@@ -1,0 +1,678 @@
+/* =====================================================================
+   R.A.M.A. — a ficha
+   ---------------------------------------------------------------------
+   A tela que precisa funcionar com a mesa em movimento: rolar um
+   atributo, tirar 3 de PV, disparar um ataque. Tudo o que é frequente
+   fica grande, à mão e a um clique.
+
+   O modo edição não é uma tela separada — é a mesma ficha com um traço
+   diferente e mais controles. Isso evita que a pessoa se perca ao trocar
+   de modo no meio de uma sessão.
+   ===================================================================== */
+
+/* =====================================================================
+   CABEÇALHO DA FICHA
+   ===================================================================== */
+
+.ficha-topo {
+  position: sticky;
+  top: 0;
+  z-index: var(--z-cabecalho);
+  background: var(--cor-fundo);
+  border-bottom: var(--borda) solid var(--cor-traco-fraca);
+}
+
+.ficha-topo__faixa {
+  display: flex;
+  align-items: center;
+  gap: var(--e3);
+  max-width: var(--largura-max);
+  margin: 0 auto;
+  padding: var(--e3) var(--e4);
+  flex-wrap: wrap;
+}
+
+.ficha-topo__identidade { display: flex; flex-direction: column; min-width: 0; flex: 1 1 200px; }
+
+.ficha-topo__nome {
+  font-weight: 700;
+  font-size: var(--texto-medio);
+  letter-spacing: var(--espaco-letra);
+  color: var(--cor-texto);
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.ficha-topo__meta {
+  font-family: var(--fonte-mini);
+  font-size: var(--texto-mini);
+  letter-spacing: var(--espaco-letra-titulo);
+  color: var(--cor-texto-3);
+  text-transform: uppercase;
+}
+
+.ficha-topo__ferramentas { display: flex; align-items: center; gap: var(--e2); flex-wrap: wrap; }
+
+/* ---------- o aviso de modo ----------
+   Precisa ser impossível não notar: no modo edição a ficha inteira ganha
+   um contorno e este seletor fica invertido. Editar sem perceber é o
+   erro caro aqui — perde-se estrutura, não um número. */
+
+.modo {
+  display: inline-flex;
+  border: var(--borda) solid var(--cor-traco-media);
+}
+
+.modo__opcao {
+  min-height: calc(var(--alvo-toque) - 6px);
+  padding: var(--e1) var(--e3);
+  background: transparent;
+  border: none;
+  color: var(--cor-texto-3);
+  font-family: var(--fonte-mini);
+  font-size: var(--texto-mini);
+  letter-spacing: var(--espaco-letra-titulo);
+  text-transform: uppercase;
+  cursor: pointer;
+}
+.modo__opcao[aria-pressed="true"] {
+  background: var(--cor-texto);
+  color: var(--cor-fundo);
+  font-weight: 700;
+}
+.modo__opcao--edicao[aria-pressed="true"] {
+  background: var(--cor-aviso);
+  color: var(--cor-fundo);
+}
+
+/* a ficha inteira avisa que está aberta para reestruturação */
+.ficha[data-modo="edicao"] {
+  outline: var(--borda) solid var(--cor-aviso);
+  outline-offset: calc(var(--e2) * -1);
+}
+
+.ficha__aviso-edicao {
+  display: flex;
+  align-items: center;
+  gap: var(--e2);
+  padding: var(--e2) var(--e3);
+  border: var(--borda) solid var(--cor-aviso);
+  color: var(--cor-aviso);
+  font-family: var(--fonte-mini);
+  font-size: var(--texto-mini);
+  letter-spacing: var(--espaco-letra-titulo);
+  text-transform: uppercase;
+}
+
+/* o que só existe em um dos modos */
+.ficha[data-modo="normal"] .so-edicao { display: none !important; }
+.ficha[data-modo="edicao"] .so-normal { display: none !important; }
+
+/* =====================================================================
+   BLOCO SUPERIOR — foto, atributos, status, defesa
+   ===================================================================== */
+
+.ficha-geral {
+  display: grid;
+  gap: var(--e4);
+  grid-template-columns: 200px 1fr;
+  align-items: start;
+}
+
+@media (max-width: 900px) {
+  .ficha-geral { grid-template-columns: 1fr; }
+}
+
+.ficha-identidade { display: flex; flex-direction: column; gap: var(--e3); }
+
+.ficha-foto {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1;
+  overflow: hidden;
+  background: var(--cor-superficie-2);
+  border: var(--borda) solid var(--cor-traco-fraca);
+}
+.ficha-foto img { width: 100%; height: 100%; object-fit: cover; }
+.ficha-foto__vazio {
+  display: grid;
+  place-items: center;
+  width: 100%; height: 100%;
+  color: var(--cor-traco-fraca);
+}
+.ficha-foto__trocar {
+  position: absolute;
+  left: 0; right: 0; bottom: 0;
+  padding: var(--e1);
+  background: rgba(8, 8, 10, 0.85);
+  border: none;
+  border-top: var(--borda) solid var(--cor-traco-fraca);
+  color: var(--cor-texto-2);
+  font-family: var(--fonte-mini);
+  font-size: var(--texto-mini);
+  letter-spacing: var(--espaco-letra-titulo);
+  text-transform: uppercase;
+  cursor: pointer;
+}
+.ficha-foto__trocar:hover { background: var(--cor-texto); color: var(--cor-fundo); }
+
+/* ---------- atributos ---------- */
+
+.atributos {
+  display: grid;
+  gap: var(--e3);
+  grid-template-columns: repeat(5, 1fr);
+}
+
+@media (max-width: 720px) {
+  .atributos { grid-template-columns: repeat(3, 1fr); }
+}
+@media (max-width: 400px) {
+  .atributos { grid-template-columns: repeat(2, 1fr); }
+}
+
+.atributo {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: var(--e1);
+  min-width: 0;
+}
+
+/* O corpo do atributo é o botão de rolar: no modo normal a área inteira
+   dispara o dado. Um clique, sem mira. */
+.atributo__caixa {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  padding: var(--e3) var(--e2);
+  min-height: 84px;
+  background: var(--cor-superficie);
+  border: var(--borda) solid var(--cor-traco-media);
+  color: var(--cor-texto);
+  cursor: pointer;
+  transition: background var(--tempo-seco) var(--curva),
+              border-color var(--tempo-seco) var(--curva);
+}
+.atributo__caixa:hover {
+  background: var(--cor-superficie-2);
+  border-color: var(--cor-traco-forte);
+}
+.atributo__caixa:active { background: var(--cor-texto); color: var(--cor-fundo); }
+.atributo__caixa[disabled] { cursor: default; }
+.atributo__caixa[disabled]:hover { background: var(--cor-superficie); border-color: var(--cor-traco-media); }
+
+.atributo__sigla {
+  font-family: var(--fonte-mini);
+  font-size: var(--texto-mini);
+  font-weight: 700;
+  letter-spacing: var(--espaco-letra-titulo);
+  color: var(--cor-texto-3);
+}
+.atributo__caixa:active .atributo__sigla { color: var(--cor-fundo); }
+
+.atributo__valor {
+  font-weight: 700;
+  font-size: var(--texto-numero);
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.atributo__dado {
+  font-family: var(--fonte-mini);
+  font-size: var(--texto-mini);
+  color: var(--cor-texto-3);
+  letter-spacing: var(--espaco-letra);
+}
+.atributo__caixa:active .atributo__dado { color: var(--cor-fundo); }
+
+.atributo__edicao { display: flex; flex-direction: column; gap: var(--e1); }
+
+/* ---------- status ---------- */
+
+.status-lista {
+  display: grid;
+  gap: var(--e3);
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+}
+
+.status {
+  display: flex;
+  flex-direction: column;
+  gap: var(--e1);
+  padding: var(--e3);
+  background: var(--cor-superficie);
+  border: var(--borda) solid var(--cor-traco-fraca);
+}
+
+.status__topo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--e2);
+}
+
+.status__nome {
+  font-family: var(--fonte-mini);
+  font-size: var(--texto-mini);
+  font-weight: 700;
+  letter-spacing: var(--espaco-letra-titulo);
+  color: var(--cor-texto-2);
+  text-transform: uppercase;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.status__maximo {
+  font-family: var(--fonte-mini);
+  font-size: var(--texto-mini);
+  color: var(--cor-texto-3);
+  font-variant-numeric: tabular-nums;
+}
+
+/* A barra é leitura periférica: dá para ver de longe quanto sobrou sem
+   precisar ler o número. O número continua lá para quem precisa dele. */
+.status__barra {
+  height: 6px;
+  background: var(--cor-superficie-3);
+  border: var(--borda) solid var(--cor-traco-fraca);
+  overflow: hidden;
+}
+.status__preenche {
+  height: 100%;
+  background: var(--cor-texto-2);
+  transition: width var(--tempo-curto) var(--curva);
+}
+.status[data-nivel="baixo"] .status__preenche  { background: var(--cor-aviso); }
+.status[data-nivel="critico"] .status__preenche { background: var(--cor-erro); }
+
+/* ---------- defesa ---------- */
+
+.defesa {
+  display: grid;
+  gap: var(--e3);
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+}
+
+.defesa__item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--e1);
+  padding: var(--e3) var(--e2);
+  background: var(--cor-superficie);
+  border: var(--borda) solid var(--cor-traco-fraca);
+}
+.defesa__valor {
+  font-weight: 700;
+  font-size: var(--texto-grande);
+  line-height: 1;
+  color: var(--cor-texto);
+  font-variant-numeric: tabular-nums;
+}
+
+/* =====================================================================
+   PERÍCIAS
+   ===================================================================== */
+
+.pericias {
+  display: grid;
+  gap: var(--e2);
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+}
+
+.pericia {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: var(--e2);
+  padding: var(--e2) var(--e3);
+  background: var(--cor-superficie);
+  border: var(--borda) solid var(--cor-traco-fraca);
+  color: var(--cor-texto-2);
+  text-align: left;
+  cursor: pointer;
+  min-height: var(--alvo-toque);
+  transition: background var(--tempo-seco) var(--curva),
+              border-color var(--tempo-seco) var(--curva);
+}
+.pericia:hover { background: var(--cor-superficie-2); border-color: var(--cor-traco-media); }
+.pericia:active { background: var(--cor-texto); color: var(--cor-fundo); }
+
+.pericia__nome { min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+
+/* a sigla do atributo vinculado anda junto do nome, sempre */
+.pericia__attr {
+  font-family: var(--fonte-mini);
+  font-size: var(--texto-mini);
+  color: var(--cor-texto-3);
+  margin-left: var(--e1);
+}
+.pericia:active .pericia__attr { color: var(--cor-fundo); }
+
+.pericia__bonus {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--cor-texto);
+  white-space: nowrap;
+}
+.pericia:active .pericia__bonus { color: var(--cor-fundo); }
+.pericia__bonus--zero { color: var(--cor-texto-3); font-weight: 400; }
+
+/* a perícia aberta em edição vira um bloco de formulário */
+.pericia-edicao {
+  display: flex;
+  flex-direction: column;
+  gap: var(--e2);
+  padding: var(--e3);
+  background: var(--cor-superficie);
+  border: var(--borda) solid var(--cor-traco-fraca);
+}
+.pericia-edicao__linha {
+  display: grid;
+  gap: var(--e2);
+  grid-template-columns: 1fr 90px 90px auto;
+  align-items: end;
+}
+@media (max-width: 620px) {
+  .pericia-edicao__linha { grid-template-columns: 1fr 1fr; }
+}
+
+.dados-extras { display: flex; flex-wrap: wrap; gap: var(--e1); align-items: center; }
+
+.dado-extra {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--e1);
+  padding: 2px var(--e2);
+  border: var(--borda) solid var(--cor-traco-fraca);
+  font-family: var(--fonte-mini);
+  font-size: var(--texto-mini);
+  color: var(--cor-texto-2);
+}
+.dado-extra--mais  { border-color: rgba(111, 176, 122, 0.5); }
+.dado-extra--menos { border-color: rgba(198, 86, 75, 0.5); }
+
+/* =====================================================================
+   INVENTÁRIO
+   ===================================================================== */
+
+.inventario__peso {
+  display: flex;
+  align-items: baseline;
+  gap: var(--e2);
+  padding: var(--e3);
+  background: var(--cor-superficie-2);
+  border: var(--borda) solid var(--cor-traco-fraca);
+}
+.inventario__peso-valor {
+  font-weight: 700;
+  font-size: var(--texto-grande);
+  color: var(--cor-texto);
+  font-variant-numeric: tabular-nums;
+}
+.inventario__peso--excedido { border-color: var(--cor-aviso); }
+.inventario__peso--excedido .inventario__peso-valor { color: var(--cor-aviso); }
+
+/* Os cartões de item vivem em componentes.css: eles aparecem tanto no
+   inventário da ficha quanto na biblioteca Homebrew, e um componente
+   usado por duas telas não pertence ao CSS de uma delas. */
+
+/* =====================================================================
+   ANOTAÇÕES
+   ===================================================================== */
+
+.anotacoes {
+  display: grid;
+  gap: var(--e4);
+  grid-template-columns: 260px 1fr;
+  align-items: start;
+}
+@media (max-width: 860px) {
+  .anotacoes { grid-template-columns: 1fr; }
+}
+
+.arvore { display: flex; flex-direction: column; gap: var(--e1); }
+
+.arvore__pasta > summary {
+  display: flex;
+  align-items: center;
+  gap: var(--e2);
+  min-height: var(--alvo-toque);
+  padding: var(--e1) var(--e2);
+  cursor: pointer;
+  list-style: none;
+  font-family: var(--fonte-mini);
+  font-size: var(--texto-mini);
+  font-weight: 700;
+  letter-spacing: var(--espaco-letra-titulo);
+  color: var(--cor-texto-2);
+  text-transform: uppercase;
+}
+.arvore__pasta > summary::-webkit-details-marker { display: none; }
+.arvore__pasta > summary::before { content: "\25B8"; color: var(--cor-texto-3); }
+.arvore__pasta[open] > summary::before { content: "\25BE"; }
+.arvore__pasta > summary:hover { background: var(--cor-superficie-2); }
+
+.arvore__notas { display: flex; flex-direction: column; padding-left: var(--e4); }
+
+.arvore__nota {
+  display: flex;
+  align-items: center;
+  gap: var(--e2);
+  min-height: calc(var(--alvo-toque) - 6px);
+  padding: var(--e1) var(--e2);
+  background: transparent;
+  border: none;
+  border-left: var(--borda) solid var(--cor-traco-fraca);
+  color: var(--cor-texto-3);
+  text-align: left;
+  cursor: pointer;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.arvore__nota:hover { color: var(--cor-texto); border-left-color: var(--cor-traco-media); }
+.arvore__nota[aria-current="true"] {
+  color: var(--cor-texto);
+  border-left-color: var(--cor-traco-forte);
+  border-left-width: 2px;
+  background: var(--cor-superficie-2);
+}
+
+.nota-editor { display: flex; flex-direction: column; gap: var(--e3); min-width: 0; }
+.nota-editor__corpo { min-height: 320px; resize: vertical; }
+
+/* =====================================================================
+   RESULTADO DE ROLAGEM
+   ---------------------------------------------------------------------
+   Flutua no canto inferior direito, empilhando as últimas rolagens. Não
+   rouba o foco e não bloqueia a ficha: quem está jogando precisa
+   continuar mexendo enquanto lê o resultado.
+   ===================================================================== */
+
+.rolagens {
+  position: fixed;
+  right: var(--e4);
+  bottom: var(--e4);
+  z-index: var(--z-flutuante);
+  display: flex;
+  flex-direction: column-reverse;
+  gap: var(--e2);
+  width: min(300px, calc(100vw - var(--e6)));
+  max-height: 70vh;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.rolagem {
+  display: flex;
+  flex-direction: column;
+  gap: var(--e2);
+  padding: var(--e3);
+  background: var(--cor-superficie-2);
+  border: var(--borda) solid var(--cor-traco-media);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.85);
+  pointer-events: auto;
+  animation: r-rolar var(--tempo-medio) var(--curva);
+}
+.rolagem--antiga { opacity: 0.55; }
+.rolagem--critico { border-color: var(--cor-paranormal); }
+.rolagem--dano    { border-color: var(--cor-erro); }
+
+@keyframes r-rolar {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: none; }
+}
+@media (prefers-reduced-motion: reduce) { .rolagem { animation: none; } }
+
+.rolagem__topo {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--e2);
+}
+
+.rolagem__nome {
+  font-weight: 700;
+  letter-spacing: var(--espaco-letra-titulo);
+  color: var(--cor-texto);
+  text-transform: uppercase;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.rolagem__expressao {
+  font-family: var(--fonte-mini);
+  font-size: var(--texto-mini);
+  color: var(--cor-texto-3);
+}
+
+.rolagem__total {
+  font-weight: 700;
+  font-size: calc(40px * var(--escala));
+  line-height: 1;
+  color: var(--cor-texto);
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Os dados brutos, com o principal marcado. Ver os dois descartados
+   importa: é a diferença entre 2d20 e -2d20 na mesa. */
+.rolagem__dados { display: flex; flex-wrap: wrap; gap: var(--e1); justify-content: center; }
+
+.face {
+  display: inline-grid;
+  place-items: center;
+  min-width: 26px;
+  padding: 2px var(--e1);
+  border: var(--borda) solid var(--cor-traco-fraca);
+  color: var(--cor-texto-3);
+  font-variant-numeric: tabular-nums;
+}
+.face--principal {
+  border-color: var(--cor-traco-forte);
+  background: var(--cor-texto);
+  color: var(--cor-fundo);
+  font-weight: 700;
+}
+
+.rolagem__parcelas {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding-top: var(--e2);
+  border-top: var(--borda) solid var(--cor-traco-fraca);
+  font-family: var(--fonte-mini);
+  font-size: var(--texto-mini);
+  color: var(--cor-texto-3);
+}
+.rolagem__parcela { display: flex; justify-content: space-between; gap: var(--e2); }
+.rolagem__parcela span:last-child { color: var(--cor-texto-2); font-variant-numeric: tabular-nums; }
+
+.rolagem__marca {
+  align-self: center;
+  color: var(--cor-paranormal);
+  font-weight: 700;
+  letter-spacing: var(--espaco-letra-titulo);
+  text-transform: uppercase;
+}
+
+.rolagem__acao { pointer-events: auto; }
+
+@media (max-width: 640px) {
+  .rolagens { right: var(--e2); left: var(--e2); bottom: var(--e2); width: auto; }
+}
+
+/* =====================================================================
+   MODO EDIÇÃO — linhas reordenáveis e removíveis
+   ===================================================================== */
+
+/* .linha-editavel e .editar-grade também moraram aqui e foram para
+   componentes.css: a tela de conflito do RAMASync usa a primeira, e
+   ela pode abrir em qualquer página. */
+
+/* =====================================================================
+   A PÁGINA DA FICHA
+   ---------------------------------------------------------------------
+   Duas barras grudadas no topo brigariam por espaço e empurrariam a
+   ficha para baixo. A navegação do sistema continua na página, mas
+   rola junto; quem fica fixo é o cabeçalho da ficha, que carrega o
+   modo e o estado do salvamento.
+   ===================================================================== */
+
+body.pagina-ficha .app-topo { position: static; }
+
+body.pagina-ficha .app-corpo {
+  padding-top: 0;
+  gap: var(--e4);
+}
+
+.ficha {
+  display: flex;
+  flex-direction: column;
+  gap: var(--e5);
+  padding: var(--e2) 0 0;
+}
+
+/* =====================================================================
+   A FICHA NO CELULAR
+   ---------------------------------------------------------------------
+   Numa tela estreita a foto em tamanho cheio empurrava atributos e PV
+   para fora da vista — justamente o que mais se olha durante a sessão.
+   Aqui ela encolhe e divide a linha com a identidade, e o que a mesa
+   consulta sobe para a primeira tela.
+   ===================================================================== */
+
+@media (max-width: 560px) {
+  .ficha-identidade {
+    display: grid;
+    grid-template-columns: 116px 1fr;
+    gap: var(--e3);
+    align-items: start;
+  }
+
+  .ficha-foto { grid-row: span 2; }
+
+  .ficha-topo__faixa { padding: var(--e2) var(--e3); gap: var(--e2); }
+
+  /* O modo e o estado do salvamento continuam na primeira linha: são a
+     diferença entre anotar com segurança e anotar no escuro. */
+  .ficha-topo__ferramentas { width: 100%; justify-content: space-between; }
+
+  .ficha { gap: var(--e4); }
+
+  /* Um atributo por dedo: dois por linha, com o número grande o
+     bastante para ser lido de relance. */
+  .atributos { grid-template-columns: repeat(2, 1fr); gap: var(--e2); }
+
+  .defesa { grid-template-columns: repeat(2, 1fr); }
+
+  .r-painel { padding: var(--e5) var(--e3) var(--e3); }
+}

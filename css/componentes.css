@@ -1,0 +1,818 @@
+/* =====================================================================
+   R.A.M.A. — componentes
+   ---------------------------------------------------------------------
+   O vocabulário visual do sistema. Toda tela monta a partir daqui; nada
+   de estilo solto dentro de página. Se um componente novo for preciso,
+   ele nasce neste arquivo, com prefixo r-.
+
+   A linguagem é uma só: retângulo de traço fino sobre fundo quase preto,
+   e a seleção inverte — fundo branco, texto preto. Sem sombra colorida,
+   sem gradiente, sem canto redondo além de 2px.
+   ===================================================================== */
+
+/* =====================================================================
+   BOTÃO
+   ===================================================================== */
+
+.r-botao {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--e2);
+  min-height: var(--alvo-toque);
+  padding: var(--e2) var(--e4);
+  background: var(--cor-superficie);
+  color: var(--cor-texto-2);
+  border: var(--borda) solid var(--cor-traco-media);
+  border-radius: var(--raio);
+  font-size: var(--texto-base);
+  letter-spacing: var(--espaco-letra-titulo);
+  text-transform: uppercase;
+  cursor: pointer;
+  user-select: none;
+  transition: background var(--tempo-seco) var(--curva),
+              color var(--tempo-seco) var(--curva),
+              border-color var(--tempo-seco) var(--curva);
+}
+
+.r-botao:hover:not(:disabled) {
+  border-color: var(--cor-traco-forte);
+  color: var(--cor-texto);
+  background: var(--cor-superficie-2);
+}
+
+.r-botao:active:not(:disabled) {
+  background: var(--cor-texto);
+  color: var(--cor-fundo);
+}
+
+.r-botao:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* o que a tela quer que você faça: traço cheio, invertido */
+.r-botao--principal {
+  background: var(--cor-texto);
+  color: var(--cor-fundo);
+  border-color: var(--cor-traco-forte);
+  font-weight: 700;
+}
+.r-botao--principal:hover:not(:disabled) {
+  background: var(--cor-texto-2);
+  color: var(--cor-fundo);
+}
+.r-botao--principal:active:not(:disabled) {
+  background: var(--cor-superficie);
+  color: var(--cor-texto);
+}
+
+/* ação que apaga: só ganha cor na hora de confirmar, nunca no repouso */
+.r-botao--perigo {
+  border-color: var(--cor-erro);
+  color: var(--cor-erro);
+}
+.r-botao--perigo:hover:not(:disabled) {
+  background: var(--cor-erro);
+  border-color: var(--cor-erro);
+  color: var(--cor-fundo);
+}
+
+/* discreto: para o que acompanha, não para o que decide */
+.r-botao--fantasma {
+  background: transparent;
+  border-color: var(--cor-traco-fraca);
+  color: var(--cor-texto-3);
+}
+.r-botao--fantasma:hover:not(:disabled) {
+  border-color: var(--cor-traco-media);
+  color: var(--cor-texto-2);
+  background: transparent;
+}
+
+.r-botao--mini {
+  min-height: calc(var(--alvo-toque) - 12px);
+  padding: var(--e1) var(--e2);
+  font-family: var(--fonte-mini);
+  font-size: var(--texto-mini);
+}
+
+.r-botao--bloco { width: 100%; }
+
+/* botão quadrado de ícone — o alvo continua sendo o de toque */
+.r-icone {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--alvo-toque);
+  height: var(--alvo-toque);
+  padding: 0;
+  background: transparent;
+  color: var(--cor-texto-3);
+  border: var(--borda) solid transparent;
+  cursor: pointer;
+  transition: color var(--tempo-seco) var(--curva),
+              border-color var(--tempo-seco) var(--curva);
+}
+.r-icone:hover { color: var(--cor-texto); border-color: var(--cor-traco-fraca); }
+.r-icone svg { width: 16px; height: 16px; }
+
+/* =====================================================================
+   CAMPOS
+   ===================================================================== */
+
+.r-campo {
+  display: flex;
+  flex-direction: column;
+  gap: var(--e1);
+  min-width: 0;
+}
+
+.r-campo > label,
+.r-rotulo {
+  font-family: var(--fonte-mini);
+  font-size: var(--texto-mini);
+  letter-spacing: var(--espaco-letra-titulo);
+  color: var(--cor-texto-3);
+  text-transform: uppercase;
+}
+
+.r-entrada,
+.r-area,
+.r-selecao {
+  width: 100%;
+  min-height: var(--alvo-toque);
+  padding: var(--e2) var(--e3);
+  background: var(--cor-fundo);
+  color: var(--cor-texto);
+  border: var(--borda) solid var(--cor-traco-fraca);
+  border-radius: var(--raio);
+  font-size: var(--texto-base);
+  transition: border-color var(--tempo-seco) var(--curva);
+}
+
+.r-entrada:hover, .r-area:hover, .r-selecao:hover { border-color: var(--cor-traco-media); }
+.r-entrada:focus, .r-area:focus, .r-selecao:focus { border-color: var(--cor-traco-forte); }
+
+.r-entrada::placeholder, .r-area::placeholder { color: var(--cor-traco-fraca); }
+
+.r-entrada:disabled, .r-area:disabled, .r-selecao:disabled {
+  color: var(--cor-texto-3);
+  background: var(--cor-superficie);
+  border-style: dashed;
+  cursor: not-allowed;
+}
+
+.r-area {
+  min-height: calc(var(--alvo-toque) * 3);
+  resize: vertical;
+  line-height: var(--altura-linha);
+}
+
+.r-selecao {
+  appearance: none;
+  padding-right: var(--e6);
+  background-image: linear-gradient(45deg, transparent 50%, var(--cor-texto-3) 50%),
+                    linear-gradient(135deg, var(--cor-texto-3) 50%, transparent 50%);
+  background-position: calc(100% - 16px) 50%, calc(100% - 11px) 50%;
+  background-size: 5px 5px, 5px 5px;
+  background-repeat: no-repeat;
+  cursor: pointer;
+}
+.r-selecao option { background: var(--cor-superficie-2); color: var(--cor-texto); }
+
+/* números: centralizados e com algarismo de largura fixa, para a coluna
+   não dançar enquanto o valor muda */
+.r-entrada--numero {
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+}
+
+.r-entrada--erro, .r-area--erro { border-color: var(--cor-erro); }
+
+.r-ajuda {
+  font-family: var(--fonte-mini);
+  font-size: var(--texto-mini);
+  color: var(--cor-texto-3);
+}
+.r-ajuda--erro { color: var(--cor-erro); }
+
+/* caixa de marcar */
+.r-marca {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--e2);
+  min-height: var(--alvo-toque);
+  cursor: pointer;
+}
+.r-marca input {
+  appearance: none;
+  width: 14px; height: 14px;
+  flex: 0 0 auto;
+  background: var(--cor-fundo);
+  border: var(--borda) solid var(--cor-traco-media);
+  cursor: pointer;
+  display: grid;
+  place-content: center;
+}
+.r-marca input:checked { background: var(--cor-texto); border-color: var(--cor-traco-forte); }
+.r-marca input:checked::after {
+  content: "";
+  width: 6px; height: 6px;
+  background: var(--cor-fundo);
+}
+
+/* =====================================================================
+   PAINEL — a caixa que organiza tudo
+   ---------------------------------------------------------------------
+   O título fica montado sobre o traço de cima, como etiqueta de pasta.
+   É o que dá à tela a cara de arquivo sem custar nenhum enfeite.
+   ===================================================================== */
+
+.r-painel {
+  position: relative;
+  background: var(--cor-superficie);
+  border: var(--borda) solid var(--cor-traco-fraca);
+  border-radius: var(--raio);
+  padding: var(--e5) var(--e4) var(--e4);
+  min-width: 0;
+}
+
+.r-painel__titulo {
+  position: absolute;
+  top: 0;
+  left: var(--e3);
+  transform: translateY(-50%);
+  display: inline-flex;
+  align-items: center;
+  gap: var(--e2);
+  padding: 0 var(--e2);
+  background: var(--cor-fundo);
+  font-family: var(--fonte-mini);
+  font-size: var(--texto-mini);
+  font-weight: 700;
+  letter-spacing: var(--espaco-letra-titulo);
+  color: var(--cor-texto-2);
+  text-transform: uppercase;
+}
+
+.r-painel__acoes {
+  position: absolute;
+  top: 0;
+  right: var(--e3);
+  transform: translateY(-50%);
+  display: flex;
+  gap: var(--e1);
+  padding: 0 var(--e2);
+  background: var(--cor-fundo);
+}
+
+.r-painel--plano { background: transparent; }
+.r-painel--solto { border: none; padding: 0; }
+
+/* =====================================================================
+   CARTÃO — item de lista clicável
+   ===================================================================== */
+
+.r-cartao {
+  display: block;
+  position: relative;
+  background: var(--cor-superficie);
+  border: var(--borda) solid var(--cor-traco-fraca);
+  border-radius: var(--raio);
+  padding: var(--e3);
+  text-decoration: none;
+  color: inherit;
+  transition: border-color var(--tempo-seco) var(--curva),
+              background var(--tempo-seco) var(--curva);
+}
+.r-cartao:hover {
+  border-color: var(--cor-traco-media);
+  background: var(--cor-superficie-2);
+}
+
+/* o traço da esquerda cresce no hover: dá direção sem mover a caixa */
+.r-cartao::before {
+  content: "";
+  position: absolute;
+  left: -1px; top: 50%;
+  width: 2px; height: 0;
+  background: var(--cor-traco-forte);
+  transform: translateY(-50%);
+  transition: height var(--tempo-curto) var(--curva);
+}
+.r-cartao:hover::before,
+.r-cartao:focus-within::before { height: 60%; }
+
+/* =====================================================================
+   ABAS
+   ===================================================================== */
+
+.r-abas {
+  display: flex;
+  gap: var(--e1);
+  border-bottom: var(--borda) solid var(--cor-traco-fraca);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.r-abas::-webkit-scrollbar { display: none; }
+
+.r-aba {
+  position: relative;
+  flex: 0 0 auto;
+  min-height: var(--alvo-toque);
+  padding: var(--e2) var(--e4);
+  margin-bottom: -1px;
+  background: transparent;
+  color: var(--cor-texto-3);
+  border: var(--borda) solid transparent;
+  border-bottom-color: var(--cor-traco-fraca);
+  font-size: var(--texto-base);
+  letter-spacing: var(--espaco-letra-titulo);
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: color var(--tempo-seco) var(--curva);
+}
+.r-aba:hover { color: var(--cor-texto-2); }
+
+.r-aba[aria-selected="true"] {
+  color: var(--cor-texto);
+  font-weight: 700;
+  background: var(--cor-superficie);
+  border-color: var(--cor-traco-fraca);
+  border-bottom-color: var(--cor-fundo);
+}
+
+/* =====================================================================
+   ESTADO DE SINCRONIZAÇÃO
+   ---------------------------------------------------------------------
+   O texto vem sempre junto: cor sozinha não informa quem não distingue
+   cor, e este é justamente o indicador que diz se o trabalho está a
+   salvo. Ele nunca pode depender só do verde.
+   ===================================================================== */
+
+.r-estado {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--e2);
+  padding: var(--e1) var(--e2);
+  font-family: var(--fonte-mini);
+  font-size: var(--texto-mini);
+  letter-spacing: var(--espaco-letra-titulo);
+  text-transform: uppercase;
+  color: var(--cor-texto-3);
+  border: var(--borda) solid var(--cor-traco-fraca);
+  white-space: nowrap;
+}
+
+.r-estado::before {
+  content: "";
+  width: 6px; height: 6px;
+  flex: 0 0 auto;
+  background: currentColor;
+}
+
+.r-estado[data-estado="salvo"]    { color: var(--cor-ok);    border-color: rgba(111, 176, 122, 0.4); }
+.r-estado[data-estado="salvando"] { color: var(--cor-texto-2); }
+.r-estado[data-estado="pendente"] { color: var(--cor-aviso); border-color: rgba(201, 162, 39, 0.4); }
+.r-estado[data-estado="offline"]  { color: var(--cor-aviso); border-color: rgba(201, 162, 39, 0.4); }
+.r-estado[data-estado="erro"]     { color: var(--cor-erro);  border-color: rgba(198, 86, 75, 0.4); }
+.r-estado[data-estado="conflito"] { color: var(--cor-erro);  border-color: var(--cor-erro); cursor: pointer; }
+.r-estado[data-estado="expirado"] { color: var(--cor-erro);  border-color: var(--cor-erro); }
+
+.r-estado[data-estado="salvando"]::before { animation: r-pulsar 900ms steps(2, end) infinite; }
+@keyframes r-pulsar { 50% { opacity: 0.2; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .r-estado[data-estado="salvando"]::before { animation: none; }
+}
+
+/* =====================================================================
+   MENU SUSPENSO
+   ===================================================================== */
+
+.r-menu { position: relative; display: inline-block; }
+
+.r-menu__lista {
+  position: absolute;
+  top: calc(100% + var(--e1));
+  right: 0;
+  z-index: var(--z-flutuante);
+  min-width: 180px;
+  padding: var(--e1);
+  background: var(--cor-superficie-2);
+  border: var(--borda) solid var(--cor-traco-media);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.8);
+}
+.r-menu__lista[hidden] { display: none; }
+.r-menu__lista--esquerda { right: auto; left: 0; }
+
+.r-menu__item {
+  display: flex;
+  align-items: center;
+  gap: var(--e2);
+  width: 100%;
+  min-height: calc(var(--alvo-toque) - 8px);
+  padding: var(--e2) var(--e3);
+  background: transparent;
+  border: none;
+  color: var(--cor-texto-2);
+  text-align: left;
+  cursor: pointer;
+  text-transform: uppercase;
+  letter-spacing: var(--espaco-letra);
+}
+.r-menu__item:hover { background: var(--cor-texto); color: var(--cor-fundo); }
+.r-menu__item--perigo { color: var(--cor-erro); }
+.r-menu__item--perigo:hover { background: var(--cor-erro); color: var(--cor-fundo); }
+
+.r-menu__separador {
+  height: 1px;
+  margin: var(--e1) 0;
+  background: var(--cor-traco-fraca);
+}
+
+/* =====================================================================
+   JANELA MODAL
+   ===================================================================== */
+
+.r-fundo {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-modal);
+  display: grid;
+  place-items: center;
+  padding: var(--e4);
+  background: rgba(8, 8, 10, 0.86);
+  animation: r-surgir var(--tempo-curto) var(--curva);
+}
+
+.r-modal {
+  width: 100%;
+  max-width: 520px;
+  max-height: calc(100vh - var(--e8));
+  display: flex;
+  flex-direction: column;
+  background: var(--cor-superficie);
+  border: var(--borda) solid var(--cor-traco-media);
+  animation: r-abrir var(--tempo-medio) var(--curva);
+}
+.r-modal--largo { max-width: 820px; }
+
+.r-modal__topo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--e3);
+  padding: var(--e3) var(--e4);
+  border-bottom: var(--borda) solid var(--cor-traco-fraca);
+}
+
+.r-modal__corpo {
+  padding: var(--e4);
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--e4);
+}
+
+.r-modal__rodape {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--e2);
+  padding: var(--e3) var(--e4);
+  border-top: var(--borda) solid var(--cor-traco-fraca);
+}
+
+/* o registro se abre de cima para baixo, como gaveta de arquivo */
+@keyframes r-abrir {
+  from { clip-path: inset(0 0 100% 0); opacity: 0.4; }
+  to   { clip-path: inset(0 0 0 0);    opacity: 1; }
+}
+@keyframes r-surgir { from { opacity: 0; } to { opacity: 1; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .r-modal, .r-fundo { animation: none; }
+}
+
+@media (max-width: 640px) {
+  .r-fundo { padding: 0; align-items: flex-end; }
+  .r-modal {
+    max-width: none;
+    max-height: 92vh;
+    border-left: none; border-right: none; border-bottom: none;
+  }
+  .r-modal__rodape { flex-direction: column-reverse; }
+  .r-modal__rodape .r-botao { width: 100%; }
+}
+
+/* =====================================================================
+   AVISO PASSAGEIRO
+   ===================================================================== */
+
+.r-avisos {
+  position: fixed;
+  left: 50%;
+  bottom: var(--e4);
+  transform: translateX(-50%);
+  z-index: var(--z-aviso);
+  display: flex;
+  flex-direction: column;
+  gap: var(--e2);
+  width: min(440px, calc(100vw - var(--e6)));
+  pointer-events: none;
+}
+
+.r-aviso {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--e3);
+  padding: var(--e3);
+  background: var(--cor-superficie-2);
+  border: var(--borda) solid var(--cor-traco-media);
+  border-left-width: 3px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.7);
+  pointer-events: auto;
+  animation: r-entrar var(--tempo-medio) var(--curva);
+}
+.r-aviso--ok      { border-left-color: var(--cor-ok); }
+.r-aviso--erro    { border-left-color: var(--cor-erro); }
+.r-aviso--atencao { border-left-color: var(--cor-aviso); }
+
+.r-aviso__texto { flex: 1; min-width: 0; color: var(--cor-texto-2); }
+
+@keyframes r-entrar {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: none; }
+}
+@media (prefers-reduced-motion: reduce) { .r-aviso { animation: none; } }
+
+/* =====================================================================
+   ESTADO VAZIO E CARREGAMENTO
+   ===================================================================== */
+
+.r-vazio {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--e3);
+  padding: var(--e7) var(--e4);
+  text-align: center;
+  border: var(--borda) dashed var(--cor-traco-fraca);
+}
+.r-vazio__marca { color: var(--cor-traco-fraca); }
+.r-vazio__titulo {
+  font-weight: 700;
+  letter-spacing: var(--espaco-letra-titulo);
+  color: var(--cor-texto-2);
+  text-transform: uppercase;
+}
+.r-vazio__texto { color: var(--cor-texto-3); max-width: 44ch; }
+
+.r-carregando {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--e3);
+  padding: var(--e7) var(--e4);
+  color: var(--cor-texto-3);
+}
+
+.r-carregando__rotulo::after {
+  content: "";
+  display: inline-block;
+  width: 0.6em; height: 1em;
+  margin-left: 0.2em;
+  background: var(--cor-texto-2);
+  vertical-align: text-bottom;
+  animation: r-cursor 1s steps(1) infinite;
+}
+@keyframes r-cursor { 50% { opacity: 0; } }
+
+/* barra indeterminada, em blocos — não finge porcentagem que não existe */
+.r-barra {
+  width: min(240px, 60vw);
+  height: 10px;
+  border: var(--borda) solid var(--cor-traco-fraca);
+  padding: 2px;
+  overflow: hidden;
+}
+.r-barra__preenche {
+  width: 40%;
+  height: 100%;
+  background: repeating-linear-gradient(
+    90deg,
+    var(--cor-texto-2) 0 4px,
+    transparent 4px 7px
+  );
+  animation: r-varrer 1.4s steps(12, end) infinite;
+}
+@keyframes r-varrer {
+  from { transform: translateX(-100%); }
+  to   { transform: translateX(250%); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .r-barra__preenche { animation: none; width: 100%; }
+  .r-carregando__rotulo::after { animation: none; }
+}
+
+/* =====================================================================
+   ETIQUETA
+   ===================================================================== */
+
+.r-etiqueta {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--e1);
+  padding: 1px var(--e2);
+  font-family: var(--fonte-mini);
+  font-size: var(--texto-mini);
+  letter-spacing: var(--espaco-letra-titulo);
+  text-transform: uppercase;
+  color: var(--cor-texto-3);
+  border: var(--borda) solid var(--cor-traco-fraca);
+  white-space: nowrap;
+}
+.r-etiqueta--forte { color: var(--cor-fundo); background: var(--cor-texto); border-color: var(--cor-traco-forte); }
+.r-etiqueta--aviso { color: var(--cor-aviso); border-color: var(--cor-aviso); }
+.r-etiqueta--para  { color: var(--cor-paranormal); border-color: var(--cor-paranormal); }
+
+/* =====================================================================
+   AVATAR
+   ---------------------------------------------------------------------
+   Foto de gente não leva pixelização artificial: a estética é da
+   interface, não do rosto de quem está na campanha.
+   ===================================================================== */
+
+.r-avatar {
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 48px; height: 48px;
+  overflow: hidden;
+  background: var(--cor-superficie-2);
+  border: var(--borda) solid var(--cor-traco-fraca);
+  border-radius: 50%;
+  color: var(--cor-texto-3);
+  font-weight: 700;
+  letter-spacing: 0;
+  text-transform: uppercase;
+  user-select: none;
+}
+.r-avatar img { width: 100%; height: 100%; object-fit: cover; image-rendering: auto; }
+.r-avatar--g { width: 96px; height: 96px; font-size: var(--texto-grande); }
+.r-avatar--p { width: 28px; height: 28px; font-size: var(--texto-mini); }
+.r-avatar--quadrado { border-radius: var(--raio-suave); }
+
+/* =====================================================================
+   SEPARADORES E PARES RÓTULO/VALOR
+   ===================================================================== */
+
+.r-linha {
+  height: 1px;
+  background: var(--cor-traco-fraca);
+  border: none;
+  margin: 0;
+}
+
+.r-dados {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: var(--e1) var(--e4);
+  align-items: baseline;
+}
+.r-dados dt {
+  font-family: var(--fonte-mini);
+  font-size: var(--texto-mini);
+  letter-spacing: var(--espaco-letra-titulo);
+  color: var(--cor-texto-3);
+  text-transform: uppercase;
+}
+.r-dados dd { color: var(--cor-texto-2); font-variant-numeric: tabular-nums; }
+
+/* =====================================================================
+   CONTROLE DE NÚMERO  [-] valor [+]
+   ===================================================================== */
+
+.r-passo {
+  display: grid;
+  grid-template-columns: var(--alvo-toque) 1fr var(--alvo-toque);
+  border: var(--borda) solid var(--cor-traco-fraca);
+}
+.r-passo:focus-within { border-color: var(--cor-traco-forte); }
+
+.r-passo__botao {
+  display: grid;
+  place-items: center;
+  min-height: var(--alvo-toque);
+  background: var(--cor-superficie-2);
+  border: none;
+  color: var(--cor-texto-2);
+  font-weight: 700;
+  cursor: pointer;
+  user-select: none;
+}
+.r-passo__botao:hover { background: var(--cor-texto); color: var(--cor-fundo); }
+.r-passo__botao:disabled { opacity: 0.35; cursor: not-allowed; background: var(--cor-superficie-2); color: var(--cor-texto-3); }
+
+.r-passo__valor {
+  min-width: 0;
+  padding: var(--e1);
+  background: var(--cor-fundo);
+  border: none;
+  border-left: var(--borda) solid var(--cor-traco-fraca);
+  border-right: var(--borda) solid var(--cor-traco-fraca);
+  color: var(--cor-texto);
+  text-align: center;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.r-passo__valor:focus { outline: none; }
+
+/* =====================================================================
+   BUSCA
+   ===================================================================== */
+
+.r-busca { position: relative; flex: 1 1 220px; min-width: 0; }
+.r-busca .r-entrada { padding-left: var(--e6); }
+.r-busca__marca {
+  position: absolute;
+  left: var(--e3);
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--cor-traco-media);
+  pointer-events: none;
+}
+
+/* =====================================================================
+   CARTÃO DE ITEM
+   ---------------------------------------------------------------------
+   Serve ao inventário da ficha e à biblioteca Homebrew. Está aqui, e
+   não no CSS da ficha, porque componente usado por duas telas não
+   pertence ao arquivo de uma delas — foi assim que a biblioteca abriu
+   sem estilo na primeira vez.
+   ===================================================================== */
+
+.itens { display: grid; gap: var(--e2); grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); }
+
+.item {
+  display: flex;
+  flex-direction: column;
+  gap: var(--e2);
+  padding: var(--e3);
+  background: var(--cor-superficie);
+  border: var(--borda) solid var(--cor-traco-fraca);
+  min-width: 0;
+}
+
+.item__topo {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--e2);
+}
+
+.item__nome {
+  font-weight: 700;
+  color: var(--cor-texto);
+  letter-spacing: var(--espaco-letra);
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.item__descricao {
+  color: var(--cor-texto-3);
+  font-family: var(--fonte-mini);
+  font-size: var(--texto-mini);
+  line-height: 1.5;
+}
+
+.item__acoes { display: flex; gap: var(--e2); }
+.item__acoes .r-botao { flex: 1; }
+
+/* a arma é o único item com dois botões de disparo, então ganha traço
+   um pouco mais forte para se separar do resto da mochila */
+.item--arma { border-color: var(--cor-traco-media); }
+
+/* =====================================================================
+   LINHAS DE FORMULÁRIO
+   ---------------------------------------------------------------------
+   .linha-editavel é usada também pela tela de conflito, que pode abrir
+   sobre qualquer página do sistema.
+   ===================================================================== */
+
+.linha-editavel {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: var(--e2);
+  align-items: center;
+  padding: var(--e2);
+  border: var(--borda) solid var(--cor-traco-fraca);
+}
+
+.editar-grade {
+  display: grid;
+  gap: var(--e3);
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+}

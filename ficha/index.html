@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ficha — R.A.M.A.</title>
+<meta name="color-scheme" content="dark">
+<meta name="theme-color" content="#08080A">
+<link rel="icon" href="../assets/icons/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="../css/tokens.css">
+<link rel="stylesheet" href="../css/base.css">
+<link rel="stylesheet" href="../css/componentes.css">
+<link rel="stylesheet" href="../css/layout.css">
+<link rel="stylesheet" href="../css/ficha.css">
+</head>
+<body>
+
+<div class="veu" aria-hidden="true"></div>
+<a class="pular-para" href="#conteudo">Pular para o conteúdo</a>
+
+<main id="conteudo" class="app-corpo app-corpo--largo">
+  <div id="ficha"></div>
+</main>
+
+<!-- As rolagens flutuam por cima da ficha e não entram no fluxo dela:
+     quem está jogando precisa continuar mexendo enquanto lê o resultado. -->
+<div id="rolagens" class="rolagens" aria-live="polite" aria-label="Últimas rolagens"></div>
+
+<script src="../js/config.js"></script>
+<script src="../js/util.js"></script>
+<script src="../js/rede.js"></script>
+<script src="../js/dados.js"></script>
+<script src="../js/ficha.js"></script>
+<script src="../js/validacao.js"></script>
+<script src="../js/api.js"></script>
+<script src="../js/ui.js"></script>
+<script src="../js/auth.js"></script>
+<script src="../js/sync.js"></script>
+<script src="../js/salvar.js"></script>
+<script src="../js/imagem.js"></script>
+<script src="../js/app.js"></script>
+
+<script src="../js/paginas/ficha-rolagens.js"></script>
+<script src="../js/paginas/ficha-geral.js"></script>
+<script src="../js/paginas/ficha-pericias.js"></script>
+<script src="../js/paginas/ficha-inventario.js"></script>
+<script src="../js/paginas/ficha-anotacoes.js"></script>
+<script src="../js/paginas/ficha.js"></script>
+
+</body>
+</html>

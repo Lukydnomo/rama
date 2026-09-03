@@ -1,0 +1,20 @@
+# Configuração local de desenvolvimento
+.claude/
+
+# Nada de segredo entra aqui. O Apps Script publicado lê pepper, id da
+# planilha e iterações das Script Properties; se você mantiver uma cópia
+# local com valores preenchidos, ela fica de fora.
+backend/*.local.gs
+backend/.clasp.json
+segredos.txt
+senhas.txt
+
+# Fontes: a PixelMplus tem licença própria e não é redistribuída aqui.
+# Veja assets/fonts/LEIA-ME.md.
+assets/fonts/*.woff2
+assets/fonts/*.ttf
+assets/fonts/*.otf
+
+# Sistema
+.DS_Store
+Thumbs.db

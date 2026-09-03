@@ -1,0 +1,478 @@
+/* =====================================================================
+   R.A.M.A. — esqueleto
+   ---------------------------------------------------------------------
+   Cabeçalho, navegação, o corpo da página e as listas que aparecem em
+   Personagens, Campanhas e Homebrew. Tudo o que é forma da página, e
+   nada do que é forma de um componente isolado.
+   ===================================================================== */
+
+/* =====================================================================
+   CABEÇALHO
+   ===================================================================== */
+
+.app-topo {
+  position: sticky;
+  top: 0;
+  z-index: var(--z-cabecalho);
+  background: var(--cor-fundo);
+  border-bottom: var(--borda) solid var(--cor-traco-fraca);
+}
+
+.app-topo__faixa {
+  display: flex;
+  align-items: center;
+  gap: var(--e4);
+  max-width: var(--largura-max);
+  margin: 0 auto;
+  padding: var(--e3) var(--e4);
+}
+
+/* ---------- a marca ---------- */
+
+.marca {
+  display: flex;
+  align-items: center;
+  gap: var(--e3);
+  border: none;
+  min-width: 0;
+}
+.marca:hover { border: none; }
+
+.marca__simbolo {
+  flex: 0 0 auto;
+  width: 28px; height: 28px;
+  color: var(--cor-texto);
+}
+
+.marca__texto { display: flex; flex-direction: column; min-width: 0; }
+
+.marca__nome {
+  font-weight: 700;
+  font-size: var(--texto-medio);
+  line-height: 1.1;
+  letter-spacing: 0.16em;
+  color: var(--cor-texto);
+  /* "R.A.M.A." é uma palavra só. Sem isto ela quebra em "R.A.M" e
+     ".A." na largura de um celular, e a marca vira duas coisas. */
+  white-space: nowrap;
+}
+
+.marca__extenso {
+  font-family: var(--fonte-mini);
+  font-size: var(--texto-mini);
+  letter-spacing: var(--espaco-letra-titulo);
+  color: var(--cor-texto-3);
+  text-transform: uppercase;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.app-topo__espaco { flex: 1 1 auto; }
+
+/* ---------- identificação do agente ---------- */
+
+.agente {
+  display: flex;
+  align-items: center;
+  gap: var(--e2);
+  min-height: var(--alvo-toque);
+  padding: var(--e1) var(--e2) var(--e1) var(--e1);
+  background: transparent;
+  border: var(--borda) solid var(--cor-traco-fraca);
+  color: var(--cor-texto-2);
+  cursor: pointer;
+  max-width: 220px;
+  transition: border-color var(--tempo-seco) var(--curva);
+}
+.agente:hover { border-color: var(--cor-traco-media); }
+
+.agente__nome {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  letter-spacing: var(--espaco-letra-titulo);
+  text-transform: uppercase;
+}
+
+/* ---------- navegação ---------- */
+
+.app-nav { border-bottom: var(--borda) solid var(--cor-traco-fraca); }
+
+.app-nav__lista {
+  display: flex;
+  gap: var(--e2);
+  max-width: var(--largura-max);
+  margin: 0 auto;
+  padding: 0 var(--e4) var(--e3);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.app-nav__lista::-webkit-scrollbar { display: none; }
+
+.app-nav__link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  min-height: var(--alvo-toque);
+  padding: var(--e2) var(--e5);
+  background: var(--cor-fundo);
+  color: var(--cor-texto-2);
+  border: var(--borda) solid var(--cor-traco-media);
+  letter-spacing: var(--espaco-letra-titulo);
+  text-transform: uppercase;
+  transition: background var(--tempo-seco) var(--curva),
+              color var(--tempo-seco) var(--curva),
+              border-color var(--tempo-seco) var(--curva);
+}
+.app-nav__link:hover {
+  border-color: var(--cor-traco-forte);
+  color: var(--cor-texto);
+  background: var(--cor-superficie-2);
+}
+
+/* Seleção é inversão: o item ativo vira o negativo dos outros. É a
+   diferença mais forte que existe numa paleta preto e branco. */
+.app-nav__link[aria-current="page"] {
+  background: var(--cor-texto);
+  color: var(--cor-fundo);
+  border-color: var(--cor-traco-forte);
+  font-weight: 700;
+}
+
+/* botão do menu no celular */
+.app-nav__alternar { display: none; }
+
+@media (max-width: 760px) {
+  /* O botão de menu passa a ser o primeiro item da barra de cima, à
+     esquerda da marca — e não uma faixa própria embaixo dela. */
+  .app-nav__alternar { display: inline-flex; order: -1; }
+
+  .app-topo__faixa { gap: var(--e2); padding: var(--e2) var(--e3); }
+
+  .app-nav__lista {
+    flex-direction: column;
+    gap: var(--e1);
+    padding: var(--e3);
+  }
+  .app-nav__lista[hidden] { display: none; }
+  .app-nav__link { justify-content: flex-start; width: 100%; }
+
+  .marca__extenso { display: none; }
+  .marca { gap: var(--e2); }
+  .marca__simbolo { width: 22px; height: 22px; }
+
+  /* Sobra pouca largura: o avatar já identifica quem está, e o nome
+     completo continua a um toque de distância, no menu. */
+  .agente { border: none; padding: 0; }
+  .agente__nome { display: none; }
+}
+
+/* =====================================================================
+   CORPO DA PÁGINA
+   ===================================================================== */
+
+.app-corpo {
+  max-width: var(--largura-max);
+  margin: 0 auto;
+  padding: var(--e5) var(--e4) var(--e8);
+  display: flex;
+  flex-direction: column;
+  gap: var(--e5);
+}
+.app-corpo--largo { max-width: none; }
+
+.pagina-topo {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--e4);
+  flex-wrap: wrap;
+}
+
+.pagina-topo__texto { display: flex; flex-direction: column; gap: var(--e1); min-width: 0; }
+
+.pagina-topo__acoes { display: flex; gap: var(--e2); flex-wrap: wrap; }
+
+/* linha fina de metadados: REGISTRO // 2F91A · NÓ // ATIVO */
+.trilha {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--e1) var(--e3);
+  font-family: var(--fonte-mini);
+  font-size: var(--texto-mini);
+  letter-spacing: var(--espaco-letra-titulo);
+  color: var(--cor-texto-3);
+  text-transform: uppercase;
+}
+.trilha__sep { color: var(--cor-traco-fraca); }
+
+/* =====================================================================
+   RODAPÉ
+   ===================================================================== */
+
+.app-rodape {
+  border-top: var(--borda) solid var(--cor-traco-fraca);
+  margin-top: auto;
+}
+.app-rodape__faixa {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--e3);
+  max-width: var(--largura-max);
+  margin: 0 auto;
+  padding: var(--e4);
+  font-family: var(--fonte-mini);
+  font-size: var(--texto-mini);
+  letter-spacing: var(--espaco-letra-titulo);
+  color: var(--cor-texto-3);
+  text-transform: uppercase;
+}
+
+body { display: flex; flex-direction: column; }
+.app-corpo { flex: 1 0 auto; width: 100%; }
+
+/* =====================================================================
+   GRADES REUTILIZÁVEIS
+   ===================================================================== */
+
+.grade {
+  display: grid;
+  gap: var(--e4);
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+}
+.grade--folga { gap: var(--e5); }
+
+.pilha { display: flex; flex-direction: column; gap: var(--e3); }
+.pilha--curta { gap: var(--e2); }
+.pilha--larga { gap: var(--e5); }
+
+.faixa {
+  display: flex;
+  align-items: center;
+  gap: var(--e2);
+  flex-wrap: wrap;
+}
+.faixa--fim { justify-content: flex-end; }
+.faixa--entre { justify-content: space-between; }
+
+/* =====================================================================
+   PAINEL DE RESUMO DA HOME
+   ===================================================================== */
+
+.resumo {
+  display: grid;
+  gap: var(--e3);
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+}
+
+.resumo__item {
+  display: flex;
+  flex-direction: column;
+  gap: var(--e1);
+  padding: var(--e4);
+  background: var(--cor-superficie);
+  border: var(--borda) solid var(--cor-traco-fraca);
+  color: inherit;
+  transition: border-color var(--tempo-seco) var(--curva);
+}
+.resumo__item:hover { border-color: var(--cor-traco-media); }
+.resumo__valor {
+  font-weight: 700;
+  font-size: var(--texto-numero);
+  line-height: 1;
+  color: var(--cor-texto);
+  font-variant-numeric: tabular-nums;
+}
+
+/* =====================================================================
+   LISTAS DE REGISTRO (personagens, campanhas, homebrew)
+   ===================================================================== */
+
+.registros { display: flex; flex-direction: column; gap: var(--e2); }
+
+.registro {
+  display: grid;
+  grid-template-columns: auto 1fr auto auto;
+  align-items: center;
+  gap: var(--e3);
+  padding: var(--e3);
+}
+
+.registro__corpo { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+
+.registro__nome {
+  font-weight: 700;
+  font-size: var(--texto-medio);
+  color: var(--cor-texto);
+  letter-spacing: var(--espaco-letra);
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.registro__sub {
+  font-family: var(--fonte-mini);
+  font-size: var(--texto-mini);
+  color: var(--cor-texto-3);
+  text-transform: uppercase;
+  letter-spacing: var(--espaco-letra-titulo);
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.registro__data {
+  font-family: var(--fonte-mini);
+  font-size: var(--texto-mini);
+  color: var(--cor-texto-3);
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.registro__link {
+  position: absolute;
+  inset: 0;
+  border: none;
+  /* o cartão inteiro abre o registro; o menu fica por cima deste link */
+  z-index: 1;
+}
+.registro__link:hover { border: none; }
+
+.registro .r-menu { position: relative; z-index: 2; }
+
+@media (max-width: 560px) {
+  .registro {
+    grid-template-columns: auto 1fr auto;
+    grid-template-areas:
+      "foto corpo menu"
+      "foto data menu";
+    row-gap: var(--e1);
+  }
+  .registro > .r-avatar { grid-area: foto; }
+  .registro__corpo { grid-area: corpo; }
+  .registro__data { grid-area: data; text-align: left; }
+  .registro .r-menu { grid-area: menu; }
+}
+
+/* =====================================================================
+   BARRA DE FILTRO
+   ===================================================================== */
+
+.filtros {
+  display: flex;
+  align-items: center;
+  gap: var(--e2);
+  flex-wrap: wrap;
+}
+.filtros__grupo { display: flex; gap: var(--e1); flex-wrap: wrap; }
+
+.filtro {
+  min-height: calc(var(--alvo-toque) - 8px);
+  padding: var(--e1) var(--e3);
+  background: transparent;
+  border: var(--borda) solid var(--cor-traco-fraca);
+  color: var(--cor-texto-3);
+  font-family: var(--fonte-mini);
+  font-size: var(--texto-mini);
+  letter-spacing: var(--espaco-letra-titulo);
+  text-transform: uppercase;
+  cursor: pointer;
+}
+.filtro:hover { border-color: var(--cor-traco-media); color: var(--cor-texto-2); }
+.filtro[aria-pressed="true"] {
+  background: var(--cor-texto);
+  border-color: var(--cor-traco-forte);
+  color: var(--cor-fundo);
+  font-weight: 700;
+}
+
+/* =====================================================================
+   TELA DE ENTRADA
+   ===================================================================== */
+
+.portao {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: var(--e4);
+}
+
+.portao__caixa {
+  width: 100%;
+  max-width: 400px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--e5);
+  padding: var(--e6) var(--e5);
+  background: var(--cor-superficie);
+  border: var(--borda) solid var(--cor-traco-media);
+}
+
+.portao__marca {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--e2);
+  text-align: center;
+}
+.portao__marca svg { width: 56px; height: 56px; color: var(--cor-texto); }
+
+.portao__nome {
+  font-weight: 700;
+  font-size: var(--texto-grande);
+  letter-spacing: 0.2em;
+  color: var(--cor-texto);
+}
+
+.portao__extenso {
+  font-family: var(--fonte-mini);
+  font-size: var(--texto-mini);
+  letter-spacing: var(--espaco-letra-titulo);
+  color: var(--cor-texto-3);
+  text-transform: uppercase;
+  max-width: 28ch;
+  line-height: 1.5;
+}
+
+/* campo de senha com o olho dentro */
+.senha { position: relative; }
+.senha .r-entrada { padding-right: var(--alvo-toque); }
+.senha__olho {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: var(--alvo-toque);
+  height: var(--alvo-toque);
+}
+
+/* =====================================================================
+   TELA CHEIA DE CARREGAMENTO
+   ===================================================================== */
+
+.abertura {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-aviso);
+  display: grid;
+  place-items: center;
+  background: var(--cor-fundo);
+}
+.abertura__caixa {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--e3);
+  text-align: center;
+}
+.abertura__nome {
+  font-weight: 700;
+  font-size: var(--texto-grande);
+  letter-spacing: 0.2em;
+  color: var(--cor-texto);
+}
