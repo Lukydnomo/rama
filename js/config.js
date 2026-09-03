@@ -14,10 +14,18 @@ window.RAMA_CONFIG = {
       Sem isto o sistema abre e avisa que não foi configurado. */
    API_URL: "https://script.google.com/macros/s/AKfycbyFwmvGkJY-T9uQftbu0UKw-jaENW3D1BNpYTwa5y1rldpnTsLAYRJdpLcF8FpZ1BUfTw/exec",
 
-   /* Quanto tempo esta máquina espera antes de considerar o servidor mudo.
-      O Apps Script é lento em requisição fria; menos que isto gera falso
-      alarme de rede. */
-   TEMPO_LIMITE_MS: 25000,
+   /* Prazo de UMA tentativa ao falar com o servidor.
+
+      O Apps Script hiberna: a primeira chamada depois de um tempo parado
+      precisa subir o contêiner de execução e pode passar de meio minuto,
+      enquanto as seguintes respondem na hora. É o motivo de "só a
+      primeira vez dá erro".
+
+      Leituras repetem sozinhas quando o prazo estoura, e a primeira
+      tentativa é curta de propósito — ver o comentário em js/rede.js.
+      Então este valor é o teto de CADA tentativa, não da operação
+      inteira. Aumente se o seu Apps Script demorar muito a acordar. */
+   TEMPO_LIMITE_MS: 30000,
 
    /* Espera entre alteração e envio. Junta digitação seguida num só POST
       sem a pessoa sentir atraso. */

@@ -5,18 +5,30 @@
    todas. Nenhuma tela monta corpo de requisição à mão: se uma ação
    nova aparecer, ela nasce aqui.
 
-   O ponto sensível é `repetir`. Leitura é idempotente e pode ser
-   repetida quando o Apps Script tropeça no próprio redirecionamento.
-   Gravação NÃO pode: repetir "criar_personagem" cria dois personagens.
-   Por isso a lista de leituras é explícita, e não adivinhada por prefixo
-   do nome da ação — nome é fácil de errar, lista é fácil de conferir.
+   O ponto sensível é `repetir`. Uma operação idempotente pode ser
+   repetida quando o Apps Script demora a acordar ou tropeça no próprio
+   redirecionamento. Uma que CRIA registro não pode: repetir
+   "criar_personagem" cria dois personagens.
+
+   Por isso a lista é explícita, e não adivinhada por prefixo do nome da
+   ação — nome é fácil de errar, lista é fácil de conferir.
    ===================================================================== */
 
 (function (global) {
   "use strict";
 
-  /* Só o que pode ser repetido sem consequência entra nesta lista. */
-  var LEITURAS = [
+  /* Só o que pode ser repetido sem consequência entra nesta lista.
+
+     Toda leitura entra, por definição. E entram duas gravações, porque
+     as duas SUBSTITUEM um valor em vez de acrescentar um registro:
+     gravar a mesma foto duas vezes deixa a mesma foto na mesma célula,
+     e gravar o mesmo perfil duas vezes deixa o mesmo perfil. Repetir
+     não cria nada.
+
+     O que NÃO pode entrar aqui é qualquer ação que CRIE registro —
+     criar_personagem repetida cria dois personagens. Essas são
+     tentadas uma vez só, e quem chamou decide o que fazer. */
+  var IDEMPOTENTES = [
     "ping",
     "sessao",
     "resumo",
@@ -27,9 +39,12 @@
     "listar_campanhas",
     "ler_campanha",
     "ler_perfil",
+
+    "salvar_foto",
+    "salvar_perfil",
   ];
 
-  function ehLeitura(acao) { return LEITURAS.indexOf(acao) >= 0; }
+  function podeRepetir(acao) { return IDEMPOTENTES.indexOf(acao) >= 0; }
 
   /* Chamada crua: quem precisa de uma ação que ainda não tem função
      própria usa esta, e o token entra do mesmo jeito. */
@@ -40,7 +55,7 @@
       if (t) dados.token = t;
     }
 
-    var r = await global.RAMARede.postar(dados, { repetir: ehLeitura(dados.acao) });
+    var r = await global.RAMARede.postar(dados, { repetir: podeRepetir(dados.acao) });
 
     /* Sessão morta é assunto de autenticação, não de tela: quem
        descobre avisa o RAMAAuth, que limpa e leva ao portão. Sem isto
@@ -178,7 +193,9 @@
     },
     prazo: {
       titulo: "O SERVIDOR DEMOROU DEMAIS",
-      texto: "A resposta não chegou a tempo. Isso costuma ser passageiro — tente de novo em alguns segundos.",
+      texto: "O R.A.M.A. já tentou algumas vezes e a resposta não chegou. " +
+             "O servidor entra em repouso quando fica parado e a primeira consulta " +
+             "o acorda — se esta foi a primeira do dia, tente de novo: agora costuma ir.",
     },
     servidor_falhou: {
       titulo: "NÃO FOI POSSÍVEL ACESSAR O ARQUIVO",
@@ -244,7 +261,7 @@
 
   global.RAMAApi = {
     post: post,
-    ehLeitura: ehLeitura,
+    podeRepetir: podeRepetir,
     ehErroDeSessao: ehErroDeSessao,
 
     login: login,

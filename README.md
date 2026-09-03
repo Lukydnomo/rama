@@ -279,3 +279,36 @@ console não abre o registro de outra conta.
 3. Compartilhar uma ficha em leitura com o mestre.
 4. Aplicativo instalável (Service Worker) para a ficha abrir sem rede.
 5. Condições e efeitos temporários, que hoje moram no bônus temporário.
+
+---
+
+## O primeiro acesso é lento — e isso é normal
+
+O Apps Script **hiberna**. Depois de um tempo parado, a primeira chamada precisa
+subir o contêiner de execução no Google, e isso pode passar de meio minuto. As
+seguintes respondem na hora. É o motivo de "só a primeira vez dá erro".
+
+O R.A.M.A. lida com isso sozinho:
+
+- **A primeira tentativa tem prazo curto de propósito** (12 s). Se o servidor
+  estiver dormindo, ela vai estourar de qualquer jeito — e abortar o pedido
+  **não cancela a execução do lado do Google**, que continua e acaba de acordar
+  o contêiner. A tentativa seguinte, com prazo maior, encontra tudo quente.
+- **Leituras e gravações idempotentes repetem sozinhas** quando o prazo estoura.
+  Só as ações que criam registro é que não repetem — repetir `criar_personagem`
+  criaria dois personagens.
+- **A tela de entrada acorda o servidor enquanto você digita a senha**, com um
+  ping disparado assim que ela aparece. Os segundos de arranque acontecem
+  durante a digitação.
+- Se a espera passar da primeira tentativa, a tela de carregamento **explica**
+  que o servidor está acordando, em vez de ficar com uma barra andando sem dizer
+  nada.
+
+Se mesmo assim o erro aparecer com frequência, há dois ajustes:
+
+1. **`TEMPO_LIMITE_MS` em `js/config.js`** — aumente (o padrão é 30 000 ms por
+   tentativa).
+2. **`RAMA_ITERACOES` nas Script Properties** — este afeta só o *login*. Rode
+   `medirDerivacao()` no editor do Apps Script: se as iterações estiverem
+   levando muitos segundos, o login soma esse tempo ao arranque. Um alvo
+   razoável é de 300 ms a 1,5 s.

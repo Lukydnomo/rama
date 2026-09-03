@@ -242,6 +242,18 @@
 
     U.trocar(document.body, [el("div.veu", { "aria-hidden": "true" }), tela]);
     usuario.entrada.focus();
+
+    /* Acorda o servidor enquanto a pessoa digita.
+
+       O Apps Script hiberna, e a primeira chamada paga a subida do
+       contêiner. Sem isto, essa conta caía justamente sobre o login —
+       a operação em que esperar é mais irritante. Mandando um ping
+       agora, os segundos de arranque acontecem durante a digitação e a
+       senha chega a um servidor já acordado.
+
+       Deliberadamente sem await e sem tratamento: se falhar, o login
+       segue seu caminho normal e ninguém fica sabendo. */
+    global.RAMAApi.ping().catch(function () { /* aquecer é opcional */ });
   }
 
   /* =================================================================
@@ -253,16 +265,39 @@
      ================================================================= */
 
   function abertura() {
+    var rotulo = el("p.r-carregando__rotulo.t-mini", { texto: "Acessando registro" });
+
+    /* Meio minuto de barra andando sem explicação é indistinguível de
+       travamento. Quando a rede avisa que está repetindo por demora, a
+       tela conta o que está acontecendo — a espera continua a mesma,
+       mas deixa de parecer defeito. */
+    var explicacao = el("p.t-mini", { hidden: true, estilo: { maxWidth: "32ch", textAlign: "center" } });
+
+    function aoDemorar() {
+      explicacao.textContent =
+        "O servidor estava em repouso e está acordando. A primeira consulta " +
+        "depois de um tempo parado é a mais lenta; as seguintes são rápidas.";
+      explicacao.hidden = false;
+    }
+
+    document.addEventListener("rama:servidor-demorando", aoDemorar);
+
     var tela = el("div.abertura", { role: "status" }, [
       el("div.abertura__caixa", {}, [
         global.RAMAUI.marca(48),
         el("p.abertura__nome", { texto: "R.A.M.A." }),
-        el("p.r-carregando__rotulo.t-mini", { texto: "Acessando registro" }),
+        rotulo,
         el("div.r-barra", { "aria-hidden": "true" }, [el("div.r-barra__preenche")]),
+        explicacao,
       ]),
     ]);
+
     document.body.appendChild(tela);
-    return function () { if (tela.parentNode) tela.parentNode.removeChild(tela); };
+
+    return function () {
+      document.removeEventListener("rama:servidor-demorando", aoDemorar);
+      if (tela.parentNode) tela.parentNode.removeChild(tela);
+    };
   }
 
   /* exigirSessao(aoTerSessao) — chama aoTerSessao(agente) quando o

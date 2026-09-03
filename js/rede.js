@@ -31,9 +31,29 @@
      resposta de verdade: repetir só gasta tempo e engana. */
   var STATUS_PASSAGEIRO = [0, 404, 429, 500, 502, 503, 504];
 
-  /* Espera crescente entre tentativas. Três esperas, quatro tentativas
-     no total. Passar disto o Apps Script já derrubou a execução. */
+  /* Espera crescente entre tentativas. */
   var ESPERAS = [400, 1200, 3000];
+
+  /* O ARRANQUE A FRIO
+     ---------------------------------------------------------------
+     O Apps Script hiberna. A primeira chamada depois de um tempo
+     parado precisa subir o contêiner de execução, e isso passa
+     facilmente de meio minuto — enquanto as seguintes respondem na
+     hora. É o motivo de "só a primeira vez dá erro".
+
+     A saída é contraintuitiva: a primeira tentativa tem prazo CURTO
+     de propósito. Se o servidor estiver dormindo, ela vai estourar de
+     qualquer jeito; e abortar o fetch NÃO cancela a execução do lado
+     do Google — ela continua e acaba de acordar o contêiner. A
+     tentativa seguinte, com prazo maior, encontra tudo quente.
+
+     Desistir cedo e tentar de novo chega mais rápido do que esperar
+     muito de uma vez só. */
+  function prazos(repetir) {
+    var base = config().TEMPO_LIMITE_MS || 30000;
+    if (!repetir) return [base];                       // gravação: uma vez só
+    return [Math.min(12000, base), base, Math.round(base * 1.5)];
+  }
 
   function config() { return global.RAMA_CONFIG || {}; }
 
@@ -92,12 +112,13 @@
       return { ok: false, erro: "sem_configuracao" };
     }
 
-    var tentativas = o.repetir ? ESPERAS.length + 1 : 1;
+    var limites = prazos(o.repetir);
+    var tentativas = limites.length;
     var ultimoStatus = 0;
     var ultimoTexto = "";
 
     for (var i = 0; i < tentativas; i++) {
-      if (i > 0) await U.esperar(ESPERAS[i - 1]);
+      if (i > 0) await U.esperar(ESPERAS[Math.min(i - 1, ESPERAS.length - 1)]);
 
       var resposta;
       try {
@@ -106,12 +127,26 @@
           headers: { "Content-Type": "text/plain;charset=utf-8" },
           body: typeof corpo === "string" ? corpo : JSON.stringify(corpo),
           redirect: "follow",
-        }, config().TEMPO_LIMITE_MS || 25000);
+        }, limites[i]);
       } catch (e) {
-        /* Aqui a requisição não chegou a lugar nenhum: rede caída,
-           prazo estourado ou aba fechando. Repetir não esclarece nada,
-           e quem chamou precisa saber que foi conexão. */
         var abortou = e && e.name === "AbortError";
+        var ultima = i === tentativas - 1;
+
+        /* Prazo estourado NÃO é rede caída. O servidor está lá, só
+           demorando — o caso clássico é o contêiner acordando. Se a
+           operação pode ser repetida, é exatamente aqui que a
+           repetição vale, e era isto que faltava: antes, o prazo
+           desistia sem nunca chegar ao laço, e quem usava o sistema
+           tinha de clicar em "tentar novamente" por conta própria. */
+        if (abortou && !ultima) {
+          avisarDemora(i + 1);
+          registrar("aviso", "Prazo de " + limites[i] + " ms esgotado na tentativa " +
+            (i + 1) + " — o servidor pode estar acordando");
+          continue;
+        }
+
+        /* Rede de verdade caída: repetir não esclarece nada, e quem
+           chamou precisa saber que foi conexão. */
         registrar("aviso", abortou ? "Prazo esgotado ao falar com o servidor" : "Falha de rede", e);
         return {
           ok: false,
@@ -141,6 +176,18 @@
     registrar("erro", "Servidor respondeu " + ultimoStatus + " sem JSON", detalhe);
 
     return { ok: false, erro: "servidor_falhou", status: ultimoStatus, detalhe: detalhe };
+  }
+
+  /* Uma espera silenciosa de meio minuto é indistinguível de travamento.
+     Este aviso não interrompe nada: quem estiver desenhando uma tela de
+     carregamento escuta e troca o texto. Se ninguém escutar, não
+     acontece nada. */
+  function avisarDemora(tentativa) {
+    try {
+      document.dispatchEvent(new CustomEvent("rama:servidor-demorando", {
+        detail: { tentativa: tentativa },
+      }));
+    } catch (e) { /* ambiente sem DOM: segue sem avisar */ }
   }
 
   /* O detalhe técnico vive no console, não na tela. A tela recebe uma
