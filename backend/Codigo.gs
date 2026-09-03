@@ -1275,7 +1275,7 @@ function criarUsuario(usuario, nome, senha) {
    o editor guarda o arquivo, e senha em texto não deve ficar guardada
    em lugar nenhum. */
 function criarPrimeiroUsuario() {
-  return criarUsuario('agente', 'Agente', 'troque-esta-senha');
+  return criarUsuario('agente', 'Agente', 'teste123');
 }
 
 /* ---------------------------------------------------------------------
@@ -1397,4 +1397,12 @@ function medirDerivacao() {
   var texto = iteracoes + ' iterações levaram ' + levou + ' ms.';
   console.log(texto);
   return texto;
+}
+
+function cadastrarNovoUsuario() {
+  return criarUsuario(
+    'usuario',
+    'mostrado',
+    'senha'
+  );
 }
