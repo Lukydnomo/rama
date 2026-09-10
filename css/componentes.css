@@ -925,3 +925,26 @@
     var(--cor-traco-fraca) 5px 6px
   );
 }
+
+/* =====================================================================
+   RECOLHÍVEL COM FAIXA FIXA
+   ---------------------------------------------------------------------
+   Um <details> fechado esconde tudo o que não é o <summary> — inclusive
+   o que for acrescentado depois dele. Quando alguma coisa precisa
+   continuar à vista com o cartão fechado, ela vai para FORA do details,
+   e esta caixa é que passa a ser o cartão.
+
+   O recolhível de dentro perde a borda para os dois virarem um só.
+   ===================================================================== */
+
+.recolhivel-faixa {
+  background: var(--cor-superficie);
+  border: var(--borda) solid var(--cor-traco-fraca);
+  min-width: 0;
+}
+
+.recolhivel-faixa > .recolhivel { border: 0; background: transparent; }
+
+.recolhivel-faixa + .recolhivel-faixa,
+.recolhivel-faixa + .recolhivel,
+.recolhivel + .recolhivel-faixa { margin-top: var(--e2); }

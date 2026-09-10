@@ -33,9 +33,15 @@
   var D = global.RAMADados;
 
   /* 1 → 2: a ficha ganhou Habilidades, Rituais e categoria no
-     inventário. Ficha antiga continua abrindo: normalizarFicha() cria
-     as estruturas que faltam vazias. Ver docs/CHARACTER_SCHEMA.md. */
-  var VERSAO_SCHEMA = 2;
+     inventário.
+     2 → 3: cada ritual ganhou uma coleção de VERSÕES, cada uma com nome
+     e dano próprios.
+
+     Nenhuma das duas subidas exige migração: normalizarFicha() cria o
+     que falta, vazio, e não toca no que existe. Um ritual gravado na 2
+     abre na 3 com a versão Normal em branco. Ver
+     docs/CHARACTER_SCHEMA.md. */
+  var VERSAO_SCHEMA = 3;
 
   var NATUREZA = { INFORMACAO: "informacao", ROLAVEL: "rolavel", DEPENDENTE: "dependente" };
 
@@ -214,12 +220,130 @@
     };
   }
 
+  /* =================================================================
+     VERSÕES DO RITUAL
+     -----------------------------------------------------------------
+     Um ritual pode ser conjurado de mais de um jeito, e cada jeito tem
+     o próprio dano. Em Ordem Paranormal o uso típico é Normal, Discente
+     e Verdadeiro — mas isso é vocabulário DE UMA MESA, não estrutura do
+     R.A.M.A.
+
+     Por isso as versões são uma COLEÇÃO, e não três campos fixos
+     chamados dano, danoDiscente e danoVerdadeiro. A diferença não é
+     estética:
+
+       · campos fixos obrigariam todo ritual a ter os três, e um
+         sistema com quatro níveis não caberia sem mexer no código;
+       · o nome exibido deixaria de ser texto e viraria chave. Renomear
+         "Discente" para "Ampliado" mudaria onde o dado está gravado, e
+         quem renomeasse perderia o valor.
+
+     Aqui o NOME é conteúdo e o ID é identidade. Renomear uma versão não
+     move nada; remover uma não desloca as outras; e duas versões podem
+     até se chamar igual sem uma sobrescrever a outra.
+
+     Nesta entrega a versão guarda só nome e dano. Alcance, duração e os
+     outros campos continuam sendo do ritual inteiro, compartilhados —
+     dar uma ficha completa a cada versão seria construir um sistema que
+     ninguém pediu.
+     ================================================================= */
+
+  var NOME_VERSAO_PADRAO = "Normal";
+
+  /* Teto de sanidade, como o do motor de dados: é contra o acidente de
+     um arquivo importado trazer mil versões, não uma regra de jogo. */
+  var MAX_VERSOES_RITUAL = 12;
+
+  /* O dano é OPCIONAL: existe ritual que não causa dano nenhum, e
+     campo vazio é uma resposta legítima — nunca zero.
+
+     Expressão válida é gravada na forma canônica, para "6 D 8" e "6d8"
+     não virarem dois valores diferentes na conciliação. Expressão
+     inválida é gravada COMO VEIO: apagá-la em silêncio faria alguém
+     perder o que digitou sem nunca saber por quê. Ela volta a aparecer
+     na tela, o editor recusa salvar por cima dela e a rolagem explica
+     o motivo. */
+  function danoDeVersao(valor) {
+    var bruto = U.aparar(valor, 40);
+    if (!bruto) return "";
+    return D.normalizar(bruto) || bruto;
+  }
+
+  function criarVersaoRitual(dados) {
+    var d = dados || {};
+    return {
+      id: U.uuid(),
+      nome: U.aparar(d.nome, 40) || NOME_VERSAO_PADRAO,
+      dano: danoDeVersao(d.dano),
+    };
+  }
+
+  /* normalizarVersoesRitual(bruto, { idsNovos })
+
+     idsNovos:false (padrão)  preserva os ids que vieram — é o caminho
+                              de ler da planilha, de importar e de
+                              salvar uma edição. Renomear não pode
+                              trocar a identidade de uma versão.
+
+     idsNovos:true            gera ids do zero — é o caminho de
+                              DUPLICAR. Uma cópia que reaproveitasse os
+                              ids do original ficaria colada nele na
+                              hora de conciliar duas edições.
+
+     Em qualquer caminho, o resultado tem PELO MENOS uma versão. É isso
+     que faz um ritual antigo, gravado antes de as versões existirem,
+     abrir com a Normal em branco em vez de abrir sem nada — e é isso
+     que impede a normalização seguinte de acrescentar uma segunda
+     Normal, porque quando já existe uma ela não acrescenta nada. */
+  function normalizarVersoesRitual(bruto, opcoes) {
+    var o = opcoes || {};
+    var entrada = Array.isArray(bruto) ? bruto : [];
+
+    var saida = [];
+    var vistos = {};
+
+    entrada.slice(0, MAX_VERSOES_RITUAL).forEach(function (v) {
+      if (!v || typeof v !== "object") return;
+
+      /* Id repetido dentro do mesmo ritual quebraria a remoção e a
+         conciliação por id — e um arquivo importado pode trazer
+         qualquer coisa. O segundo ganha um id novo em vez de derrubar
+         o primeiro. */
+      var id = (!o.idsNovos && v.id) ? String(v.id) : U.uuid();
+      if (vistos[id]) id = U.uuid();
+      vistos[id] = true;
+
+      saida.push({
+        id: id,
+        nome: U.aparar(v.nome, 40) || NOME_VERSAO_PADRAO,
+        dano: danoDeVersao(v.dano),
+      });
+    });
+
+    if (!saida.length) saida.push(criarVersaoRitual({}));
+
+    return saida;
+  }
+
+  /* As versões que a ficha mostra: só as que têm dano. Uma lista de
+     três nomes com o campo em branco do lado é ruído, não informação —
+     o mesmo critério dos campos do ritual. */
+  function versoesComDano(ritual) {
+    if (!ritual || !Array.isArray(ritual.versoes)) return [];
+    return ritual.versoes.filter(function (v) { return !!U.aparar(v && v.dano); });
+  }
+
+  /* Cria um ritual NOVO a partir de dados quaisquer — inclusive de
+     outro ritual, que é o caso de duplicar. Por isso os ids das versões
+     nascem do zero: a cópia é outro registro, e precisa ser outro
+     registro também para a conciliação. */
   function criarRitual(dados) {
     var d = dados || {};
     var ritual = { id: U.uuid(), nome: U.aparar(d.nome, 120) || "Novo ritual" };
     CAMPOS_RITUAL.forEach(function (campo) {
       ritual[campo] = U.aparar(d[campo], campo === "efeito" ? 8000 : 200);
     });
+    ritual.versoes = normalizarVersoesRitual(d.versoes, { idsNovos: true });
     return ritual;
   }
 
@@ -532,6 +656,11 @@
     CAMPOS_RITUAL.forEach(function (campo) {
       ritual[campo] = U.aparar(bruto[campo], campo === "efeito" ? 8000 : 200);
     });
+    /* Ler NUNCA troca id: é o mesmo registro voltando da planilha, de
+       um arquivo importado ou de uma edição salva. Um ritual gravado
+       antes de as versões existirem sai daqui com a Normal em branco, e
+       a normalização seguinte não acrescenta uma segunda. */
+    ritual.versoes = normalizarVersoesRitual(bruto.versoes);
     return ritual;
   }
 
@@ -700,6 +829,11 @@
 
     criarFicha: criarFicha,
     criarRitual: criarRitual,
+    criarVersaoRitual: criarVersaoRitual,
+    normalizarVersoesRitual: normalizarVersoesRitual,
+    versoesComDano: versoesComDano,
+    NOME_VERSAO_PADRAO: NOME_VERSAO_PADRAO,
+    MAX_VERSOES_RITUAL: MAX_VERSOES_RITUAL,
     rituaisVazios: rituaisVazios,
     normalizarRituais: normalizarRituais,
     chaveDeCategoria: chaveDeCategoria,

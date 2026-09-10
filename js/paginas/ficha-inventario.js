@@ -158,9 +158,14 @@
         item.descricao ? el("p.item__descricao", { texto: item.descricao }) : null,
       ],
       acoes: [UI.menu(opcoesDoItem(ctx, item), { rotulo: "Opções de " + item.nome, icone: "tresPontos" })],
+      /* Ataque e Dano precisam estar à vista com o item FECHADO. Até a
+         v2.2 eles eram pendurados dentro do <details> depois da
+         montagem, e um <details> fechado não pinta nada além do
+         <summary> — então eles só apareciam depois de abrir a arma,
+         que é exatamente o contrário do que o comentário ali embaixo
+         promete. A `faixa` do recolhível resolve para os dois casos. */
+      faixa: arma ? botoesDeArma(ctx, item) : null,
     });
-
-    if (arma) caixa.appendChild(botoesDeArma(ctx, item));
 
     return caixa;
   }

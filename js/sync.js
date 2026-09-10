@@ -332,6 +332,12 @@
       "anotacoes.pastas.notas": "id",
       "anotacoes.soltas": "id",
       "camposCustomizados": "id",
+      /* Sem estas duas linhas, dois aparelhos mexendo em rituais
+         diferentes brigariam pela LISTA inteira em vez de casarem
+         ritual a ritual — e o mesmo dentro de um ritual, versão a
+         versão. É o id que casa, nunca a posição nem o nome. */
+      "rituais.itens": "id",
+      "rituais.itens.versoes": "id",
     },
     /* Carimbos de tempo mudam em toda gravação e não são decisão de
        ninguém: perguntar sobre eles seria ruído puro. */
@@ -346,6 +352,8 @@
       critico: "Crítico", multiplicador: "Multiplicador", defesa: "Defesa",
       reducaoPeso: "Redução de peso", periciaId: "Perícia de ataque",
       titulo: "Título", conteudo: "Conteúdo", descricao: "Descrição",
+      circulo: "Círculo", alcance: "Alcance", duracao: "Duração",
+      alvo: "Alvo", efeito: "Efeito", versoes: "Versões",
     },
   };
 

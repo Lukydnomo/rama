@@ -544,13 +544,296 @@
       t.igual("  nem no campo alvo", depois.rituais.itens[1].alvo, "Área");
       t.iguais("  e a chave interna continua 'circulo'",
         Object.keys(depois.rituais.itens[0]).sort(),
-        ["alcance", "alvo", "circulo", "duracao", "efeito", "id", "nome"]);
+        ["alcance", "alvo", "circulo", "duracao", "efeito", "id", "nome", "versoes"]);
 
       t.grupo("Rituais — rótulo em branco volta ao padrão");
 
       var semRotulo = S.normalizarRituais({ rotuloSecao: "   ", rotulos: { circulo: "  " }, itens: [] });
       t.igual("seção sem nome volta a Rituais", semRotulo.rotuloSecao, "Rituais");
       t.igual("rótulo vazio volta ao padrão", semRotulo.rotulos.circulo, "Círculo");
+    }
+
+    /* =================================================================
+       RITUAIS — VERSÕES E DANO
+       -----------------------------------------------------------------
+       As versões são uma COLEÇÃO com id estável, e não campos fixos
+       chamados danoDiscente e danoVerdadeiro. Quase todo caso abaixo
+       existe para trancar uma consequência dessa escolha: o nome é
+       conteúdo, o id é identidade, e nada se perde ao renomear.
+       ================================================================= */
+
+    if (S) {
+      t.grupo("Rituais — a versão Normal aparece sozinha");
+
+      var semVersoes = S.criarRitual({ nome: "Sem nada" });
+      t.igual("todo ritual nasce com uma versão", semVersoes.versoes.length, 1);
+      t.igual("  chamada Normal", semVersoes.versoes[0].nome, "Normal");
+      t.igual("  e com dano em branco", semVersoes.versoes[0].dano, "");
+      t.ok("  e com id próprio", !!semVersoes.versoes[0].id);
+
+      /* Um ritual gravado antes de as versões existirem — o caso real
+         de toda ficha que já está na planilha. */
+      var antigo = S.normalizarRituais({
+        itens: [{ id: "rit-antigo", nome: "Cicatrização", circulo: "1", efeito: "Cura." }],
+      }).itens[0];
+
+      t.igual("ritual antigo abre sem perder nada", antigo.efeito, "Cura.");
+      t.igual("  e ganha a versão Normal", antigo.versoes.length, 1);
+      t.igual("  em branco", antigo.versoes[0].dano, "");
+      t.igual("  sem trocar o id do ritual", antigo.id, "rit-antigo");
+
+      /* Idempotência: normalizar de novo não pode acrescentar uma
+         segunda Normal, nem trocar o id da que já existe. */
+      var idDaNormal = antigo.versoes[0].id;
+      var duasVezes = S.normalizarRituais({ itens: [antigo] }).itens[0];
+      var tresVezes = S.normalizarRituais({ itens: [duasVezes] }).itens[0];
+
+      t.igual("normalizar de novo NÃO duplica a Normal", tresVezes.versoes.length, 1);
+      t.igual("  e o id da versão sobrevive", tresVezes.versoes[0].id, idDaNormal);
+
+      t.grupo("Rituais — várias versões");
+
+      var comVersoes = S.criarRitual({
+        nome: "Crepúsculo",
+        versoes: [
+          { nome: "Normal", dano: "6d8" },
+          { nome: "Discente", dano: "10d8" },
+          { nome: "Verdadeiro", dano: "14d8" },
+        ],
+      });
+
+      t.igual("as três versões entram", comVersoes.versoes.length, 3);
+      t.igual("cada uma com o próprio dano", comVersoes.versoes[1].dano, "10d8");
+      t.igual("  e o próprio nome", comVersoes.versoes[2].nome, "Verdadeiro");
+
+      var ids = comVersoes.versoes.map(function (v) { return v.id; });
+      t.igual("os ids são todos diferentes", new Set(ids).size, 3);
+
+      /* O sistema não obriga ninguém a usar o vocabulário de Ordem
+         Paranormal, e nome não é chave. */
+      var personalizada = S.criarRitual({
+        nome: "Técnica",
+        versoes: [
+          { nome: "Base", dano: "2d6" },
+          { nome: "Sobrecarga", dano: "5d6" },
+          { nome: "Sobrecarga", dano: "9d6" },
+        ],
+      });
+
+      t.igual("versões com nome personalizado são aceitas", personalizada.versoes[1].nome, "Sobrecarga");
+      t.igual("  e duas versões podem se chamar igual", personalizada.versoes[2].nome, "Sobrecarga");
+      t.igual("  sem uma sobrescrever a outra", personalizada.versoes[2].dano, "9d6");
+      t.igual("  porque o id é que identifica",
+        new Set(personalizada.versoes.map(function (v) { return v.id; })).size, 3);
+
+      t.grupo("Rituais — renomear preserva id e dano");
+
+      var paraRenomear = S.criarRitual({
+        nome: "Ritual",
+        versoes: [{ nome: "Discente", dano: "10d8" }],
+      });
+      var idOriginal = paraRenomear.versoes[0].id;
+
+      /* É o que o editor faz ao salvar: devolve as linhas com os ids
+         que já tinha. */
+      var renomeado = S.normalizarVersoesRitual([
+        { id: idOriginal, nome: "Ampliado", dano: "10d8" },
+      ]);
+
+      t.igual("renomear não troca o id", renomeado[0].id, idOriginal);
+      t.igual("  e o dano continua junto", renomeado[0].dano, "10d8");
+      t.igual("  com o nome novo", renomeado[0].nome, "Ampliado");
+
+      t.grupo("Rituais — remover uma versão");
+
+      var tres = S.criarRitual({
+        nome: "Três",
+        versoes: [
+          { nome: "Normal", dano: "1d6" },
+          { nome: "Discente", dano: "2d6" },
+          { nome: "Verdadeiro", dano: "3d6" },
+        ],
+      });
+
+      var idDoMeio = tres.versoes[1].id;
+      var semOMeio = S.normalizarVersoesRitual(
+        tres.versoes.filter(function (v) { return v.id !== idDoMeio; })
+      );
+
+      t.igual("sobram duas", semOMeio.length, 2);
+      t.igual("  a primeira intacta", semOMeio[0].dano, "1d6");
+      t.igual("  e a terceira também", semOMeio[1].dano, "3d6");
+      t.igual("  sem herdar o id da removida",
+        semOMeio.filter(function (v) { return v.id === idDoMeio; }).length, 0);
+
+      /* Remover a última devolve a Normal em branco: um ritual sem
+         nenhuma versão não teria onde guardar dano. */
+      t.igual("remover TODAS devolve uma Normal em branco",
+        S.normalizarVersoesRitual([]).length, 1);
+
+      t.grupo("Rituais — dano vazio e expressão inválida");
+
+      var mistura = S.criarRitual({
+        nome: "Mistura",
+        versoes: [
+          { nome: "Sem dano", dano: "" },
+          { nome: "Com espaço", dano: " 6 d 8 " },
+          { nome: "Torta", dano: "seis dados" },
+        ],
+      });
+
+      t.igual("dano em branco continua em branco", mistura.versoes[0].dano, "");
+      t.ok("  e NÃO vira zero", mistura.versoes[0].dano !== "0" && mistura.versoes[0].dano !== 0);
+      t.igual("expressão válida é gravada canônica", mistura.versoes[1].dano, "6d8");
+      t.igual("expressão inválida NÃO é apagada", mistura.versoes[2].dano, "seis dados");
+
+      t.igual("só as versões com dano aparecem na ficha",
+        S.versoesComDano(mistura).length, 2);
+      t.igual("  e a sem dano fica de fora",
+        S.versoesComDano(mistura).filter(function (v) { return v.nome === "Sem dano"; }).length, 0);
+
+      /* A conferência do editor é a MESMA do dano de uma arma. */
+      if (V) {
+        t.ok("o editor aceita dano em branco", V.dadoOpcional("").ok);
+        t.ok("o editor aceita 10d8", V.dadoOpcional("10d8").ok);
+        t.ok("o editor recusa 'seis dados'", !V.dadoOpcional("seis dados").ok);
+        t.ok("  com mensagem que explica",
+          /NdX/.test(V.dadoOpcional("seis dados").mensagem || ""));
+        t.ok("o editor recusa dados demais", !V.dadoOpcional("999d8").ok);
+      }
+
+      t.grupo("Rituais — a rolagem usa a expressão da versão certa");
+
+      var paraRolar = S.criarRitual({
+        nome: "Crepúsculo",
+        versoes: [
+          { nome: "Normal", dano: "2d8" },
+          { nome: "Discente", dano: "3d8" },
+        ],
+      });
+
+      comFila([5, 6], function () {
+        var r = D.dano({ dano: paraRolar.versoes[0].dano, nome: paraRolar.nome });
+        t.igual("a Normal rola 2d8", r.expressao, "2d8");
+        t.igual("  dois dados", r.rolagens.length, 2);
+        t.igual("  somados", r.total, 11);
+        t.igual("  e o tipo é dano", r.tipo, "dano");
+      });
+
+      comFila([1, 2, 3], function () {
+        var r = D.dano({ dano: paraRolar.versoes[1].dano, nome: paraRolar.nome });
+        t.igual("a Discente rola 3d8", r.expressao, "3d8");
+        t.igual("  três dados", r.rolagens.length, 3);
+        t.igual("  somados", r.total, 6);
+      });
+
+      /* Nada de crítico, multiplicador ou dano extra: o ritual rola o
+         que está escrito, e só. */
+      comFila([8, 8], function () {
+        var r = D.dano({ dano: "2d8", nome: "Crepúsculo" });
+        t.igual("sem multiplicação de crítico", r.multiplicador, 1);
+        t.igual("  e sem extra somado", r.extra, 0);
+        t.igual("  o total é a soma pura", r.total, 16);
+      });
+
+      var ruim = D.dano({ dano: "seis dados", nome: "Torta" });
+      t.igual("expressão inválida NÃO rola", ruim.ok, false);
+      t.igual("  e devolve o que foi escrito, para a mensagem", ruim.expressao, "seis dados");
+
+      t.grupo("Rituais — duplicar não compartilha nada");
+
+      var original = S.criarRitual({
+        nome: "Original",
+        circulo: "2",
+        versoes: [
+          { nome: "Normal", dano: "6d8" },
+          { nome: "Discente", dano: "10d8" },
+        ],
+      });
+
+      /* É exatamente o que a tela faz ao duplicar. */
+      var copia = S.criarRitual(original);
+
+      t.igual("a cópia leva as duas versões", copia.versoes.length, 2);
+      t.igual("  com os mesmos nomes", copia.versoes[1].nome, "Discente");
+      t.igual("  e os mesmos danos", copia.versoes[1].dano, "10d8");
+      t.ok("o ritual copiado tem id próprio", copia.id !== original.id);
+      t.ok("  e cada versão também", copia.versoes[0].id !== original.versoes[0].id);
+      t.ok("  a segunda inclusive", copia.versoes[1].id !== original.versoes[1].id);
+
+      t.ok("os objetos não são compartilhados", copia.versoes[0] !== original.versoes[0]);
+      copia.versoes[0].dano = "1d4";
+      t.igual("mexer na cópia não mexe no original", original.versoes[0].dano, "6d8");
+
+      t.grupo("Rituais — sobrevivem ao salvar e recarregar");
+
+      var fichaComRitual = S.criarFicha({ nome: "Conjuradora" });
+      fichaComRitual.rituais.itens.push(S.criarRitual({
+        nome: "Crepúsculo",
+        circulo: "3",
+        versoes: [
+          { nome: "Normal", dano: "6d8" },
+          { nome: "Verdadeiro", dano: "14d8" },
+          { nome: "Ritualística", dano: "" },
+        ],
+      }));
+
+      var idsAntes = fichaComRitual.rituais.itens[0].versoes.map(function (v) { return v.id; });
+
+      /* Ida e volta pela planilha: o fichaJson é texto. */
+      var voltou = S.normalizarFicha(JSON.parse(JSON.stringify(fichaComRitual)));
+      var ritualVoltou = voltou.rituais.itens[0];
+
+      t.igual("as três versões voltam", ritualVoltou.versoes.length, 3);
+      t.iguais("  com os ids intactos",
+        ritualVoltou.versoes.map(function (v) { return v.id; }), idsAntes);
+      t.igual("  e os danos intactos", ritualVoltou.versoes[1].dano, "14d8");
+      t.igual("  inclusive a versão sem dano", ritualVoltou.versoes[2].dano, "");
+      t.igual("  que continua fora da ficha", S.versoesComDano(ritualVoltou).length, 2);
+
+      /* Exportar e importar. O importado NÃO pode ter o ownerId nem o
+         id da ficha, mas as versões precisam atravessar inteiras. */
+      if (V) {
+        var pacote = V.exportar("personagem", fichaComRitual);
+        var lido = V.importado(JSON.parse(JSON.stringify(pacote)));
+
+        t.ok("o pacote exportado é aceito de volta", lido.ok, JSON.stringify(lido.problemas || lido));
+
+        if (lido.ok) {
+          var ritualImportado = lido.dados.rituais.itens[0];
+          t.igual("as versões atravessam a exportação", ritualImportado.versoes.length, 3);
+          t.igual("  com os danos", ritualImportado.versoes[0].dano, "6d8");
+          t.igual("  e os nomes", ritualImportado.versoes[1].nome, "Verdadeiro");
+          t.igual("  sem a validação apagar o campo novo",
+            ritualImportado.versoes[2].nome, "Ritualística");
+        }
+      }
+
+      t.grupo("Rituais — arquivo importado esquisito não derruba nada");
+
+      var esquisito = S.normalizarRituais({
+        itens: [{
+          nome: "Vindo de fora",
+          versoes: [
+            { id: "mesmo", nome: "A", dano: "1d6" },
+            { id: "mesmo", nome: "B", dano: "2d6" },
+            null,
+            "texto solto",
+            { nome: "", dano: "3d6" },
+          ],
+        }],
+      }).itens[0];
+
+      t.igual("linhas inválidas são descartadas", esquisito.versoes.length, 3);
+      t.igual("  id repetido ganha um id novo",
+        new Set(esquisito.versoes.map(function (v) { return v.id; })).size, 3);
+      t.igual("  sem perder o dano da segunda", esquisito.versoes[1].dano, "2d6");
+      t.igual("  e versão sem nome vira Normal", esquisito.versoes[2].nome, "Normal");
+
+      var demais = [];
+      for (var iv = 0; iv < 40; iv++) demais.push({ nome: "V" + iv, dano: "1d6" });
+      t.igual("o teto de versões é respeitado",
+        S.normalizarVersoesRitual(demais).length, S.MAX_VERSOES_RITUAL);
     }
 
     /* =================================================================
@@ -576,7 +859,7 @@
         anotacoes: { pastas: [], soltas: [{ id: "n1", titulo: "Nota", conteudo: "texto" }] },
       });
 
-      t.igual("a ficha subiu para o schema 2", antiga.schemaVersion, 2);
+      t.igual("a ficha subiu para o schema atual", antiga.schemaVersion, S.VERSAO_SCHEMA);
       t.igual("o nome sobreviveu", antiga.nome, "Michael");
       t.igual("os atributos sobreviveram", antiga.atributos[0].sigla, "FOR");
       t.igual("os ids antigos foram preservados", antiga.atributos[0].id, "a1");

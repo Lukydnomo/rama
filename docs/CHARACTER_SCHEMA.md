@@ -33,7 +33,7 @@ Fazem parte do **dado**, não só da tela:
 
 ```jsonc
 {
-  "schemaVersion": 2,
+  "schemaVersion": 3,
 
   "nome": "Michael",
   "campanhaId": null,          // id de uma campanha da mesma conta, ou null
@@ -372,7 +372,14 @@ não muda a cópia que já está na ficha.
     "alvo": "Alvo", "efeito": "Efeito"
   },
   "itens": [
-    { "id", "nome", "circulo", "alcance", "duracao", "alvo", "efeito" }
+    {
+      "id", "nome", "circulo", "alcance", "duracao", "alvo", "efeito",
+      "versoes": [
+        { "id": "uuid", "nome": "Normal",   "dano": "6d8" },
+        { "id": "uuid", "nome": "Discente", "dano": "10d8" },
+        { "id": "uuid", "nome": "Ritual",   "dano": "" }
+      ]
+    }
   ]
 }
 ```
@@ -389,9 +396,56 @@ coisa de dois jeitos.
 
 Rótulo deixado em branco volta ao padrão.
 
+### Versões
+
+Um ritual pode ser conjurado de mais de um jeito, e cada jeito tem o próprio
+dano. Em Ordem Paranormal o costume é Normal, Discente e Verdadeiro; isso é
+vocabulário de uma mesa, não estrutura do R.A.M.A.
+
+Por isso as versões são uma **coleção**, e não três campos fixos chamados
+`dano`, `danoDiscente` e `danoVerdadeiro`. A diferença não é estética:
+
+- campos fixos obrigariam todo ritual a ter os três, e um sistema com quatro
+  níveis não caberia sem mexer no código;
+- o nome exibido deixaria de ser texto e viraria chave. Renomear "Discente"
+  para "Ampliado" mudaria onde o dado está gravado, e quem renomeasse perderia
+  o valor.
+
+Aqui o **nome é conteúdo** e o **id é identidade**. Renomear não move nada,
+remover não desloca as outras, e duas versões podem até se chamar igual sem uma
+sobrescrever a outra.
+
+| campo | o que é |
+|---|---|
+| `id` | uuid, estável. Sobrevive a renomear, salvar, exportar e importar. |
+| `nome` | texto livre, até 40 caracteres. Em branco vira `Normal`. |
+| `dano` | expressão `NdX`, **opcional**. |
+
+**O dano é opcional de verdade.** Existe ritual que não causa dano, e campo
+vazio é uma resposta legítima — nunca zero. Versão sem dano não aparece na
+ficha; ela existe, guarda o nome e espera.
+
+**Expressão válida é gravada na forma canônica** (`6 D 8` vira `6d8`), para dois
+aparelhos não brigarem por um espaço. **Expressão inválida é gravada como veio**:
+apagá-la em silêncio faria alguém perder o que digitou sem nunca saber por quê.
+Ela volta a aparecer na tela, o editor recusa salvar por cima dela com a mesma
+mensagem que o dano de uma arma recebe, e a rolagem explica o motivo.
+
+**Todo ritual tem pelo menos uma versão.** É isso que faz um ritual gravado
+antes da 2.2 abrir com a `Normal` em branco — e é isso que impede a normalização
+seguinte de acrescentar uma segunda, porque quando já existe uma ela não
+acrescenta nada.
+
+**Duplicar um ritual gera ids novos para as versões.** Uma cópia que
+reaproveitasse os ids do original ficaria colada nele na hora de conciliar duas
+edições.
+
+Teto de 12 versões por ritual: é contra um arquivo importado trazer mil, não
+uma regra de jogo.
+
 ## Migração
 
-`schemaVersion` é `2`. Toda ficha lida passa por `normalizarFicha()`, que aceita
+`schemaVersion` é `3`. Toda ficha lida passa por `normalizarFicha()`, que aceita
 o que faltar e conserta o que dá.
 
 **Ficha gravada na v1 continua abrindo.** Ela não tem `habilidades`, não tem
@@ -399,6 +453,11 @@ o que faltar e conserta o que dá.
 estrutura padrão de rituais e a categoria em branco. Nenhuma migração manual,
 nenhum aviso, nenhuma célula editada à mão — e nada é inventado: a ficha
 antiga não ganha habilidade nem ritual nenhum, só as estruturas vazias.
+
+**Ritual gravado na v2 continua abrindo.** Ele não tem `versoes`; a normalização
+acrescenta a `Normal` com dano em branco. Rodar a normalização de novo não
+acrescenta uma segunda, e o id da que existe sobrevive — é o que permite salvar,
+recarregar, exportar e importar sem a versão trocar de identidade no caminho.
 
 Além disso:
 

@@ -14,15 +14,16 @@
    TRÊS COISAS DIFERENTES, QUE NÃO SE MISTURAM
    ---------------------------------------------------------------------
 
-     versão do aplicativo   está aqui. É o que a pessoa vê: v2.1.1.
+     versão do aplicativo   está aqui. É o que a pessoa vê: v2.2.0.
      schemaVersion          está em js/ficha.js. É o formato da FICHA,
                             e só sobe quando a ficha muda de forma.
      versaoFormato          está em js/config.js. É o formato dos
                             arquivos de importação/exportação.
 
-   Elas sobem em ritmos próprios. A v2.1.1 leva schemaVersion 2 e
-   versaoFormato 1 — e isso é normal: esta entrega mudou o jeito de
-   ler a planilha, não o formato da ficha nem o dos arquivos.
+   Elas sobem em ritmos próprios. A v2.2.0 leva schemaVersion 3 e
+   versaoFormato 1 — e isso é normal: a ficha ganhou um campo novo, mas
+   o formato dos arquivos de importação continua o mesmo, porque um
+   arquivo antigo continua sendo lido sem perder nada.
 
    ---------------------------------------------------------------------
    A REGRA, PARA TODA ENTREGA FUTURA
@@ -55,6 +56,32 @@
   ];
 
   var CHANGELOG = [
+    {
+      versao: "2.2.0",
+      codinome: "RAMIFICAÇÃO",
+      data: "10/09/2026",
+      mudancas: {
+        "Adicionado": [
+          "Rituais agora têm dano, e mais de uma versão. Cada versão tem nome e expressão próprios: Normal 6d8, Discente 10d8, Verdadeiro 14d8 — ou o que a sua mesa usar.",
+          "Os nomes são livres. Crie, renomeie e remova versões à vontade; nenhum ritual é obrigado a ter Discente e Verdadeiro, e dois rituais podem usar vocabulários diferentes.",
+          "Na ficha, cada versão com dano ganha o próprio dado ao lado do nome do ritual. O resultado sai identificado: “Dano — Crepúsculo · Discente”.",
+          "A rolagem entra no histórico da campanha como qualquer outra, com autoria e visibilidade iguais às do resto.",
+        ],
+        "Alterado": [
+          "O dano do ritual é opcional. Ritual que não causa dano deixa o campo em branco, e a versão simplesmente não aparece na ficha — campo vazio nunca vira zero.",
+          "Rituais gravados antes desta versão abrem com a versão Normal em branco, sem perder nada e sem pedir nada a ninguém. schemaVersion foi para 3.",
+        ],
+        "Corrigido": [
+          "Os botões de Ataque e Dano de uma arma só apareciam depois de abrir o item, embora existissem para não precisar disso. A causa era o próprio recolhível: um bloco fechado não desenha nada além do título, nem o que for pendurado nele depois. Agora essa faixa fica de fora, e continua à vista com o item fechado.",
+        ],
+        "Técnico": [
+          "As versões são uma coleção com id estável, e não campos fixos chamados danoDiscente e danoVerdadeiro. O nome exibido é conteúdo; a identidade é o id — renomear uma versão não move o dano dela para lugar nenhum.",
+          "A rolagem reusa o motor de dados e o mostrador central, sem segundo interpretador de expressão e sem caminho paralelo até o histórico.",
+          "Duplicar um ritual gera ids novos para as versões, para a cópia não ficar colada no original na hora de conciliar duas edições.",
+          "Rituais entraram no esquema de conciliação: dois aparelhos mexendo em rituais diferentes agora casam ritual a ritual e versão a versão, em vez de brigarem pela lista inteira.",
+        ],
+      },
+    },
     {
       versao: "2.1.1",
       codinome: "DESCOMPASSO",

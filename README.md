@@ -91,7 +91,7 @@ E abra `http://localhost:8099/rama/`.
 
 São três conjuntos.
 
-**Modelo e motor de dados** — 292 verificações. No navegador, abra `testes/`;
+**Modelo e motor de dados** — 383 verificações. No navegador, abra `testes/`;
 no terminal:
 
 ```bash
@@ -100,8 +100,8 @@ deno run --allow-read testes/executar.js
 
 Cobrem expressões de dado válidas e inválidas, dado principal, perícia, dano,
 crítico, a ficha padrão, peso do inventário, habilidades e a árvore recursiva,
-rituais e rótulos compartilhados, categorias, migração de ficha antiga,
-importação e versionamento.
+rituais, versões de ritual com dano, rótulos compartilhados, categorias,
+migração de ficha antiga, importação e versionamento.
 
 **Permissões e concorrência do backend** — 228 verificações:
 

@@ -736,6 +736,98 @@ body.pagina-ficha .app-corpo {
   border-top: var(--borda) solid var(--cor-traco-fraca);
 }
 
-.recolhivel--arma { border-color: var(--cor-traco-media); }
+/* A classe vai para a caixa externa quando existe faixa — é ela que
+   carrega a borda. */
+.recolhivel--arma,
+.recolhivel-faixa.recolhivel--arma { border-color: var(--cor-traco-media); }
+.recolhivel-faixa.recolhivel--arma > .recolhivel { border: 0; }
 
-.itens > .recolhivel + .recolhivel { margin-top: 0; }
+.itens > .recolhivel + .recolhivel,
+.itens > .recolhivel-faixa + .recolhivel-faixa,
+.itens > .recolhivel + .recolhivel-faixa,
+.itens > .recolhivel-faixa + .recolhivel { margin-top: 0; }
+
+/* =====================================================================
+   DANO DOS RITUAIS
+   ---------------------------------------------------------------------
+   Uma faixa compacta pendurada abaixo do resumo do ritual, no mesmo
+   lugar em que ficam os botões de uma arma. Ela mostra só as versões
+   com dano preenchido: nome em cima, expressão e dado embaixo.
+
+   Fica fora do corpo recolhível de propósito. Durante uma sessão o
+   dano é a ação mais repetida de um ritual, e abrir o cartão para
+   alcançá-la seria um clique a mais em toda conjuração.
+   ===================================================================== */
+
+.ritual-danos {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--e3);
+  padding: var(--e2) var(--e3);
+  border-top: var(--borda) solid var(--cor-traco-fraca);
+}
+
+.ritual-dano {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.ritual-dano__versao {
+  font-family: var(--fonte-mini);
+  font-size: var(--texto-mini);
+  letter-spacing: var(--espaco-letra-titulo);
+  text-transform: uppercase;
+  color: var(--cor-texto-3);
+  white-space: nowrap;
+}
+
+.ritual-dano__linha {
+  display: flex;
+  align-items: center;
+  gap: var(--e1);
+}
+
+.ritual-dano__expressao {
+  font-weight: 700;
+  color: var(--cor-texto);
+  white-space: nowrap;
+}
+
+/* O alvo de toque é o do resto do sistema: numa mesa, quem rola está
+   com o celular na mão. */
+.ritual-dano__rolar {
+  flex: 0 0 auto;
+  min-width: var(--alvo-toque);
+  min-height: var(--alvo-toque);
+}
+
+/* =====================================================================
+   VERSÕES, NO EDITOR
+   ---------------------------------------------------------------------
+   Nome e dano lado a lado, com o remover no fim. Abaixo de 560px cada
+   campo ocupa a largura toda: dois campos espremidos numa tela de
+   celular não se digitam.
+   ===================================================================== */
+
+.versoes { display: flex; flex-direction: column; gap: var(--e2); }
+
+.versao {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 10rem) auto;
+  gap: var(--e2);
+  align-items: end;
+}
+
+/* O botão de remover alinha com a base dos campos, e não com o rótulo
+   deles. */
+.versao__acao { display: flex; padding-bottom: 2px; }
+
+@media (max-width: 560px) {
+  .versao {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+  /* O nome ocupa a linha inteira; dano e remover dividem a de baixo. */
+  .versao > .r-campo:first-child { grid-column: 1 / -1; }
+}

@@ -704,7 +704,25 @@
       if (o.aoAlternar) o.aoAlternar(caixa.open);
     });
 
-    return caixa;
+    if (!o.faixa) return caixa;
+
+    /* A FAIXA QUE NÃO SE RECOLHE
+       -----------------------------------------------------------------
+       Alguma coisa precisa continuar à vista com o cartão fechado: os
+       botões de Ataque e Dano de uma arma, as versões de dano de um
+       ritual. São as ações mais repetidas de uma sessão, e abrir o
+       cartão para alcançá-las é um clique a mais em toda rolagem.
+
+       Ela fica FORA do <details>, e não pendurada dentro dele. É a
+       parte que não é óbvia: um <details> fechado esconde TUDO o que
+       não é o <summary>, inclusive o que for acrescentado depois. Uma
+       faixa dentro dele existe, ocupa espaço no cálculo de quem
+       pergunta, e não é pintada — que é o pior dos mundos, porque
+       parece funcionar em código e some na tela.
+
+       Então o recolhível vira o miolo de uma caixa, e a caixa é que
+       carrega a borda. Visualmente é o mesmo cartão. */
+    return el("div.recolhivel-faixa", { class: o.classe || "" }, [caixa, o.faixa]);
   }
 
   /* =================================================================
