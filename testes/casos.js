@@ -17,6 +17,8 @@
     var D = global.RAMADados;
     var S = global.RAMAFicha;
     var V = global.RAMAValidacao;
+    var H = global.RAMAHabilidades;
+    var Ver = global.RAMAVersion;
 
     /* Fila de faces: cada chamada de sorteio consome a próxima. Se a
        fila acabar antes da conta terminar, o teste falha por aqui — e
@@ -361,6 +363,357 @@
       t.igual("crítico inválido vira 0", suja.inventario.itens[0].critico, 0);
       t.ok("campo que deveria ser lista virou lista", Array.isArray(suja.camposCustomizados));
       t.ok("todo item ganhou id", suja.inventario.itens.every(function (i) { return !!i.id; }));
+    }
+
+    /* =================================================================
+       HABILIDADES
+       ================================================================= */
+
+    if (S && H) {
+      t.grupo("Habilidades — modelo");
+
+      var hab = H.criarHabilidade({ nome: "Ataque Especial", texto: "...", origem: "geral", cor: "#C6564B", negrito: true });
+      t.igual("habilidade nasce com id", typeof hab.id, "string");
+      t.igual("tipo é habilidade", hab.tipo, H.TIPO_HABILIDADE);
+      t.igual("nome guardado", hab.nome, "Ataque Especial");
+      t.igual("origem guardada", hab.origem, "geral");
+      t.igual("cor válida aceita", hab.cor, "#C6564B");
+      t.igual("negrito guardado", hab.negrito, true);
+      t.ok("habilidade não tem valor nem dado — é informação",
+        hab.valor === undefined && hab.dado === undefined && hab.atributoId === undefined);
+
+      t.grupo("Habilidades — cor nunca vira CSS arbitrário");
+
+      t.igual("hex de 6 passa", H.corValida("#A33B3B"), "#A33B3B");
+      t.igual("hex de 3 passa", H.corValida("#abc"), "#abc");
+      t.igual("sem cor é vazio", H.corValida(""), "");
+      t.igual("nome de cor é recusado", H.corValida("red"), "");
+      t.igual("expressão CSS é recusada", H.corValida("red; background: url(x)"), "");
+      t.igual("javascript: é recusado", H.corValida("javascript:alert(1)"), "");
+      t.igual("var() é recusado", H.corValida("var(--cor-fundo)"), "");
+      t.igual("cor inválida numa habilidade vira vazio",
+        H.criarHabilidade({ nome: "X", cor: "'; drop" }).cor, "");
+
+      t.grupo("Habilidades — árvore recursiva");
+
+      var arv = H.arvoreVazia();
+      var classe = H.criarPasta("Classe");
+      var passivas = H.criarPasta("Passivas");
+      var defensivas = H.criarPasta("Defensivas");
+      var hx = H.criarHabilidade({ nome: "Habilidade X" });
+      var hy = H.criarHabilidade({ nome: "Habilidade Y" });
+
+      H.inserir(arv, classe, null);
+      H.inserir(arv, passivas, classe.id);
+      H.inserir(arv, defensivas, passivas.id);
+      H.inserir(arv, hx, defensivas.id);
+      H.inserir(arv, hy, passivas.id);
+
+      t.igual("raiz tem uma pasta", arv.filhos.length, 1);
+      t.igual("Classe contém Passivas", arv.filhos[0].filhos[0].nome, "Passivas");
+      t.igual("terceiro nível existe", arv.filhos[0].filhos[0].filhos[0].nome, "Defensivas");
+      t.igual("habilidade no quarto nível",
+        arv.filhos[0].filhos[0].filhos[0].filhos[0].nome, "Habilidade X");
+
+      var achado = H.achar(arv, hx.id);
+      t.ok("achar encontra em profundidade", !!achado);
+      t.igual("  e sabe a profundidade", achado.profundidade, 3);
+      t.igual("  e sabe o pai", achado.pai.nome, "Defensivas");
+
+      t.iguais("contagem percorre a árvore inteira",
+        [H.contar(arv).pastas, H.contar(arv).habilidades], [3, 2]);
+
+      t.grupo("Habilidades — mover");
+
+      t.ok("move habilidade entre pastas", H.mover(arv, hx.id, classe.id));
+      t.igual("  saiu de Defensivas", defensivas.filhos.length, 0);
+      t.igual("  chegou em Classe", classe.filhos.length, 2);
+
+      t.ok("move para a raiz", H.mover(arv, hx.id, null));
+      t.igual("  a raiz recebeu", arv.filhos.length, 2);
+
+      t.ok("NÃO move uma pasta para dentro de si mesma", !H.mover(arv, classe.id, classe.id));
+      t.ok("NÃO move uma pasta para dentro de um descendente seu",
+        !H.mover(arv, classe.id, defensivas.id));
+      t.ok("a árvore continua íntegra depois das tentativas recusadas",
+        !!H.achar(arv, defensivas.id) && !!H.achar(arv, classe.id));
+
+      t.grupo("Habilidades — excluir pasta sem perder conteúdo");
+
+      var arv2 = H.arvoreVazia();
+      var pastaA = H.criarPasta("A");
+      var dentro = H.criarHabilidade({ nome: "Dentro" });
+      H.inserir(arv2, pastaA, null);
+      H.inserir(arv2, dentro, pastaA.id);
+
+      t.igual("a pasta sabe dizer o que tem dentro",
+        H.conteudoDaPasta(pastaA).habilidades, 1);
+
+      H.esvaziarPara(arv2, pastaA.id);
+      t.igual("esvaziar sobe o conteúdo para o lugar da pasta", arv2.filhos.length, 1);
+      t.igual("  e a habilidade sobreviveu", arv2.filhos[0].nome, "Dentro");
+
+      t.grupo("Habilidades — cópia para a ficha");
+
+      var modelo = H.criarHabilidade({ nome: "Da biblioteca", texto: "original" });
+      var copia = H.copiarParaFicha(modelo);
+      t.ok("a cópia tem id próprio", copia.id !== modelo.id);
+      t.igual("a cópia guarda de onde veio", copia.origemHabilidadeId, modelo.id);
+
+      modelo.texto = "editado depois na biblioteca";
+      t.igual("editar o modelo NÃO muda a cópia da ficha", copia.texto, "original");
+
+      t.grupo("Habilidades — normalização defensiva");
+
+      var suja2 = H.normalizarArvore({
+        filhos: [
+          { tipo: "pasta", nome: "  Espaçada  ", filhos: [
+            { nome: "Solta", cor: "vermelho", negrito: "sim" },
+            { nome: "" },
+            null,
+          ] },
+          "isto não é um nó",
+          { nome: "Na raiz" },
+        ],
+      });
+      t.igual("nome de pasta aparado", suja2.filhos[0].nome, "Espaçada");
+      t.igual("lixo é descartado", suja2.filhos.length, 2);
+      t.igual("habilidade sem nome é descartada", suja2.filhos[0].filhos.length, 1);
+      t.igual("cor inválida vira vazio", suja2.filhos[0].filhos[0].cor, "");
+      t.igual("negrito vira booleano", suja2.filhos[0].filhos[0].negrito, true);
+      t.ok("todo nó ganhou id", H.todasAsHabilidades(suja2).every(function (n) { return !!n.id; }));
+
+      t.grupo("Habilidades — profundidade tem teto");
+
+      var fundo = { filhos: [] };
+      var atual = fundo;
+      for (var p = 0; p < H.MAX_PROFUNDIDADE + 4; p++) {
+        var nova = { tipo: "pasta", nome: "N" + p, filhos: [] };
+        atual.filhos.push(nova);
+        atual = nova;
+      }
+      var limitada = H.normalizarArvore(fundo);
+      var niveis = 0, cursor = limitada;
+      while (cursor.filhos && cursor.filhos.length) { niveis++; cursor = cursor.filhos[0]; }
+      t.ok("a normalização para no teto em vez de recursar sem fim",
+        niveis <= H.MAX_PROFUNDIDADE + 1);
+    }
+
+    /* =================================================================
+       RITUAIS
+       ================================================================= */
+
+    if (S) {
+      t.grupo("Rituais — estrutura");
+
+      var fichaR = S.criarFicha({ nome: "Com rituais" });
+
+      t.igual("a seção nasce chamada Rituais", fichaR.rituais.rotuloSecao, "Rituais");
+      t.igual("nasce sem nenhum ritual", fichaR.rituais.itens.length, 0);
+      t.iguais("os cinco campos padrão",
+        S.CAMPOS_RITUAL, ["circulo", "alcance", "duracao", "alvo", "efeito"]);
+      t.igual("rótulo padrão de circulo", fichaR.rituais.rotulos.circulo, "Círculo");
+
+      var rit = S.criarRitual({ nome: "Cicatrização", circulo: "1", efeito: "Cura." });
+      t.igual("ritual nasce com nome", rit.nome, "Cicatrização");
+      t.igual("  e com os campos", rit.circulo, "1");
+      t.ok("  e com id próprio", !!rit.id);
+
+      t.grupo("Rituais — rótulos pertencem à SEÇÃO, não ao ritual");
+
+      fichaR.rituais.itens.push(S.criarRitual({ nome: "A", circulo: "1", alvo: "Você" }));
+      fichaR.rituais.itens.push(S.criarRitual({ nome: "B", circulo: "3", alvo: "Área" }));
+
+      fichaR.rituais.rotuloSecao = "Magias";
+      fichaR.rituais.rotulos.circulo = "Nível";
+      fichaR.rituais.rotulos.alvo = "Destinatário";
+
+      var depois = S.normalizarFicha(fichaR);
+
+      t.igual("a seção passou a se chamar Magias", depois.rituais.rotuloSecao, "Magias");
+      t.igual("Círculo virou Nível", depois.rituais.rotulos.circulo, "Nível");
+      t.igual("Alvo virou Destinatário", depois.rituais.rotulos.alvo, "Destinatário");
+      t.igual("os rótulos não mexidos continuam", depois.rituais.rotulos.duracao, "Duração");
+
+      t.igual("TODOS os rituais usam o rótulo novo — não há rótulo por ritual",
+        depois.rituais.itens.every(function (r) { return r.rotulos === undefined; }), true);
+
+      t.igual("os DADOS não se perderam ao renomear o rótulo",
+        depois.rituais.itens[0].circulo, "1");
+      t.igual("  nem no segundo ritual", depois.rituais.itens[1].circulo, "3");
+      t.igual("  nem no campo alvo", depois.rituais.itens[1].alvo, "Área");
+      t.iguais("  e a chave interna continua 'circulo'",
+        Object.keys(depois.rituais.itens[0]).sort(),
+        ["alcance", "alvo", "circulo", "duracao", "efeito", "id", "nome"]);
+
+      t.grupo("Rituais — rótulo em branco volta ao padrão");
+
+      var semRotulo = S.normalizarRituais({ rotuloSecao: "   ", rotulos: { circulo: "  " }, itens: [] });
+      t.igual("seção sem nome volta a Rituais", semRotulo.rotuloSecao, "Rituais");
+      t.igual("rótulo vazio volta ao padrão", semRotulo.rotulos.circulo, "Círculo");
+    }
+
+    /* =================================================================
+       MIGRAÇÃO — FICHA ANTIGA (schema 1)
+       ================================================================= */
+
+    if (S) {
+      t.grupo("Ficha antiga continua abrindo");
+
+      /* Exatamente o que a versão 1 gravava: sem habilidades, sem
+         rituais, e com itens sem categoria. */
+      var antiga = S.normalizarFicha({
+        schemaVersion: 1,
+        nome: "Michael",
+        classe: "Combatente",
+        atributos: [{ id: "a1", nome: "Força", sigla: "FOR", valor: 2, dado: "1d20" }],
+        status: [{ id: "s1", nome: "PV", atual: 10, maximo: 20 }],
+        pericias: [{ id: "p1", nome: "Luta", atributoId: "a1", bonus: 2, bonusTemporario: 0, dadosExtras: [] }],
+        inventario: { limite: 5, itens: [
+          { id: "i1", tipo: "arma", nome: "Espada", peso: 1, dano: "2d10", critico: 18, multiplicador: 2 },
+          { id: "i2", tipo: "item", nome: "Corda", peso: 2 },
+        ] },
+        anotacoes: { pastas: [], soltas: [{ id: "n1", titulo: "Nota", conteudo: "texto" }] },
+      });
+
+      t.igual("a ficha subiu para o schema 2", antiga.schemaVersion, 2);
+      t.igual("o nome sobreviveu", antiga.nome, "Michael");
+      t.igual("os atributos sobreviveram", antiga.atributos[0].sigla, "FOR");
+      t.igual("os ids antigos foram preservados", antiga.atributos[0].id, "a1");
+      t.igual("o status sobreviveu", antiga.status[0].atual, 10);
+      t.igual("a perícia continua ligada ao atributo", antiga.pericias[0].atributoId, "a1");
+      t.igual("a anotação sobreviveu", antiga.anotacoes.soltas[0].conteudo, "texto");
+      t.igual("o inventário sobreviveu", antiga.inventario.itens.length, 2);
+      t.igual("a arma manteve o dano", antiga.inventario.itens[0].dano, "2d10");
+
+      t.ok("ganhou habilidades vazias", !!antiga.habilidades && Array.isArray(antiga.habilidades.filhos));
+      t.igual("  e nenhuma habilidade inventada", antiga.habilidades.filhos.length, 0);
+      t.ok("ganhou rituais padrão", !!antiga.rituais);
+      t.igual("  com o rótulo padrão", antiga.rituais.rotuloSecao, "Rituais");
+      t.igual("  e nenhum ritual inventado", antiga.rituais.itens.length, 0);
+
+      t.igual("item antigo ganhou categoria vazia", antiga.inventario.itens[0].categoria, "");
+      t.igual("  e não uma categoria inventada", antiga.inventario.itens[1].categoria, "");
+
+      t.grupo("Categorias no inventário");
+
+      var inv = { limite: 0, itens: [
+        S.criarItem("item", { nome: "Bandagem", categoria: "Consumível", peso: 0 }),
+        S.criarItem("item", { nome: "Poção", categoria: " consumível ", peso: 0 }),
+        S.criarItem("item", { nome: "Soro", categoria: "CONSUMÍVEL", peso: 0 }),
+        S.criarItem("arma", { nome: "Faca", categoria: "Corpo a corpo", peso: 1 }),
+        S.criarItem("item", { nome: "Anônimo", peso: 1 }),
+      ] };
+
+      var cats = S.categoriasDe(inv);
+      t.igual("três grafias de 'consumível' viram UMA categoria", cats.length, 3);
+      t.igual("  e o grupo tem os três itens",
+        cats.filter(function (c) { return c.chave === S.chaveDeCategoria("Consumível"); })[0].quantidade, 3);
+      t.igual("o rótulo mostrado preserva a grafia de quem escreveu",
+        cats[0].rotulo, "Consumível");
+      t.igual("sem categoria vai para o fim", cats[cats.length - 1].rotulo, "Sem categoria");
+
+      t.grupo("Filtro por categoria");
+
+      var chaveCons = S.chaveDeCategoria("Consumível");
+      var filtrados = inv.itens.filter(function (i) { return S.itemNaCategoria(i, chaveCons); });
+      t.igual("o filtro pega as três grafias", filtrados.length, 3);
+
+      t.ok("o filtro usa a categoria, não a descrição",
+        !inv.itens.filter(function (i) { return S.itemNaCategoria(i, S.chaveDeCategoria("Corpo a corpo")); })
+          .some(function (i) { return i.nome === "Bandagem"; }));
+
+      t.igual("sem filtro, todos passam",
+        inv.itens.filter(function (i) { return S.itemNaCategoria(i, ""); }).length, 5);
+
+      t.igual("filtrar por 'sem categoria' pega só o que não tem",
+        inv.itens.filter(function (i) { return S.itemNaCategoria(i, S.CATEGORIA_VAZIA); }).length, 1);
+
+      t.grupo("Categoria vale para TODOS os tipos de item");
+
+      S.TIPOS_ITEM.forEach(function (tipo) {
+        var it = S.criarItem(tipo, { nome: "X", categoria: "Teste" });
+        t.igual("  " + tipo + " aceita categoria", it.categoria, "Teste");
+      });
+    }
+
+    /* =================================================================
+       VERSIONAMENTO
+       ================================================================= */
+
+    if (Ver) {
+      t.grupo("Versionamento — fonte única");
+
+      t.ok("existe changelog", Array.isArray(Ver.changelog) && Ver.changelog.length > 0);
+      t.ok("a versão atual É o primeiro registro", Ver.atual === Ver.changelog[0]);
+      t.igual("o rótulo deriva do topo", Ver.rotulo,
+        "v" + Ver.changelog[0].versao + " — " + Ver.changelog[0].codinome);
+      t.igual("o número deriva do topo", Ver.numero, Ver.changelog[0].versao);
+      t.igual("o codinome deriva do topo", Ver.codinome, Ver.changelog[0].codinome);
+
+      t.grupo("Versionamento — formato SemVer");
+
+      Ver.changelog.forEach(function (r) {
+        t.ok("v" + r.versao + " tem três segmentos numéricos",
+          /^\d+\.\d+\.\d+$/.test(r.versao));
+        t.ok("  sem letra e sem sufixo", !/[a-zA-Z]/.test(r.versao));
+        t.ok("  data em DD/MM/AAAA", /^\d{2}\/\d{2}\/\d{4}$/.test(r.data));
+        t.ok("  codinome numa palavra, em maiúsculas: " + r.codinome,
+          /^[A-ZÀ-Ú]+$/.test(r.codinome));
+      });
+
+      t.grupo("Versionamento — ordem e unicidade");
+
+      var codinomes = Ver.changelog.map(function (r) { return r.codinome; });
+      t.igual("nenhum codinome se repete", new Set(codinomes).size, codinomes.length);
+
+      var versoes = Ver.changelog.map(function (r) { return r.versao; });
+      t.igual("nenhuma versão se repete", new Set(versoes).size, versoes.length);
+
+      function ordem(v) {
+        var p = v.split(".").map(Number);
+        return p[0] * 1000000 + p[1] * 1000 + p[2];
+      }
+
+      var decrescente = true;
+      for (var i = 1; i < Ver.changelog.length; i++) {
+        if (ordem(Ver.changelog[i - 1].versao) <= ordem(Ver.changelog[i].versao)) decrescente = false;
+      }
+      t.ok("da mais recente para a mais antiga", decrescente);
+
+      t.grupo("Versionamento — os números de baixo zeram");
+
+      for (var j = 1; j < Ver.changelog.length; j++) {
+        var nova = Ver.changelog[j - 1].versao.split(".").map(Number);
+        var velha = Ver.changelog[j].versao.split(".").map(Number);
+
+        if (nova[0] > velha[0]) {
+          t.igual("MAJOR " + Ver.changelog[j - 1].versao + ": minor zerou", nova[1], 0);
+          t.igual("MAJOR " + Ver.changelog[j - 1].versao + ": patch zerou", nova[2], 0);
+        } else if (nova[1] > velha[1]) {
+          t.igual("MINOR " + Ver.changelog[j - 1].versao + ": patch zerou", nova[2], 0);
+        }
+      }
+
+      t.grupo("Versionamento — changelog sem categoria vazia");
+
+      Ver.changelog.forEach(function (r) {
+        Object.keys(r.mudancas || {}).forEach(function (cat) {
+          t.ok("v" + r.versao + " · " + cat + " tem conteúdo",
+            Array.isArray(r.mudancas[cat]) && r.mudancas[cat].length > 0);
+          t.ok("  " + cat + " é uma categoria conhecida",
+            Ver.categorias.indexOf(cat) >= 0);
+        });
+      });
+
+      t.grupo("Versionamento — não se confunde com os outros números");
+
+      if (S) {
+        t.ok("schemaVersion da ficha é independente da versão do app",
+          S.VERSAO_SCHEMA !== Ver.numero);
+      }
+      t.ok("versaoFormato da importação é independente",
+        String((global.RAMA_CONFIG || {}).VERSAO_FORMATO) !== Ver.numero);
     }
 
     /* =================================================================

@@ -33,7 +33,7 @@ Fazem parte do **dado**, não só da tela:
 
 ```jsonc
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
 
   "nome": "Michael",
   "campanhaId": null,          // id de uma campanha da mesma conta, ou null
@@ -47,6 +47,9 @@ Fazem parte do **dado**, não só da tela:
   "status": [ /* ... */ ],
   "defesa": { "dt": 0, "esquiva": 0, "bloqueio": 0, "resistencia": 0 },
   "pericias": [ /* ... */ ],
+  "habilidades": { "filhos": [] },
+  "rituais": { "rotuloSecao": "Rituais", "rotulos": { }, "itens": [] },
+
   "inventario": { "limite": 0, "itens": [] },
   "anotacoes": { "pastas": [], "soltas": [] },
   "camposCustomizados": []
@@ -322,10 +325,82 @@ protege.
 
 ---
 
+## Habilidades
+
+Modelo em `js/habilidades.js`. **Habilidade é INFORMAÇÃO** — não tem valor, não
+tem dado, não tem atributo vinculado. Clicar nela abre o texto; não rola nada.
+
+A árvore é **recursiva de verdade**. Não é "pasta → habilidade": uma pasta
+guarda filhos, e um filho pode ser outra pasta. Modelar isso como dois níveis
+fixos condenaria a estrutura a uma reescrita no dia em que alguém quisesse
+`Classe → Passivas → Defensivas`.
+
+```jsonc
+"habilidades": {
+  "filhos": [
+    { "id", "tipo": "pasta", "nome": "Classe", "aberta": true, "filhos": [
+      { "id", "tipo": "pasta", "nome": "Passivas", "aberta": true, "filhos": [
+        { "id", "tipo": "habilidade", "nome": "Habilidade X",
+          "texto": "...", "origem": "Classe",
+          "cor": "#C6564B", "negrito": false,
+          "origemHabilidadeId": null }
+      ] }
+    ] }
+  ]
+}
+```
+
+O teto de profundidade é **6**, e é limite da TELA, não do modelo: mais que isso
+e o recuo de cada nível não cabe num celular. O teto também protege a
+normalização de recursão infinita num JSON importado que aponte para si mesmo.
+
+**A cor é validada como hexadecimal** (`#abc` ou `#A33B3B`) e aplicada por
+`style.setProperty`, nunca concatenada numa string de CSS. Nome de cor, `var()`,
+`javascript:` e qualquer outra coisa viram vazio. E a cor nunca é a única forma
+de identificar algo: nome e origem continuam valendo.
+
+`origemHabilidadeId` é **rastro, não vínculo**: editar o modelo na biblioteca
+não muda a cópia que já está na ficha.
+
+## Rituais
+
+```jsonc
+"rituais": {
+  "rotuloSecao": "Rituais",
+  "rotulos": {
+    "circulo": "Círculo", "alcance": "Alcance", "duracao": "Duração",
+    "alvo": "Alvo", "efeito": "Efeito"
+  },
+  "itens": [
+    { "id", "nome", "circulo", "alcance", "duracao", "alvo", "efeito" }
+  ]
+}
+```
+
+**O nome da seção e os rótulos são configuráveis; as CHAVES internas não.**
+
+Trocar "Círculo" por "Nível" muda o que a tela escreve, não o que está gravado —
+então nenhum ritual precisa ser migrado e nada se perde. A aba da ficha também
+passa a mostrar o nome escolhido.
+
+**Os rótulos pertencem à SEÇÃO, não a cada ritual.** Se cada registro carregasse
+os próprios nomes de campo, dois rituais da mesma ficha poderiam chamar a mesma
+coisa de dois jeitos.
+
+Rótulo deixado em branco volta ao padrão.
+
 ## Migração
 
-`schemaVersion` é `1`. Toda ficha lida passa por `normalizarFicha()`, que aceita
-o que faltar e conserta o que dá:
+`schemaVersion` é `2`. Toda ficha lida passa por `normalizarFicha()`, que aceita
+o que faltar e conserta o que dá.
+
+**Ficha gravada na v1 continua abrindo.** Ela não tem `habilidades`, não tem
+`rituais` e os itens não têm `categoria`; a normalização cria a árvore vazia, a
+estrutura padrão de rituais e a categoria em branco. Nenhuma migração manual,
+nenhum aviso, nenhuma célula editada à mão — e nada é inventado: a ficha
+antiga não ganha habilidade nem ritual nenhum, só as estruturas vazias.
+
+Além disso:
 
 - ficha sem atributo nenhum recebe os cinco padrões (senão as perícias não teriam
   onde se apoiar);

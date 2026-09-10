@@ -45,6 +45,18 @@
     historico.unshift({ quando: Date.now(), resultado: resultado });
     if (historico.length > 30) historico.pop();
 
+    /* O FUNIL. Toda rolagem do sistema passa por mostrar(), então é
+       aqui — e só aqui — que ela também vira linha no histórico da
+       campanha. Nenhuma tela precisa lembrar de registrar; quem
+       esquecer de chamar mostrar() não teria mostrado o dado também. */
+    if (global.RAMAHistorico) {
+      global.RAMAHistorico.registrar(resultado, {
+        tipo: resultado.tipo || o.tipo,
+        nome: o.nome || resultado.nome,
+        critico: !!o.critico,
+      });
+    }
+
     return cartao;
   }
 

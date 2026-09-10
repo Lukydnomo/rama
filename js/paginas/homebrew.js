@@ -28,11 +28,19 @@
 
   var TIPOS = [
     { chave: "", rotulo: "Tudo" },
+    { chave: "criatura", rotulo: "Criaturas" },
     { chave: "arma", rotulo: "Armas" },
     { chave: "armadura", rotulo: "Armaduras" },
     { chave: "item", rotulo: "Itens" },
     { chave: "mochila", rotulo: "Mochilas" },
+    { chave: "habilidade", rotulo: "Habilidades" },
   ];
+
+  /* "Minhas" e "Públicas" são bibliotecas diferentes: a segunda é o que
+     outras contas publicaram, e nela você usa como modelo mas não
+     edita. Misturar as duas numa lista só faria o botão de excluir
+     aparecer em coisa que não é sua. */
+  var escopo = "meus";
 
   global.RAMAApp.iniciar("homebrew", async function () {
     painel = U.$("#painel-homebrew");
@@ -42,7 +50,7 @@
   async function carregar() {
     U.trocar(painel, [cabecalho(), UI.carregando("Consultando biblioteca")]);
 
-    var r = await global.RAMAApi.listarHomebrew();
+    var r = await global.RAMAApi.listarHomebrew({ escopo: escopo });
     if (!r.ok) { U.trocar(painel, [cabecalho(), UI.erroDeTela(r, carregar)]); return; }
 
     registros = r.dados || [];
@@ -80,6 +88,16 @@
             oninput: function (ev) { busca = ev.target.value; desenhar(); },
           }),
         ]),
+        el("div.filtros__grupo", { role: "group", "aria-label": "Biblioteca" },
+          [{ v: "meus", r: "Minhas" }, { v: "publicos", r: "Públicas" }].map(function (op) {
+            return el("button.filtro", {
+              type: "button",
+              "aria-pressed": String(escopo === op.v),
+              texto: op.r,
+              onclick: function () { escopo = op.v; carregar(); },
+            });
+          })
+        ),
         el("div.filtros__grupo", { role: "group", "aria-label": "Filtrar por tipo" },
           TIPOS.map(function (t) {
             return el("button.filtro", {
@@ -112,6 +130,12 @@
   }
 
   function bibliotecaVazia() {
+    if (escopo === "publicos") {
+      return UI.vazio({
+        titulo: "Nada publicado ainda",
+        texto: "Quando alguém marcar uma criatura, item ou habilidade como pública, ela aparece aqui.",
+      });
+    }
     return UI.vazio({
       titulo: "Biblioteca vazia",
       texto: "Crie um item aqui, ou marque “guardar na biblioteca” ao criar algo no inventário de uma ficha.",
@@ -135,27 +159,131 @@
      ================================================================= */
 
   function cartao(registro) {
-    return el("article.item", { class: registro.tipo === "arma" ? "item--arma" : "" }, [
-      el("div.item__topo", {}, [
-        el("div", {}, [
-          el("p.item__nome", { texto: registro.nome }),
-          el("span.r-etiqueta", { texto: F.rotuloDoTipo(registro.tipo) }),
-        ]),
-        UI.menu([
+    /* Público de outra conta pode ser usado como modelo, nunca editado
+       nem apagado: o menu simplesmente não oferece isso — e o servidor
+       recusaria de qualquer forma. */
+    var meu = registro.meu !== false;
+
+    var opcoes = meu
+      ? [
           { rotulo: "Editar", aoClicar: function () { editar(registro); } },
           { rotulo: "Duplicar", aoClicar: function () { duplicar(registro); } },
           { rotulo: "Exportar", aoClicar: function () { exportar(registro); } },
           "separador",
           { rotulo: "Excluir", perigo: true, aoClicar: function () { excluir(registro); } },
-        ], { rotulo: "Opções de " + registro.nome, icone: "tresPontos" }),
+        ]
+      : [
+          { rotulo: "Copiar para minha biblioteca", aoClicar: function () { duplicar(registro); } },
+          { rotulo: "Exportar", aoClicar: function () { exportar(registro); } },
+        ];
+
+    var etiquetas = [
+      el("span.r-etiqueta", { texto: rotuloDoTipo(registro.tipo) }),
+      registro.visibilidade === "publico"
+        ? el("span.r-etiqueta", { texto: "Pública" })
+        : null,
+      !meu ? el("span.r-etiqueta.r-etiqueta--para", { texto: "De outra conta" }) : null,
+    ];
+
+    return el("article.item", { class: registro.tipo === "arma" ? "item--arma" : "" }, [
+      el("div.item__topo", {}, [
+        el("div", {}, [
+          el("p.item__nome", { texto: registro.nome }),
+          el("div.faixa", { estilo: { gap: "var(--e1)" } }, etiquetas),
+        ]),
+        UI.menu(opcoes, { rotulo: "Opções de " + registro.nome, icone: "tresPontos" }),
       ]),
 
-      detalhes(registro),
+      registro.tipo === "criatura"
+        ? global.RAMAHomebrewCriatura.detalhes(registro)
+        : detalhes(registro),
 
       registro.descricao ? el("p.item__descricao", { texto: registro.descricao }) : null,
 
       el("p.t-mini", { texto: "Registro // " + U.codigoCurto(registro.id) + " · " + U.dataCurta(registro.atualizadoEm) }),
     ]);
+  }
+
+  function rotuloDoTipo(tipo) {
+    if (tipo === "criatura") return "Criatura";
+    if (tipo === "habilidade") return "Habilidade";
+    return F.rotuloDoTipo(tipo);
+  }
+
+  /* Editor de habilidade avulsa. Reusa o mesmo modelo da ficha, para
+     não existirem dois schemas de habilidade no sistema. */
+  function editarHabilidade(registro) {
+    var H = global.RAMAHabilidades;
+    var criando = !registro;
+    var h = criando ? H.criarHabilidade({}) : H.normalizarHabilidade(registro);
+    var cor = h.cor;
+    var negrito = !!h.negrito;
+    var visibilidade = (registro && registro.visibilidade) || "privado";
+
+    var nome = UI.campo({ rotulo: "Nome", valor: h.nome, limite: 120 });
+    var origem = UI.campo({ rotulo: "Origem", valor: h.origem, limite: 60 });
+    var texto = UI.campo({ rotulo: "Texto", tipo: "area", valor: h.texto, linhas: 6, limite: 8000 });
+
+    var seletorVis = el("div.filtros__grupo", { role: "group", "aria-label": "Visibilidade" },
+      [{ v: "privado", r: "Privada" }, { v: "publico", r: "Pública" }].map(function (op) {
+        return el("button.filtro", {
+          type: "button",
+          "aria-pressed": String(visibilidade === op.v),
+          texto: op.r,
+          onclick: function (ev) {
+            visibilidade = op.v;
+            U.$$(".filtro", ev.target.parentNode).forEach(function (b) {
+              b.setAttribute("aria-pressed", String(b === ev.target));
+            });
+          },
+        });
+      })
+    );
+
+    UI.modal({
+      titulo: criando ? "Nova habilidade" : "Editar habilidade",
+      largo: true,
+      conteudo: el("div.pilha", {}, [
+        nome, origem, texto,
+        el("label.r-marca", {}, [
+          el("input", { type: "checkbox", checked: negrito,
+            onchange: function (ev) { negrito = ev.target.checked; } }),
+          el("span", { texto: "Texto em negrito" }),
+        ]),
+        UI.seletorDeCor({ valor: cor, aoMudar: function (v) { cor = v; } }),
+        el("div.r-campo", {}, [
+          el("span.r-rotulo", { texto: "Visibilidade" }),
+          seletorVis,
+          el("p.r-ajuda", { texto: "Pública: outras contas encontram esta habilidade como GERAL e podem copiá-la." }),
+        ]),
+      ]),
+      botoes: [
+        { rotulo: "Cancelar", classe: "r-botao--fantasma" },
+        {
+          rotulo: criando ? "Criar" : "Salvar", classe: "r-botao--principal",
+          aoClicar: async function (fechar) {
+            var valor = nome.entrada.value.trim();
+            if (!valor) { nome.marcarErro("Informe um nome."); return; }
+
+            var pronta = H.criarHabilidade({
+              nome: valor, origem: origem.entrada.value.trim(),
+              texto: texto.entrada.value, cor: cor, negrito: negrito,
+            });
+            pronta.tipo = "habilidade";
+            pronta.visibilidade = visibilidade;
+            if (registro && registro.id) pronta.id = registro.id;
+
+            var r = await global.RAMAApi.salvarHomebrew(pronta);
+            if (!r.ok) { UI.avisoDeFalha(r, "gravação"); return; }
+
+            fechar();
+            await carregar();
+          },
+        },
+      ],
+    });
+
+    nome.entrada.focus();
   }
 
   function detalhes(r) {
@@ -190,6 +318,9 @@
         opcao("Arma", "Perícia de ataque, dano, crítico e multiplicador.", "arma"),
         opcao("Armadura", "Com um valor de defesa.", "armadura"),
         opcao("Mochila", "Reduz o peso total carregado.", "mochila"),
+        el("hr.r-linha"),
+        opcao("Criatura", "Mini ficha: status, atributos, perícias, ataques e habilidades.", "criatura"),
+        opcao("Habilidade", "Texto informativo, com cor e origem.", "habilidade"),
       ]),
     });
 
@@ -208,13 +339,32 @@
   function editar(registro, tipoNovo) {
     var criando = !registro;
     var tipo = registro ? registro.tipo : tipoNovo;
+
+    /* Criatura e habilidade têm editores próprios: os campos delas não
+       se parecem em nada com peso e dano. */
+    if (tipo === "criatura") {
+      global.RAMAHomebrewCriatura.editar(criando ? null : registro, carregar);
+      return;
+    }
+    if (tipo === "habilidade") {
+      editarHabilidade(criando ? null : registro);
+      return;
+    }
+
     var atual = registro || F.criarItem(tipo, {});
 
     var nome = UI.campo({ rotulo: "Nome", valor: atual.nome, limite: 80 });
+    /* A categoria acompanha o modelo para chegar junto na ficha quando
+       o item for copiado — senão ela teria de ser redigitada a cada
+       personagem que usasse a mesma espada. */
+    var categoria = UI.campo({
+      rotulo: "Categoria", valor: atual.categoria, limite: 60,
+      ajuda: "Livre. Vai junto quando este modelo entrar num inventário.",
+    });
     var descricao = UI.campo({ rotulo: "Descrição", tipo: "area", valor: atual.descricao, linhas: 3, limite: 2000 });
 
-    var campos = [nome];
-    var extras = {};
+    var campos = [nome, categoria];
+    var extras = { categoria: categoria };
 
     if (tipo === "mochila") {
       extras.reducao = UI.campo({ rotulo: "Redução de peso", tipo: "numero", valor: atual.reducaoPeso });
@@ -276,7 +426,11 @@
   }
 
   function coletar(tipo, base, nome, descricao, extras) {
-    var dados = { nome: nome.entrada.value.trim(), descricao: descricao.entrada.value };
+    var dados = {
+      nome: nome.entrada.value.trim(),
+      categoria: extras.categoria ? extras.categoria.entrada.value.trim() : "",
+      descricao: descricao.entrada.value,
+    };
 
     nome.marcarErro("");
     if (!dados.nome) { nome.marcarErro("Informe um nome."); nome.entrada.focus(); return null; }
@@ -336,8 +490,18 @@
      ================================================================= */
 
   async function duplicar(registro) {
-    var copia = F.normalizarItem(registro);
-    copia.id = U.uuid();
+    var copia = registro.tipo === "criatura"
+      ? global.RAMACriaturas.normalizar(registro)
+      : (registro.tipo === "habilidade"
+          ? global.RAMAHabilidades.normalizarHabilidade(registro)
+          : F.normalizarItem(registro));
+
+    /* Sem id: o servidor cria um registro novo sob quem pediu. É assim
+       que copiar algo público de outra conta não vira edição do
+       original. */
+    delete copia.id;
+    copia.tipo = registro.tipo;
+    copia.visibilidade = "privado";
     copia.nome = registro.nome + " (cópia)";
 
     var r = await global.RAMAApi.salvarHomebrew(copia);

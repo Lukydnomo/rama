@@ -22,7 +22,8 @@ preferências de tela — nunca é tratado como banco.
 /
   index.html            Home: painel do agente
   personagens/          lista de personagens
-  campanhas/            campanhas (base)
+  campanhas/            lista de campanhas
+  campanha/             uma campanha (?id=...)
   homebrew/             biblioteca de itens
   perfil/               conta, exibição e importação
   ficha/                a ficha (?id=...)
@@ -48,18 +49,25 @@ preferências de tela — nunca é tratado como banco.
     salvar.js           debounce, fila, backoff, revisão
     imagem.js           recorte, redução e compressão de foto
     importar.js         janela de importação com prévia
-    ui.js               avisos, janelas, menus, indicadores
-    app.js              casca: cabeçalho, navegação, preferências
+    ui.js               avisos, janelas, menus, indicadores, recolhível
+    app.js              casca: cabeçalho, navegação, preferências, changelog
+    versao.js           FONTE ÚNICA da versão e do changelog
+    habilidades.js      modelo e árvore recursiva de habilidades
+    criaturas.js        mini ficha de criatura
+    historico.js        rolagem → histórico da campanha, num funil só
     paginas/            um arquivo por tela
 
   backend/
-    Codigo.gs           o Apps Script inteiro (sem segredos)
+    Codigo.gs           núcleo: sessão, personagens, homebrew, perfil
+    Campanhas.gs        campanhas, rolagens, documentos, notas, combates
     appsscript.json     manifesto do projeto
 
   docs/
     DATABASE.md         abas, colunas e o porquê de cada uma
     API.md              todas as ações, entradas e saídas
     CHARACTER_SCHEMA.md o formato da ficha, campo a campo
+    PERMISSIONS.md      quem alcança o quê, e onde isso é decidido
+    CAMPAIGNS.md        campanhas, combate, histórico e criaturas
 ```
 
 ---
@@ -79,16 +87,30 @@ E abra `http://localhost:8099/rama/`.
 
 ### Testes
 
-No navegador: abra `testes/`.
-No terminal:
+São dois conjuntos.
+
+**Modelo e motor de dados** — 279 verificações. No navegador, abra `testes/`;
+no terminal:
 
 ```bash
 deno run --allow-read testes/executar.js
 ```
 
-São os mesmos casos nos dois lugares. Cobrem o motor de dados (expressões
-válidas e inválidas, dado principal, perícia, dano, crítico), a ficha padrão, o
-peso do inventário, a normalização e a importação.
+Cobrem expressões de dado válidas e inválidas, dado principal, perícia, dano,
+crítico, a ficha padrão, peso do inventário, habilidades e a árvore recursiva,
+rituais e rótulos compartilhados, categorias, migração de ficha antiga,
+importação e versionamento.
+
+**Permissões do backend** — 118 verificações:
+
+```bash
+deno run --allow-read testes/executar-backend.js
+```
+
+Carregam os dois arquivos do Apps Script num simulador da plataforma
+(`testes/apps-script-simulado.js`) e entram por `doPost`, como uma requisição de
+verdade. É onde se confirma que um usuário não alcança o que não é dele —
+inclusive mandando o pedido direto, sem passar pela interface.
 
 ---
 
@@ -106,8 +128,16 @@ Não precisa criar aba nenhuma à mão — o passo 3 faz isso.
 
 ### 2. Criar o Apps Script
 
-Em <https://script.google.com>, crie um projeto novo. Cole o conteúdo de
-`backend/Codigo.gs` no editor (substituindo o `Codigo.gs` padrão).
+Em <https://script.google.com>, crie um projeto novo.
+
+São **dois arquivos**:
+
+1. cole `backend/Codigo.gs` no editor, substituindo o `Codigo.gs` padrão;
+2. crie um arquivo novo chamado **`Campanhas`** (o botão `+` ao lado de
+   Arquivos) e cole `backend/Campanhas.gs` nele.
+
+> O Apps Script lê todos os `.gs` no mesmo escopo, então a ordem não importa.
+> São dois porque 2.300 linhas num arquivo só é ingovernável.
 
 Em **Configurações do projeto**, marque "Mostrar arquivo de manifesto
 appsscript.json" e cole o conteúdo de `backend/appsscript.json`.
@@ -195,7 +225,8 @@ implantações → editar (lápis) → Versão: Nova versão**. Editar a implant
 existente mantém a mesma URL; criar uma implantação nova gera outra URL e
 exigiria mexer no `config.js`.
 
-Se a atualização acrescentar colunas, rode `setupRama()` de novo.
+Se a atualização acrescentar abas ou colunas, rode `setupRama()` de novo. Ele
+cria só o que falta e nunca apaga o que existe.
 
 ---
 
@@ -256,9 +287,13 @@ console não abre o registro de outra conta.
 
 ## Limitações conhecidas
 
-- **Campanhas são a base**: nome, descrição e vínculo de personagens. Não há
-  nada de mestre (iniciativa, combate, NPCs, convites) — falta especificação, e
-  inventar agora seria construir para desfazer depois.
+- **O histórico de rolagens é lido inteiro do lado do servidor** antes de ser
+  paginado. Para uma mesa isso é irrelevante; para dezenas de milhares de
+  linhas, o mestre precisará limpar o histórico de vez em quando.
+- **Um mestre só por campanha na interface.** O banco já guarda o papel por
+  membro e aceita mais de um mestre, mas a tela não oferece promover ninguém.
+- **Combate não tem grid, distância, turno automático nem condições.** Nada
+  disso foi especificado.
 - **Uma ficha cabe numa célula** (~45 000 caracteres de JSON). É muito para uma
   ficha normal, mas anotações muito longas podem esbarrar; o servidor recusa com
   `dados_grandes` em vez de truncar.
@@ -274,11 +309,31 @@ console não abre o registro de outra conta.
 
 ## Próximos passos sugeridos
 
-1. Campanhas de verdade, quando a mesa souber o que precisa.
-2. Auditoria: quem mudou o quê e quando, aproveitando o `rev` que já existe.
-3. Compartilhar uma ficha em leitura com o mestre.
-4. Aplicativo instalável (Service Worker) para a ficha abrir sem rede.
-5. Condições e efeitos temporários, que hoje moram no bônus temporário.
+1. Auditoria: quem mudou o quê e quando, aproveitando o `rev` que já existe.
+2. Promover um segundo mestre pela interface (o banco já suporta).
+3. Aplicativo instalável (Service Worker) para a ficha abrir sem rede.
+4. Condições e efeitos temporários, que hoje moram no bônus temporário.
+5. Turno e rodada no combate, se a mesa quiser.
+
+---
+
+## Versionamento
+
+**A versão do sistema vive só em `js/versao.js`**, e é sempre o primeiro
+registro do `CHANGELOG`. O rodapé lê dali; clicar nele abre o histórico.
+
+Três números diferentes, que não se misturam:
+
+| | Onde | O que é |
+|---|---|---|
+| versão do aplicativo | `js/versao.js` | o que a pessoa vê: v2.0.0 |
+| `schemaVersion` | `js/ficha.js` | o formato da FICHA |
+| `versaoFormato` | `js/config.js` | o formato dos arquivos de importação |
+
+A cada entrega: um registro novo no topo, com codinome inédito e a data real.
+PATCH para correções, MINOR para funcionalidades, MAJOR para mudança de fase —
+e os números de baixo zeram ao subir. As regras completas estão comentadas no
+próprio `js/versao.js`.
 
 ---
 

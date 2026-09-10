@@ -659,6 +659,114 @@
   }
 
   /* =================================================================
+     RECOLHÍVEL
+     -----------------------------------------------------------------
+     Por padrão só o nome aparece; o resto abre no clique. Um inventário
+     de vinte itens mostrando tudo o tempo todo vira uma parede em que
+     ninguém acha nada.
+
+     É montado com <details>/<summary> de propósito. O navegador já dá
+     de graça o que teríamos de reconstruir à mão e provavelmente errar:
+     foco por teclado, Enter e Espaço para abrir, estado exposto para
+     leitor de tela e busca do navegador encontrando texto fechado. O
+     aria-expanded vai junto porque nem todo leitor de tela antigo lê o
+     estado nativo do <details>.
+
+     recolhivel({ titulo, extra, conteudo, aberto, acoes })
+     ================================================================= */
+
+  function recolhivel(opcoes) {
+    var o = opcoes || {};
+
+    var seta = el("span.recolhivel__seta", { "aria-hidden": "true" });
+
+    var resumo = el("summary.recolhivel__topo", {}, [
+      seta,
+      el("span.recolhivel__titulo", { texto: o.titulo || "" }),
+      o.extra ? el("span.recolhivel__extra", { texto: o.extra }) : null,
+    ]);
+
+    var caixa = el("details.recolhivel", { open: !!o.aberto, class: o.classe || "" }, [
+      resumo,
+      el("div.recolhivel__corpo", {}, o.conteudo),
+    ]);
+
+    /* As ações ficam FORA do <summary>: um botão dentro dele seria
+       ativado junto com a abertura, e "Excluir" não pode disparar
+       porque alguém quis só olhar o item. */
+    if (o.acoes) resumo.appendChild(el("span.recolhivel__acoes", {
+      onclick: function (ev) { ev.preventDefault(); ev.stopPropagation(); },
+    }, o.acoes));
+
+    resumo.setAttribute("aria-expanded", String(!!o.aberto));
+    caixa.addEventListener("toggle", function () {
+      resumo.setAttribute("aria-expanded", String(caixa.open));
+      if (o.aoAlternar) o.aoAlternar(caixa.open);
+    });
+
+    return caixa;
+  }
+
+  /* =================================================================
+     SELETOR DE COR
+     -----------------------------------------------------------------
+     Uma paleta fechada, mais um campo hexadecimal validado. A cor
+     escolhida NUNCA vira CSS por concatenação de texto: ela passa por
+     RAMAHabilidades.corValida() e só depois é aplicada por
+     style.setProperty, que trata o valor como valor e não como
+     declaração.
+     ================================================================= */
+
+  function seletorDeCor(opcoes) {
+    var o = opcoes || {};
+    var H = global.RAMAHabilidades;
+    var atual = H.corValida(o.valor);
+
+    var amostras = el("div.cores");
+
+    function pintar() {
+      U.trocar(amostras, H.CORES.map(function (c) {
+        var escolhida = H.corValida(c.valor) === atual;
+        var botao = el("button.cor", {
+          type: "button",
+          "aria-label": c.nome,
+          "aria-pressed": String(escolhida),
+          title: c.nome,
+          class: c.valor ? "" : "cor--nenhuma",
+          onclick: function () { atual = H.corValida(c.valor); pintar(); if (o.aoMudar) o.aoMudar(atual); },
+        });
+        if (c.valor) botao.style.setProperty("--cor-escolhida", c.valor);
+        return botao;
+      }));
+    }
+
+    pintar();
+
+    var manual = campo({
+      rotulo: "Cor personalizada", valor: atual, limite: 7,
+      ajuda: "Hexadecimal, como #A33B3B. Em branco, sem cor.",
+      aoMudar: function (v, entrada) {
+        var limpa = H.corValida(v);
+        if (v && !limpa) {
+          entrada.value = atual;
+          avisoErro("Use um hexadecimal como #A33B3B.");
+          return;
+        }
+        atual = limpa;
+        entrada.value = limpa;
+        pintar();
+        if (o.aoMudar) o.aoMudar(atual);
+      },
+    });
+
+    return el("div.r-campo", {}, [
+      el("span.r-rotulo", { texto: o.rotulo || "Cor" }),
+      amostras,
+      manual,
+    ]);
+  }
+
+  /* =================================================================
      PAINEL
      ================================================================= */
 
@@ -690,5 +798,7 @@
     passo: passo,
     campo: campo,
     painel: painel,
+    recolhivel: recolhivel,
+    seletorDeCor: seletorDeCor,
   };
 })(window);

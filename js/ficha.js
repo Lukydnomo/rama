@@ -32,7 +32,10 @@
   var U = global.RAMAUtil;
   var D = global.RAMADados;
 
-  var VERSAO_SCHEMA = 1;
+  /* 1 → 2: a ficha ganhou Habilidades, Rituais e categoria no
+     inventário. Ficha antiga continua abrindo: normalizarFicha() cria
+     as estruturas que faltam vazias. Ver docs/CHARACTER_SCHEMA.md. */
+  var VERSAO_SCHEMA = 2;
 
   var NATUREZA = { INFORMACAO: "informacao", ROLAVEL: "rolavel", DEPENDENTE: "dependente" };
 
@@ -102,6 +105,32 @@
   var DEFESA_PADRAO = { dt: 0, esquiva: 0, bloqueio: 0, resistencia: 0 };
 
   /* =================================================================
+     RITUAIS
+     -----------------------------------------------------------------
+     O NOME da seção e os RÓTULOS dos campos são configuráveis; as
+     CHAVES internas não. Quem troca "Círculo" por "Nível" está mudando
+     o que a tela escreve, não o que o dado é — se a chave mudasse
+     junto, cada renomeação exigiria migrar todos os rituais da ficha, e
+     um erro no meio disso apagaria conteúdo.
+
+     Os rótulos pertencem à SEÇÃO, não a cada ritual. Cinco nomes de
+     campo por ritual dariam uma ficha onde dois rituais mostram coisas
+     diferentes com o mesmo significado.
+     ================================================================= */
+
+  var CAMPOS_RITUAL = ["circulo", "alcance", "duracao", "alvo", "efeito"];
+
+  var ROTULOS_RITUAL_PADRAO = {
+    circulo: "Círculo",
+    alcance: "Alcance",
+    duracao: "Duração",
+    alvo: "Alvo",
+    efeito: "Efeito",
+  };
+
+  var ROTULO_SECAO_RITUAIS = "Rituais";
+
+  /* =================================================================
      CONSTRUÇÃO
      ================================================================= */
 
@@ -168,10 +197,30 @@
       defesa: Object.assign({}, DEFESA_PADRAO),
       pericias: PERICIAS_PADRAO.map(function (p) { return criarPericia(p, porSigla); }),
 
+      habilidades: global.RAMAHabilidades.arvoreVazia(),
+      rituais: rituaisVazios(),
+
       inventario: { limite: 0, itens: [] },
       anotacoes: { pastas: [], soltas: [] },
       camposCustomizados: [],
     };
+  }
+
+  function rituaisVazios() {
+    return {
+      rotuloSecao: ROTULO_SECAO_RITUAIS,
+      rotulos: Object.assign({}, ROTULOS_RITUAL_PADRAO),
+      itens: [],
+    };
+  }
+
+  function criarRitual(dados) {
+    var d = dados || {};
+    var ritual = { id: U.uuid(), nome: U.aparar(d.nome, 120) || "Novo ritual" };
+    CAMPOS_RITUAL.forEach(function (campo) {
+      ritual[campo] = U.aparar(d[campo], campo === "efeito" ? 8000 : 200);
+    });
+    return ritual;
   }
 
   /* =================================================================
@@ -188,6 +237,12 @@
       id: U.uuid(),
       tipo: TIPOS_ITEM.indexOf(tipo) >= 0 ? tipo : "item",
       nome: U.aparar(d.nome, 80) || nomePadraoDoTipo(tipo),
+      /* Categoria é diferente de tipo. O tipo diz o que o item É para o
+         sistema (arma, mochila) e é fechado; a categoria diz como quem
+         joga o organiza (Consumível, Corpo a corpo) e é texto livre —
+         fechá-la num enum obrigaria a mexer no código toda vez que uma
+         mesa inventasse uma gaveta nova. */
+      categoria: U.aparar(d.categoria, 60),
       descricao: U.aparar(d.descricao, 2000),
       /* De onde este item veio, quando veio da biblioteca. É rastro,
          não vínculo: editar o modelo na Homebrew NÃO muda a ficha. */
@@ -253,6 +308,55 @@
     });
 
     return U.peso(Math.max(0, carregado - reducao));
+  }
+
+  /* =================================================================
+     CATEGORIAS
+     -----------------------------------------------------------------
+     A categoria é texto livre, então "Consumível", " consumível " e
+     "CONSUMÍVEL" chegam como três coisas e são a mesma gaveta. A chave
+     canônica agrupa; o rótulo mostrado é a primeira grafia que
+     apareceu, para a tela não impor maiúsculas a quem escreveu com
+     capitalização própria.
+     ================================================================= */
+
+  function chaveDeCategoria(texto) {
+    return U.chaveDeBusca(U.texto(texto).replace(/\s+/g, " ").trim());
+  }
+
+  var CATEGORIA_VAZIA = "__sem__";
+
+  function categoriasDe(inventario) {
+    var itens = (inventario && inventario.itens) || [];
+    var mapa = {};
+
+    itens.forEach(function (item) {
+      if (!item) return;
+      var bruto = U.aparar(item.categoria, 60);
+      var chave = bruto ? chaveDeCategoria(bruto) : CATEGORIA_VAZIA;
+
+      if (!mapa[chave]) {
+        mapa[chave] = { chave: chave, rotulo: bruto || "Sem categoria", quantidade: 0 };
+      }
+      mapa[chave].quantidade++;
+    });
+
+    return Object.keys(mapa)
+      .map(function (k) { return mapa[k]; })
+      .sort(function (a, b) {
+        /* "Sem categoria" fica sempre no fim: é a ausência de escolha,
+           não uma gaveta concorrendo com as outras. */
+        if (a.chave === CATEGORIA_VAZIA) return 1;
+        if (b.chave === CATEGORIA_VAZIA) return -1;
+        return a.rotulo.localeCompare(b.rotulo, "pt-BR");
+      });
+  }
+
+  function itemNaCategoria(item, chave) {
+    if (!chave) return true;
+    var bruto = U.aparar(item && item.categoria, 60);
+    var atual = bruto ? chaveDeCategoria(bruto) : CATEGORIA_VAZIA;
+    return atual === chave;
   }
 
   function defesaDeArmaduras(inventario) {
@@ -389,7 +493,46 @@
     /* ---- campos personalizados ---- */
     ficha.camposCustomizados = lista(b.camposCustomizados).map(normalizarCampo).filter(Boolean);
 
+    /* ---- habilidades (schema 2) ----
+       Ficha gravada antes desta versão não tem o campo. Ela recebe uma
+       árvore vazia e abre normalmente — nenhuma migração manual, nenhum
+       aviso, nenhuma célula editada à mão. */
+    ficha.habilidades = global.RAMAHabilidades.normalizarArvore(b.habilidades);
+
+    /* ---- rituais (schema 2) ---- */
+    ficha.rituais = normalizarRituais(b.rituais);
+
     return ficha;
+  }
+
+  function normalizarRituais(bruto) {
+    var b = (bruto && typeof bruto === "object") ? bruto : {};
+    var rotulosBrutos = (b.rotulos && typeof b.rotulos === "object") ? b.rotulos : {};
+
+    var rotulos = {};
+    CAMPOS_RITUAL.forEach(function (campo) {
+      /* Rótulo em branco voltaria a seção para uma coluna sem nome;
+         nesse caso o padrão volta a valer. */
+      rotulos[campo] = U.aparar(rotulosBrutos[campo], 40) || ROTULOS_RITUAL_PADRAO[campo];
+    });
+
+    return {
+      rotuloSecao: U.aparar(b.rotuloSecao, 40) || ROTULO_SECAO_RITUAIS,
+      rotulos: rotulos,
+      itens: lista(b.itens).map(normalizarRitual).filter(Boolean),
+    };
+  }
+
+  function normalizarRitual(bruto) {
+    if (!bruto || typeof bruto !== "object") return null;
+    var nome = U.aparar(bruto.nome, 120);
+    if (!nome) return null;
+
+    var ritual = { id: bruto.id || U.uuid(), nome: nome };
+    CAMPOS_RITUAL.forEach(function (campo) {
+      ritual[campo] = U.aparar(bruto[campo], campo === "efeito" ? 8000 : 200);
+    });
+    return ritual;
   }
 
   function lista(v) { return Array.isArray(v) ? v : []; }
@@ -551,7 +694,17 @@
     ATRIBUTOS_PADRAO: ATRIBUTOS_PADRAO,
     PERICIAS_PADRAO: PERICIAS_PADRAO,
 
+    CAMPOS_RITUAL: CAMPOS_RITUAL,
+    ROTULOS_RITUAL_PADRAO: ROTULOS_RITUAL_PADRAO,
+    CATEGORIA_VAZIA: CATEGORIA_VAZIA,
+
     criarFicha: criarFicha,
+    criarRitual: criarRitual,
+    rituaisVazios: rituaisVazios,
+    normalizarRituais: normalizarRituais,
+    chaveDeCategoria: chaveDeCategoria,
+    categoriasDe: categoriasDe,
+    itemNaCategoria: itemNaCategoria,
     criarAtributo: criarAtributo,
     criarStatus: criarStatus,
     criarItem: criarItem,

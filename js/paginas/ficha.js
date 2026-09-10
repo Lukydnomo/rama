@@ -23,12 +23,25 @@
   var F = global.RAMAFicha;
   var el = U.el;
 
+  /* A ordem é a do projeto: Habilidades logo depois de Perícias, e a
+     seção de rituais em seguida.
+
+     O rótulo de rituais é uma FUNÇÃO porque o nome dela é configurável
+     — quem trocar "Rituais" por "Magias" vê a aba mudar junto, sem que
+     nada da estrutura interna se mexa. */
   var ABAS = [
-    { chave: "geral",      rotulo: "Geral",      secao: "RAMASecaoGeral" },
-    { chave: "pericias",   rotulo: "Perícias",   secao: "RAMASecaoPericias" },
-    { chave: "inventario", rotulo: "Inventário", secao: "RAMASecaoInventario" },
-    { chave: "anotacoes",  rotulo: "Anotações",  secao: "RAMASecaoAnotacoes" },
+    { chave: "geral",        rotulo: "Geral",       secao: "RAMASecaoGeral" },
+    { chave: "pericias",     rotulo: "Perícias",    secao: "RAMASecaoPericias" },
+    { chave: "habilidades",  rotulo: "Habilidades", secao: "RAMASecaoHabilidades" },
+    { chave: "rituais",      secao: "RAMASecaoRituais",
+      rotulo: function () { return global.RAMASecaoRituais.rotulo(ctx); } },
+    { chave: "inventario",   rotulo: "Inventário",  secao: "RAMASecaoInventario" },
+    { chave: "anotacoes",    rotulo: "Anotações",   secao: "RAMASecaoAnotacoes" },
   ];
+
+  function rotuloDaAba(a) {
+    return typeof a.rotulo === "function" ? a.rotulo() : a.rotulo;
+  }
 
   var CHAVE_ABA = "rama.ficha.aba";
 
@@ -42,6 +55,7 @@
     salvador: null,
     indicador: null,
     raiz: null,
+    comoMestre: false,
   };
 
   var ctx = null;
@@ -85,6 +99,20 @@
 
     montarContexto();
     montarSalvador(U.inteiro(rFicha.rev, 0));
+
+    /* O histórico se liga aqui, uma vez. Daqui em diante toda rolagem
+       que passar por RAMARolagens.mostrar() sobe para a campanha
+       sozinha — nenhuma seção da ficha precisa saber disso. */
+    if (global.RAMAHistorico) {
+      global.RAMAHistorico.configurar({
+        campanhaId: estado.ficha.campanhaId || null,
+        personagemId: estado.personagemId,
+      });
+    }
+
+    /* Quem abriu como mestre precisa saber: a ficha é de outra pessoa. */
+    estado.comoMestre = !!rFicha.mestre && !rFicha.dono;
+
     desenhar();
   });
 
@@ -155,6 +183,7 @@
 
     estado.raiz = el("div.ficha", { dataset: { modo: estado.modo } }, [
       cabecalho(),
+      estado.comoMestre ? avisoDeMestre() : null,
       estado.modo === "edicao" ? avisoDeEdicao() : null,
       global.RAMASecaoGeral.blocoSuperior(ctx),
       abas(),
@@ -260,6 +289,15 @@
       : "Modo normal. A estrutura está travada de novo.");
   }
 
+  /* Editar a ficha de outra pessoa tem de ser evidente o tempo todo.
+     Sem este aviso, um mestre com várias fichas abertas mexe na errada
+     sem perceber. */
+  function avisoDeMestre() {
+    return el("div.ficha__aviso-mestre", { role: "status" }, [
+      el("span", { texto: "Você está editando como MESTRE da campanha — esta ficha é de outro agente." }),
+    ]);
+  }
+
   function avisoDeEdicao() {
     return el("div.ficha__aviso-edicao", { role: "status" }, [
       el("span", { texto: "Modo edição ativo — a estrutura da ficha pode ser alterada" }),
@@ -284,7 +322,7 @@
           role: "tab",
           "aria-selected": String(ativa),
           tabindex: ativa ? "0" : "-1",
-          texto: a.rotulo,
+          texto: rotuloDaAba(a),
           onclick: function () { trocarAba(a.chave); },
           onkeydown: function (ev) { navegarAbas(ev); },
         });

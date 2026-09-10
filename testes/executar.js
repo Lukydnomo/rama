@@ -16,8 +16,10 @@ const ARQUIVOS = [
   "js/config.js",
   "js/util.js",
   "js/dados.js",
+  "js/habilidades.js",
   "js/ficha.js",
   "js/validacao.js",
+  "js/versao.js",
   "testes/casos.js",
 ];
 

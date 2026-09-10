@@ -164,7 +164,11 @@
     var rodape = el("footer.app-rodape", {}, [
       el("div.app-rodape__faixa", {}, [
         el("span.t-no", { texto: "Nó" }),
-        el("span", { texto: "Arquivo pessoal · os dados vivem na sua planilha" }),
+        el("span", { texto: "Os dados vivem na sua planilha" }),
+        /* A versão vem do topo do CHANGELOG, nunca de uma constante
+           escrita à mão aqui. Uma vez só, na casca compartilhada, para
+           não existir uma cópia por página que possa divergir. */
+        versaoNoRodape(),
       ]),
     ]);
 
@@ -194,6 +198,66 @@
       rotuloConfirmar: "Sair",
     });
     if (certeza) global.RAMAAuth.sair();
+  }
+
+  /* =================================================================
+     VERSÃO E HISTÓRICO
+     -----------------------------------------------------------------
+     A única leitura de versão da interface inteira. Se outra tela
+     precisar mostrá-la, ela chama daqui — não recria a constante.
+     ================================================================= */
+
+  function versaoNoRodape() {
+    var V = global.RAMAVersion;
+    if (!V) return null;
+
+    return el("button.versao", {
+      type: "button",
+      title: "Ver o histórico de versões",
+      texto: "R.A.M.A. · " + V.rotulo,
+      onclick: abrirChangelog,
+    });
+  }
+
+  function abrirChangelog() {
+    var V = global.RAMAVersion;
+    if (!V) return;
+
+    var registros = V.changelog.map(function (r, i) {
+      var secoes = [];
+
+      /* Categoria vazia não aparece: uma lista de títulos sem conteúdo
+         faria o changelog parecer maior do que é. */
+      V.categorias.forEach(function (categoria) {
+        var itens = (r.mudancas && r.mudancas[categoria]) || [];
+        if (!itens.length) return;
+
+        secoes.push(el("div.versao-secao", {}, [
+          el("p.t-rotulo.t-rotulo-forte", { texto: categoria }),
+          el("ul.versao-lista", {}, itens.map(function (texto) {
+            return el("li", { texto: texto });
+          })),
+        ]));
+      });
+
+      return global.RAMAUI.recolhivel({
+        titulo: "v" + r.versao + " — " + r.codinome,
+        extra: r.data,
+        /* A mais recente abre; as anteriores ficam recolhidas. */
+        aberto: i === 0,
+        conteudo: secoes.length ? secoes : [el("p.t-mini", { texto: "Sem mudanças registradas." })],
+      });
+    });
+
+    global.RAMAUI.modal({
+      titulo: "Histórico de versões",
+      largo: true,
+      conteudo: [
+        el("p.t-mini", { texto: "A versão que aparece no rodapé é sempre a do topo desta lista." }),
+        el("div.pilha--curta", { class: "pilha" }, registros),
+      ],
+      botoes: [{ rotulo: "Fechar", classe: "r-botao--principal" }],
+    });
   }
 
   /* =================================================================
@@ -258,6 +322,7 @@
     titulo: titulo,
     iniciar: iniciar,
     preferencias: preferencias,
+    abrirChangelog: abrirChangelog,
     definirEfeitos: definirEfeitos,
     definirEscala: definirEscala,
     aplicarPreferencias: aplicarPreferencias,

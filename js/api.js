@@ -40,8 +40,25 @@
     "ler_campanha",
     "ler_perfil",
 
+    "listar_usuarios",
+    "listar_personagens_campanha",
+    "listar_rolagens",
+    "listar_documentos",
+    "ler_imagem_documento",
+    "listar_notas_mestre",
+    "listar_combates",
+    "ler_homebrew",
+    "ler_imagem_criatura",
+
     "salvar_foto",
     "salvar_perfil",
+    "salvar_imagem_criatura",
+    "salvar_imagem_documento",
+
+    /* registrar_rolagem repete com segurança porque carrega um id
+       próprio: o servidor reconhece a segunda chegada e não cria a
+       segunda linha. Sem essa chave ela NÃO poderia estar aqui. */
+    "registrar_rolagem",
   ];
 
   function podeRepetir(acao) { return IDEMPOTENTES.indexOf(acao) >= 0; }
@@ -140,7 +157,12 @@
      HOMEBREW
      ================================================================= */
 
-  function listarHomebrew() { return post({ acao: "listar_homebrew" }); }
+  /* escopo: "meus" (padrão), "publicos" ou "todos". O padrão é o mais
+     restrito de propósito — quem não pediu conteúdo alheio não recebe. */
+  function listarHomebrew(opcoes) {
+    var o = opcoes || {};
+    return post({ acao: "listar_homebrew", escopo: o.escopo || "meus", tipo: o.tipo || "" });
+  }
 
   function salvarHomebrew(registro) {
     return post({ acao: "salvar_homebrew", dados: registro });
@@ -173,6 +195,128 @@
   function lerPerfil() { return post({ acao: "ler_perfil" }); }
 
   function salvarPerfil(dados) { return post({ acao: "salvar_perfil", dados: dados }); }
+
+  /* =================================================================
+     HOMEBREW — LEITURA AVULSA E IMAGENS
+     ================================================================= */
+
+  function lerHomebrew(id) { return post({ acao: "ler_homebrew", homebrewId: id }); }
+
+  function lerImagemCriatura(id) { return post({ acao: "ler_imagem_criatura", criaturaId: id }); }
+
+  function salvarImagemCriatura(id, imagem) {
+    return post({ acao: "salvar_imagem_criatura", criaturaId: id, imagem: imagem });
+  }
+
+  /* =================================================================
+     CAMPANHA — PARTICIPANTES E PERSONAGENS
+     ================================================================= */
+
+  function listarUsuarios() { return post({ acao: "listar_usuarios" }); }
+
+  function salvarParticipantes(campanhaId, membros) {
+    return post({ acao: "salvar_participantes", campanhaId: campanhaId, membros: membros });
+  }
+
+  function listarPersonagensCampanha(campanhaId) {
+    return post({ acao: "listar_personagens_campanha", campanhaId: campanhaId });
+  }
+
+  function vincularPersonagem(campanhaId, personagemId, vincular) {
+    return post({
+      acao: "vincular_personagem", campanhaId: campanhaId,
+      personagemId: personagemId, vincular: vincular !== false,
+    });
+  }
+
+  /* O ajuste cirúrgico do painel do mestre: um campo, por id, com a
+     revisão conferida. Não é um atalho mais frouxo do que salvar a
+     ficha — é o mesmo controle sobre um payload menor. */
+  function ajustarPersonagem(personagemId, rev, alvo, itemId, campo, valor) {
+    return post({
+      acao: "ajustar_personagem", personagemId: personagemId, rev: rev,
+      alvo: alvo, itemId: itemId, campo: campo, valor: valor,
+    });
+  }
+
+  /* =================================================================
+     CAMPANHA — ROLAGENS
+     ================================================================= */
+
+  function listarRolagens(campanhaId, opcoes) {
+    var o = opcoes || {};
+    return post({
+      acao: "listar_rolagens", campanhaId: campanhaId,
+      limite: o.limite, pulo: o.pulo,
+    });
+  }
+
+  /* A rolagem JÁ aconteceu. O `rolagemId` é gerado por quem rolou e é a
+     chave que impede uma retentativa de virar duas linhas no histórico.
+     Nunca gere um id novo ao repetir o envio. */
+  function registrarRolagem(campanhaId, rolagem) {
+    return post({
+      acao: "registrar_rolagem", campanhaId: campanhaId,
+      rolagemId: rolagem.id, personagemId: rolagem.personagemId || "",
+      tipo: rolagem.tipo || "", nome: rolagem.nome || "",
+      dados: rolagem.dados,
+    });
+  }
+
+  function limparRolagens(campanhaId) {
+    return post({ acao: "limpar_rolagens", campanhaId: campanhaId });
+  }
+
+  /* =================================================================
+     CAMPANHA — DOCUMENTOS, NOTAS E COMBATES
+     ================================================================= */
+
+  function listarDocumentos(campanhaId) {
+    return post({ acao: "listar_documentos", campanhaId: campanhaId });
+  }
+
+  function salvarDocumento(campanhaId, dados, rev) {
+    return post({ acao: "salvar_documento", campanhaId: campanhaId, dados: dados, rev: rev });
+  }
+
+  function excluirDocumento(campanhaId, documentoId) {
+    return post({ acao: "excluir_documento", campanhaId: campanhaId, documentoId: documentoId });
+  }
+
+  function lerImagemDocumento(campanhaId, documentoId) {
+    return post({ acao: "ler_imagem_documento", campanhaId: campanhaId, documentoId: documentoId });
+  }
+
+  function salvarImagemDocumento(campanhaId, documentoId, imagem) {
+    return post({
+      acao: "salvar_imagem_documento", campanhaId: campanhaId,
+      documentoId: documentoId, imagem: imagem,
+    });
+  }
+
+  function listarNotasMestre(campanhaId) {
+    return post({ acao: "listar_notas_mestre", campanhaId: campanhaId });
+  }
+
+  function salvarNotaMestre(campanhaId, dados) {
+    return post({ acao: "salvar_nota_mestre", campanhaId: campanhaId, dados: dados });
+  }
+
+  function excluirNotaMestre(campanhaId, notaId) {
+    return post({ acao: "excluir_nota_mestre", campanhaId: campanhaId, notaId: notaId });
+  }
+
+  function listarCombates(campanhaId) {
+    return post({ acao: "listar_combates", campanhaId: campanhaId });
+  }
+
+  function salvarCombate(campanhaId, dados, rev) {
+    return post({ acao: "salvar_combate", campanhaId: campanhaId, dados: dados, rev: rev });
+  }
+
+  function excluirCombate(campanhaId, combateId) {
+    return post({ acao: "excluir_combate", campanhaId: campanhaId, combateId: combateId });
+  }
 
   /* =================================================================
      MENSAGENS
@@ -291,6 +435,34 @@
 
     lerPerfil: lerPerfil,
     salvarPerfil: salvarPerfil,
+
+    lerHomebrew: lerHomebrew,
+    lerImagemCriatura: lerImagemCriatura,
+    salvarImagemCriatura: salvarImagemCriatura,
+
+    listarUsuarios: listarUsuarios,
+    salvarParticipantes: salvarParticipantes,
+    listarPersonagensCampanha: listarPersonagensCampanha,
+    vincularPersonagem: vincularPersonagem,
+    ajustarPersonagem: ajustarPersonagem,
+
+    listarRolagens: listarRolagens,
+    registrarRolagem: registrarRolagem,
+    limparRolagens: limparRolagens,
+
+    listarDocumentos: listarDocumentos,
+    salvarDocumento: salvarDocumento,
+    excluirDocumento: excluirDocumento,
+    lerImagemDocumento: lerImagemDocumento,
+    salvarImagemDocumento: salvarImagemDocumento,
+
+    listarNotasMestre: listarNotasMestre,
+    salvarNotaMestre: salvarNotaMestre,
+    excluirNotaMestre: excluirNotaMestre,
+
+    listarCombates: listarCombates,
+    salvarCombate: salvarCombate,
+    excluirCombate: excluirCombate,
 
     frase: frase,
     recado: recado,

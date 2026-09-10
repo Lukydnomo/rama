@@ -1,7 +1,12 @@
 # O banco
 
-Uma planilha do Google, sete abas. Criadas e mantidas por `setupRama()` — não
+Uma planilha do Google, treze abas. Criadas e mantidas por `setupRama()` — não
 monte nada à mão.
+
+> **Atualizando da v1 para a v2:** rode `setupRama()` de novo. Ele cria as seis
+> abas novas, acrescenta a coluna `visibilidade` em `HOMEBREW` e `CAMPANHAS`, e
+> **não toca em nada que já existe**. Coluna nova entra no fim e fica vazia nas
+> linhas antigas; vazio é lido como `privado`.
 
 ## Duas decisões que explicam o formato
 
@@ -118,7 +123,8 @@ aba de personagens antes de decidir.
 |----------------|--------------------------------------------|
 | `id`           | UUID                                       |
 | `ownerId`      | da sessão                                  |
-| `tipo`         | `item` / `arma` / `armadura` / `mochila`   |
+| `tipo`         | `item` / `arma` / `armadura` / `mochila` / `criatura` / `habilidade` |
+| `visibilidade` | `privado` (padrão) / `publico` — vazio é privado |
 | `nome`         | espelho, para busca e ordenação            |
 | `criadoEm`     | ISO 8601                                   |
 | `atualizadoEm` | ISO 8601                                   |
@@ -138,15 +144,72 @@ modelo aqui não muda, semanas depois, a espada de um personagem em jogo.
 | `nome`         | espelho                        |
 | `criadoEm`     | ISO 8601                       |
 | `atualizadoEm` | ISO 8601                       |
+| `visibilidade` | `privado` (padrão) / `publico` |
 | `rev`          | inteiro                        |
-| `dadosJson`    | hoje só `{ descricao }`        |
+| `dadosJson`    | `{ descricao, rolagensMestreOcultas }` |
 
-O `dadosJson` está quase vazio de propósito: quando a mesa souber o que uma
-campanha precisa ter, cresce ali dentro, sem mexer na planilha.
+O que cresce, tem permissão própria ou carrega imagem NÃO fica aqui: mora em
+tabela própria. Ver `CAMPANHA_MEMBROS` e as demais, abaixo.
 
 **O vínculo personagem↔campanha mora no personagem** (`campanhaId`), e só nele.
 Guardar dos dois lados exigiria manter dois lugares em sincronia, e a primeira
 gravação que falhasse deixaria um personagem numa campanha que não sabe dele.
+
+## As tabelas da campanha
+
+Seis, e nenhuma delas cabia no `dadosJson`: rolagens crescem sem fim, documentos
+carregam imagem, notas e combates têm permissão própria e são editados de forma
+independente. Enfiados num só JSON, abrir a campanha baixaria tudo e uma nota
+nova reescreveria o histórico inteiro.
+
+### CAMPANHA_MEMBROS
+
+`id · campanhaId · userId · papel · criadoEm`
+
+O vínculo entre conta e campanha, **por ID permanente**. Nunca por nome ou
+username: renomear uma conta não pode dar nem tirar acesso de ninguém.
+
+O criador não tem linha aqui — ele é mestre por ser dono da campanha. Uma
+campanha recém-criada não teria nenhuma linha, e o dono ficaria trancado para
+fora da própria mesa.
+
+### CAMPANHA_ROLAGENS
+
+`id · campanhaId · autorUserId · personagemId · tipo · nome · visibilidade · criadoEm · dadosJson`
+
+O `id` vem do CLIENTE e é a chave de idempotência: uma retentativa de rede
+encontra a linha que já existe e não cria a segunda. `visibilidade` é decidida
+no servidor, nunca aceita do pedido.
+
+### CAMPANHA_DOCUMENTOS + CAMPANHA_DOCUMENTOS_IMAGENS
+
+`id · campanhaId · nome · descricao · visiveisJson · criadoEm · atualizadoEm · rev`
+`documentoId · campanhaId · imagem · atualizadoEm`
+
+`visiveisJson` é um array de ids de usuário. **Array vazio significa ninguém
+além do mestre** — nunca "todos". A imagem fica em tabela separada porque é o
+campo mais pesado e o que menos muda.
+
+### CAMPANHA_NOTAS
+
+`id · campanhaId · personagemId · pasta · titulo · criadoEm · atualizadoEm · conteudo`
+
+Privadas do mestre. Nenhuma resposta destinada a jogador toca nesta aba.
+
+### CAMPANHA_COMBATES
+
+`id · campanhaId · nome · estado · visiveisJson · criadoEm · atualizadoEm · rev · dadosJson`
+
+`dadosJson` guarda `{ participantes }`. Cada criatura entra como **snapshot**
+com id próprio, então duas ocorrências do mesmo modelo têm estados
+independentes.
+
+### CRIATURAS_IMAGENS
+
+`criaturaId · ownerId · imagem · atualizadoEm`
+
+Mesma razão da foto de personagem: imagem fora do JSON que é reenviado a cada
+edição.
 
 ---
 

@@ -73,6 +73,7 @@ página de erro quando estoura), o `rede.js` reconhece pelo que é e converte em
 | `nao_encontrado`   | não existe **ou não é seu**                          |
 | `conflito`         | a revisão mudou; vem com `rev` e `dados`             |
 | `ocupado`          | a trava não foi obtida em 25 s                       |
+| `sem_permissao`    | você alcança a campanha, mas não esta ação nela      |
 
 > **`nao_encontrado` também cobre "existe, mas é de outra conta".** Distinguir os
 > dois confirmaria que aquele id existe — o mesmo motivo pelo qual login errado
@@ -91,8 +92,22 @@ nome é fácil de errar, lista é fácil de conferir.
 
 ```
 ping · sessao · resumo · listar_personagens · ler_personagem · ler_foto
-listar_homebrew · listar_campanhas · ler_campanha · ler_perfil
+listar_homebrew · ler_homebrew · ler_imagem_criatura
+listar_campanhas · ler_campanha · listar_usuarios
+listar_personagens_campanha · listar_rolagens · listar_documentos
+ler_imagem_documento · listar_notas_mestre · listar_combates · ler_perfil
 ```
+
+Três GRAVAÇÕES também entram na lista, porque SUBSTITUEM um valor em vez de
+criar registro — repetir não cria nada:
+
+```
+salvar_foto · salvar_perfil · salvar_imagem_criatura · salvar_imagem_documento
+```
+
+E `registrar_rolagem`, que é o caso especial: ela carrega um id próprio, e o
+servidor reconhece a segunda chegada como repetição. **Sem essa chave ela não
+poderia estar aqui.**
 
 ---
 
@@ -231,6 +246,60 @@ assunto exclusivo do editor do Apps Script.
 
 ---
 
+## Ações de campanha
+
+Todas em `backend/Campanhas.gs`. A primeira linha de cada uma é
+`contextoDaCampanha()` ou `exigirMestre()` — não existe caminho que pule isso.
+
+| Ação | Quem | Observação |
+|---|---|---|
+| `listar_campanhas` | qualquer | as suas, as que joga, e as públicas |
+| `ler_campanha` | membro ou espectador | espectador não recebe a lista de membros |
+| `criar_campanha` | qualquer | nasce privada |
+| `salvar_campanha` | mestre | com `rev` |
+| `excluir_campanha` | **criador** | leva membros, rolagens, documentos, notas e combates; fichas ficam só sem campanha |
+| `listar_usuarios` | qualquer | diretório mínimo: id, usuario, nome, avatar |
+| `salvar_participantes` | mestre | ids de usuário; quem sai leva os personagens junto |
+| `listar_personagens_campanha` | membro | cabeçalho + status + atributos, nunca a ficha inteira |
+| `vincular_personagem` | dono ou mestre | só entra ficha de quem é membro |
+| `ajustar_personagem` | dono ou mestre | um campo, por id, **com `rev`** |
+| `registrar_rolagem` | membro | idempotente pelo `rolagemId` |
+| `listar_rolagens` | membro | paginado; oculta do mestre não sai para jogador |
+| `limpar_rolagens` | mestre | só daquela campanha |
+| `listar_documentos` | membro | filtrado no servidor |
+| `salvar_documento` / `excluir_documento` | mestre | `visiveis` só aceita membros |
+| `ler_imagem_documento` | quem pode ver o documento | permissão conferida de novo |
+| `salvar_imagem_documento` | mestre | |
+| `listar_notas_mestre` / `salvar_nota_mestre` / `excluir_nota_mestre` | **mestre** | não existe variação para jogador |
+| `listar_combates` | membro autorizado | jogador não recebe o snapshot das criaturas |
+| `salvar_combate` / `excluir_combate` | mestre | com `rev` |
+
+### `ajustar_personagem`
+
+```js
+{ acao: "ajustar_personagem", personagemId, rev,
+  alvo: "status" | "atributo", itemId, campo, valor }
+```
+
+`campo` só aceita `atual` e `maximo` para status, e `valor` para atributo. Alvo
+ou campo fora dessa lista responde `dados_invalidos`. **Não é um caminho
+paralelo mais frouxo** — é o mesmo controle de revisão sobre um payload menor.
+
+### `registrar_rolagem`
+
+```js
+{ acao: "registrar_rolagem", campanhaId, rolagemId, personagemId, tipo, nome, dados }
+```
+
+O `rolagemId` é gerado por quem rolou. **Nunca gere um id novo ao repetir o
+envio**: é ele que impede a mesma rolagem de virar duas linhas. A resposta traz
+`repetida: true` quando o servidor reconhece a segunda chegada.
+
+A `visibilidade` **não é aceita do cliente**. Rolagem de jogador é sempre
+pública na mesa; a do mestre segue a configuração da campanha.
+
+---
+
 ## Segurança — o contrato
 
 O frontend roda no navegador de outra pessoa. Pode ser lido inteiro, alterado
@@ -246,5 +315,12 @@ pelo console e chamado por fora da interface. Então:
    os dados públicos do perfil — nunca senha, hash, sal ou segredo.
 6. **Estar logado na tela não é autorização.** Se este frontend inteiro fosse
    adulterado, o servidor continuaria recusando o que precisa recusar.
+7. **Papel de campanha vem do banco.** Mandar `papel: "mestre"` ou
+   `ehMestre: true` no corpo não promove ninguém.
+8. **Ser mestre dá acesso à FICHA vinculada, não à conta.** O `ownerId` nunca
+   muda, e apagar ou duplicar o personagem de outra pessoa continua fora de
+   alcance.
 
-Essas seis linhas são o que os testes de segurança conferem.
+Essas oito linhas são o que os testes de segurança conferem — 118 verificações
+em `testes/executar-backend.js`. A matriz completa está em
+[PERMISSIONS.md](PERMISSIONS.md).

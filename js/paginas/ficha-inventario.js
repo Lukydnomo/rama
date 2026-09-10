@@ -30,6 +30,10 @@
   var D = global.RAMADados;
   var el = U.el;
 
+  /* Filtro de categoria escolhido. Estado de TELA: não sobe para a
+     planilha, porque não é do personagem — é do momento. */
+  var categoriaAtiva = "";
+
   function aba(ctx) {
     var inventario = ctx.ficha.inventario;
     var peso = F.pesoAtual(inventario);
@@ -75,6 +79,7 @@
     var itens = ctx.ficha.inventario.itens || [];
 
     if (!itens.length) {
+      categoriaAtiva = "";
       return UI.vazio({
         titulo: "Mochila vazia",
         texto: "Acrescente itens, armas, armaduras e mochilas. Tudo o que você criar aqui também entra na sua biblioteca Homebrew.",
@@ -82,40 +87,88 @@
       });
     }
 
+    var categorias = F.categoriasDe(ctx.ficha.inventario);
+
+    /* Se a categoria filtrada deixou de existir — o último item dela foi
+       removido —, o filtro volta sozinho para "todas". Sem isso a tela
+       ficaria vazia sem explicação nenhuma. */
+    if (categoriaAtiva && !categorias.some(function (c) { return c.chave === categoriaAtiva; })) {
+      categoriaAtiva = "";
+    }
+
     /* Armas primeiro: são as que se usam durante o combate, e é nelas
        que se clica com pressa. */
     var ordem = { arma: 0, armadura: 1, item: 2, mochila: 3 };
-    var ordenados = itens.slice().sort(function (a, b) {
-      return (ordem[a.tipo] - ordem[b.tipo]) || U.chaveDeBusca(a.nome).localeCompare(U.chaveDeBusca(b.nome), "pt-BR");
-    });
+    var visiveis = itens
+      .filter(function (i) { return F.itemNaCategoria(i, categoriaAtiva); })
+      .sort(function (a, b) {
+        return (ordem[a.tipo] - ordem[b.tipo]) ||
+               U.chaveDeBusca(a.nome).localeCompare(U.chaveDeBusca(b.nome), "pt-BR");
+      });
 
-    return el("div.itens", {}, ordenados.map(function (i) { return cartao(ctx, i); }));
+    return el("div.pilha--curta", { class: "pilha" }, [
+      /* O filtro só aparece quando há mais de uma gaveta: um seletor com
+         uma opção só é ruído. */
+      categorias.length > 1 ? filtro(ctx, categorias, itens.length) : null,
+
+      visiveis.length
+        ? el("div.itens", {}, visiveis.map(function (i) { return cartao(ctx, i); }))
+        : el("p.t-mini", { texto: "Nenhum item nesta categoria." }),
+    ]);
+  }
+
+  /* O filtro casa pela CATEGORIA do item, e não por texto solto na
+     descrição: "Consumível" escrito no meio de uma descrição não faz o
+     item entrar na gaveta de consumíveis. */
+  function filtro(ctx, categorias, total) {
+    return el("div.filtros", {}, [
+      el("div.filtros__grupo", { role: "group", "aria-label": "Filtrar por categoria" },
+        [{ chave: "", rotulo: "Todas", quantidade: total }].concat(categorias).map(function (c) {
+          return el("button.filtro", {
+            type: "button",
+            "aria-pressed": String(categoriaAtiva === c.chave),
+            texto: c.rotulo + " (" + c.quantidade + ")",
+            onclick: function () { categoriaAtiva = c.chave; ctx.redesenhar(); },
+          });
+        })
+      ),
+    ]);
   }
 
   /* =================================================================
      CARTÃO DE ITEM
      ================================================================= */
 
+  /* Fechado, cada item mostra só o nome, o tipo e a categoria. Vinte
+     itens abertos ao mesmo tempo viram uma parede em que ninguém acha
+     nada — e no celular a lista não terminava mais.
+
+     As armas são a exceção: os botões de Ataque e Dano continuam à
+     vista mesmo com o item fechado, porque são a ação mais repetida
+     durante um combate e não podem custar um clique a mais. */
   function cartao(ctx, item) {
-    return el("article.item", { class: item.tipo === "arma" ? "item--arma" : "" }, [
-      el("div.item__topo", {}, [
-        el("div", {}, [
-          el("p.item__nome", { texto: item.nome }),
-          el("span.r-etiqueta", { texto: F.rotuloDoTipo(item.tipo) }),
-        ]),
-        UI.menu(opcoesDoItem(ctx, item), { rotulo: "Opções de " + item.nome, icone: "tresPontos" }),
-      ]),
+    var arma = item.tipo === "arma" && !ctx.emEdicao();
 
-      detalhes(item),
+    var caixa = UI.recolhivel({
+      titulo: item.nome,
+      extra: [F.rotuloDoTipo(item.tipo), item.categoria].filter(Boolean).join(" · "),
+      classe: item.tipo === "arma" ? "recolhivel--arma" : "",
+      conteudo: [
+        detalhes(item),
+        item.descricao ? el("p.item__descricao", { texto: item.descricao }) : null,
+      ],
+      acoes: [UI.menu(opcoesDoItem(ctx, item), { rotulo: "Opções de " + item.nome, icone: "tresPontos" })],
+    });
 
-      item.descricao ? el("p.item__descricao", { texto: item.descricao }) : null,
+    if (arma) caixa.appendChild(botoesDeArma(ctx, item));
 
-      item.tipo === "arma" && !ctx.emEdicao() ? botoesDeArma(ctx, item) : null,
-    ]);
+    return caixa;
   }
 
   function detalhes(item) {
     var linhas = [];
+
+    linhas.push(["Categoria", item.categoria || "Sem categoria"]);
 
     if (item.tipo === "mochila") {
       linhas.push(["Reduz", formatarPeso(item.reducaoPeso) + " de peso"]);
@@ -164,7 +217,7 @@
      ================================================================= */
 
   function botoesDeArma(ctx, arma) {
-    return el("div.item__acoes", {}, [
+    return el("div.item__acoes.item__acoes--fora", {}, [
       el("button.r-botao", {
         type: "button", texto: "Ataque",
         onclick: function () { atacar(ctx, arma); },
@@ -282,8 +335,13 @@
     var nome = UI.campo({ rotulo: "Nome", valor: atual.nome, limite: 80 });
     var descricao = UI.campo({ rotulo: "Descrição", tipo: "area", valor: atual.descricao, linhas: 3, limite: 2000 });
 
-    var campos = [nome];
-    var extras = {};
+    var categoria = UI.campo({
+      rotulo: "Categoria", valor: atual.categoria, limite: 60,
+      ajuda: "Livre: Consumível, Corpo a corpo, Investigação… Serve para filtrar.",
+    });
+
+    var campos = [nome, categoria];
+    var extras = { categoria: categoria };
 
     if (tipo === "mochila") {
       extras.reducao = UI.campo({
@@ -378,6 +436,7 @@
   function coletar(tipo, base, nome, descricao, extras) {
     var dados = {
       nome: nome.entrada.value.trim(),
+      categoria: extras.categoria ? extras.categoria.entrada.value.trim() : (base.categoria || ""),
       descricao: descricao.entrada.value,
       origemHomebrewId: base.origemHomebrewId || null,
     };

@@ -676,3 +676,66 @@ body.pagina-ficha .app-corpo {
 
   .r-painel { padding: var(--e5) var(--e3) var(--e3); }
 }
+
+/* =====================================================================
+   HABILIDADES
+   ---------------------------------------------------------------------
+   A árvore recua por nível, mas o recuo é discreto: no celular, seis
+   níveis de indentação larga não deixariam texto nenhum na tela.
+   ===================================================================== */
+
+.arvore-hab { display: flex; flex-direction: column; gap: var(--e2); }
+
+.arvore-hab .recolhivel__corpo > .recolhivel { margin-left: var(--e2); }
+
+@media (min-width: 720px) {
+  .arvore-hab .recolhivel__corpo > .recolhivel { margin-left: var(--e3); }
+}
+
+/* A pasta se distingue da habilidade pela etiqueta tracejada, não por
+   cor: quem não distingue cores continua vendo a diferença. */
+.recolhivel--pasta > .recolhivel__topo { border-left: 2px dashed var(--cor-traco-fraca); }
+
+.habilidade__texto {
+  color: var(--cor-texto-2);
+  line-height: var(--altura-linha);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.habilidade__texto--negrito { font-weight: 700; color: var(--cor-texto); }
+
+/* =====================================================================
+   AVISO DE MESTRE
+   ---------------------------------------------------------------------
+   Editar a ficha de outra pessoa precisa ser evidente o tempo todo.
+   Usa a cor paranormal, que em nenhum outro lugar do sistema significa
+   "atenção" — então não se confunde com o modo edição.
+   ===================================================================== */
+
+.ficha__aviso-mestre {
+  display: flex;
+  align-items: center;
+  gap: var(--e2);
+  padding: var(--e2) var(--e3);
+  border: var(--borda) solid var(--cor-paranormal);
+  color: var(--cor-paranormal);
+  font-family: var(--fonte-mini);
+  font-size: var(--texto-mini);
+  letter-spacing: var(--espaco-letra-titulo);
+  text-transform: uppercase;
+}
+
+/* =====================================================================
+   ITENS RECOLHÍVEIS
+   ===================================================================== */
+
+/* Os botões de Ataque e Dano ficam FORA do corpo recolhível: são a ação
+   mais repetida de um combate e não podem custar a abertura do item. */
+.item__acoes--fora {
+  padding: var(--e2) var(--e3) var(--e3);
+  border-top: var(--borda) solid var(--cor-traco-fraca);
+}
+
+.recolhivel--arma { border-color: var(--cor-traco-media); }
+
+.itens > .recolhivel + .recolhivel { margin-top: 0; }

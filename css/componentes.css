@@ -816,3 +816,112 @@
   gap: var(--e3);
   grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
 }
+
+/* =====================================================================
+   RECOLHÍVEL
+   ---------------------------------------------------------------------
+   Construído sobre <details>/<summary>: o navegador já entrega foco por
+   teclado, Enter/Espaço, estado para leitor de tela e busca encontrando
+   texto fechado. Reimplementar isso com div e clique daria menos, com
+   mais código.
+   ===================================================================== */
+
+.recolhivel {
+  background: var(--cor-superficie);
+  border: var(--borda) solid var(--cor-traco-fraca);
+  min-width: 0;
+}
+.recolhivel + .recolhivel { margin-top: var(--e2); }
+
+.recolhivel__topo {
+  display: flex;
+  align-items: center;
+  gap: var(--e2);
+  min-height: var(--alvo-toque);
+  padding: var(--e2) var(--e3);
+  cursor: pointer;
+  list-style: none;
+  user-select: none;
+}
+.recolhivel__topo::-webkit-details-marker { display: none; }
+.recolhivel__topo:hover { background: var(--cor-superficie-2); }
+
+/* O indicador é forma, não cor: a seta gira, e continua legível para
+   quem não distingue cores. */
+.recolhivel__seta {
+  flex: 0 0 auto;
+  width: 10px;
+  color: var(--cor-texto-3);
+  transition: transform var(--tempo-curto) var(--curva);
+}
+.recolhivel__seta::before { content: "\25B8"; }
+.recolhivel[open] > .recolhivel__topo .recolhivel__seta { transform: rotate(90deg); }
+
+@media (prefers-reduced-motion: reduce) {
+  .recolhivel__seta { transition: none; }
+}
+
+.recolhivel__titulo {
+  flex: 1;
+  min-width: 0;
+  font-weight: 700;
+  color: var(--cor-texto);
+  letter-spacing: var(--espaco-letra);
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.recolhivel__extra {
+  flex: 0 0 auto;
+  font-family: var(--fonte-mini);
+  font-size: var(--texto-mini);
+  color: var(--cor-texto-3);
+  white-space: nowrap;
+}
+
+.recolhivel__acoes { flex: 0 0 auto; display: flex; gap: var(--e1); }
+
+.recolhivel__corpo {
+  padding: 0 var(--e3) var(--e3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--e2);
+  border-top: var(--borda) solid var(--cor-traco-fraca);
+  padding-top: var(--e3);
+}
+
+/* A cor de identificação entra como traço lateral, nunca como
+   preenchimento: a interface é escura de propósito, e um bloco colorido
+   brigaria com a leitura. */
+.recolhivel[data-cor] { border-left-width: 3px; }
+
+/* =====================================================================
+   SELETOR DE COR
+   ===================================================================== */
+
+.cores { display: flex; flex-wrap: wrap; gap: var(--e2); }
+
+.cor {
+  width: 28px; height: 28px;
+  padding: 0;
+  background: var(--cor-escolhida, transparent);
+  border: var(--borda) solid var(--cor-traco-fraca);
+  cursor: pointer;
+}
+.cor:hover { border-color: var(--cor-traco-media); }
+.cor[aria-pressed="true"] {
+  border-color: var(--cor-traco-forte);
+  border-width: 2px;
+  outline: 1px solid var(--cor-fundo);
+  outline-offset: -4px;
+}
+
+/* "Sem cor" precisa ser reconhecível sem depender de cor nenhuma. */
+.cor--nenhuma {
+  background: repeating-linear-gradient(
+    45deg,
+    transparent 0 5px,
+    var(--cor-traco-fraca) 5px 6px
+  );
+}

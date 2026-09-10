@@ -18,3 +18,4 @@ assets/fonts/*.otf
 # Sistema
 .DS_Store
 Thumbs.db
+js/config.js

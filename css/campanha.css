@@ -1,0 +1,141 @@
+/* =====================================================================
+   R.A.M.A. — campanha
+   ---------------------------------------------------------------------
+   Só o que é exclusivo da tela de campanha. Tudo o mais reaproveita os
+   componentes que já existem: painel, recolhível, filtro, etiqueta.
+   ===================================================================== */
+
+.membros {
+  display: grid;
+  gap: var(--e2);
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+}
+
+.membro {
+  display: flex;
+  align-items: center;
+  gap: var(--e2);
+  padding: var(--e2);
+  background: var(--cor-superficie);
+  border: var(--borda) solid var(--cor-traco-fraca);
+  min-width: 0;
+}
+.membro p { min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+
+/* =====================================================================
+   PAINEL DE NÚMEROS DO MESTRE
+   ---------------------------------------------------------------------
+   Os controles rápidos de PV e atributo. Alvos grandes: são apertados
+   às pressas no meio de um combate.
+   ===================================================================== */
+
+.painel-numeros {
+  display: grid;
+  gap: var(--e2);
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+}
+
+.painel-numero {
+  display: flex;
+  flex-direction: column;
+  gap: var(--e1);
+  min-width: 0;
+}
+
+/* =====================================================================
+   HISTÓRICO DE ROLAGENS
+   ===================================================================== */
+
+.rolagem-linha {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: var(--e2) var(--e3);
+  background: var(--cor-superficie);
+  border: var(--borda) solid var(--cor-traco-fraca);
+}
+
+/* A rolagem oculta do mestre é marcada por traço e por etiqueta, nunca
+   só por cor: ela precisa se distinguir para quem não distingue cor. */
+.rolagem-linha--oculta {
+  border-left: 3px solid var(--cor-paranormal);
+}
+
+.rolagem-linha__topo {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--e2);
+}
+
+.rolagem-linha__total {
+  font-weight: 700;
+  font-size: var(--texto-medio);
+  color: var(--cor-texto);
+  font-variant-numeric: tabular-nums;
+}
+
+.rolagem-livre__saida { text-align: center; }
+.rolagem-livre__total {
+  font-weight: 700;
+  font-size: var(--texto-numero);
+  line-height: 1;
+  color: var(--cor-texto);
+  font-variant-numeric: tabular-nums;
+}
+
+/* =====================================================================
+   INICIATIVA
+   ---------------------------------------------------------------------
+   O número é DIGITADO. O sistema só ordena — não sorteia iniciativa.
+   ===================================================================== */
+
+.iniciativa { display: flex; flex-direction: column; gap: var(--e1); }
+
+.iniciativa__linha {
+  display: grid;
+  grid-template-columns: 2em 4.5em 1fr auto auto auto;
+  align-items: center;
+  gap: var(--e2);
+  padding: var(--e1) var(--e2);
+  background: var(--cor-superficie);
+  border: var(--borda) solid var(--cor-traco-fraca);
+}
+.iniciativa__linha--criatura { border-left: 3px solid var(--cor-traco-media); }
+
+.iniciativa__posicao {
+  font-family: var(--fonte-mini);
+  font-size: var(--texto-mini);
+  color: var(--cor-texto-3);
+  text-align: center;
+}
+
+.iniciativa__numero { min-height: var(--alvo-toque); }
+
+.iniciativa__nome {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  color: var(--cor-texto);
+}
+
+@media (max-width: 640px) {
+  .iniciativa__linha {
+    grid-template-columns: 2em 4.5em 1fr auto;
+    grid-template-areas:
+      "pos num nome menu"
+      "pos num tags menu";
+    row-gap: var(--e1);
+  }
+  .iniciativa__posicao { grid-area: pos; }
+  .iniciativa__numero { grid-area: num; }
+  .iniciativa__nome { grid-area: nome; }
+  .iniciativa__linha .r-etiqueta { grid-area: tags; justify-self: start; }
+}
+
+/* =====================================================================
+   DOCUMENTOS
+   ===================================================================== */
+
+.documento__imagem img { max-width: 100%; height: auto; }

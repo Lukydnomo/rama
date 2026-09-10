@@ -87,14 +87,81 @@ var ABAS = {
     colunas: ['personagemId', 'ownerId', 'imagem', 'atualizadoEm'],
   },
   HOMEBREW: {
+    /* `visibilidade` entrou na v2. Registro antigo fica com a célula
+       vazia, e vazio é lido como 'privado' — nenhuma biblioteca que já
+       existia vira pública sozinha. */
     nome: 'HOMEBREW',
-    colunas: ['id', 'ownerId', 'tipo', 'nome', 'criadoEm', 'atualizadoEm', 'rev', 'dadosJson'],
+    colunas: ['id', 'ownerId', 'tipo', 'nome', 'visibilidade', 'criadoEm', 'atualizadoEm', 'rev', 'dadosJson'],
+  },
+  CRIATURAS_IMAGENS: {
+    /* Mesma razão da foto de personagem: imagem fora do JSON que é
+       reenviado a cada edição. */
+    nome: 'CRIATURAS_IMAGENS',
+    colunas: ['criaturaId', 'ownerId', 'imagem', 'atualizadoEm'],
   },
   CAMPANHAS: {
     nome: 'CAMPANHAS',
-    colunas: ['id', 'ownerId', 'nome', 'criadoEm', 'atualizadoEm', 'rev', 'dadosJson'],
+    colunas: ['id', 'ownerId', 'nome', 'visibilidade', 'criadoEm', 'atualizadoEm', 'rev', 'dadosJson'],
+  },
+
+  /* ---------------------------------------------------------------
+     As cinco tabelas novas da campanha.
+
+     Nada disto cabia dentro do dadosJson da campanha: rolagens crescem
+     sem fim, documentos carregam imagem, notas e combates têm
+     permissão própria e são editados de forma independente. Enfiados
+     num só JSON, abrir a campanha baixaria tudo e uma nota nova
+     reescreveria o histórico inteiro.
+     --------------------------------------------------------------- */
+
+  CAMPANHA_MEMBROS: {
+    /* O vínculo entre conta e campanha, por ID permanente. Nunca por
+       nome ou usuário: renomear uma conta não pode dar nem tirar
+       acesso de ninguém. */
+    nome: 'CAMPANHA_MEMBROS',
+    colunas: ['id', 'campanhaId', 'userId', 'papel', 'criadoEm'],
+  },
+  CAMPANHA_ROLAGENS: {
+    nome: 'CAMPANHA_ROLAGENS',
+    colunas: ['id', 'campanhaId', 'autorUserId', 'personagemId', 'tipo', 'nome',
+              'visibilidade', 'criadoEm', 'dadosJson'],
+  },
+  CAMPANHA_DOCUMENTOS: {
+    nome: 'CAMPANHA_DOCUMENTOS',
+    colunas: ['id', 'campanhaId', 'nome', 'descricao', 'visiveisJson',
+              'criadoEm', 'atualizadoEm', 'rev'],
+  },
+  CAMPANHA_DOCUMENTOS_IMAGENS: {
+    nome: 'CAMPANHA_DOCUMENTOS_IMAGENS',
+    colunas: ['documentoId', 'campanhaId', 'imagem', 'atualizadoEm'],
+  },
+  CAMPANHA_NOTAS: {
+    /* Privadas do mestre. Nenhuma resposta destinada a jogador toca
+       nesta aba. */
+    nome: 'CAMPANHA_NOTAS',
+    colunas: ['id', 'campanhaId', 'personagemId', 'pasta', 'titulo',
+              'criadoEm', 'atualizadoEm', 'conteudo'],
+  },
+  CAMPANHA_COMBATES: {
+    nome: 'CAMPANHA_COMBATES',
+    colunas: ['id', 'campanhaId', 'nome', 'estado', 'visiveisJson',
+              'criadoEm', 'atualizadoEm', 'rev', 'dadosJson'],
   },
 };
+
+/* Visibilidade, em um só lugar. 'privado' é o padrão de tudo o que não
+   diz o contrário — inclusive das linhas antigas, cuja célula está
+   vazia. Um padrão que erra para o lado de esconder. */
+var VIS_PRIVADO = 'privado';
+var VIS_PUBLICO = 'publico';
+
+function visibilidadeDe(valor) {
+  return String(valor) === VIS_PUBLICO ? VIS_PUBLICO : VIS_PRIVADO;
+}
+
+var PAPEL_MESTRE = 'mestre';
+var PAPEL_JOGADOR = 'jogador';
+var PAPEL_ESPECTADOR = 'espectador';
 
 var DIAS_SESSAO = 30;
 
@@ -119,7 +186,7 @@ function doPost(e) {
     if (!corpo) return responder({ ok: false, erro: 'dados_invalidos' });
 
     var acao = String(corpo.acao || '');
-    var rota = ROTAS[acao];
+    var rota = rotaDe(acao);
     if (!rota) return responder({ ok: false, erro: 'acao_desconhecida' });
 
     /* Login e ping são as únicas portas abertas. Todo o resto exige
@@ -165,7 +232,35 @@ function responder(objeto) {
    ROTEAMENTO
    ===================================================================== */
 
-var ROTAS = {
+/* O mapa é montado sob demanda, e não numa `var` de topo.
+
+   O motivo é concreto: as ações de campanha moram em Campanhas.gs, e o
+   Apps Script avalia os arquivos numa ordem que não controlamos. Um
+   objeto literal montado no carregamento de Codigo.gs poderia apontar
+   para funções que ainda não existem. Montado na primeira requisição,
+   todos os arquivos já foram lidos.
+
+   O resultado fica em cache: a execução seguinte reaproveita. */
+var CACHE_ROTAS = null;
+
+function rotaDe(acao) {
+  if (!CACHE_ROTAS) {
+    CACHE_ROTAS = rotasDoNucleo();
+
+    /* Campanhas.gs se anuncia por esta função. Se o arquivo não
+       estiver instalado, o núcleo continua funcionando sozinho — e as
+       ações de campanha respondem 'acao_desconhecida' em vez de
+       derrubar o script inteiro. */
+    if (typeof rotasDeCampanha === 'function') {
+      var extras = rotasDeCampanha();
+      Object.keys(extras).forEach(function (chave) { CACHE_ROTAS[chave] = extras[chave]; });
+    }
+  }
+  return CACHE_ROTAS[acao] || null;
+}
+
+function rotasDoNucleo() {
+  return {
   ping:                  { publica: true,  fn: acaoPing },
   login:                 { publica: true,  fn: acaoLogin },
 
@@ -184,18 +279,19 @@ var ROTAS = {
   salvar_foto:           { publica: false, fn: acaoSalvarFoto },
 
   listar_homebrew:       { publica: false, fn: acaoListarHomebrew },
+  ler_homebrew:          { publica: false, fn: acaoLerHomebrew },
   salvar_homebrew:       { publica: false, fn: acaoSalvarHomebrew },
   excluir_homebrew:      { publica: false, fn: acaoExcluirHomebrew },
 
-  listar_campanhas:      { publica: false, fn: acaoListarCampanhas },
-  ler_campanha:          { publica: false, fn: acaoLerCampanha },
-  criar_campanha:        { publica: false, fn: acaoCriarCampanha },
-  salvar_campanha:       { publica: false, fn: acaoSalvarCampanha },
-  excluir_campanha:      { publica: false, fn: acaoExcluirCampanha },
+  ler_imagem_criatura:   { publica: false, fn: acaoLerImagemCriatura },
+  salvar_imagem_criatura:{ publica: false, fn: acaoSalvarImagemCriatura },
 
   ler_perfil:            { publica: false, fn: acaoLerPerfil },
   salvar_perfil:         { publica: false, fn: acaoSalvarPerfil },
-};
+
+  /* As ações de campanha ficam em Campanhas.gs e entram pelo rotaDe(). */
+  };
+}
 
 /* =====================================================================
    PLANILHA
@@ -587,14 +683,170 @@ function meuRegistro(definicao, id, usuario) {
 }
 
 /* =====================================================================
+   A MATRIZ DE PERMISSÕES
+   ---------------------------------------------------------------------
+   Até a v1 havia uma regra só: o dono acessa, mais ninguém. Com mestre
+   de campanha isso deixou de bastar — mas a saída NÃO é afrouxar a
+   conferência de dono. É acrescentar um segundo caminho, igualmente
+   explícito, e obrigar toda ação a passar por um dos dois.
+
+   Papéis, e o que cada um alcança:
+
+     mestre       criou a campanha (ou foi promovido). Lê e edita as
+                  fichas VINCULADAS a ela, vê todas as rolagens,
+                  administra documentos, notas e combates.
+     jogador      foi convidado. Entra na campanha, vê o que foi
+                  liberado, edita a própria ficha como sempre.
+     espectador   a campanha é pública e ele não é membro. Vê a
+                  existência dela e o que for realmente público.
+     nenhum       campanha privada e ele está de fora. Não existe.
+
+   Três coisas que ser mestre NÃO dá:
+
+     · virar dono de ficha alguma (ownerId nunca muda);
+     · apagar o personagem de outra pessoa;
+     · abrir o catálogo Homebrew privado de um jogador.
+
+   Catálogo e conteúdo já anexado à ficha são coisas diferentes: o
+   mestre lê a cópia que está DENTRO da ficha, nunca a biblioteca de
+   onde ela saiu.
+   ===================================================================== */
+
+/* O contexto que toda ação de campanha pede antes de decidir qualquer
+   coisa. Devolve o papel real, derivado da SESSÃO e do BANCO — nunca
+   de um campo enviado pelo navegador. */
+function contextoDaCampanha(campanhaId, usuario) {
+  var campanha = acharPor(ABAS.CAMPANHAS, 'id', campanhaId);
+  if (!campanha) return { ok: false, erro: 'nao_encontrado' };
+
+  var papel = papelNaCampanha(campanha, usuario);
+  if (!papel) return { ok: false, erro: 'nao_encontrado' };
+
+  return { ok: true, campanha: campanha, papel: papel, mestre: papel === PAPEL_MESTRE };
+}
+
+function papelNaCampanha(campanha, usuario) {
+  if (!campanha || !usuario) return null;
+
+  /* Quem criou é mestre. Não depende de haver linha em MEMBROS — uma
+     campanha recém-criada não teria nenhuma, e o dono ficaria trancado
+     para fora da própria campanha. */
+  if (String(campanha.ownerId) === String(usuario.id)) return PAPEL_MESTRE;
+
+  var membro = membroDaCampanha(campanha.id, usuario.id);
+  if (membro) {
+    return String(membro.papel) === PAPEL_MESTRE ? PAPEL_MESTRE : PAPEL_JOGADOR;
+  }
+
+  /* Pública deixa entrar para olhar; privada não deixa nem saber que
+     existe. */
+  if (visibilidadeDe(campanha.visibilidade) === VIS_PUBLICO) return PAPEL_ESPECTADOR;
+
+  return null;
+}
+
+function membroDaCampanha(campanhaId, userId) {
+  var alvoC = String(campanhaId), alvoU = String(userId);
+  var todos = lerTudo(ABAS.CAMPANHA_MEMBROS);
+  for (var i = 0; i < todos.length; i++) {
+    if (String(todos[i].campanhaId) === alvoC && String(todos[i].userId) === alvoU) return todos[i];
+  }
+  return null;
+}
+
+function membrosDaCampanha(campanhaId) {
+  var alvo = String(campanhaId);
+  return lerTudo(ABAS.CAMPANHA_MEMBROS).filter(function (m) {
+    return String(m.campanhaId) === alvo;
+  });
+}
+
+/* Exige mestre. Devolve o contexto ou o erro, e é a primeira linha de
+   toda ação administrativa. */
+function exigirMestre(campanhaId, usuario) {
+  var ctx = contextoDaCampanha(campanhaId, usuario);
+  if (!ctx.ok) return ctx;
+  if (!ctx.mestre) return { ok: false, erro: 'sem_permissao' };
+  return ctx;
+}
+
+/* As linhas da campanha que pertencem a ela. Filtro aplicado no
+   servidor, sempre — o navegador nunca recebe linha de outra campanha
+   para descartar depois. */
+function daCampanha(definicao, campanhaId) {
+  var alvo = String(campanhaId);
+  return lerTudo(definicao).filter(function (r) { return String(r.campanhaId) === alvo; });
+}
+
+/* =====================================================================
+   ACESSO A PERSONAGEM
+   ---------------------------------------------------------------------
+   O ponto onde a v1 e a v2 se separam. Duas portas, e só duas:
+
+     1. é seu;
+     2. é de um jogador, está vinculado a uma campanha, e quem pede é o
+        mestre DAQUELA campanha.
+
+   A segunda porta confere o vínculo no BANCO. Não basta o pedido vir
+   com um campanhaId: se o personagem não estiver realmente naquela
+   campanha, ou quem pede não for realmente mestre dela, a porta não
+   abre. É por isso que o campanhaId do corpo da requisição não entra
+   nesta função — ela lê o do próprio personagem.
+   ===================================================================== */
+
+function personagemAcessivel(personagemId, usuario, opcoes) {
+  var o = opcoes || {};
+  var personagem = acharPor(ABAS.PERSONAGENS, 'id', personagemId);
+  if (!personagem) return { ok: false, erro: 'nao_encontrado' };
+
+  if (meu(personagem, usuario)) {
+    return { ok: true, personagem: personagem, dono: true, mestre: false };
+  }
+
+  /* Não é seu. Só resta o caminho do mestre — e ele exige que o
+     personagem esteja mesmo numa campanha. */
+  if (!personagem.campanhaId) return { ok: false, erro: 'nao_encontrado' };
+
+  var campanha = acharPor(ABAS.CAMPANHAS, 'id', personagem.campanhaId);
+  if (!campanha) return { ok: false, erro: 'nao_encontrado' };
+
+  if (papelNaCampanha(campanha, usuario) !== PAPEL_MESTRE) {
+    return { ok: false, erro: 'nao_encontrado' };
+  }
+
+  /* Ser mestre não é ser dono. Apagar e transferir continuam sendo do
+     dono, e só dele. */
+  if (o.exigeDono) return { ok: false, erro: 'sem_permissao' };
+
+  return { ok: true, personagem: personagem, dono: false, mestre: true, campanha: campanha };
+}
+
+/* As campanhas que este usuário alcança, com o papel em cada uma.
+   Calculado uma vez por requisição e reaproveitado, para listar
+   personagens não reler a aba de membros a cada linha. */
+function campanhasDoUsuario(usuario) {
+  var porId = {};
+
+  lerTudo(ABAS.CAMPANHAS).forEach(function (c) {
+    var papel = papelNaCampanha(c, usuario);
+    if (papel) porId[c.id] = { campanha: c, papel: papel };
+  });
+
+  return porId;
+}
+
+/* =====================================================================
    PERSONAGENS
    ===================================================================== */
 
 function acaoListarPersonagens(corpo, usuario) {
+  /* A lista pessoal continua sendo só do dono: o mestre chega às
+     fichas dos jogadores pela tela da campanha, não misturadas às
+     dele. O que mudou é a resolução do NOME da campanha, que agora
+     alcança as campanhas de que o usuário participa. */
   var campanhas = {};
-  lerTudo(ABAS.CAMPANHAS).forEach(function (c) {
-    if (meu(c, usuario)) campanhas[c.id] = c.nome;
-  });
+  var alcance = campanhasDoUsuario(usuario);
+  Object.keys(alcance).forEach(function (id) { campanhas[id] = alcance[id].campanha.nome; });
 
   var fotos = {};
   lerTudo(ABAS.PERSONAGENS_FOTOS).forEach(function (f) {
@@ -626,13 +878,18 @@ function acaoListarPersonagens(corpo, usuario) {
 }
 
 function acaoLerPersonagem(corpo, usuario) {
-  var registro = meuRegistro(ABAS.PERSONAGENS, corpo.personagemId, usuario);
-  if (!registro) return { ok: false, erro: 'nao_encontrado' };
+  var acesso = personagemAcessivel(corpo.personagemId, usuario);
+  if (!acesso.ok) return acesso;
 
   return {
     ok: true,
-    rev: Number(registro.rev) || 0,
-    dados: lerJson(registro.fichaJson, {}),
+    rev: Number(acesso.personagem.rev) || 0,
+    /* Quem abriu precisa saber se está como dono ou como mestre: a
+       tela mostra um aviso e esconde o que é do dono. A decisão de
+       permissão já foi tomada aqui; isto é só o rótulo. */
+    dono: acesso.dono,
+    mestre: acesso.mestre,
+    dados: lerJson(acesso.personagem.fichaJson, {}),
   };
 }
 
@@ -691,8 +948,9 @@ function acaoSalvarPersonagem(corpo, usuario) {
   if (json.length > MAX_CELULA) return { ok: false, erro: 'dados_grandes' };
 
   return comTrava(function () {
-    var registro = meuRegistro(ABAS.PERSONAGENS, corpo.personagemId, usuario);
-    if (!registro) return { ok: false, erro: 'nao_encontrado' };
+    var acesso = personagemAcessivel(corpo.personagemId, usuario);
+    if (!acesso.ok) return acesso;
+    var registro = acesso.personagem;
 
     var revAtual = Number(registro.rev) || 0;
     var revPedida = Number(corpo.rev);
@@ -725,8 +983,11 @@ function acaoSalvarPersonagem(corpo, usuario) {
 
 function acaoExcluirPersonagem(corpo, usuario) {
   return comTrava(function () {
-    var registro = meuRegistro(ABAS.PERSONAGENS, corpo.personagemId, usuario);
-    if (!registro) return { ok: false, erro: 'nao_encontrado' };
+    /* exigeDono: ser mestre dá acesso à FICHA, não à conta. Apagar o
+       personagem de outra pessoa continua fora de alcance. */
+    var acesso = personagemAcessivel(corpo.personagemId, usuario, { exigeDono: true });
+    if (!acesso.ok) return acesso;
+    var registro = acesso.personagem;
 
     apagarLinha(ABAS.PERSONAGENS, registro._linha);
 
@@ -741,8 +1002,9 @@ function acaoExcluirPersonagem(corpo, usuario) {
 
 function acaoDuplicarPersonagem(corpo, usuario) {
   return comTrava(function () {
-    var registro = meuRegistro(ABAS.PERSONAGENS, corpo.personagemId, usuario);
-    if (!registro) return { ok: false, erro: 'nao_encontrado' };
+    var acesso = personagemAcessivel(corpo.personagemId, usuario, { exigeDono: true });
+    if (!acesso.ok) return acesso;
+    var registro = acesso.personagem;
 
     var ficha = lerJson(registro.fichaJson, {});
     var agora = new Date().toISOString();
@@ -782,10 +1044,17 @@ function acaoDuplicarPersonagem(corpo, usuario) {
 /* Uma campanha só entra na ficha se existir E for desta conta. Sem
    isto, alterar o campanhaId no console vincularia o personagem à
    campanha de outra pessoa. */
+/* Uma campanha só entra na ficha se existir E o usuário alcançar. Até
+   a v1 isso queria dizer "ser dono"; agora quer dizer "ser mestre ou
+   jogador dela" — mas continua sendo conferido aqui, e não aceito de
+   quem enviou. Espectador de campanha pública NÃO conta: olhar de fora
+   não põe personagem dentro. */
 function campanhaValida(campanhaId, usuario) {
   if (!campanhaId) return '';
   var campanha = acharPor(ABAS.CAMPANHAS, 'id', campanhaId);
-  return (campanha && meu(campanha, usuario)) ? campanhaId : '';
+  if (!campanha) return '';
+  var papel = papelNaCampanha(campanha, usuario);
+  return (papel === PAPEL_MESTRE || papel === PAPEL_JOGADOR) ? campanhaId : '';
 }
 
 /* =====================================================================
@@ -793,15 +1062,14 @@ function campanhaValida(campanhaId, usuario) {
    ===================================================================== */
 
 function acaoLerFoto(corpo, usuario) {
-  var personagem = meuRegistro(ABAS.PERSONAGENS, corpo.personagemId, usuario);
-  if (!personagem) return { ok: false, erro: 'nao_encontrado' };
+  var acesso = personagemAcessivel(corpo.personagemId, usuario);
+  if (!acesso.ok) return acesso;
 
+  /* A permissão já foi decidida pelo acesso ao personagem. Conferir o
+     ownerId da FOTO de novo trancaria o mestre para fora de uma imagem
+     que ele pode ver na ficha inteira. */
   var foto = acharPor(ABAS.PERSONAGENS_FOTOS, 'personagemId', corpo.personagemId);
-  if (!foto || String(foto.ownerId) !== String(usuario.id)) {
-    return { ok: true, dados: { imagem: '' } };
-  }
-
-  return { ok: true, dados: { imagem: foto.imagem || '' } };
+  return { ok: true, dados: { imagem: (foto && foto.imagem) || '' } };
 }
 
 function acaoSalvarFoto(corpo, usuario) {
@@ -811,21 +1079,23 @@ function acaoSalvarFoto(corpo, usuario) {
   if (imagem.length > MAX_CELULA) return { ok: false, erro: 'dados_grandes' };
 
   return comTrava(function () {
-    var personagem = meuRegistro(ABAS.PERSONAGENS, corpo.personagemId, usuario);
-    if (!personagem) return { ok: false, erro: 'nao_encontrado' };
+    var acesso = personagemAcessivel(corpo.personagemId, usuario);
+    if (!acesso.ok) return acesso;
 
     var agora = new Date().toISOString();
     var existente = acharPor(ABAS.PERSONAGENS_FOTOS, 'personagemId', corpo.personagemId);
 
     if (existente) {
-      existente.ownerId = usuario.id;
+      /* O dono da foto é o dono do PERSONAGEM, não quem gravou: se o
+         mestre trocar a imagem, a ficha continua sendo do jogador. */
+      existente.ownerId = acesso.personagem.ownerId;
       existente.imagem = imagem;
       existente.atualizadoEm = agora;
       atualizarLinha(ABAS.PERSONAGENS_FOTOS, existente._linha, existente);
     } else {
       inserir(ABAS.PERSONAGENS_FOTOS, {
         personagemId: corpo.personagemId,
-        ownerId: usuario.id,
+        ownerId: acesso.personagem.ownerId,
         imagem: imagem,
         atualizadoEm: agora,
       });
@@ -839,23 +1109,67 @@ function acaoSalvarFoto(corpo, usuario) {
    HOMEBREW
    ===================================================================== */
 
-var TIPOS_HOMEBREW = ['item', 'arma', 'armadura', 'mochila'];
+var TIPOS_HOMEBREW = ['item', 'arma', 'armadura', 'mochila', 'criatura'];
 
+/* Um registro é alcançável se for seu, ou se for público. Público dá
+   direito de LER e de copiar como modelo — nunca de alterar o
+   original. Editar e apagar continuam sendo só do dono. */
+function homebrewAlcancavel(registro, usuario) {
+  if (!registro) return false;
+  if (meu(registro, usuario)) return true;
+  return visibilidadeDe(registro.visibilidade) === VIS_PUBLICO;
+}
+
+/* escopo:
+     'meus'     (padrão) só a biblioteca de quem pediu, pública ou não
+     'publicos' só o que OUTRAS contas publicaram
+     'todos'    os dois juntos — é o que o seletor de criaturas do
+                combate usa
+
+   O padrão é 'meus' de propósito: quem não pediu conteúdo alheio não
+   recebe conteúdo alheio. E em nenhum escopo entra registro privado de
+   outra conta. */
 function acaoListarHomebrew(corpo, usuario) {
+  var escopo = String(corpo.escopo || 'meus');
+  var tipo = String(corpo.tipo || '');
+
   var lista = lerTudo(ABAS.HOMEBREW)
-    .filter(function (h) { return meu(h, usuario); })
-    .map(function (h) {
-      var dados = lerJson(h.dadosJson, {});
-      dados.id = h.id;
-      dados.tipo = h.tipo;
-      dados.nome = h.nome;
-      dados.criadoEm = h.criadoEm;
-      dados.atualizadoEm = h.atualizadoEm;
-      return dados;
+    .filter(function (h) {
+      if (tipo && String(h.tipo) !== tipo) return false;
+
+      var proprio = meu(h, usuario);
+      var publico = visibilidadeDe(h.visibilidade) === VIS_PUBLICO;
+
+      if (escopo === 'publicos') return !proprio && publico;
+      if (escopo === 'todos') return proprio || publico;
+      return proprio;
     })
+    .map(function (h) { return homebrewParaCliente(h, usuario); })
     .sort(function (a, b) { return String(a.nome).localeCompare(String(b.nome), 'pt-BR'); });
 
   return { ok: true, dados: lista };
+}
+
+/* A forma como um registro chega ao navegador. As colunas mandam sobre
+   o JSON: id, tipo, nome e visibilidade vêm da linha, não do conteúdo
+   gravado, para um dadosJson adulterado não conseguir mentir sobre a
+   própria visibilidade. */
+function homebrewParaCliente(h, usuario) {
+  var dados = lerJson(h.dadosJson, {});
+  dados.id = h.id;
+  dados.tipo = h.tipo;
+  dados.nome = h.nome;
+  dados.visibilidade = visibilidadeDe(h.visibilidade);
+  dados.criadoEm = h.criadoEm;
+  dados.atualizadoEm = h.atualizadoEm;
+  dados.meu = meu(h, usuario);
+  return dados;
+}
+
+function acaoLerHomebrew(corpo, usuario) {
+  var registro = acharPor(ABAS.HOMEBREW, 'id', corpo.homebrewId);
+  if (!homebrewAlcancavel(registro, usuario)) return { ok: false, erro: 'nao_encontrado' };
+  return { ok: true, rev: Number(registro.rev) || 0, dados: homebrewParaCliente(registro, usuario) };
 }
 
 /* Cria ou atualiza, conforme o id vier ou não — e conforme ele ser
@@ -872,13 +1186,23 @@ function acaoSalvarHomebrew(corpo, usuario) {
   var json = JSON.stringify(dados);
   if (json.length > MAX_CELULA) return { ok: false, erro: 'dados_grandes' };
 
+  /* Só quem declarou visibilidade muda visibilidade. Um registro que
+     chega sem o campo mantém a que tinha — e um registro novo nasce
+     privado. */
+  var visibilidade = dados.visibilidade === undefined ? null : visibilidadeDe(dados.visibilidade);
+
   return comTrava(function () {
     var agora = new Date().toISOString();
+
+    /* meuRegistro, e não homebrewAlcancavel: editar um registro público
+       de OUTRA conta é exatamente o que não pode acontecer. Um id
+       alheio não vira atualização — vira registro novo sob quem pediu. */
     var existente = dados.id ? meuRegistro(ABAS.HOMEBREW, dados.id, usuario) : null;
 
     if (existente) {
       existente.tipo = tipo;
       existente.nome = nome;
+      existente.visibilidade = visibilidade || visibilidadeDe(existente.visibilidade);
       existente.atualizadoEm = agora;
       existente.rev = (Number(existente.rev) || 0) + 1;
       existente.dadosJson = json;
@@ -892,6 +1216,7 @@ function acaoSalvarHomebrew(corpo, usuario) {
       ownerId: usuario.id,
       tipo: tipo,
       nome: nome,
+      visibilidade: visibilidade || VIS_PRIVADO,
       criadoEm: agora,
       atualizadoEm: agora,
       rev: 1,
@@ -906,114 +1231,68 @@ function acaoExcluirHomebrew(corpo, usuario) {
   return comTrava(function () {
     var registro = meuRegistro(ABAS.HOMEBREW, corpo.homebrewId, usuario);
     if (!registro) return { ok: false, erro: 'nao_encontrado' };
+
     apagarLinha(ABAS.HOMEBREW, registro._linha);
+
+    /* A imagem mora em outra aba e não some sozinha. Deixá-la para trás
+       encheria a planilha de linhas órfãs que ninguém mais consegue
+       alcançar nem apagar pela interface. */
+    var imagem = acharPor(ABAS.CRIATURAS_IMAGENS, 'criaturaId', corpo.homebrewId);
+    if (imagem && String(imagem.ownerId) === String(usuario.id)) {
+      apagarLinha(ABAS.CRIATURAS_IMAGENS, imagem._linha);
+    }
+
     return { ok: true };
   });
 }
 
 /* =====================================================================
-   CAMPANHAS
+   IMAGEM DE CRIATURA
+   ---------------------------------------------------------------------
+   Mesma arquitetura da foto de personagem: fora do dadosJson, porque é
+   o campo mais pesado e o que menos muda. Ler é permitido a quem
+   alcança a criatura (dono ou pública); gravar, só ao dono.
    ===================================================================== */
 
-function acaoListarCampanhas(corpo, usuario) {
-  var lista = lerTudo(ABAS.CAMPANHAS)
-    .filter(function (c) { return meu(c, usuario); })
-    .map(function (c) {
-      var dados = lerJson(c.dadosJson, {});
-      return {
-        id: c.id,
-        nome: c.nome,
-        descricao: dados.descricao || '',
-        criadoEm: c.criadoEm,
-        atualizadoEm: c.atualizadoEm,
-        rev: Number(c.rev) || 0,
-      };
-    })
-    .sort(function (a, b) { return String(a.nome).localeCompare(String(b.nome), 'pt-BR'); });
+function acaoLerImagemCriatura(corpo, usuario) {
+  var registro = acharPor(ABAS.HOMEBREW, 'id', corpo.criaturaId);
+  if (!homebrewAlcancavel(registro, usuario)) return { ok: false, erro: 'nao_encontrado' };
 
-  return { ok: true, dados: lista };
+  var imagem = acharPor(ABAS.CRIATURAS_IMAGENS, 'criaturaId', corpo.criaturaId);
+  return { ok: true, dados: { imagem: (imagem && imagem.imagem) || '' } };
 }
 
-function acaoLerCampanha(corpo, usuario) {
-  var registro = meuRegistro(ABAS.CAMPANHAS, corpo.campanhaId, usuario);
-  if (!registro) return { ok: false, erro: 'nao_encontrado' };
+function acaoSalvarImagemCriatura(corpo, usuario) {
+  var imagem = String(corpo.imagem || '');
 
-  return {
-    ok: true,
-    rev: Number(registro.rev) || 0,
-    dados: lerJson(registro.dadosJson, {}),
-  };
-}
-
-function acaoCriarCampanha(corpo, usuario) {
-  var dados = corpo.dados || {};
-  var nome = String(dados.nome || '').trim().slice(0, 120);
-  if (!nome) return { ok: false, erro: 'dados_invalidos' };
-
-  var agora = new Date().toISOString();
-  var id = novoId();
+  if (imagem && imagem.indexOf('data:image/') !== 0) return { ok: false, erro: 'dados_invalidos' };
+  if (imagem.length > MAX_CELULA) return { ok: false, erro: 'dados_grandes' };
 
   return comTrava(function () {
-    inserir(ABAS.CAMPANHAS, {
-      id: id,
-      ownerId: usuario.id,
-      nome: nome,
-      criadoEm: agora,
-      atualizadoEm: agora,
-      rev: 1,
-      dadosJson: JSON.stringify({ descricao: String(dados.descricao || '').slice(0, 4000) }),
-    });
-    return { ok: true, rev: 1, dados: { id: id } };
-  });
-}
-
-function acaoSalvarCampanha(corpo, usuario) {
-  var dados = corpo.dados || {};
-
-  return comTrava(function () {
-    var registro = meuRegistro(ABAS.CAMPANHAS, corpo.campanhaId, usuario);
+    var registro = meuRegistro(ABAS.HOMEBREW, corpo.criaturaId, usuario);
     if (!registro) return { ok: false, erro: 'nao_encontrado' };
 
-    var revAtual = Number(registro.rev) || 0;
-    var revPedida = Number(corpo.rev);
+    var agora = new Date().toISOString();
+    var existente = acharPor(ABAS.CRIATURAS_IMAGENS, 'criaturaId', corpo.criaturaId);
 
-    if (Number.isFinite(revPedida) && revPedida !== revAtual) {
-      return { ok: false, erro: 'conflito', rev: revAtual, dados: lerJson(registro.dadosJson, {}) };
+    if (existente) {
+      existente.ownerId = usuario.id;
+      existente.imagem = imagem;
+      existente.atualizadoEm = agora;
+      atualizarLinha(ABAS.CRIATURAS_IMAGENS, existente._linha, existente);
+    } else {
+      inserir(ABAS.CRIATURAS_IMAGENS, {
+        criaturaId: corpo.criaturaId,
+        ownerId: usuario.id,
+        imagem: imagem,
+        atualizadoEm: agora,
+      });
     }
-
-    var guardado = lerJson(registro.dadosJson, {});
-    if (dados.descricao !== undefined) guardado.descricao = String(dados.descricao).slice(0, 4000);
-
-    registro.nome = String(dados.nome || registro.nome).trim().slice(0, 120);
-    registro.atualizadoEm = new Date().toISOString();
-    registro.rev = revAtual + 1;
-    registro.dadosJson = JSON.stringify(guardado);
-
-    atualizarLinha(ABAS.CAMPANHAS, registro._linha, registro);
-
-    return { ok: true, rev: registro.rev };
-  });
-}
-
-/* Excluir campanha não apaga personagem. Ela é um agrupamento; apagar
-   o agrupamento não pode apagar o que estava agrupado. */
-function acaoExcluirCampanha(corpo, usuario) {
-  return comTrava(function () {
-    var registro = meuRegistro(ABAS.CAMPANHAS, corpo.campanhaId, usuario);
-    if (!registro) return { ok: false, erro: 'nao_encontrado' };
-
-    apagarLinha(ABAS.CAMPANHAS, registro._linha);
-
-    lerTudo(ABAS.PERSONAGENS).forEach(function (p) {
-      if (meu(p, usuario) && String(p.campanhaId) === String(corpo.campanhaId)) {
-        p.campanhaId = '';
-        atualizarLinha(ABAS.PERSONAGENS, p._linha, p);
-      }
-    });
 
     return { ok: true };
   });
 }
+
 
 /* =====================================================================
    PERFIL
@@ -1085,8 +1364,17 @@ function acaoSalvarPerfil(corpo, usuario) {
 
 function acaoResumo(corpo, usuario) {
   var personagens = lerTudo(ABAS.PERSONAGENS).filter(function (p) { return meu(p, usuario); });
-  var campanhas = lerTudo(ABAS.CAMPANHAS).filter(function (c) { return meu(c, usuario); });
   var homebrew = lerTudo(ABAS.HOMEBREW).filter(function (h) { return meu(h, usuario); });
+
+  /* A conta de campanhas passa a incluir aquelas de que o usuário
+     PARTICIPA, e não só as que ele criou: para quem só joga, contar
+     zero enquanto está em três mesas seria simplesmente errado.
+     Espectador de campanha pública fica de fora — olhar de longe não é
+     participar. */
+  var alcance = campanhasDoUsuario(usuario);
+  var campanhas = Object.keys(alcance)
+    .filter(function (id) { return alcance[id].papel !== PAPEL_ESPECTADOR; })
+    .map(function (id) { return alcance[id].campanha; });
 
   var nomeDaCampanha = {};
   campanhas.forEach(function (c) { nomeDaCampanha[c.id] = c.nome; });

@@ -34,8 +34,14 @@
 
   function lado() { return config().LADO_FOTO || 256; }
 
-  /* preparar(File) → Promise<{ ok, imagem, largura, bytes }> */
-  async function preparar(arquivo) {
+  /* preparar(File, { lado, quadrado })
+
+     `lado` permite pedir um recorte maior que o do avatar. A imagem de
+     um documento precisa ser LEGÍVEL — uma planta baixa a 256px não
+     serve para nada —, então a tela de documentos pede 1024 e aceita
+     o retângulo original em vez de forçar o quadrado. */
+  async function preparar(arquivo, opcoes) {
+    var o = opcoes || {};
     if (!arquivo) return { ok: false, erro: "sem_arquivo", mensagem: "Nenhuma imagem escolhida." };
 
     if (TIPOS_ACEITOS.indexOf(arquivo.type) < 0) {
@@ -57,7 +63,9 @@
       return { ok: false, erro: "leitura", mensagem: "Não foi possível ler esta imagem." };
     }
 
-    var quadro = recortarQuadrado(bitmap, lado());
+    var quadro = o.quadrado === false
+      ? redimensionar(bitmap, o.lado || lado())
+      : recortarQuadrado(bitmap, o.lado || lado());
     if (bitmap.close) bitmap.close();
 
     var resultado = comprimir(quadro);
@@ -81,6 +89,26 @@
       img.onerror = function () { URL.revokeObjectURL(url); falhou(new Error("decodificação")); };
       img.src = url;
     });
+  }
+
+  /* Mantém a proporção e cabe dentro do lado pedido. É o que serve para
+     documentos: recortar um quadrado de uma planta baixa jogaria fora
+     metade da informação. */
+  function redimensionar(origem, maximo) {
+    var largura = origem.width || origem.naturalWidth;
+    var altura = origem.height || origem.naturalHeight;
+    var escala = Math.min(1, maximo / Math.max(largura, altura));
+
+    var tela = document.createElement("canvas");
+    tela.width = Math.max(1, Math.round(largura * escala));
+    tela.height = Math.max(1, Math.round(altura * escala));
+
+    var ctx = tela.getContext("2d");
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = "high";
+    ctx.drawImage(origem, 0, 0, tela.width, tela.height);
+
+    return tela;
   }
 
   /* Recorta o maior quadrado central e desenha no tamanho pedido. */
@@ -153,7 +181,7 @@
 
   /* Abre o seletor de arquivo e devolve a imagem pronta. O <input> não
      precisa existir no HTML: ele nasce, é usado e some. */
-  function escolher() {
+  function escolher(opcoes) {
     return new Promise(function (ok) {
       var entrada = document.createElement("input");
       entrada.type = "file";
@@ -179,7 +207,7 @@
         var arquivo = entrada.files && entrada.files[0];
         if (!arquivo) { responder({ ok: false, erro: "cancelado" }); return; }
         escolheu = true;
-        responder(await preparar(arquivo));
+        responder(await preparar(arquivo, opcoes));
       });
 
       /* Cancelar o seletor de arquivo não dispara `change` em navegador
