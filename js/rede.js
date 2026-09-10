@@ -31,8 +31,25 @@
      resposta de verdade: repetir só gasta tempo e engana. */
   var STATUS_PASSAGEIRO = [0, 404, 429, 500, 502, 503, 504];
 
-  /* Espera crescente entre tentativas. */
+  /* Espera crescente entre tentativas, com variação aleatória.
+
+     A variação não é enfeite. Quando o Apps Script tropeça, ele
+     costuma tropeçar para todo mundo ao mesmo tempo — o contêiner
+     reiniciou, a cota bateu. Se as vinte pessoas da mesa esperarem
+     exatamente 400 ms e voltarem juntas, elas reconstroem a mesma
+     rajada que acabou de falhar, e o servidor volta a cair pelo mesmo
+     motivo. Espalhar as retentativas por uma janela desfaz o
+     sincronismo.
+
+     A variação é para CIMA, entre o valor base e ele mais a janela:
+     encurtar a espera seria voltar mais cedo do que se decidiu. */
   var ESPERAS = [400, 1200, 3000];
+  var JANELA_ALEATORIA = 500;
+
+  function esperaDa(tentativa) {
+    var base = ESPERAS[Math.min(tentativa, ESPERAS.length - 1)];
+    return base + Math.floor(Math.random() * JANELA_ALEATORIA);
+  }
 
   /* O ARRANQUE A FRIO
      ---------------------------------------------------------------
@@ -118,7 +135,7 @@
     var ultimoTexto = "";
 
     for (var i = 0; i < tentativas; i++) {
-      if (i > 0) await U.esperar(ESPERAS[Math.min(i - 1, ESPERAS.length - 1)]);
+      if (i > 0) await U.esperar(esperaDa(i - 1));
 
       var resposta;
       try {

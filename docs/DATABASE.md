@@ -213,6 +213,64 @@ edição.
 
 ---
 
+## O cabeçalho manda, não a posição
+
+As posições das colunas saem do **cabeçalho real da aba**, não da ordem em
+que o código as declara. Isso não é preciosismo: o `setupRama()` acrescenta
+coluna nova no **fim** da aba, porque é a única forma de não mover dado de
+lugar — mas o código pode declarar essa mesma coluna no meio da lista.
+
+Foi o que aconteceu com `visibilidade`, acrescentada na v2 ao HOMEBREW e às
+CAMPANHAS. Numa planilha criada já na v2, a ordem física e a declarada
+coincidem. Numa planilha que veio da v1, não coincidem — e ler por posição
+devolveria uma coluna pelo valor de outra.
+
+### Duas gramáticas na mesma aba
+
+Numa planilha atualizada da v1 para a v2, a aba pode ter linhas de duas
+formas:
+
+| origem da linha | como ela está |
+|---|---|
+| gravada pela v1 | segue o cabeçalho, com a coluna nova vazia no fim |
+| gravada pela v2 | segue a ordem declarada, com a coluna nova no meio |
+
+Nenhuma leitura única serve para as duas. Desde a v2.1.0, cada linha diz de
+qual forma ela é, e o sinal é o JSON: numa aba dessas há sempre uma coluna que
+guarda um objeto serializado, e um objeto serializado começa com chave. A
+célula que estiver com o JSON revela qual leitura vale para aquela linha.
+
+**Nada é movido.** A escolha é de leitura. A primeira gravação numa linha da
+v2 reescreve todas as colunas pelo cabeçalho, e ela passa a ser uma linha
+normal — o conserto é progressivo e nunca precisa de uma passagem que
+reorganize a planilha inteira.
+
+### Se você mexer nas colunas à mão
+
+Rode `setupRama()` depois. Ele avança a época, que joga fora os cabeçalhos
+guardados em cache. Sem isso, o sistema continua trabalhando com o desenho
+anterior por até seis horas.
+
+---
+
+## Coluna leve e coluna pesada
+
+Toda aba tem colunas curtas — id, dono, nome, datas — e normalmente uma que
+carrega o peso: o `fichaJson`, a imagem em base64, o `dadosJson`. O campo
+`leves` de cada definição diz quantas colunas do começo são as curtas.
+
+Com isso dá para varrer uma aba inteira sem tocar no peso: descobrir **quais**
+registros interessam custa pouco, e só então o conteúdo dos escolhidos é
+buscado.
+
+Registros lidos assim vêm marcados e **não podem ser gravados de volta** —
+escrever um registro sem as colunas pesadas apagaria o conteúdo de alguém. A
+camada recusa, e há teste para isso.
+
+Detalhes em [PERFORMANCE.md](PERFORMANCE.md).
+
+---
+
 ## Datas
 
 No banco, sempre ISO 8601 em UTC (`2026-09-03T16:30:00.000Z`), exceto os

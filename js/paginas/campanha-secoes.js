@@ -84,9 +84,74 @@
     });
   }
 
-  /* Um número com [-] e [+]. Cada alteração vai ao servidor com a
-     revisão que a listagem trouxe; se ela tiver mudado, o servidor
-     recusa e a tela recarrega — o mesmo contrato da ficha. */
+  /* A FILA DOS AJUSTES
+     -----------------------------------------------------------------
+     Uma por tela, compartilhada por todos os [−] e [+] do painel, com
+     uma raia por número: a vida do Ana e a vida do Bruno não esperam
+     uma pela outra, mas dois cliques na vida do Ana viram um pedido só.
+
+     Sem isto, quatro cliques rápidos no mesmo botão viravam quatro
+     requisições com a MESMA revisão. A primeira gravava, as outras três
+     voltavam como conflito, e a tela recarregava mostrando um número
+     que a pessoa não tinha pedido. O `rev` estava certo; era a
+     interface pedindo quatro coisas quando queria uma.
+
+     Juntar é seguro aqui porque o pedido manda o valor FINAL, não a
+     diferença — ver o cabeçalho de js/fila.js. */
+  var filaDeAjustes = null;
+  var ctxDaFila = null;
+
+  function filaDoPainel(ctx) {
+    /* A fila vive mais do que um desenho de tela: recarregar a campanha
+       monta um contexto novo, e a fila precisa passar a falar com ESSE.
+       Guardar o contexto do primeiro clique deixaria a fila conversando
+       com uma tela que não existe mais. */
+    ctxDaFila = ctx;
+    if (filaDeAjustes) return filaDeAjustes;
+
+    filaDeAjustes = global.RAMAFila.criar({
+      enviar: function (a) {
+        return global.RAMAApi.ajustarPersonagem(
+          a.personagem.id, a.personagem.rev, a.alvo, a.item.id, a.campo, a.valor
+        );
+      },
+
+      /* Conflito quer dizer que outra pessoa mexeu nesta ficha. Não é
+         caso de repetir com a revisão vencida, e também não é caso de
+         desistir do que ESTA pessoa acabou de pedir: busca a revisão
+         atual e manda o valor de novo, uma vez. */
+      aoConflito: async function (a) {
+        var r = await global.RAMAApi.listarPersonagensCampanha(ctxDaFila.campanhaId);
+        if (!r.ok || !r.dados) return null;
+
+        var atual = r.dados.filter(function (p) { return p.id === a.personagem.id; })[0];
+        if (!atual) return null;
+
+        a.personagem.rev = U.inteiro(atual.rev, a.personagem.rev);
+        return a;
+      },
+
+      aoConcluir: function (chave, a, r) {
+        a.personagem.rev = U.inteiro(r.rev, a.personagem.rev);
+        a.item[a.campo] = a.valor;
+      },
+
+      aoFalhar: async function (chave, a, r) {
+        if (r && r.erro === "conflito") {
+          UI.avisoAtencao("Esta ficha continua sendo alterada em outro aparelho. Recarregando os números.");
+        } else {
+          UI.avisoDeFalha(r, "ajuste de " + a.rotulo);
+        }
+        await ctxDaFila.atualizarPersonagens();
+      },
+    });
+
+    return filaDeAjustes;
+  }
+
+  /* Um número com [-] e [+]. A alteração entra na fila acima; o envio
+     leva a revisão mais recente que esta tela conhece, e o servidor
+     recusa se ela já tiver mudado — o mesmo contrato da ficha. */
   function numero(ctx, personagem, alvo, item, campo, rotulo, maximo, podeMexer) {
     var valorAtual = U.inteiro(item[campo], 0);
 
@@ -95,27 +160,13 @@
       minimo: -9999,
       maximo: maximo > 0 ? maximo : 999999,
       rotulo: rotulo + " de " + personagem.nome,
-      aoMudar: async function (v) {
+      aoMudar: function (v) {
         if (!podeMexer) return;
 
-        var r = await global.RAMAApi.ajustarPersonagem(
-          personagem.id, personagem.rev, alvo, item.id, campo, v
+        filaDoPainel(ctx).definir(
+          personagem.id + "/" + alvo + "/" + item.id + "/" + campo,
+          { personagem: personagem, alvo: alvo, item: item, campo: campo, valor: v, rotulo: rotulo }
         );
-
-        if (r.ok) {
-          personagem.rev = U.inteiro(r.rev, personagem.rev);
-          item[campo] = v;
-          return;
-        }
-
-        if (r.erro === "conflito") {
-          UI.avisoAtencao("Alguém alterou esta ficha enquanto você mexia. Recarregando os números.");
-          await ctx.atualizarPersonagens();
-          return;
-        }
-
-        UI.avisoDeFalha(r, "ajuste de " + rotulo);
-        await ctx.atualizarPersonagens();
       },
     });
 

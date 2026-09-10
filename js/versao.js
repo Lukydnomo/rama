@@ -14,14 +14,15 @@
    TRÊS COISAS DIFERENTES, QUE NÃO SE MISTURAM
    ---------------------------------------------------------------------
 
-     versão do aplicativo   está aqui. É o que a pessoa vê: v2.0.0.
+     versão do aplicativo   está aqui. É o que a pessoa vê: v2.1.0.
      schemaVersion          está em js/ficha.js. É o formato da FICHA,
                             e só sobe quando a ficha muda de forma.
      versaoFormato          está em js/config.js. É o formato dos
                             arquivos de importação/exportação.
 
-   Elas sobem em ritmos próprios. A v2.0.0 leva schemaVersion 2 e
-   versaoFormato 1 — e isso é normal.
+   Elas sobem em ritmos próprios. A v2.1.0 leva schemaVersion 2 e
+   versaoFormato 1 — e isso é normal: esta entrega mudou o jeito de
+   ler a planilha, não o formato da ficha nem o dos arquivos.
 
    ---------------------------------------------------------------------
    A REGRA, PARA TODA ENTREGA FUTURA
@@ -54,6 +55,35 @@
   ];
 
   var CHANGELOG = [
+    {
+      versao: "2.1.0",
+      codinome: "VAZÃO",
+      data: "10/09/2026",
+      mudancas: {
+        "Melhorado": [
+          "Abrir uma ficha passou a ser uma única ida ao servidor, em vez de quatro. Abrir uma campanha, uma em vez de três. Cada ida ao Apps Script custa o tempo de ele acordar, e esse tempo era pago uma vez por chamada.",
+          "As telas de lista deixaram de baixar o que não mostram. Ver os seus personagens não lê mais a ficha completa nem a foto de todos os personagens do sistema; abrir o painel da mesa não lê mais as fichas de quem não está nela.",
+          "O histórico de rolagens ficou muito mais leve: uma página traz o resultado das rolagens que ela mostra, e não o de todas as que existem.",
+          "Os botões de mais e menos do painel do mestre agora juntam cliques seguidos num envio só. Antes, seis cliques rápidos viravam seis gravações, cinco delas recusadas por conflito — e o número piscava de volta para um valor que ninguém pediu.",
+          "Conferir quem está conectado deixou de custar duas leituras da planilha em toda requisição.",
+          "Pedidos iguais disparados ao mesmo tempo pela mesma tela agora viram um só.",
+        ],
+        "Corrigido": [
+          "Numa planilha criada na v1 e atualizada para a v2, a coluna de visibilidade entrou no fim da aba enquanto o sistema a procurava no meio. O efeito era grave e silencioso: itens da biblioteca e campanhas criados antes da atualização podiam aparecer vazios. O sistema passou a ler pelo NOME da coluna, e reconhece linha por linha as duas formas que a planilha pode ter — sem mover nenhuma célula.",
+          "Uma referência a número de linha guardada durante a requisição podia envelhecer se outra coisa apagasse uma linha acima dela. Toda gravação agora confere o identificador antes de escrever.",
+        ],
+        "Alterado": [
+          "A limpeza de sessões vencidas passou a rodar no máximo uma vez por dia, em vez de a cada entrada. Numa noite de mesa, dezenove pessoas pagavam por uma faxina que a primeira já tinha feito.",
+          "As esperas entre tentativas ganharam variação aleatória. Quando o servidor tropeça, ele tropeça para todo mundo ao mesmo tempo — e voltar todos juntos refaz a rajada que causou a falha.",
+        ],
+        "Técnico": [
+          "O Apps Script passou a ter três arquivos: Dados.gs (novo), Codigo.gs e Campanhas.gs. A divisão é de manutenção; o que ficou mais rápido está no jeito de ler, não no número de arquivos.",
+          "Ação nova de lote, só para leitura, que agrupa várias consultas numa requisição. Cada uma continua passando pela própria conferência de permissão.",
+          "Cache curto da sessão, carimbado com uma época que sair da conta, trocar a senha ou desativar o usuário faz avançar — revogação continua imediata.",
+          "As regiões protegidas por trava encurtaram: o que dá para preparar antes de entrar na fila é preparado antes.",
+        ],
+      },
+    },
     {
       versao: "2.0.0",
       codinome: "CONVERGÊNCIA",

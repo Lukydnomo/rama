@@ -59,9 +59,55 @@
        próprio: o servidor reconhece a segunda chegada e não cria a
        segunda linha. Sem essa chave ela NÃO poderia estar aqui. */
     "registrar_rolagem",
+
+    /* O lote só aceita leitura — a lista de ações permitidas está
+       fechada no servidor. Repeti-lo repete leituras. */
+    "lote",
   ];
 
   function podeRepetir(acao) { return IDEMPOTENTES.indexOf(acao) >= 0; }
+
+  /* =================================================================
+     DEDUPLICAÇÃO DE PEDIDOS EM VOO
+     -----------------------------------------------------------------
+     Duas partes da mesma tela pedem a mesma coisa ao mesmo tempo. É
+     comum: a lista de campanhas serve ao seletor da ficha e ao rótulo
+     do topo; o painel do mestre recarrega os personagens enquanto a aba
+     de combate faz o mesmo.
+
+     Quando o segundo pedido chega e o primeiro ainda está voando, não
+     há motivo para uma segunda viagem — e com vinte pessoas conectadas
+     há bom motivo para não fazê-la. O segundo espera o primeiro.
+
+     Três cuidados:
+
+     · só LEITURA entra. Duas gravações iguais podem ser duas intenções
+       diferentes, e juntá-las esconderia uma delas;
+     · a chave inclui a ação e todos os parâmetros, menos o token. Dois
+       pedidos que diferem em um id não são o mesmo pedido;
+     · quem chega depois recebe uma CÓPIA. Sem isso, duas telas ficariam
+       com o mesmo objeto na mão e a alteração de uma apareceria na
+       outra.
+
+     A janela é a do voo, e nada mais: quando a resposta chega, a
+     entrada some. Isto não é cache — não guarda resposta para depois,
+     não tem validade e não devolve nada desatualizado. Um pedido feito
+     um instante depois do anterior terminar vai à rede de novo. */
+
+  var LEITURAS = {};
+  IDEMPOTENTES.forEach(function (acao) {
+    if (acao.indexOf("salvar_") !== 0 && acao !== "registrar_rolagem") LEITURAS[acao] = true;
+  });
+
+  var emVoo = {};
+
+  function chaveDoPedido(dados) {
+    var copia = {};
+    Object.keys(dados).sort().forEach(function (k) {
+      if (k !== "token") copia[k] = dados[k];
+    });
+    return JSON.stringify(copia);
+  }
 
   /* Chamada crua: quem precisa de uma ação que ainda não tem função
      própria usa esta, e o token entra do mesmo jeito. */
@@ -72,6 +118,26 @@
       if (t) dados.token = t;
     }
 
+    if (!LEITURAS[dados.acao]) return enviar(dados);
+
+    var chave = chaveDoPedido(dados);
+
+    if (emVoo[chave]) {
+      var r0 = await emVoo[chave];
+      return global.RAMAUtil.copiar(r0);
+    }
+
+    var promessa = enviar(dados);
+    emVoo[chave] = promessa;
+
+    try {
+      return await promessa;
+    } finally {
+      delete emVoo[chave];
+    }
+  }
+
+  async function enviar(dados) {
     var r = await global.RAMARede.postar(dados, { repetir: podeRepetir(dados.acao) });
 
     /* Sessão morta é assunto de autenticação, não de tela: quem
@@ -100,6 +166,41 @@
       { acao: "login", usuario: usuario, senha: senha },
       { repetir: true }
     );
+  }
+
+  /* =================================================================
+     LOTE
+     -----------------------------------------------------------------
+     Várias leituras numa requisição só.
+
+     O ganho não é de planilha, é de latência: cada chamada ao Apps
+     Script paga o custo de partida do contêiner, e abrir uma ficha
+     pedia quatro chamadas em duas ondas. Juntas, pagam uma partida e
+     validam a sessão uma vez.
+
+     Devolve SEMPRE um array do mesmo tamanho da lista de pedidos, na
+     mesma ordem. Se o lote inteiro falhar — sessão vencida, servidor
+     fora —, cada posição recebe esse mesmo erro, para quem chamou
+     tratar cada resposta do mesmo jeito que trataria a avulsa.
+
+     O servidor só aceita leitura aqui. Gravação continua indo uma a
+     uma, porque uma falha no meio de um lote de gravações deixaria
+     metade aplicada e não há como desfazer. */
+  async function lote(pedidos) {
+    var lista = pedidos || [];
+    if (!lista.length) return [];
+
+    var r = await post({ acao: "lote", pedidos: lista });
+
+    if (!r || !r.ok || !r.dados || !Array.isArray(r.dados.respostas)) {
+      var erro = { ok: false, erro: (r && r.erro) || "sem_resposta" };
+      return lista.map(function () { return Object.assign({}, erro); });
+    }
+
+    var respostas = r.dados.respostas;
+    return lista.map(function (pedido, i) {
+      return respostas[i] || { ok: false, erro: "sem_resposta" };
+    });
   }
 
   function sessao(token) { return post({ acao: "sessao", token: token }); }
@@ -385,6 +486,14 @@
       titulo: "ARQUIVO OCUPADO",
       texto: "Outra gravação está acontecendo neste momento. Tente novamente em instantes.",
     },
+    instalacao_incompleta: {
+      titulo: "SERVIDOR INCOMPLETO",
+      texto: "Falta um arquivo no Apps Script. Confira se Dados.gs, Codigo.gs e Campanhas.gs estão todos no projeto e reimplante.",
+    },
+    acao_desconhecida: {
+      titulo: "OPERAÇÃO NÃO RECONHECIDA",
+      texto: "Esta versão do site pediu algo que o servidor não conhece. Atualize a implantação do Apps Script.",
+    },
   };
 
   function frase(resposta) {
@@ -405,6 +514,7 @@
 
   global.RAMAApi = {
     post: post,
+    lote: lote,
     podeRepetir: podeRepetir,
     ehErroDeSessao: ehErroDeSessao,
 

@@ -71,17 +71,26 @@ var MAX_PAGINA_ROLAGENS = 200;
 var VIS_ROLAGEM_PUBLICA = 'publica';
 var VIS_ROLAGEM_OCULTA = 'oculta';
 
+/* Quanto tempo o atalho de idempotência de uma rolagem vale. Meia hora
+   cobre com folga qualquer retentativa de rede; passado isso, a
+   conferência volta a ser feita na planilha, onde ela é definitiva. */
+var SEGUNDOS_IDEMPOTENCIA = 1800;
+
 /* =====================================================================
    CAMPANHAS
    ===================================================================== */
 
 function acaoListarCampanhas(corpo, usuario) {
-  var alcance = campanhasDoUsuario(usuario);
+  /* A descrição mora no dadosJson, e a lista mostra a descrição — mas
+     só das campanhas que esta conta alcança. Numa planilha com trinta
+     campanhas em que ela participa de três, o conteúdo lido é o de
+     três. */
+  var alcance = campanhasDoUsuarioCompletas(usuario);
 
   var lista = Object.keys(alcance).map(function (id) {
     var c = alcance[id].campanha;
     var papel = alcance[id].papel;
-    var dados = lerJson(c.dadosJson, {});
+    var dados = alcance[id].dados || {};
 
     return {
       id: c.id,
@@ -149,22 +158,44 @@ function acaoLerCampanha(corpo, usuario) {
    lista, e nada além. Nunca hashSenha, salt, token, sessão ou qualquer
    campo interno — nem por engano, porque a montagem é explícita campo a
    campo e não um "espalha o registro inteiro". */
-function usuarioParaCliente(u, perfilPorId) {
-  var perfil = perfilPorId ? perfilPorId[u.id] : null;
+function usuarioParaCliente(u, avatarPorId) {
   return {
     id: u.id,
     usuario: u.usuario,
     nome: u.nome || u.usuario,
-    avatar: (perfil && perfil.avatar) || '',
+    avatar: (avatarPorId && avatarPorId[u.id]) || '',
   };
+}
+
+/* Os avatares de um conjunto de contas, e só dele.
+
+   O avatar é base64 e mora na segunda coluna de PERFIS. Ler a aba
+   inteira para montar uma lista de sete participantes trazia o avatar
+   de todas as vinte contas do sistema. A varredura leva só o userId; as
+   imagens vêm pelas linhas que interessam. */
+function avataresDe(ids) {
+  var querido = {};
+  (ids || []).forEach(function (id) { querido[String(id)] = true; });
+
+  var linhas = lerLeves(ABAS.PERFIS).filter(function (perfil) {
+    return querido[String(perfil.userId)];
+  });
+
+  var imagens = lerCelulas(ABAS.PERFIS, linhas, 'avatar');
+
+  var saida = {};
+  linhas.forEach(function (p) { saida[String(p.userId)] = imagens[p._linha] || ''; });
+  return saida;
 }
 
 function membrosParaCliente(campanha, membros) {
   var usuarios = {};
   lerTudo(ABAS.USUARIOS).forEach(function (u) { usuarios[u.id] = u; });
 
-  var perfis = {};
-  lerTudo(ABAS.PERFIS).forEach(function (p) { perfis[p.userId] = p; });
+  var envolvidos = [String(campanha.ownerId)];
+  membros.forEach(function (m) { envolvidos.push(String(m.userId)); });
+
+  var perfis = avataresDe(envolvidos);
 
   var saida = [];
   var vistos = {};
@@ -190,12 +221,23 @@ function membrosParaCliente(campanha, membros) {
   return saida;
 }
 
-function acaoListarUsuarios(corpo, usuario) {
-  var perfis = {};
-  lerTudo(ABAS.PERFIS).forEach(function (p) { perfis[p.userId] = p; });
+/* Quem pode aparecer numa lista de "quem vê" — só os ids, sem avatar
+   nem nome. Montar a lista completa de participantes para depois usar
+   apenas os identificadores obrigaria a ler os avatares de todo mundo
+   para não mostrar nenhum deles. */
+function idsDaMesa(campanha) {
+  var conjunto = {};
+  conjunto[String(campanha.ownerId)] = true;
+  membrosDaCampanha(campanha.id).forEach(function (m) { conjunto[String(m.userId)] = true; });
+  return conjunto;
+}
 
-  var lista = lerTudo(ABAS.USUARIOS)
-    .filter(function (u) { return String(u.ativo) === 'true'; })
+function acaoListarUsuarios(corpo, usuario) {
+  var ativos = lerTudo(ABAS.USUARIOS).filter(function (u) { return String(u.ativo) === 'true'; });
+
+  var perfis = avataresDe(ativos.map(function (u) { return u.id; }));
+
+  var lista = ativos
     .map(function (u) { return usuarioParaCliente(u, perfis); })
     .sort(function (a, b) { return String(a.nome).localeCompare(String(b.nome), 'pt-BR'); });
 
@@ -286,15 +328,16 @@ function acaoExcluirCampanha(corpo, usuario) {
        NÃO entram nisso: elas são dos jogadores e só perdem o vínculo. */
     [ABAS.CAMPANHA_MEMBROS, ABAS.CAMPANHA_ROLAGENS, ABAS.CAMPANHA_DOCUMENTOS,
      ABAS.CAMPANHA_DOCUMENTOS_IMAGENS, ABAS.CAMPANHA_NOTAS, ABAS.CAMPANHA_COMBATES
-    ].forEach(function (aba) {
-      var linhas = lerTudo(aba).filter(function (r) { return String(r.campanhaId) === id; });
-      for (var i = linhas.length - 1; i >= 0; i--) apagarLinha(aba, linhas[i]._linha);
+    ].forEach(function (tabela) {
+      /* Descobrir o que apagar não exige ler o que vai ser apagado: as
+         colunas leves trazem o campanhaId, que é o filtro. */
+      apagarLinhas(tabela, daCampanhaLeves(tabela, id).map(function (r) { return r._linha; }));
     });
 
-    lerTudo(ABAS.PERSONAGENS).forEach(function (p) {
+    lerLeves(ABAS.PERSONAGENS).forEach(function (p) {
       if (String(p.campanhaId) === id) {
         p.campanhaId = '';
-        atualizarLinha(ABAS.PERSONAGENS, p._linha, p);
+        atualizarCampos(ABAS.PERSONAGENS, p, ['campanhaId']);
       }
     });
 
@@ -358,11 +401,14 @@ function acaoSalvarParticipantes(corpo, usuario) {
     aindaDentro[String(ctx.campanha.ownerId)] = true;
     novos.forEach(function (m) { aindaDentro[String(m.userId)] = true; });
 
-    lerTudo(ABAS.PERSONAGENS).forEach(function (p) {
+    /* Varredura leve e gravação cirúrgica: tirar um personagem da
+       campanha mexe numa célula. Reescrever a linha inteira obrigaria a
+       ler o fichaJson de cada um só para devolvê-lo igual. */
+    lerLeves(ABAS.PERSONAGENS).forEach(function (p) {
       if (String(p.campanhaId) !== String(ctx.campanha.id)) return;
       if (aindaDentro[String(p.ownerId)]) return;
       p.campanhaId = '';
-      atualizarLinha(ABAS.PERSONAGENS, p._linha, p);
+      atualizarCampos(ABAS.PERSONAGENS, p, ['campanhaId']);
     });
 
     return { ok: true, dados: { membros: membrosParaCliente(ctx.campanha, membrosDaCampanha(ctx.campanha.id)) } };
@@ -381,16 +427,39 @@ function acaoListarPersonagensCampanha(corpo, usuario) {
      campanha existe não é ver quem joga nela com que ficha. */
   if (ctx.papel === PAPEL_ESPECTADOR) return { ok: true, dados: [] };
 
-  var fotos = {};
-  lerTudo(ABAS.PERSONAGENS_FOTOS).forEach(function (f) { fotos[f.personagemId] = f.imagem; });
-
   var donos = {};
   lerTudo(ABAS.USUARIOS).forEach(function (u) { donos[u.id] = u.nome || u.usuario; });
 
-  var lista = lerTudo(ABAS.PERSONAGENS)
-    .filter(function (p) { return String(p.campanhaId) === String(ctx.campanha.id); })
+  /* Duas etapas, e a ordem é o ponto.
+
+     Primeiro descobre QUAIS personagens são desta campanha, varrendo só
+     as colunas leves — nenhum fichaJson e nenhuma foto atravessam o
+     serviço nesta etapa. Só então busca o conteúdo das linhas que
+     sobraram.
+
+     Antes, esta tela lia a ficha completa e a foto de TODOS os
+     personagens do sistema para desenhar os sete da mesa. */
+  var daMesa = lerLeves(ABAS.PERSONAGENS).filter(function (p) {
+    return String(p.campanhaId) === String(ctx.campanha.id);
+  });
+
+  var fichas = lerCelulas(ABAS.PERSONAGENS, daMesa, 'fichaJson');
+
+  var idsDaMesa = {};
+  daMesa.forEach(function (p) { idsDaMesa[String(p.id)] = true; });
+
+  var linhasDeFoto = lerLeves(ABAS.PERSONAGENS_FOTOS).filter(function (f) {
+    return idsDaMesa[String(f.personagemId)];
+  });
+
+  var imagens = lerCelulas(ABAS.PERSONAGENS_FOTOS, linhasDeFoto, 'imagem');
+
+  var fotos = {};
+  linhasDeFoto.forEach(function (f) { fotos[String(f.personagemId)] = imagens[f._linha] || ''; });
+
+  var lista = daMesa
     .map(function (p) {
-      var ficha = lerJson(p.fichaJson, {});
+      var ficha = lerJson(fichas[p._linha], {});
 
       /* O painel do mestre precisa de status e atributos para os
          controles rápidos, mas não da ficha inteira: perícias,
@@ -587,9 +656,27 @@ function acaoRegistrarRolagem(corpo, usuario) {
   var json = JSON.stringify(dados);
   if (json.length > MAX_CELULA) return { ok: false, erro: 'dados_grandes' };
 
+  /* Atalho de idempotência.
+
+     Quando o navegador reenvia uma rolagem porque a resposta se perdeu,
+     o id é o MESMO — e quase sempre a segunda chegada acontece segundos
+     depois da primeira, ainda dentro da janela do cache. Reconhecer
+     ali evita entrar na trava e varrer a aba.
+
+     O cache aqui ACELERA um caminho que já era correto sem ele. Se a
+     entrada tiver sumido, a conferência na planilha acontece do mesmo
+     jeito, e é ela que decide. Um cache vazio nunca produz linha
+     duplicada; produz só uma conferência a mais. */
+  var chaveDeIdempotencia = 'rama.rolagem.' + id;
+  if (cacheLer(chaveDeIdempotencia)) {
+    return { ok: true, dados: { id: id, repetida: true } };
+  }
+
   return comTrava(function () {
-    var existente = acharPor(ABAS.CAMPANHA_ROLAGENS, 'id', id);
-    if (existente) {
+    /* Só a coluna de ids: para saber se este id já entrou não é preciso
+       trazer mais nada de 1.500 linhas. */
+    if (linhaDe(ABAS.CAMPANHA_ROLAGENS, 'id', id)) {
+      cacheGravar(chaveDeIdempotencia, '1', SEGUNDOS_IDEMPOTENCIA);
       /* Já registrada. Responder ok mantém o cliente calmo e não cria
          a segunda linha. */
       return { ok: true, dados: { id: id, repetida: true } };
@@ -607,6 +694,8 @@ function acaoRegistrarRolagem(corpo, usuario) {
       dadosJson: json,
     });
 
+    cacheGravar(chaveDeIdempotencia, '1', SEGUNDOS_IDEMPOTENCIA);
+
     return { ok: true, dados: { id: id, visibilidade: visibilidade } };
   });
 }
@@ -622,7 +711,27 @@ function acaoListarRolagens(corpo, usuario) {
   var nomes = {};
   lerTudo(ABAS.USUARIOS).forEach(function (u) { nomes[u.id] = u.nome || u.usuario; });
 
-  var todas = daCampanha(ABAS.CAMPANHA_ROLAGENS, ctx.campanha.id)
+  /* O CUSTO REAL DESTA PAGINAÇÃO
+     -----------------------------------------------------------------
+     A varredura abaixo percorre TODAS as linhas de CAMPANHA_ROLAGENS,
+     não só as da página. Não adianta fingir o contrário: para saber
+     quais são as vinte e cinco mais recentes DESTA campanha, e quantas
+     existem ao todo, é preciso olhar o campanhaId de cada linha.
+
+     O que mudou é o que a varredura carrega. Ela lê oito colunas
+     curtas — id, autor, tipo, nome, visibilidade, data — e deixa o
+     dadosJson para trás. O resultado de cada rolagem, que é o volume,
+     é buscado depois, só para as linhas que a página realmente mostra.
+
+     Com 1.500 rolagens gravadas, uma página deixou de trazer 1.500
+     resultados para trazer 25.
+
+     O que continua verdadeiro: o custo cresce com o tamanho da aba, não
+     com o da página. Numa mesa de dezenas de milhares de linhas isso
+     volta a pesar, e a saída continua sendo o botão "Limpar" do
+     mestre. Um índice de verdade exigiria uma estrutura que a planilha
+     não oferece. */
+  var todas = daCampanhaLeves(ABAS.CAMPANHA_ROLAGENS, ctx.campanha.id)
     /* A FILTRAGEM ACONTECE AQUI, no servidor. Uma rolagem oculta do
        mestre não é escondida com CSS: ela nem chega ao navegador do
        jogador. */
@@ -636,11 +745,13 @@ function acaoListarRolagens(corpo, usuario) {
   var pulo = Math.max(0, Number(corpo.pulo) || 0);
   var pagina = todas.slice(pulo, pulo + limite);
 
+  var resultados = lerCelulas(ABAS.CAMPANHA_ROLAGENS, pagina, 'dadosJson');
+
   return {
     ok: true,
     dados: {
       rolagens: pagina.map(function (r) {
-        var d = lerJson(r.dadosJson, {});
+        var d = lerJson(resultados[r._linha], {});
         return {
           id: r.id,
           autorUserId: r.autorUserId,
@@ -664,12 +775,11 @@ function acaoLimparRolagens(corpo, usuario) {
     var ctx = exigirMestre(corpo.campanhaId, usuario);
     if (!ctx.ok) return ctx;
 
-    var linhas = daCampanha(ABAS.CAMPANHA_ROLAGENS, ctx.campanha.id);
-    for (var i = linhas.length - 1; i >= 0; i--) {
-      apagarLinha(ABAS.CAMPANHA_ROLAGENS, linhas[i]._linha);
-    }
+    var linhas = daCampanhaLeves(ABAS.CAMPANHA_ROLAGENS, ctx.campanha.id);
+    var removidas = apagarLinhas(ABAS.CAMPANHA_ROLAGENS,
+      linhas.map(function (r) { return r._linha; }));
 
-    return { ok: true, dados: { removidas: linhas.length } };
+    return { ok: true, dados: { removidas: removidas } };
   });
 }
 
@@ -731,9 +841,7 @@ function acaoSalvarDocumento(corpo, usuario) {
     /* A lista de quem vê só é aceita de um mestre — e só com ids de
        gente que realmente participa. Um id qualquer enviado pelo
        console não vira permissão. */
-    var membros = {};
-    membrosParaCliente(ctx.campanha, membrosDaCampanha(ctx.campanha.id))
-      .forEach(function (m) { membros[m.id] = true; });
+    var membros = idsDaMesa(ctx.campanha);
 
     var visiveis = (Array.isArray(dados.visiveis) ? dados.visiveis : [])
       .map(String)
@@ -864,14 +972,20 @@ function acaoListarNotasMestre(corpo, usuario) {
   var ctx = exigirMestre(corpo.campanhaId, usuario);
   if (!ctx.ok) return ctx;
 
-  var lista = daCampanha(ABAS.CAMPANHA_NOTAS, ctx.campanha.id)
+  var linhas = daCampanhaLeves(ABAS.CAMPANHA_NOTAS, ctx.campanha.id);
+
+  /* O conteúdo das notas é a coluna pesada, e é lido só das notas desta
+     campanha — não das de todas as campanhas do sistema. */
+  var conteudos = lerCelulas(ABAS.CAMPANHA_NOTAS, linhas, 'conteudo');
+
+  var lista = linhas
     .map(function (n) {
       return {
         id: n.id,
         personagemId: n.personagemId || null,
         pasta: n.pasta || '',
         titulo: n.titulo,
-        conteudo: n.conteudo,
+        conteudo: conteudos[n._linha] || '',
         criadoEm: n.criadoEm,
         atualizadoEm: n.atualizadoEm,
       };
@@ -977,9 +1091,17 @@ function acaoListarCombates(corpo, usuario) {
   var ctx = contextoDaCampanha(corpo.campanhaId, usuario);
   if (!ctx.ok) return ctx;
 
-  var lista = daCampanha(ABAS.CAMPANHA_COMBATES, ctx.campanha.id)
-    .filter(function (c) { return podeVerCombate(c, ctx, usuario); })
-    .map(function (c) { return combateParaCliente(c, ctx); })
+  /* A permissão é decidida ANTES de ler o conteúdo: um combate que este
+     jogador não pode ver não chega nem a ter o dadosJson buscado. A
+     coluna que carrega a lista de quem vê é leve, então filtrar é
+     barato. */
+  var visiveis = daCampanhaLeves(ABAS.CAMPANHA_COMBATES, ctx.campanha.id)
+    .filter(function (c) { return podeVerCombate(c, ctx, usuario); });
+
+  var conteudos = lerCelulas(ABAS.CAMPANHA_COMBATES, visiveis, 'dadosJson');
+
+  var lista = visiveis
+    .map(function (c) { return combateParaCliente(c, ctx, conteudos[c._linha]); })
     .sort(function (a, b) { return String(b.atualizadoEm).localeCompare(String(a.atualizadoEm)); });
 
   return { ok: true, dados: lista };
@@ -989,8 +1111,8 @@ function acaoListarCombates(corpo, usuario) {
    montadas aqui. O jogador autorizado recebe a lista e a ordem — que é
    o que ele precisa para jogar — e não a ficha interna das criaturas.
    Ver a lista não é ver os pontos de vida do monstro. */
-function combateParaCliente(c, ctx) {
-  var dados = lerJson(c.dadosJson, {});
+function combateParaCliente(c, ctx, jsonPronto) {
+  var dados = lerJson(jsonPronto === undefined ? c.dadosJson : jsonPronto, {});
   var participantes = Array.isArray(dados.participantes) ? dados.participantes : [];
 
   var saida = {
@@ -1030,9 +1152,7 @@ function acaoSalvarCombate(corpo, usuario) {
     var ctx = exigirMestre(corpo.campanhaId, usuario);
     if (!ctx.ok) return ctx;
 
-    var membros = {};
-    membrosParaCliente(ctx.campanha, membrosDaCampanha(ctx.campanha.id))
-      .forEach(function (m) { membros[m.id] = true; });
+    var membros = idsDaMesa(ctx.campanha);
 
     var visiveis = (Array.isArray(dados.visiveis) ? dados.visiveis : [])
       .map(String)
@@ -1096,8 +1216,9 @@ function acaoSalvarCombate(corpo, usuario) {
 function normalizarParticipantes(lista, ctx) {
   if (!Array.isArray(lista)) return [];
 
+  /* Só id e nome interessam aqui, e os dois são colunas leves. */
   var daMesa = {};
-  lerTudo(ABAS.PERSONAGENS).forEach(function (p) {
+  lerLeves(ABAS.PERSONAGENS).forEach(function (p) {
     if (String(p.campanhaId) === String(ctx.campanha.id)) daMesa[p.id] = p.nome;
   });
 

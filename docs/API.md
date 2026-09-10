@@ -74,6 +74,7 @@ página de erro quando estoura), o `rede.js` reconhece pelo que é e converte em
 | `conflito`         | a revisão mudou; vem com `rev` e `dados`             |
 | `ocupado`          | a trava não foi obtida em 25 s                       |
 | `sem_permissao`    | você alcança a campanha, mas não esta ação nela      |
+| `instalacao_incompleta` | falta um dos três `.gs` no projeto do Apps Script |
 
 > **`nao_encontrado` também cobre "existe, mas é de outra conta".** Distinguir os
 > dois confirmaria que aquele id existe — o mesmo motivo pelo qual login errado
@@ -105,6 +106,8 @@ criar registro — repetir não cria nada:
 salvar_foto · salvar_perfil · salvar_imagem_criatura · salvar_imagem_documento
 ```
 
+E `lote`, que só carrega leitura.
+
 E `registrar_rolagem`, que é o caso especial: ela carrega um id próprio, e o
 servidor reconhece a segunda chegada como repetição. **Sem essa chave ela não
 poderia estar aqui.**
@@ -134,6 +137,41 @@ presente no `localStorage` não prova nada.
 
 #### `logout`
 Encerra a sessão do token enviado.
+
+#### `lote`
+Várias leituras numa requisição só.
+
+```js
+{ acao: "lote", token: "...", pedidos: [
+    { acao: "sessao" },
+    { acao: "ler_personagem", personagemId: "..." },
+    { acao: "ler_foto", personagemId: "..." },
+] }
+→ { ok: true, dados: { respostas: [ {...}, {...}, {...} ] } }
+```
+
+`respostas` tem o mesmo tamanho de `pedidos` e vem na mesma ordem. Cada
+resposta é exatamente a que a ação devolveria sozinha, mais um campo `acao`.
+
+**O ganho é de latência, não de planilha.** Cada chamada ao Apps Script paga o
+custo de preparar uma execução; abrir uma ficha pedia quatro chamadas em duas
+ondas e passou a pedir uma.
+
+Quatro coisas que valem sempre:
+
+- **só leitura.** A lista de ações aceitas é fechada no servidor. Gravação
+  dentro de um lote responde `acao_desconhecida` — repetir um lote (ele é
+  idempotente) repetiria a gravação, e uma falha no meio deixaria metade
+  aplicada, sem transação para desfazer;
+- **a permissão não afrouxa.** Cada sub-ação chama a mesma função que
+  chamaria sozinha, com o usuário da sessão. Pedir a ficha de outra conta
+  dentro de um lote é recusado pela mesma linha de código;
+- **a sessão é validada uma vez, antes de tudo.** Token inválido recusa o
+  lote inteiro e nenhuma sub-ação chega a rodar;
+- **no máximo 8 pedidos.** Acima disso, `dados_invalidos`.
+
+Uma sub-ação que falha não derruba as outras: ela devolve o próprio erro na
+posição dela.
 
 ---
 

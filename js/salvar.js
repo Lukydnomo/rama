@@ -39,6 +39,21 @@
 
   var ESPERA_MAXIMA = 20000;
 
+  /* Variação aleatória na espera entre tentativas.
+
+     Com uma pessoa só, esperar 1.500 ms, depois 3.000, depois 4.500 é
+     tão bom quanto qualquer coisa. Com vinte fichas abertas na mesma
+     mesa e um tropeço do servidor, é diferente: todas as vinte
+     recomeçam no mesmo instante e refazem a rajada que causou a falha.
+
+     A janela desfaz o alinhamento sem atrasar ninguém de verdade. */
+  var JANELA_ALEATORIA = 700;
+
+  function esperaDaTentativa(tentativa) {
+    var base = Math.min(ESPERA_MAXIMA, 1500 * tentativa);
+    return base + Math.floor(Math.random() * JANELA_ALEATORIA);
+  }
+
   /* criar({
        indicador,     objeto de RAMAUI.indicador
        instantaneo(), devolve o que deve ser gravado, já copiado
@@ -149,7 +164,7 @@
       estadoVira(semRede ? "offline" : "erro");
 
       clearTimeout(timer);
-      timer = setTimeout(enviar, Math.min(ESPERA_MAXIMA, 1500 * tentativa));
+      timer = setTimeout(enviar, esperaDaTentativa(tentativa));
 
       if (tentativa === 1) {
         global.RAMAUI.aviso(

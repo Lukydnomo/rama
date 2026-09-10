@@ -5,6 +5,27 @@
    navegador e a planilha, e é onde toda decisão de segurança acontece.
 
    ---------------------------------------------------------------------
+   OS TRÊS ARQUIVOS
+   ---------------------------------------------------------------------
+
+   A implantação precisa dos três, com estes nomes:
+
+     Dados.gs      esquema das abas e acesso ao Sheets
+     Codigo.gs     este — entrada, sessão, permissões, personagens
+     Campanhas.gs  tudo o que é campanha
+
+   O Apps Script avalia todos os .gs no mesmo escopo global antes de
+   atender qualquer requisição, e declarações de função são içadas entre
+   arquivos: a ordem em que aparecem no editor não importa. O que
+   importa é os três existirem. Faltando Dados.gs o sistema não tem como
+   ler nada, e `doPost` responde com um erro que diz isso em vez de uma
+   pilha de execução.
+
+   A divisão é de manutenção, não de desempenho: separar arquivos não
+   deixa nada mais rápido. O que ficou mais rápido está DENTRO do
+   Dados.gs, no jeito de ler.
+
+   ---------------------------------------------------------------------
    O QUE ESTE ARQUIVO ASSUME, E POR QUÊ
    ---------------------------------------------------------------------
 
@@ -62,93 +83,6 @@
    CONFIGURAÇÃO
    ===================================================================== */
 
-var ABAS = {
-  USUARIOS: {
-    nome: 'USUARIOS',
-    colunas: ['id', 'usuario', 'nome', 'hashSenha', 'salt', 'iteracoes', 'ativo', 'criadoEm', 'atualizadoEm'],
-  },
-  SESSOES: {
-    nome: 'SESSOES',
-    colunas: ['tokenHash', 'userId', 'criadoEm', 'ultimaAtividade', 'expiraEm', 'ativo', 'agente'],
-  },
-  PERFIS: {
-    nome: 'PERFIS',
-    colunas: ['userId', 'avatar', 'preferenciasJson', 'atualizadoEm'],
-  },
-  PERSONAGENS: {
-    nome: 'PERSONAGENS',
-    colunas: ['id', 'ownerId', 'nome', 'campanhaId', 'classe', 'origem', 'criadoEm', 'atualizadoEm', 'rev', 'fichaJson'],
-  },
-  PERSONAGENS_FOTOS: {
-    /* A foto mora fora da ficha de propósito: é o campo mais pesado e o
-       que menos muda. Junto no fichaJson, cada tecla digitada numa
-       anotação reenviaria a imagem inteira — e a célula tem limite. */
-    nome: 'PERSONAGENS_FOTOS',
-    colunas: ['personagemId', 'ownerId', 'imagem', 'atualizadoEm'],
-  },
-  HOMEBREW: {
-    /* `visibilidade` entrou na v2. Registro antigo fica com a célula
-       vazia, e vazio é lido como 'privado' — nenhuma biblioteca que já
-       existia vira pública sozinha. */
-    nome: 'HOMEBREW',
-    colunas: ['id', 'ownerId', 'tipo', 'nome', 'visibilidade', 'criadoEm', 'atualizadoEm', 'rev', 'dadosJson'],
-  },
-  CRIATURAS_IMAGENS: {
-    /* Mesma razão da foto de personagem: imagem fora do JSON que é
-       reenviado a cada edição. */
-    nome: 'CRIATURAS_IMAGENS',
-    colunas: ['criaturaId', 'ownerId', 'imagem', 'atualizadoEm'],
-  },
-  CAMPANHAS: {
-    nome: 'CAMPANHAS',
-    colunas: ['id', 'ownerId', 'nome', 'visibilidade', 'criadoEm', 'atualizadoEm', 'rev', 'dadosJson'],
-  },
-
-  /* ---------------------------------------------------------------
-     As cinco tabelas novas da campanha.
-
-     Nada disto cabia dentro do dadosJson da campanha: rolagens crescem
-     sem fim, documentos carregam imagem, notas e combates têm
-     permissão própria e são editados de forma independente. Enfiados
-     num só JSON, abrir a campanha baixaria tudo e uma nota nova
-     reescreveria o histórico inteiro.
-     --------------------------------------------------------------- */
-
-  CAMPANHA_MEMBROS: {
-    /* O vínculo entre conta e campanha, por ID permanente. Nunca por
-       nome ou usuário: renomear uma conta não pode dar nem tirar
-       acesso de ninguém. */
-    nome: 'CAMPANHA_MEMBROS',
-    colunas: ['id', 'campanhaId', 'userId', 'papel', 'criadoEm'],
-  },
-  CAMPANHA_ROLAGENS: {
-    nome: 'CAMPANHA_ROLAGENS',
-    colunas: ['id', 'campanhaId', 'autorUserId', 'personagemId', 'tipo', 'nome',
-              'visibilidade', 'criadoEm', 'dadosJson'],
-  },
-  CAMPANHA_DOCUMENTOS: {
-    nome: 'CAMPANHA_DOCUMENTOS',
-    colunas: ['id', 'campanhaId', 'nome', 'descricao', 'visiveisJson',
-              'criadoEm', 'atualizadoEm', 'rev'],
-  },
-  CAMPANHA_DOCUMENTOS_IMAGENS: {
-    nome: 'CAMPANHA_DOCUMENTOS_IMAGENS',
-    colunas: ['documentoId', 'campanhaId', 'imagem', 'atualizadoEm'],
-  },
-  CAMPANHA_NOTAS: {
-    /* Privadas do mestre. Nenhuma resposta destinada a jogador toca
-       nesta aba. */
-    nome: 'CAMPANHA_NOTAS',
-    colunas: ['id', 'campanhaId', 'personagemId', 'pasta', 'titulo',
-              'criadoEm', 'atualizadoEm', 'conteudo'],
-  },
-  CAMPANHA_COMBATES: {
-    nome: 'CAMPANHA_COMBATES',
-    colunas: ['id', 'campanhaId', 'nome', 'estado', 'visiveisJson',
-              'criadoEm', 'atualizadoEm', 'rev', 'dadosJson'],
-  },
-};
-
 /* Visibilidade, em um só lugar. 'privado' é o padrão de tudo o que não
    diz o contrário — inclusive das linhas antigas, cuja célula está
    vazia. Um padrão que erra para o lado de esconder. */
@@ -173,15 +107,27 @@ var INTERVALO_ATIVIDADE_MS = 60 * 60 * 1000;
 var MAX_TENTATIVAS = 8;
 var MINUTOS_BLOQUEIO = 15;
 
-/* Limite prático de uma célula do Sheets é 50.000 caracteres. */
-var MAX_CELULA = 45000;
-
 /* =====================================================================
    ENTRADA
    ===================================================================== */
 
 function doPost(e) {
+  /* Uma requisição do Apps Script começa com o escopo global limpo, e o
+     Dados.gs conta com isso para guardar o que leu sem risco de servir
+     dado de outra pessoa. Dizer isso em voz alta custa nada e faz o
+     comportamento ser o mesmo em qualquer ambiente que reaproveite o
+     global — o simulador dos testes, por exemplo. */
+  if (typeof reiniciarExecucao === 'function') reiniciarExecucao();
+
   try {
+    /* Dados.gs ausente é o único erro de instalação que vale a pena
+       distinguir: sem ele nenhuma ação funciona, e o sintoma sem esta
+       conferência seria "ReferenceError: ABAS is not defined" chegando
+       ao navegador como um 500 sem explicação. */
+    if (typeof ABAS === 'undefined') {
+      return responder({ ok: false, erro: 'instalacao_incompleta' });
+    }
+
     var corpo = lerCorpo(e);
     if (!corpo) return responder({ ok: false, erro: 'dados_invalidos' });
 
@@ -264,6 +210,9 @@ function rotasDoNucleo() {
   ping:                  { publica: true,  fn: acaoPing },
   login:                 { publica: true,  fn: acaoLogin },
 
+  /* Várias leituras numa requisição só. Ver acaoLote(). */
+  lote:                  { publica: false, fn: acaoLote },
+
   sessao:                { publica: false, fn: acaoSessao },
   logout:                { publica: false, fn: acaoLogout },
   resumo:                { publica: false, fn: acaoResumo },
@@ -294,98 +243,98 @@ function rotasDoNucleo() {
 }
 
 /* =====================================================================
-   PLANILHA
-   ===================================================================== */
-
-function planilha() {
-  var id = propriedade('RAMA_PLANILHA_ID', '');
-  if (id) return SpreadsheetApp.openById(id);
-
-  var ativa = SpreadsheetApp.getActiveSpreadsheet();
-  if (ativa) return ativa;
-
-  throw new Error('Sem planilha: defina RAMA_PLANILHA_ID em Script Properties ou vincule o script a uma planilha.');
-}
-
-function aba(definicao) {
-  var folha = planilha().getSheetByName(definicao.nome);
-  if (!folha) throw new Error('A aba ' + definicao.nome + ' não existe. Rode setupRama().');
-  return folha;
-}
-
-function propriedade(chave, padrao) {
-  var v = PropertiesService.getScriptProperties().getProperty(chave);
-  return (v === null || v === undefined || v === '') ? padrao : v;
-}
-
-/* Todas as linhas, já viradas em objeto pelo cabeçalho. As tabelas
-   deste sistema são pequenas — dezenas de linhas, não milhares —, e ler
-   tudo de uma vez custa uma chamada em vez de uma por linha. */
-function lerTudo(definicao) {
-  var folha = aba(definicao);
-  var ultima = folha.getLastRow();
-  if (ultima < 2) return [];
-
-  var valores = folha.getRange(2, 1, ultima - 1, definicao.colunas.length).getValues();
-
-  return valores.map(function (linha, i) {
-    var registro = { _linha: i + 2 };
-    definicao.colunas.forEach(function (coluna, c) { registro[coluna] = linha[c]; });
-    return registro;
-  });
-}
-
-function acharPor(definicao, coluna, valor) {
-  var alvo = String(valor);
-  var todos = lerTudo(definicao);
-  for (var i = 0; i < todos.length; i++) {
-    if (String(todos[i][coluna]) === alvo) return todos[i];
-  }
-  return null;
-}
-
-function inserir(definicao, registro) {
-  var folha = aba(definicao);
-  folha.appendRow(definicao.colunas.map(function (c) {
-    return registro[c] === undefined ? '' : registro[c];
-  }));
-}
-
-function atualizarLinha(definicao, numeroDaLinha, registro) {
-  var folha = aba(definicao);
-  folha.getRange(numeroDaLinha, 1, 1, definicao.colunas.length).setValues([
-    definicao.colunas.map(function (c) { return registro[c] === undefined ? '' : registro[c]; }),
-  ]);
-}
-
-function apagarLinha(definicao, numeroDaLinha) {
-  aba(definicao).deleteRow(numeroDaLinha);
-}
-
-/* =====================================================================
-   TRAVA
+   O LOTE
    ---------------------------------------------------------------------
-   O LockService impede que duas execuções do script mexam na mesma
-   região ao mesmo tempo. Ele resolve um problema diferente do `rev`:
+   Várias leituras numa requisição só.
 
-     lock  — duas gravações simultâneas embaralhando linhas da planilha
-     rev   — alguém salvando por cima de uma versão que já mudou
+   O problema que ele resolve não é de planilha, é de latência. Abrir
+   uma ficha pedia quatro requisições: conferir a sessão, ler a ficha,
+   ler a foto e listar as campanhas. Cada uma é uma viagem completa até
+   o Apps Script — e o Apps Script tem um custo de partida que não
+   depende do que se pediu. Quatro viagens custam quatro partidas.
 
-   Uma não substitui a outra. Sem lock, duas gravações concorrentes
-   podem escrever na mesma linha; sem rev, a segunda gravação apaga em
-   silêncio o trabalho da primeira mesmo tendo esperado a vez.
+   Juntas numa execução, elas pagam a partida uma vez, validam a sessão
+   uma vez e — porque o Dados.gs guarda o que leu enquanto a execução
+   dura — leem cada aba uma vez, mesmo que três delas precisem da mesma.
+
+   O QUE O LOTE NÃO FAZ
+   ---------------------------------------------------------------------
+
+   Gravar. A lista de ações aceitas é fechada e só tem leitura, por três
+   motivos que se somam:
+
+     · o lote é declarado idempotente no cliente, para poder ser
+       repetido quando o servidor demora a acordar. Uma gravação
+       repetida cria registro duas vezes;
+     · uma falha no meio de um lote de gravações deixaria metade
+       aplicada, e o Apps Script não oferece transação para desfazer;
+     · a trava seria segurada por tantas operações quantas coubessem no
+       lote, que é exatamente o contrário do que esta versão persegue.
+
+   Cada sub-ação faz a PRÓPRIA conferência de permissão, com o mesmo
+   usuário da sessão. O lote não é um caminho lateral mais frouxo: é a
+   mesma função que a ação avulsa chamaria, com o mesmo argumento. Um
+   pedido de campanha alheia dentro de um lote é recusado pela mesma
+   linha de código que o recusaria sozinho.
    ===================================================================== */
 
-function comTrava(fn) {
-  var trava = LockService.getScriptLock();
+var LOTE_MAXIMO = 8;
 
-  if (!trava.tryLock(25000)) return { ok: false, erro: 'ocupado' };
+/* Fechada de propósito, e só com leitura. Uma ação nova não entra aqui
+   por descuido: entra porque alguém escreveu o nome. */
+function acoesDeLote() {
+  return {
+    sessao: true,
+    resumo: true,
+    listar_personagens: true,
+    ler_personagem: true,
+    ler_foto: true,
+    listar_homebrew: true,
+    ler_homebrew: true,
+    ler_imagem_criatura: true,
+    ler_perfil: true,
+    listar_campanhas: true,
+    ler_campanha: true,
+    listar_usuarios: true,
+    listar_personagens_campanha: true,
+    listar_rolagens: true,
+    listar_documentos: true,
+    ler_imagem_documento: true,
+    listar_notas_mestre: true,
+    listar_combates: true,
+  };
+}
 
-  try {
-    return fn();
-  } finally {
-    trava.releaseLock();
-  }
+function acaoLote(corpo, usuario) {
+  var pedidos = Array.isArray(corpo.pedidos) ? corpo.pedidos : [];
+
+  if (!pedidos.length) return { ok: false, erro: 'dados_invalidos' };
+  if (pedidos.length > LOTE_MAXIMO) return { ok: false, erro: 'dados_invalidos' };
+
+  var permitidas = acoesDeLote();
+
+  var respostas = pedidos.map(function (pedido) {
+    var acao = String((pedido && pedido.acao) || '');
+
+    if (!permitidas[acao]) return { ok: false, erro: 'acao_desconhecida', acao: acao };
+
+    var rota = rotaDe(acao);
+    if (!rota || rota.publica) return { ok: false, erro: 'acao_desconhecida', acao: acao };
+
+    /* Uma sub-ação que estoura não derruba as outras. Quem pediu quatro
+       coisas e recebeu três recebe também o motivo da quarta, em vez de
+       uma tela em branco. */
+    try {
+      var r = rota.fn(pedido, usuario) || { ok: false, erro: 'sem_resposta' };
+      r.acao = acao;
+      return r;
+    } catch (erro) {
+      console.error('R.A.M.A. lote/' + acao + ': ' + (erro && erro.stack ? erro.stack : erro));
+      return { ok: false, erro: 'servidor_falhou', acao: acao };
+    }
+  });
+
+  return { ok: true, dados: { respostas: respostas } };
 }
 
 /* =====================================================================
@@ -481,51 +430,169 @@ function iguaisEmTempoConstante(a, b) {
 
 /* Na planilha fica o HASH do token, nunca o token. Quem abrir o arquivo
    vê 64 caracteres que não servem para entrar em lugar nenhum — o mesmo
-   raciocínio que se aplica à senha vale para a chave de sessão. */
+   raciocínio que se aplica à senha vale para a chave de sessão.
+
+   ---------------------------------------------------------------------
+   O CACHE DA SESSÃO
+   ---------------------------------------------------------------------
+
+   Toda requisição passa por aqui, e antes desta versão toda requisição
+   pagava duas varreduras completas: SESSOES para achar o token e
+   USUARIOS para achar a conta. Numa sessão de jogo com vinte pessoas
+   isso é o custo fixo mais alto do sistema, e ele é pago antes de a
+   ação sequer começar.
+
+   A resposta é um cache curto, e cada decisão dele tem motivo:
+
+     chave      'rama.sessao.' + o hash do token. Formar essa chave
+                exige o token, que só quem tem a sessão tem. Não existe
+                caminho para ler a entrada de outra pessoa.
+
+     conteúdo   id, usuário, nome e datas — o suficiente para as ações
+                trabalharem. NUNCA hashSenha, salt, token ou o pepper:
+                o cache é mais fácil de inspecionar do que a planilha,
+                e não há motivo para pôr lá o que não é usado.
+
+     validade   120 segundos. Curto o bastante para uma revogação feita
+                à mão na planilha aparecer quase na hora; longo o
+                bastante para cobrir a rajada de requisições de quem
+                abre uma tela.
+
+     época      o carimbo de RAMA_EPOCA entra na entrada e é conferido
+                na leitura. Trocar senha, desativar conta ou mexer em
+                participantes avança a época e derruba TODAS as
+                entradas na mesma hora — que é o jeito de revogar num
+                serviço que não deixa procurar chaves.
+
+     ausência   cache vazio não é erro. Cai no caminho da planilha, que
+                continua sendo a fonte da verdade. O cache acelera; não
+                autoriza.
+
+   O que continua sendo conferido a CADA requisição, venha o dado de
+   onde vier: a sessão estar ativa, o prazo não ter vencido e a conta
+   não estar desativada. Nada disso é dispensado por estar em cache — o
+   prazo, inclusive, é conferido contra o relógio de agora, e não contra
+   o de quando a entrada foi criada.
+
+   E o que o cache NÃO cobre, dito sem rodeio: marcar `ativo = false` na
+   linha da SESSOES direto na planilha, com a mão, pode levar até dois
+   minutos para fazer efeito. Sair pelo botão, trocar a senha e
+   desativar a conta têm efeito imediato, porque passam por código que
+   apaga a entrada ou avança a época. */
+
+var SEGUNDOS_CACHE_SESSAO = 120;
+
+function chaveDeSessao(hash) { return 'rama.sessao.' + hash; }
+
+function sessaoDoCache(hash) {
+  var bruto = cacheLer(chaveDeSessao(hash));
+  if (!bruto) return null;
+
+  var guardado = lerJson(bruto, null);
+  if (!guardado || guardado.epoca !== epoca()) return null;
+
+  return guardado;
+}
+
+function guardarSessaoNoCache(hash, usuario, sessao) {
+  cacheGravar(chaveDeSessao(hash), JSON.stringify({
+    epoca: epoca(),
+    /* Campo a campo, e não o registro inteiro: o registro traz
+       hashSenha e salt, que não têm o que fazer aqui. */
+    usuario: {
+      id: usuario.id,
+      usuario: usuario.usuario,
+      nome: usuario.nome,
+      ativo: String(usuario.ativo),
+      criadoEm: usuario.criadoEm,
+    },
+    expiraEm: Number(sessao.expiraEm) || 0,
+    ultimaAtividade: Number(sessao.ultimaAtividade) || 0,
+  }), SEGUNDOS_CACHE_SESSAO);
+}
+
+function esquecerSessaoNoCache(hash) {
+  cacheApagar(chaveDeSessao(hash));
+}
+
 function validarSessao(token) {
   var bruto = String(token || '');
   if (!bruto) return { ok: false, erro: 'sem_token' };
 
   var hash = sha256Hex(bruto);
+  var agora = Date.now();
+
+  var guardado = sessaoDoCache(hash);
+  if (guardado) {
+    /* O prazo vale contra o relógio de agora, nunca contra o de quando
+       a entrada foi criada. Uma sessão que venceu dentro da janela do
+       cache é recusada aqui, sem consultar nada. */
+    if (guardado.expiraEm && agora > guardado.expiraEm) {
+      esquecerSessaoNoCache(hash);
+      return expirarSessao(hash);
+    }
+    if (String(guardado.usuario.ativo) !== 'true') return { ok: false, erro: 'inativo' };
+
+    renovarAtividade(hash, guardado.ultimaAtividade, agora);
+
+    return { ok: true, usuario: guardado.usuario, sessao: null, doCache: true };
+  }
+
   var sessao = acharPor(ABAS.SESSOES, 'tokenHash', hash);
   if (!sessao) return { ok: false, erro: 'sessao' };
 
   if (String(sessao.ativo) !== 'true') return { ok: false, erro: 'sessao' };
 
-  var agora = Date.now();
   var expira = Number(sessao.expiraEm) || 0;
-  if (expira && agora > expira) {
-    comTrava(function () {
-      var atual = acharPor(ABAS.SESSOES, 'tokenHash', hash);
-      if (atual) {
-        atual.ativo = 'false';
-        atualizarLinha(ABAS.SESSOES, atual._linha, atual);
-      }
-      return { ok: true };
-    });
-    return { ok: false, erro: 'expirada' };
-  }
+  if (expira && agora > expira) return expirarSessao(hash);
 
   var usuario = acharPor(ABAS.USUARIOS, 'id', sessao.userId);
   if (!usuario) return { ok: false, erro: 'sessao' };
   if (String(usuario.ativo) !== 'true') return { ok: false, erro: 'inativo' };
 
-  /* Renova o prazo, mas com parcimônia: uma gravação por hora, não uma
-     por requisição. */
-  var ultima = Number(sessao.ultimaAtividade) || 0;
-  if (agora - ultima > INTERVALO_ATIVIDADE_MS) {
-    comTrava(function () {
-      var atual = acharPor(ABAS.SESSOES, 'tokenHash', hash);
-      if (atual) {
-        atual.ultimaAtividade = agora;
-        atual.expiraEm = agora + DIAS_SESSAO * 86400000;
-        atualizarLinha(ABAS.SESSOES, atual._linha, atual);
-      }
-      return { ok: true };
-    });
-  }
+  guardarSessaoNoCache(hash, usuario, sessao);
+
+  renovarAtividade(hash, Number(sessao.ultimaAtividade) || 0, agora);
 
   return { ok: true, usuario: usuario, sessao: sessao };
+}
+
+/* Marca a sessão vencida na planilha e no cache. */
+function expirarSessao(hash) {
+  esquecerSessaoNoCache(hash);
+
+  comTrava(function () {
+    var atual = acharPor(ABAS.SESSOES, 'tokenHash', hash);
+    if (atual && String(atual.ativo) === 'true') {
+      atual.ativo = 'false';
+      atualizarLinha(ABAS.SESSOES, atual._linha, atual);
+    }
+    return { ok: true };
+  });
+
+  return { ok: false, erro: 'expirada' };
+}
+
+/* Renova o prazo, mas com parcimônia: uma gravação por hora, não uma
+   por requisição. Com vinte pessoas conectadas, carimbar a atividade a
+   cada chamada seria uma disputa constante pela trava do script para
+   ganhar precisão que ninguém usa. */
+function renovarAtividade(hash, ultimaAtividade, agora) {
+  if (agora - ultimaAtividade <= INTERVALO_ATIVIDADE_MS) return;
+
+  comTrava(function () {
+    var atual = acharPor(ABAS.SESSOES, 'tokenHash', hash);
+    if (!atual) return { ok: true };
+
+    atual.ultimaAtividade = agora;
+    atual.expiraEm = agora + DIAS_SESSAO * 86400000;
+    atualizarLinha(ABAS.SESSOES, atual._linha, atual);
+
+    /* A entrada guardada envelheceu junto: sem isto, a próxima
+       requisição leria a atividade antiga e tentaria carimbar de novo. */
+    esquecerSessaoNoCache(hash);
+    return { ok: true };
+  });
 }
 
 function acaoPing() {
@@ -593,6 +660,12 @@ function acaoSessao(corpo, usuario) {
 function acaoLogout(corpo) {
   var hash = sha256Hex(String(corpo.token || ''));
 
+  /* Primeiro o cache, depois a planilha. Nesta ordem, uma falha na
+     gravação deixa a sessão fora do cache — o pior caso é uma leitura a
+     mais. Na ordem inversa, a mesma falha deixaria a sessão VIVA no
+     cache por dois minutos depois de a pessoa ter clicado em sair. */
+  esquecerSessaoNoCache(hash);
+
   return comTrava(function () {
     var sessao = acharPor(ABAS.SESSOES, 'tokenHash', hash);
     if (sessao) {
@@ -615,18 +688,32 @@ function perfilPublico(usuario) {
 
 /* Sessões encerradas ou vencidas há mais de 30 dias saem da planilha.
    Sem isso a aba cresce para sempre e o login fica mais lento a cada
-   entrada — porque validar sessão lê a aba inteira. */
-function limparSessoesVelhas() {
-  var limite = Date.now() - DIAS_SESSAO * 86400000;
-  var folha = aba(ABAS.SESSOES);
-  var todas = lerTudo(ABAS.SESSOES);
+   entrada — porque validar sessão lê a aba inteira quando o cache não
+   ajuda.
 
-  for (var i = todas.length - 1; i >= 0; i--) {
-    var s = todas[i];
+   Roda no máximo uma vez por dia. Antes rodava em TODO login, dentro da
+   trava, apagando linha por linha: com vinte pessoas entrando na mesma
+   noite, dezenove pagavam por uma faxina que a primeira já tinha feito.
+   A data da última passagem fica em Script Properties, que é o único
+   lugar por aqui que sobrevive à execução e não custa uma gravação na
+   planilha. */
+var INTERVALO_FAXINA_MS = 24 * 60 * 60 * 1000;
+
+function limparSessoesVelhas() {
+  var agora = Date.now();
+  var ultima = Number(propriedade('RAMA_FAXINA', '0')) || 0;
+  if (agora - ultima < INTERVALO_FAXINA_MS) return 0;
+
+  definirPropriedade('RAMA_FAXINA', String(agora));
+
+  var limite = agora - DIAS_SESSAO * 86400000;
+  var condenadas = lerTudo(ABAS.SESSOES).filter(function (s) {
     var venceu = (Number(s.expiraEm) || 0) < limite;
     var morta = String(s.ativo) !== 'true' && (Number(s.ultimaAtividade) || 0) < limite;
-    if (venceu || morta) folha.deleteRow(s._linha);
-  }
+    return venceu || morta;
+  }).map(function (s) { return s._linha; });
+
+  return apagarLinhas(ABAS.SESSOES, condenadas);
 }
 
 /* =====================================================================
@@ -671,6 +758,24 @@ function limparFalhas(usuario) {
 
 function meu(registro, usuario) {
   return !!registro && String(registro.ownerId) === String(usuario.id);
+}
+
+/* Acha a linha sem trazer a coluna pesada.
+
+   Serve para o caso em que só interessa ONDE o registro está — porque o
+   que vem depois é uma gravação por cima, e ler o valor antigo seria
+   trabalho jogado fora. O que volta daqui não pode ir para
+   `atualizarLinha`; vai para `atualizarCampos`, que grava só o que
+   recebeu. */
+function linhaLeve(definicao, coluna, valor) {
+  var alvo = String(valor);
+  if (!alvo) return null;
+
+  var leves = lerLeves(definicao);
+  for (var i = 0; i < leves.length; i++) {
+    if (String(leves[i][coluna]) === alvo) return leves[i];
+  }
+  return null;
 }
 
 /* Devolve o registro só se ele for de quem está pedindo. Registro de
@@ -745,20 +850,48 @@ function papelNaCampanha(campanha, usuario) {
   return null;
 }
 
+/* A aba de membros é pequena e é consultada muitas vezes na mesma
+   requisição: uma vez por campanha do usuário ao montar a lista, mais
+   uma a cada conferência de papel. Ela é lida UMA vez por execução — o
+   Dados.gs cuida disso — e aqui vira um índice por campanha, para as
+   conferências seguintes não repetirem o laço.
+
+   O índice vive na execução e some com ela. Não é cache entre
+   requisições: mudança de participante feita por outra pessoa aparece
+   na requisição seguinte, como tem de ser. */
+function indiceDeMembros() {
+  var linhas = lerTudo(ABAS.CAMPANHA_MEMBROS);
+  var e = exec();
+
+  /* A validade do índice é amarrada ao ARRAY que veio do Dados.gs, e
+     não a um sinalizador próprio. Toda gravação em CAMPANHA_MEMBROS
+     invalida a varredura, a leitura seguinte devolve um array novo, e
+     este `!==` percebe. Um sinalizador separado seria mais uma coisa
+     para lembrar de limpar — e a que alguém esqueceria. */
+  if (e.indiceMembros && e.indiceMembros.fonte === linhas) return e.indiceMembros.porCampanha;
+
+  var porCampanha = {};
+  linhas.forEach(function (m) {
+    var c = String(m.campanhaId);
+    if (!porCampanha[c]) porCampanha[c] = [];
+    porCampanha[c].push(m);
+  });
+
+  e.indiceMembros = { fonte: linhas, porCampanha: porCampanha };
+  return porCampanha;
+}
+
 function membroDaCampanha(campanhaId, userId) {
-  var alvoC = String(campanhaId), alvoU = String(userId);
-  var todos = lerTudo(ABAS.CAMPANHA_MEMBROS);
-  for (var i = 0; i < todos.length; i++) {
-    if (String(todos[i].campanhaId) === alvoC && String(todos[i].userId) === alvoU) return todos[i];
+  var lista = indiceDeMembros()[String(campanhaId)] || [];
+  var alvo = String(userId);
+  for (var i = 0; i < lista.length; i++) {
+    if (String(lista[i].userId) === alvo) return lista[i];
   }
   return null;
 }
 
 function membrosDaCampanha(campanhaId) {
-  var alvo = String(campanhaId);
-  return lerTudo(ABAS.CAMPANHA_MEMBROS).filter(function (m) {
-    return String(m.campanhaId) === alvo;
-  });
+  return (indiceDeMembros()[String(campanhaId)] || []).slice();
 }
 
 /* Exige mestre. Devolve o contexto ou o erro, e é a primeira linha de
@@ -776,6 +909,14 @@ function exigirMestre(campanhaId, usuario) {
 function daCampanha(definicao, campanhaId) {
   var alvo = String(campanhaId);
   return lerTudo(definicao).filter(function (r) { return String(r.campanhaId) === alvo; });
+}
+
+/* Igual, mas sem arrastar a coluna pesada. Serve para listar, contar e
+   filtrar; os registros que voltam daqui NÃO podem ser gravados de
+   volta, e o Dados.gs recusa se alguém tentar. */
+function daCampanhaLeves(definicao, campanhaId) {
+  var alvo = String(campanhaId);
+  return lerLeves(definicao).filter(function (r) { return String(r.campanhaId) === alvo; });
 }
 
 /* =====================================================================
@@ -807,7 +948,10 @@ function personagemAcessivel(personagemId, usuario, opcoes) {
      personagem esteja mesmo numa campanha. */
   if (!personagem.campanhaId) return { ok: false, erro: 'nao_encontrado' };
 
-  var campanha = acharPor(ABAS.CAMPANHAS, 'id', personagem.campanhaId);
+  /* Para decidir o papel bastam id, dono e visibilidade — todas
+     colunas leves. O dadosJson da campanha não entra nesta decisão e
+     não precisa ser lido para tomá-la. */
+  var campanha = campanhaLeve(personagem.campanhaId);
   if (!campanha) return { ok: false, erro: 'nao_encontrado' };
 
   if (papelNaCampanha(campanha, usuario) !== PAPEL_MESTRE) {
@@ -821,18 +965,54 @@ function personagemAcessivel(personagemId, usuario, opcoes) {
   return { ok: true, personagem: personagem, dono: false, mestre: true, campanha: campanha };
 }
 
+/* A campanha sem o dadosJson. É o bastante para decidir papel, que é
+   o que quase todo caminho precisa. */
+function campanhaLeve(campanhaId) {
+  var alvo = String(campanhaId);
+  var todas = lerLeves(ABAS.CAMPANHAS);
+  for (var i = 0; i < todas.length; i++) {
+    if (String(todas[i].id) === alvo) return todas[i];
+  }
+  return null;
+}
+
 /* As campanhas que este usuário alcança, com o papel em cada uma.
-   Calculado uma vez por requisição e reaproveitado, para listar
-   personagens não reler a aba de membros a cada linha. */
+
+   Só as colunas leves: nome, dono e visibilidade decidem tudo o que se
+   pergunta aqui. Quem precisar da descrição — que mora no dadosJson —
+   pede em campanhasDoUsuarioCompletas().
+
+   Calculado uma vez por requisição e reaproveitado. */
 function campanhasDoUsuario(usuario) {
   var porId = {};
 
-  lerTudo(ABAS.CAMPANHAS).forEach(function (c) {
+  lerLeves(ABAS.CAMPANHAS).forEach(function (c) {
     var papel = papelNaCampanha(c, usuario);
     if (papel) porId[c.id] = { campanha: c, papel: papel };
   });
 
   return porId;
+}
+
+/* A mesma coisa, com o dadosJson das campanhas alcançadas — e só
+   dessas. Numa planilha com trinta campanhas em que o usuário está em
+   três, lê três descrições em vez de trinta. */
+function campanhasDoUsuarioCompletas(usuario) {
+  var alcance = campanhasDoUsuario(usuario);
+  var ids = Object.keys(alcance);
+  if (!ids.length) return alcance;
+
+  /* Passa os registros, não os números: só eles sabem em que ordem de
+     colunas a linha foi gravada. */
+  var registros = ids.map(function (id) { return alcance[id].campanha; });
+  var conteudo = lerCelulas(ABAS.CAMPANHAS, registros, 'dadosJson');
+
+  ids.forEach(function (id) {
+    var c = alcance[id].campanha;
+    alcance[id].dados = lerJson(conteudo[c._linha], {});
+  });
+
+  return alcance;
 }
 
 /* =====================================================================
@@ -848,15 +1028,27 @@ function acaoListarPersonagens(corpo, usuario) {
   var alcance = campanhasDoUsuario(usuario);
   Object.keys(alcance).forEach(function (id) { campanhas[id] = alcance[id].campanha.nome; });
 
-  var fotos = {};
-  lerTudo(ABAS.PERSONAGENS_FOTOS).forEach(function (f) {
-    if (String(f.ownerId) === String(usuario.id)) fotos[f.personagemId] = f.imagem;
+  /* As fotos são o campo mais pesado da planilha inteira, e esta tela
+     precisa das do usuário — não das de todo mundo.
+
+     Antes, a aba de fotos era lida inteira e filtrada depois: sessenta
+     imagens em base64 atravessavam o serviço do Sheets para três
+     aparecerem na tela. Agora a varredura leva só as duas colunas de
+     identificação, e as imagens são buscadas pelas linhas que
+     sobraram. */
+  var minhasFotos = lerLeves(ABAS.PERSONAGENS_FOTOS).filter(function (f) {
+    return String(f.ownerId) === String(usuario.id);
   });
+
+  var imagens = lerCelulas(ABAS.PERSONAGENS_FOTOS, minhasFotos, 'imagem');
+
+  var fotos = {};
+  minhasFotos.forEach(function (f) { fotos[f.personagemId] = imagens[f._linha] || ''; });
 
   /* A listagem devolve o cabeçalho de cada ficha, nunca o fichaJson.
      Trinta fichas completas para desenhar trinta nomes seriam
-     megabytes por tela. */
-  var lista = lerTudo(ABAS.PERSONAGENS)
+     megabytes por tela — e agora nem chegam a ser lidas da planilha. */
+  var lista = lerLeves(ABAS.PERSONAGENS)
     .filter(function (p) { return meu(p, usuario); })
     .map(function (p) {
       return {
@@ -991,7 +1183,8 @@ function acaoExcluirPersonagem(corpo, usuario) {
 
     apagarLinha(ABAS.PERSONAGENS, registro._linha);
 
-    var foto = acharPor(ABAS.PERSONAGENS_FOTOS, 'personagemId', corpo.personagemId);
+    /* Achar para apagar não precisa da imagem. */
+    var foto = linhaLeve(ABAS.PERSONAGENS_FOTOS, 'personagemId', corpo.personagemId);
     if (foto && String(foto.ownerId) === String(usuario.id)) {
       apagarLinha(ABAS.PERSONAGENS_FOTOS, foto._linha);
     }
@@ -1083,7 +1276,12 @@ function acaoSalvarFoto(corpo, usuario) {
     if (!acesso.ok) return acesso;
 
     var agora = new Date().toISOString();
-    var existente = acharPor(ABAS.PERSONAGENS_FOTOS, 'personagemId', corpo.personagemId);
+
+    /* Busca leve: as duas colunas de identificação bastam para achar a
+       linha. Ler a linha inteira traria a imagem ANTIGA — quinze mil
+       caracteres que vão ser substituídos — só para devolvê-la
+       completa com um campo diferente. */
+    var existente = linhaLeve(ABAS.PERSONAGENS_FOTOS, 'personagemId', corpo.personagemId);
 
     if (existente) {
       /* O dono da foto é o dono do PERSONAGEM, não quem gravou: se o
@@ -1091,7 +1289,7 @@ function acaoSalvarFoto(corpo, usuario) {
       existente.ownerId = acesso.personagem.ownerId;
       existente.imagem = imagem;
       existente.atualizadoEm = agora;
-      atualizarLinha(ABAS.PERSONAGENS_FOTOS, existente._linha, existente);
+      atualizarCampos(ABAS.PERSONAGENS_FOTOS, existente, ['ownerId', 'imagem', 'atualizadoEm']);
     } else {
       inserir(ABAS.PERSONAGENS_FOTOS, {
         personagemId: corpo.personagemId,
@@ -1133,18 +1331,28 @@ function acaoListarHomebrew(corpo, usuario) {
   var escopo = String(corpo.escopo || 'meus');
   var tipo = String(corpo.tipo || '');
 
-  var lista = lerTudo(ABAS.HOMEBREW)
-    .filter(function (h) {
-      if (tipo && String(h.tipo) !== tipo) return false;
+  /* Primeiro decide QUAIS registros entram, olhando só as colunas
+     baratas — tipo, dono e visibilidade bastam para isso. Só depois
+     busca o conteúdo dos que passaram.
 
-      var proprio = meu(h, usuario);
-      var publico = visibilidadeDe(h.visibilidade) === VIS_PUBLICO;
+     A diferença aparece no escopo padrão: numa planilha com oitenta
+     itens de vinte contas, "meus" agora lê quatro conteúdos em vez de
+     oitenta. */
+  var escolhidos = lerLeves(ABAS.HOMEBREW).filter(function (h) {
+    if (tipo && String(h.tipo) !== tipo) return false;
 
-      if (escopo === 'publicos') return !proprio && publico;
-      if (escopo === 'todos') return proprio || publico;
-      return proprio;
-    })
-    .map(function (h) { return homebrewParaCliente(h, usuario); })
+    var proprio = meu(h, usuario);
+    var publico = visibilidadeDe(h.visibilidade) === VIS_PUBLICO;
+
+    if (escopo === 'publicos') return !proprio && publico;
+    if (escopo === 'todos') return proprio || publico;
+    return proprio;
+  });
+
+  var conteudo = lerCelulas(ABAS.HOMEBREW, escolhidos, 'dadosJson');
+
+  var lista = escolhidos
+    .map(function (h) { return homebrewParaCliente(h, usuario, conteudo[h._linha]); })
     .sort(function (a, b) { return String(a.nome).localeCompare(String(b.nome), 'pt-BR'); });
 
   return { ok: true, dados: lista };
@@ -1154,8 +1362,8 @@ function acaoListarHomebrew(corpo, usuario) {
    o JSON: id, tipo, nome e visibilidade vêm da linha, não do conteúdo
    gravado, para um dadosJson adulterado não conseguir mentir sobre a
    própria visibilidade. */
-function homebrewParaCliente(h, usuario) {
-  var dados = lerJson(h.dadosJson, {});
+function homebrewParaCliente(h, usuario, jsonPronto) {
+  var dados = lerJson(jsonPronto === undefined ? h.dadosJson : jsonPronto, {});
   dados.id = h.id;
   dados.tipo = h.tipo;
   dados.nome = h.nome;
@@ -1237,7 +1445,7 @@ function acaoExcluirHomebrew(corpo, usuario) {
     /* A imagem mora em outra aba e não some sozinha. Deixá-la para trás
        encheria a planilha de linhas órfãs que ninguém mais consegue
        alcançar nem apagar pela interface. */
-    var imagem = acharPor(ABAS.CRIATURAS_IMAGENS, 'criaturaId', corpo.homebrewId);
+    var imagem = linhaLeve(ABAS.CRIATURAS_IMAGENS, 'criaturaId', corpo.homebrewId);
     if (imagem && String(imagem.ownerId) === String(usuario.id)) {
       apagarLinha(ABAS.CRIATURAS_IMAGENS, imagem._linha);
     }
@@ -1273,13 +1481,13 @@ function acaoSalvarImagemCriatura(corpo, usuario) {
     if (!registro) return { ok: false, erro: 'nao_encontrado' };
 
     var agora = new Date().toISOString();
-    var existente = acharPor(ABAS.CRIATURAS_IMAGENS, 'criaturaId', corpo.criaturaId);
+    var existente = linhaLeve(ABAS.CRIATURAS_IMAGENS, 'criaturaId', corpo.criaturaId);
 
     if (existente) {
       existente.ownerId = usuario.id;
       existente.imagem = imagem;
       existente.atualizadoEm = agora;
-      atualizarLinha(ABAS.CRIATURAS_IMAGENS, existente._linha, existente);
+      atualizarCampos(ABAS.CRIATURAS_IMAGENS, existente, ['ownerId', 'imagem', 'atualizadoEm']);
     } else {
       inserir(ABAS.CRIATURAS_IMAGENS, {
         criaturaId: corpo.criaturaId,
@@ -1363,8 +1571,10 @@ function acaoSalvarPerfil(corpo, usuario) {
    ===================================================================== */
 
 function acaoResumo(corpo, usuario) {
-  var personagens = lerTudo(ABAS.PERSONAGENS).filter(function (p) { return meu(p, usuario); });
-  var homebrew = lerTudo(ABAS.HOMEBREW).filter(function (h) { return meu(h, usuario); });
+  /* Contagens e seis nomes recentes. Nada aqui olha para dentro de uma
+     ficha ou de um item, então nada aqui precisa lê-los. */
+  var personagens = lerLeves(ABAS.PERSONAGENS).filter(function (p) { return meu(p, usuario); });
+  var homebrew = lerLeves(ABAS.HOMEBREW).filter(function (h) { return meu(h, usuario); });
 
   /* A conta de campanhas passa a incluir aquelas de que o usuário
      PARTICIPA, e não só as que ele criou: para quem só joga, contar
@@ -1410,24 +1620,6 @@ function acaoResumo(corpo, usuario) {
 }
 
 /* =====================================================================
-   AUXILIARES
-   ===================================================================== */
-
-/* JSON corrompido numa célula não pode derrubar a resposta inteira: a
-   ficha volta vazia, a pessoa vê que algo se perdeu e o log guarda o
-   motivo. Melhor uma ficha em branco do que um 500. */
-function lerJson(texto, padrao) {
-  try {
-    if (!texto) return padrao;
-    var v = JSON.parse(texto);
-    return (v && typeof v === 'object') ? v : padrao;
-  } catch (erro) {
-    console.warn('JSON inválido na planilha: ' + erro);
-    return padrao;
-  }
-}
-
-/* =====================================================================
    =====================================================================
    FUNÇÕES ADMINISTRATIVAS
    ---------------------------------------------------------------------
@@ -1444,6 +1636,7 @@ function lerJson(texto, padrao) {
    inclusive depois de uma atualização que acrescente colunas.
    --------------------------------------------------------------------- */
 function setupRama() {
+  reiniciarExecucao();
   var arquivo = planilha();
   var relatorio = [];
 
@@ -1489,6 +1682,35 @@ function setupRama() {
     relatorio.push('removida a aba padrão vazia');
   }
 
+  /* A época começa a existir aqui. Sem ela, o cache de sessão não teria
+     com que se comparar e recusaria toda entrada — funcionaria, só que
+     sem cache nenhum. */
+  if (!propriedade('RAMA_EPOCA', '')) definirPropriedade('RAMA_EPOCA', '1');
+
+  /* Este setup pode ter acrescentado coluna. Avançar a época joga fora
+     os cabeçalhos guardados e as sessões em cache, para nada continuar
+     trabalhando com o desenho antigo da planilha.
+
+     É também o motivo de a instrução ser sempre "mexeu na planilha,
+     rode setupRama()": é aqui que o sistema toma conhecimento. */
+  esquecerCabecalhos();
+
+  /* Aviso, não conserto: numa planilha vinda da v1, `visibilidade` foi
+     acrescentada no FIM da aba, enquanto o código a declara no meio.
+     Reordenar colunas aqui moveria dado de lugar — o tipo de conserto
+     que estraga mais do que arruma. O sistema lê pelo NOME da coluna
+     justamente para não depender disso; o aviso abaixo só torna a
+     situação visível a quem rodar o setup. */
+  Object.keys(ABAS).forEach(function (chave) {
+    var definicao = ABAS[chave];
+    try {
+      if (!cabecalho(definicao).alinhado) {
+        relatorio.push('ordem física diferente da declarada em ' + definicao.nome +
+          ' — lido pelo nome da coluna, nada a fazer');
+      }
+    } catch (erro) { /* aba recém-criada, sem o que conferir */ }
+  });
+
   var texto = 'R.A.M.A. — setup\n\n' + relatorio.join('\n');
   console.log(texto);
   return texto;
@@ -1503,6 +1725,7 @@ function setupRama() {
    ser recalculadas. Se precisar trocar, cadastre as senhas de novo.
    --------------------------------------------------------------------- */
 function gerarPepper() {
+  reiniciarExecucao();
   var props = PropertiesService.getScriptProperties();
 
   if (props.getProperty('RAMA_PEPPER')) {
@@ -1522,6 +1745,7 @@ function gerarPepper() {
    Cadastra uma conta. Chame pelo editor, com os valores no lugar.
    --------------------------------------------------------------------- */
 function criarUsuario(usuario, nome, senha) {
+  reiniciarExecucao();
   var login = String(usuario || '').trim().toLowerCase();
   var texto = String(senha || '');
 
@@ -1570,6 +1794,7 @@ function criarPrimeiroUsuario() {
    trocarSenha(usuario, novaSenha)
    --------------------------------------------------------------------- */
 function trocarSenha(usuario, novaSenha) {
+  reiniciarExecucao();
   var login = String(usuario || '').trim().toLowerCase();
   var texto = String(novaSenha || '');
 
@@ -1598,6 +1823,7 @@ function trocarSenha(usuario, novaSenha) {
 }
 
 function desativarUsuario(usuario) {
+  reiniciarExecucao();
   var registro = acharPor(ABAS.USUARIOS, 'usuario', String(usuario || '').trim().toLowerCase());
   if (!registro) throw new Error('Usuário não encontrado.');
 
@@ -1609,6 +1835,18 @@ function desativarUsuario(usuario) {
   return 'Usuário desativado e sessões encerradas.';
 }
 
+/* Derruba as sessões de uma conta.
+
+   O avanço da época é a parte que não pode faltar. Marcar `ativo =
+   false` na planilha resolve o caminho da planilha; as entradas de
+   cache que já existem continuariam valendo por até dois minutos, e
+   dois minutos é tempo demais quando o motivo de encerrar foi alguém ter
+   entrado onde não devia.
+
+   O CacheService não deixa listar nem apagar por prefixo, então não há
+   como achar as entradas dessa conta. Avançar a época invalida as de
+   todo mundo de uma vez — grosseiro, mas é a operação que existe, e o
+   preço é uma leitura a mais para quem estava online. */
 function encerrarSessoesDe(userId) {
   lerTudo(ABAS.SESSOES).forEach(function (s) {
     if (String(s.userId) === String(userId) && String(s.ativo) === 'true') {
@@ -1616,6 +1854,8 @@ function encerrarSessoesDe(userId) {
       atualizarLinha(ABAS.SESSOES, s._linha, s);
     }
   });
+
+  avancarEpoca();
 }
 
 /* ---------------------------------------------------------------------
@@ -1623,8 +1863,24 @@ function encerrarSessoesDe(userId) {
    Diz o que falta antes de publicar. Rode depois do setup.
    --------------------------------------------------------------------- */
 function conferirInstalacao() {
+  /* Os três arquivos, ANTES de qualquer outra coisa. Esta é a função que
+     alguém roda justamente quando algo não está no lugar, então ela não
+     pode depender do que está faltando — chamar reiniciarExecucao()
+     aqui em cima estouraria com ReferenceError e esconderia o
+     diagnóstico que ela existe para dar. */
+  if (typeof ABAS === 'undefined' || typeof reiniciarExecucao !== 'function') {
+    var falta = 'PENDÊNCIAS: Dados.gs não está no projeto — crie o arquivo e cole o conteúdo.';
+    console.log(falta);
+    return falta;
+  }
+
+  reiniciarExecucao();
   var problemas = [];
   var avisos = [];
+
+  if (typeof rotasDeCampanha !== 'function') {
+    problemas.push('Campanhas.gs não está no projeto — as ações de campanha vão responder erro.');
+  }
 
   try {
     planilha().getName();
@@ -1677,6 +1933,7 @@ function conferirInstalacao() {
    1,5 s. Menos que isso protege pouco; mais que isso irrita quem entra.
    --------------------------------------------------------------------- */
 function medirDerivacao() {
+  reiniciarExecucao();
   var iteracoes = Number(propriedade('RAMA_ITERACOES', '10000'));
   var inicio = Date.now();
   derivarSenha('medindo-o-tempo', novoSegredo().slice(0, 32), iteracoes);

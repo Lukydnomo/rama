@@ -60,7 +60,7 @@
 
   var ctx = null;
 
-  global.RAMAApp.iniciar("personagens", async function () {
+  global.RAMAApp.iniciar("personagens", async function (agente, casca, prontas) {
     document.body.classList.add("pagina-ficha");
 
     estado.personagemId = U.parametro("id");
@@ -79,14 +79,24 @@
 
     U.trocar(alvo, UI.carregando("Acessando registro"));
 
-    /* Ficha, foto e campanhas em paralelo: são três leituras
-       independentes, e o Apps Script é lento o bastante para a
-       diferença aparecer. */
-    var [rFicha, rFoto, rCampanhas] = await Promise.all([
-      global.RAMAApi.lerPersonagem(estado.personagemId),
-      global.RAMAApi.lerFoto(estado.personagemId),
-      global.RAMAApi.listarCampanhas(),
-    ]);
+    /* Ficha, foto e campanhas já vieram junto com a conferência da
+       sessão, numa requisição só — ver o `pedidos` no fim do arquivo.
+
+       Antes eram quatro chamadas em duas ondas: a sessão primeiro, e só
+       depois as três leituras em paralelo. Paralelo ajuda, mas cada uma
+       ainda pagava a partida do Apps Script por conta própria, e a
+       segunda onda só começava quando a primeira terminava.
+
+       O `Promise.all` continua aqui como rede de segurança: se a página
+       for aberta sem a pré-carga — outro caminho de entrada, um erro no
+       lote — ela busca por conta própria em vez de ficar em branco. */
+    var [rFicha, rFoto, rCampanhas] = prontas && prontas.length === 3
+      ? prontas
+      : await Promise.all([
+          global.RAMAApi.lerPersonagem(estado.personagemId),
+          global.RAMAApi.lerFoto(estado.personagemId),
+          global.RAMAApi.listarCampanhas(),
+        ]);
 
     if (!rFicha.ok) {
       U.trocar(alvo, UI.erroDeTela(rFicha, function () { location.reload(); }));
@@ -114,6 +124,20 @@
     estado.comoMestre = !!rFicha.mestre && !rFicha.dono;
 
     desenhar();
+  }, {
+    /* Roda antes de a sessão ser confirmada, então só pode olhar para o
+       endereço da página. O servidor confere a permissão de cada uma
+       destas leituras do mesmo jeito que conferiria se viessem
+       sozinhas — e confere a sessão antes de todas elas. */
+    pedidos: function () {
+      var id = U.parametro("id");
+      if (!id) return [];
+      return [
+        { acao: "ler_personagem", personagemId: id },
+        { acao: "ler_foto", personagemId: id },
+        { acao: "listar_campanhas" },
+      ];
+    },
   });
 
   /* =================================================================

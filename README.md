@@ -58,6 +58,7 @@ preferências de tela — nunca é tratado como banco.
     paginas/            um arquivo por tela
 
   backend/
+    Dados.gs            esquema das abas e acesso ao Sheets
     Codigo.gs           núcleo: sessão, personagens, homebrew, perfil
     Campanhas.gs        campanhas, rolagens, documentos, notas, combates
     appsscript.json     manifesto do projeto
@@ -68,6 +69,7 @@ preferências de tela — nunca é tratado como banco.
     CHARACTER_SCHEMA.md o formato da ficha, campo a campo
     PERMISSIONS.md      quem alcança o quê, e onde isso é decidido
     CAMPAIGNS.md        campanhas, combate, histórico e criaturas
+    PERFORMANCE.md      o que custa caro, o que foi feito e como medir
 ```
 
 ---
@@ -130,14 +132,20 @@ Não precisa criar aba nenhuma à mão — o passo 3 faz isso.
 
 Em <https://script.google.com>, crie um projeto novo.
 
-São **dois arquivos**:
+São **três arquivos**, e os três precisam existir:
 
 1. cole `backend/Codigo.gs` no editor, substituindo o `Codigo.gs` padrão;
-2. crie um arquivo novo chamado **`Campanhas`** (o botão `+` ao lado de
-   Arquivos) e cole `backend/Campanhas.gs` nele.
+2. crie um arquivo chamado **`Campanhas`** (o botão `+` ao lado de
+   Arquivos) e cole `backend/Campanhas.gs` nele;
+3. crie um arquivo chamado **`Dados`** e cole `backend/Dados.gs` nele.
 
-> O Apps Script lê todos os `.gs` no mesmo escopo, então a ordem não importa.
-> São dois porque 2.300 linhas num arquivo só é ingovernável.
+> O Apps Script lê todos os `.gs` no mesmo escopo e iça as declarações de
+> função entre arquivos, então a ordem em que eles aparecem não importa.
+> São três por manutenção — separar arquivos não deixa nada mais rápido.
+>
+> Faltando o `Dados.gs`, o sistema não tem como ler nada, e toda ação
+> responde `instalacao_incompleta` em vez de uma pilha de execução.
+> `conferirInstalacao()` diz qual arquivo está faltando.
 
 Em **Configurações do projeto**, marque "Mostrar arquivo de manifesto
 appsscript.json" e cole o conteúdo de `backend/appsscript.json`.

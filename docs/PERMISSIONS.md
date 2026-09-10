@@ -132,7 +132,8 @@ nota é não haver caminho de código que a devolva a quem não é mestre.
 
 ## Onde isso está no código
 
-Tudo em `backend/Codigo.gs` e `backend/Campanhas.gs`:
+Tudo em `backend/Codigo.gs` e `backend/Campanhas.gs`. O `backend/Dados.gs`
+não decide permissão nenhuma — ele não sabe quem está pedindo:
 
 | Função | Responde |
 |---|---|
@@ -150,9 +151,52 @@ diz se foi o usuário ou a senha.
 
 ---
 
+## O lote não é uma porta lateral
+
+Desde a v2.1.0 existe a ação `lote`, que junta várias **leituras** numa
+requisição só. Ela reduz viagens ao Apps Script; não reduz conferências.
+
+- cada sub-ação chama a **mesma função** que chamaria se viesse sozinha, com
+  o usuário derivado da sessão;
+- a sessão é validada **uma vez, na entrada**, antes de o servidor olhar o que
+  foi pedido. Token inválido recusa o lote inteiro e nenhuma sub-ação roda;
+- a lista de ações aceitas é fechada e só tem leitura. Gravação dentro de um
+  lote responde `acao_desconhecida`.
+
+Pedir dentro de um lote a ficha de outra conta é recusado pela mesma linha de
+código que recusaria o pedido avulso — e há teste para exatamente isso.
+
+---
+
+## O cache não autoriza
+
+A sessão fica em cache por 120 segundos, numa chave derivada do **hash do
+token**: formar essa chave exige ter o token, então não existe caminho para
+ler a entrada de outra pessoa. O que vai para lá é id, usuário, nome e datas
+— nunca `hashSenha`, `salt`, token ou o pepper.
+
+O que continua sendo conferido a cada requisição, venha o dado de onde vier:
+
+- a sessão estar ativa;
+- o prazo não ter vencido, contra o relógio de **agora**;
+- a conta não estar desativada.
+
+**Revogação continua imediata.** Sair da conta apaga a entrada; trocar a senha
+e desativar o usuário avançam a época, e toda entrada carimbada com a época
+anterior deixa de valer na hora. O `CacheService` não permite listar nem apagar
+por prefixo, então avançar a época é a operação que existe para isso.
+
+**O que o cache não cobre:** marcar `ativo = false` na linha da aba SESSOES
+direto na planilha, com a mão. Isso leva até 120 segundos para valer.
+
+**Nada de campanha é guardado entre requisições.** Tirar alguém da mesa tira o
+acesso na requisição seguinte, sem janela nenhuma — e há teste para isso.
+
+---
+
 ## O que os testes conferem
 
-`deno run --allow-read testes/executar-backend.js` — 118 verificações, entrando
+`deno run --allow-read testes/executar-backend.js` — 224 verificações, entrando
 por `doPost` como uma requisição de verdade. Entre elas:
 
 - A não lê nem grava no personagem de B trocando o id
@@ -173,3 +217,10 @@ por `doPost` como uma requisição de verdade. Entre elas:
 - nota do mestre não vaza em NENHUMA resposta do jogador
 - o jogador não recebe a ficha interna das criaturas do combate
 - o diretório de usuários devolve só id, usuário, nome e avatar
+- gravação dentro de um lote é recusada, e nada é criado
+- pedido pela ficha alheia dentro de um lote é recusado
+- lote com token inválido não roda nenhuma sub-ação
+- sair da conta, trocar a senha e desativar o usuário derrubam a sessão em cache na hora
+- sessão vencida é recusada mesmo estando em cache
+- tirar alguém da campanha tira o acesso na requisição seguinte
+- sem a trava, a gravação responde `ocupado` e nada é gravado pela metade

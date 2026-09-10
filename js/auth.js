@@ -110,15 +110,47 @@
   }
 
   /* Confere a sessão com o servidor. É a única resposta que vale:
-     token presente no localStorage não prova nada. */
-  async function retomar() {
+     token presente no localStorage não prova nada.
+
+     `pedidos` é opcional e muda o transporte, não a regra. Com ele, a
+     conferência da sessão e as primeiras leituras da página saem numa
+     requisição só — e o que a página recebe já vem junto.
+
+     Sem ele, a página faria assim:
+
+       1. perguntar quem é      → uma viagem ao Apps Script
+       2. desenhar a casca
+       3. pedir os dados        → outra viagem
+
+     Duas ondas, e a segunda só começa quando a primeira acaba. Cada
+     viagem paga o custo de partida do Apps Script, que é o que faz uma
+     tela demorar mesmo quando a planilha é pequena.
+
+     A ordem de segurança não muda: a sessão continua sendo validada
+     pelo servidor antes de qualquer leitura, porque é o servidor que
+     executa as duas coisas, e ele valida a sessão ANTES de olhar para
+     a lista de pedidos. Se a sessão não valer, nenhuma leitura
+     acontece — a resposta é o erro de sessão, e nada mais. */
+  async function retomar(pedidos) {
     var tk = token();
     if (!tk) return { ok: false, erro: "sem_token" };
     if (venceuAqui()) { esquecer(); return { ok: false, erro: "expirada" }; }
 
-    var r = await global.RAMAApi.sessao(tk);
+    var extras = pedidos || [];
+    var r;
+    var respostas = [];
+
+    if (extras.length) {
+      var todas = await global.RAMAApi.lote([{ acao: "sessao" }].concat(extras));
+      r = todas[0];
+      respostas = todas.slice(1);
+    } else {
+      r = await global.RAMAApi.sessao(tk);
+    }
+
     if (r && r.ok) {
       anotarSessao(tk, r.agente);
+      r.respostas = respostas;
     } else if (r && global.RAMAApi.ehErroDeSessao(r.erro)) {
       esquecer();
     }
@@ -302,19 +334,19 @@
 
   /* exigirSessao(aoTerSessao) — chama aoTerSessao(agente) quando o
      servidor confirmar; caso contrário desenha o portão. */
-  async function exigirSessao(aoTerSessao) {
+  async function exigirSessao(aoTerSessao, pedidos) {
     if (!global.RAMARede.configurado()) {
       desenharSemConfiguracao();
       return;
     }
 
     var fechar = abertura();
-    var r = await retomar();
+    var r = await retomar(pedidos);
     fechar();
 
     if (r && r.ok) {
       tocarAtividade();
-      aoTerSessao(agente());
+      aoTerSessao(agente(), r.respostas || []);
       return;
     }
 

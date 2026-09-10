@@ -294,14 +294,41 @@
      tela nunca desenha antes de o servidor dizer quem está do outro
      lado — e essa ordem é o que impede conteúdo de uma conta piscar
      na tela de outra.
-     ================================================================= */
 
-  function iniciar(secao, aoPronto) {
+     O TERCEIRO ARGUMENTO
+     -----------------------------------------------------------------
+     Uma página pode declarar o que vai precisar ANTES de o servidor
+     responder quem ela é:
+
+       iniciar("ficha", aoPronto, {
+         pedidos: function () { return [{ acao: "ler_personagem", ... }]; },
+       })
+
+     A conferência da sessão e essas leituras viajam juntas, e as
+     respostas chegam no terceiro argumento de aoPronto, na mesma ordem
+     em que foram pedidas.
+
+     Isso troca duas ondas de rede por uma. Não troca nada da ordem de
+     segurança: quem valida a sessão antes das leituras é o servidor, e
+     ele faz isso na entrada, antes de olhar o que foi pedido.
+
+     `pedidos` roda cedo, antes de existir sessão confirmada — então só
+     pode olhar para o endereço da página, nunca para dados do agente. */
+
+  function iniciar(secao, aoPronto, opcoes) {
+    var o = opcoes || {};
+
     document.addEventListener("DOMContentLoaded", function () {
-      global.RAMAAuth.exigirSessao(async function (agente) {
+      var pedidos = [];
+      if (o.pedidos) {
+        try { pedidos = o.pedidos() || []; }
+        catch (e) { pedidos = []; }
+      }
+
+      global.RAMAAuth.exigirSessao(async function (agente, respostas) {
         var casca = montar({ secao: secao, agente: agente });
         try {
-          await aoPronto(agente, casca);
+          await aoPronto(agente, casca, respostas || []);
         } catch (e) {
           console.error("[R.A.M.A.] a página falhou ao montar", e);
           var conteudo = U.$("#conteudo");
@@ -312,7 +339,7 @@
             ));
           }
         }
-      });
+      }, pedidos);
     });
   }
 

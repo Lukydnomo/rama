@@ -43,7 +43,7 @@
     { chave: "config",      rotulo: "Configurações", secao: "RAMACampanhaConfig", soMestre: true },
   ];
 
-  global.RAMAApp.iniciar("campanhas", async function () {
+  global.RAMAApp.iniciar("campanhas", async function (agente, casca, prontas) {
     estado.campanhaId = U.parametro("id");
     var alvo = U.$("#painel-campanha");
 
@@ -57,15 +57,28 @@
     }
 
     U.trocar(alvo, UI.carregando("Acessando campanha"));
-    await carregar();
+
+    /* A primeira carga usa o que veio junto com a sessão; recarregar
+       depois volta a buscar do jeito normal. */
+    await carregar(prontas);
+  }, {
+    pedidos: function () {
+      var id = U.parametro("id");
+      if (!id) return [];
+      return [
+        { acao: "ler_campanha", campanhaId: id },
+        { acao: "listar_personagens_campanha", campanhaId: id },
+      ];
+    },
   });
 
-  async function carregar() {
+  async function carregar(prontas) {
     var alvo = U.$("#painel-campanha");
+    var prontasValidas = prontas && prontas.length === 2 ? prontas : null;
 
-    var r = await global.RAMAApi.lerCampanha(estado.campanhaId);
+    var r = prontasValidas ? prontasValidas[0] : await global.RAMAApi.lerCampanha(estado.campanhaId);
     if (!r.ok) {
-      U.trocar(alvo, UI.erroDeTela(r, carregar));
+      U.trocar(alvo, UI.erroDeTela(r, function () { return carregar(); }));
       return;
     }
 
@@ -82,7 +95,10 @@
       return;
     }
 
-    var rp = await global.RAMAApi.listarPersonagensCampanha(estado.campanhaId);
+    var rp = prontasValidas
+      ? prontasValidas[1]
+      : await global.RAMAApi.listarPersonagensCampanha(estado.campanhaId);
+
     estado.personagens = (rp.ok && rp.dados) || [];
 
     montarContexto();
@@ -101,7 +117,10 @@
       papel: function () { return estado.papel; },
 
       definirRev: function (rev) { estado.rev = U.inteiro(rev, estado.rev); },
-      recarregar: carregar,
+      /* Sem argumento: recarregar sempre vai ao servidor. Repassar a
+         pré-carga aqui devolveria a tela ao estado de quando a página
+         abriu, que é o contrário de recarregar. */
+      recarregar: function () { return carregar(); },
       redesenhar: desenhar,
 
       atualizarPersonagens: async function () {
