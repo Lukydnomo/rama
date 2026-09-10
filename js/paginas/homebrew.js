@@ -530,7 +530,7 @@
   }
 
   function exportar(registro) {
-    var texto = JSON.stringify(V.exportar("homebrew-item", registro), null, 2);
+    var texto = JSON.stringify(V.exportar(V.tipoDeExportacao(registro), registro), null, 2);
 
     var area = el("textarea.r-area", { rows: 12, readonly: true, "aria-label": "Registro em JSON" });
     area.value = texto;
@@ -557,7 +557,8 @@
 
   function importar() {
     global.RAMAImportar.abrir({
-      tipo: "homebrew-item",
+      /* sem `tipo`: a biblioteca aceita item, criatura e habilidade, e a
+         janela reconhece qual é pelo próprio arquivo */
       aoConfirmar: async function (dados) {
         var r = await global.RAMAApi.salvarHomebrew(dados);
         if (!r.ok) { UI.avisoDeFalha(r, "importação"); return false; }

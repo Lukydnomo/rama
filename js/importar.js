@@ -133,14 +133,11 @@
     }
 
     function mostrarPrevia(r) {
-      U.trocar(previa, UI.painel("Prévia", r.tipo === "personagem"
-        ? previaDeFicha(r.dados)
-        : previaDeItem(r.dados)
-      ));
+      U.trocar(previa, UI.painel("Prévia", previaDe(r)));
     }
 
     var m = UI.modal({
-      titulo: o.tipo === "personagem" ? "Importar ficha" : "Importar item",
+      titulo: o.tipo === "personagem" ? "Importar ficha" : "Importar para a biblioteca",
       largo: true,
       conteudo: [
         el("p", {
@@ -165,6 +162,41 @@
   /* =================================================================
      PRÉVIAS
      ================================================================= */
+
+  function previaDe(r) {
+    if (r.tipo === "personagem") return previaDeFicha(r.dados);
+    if (r.tipo === "homebrew-criatura") return previaDeCriatura(r.dados);
+    if (r.tipo === "homebrew-habilidade") return previaDeHabilidade(r.dados);
+    return previaDeItem(r.dados);
+  }
+
+  function previaDeCriatura(c) {
+    var pares = [
+      linha("Nome", c.nome),
+      linha("Tipo", "Criatura"),
+      linha("Status", (c.status || []).map(function (s) { return s.nome; }).join(", ") || "nenhum"),
+      linha("Atributos", (c.atributos || []).length),
+      linha("Perícias", (c.pericias || []).length),
+      linha("Ataques", (c.ataques || []).length),
+      linha("Habilidades", (c.habilidades || []).length),
+      linha("Visibilidade", "entra como privada"),
+    ];
+    if (c.descricao) pares.push(linha("Descrição", c.descricao.slice(0, 200)));
+    return el("dl.r-dados", {}, pares.reduce(function (saida, par) { return saida.concat(par); }, []));
+  }
+
+  function previaDeHabilidade(h) {
+    var pares = [
+      linha("Nome", h.nome),
+      linha("Tipo", "Habilidade"),
+      linha("Origem", h.origem || "—"),
+      linha("Negrito", h.negrito ? "sim" : "não"),
+      linha("Cor", h.cor || "sem cor"),
+      linha("Visibilidade", "entra como privada"),
+    ];
+    if (h.texto) pares.push(linha("Texto", h.texto.slice(0, 200)));
+    return el("dl.r-dados", {}, pares.reduce(function (saida, par) { return saida.concat(par); }, []));
+  }
 
   function previaDeFicha(ficha) {
     var itens = (ficha.inventario && ficha.inventario.itens) || [];

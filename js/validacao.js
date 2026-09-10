@@ -237,7 +237,19 @@
      mostrar a verdade, não para ser a barreira.
      ================================================================= */
 
-  var TIPOS_IMPORTACAO = ["personagem", "homebrew-item"];
+  /* Um tipo por FORMA de dado. Criatura e habilidade não cabem em
+     "homebrew-item": passá-las pela normalização de item transformaria
+     uma criatura num item com nome e peso, perdendo status, atributos,
+     perícias e ataques em silêncio. */
+  var TIPOS_IMPORTACAO = ["personagem", "homebrew-item", "homebrew-criatura", "homebrew-habilidade"];
+
+  /* Descobre o tipo de exportação a partir do registro. */
+  function tipoDeExportacao(registro) {
+    if (!registro || !registro.tipo) return "homebrew-item";
+    if (registro.tipo === "criatura") return "homebrew-criatura";
+    if (registro.tipo === "habilidade") return "homebrew-habilidade";
+    return "homebrew-item";
+  }
 
   /* Nada com estes nomes atravessa a importação, em nenhum nível. */
   var CAMPOS_PROIBIDOS = [
@@ -293,6 +305,32 @@
       var v = personagem(ficha);
       if (!v.ok) return { ok: false, erro: "invalido", mensagem: "A ficha tem problemas.", problemas: v.problemas };
       return { ok: true, tipo: "personagem", dados: ficha };
+    }
+
+    if (pacote.tipo === "homebrew-criatura") {
+      /* A tela do Perfil não carrega o modelo de criatura — ela importa
+         fichas e itens. Sem esta guarda, um arquivo de criatura colado
+         ali estouraria com um erro que não explica nada. */
+      if (!global.RAMACriaturas) {
+        return ruim("tipo", "Este arquivo é uma criatura. Importe-o pela tela Homebrew.");
+      }
+      var criatura = global.RAMACriaturas.normalizar(limpo);
+      delete criatura.id;
+      /* Nasce privada, sempre. Um arquivo não publica nada na conta de
+         quem importou. */
+      criatura.visibilidade = "privado";
+      if (!U.aparar(criatura.nome)) return ruim("invalido", "A criatura precisa de um nome.");
+      return { ok: true, tipo: "homebrew-criatura", dados: criatura };
+    }
+
+    if (pacote.tipo === "homebrew-habilidade") {
+      var hab = global.RAMAHabilidades.normalizarHabilidade(limpo);
+      if (!hab) return ruim("invalido", "A habilidade importada não pôde ser lida.");
+      delete hab.id;
+      hab.tipo = "habilidade";
+      hab.visibilidade = "privado";
+      hab.origemHabilidadeId = null;
+      return { ok: true, tipo: "homebrew-habilidade", dados: hab };
     }
 
     /* homebrew-item */
