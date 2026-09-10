@@ -173,6 +173,12 @@ Quatro coisas que valem sempre:
 Uma sub-ação que falha não derruba as outras: ela devolve o próprio erro na
 posição dela.
 
+**O lote é otimização, não requisito.** O site e o Apps Script são publicados
+separadamente e podem estar em versões diferentes. Um servidor que ainda não
+conhece esta ação responde `acao_desconhecida`, e o cliente volta a pedir uma
+coisa de cada vez — a tela demora mais e nada quebra. Qualquer código novo que
+dependa do lote precisa continuar funcionando sem ele.
+
 ---
 
 ### Panorama

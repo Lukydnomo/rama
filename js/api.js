@@ -185,12 +185,46 @@
 
      O servidor só aceita leitura aqui. Gravação continua indo uma a
      uma, porque uma falha no meio de um lote de gravações deixaria
-     metade aplicada e não há como desfazer. */
+     metade aplicada e não há como desfazer.
+
+     O LOTE É OTIMIZAÇÃO, NÃO REQUISITO
+     -----------------------------------------------------------------
+     O site e o Apps Script são publicados separadamente, e nada garante
+     que estejam na mesma versão. Um servidor mais antigo não conhece
+     esta ação e responde `acao_desconhecida`.
+
+     Quando isso acontece, o lote não pode ser um beco sem saída: quem
+     chamou precisa conseguir fazer do jeito antigo. Por isso a
+     descoberta fica guardada, e a partir da primeira recusa o lote
+     responde na hora, sem gastar outra viagem para ouvir o mesmo não.
+
+     A memória dura o tempo desta página, e não mais. Guardá-la no
+     navegador pouparia uma chamada por tela abrida enquanto o servidor
+     estiver desatualizado, ao custo de o site continuar no caminho
+     lento depois de o Apps Script ser atualizado — até alguém fechar a
+     aba. Entre gastar uma viagem por página num estado que é
+     temporário e ficar preso nele depois de resolvido, a escolha é a
+     primeira. */
+  var servidorAceitaLote = true;
+
+  function semLote(lista) {
+    return lista.map(function () { return { ok: false, erro: "acao_desconhecida" }; });
+  }
+
   async function lote(pedidos) {
     var lista = pedidos || [];
     if (!lista.length) return [];
+    if (!servidorAceitaLote) return semLote(lista);
 
     var r = await post({ acao: "lote", pedidos: lista });
+
+    if (r && !r.ok && r.erro === "acao_desconhecida") {
+      servidorAceitaLote = false;
+      global.RAMARede.registrar("aviso",
+        "Este servidor não conhece a ação 'lote' — seguindo com chamadas avulsas. " +
+        "Atualize a implantação do Apps Script para as telas abrirem numa viagem só.");
+      return semLote(lista);
+    }
 
     if (!r || !r.ok || !r.dados || !Array.isArray(r.dados.respostas)) {
       var erro = { ok: false, erro: (r && r.erro) || "sem_resposta" };
@@ -515,6 +549,7 @@
   global.RAMAApi = {
     post: post,
     lote: lote,
+    aceitaLote: function () { return servidorAceitaLote; },
     podeRepetir: podeRepetir,
     ehErroDeSessao: ehErroDeSessao,
 

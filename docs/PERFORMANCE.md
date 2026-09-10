@@ -148,6 +148,10 @@ verificado no navegador contra o backend rodando de verdade:
 | abrir uma campanha | 3 | 1 |
 | seis cliques rápidos no botão do mestre | 6 | 1 |
 
+Contra um Apps Script que ainda não conhece a ação `lote`, essas telas voltam
+sozinhas ao número antigo de requisições. O lote é otimização, não requisito, e
+`testes/executar-frontend.js` tranca isso.
+
 ### O que estes números NÃO são
 
 **Não são tempo.** A planilha do medidor é um array em memória e

@@ -89,9 +89,9 @@ E abra `http://localhost:8099/rama/`.
 
 ### Testes
 
-São dois conjuntos.
+São três conjuntos.
 
-**Modelo e motor de dados** — 279 verificações. No navegador, abra `testes/`;
+**Modelo e motor de dados** — 292 verificações. No navegador, abra `testes/`;
 no terminal:
 
 ```bash
@@ -103,16 +103,38 @@ crítico, a ficha padrão, peso do inventário, habilidades e a árvore recursiv
 rituais e rótulos compartilhados, categorias, migração de ficha antiga,
 importação e versionamento.
 
-**Permissões do backend** — 118 verificações:
+**Permissões e concorrência do backend** — 228 verificações:
 
 ```bash
 deno run --allow-read testes/executar-backend.js
 ```
 
-Carregam os dois arquivos do Apps Script num simulador da plataforma
+Carregam os três arquivos do Apps Script num simulador da plataforma
 (`testes/apps-script-simulado.js`) e entram por `doPost`, como uma requisição de
 verdade. É onde se confirma que um usuário não alcança o que não é dele —
-inclusive mandando o pedido direto, sem passar pela interface.
+inclusive mandando o pedido direto, sem passar pela interface. Cobrem também
+revisão conflitante, gravação repetida, cache ausente, revogação de sessão,
+contenção da trava e planilha com as colunas fora de ordem.
+
+**Transporte do frontend** — 28 verificações:
+
+```bash
+deno run --allow-read testes/executar-frontend.js
+```
+
+O site e o Apps Script são publicados separadamente e podem estar em versões
+diferentes. Estes testes trancam as duas regras que valem nesse intervalo: o
+lote é otimização e não requisito, e o portão de login só aparece quando o
+problema é mesmo a sessão.
+
+**Custo das operações** — não é teste, é medição:
+
+```bash
+deno run --allow-read testes/medir.js
+```
+
+Ver [docs/PERFORMANCE.md](docs/PERFORMANCE.md) para o que esses números podem e
+não podem dizer.
 
 ---
 

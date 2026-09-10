@@ -14,13 +14,13 @@
    TRÊS COISAS DIFERENTES, QUE NÃO SE MISTURAM
    ---------------------------------------------------------------------
 
-     versão do aplicativo   está aqui. É o que a pessoa vê: v2.1.0.
+     versão do aplicativo   está aqui. É o que a pessoa vê: v2.1.1.
      schemaVersion          está em js/ficha.js. É o formato da FICHA,
                             e só sobe quando a ficha muda de forma.
      versaoFormato          está em js/config.js. É o formato dos
                             arquivos de importação/exportação.
 
-   Elas sobem em ritmos próprios. A v2.1.0 leva schemaVersion 2 e
+   Elas sobem em ritmos próprios. A v2.1.1 leva schemaVersion 2 e
    versaoFormato 1 — e isso é normal: esta entrega mudou o jeito de
    ler a planilha, não o formato da ficha nem o dos arquivos.
 
@@ -55,6 +55,19 @@
   ];
 
   var CHANGELOG = [
+    {
+      versao: "2.1.1",
+      codinome: "DESCOMPASSO",
+      data: "10/09/2026",
+      mudancas: {
+        "Corrigido": [
+          "Abrir uma ficha ou uma campanha pedia login de novo, mesmo com a sessão válida — e o login funcionava sem resolver nada, porque o problema não era a senha. A tela inicial continuava logada, o que tornava o defeito ainda mais confuso.",
+          "A causa: o site e o Apps Script são publicados separadamente, e a v2.1.0 fez essas duas telas dependerem de uma ação que só existe no servidor atualizado. Um servidor ainda na versão anterior respondia que não conhecia a ação, e o site entendia isso como sessão inválida.",
+          "Agora essa ação é otimização, e não requisito: um servidor que não a conhece faz o site voltar ao caminho de sempre, sem que ninguém perceba além de a tela demorar um pouco mais.",
+          "O portão de login passou a aparecer só quando o problema é mesmo a sessão. Qualquer outra recusa do servidor mostra o que aconteceu e um botão de tentar de novo, em vez de pedir uma senha que não vai adiantar.",
+        ],
+      },
+    },
     {
       versao: "2.1.0",
       codinome: "VAZÃO",

@@ -137,16 +137,33 @@
     if (venceuAqui()) { esquecer(); return { ok: false, erro: "expirada" }; }
 
     var extras = pedidos || [];
-    var r;
+    var r = null;
     var respostas = [];
 
     if (extras.length) {
       var todas = await global.RAMAApi.lote([{ acao: "sessao" }].concat(extras));
-      r = todas[0];
-      respostas = todas.slice(1);
-    } else {
-      r = await global.RAMAApi.sessao(tk);
+      var primeira = todas[0];
+
+      if (primeira && primeira.ok) {
+        r = primeira;
+        respostas = todas.slice(1);
+      } else if (primeira && global.RAMAApi.ehErroDeSessao(primeira.erro)) {
+        /* A sessão é que está ruim. Perguntar de novo por outro caminho
+           daria a mesma resposta. */
+        r = primeira;
+      }
+
+      /* Qualquer outro motivo — e o mais provável é um Apps Script
+         ainda não atualizado, que não conhece a ação `lote` — não pode
+         parecer sessão inválida. Pergunta do jeito de sempre.
+
+         Sem esta linha o sistema entrava em laço: a tela pedia login,
+         o login funcionava, a página recarregava e o lote falhava de
+         novo. E a tela inicial continuava logada, porque ela não usa
+         pré-carga. */
     }
+
+    if (!r) r = await global.RAMAApi.sessao(tk);
 
     if (r && r.ok) {
       anotarSessao(tk, r.agente);
@@ -350,14 +367,21 @@
       return;
     }
 
-    /* Falha de rede não é falha de sessão: mandar alguém digitar a
-       senha de novo porque o wi-fi caiu é castigo por nada. */
-    if (r && (r.erro === "sem_conexao" || r.erro === "prazo" || r.erro === "servidor_falhou")) {
-      desenharSemServidor(r);
+    /* O portão aparece SÓ quando o problema é mesmo a sessão.
+
+       A regra era o contrário: qualquer erro fora de uma lista curta de
+       falhas passageiras levava ao portão. Isso transforma qualquer
+       recusa nova do servidor num pedido de senha — que a pessoa
+       digita, que funciona, e que não resolve nada, porque o problema
+       não era a senha. Errar para o lado de "o servidor está com
+       algum problema" é sempre mais honesto do que errar para o lado
+       de "você não está logado". */
+    if (r && global.RAMAApi.ehErroDeSessao(r.erro)) {
+      desenharPortao(function () { location.reload(); });
       return;
     }
 
-    desenharPortao(function () { location.reload(); });
+    desenharSemServidor(r);
   }
 
   function desenharSemConfiguracao() {
