@@ -165,7 +165,7 @@
       ctx.ehMestre() && p.tipo === "criatura" && p.snapshot
         ? el("button.r-botao.r-botao--mini.r-botao--fantasma", {
             type: "button", texto: "Ficha",
-            onclick: function () { verCriatura(ctx, p); },
+            onclick: function () { verCriatura(ctx, p, combate, recarregar); },
           })
         : null,
 
@@ -402,7 +402,7 @@
      FICHA DA CRIATURA NO COMBATE
      ================================================================= */
 
-  function verCriatura(ctx, participante) {
+  function verCriatura(ctx, participante, combate, recarregar) {
     var c = global.RAMACriaturas.normalizar(participante.snapshot);
 
     var corpo = el("div.pilha", {}, [
@@ -415,10 +415,12 @@
             valor: s.atual, minimo: -9999, maximo: s.maximo > 0 ? s.maximo : 999999,
             rotulo: s.nome,
             /* O estado da criatura é do COMBATE, não do modelo: mexer
-               aqui não toca na biblioteca. */
+               aqui não toca na biblioteca — e PRECISA ser gravado, senão
+               a vida que o monstro perdeu volta ao recarregar. */
             aoMudar: function (v) {
               s.atual = v;
               participante.snapshot = c;
+              salvar(ctx, combate, recarregar, true);
             },
           }),
         ]);
