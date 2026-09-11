@@ -33,7 +33,7 @@
     await carregar();
 
     /* A Home manda para cá com ?novo=1 quando o arquivo está vazio. */
-    if (U.parametro("novo")) abrirCriacao();
+    if (U.parametro("novo")) abrirEscolhaDeTipo();
   });
 
   async function carregar() {
@@ -55,7 +55,7 @@
       trilha: ["Arquivo // " + registros.length + " registro(s)"],
       acoes: [
         el("button.r-botao.r-botao--principal", {
-          type: "button", texto: "+ Adicionar personagem", onclick: abrirCriacao,
+          type: "button", texto: "+ Adicionar personagem", onclick: abrirEscolhaDeTipo,
         }),
       ],
     });
@@ -100,7 +100,7 @@
     return UI.vazio({
       titulo: "Nenhum personagem arquivado",
       texto: "Crie seu primeiro registro para começar.",
-      acao: { rotulo: "+ Adicionar personagem", aoClicar: abrirCriacao },
+      acao: { rotulo: "+ Adicionar personagem", aoClicar: abrirEscolhaDeTipo },
     });
   }
 
@@ -162,7 +162,87 @@
   }
 
   /* =================================================================
-     CRIAÇÃO
+     CRIAÇÃO — A ESCOLHA DO MODELO
+     -----------------------------------------------------------------
+     Antes de qualquer campo, uma pergunta: que ficha é esta?
+
+     A escolha vem primeiro porque ela muda tudo o que vem depois. Uma
+     ficha de Ordem tem criação guiada, cálculo automático e catálogo;
+     uma universal tem campos livres. Perguntar no fim, depois de a
+     pessoa já ter preenchido nome e classe, seria perguntar tarde.
+
+     O tipo é gravado num campo e não muda depois — ver o bloco de tipo
+     em js/ficha.js. Por isso a tela diz isso aqui, antes, e não depois
+     de já ser tarde. */
+  function abrirEscolhaDeTipo() {
+    function cartao(o) {
+      return el("button.tipo-ficha", {
+        type: "button",
+        onclick: function () { if (o.aoEscolher) o.aoEscolher(); },
+      }, [
+        el("span.tipo-ficha__nome", { texto: o.nome }),
+        el("span.tipo-ficha__resumo", { texto: o.resumo }),
+        el("ul.tipo-ficha__lista", {}, o.pontos.map(function (t) {
+          return el("li", { texto: t });
+        })),
+      ]);
+    }
+
+    var m = UI.modal({
+      titulo: "Que tipo de ficha?",
+      largo: true,
+      conteudo: [
+        el("div.tipos-ficha", {}, [
+          cartao({
+            nome: "Ordem Paranormal",
+            resumo: "A ficha do sistema, com as regras dos livros.",
+            pontos: [
+              "Criação guiada passo a passo",
+              "PV, PE, Sanidade, Defesa e carga calculados",
+              "Catálogo de origens, classes e trilhas com página do livro",
+              "Regras opcionais do Sobrevivendo ao Horror",
+            ],
+            aoEscolher: function () { m.fechar(); abrirCriacaoOrdem(); },
+          }),
+          cartao({
+            nome: "Universal",
+            resumo: "O modelo flexível do R.A.M.A., para qualquer sistema.",
+            pontos: [
+              "Atributos, perícias e status que você define",
+              "Seções e rótulos com o nome da sua mesa",
+              "Nenhuma regra imposta",
+              "É o que toda ficha criada até hoje usa",
+            ],
+            aoEscolher: function () { m.fechar(); abrirCriacao(); },
+          }),
+        ]),
+        el("p.t-mini", {
+          texto: "A escolha fica gravada na ficha e não muda depois. Não existe conversão " +
+                 "automática entre os dois modelos: ela teria de adivinhar o que vira o quê, " +
+                 "e adivinhar aqui é perder dado em silêncio.",
+        }),
+      ],
+      botoes: [{ rotulo: "Cancelar", classe: "r-botao--fantasma" }],
+    });
+
+    return m;
+  }
+
+  /* Abre a criação guiada de Ordem, se o módulo dela estiver carregado.
+     Sem ele, a tela diz o que falta em vez de não fazer nada. */
+  async function abrirCriacaoOrdem() {
+    if (!global.RAMAOrdemCriar) {
+      UI.avisoErro("A criação de Ordem Paranormal não está disponível nesta página.");
+      return;
+    }
+    var campanhas = [];
+    var r = await global.RAMAApi.listarCampanhas();
+    if (r.ok) campanhas = r.dados || [];
+    global.RAMAOrdemCriar.abrir({ campanhas: campanhas });
+  }
+
+  /* =================================================================
+     CRIAÇÃO UNIVERSAL
      -----------------------------------------------------------------
      Só o nome é obrigatório. Classe, origem, campanha e foto podem
      esperar — quem cria um personagem no meio de uma sessão não quer
@@ -233,6 +313,7 @@
             criando = true;
             var ficha = global.RAMAFicha.criarFicha({
               nome: valor,
+              tipoFicha: "universal",
               classe: classe.entrada.value.trim(),
               origem: origem.entrada.value.trim(),
               campanhaId: campanha.entrada.value || null,

@@ -29,7 +29,14 @@
      O rótulo de rituais é uma FUNÇÃO porque o nome dela é configurável
      — quem trocar "Rituais" por "Magias" vê a aba mudar junto, sem que
      nada da estrutura interna se mexa. */
-  var ABAS = [
+  /* As abas dependem do TIPO da ficha.
+
+     A universal tem as de sempre. A de Ordem troca Geral e Perícias
+     por versões que calculam pelas regras, e acrescenta Progressão e
+     Regras opcionais. Habilidades, Rituais, Inventário e Anotações são
+     as MESMAS nos dois: um ritual é um ritual, e duplicar a seção só
+     para mudar o cabeçalho seria manter dois códigos iguais. */
+  var ABAS_UNIVERSAL = [
     { chave: "geral",        rotulo: "Geral",       secao: "RAMASecaoGeral" },
     { chave: "pericias",     rotulo: "Perícias",    secao: "RAMASecaoPericias" },
     { chave: "habilidades",  rotulo: "Habilidades", secao: "RAMASecaoHabilidades" },
@@ -38,6 +45,37 @@
     { chave: "inventario",   rotulo: "Inventário",  secao: "RAMASecaoInventario" },
     { chave: "anotacoes",    rotulo: "Anotações",   secao: "RAMASecaoAnotacoes" },
   ];
+
+  var ABAS_ORDEM = [
+    { chave: "geral",        rotulo: "Geral",       secao: "RAMASecaoOrdemGeral" },
+    { chave: "pericias",     rotulo: "Perícias",    secao: "RAMASecaoOrdemPericias" },
+    { chave: "progressao",   rotulo: "Progressão",  secao: "RAMASecaoOrdemProgressao" },
+    { chave: "habilidades",  rotulo: "Habilidades", secao: "RAMASecaoHabilidades" },
+    { chave: "rituais",      secao: "RAMASecaoRituais",
+      rotulo: function () { return global.RAMASecaoRituais.rotulo(ctx); } },
+    { chave: "inventario",   rotulo: "Inventário",  secao: "RAMASecaoInventario" },
+    { chave: "anotacoes",    rotulo: "Anotações",   secao: "RAMASecaoAnotacoes" },
+    { chave: "regras",       rotulo: "Regras",      secao: "RAMASecaoOrdemRegras" },
+  ];
+
+  /* Lida do TIPO gravado, nunca deduzida do conteúdo. E com uma rede:
+     se os módulos de Ordem não estiverem carregados, a ficha abre no
+     modelo universal em vez de abrir quebrada. */
+  /* O bloco que fica sempre à vista, acima das abas. Ele também depende
+     do tipo: numa ficha de Ordem, os atributos e os recursos são os
+     calculados pelas regras, não os campos livres do modelo universal. */
+  function blocoSuperiorDaFicha() {
+    var secao = abasDaFicha() === ABAS_ORDEM
+      ? global.RAMASecaoOrdemGeral
+      : global.RAMASecaoGeral;
+    return secao.blocoSuperior(ctx);
+  }
+
+  function abasDaFicha() {
+    if (!estado.ficha || !F.ehDeOrdem(estado.ficha)) return ABAS_UNIVERSAL;
+    if (!global.RAMASecaoOrdemGeral) return ABAS_UNIVERSAL;
+    return ABAS_ORDEM;
+  }
 
   function rotuloDaAba(a) {
     return typeof a.rotulo === "function" ? a.rotulo() : a.rotulo;
@@ -203,13 +241,14 @@
 
   function desenhar() {
     var alvo = U.$("#ficha");
-    var secao = ABAS.find(function (a) { return a.chave === estado.aba; }) || ABAS[0];
+    var lista = abasDaFicha();
+    var secao = lista.find(function (a) { return a.chave === estado.aba; }) || lista[0];
 
     estado.raiz = el("div.ficha", { dataset: { modo: estado.modo } }, [
       cabecalho(),
       estado.comoMestre ? avisoDeMestre() : null,
       estado.modo === "edicao" ? avisoDeEdicao() : null,
-      global.RAMASecaoGeral.blocoSuperior(ctx),
+      blocoSuperiorDaFicha(),
       abas(),
       el("div", { id: "aba-conteudo", role: "tabpanel", "aria-labelledby": "aba-" + secao.chave },
         [global[secao.secao].aba(ctx)]),
@@ -338,7 +377,7 @@
 
   function abas() {
     return el("div.r-abas", { role: "tablist", "aria-label": "Seções da ficha" },
-      ABAS.map(function (a) {
+      abasDaFicha().map(function (a) {
         var ativa = a.chave === estado.aba;
         return el("button.r-aba", {
           type: "button",
@@ -380,19 +419,20 @@
   function navegarAbas(ev) {
     if (ev.key !== "ArrowRight" && ev.key !== "ArrowLeft") return;
     ev.preventDefault();
-    var i = ABAS.findIndex(function (a) { return a.chave === estado.aba; });
+    var lista = abasDaFicha();
+    var i = lista.findIndex(function (a) { return a.chave === estado.aba; });
     var proximo = ev.key === "ArrowRight" ? i + 1 : i - 1;
-    if (proximo < 0) proximo = ABAS.length - 1;
-    if (proximo >= ABAS.length) proximo = 0;
-    trocarAba(ABAS[proximo].chave);
-    var botao = U.$("#aba-" + ABAS[proximo].chave);
+    if (proximo < 0) proximo = lista.length - 1;
+    if (proximo >= lista.length) proximo = 0;
+    trocarAba(lista[proximo].chave);
+    var botao = U.$("#aba-" + lista[proximo].chave);
     if (botao) botao.focus();
   }
 
   function lerAbaGuardada() {
     try {
       var v = localStorage.getItem(CHAVE_ABA) || "geral";
-      return ABAS.some(function (a) { return a.chave === v; }) ? v : "geral";
+      return abasDaFicha().some(function (a) { return a.chave === v; }) ? v : "geral";
     } catch (e) { return "geral"; }
   }
 

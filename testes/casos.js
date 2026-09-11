@@ -837,6 +837,527 @@
     }
 
     /* =================================================================
+       ORDEM PARANORMAL — TIPO DE FICHA
+       -----------------------------------------------------------------
+       O tipo é um CAMPO. Nada no sistema o deduz do conteúdo, e ficha
+       antiga é universal — que é o modelo que não impõe nada.
+       ================================================================= */
+
+    if (S) {
+      t.grupo("Ordem — tipo de ficha");
+
+      var universal = S.criarFicha({ nome: "Livre" });
+      t.igual("ficha nasce universal por padrão", universal.tipoFicha, "universal");
+      t.ok("e não carrega o bloco de Ordem", universal.ordem === undefined);
+
+      var deOrdem = S.criarFicha({ nome: "Agente", tipoFicha: "ordem" });
+      t.igual("ficha de Ordem grava o tipo", deOrdem.tipoFicha, "ordem");
+      t.ok("e carrega o bloco de Ordem", !!deOrdem.ordem);
+      t.igual("que começa em NEX 5%", deOrdem.ordem.nex, 5);
+
+      /* O caso que a instrução destaca: ficha gravada antes desta
+         versão, sem o campo. */
+      var antiga = S.normalizarFicha({
+        nome: "Michael",
+        atributos: [{ id: "a1", nome: "Agilidade", sigla: "AGI", valor: 2, dado: "1d20" }],
+        status: [{ id: "s1", nome: "PV", atual: 10, maximo: 20 }],
+      });
+      t.igual("ficha sem o campo é tratada como universal", antiga.tipoFicha, "universal");
+      t.igual("  sem perder o nome", antiga.nome, "Michael");
+      t.igual("  nem os atributos", antiga.atributos[0].sigla, "AGI");
+      t.igual("  nem o que já estava gasto", antiga.status[0].atual, 10);
+
+      /* Nada é deduzido do conteúdo: uma ficha universal com nomes de
+         Ordem continua universal. */
+      var disfarcada = S.normalizarFicha({
+        nome: "Parece de Ordem",
+        atributos: ["AGI", "FOR", "INT", "PRE", "VIG"].map(function (sg, i) {
+          return { id: "a" + i, nome: sg, sigla: sg, valor: 1, dado: "1d20" };
+        }),
+      });
+      t.igual("atributos com nome de Ordem NÃO tornam a ficha de Ordem",
+        disfarcada.tipoFicha, "universal");
+
+      t.igual("tipo desconhecido cai para universal",
+        S.tipoDeFicha("sistema-inventado"), "universal");
+      t.igual("tipo vazio cai para universal", S.tipoDeFicha(""), "universal");
+      t.ok("ehDeOrdem reconhece a de Ordem", S.ehDeOrdem(deOrdem));
+      t.ok("  e não a universal", !S.ehDeOrdem(universal));
+
+      /* O bloco sobrevive à ida e volta pela planilha. */
+      var voltou = S.normalizarFicha(JSON.parse(JSON.stringify(deOrdem)));
+      t.igual("o tipo sobrevive ao salvar e recarregar", voltou.tipoFicha, "ordem");
+      t.ok("  e o bloco de Ordem também", !!voltou.ordem);
+    }
+
+    /* =================================================================
+       ORDEM — CATÁLOGO
+       ================================================================= */
+
+    if (global.RAMAOrdemCatalogo) {
+      var OC = global.RAMAOrdemCatalogo;
+
+      t.grupo("Ordem — catálogo");
+
+      t.igual("cinco atributos", OC.ATRIBUTOS.length, 5);
+      t.igual("28 perícias", OC.PERICIAS.length, 28);
+      t.igual("26 origens", OC.ORIGENS.length, 26);
+      t.igual("três classes", OC.CLASSES.length, 3);
+      t.igual("quinze trilhas", OC.TRILHAS.length, 15);
+      t.igual("cinco por classe", OC.trilhasDaClasse("combatente").length, 5);
+      t.igual("cinco patentes", OC.PATENTES.length, 5);
+
+      /* Atributos-base conferidos contra o livro (OPRPG p.41-49). */
+      t.igual("Intuição é Presença, não Intelecto", OC.pericia("intuicao").atributo, "pre");
+      t.igual("Adestramento é Presença", OC.pericia("adestramento").atributo, "pre");
+      t.igual("Luta é Força", OC.pericia("luta").atributo, "for");
+      t.igual("Fortitude é Vigor", OC.pericia("fortitude").atributo, "vig");
+      t.igual("Ocultismo é Intelecto", OC.pericia("ocultismo").atributo, "int");
+      t.ok("Ocultismo é só treinada", OC.pericia("ocultismo").treinada);
+      t.ok("Acrobacia tem penalidade de carga", OC.pericia("acrobacia").carga);
+      t.ok("Percepção não tem", !OC.pericia("percepcao").carga);
+
+      t.iguais("bônus por grau", OC.GRAUS.map(function (g) { return g.bonus; }), [0, 5, 10, 15]);
+      t.igual("veterano exige NEX 35%", OC.grau("veterano").nexMinimo, 35);
+      t.igual("expert exige NEX 70%", OC.grau("expert").nexMinimo, 70);
+
+      /* Origens conferidas contra a Tabela 1.1 (OPRPG p.19). */
+      t.iguais("Investigador treina Investigação e Percepção",
+        OC.origem("investigador").pericias, ["investigacao", "percepcao"]);
+      t.iguais("Militar treina Pontaria e Tática",
+        OC.origem("militar").pericias, ["pontaria", "tatica"]);
+      t.igual("Desgarrado tem Calejado", OC.origem("desgarrado").poder, "Calejado");
+      t.igual("Vítima tem Cicatrizes Psicológicas", OC.origem("vitima").poder, "Cicatrizes Psicológicas");
+
+      t.igual("toda origem tem duas perícias ou diz que são à escolha",
+        OC.ORIGENS.filter(function (o) {
+          return o.pericias.length === 2 || o.periciasAEscolher === 2;
+        }).length, 26);
+
+      t.ok("toda origem tem página do livro",
+        OC.ORIGENS.every(function (o) { return o.pagina > 0; }));
+      t.ok("toda trilha tem quatro poderes",
+        OC.TRILHAS.every(function (tr) { return tr.poderes.length === 4; }));
+      t.ok("nos NEX 10, 40, 65 e 99",
+        OC.TRILHAS.every(function (tr) {
+          return JSON.stringify(tr.poderes.map(function (p) { return p.nex; })) === "[10,40,65,99]";
+        }));
+
+      t.igual("custo do 1º círculo", OC.CUSTO_RITUAL[1], 1);
+      t.igual("custo do 4º círculo", OC.CUSTO_RITUAL[4], 10);
+      t.igual("referência mostra livro e página",
+        OC.referencia(OC.origem("investigador")), "Ordem Paranormal RPG, p. 19");
+    }
+
+    /* =================================================================
+       ORDEM — CÁLCULO
+       -----------------------------------------------------------------
+       O exemplo do livro: Bianca, a especialista de Luísa.
+       Agilidade 2, Força 0, Intelecto 3, Presença 3, Vigor 1,
+       origem Investigador, NEX 5%. OPRPG p.15, p.22, p.29.
+       ================================================================= */
+
+    if (global.RAMAOrdemRegras && global.RAMAOrdemCatalogo) {
+      var R = global.RAMAOrdemRegras;
+
+      function bianca(extra) {
+        var f = R.fichaVazia();
+        f.classe = "especialista";
+        f.origem = "investigador";
+        f.atributos = { agi: 2, for: 0, int: 3, pre: 3, vig: 1 };
+        f.nex = 5;
+        return Object.assign(f, extra || {});
+      }
+
+      t.grupo("Ordem — a especialista do exemplo do livro");
+
+      var b = bianca();
+
+      t.igual("PV = 16 + Vigor 1", R.pontosDeVida(b).total, 17);
+      t.igual("PE = 3 + Presença 3", R.pontosDeEsforco(b).total, 6);
+      t.igual("Sanidade da especialista", R.sanidade(b).total, 16);
+      t.igual("Defesa = 10 + Agilidade 2", R.defesa(b).total, 12);
+      t.igual("deslocamento padrão", R.deslocamento(b).total, 9);
+      t.igual("limite de PE por turno em NEX 5%", R.limiteDeEsforco(b).total, 1);
+
+      /* Força 0 carrega 2 espaços, não 0 — OPRPG p.53. */
+      t.igual("Força 0 carrega 2 espaços", R.capacidade(b, { itens: [] }).limite, 2);
+      t.igual("Força 2 carrega 10", R.capacidade(bianca({ atributos: { agi: 2, for: 2, int: 3, pre: 3, vig: 1 } }), { itens: [] }).limite, 10);
+      t.igual("  e o teto é o dobro", R.capacidade(bianca({ atributos: { agi: 2, for: 2, int: 3, pre: 3, vig: 1 } }), { itens: [] }).maximo, 20);
+
+      /* A composição é aberta: dá para conferir de onde veio cada
+         número em vez de ter de confiar. */
+      var composicaoDefesa = R.defesa(b).parcelas;
+      t.igual("a Defesa mostra a composição", composicaoDefesa.length, 2);
+      t.igual("  começando pela base", composicaoDefesa[0].valor, 10);
+      t.igual("  e somando o atributo", composicaoDefesa[1].rotulo, "Agilidade");
+
+      t.grupo("Ordem — progressão de NEX");
+
+      /* Especialista: 16+Vig inicial, depois 3+Vig por degrau. */
+      t.igual("especialista NEX 10% com Vigor 1", R.pontosDeVida(bianca({ nex: 10 })).total, 17 + 4);
+      t.igual("  NEX 15%", R.pontosDeVida(bianca({ nex: 15 })).total, 17 + 8);
+      t.igual("PE sobe 3 + Presença por degrau", R.pontosDeEsforco(bianca({ nex: 10 })).total, 6 + 6);
+      t.igual("Sanidade sobe 4 por degrau", R.sanidade(bianca({ nex: 10 })).total, 16 + 4);
+      t.igual("limite de PE acompanha o NEX", R.limiteDeEsforco(bianca({ nex: 50 })).total, 10);
+      t.igual("  e chega a 20 em NEX 99%", R.limiteDeEsforco(bianca({ nex: 99 })).total, 20);
+
+      /* Combatente e ocultista, conferidos contra os blocos do livro. */
+      function comClasse(chave, atrib, nex) {
+        var f = R.fichaVazia();
+        f.classe = chave;
+        f.atributos = atrib;
+        f.nex = nex || 5;
+        return f;
+      }
+      var atribPadrao = { agi: 1, for: 1, int: 1, pre: 1, vig: 1 };
+
+      t.igual("combatente NEX 5%, Vigor 1: PV 21",
+        R.pontosDeVida(comClasse("combatente", atribPadrao)).total, 21);
+      t.igual("  PE 3", R.pontosDeEsforco(comClasse("combatente", atribPadrao)).total, 3);
+      t.igual("  Sanidade 12", R.sanidade(comClasse("combatente", atribPadrao)).total, 12);
+      t.igual("ocultista NEX 5%, Vigor 1: PV 13",
+        R.pontosDeVida(comClasse("ocultista", atribPadrao)).total, 13);
+      t.igual("  PE 5", R.pontosDeEsforco(comClasse("ocultista", atribPadrao)).total, 5);
+      t.igual("  Sanidade 20", R.sanidade(comClasse("ocultista", atribPadrao)).total, 20);
+
+      t.grupo("Ordem — poderes de origem que entram na conta");
+
+      /* Calejado: +1 PV para cada 5% de NEX (OPRPG p.18). */
+      var desgarrado = comClasse("combatente", atribPadrao, 20);
+      desgarrado.origem = "desgarrado";
+      var semCalejado = comClasse("combatente", atribPadrao, 20);
+      t.igual("Calejado dá +1 PV por degrau",
+        R.pontosDeVida(desgarrado).total - R.pontosDeVida(semCalejado).total, 4);
+
+      /* Cicatrizes Psicológicas: +1 Sanidade por 5% de NEX. */
+      var vitima = comClasse("ocultista", atribPadrao, 20);
+      vitima.origem = "vitima";
+      t.igual("Cicatrizes Psicológicas dá +1 Sanidade por degrau",
+        R.sanidade(vitima).total - R.sanidade(comClasse("ocultista", atribPadrao, 20)).total, 4);
+
+      /* Patrulha: +2 em Defesa. */
+      var policial = comClasse("combatente", atribPadrao);
+      policial.origem = "policial";
+      t.igual("Patrulha dá +2 em Defesa", R.defesa(policial).total, 13);
+      t.ok("  e aparece na composição com o nome do poder",
+        R.defesa(policial).parcelas.some(function (p) { return p.rotulo === "Patrulha"; }));
+
+      /* Traços do Outro Lado: metade da Sanidade da classe. */
+      var cultista = comClasse("ocultista", atribPadrao);
+      cultista.origem = "cultistaarrependido";
+      t.igual("Cultista Arrependido começa com metade da Sanidade",
+        R.sanidade(cultista).total, 10);
+
+      /* Dedicação: +1 PE e mais 1 a cada NEX ímpar. */
+      var universitario = comClasse("especialista", atribPadrao);
+      universitario.origem = "universitario";
+      t.igual("Dedicação dá +1 PE em NEX 5%",
+        R.pontosDeEsforco(universitario).total - R.pontosDeEsforco(comClasse("especialista", atribPadrao)).total, 1);
+      t.igual("  e aumenta o limite de PE por turno",
+        R.limiteDeEsforco(universitario).total, 2);
+
+      t.grupo("Ordem — recálculo não acumula nem restaura");
+
+      /* O defeito clássico: recalcular e o bônus entrar de novo. */
+      var estavel = bianca();
+      estavel.origem = "policial";
+      var uma = R.defesa(estavel).total;
+      var outra = R.defesa(estavel).total;
+      var maisUma = R.defesa(estavel).total;
+      t.igual("recalcular três vezes dá o mesmo valor", uma + "/" + outra + "/" + maisUma, "14/14/14");
+
+      /* Recurso gasto não volta ao recalcular. */
+      var ferido = bianca();
+      ferido.recursos.pv = 5;
+      t.igual("PV atual é o que sobrou", R.calcular(ferido, { itens: [] }).atual.pv, 5);
+      ferido.nex = 20;
+      t.igual("subir de NEX não cura", R.calcular(ferido, { itens: [] }).atual.pv, 5);
+      t.igual("  mas o máximo sobe", R.pontosDeVida(ferido).total, 17 + 12);
+
+      /* Máximo que cai apara o atual, sem repor. */
+      var aparado = bianca({ nex: 20 });
+      aparado.recursos.pv = 29;
+      aparado.nex = 5;
+      var maximos = { pv: R.pontosDeVida(aparado).total, pe: R.pontosDeEsforco(aparado).total, san: R.sanidade(aparado).total };
+      R.aparar(aparado, maximos);
+      t.igual("máximo que cai apara o atual", aparado.recursos.pv, 17);
+
+      /* null é "cheio", zero é "gastou tudo". */
+      var intocado = bianca();
+      t.igual("recurso nunca tocado vale o máximo", R.calcular(intocado, { itens: [] }).atual.pv, 17);
+      var zerado = bianca();
+      zerado.recursos.pv = 0;
+      t.igual("zero continua zero", R.calcular(zerado, { itens: [] }).atual.pv, 0);
+
+      t.grupo("Ordem — ajuste manual sobrevive ao recálculo");
+
+      var comAjuste = bianca();
+      comAjuste.ajustes.push(R.criarAjuste("defesa", 3, "Colete da mesa"));
+      t.igual("o ajuste entra na conta", R.defesa(comAjuste).total, 15);
+      t.igual("  e continua depois de recalcular", R.defesa(comAjuste).total, 15);
+      t.ok("  aparecendo com o motivo",
+        R.defesa(comAjuste).parcelas.some(function (p) { return p.rotulo === "Colete da mesa"; }));
+      t.ok("  e marcado como ajuste da mesa",
+        R.defesa(comAjuste).parcelas.some(function (p) { return p.origem === "ajuste da mesa"; }));
+
+      var ajustePv = bianca();
+      ajustePv.ajustes.push(R.criarAjuste("pv", 5, "Bênção da campanha"));
+      t.igual("ajuste de PV soma no máximo", R.pontosDeVida(ajustePv).total, 22);
+
+      t.grupo("Ordem — sobrecarga");
+
+      var pesado = bianca();
+      var inventarioPesado = { itens: [{ espacos: 3 }] };
+      t.ok("passar do limite sobrecarrega", R.capacidade(pesado, inventarioPesado).sobrecarregado);
+      t.igual("sobrecarregado perde 5 de Defesa", R.defesa(pesado, inventarioPesado).total, 12 - 5);
+      t.igual("  e 3m de deslocamento", R.deslocamento(pesado, inventarioPesado).total, 6);
+      t.igual("perícia com carga sofre a penalidade",
+        R.bonusDePericia(pesado, "acrobacia", inventarioPesado).total, -5);
+      t.igual("  e perícia sem carga não",
+        R.bonusDePericia(pesado, "percepcao", inventarioPesado).total, 0);
+
+      t.grupo("Ordem — perícias");
+
+      var treinada = bianca();
+      treinada.pericias = { investigacao: "treinado", ciencias: "veterano", luta: "expert" };
+      t.igual("treinado dá +5", R.bonusDePericia(treinada, "investigacao", { itens: [] }).total, 5);
+      t.igual("veterano dá +10", R.bonusDePericia(treinada, "ciencias", { itens: [] }).total, 10);
+      t.igual("expert dá +15", R.bonusDePericia(treinada, "luta", { itens: [] }).total, 15);
+      t.igual("destreinada dá 0", R.bonusDePericia(treinada, "pilotagem", { itens: [] }).total, 0);
+
+      /* Os dados vêm do atributo-base, e atributo 0 rola 2d20 pegando o
+         pior — que é o -2d20 do motor de dados. */
+      t.igual("Investigação usa Intelecto 3", R.dadoDePericia(treinada, "investigacao"), "3d20");
+      t.igual("Atletismo com Força 0 rola -2d20", R.dadoDePericia(treinada, "atletismo"), "-2d20");
+      t.igual("Percepção usa Presença 3", R.dadoDePericia(treinada, "percepcao"), "3d20");
+
+      t.grupo("Ordem — patente");
+
+      function comPP(pp, origem) {
+        var f = bianca();
+        f.prestigio = pp;
+        if (origem) f.origem = origem;
+        return f;
+      }
+      t.igual("0 PP é recruta", R.patente(comPP(0)).patente.chave, "recruta");
+      t.igual("20 PP é operador", R.patente(comPP(20)).patente.chave, "operador");
+      t.igual("49 PP ainda é operador", R.patente(comPP(49)).patente.chave, "operador");
+      t.igual("50 PP é agente especial", R.patente(comPP(50)).patente.chave, "especial");
+      t.igual("200 PP é agente de elite", R.patente(comPP(200)).patente.chave, "elite");
+      t.igual("perder PP rebaixa", R.patente(comPP(19)).patente.chave, "recruta");
+      t.igual("recruta leva 2 itens de categoria I", R.patente(comPP(0)).itens.I, 2);
+      t.igual("Patrocinador da Ordem sobe o crédito",
+        R.patente(comPP(0, "magnata")).credito, "Médio");
+      t.ok("  e a ficha mostra que foi elevado", R.patente(comPP(0, "magnata")).creditoElevado);
+
+      t.grupo("Ordem — rituais");
+
+      var ocultista5 = comClasse("ocultista", { agi: 1, for: 1, int: 3, pre: 1, vig: 1 }, 5);
+      t.igual("ocultista NEX 5% lança 1º círculo", R.rituais(ocultista5).circuloMaximo, 1);
+      t.igual("  2º círculo em NEX 25%",
+        R.rituais(comClasse("ocultista", atribPadrao, 25)).circuloMaximo, 2);
+      t.igual("  3º círculo em NEX 55%",
+        R.rituais(comClasse("ocultista", atribPadrao, 55)).circuloMaximo, 3);
+      t.igual("  4º círculo em NEX 85%",
+        R.rituais(comClasse("ocultista", atribPadrao, 85)).circuloMaximo, 4);
+      t.igual("  e NEX 80% ainda é 3º círculo",
+        R.rituais(comClasse("ocultista", atribPadrao, 80)).circuloMaximo, 3);
+      t.igual("  NEX 50% ainda é 2º círculo",
+        R.rituais(comClasse("ocultista", atribPadrao, 50)).circuloMaximo, 2);
+      t.igual("o limite de rituais aprendidos é o Intelecto",
+        R.rituais(ocultista5).limitePorIntelecto, 3);
+      t.igual("combatente não conjura por classe",
+        R.rituais(comClasse("combatente", atribPadrao, 99)).circuloMaximo, 0);
+    }
+
+    /* =================================================================
+       ORDEM — NÍVEL E NEX SEPARADOS
+       -----------------------------------------------------------------
+       A regra opcional de SAH p.98. Não é troca de rótulo: o trilho de
+       progressão inteiro muda de campo.
+       ================================================================= */
+
+    if (global.RAMAOrdemRegras && global.RAMAOrdemOpcionais) {
+      var R2 = global.RAMAOrdemRegras;
+      var OP = global.RAMAOrdemOpcionais;
+
+      t.grupo("Ordem — regras opcionais");
+
+      t.igual("dez regras opcionais", OP.REGRAS.length, 10);
+      t.ok("todas com fonte e página",
+        OP.REGRAS.every(function (r) { return r.fonte && r.pagina > 0; }));
+      t.ok("todas com resumo e efeito",
+        OP.REGRAS.every(function (r) { return r.resumo && r.efeito; }));
+
+      var fichaLimpa = R2.fichaVazia();
+      t.igual("nenhuma começa ligada", OP.ligadas(fichaLimpa).length, 0);
+      t.ok("as que não mexem na ficha estão marcadas",
+        OP.regra("combateNarrativo").afetaFicha === false);
+      t.ok("  e as que mexem também", OP.regra("nexExperiencia").afetaFicha === true);
+
+      t.grupo("Ordem — separar nível e NEX");
+
+      var comum = R2.fichaVazia();
+      comum.classe = "combatente";
+      comum.atributos = { agi: 1, for: 1, int: 1, pre: 1, vig: 1 };
+      comum.nex = 50;
+
+      t.igual("sem a regra, o trilho é o NEX", R2.trilho(comum).passos, 10);
+      t.igual("  e o rótulo diz NEX", R2.trilho(comum).rotulo, "NEX 50%");
+      var pvPorNex = R2.pontosDeVida(comum).total;
+
+      var r = OP.definir(comum, "nexExperiencia", true);
+      t.ok("a regra liga", r.ok);
+      t.ok("  avisando que o nível partiu do equivalente", !!r.aviso);
+      t.igual("  nível 10 para NEX 50%", comum.nivel, 10);
+      t.igual("o NEX gravado NÃO é convertido nem zerado", comum.nex, 50);
+
+      t.igual("com a regra, o trilho é o nível", R2.trilho(comum).passos, 10);
+      t.igual("  e o rótulo diz Nível", R2.trilho(comum).rotulo, "Nível 10");
+      t.igual("os PV não mudam quando o nível equivale ao NEX",
+        R2.pontosDeVida(comum).total, pvPorNex);
+
+      /* Agora os dois andam separados: é o ponto da regra. */
+      comum.nivel = 4;
+      comum.nex = 80;
+      t.igual("o nível manda nos PV", R2.trilho(comum).passos, 4);
+      t.igual("  PV de combatente nível 4", R2.pontosDeVida(comum).total, 21 + 15);
+      t.igual("o NEX continua sendo o NEX", R2.exposicao(comum), 80);
+      t.ok("  e o sistema sabe que estão separados", R2.separaNivelENex(comum));
+
+      /* O exemplo do próprio livro: Proteção Pesada exige NEX 30%, que
+         com a regra vira nível 6. */
+      comum.nivel = 6;
+      t.igual("nível 6 equivale a NEX 30% para pré-requisitos",
+        R2.trilho(comum).nexEquivalente, 30);
+      comum.nivel = 5;
+      t.ok("  e nível 5 ainda não alcança", R2.trilho(comum).nexEquivalente < 30);
+
+      /* Calejado: "+1 PV para cada 5% de NEX" vira "+1 PV por nível". */
+      var calejado = R2.fichaVazia();
+      calejado.classe = "combatente";
+      calejado.origem = "desgarrado";
+      calejado.atributos = { agi: 1, for: 1, int: 1, pre: 1, vig: 1 };
+      calejado.opcionais = { nexExperiencia: true };
+      calejado.nivel = 6;
+      calejado.nex = 10;
+      var semOrigem = R2.fichaVazia();
+      semOrigem.classe = "combatente";
+      semOrigem.atributos = { agi: 1, for: 1, int: 1, pre: 1, vig: 1 };
+      semOrigem.opcionais = { nexExperiencia: true };
+      semOrigem.nivel = 6;
+      semOrigem.nex = 10;
+      t.igual("Calejado passa a contar por NÍVEL, não por NEX",
+        R2.pontosDeVida(calejado).total - R2.pontosDeVida(semOrigem).total, 6);
+
+      /* O limite de PE por turno também segue o nível. */
+      t.igual("limite de PE segue o nível", R2.limiteDeEsforco(calejado).total, 6);
+
+      t.grupo("Ordem — ligar e desligar não reconfigura");
+
+      var ida = R2.fichaVazia();
+      ida.classe = "especialista";
+      ida.atributos = { agi: 2, for: 0, int: 3, pre: 3, vig: 1 };
+      ida.nex = 25;
+      ida.pericias = { investigacao: "treinado" };
+      ida.recursos.pv = 7;
+      var pvAntes = R2.pontosDeVida(ida).total;
+
+      OP.definir(ida, "nexExperiencia", true);
+      OP.definir(ida, "nexExperiencia", false);
+
+      t.igual("desligar volta ao valor de antes", R2.pontosDeVida(ida).total, pvAntes);
+      t.igual("  o NEX está intacto", ida.nex, 25);
+      t.igual("  as perícias estão intactas", ida.pericias.investigacao, "treinado");
+      t.igual("  e o que estava gasto continua gasto", ida.recursos.pv, 7);
+
+      t.grupo("Ordem — regras incompatíveis");
+
+      var conflito = R2.fichaVazia();
+      OP.definir(conflito, "nexExperiencia", true);
+      var recusa = OP.definir(conflito, "evolucaoPatentes", true);
+      t.ok("Evolução por Patentes não liga junto com NEX & Experiência", !recusa.ok);
+      t.igual("  e diz o motivo", recusa.erro, "conflito");
+      t.ok("  citando a outra regra", recusa.problemas[0].texto.indexOf("NEX & Experiência") >= 0);
+      t.ok("a primeira continua ligada", OP.ligada(conflito, "nexExperiencia"));
+      t.ok("  e a segunda não entrou", !OP.ligada(conflito, "evolucaoPatentes"));
+
+      /* Um arquivo adulterado com as duas ligadas abre num estado
+         possível, em vez de num estado que as regras proíbem. */
+      var salvo = OP.normalizar({ nexExperiencia: true, evolucaoPatentes: true, inventada: true });
+      t.ok("a normalização desfaz a combinação impossível",
+        !(salvo.nexExperiencia && salvo.evolucaoPatentes));
+      t.ok("  e ignora chave inventada", salvo.inventada === undefined);
+
+      t.grupo("Ordem — consequências antes de mexer");
+
+      var consequencias = OP.consequenciasDe(R2.fichaVazia(), "nexExperiencia", true);
+      t.ok("ligar avisa o que muda", consequencias.length >= 3);
+      t.ok("  inclusive que o NEX deixa de controlar a progressão",
+        consequencias.join(" ").indexOf("deixa de controlar") >= 0);
+
+      var semEfeito = OP.consequenciasDe(R2.fichaVazia(), "combateNarrativo", true);
+      t.ok("regra sem efeito na ficha diz isso com todas as letras",
+        semEfeito.join(" ").indexOf("não muda nenhum campo") >= 0);
+    }
+
+    /* =================================================================
+       ORDEM — PERSISTÊNCIA
+       ================================================================= */
+
+    if (S && global.RAMAOrdemRegras) {
+      t.grupo("Ordem — sobrevive ao salvar, exportar e importar");
+
+      var completa = S.criarFicha({ nome: "Bianca", tipoFicha: "ordem" });
+      completa.ordem.classe = "especialista";
+      completa.ordem.origem = "investigador";
+      completa.ordem.trilha = "medico";
+      completa.ordem.atributos = { agi: 2, for: 0, int: 3, pre: 3, vig: 1 };
+      completa.ordem.pericias = { investigacao: "treinado", percepcao: "treinado" };
+      completa.ordem.nex = 25;
+      completa.ordem.prestigio = 60;
+      completa.ordem.recursos.pv = 9;
+      completa.ordem.ajustes.push(global.RAMAOrdemRegras.criarAjuste("defesa", 2, "Item da mesa"));
+      completa.ordem.opcionais = { ferimentosDebilitantes: true };
+
+      var lida = S.normalizarFicha(JSON.parse(JSON.stringify(completa)));
+
+      t.igual("a classe volta", lida.ordem.classe, "especialista");
+      t.igual("a origem volta", lida.ordem.origem, "investigador");
+      t.igual("a trilha volta", lida.ordem.trilha, "medico");
+      t.igual("os atributos voltam", lida.ordem.atributos.int, 3);
+      t.igual("  inclusive o zero", lida.ordem.atributos["for"], 0);
+      t.igual("as perícias voltam", lida.ordem.pericias.investigacao, "treinado");
+      t.igual("o NEX volta", lida.ordem.nex, 25);
+      t.igual("o prestígio volta", lida.ordem.prestigio, 60);
+      t.igual("o que estava gasto continua gasto", lida.ordem.recursos.pv, 9);
+      t.igual("o ajuste manual volta", lida.ordem.ajustes.length, 1);
+      t.igual("  com o motivo", lida.ordem.ajustes[0].motivo, "Item da mesa");
+      t.ok("a regra opcional volta ligada", lida.ordem.opcionais.ferimentosDebilitantes);
+
+      /* Trilha de outra classe é vínculo quebrado, e some. */
+      var trocada = S.normalizarFicha(Object.assign({}, JSON.parse(JSON.stringify(completa)), {
+        ordem: Object.assign({}, completa.ordem, { classe: "combatente" }),
+      }));
+      t.igual("trilha de outra classe não sobrevive à troca de classe", trocada.ordem.trilha, "");
+      t.igual("  mas as perícias sobrevivem", trocada.ordem.pericias.investigacao, "treinado");
+
+      if (V) {
+        var pacote = V.exportar("personagem", completa);
+        var importada = V.importado(JSON.parse(JSON.stringify(pacote)));
+        t.ok("o pacote exportado é aceito de volta", importada.ok,
+          JSON.stringify(importada.problemas || importada));
+        if (importada.ok) {
+          t.igual("o tipo atravessa a exportação", importada.dados.tipoFicha, "ordem");
+          t.igual("  e a classe também", importada.dados.ordem.classe, "especialista");
+          t.igual("  e o NEX", importada.dados.ordem.nex, 25);
+          t.igual("  e o ajuste manual", importada.dados.ordem.ajustes.length, 1);
+        }
+      }
+    }
+
+    /* =================================================================
        MIGRAÇÃO — FICHA ANTIGA (schema 1)
        ================================================================= */
 

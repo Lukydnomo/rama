@@ -529,5 +529,5 @@
     ctx.redesenhar();
   }
 
-  global.RAMASecaoGeral = { blocoSuperior: blocoSuperior, aba: aba };
+  global.RAMASecaoGeral = { blocoSuperior: blocoSuperior, aba: aba, foto: foto };
 })(window);

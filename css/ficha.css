@@ -831,3 +831,288 @@ body.pagina-ficha .app-corpo {
   /* O nome ocupa a linha inteira; dano e remover dividem a de baixo. */
   .versao > .r-campo:first-child { grid-column: 1 / -1; }
 }
+
+/* =====================================================================
+   FICHA DE ORDEM PARANORMAL
+   ---------------------------------------------------------------------
+   Um número que o sistema calculou e um que a mesa digitou não podem
+   parecer a mesma coisa. O calculado carrega a marca "=" e abre a
+   composição no clique; o ajuste manual aparece dentro dela, com o
+   motivo e a marca de decisão da mesa.
+   ===================================================================== */
+
+.calculado {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  gap: var(--e1) var(--e2);
+  align-items: baseline;
+  width: 100%;
+  padding: var(--e2) var(--e3);
+  text-align: left;
+  background: var(--cor-superficie);
+  border: var(--borda) solid var(--cor-traco-fraca);
+  color: var(--cor-texto);
+  cursor: pointer;
+  min-height: var(--alvo-toque);
+}
+.calculado:hover { background: var(--cor-superficie-2); }
+
+.calculado__rotulo {
+  font-family: var(--fonte-mini);
+  font-size: var(--texto-mini);
+  text-transform: uppercase;
+  letter-spacing: var(--espaco-letra-titulo);
+  color: var(--cor-texto-3);
+  min-width: 0;
+}
+.calculado__valor { font-size: 1.25rem; font-weight: 700; }
+.calculado__extra { font-family: var(--fonte-mini); font-size: var(--texto-mini); color: var(--cor-texto-3); }
+.calculado__marca {
+  font-family: var(--fonte-mini);
+  font-size: var(--texto-mini);
+  color: var(--cor-paranormal);
+}
+
+.composicao { display: flex; flex-direction: column; gap: var(--e1); }
+.composicao__linha {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: var(--e1) var(--e2);
+  padding: var(--e1) 0;
+  border-bottom: var(--borda) solid var(--cor-traco-fraca);
+}
+.composicao__rotulo { min-width: 0; }
+.composicao__origem {
+  grid-column: 1 / -1;
+  font-family: var(--fonte-mini);
+  font-size: var(--texto-mini);
+  color: var(--cor-texto-3);
+}
+.composicao__valor { font-weight: 700; }
+
+/* O ajuste da mesa fica visualmente separado do que as regras
+   produziram: traço lateral e recuo. */
+.composicao__linha--manual {
+  border-left: 3px solid var(--cor-paranormal);
+  padding-left: var(--e2);
+}
+
+.composicao__total {
+  display: flex;
+  justify-content: space-between;
+  padding-top: var(--e2);
+  font-weight: 700;
+  letter-spacing: var(--espaco-letra-titulo);
+  text-transform: uppercase;
+}
+
+/* ---------- atributos ---------- */
+
+.ordem-atributos {
+  display: grid;
+  gap: var(--e2);
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+}
+
+.ordem-atributo {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--e1);
+  padding: var(--e2);
+  background: var(--cor-superficie);
+  border: var(--borda) solid var(--cor-traco-fraca);
+  min-width: 0;
+}
+.ordem-atributo__sigla {
+  font-family: var(--fonte-mini);
+  font-size: var(--texto-mini);
+  letter-spacing: var(--espaco-letra-titulo);
+  color: var(--cor-texto-3);
+}
+.ordem-atributo__valor {
+  min-width: var(--alvo-toque);
+  min-height: var(--alvo-toque);
+  font-size: 1.6rem;
+  font-weight: 700;
+  background: transparent;
+  border: 0;
+  color: var(--cor-texto);
+  cursor: pointer;
+}
+.ordem-atributo__valor:hover { color: var(--cor-paranormal); }
+.ordem-atributo__dado,
+.ordem-atributo__nome {
+  font-family: var(--fonte-mini);
+  font-size: var(--texto-mini);
+  color: var(--cor-texto-3);
+  text-align: center;
+}
+
+/* ---------- recursos e derivados ---------- */
+
+.ordem-recursos,
+.ordem-derivados {
+  display: grid;
+  gap: var(--e2);
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+}
+
+.ordem-recurso {
+  display: flex;
+  flex-direction: column;
+  gap: var(--e2);
+  padding: var(--e2);
+  background: var(--cor-superficie);
+  border: var(--borda) solid var(--cor-traco-fraca);
+  min-width: 0;
+}
+.ordem-recurso__topo { display: flex; flex-direction: column; gap: var(--e1); }
+.ordem-recurso__nome {
+  font-family: var(--fonte-mini);
+  font-size: var(--texto-mini);
+  text-transform: uppercase;
+  letter-spacing: var(--espaco-letra-titulo);
+  color: var(--cor-texto-2);
+}
+
+.ordem-carga {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--e2);
+  padding-top: var(--e2);
+  border-top: var(--borda) solid var(--cor-traco-fraca);
+}
+
+/* ---------- perícias ---------- */
+
+.ordem-pericias { display: flex; flex-direction: column; gap: var(--e1); }
+
+.ordem-pericia {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 2.5rem minmax(0, 8rem) 3.5rem auto minmax(0, 5rem);
+  gap: var(--e2);
+  align-items: center;
+  padding: var(--e1) var(--e2);
+  border-bottom: var(--borda) solid var(--cor-traco-fraca);
+}
+.ordem-pericia--destreinada { color: var(--cor-texto-3); }
+
+.ordem-pericia__nome { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ordem-pericia__atrib,
+.ordem-pericia__grau,
+.ordem-pericia__marcas,
+.ordem-pericia__travada {
+  font-family: var(--fonte-mini);
+  font-size: var(--texto-mini);
+  color: var(--cor-texto-3);
+}
+.ordem-pericia__bonus {
+  min-height: var(--alvo-toque);
+  font-weight: 700;
+  background: transparent;
+  border: var(--borda) solid var(--cor-traco-fraca);
+  color: var(--cor-texto);
+  cursor: pointer;
+}
+.ordem-pericia__bonus:hover { border-color: var(--cor-paranormal); }
+.ordem-pericia__rolar { min-width: var(--alvo-toque); min-height: var(--alvo-toque); }
+
+@media (max-width: 720px) {
+  .ordem-pericia {
+    grid-template-columns: minmax(0, 1fr) 2.5rem 3.5rem auto;
+  }
+  /* O seletor de grau ocupa a linha de baixo; as marcas somem. */
+  .ordem-pericia > .r-campo { grid-column: 1 / -1; }
+  .ordem-pericia__marcas { display: none; }
+}
+
+/* ---------- progressão ---------- */
+
+.ordem-pendencia {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--e2);
+  padding: var(--e2);
+  background: var(--cor-superficie);
+  border-left: 3px solid var(--cor-paranormal);
+}
+.ordem-pendencia__nex {
+  font-family: var(--fonte-mini);
+  font-size: var(--texto-mini);
+  color: var(--cor-texto-3);
+}
+.ordem-pendencia__rotulo { flex: 1; min-width: 0; }
+
+.ordem-degraus { display: flex; flex-direction: column; gap: 2px; }
+
+.ordem-degrau {
+  display: grid;
+  grid-template-columns: 4rem minmax(0, 1fr);
+  gap: var(--e2);
+  padding: var(--e1) var(--e2);
+  color: var(--cor-texto-3);
+  border-left: 3px solid transparent;
+}
+.ordem-degrau--alcancado {
+  color: var(--cor-texto);
+  border-left-color: var(--cor-paranormal);
+  background: var(--cor-superficie);
+}
+.ordem-degrau__nex {
+  font-family: var(--fonte-mini);
+  font-size: var(--texto-mini);
+}
+
+/* ---------- regras opcionais ---------- */
+
+.ordem-regra {
+  display: flex;
+  flex-direction: column;
+  gap: var(--e2);
+  padding: var(--e3);
+  background: var(--cor-superficie);
+  border: var(--borda) solid var(--cor-traco-fraca);
+}
+.ordem-regra--ligada { border-color: var(--cor-paranormal); }
+
+.ordem-regra__topo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--e2);
+}
+.ordem-regra__nome {
+  font-weight: 700;
+  letter-spacing: var(--espaco-letra-titulo);
+  min-width: 0;
+}
+
+/* O interruptor é forma além de cor: a bola muda de lado, e continua
+   legível para quem não distingue cores. */
+.r-interruptor {
+  flex: 0 0 auto;
+  width: 44px;
+  height: 24px;
+  padding: 2px;
+  background: var(--cor-superficie-2);
+  border: var(--borda) solid var(--cor-traco-media);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+}
+.r-interruptor:disabled { opacity: 0.45; cursor: not-allowed; }
+.r-interruptor--ligado {
+  justify-content: flex-end;
+  border-color: var(--cor-paranormal);
+}
+.r-interruptor__bola {
+  display: block;
+  width: 16px;
+  height: 16px;
+  background: var(--cor-traco-media);
+}
+.r-interruptor--ligado .r-interruptor__bola { background: var(--cor-paranormal); }

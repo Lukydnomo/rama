@@ -948,3 +948,189 @@
 .recolhivel-faixa + .recolhivel-faixa,
 .recolhivel-faixa + .recolhivel,
 .recolhivel + .recolhivel-faixa { margin-top: var(--e2); }
+
+/* =====================================================================
+   ORDEM PARANORMAL — ESCOLHA DO TIPO DE FICHA
+   ---------------------------------------------------------------------
+   Dois cartões lado a lado, cada um dizendo o que aquele modelo entrega.
+   A escolha é do tipo que não se desfaz, então ela precisa ser feita com
+   a informação na frente, não depois.
+   ===================================================================== */
+
+.tipos-ficha {
+  display: grid;
+  gap: var(--e3);
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+}
+
+.tipo-ficha {
+  display: flex;
+  flex-direction: column;
+  gap: var(--e2);
+  padding: var(--e3);
+  text-align: left;
+  background: var(--cor-superficie);
+  border: var(--borda) solid var(--cor-traco-fraca);
+  color: var(--cor-texto);
+  cursor: pointer;
+  min-width: 0;
+}
+.tipo-ficha:hover,
+.tipo-ficha:focus-visible { border-color: var(--cor-traco-forte); background: var(--cor-superficie-2); }
+
+.tipo-ficha__nome {
+  font-weight: 700;
+  letter-spacing: var(--espaco-letra-titulo);
+  text-transform: uppercase;
+}
+.tipo-ficha__resumo { color: var(--cor-texto-2); }
+.tipo-ficha__lista {
+  margin: 0;
+  padding-left: var(--e3);
+  font-family: var(--fonte-mini);
+  font-size: var(--texto-mini);
+  color: var(--cor-texto-3);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+/* =====================================================================
+   ORDEM PARANORMAL — CRIAÇÃO GUIADA
+   ===================================================================== */
+
+.criacao-trilha {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--e1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-family: var(--fonte-mini);
+  font-size: var(--texto-mini);
+  text-transform: uppercase;
+  letter-spacing: var(--espaco-letra-titulo);
+}
+
+.criacao-trilha__passo {
+  padding: 2px var(--e2);
+  color: var(--cor-texto-3);
+  border: var(--borda) solid transparent;
+}
+.criacao-trilha__passo--feito { color: var(--cor-texto-2); }
+.criacao-trilha__passo--atual {
+  color: var(--cor-texto);
+  border-color: var(--cor-traco-media);
+}
+
+.criacao-atributos { display: flex; flex-direction: column; gap: var(--e2); }
+
+.criacao-atributo {
+  display: grid;
+  grid-template-columns: 3rem minmax(0, 1fr) auto minmax(0, 9rem);
+  gap: var(--e2);
+  align-items: center;
+}
+.criacao-atributo__sigla {
+  font-weight: 700;
+  letter-spacing: var(--espaco-letra-titulo);
+}
+.criacao-atributo__nome { color: var(--cor-texto-2); min-width: 0; }
+
+@media (max-width: 560px) {
+  .criacao-atributo { grid-template-columns: 3rem minmax(0, 1fr) auto; }
+  .criacao-atributo > .t-mini { grid-column: 2 / -1; }
+}
+
+.criacao-lista {
+  display: grid;
+  gap: var(--e2);
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  max-height: 22rem;
+  overflow-y: auto;
+}
+
+.criacao-opcao {
+  display: flex;
+  flex-direction: column;
+  gap: var(--e1);
+  padding: var(--e2) var(--e3);
+  text-align: left;
+  background: var(--cor-superficie);
+  border: var(--borda) solid var(--cor-traco-fraca);
+  color: var(--cor-texto);
+  cursor: pointer;
+  min-width: 0;
+}
+.criacao-opcao:hover { background: var(--cor-superficie-2); }
+.criacao-opcao--escolhida { border-color: var(--cor-paranormal); }
+
+.criacao-opcao__nome { font-weight: 700; }
+.criacao-opcao__meta,
+.criacao-opcao__texto,
+.criacao-opcao__fonte {
+  font-family: var(--fonte-mini);
+  font-size: var(--texto-mini);
+  color: var(--cor-texto-3);
+  overflow-wrap: anywhere;
+}
+.criacao-opcao__meta { color: var(--cor-texto-2); }
+
+.criacao-fonte {
+  font-family: var(--fonte-mini);
+  font-size: var(--texto-mini);
+  color: var(--cor-texto-3);
+  margin: 0;
+}
+
+.criacao-pericias {
+  display: grid;
+  gap: var(--e1);
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  max-height: 20rem;
+  overflow-y: auto;
+}
+
+.criacao-pericia {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: var(--e1);
+  align-items: center;
+  padding: var(--e1) var(--e2);
+  min-height: var(--alvo-toque);
+  text-align: left;
+  background: var(--cor-superficie);
+  border: var(--borda) solid var(--cor-traco-fraca);
+  color: var(--cor-texto);
+  cursor: pointer;
+}
+.criacao-pericia:disabled { cursor: not-allowed; opacity: 0.55; }
+.criacao-pericia--marcada { border-color: var(--cor-paranormal); }
+
+.criacao-pericia__nome { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.criacao-pericia__atrib {
+  font-family: var(--fonte-mini);
+  font-size: var(--texto-mini);
+  color: var(--cor-texto-3);
+}
+.criacao-pericia__motivo {
+  grid-column: 1 / -1;
+  font-family: var(--fonte-mini);
+  font-size: var(--texto-mini);
+  color: var(--cor-texto-3);
+}
+
+/* Uma etiqueta que diz, sem rodeio, o que o sistema faz com aquela
+   entrada: se ela entra na conta ou se é anotação. */
+.etiqueta {
+  align-self: flex-start;
+  padding: 1px var(--e1);
+  font-family: var(--fonte-mini);
+  font-size: var(--texto-mini);
+  text-transform: uppercase;
+  letter-spacing: var(--espaco-letra-titulo);
+  color: var(--cor-texto-3);
+  border: var(--borda) solid var(--cor-traco-fraca);
+}
+.etiqueta--calculo { color: var(--cor-paranormal); border-color: var(--cor-paranormal); }
+.etiqueta--parcial { color: var(--cor-texto-2); border-color: var(--cor-traco-media); }

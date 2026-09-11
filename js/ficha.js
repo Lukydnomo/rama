@@ -36,12 +36,15 @@
      inventário.
      2 → 3: cada ritual ganhou uma coleção de VERSÕES, cada uma com nome
      e dano próprios.
+     3 → 4: a ficha ganhou `tipoFicha` e, quando é de Ordem, o bloco
+     `ordem` com as escolhas do sistema. Ficha sem o campo é universal,
+     que é o que toda ficha gravada antes desta versão é.
 
      Nenhuma das duas subidas exige migração: normalizarFicha() cria o
      que falta, vazio, e não toca no que existe. Um ritual gravado na 2
      abre na 3 com a versão Normal em branco. Ver
      docs/CHARACTER_SCHEMA.md. */
-  var VERSAO_SCHEMA = 3;
+  var VERSAO_SCHEMA = 4;
 
   var NATUREZA = { INFORMACAO: "informacao", ROLAVEL: "rolavel", DEPENDENTE: "dependente" };
 
@@ -137,6 +140,68 @@
   var ROTULO_SECAO_RITUAIS = "Rituais";
 
   /* =================================================================
+     TIPO DE FICHA
+     -----------------------------------------------------------------
+     O R.A.M.A. passa a ter dois modelos de ficha:
+
+       universal  o modelo flexível que sempre existiu. Nada nele é
+                  imposto: atributos, perícias, status e seções são de
+                  quem joga.
+       ordem      a ficha de Ordem Paranormal RPG, com as regras, os
+                  cálculos e o catálogo dos livros.
+
+     O TIPO É UM CAMPO, E SÓ UM CAMPO
+     -----------------------------------------------------------------
+     Ele é gravado explicitamente e nunca deduzido. Nada no sistema
+     olha para o nome de um atributo, de uma seção ou de um personagem
+     para decidir que ficha é aquela — uma ficha universal cujo dono
+     resolveu chamar os atributos de AGI, FOR, INT, PRE e VIG continua
+     sendo universal, e uma ficha de Ordem com a seção de rituais
+     renomeada para "Magias" continua sendo de Ordem.
+
+     Deduzir o sistema pelo conteúdo seria adivinhar a intenção de
+     quem joga a partir de um nome que ele escolheu por outro motivo.
+
+     FICHA ANTIGA É UNIVERSAL
+     -----------------------------------------------------------------
+     Toda ficha gravada antes desta versão não tem o campo, e a
+     normalização a trata como universal. É o comportamento correto e
+     não é um chute: universal é o único modelo que existia, e é o
+     modelo que não impõe nada. Uma ficha antiga continua abrindo, com
+     os mesmos dados e o mesmo funcionamento.
+
+     NÃO EXISTE CONVERSÃO AUTOMÁTICA
+     -----------------------------------------------------------------
+     Nesta entrega não há caminho de universal para ordem nem o
+     contrário. Uma conversão automática teria de adivinhar qual dos
+     atributos livres vira Agilidade, qual perícia vira qual, e o que
+     fazer com o que não tem equivalente — e cada adivinhação dessas é
+     uma chance de apagar o trabalho de alguém em silêncio. Trocar o
+     tipo é uma decisão com perda de dados, e enquanto não houver um
+     caminho que a torne segura, ela não existe.
+
+     A escolha inicial também não pode virar uma armadilha: o tipo
+     escolhido na criação não apaga nada depois, porque ele nunca
+     muda sozinho. */
+
+  var TIPOS_FICHA = ["universal", "ordem"];
+  var TIPO_FICHA_PADRAO = "universal";
+
+  /* Qualquer coisa que não seja um tipo conhecido vira universal.
+     Errar para o lado do modelo que não impõe regra nenhuma é o único
+     erro seguro aqui: um arquivo adulterado que dissesse "ordem" faria
+     a ficha ser desenhada com cálculos que os dados dela não
+     sustentam. */
+  function tipoDeFicha(valor) {
+    var t = U.texto(valor).trim().toLowerCase();
+    return TIPOS_FICHA.indexOf(t) >= 0 ? t : TIPO_FICHA_PADRAO;
+  }
+
+  function ehDeOrdem(ficha) {
+    return !!ficha && tipoDeFicha(ficha.tipoFicha) === "ordem";
+  }
+
+  /* =================================================================
      CONSTRUÇÃO
      ================================================================= */
 
@@ -189,6 +254,8 @@
 
     return {
       schemaVersion: VERSAO_SCHEMA,
+      /* Explícito desde o nascimento da ficha. */
+      tipoFicha: tipoDeFicha(i.tipoFicha),
 
       nome: U.aparar(i.nome, 80) || "Novo personagem",
       campanhaId: i.campanhaId || null,
@@ -205,6 +272,12 @@
 
       habilidades: global.RAMAHabilidades.arvoreVazia(),
       rituais: rituaisVazios(),
+
+      /* Só a ficha de Ordem carrega este bloco. Numa universal ele não
+         existe, e nada do sistema o procura. */
+      ordem: tipoDeFicha(i.tipoFicha) === "ordem" && global.RAMAOrdemRegras
+        ? global.RAMAOrdemRegras.fichaVazia()
+        : undefined,
 
       inventario: { limite: 0, itens: [] },
       anotacoes: { pastas: [], soltas: [] },
@@ -562,6 +635,9 @@
 
     var ficha = {
       schemaVersion: VERSAO_SCHEMA,
+      /* Sem o campo, universal — que é o que toda ficha gravada antes
+         desta versão é, e o único modelo que não impõe regra nenhuma. */
+      tipoFicha: tipoDeFicha(b.tipoFicha),
       nome: U.aparar(b.nome, 80) || "Sem nome",
       campanhaId: b.campanhaId || null,
       classe: U.aparar(b.classe, 60),
@@ -613,6 +689,16 @@
       pastas: lista(an.pastas).map(normalizarPasta).filter(Boolean),
       soltas: lista(an.soltas).map(normalizarNota).filter(Boolean),
     };
+
+    /* ---- Ordem Paranormal ----
+       O bloco só é montado quando a ficha É de Ordem. Mas ele é
+       PRESERVADO sempre que existir no que veio: uma ficha universal
+       que um dia foi de Ordem não perde as escolhas por causa de uma
+       leitura — perder dado em silêncio é o contrário do que esta
+       função existe para fazer. */
+    if (global.RAMAOrdemRegras && (ficha.tipoFicha === "ordem" || b.ordem)) {
+      ficha.ordem = global.RAMAOrdemRegras.normalizar(b.ordem);
+    }
 
     /* ---- campos personalizados ---- */
     ficha.camposCustomizados = lista(b.camposCustomizados).map(normalizarCampo).filter(Boolean);
@@ -817,6 +903,10 @@
 
   global.RAMAFicha = {
     VERSAO_SCHEMA: VERSAO_SCHEMA,
+    TIPOS_FICHA: TIPOS_FICHA,
+    TIPO_FICHA_PADRAO: TIPO_FICHA_PADRAO,
+    tipoDeFicha: tipoDeFicha,
+    ehDeOrdem: ehDeOrdem,
     NATUREZA: NATUREZA,
     TIPOS_ITEM: TIPOS_ITEM,
     DADO_PADRAO: DADO_PADRAO,

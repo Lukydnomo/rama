@@ -54,6 +54,11 @@ preferências de tela — nunca é tratado como banco.
     versao.js           FONTE ÚNICA da versão e do changelog
     habilidades.js      modelo e árvore recursiva de habilidades
     criaturas.js        mini ficha de criatura
+    fila.js             fila de gravação por entidade
+    ordem/              as regras de Ordem Paranormal, em camada própria
+      catalogo.js       origens, classes, trilhas, perícias e patentes
+      regras.js         os cálculos, com a composição de cada número
+      opcionais.js      as regras opcionais, uma chave para cada
     historico.js        rolagem → histórico da campanha, num funil só
     paginas/            um arquivo por tela
 
@@ -70,6 +75,7 @@ preferências de tela — nunca é tratado como banco.
     PERMISSIONS.md      quem alcança o quê, e onde isso é decidido
     CAMPAIGNS.md        campanhas, combate, histórico e criaturas
     PERFORMANCE.md      o que custa caro, o que foi feito e como medir
+    ORDEM-REGRAS.md     matriz de regras de Ordem: fonte, página e lacunas
 ```
 
 ---
@@ -91,7 +97,7 @@ E abra `http://localhost:8099/rama/`.
 
 São três conjuntos.
 
-**Modelo e motor de dados** — 383 verificações. No navegador, abra `testes/`;
+**Modelo e motor de dados** — 569 verificações. No navegador, abra `testes/`;
 no terminal:
 
 ```bash
@@ -101,7 +107,10 @@ deno run --allow-read testes/executar.js
 Cobrem expressões de dado válidas e inválidas, dado principal, perícia, dano,
 crítico, a ficha padrão, peso do inventário, habilidades e a árvore recursiva,
 rituais, versões de ritual com dano, rótulos compartilhados, categorias,
-migração de ficha antiga, importação e versionamento.
+migração de ficha antiga, importação e versionamento. E a camada de Ordem
+Paranormal: catálogo, fórmulas conferidas contra exemplos dos livros,
+recálculo que não acumula bônus nem restaura recurso gasto, regras opcionais e
+a separação entre nível e NEX.
 
 **Permissões e concorrência do backend** — 228 verificações:
 

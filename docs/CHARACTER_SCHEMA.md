@@ -33,7 +33,8 @@ Fazem parte do **dado**, não só da tela:
 
 ```jsonc
 {
-  "schemaVersion": 3,
+  "schemaVersion": 4,
+  "tipoFicha": "universal",
 
   "nome": "Michael",
   "campanhaId": null,          // id de uma campanha da mesma conta, ou null
@@ -445,7 +446,7 @@ uma regra de jogo.
 
 ## Migração
 
-`schemaVersion` é `3`. Toda ficha lida passa por `normalizarFicha()`, que aceita
+`schemaVersion` é `4`. Toda ficha lida passa por `normalizarFicha()`, que aceita
 o que faltar e conserta o que dá.
 
 **Ficha gravada na v1 continua abrindo.** Ela não tem `habilidades`, não tem
@@ -458,6 +459,62 @@ antiga não ganha habilidade nem ritual nenhum, só as estruturas vazias.
 acrescenta a `Normal` com dano em branco. Rodar a normalização de novo não
 acrescenta uma segunda, e o id da que existe sobrevive — é o que permite salvar,
 recarregar, exportar e importar sem a versão trocar de identidade no caminho.
+
+**Ficha gravada antes da v2.3 continua abrindo, e é Universal.** Ela não tem
+`tipoFicha`; a normalização a lê como `"universal"` — que é o único modelo que
+existia e o único que não impõe regra nenhuma. Nenhum dado é convertido.
+
+## Tipo de ficha
+
+```jsonc
+"tipoFicha": "universal" | "ordem"
+```
+
+**O tipo é um campo, e só um campo.** Nada no sistema o deduz do conteúdo: uma
+ficha universal cujo dono chamou os atributos de AGI, FOR, INT, PRE e VIG
+continua universal, e uma ficha de Ordem com a seção de rituais renomeada para
+"Magias" continua de Ordem.
+
+Valor desconhecido vira `universal`. Errar para o lado do modelo que não impõe
+nada é o único erro seguro: um arquivo adulterado dizendo `"ordem"` faria a
+ficha ser desenhada com cálculos que os dados dela não sustentam.
+
+**Não existe conversão automática entre os dois.** Ela teria de adivinhar qual
+atributo livre vira Agilidade, qual perícia vira qual e o que fazer com o que
+não tem equivalente — e cada adivinhação dessas apaga trabalho em silêncio.
+
+### O bloco `ordem`
+
+Só existe na ficha de Ordem. Guarda **escolhas**, **recursos gastos** e
+**ajustes manuais** — nunca valores calculados.
+
+```jsonc
+"ordem": {
+  "nex": 5,                       // exposição paranormal, 0-99
+  "nivel": 1,                     // só usado com a regra NEX & Experiência
+  "classe": "especialista",
+  "origem": "investigador",
+  "trilha": "medico",
+  "atributos": { "agi": 2, "for": 0, "int": 3, "pre": 3, "vig": 1 },
+  "pericias": { "investigacao": "treinado" },   // o que falta é destreinado
+  "prestigio": 0,
+  "progressao": [ { "id", "nex", "tipo", "valor", "rotulo" } ],
+  "recursos": { "pv": null, "pe": null, "san": null },
+  "ajustes": [ { "id", "alvo", "valor", "motivo", "manual": true } ],
+  "temporarios": { "pv": 0, "pe": 0, "san": 0, "defesa": 0 },
+  "opcionais": { "nexExperiencia": true }
+}
+```
+
+**Valor calculado não é gravado.** PV máximo, Defesa, carga e bônus de perícia
+nascem da soma completa toda vez que alguém pergunta. É isso que torna
+impossível — e não só improvável — aplicar um bônus duas vezes.
+
+**`null` em `recursos` é "nunca foi tocado" e vale o máximo.** Zero é "gastou
+tudo". Confundir os dois é como um recálculo acaba curando um personagem.
+
+Ver [ORDEM-REGRAS.md](ORDEM-REGRAS.md) para a matriz de regras, com fonte,
+página e o que está automatizado.
 
 Além disso:
 

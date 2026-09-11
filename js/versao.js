@@ -14,16 +14,16 @@
    TRÊS COISAS DIFERENTES, QUE NÃO SE MISTURAM
    ---------------------------------------------------------------------
 
-     versão do aplicativo   está aqui. É o que a pessoa vê: v2.2.0.
+     versão do aplicativo   está aqui. É o que a pessoa vê: v2.3.0.
      schemaVersion          está em js/ficha.js. É o formato da FICHA,
                             e só sobe quando a ficha muda de forma.
      versaoFormato          está em js/config.js. É o formato dos
                             arquivos de importação/exportação.
 
-   Elas sobem em ritmos próprios. A v2.2.0 leva schemaVersion 3 e
-   versaoFormato 1 — e isso é normal: a ficha ganhou um campo novo, mas
-   o formato dos arquivos de importação continua o mesmo, porque um
-   arquivo antigo continua sendo lido sem perder nada.
+   Elas sobem em ritmos próprios. A v2.3.0 leva schemaVersion 4 e
+   versaoFormato 1 — e isso é normal: a ficha ganhou o tipo e o bloco de
+   Ordem, mas o formato dos arquivos de importação continua o mesmo,
+   porque um arquivo antigo continua sendo lido sem perder nada.
 
    ---------------------------------------------------------------------
    A REGRA, PARA TODA ENTREGA FUTURA
@@ -56,6 +56,38 @@
   ];
 
   var CHANGELOG = [
+    {
+      versao: "2.3.0",
+      codinome: "PARALELO",
+      data: "10/09/2026",
+      mudancas: {
+        "Adicionado": [
+          "O R.A.M.A. passou a ter dois tipos de ficha. Ao criar um personagem, você escolhe entre Ordem Paranormal — com as regras dos livros — e Universal, o modelo flexível de sempre.",
+          "Ficha de Ordem Paranormal com criação guiada em seis passos, na ordem do livro: conceito, atributos, origem, classe, perícias e revisão. Dá para começar em NEX 5% ou já adiantado; a revisão reúne o que aquele NEX acumulou.",
+          "PV, PE, Sanidade, Defesa, deslocamento, carga, limite de PE por turno e patente são calculados pelas regras. Todo número calculado abre a conta no clique: valor-base, cada bônus, cada penalidade e o total.",
+          "As 28 perícias com atributo-base, grau de treinamento e bônus, com o dado certo em cada uma. Perícia que exige treinamento aparece travada quando você não é treinado nela.",
+          "Catálogo com as 26 origens, as 3 classes, as 15 trilhas e as 5 patentes, cada entrada com o livro e a página de onde saiu.",
+          "Área de Regras opcionais com as dez regras do Sobrevivendo ao Horror, uma chave para cada. Todas começam desligadas, e ligar mostra antes o que vai mudar.",
+          "A regra de separar nível e NEX, implementada de verdade: com ela ligada, o nível manda em PV, PE, Sanidade, habilidades de classe e efeitos de origem, e o NEX passa a medir só a exposição ao Outro Lado.",
+          "Ajustes manuais da mesa, com motivo anotado. Eles aparecem na composição do número, separados do que as regras produziram, e sobrevivem a qualquer recálculo.",
+        ],
+        "Alterado": [
+          "Toda ficha criada até hoje continua funcionando exatamente como antes, e passa a ser identificada como Universal. Nenhum dado foi convertido, movido ou perdido.",
+          "O tipo fica gravado num campo próprio. Nada no sistema adivinha o sistema pelo nome dos atributos, das seções ou do personagem.",
+          "Não existe conversão automática entre os dois modelos nesta entrega. Ela teria de adivinhar o que vira o quê, e adivinhar aqui é perder trabalho em silêncio.",
+        ],
+        "Corrigido": [
+          "Os poderes de origem com efeito numérico entram na conta sozinhos: Calejado, Cicatrizes Psicológicas, Patrulha, Mão Pesada, Para Bellum, Dedicação, Eu Já Sabia, Patrocinador da Ordem e Traços do Outro Lado.",
+          "Recalcular a ficha nunca aplica o mesmo bônus duas vezes, nunca devolve recurso gasto e nunca apaga um ajuste da mesa. Valor calculado não é gravado: ele nasce da soma completa toda vez que alguém pergunta.",
+        ],
+        "Técnico": [
+          "As regras de Ordem ficam numa camada própria, em js/ordem. A ficha Universal não sabe que ela existe e não recebeu nenhuma verificação de sistema.",
+          "Habilidades, Rituais, Inventário e Anotações são as MESMAS seções nos dois tipos de ficha. Um ritual é um ritual.",
+          "A rolagem de Ordem usa o motor de dados e o mostrador central de sempre — mesmo histórico de campanha, mesma idempotência, nenhum interpretador novo.",
+          "A matriz de regras, com fonte, página e o que está automatizado, está em docs/ORDEM-REGRAS.md, junto com as lacunas que não foram preenchidas por dedução.",
+        ],
+      },
+    },
     {
       versao: "2.2.0",
       codinome: "RAMIFICAÇÃO",
