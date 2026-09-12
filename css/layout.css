@@ -261,7 +261,7 @@ body { display: flex; flex-direction: column; }
 .faixa--entre { justify-content: space-between; }
 
 /* =====================================================================
-   PAINEL DE RESUMO DA HOME
+   PAINEL DE RESUMO (visão geral da campanha)
    ===================================================================== */
 
 .resumo {

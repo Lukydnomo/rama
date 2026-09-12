@@ -14,13 +14,13 @@
    TRÊS COISAS DIFERENTES, QUE NÃO SE MISTURAM
    ---------------------------------------------------------------------
 
-     versão do aplicativo   está aqui. É o que a pessoa vê: v2.4.0.
+     versão do aplicativo   está aqui. É o que a pessoa vê: v2.4.1.
      schemaVersion          está em js/ficha.js. É o formato da FICHA,
                             e só sobe quando a ficha muda de forma.
      versaoFormato          está em js/config.js. É o formato dos
                             arquivos de importação/exportação.
 
-   Elas sobem em ritmos próprios. A v2.4.0 leva schemaVersion 5 e
+   Elas sobem em ritmos próprios. A v2.4.1 leva schemaVersion 5 e
    versaoFormato 1 — e isso é normal: a ficha ganhou as escolhas de
    progressão de Ordem, mas o formato dos arquivos de importação continua
    o mesmo,
@@ -57,6 +57,26 @@
   ];
 
   var CHANGELOG = [
+    {
+      versao: "2.4.1",
+      codinome: "PREFÁCIO",
+      data: "12/09/2026",
+      mudancas: {
+        "Alterado": [
+          "A Home virou uma apresentação do R.A.M.A.: o que as fichas, a ficha de Ordem Paranormal, as campanhas e a biblioteca Homebrew fazem, e por onde começar.",
+          "Cada seção tem um atalho direto para a aba correspondente, e a abertura leva a criar personagem.",
+        ],
+        "Removido": [
+          "O painel de contagens e de últimos registros saiu da Home. Os personagens, as campanhas e a Homebrew continuam listados nas próprias abas.",
+        ],
+        "Visual": [
+          "As ilustrações da Home são montadas com os traços da própria interface, sem imagens: acompanham a escala de texto do Perfil e funcionam no celular.",
+        ],
+        "Performance": [
+          "A Home não consulta mais o servidor além da conferência da sessão.",
+        ],
+      },
+    },
     {
       versao: "2.4.0",
       codinome: "ENCRUZILHADA",

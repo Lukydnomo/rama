@@ -1,0 +1,335 @@
+/* =====================================================================
+   R.A.M.A. — Home
+   ---------------------------------------------------------------------
+   A página de apresentação. Seções alternando texto e miniatura, na
+   mesma linguagem da interface: preto, traço fino, a cor paranormal só
+   onde ela aponta alguma coisa.
+
+   Carregado só pela Home. Nada aqui é reaproveitado por outra tela.
+   ===================================================================== */
+
+/* ---------- abertura ---------- */
+
+.home-abertura {
+  display: flex;
+  flex-direction: column;
+  gap: var(--e4);
+  padding: var(--e6) 0 var(--e5);
+  border-bottom: var(--borda) solid var(--cor-traco-fraca);
+}
+
+.home-abertura__titulo {
+  max-width: 22ch;
+  margin: 0;
+  font-weight: 700;
+  font-size: calc(var(--texto-numero) * 1.5);
+  line-height: 1.2;
+  letter-spacing: var(--espaco-letra-titulo);
+  text-transform: uppercase;
+  color: var(--cor-texto);
+}
+
+.home-abertura__texto {
+  max-width: 56ch;
+  margin: 0;
+  font-size: var(--texto-medio);
+  line-height: var(--altura-linha);
+  color: var(--cor-texto-2);
+}
+
+/* ---------- seções ---------- */
+
+.home-secao {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: var(--e6);
+  align-items: center;
+  padding: var(--e6) 0;
+  border-bottom: var(--borda) solid var(--cor-traco-fraca);
+}
+
+/* Invertida troca só a ordem visual; a ordem de leitura continua sendo
+   texto e depois miniatura. */
+.home-secao--invertida .home-secao__texto { order: 2; }
+.home-secao--invertida .home-secao__ilustracao { order: 1; }
+
+.home-secao__texto {
+  display: flex;
+  flex-direction: column;
+  gap: var(--e3);
+  min-width: 0;
+}
+
+.home-secao__marca {
+  font-family: var(--fonte-mini);
+  font-size: var(--texto-mini);
+  letter-spacing: var(--espaco-letra-titulo);
+  color: var(--cor-texto-3);
+}
+.home-secao__marca::before { content: "// "; color: var(--cor-traco-fraca); }
+
+.home-secao__titulo {
+  margin: 0;
+  font-weight: 700;
+  font-size: var(--texto-grande);
+  line-height: 1.25;
+  letter-spacing: var(--espaco-letra-titulo);
+  text-transform: uppercase;
+  color: var(--cor-texto);
+}
+
+.home-destaque {
+  color: var(--cor-paranormal);
+  text-decoration: underline;
+  text-decoration-thickness: 2px;
+  text-underline-offset: 6px;
+}
+
+.home-secao__paragrafo {
+  margin: 0;
+  line-height: var(--altura-linha);
+  color: var(--cor-texto-2);
+}
+
+.home-lista {
+  display: flex;
+  flex-direction: column;
+  gap: var(--e1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.home-lista li {
+  position: relative;
+  padding-left: var(--e4);
+  color: var(--cor-texto-3);
+}
+.home-lista li::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0.6em;
+  width: 6px;
+  height: 6px;
+  background: var(--cor-paranormal);
+}
+
+.home-secao__ilustracao { min-width: 0; }
+
+@media (max-width: 760px) {
+  .home-secao { grid-template-columns: minmax(0, 1fr); gap: var(--e4); }
+  .home-secao--invertida .home-secao__texto,
+  .home-secao--invertida .home-secao__ilustracao { order: 0; }
+  .home-abertura__titulo { font-size: var(--texto-numero); }
+}
+
+/* ---------- miniaturas ---------- */
+
+.home-mock {
+  background: var(--cor-superficie);
+  border: var(--borda) solid var(--cor-traco-media);
+  box-shadow: 6px 6px 0 var(--cor-fundo), 6px 6px 0 1px var(--cor-traco-fraca);
+}
+
+.home-mock__topo {
+  display: flex;
+  align-items: center;
+  gap: var(--e3);
+  padding: var(--e2) var(--e3);
+  border-bottom: var(--borda) solid var(--cor-traco-fraca);
+  background: var(--cor-superficie-2);
+}
+.home-mock__pontos { display: flex; gap: var(--e1); }
+.home-mock__pontos span {
+  width: 6px;
+  height: 6px;
+  background: var(--cor-traco-fraca);
+}
+.home-mock__pontos span:first-child { background: var(--cor-paranormal); }
+
+.home-mock__corpo {
+  display: flex;
+  flex-direction: column;
+  gap: var(--e3);
+  padding: var(--e4);
+}
+
+.home-mock__linha { display: flex; align-items: center; gap: var(--e3); }
+
+.home-mock__avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  width: 40px;
+  height: 40px;
+  font-size: var(--texto-base);
+  font-weight: 700;
+  color: var(--cor-texto);
+  background: var(--cor-superficie-3);
+  border: var(--borda) solid var(--cor-traco-media);
+}
+.home-mock__avatar--mini { width: 24px; height: 24px; font-size: var(--texto-mini); }
+
+.home-mock__atributos {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: var(--e1);
+}
+.home-mock__atributo {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: var(--e2) 0;
+  border: var(--borda) solid var(--cor-traco-fraca);
+}
+.home-mock__numero {
+  font-weight: 700;
+  font-size: var(--texto-grande);
+  line-height: 1;
+  color: var(--cor-texto);
+}
+
+.home-mock__rolagem {
+  display: flex;
+  flex-direction: column;
+  gap: var(--e1);
+  padding: var(--e3);
+  border-left: 3px solid var(--cor-paranormal);
+  background: var(--cor-fundo);
+}
+.home-mock__resultado { display: flex; align-items: baseline; justify-content: space-between; gap: var(--e3); }
+.home-mock__dados { color: var(--cor-texto-3); letter-spacing: var(--espaco-letra); }
+.home-mock__total {
+  font-weight: 700;
+  font-size: var(--texto-numero);
+  line-height: 1;
+  color: var(--cor-texto);
+}
+
+.home-mock__pendencia {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--e3);
+  padding: var(--e3);
+  border-left: 3px solid var(--cor-paranormal);
+  background: var(--cor-fundo);
+}
+.home-mock__pendencia--feita { border-left-color: var(--cor-traco-fraca); }
+
+.home-mock__botao {
+  padding: var(--e1) var(--e3);
+  font-size: var(--texto-mini);
+  letter-spacing: var(--espaco-letra-titulo);
+  text-transform: uppercase;
+  color: var(--cor-texto);
+  border: var(--borda) solid var(--cor-paranormal);
+  white-space: nowrap;
+}
+
+.home-mock__conta { display: flex; flex-direction: column; gap: 2px; }
+.home-mock__parcela {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--e3);
+  padding: 2px 0;
+  color: var(--cor-texto-2);
+  border-bottom: var(--borda) dashed var(--cor-traco-fraca);
+}
+.home-mock__parcela--total {
+  font-weight: 700;
+  color: var(--cor-texto);
+  border-bottom: 0;
+  border-top: var(--borda) solid var(--cor-traco-media);
+}
+
+.home-mock__lista { display: flex; flex-direction: column; gap: var(--e1); }
+.home-mock__item {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--e2);
+  padding: var(--e1) var(--e2);
+  border: var(--borda) solid var(--cor-traco-fraca);
+  color: var(--cor-texto-2);
+}
+.home-mock__item--vez { border-color: var(--cor-paranormal); color: var(--cor-texto); }
+.home-mock__valor { font-weight: 700; color: var(--cor-texto); }
+
+.home-mock__seta { display: flex; align-items: center; gap: var(--e2); }
+.home-mock__traco { flex: 1; height: 0; border-top: var(--borda) dashed var(--cor-paranormal); }
+
+.home-mock__estado { display: flex; align-items: center; gap: var(--e2); }
+.home-mock__luz { width: 8px; height: 8px; background: var(--cor-ok); }
+
+.home-mock__aparelhos { display: flex; align-items: stretch; gap: var(--e2); }
+.home-mock__aparelho {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: var(--e3);
+  border: var(--borda) solid var(--cor-traco-fraca);
+}
+.home-mock__junta {
+  align-self: center;
+  font-weight: 700;
+  color: var(--cor-paranormal);
+}
+
+/* ---------- como começar ---------- */
+
+.home-passos {
+  display: flex;
+  flex-direction: column;
+  gap: var(--e4);
+  padding: var(--e6) 0;
+}
+
+.home-passos__lista {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: var(--e3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.home-passo { display: flex; min-width: 0; }
+.home-passo__numero {
+  display: flex;
+  align-items: center;
+  padding: 0 var(--e3);
+  font-weight: 700;
+  font-size: var(--texto-grande);
+  color: var(--cor-paranormal);
+  border: var(--borda) solid var(--cor-traco-fraca);
+  border-right: 0;
+}
+.home-passo__link {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--e1);
+  padding: var(--e3) var(--e4);
+  color: inherit;
+  text-decoration: none;
+  background: var(--cor-superficie);
+  border: var(--borda) solid var(--cor-traco-fraca);
+  transition: border-color var(--tempo-seco) var(--curva);
+}
+.home-passo__link:hover,
+.home-passo__link:focus-visible { border-color: var(--cor-paranormal); }
+
+/* ---------- aviso ---------- */
+
+.home-aviso {
+  display: flex;
+  flex-direction: column;
+  gap: var(--e1);
+  padding-top: var(--e4);
+  border-top: var(--borda) solid var(--cor-traco-fraca);
+}
+.home-aviso p { margin: 0; }

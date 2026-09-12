@@ -20,7 +20,7 @@ preferências de tela — nunca é tratado como banco.
 
 ```
 /
-  index.html            Home: painel do agente
+  index.html            Home: apresentação do sistema e por onde começar
   personagens/          lista de personagens
   campanhas/            lista de campanhas
   campanha/             uma campanha (?id=...)
@@ -100,7 +100,7 @@ E abra `http://localhost:8099/rama/`.
 
 São três conjuntos.
 
-**Modelo e motor de dados** — 759 verificações. No navegador, abra `testes/`;
+**Modelo e motor de dados** — 771 verificações. No navegador, abra `testes/`;
 no terminal:
 
 ```bash

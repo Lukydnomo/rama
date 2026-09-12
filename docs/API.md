@@ -196,8 +196,11 @@ dependa do lote precisa continuar funcionando sem ele.
       recentes: [ { tipo, id, nome, campanha?, subtipo?, atualizadoEm } ]
    } }
 ```
-Uma chamada só para a Home inteira. Três chamadas para escrever três números
-pagariam três vezes a lentidão do Apps Script.
+Uma chamada só para contagens e últimos registros. A Home deixou de usá-la na
+v2.4.1, quando passou a ser uma página de apresentação sem consulta ao
+servidor. A ação continua no backend: tirá-la exigiria uma nova implantação
+do Apps Script sem ganho nenhum, e ela não expõe nada além do que é da
+própria conta.
 
 ---
 
