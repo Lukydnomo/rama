@@ -2065,3 +2065,10 @@ function cadastrarNovoUsuario() {
     'senha'
   );
 }
+
+function realTrocarSenha() {
+  return trocarSenha(
+    'usuario',
+    'novaSenha'
+  )
+}
