@@ -267,6 +267,13 @@ Todos os modelos da conta, com o conteúdo — são registros pequenos.
 Cria ou atualiza conforme o `id` vier — e conforme ele ser mesmo da conta. Um id
 de outra pessoa **não** vira atualização: vira registro novo, sob quem pediu.
 
+`tipo` aceita `item`, `arma`, `armadura`, `mochila`, `criatura` e `habilidade`;
+qualquer outro vira `item`. Até a v2.4.2 `habilidade` não estava na lista, e as
+habilidades enviadas à biblioteca ficaram com a coluna `tipo = item`. Elas não são
+reescritas: `listar_homebrew` e `ler_homebrew` leem o tipo do conteúdo guardado
+(que sempre disse `habilidade`), e o próximo salvamento do registro corrige a
+coluna.
+
 #### `excluir_homebrew`
 Não afeta as fichas que já usam uma cópia daquele modelo.
 

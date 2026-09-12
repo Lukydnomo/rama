@@ -1329,7 +1329,17 @@ function acaoSalvarFoto(corpo, usuario) {
    HOMEBREW
    ===================================================================== */
 
-var TIPOS_HOMEBREW = ['item', 'arma', 'armadura', 'mochila', 'criatura'];
+var TIPOS_HOMEBREW = ['item', 'arma', 'armadura', 'mochila', 'criatura', 'habilidade'];
+
+/* Até a v2.4.2, 'habilidade' faltava na lista acima e toda habilidade
+   enviada à biblioteca era gravada com a coluna tipo = 'item' — mas o
+   conteúdo guardado continuou dizendo tipo 'habilidade'. Esses registros
+   não são reescritos: o tipo certo é lido do conteúdo na hora de
+   entregar, e o próximo salvamento corrige a coluna. */
+function tipoDoHomebrew(h, dados) {
+  if (String(h.tipo) === 'item' && dados && dados.tipo === 'habilidade') return 'habilidade';
+  return h.tipo;
+}
 
 /* Um registro é alcançável se for seu, ou se for público. Público dá
    direito de LER e de copiar como modelo — nunca de alterar o
@@ -1361,7 +1371,10 @@ function acaoListarHomebrew(corpo, usuario) {
      itens de vinte contas, "meus" agora lê quatro conteúdos em vez de
      oitenta. */
   var escolhidos = lerLeves(ABAS.HOMEBREW).filter(function (h) {
-    if (tipo && String(h.tipo) !== tipo) return false;
+    /* Pedindo habilidades, os 'item' também passam por aqui: podem ser
+       habilidades antigas gravadas com o tipo errado (ver
+       tipoDoHomebrew). O conteúdo decide logo abaixo. */
+    if (tipo && String(h.tipo) !== tipo && !(tipo === 'habilidade' && String(h.tipo) === 'item')) return false;
 
     var proprio = meu(h, usuario);
     var publico = visibilidadeDe(h.visibilidade) === VIS_PUBLICO;
@@ -1375,6 +1388,7 @@ function acaoListarHomebrew(corpo, usuario) {
 
   var lista = escolhidos
     .map(function (h) { return homebrewParaCliente(h, usuario, conteudo[h._linha]); })
+    .filter(function (d) { return !tipo || d.tipo === tipo; })
     .sort(function (a, b) { return String(a.nome).localeCompare(String(b.nome), 'pt-BR'); });
 
   return { ok: true, dados: lista };
@@ -1387,7 +1401,7 @@ function acaoListarHomebrew(corpo, usuario) {
 function homebrewParaCliente(h, usuario, jsonPronto) {
   var dados = lerJson(jsonPronto === undefined ? h.dadosJson : jsonPronto, {});
   dados.id = h.id;
-  dados.tipo = h.tipo;
+  dados.tipo = tipoDoHomebrew(h, dados);
   dados.nome = h.nome;
   dados.visibilidade = visibilidadeDe(h.visibilidade);
   dados.criadoEm = h.criadoEm;

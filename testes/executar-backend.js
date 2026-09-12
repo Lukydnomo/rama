@@ -236,6 +236,43 @@ t.recusa("registro anterior à v2 (visibilidade vazia) continua PRIVADO",
 t.ok("  e o dono continua alcançando",
   comoBruno({ acao: "ler_homebrew", homebrewId: "hb-antigo" }).ok);
 
+t.grupo("Homebrew — habilidades");
+
+const habNova = comoBruno({
+  acao: "salvar_homebrew",
+  dados: { tipo: "habilidade", nome: "Faro de Mesa", origem: "Mesa", texto: "Sente cheiro de problema." },
+});
+t.ok("uma habilidade é gravada", habNova.ok);
+const habsDeBruno = comoBruno({ acao: "listar_homebrew", tipo: "habilidade" }).dados;
+t.igual("  e volta como habilidade, não como item", habsDeBruno.map((h) => h.nome + ":" + h.tipo).join(","), "Faro de Mesa:habilidade");
+t.igual("  e não aparece entre os itens",
+  comoBruno({ acao: "listar_homebrew", tipo: "item" }).dados.filter((h) => h.nome === "Faro de Mesa").length, 0);
+
+/* Registro gravado antes da correção: coluna tipo = 'item', conteúdo
+   dizendo 'habilidade'. Nada é migrado — ele só precisa aparecer certo. */
+const antiga = comoBruno({
+  acao: "salvar_homebrew",
+  dados: { tipo: "habilidade", nome: "Instinto Antigo", texto: "Gravada pela versão velha." },
+}).dados.id;
+const habAntigaNaPlanilha = acharPor(ABAS.HOMEBREW, "id", antiga);
+habAntigaNaPlanilha.tipo = "item";
+atualizarLinha(ABAS.HOMEBREW, habAntigaNaPlanilha._linha, habAntigaNaPlanilha);
+t.igual("uma habilidade antiga gravada como item está mesmo como item na planilha",
+  String(acharPor(ABAS.HOMEBREW, "id", antiga).tipo), "item");
+t.ok("  aparece na lista de habilidades",
+  comoBruno({ acao: "listar_homebrew", tipo: "habilidade" }).dados.some((h) => h.id === antiga && h.tipo === "habilidade"));
+t.igual("  sai da lista de itens",
+  comoBruno({ acao: "listar_homebrew", tipo: "item" }).dados.filter((h) => h.id === antiga).length, 0);
+t.igual("  e abre como habilidade",
+  comoBruno({ acao: "ler_homebrew", homebrewId: antiga }).dados.tipo, "habilidade");
+comoBruno({ acao: "salvar_homebrew", dados: { id: antiga, tipo: "habilidade", nome: "Instinto Antigo", texto: "Reenviada." } });
+t.igual("  e o próximo salvamento corrige a coluna",
+  String(acharPor(ABAS.HOMEBREW, "id", antiga).tipo), "habilidade");
+t.igual("um item de verdade continua item",
+  comoBruno({ acao: "listar_homebrew", tipo: "habilidade" }).dados.filter((h) => h.tipo !== "habilidade").length, 0);
+t.igual("habilidade privada de B não chega a A",
+  comoAna({ acao: "listar_homebrew", escopo: "publicos", tipo: "habilidade" }).dados.length, 0);
+
 /* =====================================================================
    CAMPANHAS — VISIBILIDADE E PAPÉIS
    ===================================================================== */

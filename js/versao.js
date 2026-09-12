@@ -14,13 +14,13 @@
    TRÊS COISAS DIFERENTES, QUE NÃO SE MISTURAM
    ---------------------------------------------------------------------
 
-     versão do aplicativo   está aqui. É o que a pessoa vê: v2.4.2.
+     versão do aplicativo   está aqui. É o que a pessoa vê: v2.5.0.
      schemaVersion          está em js/ficha.js. É o formato da FICHA,
                             e só sobe quando a ficha muda de forma.
      versaoFormato          está em js/config.js. É o formato dos
                             arquivos de importação/exportação.
 
-   Elas sobem em ritmos próprios. A v2.4.2 leva schemaVersion 5 e
+   Elas sobem em ritmos próprios. A v2.5.0 leva schemaVersion 5 e
    versaoFormato 1 — e isso é normal: a ficha ganhou as escolhas de
    progressão de Ordem, mas o formato dos arquivos de importação continua
    o mesmo,
@@ -57,6 +57,24 @@
   ];
 
   var CHANGELOG = [
+    {
+      versao: "2.5.0",
+      codinome: "ACERVO",
+      data: "12/09/2026",
+      mudancas: {
+        "Adicionado": [
+          "Na ficha de Ordem Paranormal, o botão “Da biblioteca” da aba Habilidades mostra também as habilidades oficiais: abas de Combatente, Especialista e Ocultista (habilidades de classe, poderes e trilhas), Poderes gerais e Poderes paranormais por elemento, com busca.",
+          "Cada habilidade oficial mostra origem, livro, resumo, afinidade, pré-requisitos e página, e avisa quando já está na ficha.",
+        ],
+        "Corrigido": [
+          "Habilidades enviadas à biblioteca Homebrew eram gravadas como item e não apareciam em lugar nenhum como habilidade. As que já foram gravadas assim voltam a aparecer, sem migração.",
+          "Janelas largas não passam mais da largura da tela no celular.",
+        ],
+        "Técnico": [
+          "Requer nova implantação do Apps Script (backend/Codigo.gs) para a correção da Homebrew.",
+        ],
+      },
+    },
     {
       versao: "2.4.2",
       codinome: "GAVETA",

@@ -35,6 +35,7 @@ leitura que o R.A.M.A. adotou escrita por extenso.
 | `js/ordem/inventario.js` | espaços, quantidade, categoria e grupo dos itens |
 | `js/ordem/regras.js` | todas as contas, com a composição de cada número |
 | `js/ordem/opcionais.js` | as regras opcionais, uma chave para cada |
+| `js/ordem/biblioteca.js` | o catálogo de poderes arrumado para consulta na janela "Da biblioteca" |
 | `js/paginas/ordem-escolhas.js` | as janelas de escolha, iguais na criação e na ficha |
 
 O catálogo de poderes só é carregado nas páginas que calculam a ficha de Ordem
@@ -184,6 +185,33 @@ Exemplos dos livros conferidos em teste: Potencial Aprimorado em NEX 30% dá 6 P
 e em NEX 35% dá 7 (OPRPG p.115); Sangue de Ferro em NEX 50% dá 20 PV (OPRPG
 p.116); Técnico com Força 1 e Intelecto 3 carrega 20 espaços (OPRPG p.31); Morte 2
 exige dois poderes de Morte antes (OPRPG p.114).
+
+### Biblioteca oficial na aba Habilidades
+
+No modo edição da ficha de Ordem, o botão **Da biblioteca** abre duas origens:
+**Ordem Paranormal** (os livros) e **Homebrew** (a biblioteca da conta e o que
+outras contas publicaram). Na ficha universal a janela continua só com a
+Homebrew.
+
+Nos livros há cinco abas, e a da classe da ficha abre primeiro:
+
+| aba | o que mostra |
+|---|---|
+| Combatente, Especialista, Ocultista | habilidades de classe (com os estágios por NEX), poderes da classe e uma seção por trilha, livro básico e SAH |
+| Poderes gerais | os poderes gerais do SAH e os quatro poderes de classe que o SAH tornou gerais |
+| Poderes paranormais | um grupo por elemento, mais os sem elemento fixo |
+
+Cada cartão traz origem, livro, resumo, afinidade, pré-requisitos e página; a
+busca ignora acento e caixa. Uma habilidade que já está na ficha ganha a marca
+"já vem pelas regras" ou "já na ficha", e trazê-la de novo pede confirmação.
+
+**Trazer daqui é copiar texto.** Entra na árvore de habilidades uma habilidade
+comum (nome, origem, resumo, estágios, afinidade, pré-requisitos e página), que
+pode ser editada, movida ou removida como qualquer outra. Nenhum efeito entra na
+conta por esse caminho, e os requisitos não são conferidos: quem soma PV, Defesa
+ou treinamento é a escolha na aba **Progressão**, que sabe em que etapa o poder
+entrou. A cópia não leva a `nota` de automação do catálogo, porque ela descreve o
+que a ficha calcula, e a cópia não calcula nada.
 
 ---
 

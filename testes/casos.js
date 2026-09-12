@@ -1140,6 +1140,66 @@
       t.igual("Atletismo com Força 0 rola -2d20", R.dadoDePericia(treinada, "atletismo"), "-2d20");
       t.igual("Percepção usa Presença 3", R.dadoDePericia(treinada, "percepcao"), "3d20");
 
+      if (global.RAMAOrdemBiblioteca) {
+        t.grupo("Ordem — biblioteca oficial de habilidades");
+
+        var OB = global.RAMAOrdemBiblioteca;
+        var OPod = global.RAMAOrdemPoderes;
+        var soma = function (secs) { return secs.reduce(function (n, s) { return n + s.entradas.length; }, 0); };
+        var chavesDe = function (secs) {
+          var k = {};
+          secs.forEach(function (s) { s.entradas.forEach(function (x) { k[x.entrada.chave] = true; }); });
+          return k;
+        };
+
+        t.igual("cinco abas: três classes, gerais e paranormais", OB.ABAS.map(function (a) { return a.chave; }).join(","),
+          "combatente,especialista,ocultista,gerais,paranormais");
+
+        var todasAsChaves = {};
+        OB.ABAS.forEach(function (a) { Object.assign(todasAsChaves, chavesDe(OB.secoes(a.chave))); });
+        var fora = OPod.PODERES_CLASSE.concat(OPod.PODERES_GERAIS, OPod.PODERES_PARANORMAIS, OPod.HABILIDADES_TRILHA, OPod.AUTOMATICAS)
+          .filter(function (p) { return !todasAsChaves[p.chave]; }).map(function (p) { return p.nome; });
+        t.igual("todo poder e habilidade do catálogo aparece em alguma aba", fora.join(", "), "");
+
+        var combatente = OB.secoes("combatente");
+        t.igual("combatente abre com as habilidades de classe", combatente[0].titulo, "Habilidades de classe");
+        t.ok("  e tem Ataque Especial", chavesDe([combatente[0]]).ataqueEspecial);
+        t.ok("combatente só traz poderes e trilhas do combatente", combatente.every(function (s) {
+          return s.entradas.every(function (x) {
+            var p = x.entrada;
+            return p.tipo === "trilha"
+              ? global.RAMAOrdemCatalogo.trilha(p.trilha).classe === "combatente"
+              : p.classes.indexOf("combatente") >= 0;
+          });
+        }));
+        t.igual("cada trilha do combatente vira uma seção",
+          combatente.filter(function (s) { return s.chave.indexOf("trilha.") === 0; }).length,
+          global.RAMAOrdemCatalogo.trilhasDaClasse("combatente").length);
+        t.igual("paranormais separados por elemento", soma(OB.secoes("paranormais")), OPod.PODERES_PARANORMAIS.length);
+        var gerais = chavesDe(OB.secoes("gerais"));
+        t.ok("gerais incluem os poderes de classe que o SAH tornou gerais",
+          OPod.PODERES_CLASSE.filter(function (p) { return p.geral; }).every(function (p) { return gerais[p.chave]; }));
+        t.igual("  e todos os poderes gerais", OPod.PODERES_GERAIS.filter(function (p) { return !gerais[p.chave]; }).length, 0);
+        t.igual("aba desconhecida não tem nada", OB.secoes("sobrevivente").length, 0);
+
+        t.ok("busca ignora acento e caixa", soma(OB.filtrar(OB.secoes("combatente"), "ATAQUE especial")) >= 1);
+        t.igual("busca sem resultado esvazia", OB.filtrar(OB.secoes("combatente"), "zzzz").length, 0);
+        t.igual("a aba inicial é a da classe da ficha", OB.abaInicial("ocultista"), "ocultista");
+        t.igual("  e sem classe abre em Combatente", OB.abaInicial(""), "combatente");
+
+        var atletico = OB.modelo(OPod.poder("atletico"), "");
+        t.igual("a cópia leva o nome", atletico.nome, "Atlético");
+        t.igual("  a origem", atletico.origem, "Poder geral");
+        t.ok("  os pré-requisitos por extenso", atletico.texto.indexOf("Pré-requisitos: Força 2") >= 0);
+        t.ok("  e a página do livro", atletico.texto.indexOf("Sobrevivendo ao Horror, p. 33") >= 0);
+        t.ok("a origem cabe no campo de 60 caracteres",
+          OB.ABAS.every(function (a) { return OB.secoes(a.chave).every(function (s) { return s.entradas.every(function (x) { return OB.origem(x.entrada, x.classe).length <= 60; }); }); }));
+        var ataque = OB.modelo(OPod.poder("ataqueEspecial"), "combatente");
+        t.ok("habilidade de classe leva os estágios por NEX", ataque.texto.indexOf("NEX 55%: 4 PE: +15") >= 0);
+        var copia = global.RAMAHabilidades.copiarParaFicha(ataque);
+        t.ok("a cópia vira habilidade de texto comum na árvore", copia && copia.tipo === global.RAMAHabilidades.TIPO_HABILIDADE && !copia.origemHabilidadeId);
+      }
+
       t.grupo("Ordem — patente");
 
       function comPP(pp, origem) {

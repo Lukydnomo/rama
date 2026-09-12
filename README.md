@@ -100,7 +100,7 @@ E abra `http://localhost:8099/rama/`.
 
 São três conjuntos.
 
-**Modelo e motor de dados** — 777 verificações. No navegador, abra `testes/`;
+**Modelo e motor de dados** — 809 verificações. No navegador, abra `testes/`;
 no terminal:
 
 ```bash
@@ -118,7 +118,7 @@ requisitos e repetição, concessão automática sem duplicação, revisão com
 dependências, afinidade (inclusive adiada e Homebrew), patente com limites
 manuais, carga por quantidade e o ajuste temporário de capacidade.
 
-**Permissões e concorrência do backend** — 251 verificações:
+**Permissões e concorrência do backend** — 261 verificações:
 
 ```bash
 deno run --allow-read testes/executar-backend.js

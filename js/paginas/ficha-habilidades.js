@@ -21,10 +21,17 @@
   var H = global.RAMAHabilidades;
   var el = U.el;
 
-  /* `dasRegras` só vem da ficha de Ordem: { itens, aviso } com o que as
-     regras entregaram. Esses itens entram na MESMA lista, antes da
-     árvore, e não têm menu — mudam pela Progressão, não por aqui. */
+  /* O que a janela "Da biblioteca" oferece além da Homebrew. Só a ficha
+     de Ordem preenche; a universal zera a cada desenho da aba. */
+  var bibliotecaOficial = null;
+
+  /* `dasRegras` só vem da ficha de Ordem: { itens, aviso, biblioteca }
+     com o que as regras entregaram. Esses itens entram na MESMA lista,
+     antes da árvore, e não têm menu — mudam pela Progressão, não por
+     aqui. `biblioteca` ({ classe, nomes }) liga os livros de Ordem na
+     janela "Da biblioteca". */
   function aba(ctx, dasRegras) {
+    bibliotecaOficial = (dasRegras && dasRegras.biblioteca) || null;
     var arvore = ctx.ficha.habilidades;
     var total = H.contar(arvore);
     var regras = (dasRegras && dasRegras.itens) || [];
@@ -71,7 +78,7 @@
           UI.vazio({
             titulo: "Nenhuma habilidade",
             texto: ctx.emEdicao()
-              ? "Crie uma habilidade, ou traga uma da sua biblioteca."
+              ? "Crie uma habilidade, ou traga uma da biblioteca: dos livros de Ordem ou da Homebrew."
               : "Entre no modo edição para acrescentar habilidades.",
             acao: ctx.emEdicao()
               ? { rotulo: "+ Habilidade", aoClicar: function () { editar(ctx, null, null); } }
@@ -441,21 +448,39 @@
     if (!silencioso) UI.avisoOk(no.nome + " foi guardada na biblioteca.");
   }
 
-  async function daBiblioteca(ctx, pastaId) {
-    var aviso = UI.aviso("Consultando biblioteca…", { duracao: 30000 });
+  /* Na ficha de Ordem a janela tem duas origens: os livros e a Homebrew.
+     Na universal, só a Homebrew — o R.A.M.A. não traz catálogo pronto
+     para nenhum outro sistema. */
+  function daBiblioteca(ctx, pastaId) {
+    if (bibliotecaOficial && global.RAMAOrdemBiblioteca) {
+      daBibliotecaDeOrdem(ctx, pastaId, bibliotecaOficial);
+      return;
+    }
+    daHomebrew(ctx, pastaId);
+  }
 
+  async function lerHomebrew() {
     var [minhas, publicas] = await Promise.all([
       global.RAMAApi.listarHomebrew({ escopo: "meus", tipo: "habilidade" }),
       global.RAMAApi.listarHomebrew({ escopo: "publicos", tipo: "habilidade" }),
     ]);
+
+    if (!minhas.ok) return { falha: minhas };
+
+    return {
+      registros: (minhas.dados || []).map(function (h) { return Object.assign({ escopo: "minha" }, h); })
+        .concat(((publicas.ok && publicas.dados) || []).map(function (h) { return Object.assign({ escopo: "geral" }, h); })),
+    };
+  }
+
+  async function daHomebrew(ctx, pastaId) {
+    var aviso = UI.aviso("Consultando biblioteca…", { duracao: 30000 });
+    var lido = await lerHomebrew();
     aviso();
 
-    if (!minhas.ok) { UI.avisoDeFalha(minhas, "leitura da biblioteca"); return; }
+    if (lido.falha) { UI.avisoDeFalha(lido.falha, "leitura da biblioteca"); return; }
 
-    var registros = (minhas.dados || []).map(function (h) { return Object.assign({ escopo: "minha" }, h); })
-      .concat(((publicas.ok && publicas.dados) || []).map(function (h) { return Object.assign({ escopo: "geral" }, h); }));
-
-    if (!registros.length) {
+    if (!lido.registros.length) {
       UI.modal({
         titulo: "Nenhuma habilidade disponível",
         conteudo: [
@@ -469,6 +494,16 @@
       return;
     }
 
+    var m = UI.modal({
+      titulo: "Trazer da biblioteca",
+      largo: true,
+      conteudo: listaDeHomebrew(ctx, lido.registros, pastaId, function () { m.fechar(); }),
+      botoes: [{ rotulo: "Fechar", classe: "r-botao--fantasma" }],
+    });
+  }
+
+  /* Busca, escopo e a lista de registros da Homebrew. */
+  function listaDeHomebrew(ctx, registros, pastaId, fechar) {
     var filtro = "";
     var escopo = "";
     var lista = el("div.pilha--curta", { class: "pilha" });
@@ -486,7 +521,7 @@
             return el("button.r-cartao", {
               type: "button",
               estilo: { textAlign: "left", width: "100%", cursor: "pointer" },
-              onclick: function () { trazer(ctx, h, pastaId); m.fechar(); },
+              onclick: function () { trazer(ctx, h, pastaId); fechar(); },
             }, [
               el("div.faixa.faixa--entre", {}, [
                 el("span.t-forte", { texto: h.nome }),
@@ -500,44 +535,225 @@
       );
     }
 
-    var m = UI.modal({
-      titulo: "Trazer da biblioteca",
-      largo: true,
-      conteudo: [
-        el("div.filtros", {}, [
-          el("div.r-busca", {}, [
-            el("span.r-busca__marca", {}, [UI.simbolo("busca")]),
-            el("input.r-entrada", {
-              type: "search", placeholder: "Buscar habilidade", "aria-label": "Buscar habilidade",
-              oninput: function (ev) { filtro = ev.target.value; pintar(); },
-            }),
-          ]),
-          el("div.filtros__grupo", { role: "group", "aria-label": "Escopo" },
-            [{ v: "", r: "Todas" }, { v: "minha", r: "Minhas" }, { v: "geral", r: "Gerais" }].map(function (op) {
-              return el("button.filtro", {
-                type: "button",
-                "aria-pressed": String(escopo === op.v),
-                texto: op.r,
-                onclick: function (ev) {
-                  escopo = op.v;
-                  U.$$(".filtro", ev.target.parentNode).forEach(function (b) {
-                    b.setAttribute("aria-pressed", String(b === ev.target));
-                  });
-                  pintar();
-                },
-              });
-            })
-          ),
+    pintar();
+
+    return el("div.pilha", {}, [
+      el("div.filtros", {}, [
+        el("div.r-busca", {}, [
+          el("span.r-busca__marca", {}, [UI.simbolo("busca")]),
+          el("input.r-entrada", {
+            type: "search", placeholder: "Buscar habilidade", "aria-label": "Buscar habilidade",
+            oninput: function (ev) { filtro = ev.target.value; pintar(); },
+          }),
         ]),
-        lista,
+        el("div.filtros__grupo", { role: "group", "aria-label": "Escopo" },
+          [{ v: "", r: "Todas" }, { v: "minha", r: "Minhas" }, { v: "geral", r: "Gerais" }].map(function (op) {
+            return el("button.filtro", {
+              type: "button",
+              "aria-pressed": String(escopo === op.v),
+              texto: op.r,
+              onclick: function (ev) {
+                escopo = op.v;
+                U.$$(".filtro", ev.target.parentNode).forEach(function (b) {
+                  b.setAttribute("aria-pressed", String(b === ev.target));
+                });
+                pintar();
+              },
+            });
+          })
+        ),
+      ]),
+      lista,
+      el("p.t-mini", {
+        texto: "A habilidade entra na ficha como cópia. Editá-la aqui não muda o modelo, e editar o modelo não muda esta ficha.",
+      }),
+    ]);
+  }
+
+  /* =================================================================
+     BIBLIOTECA DE ORDEM PARANORMAL
+     -----------------------------------------------------------------
+     Duas origens no topo — os livros e a Homebrew — e, nos livros, uma
+     aba por classe, os poderes gerais e os paranormais. A aba da classe
+     da ficha abre primeiro.
+
+     O que vem dos livros entra como CÓPIA DE TEXTO, igual à Homebrew. Os
+     efeitos nas contas continuam sendo da aba Progressão; a janela diz
+     isso, e avisa quando a habilidade já está na ficha.
+     ================================================================= */
+
+  function daBibliotecaDeOrdem(ctx, pastaId, fonte) {
+    var B = global.RAMAOrdemBiblioteca;
+    var P = global.RAMAOrdemPoderes;
+    var estado = { origem: "oficial", aba: B.abaInicial(fonte.classe), busca: "" };
+    var homebrew = null;
+    var janela = el("div.pilha.biblioteca");
+    var m;
+
+    function fechar() { m.fechar(); }
+
+    /* Nome → de onde ele já está na ficha: pelas regras ou à mão. */
+    function nomesNaFicha() {
+      var mapa = {};
+      (function andar(filhos) {
+        (filhos || []).forEach(function (no) {
+          if (no.tipo === H.TIPO_PASTA) andar(no.filhos);
+          else mapa[U.chaveDeBusca(no.nome)] = "arvore";
+        });
+      })(ctx.ficha.habilidades.filhos);
+      (fonte.nomes || []).forEach(function (n) { mapa[U.chaveDeBusca(n)] = "regras"; });
+      return mapa;
+    }
+
+    function pintar() {
+      U.trocar(janela, [
+        el("div.biblioteca-origens", { role: "group", "aria-label": "Origem das habilidades" }, [
+          botaoOrigem("oficial", "Ordem Paranormal"),
+          botaoOrigem("homebrew", "Homebrew"),
+        ]),
+        estado.origem === "oficial" ? painelOficial() : painelHomebrew(),
+      ]);
+    }
+
+    function botaoOrigem(chave, rotulo) {
+      return el("button.biblioteca-origem", {
+        type: "button",
+        "aria-pressed": String(estado.origem === chave),
+        texto: rotulo,
+        onclick: function () {
+          if (estado.origem === chave) return;
+          estado.origem = chave;
+          pintar();
+        },
+      });
+    }
+
+    function painelOficial() {
+      var naFicha = nomesNaFicha();
+      var lista = el("div.biblioteca-lista");
+      var contagem = el("p.t-mini", { "aria-live": "polite" });
+
+      function pintarLista() {
+        var secoes = B.filtrar(B.secoes(estado.aba), estado.busca);
+        var total = secoes.reduce(function (n, s) { return n + s.entradas.length; }, 0);
+        contagem.textContent = total + " habilidade(s)" + (estado.busca ? " encontrada(s) nesta aba." : ".");
+        U.trocar(lista, secoes.length
+          ? secoes.map(function (s) { return secao(s, naFicha); })
+          : el("p.t-mini", { texto: "Nada corresponde à busca nesta aba." }));
+      }
+
+      var abas = el("div.r-abas.biblioteca-abas", { role: "group", "aria-label": "Categoria" },
+        B.ABAS.map(function (a) {
+          return el("button.r-aba", {
+            type: "button",
+            "aria-pressed": String(a.chave === estado.aba),
+            texto: a.rotulo,
+            onclick: function () {
+              estado.aba = a.chave;
+              pintar();
+            },
+          });
+        }));
+
+      var busca = el("input.r-entrada", {
+        type: "search", placeholder: "Buscar por nome ou efeito", "aria-label": "Buscar habilidade oficial",
+        value: estado.busca,
+        oninput: function (ev) { estado.busca = ev.target.value; pintarLista(); },
+      });
+
+      pintarLista();
+
+      return el("div.pilha", {}, [
+        abas,
+        el("div.r-busca", {}, [el("span.r-busca__marca", {}, [UI.simbolo("busca")]), busca]),
         el("p.t-mini", {
-          texto: "A habilidade entra na ficha como cópia. Editá-la aqui não muda o modelo, e editar o modelo não muda esta ficha.",
+          texto: "Trazer daqui copia o texto para a lista de habilidades. Nada entra nas contas por este caminho: poderes com efeito são escolhidos na aba Progressão.",
         }),
-      ],
-      botoes: [{ rotulo: "Fechar", classe: "r-botao--fantasma" }],
-    });
+        contagem,
+        lista,
+      ]);
+    }
+
+    function secao(s, naFicha) {
+      return el("section.biblioteca-secao", {}, [
+        el("h3.t-rotulo", { texto: s.titulo }),
+        s.nota ? el("p.t-mini", { texto: s.nota }) : null,
+        el("div.biblioteca-grade", {}, s.entradas.map(function (x) { return cartao(x, naFicha); })),
+      ]);
+    }
+
+    function cartao(x, naFicha) {
+      var p = x.entrada;
+      var ja = naFicha[U.chaveDeBusca(p.nome)] || "";
+      var reqs = B.requisitos(p);
+      var niveis = B.estagios(p);
+
+      return el("button.criacao-opcao.escolha-cartao", {
+        type: "button",
+        "aria-label": "Trazer " + p.nome + (ja ? ", já está na ficha" : "") + ". " + p.resumo,
+        onclick: function () { escolher(x, ja); },
+      }, [
+        el("span.criacao-opcao__nome", { texto: p.nome }),
+        el("span.escolha-marcas", {}, [
+          el("span.etiqueta", { texto: B.origem(p, x.classe) }),
+          el("span.etiqueta", { texto: B.ROTULO_FONTE[p.fonte] || p.fonte }),
+          ja ? el("span.etiqueta.etiqueta--calculo", { texto: ja === "regras" ? "já vem pelas regras" : "já na ficha" }) : null,
+        ]),
+        el("span.criacao-opcao__texto.escolha-cartao__resumo", { texto: p.resumo }),
+        niveis.length ? el("span.criacao-opcao__texto", { texto: niveis.join(" · ") }) : null,
+        p.afinidade ? el("span.criacao-opcao__texto", { texto: "Afinidade: " + p.afinidade }) : null,
+        reqs.length ? el("span.criacao-opcao__fonte", { texto: "Pré-requisitos: " + reqs.join("; ") }) : null,
+        el("span.criacao-opcao__fonte", { texto: P.referencia(p, x.classe) }),
+      ]);
+    }
+
+    async function escolher(x, ja) {
+      if (ja) {
+        var certeza = await UI.confirmar({
+          titulo: "Trazer " + x.entrada.nome + " de novo?",
+          texto: ja === "regras"
+            ? "Ela já está na lista pelas regras da ficha (aba Progressão). A cópia seria só texto, repetido."
+            : "Já existe uma habilidade com esse nome na ficha.",
+          rotuloConfirmar: "Trazer mesmo assim",
+        });
+        if (!certeza) return;
+      }
+      fechar();
+      trazer(ctx, B.modelo(x.entrada, x.classe), pastaId);
+    }
+
+    function painelHomebrew() {
+      if (!homebrew) {
+        homebrew = { carregando: true };
+        lerHomebrew().then(function (r) {
+          homebrew = r;
+          if (estado.origem === "homebrew") pintar();
+        });
+      }
+      if (homebrew.carregando) return UI.carregando("Consultando biblioteca");
+
+      if (homebrew.falha) {
+        return UI.erroDeTela(homebrew.falha, function () { homebrew = null; pintar(); });
+      }
+
+      if (!homebrew.registros.length) {
+        return UI.vazio({
+          titulo: "Nenhuma habilidade na Homebrew",
+          texto: "Você ainda não guardou habilidades na biblioteca, e nenhuma foi publicada por outras contas.",
+        });
+      }
+
+      return listaDeHomebrew(ctx, homebrew.registros, pastaId, fechar);
+    }
 
     pintar();
+
+    m = UI.modal({
+      titulo: "Trazer da biblioteca",
+      largo: true,
+      conteudo: janela,
+      botoes: [{ rotulo: "Fechar", classe: "r-botao--fantasma" }],
+    });
   }
 
   function trazer(ctx, registro, pastaId) {

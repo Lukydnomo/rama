@@ -626,6 +626,15 @@
     return (e.requisitos || []).map(function (r) { return requisito(r, percurso, etapa, opcoes, ordem); });
   }
 
+  /* Os requisitos só como texto, fora de qualquer ficha — para consulta
+     (a biblioteca oficial). Nada é avaliado: o `ok` é descartado. */
+  function textosDosRequisitos(e) {
+    var vazio = { atributos: {}, graus: {}, adquiridos: [] };
+    return (e.requisitos || []).map(function (r) {
+      return requisito(r, vazio, { nex: 0, separado: false, rotulo: "" }, {}, null).texto;
+    }).filter(Boolean);
+  }
+
   /* ---------------- repetição ---------------- */
 
   function repeticao(e, percurso, opcoes, etapa, ordem) {
@@ -1674,5 +1683,6 @@
     simular: simular,
     impacto: impacto,
     automaticas: automaticas,
+    textosDosRequisitos: textosDosRequisitos,
   };
 })(typeof window !== "undefined" ? window : globalThis);

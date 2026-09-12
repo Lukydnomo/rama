@@ -245,12 +245,14 @@
   function poderesDasRegras(ctx, o, c) {
     var est = c.estado;
     if (!est || !C.classe(o.classe)) {
-      return { itens: [], aviso: "Escolha uma classe na aba Geral para ver as habilidades das regras." };
+      return { itens: [], aviso: "Escolha uma classe na aba Geral para ver as habilidades das regras.", biblioteca: { classe: "", nomes: [] } };
     }
 
     var itens = [];
+    var nomes = [];
 
     E.automaticas(o).forEach(function (a) {
+      nomes.push(a.entrada.nome);
       itens.push(itemDePoder({
         nome: a.entrada.nome + (a.estagio ? " · " + a.estagio : ""),
         resumo: a.entrada.resumo,
@@ -262,6 +264,8 @@
     });
 
     est.adquiridos.forEach(function (a) {
+      nomes.push(a.nome);
+      if (a.entrada) nomes.push(a.entrada.nome);
       if (a.tipo === "escolhaPerito") {
         itens.push(itemDePoder({ nome: a.nome, resumo: "As perícias escolhidas para usar com Perito.", origem: "Escolha · " + a.rotuloEtapa, automacao: "informacao", situacao: "ok" }));
         return;
@@ -287,6 +291,7 @@
 
     return {
       itens: itens,
+      biblioteca: { classe: o.classe, nomes: nomes },
       aviso: itens.length
         ? "“Entra na conta”: o efeito já está nos números da ficha. “Parte na conta”: uma parte está, o resto é aplicado na cena. “Anotação”: o efeito depende da cena ou de gasto de PE. As que vêm das regras mudam pela aba Progressão."
         : "",

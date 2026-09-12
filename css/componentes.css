@@ -442,6 +442,10 @@
   inset: 0;
   z-index: var(--z-modal);
   display: grid;
+  /* A coluna nunca passa da tela: sem isto, conteúdo largo (uma tira de
+     abas que rola, uma grade de cartões) alargava a janela além do
+     celular. */
+  grid-template-columns: minmax(0, 1fr);
   place-items: center;
   padding: var(--e4);
   background: rgba(8, 8, 10, 0.86);
@@ -1143,6 +1147,58 @@
    ===================================================================== */
 
 .escolha-lista { max-height: 26rem; }
+
+/* ---------- biblioteca oficial de habilidades (ficha de Ordem) ----------
+   Origem no topo (livros ou Homebrew), categorias logo abaixo, e uma
+   única rolagem para todas as seções — rolagem dentro de rolagem perde
+   quem está no celular. */
+
+.biblioteca-origens {
+  display: inline-flex;
+  align-self: flex-start;
+  border: var(--borda) solid var(--cor-traco-media);
+}
+.biblioteca-origem {
+  min-height: var(--alvo-toque);
+  padding: var(--e2) var(--e4);
+  background: transparent;
+  border: 0;
+  color: var(--cor-texto-3);
+  font-size: var(--texto-base);
+  letter-spacing: var(--espaco-letra-titulo);
+  text-transform: uppercase;
+  cursor: pointer;
+}
+.biblioteca-origem + .biblioteca-origem { border-left: var(--borda) solid var(--cor-traco-media); }
+.biblioteca-origem:hover { color: var(--cor-texto-2); }
+.biblioteca-origem[aria-pressed="true"] {
+  background: var(--cor-paranormal);
+  color: var(--cor-fundo);
+  font-weight: 700;
+}
+
+.biblioteca-abas .r-aba[aria-pressed="true"] {
+  color: var(--cor-texto);
+  font-weight: 700;
+  background: var(--cor-superficie);
+  border-color: var(--cor-traco-fraca);
+  border-bottom-color: var(--cor-paranormal);
+}
+
+.biblioteca-lista {
+  display: flex;
+  flex-direction: column;
+  gap: var(--e4);
+  max-height: 55vh;
+  overflow-y: auto;
+  padding-right: var(--e1);
+}
+.biblioteca-secao { display: flex; flex-direction: column; gap: var(--e2); }
+.biblioteca-grade {
+  display: grid;
+  gap: var(--e2);
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+}
 
 .escolha-cartao { position: relative; }
 .escolha-cartao[aria-pressed="true"] { background: var(--cor-superficie-2); }
