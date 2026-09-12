@@ -738,7 +738,11 @@
    BUSCA
    ===================================================================== */
 
-.r-busca { position: relative; flex: 1 1 220px; min-width: 0; }
+/* A busca só estica na LINHA de filtros. Numa coluna (janela, pilha) a
+   base de 220px virava altura, e o campo ocupava um bloco inteiro. */
+.r-busca { position: relative; flex: 0 0 auto; min-width: 0; }
+.filtros > .r-busca,
+.faixa > .r-busca { flex: 1 1 220px; }
 .r-busca .r-entrada { padding-left: var(--e6); }
 .r-busca__marca {
   position: absolute;

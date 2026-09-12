@@ -14,13 +14,13 @@
    TRÊS COISAS DIFERENTES, QUE NÃO SE MISTURAM
    ---------------------------------------------------------------------
 
-     versão do aplicativo   está aqui. É o que a pessoa vê: v2.5.0.
+     versão do aplicativo   está aqui. É o que a pessoa vê: v2.5.1.
      schemaVersion          está em js/ficha.js. É o formato da FICHA,
                             e só sobe quando a ficha muda de forma.
      versaoFormato          está em js/config.js. É o formato dos
                             arquivos de importação/exportação.
 
-   Elas sobem em ritmos próprios. A v2.5.0 leva schemaVersion 5 e
+   Elas sobem em ritmos próprios. A v2.5.1 leva schemaVersion 5 e
    versaoFormato 1 — e isso é normal: a ficha ganhou as escolhas de
    progressão de Ordem, mas o formato dos arquivos de importação continua
    o mesmo,
@@ -57,6 +57,16 @@
   ];
 
   var CHANGELOG = [
+    {
+      versao: "2.5.1",
+      codinome: "REALINHO",
+      data: "12/09/2026",
+      mudancas: {
+        "Corrigido": [
+          "O campo de busca das janelas (biblioteca de habilidades e de itens, escolhas da Progressão) ocupava um bloco de mais de 200px de altura. Agora tem a altura de um campo comum.",
+        ],
+      },
+    },
     {
       versao: "2.5.0",
       codinome: "ACERVO",
