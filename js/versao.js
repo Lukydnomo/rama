@@ -14,13 +14,13 @@
    TRÊS COISAS DIFERENTES, QUE NÃO SE MISTURAM
    ---------------------------------------------------------------------
 
-     versão do aplicativo   está aqui. É o que a pessoa vê: v2.3.0.
+     versão do aplicativo   está aqui. É o que a pessoa vê: v2.3.1.
      schemaVersion          está em js/ficha.js. É o formato da FICHA,
                             e só sobe quando a ficha muda de forma.
      versaoFormato          está em js/config.js. É o formato dos
                             arquivos de importação/exportação.
 
-   Elas sobem em ritmos próprios. A v2.3.0 leva schemaVersion 4 e
+   Elas sobem em ritmos próprios. A v2.3.1 leva schemaVersion 4 e
    versaoFormato 1 — e isso é normal: a ficha ganhou o tipo e o bloco de
    Ordem, mas o formato dos arquivos de importação continua o mesmo,
    porque um arquivo antigo continua sendo lido sem perder nada.
@@ -56,6 +56,22 @@
   ];
 
   var CHANGELOG = [
+    {
+      versao: "2.3.1",
+      codinome: "ÍNDICE",
+      data: "11/09/2026",
+      mudancas: {
+        "Corrigido": [
+          "O login recusava a senha certa quando a linha de cabeçalho da aba USUARIOS não estava com os nomes exatos. A v2.1 passou a ler as colunas pelo nome; sem o nome, hashSenha e salt voltavam vazios e nenhuma senha conferia — e a tela dizia “usuário ou senha incorretos”, sem nenhuma pista de que o problema era a planilha.",
+          "Agora o nome continua mandando, e a posição declarada entra como rede quando o nome sumiu. Cabeçalho apagado, renomeado, em maiúsculas ou com uma coluna a mais na frente deixaram de trancar todo mundo para fora.",
+          "Quando nem a rede pode agir — a posição declarada já pertence a outra coluna — o login recusa dizendo que a instalação está incompleta, em vez de acusar a senha. Esse aviso sai antes de procurar a conta, então ele não revela se o usuário existe.",
+        ],
+        "Técnico": [
+          "conferirInstalacao() passou a listar, aba por aba, quais colunas voltam vazias e quais estão sendo lidas pela posição em vez do nome.",
+          "Nova função de manutenção no editor do Apps Script: diagnosticarLogin(“luky”) diz se o pepper existe, se a conta foi encontrada e está ativa, se o cabeçalho está são e se a derivação da senha roda. Ela nunca imprime hash, salt nem pepper.",
+        ],
+      },
+    },
     {
       versao: "2.3.0",
       codinome: "PARALELO",

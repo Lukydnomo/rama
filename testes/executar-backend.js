@@ -1520,6 +1520,110 @@ t.grupo("Arquivo faltando");
 })();
 
 /* =====================================================================
+   O CABEÇALHO NÃO PODE TRANCAR NINGUÉM PARA FORA
+   ---------------------------------------------------------------------
+   A v2.1 passou a ler as colunas pelo NOME do cabeçalho. Isso conserta
+   a aba cujas colunas estão fora da ordem declarada — e criou um
+   defeito novo, que só apareceu em uso: se o cabeçalho não tiver o nome
+   exato, a coluna é lida como VAZIA.
+
+   Numa aba USUARIOS isso significa hash de senha vazio, e aí NENHUMA
+   senha confere. A tela diz "usuário ou senha incorretos" para todo
+   mundo, para sempre, sem nenhuma pista de que o problema é a planilha.
+
+   A rede é a posição declarada, usada só quando ela não pertence a
+   outra coluna declarada. Estes casos existem para ela nunca mais sair.
+   ===================================================================== */
+
+t.grupo("Cabeçalho da planilha e login");
+
+(() => {
+  function comCabecalho(mexer) {
+    preparar();
+    criarUsuario("luky", "Luky", "senha-de-teste");
+
+    const folha = ambiente.planilha.getSheetByName("USUARIOS");
+    if (mexer) mexer(folha);
+
+    /* Como aconteceria numa execução nova do Apps Script. */
+    esquecerCabecalhos();
+    reiniciarExecucao();
+
+    return chamar(globalThis, { acao: "login", usuario: "luky", senha: "senha-de-teste" });
+  }
+
+  t.ok("cabeçalho intacto: entra", comCabecalho(null).ok);
+
+  t.ok("coluna hashSenha renomeada: ainda entra",
+    comCabecalho((f) => { f.linhas[0][3] = "senha"; }).ok);
+
+  t.ok("coluna salt renomeada: ainda entra",
+    comCabecalho((f) => { f.linhas[0][4] = "sal"; }).ok);
+
+  t.ok("cabeçalho inteiro em MAIÚSCULAS: ainda entra",
+    comCabecalho((f) => { f.linhas[0] = f.linhas[0].map((c) => String(c).toUpperCase()); }).ok);
+
+  t.ok("linha de cabeçalho apagada: ainda entra",
+    comCabecalho((f) => { f.linhas[0] = f.linhas[0].map(() => ""); }).ok);
+
+  t.ok("coluna a mais inserida antes de todas: ainda entra",
+    comCabecalho((f) => { f.linhas.forEach((l, i) => l.unshift(i === 0 ? "obs" : "")); }).ok);
+
+  /* A rede NÃO pode ler a coluna do vizinho. Quando a posição declarada
+     já pertence a outra coluna declarada, o campo fica vazio — e aí o
+     login precisa falhar dizendo que a INSTALAÇÃO está quebrada, não
+     que a senha está errada. */
+  const invertido = comCabecalho((f) => {
+    /* hashSenha some do cabeçalho, e a posição 4 passa a pertencer a
+       "salt" — que é outra coluna declarada. */
+    f.linhas[0][3] = "salt";
+    f.linhas[0][4] = "outra";
+  });
+  t.ok("quando a rede não pode agir, o login NÃO diz senha errada", !invertido.ok);
+  t.igual("  e sim que a instalação está incompleta", invertido.erro, "instalacao_incompleta");
+
+  /* E a conferência de instalação aponta o dedo para a aba certa. */
+  preparar();
+  criarUsuario("luky", "Luky", "senha-de-teste");
+  ambiente.planilha.getSheetByName("USUARIOS").linhas[0][3] = "salt";
+  ambiente.planilha.getSheetByName("USUARIOS").linhas[0][4] = "outra";
+  esquecerCabecalhos();
+  reiniciarExecucao();
+
+  const diagnostico = String(conferirInstalacao());
+  t.ok("conferirInstalacao() nomeia a aba com problema",
+    diagnostico.indexOf("USUARIOS") >= 0, diagnostico.slice(0, 160));
+  t.ok("  e diz o que fazer", diagnostico.indexOf("setupRama") >= 0);
+})();
+
+/* A leitura pelo NOME continua valendo quando o nome existe: é ela que
+   conserta a aba cujas colunas estão fora da ordem declarada. */
+t.grupo("Cabeçalho — o nome continua mandando quando existe");
+
+(() => {
+  preparar();
+  const zeca = novaConta("zeca");
+  const comoZeca = comoFn(zeca);
+
+  const folha = ambiente.planilha.getSheetByName("HOMEBREW");
+  folha.linhas = [[
+    "id", "ownerId", "tipo", "nome", "criadoEm",
+    "atualizadoEm", "rev", "dadosJson", "visibilidade",
+  ]];
+  esquecerCabecalhos();
+
+  const criado = comoZeca({
+    acao: "salvar_homebrew",
+    dados: { tipo: "arma", nome: "Faca", dano: "1d6", visibilidade: "publico" },
+  });
+  t.ok("grava numa aba com as colunas fora da ordem declarada", criado.ok);
+
+  const linha = folha.linhas[1];
+  t.igual("a visibilidade foi para a coluna que o cabeçalho aponta", linha[8], "publico");
+  t.ok("e o JSON também", String(linha[7]).indexOf("1d6") >= 0);
+})();
+
+/* =====================================================================
    FIM
    ===================================================================== */
 

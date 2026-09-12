@@ -607,6 +607,28 @@ function acaoLogin(corpo) {
 
   if (!usuario || !senha) return { ok: false, erro: 'credenciais' };
 
+  /* A aba USUARIOS precisa estar legível ANTES de conferir qualquer
+     senha.
+
+     Se ela não estiver — cabeçalho perdido, coluna renomeada —, o hash
+     guardado volta vazio e NENHUMA senha do mundo confere. Sem esta
+     conferência, o sintoma é "usuário ou senha incorretos" para todo
+     mundo, para sempre, sem nenhuma pista de que o problema é a
+     planilha e não a senha.
+
+     A conferência vem antes da busca de propósito: assim ela não
+     revela se aquele usuário existe. Ela fala da PLANILHA, não da
+     conta. */
+  var quebradas = colunasIlegiveis(ABAS.USUARIOS).filter(function (c) {
+    return c === 'usuario' || c === 'hashSenha' || c === 'salt' || c === 'ativo';
+  });
+
+  if (quebradas.length) {
+    console.error('R.A.M.A.: a aba USUARIOS está sem as colunas ' + quebradas.join(', ') +
+      '. Nenhuma senha vai conferir enquanto isso durar. Rode setupRama().');
+    return { ok: false, erro: 'instalacao_incompleta' };
+  }
+
   var bloqueio = conferirBloqueio(usuario);
   if (bloqueio.bloqueado) {
     return { ok: false, erro: 'bloqueado', minutos: bloqueio.minutos };
@@ -1898,13 +1920,34 @@ function conferirInstalacao() {
     }
   });
 
+  /* Cabeçalho incompleto é a falha mais traiçoeira que esta planilha
+     pode ter: tudo parece no lugar, e a coluna some da leitura. Numa
+     aba USUARIOS isso faz toda senha ser recusada. */
+  Object.keys(ABAS).forEach(function (chave) {
+    try {
+      var ilegiveis = colunasIlegiveis(ABAS[chave]);
+      if (ilegiveis.length) {
+        problemas.push('A aba ' + ABAS[chave].nome + ' não consegue ler estas colunas: ' +
+          ilegiveis.join(', ') + '. Elas voltam vazias. Rode setupRama() e confira o cabeçalho.');
+      }
+
+      var recuperadas = colunasRecuperadas(ABAS[chave]);
+      if (recuperadas.length) {
+        avisos.push('A aba ' + ABAS[chave].nome + ' está com o cabeçalho fora do esperado em: ' +
+          recuperadas.join(', ') + '. O dado continua sendo lido pela posição, mas rode ' +
+          'setupRama() para acertar o cabeçalho.');
+      }
+    } catch (erro) { /* aba ausente, já reportada acima */ }
+  });
+
   try {
     var usuarios = lerTudo(ABAS.USUARIOS);
     if (!usuarios.length) problemas.push('Nenhum usuário cadastrado — rode criarUsuario().');
 
     usuarios.forEach(function (u) {
       if (String(u.hashSenha || '').length !== 64) {
-        problemas.push('Usuário "' + u.usuario + '" com hash de tamanho inesperado.');
+        problemas.push('Usuário "' + u.usuario + '" com hash de tamanho inesperado. ' +
+          'Se a planilha não foi editada à mão, rode trocarSenha() para essa conta.');
       }
     });
   } catch (erro) {
@@ -1922,6 +1965,77 @@ function conferirInstalacao() {
 
   if (avisos.length) texto += '\n\nAVISOS:\n' + avisos.map(function (a) { return '· ' + a; }).join('\n');
 
+  console.log(texto);
+  return texto;
+}
+
+/* ---------------------------------------------------------------------
+   diagnosticarLogin(usuario)
+   Por que uma senha certa está sendo recusada.
+
+   Rode no editor do Apps Script com o nome da conta. Ele NÃO imprime o
+   hash, o salt nem o pepper: só diz se cada peça está no lugar e com a
+   cara certa. É o que se pode publicar num chat de suporte sem entregar
+   nada.
+   --------------------------------------------------------------------- */
+function diagnosticarLogin(usuario) {
+  reiniciarExecucao();
+
+  var login = String(usuario || '').trim().toLowerCase();
+  var linhas = [];
+
+  function diz(rotulo, valor) { linhas.push(rotulo + ': ' + valor); }
+
+  if (typeof ABAS === 'undefined') {
+    return 'Dados.gs não está no projeto. Nenhuma leitura funciona.';
+  }
+
+  diz('RAMA_PEPPER definido', propriedade('RAMA_PEPPER', '') ? 'sim' : 'NÃO — rode gerarPepper()');
+  diz('RAMA_ITERACOES', propriedade('RAMA_ITERACOES', '10000 (padrão)'));
+
+  var ilegiveis = colunasIlegiveis(ABAS.USUARIOS);
+  var recuperadas = colunasRecuperadas(ABAS.USUARIOS);
+  diz('colunas ilegíveis em USUARIOS', ilegiveis.length ? ilegiveis.join(', ') : 'nenhuma');
+  diz('colunas lidas pela posição', recuperadas.length ? recuperadas.join(', ') : 'nenhuma');
+
+  if (!login) {
+    linhas.push('');
+    linhas.push('Passe o nome da conta para conferir a linha dela: diagnosticarLogin("luky")');
+    var texto0 = linhas.join('\n');
+    console.log(texto0);
+    return texto0;
+  }
+
+  var registro = acharPor(ABAS.USUARIOS, 'usuario', login);
+
+  if (!registro) {
+    diz('conta "' + login + '"', 'NÃO encontrada na aba USUARIOS');
+    var nomes = lerTudo(ABAS.USUARIOS).map(function (u) { return String(u.usuario); });
+    diz('contas que existem', nomes.length ? nomes.join(', ') : 'nenhuma');
+    var texto1 = linhas.join('\n');
+    console.log(texto1);
+    return texto1;
+  }
+
+  diz('conta "' + login + '"', 'encontrada na linha ' + registro._linha);
+  diz('ativo', String(registro.ativo) === 'true' ? 'sim' : 'NÃO — a conta está desativada');
+  diz('tamanho do hash', String(registro.hashSenha || '').length + ' (o esperado é 64)');
+  diz('tamanho do salt', String(registro.salt || '').length + ' (o esperado é 32)');
+  diz('iterações da linha', String(registro.iteracoes || '(vazio, usa a propriedade)'));
+
+  /* A prova final: derivar com a senha guardada não dá para fazer, mas
+     dá para conferir que a derivação RODA e devolve um hash do tamanho
+     certo. Se isto falhar, o problema é o pepper ou o salt, não a
+     senha que alguém digitou. */
+  try {
+    var teste = derivarSenha('conferindo-a-derivacao', registro.salt,
+      Number(registro.iteracoes) || Number(propriedade('RAMA_ITERACOES', '10000')));
+    diz('a derivação roda', teste.length === 64 ? 'sim' : 'devolveu ' + teste.length + ' caracteres');
+  } catch (erro) {
+    diz('a derivação roda', 'NÃO — ' + erro.message);
+  }
+
+  var texto = linhas.join('\n');
   console.log(texto);
   return texto;
 }

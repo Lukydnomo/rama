@@ -207,7 +207,14 @@ função (autorize o acesso quando o Google pedir):
    senha pelos seus, salve e rode.
    **Depois apague a senha do editor.**
 
-4. **`conferirInstalacao()`** — diz o que ainda falta, se faltar algo.
+4. **`conferirInstalacao()`** — diz o que ainda falta, se faltar algo. Também
+   confere, aba por aba, se o cabeçalho ainda tem todas as colunas que o
+   código procura.
+
+5. **`diagnosticarLogin("usuario")`** — só quando um login certo for recusado.
+   Diz se o pepper existe, se a conta foi encontrada e está ativa, se o
+   cabeçalho de `USUARIOS` está são e se a derivação da senha roda. Não
+   imprime hash, sal nem pepper, e não conta qual foi a senha testada.
 
 ### 4. Publicar o app da Web
 

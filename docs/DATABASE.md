@@ -245,6 +245,31 @@ v2 reescreve todas as colunas pelo cabeçalho, e ela passa a ser uma linha
 normal — o conserto é progressivo e nunca precisa de uma passagem que
 reorganize a planilha inteira.
 
+### Quando o nome não está lá
+
+Ler pelo nome resolve a aba desalinhada e cria um problema novo: se o
+cabeçalho não tiver o nome exato, a coluna passaria a ser lida como **vazia**.
+Numa aba `USUARIOS` sem `hashSenha` no cabeçalho, toda senha do mundo estaria
+errada, e a tela diria "usuário ou senha incorretos" para sempre, sem nenhuma
+pista de que o problema é a planilha. Foi um defeito real da v2.1.0, corrigido
+na v2.3.1.
+
+A regra completa, desde a v2.3.1:
+
+| situação | o que acontece |
+|---|---|
+| o nome está no cabeçalho | manda o nome, em qualquer posição |
+| o nome sumiu, e a posição declarada está livre | lê pela posição declarada |
+| o nome sumiu, e a posição declarada é de outra coluna declarada | a coluna fica ilegível |
+
+A rede nunca lê a coluna do vizinho: ler o valor errado é pior do que ler
+vazio. `conferirInstalacao()` lista as duas últimas situações aba por aba — as
+recuperadas como aviso, as ilegíveis como problema.
+
+Uma coluna ilegível em `USUARIOS` faz o `login` recusar com
+`instalacao_incompleta` em vez de `credenciais`. O aviso sai antes de procurar
+a conta, então ele não revela se aquele usuário existe.
+
 ### Se você mexer nas colunas à mão
 
 Rode `setupRama()` depois. Ele avança a época, que joga fora os cabeçalhos

@@ -74,7 +74,7 @@ página de erro quando estoura), o `rede.js` reconhece pelo que é e converte em
 | `conflito`         | a revisão mudou; vem com `rev` e `dados`             |
 | `ocupado`          | a trava não foi obtida em 25 s                       |
 | `sem_permissao`    | você alcança a campanha, mas não esta ação nela      |
-| `instalacao_incompleta` | falta um dos três `.gs` no projeto do Apps Script |
+| `instalacao_incompleta` | falta um dos três `.gs`, ou o cabeçalho de uma aba ficou ilegível |
 
 > **`nao_encontrado` também cobre "existe, mas é de outra conta".** Distinguir os
 > dois confirmaria que aquele id existe — o mesmo motivo pelo qual login errado
@@ -128,7 +128,13 @@ publicação.
 → { ok: true, token: "...", agente: { id, usuario, nome, avatar } }
 → { ok: false, erro: "credenciais", restam: 6 }
 → { ok: false, erro: "bloqueado", minutos: 15 }
+→ { ok: false, erro: "instalacao_incompleta" }
 ```
+O `instalacao_incompleta` aqui quer dizer que a aba `USUARIOS` perdeu uma
+coluna essencial do cabeçalho e ela volta vazia — nenhuma senha conferiria.
+Ele sai **antes** de procurar a conta, para não revelar se o usuário existe.
+Rode `conferirInstalacao()` no editor do Apps Script para ver qual aba é.
+
 A senha viaja uma vez e não volta nunca. O que fica no navegador é o token.
 
 #### `sessao`

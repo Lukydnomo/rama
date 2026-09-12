@@ -410,7 +410,53 @@ function cabecalho(definicao) {
     if (nome && !mapa[nome]) mapa[nome] = i + 1;
   }
 
-  var posicoes = definicao.colunas.map(function (c) { return mapa[c] || 0; });
+  /* Quais posições o cabeçalho já reivindica para alguma coluna
+     DECLARADA. Só elas contam: uma coluna que a mesa acrescentou por
+     conta própria não impede nada. */
+  var reivindicadas = {};
+  definicao.colunas.forEach(function (c) { if (mapa[c]) reivindicadas[mapa[c]] = c; });
+
+  /* ---------------------------------------------------------------
+     A REDE DE SEGURANÇA DO CABEÇALHO
+     ---------------------------------------------------------------
+     Até a v2.1 este arquivo lia as colunas por POSIÇÃO e ignorava o
+     cabeçalho. Ler pelo NOME conserta a aba cujas colunas estão fora
+     da ordem declarada — mas troca um problema por outro: se o
+     cabeçalho não tiver o nome exato, a coluna passa a ser lida como
+     VAZIA.
+
+     Isso é catastrófico em silêncio. Numa aba USUARIOS cujo cabeçalho
+     perdeu "hashSenha", toda senha do mundo passa a estar errada, e a
+     tela diz "usuário ou senha incorretos" sem nenhuma pista de que o
+     problema é a planilha.
+
+     Então: nome primeiro, posição declarada como rede. A rede só é
+     usada quando a posição não pertence a NENHUMA outra coluna
+     declarada — porque ler a coluna do vizinho seria pior do que ler
+     vazio.
+
+     As duas listas são diferentes de propósito:
+
+       recuperadas  o nome sumiu do cabeçalho, mas a posição declarada
+                    estava livre e a coluna continua legível. É um
+                    AVISO: vale consertar, não impede nada.
+
+       ilegiveis    o nome sumiu e a posição declarada pertence a outra
+                    coluna. Aí a coluna volta vazia de verdade, e quem
+                    depende dela precisa parar em vez de tratar o vazio
+                    como resposta. */
+  var recuperadas = [];
+  var ilegiveis = [];
+
+  var posicoes = definicao.colunas.map(function (c, i) {
+    if (mapa[c]) return mapa[c];
+
+    var declarada = i + 1;
+    if (reivindicadas[declarada]) { ilegiveis.push(c); return 0; }
+
+    recuperadas.push(c);
+    return declarada;
+  });
 
   var maior = 0;
   posicoes.forEach(function (p) { if (p > maior) maior = p; });
@@ -421,6 +467,10 @@ function cabecalho(definicao) {
     /* 1, 2, 3… — a ordem em que o código declara as colunas. É a
        gramática das linhas gravadas pela v2 numa aba desalinhada. */
     declaradas: definicao.colunas.map(function (c, i) { return i + 1; }),
+    /* Os nomes que o cabeçalho não tinha mas a posição salvou. */
+    recuperadas: recuperadas,
+    /* Os nomes que nem a posição salvou: estes voltam vazios. */
+    ilegiveis: ilegiveis,
     largura: Math.max(maior, 1),
     /* Verdadeiro quando a ordem física bate com a declarada. É o caso
        de toda planilha criada por esta versão, e o caminho em que a
@@ -431,6 +481,29 @@ function cabecalho(definicao) {
   e.cabecalhos[definicao.nome] = guardado;
   guardarCabecalhos();
   return guardado;
+}
+
+/* As colunas que voltam VAZIAS porque nem o nome nem a posição
+   resolveram. Vazio quer dizer que a aba está legível.
+
+   Não confundir com `recuperadas`: essas o cabeçalho perdeu, mas a
+   posição declarada salvou, e o dado continua chegando inteiro. */
+function colunasIlegiveis(definicao) {
+  try {
+    return cabecalho(definicao).ilegiveis || [];
+  } catch (erro) {
+    return definicao.colunas.slice();
+  }
+}
+
+/* As colunas que o cabeçalho perdeu e a posição declarada salvou.
+   Vale consertar com setupRama(), mas nada está quebrado. */
+function colunasRecuperadas(definicao) {
+  try {
+    return cabecalho(definicao).recuperadas || [];
+  } catch (erro) {
+    return [];
+  }
 }
 
 /* Quantas colunas do começo da declaração são baratas. */
