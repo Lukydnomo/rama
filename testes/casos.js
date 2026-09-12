@@ -1871,6 +1871,12 @@
       t.ok("“-2” também", IO.validarAjusteTemporario("-2").valor === -2);
       t.ok("“abc” não é", !IO.validarAjusteTemporario("abc").ok);
       t.ok("meio espaço é aceito", IO.validarEspacos("0,5").valor === 0.5);
+      t.ok("espaço fora de quartos (0,1) é aceito", IO.validarEspacos("0,1").ok && IO.validarEspacos("0,1").valor === 0.1);
+      t.igual("  e guardado com duas casas", IO.validarEspacos("0,125").valor, 0.13);
+      t.igual("  e sobrevive à normalização", IO.normalizarDados({ espacos: 0.1 }, "item").espacos, 0.1);
+      t.ok("espaço negativo continua recusado", !IO.validarEspacos("-1").ok);
+      t.igual("três unidades de 0,1 ocupam 0,3, sem resto de ponto flutuante",
+        RR.ocupacaoDoInventario(RR.fichaVazia(), invDe([{ id: "p", tipo: "item", nome: "Pena", ordem: { espacos: 0.1, quantidade: 3 } }])).total, 0.3);
       t.ok("quantidade 0 é recusada", !IO.validarQuantidade("0").ok);
 
       /* Inventário Otimizado: "se você tem Força 1 e Intelecto 3, seu

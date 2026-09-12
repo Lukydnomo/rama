@@ -14,13 +14,13 @@
    TRÊS COISAS DIFERENTES, QUE NÃO SE MISTURAM
    ---------------------------------------------------------------------
 
-     versão do aplicativo   está aqui. É o que a pessoa vê: v2.5.2.
+     versão do aplicativo   está aqui. É o que a pessoa vê: v2.5.3.
      schemaVersion          está em js/ficha.js. É o formato da FICHA,
                             e só sobe quando a ficha muda de forma.
      versaoFormato          está em js/config.js. É o formato dos
                             arquivos de importação/exportação.
 
-   Elas sobem em ritmos próprios. A v2.5.2 leva schemaVersion 5 e
+   Elas sobem em ritmos próprios. A v2.5.3 leva schemaVersion 5 e
    versaoFormato 1 — e isso é normal: a ficha ganhou as escolhas de
    progressão de Ordem, mas o formato dos arquivos de importação continua
    o mesmo,
@@ -57,6 +57,16 @@
   ];
 
   var CHANGELOG = [
+    {
+      versao: "2.5.3",
+      codinome: "FRAÇÃO",
+      data: "12/09/2026",
+      mudancas: {
+        "Alterado": [
+          "Na ficha de Ordem Paranormal, os espaços por unidade de um item aceitam qualquer número a partir de 0 (0,1, 0,3, 2,75…), guardado com duas casas decimais. Antes só frações de quarto eram aceitas.",
+        ],
+      },
+    },
     {
       versao: "2.5.2",
       codinome: "ETIQUETA",

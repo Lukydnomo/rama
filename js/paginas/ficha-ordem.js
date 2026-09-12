@@ -1439,9 +1439,9 @@
       var d = I.dadosDoItem(atual);
 
       var espacos = UI.campo({
-        rotulo: "Espaços por unidade", valor: d.espacos === null ? "" : String(d.espacos).replace(".", ","), limite: 5,
+        rotulo: "Espaços por unidade", valor: d.espacos === null ? "" : String(d.espacos).replace(".", ","), limite: 8,
         dica: String(I.espacosPadrao(atual.tipo)),
-        ajuda: "Vazio usa o padrão do livro: 1 espaço. Duas mãos e proteção leve: 2. Proteção pesada: 5. Aceita 0,5.",
+        ajuda: "Vazio usa o padrão do livro: 1 espaço. Duas mãos e proteção leve: 2. Proteção pesada: 5. Aceita qualquer número, como 0,5 ou 0,1.",
       });
       var quantidade = UI.campo({
         rotulo: "Quantidade", valor: String(d.quantidade), limite: 3,

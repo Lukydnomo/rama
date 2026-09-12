@@ -568,7 +568,8 @@ de ficha universal nunca o ganha, e o `peso` do item nunca é convertido.
 }
 ```
 
-Espaços andam em quartos (0,25, 0,5…). Quantidade e categoria são coisas
+Espaços aceitam qualquer número a partir de 0 (0,1, 0,5, 2,75…), guardado com
+duas casas decimais. Quantidade e categoria são coisas
 diferentes: a quantidade diz quantas unidades existem; a categoria é o que conta
 contra o limite da patente — e cada unidade conta como um item.
 

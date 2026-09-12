@@ -584,7 +584,9 @@
         }
       });
 
-      soma = Math.max(0, soma);
+      /* Duas casas: 0,1 × 3 é 0,3, e não 0,30000000000000004 — que
+         passaria do limite por um fio. */
+      soma = Math.max(0, Math.round(soma * 100) / 100);
       total += soma;
 
       return {

@@ -89,13 +89,19 @@
     return n;
   }
 
-  /* Espaços andam em quartos: o Sobrevivendo ao Horror tem itens de meio
-     espaço, e Inventário Organizado os reduz a um quarto (SAH p.34). */
+  /* Espaços aceitam qualquer número, guardado com duas casas decimais —
+     a mesma precisão com que a carga é somada e mostrada. Até a v2.5.2
+     eles andavam em quartos (0,25, 0,5…), por causa dos itens de meio
+     espaço do SAH; a mesa pode precisar de outros valores. */
+  function arredondarEspacos(n) {
+    return Math.round(n * 100) / 100;
+  }
+
   function espacosValidos(valor) {
     if (valor === null || valor === undefined || valor === "") return null;
     var n = Number(String(valor).replace(",", "."));
     if (!Number.isFinite(n) || n < 0 || n > LIMITES.espacos) return null;
-    return Math.round(n * 4) / 4;
+    return arredondarEspacos(n);
   }
 
   function normalizarDados(bruto, tipo) {
@@ -157,8 +163,7 @@
     if (!Number.isFinite(n)) return { ok: false, mensagem: "Use um número: 1, 2 ou 0,5." };
     if (n < 0) return { ok: false, mensagem: "Espaço não pode ser negativo." };
     if (n > LIMITES.espacos) return { ok: false, mensagem: "No máximo " + LIMITES.espacos + " espaços por unidade." };
-    if (Math.round(n * 4) !== n * 4) return { ok: false, mensagem: "Use frações de quarto: 0,25, 0,5, 0,75…" };
-    return { ok: true, valor: n };
+    return { ok: true, valor: arredondarEspacos(n) };
   }
 
   function validarQuantidade(texto) {
