@@ -100,7 +100,7 @@ E abra `http://localhost:8099/rama/`.
 
 São três conjuntos.
 
-**Modelo e motor de dados** — 771 verificações. No navegador, abra `testes/`;
+**Modelo e motor de dados** — 777 verificações. No navegador, abra `testes/`;
 no terminal:
 
 ```bash

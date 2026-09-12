@@ -2,7 +2,8 @@
    R.A.M.A. — ficha de Ordem Paranormal
    =====================================================================
    As seções que só a ficha de Ordem tem: Geral, Perícias, Progressão e
-   Regras — e o complemento de Ordem do inventário.
+   Regras — e os complementos de Ordem do inventário (carga e
+   capacidade) e das habilidades (poderes e habilidades das regras).
 
    Habilidades, Rituais, Inventário e Anotações são as MESMAS da ficha
    universal. Um ritual é um ritual; duplicar a seção só para trocar o
@@ -138,17 +139,17 @@
       ]);
     },
 
-    /* A aba Geral: quem o personagem é nas regras, o que ele adquiriu,
-       a carga e os ajustes da mesa. */
+    /* A aba Geral: quem o personagem é nas regras, as proficiências e
+       resistências, e os ajustes da mesa. Os poderes ficam na aba
+       Habilidades e a carga na aba Inventário, junto do que eles
+       descrevem. */
     aba: function (ctx) {
       var o = ordemDe(ctx);
       var c = calculo(ctx);
 
       return el("div.pilha--larga", { class: "pilha" }, [
         painelIdentidade(ctx, o, c),
-        painelPoderes(ctx, o, c),
         painelResistencias(ctx, o, c),
-        painelCarga(ctx, o, c),
         UI.painel("Ajustes da mesa", botaoAjuste(ctx, o, true)),
       ]);
     },
@@ -236,13 +237,15 @@
      -----------------------------------------------------------------
      Tudo o que o personagem já recebeu: as automáticas da classe, os
      poderes da trilha, os escolhidos. Cada um diz de onde veio, se está
-     completo e o que o sistema faz com ele.
+     completo e o que o sistema faz com ele. A lista não tem painel
+     próprio: entra na aba Habilidades, na mesma lista das habilidades
+     criadas à mão.
      ================================================================= */
 
-  function painelPoderes(ctx, o, c) {
+  function poderesDasRegras(ctx, o, c) {
     var est = c.estado;
     if (!est || !C.classe(o.classe)) {
-      return UI.painel("Poderes e habilidades", el("p.t-mini", { texto: "Escolha uma classe para ver as habilidades." }));
+      return { itens: [], aviso: "Escolha uma classe na aba Geral para ver as habilidades das regras." };
     }
 
     var itens = [];
@@ -282,12 +285,12 @@
       }));
     });
 
-    return UI.painel("Poderes e habilidades", el("div.pilha", {}, [
-      el("p.t-mini", {
-        texto: "“Entra na conta”: o efeito já está nos números da ficha. “Parte na conta”: uma parte está, o resto é aplicado na cena. “Anotação”: o efeito depende da cena ou de gasto de PE.",
-      }),
-      itens.length ? el("div.ordem-poderes", {}, itens) : el("p.t-mini", { texto: "Nada adquirido ainda." }),
-    ]));
+    return {
+      itens: itens,
+      aviso: itens.length
+        ? "“Entra na conta”: o efeito já está nos números da ficha. “Parte na conta”: uma parte está, o resto é aplicado na cena. “Anotação”: o efeito depende da cena ou de gasto de PE. As que vêm das regras mudam pela aba Progressão."
+        : "",
+    };
   }
 
   function rotuloDaVia(a) {
@@ -575,7 +578,7 @@
       uso.semCategoria.length
         ? el("p.t-mini.t-aviso", { texto: "Sem categoria informada (não contam em nenhum limite): " + uso.semCategoria.map(function (i) { return i.nome; }).join(", ") + "." })
         : null,
-      el("p.t-mini", { texto: "Espaços, quantidade e categoria de cada item são editados no inventário." }),
+      el("p.t-mini", { texto: "Espaços, quantidade e categoria de cada item são editados no próprio item, na lista abaixo." }),
     ]));
   }
 
@@ -1379,27 +1382,11 @@
      ================================================================= */
 
   var SecaoInventarioOrdem = {
-    /* O resumo de carga no lugar do peso. */
+    /* No lugar do peso, o painel inteiro de carga e capacidade: a conta,
+       o ajuste temporário e os itens por categoria, logo acima dos itens
+       que eles contam. */
     cabecalho: function (ctx) {
-      var o = ordemDe(ctx);
-      var carga = R.capacidade(o, ctx.ficha.inventario);
-      var uso = R.usoPorCategoria(o, ctx.ficha.inventario);
-      var excedidas = [0, 1, 2, 3, 4].map(function (n) { return uso.categorias[n]; }).filter(function (c) { return c.excedido; });
-
-      return el("div.inventario__peso", { class: carga.sobrecarregado ? "inventario__peso--excedido" : "" }, [
-        el("span.t-rotulo", { texto: "Carga" }),
-        el("span.inventario__peso-valor", { texto: I.rotuloEspacos(carga.ocupado) }),
-        el("span.t-fraco", { texto: "/" }),
-        el("span.inventario__peso-valor", { texto: String(carga.final) }),
-        el("span.t-mini", { texto: "espaços" + (carga.temporario ? " (" + carga.calculada + " " + U.comSinal(carga.temporario) + ")" : "") }),
-        carga.acimaDoMaximo
-          ? el("span.r-etiqueta.r-etiqueta--aviso", { texto: "Acima do máximo" })
-          : (carga.sobrecarregado ? el("span.r-etiqueta.r-etiqueta--aviso", { texto: "Sobrecarga" }) : null),
-        excedidas.length
-          ? el("span.r-etiqueta.r-etiqueta--aviso", { texto: "Categoria acima do limite: " + excedidas.map(function (c) { return c.rotulo; }).join(", ") })
-          : null,
-        el("span.t-mini", { texto: "Composição e limites na aba Geral." }),
-      ]);
+      return painelCarga(ctx, ordemDe(ctx), calculo(ctx));
     },
 
     /* Mochila é peso; Ordem não usa peso. Uma mochila de verdade em
@@ -1499,6 +1486,21 @@
   };
 
   /* =================================================================
+     HABILIDADES — o complemento de Ordem
+     -----------------------------------------------------------------
+     A aba Habilidades é a universal, com a árvore de habilidades que a
+     mesa cria à mão. Numa ficha de Ordem a MESMA lista abre com o que as
+     regras entregaram: habilidades automáticas, poderes da trilha e
+     poderes escolhidos na Progressão. Um painel só, sem separar.
+     ================================================================= */
+
+  var SecaoHabilidadesOrdem = {
+    aba: function (ctx) {
+      return global.RAMASecaoHabilidades.aba(ctx, poderesDasRegras(ctx, ordemDe(ctx), calculo(ctx)));
+    },
+  };
+
+  /* =================================================================
      AUXILIARES
      ================================================================= */
 
@@ -1526,4 +1528,5 @@
   global.RAMASecaoOrdemProgressao = SecaoProgressao;
   global.RAMASecaoOrdemRegras = SecaoRegras;
   global.RAMASecaoOrdemInventario = SecaoInventarioOrdem;
+  global.RAMASecaoOrdemHabilidades = SecaoHabilidadesOrdem;
 })(window);

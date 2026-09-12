@@ -14,13 +14,13 @@
    TRÊS COISAS DIFERENTES, QUE NÃO SE MISTURAM
    ---------------------------------------------------------------------
 
-     versão do aplicativo   está aqui. É o que a pessoa vê: v2.4.1.
+     versão do aplicativo   está aqui. É o que a pessoa vê: v2.4.2.
      schemaVersion          está em js/ficha.js. É o formato da FICHA,
                             e só sobe quando a ficha muda de forma.
      versaoFormato          está em js/config.js. É o formato dos
                             arquivos de importação/exportação.
 
-   Elas sobem em ritmos próprios. A v2.4.1 leva schemaVersion 5 e
+   Elas sobem em ritmos próprios. A v2.4.2 leva schemaVersion 5 e
    versaoFormato 1 — e isso é normal: a ficha ganhou as escolhas de
    progressão de Ordem, mas o formato dos arquivos de importação continua
    o mesmo,
@@ -57,6 +57,17 @@
   ];
 
   var CHANGELOG = [
+    {
+      versao: "2.4.2",
+      codinome: "GAVETA",
+      data: "12/09/2026",
+      mudancas: {
+        "Alterado": [
+          "Na ficha de Ordem Paranormal, o painel “Carga e capacidade” saiu da aba Geral e virou o topo da aba Inventário, com a conta, o ajuste temporário e os itens por categoria logo acima dos itens.",
+          "O painel “Poderes e habilidades” saiu da aba Geral: as habilidades automáticas, os poderes da trilha e os escolhidos agora ficam na aba Habilidades, na mesma lista das habilidades criadas à mão.",
+        ],
+      },
+    },
     {
       versao: "2.4.1",
       codinome: "PREFÁCIO",

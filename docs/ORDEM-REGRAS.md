@@ -281,7 +281,8 @@ para o campo de peso da ficha universal, e nenhum dos dois é convertido no outr
 
 ### Ajuste temporário de capacidade
 
-Um número com sinal, no modo edição, na aba Geral:
+Um número com sinal, no modo edição, no painel "Carga e capacidade" da aba
+Inventário:
 
 ```
 capacidade calculada + ajuste temporário = capacidade final
@@ -295,7 +296,7 @@ capacidade calculada + ajuste temporário = capacidade final
 - se levaria a capacidade abaixo de zero, a final fica em 0 e a tela diz isso por
   extenso.
 
-A mesma conta alimenta o bloco superior, a aba Geral, o inventário e as
+A mesma conta alimenta o bloco superior, o painel de carga do inventário e as
 penalidades de sobrecarga.
 
 ---

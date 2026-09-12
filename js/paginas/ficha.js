@@ -35,7 +35,9 @@
      por versões que calculam pelas regras, e acrescenta Progressão e
      Regras opcionais. Habilidades, Rituais, Inventário e Anotações são
      as MESMAS nos dois: um ritual é um ritual, e duplicar a seção só
-     para mudar o cabeçalho seria manter dois códigos iguais. */
+     para mudar o cabeçalho seria manter dois códigos iguais. Na de
+     Ordem, Habilidades recebe na mesma lista o que as regras entregam,
+     e Inventário abre com carga e capacidade. */
   var ABAS_UNIVERSAL = [
     { chave: "geral",        rotulo: "Geral",       secao: "RAMASecaoGeral" },
     { chave: "pericias",     rotulo: "Perícias",    secao: "RAMASecaoPericias" },
@@ -50,7 +52,7 @@
     { chave: "geral",        rotulo: "Geral",       secao: "RAMASecaoOrdemGeral" },
     { chave: "pericias",     rotulo: "Perícias",    secao: "RAMASecaoOrdemPericias" },
     { chave: "progressao",   rotulo: "Progressão",  secao: "RAMASecaoOrdemProgressao" },
-    { chave: "habilidades",  rotulo: "Habilidades", secao: "RAMASecaoHabilidades" },
+    { chave: "habilidades",  rotulo: "Habilidades", secao: "RAMASecaoOrdemHabilidades" },
     { chave: "rituais",      secao: "RAMASecaoRituais",
       rotulo: function () { return global.RAMASecaoRituais.rotulo(ctx); } },
     { chave: "inventario",   rotulo: "Inventário",  secao: "RAMASecaoInventario" },

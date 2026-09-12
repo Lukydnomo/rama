@@ -21,12 +21,17 @@
   var H = global.RAMAHabilidades;
   var el = U.el;
 
-  function aba(ctx) {
+  /* `dasRegras` só vem da ficha de Ordem: { itens, aviso } com o que as
+     regras entregaram. Esses itens entram na MESMA lista, antes da
+     árvore, e não têm menu — mudam pela Progressão, não por aqui. */
+  function aba(ctx, dasRegras) {
     var arvore = ctx.ficha.habilidades;
     var total = H.contar(arvore);
+    var regras = (dasRegras && dasRegras.itens) || [];
+    var quantas = total.habilidades + regras.length;
 
     return el("div.pilha--larga", { class: "pilha" }, [
-      UI.painel("Habilidades", corpo(ctx, arvore), {
+      UI.painel("Habilidades", corpo(ctx, arvore, dasRegras), {
         acoes: ctx.emEdicao() ? [
           el("button.r-botao.r-botao--mini", {
             type: "button", texto: "+ Pasta", onclick: function () { novaPasta(ctx, null); },
@@ -40,16 +45,40 @@
         ] : null,
       }),
 
-      total.habilidades
+      quantas
         ? el("p.t-mini", {
-            texto: total.habilidades + " habilidade(s) em " + total.pastas + " pasta(s).",
+            texto: quantas + " habilidade(s)" + (total.pastas ? " · " + total.pastas + " pasta(s)" : "") + ".",
           })
         : null,
     ]);
   }
 
-  function corpo(ctx, arvore) {
+  function corpo(ctx, arvore, dasRegras) {
+    var regras = (dasRegras && dasRegras.itens) || [];
+    var aviso = dasRegras && dasRegras.aviso ? el("p.t-mini", { texto: dasRegras.aviso }) : null;
+
+    if (dasRegras && (regras.length || arvore.filhos.length)) {
+      return el("div.pilha", {}, [
+        aviso,
+        el("div.arvore-hab", {}, regras.concat(ramos(ctx, arvore.filhos, 0))),
+      ]);
+    }
+
     if (!arvore.filhos.length) {
+      if (aviso) {
+        return el("div.pilha", {}, [
+          aviso,
+          UI.vazio({
+            titulo: "Nenhuma habilidade",
+            texto: ctx.emEdicao()
+              ? "Crie uma habilidade, ou traga uma da sua biblioteca."
+              : "Entre no modo edição para acrescentar habilidades.",
+            acao: ctx.emEdicao()
+              ? { rotulo: "+ Habilidade", aoClicar: function () { editar(ctx, null, null); } }
+              : null,
+          }),
+        ]);
+      }
       return UI.vazio({
         titulo: "Nenhuma habilidade",
         texto: ctx.emEdicao()
