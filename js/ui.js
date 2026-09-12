@@ -680,9 +680,17 @@
 
     var seta = el("span.recolhivel__seta", { "aria-hidden": "true" });
 
-    var resumo = el("summary.recolhivel__topo", {}, [
+    /* Com `subtitulo`, o título ganha uma segunda linha logo abaixo (os
+       dados de um item, por exemplo). Sem ele, título e `extra` dividem
+       uma linha só — e num cartão estreito o extra comia o título. */
+    var resumo = el("summary.recolhivel__topo", { class: o.subtitulo ? "recolhivel__topo--empilhado" : "" }, [
       seta,
-      el("span.recolhivel__titulo", { texto: o.titulo || "" }),
+      o.subtitulo
+        ? el("span.recolhivel__cabeca", {}, [
+            el("span.recolhivel__titulo", { texto: o.titulo || "" }),
+            el("span.recolhivel__subtitulo", {}, o.subtitulo),
+          ])
+        : el("span.recolhivel__titulo", { texto: o.titulo || "" }),
       o.extra ? el("span.recolhivel__extra", { texto: o.extra }) : null,
     ]);
 

@@ -1398,14 +1398,16 @@
        Ordem é um item com "aumenta a capacidade". */
     tiposPermitidos: ["item", "arma", "armadura"],
 
+    /* Pares [rótulo, valor] para a linha abaixo do nome do item. */
     resumoDoCartao: function (item) {
       var d = I.dadosDoItem(item);
       var e = I.espacosDoItem(item);
-      var partes = [];
-      partes.push(I.rotuloEspacos(e.unitario) + " esp." + (e.padrao ? " (padrão)" : ""));
-      if (d.quantidade > 1) partes.push("×" + d.quantidade);
-      partes.push("cat. " + I.rotuloCategoria(d.categoria));
-      return partes.join(" · ");
+      var pares = [
+        ["Categoria", d.categoria === null || d.categoria === undefined ? "—" : I.rotuloCategoria(d.categoria)],
+        ["Espaços", I.rotuloEspacos(e.unitario)],
+      ];
+      if (d.quantidade > 1) pares.push(["Quantidade", String(d.quantidade)]);
+      return pares;
     },
 
     detalhes: function (ctx, item) {

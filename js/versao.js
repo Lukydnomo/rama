@@ -14,13 +14,13 @@
    TRÊS COISAS DIFERENTES, QUE NÃO SE MISTURAM
    ---------------------------------------------------------------------
 
-     versão do aplicativo   está aqui. É o que a pessoa vê: v2.5.1.
+     versão do aplicativo   está aqui. É o que a pessoa vê: v2.5.2.
      schemaVersion          está em js/ficha.js. É o formato da FICHA,
                             e só sobe quando a ficha muda de forma.
      versaoFormato          está em js/config.js. É o formato dos
                             arquivos de importação/exportação.
 
-   Elas sobem em ritmos próprios. A v2.5.1 leva schemaVersion 5 e
+   Elas sobem em ritmos próprios. A v2.5.2 leva schemaVersion 5 e
    versaoFormato 1 — e isso é normal: a ficha ganhou as escolhas de
    progressão de Ordem, mas o formato dos arquivos de importação continua
    o mesmo,
@@ -57,6 +57,21 @@
   ];
 
   var CHANGELOG = [
+    {
+      versao: "2.5.2",
+      codinome: "ETIQUETA",
+      data: "12/09/2026",
+      mudancas: {
+        "Corrigido": [
+          "Num cartão de item estreito, a linha de tipo e categoria ocupava a largura inteira e o nome do item sumia.",
+        ],
+        "Visual": [
+          "Os itens do inventário mostram o nome em destaque e, logo abaixo, os dados em rótulo e valor: Categoria e Espaços na ficha de Ordem (e Quantidade, quando há mais de um), Peso na universal, Dano nas armas e Defesa nas proteções. Tipo e classificação ficam por último, mais discretos.",
+          "A descrição do item aberto usa a fonte do texto corrido, maior e mais clara.",
+          "Um item simples não estica mais até a altura da arma ao lado.",
+        ],
+      },
+    },
     {
       versao: "2.5.1",
       codinome: "REALINHO",

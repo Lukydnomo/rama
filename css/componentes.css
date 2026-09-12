@@ -762,7 +762,9 @@
    sem estilo na primeira vez.
    ===================================================================== */
 
-.itens { display: grid; gap: var(--e2); grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); }
+/* align-items: start — um item simples não estica até a altura da arma
+   ao lado, que carrega os botões de Ataque e Dano. */
+.itens { display: grid; gap: var(--e2); grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); align-items: start; }
 
 .item {
   display: flex;
@@ -790,10 +792,11 @@
 }
 
 .item__descricao {
-  color: var(--cor-texto-3);
-  font-family: var(--fonte-mini);
-  font-size: var(--texto-mini);
-  line-height: 1.5;
+  color: var(--cor-texto-2);
+  font-size: var(--texto-base);
+  line-height: var(--altura-linha);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
 }
 
 .item__acoes { display: flex; gap: var(--e2); }
@@ -889,6 +892,40 @@
 }
 
 .recolhivel__acoes { flex: 0 0 auto; display: flex; gap: var(--e1); }
+
+/* Título com segunda linha: o nome quebra em vez de sumir, e a linha de
+   baixo carrega os dados que se consultam sem abrir o cartão. */
+.recolhivel__topo--empilhado { align-items: flex-start; padding-top: var(--e3); padding-bottom: var(--e3); }
+.recolhivel__topo--empilhado .recolhivel__seta { margin-top: 2px; }
+.recolhivel__cabeca {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--e1);
+}
+.recolhivel__cabeca .recolhivel__titulo {
+  flex: none;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  font-size: calc(var(--texto-base) * 1.15);
+  line-height: 1.3;
+}
+.recolhivel__subtitulo { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+
+/* ---------- dados de item no cartão fechado ---------- */
+
+.item-dados { display: flex; flex-wrap: wrap; gap: 2px var(--e4); }
+.item-dados__par { display: inline-flex; gap: var(--e1); white-space: nowrap; }
+.item-dados__rotulo { color: var(--cor-paranormal); }
+.item-dados__valor { color: var(--cor-texto); font-weight: 700; }
+.item-dados__tipo {
+  font-family: var(--fonte-mini);
+  font-size: var(--texto-mini);
+  letter-spacing: var(--espaco-letra-titulo);
+  text-transform: uppercase;
+  color: var(--cor-texto-3);
+}
 
 .recolhivel__corpo {
   padding: 0 var(--e3) var(--e3);

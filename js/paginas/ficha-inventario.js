@@ -173,8 +173,8 @@
 
     var perfil = perfilDe(ctx);
     var caixa = UI.recolhivel({
-      titulo: item.nome,
-      extra: [F.rotuloDoTipo(item.tipo), item.categoria, perfil ? perfil.resumoDoCartao(item) : ""].filter(Boolean).join(" · "),
+      titulo: item.nome || "Sem nome",
+      subtitulo: resumoDoCartao(ctx, item, perfil),
       classe: item.tipo === "arma" ? "recolhivel--arma" : "",
       conteudo: [
         detalhes(ctx, item),
@@ -193,11 +193,40 @@
     return caixa;
   }
 
+  /* A linha abaixo do nome: o que se consulta sem abrir o item, como
+     rótulo e valor ("Categoria: 0  Espaços: 1"), e o tipo e a gaveta por
+     último, mais apagados. Na ficha de Ordem os pares vêm do perfil. */
+  function resumoDoCartao(ctx, item, perfil) {
+    var pares = perfil ? perfil.resumoDoCartao(item) : [];
+
+    if (!perfil) {
+      if (item.tipo === "mochila") pares.push(["Reduz", formatarPeso(item.reducaoPeso)]);
+      else pares.push(["Peso", formatarPeso(item.peso)]);
+    }
+    if (item.tipo === "arma" && item.dano) pares.push(["Dano", item.dano + (item.danoExtra ? " + " + item.danoExtra : "")]);
+    if (item.tipo === "armadura") pares.push(["Defesa", String(item.defesa || 0)]);
+
+    var tipo = item.tipo === "armadura" && perfil ? "Proteção" : F.rotuloDoTipo(item.tipo);
+
+    return [
+      el("span.item-dados", {}, pares.map(function (par) {
+        return el("span.item-dados__par", {}, [
+          el("span.item-dados__rotulo", { texto: par[0] + ":" }),
+          el("span.item-dados__valor", { texto: par[1] }),
+        ]);
+      })),
+      el("span.item-dados__tipo", { texto: [tipo, item.categoria].filter(Boolean).join(" · ") }),
+    ];
+  }
+
   function detalhes(ctx, item) {
     var linhas = [];
     var perfil = perfilDe(ctx);
 
-    linhas.push(["Categoria", item.categoria || "Sem categoria"]);
+    /* Na ficha de Ordem, "Categoria" é a de 0 a IV do livro; a gaveta
+       do inventário ganha outro nome para as duas não se confundirem. */
+    if (!perfil) linhas.push(["Categoria", item.categoria || "Sem categoria"]);
+    else if (item.categoria) linhas.push(["Classificação", item.categoria]);
 
     if (perfil) {
       linhas = linhas.concat(perfil.detalhes(ctx, item));
