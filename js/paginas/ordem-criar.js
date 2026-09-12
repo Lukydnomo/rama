@@ -24,8 +24,10 @@
 
    Escolher pela pessoa. Quando uma etapa tem pendência — um poder de
    classe a definir, um aumento de atributo a distribuir — ela aparece
-   listada como pendência, e a ficha nasce com ela em aberto. Preencher
-   sozinho seria decidir o personagem de alguém.
+   na revisão com o botão que abre a escolha certa. Dá para resolver ali
+   mesmo ou criar o personagem com a pendência em aberto e resolver
+   depois, na aba Progressão. Preencher sozinho seria decidir o
+   personagem de alguém.
 
    ---------------------------------------------------------------------
    COMEÇAR ADIANTADO
@@ -33,10 +35,10 @@
 
    Dá para criar um personagem já em NEX 50%. A tela reúne o que aquele
    NEX acumulou — trilha, aumentos de atributo, graus de treinamento,
-   poderes — numa lista só, sem obrigar ninguém a salvar uma ficha por
-   etapa anterior. O que a tela sabe resolver, ela resolve; o que
-   depende de catálogo que ainda não existe, ela registra como pendente
-   em vez de fingir que resolveu.
+   poderes, afinidade — numa lista só, sem obrigar ninguém a salvar uma
+   ficha por etapa anterior. As escolhas usam as mesmas janelas e o
+   mesmo motor de progressão da ficha: o que se decide aqui é o que a
+   ficha vai mostrar.
    ===================================================================== */
 
 (function (global) {
@@ -47,6 +49,8 @@
   var F = global.RAMAFicha;
   var C = global.RAMAOrdemCatalogo;
   var R = global.RAMAOrdemRegras;
+  var E = global.RAMAOrdemProgressao;
+  var ES = global.RAMAOrdemEscolhas;
   var el = U.el;
 
   function abrir(opcoes) {
@@ -69,6 +73,10 @@
       escolhasDeClasse: [],
       periciasEscolhidas: [],
       trilha: "",
+      /* As decisões de progressão feitas na revisão, no mesmo formato
+         que a ficha grava. */
+      escolhas: [],
+      afinidade: { elemento: "", nomeOutro: "", adiada: false },
     };
 
     var etapa = 0;
@@ -305,7 +313,42 @@
         el("p", { texto: "A origem diz o que você fazia antes da Ordem. Ela dá duas perícias treinadas e um poder." }),
         buscaOrigem,
         lista,
+        periciasAEscolherDaOrigem(),
         referencia("Ordem Paranormal RPG, p. 16-21"),
+      ]);
+    }
+
+    /* Amnésico: "Duas à escolha do mestre" (OPRPG p.16). A tela precisa
+       de um lugar para registrar a decisão da mesa. */
+    function periciasAEscolherDaOrigem() {
+      var org = C.origem(d.origem);
+      if (!org || !org.periciasAEscolher) return null;
+      var alvo = org.periciasAEscolher;
+
+      return el("div.pilha--curta", { class: "pilha" }, [
+        el("h4.t-secao", { texto: "Perícias da origem (" + d.periciasDaOrigem.length + " de " + alvo + ")" }),
+        el("p.t-mini", { texto: org.periciasObservacao || "Escolha as perícias." }),
+        el("div.criacao-pericias", {}, C.PERICIAS.map(function (p) {
+          var marcada = d.periciasDaOrigem.indexOf(p.chave) >= 0;
+          var cheia = !marcada && d.periciasDaOrigem.length >= alvo;
+          return el("button.criacao-pericia", {
+            type: "button",
+            "aria-pressed": String(marcada),
+            "aria-disabled": cheia ? "true" : null,
+            class: marcada ? "criacao-pericia--marcada" : (cheia ? "criacao-pericia--bloqueada" : ""),
+            title: cheia ? "Já há " + alvo + " escolhidas." : "",
+            onclick: function () {
+              if (cheia) { UI.avisoAtencao("Já há " + alvo + " perícias escolhidas. Desmarque uma antes."); return; }
+              var i = d.periciasDaOrigem.indexOf(p.chave);
+              if (i >= 0) d.periciasDaOrigem.splice(i, 1); else d.periciasDaOrigem.push(p.chave);
+              d.periciasEscolhidas = d.periciasEscolhidas.filter(function (x) { return x !== p.chave; });
+              pintar();
+            },
+          }, [
+            el("span.criacao-pericia__nome", { texto: p.nome }),
+            el("span.criacao-pericia__atrib", { texto: siglaDe(p.atributo) }),
+          ]);
+        })),
       ]);
     }
 
@@ -336,6 +379,10 @@
 
     function conferirOrigem() {
       if (!d.origem) return "Escolha uma origem.";
+      var org = C.origem(d.origem);
+      if (org && org.periciasAEscolher && d.periciasDaOrigem.length !== org.periciasAEscolher) {
+        return "Escolha as " + org.periciasAEscolher + " perícias da origem.";
+      }
       return null;
     }
 
@@ -524,37 +571,30 @@
        O que ficou, e — o ponto desta etapa — o que AINDA FALTA decidir.
        ================================================================= */
 
+    /* As pendências vêm do motor de progressão, calculadas sobre o
+       rascunho — as mesmas que a ficha vai mostrar. */
     function pendencias() {
-      var lista = [];
-      var progressao = C.progressaoDaClasse(d.classe);
-
-      progressao.forEach(function (degrau) {
-        if (degrau.nex > d.nex) return;
-
-        degrau.escolhas.forEach(function (tipo) {
-          if (tipo === "trilha" && d.trilha) return;
-          lista.push({
-            nex: degrau.nex,
-            tipo: tipo,
-            rotulo: rotuloDeEscolha(tipo),
-          });
-        });
-      });
-
-      return lista;
+      return E.estado(rascunhoParaRegras(), null).pendencias;
     }
 
-    function rotuloDeEscolha(tipo) {
-      var mapa = {
-        trilha: "Escolher a trilha",
-        poderTrilha: "Poder da trilha",
-        poderClasse: "Poder de classe",
-        atributo: "Aumento de atributo",
-        grauTreinamento: "Grau de treinamento",
-        versatilidade: "Versatilidade",
-        perito: "Perito: escolher duas perícias",
-      };
-      return mapa[tipo] || tipo;
+    /* Abre a escolha de uma pendência sobre o rascunho e traz o
+       resultado de volta para ele. */
+    function resolverNoRascunho(p) {
+      var ordem = rascunhoParaRegras();
+      ES.abrir({
+        ordem: ordem,
+        contexto: null,
+        vagaId: p.id,
+        aoRegistrar: function () { trazerDeVolta(ordem); pintar(); },
+        aoConfirmar: function () { trazerDeVolta(ordem); pintar(); },
+        aoAdiar: function () { trazerDeVolta(ordem); pintar(); },
+      });
+    }
+
+    function trazerDeVolta(ordem) {
+      d.escolhas = ordem.escolhas || [];
+      d.afinidade = ordem.afinidade || d.afinidade;
+      d.trilha = ordem.trilha || "";
     }
 
     function etapaRevisao() {
@@ -564,23 +604,11 @@
       var jaTem = periciasJaTreinadas();
 
       var todasPericias = Object.keys(jaTem).concat(d.periciasEscolhidas);
-
-      var trilhas = C.trilhasDaClasse(d.classe);
-      var escolhaTrilha = d.nex >= 10 && trilhas.length
-        ? el("div.pilha--curta", { class: "pilha" }, [
-            el("h4.t-secao", { texto: "Trilha" }),
-            el("p.t-mini", { texto: "A partir de NEX 10% você escolhe uma trilha da sua classe." }),
-            el("div.faixa", {}, trilhas.map(function (tr) {
-              return el("button.r-botao.r-botao--mini", {
-                type: "button",
-                class: d.trilha === tr.chave ? "r-botao--principal" : "r-botao--fantasma",
-                texto: tr.nome,
-                title: tr.resumo,
-                onclick: function () { d.trilha = d.trilha === tr.chave ? "" : tr.chave; pintar(); },
-              });
-            })),
-          ])
-        : null;
+      var trilha = C.trilha(d.trilha);
+      var feitas = (d.escolhas || []).map(function (r) {
+        var tipo = E.TIPOS[r.tipo];
+        return (tipo ? tipo.rotulo + ": " : "") + (r.nome || "");
+      });
 
       var pend = pendencias();
 
@@ -601,19 +629,20 @@
             texto: todasPericias.map(function (p) { return C.pericia(p).nome; }).sort().join(", ") || "—",
           }),
           el("dt", { texto: "Proficiências" }), el("dd", { texto: cl ? cl.proficiencias.join(", ") : "—" }),
+          el("dt", { texto: "Trilha" }), el("dd", { texto: trilha ? trilha.nome : (d.nex >= 10 ? "a escolher" : "a partir de NEX 10%") }),
+          feitas.length ? el("dt", { texto: "Já decidido" }) : null,
+          feitas.length ? el("dd", { texto: feitas.join(" · ") }) : null,
         ]),
-
-        escolhaTrilha,
 
         pend.length
           ? el("div.pilha--curta", { class: "pilha" }, [
               el("h4.t-secao.t-aviso", { texto: "Falta decidir (" + pend.length + ")" }),
               el("p.t-mini", {
-                texto: "O R.A.M.A. não escolhe isso por você. A ficha nasce com estas pendências " +
-                       "em aberto, e você resolve na aba Progressão quando quiser.",
+                texto: "O R.A.M.A. não escolhe isto por você. Resolva aqui, uma a uma, ou crie o personagem " +
+                       "agora: as pendências ficam na aba Progressão, com o mesmo botão.",
               }),
-              el("ul.pilha--curta", { class: "pilha" }, pend.map(function (p) {
-                return el("li.t-mini", { texto: "NEX " + p.nex + "% — " + p.rotulo });
+              el("div.pilha--curta", { class: "pilha" }, pend.map(function (p) {
+                return ES.cartaoDePendencia(p, resolverNoRascunho);
               })),
             ])
           : el("p.t-mini", { texto: "Nada pendente: a ficha nasce completa para este NEX." }),
@@ -631,6 +660,8 @@
       ordem.origem = d.origem;
       ordem.trilha = d.trilha;
       ordem.atributos = Object.assign({}, d.atributos);
+      ordem.escolhas = JSON.parse(JSON.stringify(d.escolhas || []));
+      ordem.afinidade = Object.assign({}, d.afinidade);
 
       var jaTem = periciasJaTreinadas();
       Object.keys(jaTem).forEach(function (p) { ordem.pericias[p] = "treinado"; });
@@ -640,20 +671,10 @@
     }
 
     async function gravar() {
+      /* As escolhas feitas na revisão vão junto. As que ficaram em
+         aberto NÃO são gravadas como nada: a ficha as calcula a partir
+         da classe e do NEX, e elas aparecem na Progressão esperando. */
       var ordem = rascunhoParaRegras();
-
-      /* As pendências entram na ficha como escolhas EM ABERTO, e não
-         como escolhas feitas. É a diferença entre "você ainda precisa
-         decidir isto" e "decidimos por você". */
-      pendencias().forEach(function (p) {
-        ordem.progressao.push({
-          id: U.uuid(),
-          nex: p.nex,
-          tipo: p.tipo,
-          valor: "",
-          rotulo: p.rotulo,
-        });
-      });
 
       var cl = C.classe(d.classe);
       var org = C.origem(d.origem);

@@ -1116,3 +1116,118 @@ body.pagina-ficha .app-corpo {
   background: var(--cor-traco-media);
 }
 .r-interruptor--ligado .r-interruptor__bola { background: var(--cor-paranormal); }
+
+/* ---------- progressão: pendências, escolhas feitas, poderes ---------- */
+
+.ordem-pendencia__corpo {
+  flex: 1;
+  min-width: 12rem;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.ordem-pendencia[data-situacao="incompleta"] { border-left-color: var(--cor-aviso); }
+.ordem-pendencia[data-situacao="invalida"] { border-left-color: var(--cor-erro); }
+
+.ordem-escolha {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--e2);
+  padding: var(--e2);
+  background: var(--cor-superficie);
+  border-left: 3px solid var(--cor-traco-fraca);
+}
+.ordem-escolha[data-situacao="invalida"] { border-left-color: var(--cor-erro); }
+.ordem-escolha[data-situacao="incompleta"] { border-left-color: var(--cor-aviso); }
+.ordem-escolha[data-situacao="mantida"] { border-left-color: var(--cor-aviso); }
+.ordem-escolha__rotulo { overflow-wrap: anywhere; }
+
+.ordem-aviso-pendencias {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--e2);
+  padding: var(--e2) var(--e3);
+  border: var(--borda) solid var(--cor-paranormal);
+  background: var(--cor-superficie);
+}
+
+.ordem-poderes { display: flex; flex-direction: column; gap: var(--e1); }
+.ordem-poder--suspensa { border-left: 3px solid var(--cor-erro); }
+.ordem-poder--incompleta { border-left: 3px solid var(--cor-aviso); }
+
+.ordem-atributo__conta {
+  padding: 0 var(--e1);
+  font-family: var(--fonte-mini);
+  font-size: var(--texto-mini);
+  color: var(--cor-paranormal);
+  background: transparent;
+  border: var(--borda) solid var(--cor-traco-fraca);
+  cursor: pointer;
+}
+.ordem-atributo__conta:hover { border-color: var(--cor-paranormal); }
+
+/* ---------- carga: a equação escrita por extenso ---------- */
+
+.ordem-equacao {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--e2) var(--e3);
+}
+.ordem-equacao__termo {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 7rem;
+}
+.ordem-equacao__valor {
+  font-size: var(--texto-grande);
+  font-weight: 700;
+  text-align: left;
+  font-variant-numeric: tabular-nums;
+}
+button.ordem-equacao__valor {
+  padding: 0 var(--e1);
+  color: var(--cor-texto);
+  background: transparent;
+  border: var(--borda) solid var(--cor-traco-fraca);
+  cursor: pointer;
+}
+button.ordem-equacao__valor:hover { border-color: var(--cor-paranormal); }
+.ordem-equacao__sinal {
+  font-size: var(--texto-grande);
+  color: var(--cor-texto-3);
+}
+
+.ordem-categorias {
+  display: grid;
+  gap: var(--e2);
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+}
+.ordem-categoria {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: var(--e2);
+  background: var(--cor-superficie);
+  border: var(--borda) solid var(--cor-traco-fraca);
+}
+.ordem-categoria--excedida { border-color: var(--cor-erro); }
+.ordem-categoria__rotulo {
+  font-family: var(--fonte-mini);
+  font-size: var(--texto-mini);
+  text-transform: uppercase;
+  letter-spacing: var(--espaco-letra-titulo);
+  color: var(--cor-texto-2);
+}
+.ordem-categoria__valor { font-weight: 700; }
+
+.ordem-limites {
+  display: grid;
+  gap: var(--e2);
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+}
+.ordem-limite { display: flex; flex-direction: column; gap: var(--e1); }

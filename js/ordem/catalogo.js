@@ -154,6 +154,9 @@
       periciasFixas: [],
       periciasLivres: { base: 1, atributo: "int" },
       proficiencias: ["Armas simples", "Armas táticas", "Proteções leves"],
+      /* Grau de Treinamento: "um número de perícias treinadas igual a
+         2 + Int" — OPRPG p.26. */
+      grauTreinamentoBase: 2,
     },
     {
       chave: "especialista",
@@ -170,6 +173,8 @@
       periciasFixas: [],
       periciasLivres: { base: 7, atributo: "int" },
       proficiencias: ["Armas simples", "Proteções leves"],
+      /* "igual a 5 + Int" — OPRPG p.30. */
+      grauTreinamentoBase: 5,
     },
     {
       chave: "ocultista",
@@ -186,6 +191,8 @@
       periciasFixas: ["ocultismo", "vontade"],
       periciasLivres: { base: 3, atributo: "int" },
       proficiencias: ["Armas simples"],
+      /* "igual a 3 + Int" — OPRPG p.34. */
+      grauTreinamentoBase: 3,
       /* Escolhido pelo Outro Lado — OPRPG p.33. O círculo máximo que o
          ocultista consegue conjurar, por NEX. */
       circuloPorNex: [
@@ -213,19 +220,19 @@
       { nex: 25, rotulos: ["Ataque especial (3 PE, +10)"], escolhas: [] },
       { nex: 30, rotulos: ["Poder de combatente"], escolhas: ["poderClasse"] },
       { nex: 35, rotulos: ["Grau de treinamento"], escolhas: ["grauTreinamento"] },
-      { nex: 40, rotulos: ["Habilidade de trilha"], escolhas: ["poderTrilha"] },
+      { nex: 40, rotulos: ["Habilidade de trilha"], escolhas: [] },
       { nex: 45, rotulos: ["Poder de combatente"], escolhas: ["poderClasse"] },
       { nex: 50, rotulos: ["Aumento de atributo", "Versatilidade"], escolhas: ["atributo", "versatilidade"] },
       { nex: 55, rotulos: ["Ataque especial (4 PE, +15)"], escolhas: [] },
       { nex: 60, rotulos: ["Poder de combatente"], escolhas: ["poderClasse"] },
-      { nex: 65, rotulos: ["Habilidade de trilha"], escolhas: ["poderTrilha"] },
+      { nex: 65, rotulos: ["Habilidade de trilha"], escolhas: [] },
       { nex: 70, rotulos: ["Grau de treinamento"], escolhas: ["grauTreinamento"] },
       { nex: 75, rotulos: ["Poder de combatente"], escolhas: ["poderClasse"] },
       { nex: 80, rotulos: ["Aumento de atributo"], escolhas: ["atributo"] },
       { nex: 85, rotulos: ["Ataque especial (5 PE, +20)"], escolhas: [] },
       { nex: 90, rotulos: ["Poder de combatente"], escolhas: ["poderClasse"] },
       { nex: 95, rotulos: ["Aumento de atributo"], escolhas: ["atributo"] },
-      { nex: 99, rotulos: ["Habilidade de trilha"], escolhas: ["poderTrilha"] },
+      { nex: 99, rotulos: ["Habilidade de trilha"], escolhas: [] },
     ],
     especialista: [
       { nex: 5,  rotulos: ["Eclético", "Perito (2 PE, +1d6)"], escolhas: ["perito"] },
@@ -235,19 +242,19 @@
       { nex: 25, rotulos: ["Perito (3 PE, +1d8)"], escolhas: [] },
       { nex: 30, rotulos: ["Poder de especialista"], escolhas: ["poderClasse"] },
       { nex: 35, rotulos: ["Grau de treinamento"], escolhas: ["grauTreinamento"] },
-      { nex: 40, rotulos: ["Engenhosidade (veterano)", "Habilidade de trilha"], escolhas: ["poderTrilha"] },
+      { nex: 40, rotulos: ["Engenhosidade (veterano)", "Habilidade de trilha"], escolhas: [] },
       { nex: 45, rotulos: ["Poder de especialista"], escolhas: ["poderClasse"] },
       { nex: 50, rotulos: ["Aumento de atributo", "Versatilidade"], escolhas: ["atributo", "versatilidade"] },
       { nex: 55, rotulos: ["Perito (4 PE, +1d10)"], escolhas: [] },
       { nex: 60, rotulos: ["Poder de especialista"], escolhas: ["poderClasse"] },
-      { nex: 65, rotulos: ["Habilidade de trilha"], escolhas: ["poderTrilha"] },
+      { nex: 65, rotulos: ["Habilidade de trilha"], escolhas: [] },
       { nex: 70, rotulos: ["Grau de treinamento"], escolhas: ["grauTreinamento"] },
       { nex: 75, rotulos: ["Engenhosidade (expert)", "Poder de especialista"], escolhas: ["poderClasse"] },
       { nex: 80, rotulos: ["Aumento de atributo"], escolhas: ["atributo"] },
       { nex: 85, rotulos: ["Perito (5 PE, +1d12)"], escolhas: [] },
       { nex: 90, rotulos: ["Poder de especialista"], escolhas: ["poderClasse"] },
       { nex: 95, rotulos: ["Aumento de atributo"], escolhas: ["atributo"] },
-      { nex: 99, rotulos: ["Habilidade de trilha"], escolhas: ["poderTrilha"] },
+      { nex: 99, rotulos: ["Habilidade de trilha"], escolhas: [] },
     ],
     ocultista: [
       { nex: 5,  rotulos: ["Escolhido pelo Outro Lado (1º círculo)"], escolhas: [] },
@@ -257,19 +264,19 @@
       { nex: 25, rotulos: ["Escolhido pelo Outro Lado (2º círculo)"], escolhas: [] },
       { nex: 30, rotulos: ["Poder de ocultista"], escolhas: ["poderClasse"] },
       { nex: 35, rotulos: ["Grau de treinamento"], escolhas: ["grauTreinamento"] },
-      { nex: 40, rotulos: ["Habilidade de trilha"], escolhas: ["poderTrilha"] },
+      { nex: 40, rotulos: ["Habilidade de trilha"], escolhas: [] },
       { nex: 45, rotulos: ["Poder de ocultista"], escolhas: ["poderClasse"] },
       { nex: 50, rotulos: ["Aumento de atributo", "Versatilidade"], escolhas: ["atributo", "versatilidade"] },
       { nex: 55, rotulos: ["Escolhido pelo Outro Lado (3º círculo)"], escolhas: [] },
       { nex: 60, rotulos: ["Poder de ocultista"], escolhas: ["poderClasse"] },
-      { nex: 65, rotulos: ["Habilidade de trilha"], escolhas: ["poderTrilha"] },
+      { nex: 65, rotulos: ["Habilidade de trilha"], escolhas: [] },
       { nex: 70, rotulos: ["Grau de treinamento"], escolhas: ["grauTreinamento"] },
       { nex: 75, rotulos: ["Poder de ocultista"], escolhas: ["poderClasse"] },
       { nex: 80, rotulos: ["Aumento de atributo"], escolhas: ["atributo"] },
       { nex: 85, rotulos: ["Escolhido pelo Outro Lado (4º círculo)"], escolhas: [] },
       { nex: 90, rotulos: ["Poder de ocultista"], escolhas: ["poderClasse"] },
       { nex: 95, rotulos: ["Aumento de atributo"], escolhas: ["atributo"] },
-      { nex: 99, rotulos: ["Habilidade de trilha"], escolhas: ["poderTrilha"] },
+      { nex: 99, rotulos: ["Habilidade de trilha"], escolhas: [] },
     ],
   };
 
@@ -317,6 +324,9 @@
                 poder(65, "Assassinar", 30), poder(99, "Sombra Fugaz", 31)] },
     { chave: "medico", classe: "especialista", nome: "Médico de Campo", pagina: 31,
       resumo: "Mantém o grupo de pé no meio do horror.",
+      /* "Para escolher esta trilha, você precisa ser treinado em
+         Medicina" — OPRPG p.31. */
+      requisitos: [{ tipo: "treinado", pericia: "medicina" }],
       poderes: [poder(10, "Paramédico", 31), poder(40, "Equipe de Trauma", 31),
                 poder(65, "Resgate", 31), poder(99, "Reanimação", 31)] },
     { chave: "negociador", classe: "especialista", nome: "Negociador", pagina: 31,
@@ -349,6 +359,52 @@
       resumo: "Junta ritual e combate corpo a corpo numa arma só.",
       poderes: [poder(10, "Lâmina Maldita", 35), poder(40, "Gladiador Paranormal", 35),
                 poder(65, "Conjuração Marcial", 35), poder(99, "Lâmina do Medo", 35)] },
+
+    /* --- Sobrevivendo ao Horror, p.15-29 ---
+       As nove trilhas novas do suplemento. Os poderes delas estão em
+       poderes.js, como os das trilhas do livro básico. */
+    { chave: "agentesecreto", classe: "combatente", nome: "Agente Secreto", pagina: 15, fonte: SAH,
+      resumo: "Agente de governo emprestado à Ordem: documentos que abrem portas e um sorriso que resolve.",
+      poderes: [poder(10, "Carteirada", 15), poder(40, "O Sorriso", 16),
+                poder(65, "Método Investigativo", 16), poder(99, "Multifacetado", 16)] },
+    { chave: "cacador", classe: "combatente", nome: "Caçador", pagina: 16, fonte: SAH,
+      resumo: "Decidiu não ser presa: estuda rastros e fraquezas do que espreita no escuro.",
+      poderes: [poder(10, "Rastrear o Paranormal", 16), poder(40, "Estudar Fraquezas", 16),
+                poder(65, "Atacar das Sombras", 17), poder(99, "Estudar a Presa", 17)] },
+    { chave: "monstruoso", classe: "combatente", nome: "Monstruoso", pagina: 17, fonte: SAH,
+      resumo: "Abre o próprio corpo às Entidades em troca de poder, e paga com a humanidade.",
+      especial: "Usa a Progressão de NEX da regra NEX & Experiência mesmo sem a regra ligada; em NEX 75% fica permanentemente perturbado e perde o apoio da Ordem (SAH p.17-21).",
+      poderes: [poder(10, "Ser Amaldiçoado", 17), poder(40, "Ser Macabro", 18),
+                poder(65, "Ser Assustador", 19), poder(99, "Ser Aterrorizante", 20)] },
+    { chave: "bibliotecario", classe: "especialista", nome: "Bibliotecário", pagina: 23, fonte: SAH,
+      resumo: "Leitura obstinada que vira solução para situações desesperadoras.",
+      poderes: [poder(10, "Conhecimento Prático", 23), poder(40, "Leitor Contumaz", 23),
+                poder(65, "Rato de Biblioteca", 23), poder(99, "A Força do Saber", 23)] },
+    { chave: "perseverante", classe: "especialista", nome: "Perseverante", pagina: 24, fonte: SAH,
+      resumo: "O último sobrevivente do filme de terror: nunca desiste e sempre acha uma saída.",
+      poderes: [poder(10, "Soluções Improvisadas", 24), poder(40, "Fuga Obstinada", 24),
+                poder(65, "Determinação Inquestionável", 24), poder(99, "Só Mais um Passo…", 24)] },
+    { chave: "muambeiro", classe: "especialista", nome: "Muambeiro", pagina: 25, fonte: SAH,
+      resumo: "Produz ou encontra o item certo para cada ocasião.",
+      poderes: [poder(10, "Mascate", 25), poder(40, "Fabricação Própria", 25),
+                poder(65, "Laboratório de Campo", 25), poder(99, "Achado Conveniente", 25)] },
+    { chave: "exorcista", classe: "ocultista", nome: "Exorcista", pagina: 27, fonte: SAH,
+      resumo: "A fé como escudo e as palavras como espada contra o paranormal.",
+      poderes: [poder(10, "Revelação do Mal", 27), poder(40, "Poder da Fé", 27),
+                poder(65, "Parareligiosidade", 27), poder(99, "Chagas da Resistência", 28)] },
+    { chave: "possuido", classe: "ocultista", nome: "Possuído", pagina: 28, fonte: SAH,
+      resumo: "O paranormal cresce por dentro e oferece poder em troca de obediência.",
+      poderes: [poder(10, "Poder Não Desejado", 28), poder(40, "As Sombras Dentro de Mim", 28),
+                poder(65, "Ele Me Ensina", 28), poder(99, "Tornamo-nos Um", 28)] },
+    { chave: "parapsicologo", classe: "ocultista", nome: "Parapsicólogo", pagina: 29, fonte: SAH,
+      resumo: "Usa o estudo da mente para curar o que o Outro Lado perturba.",
+      /* "Para escolher esta trilha, você precisa ser treinado em
+         Profissão (psicólogo)" — SAH p.29. O R.A.M.A. tem uma perícia
+         Profissão só; o requisito confere o treinamento nela. */
+      requisitos: [{ tipo: "treinado", pericia: "profissao" }],
+      requisitoNota: "O livro pede Profissão (psicólogo). A ficha confere o treinamento em Profissão; a especialidade é conferida pela mesa.",
+      poderes: [poder(10, "Terapia", 29), poder(40, "Palavras-chave", 29),
+                poder(65, "Reprogramação Mental", 29), poder(99, "A Sanidade Está Lá Fora", 29)] },
   ];
 
   /* =================================================================
@@ -356,10 +412,14 @@
      -----------------------------------------------------------------
      Cada origem dá duas perícias treinadas e um poder.
 
-     `efeito` só existe nas origens cujo poder é numérico e permanente —
-     essas entram no cálculo. As outras 16 têm poderes que dependem de
-     gastar PE, de uma vez por cena ou de decisão do mestre, e são
-     informativas por natureza, não por preguiça.
+     `efeito` só existe nas origens cujo poder é numérico, permanente e
+     calculável na ficha — essas entram na conta. `escolha` marca as
+     origens cujo poder pede uma decisão (Traços do Outro Lado,
+     Ferramentas Favoritas), que vira vaga na Progressão.
+
+     As demais têm poderes que dependem de gastar PE, de uma cena, de uma
+     rolagem de dano de arma ou de decisão do mestre, e são informativas
+     por natureza, não por preguiça.
      ================================================================= */
 
   var ORIGENS = [
@@ -404,6 +464,9 @@
       pericias: ["ocultismo", "religiao"],
       poder: "Traços do Outro Lado", automacao: "calculo",
       efeito: { tipo: "sanidadeMetade" },
+      /* O poder paranormal de Traços do Outro Lado é uma escolha: a
+         ficha abre a vaga dela na Progressão. */
+      escolha: { chave: "poder", tipo: "poderParanormal", rotulo: "Poder paranormal de Traços do Outro Lado" },
       resumo: "Você tem um poder paranormal à sua escolha, mas começa com METADE da Sanidade normal da sua classe." },
 
     { chave: "desgarrado", nome: "Desgarrado", pagina: 18,
@@ -414,7 +477,9 @@
 
     { chave: "engenheiro", nome: "Engenheiro", pagina: 18,
       pericias: ["profissao", "tecnologia"],
-      poder: "Ferramentas Favoritas", automacao: "informacao",
+      poder: "Ferramentas Favoritas", automacao: "calculo",
+      escolha: { chave: "item", tipo: "item", excetoArmas: true, rotulo: "Item de Ferramentas Favoritas" },
+      efeitoEscolha: { tipo: "categoriaItem", opcao: "item", reducao: 1 },
       resumo: "Um item à sua escolha (exceto armas) conta como uma categoria abaixo." },
 
     { chave: "executivo", nome: "Executivo", pagina: 18,
@@ -429,8 +494,9 @@
 
     { chave: "lutador", nome: "Lutador", pagina: 19,
       pericias: ["luta", "reflexos"],
-      poder: "Mão Pesada", automacao: "calculo",
-      efeito: { tipo: "danoCorpoACorpo", valor: 2 },
+      /* O +2 vale na rolagem de dano da arma. A ficha de Ordem ainda não
+         rola dano de arma pelas regras de Ordem, então isto é anotação. */
+      poder: "Mão Pesada", automacao: "informacao",
       resumo: "+2 em rolagens de dano com ataques corpo a corpo." },
 
     { chave: "magnata", nome: "Magnata", pagina: 20,
@@ -446,8 +512,8 @@
 
     { chave: "militar", nome: "Militar", pagina: 20,
       pericias: ["pontaria", "tatica"],
-      poder: "Para Bellum", automacao: "calculo",
-      efeito: { tipo: "danoArmaDeFogo", valor: 2 },
+      /* Idem: vale na rolagem de dano com arma de fogo. */
+      poder: "Para Bellum", automacao: "informacao",
       resumo: "+2 em rolagens de dano com armas de fogo." },
 
     { chave: "operario", nome: "Operário", pagina: 20,
@@ -520,6 +586,17 @@
 
   var CREDITOS = ["Baixo", "Médio", "Alto", "Ilimitado"];
 
+  /* Categorias de item — OPRPG p.53. "Você pode escolher quantos itens
+     quiser de categoria 0". Guardadas como número (0 a 4), mostradas em
+     romano. */
+  var CATEGORIAS_ITEM = [
+    { valor: 0, rotulo: "0" },
+    { valor: 1, rotulo: "I" },
+    { valor: 2, rotulo: "II" },
+    { valor: 3, rotulo: "III" },
+    { valor: 4, rotulo: "IV" },
+  ];
+
   /* =================================================================
      RITUAIS — OPRPG p.117-121
      ================================================================= */
@@ -531,6 +608,10 @@
     { chave: "sangue",       nome: "Sangue",       resumo: "A entidade do sentimento. Fortalece o corpo e manipula emoções." },
     { chave: "medo",         nome: "Medo",         resumo: "O elemento mais misterioso. Afeta a relação do Outro Lado com a Realidade." },
   ];
+
+  /* Afinidade — OPRPG p.110 e p.114: "Escolha um elemento entre
+     Conhecimento, Energia, Morte ou Sangue." Medo não é opção. */
+  var ELEMENTOS_AFINIDADE = ["conhecimento", "energia", "morte", "sangue"];
 
   /* "Cada elemento é efetivo contra outro e menos efetivo contra si."
      OPRPG p.118. O Medo é neutro nos dois sentidos. */
@@ -607,6 +688,7 @@
   function origem(chave) { return POR_CHAVE.origens[chave] || null; }
   function trilha(chave) { return POR_CHAVE.trilhas[chave] || null; }
   function grau(chave) { return POR_CHAVE.graus[chave] || POR_CHAVE.graus.destreinado; }
+  function elemento(chave) { return POR_CHAVE.elementos[chave] || null; }
 
   function trilhasDaClasse(chaveClasse) {
     return TRILHAS.filter(function (t) { return t.classe === chaveClasse; });
@@ -637,7 +719,9 @@
     ORIGENS: ORIGENS,
     PATENTES: PATENTES,
     CREDITOS: CREDITOS,
+    CATEGORIAS_ITEM: CATEGORIAS_ITEM,
     ELEMENTOS: ELEMENTOS,
+    ELEMENTOS_AFINIDADE: ELEMENTOS_AFINIDADE,
     OPRESSAO: OPRESSAO,
     CUSTO_RITUAL: CUSTO_RITUAL,
     EXECUCOES: EXECUCOES,
@@ -649,6 +733,7 @@
     origem: origem,
     trilha: trilha,
     grau: grau,
+    elemento: elemento,
     trilhasDaClasse: trilhasDaClasse,
     progressaoDaClasse: progressaoDaClasse,
     referencia: referencia,

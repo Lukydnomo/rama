@@ -18,6 +18,11 @@
    Todo item criado à mão aqui também nasce na biblioteca Homebrew. E
    todo item trazido da biblioteca entra como CÓPIA: editar o modelo
    depois não muda as fichas que já o usam.
+
+   Numa ficha de Ordem Paranormal, o inventário não mede peso: mede
+   espaços. O que muda — o cabeçalho de carga, os campos de espaços,
+   quantidade e categoria — vem de RAMASecaoOrdemInventario, e é pedido
+   por perfilDe(). A ficha universal nunca passa por esse caminho.
    ===================================================================== */
 
 (function (global) {
@@ -34,7 +39,20 @@
      planilha, porque não é do personagem — é do momento. */
   var categoriaAtiva = "";
 
+  /* O complemento de Ordem, quando a ficha é de Ordem. */
+  function perfilDe(ctx) {
+    return F.ehDeOrdem(ctx.ficha) && global.RAMASecaoOrdemInventario ? global.RAMASecaoOrdemInventario : null;
+  }
+
   function aba(ctx) {
+    var perfil = perfilDe(ctx);
+    if (perfil) {
+      return el("div.pilha--larga", { class: "pilha" }, [
+        perfil.cabecalho(ctx),
+        painelDoInventario(ctx),
+      ]);
+    }
+
     var inventario = ctx.ficha.inventario;
     var peso = F.pesoAtual(inventario);
     var limite = U.numero(inventario.limite, 0);
@@ -60,14 +78,18 @@
         excedeu ? el("span.r-etiqueta.r-etiqueta--aviso", { texto: "Sobrecarga" }) : null,
       ]),
 
-      UI.painel("Inventário", corpo(ctx), {
-        acoes: [
-          el("button.r-botao.r-botao--mini", {
-            type: "button", texto: "+ Adicionar", onclick: function (ev) { menuAdicionar(ctx, ev); },
-          }),
-        ],
-      }),
+      painelDoInventario(ctx),
     ]);
+  }
+
+  function painelDoInventario(ctx) {
+    return UI.painel("Inventário", corpo(ctx), {
+      acoes: [
+        el("button.r-botao.r-botao--mini", {
+          type: "button", texto: "+ Adicionar", onclick: function (ev) { menuAdicionar(ctx, ev); },
+        }),
+      ],
+    });
   }
 
   function formatarPeso(n) {
@@ -149,12 +171,13 @@
   function cartao(ctx, item) {
     var arma = item.tipo === "arma" && !ctx.emEdicao();
 
+    var perfil = perfilDe(ctx);
     var caixa = UI.recolhivel({
       titulo: item.nome,
-      extra: [F.rotuloDoTipo(item.tipo), item.categoria].filter(Boolean).join(" · "),
+      extra: [F.rotuloDoTipo(item.tipo), item.categoria, perfil ? perfil.resumoDoCartao(item) : ""].filter(Boolean).join(" · "),
       classe: item.tipo === "arma" ? "recolhivel--arma" : "",
       conteudo: [
-        detalhes(item),
+        detalhes(ctx, item),
         item.descricao ? el("p.item__descricao", { texto: item.descricao }) : null,
       ],
       acoes: [UI.menu(opcoesDoItem(ctx, item), { rotulo: "Opções de " + item.nome, icone: "tresPontos" })],
@@ -170,12 +193,15 @@
     return caixa;
   }
 
-  function detalhes(item) {
+  function detalhes(ctx, item) {
     var linhas = [];
+    var perfil = perfilDe(ctx);
 
     linhas.push(["Categoria", item.categoria || "Sem categoria"]);
 
-    if (item.tipo === "mochila") {
+    if (perfil) {
+      linhas = linhas.concat(perfil.detalhes(ctx, item));
+    } else if (item.tipo === "mochila") {
       linhas.push(["Reduz", formatarPeso(item.reducaoPeso) + " de peso"]);
     } else {
       linhas.push(["Peso", formatarPeso(item.peso)]);
@@ -301,13 +327,16 @@
   }
 
   function escolherTipo(ctx) {
+    var perfil = perfilDe(ctx);
     var m = UI.modal({
       titulo: "Adicionar ao inventário",
       conteudo: el("div.pilha--curta", { class: "pilha" }, [
-        botaoTipo("Item", "Qualquer coisa com nome, peso e descrição.", function () { m.fechar(); editar(ctx, null, "item"); }),
+        botaoTipo("Item", perfil ? "Qualquer coisa com nome, espaços, categoria e descrição." : "Qualquer coisa com nome, peso e descrição.", function () { m.fechar(); editar(ctx, null, "item"); }),
         botaoTipo("Arma", "Com perícia de ataque, dano, crítico e multiplicador.", function () { m.fechar(); editar(ctx, null, "arma"); }),
-        botaoTipo("Armadura", "Com um valor de defesa.", function () { m.fechar(); editar(ctx, null, "armadura"); }),
-        botaoTipo("Mochila", "Reduz o peso total carregado.", function () { m.fechar(); editar(ctx, null, "mochila"); }),
+        botaoTipo(perfil ? "Proteção" : "Armadura", "Com um valor de defesa.", function () { m.fechar(); editar(ctx, null, "armadura"); }),
+        perfil
+          ? null
+          : botaoTipo("Mochila", "Reduz o peso total carregado.", function () { m.fechar(); editar(ctx, null, "mochila"); }),
         el("hr.r-linha"),
         botaoTipo("Da biblioteca Homebrew", "Traz uma cópia de algo que você já criou.", function () { m.fechar(); daBiblioteca(ctx); }),
       ]),
@@ -347,8 +376,13 @@
 
     var campos = [nome, categoria];
     var extras = { categoria: categoria };
+    var perfil = perfilDe(ctx);
 
-    if (tipo === "mochila") {
+    /* Numa ficha de Ordem, espaços no lugar de peso. O peso que o item
+       já tinha fica guardado como estava. */
+    if (perfil) {
+      extras.ordem = perfil.campos(ctx, atual);
+    } else if (tipo === "mochila") {
       extras.reducao = UI.campo({
         rotulo: "Redução de peso", tipo: "numero", valor: atual.reducaoPeso,
         ajuda: "Quanto esta mochila tira do peso total.",
@@ -391,6 +425,8 @@
       extras.defesa = UI.campo({ rotulo: "Defesa", tipo: "numero", valor: atual.defesa });
       campos.push(extras.defesa);
     }
+
+    if (extras.ordem) campos = campos.concat(extras.ordem.elementos);
 
     campos.push(descricao);
 
@@ -449,7 +485,13 @@
     nome.marcarErro("");
     if (!dados.nome) { nome.marcarErro("Informe um nome."); nome.entrada.focus(); return null; }
 
-    if (tipo === "mochila") {
+    if (extras.ordem) {
+      var ordem = extras.ordem.coletar();
+      if (!ordem) return null;
+      dados.ordem = ordem;
+      dados.peso = base.peso;
+      dados.reducaoPeso = base.reducaoPeso;
+    } else if (tipo === "mochila") {
       var red = V.peso(extras.reducao.entrada.value);
       extras.reducao.marcarErro(red.ok ? "" : red.mensagem);
       if (!red.ok) return null;

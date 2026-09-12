@@ -55,6 +55,10 @@ const t = {
     const igual = Object.is(obtido, esperado);
     t.ok(nome, igual, igual ? "" : `obtido ${JSON.stringify(obtido)}, esperado ${JSON.stringify(esperado)}`);
   },
+  iguais(nome, obtido, esperado) {
+    const a = JSON.stringify(obtido), b = JSON.stringify(esperado);
+    t.ok(nome, a === b, a === b ? "" : `obtido ${a}, esperado ${b}`);
+  },
   recusa(nome, resposta, erroEsperado) {
     const bateu = resposta && resposta.ok === false &&
       (!erroEsperado || resposta.erro === erroEsperado);
@@ -1621,6 +1625,66 @@ t.grupo("Cabeçalho — o nome continua mandando quando existe");
   const linha = folha.linhas[1];
   t.igual("a visibilidade foi para a coluna que o cabeçalho aponta", linha[8], "publico");
   t.ok("e o JSON também", String(linha[7]).indexOf("1d6") >= 0);
+})();
+
+/* =====================================================================
+   ORDEM PARANORMAL — AS ESCOLHAS DE PROGRESSÃO ATRAVESSAM O SERVIDOR
+   ---------------------------------------------------------------------
+   O servidor não interpreta a ficha: guarda o JSON. Estes casos travam
+   que as escolhas, a afinidade, a configuração de patente e os dados de
+   Ordem dos itens voltam exatamente como foram, e que a revisão
+   continua protegendo contra gravação concorrente.
+   ===================================================================== */
+
+t.grupo("Ordem — escolhas atravessam o servidor");
+
+(() => {
+  preparar();
+  const iris = novaConta("iris");
+  const comoIris = comoFn(iris);
+
+  const ficha = {
+    nome: "Íris", tipoFicha: "ordem", schemaVersion: 4,
+    ordem: {
+      classe: "combatente", origem: "militar", trilha: "aniquilador", nex: 60,
+      atributos: { agi: 2, for: 2, int: 1, pre: 1, vig: 2 },
+      escolhas: [
+        { id: "e1", etapa: "d3.poderClasse", tipo: "poderClasse", valor: "transcender",
+          opcoes: { poder: { valor: "resistirAElemento", opcoes: { elemento: "morte" } } },
+          nome: "Transcender → Resistir a Morte", ignorarRequisitos: false, registradoEm: "2026-09-12T10:00:00.000Z" },
+        { id: "e2", etapa: "b.aFavorita", tipo: "opcoesBeneficio", valor: "",
+          opcoes: { arma: "Fuzil", itens: ["i1"] }, nome: "", ignorarRequisitos: false, registradoEm: "2026-09-12T10:01:00.000Z" },
+      ],
+      afinidade: { elemento: "outro", nomeOutro: "Vazio", adiada: false },
+      patente: { aplicar: false, limites: { "0": null, "1": 3, "2": null, "3": 0, "4": 0 } },
+      temporarios: { pv: 0, pe: 0, san: 0, defesa: 0, capacidade: -2 },
+    },
+    inventario: { limite: 0, itens: [
+      { id: "i1", tipo: "arma", nome: "Fuzil", peso: 0, ordem: { espacos: 2, quantidade: 1, categoria: 2, grupo: "arma", capacidade: 0 } },
+    ] },
+  };
+
+  const criado = comoIris({ acao: "criar_personagem", dados: ficha });
+  t.ok("a ficha de Ordem com escolhas é criada", criado.ok);
+
+  const lido = comoIris({ acao: "ler_personagem", personagemId: criado.dados.id });
+  t.iguais("as escolhas voltam iguais", lido.dados.ordem.escolhas, ficha.ordem.escolhas);
+  t.iguais("  a afinidade Homebrew também", lido.dados.ordem.afinidade, ficha.ordem.afinidade);
+  t.iguais("  e os limites manuais, com null sendo sem limite", lido.dados.ordem.patente, ficha.ordem.patente);
+  t.igual("  e o ajuste temporário de capacidade", lido.dados.ordem.temporarios.capacidade, -2);
+  t.iguais("  e os dados de Ordem do item", lido.dados.inventario.itens[0].ordem, ficha.inventario.itens[0].ordem);
+
+  const nova = JSON.parse(JSON.stringify(lido.dados));
+  nova.ordem.escolhas.push({ id: "e3", etapa: "d4.atributo", tipo: "atributo", valor: "agi", opcoes: {},
+    nome: "+1 em Agilidade", ignorarRequisitos: false, registradoEm: "2026-09-12T10:02:00.000Z" });
+  const gravado = comoIris({ acao: "salvar_personagem", personagemId: criado.dados.id, rev: lido.rev, dados: nova });
+  t.ok("registrar mais uma escolha grava", gravado.ok);
+  t.igual("  subindo a revisão", gravado.rev, lido.rev + 1);
+
+  const atrasado = comoIris({ acao: "salvar_personagem", personagemId: criado.dados.id, rev: lido.rev, dados: lido.dados });
+  t.recusa("gravar com a revisão velha é conflito, não sobrescreve a escolha nova", atrasado, "conflito");
+  t.igual("  e o conflito devolve a ficha com as três escolhas",
+    atrasado.dados && atrasado.dados.ordem ? atrasado.dados.ordem.escolhas.length : -1, 3);
 })();
 
 /* =====================================================================

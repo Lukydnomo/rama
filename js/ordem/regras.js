@@ -11,9 +11,9 @@
    Valor calculado NÃO é gravado. Nunca.
 
    O que fica guardado na ficha é só o que uma pessoa escolheu — classe,
-   origem, NEX, atributos, graus de perícia —, o que ela gastou, e os
-   ajustes manuais que ela pediu. Todo número derivado é recalculado do
-   zero quando alguém pergunta.
+   origem, NEX, atributos, graus de perícia, as decisões de cada etapa —,
+   o que ela gastou, e os ajustes manuais que ela pediu. Todo número
+   derivado é recalculado do zero quando alguém pergunta.
 
    Isso não é elegância: é o que torna três defeitos clássicos
    IMPOSSÍVEIS, em vez de improváveis.
@@ -36,16 +36,22 @@
    AS SEIS COISAS QUE NÃO SE MISTURAM
    ---------------------------------------------------------------------
 
-     escolhido      classe, origem, trilha, NEX, atributos, perícias
+     escolhido      classe, origem, trilha, NEX, atributos, perícias,
+                    as escolhas registradas em cada etapa
      calculado      PV máximo, PE máximo, Defesa, carga, bônus de perícia
-     permanente     modificadores de origem e de habilidade, sempre ativos
-     temporário     o que vale até o fim da cena, e some sozinho
+     permanente     efeitos de origem, de habilidade e de poder
+     temporário     ajustes que valem até alguém os tirar
      recurso        PV/PE/SAN atuais — o que sobrou depois do gasto
      ajuste manual  o que a mesa decidiu à mão, com motivo anotado
 
-   Cada uma mora num lugar diferente da ficha e é tratada de um jeito
-   diferente aqui. Embaralhá-las é o que produz ficha que "se conserta"
-   sozinha para o valor errado.
+   ---------------------------------------------------------------------
+   DE ONDE VÊM OS EFEITOS DE PROGRESSÃO
+   ---------------------------------------------------------------------
+
+   progressao.js percorre as etapas e devolve atributos e graus
+   efetivos, poderes adquiridos e uma lista de efeitos. Esta camada só
+   SOMA essa lista nas contas certas. Nenhum poder é tratado por nome
+   aqui: um efeito novo é um tipo novo de efeito, não um `if` a mais.
 
    ---------------------------------------------------------------------
    COMPOSIÇÃO
@@ -61,6 +67,9 @@
   "use strict";
 
   var C = global.RAMAOrdemCatalogo;
+
+  function E() { return global.RAMAOrdemProgressao; }
+  function I() { return global.RAMAOrdemInventario; }
 
   /* =================================================================
      COMPOSIÇÃO
@@ -108,8 +117,15 @@
       pericias: {},
       prestigio: 0,
 
-      /* --- escolhas registradas por etapa --- */
+      /* --- decisões de progressão, por etapa (progressao.js) --- */
+      escolhas: [],
+      /* --- registros de texto livre da v2.3, preservados --- */
       progressao: [],
+      /* --- afinidade elemental --- */
+      afinidade: { elemento: "", nomeOutro: "", adiada: false },
+
+      /* --- regra de patente e limites manuais --- */
+      patente: { aplicar: true, limites: null },
 
       /* --- recurso: o que sobrou --- */
       recursos: { pv: null, pe: null, san: null },
@@ -117,8 +133,8 @@
       /* --- ajuste manual, com motivo --- */
       ajustes: [],
 
-      /* --- temporário, some no fim da cena --- */
-      temporarios: { pv: 0, pe: 0, san: 0, defesa: 0 },
+      /* --- temporário: fica até alguém tirar --- */
+      temporarios: { pv: 0, pe: 0, san: 0, defesa: 0, capacidade: 0 },
 
       /* --- regras opcionais ligadas --- */
       opcionais: {},
@@ -141,10 +157,8 @@
 
      "Para estas regras, considere que 1 nível equivale a 5% de NEX."
 
-     Por isso esta função existe: nenhum cálculo deste arquivo lê
-     `ficha.nex` diretamente para fins de progressão. Todos passam por
-     aqui, e trocar o trilho é trocar uma função — não caçar dezenas de
-     contas espalhadas.
+     Por isso esta função existe: nenhum cálculo lê `ficha.nex`
+     diretamente para fins de progressão. Todos passam por aqui.
      ================================================================= */
 
   function separaNivelENex(ficha) {
@@ -158,8 +172,6 @@
         passos: nivel,
         rotulo: "Nível " + nivel,
         curto: "Nv " + nivel,
-        /* O NEX equivalente, para comparar com pré-requisitos escritos
-           em porcentagem. 1 nível = 5%. */
         nexEquivalente: nivel * 5,
         separado: true,
       };
@@ -191,14 +203,33 @@
   }
 
   /* =================================================================
-     MODIFICADORES PERMANENTES
-     -----------------------------------------------------------------
-     Reunidos num lugar só, a partir das escolhas. É esta lista que
-     alimenta todos os cálculos — e é por ela ser montada do zero a cada
-     chamada que um bônus não tem como entrar duas vezes.
+     ESTADO DE PROGRESSÃO
      ================================================================= */
 
-  function modificadores(ficha) {
+  /* O catálogo de poderes só é carregado nas páginas que calculam a
+     ficha de Ordem (a ficha e a criação). Nas outras, a conta de
+     progressão não existe — e o que depende dela volta ao valor base,
+     em vez de quebrar a página. */
+  function estadoDe(ficha, inventario) {
+    if (!E() || !global.RAMAOrdemPoderes || !ficha) return null;
+    return E().estado(ficha, inventario ? { inventario: inventario } : null);
+  }
+
+  function efeitosDaProgressao(ficha, inventario) {
+    var est = estadoDe(ficha, inventario);
+    return est ? est.efeitos : [];
+  }
+
+  /* =================================================================
+     MODIFICADORES PERMANENTES
+     -----------------------------------------------------------------
+     Reunidos num lugar só: o efeito da origem e todos os efeitos que a
+     progressão produziu. É esta lista que alimenta os cálculos — e é
+     por ela ser montada do zero a cada chamada que um bônus não tem
+     como entrar duas vezes.
+     ================================================================= */
+
+  function modificadores(ficha, inventario) {
     var lista = [];
 
     var origem = C.origem(ficha.origem);
@@ -210,15 +241,46 @@
       });
     }
 
-    /* Trilha e poderes de classe entram aqui quando tiverem efeito
-       mecânico implementado. Hoje nenhum tem — e é por isso que o
-       catálogo os marca como informativos em vez de fingir. */
+    efeitosDaProgressao(ficha, inventario).forEach(function (ef) {
+      lista.push({ fonte: ef.fonte, detalhe: ef.detalhe, efeito: ef });
+    });
 
     return lista;
   }
 
-  function efeitosDoTipo(ficha, tipo) {
-    return modificadores(ficha).filter(function (m) { return m.efeito.tipo === tipo; });
+  function efeitosDoTipo(ficha, tipo, inventario) {
+    return modificadores(ficha, inventario).filter(function (m) { return m.efeito.tipo === tipo; });
+  }
+
+  /* =================================================================
+     ATRIBUTOS
+     -----------------------------------------------------------------
+     `atributoBase` é o que está gravado: o valor da criação e os
+     ajustes que a mesa fez à mão. `atributo` é o que vale na conta: a
+     base mais os aumentos de atributo e os efeitos de poder, somados
+     na ordem das etapas.
+     ================================================================= */
+
+  function atributoBase(ficha, chave) {
+    return inteiro(ficha && ficha.atributos ? ficha.atributos[chave] : 0, 0);
+  }
+
+  function atributo(ficha, chave) {
+    var est = estadoDe(ficha);
+    if (est && est.atributos && est.atributos[chave] !== undefined) return est.atributos[chave];
+    return atributoBase(ficha, chave);
+  }
+
+  /* A conta aberta de um atributo: base e cada efeito. */
+  function composicaoDoAtributo(ficha, chave) {
+    var c = conta();
+    c.soma("Valor da ficha", atributoBase(ficha, chave), "criação e ajustes à mão");
+    efeitosDaProgressao(ficha).forEach(function (ef) {
+      if ((ef.tipo === "aumentoAtributo" || ef.tipo === "atributo") && ef.atributo === chave) {
+        c.soma(ef.fonte, ef.valor, ef.detalhe);
+      }
+    });
+    return c;
   }
 
   /* =================================================================
@@ -227,6 +289,11 @@
      OPRPG p.25, p.29, p.33. O valor inicial vale no primeiro degrau; a
      partir dele, cada degrau soma o incremento da classe.
      ================================================================= */
+
+  function passosDoEfeito(ficha, ef) {
+    if (ef.trilho === "exposicao" && E()) return E().degrauDeExposicao(exposicao(ficha));
+    return Math.max(1, trilho(ficha).passos);
+  }
 
   function maximoDeRecurso(ficha, qual) {
     var c = conta();
@@ -239,11 +306,20 @@
     var inicial = classe[qual + "Inicial"];
     var porNex = classe[qual + "PorNex"];
 
-    var atribInicial = inicial.atributo ? atributo(ficha, inicial.atributo) : 0;
-    var atribPorNex = porNex.atributo ? atributo(ficha, porNex.atributo) : 0;
+    /* Racionalidade Inflexível troca a Presença pelo Intelecto no
+       cálculo dos PE (SAH p.35). */
+    var atribPe = null;
+    if (qual === "pe") {
+      efeitosDoTipo(ficha, "atributoDoPe").forEach(function (m) { atribPe = m.efeito.atributo; });
+    }
+    var chaveInicial = inicial.atributo ? (atribPe || inicial.atributo) : null;
+    var chavePorNex = porNex.atributo ? (atribPe || porNex.atributo) : null;
+
+    var atribInicial = chaveInicial ? atributo(ficha, chaveInicial) : 0;
+    var atribPorNex = chavePorNex ? atributo(ficha, chavePorNex) : 0;
 
     c.soma(classe.nome + ", inicial", inicial.base + atribInicial,
-      inicial.atributo ? "base " + inicial.base + " + " + siglaDe(inicial.atributo) + " " + atribInicial : "");
+      chaveInicial ? "base " + inicial.base + " + " + siglaDe(chaveInicial) + " " + atribInicial : "");
 
     if (passos > 1) {
       var porDegrau = porNex.base + atribPorNex;
@@ -262,6 +338,16 @@
       });
     }
 
+    /* --- efeitos de poder e habilidade, por degrau --- */
+    var porDegrauDoPoder = qual === "pv" ? "pvPorDegrau" : (qual === "pe" ? "pePorDegrau" : null);
+    if (porDegrauDoPoder) {
+      efeitosDoTipo(ficha, porDegrauDoPoder).forEach(function (m) {
+        var n = passosDoEfeito(ficha, m.efeito);
+        c.soma(m.fonte, m.efeito.valor * n,
+          m.efeito.valor + " por " + (m.efeito.trilho === "exposicao" ? "5% de NEX de exposição" : "degrau") + " × " + n);
+      });
+    }
+
     if (qual === "pe") {
       efeitosDoTipo(ficha, "dedicacao").forEach(function (m) {
         /* "+1 PE, e mais 1 PE adicional a cada NEX ímpar (15%, 25%…)"
@@ -270,12 +356,28 @@
         var extras = passos >= 3 ? Math.floor((passos - 1) / 2) : 0;
         c.soma(m.fonte, 1 + extras, m.detalhe);
       });
+      efeitosDoTipo(ficha, "pePorDoisDegraus").forEach(function (m) {
+        var n = Math.floor(passos / 2);
+        c.soma(m.fonte, m.efeito.valor * n, "1 a cada 2 degraus × " + n);
+      });
+      efeitosDoTipo(ficha, "peFixo").forEach(function (m) {
+        c.soma(m.fonte, m.efeito.valor, m.detalhe);
+      });
+      efeitosDoTipo(ficha, "peAtributo").forEach(function (m) {
+        c.soma(m.fonte, atributo(ficha, m.efeito.atributo), siglaDe(m.efeito.atributo) + " somado aos PE");
+      });
     }
 
-    /* --- Sanidade pela metade (Cultista Arrependido, OPRPG p.18) ---
-       Entra depois de tudo, porque o livro fala em "metade da Sanidade
-       normal para sua classe" — o que já foi somado até aqui. */
     if (qual === "san") {
+      /* Transcender: "você recebe o poder escolhido, mas não ganha
+         Sanidade neste aumento de NEX" (OPRPG p.26). */
+      efeitosDoTipo(ficha, "sanPerdidaTranscender").forEach(function (m) {
+        c.soma("Transcender", -porNex.base, "Sanidade não ganha em " + m.detalhe);
+      });
+
+      /* Sanidade pela metade (Cultista Arrependido, OPRPG p.18). Entra
+         depois de tudo, porque o livro fala em "metade da Sanidade
+         normal para sua classe" — o que já foi somado até aqui. */
       var metade = efeitosDoTipo(ficha, "sanidadeMetade");
       if (metade.length) {
         var perdido = c.total - Math.floor(c.total / 2);
@@ -283,7 +385,6 @@
       }
     }
 
-    /* --- ajustes manuais --- */
     somarAjustes(c, ficha, qual);
 
     c.piso(0);
@@ -296,9 +397,6 @@
 
   /* =================================================================
      LIMITE DE PE POR TURNO — OPRPG p.23, Tabela 1.2
-     -----------------------------------------------------------------
-     A tabela é linear: NEX 5% → 1, 10% → 2, … 95% → 19, 99% → 20. Ou
-     seja, o número do degrau.
      ================================================================= */
 
   function limiteDeEsforco(ficha) {
@@ -326,7 +424,7 @@
     c.soma("Base", C.REGRAS.defesaBase, "OPRPG p.36");
     c.soma("Agilidade", atributo(ficha, "agi"));
 
-    efeitosDoTipo(ficha, "defesa").forEach(function (m) {
+    efeitosDoTipo(ficha, "defesa", inventario).forEach(function (m) {
       c.soma(m.fonte, m.efeito.valor, m.detalhe);
     });
 
@@ -351,6 +449,10 @@
     var c = conta();
     c.soma("Padrão", C.REGRAS.deslocamentoPadrao, "OPRPG p.36");
 
+    efeitosDoTipo(ficha, "deslocamento", inventario).forEach(function (m) {
+      c.soma(m.fonte, m.efeito.valor, m.detalhe);
+    });
+
     var carga = capacidade(ficha, inventario);
     if (carga.sobrecarregado) {
       c.soma("Sobrecarregado", C.REGRAS.penalidadeSobrecarga.deslocamento, "OPRPG p.53");
@@ -366,37 +468,159 @@
      -----------------------------------------------------------------
      "Você pode carregar um número de espaços de itens igual a 5 por
      ponto de Força (se tiver Força 0, pode carregar apenas 2 espaços)."
+
+     Três números, mostrados separados:
+
+       calculada   a regra: Força, poderes, itens que aumentam a
+                   capacidade e ajustes da mesa
+       temporário  o ajuste com sinal que quem joga pôs à mão, e que
+                   fica até ser tirado — nenhuma duração é inventada
+       final       calculada + temporário, nunca abaixo de zero
+
+     O ajuste temporário muda a CAPACIDADE. Ele não mexe na carga dos
+     itens, na Força nem nos limites por categoria.
      ================================================================= */
 
   function capacidade(ficha, inventario) {
     var forca = atributo(ficha, "for");
-    var limite = forca <= 0
-      ? C.REGRAS.espacosForcaZero
-      : forca * C.REGRAS.espacosPorForca;
+    var comp = conta();
 
-    var ocupado = 0;
-    (inventario && inventario.itens ? inventario.itens : []).forEach(function (item) {
-      ocupado += Math.max(0, Number(item && item.espacos) || 0);
+    var somaAtributo = efeitosDoTipo(ficha, "capacidadeForcaMais", inventario)[0];
+    var extra = somaAtributo ? atributo(ficha, somaAtributo.efeito.atributo) : 0;
+    var base = forca + extra;
+
+    if (base <= 0) {
+      comp.soma("Força 0", C.REGRAS.espacosForcaZero, "OPRPG p.53");
+    } else if (somaAtributo) {
+      comp.soma("Força " + forca + " + " + siglaDe(somaAtributo.efeito.atributo) + " " + extra,
+        base * C.REGRAS.espacosPorForca, somaAtributo.fonte + " · 5 por ponto");
+    } else {
+      comp.soma("Força " + forca, base * C.REGRAS.espacosPorForca, "5 espaços por ponto · OPRPG p.53");
+    }
+
+    efeitosDoTipo(ficha, "capacidade", inventario).forEach(function (m) {
+      comp.soma(m.fonte, m.efeito.valor, m.detalhe);
+    });
+    efeitosDoTipo(ficha, "capacidadeAtributo", inventario).forEach(function (m) {
+      comp.soma(m.fonte, atributo(ficha, m.efeito.atributo), siglaDe(m.efeito.atributo) + " somado à capacidade");
     });
 
+    /* Itens que aumentam a capacidade (Mochila Militar, OPRPG p.66).
+       Cada item conta uma vez, não por unidade: duas mochilas na
+       quantidade não viram duas mochilas vestidas. */
+    itensDe(inventario).forEach(function (item) {
+      var d = I() ? I().dadosDoItem(item) : { capacidade: 0 };
+      if (d.capacidade > 0) comp.soma(item.nome || "Item", d.capacidade, "item que aumenta a capacidade");
+    });
+
+    somarAjustes(comp, ficha, "capacidade");
+
+    var calculada = Math.max(0, comp.total);
+    var temporario = inteiro(ficha.temporarios ? ficha.temporarios.capacidade : 0, 0);
+    var bruto = calculada + temporario;
+    var final = Math.max(0, bruto);
+
+    var ocupacao = ocupacaoDoInventario(ficha, inventario);
+
     return {
-      limite: limite,
+      composicao: comp,
+      calculada: calculada,
+      temporario: temporario,
+      final: final,
+      /* O ajuste levaria abaixo de zero: a tela diz isso por extenso em
+         vez de mostrar um número negativo ou esconder o ajuste. */
+      abaixoDeZero: bruto < 0,
+      semTemporario: calculada,
+
+      limite: final,
       /* "Você não pode ultrapassar o dobro desse limite." */
-      maximo: limite * 2,
-      ocupado: ocupado,
-      sobrecarregado: ocupado > limite,
-      acimaDoMaximo: ocupado > limite * 2,
+      maximo: final * 2,
+      ocupado: ocupacao.total,
+      itens: ocupacao.itens,
+      sobrecarregado: ocupacao.total > final,
+      acimaDoMaximo: ocupacao.total > final * 2,
       forca: forca,
     };
+  }
+
+  function itensDe(inventario) {
+    return (inventario && Array.isArray(inventario.itens)) ? inventario.itens.filter(Boolean) : [];
+  }
+
+  /* Quanto cada item ocupa, com as exceções das habilidades. */
+  function ocupacaoDoInventario(ficha, inventario) {
+    var itens = itensDe(inventario);
+    var meio = efeitosDoTipo(ficha, "meioEspaco", inventario)[0];
+
+    var reducoes = {};
+    efeitosDoTipo(ficha, "espacoItem", inventario).forEach(function (m) {
+      (m.efeito.itens || []).forEach(function (id) {
+        (reducoes[id] = reducoes[id] || []).push({ valor: m.efeito.reducao || 1, fonte: m.fonte });
+      });
+    });
+
+    var total = 0;
+    var lista = itens.map(function (item) {
+      var e = I() ? I().espacosDoItem(item) : { unitario: Math.max(0, Number(item.espacos) || 0), padrao: false, quantidade: 1 };
+      var unitario = e.unitario;
+      var notas = [];
+
+      /* Inventário Organizado: "itens [...] que normalmente ocupam meio
+         espaço (0,5), em vez disso ocupam 1/4 de espaço" (SAH p.34). */
+      if (meio && unitario === 0.5) {
+        unitario = 0.25;
+        notas.push(meio.fonte + ": meio espaço vira um quarto");
+      }
+
+      var soma = unitario * e.quantidade;
+
+      /* Mochila de Utilidades: "um item [...] ocupa 1 espaço a menos"
+         (OPRPG p.29). Um item — uma unidade —, nunca abaixo de zero. */
+      (reducoes[item.id] || []).forEach(function (r) {
+        var tirar = Math.min(r.valor, unitario);
+        if (tirar > 0) {
+          soma -= tirar;
+          notas.push(r.fonte + ": −" + tirar + " espaço");
+        }
+      });
+
+      soma = Math.max(0, soma);
+      total += soma;
+
+      return {
+        id: item.id,
+        nome: item.nome,
+        unitario: e.unitario,
+        unitarioEfetivo: unitario,
+        quantidade: e.quantidade,
+        total: soma,
+        padrao: e.padrao,
+        notas: notas,
+      };
+    });
+
+    return { total: Math.round(total * 100) / 100, itens: lista };
   }
 
   /* =================================================================
      PERÍCIAS — OPRPG p.40
      ================================================================= */
 
-  function grauDaPericia(ficha, chave) {
+  function grauBaseDaPericia(ficha, chave) {
     var g = ficha.pericias && ficha.pericias[chave];
     return C.grau(g).chave;
+  }
+
+  /* O grau que vale: o da ficha, subido pelas escolhas de progressão. */
+  function grauDaPericia(ficha, chave) {
+    var est = estadoDe(ficha);
+    if (est && est.graus && est.graus[chave]) return est.graus[chave];
+    return grauBaseDaPericia(ficha, chave);
+  }
+
+  function fontesDoGrau(ficha, chave) {
+    var est = estadoDe(ficha);
+    return est && est.fontesGrau ? (est.fontesGrau[chave] || []) : [];
   }
 
   function bonusDePericia(ficha, chave, inventario) {
@@ -405,7 +629,25 @@
     if (!pe) return c;
 
     var g = C.grau(grauDaPericia(ficha, chave));
-    c.soma(g.nome, g.bonus, "OPRPG p.40");
+    var fontes = fontesDoGrau(ficha, chave);
+    var origemGrau = fontes.length
+      ? "OPRPG p.40 · " + fontes.map(function (f) { return f.fonte + " (" + f.detalhe + ")"; }).join(", ")
+      : "OPRPG p.40";
+    c.soma(g.nome, g.bonus, origemGrau);
+
+    efeitosDoTipo(ficha, "bonusPericia", inventario).forEach(function (m) {
+      if ((m.efeito.pericias || []).indexOf(chave) >= 0) c.soma(m.fonte, m.efeito.valor, m.detalhe);
+    });
+
+    efeitosDoTipo(ficha, "bonusPericiaAtributo", inventario).forEach(function (m) {
+      if (m.efeito.pericia === chave) {
+        c.soma(m.fonte, atributo(ficha, m.efeito.atributo), siglaDe(m.efeito.atributo) + " somado");
+      }
+    });
+
+    efeitosDoTipo(ficha, "bonusSeTreinado", inventario).forEach(function (m) {
+      if (m.efeito.pericia === chave && g.bonus > 0) c.soma(m.fonte, m.efeito.valor, m.detalhe);
+    });
 
     /* Penalidade de carga: só nas perícias marcadas com carga. */
     if (pe.carga) {
@@ -419,40 +661,242 @@
     return c;
   }
 
+  /* O atributo que a perícia usa. Um efeito pode trocá-lo — A Força do
+     Saber, Racionalidade Inflexível. */
+  function atributoDaPericia(ficha, chave) {
+    var pe = C.pericia(chave);
+    if (!pe) return "";
+    var escolhido = pe.atributo;
+    efeitosDoTipo(ficha, "atributoBasePericia").forEach(function (m) {
+      if (m.efeito.pericia === chave) escolhido = m.efeito.atributo;
+    });
+    return escolhido;
+  }
+
   /* Os dados que a perícia rola: um d20 por ponto do atributo-base.
      Atributo 0 rola 2d20 e pega o pior — que é o `-2d20` do motor. */
   function dadoDePericia(ficha, chave) {
     var pe = C.pericia(chave);
     if (!pe) return "1d20";
-    var valor = atributo(ficha, pe.atributo);
+    var valor = atributo(ficha, atributoDaPericia(ficha, chave));
     return valor <= 0 ? "-2d20" : valor + "d20";
   }
 
   /* =================================================================
      PATENTE — OPRPG p.51-52
+     -----------------------------------------------------------------
+     A regra de patente é uma chave da ficha, "Aplicar regras de
+     patente". Ligada (o padrão, e o comportamento de toda ficha
+     anterior a esta chave), ela controla três coisas:
+
+       · a patente em si, derivada dos pontos de prestígio;
+       · o limite de crédito, com o efeito de Patrocinador da Ordem;
+       · o limite de itens por categoria (Tabela 3.1).
+
+     Desligada, nenhuma das três é calculada. Os pontos de prestígio
+     continuam guardados, e os limites por categoria passam a ser os
+     definidos à mão pela mesa — guardados à parte, para voltar a valer
+     se a chave for desligada de novo depois.
+
+     Limite `null` é "sem limite". Limite `0` é "nenhum item". Os dois
+     nunca se confundem.
      ================================================================= */
+
+  var CATEGORIAS = [0, 1, 2, 3, 4];
+
+  function regraDePatente(ficha) {
+    return !(ficha && ficha.patente && ficha.patente.aplicar === false);
+  }
 
   function patente(ficha) {
     var pp = inteiro(ficha.prestigio, 0);
 
-    /* A tabela vale de baixo para cima: a maior patente cujo mínimo o
-       personagem alcançou. Perder PP rebaixa pelo mesmo caminho. */
     var atual = C.PATENTES[0];
     C.PATENTES.forEach(function (p) { if (pp >= p.pp) atual = p; });
 
     var indiceCredito = C.CREDITOS.indexOf(atual.credito);
-
     efeitosDoTipo(ficha, "creditoAcima").forEach(function (m) {
       indiceCredito = Math.min(C.CREDITOS.length - 1, indiceCredito + m.efeito.valor);
     });
 
+    var aplicada = regraDePatente(ficha);
+
     return {
+      aplicada: aplicada,
       patente: atual,
       credito: C.CREDITOS[indiceCredito],
       creditoElevado: indiceCredito !== C.CREDITOS.indexOf(atual.credito),
+      /* A tabela da patente, sempre disponível para mostrar. */
       itens: atual.itens,
+      limites: limitesPorCategoria(ficha, atual),
       prestigio: pp,
     };
+  }
+
+  function limitesPorCategoria(ficha, patenteAtual) {
+    var saida = {};
+    if (regraDePatente(ficha)) {
+      var tabela = patenteAtual || C.PATENTES[0];
+      CATEGORIAS.forEach(function (n) {
+        /* "Você pode escolher quantos itens quiser de categoria 0"
+           (OPRPG p.53). Na tabela, "—" é nenhum item. */
+        saida[n] = n === 0
+          ? { limite: null, origem: "patente", texto: "Categoria 0 não tem limite (OPRPG p.53)." }
+          : { limite: tabela.itens[C.CATEGORIAS_ITEM[n].rotulo] || 0, origem: "patente", texto: tabela.nome + ", Tabela 3.1 (OPRPG p.52)." };
+      });
+      return saida;
+    }
+
+    var manuais = ficha.patente && ficha.patente.limites ? ficha.patente.limites : {};
+    CATEGORIAS.forEach(function (n) {
+      var v = manuais[String(n)];
+      saida[n] = {
+        limite: v === null || v === undefined ? null : v,
+        origem: "manual",
+        texto: v === null || v === undefined ? "Sem limite definido pela mesa." : "Definido pela mesa.",
+      };
+    });
+    return saida;
+  }
+
+  /* Os limites da patente atual, no formato manual — é com eles que a
+     configuração manual começa na primeira vez que a regra é
+     desligada, para nada mudar de uma hora para a outra. */
+  function limitesDaTabela(ficha) {
+    var atual = patente(Object.assign({}, ficha, { patente: { aplicar: true } }));
+    var saida = {};
+    CATEGORIAS.forEach(function (n) { saida[String(n)] = atual.limites[n].limite; });
+    return saida;
+  }
+
+  /* Liga ou desliga a regra de patente. Não apaga item nenhum e não
+     perde a configuração manual. */
+  function definirRegraDePatente(ficha, aplicar) {
+    if (!ficha.patente || typeof ficha.patente !== "object") ficha.patente = { aplicar: true, limites: null };
+    var aviso = null;
+    if (!aplicar && !ficha.patente.limites) {
+      ficha.patente.limites = limitesDaTabela(ficha);
+      aviso = "Os limites manuais começaram iguais aos da patente atual. Ajuste no modo edição.";
+    }
+    ficha.patente.aplicar = !!aplicar;
+    return { ok: true, aviso: aviso };
+  }
+
+  /* Quantos itens de cada categoria o inventário tem, contra o limite.
+
+     Cada UNIDADE conta como um item: três granadas de categoria I são
+     três itens de categoria I. A categoria contada é a EFETIVA, depois
+     das habilidades que a reduzem. */
+  function usoPorCategoria(ficha, inventario) {
+    var reducoes = {};
+    function reduzir(id, valor, fonte) {
+      (reducoes[id] = reducoes[id] || []).push({ valor: valor, fonte: fonte });
+    }
+
+    efeitosDoTipo(ficha, "categoriaItem", inventario).forEach(function (m) {
+      (m.efeito.itens || []).forEach(function (id) { reduzir(id, m.efeito.reducao || 1, m.fonte); });
+    });
+
+    /* A Favorita cai I; Técnica Secreta faz cair II; Máquina de Matar,
+       III (OPRPG p.26). A redução acompanha a trilha, não se soma. */
+    var est = estadoDe(ficha, inventario);
+    var temTrilha = function (chave) {
+      return !!est && est.adquiridos.some(function (a) { return a.valido && a.completo !== false && a.chave === chave && a.via === "trilha"; });
+    };
+    efeitosDoTipo(ficha, "categoriaFavorita", inventario).forEach(function (m) {
+      var nivel = 1 + (temTrilha("tecnicaSecreta") ? 1 : 0) + (temTrilha("maquinaDeMatar") ? 1 : 0);
+      (m.efeito.itens || []).forEach(function (id) { reduzir(id, nivel, m.fonte); });
+    });
+
+    var porGrupo = efeitosDoTipo(ficha, "categoriaGrupo", inventario);
+
+    var limites = patente(ficha).limites;
+    var categorias = {};
+    CATEGORIAS.forEach(function (n) {
+      categorias[n] = { categoria: n, rotulo: C.CATEGORIAS_ITEM[n].rotulo, usados: 0, itens: [],
+        limite: limites[n].limite, origem: limites[n].origem, texto: limites[n].texto, excedido: false };
+    });
+    var semCategoria = [];
+
+    itensDe(inventario).forEach(function (item) {
+      var d = I() ? I().dadosDoItem(item) : { categoria: null, quantidade: 1, grupo: "geral" };
+      if (d.categoria === null) { semCategoria.push({ id: item.id, nome: item.nome, quantidade: d.quantidade }); return; }
+
+      var lista = (reducoes[item.id] || []).slice();
+      porGrupo.forEach(function (m) {
+        if (d.grupo === m.efeito.grupo) lista.push({ valor: m.efeito.reducao || 1, fonte: m.fonte });
+      });
+
+      var total = lista.reduce(function (s, r) { return s + r.valor; }, 0);
+      var efetiva = Math.max(0, d.categoria - total);
+
+      categorias[efetiva].usados += d.quantidade;
+      categorias[efetiva].itens.push({
+        id: item.id, nome: item.nome, quantidade: d.quantidade,
+        base: d.categoria, efetiva: efetiva, reducoes: lista,
+      });
+    });
+
+    CATEGORIAS.forEach(function (n) {
+      var cat = categorias[n];
+      cat.excedido = cat.limite !== null && cat.usados > cat.limite;
+    });
+
+    return { categorias: categorias, semCategoria: semCategoria, aplicada: regraDePatente(ficha) };
+  }
+
+  /* =================================================================
+     RESISTÊNCIAS E PROFICIÊNCIAS
+     ================================================================= */
+
+  var ROTULOS_DANO = { mental: "Dano mental", paranormal: "Dano paranormal" };
+
+  function resistencias(ficha, inventario) {
+    var dano = {};
+    function contaDe(tipo) {
+      if (!dano[tipo]) {
+        var el = C.elemento(tipo);
+        dano[tipo] = { tipo: tipo, rotulo: el ? el.nome : (ROTULOS_DANO[tipo] || tipo), conta: conta() };
+      }
+      return dano[tipo].conta;
+    }
+
+    efeitosDoTipo(ficha, "resistenciaDano", inventario).forEach(function (m) {
+      if (m.efeito.dano) contaDe(m.efeito.dano).soma(m.fonte, m.efeito.valor, m.detalhe);
+    });
+
+    /* Eu Já Sabia: resistência a dano mental igual ao Intelecto
+       (OPRPG p.21). */
+    efeitosDoTipo(ficha, "resistenciaMental", inventario).forEach(function (m) {
+      contaDe("mental").soma(m.fonte, atributo(ficha, m.efeito.atributo || "int"), m.detalhe);
+    });
+
+    var testes = conta();
+    efeitosDoTipo(ficha, "resistenciaTestes", inventario).forEach(function (m) {
+      testes.soma(m.fonte, m.efeito.valor, m.detalhe);
+    });
+
+    var paranormal = conta();
+    efeitosDoTipo(ficha, "resistenciaTestesParanormal", inventario).forEach(function (m) {
+      paranormal.soma(m.fonte, m.efeito.valor, m.detalhe);
+    });
+
+    return {
+      dano: Object.keys(dano).map(function (k) { return dano[k]; }),
+      testes: testes,
+      testesParanormal: paranormal,
+    };
+  }
+
+  function proficiencias(ficha) {
+    var classe = C.classe(ficha.classe);
+    var lista = classe ? classe.proficiencias.map(function (p) { return { texto: p, fonte: classe.nome }; }) : [];
+    efeitosDoTipo(ficha, "proficiencia").forEach(function (m) {
+      if (!lista.some(function (x) { return x.texto === m.efeito.texto; })) {
+        lista.push({ texto: m.efeito.texto, fonte: m.fonte });
+      }
+    });
+    return lista;
   }
 
   /* =================================================================
@@ -463,8 +907,6 @@
     var classe = C.classe(ficha.classe);
     var t = trilho(ficha);
 
-    /* O círculo máximo é de Escolhido pelo Outro Lado, que é habilidade
-       de classe — logo, segue o trilho de progressão. */
     var circuloMaximo = 0;
     if (classe && classe.circuloPorNex) {
       classe.circuloPorNex.forEach(function (faixa) {
@@ -473,8 +915,6 @@
     }
 
     return {
-      /* "um personagem só pode aprender um número de rituais dessa
-         forma igual ao seu Intelecto" — OPRPG p.119. */
       limitePorIntelecto: atributo(ficha, "int"),
       circuloMaximo: circuloMaximo,
       custoPorCirculo: C.CUSTO_RITUAL,
@@ -483,12 +923,6 @@
 
   /* =================================================================
      AJUSTES MANUAIS
-     -----------------------------------------------------------------
-     A mesa decide coisas que o livro não prevê, e o R.A.M.A. não pode
-     tornar isso impossível. Um ajuste é uma parcela como outra
-     qualquer: tem rótulo, valor e motivo, aparece na composição com a
-     marca de manual, e sobrevive a qualquer recálculo — porque
-     recalcular soma as parcelas de novo, e ele é uma delas.
      ================================================================= */
 
   function somarAjustes(c, ficha, alvo) {
@@ -511,42 +945,30 @@
   /* =================================================================
      RECURSOS ATUAIS
      -----------------------------------------------------------------
-     O que sobrou depois do gasto. Guardado, porque não dá para deduzir:
-     o sistema não tem como saber quanto dano alguém tomou.
-
      `null` quer dizer "nunca foi tocado" e vale o máximo. É diferente de
-     0, que quer dizer "gastou tudo" — e confundir os dois é como um
-     recálculo acaba curando um personagem.
+     0, que quer dizer "gastou tudo".
      ================================================================= */
 
   function recursoAtual(ficha, qual, maximo) {
     var guardado = ficha.recursos ? ficha.recursos[qual] : null;
     if (guardado === null || guardado === undefined) return maximo;
-
     var n = inteiro(guardado, maximo);
-    /* Aparar para baixo quando o máximo cai. NUNCA para cima: se o
-       máximo subir, o que estava gasto continua gasto. */
     return Math.min(n, maximo);
   }
 
-  /* Aplica um novo máximo aos recursos guardados, sem repor nada. */
   function aparar(ficha, maximos) {
     if (!ficha.recursos) ficha.recursos = { pv: null, pe: null, san: null };
-
     ["pv", "pe", "san"].forEach(function (qual) {
       var atual = ficha.recursos[qual];
       if (atual === null || atual === undefined) return;
       var teto = maximos[qual];
       if (inteiro(atual, 0) > teto) ficha.recursos[qual] = teto;
     });
-
     return ficha.recursos;
   }
 
   /* =================================================================
      O PANORAMA
-     -----------------------------------------------------------------
-     Tudo de uma vez, que é como a tela desenha.
      ================================================================= */
 
   function calcular(ficha, inventario) {
@@ -557,6 +979,7 @@
     return {
       trilho: trilho(ficha),
       exposicao: exposicao(ficha),
+      estado: estadoDe(ficha, inventario),
 
       pv: pv, pe: pe, san: san,
 
@@ -570,18 +993,17 @@
       defesa: defesa(ficha, inventario),
       deslocamento: deslocamento(ficha, inventario),
       carga: capacidade(ficha, inventario),
+      categorias: usoPorCategoria(ficha, inventario),
       patente: patente(ficha),
       rituais: rituais(ficha),
+      resistencias: resistencias(ficha, inventario),
+      proficiencias: proficiencias(ficha),
     };
   }
 
   /* =================================================================
      AUXILIARES
      ================================================================= */
-
-  function atributo(ficha, chave) {
-    return inteiro(ficha && ficha.atributos ? ficha.atributos[chave] : 0, 0);
-  }
 
   function siglaDe(chave) {
     var a = C.ATRIBUTOS.filter(function (x) { return x.chave === chave; })[0];
@@ -601,6 +1023,8 @@
      possa ser aproveitado.
      ================================================================= */
 
+  var ELEMENTOS_DA_AFINIDADE = ["conhecimento", "energia", "morte", "sangue", "outro"];
+
   function normalizar(bruto) {
     var b = (bruto && typeof bruto === "object") ? bruto : {};
     var vazia = fichaVazia();
@@ -615,10 +1039,13 @@
       prestigio: Math.max(0, inteiro(b.prestigio, 0)),
       atributos: {},
       pericias: {},
+      escolhas: [],
       progressao: [],
+      afinidade: normalizarAfinidade(b.afinidade),
+      patente: normalizarPatente(b.patente),
       recursos: { pv: null, pe: null, san: null },
       ajustes: [],
-      temporarios: { pv: 0, pe: 0, san: 0, defesa: 0 },
+      temporarios: { pv: 0, pe: 0, san: 0, defesa: 0, capacidade: 0 },
       opcionais: global.RAMAOrdemOpcionais
         ? global.RAMAOrdemOpcionais.normalizar(b.opcionais)
         : {},
@@ -632,8 +1059,6 @@
 
     var atribBruto = (b.atributos && typeof b.atributos === "object") ? b.atributos : {};
     C.ATRIBUTOS.forEach(function (a) {
-      /* O teto de 5 é do Aumento de Atributo (OPRPG p.26). O piso 0
-         existe porque atributo 0 é um valor legítimo do sistema. */
       ficha.atributos[a.chave] = Math.max(0, Math.min(5, inteiro(atribBruto[a.chave], vazia.atributos[a.chave])));
     });
 
@@ -643,10 +1068,15 @@
       if (g.chave !== "destreinado") ficha.pericias[p.chave] = g.chave;
     });
 
-    /* Escolhas de progressão: guardadas como vieram, filtrando só o que
-       não tem forma de escolha. Uma escolha que deixou de ser válida
-       NÃO é apagada aqui — ela é sinalizada pela revisão, para quem
-       joga decidir. */
+    /* As decisões de cada etapa. Uma escolha que deixou de ser válida
+       NÃO é apagada aqui — ela é sinalizada pelo motor de progressão,
+       para quem joga decidir. Sem o módulo carregado, o que veio é
+       preservado como veio. */
+    ficha.escolhas = E()
+      ? E().normalizarEscolhas(b.escolhas)
+      : (Array.isArray(b.escolhas) ? b.escolhas.slice() : []);
+
+    /* Os registros de texto livre da v2.3: guardados como vieram. */
     (Array.isArray(b.progressao) ? b.progressao : []).forEach(function (e) {
       if (!e || typeof e !== "object") return;
       ficha.progressao.push({
@@ -661,8 +1091,6 @@
     var rec = (b.recursos && typeof b.recursos === "object") ? b.recursos : {};
     ["pv", "pe", "san"].forEach(function (qual) {
       var v = rec[qual];
-      /* null é "nunca foi tocado" e vale o máximo. Zero é "gastou
-         tudo". Os dois precisam sobreviver à leitura. */
       ficha.recursos[qual] = (v === null || v === undefined || v === "") ? null : inteiro(v, null);
     });
 
@@ -681,8 +1109,43 @@
     ["pv", "pe", "san", "defesa"].forEach(function (qual) {
       ficha.temporarios[qual] = inteiro(temp[qual], 0);
     });
+    var limiteTemp = global.RAMAOrdemInventario ? global.RAMAOrdemInventario.LIMITES.ajusteTemporario : 99;
+    ficha.temporarios.capacidade = Math.max(-limiteTemp, Math.min(limiteTemp, inteiro(temp.capacidade, 0)));
 
     return ficha;
+  }
+
+  function normalizarAfinidade(bruto) {
+    var b = (bruto && typeof bruto === "object") ? bruto : {};
+    var elemento = ELEMENTOS_DA_AFINIDADE.indexOf(b.elemento) >= 0 ? b.elemento : "";
+    return {
+      elemento: elemento,
+      /* O nome do elemento Homebrew fica guardado mesmo quando a
+         afinidade é trocada para outro elemento: voltar para "Outro" não
+         pede para digitar tudo de novo. */
+      nomeOutro: String(b.nomeOutro || "").trim().slice(0, 60),
+      adiada: b.adiada === true,
+    };
+  }
+
+  function normalizarPatente(bruto) {
+    var b = (bruto && typeof bruto === "object") ? bruto : {};
+    var limites = null;
+    if (b.limites && typeof b.limites === "object") {
+      limites = {};
+      CATEGORIAS.forEach(function (n) {
+        var v = b.limites[String(n)];
+        if (v === null || v === undefined || v === "") { limites[String(n)] = null; return; }
+        var num = inteiro(v, null);
+        limites[String(n)] = num === null ? null : Math.max(0, Math.min(99, num));
+      });
+    }
+    return {
+      /* Ausente é ligada: é o comportamento de toda ficha gravada antes
+         desta chave existir. */
+      aplicar: b.aplicar !== false,
+      limites: limites,
+    };
   }
 
   function chaveConhecida(valor, lista) {
@@ -700,7 +1163,12 @@
     separaNivelENex: separaNivelENex,
     nexValido: nexValido,
 
+    estado: estadoDe,
     modificadores: modificadores,
+
+    atributo: atributo,
+    atributoBase: atributoBase,
+    composicaoDoAtributo: composicaoDoAtributo,
 
     pontosDeVida: pontosDeVida,
     pontosDeEsforco: pontosDeEsforco,
@@ -709,11 +1177,21 @@
     defesa: defesa,
     deslocamento: deslocamento,
     capacidade: capacidade,
+    ocupacaoDoInventario: ocupacaoDoInventario,
     patente: patente,
+    regraDePatente: regraDePatente,
+    definirRegraDePatente: definirRegraDePatente,
+    limitesDaTabela: limitesDaTabela,
+    usoPorCategoria: usoPorCategoria,
     rituais: rituais,
+    resistencias: resistencias,
+    proficiencias: proficiencias,
 
     grauDaPericia: grauDaPericia,
+    grauBaseDaPericia: grauBaseDaPericia,
+    fontesDoGrau: fontesDoGrau,
     bonusDePericia: bonusDePericia,
+    atributoDaPericia: atributoDaPericia,
     dadoDePericia: dadoDePericia,
 
     criarAjuste: criarAjuste,
@@ -721,6 +1199,5 @@
     aparar: aparar,
 
     calcular: calcular,
-    atributo: atributo,
   };
 })(typeof window !== "undefined" ? window : globalThis);

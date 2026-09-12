@@ -57,6 +57,9 @@ preferências de tela — nunca é tratado como banco.
     fila.js             fila de gravação por entidade
     ordem/              as regras de Ordem Paranormal, em camada própria
       catalogo.js       origens, classes, trilhas, perícias e patentes
+      poderes.js        poderes de classe, gerais, paranormais e de trilha
+      progressao.js     vagas de escolha, requisitos, pendências e efeitos
+      inventario.js     espaços, quantidade e categoria dos itens
       regras.js         os cálculos, com a composição de cada número
       opcionais.js      as regras opcionais, uma chave para cada
     historico.js        rolagem → histórico da campanha, num funil só
@@ -97,7 +100,7 @@ E abra `http://localhost:8099/rama/`.
 
 São três conjuntos.
 
-**Modelo e motor de dados** — 569 verificações. No navegador, abra `testes/`;
+**Modelo e motor de dados** — 759 verificações. No navegador, abra `testes/`;
 no terminal:
 
 ```bash
@@ -110,9 +113,12 @@ rituais, versões de ritual com dano, rótulos compartilhados, categorias,
 migração de ficha antiga, importação e versionamento. E a camada de Ordem
 Paranormal: catálogo, fórmulas conferidas contra exemplos dos livros,
 recálculo que não acumula bônus nem restaura recurso gasto, regras opcionais e
-a separação entre nível e NEX.
+a separação entre nível e NEX; o motor de progressão — cada tipo de pendência,
+requisitos e repetição, concessão automática sem duplicação, revisão com
+dependências, afinidade (inclusive adiada e Homebrew), patente com limites
+manuais, carga por quantidade e o ajuste temporário de capacidade.
 
-**Permissões e concorrência do backend** — 228 verificações:
+**Permissões e concorrência do backend** — 251 verificações:
 
 ```bash
 deno run --allow-read testes/executar-backend.js

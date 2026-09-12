@@ -141,6 +141,19 @@
       return;
     }
 
+    /* Uma ficha gravada por uma versão MAIS NOVA do R.A.M.A. — outra aba,
+       outro aparelho, já atualizado — pode ter campos que este código
+       não conhece. Normalizar e gravar aqui os descartaria. A página
+       para e pede para recarregar, em vez de salvar por cima. */
+    if (U.inteiro(rFicha.dados && rFicha.dados.schemaVersion, 0) > F.VERSAO_SCHEMA) {
+      U.trocar(alvo, UI.vazio({
+        titulo: "Esta ficha é de uma versão mais nova",
+        texto: "Ela foi salva por uma versão do R.A.M.A. mais recente do que a desta página. Recarregue a página para abrir a versão atual — assim nada do que foi salvo se perde.",
+        acao: { rotulo: "Recarregar", aoClicar: function () { location.reload(); } },
+      }));
+      return;
+    }
+
     estado.ficha = F.normalizarFicha(rFicha.dados);
     estado.foto = (rFoto.ok && rFoto.dados && rFoto.dados.imagem) || "";
     estado.campanhas = (rCampanhas.ok && rCampanhas.dados) || [];
@@ -162,6 +175,13 @@
     estado.comoMestre = !!rFicha.mestre && !rFicha.dono;
 
     desenhar();
+
+    /* Uma única vez por abertura: se o personagem de Ordem chegou a NEX
+       50% sem afinidade e ninguém adiou a decisão, a escolha abre.
+       Redesenhar ou salvar nunca chama isto de novo. */
+    if (abasDaFicha() === ABAS_ORDEM && global.RAMASecaoOrdemProgressao && global.RAMASecaoOrdemProgressao.verificarAfinidade) {
+      global.RAMASecaoOrdemProgressao.verificarAfinidade(ctx);
+    }
   }, {
     /* Roda antes de a sessão ser confirmada, então só pode olhar para o
        endereço da página. O servidor confere a permissão de cada uma
@@ -205,6 +225,8 @@
         desenhar();
       },
 
+      irParaAba: function (chave) { trocarAba(chave); },
+
       nomeDaCampanha: function () {
         var c = U.porId(estado.campanhas, estado.ficha.campanhaId);
         return c ? c.nome : "";
@@ -243,6 +265,9 @@
     var alvo = U.$("#ficha");
     var lista = abasDaFicha();
     var secao = lista.find(function (a) { return a.chave === estado.aba; }) || lista[0];
+    /* A aba guardada pode não existir neste tipo de ficha (Progressão
+       numa universal). A que aparece passa a ser a marcada. */
+    estado.aba = secao.chave;
 
     estado.raiz = el("div.ficha", { dataset: { modo: estado.modo } }, [
       cabecalho(),
@@ -432,7 +457,10 @@
   function lerAbaGuardada() {
     try {
       var v = localStorage.getItem(CHAVE_ABA) || "geral";
-      return abasDaFicha().some(function (a) { return a.chave === v; }) ? v : "geral";
+      /* A aba é lida antes de a ficha chegar, quando ainda não se sabe o
+         tipo dela: vale qualquer aba conhecida. Se ela não existir no
+         tipo da ficha, o desenho cai na primeira. */
+      return ABAS_UNIVERSAL.concat(ABAS_ORDEM).some(function (a) { return a.chave === v; }) ? v : "geral";
     } catch (e) { return "geral"; }
   }
 

@@ -338,6 +338,12 @@
          versão. É o id que casa, nunca a posição nem o nome. */
       "rituais.itens": "id",
       "rituais.itens.versoes": "id",
+      /* As decisões de progressão de Ordem casam registro a registro:
+         dois aparelhos resolvendo etapas diferentes não brigam pela
+         lista inteira. */
+      "ordem.escolhas": "id",
+      "ordem.ajustes": "id",
+      "ordem.progressao": "id",
     },
     /* Carimbos de tempo mudam em toda gravação e não são decisão de
        ninguém: perguntar sobre eles seria ruído puro. */
@@ -354,6 +360,10 @@
       titulo: "Título", conteudo: "Conteúdo", descricao: "Descrição",
       circulo: "Círculo", alcance: "Alcance", duracao: "Duração",
       alvo: "Alvo", efeito: "Efeito", versoes: "Versões",
+      quantidade: "Quantidade", espacos: "Espaços", capacidade: "Capacidade",
+      escolhas: "Escolhas de progressão", afinidade: "Afinidade", elemento: "Elemento",
+      nomeOutro: "Elemento Homebrew", adiada: "Afinidade adiada", aplicar: "Aplicar regras de patente",
+      limites: "Limites por categoria", opcoes: "Opções da escolha", etapa: "Etapa",
     },
   };
 

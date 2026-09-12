@@ -14,15 +14,16 @@
    TRÊS COISAS DIFERENTES, QUE NÃO SE MISTURAM
    ---------------------------------------------------------------------
 
-     versão do aplicativo   está aqui. É o que a pessoa vê: v2.3.1.
+     versão do aplicativo   está aqui. É o que a pessoa vê: v2.4.0.
      schemaVersion          está em js/ficha.js. É o formato da FICHA,
                             e só sobe quando a ficha muda de forma.
      versaoFormato          está em js/config.js. É o formato dos
                             arquivos de importação/exportação.
 
-   Elas sobem em ritmos próprios. A v2.3.1 leva schemaVersion 4 e
-   versaoFormato 1 — e isso é normal: a ficha ganhou o tipo e o bloco de
-   Ordem, mas o formato dos arquivos de importação continua o mesmo,
+   Elas sobem em ritmos próprios. A v2.4.0 leva schemaVersion 5 e
+   versaoFormato 1 — e isso é normal: a ficha ganhou as escolhas de
+   progressão de Ordem, mas o formato dos arquivos de importação continua
+   o mesmo,
    porque um arquivo antigo continua sendo lido sem perder nada.
 
    ---------------------------------------------------------------------
@@ -56,6 +57,41 @@
   ];
 
   var CHANGELOG = [
+    {
+      versao: "2.4.0",
+      codinome: "ENCRUZILHADA",
+      data: "12/09/2026",
+      mudancas: {
+        "Adicionado": [
+          "Na ficha de Ordem Paranormal, cada pendência de progressão tem o seu botão — Escolher poder, Escolher atributo, Escolher perícias, Resolver — que abre a escolha certa, com as opções que cabem naquela etapa e o motivo das que não cabem.",
+          "Catálogo de poderes com livro e página em cada entrada: os poderes de classe dos dois livros, os 34 poderes gerais e os 30 poderes paranormais do Livro de Regras e do Sobrevivendo ao Horror, e as habilidades das 24 trilhas — incluindo as nove trilhas novas do suplemento.",
+          "Transcender, Versatilidade, Expansão de Conhecimento e outros poderes que dão poderes abrem a segunda escolha na mesma janela, com as opções internas de cada um (elemento, perícias, item, ritual).",
+          "Afinidade elemental: ao chegar a NEX 50%, a escolha abre uma vez, com Conhecimento, Energia, Morte, Sangue ou um elemento Homebrew com nome. Dá para decidir depois; a pendência fica na Progressão.",
+          "Chave “Aplicar regras de patente” na aba Regras. Desligada, a mesa define quantos itens de cada categoria são permitidos, e a configuração fica guardada para a próxima vez.",
+          "Bônus temporário de capacidade, com sinal, no modo edição. A ficha mostra a conta inteira: capacidade calculada, ajuste e capacidade final.",
+          "Itens de Ordem têm espaços, quantidade, categoria e grupo. A carga ocupada é calculada sozinha, e cada categoria mostra quantos itens usa contra o limite.",
+          "Painel “Poderes e habilidades” na aba Geral, com tudo o que o personagem já recebeu, de onde veio e se entra na conta, entra em parte ou é anotação.",
+        ],
+        "Alterado": [
+          "As habilidades de trilha deixaram de aparecer como “Falta decidir”: elas chegam sozinhas quando o NEX alcança a etapa. Só a trilha em si é escolhida.",
+          "A criação guiada resolve as pendências no próprio resumo, com as mesmas janelas da ficha. Continua dando para criar o personagem com pendências em aberto.",
+          "Revisar uma escolha no modo edição mostra antes o que sai, o que entra e quais escolhas posteriores deixam de cumprir requisito. Nada é apagado: o que perde requisito fica marcado, e a mesa pode manter mesmo assim.",
+          "Aumentos de atributo e de grau escolhidos na progressão somam por cima do valor da ficha, com a conta aberta. Recarregar ou recalcular nunca concede o mesmo benefício de novo.",
+        ],
+        "Corrigido": [
+          "A carga do inventário de Ordem ficava sempre em zero, porque os itens não tinham espaços. Agora cada item ocupa o que o livro diz — 1 espaço quando não informado.",
+          "A origem Amnésico não deixava escolher as duas perícias da origem na criação.",
+          "Mão Pesada e Para Bellum apareciam como “entra na conta” sem somar em rolagem nenhuma. Agora aparecem como anotação, que é o que são hoje.",
+          "A aba Progressão ou Regras voltava para Geral ao recarregar a ficha.",
+        ],
+        "Técnico": [
+          "Motor de progressão em js/ordem/progressao.js: cada vaga tem id estável (d3.poderClasse, b.aFavorita, afinidade), e os efeitos das escolhas são recalculados na ordem das etapas, nunca gravados.",
+          "schemaVersion 5: o bloco de Ordem ganhou escolhas, afinidade, patente e o ajuste temporário de capacidade; os itens ganharam espaços, quantidade e categoria. Fichas antigas abrem sem migração.",
+          "Uma página com o código anterior que abrir uma ficha gravada por esta versão avisa e pede para recarregar, em vez de gravar por cima.",
+          "A sincronização junta escolhas de progressão feitas em aparelhos diferentes registro a registro. O catálogo de poderes só carrega nas páginas da ficha e da criação.",
+        ],
+      },
+    },
     {
       versao: "2.3.1",
       codinome: "ÍNDICE",

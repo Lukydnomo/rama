@@ -1134,3 +1134,64 @@
 }
 .etiqueta--calculo { color: var(--cor-paranormal); border-color: var(--cor-paranormal); }
 .etiqueta--parcial { color: var(--cor-texto-2); border-color: var(--cor-traco-media); }
+
+/* =====================================================================
+   ESCOLHA DE PROGRESSÃO (Ordem Paranormal)
+   ---------------------------------------------------------------------
+   A janela que resolve uma pendência. Opção indisponível continua
+   visível e legível: esmaecida, com o motivo escrito — nunca some.
+   ===================================================================== */
+
+.escolha-lista { max-height: 26rem; }
+
+.escolha-cartao { position: relative; }
+.escolha-cartao[aria-pressed="true"] { background: var(--cor-superficie-2); }
+.escolha-cartao--indisponivel { cursor: not-allowed; }
+.escolha-cartao--indisponivel .criacao-opcao__nome,
+.escolha-cartao--indisponivel .escolha-cartao__resumo { color: var(--cor-texto-3); }
+
+.escolha-marcas { display: flex; flex-wrap: wrap; gap: var(--e1); }
+
+.escolha-requisitos { display: flex; flex-direction: column; gap: 2px; }
+.escolha-requisito {
+  font-family: var(--fonte-mini);
+  font-size: var(--texto-mini);
+  color: var(--cor-texto-2);
+}
+.escolha-requisito--ok { color: var(--cor-ok); }
+.escolha-requisito--falta { color: var(--cor-erro); }
+
+.escolha-motivo {
+  font-family: var(--fonte-mini);
+  font-size: var(--texto-mini);
+  color: var(--cor-aviso);
+}
+
+.escolha-aninhada {
+  display: flex;
+  flex-direction: column;
+  gap: var(--e2);
+  padding: var(--e3);
+  border-left: 3px solid var(--cor-paranormal);
+  background: var(--cor-fundo);
+}
+
+.escolha-opcoes { gap: var(--e3); }
+
+.escolha-status {
+  display: flex;
+  flex-direction: column;
+  gap: var(--e1);
+  padding-top: var(--e2);
+  border-top: var(--borda) solid var(--cor-traco-fraca);
+  min-height: 1.5rem;
+}
+
+.escolha-atributos {
+  display: grid;
+  gap: var(--e2);
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+}
+.escolha-atributo__valor { font-size: var(--texto-medio); font-weight: 700; }
+
+.criacao-pericia--bloqueada { opacity: 0.6; cursor: not-allowed; }

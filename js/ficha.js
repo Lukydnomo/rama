@@ -39,12 +39,17 @@
      3 → 4: a ficha ganhou `tipoFicha` e, quando é de Ordem, o bloco
      `ordem` com as escolhas do sistema. Ficha sem o campo é universal,
      que é o que toda ficha gravada antes desta versão é.
+     4 → 5: o bloco `ordem` ganhou `escolhas` (as decisões de cada etapa
+     de progressão), `afinidade`, `patente` e o ajuste temporário de
+     capacidade; os itens de uma ficha de Ordem ganharam o bloco `ordem`
+     com espaços, quantidade e categoria.
 
-     Nenhuma das duas subidas exige migração: normalizarFicha() cria o
-     que falta, vazio, e não toca no que existe. Um ritual gravado na 2
-     abre na 3 com a versão Normal em branco. Ver
-     docs/CHARACTER_SCHEMA.md. */
-  var VERSAO_SCHEMA = 4;
+     Nenhuma das subidas exige migração: normalizarFicha() cria o que
+     falta, vazio, e não toca no que existe. Um ritual gravado na 2 abre
+     na 3 com a versão Normal em branco; uma ficha de Ordem gravada na 4
+     abre na 5 sem escolhas registradas, com as pendências calculadas a
+     partir da classe e do NEX. Ver docs/CHARACTER_SCHEMA.md. */
+  var VERSAO_SCHEMA = 5;
 
   var NATUREZA = { INFORMACAO: "informacao", ROLAVEL: "rolavel", DEPENDENTE: "dependente" };
 
@@ -445,6 +450,15 @@
          não vínculo: editar o modelo na Homebrew NÃO muda a ficha. */
       origemHomebrewId: d.origemHomebrewId || null,
     };
+
+    /* Espaços, quantidade e categoria de Ordem Paranormal. O bloco só
+       existe no item que já o tinha — um item da ficha universal nunca
+       ganha campo novo por causa disto. */
+    if (d.ordem && typeof d.ordem === "object") {
+      base.ordem = global.RAMAOrdemInventario
+        ? global.RAMAOrdemInventario.normalizarDados(d.ordem, base.tipo)
+        : JSON.parse(JSON.stringify(d.ordem));
+    }
 
     if (base.tipo === "mochila") {
       base.reducaoPeso = U.peso(d.reducaoPeso);

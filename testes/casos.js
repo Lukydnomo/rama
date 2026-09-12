@@ -903,8 +903,16 @@
       t.igual("28 perícias", OC.PERICIAS.length, 28);
       t.igual("26 origens", OC.ORIGENS.length, 26);
       t.igual("três classes", OC.CLASSES.length, 3);
-      t.igual("quinze trilhas", OC.TRILHAS.length, 15);
-      t.igual("cinco por classe", OC.trilhasDaClasse("combatente").length, 5);
+      /* Quinze do livro básico e nove do Sobrevivendo ao Horror, três
+         por classe. A fonte distingue as duas. */
+      t.igual("quinze trilhas do livro básico",
+        OC.TRILHAS.filter(function (tr) { return tr.fonte !== "SAH"; }).length, 15);
+      t.igual("nove trilhas do Sobrevivendo ao Horror",
+        OC.TRILHAS.filter(function (tr) { return tr.fonte === "SAH"; }).length, 9);
+      t.igual("cinco do livro básico por classe",
+        OC.trilhasDaClasse("combatente").filter(function (tr) { return tr.fonte !== "SAH"; }).length, 5);
+      t.igual("e três do suplemento por classe",
+        OC.trilhasDaClasse("ocultista").filter(function (tr) { return tr.fonte === "SAH"; }).length, 3);
       t.igual("cinco patentes", OC.PATENTES.length, 5);
 
       /* Atributos-base conferidos contra o livro (OPRPG p.41-49). */
@@ -1354,6 +1362,564 @@
           t.igual("  e o NEX", importada.dados.ordem.nex, 25);
           t.igual("  e o ajuste manual", importada.dados.ordem.ajustes.length, 1);
         }
+      }
+    }
+
+    /* =================================================================
+       ORDEM — PROGRESSÃO, ESCOLHAS E EFEITOS
+       -----------------------------------------------------------------
+       O motor que transforma pendência em escolha e escolha em número.
+       Os exemplos numéricos vêm dos próprios livros sempre que o livro
+       dá um.
+       ================================================================= */
+
+    if (global.RAMAOrdemProgressao && global.RAMAOrdemPoderes && global.RAMAOrdemRegras) {
+      var EP = global.RAMAOrdemProgressao;
+      var PO = global.RAMAOrdemPoderes;
+      var RR = global.RAMAOrdemRegras;
+      var CC = global.RAMAOrdemCatalogo;
+      var IO = global.RAMAOrdemInventario;
+
+      function agente(extra) {
+        var f = RR.fichaVazia();
+        f.classe = "combatente";
+        f.origem = "militar";
+        f.trilha = "tropadechoque";
+        f.nex = 99;
+        f.atributos = { agi: 2, for: 3, int: 1, pre: 1, vig: 2 };
+        f.pericias = { luta: "treinado", fortitude: "treinado", pontaria: "treinado", tatica: "treinado", iniciativa: "treinado", percepcao: "treinado" };
+        return Object.assign(f, extra || {});
+      }
+
+      function vagaDe(ordem, id) {
+        return EP.vagas(ordem).filter(function (v) { return v.id === id; })[0];
+      }
+
+      function escolher(ordem, id, valor, opcoes) {
+        return EP.registrar(ordem, vagaDe(ordem, id), { valor: valor, opcoes: opcoes || {} });
+      }
+
+      function avaliar(ordem, id, valor, opcoes, contexto) {
+        return EP.simular(ordem, vagaDe(ordem, id), { valor: valor, opcoes: opcoes || {} }, contexto || null).avaliacao;
+      }
+
+      function idsPendentes(ordem, contexto) {
+        return EP.estado(ordem, contexto || null).pendencias.map(function (p) { return p.id; });
+      }
+
+      function nomesAdquiridos(ordem, contexto) {
+        return EP.estado(ordem, contexto || null).adquiridos.filter(function (a) { return a.valido && a.completo !== false; })
+          .map(function (a) { return a.nome; });
+      }
+
+      /* ---------------------------------------------------------------- */
+      t.grupo("Ordem — catálogo de poderes");
+
+      var chaves = {};
+      var duplicada = "";
+      PO.TODOS.forEach(function (p) { if (chaves[p.chave]) duplicada = p.chave; chaves[p.chave] = true; });
+      t.igual("nenhuma chave de poder se repete", duplicada, "");
+      t.ok("todo poder tem fonte e página", PO.TODOS.every(function (p) { return (p.fonte === "OPRPG" || p.fonte === "SAH") && p.pagina > 0; }));
+      t.ok("todo poder tem resumo", PO.TODOS.every(function (p) { return p.resumo.length > 10; }));
+      t.ok("toda automação é calculo, parcial ou informacao",
+        PO.TODOS.every(function (p) { return ["calculo", "parcial", "informacao"].indexOf(p.automacao) >= 0; }));
+      t.igual("22 poderes paranormais do livro básico",
+        PO.PODERES_PARANORMAIS.filter(function (p) { return p.fonte === "OPRPG"; }).length, 22);
+      t.igual("8 poderes paranormais do Sobrevivendo ao Horror (Tabela 1.6)",
+        PO.PODERES_PARANORMAIS.filter(function (p) { return p.fonte === "SAH"; }).length, 8);
+      t.igual("34 poderes gerais do Sobrevivendo ao Horror (Tabela 2.3)", PO.PODERES_GERAIS.length, 34);
+      t.igual("quatro habilidades por trilha, nas 24 trilhas", PO.HABILIDADES_TRILHA.length, 96);
+      t.ok("os nomes das habilidades batem com os das trilhas do catálogo",
+        CC.TRILHAS.every(function (tr) {
+          var h = PO.habilidadesDaTrilha(tr.chave).map(function (x) { return x.nome; });
+          return JSON.stringify(h) === JSON.stringify(tr.poderes.map(function (x) { return x.nome; }));
+        }));
+      t.ok("todo requisito de poder aponta para algo que existe",
+        PO.TODOS.every(function (p) {
+          return p.requisitos.every(function (r) {
+            if (r.tipo === "poder" || r.tipo === "poderElemento") return !!PO.poder(r.poder);
+            if (r.tipo === "treinado") return !!CC.pericia(r.pericia);
+            if (r.tipo === "atributo") return CC.ATRIBUTOS.some(function (a) { return a.chave === r.atributo; });
+            return true;
+          });
+        }));
+      t.ok("Transcender é poder das três classes", PO.poder("transcender").classes.length === 3);
+      t.ok("Artista Marcial também vale como poder geral (SAH p.33)", !!PO.poder("artistaMarcial").geral);
+
+      /* ---------------------------------------------------------------- */
+      t.grupo("Ordem — pendências viram vagas com id estável");
+
+      var lia = agente();
+      var pendentes = idsPendentes(lia);
+      t.ok("poder de classe em NEX 15% é a vaga d3.poderClasse", pendentes.indexOf("d3.poderClasse") >= 0);
+      t.ok("  e o de NEX 30% é outra vaga, d6.poderClasse", pendentes.indexOf("d6.poderClasse") >= 0);
+      t.ok("NEX 50% abre atributo e versatilidade separados",
+        pendentes.indexOf("d10.atributo") >= 0 && pendentes.indexOf("d10.versatilidade") >= 0);
+      t.ok("habilidade de trilha NÃO é pendência: chega sozinha",
+        pendentes.filter(function (id) { return /poderTrilha/.test(id); }).length === 0);
+      t.iguais("os quatro poderes da Tropa de Choque chegaram sozinhos em NEX 99%",
+        nomesAdquiridos(lia), ["Casca Grossa", "Cai Dentro", "Duro de Matar", "Inquebrável"]);
+      t.ok("a afinidade é pendência em NEX 99%", pendentes.indexOf("afinidade") >= 0);
+
+      var especialista5 = RR.fichaVazia();
+      especialista5.classe = "especialista";
+      especialista5.nex = 5;
+      t.iguais("especialista em NEX 5% só tem Perito a decidir", idsPendentes(especialista5), ["d1.perito"]);
+
+      var semTrilha = agente({ trilha: "", nex: 10 });
+      t.iguais("sem trilha em NEX 10%, a trilha é pendência", idsPendentes(semTrilha), ["d2.trilha"]);
+
+      /* ---------------------------------------------------------------- */
+      t.grupo("Ordem — resolver cada tipo de pendência");
+
+      /* Poder de classe. */
+      var r1 = avaliar(lia, "d3.poderClasse", "golpePesado");
+      t.ok("Golpe Pesado resolve um poder de classe", r1.completo && r1.valido);
+      escolher(lia, "d3.poderClasse", "golpePesado");
+      t.ok("  e a vaga sai das pendências", idsPendentes(lia).indexOf("d3.poderClasse") < 0);
+      t.ok("  sem quitar a de NEX 30%", idsPendentes(lia).indexOf("d6.poderClasse") >= 0);
+      t.ok("  e o poder aparece na ficha", nomesAdquiridos(lia).indexOf("Golpe Pesado") >= 0);
+
+      /* Aumento de atributo, com o ponto de Intelecto. */
+      var semPericia = avaliar(lia, "d4.atributo", "int");
+      t.ok("aumentar Intelecto sem escolher a perícia fica incompleto", !semPericia.completo);
+      t.ok("  e diz o que falta", semPericia.faltam.join(" ").indexOf("Perícia") >= 0);
+      escolher(lia, "d4.atributo", "int", { pericia: "investigacao" });
+      t.igual("Intelecto sobe de 1 para 2", RR.atributo(lia, "int"), 2);
+      t.igual("  o valor da ficha continua 1", RR.atributoBase(lia, "int"), 1);
+      t.igual("  e Investigação fica treinada (OPRPG p.15)", RR.grauDaPericia(lia, "investigacao"), "treinado");
+
+      /* Grau de treinamento: 2 + Intelecto, já com o aumento. */
+      t.igual("grau de treinamento de combatente com Int 2 pede 4 perícias",
+        EP.quantasNoGrau(lia, "d7.grauTreinamento").total, 4);
+      var parcial = avaliar(lia, "d7.grauTreinamento", "", { pericias: ["luta", "fortitude"] });
+      t.ok("duas de quatro: incompleto", !parcial.completo && parcial.valido);
+      t.ok("  dizendo quantas faltam", parcial.faltam.join(" ").indexOf("faltam 2") >= 0);
+      var destreinada = avaliar(lia, "d7.grauTreinamento", "", { pericias: ["luta", "fortitude", "pontaria", "crime"] });
+      t.ok("perícia destreinada não sobe grau", !destreinada.valido);
+      escolher(lia, "d7.grauTreinamento", "", { pericias: ["luta", "fortitude", "pontaria", "tatica"] });
+      t.igual("Luta vira veterano", RR.grauDaPericia(lia, "luta"), "veterano");
+      t.igual("  com bônus +10", RR.bonusDePericia(lia, "luta").total, 10);
+      t.igual("  e a ficha continua dizendo treinado na base", RR.grauBaseDaPericia(lia, "luta"), "treinado");
+
+      /* Versatilidade: o primeiro poder de outra trilha. */
+      var vers = avaliar(lia, "d10.versatilidade", "trilha", { trilha: { valor: "aniquilador", opcoes: { arma: "Katana" } } });
+      t.ok("versatilidade aceita o primeiro poder de outra trilha", vers.completo && vers.valido);
+      var versPropria = avaliar(lia, "d10.versatilidade", "trilha", { trilha: { valor: "tropadechoque", opcoes: {} } });
+      t.ok("  mas não da própria trilha", !versPropria.valido);
+      escolher(lia, "d10.versatilidade", "trilha", { trilha: { valor: "aniquilador", opcoes: { arma: "Katana" } } });
+      t.ok("A Favorita chega pela versatilidade", nomesAdquiridos(lia).indexOf("A Favorita") >= 0);
+
+      /* Perito. */
+      var perito = RR.fichaVazia();
+      perito.classe = "especialista";
+      perito.nex = 5;
+      perito.pericias = { investigacao: "treinado", luta: "treinado", ciencias: "treinado" };
+      t.ok("Perito não aceita Luta", !avaliar(perito, "d1.perito", "", { pericias: ["investigacao", "luta"] }).valido);
+      t.ok("  nem perícia destreinada", !avaliar(perito, "d1.perito", "", { pericias: ["investigacao", "crime"] }).valido);
+      t.ok("  e aceita duas treinadas", avaliar(perito, "d1.perito", "", { pericias: ["investigacao", "ciencias"] }).valido);
+
+      /* Trilha com requisito: Médico de Campo exige Medicina (OPRPG p.31). */
+      var medica = RR.fichaVazia();
+      medica.classe = "especialista";
+      medica.nex = 10;
+      var medicoSem = EP.candidatosTrilha(medica, "d2.trilha", null, false).filter(function (c) { return c.trilha.chave === "medico"; })[0];
+      t.ok("Médico de Campo fica indisponível sem Medicina", !medicoSem.disponivel);
+      t.ok("  e diz por quê", medicoSem.motivos.join(" ").indexOf("Medicina") >= 0);
+      medica.pericias.medicina = "treinado";
+      var medicoCom = EP.candidatosTrilha(medica, "d2.trilha", null, false).filter(function (c) { return c.trilha.chave === "medico"; })[0];
+      t.ok("  e disponível com Medicina", medicoCom.disponivel);
+
+      /* Opção interna de habilidade automática. */
+      var aniq = agente({ trilha: "aniquilador", nex: 10 });
+      t.ok("A Favorita abre a vaga da opção interna", idsPendentes(aniq).indexOf("b.aFavorita") >= 0);
+      escolher(aniq, "b.aFavorita", "", { arma: "Fuzil de assalto", itens: [] });
+      t.ok("  e escolher a arma a fecha", idsPendentes(aniq).indexOf("b.aFavorita") < 0);
+
+      /* Poder de origem com escolha: Traços do Outro Lado. */
+      var cultista = agente({ origem: "cultistaarrependido", nex: 5, trilha: "" });
+      t.ok("Cultista Arrependido abre a escolha do poder paranormal", idsPendentes(cultista).indexOf("b.origem.cultistaarrependido") >= 0);
+      escolher(cultista, "b.origem.cultistaarrependido", "", { poder: { valor: "sensitivo", opcoes: {} } });
+      t.igual("  e Sensitivo entra na conta de Diplomacia", RR.bonusDePericia(cultista, "diplomacia").total, 5);
+
+      /* ---------------------------------------------------------------- */
+      t.grupo("Ordem — requisitos e repetição");
+
+      var req = agente({ nex: 60, atributos: { agi: 2, for: 1, int: 1, pre: 1, vig: 2 } });
+      var armamento = EP.candidatosPoderClasse(req, "d3.poderClasse", null).filter(function (c) { return c.entrada.chave === "armamentoPesado"; })[0];
+      t.ok("Armamento Pesado indisponível com Força 1", !armamento.disponivel);
+      t.ok("  dizendo o requisito e o valor da etapa", armamento.motivos.join(" ").indexOf("Força 2") >= 0);
+      t.ok("Proteção Pesada não serve em NEX 15%", !avaliar(req, "d3.poderClasse", "protecaoPesada").valido);
+      t.ok("  e serve em NEX 30% (OPRPG p.25)", avaliar(req, "d6.poderClasse", "protecaoPesada").valido);
+      t.ok("Tanque de Guerra exige Proteção Pesada", !avaliar(req, "d6.poderClasse", "tanqueDeGuerra").valido);
+      escolher(req, "d6.poderClasse", "protecaoPesada");
+      t.ok("  e com ela escolhida antes, vale", avaliar(req, "d9.poderClasse", "tanqueDeGuerra").valido);
+      t.ok("o mesmo poder não entra duas vezes", !avaliar(req, "d9.poderClasse", "protecaoPesada").valido);
+      t.ok("Treinamento em Perícia pode repetir",
+        avaliar(req, "d9.poderClasse", "treinamentoEmPericia", { pericias: ["crime", "medicina"] }).valido);
+      t.ok("um poder de outra classe não vale como poder de classe", !avaliar(req, "d9.poderClasse", "hacker").valido);
+      t.ok("poder geral do Sobrevivendo ao Horror vale como poder de classe", avaliar(req, "d9.poderClasse", "estigmado").valido);
+
+      /* Elemento: "para escolher um poder com pré-requisito Morte 2, você
+         já precisa ter outros dois poderes de Morte" (OPRPG p.114). */
+      var morte = agente({ nex: 99 });
+      t.ok("Surto Temporal (Morte 2) fica indisponível sem poderes de Morte",
+        !avaliar(morte, "d3.poderClasse", "transcender", { poder: { valor: "surtoTemporal", opcoes: {} } }).valido);
+      escolher(morte, "d3.poderClasse", "transcender", { poder: { valor: "encararAMorte", opcoes: {} } });
+      escolher(morte, "d6.poderClasse", "transcender", { poder: { valor: "resistirAElemento", opcoes: { elemento: "morte" } } });
+      t.ok("  e disponível com dois poderes de Morte (Resistir a Morte conta como Morte)",
+        avaliar(morte, "d9.poderClasse", "transcender", { poder: { valor: "surtoTemporal", opcoes: {} } }).valido);
+
+      t.ok("Mestre em Elemento exige Especialista no mesmo elemento", (function () {
+        var oc = RR.fichaVazia();
+        oc.classe = "ocultista";
+        oc.nex = 60;
+        escolher(oc, "d3.poderClasse", "especialistaEmElemento", { elemento: "sangue" });
+        var outro = avaliar(oc, "d9.poderClasse", "mestreEmElemento", { elemento: "morte" });
+        var mesmo = avaliar(oc, "d9.poderClasse", "mestreEmElemento", { elemento: "sangue" });
+        return !outro.valido && mesmo.valido;
+      })());
+
+      /* ---------------------------------------------------------------- */
+      t.grupo("Ordem — efeitos entram uma vez só");
+
+      /* Potencial Aprimorado: "se escolher este poder em NEX 30%, recebe
+         6 PE. Quando subir para NEX 35%, recebe +1 PE" (OPRPG p.115). */
+      var potencial = agente({ nex: 30 });
+      var pe30 = RR.pontosDeEsforco(potencial).total;
+      escolher(potencial, "d6.poderClasse", "transcender", { poder: { valor: "potencialAprimorado", opcoes: {} } });
+      t.igual("Potencial Aprimorado em NEX 30% dá 6 PE", RR.pontosDeEsforco(potencial).total - pe30, 6);
+      potencial.nex = 35;
+      var semPoder35 = agente({ nex: 35 });
+      t.igual("  e em NEX 35% passa a dar 7", RR.pontosDeEsforco(potencial).total - RR.pontosDeEsforco(semPoder35).total, 7);
+
+      /* Sangue de Ferro: "se escolher este poder em NEX 50%, recebe 20 PV.
+         Quando subir para NEX 55%, recebe +2 PV" (OPRPG p.116). */
+      var ferro = agente({ nex: 50 });
+      var pv50 = RR.pontosDeVida(ferro).total;
+      escolher(ferro, "d9.poderClasse", "transcender", { poder: { valor: "sangueDeFerro", opcoes: {} } });
+      t.igual("Sangue de Ferro em NEX 50% dá 20 PV", RR.pontosDeVida(ferro).total - pv50, 20);
+
+      /* Transcender: "não ganha Sanidade neste aumento de NEX". */
+      var sanAntes = RR.sanidade(agente({ nex: 50 })).total;
+      t.igual("Transcender tira a Sanidade daquele degrau (3 do combatente)", sanAntes - RR.sanidade(ferro).total, 3);
+
+      var tresVezes = [RR.pontosDeVida(ferro).total, RR.pontosDeVida(ferro).total, RR.pontosDeVida(ferro).total];
+      t.ok("recalcular três vezes dá o mesmo PV", tresVezes[0] === tresVezes[1] && tresVezes[1] === tresVezes[2]);
+
+      var relida = RR.normalizar(JSON.parse(JSON.stringify(ferro)));
+      t.igual("recarregar a ficha não concede o poder de novo", RR.pontosDeVida(relida).total, RR.pontosDeVida(ferro).total);
+      t.igual("  nem duplica a escolha", relida.escolhas.length, ferro.escolhas.length);
+
+      var casca = agente({ nex: 50 });
+      var cascas = EP.estado(casca).adquiridos.filter(function (a) { return a.chave === "cascaGrossa"; }).length;
+      t.igual("habilidade automática de trilha aparece uma vez", cascas, 1);
+
+      /* Reflexos Defensivos: +2 Defesa, aparecendo na composição. */
+      var reflexos = agente({ nex: 15 });
+      var defAntes = RR.defesa(reflexos).total;
+      escolher(reflexos, "d3.poderClasse", "reflexosDefensivos");
+      t.igual("Reflexos Defensivos soma +2 na Defesa", RR.defesa(reflexos).total - defAntes, 2);
+      t.ok("  com o nome do poder na composição",
+        RR.defesa(reflexos).parcelas.some(function (p) { return p.rotulo === "Reflexos Defensivos"; }));
+      t.igual("  e +2 em testes de resistência, à parte", RR.resistencias(reflexos).testes.total, 2);
+
+      /* ---------------------------------------------------------------- */
+      t.grupo("Ordem — revisar tira só o que a escolha dava");
+
+      var rev = agente({ nex: 60 });
+      rev.ajustes.push(RR.criarAjuste("defesa", 1, "Colete da mesa"));
+      escolher(rev, "d3.poderClasse", "reflexosDefensivos");
+      escolher(rev, "d6.poderClasse", "protecaoPesada");
+      escolher(rev, "d9.poderClasse", "tanqueDeGuerra");
+      var defesaAntes = RR.defesa(rev).total;
+
+      var imp = EP.impacto(rev, vagaDe(rev, "d6.poderClasse"), { valor: "golpePesado", opcoes: {} }, null);
+      t.iguais("trocar Proteção Pesada avisa o que sai", imp.saem, ["Proteção Pesada"]);
+      t.iguais("  e o que entra", imp.entram, ["Golpe Pesado"]);
+      t.igual("  e que Tanque de Guerra deixa de valer", imp.invalidados.length, 1);
+
+      escolher(rev, "d6.poderClasse", "golpePesado");
+      var est = EP.estado(rev);
+      var tanque = (rev.escolhas || []).filter(function (r) { return r.etapa === "d9.poderClasse"; })[0];
+      t.ok("Tanque de Guerra NÃO foi apagado", !!tanque);
+      t.ok("  mas ficou marcado como requisito não cumprido", est.avaliacoes[tanque.id].valido === false);
+      t.ok("  e virou pendência a revisar", est.pendencias.some(function (p) { return p.id === "d9.poderClasse" && p.situacao === "invalida"; }));
+      t.igual("a Defesa de Reflexos Defensivos e do ajuste da mesa continua", RR.defesa(rev).total, defesaAntes);
+      t.ok("o ajuste da mesa sobreviveu à troca", rev.ajustes.length === 1);
+
+      EP.definirIgnorarRequisitos(rev, tanque.id, true);
+      t.ok("a mesa pode manter a escolha mesmo assim", EP.estado(rev).avaliacoes[tanque.id].valido);
+      t.ok("  e os problemas continuam listados", EP.estado(rev).avaliacoes[tanque.id].motivos.length > 0);
+
+      /* Baixar o NEX guarda a escolha em vez de apagar. */
+      var baixa = agente({ nex: 50 });
+      escolher(baixa, "d10.atributo", "agi");
+      baixa.nex = 45;
+      t.igual("baixar o NEX não apaga a escolha de NEX 50%", baixa.escolhas.length, 1);
+      t.igual("  mas tira o efeito", RR.atributo(baixa, "agi"), 2);
+      t.igual("  e a lista como guardada fora da progressão", EP.estado(baixa).fora.length, 1);
+      baixa.nex = 50;
+      t.igual("subir de novo faz a escolha voltar a valer", RR.atributo(baixa, "agi"), 3);
+
+      /* ---------------------------------------------------------------- */
+      t.grupo("Ordem — afinidade");
+
+      var af = agente({ nex: 45 });
+      t.ok("NEX 45%: nenhuma afinidade a decidir", idsPendentes(af).indexOf("afinidade") < 0);
+      af.nex = 50;
+      t.ok("NEX 50%: afinidade a decidir", idsPendentes(af).indexOf("afinidade") >= 0);
+
+      af.afinidade = { elemento: "", nomeOutro: "", adiada: true };
+      var adiada = EP.estado(af).pendencias.filter(function (p) { return p.id === "afinidade"; })[0];
+      t.ok("adiar mantém a pendência", !!adiada);
+      t.ok("  marcada como adiada", adiada.adiada === true);
+
+      af.afinidade = { elemento: "outro", nomeOutro: "", adiada: false };
+      t.ok("“Outro” sem nome continua pendente", idsPendentes(af).indexOf("afinidade") >= 0);
+      af.afinidade.nomeOutro = "Vazio";
+      t.ok("“Outro” com nome resolve", idsPendentes(af).indexOf("afinidade") < 0);
+      t.ok("  e é marcado como Homebrew", EP.estado(af).afinidade.homebrew);
+
+      /* Escolher o elemento não aplica efeito: a afinidade vem ao
+         transcender depois de NEX 50% (OPRPG p.114). */
+      var afi = agente({ nex: 99, afinidade: { elemento: "sangue", nomeOutro: "", adiada: false } });
+      t.ok("escolher o elemento sozinho não desenvolve afinidade", !EP.estado(afi).afinidade.ativa);
+      escolher(afi, "d9.poderClasse", "transcender", { poder: { valor: "espreitarDaBesta", opcoes: {} } });
+      t.ok("transcender em NEX 45% ainda não desenvolve", !EP.estado(afi).afinidade.ativa);
+      t.ok("  e antes de NEX 50% a segunda escolha do mesmo poder é recusada", (function () {
+        var cedo = agente({ nex: 99, afinidade: { elemento: "sangue", nomeOutro: "", adiada: false } });
+        escolher(cedo, "d3.poderClasse", "transcender", { poder: { valor: "espreitarDaBesta", opcoes: {} } });
+        return !avaliar(cedo, "d6.poderClasse", "transcender", { poder: { valor: "espreitarDaBesta", opcoes: {} } }).valido;
+      })());
+      escolher(afi, "d12.poderClasse", "transcender", { poder: { valor: "sangueDeFerro", opcoes: {} } });
+      t.ok("transcender em NEX 60% desenvolve a afinidade", EP.estado(afi).afinidade.ativa);
+      var furtAntes = RR.bonusDePericia(afi, "furtividade").total;
+      escolher(afi, "d15.poderClasse", "transcender", { poder: { valor: "espreitarDaBesta", opcoes: {} } });
+      t.igual("com afinidade, Espreitar da Besta de novo sobe Furtividade para +10", RR.bonusDePericia(afi, "furtividade").total - furtAntes, 5);
+      var afi2 = agente({ nex: 99, afinidade: { elemento: "sangue", nomeOutro: "", adiada: false } });
+      escolher(afi2, "d3.poderClasse", "transcender", { poder: { valor: "encararAMorte", opcoes: {} } });
+      escolher(afi2, "d12.poderClasse", "transcender", { poder: { valor: "armaDeSangue", opcoes: {} } });
+      t.ok("com afinidade em Sangue, um poder de Morte não repete",
+        !avaliar(afi2, "d15.poderClasse", "transcender", { poder: { valor: "encararAMorte", opcoes: {} } }).valido);
+
+      afi.afinidade.elemento = "morte";
+      var trocada = EP.estado(afi);
+      var segunda = (afi.escolhas || []).filter(function (r) { return r.etapa === "d15.poderClasse"; })[0];
+      t.ok("trocar o elemento marca a segunda escolha como problema, sem apagar",
+        trocada.avaliacoes[segunda.id].valido === false && afi.escolhas.length === 3);
+
+      /* Nível e NEX separados: a afinidade olha o NEX de exposição. */
+      var sep = agente({ opcionais: { nexExperiencia: true }, nivel: 12, nex: 30 });
+      t.ok("nível 12 com NEX 30%: sem afinidade a decidir", idsPendentes(sep).indexOf("afinidade") < 0);
+      sep.nivel = 2;
+      sep.nex = 55;
+      t.ok("nível 2 com NEX 55%: afinidade a decidir", idsPendentes(sep).indexOf("afinidade") >= 0);
+
+      /* ---------------------------------------------------------------- */
+      t.grupo("Ordem — progressão com nível e NEX separados");
+
+      var niv = agente({ opcionais: { nexExperiencia: true }, nivel: 6, nex: 25, trilha: "tropadechoque" });
+      var vagasNiv = EP.vagas(niv).map(function (v) { return v.id; });
+      t.ok("as vagas de classe seguem o nível", vagasNiv.indexOf("d6.poderClasse") >= 0 && vagasNiv.indexOf("d7.grauTreinamento") < 0);
+      t.ok("a exposição abre a oportunidade de transcender em NEX 25%", vagasNiv.indexOf("x25.transcender") >= 0);
+      t.ok("  e a alteração de NEX 25%", vagasNiv.indexOf("x25.alteracao") >= 0);
+      t.ok("Transcender não vale como poder de classe com a regra",
+        !avaliar(niv, "d3.poderClasse", "transcender", { poder: { valor: "sensitivo", opcoes: {} } }).valido);
+      var sanNiv = RR.sanidade(niv).total;
+      escolher(niv, "x25.transcender", "transcender", { poder: { valor: "sensitivo", opcoes: {} } });
+      t.igual("transcender pela exposição NÃO custa Sanidade (SAH p.98)", RR.sanidade(niv).total, sanNiv);
+      escolher(niv, "x25.alteracao", "", { penalidade: "enganacao" });
+      t.igual("a alteração de NEX 25% penaliza a perícia escolhida em –5", RR.bonusDePericia(niv, "enganacao").total, -5);
+      t.ok("recusar transcender também resolve a vaga", (function () {
+        var o = agente({ opcionais: { nexExperiencia: true }, nivel: 7, nex: 35 });
+        escolher(o, "x35.transcender", "nao");
+        return idsPendentes(o).indexOf("x35.transcender") < 0;
+      })());
+
+      /* Ligar a regra não apaga a escolha de Transcender feita antes. */
+      var antes = agente({ nex: 30 });
+      escolher(antes, "d6.poderClasse", "transcender", { poder: { valor: "sensitivo", opcoes: {} } });
+      global.RAMAOrdemOpcionais.definir(antes, "nexExperiencia", true);
+      var reg = antes.escolhas[0];
+      t.ok("ligar NEX & Experiência marca Transcender de classe como problema", EP.estado(antes).avaliacoes[reg.id].valido === false);
+      t.igual("  sem apagar a escolha", antes.escolhas.length, 1);
+      global.RAMAOrdemOpcionais.definir(antes, "nexExperiencia", false);
+      t.ok("  e desligar faz ela voltar a valer", EP.estado(antes).avaliacoes[reg.id].valido === true);
+
+      /* ---------------------------------------------------------------- */
+      t.grupo("Ordem — criação em progressão avançada");
+
+      var rascunho = RR.fichaVazia();
+      rascunho.classe = "ocultista";
+      rascunho.origem = "academico";
+      rascunho.nex = 60;
+      rascunho.atributos = { agi: 1, for: 1, int: 3, pre: 2, vig: 1 };
+      var abertas = idsPendentes(rascunho);
+      t.ok("NEX 60% sem nada decidido lista trilha, poderes, atributos, graus e afinidade",
+        ["d2.trilha", "d3.poderClasse", "d4.atributo", "d7.grauTreinamento", "d10.versatilidade", "afinidade"].every(function (id) {
+          return abertas.indexOf(id) >= 0;
+        }));
+      rascunho.trilha = "graduado";
+      escolher(rascunho, "d3.poderClasse", "ritualPotente");
+      var criada = global.RAMAFicha.normalizarFicha(JSON.parse(JSON.stringify({
+        nome: "Criada", tipoFicha: "ordem", ordem: rascunho,
+      })));
+      t.igual("a escolha feita na criação chega na ficha", criada.ordem.escolhas.length, 1);
+      t.ok("  e as abertas continuam abertas", idsPendentes(criada.ordem).indexOf("d4.atributo") >= 0);
+
+      /* ---------------------------------------------------------------- */
+      t.grupo("Ordem — carga, quantidade e ajuste temporário");
+
+      function invDe(itens) { return { limite: 0, itens: itens }; }
+
+      var carg = agente({ nex: 5, atributos: { agi: 1, for: 2, int: 1, pre: 1, vig: 1 } });
+      var inv = invDe([
+        global.RAMAFicha.criarItem("item", { nome: "Granada", ordem: { espacos: 1, quantidade: 3, categoria: 1 } }),
+        global.RAMAFicha.criarItem("arma", { nome: "Fuzil", ordem: { espacos: 2, quantidade: 1, categoria: 2 } }),
+        global.RAMAFicha.criarItem("item", { nome: "Corda" }),
+        global.RAMAFicha.criarItem("item", { nome: "Mochila militar", ordem: { espacos: 0, capacidade: 2, categoria: 1 } }),
+      ]);
+      var cap = RR.capacidade(carg, inv);
+      t.igual("Força 2 carrega 10 espaços, mais 2 da mochila militar", cap.calculada, 12);
+      t.igual("carga soma espaços × quantidade, com o padrão de 1 para quem não informou", cap.ocupado, 3 + 2 + 1 + 0);
+      t.ok("  e marca o item sem espaço informado como padrão", cap.itens.filter(function (x) { return x.nome === "Corda"; })[0].padrao);
+
+      carg.temporarios.capacidade = 5;
+      t.igual("ajuste +5 aumenta a capacidade final", RR.capacidade(carg, inv).final, 17);
+      t.igual("  sem mexer na carga", RR.capacidade(carg, inv).ocupado, 6);
+      t.igual("  nem na Força", RR.atributo(carg, "for"), 2);
+      carg.temporarios.capacidade = -2;
+      t.igual("ajuste –2 reduz", RR.capacidade(carg, inv).final, 10);
+      carg.temporarios.capacidade = 0;
+      t.igual("ajuste 0 mantém a calculada", RR.capacidade(carg, inv).final, 12);
+      carg.temporarios.capacidade = -20;
+      var negativo = RR.capacidade(carg, inv);
+      t.igual("ajuste que levaria abaixo de zero para em 0", negativo.final, 0);
+      t.ok("  e avisa que passou do limite", negativo.abaixoDeZero);
+      t.ok("  deixando sobrecarregado, com –5 na Defesa", RR.defesa(carg, inv).parcelas.some(function (p) { return p.rotulo === "Sobrecarregado"; }));
+      carg.temporarios.capacidade = 0;
+
+      t.ok("o ajuste temporário sobrevive a recarregar", (function () {
+        var o = agente();
+        o.temporarios.capacidade = 4;
+        return RR.normalizar(JSON.parse(JSON.stringify(o))).temporarios.capacidade === 4;
+      })());
+      t.igual("ajuste fora do intervalo é aparado na leitura", RR.normalizar({ temporarios: { capacidade: 500 } }).temporarios.capacidade, 99);
+
+      t.ok("“+5” é um ajuste válido", IO.validarAjusteTemporario("+5").valor === 5);
+      t.ok("“-2” também", IO.validarAjusteTemporario("-2").valor === -2);
+      t.ok("“abc” não é", !IO.validarAjusteTemporario("abc").ok);
+      t.ok("meio espaço é aceito", IO.validarEspacos("0,5").valor === 0.5);
+      t.ok("quantidade 0 é recusada", !IO.validarQuantidade("0").ok);
+
+      /* Inventário Otimizado: "se você tem Força 1 e Intelecto 3, seu
+         inventário tem 20 espaços" (OPRPG p.31). */
+      var tecnico = RR.fichaVazia();
+      tecnico.classe = "especialista";
+      tecnico.trilha = "tecnico";
+      tecnico.nex = 10;
+      tecnico.atributos = { agi: 1, for: 1, int: 3, pre: 1, vig: 1 };
+      t.igual("Técnico com Força 1 e Intelecto 3 carrega 20 espaços", RR.capacidade(tecnico, invDe([])).calculada, 20);
+
+      /* Mochila de Utilidades: um item conta uma categoria abaixo e ocupa
+         1 espaço a menos. */
+      var mochila = RR.fichaVazia();
+      mochila.classe = "especialista";
+      mochila.nex = 15;
+      mochila.atributos = { agi: 1, for: 2, int: 1, pre: 1, vig: 1 };
+      var kit = global.RAMAFicha.criarItem("item", { nome: "Kit", ordem: { espacos: 2, categoria: 2 } });
+      var invKit = invDe([kit]);
+      escolher(mochila, "d3.poderClasse", "mochilaDeUtilidades", { item: kit.id });
+      t.igual("Mochila de Utilidades tira 1 espaço do item", RR.capacidade(mochila, invKit).ocupado, 1);
+      t.igual("  e baixa a categoria de II para I", RR.usoPorCategoria(mochila, invKit).categorias[1].usados, 1);
+      var semItem = EP.estado(mochila, { inventario: invDe([]) });
+      t.ok("remover o item deixa a escolha marcada, não apagada",
+        semItem.avaliacoes[mochila.escolhas[0].id].valido === false && mochila.escolhas.length === 1);
+
+      /* ---------------------------------------------------------------- */
+      t.grupo("Ordem — patente ligada e limites manuais");
+
+      var pat = agente({ prestigio: 20 });
+      var invPat = invDe([
+        global.RAMAFicha.criarItem("item", { nome: "Granadas", ordem: { quantidade: 4, categoria: 1 } }),
+        global.RAMAFicha.criarItem("item", { nome: "Óculos", ordem: { quantidade: 1, categoria: 2 } }),
+      ]);
+      t.ok("ficha sem a chave aplica a patente (comportamento anterior)", RR.regraDePatente(RR.normalizar({})));
+      var uso = RR.usoPorCategoria(pat, invPat);
+      t.igual("operador: 3 itens de categoria I (OPRPG p.53)", uso.categorias[1].limite, 3);
+      t.ok("  e 4 unidades passam do limite", uso.categorias[1].excedido);
+      t.igual("categoria 0 não tem limite", uso.categorias[0].limite, null);
+      t.igual("patente III de operador é 0 — nenhum, não “sem limite”", uso.categorias[3].limite, 0);
+
+      var aviso = RR.definirRegraDePatente(pat, false);
+      t.ok("desligar a patente avisa que os limites manuais começaram iguais", !!aviso.aviso);
+      t.igual("  com o limite de I igual ao da patente", RR.usoPorCategoria(pat, invPat).categorias[1].limite, 3);
+      t.ok("  e a patente deixa de ser aplicada", !RR.patente(pat).aplicada);
+      pat.patente.limites["1"] = null;
+      pat.patente.limites["3"] = 0;
+      t.igual("limite manual “sem limite” vale", RR.usoPorCategoria(pat, invPat).categorias[1].limite, null);
+      t.ok("  e nada fica acima do limite", !RR.usoPorCategoria(pat, invPat).categorias[1].excedido);
+      RR.definirRegraDePatente(pat, true);
+      t.igual("religar volta à tabela", RR.usoPorCategoria(pat, invPat).categorias[1].limite, 3);
+      RR.definirRegraDePatente(pat, false);
+      t.igual("desligar de novo recupera a configuração manual", RR.usoPorCategoria(pat, invPat).categorias[1].limite, null);
+      t.igual("alternar a regra não apaga item nenhum", invPat.itens.length, 2);
+      t.ok("os limites manuais sobrevivem a recarregar", (function () {
+        var lida = RR.normalizar(JSON.parse(JSON.stringify(pat)));
+        return lida.patente.aplicar === false && lida.patente.limites["1"] === null && lida.patente.limites["3"] === 0;
+      })());
+
+      /* ---------------------------------------------------------------- */
+      t.grupo("Ordem — persistência e compatibilidade");
+
+      var completa2 = global.RAMAFicha.criarFicha({ nome: "Persistente", tipoFicha: "ordem" });
+      completa2.ordem = agente({ nex: 60, afinidade: { elemento: "energia", nomeOutro: "Vazio", adiada: false } });
+      escolher(completa2.ordem, "d3.poderClasse", "golpePesado");
+      completa2.inventario.itens.push(global.RAMAFicha.criarItem("item", { nome: "Kit", ordem: { espacos: 1.5, quantidade: 2, categoria: 1, grupo: "geral" } }));
+      var voltou = global.RAMAFicha.normalizarFicha(JSON.parse(JSON.stringify(completa2)));
+      t.igual("a escolha volta depois de salvar e recarregar", voltou.ordem.escolhas[0].valor, "golpePesado");
+      t.igual("  com o mesmo id", voltou.ordem.escolhas[0].id, completa2.ordem.escolhas[0].id);
+      t.igual("a afinidade volta", voltou.ordem.afinidade.elemento, "energia");
+      t.igual("  e o nome Homebrew guardado não se perde", voltou.ordem.afinidade.nomeOutro, "Vazio");
+      t.iguais("os dados de Ordem do item voltam", [voltou.inventario.itens[0].ordem.espacos, voltou.inventario.itens[0].ordem.quantidade],
+        [1.5, 2]);
+
+      if (V) {
+        var pacote2 = V.exportar("personagem", completa2);
+        var imp2 = V.importado(JSON.parse(JSON.stringify(pacote2)));
+        t.ok("a ficha com escolhas atravessa exportar e importar", imp2.ok && imp2.dados.ordem.escolhas.length === 1);
+      }
+
+      var universal = global.RAMAFicha.normalizarFicha({ nome: "Universal", inventario: { itens: [{ id: "u1", tipo: "item", nome: "Corda", peso: 2 }] } });
+      t.ok("item da ficha universal não ganha bloco de Ordem", universal.inventario.itens[0].ordem === undefined);
+      t.igual("  e continua com o peso", universal.inventario.itens[0].peso, 2);
+      t.ok("ficha universal não ganha bloco de Ordem", universal.ordem === undefined);
+
+      /* A v2.3 guardava pendências e anotações de texto em `progressao`. */
+      var antiga23 = RR.normalizar({
+        classe: "combatente", nex: 20,
+        progressao: [
+          { id: "p1", nex: 15, tipo: "poderClasse", valor: "Golpe Pesado", rotulo: "Poder de classe" },
+          { id: "p2", nex: 20, tipo: "atributo", valor: "", rotulo: "Aumento de atributo" },
+        ],
+      });
+      t.igual("a anotação de texto da v2.3 é preservada", antiga23.progressao.length, 2);
+      t.ok("  e conta como escolha feita", idsPendentes(antiga23).indexOf("d3.poderClasse") < 0);
+      t.ok("  enquanto a pendência vazia continua pendente", idsPendentes(antiga23).indexOf("d4.atributo") >= 0);
+      t.igual("  e aparece como registro escrito à mão", EP.estado(antiga23).legado.length, 1);
+
+      if (global.RAMASync) {
+        /* Dois aparelhos resolvendo etapas diferentes: as duas decisões
+           ficam, casadas por id. */
+        var base = { ordem: agente({ nex: 30 }) };
+        var aparelhoA = JSON.parse(JSON.stringify(base));
+        var aparelhoB = JSON.parse(JSON.stringify(base));
+        escolher(aparelhoA.ordem, "d3.poderClasse", "golpePesado");
+        escolher(aparelhoB.ordem, "d6.poderClasse", "protecaoPesada");
+        var mescla = global.RAMASync.mesclar(base, aparelhoA, aparelhoB, global.RAMASync.ESQUEMA_FICHA);
+        t.igual("a sincronização junta escolhas de etapas diferentes", mescla.estado.ordem.escolhas.length, 2);
+        t.igual("  sem perguntar nada", mescla.conflitos.length, 0);
       }
     }
 

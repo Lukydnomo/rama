@@ -430,6 +430,10 @@
       nome: nome.entrada.value.trim(),
       categoria: extras.categoria ? extras.categoria.entrada.value.trim() : "",
       descricao: descricao.entrada.value,
+      /* Espaços, quantidade e categoria de Ordem Paranormal, quando o
+         modelo veio de uma ficha de Ordem. A biblioteca não os edita,
+         mas também não pode perdê-los numa edição do nome. */
+      ordem: base.ordem,
     };
 
     nome.marcarErro("");

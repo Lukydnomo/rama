@@ -33,7 +33,7 @@ Fazem parte do **dado**, não só da tela:
 
 ```jsonc
 {
-  "schemaVersion": 4,
+  "schemaVersion": 5,
   "tipoFicha": "universal",
 
   "nome": "Michael",
@@ -446,7 +446,7 @@ uma regra de jogo.
 
 ## Migração
 
-`schemaVersion` é `4`. Toda ficha lida passa por `normalizarFicha()`, que aceita
+`schemaVersion` é `5`. Toda ficha lida passa por `normalizarFicha()`, que aceita
 o que faltar e conserta o que dá.
 
 **Ficha gravada na v1 continua abrindo.** Ela não tem `habilidades`, não tem
@@ -495,16 +495,82 @@ Só existe na ficha de Ordem. Guarda **escolhas**, **recursos gastos** e
   "classe": "especialista",
   "origem": "investigador",
   "trilha": "medico",
-  "atributos": { "agi": 2, "for": 0, "int": 3, "pre": 3, "vig": 1 },
-  "pericias": { "investigacao": "treinado" },   // o que falta é destreinado
+  "atributos": { "agi": 2, "for": 0, "int": 3, "pre": 3, "vig": 1 },  // os da criação
+  "pericias": { "investigacao": "treinado" },   // graus da criação; o que falta é destreinado
   "prestigio": 0,
-  "progressao": [ { "id", "nex", "tipo", "valor", "rotulo" } ],
+  "escolhas": [ {                 // uma decisão por vaga de progressão
+    "id": "uuid",
+    "etapa": "d3.poderClasse",    // id estável da vaga, nunca o texto mostrado
+    "tipo": "poderClasse",
+    "valor": "transcender",       // chave do catálogo
+    "opcoes": { "poder": { "valor": "resistirAElemento", "opcoes": { "elemento": "morte" } } },
+    "nome": "Transcender → Resistir a Morte",   // retrato do rótulo, só para leitura
+    "ignorarRequisitos": false,   // "manter mesmo assim", decisão da mesa
+    "registradoEm": "2026-09-12T10:00:00.000Z"
+  } ],
+  "afinidade": { "elemento": "", "nomeOutro": "", "adiada": false },
+  "patente": { "aplicar": true, "limites": null },
+  "progressao": [ { "id", "nex", "tipo", "valor", "rotulo" } ],   // texto livre da v2.3, preservado
   "recursos": { "pv": null, "pe": null, "san": null },
   "ajustes": [ { "id", "alvo", "valor", "motivo", "manual": true } ],
-  "temporarios": { "pv": 0, "pe": 0, "san": 0, "defesa": 0 },
+  "temporarios": { "pv": 0, "pe": 0, "san": 0, "defesa": 0, "capacidade": 0 },
   "opcionais": { "nexExperiencia": true }
 }
 ```
+
+**As escolhas guardam decisões, não efeitos.** Um aumento de atributo não soma
+nada em `atributos`; um Grau de Treinamento não troca nada em `pericias`. Os
+dois campos continuam sendo o que a criação definiu e a mesa ajustou à mão, e o
+motor de progressão recalcula o efeito de cada escolha a cada leitura. É isso
+que impede recarregar a ficha de conceder o mesmo benefício de novo.
+
+Ids de vaga (`etapa`):
+
+| formato | vaga |
+|---|---|
+| `d<degrau>.<tipo>` | vaga da progressão da classe: `poderClasse`, `atributo`, `grauTreinamento`, `versatilidade`, `perito` |
+| `b.<chave>` | opção interna de uma habilidade automática de trilha |
+| `b.origem.<chave>` | opção interna do poder de origem |
+| `x<nex>.transcender`, `x<nex>.alteracao` | vagas de exposição, só com NEX & Experiência |
+
+A trilha **não** é registro: continua em `trilha`. A afinidade também não: está
+em `afinidade`.
+
+Uma escolha cuja etapa deixou de existir (o NEX baixou, a classe mudou) **não é
+apagada** na leitura: ela fica guardada, sem efeito, e volta a valer se a etapa
+voltar a existir.
+
+`afinidade.elemento` é `conhecimento`, `energia`, `morte`, `sangue`, `outro` ou
+vazio. `nomeOutro` é obrigatório para `outro` e continua guardado se o elemento
+for trocado depois. `adiada: true` quer dizer que alguém escolheu decidir depois:
+a janela não reabre, e a pendência continua na Progressão.
+
+`patente.aplicar` ausente vale `true` — o comportamento de toda ficha anterior a
+esta chave. `patente.limites` guarda os limites manuais por categoria, com as
+chaves `"0"` a `"4"`: `null` é **sem limite**, um número é o máximo, e `0` é
+**nenhum item**. Os limites ficam guardados mesmo com a patente ligada.
+
+`temporarios.capacidade` é o ajuste temporário de capacidade de carga, em
+espaços, de −99 a +99. Ele não tem duração: fica até alguém mudar.
+
+### O bloco `ordem` de um item
+
+Numa ficha de Ordem, cada item do inventário pode ter um bloco próprio. Um item
+de ficha universal nunca o ganha, e o `peso` do item nunca é convertido.
+
+```jsonc
+"ordem": {
+  "espacos": 2,        // por unidade; null = padrão do livro (1)
+  "quantidade": 3,     // unidades, a partir de 1
+  "categoria": 1,      // 0 a 4 (0, I, II, III, IV); null = não informada
+  "grupo": "geral",    // arma, municao, protecao, geral, paranormal
+  "capacidade": 0      // quanto o item AUMENTA a capacidade (Mochila Militar: 2)
+}
+```
+
+Espaços andam em quartos (0,25, 0,5…). Quantidade e categoria são coisas
+diferentes: a quantidade diz quantas unidades existem; a categoria é o que conta
+contra o limite da patente — e cada unidade conta como um item.
 
 **Valor calculado não é gravado.** PV máximo, Defesa, carga e bônus de perícia
 nascem da soma completa toda vez que alguém pergunta. É isso que torna
