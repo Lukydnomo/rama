@@ -14,13 +14,13 @@
    TRÊS COISAS DIFERENTES, QUE NÃO SE MISTURAM
    ---------------------------------------------------------------------
 
-     versão do aplicativo   está aqui. É o que a pessoa vê: v2.10.0.
+     versão do aplicativo   está aqui. É o que a pessoa vê: v2.10.1.
      schemaVersion          está em js/ficha.js. É o formato da FICHA,
                             e só sobe quando a ficha muda de forma.
      versaoFormato          está em js/config.js. É o formato dos
                             arquivos de importação/exportação.
 
-   Elas sobem em ritmos próprios. A v2.10.0 leva schemaVersion 6 e
+   Elas sobem em ritmos próprios. A v2.10.1 leva schemaVersion 6 e
    versaoFormato 1 — e isso é normal: a ficha ganhou versões personalizadas e
    etiquetas, mas o formato dos arquivos de importação continua
    o mesmo,
@@ -57,6 +57,16 @@
   ];
 
   var CHANGELOG = [
+    {
+      versao: "2.10.1",
+      codinome: "CAMADA",
+      data: "13/09/2026",
+      mudancas: {
+        "Corrigido": [
+          "Na página da ficha, o menu dos três pontinhos ao lado da foto de perfil abria por baixo da barra Normal/Edição, e “Sair” ficava escondido. A navegação do topo agora fica acima dessa barra.",
+        ],
+      },
+    },
     {
       versao: "2.10.0",
       codinome: "ALISTAMENTO",

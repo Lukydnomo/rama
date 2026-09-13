@@ -627,7 +627,16 @@
    modo e o estado do salvamento.
    ===================================================================== */
 
-body.pagina-ficha .app-topo { position: static; }
+/* Mesmo sem grudar, a navegação fica uma camada ACIMA do cabeçalho da
+   ficha. O body é flex, então o z-index dela vale mesmo com position
+   static — e, empatada com a .ficha-topo (que vem depois no HTML), ela
+   perdia: o menu do agente e a lista de navegação abriam por baixo da
+   barra Normal/Edição. Quando a .ficha-topo gruda, a navegação já
+   rolou para fora da tela, então as duas nunca se sobrepõem. */
+body.pagina-ficha .app-topo {
+  position: static;
+  z-index: calc(var(--z-cabecalho) + 1);
+}
 
 body.pagina-ficha .app-corpo {
   padding-top: 0;
