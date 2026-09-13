@@ -385,6 +385,15 @@ habilidade), `categoria` (a gaveta do item) nem o elemento de um poder. O texto
 entra na tela por `textContent` e a cor por `style.setProperty`, depois de
 validada — nada vira HTML ou CSS. Registros antigos simplesmente não têm o campo.
 
+### Data de adição
+
+Habilidades, pastas, itens e rituais ganham `adicionadoEm` (ISO) **no momento em
+que entram na ficha**: criar, trazer da biblioteca, duplicar (a cópia é um
+registro novo) e transformar uma versão personalizada em habilidade comum. Editar
+não muda a data. O campo só é **preservado** pela normalização — nunca inventado:
+um registro anterior à v2.7 não tem data e não ganha uma. Data inválida é
+descartada. É o que a ordem "de adição" usa (ver `ordem.organizacao`).
+
 ## Rituais
 
 ```jsonc
@@ -558,6 +567,11 @@ Só existe na ficha de Ordem. Guarda **escolhas**, **recursos gastos** e
   "recursos": { "pv": null, "pe": null, "san": null },
   "ajustes": [ { "id", "alvo", "valor", "motivo", "manual": true } ],
   "temporarios": { "pv": 0, "pe": 0, "san": 0, "defesa": 0, "capacidade": 0 },
+  "organizacao": {                // como cada aba ordena a lista — só apresentação
+    "habilidades": { "modo": "personalizada", "regras": [ "auto|ataqueEspecial" ] },
+    "rituais": { "modo": "az" },
+    "inventario": { "modo": "adicao" }
+  },
   "opcionais": { "nexExperiencia": true }
 }
 ```
@@ -596,6 +610,29 @@ chaves `"0"` a `"4"`: `null` é **sem limite**, um número é o máximo, e `0` �
 
 `temporarios.capacidade` é o ajuste temporário de capacidade de carga, em
 espaços, de −99 a +99. Ele não tem duração: fica até alguém mudar.
+
+### Organização das listas
+
+`organizacao` guarda, por aba (Habilidades, Rituais, Inventário), o **modo** de
+exibição. É da ficha — vale em qualquer aparelho — e é só apresentação: nenhuma
+conta, requisito ou permissão lê isto, e escolher um modo **não reescreve** a
+lista guardada.
+
+| `modo` | a tela mostra |
+|---|---|
+| `personalizada` (padrão) | a ordem guardada; Subir e Descer mexem nela |
+| `adicao` | pela data de `adicionadoEm`, do mais antigo ao mais novo. O que não tem data (anterior à v2.7) vem primeiro, na ordem guardada. Uma habilidade escolhida na progressão usa o `registradoEm` da escolha; uma automática não tem data |
+| `az` / `za` | pelo nome, sem diferença de acento nem de maiúscula, com números em ordem natural ("Nível 2" antes de "Nível 10"). Pastas vêm antes das habilidades |
+
+Modo ausente ou desconhecido vale `personalizada`, que é o comportamento de toda
+ficha anterior. Empates desempatam pela posição guardada.
+
+`habilidades.regras` é a ordem personalizada das habilidades **das regras** (ids
+de aquisição), que não moram na árvore. As que não estão na lista entram no fim,
+na ordem da progressão. Ids repetidos ou fora do padrão são descartados.
+
+Numa ficha Universal não há `organizacao`: as abas mostram a ordem guardada, e o
+inventário continua com as armas primeiro.
 
 ### Versões personalizadas e habilidades excluídas
 

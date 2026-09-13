@@ -118,23 +118,36 @@
       categoriaAtiva = "";
     }
 
-    /* Armas primeiro: são as que se usam durante o combate, e é nelas
-       que se clica com pressa. */
-    var ordem = { arma: 0, armadura: 1, item: 2, mochila: 3 };
-    var visiveis = itens
-      .filter(function (i) { return F.itemNaCategoria(i, categoriaAtiva); })
-      .sort(function (a, b) {
+    var filtrados = itens.filter(function (i) { return F.itemNaCategoria(i, categoriaAtiva); });
+    var org = perfilDe(ctx) ? global.RAMAOrdemOrganizacao : null;
+    var modo = org ? org.modo(ctx, "inventario") : "";
+
+    var visiveis;
+    if (org) {
+      /* Ficha de Ordem: o modo escolhido na barra — personalizada, de
+         adição, A–Z ou Z–A. */
+      visiveis = U.ordenarLista(filtrados, modo);
+    } else {
+      /* Ficha universal: armas primeiro. São as que se usam durante o
+         combate, e é nelas que se clica com pressa. */
+      var ordem = { arma: 0, armadura: 1, item: 2, mochila: 3 };
+      visiveis = filtrados.sort(function (a, b) {
         return (ordem[a.tipo] - ordem[b.tipo]) ||
                U.chaveDeBusca(a.nome).localeCompare(U.chaveDeBusca(b.nome), "pt-BR");
       });
+    }
 
     return el("div.pilha--curta", { class: "pilha" }, [
+      org ? org.barra(ctx, "inventario") : null,
+
       /* O filtro só aparece quando há mais de uma gaveta: um seletor com
          uma opção só é ruído. */
       categorias.length > 1 ? filtro(ctx, categorias, itens.length) : null,
 
       visiveis.length
-        ? el("div.itens", {}, visiveis.map(function (i) { return cartao(ctx, i); }))
+        ? el("div.itens", {}, visiveis.map(function (i) {
+            return cartao(ctx, i, modo === "personalizada" ? visiveis : null);
+          }))
         : el("p.t-mini", { texto: "Nenhum item nesta categoria." }),
     ]);
   }
@@ -168,7 +181,9 @@
      As armas são a exceção: os botões de Ataque e Dano continuam à
      vista mesmo com o item fechado, porque são a ação mais repetida
      durante um combate e não podem custar um clique a mais. */
-  function cartao(ctx, item) {
+  /* `visiveis` só vem na ordem personalizada da ficha de Ordem: é a
+     lista na tela, para Subir e Descer trocarem com o vizinho visível. */
+  function cartao(ctx, item, visiveis) {
     var arma = item.tipo === "arma" && !ctx.emEdicao();
 
     var perfil = perfilDe(ctx);
@@ -180,7 +195,7 @@
         detalhes(ctx, item),
         item.descricao ? el("p.item__descricao", { texto: item.descricao }) : null,
       ],
-      acoes: [UI.menu(opcoesDoItem(ctx, item), { rotulo: "Opções de " + item.nome, icone: "tresPontos" })],
+      acoes: [UI.menu(opcoesDoItem(ctx, item, visiveis), { rotulo: "Opções de " + item.nome, icone: "tresPontos" })],
       /* Ataque e Dano precisam estar à vista com o item FECHADO. Até a
          v2.2 eles eram pendurados dentro do <details> depois da
          montagem, e um <details> fechado não pinta nada além do
@@ -253,21 +268,36 @@
     }, []));
   }
 
-  function opcoesDoItem(ctx, item) {
+  function opcoesDoItem(ctx, item, visiveis) {
+    var ordem = visiveis && ctx.emEdicao() ? [
+      { rotulo: "Subir", aoClicar: function () { moverItem(ctx, visiveis, item, -1); } },
+      { rotulo: "Descer", aoClicar: function () { moverItem(ctx, visiveis, item, 1); } },
+    ] : [];
     return [
       { rotulo: "Editar", aoClicar: function () { editar(ctx, item); } },
       { rotulo: "Duplicar", aoClicar: function () {
           var copia = F.normalizarItem(item);
           copia.id = U.uuid();
           copia.nome = item.nome + " (cópia)";
+          /* A cópia é um item novo: entrou agora. */
+          copia.adicionadoEm = U.agoraISO();
           ctx.ficha.inventario.itens.push(copia);
           ctx.alterou();
           ctx.redesenhar();
         } },
+    ].concat(ordem, [
       { rotulo: "Enviar à biblioteca", aoClicar: function () { paraHomebrew(ctx, item); } },
       "separador",
       { rotulo: "Remover", perigo: true, aoClicar: function () { remover(ctx, item); } },
-    ];
+    ]);
+  }
+
+  /* Com um filtro de categoria ligado, o vizinho de cima pode estar
+     longe na lista guardada: troca-se com o vizinho VISÍVEL. */
+  function moverItem(ctx, visiveis, item, direcao) {
+    if (!U.moverEntreVisiveis(ctx.ficha.inventario.itens, visiveis, item, direcao)) return;
+    ctx.alterou();
+    ctx.redesenhar();
   }
 
   /* =================================================================
@@ -487,6 +517,7 @@
             if (!montado) return;
 
             if (criando) {
+              montado.adicionadoEm = U.agoraISO();
               ctx.ficha.inventario.itens.push(montado);
             } else {
               /* Tirar a etiqueta precisa apagar o campo: o item montado
@@ -693,6 +724,7 @@
     var copia = F.normalizarItem(registro);
     copia.id = U.uuid();
     copia.origemHomebrewId = registro.id;
+    copia.adicionadoEm = U.agoraISO();
 
     ctx.ficha.inventario.itens.push(copia);
     ctx.alterou();

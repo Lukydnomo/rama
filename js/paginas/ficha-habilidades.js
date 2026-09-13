@@ -25,6 +25,10 @@
      de Ordem preenche; a universal zera a cada desenho da aba. */
   var bibliotecaOficial = null;
 
+  /* Como a árvore é ordenada na tela (U.ordenarLista). Só a ficha de
+     Ordem escolhe outro modo; na universal é sempre a ordem guardada. */
+  var modoDaArvore = "personalizada";
+
   /* `dasRegras` só vem da ficha de Ordem: { itens, aviso, biblioteca }
      com o que as regras entregaram. Esses itens entram na MESMA lista,
      antes da árvore, e não têm menu — mudam pela Progressão, não por
@@ -32,6 +36,7 @@
      janela "Da biblioteca". */
   function aba(ctx, dasRegras) {
     bibliotecaOficial = (dasRegras && dasRegras.biblioteca) || null;
+    modoDaArvore = (dasRegras && dasRegras.ordenacao && dasRegras.ordenacao.modo) || "personalizada";
     var arvore = ctx.ficha.habilidades;
     var total = H.contar(arvore);
     var regras = (dasRegras && dasRegras.itens) || [];
@@ -67,8 +72,9 @@
 
     if (dasRegras && (regras.length || fim.length || arvore.filhos.length)) {
       return el("div.pilha", {}, [
+        dasRegras.ordenacao ? dasRegras.ordenacao.barra : null,
         aviso,
-        el("div.arvore-hab", {}, regras.concat(ramos(ctx, arvore.filhos, 0), fim)),
+        el("div.arvore-hab", {}, primeiroNivel(ctx, arvore.filhos, regras).concat(fim)),
       ]);
     }
 
@@ -101,11 +107,44 @@
     return el("div.arvore-hab", {}, ramos(ctx, arvore.filhos, 0));
   }
 
+  /* O primeiro nível da ficha de Ordem: as habilidades das regras e o
+     primeiro nível da árvore. Na ordem personalizada, as das regras vêm
+     antes, cada grupo na ordem guardada. Nos outros modos, as duas
+     formam uma lista só — o nome que conta é o do cartão (o da versão
+     personalizada, quando houver), e em A–Z e Z–A as pastas vêm antes. */
+  function primeiroNivel(ctx, filhos, regras) {
+    if (modoDaArvore === "personalizada") return regras.concat(ramos(ctx, filhos, 0));
+
+    var entradas = regras.map(function (cartao) {
+      var titulo = cartao.querySelector ? cartao.querySelector(".recolhivel__titulo") : null;
+      return {
+        cartao: cartao,
+        nome: titulo ? titulo.textContent : "",
+        adicionado: cartao.dataset ? cartao.dataset.adicionado : "",
+        pasta: false,
+      };
+    }).concat((filhos || []).map(function (no) {
+      return { no: no, nome: no.nome, adicionado: no.adicionadoEm, pasta: no.tipo === H.TIPO_PASTA };
+    }));
+
+    return U.ordenarLista(entradas, modoDaArvore, {
+      nome: function (e) { return e.nome; },
+      adicionado: function (e) { return e.adicionado; },
+      grupo: function (e) { return e.pasta ? 0 : 1; },
+    }).map(function (e) {
+      if (e.cartao) return e.cartao;
+      return e.pasta ? pasta(ctx, e.no, 0) : habilidade(ctx, e.no, 0);
+    });
+  }
+
   /* A recursão. Cada nível devolve os próprios filhos e chama a si
      mesmo para as pastas — sem limite escrito aqui, porque o limite é
      do modelo e já foi aplicado na normalização. */
   function ramos(ctx, filhos, profundidade) {
-    return (filhos || []).map(function (no) {
+    var ordenados = modoDaArvore === "personalizada"
+      ? (filhos || [])
+      : U.ordenarLista(filhos, modoDaArvore, { grupo: function (no) { return no.tipo === H.TIPO_PASTA ? 0 : 1; } });
+    return ordenados.map(function (no) {
       return no.tipo === H.TIPO_PASTA
         ? pasta(ctx, no, profundidade)
         : habilidade(ctx, no, profundidade);
@@ -123,11 +162,10 @@
         "separador",
         { rotulo: "Renomear", aoClicar: function () { renomear(ctx, no); } },
         { rotulo: "Mover", aoClicar: function () { mover(ctx, no); } },
-        { rotulo: "Subir", aoClicar: function () { reordenar(ctx, no.id, -1); } },
-        { rotulo: "Descer", aoClicar: function () { reordenar(ctx, no.id, 1); } },
+      ].concat(opcoesDeOrdem(ctx, no), [
         "separador",
         { rotulo: "Excluir pasta", perigo: true, aoClicar: function () { excluirPasta(ctx, no); } },
-      ], { rotulo: "Opções da pasta " + no.nome, icone: "tresPontos" }),
+      ]), { rotulo: "Opções da pasta " + no.nome, icone: "tresPontos" }),
     ] : null;
 
     var dentro = no.filhos.length
@@ -154,17 +192,27 @@
     return caixa;
   }
 
+  /* Subir e Descer mexem na ordem guardada. Com a tela em A–Z, Z–A ou
+     por adição, eles não mudariam nada que se visse — então só aparecem
+     na ordem personalizada. */
+  function opcoesDeOrdem(ctx, no) {
+    if (modoDaArvore !== "personalizada") return [];
+    return [
+      { rotulo: "Subir", aoClicar: function () { reordenar(ctx, no.id, -1); } },
+      { rotulo: "Descer", aoClicar: function () { reordenar(ctx, no.id, 1); } },
+    ];
+  }
+
   function habilidade(ctx, no, profundidade) {
     var acoes = ctx.emEdicao() ? [
       UI.menu([
         { rotulo: "Editar", aoClicar: function () { editar(ctx, no, null); } },
         { rotulo: "Mover", aoClicar: function () { mover(ctx, no); } },
-        { rotulo: "Subir", aoClicar: function () { reordenar(ctx, no.id, -1); } },
-        { rotulo: "Descer", aoClicar: function () { reordenar(ctx, no.id, 1); } },
+      ].concat(opcoesDeOrdem(ctx, no), [
         { rotulo: "Enviar à biblioteca", aoClicar: function () { paraBiblioteca(ctx, no); } },
         "separador",
         { rotulo: "Remover", perigo: true, aoClicar: function () { remover(ctx, no); } },
-      ], { rotulo: "Opções de " + no.nome, icone: "tresPontos" }),
+      ]), { rotulo: "Opções de " + no.nome, icone: "tresPontos" }),
     ] : null;
 
     var texto = el("p.habilidade__texto", {
@@ -435,6 +483,7 @@
 
         if (criando) {
           var nova = H.criarHabilidade(montada);
+          nova.adicionadoEm = U.agoraISO();
           H.inserir(ctx.ficha.habilidades, nova, pastaId);
           ctx.alterou();
           fechar();
@@ -822,6 +871,8 @@
   function trazer(ctx, registro, pastaId) {
     var copia = H.copiarParaFicha(registro);
     if (!copia) { UI.avisoErro("Esta habilidade não pôde ser lida."); return; }
+    /* Entrou na ficha agora — o carimbo do modelo, se houver, não vale. */
+    copia.adicionadoEm = U.agoraISO();
 
     H.inserir(ctx.ficha.habilidades, copia, pastaId);
     ctx.alterou();

@@ -84,16 +84,25 @@
       /* De onde veio, quando veio de uma biblioteca. É rastro, não
          vínculo: editar o modelo depois NÃO muda esta cópia. */
       origemHabilidadeId: d.origemHabilidadeId || null,
-    }, d.etiqueta);
+    }, d.etiqueta, d.adicionadoEm);
   }
 
   /* A etiqueta colorida só entra no objeto quando existe. Uma habilidade
      sem etiqueta continua exatamente como era antes da v2.6 — nenhum
      campo novo aparece numa ficha que não usou o recurso. */
-  function comEtiqueta(h, bruta) {
+  function comEtiqueta(h, bruta, adicionadoEm) {
     var e = U.normalizarEtiqueta(bruta);
     if (e) h.etiqueta = e;
-    return h;
+    return comCarimbo(h, adicionadoEm);
+  }
+
+  /* `adicionadoEm` é quando o nó ENTROU na ficha — é o que a ordem "de
+     adição" usa. Quem põe o carimbo é a tela, no momento de inserir;
+     aqui ele só é preservado. Nó antigo não tem, e não ganha. */
+  function comCarimbo(no, valor) {
+    var c = U.carimbo(valor);
+    if (c) no.adicionadoEm = c;
+    return no;
   }
 
   function criarPasta(nome) {
@@ -103,6 +112,7 @@
       nome: U.aparar(nome, 80) || "Nova pasta",
       aberta: true,
       filhos: [],
+      adicionadoEm: U.agoraISO(),
     };
   }
 
@@ -136,7 +146,7 @@
     if (no.tipo === TIPO_PASTA || Array.isArray(no.filhos)) {
       var nome = U.aparar(no.nome, 80);
       if (!nome) nome = "Pasta";
-      return {
+      return comCarimbo({
         id: no.id || U.uuid(),
         tipo: TIPO_PASTA,
         nome: nome,
@@ -144,7 +154,7 @@
            que a pessoa não mandou esconder é pior do que mostrar. */
         aberta: no.aberta === undefined ? true : !!no.aberta,
         filhos: normalizarFilhos(no.filhos, profundidade + 1),
-      };
+      }, no.adicionadoEm);
     }
 
     var habilidade = normalizarHabilidade(no);
@@ -167,7 +177,7 @@
       cor: corValida(bruto.cor),
       negrito: !!bruto.negrito,
       origemHabilidadeId: bruto.origemHabilidadeId || null,
-    }, bruto.etiqueta);
+    }, bruto.etiqueta, bruto.adicionadoEm);
   }
 
   /* =================================================================

@@ -124,6 +124,8 @@
       personalizacoes: [],
       /* --- habilidades automáticas excluídas da ficha --- */
       excluidas: [],
+      /* --- como cada aba ordena a lista (só apresentação) --- */
+      organizacao: normalizarOrganizacao(null),
       /* --- registros de texto livre da v2.3, preservados --- */
       progressao: [],
       /* --- afinidade elemental --- */
@@ -1051,6 +1053,7 @@
       escolhas: [],
       personalizacoes: [],
       excluidas: [],
+      organizacao: normalizarOrganizacao(b.organizacao),
       progressao: [],
       afinidade: normalizarAfinidade(b.afinidade),
       patente: normalizarPatente(b.patente),
@@ -1133,6 +1136,32 @@
     ficha.temporarios.capacidade = Math.max(-limiteTemp, Math.min(limiteTemp, inteiro(temp.capacidade, 0)));
 
     return ficha;
+  }
+
+  /* A ordem de exibição de cada aba — personalizada, de adição, A–Z ou
+     Z–A — e a ordem personalizada das habilidades que vêm das regras
+     (ids de aquisição). É apresentação: nenhuma conta lê isto. Modo
+     ausente ou desconhecido é "personalizada", o comportamento de antes. */
+  function normalizarOrganizacao(bruto) {
+    var b = (bruto && typeof bruto === "object") ? bruto : {};
+    var modo = function (aba) {
+      var valor = b[aba] && typeof b[aba] === "object" ? b[aba].modo : "";
+      return global.RAMAUtil ? global.RAMAUtil.modoDeOrdem(valor) : (valor || "personalizada");
+    };
+    var vistas = {};
+    var regras = (b.habilidades && Array.isArray(b.habilidades.regras) ? b.habilidades.regras : [])
+      .map(function (id) { return String(id || "").slice(0, 160); })
+      .filter(function (id) {
+        if (!id || vistas[id] || !/^[A-Za-z0-9_.:|#-]+$/.test(id)) return false;
+        vistas[id] = true;
+        return true;
+      })
+      .slice(0, 500);
+    return {
+      habilidades: { modo: modo("habilidades"), regras: regras },
+      rituais: { modo: modo("rituais") },
+      inventario: { modo: modo("inventario") },
+    };
   }
 
   function normalizarAfinidade(bruto) {

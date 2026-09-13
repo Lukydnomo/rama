@@ -422,6 +422,8 @@
       ritual[campo] = U.aparar(d[campo], campo === "efeito" ? 8000 : 200);
     });
     ritual.versoes = normalizarVersoesRitual(d.versoes, { idsNovos: true });
+    var adicionadoEm = U.carimbo(d.adicionadoEm);
+    if (adicionadoEm) ritual.adicionadoEm = adicionadoEm;
     return ritual;
   }
 
@@ -455,6 +457,11 @@
        existe no item que a tem — nenhum item antigo ganha campo novo. */
     var etiqueta = U.normalizarEtiqueta(d.etiqueta);
     if (etiqueta) base.etiqueta = etiqueta;
+
+    /* Quando o item entrou na ficha, para a ordem "de adição". Quem
+       carimba é a tela, ao inserir; aqui só é preservado. */
+    var adicionadoEm = U.carimbo(d.adicionadoEm);
+    if (adicionadoEm) base.adicionadoEm = adicionadoEm;
 
     /* Espaços, quantidade e categoria de Ordem Paranormal. O bloco só
        existe no item que já o tinha — um item da ficha universal nunca
@@ -766,6 +773,8 @@
        antes de as versões existirem sai daqui com a Normal em branco, e
        a normalização seguinte não acrescenta uma segunda. */
     ritual.versoes = normalizarVersoesRitual(bruto.versoes);
+    var adicionadoEm = U.carimbo(bruto.adicionadoEm);
+    if (adicionadoEm) ritual.adicionadoEm = adicionadoEm;
     return ritual;
   }
 

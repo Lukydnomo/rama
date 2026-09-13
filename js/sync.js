@@ -366,7 +366,9 @@
       escolhas: "Escolhas de progressão", afinidade: "Afinidade", elemento: "Elemento",
       nomeOutro: "Elemento Homebrew", adiada: "Afinidade adiada", aplicar: "Aplicar regras de patente",
       limites: "Limites por categoria", opcoes: "Opções da escolha", etapa: "Etapa",
-      personalizacoes: "Habilidades personalizadas", excluidas: "Habilidades oficiais excluídas", aquisicao: "Aquisição", efeitos: "Efeitos automáticos",
+      personalizacoes: "Habilidades personalizadas", excluidas: "Habilidades oficiais excluídas",
+      organizacao: "Ordem das listas", modo: "Ordem de exibição", regras: "Ordem das habilidades das regras",
+      adicionadoEm: "Adicionado em", aquisicao: "Aquisição", efeitos: "Efeitos automáticos",
       etiqueta: "Etiqueta", texto: "Texto", cor: "Cor", negrito: "Negrito",
     },
   };

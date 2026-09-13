@@ -73,11 +73,18 @@
       });
     }
 
-    return el("div.pilha--curta", { class: "pilha" },
-      rituais.itens.map(function (r) { return cartao(ctx, r); }));
+    /* Na ficha de Ordem, a lista segue o modo escolhido na barra
+       (personalizada, de adição, A–Z, Z–A). Na universal, a guardada. */
+    var org = global.RAMAOrdemOrganizacao;
+    var modo = org ? org.modo(ctx, "rituais") : "personalizada";
+    var lista = U.ordenarLista(rituais.itens, modo);
+
+    return el("div.pilha--curta", { class: "pilha" }, [
+      org ? org.barra(ctx, "rituais") : null,
+    ].concat(lista.map(function (r) { return cartao(ctx, r, modo); })));
   }
 
-  function cartao(ctx, ritual) {
+  function cartao(ctx, ritual, modo) {
     var rotulos = ctx.ficha.rituais.rotulos;
 
     /* Só campo preenchido aparece: uma lista de cinco rótulos com
@@ -94,11 +101,15 @@
       UI.menu([
         { rotulo: "Editar", aoClicar: function () { editar(ctx, ritual); } },
         { rotulo: "Duplicar", aoClicar: function () { duplicar(ctx, ritual); } },
+      ].concat(modo && modo !== "personalizada" ? [] : [
+        /* Subir e Descer mexem na ordem guardada: com a tela ordenada
+           por nome ou por adição, não mudariam nada visível. */
         { rotulo: "Subir", aoClicar: function () { reordenar(ctx, ritual, -1); } },
         { rotulo: "Descer", aoClicar: function () { reordenar(ctx, ritual, 1); } },
+      ], [
         "separador",
         { rotulo: "Remover", perigo: true, aoClicar: function () { remover(ctx, ritual); } },
-      ], { rotulo: "Opções de " + ritual.nome, icone: "tresPontos" }),
+      ]), { rotulo: "Opções de " + ritual.nome, icone: "tresPontos" }),
     ] : null;
 
     /* A faixa de danos continua à vista com o ritual fechado — numa
@@ -374,7 +385,9 @@
               /* criarRitual gera ids do zero, inclusive das versões — é
                  o que se quer para um registro que está nascendo. */
               dados.versoes = listaDeVersoes;
-              ctx.ficha.rituais.itens.push(F.criarRitual(dados));
+              var novo = F.criarRitual(dados);
+              novo.adicionadoEm = U.agoraISO();
+              ctx.ficha.rituais.itens.push(novo);
             } else {
               Object.assign(ritual, F.criarRitual(dados), {
                 id: ritual.id,
@@ -399,6 +412,8 @@
   function duplicar(ctx, ritual) {
     var copia = F.criarRitual(ritual);
     copia.nome = ritual.nome + " (cópia)";
+    /* A cópia é um registro novo: entrou agora. */
+    copia.adicionadoEm = U.agoraISO();
     ctx.ficha.rituais.itens.push(copia);
     ctx.alterou();
     ctx.redesenhar();

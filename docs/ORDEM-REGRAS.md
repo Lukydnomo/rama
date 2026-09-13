@@ -259,6 +259,27 @@ no fim da lista como **sem aquisição**, sem conceder nada, com as opções de
 transformá-la em habilidade comum ou excluí-la. Se a mesma aquisição voltar, ela
 volta a valer sozinha.
 
+### Ordem das listas: Habilidades, Rituais e Inventário
+
+Na ficha de Ordem, as abas Habilidades, Rituais e Inventário têm uma barra
+**Ordenar** no topo da lista, fora e dentro do modo edição:
+
+- **Personalizada** — a ordem guardada. No modo edição, **Subir** e **Descer**, no
+  menu de cada um, mudam essa ordem. Na aba Habilidades, as das regras têm a
+  própria ordem e vêm antes das criadas à mão; no Inventário, com um filtro de
+  categoria ligado, Subir e Descer trocam com o vizinho **visível**.
+- **Ordem de adição** — do mais antigo ao mais novo. O que entrou antes da v2.7
+  não tem data e vem no topo, na ordem guardada; habilidades automáticas das
+  regras também. Um poder escolhido conta a partir de quando a escolha foi feita.
+- **A–Z** e **Z–A** — pelo nome que aparece no cartão (o da versão personalizada,
+  quando houver), sem diferença de acento ou maiúscula. Na aba Habilidades, as das
+  regras e as criadas à mão formam uma lista só, com as pastas antes.
+
+Subir e Descer só aparecem na ordem personalizada: com a tela ordenada por nome ou
+por adição, eles não mudariam nada visível. O modo fica gravado na ficha
+(`ordem.organizacao`) e nenhuma conta o lê. Personalizações e habilidades
+excluídas continuam no fim da lista, em qualquer modo.
+
 ---
 
 ## Afinidade

@@ -316,16 +316,35 @@
       });
     });
 
+    /* Para a ordem "de adição": uma habilidade escolhida entrou quando a
+       escolha foi registrada; uma automática não tem data e vem antes. */
+    var registradoEm = {};
+    (o.escolhas || []).forEach(function (r) { if (r && r.id) registradoEm[r.id] = r.registradoEm || ""; });
+    aquisicoes.forEach(function (aq) { aq.adicionadoEm = aq.registroId ? (registradoEm[aq.registroId] || "") : ""; });
+
+    /* A ordem personalizada das habilidades das regras: a guardada em
+       `organizacao.habilidades.regras`, e as que ainda não estão lá no
+       fim, na ordem da progressão. */
+    var ativas = aquisicoes.filter(function (aq) { return !(PZ() && PZ().excluida(o, aq.id)); });
+    var guardada = (Organizacao.dados(o).habilidades.regras || []);
+    var posicao = {};
+    guardada.forEach(function (id, i) { posicao[id] = i; });
+    ativas = ativas.map(function (aq, i) { return { aq: aq, i: i }; }).sort(function (a, b) {
+      var pa = posicao[a.aq.id] === undefined ? guardada.length + a.i : posicao[a.aq.id];
+      var pb = posicao[b.aq.id] === undefined ? guardada.length + b.i : posicao[b.aq.id];
+      return pa - pb;
+    }).map(function (x) { return x.aq; });
+    var ordemAtual = ativas.map(function (aq) { return aq.id; });
+
     var nomes = [];
     var itens = [];
-    aquisicoes.forEach(function (aq) {
+    ativas.forEach(function (aq) {
       /* Excluída da ficha: não aparece na lista, e o motor já tirou os
          efeitos dela da conta. Fica na seção de excluídas, no fim. */
-      if (PZ() && PZ().excluida(o, aq.id)) return;
       var pz = PZ() ? PZ().daAquisicao(o, aq.id) : null;
       nomes.push(aq.nome);
       if (pz) nomes.push(pz.nome);
-      itens.push(cartaoDeAquisicao(ctx, o, aq, pz));
+      itens.push(cartaoDeAquisicao(ctx, o, aq, pz, ordemAtual));
     });
 
     var idsAtuais = aquisicoes.map(function (aq) { return aq.id; });
@@ -338,6 +357,7 @@
     return {
       itens: itens,
       fim: fim,
+      ordenacao: { modo: Organizacao.modo(ctx, "habilidades"), barra: Organizacao.barra(ctx, "habilidades") },
       biblioteca: { classe: o.classe, nomes: nomes.concat(nomesPersonalizados(o)) },
       aviso: itens.length
         ? "“Entra na conta”: o efeito já está nos números da ficha. “Parte na conta”: uma parte está, o resto é aplicado na cena. “Anotação”: o efeito depende da cena ou de gasto de PE. As que vêm das regras são escolhidas na aba Progressão; no modo edição, o menu de cada uma cria uma versão personalizada só desta ficha."
@@ -378,7 +398,7 @@
      efeitos daquela ocorrência explicitamente.
      ================================================================= */
 
-  function cartaoDeAquisicao(ctx, o, aq, pz) {
+  function cartaoDeAquisicao(ctx, o, aq, pz, ordemAtual) {
     var situacaoExtra = aq.situacao === "suspensa" ? "suspenso" : (aq.situacao === "incompleta" ? "incompleto" : "");
     var nomeOficial = aq.nome + (aq.estagio ? " · " + aq.estagio : "");
     var titulo = pz ? pz.nome : nomeOficial;
@@ -391,6 +411,10 @@
       }];
       if (pz) {
         opcoes.push({ rotulo: "Salvar na minha biblioteca Homebrew", aoClicar: function () { salvarPersonalizadaNaBiblioteca(ctx, o, aq, pz); } });
+      }
+      if (ordemAtual && Organizacao.modo(ctx, "habilidades") === "personalizada") {
+        opcoes.push({ rotulo: "Subir", aoClicar: function () { moverRegra(ctx, o, ordemAtual, aq.id, -1); } });
+        opcoes.push({ rotulo: "Descer", aoClicar: function () { moverRegra(ctx, o, ordemAtual, aq.id, 1); } });
       }
       opcoes.push("separador");
       if (pz) {
@@ -441,6 +465,7 @@
       acoes: acoes,
     });
     caixa.dataset.aquisicao = aq.id;
+    caixa.dataset.adicionado = aq.adicionadoEm || "";
     if (pz && pz.cor) {
       caixa.dataset.cor = "sim";
       caixa.style.setProperty("border-left-color", pz.cor);
@@ -569,7 +594,9 @@
       var poder = P.poder(pz.poder);
       var acoes = ctx.emEdicao() ? [UI.menu([
         { rotulo: "Transformar em habilidade comum", aoClicar: function () {
-            H().inserir(ctx.ficha.habilidades, PZ().comoHabilidade(pz), null);
+            var comum = PZ().comoHabilidade(pz);
+            comum.adicionadoEm = U.agoraISO();
+            H().inserir(ctx.ficha.habilidades, comum, null);
             PZ().restaurar(o, pz.aquisicao);
             aoMudarOrdem(ctx);
             UI.avisoOk(pz.nome + " agora é uma habilidade comum da ficha.");
@@ -1900,6 +1927,75 @@
      poderes escolhidos na Progressão. Um painel só, sem separar.
      ================================================================= */
 
+  /* =================================================================
+     ORGANIZAÇÃO DAS LISTAS
+     -----------------------------------------------------------------
+     Habilidades, Rituais e Inventário ordenam a exibição por um de
+     quatro modos (U.ordenarLista): personalizada, de adição, A–Z e
+     Z–A. O modo é da FICHA — fica em `ordem.organizacao` e vale em
+     qualquer aparelho. Só a tela ordena; nada na lista guardada é
+     reescrito por escolher um modo. As três abas são compartilhadas com
+     a ficha universal e perguntam aqui se há um modo a aplicar.
+     ================================================================= */
+
+  var Organizacao = {
+    ativa: function (ctx) {
+      return !!(ctx && ctx.ficha && global.RAMAFicha && global.RAMAFicha.ehDeOrdem(ctx.ficha));
+    },
+
+    dados: function (o) {
+      if (!o.organizacao || !o.organizacao.habilidades || !o.organizacao.rituais || !o.organizacao.inventario) {
+        o.organizacao = R.normalizar({ organizacao: o.organizacao }).organizacao;
+      }
+      return o.organizacao;
+    },
+
+    modo: function (ctx, aba) {
+      if (!Organizacao.ativa(ctx)) return "personalizada";
+      var org = Organizacao.dados(ordemDe(ctx));
+      return U.modoDeOrdem(org[aba] && org[aba].modo);
+    },
+
+    definir: function (ctx, aba, modo) {
+      var org = Organizacao.dados(ordemDe(ctx));
+      if (org[aba].modo === modo) return;
+      org[aba].modo = U.modoDeOrdem(modo);
+      ctx.alterou();
+      ctx.redesenhar();
+      /* Redesenhar recria o seletor: o foco volta para ele, para quem
+         troca de modo pelo teclado não se perder na página. */
+      var novo = document.querySelector('[data-ordenacao="' + aba + '"] select');
+      if (novo) novo.focus();
+    },
+
+    barra: function (ctx, aba) {
+      if (!Organizacao.ativa(ctx)) return null;
+      var modo = Organizacao.modo(ctx, aba);
+      return el("div.ordenacao-barra", { dataset: { ordenacao: aba } }, [
+        UI.seletorDeOrdem({
+          valor: modo,
+          rotulo: "Ordenar",
+          aoMudar: function (m) { Organizacao.definir(ctx, aba, m); },
+        }),
+        modo === "personalizada" && ctx.emEdicao()
+          ? el("span.t-mini", { texto: "Subir e Descer, no menu de cada um, mudam esta ordem." })
+          : (modo === "adicao" ? el("span.t-mini", { texto: "O mais antigo primeiro. O que entrou antes da v2.7 vem no topo, na ordem guardada." }) : null),
+      ]);
+    },
+  };
+
+  function moverRegra(ctx, o, ordemAtual, id, direcao) {
+    var lista = ordemAtual.slice();
+    var i = lista.indexOf(id);
+    var j = i + (direcao < 0 ? -1 : 1);
+    if (i < 0 || j < 0 || j >= lista.length) return;
+    lista[i] = lista[j];
+    lista[j] = id;
+    Organizacao.dados(o).habilidades.regras = lista;
+    ctx.alterou();
+    ctx.redesenhar();
+  }
+
   var SecaoHabilidadesOrdem = {
     aba: function (ctx) {
       return global.RAMASecaoHabilidades.aba(ctx, poderesDasRegras(ctx, ordemDe(ctx), calculo(ctx)));
@@ -1935,4 +2031,5 @@
   global.RAMASecaoOrdemRegras = SecaoRegras;
   global.RAMASecaoOrdemInventario = SecaoInventarioOrdem;
   global.RAMASecaoOrdemHabilidades = SecaoHabilidadesOrdem;
+  global.RAMAOrdemOrganizacao = Organizacao;
 })(window);

@@ -14,13 +14,13 @@
    TRÊS COISAS DIFERENTES, QUE NÃO SE MISTURAM
    ---------------------------------------------------------------------
 
-     versão do aplicativo   está aqui. É o que a pessoa vê: v2.6.0.
+     versão do aplicativo   está aqui. É o que a pessoa vê: v2.7.0.
      schemaVersion          está em js/ficha.js. É o formato da FICHA,
                             e só sobe quando a ficha muda de forma.
      versaoFormato          está em js/config.js. É o formato dos
                             arquivos de importação/exportação.
 
-   Elas sobem em ritmos próprios. A v2.6.0 leva schemaVersion 6 e
+   Elas sobem em ritmos próprios. A v2.7.0 leva schemaVersion 6 e
    versaoFormato 1 — e isso é normal: a ficha ganhou versões personalizadas e
    etiquetas, mas o formato dos arquivos de importação continua
    o mesmo,
@@ -57,6 +57,21 @@
   ];
 
   var CHANGELOG = [
+    {
+      versao: "2.7.0",
+      codinome: "TRIAGEM",
+      data: "12/09/2026",
+      mudancas: {
+        "Adicionado": [
+          "Na ficha de Ordem Paranormal, as abas Habilidades, Rituais e Inventário têm uma barra “Ordenar” com quatro modos: Personalizada, Ordem de adição, A–Z e Z–A. O modo fica gravado na ficha e vale em qualquer aparelho.",
+          "Na ordem personalizada, Subir e Descer mudam a posição de cada um — inclusive das habilidades que vêm das regras e dos itens do inventário. Com um filtro de categoria ligado, o item troca com o vizinho visível.",
+          "Habilidades, pastas, itens e rituais passam a guardar quando entraram na ficha, para a ordem de adição. O que é anterior a esta versão vem primeiro, na ordem guardada.",
+        ],
+        "Alterado": [
+          "No inventário da ficha de Ordem, a ordem padrão passa a ser a personalizada (a lista guardada) em vez de armas primeiro. A ficha universal continua como era.",
+        ],
+      },
+    },
     {
       versao: "2.6.0",
       codinome: "VARIANTE",

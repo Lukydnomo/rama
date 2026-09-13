@@ -793,6 +793,36 @@
   }
 
   /* =================================================================
+     SELETOR DE ORDEM
+     -----------------------------------------------------------------
+     Um <select> nativo e rotulado: funciona com teclado e leitor de tela
+     sem nenhum código a mais, e no celular abre o seletor do sistema.
+     ================================================================= */
+
+  var ROTULOS_DE_ORDEM = {
+    personalizada: "Personalizada",
+    adicao: "Ordem de adição",
+    az: "A–Z",
+    za: "Z–A",
+  };
+
+  function seletorDeOrdem(opcoes) {
+    var o = opcoes || {};
+    var atual = U.modoDeOrdem(o.valor);
+    var id = "ordem-" + U.uuid().slice(0, 8);
+    var select = el("select.r-selecao.ordenacao__selecao", {
+      id: id,
+      onchange: function (ev) { if (o.aoMudar) o.aoMudar(U.modoDeOrdem(ev.target.value)); },
+    }, U.MODOS_DE_ORDEM.map(function (m) {
+      return el("option", { value: m, texto: ROTULOS_DE_ORDEM[m], selected: m === atual });
+    }));
+    return el("span.ordenacao", {}, [
+      el("label.ordenacao__rotulo", { for: id, texto: o.rotulo || "Ordem" }),
+      select,
+    ]);
+  }
+
+  /* =================================================================
      ETIQUETA COLORIDA
      -----------------------------------------------------------------
      A etiqueta abaixo do nome ("ENERGIA" em roxo). É só apresentação:
@@ -920,6 +950,8 @@
     recolhivel: recolhivel,
     seletorDeCor: seletorDeCor,
     etiquetaColorida: etiquetaColorida,
+    seletorDeOrdem: seletorDeOrdem,
+    ROTULOS_DE_ORDEM: ROTULOS_DE_ORDEM,
     campoEtiqueta: campoEtiqueta,
   };
 })(window);

@@ -206,6 +206,79 @@
     return contrastePreto >= contrasteBranco ? "#08080A" : "#FFFFFF";
   }
 
+  /* =================================================================
+     ORDEM DE EXIBIÇÃO DAS LISTAS
+     -----------------------------------------------------------------
+     Quatro modos, escolhidos por aba na ficha de Ordem:
+
+       personalizada  a ordem guardada na ficha (Subir e Descer mexem nela)
+       adicao         a data em que cada coisa ENTROU na ficha
+                      (`adicionadoEm`). O que é anterior a esse carimbo
+                      vem primeiro, na ordem guardada.
+       az / za        pelo nome, sem diferença de acento nem de
+                      maiúscula, e "Nível 2" antes de "Nível 10"
+
+     Só a TELA ordena: a lista gravada não é reescrita por nenhum modo.
+     Empate sempre desempata pela posição guardada, para a ordem não
+     "pular" entre um desenho e outro.
+     ================================================================= */
+
+  var MODOS_DE_ORDEM = ["personalizada", "adicao", "az", "za"];
+
+  function modoDeOrdem(valor) {
+    return MODOS_DE_ORDEM.indexOf(valor) >= 0 ? valor : "personalizada";
+  }
+
+  function compararNomes(a, b) {
+    return texto(a).localeCompare(texto(b), "pt-BR", { sensitivity: "base", numeric: true });
+  }
+
+  /* Um carimbo de adição válido (ISO) ou vazio. */
+  function carimbo(valor) {
+    return paraData(valor) ? new Date(valor).toISOString() : "";
+  }
+
+  /* acesso: { nome(x), adicionado(x), grupo(x) } — `grupo` (opcional)
+     separa blocos em A–Z e Z–A, como pastas antes de habilidades. */
+  function ordenarLista(lista, modo, acesso) {
+    var a = acesso || {};
+    var nome = a.nome || function (x) { return x && x.nome; };
+    var adicionado = a.adicionado || function (x) { return x && x.adicionadoEm; };
+    var grupo = a.grupo || function () { return 0; };
+    var m = modoDeOrdem(modo);
+    var indexada = (Array.isArray(lista) ? lista : []).map(function (x, i) { return { x: x, i: i }; });
+
+    if (m === "az" || m === "za") {
+      var direcao = m === "az" ? 1 : -1;
+      indexada.sort(function (p, q) {
+        return (grupo(p.x) - grupo(q.x)) || (direcao * compararNomes(nome(p.x), nome(q.x))) || (p.i - q.i);
+      });
+    } else if (m === "adicao") {
+      indexada.sort(function (p, q) {
+        var tp = carimbo(adicionado(p.x));
+        var tq = carimbo(adicionado(q.x));
+        if (!tp !== !tq) return tp ? 1 : -1;
+        if (tp !== tq) return tp < tq ? -1 : 1;
+        return p.i - q.i;
+      });
+    }
+    return indexada.map(function (p) { return p.x; });
+  }
+
+  /* Troca um elemento de lugar com o vizinho VISÍVEL (a lista pode estar
+     filtrada), mexendo só nas duas posições da lista guardada. */
+  function moverEntreVisiveis(listaGuardada, visiveis, alvo, direcao) {
+    var pos = visiveis.indexOf(alvo);
+    var vizinho = pos < 0 ? null : visiveis[pos + (direcao < 0 ? -1 : 1)];
+    if (!vizinho) return false;
+    var i = listaGuardada.indexOf(alvo);
+    var j = listaGuardada.indexOf(vizinho);
+    if (i < 0 || j < 0) return false;
+    listaGuardada[i] = vizinho;
+    listaGuardada[j] = alvo;
+    return true;
+  }
+
   function iniciais(nome) {
     var partes = texto(nome).trim().split(/\s+/).filter(Boolean);
     if (!partes.length) return "?";
@@ -415,6 +488,12 @@
     corDeEtiqueta: corDeEtiqueta,
     normalizarEtiqueta: normalizarEtiqueta,
     corDoTextoSobre: corDoTextoSobre,
+    MODOS_DE_ORDEM: MODOS_DE_ORDEM,
+    modoDeOrdem: modoDeOrdem,
+    compararNomes: compararNomes,
+    carimbo: carimbo,
+    ordenarLista: ordenarLista,
+    moverEntreVisiveis: moverEntreVisiveis,
     iniciais: iniciais,
     copiar: copiar,
     vazio: vazio,

@@ -540,6 +540,49 @@
       t.ok("habilidade Homebrew exportada e importada mantém a etiqueta", hbHab.ok && hbHab.dados.etiqueta.texto === "Energia");
       var hbItem = V.importado(JSON.parse(JSON.stringify(V.exportar("homebrew-item", itemComEtq))));
       t.ok("item Homebrew exportado e importado mantém a etiqueta", hbItem.ok && hbItem.dados.etiqueta.cor === "#A33B3B");
+
+      /* ---------------------------------------------------------------- */
+      t.grupo("Ordem das listas — A–Z, Z–A, personalizada e de adição");
+
+      var UO = global.RAMAUtil;
+      var nomesDe = function (lista) { return lista.map(function (x) { return x.nome; }).join(","); };
+      var guardada = [
+        { id: "c", nome: "Zarabatana", adicionadoEm: "2026-09-12T10:00:00.000Z" },
+        { id: "a", nome: "ágata" },
+        { id: "d", nome: "Nível 10", adicionadoEm: "2026-09-12T09:00:00.000Z" },
+        { id: "b", nome: "Nível 2" },
+        { id: "e", nome: "Bússola", adicionadoEm: "2026-09-12T11:00:00.000Z" },
+      ];
+      var copiaGuardada = JSON.stringify(guardada);
+
+      t.igual("A–Z ignora acento e caixa, e põe Nível 2 antes de Nível 10",
+        nomesDe(UO.ordenarLista(guardada, "az")), "ágata,Bússola,Nível 2,Nível 10,Zarabatana");
+      t.igual("Z–A é o contrário", nomesDe(UO.ordenarLista(guardada, "za")), "Zarabatana,Nível 10,Nível 2,Bússola,ágata");
+      t.igual("personalizada é a ordem guardada", nomesDe(UO.ordenarLista(guardada, "personalizada")), nomesDe(guardada));
+      t.igual("de adição: o que não tem data (anterior ao carimbo) vem primeiro, na ordem guardada; depois, do mais antigo ao mais novo",
+        nomesDe(UO.ordenarLista(guardada, "adicao")), "ágata,Nível 2,Nível 10,Zarabatana,Bússola");
+      t.igual("modo desconhecido vale personalizada", nomesDe(UO.ordenarLista(guardada, "aleatorio")), nomesDe(guardada));
+      t.igual("ordenar não reescreve a lista guardada", JSON.stringify(guardada), copiaGuardada);
+      t.igual("em A–Z o grupo vem antes do nome (pastas primeiro)",
+        nomesDe(UO.ordenarLista([{ nome: "Arma" }, { nome: "Zona", pasta: true }], "az", { grupo: function (x) { return x.pasta ? 0 : 1; } })), "Zona,Arma");
+      t.igual("empate no nome desempata pela posição guardada",
+        UO.ordenarLista([{ id: 1, nome: "Igual" }, { id: 2, nome: "igual" }], "az").map(function (x) { return x.id; }).join(","), "1,2");
+
+      var guardadaMover = guardada.slice();
+      var visiveisMover = [guardada[0], guardada[2], guardada[4]];
+      t.ok("subir troca com o vizinho visível", UO.moverEntreVisiveis(guardadaMover, visiveisMover, guardada[2], -1));
+      t.igual("  mexendo só nas duas posições", nomesDe(guardadaMover), "Nível 10,ágata,Zarabatana,Nível 2,Bússola");
+      t.ok("  e o primeiro não sobe mais", !UO.moverEntreVisiveis(guardadaMover, [guardada[0]], guardada[0], -1));
+
+      t.igual("item preserva a data de adição", S.normalizarItem({ tipo: "item", nome: "Lanterna", adicionadoEm: "2026-09-12T10:00:00.000Z" }).adicionadoEm, "2026-09-12T10:00:00.000Z");
+      t.ok("item antigo sem data não ganha data inventada", !("adicionadoEm" in S.normalizarItem({ tipo: "item", nome: "Corda" })));
+      t.ok("data inválida é descartada", !("adicionadoEm" in S.normalizarItem({ tipo: "item", nome: "Corda", adicionadoEm: "ontem" })));
+      t.igual("habilidade preserva a data de adição", H.normalizarHabilidade({ nome: "X", adicionadoEm: "2026-09-12T10:00:00.000Z" }).adicionadoEm, "2026-09-12T10:00:00.000Z");
+      t.ok("pasta nova nasce com data", !!H.criarPasta("Nova").adicionadoEm);
+      t.igual("pasta preserva a data ao normalizar",
+        H.normalizarArvore({ filhos: [{ tipo: "pasta", nome: "P", filhos: [], adicionadoEm: "2026-09-12T10:00:00.000Z" }] }).filhos[0].adicionadoEm, "2026-09-12T10:00:00.000Z");
+      t.igual("ritual preserva a data de adição ao normalizar a ficha",
+        S.normalizarFicha({ nome: "R", rituais: { itens: [{ nome: "Decadência", adicionadoEm: "2026-09-12T10:00:00.000Z" }] } }).rituais.itens[0].adicionadoEm, "2026-09-12T10:00:00.000Z");
     }
 
     /* =================================================================
@@ -1697,6 +1740,27 @@
         t.igual("exclusão repetida para a mesma aquisição vira uma só",
           PZ.normalizarExcluidas([{ aquisicao: "auto|x" }, { aquisicao: "auto|x" }]).length, 1);
         t.igual("ficha antiga sem exclusões abre com a lista vazia", RR.normalizar({ classe: "combatente" }).excluidas.length, 0);
+
+        t.grupo("Ordem — organização das listas guardada na ficha");
+
+        var semOrg = RR.normalizar({ classe: "combatente" }).organizacao;
+        t.igual("ficha antiga abre com as três abas na ordem personalizada",
+          [semOrg.habilidades.modo, semOrg.rituais.modo, semOrg.inventario.modo].join(","), "personalizada,personalizada,personalizada");
+        var comOrg = RR.normalizar({ organizacao: {
+          habilidades: { modo: "az", regras: ["auto|ataqueEspecial", "auto|ataqueEspecial", "<lixo>", "t.cascaGrossa|cascaGrossa"] },
+          rituais: { modo: "adicao" }, inventario: { modo: "za" },
+        } }).organizacao;
+        t.igual("os modos escolhidos sobrevivem a recarregar",
+          [comOrg.habilidades.modo, comOrg.rituais.modo, comOrg.inventario.modo].join(","), "az,adicao,za");
+        t.igual("a ordem das habilidades das regras descarta repetida e id fora do padrão",
+          comOrg.habilidades.regras.join(","), "auto|ataqueEspecial,t.cascaGrossa|cascaGrossa");
+        t.igual("modo inválido vira personalizada", RR.normalizar({ organizacao: { rituais: { modo: "caos" } } }).organizacao.rituais.modo, "personalizada");
+        var orgOrdem = agente();
+        var pvOrg = RR.pontosDeVida(orgOrdem).total;
+        orgOrdem.organizacao.habilidades.modo = "za";
+        orgOrdem.organizacao.habilidades.regras = ["t.caiDentro|caiDentro"];
+        t.igual("a organização não muda nenhuma conta", RR.pontosDeVida(orgOrdem).total, pvOrg);
+        t.igual("  nem as pendências", JSON.stringify(idsPendentes(orgOrdem)), JSON.stringify(idsPendentes(agente())));
       }
 
       /* ---------------------------------------------------------------- */
