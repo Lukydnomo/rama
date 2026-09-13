@@ -23,10 +23,7 @@
 .membro p { min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
 
 /* =====================================================================
-   PAINEL DE NÚMEROS DO MESTRE
-   ---------------------------------------------------------------------
-   Os controles rápidos de PV e atributo. Alvos grandes: são apertados
-   às pressas no meio de um combate.
+   GRADE DE NÚMEROS (status de criatura no combate)
    ===================================================================== */
 
 .painel-numeros {
@@ -41,6 +38,262 @@
   gap: var(--e1);
   min-width: 0;
 }
+
+/* =====================================================================
+   PAINEL DA MESA (aba Personagens)
+   ---------------------------------------------------------------------
+   Cartões compactos numa grade que se ajusta à largura: foto e nome no
+   topo, atributos numa linha, recursos no centro, estatísticas embaixo
+   e o acesso à ficha sempre no rodapé. Os recursos têm cor própria E o
+   nome escrito — a cor nunca é a única pista.
+   ===================================================================== */
+
+.mesa-cartao {
+  --cor-vida: #B8433A;
+  --cor-esforco: #C9772A;
+  --cor-sanidade: #7E6BB5;
+  --cor-azul: #3B6EA3;
+  --cor-verde: #4F8A4B;
+  --cor-cinza: #6B6B73;
+}
+
+.mesa-barra {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--e3);
+  flex-wrap: wrap;
+}
+
+.mesa-grade {
+  display: grid;
+  gap: var(--e3);
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 290px), 1fr));
+  align-items: start;
+}
+
+.mesa-cartao {
+  display: flex;
+  flex-direction: column;
+  gap: var(--e3);
+  min-width: 0;
+  padding: var(--e3);
+  background: var(--cor-superficie);
+  border: var(--borda) solid var(--cor-traco-fraca);
+  transition: border-color var(--tempo-seco) var(--curva);
+}
+.mesa-cartao:hover,
+.mesa-cartao:focus-within { border-color: var(--cor-traco-media); }
+
+/* ---------- topo ---------- */
+
+.mesa-cartao__topo {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: start;
+  gap: var(--e3);
+}
+
+.mesa-cartao__foto { width: 56px; height: 56px; border-radius: 0; }
+
+.mesa-cartao__id { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+
+.mesa-cartao__nome {
+  margin: 0;
+  font-weight: 700;
+  font-size: var(--texto-base);
+  line-height: 1.3;
+  letter-spacing: var(--espaco-letra);
+  color: var(--cor-texto);
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.mesa-cartao__linha {
+  margin: 0;
+  font-family: var(--fonte-mini);
+  font-size: var(--texto-mini);
+  color: var(--cor-texto-3);
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.mesa-cartao__progressao { color: var(--cor-texto-2); }
+
+/* ---------- atributos (só leitura) ---------- */
+
+.mesa-atributos {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(2.6rem, 1fr));
+  gap: var(--e1);
+  margin: 0;
+}
+.mesa-atributo {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  min-width: 0;
+}
+.mesa-atributo dt {
+  font-family: var(--fonte-mini);
+  font-size: var(--texto-mini);
+  letter-spacing: var(--espaco-letra-titulo);
+  color: var(--cor-texto-3);
+}
+.mesa-atributo dd { margin: 0; font-weight: 700; color: var(--cor-texto); font-variant-numeric: tabular-nums; }
+
+/* ---------- recursos ---------- */
+
+.mesa-recursos { display: flex; flex-direction: column; gap: var(--e2); }
+
+.mesa-recurso { display: flex; flex-direction: column; gap: 2px; --cor-recurso: var(--cor-cinza); }
+.mesa-recurso--vida { --cor-recurso: var(--cor-vida); }
+.mesa-recurso--esforco { --cor-recurso: var(--cor-esforco); }
+.mesa-recurso--sanidade { --cor-recurso: var(--cor-sanidade); }
+.mesa-recurso--azul { --cor-recurso: var(--cor-azul); }
+.mesa-recurso--verde { --cor-recurso: var(--cor-verde); }
+.mesa-recurso--cinza { --cor-recurso: var(--cor-cinza); }
+
+.mesa-recurso__nome {
+  font-family: var(--fonte-mini);
+  font-size: var(--texto-mini);
+  letter-spacing: var(--espaco-letra-titulo);
+  text-transform: uppercase;
+  color: var(--cor-texto-2);
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.mesa-recurso__linha,
+.mesa-recurso__edicao {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: stretch;
+  gap: var(--e1);
+}
+.mesa-recurso__linha > .mesa-recurso__barra:only-child { grid-column: 1 / -1; }
+
+/* Alvos do tamanho de um dedo: são apertados às pressas no meio de um
+   combate, muitas vezes no celular. */
+.mesa-recurso__passo {
+  min-width: var(--alvo-toque);
+  min-height: var(--alvo-toque);
+  padding: 0 var(--e2);
+  background: var(--cor-superficie-2);
+  border: var(--borda) solid var(--cor-traco-fraca);
+  color: var(--cor-texto);
+  font-weight: 700;
+  cursor: pointer;
+}
+.mesa-recurso__passo:hover:not(:disabled) { border-color: var(--cor-traco-media); }
+.mesa-recurso__passo:disabled { color: var(--cor-texto-3); cursor: not-allowed; }
+.mesa-recurso__passo:focus-visible,
+.mesa-recurso__valor:focus-visible,
+.mesa-recurso__entrada:focus-visible { outline: 2px solid var(--cor-traco-forte); outline-offset: 1px; }
+
+.mesa-recurso__barra {
+  position: relative;
+  min-height: var(--alvo-toque);
+  min-width: 0;
+  background: var(--cor-fundo);
+  border: var(--borda) solid var(--cor-recurso);
+}
+
+.mesa-recurso__medidor { position: absolute; inset: 0; overflow: hidden; }
+.mesa-recurso__preenchimento {
+  display: block;
+  height: 100%;
+  width: 0;
+  background: var(--cor-recurso);
+  opacity: 0.8;
+  transition: width var(--tempo-curto) var(--curva);
+}
+
+.mesa-recurso__valor {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  min-height: var(--alvo-toque);
+  padding: 0 var(--e2);
+  background: transparent;
+  border: 0;
+  color: var(--cor-texto);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  text-shadow: 0 0 3px var(--cor-fundo), 0 0 2px var(--cor-fundo);
+  white-space: nowrap;
+}
+button.mesa-recurso__valor { cursor: text; }
+
+/* Valor ainda não confirmado pelo servidor: um traço pontilhado, sem
+   depender só de cor. */
+.mesa-recurso--pendente .mesa-recurso__barra { border-style: dashed; }
+
+.mesa-recurso__entrada {
+  min-width: 0;
+  min-height: var(--alvo-toque);
+  padding: 0 var(--e2);
+  background: var(--cor-fundo);
+  border: var(--borda) solid var(--cor-recurso);
+  color: var(--cor-texto);
+  font: inherit;
+  font-weight: 700;
+  text-align: center;
+}
+.mesa-recurso__edicao { grid-template-columns: minmax(0, 1fr) auto auto; grid-column: 1 / -1; }
+.mesa-recurso__erro { grid-column: 1 / -1; font-size: var(--texto-mini); color: var(--cor-erro); }
+.mesa-recurso__erro:empty { display: none; }
+.mesa-recurso__entrada[aria-invalid="true"] { border-color: var(--cor-erro); }
+
+@media (prefers-reduced-motion: reduce) {
+  .mesa-recurso__preenchimento { transition: none; }
+}
+
+/* ---------- estatísticas ---------- */
+
+.mesa-estatisticas {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(5rem, 1fr));
+  gap: var(--e2);
+  margin: 0;
+  padding-top: var(--e2);
+  border-top: var(--borda) solid var(--cor-traco-fraca);
+}
+.mesa-estatistica { display: flex; flex-direction: column; align-items: center; gap: 1px; min-width: 0; text-align: center; }
+.mesa-estatistica dt {
+  font-family: var(--fonte-mini);
+  font-size: var(--texto-mini);
+  letter-spacing: var(--espaco-letra-titulo);
+  text-transform: uppercase;
+  color: var(--cor-texto-3);
+}
+.mesa-estatistica dd { margin: 0; font-weight: 700; color: var(--cor-texto); font-variant-numeric: tabular-nums; }
+
+/* ---------- rodapé ---------- */
+
+.mesa-cartao__rodape {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--e2);
+  margin-top: auto;
+}
+.mesa-cartao__estado {
+  min-width: 0;
+  font-family: var(--fonte-mini);
+  font-size: var(--texto-mini);
+  color: var(--cor-texto-3);
+  text-align: right;
+}
+.mesa-cartao__estado--ok { color: var(--cor-ok); }
+.mesa-cartao__estado--aviso { color: var(--cor-aviso); }
+.mesa-cartao__estado--erro { color: var(--cor-erro); }
 
 /* =====================================================================
    HISTÓRICO DE ROLAGENS

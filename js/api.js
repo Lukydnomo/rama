@@ -367,11 +367,15 @@
   /* O ajuste cirúrgico do painel do mestre: um campo, por id, com a
      revisão conferida. Não é um atalho mais frouxo do que salvar a
      ficha — é o mesmo controle sobre um payload menor. */
-  function ajustarPersonagem(personagemId, rev, alvo, itemId, campo, valor) {
-    return post({
+  /* `campanhaId` (opcional): o servidor confere que o personagem
+     continua nesta campanha antes de ajustar. */
+  function ajustarPersonagem(personagemId, rev, alvo, itemId, campo, valor, campanhaId) {
+    var corpo = {
       acao: "ajustar_personagem", personagemId: personagemId, rev: rev,
       alvo: alvo, itemId: itemId, campo: campo, valor: valor,
-    });
+    };
+    if (campanhaId) corpo.campanhaId = campanhaId;
+    return post(corpo);
   }
 
   /* =================================================================

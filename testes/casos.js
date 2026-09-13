@@ -1764,6 +1764,79 @@
       }
 
       /* ---------------------------------------------------------------- */
+      if (global.RAMAPainelMesa) {
+        t.grupo("Painel da mesa — cartões calculados pela ficha");
+
+        var PMs = global.RAMAPainelMesa;
+        var mari = agente({ classe: "ocultista", trilha: "", nex: 60, atributos: { agi: 3, for: 1, int: 5, pre: 4, vig: 0 } });
+        mari.recursos = { pv: 0, pe: 5, san: 47 };
+        var protecaoMari = global.RAMAFicha.criarItem("armadura", { nome: "Proteção Leve", defesa: 5, ordem: { espacos: 2, categoria: 1, emUso: true } });
+        var invMari = { limite: 0, itens: [protecaoMari] };
+        var calcMari = RR.calcular(mari, invMari);
+        var listadoMari = { id: "m1", nome: "Mari", tipoFicha: "ordem", souDono: false, detalhado: true, dono: "Bolo", rev: 3,
+          ordem: JSON.parse(JSON.stringify(mari)), inventario: JSON.parse(JSON.stringify(invMari)) };
+        var cartaoMari = PMs.resumir(listadoMari);
+
+        t.igual("PV do cartão = PV da ficha (atual e máximo)", cartaoMari.recursos[0].atual + "/" + cartaoMari.recursos[0].maximo, calcMari.atual.pv + "/" + calcMari.pv.total);
+        t.igual("PE do cartão = PE da ficha", cartaoMari.recursos[1].atual + "/" + cartaoMari.recursos[1].maximo, calcMari.atual.pe + "/" + calcMari.pe.total);
+        t.igual("Sanidade do cartão = Sanidade da ficha", cartaoMari.recursos[2].atual + "/" + cartaoMari.recursos[2].maximo, calcMari.atual.san + "/" + calcMari.san.total);
+        t.igual("PV zerado continua 0, não o máximo", cartaoMari.recursos[0].atual, 0);
+        t.igual("Defesa do cartão = Defesa da ficha, com a proteção em uso", cartaoMari.estatisticas[0].valor, String(calcMari.defesa.total));
+        t.igual("PE por turno = limite da ficha", cartaoMari.estatisticas[1].valor, String(calcMari.limitePe.total));
+        t.igual("deslocamento = o da ficha", cartaoMari.estatisticas[2].valor, calcMari.deslocamento.total + " m");
+        t.igual("sem Bloqueio nem Esquiva inventados", cartaoMari.estatisticas.map(function (s) { return s.chave; }).join(","), "defesa,limitePe,deslocamento");
+        t.igual("atributos efetivos, na ordem do catálogo", cartaoMari.atributos.map(function (a) { return a.sigla + a.valor; }).join(" "),
+          CC.ATRIBUTOS.map(function (a) { return a.sigla + RR.atributo(mari, a.chave); }).join(" "));
+        t.igual("classe e progressão na identificação", cartaoMari.linhas[0] + " | " + cartaoMari.progressao, "Ocultista | NEX 60%");
+        t.igual("o recurso de Ordem é ajustado por recurso/pv, só o atual",
+          [cartaoMari.recursos[0].alvo, cartaoMari.recursos[0].itemId, cartaoMari.recursos[0].campo].join("/"), "recurso/pv/atual");
+        t.ok("  com os limites da ficha: −99 até o máximo", cartaoMari.recursos[0].minimo === -99 && cartaoMari.recursos[0].teto === calcMari.pv.total);
+
+        var semSan = JSON.parse(JSON.stringify(listadoMari));
+        semSan.ordem.opcionais = { semSanidade: true };
+        t.igual("com “Jogando sem Sanidade”, a Sanidade não aparece", PMs.resumir(semSan).recursos.map(function (r) { return r.rotulo; }).join(","), "PV,PE");
+
+        var nivelado = JSON.parse(JSON.stringify(listadoMari));
+        nivelado.ordem.opcionais = { nexExperiencia: true };
+        nivelado.ordem.nivel = 4;
+        t.igual("com NEX & Experiência, mostra nível e NEX", PMs.resumir(nivelado).progressao, "Nível 4 · NEX 60%");
+
+        var alheio = { id: "m2", nome: "Mari", tipoFicha: "ordem", detalhado: false, ordem: { classe: "ocultista", trilha: "", nex: 60, nivel: null, opcionais: {} } };
+        var cartaoAlheio = PMs.resumir(alheio);
+        t.ok("ficha alheia sem dados de cálculo: nenhum recurso ou estatística inventado",
+          !cartaoAlheio.recursos.length && !cartaoAlheio.estatisticas.length && !cartaoAlheio.atributos.length);
+        t.igual("  mas com a identificação", cartaoAlheio.linhas[0] + " | " + cartaoAlheio.progressao, "Ocultista | NEX 60%");
+
+        var universal = PMs.resumir({ id: "u1", nome: "Livre", tipoFicha: "universal", classe: "Bardo",
+          status: [{ id: "s1", nome: "Fôlego", atual: 3, maximo: 0 }, { id: "s2", nome: "Mana", atual: 12, maximo: 10 }],
+          atributos: [{ id: "a1", nome: "Carisma", sigla: "CAR", valor: 4 }] });
+        t.igual("universal mantém os nomes da própria ficha", universal.recursos.map(function (r) { return r.rotulo; }).join(","), "Fôlego,Mana");
+        t.ok("  sem Sanidade, NEX nem estatística de Ordem", !universal.estatisticas.length && !universal.progressao);
+        t.igual("  com os limites da ficha universal (sem teto quando o máximo é 0)", universal.recursos[0].teto, 999999);
+        t.igual("  e o atributo configurado", universal.atributos[0].sigla + universal.atributos[0].valor, "CAR4");
+
+        t.igual("barra: zerado fica vazia", PMs.preenchimento(0, 69), 0);
+        t.igual("barra: negativo fica vazia", PMs.preenchimento(-5, 69), 0);
+        t.igual("barra: acima do máximo não passa de 100%", PMs.preenchimento(12, 10), 100);
+        t.igual("barra: máximo 0 com valor enche", PMs.preenchimento(3, 0), 100);
+        t.igual("barra: proporcional", PMs.preenchimento(31, 62), 50);
+
+        var limitesPv = cartaoMari.recursos[0];
+        t.ok("entrada vazia é recusada, não vira 0", !PMs.validarEntrada("", limitesPv).ok && !PMs.validarEntrada("   ", limitesPv).ok);
+        t.ok("texto e decimal são recusados", !PMs.validarEntrada("abc", limitesPv).ok && !PMs.validarEntrada("2,5", limitesPv).ok);
+        t.ok("fora dos limites é recusado com o motivo", /máximo/.test(PMs.validarEntrada("999", limitesPv).mensagem) && /mínimo/.test(PMs.validarEntrada("-100", limitesPv).mensagem));
+        t.igual("número válido passa", PMs.validarEntrada(" 12 ", limitesPv).valor, 12);
+        t.igual("sinal de menos tipográfico é aceito", PMs.validarEntrada("−3", limitesPv).valor, -3);
+
+        t.ok("conflito: reenviar se o recurso não mudou no servidor", PMs.podeReenviar(listadoMari, cartaoMari.recursos[1], 5));
+        var mudou = JSON.parse(JSON.stringify(listadoMari));
+        mudou.ordem.recursos.pe = 2;
+        t.ok("  não reenviar se o jogador mexeu naquele recurso", !PMs.podeReenviar(mudou, cartaoMari.recursos[1], 5));
+        t.ok("  nunca-tocado (null) continua igual a null", PMs.podeReenviar({ tipoFicha: "ordem", ordem: { recursos: { pv: null } } }, cartaoMari.recursos[0], null));
+        t.ok("  personagem sem o status não reenvia", !PMs.podeReenviar({ status: [] }, universal.recursos[0], 3));
+      }
+
+      /* ---------------------------------------------------------------- */
       t.grupo("Ordem — resolver cada tipo de pendência");
 
       /* Poder de classe. */

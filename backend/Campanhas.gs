@@ -460,33 +460,93 @@ function acaoListarPersonagensCampanha(corpo, usuario) {
   var lista = daMesa
     .map(function (p) {
       var ficha = lerJson(fichas[p._linha], {});
+      var souDono = meu(p, usuario);
 
-      /* O painel do mestre precisa de status e atributos para os
-         controles rápidos, mas não da ficha inteira: perícias,
-         inventário e anotações ficam para quando alguém abrir a ficha
-         de verdade. É a diferença entre uma tela que carrega e uma que
-         baixa megabytes para desenhar quatro números. */
-      return {
+      /* O mestre e o dono veem o personagem inteiro no painel; os outros
+         jogadores da mesa, só o que já viam antes. */
+      var detalhado = ctx.mestre || souDono;
+      var ehOrdem = String(ficha.tipoFicha || '') === 'ordem' && !!ficha.ordem && typeof ficha.ordem === 'object';
+
+      var saida = {
         id: p.id,
         nome: p.nome,
+        tipoFicha: ehOrdem ? 'ordem' : 'universal',
         classe: p.classe || '',
         origem: p.origem || '',
         ownerId: p.ownerId,
         dono: donos[p.ownerId] || '',
-        souDono: meu(p, usuario),
+        souDono: souDono,
+        detalhado: detalhado,
         foto: fotos[p.id] || '',
         rev: Number(p.rev) || 0,
-        atributos: (ficha.atributos || []).map(function (a) {
-          return { id: a.id, nome: a.nome, sigla: a.sigla, valor: a.valor, dado: a.dado };
-        }),
-        status: (ficha.status || []).map(function (s) {
-          return { id: s.id, nome: s.nome, atual: s.atual, maximo: s.maximo };
-        }),
       };
+
+      if (ehOrdem) {
+        /* Uma ficha de Ordem NÃO usa `status` e `atributos` universais —
+           ela os tem só como padrão de nascimento. Os números dela são
+           calculados pelas regras no navegador (js/ordem/regras.js), o
+           mesmo cálculo da ficha: o painel recebe os dados de entrada
+           desse cálculo, não um resultado paralelo. Textos longos
+           (personalizações, descrições de item) ficam de fora. */
+        saida.ordem = detalhado ? ordemParaPainel(ficha.ordem) : ordemPublicaParaPainel(ficha.ordem);
+        if (detalhado) saida.inventario = { itens: itensParaPainel(ficha.inventario) };
+      } else {
+        /* O painel precisa de status e atributos para os controles
+           rápidos, mas não da ficha inteira: perícias, inventário e
+           anotações ficam para quando alguém abrir a ficha de verdade. */
+        saida.atributos = (ficha.atributos || []).map(function (a) {
+          return { id: a.id, nome: a.nome, sigla: a.sigla, valor: a.valor, dado: a.dado };
+        });
+        saida.status = (ficha.status || []).map(function (s) {
+          return { id: s.id, nome: s.nome, atual: s.atual, maximo: s.maximo };
+        });
+      }
+      return saida;
     })
     .sort(function (a, b) { return String(a.nome).localeCompare(String(b.nome), 'pt-BR'); });
 
   return { ok: true, dados: lista };
+}
+
+/* O bloco `ordem` com o necessário para calcular PV, PE, Sanidade,
+   Defesa, limite de PE e deslocamento — sem os textos das versões
+   personalizadas (só o que muda efeito: aquisição e `efeitos`). */
+function ordemParaPainel(ordem) {
+  var copia = {};
+  Object.keys(ordem).forEach(function (k) {
+    if (k === 'organizacao') return;
+    copia[k] = ordem[k];
+  });
+  copia.personalizacoes = (Array.isArray(ordem.personalizacoes) ? ordem.personalizacoes : [])
+    .filter(function (x) { return x && typeof x === 'object'; })
+    .map(function (x) {
+      return { id: x.id, aquisicao: x.aquisicao, poder: x.poder, nome: x.nome, efeitos: x.efeitos };
+    });
+  return copia;
+}
+
+/* O que outro jogador da mesa vê de uma ficha de Ordem que não é dele:
+   identificação, e nada de recursos, escolhas ou inventário. */
+function ordemPublicaParaPainel(ordem) {
+  var opcionais = ordem.opcionais && typeof ordem.opcionais === 'object' ? ordem.opcionais : {};
+  return {
+    classe: ordem.classe || '',
+    trilha: ordem.trilha || '',
+    nex: ordem.nex === undefined ? null : ordem.nex,
+    nivel: ordem.nivel === undefined ? null : ordem.nivel,
+    opcionais: { nexExperiencia: opcionais.nexExperiencia === true },
+  };
+}
+
+/* Itens com o que conta para Defesa e carga (tipo, Defesa, bloco de
+   Ordem). Descrição e etiqueta ficam na ficha. */
+function itensParaPainel(inventario) {
+  var itens = inventario && Array.isArray(inventario.itens) ? inventario.itens : [];
+  return itens
+    .filter(function (i) { return i && typeof i === 'object'; })
+    .map(function (i) {
+      return { id: i.id, tipo: i.tipo, nome: i.nome, defesa: i.defesa, ordem: i.ordem };
+    });
 }
 
 /* Põe ou tira um personagem da campanha.
@@ -554,7 +614,15 @@ function acaoVincularPersonagem(corpo, usuario) {
 var CAMPOS_AJUSTAVEIS = {
   status: ['atual', 'maximo'],
   atributo: ['valor'],
+  /* Ficha de Ordem: o que sobrou de PV, PE e Sanidade. O máximo é
+     calculado pelas regras e nunca é gravado. */
+  recurso: ['atual'],
 };
+
+var RECURSOS_DE_ORDEM = ['pv', 'pe', 'san'];
+
+/* O mesmo piso da ficha de Ordem (js/paginas/ficha-ordem.js). */
+var PISO_DE_RECURSO = -99;
 
 function acaoAjustarPersonagem(corpo, usuario) {
   var alvo = String(corpo.alvo || '');
@@ -563,16 +631,34 @@ function acaoAjustarPersonagem(corpo, usuario) {
   var permitidos = CAMPOS_AJUSTAVEIS[alvo];
   if (!permitidos || permitidos.indexOf(campo) < 0) return { ok: false, erro: 'dados_invalidos' };
 
-  var valor = Number(corpo.valor);
+  /* Só número de verdade. `Number("")`, `Number(null)` e `Number(false)`
+     valem 0 — e um campo apagado não pode virar zero em silêncio. */
+  var bruto = corpo.valor;
+  var ehNumero = typeof bruto === 'number' ||
+    (typeof bruto === 'string' && /^\s*-?\d+(\.\d+)?\s*$/.test(bruto));
+  if (!ehNumero) return { ok: false, erro: 'dados_invalidos' };
+  var valor = Number(bruto);
   if (!Number.isFinite(valor)) return { ok: false, erro: 'dados_invalidos' };
   valor = Math.round(valor);
   if (valor < -99999 || valor > 999999) return { ok: false, erro: 'dados_invalidos' };
+  if (alvo === 'recurso') {
+    if (RECURSOS_DE_ORDEM.indexOf(String(corpo.itemId || '')) < 0) return { ok: false, erro: 'dados_invalidos' };
+    if (valor < PISO_DE_RECURSO) return { ok: false, erro: 'dados_invalidos' };
+  }
 
   return comTrava(function () {
     var acesso = personagemAcessivel(corpo.personagemId, usuario);
     if (!acesso.ok) return acesso;
 
     var registro = acesso.personagem;
+
+    /* Pedido feito a partir de uma campanha: o personagem precisa
+       continuar nela. Um cartão aberto há uma hora não pode mexer numa
+       ficha que já foi tirada daquela mesa. */
+    if (corpo.campanhaId !== undefined && corpo.campanhaId !== null &&
+        String(registro.campanhaId || '') !== String(corpo.campanhaId)) {
+      return { ok: false, erro: 'nao_encontrado' };
+    }
     var revAtual = Number(registro.rev) || 0;
     var revPedida = Number(corpo.rev);
 
@@ -581,13 +667,26 @@ function acaoAjustarPersonagem(corpo, usuario) {
     }
 
     var ficha = lerJson(registro.fichaJson, {});
-    var lista = alvo === 'status' ? (ficha.status || []) : (ficha.atributos || []);
-
     var item = null;
-    for (var i = 0; i < lista.length; i++) {
-      if (String(lista[i].id) === String(corpo.itemId)) { item = lista[i]; break; }
+
+    if (alvo === 'recurso') {
+      /* Só existe em ficha de Ordem. Numa universal, o recurso é um
+         status — e mexer num bloco que ela não tem seria criar dado. */
+      if (String(ficha.tipoFicha || '') !== 'ordem' || !ficha.ordem || typeof ficha.ordem !== 'object') {
+        return { ok: false, erro: 'dados_invalidos' };
+      }
+      if (!ficha.ordem.recursos || typeof ficha.ordem.recursos !== 'object') {
+        ficha.ordem.recursos = { pv: null, pe: null, san: null };
+      }
+      item = ficha.ordem.recursos;
+      campo = String(corpo.itemId);
+    } else {
+      var lista = alvo === 'status' ? (ficha.status || []) : (ficha.atributos || []);
+      for (var i = 0; i < lista.length; i++) {
+        if (String(lista[i].id) === String(corpo.itemId)) { item = lista[i]; break; }
+      }
+      if (!item) return { ok: false, erro: 'nao_encontrado' };
     }
-    if (!item) return { ok: false, erro: 'nao_encontrado' };
 
     item[campo] = valor;
 

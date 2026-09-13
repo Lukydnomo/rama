@@ -15,7 +15,7 @@ não são renderizadas desabilitadas, simplesmente não entram na lista.
 | Aba | Quem vê | O que faz |
 |---|---|---|
 | Visão geral | todos | panorama, mesa, aviso de rolagens ocultas |
-| Personagens | membros | painel com status e atributos, com controles rápidos |
+| Personagens | membros | grade de cartões: recursos com barra e ajuste rápido, atributos e estatísticas só para consulta |
 | Rolagens | membros | histórico paginado; rolagem livre só para o mestre |
 | Documentos | membros | só os documentos liberados para você |
 | Combate | membros | só os combates liberados para você |
@@ -166,6 +166,47 @@ comuns, removíveis e renomeáveis como qualquer outro. Nada é calculado.
 
 ---
 
+## Painel da mesa (aba Personagens)
+
+Uma grade de cartões compactos (`js/paginas/campanha-personagens.js`) que se
+ajusta à largura — vários por linha no desktop, um por linha no celular, sem
+rolagem horizontal. Cada cartão: foto (ou iniciais), nome (cortado com
+reticências, completo no título e nos rótulos de acessibilidade), classe e trilha,
+jogador, NEX ou nível; atributos só para consulta; barras de recurso; estatísticas;
+**Abrir ficha** no rodapé; e, para o mestre, **Tirar da campanha** num menu
+separado dos recursos.
+
+**O que cada cartão mostra** sai de `js/campanha-painel.js`, sem fórmula própria:
+
+| ficha | recursos | atributos | estatísticas |
+|---|---|---|---|
+| Ordem | PV, PE e Sanidade (sem Sanidade com "Jogando sem Sanidade"), atual e máximo calculados por `RAMAOrdemRegras.calcular` | efetivos | Defesa, PE por turno, deslocamento |
+| Universal | os status configurados na ficha, com os nomes dela | os configurados | nenhuma — nada de Ordem é imposto |
+
+Bloqueio e Esquiva não existem no R.A.M.A. e não aparecem. A barra limita só a
+LARGURA ao espaço dela: o número mostrado é o de verdade (zerado, negativo ou acima
+do máximo). A cor de cada recurso vem acompanhada do nome escrito.
+
+**Quem vê o quê.** O mestre e o dono do personagem recebem os dados de cálculo; os
+outros jogadores veem, de uma ficha de Ordem alheia, só a identificação (classe,
+trilha, NEX) — a mesma medida do que já viam antes. Da universal alheia continuam
+vendo status e atributos, sem controles.
+
+**Ajuste rápido.** `[−]`, `[+]` e o número, que abre um campo: Enter ou ✓ confirma,
+Esc ou × cancela. Vazio, texto, decimal ou fora dos limites da ficha é recusado com
+o motivo — nunca vira zero. Os limites são os da ficha completa (Ordem: −99 até o
+máximo; universal: −9999 até o máximo, sem teto quando ele é 0). Só o valor atual
+muda: máximos, atributos e valores-base não.
+
+A mudança aparece na hora (a barra fica tracejada até o servidor confirmar) e entra
+na fila de `js/fila.js`: cliques seguidos viram um envio com o valor final, e o
+cartão mostra "Salvando…", "Salvo", "Tentando de novo…" ou o erro. Num conflito de
+revisão, a fila busca a listagem de novo e **só reenvia se aquele recurso continua
+com o valor de quando o mestre começou**; se o jogador acabou de mexer nele, o
+ajuste não passa por cima e a tela avisa. Buscar a listagem (botão **Atualizar**)
+atualiza os cartões no lugar, sem tocar num recurso sendo digitado ou com gravação
+pendente.
+
 ## Ajuste rápido de status
 
 Os botões `[-]` e `[+]` do painel do mestre poderiam reusar `salvar_personagem`,
@@ -177,8 +218,19 @@ enorme.
 revisão conferida do mesmo jeito**. Não é um caminho paralelo mais frouxo — é o
 mesmo controle de concorrência sobre um payload menor.
 
-O servidor valida o alvo (`status` ou `atributo`), o campo (lista fechada) e o
-valor. Um campo fora da lista, ou um alvo inventado, é recusado.
+O servidor valida o alvo (`status`, `atributo` ou `recurso`), o campo (lista
+fechada) e o valor — que precisa ser um número de verdade: vazio, `null` ou texto é
+recusado, e não vira 0. Um campo fora da lista, ou um alvo inventado, é recusado.
+
+`recurso` é da ficha de Ordem: `itemId` é `pv`, `pe` ou `san`, o campo é só
+`atual`, o piso é −99 (o da ficha) e o valor vai para `ordem.recursos`. O máximo é
+calculado pelas regras e nunca é gravado. Numa ficha universal, `recurso` é
+recusado.
+
+Com `campanhaId` no pedido, o servidor confere também que o personagem continua
+vinculado àquela campanha — um cartão aberto há uma hora não mexe numa ficha que
+já saiu da mesa. A permissão continua a de sempre: dono, ou mestre da campanha em
+que o personagem está.
 
 ---
 

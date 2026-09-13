@@ -14,13 +14,13 @@
    TRÊS COISAS DIFERENTES, QUE NÃO SE MISTURAM
    ---------------------------------------------------------------------
 
-     versão do aplicativo   está aqui. É o que a pessoa vê: v2.7.1.
+     versão do aplicativo   está aqui. É o que a pessoa vê: v2.8.0.
      schemaVersion          está em js/ficha.js. É o formato da FICHA,
                             e só sobe quando a ficha muda de forma.
      versaoFormato          está em js/config.js. É o formato dos
                             arquivos de importação/exportação.
 
-   Elas sobem em ritmos próprios. A v2.7.1 leva schemaVersion 6 e
+   Elas sobem em ritmos próprios. A v2.8.0 leva schemaVersion 6 e
    versaoFormato 1 — e isso é normal: a ficha ganhou versões personalizadas e
    etiquetas, mas o formato dos arquivos de importação continua
    o mesmo,
@@ -57,6 +57,28 @@
   ];
 
   var CHANGELOG = [
+    {
+      versao: "2.8.0",
+      codinome: "PANORAMA",
+      data: "13/09/2026",
+      mudancas: {
+        "Alterado": [
+          "A aba Personagens da campanha virou uma grade de cartões compactos: foto e identificação no topo, atributos numa linha, barras de PV, PE e Sanidade no centro, estatísticas embaixo e “Abrir ficha” no rodapé. Vários cartões por linha no desktop, um no celular.",
+          "O ajuste rápido fica nas barras: [−], [+] e o número, que abre um campo (Enter confirma, Esc cancela). Os atributos continuam à vista, só para consulta — a edição deles é na ficha.",
+          "“Tirar da campanha” saiu de perto dos recursos e foi para um menu separado, com confirmação. A ficha não é apagada.",
+        ],
+        "Corrigido": [
+          "Para fichas de Ordem Paranormal, o painel mostrava e ajustava os status e atributos universais de nascimento, que a ficha de Ordem não usa. Agora mostra PV, PE, Sanidade, Defesa, PE por turno e deslocamento calculados pelas mesmas regras da ficha, e o ajuste vai para os recursos de verdade.",
+          "Um ajuste do mestre que batia em conflito era reenviado mesmo quando o jogador tinha acabado de mexer no mesmo recurso. Agora ele só é reenviado se aquele recurso não mudou; se mudou, a tela mostra o valor novo e avisa.",
+          "O servidor aceitava um valor vazio no ajuste rápido e o gravava como 0. Agora recusa.",
+          "Uma falha ao buscar os personagens aparecia como “nenhum personagem na mesa”. Agora mostra o erro, com “Tentar novamente”.",
+        ],
+        "Técnico": [
+          "O ajuste rápido ganha o alvo `recurso` (PV, PE e Sanidade da ficha de Ordem, só o atual) e confere, pela campanha informada, que o personagem continua vinculado a ela. Outros jogadores da mesa recebem de uma ficha de Ordem alheia só a identificação.",
+          "Requer nova implantação do Apps Script (backend/Campanhas.gs).",
+        ],
+      },
+    },
     {
       versao: "2.7.1",
       codinome: "COURAÇA",

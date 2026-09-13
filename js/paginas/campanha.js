@@ -29,6 +29,9 @@
     aba: "visao",
     membros: [],
     personagens: [],
+    /* A resposta de erro quando a lista de personagens não veio. Sem
+       isto, uma falha de rede aparecia como "nenhum personagem". */
+    falhaPersonagens: null,
   };
 
   var ctx = null;
@@ -100,6 +103,7 @@
       : await global.RAMAApi.listarPersonagensCampanha(estado.campanhaId);
 
     estado.personagens = (rp.ok && rp.dados) || [];
+    estado.falhaPersonagens = rp.ok ? null : rp;
 
     montarContexto();
     desenhar();
@@ -111,6 +115,7 @@
       get campanha() { return estado.campanha; },
       get membros() { return estado.membros; },
       get personagens() { return estado.personagens; },
+      get falhaPersonagens() { return estado.falhaPersonagens; },
       get rev() { return estado.rev; },
 
       ehMestre: function () { return estado.mestre; },
@@ -126,7 +131,19 @@
       atualizarPersonagens: async function () {
         var rp = await global.RAMAApi.listarPersonagensCampanha(estado.campanhaId);
         if (rp.ok) estado.personagens = rp.dados || [];
+        estado.falhaPersonagens = rp.ok ? null : rp;
         desenhar();
+      },
+
+      /* Busca a lista sem redesenhar a tela: quem chamou decide o que
+         atualizar (o painel da mesa atualiza cartão por cartão). */
+      buscarPersonagens: async function () {
+        var rp = await global.RAMAApi.listarPersonagensCampanha(estado.campanhaId);
+        if (rp.ok) {
+          estado.personagens = rp.dados || [];
+          estado.falhaPersonagens = null;
+        }
+        return rp;
       },
 
       nomeDoMembro: function (userId) {

@@ -55,6 +55,7 @@ preferências de tela — nunca é tratado como banco.
     habilidades.js      modelo e árvore recursiva de habilidades
     criaturas.js        mini ficha de criatura
     fila.js             fila de gravação por entidade
+    campanha-painel.js  o que cada cartão do painel da mesa mostra (sem fórmula própria)
     ordem/              as regras de Ordem Paranormal, em camada própria
       catalogo.js       origens, classes, trilhas, perícias e patentes
       poderes.js        poderes de classe, gerais, paranormais e de trilha
@@ -102,7 +103,7 @@ E abra `http://localhost:8099/rama/`.
 
 São três conjuntos.
 
-**Modelo e motor de dados** — 991 verificações. No navegador, abra `testes/`;
+**Modelo e motor de dados** — 1036 verificações. No navegador, abra `testes/`;
 no terminal:
 
 ```bash
@@ -120,7 +121,7 @@ requisitos e repetição, concessão automática sem duplicação, revisão com
 dependências, afinidade (inclusive adiada e Homebrew), patente com limites
 manuais, carga por quantidade e o ajuste temporário de capacidade.
 
-**Permissões e concorrência do backend** — 272 verificações:
+**Permissões e concorrência do backend** — 304 verificações:
 
 ```bash
 deno run --allow-read testes/executar-backend.js

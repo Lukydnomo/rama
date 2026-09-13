@@ -26,6 +26,7 @@ const ARQUIVOS = [
   "js/ordem/biblioteca.js",
   "js/ordem/regras.js",
   "js/ficha.js",
+  "js/campanha-painel.js",
   "js/validacao.js",
   "js/sync.js",
   "js/versao.js",

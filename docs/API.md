@@ -320,7 +320,7 @@ Todas em `backend/Campanhas.gs`. A primeira linha de cada uma é
 | `excluir_campanha` | **criador** | leva membros, rolagens, documentos, notas e combates; fichas ficam só sem campanha |
 | `listar_usuarios` | qualquer | diretório mínimo: id, usuario, nome, avatar |
 | `salvar_participantes` | mestre | ids de usuário; quem sai leva os personagens junto |
-| `listar_personagens_campanha` | membro | cabeçalho + status + atributos, nunca a ficha inteira |
+| `listar_personagens_campanha` | membro | cabeçalho + status e atributos (universal) ou dados de cálculo de Ordem só para mestre e dono; nunca a ficha inteira |
 | `vincular_personagem` | dono ou mestre | só entra ficha de quem é membro |
 | `ajustar_personagem` | dono ou mestre | um campo, por id, **com `rev`** |
 | `registrar_rolagem` | membro | idempotente pelo `rolagemId` |
@@ -337,12 +337,16 @@ Todas em `backend/Campanhas.gs`. A primeira linha de cada uma é
 ### `ajustar_personagem`
 
 ```js
-{ acao: "ajustar_personagem", personagemId, rev,
-  alvo: "status" | "atributo", itemId, campo, valor }
+{ acao: "ajustar_personagem", personagemId, rev, campanhaId?,
+  alvo: "status" | "atributo" | "recurso", itemId, campo, valor }
 ```
 
-`campo` só aceita `atual` e `maximo` para status, e `valor` para atributo. Alvo
-ou campo fora dessa lista responde `dados_invalidos`. **Não é um caminho
+`campo` só aceita `atual` e `maximo` para status, `valor` para atributo e `atual`
+para recurso (ficha de Ordem; `itemId` é `pv`, `pe` ou `san`, piso −99). `valor`
+precisa ser número — vazio, `null` ou texto responde `dados_invalidos` em vez de
+virar 0. Com `campanhaId`, o personagem precisa continuar vinculado a ela
+(`nao_encontrado` se não estiver). Alvo ou campo fora dessa lista responde
+`dados_invalidos`. **Não é um caminho
 paralelo mais frouxo** — é o mesmo controle de revisão sobre um payload menor.
 
 ### `registrar_rolagem`

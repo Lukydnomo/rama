@@ -1784,6 +1784,119 @@ t.grupo("Ordem — versões personalizadas e etiquetas atravessam o servidor");
   t.recusa("  e outra conta não a enxerga", comoLara({ acao: "ler_homebrew", homebrewId: hb.dados.id }), "nao_encontrado");
 })();
 
+t.grupo("Painel da campanha — fichas de Ordem e permissões");
+
+(() => {
+  preparar();
+  const mestra = novaConta("mestra");
+  const dona = novaConta("dona");
+  const colega = novaConta("colega");
+  const estranha = novaConta("estranha");
+  const comoMestra = comoFn(mestra);
+  const comoDona = comoFn(dona);
+  const comoColega = comoFn(colega);
+  const comoEstranha = comoFn(estranha);
+
+  const campanha = comoMestra({ acao: "criar_campanha", dados: { nome: "Painel" } }).dados.id;
+  const outra = comoMestra({ acao: "criar_campanha", dados: { nome: "Outra mesa" } }).dados.id;
+  comoMestra({ acao: "salvar_participantes", campanhaId: campanha,
+    membros: [{ userId: dona.id, papel: "jogador" }, { userId: colega.id, papel: "jogador" }] });
+  comoMestra({ acao: "salvar_participantes", campanhaId: outra,
+    membros: [{ userId: dona.id, papel: "jogador" }] });
+
+  const fichaOrdem = {
+    nome: "Mari de Nome Muito Comprido Para Caber", tipoFicha: "ordem", schemaVersion: 6,
+    status: [{ id: "st-padrao", nome: "Vida", atual: 10, maximo: 10 }],
+    atributos: [{ id: "at-padrao", nome: "Força", sigla: "FOR", valor: 1 }],
+    ordem: {
+      classe: "ocultista", origem: "academico", trilha: "", nex: 20,
+      atributos: { agi: 3, for: 1, int: 5, pre: 4, vig: 0 },
+      escolhas: [], recursos: { pv: null, pe: 5, san: 47 },
+      personalizacoes: [{ id: "pz", aquisicao: "auto|escolhidoPeloOutroLado", poder: "escolhidoPeloOutroLado",
+        nome: "Versão", texto: "Texto longo e privado", efeitos: "herdados" }],
+      organizacao: { habilidades: { modo: "az" } },
+    },
+    inventario: { limite: 0, itens: [
+      { id: "i1", tipo: "armadura", nome: "Proteção Leve", defesa: 5, descricao: "Descrição privada",
+        ordem: { espacos: 2, quantidade: 1, categoria: 1, grupo: "protecao", capacidade: 0, emUso: true } },
+    ] },
+  };
+  const pOrdem = comoDona({ acao: "criar_personagem", dados: fichaOrdem }).dados.id;
+  comoDona({ acao: "vincular_personagem", campanhaId: campanha, personagemId: pOrdem });
+
+  const pUniversal = comoColega({ acao: "criar_personagem", dados: fichaDeTeste("Universal do Colega") }).dados.id;
+  comoColega({ acao: "vincular_personagem", campanhaId: campanha, personagemId: pUniversal });
+
+  const daMestra = comoMestra({ acao: "listar_personagens_campanha", campanhaId: campanha }).dados;
+  const ordemMestra = daMestra.find((x) => x.id === pOrdem);
+  t.igual("a mestra vê as duas fichas da mesa mista", daMestra.length, 2);
+  t.igual("  a de Ordem vem marcada como Ordem", ordemMestra.tipoFicha, "ordem");
+  t.ok("  com os dados de cálculo para a mestra", ordemMestra.detalhado && !!ordemMestra.ordem.atributos && !!ordemMestra.inventario);
+  t.igual("  e os recursos guardados", JSON.stringify(ordemMestra.ordem.recursos), JSON.stringify({ pv: null, pe: 5, san: 47 }));
+  t.ok("  sem os status e atributos universais de nascimento", ordemMestra.status === undefined && ordemMestra.atributos === undefined);
+  t.ok("  sem o texto das personalizações", ordemMestra.ordem.personalizacoes.length === 1 && ordemMestra.ordem.personalizacoes[0].texto === undefined);
+  t.ok("  sem a descrição dos itens", ordemMestra.inventario.itens[0].descricao === undefined && ordemMestra.inventario.itens[0].ordem.emUso === true);
+  t.ok("a universal continua com status e atributos", Array.isArray(daMestra.find((x) => x.id === pUniversal).status));
+
+  const doColega = comoColega({ acao: "listar_personagens_campanha", campanhaId: campanha }).dados;
+  const ordemColega = doColega.find((x) => x.id === pOrdem);
+  t.ok("outro jogador NÃO recebe os dados de cálculo da ficha alheia",
+    !ordemColega.detalhado && ordemColega.inventario === undefined && ordemColega.ordem.recursos === undefined &&
+    ordemColega.ordem.escolhas === undefined && ordemColega.ordem.atributos === undefined);
+  t.igual("  só a identificação", Object.keys(ordemColega.ordem).sort().join(","), "classe,nex,nivel,opcionais,trilha");
+  t.ok("  e a dona recebe tudo da própria", comoDona({ acao: "listar_personagens_campanha", campanhaId: campanha })
+    .dados.find((x) => x.id === pOrdem).detalhado);
+
+  const golpeLista = comoColega({ acao: "listar_personagens_campanha", campanhaId: campanha, mestre: true, papel: "mestre" }).dados;
+  t.ok("mandar mestre:true na listagem não libera nada", !golpeLista.find((x) => x.id === pOrdem).detalhado);
+
+  const rev0 = ordemMestra.rev;
+  const ajuste = comoMestra({ acao: "ajustar_personagem", personagemId: pOrdem, campanhaId: campanha, rev: rev0,
+    alvo: "recurso", itemId: "pv", campo: "atual", valor: 12 });
+  t.ok("a mestra ajusta o PV atual da ficha de Ordem", ajuste.ok && ajuste.rev === rev0 + 1);
+  const lida = comoDona({ acao: "ler_personagem", personagemId: pOrdem }).dados;
+  t.igual("  o valor vai para ordem.recursos.pv", lida.ordem.recursos.pv, 12);
+  t.ok("  sem mexer em PE, Sanidade nem no status universal",
+    lida.ordem.recursos.pe === 5 && lida.ordem.recursos.san === 47 && lida.status[0].atual === 10);
+  t.igual("  nem nos atributos", JSON.stringify(lida.ordem.atributos), JSON.stringify(fichaOrdem.ordem.atributos));
+
+  const repetido = comoMestra({ acao: "ajustar_personagem", personagemId: pOrdem, campanhaId: campanha, rev: ajuste.rev,
+    alvo: "recurso", itemId: "pv", campo: "atual", valor: 12 });
+  t.ok("reenviar o mesmo valor final não desconta de novo",
+    repetido.ok && comoDona({ acao: "ler_personagem", personagemId: pOrdem }).dados.ordem.recursos.pv === 12);
+
+  t.recusa("revisão velha é conflito", comoMestra({ acao: "ajustar_personagem", personagemId: pOrdem, campanhaId: campanha,
+    rev: rev0, alvo: "recurso", itemId: "pe", campo: "atual", valor: 1 }), "conflito");
+  t.recusa("recurso inventado é recusado", comoMestra({ acao: "ajustar_personagem", personagemId: pOrdem, campanhaId: campanha,
+    rev: repetido.rev, alvo: "recurso", itemId: "defesa", campo: "atual", valor: 1 }), "dados_invalidos");
+  t.recusa("o máximo não é ajustável", comoMestra({ acao: "ajustar_personagem", personagemId: pOrdem, campanhaId: campanha,
+    rev: repetido.rev, alvo: "recurso", itemId: "pv", campo: "maximo", valor: 99 }), "dados_invalidos");
+  t.recusa("abaixo do piso da ficha (−99) é recusado", comoMestra({ acao: "ajustar_personagem", personagemId: pOrdem, campanhaId: campanha,
+    rev: repetido.rev, alvo: "recurso", itemId: "pv", campo: "atual", valor: -100 }), "dados_invalidos");
+  t.recusa("valor que não é número é recusado", comoMestra({ acao: "ajustar_personagem", personagemId: pOrdem, campanhaId: campanha,
+    rev: repetido.rev, alvo: "recurso", itemId: "pv", campo: "atual", valor: "" }), "dados_invalidos");
+  t.recusa("recurso de Ordem numa ficha universal é recusado", comoMestra({ acao: "ajustar_personagem", personagemId: pUniversal,
+    campanhaId: campanha, alvo: "recurso", itemId: "pv", campo: "atual", valor: 3 }), "dados_invalidos");
+
+  t.recusa("outro jogador da mesa não ajusta a ficha alheia", comoColega({ acao: "ajustar_personagem", personagemId: pOrdem,
+    campanhaId: campanha, alvo: "recurso", itemId: "pv", campo: "atual", valor: 1 }), "nao_encontrado");
+  t.recusa("  nem mandando mestre:true", comoColega({ acao: "ajustar_personagem", personagemId: pOrdem, campanhaId: campanha,
+    alvo: "recurso", itemId: "pv", campo: "atual", valor: 1, mestre: true, ehMestre: true }), "nao_encontrado");
+  t.recusa("quem não é da mesa não ajusta", comoEstranha({ acao: "ajustar_personagem", personagemId: pOrdem, campanhaId: campanha,
+    alvo: "recurso", itemId: "pv", campo: "atual", valor: 1 }), "nao_encontrado");
+  t.recusa("pedido em nome de outra campanha é recusado", comoMestra({ acao: "ajustar_personagem", personagemId: pOrdem, campanhaId: outra,
+    alvo: "recurso", itemId: "pv", campo: "atual", valor: 1 }), "nao_encontrado");
+
+  const saiu = comoMestra({ acao: "vincular_personagem", campanhaId: campanha, personagemId: pOrdem, vincular: false });
+  t.ok("tirar da campanha desfaz só o vínculo", saiu.ok);
+  t.ok("  a ficha continua existindo com a dona", comoDona({ acao: "ler_personagem", personagemId: pOrdem }).ok);
+  t.ok("  e sai da listagem da mesa", !comoMestra({ acao: "listar_personagens_campanha", campanhaId: campanha }).dados.some((x) => x.id === pOrdem));
+  t.recusa("depois de tirada, o cartão antigo da mestra não ajusta mais", comoMestra({ acao: "ajustar_personagem", personagemId: pOrdem,
+    campanhaId: campanha, alvo: "recurso", itemId: "pv", campo: "atual", valor: 1 }), "nao_encontrado");
+  t.recusa("jogador não tira personagem alheio da campanha", comoColega({ acao: "vincular_personagem", campanhaId: campanha,
+    personagemId: pUniversal === pUniversal ? pOrdem : pOrdem, vincular: false }), "nao_encontrado");
+})();
+
 /* =====================================================================
    FIM
    ===================================================================== */
