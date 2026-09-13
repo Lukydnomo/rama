@@ -1158,6 +1158,36 @@ body.pagina-ficha .app-corpo {
 .ordem-poder--suspensa { border-left: 3px solid var(--cor-erro); }
 .ordem-poder--incompleta { border-left: 3px solid var(--cor-aviso); }
 
+/* Versão personalizada de habilidade oficial: um traço discreto; a cor
+   de contorno escolhida, quando houver, vem por cima (data-cor). */
+.ordem-poder--personalizada { border-left: 3px solid var(--cor-traco-media); }
+.ordem-poder--orfa { border-left: 3px dashed var(--cor-aviso); }
+.ordem-poder--excluidas { border-style: dashed; }
+.ordem-excluida {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--e3);
+  padding: var(--e2) 0;
+  border-top: var(--borda) solid var(--cor-traco-fraca);
+}
+.ordem-excluida__texto { display: flex; flex-direction: column; gap: 2px; min-width: 0; overflow-wrap: anywhere; }
+.ordem-personalizada,
+.ordem-automacao { display: flex; flex-wrap: wrap; align-items: center; gap: var(--e1) var(--e2); margin: 0; }
+.etiqueta--desligada { color: var(--cor-aviso); border-color: var(--cor-aviso); }
+.ordem-personalizacao-aviso {
+  padding: var(--e2) var(--e3);
+  border-left: 2px solid var(--cor-paranormal);
+  background: var(--cor-fundo);
+}
+.ordem-personalizacao-automacao {
+  display: flex;
+  flex-direction: column;
+  gap: var(--e1);
+  padding: var(--e3);
+  border: var(--borda) dashed var(--cor-traco-fraca);
+}
+
 .ordem-atributo__conta {
   padding: 0 var(--e1);
   font-family: var(--fonte-mini);

@@ -60,6 +60,8 @@ preferências de tela — nunca é tratado como banco.
       poderes.js        poderes de classe, gerais, paranormais e de trilha
       progressao.js     vagas de escolha, requisitos, pendências e efeitos
       inventario.js     espaços, quantidade e categoria dos itens
+      personalizacao.js versões personalizadas e exclusão de habilidades oficiais
+      biblioteca.js     o catálogo arrumado para a janela "Da biblioteca"
       regras.js         os cálculos, com a composição de cada número
       opcionais.js      as regras opcionais, uma chave para cada
     historico.js        rolagem → histórico da campanha, num funil só
@@ -100,7 +102,7 @@ E abra `http://localhost:8099/rama/`.
 
 São três conjuntos.
 
-**Modelo e motor de dados** — 834 verificações. No navegador, abra `testes/`;
+**Modelo e motor de dados** — 916 verificações. No navegador, abra `testes/`;
 no terminal:
 
 ```bash
@@ -118,7 +120,7 @@ requisitos e repetição, concessão automática sem duplicação, revisão com
 dependências, afinidade (inclusive adiada e Homebrew), patente com limites
 manuais, carga por quantidade e o ajuste temporário de capacidade.
 
-**Permissões e concorrência do backend** — 261 verificações:
+**Permissões e concorrência do backend** — 272 verificações:
 
 ```bash
 deno run --allow-read testes/executar-backend.js

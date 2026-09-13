@@ -187,8 +187,9 @@
 
     return el("article.item", { class: registro.tipo === "arma" ? "item--arma" : "" }, [
       el("div.item__topo", {}, [
-        el("div", {}, [
+        el("div.pilha--curta", { class: "pilha", estilo: { gap: "var(--e1)" } }, [
           el("p.item__nome", { texto: registro.nome }),
+          UI.etiquetaColorida(registro.etiqueta),
           el("div.faixa", { estilo: { gap: "var(--e1)" } }, etiquetas),
         ]),
         UI.menu(opcoes, { rotulo: "Opções de " + registro.nome, icone: "tresPontos" }),
@@ -218,6 +219,7 @@
     var h = criando ? H.criarHabilidade({}) : H.normalizarHabilidade(registro);
     var cor = h.cor;
     var negrito = !!h.negrito;
+    var etiqueta = U.normalizarEtiqueta(h.etiqueta);
     var visibilidade = (registro && registro.visibilidade) || "privado";
 
     var nome = UI.campo({ rotulo: "Nome", valor: h.nome, limite: 120 });
@@ -244,7 +246,9 @@
       titulo: criando ? "Nova habilidade" : "Editar habilidade",
       largo: true,
       conteudo: el("div.pilha", {}, [
-        nome, origem, texto,
+        nome,
+        UI.campoEtiqueta({ valor: etiqueta, aoMudar: function (v) { etiqueta = v; } }),
+        origem, texto,
         el("label.r-marca", {}, [
           el("input", { type: "checkbox", checked: negrito,
             onchange: function (ev) { negrito = ev.target.checked; } }),
@@ -267,7 +271,7 @@
 
             var pronta = H.criarHabilidade({
               nome: valor, origem: origem.entrada.value.trim(),
-              texto: texto.entrada.value, cor: cor, negrito: negrito,
+              texto: texto.entrada.value, cor: cor, negrito: negrito, etiqueta: etiqueta,
             });
             pronta.tipo = "habilidade";
             pronta.visibilidade = visibilidade;
@@ -363,8 +367,11 @@
     });
     var descricao = UI.campo({ rotulo: "Descrição", tipo: "area", valor: atual.descricao, linhas: 3, limite: 2000 });
 
-    var campos = [nome, categoria];
-    var extras = { categoria: categoria };
+    var etiqueta = U.normalizarEtiqueta(atual.etiqueta);
+    var campoEtiqueta = UI.campoEtiqueta({ valor: etiqueta, aoMudar: function (v) { etiqueta = v; } });
+
+    var campos = [nome, campoEtiqueta, categoria];
+    var extras = { categoria: categoria, etiqueta: function () { return etiqueta; } };
 
     if (tipo === "mochila") {
       extras.reducao = UI.campo({ rotulo: "Redução de peso", tipo: "numero", valor: atual.reducaoPeso });
@@ -434,6 +441,7 @@
          modelo veio de uma ficha de Ordem. A biblioteca não os edita,
          mas também não pode perdê-los numa edição do nome. */
       ordem: base.ordem,
+      etiqueta: extras.etiqueta ? extras.etiqueta() : base.etiqueta,
     };
 
     nome.marcarErro("");

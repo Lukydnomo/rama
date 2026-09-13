@@ -36,6 +36,7 @@ leitura que o R.A.M.A. adotou escrita por extenso.
 | `js/ordem/regras.js` | todas as contas, com a composição de cada número |
 | `js/ordem/opcionais.js` | as regras opcionais, uma chave para cada |
 | `js/ordem/biblioteca.js` | o catálogo de poderes arrumado para consulta na janela "Da biblioteca" |
+| `js/ordem/personalizacao.js` | versões personalizadas e exclusão de habilidades oficiais, por aquisição |
 | `js/paginas/ordem-escolhas.js` | as janelas de escolha, iguais na criação e na ficha |
 
 O catálogo de poderes só é carregado nas páginas que calculam a ficha de Ordem
@@ -212,6 +213,51 @@ conta por esse caminho, e os requisitos não são conferidos: quem soma PV, Defe
 ou treinamento é a escolha na aba **Progressão**, que sabe em que etapa o poder
 entrou. A cópia não leva a `nota` de automação do catálogo, porque ela descreve o
 que a ficha calcula, e a cópia não calcula nada.
+
+### Editar e excluir habilidades oficiais da ficha
+
+No modo edição, cada habilidade oficial da aba Habilidades (automática de classe,
+de trilha, poder escolhido) tem um menu.
+
+**Editar** abre o mesmo formulário das habilidades criadas à mão, já preenchido,
+com um aviso de que será criada uma versão personalizada **só desta ficha**. Nome,
+texto, origem, cor de contorno, negrito e etiqueta podem mudar. Cancelar não cria
+nada. Salvar faz a lista mostrar a versão personalizada **no lugar** da oficial —
+nunca as duas. O catálogo e as outras fichas não mudam.
+
+A personalização se prende à **aquisição** pelo id estável (etapa + chave; ver
+`docs/CHARACTER_SCHEMA.md`), não ao nome: sobrevive a recalcular, recarregar e
+evoluir o personagem, não reabre nem consome escolha, e cada ocorrência de um
+poder repetido é personalizada à parte.
+
+**Automação.** O formulário diz se o original tem efeito na conta. Mudar a
+apresentação não mexe nele, e **um texto novo não cria mecânica nova** — o
+R.A.M.A. não interpreta texto livre. Quando o original tem efeitos, há uma marca
+explícita para desativá-los naquela ocorrência: sai da conta só o que vem daquela
+aquisição (os +2 de Defesa de Reflexos Defensivos, o PV por NEX de Casca Grossa),
+e o resto — outros poderes, ajustes manuais, temporários — fica. O R.A.M.A. não
+tem editor de efeitos estruturados para Homebrew, então esta versão não oferece
+trocar um efeito por outro.
+
+**Salvar na minha biblioteca Homebrew** grava a versão como habilidade
+**privada**. A ficha continua com a própria cópia: editar o registro da biblioteca
+depois não muda a ficha. Salvar de novo atualiza o mesmo registro.
+
+**Restaurar versão oficial** pede confirmação e apaga a personalização daquela
+ocorrência. A habilidade volta ao texto **atual** do catálogo do R.A.M.A. — nenhum
+snapshot do original é guardado — e os efeitos voltam a valer.
+
+**Excluir** depende de como a habilidade chegou, e a confirmação diz qual é:
+
+| habilidade | o que excluir faz |
+|---|---|
+| escolhida numa etapa (poder de classe, Transcender, versatilidade…) | desfaz a escolha: a etapa volta a ficar pendente na Progressão, os efeitos saem, e o que veio junto na mesma escolha sai também. A personalização dela é apagada. |
+| automática (de classe, de trilha, com opção interna, alteração por NEX) | tira da lista e da conta, sem apagar: fica em "Habilidades oficiais excluídas", no fim da lista, e pode ser restaurada — com a personalização, se houver. |
+
+Se a aquisição some (classe, trilha ou escolha trocada), a personalização aparece
+no fim da lista como **sem aquisição**, sem conceder nada, com as opções de
+transformá-la em habilidade comum ou excluí-la. Se a mesma aquisição voltar, ela
+volta a valer sozinha.
 
 ---
 

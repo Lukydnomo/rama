@@ -62,12 +62,13 @@
 
   function corpo(ctx, arvore, dasRegras) {
     var regras = (dasRegras && dasRegras.itens) || [];
+    var fim = (dasRegras && dasRegras.fim) || [];
     var aviso = dasRegras && dasRegras.aviso ? el("p.t-mini", { texto: dasRegras.aviso }) : null;
 
-    if (dasRegras && (regras.length || arvore.filhos.length)) {
+    if (dasRegras && (regras.length || fim.length || arvore.filhos.length)) {
       return el("div.pilha", {}, [
         aviso,
-        el("div.arvore-hab", {}, regras.concat(ramos(ctx, arvore.filhos, 0))),
+        el("div.arvore-hab", {}, regras.concat(ramos(ctx, arvore.filhos, 0), fim)),
       ]);
     }
 
@@ -171,8 +172,12 @@
       texto: no.texto || "Sem descrição.",
     });
 
+    var etiqueta = UI.etiquetaColorida(no.etiqueta);
     var caixa = UI.recolhivel({
       titulo: no.nome,
+      /* A etiqueta fica logo abaixo do nome, à vista com o cartão
+         fechado, e antes do texto. */
+      subtitulo: etiqueta ? [etiqueta] : null,
       extra: no.origem || "",
       conteudo: [texto],
       acoes: acoes,
@@ -315,11 +320,21 @@
      CRIAR E EDITAR
      ================================================================= */
 
-  function editar(ctx, no, pastaId) {
-    var criando = !no;
-    var atual = no || H.criarHabilidade({});
-    var cor = atual.cor;
+  /* O formulário de habilidade. Serve para criar e editar habilidades da
+     árvore e — na ficha de Ordem — para personalizar uma habilidade
+     oficial. Um formulário só: dois iguais seriam duas listas de campos
+     para manter em sincronia.
+
+     opcoes: { titulo, atual, antes, depois, rotuloSalvar, aoSalvar }
+     `aoSalvar(dados, fechar)` recebe { nome, origem, texto, cor,
+     negrito, etiqueta } e decide o que fazer. Cancelar não chama nada:
+     nenhum objeto é tocado antes de "Salvar". */
+  function editorDeHabilidade(opcoes) {
+    var o = opcoes || {};
+    var atual = o.atual || {};
+    var cor = H.corValida(atual.cor);
     var negrito = !!atual.negrito;
+    var etiqueta = U.normalizarEtiqueta(atual.etiqueta);
 
     var nome = UI.campo({ rotulo: "Nome", valor: atual.nome, limite: 120 });
     var origem = UI.campo({
@@ -330,8 +345,13 @@
       rotulo: "Texto", tipo: "area", valor: atual.texto, linhas: 6, limite: 8000,
     });
 
+    var campoEtiqueta = UI.campoEtiqueta({
+      valor: etiqueta,
+      aoMudar: function (v) { etiqueta = v; },
+    });
+
     var seletorCor = UI.seletorDeCor({
-      rotulo: "Cor de identificação",
+      rotulo: "Cor de contorno",
       valor: cor,
       aoMudar: function (v) { cor = v; },
     });
@@ -344,6 +364,58 @@
       el("span", { texto: "Texto em negrito" }),
     ]);
 
+    var salvando = false;
+
+    UI.modal({
+      titulo: o.titulo || "Editar habilidade",
+      largo: true,
+      conteudo: el("div.pilha", {}, [].concat(o.antes || [], [
+        nome,
+        campoEtiqueta,
+        origem,
+        texto,
+        marcaNegrito,
+        seletorCor,
+        el("p.t-mini", {
+          texto: "A cor é um detalhe de contorno. Ela nunca é a única forma de identificar a habilidade — nome e origem continuam valendo.",
+        }),
+      ], o.depois || [])),
+      botoes: [
+        { rotulo: "Cancelar", classe: "r-botao--fantasma" },
+        {
+          rotulo: o.rotuloSalvar || "Salvar",
+          classe: "r-botao--principal",
+          aoClicar: async function (fechar) {
+            if (salvando) return;
+            var valor = nome.entrada.value.trim();
+            if (!valor) { nome.marcarErro("Informe um nome."); nome.entrada.focus(); return; }
+            nome.marcarErro("");
+
+            salvando = true;
+            try {
+              await o.aoSalvar({
+                nome: valor,
+                origem: origem.entrada.value.trim(),
+                texto: texto.entrada.value,
+                cor: cor,
+                negrito: negrito,
+                etiqueta: etiqueta,
+              }, fechar);
+            } finally {
+              salvando = false;
+            }
+          },
+        },
+      ],
+    });
+
+    nome.entrada.focus();
+  }
+
+  function editar(ctx, no, pastaId) {
+    var criando = !no;
+    var atual = no || H.criarHabilidade({});
+
     var guardarNaBiblioteca = criando;
     var marcaBiblioteca = criando ? el("label.r-marca", {}, [
       el("input", {
@@ -353,58 +425,33 @@
       el("span", { texto: "Guardar também na biblioteca Homebrew" }),
     ]) : null;
 
-    UI.modal({
+    editorDeHabilidade({
       titulo: criando ? "Nova habilidade" : "Editar habilidade",
-      largo: true,
-      conteudo: el("div.pilha", {}, [
-        nome,
-        origem,
-        texto,
-        marcaNegrito,
-        seletorCor,
-        el("p.t-mini", {
-          texto: "A cor é um detalhe de contorno. Ela nunca é a única forma de identificar a habilidade — nome e origem continuam valendo.",
-        }),
-        marcaBiblioteca,
-      ]),
-      botoes: [
-        { rotulo: "Cancelar", classe: "r-botao--fantasma" },
-        {
-          rotulo: criando ? "Criar" : "Salvar",
-          classe: "r-botao--principal",
-          aoClicar: async function (fechar) {
-            var valor = nome.entrada.value.trim();
-            if (!valor) { nome.marcarErro("Informe um nome."); nome.entrada.focus(); return; }
+      atual: atual,
+      depois: [marcaBiblioteca],
+      rotuloSalvar: criando ? "Criar" : "Salvar",
+      aoSalvar: async function (dados, fechar) {
+        var montada = Object.assign({}, dados, { origemHabilidadeId: atual.origemHabilidadeId || null });
 
-            var montada = {
-              nome: valor,
-              origem: origem.entrada.value.trim(),
-              texto: texto.entrada.value,
-              cor: cor,
-              negrito: negrito,
-              origemHabilidadeId: atual.origemHabilidadeId || null,
-            };
+        if (criando) {
+          var nova = H.criarHabilidade(montada);
+          H.inserir(ctx.ficha.habilidades, nova, pastaId);
+          ctx.alterou();
+          fechar();
+          ctx.redesenhar();
+          if (guardarNaBiblioteca) await paraBiblioteca(ctx, nova, true);
+          return;
+        }
 
-            if (criando) {
-              var nova = H.criarHabilidade(montada);
-              H.inserir(ctx.ficha.habilidades, nova, pastaId);
-              ctx.alterou();
-              fechar();
-              ctx.redesenhar();
-              if (guardarNaBiblioteca) await paraBiblioteca(ctx, nova, true);
-              return;
-            }
-
-            Object.assign(no, H.criarHabilidade(montada), { id: no.id });
-            ctx.alterou();
-            fechar();
-            ctx.redesenhar();
-          },
-        },
-      ],
+        /* A etiqueta só existe quando tem texto: tirá-la precisa apagar
+           o campo, e Object.assign sozinho não apaga nada. */
+        delete no.etiqueta;
+        Object.assign(no, H.criarHabilidade(montada), { id: no.id });
+        ctx.alterou();
+        fechar();
+        ctx.redesenhar();
+      },
     });
-
-    nome.entrada.focus();
   }
 
   async function remover(ctx, no) {
@@ -446,6 +493,22 @@
     }
 
     if (!silencioso) UI.avisoOk(no.nome + " foi guardada na biblioteca.");
+  }
+
+  /* Grava uma habilidade na biblioteca Homebrew da conta, SEMPRE
+     privada, e devolve o id do registro (ou null). É o "Salvar na minha
+     biblioteca" de uma versão personalizada: a ficha continua com a
+     própria cópia, e editar o registro depois não muda a ficha. */
+  async function paraBibliotecaPrivada(dados, idExistente) {
+    var registro = H.normalizarHabilidade(H.criarHabilidade(dados));
+    registro.tipo = "habilidade";
+    registro.visibilidade = "privado";
+    registro.origemHabilidadeId = null;
+    if (idExistente) registro.id = idExistente; else delete registro.id;
+
+    var r = await global.RAMAApi.salvarHomebrew(registro);
+    if (!r.ok) { UI.avisoDeFalha(r, "envio para a biblioteca"); return null; }
+    return (r.dados && r.dados.id) || registro.id || null;
   }
 
   /* Na ficha de Ordem a janela tem duas origens: os livros e a Homebrew.
@@ -766,5 +829,5 @@
     UI.avisoOk(copia.nome + " entrou na ficha.");
   }
 
-  global.RAMASecaoHabilidades = { aba: aba };
+  global.RAMASecaoHabilidades = { aba: aba, editorDeHabilidade: editorDeHabilidade, paraBibliotecaPrivada: paraBibliotecaPrivada };
 })(window);

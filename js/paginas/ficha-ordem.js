@@ -245,38 +245,57 @@
   function poderesDasRegras(ctx, o, c) {
     var est = c.estado;
     if (!est || !C.classe(o.classe)) {
-      return { itens: [], aviso: "Escolha uma classe na aba Geral para ver as habilidades das regras.", biblioteca: { classe: "", nomes: [] } };
+      return {
+        itens: [],
+        fim: cartoesSemAquisicao(ctx, o, []),
+        aviso: "Escolha uma classe na aba Geral para ver as habilidades das regras.",
+        biblioteca: { classe: "", nomes: nomesPersonalizados(o) },
+      };
     }
 
-    var itens = [];
-    var nomes = [];
+    var aquisicoes = [];
 
     E.automaticas(o).forEach(function (a) {
-      nomes.push(a.entrada.nome);
-      itens.push(itemDePoder({
-        nome: a.entrada.nome + (a.estagio ? " · " + a.estagio : ""),
+      aquisicoes.push({
+        id: a.id,
+        chave: a.entrada.chave,
+        nome: a.entrada.nome,
+        estagio: a.estagio,
         resumo: a.entrada.resumo,
         origem: "Automática da classe",
         automacao: a.entrada.automacao,
         referencia: P.referencia(a.entrada),
         situacao: "ok",
-      }));
+        /* As automáticas de classe não têm efeito na conta: são gasto de
+           PE e anotação. Não há o que desativar. */
+        temEfeitos: false,
+      });
     });
 
     est.adquiridos.forEach(function (a) {
-      nomes.push(a.nome);
-      if (a.entrada) nomes.push(a.entrada.nome);
       if (a.tipo === "escolhaPerito") {
-        itens.push(itemDePoder({ nome: a.nome, resumo: "As perícias escolhidas para usar com Perito.", origem: "Escolha · " + a.rotuloEtapa, automacao: "informacao", situacao: "ok" }));
+        aquisicoes.push({
+          id: a.id, chave: a.chave, nome: a.nome, resumo: "As perícias escolhidas para usar com Perito.",
+          origem: "Escolha · " + a.rotuloEtapa, automacao: "informacao", situacao: "ok", temEfeitos: false,
+          registroId: a.registroId || "", rotuloEtapa: a.rotuloEtapa || "",
+        });
         return;
       }
       var e = a.entrada;
       if (!e) {
-        itens.push(itemDePoder({ nome: a.nome, resumo: a.resumo || "", origem: "Escolha · " + (a.rotuloEtapa || ""), automacao: a.automacao || "informacao", referencia: a.fonteRef || "", situacao: "ok" }));
+        var org = a.tipo === "origem" ? C.origem(String(a.chave).replace(/^origem:/, "")) : null;
+        aquisicoes.push({
+          id: a.id, chave: a.chave, nome: a.nome, resumo: a.resumo || "",
+          origem: "Escolha · " + (a.rotuloEtapa || ""), automacao: a.automacao || "informacao",
+          referencia: a.fonteRef || "", situacao: "ok",
+          temEfeitos: !!(org && org.efeito), efeitosDesativados: !!a.efeitosDesativados,
+          registroId: a.registroId || "", rotuloEtapa: a.rotuloEtapa || "",
+        });
         return;
       }
-      var situacao = !a.valido ? "suspensa" : (a.completo === false ? "incompleta" : "ok");
-      itens.push(itemDePoder({
+      aquisicoes.push({
+        id: a.id,
+        chave: e.chave,
         nome: a.nome,
         resumo: e.resumo,
         afinidade: a.afinidade && e.afinidade ? e.afinidade : "",
@@ -284,18 +303,52 @@
         automacao: e.automacao,
         nota: e.nota,
         referencia: P.referencia(e, o.classe),
-        situacao: situacao,
+        situacao: !a.valido ? "suspensa" : (a.completo === false ? "incompleta" : "ok"),
         motivos: a.motivos,
-      }));
+        temEfeitos: ((a.afinidade ? e.efeitosAfinidade : e.efeitos) || []).length > 0,
+        efeitosDesativados: !!a.efeitosDesativados,
+        /* Habilidade de trilha com opção interna (A Favorita) e alteração
+           por NEX chegam sozinhas: o registro delas guarda só a opção.
+           Desfazê-lo não tiraria a habilidade — então, para excluir,
+           elas contam como automáticas. */
+        registroId: (a.via === "opcoesBeneficio" || a.via === "alteracao") ? "" : (a.registroId || ""),
+        rotuloEtapa: a.rotuloEtapa || "",
+      });
     });
+
+    var nomes = [];
+    var itens = [];
+    aquisicoes.forEach(function (aq) {
+      /* Excluída da ficha: não aparece na lista, e o motor já tirou os
+         efeitos dela da conta. Fica na seção de excluídas, no fim. */
+      if (PZ() && PZ().excluida(o, aq.id)) return;
+      var pz = PZ() ? PZ().daAquisicao(o, aq.id) : null;
+      nomes.push(aq.nome);
+      if (pz) nomes.push(pz.nome);
+      itens.push(cartaoDeAquisicao(ctx, o, aq, pz));
+    });
+
+    var idsAtuais = aquisicoes.map(function (aq) { return aq.id; });
+    /* O que não é habilidade ativa vai para o FIM da lista, depois das
+       criadas à mão: versões sem aquisição e as excluídas. */
+    var fim = cartoesSemAquisicao(ctx, o, idsAtuais);
+    var secaoExcluidas = cartaoDeExcluidas(ctx, o, idsAtuais);
+    if (secaoExcluidas) fim.push(secaoExcluidas);
 
     return {
       itens: itens,
-      biblioteca: { classe: o.classe, nomes: nomes },
+      fim: fim,
+      biblioteca: { classe: o.classe, nomes: nomes.concat(nomesPersonalizados(o)) },
       aviso: itens.length
-        ? "“Entra na conta”: o efeito já está nos números da ficha. “Parte na conta”: uma parte está, o resto é aplicado na cena. “Anotação”: o efeito depende da cena ou de gasto de PE. As que vêm das regras mudam pela aba Progressão."
+        ? "“Entra na conta”: o efeito já está nos números da ficha. “Parte na conta”: uma parte está, o resto é aplicado na cena. “Anotação”: o efeito depende da cena ou de gasto de PE. As que vêm das regras são escolhidas na aba Progressão; no modo edição, o menu de cada uma cria uma versão personalizada só desta ficha."
         : "",
     };
+  }
+
+  function PZ() { return global.RAMAOrdemPersonalizacao || null; }
+
+  function nomesPersonalizados(o) {
+    return (Array.isArray(o.personalizacoes) ? o.personalizacoes : []).map(function (p) { return p && p.nome; }).filter(Boolean);
   }
 
   function rotuloDaVia(a) {
@@ -309,21 +362,367 @@
     return "Escolha";
   }
 
-  function itemDePoder(d) {
+  function rotuloDaAutomacao(automacao) {
+    if (automacao === "calculo") return "entra na conta";
+    if (automacao === "parcial") return "parte na conta";
+    return "anotação";
+  }
+
+  /* =================================================================
+     VERSÃO PERSONALIZADA DE UMA HABILIDADE OFICIAL
+     -----------------------------------------------------------------
+     Uma aquisição mostra UMA habilidade: a oficial ou, se a mesa
+     personalizou, a versão desta ficha — nunca as duas. A versão é
+     apresentação (personalizacao.js); o que entra na conta continua
+     vindo do motor de progressão, e só muda se a pessoa desligar os
+     efeitos daquela ocorrência explicitamente.
+     ================================================================= */
+
+  function cartaoDeAquisicao(ctx, o, aq, pz) {
+    var situacaoExtra = aq.situacao === "suspensa" ? "suspenso" : (aq.situacao === "incompleta" ? "incompleto" : "");
+    var nomeOficial = aq.nome + (aq.estagio ? " · " + aq.estagio : "");
+    var titulo = pz ? pz.nome : nomeOficial;
+
+    var acoes = null;
+    if (ctx.emEdicao() && PZ()) {
+      var opcoes = [{
+        rotulo: pz ? "Editar versão personalizada" : "Editar",
+        aoClicar: function () { editarAquisicao(ctx, o, aq, pz); },
+      }];
+      if (pz) {
+        opcoes.push({ rotulo: "Salvar na minha biblioteca Homebrew", aoClicar: function () { salvarPersonalizadaNaBiblioteca(ctx, o, aq, pz); } });
+      }
+      opcoes.push("separador");
+      if (pz) {
+        opcoes.push({ rotulo: "Restaurar versão oficial", perigo: true, aoClicar: function () { restaurarOficial(ctx, o, aq, pz); } });
+      }
+      opcoes.push({ rotulo: "Excluir", perigo: true, aoClicar: function () { excluirAquisicao(ctx, o, aq, pz); } });
+      acoes = [UI.menu(opcoes, { rotulo: "Opções de " + titulo, icone: "tresPontos" })];
+    }
+
+    var avisos = [
+      aq.situacao === "suspensa" ? el("p.t-mini.t-erro", { texto: "Efeitos suspensos: " + (aq.motivos || []).join(" ") }) : null,
+      aq.situacao === "incompleta" ? el("p.t-mini.t-aviso", { texto: "Incompleto: resolva a opção na aba Progressão. Os efeitos entram depois disso." }) : null,
+    ];
+
+    var conteudo;
+    if (pz) {
+      conteudo = [
+        el("p.t-mini", { texto: pz.origem || aq.origem }),
+        el("p.habilidade__texto", { class: pz.negrito ? "habilidade__texto--negrito" : "", texto: pz.texto || "Sem descrição." }),
+        aq.estagio ? el("p.t-mini", { texto: "Estágio atual pelas regras: " + aq.estagio }) : null,
+        el("p.ordem-personalizada", {}, [
+          el("span.etiqueta", { texto: "personalizada" }),
+          el("span.t-mini", { texto: "Versão desta ficha, baseada em " + aq.nome + " (" + aq.origem + "). O catálogo oficial não mudou." }),
+        ]),
+        linhaDeAutomacao(aq, pz),
+      ].concat(avisos, [
+        aq.referencia ? el("p.criacao-fonte", { texto: "Original: " + aq.referencia }) : null,
+      ]);
+    } else {
+      conteudo = [
+        el("p.t-mini", { texto: aq.origem }),
+        aq.resumo ? el("p", { texto: aq.resumo }) : null,
+        aq.afinidade ? el("p.t-mini", { texto: "Com afinidade: " + aq.afinidade }) : null,
+        linhaDeAutomacao(aq, null),
+        aq.nota ? el("p.t-mini", { texto: aq.nota }) : null,
+      ].concat(avisos, [
+        aq.referencia ? el("p.criacao-fonte", { texto: aq.referencia }) : null,
+      ]);
+    }
+
+    var etiqueta = pz ? UI.etiquetaColorida(pz.etiqueta) : null;
+    var caixa = UI.recolhivel({
+      titulo: titulo,
+      subtitulo: etiqueta ? [etiqueta] : null,
+      extra: situacaoExtra || (pz ? (pz.origem || aq.origem) : aq.origem),
+      classe: "ordem-poder ordem-poder--" + aq.situacao + (pz ? " ordem-poder--personalizada" : ""),
+      conteudo: el("div.pilha--curta", { class: "pilha" }, conteudo),
+      acoes: acoes,
+    });
+    caixa.dataset.aquisicao = aq.id;
+    if (pz && pz.cor) {
+      caixa.dataset.cor = "sim";
+      caixa.style.setProperty("border-left-color", pz.cor);
+    }
+    return caixa;
+  }
+
+  /* O que a ficha faz com a habilidade — sem deixar um texto novo
+     parecer uma mecânica nova. */
+  function linhaDeAutomacao(aq, pz) {
+    if (pz && aq.temEfeitos && aq.efeitosDesativados) {
+      return el("p.ordem-automacao", {}, [
+        el("span.etiqueta.etiqueta--desligada", { texto: "efeitos desativados" }),
+        el("span.t-mini", { texto: "Nesta versão os efeitos automáticos do original não entram na conta." }),
+      ]);
+    }
+    if (pz) {
+      return el("p.ordem-automacao", {}, [
+        ES.etiquetaAutomacao(aq.automacao),
+        el("span.t-mini", {
+          texto: aq.temEfeitos
+            ? "Automação herdada do original. O texto desta versão não cria nem muda efeitos."
+            : "Como o original, sem efeito automático na conta.",
+        }),
+      ]);
+    }
+    return ES.etiquetaAutomacao(aq.automacao);
+  }
+
+  function textoOficial(aq) {
+    return [aq.resumo, aq.afinidade ? "Com afinidade: " + aq.afinidade : ""].filter(Boolean).join("\n\n");
+  }
+
+  function editarAquisicao(ctx, o, aq, pz) {
+    var desativar = !!(pz && pz.efeitos === "desativados");
+
+    var atual = pz || {
+      nome: aq.nome,
+      origem: aq.origem,
+      texto: textoOficial(aq),
+      cor: "",
+      negrito: false,
+    };
+
+    var aviso = el("p.t-mini.ordem-personalizacao-aviso", {
+      texto: pz
+        ? "Versão personalizada de " + aq.nome + ", só nesta ficha."
+        : "Ao salvar, esta ficha passa a mostrar uma versão personalizada de " + aq.nome + ". O catálogo oficial e as outras fichas não mudam.",
+    });
+
+    var automacao;
+    if (aq.temEfeitos) {
+      automacao = el("div.ordem-personalizacao-automacao", {}, [
+        el("p.t-mini", {
+          texto: "Automação herdada do original: " + rotuloDaAutomacao(aq.automacao) +
+            ". Mudar nome, texto, cor ou etiqueta não muda o que entra na conta, e um texto novo não cria efeito novo.",
+        }),
+        el("label.r-marca", {}, [
+          el("input", {
+            type: "checkbox", checked: desativar,
+            onchange: function (ev) { desativar = ev.target.checked; },
+          }),
+          el("span", { texto: "Desativar os efeitos automáticos desta ocorrência" }),
+        ]),
+        el("p.r-ajuda", {
+          texto: "Tira da conta só o que vem desta aquisição. Bônus de outras fontes e ajustes manuais continuam. A escolha na Progressão não muda.",
+        }),
+      ]);
+    } else {
+      automacao = el("p.t-mini.ordem-personalizacao-automacao", {
+        texto: "O original não tem efeito automático na conta: é aplicado na hora do jogo. Esta versão também não terá.",
+      });
+    }
+
+    global.RAMASecaoHabilidades.editorDeHabilidade({
+      titulo: pz ? "Editar versão personalizada" : "Personalizar " + aq.nome,
+      atual: atual,
+      antes: [aviso],
+      depois: [automacao],
+      rotuloSalvar: "Salvar",
+      aoSalvar: function (dados, fechar) {
+        var gravada = PZ().salvar(o, aq.id, aq.chave, Object.assign({}, dados, {
+          efeitos: aq.temEfeitos && desativar ? "desativados" : "herdados",
+        }));
+        if (!gravada) { UI.avisoErro("A versão personalizada precisa de um nome."); return; }
+        fechar();
+        /* Os efeitos podem ter mudado: recalcula e apara os recursos. */
+        aoMudarOrdem(ctx);
+        UI.avisoOk(pz ? "Versão personalizada atualizada." : gravada.nome + " agora é uma versão personalizada desta ficha.");
+      },
+    });
+  }
+
+  async function restaurarOficial(ctx, o, aq, pz) {
+    var certeza = await UI.confirmar({
+      titulo: "Restaurar a versão oficial?",
+      texto: "O nome, o texto, a cor e a etiqueta personalizados desta ocorrência (" + pz.nome + ") serão substituídos pela versão oficial de " + aq.nome + ".",
+      detalhe: "A habilidade volta ao texto ATUAL do catálogo do R.A.M.A. — não a uma cópia de quando foi personalizada — e os efeitos automáticos voltam a valer. A cópia salva na biblioteca, se houver, continua lá.",
+      rotuloConfirmar: "Restaurar",
+      perigo: true,
+    });
+    if (!certeza) return;
+    PZ().restaurar(o, aq.id);
+    aoMudarOrdem(ctx);
+    UI.avisoOk(aq.nome + " voltou à versão oficial.");
+  }
+
+  async function salvarPersonalizadaNaBiblioteca(ctx, o, aq, pz) {
+    var id = await global.RAMASecaoHabilidades.paraBibliotecaPrivada({
+      nome: pz.nome, origem: pz.origem, texto: pz.texto, cor: pz.cor, negrito: pz.negrito, etiqueta: pz.etiqueta,
+    }, pz.homebrewId);
+    if (!id) return;
+    if (pz.homebrewId !== id) {
+      PZ().marcarHomebrew(o, aq.id, id);
+      ctx.alterou();
+    }
+    UI.avisoOk(pz.nome + " foi guardada na sua biblioteca Homebrew, como privada. A ficha continua com a própria cópia.");
+  }
+
+  /* Personalizações cuja aquisição não existe mais: a classe, a trilha
+     ou uma escolha mudou. Aparecem, sem conceder nada, para recuperar
+     ou excluir — nunca somem sozinhas. */
+  function cartoesSemAquisicao(ctx, o, idsAtuais) {
+    if (!PZ()) return [];
+    return PZ().semAquisicao(o, idsAtuais).map(function (pz) {
+      var poder = P.poder(pz.poder);
+      var acoes = ctx.emEdicao() ? [UI.menu([
+        { rotulo: "Transformar em habilidade comum", aoClicar: function () {
+            H().inserir(ctx.ficha.habilidades, PZ().comoHabilidade(pz), null);
+            PZ().restaurar(o, pz.aquisicao);
+            aoMudarOrdem(ctx);
+            UI.avisoOk(pz.nome + " agora é uma habilidade comum da ficha.");
+          } },
+        "separador",
+        { rotulo: "Excluir versão personalizada", perigo: true, aoClicar: async function () {
+            var certeza = await UI.confirmar({
+              titulo: "Excluir " + pz.nome + "?",
+              texto: "A versão personalizada sai da ficha. Ela não tem aquisição correspondente e não concede nenhum efeito.",
+              rotuloConfirmar: "Excluir", perigo: true,
+            });
+            if (!certeza) return;
+            PZ().restaurar(o, pz.aquisicao);
+            aoMudarOrdem(ctx);
+          } },
+      ], { rotulo: "Opções de " + pz.nome, icone: "tresPontos" })] : null;
+
+      var etiqueta = UI.etiquetaColorida(pz.etiqueta);
+      return UI.recolhivel({
+        titulo: pz.nome,
+        subtitulo: etiqueta ? [etiqueta] : null,
+        extra: "sem aquisição",
+        classe: "ordem-poder ordem-poder--orfa",
+        conteudo: el("div.pilha--curta", { class: "pilha" }, [
+          el("p.t-mini.t-aviso", {
+            texto: "A aquisição desta versão personalizada não existe mais na ficha (a classe, a trilha ou uma escolha da progressão mudou). Ela não concede nenhum efeito. Se a mesma aquisição voltar, ela volta a valer.",
+          }),
+          el("p.habilidade__texto", { class: pz.negrito ? "habilidade__texto--negrito" : "", texto: pz.texto || "Sem descrição." }),
+          el("p.criacao-fonte", { texto: "Baseada em " + (poder ? poder.nome : pz.poder || "habilidade oficial") }),
+        ]),
+        acoes: acoes,
+      });
+    });
+  }
+
+  function H() { return global.RAMAHabilidades; }
+
+  /* =================================================================
+     EXCLUIR UMA HABILIDADE OFICIAL
+     -----------------------------------------------------------------
+     Duas situações, e a tela diz qual antes de fazer:
+
+       escolhida   (tem registro na progressão) — excluir DESFAZ a
+                   escolha: a etapa volta a ficar pendente, para escolher
+                   de novo, e os efeitos dela saem. É o mesmo "Desfazer"
+                   da aba Progressão.
+       automática  (classe, trilha) — não há escolha para desfazer. A
+                   habilidade sai da lista, os efeitos deixam de entrar
+                   na conta, e ela fica em "excluídas", restaurável.
+     ================================================================= */
+
+  async function excluirAquisicao(ctx, o, aq, pz) {
+    if (aq.registroId) {
+      var antes = E.estado(o, contextoDe(ctx));
+      var registro = (o.escolhas || []).filter(function (r) { return r.id === aq.registroId; })[0];
+      var mesmaEscolha = antes.adquiridos.filter(function (a) { return a.registroId === aq.registroId; });
+      var junto = mesmaEscolha.filter(function (a) { return a.id !== aq.id; }).map(function (a) { return a.nome; });
+
+      var copia = JSON.parse(JSON.stringify(o));
+      E.remover(copia, aq.registroId);
+      var depois = E.estado(copia, contextoDe(ctx));
+      var afetados = [];
+      Object.keys(depois.avaliacoes).forEach(function (id) {
+        var a = antes.avaliacoes[id];
+        var d = depois.avaliacoes[id];
+        if (a && a.valido && d && !d.valido) {
+          var x = (o.escolhas || []).filter(function (e) { return e.id === id; })[0];
+          afetados.push(x ? x.nome : "uma escolha");
+        }
+      });
+
+      var detalhes = [];
+      if (junto.length) detalhes.push("Sai junto, por ser a mesma escolha: " + junto.join(", ") + ".");
+      if (afetados.length) detalhes.push("Deixam de cumprir requisito (não são apagadas, ficam marcadas): " + afetados.join(", ") + ".");
+      if (pz || mesmaEscolha.some(function (a) { return PZ() && PZ().daAquisicao(o, a.id); })) {
+        detalhes.push("A versão personalizada desta escolha é apagada junto.");
+      }
+
+      var certeza = await UI.confirmar({
+        titulo: "Excluir " + (pz ? pz.nome : aq.nome) + "?",
+        texto: "Esta habilidade foi escolhida em " + (aq.rotuloEtapa || "uma etapa da progressão") +
+          (registro && registro.nome ? " (" + registro.nome + ")" : "") +
+          ". Excluir desfaz a escolha: a etapa volta a ficar pendente na aba Progressão, para escolher de novo, e os efeitos dela saem da conta.",
+        detalhe: detalhes.join(" ") || "Nenhuma outra escolha é afetada.",
+        rotuloConfirmar: "Excluir",
+        perigo: true,
+      });
+      if (!certeza) return;
+
+      E.remover(o, aq.registroId);
+      if (PZ()) PZ().esquecerAquisicoes(o, mesmaEscolha.map(function (a) { return a.id; }));
+      aoMudarOrdem(ctx);
+      UI.avisoOk("Escolha desfeita. A etapa está pendente na aba Progressão.");
+      return;
+    }
+
+    var ok = await UI.confirmar({
+      titulo: "Excluir " + (pz ? pz.nome : aq.nome) + " da ficha?",
+      texto: aq.nome + " vem sozinha pelas regras (" + aq.origem + "), então não há escolha para desfazer. Ela sai da lista de habilidades, e os efeitos automáticos dela deixam de entrar na conta.",
+      detalhe: "Nada é apagado: ela fica em “Habilidades oficiais excluídas”, no fim da lista, e pode ser restaurada" +
+        (pz ? " — com a versão personalizada" : "") + ". Para trocar de classe ou trilha, use as abas Geral e Progressão.",
+      rotuloConfirmar: "Excluir",
+      perigo: true,
+    });
+    if (!ok) return;
+
+    PZ().excluir(o, aq.id, aq.chave, aq.nome);
+    aoMudarOrdem(ctx);
+    UI.avisoOk(aq.nome + " saiu da ficha. Dá para restaurar no fim da lista.");
+  }
+
+  function cartaoDeExcluidas(ctx, o, idsAtuais) {
+    if (!PZ()) return null;
+    var lista = Array.isArray(o.excluidas) ? o.excluidas : [];
+    if (!lista.length) return null;
+    var existe = {};
+    idsAtuais.forEach(function (id) { existe[id] = true; });
+
+    var linhas = lista.map(function (x) {
+      var semAquisicao = !existe[x.aquisicao];
+      return el("div.ordem-excluida", {}, [
+        el("div.ordem-excluida__texto", {}, [
+          el("span.t-forte", { texto: x.nome }),
+          el("span.t-mini", {
+            texto: semAquisicao
+              ? "A aquisição não existe mais na ficha; não há o que restaurar."
+              : "Excluída da ficha. Os efeitos automáticos não entram na conta.",
+          }),
+        ]),
+        ctx.emEdicao()
+          ? el("button.r-botao.r-botao--mini", {
+              type: "button",
+              texto: semAquisicao ? "Tirar da lista" : "Restaurar",
+              "aria-label": (semAquisicao ? "Tirar da lista " : "Restaurar ") + x.nome,
+              onclick: function () {
+                PZ().reincluir(o, x.aquisicao);
+                aoMudarOrdem(ctx);
+                if (!semAquisicao) UI.avisoOk(x.nome + " voltou para a ficha.");
+              },
+            })
+          : null,
+      ]);
+    });
+
     return UI.recolhivel({
-      titulo: d.nome,
-      extra: d.situacao === "suspensa" ? "suspenso" : (d.situacao === "incompleta" ? "incompleto" : d.origem),
-      classe: "ordem-poder ordem-poder--" + d.situacao,
+      titulo: "Habilidades oficiais excluídas (" + lista.length + ")",
+      extra: ctx.emEdicao() ? "restaurar" : "",
+      classe: "ordem-poder ordem-poder--excluidas",
       conteudo: el("div.pilha--curta", { class: "pilha" }, [
-        el("p.t-mini", { texto: d.origem }),
-        d.resumo ? el("p", { texto: d.resumo }) : null,
-        d.afinidade ? el("p.t-mini", { texto: "Com afinidade: " + d.afinidade }) : null,
-        ES.etiquetaAutomacao(d.automacao),
-        d.nota ? el("p.t-mini", { texto: d.nota }) : null,
-        d.situacao === "suspensa" ? el("p.t-mini.t-erro", { texto: "Efeitos suspensos: " + (d.motivos || []).join(" ") }) : null,
-        d.situacao === "incompleta" ? el("p.t-mini.t-aviso", { texto: "Incompleto: resolva a opção na aba Progressão. Os efeitos entram depois disso." }) : null,
-        d.referencia ? el("p.criacao-fonte", { texto: d.referencia }) : null,
-      ]),
+        el("p.t-mini", { texto: "Habilidades que chegam sozinhas pelas regras e foram tiradas desta ficha. Nada foi apagado." }),
+      ].concat(linhas, [
+        ctx.emEdicao() ? null : el("p.t-mini", { texto: "Entre no modo edição para restaurar." }),
+      ])),
     });
   }
 

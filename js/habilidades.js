@@ -73,7 +73,7 @@
 
   function criarHabilidade(dados) {
     var d = dados || {};
-    return {
+    return comEtiqueta({
       id: U.uuid(),
       tipo: TIPO_HABILIDADE,
       nome: U.aparar(d.nome, 120) || "Nova habilidade",
@@ -84,7 +84,16 @@
       /* De onde veio, quando veio de uma biblioteca. É rastro, não
          vínculo: editar o modelo depois NÃO muda esta cópia. */
       origemHabilidadeId: d.origemHabilidadeId || null,
-    };
+    }, d.etiqueta);
+  }
+
+  /* A etiqueta colorida só entra no objeto quando existe. Uma habilidade
+     sem etiqueta continua exatamente como era antes da v2.6 — nenhum
+     campo novo aparece numa ficha que não usou o recurso. */
+  function comEtiqueta(h, bruta) {
+    var e = U.normalizarEtiqueta(bruta);
+    if (e) h.etiqueta = e;
+    return h;
   }
 
   function criarPasta(nome) {
@@ -149,7 +158,7 @@
     var nome = U.aparar(bruto.nome, 120);
     if (!nome) return null;
 
-    return {
+    return comEtiqueta({
       id: bruto.id || U.uuid(),
       tipo: TIPO_HABILIDADE,
       nome: nome,
@@ -158,7 +167,7 @@
       cor: corValida(bruto.cor),
       negrito: !!bruto.negrito,
       origemHabilidadeId: bruto.origemHabilidadeId || null,
-    };
+    }, bruto.etiqueta);
   }
 
   /* =================================================================

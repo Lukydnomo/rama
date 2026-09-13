@@ -913,6 +913,37 @@
 }
 .recolhivel__subtitulo { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 
+/* ---------- etiqueta colorida ----------
+   Compacta, uma linha que quebra só se o texto não couber no cartão. A
+   cor de fundo e a do texto vêm do dado validado (js/ui.js). */
+
+.etiqueta-cor {
+  display: inline-block;
+  align-self: flex-start;
+  max-width: 100%;
+  padding: 1px var(--e2);
+  font-family: var(--fonte-mini);
+  font-size: var(--texto-mini);
+  font-weight: 700;
+  line-height: 1.5;
+  letter-spacing: var(--espaco-letra-titulo);
+  text-transform: uppercase;
+  overflow-wrap: anywhere;
+  border-radius: 2px;
+}
+
+.campo-etiqueta__cores { display: flex; flex-wrap: wrap; align-items: center; gap: var(--e3); }
+.campo-etiqueta__personalizada { display: inline-flex; align-items: center; gap: var(--e1); cursor: pointer; }
+.campo-etiqueta__seletor {
+  width: 32px; height: 28px;
+  padding: 0;
+  background: transparent;
+  border: var(--borda) solid var(--cor-traco-fraca);
+  cursor: pointer;
+}
+.campo-etiqueta__seletor:focus-visible { outline: 2px solid var(--cor-paranormal); outline-offset: 2px; }
+.campo-etiqueta__previa { display: flex; flex-wrap: wrap; align-items: center; gap: var(--e2); min-height: 22px; }
+
 /* ---------- dados de item no cartão fechado ---------- */
 
 .item-dados { display: flex; flex-wrap: wrap; gap: 2px var(--e4); }

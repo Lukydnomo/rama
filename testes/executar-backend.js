@@ -1724,6 +1724,66 @@ t.grupo("Ordem — escolhas atravessam o servidor");
     atrasado.dados && atrasado.dados.ordem ? atrasado.dados.ordem.escolhas.length : -1, 3);
 })();
 
+t.grupo("Ordem — versões personalizadas e etiquetas atravessam o servidor");
+
+(() => {
+  preparar();
+  const joana = novaConta("joana");
+  const lara = novaConta("lara");
+  const comoJoana = comoFn(joana);
+  const comoLara = comoFn(lara);
+
+  const personalizacao = {
+    id: "pz1", aquisicao: "d3.poderClasse|reflexosDefensivos", poder: "reflexosDefensivos",
+    nome: "Reflexos de Gato", texto: "Versão da mesa.", origem: "Poder de classe", cor: "#3B6EA3", negrito: true,
+    etiqueta: { texto: "Agilidade", cor: "#3B6EA3" }, efeitos: "desativados", homebrewId: null,
+    criadoEm: "2026-09-12T10:00:00.000Z", atualizadoEm: "2026-09-12T10:00:00.000Z",
+  };
+  const ficha = {
+    nome: "Joana", tipoFicha: "ordem", schemaVersion: 5,
+    ordem: {
+      classe: "combatente", origem: "militar", trilha: "tropadechoque", nex: 20,
+      atributos: { agi: 2, for: 2, int: 1, pre: 1, vig: 2 },
+      escolhas: [{ id: "e1", etapa: "d3.poderClasse", tipo: "poderClasse", valor: "reflexosDefensivos", opcoes: {},
+        nome: "Reflexos Defensivos", ignorarRequisitos: false, registradoEm: "2026-09-12T09:00:00.000Z" }],
+      personalizacoes: [personalizacao],
+    },
+    habilidades: { filhos: [{ id: "h1", tipo: "habilidade", nome: "Baguncinha Mortal", texto: "", origem: "", cor: "", negrito: false,
+      origemHabilidadeId: null, etiqueta: { texto: "Energia", cor: "#7E6BB5" } }] },
+    inventario: { limite: 0, itens: [
+      { id: "i1", tipo: "item", nome: "Amuleto", peso: 0, categoria: "", descricao: "", origemHomebrewId: null,
+        etiqueta: { texto: "Sangue", cor: "#A33B3B" } },
+    ] },
+  };
+
+  const criado = comoJoana({ acao: "criar_personagem", dados: ficha });
+  t.ok("a ficha com personalização e etiquetas é criada", criado.ok);
+  const lido = comoJoana({ acao: "ler_personagem", personagemId: criado.dados.id });
+  t.iguais("a personalização volta igual, com os efeitos desativados", lido.dados.ordem.personalizacoes, [personalizacao]);
+  t.iguais("  a etiqueta da habilidade também", lido.dados.habilidades.filhos[0].etiqueta, { texto: "Energia", cor: "#7E6BB5" });
+  t.iguais("  e a do item", lido.dados.inventario.itens[0].etiqueta, { texto: "Sangue", cor: "#A33B3B" });
+
+  t.recusa("outra conta não lê a ficha com a personalização",
+    comoLara({ acao: "ler_personagem", personagemId: criado.dados.id }), "nao_encontrado");
+
+  const restaurada = JSON.parse(JSON.stringify(lido.dados));
+  restaurada.ordem.personalizacoes = [];
+  const gravado = comoJoana({ acao: "salvar_personagem", personagemId: criado.dados.id, rev: lido.rev, dados: restaurada });
+  t.ok("restaurar a versão oficial (lista vazia) grava", gravado.ok && gravado.rev === lido.rev + 1);
+  const atrasado = comoJoana({ acao: "salvar_personagem", personagemId: criado.dados.id, rev: lido.rev, dados: lido.dados });
+  t.recusa("gravar a personalização com a revisão velha é conflito", atrasado, "conflito");
+
+  const hb = comoJoana({ acao: "salvar_homebrew", dados: {
+    tipo: "habilidade", nome: "Reflexos de Gato", texto: "Versão da mesa.", visibilidade: "privado",
+    etiqueta: { texto: "Agilidade", cor: "#3B6EA3" },
+  } });
+  t.ok("a versão salva na biblioteca vira habilidade privada", hb.ok);
+  const lidaHb = comoJoana({ acao: "ler_homebrew", homebrewId: hb.dados.id });
+  t.iguais("  com a etiqueta", lidaHb.dados.etiqueta, { texto: "Agilidade", cor: "#3B6EA3" });
+  t.igual("  privada", lidaHb.dados.visibilidade, "privado");
+  t.recusa("  e outra conta não a enxerga", comoLara({ acao: "ler_homebrew", homebrewId: hb.dados.id }), "nao_encontrado");
+})();
+
 /* =====================================================================
    FIM
    ===================================================================== */

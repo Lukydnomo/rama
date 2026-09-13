@@ -344,6 +344,8 @@
       "ordem.escolhas": "id",
       "ordem.ajustes": "id",
       "ordem.progressao": "id",
+      "ordem.personalizacoes": "id",
+      "ordem.excluidas": "id",
     },
     /* Carimbos de tempo mudam em toda gravação e não são decisão de
        ninguém: perguntar sobre eles seria ruído puro. */
@@ -364,6 +366,8 @@
       escolhas: "Escolhas de progressão", afinidade: "Afinidade", elemento: "Elemento",
       nomeOutro: "Elemento Homebrew", adiada: "Afinidade adiada", aplicar: "Aplicar regras de patente",
       limites: "Limites por categoria", opcoes: "Opções da escolha", etapa: "Etapa",
+      personalizacoes: "Habilidades personalizadas", excluidas: "Habilidades oficiais excluídas", aquisicao: "Aquisição", efeitos: "Efeitos automáticos",
+      etiqueta: "Etiqueta", texto: "Texto", cor: "Cor", negrito: "Negrito",
     },
   };
 

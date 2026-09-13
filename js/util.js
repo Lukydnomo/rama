@@ -147,6 +147,65 @@
       .trim();
   }
 
+  /* =================================================================
+     ETIQUETA COLORIDA
+     -----------------------------------------------------------------
+     A etiqueta abaixo do nome de uma habilidade ou item ("ENERGIA" em
+     roxo). É APRESENTAÇÃO: nenhuma regra lê o texto dela. Tem dados
+     próprios — { texto, cor } — e não reaproveita a cor de contorno da
+     habilidade, a categoria do item nem o elemento de um poder.
+
+     Texto vazio = sem etiqueta (null). A cor é sempre um hexadecimal de
+     seis dígitos; qualquer outra coisa vira a cor padrão. O texto nunca
+     vira HTML (é pintado com textContent) e a cor nunca vira CSS por
+     concatenação (vai por style.setProperty, já validada).
+     ================================================================= */
+
+  var ETIQUETA_LIMITE = 32;
+  var ETIQUETA_COR_PADRAO = "#7E6BB5";
+  var CORES_ETIQUETA = [
+    { nome: "Roxo", valor: "#7E6BB5" },
+    { nome: "Vermelho", valor: "#A33B3B" },
+    { nome: "Laranja", valor: "#C2702E" },
+    { nome: "Amarelo", valor: "#D8B43A" },
+    { nome: "Verde", valor: "#4F8A4B" },
+    { nome: "Azul", valor: "#3B6EA3" },
+    { nome: "Cinza", valor: "#6B6B73" },
+    { nome: "Branco", valor: "#E6E6EA" },
+  ];
+
+  function corDeEtiqueta(valor) {
+    var v = aparar(valor, 7);
+    if (/^#[0-9a-fA-F]{6}$/.test(v)) return v.toUpperCase();
+    if (/^#[0-9a-fA-F]{3}$/.test(v)) {
+      return ("#" + v[1] + v[1] + v[2] + v[2] + v[3] + v[3]).toUpperCase();
+    }
+    return "";
+  }
+
+  function normalizarEtiqueta(valor) {
+    if (!valor || typeof valor !== "object") return null;
+    /* Sem quebra de linha nem caractere de controle: é uma etiqueta de
+       uma linha só. */
+    var t = texto(valor.texto).replace(/[\u0000-\u001f\u007f]+/g, " ").replace(/\s+/g, " ").trim().slice(0, ETIQUETA_LIMITE);
+    if (!t) return null;
+    return { texto: t, cor: corDeEtiqueta(valor.cor) || ETIQUETA_COR_PADRAO };
+  }
+
+  /* Preto ou branco, o que tiver mais contraste com o fundo (luminância
+     relativa do WCAG). */
+  function corDoTextoSobre(fundo) {
+    var hex = corDeEtiqueta(fundo) || ETIQUETA_COR_PADRAO;
+    var canal = function (i) {
+      var c = parseInt(hex.slice(i, i + 2), 16) / 255;
+      return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
+    };
+    var l = 0.2126 * canal(1) + 0.7152 * canal(3) + 0.0722 * canal(5);
+    var contrasteBranco = 1.05 / (l + 0.05);
+    var contrastePreto = (l + 0.05) / 0.05;
+    return contrastePreto >= contrasteBranco ? "#08080A" : "#FFFFFF";
+  }
+
   function iniciais(nome) {
     var partes = texto(nome).trim().split(/\s+/).filter(Boolean);
     if (!partes.length) return "?";
@@ -350,6 +409,12 @@
     texto: texto,
     aparar: aparar,
     chaveDeBusca: chaveDeBusca,
+    ETIQUETA_LIMITE: ETIQUETA_LIMITE,
+    ETIQUETA_COR_PADRAO: ETIQUETA_COR_PADRAO,
+    CORES_ETIQUETA: CORES_ETIQUETA,
+    corDeEtiqueta: corDeEtiqueta,
+    normalizarEtiqueta: normalizarEtiqueta,
+    corDoTextoSobre: corDoTextoSobre,
     iniciais: iniciais,
     copiar: copiar,
     vazio: vazio,

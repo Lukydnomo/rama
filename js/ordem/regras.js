@@ -119,6 +119,11 @@
 
       /* --- decisões de progressão, por etapa (progressao.js) --- */
       escolhas: [],
+      /* --- versões personalizadas de habilidades oficiais
+             (personalizacao.js): apresentação por aquisição --- */
+      personalizacoes: [],
+      /* --- habilidades automáticas excluídas da ficha --- */
+      excluidas: [],
       /* --- registros de texto livre da v2.3, preservados --- */
       progressao: [],
       /* --- afinidade elemental --- */
@@ -803,7 +808,9 @@
        III (OPRPG p.26). A redução acompanha a trilha, não se soma. */
     var est = estadoDe(ficha, inventario);
     var temTrilha = function (chave) {
-      return !!est && est.adquiridos.some(function (a) { return a.valido && a.completo !== false && a.chave === chave && a.via === "trilha"; });
+      return !!est && est.adquiridos.some(function (a) {
+        return a.valido && a.completo !== false && !a.efeitosDesativados && a.chave === chave && a.via === "trilha";
+      });
     };
     efeitosDoTipo(ficha, "categoriaFavorita", inventario).forEach(function (m) {
       var nivel = 1 + (temTrilha("tecnicaSecreta") ? 1 : 0) + (temTrilha("maquinaDeMatar") ? 1 : 0);
@@ -1042,6 +1049,8 @@
       atributos: {},
       pericias: {},
       escolhas: [],
+      personalizacoes: [],
+      excluidas: [],
       progressao: [],
       afinidade: normalizarAfinidade(b.afinidade),
       patente: normalizarPatente(b.patente),
@@ -1077,6 +1086,15 @@
     ficha.escolhas = E()
       ? E().normalizarEscolhas(b.escolhas)
       : (Array.isArray(b.escolhas) ? b.escolhas.slice() : []);
+
+    /* Sem o módulo carregado (uma página que não edita habilidades), as
+       personalizações passam como vieram — nunca somem numa gravação. */
+    ficha.personalizacoes = global.RAMAOrdemPersonalizacao
+      ? global.RAMAOrdemPersonalizacao.normalizar(b.personalizacoes)
+      : (Array.isArray(b.personalizacoes) ? JSON.parse(JSON.stringify(b.personalizacoes)) : []);
+    ficha.excluidas = global.RAMAOrdemPersonalizacao
+      ? global.RAMAOrdemPersonalizacao.normalizarExcluidas(b.excluidas)
+      : (Array.isArray(b.excluidas) ? JSON.parse(JSON.stringify(b.excluidas)) : []);
 
     /* Os registros de texto livre da v2.3: guardados como vieram. */
     (Array.isArray(b.progressao) ? b.progressao : []).forEach(function (e) {

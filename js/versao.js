@@ -14,15 +14,15 @@
    TRÊS COISAS DIFERENTES, QUE NÃO SE MISTURAM
    ---------------------------------------------------------------------
 
-     versão do aplicativo   está aqui. É o que a pessoa vê: v2.5.3.
+     versão do aplicativo   está aqui. É o que a pessoa vê: v2.6.0.
      schemaVersion          está em js/ficha.js. É o formato da FICHA,
                             e só sobe quando a ficha muda de forma.
      versaoFormato          está em js/config.js. É o formato dos
                             arquivos de importação/exportação.
 
-   Elas sobem em ritmos próprios. A v2.5.3 leva schemaVersion 5 e
-   versaoFormato 1 — e isso é normal: a ficha ganhou as escolhas de
-   progressão de Ordem, mas o formato dos arquivos de importação continua
+   Elas sobem em ritmos próprios. A v2.6.0 leva schemaVersion 6 e
+   versaoFormato 1 — e isso é normal: a ficha ganhou versões personalizadas e
+   etiquetas, mas o formato dos arquivos de importação continua
    o mesmo,
    porque um arquivo antigo continua sendo lido sem perder nada.
 
@@ -57,6 +57,24 @@
   ];
 
   var CHANGELOG = [
+    {
+      versao: "2.6.0",
+      codinome: "VARIANTE",
+      data: "12/09/2026",
+      mudancas: {
+        "Adicionado": [
+          "Na ficha de Ordem Paranormal, as habilidades oficiais (automáticas de classe, de trilha e poderes escolhidos) podem ser editadas no modo edição. Editar cria uma versão personalizada só daquela ocorrência, naquela ficha; o catálogo e as outras fichas não mudam.",
+          "A versão personalizada mantém a automação do original, e o editor diz isso. Quando o original tem efeitos na conta, dá para desativá-los naquela ocorrência, sem mexer em outros bônus nem nos ajustes manuais.",
+          "Ações “Salvar na minha biblioteca Homebrew” (sempre privada) e “Restaurar versão oficial”, que volta ao texto atual do catálogo.",
+          "Botão “Excluir” nas habilidades oficiais: um poder escolhido por engano tem a escolha desfeita e a etapa volta a ficar pendente; uma habilidade automática sai da lista e da conta e fica em “Habilidades oficiais excluídas”, restaurável.",
+          "Etiqueta colorida opcional abaixo do nome de habilidades e itens, nas fichas Universal e de Ordem e na Homebrew, com paleta, cor personalizada e prévia no editor. É só identificação visual: não muda elemento, categoria nem nenhuma regra.",
+        ],
+        "Técnico": [
+          "schemaVersion sobe de 5 para 6, sem converter nenhum dado: uma aba aberta com a versão anterior deixa de gravar por cima de personalizações e etiquetas.",
+          "Cada aquisição de Ordem ganha um id estável (etapa + chave do poder), usado pelas personalizações e exclusões.",
+        ],
+      },
+    },
     {
       versao: "2.5.3",
       codinome: "FRAÇÃO",

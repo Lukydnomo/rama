@@ -209,6 +209,7 @@
     var tipo = item.tipo === "armadura" && perfil ? "Proteção" : F.rotuloDoTipo(item.tipo);
 
     return [
+      UI.etiquetaColorida(item.etiqueta),
       el("span.item-dados", {}, pares.map(function (par) {
         return el("span.item-dados__par", {}, [
           el("span.item-dados__rotulo", { texto: par[0] + ":" }),
@@ -403,8 +404,11 @@
       ajuda: "Livre: Consumível, Corpo a corpo, Investigação… Serve para filtrar.",
     });
 
-    var campos = [nome, categoria];
-    var extras = { categoria: categoria };
+    var etiqueta = U.normalizarEtiqueta(atual.etiqueta);
+    var campoEtiqueta = UI.campoEtiqueta({ valor: etiqueta, aoMudar: function (v) { etiqueta = v; } });
+
+    var campos = [nome, campoEtiqueta, categoria];
+    var extras = { categoria: categoria, etiqueta: function () { return etiqueta; } };
     var perfil = perfilDe(ctx);
 
     /* Numa ficha de Ordem, espaços no lugar de peso. O peso que o item
@@ -485,6 +489,9 @@
             if (criando) {
               ctx.ficha.inventario.itens.push(montado);
             } else {
+              /* Tirar a etiqueta precisa apagar o campo: o item montado
+                 simplesmente não o tem, e Object.assign não apaga nada. */
+              delete item.etiqueta;
               Object.assign(item, montado, { id: item.id });
             }
 
@@ -509,6 +516,7 @@
       categoria: extras.categoria ? extras.categoria.entrada.value.trim() : (base.categoria || ""),
       descricao: descricao.entrada.value,
       origemHomebrewId: base.origemHomebrewId || null,
+      etiqueta: extras.etiqueta ? extras.etiqueta() : base.etiqueta,
     };
 
     nome.marcarErro("");

@@ -49,7 +49,7 @@
      na 3 com a versão Normal em branco; uma ficha de Ordem gravada na 4
      abre na 5 sem escolhas registradas, com as pendências calculadas a
      partir da classe e do NEX. Ver docs/CHARACTER_SCHEMA.md. */
-  var VERSAO_SCHEMA = 5;
+  var VERSAO_SCHEMA = 6;
 
   var NATUREZA = { INFORMACAO: "informacao", ROLAVEL: "rolavel", DEPENDENTE: "dependente" };
 
@@ -450,6 +450,11 @@
          não vínculo: editar o modelo na Homebrew NÃO muda a ficha. */
       origemHomebrewId: d.origemHomebrewId || null,
     };
+
+    /* Etiqueta colorida abaixo do nome: apresentação, nunca regra. Só
+       existe no item que a tem — nenhum item antigo ganha campo novo. */
+    var etiqueta = U.normalizarEtiqueta(d.etiqueta);
+    if (etiqueta) base.etiqueta = etiqueta;
 
     /* Espaços, quantidade e categoria de Ordem Paranormal. O bloco só
        existe no item que já o tinha — um item da ficha universal nunca

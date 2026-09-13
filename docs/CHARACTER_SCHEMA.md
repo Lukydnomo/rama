@@ -168,6 +168,10 @@ peso = soma dos pesos dos itens − soma das reduções das mochilas   (mínimo 
 Um peso digitado à mão para de bater com o inventário na primeira troca de item,
 e aí ninguém sabe qual dos dois está certo. O `limite` é configurável.
 
+Todo item aceita a mesma `etiqueta` opcional das habilidades (ver
+[Etiqueta colorida](#etiqueta-colorida)): `{ "texto": "Sangue", "cor": "#A33B3B" }`.
+Duplicar um item copia a etiqueta junto, com id novo.
+
 ### Os quatro tipos
 
 Cada um tem os seus campos, e só os seus:
@@ -344,6 +348,7 @@ fixos condenaria a estrutura a uma reescrita no dia em que alguém quisesse
         { "id", "tipo": "habilidade", "nome": "Habilidade X",
           "texto": "...", "origem": "Classe",
           "cor": "#C6564B", "negrito": false,
+          "etiqueta": { "texto": "Energia", "cor": "#7E6BB5" },   // opcional
           "origemHabilidadeId": null }
       ] }
     ] }
@@ -362,6 +367,23 @@ de identificar algo: nome e origem continuam valendo.
 
 `origemHabilidadeId` é **rastro, não vínculo**: editar o modelo na biblioteca
 não muda a cópia que já está na ficha.
+
+### Etiqueta colorida
+
+`etiqueta` é a marca abaixo do nome ("ENERGIA" em roxo). Vale igual para
+habilidades e itens, nas fichas Universal e de Ordem e na Homebrew.
+
+- `texto`: até 32 caracteres, uma linha só (quebras e caracteres de controle
+  viram espaço). Vazio = **sem etiqueta**, e o campo não é gravado.
+- `cor`: hexadecimal de seis dígitos (`#abc` vira `#AABBCC`). Qualquer outra
+  coisa vira a cor padrão `#7E6BB5`. A cor do texto não é gravada: é preto ou
+  branco, o de maior contraste com o fundo, calculado na tela.
+
+**É apresentação, nunca regra.** Nenhum cálculo, requisito, elemento, afinidade,
+categoria ou permissão lê a etiqueta. Ela não reaproveita `cor` (o contorno da
+habilidade), `categoria` (a gaveta do item) nem o elemento de um poder. O texto
+entra na tela por `textContent` e a cor por `style.setProperty`, depois de
+validada — nada vira HTML ou CSS. Registros antigos simplesmente não têm o campo.
 
 ## Rituais
 
@@ -446,8 +468,15 @@ uma regra de jogo.
 
 ## Migração
 
-`schemaVersion` é `5`. Toda ficha lida passa por `normalizarFicha()`, que aceita
+`schemaVersion` é `6`. Toda ficha lida passa por `normalizarFicha()`, que aceita
 o que faltar e conserta o que dá.
+
+**A v2.6 subiu o schema de 5 para 6 sem converter nada.** Os campos novos
+(`etiqueta` em habilidades e itens; `ordem.personalizacoes` e `ordem.excluidas`)
+são opcionais, e uma ficha 5 abre igual. A subida existe para proteger os dados:
+uma aba ainda aberta com a versão anterior do aplicativo não conhece esses campos
+e os descartaria ao gravar — com o schema 6 ela recusa abrir a ficha e pede para
+recarregar.
 
 **Ficha gravada na v1 continua abrindo.** Ela não tem `habilidades`, não tem
 `rituais` e os itens não têm `categoria`; a normalização cria a árvore vazia, a
@@ -509,6 +538,21 @@ Só existe na ficha de Ordem. Guarda **escolhas**, **recursos gastos** e
     "registradoEm": "2026-09-12T10:00:00.000Z"
   } ],
   "afinidade": { "elemento": "", "nomeOutro": "", "adiada": false },
+  "personalizacoes": [ {          // versão desta ficha de uma habilidade oficial
+    "id": "uuid",
+    "aquisicao": "d3.poderClasse|reflexosDefensivos",   // id estável da aquisição
+    "poder": "reflexosDefensivos",
+    "nome": "Reflexos de Gato", "texto": "...", "origem": "Poder de classe",
+    "cor": "", "negrito": false,
+    "etiqueta": { "texto": "Agilidade", "cor": "#3B6EA3" },   // opcional
+    "efeitos": "herdados",        // ou "desativados"
+    "homebrewId": null,           // rastro, se foi salva na biblioteca
+    "criadoEm": "...", "atualizadoEm": "..."
+  } ],
+  "excluidas": [ {                // habilidades automáticas tiradas da ficha
+    "id": "uuid", "aquisicao": "t.cascaGrossa|cascaGrossa", "poder": "cascaGrossa",
+    "nome": "Casca Grossa", "excluidaEm": "..."
+  } ],
   "patente": { "aplicar": true, "limites": null },
   "progressao": [ { "id", "nex", "tipo", "valor", "rotulo" } ],   // texto livre da v2.3, preservado
   "recursos": { "pv": null, "pe": null, "san": null },
@@ -552,6 +596,35 @@ chaves `"0"` a `"4"`: `null` é **sem limite**, um número é o máximo, e `0` �
 
 `temporarios.capacidade` é o ajuste temporário de capacidade de carga, em
 espaços, de −99 a +99. Ele não tem duração: fica até alguém mudar.
+
+### Versões personalizadas e habilidades excluídas
+
+Cada habilidade oficial que o personagem tem é uma **aquisição**, com um id
+estável dado pelo motor de progressão: a etapa mais a chave do poder, nunca o
+nome.
+
+| id | aquisição |
+|---|---|
+| `auto\|<chave>` | habilidade automática de classe (Ataque Especial, Perito…) |
+| `t.<chave>\|<chave>` | habilidade automática de trilha |
+| `<etapa>\|<chave>` | poder vindo de uma escolha: `d3.poderClasse\|golpePesado`, `x60.transcender\|sangueDeFerro` |
+| `…#2` | a mesma chave duas vezes na mesma etapa |
+
+`personalizacoes` guarda, **uma por aquisição**, o que a mesa mudou na
+apresentação. Ela não abre nem consome escolha e não é lida como regra. Duas para
+a mesma aquisição (sincronização de dois aparelhos) valem pela mais recente.
+`efeitos: "desativados"` é o único dado mecânico: o motor pula os efeitos daquela
+aquisição e mais nada — o poder continua adquirido para requisitos e repetição, e
+bônus de outras fontes e ajustes manuais ficam.
+
+`excluidas` guarda habilidades que **chegam sozinhas** (classe, trilha) e foram
+tiradas da ficha: somem da lista e os efeitos saem da conta, como
+`"desativados"`. Um poder **escolhido** não entra aqui: excluí-lo desfaz a
+escolha em `escolhas`, e a personalização dele é apagada junto.
+
+Se a aquisição deixa de existir (a classe, a trilha ou a escolha mudou), a
+personalização e a exclusão **não são apagadas**: ficam guardadas, sem efeito, e
+voltam a valer se a mesma aquisição voltar.
 
 ### O bloco `ordem` de um item
 

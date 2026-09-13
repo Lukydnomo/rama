@@ -793,6 +793,99 @@
   }
 
   /* =================================================================
+     ETIQUETA COLORIDA
+     -----------------------------------------------------------------
+     A etiqueta abaixo do nome ("ENERGIA" em roxo). É só apresentação:
+     nenhuma regra lê o texto. O texto entra por textContent e a cor por
+     style.setProperty, depois de validada — nada vira HTML ou CSS.
+     ================================================================= */
+
+  function etiquetaColorida(etiqueta) {
+    var e = U.normalizarEtiqueta(etiqueta);
+    if (!e) return null;
+    var no = el("span.etiqueta-cor", { texto: e.texto });
+    no.style.setProperty("background-color", e.cor);
+    no.style.setProperty("color", U.corDoTextoSobre(e.cor));
+    return no;
+  }
+
+  /* O campo do editor: texto, paleta, cor personalizada e prévia.
+     `aoMudar` recebe a etiqueta normalizada, ou null quando o texto está
+     vazio. */
+  function campoEtiqueta(opcoes) {
+    var o = opcoes || {};
+    var inicial = U.normalizarEtiqueta(o.valor);
+    var texto = inicial ? inicial.texto : "";
+    var cor = inicial ? inicial.cor : U.ETIQUETA_COR_PADRAO;
+    var idTexto = "etq-" + U.uuid().slice(0, 8);
+
+    var previa = el("div.campo-etiqueta__previa", { "aria-live": "polite" });
+    var amostras = el("div.cores", { role: "group", "aria-label": "Cor da etiqueta" });
+
+    function atual() { return U.normalizarEtiqueta({ texto: texto, cor: cor }); }
+
+    function avisar() { if (o.aoMudar) o.aoMudar(atual()); }
+
+    function pintarPrevia() {
+      var e = atual();
+      U.trocar(previa, e
+        ? [el("span.t-mini", { texto: "Prévia:" }), etiquetaColorida(e)]
+        : [el("span.t-mini", { texto: "Sem etiqueta. Escreva um texto para ela aparecer abaixo do nome." })]);
+    }
+
+    function pintarAmostras() {
+      U.trocar(amostras, U.CORES_ETIQUETA.map(function (c) {
+        var escolhida = c.valor === cor;
+        var botao = el("button.cor", {
+          type: "button",
+          "aria-label": "Etiqueta " + c.nome.toLowerCase(),
+          "aria-pressed": String(escolhida),
+          title: c.nome,
+          onclick: function () {
+            cor = c.valor;
+            seletor.value = cor.toLowerCase();
+            pintarAmostras(); pintarPrevia(); avisar();
+          },
+        });
+        botao.style.setProperty("--cor-escolhida", c.valor);
+        return botao;
+      }));
+    }
+
+    var entrada = el("input.r-entrada", {
+      id: idTexto, type: "text", maxlength: U.ETIQUETA_LIMITE, value: texto,
+      placeholder: "Ex.: Energia",
+      oninput: function (ev) { texto = ev.target.value; pintarPrevia(); avisar(); },
+    });
+
+    var seletor = el("input.campo-etiqueta__seletor", {
+      type: "color", value: cor.toLowerCase(), "aria-label": "Cor personalizada da etiqueta",
+      oninput: function (ev) {
+        var limpa = U.corDeEtiqueta(ev.target.value);
+        if (!limpa) return;
+        cor = limpa;
+        pintarAmostras(); pintarPrevia(); avisar();
+      },
+    });
+
+    pintarAmostras();
+    pintarPrevia();
+
+    return el("div.r-campo.campo-etiqueta", {}, [
+      el("label", { for: idTexto, texto: o.rotulo || "Etiqueta" }),
+      entrada,
+      el("div.campo-etiqueta__cores", {}, [
+        amostras,
+        el("label.campo-etiqueta__personalizada", {}, [seletor, el("span.t-mini", { texto: "Outra cor" })]),
+      ]),
+      previa,
+      el("p.r-ajuda", {
+        texto: o.ajuda || "Opcional, até " + U.ETIQUETA_LIMITE + " caracteres. Só identificação visual: não muda elemento, categoria nem nenhuma regra.",
+      }),
+    ]);
+  }
+
+  /* =================================================================
      PAINEL
      ================================================================= */
 
@@ -826,5 +919,7 @@
     painel: painel,
     recolhivel: recolhivel,
     seletorDeCor: seletorDeCor,
+    etiquetaColorida: etiquetaColorida,
+    campoEtiqueta: campoEtiqueta,
   };
 })(window);

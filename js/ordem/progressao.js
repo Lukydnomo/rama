@@ -486,7 +486,34 @@
       fontesGrau: fontesGrau,
       adquiridos: [],
       afinidadeAtiva: false,
+      ids: {},
+      /* Aquisições cujos efeitos a mesa desligou numa versão
+         personalizada (personalizacao.js). */
+      desligadas: desativadasDe(ordem),
     };
+  }
+
+  /* Desligadas numa versão personalizada ou excluídas da ficha — as
+     duas listas de personalizacao.js. */
+  function desativadasDe(ordem) {
+    var saida = {};
+    (Array.isArray(ordem.personalizacoes) ? ordem.personalizacoes : []).forEach(function (p) {
+      if (p && p.efeitos === "desativados" && p.aquisicao) saida[p.aquisicao] = true;
+    });
+    (Array.isArray(ordem.excluidas) ? ordem.excluidas : []).forEach(function (x) {
+      if (x && x.aquisicao) saida[x.aquisicao] = true;
+    });
+    return saida;
+  }
+
+  /* O id estável de uma aquisição: a etapa mais a chave do poder, nunca
+     o nome. É a ele que uma versão personalizada se prende. Se a mesma
+     chave vier duas vezes na MESMA etapa, a segunda ganha "#2". */
+  function idDeAquisicao(percurso, etapaId, chave) {
+    var base = String(etapaId || "sem-etapa") + "|" + String(chave || "");
+    var n = (percurso.ids[base] || 0) + 1;
+    percurso.ids[base] = n;
+    return n === 1 ? base : base + "#" + n;
   }
 
   function copiarPercurso(p) {
@@ -496,6 +523,8 @@
       fontesGrau: JSON.parse(JSON.stringify(p.fontesGrau)),
       adquiridos: p.adquiridos.slice(),
       afinidadeAtiva: p.afinidadeAtiva,
+      ids: Object.assign({}, p.ids),
+      desligadas: p.desligadas,
     };
   }
 
@@ -1015,13 +1044,17 @@
          houver, entra pela camada de cálculo como o de qualquer origem. */
       var org = C.origem(filho.origem);
       if (org) {
+        var idOrigem = idDeAquisicao(percurso, info.etapa.id, "origem:" + org.chave);
+        var origemDesligada = !!percurso.desligadas[idOrigem];
         percurso.adquiridos.push({
+          id: idOrigem,
           chave: "origem:" + org.chave, nome: org.poder + " (" + org.nome + ")", tipo: "origem",
           elemento: "", opcoes: {}, afinidade: false, valido: true, completo: true,
           via: info.via, degrau: info.etapa.degrau, etapaId: info.etapa.id, registroId: info.registroId,
           resumo: org.resumo, automacao: org.automacao, fonteRef: C.referencia(org),
+          efeitosDesativados: origemDesligada,
         });
-        if (org.efeito) efeitos.push(Object.assign({}, org.efeito, { tipo: org.efeito.tipo, fonte: org.poder, detalhe: "Flashback: " + org.nome }));
+        if (org.efeito && !origemDesligada) efeitos.push(Object.assign({}, org.efeito, { tipo: org.efeito.tipo, fonte: org.poder, detalhe: "Flashback: " + org.nome }));
       }
       return;
     }
@@ -1032,7 +1065,10 @@
     }
 
     var e = filho.entrada;
+    var idReg = idDeAquisicao(percurso, info.etapa.id, e.chave);
     var reg = {
+      id: idReg,
+      efeitosDesativados: !!percurso.desligadas[idReg],
       chave: e.chave,
       nome: nomeDoPoder(e, filho.opcoes) + (filho.afinidade ? " (afinidade)" : ""),
       tipo: e.tipo,
@@ -1053,7 +1089,10 @@
     /* A segunda escolha de um poder, pela afinidade, dá SÓ o que a linha
        "Afinidade" acrescenta: "o bônus em Furtividade aumenta para +10"
        é +5 sobre o +5 que a primeira escolha já dá, não +15. */
-    var lista = filho.afinidade ? (e.efeitosAfinidade || []) : (e.efeitos || []);
+    /* Uma versão personalizada com os efeitos desligados tira da conta
+       SÓ o que vem desta aquisição. O poder continua adquirido — conta
+       para requisitos e repetição, como antes. */
+    var lista = reg.efeitosDesativados ? [] : (filho.afinidade ? (e.efeitosAfinidade || []) : (e.efeitos || []));
     lista.forEach(function (ef) {
       aplicarEfeito(percurso, efeitos, ef, filho.opcoes, { nome: reg.nome, detalhe: info.etapa.rotulo }, info.etapa);
     });
@@ -1146,6 +1185,7 @@
     return JSON.stringify([
       ordem.classe, ordem.origem, ordem.trilha, ordem.nex, ordem.nivel,
       ordem.atributos, ordem.pericias, ordem.escolhas, ordem.afinidade, ordem.opcionais,
+      Object.keys(desativadasDe(ordem)).sort(),
       ordem.progressao ? ordem.progressao.length : 0,
       itens ? itens.map(function (i) { return i ? [i.id, i.tipo, i.nome, i.ordem && i.ordem.grupo] : null; }) : null,
     ]);
@@ -1236,13 +1276,17 @@
 
       if (ev.trilhaAuto) {
         var etapaAuto = etapaDe(ordem, { id: "t." + ev.trilhaAuto.chave, degrau: ev.degrau });
+        var idTrilha = idDeAquisicao(percurso, "t." + ev.trilhaAuto.chave, ev.trilhaAuto.chave);
+        var trilhaDesligada = !!percurso.desligadas[idTrilha];
         percurso.adquiridos.push({
+          id: idTrilha,
           chave: ev.trilhaAuto.chave, nome: ev.trilhaAuto.nome, tipo: "trilha", elemento: "", opcoes: {},
           afinidade: false, valido: trilhaOk, completo: true, via: "trilha", degrau: ev.degrau,
           etapaId: "t." + ev.trilhaAuto.chave, rotuloEtapa: etapaAuto.rotulo, entrada: ev.trilhaAuto,
           motivos: trilhaOk ? [] : [motivoTrilha],
+          efeitosDesativados: trilhaDesligada,
         });
-        if (trilhaOk) {
+        if (trilhaOk && !trilhaDesligada) {
           var ultimo = percurso.adquiridos[percurso.adquiridos.length - 1];
           (ev.trilhaAuto.efeitos || []).forEach(function (ef) {
             aplicarEfeito(percurso, efeitos, ef, {}, { nome: ultimo.nome, detalhe: etapaAuto.rotulo }, etapaAuto);
@@ -1327,6 +1371,7 @@
         }
         if (v.tipo === "perito") {
           percurso.adquiridos.push({
+            id: idDeAquisicao(percurso, v.id, "perito:escolha"),
             chave: "perito:escolha", nome: "Perito: " + (r.opcoes.pericias || []).map(nomeDaPericia).join(" e "),
             tipo: "escolhaPerito", elemento: "", opcoes: r.opcoes, afinidade: false, valido: true, completo: true,
             via: "perito", degrau: v.degrau, etapaId: v.id, rotuloEtapa: etapa.rotulo, registroId: r.id,
@@ -1389,6 +1434,7 @@
     var h = P.poder(v.beneficio);
     if (!h) return;
     percurso.adquiridos.push({
+      id: idDeAquisicao(percurso, v.id, h.chave),
       chave: h.chave, nome: h.nome, tipo: h.tipo, elemento: "", opcoes: {}, afinidade: false,
       valido: trilhaOk, completo: false, via: v.tipo, degrau: v.degrau, etapaId: v.id,
       rotuloEtapa: v.rotuloEtapa, entrada: h, motivos: ["Falta escolher a opção desta habilidade."],
@@ -1647,7 +1693,7 @@
       var estagios = P.ESTAGIOS[a.chave] || [];
       var atual = null;
       estagios.forEach(function (s) { if (t.nexEquivalente >= s.nex) atual = s; });
-      return { entrada: a, estagio: atual ? atual.texto : "" };
+      return { id: "auto|" + a.chave, entrada: a, estagio: atual ? atual.texto : "" };
     });
   }
 

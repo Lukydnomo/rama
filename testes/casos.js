@@ -497,6 +497,49 @@
       while (cursor.filhos && cursor.filhos.length) { niveis++; cursor = cursor.filhos[0]; }
       t.ok("a normalização para no teto em vez de recursar sem fim",
         niveis <= H.MAX_PROFUNDIDADE + 1);
+
+      /* ---------------------------------------------------------------- */
+      t.grupo("Etiqueta colorida — dados próprios, validados");
+
+      var UU = global.RAMAUtil;
+      t.igual("texto vazio é sem etiqueta", UU.normalizarEtiqueta({ texto: "   ", cor: "#7E6BB5" }), null);
+      t.igual("sem objeto é sem etiqueta", UU.normalizarEtiqueta("ENERGIA"), null);
+      t.iguais("texto e cor válidos passam", UU.normalizarEtiqueta({ texto: "Energia", cor: "#7e6bb5" }), { texto: "Energia", cor: "#7E6BB5" });
+      t.igual("cor inválida vira a padrão", UU.normalizarEtiqueta({ texto: "x", cor: "red; background:url(x)" }).cor, UU.ETIQUETA_COR_PADRAO);
+      t.igual("cor curta vira seis dígitos", UU.normalizarEtiqueta({ texto: "x", cor: "#fa0" }).cor, "#FFAA00");
+      t.igual("texto longo é aparado no limite", UU.normalizarEtiqueta({ texto: new Array(80).join("a"), cor: "" }).texto.length, UU.ETIQUETA_LIMITE);
+      t.igual("quebra de linha vira espaço", UU.normalizarEtiqueta({ texto: "Morte\nSangue", cor: "" }).texto, "Morte Sangue");
+      t.igual("HTML fica como texto, nunca como marcação", UU.normalizarEtiqueta({ texto: "<b>x</b>", cor: "" }).texto, "<b>x</b>");
+      t.igual("texto sobre roxo escuro é branco", UU.corDoTextoSobre("#3B2A6B"), "#FFFFFF");
+      t.igual("texto sobre amarelo é escuro", UU.corDoTextoSobre("#D8B43A"), "#08080A");
+
+      var habComEtq = H.criarHabilidade({ nome: "Baguncinha Mortal", etiqueta: { texto: "Energia", cor: "#7E6BB5" } });
+      t.igual("habilidade guarda a etiqueta", habComEtq.etiqueta.texto, "Energia");
+      t.ok("habilidade sem etiqueta não ganha campo novo", !("etiqueta" in H.criarHabilidade({ nome: "Antiga" })));
+      t.igual("normalizar a habilidade preserva a etiqueta", H.normalizarHabilidade(JSON.parse(JSON.stringify(habComEtq))).etiqueta.cor, "#7E6BB5");
+      t.igual("copiar da biblioteca para a ficha preserva a etiqueta", H.copiarParaFicha(habComEtq).etiqueta.texto, "Energia");
+
+      var itemComEtq = S.criarItem("arma", { nome: "Faca ritual", etiqueta: { texto: "Sangue", cor: "#A33B3B" }, dano: "1d4" });
+      t.igual("item guarda a etiqueta", itemComEtq.etiqueta.texto, "Sangue");
+      t.ok("item antigo sem etiqueta continua sem o campo", !("etiqueta" in S.normalizarItem({ tipo: "item", nome: "Corda" })));
+      var duplicado = S.normalizarItem(itemComEtq);
+      duplicado.id = "outro";
+      t.ok("duplicar preserva a etiqueta com id independente",
+        duplicado.etiqueta.texto === "Sangue" && duplicado.id !== itemComEtq.id && duplicado.etiqueta !== itemComEtq.etiqueta);
+      t.igual("a etiqueta não muda a categoria do item", itemComEtq.categoria, "");
+
+      var fichaEtq = S.criarFicha({ nome: "Com etiquetas" });
+      fichaEtq.inventario.itens.push(itemComEtq);
+      H.inserir(fichaEtq.habilidades, habComEtq, null);
+      var pacote = V.exportar("personagem", fichaEtq);
+      var reimportada = V.importado(JSON.parse(JSON.stringify(pacote)));
+      t.ok("exportar e importar a ficha preserva a etiqueta do item",
+        reimportada.ok && reimportada.dados.inventario.itens[0].etiqueta.texto === "Sangue");
+      t.ok("  e a da habilidade", H.todasAsHabilidades(reimportada.dados.habilidades)[0].etiqueta.texto === "Energia");
+      var hbHab = V.importado(JSON.parse(JSON.stringify(V.exportar("homebrew-habilidade", Object.assign({ tipo: "habilidade" }, habComEtq)))));
+      t.ok("habilidade Homebrew exportada e importada mantém a etiqueta", hbHab.ok && hbHab.dados.etiqueta.texto === "Energia");
+      var hbItem = V.importado(JSON.parse(JSON.stringify(V.exportar("homebrew-item", itemComEtq))));
+      t.ok("item Homebrew exportado e importado mantém a etiqueta", hbItem.ok && hbItem.dados.etiqueta.cor === "#A33B3B");
     }
 
     /* =================================================================
@@ -1528,6 +1571,133 @@
 
       var semTrilha = agente({ trilha: "", nex: 10 });
       t.iguais("sem trilha em NEX 10%, a trilha é pendência", idsPendentes(semTrilha), ["d2.trilha"]);
+
+      /* ---------------------------------------------------------------- */
+      if (global.RAMAOrdemPersonalizacao) {
+        t.grupo("Ordem — versões personalizadas de habilidades oficiais");
+
+        var PZ = global.RAMAOrdemPersonalizacao;
+        var daChave = function (ordem, chave) {
+          return EP.estado(ordem, null).adquiridos.filter(function (a) { return a.chave === chave; });
+        };
+
+        var tropa = agente();
+        var casca = daChave(tropa, "cascaGrossa")[0];
+        t.igual("habilidade de trilha tem id estável: etapa e chave, não nome", casca.id, "t.cascaGrossa|cascaGrossa");
+        t.igual("automática de classe tem id próprio", EP.automaticas(tropa)[0].id, "auto|ataqueEspecial");
+        escolher(tropa, "d3.poderClasse", "reflexosDefensivos");
+        var aqReflexos = daChave(tropa, "reflexosDefensivos")[0];
+        t.igual("poder escolhido tem o id da etapa em que entrou", aqReflexos.id, "d3.poderClasse|reflexosDefensivos");
+
+        tropa.temporarios.defesa = 3;
+        var catalogoAntes = JSON.stringify(PO.poder("reflexosDefensivos"));
+        var pvAntes = RR.pontosDeVida(tropa).total;
+        var defAntes = RR.defesa(tropa).total;
+        var escolhasAntes = JSON.stringify(tropa.escolhas);
+        var pendAntes = JSON.stringify(idsPendentes(tropa));
+
+        var gravada = PZ.salvar(tropa, aqReflexos.id, "reflexosDefensivos", {
+          nome: "Reflexos de Gato", texto: "Texto da mesa: +10 em tudo.", etiqueta: { texto: "Agilidade", cor: "#3B6EA3" },
+        });
+        t.ok("personalizar um poder escolhido cria a versão", !!gravada && gravada.efeitos === "herdados");
+        t.igual("mudança só visual mantém a Defesa (e o texto não vira regra)", RR.defesa(tropa).total, defAntes);
+        t.igual("  mantém os PV", RR.pontosDeVida(tropa).total, pvAntes);
+        t.igual("  não mexe nas escolhas de progressão", JSON.stringify(tropa.escolhas), escolhasAntes);
+        t.igual("  não reabre nem consome pendência", JSON.stringify(idsPendentes(tropa)), pendAntes);
+        t.igual("  não altera o catálogo", JSON.stringify(PO.poder("reflexosDefensivos")), catalogoAntes);
+        t.igual("  e a aquisição continua uma só", daChave(tropa, "reflexosDefensivos").length, 1);
+
+        var gravadaAuto = PZ.salvar(tropa, "auto|ataqueEspecial", "ataqueEspecial", { nome: "Golpe de Quebrada", texto: "Mesma regra, outro nome." });
+        t.ok("personalizar uma habilidade automática de classe também funciona", !!gravadaAuto && tropa.personalizacoes.length === 2);
+
+        var outraFicha = agente();
+        escolher(outraFicha, "d3.poderClasse", "reflexosDefensivos");
+        t.igual("outra ficha com o mesmo poder não recebe a personalização", outraFicha.personalizacoes.length, 0);
+
+        var recarregada = RR.normalizar(JSON.parse(JSON.stringify(tropa)));
+        t.igual("recarregar mantém uma personalização por aquisição", recarregada.personalizacoes.length, 2);
+        t.igual("  com o nome personalizado", PZ.daAquisicao(recarregada, aqReflexos.id).nome, "Reflexos de Gato");
+        t.igual("  e a etiqueta", PZ.daAquisicao(recarregada, aqReflexos.id).etiqueta.texto, "Agilidade");
+        t.igual("recalcular a ficha recarregada não duplica a aquisição", daChave(recarregada, "reflexosDefensivos").length, 1);
+        t.igual("  nem as personalizações (normalizar duas vezes)", RR.normalizar(recarregada).personalizacoes.length, 2);
+
+        PZ.salvar(tropa, aqReflexos.id, "reflexosDefensivos", { nome: "Reflexos Felinos", texto: "x", etiqueta: null });
+        t.igual("editar de novo atualiza a mesma personalização", tropa.personalizacoes.length, 2);
+        t.ok("  e tirar a etiqueta apaga o campo", !("etiqueta" in PZ.daAquisicao(tropa, aqReflexos.id)));
+
+        PZ.salvar(tropa, aqReflexos.id, "reflexosDefensivos", { nome: "Reflexos Felinos", texto: "x", efeitos: "desativados" });
+        t.igual("desativar os efeitos tira só os +2 de Defesa desta aquisição", RR.defesa(tropa).total, defAntes - 2);
+        t.ok("  e o ajuste temporário de Defesa continua na conta",
+          RR.defesa(tropa).parcelas.some(function (p) { return p.valor === 3; }));
+        t.igual("  os PV (Casca Grossa) não mudam", RR.pontosDeVida(tropa).total, pvAntes);
+        t.ok("  o poder continua adquirido e válido", daChave(tropa, "reflexosDefensivos")[0].valido);
+        t.igual("  e nenhuma pendência reabre", JSON.stringify(idsPendentes(tropa)), pendAntes);
+
+        PZ.salvar(tropa, casca.id, "cascaGrossa", { nome: "Casca Grossa", efeitos: "desativados" });
+        t.igual("desativar Casca Grossa tira 1 PV por degrau de NEX (20 em NEX 99%)", pvAntes - RR.pontosDeVida(tropa).total, 20);
+
+        PZ.restaurar(tropa, aqReflexos.id);
+        t.igual("restaurar a versão oficial devolve os +2 de Defesa", RR.defesa(tropa).total, defAntes);
+        t.ok("  e apaga só aquela personalização", !PZ.daAquisicao(tropa, aqReflexos.id) && !!PZ.daAquisicao(tropa, casca.id));
+
+        var trocada = agente();
+        escolher(trocada, "d3.poderClasse", "reflexosDefensivos");
+        PZ.salvar(trocada, "d3.poderClasse|reflexosDefensivos", "reflexosDefensivos", { nome: "Minha versão", efeitos: "desativados" });
+        var defTrocada = RR.defesa(trocada).total;
+        escolher(trocada, "d3.poderClasse", "golpePesado");
+        var idsTrocada = EP.estado(trocada, null).adquiridos.map(function (a) { return a.id; });
+        t.igual("trocar a escolha deixa a personalização sem aquisição", PZ.semAquisicao(trocada, idsTrocada).length, 1);
+        t.igual("  preservada para recuperação", trocada.personalizacoes[0].nome, "Minha versão");
+        t.ok("  sem desligar nada do poder novo", !daChave(trocada, "golpePesado")[0].efeitosDesativados);
+        t.igual("  e sem conceder Defesa", RR.defesa(trocada).total, defTrocada);
+        escolher(trocada, "d3.poderClasse", "reflexosDefensivos");
+        t.igual("refazer a mesma escolha religa a personalização",
+          PZ.semAquisicao(trocada, EP.estado(trocada, null).adquiridos.map(function (a) { return a.id; })).length, 0);
+
+        t.igual("personalização sem nome é descartada", PZ.normalizar([{ aquisicao: "auto|x", nome: "" }]).length, 0);
+        t.igual("aquisição com caracteres fora do padrão é recusada", PZ.normalizar([{ aquisicao: "<script>", nome: "a" }]).length, 0);
+        t.igual("duas para a mesma aquisição: vale a mais recente",
+          PZ.normalizar([
+            { aquisicao: "auto|x", nome: "velha", atualizadoEm: "2026-01-01T00:00:00.000Z" },
+            { aquisicao: "auto|x", nome: "nova", atualizadoEm: "2026-02-01T00:00:00.000Z" },
+          ]).map(function (x) { return x.nome; }).join(","), "nova");
+        t.igual("efeitos desconhecidos viram herdados", PZ.normalizar([{ aquisicao: "auto|x", nome: "a", efeitos: "tudo" }])[0].efeitos, "herdados");
+        t.igual("ficha antiga sem o campo abre com a lista vazia", RR.normalizar({ classe: "combatente" }).personalizacoes.length, 0);
+
+        t.grupo("Ordem — excluir habilidades oficiais");
+
+        var exc = agente();
+        var pvExc = RR.pontosDeVida(exc).total;
+        var cascaExc = daChave(exc, "cascaGrossa")[0];
+        PZ.excluir(exc, cascaExc.id, "cascaGrossa", "Casca Grossa");
+        t.igual("excluir uma habilidade automática de trilha tira os PV dela (20 em NEX 99%)", pvExc - RR.pontosDeVida(exc).total, 20);
+        t.ok("  e fica registrada como excluída, sem apagar nada", !!PZ.excluida(exc, cascaExc.id));
+        t.igual("  sem reabrir pendência", JSON.stringify(idsPendentes(exc)), JSON.stringify(idsPendentes(agente())));
+        t.igual("excluir de novo não duplica o registro", (PZ.excluir(exc, cascaExc.id, "cascaGrossa", "Casca Grossa"), exc.excluidas.length), 1);
+        PZ.salvar(exc, cascaExc.id, "cascaGrossa", { nome: "Pele de Pedra" });
+        t.igual("personalizar uma excluída não traz os efeitos de volta", pvExc - RR.pontosDeVida(exc).total, 20);
+        PZ.reincluir(exc, cascaExc.id);
+        t.igual("restaurar a excluída devolve os PV", RR.pontosDeVida(exc).total, pvExc);
+        t.igual("  e a versão personalizada continua lá", PZ.daAquisicao(exc, cascaExc.id).nome, "Pele de Pedra");
+        t.igual("a exclusão sobrevive a recarregar",
+          (PZ.excluir(exc, cascaExc.id, "cascaGrossa", "Casca Grossa"), RR.normalizar(JSON.parse(JSON.stringify(exc))).excluidas.length), 1);
+
+        var enganada = agente();
+        escolher(enganada, "d3.poderClasse", "reflexosDefensivos");
+        var defEnganada = RR.defesa(enganada).total;
+        var aqEnganada = daChave(enganada, "reflexosDefensivos")[0];
+        PZ.salvar(enganada, aqEnganada.id, "reflexosDefensivos", { nome: "Escolhi errado" });
+        EP.remover(enganada, aqEnganada.registroId);
+        PZ.esquecerAquisicoes(enganada, [aqEnganada.id]);
+        t.ok("excluir um poder escolhido desfaz a escolha: a etapa volta a ficar pendente", idsPendentes(enganada).indexOf("d3.poderClasse") >= 0);
+        t.igual("  os +2 de Defesa saem", RR.defesa(enganada).total, defEnganada - 2);
+        t.igual("  e a personalização dela é apagada junto, sem virar órfã", enganada.personalizacoes.length, 0);
+
+        t.igual("exclusão com aquisição fora do padrão é descartada", PZ.normalizarExcluidas([{ aquisicao: "a b", nome: "x" }]).length, 0);
+        t.igual("exclusão repetida para a mesma aquisição vira uma só",
+          PZ.normalizarExcluidas([{ aquisicao: "auto|x" }, { aquisicao: "auto|x" }]).length, 1);
+        t.igual("ficha antiga sem exclusões abre com a lista vazia", RR.normalizar({ classe: "combatente" }).excluidas.length, 0);
+      }
 
       /* ---------------------------------------------------------------- */
       t.grupo("Ordem — resolver cada tipo de pendência");
