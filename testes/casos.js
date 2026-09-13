@@ -2138,6 +2138,98 @@
         semItem.avaliacoes[mochila.escolhas[0].id].valido === false && mochila.escolhas.length === 1);
 
       /* ---------------------------------------------------------------- */
+      t.grupo("Ordem — categoria e espaços efetivos: uma origem só");
+
+      var coroa = global.RAMAFicha.criarItem("item", { nome: "Coroa de Espinhos", ordem: { categoria: 2, grupo: "paranormal" } });
+      var municao = global.RAMAFicha.criarItem("item", { nome: "Balas", ordem: { espacos: 1, quantidade: 3, categoria: 2 } });
+      var invCoroa = invDe([coroa, municao]);
+      var fichaCoroa = RR.fichaVazia();
+      fichaCoroa.classe = "especialista";
+      fichaCoroa.nex = 15;
+      escolher(fichaCoroa, "d3.poderClasse", "mochilaDeUtilidades", { item: coroa.id });
+
+      var efCoroa = RR.itensEfetivos(fichaCoroa, invCoroa).porId[coroa.id];
+      t.igual("Coroa de Espinhos modificada: categoria efetiva I", efCoroa.categoria.efetiva, 1);
+      t.igual("  guardando a original II", efCoroa.categoria.base, 2);
+      t.ok("  com a fonte do modificador", efCoroa.categoria.reducoes.some(function (r) { return /Mochila de Utilidades/.test(r.fonte); }));
+      t.igual("  espaços efetivos 0 — zero não vira o valor-base", efCoroa.espacos.total, 0);
+      t.igual("  espaços originais 1 (padrão do livro)", efCoroa.espacos.totalBase, 1);
+      t.ok("  e o item guardado continua com os valores-base", coroa.ordem.categoria === 2 && coroa.ordem.espacos === null);
+      t.igual("o cabeçalho, os detalhes e a carga leem a mesma conta",
+        RR.itensEfetivos(fichaCoroa, invCoroa).ocupado, RR.capacidade(fichaCoroa, invCoroa).ocupado);
+      t.igual("  e os limites por categoria contam a categoria efetiva",
+        RR.usoPorCategoria(fichaCoroa, invCoroa).categorias[1].itens.map(function (x) { return x.nome; }).join(","), "Coroa de Espinhos");
+
+      var efBalas = RR.itensEfetivos(fichaCoroa, invCoroa).porId[municao.id];
+      t.igual("sem modificador, 3 unidades de 1 espaço ocupam 3", efBalas.espacos.total, 3);
+      t.igual("  e contam 3 contra a categoria II", RR.usoPorCategoria(fichaCoroa, invCoroa).categorias[2].usados, 3);
+
+      var fichaBalas = RR.fichaVazia();
+      fichaBalas.classe = "especialista";
+      fichaBalas.nex = 15;
+      escolher(fichaBalas, "d3.poderClasse", "mochilaDeUtilidades", { item: municao.id });
+      var efBalasMod = RR.itensEfetivos(fichaBalas, invCoroa).porId[municao.id];
+      t.igual("Mochila de Utilidades numa pilha de 3 tira 1 espaço de UMA unidade: ocupa 2", efBalasMod.espacos.total, 2);
+      t.igual("  o espaço por unidade continua 1", efBalasMod.espacos.unitarioEfetivo, 1);
+      t.igual("  a quantidade continua 3", efBalasMod.quantidade, 3);
+      t.igual("  e as 3 unidades contam na categoria I", RR.usoPorCategoria(fichaBalas, invCoroa).categorias[1].usados, 3);
+
+      fichaCoroa.escolhas = [];
+      var efSem = RR.itensEfetivos(fichaCoroa, invCoroa).porId[coroa.id];
+      t.ok("remover o modificador restaura os valores-base", efSem.categoria.efetiva === 2 && efSem.espacos.total === 1);
+
+      var zero = global.RAMAFicha.criarItem("item", { nome: "Bilhete", ordem: { espacos: 0, categoria: 0 } });
+      var efZero = RR.itensEfetivos(RR.fichaVazia(), invDe([zero])).porId[zero.id];
+      t.ok("espaço 0 cadastrado é 0, não o padrão de 1", efZero.espacos.total === 0 && efZero.espacos.unitario === 0 && !efZero.espacos.padrao);
+      t.igual("  e categoria 0 é 0, não “não informada”", efZero.categoria.efetiva, 0);
+
+      escolher(fichaCoroa, "d3.poderClasse", "mochilaDeUtilidades", { item: coroa.id });
+      var recarregadaCoroa = RR.normalizar(JSON.parse(JSON.stringify(fichaCoroa)));
+      var invRecarregado = { limite: 0, itens: JSON.parse(JSON.stringify(invCoroa.itens)).map(global.RAMAFicha.normalizarItem) };
+      RR.itensEfetivos(recarregadaCoroa, invRecarregado);
+      var efRecarregada = RR.itensEfetivos(recarregadaCoroa, invRecarregado).porId[coroa.id];
+      t.ok("recalcular e recarregar não acumulam a redução", efRecarregada.categoria.efetiva === 1 && efRecarregada.espacos.total === 0);
+
+      /* ---------------------------------------------------------------- */
+      t.grupo("Ordem — proteção em uso soma na Defesa");
+
+      var comProtecao = RR.fichaVazia();
+      comProtecao.atributos = { agi: 3, for: 1, int: 1, pre: 1, vig: 1 };
+      var leve = global.RAMAFicha.criarItem("armadura", { nome: "Proteção Leve", defesa: 5, ordem: { espacos: 2, quantidade: 2, categoria: 1, emUso: true } });
+      var invLeve = invDe([leve]);
+      var defLeve = RR.defesa(comProtecao, invLeve);
+      t.igual("Base 10 + Agilidade 3 + Proteção Leve 5 = Defesa 18", defLeve.total, 18);
+      t.ok("  a composição mostra a proteção", defLeve.parcelas.some(function (x) { return x.rotulo === "Proteção Leve" && x.valor === 5; }));
+      t.igual("  e as parcelas somam o total", defLeve.parcelas.reduce(function (s, x) { return s + x.valor; }, 0), defLeve.total);
+      t.igual("quantidade 2 não dobra o bônus", RR.defesa(comProtecao, invLeve).total, 18);
+
+      delete leve.ordem.emUso;
+      var guardadaDef = RR.defesa(comProtecao, invLeve);
+      t.igual("guardada, a proteção não soma: 13", guardadaDef.total, 13);
+      t.ok("  e a composição explica por quê", (guardadaDef.avisos || []).some(function (a) { return /nenhuma está em uso/.test(a); }));
+
+      leve.ordem.emUso = true;
+      leve.defesa = 7;
+      t.igual("mudar a Defesa cadastrada muda o resultado (20)", RR.defesa(comProtecao, invLeve).total, 20);
+      leve.defesa = 5;
+
+      /* Sem espaço: a carga não pode entrar na conta deste teste (5 espaços
+         a mais sobrecarregariam e tirariam 5 da Defesa). */
+      var pesada = global.RAMAFicha.criarItem("armadura", { nome: "Proteção Pesada", defesa: 10, ordem: { espacos: 0, categoria: 2, emUso: true } });
+      var invDuas = invDe([leve, pesada]);
+      var defDuas = RR.defesa(comProtecao, invDuas);
+      t.igual("duas marcadas em uso não somam as duas: vale a de maior Defesa (23)", defDuas.total, 23);
+      t.ok("  e a composição avisa", (defDuas.avisos || []).some(function (a) { return /Mais de uma/.test(a); }));
+
+      t.igual("remover a proteção tira o bônus sem resto", RR.defesa(comProtecao, invDe([])).total, 13);
+
+      var leveRecarregada = global.RAMAFicha.normalizarItem(JSON.parse(JSON.stringify(leve)));
+      t.ok("o estado de uso sobrevive a salvar e reabrir", leveRecarregada.ordem.emUso === true);
+      t.igual("  e recalcular duas vezes não acumula", (RR.defesa(comProtecao, invDe([leveRecarregada])), RR.defesa(comProtecao, invDe([leveRecarregada])).total), 18);
+      t.ok("só proteção guarda estado de uso", !("emUso" in IO.normalizarDados({ emUso: true }, "item")));
+      t.ok("proteção fora de uso não ganha campo", !("emUso" in IO.normalizarDados({}, "armadura")));
+
+      /* ---------------------------------------------------------------- */
       t.grupo("Ordem — patente ligada e limites manuais");
 
       var pat = agente({ prestigio: 20 });

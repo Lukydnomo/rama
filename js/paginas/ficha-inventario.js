@@ -137,6 +137,10 @@
       });
     }
 
+    /* Categoria e espaços efetivos de todos os itens, calculados uma vez
+       e usados por cabeçalho e detalhes de cada cartão. */
+    var efetivos = perfilDe(ctx) && perfilDe(ctx).preparar ? perfilDe(ctx).preparar(ctx) : null;
+
     return el("div.pilha--curta", { class: "pilha" }, [
       org ? org.barra(ctx, "inventario") : null,
 
@@ -146,7 +150,7 @@
 
       visiveis.length
         ? el("div.itens", {}, visiveis.map(function (i) {
-            return cartao(ctx, i, modo === "personalizada" ? visiveis : null);
+            return cartao(ctx, i, modo === "personalizada" ? visiveis : null, efetivos);
           }))
         : el("p.t-mini", { texto: "Nenhum item nesta categoria." }),
     ]);
@@ -183,16 +187,16 @@
      durante um combate e não podem custar um clique a mais. */
   /* `visiveis` só vem na ordem personalizada da ficha de Ordem: é a
      lista na tela, para Subir e Descer trocarem com o vizinho visível. */
-  function cartao(ctx, item, visiveis) {
+  function cartao(ctx, item, visiveis, efetivos) {
     var arma = item.tipo === "arma" && !ctx.emEdicao();
 
     var perfil = perfilDe(ctx);
     var caixa = UI.recolhivel({
       titulo: item.nome || "Sem nome",
-      subtitulo: resumoDoCartao(ctx, item, perfil),
+      subtitulo: resumoDoCartao(ctx, item, perfil, efetivos),
       classe: item.tipo === "arma" ? "recolhivel--arma" : "",
       conteudo: [
-        detalhes(ctx, item),
+        detalhes(ctx, item, efetivos),
         item.descricao ? el("p.item__descricao", { texto: item.descricao }) : null,
       ],
       acoes: [UI.menu(opcoesDoItem(ctx, item, visiveis), { rotulo: "Opções de " + item.nome, icone: "tresPontos" })],
@@ -202,7 +206,7 @@
          <summary> — então eles só apareciam depois de abrir a arma,
          que é exatamente o contrário do que o comentário ali embaixo
          promete. A `faixa` do recolhível resolve para os dois casos. */
-      faixa: arma ? botoesDeArma(ctx, item) : null,
+      faixa: arma ? botoesDeArma(ctx, item) : (perfil && perfil.faixaDoItem ? perfil.faixaDoItem(ctx, item) : null),
     });
 
     return caixa;
@@ -211,15 +215,15 @@
   /* A linha abaixo do nome: o que se consulta sem abrir o item, como
      rótulo e valor ("Categoria: 0  Espaços: 1"), e o tipo e a gaveta por
      último, mais apagados. Na ficha de Ordem os pares vêm do perfil. */
-  function resumoDoCartao(ctx, item, perfil) {
-    var pares = perfil ? perfil.resumoDoCartao(item) : [];
+  function resumoDoCartao(ctx, item, perfil, efetivos) {
+    var pares = perfil ? perfil.resumoDoCartao(item, efetivos) : [];
 
     if (!perfil) {
       if (item.tipo === "mochila") pares.push(["Reduz", formatarPeso(item.reducaoPeso)]);
       else pares.push(["Peso", formatarPeso(item.peso)]);
     }
     if (item.tipo === "arma" && item.dano) pares.push(["Dano", item.dano + (item.danoExtra ? " + " + item.danoExtra : "")]);
-    if (item.tipo === "armadura") pares.push(["Defesa", String(item.defesa || 0)]);
+    if (item.tipo === "armadura") pares.push(["Defesa", String(U.inteiro(item.defesa, 0))]);
 
     var tipo = item.tipo === "armadura" && perfil ? "Proteção" : F.rotuloDoTipo(item.tipo);
 
@@ -235,7 +239,7 @@
     ];
   }
 
-  function detalhes(ctx, item) {
+  function detalhes(ctx, item, efetivos) {
     var linhas = [];
     var perfil = perfilDe(ctx);
 
@@ -245,7 +249,7 @@
     else if (item.categoria) linhas.push(["Classificação", item.categoria]);
 
     if (perfil) {
-      linhas = linhas.concat(perfil.detalhes(ctx, item));
+      linhas = linhas.concat(perfil.detalhes(ctx, item, efetivos));
     } else if (item.tipo === "mochila") {
       linhas.push(["Reduz", formatarPeso(item.reducaoPeso) + " de peso"]);
     } else {
@@ -279,8 +283,10 @@
           var copia = F.normalizarItem(item);
           copia.id = U.uuid();
           copia.nome = item.nome + " (cópia)";
-          /* A cópia é um item novo: entrou agora. */
+          /* A cópia é um item novo: entrou agora, e guardada — só uma
+             proteção fica em uso. */
           copia.adicionadoEm = U.agoraISO();
+          if (copia.ordem) delete copia.ordem.emUso;
           ctx.ficha.inventario.itens.push(copia);
           ctx.alterou();
           ctx.redesenhar();
@@ -725,6 +731,7 @@
     copia.id = U.uuid();
     copia.origemHomebrewId = registro.id;
     copia.adicionadoEm = U.agoraISO();
+    if (copia.ordem) delete copia.ordem.emUso;
 
     ctx.ficha.inventario.itens.push(copia);
     ctx.alterou();

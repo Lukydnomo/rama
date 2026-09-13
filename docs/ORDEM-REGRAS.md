@@ -394,6 +394,46 @@ capacidade calculada + ajuste temporário = capacidade final
 A mesma conta alimenta o bloco superior, o painel de carga do inventário e as
 penalidades de sobrecarga.
 
+### Valores efetivos de cada item
+
+`R.itensEfetivos(ficha, inventario)` é a **única origem** do que a tela mostra de
+um item: categoria original e efetiva, espaços por unidade (original e efetivo),
+quantidade, ocupação total da pilha (original e efetiva) e os modificadores com a
+fonte de cada um. Ela sai das mesmas duas contas que a carga
+(`ocupacaoDoInventario`) e os limites por categoria (`usoPorCategoria`) usam —
+cabeçalho do cartão, detalhes, carga total e patente não têm como divergir.
+
+- O **cabeçalho** do cartão mostra os valores **efetivos**: `Categoria: I ·
+  Espaços: 0`. Com mais de uma unidade, os nomes se separam: `Espaços por unidade`,
+  `Quantidade` e `Ocupa` (a pilha inteira).
+- Os **detalhes** mostram a transformação e a fonte: `Categoria: II → I — Mochila
+  de Utilidades`, `Ocupa no total: 1 → 0 — Mochila de Utilidades: −1 espaço`.
+- Mochila de Utilidades tira 1 espaço de **uma** unidade: uma pilha de 3 itens de
+  1 espaço ocupa 2, e o espaço por unidade continua 1.
+- Zero é resultado válido e nunca é trocado pelo valor-base.
+- Nada efetivo é gravado: o item guarda só os valores-base, e remover o
+  modificador devolve a categoria e os espaços originais.
+
+### Proteção em uso
+
+Uma proteção (item do tipo proteção) só soma na Defesa quando está **em uso**. O
+cartão da proteção mostra o estado com o cartão fechado — "Em uso: soma +5 na
+Defesa" ou "Guardada: não soma na Defesa" — e o botão **Usar**/**Em uso** troca.
+
+- **Uma proteção em uso por vez**: usar uma tira as outras de uso. É a regra de
+  acumulação que o R.A.M.A. adota; o modelo de item não distingue escudo, então um
+  escudo usado junto de outra proteção entra como ajuste da mesa.
+- A **quantidade não multiplica**: duas proteções leves na ficha são +5, não +10.
+- A composição da Defesa mostra a parcela com o nome da proteção. Sem nenhuma em
+  uso, ela explica por que a proteção do inventário não entrou.
+- Se duas vierem marcadas (dois aparelhos, um arquivo importado), vale a de maior
+  Defesa e a composição avisa.
+- Editar a proteção não a tira de uso; duplicar ou trazer da biblioteca cria uma
+  cópia guardada. O estado fica em `ordem.emUso` do item.
+
+A ficha universal não muda: lá as armaduras continuam somando um número mostrado
+ao lado, sem aplicar sozinhas.
+
 ---
 
 ## Atributos
@@ -500,6 +540,7 @@ SAN      = SANinicial + (passos − 1) × (SANporNex)
 | regra | fonte | comportamento | est. |
 |---|---|---|---|
 | Defesa = 10 + Agilidade + modificadores | OPRPG p.36 | calculado com composição visível | **A** |
+| Proteção soma a Defesa cadastrada no item | OPRPG | só a proteção **em uso**, uma vez (a quantidade não multiplica) | **A** |
 | Deslocamento padrão 9m | OPRPG p.36 | calculado; −3m sobrecarregado | **A** |
 | Força soma no dano corpo a corpo e de arremesso | OPRPG p.15 | somado na rolagem de dano da ficha universal | **I** |
 

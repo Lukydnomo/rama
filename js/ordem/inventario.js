@@ -108,7 +108,7 @@
     var b = (bruto && typeof bruto === "object") ? bruto : {};
     var grupo = GRUPOS.some(function (g) { return g.valor === b.grupo; }) ? b.grupo : grupoPadrao(tipo);
 
-    return {
+    var dados = {
       categoria: categoriaValida(b.categoria),
       espacos: espacosValidos(b.espacos),
       quantidade: Math.max(1, Math.min(LIMITES.quantidade, inteiro(b.quantidade, 1))),
@@ -118,6 +118,11 @@
          a carga é ajuste da mesa, não propriedade do item. */
       capacidade: Math.max(0, Math.min(LIMITES.capacidadeItem, inteiro(b.capacidade, 0))),
     };
+    /* Proteção em uso: é ela que soma na Defesa (regras.js,
+       protecaoEmUso). Só uma proteção pode ter, e o campo só aparece
+       quando é verdade — nenhum item antigo ganha campo novo. */
+    if (tipo === "armadura" && b.emUso === true) dados.emUso = true;
+    return dados;
   }
 
   /* Os dados de Ordem de um item qualquer, com padrões. Um item que

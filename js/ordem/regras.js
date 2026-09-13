@@ -431,6 +431,13 @@
     c.soma("Base", C.REGRAS.defesaBase, "OPRPG p.36");
     c.soma("Agilidade", atributo(ficha, "agi"));
 
+    /* A proteção em uso soma a Defesa cadastrada nela — uma vez, seja
+       qual for a quantidade (duas proteções leves na mochila não são
+       duas vestidas). As que não estão em uso não somam. */
+    var protecao = protecaoEmUso(inventario);
+    if (protecao.item) c.soma(protecao.item.nome, protecao.defesa, "proteção em uso");
+    c.avisos = protecao.avisos;
+
     efeitosDoTipo(ficha, "defesa", inventario).forEach(function (m) {
       c.soma(m.fonte, m.efeito.valor, m.detalhe);
     });
@@ -550,6 +557,44 @@
     };
   }
 
+  /* =================================================================
+     PROTEÇÃO EM USO
+     -----------------------------------------------------------------
+     No R.A.M.A. uma proteção (item do tipo "armadura") só soma na
+     Defesa quando está EM USO — `ordem.emUso` no item —, e só uma
+     proteção vale por vez. A tela garante isso ao marcar uma (desmarca
+     as outras). Se mesmo assim vierem duas marcadas (dois aparelhos, um
+     arquivo importado), vale a de maior Defesa, e a composição avisa.
+
+     Não há distinção de escudo no modelo de item: um escudo usado junto
+     com outra proteção entra como ajuste da mesa.
+     ================================================================= */
+
+  function protecaoEmUso(inventario) {
+    var protecoes = itensDe(inventario).filter(function (i) { return i.tipo === "armadura"; });
+    var emUso = protecoes.filter(function (i) { return !!(i.ordem && i.ordem.emUso === true); });
+    var escolhida = null;
+    emUso.forEach(function (i) {
+      if (!escolhida || inteiro(i.defesa, 0) > inteiro(escolhida.defesa, 0)) escolhida = i;
+    });
+
+    var avisos = [];
+    if (emUso.length > 1) {
+      avisos.push("Mais de uma proteção está marcada em uso; só a de maior Defesa (" + escolhida.nome + ") conta. Deixe só uma em uso no inventário.");
+    } else if (!emUso.length && protecoes.length) {
+      avisos.push((protecoes.length === 1 ? protecoes[0].nome + " está" : "Há proteções") +
+        " no inventário, mas nenhuma está em uso. Use o botão “Usar” no cartão da proteção para somar a Defesa dela.");
+    }
+
+    return {
+      item: escolhida,
+      defesa: escolhida ? inteiro(escolhida.defesa, 0) : 0,
+      marcadas: emUso,
+      protecoes: protecoes,
+      avisos: avisos,
+    };
+  }
+
   function itensDe(inventario) {
     return (inventario && Array.isArray(inventario.itens)) ? inventario.itens.filter(Boolean) : [];
   }
@@ -609,6 +654,55 @@
     });
 
     return { total: Math.round(total * 100) / 100, itens: lista };
+  }
+
+  /* =================================================================
+     VALORES EFETIVOS DE CADA ITEM
+     -----------------------------------------------------------------
+     A ÚNICA origem do que a tela mostra de um item: categoria original
+     e efetiva, espaços por unidade (original e efetivo), quantidade,
+     ocupação total da pilha (original e efetiva) e os modificadores com
+     a fonte de cada um. Sai das mesmas duas contas que a carga e os
+     limites por categoria usam — cabeçalho, detalhes, carga e patente
+     não têm como divergir.
+
+     Nada disto é gravado: o item guarda só os valores-base, e os
+     efetivos nascem de novo a cada leitura. Zero é um resultado válido
+     e nunca é trocado pelo valor-base.
+     ================================================================= */
+
+  function itensEfetivos(ficha, inventario) {
+    var ocupacao = ocupacaoDoInventario(ficha, inventario);
+    var uso = usoPorCategoria(ficha, inventario);
+
+    var categoria = {};
+    CATEGORIAS.forEach(function (n) {
+      uso.categorias[n].itens.forEach(function (x) {
+        categoria[x.id] = { base: x.base, efetiva: x.efetiva, reducoes: x.reducoes.slice() };
+      });
+    });
+
+    var porId = {};
+    ocupacao.itens.forEach(function (o) {
+      var totalBase = Math.round(o.unitario * o.quantidade * 100) / 100;
+      porId[o.id] = {
+        id: o.id,
+        nome: o.nome,
+        quantidade: o.quantidade,
+        espacos: {
+          unitario: o.unitario,
+          unitarioEfetivo: o.unitarioEfetivo,
+          padrao: o.padrao,
+          totalBase: totalBase,
+          total: o.total,
+          modificado: o.total !== totalBase || o.unitarioEfetivo !== o.unitario,
+          notas: o.notas.slice(),
+        },
+        categoria: categoria[o.id] || { base: null, efetiva: null, reducoes: [] },
+      };
+    });
+
+    return { porId: porId, ocupado: ocupacao.total, categorias: uso.categorias, semCategoria: uso.semCategoria };
   }
 
   /* =================================================================
@@ -1227,6 +1321,8 @@
     deslocamento: deslocamento,
     capacidade: capacidade,
     ocupacaoDoInventario: ocupacaoDoInventario,
+    itensEfetivos: itensEfetivos,
+    protecaoEmUso: protecaoEmUso,
     patente: patente,
     regraDePatente: regraDePatente,
     definirRegraDePatente: definirRegraDePatente,

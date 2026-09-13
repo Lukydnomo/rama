@@ -736,6 +736,11 @@ body.pagina-ficha .app-corpo {
   border-top: var(--borda) solid var(--cor-traco-fraca);
 }
 
+/* Proteção: estado de uso à esquerda, o botão à direita, sem esticar. */
+.item-uso { align-items: center; justify-content: space-between; flex-wrap: wrap; }
+.item-uso .r-botao { flex: 0 0 auto; }
+.item-uso__estado { min-width: 0; }
+
 /* A classe vai para a caixa externa quando existe faixa — é ela que
    carrega a borda. */
 .recolhivel--arma,

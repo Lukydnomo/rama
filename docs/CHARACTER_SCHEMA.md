@@ -674,9 +674,16 @@ de ficha universal nunca o ganha, e o `peso` do item nunca é convertido.
   "quantidade": 3,     // unidades, a partir de 1
   "categoria": 1,      // 0 a 4 (0, I, II, III, IV); null = não informada
   "grupo": "geral",    // arma, municao, protecao, geral, paranormal
-  "capacidade": 0      // quanto o item AUMENTA a capacidade (Mochila Militar: 2)
+  "capacidade": 0,     // quanto o item AUMENTA a capacidade (Mochila Militar: 2)
+  "emUso": true        // só em proteção, e só quando verdade: é a que soma na Defesa
 }
 ```
+
+`emUso` só existe em item do tipo `armadura` (proteção) e só é gravado quando é
+verdade. Uma ficha de Ordem tem no máximo uma proteção em uso — a tela garante; se
+vierem duas, o cálculo usa a de maior Defesa. Categoria e espaços **efetivos**
+(depois de Mochila de Utilidades, A Favorita, Inventário Organizado…) nunca são
+gravados: `categoria` e `espacos` são sempre os valores-base.
 
 Espaços aceitam qualquer número a partir de 0 (0,1, 0,5, 2,75…), guardado com
 duas casas decimais. Quantidade e categoria são coisas

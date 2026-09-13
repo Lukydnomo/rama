@@ -14,13 +14,13 @@
    TRÊS COISAS DIFERENTES, QUE NÃO SE MISTURAM
    ---------------------------------------------------------------------
 
-     versão do aplicativo   está aqui. É o que a pessoa vê: v2.7.0.
+     versão do aplicativo   está aqui. É o que a pessoa vê: v2.7.1.
      schemaVersion          está em js/ficha.js. É o formato da FICHA,
                             e só sobe quando a ficha muda de forma.
      versaoFormato          está em js/config.js. É o formato dos
                             arquivos de importação/exportação.
 
-   Elas sobem em ritmos próprios. A v2.7.0 leva schemaVersion 6 e
+   Elas sobem em ritmos próprios. A v2.7.1 leva schemaVersion 6 e
    versaoFormato 1 — e isso é normal: a ficha ganhou versões personalizadas e
    etiquetas, mas o formato dos arquivos de importação continua
    o mesmo,
@@ -57,6 +57,23 @@
   ];
 
   var CHANGELOG = [
+    {
+      versao: "2.7.1",
+      codinome: "COURAÇA",
+      data: "12/09/2026",
+      mudancas: {
+        "Corrigido": [
+          "Na ficha de Ordem Paranormal, a Defesa cadastrada numa proteção não chegava à Defesa da ficha. Agora a proteção em uso soma uma vez (a quantidade não multiplica) e aparece na composição: Base 10 + Agilidade 3 + Proteção Leve 5 = 18.",
+          "O resumo do item recolhido mostrava a categoria e os espaços originais mesmo com modificadores como Mochila de Utilidades. Agora mostra os valores efetivos (Categoria: I · Espaços: 0), e os detalhes explicam a transformação e a fonte.",
+        ],
+        "Adicionado": [
+          "Botão “Usar” no cartão das proteções, com o estado à vista: só uma proteção fica em uso por vez. Sem nenhuma em uso, a composição da Defesa explica por que a do inventário não entrou.",
+        ],
+        "Técnico": [
+          "Cabeçalho, detalhes, carga total e limites por categoria passam a ler os mesmos valores efetivos (R.itensEfetivos). Com mais de uma unidade, o resumo separa espaços por unidade e ocupação total.",
+        ],
+      },
+    },
     {
       versao: "2.7.0",
       codinome: "TRIAGEM",

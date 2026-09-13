@@ -106,6 +106,11 @@
           el("span", { texto: "Total" }),
           el("span", { texto: String(conta.total) }),
         ]),
+        /* O que NÃO entrou e por quê — uma proteção guardada, por
+           exemplo. Não é parcela: não soma nada. */
+        (conta.avisos || []).length
+          ? el("div.pilha--curta", { class: "pilha" }, conta.avisos.map(function (a) { return el("p.t-mini.t-aviso", { texto: a }); }))
+          : null,
         extra || null,
       ],
       botoes: [{ rotulo: "Fechar", classe: "r-botao--principal" }],
@@ -1812,6 +1817,35 @@
      espaços, quantidade, categoria e grupo, e as linhas de detalhe.
      ================================================================= */
 
+  function efetivoDe(item, efetivos) {
+    var ef = efetivos && efetivos.porId ? efetivos.porId[item.id] : null;
+    if (ef) return ef;
+    /* Sem o cálculo em mãos (item fora do inventário): os valores-base,
+       sem modificador nenhum. */
+    var d = I.dadosDoItem(item);
+    var e = I.espacosDoItem(item);
+    var total = Math.round(e.unitario * d.quantidade * 100) / 100;
+    return {
+      id: item.id, nome: item.nome, quantidade: d.quantidade,
+      espacos: { unitario: e.unitario, unitarioEfetivo: e.unitario, padrao: e.padrao, totalBase: total, total: total, modificado: false, notas: [] },
+      categoria: { base: d.categoria, efetiva: d.categoria, reducoes: [] },
+    };
+  }
+
+  /* Só uma proteção em uso por vez: marcar uma desmarca as outras. O
+     valor-base do item (a Defesa cadastrada) nunca é tocado — só o
+     estado de uso. */
+  function definirProtecaoEmUso(ctx, alvo, usar) {
+    (ctx.ficha.inventario.itens || []).forEach(function (i) {
+      if (!i || i.tipo !== "armadura") return;
+      if (!i.ordem || typeof i.ordem !== "object") i.ordem = I.normalizarDados(i.ordem, i.tipo);
+      var deveUsar = usar && i === alvo;
+      if (deveUsar) i.ordem.emUso = true;
+      else delete i.ordem.emUso;
+    });
+    aoMudarOrdem(ctx);
+  }
+
   var SecaoInventarioOrdem = {
     /* No lugar do peso, o painel inteiro de carga e capacidade: a conta,
        o ajuste temporário e os itens por categoria, logo acima dos itens
@@ -1824,41 +1858,83 @@
        Ordem é um item com "aumenta a capacidade". */
     tiposPermitidos: ["item", "arma", "armadura"],
 
-    /* Pares [rótulo, valor] para a linha abaixo do nome do item. */
-    resumoDoCartao: function (item) {
-      var d = I.dadosDoItem(item);
-      var e = I.espacosDoItem(item);
-      var pares = [
-        ["Categoria", d.categoria === null || d.categoria === undefined ? "—" : I.rotuloCategoria(d.categoria)],
-        ["Espaços", I.rotuloEspacos(e.unitario)],
-      ];
-      if (d.quantidade > 1) pares.push(["Quantidade", String(d.quantidade)]);
+    /* Os valores efetivos de todos os itens, calculados UMA vez por
+       desenho do inventário (R.itensEfetivos) e entregues ao cabeçalho e
+       aos detalhes de cada cartão. */
+    preparar: function (ctx) {
+      return R.itensEfetivos(ordemDe(ctx), ctx.ficha.inventario);
+    },
+
+    /* Pares [rótulo, valor] para a linha abaixo do nome do item — com os
+       valores EFETIVOS, depois das habilidades. A transformação (II → I,
+       e de onde vem) fica nos detalhes. */
+    resumoDoCartao: function (item, efetivos) {
+      var ef = efetivoDe(item, efetivos);
+      var pares = [["Categoria", ef.categoria.efetiva === null ? "—" : I.rotuloCategoria(ef.categoria.efetiva)]];
+      if (ef.quantidade > 1) {
+        /* Com mais de uma unidade, por unidade e total têm nomes
+           diferentes: "Espaços" sozinho seria ambíguo. */
+        pares.push(["Espaços por unidade", I.rotuloEspacos(ef.espacos.unitarioEfetivo)]);
+        pares.push(["Quantidade", String(ef.quantidade)]);
+        pares.push(["Ocupa", I.rotuloEspacos(ef.espacos.total)]);
+      } else {
+        pares.push(["Espaços", I.rotuloEspacos(ef.espacos.total)]);
+      }
       return pares;
     },
 
-    detalhes: function (ctx, item) {
-      var o = ordemDe(ctx);
+    detalhes: function (ctx, item, efetivos) {
       var d = I.dadosDoItem(item);
-      var e = I.espacosDoItem(item);
-      var ocupacao = R.ocupacaoDoInventario(o, ctx.ficha.inventario).itens.filter(function (x) { return x.id === item.id; })[0];
-      var uso = R.usoPorCategoria(o, ctx.ficha.inventario);
-      var naCategoria = null;
-      [0, 1, 2, 3, 4].forEach(function (n) {
-        uso.categorias[n].itens.forEach(function (x) { if (x.id === item.id) naCategoria = x; });
-      });
+      var ef = efetivoDe(item, efetivos || SecaoInventarioOrdem.preparar(ctx));
+      var e = ef.espacos;
+      var cat = ef.categoria;
+      var fontes = function (lista) {
+        return lista.filter(Boolean).filter(function (f, i, todas) { return todas.indexOf(f) === i; }).join(", ");
+      };
+      var notasEspaco = e.notas.join("; ");
 
       var linhas = [
-        ["Espaços por unidade", I.rotuloEspacos(e.unitario) + (e.padrao ? " (padrão do livro)" : "")],
-        ["Quantidade", String(d.quantidade)],
-        ["Ocupa no total", ocupacao ? I.rotuloEspacos(ocupacao.total) + (ocupacao.notas.length ? " — " + ocupacao.notas.join("; ") : "") : "—"],
-        ["Categoria", I.rotuloCategoria(d.categoria) +
-          (naCategoria && naCategoria.efetiva !== naCategoria.base
-            ? " → " + I.rotuloCategoria(naCategoria.efetiva) + " (" + naCategoria.reducoes.map(function (r) { return r.fonte; }).join(", ") + ")"
+        ["Espaços por unidade", I.rotuloEspacos(e.unitario) + (e.padrao ? " (padrão do livro)" : "") +
+          (e.unitarioEfetivo !== e.unitario ? " → " + I.rotuloEspacos(e.unitarioEfetivo) : "")],
+        ["Quantidade", String(ef.quantidade)],
+        ["Ocupa no total", (e.total !== e.totalBase
+          ? I.rotuloEspacos(e.totalBase) + " → " + I.rotuloEspacos(e.total)
+          : I.rotuloEspacos(e.total)) + (notasEspaco ? " — " + notasEspaco : "")],
+        ["Categoria", cat.base === null ? "Não informada" : I.rotuloCategoria(cat.base) +
+          (cat.efetiva !== cat.base
+            ? " → " + I.rotuloCategoria(cat.efetiva) + " — " + fontes(cat.reducoes.map(function (r) { return r.fonte; }))
             : "")],
         ["Grupo", (I.GRUPOS.filter(function (g) { return g.valor === d.grupo; })[0] || {}).rotulo || d.grupo],
       ];
       if (d.capacidade) linhas.push(["Aumenta a capacidade", "+" + d.capacidade + " espaços"]);
+      if (item.tipo === "armadura") {
+        var uso = R.protecaoEmUso(ctx.ficha.inventario);
+        linhas.push(["Uso", uso.item === item
+          ? "Em uso — soma " + U.comSinal(uso.defesa) + " na Defesa"
+          : (d.emUso ? "Marcada em uso, mas outra proteção de Defesa maior vale" : "Guardada — não soma na Defesa")]);
+      }
       return linhas;
+    },
+
+    /* A faixa que fica à vista com o cartão fechado: numa proteção, o
+       estado de uso e o botão que troca. Usar uma tira as outras de uso. */
+    faixaDoItem: function (ctx, item) {
+      if (item.tipo !== "armadura") return null;
+      var uso = R.protecaoEmUso(ctx.ficha.inventario);
+      var emUso = uso.item === item;
+      return el("div.item__acoes.item__acoes--fora.item-uso", {}, [
+        el("span.t-mini.item-uso__estado", {
+          texto: emUso ? "Em uso: soma " + U.comSinal(uso.defesa) + " na Defesa." : "Guardada: não soma na Defesa.",
+        }),
+        el("button.r-botao.r-botao--mini", {
+          type: "button",
+          class: emUso ? "r-botao--principal" : "",
+          "aria-pressed": String(emUso),
+          "aria-label": (emUso ? "Tirar de uso " : "Usar ") + item.nome,
+          texto: emUso ? "Em uso" : "Usar",
+          onclick: function () { definirProtecaoEmUso(ctx, item, !emUso); },
+        }),
+      ]);
     },
 
     campos: function (ctx, atual) {
@@ -1912,6 +1988,8 @@
             categoria: categoria.entrada.value === "" ? null : parseInt(categoria.entrada.value, 10),
             grupo: grupo.entrada.value,
             capacidade: rC.valor,
+            /* Editar a proteção não a tira de uso. */
+            emUso: d.emUso === true,
           };
         },
       };
