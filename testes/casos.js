@@ -1764,6 +1764,100 @@
       }
 
       /* ---------------------------------------------------------------- */
+      t.grupo("Ordem — Bloqueio, Esquiva e bônus extras");
+
+      var somaParcelas = function (conta) { return conta.parcelas.reduce(function (s, x) { return s + x.valor; }, 0); };
+      var vig = RR.fichaVazia();
+      vig.atributos = { agi: 3, for: 1, int: 1, pre: 1, vig: 1 };
+      vig.pericias = { fortitude: "treinado", reflexos: "veterano" };
+      var invVig = { limite: 0, itens: [global.RAMAFicha.criarItem("armadura", { nome: "Proteção Leve", defesa: 5, ordem: { espacos: 0, categoria: 1, emUso: true } })] };
+
+      t.igual("Defesa calculada do exemplo: 18", RR.defesa(vig, invVig).total, 18);
+      t.igual("Bloqueio sem extras = Fortitude (+5)", RR.bloqueio(vig, invVig).total, 5);
+      t.igual("Esquiva sem extras = Defesa 18 + Reflexos 10 = 28", RR.esquiva(vig, invVig).total, 28);
+
+      RR.definirBonusExtra(vig, "defesa", 2);
+      RR.definirBonusExtra(vig, "bloqueio", 3);
+      RR.definirBonusExtra(vig, "esquiva", 1);
+      var cVig = RR.calcular(vig, invVig);
+      t.igual("com os extras do exemplo: Defesa 20", cVig.defesa.total, 20);
+      t.igual("  Bloqueio 8", cVig.bloqueio.total, 8);
+      t.igual("  Esquiva 31", cVig.esquiva.total, 31);
+      t.ok("a composição das três fecha com o total",
+        somaParcelas(cVig.defesa) === 20 && somaParcelas(cVig.bloqueio) === 8 && somaParcelas(cVig.esquiva) === 31);
+      t.ok("  e mostra cada bônus extra como parcela própria",
+        cVig.defesa.parcelas.some(function (x) { return x.rotulo === "Bônus extra de Defesa" && x.valor === 2; }) &&
+        cVig.bloqueio.parcelas.some(function (x) { return x.rotulo === "Bônus extra de Bloqueio" && x.valor === 3; }) &&
+        cVig.esquiva.parcelas.some(function (x) { return x.rotulo === "Bônus extra de Esquiva" && x.valor === 1; }));
+      t.ok("a Esquiva usa a Defesa final como UMA parcela, sem repetir as da Defesa",
+        cVig.esquiva.parcelas.filter(function (x) { return x.rotulo === "Defesa final" && x.valor === 20; }).length === 1 &&
+        !cVig.esquiva.parcelas.some(function (x) { return x.rotulo === "Base" || x.rotulo === "Bônus extra de Defesa"; }));
+
+      RR.definirBonusExtra(vig, "defesa", -3);
+      t.igual("extra negativo de Defesa: 15 na Defesa", RR.defesa(vig, invVig).total, 15);
+      t.igual("  e a Esquiva cai os mesmos 5 pontos, uma vez só (26)", RR.esquiva(vig, invVig).total, 26);
+      RR.definirBonusExtra(vig, "defesa", 0);
+      t.ok("extra zero não vira parcela", !RR.defesa(vig, invVig).parcelas.some(function (x) { return /Bônus extra/.test(x.rotulo); }));
+      t.igual("extra acima do limite é aparado em +99", (RR.definirBonusExtra(vig, "bloqueio", 500), vig.bonusExtra.bloqueio), 99);
+      RR.definirBonusExtra(vig, "bloqueio", 3);
+      t.ok("estatística fora das três é recusada", !RR.definirBonusExtra(vig, "deslocamento", 5));
+
+      RR.definirAjusteDePericia(vig, "fortitude", { extra: 2 });
+      t.igual("extra de Fortitude entra no bônus da perícia (+7)", RR.bonusDePericia(vig, "fortitude", invVig).total, 7);
+      t.igual("  e no Bloqueio uma vez só (7 + 3 = 10)", RR.bloqueio(vig, invVig).total, 10);
+      t.igual("  sem mudar o grau", RR.grauDaPericia(vig, "fortitude"), "treinado");
+      RR.definirAjusteDePericia(vig, "reflexos", { extra: 1 });
+      t.igual("extra de Reflexos reflete na Esquiva (18 + 11 + 1 = 30)", RR.esquiva(vig, invVig).total, 30);
+      t.ok("  a composição mostra de onde veio (Reflexos · Bônus extra)",
+        RR.esquiva(vig, invVig).parcelas.some(function (x) { return x.rotulo === "Reflexos · Bônus extra" && x.valor === 1; }));
+
+      var recarregadoVig = RR.normalizar(JSON.parse(JSON.stringify(vig)));
+      t.ok("recalcular e recarregar não duplicam nada",
+        RR.calcular(recarregadoVig, invVig).esquiva.total === 30 && RR.calcular(recarregadoVig, invVig).esquiva.total === 30 &&
+        RR.bloqueio(recarregadoVig, invVig).total === 10);
+      t.igual("  os extras continuam guardados à parte", JSON.stringify(recarregadoVig.periciasAjustes), JSON.stringify({ fortitude: { extra: 2 }, reflexos: { extra: 1 } }));
+      t.igual("  e o grau-base da ficha não mudou", JSON.stringify(recarregadoVig.pericias), JSON.stringify({ fortitude: "treinado", reflexos: "veterano" }));
+
+      var reflexosDef = agente();
+      escolher(reflexosDef, "d3.poderClasse", "reflexosDefensivos");
+      var semPoderEsq = RR.esquiva(agente(), null).total;
+      t.igual("Reflexos Defensivos: +2 na Defesa entram na Esquiva; o +2 em testes de resistência NÃO (condicional)",
+        RR.esquiva(reflexosDef, null).total, semPoderEsq + 2);
+
+      var lutador = RR.fichaVazia();
+      lutador.atributos = { agi: 3, for: 1, int: 1, pre: 1, vig: 1 };
+      lutador.pericias = { luta: "treinado" };
+      t.igual("Luta usa Força por padrão (1d20)", RR.dadoDePericia(lutador, "luta"), "1d20");
+      RR.definirAjusteDePericia(lutador, "luta", { atributo: "agi" });
+      t.igual("trocar para Agilidade muda os dados da rolagem (3d20)", RR.dadoDePericia(lutador, "luta"), "3d20");
+      t.igual("  o atributo padrão continua Força", RR.atributoPadraoDaPericia(lutador, "luta"), "for");
+      t.ok("  e o grau e o bônus não mudam", RR.grauDaPericia(lutador, "luta") === "treinado" && RR.bonusDePericia(lutador, "luta").total === 5);
+      var rolagemAgi = comFila([4, 17, 9], function () {
+        return D.dependente({ expressao: RR.dadoDePericia(lutador, "luta"), bonus: RR.bonusDePericia(lutador, "luta").total });
+      });
+      t.igual("  a rolagem de fato usa 3 dados de Agilidade (maior 17 + 5)", rolagemAgi.total, 22);
+      RR.definirAjusteDePericia(lutador, "luta", { atributo: "" });
+      t.ok("restaurar o atributo padrão volta a Força e limpa a personalização",
+        RR.dadoDePericia(lutador, "luta") === "1d20" && !lutador.periciasAjustes.luta);
+
+      var sujo = RR.normalizar({ periciasAjustes: {
+        inventada: { extra: 3 }, luta: { atributo: "sorte", extra: "abc" }, crime: { extra: 0 }, furtividade: { atributo: "agi", extra: 150 },
+      }, bonusExtra: { defesa: "x", bloqueio: -500 } });
+      t.igual("normalização descarta perícia e atributo inexistentes e extra zero", JSON.stringify(sujo.periciasAjustes), JSON.stringify({ furtividade: { atributo: "agi", extra: 99 } }));
+      t.igual("  e apara os extras das estatísticas", JSON.stringify(sujo.bonusExtra), JSON.stringify({ defesa: 0, bloqueio: -99, esquiva: 0 }));
+      var antiga = RR.normalizar({ classe: "combatente" });
+      t.ok("ficha antiga abre com extras zerados e atributos padrão",
+        JSON.stringify(antiga.bonusExtra) === JSON.stringify({ defesa: 0, bloqueio: 0, esquiva: 0 }) && JSON.stringify(antiga.periciasAjustes) === "{}");
+
+      var fichaExport = global.RAMAFicha.criarFicha({ nome: "Exportável", tipoFicha: "ordem" });
+      RR.definirBonusExtra(fichaExport.ordem, "esquiva", 4);
+      RR.definirAjusteDePericia(fichaExport.ordem, "reflexos", { atributo: "int", extra: -2 });
+      var ida = V.importado(JSON.parse(JSON.stringify(V.exportar("personagem", fichaExport))));
+      t.ok("exportar e importar preservam os extras e o atributo trocado",
+        ida.ok && ida.dados.ordem.bonusExtra.esquiva === 4 &&
+        ida.dados.ordem.periciasAjustes.reflexos.atributo === "int" && ida.dados.ordem.periciasAjustes.reflexos.extra === -2);
+
+      /* ---------------------------------------------------------------- */
       if (global.RAMAPainelMesa) {
         t.grupo("Painel da mesa — cartões calculados pela ficha");
 
@@ -1782,9 +1876,12 @@
         t.igual("Sanidade do cartão = Sanidade da ficha", cartaoMari.recursos[2].atual + "/" + cartaoMari.recursos[2].maximo, calcMari.atual.san + "/" + calcMari.san.total);
         t.igual("PV zerado continua 0, não o máximo", cartaoMari.recursos[0].atual, 0);
         t.igual("Defesa do cartão = Defesa da ficha, com a proteção em uso", cartaoMari.estatisticas[0].valor, String(calcMari.defesa.total));
-        t.igual("PE por turno = limite da ficha", cartaoMari.estatisticas[1].valor, String(calcMari.limitePe.total));
-        t.igual("deslocamento = o da ficha", cartaoMari.estatisticas[2].valor, calcMari.deslocamento.total + " m");
-        t.igual("sem Bloqueio nem Esquiva inventados", cartaoMari.estatisticas.map(function (s) { return s.chave; }).join(","), "defesa,limitePe,deslocamento");
+        t.igual("PE por turno = limite da ficha", cartaoMari.estatisticas[3].valor, String(calcMari.limitePe.total));
+        t.igual("deslocamento = o da ficha", cartaoMari.estatisticas[4].valor, calcMari.deslocamento.total + " m");
+        t.igual("estatísticas do cartão: Defesa, Bloqueio, Esquiva, PE por turno e deslocamento",
+          cartaoMari.estatisticas.map(function (s) { return s.chave; }).join(","), "defesa,bloqueio,esquiva,limitePe,deslocamento");
+        t.igual("  Bloqueio do cartão = Bloqueio da ficha", cartaoMari.estatisticas[1].valor, String(calcMari.bloqueio.total));
+        t.igual("  Esquiva do cartão = Esquiva da ficha", cartaoMari.estatisticas[2].valor, String(calcMari.esquiva.total));
         t.igual("atributos efetivos, na ordem do catálogo", cartaoMari.atributos.map(function (a) { return a.sigla + a.valor; }).join(" "),
           CC.ATRIBUTOS.map(function (a) { return a.sigla + RR.atributo(mari, a.chave); }).join(" "));
         t.igual("classe e progressão na identificação", cartaoMari.linhas[0] + " | " + cartaoMari.progressao, "Ocultista | NEX 60%");

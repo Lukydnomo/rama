@@ -457,6 +457,48 @@ Atributo-base conferido nos títulos de cada perícia (p.41-49), que é a fonte
 autoritativa. A Tabela 2.1 (p.40) foi descartada como referência primária
 porque a extração de texto do PDF embaralha as colunas dela.
 
+### Bloqueio, Esquiva e bônus extras
+
+- **Bloqueio** = bônus de Fortitude + bônus extra de Bloqueio.
+- **Esquiva** = Defesa final + bônus de Reflexos + bônus extra de Esquiva.
+- **Defesa** = cálculo de sempre + bônus extra de Defesa.
+
+"Bônus da perícia" é o número que soma na rolagem — grau, poderes, penalidade de
+carga, ajustes da mesa e o bônus extra da perícia —, **sem** os dados do atributo.
+É o mesmo `bonusDePericia` da rolagem: o extra de Fortitude chega ao Bloqueio porque
+já está em Fortitude, e não é somado de novo. A Esquiva usa a Defesa como ela sai
+do cálculo, em **uma** parcela ("Defesa final"); as parcelas da Defesa não se repetem.
+
+O bônus em testes de resistência (Reflexos Defensivos, Mente Sã…) é condicional —
+vale quando a perícia é usada para resistir — e **não** entra no Bloqueio nem na
+Esquiva, do mesmo jeito que não entra no bônus geral dessas perícias.
+
+Os três valores abrem a composição ao clicar. Dentro dela há o campo **Bônus extra**
+(−99 a +99, positivo, negativo ou zero), com **Aplicar** e **Zerar**. Ele funciona
+no modo normal para quem pode editar a ficha, aparece como parcela própria na conta,
+fica guardado em `ordem.bonusExtra` até alguém mudar e não mexe em atributo,
+equipamento nem valor-base. Os cartões do painel da campanha mostram os mesmos três
+números.
+
+### Ajustes de cada perícia
+
+No modo edição, cada perícia tem:
+
+- **Atributo**: qualquer um dos cinco. A escolha muda os dados da rolagem (é o
+  atributo que `dadoDePericia` usa) e fica em `ordem.periciasAjustes`; o catálogo e
+  as outras fichas não mudam. **Restaurar atributo padrão** volta ao do catálogo — ou
+  ao que um poder define, como A Força do Saber. Trocar o atributo não muda o grau nem
+  soma o valor do atributo ao bônus.
+- **Extra**: um bônus fixo da perícia (−99 a +99). Entra no total, na rolagem e na
+  composição ("Bônus extra"), e reflete em Bloqueio (Fortitude) e Esquiva (Reflexos).
+  Não muda o grau.
+
+A tabela mostra, alinhados: perícia, atributo, grau, treino (o bônus do grau), extra,
+total e rolagem, com as marcas de carga e kit. Quando o total tem outros modificadores
+(poderes, carga, ajustes), ele ganha um asterisco e a composição explica. O grau tem
+cor própria — treinado verde, veterano azul, expert laranja — sempre com o nome
+escrito, e a cor depende só do grau, nunca do total.
+
 | perícia | atrib. | só treinada | carga | kit |
 |---|---|---|---|---|
 | Acrobacia | AGI | — | sim | — |
@@ -541,6 +583,8 @@ SAN      = SANinicial + (passos − 1) × (SANporNex)
 |---|---|---|---|
 | Defesa = 10 + Agilidade + modificadores | OPRPG p.36 | calculado com composição visível | **A** |
 | Proteção soma a Defesa cadastrada no item | OPRPG | só a proteção **em uso**, uma vez (a quantidade não multiplica) | **A** |
+| Bloqueio = bônus de Fortitude | — | calculado com composição; + bônus extra de Bloqueio | **A** |
+| Esquiva = Defesa + bônus de Reflexos | — | calculado com composição; usa a Defesa final; + bônus extra de Esquiva | **A** |
 | Deslocamento padrão 9m | OPRPG p.36 | calculado; −3m sobrecarregado | **A** |
 | Força soma no dano corpo a corpo e de arremesso | OPRPG p.15 | somado na rolagem de dano da ficha universal | **I** |
 

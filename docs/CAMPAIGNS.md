@@ -180,10 +180,10 @@ separado dos recursos.
 
 | ficha | recursos | atributos | estatísticas |
 |---|---|---|---|
-| Ordem | PV, PE e Sanidade (sem Sanidade com "Jogando sem Sanidade"), atual e máximo calculados por `RAMAOrdemRegras.calcular` | efetivos | Defesa, PE por turno, deslocamento |
+| Ordem | PV, PE e Sanidade (sem Sanidade com "Jogando sem Sanidade"), atual e máximo calculados por `RAMAOrdemRegras.calcular` | efetivos | Defesa, Bloqueio, Esquiva, PE por turno, deslocamento — com os bônus extras |
 | Universal | os status configurados na ficha, com os nomes dela | os configurados | nenhuma — nada de Ordem é imposto |
 
-Bloqueio e Esquiva não existem no R.A.M.A. e não aparecem. A barra limita só a
+Bloqueio e Esquiva vêm do mesmo cálculo da ficha. A barra limita só a
 LARGURA ao espaço dela: o número mostrado é o de verdade (zerado, negativo ou acima
 do máximo). A cor de cada recurso vem acompanhada do nome escrito.
 

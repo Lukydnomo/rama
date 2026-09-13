@@ -368,6 +368,8 @@
       limites: "Limites por categoria", opcoes: "Opções da escolha", etapa: "Etapa",
       personalizacoes: "Habilidades personalizadas", excluidas: "Habilidades oficiais excluídas",
       organizacao: "Ordem das listas", modo: "Ordem de exibição", regras: "Ordem das habilidades das regras",
+      bonusExtra: "Bônus extra", bloqueio: "Bloqueio", esquiva: "Esquiva",
+      periciasAjustes: "Ajustes das perícias", extra: "Bônus extra", atributo: "Atributo",
       adicionadoEm: "Adicionado em", aquisicao: "Aquisição", efeitos: "Efeitos automáticos",
       etiqueta: "Etiqueta", texto: "Texto", cor: "Cor", negrito: "Negrito",
     },

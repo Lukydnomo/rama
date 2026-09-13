@@ -39,6 +39,13 @@
   --cor-erro:         #C6564B;
   --cor-paranormal:   #7E6BB5;
 
+  /* ---------- graus de treinamento ----------
+     Verde, azul e laranja, na ordem de subida. A cor acompanha o NOME do
+     grau, nunca o substitui, e depende só do grau — não do total. */
+  --cor-grau-treinado: #6FB07A;
+  --cor-grau-veterano: #6A9FD8;
+  --cor-grau-expert:   #D98B3F;
+
   /* ---------- tipografia ---------- */
   --fonte-corpo: "PixelMplus12", "PixelMplus12 Regular", ui-monospace,
                  "Cascadia Mono", "Segoe UI Mono", "DejaVu Sans Mono", monospace;

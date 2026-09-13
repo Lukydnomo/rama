@@ -7,14 +7,15 @@
    de edição e estatísticas secundárias.
 
    NENHUMA FÓRMULA MORA AQUI. Numa ficha de Ordem, máximos, atuais,
-   atributos efetivos, Defesa, limite de PE e deslocamento saem de
+   atributos efetivos, Defesa, Bloqueio, Esquiva, limite de PE e
+   deslocamento saem de
    RAMAOrdemRegras.calcular — o mesmo cálculo que a ficha completa faz,
    com os mesmos dados (o servidor manda o bloco `ordem` e os itens que
    entram na conta). Numa universal, os status e atributos são os que a
    própria ficha configurou.
 
    O que a listagem não trouxe não vira zero: estatística ausente não
-   aparece. Bloqueio e Esquiva não existem no R.A.M.A. e não aparecem.
+   aparece.
    ===================================================================== */
 
 (function (global) {
@@ -131,6 +132,8 @@
 
     base.estatisticas = [
       { chave: "defesa", rotulo: "Defesa", valor: String(c.defesa.total) },
+      { chave: "bloqueio", rotulo: "Bloqueio", valor: String(c.bloqueio.total) },
+      { chave: "esquiva", rotulo: "Esquiva", valor: String(c.esquiva.total) },
       { chave: "limitePe", rotulo: "PE por turno", valor: String(c.limitePe.total) },
       { chave: "deslocamento", rotulo: "Deslocamento", valor: c.deslocamento.total + " m" },
     ];

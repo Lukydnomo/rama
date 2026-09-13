@@ -902,6 +902,26 @@ body.pagina-ficha .app-corpo {
   padding-left: var(--e2);
 }
 
+/* O bônus extra de Defesa, Bloqueio ou Esquiva, dentro da composição. */
+.composicao-extra {
+  display: flex;
+  flex-direction: column;
+  gap: var(--e1);
+  padding-top: var(--e3);
+  border-top: var(--borda) dashed var(--cor-traco-fraca);
+}
+.composicao-extra > label {
+  font-family: var(--fonte-mini);
+  font-size: var(--texto-mini);
+  letter-spacing: var(--espaco-letra-titulo);
+  text-transform: uppercase;
+  color: var(--cor-texto-3);
+}
+.composicao-extra__linha { display: flex; flex-wrap: wrap; align-items: stretch; gap: var(--e2); }
+.composicao-extra__entrada { width: 6rem; text-align: center; font-weight: 700; font-variant-numeric: tabular-nums; }
+.composicao-extra__entrada[aria-invalid="true"] { border-color: var(--cor-erro); }
+.composicao-extra .t-erro:empty { display: none; }
+
 .composicao__total {
   display: flex;
   justify-content: space-between;
@@ -992,45 +1012,137 @@ body.pagina-ficha .app-corpo {
 
 /* ---------- perícias ---------- */
 
-.ordem-pericias { display: flex; flex-direction: column; gap: var(--e1); }
+/* ---------- perícias ----------
+   Uma tabela de colunas fixas: todas as linhas usam o MESMO molde, então
+   atributo, grau, treino, extra, total e rolagem ficam alinhados de cima
+   a baixo. No celular cada linha vira um bloco compacto, com rótulo em
+   cada campo. */
+
+.ordem-pericias {
+  display: flex;
+  flex-direction: column;
+  --molde-pericia: minmax(8rem, 1.6fr) 3.5rem minmax(6.5rem, 1fr) 3.5rem 3.5rem 4.5rem 2.75rem minmax(4.5rem, 0.8fr);
+}
+.ordem-pericias--edicao {
+  --molde-pericia: minmax(8rem, 1.4fr) 7rem minmax(8rem, 1fr) 3.5rem 4.25rem 4.5rem 2.75rem minmax(4.5rem, 0.8fr);
+}
 
 .ordem-pericia {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 2.5rem minmax(0, 8rem) 3.5rem auto minmax(0, 5rem);
+  grid-template-columns: var(--molde-pericia);
   gap: var(--e2);
   align-items: center;
   padding: var(--e1) var(--e2);
   border-bottom: var(--borda) solid var(--cor-traco-fraca);
 }
-.ordem-pericia--destreinada { color: var(--cor-texto-3); }
+
+.ordem-pericia--cabecalho {
+  font-family: var(--fonte-mini);
+  font-size: var(--texto-mini);
+  letter-spacing: var(--espaco-letra-titulo);
+  text-transform: uppercase;
+  color: var(--cor-texto-3);
+  border-bottom-color: var(--cor-traco-media);
+}
+
+.ordem-pericia--destreinada .ordem-pericia__nome { color: var(--cor-texto-3); }
 
 .ordem-pericia__nome { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ordem-pericia__celula { display: flex; align-items: center; gap: var(--e1); min-width: 0; }
+
 .ordem-pericia__atrib,
 .ordem-pericia__grau,
-.ordem-pericia__marcas,
-.ordem-pericia__travada {
+.ordem-pericia__travada,
+.ordem-pericia__extra {
   font-family: var(--fonte-mini);
   font-size: var(--texto-mini);
   color: var(--cor-texto-3);
 }
+.ordem-pericia__atrib--trocado { color: var(--cor-texto); text-decoration: underline dotted; text-underline-offset: 3px; }
+.ordem-pericia__grau.grau--treinado,
+.ordem-pericia__grau.grau--veterano,
+.ordem-pericia__grau.grau--expert { font-weight: 700; }
+.ordem-pericia__grau.grau--treinado { color: var(--cor-grau-treinado); }
+.ordem-pericia__grau.grau--veterano { color: var(--cor-grau-veterano); }
+.ordem-pericia__grau.grau--expert { color: var(--cor-grau-expert); }
+
+.ordem-pericia__treino { font-weight: 700; font-variant-numeric: tabular-nums; color: var(--cor-texto-3); }
+.ordem-pericia__treino.grau--treinado { color: var(--cor-grau-treinado); }
+.ordem-pericia__treino.grau--veterano { color: var(--cor-grau-veterano); }
+.ordem-pericia__treino.grau--expert { color: var(--cor-grau-expert); }
+
+.ordem-pericia__extra { color: var(--cor-texto); font-variant-numeric: tabular-nums; }
+.ordem-pericia__extra--zero { color: var(--cor-texto-3); }
+
 .ordem-pericia__bonus {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+  width: 100%;
   min-height: var(--alvo-toque);
   font-weight: 700;
+  font-variant-numeric: tabular-nums;
   background: transparent;
   border: var(--borda) solid var(--cor-traco-fraca);
   color: var(--cor-texto);
   cursor: pointer;
 }
-.ordem-pericia__bonus:hover { border-color: var(--cor-paranormal); }
+.ordem-pericia__bonus:hover,
+.ordem-pericia__bonus:focus-visible { border-color: var(--cor-paranormal); }
+.ordem-pericia__outros { color: var(--cor-paranormal); }
+
 .ordem-pericia__rolar { min-width: var(--alvo-toque); min-height: var(--alvo-toque); }
 
-@media (max-width: 720px) {
-  .ordem-pericia {
-    grid-template-columns: minmax(0, 1fr) 2.5rem 3.5rem auto;
+.ordem-pericia__marcas { flex-wrap: wrap; }
+.ordem-pericia__marcas .r-etiqueta { font-size: var(--texto-mini); }
+
+.ordem-pericia__seletor { width: 100%; min-width: 0; min-height: var(--alvo-toque); }
+.ordem-pericia__atrib-edicao,
+.ordem-pericia__grau-edicao { display: flex; align-items: center; gap: var(--e1); width: 100%; min-width: 0; }
+.ordem-pericia__grau-edicao { flex-direction: column; align-items: stretch; }
+.ordem-pericia__restaurar { flex: 0 0 auto; min-width: 2rem; min-height: var(--alvo-toque); }
+.ordem-pericia__extra-entrada {
+  width: 100%;
+  min-height: var(--alvo-toque);
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+.ordem-pericia__extra-entrada[aria-invalid="true"] { border-color: var(--cor-erro); }
+
+@media (max-width: 760px) {
+  .ordem-pericia--cabecalho { display: none; }
+
+  /* Um bloco por perícia: nome e rolagem em cima; atributo, grau,
+     treino, extra e total com o rótulo escrito embaixo. */
+  .ordem-pericia,
+  .ordem-pericias--edicao .ordem-pericia {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    grid-template-areas:
+      "nome nome nome nome marcas rolar"
+      "atrib atrib grau grau grau grau"
+      "treino treino extra extra total total";
+    row-gap: var(--e1);
+    padding: var(--e2);
   }
-  /* O seletor de grau ocupa a linha de baixo; as marcas somem. */
-  .ordem-pericia > .r-campo { grid-column: 1 / -1; }
-  .ordem-pericia__marcas { display: none; }
+  .ordem-pericia__nome { grid-area: nome; white-space: normal; }
+  .ordem-pericia__c-atrib { grid-area: atrib; }
+  .ordem-pericia__c-grau { grid-area: grau; }
+  .ordem-pericia__c-treino { grid-area: treino; }
+  .ordem-pericia__c-extra { grid-area: extra; }
+  .ordem-pericia__c-total { grid-area: total; }
+  .ordem-pericia__c-rolar { grid-area: rolar; justify-content: flex-end; }
+  .ordem-pericia__marcas { grid-area: marcas; justify-content: flex-end; }
+
+  .ordem-pericia__celula[data-rotulo]::before {
+    content: attr(data-rotulo);
+    flex: 0 0 auto;
+    font-family: var(--fonte-mini);
+    font-size: var(--texto-mini);
+    letter-spacing: var(--espaco-letra-titulo);
+    text-transform: uppercase;
+    color: var(--cor-texto-3);
+  }
 }
 
 /* ---------- progressão ---------- */

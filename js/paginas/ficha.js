@@ -212,6 +212,12 @@
       get personagemId() { return estado.personagemId; },
 
       emEdicao: function () { return estado.modo === "edicao"; },
+      /* Quem abriu a ficha pode alterá-la? O servidor só entrega a ficha a
+         quem pode editar (dono ou mestre da campanha) e confere de novo a
+         cada gravação; esta pergunta existe para os controles que ficam
+         fora do modo edição (bônus extra de Defesa, Bloqueio e Esquiva)
+         mostrarem só o valor quando um dia houver acesso de leitura. */
+      podeEditar: function () { return !!estado.ficha; },
       revisao: function () { return estado.salvador ? estado.salvador.revisao() : 0; },
 
       alterou: function () {

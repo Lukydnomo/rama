@@ -1815,6 +1815,8 @@ t.grupo("Painel da campanha — fichas de Ordem e permissões");
       personalizacoes: [{ id: "pz", aquisicao: "auto|escolhidoPeloOutroLado", poder: "escolhidoPeloOutroLado",
         nome: "Versão", texto: "Texto longo e privado", efeitos: "herdados" }],
       organizacao: { habilidades: { modo: "az" } },
+      bonusExtra: { defesa: 2, bloqueio: 3, esquiva: -1 },
+      periciasAjustes: { reflexos: { atributo: "int", extra: 2 } },
     },
     inventario: { limite: 0, itens: [
       { id: "i1", tipo: "armadura", nome: "Proteção Leve", defesa: 5, descricao: "Descrição privada",
@@ -1837,6 +1839,10 @@ t.grupo("Painel da campanha — fichas de Ordem e permissões");
   t.ok("  sem o texto das personalizações", ordemMestra.ordem.personalizacoes.length === 1 && ordemMestra.ordem.personalizacoes[0].texto === undefined);
   t.ok("  sem a descrição dos itens", ordemMestra.inventario.itens[0].descricao === undefined && ordemMestra.inventario.itens[0].ordem.emUso === true);
   t.ok("a universal continua com status e atributos", Array.isArray(daMestra.find((x) => x.id === pUniversal).status));
+  t.iguais("bônus extras de Defesa, Bloqueio e Esquiva chegam ao painel da mestra", ordemMestra.ordem.bonusExtra, { defesa: 2, bloqueio: 3, esquiva: -1 });
+  t.iguais("  e os ajustes de perícia também", ordemMestra.ordem.periciasAjustes, { reflexos: { atributo: "int", extra: 2 } });
+  t.iguais("a ficha guarda os ajustes à parte dos graus", comoDona({ acao: "ler_personagem", personagemId: pOrdem }).dados.ordem.periciasAjustes,
+    { reflexos: { atributo: "int", extra: 2 } });
 
   const doColega = comoColega({ acao: "listar_personagens_campanha", campanhaId: campanha }).dados;
   const ordemColega = doColega.find((x) => x.id === pOrdem);

@@ -567,6 +567,11 @@ Só existe na ficha de Ordem. Guarda **escolhas**, **recursos gastos** e
   "recursos": { "pv": null, "pe": null, "san": null },
   "ajustes": [ { "id", "alvo", "valor", "motivo", "manual": true } ],
   "temporarios": { "pv": 0, "pe": 0, "san": 0, "defesa": 0, "capacidade": 0 },
+  "bonusExtra": { "defesa": 2, "bloqueio": 3, "esquiva": -1 },   // −99 a +99; fica até mudar
+  "periciasAjustes": {            // só o que difere do padrão
+    "luta": { "atributo": "agi" },            // atributo escolhido na ficha
+    "fortitude": { "extra": 2 }               // bônus extra da perícia
+  },
   "organizacao": {                // como cada aba ordena a lista — só apresentação
     "habilidades": { "modo": "personalizada", "regras": [ "auto|ataqueEspecial" ] },
     "rituais": { "modo": "az" },
@@ -610,6 +615,17 @@ chaves `"0"` a `"4"`: `null` é **sem limite**, um número é o máximo, e `0` �
 
 `temporarios.capacidade` é o ajuste temporário de capacidade de carga, em
 espaços, de −99 a +99. Ele não tem duração: fica até alguém mudar.
+
+### Bônus extras e ajustes de perícia
+
+`bonusExtra` guarda um número por estatística — `defesa`, `bloqueio`, `esquiva` —,
+de −99 a +99. Ficha antiga lê tudo 0.
+
+`periciasAjustes` guarda, por chave de perícia do catálogo, o `atributo` escolhido
+(uma das cinco chaves) e/ou o `extra` (−99 a +99). Perícia sem troca e com extra 0 não
+é gravada; perícia ou atributo inexistente é descartado na leitura. Nenhum dos dois
+toca `pericias` (os graus) nem `atributos`: são ajustes à parte, recalculados a cada
+leitura, e por isso nunca acumulam.
 
 ### Organização das listas
 

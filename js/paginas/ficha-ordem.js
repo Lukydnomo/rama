@@ -84,16 +84,157 @@
     ]);
   }
 
+  /* Decisões da mesa ou da ficha (ajuste manual, bônus extra) ficam
+     marcadas à parte do que as regras produziram. */
+  var ORIGENS_MANUAIS = ["ajuste da mesa", "bônus extra", "ajuste da ficha"];
+
   function linhasDaComposicao(conta) {
     return conta.parcelas.map(function (p) {
       return el("div.composicao__linha", {
-        class: p.origem === "ajuste da mesa" ? "composicao__linha--manual" : "",
+        class: ORIGENS_MANUAIS.indexOf(p.origem) >= 0 ? "composicao__linha--manual" : "",
       }, [
         el("span.composicao__rotulo", { texto: p.rotulo }),
         el("span.composicao__origem", { texto: p.origem || "" }),
         el("span.composicao__valor", { texto: U.comSinal(p.valor) }),
       ]);
     });
+  }
+
+  /* =================================================================
+     DEFESA, BLOQUEIO E ESQUIVA COM BÔNUS EXTRA
+     -----------------------------------------------------------------
+     O botão mostra o total; a janela mostra a composição e o campo do
+     bônus extra daquela estatística. O número e a explicação vêm da mesma
+     conta (R.defesa, R.bloqueio, R.esquiva, via R.calcular) e a janela se
+     redesenha depois de cada mudança.
+
+     O campo não exige o modo edição: é um ajuste de mesa usado durante a
+     sessão. Quem não pode editar a ficha vê o valor, sem o campo.
+     ================================================================= */
+
+  var EXPLICACOES = {
+    defesa: "",
+    bloqueio: "Bloqueio usa o valor de Fortitude — o bônus da perícia, sem rolar os dados — mais o bônus extra de Bloqueio. O bônus em testes de resistência não entra: bloquear não é resistir.",
+    esquiva: "Esquiva usa a Defesa final, já com todos os modificadores e o bônus extra de Defesa, mais o valor de Reflexos e o bônus extra de Esquiva. As parcelas da Defesa não são somadas de novo.",
+  };
+
+  var NOMES_EXTRA = { defesa: "Defesa", bloqueio: "Bloqueio", esquiva: "Esquiva" };
+
+  function valorComExtra(ctx, o, c, qual) {
+    var conta = c[qual];
+    return el("button.calculado", {
+      type: "button",
+      "aria-label": "Como " + NOMES_EXTRA[qual] + " foi calculado: " + conta.total,
+      title: "Ver a composição",
+      dataset: { estatistica: qual },
+      onclick: function () { abrirComposicaoComExtra(ctx, o, qual); },
+    }, [
+      el("span.calculado__rotulo", { texto: NOMES_EXTRA[qual] }),
+      el("span.calculado__valor", { texto: String(conta.total) }),
+      R.bonusExtra(o, qual)
+        ? el("span.calculado__extra", { texto: "extra " + U.comSinal(R.bonusExtra(o, qual)) })
+        : null,
+      el("span.calculado__marca", { "aria-hidden": "true", texto: "=" }),
+    ]);
+  }
+
+  function abrirComposicaoComExtra(ctx, o, qual) {
+    var nome = NOMES_EXTRA[qual];
+    var corpo = el("div.pilha");
+
+    function pintar(foco) {
+      var conta = calculo(ctx)[qual];
+      var atual = R.bonusExtra(o, qual);
+
+      U.trocar(corpo, [
+        el("p.t-mini", { texto: "De onde vem cada parte deste número." }),
+        EXPLICACOES[qual] ? el("p.t-mini", { texto: EXPLICACOES[qual] }) : null,
+        el("div.composicao", {}, linhasDaComposicao(conta)),
+        el("div.composicao__total", { "aria-live": "polite" }, [
+          el("span", { texto: "Total" }),
+          el("span", { texto: String(conta.total) }),
+        ]),
+        (conta.avisos || []).length
+          ? el("div.pilha--curta", { class: "pilha" }, conta.avisos.map(function (a) { return el("p.t-mini.t-aviso", { texto: a }); }))
+          : null,
+        campoDeExtra(atual),
+      ]);
+
+      if (foco) {
+        var alvo = corpo.querySelector("input.composicao-extra__entrada");
+        if (alvo) { alvo.focus(); alvo.select(); }
+      }
+    }
+
+    function campoDeExtra(atual) {
+      var rotulo = "Bônus extra de " + nome;
+      if (!ctx.podeEditar()) {
+        return el("p.t-mini", { texto: rotulo + ": " + U.comSinal(atual) + " (só leitura)." });
+      }
+
+      var id = "extra-" + qual + "-" + U.uuid().slice(0, 6);
+      var erro = el("p.t-mini.t-erro", { role: "alert" });
+      var entrada = el("input.r-entrada.composicao-extra__entrada", {
+        id: id, type: "text", inputmode: "numeric", value: String(atual), maxlength: 4,
+      });
+
+      function aplicar() {
+        var v = validarExtra(entrada.value);
+        if (!v.ok) {
+          entrada.setAttribute("aria-invalid", "true");
+          erro.textContent = v.mensagem;
+          entrada.focus();
+          return;
+        }
+        if (v.valor === atual) { erro.textContent = ""; entrada.removeAttribute("aria-invalid"); return; }
+        R.definirBonusExtra(o, qual, v.valor);
+        aoMudarOrdem(ctx);
+        pintar(true);
+      }
+
+      entrada.addEventListener("keydown", function (ev) {
+        if (ev.key === "Enter") { ev.preventDefault(); aplicar(); }
+      });
+
+      return el("div.composicao-extra", {}, [
+        el("label", { for: id, texto: rotulo }),
+        el("div.composicao-extra__linha", {}, [
+          entrada,
+          el("button.r-botao.r-botao--mini", { type: "button", texto: "Aplicar", onclick: aplicar }),
+          el("button.r-botao.r-botao--mini.r-botao--fantasma", {
+            type: "button", texto: "Zerar", disabled: atual === 0,
+            "aria-label": "Zerar o bônus extra de " + nome,
+            onclick: function () {
+              R.definirBonusExtra(o, qual, 0);
+              aoMudarOrdem(ctx);
+              pintar(true);
+            },
+          }),
+        ]),
+        erro,
+        el("p.r-ajuda", {
+          texto: "De −" + R.LIMITE_EXTRA + " a +" + R.LIMITE_EXTRA + ". Fica guardado na ficha até alguém mudar ou zerar — não mexe em atributos, equipamentos nem valores-base.",
+        }),
+      ]);
+    }
+
+    pintar(false);
+
+    UI.modal({
+      titulo: nome,
+      conteudo: corpo,
+      botoes: [{ rotulo: "Fechar", classe: "r-botao--principal" }],
+    });
+  }
+
+  /* Um inteiro de −99 a +99. Vazio ou texto é recusado — nunca vira 0. */
+  function validarExtra(texto) {
+    var bruto = U.texto(texto).trim().replace("−", "-").replace(/^\+/, "");
+    if (!bruto) return { ok: false, mensagem: "Digite um número (0 para nenhum bônus)." };
+    if (!/^-?\d+$/.test(bruto)) return { ok: false, mensagem: "Use um número inteiro, como 2 ou -1." };
+    var n = parseInt(bruto, 10);
+    if (Math.abs(n) > R.LIMITE_EXTRA) return { ok: false, mensagem: "Use um valor entre −" + R.LIMITE_EXTRA + " e +" + R.LIMITE_EXTRA + "." };
+    return { ok: true, valor: n };
   }
 
   function abrirComposicao(rotulo, conta, extra) {
@@ -888,7 +1029,9 @@
 
     return el("div.pilha", {}, [
       el("div.ordem-derivados", {}, [
-        valorCalculado("Defesa", c.defesa),
+        valorComExtra(ctx, o, c, "defesa"),
+        valorComExtra(ctx, o, c, "bloqueio"),
+        valorComExtra(ctx, o, c, "esquiva"),
         valorCalculado("Deslocamento", c.deslocamento, "metros"),
         valorCalculado("Limite de PE por turno", c.limitePe),
       ]),
@@ -1114,18 +1257,30 @@
   var SecaoPericias = {
     aba: function (ctx) {
       var o = ordemDe(ctx);
+      var edicao = ctx.emEdicao();
       var linhas = C.PERICIAS.map(function (p) { return linhaDePericia(ctx, o, p); });
 
       return el("div.pilha--larga", { class: "pilha" }, [
         UI.painel("Perícias", el("div.pilha", {}, [
-          el("div.ordem-pericias", {}, linhas),
+          el("div.ordem-pericias", { role: "table", "aria-label": "Perícias", class: edicao ? "ordem-pericias--edicao" : "" }, [
+            el("div.ordem-pericia.ordem-pericia--cabecalho", { role: "row" }, [
+              el("span", { role: "columnheader", texto: "Perícia" }),
+              el("span", { role: "columnheader", texto: "Atributo" }),
+              el("span", { role: "columnheader", texto: "Grau" }),
+              el("span", { role: "columnheader", texto: "Treino" }),
+              el("span", { role: "columnheader", texto: "Extra" }),
+              el("span", { role: "columnheader", texto: "Total" }),
+              el("span", { role: "columnheader" }, [el("span.so-leitor", { texto: "Rolar" })]),
+              el("span", { role: "columnheader", texto: "Notas" }),
+            ]),
+          ].concat(linhas)),
           el("p.t-mini", {
-            texto: "Destreinado 0 · Treinado +5 · Veterano +10 · Expert +15. " +
-                   "Perícia marcada com “treinada” só pode ser usada por quem é treinado nela.",
+            texto: "Treino: Destreinado 0 · Treinado +5 · Veterano +10 · Expert +15. Total = treino + extra + outros modificadores (poderes, carga, ajustes da mesa) — toque no total para ver a conta. " +
+                   "“Só treinada” exige treinamento para ser usada.",
           }),
-          ctx.emEdicao()
+          edicao
             ? el("p.t-mini", {
-                texto: "No modo edição, o seletor muda o grau da ficha (o da criação). Graus ganhos por escolhas de progressão — Grau de Treinamento, Treinamento em Perícia, poderes — somam por cima e aparecem ao lado.",
+                texto: "No modo edição: o seletor de grau muda o grau da ficha (o da criação) — graus ganhos na progressão somam por cima. Trocar o atributo muda os dados da rolagem, não o grau nem o bônus. O extra é um bônus fixo desta perícia.",
               })
             : null,
         ])),
@@ -1134,62 +1289,150 @@
   };
 
   function linhaDePericia(ctx, o, p) {
+    var edicao = ctx.emEdicao();
     var bonus = R.bonusDePericia(o, p.chave, ctx.ficha.inventario);
     var dado = R.dadoDePericia(o, p.chave);
     var g = R.grauDaPericia(o, p.chave);
+    var grau = C.grau(g);
     var base = R.grauBaseDaPericia(o, p.chave);
     var fontes = R.fontesDoGrau(o, p.chave);
     var destreinada = g === "destreinado";
     var atributo = R.atributoDaPericia(o, p.chave);
+    var padrao = R.atributoPadraoDaPericia(o, p.chave);
+    var ajuste = R.ajusteDePericia(o, p.chave);
+    var trocado = atributo !== padrao;
+    var outros = bonus.total - grau.bonus - ajuste.extra;
+    var podeRolar = !(p.treinada && destreinada);
 
-    var controle = ctx.emEdicao()
-      ? el("div.pilha--curta", { class: "pilha" }, [
-          UI.campo({
-            rotulo: "", tipo: "selecao", valor: base,
-            opcoes: C.GRAUS.map(function (x) { return { valor: x.chave, rotulo: x.nome + (x.chave === base ? " (ficha)" : "") }; }),
-            aoMudar: function (v) {
-              if (v === "destreinado") delete o.pericias[p.chave];
-              else o.pericias[p.chave] = v;
-              aoMudarOrdem(ctx);
+    /* ---- atributo ---- */
+    var celulaAtributo;
+    if (edicao) {
+      celulaAtributo = el("span.ordem-pericia__atrib-edicao", {}, [
+        el("select.r-selecao.ordem-pericia__seletor", {
+          "aria-label": "Atributo de " + p.nome,
+          dataset: { foco: "atrib-" + p.chave },
+          onchange: function (ev) {
+            R.definirAjusteDePericia(o, p.chave, { atributo: ev.target.value === padrao ? "" : ev.target.value });
+            mudouPericia(ctx, "atrib-" + p.chave);
+          },
+        }, C.ATRIBUTOS.map(function (a) {
+          return el("option", {
+            value: a.chave, selected: a.chave === atributo,
+            texto: a.sigla + (a.chave === padrao ? " (padrão)" : ""),
+          });
+        })),
+        trocado
+          ? el("button.r-icone.ordem-pericia__restaurar", {
+              type: "button",
+              "aria-label": "Restaurar atributo padrão de " + p.nome + " (" + siglaDe(padrao) + ")",
+              title: "Restaurar atributo padrão (" + siglaDe(padrao) + ")",
+              dataset: { foco: "rest-" + p.chave },
+              onclick: function () {
+                R.definirAjusteDePericia(o, p.chave, { atributo: "" });
+                mudouPericia(ctx, "atrib-" + p.chave);
+              },
+            }, [el("span", { "aria-hidden": "true", texto: "↺" })])
+          : null,
+      ]);
+    } else {
+      celulaAtributo = el("span.ordem-pericia__atrib", {
+        class: trocado ? "ordem-pericia__atrib--trocado" : "",
+        title: trocado ? "Atributo trocado nesta ficha. Padrão: " + siglaDe(padrao) + "." : (padrao !== p.atributo ? "Atributo trocado por um poder." : ""),
+      }, [
+        el("span", { texto: siglaDe(atributo) }),
+        trocado ? el("span.so-leitor", { texto: " (trocado; padrão " + siglaDe(padrao) + ")" }) : null,
+      ]);
+    }
+
+    /* ---- grau ---- */
+    var celulaGrau = edicao
+      ? el("span.ordem-pericia__grau-edicao", {}, [
+          el("select.r-selecao.ordem-pericia__seletor", {
+            "aria-label": "Grau de " + p.nome + " na ficha",
+            dataset: { foco: "grau-" + p.chave },
+            onchange: function (ev) {
+              if (ev.target.value === "destreinado") delete o.pericias[p.chave];
+              else o.pericias[p.chave] = ev.target.value;
+              mudouPericia(ctx, "grau-" + p.chave);
             },
-          }),
-          fontes.length ? el("span.t-mini", { texto: "efetivo: " + C.grau(g).nome }) : null,
+          }, C.GRAUS.map(function (x) {
+            return el("option", { value: x.chave, selected: x.chave === base, texto: x.nome });
+          })),
+          fontes.length ? el("span.t-mini", { texto: "efetivo: " + grau.nome }) : null,
         ])
-      : el("span.ordem-pericia__grau", {
-          texto: C.grau(g).nome,
+      : el("span.ordem-pericia__grau.grau--" + g, {
+          texto: grau.nome,
           title: fontes.length ? fontes.map(function (f) { return f.fonte + " (" + f.detalhe + ")"; }).join("; ") : "",
         });
 
-    var podeRolar = !(p.treinada && destreinada);
+    /* ---- extra ---- */
+    var celulaExtra = edicao
+      ? el("input.r-entrada.ordem-pericia__extra-entrada", {
+          type: "text", inputmode: "numeric", maxlength: 4, value: String(ajuste.extra),
+          "aria-label": "Bônus extra de " + p.nome,
+          dataset: { foco: "extra-" + p.chave },
+          onkeydown: function (ev) { if (ev.key === "Enter") { ev.preventDefault(); ev.target.blur(); } },
+          onchange: function (ev) {
+            var v = validarExtra(ev.target.value);
+            if (!v.ok) {
+              ev.target.setAttribute("aria-invalid", "true");
+              UI.avisoErro(p.nome + ": " + v.mensagem);
+              ev.target.value = String(ajuste.extra);
+              return;
+            }
+            R.definirAjusteDePericia(o, p.chave, { extra: v.valor });
+            mudouPericia(ctx, null);
+          },
+        })
+      : el("span.ordem-pericia__extra", { class: ajuste.extra ? "" : "ordem-pericia__extra--zero", texto: U.comSinal(ajuste.extra) });
 
     return el("div.ordem-pericia", {
-      class: destreinada ? "ordem-pericia--destreinada" : "",
+      role: "row",
+      class: (destreinada ? "ordem-pericia--destreinada" : ""),
     }, [
-      el("span.ordem-pericia__nome", { texto: p.nome }),
-      el("span.ordem-pericia__atrib", { texto: siglaDe(atributo), title: atributo !== p.atributo ? "Atributo trocado por um poder." : "" }),
-      controle,
-      el("button.ordem-pericia__bonus", {
-        type: "button",
-        "aria-label": "Como o bônus de " + p.nome + " foi calculado",
-        title: "Ver a composição",
-        texto: U.comSinal(bonus.total),
-        onclick: function () { abrirComposicao("Bônus de " + p.nome, bonus); },
-      }),
-      podeRolar
-        ? el("button.r-icone.ordem-pericia__rolar", {
-            type: "button",
-            "aria-label": "Rolar " + p.nome + ", " + dado + " " + U.comSinal(bonus.total),
-            title: "Rolar " + dado + " " + U.comSinal(bonus.total),
-            onclick: function () { rolarPericia(ctx, o, p, dado, bonus, atributo); },
-          }, [UI.simbolo("dado", 14)])
-        : el("span.ordem-pericia__travada", {
-            texto: "só treinada",
-            title: "Esta perícia exige treinamento para ser usada.",
-          }),
-      el("span.ordem-pericia__marcas", {
-        texto: [p.carga ? "carga" : "", p.kit ? "kit" : ""].filter(Boolean).join(" · "),
-      }),
+      el("span.ordem-pericia__nome", { role: "rowheader", texto: p.nome, title: p.nome }),
+      el("span.ordem-pericia__celula.ordem-pericia__c-atrib", { role: "cell", "data-rotulo": "Atributo" }, [celulaAtributo]),
+      el("span.ordem-pericia__celula.ordem-pericia__c-grau", { role: "cell", "data-rotulo": "Grau" }, [celulaGrau]),
+      el("span.ordem-pericia__celula.ordem-pericia__c-treino", { role: "cell", "data-rotulo": "Treino" }, [
+        el("span.ordem-pericia__treino.grau--" + g, { texto: U.comSinal(grau.bonus) }),
+      ]),
+      el("span.ordem-pericia__celula.ordem-pericia__c-extra", { role: "cell", "data-rotulo": "Extra" }, [celulaExtra]),
+      el("span.ordem-pericia__celula.ordem-pericia__c-total", { role: "cell", "data-rotulo": "Total" }, [
+        el("button.ordem-pericia__bonus", {
+          type: "button",
+          "aria-label": "Total de " + p.nome + ": " + U.comSinal(bonus.total) + (outros ? ", inclui outros modificadores" : "") + ". Ver a composição",
+          title: "Ver a composição",
+          onclick: function () { abrirComposicao("Bônus de " + p.nome, bonus); },
+        }, [
+          el("span", { texto: U.comSinal(bonus.total) }),
+          outros ? el("span.ordem-pericia__outros", { "aria-hidden": "true", texto: "*" }) : null,
+        ]),
+      ]),
+      el("span.ordem-pericia__celula.ordem-pericia__c-rolar", { role: "cell" }, [
+        podeRolar
+          ? el("button.r-icone.ordem-pericia__rolar", {
+              type: "button",
+              "aria-label": "Rolar " + p.nome + ", " + dado + " " + U.comSinal(bonus.total),
+              title: "Rolar " + dado + " " + U.comSinal(bonus.total),
+              onclick: function () { rolarPericia(ctx, o, p, dado, bonus, atributo); },
+            }, [UI.simbolo("dado", 18)])
+          : el("span.ordem-pericia__travada", {
+              texto: "só treinada",
+              title: "Esta perícia exige treinamento para ser usada.",
+            }),
+      ]),
+      el("span.ordem-pericia__celula.ordem-pericia__marcas", { role: "cell" }, [p.carga ? el("span.r-etiqueta", { texto: "carga", title: "Sofre a penalidade de carga." }) : null,
+        p.kit ? el("span.r-etiqueta", { texto: "kit", title: "Precisa de um kit." }) : null]),
     ]);
+  }
+
+  /* Recalcula e devolve o foco ao controle que mudou — redesenhar a aba
+     recria os elementos, e quem usa teclado não pode perder o lugar. */
+  function mudouPericia(ctx, foco) {
+    aoMudarOrdem(ctx);
+    if (!foco) return;
+    var alvo = document.querySelector('[data-foco="' + foco + '"]');
+    if (alvo) alvo.focus();
   }
 
   /* A rolagem de perícia usa o motor central — o mesmo `dependente` da

@@ -14,13 +14,13 @@
    TRÊS COISAS DIFERENTES, QUE NÃO SE MISTURAM
    ---------------------------------------------------------------------
 
-     versão do aplicativo   está aqui. É o que a pessoa vê: v2.8.0.
+     versão do aplicativo   está aqui. É o que a pessoa vê: v2.9.0.
      schemaVersion          está em js/ficha.js. É o formato da FICHA,
                             e só sobe quando a ficha muda de forma.
      versaoFormato          está em js/config.js. É o formato dos
                             arquivos de importação/exportação.
 
-   Elas sobem em ritmos próprios. A v2.8.0 leva schemaVersion 6 e
+   Elas sobem em ritmos próprios. A v2.9.0 leva schemaVersion 6 e
    versaoFormato 1 — e isso é normal: a ficha ganhou versões personalizadas e
    etiquetas, mas o formato dos arquivos de importação continua
    o mesmo,
@@ -57,6 +57,28 @@
   ];
 
   var CHANGELOG = [
+    {
+      versao: "2.9.0",
+      codinome: "ALINHAVO",
+      data: "13/09/2026",
+      mudancas: {
+        "Adicionado": [
+          "Na ficha de Ordem Paranormal, Defesa e Movimento ganha Bloqueio (bônus de Fortitude) e Esquiva (Defesa + bônus de Reflexos), cada um com a composição aberta ao clicar.",
+          "Bônus extra de Defesa, Bloqueio e Esquiva dentro da composição de cada um, com Aplicar e Zerar. Funciona no modo normal e fica guardado até alguém mudar.",
+          "Perícias: no modo edição, cada perícia pode usar outro atributo (com “Restaurar atributo padrão”) e ter um bônus extra. O atributo trocado muda os dados da rolagem; o extra entra no total, na rolagem, no Bloqueio e na Esquiva.",
+        ],
+        "Alterado": [
+          "A tabela de perícias ganhou colunas alinhadas — perícia, atributo, grau, treino, extra, total, rolagem e notas — e vira um bloco compacto por perícia no celular.",
+          "O grau de treinamento tem cor própria: treinado verde, veterano azul, expert laranja, sempre com o nome escrito.",
+        ],
+        "Corrigido": [
+          "O ícone de rolar aparecia como um quadrado vazio: os pontos do dado agora aparecem.",
+        ],
+        "Técnico": [
+          "Bloqueio, Esquiva e os extras saem de js/ordem/regras.js e chegam iguais à ficha e aos cartões da campanha. Novos campos opcionais `ordem.bonusExtra` e `ordem.periciasAjustes`; fichas antigas leem zero e atributos padrão. Não requer nova implantação do Apps Script.",
+        ],
+      },
+    },
     {
       versao: "2.8.0",
       codinome: "PANORAMA",

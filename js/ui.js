@@ -523,7 +523,9 @@
     voltar: "M10 3 L5 8 L10 13",
     olho: "M1 8 s3-4 7-4 7 4 7 4 -3 4-7 4-7-4-7-4z M8 6 a2 2 0 1 0 0.01 0",
     olhoFechado: "M2 2 L14 14 M1 8 s3-4 7-4c1 0 2 .2 3 .5 M13 6.5 c1 .8 2 1.5 2 1.5 s-3 4-7 4c-1 0-2-.2-3-.5",
-    dado: "M2 2 h12 v12 h-12z M5 5 h0.01 M11 5 h0.01 M8 8 h0.01 M5 11 h0.01 M11 11 h0.01",
+    /* Pontos com comprimento de verdade: com 0,01 eles sumiam em ícone
+       pequeno, e o dado virava um quadrado vazio. */
+    dado: "M2 2 h12 v12 h-12z M4.5 5 h1.5 M10 5 h1.5 M7.25 8 h1.5 M4.5 11 h1.5 M10 11 h1.5",
     lixeira: "M3 4 h10 M6 4 V2 h4 v2 M5 4 l0.5 10 h5 L11 4",
     baixar: "M8 2 V11 M4 8 L8 12 L12 8 M3 14 h10",
     salvar: "M3 3 h10 v10 h-10z M6 3 v4 h4 V3 M5 13 v-4 h6 v4",

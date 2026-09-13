@@ -126,6 +126,11 @@
       excluidas: [],
       /* --- como cada aba ordena a lista (só apresentação) --- */
       organizacao: normalizarOrganizacao(null),
+      /* --- bônus extra de Defesa, Bloqueio e Esquiva --- */
+      bonusExtra: { defesa: 0, bloqueio: 0, esquiva: 0 },
+      /* --- por perícia: atributo escolhido e bônus extra (só o que
+             difere do padrão) --- */
+      periciasAjustes: {},
       /* --- registros de texto livre da v2.3, preservados --- */
       progressao: [],
       /* --- afinidade elemental --- */
@@ -452,7 +457,68 @@
     }
 
     somarAjustes(c, ficha, "defesa");
+    somarExtra(c, ficha, "defesa", "Bônus extra de Defesa");
     return c;
+  }
+
+  /* =================================================================
+     BLOQUEIO E ESQUIVA
+     -----------------------------------------------------------------
+     Bloqueio = valor de Fortitude + bônus extra de Bloqueio.
+     Esquiva  = Defesa FINAL + valor de Reflexos + bônus extra de Esquiva.
+
+     "Valor da perícia" é o bônus numérico dela — grau, poderes,
+     penalidade de carga, ajustes da mesa e o bônus extra da perícia —,
+     o mesmo que entra na rolagem, sem os dados do atributo. Ele vem de
+     bonusDePericia: um extra de Fortitude aparece no Bloqueio porque já
+     está em Fortitude, e não é somado de novo aqui.
+
+     O bônus em testes de resistência (Reflexos Defensivos, Mente Sã…)
+     vale quando a perícia é usada para RESISTIR. Bloquear e esquivar não
+     são testes de resistência, então ele não entra — do mesmo jeito que
+     não entra no bônus geral dessas perícias.
+
+     A Esquiva usa a Defesa como ela sai de `defesa()`, já com proteção,
+     poderes, sobrecarga, temporário, ajustes e o extra de Defesa: é UMA
+     parcela, e as parcelas da Defesa não são repetidas.
+     ================================================================= */
+
+  function bloqueio(ficha, inventario) {
+    var c = conta();
+    var fortitude = bonusDePericia(ficha, "fortitude", inventario);
+    parcelasDaPericia(c, "Fortitude", fortitude);
+    somarAjustes(c, ficha, "bloqueio");
+    somarExtra(c, ficha, "bloqueio", "Bônus extra de Bloqueio");
+    c.pericia = fortitude.total;
+    return c;
+  }
+
+  function esquiva(ficha, inventario) {
+    var c = conta();
+    var def = defesa(ficha, inventario);
+    c.soma("Defesa final", def.total, "a Defesa inteira, já com os modificadores e o extra de Defesa");
+    var reflexos = bonusDePericia(ficha, "reflexos", inventario);
+    parcelasDaPericia(c, "Reflexos", reflexos);
+    somarAjustes(c, ficha, "esquiva");
+    somarExtra(c, ficha, "esquiva", "Bônus extra de Esquiva");
+    c.defesa = def.total;
+    c.pericia = reflexos.total;
+    return c;
+  }
+
+  /* O valor de uma perícia entra aberto na composição — "Reflexos ·
+     Veterano +10", "Reflexos · Bônus extra +2" —, e a soma continua
+     sendo exatamente o bônus da perícia. Perícia com bônus 0 e nenhuma
+     parcela aparece como uma linha "+0", para a conta não esconder que
+     ela foi considerada. */
+  function parcelasDaPericia(c, nome, contaDaPericia) {
+    if (!contaDaPericia.parcelas.length) {
+      c.soma(nome, 0, "valor da perícia");
+      return;
+    }
+    contaDaPericia.parcelas.forEach(function (x) {
+      c.soma(nome + " · " + x.rotulo, x.valor, x.origem || "valor da perícia");
+    });
   }
 
   /* =================================================================
@@ -761,12 +827,25 @@
     }
 
     somarAjustes(c, ficha, "pericia:" + chave);
+
+    var ajuste = ajusteDePericia(ficha, chave);
+    if (ajuste.extra) c.soma("Bônus extra", ajuste.extra, "ajuste da ficha");
     return c;
   }
 
-  /* O atributo que a perícia usa. Um efeito pode trocá-lo — A Força do
-     Saber, Racionalidade Inflexível. */
-  function atributoDaPericia(ficha, chave) {
+  /* O que a ficha personalizou numa perícia: o atributo usado e um bônus
+     extra. Nada disto muda o grau de treinamento. */
+  function ajusteDePericia(ficha, chave) {
+    var a = ficha.periciasAjustes && ficha.periciasAjustes[chave];
+    return {
+      atributo: a && a.atributo ? a.atributo : "",
+      extra: a ? inteiro(a.extra, 0) : 0,
+    };
+  }
+
+  /* O atributo padrão da perícia: o do catálogo, ou o que um poder
+     troca — A Força do Saber, Racionalidade Inflexível. */
+  function atributoPadraoDaPericia(ficha, chave) {
     var pe = C.pericia(chave);
     if (!pe) return "";
     var escolhido = pe.atributo;
@@ -774,6 +853,15 @@
       if (m.efeito.pericia === chave) escolhido = m.efeito.atributo;
     });
     return escolhido;
+  }
+
+  /* O atributo que a perícia usa. A escolha feita na ficha vale sobre o
+     padrão; sem escolha, é o padrão. */
+  function atributoDaPericia(ficha, chave) {
+    var padrao = atributoPadraoDaPericia(ficha, chave);
+    if (!padrao) return "";
+    var escolhido = ajusteDePericia(ficha, chave).atributo;
+    return escolhido || padrao;
   }
 
   /* Os dados que a perícia rola: um d20 por ponto do atributo-base.
@@ -1037,6 +1125,20 @@
     });
   }
 
+  /* O bônus extra de Defesa, Bloqueio ou Esquiva: um número guardado na
+     ficha, que fica até alguém mudar ou zerar. Zero não vira parcela. */
+  var ESTATISTICAS_COM_EXTRA = ["defesa", "bloqueio", "esquiva"];
+  var LIMITE_EXTRA = 99;
+
+  function bonusExtra(ficha, qual) {
+    return ficha.bonusExtra ? inteiro(ficha.bonusExtra[qual], 0) : 0;
+  }
+
+  function somarExtra(c, ficha, qual, rotulo) {
+    var v = bonusExtra(ficha, qual);
+    if (v) c.soma(rotulo, v, "bônus extra");
+  }
+
   function criarAjuste(alvo, valor, motivo) {
     return {
       id: (global.RAMAUtil ? global.RAMAUtil.uuid() : String(Math.random())),
@@ -1096,6 +1198,8 @@
 
       limitePe: limiteDeEsforco(ficha),
       defesa: defesa(ficha, inventario),
+      bloqueio: bloqueio(ficha, inventario),
+      esquiva: esquiva(ficha, inventario),
       deslocamento: deslocamento(ficha, inventario),
       carga: capacidade(ficha, inventario),
       categorias: usoPorCategoria(ficha, inventario),
@@ -1148,6 +1252,8 @@
       personalizacoes: [],
       excluidas: [],
       organizacao: normalizarOrganizacao(b.organizacao),
+      bonusExtra: normalizarBonusExtra(b.bonusExtra),
+      periciasAjustes: normalizarAjustesDePericia(b.periciasAjustes),
       progressao: [],
       afinidade: normalizarAfinidade(b.afinidade),
       patente: normalizarPatente(b.patente),
@@ -1258,6 +1364,54 @@
     };
   }
 
+  function extraValido(valor) {
+    return Math.max(-LIMITE_EXTRA, Math.min(LIMITE_EXTRA, inteiro(valor, 0)));
+  }
+
+  function normalizarBonusExtra(bruto) {
+    var b = (bruto && typeof bruto === "object") ? bruto : {};
+    return { defesa: extraValido(b.defesa), bloqueio: extraValido(b.bloqueio), esquiva: extraValido(b.esquiva) };
+  }
+
+  /* Só perícias do catálogo e atributos que existem. Uma perícia sem
+     atributo trocado e com extra 0 não é guardada. */
+  function normalizarAjustesDePericia(bruto) {
+    var b = (bruto && typeof bruto === "object") ? bruto : {};
+    var saida = {};
+    Object.keys(b).forEach(function (chave) {
+      if (!C.pericia(chave)) return;
+      var a = b[chave];
+      if (!a || typeof a !== "object") return;
+      var atributo = C.ATRIBUTOS.some(function (x) { return x.chave === a.atributo; }) ? a.atributo : "";
+      var extra = extraValido(a.extra);
+      if (!atributo && !extra) return;
+      var item = {};
+      if (atributo) item.atributo = atributo;
+      if (extra) item.extra = extra;
+      saida[chave] = item;
+    });
+    return saida;
+  }
+
+  /* Grava o ajuste de uma perícia na ficha, já normalizado. `mudanca` é
+     { atributo } e/ou { extra }; atributo "" restaura o padrão. */
+  function definirAjusteDePericia(ficha, chave, mudanca) {
+    if (!C.pericia(chave)) return false;
+    var atual = Object.assign({}, (ficha.periciasAjustes || {})[chave] || {}, mudanca || {});
+    var todos = Object.assign({}, ficha.periciasAjustes || {});
+    todos[chave] = atual;
+    ficha.periciasAjustes = normalizarAjustesDePericia(todos);
+    return true;
+  }
+
+  function definirBonusExtra(ficha, qual, valor) {
+    if (ESTATISTICAS_COM_EXTRA.indexOf(qual) < 0) return false;
+    ficha.bonusExtra = normalizarBonusExtra(Object.assign({}, ficha.bonusExtra || {}, (function () {
+      var o = {}; o[qual] = valor; return o;
+    })()));
+    return true;
+  }
+
   function normalizarAfinidade(bruto) {
     var b = (bruto && typeof bruto === "object") ? bruto : {};
     var elemento = ELEMENTOS_DA_AFINIDADE.indexOf(b.elemento) >= 0 ? b.elemento : "";
@@ -1318,6 +1472,11 @@
     sanidade: sanidade,
     limiteDeEsforco: limiteDeEsforco,
     defesa: defesa,
+    bloqueio: bloqueio,
+    esquiva: esquiva,
+    bonusExtra: bonusExtra,
+    ESTATISTICAS_COM_EXTRA: ESTATISTICAS_COM_EXTRA,
+    LIMITE_EXTRA: LIMITE_EXTRA,
     deslocamento: deslocamento,
     capacidade: capacidade,
     ocupacaoDoInventario: ocupacaoDoInventario,
@@ -1336,6 +1495,10 @@
     grauBaseDaPericia: grauBaseDaPericia,
     fontesDoGrau: fontesDoGrau,
     bonusDePericia: bonusDePericia,
+    ajusteDePericia: ajusteDePericia,
+    definirAjusteDePericia: definirAjusteDePericia,
+    definirBonusExtra: definirBonusExtra,
+    atributoPadraoDaPericia: atributoPadraoDaPericia,
     atributoDaPericia: atributoDaPericia,
     dadoDePericia: dadoDePericia,
 
