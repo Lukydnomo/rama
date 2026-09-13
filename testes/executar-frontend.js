@@ -324,6 +324,97 @@ t.grupo("Gravação");
 }
 
 /* =====================================================================
+   AS PÁGINAS CARREGAM O MOTOR INTEIRO
+   ---------------------------------------------------------------------
+   Outro defeito que nenhum teste de modelo pegava, porque os testes
+   carregam todos os módulos: a página da campanha não carregava
+   js/ordem/poderes.js. Sem ele, js/ordem/regras.js volta ao valor base
+   em silêncio — nada de aumento de atributo, poder ou efeito de
+   trilha —, e os cartões da aba Personagens mostravam PV, Sanidade,
+   Defesa, Bloqueio, Esquiva e deslocamento diferentes da ficha.
+
+   Aqui a lista de scripts é lida do HTML de cada página, na ordem em
+   que ela está.
+   ===================================================================== */
+
+t.grupo("Páginas que calculam ficha de Ordem carregam o motor inteiro");
+
+{
+  const PAGINAS = ["index.html", "personagens/index.html", "campanhas/index.html", "campanha/index.html",
+    "perfil/index.html", "homebrew/index.html", "ficha/index.html"];
+
+  const scriptsDe = async (pagina) => {
+    const html = await Deno.readTextFile(new URL("../" + pagina, import.meta.url));
+    return [...html.matchAll(/<script\s+src="([^"]+)"/g)].map((m) => m[1].replace(/^(\.\.\/)+/, ""));
+  };
+
+  /* Quem desenha número calculado de Ordem. */
+  const CALCULA = ["js/campanha-painel.js", "js/paginas/ficha-ordem.js", "js/paginas/ordem-criar.js"];
+
+  for (const pagina of PAGINAS) {
+    const s = await scriptsDe(pagina);
+    if (!CALCULA.some((c) => s.includes(c))) continue;
+    const poderes = s.indexOf("js/ordem/poderes.js");
+    const progressao = s.indexOf("js/ordem/progressao.js");
+    const regras = s.indexOf("js/ordem/regras.js");
+    t.ok(pagina + " carrega js/ordem/poderes.js", poderes >= 0);
+    /* progressao.js guarda o catálogo de poderes quando carrega: depois
+       dele, é tarde. */
+    t.ok(pagina + ": poderes → progressão → regras, nesta ordem",
+      poderes >= 0 && poderes < progressao && progressao < regras,
+      `poderes ${poderes}, progressão ${progressao}, regras ${regras}`);
+  }
+
+  /* E o efeito, com uma ficha que depende da progressão para cada um
+     dos números: aumento de Agilidade e Vigor, Transcender, e o
+     Inventário Otimizado (Técnico, por Versatilidade) que soma o
+     Intelecto à capacidade — sem ele, a carga passa do limite e a
+     sobrecarga derruba Defesa, perícias e deslocamento. */
+  const CADEIA = /^js\/(dados|habilidades|ficha|campanha-painel)\.js$|^js\/ordem\//;
+  const avaliar = async (pagina) => {
+    for (const nome of Object.keys(globalThis)) if (/^RAMAOrdem/.test(nome)) delete globalThis[nome];
+    for (const arquivo of (await scriptsDe(pagina)).filter((a) => CADEIA.test(a))) {
+      (0, eval)(await Deno.readTextFile(new URL("../" + arquivo, import.meta.url)));
+    }
+    const R = globalThis.RAMAOrdemRegras;
+    const ordem = R.normalizar({
+      classe: "especialista", origem: "academico", trilha: "medico", nex: 65,
+      atributos: { agi: 2, for: 2, int: 3, pre: 1, vig: 1 },
+      pericias: { fortitude: "treinado", reflexos: "treinado", medicina: "treinado", ciencias: "treinado", investigacao: "treinado" },
+      escolhas: [
+        { id: "e1", etapa: "d3.poderClasse", tipo: "poderClasse", valor: "transcender", opcoes: { poder: { valor: "sangueDeFerro", opcoes: {} } } },
+        { id: "e2", etapa: "d4.atributo", tipo: "atributo", valor: "agi", opcoes: {} },
+        { id: "e3", etapa: "d10.versatilidade", tipo: "versatilidade", valor: "trilha", opcoes: { trilha: { valor: "tecnico", opcoes: {} } } },
+        { id: "e4", etapa: "d10.atributo", tipo: "atributo", valor: "vig", opcoes: {} },
+      ],
+    });
+    const itens = [
+      { id: "i1", tipo: "item", nome: "Caixa pesada", ordem: { espacos: 14, quantidade: 1, categoria: 0, grupo: "geral" } },
+      { id: "i2", tipo: "armadura", nome: "Proteção Leve", defesa: 5, ordem: { espacos: 2, quantidade: 1, categoria: 1, grupo: "protecao", emUso: true } },
+    ].map((i) => globalThis.RAMAFicha.normalizarItem(i));
+    const r = globalThis.RAMAPainelMesa
+      ? globalThis.RAMAPainelMesa.resumir({ id: "p", nome: "Teste", tipoFicha: "ordem", detalhado: true, ordem: ordem, inventario: { itens: itens } })
+      : null;
+    const c = R.calcular(ordem, { limite: 0, itens: itens });
+    return {
+      atributos: ["agi", "for", "int", "pre", "vig"].map((a) => R.atributo(ordem, a)).join(" "),
+      pv: c.pv.total, pe: c.pe.total, san: c.san.total,
+      defesa: c.defesa.total, bloqueio: c.bloqueio.total, esquiva: c.esquiva.total,
+      deslocamento: c.deslocamento.total, limitePe: c.limitePe.total,
+      cartao: r ? r.recursos.map((x) => x.maximo).concat(r.estatisticas.map((x) => x.valor)).join(" ") : null,
+    };
+  };
+
+  const naFicha = await avaliar("ficha/index.html");
+  const naCampanha = await avaliar("campanha/index.html");
+  for (const k of ["atributos", "pv", "pe", "san", "defesa", "bloqueio", "esquiva", "deslocamento", "limitePe"]) {
+    t.igual("cartão da campanha calcula " + k + " igual à ficha", naCampanha[k], naFicha[k]);
+  }
+  t.ok("  (a ficha de teste depende mesmo da progressão: Agilidade 3 e Vigor 2)", naFicha.atributos === "3 2 3 1 2", naFicha.atributos);
+  t.ok("  e o cartão desenha esses números", !!naCampanha.cartao && naCampanha.cartao.indexOf(String(naFicha.defesa)) >= 0, naCampanha.cartao);
+}
+
+/* =====================================================================
    FIM
    ===================================================================== */
 

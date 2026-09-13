@@ -205,7 +205,12 @@ vê ali as fichas dos jogadores: cada conta adiciona as suas. Listar fichas de
 outra conta que ainda não estão na mesa daria ao mestre um alcance que ele não
 tem.
 
-**O que cada cartão mostra** sai de `js/campanha-painel.js`, sem fórmula própria:
+**O que cada cartão mostra** sai de `js/campanha-painel.js`, sem fórmula própria.
+Para os números serem os da ficha, `campanha/index.html` carrega o motor de Ordem
+inteiro, na mesma ordem da ficha: `catalogo`, **`poderes`**, `opcionais`,
+`inventario`, `personalizacao`, `progressao`, `regras`. Sem `poderes.js` o cálculo
+não quebra — ele ignora a progressão e mostra valores base (foi o defeito da
+v2.11.1); `testes/executar-frontend.js` confere isso lendo o HTML.
 
 | ficha | recursos | atributos | estatísticas |
 |---|---|---|---|

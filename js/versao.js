@@ -14,13 +14,13 @@
    TRÊS COISAS DIFERENTES, QUE NÃO SE MISTURAM
    ---------------------------------------------------------------------
 
-     versão do aplicativo   está aqui. É o que a pessoa vê: v2.11.0.
+     versão do aplicativo   está aqui. É o que a pessoa vê: v2.11.1.
      schemaVersion          está em js/ficha.js. É o formato da FICHA,
                             e só sobe quando a ficha muda de forma.
      versaoFormato          está em js/config.js. É o formato dos
                             arquivos de importação/exportação.
 
-   Elas sobem em ritmos próprios. A v2.11.0 leva schemaVersion 6 e
+   Elas sobem em ritmos próprios. A v2.11.1 leva schemaVersion 6 e
    versaoFormato 1 — e isso é normal: a ficha ganhou versões personalizadas e
    etiquetas, mas o formato dos arquivos de importação continua
    o mesmo,
@@ -57,6 +57,19 @@
   ];
 
   var CHANGELOG = [
+    {
+      versao: "2.11.1",
+      codinome: "ESPELHO",
+      data: "13/09/2026",
+      mudancas: {
+        "Corrigido": [
+          "Aba Personagens da campanha: os cartões de fichas de Ordem mostravam atributos, PV, Sanidade, Defesa, Bloqueio, Esquiva e deslocamento diferentes da ficha. A página não carregava o catálogo de poderes, e o cálculo ignorava a progressão inteira — aumentos de atributo, poderes, efeitos de trilha e poderes que mudam a capacidade de carga (o que ainda punha o personagem em sobrecarga). Agora o cartão mostra os mesmos números da ficha.",
+        ],
+        "Técnico": [
+          "campanha/index.html carrega js/ordem/poderes.js antes de progressao.js. testes/executar-frontend.js lê os scripts de cada página que calcula ficha de Ordem e compara o cartão da campanha com a ficha. Não requer nova implantação do Apps Script.",
+        ],
+      },
+    },
     {
       versao: "2.11.0",
       codinome: "BÚSSOLA",
