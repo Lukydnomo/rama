@@ -11,99 +11,100 @@
    ===================================================================== */
 
 :root {
-  color-scheme: dark;
+   color-scheme: dark;
 
-  /* ---------- fundos ---------- */
-  --cor-fundo:        #08080A;
-  --cor-superficie:   #101012;
-  --cor-superficie-2: #18181B;
-  --cor-superficie-3: #222225;
+   /* ---------- fundos ---------- */
+   --cor-fundo: #08080A;
+   --cor-superficie: #101012;
+   --cor-superficie-2: #18181B;
+   --cor-superficie-3: #222225;
 
-  /* ---------- texto ---------- */
-  --cor-texto:        #FFFFFF;
-  --cor-texto-2:      #DEDEDE;
-  --cor-texto-3:      #A0A0A0;
+   /* ---------- texto ---------- */
+   --cor-texto: #FFFFFF;
+   --cor-texto-2: #DEDEDE;
+   --cor-texto-3: #A0A0A0;
 
-  /* ---------- traços ----------
+   /* ---------- traços ----------
      forte para o que está ativo, media para o corpo da interface,
      fraca para separações internas que não devem competir com o dado */
-  --cor-traco-forte:  #FFFFFF;
-  --cor-traco-media:  #AAAAAA;
-  --cor-traco-fraca:  #4A4A4A;
+   --cor-traco-forte: #FFFFFF;
+   --cor-traco-media: #AAAAAA;
+   --cor-traco-fraca: #4A4A4A;
 
-  /* ---------- cor temática ----------
+   /* ---------- cor temática ----------
      Dessaturada de propósito: ela existe para avisar, não para decorar.
      Um sistema quase todo preto e branco faz o amarelo pesar mais. */
-  --cor-ok:           #6FB07A;
-  --cor-aviso:        #C9A227;
-  --cor-erro:         #C6564B;
-  --cor-paranormal:   #7E6BB5;
+   --cor-ok: #6FB07A;
+   --cor-aviso: #C9A227;
+   --cor-erro: #C6564B;
+   --cor-paranormal: #7E6BB5;
 
-  /* ---------- graus de treinamento ----------
+   /* ---------- graus de treinamento ----------
      Uma cor só para os três graus; a subida aparece no peso da letra:
      treinado só a cor, veterano em negrito, expert em negrito e itálico.
      A cor acompanha o NOME do grau, nunca o substitui, e depende só do
      grau — não do total. */
-  --cor-grau: #402A7E;
+   --cor-grau: #4FACE5;
 
-  /* ---------- tipografia ---------- */
-  --fonte-corpo: "PixelMplus12", "PixelMplus12 Regular", ui-monospace,
-                 "Cascadia Mono", "Segoe UI Mono", "DejaVu Sans Mono", monospace;
-  --fonte-mini:  "PixelMplus10", "PixelMplus10 Regular", var(--fonte-corpo);
+   /* ---------- tipografia ---------- */
+   --fonte-corpo: "PixelMplus12", "PixelMplus12 Regular", ui-monospace,
+      "Cascadia Mono", "Segoe UI Mono", "DejaVu Sans Mono", monospace;
+   --fonte-mini: "PixelMplus10", "PixelMplus10 Regular", var(--fonte-corpo);
 
-  --escala: 1;                       /* preferência de quem usa */
-  --texto-mini:   calc(10px * var(--escala));
-  --texto-base:   calc(12px * var(--escala));
-  --texto-medio:  calc(16px * var(--escala));
-  --texto-grande: calc(24px * var(--escala));
-  --texto-numero: calc(32px * var(--escala));
+   --escala: 1;
+   /* preferência de quem usa */
+   --texto-mini: calc(10px * var(--escala));
+   --texto-base: calc(12px * var(--escala));
+   --texto-medio: calc(16px * var(--escala));
+   --texto-grande: calc(24px * var(--escala));
+   --texto-numero: calc(32px * var(--escala));
 
-  --altura-linha: 1.6;
-  --espaco-letra: 0.02em;
-  --espaco-letra-titulo: 0.12em;
+   --altura-linha: 1.6;
+   --espaco-letra: 0.02em;
+   --espaco-letra-titulo: 0.12em;
 
-  /* ---------- espaçamento ----------
+   /* ---------- espaçamento ----------
      Grade de 4. Nada de valores fora dela: é o que mantém as caixas
      alinhadas quando a tela muda de tamanho. */
-  --e1: 4px;
-  --e2: 8px;
-  --e3: 12px;
-  --e4: 16px;
-  --e5: 24px;
-  --e6: 32px;
-  --e7: 48px;
-  --e8: 64px;
+   --e1: 4px;
+   --e2: 8px;
+   --e3: 12px;
+   --e4: 16px;
+   --e5: 24px;
+   --e6: 32px;
+   --e7: 48px;
+   --e8: 64px;
 
-  /* ---------- forma ---------- */
-  --raio:       0px;
-  --raio-suave: 2px;
-  --borda:      1px;
+   /* ---------- forma ---------- */
+   --raio: 0px;
+   --raio-suave: 2px;
+   --borda: 1px;
 
-  /* ---------- movimento ---------- */
-  --tempo-seco:  90ms;
-  --tempo-curto: 160ms;
-  --tempo-medio: 260ms;
-  --curva: cubic-bezier(0.2, 0, 0.2, 1);
+   /* ---------- movimento ---------- */
+   --tempo-seco: 90ms;
+   --tempo-curto: 160ms;
+   --tempo-medio: 260ms;
+   --curva: cubic-bezier(0.2, 0, 0.2, 1);
 
-  /* ---------- profundidade ---------- */
-  --z-conteudo: 1;
-  --z-fixo:     20;
-  --z-cabecalho:30;
-  --z-flutuante:40;
-  --z-modal:    50;
-  --z-aviso:    60;
+   /* ---------- profundidade ---------- */
+   --z-conteudo: 1;
+   --z-fixo: 20;
+   --z-cabecalho: 30;
+   --z-flutuante: 40;
+   --z-modal: 50;
+   --z-aviso: 60;
 
-  /* ---------- medidas do esqueleto ---------- */
-  --largura-max: 1320px;
-  --alvo-toque:  40px;
+   /* ---------- medidas do esqueleto ---------- */
+   --largura-max: 1320px;
+   --alvo-toque: 40px;
 }
 
 /* Quem pediu menos movimento recebe menos movimento — inclusive as
    scanlines, que são animação mesmo quando não parecem. */
 @media (prefers-reduced-motion: reduce) {
-  :root {
-    --tempo-seco: 0ms;
-    --tempo-curto: 0ms;
-    --tempo-medio: 0ms;
-  }
+   :root {
+      --tempo-seco: 0ms;
+      --tempo-curto: 0ms;
+      --tempo-medio: 0ms;
+   }
 }
