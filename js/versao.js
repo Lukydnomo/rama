@@ -14,13 +14,13 @@
    TRÊS COISAS DIFERENTES, QUE NÃO SE MISTURAM
    ---------------------------------------------------------------------
 
-     versão do aplicativo   está aqui. É o que a pessoa vê: v2.6.0.
+     versão do aplicativo   está aqui. É o que a pessoa vê: v2.6.1.
      schemaVersion          está em js/ficha.js. É o formato da FICHA,
                             e só sobe quando a ficha muda de forma.
      versaoFormato          está em js/config.js. É o formato dos
                             arquivos de importação/exportação.
 
-   Elas sobem em ritmos próprios. A v2.6.0 leva schemaVersion 6 e
+   Elas sobem em ritmos próprios. A v2.6.1 leva schemaVersion 6 e
    versaoFormato 1 — e isso é normal: a ficha ganhou versões personalizadas e
    etiquetas, mas o formato dos arquivos de importação continua
    o mesmo,
@@ -57,6 +57,19 @@
   ];
 
   var CHANGELOG = [
+    {
+      versao: "2.6.1",
+      codinome: "SUMÁRIO",
+      data: "12/09/2026",
+      mudancas: {
+        "Alterado": [
+          "A aba Habilidades mostra tudo em ordem alfabética, em todos os níveis: pastas primeiro, depois as habilidades, sem diferença de acento ou maiúscula. Na ficha de Ordem, as habilidades das regras e as criadas à mão ficam numa lista só, pelo nome que aparece no cartão.",
+        ],
+        "Removido": [
+          "As opções “Subir” e “Descer” do menu de habilidades e pastas, que deixaram de fazer sentido com a ordem automática. “Mover” continua.",
+        ],
+      },
+    },
     {
       versao: "2.6.0",
       codinome: "VARIANTE",

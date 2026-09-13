@@ -483,6 +483,26 @@
       t.igual("negrito vira booleano", suja2.filhos[0].filhos[0].negrito, true);
       t.ok("todo nó ganhou id", H.todasAsHabilidades(suja2).every(function (n) { return !!n.id; }));
 
+      t.grupo("Habilidades — ordem alfabética na tela");
+
+      var desordem = [
+        { tipo: "habilidade", nome: "Zumbido" },
+        { tipo: "pasta", nome: "Trilha", filhos: [] },
+        { tipo: "habilidade", nome: "ágil" },
+        { tipo: "habilidade", nome: "Nível 10" },
+        { tipo: "pasta", nome: "Classe", filhos: [] },
+        { tipo: "habilidade", nome: "Nível 2" },
+        { tipo: "habilidade", nome: "Ataque" },
+      ];
+      var copiaDaOrdem = JSON.stringify(desordem);
+      t.iguais("pastas primeiro, depois habilidades, cada grupo por nome",
+        H.ordenarParaExibicao(desordem).map(function (n) { return n.nome; }),
+        ["Classe", "Trilha", "ágil", "Ataque", "Nível 2", "Nível 10", "Zumbido"]);
+      t.igual("acento e maiúscula não mudam a ordem", H.compararNomes("Ágil", "agil"), 0);
+      t.ok("número em ordem natural: Nível 2 antes de Nível 10", H.compararNomes("Nível 2", "Nível 10") < 0);
+      t.igual("ordenar para a tela não reescreve a ordem guardada", JSON.stringify(desordem), copiaDaOrdem);
+      t.iguais("lista vazia ou ausente não quebra", H.ordenarParaExibicao(null), []);
+
       t.grupo("Habilidades — profundidade tem teto");
 
       var fundo = { filhos: [] };

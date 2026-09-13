@@ -68,7 +68,7 @@
     if (dasRegras && (regras.length || fim.length || arvore.filhos.length)) {
       return el("div.pilha", {}, [
         aviso,
-        el("div.arvore-hab", {}, regras.concat(ramos(ctx, arvore.filhos, 0), fim)),
+        el("div.arvore-hab", {}, primeiroNivel(ctx, arvore.filhos, regras).concat(fim)),
       ]);
     }
 
@@ -104,8 +104,27 @@
   /* A recursão. Cada nível devolve os próprios filhos e chama a si
      mesmo para as pastas — sem limite escrito aqui, porque o limite é
      do modelo e já foi aplicado na normalização. */
+  /* O primeiro nível da ficha de Ordem: as pastas, em ordem alfabética,
+     e depois UMA lista alfabética com as habilidades das regras e as
+     criadas à mão misturadas. O nome que conta é o que aparece no
+     cartão — o da versão personalizada, quando houver. */
+  function primeiroNivel(ctx, filhos, regras) {
+    var pastas = [];
+    var habilidades = [];
+    H.ordenarParaExibicao(filhos).forEach(function (no) {
+      if (no.tipo === H.TIPO_PASTA) pastas.push(pasta(ctx, no, 0));
+      else habilidades.push({ nome: no.nome, elemento: habilidade(ctx, no, 0) });
+    });
+    (regras || []).forEach(function (cartao) {
+      var titulo = cartao && cartao.querySelector ? cartao.querySelector(".recolhivel__titulo") : null;
+      habilidades.push({ nome: titulo ? titulo.textContent : "", elemento: cartao });
+    });
+    habilidades.sort(function (a, b) { return H.compararNomes(a.nome, b.nome); });
+    return pastas.concat(habilidades.map(function (x) { return x.elemento; }));
+  }
+
   function ramos(ctx, filhos, profundidade) {
-    return (filhos || []).map(function (no) {
+    return H.ordenarParaExibicao(filhos).map(function (no) {
       return no.tipo === H.TIPO_PASTA
         ? pasta(ctx, no, profundidade)
         : habilidade(ctx, no, profundidade);
@@ -123,8 +142,6 @@
         "separador",
         { rotulo: "Renomear", aoClicar: function () { renomear(ctx, no); } },
         { rotulo: "Mover", aoClicar: function () { mover(ctx, no); } },
-        { rotulo: "Subir", aoClicar: function () { reordenar(ctx, no.id, -1); } },
-        { rotulo: "Descer", aoClicar: function () { reordenar(ctx, no.id, 1); } },
         "separador",
         { rotulo: "Excluir pasta", perigo: true, aoClicar: function () { excluirPasta(ctx, no); } },
       ], { rotulo: "Opções da pasta " + no.nome, icone: "tresPontos" }),
@@ -159,8 +176,6 @@
       UI.menu([
         { rotulo: "Editar", aoClicar: function () { editar(ctx, no, null); } },
         { rotulo: "Mover", aoClicar: function () { mover(ctx, no); } },
-        { rotulo: "Subir", aoClicar: function () { reordenar(ctx, no.id, -1); } },
-        { rotulo: "Descer", aoClicar: function () { reordenar(ctx, no.id, 1); } },
         { rotulo: "Enviar à biblioteca", aoClicar: function () { paraBiblioteca(ctx, no); } },
         "separador",
         { rotulo: "Remover", perigo: true, aoClicar: function () { remover(ctx, no); } },
@@ -268,7 +283,7 @@
   }
 
   /* =================================================================
-     MOVER E REORDENAR
+     MOVER (a ordem é alfabética, ver RAMAHabilidades.ordenarParaExibicao)
      ================================================================= */
 
   function mover(ctx, no) {
@@ -308,12 +323,6 @@
         },
       ],
     });
-  }
-
-  function reordenar(ctx, id, direcao) {
-    if (!H.reordenar(ctx.ficha.habilidades, id, direcao)) return;
-    ctx.alterou();
-    ctx.redesenhar();
   }
 
   /* =================================================================
