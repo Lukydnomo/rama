@@ -96,27 +96,6 @@
     return h;
   }
 
-  /* =================================================================
-     ORDEM DE EXIBIÇÃO
-     -----------------------------------------------------------------
-     A aba Habilidades mostra tudo em ordem alfabética: pastas primeiro,
-     depois as habilidades, cada grupo por nome — sem diferença de
-     acento nem de maiúscula, e "Nível 2" antes de "Nível 10". É só a
-     TELA que ordena: a ordem guardada na ficha não é reescrita.
-     ================================================================= */
-
-  function compararNomes(a, b) {
-    return String(a || "").localeCompare(String(b || ""), "pt-BR", { sensitivity: "base", numeric: true });
-  }
-
-  function ordenarParaExibicao(filhos) {
-    return (Array.isArray(filhos) ? filhos : []).slice().sort(function (a, b) {
-      var pa = a && a.tipo === TIPO_PASTA ? 0 : 1;
-      var pb = b && b.tipo === TIPO_PASTA ? 0 : 1;
-      return (pa - pb) || compararNomes(a && a.nome, b && b.nome);
-    });
-  }
-
   function criarPasta(nome) {
     return {
       id: U.uuid(),
@@ -377,8 +356,6 @@
     percorrer: percorrer,
     achar: achar,
     contar: contar,
-    compararNomes: compararNomes,
-    ordenarParaExibicao: ordenarParaExibicao,
     todasAsHabilidades: todasAsHabilidades,
     destinosPossiveis: destinosPossiveis,
 

@@ -356,14 +356,6 @@ fixos condenaria a estrutura a uma reescrita no dia em que alguém quisesse
 }
 ```
 
-**A aba mostra tudo em ordem alfabética**, em todos os níveis: pastas primeiro,
-depois habilidades, cada grupo por nome, sem diferença de acento ou maiúscula e
-com números em ordem natural ("Nível 2" antes de "Nível 10"). Na ficha de Ordem,
-as habilidades das regras e as criadas à mão formam uma lista só, pelo nome que
-aparece no cartão (o da versão personalizada, quando houver). É ordem de TELA:
-a ordem de `filhos` gravada na ficha não é reescrita
-(`RAMAHabilidades.ordenarParaExibicao`).
-
 O teto de profundidade é **6**, e é limite da TELA, não do modelo: mais que isso
 e o recuo de cada nível não cabe num celular. O teto também protege a
 normalização de recursão infinita num JSON importado que aponte para si mesmo.
