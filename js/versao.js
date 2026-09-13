@@ -14,13 +14,13 @@
    TRÊS COISAS DIFERENTES, QUE NÃO SE MISTURAM
    ---------------------------------------------------------------------
 
-     versão do aplicativo   está aqui. É o que a pessoa vê: v2.9.0.
+     versão do aplicativo   está aqui. É o que a pessoa vê: v2.9.1.
      schemaVersion          está em js/ficha.js. É o formato da FICHA,
                             e só sobe quando a ficha muda de forma.
      versaoFormato          está em js/config.js. É o formato dos
                             arquivos de importação/exportação.
 
-   Elas sobem em ritmos próprios. A v2.9.0 leva schemaVersion 6 e
+   Elas sobem em ritmos próprios. A v2.9.1 leva schemaVersion 6 e
    versaoFormato 1 — e isso é normal: a ficha ganhou versões personalizadas e
    etiquetas, mas o formato dos arquivos de importação continua
    o mesmo,
@@ -57,6 +57,16 @@
   ];
 
   var CHANGELOG = [
+    {
+      versao: "2.9.1",
+      codinome: "SUTURA",
+      data: "13/09/2026",
+      mudancas: {
+        "Visual": [
+          "Nas perícias da ficha de Ordem Paranormal, os graus de treinamento passam a usar uma cor só (#402A7E) no nome e no bônus do grau: Treinado só com a cor, Veterano em negrito, Expert em negrito e itálico. O nome do grau continua escrito, e o estilo depende só do grau.",
+        ],
+      },
+    },
     {
       versao: "2.9.0",
       codinome: "ALINHAVO",

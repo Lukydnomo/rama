@@ -495,9 +495,11 @@ No modo edição, cada perícia tem:
 
 A tabela mostra, alinhados: perícia, atributo, grau, treino (o bônus do grau), extra,
 total e rolagem, com as marcas de carga e kit. Quando o total tem outros modificadores
-(poderes, carga, ajustes), ele ganha um asterisco e a composição explica. O grau tem
-cor própria — treinado verde, veterano azul, expert laranja — sempre com o nome
-escrito, e a cor depende só do grau, nunca do total.
+(poderes, carga, ajustes), ele ganha um asterisco e a composição explica. Os graus
+treinado, veterano e expert usam a mesma cor (#402A7E) no nome e no bônus do grau, e
+a subida aparece no peso da letra: treinado só a cor, veterano em negrito, expert em
+negrito e itálico. O nome continua escrito, e o estilo depende só do grau, nunca do
+total.
 
 | perícia | atrib. | só treinada | carga | kit |
 |---|---|---|---|---|

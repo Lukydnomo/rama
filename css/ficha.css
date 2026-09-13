@@ -1059,17 +1059,20 @@ body.pagina-ficha .app-corpo {
   color: var(--cor-texto-3);
 }
 .ordem-pericia__atrib--trocado { color: var(--cor-texto); text-decoration: underline dotted; text-underline-offset: 3px; }
+.ordem-pericia__treino { font-variant-numeric: tabular-nums; color: var(--cor-texto-3); }
+
+/* O grau e o bônus dele seguem o mesmo estilo (tokens.css, --cor-grau):
+   treinado só a cor, veterano em negrito, expert em negrito e itálico. */
 .ordem-pericia__grau.grau--treinado,
 .ordem-pericia__grau.grau--veterano,
-.ordem-pericia__grau.grau--expert { font-weight: 700; }
-.ordem-pericia__grau.grau--treinado { color: var(--cor-grau-treinado); }
-.ordem-pericia__grau.grau--veterano { color: var(--cor-grau-veterano); }
-.ordem-pericia__grau.grau--expert { color: var(--cor-grau-expert); }
-
-.ordem-pericia__treino { font-weight: 700; font-variant-numeric: tabular-nums; color: var(--cor-texto-3); }
-.ordem-pericia__treino.grau--treinado { color: var(--cor-grau-treinado); }
-.ordem-pericia__treino.grau--veterano { color: var(--cor-grau-veterano); }
-.ordem-pericia__treino.grau--expert { color: var(--cor-grau-expert); }
+.ordem-pericia__grau.grau--expert,
+.ordem-pericia__treino.grau--treinado,
+.ordem-pericia__treino.grau--veterano,
+.ordem-pericia__treino.grau--expert { color: var(--cor-grau); font-weight: 400; font-style: normal; }
+.ordem-pericia__grau.grau--veterano,
+.ordem-pericia__treino.grau--veterano { font-weight: 700; }
+.ordem-pericia__grau.grau--expert,
+.ordem-pericia__treino.grau--expert { font-weight: 700; font-style: italic; }
 
 .ordem-pericia__extra { color: var(--cor-texto); font-variant-numeric: tabular-nums; }
 .ordem-pericia__extra--zero { color: var(--cor-texto-3); }

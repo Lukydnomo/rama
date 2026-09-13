@@ -1219,9 +1219,11 @@
 /* Uma etiqueta que diz, sem rodeio, o que o sistema faz com aquela
    entrada: se ela entra na conta ou se é anotação. */
 /* Cor do grau de treinamento: no nome do grau e no bônus dele. */
-.grau--treinado { color: var(--cor-grau-treinado); }
-.grau--veterano { color: var(--cor-grau-veterano); }
-.grau--expert   { color: var(--cor-grau-expert); }
+.grau--treinado,
+.grau--veterano,
+.grau--expert   { color: var(--cor-grau); font-weight: 400; font-style: normal; }
+.grau--veterano { font-weight: 700; }
+.grau--expert   { font-weight: 700; font-style: italic; }
 
 .etiqueta {
   align-self: flex-start;
