@@ -1159,21 +1159,9 @@ body.pagina-ficha .app-corpo {
 
 /* ---------- progressão ---------- */
 
-.ordem-pendencia {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--e2);
-  padding: var(--e2);
-  background: var(--cor-superficie);
-  border-left: 3px solid var(--cor-paranormal);
-}
-.ordem-pendencia__nex {
-  font-family: var(--fonte-mini);
-  font-size: var(--texto-mini);
-  color: var(--cor-texto-3);
-}
-.ordem-pendencia__rotulo { flex: 1; min-width: 0; }
+/* .ordem-pendencia, .ordem-regra e .r-interruptor moram em
+   componentes.css: a criação guiada (página Personagens) usa os três, e
+   ela não carrega este arquivo. */
 
 .ordem-degraus { display: flex; flex-direction: column; gap: 2px; }
 
@@ -1195,68 +1183,7 @@ body.pagina-ficha .app-corpo {
   font-size: var(--texto-mini);
 }
 
-/* ---------- regras opcionais ---------- */
-
-.ordem-regra {
-  display: flex;
-  flex-direction: column;
-  gap: var(--e2);
-  padding: var(--e3);
-  background: var(--cor-superficie);
-  border: var(--borda) solid var(--cor-traco-fraca);
-}
-.ordem-regra--ligada { border-color: var(--cor-paranormal); }
-
-.ordem-regra__topo {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--e2);
-}
-.ordem-regra__nome {
-  font-weight: 700;
-  letter-spacing: var(--espaco-letra-titulo);
-  min-width: 0;
-}
-
-/* O interruptor é forma além de cor: a bola muda de lado, e continua
-   legível para quem não distingue cores. */
-.r-interruptor {
-  flex: 0 0 auto;
-  width: 44px;
-  height: 24px;
-  padding: 2px;
-  background: var(--cor-superficie-2);
-  border: var(--borda) solid var(--cor-traco-media);
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: flex-start;
-}
-.r-interruptor:disabled { opacity: 0.45; cursor: not-allowed; }
-.r-interruptor--ligado {
-  justify-content: flex-end;
-  border-color: var(--cor-paranormal);
-}
-.r-interruptor__bola {
-  display: block;
-  width: 16px;
-  height: 16px;
-  background: var(--cor-traco-media);
-}
-.r-interruptor--ligado .r-interruptor__bola { background: var(--cor-paranormal); }
-
 /* ---------- progressão: pendências, escolhas feitas, poderes ---------- */
-
-.ordem-pendencia__corpo {
-  flex: 1;
-  min-width: 12rem;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-.ordem-pendencia[data-situacao="incompleta"] { border-left-color: var(--cor-aviso); }
-.ordem-pendencia[data-situacao="invalida"] { border-left-color: var(--cor-erro); }
 
 .ordem-escolha {
   display: flex;

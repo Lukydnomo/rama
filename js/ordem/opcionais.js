@@ -55,6 +55,11 @@
        fonte/pagina    de onde ela saiu
        efeito          o que muda NA FICHA, em português
        afetaFicha      false para regra que não muda campo nem conta
+       progressao      true para regra que troca o TRILHO de progressão
+                       (o que decide PV, PE, Sanidade e as etapas). A
+                       criação guiada mostra estas na revisão, antes das
+                       pendências: decidir depois de fazer a progressão
+                       inteira seria refazê-la
        automacao       "calculo" | "parcial" | "informacao"
        parametros      campos que aparecem DEPOIS de ligar
        depende         chaves de outras regras exigidas
@@ -68,6 +73,7 @@
       resumo: "Separa o nível de experiência do nível de exposição paranormal.",
       fonte: SAH, pagina: 98,
       afetaFicha: true,
+      progressao: true,
       automacao: "calculo",
       efeito:
         "Nível e NEX passam a ser dois campos independentes. O NÍVEL manda na " +
@@ -148,6 +154,7 @@
       resumo: "A progressão passa a acompanhar a patente na Ordem, não o NEX.",
       fonte: SAH, pagina: 108,
       afetaFicha: true,
+      progressao: true,
       automacao: "parcial",
       efeito: "A patente passa a ser o trilho de progressão. Os detalhes da tabela de patentes desta regra " +
               "ainda não foram estruturados: ver a pendência em docs/ORDEM-REGRAS.md.",
@@ -245,6 +252,11 @@
 
   function ligadas(ficha) {
     return REGRAS.filter(function (r) { return ligada(ficha, r.chave); });
+  }
+
+  /* As que trocam o trilho de progressão. */
+  function deProgressao() {
+    return REGRAS.filter(function (r) { return r.progressao === true; });
   }
 
   /* =================================================================
@@ -375,6 +387,7 @@
     regra: regra,
     ligada: ligada,
     ligadas: ligadas,
+    deProgressao: deProgressao,
     conflitos: conflitos,
     consequenciasDe: consequenciasDe,
     definir: definir,

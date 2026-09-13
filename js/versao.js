@@ -14,13 +14,13 @@
    TRÊS COISAS DIFERENTES, QUE NÃO SE MISTURAM
    ---------------------------------------------------------------------
 
-     versão do aplicativo   está aqui. É o que a pessoa vê: v2.10.1.
+     versão do aplicativo   está aqui. É o que a pessoa vê: v2.11.0.
      schemaVersion          está em js/ficha.js. É o formato da FICHA,
                             e só sobe quando a ficha muda de forma.
      versaoFormato          está em js/config.js. É o formato dos
                             arquivos de importação/exportação.
 
-   Elas sobem em ritmos próprios. A v2.10.1 leva schemaVersion 6 e
+   Elas sobem em ritmos próprios. A v2.11.0 leva schemaVersion 6 e
    versaoFormato 1 — e isso é normal: a ficha ganhou versões personalizadas e
    etiquetas, mas o formato dos arquivos de importação continua
    o mesmo,
@@ -57,6 +57,26 @@
   ];
 
   var CHANGELOG = [
+    {
+      versao: "2.11.0",
+      codinome: "BÚSSOLA",
+      data: "13/09/2026",
+      mudancas: {
+        "Adicionado": [
+          "Criação de ficha de Ordem Paranormal: a Revisão mostra, acima de “Falta decidir”, as regras opcionais que mudam a progressão — NEX & Experiência e Evolução por Patentes —, com a mesma chave da aba Regras. Assim dá para decidir se a mesa usa NEX ou nível antes de resolver as pendências.",
+          "Com NEX & Experiência ligada na criação, a Revisão e a etapa Conceito pedem nível de experiência e NEX por exposição, e as pendências passam a seguir o nível.",
+        ],
+        "Alterado": [
+          "Na criação, ligar NEX & Experiência começa o nível no equivalente ao NEX escolhido, e desligar volta o NEX ao equivalente ao nível — o personagem fica no mesmo ponto da progressão. Com decisões já tomadas, a troca pede confirmação e não apaga nada.",
+        ],
+        "Corrigido": [
+          "Os cartões de “Falta decidir” da criação apareciam sem estilo, com o nome colado na explicação (“TrilhaEscolha uma trilha…”).",
+        ],
+        "Técnico": [
+          "Campo `progressao` e função `deProgressao()` em js/ordem/opcionais.js. Os estilos de .ordem-pendencia, .ordem-regra e .r-interruptor saíram de css/ficha.css para css/componentes.css, porque a criação abre na página Personagens. Não requer nova implantação do Apps Script.",
+        ],
+      },
+    },
     {
       versao: "2.10.1",
       codinome: "CAMADA",

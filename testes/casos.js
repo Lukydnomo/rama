@@ -1349,6 +1349,32 @@
       t.ok("as que não mexem na ficha estão marcadas",
         OP.regra("combateNarrativo").afetaFicha === false);
       t.ok("  e as que mexem também", OP.regra("nexExperiencia").afetaFicha === true);
+      t.iguais("as que trocam o trilho de progressão (mostradas na revisão da criação)",
+        OP.deProgressao().map(function (r) { return r.chave; }), ["nexExperiencia", "evolucaoPatentes"]);
+      t.ok("  todas mexem na ficha", OP.deProgressao().every(function (r) { return r.afetaFicha; }));
+
+      /* A revisão da criação liga a regra sobre o rascunho: as pendências
+         passam a seguir o nível, e o que vale é o degrau, não o rótulo. */
+      var rascunho = R2.fichaVazia();
+      rascunho.classe = "combatente";
+      rascunho.origem = "academico";
+      rascunho.atributos = { agi: 2, for: 2, int: 2, pre: 2, vig: 1 };
+      rascunho.nex = 25;
+      var idsDe = function (o, prefixo) {
+        return global.RAMAOrdemProgressao.estado(o, null).pendencias
+          .map(function (p) { return p.id; })
+          .filter(function (id) { return id.indexOf(prefixo) === 0; });
+      };
+      var daClassePorNex = idsDe(rascunho, "d");
+      t.iguais("sem a regra, NEX 25% pede trilha, poder e atributo", daClassePorNex, ["d2.trilha", "d3.poderClasse", "d4.atributo"]);
+      t.iguais("  e nada por exposição", idsDe(rascunho, "x"), []);
+      OP.definir(rascunho, "nexExperiencia", true);
+      t.igual("ligar no rascunho põe o nível no equivalente ao NEX (25% → 5)", rascunho.nivel, 5);
+      t.iguais("  as etapas de classe são as mesmas, porque o degrau é o mesmo", idsDe(rascunho, "d"), daClassePorNex);
+      t.ok("  mas surgem pendências por exposição — por isso a revisão pergunta antes",
+        idsDe(rascunho, "x").length > 0);
+      rascunho.nivel = 1;
+      t.iguais("  baixar o nível tira as etapas de classe que ele não alcança", idsDe(rascunho, "d"), []);
 
       t.grupo("Ordem — separar nível e NEX");
 

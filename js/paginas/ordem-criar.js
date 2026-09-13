@@ -39,6 +39,21 @@
    ficha por etapa anterior. As escolhas usam as mesmas janelas e o
    mesmo motor de progressão da ficha: o que se decide aqui é o que a
    ficha vai mostrar.
+
+   ---------------------------------------------------------------------
+   REGRAS QUE MUDAM A PROGRESSÃO
+   ---------------------------------------------------------------------
+
+   NEX & Experiência (e Evolução por Patentes) trocam o trilho que decide
+   PV, PE, Sanidade e as etapas. Por isso a revisão as mostra ANTES das
+   pendências: descobrir depois de resolver tudo que a mesa separa nível
+   e NEX seria refazer a progressão. A chave é a mesma da aba Regras da
+   ficha (RAMAOrdemOpcionais) e vai gravada junto.
+
+   No rascunho, ligar NEX & Experiência põe o nível no equivalente ao NEX
+   escolhido (1 nível por 5%), e desligar devolve ao NEX o equivalente ao
+   nível — o personagem continua no mesmo degrau. O NEX por exposição
+   fica editável enquanto a regra estiver ligada.
    ===================================================================== */
 
 (function (global) {
@@ -51,6 +66,7 @@
   var R = global.RAMAOrdemRegras;
   var E = global.RAMAOrdemProgressao;
   var ES = global.RAMAOrdemEscolhas;
+  var OP = global.RAMAOrdemOpcionais;
   var el = U.el;
 
   function abrir(opcoes) {
@@ -77,6 +93,11 @@
          que a ficha grava. */
       escolhas: [],
       afinidade: { elemento: "", nomeOutro: "", adiada: false },
+      /* Regras opcionais ligadas na revisão e, com NEX & Experiência, o
+         nível de experiência — que passa a mandar na progressão. */
+      opcionais: {},
+      nivel: 1,
+      nivelDefinido: false,
     };
 
     var etapa = 0;
@@ -120,6 +141,14 @@
       rodapeInfo.textContent = "";
     }
 
+    /* Redesenha e devolve o foco a um controle que nasceu de novo com o
+       mesmo id — sem isto, quem usa teclado volta ao topo da janela. */
+    function pintarFocando(id) {
+      pintar();
+      var alvo = id && document.getElementById(id);
+      if (alvo) alvo.focus();
+    }
+
     function trilhaDeEtapas() {
       return el("ol.criacao-trilha", {}, ETAPAS.map(function (e, i) {
         return el("li.criacao-trilha__passo", {
@@ -150,7 +179,11 @@
        1. CONCEITO — OPRPG p.14
        ================================================================= */
 
-    var campoNome, campoConceito, campoCampanha, campoNex;
+    var campoNome, campoConceito, campoCampanha, campoNex, campoExposicao;
+
+    function separaNivel() {
+      return !!(OP && OP.ligada(d, "nexExperiencia"));
+    }
 
     function etapaConceito() {
       campoNome = UI.campo({ rotulo: "Nome do agente", valor: d.nome, limite: 80 });
@@ -166,18 +199,33 @@
         })),
       });
 
-      campoNex = UI.campo({
-        rotulo: "NEX inicial", tipo: "selecao", valor: String(d.nex),
-        opcoes: nivelDeExposicaoOpcoes(),
-        ajuda: "Um agente novato começa em NEX 5%. Se a sua mesa começa adiantada, escolha aqui — " +
-               "a revisão reúne tudo o que esse NEX acumula.",
-      });
+      if (separaNivel()) {
+        campoNex = UI.campo({
+          rotulo: "Nível de experiência inicial", tipo: "selecao", valor: String(d.nivel),
+          opcoes: opcoesDeParametro({ chave: "nivel", minimo: 1, maximo: 20 }),
+          ajuda: "A regra “NEX & Experiência” está ligada (etapa Revisão): o nível manda na progressão.",
+        });
+        campoExposicao = UI.campo({
+          rotulo: "NEX por exposição", tipo: "selecao", valor: String(d.nex),
+          opcoes: opcoesDeParametro({ chave: "nex", minimo: 0, maximo: C.REGRAS.nexMaximo }),
+          ajuda: "Mede só o contato com o Outro Lado: afinidade elemental e poderes paranormais.",
+        });
+      } else {
+        campoNex = UI.campo({
+          rotulo: "NEX inicial", tipo: "selecao", valor: String(d.nex),
+          opcoes: nivelDeExposicaoOpcoes(),
+          ajuda: "Um agente novato começa em NEX 5%. Se a sua mesa começa adiantada, escolha aqui — " +
+                 "a revisão reúne tudo o que esse NEX acumula. Se a mesa separa nível e NEX, " +
+                 "ligue “NEX & Experiência” na revisão.",
+        });
+        campoExposicao = null;
+      }
 
       return el("div.pilha", {}, [
         el("p", { texto: "Comece pelo que dá vontade de jogar. O resto se encaixa depois." }),
         campoNome,
         campoConceito,
-        el("div.editar-grade", {}, [campoCampanha, campoNex]),
+        el("div.editar-grade", {}, [campoCampanha, campoNex, campoExposicao]),
       ]);
     }
 
@@ -194,7 +242,12 @@
       d.nome = campoNome.entrada.value.trim();
       d.conceito = campoConceito.entrada.value.trim();
       d.campanhaId = campoCampanha.entrada.value || "";
-      d.nex = parseInt(campoNex.entrada.value, 10) || 5;
+      if (campoExposicao) {
+        d.nivel = Math.max(1, Math.min(20, parseInt(campoNex.entrada.value, 10) || 1));
+        d.nex = R.nexValido(campoExposicao.entrada.value);
+      } else {
+        d.nex = parseInt(campoNex.entrada.value, 10) || 5;
+      }
 
       if (!d.nome) { campoNome.marcarErro("Informe um nome."); campoNome.entrada.focus(); return "O agente precisa de um nome."; }
       campoNome.marcarErro("");
@@ -598,13 +651,17 @@
     }
 
     function etapaRevisao() {
-      var previa = R.calcular(rascunhoParaRegras(), { itens: [] });
+      var rascunho = rascunhoParaRegras();
+      var previa = R.calcular(rascunho, { itens: [] });
+      var trilho = R.trilho(rascunho);
       var org = C.origem(d.origem);
       var cl = C.classe(d.classe);
       var jaTem = periciasJaTreinadas();
 
       var todasPericias = Object.keys(jaTem).concat(d.periciasEscolhidas);
       var trilha = C.trilha(d.trilha);
+      /* A trilha abre no segundo degrau: NEX 10%, ou nível 2. */
+      var semTrilha = trilho.passos >= 2 ? "a escolher" : (trilho.separado ? "a partir do nível 2" : "a partir de NEX 10%");
       var feitas = (d.escolhas || []).map(function (r) {
         var tipo = E.TIPOS[r.tipo];
         return (tipo ? tipo.rotulo + ": " : "") + (r.nome || "");
@@ -617,7 +674,10 @@
           el("dt", { texto: "Nome" }), el("dd", { texto: d.nome }),
           el("dt", { texto: "Origem" }), el("dd", { texto: org ? org.nome : "—" }),
           el("dt", { texto: "Classe" }), el("dd", { texto: cl ? cl.nome : "—" }),
-          el("dt", { texto: "NEX" }), el("dd", { texto: d.nex + "%" }),
+          trilho.separado ? el("dt", { texto: "Nível de experiência" }) : el("dt", { texto: "NEX" }),
+          trilho.separado ? el("dd", { texto: String(d.nivel) }) : el("dd", { texto: d.nex + "%" }),
+          trilho.separado ? el("dt", { texto: "NEX por exposição" }) : null,
+          trilho.separado ? el("dd", { texto: d.nex + "%" }) : null,
           el("dt", { texto: "Atributos" }), el("dd", {
             texto: C.ATRIBUTOS.map(function (a) { return a.sigla + " " + d.atributos[a.chave]; }).join(" · "),
           }),
@@ -629,10 +689,12 @@
             texto: todasPericias.map(function (p) { return C.pericia(p).nome; }).sort().join(", ") || "—",
           }),
           el("dt", { texto: "Proficiências" }), el("dd", { texto: cl ? cl.proficiencias.join(", ") : "—" }),
-          el("dt", { texto: "Trilha" }), el("dd", { texto: trilha ? trilha.nome : (d.nex >= 10 ? "a escolher" : "a partir de NEX 10%") }),
+          el("dt", { texto: "Trilha" }), el("dd", { texto: trilha ? trilha.nome : semTrilha }),
           feitas.length ? el("dt", { texto: "Já decidido" }) : null,
           feitas.length ? el("dd", { texto: feitas.join(" · ") }) : null,
         ]),
+
+        regrasDeProgressao(rascunho),
 
         pend.length
           ? el("div.pilha--curta", { class: "pilha" }, [
@@ -645,8 +707,172 @@
                 return ES.cartaoDePendencia(p, resolverNoRascunho);
               })),
             ])
-          : el("p.t-mini", { texto: "Nada pendente: a ficha nasce completa para este NEX." }),
+          : el("p.t-mini", { texto: "Nada pendente: a ficha nasce completa para este " + (trilho.separado ? "nível." : "NEX.") }),
       ]);
+    }
+
+    /* As regras opcionais que trocam o trilho de progressão, com a mesma
+       chave da aba Regras da ficha. Ficam acima das pendências porque
+       mudam quais pendências existem. */
+    function regrasDeProgressao(rascunho) {
+      var regras = OP ? OP.deProgressao() : [];
+      if (!regras.length) return null;
+
+      return el("div.pilha--curta", { class: "pilha" }, [
+        el("h4.t-secao", { texto: "Regras que mudam a progressão" }),
+        el("p.t-mini", {
+          texto: "Decida antes de resolver o que falta: estas regras mudam o que conta como " +
+                 "progressão — e, com isso, as pendências abaixo. Todas começam desligadas, " +
+                 "e as outras regras opcionais ficam na aba Regras da ficha.",
+        }),
+        el("div.pilha--curta", { class: "pilha" }, regras.map(function (r) {
+          return cartaoDeRegra(rascunho, r);
+        })),
+      ]);
+    }
+
+    function cartaoDeRegra(rascunho, r) {
+      var ligada = OP.ligada(rascunho, r.chave);
+      var problemas = OP.conflitos(rascunho, r.chave, true);
+      var bloqueada = !ligada && problemas.length > 0;
+
+      var chave = el("button.r-interruptor", {
+        type: "button",
+        role: "switch",
+        id: "criacao-regra-" + r.chave,
+        "aria-checked": String(ligada),
+        "aria-label": r.nome,
+        disabled: bloqueada,
+        class: ligada ? "r-interruptor--ligado" : "",
+        onclick: function () { alternarRegra(r, !ligada); },
+      }, [el("span.r-interruptor__bola", { "aria-hidden": "true" })]);
+
+      var corpo = [
+        el("p.t-mini", { texto: r.resumo }),
+        el("p.t-mini", { texto: r.efeito }),
+        ES.etiquetaAutomacao(r.automacao),
+        referencia((r.fonte === "SAH" ? "Sobrevivendo ao Horror" : "Ordem Paranormal RPG") + ", p. " + r.pagina),
+      ];
+
+      /* Evolução por Patentes ainda não tem a tabela estruturada: ligar
+         não muda conta nem pendência, e o cartão precisa dizer isso para
+         ninguém esperar que a lista abaixo mude. */
+      if (r.automacao !== "calculo") {
+        corpo.push(el("p.t-mini", {
+          texto: "O R.A.M.A. ainda não recalcula a progressão com esta regra: ligada, as pendências " +
+                 "abaixo não mudam. Ela fica registrada na ficha, para a mesa.",
+        }));
+      }
+
+      if (bloqueada) {
+        corpo.push(el("p.t-mini.t-erro", { texto: problemas.map(function (p) { return p.texto; }).join(" ") }));
+      }
+
+      if (ligada && r.parametros.length) {
+        corpo.push(el("div.editar-grade", {}, r.parametros.map(function (par) {
+          var id = "criacao-parametro-" + par.chave;
+          return UI.campo({
+            id: id,
+            rotulo: par.rotulo,
+            tipo: "selecao",
+            valor: String(d[par.chave]),
+            opcoes: opcoesDeParametro(par),
+            ajuda: par.ajuda,
+            aoMudar: function (v) {
+              d[par.chave] = Math.max(par.minimo, Math.min(par.maximo, parseInt(v, 10) || par.minimo));
+              pintarFocando(id);
+            },
+          });
+        })));
+      }
+
+      return el("div.ordem-regra", { class: ligada ? "ordem-regra--ligada" : "" }, [
+        el("div.ordem-regra__topo", {}, [
+          el("span.ordem-regra__nome", { texto: r.nome }),
+          chave,
+        ]),
+        el("div.pilha--curta", { class: "pilha" }, corpo),
+      ]);
+    }
+
+    /* O que muda NO RASCUNHO. Não é o texto da aba Regras da ficha:
+       aqui o nível e o NEX são convertidos um no outro, para o
+       personagem ficar no mesmo degrau. */
+    function textoDaMudanca(r, ligar) {
+      if (r.chave === "nexExperiencia") {
+        var nivel = Math.max(1, Math.round((Number(d.nex) || C.REGRAS.nexMinimo) / C.REGRAS.passoNex));
+        var nex = d.nivel >= 20 ? C.REGRAS.nexMaximo : Math.max(C.REGRAS.nexMinimo, d.nivel * C.REGRAS.passoNex);
+        return ligar
+          ? { texto: "O nível de experiência passa a mandar na progressão, começando no equivalente ao NEX escolhido (NEX " +
+                     d.nex + "% → nível " + nivel + "). O NEX passa a medir só exposição e continua em " + d.nex + "%.",
+              detalhe: "Podem surgir pendências por exposição, como alterações e transcender." }
+          : { texto: "O NEX volta a mandar na progressão, valendo o que o nível valia (nível " + d.nivel +
+                     " → NEX " + nex + "%).",
+              detalhe: "O NEX por exposição definido na regra deixa de valer, e as pendências por exposição somem." };
+      }
+      return {
+        texto: ligar ? r.efeito : "A regra deixa de ser registrada na ficha.",
+        detalhe: r.automacao !== "calculo" ? "O R.A.M.A. ainda não recalcula a progressão com esta regra." : "",
+      };
+    }
+
+    function opcoesDeParametro(par) {
+      var lista = [];
+      for (var n = par.minimo; n <= par.maximo; n++) {
+        lista.push({ valor: String(n), rotulo: par.chave === "nex" ? n + "%" : String(n) });
+      }
+      return lista;
+    }
+
+    async function alternarRegra(r, ligar) {
+      /* Com decisões já tomadas, avisa antes — como a aba Regras. Num
+         rascunho sem nada decidido não há o que perder, e o cartão já
+         diz o que a regra faz. */
+      var decidiu = (d.escolhas || []).length > 0 || !!d.trilha ||
+                    !!(d.afinidade && (d.afinidade.elemento || d.afinidade.adiada));
+      if (decidiu) {
+        var mudanca = textoDaMudanca(r, ligar);
+        var certeza = await UI.confirmar({
+          titulo: (ligar ? "Ligar" : "Desligar") + " “" + r.nome + "”?",
+          texto: mudanca.texto,
+          detalhe: mudanca.detalhe + " Nada do que você já decidiu nesta revisão é apagado; o que " +
+                   "ficar numa etapa que o personagem não alcança fica guardado, sem efeito.",
+          rotuloConfirmar: ligar ? "Ligar" : "Desligar",
+        });
+        if (!certeza) return;
+      }
+
+      var ordem = rascunhoParaRegras();
+      /* No rascunho, o nível parte sempre do NEX escolhido agora — não de
+         uma vez anterior em que a regra foi ligada e desligada. */
+      if (ligar && r.chave === "nexExperiencia") ordem.nivelDefinido = false;
+
+      var resultado = OP.definir(ordem, r.chave, ligar);
+      if (!resultado.ok) {
+        UI.avisoErro((resultado.problemas || []).map(function (p) { return p.texto; }).join(" ") ||
+          "Não foi possível mudar esta regra.");
+        return;
+      }
+
+      var aviso = null;
+      if (ligar && r.chave === "nexExperiencia") {
+        aviso = "O nível começou em " + ordem.nivel + ", o equivalente ao NEX " + ordem.nex +
+                "% escolhido. O NEX por exposição continua " + ordem.nex + "% — ajuste os dois se a mesa combinou outros valores.";
+      }
+      if (!ligar && r.chave === "nexExperiencia") {
+        /* O personagem continua no mesmo degrau: o NEX volta a mandar,
+           valendo o que o nível valia. */
+        ordem.nex = ordem.nivel >= 20 ? C.REGRAS.nexMaximo : Math.max(C.REGRAS.nexMinimo, ordem.nivel * C.REGRAS.passoNex);
+        aviso = "O NEX voltou a mandar na progressão: NEX " + ordem.nex + "%, o equivalente ao nível " + ordem.nivel + ".";
+      }
+
+      d.opcionais = ordem.opcionais || {};
+      d.nivel = ordem.nivel;
+      d.nivelDefinido = !!ordem.nivelDefinido;
+      d.nex = ordem.nex;
+
+      pintarFocando("criacao-regra-" + r.chave);
+      if (aviso) UI.aviso(aviso);
     }
 
     /* =================================================================
@@ -656,6 +882,9 @@
     function rascunhoParaRegras() {
       var ordem = R.fichaVazia();
       ordem.nex = d.nex;
+      ordem.nivel = d.nivel;
+      ordem.nivelDefinido = d.nivelDefinido;
+      ordem.opcionais = Object.assign({}, d.opcionais);
       ordem.classe = d.classe;
       ordem.origem = d.origem;
       ordem.trilha = d.trilha;

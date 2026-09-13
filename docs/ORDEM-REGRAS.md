@@ -644,6 +644,28 @@ Todas do **SAH**, capítulo 2, "Novas Regras Opcionais" (p.98-123). Começam
 A chave "Aplicar regras de patente" **não** é uma destas regras: é configuração
 da ficha, e começa ligada.
 
+### Na criação guiada
+
+As regras marcadas `progressao: true` em `js/ordem/opcionais.js` — **NEX &
+Experiência** e **Evolução por Patentes**, as que trocam o trilho de progressão —
+aparecem na etapa **Revisão**, entre o resumo e "Falta decidir". Elas mudam quais
+pendências existem (com NEX & Experiência surgem, por exemplo, `x25.alteracao` e
+`x25.transcender`), então a pergunta vem antes de a pessoa resolver a progressão.
+As outras regras continuam só na aba Regras da ficha.
+
+- É a mesma chave (`ordem.opcionais`) e vai gravada na ficha criada, com a mesma
+  incompatibilidade entre as duas.
+- **No rascunho**, ligar NEX & Experiência põe o nível no equivalente ao NEX
+  escolhido (NEX 25% → nível 5) e mantém o NEX como exposição; o cartão mostra
+  **Nível de experiência** e **NEX por exposição** para ajustar, e a etapa Conceito
+  passa a pedir os dois. Desligar devolve ao NEX o equivalente ao nível (nível 7 →
+  NEX 35%): o personagem fica no mesmo degrau. A aba Regras da ficha **não**
+  converte ao desligar — lá o NEX guardado é preservado.
+- Com alguma decisão já tomada na revisão, mudar a regra pede confirmação. Nada é
+  apagado; o que ficar numa etapa não alcançada fica guardado, sem efeito.
+- Evolução por Patentes ainda não tem a tabela estruturada (**P**): o cartão avisa
+  que ligar não muda as pendências.
+
 ### NEX & Experiência, em detalhe
 
 **SAH p.98-103.**
