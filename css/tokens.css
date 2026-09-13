@@ -44,7 +44,7 @@
      treinado só a cor, veterano em negrito, expert em negrito e itálico.
      A cor acompanha o NOME do grau, nunca o substitui, e depende só do
      grau — não do total. */
-   --cor-grau: #4FACE5;
+   --cor-grau: #9f91dd;
 
    /* ---------- tipografia ---------- */
    --fonte-corpo: "PixelMplus12", "PixelMplus12 Regular", ui-monospace,
