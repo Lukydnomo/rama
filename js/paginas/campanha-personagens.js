@@ -33,6 +33,17 @@
    cartão conhece é ignorada.
 
    Atributos aparecem só para consulta: a edição deles é na ficha.
+
+   ---------------------------------------------------------------------
+   ADICIONAR E TIRAR
+   ---------------------------------------------------------------------
+
+   "Adicionar personagem" lista os personagens de quem abriu que ainda
+   não estão nesta mesa e vincula com um clique — sem passar pela ficha.
+   O mestre não vê ali as fichas dos jogadores: cada conta adiciona os
+   seus. "Tirar da campanha" aparece para o mestre em qualquer cartão e
+   para o dono no próprio personagem. As duas coisas usam o mesmo
+   vincular_personagem, e o servidor confere dono, papel e campanha.
    ===================================================================== */
 
 (function (global) {
@@ -68,12 +79,11 @@
         return UI.vazio({
           titulo: "Nenhum personagem na mesa",
           texto: ctx.ehMestre()
-            ? "Os jogadores vinculam as fichas deles pela própria ficha."
-            : "Vincule o seu personagem a esta campanha pela ficha dele.",
-          acao: {
-            rotulo: "Ver meus personagens",
-            aoClicar: function () { location.href = U.url("personagens/"); },
-          },
+            ? "Adicione um personagem seu. Os jogadores adicionam os deles por esta mesma aba ou pela ficha."
+            : "Adicione o seu personagem a esta campanha — por aqui ou pela ficha dele.",
+          acao: podeAdicionar(ctx)
+            ? { rotulo: "+ Adicionar personagem", aoClicar: function () { abrirAdicionar(ctx); } }
+            : { rotulo: "Ver meus personagens", aoClicar: function () { location.href = U.url("personagens/"); } },
         });
       }
 
@@ -86,17 +96,26 @@
       return el("div.pilha", {}, [
         el("div.mesa-barra", {}, [
           contagem,
-          el("button.r-botao.r-botao--mini.r-botao--fantasma", {
-            type: "button",
-            texto: "Atualizar",
-            "aria-label": "Buscar os números mais recentes das fichas",
-            onclick: async function (ev) {
-              var botao = ev.currentTarget;
-              botao.disabled = true;
-              await buscarEAtualizar(ctx, true);
-              botao.disabled = false;
-            },
-          }),
+          el("div.mesa-barra__acoes", {}, [
+            el("button.r-botao.r-botao--mini.r-botao--fantasma", {
+              type: "button",
+              texto: "Atualizar",
+              "aria-label": "Buscar os números mais recentes das fichas",
+              onclick: async function (ev) {
+                var botao = ev.currentTarget;
+                botao.disabled = true;
+                await buscarEAtualizar(ctx, true);
+                botao.disabled = false;
+              },
+            }),
+            podeAdicionar(ctx)
+              ? el("button.r-botao.r-botao--mini.r-botao--principal", {
+                  type: "button",
+                  texto: "+ Adicionar personagem",
+                  onclick: function () { abrirAdicionar(ctx); },
+                })
+              : null,
+          ]),
         ]),
         painel.grade,
       ]);
@@ -164,7 +183,8 @@
     });
     cartao.recursos = novos;
 
-    var podeAdministrar = ctx.ehMestre() && !r.souDono;
+    /* O mestre tira qualquer personagem; o dono, o próprio. */
+    var podeTirar = ctx.ehMestre() || r.souDono;
 
     U.trocar(cartao.raiz, [
       el("div.mesa-cartao__topo", {}, [
@@ -175,7 +195,7 @@
           el("p.mesa-cartao__linha", { texto: r.souDono ? "Seu personagem" : (r.dono ? "Jogador: " + r.dono : "") }),
           r.progressao ? el("p.mesa-cartao__linha.mesa-cartao__progressao", { texto: r.progressao }) : null,
         ]),
-        podeAdministrar
+        podeTirar
           ? UI.menu([
               { rotulo: "Tirar da campanha", perigo: true, aoClicar: function () { desvincular(ctx, cartao); } },
             ], { rotulo: "Mais ações para " + r.nome, icone: "tresPontos" })
@@ -519,10 +539,15 @@
 
   async function desvincular(ctx, cartao) {
     var nome = cartao.personagem.nome;
+    var meu = !!(cartao.resumo && cartao.resumo.souDono);
     var certeza = await UI.confirmar({
       titulo: "Tirar " + nome + " da campanha?",
-      texto: "A ficha continua existindo, com o mesmo dono. Ela só deixa de aparecer nesta mesa.",
-      detalhe: "Nada é apagado. O dono pode vincular a ficha de novo depois.",
+      texto: meu
+        ? "A ficha continua sua, com tudo o que tem. Ela só deixa de aparecer nesta mesa."
+        : "A ficha continua existindo, com o mesmo dono. Ela só deixa de aparecer nesta mesa.",
+      detalhe: meu
+        ? "Nada é apagado. Dá para adicioná-la de novo em “Adicionar personagem”."
+        : "Nada é apagado. O dono pode adicionar a ficha de novo depois.",
       rotuloConfirmar: "Tirar da campanha",
       perigo: true,
     });
@@ -533,5 +558,187 @@
 
     UI.avisoOk(nome + " saiu da campanha.");
     await buscarEAtualizar(ctx, true);
+  }
+
+  /* =================================================================
+     ADICIONAR PERSONAGEM
+     -----------------------------------------------------------------
+     Os personagens de quem abriu, fora desta campanha, cada um com o
+     seu botão. A lista vem de listar_personagens — que só devolve as
+     fichas da própria conta — e o vínculo é o mesmo da ficha: o
+     servidor confere que a conta é dona do personagem e mestre ou
+     jogadora desta campanha.
+
+     O mestre não vê aqui as fichas dos jogadores. Listar personagens de
+     outra conta que ainda não estão na mesa daria a ele um alcance que
+     hoje não tem.
+
+     Um personagem que está em outra campanha pode vir: a linha avisa
+     que ele sai de lá. Nada é apagado, e dá para voltar.
+     ================================================================= */
+
+  function podeAdicionar(ctx) {
+    var papel = ctx.papel();
+    return papel === "mestre" || papel === "jogador";
+  }
+
+  function abrirAdicionar(ctx) {
+    var registros = [];
+    var busca = "";
+    var adicionados = {};
+    var ocupados = {};
+
+    var corpo = el("div.pilha.mesa-adicionar");
+    var lista = el("div.mesa-adicionar__lista", { role: "list", "aria-label": "Seus personagens fora desta campanha" });
+
+    var janela = UI.modal({
+      titulo: "Adicionar personagem",
+      conteudo: corpo,
+      botoes: [{ rotulo: "Fechar", classe: "r-botao--fantasma" }],
+    });
+
+    carregar();
+
+    async function carregar() {
+      U.trocar(corpo, UI.carregando("Buscando seus personagens"));
+      var r = await global.RAMAApi.listarPersonagens();
+      if (!document.body.contains(corpo)) return;
+      if (!r.ok) {
+        U.trocar(corpo, UI.erroDeTela(r, carregar));
+        return;
+      }
+      registros = r.dados || [];
+      desenhar();
+    }
+
+    function foraDaMesa() {
+      return registros.filter(function (p) {
+        return adicionados[p.id] || String(p.campanhaId || "") !== String(ctx.campanhaId);
+      });
+    }
+
+    function desenhar() {
+      if (!registros.length) {
+        U.trocar(corpo, UI.vazio({
+          titulo: "Você ainda não tem personagens",
+          texto: ctx.ehMestre()
+            ? "Crie um personagem seu e volte aqui para trazê-lo à mesa. Os jogadores adicionam os deles por esta mesma aba."
+            : "Crie um personagem e volte aqui para trazê-lo à mesa.",
+          acao: { rotulo: "Ir para Personagens", aoClicar: function () { location.href = U.url("personagens/"); } },
+        }));
+        return;
+      }
+
+      var fora = foraDaMesa();
+      if (!fora.length) {
+        U.trocar(corpo, el("p", { texto: "Todos os seus personagens já estão nesta campanha." }));
+        return;
+      }
+
+      U.trocar(corpo, [
+        el("p.t-mini", {
+          texto: ctx.ehMestre()
+            ? "Aparecem os seus personagens. Os jogadores adicionam os deles por esta mesma aba."
+            : "Aparecem os seus personagens que ainda não estão nesta campanha.",
+        }),
+        fora.length > 5 ? el("div.r-busca", {}, [
+          el("span.r-busca__marca", {}, [UI.simbolo("busca")]),
+          el("input.r-entrada", {
+            type: "search",
+            value: busca,
+            placeholder: "Buscar por nome, classe ou campanha",
+            "aria-label": "Buscar entre os seus personagens",
+            oninput: function (ev) { busca = ev.target.value; pintarLista(); },
+          }),
+        ]) : null,
+        lista,
+      ]);
+      pintarLista();
+    }
+
+    function pintarLista() {
+      var chave = U.chaveDeBusca(busca);
+      var visiveis = foraDaMesa().filter(function (p) {
+        return !chave || U.chaveDeBusca([p.nome, p.classe, p.origem, p.campanha].join(" ")).indexOf(chave) >= 0;
+      });
+      U.trocar(lista, visiveis.length
+        ? visiveis.map(linha)
+        : [el("p.t-mini", { texto: "Nenhum personagem corresponde a “" + busca + "”." })]);
+    }
+
+    function linha(p) {
+      var nome = p.nome || "Sem nome";
+      var detalhes = [p.classe, p.origem].filter(Boolean).join(" · ");
+      var onde = el("span.mesa-adicionar__onde");
+      var botao = el("button.r-botao.r-botao--mini", { type: "button" });
+
+      var item = el("div.mesa-adicionar__item", { role: "listitem" }, [
+        avatar(p),
+        el("div.mesa-adicionar__id", {}, [
+          el("span.mesa-adicionar__nome", { title: nome, texto: nome }),
+          detalhes ? el("span.t-mini", { texto: detalhes }) : null,
+          onde,
+        ]),
+        botao,
+      ]);
+
+      function pintar() {
+        var ja = !!adicionados[p.id];
+        var outra = !ja && p.campanhaId && String(p.campanhaId) !== String(ctx.campanhaId);
+        onde.textContent = ja
+          ? "Nesta campanha"
+          : (outra ? "Hoje em " + (p.campanha || "outra campanha") + " — sai de lá ao entrar aqui" : "Sem campanha");
+        onde.className = "mesa-adicionar__onde" + (outra ? " mesa-adicionar__onde--outra" : "");
+        botao.textContent = ja ? "Adicionado" : (ocupados[p.id] ? "Adicionando…" : "Adicionar");
+        botao.disabled = ja || !!ocupados[p.id];
+        botao.setAttribute("aria-label", ja ? nome + " já está nesta campanha" : "Adicionar " + nome + " a esta campanha");
+      }
+
+      botao.onclick = async function () {
+        if (ocupados[p.id] || adicionados[p.id]) return;
+        ocupados[p.id] = true;
+        pintar();
+
+        var r = await global.RAMAApi.vincularPersonagem(ctx.campanhaId, p.id, true);
+        delete ocupados[p.id];
+
+        if (!r.ok) {
+          pintar();
+          UI.avisoDeFalha(r, "vínculo de " + nome);
+          return;
+        }
+
+        adicionados[p.id] = true;
+        p.campanhaId = ctx.campanhaId;
+        p.campanha = ctx.campanha ? ctx.campanha.nome : "";
+        pintar();
+        UI.avisoOk(nome + " entrou na campanha.");
+
+        /* O botão desabilitado perde o foco; ele vai para o próximo
+           personagem da lista, ou para Fechar. */
+        var proximo = U.$$(".mesa-adicionar__item button:not([disabled])", lista)[0] ||
+                      janela.janela.querySelector(".r-modal__rodape .r-botao");
+        if (proximo) proximo.focus();
+
+        atualizarMesa(ctx);
+      };
+
+      pintar();
+      return item;
+    }
+  }
+
+  function avatar(p) {
+    var caixa = el("span.r-avatar.r-avatar--p", { "aria-hidden": "true" });
+    if (p.foto) caixa.appendChild(el("img", { src: p.foto, alt: "" }));
+    else caixa.textContent = U.iniciais(p.nome);
+    return caixa;
+  }
+
+  /* A mesa com cartões atualiza no lugar; a mesa vazia precisa virar a
+     grade, e isso é um redesenho da aba. */
+  function atualizarMesa(ctx) {
+    if (painel.grade && document.body.contains(painel.grade)) return buscarEAtualizar(ctx, true);
+    return ctx.atualizarPersonagens();
   }
 })(window);

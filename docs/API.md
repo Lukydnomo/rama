@@ -223,7 +223,8 @@ trinta nomes seriam megabytes por tela.
 → { ok: true, rev: 1, dados: { id: "..." } }
 ```
 `ownerId` e `id` que venham no corpo são **descartados**. O dono sai da sessão;
-o id nasce no servidor.
+o id nasce no servidor. `campanhaId` só vale se a conta for mestre ou jogadora
+daquela campanha; senão vira vazio — na coluna e dentro da ficha guardada.
 
 #### `salvar_personagem`
 ```js
@@ -234,6 +235,12 @@ o id nasce no servidor.
 Se a revisão no servidor ainda for 12, grava e sobe para 13. Se já estiver em
 13, **recusa** e devolve o estado atual. Sobrescrever em silêncio seria mais
 simples de programar e apagaria o trabalho de alguém sem ninguém perceber.
+
+`dados.campanhaId`: do **dono**, vale se ele for mestre ou jogador da campanha
+(senão vira vazio). De quem **não é dono** (o mestre editando a ficha de um
+jogador) é ignorado — a campanha continua a que estava. Nos dois casos a campanha
+que ficou valendo é gravada também dentro da ficha, para coluna e ficha não
+discordarem.
 
 #### `excluir_personagem`
 Remove a ficha e a foto.
@@ -321,7 +328,7 @@ Todas em `backend/Campanhas.gs`. A primeira linha de cada uma é
 | `listar_usuarios` | qualquer | diretório mínimo: id, usuario, nome, avatar |
 | `salvar_participantes` | mestre | ids de usuário; quem sai leva os personagens junto |
 | `listar_personagens_campanha` | membro | cabeçalho + status e atributos (universal) ou dados de cálculo de Ordem só para mestre e dono; nunca a ficha inteira |
-| `vincular_personagem` | dono ou mestre | só entra ficha de quem é membro |
+| `vincular_personagem` | dono ou mestre | só entra ficha de quem é mestre ou jogador da campanha; tira da campanha anterior; é o que o botão "Adicionar personagem" usa |
 | `ajustar_personagem` | dono ou mestre | um campo, por id, **com `rev`** |
 | `registrar_rolagem` | membro | idempotente pelo `rolagemId` |
 | `listar_rolagens` | membro | paginado; oculta do mestre não sai para jogador |

@@ -1903,6 +1903,77 @@ t.grupo("Painel da campanha — fichas de Ordem e permissões");
     personagemId: pUniversal === pUniversal ? pOrdem : pOrdem, vincular: false }), "nao_encontrado");
 })();
 
+t.grupo("Campanha da ficha — só o dono troca, e coluna e ficha concordam");
+
+(() => {
+  preparar();
+  const mestra = novaConta("mestra");
+  const dona = novaConta("dona");
+  const outraMestra = novaConta("outramestra");
+  const comoMestra = comoFn(mestra);
+  const comoDona = comoFn(dona);
+  const comoOutra = comoFn(outraMestra);
+
+  const mesaA = comoMestra({ acao: "criar_campanha", dados: { nome: "Mesa A" } }).dados.id;
+  const mesaB = comoMestra({ acao: "criar_campanha", dados: { nome: "Mesa B (sem a dona)" } }).dados.id;
+  const mesaC = comoMestra({ acao: "criar_campanha", dados: { nome: "Mesa C" } }).dados.id;
+  const vitrine = comoOutra({ acao: "criar_campanha", dados: { nome: "Vitrine", visibilidade: "publico" } }).dados.id;
+  comoMestra({ acao: "salvar_participantes", campanhaId: mesaA, membros: [{ userId: dona.id, papel: "jogador" }] });
+  comoMestra({ acao: "salvar_participantes", campanhaId: mesaC, membros: [{ userId: dona.id, papel: "jogador" }] });
+
+  const campanhaNaLista = (id) => (comoDona({ acao: "listar_personagens" }).dados.find((p) => p.id === id) || {}).campanhaId || null;
+  const campanhaNaFicha = (id) => comoDona({ acao: "ler_personagem", personagemId: id }).dados.campanhaId;
+
+  const criada = comoDona({ acao: "criar_personagem", dados: Object.assign(fichaDeTeste("Rosa"), { campanhaId: mesaB }) });
+  const p = criada.dados.id;
+  t.igual("criar numa campanha de que a dona não participa não vincula", campanhaNaLista(p), null);
+  t.igual("  e a ficha guardada diz o mesmo (campanhaId nulo)", campanhaNaFicha(p), null);
+
+  let lido = comoDona({ acao: "ler_personagem", personagemId: p });
+  const naA = comoDona({ acao: "salvar_personagem", personagemId: p, rev: lido.rev,
+    dados: Object.assign({}, lido.dados, { campanhaId: mesaA }) });
+  t.ok("a dona põe a ficha numa campanha em que joga, salvando a ficha", naA.ok);
+  t.igual("  a listagem mostra a campanha", campanhaNaLista(p), mesaA);
+  t.igual("  e a ficha guardada também", campanhaNaFicha(p), mesaA);
+  t.ok("  e a mesa passa a listar o personagem",
+    comoMestra({ acao: "listar_personagens_campanha", campanhaId: mesaA }).dados.some((x) => x.id === p));
+
+  lido = comoMestra({ acao: "ler_personagem", personagemId: p });
+  t.igual("a mestra abre como mestra, não como dona", lido.dono, false);
+  const moverPelaMestra = comoMestra({ acao: "salvar_personagem", personagemId: p, rev: lido.rev,
+    dados: Object.assign({}, lido.dados, { campanhaId: mesaB, classe: "Mexida pela mestra" }) });
+  t.ok("a mestra salva a ficha do jogador", moverPelaMestra.ok);
+  t.igual("  mas a campanha NÃO muda para outra mesa dela", campanhaNaLista(p), mesaA);
+  t.igual("  nem dentro da ficha", campanhaNaFicha(p), mesaA);
+  t.igual("  e o resto da gravação vale", comoDona({ acao: "ler_personagem", personagemId: p }).dados.classe, "Mexida pela mestra");
+  t.ok("  a Mesa B continua sem o personagem",
+    !comoMestra({ acao: "listar_personagens_campanha", campanhaId: mesaB }).dados.some((x) => x.id === p));
+
+  lido = comoMestra({ acao: "ler_personagem", personagemId: p });
+  comoMestra({ acao: "salvar_personagem", personagemId: p, rev: lido.rev,
+    dados: Object.assign({}, lido.dados, { campanhaId: null }) });
+  t.igual("a mestra também não tira a ficha da campanha salvando campanhaId nulo", campanhaNaLista(p), mesaA);
+
+  t.ok("a lista de 'Adicionar personagem' da mestra (listar_personagens) não traz fichas da dona",
+    !comoMestra({ acao: "listar_personagens" }).dados.some((x) => x.id === p));
+
+  const mover = comoDona({ acao: "vincular_personagem", campanhaId: mesaC, personagemId: p });
+  t.ok("a dona adiciona a ficha a outra mesa em que joga (vincular_personagem)", mover.ok);
+  t.igual("  a ficha sai da Mesa A e vai para a Mesa C", campanhaNaLista(p), mesaC);
+  t.igual("  e a ficha guardada acompanha", campanhaNaFicha(p), mesaC);
+  t.ok("  a Mesa A não lista mais o personagem",
+    !comoMestra({ acao: "listar_personagens_campanha", campanhaId: mesaA }).dados.some((x) => x.id === p));
+
+  t.recusa("a dona não adiciona a ficha a uma campanha que só observa",
+    comoDona({ acao: "vincular_personagem", campanhaId: vitrine, personagemId: p }), "sem_permissao");
+
+  lido = comoDona({ acao: "ler_personagem", personagemId: p });
+  comoDona({ acao: "salvar_personagem", personagemId: p, rev: lido.rev,
+    dados: Object.assign({}, lido.dados, { campanhaId: vitrine }) });
+  t.igual("salvar a ficha apontando para uma campanha só observada desvincula", campanhaNaLista(p), null);
+  t.igual("  e a ficha guardada não fica dizendo a campanha recusada", campanhaNaFicha(p), null);
+})();
+
 /* =====================================================================
    FIM
    ===================================================================== */

@@ -14,13 +14,13 @@
    TRÊS COISAS DIFERENTES, QUE NÃO SE MISTURAM
    ---------------------------------------------------------------------
 
-     versão do aplicativo   está aqui. É o que a pessoa vê: v2.9.1.
+     versão do aplicativo   está aqui. É o que a pessoa vê: v2.10.0.
      schemaVersion          está em js/ficha.js. É o formato da FICHA,
                             e só sobe quando a ficha muda de forma.
      versaoFormato          está em js/config.js. É o formato dos
                             arquivos de importação/exportação.
 
-   Elas sobem em ritmos próprios. A v2.9.1 leva schemaVersion 6 e
+   Elas sobem em ritmos próprios. A v2.10.0 leva schemaVersion 6 e
    versaoFormato 1 — e isso é normal: a ficha ganhou versões personalizadas e
    etiquetas, mas o formato dos arquivos de importação continua
    o mesmo,
@@ -57,6 +57,30 @@
   ];
 
   var CHANGELOG = [
+    {
+      versao: "2.10.0",
+      codinome: "ALISTAMENTO",
+      data: "13/09/2026",
+      mudancas: {
+        "Adicionado": [
+          "Aba Personagens da campanha: botão “+ Adicionar personagem”, para mestre e jogadores. Ele lista os seus personagens que ainda não estão na campanha e adiciona com um clique, sem abrir a ficha. Personagem que está em outra campanha aparece com o aviso de que sai de lá.",
+          "Ficha de Ordem Paranormal: seletor “Campanha” no modo edição (aba Geral, painel Identidade), o mesmo da ficha universal. No modo normal, a campanha aparece na identidade.",
+          "O dono também pode tirar o próprio personagem da campanha pelo menu do cartão — antes só o mestre tinha essa opção.",
+        ],
+        "Alterado": [
+          "O seletor de campanha das fichas mostra só as campanhas em que você é mestre ou jogador. Quem abre a ficha como mestre vê a campanha, mas não troca: para onde o personagem vai é decisão do dono.",
+          "A mesa vazia sugere “Adicionar personagem” em vez de mandar a pessoa para a ficha.",
+        ],
+        "Corrigido": [
+          "O mestre que editava a ficha de um jogador conseguia, salvando, levá-la para outra campanha dele — até uma em que o jogador nem estava. O servidor agora mantém a campanha de uma ficha salva por quem não é dono.",
+          "Escolher na ficha uma campanha que você só observa parecia funcionar e era descartado ao salvar. Ela não aparece mais no seletor.",
+          "A ficha guardada podia continuar dizendo uma campanha recusada pelo servidor. Agora a campanha dentro da ficha é sempre a que o servidor aceitou.",
+        ],
+        "Técnico": [
+          "Novo RAMASecaoGeral.campoCampanha, usado pelas duas fichas; ctx.ehDono() e ctx.definirCampanha() na ficha (a troca também reaponta o histórico de rolagens). O botão da campanha usa listar_personagens e vincular_personagem, sem ação nova. Requer nova implantação do Apps Script (backend/Codigo.gs: criar_personagem e salvar_personagem).",
+        ],
+      },
+    },
     {
       versao: "2.9.1",
       codinome: "SUTURA",

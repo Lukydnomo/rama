@@ -96,6 +96,7 @@
     indicador: null,
     raiz: null,
     comoMestre: false,
+    dono: true,
   };
 
   var ctx = null;
@@ -175,6 +176,7 @@
 
     /* Quem abriu como mestre precisa saber: a ficha é de outra pessoa. */
     estado.comoMestre = !!rFicha.mestre && !rFicha.dono;
+    estado.dono = !!rFicha.dono;
 
     desenhar();
 
@@ -218,6 +220,9 @@
          fora do modo edição (bônus extra de Defesa, Bloqueio e Esquiva)
          mostrarem só o valor quando um dia houver acesso de leitura. */
       podeEditar: function () { return !!estado.ficha; },
+      /* Rótulo, não permissão: o servidor já decidiu quem é dono. Serve
+         para esconder o que só o dono muda — a campanha da ficha. */
+      ehDono: function () { return estado.dono; },
       revisao: function () { return estado.salvador ? estado.salvador.revisao() : 0; },
 
       alterou: function () {
@@ -238,6 +243,22 @@
       nomeDaCampanha: function () {
         var c = U.porId(estado.campanhas, estado.ficha.campanhaId);
         return c ? c.nome : "";
+      },
+
+      /* Trocar de campanha é um campo da ficha como outro qualquer: vai
+         na próxima gravação, e o servidor confere se o dono é mestre ou
+         jogador da campanha escolhida. As rolagens passam a subir para
+         ela a partir daqui. */
+      definirCampanha: function (id) {
+        estado.ficha.campanhaId = id || null;
+        if (global.RAMAHistorico) {
+          global.RAMAHistorico.configurar({
+            campanhaId: estado.ficha.campanhaId,
+            personagemId: estado.personagemId,
+          });
+        }
+        ctx.alterou();
+        atualizarTitulo();
       },
     };
   }

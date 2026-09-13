@@ -37,7 +37,7 @@ Fazem parte do **dado**, não só da tela:
   "tipoFicha": "universal",
 
   "nome": "Michael",
-  "campanhaId": null,          // id de uma campanha da mesma conta, ou null
+  "campanhaId": null,          // campanha em que o dono é mestre ou jogador, ou null; só o dono troca
   "classe": "",
   "origem": "",
 

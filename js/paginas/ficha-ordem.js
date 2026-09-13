@@ -355,6 +355,11 @@
       linhas.push(["Patente", "Regra de patente desligada"]);
     }
 
+    /* A campanha: no modo edição vira o mesmo seletor da ficha
+       universal (RAMASecaoGeral.campoCampanha). */
+    var editarCampanha = ctx.emEdicao() && global.RAMASecaoGeral && global.RAMASecaoGeral.campoCampanha;
+    if (!editarCampanha) linhas.push(["Campanha", ctx.nomeDaCampanha() || "—"]);
+
     var poderDaOrigem = origem
       ? el("div.pilha--curta", { class: "pilha" }, [
           el("p.t-secao", { texto: origem.poder }),
@@ -368,6 +373,7 @@
       el("dl.r-dados", {}, linhas.reduce(function (saida, par) {
         return saida.concat([el("dt", { texto: par[0] }), el("dd", { texto: par[1] })]);
       }, [])),
+      editarCampanha ? global.RAMASecaoGeral.campoCampanha(ctx) : null,
       poderDaOrigem,
     ]));
   }

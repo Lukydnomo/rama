@@ -46,7 +46,24 @@ inteiro.
 **O vínculo personagem↔campanha continua morando no personagem** (`campanhaId`),
 e só nele. Guardar dos dois lados exigiria manter dois lugares em sincronia, e a
 primeira gravação que falhasse deixaria um personagem numa campanha que não sabe
-dele.
+dele. (A coluna `campanhaId` e o `campanhaId` dentro do `fichaJson` são o mesmo
+dado na mesma linha: `criar_personagem`, `salvar_personagem` e
+`vincular_personagem` gravam nos dois o valor que o servidor aceitou.)
+
+**Três caminhos põem um personagem numa campanha**, todos conferidos no servidor:
+
+| onde | quem | ação |
+|---|---|---|
+| criação da ficha (universal ou Ordem) | o dono | `criar_personagem` |
+| seletor **Campanha** no modo edição da ficha — universal (aba Geral, identidade) e Ordem (aba Geral, painel Identidade) | o dono | `salvar_personagem` |
+| **+ Adicionar personagem** na aba Personagens da campanha | o dono, mestre ou jogador da campanha | `vincular_personagem` |
+
+Em todos, a conta dona precisa ser mestre ou jogadora da campanha; espectador não
+põe personagem. O seletor da ficha só oferece essas campanhas. **Só o dono troca a
+campanha de uma ficha**: o mestre que abre a ficha de um jogador vê o campo travado,
+e `salvar_personagem` feito por quem não é dono mantém a campanha que estava — sem
+isso, um mestre levaria a ficha do jogador para outra mesa dele. Tirar da campanha
+é do dono (ficha, ou menu do cartão) ou do mestre (menu do cartão).
 
 **Membros usam ID de usuário, nunca nome ou username.** Renomear uma conta não
 pode dar nem tirar acesso de ninguém.
@@ -173,8 +190,20 @@ ajusta à largura — vários por linha no desktop, um por linha no celular, sem
 rolagem horizontal. Cada cartão: foto (ou iniciais), nome (cortado com
 reticências, completo no título e nos rótulos de acessibilidade), classe e trilha,
 jogador, NEX ou nível; atributos só para consulta; barras de recurso; estatísticas;
-**Abrir ficha** no rodapé; e, para o mestre, **Tirar da campanha** num menu
-separado dos recursos.
+**Abrir ficha** no rodapé; e **Tirar da campanha** num menu separado dos recursos —
+em todos os cartões para o mestre, e no próprio personagem para o dono.
+
+**+ Adicionar personagem** fica na barra da aba (ao lado de **Atualizar**) e no
+aviso de mesa vazia, para mestre e jogadores. Abre uma janela com os personagens
+**da própria conta** que ainda não estão nesta campanha — a lista vem de
+`listar_personagens`, que só devolve fichas de quem pede —, com busca a partir de
+seis, e um botão **Adicionar** por linha. Um personagem que está em outra campanha
+aparece com o aviso "sai de lá ao entrar aqui". Cada clique chama
+`vincular_personagem`; o cartão entra na grade na hora (ou a grade nasce, se a
+mesa estava vazia) e a janela continua aberta para adicionar outros. O mestre não
+vê ali as fichas dos jogadores: cada conta adiciona as suas. Listar fichas de
+outra conta que ainda não estão na mesa daria ao mestre um alcance que ele não
+tem.
 
 **O que cada cartão mostra** sai de `js/campanha-painel.js`, sem fórmula própria:
 

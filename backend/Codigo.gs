@@ -1122,15 +1122,21 @@ function acaoCriarPersonagem(corpo, usuario) {
   ficha.criadoEm = agora;
   ficha.atualizadoEm = agora;
 
-  var json = JSON.stringify(ficha);
-  if (json.length > MAX_CELULA) return { ok: false, erro: 'dados_grandes' };
+  if (JSON.stringify(ficha).length > MAX_CELULA) return { ok: false, erro: 'dados_grandes' };
 
   return comTrava(function () {
+    /* A campanha que o servidor aceitou é a que vai para dentro da
+       ficha também — ver acaoSalvarPersonagem. */
+    var campanhaId = campanhaValida(ficha.campanhaId, usuario);
+    ficha.campanhaId = campanhaId || null;
+    var json = JSON.stringify(ficha);
+    if (json.length > MAX_CELULA) return { ok: false, erro: 'dados_grandes' };
+
     inserir(ABAS.PERSONAGENS, {
       id: id,
       ownerId: usuario.id,
       nome: String(ficha.nome || 'Sem nome').slice(0, 120),
-      campanhaId: campanhaValida(ficha.campanhaId, usuario),
+      campanhaId: campanhaId,
       classe: String(ficha.classe || '').slice(0, 80),
       origem: String(ficha.origem || '').slice(0, 80),
       criadoEm: agora,
@@ -1158,8 +1164,7 @@ function acaoSalvarPersonagem(corpo, usuario) {
   var ficha = corpo.dados;
   if (!ficha || typeof ficha !== 'object') return { ok: false, erro: 'dados_invalidos' };
 
-  var json = JSON.stringify(ficha);
-  if (json.length > MAX_CELULA) return { ok: false, erro: 'dados_grandes' };
+  if (JSON.stringify(ficha).length > MAX_CELULA) return { ok: false, erro: 'dados_grandes' };
 
   return comTrava(function () {
     var acesso = personagemAcessivel(corpo.personagemId, usuario);
@@ -1182,12 +1187,23 @@ function acaoSalvarPersonagem(corpo, usuario) {
     ficha.atualizadoEm = agora;
 
     registro.nome = String(ficha.nome || 'Sem nome').slice(0, 120);
-    registro.campanhaId = campanhaValida(ficha.campanhaId, usuario);
+    /* Para onde o personagem vai é decisão do DONO. O mestre que edita
+       a ficha de um jogador salva números e textos, mas a campanha fica
+       onde estava: sem isto, bastava trocar o campo para levar a ficha a
+       outra mesa dele — uma em que o jogador nem está.
+
+       E a campanha que ficou valendo é a que vai para dentro do
+       fichaJson: coluna e ficha precisam dizer a mesma coisa, senão a
+       ficha abre numa campanha e a listagem mostra outra. */
+    if (acesso.dono) registro.campanhaId = campanhaValida(ficha.campanhaId, usuario);
+    ficha.campanhaId = registro.campanhaId || null;
     registro.classe = String(ficha.classe || '').slice(0, 80);
     registro.origem = String(ficha.origem || '').slice(0, 80);
     registro.atualizadoEm = agora;
     registro.rev = revAtual + 1;
     registro.fichaJson = JSON.stringify(ficha);
+    /* Conferido de novo: o id da campanha que entrou acima ocupa espaço. */
+    if (registro.fichaJson.length > MAX_CELULA) return { ok: false, erro: 'dados_grandes' };
 
     atualizarLinha(ABAS.PERSONAGENS, registro._linha, registro);
 

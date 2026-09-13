@@ -123,16 +123,60 @@
         rotulo: "Origem", valor: ctx.ficha.origem, limite: 60,
         aoMudar: function (v) { ctx.ficha.origem = U.aparar(v, 60); ctx.alterou(); ctx.atualizarTitulo(); },
       }),
-      UI.campo({
-        rotulo: "Campanha",
-        tipo: "selecao",
-        valor: ctx.ficha.campanhaId || "",
-        opcoes: [{ valor: "", rotulo: "Sem campanha" }].concat(
-          ctx.campanhas.map(function (c) { return { valor: c.id, rotulo: c.nome }; })
-        ),
-        aoMudar: function (v) { ctx.ficha.campanhaId = v || null; ctx.alterou(); ctx.atualizarTitulo(); },
-      }),
+      campoCampanha(ctx),
     ]);
+  }
+
+  /* =================================================================
+     CAMPANHA
+     -----------------------------------------------------------------
+     O mesmo controle nas fichas universal e de Ordem.
+
+     Só entram as campanhas em que a conta é mestre ou jogadora — é o
+     que o servidor aceita. Oferecer uma campanha que a pessoa só
+     observa faria a escolha sumir em silêncio na gravação.
+
+     Quem abriu como mestre vê a campanha, mas não troca: para onde o
+     personagem vai é decisão do dono. O servidor mantém a campanha de
+     uma ficha salva por quem não é dono, com ou sem este controle.
+     ================================================================= */
+
+  function campoCampanha(ctx) {
+    var atual = ctx.ficha.campanhaId || "";
+
+    if (ctx.ehDono && !ctx.ehDono()) {
+      return UI.campo({
+        rotulo: "Campanha",
+        valor: ctx.nomeDaCampanha() || (atual ? "Campanha atual" : "Sem campanha"),
+        desabilitado: true,
+        ajuda: "Só o dono do personagem troca a campanha da ficha.",
+      });
+    }
+
+    var opcoes = [{ valor: "", rotulo: "Sem campanha" }];
+    var achouAtual = !atual;
+    ctx.campanhas.forEach(function (c) {
+      var joga = c.papel === "mestre" || c.papel === "jogador";
+      if (!joga && c.id !== atual) return;
+      if (c.id === atual) achouAtual = true;
+      opcoes.push({ valor: c.id, rotulo: c.nome });
+    });
+    /* Uma campanha que não está mais na lista (a pessoa saiu dela) não
+       some do seletor: mostrar "Sem campanha" ali seria dizer uma coisa
+       e gravar outra. */
+    if (!achouAtual) opcoes.push({ valor: atual, rotulo: "Campanha fora do seu alcance" });
+
+    return UI.campo({
+      rotulo: "Campanha",
+      tipo: "selecao",
+      valor: atual,
+      opcoes: opcoes,
+      ajuda: "Aparecem as campanhas em que você é mestre ou jogador. Também dá para adicionar pela aba Personagens da campanha.",
+      aoMudar: function (v) {
+        if (ctx.definirCampanha) ctx.definirCampanha(v);
+        else { ctx.ficha.campanhaId = v || null; ctx.alterou(); ctx.atualizarTitulo(); }
+      },
+    });
   }
 
   /* =================================================================
@@ -529,5 +573,5 @@
     ctx.redesenhar();
   }
 
-  global.RAMASecaoGeral = { blocoSuperior: blocoSuperior, aba: aba, foto: foto };
+  global.RAMASecaoGeral = { blocoSuperior: blocoSuperior, aba: aba, foto: foto, campoCampanha: campoCampanha };
 })(window);
