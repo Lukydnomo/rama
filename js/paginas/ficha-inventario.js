@@ -17,7 +17,10 @@
 
    Todo item criado à mão aqui também nasce na biblioteca Homebrew. E
    todo item trazido da biblioteca entra como CÓPIA: editar o modelo
-   depois não muda as fichas que já o usam.
+   depois não muda as fichas que já o usam. A janela "Da biblioteca"
+   mora em js/paginas/ficha-inventario-biblioteca.js: na ficha de Ordem,
+   com o catálogo oficial dos livros e a Homebrew; na universal, só a
+   Homebrew.
 
    Numa ficha de Ordem Paranormal, o inventário não mede peso: mede
    espaços. O que muda — o cabeçalho de carga, os campos de espaços,
@@ -88,6 +91,9 @@
         el("button.r-botao.r-botao--mini", {
           type: "button", texto: "+ Adicionar", onclick: function (ev) { menuAdicionar(ctx, ev); },
         }),
+        el("button.r-botao.r-botao--mini", {
+          type: "button", texto: "Da biblioteca", onclick: function () { daBiblioteca(ctx); },
+        }),
       ],
     });
   }
@@ -104,7 +110,9 @@
       categoriaAtiva = "";
       return UI.vazio({
         titulo: "Mochila vazia",
-        texto: "Acrescente itens, armas, armaduras e mochilas. Tudo o que você criar aqui também entra na sua biblioteca Homebrew.",
+        texto: perfilDe(ctx)
+          ? "Traga itens prontos em “Da biblioteca” — do catálogo oficial de Ordem Paranormal ou da Homebrew — ou crie os seus em “+ Adicionar”."
+          : "Acrescente itens, armas, armaduras e mochilas. Tudo o que você criar aqui também entra na sua biblioteca Homebrew.",
         acao: { rotulo: "+ Adicionar", aoClicar: function () { escolherTipo(ctx); } },
       });
     }
@@ -206,7 +214,9 @@
          <summary> — então eles só apareciam depois de abrir a arma,
          que é exatamente o contrário do que o comentário ali embaixo
          promete. A `faixa` do recolhível resolve para os dois casos. */
-      faixa: arma ? botoesDeArma(ctx, item) : (perfil && perfil.faixaDoItem ? perfil.faixaDoItem(ctx, item) : null),
+      faixa: arma
+        ? (perfil && perfil.botoesDaArma ? perfil.botoesDaArma(ctx, item) : botoesDeArma(ctx, item))
+        : (perfil && perfil.faixaDoItem ? perfil.faixaDoItem(ctx, item) : null),
     });
 
     return caixa;
@@ -216,14 +226,16 @@
      rótulo e valor ("Categoria: 0  Espaços: 1"), e o tipo e a gaveta por
      último, mais apagados. Na ficha de Ordem os pares vêm do perfil. */
   function resumoDoCartao(ctx, item, perfil, efetivos) {
-    var pares = perfil ? perfil.resumoDoCartao(item, efetivos) : [];
+    /* Na ficha de Ordem, dano e Defesa vêm do perfil com os valores
+       efetivos (atributo, modificações); na universal, os cadastrados. */
+    var pares = perfil ? perfil.resumoDoCartao(item, efetivos, ctx) : [];
 
     if (!perfil) {
       if (item.tipo === "mochila") pares.push(["Reduz", formatarPeso(item.reducaoPeso)]);
       else pares.push(["Peso", formatarPeso(item.peso)]);
+      if (item.tipo === "arma" && item.dano) pares.push(["Dano", item.dano + (item.danoExtra ? " + " + item.danoExtra : "")]);
+      if (item.tipo === "armadura") pares.push(["Defesa", String(U.inteiro(item.defesa, 0))]);
     }
-    if (item.tipo === "arma" && item.dano) pares.push(["Dano", item.dano + (item.danoExtra ? " + " + item.danoExtra : "")]);
-    if (item.tipo === "armadura") pares.push(["Defesa", String(U.inteiro(item.defesa, 0))]);
 
     var tipo = item.tipo === "armadura" && perfil ? "Proteção" : F.rotuloDoTipo(item.tipo);
 
@@ -249,20 +261,21 @@
     else if (item.categoria) linhas.push(["Classificação", item.categoria]);
 
     if (perfil) {
+      /* Arma e proteção de Ordem: o perfil traz ataque, dano, crítico e
+         Defesa efetivos, com o que as modificações somam. */
       linhas = linhas.concat(perfil.detalhes(ctx, item, efetivos));
-    } else if (item.tipo === "mochila") {
-      linhas.push(["Reduz", formatarPeso(item.reducaoPeso) + " de peso"]);
     } else {
-      linhas.push(["Peso", formatarPeso(item.peso)]);
-    }
+      if (item.tipo === "mochila") linhas.push(["Reduz", formatarPeso(item.reducaoPeso) + " de peso"]);
+      else linhas.push(["Peso", formatarPeso(item.peso)]);
 
-    if (item.tipo === "arma") {
-      linhas.push(["Dano", (item.dano || "—") + (item.danoExtra ? " + " + item.danoExtra : "")]);
-      linhas.push(["Crítico", item.critico ? item.critico + " / x" + item.multiplicador : "—"]);
-    }
+      if (item.tipo === "arma") {
+        linhas.push(["Dano", (item.dano || "—") + (item.danoExtra ? " + " + item.danoExtra : "")]);
+        linhas.push(["Crítico", item.critico ? item.critico + " / x" + item.multiplicador : "—"]);
+      }
 
-    if (item.tipo === "armadura") {
-      linhas.push(["Defesa", String(item.defesa)]);
+      if (item.tipo === "armadura") {
+        linhas.push(["Defesa", String(item.defesa)]);
+      }
     }
 
     return el("dl.r-dados", {}, linhas.reduce(function (saida, par) {
@@ -277,6 +290,11 @@
       { rotulo: "Subir", aoClicar: function () { moverItem(ctx, visiveis, item, -1); } },
       { rotulo: "Descer", aoClicar: function () { moverItem(ctx, visiveis, item, 1); } },
     ] : [];
+    /* Modificações e maldições são da ficha de Ordem: aplicadas a este
+       item, pela biblioteca. */
+    var modificar = perfilDe(ctx) && global.RAMABibliotecaDeItens ? [
+      { rotulo: "Modificações e maldições…", aoClicar: function () { global.RAMABibliotecaDeItens.abrirParaModificar(ctx, item); } },
+    ] : [];
     return [
       { rotulo: "Editar", aoClicar: function () { editar(ctx, item); } },
       { rotulo: "Duplicar", aoClicar: function () {
@@ -284,14 +302,18 @@
           copia.id = U.uuid();
           copia.nome = item.nome + " (cópia)";
           /* A cópia é um item novo: entrou agora, e guardada — só uma
-             proteção fica em uso. */
+             proteção fica em uso. Mantém modificações, etiqueta e o
+             rastro da origem, cada modificação com id próprio. */
           copia.adicionadoEm = U.agoraISO();
-          if (copia.ordem) delete copia.ordem.emUso;
+          if (copia.ordem) {
+            delete copia.ordem.emUso;
+            (copia.ordem.modificacoes || []).forEach(function (m) { m.id = U.uuid(); });
+          }
           ctx.ficha.inventario.itens.push(copia);
           ctx.alterou();
           ctx.redesenhar();
         } },
-    ].concat(ordem, [
+    ].concat(modificar, ordem, [
       { rotulo: "Enviar à biblioteca", aoClicar: function () { paraHomebrew(ctx, item); } },
       "separador",
       { rotulo: "Remover", perigo: true, aoClicar: function () { remover(ctx, item); } },
@@ -404,7 +426,9 @@
           ? null
           : botaoTipo("Mochila", "Reduz o peso total carregado.", function () { m.fechar(); editar(ctx, null, "mochila"); }),
         el("hr.r-linha"),
-        botaoTipo("Da biblioteca Homebrew", "Traz uma cópia de algo que você já criou.", function () { m.fechar(); daBiblioteca(ctx); }),
+        botaoTipo("Da biblioteca",
+          perfil ? "Itens oficiais de Ordem Paranormal, com os campos preenchidos, ou da sua Homebrew." : "Traz uma cópia de algo da biblioteca Homebrew.",
+          function () { m.fechar(); daBiblioteca(ctx); }),
       ]),
     });
   }
@@ -435,9 +459,12 @@
     var nome = UI.campo({ rotulo: "Nome", valor: atual.nome, limite: 80 });
     var descricao = UI.campo({ rotulo: "Descrição", tipo: "area", valor: atual.descricao, linhas: 3, limite: 2000 });
 
+    var perfilDoEditor = perfilDe(ctx);
     var categoria = UI.campo({
-      rotulo: "Categoria", valor: atual.categoria, limite: 60,
-      ajuda: "Livre: Consumível, Corpo a corpo, Investigação… Serve para filtrar.",
+      rotulo: perfilDoEditor ? "Classificação" : "Categoria", valor: atual.categoria, limite: 60,
+      ajuda: perfilDoEditor
+        ? "Livre: Armas, Consumível, Investigação… Serve para filtrar a lista. Não é a categoria de 0 a IV, que fica abaixo."
+        : "Livre: Consumível, Corpo a corpo, Investigação… Serve para filtrar.",
     });
 
     var etiqueta = U.normalizarEtiqueta(atual.etiqueta);
@@ -463,7 +490,9 @@
     }
 
     if (tipo === "arma") {
-      extras.pericia = UI.campo({
+      /* Na ficha de Ordem a perícia de ataque é uma perícia de Ordem, e
+         o campo fica com o perfil. */
+      extras.pericia = perfil ? null : UI.campo({
         rotulo: "Perícia de ataque",
         tipo: "selecao",
         valor: atual.periciaId || "",
@@ -485,7 +514,7 @@
         ajuda: "Multiplica a quantidade de dados-base: 2d10 x2 vira 4d10.",
       });
 
-      campos.push(extras.pericia);
+      if (extras.pericia) campos.push(extras.pericia);
       campos.push(el("div.editar-grade", {}, [extras.dano, extras.danoExtra]));
       campos.push(el("div.editar-grade", {}, [extras.critico, extras.multiplicador]));
     }
@@ -553,6 +582,7 @@
       categoria: extras.categoria ? extras.categoria.entrada.value.trim() : (base.categoria || ""),
       descricao: descricao.entrada.value,
       origemHomebrewId: base.origemHomebrewId || null,
+      origemCatalogoId: base.origemCatalogoId || null,
       etiqueta: extras.etiqueta ? extras.etiqueta() : base.etiqueta,
     };
 
@@ -597,7 +627,7 @@
       }
       extras.danoExtra.marcarErro("");
 
-      dados.periciaId = extras.pericia.entrada.value || null;
+      dados.periciaId = extras.pericia ? (extras.pericia.entrada.value || null) : (base.periciaId || null);
       dados.dano = d.valor;
       dados.danoExtra = extra;
       dados.critico = c.valor;
@@ -663,81 +693,21 @@
     if (!silencioso) UI.avisoOk(item.nome + " foi guardado na biblioteca.");
   }
 
-  async function daBiblioteca(ctx) {
-    var r = await global.RAMAApi.listarHomebrew();
-    if (!r.ok) { UI.avisoDeFalha(r, "leitura da biblioteca"); return; }
-
-    var registros = r.dados || [];
-
-    if (!registros.length) {
-      UI.modal({
-        titulo: "Biblioteca vazia",
-        conteudo: el("p", { texto: "Você ainda não guardou nada na Homebrew. Todo item que você criar no inventário pode entrar nela." }),
-        botoes: [{ rotulo: "Entendi", classe: "r-botao--principal" }],
-      });
+  /* A janela "Da biblioteca". Sem o módulo (página sem o arquivo), cai na
+     Homebrew simples de antes — nada quebra. */
+  function daBiblioteca(ctx) {
+    if (global.RAMABibliotecaDeItens) {
+      global.RAMABibliotecaDeItens.abrir(ctx);
       return;
     }
-
-    var filtro = "";
-    var lista = el("div.registros");
-
-    function pintar() {
-      var chave = U.chaveDeBusca(filtro);
-      var visiveis = registros.filter(function (h) {
-        return !chave || U.chaveDeBusca(h.nome + " " + F.rotuloDoTipo(h.tipo)).indexOf(chave) >= 0;
-      });
-
-      U.trocar(lista, visiveis.length
-        ? visiveis.map(function (h) {
-            return el("button.r-cartao.registro", {
-              type: "button",
-              estilo: { textAlign: "left", width: "100%", cursor: "pointer" },
-              onclick: function () { trazer(ctx, h); m.fechar(); },
-            }, [
-              el("span.r-avatar", { "aria-hidden": "true", texto: F.rotuloDoTipo(h.tipo).slice(0, 2) }),
-              el("div.registro__corpo", {}, [
-                el("span.registro__nome", { texto: h.nome }),
-                el("span.registro__sub", { texto: F.rotuloDoTipo(h.tipo) }),
-              ]),
-              el("span.registro__data", { texto: U.dataCurta(h.atualizadoEm) }),
-            ]);
-          })
-        : el("p.t-mini", { texto: "Nada corresponde a “" + filtro + "”." })
-      );
-    }
-
-    var m = UI.modal({
-      titulo: "Trazer da biblioteca",
-      largo: true,
-      conteudo: [
-        el("div.r-busca", {}, [
-          el("span.r-busca__marca", {}, [UI.simbolo("busca")]),
-          el("input.r-entrada", {
-            type: "search", placeholder: "Buscar na biblioteca", "aria-label": "Buscar na biblioteca",
-            oninput: function (ev) { filtro = ev.target.value; pintar(); },
-          }),
-        ]),
-        lista,
-        el("p.t-mini", { texto: "O item entra na ficha como cópia. Editá-lo aqui não muda o modelo da biblioteca, e editar o modelo não muda esta ficha." }),
-      ],
-      botoes: [{ rotulo: "Fechar", classe: "r-botao--fantasma" }],
-    });
-
-    pintar();
+    UI.avisoErro("A biblioteca de itens não carregou nesta página. Recarregue a ficha e tente de novo.");
   }
 
-  function trazer(ctx, registro) {
-    var copia = F.normalizarItem(registro);
-    copia.id = U.uuid();
-    copia.origemHomebrewId = registro.id;
-    copia.adicionadoEm = U.agoraISO();
-    if (copia.ordem) delete copia.ordem.emUso;
-
-    ctx.ficha.inventario.itens.push(copia);
-    ctx.alterou();
-    ctx.redesenhar();
-    UI.avisoOk(copia.nome + " entrou no inventário.");
-  }
-
-  global.RAMASecaoInventario = { aba: aba, atacar: atacar, rolarDano: rolarDano };
+  global.RAMASecaoInventario = {
+    aba: aba,
+    atacar: atacar,
+    rolarDano: rolarDano,
+    /* Para a biblioteca vazia oferecer "Criar item". */
+    novoItem: function (ctx) { escolherTipo(ctx); },
+  };
 })(window);

@@ -119,6 +119,27 @@ direto na planilha, com a mão. Isso leva até 120 segundos para valer.
 
 ---
 
+## O catálogo de itens, que não passa pelo servidor
+
+O catálogo de itens de Ordem Paranormal (`js/ordem/itens-dados.js`, 244 entradas)
+é arquivo estático, servido pelo GitHub Pages e guardado no cache do navegador.
+Ele **não** entra em nenhuma página: só é carregado na primeira vez que alguém
+abre a janela "Da biblioteca" do inventário, por um `<script>` injetado na hora.
+Uma falha de rede não fica guardada — a próxima tentativa carrega de novo.
+
+Três consequências que interessam ao custo:
+
+1. **Abrir a ficha não paga por ele.** Quem nunca abre a biblioteca nunca o
+   baixa.
+2. **A planilha nunca o vê.** O item adicionado guarda a própria cópia (nome,
+   números, descrição resumida e a referência do livro); a ficha gravada não leva
+   catálogo nenhum, e `listar_homebrew` não é chamada na origem oficial.
+3. **A lista é montada por partes.** Os detalhes de um resultado só são
+   construídos quando alguém o abre — 244 entradas com descrição, efeitos e
+   regras de cada uma seriam DOM demais para montar de uma vez no celular.
+
+---
+
 ## A atualização automática, e quanto ela custa
 
 Desde a v2.12 a campanha aberta se atualiza sozinha (`js/sincronia.js`). O

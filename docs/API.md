@@ -291,7 +291,24 @@ do `fichaJson` para não subir junto a cada tecla digitada numa anotação.
 ### Homebrew
 
 #### `listar_homebrew`
-Todos os modelos da conta, com o conteúdo — são registros pequenos.
+```js
+{ acao: "listar_homebrew", escopo?, tipo?, tipos? }
+→ { ok: true, dados: [ { id, tipo, nome, visibilidade, meu, criadoEm, atualizadoEm, ... } ] }
+```
+Os modelos que a conta **alcança**, com o conteúdo — são registros pequenos.
+
+- `escopo`: `meus` (padrão), `publicos` (só o que OUTRAS contas publicaram) ou
+  `todos` (os dois juntos). O padrão é o mais restrito de propósito, e **em
+  nenhum escopo** entra registro privado de outra conta.
+- `tipo`: um tipo só, como a aba Habilidades da ficha pede.
+- `tipos`: uma **lista** de tipos, como a biblioteca de itens do inventário pede
+  (`["item", "arma", "armadura", "mochila"]`). Só tipos conhecidos passam; uma
+  lista sem nenhum tipo válido devolve lista vazia, não tudo. O filtro roda
+  **antes** de ler o conteúdo das linhas, e depois de novo sobre o tipo lido do
+  conteúdo — uma habilidade antiga gravada com a coluna `item` não vira item.
+
+Um servidor anterior à v2.13 ignora `tipos` e devolve tudo do escopo; o navegador
+filtra de novo por isso.
 
 #### `salvar_homebrew`
 ```js

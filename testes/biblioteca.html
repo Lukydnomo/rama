@@ -3,16 +3,16 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Testes — R.A.M.A.</title>
+<title>Testes da biblioteca de itens — R.A.M.A.</title>
 <meta name="color-scheme" content="dark">
 <link rel="icon" href="../assets/icons/favicon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="../css/tokens.css">
 <link rel="stylesheet" href="../css/base.css">
 <link rel="stylesheet" href="../css/componentes.css">
 <link rel="stylesheet" href="../css/layout.css">
+<link rel="stylesheet" href="../css/ficha.css">
 <style>
-  /* Só esta página tem estilo próprio: ela não faz parte do sistema,
-     é ferramenta de quem está consertando. */
+  /* Ferramenta de quem está consertando, não parte do sistema. */
   .placar { display: flex; gap: var(--e4); align-items: baseline; flex-wrap: wrap; }
   .placar__numero { font-size: var(--texto-numero); font-weight: 700; line-height: 1; }
   .grupo { margin-top: var(--e4); }
@@ -21,10 +21,7 @@
     text-transform: uppercase; color: var(--cor-texto);
     padding-bottom: var(--e1); border-bottom: 1px solid var(--cor-traco-fraca);
   }
-  .caso {
-    display: grid; grid-template-columns: 3em 1fr; gap: var(--e2);
-    padding: 2px var(--e1); align-items: baseline;
-  }
+  .caso { display: grid; grid-template-columns: 3em 1fr; gap: var(--e2); padding: 2px var(--e1); align-items: baseline; }
   .caso--ok { color: var(--cor-texto-3); }
   .caso--falhou { color: var(--cor-erro); background: rgba(198, 86, 75, 0.08); }
   .caso__marca { font-family: var(--fonte-mini); font-size: var(--texto-mini); font-weight: 700; }
@@ -38,16 +35,14 @@
 <main id="conteudo" class="app-corpo">
   <div class="pagina-topo">
     <div class="pagina-topo__texto">
-      <h1 class="t-titulo">Testes</h1>
-      <div class="trilha"><span>R.A.M.A.</span><span class="trilha__sep">·</span><span>Motor de dados, ficha e validação</span></div>
+      <h1 class="t-titulo">Testes da biblioteca de itens</h1>
+      <div class="trilha"><span>R.A.M.A.</span><span class="trilha__sep">·</span><span>A janela “Da biblioteca” de verdade, com uma ficha de teste</span></div>
     </div>
   </div>
 
   <section class="r-painel">
     <h2 class="r-painel__titulo">Placar</h2>
-    <div id="placar" class="placar">
-      <span class="t-fraco">Executando…</span>
-    </div>
+    <div id="placar" class="placar"><span class="t-fraco">Executando… a janela abre e fecha sozinha.</span></div>
   </section>
 
   <section class="r-painel">
@@ -56,13 +51,15 @@
   </section>
 
   <p class="t-mini">
-    Os mesmos casos rodam na linha de comando com
-    <code>deno run --allow-read testes/executar.js</code>.
+    Abra por um servidor local (os scripts do catálogo são carregados sob demanda). A Homebrew é
+    simulada nesta página: nada é enviado a servidor nenhum. Para conferir o celular, abra com a
+    largura de um telefone — o grupo “Layout” mede na largura atual.
   </p>
 </main>
 
 <script src="../js/config.js"></script>
 <script src="../js/util.js"></script>
+<script src="../js/rede.js"></script>
 <script src="../js/dados.js"></script>
 <script src="../js/habilidades.js"></script>
 <script src="../js/ordem/catalogo.js"></script>
@@ -73,14 +70,12 @@
 <script src="../js/ordem/progressao.js"></script>
 <script src="../js/ordem/biblioteca.js"></script>
 <script src="../js/ordem/regras.js"></script>
-<script src="../js/ordem/itens-dados.js"></script>
 <script src="../js/ordem/itens.js"></script>
 <script src="../js/ficha.js"></script>
-<script src="../js/campanha-painel.js"></script>
 <script src="../js/validacao.js"></script>
-<script src="../js/versao.js"></script>
-<script src="casos.js"></script>
-<script src="navegador.js"></script>
-
+<script src="../js/api.js"></script>
+<script src="../js/ui.js"></script>
+<script src="../js/paginas/ficha-inventario-biblioteca.js"></script>
+<script src="biblioteca.js"></script>
 </body>
 </html>

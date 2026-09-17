@@ -51,9 +51,29 @@
     { valor: "protecao", rotulo: "Proteção" },
     { valor: "geral", rotulo: "Equipamento geral" },
     { valor: "paranormal", rotulo: "Item paranormal" },
+    /* Itens amaldiçoados não são "itens paranormais" no livro (OPRPG
+       p. 66 e p. 144 são listas diferentes): Ferramentas Paranormais,
+       por exemplo, não os alcança. */
+    { valor: "amaldicoado", rotulo: "Item amaldiçoado" },
   ];
 
-  var ROMANOS = ["0", "I", "II", "III", "IV"];
+  /* Categorias válidas vão de 0 a IV. Os romanos seguintes existem para
+     MOSTRAR uma categoria efetiva acima de IV — um item com modificações
+     e maldições demais —, que nunca é gravada. */
+  var ROMANOS = ["0", "I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X"];
+
+  /* Os valores fechados dos dados de arma e proteção de Ordem. */
+  var PROFICIENCIAS_ARMA = ["simples", "tatica", "pesada"];
+  var TIPOS_ARMA = ["corpoACorpo", "arremesso", "disparo", "fogo", "distancia"];
+  var EMPUNHADURAS = ["leve", "umaMao", "duasMaos"];
+  var ALCANCES = ["curto", "medio", "longo", "extremo"];
+  var ATRIBUTOS_DANO = ["for", "agi", "melhor"];
+  var TIPOS_PROTECAO = ["leve", "pesada", "escudo"];
+  var ELEMENTOS = ["sangue", "morte", "conhecimento", "energia", "medo", "varia"];
+  var MARCADORES = ["acessorio", "utensilio", "vestimenta", "eletrico", "camera", "corpoACorpo", "besta", "balas"];
+  var FONTES = ["OPRPG", "SAH"];
+  var MAX_MODIFICACOES = 12;
+  var DADO = /^[1-9]\d{0,2}d([1-9]\d{0,2})$/;
 
   var LIMITES = {
     espacos: 99,
@@ -119,10 +139,137 @@
       capacidade: Math.max(0, Math.min(LIMITES.capacidadeItem, inteiro(b.capacidade, 0))),
     };
     /* Proteção em uso: é ela que soma na Defesa (regras.js,
-       protecaoEmUso). Só uma proteção pode ter, e o campo só aparece
-       quando é verdade — nenhum item antigo ganha campo novo. */
+       protecaoEmUso). O campo só aparece quando é verdade — nenhum item
+       antigo ganha campo novo. */
     if (tipo === "armadura" && b.emUso === true) dados.emUso = true;
+
+    /* Os campos abaixo vieram com o catálogo de itens (v2.13). Cada um
+       só existe quando tem valor: um item antigo, ou criado à mão sem
+       eles, continua exatamente como era. */
+    if (tipo === "arma") {
+      var pericia = periciaValida(b.pericia);
+      if (pericia) dados.pericia = pericia;
+      var arma = armaValida(b.arma);
+      if (arma) dados.arma = arma;
+    }
+    if (tipo === "armadura" && b.protecao && TIPOS_PROTECAO.indexOf(b.protecao.tipo) >= 0) {
+      dados.protecao = { tipo: b.protecao.tipo };
+    }
+    if (b.amaldicoado === true) dados.amaldicoado = true;
+    if (ELEMENTOS.indexOf(b.elemento) >= 0) dados.elemento = b.elemento;
+    var marcadores = (Array.isArray(b.marcadores) ? b.marcadores : []).filter(function (m, i, lista) {
+      return MARCADORES.indexOf(m) >= 0 && lista.indexOf(m) === i;
+    });
+    if (marcadores.length) dados.marcadores = marcadores;
+    var ref = referenciaValida(b.referencia);
+    if (ref) dados.referencia = ref;
+    var mods = (Array.isArray(b.modificacoes) ? b.modificacoes : []).map(modificacaoValida).filter(Boolean).slice(0, MAX_MODIFICACOES);
+    if (mods.length) dados.modificacoes = mods;
     return dados;
+  }
+
+  function textoCurto(v, limite) {
+    return String(v === null || v === undefined ? "" : v).trim().slice(0, limite);
+  }
+
+  function dadoValido(v) {
+    var s = textoCurto(v, 12).toLowerCase().replace(/\s+/g, "");
+    return DADO.test(s) ? s : "";
+  }
+
+  function inteiroEntre(v, min, max) {
+    var n = Math.round(Number(v));
+    if (!Number.isFinite(n)) return 0;
+    return Math.max(min, Math.min(max, n));
+  }
+
+  function periciaValida(chave) {
+    if (typeof chave !== "string" || !/^[a-z]{2,20}$/.test(chave)) return "";
+    var C = global.RAMAOrdemCatalogo;
+    if (C && C.pericia && !C.pericia(chave)) return "";
+    return chave;
+  }
+
+  function referenciaValida(r) {
+    if (!r || typeof r !== "object" || FONTES.indexOf(r.fonte) < 0) return null;
+    var pagina = inteiroEntre(r.pagina, 0, 999);
+    return pagina ? { fonte: r.fonte, pagina: pagina } : null;
+  }
+
+  /* O bloco `arma` de Ordem: o que a arma é e como ela ataca. Valores
+     fora das listas fechadas são descartados, nunca inventados. */
+  function armaValida(a) {
+    if (!a || typeof a !== "object") return null;
+    var saida = {};
+    if (PROFICIENCIAS_ARMA.indexOf(a.proficiencia) >= 0) saida.proficiencia = a.proficiencia;
+    if (TIPOS_ARMA.indexOf(a.tipo) >= 0) saida.tipo = a.tipo;
+    if (EMPUNHADURAS.indexOf(a.empunhadura) >= 0) saida.empunhadura = a.empunhadura;
+    if (ALCANCES.indexOf(a.alcance) >= 0) saida.alcance = a.alcance;
+    var tipoDano = textoCurto(a.tipoDano, 20);
+    if (tipoDano) saida.tipoDano = tipoDano;
+    var municao = textoCurto(a.municao, 80);
+    if (municao) saida.municao = municao;
+    if (ATRIBUTOS_DANO.indexOf(a.atributoDano) >= 0) saida.atributoDano = a.atributoDano;
+    ["agil", "arremessavel", "automatica", "desarmado", "semMunicao"].forEach(function (k) {
+      if (a[k] === true) saida[k] = true;
+    });
+    var dadosAtaque = inteiroEntre(a.dadosAtaque, -5, 5);
+    if (dadosAtaque) saida.dadosAtaque = dadosAtaque;
+    var bonusAtaque = inteiroEntre(a.bonusAtaque, -20, 20);
+    if (bonusAtaque) saida.bonusAtaque = bonusAtaque;
+    if (a.danoAlternativo && typeof a.danoAlternativo === "object") {
+      var alt = dadoValido(a.danoAlternativo.dano);
+      if (alt) saida.danoAlternativo = { dano: alt, rotulo: textoCurto(a.danoAlternativo.rotulo, 30) || "alternativo" };
+    }
+    if (Array.isArray(a.danoPorD6) && a.danoPorD6.length === 6) {
+      var tabela = a.danoPorD6.map(dadoValido);
+      if (tabela.every(Boolean)) saida.danoPorD6 = tabela;
+    }
+    var capacidade = inteiroEntre(a.capacidade, 0, 999);
+    if (capacidade) saida.capacidade = capacidade;
+    var semEspaco = periciaValida(a.semEspacoSeTreinado);
+    if (semEspaco) saida.semEspacoSeTreinado = semEspaco;
+    return Object.keys(saida).length ? saida : null;
+  }
+
+  /* Uma modificação ou maldição aplicada: um RETRATO com os números que
+     a regra usa, copiados na hora. Mudar o catálogo depois não mexe nela. */
+  var CAMPOS_DE_CALCULO = {
+    ataque: [-20, 20], dano: [-20, 20], dadosDano: [-5, 5], margem: [-10, 10],
+    alcance: [-3, 3], alcanceSeDistancia: [-3, 3], espacos: [-10, 10], defesa: [-20, 20],
+  };
+
+  function modificacaoValida(m) {
+    if (!m || typeof m !== "object") return null;
+    var nome = textoCurto(m.nome, 80);
+    if (!nome) return null;
+    var natureza = m.natureza === "maldicao" ? "maldicao" : "modificacao";
+    var saida = {
+      id: textoCurto(m.id, 60) || (global.RAMAUtil && global.RAMAUtil.uuid ? global.RAMAUtil.uuid() : nome),
+      catalogoId: textoCurto(m.catalogoId, 80),
+      nome: nome,
+      natureza: natureza,
+    };
+    var resumo = textoCurto(m.resumo, 300);
+    if (resumo) saida.resumo = resumo;
+    if (ELEMENTOS.indexOf(m.elemento) >= 0) saida.elemento = m.elemento;
+    var escolha = textoCurto(m.escolha, 60);
+    if (escolha) saida.escolha = escolha;
+    var ref = referenciaValida(m.referencia);
+    if (ref) saida.referencia = ref;
+    if (m.semAcrescimoDeCategoria === true) saida.semAcrescimoDeCategoria = true;
+    if (m.calculo && typeof m.calculo === "object") {
+      var calculo = {};
+      Object.keys(CAMPOS_DE_CALCULO).forEach(function (k) {
+        var limites = CAMPOS_DE_CALCULO[k];
+        var v = inteiroEntre(m.calculo[k], limites[0], limites[1]);
+        if (v) calculo[k] = v;
+      });
+      if (m.calculo.margemDobra === true) calculo.margemDobra = true;
+      if (m.calculo.automatica === true) calculo.automatica = true;
+      if (Object.keys(calculo).length) saida.calculo = calculo;
+    }
+    return saida;
   }
 
   /* Os dados de Ordem de um item qualquer, com padrões. Um item que
@@ -146,7 +293,8 @@
   }
 
   function rotuloCategoria(n) {
-    return (n === null || n === undefined) ? "sem categoria" : ROMANOS[n];
+    if (n === null || n === undefined) return "sem categoria";
+    return ROMANOS[n] !== undefined ? ROMANOS[n] : String(n);
   }
 
   function rotuloEspacos(n) {
@@ -218,6 +366,12 @@
     GRUPOS: GRUPOS,
     LIMITES: LIMITES,
     ROMANOS: ROMANOS,
+    TIPOS_ARMA: TIPOS_ARMA,
+    PROFICIENCIAS_ARMA: PROFICIENCIAS_ARMA,
+    EMPUNHADURAS: EMPUNHADURAS,
+    ALCANCES: ALCANCES,
+    TIPOS_PROTECAO: TIPOS_PROTECAO,
+    ELEMENTOS: ELEMENTOS,
 
     grupoPadrao: grupoPadrao,
     espacosPadrao: espacosPadrao,
@@ -227,6 +381,8 @@
     rotuloCategoria: rotuloCategoria,
     rotuloEspacos: rotuloEspacos,
     categoriaValida: categoriaValida,
+    armaValida: armaValida,
+    modificacaoValida: modificacaoValida,
 
     validarEspacos: validarEspacos,
     validarQuantidade: validarQuantidade,

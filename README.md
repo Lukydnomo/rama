@@ -63,9 +63,11 @@ preferências de tela — nunca é tratado como banco.
       catalogo.js       origens, classes, trilhas, perícias e patentes
       poderes.js        poderes de classe, gerais, paranormais e de trilha
       progressao.js     vagas de escolha, requisitos, pendências e efeitos
-      inventario.js     espaços, quantidade e categoria dos itens
+      inventario.js     espaços, quantidade, categoria e dados de item
       personalizacao.js versões personalizadas e exclusão de habilidades oficiais
-      biblioteca.js     o catálogo arrumado para a janela "Da biblioteca"
+      biblioteca.js     o catálogo de poderes arrumado para "Da biblioteca"
+      itens-dados.js    o catálogo de itens dos dois livros (carregado sob demanda)
+      itens.js          busca, filtros e a cópia de uma entrada para a ficha
       regras.js         os cálculos, com a composição de cada número
       opcionais.js      as regras opcionais, uma chave para cada
     historico.js        rolagem → histórico da campanha, num funil só
@@ -106,7 +108,7 @@ E abra `http://localhost:8099/rama/`.
 
 São três conjuntos.
 
-**Modelo e motor de dados** — 1165 verificações. No navegador, abra `testes/`;
+**Modelo e motor de dados** — 1363 verificações. No navegador, abra `testes/`;
 no terminal:
 
 ```bash
@@ -124,7 +126,17 @@ requisitos e repetição, concessão automática sem duplicação, revisão com
 dependências, afinidade (inclusive adiada e Homebrew), patente com limites
 manuais, carga por quantidade e o ajuste temporário de capacidade.
 
-**Permissões e concorrência do backend** — 447 verificações:
+E o catálogo de itens: as 244 entradas conferidas contra as tabelas dos livros
+(categoria, espaços, dano, crítico, alcance, tipo de dano), busca e filtros, a
+cópia de cada tipo de item para a ficha com os campos mecânicos preenchidos,
+snapshot independente com catálogo congelado, ataque e dano de arma (ágil,
+atributo no dano, penalidade de dados, margem dobrada por Predadora, tabela de
+1d6), proteção e escudo na Defesa, penalidade da proteção pesada, modificações e
+maldições (acréscimo de categoria, não acumulação, incompatibilidade, oposição de
+elementos, remoção que devolve o valor-base) e a ficha atravessando salvar,
+exportar e importar com tudo isso.
+
+**Permissões e concorrência do backend** — 460 verificações:
 
 ```bash
 deno run --allow-read testes/executar-backend.js
@@ -140,9 +152,11 @@ capa, o que cada jogador recebe nos cartões e no combate (com e sem "Esconder
 status dos jogadores"), o resumo de recursos, as marcas da atualização automática,
 as operações em lote do combate (repetição pelo `opId`, conflito, lote atômico) e
 as regras de turno e rodada, rodadas também contra a cópia do navegador em 400
-combates sorteados.
+combates sorteados. E a listagem da biblioteca de itens: só os itens que a conta
+alcança, sem o privado de outra conta, sem habilidade nem criatura — inclusive a
+habilidade antiga gravada com a coluna `item`.
 
-**Transporte do frontend e carga das páginas** — 120 verificações:
+**Transporte do frontend e carga das páginas** — 138 verificações:
 
 ```bash
 deno run --allow-read testes/executar-frontend.js
@@ -163,7 +177,18 @@ segundo plano), a fila do combate (espera de ~5 s, um lote no ar por vez, ediç�
 durante o envio, repetição com o mesmo `opId` depois de prazo, conflito
 independente reaplicado, conflito no mesmo campo decidido pela pessoa, resposta
 velha que não apaga valor novo) e a sincronização (ritmo, pausa com a página
-escondida, espera crescente, perda de acesso).
+escondida, espera crescente, perda de acesso). E o catálogo de itens carregado sob
+demanda: um script só, falha que rejeita e não fica guardada, nova tentativa que
+carrega, e nenhuma página levando o catálogo junto.
+
+**A janela "Da biblioteca" no navegador** — 86 verificações. Sirva a pasta por
+HTTP e abra `testes/biblioteca.html`: a janela de verdade abre com uma ficha de
+teste e o roteiro confere as duas origens, busca e filtros, detalhes sob demanda,
+inclusão de cada tipo de item (com quantidade, escolha e sem duplicar por clique
+duplo), aplicação de modificação pelo menu do item, os estados de erro e de
+biblioteca vazia, o teclado (setas nas abas, Esc, foco de volta) e o layout na
+largura da janela — abra num tamanho de celular para conferir a versão estreita.
+A Homebrew é simulada nessa página; as permissões dela são testadas no backend.
 
 **Custo das operações** — não é teste, é medição:
 
@@ -401,6 +426,13 @@ console não abre o registro de outra conta.
 - **Histórico de rolagens vive só na aba** e não sobe para a planilha.
 - **A biblioteca Homebrew não versiona.** Editar um modelo não muda as fichas
   que já o usam — isso é de propósito —, mas também não há como ver o que mudou.
+- **O catálogo de itens preenche campos, não interpreta efeitos.** Dano, crítico,
+  categoria, espaços, Defesa e as modificações entram nas contas; efeitos com
+  custo em PE, ação, condição ou escolha ficam no texto do item, para a mesa
+  aplicar. A ficha não desconta munição, não liga munição a arma (Dum dum e
+  Explosiva ficam no pacote) e não aplica sozinha a penalidade por falta de
+  proficiência — ela avisa. O que é automático e o que é manual está entrada por
+  entrada em [docs/ORDEM-REGRAS.md](docs/ORDEM-REGRAS.md).
 
 ## Próximos passos sugeridos
 

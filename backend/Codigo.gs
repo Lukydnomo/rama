@@ -1448,6 +1448,16 @@ function acaoListarHomebrew(corpo, usuario) {
   var escopo = String(corpo.escopo || 'meus');
   var tipo = String(corpo.tipo || '');
 
+  /* `tipos`: uma lista fechada, para a biblioteca de itens da ficha não
+     receber habilidades nem criaturas. Só tipos conhecidos passam. */
+  var tipos = (Array.isArray(corpo.tipos) ? corpo.tipos : [])
+    .map(String)
+    .filter(function (t) { return TIPOS_HOMEBREW.indexOf(t) >= 0; });
+  /* Pediu uma lista e nenhum tipo dela existe: a resposta é vazia, não
+     "tudo" — um filtro que não casa com nada não pode virar filtro
+     nenhum. */
+  if (Array.isArray(corpo.tipos) && !tipos.length) return { ok: true, dados: [] };
+
   /* Primeiro decide QUAIS registros entram, olhando só as colunas
      baratas — tipo, dono e visibilidade bastam para isso. Só depois
      busca o conteúdo dos que passaram.
@@ -1460,6 +1470,7 @@ function acaoListarHomebrew(corpo, usuario) {
        habilidades antigas gravadas com o tipo errado (ver
        tipoDoHomebrew). O conteúdo decide logo abaixo. */
     if (tipo && String(h.tipo) !== tipo && !(tipo === 'habilidade' && String(h.tipo) === 'item')) return false;
+    if (tipos.length && tipos.indexOf(String(h.tipo)) < 0) return false;
 
     var proprio = meu(h, usuario);
     var publico = visibilidadeDe(h.visibilidade) === VIS_PUBLICO;
@@ -1474,6 +1485,9 @@ function acaoListarHomebrew(corpo, usuario) {
   var lista = escolhidos
     .map(function (h) { return homebrewParaCliente(h, usuario, conteudo[h._linha]); })
     .filter(function (d) { return !tipo || d.tipo === tipo; })
+    /* Uma habilidade antiga gravada com a coluna `item` passa pelo
+       filtro das colunas; o conteúdo diz o que ela é, e aqui ela sai. */
+    .filter(function (d) { return !tipos.length || tipos.indexOf(d.tipo) >= 0; })
     .sort(function (a, b) { return String(a.nome).localeCompare(String(b.nome), 'pt-BR'); });
 
   return { ok: true, dados: lista };

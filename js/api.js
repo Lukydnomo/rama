@@ -389,9 +389,14 @@
 
   /* escopo: "meus" (padrão), "publicos" ou "todos". O padrão é o mais
      restrito de propósito — quem não pediu conteúdo alheio não recebe. */
+  /* opcoes.tipos: só estes tipos (ex.: os de item, sem habilidades nem
+     criaturas). O servidor filtra antes de ler o conteúdo; um servidor
+     antigo ignora o campo, e por isso quem chama filtra de novo. */
   function listarHomebrew(opcoes) {
     var o = opcoes || {};
-    return post({ acao: "listar_homebrew", escopo: o.escopo || "meus", tipo: o.tipo || "" });
+    var corpo = { acao: "listar_homebrew", escopo: o.escopo || "meus", tipo: o.tipo || "" };
+    if (Array.isArray(o.tipos) && o.tipos.length) corpo.tipos = o.tipos;
+    return post(corpo, o.segundoPlano ? { segundoPlano: true } : undefined);
   }
 
   function salvarHomebrew(registro) {

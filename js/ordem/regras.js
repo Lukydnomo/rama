@@ -438,9 +438,21 @@
 
     /* A proteção em uso soma a Defesa cadastrada nela — uma vez, seja
        qual for a quantidade (duas proteções leves na mochila não são
-       duas vestidas). As que não estão em uso não somam. */
+       duas vestidas). As que não estão em uso não somam. O escudo em
+       uso acumula (OPRPG p. 62). Modificações entram como parcelas. */
     var protecao = protecaoEmUso(inventario);
-    if (protecao.item) c.soma(protecao.item.nome, protecao.defesa, "proteção em uso");
+    if (protecao.item) {
+      c.soma(protecao.item.nome, protecao.composicao.base, "proteção em uso");
+      protecao.composicao.ajustes.forEach(function (x) {
+        c.soma(protecao.item.nome + " · " + x.fonte, x.valor, "modificação da proteção em uso");
+      });
+    }
+    if (protecao.escudo) {
+      c.soma(protecao.escudo.nome, protecao.composicaoEscudo.base, "escudo em uso — acumula com a proteção (OPRPG p.62)");
+      protecao.composicaoEscudo.ajustes.forEach(function (x) {
+        c.soma(protecao.escudo.nome + " · " + x.fonte, x.valor, "modificação do escudo em uso");
+      });
+    }
     c.avisos = protecao.avisos;
 
     efeitosDoTipo(ficha, "defesa", inventario).forEach(function (m) {
@@ -627,35 +639,73 @@
      PROTEÇÃO EM USO
      -----------------------------------------------------------------
      No R.A.M.A. uma proteção (item do tipo "armadura") só soma na
-     Defesa quando está EM USO — `ordem.emUso` no item —, e só uma
-     proteção vale por vez. A tela garante isso ao marcar uma (desmarca
-     as outras). Se mesmo assim vierem duas marcadas (dois aparelhos, um
-     arquivo importado), vale a de maior Defesa, e a composição avisa.
+     Defesa quando está EM USO — `ordem.emUso` no item.
 
-     Não há distinção de escudo no modelo de item: um escudo usado junto
-     com outra proteção entra como ajuste da mesa.
+     Vale UMA proteção vestida e UM escudo. "Bônus na Defesa fornecido
+     por um escudo acumula com o de uma proteção" (OPRPG p. 62): o escudo
+     é a proteção marcada com `ordem.protecao.tipo = "escudo"` (todo
+     escudo do catálogo vem assim; um item antigo sem o tipo conta como
+     proteção vestida, como sempre contou). A tela garante um de cada ao
+     marcar; se vierem dois marcados (dois aparelhos, um arquivo
+     importado), vale o de maior Defesa e a composição avisa.
+
+     A Defesa de cada proteção é a cadastrada mais o que as modificações
+     e maldições aplicadas somam (Reforçada, Cinética, Letárgica) — cada
+     uma como parcela própria na composição.
      ================================================================= */
+
+  function tipoDeProtecao(item) {
+    var d = I() ? I().dadosDoItem(item) : ((item && item.ordem) || {});
+    return d.protecao && d.protecao.tipo ? d.protecao.tipo : "";
+  }
+
+  function defesaDaProtecao(item) {
+    var base = inteiro(item && item.defesa, 0);
+    var ajustes = ajustesDoItem(item).defesa;
+    return { base: base, ajustes: ajustes, total: base + somaDe(ajustes) };
+  }
 
   function protecaoEmUso(inventario) {
     var protecoes = itensDe(inventario).filter(function (i) { return i.tipo === "armadura"; });
-    var emUso = protecoes.filter(function (i) { return !!(i.ordem && i.ordem.emUso === true); });
-    var escolhida = null;
-    emUso.forEach(function (i) {
-      if (!escolhida || inteiro(i.defesa, 0) > inteiro(escolhida.defesa, 0)) escolhida = i;
-    });
+    var emUso = function (i) { return !!(i.ordem && i.ordem.emUso === true); };
+    var maior = function (lista) {
+      var escolhida = null;
+      lista.forEach(function (i) {
+        if (!escolhida || defesaDaProtecao(i).total > defesaDaProtecao(escolhida).total) escolhida = i;
+      });
+      return escolhida;
+    };
+
+    var vestidas = protecoes.filter(function (i) { return tipoDeProtecao(i) !== "escudo"; });
+    var escudos = protecoes.filter(function (i) { return tipoDeProtecao(i) === "escudo"; });
+    var marcadasVestidas = vestidas.filter(emUso);
+    var marcadosEscudos = escudos.filter(emUso);
+    var escolhida = maior(marcadasVestidas);
+    var escudo = maior(marcadosEscudos);
 
     var avisos = [];
-    if (emUso.length > 1) {
+    if (marcadasVestidas.length > 1) {
       avisos.push("Mais de uma proteção está marcada em uso; só a de maior Defesa (" + escolhida.nome + ") conta. Deixe só uma em uso no inventário.");
-    } else if (!emUso.length && protecoes.length) {
+    }
+    if (marcadosEscudos.length > 1) {
+      avisos.push("Mais de um escudo está marcado em uso; só o de maior Defesa (" + escudo.nome + ") conta.");
+    }
+    if (!marcadasVestidas.length && !marcadosEscudos.length && protecoes.length) {
       avisos.push((protecoes.length === 1 ? protecoes[0].nome + " está" : "Há proteções") +
         " no inventário, mas nenhuma está em uso. Use o botão “Usar” no cartão da proteção para somar a Defesa dela.");
     }
 
     return {
       item: escolhida,
-      defesa: escolhida ? inteiro(escolhida.defesa, 0) : 0,
-      marcadas: emUso,
+      defesa: escolhida ? defesaDaProtecao(escolhida).total : 0,
+      composicao: escolhida ? defesaDaProtecao(escolhida) : null,
+      escudo: escudo,
+      defesaEscudo: escudo ? defesaDaProtecao(escudo).total : 0,
+      composicaoEscudo: escudo ? defesaDaProtecao(escudo) : null,
+      /* "impõe –5 em testes de perícias que sofrem penalidade de carga"
+         (OPRPG p. 62) — só a proteção pesada, e só em uso. */
+      pesadaEmUso: !!escolhida && tipoDeProtecao(escolhida) === "pesada",
+      marcadas: marcadasVestidas.concat(marcadosEscudos),
       protecoes: protecoes,
       avisos: avisos,
     };
@@ -663,6 +713,53 @@
 
   function itensDe(inventario) {
     return (inventario && Array.isArray(inventario.itens)) ? inventario.itens.filter(Boolean) : [];
+  }
+
+  /* =================================================================
+     MODIFICAÇÕES E MALDIÇÕES DE UM ITEM
+     -----------------------------------------------------------------
+     O que cada modificação ou maldição aplicada soma, lido do RETRATO
+     guardado no próprio item (`ordem.modificacoes`) — nunca do catálogo,
+     que pode mudar ou nem estar carregado.
+
+       categoria   +I por modificação (OPRPG p. 60); a primeira maldição
+                   do item soma II e as seguintes, I (p. 144)
+       o resto     o que o retrato traz em `calculo`: espaços, Defesa,
+                   ataque, dano, dados de dano, margem, alcance
+
+     Nada disto é gravado: o item guarda os valores-base, e tirar a
+     modificação desfaz a conta na leitura seguinte.
+     ================================================================= */
+
+  function ajustesDoItem(item) {
+    var d = I() ? I().dadosDoItem(item) : ((item && item.ordem) || {});
+    var saida = {
+      categoria: [], espacos: [], defesa: [], ataque: [], dano: [], dadosDano: [],
+      margem: [], margemDobra: [], alcance: [], alcanceSeDistancia: [],
+      automatica: false, lista: [],
+    };
+    var maldicoes = 0;
+    (d.modificacoes || []).forEach(function (m) {
+      saida.lista.push(m);
+      var fonte = m.nome;
+      if (m.natureza === "maldicao") {
+        maldicoes++;
+        saida.categoria.push({ valor: maldicoes === 1 ? 2 : 1, fonte: fonte + " (maldição)" });
+      } else if (!m.semAcrescimoDeCategoria) {
+        saida.categoria.push({ valor: 1, fonte: fonte + " (modificação)" });
+      }
+      var c = m.calculo || {};
+      ["espacos", "defesa", "ataque", "dano", "dadosDano", "margem", "alcance", "alcanceSeDistancia"].forEach(function (k) {
+        if (c[k]) saida[k].push({ valor: c[k], fonte: fonte });
+      });
+      if (c.margemDobra) saida.margemDobra.push({ fonte: fonte });
+      if (c.automatica) saida.automatica = true;
+    });
+    return saida;
+  }
+
+  function somaDe(lista) {
+    return (lista || []).reduce(function (s, x) { return s + (Number(x.valor) || 0); }, 0);
   }
 
   /* Quanto cada item ocupa, com as exceções das habilidades. */
@@ -683,6 +780,16 @@
       var unitario = e.unitario;
       var notas = [];
 
+      /* Modificações que mudam o espaço (Discreta −1; Reforçada e
+         Blindada +1): por unidade, antes de tudo, nunca abaixo de 0. */
+      var ajustesEspaco = ajustesDoItem(item).espacos;
+      if (ajustesEspaco.length) {
+        unitario = Math.max(0, Math.round((unitario + somaDe(ajustesEspaco)) * 100) / 100);
+        ajustesEspaco.forEach(function (x) {
+          notas.push(x.fonte + ": " + (x.valor > 0 ? "+" : "−") + Math.abs(x.valor) + " espaço por unidade");
+        });
+      }
+
       /* Inventário Organizado: "itens [...] que normalmente ocupam meio
          espaço (0,5), em vez disso ocupam 1/4 de espaço" (SAH p.34). */
       if (meio && unitario === 0.5) {
@@ -691,6 +798,18 @@
       }
 
       var soma = unitario * e.quantidade;
+
+      /* Revólver compacto: treinado em Crime, UMA unidade não ocupa
+         espaço (SAH p. 37). */
+      var dadosArma = item.tipo === "arma" && I() ? I().dadosDoItem(item).arma : null;
+      var semEspaco = dadosArma && dadosArma.semEspacoSeTreinado;
+      if (semEspaco && C.pericia(semEspaco) && grauDaPericia(ficha, semEspaco) !== "destreinado") {
+        var livre = Math.min(unitario, soma);
+        if (livre > 0) {
+          soma -= livre;
+          notas.push("Treinado em " + C.pericia(semEspaco).nome + ": uma unidade não ocupa espaço");
+        }
+      }
 
       /* Mochila de Utilidades: "um item [...] ocupa 1 espaço a menos"
          (OPRPG p.29). Um item — uma unidade —, nunca abaixo de zero. */
@@ -742,11 +861,11 @@
     var uso = usoPorCategoria(ficha, inventario);
 
     var categoria = {};
-    CATEGORIAS.forEach(function (n) {
-      uso.categorias[n].itens.forEach(function (x) {
-        categoria[x.id] = { base: x.base, efetiva: x.efetiva, reducoes: x.reducoes.slice() };
-      });
-    });
+    var guardar = function (x) {
+      categoria[x.id] = { base: x.base, efetiva: x.efetiva, reducoes: x.reducoes.slice(), acrescimos: (x.acrescimos || []).slice(), acimaDeIV: x.efetiva > 4 };
+    };
+    CATEGORIAS.forEach(function (n) { uso.categorias[n].itens.forEach(guardar); });
+    uso.acimaDeIV.forEach(guardar);
 
     var porId = {};
     ocupacao.itens.forEach(function (o) {
@@ -764,11 +883,186 @@
           modificado: o.total !== totalBase || o.unitarioEfetivo !== o.unitario,
           notas: o.notas.slice(),
         },
-        categoria: categoria[o.id] || { base: null, efetiva: null, reducoes: [] },
+        categoria: categoria[o.id] || { base: null, efetiva: null, reducoes: [], acrescimos: [], acimaDeIV: false },
       };
     });
 
-    return { porId: porId, ocupado: ocupacao.total, categorias: uso.categorias, semCategoria: uso.semCategoria };
+    return { porId: porId, ocupado: ocupacao.total, categorias: uso.categorias, semCategoria: uso.semCategoria, acimaDeIV: uso.acimaDeIV };
+  }
+
+  /* =================================================================
+     ATAQUE E DANO DE UMA ARMA — OPRPG p. 54–59
+     -----------------------------------------------------------------
+     Os botões Ataque e Dano de uma arma da ficha de Ordem rolam com os
+     números DE ORDEM — o grau e os poderes da perícia, o atributo
+     efetivo —, pelo mesmo motor de dados da ficha universal.
+
+       perícia     a escolhida na arma; sem ela, Luta para corpo a
+                   corpo e Pontaria para o resto (p. 54)
+       atributo    o da perícia; arma ágil usa Agilidade se for maior
+                   (p. 59). A penalidade em dados da arma (motosserra:
+                   −1) tira dados do teste
+       ataque      o bônus da perícia, o bônus da arma e o que as
+                   modificações somam (Certeira, Alongada)
+       dano        os dados da arma (+ dados de Calibre Grosso), e soma
+                   Força em corpo a corpo e arremesso; arco composto e
+                   estilingue também; arma ágil soma o maior entre
+                   Força e Agilidade; disparo e fogo, nada (p. 54)
+       margem      a da arma; Predadora dobra antes de qualquer aumento,
+                   e Perigosa e Mira Laser somam +2 (p. 60, 146)
+
+     O que depende de escolha na hora — rajada, dois canos, mirar, pagar
+     PE, alcance dobrado — fica com quem joga.
+     ================================================================= */
+
+  var PASSOS_ALCANCE = ["curto", "medio", "longo", "extremo"];
+  var PENALIDADE_PROTECAO_PESADA = -5;
+
+  /* `periciasUniversais`: a lista de perícias do corpo da ficha. Uma
+     arma criada antes da v2.13 guarda só `periciaId`, apontando para
+     essa lista; o NOME dela ("Luta") leva à perícia de Ordem. */
+  function periciaDaArma(item, periciasUniversais) {
+    var d = I() ? I().dadosDoItem(item) : {};
+    if (d.pericia && C.pericia(d.pericia)) return d.pericia;
+    if (item && item.periciaId && Array.isArray(periciasUniversais)) {
+      var universal = periciasUniversais.filter(function (p) { return p && p.id === item.periciaId; })[0];
+      var chave = universal ? chaveDeTexto(universal.nome) : "";
+      var deOrdem = C.PERICIAS.filter(function (p) { return chaveDeTexto(p.nome) === chave; })[0];
+      if (deOrdem) return deOrdem.chave;
+    }
+    var a = d.arma || {};
+    if (a.tipo === "corpoACorpo") return "luta";
+    if (a.tipo) return "pontaria";
+    return "";
+  }
+
+  function aumentarDados(expressao, mais) {
+    var m = /^(\d+)d(\d+)$/.exec(String(expressao || "").trim().toLowerCase());
+    if (!m) return String(expressao || "");
+    return Math.max(1, parseInt(m[1], 10) + (mais || 0)) + "d" + m[2];
+  }
+
+  function armaEfetiva(ficha, inventario, item, periciasUniversais) {
+    var d = I() ? I().dadosDoItem(item) : {};
+    var a = d.arma || {};
+    var aj = ajustesDoItem(item);
+    var avisos = [];
+
+    var chave = periciaDaArma(item, periciasUniversais);
+    var pe = chave ? C.pericia(chave) : null;
+    if (!pe) avisos.push("Escolha a perícia de ataque de " + (item.nome || "a arma") + " no modo edição.");
+
+    var atributoDoTeste = pe ? atributoDaPericia(ficha, chave) : "";
+    var agil = false;
+    if (a.agil && atributoDoTeste && atributo(ficha, "agi") > atributo(ficha, atributoDoTeste)) {
+      atributoDoTeste = "agi";
+      agil = true;
+    }
+    var quantosDados = atributoDoTeste ? atributo(ficha, atributoDoTeste) + (a.dadosAtaque || 0) : 0;
+    var dado = quantosDados <= 0 ? "-2d20" : quantosDados + "d20";
+
+    var ataque = pe ? bonusDePericia(ficha, chave, inventario) : conta();
+    if (a.bonusAtaque) ataque.soma(item.nome || "Arma", a.bonusAtaque, "bônus de ataque da arma");
+    aj.ataque.forEach(function (x) { ataque.soma(x.fonte, x.valor, "modificação da arma"); });
+
+    var maisDados = somaDe(aj.dadosDano);
+    var dano = aumentarDados(item.dano, maisDados);
+    var alternativo = a.danoAlternativo ? { dano: aumentarDados(a.danoAlternativo.dano, maisDados), rotulo: a.danoAlternativo.rotulo } : null;
+    var tabelaD6 = a.danoPorD6 ? a.danoPorD6.map(function (x) { return aumentarDados(x, maisDados); }) : null;
+
+    var extra = conta();
+    var atributoDano = a.atributoDano || "";
+    if (atributoDano === "melhor" || (atributoDano === "for" && a.agil)) {
+      var forca = atributo(ficha, "for");
+      var agilidade = atributo(ficha, "agi");
+      if (agilidade > forca) extra.soma("Agilidade", agilidade, "arma ágil: Agilidade no lugar de Força (OPRPG p.59)");
+      else extra.soma("Força", forca, "OPRPG p.54");
+    } else if (atributoDano === "for") {
+      extra.soma("Força", atributo(ficha, "for"), "OPRPG p.54");
+    } else if (atributoDano === "agi") {
+      extra.soma("Agilidade", atributo(ficha, "agi"), "atributo no dano da arma");
+    }
+    aj.dano.forEach(function (x) { extra.soma(x.fonte, x.valor, "modificação da arma"); });
+
+    var margemBase = inteiro(item.critico, 0);
+    var margem = margemBase;
+    if (margemBase > 0) {
+      var faces = 21 - Math.min(20, margemBase);
+      if (aj.margemDobra.length) faces *= 2;
+      faces += somaDe(aj.margem);
+      margem = Math.max(1, 21 - faces);
+    }
+
+    var alcance = a.alcance || "";
+    var passos = somaDe(aj.alcance) + (a.tipo && a.tipo !== "corpoACorpo" ? somaDe(aj.alcanceSeDistancia) : 0);
+    if (alcance && passos) {
+      alcance = PASSOS_ALCANCE[Math.max(0, Math.min(PASSOS_ALCANCE.length - 1, PASSOS_ALCANCE.indexOf(alcance) + passos))];
+    }
+
+    return {
+      pericia: chave,
+      periciaNome: pe ? pe.nome : "",
+      atributoDoTeste: atributoDoTeste,
+      agilNoTeste: agil,
+      dado: dado,
+      ataque: ataque,
+      dano: dano,
+      alternativo: alternativo,
+      tabelaD6: tabelaD6,
+      extra: extra,
+      danoExtraManual: item.danoExtra || "",
+      margem: margem,
+      margemBase: margemBase,
+      multiplicador: Math.max(1, inteiro(item.multiplicador, 2)),
+      alcance: alcance,
+      alcanceBase: a.alcance || "",
+      automatica: !!(a.automatica || aj.automatica),
+      proficiencia: proficienciaDaArma(ficha, item),
+      modificacoes: aj.lista,
+      avisos: avisos,
+    };
+  }
+
+  /* A proficiência que a arma exige, contra as da ficha. É AVISO: a
+     penalidade (−2 dados no ataque, OPRPG p. 54) não é aplicada
+     sozinha, porque proficiências de poderes vêm em texto e a mesa pode
+     ter decidido outra coisa. */
+  var PROFICIENCIA_EXIGIDA = { simples: "Armas simples", tatica: "Armas táticas", pesada: "Armas pesadas" };
+
+  function chaveDeTexto(texto) {
+    return global.RAMAUtil && global.RAMAUtil.chaveDeBusca ? global.RAMAUtil.chaveDeBusca(texto) : String(texto || "").toLowerCase();
+  }
+
+  function proficienciaDaArma(ficha, item) {
+    var d = I() ? I().dadosDoItem(item) : {};
+    var a = d.arma || {};
+    if (!a.proficiencia) return { exigida: "", proficiente: null, texto: "" };
+    var exigida = PROFICIENCIA_EXIGIDA[a.proficiencia];
+    var lista = proficiencias(ficha);
+    if (!lista.length) {
+      return { exigida: exigida, proficiente: null, texto: "Sem classe definida, a ficha não sabe as proficiências." };
+    }
+    var alvo = chaveDeTexto(exigida);
+    var municaoLonga = /balas longas/.test(chaveDeTexto(a.municao));
+    var proficiente = lista.some(function (p) {
+      var t = chaveDeTexto(p.texto);
+      if (t === alvo) return true;
+      if (a.proficiencia === "tatica" && t.indexOf("armas taticas") === 0) {
+        if (/exceto de fogo/.test(t)) {
+          return a.tipo !== "fogo" && ((/corpo a corpo/.test(t) && a.tipo === "corpoACorpo") || (/disparo/.test(t) && a.tipo === "disparo"));
+        }
+        if (/de fogo/.test(t)) return a.tipo === "fogo";
+      }
+      if (/armas de fogo que usam balas longas/.test(t)) return a.tipo === "fogo" && municaoLonga;
+      return false;
+    });
+    return {
+      exigida: exigida,
+      proficiente: proficiente,
+      texto: proficiente
+        ? "Proficiente com " + exigida.toLowerCase() + "."
+        : "Sem proficiência com " + exigida.toLowerCase() + " nesta ficha: −2 dados nos testes de ataque (OPRPG p.54). A penalidade não entra sozinha.",
+    };
   }
 
   /* =================================================================
@@ -818,11 +1112,16 @@
       if (m.efeito.pericia === chave && g.bonus > 0) c.soma(m.fonte, m.efeito.valor, m.detalhe);
     });
 
-    /* Penalidade de carga: só nas perícias marcadas com carga. */
+    /* Penalidade de carga: só nas perícias marcadas com carga. A
+       proteção pesada em uso impõe a mesma −5 (OPRPG p. 62). */
     if (pe.carga) {
       var carga = capacidade(ficha, inventario);
       if (carga.sobrecarregado) {
         c.soma("Sobrecarregado", C.REGRAS.penalidadeSobrecarga.pericias, "OPRPG p.53");
+      }
+      var emUso = protecaoEmUso(inventario);
+      if (emUso.pesadaEmUso) {
+        c.soma(emUso.item.nome + " (proteção pesada em uso)", PENALIDADE_PROTECAO_PESADA, "OPRPG p.62");
       }
     }
 
@@ -1010,6 +1309,11 @@
         limite: limites[n].limite, origem: limites[n].origem, texto: limites[n].texto, excedido: false };
     });
     var semCategoria = [];
+    /* "Categorias Acima de IV" (OPRPG p. 53): um item com modificações e
+       maldições pode passar de IV; só entra no limite se habilidades o
+       trouxerem de volta a IV ou menos. Acima disso ele fica numa lista
+       à parte, que a tela mostra como aviso. */
+    var acimaDeIV = [];
 
     itensDe(inventario).forEach(function (item) {
       var d = I() ? I().dadosDoItem(item) : { categoria: null, quantidade: 1, grupo: "geral" };
@@ -1020,14 +1324,18 @@
         if (d.grupo === m.efeito.grupo) lista.push({ valor: m.efeito.reducao || 1, fonte: m.fonte });
       });
 
+      var acrescimos = ajustesDoItem(item).categoria;
       var total = lista.reduce(function (s, r) { return s + r.valor; }, 0);
-      var efetiva = Math.max(0, d.categoria - total);
+      var efetiva = Math.max(0, d.categoria + somaDe(acrescimos) - total);
+
+      var registro = {
+        id: item.id, nome: item.nome, quantidade: d.quantidade,
+        base: d.categoria, efetiva: efetiva, reducoes: lista, acrescimos: acrescimos,
+      };
+      if (efetiva > 4) { acimaDeIV.push(registro); return; }
 
       categorias[efetiva].usados += d.quantidade;
-      categorias[efetiva].itens.push({
-        id: item.id, nome: item.nome, quantidade: d.quantidade,
-        base: d.categoria, efetiva: efetiva, reducoes: lista,
-      });
+      categorias[efetiva].itens.push(registro);
     });
 
     CATEGORIAS.forEach(function (n) {
@@ -1035,7 +1343,7 @@
       cat.excedido = cat.limite !== null && cat.usados > cat.limite;
     });
 
-    return { categorias: categorias, semCategoria: semCategoria, aplicada: regraDePatente(ficha) };
+    return { categorias: categorias, semCategoria: semCategoria, acimaDeIV: acimaDeIV, aplicada: regraDePatente(ficha) };
   }
 
   /* =================================================================
@@ -1502,6 +1810,12 @@
     ocupacaoDoInventario: ocupacaoDoInventario,
     itensEfetivos: itensEfetivos,
     protecaoEmUso: protecaoEmUso,
+    tipoDeProtecao: tipoDeProtecao,
+    defesaDaProtecao: defesaDaProtecao,
+    ajustesDoItem: ajustesDoItem,
+    armaEfetiva: armaEfetiva,
+    periciaDaArma: periciaDaArma,
+    proficienciaDaArma: proficienciaDaArma,
     patente: patente,
     regraDePatente: regraDePatente,
     definirRegraDePatente: definirRegraDePatente,

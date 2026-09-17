@@ -2546,6 +2546,530 @@
     }
 
     /* =================================================================
+       ORDEM — BIBLIOTECA DE ITENS (v2.13)
+       -----------------------------------------------------------------
+       O catálogo dos dois livros como dado, a busca, a cópia que vira
+       item de ficha, e a prova de que o item copiado FUNCIONA: carga,
+       categoria, Defesa, ataque e dano pelos mesmos motores da ficha.
+       ================================================================= */
+
+    if (global.RAMAOrdemItens && global.RAMAOrdemItensDados && global.RAMAOrdemRegras && global.RAMAFicha) {
+      var IT = global.RAMAOrdemItens;
+      var RI = global.RAMAOrdemRegras;
+      var II = global.RAMAOrdemInventario;
+      var FI = global.RAMAFicha;
+
+      var catalogo = IT.normalizarCatalogo(global.RAMAOrdemItensDados);
+      var entrada = function (id) { return catalogo.porId[id]; };
+      var inv = function (itens) { return { limite: 0, itens: itens }; };
+      var agenteDeItens = function (extra) {
+        var f = RI.fichaVazia();
+        f.classe = "combatente";
+        f.origem = "militar";
+        f.trilha = "";
+        f.nex = 5;
+        f.atributos = { agi: 2, for: 2, int: 1, pre: 1, vig: 2 };
+        f.pericias = { luta: "treinado", pontaria: "treinado", fortitude: "treinado", reflexos: "treinado" };
+        return Object.assign(f, extra || {});
+      };
+      /* Adicionar pela biblioteca, sem tela: montar e criar o item. */
+      var adicionar = function (id, opcoes) {
+        var o = Object.assign({ catalogo: catalogo }, opcoes || {});
+        var r = IT.paraInventario(entrada(id), o);
+        if (!r.ok) throw new Error("não montou " + id + ": " + r.mensagem);
+        return FI.criarItem(r.tipo, r.dados);
+      };
+      var aplicarEm = function (id, item, escolha) {
+        return IT.aplicar(entrada(id), item, { escolha: escolha });
+      };
+
+      /* ---------------------------------------------------------------- */
+      t.grupo("Ordem · itens — catálogo completo e estruturado");
+
+      t.igual("244 entradas nos dois livros", catalogo.itens.length, 244);
+      var contagem = {};
+      catalogo.itens.forEach(function (e) {
+        var k = e.aba + "/" + e.natureza + "/" + e.fonte;
+        contagem[k] = (contagem[k] || 0) + 1;
+      });
+      [
+        ["armas/item/OPRPG", 34, "armas do livro básico (Tabela 3.3)"],
+        ["armas/item/SAH", 11, "armas do Sobrevivendo ao Horror (Tabela 1.4)"],
+        ["armas/modificacao/OPRPG", 13, "modificações de armas do livro básico (Tabela 3.5)"],
+        ["armas/modificacao/SAH", 1, "modificação de armas do SAH (Carregador rápido)"],
+        ["municoes/item/OPRPG", 8, "munições do livro básico"],
+        ["municoes/item/SAH", 1, "munição do SAH (bolinhas de estilingue)"],
+        ["municoes/modificacao/OPRPG", 2, "modificações de munição (Dum dum, Explosiva)"],
+        ["protecoes/item/OPRPG", 3, "proteções (Tabela 3.6)"],
+        ["protecoes/modificacao/OPRPG", 4, "modificações de proteção (Tabela 3.7)"],
+        ["geral/item/OPRPG", 34, "equipamentos gerais e paranormais do livro básico"],
+        ["geral/item/SAH", 45, "equipamentos gerais e paranormais do SAH (Tabela 1.5)"],
+        ["geral/modificacao/OPRPG", 4, "modificações de acessório (Tabela 3.9)"],
+        ["geral/modificacao/SAH", 2, "modificações do SAH para acessórios e itens paranormais"],
+        ["amaldicoados/maldicao/OPRPG", 35, "maldições para armas, proteções e acessórios"],
+        ["amaldicoados/item/OPRPG", 28, "itens amaldiçoados especiais do livro básico"],
+        ["amaldicoados/item/SAH", 19, "itens amaldiçoados do SAH (Tabela 1.6)"],
+      ].forEach(function (c) { t.igual(c[2] + ": " + c[1], contagem[c[0]] || 0, c[1]); });
+
+      var idsVistos = {};
+      var idRepetido = "";
+      catalogo.itens.forEach(function (e) { if (idsVistos[e.id]) idRepetido = e.id; idsVistos[e.id] = true; });
+      t.igual("nenhum id se repete", idRepetido, "");
+      t.ok("todo id é estável e diz a fonte (op.… ou sah.…)", catalogo.itens.every(function (e) {
+        return /^(op|sah)\.[a-z0-9.-]+$/.test(e.id) && (e.fonte === "SAH") === (e.id.indexOf("sah.") === 0);
+      }));
+      t.ok("toda entrada tem nome, resumo, fonte e página", catalogo.itens.every(function (e) {
+        return e.nome && e.resumo && (e.fonte === "OPRPG" || e.fonte === "SAH") && e.pagina > 0;
+      }));
+      t.ok("todo item tem tipo de ficha e grupo; modificações e maldições não", catalogo.itens.every(function (e) {
+        return e.natureza === "item" ? !!(e.tipoItem && e.grupo) : (e.tipoItem === null && e.grupo === null);
+      }));
+      var semCategoria = catalogo.itens.filter(function (e) { return e.natureza === "item" && e.categoria === null; });
+      t.iguais("só dois itens ficam sem categoria, porque o livro não a informa",
+        semCategoria.map(function (e) { return e.id; }).sort(), ["op.amaldicoado.selos-paranormais", "op.paranormal.medidor-de-estabilidade"]);
+      t.ok("  e os dois explicam o porquê (nota ou escolha que define a categoria)", semCategoria.every(function (e) {
+        return e.notas.length || (e.escolha && e.escolha.tipo === "circulo");
+      }));
+      t.ok("toda arma tem dano (ou a tabela de 1d6 do Arcabuz)", catalogo.itens.every(function (e) {
+        return !e.arma || e.arma.dano || (e.arma.danoPorD6 && e.arma.danoPorD6.length === 6);
+      }));
+      t.ok("toda munição citada por uma arma existe no catálogo", catalogo.itens.every(function (e) {
+        return !e.arma || !e.arma.municao || !!catalogo.porId[e.arma.municao];
+      }));
+      t.ok("toda incompatibilidade aponta para uma entrada real", catalogo.itens.every(function (e) {
+        return (e.incompativel || []).every(function (id) { return !!catalogo.porId[id]; });
+      }));
+      t.ok("toda modificação e maldição diz onde se aplica", catalogo.itens.every(function (e) {
+        return e.natureza === "item" || (e.aplicaEm || []).length > 0;
+      }));
+      t.ok("toda maldição tem elemento (ou o elemento é escolhido ao aplicar)", catalogo.itens.every(function (e) {
+        return e.natureza !== "maldicao" || !!e.elemento || !!(e.escolha && e.escolha.defineElemento);
+      }));
+      t.ok("o catálogo carregado é congelado, até o fundo", Object.isFrozen(catalogo) && Object.isFrozen(catalogo.itens) &&
+        Object.isFrozen(entrada("op.arma.katana")) && Object.isFrozen(entrada("op.arma.katana").arma));
+      IT._esquecer();
+      var carga = IT.carregar();
+      t.ok("carregar() devolve uma promessa e deixa o catálogo pronto", !!carga && typeof carga.then === "function" && !!IT.catalogoPronto());
+      t.igual("  com as mesmas 244 entradas", IT.catalogoPronto().itens.length, 244);
+
+      /* Conferência pontual contra as tabelas dos livros. */
+      var katana = entrada("op.arma.katana");
+      t.iguais("Katana (Tabela 3.3): I, 2 espaços, 1d10, 19/x2, corte, tática de duas mãos, ágil",
+        [katana.categoria, katana.espacos, katana.arma.dano, katana.arma.margem, katana.arma.multiplicador, katana.arma.tipoDano,
+          katana.arma.proficiencia, katana.arma.empunhadura, katana.arma.agil, katana.fonte, katana.pagina],
+        [1, 2, "1d10", 19, 2, "C", "tatica", "duasMaos", true, "OPRPG", 58]);
+      var fuzil = entrada("op.arma.fuzil-de-assalto");
+      t.iguais("Fuzil de assalto: II, 2 espaços, 2d10, 19/x3, médio, balas longas, automático",
+        [fuzil.categoria, fuzil.espacos, fuzil.arma.dano, fuzil.arma.margem, fuzil.arma.multiplicador, fuzil.arma.alcance, fuzil.arma.municao, fuzil.arma.automatica],
+        [2, 2, "2d10", 19, 3, "medio", "op.municao.balas-longas", true]);
+      var bazuca = entrada("op.arma.bazuca");
+      t.iguais("Bazuca: III, 10d8, x2, médio", [bazuca.categoria, bazuca.arma.dano, bazuca.arma.margem, bazuca.arma.multiplicador, bazuca.arma.alcance], [3, "10d8", 20, 2, "medio"]);
+      t.iguais("Bastão: 1d6, ou 1d8 com as duas mãos", [entrada("op.arma.bastao").arma.dano, entrada("op.arma.bastao").arma.danoAlternativo.dano], ["1d6", "1d8"]);
+      t.igual("Motosserra: −1 dado no teste de ataque", entrada("op.arma.motosserra").arma.dadosAtaque, -1);
+      var pesadaCat = entrada("op.protecao.pesada");
+      t.iguais("Proteção pesada (Tabela 3.6): +10, II, 5 espaços", [pesadaCat.protecao.defesa, pesadaCat.categoria, pesadaCat.espacos], [10, 2, 5]);
+      var escudoCat = entrada("op.protecao.escudo");
+      t.iguais("Escudo: +2, I, 2 espaços, tipo escudo", [escudoCat.protecao.defesa, escudoCat.categoria, escudoCat.espacos, escudoCat.protecao.tipo], [2, 1, 2, "escudo"]);
+      var curtas = entrada("op.municao.balas-curtas");
+      t.iguais("Balas curtas: 0, 1 espaço, pacote que dura 2 cenas", [curtas.categoria, curtas.espacos, curtas.municao.unidade, curtas.municao.duracao], [0, 1, "pacote", "2 cenas"]);
+      t.iguais("Foguete: I, dura um disparo", [entrada("op.municao.foguete").categoria, entrada("op.municao.foguete").municao.duracao], [1, "1 disparo"]);
+      var dardos = entrada("op.municao.dardos");
+      t.ok("caixa de dardos: o livro diz o CONTEÚDO (2 dardos), não uma duração", dardos.municao.conteudo === "2 dardos" && !dardos.municao.duracao);
+      t.ok("  e a classificação não fala em \"dura\"", !/dura/.test(dardos.classificacao) && /caixa com 2 dardos/.test(dardos.classificacao));
+      var fuzilAlheio = entrada("sah.amaldicoado.fuzil-alheio");
+      t.iguais("Fuzil alheio (SAH Tabela 1.6): Energia, IV, 2 espaços", [fuzilAlheio.elemento, fuzilAlheio.categoria, fuzilAlheio.espacos, fuzilAlheio.fonte], ["energia", 4, 2, "SAH"]);
+      var jaqueta = entrada("op.amaldicoado.jaqueta-de-verissimo");
+      t.iguais("Jaqueta de Veríssimo: categoria IV e item único", [jaqueta.categoria, jaqueta.unico], [4, true]);
+      t.iguais("amaldiçoado especial sem indicação: II e 1 espaço (OPRPG p. 148)",
+        [entrada("op.amaldicoado.coracao-pulsante").categoria, entrada("op.amaldicoado.coracao-pulsante").espacos], [2, 1]);
+      var mochilaCat = entrada("op.geral.mochila-militar");
+      t.iguais("Mochila militar: I, sem espaço, +2 de capacidade", [mochilaCat.categoria, mochilaCat.espacos, mochilaCat.capacidade], [1, 0, 2]);
+      t.ok("Tábula do saber custoso também é achada como \"Tablet\", o nome da Tabela 1.6",
+        IT.filtrar(catalogo, { busca: "tablet do saber" }).some(function (e) { return e.id === "sah.amaldicoado.tabula-do-saber-custoso"; }));
+      t.igual("Discreta aparece UMA vez, para armas corpo a corpo, de disparo e de fogo",
+        catalogo.itens.filter(function (e) { return e.aba === "armas" && e.nome === "Discreta"; }).length, 1);
+      t.ok("  com a divergência entre tabela e texto registrada", entrada("op.mod.arma.discreta").notas.length > 0);
+
+      /* ---------------------------------------------------------------- */
+      t.grupo("Ordem · itens — busca e filtros");
+
+      var nomes = function (lista) { return lista.map(function (e) { return e.nome; }); };
+      t.ok("busca ignora maiúsculas e acentos: BASTAO acha Bastão", nomes(IT.filtrar(catalogo, { busca: "BASTAO" })).indexOf("Bastão") >= 0);
+      t.ok("  \"municao jurada\" acha Munição jurada", nomes(IT.filtrar(catalogo, { busca: "municao jurada" })).indexOf("Munição jurada") >= 0);
+      t.ok("  e espaços a mais não atrapalham", nomes(IT.filtrar(catalogo, { busca: "  fuzil   de  assalto " })).indexOf("Fuzil de assalto") >= 0);
+      t.iguais("busca sem resultado devolve lista vazia", IT.filtrar(catalogo, { busca: "xyzzy nada" }), []);
+
+      var sahArmas = IT.filtrar(catalogo, { aba: "armas", fonte: "SAH" });
+      t.igual("fonte SAH na aba Armas: 11 armas e 1 modificação", sahArmas.length, 12);
+      t.ok("  nenhuma do livro básico", sahArmas.every(function (e) { return e.fonte === "SAH"; }));
+      var fogo = IT.filtrar(catalogo, { aba: "armas", tipo: "fogo" });
+      t.ok("tipo Fogo só traz armas de fogo", fogo.length > 5 && fogo.every(function (e) { return e.arma && e.arma.tipo === "fogo"; }));
+      var cat0 = IT.filtrar(catalogo, { aba: "armas", categoria: "0" });
+      t.ok("categoria 0 filtra itens de categoria 0 — e deixa modificações de fora", cat0.length > 0 &&
+        cat0.every(function (e) { return e.natureza === "item" && e.categoria === 0; }));
+      t.igual("categoria \"não informada\" existe e é específica", IT.filtrar(catalogo, { categoria: "nula" }).length, 2);
+      var sangue = IT.filtrar(catalogo, { aba: "amaldicoados", elemento: "sangue" });
+      t.ok("elemento Sangue na aba Itens Amaldiçoados", sangue.length > 5 && sangue.every(function (e) { return e.elemento === "sangue"; }));
+      t.igual("filtros combinados: SAH + categoria III + Conhecimento",
+        nomes(IT.filtrar(catalogo, { aba: "amaldicoados", fonte: "SAH", categoria: "3", elemento: "conhecimento" })).sort().join(", "),
+        "Câmera obscura, Enxame fantasmagórico");
+      var porAba = IT.contagemPorAba(catalogo, { busca: "discret" });
+      t.iguais("a contagem por aba acompanha a busca (\"discret\" em Armas, Proteções e Geral)",
+        [porAba.armas, porAba.municoes, porAba.protecoes, porAba.geral, porAba.amaldicoados], [1, 0, 1, 1, 0]);
+      var opcoesArmas = IT.opcoesDeFiltro(catalogo, "armas");
+      t.ok("os filtros de uma aba só oferecem o que existe nela", opcoesArmas.tipos.every(function (o) {
+        return ["corpoACorpo", "arremesso", "disparo", "fogo", "distancia", "modificacao"].indexOf(o.valor) >= 0;
+      }) && opcoesArmas.elementos.length === 0);
+      t.ok("  e a aba de amaldiçoados oferece elementos", IT.opcoesDeFiltro(catalogo, "amaldicoados").elementos.length >= 5);
+      var secoesArmas = IT.secoes("armas", IT.filtrar(catalogo, { aba: "armas" }));
+      t.iguais("seções de Armas sem abas a mais: simples, táticas, pesadas, modificações",
+        secoesArmas.map(function (s) { return s.chave; }), ["simples", "taticas", "pesadas", "modificacoes"]);
+      t.ok("  cada seção em ordem alfabética", secoesArmas.every(function (s) {
+        return s.entradas.every(function (e, i, l) { return i === 0 || l[i - 1].nome.localeCompare(e.nome, "pt-BR") <= 0; });
+      }));
+      t.ok("a categoria de navegação (aba) não é a categoria 0–IV: são campos diferentes", catalogo.itens.every(function (e) {
+        return typeof e.aba === "string" && (e.categoria === null || typeof e.categoria === "number");
+      }));
+
+      /* ---------------------------------------------------------------- */
+      t.grupo("Ordem · itens — prévia compacta e detalhes sem campo vazio");
+
+      var semVazio = function (pares) { return pares.every(function (p) { return p[0] && p[1] !== "" && p[1] !== null && p[1] !== undefined && p[1] !== "undefined"; }); };
+      t.ok("o resumo compacto de TODAS as entradas não tem valor vazio", catalogo.itens.every(function (e) { return semVazio(IT.resumoCompacto(e)); }));
+      t.ok("os detalhes de TODAS as entradas não têm valor vazio", catalogo.itens.every(function (e) { return semVazio(IT.detalhes(e, catalogo)); }));
+      t.ok("  e todos dizem a fonte com página", catalogo.itens.every(function (e) {
+        return IT.detalhes(e, catalogo).some(function (p) { return p[0] === "Fonte" && /p\. \d+/.test(p[1]); });
+      }));
+      var rotulosDe = function (pares) { return pares.map(function (p) { return p[0]; }); };
+      t.iguais("arma: dano, crítico, alcance e tipo no resumo", rotulosDe(IT.resumoCompacto(entrada("op.arma.fuzil-de-assalto"))), ["Dano", "Crítico", "Alcance", "Tipo"]);
+      t.iguais("arma corpo a corpo não mostra alcance vazio", rotulosDe(IT.resumoCompacto(katana)), ["Dano", "Crítico", "Tipo"]);
+      var detKatana = rotulosDe(IT.detalhes(katana, catalogo));
+      t.ok("detalhes de arma: proficiência, tipo, empunhadura, dano, crítico, alcance, tipo de dano",
+        ["Proficiência", "Tipo", "Empunhadura", "Dano", "Crítico", "Alcance", "Tipo de dano"].every(function (r) { return detKatana.indexOf(r) >= 0; }));
+      t.iguais("proteção: Defesa no resumo", IT.resumoCompacto(pesadaCat), [["Defesa", "+10"]]);
+      t.iguais("munição: duração no resumo", IT.resumoCompacto(curtas), [["Dura", "2 cenas"]]);
+      t.ok("munição nos detalhes: unidade, duração e armas", ["Unidade", "Duração", "Usada em"].every(function (r) { return rotulosDe(IT.detalhes(curtas, catalogo)).indexOf(r) >= 0; }));
+      t.iguais("modificação: o acréscimo de categoria", IT.resumoCompacto(entrada("op.mod.arma.certeira")), [["Categoria", "+I"]]);
+      t.ok("requisitos de arma citam a proficiência", /armas táticas/.test(IT.requisitos(katana).join(" ")));
+      t.ok("requisitos de amaldiçoado citam a patente e o preço da maldição", (function () {
+        var r = IT.requisitos(entrada("op.amaldicoado.coracao-pulsante")).join(" ");
+        return /agente especial/.test(r) && /Preço da maldição/.test(r);
+      })());
+      t.ok("toda entrada declara o que é automático (calculo, parcial ou texto)", catalogo.itens.every(function (e) {
+        var n = IT.naFicha(e);
+        return ["calculo", "parcial", "texto"].indexOf(n.automacao) >= 0 && n.texto.length > 10;
+      }));
+      t.ok("proteção pesada avisa que a resistência a dano é manual", /controle manual/.test(IT.naFicha(pesadaCat).texto));
+
+      /* ---------------------------------------------------------------- */
+      t.grupo("Ordem · itens — adicionar cria um item completo");
+
+      var kat = adicionar("op.arma.katana");
+      t.igual("arma vira item do tipo arma", kat.tipo, "arma");
+      t.iguais("  com dano, crítico e multiplicador nos campos da ficha", [kat.dano, kat.critico, kat.multiplicador, kat.danoExtra], ["1d10", 19, 2, ""]);
+      t.iguais("  categoria e espaços de Ordem", [kat.ordem.categoria, kat.ordem.espacos, kat.ordem.quantidade, kat.ordem.grupo], [1, 2, 1, "arma"]);
+      t.iguais("  como a arma ataca", [kat.ordem.pericia, kat.ordem.arma.tipo, kat.ordem.arma.proficiencia, kat.ordem.arma.empunhadura, kat.ordem.arma.tipoDano, kat.ordem.arma.agil, kat.ordem.arma.atributoDano],
+        ["luta", "corpoACorpo", "tatica", "duasMaos", "Corte", true, "melhor"]);
+      t.igual("  com o rastro da origem", kat.origemCatalogoId, "op.arma.katana");
+      t.iguais("  a referência do livro", kat.ordem.referencia, { fonte: "OPRPG", pagina: 58 });
+      t.igual("  a gaveta (categoria livre) é a aba, não a categoria 0–IV", kat.categoria, "Armas");
+      t.ok("  a descrição resume e cita a fonte, dentro do limite", /Fonte: Ordem Paranormal RPG, p\. 58/.test(kat.descricao) && kat.descricao.length <= 2000);
+      t.ok("  e tem id próprio", typeof kat.id === "string" && kat.id.length > 8);
+
+      var pistola = adicionar("op.arma.pistola");
+      t.iguais("arma de fogo ataca com Pontaria e não soma atributo no dano", [pistola.ordem.pericia, pistola.ordem.arma.atributoDano || ""], ["pontaria", ""]);
+      t.igual("  e guarda o NOME da munição, não o id", pistola.ordem.arma.municao, "Balas curtas");
+
+      var balas = adicionar("op.municao.balas-curtas", { quantidade: 3 });
+      t.iguais("munição: 3 pacotes, 1 espaço cada, categoria 0, grupo munição", [balas.tipo, balas.ordem.quantidade, balas.ordem.espacos, balas.ordem.categoria, balas.ordem.grupo],
+        ["item", 3, 1, 0, "municao"]);
+      t.ok("  sem virar contagem de balas", JSON.stringify(balas).indexOf("contagem") < 0 && !("balas" in balas.ordem));
+      t.igual("  marcada como balas (para Dum dum e Explosiva)", (balas.ordem.marcadores || []).join(","), "balas");
+
+      var leve = adicionar("op.protecao.leve");
+      t.iguais("proteção: armadura com Defesa +5 e tipo leve", [leve.tipo, leve.defesa, leve.ordem.protecao.tipo], ["armadura", 5, "leve"]);
+      t.ok("  e entra GUARDADA: adicionar não é vestir", leve.ordem.emUso !== true);
+
+      var mochila = adicionar("op.geral.mochila-militar");
+      t.iguais("equipamento geral: capacidade da mochila militar", [mochila.tipo, mochila.ordem.capacidade, mochila.ordem.espacos], ["item", 2, 0]);
+
+      t.ok("kit de perícia sem a perícia escolhida é recusado", !IT.paraInventario(entrada("op.geral.kit-de-pericia"), {}).ok);
+      t.ok("  perícia fora da lista também", !IT.paraInventario(entrada("op.geral.kit-de-pericia"), { escolha: "luta" }).ok);
+      var kitMed = adicionar("op.geral.kit-de-pericia", { escolha: "medicina" });
+      t.igual("  com Medicina, o nome leva a escolha", kitMed.nome, "Kit de perícia (Medicina)");
+
+      var scanner = adicionar("op.paranormal.scanner", { escolha: "sangue" });
+      t.iguais("item de (elemento): o elemento entra no nome e nos dados", [scanner.nome, scanner.ordem.elemento], ["Scanner de manifestação paranormal de Sangue", "sangue"]);
+
+      var coracao = adicionar("op.amaldicoado.coracao-pulsante");
+      t.iguais("amaldiçoado: marcado, com elemento, categoria II", [coracao.ordem.amaldicoado, coracao.ordem.elemento, coracao.ordem.categoria, coracao.ordem.grupo],
+        [true, "sangue", 2, "amaldicoado"]);
+      var selo = adicionar("op.amaldicoado.selos-paranormais", { escolha: "3" });
+      t.igual("selo paranormal de 3º círculo: categoria III (a do círculo)", selo.ordem.categoria, 3);
+      var arcabuz = adicionar("op.amaldicoado.arcabuz-dos-moretti");
+      t.iguais("Arcabuz dos Moretti: tabela de 1d6, +2 no ataque, sem munição",
+        [arcabuz.ordem.arma.danoPorD6.length, arcabuz.ordem.arma.bonusAtaque, arcabuz.ordem.arma.semMunicao, arcabuz.dano], [6, 2, true, ""]);
+
+      t.ok("modificação não entra no inventário como item", !IT.paraInventario(entrada("op.mod.arma.certeira"), {}).ok);
+      t.ok("maldição também não", !IT.paraInventario(entrada("op.maldicao.arma.predadora"), {}).ok);
+      t.igual("quantidade 0 vira 1", adicionar("op.municao.balas-curtas", { quantidade: 0 }).ordem.quantidade, 1);
+      t.igual("quantidade absurda para em 999", adicionar("op.municao.balas-curtas", { quantidade: 5000 }).ordem.quantidade, 999);
+
+      var todosMontam = catalogo.itens.filter(function (e) { return e.natureza === "item"; }).every(function (e) {
+        var escolha = e.escolha ? (IT.opcoesDaEscolha(e.escolha)[0] || { valor: "texto livre" }).valor : undefined;
+        var r = IT.paraInventario(e, { escolha: escolha, catalogo: catalogo });
+        if (!r.ok) return false;
+        var item = FI.normalizarItem(FI.criarItem(r.tipo, r.dados));
+        var d = II.dadosDoItem(item);
+        return item.nome && item.origemCatalogoId === e.id && d.categoria === (e.escolha && e.escolha.tipo === "circulo" ? 1 : e.categoria) &&
+          (e.espacos === null ? d.espacos === null : d.espacos === e.espacos);
+      });
+      t.ok("TODOS os itens do catálogo viram item de ficha com categoria e espaços do livro", todosMontam);
+
+      /* ---------------------------------------------------------------- */
+      t.grupo("Ordem · itens — cópia independente (snapshot)");
+
+      var k1 = adicionar("op.arma.katana");
+      var k2 = adicionar("op.arma.katana");
+      t.ok("duas inclusões do mesmo item: dois itens, ids diferentes", k1.id !== k2.id && k1.origemCatalogoId === k2.origemCatalogoId);
+      k1.dano = "9d9";
+      k1.ordem.arma.tipoDano = "Corte (afiada)";
+      k1.ordem.categoria = 3;
+      t.iguais("editar a cópia não muda a outra cópia", [k2.dano, k2.ordem.arma.tipoDano, k2.ordem.categoria], ["1d10", "Corte", 1]);
+      t.iguais("  nem o catálogo", [entrada("op.arma.katana").arma.dano, entrada("op.arma.katana").arma.tipoDano, entrada("op.arma.katana").categoria], ["1d10", "C", 1]);
+      t.ok("o catálogo recusa alteração direta", (function () {
+        try { entrada("op.arma.katana").arma.dano = "1d4"; } catch (e) { /* modo estrito lança */ }
+        return entrada("op.arma.katana").arma.dano === "1d10";
+      })());
+      var dadosNovos = JSON.parse(JSON.stringify(global.RAMAOrdemItensDados));
+      dadosNovos.itens.forEach(function (e) { if (e.id === "op.arma.katana") { e.arma.dano = "2d12"; e.categoria = "IV"; } });
+      var catalogoNovo = IT.normalizarCatalogo(dadosNovos);
+      t.igual("um catálogo corrigido depois não muda item já adicionado", (catalogoNovo.porId["op.arma.katana"].arma.dano !== k2.dano) && k2.dano, "1d10");
+      var k2lido = FI.normalizarItem(JSON.parse(JSON.stringify(k2)));
+      t.iguais("salvar e reabrir preserva a cópia inteira", [k2lido.id, k2lido.origemCatalogoId, k2lido.ordem.arma.agil, k2lido.ordem.pericia, k2lido.ordem.referencia.pagina],
+        [k2.id, "op.arma.katana", true, "luta", 58]);
+      t.igual("o item salvo não carrega o catálogo junto (só a própria cópia)", JSON.stringify(k2lido).length < 2600, true);
+
+      /* ---------------------------------------------------------------- */
+      t.grupo("Ordem · itens — arma usa os controles de ataque e dano");
+
+      var lutador = agenteDeItens();
+      var armaDe = function (item, ficha, extra) { return RI.armaEfetiva(ficha || lutador, inv([item].concat(extra || [])), item); };
+      var kataNova = adicionar("op.arma.katana");
+      var ek = armaDe(kataNova);
+      t.iguais("Katana: Luta, Força 2 → 2d20, +5 de treinado", [ek.pericia, ek.periciaNome, ek.dado, ek.ataque.total], ["luta", "Luta", "2d20", 5]);
+      t.iguais("  dano 1d10 + Força 2, margem 19, x2", [ek.dano, ek.extra.total, ek.margem, ek.multiplicador], ["1d10", 2, 19, 2]);
+      t.ok("  o dado é uma expressão que o motor de dados aceita", !global.RAMADados || global.RAMADados.analisar(ek.dado).ok);
+      var agil = agenteDeItens({ atributos: { agi: 4, for: 1, int: 1, pre: 1, vig: 1 } });
+      var ekAgil = armaDe(kataNova, agil);
+      t.iguais("arma ágil com Agilidade maior: 4d20 e Agilidade no dano", [ekAgil.dado, ekAgil.agilNoTeste, ekAgil.extra.total, ekAgil.extra.parcelas[0].rotulo], ["4d20", true, 4, "Agilidade"]);
+      var ep = armaDe(adicionar("op.arma.pistola"));
+      t.iguais("Pistola: Pontaria, sem atributo no dano, margem 18", [ep.pericia, ep.extra.total, ep.margem], ["pontaria", 0, 18]);
+      var em = armaDe(adicionar("op.arma.motosserra"));
+      t.igual("Motosserra: Força 2 com −1 dado → 1d20", em.dado, "1d20");
+      var eb = armaDe(adicionar("op.arma.bastao"));
+      t.iguais("Bastão: dano normal e o alternativo com as duas mãos", [eb.dano, eb.alternativo.dano, eb.alternativo.rotulo], ["1d6", "1d8", "duas mãos"]);
+      var ea = armaDe(adicionar("op.amaldicoado.arcabuz-dos-moretti"));
+      t.iguais("Arcabuz: tabela de 1d6 e +2 como parcela do ataque", [ea.tabelaD6.join(" "), ea.ataque.total, ea.ataque.parcelas.some(function (p) { return p.valor === 2; })],
+        ["2d4 2d6 2d8 2d10 2d12 2d20", 7, true]);
+
+      var modificada = adicionar("op.arma.katana");
+      aplicarEm("op.mod.arma.certeira", modificada);
+      aplicarEm("op.mod.arma.cruel", modificada);
+      var emod = armaDe(modificada);
+      t.iguais("Certeira +2 no ataque e Cruel +2 no dano, como parcelas", [emod.ataque.total, emod.extra.total], [7, 4]);
+      var perigosa = adicionar("op.arma.katana");
+      aplicarEm("op.mod.arma.perigosa", perigosa);
+      t.igual("Perigosa: margem 19 vira 17", armaDe(perigosa).margem, 17);
+      var predadora = adicionar("op.arma.katana");
+      aplicarEm("op.maldicao.arma.predadora", predadora);
+      t.igual("Predadora dobra a margem: 19 vira 17", armaDe(predadora).margem, 17);
+      aplicarEm("op.mod.arma.perigosa", predadora);
+      t.igual("  e dobra ANTES dos aumentos: com Perigosa, 15", armaDe(predadora).margem, 15);
+      var cacador = adicionar("op.arma.fuzil-de-caca");
+      aplicarEm("op.maldicao.arma.predadora", cacador);
+      t.iguais("fuzil de caça predador: margem 17 e alcance médio vira longo (OPRPG p. 146)", [armaDe(cacador).margem, armaDe(cacador).alcance], [17, "longo"]);
+      var calibre = adicionar("op.arma.fuzil-de-assalto");
+      aplicarEm("op.mod.arma.calibre-grosso", calibre);
+      t.igual("Calibre grosso: 2d10 vira 3d10", armaDe(calibre).dano, "3d10");
+      var ferrolho = adicionar("op.arma.pistola");
+      aplicarEm("op.mod.arma.ferrolho-automatico", ferrolho);
+      t.ok("Ferrolho automático marca a arma como automática", armaDe(ferrolho).automatica);
+      t.ok("  e não se aplica de novo numa arma que já é automática",
+        !IT.podeAplicar(entrada("op.mod.arma.ferrolho-automatico"), adicionar("op.arma.submetralhadora")).ok);
+
+      var semPericia = FI.criarItem("arma", { nome: "Arma antiga", dano: "2d10", critico: 19, multiplicador: 3, ordem: { espacos: 2, categoria: 2 } });
+      t.ok("arma antiga sem perícia: o botão avisa em vez de adivinhar", armaDe(semPericia).pericia === "" && /Escolha a perícia/.test(armaDe(semPericia).avisos[0]));
+      var antiga = FI.criarItem("arma", { nome: "Rifle antigo", dano: "2d8", periciaId: "u-pontaria" });
+      t.igual("arma antiga com perícia da lista universal chamada Pontaria ataca com Pontaria",
+        RI.armaEfetiva(lutador, inv([antiga]), antiga, [{ id: "u-pontaria", nome: "Pontaria" }]).pericia, "pontaria");
+      t.igual("  e o dano extra digitado à mão continua valendo", RI.armaEfetiva(lutador, inv([antiga]), FI.criarItem("arma", { nome: "X", dano: "1d6", danoExtra: "2" })).danoExtraManual, "2");
+      var ocultista = agenteDeItens({ classe: "ocultista" });
+      t.igual("proficiência: ocultista com arma tática recebe AVISO", RI.proficienciaDaArma(ocultista, kataNova).proficiente, false);
+      t.igual("  combatente é proficiente", RI.proficienciaDaArma(lutador, kataNova).proficiente, true);
+
+      /* ---------------------------------------------------------------- */
+      t.grupo("Ordem · itens — proteção equipada muda a Defesa");
+
+      var def = function (ficha, itens) { return RI.defesa(ficha, inv(itens)).total; };
+      var semNada = def(lutador, []);
+      var leveUso = adicionar("op.protecao.leve");
+      var escudoUso = adicionar("op.protecao.escudo");
+      t.igual("proteção adicionada e guardada não muda a Defesa", def(lutador, [leveUso]), semNada);
+      leveUso.ordem.emUso = true;
+      t.igual("em uso, soma +5", def(lutador, [leveUso]), semNada + 5);
+      escudoUso.ordem.emUso = true;
+      t.igual("o escudo em uso acumula com a proteção: +7", def(lutador, [leveUso, escudoUso]), semNada + 7);
+      var pesadaUso = adicionar("op.protecao.pesada");
+      pesadaUso.ordem.emUso = true;
+      pesadaUso.ordem.espacos = 0;
+      t.igual("duas vestidas em uso: vale a maior (+10), e o escudo continua (+12)", def(lutador, [leveUso, pesadaUso, escudoUso]), semNada + 12);
+      var acrobacia = function (itens) { return RI.bonusDePericia(lutador, "acrobacia", inv(itens)); };
+      t.igual("proteção pesada em uso: −5 nas perícias de carga", acrobacia([pesadaUso]).total, -5);
+      t.igual("  mas não em Luta", RI.bonusDePericia(lutador, "luta", inv([pesadaUso])).total, 5);
+      pesadaUso.ordem.emUso = false;
+      t.igual("  e guardada, nada", acrobacia([pesadaUso]).total, 0);
+      var reforcada = adicionar("op.protecao.leve");
+      aplicarEm("op.mod.protecao.reforcada", reforcada);
+      reforcada.ordem.emUso = true;
+      t.igual("Reforçada: +2 na Defesa da proteção em uso", def(lutador, [reforcada]), semNada + 7);
+      t.igual("  +1 espaço por unidade", RI.itensEfetivos(lutador, inv([reforcada])).porId[reforcada.id].espacos.total, 3);
+      t.ok("  e não combina com Discreta", !IT.podeAplicar(entrada("op.mod.protecao.discreta"), reforcada).ok);
+      t.igual("o valor-base da proteção continua 5 no item", reforcada.defesa, 5);
+
+      /* ---------------------------------------------------------------- */
+      t.grupo("Ordem · itens — modificações e maldições entram uma vez");
+
+      var base = adicionar("op.arma.katana");
+      var efCat = function (item, ficha, extra) { return RI.itensEfetivos(ficha || lutador, inv([item].concat(extra || []))).porId[item.id].categoria; };
+      t.ok("aplicar Certeira: categoria efetiva II", aplicarEm("op.mod.arma.certeira", base).ok && efCat(base).efetiva === 2);
+      t.igual("  o valor-base continua I no item", base.ordem.categoria, 1);
+      t.igual("  recalcular não soma de novo", (efCat(base), efCat(base), efCat(base).efetiva), 2);
+      var relida = FI.normalizarItem(JSON.parse(JSON.stringify(base)));
+      t.igual("  salvar e reabrir também não", efCat(relida).efetiva, 2);
+      var segunda = aplicarEm("op.mod.arma.certeira", base);
+      t.ok("a mesma modificação duas vezes é recusada", !segunda.ok && /não se acumulam/.test(segunda.motivo));
+      t.ok("maldição de Sangue: +II (a primeira)", aplicarEm("op.maldicao.arma.predadora", base).ok && efCat(base).efetiva === 4);
+      var senciente = aplicarEm("op.maldicao.arma.senciente", base);
+      t.ok("maldição de elemento opressor (Conhecimento contra Sangue) é recusada", !senciente.ok && /opressores/.test(senciente.motivo));
+      t.ok("segunda maldição compatível (Energia) soma só +I: acima de IV", aplicarEm("op.maldicao.arma.empuxo", base).ok && efCat(base).efetiva === 5);
+      t.ok("  e acima de IV fica fora dos limites, com aviso", RI.itensEfetivos(lutador, inv([base])).acimaDeIV.length === 1 && efCat(base).acimaDeIV);
+      var idCerteira = base.ordem.modificacoes.filter(function (m) { return m.catalogoId === "op.mod.arma.certeira"; })[0].id;
+      t.ok("remover a Certeira desfaz só a parte dela", IT.remover(base, idCerteira) && efCat(base).efetiva === 4);
+      base.ordem.modificacoes.slice().forEach(function (m) { IT.remover(base, m.id); });
+      t.ok("sem modificações: volta ao valor-base e some a lista", efCat(base).efetiva === 1 && !("modificacoes" in base.ordem));
+
+      var alongadaNaKatana = IT.podeAplicar(entrada("op.mod.arma.alongada"), adicionar("op.arma.katana"));
+      t.ok("modificação de arma de fogo numa arma corpo a corpo: recusada com motivo", !alongadaNaKatana.ok && /armas de fogo/.test(alongadaNaKatana.motivo));
+      t.ok("modificação de proteção numa arma: recusada", !IT.podeAplicar(entrada("op.mod.protecao.reforcada"), adicionar("op.arma.katana")).ok);
+      var desconhecida = IT.podeAplicar(entrada("op.mod.arma.alongada"), FI.criarItem("arma", { nome: "Arma caseira" }));
+      t.ok("arma feita à mão, sem tipo: aplica com aviso para a mesa conferir", desconhecida.ok && !!desconhecida.aviso);
+      t.ok("Dum dum aplica em balas curtas", IT.podeAplicar(entrada("op.mod.municao.dum-dum"), adicionar("op.municao.balas-curtas")).ok);
+      t.ok("  e não em cartuchos", !IT.podeAplicar(entrada("op.mod.municao.dum-dum"), adicionar("op.municao.cartuchos")).ok);
+      var lente = adicionar("op.paranormal.camera-de-aura");
+      t.ok("modificação sem acréscimo informado (Lente de revelação) não muda a categoria",
+        aplicarEm("sah.mod.paranormal.lente-de-revelacao", lente).ok && efCat(lente).efetiva === lente.ordem.categoria);
+      var utensilio = adicionar("op.geral.utensilio", { escolha: "ciencias" });
+      t.ok("Aprimorado só se repete com Função adicional", aplicarEm("op.mod.acessorio.aprimorado", utensilio).ok &&
+        !aplicarEm("op.mod.acessorio.aprimorado", utensilio).ok &&
+        aplicarEm("op.mod.acessorio.funcao-adicional", utensilio).ok &&
+        aplicarEm("op.mod.acessorio.aprimorado", utensilio).ok);
+
+      /* A Mochila de Utilidades (habilidade) e as modificações juntas:
+         cada uma entra uma vez. */
+      var espec = RI.fichaVazia();
+      espec.classe = "especialista";
+      espec.nex = 15;
+      espec.atributos = { agi: 1, for: 2, int: 1, pre: 1, vig: 1 };
+      /* A Mochila não vale para armas (OPRPG p. 29): uma proteção leve. */
+      var kitDiscreto = adicionar("op.protecao.leve");
+      aplicarEm("op.mod.protecao.discreta", kitDiscreto);
+      if (global.RAMAOrdemProgressao) {
+        var vaga = global.RAMAOrdemProgressao.vagas(espec).filter(function (v) { return v.id === "d3.poderClasse"; })[0];
+        global.RAMAOrdemProgressao.registrar(espec, vaga, { valor: "mochilaDeUtilidades", opcoes: { item: kitDiscreto.id } });
+        var efMochila = RI.itensEfetivos(espec, inv([kitDiscreto])).porId[kitDiscreto.id];
+        t.iguais("proteção leve (I, 2 espaços) com Discreta (+I, −1) e Mochila de Utilidades (−I, −1): I e 0 espaços",
+          [efMochila.categoria.efetiva, efMochila.espacos.total], [1, 0]);
+        t.igual("  e continua igual depois de recalcular", RI.itensEfetivos(espec, inv([kitDiscreto])).porId[kitDiscreto.id].espacos.total, 0);
+      }
+
+      /* ---------------------------------------------------------------- */
+      t.grupo("Ordem · itens — carga, quantidade e categorias");
+
+      var mochilaCarga = adicionar("op.geral.mochila-militar");
+      var katanaCarga = adicionar("op.arma.katana");
+      var balasCarga = adicionar("op.municao.balas-curtas", { quantidade: 3 });
+      var pesadaCarga = adicionar("op.protecao.pesada");
+      var invCarga = inv([mochilaCarga, katanaCarga, balasCarga, pesadaCarga]);
+      var capCarga = RI.capacidade(lutador, invCarga);
+      t.igual("Katana 2 + três pacotes de balas 3 + proteção pesada 5 + mochila 0 = 10 espaços", capCarga.ocupado, 10);
+      t.igual("a mochila militar soma +2 na capacidade (Força 2: 10 + 2)", capCarga.calculada, 12);
+      var usoCarga = RI.usoPorCategoria(lutador, invCarga);
+      t.iguais("por categoria: 0 → 3 pacotes; I → Katana e mochila; II → proteção pesada",
+        [usoCarga.categorias[0].usados, usoCarga.categorias[1].usados, usoCarga.categorias[2].usados], [3, 2, 1]);
+      t.igual("o cabeçalho e a carga leem a mesma conta", RI.itensEfetivos(lutador, invCarga).ocupado, capCarga.ocupado);
+      var compacto = adicionar("sah.arma.revolver-compacto", {});
+      var crimeTreinado = agenteDeItens({ pericias: { luta: "treinado", crime: "treinado" } });
+      t.iguais("Revólver compacto: treinado em Crime, uma unidade não ocupa espaço (SAH p. 37)",
+        [RI.itensEfetivos(lutador, inv([compacto])).ocupado, RI.itensEfetivos(crimeTreinado, inv([compacto])).ocupado], [1, 0]);
+
+      /* ---------------------------------------------------------------- */
+      t.grupo("Ordem · itens — persistência, importação e exportação");
+
+      var fichaCompleta = FI.criarFicha({ nome: "Com catálogo", tipoFicha: "ordem" });
+      fichaCompleta.ordem = agenteDeItens();
+      var kExp = adicionar("op.arma.katana");
+      aplicarEm("op.maldicao.arma.predadora", kExp);
+      var pExp = adicionar("op.protecao.leve");
+      aplicarEm("op.mod.protecao.reforcada", pExp);
+      pExp.ordem.emUso = true;
+      fichaCompleta.inventario.itens = [kExp, pExp, adicionar("op.municao.balas-curtas", { quantidade: 2 }),
+        FI.criarItem("item", { nome: "Corda à mão", ordem: { espacos: 1, categoria: 0 } })];
+      var reaberta = FI.normalizarFicha(JSON.parse(JSON.stringify(fichaCompleta)));
+      var resumoMecanico = function (f) {
+        return {
+          defesa: RI.defesa(f.ordem, f.inventario).total,
+          ocupado: RI.itensEfetivos(f.ordem, f.inventario).ocupado,
+          categorias: f.inventario.itens.map(function (i) { return RI.itensEfetivos(f.ordem, f.inventario).porId[i.id].categoria.efetiva; }),
+          margem: RI.armaEfetiva(f.ordem, f.inventario, f.inventario.itens[0]).margem,
+          origens: f.inventario.itens.map(function (i) { return i.origemCatalogoId || null; }),
+          mods: f.inventario.itens.map(function (i) { return ((i.ordem || {}).modificacoes || []).map(function (m) { return m.catalogoId; }).join(","); }),
+        };
+      };
+      t.iguais("salvar e reabrir: mesmos valores efetivos, origens e modificações", resumoMecanico(reaberta), resumoMecanico(fichaCompleta));
+      t.ok("  e a proteção continua em uso", reaberta.inventario.itens[1].ordem.emUso === true);
+      if (V) {
+        var imp = V.importado(JSON.parse(JSON.stringify(V.exportar("personagem", fichaCompleta))));
+        t.ok("exportar e importar a ficha com itens do catálogo", imp.ok);
+        t.iguais("  com os mesmos números", resumoMecanico(imp.dados), resumoMecanico(fichaCompleta));
+        t.ok("  itens e modificações ganham ids novos (quem importa recebe registro próprio)",
+          imp.dados.inventario.itens.every(function (i, n) { return i.id && i.id !== fichaCompleta.inventario.itens[n].id; }) &&
+          imp.dados.inventario.itens[0].ordem.modificacoes[0].id && imp.dados.inventario.itens[0].ordem.modificacoes[0].id !== kExp.ordem.modificacoes[0].id);
+        var pacoteItem = V.exportar("homebrew-item", kExp);
+        var impItem = V.importado(JSON.parse(JSON.stringify(pacoteItem)));
+        t.ok("um item do catálogo exportado sozinho também importa", impItem.ok && impItem.dados.ordem.arma.agil === true);
+      }
+      var lixo = FI.normalizarItem({ id: "x", tipo: "arma", nome: "Estranha", ordem: {
+        arma: { tipo: "laser", proficiencia: "divina", agil: "sim", municao: "<b>balas</b>" },
+        modificacoes: [{ nome: "" }, { nome: "Certeira", calculo: { ataque: 9999, margem: "abc" } }],
+      } });
+      t.ok("dados de arma fora do esperado são descartados na leitura", !lixo.ordem.arma || (lixo.ordem.arma.tipo === undefined && lixo.ordem.arma.proficiencia === undefined && lixo.ordem.arma.agil === undefined));
+      t.ok("modificação sem nome some; número absurdo não passa", lixo.ordem.modificacoes.length === 1 &&
+        !(lixo.ordem.modificacoes[0].calculo && lixo.ordem.modificacoes[0].calculo.ataque === 9999));
+      var muitas = { id: "y", tipo: "arma", nome: "Cheia", ordem: { modificacoes: [] } };
+      for (var mm = 0; mm < 30; mm++) muitas.ordem.modificacoes.push({ nome: "M" + mm });
+      t.igual("no máximo 12 modificações por item", FI.normalizarItem(muitas).ordem.modificacoes.length, 12);
+
+      var universalItens = FI.normalizarFicha({ nome: "Universal", inventario: { itens: [{ id: "u1", tipo: "arma", nome: "Facão", dano: "1d8", critico: 19, multiplicador: 2, peso: 2 }] } });
+      t.ok("ficha universal: arma continua sem bloco de Ordem", universalItens.inventario.itens[0].ordem === undefined);
+      t.ok("  e sem rastro de catálogo", !("origemCatalogoId" in universalItens.inventario.itens[0]));
+      var legado = FI.normalizarItem({ id: "o-1", tipo: "arma", nome: "Fuzil de assalto", dano: "2d10", critico: 19, multiplicador: 3,
+        ordem: { espacos: 2, quantidade: 1, categoria: 2, grupo: "arma" } });
+      t.iguais("item de Ordem anterior à biblioteca abre igual", [legado.ordem.categoria, legado.ordem.espacos, legado.dano, "arma" in legado.ordem, "origemCatalogoId" in legado],
+        [2, 2, "2d10", false, false]);
+    }
+
+    /* =================================================================
        MIGRAÇÃO — FICHA ANTIGA (schema 1)
        ================================================================= */
 

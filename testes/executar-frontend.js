@@ -837,6 +837,98 @@ t.grupo("Sincronia — ritmo, espera e mudanças");
 }
 
 /* =====================================================================
+   v2.13 — BIBLIOTECA DE ITENS: PÁGINAS, TRANSPORTE E CARGA SOB DEMANDA
+   ===================================================================== */
+
+t.grupo("Biblioteca de itens — páginas carregam o necessário, e o catálogo só sob demanda");
+
+{
+  const scriptsDe = async (pagina) => {
+    const html = await Deno.readTextFile(new URL("../" + pagina, import.meta.url));
+    return [...html.matchAll(/<script\s+src="([^"]+)"/g)].map((m) => m[1].replace(/^(\.\.\/)+/, ""));
+  };
+  const ficha = await scriptsDe("ficha/index.html");
+  t.ok("a ficha carrega js/ordem/itens.js depois das regras", ficha.indexOf("js/ordem/itens.js") > ficha.indexOf("js/ordem/regras.js") && ficha.indexOf("js/ordem/regras.js") >= 0);
+  t.ok("  e a janela da biblioteca depois do inventário",
+    ficha.indexOf("js/paginas/ficha-inventario-biblioteca.js") > ficha.indexOf("js/paginas/ficha-inventario.js") && ficha.indexOf("js/paginas/ficha-inventario.js") >= 0);
+  const PAGINAS = ["index.html", "personagens/index.html", "campanhas/index.html", "campanha/index.html",
+    "perfil/index.html", "homebrew/index.html", "ficha/index.html"];
+  let alguemCarrega = false;
+  for (const pagina of PAGINAS) if ((await scriptsDe(pagina)).includes("js/ordem/itens-dados.js")) alguemCarrega = true;
+  t.ok("nenhuma página carrega os dados do catálogo junto com ela", !alguemCarrega);
+  const testes = await scriptsDe("testes/index.html");
+  t.ok("a página de testes do navegador carrega dados e catálogo", testes.includes("js/ordem/itens-dados.js") && testes.includes("js/ordem/itens.js"));
+}
+
+t.grupo("Biblioteca de itens — o pedido à Homebrew");
+
+{
+  comSessaoGuardada();
+  let ultimo = null;
+  rede.responder = (corpo) => { ultimo = corpo; return { ok: true, dados: [] }; };
+  await RAMAApi.listarHomebrew({ escopo: "todos", tipos: ["item", "arma", "armadura", "mochila"] });
+  t.iguais("a biblioteca pede só os tipos de item, em 'todos'", [ultimo.acao, ultimo.escopo, ultimo.tipos], ["listar_homebrew", "todos", ["item", "arma", "armadura", "mochila"]]);
+  t.ok("  sem mandar dono, papel ou permissão", !("ownerId" in ultimo) && !("userId" in ultimo) && !("permitido" in ultimo) && !("papel" in ultimo));
+  await RAMAApi.listarHomebrew({ escopo: "meus" });
+  t.ok("quem não pede tipos não manda o campo (a página Homebrew continua igual)", !("tipos" in ultimo) && ultimo.escopo === "meus");
+  await RAMAApi.listarHomebrew({ escopo: "todos", tipos: [] });
+  t.ok("lista vazia de tipos também não vai", !("tipos" in ultimo));
+}
+
+t.grupo("Biblioteca de itens — catálogo carregado sob demanda");
+
+{
+  /* Um documento de mentira que só registra os <script> pedidos. */
+  const scripts = [];
+  const documentoOriginal = globalThis.document;
+  globalThis.document = Object.assign({}, documentoOriginal, {
+    createElement: (nome) => ({ nome, src: "", async: false, onload: null, onerror: null, parentNode: null }),
+    head: {
+      appendChild(el) { el.parentNode = this; scripts.push(el); },
+      removeChild(el) { el.parentNode = null; el.removido = true; },
+    },
+  });
+  delete globalThis.RAMAOrdemItensDados;
+  delete globalThis.RAMAOrdemItens;
+  (0, eval)(await Deno.readTextFile(new URL("../js/ordem/itens.js", import.meta.url)));
+  const IT = globalThis.RAMAOrdemItens;
+
+  const primeira = IT.carregar();
+  const segunda = IT.carregar();
+  t.igual("abrir a biblioteca pede UM script do catálogo", scripts.length, 1);
+  t.ok("  o arquivo de dados, e assíncrono", /js\/ordem\/itens-dados\.js$/.test(scripts[0].src) && scripts[0].async === true);
+  t.ok("  dois pedidos ao mesmo tempo esperam a mesma carga", primeira === segunda || scripts.length === 1);
+  t.igual("  nada pronto antes de o script chegar", IT.catalogoPronto(), null);
+
+  scripts[0].onerror();
+  let falhou = null;
+  await primeira.then(() => {}, (e) => { falhou = e; });
+  t.ok("falha de rede rejeita, com o motivo", falhou && falhou.message === "rede");
+  t.ok("  e tira o script quebrado da página", scripts[0].removido === true);
+
+  const nova = IT.carregar();
+  t.igual("tentar de novo pede o script outra vez (a falha não fica guardada)", scripts.length, 2);
+  globalThis.RAMAOrdemItensDados = { versao: 1, itens: [
+    { id: "op.teste.item", nome: "Item de teste", fonte: "OPRPG", pagina: 1, aba: "geral", secao: "operacionais", categoria: "I", espacos: 1, resumo: "Só para o teste." },
+  ] };
+  scripts[1].onload();
+  const pronto = await nova;
+  t.ok("quando chega, o catálogo fica pronto e congelado", pronto.itens.length === 1 && Object.isFrozen(pronto.itens[0]) && IT.catalogoPronto() === pronto);
+  await IT.carregar();
+  t.igual("  e a próxima abertura não pede nada", scripts.length, 2);
+
+  IT._esquecer();
+  delete globalThis.RAMAOrdemItensDados;
+  const vazia = IT.carregar();
+  scripts[2].onload();
+  let motivo = null;
+  await vazia.then(() => {}, (e) => { motivo = e.message; });
+  t.igual("script que carrega sem dados rejeita como vazio", motivo, "vazio");
+
+  globalThis.document = documentoOriginal;
+}
+
+/* =====================================================================
    FIM
    ===================================================================== */
 

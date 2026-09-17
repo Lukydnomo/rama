@@ -1215,3 +1215,206 @@ body.pagina-ficha--painel .app-corpo {
 body.pagina-ficha--painel .ficha { gap: var(--e3); padding-top: 0; }
 body.pagina-ficha--painel .pular-para { display: none; }
 body.pagina-ficha--painel .ficha-topo__nome { font-size: var(--texto-medio); }
+
+/* =====================================================================
+   INVENTÁRIO · "DA BIBLIOTECA"
+   ---------------------------------------------------------------------
+   Resultado compacto numa linha (nome, classificação, os números que
+   se consultam de relance e as marcas de categoria, espaços e fonte);
+   os detalhes só aparecem, e só são montados, quando alguém abre. Uma
+   rolagem só para a lista inteira — rolagem dentro de rolagem perde
+   quem está no celular.
+   ===================================================================== */
+
+.r-modal--biblioteca { max-width: 900px; }
+
+.bib-filtros {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--e2) var(--e3);
+}
+
+.bib-filtro {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 9rem;
+  flex: 1 1 9rem;
+}
+
+.bib-filtro .r-selecao { min-height: var(--alvo-toque); width: 100%; }
+
+.bib-limpar { align-self: flex-end; }
+
+.bib-status { margin: 0; }
+
+.bib-lista { max-height: 52vh; }
+
+.bib-itens {
+  display: flex;
+  flex-direction: column;
+  gap: var(--e1);
+}
+
+.bib-item {
+  background: var(--cor-superficie);
+  border: var(--borda) solid var(--cor-traco-fraca);
+}
+
+.bib-item--melhoria { border-style: dashed; }
+
+.bib-item__topo {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--e2);
+  padding-right: var(--e2);
+}
+
+.bib-item__abrir {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  align-items: flex-start;
+  gap: var(--e2);
+  min-height: var(--alvo-toque);
+  padding: var(--e2) var(--e2) var(--e2) var(--e3);
+  background: transparent;
+  border: 0;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.bib-item__abrir:hover { background: var(--cor-superficie-2); }
+
+.bib-item__seta {
+  flex: 0 0 auto;
+  width: 10px;
+  padding-top: 2px;
+  color: var(--cor-texto-3);
+  transition: transform var(--tempo-curto) var(--curva);
+}
+.bib-item__seta::before { content: "▸"; }
+.bib-item__abrir[aria-expanded="true"] .bib-item__seta { transform: rotate(90deg); }
+
+@media (prefers-reduced-motion: reduce) {
+  .bib-item__seta { transition: none; }
+}
+
+.bib-item__texto {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.bib-item__nome {
+  font-weight: 700;
+  color: var(--cor-texto);
+  overflow-wrap: anywhere;
+}
+
+.bib-item__classe {
+  font-family: var(--fonte-mini);
+  font-size: var(--texto-mini);
+  color: var(--cor-texto-3);
+}
+
+.bib-item__dados {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 var(--e3);
+  font-size: var(--texto-mini);
+}
+
+.bib-item__marcas {
+  flex: 0 1 auto;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--e1);
+  padding-top: var(--e2);
+  max-width: 45%;
+}
+
+.bib-item__na-ficha { border-color: var(--cor-ok); color: var(--cor-ok); }
+
+.bib-elemento { border-left-width: 3px; }
+.bib-elemento--sangue { border-left-color: #B64A4A; }
+.bib-elemento--morte { border-left-color: #8C8C8C; }
+.bib-elemento--conhecimento { border-left-color: var(--cor-aviso); }
+.bib-elemento--energia { border-left-color: var(--cor-paranormal); }
+.bib-elemento--medo { border-left-color: var(--cor-texto); }
+.bib-elemento--varia { border-left-style: dashed; }
+
+.bib-item__detalhes {
+  display: flex;
+  flex-direction: column;
+  gap: var(--e2);
+  padding: var(--e2) var(--e3) var(--e3);
+  border-top: var(--borda) solid var(--cor-traco-fraca);
+}
+
+.bib-item__resumo { color: var(--cor-texto-2); }
+
+.bib-item__pares { margin: 0; }
+
+.bib-lista-textos {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding-left: var(--e4);
+  list-style: square;
+}
+
+.bib-automacao {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--e1);
+}
+
+.bib-item__acao {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--e2) var(--e3);
+  padding-top: var(--e2);
+  border-top: var(--borda) dashed var(--cor-traco-fraca);
+}
+
+.bib-campo { margin: 0; min-width: 10rem; }
+
+.bib-quantidade { width: 6rem; }
+
+.bib-item__status { flex: 1 1 100%; margin: 0; min-height: 1em; }
+
+.bib-aplicar { flex-direction: column; align-items: stretch; }
+
+.bib-alvos {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--e1) var(--e2);
+}
+
+.bib-alvo-recusado { flex: 1 1 100%; color: var(--cor-texto-3); }
+
+.bib-alvo {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--e2);
+}
+
+.bib-nada { padding: var(--e4) 0; }
+
+.item-modificacao { gap: var(--e2); }
+
+@media (max-width: 640px) {
+  .bib-item__topo { flex-direction: column; gap: 0; padding: 0 0 var(--e2); }
+  .bib-item__marcas { justify-content: flex-start; max-width: none; padding: 0 var(--e3); }
+  .bib-lista { max-height: none; }
+  .bib-filtro { min-width: 45%; }
+  .bib-item__adicionar { flex: 1 1 100%; }
+}

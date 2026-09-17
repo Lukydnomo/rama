@@ -43,13 +43,23 @@
      de progressão), `afinidade`, `patente` e o ajuste temporário de
      capacidade; os itens de uma ficha de Ordem ganharam o bloco `ordem`
      com espaços, quantidade e categoria.
+     5 → 6: habilidades e itens ganharam `etiqueta` colorida, e o bloco
+     `ordem` ganhou `personalizacoes` e `excluidas`.
+     6 → 7: item vindo do catálogo de itens guarda `origemCatalogoId`, e
+     o bloco `ordem` do item ganhou `pericia`, `arma`, `protecao`,
+     `elemento`, `amaldicoado`, `marcadores`, `referencia` e
+     `modificacoes` (as modificações e maldições aplicadas).
 
      Nenhuma das subidas exige migração: normalizarFicha() cria o que
      falta, vazio, e não toca no que existe. Um ritual gravado na 2 abre
      na 3 com a versão Normal em branco; uma ficha de Ordem gravada na 4
      abre na 5 sem escolhas registradas, com as pendências calculadas a
-     partir da classe e do NEX. Ver docs/CHARACTER_SCHEMA.md. */
-  var VERSAO_SCHEMA = 6;
+     partir da classe e do NEX. As duas últimas subidas existem para
+     PROTEGER dado: uma aba ainda aberta na versão anterior não conhece
+     os campos novos e os descartaria ao gravar — com o schema maior ela
+     recusa abrir a ficha e pede para recarregar.
+     Ver docs/CHARACTER_SCHEMA.md. */
+  var VERSAO_SCHEMA = 7;
 
   var NATUREZA = { INFORMACAO: "informacao", ROLAVEL: "rolavel", DEPENDENTE: "dependente" };
 
@@ -452,6 +462,11 @@
          não vínculo: editar o modelo na Homebrew NÃO muda a ficha. */
       origemHomebrewId: d.origemHomebrewId || null,
     };
+
+    /* O mesmo rastro para o catálogo oficial de Ordem (v2.13). Só existe
+       no item que veio de lá: nenhum item antigo ganha campo novo. */
+    var origemCatalogo = U.aparar(d.origemCatalogoId, 80);
+    if (origemCatalogo) base.origemCatalogoId = origemCatalogo;
 
     /* Etiqueta colorida abaixo do nome: apresentação, nunca regra. Só
        existe no item que a tem — nenhum item antigo ganha campo novo. */

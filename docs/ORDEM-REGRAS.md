@@ -434,6 +434,144 @@ Defesa" ou "Guardada: não soma na Defesa" — e o botão **Usar**/**Em uso** tr
 A ficha universal não muda: lá as armaduras continuam somando um número mostrado
 ao lado, sem aplicar sozinhas.
 
+## Biblioteca de itens
+
+**OPRPG p. 53–67 e 144–151; SAH p. 37–45 e 55–61.** No modo edição do inventário
+da ficha de Ordem, o botão **Da biblioteca** abre duas origens: **Ordem
+Paranormal** (o catálogo dos dois livros) e **Homebrew** (os itens da conta e os
+que outras contas publicaram, filtrados no servidor). Na ficha universal a janela
+continua só com a Homebrew. Criar item à mão continua igual.
+
+O catálogo é **dado**, separado da tela: `js/ordem/itens-dados.js` só é carregado
+na primeira vez que alguém abre a janela, fica congelado na memória
+(`Object.freeze`) e **nunca vai junto na gravação da ficha**.
+
+### Organização
+
+| aba | seções |
+|---|---|
+| Armas | armas simples, táticas, pesadas e as modificações para armas |
+| Munições | munições e as modificações para munições |
+| Proteções | proteções e as modificações para proteções |
+| Geral | acessórios, explosivos, itens operacionais, itens paranormais e as modificações |
+| Itens Amaldiçoados | itens amaldiçoados e as maldições para armas, proteções e acessórios |
+
+A **categoria de navegação** (a aba) e a **categoria de equipamento** (0, I, II,
+III, IV) são campos diferentes: a aba organiza a busca, a categoria conta contra o
+limite da patente. Filtros de fonte, tipo de equipamento, categoria e elemento; a
+busca ignora acento e caixa e procura também pelos nomes alternativos que as
+tabelas usam.
+
+### Cobertura, entrada por entrada
+
+| seção | livro básico | SAH | conteúdo |
+|---|---|---|---|
+| Armas simples | 12 | 3 | Arco, Bastão, Besta, Cajado, Faca, Fuzil de caça, Lança, Machete, Martelo, Pistola, Punhal, Revólver · **SAH:** Estilingue, Pregador pneumático, Revólver compacto |
+| Armas táticas | 19 | 8 | Acha, Arco composto, Balestra, Corrente, Espada, Espingarda, Florete, Fuzil de assalto, Fuzil de precisão, Gadanho, Katana, Machadinha, Machado, Marreta, Maça, Montante, Motosserra, Nunchaku, Submetralhadora · **SAH:** Baioneta, Bastão policial, Espingarda de cano duplo, Faca tática, Gancho de carne, Picareta, Pistola pesada, Shuriken |
+| Armas pesadas | 3 | 0 | Bazuca, Lança-chamas, Metralhadora |
+| Modificações para armas | 13 | 1 | Alongada, Calibre grosso, Certeira, Compensador, Cruel, Discreta, Ferrolho automático, Mira laser, Mira telescópica, Perigosa, Silenciador, Tática, Visão de calor · **SAH:** Carregador rápido |
+| Munições | 8 | 1 | Balas curtas, Balas longas, Cargas para pistola sinalizadora, Cartuchos, Combustível, Dardos para pistola de dardos, Flechas, Foguete · **SAH:** Bolinhas de estilingue |
+| Modificações para munições | 2 | 0 | Dum dum, Explosiva |
+| Proteções | 3 | 0 | Escudo, Proteção leve, Proteção pesada |
+| Modificações para proteções | 4 | 0 | Antibombas, Blindada, Discreta, Reforçada |
+| Acessórios | 3 | 7 | Kit de perícia, Utensílio, Vestimenta · **SAH:** Amuleto sagrado, Celular, Chave de fenda universal, Chaves, Documentos falsos, Manual operacional, Notebook |
+| Explosivos | 5 | 5 | Granada de atordoamento, Granada de fragmentação, Granada de fumaça, Granada incendiária, Mina antipessoal · **SAH:** Dinamite, Explosivo plástico, Galão vermelho, Granada de gás sonífero, Granada de PEM |
+| Itens operacionais | 19 | 24 | Algemas, Arpéu, Bandoleira, Binóculos, Bloqueador de sinal, Cicatrizante, Corda, Equipamento de sobrevivência, Lanterna tática, Mochila militar, Máscara de gás, Pistola de dardos, Pistola sinalizadora, Pé de cabra, Soqueira, Spray de pimenta, Taser, Traje hazmat, Óculos de visão térmica · **SAH:** Alarme de movimento, Alimento energético, Anti-inflamatório, Antibiótico, Antiemético, Antihistamínico, Antitérmico, Antídoto, Aplicador de medicamentos, Braçadeira reforçada, Broncodilatador, Coagulante, Coldre saque rápido, Cão adestrado, Equipamento de escuta, Estrepes (saco), Faixa de pregos, Isqueiro, Paraquedas, Pá, Traje de mergulho, Traje espacial, Óculos de visão noturna, Óculos escuros |
+| Itens paranormais | 7 | 9 | Amarras de (elemento), Componentes ritualísticos de (elemento), Câmera de aura paranormal, Emissor de pulsos paranormais, Escuta de ruídos paranormais, Medidor de estabilidade da membrana, Scanner de manifestação paranormal de (elemento) · **SAH:** Catalisador ritualístico ampliador, Catalisador ritualístico perturbador, Catalisador ritualístico potencializador, Catalisador ritualístico prolongador, Ligação direta infernal, Medidor de condição vertebral, Pen drive selado, Pé de morto, Valete da salvação |
+| Modificações para acessórios e itens paranormais | 4 | 2 | Aprimorado, Discreto, Função adicional, Instrumental · **SAH:** Bateria potente, Lente de revelação |
+| Itens amaldiçoados | 28 | 19 | Amarras mortais, Anéis do elo mental, Arcabuz dos Moretti, Bateria reversa, Casaco de lodo, Coletora, Coração pulsante, Coroa de espinhos, Crânio espiral, Dedo decepado, Frasco de lodo, Frasco de vitalidade, Jaqueta de Veríssimo, Lanterna reveladora, Munição jurada, Máscara das pessoas nas sombras, Peitoral da segunda chance, Pergaminho da pertinácia, Punhos enraivecidos, Pérola de sangue, Relógio de Arnaldo, Selo paranormal, Seringa de transfiguração, Talismã da sorte, Teclado de conexão neural, Tela do pesadelo, Veículo energizado, Vislumbre do fim · **SAH:** A Primeira Adaga, Ampulheta do tempo sofrido, Arreio neural, Centrifugador existencial, Conector de membros, Câmera obscura, Dose d’A Praga, Enxame fantasmagórico, Espelho refletor, Fuzil alheio, Injeção de Lodo, Instantâneo mortal, Mandíbula agonizante, Projétil de Lodo, curto, Projétil de Lodo, longo, Repositório do fracasso, Retalho tenebroso, Rádio chiador, Tábula do saber custoso |
+| Maldições para armas | 12 | 0 | Antielemento, Consumidora, Empuxo, Energética, Erosiva, Lancinante, Predadora, Repulsora, Ritualística, Sanguinária, Senciente, Vibrante |
+| Maldições para proteções | 10 | 0 | Abascanta, Cinética, Letárgica, Lépida, Profética, Regenerativa, Repulsiva, Sombria, Sádica, Voltaica |
+| Maldições para acessórios | 13 | 0 | Carisma, Conjuração, Defesa, Destreza, Disposição, Escudo mental, Esforço adicional, Potência, Proteção elemental, Pujança, Reflexão, Sagacidade, Vitalidade |
+
+Total: **244 entradas** — 183 itens e 61 melhorias (26 modificações e 35
+maldições).
+
+**O que não entrou, e por quê.** Coronhada, armas improvisadas e ataques
+desarmados (OPRPG p. 59) são regras de ataque, não itens; a contagem de munição
+(OPRPG p. 174) é regra opcional e aparece como nota nas munições e nas armas de
+fogo; a fabricação em campo (SAH p. 94) é um procedimento de mesa. Rituais têm
+catálogo próprio, que não existe nesta entrega.
+
+### Divergências entre os materiais
+
+Cada uma está registrada na própria entrada, no campo `notas`, e aparece na janela
+como "Nota:".
+
+| conteúdo | divergência | o que o catálogo faz |
+|---|---|---|
+| Picareta | o livro básico manda usar as estatísticas da marreta (p. 59); o SAH dá estatísticas próprias (Tabela 1.4) | duas entradas separadas, cada uma com a sua fonte; nada é misturado |
+| Discreta (arma) | a Tabela 3.5 dá +10 em ocultar para corpo a corpo e disparo, e +5 com −1 espaço para armas de fogo; o texto da p. 60 dá +5 e −1 espaço para qualquer arma | segue o texto, e registra a divergência |
+| Tática (arma) | aparece nas duas listas da Tabela 3.5 | uma entrada só, aplicável aos três tipos |
+| Cajado | a tabela traz o dano como "1d6/1d6" | dano 1d6, com a nota de que as duas pontas causam o mesmo |
+| Tábula do saber custoso | a Tabela 1.6 chama de "Tablet do saber custoso" | usa o nome da descrição e acha pelos dois |
+| Câmera de aura paranormal | a Tabela 3.10 escreve "Câmara" | usa "Câmera" e acha pelos dois |
+| Motosserra | tabela e descrição escrevem "Motoserra" | usa "Motosserra" e acha pelos dois |
+| Paraquedas, traje de mergulho, traje espacial | a Tabela 1.5 escreve a categoria em arábico (1, 1, 2) | lidos como I, I e II |
+| Fuzil alheio | o SAH o descreve como fuzil de precisão com mira telescópica e mira laser | aplica só o que o texto descreve: 2d10, 19/x3, alcance extremo e margem 17 |
+| Mochila militar | a Tabela 3.8 traz "*" em espaços | 0 espaços, como diz a descrição |
+| Cão adestrado | a Tabela 1.5 traz "–" em espaços | 0 espaços: um aliado não ocupa inventário |
+
+### O que a ficha faz com o item adicionado
+
+Adicionar cria uma **cópia independente**, com id próprio e `origemCatalogoId`
+como rastro. Editar a cópia não muda o catálogo nem as outras cópias; corrigir o
+catálogo numa versão futura não muda o que já está na ficha.
+
+| campo do catálogo | onde entra na ficha | est. |
+|---|---|---|
+| categoria (0 a IV) | `ordem.categoria`, contra o limite da patente | **A** |
+| espaços por unidade | `ordem.espacos`, na carga | **A** |
+| quantidade escolhida | `ordem.quantidade` (munição, consumível, granada, catalisador, medicamento) | **A** |
+| dano, crítico e multiplicador | campos da arma, nos botões Ataque e Dano | **A** |
+| perícia de ataque | `ordem.pericia`: Luta em corpo a corpo, Pontaria no resto (OPRPG p. 54) | **A** |
+| atributo somado ao dano | Força em corpo a corpo e arremesso; o maior entre Força e Agilidade em arma ágil; nada em disparo e fogo (p. 54, 59) | **A** |
+| arma ágil no teste de ataque | usa Agilidade quando ela é maior (p. 59) | **A** |
+| penalidade de dados da arma | motosserra: −1 dado no teste | **A** |
+| bônus de ataque da própria arma | Arcabuz dos Moretti: +2 | **A** |
+| dano alternativo | botão próprio: duas mãos, dois canos, baioneta fixada | **A** |
+| dano por 1d6 | Arcabuz dos Moretti: o botão Dano rola 1d6 e usa a linha sorteada | **A** |
+| alcance | mostrado, e aumentado pelas modificações que o aumentam | **P** |
+| Defesa da proteção | `defesa` do item, somada **quando em uso** | **A** |
+| tipo de proteção | leve, pesada ou escudo: escudo acumula, pesada penaliza perícias de carga | **A** |
+| capacidade de carga do item | `ordem.capacidade` (Mochila Militar +2) | **A** |
+| proficiência exigida | comparada com as da ficha; vira **aviso**, nunca penalidade automática | **I** |
+| patente e itens amaldiçoados | aviso quando a patente ainda não os libera (p. 144) | **I** |
+| preço da maldição | painel com o custo de cada elemento; a Sanidade não é descontada | **I** |
+| efeitos com custo, ação ou condição | texto na descrição da cópia | **I** |
+| resistência a dano da proteção pesada | texto | **I** |
+| contagem de munição (regra opcional) | nota na munição e na arma de fogo | **I** |
+
+Adicionar **não** equipa: proteção entra guardada, e nenhum efeito que dependa de
+uso, escolha ou condição é ligado. A ficha não desconta munição — a unidade é o
+pacote (ou a caixa), e nada é convertido em número de projéteis.
+
+### Modificações e maldições
+
+Elas **não são itens** e não entram no inventário: aplicadas a um item, viram uma
+entrada em `ordem.modificacoes` dele, com os números que as regras usam copiados
+na hora.
+
+| regra | fonte | comportamento | est. |
+|---|---|---|---|
+| Cada modificação aumenta a categoria do item em I | OPRPG p. 60 | somado na categoria efetiva | **A** |
+| A primeira maldição aumenta em II; as seguintes, em I | OPRPG p. 144 | somado na categoria efetiva | **A** |
+| Modificações e maldições iguais não se acumulam | OPRPG p. 60, 144 | recusado, com o motivo | **A** |
+| Só no tipo de item que o livro indica | OPRPG p. 60-64, 144-151 | recusado quando o tipo é conhecido e não bate; item à mão sem tipo aplica com aviso | **A** |
+| Reforçada e Discreta não combinam | OPRPG p. 62 | recusado | **A** |
+| Ferrolho automático exige arma não automática | OPRPG p. 60 | recusado | **A** |
+| Maldições de elementos opressores não convivem | OPRPG p. 144 | recusado, dizendo quais | **A** |
+| Aprimorado repete com Função adicional | OPRPG p. 64 | permitido uma segunda vez | **A** |
+| +2 no ataque, +2 no dano, +1 dado de dano, margem, alcance, espaço, Defesa | OPRPG p. 60-62 | somados nos botões e nas contas | **A** |
+| Predadora dobra a margem antes de qualquer aumento | OPRPG p. 146 | calculado (fuzil de caça predador: 17) | **A** |
+| Cada maldição dá +10 PV e +10 RD ao item | OPRPG p. 145 | texto | **I** |
+| Categorias acima de IV | OPRPG p. 53 | o item sai dos limites e a ficha avisa | **A** |
+| Dum dum e Explosiva (munição) | OPRPG p. 60 | aplicadas ao pacote; o efeito na arma é controle manual, porque a ficha não liga munição a arma | **I** |
+| Lente de revelação | SAH p. 45 | o livro não diz o acréscimo de categoria: o catálogo não soma nada | **I** |
+
+Remover uma modificação devolve os valores originais na leitura seguinte: nada
+efetivo é gravado.
+
 ---
 
 ## Atributos
@@ -767,3 +905,37 @@ aberta, a adotada está escrita — e é a que os testes travam.
 
 14. **Possuído: Poder Não Desejado** troca cada poder de ocultista por Transcender.
     A troca é conduzida por quem joga; a vaga de poder de classe não é bloqueada.
+
+15. **Escudo junto de proteção.** "Precisa ser empunhado em uma mão e fornece
+    Defesa +2" (OPRPG p. 62) não diz explicitamente que ele soma com a proteção
+    vestida. O R.A.M.A. soma: são equipamentos diferentes, em lugares diferentes,
+    e a tabela dá Defesa própria ao escudo.
+
+16. **Categoria de item que o livro não informa.** O medidor de estabilidade da
+    membrana (OPRPG p. 67) está descrito, mas não na Tabela 3.10. A entrada fica
+    **sem** categoria — nada é deduzido — e o item entra listado para a mesa
+    classificar, com os espaços no padrão do livro.
+
+17. **Selo paranormal.** "A categoria de um selo é igual ao círculo do ritual
+    contido nele" (OPRPG p. 151): a janela pede o círculo ao adicionar e grava a
+    categoria correspondente.
+
+18. **Itens amaldiçoados sem estatísticas de arma.** A Primeira Adaga (SAH) e a
+    Coletora (OPRPG) são descritas como arma, mas sem dano, margem ou
+    multiplicador. O catálogo não inventa números: a nota diz de onde a mesa pode
+    tirá-los (o punhal, no caso da Coletora).
+
+19. **Munição não é contagem de projéteis.** A unidade é o pacote, o tanque, o
+    foguete ou a caixa, como o livro descreve (OPRPG p. 60). A quantidade do item
+    é de pacotes, e a duração em cenas — ou a contagem opcional de 20 ataques por
+    pacote (p. 174) — fica no controle manual.
+
+20. **Modificações de munição.** Dum dum e Explosiva mudam o crítico e o dano da
+    arma que usar aquela munição (OPRPG p. 60). A ficha não liga munição a arma —
+    o campo "Munição" da arma é texto —, então elas são aplicadas ao pacote e o
+    efeito na arma fica no controle manual.
+
+21. **Proficiência da arma é aviso.** A penalidade de −2 dados por falta de
+    proficiência (OPRPG p. 54) não entra sozinha: as proficiências de poderes vêm
+    em texto ("armas táticas exceto de fogo", "armas de fogo que usam balas
+    longas") e a mesa pode ter decidido outra coisa. A ficha compara e avisa.

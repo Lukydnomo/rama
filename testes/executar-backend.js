@@ -273,6 +273,50 @@ t.igual("um item de verdade continua item",
 t.igual("habilidade privada de B não chega a A",
   comoAna({ acao: "listar_homebrew", escopo: "publicos", tipo: "habilidade" }).dados.length, 0);
 
+t.grupo("Homebrew — biblioteca de itens da ficha (só itens que a conta alcança)");
+
+{
+  const TIPOS_DE_ITEM = ["item", "arma", "armadura", "mochila"];
+  const salvarComo = (como, dados) => como({ acao: "salvar_homebrew", dados }).dados.id;
+
+  const itemPublicoB = salvarComo(comoBruno, { tipo: "item", nome: "Lanterna pública de B", visibilidade: "publico", peso: 1 });
+  const armaPrivadaB = salvarComo(comoBruno, { tipo: "arma", nome: "Faca privada de B", visibilidade: "privado", dano: "1d4" });
+  const coleteB = salvarComo(comoBruno, { tipo: "armadura", nome: "Colete público de B", visibilidade: "publico", defesa: 5 });
+  const habPublicaB = salvarComo(comoBruno, { tipo: "habilidade", nome: "Faro público de B", visibilidade: "publico", texto: "Não é item." });
+  const armaDeA = salvarComo(comoAna, { tipo: "arma", nome: "Pé de cabra de A", dano: "1d8", critico: 20, multiplicador: 2 });
+
+  /* Uma habilidade antiga com a coluna gravada como 'item' e PÚBLICA:
+     a coluna deixa passar, o conteúdo tira. */
+  const disfarcada = salvarComo(comoBruno, { tipo: "habilidade", nome: "Habilidade com coluna de item", visibilidade: "publico", texto: "Antiga." });
+  const linhaDisfarcada = acharPor(ABAS.HOMEBREW, "id", disfarcada);
+  linhaDisfarcada.tipo = "item";
+  atualizarLinha(ABAS.HOMEBREW, linhaDisfarcada._linha, linhaDisfarcada);
+
+  const paraAna = comoAna({ acao: "listar_homebrew", escopo: "todos", tipos: TIPOS_DE_ITEM });
+  const ids = (r) => r.dados.map((h) => h.id);
+  t.ok("a lista de itens responde", paraAna.ok);
+  t.ok("  traz o item da própria conta", ids(paraAna).includes(armaDeA));
+  t.ok("  e os itens PÚBLICOS de outra conta", ids(paraAna).includes(itemPublicoB) && ids(paraAna).includes(coleteB));
+  t.ok("  nunca um item privado de outra conta", !ids(paraAna).includes(armaPrivadaB) && !ids(paraAna).includes("hb-antigo"));
+  t.ok("  nem habilidade ou criatura, mesmo públicas", !ids(paraAna).includes(habPublicaB) && !ids(paraAna).includes(hbPublico) &&
+    paraAna.dados.every((h) => TIPOS_DE_ITEM.includes(h.tipo)));
+  t.ok("  nem a habilidade antiga gravada com a coluna de item", !ids(paraAna).includes(disfarcada));
+  t.ok("  e nenhum dado de conta ou sessão vem junto", paraAna.dados.every((h) =>
+    !("ownerId" in h) && !("hashSenha" in h) && !("salt" in h) && !("token" in h) && !("dono" in h)));
+  t.igual("o item alheio chega marcado como não sendo da conta", paraAna.dados.find((h) => h.id === itemPublicoB).meu, false);
+
+  const soMeus = comoAna({ acao: "listar_homebrew", escopo: "meus", tipos: TIPOS_DE_ITEM });
+  t.iguais("escopo 'meus' com tipos: só os itens da própria conta", ids(soMeus), [armaDeA]);
+  const soArmas = comoBruno({ acao: "listar_homebrew", escopo: "meus", tipos: ["arma"] });
+  t.ok("tipos filtra dentro do escopo: as armas de B, inclusive a privada, para o próprio B",
+    ids(soArmas).includes(armaPrivadaB) && soArmas.dados.every((h) => h.tipo === "arma"));
+  t.igual("tipos que não existem: lista vazia, não tudo",
+    comoAna({ acao: "listar_homebrew", escopo: "todos", tipos: ["senha", "usuario"] }).dados.length, 0);
+  t.ok("sem tipos, o pedido antigo continua igual (criaturas públicas aparecem em 'todos')",
+    ids(comoAna({ acao: "listar_homebrew", escopo: "todos" })).includes(hbPublico));
+  t.recusa("sem sessão, nada", chamar(globalThis, { acao: "listar_homebrew", escopo: "todos", tipos: TIPOS_DE_ITEM }));
+}
+
 /* =====================================================================
    CAMPANHAS — VISIBILIDADE E PAPÉIS
    ===================================================================== */

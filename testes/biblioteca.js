@@ -1,0 +1,448 @@
+/* =====================================================================
+   R.A.M.A. — testes da janela "Da biblioteca" (inventário)
+   ---------------------------------------------------------------------
+   Abre a janela DE VERDADE — o mesmo arquivo que a ficha usa — com uma
+   ficha de teste, e confere o que quem usa faz: trocar de origem,
+   buscar, filtrar, abrir detalhes, adicionar cada tipo de item, aplicar
+   uma modificação, usar o teclado, e caber na largura da tela.
+
+   O que fica de fora de propósito: o servidor. A Homebrew é um dublê
+   (a permissão é conferida no backend, e testada lá, em
+   testes/executar-backend.js). O catálogo, não: ele é carregado sob
+   demanda pelo caminho real, como na ficha.
+
+   Toda espera aqui espera uma CONDIÇÃO (a lista apareceu, o botão
+   sumiu), nunca um tempo fixo que torce para a tela ter terminado.
+   ===================================================================== */
+
+(function (global) {
+  "use strict";
+
+  var U = global.RAMAUtil;
+  var el = U.el;
+  var F = global.RAMAFicha;
+  var R = global.RAMAOrdemRegras;
+  var B = global.RAMABibliotecaDeItens;
+
+  var saida = U.$("#saida");
+  var placar = U.$("#placar");
+  var passaram = 0;
+  var falharam = 0;
+  var falhas = [];
+  var grupoAtual = null;
+
+  var t = {
+    grupo: function (titulo) {
+      grupoAtual = el("div.grupo", {}, [el("p.grupo__titulo", { texto: titulo })]);
+      saida.appendChild(grupoAtual);
+    },
+    ok: function (nome, condicao, detalhe) {
+      if (condicao) passaram++; else { falharam++; falhas.push(nome); }
+      if (!grupoAtual) t.grupo("Geral");
+      grupoAtual.appendChild(el("div.caso", { class: condicao ? "caso--ok" : "caso--falhou" }, [
+        el("span.caso__marca", { texto: condicao ? "ok" : "FALHOU" }),
+        el("span", {}, [
+          el("span", { texto: nome }),
+          !condicao && detalhe ? el("span.caso__detalhe", { texto: " — " + detalhe }) : null,
+        ]),
+      ]));
+    },
+    igual: function (nome, obtido, esperado) {
+      var mesmo = Object.is(obtido, esperado);
+      t.ok(nome, mesmo, mesmo ? "" : "obtido " + JSON.stringify(obtido) + ", esperado " + JSON.stringify(esperado));
+    },
+  };
+
+  /* ---------- esperas por condição ---------- */
+
+  function tique() { return new Promise(function (ok) { setTimeout(ok, 30); }); }
+
+  async function ate(condicao, prazo) {
+    var limite = Date.now() + (prazo || 10000);
+    for (;;) {
+      var v = condicao();
+      if (v) return v;
+      if (Date.now() > limite) return null;
+      await tique();
+    }
+  }
+
+  /* ---------- atalhos da janela ---------- */
+
+  function janela() { return document.querySelector(".r-modal--biblioteca"); }
+  function botoes(raiz) { return U.$$("button", raiz || document); }
+  function botaoCom(texto, raiz) {
+    return botoes(raiz || janela()).filter(function (b) { return b.textContent.trim() === texto; })[0] || null;
+  }
+  function linhas() { return U.$$(".bib-item", janela()); }
+  function linha(nome) {
+    return linhas().filter(function (l) { return l.querySelector(".bib-item__nome").textContent.trim() === nome; })[0] || null;
+  }
+  function nomesNaLista() { return linhas().map(function (l) { return l.querySelector(".bib-item__nome").textContent.trim(); }); }
+  function clicar(alvo, detalhe) {
+    alvo.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true, detail: detalhe === undefined ? 1 : detalhe }));
+  }
+  function digitar(campo, texto) {
+    campo.value = texto;
+    campo.dispatchEvent(new Event("input", { bubbles: true }));
+  }
+  function escolherNoFiltro(rotulo, valor) {
+    var rotulos = U.$$(".bib-filtro label", janela()).filter(function (l) { return l.textContent.trim() === rotulo; });
+    var select = rotulos.length ? document.getElementById(rotulos[0].htmlFor) : null;
+    if (!select) return false;
+    select.value = valor;
+    select.dispatchEvent(new Event("change", { bubbles: true }));
+    return true;
+  }
+  function tecla(alvo, chave, extra) {
+    var ev = new KeyboardEvent("keydown", Object.assign({ key: chave, bubbles: true, cancelable: true }, extra || {}));
+    alvo.dispatchEvent(ev);
+    return ev;
+  }
+  function busca() { return janela().querySelector("input[type=search]"); }
+  function abaPressionada() {
+    var b = U.$$(".biblioteca-abas .r-aba", janela()).filter(function (x) { return x.getAttribute("aria-pressed") === "true"; })[0];
+    return b ? b.dataset.aba : "";
+  }
+  async function expandir(nome) {
+    var l = await ate(function () { return linha(nome); });
+    if (!l) return null;
+    var abrir = l.querySelector(".bib-item__abrir");
+    if (abrir.getAttribute("aria-expanded") !== "true") clicar(abrir);
+    return l;
+  }
+  async function fecharJanela() {
+    var rodape = document.querySelector(".r-modal--biblioteca .r-modal__rodape");
+    if (rodape) clicar(botaoCom("Fechar", rodape));
+    await ate(function () { return !janela(); });
+  }
+
+  /* ---------- a ficha e a Homebrew de teste ---------- */
+
+  function contexto(ficha) {
+    var c = { ficha: ficha, alteracoes: 0, desenhos: 0 };
+    c.alterou = function () { c.alteracoes++; };
+    c.redesenhar = function () { c.desenhos++; };
+    return c;
+  }
+
+  var REGISTROS = [
+    { id: "hb-arma", tipo: "arma", nome: "Pé de cabra da mesa", dano: "1d8", critico: 20, multiplicador: 2, peso: 3, meu: true, descricao: "Serve de alavanca." },
+    { id: "hb-item", tipo: "item", nome: "Lanterna pública", peso: 1, meu: false, descricao: "Publicada por outra conta.",
+      ordem: { categoria: 0, espacos: 1, quantidade: 1, grupo: "geral" } },
+    { id: "hb-hab", tipo: "habilidade", nome: "Habilidade que não é item", meu: true },
+    { id: "hb-cri", tipo: "criatura", nome: "Criatura que não é item", meu: false },
+  ];
+  var pedidosHomebrew = [];
+  var respostaHomebrew = function () { return { ok: true, dados: JSON.parse(JSON.stringify(REGISTROS)) }; };
+  global.RAMAApi.listarHomebrew = function (opcoes) {
+    pedidosHomebrew.push(opcoes);
+    return new Promise(function (ok) { setTimeout(function () { ok(respostaHomebrew(opcoes)); }, 20); });
+  };
+  var novoItemPedido = null;
+  global.RAMASecaoInventario = { novoItem: function (ctx) { novoItemPedido = ctx; } };
+
+  function fichaDeOrdem() {
+    return F.normalizarFicha({
+      nome: "Agente de teste", tipoFicha: "ordem",
+      ordem: {
+        classe: "combatente", origem: "militar", nex: 5,
+        atributos: { agi: 2, for: 2, int: 1, pre: 1, vig: 2 },
+        pericias: { luta: "treinado", pontaria: "treinado", fortitude: "treinado", reflexos: "treinado" },
+      },
+      inventario: { limite: 0, itens: [] },
+    });
+  }
+
+  /* =================================================================
+     O ROTEIRO
+     ================================================================= */
+
+  async function roteiro() {
+    if (global.RAMAOrdemItens) global.RAMAOrdemItens._esquecer();
+
+    /* ---------------------------------------------------------------- */
+    t.grupo("Ficha universal: só a Homebrew, sem regras de Ordem");
+
+    var universal = contexto(F.normalizarFicha({ nome: "Universal de teste", inventario: { itens: [] } }));
+    B.abrir(universal);
+    t.ok("a janela abre", !!(await ate(janela)));
+    t.igual("  sem o seletor de origens", U.$$(".biblioteca-origem", janela()).length, 0);
+    await ate(function () { return linhas().length; });
+    t.ok("  pedindo à Homebrew só os tipos de item", pedidosHomebrew.length === 1 &&
+      JSON.stringify(pedidosHomebrew[0].tipos) === JSON.stringify(["item", "arma", "armadura", "mochila"]));
+    t.igual("  e nunca habilidade ou criatura, mesmo que um servidor antigo mande", nomesNaLista().join(" | "), "Lanterna pública | Pé de cabra da mesa");
+    t.ok("  o catálogo de Ordem não foi carregado", !global.RAMAOrdemItensDados);
+    var peDeCabra = await expandir("Pé de cabra da mesa");
+    t.ok("  a ficha universal não pede quantidade", !peDeCabra.querySelector(".bib-quantidade"));
+    clicar(peDeCabra.querySelector(".bib-item__adicionar"));
+    var copiaUniversal = universal.ficha.inventario.itens[0];
+    t.ok("adicionar cria uma cópia com id próprio e rastro do modelo", !!copiaUniversal && copiaUniversal.id !== "hb-arma" && copiaUniversal.origemHomebrewId === "hb-arma");
+    t.ok("  sem bloco de Ordem", copiaUniversal && copiaUniversal.ordem === undefined);
+    t.ok("  e a janela avisa e continua aberta", /entrou no inventário/.test(peDeCabra.querySelector(".bib-item__status").textContent) && !!janela());
+    copiaUniversal.nome = "Pé de cabra editado";
+    t.igual("editar a cópia não muda o modelo", REGISTROS[0].nome, "Pé de cabra da mesa");
+    await fecharJanela();
+
+    /* ---------------------------------------------------------------- */
+    t.grupo("Catálogo que não carrega: erro claro e tentar de novo");
+
+    var ctx = contexto(fichaDeOrdem());
+    var urlOriginal = U.url;
+    U.url = function (caminho) {
+      return /itens-dados/.test(String(caminho)) ? urlOriginal("js/ordem/arquivo-que-nao-existe.js") : urlOriginal.apply(this, arguments);
+    };
+    B.abrir(ctx, { origem: "oficial", aba: "armas" });
+    t.ok("mostra o carregamento enquanto busca", !!(await ate(function () { return janela() && /Abrindo o catálogo/.test(janela().textContent); }, 3000)));
+    var tentar = await ate(function () { return janela() && botaoCom("Tentar novamente"); }, 25000);
+    t.ok("falhou: diz que o catálogo não abriu e oferece tentar de novo", !!tentar && /Não foi possível abrir o catálogo/.test(janela().textContent));
+    U.url = urlOriginal;
+    if (tentar) { tentar.focus(); clicar(tentar); }
+    t.ok("tentar de novo carrega o catálogo", !!(await ate(function () { return linhas().length > 10; }, 25000)));
+    t.igual("  e o foco vai para a busca", document.activeElement, busca());
+
+    /* ---------------------------------------------------------------- */
+    t.grupo("Origens e abas");
+
+    var origens = U.$$(".biblioteca-origem", janela());
+    t.igual("duas origens: Ordem Paranormal e Homebrew", origens.map(function (b) { return b.textContent; }).join(" | "), "Ordem Paranormal | Homebrew");
+    t.igual("  Ordem Paranormal marcada", origens[0].getAttribute("aria-pressed"), "true");
+    var abas = U.$$(".biblioteca-abas .r-aba", janela());
+    t.igual("cinco abas de navegação", abas.map(function (a) { return a.textContent.replace(/ \(\d+\)$/, ""); }).join(" | "),
+      "Armas | Munições | Proteções | Geral | Itens Amaldiçoados");
+    t.ok("  com a contagem de cada uma", abas.every(function (a) { return /\(\d+\)$/.test(a.textContent); }));
+    abas[0].focus();
+    tecla(abas[0], "ArrowRight");
+    t.igual("seta para a direita troca para Munições", abaPressionada(), "municoes");
+    t.igual("  e leva o foco junto", document.activeElement && document.activeElement.dataset.aba, "municoes");
+    tecla(document.activeElement, "ArrowLeft");
+    t.igual("seta para a esquerda volta para Armas", abaPressionada(), "armas");
+    clicar(origens[1]);
+    t.ok("trocar para Homebrew lista os itens da Homebrew", !!(await ate(function () { return linha("Lanterna pública"); })));
+    t.ok("  com os filtros de Escopo, Tipo e Categoria", ["Escopo", "Tipo", "Categoria"].every(function (r) {
+      return U.$$(".bib-filtro label", janela()).some(function (l) { return l.textContent === r; });
+    }));
+    escolherNoFiltro("Escopo", "publica");
+    t.igual("  escopo Públicas mostra só o que outra conta publicou", nomesNaLista().join(" | "), "Lanterna pública");
+    clicar(U.$$(".biblioteca-origem", janela())[0]);
+    t.ok("voltar a Ordem Paranormal mantém a aba", !!(await ate(function () { return abaPressionada() === "armas" && linhas().length > 10; })));
+
+    /* ---------------------------------------------------------------- */
+    t.grupo("Busca e filtros");
+
+    digitar(busca(), "BASTAO");
+    t.ok("busca sem acento e em maiúsculas acha Bastão", nomesNaLista().indexOf("Bastão") >= 0);
+    t.ok("  e diz quantos resultados", /resultado/.test(janela().querySelector(".bib-status").textContent));
+    digitar(busca(), "");
+    t.ok("filtro Fonte: Sobrevivendo ao Horror", escolherNoFiltro("Fonte", "SAH"));
+    t.ok("  só entradas do SAH na lista", linhas().length === 12 && linhas().every(function (l) { return /^SAH p\./.test(l.querySelector(".bib-fonte").textContent); }));
+    escolherNoFiltro("Tipo", "fogo");
+    t.ok("  e com Tipo Fogo, só armas de fogo do SAH", linhas().length > 0 && linhas().every(function (l) { return /Fogo/.test(l.querySelector(".bib-item__classe").textContent); }));
+    digitar(busca(), "xyzzy");
+    t.ok("sem resultado: estado claro, sem lista vazia muda", /Nenhum item encontrado/.test(janela().textContent));
+    clicar(botaoCom("Limpar busca e filtros"));
+    t.ok("limpar busca e filtros traz tudo de volta", busca().value === "" && linhas().length > 40);
+    digitar(busca(), "mochila militar");
+    var dica = botaoCom("Geral (1)");
+    t.ok("nada nesta aba, mas há em outra: a janela aponta a aba", linhas().length === 0 && !!dica &&
+      /Mas há resultados em outras abas/.test(janela().textContent));
+    if (dica) clicar(dica);
+    t.ok("  e o botão leva até lá, com a mesma busca", abaPressionada() === "geral" && nomesNaLista().join() === "Mochila militar" && busca().value === "mochila militar");
+    clicar(U.$$(".biblioteca-abas .r-aba", janela()).filter(function (a) { return a.dataset.aba === "armas"; })[0]);
+    digitar(busca(), "");
+
+    /* ---------------------------------------------------------------- */
+    t.grupo("Resumo compacto e detalhes sob demanda");
+
+    var katana = await ate(function () { return linha("Katana"); });
+    t.ok("fechado, o resultado mostra dano e crítico na mesma linha", /Dano:1d10/.test(katana.querySelector(".bib-item__dados").textContent.replace(/\s+/g, "")) &&
+      /Crítico:19\/x2/.test(katana.querySelector(".bib-item__dados").textContent.replace(/\s+/g, "")));
+    t.ok("  e a categoria 0–IV como marca, separada da aba", /Cat\. I/.test(katana.querySelector(".bib-item__marcas").textContent));
+    t.igual("  os detalhes ainda não foram montados", katana.querySelector(".bib-item__detalhes").childNodes.length, 0);
+    await expandir("Katana");
+    var detalhesKatana = katana.querySelector(".bib-item__detalhes");
+    t.ok("abrir mostra os detalhes, com aria-expanded", !detalhesKatana.hidden && katana.querySelector(".bib-item__abrir").getAttribute("aria-expanded") === "true");
+    var rotulosDt = U.$$("dt", detalhesKatana).map(function (d) { return d.textContent; });
+    t.ok("  dano, crítico, alcance, tipo de dano, empunhadura e proficiência", ["Dano", "Crítico", "Alcance", "Tipo de dano", "Empunhadura", "Proficiência"].every(function (r) {
+      return rotulosDt.indexOf(r) >= 0;
+    }));
+    t.ok("  nenhum campo vazio", U.$$("dd", detalhesKatana).every(function (d) { return d.textContent.trim() !== ""; }));
+    t.ok("  e diz o que é automático", /Parcial|Automatizado|Controle manual/.test(detalhesKatana.querySelector(".bib-automacao").textContent));
+
+    /* ---------------------------------------------------------------- */
+    t.grupo("Adicionar ao inventário: cada tipo, sem clique duplo duplicando");
+
+    digitar(busca(), "katana");
+    katana = await expandir("Katana");
+    var adicionarKatana = katana.querySelector(".bib-item__adicionar");
+    clicar(adicionarKatana, 1);
+    clicar(adicionarKatana, 2);
+    t.igual("clique duplo adiciona UMA Katana", ctx.ficha.inventario.itens.length, 1);
+    var enterRepetido = tecla(adicionarKatana, "Enter", { repeat: true });
+    t.ok("Enter segurado não repete a inclusão", enterRepetido.defaultPrevented);
+    t.ok("confirmação discreta, janela aberta, busca mantida", /Katana entrou no inventário/.test(katana.querySelector(".bib-item__status").textContent) &&
+      !!janela() && busca().value === "katana");
+    t.igual("  o foco fica no botão, para continuar", document.activeElement, adicionarKatana);
+    clicar(adicionarKatana, 1);
+    t.igual("clicar de novo, de propósito, adiciona outra", ctx.ficha.inventario.itens.length, 2);
+    t.ok("  com ids diferentes", ctx.ficha.inventario.itens[0].id !== ctx.ficha.inventario.itens[1].id);
+    t.igual("  e a marca \"na ficha\" conta as duas", katana.querySelector(".bib-item__na-ficha").textContent, "na ficha: 2");
+    var kat = ctx.ficha.inventario.itens[0];
+    t.ok("a arma entra com os campos mecânicos", kat.tipo === "arma" && kat.dano === "1d10" && kat.critico === 19 && kat.ordem.categoria === 1 &&
+      kat.ordem.espacos === 2 && kat.ordem.pericia === "luta" && kat.origemCatalogoId === "op.arma.katana");
+    t.ok("  e a ficha foi avisada para salvar e redesenhar", ctx.alteracoes === 2 && ctx.desenhos === 2);
+
+    clicar(U.$$(".biblioteca-abas .r-aba", janela()).filter(function (a) { return a.dataset.aba === "municoes"; })[0]);
+    digitar(busca(), "balas curtas");
+    var balas = await expandir("Balas curtas");
+    var qtd = balas.querySelector(".bib-quantidade");
+    t.ok("munição pede quantidade, com a unidade do livro", !!qtd && /pacotes/.test(balas.querySelector("label[for='" + qtd.id + "']").textContent));
+    qtd.value = "0";
+    clicar(balas.querySelector(".bib-item__adicionar"));
+    t.ok("quantidade inválida: avisa e não adiciona", ctx.ficha.inventario.itens.length === 2 && /t-erro/.test(balas.querySelector(".bib-item__status").className));
+    qtd.value = "3";
+    clicar(balas.querySelector(".bib-item__adicionar"));
+    var pacotes = ctx.ficha.inventario.itens[2];
+    t.ok("3 pacotes entram como UMA pilha de quantidade 3", !!pacotes && pacotes.ordem.quantidade === 3 && pacotes.ordem.grupo === "municao");
+
+    clicar(U.$$(".biblioteca-abas .r-aba", janela()).filter(function (a) { return a.dataset.aba === "protecoes"; })[0]);
+    digitar(busca(), "protecao leve");
+    clicar((await expandir("Proteção leve")).querySelector(".bib-item__adicionar"));
+    var leve = ctx.ficha.inventario.itens[3];
+    t.ok("proteção entra com Defesa e tipo, e GUARDADA", !!leve && leve.tipo === "armadura" && leve.defesa === 5 && leve.ordem.protecao.tipo === "leve" && leve.ordem.emUso !== true);
+    var defesaGuardada = R.defesa(ctx.ficha.ordem, ctx.ficha.inventario).total;
+    leve.ordem.emUso = true;
+    t.igual("  e só soma na Defesa quando posta em uso", R.defesa(ctx.ficha.ordem, ctx.ficha.inventario).total, defesaGuardada + 5);
+    leve.ordem.emUso = false;
+
+    clicar(U.$$(".biblioteca-abas .r-aba", janela()).filter(function (a) { return a.dataset.aba === "geral"; })[0]);
+    digitar(busca(), "kit de pericia");
+    var kit = await expandir("Kit de perícia");
+    clicar(kit.querySelector(".bib-item__adicionar"));
+    t.ok("item com escolha obrigatória: pede a escolha antes", ctx.ficha.inventario.itens.length === 4 && /Escolha/i.test(kit.querySelector(".bib-item__status").textContent));
+    var selectKit = kit.querySelector(".bib-campo select");
+    selectKit.value = "medicina";
+    clicar(kit.querySelector(".bib-item__adicionar"));
+    t.igual("  escolhida, o nome leva a perícia", (ctx.ficha.inventario.itens[4] || {}).nome, "Kit de perícia (Medicina)");
+
+    clicar(U.$$(".biblioteca-abas .r-aba", janela()).filter(function (a) { return a.dataset.aba === "amaldicoados"; })[0]);
+    digitar(busca(), "coracao pulsante");
+    var coracao = await expandir("Coração pulsante");
+    t.ok("amaldiçoado mostra o aviso de patente desta ficha", /patente é Recruta/.test(coracao.querySelector(".bib-item__detalhes").textContent));
+    clicar(coracao.querySelector(".bib-item__adicionar"));
+    var amaldicoado = ctx.ficha.inventario.itens[5];
+    t.ok("  e entra marcado, com elemento", !!amaldicoado && amaldicoado.ordem.amaldicoado === true && amaldicoado.ordem.elemento === "sangue");
+
+    var carga = R.itensEfetivos(ctx.ficha.ordem, ctx.ficha.inventario);
+    t.igual("a carga soma tudo que entrou: 2 + 2 + 3 + 2 + 1 + 1", carga.ocupado, 11);
+    await fecharJanela();
+
+    /* ---------------------------------------------------------------- */
+    t.grupo("Modificações pelo menu do item");
+
+    var alvo = ctx.ficha.inventario.itens[0];
+    B.abrirParaModificar(ctx, alvo);
+    await ate(function () { return janela() && linhas().length; });
+    t.igual("a janela abre para modificar", janela().querySelector(".r-modal__topo h2").textContent, "Modificações e maldições");
+    t.ok("  dizendo em qual item", /Aplicando em:\s*Katana/.test(janela().textContent));
+    var alongada = await expandir("Alongada");
+    t.ok("modificação que não serve: o motivo aparece escrito", /Katana não aceita Alongada/.test(alongada.querySelector(".bib-item__detalhes").textContent));
+    var certeira = await expandir("Certeira");
+    var aplicar = botaoCom("Aplicar em Katana", certeira);
+    t.ok("modificação que serve: botão para aplicar nela", !!aplicar);
+    if (aplicar) clicar(aplicar);
+    t.ok("aplicada, com a categoria de antes e depois", /Categoria I → II/.test(certeira.querySelector(".bib-item__status").textContent));
+    t.ok("  guardada no item, sem mexer no valor-base", (alvo.ordem.modificacoes || []).length === 1 && alvo.ordem.categoria === 1);
+    t.ok("  e não oferece aplicar de novo", !botaoCom("Aplicar em Katana", certeira));
+    t.igual("a outra Katana continua sem modificação", (ctx.ficha.inventario.itens[1].ordem.modificacoes || []).length, 0);
+    await fecharJanela();
+
+    /* ---------------------------------------------------------------- */
+    t.grupo("Homebrew vazia e com falha");
+
+    respostaHomebrew = function () { return { ok: true, dados: [] }; };
+    B.abrir(ctx, { origem: "homebrew" });
+    var criar = await ate(function () { return janela() && botaoCom("Criar item"); });
+    t.ok("sem itens: orientação e o botão Criar item", !!criar && /Nenhum item na Homebrew/.test(janela().textContent));
+    t.ok("  e o caminho para a página Homebrew", !!janela().querySelector("a[href$='homebrew/']"));
+    clicar(criar);
+    t.ok("Criar item fecha a janela e abre a criação manual", !!(await ate(function () { return !janela(); })) && novoItemPedido === ctx);
+
+    respostaHomebrew = function () { return { ok: false, erro: "sem_conexao" }; };
+    B.abrir(ctx, { origem: "homebrew" });
+    var tentarHb = await ate(function () { return janela() && botaoCom("Tentar novamente"); });
+    t.ok("falha: mensagem de erro e tentar de novo", !!tentarHb);
+    t.igual("  sem mexer no inventário", ctx.ficha.inventario.itens.length, 6);
+    respostaHomebrew = function () { return { ok: true, dados: JSON.parse(JSON.stringify(REGISTROS)) }; };
+    tentarHb.focus();
+    clicar(tentarHb);
+    t.ok("tentar de novo carrega a lista", !!(await ate(function () { return linha("Lanterna pública"); })));
+    var lanterna = await expandir("Lanterna pública");
+    var qtdHb = lanterna.querySelector(".bib-quantidade");
+    t.ok("na ficha de Ordem, a Homebrew pede quantidade", !!qtdHb);
+    qtdHb.value = "2";
+    clicar(lanterna.querySelector(".bib-item__adicionar"));
+    var copiaHb = ctx.ficha.inventario.itens[6];
+    t.ok("  e a cópia entra com a quantidade e o rastro do modelo", !!copiaHb && copiaHb.ordem.quantidade === 2 && copiaHb.origemHomebrewId === "hb-item" && copiaHb.id !== "hb-item");
+    await fecharJanela();
+
+    /* ---------------------------------------------------------------- */
+    t.grupo("Teclado");
+
+    var abridor = el("button.r-botao", { type: "button", texto: "Da biblioteca (teste)" });
+    document.querySelector("main").appendChild(abridor);
+    abridor.focus();
+    B.abrir(ctx, { origem: "oficial" });
+    await ate(function () { return janela() && linhas().length; });
+    t.ok("o foco entra na janela", janela().contains(document.activeElement));
+    t.ok("tudo o que se usa é botão, campo ou seleção de verdade", U.$$(".bib-item__abrir, .r-aba, .biblioteca-origem", janela()).every(function (b) { return b.tagName === "BUTTON"; }) &&
+      U.$$(".bib-filtro select", janela()).every(function (s) { return s.labels && s.labels.length === 1; }));
+    tecla(document, "Escape");
+    t.ok("Esc fecha", !!(await ate(function () { return !janela(); })));
+    t.igual("  e devolve o foco para quem abriu", document.activeElement, abridor);
+    abridor.parentNode.removeChild(abridor);
+
+    /* ---------------------------------------------------------------- */
+    t.grupo("Layout na largura atual (" + window.innerWidth + " px)");
+
+    B.abrir(ctx, { origem: "oficial", aba: "armas" });
+    await ate(function () { return janela() && linhas().length; });
+    var primeira = linhas()[0];
+    clicar(primeira.querySelector(".bib-item__abrir"));
+    t.ok("a página não ganha rolagem horizontal", document.documentElement.scrollWidth <= window.innerWidth + 1);
+    var caixa = janela().getBoundingClientRect();
+    t.ok("a janela cabe na tela", caixa.left >= -1 && caixa.right <= window.innerWidth + 1);
+    t.ok("os resultados cabem na janela", linhas().slice(0, 10).every(function (l) {
+      var r = l.getBoundingClientRect();
+      return r.left >= caixa.left - 1 && r.right <= caixa.right + 1;
+    }));
+    t.ok("alvos de toque com altura mínima", U.$$(".bib-item__abrir, .bib-item__adicionar", janela()).slice(0, 10).every(function (b) {
+      return b.getBoundingClientRect().height >= 32;
+    }));
+    if (window.innerWidth <= 640) {
+      t.igual("no celular, o topo do resultado empilha", getComputedStyle(primeira.querySelector(".bib-item__topo")).flexDirection, "column");
+      var add = primeira.querySelector(".bib-item__adicionar");
+      t.ok("  e o botão de adicionar ocupa a largura", add.getBoundingClientRect().width >= primeira.getBoundingClientRect().width * 0.7);
+    }
+    await fecharJanela();
+  }
+
+  function mostrarPlacar() {
+    U.trocar(placar, [
+      el("div", {}, [el("p.placar__numero", { class: falharam ? "t-erro" : "t-ok", texto: String(passaram + falharam) }), el("p.t-rotulo", { texto: "verificações" })]),
+      el("div", {}, [el("p.placar__numero.t-ok", { texto: String(passaram) }), el("p.t-rotulo", { texto: "passaram" })]),
+      el("div", {}, [el("p.placar__numero", { class: falharam ? "t-erro" : "t-fraco", texto: String(falharam) }), el("p.t-rotulo", { texto: "falharam" })]),
+      el("span.r-estado", { dataset: { estado: falharam ? "erro" : "salvo" }, texto: falharam ? "Há falhas" : "Tudo passando" }),
+    ]);
+    document.title = (falharam ? falharam + " falhas" : "Tudo passando") + " — Testes da biblioteca";
+    /* Para quem roda a página por automação. */
+    global.RAMATestesBiblioteca = { terminou: true, passaram: passaram, falharam: falharam, falhas: falhas.slice() };
+  }
+
+  roteiro().then(mostrarPlacar, function (e) {
+    falharam++;
+    t.grupo("Exceção");
+    t.ok("o roteiro parou: " + e.message, false, e.stack);
+    mostrarPlacar();
+  });
+})(window);

@@ -1163,8 +1163,62 @@
       uso.semCategoria.length
         ? el("p.t-mini.t-aviso", { texto: "Sem categoria informada (não contam em nenhum limite): " + uso.semCategoria.map(function (i) { return i.nome; }).join(", ") + "." })
         : null,
+      uso.acimaDeIV && uso.acimaDeIV.length
+        ? el("p.t-mini.t-erro", {
+            texto: "Acima de IV (não podem ser requisitados sem habilidades que reduzam a categoria, OPRPG p.53): " +
+              uso.acimaDeIV.map(function (i) { return i.nome + " (" + I.rotuloCategoria(i.efetiva) + ")"; }).join(", ") + ".",
+          })
+        : null,
+      avisoDeAmaldicoados(ctx, o, uso),
+      precoDasMaldicoes(ctx),
       el("p.t-mini", { texto: "Espaços, quantidade e categoria de cada item são editados no próprio item, na lista abaixo." }),
     ]));
+  }
+
+  /* Itens amaldiçoados e patente: "liberados apenas para agentes
+     especiais, oficiais de operações e agentes de elite" (OPRPG p.144).
+     Aviso, não bloqueio — e só com a regra de patente ligada. */
+  function temMaldicao(item) {
+    var d = I.dadosDoItem(item);
+    return !!(d.amaldicoado || (d.modificacoes || []).some(function (m) { return m.natureza === "maldicao"; }));
+  }
+
+  function avisoDeAmaldicoados(ctx, o, uso) {
+    if (!uso.aplicada) return null;
+    var pat = R.patente(o).patente;
+    if (["recruta", "operador"].indexOf(pat.chave) < 0) return null;
+    var amaldicoados = (ctx.ficha.inventario.itens || []).filter(function (i) { return i && temMaldicao(i); });
+    if (!amaldicoados.length) return null;
+    return el("p.t-mini.t-aviso", {
+      texto: "Itens amaldiçoados só são liberados a partir de agente especial (OPRPG p.144); a patente atual é " + pat.nome + ": " +
+        amaldicoados.map(function (i) { return i.nome; }).join(", ") + ".",
+    });
+  }
+
+  /* O preço de cada elemento, contado nos itens: cada maldição aplicada
+     conta uma; cada item amaldiçoado especial conta como uma maldição do
+     elemento dele (OPRPG p.145 e 148). Só mostrado — ninguém perde
+     Sanidade sozinho. */
+  function precoDasMaldicoes(ctx) {
+    var IT = global.RAMAOrdemItens;
+    if (!IT) return null;
+    var contagem = {};
+    (ctx.ficha.inventario.itens || []).forEach(function (item) {
+      if (!item) return;
+      var d = I.dadosDoItem(item);
+      if (d.amaldicoado && d.elemento && IT.PRECO_DA_MALDICAO[d.elemento]) contagem[d.elemento] = (contagem[d.elemento] || 0) + d.quantidade;
+      (d.modificacoes || []).forEach(function (m) {
+        if (m.natureza === "maldicao" && m.elemento && IT.PRECO_DA_MALDICAO[m.elemento]) contagem[m.elemento] = (contagem[m.elemento] || 0) + d.quantidade;
+      });
+    });
+    var elementos = Object.keys(contagem);
+    if (!elementos.length) return null;
+    return el("div.pilha--curta", { class: "pilha" }, [
+      el("h4.t-secao", { texto: "Preço das maldições" }),
+      el("ul.bib-lista-textos.t-mini", {}, elementos.map(function (k) {
+        return el("li", { texto: IT.ELEMENTOS[k] + " ×" + contagem[k] + ": " + IT.PRECO_DA_MALDICAO[k] }); })),
+      el("p.t-mini", { texto: "Controle manual: a ficha mostra o preço, mas não desconta Sanidade." }),
+    ]);
   }
 
   /* =================================================================
@@ -2077,22 +2131,92 @@
     return {
       id: item.id, nome: item.nome, quantidade: d.quantidade,
       espacos: { unitario: e.unitario, unitarioEfetivo: e.unitario, padrao: e.padrao, totalBase: total, total: total, modificado: false, notas: [] },
-      categoria: { base: d.categoria, efetiva: d.categoria, reducoes: [] },
+      categoria: { base: d.categoria, efetiva: d.categoria, reducoes: [], acrescimos: [], acimaDeIV: false },
     };
   }
 
-  /* Só uma proteção em uso por vez: marcar uma desmarca as outras. O
-     valor-base do item (a Defesa cadastrada) nunca é tocado — só o
-     estado de uso. */
+  /* Uma proteção vestida e um escudo em uso (OPRPG p.62): marcar uma
+     proteção desmarca as outras proteções; marcar um escudo desmarca os
+     outros escudos. O valor-base do item (a Defesa cadastrada) nunca é
+     tocado — só o estado de uso. */
   function definirProtecaoEmUso(ctx, alvo, usar) {
+    var ehEscudo = R.tipoDeProtecao(alvo) === "escudo";
     (ctx.ficha.inventario.itens || []).forEach(function (i) {
       if (!i || i.tipo !== "armadura") return;
+      if ((R.tipoDeProtecao(i) === "escudo") !== ehEscudo) return;
       if (!i.ordem || typeof i.ordem !== "object") i.ordem = I.normalizarDados(i.ordem, i.tipo);
       var deveUsar = usar && i === alvo;
       if (deveUsar) i.ordem.emUso = true;
       else delete i.ordem.emUso;
     });
     aoMudarOrdem(ctx);
+  }
+
+  /* ---------- arma: textos com os valores efetivos ---------- */
+
+  function IT() { return global.RAMAOrdemItens || null; }
+
+  function textoDoDano(ef, alternativo) {
+    if (!ef.dano && ef.tabelaD6) return "1d6: " + ef.tabelaD6.join(" / ");
+    var dados = alternativo && ef.alternativo ? ef.alternativo.dano : ef.dano;
+    if (!dados) return "—";
+    var texto = dados;
+    if (ef.extra.total) texto += (ef.extra.total > 0 ? "+" : "−") + Math.abs(ef.extra.total);
+    var manual = String(ef.danoExtraManual || "").trim();
+    if (manual) texto += (/^[+-]/.test(manual) ? "" : "+") + manual;
+    return texto;
+  }
+
+  function textoDoCritico(margem, multiplicador) {
+    if (!margem) return "sem crítico";
+    return (margem >= 20 ? "20" : margem + "–20") + ", x" + multiplicador;
+  }
+
+  function criticoCurto(margem, multiplicador) {
+    if (!margem) return "—";
+    return (margem >= 20 ? "x" : margem + "/x") + multiplicador;
+  }
+
+  function rotuloAlcance(chave) {
+    var rotulos = IT() ? IT().ROTULO_ALCANCE : {};
+    return rotulos[chave] || chave;
+  }
+
+  function linhasDeArma(ctx, item) {
+    var o = ordemDe(ctx);
+    var ef = R.armaEfetiva(o, ctx.ficha.inventario, item, ctx.ficha.pericias);
+    var a = I.dadosDoItem(item).arma || {};
+    var linhas = [];
+
+    linhas.push(["Ataque", ef.pericia
+      ? ef.periciaNome + " · " + ef.dado + " " + U.comSinal(ef.ataque.total) + (ef.agilNoTeste ? " (Agilidade: arma ágil)" : "")
+      : "escolha a perícia no modo edição"]);
+    linhas.push(["Dano", textoDoDano(ef) + (a.tipoDano ? " · " + a.tipoDano : "") +
+      (ef.alternativo ? " — " + ef.alternativo.rotulo + ": " + textoDoDano(ef, true) : "")]);
+    linhas.push(["Crítico", textoDoCritico(ef.margem, ef.multiplicador) +
+      (ef.margem !== ef.margemBase ? " (base " + textoDoCritico(ef.margemBase, ef.multiplicador) + ")" : "")]);
+    if (ef.alcance) {
+      linhas.push(["Alcance", rotuloAlcance(ef.alcance) + (ef.alcance !== ef.alcanceBase ? " (base " + rotuloAlcance(ef.alcanceBase) + ")" : "")]);
+    }
+    if (IT()) {
+      var classe = [
+        a.proficiencia ? IT().PROFICIENCIAS[a.proficiencia] : "",
+        a.tipo ? IT().TIPOS_ARMA[a.tipo] : "",
+        a.empunhadura ? IT().EMPUNHADURAS[a.empunhadura] : "",
+      ].filter(Boolean).join(" · ");
+      if (classe) linhas.push(["Tipo", classe]);
+    }
+    if (ef.proficiencia.exigida) linhas.push(["Proficiência", ef.proficiencia.texto || ef.proficiencia.exigida]);
+    if (a.municao) linhas.push(["Munição", a.municao]);
+    else if (a.semMunicao) linhas.push(["Munição", "não precisa"]);
+    var props = [];
+    if (a.agil) props.push("ágil");
+    if (a.arremessavel) props.push("pode ser arremessada");
+    if (ef.automatica) props.push("automática");
+    if (a.dadosAtaque) props.push(a.dadosAtaque + " dado no ataque (já aplicado)");
+    if (a.capacidade) props.push(a.capacidade + " disparo(s) na contagem opcional");
+    if (props.length) linhas.push(["Propriedades", props.join(", ")]);
+    return linhas;
   }
 
   var SecaoInventarioOrdem = {
@@ -2117,7 +2241,7 @@
     /* Pares [rótulo, valor] para a linha abaixo do nome do item — com os
        valores EFETIVOS, depois das habilidades. A transformação (II → I,
        e de onde vem) fica nos detalhes. */
-    resumoDoCartao: function (item, efetivos) {
+    resumoDoCartao: function (item, efetivos, ctx) {
       var ef = efetivoDe(item, efetivos);
       var pares = [["Categoria", ef.categoria.efetiva === null ? "—" : I.rotuloCategoria(ef.categoria.efetiva)]];
       if (ef.quantidade > 1) {
@@ -2128,6 +2252,15 @@
         pares.push(["Ocupa", I.rotuloEspacos(ef.espacos.total)]);
       } else {
         pares.push(["Espaços", I.rotuloEspacos(ef.espacos.total)]);
+      }
+      /* Dano e crítico EFETIVOS: com o atributo e as modificações. */
+      if (ctx && item.tipo === "arma") {
+        var arma = R.armaEfetiva(ordemDe(ctx), ctx.ficha.inventario, item, ctx.ficha.pericias);
+        if (arma.dano || arma.tabelaD6) pares.push(["Dano", textoDoDano(arma)]);
+        pares.push(["Crítico", criticoCurto(arma.margem, arma.multiplicador)]);
+      }
+      if (item.tipo === "armadura") {
+        pares.push(["Defesa", U.comSinal(R.defesaDaProtecao(item).total)]);
       }
       return pares;
     },
@@ -2142,6 +2275,24 @@
       };
       var notasEspaco = e.notas.join("; ");
 
+      /* A categoria mostra de onde veio cada mudança: modificações e
+         maldições somam, habilidades reduzem. Sem somas, o formato é o
+         de sempre ("II → I — Mochila de Utilidades"). */
+      var acrescimos = cat.acrescimos || [];
+      var textoCategoria;
+      if (cat.base === null) {
+        textoCategoria = "Não informada" + (acrescimos.length ? " (modificações: " + fontes(acrescimos.map(function (x) { return x.fonte; })) + ")" : "");
+      } else if (!acrescimos.length) {
+        textoCategoria = I.rotuloCategoria(cat.base) + (cat.efetiva !== cat.base
+          ? " → " + I.rotuloCategoria(cat.efetiva) + " — " + fontes(cat.reducoes.map(function (r) { return r.fonte; }))
+          : "");
+      } else {
+        var mudancas = acrescimos.map(function (x) { return "+" + I.rotuloCategoria(x.valor) + " " + x.fonte; })
+          .concat(cat.reducoes.map(function (r) { return "−" + I.rotuloCategoria(r.valor) + " " + r.fonte; }));
+        textoCategoria = I.rotuloCategoria(cat.base) + " → " + I.rotuloCategoria(cat.efetiva) + " — " + mudancas.join("; ");
+      }
+      if (cat.acimaDeIV) textoCategoria += " (acima de IV: não pode ser requisitado sem reduzir a categoria)";
+
       var linhas = [
         ["Espaços por unidade", I.rotuloEspacos(e.unitario) + (e.padrao ? " (padrão do livro)" : "") +
           (e.unitarioEfetivo !== e.unitario ? " → " + I.rotuloEspacos(e.unitarioEfetivo) : "")],
@@ -2149,19 +2300,32 @@
         ["Ocupa no total", (e.total !== e.totalBase
           ? I.rotuloEspacos(e.totalBase) + " → " + I.rotuloEspacos(e.total)
           : I.rotuloEspacos(e.total)) + (notasEspaco ? " — " + notasEspaco : "")],
-        ["Categoria", cat.base === null ? "Não informada" : I.rotuloCategoria(cat.base) +
-          (cat.efetiva !== cat.base
-            ? " → " + I.rotuloCategoria(cat.efetiva) + " — " + fontes(cat.reducoes.map(function (r) { return r.fonte; }))
-            : "")],
+        ["Categoria", textoCategoria],
         ["Grupo", (I.GRUPOS.filter(function (g) { return g.valor === d.grupo; })[0] || {}).rotulo || d.grupo],
       ];
       if (d.capacidade) linhas.push(["Aumenta a capacidade", "+" + d.capacidade + " espaços"]);
+      if (item.tipo === "arma") linhas = linhas.concat(linhasDeArma(ctx, item));
       if (item.tipo === "armadura") {
+        var defesaItem = R.defesaDaProtecao(item);
+        linhas.push(["Defesa", U.comSinal(defesaItem.total) + (defesaItem.ajustes.length
+          ? " (" + U.comSinal(defesaItem.base) + " + " + defesaItem.ajustes.map(function (x) { return x.fonte + " " + U.comSinal(x.valor); }).join(" + ") + ")"
+          : "")]);
+        var tipoProtecao = R.tipoDeProtecao(item);
+        if (tipoProtecao && IT()) linhas.push(["Tipo", IT().TIPOS_PROTECAO[tipoProtecao]]);
         var uso = R.protecaoEmUso(ctx.ficha.inventario);
-        linhas.push(["Uso", uso.item === item
-          ? "Em uso — soma " + U.comSinal(uso.defesa) + " na Defesa"
-          : (d.emUso ? "Marcada em uso, mas outra proteção de Defesa maior vale" : "Guardada — não soma na Defesa")]);
+        var emUsoAgora = uso.item === item || uso.escudo === item;
+        linhas.push(["Uso", emUsoAgora
+          ? "Em uso — soma " + U.comSinal(defesaItem.total) + " na Defesa" + (tipoProtecao === "escudo" ? ", junto com a proteção" : "") +
+            (tipoProtecao === "pesada" ? "; −5 nas perícias com penalidade de carga" : "")
+          : (d.emUso ? "Marcada em uso, mas outra de Defesa maior vale" : "Guardada — não soma na Defesa")]);
       }
+      if (d.elemento && IT()) linhas.push(["Elemento", IT().ELEMENTOS[d.elemento]]);
+      if (d.modificacoes && d.modificacoes.length) {
+        linhas.push(["Modificações e maldições", d.modificacoes.map(function (m) {
+          return m.nome + (m.natureza === "maldicao" ? " (maldição" + (m.elemento && IT() ? " de " + IT().ELEMENTOS[m.elemento] : "") + ")" : "");
+        }).join("; ")]);
+      }
+      if (d.referencia && IT()) linhas.push(["Fonte", IT().NOME_FONTE[d.referencia.fonte] + ", p. " + d.referencia.pagina]);
       return linhas;
     },
 
@@ -2170,10 +2334,14 @@
     faixaDoItem: function (ctx, item) {
       if (item.tipo !== "armadura") return null;
       var uso = R.protecaoEmUso(ctx.ficha.inventario);
-      var emUso = uso.item === item;
+      var escudo = R.tipoDeProtecao(item) === "escudo";
+      var emUso = escudo ? uso.escudo === item : uso.item === item;
+      var defesaDoItem = R.defesaDaProtecao(item).total;
       return el("div.item__acoes.item__acoes--fora.item-uso", {}, [
         el("span.t-mini.item-uso__estado", {
-          texto: emUso ? "Em uso: soma " + U.comSinal(uso.defesa) + " na Defesa." : "Guardada: não soma na Defesa.",
+          texto: emUso
+            ? "Em uso: soma " + U.comSinal(defesaDoItem) + " na Defesa" + (escudo ? " (acumula com a proteção)." : ".")
+            : (escudo ? "Guardado: não soma na Defesa." : "Guardada: não soma na Defesa."),
         }),
         el("button.r-botao.r-botao--mini", {
           type: "button",
@@ -2184,6 +2352,104 @@
           onclick: function () { definirProtecaoEmUso(ctx, item, !emUso); },
         }),
       ]);
+    },
+
+    /* Ataque e Dano da ficha de Ordem: rolam com os números de Ordem (a
+       perícia com grau e poderes, o atributo efetivo, as modificações),
+       pelo mesmo motor de dados e o mesmo mostrador da ficha universal. */
+    botoesDaArma: function (ctx, arma) {
+      var ef = R.armaEfetiva(ordemDe(ctx), ctx.ficha.inventario, arma, ctx.ficha.pericias);
+      var temDano = !!(ef.dano || ef.tabelaD6);
+      return el("div.item__acoes.item__acoes--fora", {}, [
+        el("button.r-botao", {
+          type: "button", texto: "Ataque",
+          title: ef.pericia ? ef.periciaNome + ": " + ef.dado + " " + U.comSinal(ef.ataque.total) : "Escolha a perícia de ataque no modo edição",
+          "aria-label": "Atacar com " + arma.nome + (ef.periciaNome ? " (" + ef.periciaNome + ")" : ""),
+          onclick: function () { SecaoInventarioOrdem.atacar(ctx, arma); },
+        }),
+        el("button.r-botao", {
+          type: "button", texto: "Dano",
+          disabled: !temDano,
+          title: temDano ? "Rolar " + textoDoDano(ef) : "Configure o dano no modo edição",
+          "aria-label": "Rolar dano de " + arma.nome,
+          onclick: function () { SecaoInventarioOrdem.rolarDano(ctx, arma, false); },
+        }),
+        ef.alternativo ? el("button.r-botao", {
+          type: "button", texto: "Dano · " + ef.alternativo.rotulo,
+          title: "Rolar " + textoDoDano(ef, true),
+          "aria-label": "Rolar dano de " + arma.nome + " (" + ef.alternativo.rotulo + ")",
+          onclick: function () { SecaoInventarioOrdem.rolarDano(ctx, arma, false, true); },
+        }) : null,
+      ]);
+    },
+
+    atacar: function (ctx, arma) {
+      var ef = R.armaEfetiva(ordemDe(ctx), ctx.ficha.inventario, arma, ctx.ficha.pericias);
+      if (!ef.pericia) { UI.avisoErro(ef.avisos[0] || "Escolha a perícia de ataque no modo edição."); return; }
+
+      var r = D.dependente({
+        expressao: ef.dado,
+        sigla: siglaDe(ef.atributoDoTeste),
+        nome: arma.nome,
+        bonus: ef.ataque.total,
+        modificadores: [],
+      });
+      if (!r || !r.ok) { UI.avisoErro("O dado de ataque de " + arma.nome + " não é válido."); return; }
+
+      r.parcelas = [r.parcelas[0]].concat(ef.ataque.parcelas.map(function (x) { return { rotulo: x.rotulo, valor: x.valor }; }));
+      /* O crítico olha o natural principal, com a margem EFETIVA. */
+      var critico = D.ehCritico(r.natural, ef.margem);
+      var temDano = !!(ef.dano || ef.tabelaD6);
+
+      global.RAMARolagens.mostrar(r, {
+        nome: arma.nome + " · Ataque (" + ef.periciaNome + ")",
+        critico: critico,
+        acao: temDano ? {
+          rotulo: critico ? "Rolar dano crítico" : "Rolar dano",
+          aoClicar: function () { SecaoInventarioOrdem.rolarDano(ctx, arma, critico); },
+        } : null,
+      });
+
+      if (ef.proficiencia.proficiente === false) UI.avisoAtencao(ef.proficiencia.texto);
+    },
+
+    rolarDano: function (ctx, arma, critico, alternativo) {
+      var ef = R.armaEfetiva(ordemDe(ctx), ctx.ficha.inventario, arma, ctx.ficha.pericias);
+      var dano = alternativo && ef.alternativo ? ef.alternativo.dano : ef.dano;
+      var escolhaD6 = 0;
+
+      /* Arma de dano variável (Arcabuz dos Moretti): 1d6 escolhe o dano
+         da tabela, pelo mesmo motor. */
+      if (!dano && ef.tabelaD6) {
+        var d6 = D.rolar("1d6");
+        escolhaD6 = d6.principal;
+        dano = ef.tabelaD6[d6.principal - 1];
+      }
+      if (!dano) { UI.avisoErro(arma.nome + " não tem dano configurado."); return; }
+
+      var r = D.dano({
+        nome: arma.nome,
+        dano: dano,
+        danoExtra: ef.danoExtraManual,
+        critico: !!critico,
+        multiplicador: ef.multiplicador,
+      });
+      if (!r.ok) { UI.avisoErro("O dano de " + arma.nome + " (" + dano + ") não é válido."); return; }
+
+      /* Atributo e modificações: parcelas próprias, fora da multiplicação
+         do crítico, como qualquer bônus numérico (OPRPG p.54). */
+      ef.extra.parcelas.forEach(function (x) {
+        if (!x.valor) return;
+        r.parcelas.push({ rotulo: x.rotulo, valor: x.valor });
+        r.total += x.valor;
+      });
+
+      global.RAMARolagens.mostrar(r, {
+        nome: arma.nome + (critico ? " · Dano crítico" : " · Dano") +
+          (alternativo && ef.alternativo ? " (" + ef.alternativo.rotulo + ")" : "") +
+          (escolhaD6 ? " · 1d6 = " + escolhaD6 + " → " + dano : ""),
+        critico: !!critico,
+      });
     },
 
     campos: function (ctx, atual) {
@@ -2215,13 +2481,106 @@
         ajuda: "Para itens como a Mochila Militar (+2). Conta uma vez por item.",
       });
 
+      var elementos = [
+        el("h4.t-secao", { texto: "Ordem Paranormal" }),
+        el("div.editar-grade", {}, [espacos, quantidade]),
+        el("div.editar-grade", {}, [categoria, grupo]),
+        capacidade,
+      ];
+
+      /* ---- arma: como ela ataca ---- */
+      var camposArma = null;
+      if (atual.tipo === "arma") {
+        var a = d.arma || {};
+        var opcoes = function (mapa, vazio) {
+          return [{ valor: "", rotulo: vazio }].concat(Object.keys(mapa).map(function (k) { return { valor: k, rotulo: mapa[k] }; }));
+        };
+        var nomes = IT() ? IT() : { PROFICIENCIAS: {}, TIPOS_ARMA: {}, EMPUNHADURAS: {}, ROTULO_ALCANCE: {} };
+        camposArma = {
+          pericia: UI.campo({
+            /* Sem perícia conhecida fica "Não informada": salvar o editor
+               de uma arma antiga não pode escolher Luta por ela. */
+            rotulo: "Perícia de ataque", tipo: "selecao", valor: R.periciaDaArma(atual, ctx.ficha.pericias) || "",
+            opcoes: [{ valor: "", rotulo: "Não informada" }].concat(C.PERICIAS.map(function (p) { return { valor: p.chave, rotulo: p.nome }; })),
+            ajuda: "Corpo a corpo ataca com Luta; à distância, com Pontaria (OPRPG p.54). Grau e poderes da perícia entram no botão Ataque.",
+          }),
+          proficiencia: UI.campo({ rotulo: "Proficiência", tipo: "selecao", valor: a.proficiencia || "", opcoes: opcoes(nomes.PROFICIENCIAS, "Não informada") }),
+          tipoArma: UI.campo({ rotulo: "Tipo", tipo: "selecao", valor: a.tipo || "", opcoes: opcoes(nomes.TIPOS_ARMA, "Não informado") }),
+          empunhadura: UI.campo({ rotulo: "Empunhadura", tipo: "selecao", valor: a.empunhadura || "", opcoes: opcoes(nomes.EMPUNHADURAS, "Não informada") }),
+          alcance: UI.campo({ rotulo: "Alcance", tipo: "selecao", valor: a.alcance || "", opcoes: opcoes(nomes.ROTULO_ALCANCE, "Sem alcance") }),
+          tipoDano: UI.campo({ rotulo: "Tipo de dano", valor: a.tipoDano || "", limite: 20, dica: "Corte, Balístico…" }),
+          municao: UI.campo({ rotulo: "Munição", valor: a.municao || "", limite: 80, dica: "Balas curtas…" }),
+          atributoDano: UI.campo({
+            rotulo: "Atributo somado ao dano", tipo: "selecao", valor: a.atributoDano || "",
+            opcoes: [
+              { valor: "", rotulo: "Nenhum (disparo e fogo)" },
+              { valor: "for", rotulo: "Força (corpo a corpo e arremesso)" },
+              { valor: "melhor", rotulo: "O maior entre Força e Agilidade (arma ágil)" },
+              { valor: "agi", rotulo: "Agilidade" },
+            ],
+          }),
+          agil: a.agil === true,
+          automatica: a.automatica === true,
+        };
+        var marcaAgil = el("label.r-marca", {}, [
+          el("input", { type: "checkbox", checked: camposArma.agil, onchange: function (ev) { camposArma.agil = ev.target.checked; } }),
+          el("span", { texto: "Arma ágil (pode usar Agilidade no ataque)" }),
+        ]);
+        var marcaAutomatica = el("label.r-marca", {}, [
+          el("input", { type: "checkbox", checked: camposArma.automatica, onchange: function (ev) { camposArma.automatica = ev.target.checked; } }),
+          el("span", { texto: "Automática (rajadas)" }),
+        ]);
+        elementos.push(el("h4.t-secao", { texto: "Como a arma ataca" }));
+        elementos.push(camposArma.pericia);
+        elementos.push(el("div.editar-grade", {}, [camposArma.proficiencia, camposArma.tipoArma]));
+        elementos.push(el("div.editar-grade", {}, [camposArma.empunhadura, camposArma.alcance]));
+        elementos.push(el("div.editar-grade", {}, [camposArma.tipoDano, camposArma.municao]));
+        elementos.push(camposArma.atributoDano);
+        elementos.push(el("div.faixa", {}, [marcaAgil, marcaAutomatica]));
+      }
+
+      /* ---- proteção: vestida ou escudo ---- */
+      var campoProtecao = null;
+      if (atual.tipo === "armadura") {
+        campoProtecao = UI.campo({
+          rotulo: "Tipo de proteção", tipo: "selecao", valor: d.protecao ? d.protecao.tipo : "",
+          opcoes: [
+            { valor: "", rotulo: "Não informado (conta como vestida)" },
+            { valor: "leve", rotulo: "Proteção leve" },
+            { valor: "pesada", rotulo: "Proteção pesada (−5 nas perícias de carga, em uso)" },
+            { valor: "escudo", rotulo: "Escudo (acumula com a proteção)" },
+          ],
+        });
+        elementos.push(campoProtecao);
+      }
+
+      /* ---- modificações e maldições aplicadas ---- */
+      var modificacoes = (d.modificacoes || []).map(function (m) { return JSON.parse(JSON.stringify(m)); });
+      var listaMods = el("div.pilha--curta", { class: "pilha" });
+      function pintarMods() {
+        U.trocar(listaMods, modificacoes.length
+          ? modificacoes.map(function (m) {
+              return el("div.faixa.faixa--entre.item-modificacao", {}, [
+                el("span.t-mini", { texto: m.nome + (m.natureza === "maldicao" ? " (maldição)" : " (modificação)") + (m.resumo ? " — " + m.resumo : "") }),
+                el("button.r-botao.r-botao--mini.r-botao--perigo", {
+                  type: "button", texto: "Remover", "aria-label": "Remover " + m.nome + " deste item",
+                  onclick: function () {
+                    modificacoes = modificacoes.filter(function (x) { return x.id !== m.id; });
+                    pintarMods();
+                  },
+                }),
+              ]);
+            })
+          : [el("p.t-mini", { texto: "Nenhuma. Aplique pelo menu do item, em “Modificações e maldições…”." })]);
+      }
+      if (atual.id && (modificacoes.length || atual.tipo === "arma" || atual.tipo === "armadura")) {
+        pintarMods();
+        elementos.push(el("h4.t-secao", { texto: "Modificações e maldições" }));
+        elementos.push(listaMods);
+      }
+
       return {
-        elementos: [
-          el("h4.t-secao", { texto: "Ordem Paranormal" }),
-          el("div.editar-grade", {}, [espacos, quantidade]),
-          el("div.editar-grade", {}, [categoria, grupo]),
-          capacidade,
-        ],
+        elementos: elementos,
         coletar: function () {
           var ok = true;
           var rE = I.validarEspacos(espacos.entrada.value);
@@ -2231,7 +2590,10 @@
           var rC = I.validarCapacidadeItem(capacidade.entrada.value);
           capacidade.marcarErro(rC.ok ? "" : rC.mensagem); if (!rC.ok) ok = false;
           if (!ok) return null;
-          return {
+
+          /* O que o editor não mostra — fonte, marcadores, elemento,
+             dados especiais da arma — continua como estava. */
+          var saida = Object.assign({}, d, {
             espacos: rE.valor,
             quantidade: rQ.valor,
             categoria: categoria.entrada.value === "" ? null : parseInt(categoria.entrada.value, 10),
@@ -2239,7 +2601,31 @@
             capacidade: rC.valor,
             /* Editar a proteção não a tira de uso. */
             emUso: d.emUso === true,
-          };
+          });
+          if (!saida.emUso) delete saida.emUso;
+
+          if (camposArma) {
+            var arma = Object.assign({}, d.arma || {}, {
+              proficiencia: camposArma.proficiencia.entrada.value || undefined,
+              tipo: camposArma.tipoArma.entrada.value || undefined,
+              empunhadura: camposArma.empunhadura.entrada.value || undefined,
+              alcance: camposArma.alcance.entrada.value || undefined,
+              tipoDano: camposArma.tipoDano.entrada.value.trim() || undefined,
+              municao: camposArma.municao.entrada.value.trim() || undefined,
+              atributoDano: camposArma.atributoDano.entrada.value || undefined,
+              agil: camposArma.agil || undefined,
+              automatica: camposArma.automatica || undefined,
+            });
+            saida.arma = arma;
+            saida.pericia = camposArma.pericia.entrada.value || undefined;
+          }
+          if (campoProtecao) {
+            if (campoProtecao.entrada.value) saida.protecao = { tipo: campoProtecao.entrada.value };
+            else delete saida.protecao;
+          }
+          if (modificacoes.length) saida.modificacoes = modificacoes;
+          else delete saida.modificacoes;
+          return saida;
         },
       };
     },

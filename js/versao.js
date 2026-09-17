@@ -14,17 +14,17 @@
    TRÊS COISAS DIFERENTES, QUE NÃO SE MISTURAM
    ---------------------------------------------------------------------
 
-     versão do aplicativo   está aqui. É o que a pessoa vê: v2.12.0.
+     versão do aplicativo   está aqui. É o que a pessoa vê: v2.13.0.
      schemaVersion          está em js/ficha.js. É o formato da FICHA,
                             e só sobe quando a ficha muda de forma.
      versaoFormato          está em js/config.js. É o formato dos
                             arquivos de importação/exportação.
 
-   Elas sobem em ritmos próprios. A v2.12.0 leva schemaVersion 6 e
-   versaoFormato 1 — e isso é normal: a ficha ganhou versões personalizadas e
-   etiquetas, mas o formato dos arquivos de importação continua
-   o mesmo,
-   porque um arquivo antigo continua sendo lido sem perder nada.
+   Elas sobem em ritmos próprios. A v2.13.0 leva schemaVersion 7 e
+   versaoFormato 1 — e isso é normal: o item da ficha ganhou os campos do
+   catálogo de itens (como a arma ataca, tipo de proteção, modificações e
+   maldições aplicadas), mas o formato dos arquivos de importação continua o
+   mesmo, porque um arquivo antigo continua sendo lido sem perder nada.
 
    ---------------------------------------------------------------------
    A REGRA, PARA TODA ENTREGA FUTURA
@@ -57,6 +57,41 @@
   ];
 
   var CHANGELOG = [
+    {
+      versao: "2.13.0",
+      codinome: "ALMOXARIFADO",
+      data: "17/09/2026",
+      mudancas: {
+        "Adicionado": [
+          "Inventário da ficha de Ordem: botão “Da biblioteca”, no mesmo lugar e com o mesmo desenho do da aba Habilidades, com duas origens — Ordem Paranormal (o catálogo dos dois livros) e Homebrew (os itens da própria conta e os que outras contas publicaram). Criar item à mão continua exatamente como era.",
+          "Catálogo oficial com 244 entradas: 183 itens (45 armas, 9 munições, 3 proteções, 79 equipamentos gerais e paranormais e 47 itens amaldiçoados) e 61 melhorias (26 modificações e 35 maldições). Cada entrada traz nome, tipo e classificação, categoria de 0 a IV, espaços, resumo em redação própria, as propriedades mecânicas que se aplicam e o livro com a página.",
+          "Cinco abas de navegação — Armas, Munições, Proteções, Geral e Itens Amaldiçoados —, com seções por dentro (armas simples, táticas e pesadas; acessórios, explosivos, operacionais e paranormais; maldições por tipo de item), busca por nome que ignora acento e maiúsculas, e filtros de fonte, tipo de equipamento, categoria e elemento. A categoria de navegação e a categoria de equipamento são campos diferentes e aparecem separadas.",
+          "Cada resultado mostra um resumo compacto — dano, crítico, alcance, tipo de dano, Defesa, duração ou conteúdo da munição, categoria, espaços e a fonte — e abre os detalhes só quando alguém pede, com efeitos, requisitos, o que a ficha automatiza, o que fica no controle manual e as notas de conferência do livro.",
+          "“Adicionar ao inventário” cria uma cópia independente na ficha, com id próprio e referência à origem. A quantidade aparece onde faz sentido (munição, consumível, granada, catalisador, medicamento), a confirmação é discreta, a janela continua aberta com a mesma busca e os mesmos filtros, e um clique duplo não vira dois itens — clicar de novo, de propósito, vira.",
+          "Arma do catálogo alimenta os botões Ataque e Dano que já existiam: perícia de Ordem (Luta ou Pontaria, com grau e poderes), dados do atributo, arma ágil, penalidade de dados da motosserra, margem de ameaça e multiplicador, alcance, dano alternativo (duas mãos, dois canos, baioneta fixada) e a tabela de 1d6 do Arcabuz dos Moretti.",
+          "Proteção do catálogo entra GUARDADA e só soma Defesa quando posta em uso. Escudo agora é um tipo próprio e acumula com a proteção vestida (OPRPG p. 62); proteção pesada em uso tira 5 das perícias que sofrem penalidade de carga.",
+          "Modificações e maldições não entram como itens: no menu do item, “Modificações e maldições…” abre a biblioteca já na aba certa, mostra o que aquele item aceita e aplica como um retrato guardado nele. Categoria sobe I por modificação e II na primeira maldição (I nas seguintes), iguais não se acumulam, Reforçada não combina com Discreta, Ferrolho automático não entra em arma já automática e maldições de elementos opressores não convivem no mesmo item.",
+          "Aba Inventário da ficha de Ordem: aviso quando a patente ainda não libera itens amaldiçoados, painel “Preço das maldições” com o custo de cada elemento e aviso de item que passou da categoria IV.",
+          "Editor do item numa ficha de Ordem: “Como a arma ataca” (perícia, proficiência, tipo, empunhadura, alcance, tipo de dano, munição, atributo somado ao dano, ágil, automática), “Tipo de proteção” (leve, pesada ou escudo) e a lista de modificações e maldições aplicadas, com Remover.",
+        ],
+        "Alterado": [
+          "Na ficha de Ordem, o cartão do item mostra Dano, Crítico e Defesa EFETIVOS — com o que as modificações somam — e a composição da Defesa lista a proteção e o escudo em parcelas separadas. Os valores-base continuam gravados no item, e tirar a modificação devolve os números originais.",
+          "A perícia de ataque de uma arma numa ficha de Ordem passou a ser uma perícia de Ordem, escolhida no editor. Uma arma criada antes desta versão continua atacando: a ficha lê a perícia universal que ela já apontava, pelo nome, e o dano extra digitado à mão continua valendo.",
+          "A ficha Universal não muda: a janela continua só com a Homebrew, sem catálogo de Ordem, e os itens dela não ganham campo novo nenhum.",
+        ],
+        "Conteúdo": [
+          "Livro básico: Tabela 3.3 (34 armas), 3.4 (munições), 3.5 (modificações de armas e de munições), 3.6 (proteções), 3.7 (modificações de proteções), 3.8 (equipamentos gerais), 3.9 (modificações de acessórios), 3.10 (itens paranormais), os 28 itens amaldiçoados especiais e as 35 maldições para armas, proteções e acessórios (p. 144–151).",
+          "Sobrevivendo ao Horror: Tabela 1.4 (11 armas e a modificação Carregador rápido), Tabela 1.5 (45 acessórios, explosivos, itens operacionais, medicamentos, catalisadores e itens paranormais, com as duas modificações do capítulo) e Tabela 1.6 (19 itens amaldiçoados).",
+          "Ficaram fora por não serem itens: coronhada, armas improvisadas e ataques desarmados, a contagem de munição opcional (que aparece como nota nas munições e nas armas de fogo) e a fabricação em campo. Onde os dois livros divergem, o catálogo segue um deles e diz qual — a picareta usa as estatísticas do Sobrevivendo ao Horror, e não as da marreta do livro básico.",
+        ],
+        "Técnico": [
+          "Novos js/ordem/itens-dados.js (o catálogo como dado puro, carregado sob demanda na primeira abertura da janela e congelado na memória), js/ordem/itens.js (busca, filtros, apresentação, a conversão de uma entrada em item de ficha e as regras de aplicação de modificações) e js/paginas/ficha-inventario-biblioteca.js (a janela). Nenhuma página carrega o catálogo junto, e a ficha nunca o envia na gravação: o item guarda só a própria cópia.",
+          "listar_homebrew aceita `tipos`: o servidor filtra por tipo antes de ler o conteúdo, e habilidade e criatura não chegam à biblioteca de itens. Requer nova implantação do Apps Script (só backend/Codigo.gs mudou) — sem ela a janela filtra no navegador e funciona igual. setupRama() não é necessário: nenhuma aba nova.",
+          "schemaVersion 6 → 7, sem conversão: os campos novos do item são opcionais e uma ficha 6 abre igual. A subida impede que uma aba ainda aberta na versão anterior descarte esses campos ao gravar.",
+          "Testes: 1363 verificações no modelo (198 novas), 460 no backend (13 novas), 138 no transporte do frontend (18 novas) e uma página nova — testes/biblioteca.html — que abre a janela de verdade no navegador e confere origens, busca, filtros, inclusão de cada tipo, aplicação de modificação, teclado e largura de celular (86 verificações).",
+        ],
+      },
+    },
     {
       versao: "2.12.0",
       codinome: "VIGÍLIA",

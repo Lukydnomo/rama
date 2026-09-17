@@ -200,6 +200,16 @@ A mochila **não tem peso**: ela é o que tira peso.
 `origemHomebrewId` é **rastro, não vínculo**. O item na ficha é uma cópia; editar
 o modelo na biblioteca não muda as fichas que já o usam.
 
+`origemCatalogoId` é o mesmo rastro para o **catálogo oficial de itens** de Ordem
+Paranormal (`"op.arma.katana"`, `"sah.amaldicoado.fuzil-alheio"`): o item foi
+trazido pela janela "Da biblioteca". Vale para os três tipos que o catálogo
+produz (item, arma e armadura) e serve para contar quantas cópias a ficha já tem
+e para achar a entrada de origem — nunca para recalcular o item a partir dela.
+Corrigir o catálogo numa versão futura **não** muda o que já está na ficha.
+
+`adicionadoEm` (ISO) é gravado quando o item entra pela biblioteca, oficial ou
+Homebrew.
+
 ---
 
 ## Anotações
@@ -477,15 +487,22 @@ uma regra de jogo.
 
 ## Migração
 
-`schemaVersion` é `6`. Toda ficha lida passa por `normalizarFicha()`, que aceita
+`schemaVersion` é `7`. Toda ficha lida passa por `normalizarFicha()`, que aceita
 o que faltar e conserta o que dá.
+
+**A v2.13 subiu o schema de 6 para 7 sem converter nada.** Os campos novos são os
+do catálogo de itens — `origemCatalogoId` no item e, dentro de `ordem`,
+`pericia`, `arma`, `protecao`, `elemento`, `amaldicoado`, `marcadores`,
+`referencia` e `modificacoes`. Todos opcionais: uma ficha 6 abre igual, e um item
+criado à mão continua sem eles.
 
 **A v2.6 subiu o schema de 5 para 6 sem converter nada.** Os campos novos
 (`etiqueta` em habilidades e itens; `ordem.personalizacoes` e `ordem.excluidas`)
-são opcionais, e uma ficha 5 abre igual. A subida existe para proteger os dados:
-uma aba ainda aberta com a versão anterior do aplicativo não conhece esses campos
-e os descartaria ao gravar — com o schema 6 ela recusa abrir a ficha e pede para
-recarregar.
+são opcionais, e uma ficha 5 abre igual.
+
+As duas subidas existem para proteger os dados: uma aba ainda aberta com a versão
+anterior do aplicativo não conhece esses campos e os descartaria ao gravar — com o
+schema maior ela recusa abrir a ficha e pede para recarregar.
 
 **Ficha gravada na v1 continua abrindo.** Ela não tem `habilidades`, não tem
 `rituais` e os itens não têm `categoria`; a normalização cria a árvore vazia, a
@@ -706,11 +723,68 @@ de ficha universal nunca o ganha, e o `peso` do item nunca é convertido.
   "espacos": 2,        // por unidade; null = padrão do livro (1)
   "quantidade": 3,     // unidades, a partir de 1
   "categoria": 1,      // 0 a 4 (0, I, II, III, IV); null = não informada
-  "grupo": "geral",    // arma, municao, protecao, geral, paranormal
+  "grupo": "geral",    // arma, municao, protecao, geral, paranormal, amaldicoado
   "capacidade": 0,     // quanto o item AUMENTA a capacidade (Mochila Militar: 2)
   "emUso": true        // só em proteção, e só quando verdade: é a que soma na Defesa
 }
 ```
+
+Os campos abaixo nasceram com o catálogo de itens (v2.13) e **só existem quando
+têm valor**. Um item antigo, ou criado à mão sem eles, continua exatamente como
+era — e some deles é diferente de vazio: a tela não mostra campo que não existe.
+
+```jsonc
+"ordem": {
+  /* … os de cima … */
+  "pericia": "luta",            // perícia de Ordem do botão Ataque (chave do catálogo)
+  "arma": {
+    "proficiencia": "tatica",   // simples | tatica | pesada
+    "tipo": "corpoACorpo",      // corpoACorpo | arremesso | disparo | fogo | distancia
+    "empunhadura": "duasMaos",  // leve | umaMao | duasMaos
+    "alcance": "medio",         // curto | medio | longo | extremo
+    "tipoDano": "Corte",        // texto livre, até 20 caracteres
+    "municao": "Balas longas",  // o NOME da munição, não um vínculo
+    "atributoDano": "melhor",   // for | agi | melhor (o maior entre Força e Agilidade)
+    "agil": true,               // só quando verdade: ágil, arremessavel,
+    "automatica": true,         //   automatica, desarmado, semMunicao
+    "dadosAtaque": -1,          // dados a mais ou a menos no teste (motosserra: −1)
+    "bonusAtaque": 2,           // bônus fixo da própria arma
+    "danoAlternativo": { "dano": "1d10", "rotulo": "duas mãos" },
+    "danoPorD6": ["2d4", "2d6", "2d8", "2d10", "2d12", "2d20"],
+    "capacidade": 30,           // tiros antes de recarregar (regra opcional)
+    "semEspacoSeTreinado": "crime"
+  },
+  "protecao": { "tipo": "leve" },   // leve | pesada | escudo
+  "elemento": "sangue",             // sangue, morte, conhecimento, energia, medo, varia
+  "amaldicoado": true,              // item amaldiçoado (categoria e patente)
+  "marcadores": ["acessorio"],      // o que o item ACEITA de modificação
+  "referencia": { "fonte": "OPRPG", "pagina": 58 },
+  "modificacoes": [
+    {
+      "id": "uuid",                   // identidade dentro do item
+      "catalogoId": "op.mod.arma.certeira",
+      "nome": "Certeira",
+      "natureza": "modificacao",      // modificacao | maldicao
+      "resumo": "+2 nos testes de ataque.",
+      "elemento": "sangue",           // só em maldição
+      "escolha": "Medicina",          // quando a modificação pede uma escolha
+      "referencia": { "fonte": "OPRPG", "pagina": 60 },
+      "calculo": { "ataque": 2 }      // os números que as regras somam
+    }
+  ]
+}
+```
+
+**`modificacoes` é um retrato, não um vínculo.** Os números que as regras usam
+(`calculo`: `ataque`, `dano`, `dadosDano`, `margem`, `margemDobra`, `alcance`,
+`alcanceSeDistancia`, `espacos`, `defesa`, `automatica`) são copiados do catálogo
+no momento em que a modificação é aplicada. Assim o item continua certo com o
+catálogo fora do ar, e uma correção futura no catálogo não muda em silêncio o que
+já está na ficha. No máximo 12 por item.
+
+Categoria e espaços **efetivos** — com as modificações somadas e as reduções de
+habilidade aplicadas — nunca são gravados. Quem os calcula é
+`RAMAOrdemRegras.itensEfetivos()`, a cada leitura.
 
 `emUso` só existe em item do tipo `armadura` (proteção) e só é gravado quando é
 verdade. Uma ficha de Ordem tem no máximo uma proteção em uso — a tela garante; se
