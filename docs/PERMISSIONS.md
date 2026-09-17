@@ -21,7 +21,7 @@ Esconder um botão é conveniência visual. Recusar é no Apps Script.
 |---|---|---|
 | **dono** | criou o personagem | tudo da própria ficha |
 | **mestre** | criou a campanha, ou foi promovido a mestre nela | lê e edita as fichas **vinculadas àquela campanha**, vê todas as rolagens, administra documentos, notas e combates |
-| **jogador** | foi convidado para a campanha | entra na campanha, vê o que foi liberado, edita a própria ficha |
+| **jogador** | foi convidado para a campanha | entra na campanha, vê o que foi liberado, edita a própria ficha e os recursos dos próprios personagens na mesa; vê os recursos dos outros, se o mestre não os esconder |
 | **espectador** | a campanha é pública e ele não é membro | vê que a campanha existe, e o que for efetivamente público |
 | **de fora** | nada disso | a campanha privada não existe para ele |
 
@@ -81,6 +81,43 @@ Ser pública **não** torna o conteúdo público. Personagens, rolagens,
 documentos, notas e combates continuam restritos a quem o mestre escolher. O
 espectador não recebe nem a lista de membros.
 
+### Capa da campanha
+
+Segue a campanha: quem a alcança vê a capa — membros sempre, espectador só em
+campanha pública. `ler_capa_campanha` passa por `contextoDaCampanha` de novo, então
+quem está de fora de uma campanha privada não baixa a imagem nem pedindo pelo id.
+Gravar, trocar e remover são só do mestre (`exigirMestre`).
+
+### Personagens da mesa
+
+Os cartões da aba Personagens (`listar_personagens_campanha`):
+
+| quem pede | recebe |
+|---|---|
+| mestre | todos os personagens da mesa, com os dados de cálculo |
+| dono | os próprios personagens (todos eles) com os dados de cálculo |
+| outro jogador | identificação e os recursos atuais e máximos, **só leitura** — ou só a identificação, com **Esconder status dos jogadores** ligada |
+| espectador | lista vazia |
+
+**Ver o resumo não é abrir a ficha.** Nenhuma resposta ao outro jogador traz
+escolhas, inventário, anotações ou o bloco de cálculo. `podeEditarRecursos` e
+`podeAbrirFicha` são só rótulos: `ajustar_personagem` e `ler_personagem` continuam
+com as duas portas de sempre, então trocar o id na URL da ficha ou chamar a API
+direto responde `nao_encontrado`.
+
+**Esconder status dos jogadores** é do mestre: `salvar_campanha` começa por
+`exigirMestre`, e um jogador que mande `ocultarStatusJogadores` recebe
+`sem_permissao`. Ligada, os recursos dos personagens dos outros **não entram na
+resposta** — nem nos cartões, nem na lista do combate. Não há número, barra,
+percentual, dica ou atributo HTML para esconder, porque eles não chegam. O mestre
+continua vendo tudo; o jogador, os próprios. O que alguém já recebeu antes de a
+chave ser ligada não tem como ser apagado.
+
+O **resumo** que o outro jogador vê numa ficha de Ordem (o máximo de PV, PE e
+Sanidade) é gravado por quem pode editar a ficha inteira — dono ou mestre — dentro
+dela. O dono conseguiria mostrar um máximo inventado, e conseguiria do mesmo jeito
+editando a própria ficha; o servidor valida a forma.
+
 ### Homebrew
 
 | | Quem lista e usa | Quem edita e apaga |
@@ -118,9 +155,23 @@ jogador** — não é `display: none`.
 
 ### Combates
 
-O mestre escolhe quem vê cada combate. Quem tem acesso recebe a lista e a ordem
-de iniciativa — e **não** a ficha interna das criaturas nem o id do modelo na
-biblioteca.
+Quatro decisões, e nenhuma decide pela outra:
+
+| decisão | quem | onde é conferida |
+|---|---|---|
+| ver o combate | quem o mestre escolheu em **Quem pode ver** | `podeVerCombate` |
+| ver os recursos dos personagens na lista | a regra dos cartões (e a chave de ocultação) | `recursosParaCombate` |
+| abrir a ficha de um personagem | dono ou mestre da campanha, sempre | `personagemAcessivel` |
+| administrar (turno, iniciativa, vida de criatura, participantes, quem vê) | só o mestre | `exigirMestre` em `atualizar_combate`, `salvar_combate` e `excluir_combate` |
+
+Quem tem acesso recebe a lista, a ordem de iniciativa, a rodada e de quem é a vez —
+e **não** a ficha interna das criaturas, o id do modelo na biblioteca nem a lista de
+quem pode ver.
+
+O painel lateral com a ficha do participante é do mestre. Personagem abre pela
+ficha de sempre (`ler_personagem`, as mesmas duas portas); criatura mostra o
+snapshot que só o mestre recebe. O jogador não tem essa interface, e o servidor não
+lhe manda nada que a alimentasse.
 
 ### Notas do mestre
 
@@ -144,6 +195,9 @@ não decide permissão nenhuma — ele não sabe quem está pedindo:
 | `homebrewAlcancavel(registro, usuario)` | seu, ou público |
 | `podeVerDocumento(doc, ctx, usuario)` | está na lista, ou é mestre |
 | `podeVerCombate(combate, ctx, usuario)` | idem |
+| `acaoListarPersonagensCampanha` | o que cada cartão leva, por papel e pela ocultação |
+| `recursosParaCombate(ctx, usuario, ids)` | os recursos que a lista do combate pode mostrar |
+| `papelParaMarcas(campanhaId, usuario, marcas)` | se a pessoa recebe as marcas da sincronização (nunca dado) |
 
 **`nao_encontrado` também cobre "existe, mas não é seu".** Distinguir os dois
 confirmaria que aquele id existe — o mesmo motivo pelo qual o login errado não
@@ -189,14 +243,27 @@ por prefixo, então avançar a época é a operação que existe para isso.
 **O que o cache não cobre:** marcar `ativo = false` na linha da aba SESSOES
 direto na planilha, com a mão. Isso leva até 120 segundos para valer.
 
-**Nada de campanha é guardado entre requisições.** Tirar alguém da mesa tira o
-acesso na requisição seguinte, sem janela nenhuma — e há teste para isso.
+**Nenhum dado de campanha é autorizado pelo cache.** Tirar alguém da mesa tira o
+acesso a qualquer conteúdo na requisição seguinte, sem janela nenhuma — e há teste
+para isso.
+
+A única coisa de campanha em cache é o que a atualização automática precisa
+(`sincronizar_campanha`):
+
+- as **marcas** de cada parte — carimbos de tempo com um trecho aleatório, sem
+  conteúdo nenhum. Saber que "os combates mudaram" não revela o combate;
+- o **papel** de quem pergunta, por até 5 minutos, numa chave que inclui a época e
+  as marcas de `membros` e `campanha`. Entrar, sair ou mudar a visibilidade troca
+  essas marcas, a chave muda e o papel é conferido de novo na planilha. Esse papel
+  só decide se a pessoa recebe marcas; toda busca de conteúdo passa pela
+  conferência completa. No pior caso — o cache falhar justo na gravação que tirou a
+  pessoa da mesa —, ela ainda recebe marcas por até 5 minutos, e nada além delas.
 
 ---
 
 ## O que os testes conferem
 
-`deno run --allow-read testes/executar-backend.js` — 224 verificações, entrando
+`deno run --allow-read testes/executar-backend.js` — 447 verificações, entrando
 por `doPost` como uma requisição de verdade. Entre elas:
 
 - A não lê nem grava no personagem de B trocando o id
@@ -224,3 +291,18 @@ por `doPost` como uma requisição de verdade. Entre elas:
 - sessão vencida é recusada mesmo estando em cache
 - tirar alguém da campanha tira o acesso na requisição seguinte
 - sem a trava, a gravação responde `ocupado` e nada é gravado pela metade
+- o jogador vê os recursos do personagem alheio, sem escolhas, inventário nem
+  permissão de editar ou abrir a ficha
+- o jogador **não** ajusta recurso nem status alheio pela API, nem abre a ficha
+  alheia pelo id
+- o jogador **não** liga "Esconder status dos jogadores"
+- com a ocultação ligada, os recursos alheios nem chegam — nos cartões e no combate
+  —, e o jogador continua vendo os próprios
+- outro jogador não grava o resumo de recursos de personagem alheio; resumo sobre
+  revisão velha é recusado
+- o jogador não grava nem remove a capa; quem está fora de campanha privada não a
+  lê pelo id; imagem maior que a célula é recusada, nunca aparada
+- quem não é da campanha privada não recebe marcas, o espectador recebe só as de
+  fora, e a jogadora tirada da mesa deixa de recebê-las na pergunta seguinte
+- a jogadora não opera o combate; lote com uma operação inválida não aplica nada;
+  o mesmo `opId` repetido não é aplicado duas vezes

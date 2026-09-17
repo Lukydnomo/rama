@@ -1,7 +1,14 @@
 # O banco
 
-Uma planilha do Google, treze abas. Criadas e mantidas por `setupRama()` — não
+Uma planilha do Google, quinze abas. Criadas e mantidas por `setupRama()` — não
 monte nada à mão.
+
+> **Atualizando para a v2.12:** rode `setupRama()` de novo. Ele cria a aba
+> `CAMPANHA_CAPAS` e **não toca em nada que já existe** — nenhuma aba é recriada,
+> nenhuma linha é apagada, nenhuma coluna muda de lugar. Rodar duas vezes dá o
+> mesmo resultado. Campanhas, combates e fichas antigos não precisam de migração:
+> o que falta (capa, turno, resumo de recursos, a chave de ocultação) é lido como
+> ausente e preenchido na primeira gravação.
 
 > **Atualizando da v1 para a v2:** rode `setupRama()` de novo. Ele cria as seis
 > abas novas, acrescenta a coluna `visibilidade` em `HOMEBREW` e `CAMPANHAS`, e
@@ -97,6 +104,12 @@ validação de sessão. Junto, cada requisição arrastaria a imagem.
 | `rev`          | inteiro, sobe a cada gravação                 |
 | `fichaJson`    | a ficha inteira — ver CHARACTER_SCHEMA.md     |
 
+Numa ficha de Ordem, o `fichaJson` leva também `resumoRecursos`
+`{ versao, pv, pe, san }` (v2.12): o máximo de PV, PE e Sanidade calculado por quem
+pode editar a ficha, para a mesa ver sem receber a ficha. Ele é derivado — gravá-lo
+por `atualizar_resumo_personagem` não sobe o `rev`. Ver "Painel da mesa" em
+[CAMPAIGNS.md](CAMPAIGNS.md).
+
 As colunas de espelho existem para a listagem não precisar abrir e interpretar
 o JSON de trinta fichas só para escrever trinta nomes. Elas são reescritas a
 partir do JSON em toda gravação, então não têm como divergir.
@@ -146,7 +159,7 @@ modelo aqui não muda, semanas depois, a espada de um personagem em jogo.
 | `atualizadoEm` | ISO 8601                       |
 | `visibilidade` | `privado` (padrão) / `publico` |
 | `rev`          | inteiro                        |
-| `dadosJson`    | `{ descricao, rolagensMestreOcultas }` |
+| `dadosJson`    | `{ descricao, rolagensMestreOcultas, ocultarStatusJogadores }` |
 
 O que cresce, tem permissão própria ou carrega imagem NÃO fica aqui: mora em
 tabela própria. Ver `CAMPANHA_MEMBROS` e as demais, abaixo.
@@ -157,9 +170,9 @@ gravação que falhasse deixaria um personagem numa campanha que não sabe dele.
 
 ## As tabelas da campanha
 
-Seis, e nenhuma delas cabia no `dadosJson`: rolagens crescem sem fim, documentos
-carregam imagem, notas e combates têm permissão própria e são editados de forma
-independente. Enfiados num só JSON, abrir a campanha baixaria tudo e uma nota
+Sete, e nenhuma delas cabia no `dadosJson`: rolagens crescem sem fim, documentos
+e a capa carregam imagem, notas e combates têm permissão própria e são editados de
+forma independente. Enfiados num só JSON, abrir a campanha baixaria tudo e uma nota
 nova reescreveria o histórico inteiro.
 
 ### CAMPANHA_MEMBROS
@@ -188,7 +201,9 @@ no servidor, nunca aceita do pedido.
 
 `visiveisJson` é um array de ids de usuário. **Array vazio significa ninguém
 além do mestre** — nunca "todos". A imagem fica em tabela separada porque é o
-campo mais pesado e o que menos muda.
+campo mais pesado e o que menos muda. Trocar a imagem atualiza também o
+`atualizadoEm` do documento (não o `rev`): é por ele que a aba Documentos sabe que
+precisa baixar a imagem de novo.
 
 ### CAMPANHA_NOTAS
 
@@ -200,9 +215,27 @@ Privadas do mestre. Nenhuma resposta destinada a jogador toca nesta aba.
 
 `id · campanhaId · nome · estado · visiveisJson · criadoEm · atualizadoEm · rev · dadosJson`
 
-`dadosJson` guarda `{ participantes }`. Cada criatura entra como **snapshot**
-com id próprio, então duas ocorrências do mesmo modelo têm estados
-independentes.
+`dadosJson` guarda `{ participantes, turno, ops }`:
+
+- `participantes` — cada criatura entra como **snapshot** com id próprio, então duas
+  ocorrências do mesmo modelo têm estados independentes;
+- `turno` — `{ rodada, ativoId }`, o turno pelo **id** do participante (v2.12).
+  Ausente num combate antigo: em andamento vale rodada 1 e o primeiro da ordem;
+- `ops` — os `{ id, rev }` dos últimos 40 lotes aplicados por `atualizar_combate`,
+  para reconhecer um lote repetido (v2.12).
+
+`salvar_combate` (a gravação completa) preserva `turno` e `ops` que já estavam lá.
+
+### CAMPANHA_CAPAS
+
+`campanhaId · atualizadoEm · largura · altura · imagem`
+
+A capa da campanha (v2.12), uma linha por campanha. Fora do `dadosJson` pela mesma
+razão da foto de personagem: dentro do JSON, salvar a descrição reenviaria a imagem
+inteira. As quatro primeiras colunas são leves — dá para saber se há capa, de que
+tamanho e de quando sem ler a imagem. `imagem` é uma data URL WebP, JPEG ou PNG que
+cabe na célula; acima disso a gravação é recusada, nunca truncada. Excluir a
+campanha apaga a linha.
 
 ### CRIATURAS_IMAGENS
 
@@ -314,10 +347,12 @@ Dois mecanismos, para dois problemas:
 |---|---|
 | **LockService** | duas execuções do script escrevendo ao mesmo tempo e embaralhando linhas |
 | **`rev`** | alguém salvando por cima de uma versão que já mudou |
+| **id da operação** | a mesma gravação chegando duas vezes porque a resposta se perdeu — o `id` da rolagem em `CAMPANHA_ROLAGENS`, o `opId` do lote em `CAMPANHA_COMBATES` |
 
-Um não substitui o outro. Sem trava, duas gravações simultâneas podem corromper
+Nenhum substitui os outros. Sem trava, duas gravações simultâneas podem corromper
 a linha; sem `rev`, a segunda apaga em silêncio o trabalho da primeira mesmo
-tendo esperado a vez.
+tendo esperado a vez; sem o id da operação, repetir um envio pela rede rolaria de
+novo ou passaria dois turnos.
 
 ## Limites
 

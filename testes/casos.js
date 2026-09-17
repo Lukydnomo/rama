@@ -1957,6 +1957,40 @@
         t.ok("  não reenviar se o jogador mexeu naquele recurso", !PMs.podeReenviar(mudou, cartaoMari.recursos[1], 5));
         t.ok("  nunca-tocado (null) continua igual a null", PMs.podeReenviar({ tipoFicha: "ordem", ordem: { recursos: { pv: null } } }, cartaoMari.recursos[0], null));
         t.ok("  personagem sem o status não reenvia", !PMs.podeReenviar({ status: [] }, universal.recursos[0], 3));
+
+        t.grupo("Painel da mesa — jogadores, ocultação e o resumo guardado");
+
+        var resumoMari = RR.resumoDeRecursos(mari);
+        t.igual("o resumo da mesa sai do mesmo cálculo da ficha", resumoMari.pv + "/" + resumoMari.pe + "/" + resumoMari.san,
+          calcMari.pv.total + "/" + calcMari.pe.total + "/" + calcMari.san.total);
+        t.igual("  e com “Jogando sem Sanidade” a Sanidade é nula", RR.resumoDeRecursos(Object.assign({}, mari, { opcionais: { semSanidade: true } })).san, null);
+
+        var alheioComResumo = PMs.resumir({ id: "m3", nome: "Mari", tipoFicha: "ordem", detalhado: false,
+          podeEditarRecursos: false, podeAbrirFicha: false, recursosVisiveis: true,
+          ordem: { classe: "ocultista", trilha: "", nex: 60, nivel: null, opcionais: {} },
+          recursos: [{ chave: "pv", atual: 3, maximo: 20 }, { chave: "san", atual: 16, maximo: 16 }, { chave: "hackeado", atual: 1, maximo: 1 }] });
+        t.igual("ficha alheia: os recursos resumidos que o servidor mandou, sem inventar outros",
+          alheioComResumo.recursos.map(function (r) { return r.rotulo + " " + r.atual + "/" + r.maximo; }).join(", "), "PV 3/20, SAN 16/16");
+        t.ok("  sem permissão de editar nem de abrir a ficha", alheioComResumo.podeEditar === false && alheioComResumo.podeAbrirFicha === false);
+        t.ok("  e sem estatísticas nem atributos calculados", !alheioComResumo.estatisticas.length && !alheioComResumo.atributos.length);
+
+        var oculto = PMs.resumir({ id: "m4", nome: "Mari", tipoFicha: "ordem", detalhado: false, recursosVisiveis: false,
+          ordem: { classe: "ocultista", trilha: "", nex: 60, nivel: null, opcionais: {} } });
+        t.ok("com a ocultação ligada, o cartão sabe que os recursos estão ocultos", oculto.recursosOcultos && !oculto.recursos.length);
+        t.ok("resumo ainda não calculado vira aviso, não número", PMs.resumir({ id: "m5", nome: "Mari", tipoFicha: "ordem", detalhado: false,
+          recursosPendentes: true, recursos: [], ordem: { classe: "ocultista", opcionais: {} } }).recursosPendentes);
+        t.ok("servidor antigo (sem os rótulos): a tela decide pelo papel", PMs.resumir(listadoMari).podeEditar === null);
+
+        var guardadoCerto = JSON.parse(JSON.stringify(listadoMari));
+        guardadoCerto.resumoRecursos = { versao: 1, pv: resumoMari.pv, pe: resumoMari.pe, san: resumoMari.san };
+        t.ok("quem vê a ficha inteira: resumo guardado igual ao cálculo não é regravado", PMs.resumir(guardadoCerto).resumoDesatualizado === false);
+        var guardadoVelho = JSON.parse(JSON.stringify(guardadoCerto));
+        guardadoVelho.resumoRecursos.pv = resumoMari.pv - 7;
+        t.ok("  resumo guardado velho é percebido", PMs.resumir(guardadoVelho).resumoDesatualizado === true);
+        var semResumo = JSON.parse(JSON.stringify(listadoMari));
+        semResumo.resumoRecursos = null;
+        t.ok("  resumo que nunca foi gravado também", PMs.resumir(semResumo).resumoDesatualizado === true);
+        t.ok("  e servidor que nem manda o campo não provoca regravação", PMs.resumir(listadoMari).resumoDesatualizado === false);
       }
 
       /* ---------------------------------------------------------------- */

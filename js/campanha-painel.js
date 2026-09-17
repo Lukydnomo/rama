@@ -16,6 +16,14 @@
 
    O que a listagem não trouxe não vira zero: estatística ausente não
    aparece.
+
+   PERMISSÕES VÊM DO SERVIDOR
+   O cartão diz o que pode fazer com os rótulos que a listagem mandou
+   (podeEditarRecursos, podeAbrirFicha, recursosVisiveis). Para outro
+   jogador, a listagem manda só o resumo dos recursos — ou nada, com
+   "Esconder status dos jogadores" ligada —, e é esse resumo que o
+   cartão desenha, sem controles. Os rótulos são para a tela; quem
+   recusa de verdade é o servidor.
    ===================================================================== */
 
 (function (global) {
@@ -32,6 +40,12 @@
   var TETO_SEM_MAXIMO = 999999;
 
   var CORES_UNIVERSAIS = ["azul", "verde", "cinza"];
+
+  var RECURSOS_DE_ORDEM = {
+    pv: { rotulo: "PV", nome: "Pontos de vida", cor: "vida" },
+    pe: { rotulo: "PE", nome: "Pontos de esforço", cor: "esforco" },
+    san: { rotulo: "SAN", nome: "Sanidade", cor: "sanidade" },
+  };
 
   /* A cor de um status universal. Os nomes de sempre ganham a mesma cor
      dos recursos de Ordem (vida, esforço, sanidade) — assim "Sanidade"
@@ -63,6 +77,16 @@
       dono: p.dono || "",
       souDono: !!p.souDono,
       detalhado: p.detalhado !== false,
+      /* null quando o servidor é de uma versão que não manda o rótulo: a
+         tela decide pelo papel, como antes. */
+      podeEditar: p.podeEditarRecursos === undefined ? null : !!p.podeEditarRecursos,
+      podeAbrirFicha: p.podeAbrirFicha === undefined ? null : !!p.podeAbrirFicha,
+      recursosOcultos: p.recursosVisiveis === false,
+      recursosPendentes: !!p.recursosPendentes,
+      /* Para quem vê a ficha inteira: o resumo que o cálculo dá, e se o
+         guardado no servidor ficou para trás. */
+      resumoCalculado: null,
+      resumoDesatualizado: false,
       rev: U.inteiro(p.rev, 0),
       tipo: p.tipoFicha === "ordem" ? "ordem" : "universal",
       linhas: [],
@@ -86,10 +110,23 @@
     var t = R().trilho(o);
     base.progressao = t.separado ? t.rotulo + " · NEX " + R().exposicao(o) + "%" : t.rotulo;
 
-    /* Outro jogador da mesa: só a identificação, que é o que o servidor
-       manda para ele. Nada de recurso calculado a partir de dado que não
-       veio. */
-    if (!base.detalhado) return base;
+    /* Outro jogador da mesa: a identificação e, se o mestre permitir, o
+       resumo dos recursos que o servidor mandou — atual e máximo, sem
+       controle. Nada é calculado a partir de dado que não veio. */
+    if (!base.detalhado) {
+      base.recursos = (Array.isArray(p.recursos) ? p.recursos : []).map(function (rec) {
+        var def = rec && RECURSOS_DE_ORDEM[rec.chave];
+        if (!def) return null;
+        var maximo = U.inteiro(rec.maximo, 0);
+        return {
+          chave: "recurso/" + rec.chave, alvo: "recurso", itemId: rec.chave, campo: "atual",
+          rotulo: def.rotulo, nome: def.nome, cor: def.cor,
+          atual: U.inteiro(rec.atual, maximo), maximo: maximo,
+          minimo: PISO_ORDEM, teto: maximo, cru: null,
+        };
+      }).filter(Boolean);
+      return base;
+    }
 
     var itens = (p.inventario && Array.isArray(p.inventario.itens) ? p.inventario.itens : [])
       .map(function (i) { return F() ? F().normalizarItem(i) : i; })
@@ -129,6 +166,15 @@
         cru: guardado === undefined ? null : guardado,
       };
     });
+
+    base.resumoCalculado = R().resumoDeRecursos ? R().resumoDeRecursos(o) : null;
+    if (base.resumoCalculado && p.resumoRecursos !== undefined) {
+      var guardado = p.resumoRecursos;
+      base.resumoDesatualizado = !guardado ||
+        guardado.pv !== base.resumoCalculado.pv ||
+        guardado.pe !== base.resumoCalculado.pe ||
+        (guardado.san === undefined ? null : guardado.san) !== base.resumoCalculado.san;
+    }
 
     base.estatisticas = [
       { chave: "defesa", rotulo: "Defesa", valor: String(c.defesa.total) },

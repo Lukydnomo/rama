@@ -14,6 +14,12 @@
    editor de enquadramento. É o caminho mais simples que resolve o caso
    real (avatar redondo pequeno) — e a estrutura aceita um editor
    depois sem mudar quem chama.
+
+   A capa da campanha usa as mesmas peças por outro caminho: escolher o
+   arquivo (escolherArquivo), abrir com as mesmas conferências de tipo e
+   tamanho (decodificar), recortar o retângulo que a pessoa enquadrou
+   (recortar) e comprimir até caber (comprimirTela). Quem enquadra é a
+   tela — ver o editor de capa em js/paginas/campanha.js.
    ===================================================================== */
 
 (function (global) {
@@ -40,8 +46,8 @@
      um documento precisa ser LEGÍVEL — uma planta baixa a 256px não
      serve para nada —, então a tela de documentos pede 1024 e aceita
      o retângulo original em vez de forçar o quadrado. */
-  async function preparar(arquivo, opcoes) {
-    var o = opcoes || {};
+  /* As conferências de tipo e tamanho, e a decodificação. */
+  async function decodificar(arquivo) {
     if (!arquivo) return { ok: false, erro: "sem_arquivo", mensagem: "Nenhuma imagem escolhida." };
 
     if (TIPOS_ACEITOS.indexOf(arquivo.type) < 0) {
@@ -55,13 +61,25 @@
       };
     }
 
-    var bitmap;
     try {
-      bitmap = await carregar(arquivo);
+      var bitmap = await carregar(arquivo);
+      return {
+        ok: true,
+        origem: bitmap,
+        largura: bitmap.width || bitmap.naturalWidth,
+        altura: bitmap.height || bitmap.naturalHeight,
+      };
     } catch (e) {
       console.error("[R.A.M.A. · imagem] falha ao decodificar", e);
       return { ok: false, erro: "leitura", mensagem: "Não foi possível ler esta imagem." };
     }
+  }
+
+  async function preparar(arquivo, opcoes) {
+    var o = opcoes || {};
+    var aberta = await decodificar(arquivo);
+    if (!aberta.ok) return aberta;
+    var bitmap = aberta.origem;
 
     var quadro = o.quadrado === false
       ? redimensionar(bitmap, o.lado || lado())
@@ -179,6 +197,98 @@
     return melhor;
   }
 
+  /* Um retângulo da origem, desenhado em largura × altura. Nunca amplia
+     além do retângulo: ampliar entrega borrão pesando mais. */
+  function recortar(origem, retangulo, largura, altura) {
+    var r = retangulo;
+    var escala = Math.min(1, largura / r.largura, altura / r.altura);
+    var tela = document.createElement("canvas");
+    tela.width = Math.max(1, Math.round(r.largura * escala));
+    tela.height = Math.max(1, Math.round(r.altura * escala));
+    var ctx = tela.getContext("2d");
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = "high";
+    ctx.drawImage(origem, r.x, r.y, r.largura, r.altura, 0, 0, tela.width, tela.height);
+    return tela;
+  }
+
+  /* Comprime uma tela até caber no limite da célula, reduzindo aos poucos
+     se preciso (em vez de cortar pela metade de uma vez, como o avatar).
+     Não cabendo nem assim, RECUSA: imagem cortada no meio é imagem
+     quebrada, e o servidor recusaria de qualquer jeito. */
+  function comprimirTela(tela, opcoes) {
+    var o = opcoes || {};
+    var limite = o.limite || MAX_SAIDA;
+    var passos = [1, 0.85, 0.72, 0.6, 0.5, 0.42];
+    var formatos = ["image/webp", "image/jpeg"];
+    var qualidades = [0.86, 0.78, 0.7, 0.62, 0.55, 0.48];
+
+    for (var p = 0; p < passos.length; p++) {
+      var alvo = tela;
+      if (passos[p] < 1) {
+        alvo = document.createElement("canvas");
+        alvo.width = Math.max(1, Math.round(tela.width * passos[p]));
+        alvo.height = Math.max(1, Math.round(tela.height * passos[p]));
+        var ctx = alvo.getContext("2d");
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = "high";
+        ctx.drawImage(tela, 0, 0, alvo.width, alvo.height);
+      }
+      for (var f = 0; f < formatos.length; f++) {
+        for (var q = 0; q < qualidades.length; q++) {
+          var dados = alvo.toDataURL(formatos[f], qualidades[q]);
+          if (dados.indexOf("data:" + formatos[f]) !== 0) break;
+          if (dados.length <= limite) {
+            return { ok: true, imagem: dados, largura: alvo.width, altura: alvo.height, bytes: dados.length };
+          }
+        }
+      }
+    }
+    return {
+      ok: false, erro: "grande",
+      mensagem: "Mesmo reduzida, esta imagem não cabe no arquivo. Escolha outra com menos detalhes.",
+    };
+  }
+
+  /* Só o arquivo, sem preparar: quem chama decide o que fazer com ele. */
+  function escolherArquivo() {
+    return new Promise(function (ok) {
+      var entrada = document.createElement("input");
+      entrada.type = "file";
+      entrada.accept = TIPOS_ACEITOS.join(",");
+      entrada.style.display = "none";
+
+      var respondido = false;
+      var escolheu = false;
+
+      function responder(resultado) {
+        if (respondido) return;
+        respondido = true;
+        window.removeEventListener("focus", aoVoltar);
+        if (entrada.parentNode) entrada.parentNode.removeChild(entrada);
+        ok(resultado);
+      }
+
+      entrada.addEventListener("change", function () {
+        var arquivo = entrada.files && entrada.files[0];
+        if (!arquivo) { responder({ ok: false, erro: "cancelado" }); return; }
+        escolheu = true;
+        responder({ ok: true, arquivo: arquivo });
+      });
+
+      function aoVoltar() {
+        setTimeout(function () {
+          if (escolheu) return;
+          responder({ ok: false, erro: "cancelado" });
+        }, 700);
+      }
+
+      window.addEventListener("focus", aoVoltar, { once: true });
+      document.body.appendChild(entrada);
+      entrada.click();
+    });
+  }
+
   /* Abre o seletor de arquivo e devolve a imagem pronta. O <input> não
      precisa existir no HTML: ele nasce, é usado e some. */
   function escolher(opcoes) {
@@ -233,6 +343,10 @@
   global.RAMAImagem = {
     preparar: preparar,
     escolher: escolher,
+    escolherArquivo: escolherArquivo,
+    decodificar: decodificar,
+    recortar: recortar,
+    comprimirTela: comprimirTela,
     TIPOS_ACEITOS: TIPOS_ACEITOS,
     MAX_SAIDA: MAX_SAIDA,
   };

@@ -118,6 +118,10 @@ const t = {
     const igual = Object.is(obtido, esperado);
     t.ok(nome, igual, igual ? "" : `obtido ${JSON.stringify(obtido)}, esperado ${JSON.stringify(esperado)}`);
   },
+  iguais(nome, obtido, esperado) {
+    const a = JSON.stringify(obtido), b = JSON.stringify(esperado);
+    t.ok(nome, a === b, a === b ? "" : `obtido ${a}, esperado ${b}`);
+  },
 };
 
 /* ---------- servidores de mentira ---------- */
@@ -412,6 +416,424 @@ t.grupo("Páginas que calculam ficha de Ordem carregam o motor inteiro");
   }
   t.ok("  (a ficha de teste depende mesmo da progressão: Agilidade 3 e Vigor 2)", naFicha.atributos === "3 2 3 1 2", naFicha.atributos);
   t.ok("  e o cartão desenha esses números", !!naCampanha.cartao && naCampanha.cartao.indexOf(String(naFicha.defesa)) >= 0, naCampanha.cartao);
+}
+
+/* =====================================================================
+   v2.12 — OPERAÇÕES ANUNCIADAS, FILA DO COMBATE, TURNOS E SINCRONIA
+   ===================================================================== */
+
+for (const caminho of ["js/combate-turnos.js", "js/combate-fila.js", "js/sincronia.js"]) {
+  (0, eval)(await Deno.readTextFile(new URL("../" + caminho, import.meta.url)));
+}
+
+const esvaziar = async () => { for (let i = 0; i < 30; i++) await Promise.resolve(); };
+
+/* Um relógio que só anda quando o teste manda. */
+function relogioFalso() {
+  let agora = 1000;
+  let seq = 0;
+  const tarefas = new Map();
+  return {
+    definir(fn, ms) { const id = ++seq; tarefas.set(id, { fn, quando: agora + (ms || 0) }); return id; },
+    limpar(id) { tarefas.delete(id); },
+    agora() { return agora; },
+    async avancar(ms) {
+      const alvo = agora + ms;
+      for (;;) {
+        let proxima = null;
+        for (const [id, tarefa] of tarefas) {
+          if (tarefa.quando <= alvo && (!proxima || tarefa.quando < proxima[1].quando)) proxima = [id, tarefa];
+        }
+        if (!proxima) break;
+        tarefas.delete(proxima[0]);
+        agora = proxima[1].quando;
+        proxima[1].fn();
+        await esvaziar();
+      }
+      agora = alvo;
+      await esvaziar();
+    },
+    pendentes() { return tarefas.size; },
+  };
+}
+
+t.grupo("Operações anunciadas pela camada de API");
+
+{
+  comSessaoGuardada();
+  rede.responder = (corpo) => ({ ok: corpo.acao !== "salvar_campanha", erro: corpo.acao === "salvar_campanha" ? "ocupado" : undefined, dados: {} });
+  const eventos = [];
+  const largar = RAMAApi.aoOperar((e) => eventos.push(e));
+
+  await RAMAApi.listarCampanhas();
+  t.ok("uma leitura é anunciada ao começar e ao terminar", eventos.length === 2 && eventos[0].fase === "inicio" && eventos[1].fase === "fim");
+  t.igual("  como leitura de primeiro plano", eventos[0].operacao.tipo + "/" + eventos[0].operacao.segundoPlano, "leitura/false");
+  t.igual("  e o resumo conta a operação enquanto ela voa", eventos[0].resumo.primeiroPlano, 1);
+  t.igual("  e zera quando ela termina", eventos[1].resumo.total, 0);
+
+  eventos.length = 0;
+  await RAMAApi.sincronizarCampanha("c1");
+  t.ok("a sincronização é anunciada como SEGUNDO plano", eventos[0].operacao.segundoPlano === true && eventos[0].resumo.segundoPlano === 1 && eventos[0].resumo.primeiroPlano === 0);
+
+  eventos.length = 0;
+  await RAMAApi.salvarCampanha("c1", 2, { nome: "x" });
+  t.ok("uma gravação que falha também anuncia o fim, com o erro", eventos[1].fase === "fim" && eventos[1].ok === false && eventos[1].erro === "ocupado" && eventos[0].operacao.tipo === "gravacao");
+
+  eventos.length = 0;
+  rede.responder = () => { throw new Error("quebrou"); };
+  try { await RAMAApi.listarPersonagens(); } catch (e) { /* esperado */ }
+  t.ok("mesmo com exceção no transporte, a operação termina anunciada", eventos.length === 2 && RAMAApi.operacoesEmAndamento().total === 0);
+  largar();
+
+  t.ok("atualizar_combate pode ser repetida pelo transporte (leva opId)", RAMAApi.podeRepetir("atualizar_combate"));
+  rede.zerar();
+  rede.responder = () => ({ ok: true, rev: 2 });
+  await Promise.all([
+    RAMAApi.atualizarCombate("c", "k", 1, "lote-aaaaaaaa", [{ tipo: "turno", direcao: "proximo" }]),
+    RAMAApi.atualizarCombate("c", "k", 1, "lote-aaaaaaaa", [{ tipo: "turno", direcao: "proximo" }]),
+  ]);
+  t.igual("  e não é tratada como leitura (duas iguais não viram uma)", rede.chamadas.length, 2);
+}
+
+t.grupo("Turnos e rodadas — regras do navegador");
+
+{
+  const T = RAMACombateTurnos;
+  const ps = [{ id: "a", ordem: 10 }, { id: "b", ordem: 15 }, { id: "c", ordem: 10 }];
+  t.iguais("ordem: maior primeiro, empate estável", T.ordem(ps).map((p) => p.id), ["b", "a", "c"]);
+  t.iguais("iniciar: rodada 1, primeiro da ordem", T.normalizado(null, ps, "ativo"), { rodada: 1, ativoId: "b" });
+  t.iguais("próximo depois do último volta ao primeiro e sobe a rodada", (({ rodada, ativoId }) => ({ rodada, ativoId }))(T.seguinte({ rodada: 1, ativoId: "c" }, ps)), { rodada: 2, ativoId: "b" });
+  t.ok("voltar na rodada 1 do primeiro não muda nada", T.anterior({ rodada: 1, ativoId: "b" }, ps).mudou === false);
+  t.ok("combate aplicado localmente: reordenar não passa o turno", (() => {
+    const c = { estado: "ativo", participantes: ps, turno: { rodada: 1, ativoId: "a" }, rev: 1 };
+    return T.aplicar(c, [{ tipo: "iniciativa", participanteId: "c", valor: 99 }]).turno.ativoId === "a";
+  })());
+}
+
+/* ---------- um servidor de combate de mentira, com as regras do de verdade ---------- */
+
+function servidorDeCombate(inicial) {
+  const s = {
+    combate: JSON.parse(JSON.stringify(inicial)),
+    opsFeitas: new Set(),
+    pedidos: [],
+    comportamento: null,     // (pedido) => "normal" | "prazo_aplicado" | "sem_conexao" | "segurar"
+    segurados: [],
+    enviar(rev, opId, ops) {
+      const pedido = { rev, opId, ops: JSON.parse(JSON.stringify(ops)) };
+      s.pedidos.push(pedido);
+      const modo = s.comportamento ? s.comportamento(pedido) : "normal";
+      if (modo === "sem_conexao") return Promise.resolve({ ok: false, erro: "sem_conexao" });
+      const responder = () => s.processar(pedido);
+      if (modo === "prazo_aplicado") { s.processar(pedido); return Promise.resolve({ ok: false, erro: "prazo" }); }
+      if (modo === "segurar") return new Promise((ok) => s.segurados.push(() => ok(responder())));
+      return Promise.resolve(responder());
+    },
+    processar(pedido) {
+      if (s.opsFeitas.has(pedido.opId)) return { ok: true, repetida: true, rev: s.combate.rev, dados: JSON.parse(JSON.stringify(s.combate)) };
+      if (pedido.rev !== s.combate.rev) return { ok: false, erro: "conflito", rev: s.combate.rev, dados: JSON.parse(JSON.stringify(s.combate)) };
+      const novo = RAMACombateTurnos.aplicar(s.combate, pedido.ops);
+      novo.rev = s.combate.rev + 1;
+      s.combate = novo;
+      s.opsFeitas.add(pedido.opId);
+      return { ok: true, rev: novo.rev, dados: JSON.parse(JSON.stringify(novo)) };
+    },
+    /* Outra pessoa mexendo direto no servidor. */
+    outraPessoa(ops) {
+      const novo = RAMACombateTurnos.aplicar(s.combate, ops);
+      novo.rev = s.combate.rev + 1;
+      s.combate = novo;
+    },
+    soltar() { const f = s.segurados.shift(); if (f) f(); },
+  };
+  return s;
+}
+
+function combateDeTeste() {
+  return {
+    id: "k1", nome: "Ponte", estado: "ativo", rev: 7, visiveis: [],
+    turno: { rodada: 1, ativoId: "a" },
+    participantes: [
+      { id: "a", tipo: "personagem", personagemId: "pa", nome: "Ana", ordem: 10, recursos: [{ chave: "pv", atual: 5, maximo: 9 }] },
+      { id: "b", tipo: "criatura", nome: "Existido #1", ordem: 8, snapshot: { status: [{ id: "vida", nome: "Vida", atual: 20, maximo: 20 }] } },
+      { id: "c", tipo: "criatura", nome: "Existido #2", ordem: 3, snapshot: { status: [{ id: "vida", nome: "Vida", atual: 20, maximo: 20 }] } },
+    ],
+  };
+}
+
+function filaDeTeste(servidor, extra) {
+  const relogio = relogioFalso();
+  let n = 0;
+  const avisos = [];
+  const fila = RAMAFilaCombate.criar(Object.assign({
+    combate: servidor.combate,
+    relogio,
+    gerarId: () => "lote-teste-" + String(++n).padStart(4, "0"),
+    enviar: (rev, opId, ops) => servidor.enviar(rev, opId, ops),
+    buscar: () => Promise.resolve({ ok: true, dados: JSON.parse(JSON.stringify(servidor.combate)) }),
+    aoAviso: (texto) => avisos.push(texto),
+  }, extra || {}));
+  return { fila, relogio, avisos };
+}
+
+t.grupo("Fila do combate — iniciativas digitadas em ritmo normal");
+
+{
+  const servidor = servidorDeCombate(combateDeTeste());
+  const { fila, relogio } = filaDeTeste(servidor);
+
+  fila.definirIniciativa("a", 12);
+  await relogio.avancar(800);
+  fila.definirIniciativa("b", 17);
+  await relogio.avancar(900);
+  fila.definirIniciativa("c", 4);
+  await relogio.avancar(700);
+  fila.definirIniciativa("a", 14);
+
+  t.iguais("a tela mostra os números na hora", fila.vista().participantes.map((p) => p.ordem), [14, 17, 4]);
+  t.igual("nada sobe enquanto a pessoa ainda está digitando", servidor.pedidos.length, 0);
+  t.ok("  e a fila diz que há alterações pendentes, com hora marcada", fila.estado().iniciativasPendentes === 3 && fila.estado().programadoPara > relogio.agora());
+
+  await relogio.avancar(4900);
+  t.igual("ainda nada 4,9 s depois da última", servidor.pedidos.length, 0);
+  await relogio.avancar(200);
+  t.igual("5 s sem nova iniciativa: sobe UM lote", servidor.pedidos.length, 1);
+  t.iguais("  com o último valor de cada participante", servidor.pedidos[0].ops.map((o) => o.participanteId + "=" + o.valor).sort(), ["a=14", "b=17", "c=4"]);
+  t.igual("  na revisão conhecida", servidor.pedidos[0].rev, 7);
+  t.igual("e a fila adota a revisão confirmada", fila.estado().rev, 8);
+  t.ok("  sem pendências", !fila.temPendencias());
+  t.igual("  e os recursos do personagem continuam na vista", fila.vista().participantes[0].recursos[0].atual, 5);
+
+  fila.definirIniciativa("b", 17);
+  t.ok("digitar o valor que já está confirmado não cria pendência", !fila.temPendencias());
+}
+
+{
+  const servidor = servidorDeCombate(combateDeTeste());
+  const { fila, relogio } = filaDeTeste(servidor);
+  fila.definirIniciativa("a", 30);
+  fila.salvarAgora();
+  await esvaziar();
+  t.igual("\"Salvar agora\" não espera os 5 s", servidor.pedidos.length, 1);
+}
+
+t.grupo("Fila do combate — edições durante o envio viram o próximo lote");
+
+{
+  const servidor = servidorDeCombate(combateDeTeste());
+  servidor.comportamento = () => "segurar";
+  const { fila, relogio } = filaDeTeste(servidor);
+
+  fila.definirIniciativa("a", 11);
+  await relogio.avancar(5000);
+  t.igual("primeiro lote no ar", servidor.pedidos.length, 1);
+
+  fila.definirIniciativa("a", 21);
+  fila.definirIniciativa("b", 22);
+  await relogio.avancar(6000);
+  t.igual("com um lote no ar, nenhum outro sai (nunca duas gravações com a mesma revisão)", servidor.pedidos.length, 1);
+  t.iguais("  mas a tela já mostra as edições novas", fila.vista().participantes.slice(0, 2).map((p) => p.ordem), [21, 22]);
+
+  servidor.comportamento = null;
+  servidor.soltar();
+  await esvaziar();
+  t.igual("a resposta chega e o próximo lote sai", servidor.pedidos.length, 2);
+  t.igual("  com a revisão que a resposta trouxe", servidor.pedidos[1].rev, 8);
+  t.iguais("  levando só o que foi editado depois", servidor.pedidos[1].ops.map((o) => o.participanteId + "=" + o.valor).sort(), ["a=21", "b=22"]);
+  t.iguais("no fim, o servidor tem tudo", servidor.combate.participantes.map((p) => p.ordem), [21, 22, 3]);
+  t.igual("  e a vista também", fila.vista().participantes[0].ordem, 21);
+}
+
+t.grupo("Fila do combate — prazo, rede e repetição segura");
+
+{
+  const servidor = servidorDeCombate(combateDeTeste());
+  let vezes = 0;
+  servidor.comportamento = () => (++vezes === 1 ? "prazo_aplicado" : "normal");
+  const { fila, relogio } = filaDeTeste(servidor);
+
+  fila.enfileirar({ tipo: "turno", direcao: "proximo" });
+  await relogio.avancar(0);
+  t.igual("o lote do turno saiu e a resposta se perdeu (mas o servidor aplicou)", servidor.combate.turno.ativoId, "b");
+  t.ok("  a fila guarda o lote e mostra o erro de rede", fila.estado().enviando && fila.estado().erro.tipo === "rede");
+  await relogio.avancar(3000);
+  t.igual("a repetição leva o MESMO opId", servidor.pedidos[1].opId, servidor.pedidos[0].opId);
+  t.igual("  e a MESMA revisão", servidor.pedidos[1].rev, servidor.pedidos[0].rev);
+  t.igual("o servidor reconhece e o turno NÃO anda duas vezes", servidor.combate.turno.ativoId, "b");
+  t.ok("  e a fila termina limpa", !fila.temPendencias() && fila.estado().erro === null && fila.vista().turno.ativoId === "b");
+}
+
+{
+  const servidor = servidorDeCombate(combateDeTeste());
+  servidor.comportamento = () => "sem_conexao";
+  const { fila, relogio } = filaDeTeste(servidor);
+
+  fila.definirIniciativa("c", 9);
+  await relogio.avancar(5000);
+  await relogio.avancar(3000);
+  fila.definirIniciativa("b", 1);
+  t.ok("sem conexão: as alterações ficam guardadas", fila.temPendencias() && fila.vista().participantes[2].ordem === 9 && fila.vista().participantes[1].ordem === 1);
+  servidor.comportamento = null;
+  fila.tentarAgora();
+  await esvaziar();
+  await relogio.avancar(6000);
+  t.iguais("voltando a conexão, tudo sobe, sem repetir o que já entrou", servidor.combate.participantes.map((p) => p.ordem), [10, 1, 9]);
+  t.ok("  e a fila fica limpa", !fila.temPendencias());
+}
+
+t.grupo("Fila do combate — conflito real com outra aba ou outro mestre");
+
+{
+  const servidor = servidorDeCombate(combateDeTeste());
+  const { fila, relogio } = filaDeTeste(servidor);
+
+  fila.definirIniciativa("a", 25);
+  servidor.outraPessoa([{ tipo: "iniciativa", participanteId: "c", valor: 40 }]);
+  await relogio.avancar(5000);
+  await esvaziar();
+  t.igual("a alteração independente (outro participante) é reaplicada sozinha", servidor.combate.participantes.find((p) => p.id === "a").ordem, 25);
+  t.igual("  sem desfazer a da outra pessoa", servidor.combate.participantes.find((p) => p.id === "c").ordem, 40);
+  t.ok("  e sem perguntar nada", !fila.temPendencias());
+}
+
+for (const escolha of ["minha", "deles"]) {
+  const servidor = servidorDeCombate(combateDeTeste());
+  let perguntado = null;
+  const { fila, relogio } = filaDeTeste(servidor, {
+    aoConflito: (lista) => { perguntado = lista; return Promise.resolve({ [lista[0].chave]: escolha }); },
+  });
+
+  fila.definirIniciativa("a", 15);
+  servidor.outraPessoa([{ tipo: "iniciativa", participanteId: "a", valor: 12 }]);
+  await relogio.avancar(5000);
+  await esvaziar();
+  t.ok(`mesmo campo mudado pelos dois: a pessoa decide (${escolha})`, perguntado && perguntado.length === 1 &&
+    perguntado[0].minha === 15 && perguntado[0].deles === 12 && perguntado[0].antes === 10);
+  t.igual(`  escolhendo "${escolha}", o servidor fica com ${escolha === "minha" ? 15 : 12}`,
+    servidor.combate.participantes.find((p) => p.id === "a").ordem, escolha === "minha" ? 15 : 12);
+}
+
+{
+  const servidor = servidorDeCombate(combateDeTeste());
+  let perguntado = false;
+  const { fila, relogio } = filaDeTeste(servidor, { aoConflito: () => { perguntado = true; return Promise.resolve({}); } });
+
+  fila.definirIniciativa("b", 30);
+  servidor.outraPessoa([{ tipo: "iniciativa", participanteId: "b", valor: 2 }]);
+  const remoto = JSON.parse(JSON.stringify(servidor.combate));
+  fila.receberRemoto(remoto);
+  await esvaziar();
+  t.ok("a sincronização traz a mudança no mesmo campo ANTES do envio: pergunta em vez de sobrescrever", perguntado);
+  await relogio.avancar(6000);
+  t.igual("  sem escolha, fica o valor da outra pessoa", servidor.combate.participantes.find((p) => p.id === "b").ordem, 2);
+
+  const velho = JSON.parse(JSON.stringify(remoto));
+  velho.rev = 1;
+  velho.participantes[0].ordem = -50;
+  fila.receberRemoto(velho);
+  t.igual("resposta atrasada (revisão menor) não apaga valor novo", fila.vista().participantes[0].ordem, 10);
+}
+
+{
+  const servidor = servidorDeCombate(combateDeTeste());
+  servidor.comportamento = () => "segurar";
+  const { fila, relogio, avisos } = filaDeTeste(servidor);
+
+  fila.enfileirar({ tipo: "turno", direcao: "proximo" });
+  await relogio.avancar(0);
+  t.igual("o clique no turno aparece na tela antes da resposta", fila.vista().turno.ativoId, "b");
+  servidor.outraPessoa([{ tipo: "turno", direcao: "proximo" }]);
+  servidor.comportamento = null;
+  servidor.soltar();
+  await esvaziar();
+  t.igual("outro mestre avançou antes: o avanço desta aba NÃO é reaplicado (não pula ninguém)", servidor.combate.turno.ativoId, "b");
+  t.ok("  e a pessoa é avisada", avisos.some((a) => /turno mudou/i.test(a)));
+}
+
+t.grupo("Fila do combate — operações pontuais");
+
+{
+  const servidor = servidorDeCombate(Object.assign(combateDeTeste(), { estado: "preparando", turno: { rodada: 0, ativoId: null } }));
+  const { fila, relogio } = filaDeTeste(servidor);
+
+  const iniciou = fila.enfileirar({ tipo: "estado", valor: "ativo" });
+  const avancou = fila.enfileirar({ tipo: "turno", direcao: "proximo" });
+  await relogio.avancar(0);
+  t.igual("iniciar e avançar em seguida saem em ordem, num lote", servidor.pedidos[0].ops.map((o) => o.tipo).join(","), "estado,turno");
+  t.ok("  e as duas promessas confirmam", (await iniciou).ok && (await avancou).ok);
+  t.iguais("  rodada 1, segundo da ordem", servidor.combate.turno, { rodada: 1, ativoId: "b" });
+
+  fila.definirStatusCriatura("c", "vida", 7);
+  fila.enfileirar({ tipo: "remover", participanteId: "c" });
+  await relogio.avancar(0);
+  t.ok("tirar um participante descarta o que estava pendente dele", !servidor.pedidos[1].ops.some((o) => o.tipo === "criatura_status"));
+  t.ok("  e ele sai", !servidor.combate.participantes.some((p) => p.id === "c"));
+
+  fila.definirStatusCriatura("b", "vida", 999);
+  await relogio.avancar(1300);
+  t.igual("status de criatura sobe em ~1,2 s e respeita o máximo", servidor.combate.participantes.find((p) => p.id === "b").snapshot.status[0].atual, 20);
+}
+
+t.grupo("Sincronia — ritmo, espera e mudanças");
+
+{
+  const S = RAMASincronia;
+  t.igual("sem falha, a espera é o intervalo (sem variação)", S.proximaEspera(8000, 0, 0.5), 8000);
+  t.igual("cada falha dobra", S.proximaEspera(8000, 2, 0.5), 32000);
+  t.igual("até 1 minuto", S.proximaEspera(8000, 5, 0.5), 60000);
+  t.ok("com variação de ±10%", S.proximaEspera(8000, 0, 0) === 7200 && S.proximaEspera(8000, 0, 1) === 8800);
+  t.iguais("diferenças: só as partes cujas marcas mudaram", S.diferencas({ a: "1", b: "2" }, { a: "1", b: "3", c: "4" }), ["b", "c"]);
+
+  const relogio = relogioFalso();
+  let marcas = { personagens: "p1", combates: "k1" };
+  let visivel = true;
+  let resposta = () => ({ ok: true, dados: { papel: "jogador", marcas } });
+  const mudancas = [];
+  let perdeu = null;
+  const s = S.criar({
+    consultar: () => Promise.resolve(resposta()),
+    marcas: { personagens: "p1", combates: "k1" },
+    papel: "jogador",
+    intervalo: () => 8000,
+    visivel: () => visivel,
+    aoMudar: (partes) => { mudancas.push(partes.join(",")); return Promise.resolve(); },
+    aoPerderAcesso: (r) => { perdeu = r; },
+    relogio,
+    aleatorio: 0.5,
+  });
+  s.iniciar();
+  await relogio.avancar(8000);
+  t.igual("pergunta no intervalo e, sem mudança, não busca nada", mudancas.length, 0);
+  marcas = { personagens: "p2", combates: "k1" };
+  await relogio.avancar(8000);
+  t.iguais("marca de personagens mudou: só personagens é avisada", mudancas, ["personagens"]);
+
+  let consultas = 0;
+  resposta = () => { consultas++; return { ok: false, erro: "sem_conexao" }; };
+  await relogio.avancar(8000);
+  await relogio.avancar(15000);
+  t.igual("falha: a próxima pergunta espera o dobro", consultas, 1);
+  await relogio.avancar(1000);
+  t.igual("  (16 s depois da falha)", consultas, 2);
+
+  visivel = false;
+  resposta = () => { consultas++; return { ok: true, dados: { papel: "jogador", marcas } }; };
+  await relogio.avancar(120000);
+  const antes = consultas;
+  await relogio.avancar(120000);
+  t.igual("página escondida não pergunta", consultas, antes);
+  visivel = true;
+  s.aoMudarVisibilidade();
+  await relogio.avancar(400);
+  t.igual("voltando à vista, pergunta logo", consultas, antes + 1);
+
+  resposta = () => ({ ok: true, dados: { papel: "mestre", marcas } });
+  await relogio.avancar(9000);
+  t.ok("papel mudou: a mudança é avisada como \"papel\"", mudancas.includes("papel"));
+
+  resposta = () => ({ ok: false, erro: "nao_encontrado" });
+  await relogio.avancar(9000);
+  t.ok("perdeu o acesso: avisa e para de perguntar", perdeu && perdeu.erro === "nao_encontrado" && s.estado().parado);
 }
 
 /* =====================================================================

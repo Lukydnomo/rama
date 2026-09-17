@@ -205,6 +205,18 @@ var ABAS = {
     chave: 'id',
     leves: 8,
   },
+  CAMPANHA_CAPAS: {
+    /* A capa (banner) da campanha. Fora do dadosJson pelo mesmo motivo
+       da foto de personagem: é o campo mais pesado e o que menos muda.
+       Dentro do JSON da campanha, salvar a descrição reenviaria a
+       imagem inteira. As quatro primeiras colunas são leves — dá para
+       saber se existe capa, de que tamanho e de quando, sem ler a
+       imagem. */
+    nome: 'CAMPANHA_CAPAS',
+    colunas: ['campanhaId', 'atualizadoEm', 'largura', 'altura', 'imagem'],
+    chave: 'campanhaId',
+    leves: 4,
+  },
 };
 
 /* Limite prático de uma célula do Sheets é 50.000 caracteres. */

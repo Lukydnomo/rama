@@ -1975,6 +1975,463 @@ t.grupo("Campanha da ficha — só o dono troca, e coluna e ficha concordam");
 })();
 
 /* =====================================================================
+   v2.12 — CAPA, RECURSOS NOS CARTÕES, MARCAS E OPERAÇÕES DE COMBATE
+   ===================================================================== */
+
+const CAPA_PEQUENA = "data:image/webp;base64," + "QUFB".repeat(50);
+
+t.grupo("Capa da campanha — quem grava, quem lê");
+
+(() => {
+  preparar();
+  const mestra = novaConta("mestra");
+  const jogadora = novaConta("jogadora");
+  const estranha = novaConta("estranha");
+  const comoMestra = comoFn(mestra);
+  const comoJogadora = comoFn(jogadora);
+  const comoEstranha = comoFn(estranha);
+
+  const privada = comoMestra({ acao: "criar_campanha", dados: { nome: "Privada" } }).dados.id;
+  const publica = comoMestra({ acao: "criar_campanha", dados: { nome: "Pública", visibilidade: "publico" } }).dados.id;
+  comoMestra({ acao: "salvar_participantes", campanhaId: privada, membros: [{ userId: jogadora.id, papel: "jogador" }] });
+
+  t.iguais("campanha sem capa: ler_campanha diz que não existe", comoMestra({ acao: "ler_campanha", campanhaId: privada }).dados.capa, { existe: false });
+  t.igual("  e ler_capa_campanha devolve imagem vazia", comoJogadora({ acao: "ler_capa_campanha", campanhaId: privada }).dados.imagem, "");
+
+  const gravada = comoMestra({ acao: "salvar_capa_campanha", campanhaId: privada, imagem: CAPA_PEQUENA, largura: 1200, altura: 400 });
+  t.ok("a mestra grava a capa", gravada.ok && gravada.dados.existe === true);
+  const lida = comoJogadora({ acao: "ler_capa_campanha", campanhaId: privada });
+  t.igual("a jogadora da mesa lê a capa inteira, sem corte", lida.dados.imagem, CAPA_PEQUENA);
+  t.iguais("  com as medidas", [lida.dados.largura, lida.dados.altura], [1200, 400]);
+  t.ok("ler_campanha traz só a existência e as medidas, não a imagem",
+    (() => { const c = comoJogadora({ acao: "ler_campanha", campanhaId: privada }).dados.capa; return c.existe && !c.imagem && c.largura === 1200; })());
+
+  t.recusa("a jogadora NÃO grava a capa", comoJogadora({ acao: "salvar_capa_campanha", campanhaId: privada, imagem: CAPA_PEQUENA, largura: 10, altura: 10 }), "sem_permissao");
+  t.recusa("  nem remove", comoJogadora({ acao: "salvar_capa_campanha", campanhaId: privada, imagem: "" }), "sem_permissao");
+  t.recusa("quem está fora de campanha privada não lê a capa pelo id direto", comoEstranha({ acao: "ler_capa_campanha", campanhaId: privada }), "nao_encontrado");
+
+  comoMestra({ acao: "salvar_capa_campanha", campanhaId: publica, imagem: CAPA_PEQUENA, largura: 300, altura: 100 });
+  t.igual("a capa de campanha pública aparece para o espectador, como o nome", comoEstranha({ acao: "ler_capa_campanha", campanhaId: publica }).dados.imagem, CAPA_PEQUENA);
+  t.recusa("  mas o espectador não grava", comoEstranha({ acao: "salvar_capa_campanha", campanhaId: publica, imagem: "" }), "sem_permissao");
+
+  t.recusa("SVG é recusado (só imagem rasterizada)", comoMestra({ acao: "salvar_capa_campanha", campanhaId: privada,
+    imagem: "data:image/svg+xml;base64,PHN2Zz48L3N2Zz4=", largura: 10, altura: 10 }), "dados_invalidos");
+  t.recusa("texto que não é imagem é recusado", comoMestra({ acao: "salvar_capa_campanha", campanhaId: privada,
+    imagem: "javascript:alert(1)", largura: 10, altura: 10 }), "dados_invalidos");
+  t.recusa("imagem sem medidas é recusada", comoMestra({ acao: "salvar_capa_campanha", campanhaId: privada, imagem: CAPA_PEQUENA }), "dados_invalidos");
+  const grande = "data:image/webp;base64," + "A".repeat(46000);
+  t.recusa("imagem maior que a célula é recusada — nunca aparada", comoMestra({ acao: "salvar_capa_campanha", campanhaId: privada,
+    imagem: grande, largura: 10, altura: 10 }), "dados_grandes");
+  t.igual("  e a capa anterior continua inteira", comoMestra({ acao: "ler_capa_campanha", campanhaId: privada }).dados.imagem, CAPA_PEQUENA);
+
+  const outra = "data:image/jpeg;base64," + "QkJC".repeat(40);
+  comoMestra({ acao: "salvar_capa_campanha", campanhaId: privada, imagem: outra, largura: 900, altura: 300 });
+  t.igual("substituir troca a imagem", comoJogadora({ acao: "ler_capa_campanha", campanhaId: privada }).dados.imagem, outra);
+  t.igual("  sem criar uma segunda linha", ambiente.planilha.getSheetByName("CAMPANHA_CAPAS").getLastRow(), 3);
+
+  t.ok("remover apaga a capa", comoMestra({ acao: "salvar_capa_campanha", campanhaId: privada, imagem: "" }).ok);
+  t.iguais("  e ler_campanha volta a dizer que não existe", comoJogadora({ acao: "ler_campanha", campanhaId: privada }).dados.capa, { existe: false });
+
+  comoMestra({ acao: "salvar_capa_campanha", campanhaId: privada, imagem: CAPA_PEQUENA, largura: 30, altura: 10 });
+  comoMestra({ acao: "excluir_campanha", campanhaId: privada });
+  t.igual("excluir a campanha leva a capa junto", ambiente.planilha.getSheetByName("CAMPANHA_CAPAS").getLastRow(), 2);
+})();
+
+t.grupo("Cartões da mesa — o jogador vê os recursos, edita só os seus, e a ocultação");
+
+(() => {
+  preparar();
+  const mestra = novaConta("mestra");
+  const ana = novaConta("ana");
+  const beto = novaConta("beto");
+  const comoMestra = comoFn(mestra);
+  const comoAna = comoFn(ana);
+  const comoBeto = comoFn(beto);
+
+  const mesa = comoMestra({ acao: "criar_campanha", dados: { nome: "Mesa" } }).dados.id;
+  comoMestra({ acao: "salvar_participantes", campanhaId: mesa,
+    membros: [{ userId: ana.id, papel: "jogador" }, { userId: beto.id, papel: "jogador" }] });
+
+  const fichaOrdem = (nome, resumo) => ({
+    nome, tipoFicha: "ordem", schemaVersion: 6,
+    ordem: {
+      classe: "ocultista", origem: "academico", trilha: "", nex: 20,
+      atributos: { agi: 1, for: 1, int: 3, pre: 2, vig: 1 },
+      escolhas: [{ id: "segredo-do-build", etapa: "d4.atributo", tipo: "atributo", valor: "int" }],
+      recursos: { pv: 9, pe: null, san: null },
+    },
+    inventario: { itens: [{ id: "item-secreto", tipo: "item", nome: "Diário proibido", descricao: "privado" }] },
+    resumoRecursos: resumo,
+  });
+
+  const anaOrdem = comoAna({ acao: "criar_personagem", dados: fichaOrdem("Ana de Ordem", { pv: 20, pe: 8, san: 16 }) }).dados.id;
+  const anaUniversal = comoAna({ acao: "criar_personagem", dados: fichaDeTeste("Ana Universal") }).dados.id;
+  const betoOrdem = comoBeto({ acao: "criar_personagem", dados: fichaOrdem("Beto de Ordem", null) }).dados.id;
+  [anaOrdem, anaUniversal].forEach((id) => comoAna({ acao: "vincular_personagem", campanhaId: mesa, personagemId: id }));
+  comoBeto({ acao: "vincular_personagem", campanhaId: mesa, personagemId: betoOrdem });
+
+  const listaDo = (como) => comoFn(como)({ acao: "listar_personagens_campanha", campanhaId: mesa }).dados;
+  const cartao = (lista, id) => lista.find((p) => p.id === id);
+
+  let doBeto = listaDo(beto);
+  let alheio = cartao(doBeto, anaOrdem);
+  t.iguais("o jogador vê os recursos atuais e máximos do personagem de Ordem alheio",
+    alheio.recursos, [{ chave: "pv", rotulo: "PV", atual: 9, maximo: 20 }, { chave: "pe", rotulo: "PE", atual: 8, maximo: 8 }, { chave: "san", rotulo: "SAN", atual: 16, maximo: 16 }]);
+  t.ok("  sem o bloco de cálculo (escolhas), sem inventário e sem o resumo cru",
+    !alheio.ordem.escolhas && !alheio.inventario && alheio.resumoRecursos === undefined && !JSON.stringify(alheio).includes("segredo-do-build") && !JSON.stringify(alheio).includes("Diário proibido"));
+  t.ok("  e sem permissão de editar nem de abrir a ficha", alheio.podeEditarRecursos === false && alheio.podeAbrirFicha === false);
+  t.ok("o jogador vê os status do personagem universal alheio", Array.isArray(cartao(doBeto, anaUniversal).status) && cartao(doBeto, anaUniversal).status.length > 0);
+  t.ok("ficha de Ordem sem resumo aparece como pendente, sem inventar número",
+    (() => { const c = cartao(listaDo(ana), betoOrdem); return c.recursosPendentes === true && c.recursos.length === 0; })());
+
+  const daAna = listaDo(ana);
+  t.ok("a dona vê e edita TODOS os próprios personagens",
+    [anaOrdem, anaUniversal].every((id) => cartao(daAna, id).podeEditarRecursos && cartao(daAna, id).podeAbrirFicha && cartao(daAna, id).detalhado));
+  t.ok("  e recebe os dados de cálculo do próprio personagem de Ordem", !!cartao(daAna, anaOrdem).ordem.escolhas);
+
+  t.recusa("o jogador NÃO ajusta recurso de personagem alheio pela API",
+    comoBeto({ acao: "ajustar_personagem", personagemId: anaOrdem, campanhaId: mesa, alvo: "recurso", itemId: "pv", campo: "atual", valor: 1 }), "nao_encontrado");
+  t.recusa("  nem status universal alheio", comoBeto({ acao: "ajustar_personagem", personagemId: anaUniversal, campanhaId: mesa,
+    alvo: "status", itemId: "st-pv", campo: "atual", valor: 1 }), "nao_encontrado");
+  t.recusa("  nem abre a ficha alheia pelo id", comoBeto({ acao: "ler_personagem", personagemId: anaOrdem }), "nao_encontrado");
+  t.ok("a dona ajusta o próprio recurso", comoAna({ acao: "ajustar_personagem", personagemId: anaOrdem, campanhaId: mesa,
+    alvo: "recurso", itemId: "pv", campo: "atual", valor: 5 }).ok);
+  t.igual("  e o outro jogador vê o valor novo", cartao(listaDo(beto), anaOrdem).recursos[0].atual, 5);
+
+  t.recusa("o jogador NÃO liga a ocultação", comoBeto({ acao: "salvar_campanha", campanhaId: mesa, dados: { ocultarStatusJogadores: true } }), "sem_permissao");
+  const ligou = comoMestra({ acao: "salvar_campanha", campanhaId: mesa, dados: { ocultarStatusJogadores: true } });
+  t.ok("a mestra liga \"Esconder status dos jogadores\"", ligou.ok && ligou.dados.ocultarStatusJogadores === true);
+  t.igual("  e a configuração fica guardada", comoAna({ acao: "ler_campanha", campanhaId: mesa }).dados.ocultarStatusJogadores, true);
+
+  doBeto = listaDo(beto);
+  alheio = cartao(doBeto, anaOrdem);
+  t.ok("com a ocultação, os recursos alheios NEM chegam (Ordem)", alheio.recursos === undefined && alheio.recursosVisiveis === false &&
+    !JSON.stringify(alheio).includes("\"maximo\""));
+  t.ok("  nem os status (universal)", cartao(doBeto, anaUniversal).status === undefined);
+  t.ok("  mas a identificação continua", alheio.nome === "Ana de Ordem" && !!alheio.ordem.classe);
+  t.ok("  e o jogador continua vendo os próprios", Array.isArray(cartao(doBeto, betoOrdem).recursos) || cartao(doBeto, betoOrdem).detalhado);
+  t.ok("a mestra continua vendo tudo", listaDo(mestra).every((p) => p.detalhado && p.recursosVisiveis));
+
+  /* Combate: a mesma regra na lista de participantes. */
+  const combate = comoMestra({ acao: "salvar_combate", campanhaId: mesa,
+    dados: { nome: "Emboscada", estado: "preparando", visiveis: [ana.id, beto.id], participantes: [] } }).dados.id;
+  let rev = 1;
+  const r1 = comoMestra({ acao: "atualizar_combate", campanhaId: mesa, combateId: combate, rev, opId: "lote-cartoes-01",
+    ops: [{ tipo: "adicionar", participantes: [
+      { id: "p-ana", tipo: "personagem", personagemId: anaOrdem, ordem: 10 },
+      { id: "p-beto", tipo: "personagem", personagemId: betoOrdem, ordem: 5 },
+      { id: "p-mon", tipo: "criatura", nome: "Monstro", ordem: 1, snapshot: { status: [{ id: "vida", nome: "Vida", atual: 30, maximo: 30 }] } },
+    ] }] });
+  rev = r1.rev;
+  const vistaDoBeto = () => comoBeto({ acao: "listar_combates", campanhaId: mesa }).dados[0];
+  let lista = vistaDoBeto().participantes;
+  t.ok("combate com ocultação: o jogador não recebe os recursos do personagem alheio", lista.find((p) => p.id === "p-ana").recursos === undefined);
+  t.ok("  nem o snapshot da criatura", !JSON.stringify(lista.find((p) => p.id === "p-mon")).includes("snapshot"));
+  t.ok("  a mestra recebe os recursos do personagem na lista", Array.isArray(comoMestra({ acao: "listar_combates", campanhaId: mesa }).dados[0]
+    .participantes.find((p) => p.id === "p-ana").recursos));
+
+  comoMestra({ acao: "salvar_campanha", campanhaId: mesa, dados: { ocultarStatusJogadores: false } });
+  lista = vistaDoBeto().participantes;
+  t.igual("sem ocultação, o jogador vê os recursos do personagem alheio no combate", lista.find((p) => p.id === "p-ana").recursos[0].atual, 5);
+  t.ok("  e a criatura continua sem ficha para ele", !JSON.stringify(lista.find((p) => p.id === "p-mon")).includes("Vida"));
+
+  /* Resumo gravado por quem pode editar. */
+  const revAna = cartao(listaDo(ana), anaOrdem).rev;
+  const a1 = comoAna({ acao: "atualizar_resumo_personagem", personagemId: anaOrdem, rev: revAna, resumo: { pv: 24, pe: 8, san: 16 } });
+  t.ok("a dona atualiza o resumo pelo painel", a1.ok && a1.dados.mudou === true);
+  t.igual("  sem subir a revisão da ficha", cartao(listaDo(ana), anaOrdem).rev, revAna);
+  t.igual("  e a mesa vê o máximo novo", cartao(listaDo(beto), anaOrdem).recursos[0].maximo, 24);
+  t.igual("repetir o mesmo resumo não grava", comoAna({ acao: "atualizar_resumo_personagem", personagemId: anaOrdem, rev: revAna, resumo: { pv: 24, pe: 8, san: 16 } }).dados.mudou, false);
+  t.recusa("resumo calculado sobre revisão velha é recusado", comoMestra({ acao: "atualizar_resumo_personagem", personagemId: anaOrdem, rev: revAna - 1, resumo: { pv: 1, pe: 1, san: 1 } }), "conflito");
+  t.recusa("outro jogador NÃO grava resumo de personagem alheio", comoBeto({ acao: "atualizar_resumo_personagem", personagemId: anaOrdem, rev: revAna, resumo: { pv: 1, pe: 1, san: 1 } }), "nao_encontrado");
+  t.recusa("resumo com texto é recusado", comoAna({ acao: "atualizar_resumo_personagem", personagemId: anaOrdem, rev: revAna, resumo: { pv: "24", pe: 8, san: 16 } }), "dados_invalidos");
+  t.recusa("ficha universal não tem resumo", comoAna({ acao: "atualizar_resumo_personagem", personagemId: anaUniversal,
+    rev: cartao(listaDo(ana), anaUniversal).rev, resumo: { pv: 1, pe: 1, san: null } }), "dados_invalidos");
+  const mestraGrava = comoMestra({ acao: "atualizar_resumo_personagem", personagemId: betoOrdem, rev: cartao(listaDo(mestra), betoOrdem).rev, resumo: { pv: 15, pe: 6, san: null } });
+  t.ok("a mestra grava o resumo de uma ficha da mesa (sem Sanidade)", mestraGrava.ok);
+  t.iguais("  e SAN nula some dos recursos da mesa", cartao(listaDo(ana), betoOrdem).recursos.map((r) => r.chave), ["pv", "pe"]);
+
+  /* Gravar a ficha sem resumo mantém o resumo guardado. */
+  const lidaAna = comoAna({ acao: "ler_personagem", personagemId: anaOrdem });
+  const semResumo = Object.assign({}, lidaAna.dados); delete semResumo.resumoRecursos;
+  comoAna({ acao: "salvar_personagem", personagemId: anaOrdem, rev: lidaAna.rev, dados: semResumo });
+  t.igual("salvar a ficha sem resumo (site antigo) mantém o resumo que a mesa via", cartao(listaDo(beto), anaOrdem).recursos[0].maximo, 24);
+  const lidaDeNovo = comoAna({ acao: "ler_personagem", personagemId: anaOrdem });
+  comoAna({ acao: "salvar_personagem", personagemId: anaOrdem, rev: lidaDeNovo.rev, dados: Object.assign({}, lidaDeNovo.dados, { resumoRecursos: { pv: 30, pe: 9, san: 18 } }) });
+  t.igual("salvar com resumo novo troca o máximo da mesa", cartao(listaDo(beto), anaOrdem).recursos[0].maximo, 30);
+  const lixo = comoAna({ acao: "ler_personagem", personagemId: anaOrdem });
+  comoAna({ acao: "salvar_personagem", personagemId: anaOrdem, rev: lixo.rev, dados: Object.assign({}, lixo.dados, { resumoRecursos: { pv: "<b>", pe: {}, san: 1 } }) });
+  t.igual("resumo malformado na gravação é descartado (fica o anterior)", cartao(listaDo(beto), anaOrdem).recursos[0].maximo, 30);
+  const universal = comoAna({ acao: "ler_personagem", personagemId: anaUniversal });
+  comoAna({ acao: "salvar_personagem", personagemId: anaUniversal, rev: universal.rev, dados: Object.assign({}, universal.dados, { resumoRecursos: { pv: 1, pe: 1, san: 1 } }) });
+  t.igual("ficha universal não guarda resumo", comoAna({ acao: "ler_personagem", personagemId: anaUniversal }).dados.resumoRecursos, undefined);
+
+  const estranha = novaConta("fora");
+  t.recusa("quem não é da mesa não lista os personagens", comoFn(estranha)({ acao: "listar_personagens_campanha", campanhaId: mesa }), "nao_encontrado");
+})();
+
+t.grupo("Marcas da mesa — sincronização leve");
+
+(() => {
+  preparar();
+  const mestra = novaConta("mestra");
+  const ana = novaConta("ana");
+  const fora = novaConta("fora");
+  const comoMestra = comoFn(mestra);
+  const comoAna = comoFn(ana);
+
+  const mesa = comoMestra({ acao: "criar_campanha", dados: { nome: "Mesa" } }).dados.id;
+  const publica = comoMestra({ acao: "criar_campanha", dados: { nome: "Aberta", visibilidade: "publico" } }).dados.id;
+  comoMestra({ acao: "salvar_participantes", campanhaId: mesa, membros: [{ userId: ana.id, papel: "jogador" }] });
+  const p = comoAna({ acao: "criar_personagem", dados: fichaDeTeste("Ana") }).dados.id;
+  comoAna({ acao: "vincular_personagem", campanhaId: mesa, personagemId: p });
+
+  const marcas = (como) => comoFn(como)({ acao: "sincronizar_campanha", campanhaId: mesa });
+  const m0 = marcas(ana);
+  t.ok("a jogadora recebe as marcas da mesa", m0.ok && m0.dados.papel === "jogador" && Object.keys(m0.dados.marcas).length === 6);
+  t.iguais("ler_campanha traz as mesmas marcas como ponto de partida", comoAna({ acao: "ler_campanha", campanhaId: mesa }).dados.marcas, m0.dados.marcas);
+
+  const contador = ambiente.contador;
+  contador.zerar();
+  marcas(ana);
+  t.igual("perguntar as marcas de novo não lê nenhuma aba da planilha", contador.getValues, 0);
+
+  comoMestra({ acao: "ajustar_personagem", personagemId: p, campanhaId: mesa, alvo: "status", itemId: "st-pv", campo: "atual", valor: 3 });
+  const m1 = marcas(ana).dados.marcas;
+  t.ok("ajustar um recurso muda a marca de personagens e de combates", m1.personagens !== m0.dados.marcas.personagens && m1.combates !== m0.dados.marcas.combates);
+  t.ok("  e não muda as outras partes", m1.campanha === m0.dados.marcas.campanha && m1.rolagens === m0.dados.marcas.rolagens && m1.documentos === m0.dados.marcas.documentos);
+
+  const combate = comoMestra({ acao: "salvar_combate", campanhaId: mesa, dados: { nome: "Luta", estado: "preparando", visiveis: [ana.id], participantes: [] } }).dados.id;
+  const m2 = marcas(ana).dados.marcas;
+  t.ok("criar combate muda só a marca de combates", m2.combates !== m1.combates && m2.personagens === m1.personagens);
+  comoMestra({ acao: "atualizar_combate", campanhaId: mesa, combateId: combate, rev: 1, opId: "lote-marcas-1", ops: [{ tipo: "renomear", nome: "Luta 2" }] });
+  t.ok("uma operação de combate muda a marca de combates", marcas(ana).dados.marcas.combates !== m2.combates);
+  const m3 = marcas(ana).dados.marcas;
+  comoMestra({ acao: "salvar_campanha", campanhaId: mesa, dados: { ocultarStatusJogadores: true } });
+  const m4 = marcas(ana).dados.marcas;
+  t.ok("ligar a ocultação muda campanha, personagens e combates", m4.campanha !== m3.campanha && m4.personagens !== m3.personagens && m4.combates !== m3.combates);
+  comoAna({ acao: "registrar_rolagem", campanhaId: mesa, rolagemId: "rol-marca-0001", tipo: "livre", nome: "x", dados: { total: 1 } });
+  t.ok("registrar rolagem muda a marca de rolagens", marcas(ana).dados.marcas.rolagens !== m4.rolagens);
+  const ficha = comoAna({ acao: "ler_personagem", personagemId: p });
+  const m5 = marcas(ana).dados.marcas;
+  comoAna({ acao: "salvar_personagem", personagemId: p, rev: ficha.rev, dados: Object.assign({}, ficha.dados, { nome: "Ana Renomeada" }) });
+  t.ok("salvar a ficha pela página da ficha também avisa a mesa", marcas(ana).dados.marcas.personagens !== m5.personagens);
+
+  /* A aba Documentos se atualiza pela marca e reaproveita o cartão de um
+     documento cuja revisão e data não mudaram. */
+  const doc = comoMestra({ acao: "salvar_documento", campanhaId: mesa, dados: { nome: "Mapa", visiveis: [ana.id] } }).dados.id;
+  const m6 = marcas(ana).dados.marcas;
+  const antesDaImagem = comoAna({ acao: "listar_documentos", campanhaId: mesa }).dados[0];
+  const relogio = Date.now();
+  while (Date.now() - relogio < 5) { /* a data precisa andar ao menos um milissegundo */ }
+  comoMestra({ acao: "salvar_imagem_documento", campanhaId: mesa, documentoId: doc, imagem: "data:image/webp;base64,AAAA" });
+  const depoisDaImagem = comoAna({ acao: "listar_documentos", campanhaId: mesa }).dados[0];
+  t.ok("trocar a imagem de um documento muda a marca de documentos", marcas(ana).dados.marcas.documentos !== m6.documentos);
+  t.ok("  e a data do documento, sem mexer na revisão",
+    depoisDaImagem.atualizadoEm !== antesDaImagem.atualizadoEm && depoisDaImagem.rev === antesDaImagem.rev);
+  const m7 = marcas(ana).dados.marcas;
+  comoMestra({ acao: "salvar_documento", campanhaId: mesa, rev: depoisDaImagem.rev, dados: { id: doc, nome: "Mapa", visiveis: [] } });
+  t.ok("tirar a permissão de um documento muda a marca de documentos", marcas(ana).dados.marcas.documentos !== m7.documentos);
+  t.igual("  e a busca seguinte da jogadora já não traz o documento", comoAna({ acao: "listar_documentos", campanhaId: mesa }).dados.length, 0);
+
+  t.recusa("quem não é da campanha privada não recebe marcas", comoFn(fora)({ acao: "sincronizar_campanha", campanhaId: mesa }), "nao_encontrado");
+  const esp = comoFn(fora)({ acao: "sincronizar_campanha", campanhaId: publica });
+  t.ok("o espectador de campanha pública recebe só as marcas de fora", esp.ok && esp.dados.papel === "espectador" && Object.keys(esp.dados.marcas).sort().join() === "campanha,membros");
+
+  marcas(ana);
+  comoMestra({ acao: "salvar_participantes", campanhaId: mesa, membros: [] });
+  t.recusa("tirada da campanha, a jogadora deixa de receber marcas na próxima pergunta", marcas(ana), "nao_encontrado");
+
+  ambiente.cache.clear();
+  const reserva = marcas(mestra).dados.marcas;
+  t.ok("sem cache, as marcas caem na reserva por minuto — nada quebra", /^r\d+$/.test(reserva.personagens) && /^r\d+$/.test(reserva.combates));
+})();
+
+t.grupo("Combate — operações em lote, turnos e rodadas, repetição segura");
+
+(() => {
+  preparar();
+  const mestra = novaConta("mestra");
+  const ana = novaConta("ana");
+  const comoMestra = comoFn(mestra);
+  const comoAna = comoFn(ana);
+
+  const mesa = comoMestra({ acao: "criar_campanha", dados: { nome: "Mesa" } }).dados.id;
+  comoMestra({ acao: "salvar_participantes", campanhaId: mesa, membros: [{ userId: ana.id, papel: "jogador" }] });
+  const pAna = comoAna({ acao: "criar_personagem", dados: fichaDeTeste("Ana") }).dados.id;
+  comoAna({ acao: "vincular_personagem", campanhaId: mesa, personagemId: pAna });
+
+  const id = comoMestra({ acao: "salvar_combate", campanhaId: mesa, dados: { nome: "Ponte", estado: "preparando", visiveis: [ana.id], participantes: [] } }).dados.id;
+  let rev = 1;
+  let seq = 0;
+  const operar = (ops, opcoes) => {
+    const o = opcoes || {};
+    const r = comoMestra({ acao: "atualizar_combate", campanhaId: mesa, combateId: id,
+      rev: o.rev !== undefined ? o.rev : rev, opId: o.opId || ("lote-teste-" + String(++seq).padStart(4, "0")), ops });
+    if (r.ok) rev = r.rev;
+    return r;
+  };
+  const combate = () => comoMestra({ acao: "listar_combates", campanhaId: mesa }).dados.find((c) => c.id === id);
+  const ordem = (c) => c.participantes.slice().map((p, i) => ({ p, i }))
+    .sort((a, b) => (b.p.ordem - a.p.ordem) || (a.i - b.i)).map((x) => x.p.id);
+
+  t.iguais("combate em preparação não tem turno", combate().turno, { rodada: 0, ativoId: null });
+
+  const comecar = operar([{ tipo: "estado", valor: "ativo" }]);
+  t.iguais("iniciar um combate vazio: rodada 1, ninguém com o turno", comecar.dados.turno, { rodada: 1, ativoId: null });
+
+  const monstro = (n, vida) => ({ tipo: "criatura", nome: "Existido #" + n, ordem: 0, origemId: "modelo-1",
+    snapshot: { nome: "Existido", status: [{ id: "vida", nome: "Vida", atual: vida, maximo: vida }] } });
+  const add = operar([{ tipo: "adicionar", participantes: [
+    Object.assign({ id: "c1" }, monstro(1, 20)),
+    Object.assign({ id: "c2" }, monstro(2, 20)),
+    { id: "pa", tipo: "personagem", personagemId: pAna, ordem: 0 },
+  ] }]);
+  t.igual("acrescentar num combate que não tinha ninguém passa o turno ao primeiro da ordem", add.dados.turno.ativoId, "c1");
+
+  const revAntes = rev;
+  const lote = operar([
+    { tipo: "iniciativa", participanteId: "c1", valor: 12 },
+    { tipo: "iniciativa", participanteId: "pa", valor: 18 },
+    { tipo: "iniciativa", participanteId: "c2", valor: 12 },
+    { tipo: "iniciativa", participanteId: "c1", valor: 14 },
+  ]);
+  t.ok("várias iniciativas num lote só: uma revisão a mais", lote.ok && rev === revAntes + 1);
+  t.iguais("  o último valor de cada participante vale, e a ordem é estável", ordem(lote.dados), ["pa", "c1", "c2"]);
+  t.igual("  mudar a iniciativa NÃO passa o turno de ninguém", lote.dados.turno.ativoId, "c1");
+
+  const antesDaRepeticao = rev;
+  const opRepetido = "lote-proximo-turno-01";
+  const avancou = operar([{ tipo: "turno", direcao: "proximo" }], { opId: opRepetido });
+  t.igual("próximo turno: de c1 para c2", avancou.dados.turno.ativoId, "c2");
+  const repetido = operar([{ tipo: "turno", direcao: "proximo" }], { opId: opRepetido, rev: antesDaRepeticao });
+  t.ok("o mesmo lote repetido (resposta perdida) é reconhecido", repetido.ok && repetido.repetida === true);
+  t.igual("  e o turno NÃO anda duas vezes", combate().turno.ativoId, "c2");
+
+  t.recusa("lote montado sobre revisão velha é conflito", operar([{ tipo: "iniciativa", participanteId: "c2", valor: 1 }], { rev: rev - 1 }), "conflito");
+  t.ok("  e o conflito traz o estado atual para a tela decidir", (() => {
+    const r = operar([{ tipo: "iniciativa", participanteId: "c2", valor: 1 }], { rev: rev - 1 });
+    return r.dados && r.dados.id === id && r.dados.rev === rev;
+  })());
+
+  const fim = operar([{ tipo: "turno", direcao: "proximo" }]);
+  t.iguais("depois do último, volta ao primeiro e a rodada sobe", fim.dados.turno, { rodada: 2, ativoId: "pa" });
+  const volta = operar([{ tipo: "turno", direcao: "anterior" }]);
+  t.iguais("voltar do primeiro vai ao último da rodada anterior", volta.dados.turno, { rodada: 1, ativoId: "c2" });
+  operar([{ tipo: "turno", direcao: "anterior" }]);
+  operar([{ tipo: "turno", direcao: "anterior" }]);
+  const inicio = operar([{ tipo: "turno", direcao: "anterior" }]);
+  t.iguais("na rodada 1, do primeiro da ordem, não há para onde voltar", inicio.dados.turno, { rodada: 1, ativoId: "pa" });
+  t.ok("  e a resposta avisa", (inicio.avisos || []).some((a) => a.aviso === "inicio"));
+
+  operar([{ tipo: "turno", direcao: "proximo" }]);
+  const reordena = operar([{ tipo: "iniciativa", participanteId: "c1", valor: 30 }]);
+  t.igual("reordenar no meio da rodada mantém o turno com quem está", reordena.dados.turno.ativoId, "c1");
+  t.iguais("  mas muda quem vem depois", ordem(reordena.dados), ["c1", "pa", "c2"]);
+
+  const vida = operar([{ tipo: "criatura_status", participanteId: "c1", statusId: "vida", valor: 7 }]);
+  const c1 = vida.dados.participantes.find((p) => p.id === "c1");
+  const c2 = vida.dados.participantes.find((p) => p.id === "c2");
+  t.ok("a vida de uma criatura muda só nesta ocorrência", c1.snapshot.status[0].atual === 7 && c2.snapshot.status[0].atual === 20);
+  t.igual("  e respeita o máximo", operar([{ tipo: "criatura_status", participanteId: "c2", statusId: "vida", valor: 999 }])
+    .dados.participantes.find((p) => p.id === "c2").snapshot.status[0].atual, 20);
+
+  const tirarAtivo = operar([{ tipo: "remover", participanteId: "c1" }]);
+  t.igual("tirar quem tem o turno passa a vez a quem vinha depois", tirarAtivo.dados.turno.ativoId, "pa");
+  operar([{ tipo: "turno", direcao: "proximo" }]);
+  const rodadaAntes = combate().turno.rodada;
+  const tirarUltimo = operar([{ tipo: "remover", participanteId: "c2" }]);
+  t.iguais("tirar o último da ordem com o turno volta ao primeiro e sobe a rodada", tirarUltimo.dados.turno, { rodada: rodadaAntes + 1, ativoId: "pa" });
+  t.ok("tirar quem já saiu não é erro", operar([{ tipo: "remover", participanteId: "c2" }]).ok);
+
+  const sozinho = operar([{ tipo: "turno", direcao: "proximo" }]);
+  t.iguais("com um participante só, próximo turno só sobe a rodada", sozinho.dados.turno, { rodada: rodadaAntes + 2, ativoId: "pa" });
+
+  const revInvalido = rev;
+  t.recusa("lote com uma operação inválida é recusado inteiro", operar([
+    { tipo: "iniciativa", participanteId: "pa", valor: 3 },
+    { tipo: "iniciativa", participanteId: "nao-existe", valor: 3 },
+  ]), "dados_invalidos");
+  t.ok("  e nada dele foi aplicado", combate().rev === revInvalido && combate().participantes.find((p) => p.id === "pa").ordem === 18);
+  t.recusa("iniciativa em texto é recusada", operar([{ tipo: "iniciativa", participanteId: "pa", valor: "" }]), "dados_invalidos");
+  t.recusa("operação desconhecida é recusada", operar([{ tipo: "apagar_planilha" }]), "dados_invalidos");
+  t.recusa("opId fora do formato é recusado", operar([{ tipo: "renomear", nome: "x" }], { opId: "x" }), "dados_invalidos");
+
+  t.recusa("a jogadora NÃO opera o combate", comoAna({ acao: "atualizar_combate", campanhaId: mesa, combateId: id, rev, opId: "lote-da-ana-01",
+    ops: [{ tipo: "turno", direcao: "proximo" }] }), "sem_permissao");
+  const vistaAna = comoAna({ acao: "listar_combates", campanhaId: mesa }).dados.find((c) => c.id === id);
+  t.ok("a jogadora com acesso vê rodada e turno", vistaAna.turno.rodada === combate().turno.rodada && vistaAna.turno.ativoId === "pa");
+
+  const vis = operar([{ tipo: "visiveis", lista: [ana.id, "id-inventado"] }]);
+  t.iguais("quem vê: ids que não são da mesa são descartados", combate().visiveis, [ana.id]);
+  t.ok("  (a resposta do lote é a do mestre)", vis.ok);
+
+  const encerrou = operar([{ tipo: "estado", valor: "encerrado" }]);
+  t.ok("encerrar registra a rodada e tira o turno de todo mundo", encerrou.dados.turno.ativoId === null && encerrou.dados.turno.rodada === rodadaAntes + 2);
+  t.recusa("depois de encerrado, turno não anda", operar([{ tipo: "turno", direcao: "proximo" }]), "dados_invalidos");
+  t.recusa("e não volta a ficar em preparação", operar([{ tipo: "estado", valor: "preparando" }]), "dados_invalidos");
+
+  /* Compatibilidade: gravação completa (site antigo) mantém o turno. */
+  const id2 = comoMestra({ acao: "salvar_combate", campanhaId: mesa, dados: { nome: "Velho", estado: "preparando", visiveis: [], participantes: [] } }).dados.id;
+  const participantesVelhos = [
+    Object.assign({ id: "v1" }, monstro(1, 10), { ordem: 3 }),
+    Object.assign({ id: "v2" }, monstro(2, 10), { ordem: 9 }),
+  ];
+  comoMestra({ acao: "salvar_combate", campanhaId: mesa, rev: 1, dados: { id: id2, nome: "Velho", estado: "ativo", visiveis: [], participantes: participantesVelhos } });
+  let velho = comoMestra({ acao: "listar_combates", campanhaId: mesa }).dados.find((c) => c.id === id2);
+  t.iguais("combate que passa a ativo pela gravação completa começa na rodada 1 com o primeiro da ordem", velho.turno, { rodada: 1, ativoId: "v2" });
+  comoMestra({ acao: "atualizar_combate", campanhaId: mesa, combateId: id2, rev: velho.rev, opId: "lote-velho-0001", ops: [{ tipo: "turno", direcao: "proximo" }] });
+  velho = comoMestra({ acao: "listar_combates", campanhaId: mesa }).dados.find((c) => c.id === id2);
+  comoMestra({ acao: "salvar_combate", campanhaId: mesa, rev: velho.rev, dados: { id: id2, nome: "Velho renomeado", estado: "ativo", visiveis: [], participantes: participantesVelhos } });
+  t.iguais("a gravação completa de um site antigo NÃO apaga o turno", comoMestra({ acao: "listar_combates", campanhaId: mesa }).dados.find((c) => c.id === id2).turno, { rodada: 1, ativoId: "v1" });
+
+  /* Combate gravado antes desta versão: ativo e sem turno. */
+  const folha = ambiente.planilha.getSheetByName("CAMPANHA_COMBATES");
+  const cab = folha.getRange(1, 1, 1, folha.getLastColumn()).getValues()[0];
+  const linhaDoVelho = folha.getRange(2, 1, folha.getLastRow() - 1, folha.getLastColumn()).getValues().findIndex((l) => l[cab.indexOf("id")] === id2) + 2;
+  folha.getRange(linhaDoVelho, cab.indexOf("dadosJson") + 1, 1, 1).setValues([[JSON.stringify({ participantes: participantesVelhos })]]);
+  t.iguais("combate antigo em andamento sem turno guardado: rodada 1, primeiro da ordem", comoMestra({ acao: "listar_combates", campanhaId: mesa }).dados.find((c) => c.id === id2).turno, { rodada: 1, ativoId: "v2" });
+})();
+
+t.grupo("Turnos — as regras do navegador e as do servidor dão o mesmo resultado");
+
+await (async () => {
+  (0, eval)(await Deno.readTextFile(new URL("../js/combate-turnos.js", import.meta.url)));
+  const N = globalThis.RAMACombateTurnos;
+
+  /* Gerador determinístico: o mesmo conjunto de casos a cada execução. */
+  let semente = 20260916;
+  const aleatorio = () => { semente = (semente * 1103515245 + 12345) % 2147483648; return semente / 2147483648; };
+  const inteiro = (min, max) => min + Math.floor(aleatorio() * (max - min + 1));
+  const limpo = (tt) => ({ rodada: tt.rodada, ativoId: tt.ativoId, mudou: tt.mudou, inicio: tt.inicio });
+
+  let divergencias = 0;
+  let casos = 0;
+  for (let k = 0; k < 400; k++) {
+    const quantos = inteiro(0, 6);
+    const ps = Array.from({ length: quantos }, (_, i) => ({ id: "p" + i, ordem: inteiro(-2, 4) }));
+    const ids = ps.map((x) => x.id).concat([null, "sumiu"]);
+    const turno = { rodada: inteiro(-1, 5), ativoId: ids[inteiro(0, ids.length - 1)] };
+    const estado = ["preparando", "ativo", "encerrado"][inteiro(0, 2)];
+    const norm = turnoNormalizado(turno, ps, estado);
+
+    const pares = [
+      [JSON.stringify(ordemDeIniciativa(ps).map((x) => x.id)), JSON.stringify(N.ordem(ps).map((x) => x.id))],
+      [JSON.stringify(norm), JSON.stringify(N.normalizado(turno, ps, estado))],
+      [JSON.stringify(limpo(turnoSeguinte(norm, ps))), JSON.stringify(limpo(N.seguinte(norm, ps)))],
+      [JSON.stringify(limpo(turnoAnterior(norm, ps))), JSON.stringify(limpo(N.anterior(norm, ps)))],
+    ];
+    if (ps.length) {
+      const alvo = ids[inteiro(0, ps.length - 1)];
+      pares.push([JSON.stringify(turnoSemParticipante(norm, ps, alvo)), JSON.stringify(N.semParticipante(norm, ps, alvo))]);
+    }
+    pares.forEach(([a, b]) => { casos++; if (a !== b) divergencias++; });
+  }
+  t.igual("400 combates sorteados, " + "ordem, normalização, próximo, anterior e remoção: nenhuma divergência", divergencias, 0);
+  t.ok("  (e os casos foram mesmo comparados)", casos > 1800);
+})();
+
+/* =====================================================================
    FIM
    ===================================================================== */
 

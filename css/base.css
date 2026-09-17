@@ -49,6 +49,12 @@
 
 *, *::before, *::after { box-sizing: border-box; }
 
+/* `hidden` quer dizer escondido, sempre. Sem isto, qualquer classe que
+   dê `display` a um elemento (um botão é inline-flex, uma barra é flex)
+   vence o atributo e o elemento continua na tela — foi o que acontecia
+   com os botões de turno e a barra de pendências do combate. */
+[hidden] { display: none !important; }
+
 html {
   font-size: var(--texto-base);
   -webkit-text-size-adjust: 100%;

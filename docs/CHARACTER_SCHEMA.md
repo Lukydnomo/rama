@@ -616,6 +616,23 @@ chaves `"0"` a `"4"`: `null` é **sem limite**, um número é o máximo, e `0` �
 `temporarios.capacidade` é o ajuste temporário de capacidade de carga, em
 espaços, de −99 a +99. Ele não tem duração: fica até alguém mudar.
 
+### O resumo de recursos
+
+```jsonc
+"resumoRecursos": { "versao": 1, "pv": 32, "pe": 9, "san": null }   // ao lado de "ordem", não dentro
+```
+
+Desde a v2.12, o `fichaJson` gravado de uma ficha de Ordem leva os **máximos** de
+PV, PE e Sanidade, para os outros jogadores da campanha verem os recursos sem
+receber a ficha (ver "Painel da mesa" em [CAMPAIGNS.md](CAMPAIGNS.md)). Os atuais
+continuam só em `ordem.recursos`. `san` é `null` com "Jogando sem Sanidade".
+
+Ele **não** faz parte da ficha que a tela edita nem do arquivo exportado: é
+calculado a cada gravação a partir do bloco `ordem`
+(`RAMAOrdemRegras.resumoDeRecursos`) e anexado só à cópia que sobe. O servidor
+valida a forma (inteiros de −999 a 99.999) e, numa gravação sem resumo, mantém o
+anterior. Ficha universal não tem resumo — os status dela já são os números.
+
 ### Bônus extras e ajustes de perícia
 
 `bonusExtra` guarda um número por estatística — `defesa`, `bloqueio`, `esquiva` —,

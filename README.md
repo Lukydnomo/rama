@@ -56,6 +56,9 @@ preferências de tela — nunca é tratado como banco.
     criaturas.js        mini ficha de criatura
     fila.js             fila de gravação por entidade
     campanha-painel.js  o que cada cartão do painel da mesa mostra (sem fórmula própria)
+    sincronia.js        atualização automática da campanha: marcas, ritmo, espera
+    combate-turnos.js   ordem, turno e rodada do combate (as mesmas regras do servidor)
+    combate-fila.js     fila de alterações de um combate: lote, repetição, conflito
     ordem/              as regras de Ordem Paranormal, em camada própria
       catalogo.js       origens, classes, trilhas, perícias e patentes
       poderes.js        poderes de classe, gerais, paranormais e de trilha
@@ -103,7 +106,7 @@ E abra `http://localhost:8099/rama/`.
 
 São três conjuntos.
 
-**Modelo e motor de dados** — 1138 verificações. No navegador, abra `testes/`;
+**Modelo e motor de dados** — 1165 verificações. No navegador, abra `testes/`;
 no terminal:
 
 ```bash
@@ -121,7 +124,7 @@ requisitos e repetição, concessão automática sem duplicação, revisão com
 dependências, afinidade (inclusive adiada e Homebrew), patente com limites
 manuais, carga por quantidade e o ajuste temporário de capacidade.
 
-**Permissões e concorrência do backend** — 328 verificações:
+**Permissões e concorrência do backend** — 447 verificações:
 
 ```bash
 deno run --allow-read testes/executar-backend.js
@@ -132,9 +135,14 @@ Carregam os três arquivos do Apps Script num simulador da plataforma
 verdade. É onde se confirma que um usuário não alcança o que não é dele —
 inclusive mandando o pedido direto, sem passar pela interface. Cobrem também
 revisão conflitante, gravação repetida, cache ausente, revogação de sessão,
-contenção da trava e planilha com as colunas fora de ordem.
+contenção da trava e planilha com as colunas fora de ordem — e, da campanha, a
+capa, o que cada jogador recebe nos cartões e no combate (com e sem "Esconder
+status dos jogadores"), o resumo de recursos, as marcas da atualização automática,
+as operações em lote do combate (repetição pelo `opId`, conflito, lote atômico) e
+as regras de turno e rodada, rodadas também contra a cópia do navegador em 400
+combates sorteados.
 
-**Transporte do frontend e carga das páginas** — 45 verificações:
+**Transporte do frontend e carga das páginas** — 120 verificações:
 
 ```bash
 deno run --allow-read testes/executar-frontend.js
@@ -149,6 +157,13 @@ Também leem a lista de scripts do HTML de cada página que calcula ficha de
 Ordem e conferem que o motor está inteiro (`js/ordem/poderes.js` antes de
 `progressao.js` e `regras.js`) — e que o cartão da campanha calcula os mesmos
 números que a ficha. Sem os poderes, o cálculo volta ao valor base em silêncio.
+
+E, com relógio e servidor falsos: o anúncio de toda operação (barra de atividade,
+segundo plano), a fila do combate (espera de ~5 s, um lote no ar por vez, edição
+durante o envio, repetição com o mesmo `opId` depois de prazo, conflito
+independente reaplicado, conflito no mesmo campo decidido pela pessoa, resposta
+velha que não apaga valor novo) e a sincronização (ritmo, pausa com a página
+escondida, espera crescente, perda de acesso).
 
 **Custo das operações** — não é teste, é medição:
 
@@ -288,6 +303,12 @@ exigiria mexer no `config.js`.
 Se a atualização acrescentar abas ou colunas, rode `setupRama()` de novo. Ele
 cria só o que falta e nunca apaga o que existe.
 
+Troque sempre **os três `.gs` juntos** (`Dados.gs`, `Codigo.gs`, `Campanhas.gs`):
+eles se chamam entre si, e um arquivo de uma versão com os outros de outra pode
+responder `instalacao_incompleta` ou pior. Publique o site **depois** da nova
+versão do Apps Script: um site novo diante de um backend velho perde as ações que
+ainda não existem lá.
+
 ---
 
 ## Senhas
@@ -352,8 +373,22 @@ console não abre o registro de outra conta.
   linhas, o mestre precisará limpar o histórico de vez em quando.
 - **Um mestre só por campanha na interface.** O banco já guarda o papel por
   membro e aceita mais de um mestre, mas a tela não oferece promover ninguém.
-- **Combate não tem grid, distância, turno automático nem condições.** Nada
-  disso foi especificado.
+- **Combate tem turno e rodada, e só.** Não há grid, distância, condições, ações
+  por turno nem duração de efeitos. Nada disso foi especificado.
+- **A atualização automática não é tempo real.** O navegador pergunta a cada ~8 s
+  nas abas Personagens e Combate e a cada ~20 s nas outras: a mudança de outra
+  pessoa chega em 2 a 15 s (até ~25 s fora das abas de mesa), mais quando o Apps
+  Script está acordando. Cada pergunta é uma execução do Apps Script.
+- **Alterações pendentes do combate vivem na memória da aba.** Uma falha de rede
+  não as perde, mas fechar a aba antes de elas subirem perde — por isso o
+  navegador pede confirmação.
+- **O máximo de PV, PE e SAN que os outros jogadores veem é calculado no navegador
+  do dono ou do mestre**, porque o motor de regras não roda no Apps Script. Uma
+  ficha importada, ou não salva desde a v2.12, aparece sem números para os outros
+  até o dono ou o mestre abrir a aba Personagens ou salvar a ficha.
+- **O painel lateral do combate carrega a página da ficha** dentro da aba (mesma
+  origem). É a ficha de verdade, com o mesmo salvamento — e o mesmo tempo de
+  abertura de uma ficha.
 - **Uma ficha cabe numa célula** (~45 000 caracteres de JSON). É muito para uma
   ficha normal, mas anotações muito longas podem esbarrar; o servidor recusa com
   `dados_grandes` em vez de truncar.
@@ -373,7 +408,8 @@ console não abre o registro de outra conta.
 2. Promover um segundo mestre pela interface (o banco já suporta).
 3. Aplicativo instalável (Service Worker) para a ficha abrir sem rede.
 4. Condições e efeitos temporários, que hoje moram no bônus temporário.
-5. Turno e rodada no combate, se a mesa quiser.
+5. Guardar no navegador as alterações pendentes do combate, para sobreviverem a
+   fechar a aba (revalidadas contra o servidor ao voltar).
 
 ---
 

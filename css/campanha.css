@@ -390,58 +390,402 @@ button.mesa-recurso__valor { cursor: text; }
   font-variant-numeric: tabular-nums;
 }
 
-/* =====================================================================
-   INICIATIVA
-   ---------------------------------------------------------------------
-   O número é DIGITADO. O sistema só ordena — não sorteia iniciativa.
-   ===================================================================== */
-
-.iniciativa { display: flex; flex-direction: column; gap: var(--e1); }
-
-.iniciativa__linha {
-  display: grid;
-  grid-template-columns: 2em 4.5em 1fr auto auto auto;
-  align-items: center;
-  gap: var(--e2);
-  padding: var(--e1) var(--e2);
-  background: var(--cor-superficie);
-  border: var(--borda) solid var(--cor-traco-fraca);
-}
-.iniciativa__linha--criatura { border-left: 3px solid var(--cor-traco-media); }
-
-.iniciativa__posicao {
-  font-family: var(--fonte-mini);
-  font-size: var(--texto-mini);
-  color: var(--cor-texto-3);
-  text-align: center;
-}
-
-.iniciativa__numero { min-height: var(--alvo-toque); }
-
-.iniciativa__nome {
-  min-width: 0;
-  overflow: hidden;
-  white-space: nowrap;
-  text-overflow: ellipsis;
-  color: var(--cor-texto);
-}
-
-@media (max-width: 640px) {
-  .iniciativa__linha {
-    grid-template-columns: 2em 4.5em 1fr auto;
-    grid-template-areas:
-      "pos num nome menu"
-      "pos num tags menu";
-    row-gap: var(--e1);
-  }
-  .iniciativa__posicao { grid-area: pos; }
-  .iniciativa__numero { grid-area: num; }
-  .iniciativa__nome { grid-area: nome; }
-  .iniciativa__linha .r-etiqueta { grid-area: tags; justify-self: start; }
-}
+/* A lista de iniciativa do combate (.combate-linha) mora na seção
+   COMBATE, mais abaixo. */
 
 /* =====================================================================
    DOCUMENTOS
    ===================================================================== */
 
 .documento__imagem img { max-width: 100%; height: auto; }
+
+/* =====================================================================
+   CAPA DA CAMPANHA (Visão geral)
+   ---------------------------------------------------------------------
+   Faixa 3:1. A imagem já chega nessa proporção, recortada pelo mestre na
+   prévia, então `object-fit: cover` nunca distorce nem corta nada que
+   ele não tenha visto. A legenda com o nome fica sobre a parte de baixo,
+   com um degradê para o texto continuar legível em qualquer imagem.
+   ===================================================================== */
+
+.campanha-capa {
+  position: relative;
+  margin: 0;
+  border: var(--borda) solid var(--cor-traco-fraca);
+  background: var(--cor-superficie);
+}
+
+.campanha-capa__imagem {
+  aspect-ratio: 3 / 1;
+  width: 100%;
+  overflow: hidden;
+  display: grid;
+  place-items: center;
+  background: var(--cor-superficie-2);
+}
+
+.campanha-capa__imagem img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  image-rendering: auto;
+}
+
+.campanha-capa__carregando,
+.campanha-capa__falha {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--e2);
+  color: var(--cor-texto-3);
+  font-family: var(--fonte-mini);
+  font-size: var(--texto-mini);
+}
+
+.campanha-capa__legenda {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: var(--e5) var(--e4) var(--e3);
+  background: linear-gradient(to top, rgba(8, 8, 10, 0.92), rgba(8, 8, 10, 0));
+  pointer-events: none;
+}
+
+.campanha-capa__nome {
+  font-size: var(--texto-grande);
+  font-weight: 700;
+  color: var(--cor-texto);
+  letter-spacing: var(--espaco-letra-titulo);
+  text-transform: uppercase;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.campanha-capa__trilha {
+  font-family: var(--fonte-mini);
+  font-size: var(--texto-mini);
+  color: var(--cor-texto-2);
+}
+
+.campanha-capa__acoes {
+  position: absolute;
+  top: var(--e2);
+  right: var(--e2);
+  display: flex;
+  gap: var(--e1);
+}
+
+.campanha-capa__acoes .r-botao { background: rgba(8, 8, 10, 0.82); }
+
+.campanha-capa--vazia { border-style: dashed; }
+
+.campanha-capa__vazio {
+  aspect-ratio: 3 / 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--e2);
+  padding: var(--e4);
+  text-align: center;
+}
+
+@media (max-width: 640px) {
+  .campanha-capa__nome { font-size: var(--texto-medio); }
+  .campanha-capa__legenda { padding: var(--e3) var(--e3) var(--e2); }
+  .campanha-capa__acoes { position: static; padding: var(--e2); justify-content: flex-end; }
+  .campanha-capa__vazio { aspect-ratio: auto; min-height: 140px; }
+}
+
+.capa-editor__moldura {
+  border: var(--borda) solid var(--cor-traco-media);
+  background: var(--cor-superficie-2);
+}
+
+.capa-editor__previa {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 3 / 1;
+  cursor: grab;
+  touch-action: none;
+}
+
+.capa-editor__previa:active { cursor: grabbing; }
+.capa-editor__previa:focus-visible { outline: 2px solid var(--cor-traco-forte); outline-offset: 2px; }
+
+.capa-editor__faixa { width: 100%; accent-color: var(--cor-texto-2); }
+
+/* =====================================================================
+   PERSONAGENS — ESCONDER STATUS DOS JOGADORES
+   ===================================================================== */
+
+.mesa-ocultacao { display: flex; flex-direction: column; gap: var(--e1); }
+.mesa-ocultacao:empty { display: none; }
+
+.mesa-ocultacao__chave {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--e2);
+  cursor: pointer;
+  color: var(--cor-texto);
+  min-height: var(--alvo-toque);
+}
+
+.mesa-ocultacao__aviso {
+  padding: var(--e2) var(--e3);
+  border-left: 3px solid var(--cor-traco-media);
+  background: var(--cor-superficie);
+}
+
+.mesa-cartao__reservado { color: var(--cor-texto-3); }
+
+/* =====================================================================
+   COMBATE
+   ---------------------------------------------------------------------
+   Duas colunas no desktop: a ordem de iniciativa à esquerda, a ficha do
+   participante selecionado à direita, grudada no topo enquanto a lista
+   rola. Abaixo de 900 px, uma coluna só: a ficha abre numa gaveta.
+
+   A vez é marcada por FORMA além de cor: seta, borda mais grossa e o
+   texto "Vez de…" no topo. Selecionado para consulta tem outro traço.
+   ===================================================================== */
+
+.combate {
+  --cor-vida: #B8433A;
+  --cor-esforco: #C9772A;
+  --cor-sanidade: #7E6BB5;
+  display: grid;
+  gap: var(--e4);
+  grid-template-columns: minmax(0, 1fr);
+  align-items: start;
+}
+
+.combate--mestre {
+  grid-template-columns: minmax(0, 5fr) minmax(0, 6fr);
+}
+
+.combate__lista { display: flex; flex-direction: column; gap: var(--e2); min-width: 0; }
+
+.combate__painel {
+  position: sticky;
+  top: var(--e3);
+  min-width: 0;
+  height: calc(100vh - var(--e7));
+  display: flex;
+  flex-direction: column;
+  border: var(--borda) solid var(--cor-traco-fraca);
+  background: var(--cor-superficie);
+}
+
+.combate__painel-vazio {
+  margin: auto;
+  padding: var(--e5);
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: var(--e2);
+  color: var(--cor-texto-3);
+}
+
+@media (max-width: 900px) {
+  .combate--mestre { grid-template-columns: minmax(0, 1fr); }
+  .combate__painel { display: none; }
+}
+
+.combate-turno {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--e2);
+  padding: var(--e2) var(--e3);
+  background: var(--cor-superficie);
+  border: var(--borda) solid var(--cor-traco-fraca);
+}
+
+.combate-turno__texto { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.combate-turno__rodada { font-weight: 700; color: var(--cor-texto); letter-spacing: var(--espaco-letra-titulo); text-transform: uppercase; }
+.combate-turno__vez { font-family: var(--fonte-mini); font-size: var(--texto-mini); color: var(--cor-texto-2); }
+.combate-turno__botoes { display: flex; gap: var(--e1); flex-wrap: wrap; }
+
+.combate-anuncio {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+.combate-pendencias {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--e2);
+  padding: var(--e2) var(--e3);
+  border: var(--borda) dashed var(--cor-aviso);
+  color: var(--cor-texto-2);
+  font-family: var(--fonte-mini);
+  font-size: var(--texto-mini);
+}
+.combate-pendencias--ocupada { border-color: var(--cor-traco-media); }
+.combate-pendencias--erro { border-style: solid; border-color: var(--cor-erro); }
+
+.combate-participantes {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--e1);
+}
+
+.combate-participantes__vazio { padding: var(--e3); color: var(--cor-texto-3); }
+
+.combate-linha {
+  display: grid;
+  grid-template-columns: 1.2em 1.6em 4.6em minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--e2);
+  padding: var(--e1) var(--e2);
+  background: var(--cor-superficie);
+  border: var(--borda) solid var(--cor-traco-fraca);
+  border-left-width: 3px;
+}
+
+.combate-linha--criatura { border-left-color: var(--cor-traco-media); }
+
+.combate-linha--vez {
+  border-color: var(--cor-traco-forte);
+  border-left-width: 6px;
+  background: var(--cor-superficie-2);
+}
+
+.combate-linha--selecionada { outline: 1px dashed var(--cor-texto-2); outline-offset: -4px; }
+.combate-linha--pendente .combate-linha__iniciativa { border-style: dashed; border-color: var(--cor-aviso); }
+
+.combate-linha__marca { color: var(--cor-texto); text-align: center; }
+
+.combate-linha__posicao {
+  font-family: var(--fonte-mini);
+  font-size: var(--texto-mini);
+  color: var(--cor-texto-3);
+  text-align: center;
+}
+
+.combate-linha__iniciativa { min-height: var(--alvo-toque); text-align: center; }
+.combate-linha__iniciativa[aria-invalid="true"] { border-color: var(--cor-erro); }
+
+.combate-linha__iniciativa-valor {
+  min-height: var(--alvo-toque);
+  display: grid;
+  place-items: center;
+  font-weight: 700;
+  color: var(--cor-texto);
+  font-variant-numeric: tabular-nums;
+}
+
+.combate-linha__id { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.combate-linha__cabeca { display: flex; align-items: center; gap: var(--e2); min-width: 0; }
+
+.combate-linha__nome {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  color: var(--cor-texto);
+  background: none;
+  border: 0;
+  padding: var(--e1) 0;
+  text-align: left;
+  font: inherit;
+  letter-spacing: inherit;
+}
+
+button.combate-linha__nome {
+  cursor: pointer;
+  min-height: var(--alvo-toque);
+  text-decoration: underline;
+  text-decoration-color: var(--cor-traco-fraca);
+  text-underline-offset: 3px;
+}
+button.combate-linha__nome:hover { text-decoration-color: var(--cor-texto-2); }
+button.combate-linha__nome:focus-visible { outline: 2px solid var(--cor-traco-forte); outline-offset: 2px; }
+button.combate-linha__nome[aria-pressed="true"] { text-decoration-color: var(--cor-texto); }
+
+.combate-linha__tipo { flex: 0 0 auto; }
+
+.combate-linha__recursos { display: flex; flex-wrap: wrap; gap: var(--e1); }
+
+.combate-recurso {
+  --cor-recurso: var(--cor-traco-media);
+  display: inline-flex;
+  gap: var(--e1);
+  padding: 0 var(--e1);
+  border-left: 3px solid var(--cor-recurso);
+  font-family: var(--fonte-mini);
+  font-size: var(--texto-mini);
+  color: var(--cor-texto-2);
+  font-variant-numeric: tabular-nums;
+}
+.combate-recurso--vida { --cor-recurso: var(--cor-vida); }
+.combate-recurso--esforco { --cor-recurso: var(--cor-esforco); }
+.combate-recurso--sanidade { --cor-recurso: var(--cor-sanidade); }
+.combate-recurso__rotulo { color: var(--cor-texto-3); }
+
+.combate-linha__remover { min-width: var(--alvo-toque); min-height: var(--alvo-toque); }
+
+.combate-controles { display: flex; flex-wrap: wrap; gap: var(--e1); padding-top: var(--e1); }
+
+.combate-ficha-caixa,
+.combate-criatura-caixa {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.combate-ficha {
+  flex: 1 1 auto;
+  width: 100%;
+  min-height: 60vh;
+  border: 0;
+  background: var(--cor-fundo);
+}
+
+.combate-criatura-caixa { overflow-y: auto; padding: var(--e3); }
+
+.r-modal--gaveta .combate-ficha { min-height: 0; height: 100%; }
+
+.criatura-painel__topo { display: flex; align-items: center; justify-content: space-between; gap: var(--e2); flex-wrap: wrap; }
+
+.combate-conflito {
+  display: flex;
+  flex-direction: column;
+  gap: var(--e1);
+  margin: 0;
+  padding: var(--e2) var(--e3);
+  border: var(--borda) solid var(--cor-traco-fraca);
+}
+
+@media (max-width: 640px) {
+  .combate-linha {
+    grid-template-columns: 1em 4.2em minmax(0, 1fr) auto;
+    grid-template-areas: "marca num id remover";
+  }
+  .combate-linha__posicao { display: none; }
+  .combate-linha__marca { grid-area: marca; }
+  .combate-linha__iniciativa,
+  .combate-linha__iniciativa-valor { grid-area: num; }
+  .combate-linha__id { grid-area: id; }
+  .combate-linha__remover { grid-area: remover; }
+  .combate-linha__cabeca { flex-wrap: wrap; row-gap: 0; }
+}

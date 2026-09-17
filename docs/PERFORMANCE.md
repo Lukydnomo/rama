@@ -84,6 +84,8 @@ conteúdo. A camada recusa, e há teste para isso.
 | sessão | `CacheService`, chave derivada do token | 120 s | sair da conta apaga; trocar senha e desativar avançam a época |
 | cabeçalhos das abas | `CacheService`, uma entrada para todas | 6 h | `setupRama()` avança a época |
 | rolagem já registrada | `CacheService`, chave = id da rolagem | 30 min | atalho apenas; a planilha continua conferindo |
+| marcas da mesa | `CacheService`, uma chave por parte de cada campanha | 6 h, regravadas com o mesmo valor a cada 4 h | toda gravação da parte troca a marca; marca perdida vira uma reserva que muda a cada minuto |
+| papel para as marcas | `CacheService`, chave = época + campanha + conta + marcas de `membros` e `campanha` | 5 min | mudar membros, visibilidade ou nome troca a chave; `setupRama()` avança a época |
 
 Três limites que valem sem exceção:
 
@@ -93,6 +95,10 @@ Três limites que valem sem exceção:
    da sessão é o hash do token: só quem tem a sessão consegue montá-la.
 3. **Cache não substitui persistência, controle de concorrência nem
    idempotência.** Ele acelera; não decide.
+
+As marcas e o papel para as marcas não carregam dado nenhum: dizem só *que*
+uma parte da campanha mudou e *se* a pessoa pode ser avisada disso. O conteúdo
+é sempre buscado pelo caminho normal, com a conferência completa.
 
 ### A época
 
@@ -110,6 +116,43 @@ desativar usuário, rodar `setupRama()`.
 
 **O que ela não cobre:** marcar `ativo = false` na linha da aba SESSOES
 direto na planilha, com a mão. Isso leva até 120 segundos para valer.
+
+---
+
+## A atualização automática, e quanto ela custa
+
+Desde a v2.12 a campanha aberta se atualiza sozinha (`js/sincronia.js`). O
+Apps Script não mantém conexão aberta, então o navegador **pergunta**: não é
+tempo real, e a documentação não deve prometer que é.
+
+**A pergunta é barata de propósito.** `sincronizar_campanha` lê as marcas da
+campanha (uma leitura de cache com sete chaves) e o papel de quem pergunta
+(outra leitura de cache). Não lê planilha e não pega a trava, então não entra na
+fila das gravações. Só quando uma marca mudou a página busca **aquela** parte,
+pelo caminho normal.
+
+| situação | intervalo |
+|---|---|
+| aba Personagens ou Combate aberta | ~8 s |
+| outras abas da campanha | ~20 s |
+| página escondida | nenhuma pergunta; ao voltar, uma na hora |
+| falha | dobra a cada falha, até 60 s |
+
+Todos com ±10% de variação, para as perguntas de uma mesa não coincidirem.
+
+**Latência esperada** de uma mudança feita por outra pessoa: intervalo + resposta
+das marcas + busca da parte — de 2 a 15 s nas abas de mesa, até ~25 s nas outras,
+mais quando o script está dormindo. **Estes números são estimativa a partir dos
+intervalos, não medição**: o simulador não tem latência de rede.
+
+**Carga estimada.** Vinte pessoas nas abas de mesa fazem cerca de 2,5 perguntas por
+segundo. O que pesa em cada uma não é o cache, é o item 1 do começo deste
+documento: cada pergunta é uma execução do Apps Script, com o custo de preparação e
+as cotas da conta que publicou o backend. As leituras de planilha acontecem só
+depois de uma gravação, e só da parte gravada — numa mesa parada, nenhuma.
+
+Para trocar latência por menos execuções, aumente `INTERVALO_ATIVO` e
+`INTERVALO_CALMO` em `js/sincronia.js`.
 
 ---
 
@@ -332,3 +375,7 @@ Em ordem de esforço:
 
 4. **Aumentar `TEMPO_LIMITE_MS`.** Não deixa nada mais rápido; só evita
    que o navegador desista de uma resposta que ia chegar.
+
+5. **Espaçar a atualização automática.** `INTERVALO_ATIVO` e
+   `INTERVALO_CALMO` em `js/sincronia.js`: menos execuções do Apps Script,
+   mudanças dos outros chegando mais devagar.

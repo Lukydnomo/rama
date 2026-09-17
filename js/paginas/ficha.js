@@ -13,6 +13,17 @@
    Sobre os dois modos: eles são o mesmo desenho com um traço
    diferente, e não duas telas. Quem entra em edição no meio de uma
    sessão precisa continuar reconhecendo onde as coisas estão.
+
+   MODO PAINEL (?painel=1)
+   A MESMA ficha, dentro do painel lateral da aba Combate da campanha.
+   Não é outra implementação: são estes arquivos, este salvador e este
+   histórico, sem a casca do site em volta. A página de fora conversa
+   com ela por RAMAFichaPainel (mesma origem): pergunta se há alteração
+   por salvar antes de trocar de participante, pede para salvar agora e
+   pede para recarregar quando a sincronização da campanha traz uma
+   versão nova — o que só acontece se não houver nada pendente nem um
+   campo sendo editado. A permissão é a de sempre: ler_personagem só
+   entrega a ficha a quem é dono ou mestre da campanha dela.
    ===================================================================== */
 
 (function (global) {
@@ -22,6 +33,8 @@
   var UI = global.RAMAUI;
   var F = global.RAMAFicha;
   var el = U.el;
+
+  var PAINEL = U.parametro("painel") === "1";
 
   /* A ordem é a do projeto: Habilidades logo depois de Perícias, e a
      seção de rituais em seguida.
@@ -103,6 +116,7 @@
 
   global.RAMAApp.iniciar("personagens", async function (agente, casca, prontas) {
     document.body.classList.add("pagina-ficha");
+    if (PAINEL) document.body.classList.add("pagina-ficha--painel");
 
     estado.personagemId = U.parametro("id");
     estado.aba = lerAbaGuardada();
@@ -182,8 +196,10 @@
 
     /* Uma única vez por abertura: se o personagem de Ordem chegou a NEX
        50% sem afinidade e ninguém adiou a decisão, a escolha abre.
-       Redesenhar ou salvar nunca chama isto de novo. */
-    if (abasDaFicha() === ABAS_ORDEM && global.RAMASecaoOrdemProgressao && global.RAMASecaoOrdemProgressao.verificarAfinidade) {
+       Redesenhar ou salvar nunca chama isto de novo. No painel do
+       combate, não: o mestre abriu para consultar, não para decidir a
+       progressão do jogador. */
+    if (!PAINEL && abasDaFicha() === ABAS_ORDEM && global.RAMASecaoOrdemProgressao && global.RAMASecaoOrdemProgressao.verificarAfinidade) {
       global.RAMASecaoOrdemProgressao.verificarAfinidade(ctx);
     }
   }, {
@@ -200,6 +216,7 @@
         { acao: "listar_campanhas" },
       ];
     },
+    semCasca: PAINEL,
   });
 
   /* =================================================================
@@ -273,18 +290,81 @@
       instantaneo: function () { return estado.ficha; },
 
       enviar: function (dados, revisao) {
-        return global.RAMAApi.salvarPersonagem(estado.personagemId, revisao, dados);
+        return global.RAMAApi.salvarPersonagem(estado.personagemId, revisao, comResumo(dados));
       },
 
       aplicar: function (conciliada) {
         estado.ficha = F.normalizarFicha(conciliada);
         desenhar();
       },
+
+      aoSalvar: function (rev) { avisarPaginaDeFora("rama:ficha-salva", { rev: rev }); },
     });
 
     estado.salvador.definirBase(estado.ficha, rev);
     estado.indicador.salvoAgora();
   }
+
+  /* O máximo de PV, PE e Sanidade vai junto de toda gravação de ficha
+     de Ordem, para a mesa ver sem receber a ficha. Uma CÓPIA: o estado
+     da tela e a base do salvador não ganham o campo. */
+  function comResumo(dados) {
+    var R = global.RAMAOrdemRegras;
+    if (!dados || dados.tipoFicha !== "ordem" || !dados.ordem || !R || !R.resumoDeRecursos) return dados;
+    try {
+      return Object.assign({}, dados, { resumoRecursos: R.resumoDeRecursos(dados.ordem) });
+    } catch (e) {
+      console.warn("[R.A.M.A. · ficha] resumo de recursos não calculado", e);
+      return dados;
+    }
+  }
+
+  /* =================================================================
+     PAINEL DO COMBATE
+     ================================================================= */
+
+  function avisarPaginaDeFora(tipo, extra) {
+    if (!PAINEL || global.parent === global) return;
+    try {
+      global.parent.postMessage(Object.assign({ tipo: tipo, personagemId: estado.personagemId }, extra || {}), location.origin);
+    } catch (e) { /* a página de fora foi embora */ }
+  }
+
+  function editandoAlgo() {
+    var ativo = document.activeElement;
+    if (!ativo || ativo === document.body) return false;
+    return /^(INPUT|TEXTAREA|SELECT)$/.test(ativo.tagName) || ativo.isContentEditable;
+  }
+
+  /* Traz a versão do servidor, se ela for mais nova e se não houver nada
+     desta ficha esperando para subir nem um campo sendo editado. Nunca
+     por cima de trabalho local. */
+  async function recarregarSeLivre() {
+    if (!estado.salvador || !estado.ficha) return { ok: false, motivo: "carregando" };
+    if (estado.salvador.temPendencia() || estado.salvador.emConflito()) return { ok: false, motivo: "pendente" };
+    if (editandoAlgo()) return { ok: false, motivo: "editando" };
+
+    var r = await global.RAMAApi.post({ acao: "ler_personagem", personagemId: estado.personagemId }, { segundoPlano: true });
+    if (!r.ok) return r;
+    if (U.inteiro(r.rev, 0) <= estado.salvador.revisao()) return { ok: true, mudou: false };
+    if (U.inteiro(r.dados && r.dados.schemaVersion, 0) > F.VERSAO_SCHEMA) return { ok: false, motivo: "versao" };
+    if (estado.salvador.temPendencia() || estado.salvador.emConflito() || editandoAlgo()) return { ok: false, motivo: "pendente" };
+
+    var rolagem = global.scrollY;
+    estado.ficha = F.normalizarFicha(r.dados);
+    estado.salvador.definirBase(estado.ficha, U.inteiro(r.rev, 0));
+    desenhar();
+    global.scrollTo(0, rolagem);
+    return { ok: true, mudou: true };
+  }
+
+  global.RAMAFichaPainel = {
+    ativo: PAINEL,
+    personagemId: function () { return estado.personagemId; },
+    temPendencia: function () { return !!(estado.salvador && (estado.salvador.temPendencia() || estado.salvador.emConflito())); },
+    salvarAgora: function () { return estado.salvador ? estado.salvador.agora() : Promise.resolve(); },
+    recarregarSeLivre: recarregarSeLivre,
+  };
 
   /* =================================================================
      DESENHO
@@ -331,9 +411,11 @@
 
     return el("header.ficha-topo", {}, [
       el("div.ficha-topo__faixa", {}, [
-        el("a.r-icone", {
-          href: U.url("personagens/"), "aria-label": "Voltar para personagens",
-        }, [UI.simbolo("voltar")]),
+        PAINEL
+          ? null
+          : el("a.r-icone", {
+              href: U.url("personagens/"), "aria-label": "Voltar para personagens",
+            }, [UI.simbolo("voltar")]),
 
         el("div.ficha-topo__identidade", {}, [
           el("h1.ficha-topo__nome", { id: "ficha-nome", texto: estado.ficha.nome }),
@@ -343,12 +425,21 @@
         el("div.ficha-topo__ferramentas", {}, [
           indicador,
           modoSeletor(),
+          PAINEL
+            ? el("a.r-botao.r-botao--mini.r-botao--fantasma", {
+                href: U.url("ficha/?id=" + encodeURIComponent(estado.personagemId)),
+                target: "_blank", rel: "noopener",
+                texto: "Página inteira",
+                "aria-label": "Abrir a ficha de " + estado.ficha.nome + " em página inteira, numa nova aba",
+              })
+            : null,
           UI.menu([
             { rotulo: "Exportar ficha", aoClicar: exportar },
             { rotulo: "Salvar agora", aoClicar: function () { estado.salvador.agora(); } },
+          ].concat(PAINEL ? [] : [
             "separador",
             { rotulo: "Ver personagens", aoClicar: function () { location.href = U.url("personagens/"); } },
-          ], { rotulo: "Opções da ficha", icone: "tresPontos" }),
+          ]), { rotulo: "Opções da ficha", icone: "tresPontos" }),
         ]),
       ]),
     ]);

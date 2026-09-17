@@ -487,128 +487,9 @@
 .nota-editor { display: flex; flex-direction: column; gap: var(--e3); min-width: 0; }
 .nota-editor__corpo { min-height: 320px; resize: vertical; }
 
-/* =====================================================================
-   RESULTADO DE ROLAGEM
-   ---------------------------------------------------------------------
-   Flutua no canto inferior direito, empilhando as últimas rolagens. Não
-   rouba o foco e não bloqueia a ficha: quem está jogando precisa
-   continuar mexendo enquanto lê o resultado.
-   ===================================================================== */
-
-.rolagens {
-  position: fixed;
-  right: var(--e4);
-  bottom: var(--e4);
-  z-index: var(--z-flutuante);
-  display: flex;
-  flex-direction: column-reverse;
-  gap: var(--e2);
-  width: min(300px, calc(100vw - var(--e6)));
-  max-height: 70vh;
-  overflow: hidden;
-  pointer-events: none;
-}
-
-.rolagem {
-  display: flex;
-  flex-direction: column;
-  gap: var(--e2);
-  padding: var(--e3);
-  background: var(--cor-superficie-2);
-  border: var(--borda) solid var(--cor-traco-media);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.85);
-  pointer-events: auto;
-  animation: r-rolar var(--tempo-medio) var(--curva);
-}
-.rolagem--antiga { opacity: 0.55; }
-.rolagem--critico { border-color: var(--cor-paranormal); }
-.rolagem--dano    { border-color: var(--cor-erro); }
-
-@keyframes r-rolar {
-  from { opacity: 0; transform: translateY(10px); }
-  to   { opacity: 1; transform: none; }
-}
-@media (prefers-reduced-motion: reduce) { .rolagem { animation: none; } }
-
-.rolagem__topo {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: var(--e2);
-}
-
-.rolagem__nome {
-  font-weight: 700;
-  letter-spacing: var(--espaco-letra-titulo);
-  color: var(--cor-texto);
-  text-transform: uppercase;
-  min-width: 0;
-  overflow: hidden;
-  white-space: nowrap;
-  text-overflow: ellipsis;
-}
-
-.rolagem__expressao {
-  font-family: var(--fonte-mini);
-  font-size: var(--texto-mini);
-  color: var(--cor-texto-3);
-}
-
-.rolagem__total {
-  font-weight: 700;
-  font-size: calc(40px * var(--escala));
-  line-height: 1;
-  color: var(--cor-texto);
-  text-align: center;
-  font-variant-numeric: tabular-nums;
-}
-
-/* Os dados brutos, com o principal marcado. Ver os dois descartados
-   importa: é a diferença entre 2d20 e -2d20 na mesa. */
-.rolagem__dados { display: flex; flex-wrap: wrap; gap: var(--e1); justify-content: center; }
-
-.face {
-  display: inline-grid;
-  place-items: center;
-  min-width: 26px;
-  padding: 2px var(--e1);
-  border: var(--borda) solid var(--cor-traco-fraca);
-  color: var(--cor-texto-3);
-  font-variant-numeric: tabular-nums;
-}
-.face--principal {
-  border-color: var(--cor-traco-forte);
-  background: var(--cor-texto);
-  color: var(--cor-fundo);
-  font-weight: 700;
-}
-
-.rolagem__parcelas {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  padding-top: var(--e2);
-  border-top: var(--borda) solid var(--cor-traco-fraca);
-  font-family: var(--fonte-mini);
-  font-size: var(--texto-mini);
-  color: var(--cor-texto-3);
-}
-.rolagem__parcela { display: flex; justify-content: space-between; gap: var(--e2); }
-.rolagem__parcela span:last-child { color: var(--cor-texto-2); font-variant-numeric: tabular-nums; }
-
-.rolagem__marca {
-  align-self: center;
-  color: var(--cor-paranormal);
-  font-weight: 700;
-  letter-spacing: var(--espaco-letra-titulo);
-  text-transform: uppercase;
-}
-
-.rolagem__acao { pointer-events: auto; }
-
-@media (max-width: 640px) {
-  .rolagens { right: var(--e2); left: var(--e2); bottom: var(--e2); width: auto; }
-}
+/* O resultado de rolagem (.rolagens, .rolagem, .face) mora em
+   componentes.css: a aba Combate da campanha rola pelas criaturas com o
+   mesmo mostrador. */
 
 /* =====================================================================
    MODO EDIÇÃO — linhas reordenáveis e removíveis
@@ -1317,3 +1198,20 @@ button.ordem-equacao__valor:hover { border-color: var(--cor-paranormal); }
   grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
 }
 .ordem-limite { display: flex; flex-direction: column; gap: var(--e1); }
+
+/* =====================================================================
+   A FICHA NO PAINEL DO COMBATE (ficha/?painel=1)
+   ---------------------------------------------------------------------
+   A mesma ficha, sem a casca do site e com respiro menor: ela mora
+   dentro de uma coluna estreita da aba Combate, ou numa gaveta no
+   celular.
+   ===================================================================== */
+
+body.pagina-ficha--painel .app-corpo {
+  padding: 0 var(--e3) var(--e5);
+  gap: var(--e3);
+}
+
+body.pagina-ficha--painel .ficha { gap: var(--e3); padding-top: 0; }
+body.pagina-ficha--painel .pular-para { display: none; }
+body.pagina-ficha--painel .ficha-topo__nome { font-size: var(--texto-medio); }

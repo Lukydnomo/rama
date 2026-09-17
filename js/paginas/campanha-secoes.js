@@ -6,6 +6,11 @@
    o mesmo `ctx` da casca e não conhece nem API nem permissão: quando
    `ctx.ehMestre()` é falso, os controles administrativos simplesmente
    não são montados — e o servidor recusa de qualquer forma.
+
+   Rolagens e Documentos se atualizam sozinhas quando a sincronização
+   da campanha (js/sincronia.js) avisa que a parte delas mudou:
+   buscam de novo em segundo plano, sem tela de carregamento, e uma
+   falha nessa busca não apaga o que já está na tela.
    ===================================================================== */
 
 (function (global) {
@@ -24,21 +29,68 @@
   global.RAMACampanhaRolagens = {
     aba: function (ctx) {
       var lista = el("div.pilha--curta", { class: "pilha" }, [UI.carregando("Consultando histórico")]);
-      var estado = { pulo: 0, total: 0, fim: false, linhas: [] };
+      var estado = { pulo: 0, total: 0, fim: false, linhas: [], carregado: false };
 
-      async function carregar(maisUma) {
-        if (!maisUma) { estado.pulo = 0; estado.linhas = []; }
-
-        var r = await global.RAMAApi.listarRolagens(ctx.campanhaId, { pulo: estado.pulo, limite: 25 });
-        if (!r.ok) { U.trocar(lista, UI.erroDeTela(r, function () { carregar(false); })); return; }
-
-        estado.linhas = estado.linhas.concat(r.dados.rolagens);
-        estado.total = r.dados.total;
-        estado.fim = r.dados.fim;
-        estado.pulo = estado.linhas.length;
-
-        pintar();
+      /* Uma busca por vez. "Carregar mais" e a atualização automática
+         mexem na mesma lista: intercaladas, uma emendaria a página dela
+         numa lista que a outra acabou de trocar. */
+      var emAndamento = Promise.resolve();
+      function emOrdem(fn) {
+        emAndamento = emAndamento.then(fn, fn);
+        return emAndamento;
       }
+
+      function carregar(maisUma) {
+        return emOrdem(async function () {
+          var pulo = maisUma ? estado.linhas.length : 0;
+          var r = await global.RAMAApi.listarRolagens(ctx.campanhaId, { pulo: pulo, limite: 25 });
+          if (!r.ok) { U.trocar(lista, UI.erroDeTela(r, function () { carregar(false); })); return; }
+
+          /* Uma rolagem nova no topo empurra as outras uma posição: a
+             página seguinte repetiria a última linha já mostrada. */
+          var ja = {};
+          var anteriores = maisUma ? estado.linhas : [];
+          anteriores.forEach(function (l) { ja[l.id] = true; });
+
+          estado.linhas = anteriores.concat(r.dados.rolagens.filter(function (l) { return !ja[l.id]; }));
+          estado.total = r.dados.total;
+          estado.fim = r.dados.fim;
+          estado.pulo = estado.linhas.length;
+          estado.carregado = true;
+
+          pintar();
+        });
+      }
+
+      /* Mudança vinda da sincronização da campanha (rolagem nova,
+         histórico limpo): busca de novo do começo, do tamanho do que já
+         estava aberto (até 200), em segundo plano. Sem tela de
+         carregamento, e uma falha não troca a lista por um erro — a
+         próxima mudança tenta de novo. */
+      function atualizar() {
+        return emOrdem(async function () {
+          if (!estado.carregado || !document.body.contains(lista)) return;
+          var limite = Math.min(200, Math.max(25, estado.linhas.length));
+          var r = await global.RAMAApi.listarRolagens(ctx.campanhaId, { pulo: 0, limite: limite }, { segundoPlano: true });
+          if (!r.ok || !document.body.contains(lista)) return;
+
+          estado.linhas = r.dados.rolagens;
+          estado.total = r.dados.total;
+          estado.fim = r.dados.fim;
+          estado.pulo = estado.linhas.length;
+
+          pintar();
+        });
+      }
+
+      ctx.aoAtualizar("rolagens", atualizar);
+
+      var avisoOculto = el("p.t-mini", { texto: "O mestre está rolando em segredo nesta campanha. As rolagens dele não aparecem aqui." });
+      function pintarAvisoOculto() {
+        avisoOculto.hidden = ctx.ehMestre() || !ctx.campanha.rolagensMestreOcultas;
+      }
+      pintarAvisoOculto();
+      ctx.aoAtualizar("campanha", pintarAvisoOculto);
 
       function pintar() {
         U.trocar(lista, [
@@ -87,9 +139,7 @@
           ] : null,
         }),
 
-        !ctx.ehMestre() && ctx.campanha.rolagensMestreOcultas
-          ? el("p.t-mini", { texto: "O mestre está rolando em segredo nesta campanha. As rolagens dele não aparecem aqui." })
-          : null,
+        avisoOculto,
       ]);
     },
   };
@@ -153,15 +203,26 @@
       if (ev.key === "Enter") { ev.preventDefault(); rolar(); }
     });
 
+    /* O modo acompanha a campanha: outro mestre pode trocá-lo com esta
+       aba aberta. */
+    var modo = el("p.t-mini");
+    function pintarModo() {
+      var oculto = !!ctx.campanha.rolagensMestreOcultas;
+      modo.classList.toggle("t-aviso", oculto);
+      modo.textContent = oculto
+        ? "Modo oculto: esta rolagem não chegará aos jogadores."
+        : "Modo visível: esta rolagem aparecerá no histórico dos jogadores.";
+    }
+    pintarModo();
+    ctx.aoAtualizar("campanha", pintarModo);
+
     return UI.painel("Rolagem livre", el("div.pilha--curta", { class: "pilha" }, [
       el("div.faixa", {}, [
         el("div", { estilo: { flex: "1", minWidth: "140px" } }, [campo]),
         el("button.r-botao.r-botao--principal", { type: "button", texto: "Rolar", onclick: rolar }),
       ]),
       saida,
-      ctx.campanha.rolagensMestreOcultas
-        ? el("p.t-mini.t-aviso", { texto: "Modo oculto: esta rolagem não chegará aos jogadores." })
-        : el("p.t-mini", { texto: "Modo visível: esta rolagem aparecerá no histórico dos jogadores." }),
+      modo,
     ]));
   }
 
@@ -173,20 +234,81 @@
     aba: function (ctx) {
       var lista = el("div.pilha--curta", { class: "pilha" }, [UI.carregando("Consultando documentos")]);
 
-      async function carregar() {
-        var r = await global.RAMAApi.listarDocumentos(ctx.campanhaId);
-        if (!r.ok) { U.trocar(lista, UI.erroDeTela(r, carregar)); return; }
+      /* id → { chave, cartao }: os cartões na tela. Um documento que não
+         mudou continua com o MESMO cartão — aberto ou fechado como
+         estava, sem baixar a imagem de novo. */
+      var cartoes = {};
+      var carregado = false;
+      var emAndamento = Promise.resolve();
 
-        U.trocar(lista, r.dados.length
-          ? r.dados.map(function (d) { return cartaoDeDocumento(ctx, d, carregar); })
-          : UI.vazio({
-              titulo: "Nenhum documento",
-              texto: ctx.ehMestre()
-                ? "Crie documentos e escolha exatamente quem pode vê-los."
-                : "O mestre ainda não liberou nenhum documento para você.",
-            })
-        );
+      /* Sem argumento (ou com qualquer coisa que não seja `true`, como o
+         evento de um clique): busca de primeiro plano. */
+      function carregar(segundoPlano) {
+        var fundo = segundoPlano === true;
+        var passo = function () { return buscar(fundo); };
+        emAndamento = emAndamento.then(passo, passo);
+        return emAndamento;
       }
+
+      async function buscar(segundoPlano) {
+        /* A atualização automática só atualiza uma lista que já está na
+           tela. A que falhou tem o próprio botão de tentar de novo. */
+        if (segundoPlano && (!carregado || !document.body.contains(lista))) return;
+
+        var r = await global.RAMAApi.listarDocumentos(ctx.campanhaId, segundoPlano ? { segundoPlano: true } : null);
+        if (!r.ok) {
+          /* Em segundo plano, uma falha não apaga o que está na tela. */
+          if (segundoPlano) return;
+          cartoes = {};
+          carregado = false;
+          U.trocar(lista, UI.erroDeTela(r, function () { carregar(); }));
+          return;
+        }
+
+        carregado = true;
+        pintar(r.dados || [], segundoPlano);
+      }
+
+      function pintar(documentos, segundoPlano) {
+        if (!documentos.length) {
+          cartoes = {};
+          U.trocar(lista, UI.vazio({
+            titulo: "Nenhum documento",
+            texto: ctx.ehMestre()
+              ? "Crie documentos e escolha exatamente quem pode vê-los."
+              : "O mestre ainda não liberou nenhum documento para você.",
+          }));
+          return;
+        }
+
+        var novos = {};
+        var nos = documentos.map(function (d) {
+          var chave = [d.rev, d.atualizadoEm, d.nome, (d.visiveis || []).join(",")].join("|");
+          var antes = cartoes[d.id];
+          var cartao = antes && antes.chave === chave
+            ? antes.cartao
+            : cartaoDeDocumento(ctx, d, carregar, { aberto: !!(antes && antes.cartao.open), segundoPlano: segundoPlano });
+          novos[d.id] = { chave: chave, cartao: cartao };
+          return cartao;
+        });
+        cartoes = novos;
+
+        /* Sai o que não é mais cartão (documento excluído ou que deixou de
+           ser liberado, o aviso de lista vazia, o carregando); os cartões
+           entram na ordem sem mexer em quem já está no lugar — mover um nó
+           tira o foco de dentro dele. */
+        Array.prototype.slice.call(lista.children).forEach(function (filho) {
+          if (nos.indexOf(filho) < 0) lista.removeChild(filho);
+        });
+        nos.forEach(function (no, i) {
+          if (lista.children[i] !== no) lista.insertBefore(no, lista.children[i] || null);
+        });
+      }
+
+      /* Mudança vinda da sincronização da campanha: documento novo,
+         editado, excluído, imagem trocada, ou a lista de quem pode ver
+         mudou. O servidor manda só o que esta conta pode ver. */
+      ctx.aoAtualizar("documentos", function () { carregar(true); });
 
       carregar();
 
@@ -201,7 +323,11 @@
     },
   };
 
-  function cartaoDeDocumento(ctx, d, recarregar) {
+  /* opcoes: { aberto, segundoPlano } — o cartão que substitui outro na
+     atualização automática nasce aberto se o anterior estava, e busca a
+     imagem sem acender a barra de atividade. */
+  function cartaoDeDocumento(ctx, d, recarregar, opcoes) {
+    var o = opcoes || {};
     var corpo = el("div.pilha--curta", { class: "pilha" }, [
       d.descricao ? el("p", { texto: d.descricao, estilo: { whiteSpace: "pre-wrap" } }) : null,
       el("div.documento__imagem", {}, [el("p.t-mini", { texto: "Carregando imagem…" })]),
@@ -209,7 +335,7 @@
 
     var imagemCaixa = U.$(".documento__imagem", corpo);
 
-    global.RAMAApi.lerImagemDocumento(ctx.campanhaId, d.id).then(function (r) {
+    global.RAMAApi.lerImagemDocumento(ctx.campanhaId, d.id, o.segundoPlano ? { segundoPlano: true } : null).then(function (r) {
       if (!r.ok || !r.dados.imagem) { U.trocar(imagemCaixa, []); return; }
       U.trocar(imagemCaixa, el("img", {
         src: r.dados.imagem,
@@ -242,6 +368,7 @@
       extra: ctx.ehMestre()
         ? ((d.visiveis || []).length ? (d.visiveis || []).length + " com acesso" : "só você")
         : "",
+      aberto: !!o.aberto,
       conteudo: [corpo],
       acoes: acoes,
     });

@@ -49,11 +49,24 @@
     "listar_combates",
     "ler_homebrew",
     "ler_imagem_criatura",
+    "ler_capa_campanha",
+    "sincronizar_campanha",
 
     "salvar_foto",
     "salvar_perfil",
     "salvar_imagem_criatura",
     "salvar_imagem_documento",
+    "salvar_capa_campanha",
+
+    /* Substitui um valor derivado, e só se a revisão ainda for a mesma:
+       repetir grava o mesmo número ou recusa por revisão. */
+    "atualizar_resumo_personagem",
+
+    /* Cada lote de operações leva um opId, e o servidor guarda os que já
+       aplicou: a segunda chegada do mesmo lote é reconhecida e não é
+       aplicada de novo. É isso — e só isso — que põe esta gravação na
+       lista. */
+    "atualizar_combate",
 
     /* registrar_rolagem repete com segurança porque carrega um id
        próprio: o servidor reconhece a segunda chegada e não cria a
@@ -94,10 +107,66 @@
      não tem validade e não devolve nada desatualizado. Um pedido feito
      um instante depois do anterior terminar vai à rede de novo. */
 
+  var GRAVACOES_REPETIVEIS = {
+    registrar_rolagem: true,
+    atualizar_resumo_personagem: true,
+    atualizar_combate: true,
+  };
+
   var LEITURAS = {};
   IDEMPOTENTES.forEach(function (acao) {
-    if (acao.indexOf("salvar_") !== 0 && acao !== "registrar_rolagem") LEITURAS[acao] = true;
+    if (acao.indexOf("salvar_") !== 0 && !GRAVACOES_REPETIVEIS[acao]) LEITURAS[acao] = true;
   });
+
+  /* =================================================================
+     OPERAÇÕES EM ANDAMENTO
+     -----------------------------------------------------------------
+     Toda ida ao servidor passa por post(). É aqui, então, e só aqui,
+     que o sistema sabe que está esperando a planilha — e avisa quem
+     quiser mostrar isso.
+
+     Cada operação é anunciada duas vezes: quando começa e quando
+     termina (bem ou mal). O anúncio traz a ação, se é leitura ou
+     gravação, se foi pedida em SEGUNDO PLANO (a sincronização automática,
+     que não merece ocupar a tela) e o resumo de tudo o que está em
+     andamento.
+
+     Quem escuta decide o que mostrar: a barra de atividade da casca
+     (js/ui.js) acende com qualquer operação de primeiro plano, e o selo
+     discreto de "Atualizando…" com as de segundo plano. Botões e regiões
+     mostram o próprio estado com RAMAUI.ocupar() — o anúncio central não
+     substitui o contexto local, só garante que nenhuma espera fique muda.
+     ================================================================= */
+
+  var ouvintes = [];
+  var emAndamento = {};
+  var proximaOperacao = 0;
+
+  function aoOperar(fn) {
+    ouvintes.push(fn);
+    return function () { ouvintes = ouvintes.filter(function (f) { return f !== fn; }); };
+  }
+
+  function resumoDasOperacoes() {
+    var saida = { total: 0, primeiroPlano: 0, segundoPlano: 0, gravacoes: 0 };
+    Object.keys(emAndamento).forEach(function (id) {
+      var op = emAndamento[id];
+      saida.total++;
+      if (op.segundoPlano) saida.segundoPlano++; else saida.primeiroPlano++;
+      if (op.tipo === "gravacao") saida.gravacoes++;
+    });
+    return saida;
+  }
+
+  function anunciar(evento) {
+    evento.resumo = resumoDasOperacoes();
+    ouvintes.slice().forEach(function (fn) {
+      try { fn(evento); } catch (e) { console.error("[R.A.M.A. · api] ouvinte de operação falhou", e); }
+    });
+    try {
+      document.dispatchEvent(new CustomEvent("rama:operacao", { detail: evento }));
+    } catch (e) { /* ambiente sem DOM */ }
+  }
 
   var emVoo = {};
 
@@ -110,14 +179,40 @@
   }
 
   /* Chamada crua: quem precisa de uma ação que ainda não tem função
-     própria usa esta, e o token entra do mesmo jeito. */
-  async function post(corpo) {
+     própria usa esta, e o token entra do mesmo jeito.
+
+     opcoes.segundoPlano: a operação é uma atualização automática — o
+     aviso dela é o selo discreto, nunca a barra de atividade. */
+  async function post(corpo, opcoes) {
+    var o = opcoes || {};
     var dados = Object.assign({}, corpo);
     if (!dados.token && global.RAMAAuth) {
       var t = global.RAMAAuth.token();
       if (t) dados.token = t;
     }
 
+    var operacao = {
+      id: ++proximaOperacao,
+      acao: dados.acao,
+      tipo: LEITURAS[dados.acao] ? "leitura" : "gravacao",
+      segundoPlano: !!o.segundoPlano,
+      inicio: Date.now(),
+    };
+
+    emAndamento[operacao.id] = operacao;
+    anunciar({ fase: "inicio", operacao: operacao });
+
+    var r;
+    try {
+      r = await postSemAnuncio(dados);
+      return r;
+    } finally {
+      delete emAndamento[operacao.id];
+      anunciar({ fase: "fim", operacao: operacao, ok: !!(r && r.ok), erro: r ? r.erro : "sem_resposta" });
+    }
+  }
+
+  async function postSemAnuncio(dados) {
     if (!LEITURAS[dados.acao]) return enviar(dados);
 
     var chave = chaveDoPedido(dados);
@@ -313,7 +408,7 @@
 
   function listarCampanhas() { return post({ acao: "listar_campanhas" }); }
 
-  function lerCampanha(id) { return post({ acao: "ler_campanha", campanhaId: id }); }
+  function lerCampanha(id, opcoes) { return post({ acao: "ler_campanha", campanhaId: id }, opcoes); }
 
   function criarCampanha(dados) { return post({ acao: "criar_campanha", dados: dados }); }
 
@@ -322,6 +417,21 @@
   }
 
   function excluirCampanha(id) { return post({ acao: "excluir_campanha", campanhaId: id }); }
+
+  /* As marcas de cada parte da campanha. Pergunta leve e automática —
+     sempre em segundo plano. Ver "Marcas da mesa" em Campanhas.gs. */
+  function sincronizarCampanha(id) {
+    return post({ acao: "sincronizar_campanha", campanhaId: id }, { segundoPlano: true });
+  }
+
+  function lerCapaCampanha(id, opcoes) {
+    return post({ acao: "ler_capa_campanha", campanhaId: id }, opcoes);
+  }
+
+  /* imagem vazia remove a capa. */
+  function salvarCapaCampanha(id, imagem, largura, altura) {
+    return post({ acao: "salvar_capa_campanha", campanhaId: id, imagem: imagem || "", largura: largura, altura: altura });
+  }
 
   /* =================================================================
      PERFIL
@@ -353,8 +463,17 @@
     return post({ acao: "salvar_participantes", campanhaId: campanhaId, membros: membros });
   }
 
-  function listarPersonagensCampanha(campanhaId) {
-    return post({ acao: "listar_personagens_campanha", campanhaId: campanhaId });
+  function listarPersonagensCampanha(campanhaId, opcoes) {
+    return post({ acao: "listar_personagens_campanha", campanhaId: campanhaId }, opcoes);
+  }
+
+  /* O máximo de PV, PE e Sanidade calculado por quem pode ver a ficha,
+     para a mesa ver sem receber a ficha. `rev` é a revisão sobre a qual a
+     conta foi feita. */
+  function atualizarResumoPersonagem(personagemId, rev, resumo) {
+    return post({
+      acao: "atualizar_resumo_personagem", personagemId: personagemId, rev: rev, resumo: resumo,
+    }, { segundoPlano: true });
   }
 
   function vincularPersonagem(campanhaId, personagemId, vincular) {
@@ -382,12 +501,14 @@
      CAMPANHA — ROLAGENS
      ================================================================= */
 
-  function listarRolagens(campanhaId, opcoes) {
+  /* `envio` vai para post(): { segundoPlano: true } na atualização
+     automática da aba. */
+  function listarRolagens(campanhaId, opcoes, envio) {
     var o = opcoes || {};
     return post({
       acao: "listar_rolagens", campanhaId: campanhaId,
       limite: o.limite, pulo: o.pulo,
-    });
+    }, envio);
   }
 
   /* A rolagem JÁ aconteceu. O `rolagemId` é gerado por quem rolou e é a
@@ -410,8 +531,8 @@
      CAMPANHA — DOCUMENTOS, NOTAS E COMBATES
      ================================================================= */
 
-  function listarDocumentos(campanhaId) {
-    return post({ acao: "listar_documentos", campanhaId: campanhaId });
+  function listarDocumentos(campanhaId, opcoes) {
+    return post({ acao: "listar_documentos", campanhaId: campanhaId }, opcoes);
   }
 
   function salvarDocumento(campanhaId, dados, rev) {
@@ -422,8 +543,8 @@
     return post({ acao: "excluir_documento", campanhaId: campanhaId, documentoId: documentoId });
   }
 
-  function lerImagemDocumento(campanhaId, documentoId) {
-    return post({ acao: "ler_imagem_documento", campanhaId: campanhaId, documentoId: documentoId });
+  function lerImagemDocumento(campanhaId, documentoId, opcoes) {
+    return post({ acao: "ler_imagem_documento", campanhaId: campanhaId, documentoId: documentoId }, opcoes);
   }
 
   function salvarImagemDocumento(campanhaId, documentoId, imagem) {
@@ -445,8 +566,18 @@
     return post({ acao: "excluir_nota_mestre", campanhaId: campanhaId, notaId: notaId });
   }
 
-  function listarCombates(campanhaId) {
-    return post({ acao: "listar_combates", campanhaId: campanhaId });
+  function listarCombates(campanhaId, opcoes) {
+    return post({ acao: "listar_combates", campanhaId: campanhaId }, opcoes);
+  }
+
+  /* Um lote de operações sobre um combate. `opId` identifica o lote e é
+     o MESMO em toda repetição dele — gerar outro ao repetir seria pedir
+     para aplicar duas vezes. */
+  function atualizarCombate(campanhaId, combateId, rev, opId, ops) {
+    return post({
+      acao: "atualizar_combate", campanhaId: campanhaId, combateId: combateId,
+      rev: rev, opId: opId, ops: ops,
+    });
   }
 
   function salvarCombate(campanhaId, dados, rev) {
@@ -553,6 +684,8 @@
   global.RAMAApi = {
     post: post,
     lote: lote,
+    aoOperar: aoOperar,
+    operacoesEmAndamento: resumoDasOperacoes,
     aceitaLote: function () { return servidorAceitaLote; },
     podeRepetir: podeRepetir,
     ehErroDeSessao: ehErroDeSessao,
@@ -581,6 +714,9 @@
     criarCampanha: criarCampanha,
     salvarCampanha: salvarCampanha,
     excluirCampanha: excluirCampanha,
+    sincronizarCampanha: sincronizarCampanha,
+    lerCapaCampanha: lerCapaCampanha,
+    salvarCapaCampanha: salvarCapaCampanha,
 
     lerPerfil: lerPerfil,
     salvarPerfil: salvarPerfil,
@@ -592,6 +728,7 @@
     listarUsuarios: listarUsuarios,
     salvarParticipantes: salvarParticipantes,
     listarPersonagensCampanha: listarPersonagensCampanha,
+    atualizarResumoPersonagem: atualizarResumoPersonagem,
     vincularPersonagem: vincularPersonagem,
     ajustarPersonagem: ajustarPersonagem,
 
@@ -611,6 +748,7 @@
 
     listarCombates: listarCombates,
     salvarCombate: salvarCombate,
+    atualizarCombate: atualizarCombate,
     excluirCombate: excluirCombate,
 
     frase: frase,

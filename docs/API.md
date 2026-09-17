@@ -8,6 +8,18 @@ RAMAApi.post({ acao: "ler_personagem", personagemId: "..." })
 
 O `token` é acrescentado pela camada de API — nenhuma tela o manipula.
 
+Um segundo argumento, opcional, marca a operação como de **segundo plano**:
+
+```js
+RAMAApi.post({ acao: "listar_combates", campanhaId: "..." }, { segundoPlano: true })
+```
+
+É o que a atualização automática da campanha usa. Toda operação, de primeiro ou de
+segundo plano, é anunciada quando começa e quando termina (`RAMAApi.aoOperar(fn)`,
+ou o evento `rama:operacao` no `document`, com `{ fase, operacao: { acao, tipo,
+segundoPlano }, ok, erro, resumo }`); é disso que vivem a barra de atividade e o selo
+"Atualizando…". Ver "Carregamento e gravação" em [CAMPAIGNS.md](CAMPAIGNS.md).
+
 ## O transporte
 
 ```
@@ -94,23 +106,30 @@ nome é fácil de errar, lista é fácil de conferir.
 ```
 ping · sessao · resumo · listar_personagens · ler_personagem · ler_foto
 listar_homebrew · ler_homebrew · ler_imagem_criatura
-listar_campanhas · ler_campanha · listar_usuarios
+listar_campanhas · ler_campanha · listar_usuarios · sincronizar_campanha
 listar_personagens_campanha · listar_rolagens · listar_documentos
 ler_imagem_documento · listar_notas_mestre · listar_combates · ler_perfil
+ler_capa_campanha
 ```
 
-Três GRAVAÇÕES também entram na lista, porque SUBSTITUEM um valor em vez de
+Algumas GRAVAÇÕES também entram na lista, porque SUBSTITUEM um valor em vez de
 criar registro — repetir não cria nada:
 
 ```
 salvar_foto · salvar_perfil · salvar_imagem_criatura · salvar_imagem_documento
+salvar_capa_campanha
 ```
 
 E `lote`, que só carrega leitura.
 
-E `registrar_rolagem`, que é o caso especial: ela carrega um id próprio, e o
-servidor reconhece a segunda chegada como repetição. **Sem essa chave ela não
-poderia estar aqui.**
+E três casos especiais, que só estão aqui por causa de uma chave:
+
+- `registrar_rolagem` carrega um id próprio, e o servidor reconhece a segunda
+  chegada como repetição. **Sem essa chave ela não poderia estar aqui.**
+- `atualizar_combate` carrega um `opId` por lote, guardado com o combate: o mesmo
+  lote chegando de novo responde `repetida: true` e **não** é aplicado outra vez.
+- `atualizar_resumo_personagem` substitui um valor derivado, e só se a revisão da
+  ficha ainda for a mesma: repetir grava o mesmo número ou é recusado por revisão.
 
 ---
 
@@ -226,6 +245,11 @@ trinta nomes seriam megabytes por tela.
 o id nasce no servidor. `campanhaId` só vale se a conta for mestre ou jogadora
 daquela campanha; senão vira vazio — na coluna e dentro da ficha guardada.
 
+`dados.resumoRecursos` (ficha de Ordem): `{ pv, pe, san }`, o máximo calculado pelas
+regras no navegador, para a mesa ver sem receber a ficha — ver
+`atualizar_resumo_personagem`. Validado no servidor; forma inválida é descartada, e
+ficha universal não guarda resumo.
+
 #### `salvar_personagem`
 ```js
 { acao: "salvar_personagem", personagemId: "...", rev: 12, dados: { ...ficha } }
@@ -241,6 +265,9 @@ simples de programar e apagaria o trabalho de alguém sem ninguém perceber.
 jogador) é ignorado — a campanha continua a que estava. Nos dois casos a campanha
 que ficou valendo é gravada também dentro da ficha, para coluna e ficha não
 discordarem.
+
+`dados.resumoRecursos` vale como em `criar_personagem`. Uma gravação sem resumo —
+de uma versão do site que não o calculava — mantém o que já estava.
 
 #### `excluir_personagem`
 Remove a ficha e a foto.
@@ -289,7 +316,8 @@ Não afeta as fichas que já usam uma cópia daquele modelo.
 ### Campanhas
 
 `listar_campanhas`, `ler_campanha`, `criar_campanha`,
-`salvar_campanha` (com `rev`), `excluir_campanha`.
+`salvar_campanha` (com `rev`), `excluir_campanha`, e as demais em
+[Ações de campanha](#ações-de-campanha).
 
 Excluir uma campanha **não** apaga personagens: ela é um agrupamento, e apagar o
 agrupamento não pode apagar o que estava agrupado. Os personagens ficam sem
@@ -321,13 +349,17 @@ Todas em `backend/Campanhas.gs`. A primeira linha de cada uma é
 | Ação | Quem | Observação |
 |---|---|---|
 | `listar_campanhas` | qualquer | as suas, as que joga, e as públicas |
-| `ler_campanha` | membro ou espectador | espectador não recebe a lista de membros |
+| `ler_campanha` | membro ou espectador | espectador não recebe a lista de membros; traz `rolagensMestreOcultas`, `ocultarStatusJogadores`, `capa` (só se existe, tamanho e data) e `marcas` |
+| `sincronizar_campanha` | membro ou espectador | só as marcas de cada parte, lidas do cache (espectador: `campanha` e `membros`) |
 | `criar_campanha` | qualquer | nasce privada |
-| `salvar_campanha` | mestre | com `rev` |
-| `excluir_campanha` | **criador** | leva membros, rolagens, documentos, notas e combates; fichas ficam só sem campanha |
+| `salvar_campanha` | mestre | com `rev`; aceita `ocultarStatusJogadores` e devolve o valor gravado |
+| `excluir_campanha` | **criador** | leva membros, rolagens, documentos, notas, combates e a capa; fichas ficam só sem campanha |
+| `ler_capa_campanha` | membro ou espectador | a imagem da capa; acesso conferido de novo; aceita no `lote` |
+| `salvar_capa_campanha` | mestre | substitui; `imagem` vazia remove |
 | `listar_usuarios` | qualquer | diretório mínimo: id, usuario, nome, avatar |
 | `salvar_participantes` | mestre | ids de usuário; quem sai leva os personagens junto |
-| `listar_personagens_campanha` | membro | cabeçalho + status e atributos (universal) ou dados de cálculo de Ordem só para mestre e dono; nunca a ficha inteira |
+| `listar_personagens_campanha` | membro | identificação para todos; recursos atuais e máximos dos outros só com a ocultação desligada; dados de cálculo e `resumoRecursos` só para mestre e dono; nunca a ficha inteira. Espectador recebe lista vazia |
+| `atualizar_resumo_personagem` | dono ou mestre | máximo de PV, PE e SAN de ficha de Ordem, **com `rev`**; a revisão não sobe |
 | `vincular_personagem` | dono ou mestre | só entra ficha de quem é mestre ou jogador da campanha; tira da campanha anterior; é o que o botão "Adicionar personagem" usa |
 | `ajustar_personagem` | dono ou mestre | um campo, por id, **com `rev`** |
 | `registrar_rolagem` | membro | idempotente pelo `rolagemId` |
@@ -338,8 +370,9 @@ Todas em `backend/Campanhas.gs`. A primeira linha de cada uma é
 | `ler_imagem_documento` | quem pode ver o documento | permissão conferida de novo |
 | `salvar_imagem_documento` | mestre | |
 | `listar_notas_mestre` / `salvar_nota_mestre` / `excluir_nota_mestre` | **mestre** | não existe variação para jogador |
-| `listar_combates` | membro autorizado | jogador não recebe o snapshot das criaturas |
-| `salvar_combate` / `excluir_combate` | mestre | com `rev` |
+| `listar_combates` | membro autorizado | com `turno`; jogador não recebe o snapshot das criaturas nem `visiveis`; recursos de personagem pela regra dos cartões |
+| `salvar_combate` / `excluir_combate` | mestre | com `rev`; `salvar_combate` cria e é o caminho das versões anteriores do site — preserva turno e `opId` guardados |
+| `atualizar_combate` | mestre | lote de operações, **com `rev` e `opId`**; tudo ou nada |
 
 ### `ajustar_personagem`
 
@@ -369,6 +402,137 @@ envio**: é ele que impede a mesma rolagem de virar duas linhas. A resposta traz
 A `visibilidade` **não é aceita do cliente**. Rolagem de jogador é sempre
 pública na mesa; a do mestre segue a configuração da campanha.
 
+### `sincronizar_campanha`
+
+```js
+{ acao: "sincronizar_campanha", campanhaId }
+→ { ok: true, dados: { papel: "jogador", mestre: false,
+      marcas: { campanha, membros, personagens, combates, documentos, rolagens } } }
+→ { ok: false, erro: "nao_encontrado" }   // esta conta não alcança mais a campanha
+```
+
+A pergunta leve da atualização automática. As marcas são carimbos opacos: compare
+com as anteriores e, na parte que mudou, busque pelo caminho normal
+(`ler_campanha`, `listar_personagens_campanha`, `listar_combates`,
+`listar_documentos`, `listar_rolagens`). Com as marcas e o papel no cache, nenhuma
+aba da planilha é lida. Uma marca que o cache perdeu vira `r` + o minuto atual — a
+parte é buscada de novo no máximo uma vez por minuto até a próxima gravação. Ver
+[CAMPAIGNS.md](CAMPAIGNS.md#atualização-automática).
+
+### `ler_capa_campanha` / `salvar_capa_campanha`
+
+```js
+{ acao: "ler_capa_campanha", campanhaId }
+→ { ok: true, dados: { imagem: "data:image/webp;base64,...", atualizadoEm, largura, altura } }
+   // sem capa: imagem "", largura 0, altura 0
+
+{ acao: "salvar_capa_campanha", campanhaId, imagem: "data:image/webp;base64,...", largura: 1500, altura: 500 }
+→ { ok: true, dados: { existe: true, atualizadoEm, largura, altura } }
+
+{ acao: "salvar_capa_campanha", campanhaId, imagem: "" }
+→ { ok: true, dados: { existe: false } }
+```
+
+`imagem` precisa ser `data:image/(webp|jpeg|png);base64,…`, com `largura` e `altura`
+inteiras de 1 a 4096. Acima do limite da célula responde `dados_grandes` — nunca é
+truncada. Só o mestre grava. A leitura passa por `contextoDaCampanha`: a capa de
+campanha privada não sai para quem está de fora, nem pelo id direto. `ler_campanha`
+diz se há capa (`capa: { existe, atualizadoEm, largura, altura }`) sem trazer a
+imagem.
+
+### `listar_personagens_campanha`
+
+```js
+{ acao: "listar_personagens_campanha", campanhaId }
+→ { ok: true, config: { ocultarStatusJogadores: false }, dados: [ {
+      id, nome, tipoFicha: "ordem" | "universal", classe, origem, ownerId, dono, foto, rev,
+      souDono, detalhado, podeEditarRecursos, podeAbrirFicha, recursosVisiveis,
+
+      // Ordem — mestre ou dono (detalhado):
+      ordem: { ...dados de cálculo }, inventario: { itens }, resumoRecursos,
+      // Ordem — outro jogador:
+      ordem: { classe, trilha, nex, nivel, opcionais: { nexExperiencia } },
+      recursos: [ { chave: "pv", rotulo: "PV", atual: 18, maximo: 32 } ],  // ou recursosPendentes: true
+      // Universal:
+      atributos: [ { id, nome, sigla, valor, dado } ],
+      status: [ { id, nome, atual, maximo } ],
+   } ] }
+```
+
+Com `recursosVisiveis: false` (ocultação ligada, personagem de outra conta),
+`recursos` e `status` **não vêm** — não há o que esconder na tela.
+`recursosPendentes: true` quer dizer que a ficha de Ordem ainda não tem resumo
+guardado. `podeEditarRecursos`, `podeAbrirFicha` e `recursosVisiveis` são rótulos
+para a tela: `ajustar_personagem` e `ler_personagem` conferem de novo.
+
+### `atualizar_resumo_personagem`
+
+```js
+{ acao: "atualizar_resumo_personagem", personagemId, rev: 7, resumo: { pv: 32, pe: 9, san: null } }
+→ { ok: true, rev: 7, dados: { mudou: true } }
+→ { ok: false, erro: "conflito", rev: 8 }
+```
+
+Só ficha de Ordem (`dados_invalidos` na universal), só dono ou mestre da campanha
+da ficha, revisão obrigatória. Grava o resumo dentro do `fichaJson` **sem subir a
+revisão** — o resumo é derivado, e subir a revisão poria em conflito a ficha aberta
+em outro aparelho. Inteiros de −999 a 99.999; `san` pode ser `null` ("Jogando sem
+Sanidade"). O atual de cada recurso não entra: ele é lido de `ordem.recursos` na
+hora.
+
+### `listar_combates`
+
+```js
+{ acao: "listar_combates", campanhaId }
+→ { ok: true, dados: [ {
+      id, nome, estado: "preparando" | "ativo" | "encerrado", rev, criadoEm, atualizadoEm,
+      turno: { rodada: 2, ativoId: "pt-..." },
+      participantes: [ { id, tipo, nome, ordem, personagemId, recursos?, recursosPendentes? } ],
+      visiveis: [ ...ids ]   // só para o mestre
+   } ] }
+```
+
+O mestre recebe cada participante inteiro (a criatura com `snapshot` e `origemId`).
+O jogador recebe de cada um só `id`, `tipo`, `nome`, `ordem` e `personagemId` (nulo
+em criatura) e, em personagem, `recursos` pela regra dos cartões: os dos próprios
+personagens sempre, os dos outros só com a ocultação desligada. Um combate em
+andamento sem turno guardado (anterior à v2.12) vem com rodada 1 e o primeiro da
+ordem.
+
+### `atualizar_combate`
+
+```js
+{ acao: "atualizar_combate", campanhaId, combateId, rev: 14, opId: "lote-3f9c2a1b",
+  ops: [
+    { tipo: "iniciativa", participanteId: "pt-lia", valor: 18 },
+    { tipo: "turno", direcao: "proximo" }
+  ] }
+→ { ok: true, rev: 15, avisos: [], dados: { ...combate como o mestre vê } }
+→ { ok: true, repetida: true, rev: 15, dados: { ... } }                 // o mesmo opId de novo
+→ { ok: false, erro: "conflito", rev: 15, dados: { ...estado atual } }  // o combate mudou
+→ { ok: false, erro: "dados_invalidos", indice: 1, motivo: "estado" }
+```
+
+| operação | campos | regra |
+|---|---|---|
+| `iniciativa` | `participanteId`, `valor` | número de verdade (texto é recusado), até ±9999 |
+| `criatura_status` | `participanteId`, `statusId`, `valor` | só criatura; muda o snapshot **deste** combate, de 0 ao máximo (sem máximo, até 999.999) |
+| `turno` | `direcao`: `"proximo"` ou `"anterior"` | só com o combate `ativo`; voltar do primeiro turno da rodada 1 não muda nada e devolve o aviso `{ aviso: "inicio" }` |
+| `estado` | `valor`: `"ativo"` ou `"encerrado"` | só `preparando → ativo → encerrado`; iniciar põe rodada 1 e o primeiro da ordem; pedir o estado atual não é erro |
+| `adicionar` | `participantes` | personagem só da mesa e sem repetir; criatura entra como snapshot; até 200 no combate |
+| `remover` | `participanteId` | tirar quem tem o turno passa a vez a quem vinha depois; tirar quem já saiu não é erro |
+| `renomear` | `nome` | até 120 caracteres, não vazio |
+| `visiveis` | `lista` | ids de usuário; quem não é da mesa é descartado |
+
+- `opId`: 8 a 80 caracteres `[A-Za-z0-9_-]`, **o mesmo em toda repetição** do
+  lote. O servidor guarda os 40 últimos com o combate e confere o `opId` **antes**
+  da revisão: o lote que já entrou subiu a revisão, e a segunda chegada dele
+  pareceria um conflito.
+- Até 100 operações por lote, aplicadas em ordem e **todas ou nenhuma**.
+- Só o mestre (`exigirMestre`).
+
+As regras de turno estão em [CAMPAIGNS.md](CAMPAIGNS.md#turnos-e-rodadas).
+
 ---
 
 ## Segurança — o contrato
@@ -391,7 +555,10 @@ pelo console e chamado por fora da interface. Então:
 8. **Ser mestre dá acesso à FICHA vinculada, não à conta.** O `ownerId` nunca
    muda, e apagar ou duplicar o personagem de outra pessoa continua fora de
    alcance.
+9. **O que a pessoa não pode ver não sai do servidor.** Recursos escondidos pelo
+   mestre, snapshot de criatura, notas, documentos não liberados e rolagens ocultas
+   não chegam ao navegador — `display: none` nunca é a proteção.
 
-Essas oito linhas são o que os testes de segurança conferem — 118 verificações
-em `testes/executar-backend.js`. A matriz completa está em
+Essas nove linhas são o que os testes de segurança conferem, entre as 447
+verificações de `testes/executar-backend.js`. A matriz completa está em
 [PERMISSIONS.md](PERMISSIONS.md).

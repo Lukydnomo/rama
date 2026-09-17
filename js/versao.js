@@ -14,13 +14,13 @@
    TRÊS COISAS DIFERENTES, QUE NÃO SE MISTURAM
    ---------------------------------------------------------------------
 
-     versão do aplicativo   está aqui. É o que a pessoa vê: v2.11.1.
+     versão do aplicativo   está aqui. É o que a pessoa vê: v2.12.0.
      schemaVersion          está em js/ficha.js. É o formato da FICHA,
                             e só sobe quando a ficha muda de forma.
      versaoFormato          está em js/config.js. É o formato dos
                             arquivos de importação/exportação.
 
-   Elas sobem em ritmos próprios. A v2.11.1 leva schemaVersion 6 e
+   Elas sobem em ritmos próprios. A v2.12.0 leva schemaVersion 6 e
    versaoFormato 1 — e isso é normal: a ficha ganhou versões personalizadas e
    etiquetas, mas o formato dos arquivos de importação continua
    o mesmo,
@@ -57,6 +57,38 @@
   ];
 
   var CHANGELOG = [
+    {
+      versao: "2.12.0",
+      codinome: "VIGÍLIA",
+      data: "17/09/2026",
+      mudancas: {
+        "Adicionado": [
+          "Campanha: a mesa se atualiza sozinha. Quem está com a campanha aberta vê, sem recarregar a página, os recursos, iniciativas, rodada e turno, participantes, permissões, capa, documentos e rolagens que outra pessoa mudou. Não é tempo real: o navegador pergunta a cada ~8 s nas abas Personagens e Combate e a cada ~20 s nas outras, para de perguntar com a página escondida e espera mais depois de uma falha — uma mudança costuma chegar em 2 a 15 s.",
+          "Visão geral: capa da campanha. O mestre importa uma imagem, ajusta o recorte numa prévia na proporção da faixa (aproximação e posição, arrastando ou pelas setas) e salva, troca ou remove. A capa segue a visibilidade da campanha.",
+          "Aba Personagens: os jogadores veem os recursos atuais e máximos de todos os personagens da mesa — PV, PE e SAN nas fichas de Ordem, os status configurados nas universais —, editam só os dos próprios personagens e têm “Abrir ficha” só neles.",
+          "Chave do mestre “Esconder status dos jogadores”, na aba Personagens: ligada, cada jogador vê os recursos só dos próprios personagens, nos cartões e na lista do combate. O servidor deixa de enviar os números dos outros, e quem está com a campanha aberta recebe a mudança sozinho.",
+          "Combate: rodada e turno. “Iniciar combate” começa a rodada 1 com o primeiro da ordem; “Próximo turno” e “Voltar turno”, só do mestre, seguem a iniciativa, mudam de rodada no fim da ordem e não voltam antes do começo. O turno é guardado pelo participante e continua certo depois de recarregar, reordenar, acrescentar ou remover alguém.",
+          "Combate: a ficha do participante selecionado abre num painel ao lado da lista (numa gaveta, no celular), só para o mestre. Personagem abre a própria ficha, com o mesmo salvamento e as mesmas rolagens; criatura mostra a instância deste combate, e mexer na vida dela não muda o modelo nem as outras cópias.",
+          "Carregamento: toda operação com a planilha acende uma barra fina no topo, e o botão que a disparou mostra “Salvando…”, “Enviando imagem…” ou “Removendo…” até terminar, sem aceitar um segundo clique. As atualizações automáticas mostram só um selo discreto “Atualizando…”. Falha de rede oferece “Tentar de novo”.",
+        ],
+        "Alterado": [
+          "Combate: iniciativa e vida de criatura esperam ~5 s sem nova digitação (~1,2 s para vida) e sobem juntas, num lote. A barra “Alterações pendentes” mostra quando vai salvar e tem “Salvar agora”. Enquanto houver iniciativa por enviar, turno, iniciar, encerrar e remover ficam travados, com o motivo. Trocar de aba ou esconder a página envia o que falta; fechar a página com algo pendente pede confirmação.",
+          "“Quem pode ver” de cada combate saiu do menu de opções e foi para os controles abaixo da lista.",
+          "Clicar no nome de um participante do combate o seleciona para consulta — não passa a vez.",
+        ],
+        "Corrigido": [
+          "Combate: digitar várias iniciativas seguidas disparava gravações com a mesma revisão. A segunda voltava como conflito, a tela recarregava e a iniciativa ainda sendo digitada se perdia. Iniciar e encerrar também recarregavam depois de um tempo fixo, às vezes antes de a gravação terminar.",
+          "Combate: um conflito real (outro mestre, outra aba) não descarta mais tudo. O que é independente é reaplicado; quando as duas pessoas mudaram o mesmo campo, a tela pergunta qual valor fica. Uma resposta perdida pela rede é repetida sem ser aplicada duas vezes — um “Próximo turno” não pula ninguém.",
+        ],
+        "Removido": [
+          "O bloco “Panorama” da Visão geral da campanha.",
+        ],
+        "Técnico": [
+          "Novas ações: sincronizar_campanha (marcas de cada parte da campanha, lidas do cache), ler_capa_campanha e salvar_capa_campanha (aba nova CAMPANHA_CAPAS), atualizar_resumo_personagem (o máximo de PV, PE e SAN guardado na ficha de Ordem, para a mesa) e atualizar_combate (lote de operações com rev e opId, tudo ou nada). listar_personagens_campanha e listar_combates filtram os recursos no servidor; salvar_combate preserva turno e opIds. Novos js/sincronia.js, js/combate-turnos.js (as regras de turno do servidor, conferidas pelos testes) e js/combate-fila.js; RAMAApi.aoOperar e RAMAUI.ocupar.",
+          "Requer nova implantação do Apps Script com os três arquivos (Dados.gs, Codigo.gs e Campanhas.gs) e rodar setupRama() para criar a aba CAMPANHA_CAPAS, antes de publicar o site. Nada é migrado nem apagado: combates antigos em andamento começam na rodada 1 com o primeiro da ordem.",
+        ],
+      },
+    },
     {
       versao: "2.11.1",
       codinome: "ESPELHO",

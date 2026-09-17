@@ -302,6 +302,7 @@ function acoesDeLote() {
     ler_imagem_documento: true,
     listar_notas_mestre: true,
     listar_combates: true,
+    ler_capa_campanha: true,
   };
 }
 
@@ -1107,6 +1108,62 @@ function acaoLerPersonagem(corpo, usuario) {
   };
 }
 
+/* =====================================================================
+   RESUMO DE RECURSOS E MESAS AVISADAS
+   ---------------------------------------------------------------------
+   `resumoRecursos` é o máximo de PV, PE e Sanidade de uma ficha de Ordem,
+   calculado pelo navegador de quem pode editar a ficha — ver o bloco
+   "Resumo de recursos" em Campanhas.gs. Aqui ele só é validado: números
+   inteiros num intervalo sensato, Sanidade podendo ser nula ("Jogando sem
+   Sanidade"). Qualquer outra forma é descartada.
+   ===================================================================== */
+
+var LIMITE_RESUMO_RECURSO = 99999;
+
+function normalizarResumoRecursos(bruto) {
+  if (!bruto || typeof bruto !== 'object') return null;
+
+  function numero(v, aceitaNulo) {
+    if (v === null || v === undefined) return aceitaNulo ? null : undefined;
+    if (typeof v !== 'number' || !isFinite(v)) return undefined;
+    var n = Math.round(v);
+    if (n < -999 || n > LIMITE_RESUMO_RECURSO) return undefined;
+    return n;
+  }
+
+  var pv = numero(bruto.pv, false);
+  var pe = numero(bruto.pe, false);
+  var san = numero(bruto.san, true);
+  if (pv === undefined || pe === undefined || san === undefined) return null;
+
+  return { versao: 1, pv: pv, pe: pe, san: san };
+}
+
+/* O resumo que vai gravado com a ficha. Ficha que não é de Ordem não tem
+   resumo. Gravação que não trouxe resumo — de uma versão do site que não
+   o calculava — mantém o que já estava, em vez de apagar o que a mesa
+   estava vendo. */
+function resumoParaGravar(ficha, fichaAnterior) {
+  var ehOrdem = String(ficha.tipoFicha || '') === 'ordem' && !!ficha.ordem && typeof ficha.ordem === 'object';
+  if (!ehOrdem) return null;
+  return normalizarResumoRecursos(ficha.resumoRecursos) ||
+    (fichaAnterior ? normalizarResumoRecursos(fichaAnterior.resumoRecursos) : null);
+}
+
+/* Quem estiver com a campanha aberta precisa saber que um personagem
+   dela mudou. As marcas são de Campanhas.gs; sem ele instalado, não há
+   mesa para avisar. */
+function avisarMesas(campanhaIds, partes) {
+  if (typeof marcarMesa !== 'function') return;
+  var vistos = {};
+  (campanhaIds || []).forEach(function (id) {
+    var c = String(id || '');
+    if (!c || vistos[c]) return;
+    vistos[c] = true;
+    marcarMesa(c, partes);
+  });
+}
+
 function acaoCriarPersonagem(corpo, usuario) {
   var ficha = corpo.dados;
   if (!ficha || typeof ficha !== 'object') return { ok: false, erro: 'dados_invalidos' };
@@ -1121,6 +1178,7 @@ function acaoCriarPersonagem(corpo, usuario) {
   ficha.id = undefined;
   ficha.criadoEm = agora;
   ficha.atualizadoEm = agora;
+  ficha.resumoRecursos = resumoParaGravar(ficha, null) || undefined;
 
   if (JSON.stringify(ficha).length > MAX_CELULA) return { ok: false, erro: 'dados_grandes' };
 
@@ -1144,6 +1202,7 @@ function acaoCriarPersonagem(corpo, usuario) {
       rev: 1,
       fichaJson: json,
     });
+    avisarMesas([campanhaId], ['personagens']);
     return { ok: true, rev: 1, dados: { id: id } };
   });
 }
@@ -1185,6 +1244,8 @@ function acaoSalvarPersonagem(corpo, usuario) {
 
     var agora = new Date().toISOString();
     ficha.atualizadoEm = agora;
+    ficha.resumoRecursos = resumoParaGravar(ficha, lerJson(registro.fichaJson, {})) || undefined;
+    var campanhaAnterior = registro.campanhaId;
 
     registro.nome = String(ficha.nome || 'Sem nome').slice(0, 120);
     /* Para onde o personagem vai é decisão do DONO. O mestre que edita
@@ -1207,6 +1268,8 @@ function acaoSalvarPersonagem(corpo, usuario) {
 
     atualizarLinha(ABAS.PERSONAGENS, registro._linha, registro);
 
+    avisarMesas([campanhaAnterior, registro.campanhaId], ['personagens', 'combates']);
+
     return { ok: true, rev: registro.rev };
   });
 }
@@ -1226,6 +1289,8 @@ function acaoExcluirPersonagem(corpo, usuario) {
     if (foto && String(foto.ownerId) === String(usuario.id)) {
       apagarLinha(ABAS.PERSONAGENS_FOTOS, foto._linha);
     }
+
+    avisarMesas([registro.campanhaId], ['personagens', 'combates']);
 
     return { ok: true };
   });
@@ -1267,6 +1332,8 @@ function acaoDuplicarPersonagem(corpo, usuario) {
         atualizadoEm: agora,
       });
     }
+
+    avisarMesas([registro.campanhaId], ['personagens']);
 
     return { ok: true, dados: { id: id } };
   });
@@ -1336,6 +1403,8 @@ function acaoSalvarFoto(corpo, usuario) {
         atualizadoEm: agora,
       });
     }
+
+    avisarMesas([acesso.personagem.campanhaId], ['personagens']);
 
     return { ok: true };
   });

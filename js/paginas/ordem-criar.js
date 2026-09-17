@@ -917,6 +917,9 @@
       });
 
       ficha.ordem = ordem;
+      /* A mesa já vê a vida do personagem novo — ver "Resumo de
+         recursos" em backend/Campanhas.gs. */
+      if (R.resumoDeRecursos) ficha.resumoRecursos = R.resumoDeRecursos(ordem);
 
       /* O conceito é do personagem, não das regras: vai para as
          anotações, que é onde ele fica à mão durante o jogo. */

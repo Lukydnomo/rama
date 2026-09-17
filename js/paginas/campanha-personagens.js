@@ -44,6 +44,29 @@
    seus. "Tirar da campanha" aparece para o mestre em qualquer cartão e
    para o dono no próprio personagem. As duas coisas usam o mesmo
    vincular_personagem, e o servidor confere dono, papel e campanha.
+
+   ---------------------------------------------------------------------
+   JOGADORES, E O QUE CADA UM VÊ
+   ---------------------------------------------------------------------
+
+   Os rótulos vêm da listagem (ver acaoListarPersonagensCampanha):
+
+     próprio personagem   recursos com [−], [+] e edição; "Abrir ficha"
+     personagem alheio    recursos atuais e máximos, só leitura; sem
+                          "Abrir ficha"
+     com "Esconder status dos jogadores" ligada (chave do mestre na barra
+     desta aba)           o alheio aparece só com a identificação — o
+                          servidor nem manda os números
+
+   O mestre vê e ajusta tudo, e abre qualquer ficha da mesa. Quando a
+   listagem de quem pode ver a ficha inteira mostra que o máximo guardado
+   para a mesa ficou para trás, esta aba o regrava em segundo plano
+   (atualizar_resumo_personagem), para os outros jogadores verem o número
+   certo.
+
+   A aba se atualiza sozinha pela sincronização da campanha
+   (js/sincronia.js): cartão por cartão, sem tocar num recurso sendo
+   digitado ou com gravação pendente.
    ===================================================================== */
 
 (function (global) {
@@ -70,6 +93,19 @@
     aba: function (ctx) {
       painel.ctx = ctx;
       painel.cartoes = {};
+      painel.grade = null;
+
+      /* Mudança vinda da sincronização: os dados novos já estão em
+         ctx.personagens. Com a grade na tela, cartão por cartão; na tela
+         de lista vazia (ou de erro), a aba se redesenha. */
+      ctx.aoAtualizar("personagens", function () {
+        if (painel.grade && document.body.contains(painel.grade) && ctx.personagens.length) {
+          aplicarLista(ctx, ctx.personagens);
+        } else {
+          ctx.redesenhar();
+        }
+      });
+      ctx.aoAtualizar("campanha", function () { pintarOcultacao(ctx); });
 
       if (ctx.falhaPersonagens) {
         return UI.erroDeTela(ctx.falhaPersonagens, function () { return ctx.atualizarPersonagens(); });
@@ -93,6 +129,9 @@
       var contagem = painel.contagem = el("span.t-mini", { "aria-live": "polite" });
       contar();
 
+      painel.ocultacao = el("div.mesa-ocultacao");
+      pintarOcultacao(ctx);
+
       return el("div.pilha", {}, [
         el("div.mesa-barra", {}, [
           contagem,
@@ -101,11 +140,9 @@
               type: "button",
               texto: "Atualizar",
               "aria-label": "Buscar os números mais recentes das fichas",
-              onclick: async function (ev) {
-                var botao = ev.currentTarget;
-                botao.disabled = true;
-                await buscarEAtualizar(ctx, true);
-                botao.disabled = false;
+              onclick: function (ev) {
+                return UI.ocupar(ev.currentTarget, function () { return buscarEAtualizar(ctx, true); },
+                  { rotulo: "Atualizando…", regiao: painel.grade });
               },
             }),
             podeAdicionar(ctx)
@@ -117,10 +154,81 @@
               : null,
           ]),
         ]),
+        painel.ocultacao,
         painel.grade,
       ]);
     },
   };
+
+  /* =================================================================
+     ESCONDER STATUS DOS JOGADORES
+     -----------------------------------------------------------------
+     A chave é do mestre e vive na campanha (salvar_campanha, que só o
+     mestre passa). O que ela faz acontece no SERVIDOR: com ela ligada, a
+     listagem de cada jogador sai sem os recursos dos personagens dos
+     outros, aqui e na lista do combate. Esta tela só mostra a chave e
+     avisa o jogador de que ela está ligada.
+     ================================================================= */
+
+  function pintarOcultacao(ctx) {
+    var caixa = painel.ocultacao;
+    if (!caixa) return;
+    var ligada = !!ctx.campanha.ocultarStatusJogadores;
+
+    if (!ctx.ehMestre()) {
+      U.trocar(caixa, ligada
+        ? [el("p.t-mini.mesa-ocultacao__aviso", {
+            texto: "O mestre escondeu os status dos jogadores: você vê os recursos só dos seus personagens.",
+          })]
+        : []);
+      return;
+    }
+
+    var chave = el("button.r-interruptor", {
+      type: "button",
+      role: "switch",
+      id: "mesa-ocultar-status",
+      "aria-checked": String(ligada),
+      class: ligada ? "r-interruptor--ligado" : "",
+      "aria-describedby": "mesa-ocultar-status-ajuda",
+      onclick: function (ev) { alternarOcultacao(ctx, ev.currentTarget, !ligada); },
+    }, [el("span.r-interruptor__bola", { "aria-hidden": "true" })]);
+
+    U.trocar(caixa, [
+      el("label.mesa-ocultacao__chave", { for: "mesa-ocultar-status" }, [
+        chave,
+        el("span", { texto: "Esconder status dos jogadores" }),
+      ]),
+      el("p.t-mini", {
+        id: "mesa-ocultar-status-ajuda",
+        texto: ligada
+          ? "Ligada: cada jogador vê os recursos só dos próprios personagens. Você continua vendo todos."
+          : "Desligada: os jogadores veem os recursos de todos os personagens da mesa e editam só os próprios.",
+      }),
+    ]);
+  }
+
+  async function alternarOcultacao(ctx, botao, ligar) {
+    var r = await UI.ocupar(botao, function () {
+      return global.RAMAApi.salvarCampanha(ctx.campanhaId, undefined, { ocultarStatusJogadores: ligar });
+    }, { rotulo: ligar ? "Ligando…" : "Desligando…" });
+
+    if (!r || r.ignorado) return;
+    if (!r.ok) {
+      UI.avisoDeFalha(r, "configuração de status", {
+        tentarDeNovo: function () { alternarOcultacao(ctx, U.$("#mesa-ocultar-status") || botao, ligar); },
+      });
+      return;
+    }
+
+    ctx.definirCampanha({ ocultarStatusJogadores: !!(r.dados ? r.dados.ocultarStatusJogadores : ligar) }, r.rev);
+    pintarOcultacao(ctx);
+    var foco = U.$("#mesa-ocultar-status");
+    if (foco) foco.focus();
+    UI.avisoOk(ligar
+      ? "Status escondidos: os jogadores deixam de receber os recursos dos outros personagens."
+      : "Status visíveis para a mesa.");
+  }
 
   function contar() {
     if (!painel.contagem) return;
@@ -185,6 +293,11 @@
 
     /* O mestre tira qualquer personagem; o dono, o próprio. */
     var podeTirar = ctx.ehMestre() || r.souDono;
+    var podeAbrir = r.podeAbrirFicha !== null ? r.podeAbrirFicha : (ctx.ehMestre() || r.souDono);
+
+    /* Quem vê a ficha inteira percebe que o máximo guardado para a mesa
+       ficou para trás e o regrava. */
+    if (r.resumoDesatualizado) regravarResumo(r);
 
     U.trocar(cartao.raiz, [
       el("div.mesa-cartao__topo", {}, [
@@ -214,9 +327,13 @@
 
       recursos.length
         ? el("div.mesa-recursos", {}, recursos)
-        : (r.tipo === "ordem" && !r.detalhado
-            ? el("p.t-mini.mesa-cartao__reservado", { texto: "Recursos e estatísticas ficam visíveis para o mestre e para quem joga com este personagem." })
-            : (r.tipo === "universal" ? el("p.t-mini", { texto: "Esta ficha não tem status configurados." }) : null)),
+        : (r.recursosOcultos
+            ? el("p.t-mini.mesa-cartao__reservado", { texto: "Status ocultos pelo mestre." })
+            : (r.recursosPendentes
+                ? el("p.t-mini.mesa-cartao__reservado", { texto: "Os recursos aparecem quando o dono ou o mestre abrir esta aba ou salvar a ficha." })
+                : (r.tipo === "ordem" && !r.detalhado
+                    ? el("p.t-mini.mesa-cartao__reservado", { texto: "Recursos e estatísticas ficam visíveis para o mestre e para quem joga com este personagem." })
+                    : (r.tipo === "universal" ? el("p.t-mini", { texto: "Esta ficha não tem status configurados." }) : null)))),
 
       r.estatisticas.length
         ? el("dl.mesa-estatisticas", {}, r.estatisticas.map(function (s) {
@@ -228,14 +345,35 @@
         : null,
 
       el("div.mesa-cartao__rodape", {}, [
-        el("a.r-botao.r-botao--mini", {
-          href: U.url("ficha/?id=" + encodeURIComponent(r.id)),
-          texto: "Abrir ficha",
-          "aria-label": "Abrir ficha de " + r.nome,
-        }),
+        podeAbrir
+          ? el("a.r-botao.r-botao--mini", {
+              href: U.url("ficha/?id=" + encodeURIComponent(r.id)),
+              texto: "Abrir ficha",
+              "aria-label": "Abrir ficha de " + r.nome,
+            })
+          : null,
         cartao.estado,
       ]),
     ]);
+  }
+
+  /* Um regravamento por personagem e revisão: a própria gravação muda a
+     marca da mesa, a listagem volta, e aí o guardado já bate. */
+  var resumosEnviados = {};
+
+  function regravarResumo(r) {
+    var calc = r.resumoCalculado;
+    if (!calc) return;
+    var assinatura = r.rev + "|" + calc.pv + "|" + calc.pe + "|" + calc.san;
+    if (resumosEnviados[r.id] === assinatura) return;
+    resumosEnviados[r.id] = assinatura;
+
+    global.RAMAApi.atualizarResumoPersonagem(r.id, r.rev, calc).then(function (resposta) {
+      /* Conflito quer dizer que a ficha mudou: a próxima listagem traz a
+         revisão nova e a conta é refeita. Outra falha libera tentar de
+         novo na próxima listagem. */
+      if (!resposta.ok && resposta.erro !== "conflito") delete resumosEnviados[r.id];
+    });
   }
 
   function foto(r) {
@@ -250,7 +388,8 @@
      ================================================================= */
 
   function controleDeRecurso(ctx, cartao, recurso, p) {
-    var pode = ctx.ehMestre() || p.souDono;
+    var rotulo = cartao.resumo && cartao.resumo.podeEditar;
+    var pode = rotulo === null || rotulo === undefined ? (ctx.ehMestre() || p.souDono) : rotulo;
     var nomeCompleto = recurso.nome + " de " + cartao.personagem.nome;
     var chaveFila = cartao.personagem.id + "/" + recurso.alvo + "/" + recurso.itemId + "/" + recurso.campo;
 
@@ -552,9 +691,26 @@
       perigo: true,
     });
     if (!certeza) return;
+    tirarDaCampanha(ctx, cartao);
+  }
+
+  async function tirarDaCampanha(ctx, cartao) {
+    var nome = cartao.personagem.nome;
+    if (cartao.saindo) return;
+    cartao.saindo = true;
+    cartao.raiz.setAttribute("aria-busy", "true");
+    mostrarEstado(cartao, "Tirando da campanha…");
 
     var r = await global.RAMAApi.vincularPersonagem(ctx.campanhaId, cartao.personagem.id, false);
-    if (!r.ok) { UI.avisoDeFalha(r, "desvínculo"); return; }
+
+    cartao.saindo = false;
+    cartao.raiz.removeAttribute("aria-busy");
+
+    if (!r.ok) {
+      mostrarEstado(cartao, "Não foi possível tirar da campanha.", "erro", 4000);
+      UI.avisoDeFalha(r, "desvínculo", { tentarDeNovo: function () { tirarDaCampanha(ctx, cartao); } });
+      return;
+    }
 
     UI.avisoOk(nome + " saiu da campanha.");
     await buscarEAtualizar(ctx, true);

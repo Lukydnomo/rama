@@ -69,12 +69,140 @@
   function avisoAtencao(texto, o) { return aviso(texto, Object.assign({ tipo: "atencao" }, o || {})); }
 
   /* Traduz uma resposta de erro da API num aviso legível. O detalhe
-     técnico vai para o console, não para a cara da pessoa. */
-  function avisoDeFalha(resposta, contexto) {
+     técnico vai para o console, não para a cara da pessoa.
+
+     opcoes.tentarDeNovo: função que refaz a operação. Com ela, o aviso
+     ganha o botão "Tentar de novo" — para falha de rede e servidor
+     ocupado, que costumam passar sozinhas. Recusa de permissão ou de
+     dados não ganha o botão: repetir não muda a resposta. */
+  function avisoDeFalha(resposta, contexto, opcoes) {
+    var o = opcoes || {};
     var f = global.RAMAApi.frase(resposta);
     console.warn("[R.A.M.A.] " + (contexto || "operação") + " falhou:", resposta);
-    return avisoErro(f.titulo + " — " + f.texto);
+    var erro = resposta && resposta.erro;
+    var passageira = !erro || erro === "sem_conexao" || erro === "prazo" ||
+                     erro === "servidor_falhou" || erro === "ocupado" || erro === "sem_resposta";
+    return avisoErro(f.titulo + " — " + f.texto, o.tentarDeNovo && passageira
+      ? { acao: { rotulo: "Tentar de novo", aoClicar: o.tentarDeNovo }, duracao: 12000 }
+      : null);
   }
+
+  /* =================================================================
+     OPERAÇÃO PONTUAL
+     -----------------------------------------------------------------
+     ocupar(botao, fn, { rotulo, regiao })
+
+     Um clique que espera a planilha — salvar, criar, excluir, enviar
+     imagem. Enquanto `fn` não termina:
+
+       · o botão fica desabilitado e marcado aria-busy: um segundo clique
+         não dispara a mesma ação de novo;
+       · o texto vira o `rotulo` ("Salvando…"), mas o nome da ação
+         continua no rótulo acessível e a largura não muda — quem olha
+         sabe O QUE está sendo salvo;
+       · a `regiao` (opcional) é marcada aria-busy, para leitor de tela.
+
+     Termine bem ou mal — inclusive com exceção —, tudo volta como
+     estava. Botão só com ícone não perde o ícone: muda só o rótulo
+     acessível.
+
+     Não serve para controles que aceitam alterações seguidas, como
+     iniciativa e recursos: eles têm FILA (js/fila.js,
+     js/combate-fila.js), porque o próximo clique não é repetição, é
+     outra intenção. Um botão ocupado ignoraria esse clique.
+     ================================================================= */
+
+  async function ocupar(botao, fn, opcoes) {
+    var o = opcoes || {};
+
+    if (botao && botao.getAttribute("aria-busy") === "true") {
+      return { ok: false, erro: "ocupado_local", ignorado: true };
+    }
+
+    var antes = null;
+    if (botao) {
+      antes = {
+        texto: botao.textContent,
+        rotulo: botao.getAttribute("aria-label"),
+        desabilitado: botao.disabled,
+        largura: botao.style.minWidth,
+        soTexto: !botao.children.length,
+      };
+      if (botao.offsetWidth) botao.style.minWidth = botao.offsetWidth + "px";
+      botao.setAttribute("aria-busy", "true");
+      botao.classList.add("r-botao--ocupado");
+      botao.disabled = true;
+      if (o.rotulo) {
+        botao.setAttribute("aria-label", (antes.rotulo || antes.texto).trim() + " — " + o.rotulo);
+        if (antes.soTexto) botao.textContent = o.rotulo;
+      }
+    }
+    if (o.regiao) o.regiao.setAttribute("aria-busy", "true");
+
+    try {
+      return await fn();
+    } finally {
+      if (botao) {
+        botao.removeAttribute("aria-busy");
+        botao.classList.remove("r-botao--ocupado");
+        botao.disabled = antes.desabilitado;
+        botao.style.minWidth = antes.largura;
+        if (o.rotulo) {
+          if (antes.soTexto) botao.textContent = antes.texto;
+          if (antes.rotulo === null) botao.removeAttribute("aria-label");
+          else botao.setAttribute("aria-label", antes.rotulo);
+        }
+      }
+      if (o.regiao) o.regiao.removeAttribute("aria-busy");
+    }
+  }
+
+  /* =================================================================
+     ATIVIDADE GLOBAL
+     -----------------------------------------------------------------
+     A rede que pega o que nenhuma tela anunciou. Qualquer operação de
+     primeiro plano acende uma barra fina no topo, no instante em que
+     começa — sem atraso, para a pessoa saber que o clique foi ouvido.
+     As de segundo plano (sincronização automática) acendem só um selo
+     pequeno no canto: nada de cobrir a tela a cada consulta.
+
+     A barra é enfeite para quem vê; para leitor de tela, o estado mora
+     nos botões e regiões marcados por ocupar().
+     ================================================================= */
+
+  var barraDeAtividade = null;
+  var seloDeSincronia = null;
+  var timerDoSelo = null;
+
+  function aoOperar(evento) {
+    if (!document.body) return;
+    var r = evento.resumo || {};
+
+    if (!barraDeAtividade) {
+      barraDeAtividade = el("div.r-atividade", { "aria-hidden": "true", hidden: true });
+      document.body.appendChild(barraDeAtividade);
+    }
+    barraDeAtividade.hidden = !r.primeiroPlano;
+
+    if (!seloDeSincronia) {
+      seloDeSincronia = el("div.r-sincronia", { "aria-hidden": "true", hidden: true }, [
+        el("span.r-sincronia__ponto"),
+        el("span", { texto: "Atualizando…" }),
+      ]);
+      document.body.appendChild(seloDeSincronia);
+    }
+
+    clearTimeout(timerDoSelo);
+    if (r.segundoPlano) {
+      seloDeSincronia.hidden = false;
+    } else {
+      /* Some com um pequeno atraso: uma consulta de 80 ms não pode virar
+         um pisca-pisca no canto da tela. */
+      timerDoSelo = setTimeout(function () { seloDeSincronia.hidden = true; }, 600);
+    }
+  }
+
+  if (global.RAMAApi && global.RAMAApi.aoOperar) global.RAMAApi.aoOperar(aoOperar);
 
   /* =================================================================
      JANELAS
@@ -99,14 +227,26 @@
         type: "button",
         class: b.classe || "",
         texto: b.rotulo,
-        onclick: function () { if (b.aoClicar) b.aoClicar(fechar); else fechar(); },
+        onclick: function (ev) {
+          var botao = ev.currentTarget;
+          /* Um botão que já está esperando a planilha não dispara de novo. */
+          if (botao.getAttribute("aria-busy") === "true") return;
+          if (!b.aoClicar) { fechar(); return; }
+          var resultado = b.aoClicar(fechar);
+          /* Ação assíncrona (salvar, criar, excluir…): o próprio botão
+             mostra que está trabalhando até ela terminar — em toda janela
+             do sistema, sem cada tela repetir isso. */
+          if (resultado && typeof resultado.then === "function") {
+            ocupar(botao, function () { return resultado; }, { rotulo: b.rotuloOcupado || rotuloOcupadoDe(b.rotulo) });
+          }
+        },
       }));
     });
 
     var idTitulo = "modal-titulo-" + U.uuid().slice(0, 8);
 
     var janela = el("div.r-modal", {
-      class: o.largo ? "r-modal--largo" : "",
+      class: [o.largo ? "r-modal--largo" : "", o.classe || ""].join(" ").trim(),
       role: "dialog",
       "aria-modal": "true",
       "aria-labelledby": idTitulo,
@@ -175,6 +315,19 @@
     }
 
     return { fechar: fechar, janela: janela, corpo: corpo };
+  }
+
+  /* "Salvar" → "Salvando…". O verbo diz o que está acontecendo; o que
+     não estiver na lista vira "Aguarde…". */
+  var GERUNDIOS = {
+    salvar: "Salvando…", criar: "Criando…", excluir: "Excluindo…", enviar: "Enviando…",
+    importar: "Importando…", adicionar: "Adicionando…", aplicar: "Aplicando…",
+    remover: "Removendo…", confirmar: "Confirmando…", limpar: "Limpando…", duplicar: "Duplicando…",
+  };
+
+  function rotuloOcupadoDe(rotulo) {
+    var primeira = String(rotulo || "").trim().split(/\s+/)[0].toLowerCase();
+    return GERUNDIOS[primeira] || "Aguarde…";
   }
 
   var rolagemGuardada = "";
@@ -940,6 +1093,7 @@
     confirmar: confirmar,
     pedirTexto: pedirTexto,
     menu: menu,
+    ocupar: ocupar,
     indicador: indicador,
     carregando: carregando,
     vazio: vazio,

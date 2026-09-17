@@ -1210,6 +1210,26 @@
     };
   }
 
+  /* O RESUMO QUE A MESA VÊ
+     -----------------------------------------------------------------
+     O máximo de PV, PE e Sanidade, para os outros jogadores da campanha
+     verem a vida do personagem sem receberem a ficha (ver "Resumo de
+     recursos" em backend/Campanhas.gs). É calculado aqui, pelo mesmo
+     motor, por quem pode ver a ficha inteira: a própria ficha ao
+     gravar, a criação guiada e o painel da campanha do dono ou do
+     mestre. Sanidade é nula com "Jogando sem Sanidade". */
+  function resumoDeRecursos(ficha) {
+    var semSanidade = !!(global.RAMAOrdemOpcionais && global.RAMAOrdemOpcionais.ligada(ficha, "semSanidade"));
+    /* Inteiros, como o servidor guarda: um total fracionário nunca
+       bateria com o guardado, e o painel regravaria o resumo a cada
+       atualização. */
+    return {
+      pv: Math.round(pontosDeVida(ficha).total),
+      pe: Math.round(pontosDeEsforco(ficha).total),
+      san: semSanidade ? null : Math.round(sanidade(ficha).total),
+    };
+  }
+
   /* =================================================================
      AUXILIARES
      ================================================================= */
@@ -1507,5 +1527,6 @@
     aparar: aparar,
 
     calcular: calcular,
+    resumoDeRecursos: resumoDeRecursos,
   };
 })(typeof window !== "undefined" ? window : globalThis);

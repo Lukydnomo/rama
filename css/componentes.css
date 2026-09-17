@@ -1487,6 +1487,129 @@
 }
 
 /* =====================================================================
+   RESULTADO DE ROLAGEM
+   ---------------------------------------------------------------------
+   Flutua no canto inferior direito, empilhando as últimas rolagens. Não
+   rouba o foco e não bloqueia a ficha: quem está jogando precisa
+   continuar mexendo enquanto lê o resultado.
+   ===================================================================== */
+
+.rolagens {
+  position: fixed;
+  right: var(--e4);
+  bottom: var(--e4);
+  z-index: var(--z-flutuante);
+  display: flex;
+  flex-direction: column-reverse;
+  gap: var(--e2);
+  width: min(300px, calc(100vw - var(--e6)));
+  max-height: 70vh;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.rolagem {
+  display: flex;
+  flex-direction: column;
+  gap: var(--e2);
+  padding: var(--e3);
+  background: var(--cor-superficie-2);
+  border: var(--borda) solid var(--cor-traco-media);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.85);
+  pointer-events: auto;
+  animation: r-rolar var(--tempo-medio) var(--curva);
+}
+.rolagem--antiga { opacity: 0.55; }
+.rolagem--critico { border-color: var(--cor-paranormal); }
+.rolagem--dano    { border-color: var(--cor-erro); }
+
+@keyframes r-rolar {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: none; }
+}
+@media (prefers-reduced-motion: reduce) { .rolagem { animation: none; } }
+
+.rolagem__topo {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--e2);
+}
+
+.rolagem__nome {
+  font-weight: 700;
+  letter-spacing: var(--espaco-letra-titulo);
+  color: var(--cor-texto);
+  text-transform: uppercase;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.rolagem__expressao {
+  font-family: var(--fonte-mini);
+  font-size: var(--texto-mini);
+  color: var(--cor-texto-3);
+}
+
+.rolagem__total {
+  font-weight: 700;
+  font-size: calc(40px * var(--escala));
+  line-height: 1;
+  color: var(--cor-texto);
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Os dados brutos, com o principal marcado. Ver os dois descartados
+   importa: é a diferença entre 2d20 e -2d20 na mesa. */
+.rolagem__dados { display: flex; flex-wrap: wrap; gap: var(--e1); justify-content: center; }
+
+.face {
+  display: inline-grid;
+  place-items: center;
+  min-width: 26px;
+  padding: 2px var(--e1);
+  border: var(--borda) solid var(--cor-traco-fraca);
+  color: var(--cor-texto-3);
+  font-variant-numeric: tabular-nums;
+}
+.face--principal {
+  border-color: var(--cor-traco-forte);
+  background: var(--cor-texto);
+  color: var(--cor-fundo);
+  font-weight: 700;
+}
+
+.rolagem__parcelas {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding-top: var(--e2);
+  border-top: var(--borda) solid var(--cor-traco-fraca);
+  font-family: var(--fonte-mini);
+  font-size: var(--texto-mini);
+  color: var(--cor-texto-3);
+}
+.rolagem__parcela { display: flex; justify-content: space-between; gap: var(--e2); }
+.rolagem__parcela span:last-child { color: var(--cor-texto-2); font-variant-numeric: tabular-nums; }
+
+.rolagem__marca {
+  align-self: center;
+  color: var(--cor-paranormal);
+  font-weight: 700;
+  letter-spacing: var(--espaco-letra-titulo);
+  text-transform: uppercase;
+}
+
+.rolagem__acao { pointer-events: auto; }
+
+@media (max-width: 640px) {
+  .rolagens { right: var(--e2); left: var(--e2); bottom: var(--e2); width: auto; }
+}
+
+/* =====================================================================
    ORDEM PARANORMAL — PEÇAS DA FICHA E DA CRIAÇÃO
    ---------------------------------------------------------------------
    Cartão de pendência de progressão, cartão de regra opcional e o
@@ -1940,4 +2063,122 @@
 .criacao-pericia--bloqueada {
   opacity: 0.6;
   cursor: not-allowed;
+}
+/* =====================================================================
+   ESPERANDO A PLANILHA
+   ---------------------------------------------------------------------
+   Três sinais, do mais específico ao mais geral:
+
+     .r-botao--ocupado  o botão que disparou a ação (RAMAUI.ocupar):
+                        desabilitado, com o texto do que está fazendo e
+                        uma tira que corre por baixo
+     .r-atividade       barra fina no topo da tela, acesa enquanto houver
+                        qualquer operação de primeiro plano
+     .r-sincronia       selo pequeno no canto para as atualizações
+                        automáticas — nunca cobre nada
+   ===================================================================== */
+
+.r-botao--ocupado {
+  position: relative;
+  cursor: progress;
+}
+
+.r-botao--ocupado:disabled {
+  opacity: 1;
+  color: var(--cor-texto-2);
+}
+
+.r-botao--ocupado::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 2px;
+  background: repeating-linear-gradient(90deg, currentColor 0 6px, transparent 6px 10px);
+  animation: r-esteira 0.9s linear infinite;
+}
+
+@keyframes r-esteira {
+  from { background-position: 0 0; }
+  to   { background-position: 20px 0; }
+}
+
+.r-atividade {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: var(--z-aviso);
+  height: 3px;
+  pointer-events: none;
+  background: repeating-linear-gradient(90deg,
+      var(--cor-texto-2) 0 8px,
+      transparent 8px 14px);
+  animation: r-esteira-larga 1.2s linear infinite;
+}
+
+@keyframes r-esteira-larga {
+  from { background-position: 0 0; }
+  to   { background-position: 28px 0; }
+}
+
+.r-sincronia {
+  position: fixed;
+  left: var(--e3);
+  bottom: var(--e3);
+  z-index: var(--z-flutuante);
+  display: inline-flex;
+  align-items: center;
+  gap: var(--e1);
+  padding: 2px var(--e2);
+  background: var(--cor-superficie);
+  border: var(--borda) solid var(--cor-traco-fraca);
+  color: var(--cor-texto-3);
+  font-family: var(--fonte-mini);
+  font-size: var(--texto-mini);
+  pointer-events: none;
+}
+
+.r-sincronia__ponto {
+  width: 6px;
+  height: 6px;
+  background: var(--cor-ok);
+  animation: r-pulsar 1s steps(2, end) infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .r-botao--ocupado::after,
+  .r-atividade,
+  .r-sincronia__ponto { animation: none; }
+}
+
+/* =====================================================================
+   GAVETA
+   ---------------------------------------------------------------------
+   A janela que vira painel de lado inteiro no celular: a ficha do
+   participante do combate, por exemplo. No desktop é uma janela larga
+   comum; em tela estreita ocupa a tela toda, sem duas colunas apertadas.
+   ===================================================================== */
+
+.r-modal--gaveta {
+  max-width: 960px;
+  height: calc(100vh - var(--e8));
+}
+
+.r-modal--gaveta .r-modal__corpo {
+  flex: 1 1 auto;
+  min-height: 0;
+  padding: 0;
+}
+
+@media (max-width: 900px) {
+  .r-fundo:has(.r-modal--gaveta) { padding: 0; }
+  .r-modal--gaveta {
+    max-width: none;
+    height: 100vh;
+    max-height: 100vh;
+    border-left: 0;
+    border-right: 0;
+  }
 }

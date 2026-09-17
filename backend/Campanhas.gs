@@ -58,7 +58,13 @@ function rotasDeCampanha() {
 
     listar_combates:             { publica: false, fn: acaoListarCombates },
     salvar_combate:              { publica: false, fn: acaoSalvarCombate },
+    atualizar_combate:           { publica: false, fn: acaoAtualizarCombate },
     excluir_combate:             { publica: false, fn: acaoExcluirCombate },
+
+    sincronizar_campanha:        { publica: false, fn: acaoSincronizarCampanha },
+    ler_capa_campanha:           { publica: false, fn: acaoLerCapaCampanha },
+    salvar_capa_campanha:        { publica: false, fn: acaoSalvarCapaCampanha },
+    atualizar_resumo_personagem: { publica: false, fn: acaoAtualizarResumoPersonagem },
   };
 }
 
@@ -75,6 +81,136 @@ var VIS_ROLAGEM_OCULTA = 'oculta';
    cobre com folga qualquer retentativa de rede; passado isso, a
    conferência volta a ser feita na planilha, onde ela é definitiva. */
 var SEGUNDOS_IDEMPOTENCIA = 1800;
+
+/* =====================================================================
+   MARCAS DA MESA
+   ---------------------------------------------------------------------
+   Quem está com a campanha aberta precisa ver o que outra pessoa acabou
+   de mudar — a vida que o mestre tirou, a iniciativa, o turno. Não há
+   conexão aberta com o Apps Script: o navegador PERGUNTA, de tempos em
+   tempos. O que decide se essa pergunta é barata é o que ela lê.
+
+   Ler as abas a cada pergunta, com vinte pessoas perguntando a cada
+   poucos segundos, seria encher a fila de leituras de planilha para, na
+   imensa maioria das vezes, descobrir que nada mudou. Então a pergunta
+   não lê planilha nenhuma: ela lê MARCAS.
+
+   Uma marca é um valor curto no CacheService, uma por parte da campanha
+   (campanha, membros, personagens, combates, documentos, rolagens). Toda
+   gravação que muda uma parte troca a marca dela. O navegador guarda as
+   marcas que já viu e, quando uma muda, busca de novo SÓ aquela parte —
+   pelo caminho normal, com todas as conferências de permissão.
+
+   A marca não carrega dado nenhum: é um carimbo de tempo mais um trecho
+   aleatório. Saber que "os combates mudaram" não revela o combate.
+
+   QUANDO O CACHE PERDE A MARCA
+   ---------------------------------------------------------------------
+   O CacheService descarta entradas quando quer, e nenhuma dura mais que
+   seis horas. Marca ausente vira uma marca de reserva que muda a cada
+   minuto: quem estava olhando busca a parte de novo uma vez por minuto
+   até a próxima gravação criar uma marca de verdade. O pior caso é um
+   minuto de atraso, nunca uma mudança perdida para sempre — e a marca
+   presente é regravada com o MESMO valor antes de vencer, para mesa
+   parada não cair nesse passo de reserva à toa.
+   ===================================================================== */
+
+var PARTES_DA_MESA = ['campanha', 'membros', 'personagens', 'combates', 'documentos', 'rolagens'];
+var SEGUNDOS_MARCA = 21600;
+var MS_RENOVAR_MARCAS = 4 * 60 * 60 * 1000;
+var SEGUNDOS_PAPEL_EM_CACHE = 300;
+
+function chaveDaMarca(campanhaId, parte) {
+  return 'rama.mesa.' + String(campanhaId) + '.' + parte;
+}
+
+function chaveDaRenovacao(campanhaId) {
+  return 'rama.mesa.' + String(campanhaId) + '.renovada';
+}
+
+/* Troca a marca das partes pedidas (todas, sem lista). Chamada DEPOIS da
+   gravação, dentro da mesma trava: quem perguntar em seguida já encontra
+   a marca nova e o dado novo. */
+function marcarMesa(campanhaId, partes) {
+  if (!campanhaId) return;
+  var lista = (partes && partes.length) ? partes : PARTES_DA_MESA;
+  var valor = 't' + Date.now() + '-' + String(novoId()).replace(/-/g, '').slice(0, 8);
+  var mapa = {};
+  lista.forEach(function (p) {
+    if (PARTES_DA_MESA.indexOf(p) >= 0) mapa[chaveDaMarca(campanhaId, p)] = valor;
+  });
+  mapa[chaveDaRenovacao(campanhaId)] = String(Date.now());
+  try {
+    cache().putAll(mapa, SEGUNDOS_MARCA);
+  } catch (erro) {
+    /* Sem cache a mesa continua funcionando: as marcas caem no passo de
+       reserva e cada parte é buscada de novo uma vez por minuto. */
+  }
+}
+
+function marcasDaMesa(campanhaId) {
+  var chaves = PARTES_DA_MESA.map(function (p) { return chaveDaMarca(campanhaId, p); });
+  var renovacao = chaveDaRenovacao(campanhaId);
+  var lidas = {};
+  try { lidas = cache().getAll(chaves.concat([renovacao])) || {}; } catch (erro) { lidas = {}; }
+
+  var agora = Date.now();
+  var reserva = 'r' + Math.floor(agora / 60000);
+  var saida = {};
+  var presentes = {};
+
+  PARTES_DA_MESA.forEach(function (p, i) {
+    var v = lidas[chaves[i]];
+    if (v) { saida[p] = String(v); presentes[chaves[i]] = String(v); }
+    else saida[p] = reserva;
+  });
+
+  /* Renovação: regrava as marcas presentes com o MESMO valor antes de
+     elas vencerem. O valor não muda, então ninguém busca nada de novo. */
+  var renovadaEm = Number(lidas[renovacao]) || 0;
+  if (Object.keys(presentes).length && agora - renovadaEm > MS_RENOVAR_MARCAS) {
+    presentes[renovacao] = String(agora);
+    try { cache().putAll(presentes, SEGUNDOS_MARCA); } catch (erro) { /* segue sem renovar */ }
+  }
+
+  return saida;
+}
+
+/* O papel de quem pergunta, para a pergunta das marcas.
+
+   Ele é guardado por alguns minutos numa chave que inclui as marcas de
+   `membros` e de `campanha`: quando alguém entra, sai ou a visibilidade
+   muda, a marca muda, a chave muda e o papel é conferido de novo na
+   planilha. O papel em cache só decide se a pessoa recebe MARCAS — nunca
+   dado: toda busca de conteúdo passa pela conferência completa. */
+function papelParaMarcas(campanhaId, usuario, marcas) {
+  var chave = 'rama.papel.' + epoca() + '.' + String(campanhaId) + '.' + String(usuario.id) +
+    '.' + marcas.membros + '.' + marcas.campanha;
+  var guardado = cacheLer(chave);
+  if (guardado) return guardado === '-' ? null : guardado;
+
+  var campanha = campanhaLeve(campanhaId);
+  var papel = campanha ? papelNaCampanha(campanha, usuario) : null;
+  cacheGravar(chave, papel || '-', SEGUNDOS_PAPEL_EM_CACHE);
+  return papel;
+}
+
+function acaoSincronizarCampanha(corpo, usuario) {
+  var id = String(corpo.campanhaId || '');
+  if (!id) return { ok: false, erro: 'dados_invalidos' };
+
+  var marcas = marcasDaMesa(id);
+  var papel = papelParaMarcas(id, usuario, marcas);
+  if (!papel) return { ok: false, erro: 'nao_encontrado' };
+
+  /* O espectador só olha a campanha por fora: marcas de mesa não
+     servem para nada a ele. */
+  if (papel === PAPEL_ESPECTADOR) {
+    marcas = { campanha: marcas.campanha, membros: marcas.membros };
+  }
+
+  return { ok: true, dados: { papel: papel, mestre: papel === PAPEL_MESTRE, marcas: marcas } };
+}
 
 /* =====================================================================
    CAMPANHAS
@@ -143,6 +279,18 @@ function acaoLerCampanha(corpo, usuario) {
      devolvida — o jogador precisa saber, por exemplo, que as rolagens
      do mestre estão ocultas, senão o histórico parece quebrado. */
   resposta.rolagensMestreOcultas = !!dados.rolagensMestreOcultas;
+  resposta.ocultarStatusJogadores = !!dados.ocultarStatusJogadores;
+
+  /* Se há capa, de que tamanho e de quando — só as colunas leves. A
+     imagem vem por ler_capa_campanha, que confere o acesso de novo. */
+  var capa = capaDaCampanha(c.id);
+  resposta.capa = capa.existe
+    ? { existe: true, atualizadoEm: capa.atualizadoEm, largura: capa.largura, altura: capa.altura }
+    : { existe: false };
+
+  /* O ponto de partida das marcas: o navegador compara as próximas
+     perguntas com estas. */
+  resposta.marcas = marcasDaMesa(c.id);
 
   /* Quem participa é informação da mesa, não segredo: o jogador precisa
      saber com quem joga. O que não sai daqui é qualquer dado interno
@@ -266,6 +414,7 @@ function acaoCriarCampanha(corpo, usuario) {
       dadosJson: JSON.stringify({
         descricao: String(dados.descricao || '').slice(0, 4000),
         rolagensMestreOcultas: false,
+        ocultarStatusJogadores: false,
       }),
     });
 
@@ -289,9 +438,18 @@ function acaoSalvarCampanha(corpo, usuario) {
     }
 
     var guardado = lerJson(registro.dadosJson, {});
+    var ocultarAntes = !!guardado.ocultarStatusJogadores;
+    var visibilidadeAntes = visibilidadeDe(registro.visibilidade);
+
     if (dados.descricao !== undefined) guardado.descricao = String(dados.descricao).slice(0, 4000);
     if (dados.rolagensMestreOcultas !== undefined) {
       guardado.rolagensMestreOcultas = !!dados.rolagensMestreOcultas;
+    }
+    /* "Esconder status dos jogadores". Só chega aqui quem passou por
+       exigirMestre — um jogador que mande o campo recebe sem_permissao
+       antes de qualquer leitura. */
+    if (dados.ocultarStatusJogadores !== undefined) {
+      guardado.ocultarStatusJogadores = !!dados.ocultarStatusJogadores;
     }
 
     if (dados.nome !== undefined) {
@@ -308,7 +466,19 @@ function acaoSalvarCampanha(corpo, usuario) {
 
     atualizarLinha(ABAS.CAMPANHAS, registro._linha, registro);
 
-    return { ok: true, rev: registro.rev };
+    /* Mudar a ocultação muda o que os cartões e os combates podem
+       mostrar: as duas partes precisam ser buscadas de novo, e a busca
+       nova já vem sem o que deixou de ser permitido. */
+    var partes = ['campanha'];
+    if (ocultarAntes !== !!guardado.ocultarStatusJogadores) partes.push('personagens', 'combates');
+    if (visibilidadeAntes !== visibilidadeDe(registro.visibilidade)) partes.push('membros');
+    marcarMesa(registro.id, partes);
+
+    return {
+      ok: true,
+      rev: registro.rev,
+      dados: { ocultarStatusJogadores: !!guardado.ocultarStatusJogadores },
+    };
   });
 }
 
@@ -327,7 +497,8 @@ function acaoExcluirCampanha(corpo, usuario) {
        encheria a planilha de linhas que ninguém mais alcança. Fichas
        NÃO entram nisso: elas são dos jogadores e só perdem o vínculo. */
     [ABAS.CAMPANHA_MEMBROS, ABAS.CAMPANHA_ROLAGENS, ABAS.CAMPANHA_DOCUMENTOS,
-     ABAS.CAMPANHA_DOCUMENTOS_IMAGENS, ABAS.CAMPANHA_NOTAS, ABAS.CAMPANHA_COMBATES
+     ABAS.CAMPANHA_DOCUMENTOS_IMAGENS, ABAS.CAMPANHA_NOTAS, ABAS.CAMPANHA_COMBATES,
+     ABAS.CAMPANHA_CAPAS
     ].forEach(function (tabela) {
       /* Descobrir o que apagar não exige ler o que vai ser apagado: as
          colunas leves trazem o campanhaId, que é o filtro. */
@@ -340,6 +511,10 @@ function acaoExcluirCampanha(corpo, usuario) {
         atualizarCampos(ABAS.PERSONAGENS, p, ['campanhaId']);
       }
     });
+
+    /* Quem estava com a campanha aberta descobre na próxima pergunta:
+       a busca de qualquer parte responde nao_encontrado. */
+    marcarMesa(id);
 
     return { ok: true };
   });
@@ -411,6 +586,10 @@ function acaoSalvarParticipantes(corpo, usuario) {
       atualizarCampos(ABAS.PERSONAGENS, p, ['campanhaId']);
     });
 
+    /* Entrar ou sair muda o papel de alguém — e com ele o que cada parte
+       pode mostrar. Todas as partes são buscadas de novo. */
+    marcarMesa(ctx.campanha.id);
+
     return { ok: true, dados: { membros: membrosParaCliente(ctx.campanha, membrosDaCampanha(ctx.campanha.id)) } };
   });
 }
@@ -419,6 +598,22 @@ function acaoSalvarParticipantes(corpo, usuario) {
    PERSONAGENS DA CAMPANHA
    ===================================================================== */
 
+/* QUEM VÊ O QUÊ NOS CARTÕES
+   ---------------------------------------------------------------------
+     mestre          tudo de todos: os dados de cálculo, os recursos, o
+                     controle de ajuste e o acesso à ficha
+     dono            o mesmo, do PRÓPRIO personagem (de todos eles, se
+                     tiver mais de um na mesa)
+     outro jogador   identificação; recursos atuais e máximos — a menos
+                     que o mestre tenha ligado "Esconder status dos
+                     jogadores"; nada de ficha, escolhas ou inventário
+     espectador      nada (a mesa não é dele)
+
+   Ver o resumo de um personagem não abre a ficha: `podeAbrirFicha` é só
+   rótulo para a tela, e ler_personagem continua recusando quem não é
+   dono nem mestre. Com a ocultação ligada, os recursos dos outros NÃO
+   entram na resposta — não há barra, número ou percentual para esconder
+   com CSS, porque eles não chegam. */
 function acaoListarPersonagensCampanha(corpo, usuario) {
   var ctx = contextoDaCampanha(corpo.campanhaId, usuario);
   if (!ctx.ok) return ctx;
@@ -426,6 +621,9 @@ function acaoListarPersonagensCampanha(corpo, usuario) {
   /* Espectador de campanha pública não recebe a mesa: ver que uma
      campanha existe não é ver quem joga nela com que ficha. */
   if (ctx.papel === PAPEL_ESPECTADOR) return { ok: true, dados: [] };
+
+  var configDaMesa = lerJson(ctx.campanha.dadosJson, {});
+  var ocultarStatus = !!configDaMesa.ocultarStatusJogadores;
 
   var donos = {};
   lerTudo(ABAS.USUARIOS).forEach(function (u) { donos[u.id] = u.nome || u.usuario; });
@@ -463,9 +661,11 @@ function acaoListarPersonagensCampanha(corpo, usuario) {
       var souDono = meu(p, usuario);
 
       /* O mestre e o dono veem o personagem inteiro no painel; os outros
-         jogadores da mesa, só o que já viam antes. */
+         jogadores da mesa, a identificação e — se o mestre permitir — os
+         recursos. */
       var detalhado = ctx.mestre || souDono;
-      var ehOrdem = String(ficha.tipoFicha || '') === 'ordem' && !!ficha.ordem && typeof ficha.ordem === 'object';
+      var recursosVisiveis = detalhado || !ocultarStatus;
+      var ehOrdem = ehFichaDeOrdem(ficha);
 
       var saida = {
         id: p.id,
@@ -477,6 +677,11 @@ function acaoListarPersonagensCampanha(corpo, usuario) {
         dono: donos[p.ownerId] || '',
         souDono: souDono,
         detalhado: detalhado,
+        /* Rótulos para a tela. A decisão de verdade é de
+           ajustar_personagem e ler_personagem, que conferem de novo. */
+        podeEditarRecursos: detalhado,
+        podeAbrirFicha: detalhado,
+        recursosVisiveis: recursosVisiveis,
         foto: fotos[p.id] || '',
         rev: Number(p.rev) || 0,
       };
@@ -488,8 +693,20 @@ function acaoListarPersonagensCampanha(corpo, usuario) {
            mesmo cálculo da ficha: o painel recebe os dados de entrada
            desse cálculo, não um resultado paralelo. Textos longos
            (personalizações, descrições de item) ficam de fora. */
-        saida.ordem = detalhado ? ordemParaPainel(ficha.ordem) : ordemPublicaParaPainel(ficha.ordem);
-        if (detalhado) saida.inventario = { itens: itensParaPainel(ficha.inventario) };
+        if (detalhado) {
+          saida.ordem = ordemParaPainel(ficha.ordem);
+          saida.inventario = { itens: itensParaPainel(ficha.inventario) };
+          /* O resumo guardado, para quem calcula conferir se ele ainda
+             bate com a ficha — ver atualizar_resumo_personagem. */
+          saida.resumoRecursos = normalizarResumoRecursos(ficha.resumoRecursos);
+        } else {
+          saida.ordem = ordemPublicaParaPainel(ficha.ordem);
+          if (recursosVisiveis) {
+            var resumidos = recursosResumidos(ficha);
+            saida.recursos = resumidos || [];
+            if (!resumidos) saida.recursosPendentes = true;
+          }
+        }
       } else {
         /* O painel precisa de status e atributos para os controles
            rápidos, mas não da ficha inteira: perícias, inventário e
@@ -497,15 +714,114 @@ function acaoListarPersonagensCampanha(corpo, usuario) {
         saida.atributos = (ficha.atributos || []).map(function (a) {
           return { id: a.id, nome: a.nome, sigla: a.sigla, valor: a.valor, dado: a.dado };
         });
-        saida.status = (ficha.status || []).map(function (s) {
-          return { id: s.id, nome: s.nome, atual: s.atual, maximo: s.maximo };
-        });
+        if (recursosVisiveis) {
+          saida.status = (ficha.status || []).map(function (s) {
+            return { id: s.id, nome: s.nome, atual: s.atual, maximo: s.maximo };
+          });
+        }
       }
       return saida;
     })
     .sort(function (a, b) { return String(a.nome).localeCompare(String(b.nome), 'pt-BR'); });
 
-  return { ok: true, dados: lista };
+  return { ok: true, dados: lista, config: { ocultarStatusJogadores: ocultarStatus } };
+}
+
+function ehFichaDeOrdem(ficha) {
+  return !!ficha && String(ficha.tipoFicha || '') === 'ordem' && !!ficha.ordem && typeof ficha.ordem === 'object';
+}
+
+/* =====================================================================
+   RESUMO DE RECURSOS
+   ---------------------------------------------------------------------
+   O outro jogador vê a vida atual e máxima do personagem de Ordem da
+   mesa, mas não pode receber a ficha: o máximo sai de classe, trilha,
+   escolhas, poderes — o build inteiro. E o Apps Script não tem o motor
+   de regras; ele mora no navegador (js/ordem/regras.js).
+
+   Então o MÁXIMO é calculado por quem já pode ver a ficha inteira — o
+   dono ou o mestre — e guardado dentro da própria ficha, em
+   `resumoRecursos`: { pv, pe, san } (san nula com "Jogando sem
+   Sanidade"). Ele chega de dois jeitos:
+
+     · junto de toda gravação da ficha (a ficha calcula antes de enviar);
+     · por atualizar_resumo_personagem, quando o painel da mesa de quem
+       pode ver a ficha percebe que o guardado não bate com o cálculo —
+       uma ficha salva por uma versão antiga do site, por exemplo.
+
+   O ATUAL não entra no resumo: ele é lido de `ordem.recursos` na hora,
+   que é onde o ajuste rápido grava. Assim um −1 de vida aparece para a
+   mesa sem ninguém precisar recalcular nada.
+
+   Confiança: quem grava o resumo é quem já pode editar a ficha inteira.
+   O dono conseguiria mostrar à mesa um máximo inventado — e conseguiria
+   do mesmo jeito editando a própria ficha. O servidor valida a forma.
+   ===================================================================== */
+
+/* Os números do resumo de uma ficha de Ordem, validados, ou null. */
+function recursosResumidos(ficha) {
+  var resumo = normalizarResumoRecursos(ficha.resumoRecursos);
+  if (!resumo) return null;
+
+  var guardados = (ficha.ordem && ficha.ordem.recursos && typeof ficha.ordem.recursos === 'object')
+    ? ficha.ordem.recursos : {};
+  var rotulos = { pv: 'PV', pe: 'PE', san: 'SAN' };
+
+  return ['pv', 'pe', 'san']
+    .filter(function (k) { return resumo[k] !== null; })
+    .map(function (k) {
+      return { chave: k, rotulo: rotulos[k], atual: recursoAtualGuardado(guardados[k], resumo[k]), maximo: resumo[k] };
+    });
+}
+
+/* A mesma regra de js/ordem/regras.js (recursoAtual): nunca tocado vale
+   o máximo; tocado vale o que foi gravado, aparado no máximo. */
+function recursoAtualGuardado(guardado, maximo) {
+  if (guardado === null || guardado === undefined || guardado === '') return maximo;
+  var n = Number(guardado);
+  if (!isFinite(n)) return maximo;
+  return Math.min(Math.round(n), maximo);
+}
+
+function acaoAtualizarResumoPersonagem(corpo, usuario) {
+  var resumo = normalizarResumoRecursos(corpo.resumo);
+  if (!resumo) return { ok: false, erro: 'dados_invalidos' };
+
+  /* A revisão é obrigatória: um painel aberto antes de a ficha subir de
+     nível calculou o máximo VELHO, e não pode gravá-lo por cima do novo. */
+  var revPedida = Number(corpo.rev);
+  if (!Number.isFinite(revPedida)) return { ok: false, erro: 'dados_invalidos' };
+
+  return comTrava(function () {
+    var acesso = personagemAcessivel(corpo.personagemId, usuario);
+    if (!acesso.ok) return acesso;
+
+    var registro = acesso.personagem;
+    var revAtual = Number(registro.rev) || 0;
+    if (revPedida !== revAtual) return { ok: false, erro: 'conflito', rev: revAtual };
+
+    var ficha = lerJson(registro.fichaJson, {});
+    if (!ehFichaDeOrdem(ficha)) return { ok: false, erro: 'dados_invalidos' };
+
+    var guardado = normalizarResumoRecursos(ficha.resumoRecursos);
+    if (guardado && guardado.pv === resumo.pv && guardado.pe === resumo.pe && guardado.san === resumo.san) {
+      return { ok: true, rev: revAtual, dados: { mudou: false } };
+    }
+
+    ficha.resumoRecursos = resumo;
+    var json = JSON.stringify(ficha);
+    if (json.length > MAX_CELULA) return { ok: false, erro: 'dados_grandes' };
+
+    /* A revisão NÃO sobe: o resumo é derivado da ficha, não uma decisão
+       de ninguém. Subir a revisão faria toda ficha aberta em outro
+       aparelho entrar em conflito por causa de uma conta. Quem gravar a
+       ficha depois manda o próprio resumo junto. */
+    registro.fichaJson = json;
+    atualizarLinha(ABAS.PERSONAGENS, registro._linha, registro);
+
+    marcarMesa(registro.campanhaId, ['personagens', 'combates']);
+    return { ok: true, rev: revAtual, dados: { mudou: true } };
+  });
 }
 
 /* O bloco `ordem` com o necessário para calcular PV, PE, Sanidade,
@@ -566,6 +882,7 @@ function acaoVincularPersonagem(corpo, usuario) {
     if (!souDono && !ctx.mestre) return { ok: false, erro: 'nao_encontrado' };
 
     var vincular = corpo.vincular !== false;
+    var campanhaAnterior = personagem.campanhaId;
 
     if (vincular) {
       /* Só entra personagem de quem é da mesa. Sem isto, um mestre
@@ -592,6 +909,11 @@ function acaoVincularPersonagem(corpo, usuario) {
     personagem.fichaJson = JSON.stringify(ficha);
 
     atualizarLinha(ABAS.PERSONAGENS, personagem._linha, personagem);
+
+    marcarMesa(ctx.campanha.id, ['personagens', 'combates']);
+    if (campanhaAnterior && String(campanhaAnterior) !== String(ctx.campanha.id)) {
+      marcarMesa(campanhaAnterior, ['personagens', 'combates']);
+    }
 
     return { ok: true, rev: personagem.rev };
   });
@@ -705,6 +1027,8 @@ function acaoAjustarPersonagem(corpo, usuario) {
 
     atualizarLinha(ABAS.PERSONAGENS, registro._linha, registro);
 
+    marcarMesa(registro.campanhaId, ['personagens', 'combates']);
+
     return { ok: true, rev: registro.rev, dados: { valor: item[campo] } };
   });
 }
@@ -794,6 +1118,7 @@ function acaoRegistrarRolagem(corpo, usuario) {
     });
 
     cacheGravar(chaveDeIdempotencia, '1', SEGUNDOS_IDEMPOTENCIA);
+    marcarMesa(ctx.campanha.id, ['rolagens']);
 
     return { ok: true, dados: { id: id, visibilidade: visibilidade } };
   });
@@ -877,6 +1202,7 @@ function acaoLimparRolagens(corpo, usuario) {
     var linhas = daCampanhaLeves(ABAS.CAMPANHA_ROLAGENS, ctx.campanha.id);
     var removidas = apagarLinhas(ABAS.CAMPANHA_ROLAGENS,
       linhas.map(function (r) { return r._linha; }));
+    marcarMesa(ctx.campanha.id, ['rolagens']);
 
     return { ok: true, dados: { removidas: removidas } };
   });
@@ -968,6 +1294,7 @@ function acaoSalvarDocumento(corpo, usuario) {
       existente.rev = revAtual + 1;
 
       atualizarLinha(ABAS.CAMPANHA_DOCUMENTOS, existente._linha, existente);
+      marcarMesa(ctx.campanha.id, ['documentos']);
       return { ok: true, dados: { id: existente.id }, rev: existente.rev };
     }
 
@@ -983,6 +1310,7 @@ function acaoSalvarDocumento(corpo, usuario) {
       rev: 1,
     });
 
+    marcarMesa(ctx.campanha.id, ['documentos']);
     return { ok: true, dados: { id: id }, rev: 1 };
   });
 }
@@ -1002,6 +1330,7 @@ function acaoExcluirDocumento(corpo, usuario) {
     var imagem = acharPor(ABAS.CAMPANHA_DOCUMENTOS_IMAGENS, 'documentoId', corpo.documentoId);
     if (imagem) apagarLinha(ABAS.CAMPANHA_DOCUMENTOS_IMAGENS, imagem._linha);
 
+    marcarMesa(ctx.campanha.id, ['documentos']);
     return { ok: true };
   });
 }
@@ -1054,7 +1383,122 @@ function acaoSalvarImagemDocumento(corpo, usuario) {
       });
     }
 
+    /* A data do documento acompanha a da imagem: é por ela que a aba
+       Documentos, ao se atualizar sozinha, sabe que precisa baixar a
+       imagem de novo. A revisão fica: trocar a imagem não é editar o
+       texto, e não pode pôr em conflito quem está com o texto aberto. */
+    documento.atualizadoEm = agora;
+    atualizarLinha(ABAS.CAMPANHA_DOCUMENTOS, documento._linha, documento);
+
+    marcarMesa(ctx.campanha.id, ['documentos']);
     return { ok: true };
+  });
+}
+
+/* =====================================================================
+   CAPA DA CAMPANHA
+   ---------------------------------------------------------------------
+   Uma imagem por campanha, numa aba própria (CAMPANHA_CAPAS). Três
+   regras:
+
+     · só o mestre grava, troca ou remove — exigirMestre, sempre;
+     · ler passa por contextoDaCampanha, então a capa de campanha privada
+       não sai para quem está de fora, nem pedindo pelo id direto; a de
+       campanha pública aparece para o espectador, como o nome e a
+       descrição;
+     · a imagem chega pronta do navegador (recortada, reduzida e
+       comprimida por js/imagem.js) e é recusada — nunca aparada — se
+       passar do limite da célula. Imagem cortada no meio é imagem
+       quebrada.
+   ===================================================================== */
+
+var FORMATO_DE_CAPA = /^data:image\/(webp|jpeg|png);base64,[A-Za-z0-9+\/]+=*$/;
+var LADO_MAXIMO_DA_CAPA = 4096;
+
+/* Se a campanha tem capa, pelas colunas leves. */
+function capaDaCampanha(campanhaId) {
+  var alvo = String(campanhaId);
+  var linhas = lerLeves(ABAS.CAMPANHA_CAPAS);
+  for (var i = 0; i < linhas.length; i++) {
+    if (String(linhas[i].campanhaId) === alvo) {
+      return {
+        existe: true,
+        atualizadoEm: linhas[i].atualizadoEm,
+        largura: Number(linhas[i].largura) || 0,
+        altura: Number(linhas[i].altura) || 0,
+        registro: linhas[i],
+      };
+    }
+  }
+  return { existe: false };
+}
+
+function acaoLerCapaCampanha(corpo, usuario) {
+  var ctx = contextoDaCampanha(corpo.campanhaId, usuario);
+  if (!ctx.ok) return ctx;
+
+  var capa = capaDaCampanha(ctx.campanha.id);
+  if (!capa.existe) return { ok: true, dados: { imagem: '', atualizadoEm: '', largura: 0, altura: 0 } };
+
+  var celulas = lerCelulas(ABAS.CAMPANHA_CAPAS, [capa.registro], 'imagem');
+  return {
+    ok: true,
+    dados: {
+      imagem: celulas[capa.registro._linha] || '',
+      atualizadoEm: capa.atualizadoEm,
+      largura: capa.largura,
+      altura: capa.altura,
+    },
+  };
+}
+
+/* imagem vazia remove a capa. */
+function acaoSalvarCapaCampanha(corpo, usuario) {
+  if (typeof corpo.imagem !== 'string') return { ok: false, erro: 'dados_invalidos' };
+  var imagem = corpo.imagem;
+
+  if (imagem.length > MAX_CELULA) return { ok: false, erro: 'dados_grandes' };
+  if (imagem && !FORMATO_DE_CAPA.test(imagem)) return { ok: false, erro: 'dados_invalidos' };
+
+  var largura = Math.round(Number(corpo.largura));
+  var altura = Math.round(Number(corpo.altura));
+  if (imagem && !(largura >= 1 && largura <= LADO_MAXIMO_DA_CAPA &&
+                  altura >= 1 && altura <= LADO_MAXIMO_DA_CAPA)) {
+    return { ok: false, erro: 'dados_invalidos' };
+  }
+
+  return comTrava(function () {
+    var ctx = exigirMestre(corpo.campanhaId, usuario);
+    if (!ctx.ok) return ctx;
+
+    /* Achar a linha sem ler a imagem antiga, que vai ser substituída. */
+    var existente = linhaLeve(ABAS.CAMPANHA_CAPAS, 'campanhaId', ctx.campanha.id);
+    var agora = new Date().toISOString();
+
+    if (!imagem) {
+      if (existente) apagarLinha(ABAS.CAMPANHA_CAPAS, existente._linha);
+      marcarMesa(ctx.campanha.id, ['campanha']);
+      return { ok: true, dados: { existe: false } };
+    }
+
+    if (existente) {
+      existente.atualizadoEm = agora;
+      existente.largura = largura;
+      existente.altura = altura;
+      existente.imagem = imagem;
+      atualizarCampos(ABAS.CAMPANHA_CAPAS, existente, ['atualizadoEm', 'largura', 'altura', 'imagem']);
+    } else {
+      inserir(ABAS.CAMPANHA_CAPAS, {
+        campanhaId: ctx.campanha.id,
+        atualizadoEm: agora,
+        largura: largura,
+        altura: altura,
+        imagem: imagem,
+      });
+    }
+
+    marcarMesa(ctx.campanha.id, ['campanha']);
+    return { ok: true, dados: { existe: true, atualizadoEm: agora, largura: largura, altura: altura } };
   });
 }
 
@@ -1186,6 +1630,12 @@ function podeVerCombate(combate, ctx, usuario) {
   return visiveis.some(function (id) { return String(id) === String(usuario.id); });
 }
 
+var ESTADOS_DE_COMBATE = ['preparando', 'ativo', 'encerrado'];
+
+function estadoDeCombate(valor) {
+  return ESTADOS_DE_COMBATE.indexOf(String(valor)) >= 0 ? String(valor) : 'preparando';
+}
+
 function acaoListarCombates(corpo, usuario) {
   var ctx = contextoDaCampanha(corpo.campanhaId, usuario);
   if (!ctx.ok) return ctx;
@@ -1199,48 +1649,219 @@ function acaoListarCombates(corpo, usuario) {
 
   var conteudos = lerCelulas(ABAS.CAMPANHA_COMBATES, visiveis, 'dadosJson');
 
+  /* Os recursos dos personagens que estão em algum destes combates, já
+     filtrados pela permissão de quem pede. */
+  var idsDePersonagem = {};
+  visiveis.forEach(function (c) {
+    var dados = lerJson(conteudos[c._linha], {});
+    (Array.isArray(dados.participantes) ? dados.participantes : []).forEach(function (p) {
+      if (p && p.tipo === 'personagem' && p.personagemId) idsDePersonagem[String(p.personagemId)] = true;
+    });
+  });
+  var recursos = recursosParaCombate(ctx, usuario, idsDePersonagem);
+
   var lista = visiveis
-    .map(function (c) { return combateParaCliente(c, ctx, conteudos[c._linha]); })
+    .map(function (c) { return combateParaCliente(c, ctx, conteudos[c._linha], recursos); })
     .sort(function (a, b) { return String(b.atualizadoEm).localeCompare(String(a.atualizadoEm)); });
 
   return { ok: true, dados: lista };
 }
 
+/* Os recursos que a lista de combate pode mostrar, por personagem.
+
+   A mesma regra dos cartões da aba Personagens: o mestre vê todos; o
+   jogador vê os do próprio personagem sempre e os dos outros só com
+   "Esconder status dos jogadores" desligada. Personagem ausente do mapa
+   quer dizer "não mostrar" — e o que não pode ser mostrado não entra na
+   resposta. Criatura nunca passa por aqui: o snapshot é só do mestre. */
+function recursosParaCombate(ctx, usuario, ids) {
+  var saida = {};
+  if (!Object.keys(ids).length) return saida;
+
+  var ocultar = !!lerJson(ctx.campanha.dadosJson, {}).ocultarStatusJogadores;
+
+  var linhas = lerLeves(ABAS.PERSONAGENS).filter(function (p) {
+    return ids[String(p.id)] && String(p.campanhaId) === String(ctx.campanha.id);
+  });
+
+  var permitidas = linhas.filter(function (p) {
+    return ctx.mestre || meu(p, usuario) || !ocultar;
+  });
+
+  var fichas = lerCelulas(ABAS.PERSONAGENS, permitidas, 'fichaJson');
+
+  permitidas.forEach(function (p) {
+    var ficha = lerJson(fichas[p._linha], {});
+    var lista;
+    if (ehFichaDeOrdem(ficha)) {
+      lista = recursosResumidos(ficha);
+      if (!lista) { saida[String(p.id)] = { pendente: true, lista: [] }; return; }
+    } else {
+      lista = (Array.isArray(ficha.status) ? ficha.status : [])
+        .filter(function (s) { return s && typeof s === 'object'; })
+        .map(function (s) {
+          return { chave: String(s.id), rotulo: String(s.nome || ''), atual: Number(s.atual) || 0, maximo: Number(s.maximo) || 0 };
+        });
+    }
+    saida[String(p.id)] = { pendente: false, lista: lista };
+  });
+
+  return saida;
+}
+
 /* O que o mestre vê e o que o jogador vê são respostas DIFERENTES,
-   montadas aqui. O jogador autorizado recebe a lista e a ordem — que é
-   o que ele precisa para jogar — e não a ficha interna das criaturas.
-   Ver a lista não é ver os pontos de vida do monstro. */
-function combateParaCliente(c, ctx, jsonPronto) {
+   montadas aqui. O jogador autorizado recebe a lista, a ordem e o turno
+   — que é o que ele precisa para jogar — e não a ficha interna das
+   criaturas. Ver a lista não é ver os pontos de vida do monstro. */
+function combateParaCliente(c, ctx, jsonPronto, recursos) {
   var dados = lerJson(jsonPronto === undefined ? c.dadosJson : jsonPronto, {});
   var participantes = Array.isArray(dados.participantes) ? dados.participantes : [];
+  var estado = estadoDeCombate(c.estado);
+  var porPersonagem = recursos || null;
 
   var saida = {
     id: c.id,
     nome: c.nome,
-    estado: c.estado || 'preparando',
+    estado: estado,
     criadoEm: c.criadoEm,
     atualizadoEm: c.atualizadoEm,
     rev: Number(c.rev) || 0,
+    turno: turnoNormalizado(dados.turno, participantes, estado),
   };
 
+  function comRecursos(p, objeto) {
+    if (!porPersonagem || p.tipo !== 'personagem') return objeto;
+    var r = porPersonagem[String(p.personagemId)];
+    if (r) {
+      objeto.recursos = r.lista;
+      if (r.pendente) objeto.recursosPendentes = true;
+    }
+    return objeto;
+  }
+
   if (ctx.mestre) {
-    saida.participantes = participantes;
+    saida.participantes = participantes.map(function (p) { return comRecursos(p, Object.assign({}, p)); });
     saida.visiveis = lerJson(c.visiveisJson, []) || [];
     return saida;
   }
 
   saida.participantes = participantes.map(function (p) {
-    return {
+    return comRecursos(p, {
       id: p.id,
       tipo: p.tipo,
       nome: p.nome,
       ordem: Number(p.ordem) || 0,
       personagemId: p.tipo === 'personagem' ? p.personagemId : null,
-    };
+    });
   });
 
   return saida;
 }
+
+/* =====================================================================
+   TURNOS E RODADAS
+   ---------------------------------------------------------------------
+   A ordem é a de iniciativa DIGITADA: do maior para o menor, e quem
+   empata mantém a posição em que entrou na lista (ordenação estável). O
+   turno é de um participante, guardado pelo ID — nunca pela posição.
+   Por isso mudar uma iniciativa no meio da rodada muda a ordem, mas não
+   passa a vez de ninguém.
+
+   As mesmas regras moram em js/combate-turnos.js, para a tela mostrar a
+   próxima vez sem esperar o servidor. Os testes conferem que as duas
+   implementações dão o mesmo resultado nos mesmos casos.
+
+     iniciar            rodada 1, turno do primeiro da ordem (ou de
+                        ninguém, num combate sem participantes)
+     próximo turno      o seguinte na ordem; depois do último, volta ao
+                        primeiro e a rodada sobe 1
+     voltar turno       o anterior; do primeiro, vai ao último da rodada
+                        anterior. Na rodada 1, com o primeiro da ordem,
+                        não há para onde voltar e nada muda
+     um participante    próximo e voltar só mudam a rodada
+     acrescentar        entra na ordem pela iniciativa; o turno continua
+                        com quem estava. Se ninguém tinha o turno (combate
+                        vazio), ele vai para o primeiro da ordem
+     remover o da vez   o turno passa para quem vinha depois dele; se ele
+                        era o último, para o primeiro, e a rodada sobe
+     reordenar          muda quem vem depois; o turno atual não muda
+     encerrar           a rodada fica registrada e ninguém tem o turno
+     combate antigo     em andamento e sem turno guardado: rodada 1, turno
+                        do primeiro da ordem. Não há histórico anterior a
+                        reconstruir, e nada é inventado
+   ===================================================================== */
+
+function ordemDeIniciativa(participantes) {
+  return (Array.isArray(participantes) ? participantes : [])
+    .map(function (p, i) { return { p: p, i: i }; })
+    .sort(function (a, b) {
+      return ((Number(b.p.ordem) || 0) - (Number(a.p.ordem) || 0)) || (a.i - b.i);
+    })
+    .map(function (x) { return x.p; });
+}
+
+function indiceNaOrdem(lista, id) {
+  if (!id) return -1;
+  for (var i = 0; i < lista.length; i++) {
+    if (String(lista[i].id) === String(id)) return i;
+  }
+  return -1;
+}
+
+function turnoNormalizado(turno, participantes, estado) {
+  var lista = ordemDeIniciativa(participantes);
+  var t = (turno && typeof turno === 'object') ? turno : {};
+  var rodada = Math.round(Number(t.rodada));
+  var ativoId = t.ativoId ? String(t.ativoId) : null;
+
+  if (estado === 'preparando') return { rodada: 0, ativoId: null };
+  if (estado === 'encerrado') return { rodada: rodada > 0 ? rodada : 0, ativoId: null };
+
+  return {
+    rodada: rodada >= 1 ? rodada : 1,
+    ativoId: indiceNaOrdem(lista, ativoId) >= 0 ? ativoId : (lista.length ? String(lista[0].id) : null),
+  };
+}
+
+function turnoSeguinte(turno, participantes) {
+  var lista = ordemDeIniciativa(participantes);
+  if (!lista.length) return { rodada: turno.rodada, ativoId: null, mudou: false };
+  var i = indiceNaOrdem(lista, turno.ativoId);
+  if (i < 0) return { rodada: turno.rodada, ativoId: String(lista[0].id), mudou: true };
+  if (i + 1 < lista.length) return { rodada: turno.rodada, ativoId: String(lista[i + 1].id), mudou: true };
+  return { rodada: turno.rodada + 1, ativoId: String(lista[0].id), mudou: true };
+}
+
+function turnoAnterior(turno, participantes) {
+  var lista = ordemDeIniciativa(participantes);
+  if (!lista.length) return { rodada: turno.rodada, ativoId: null, mudou: false };
+  var i = indiceNaOrdem(lista, turno.ativoId);
+  if (i < 0) return { rodada: turno.rodada, ativoId: String(lista[0].id), mudou: true };
+  if (i > 0) return { rodada: turno.rodada, ativoId: String(lista[i - 1].id), mudou: true };
+  if (turno.rodada <= 1) return { rodada: turno.rodada, ativoId: turno.ativoId, mudou: false, inicio: true };
+  return { rodada: turno.rodada - 1, ativoId: String(lista[lista.length - 1].id), mudou: true };
+}
+
+/* O turno depois de tirar um participante (antes de ele sair da lista). */
+function turnoSemParticipante(turno, participantes, removidoId) {
+  if (!turno || String(turno.ativoId) !== String(removidoId)) return turno;
+  var lista = ordemDeIniciativa(participantes);
+  var i = indiceNaOrdem(lista, removidoId);
+  var restantes = lista.filter(function (p) { return String(p.id) !== String(removidoId); });
+  if (!restantes.length) return { rodada: turno.rodada, ativoId: null };
+  if (i < 0) return { rodada: turno.rodada, ativoId: String(restantes[0].id) };
+  if (i + 1 < lista.length) return { rodada: turno.rodada, ativoId: String(lista[i + 1].id) };
+  return { rodada: turno.rodada + 1, ativoId: String(restantes[0].id) };
+}
+
+/* =====================================================================
+   GRAVAÇÃO COMPLETA
+   ---------------------------------------------------------------------
+   Criar um combate, e o caminho das versões anteriores do site, que
+   mandavam o combate inteiro a cada alteração. O turno e as operações
+   já aplicadas continuam guardados — quem não os conhece não os apaga.
+   Para editar um combate que já existe, o site usa atualizar_combate.
+   ===================================================================== */
 
 function acaoSalvarCombate(corpo, usuario) {
   var dados = corpo.dados || {};
@@ -1258,12 +1879,7 @@ function acaoSalvarCombate(corpo, usuario) {
       .filter(function (id) { return membros[id]; });
 
     var participantes = normalizarParticipantes(dados.participantes, ctx);
-
-    var estado = ['preparando', 'ativo', 'encerrado'].indexOf(String(dados.estado)) >= 0
-      ? String(dados.estado) : 'preparando';
-
-    var json = JSON.stringify({ participantes: participantes });
-    if (json.length > MAX_CELULA) return { ok: false, erro: 'dados_grandes' };
+    var estado = estadoDeCombate(dados.estado);
 
     var agora = new Date().toISOString();
     var existente = null;
@@ -1280,6 +1896,19 @@ function acaoSalvarCombate(corpo, usuario) {
         return { ok: false, erro: 'conflito', rev: revAtual };
       }
 
+      var anteriores = lerJson(existente.dadosJson, {});
+      var turnoAntes = turnoNormalizado(anteriores.turno, participantes, estadoDeCombate(existente.estado));
+      var turno = estadoDeCombate(existente.estado) === 'preparando' && estado === 'ativo'
+        ? turnoNormalizado(null, participantes, estado)
+        : turnoNormalizado(turnoAntes, participantes, estado);
+
+      var json = JSON.stringify({
+        participantes: participantes,
+        turno: turno,
+        ops: Array.isArray(anteriores.ops) ? anteriores.ops : [],
+      });
+      if (json.length > MAX_CELULA) return { ok: false, erro: 'dados_grandes' };
+
       existente.nome = nome;
       existente.estado = estado;
       existente.visiveisJson = JSON.stringify(visiveis);
@@ -1288,8 +1917,16 @@ function acaoSalvarCombate(corpo, usuario) {
       existente.dadosJson = json;
 
       atualizarLinha(ABAS.CAMPANHA_COMBATES, existente._linha, existente);
+      marcarMesa(ctx.campanha.id, ['combates']);
       return { ok: true, dados: { id: existente.id }, rev: existente.rev };
     }
+
+    var jsonNovo = JSON.stringify({
+      participantes: participantes,
+      turno: turnoNormalizado(null, participantes, estado),
+      ops: [],
+    });
+    if (jsonNovo.length > MAX_CELULA) return { ok: false, erro: 'dados_grandes' };
 
     var id = novoId();
     inserir(ABAS.CAMPANHA_COMBATES, {
@@ -1301,9 +1938,10 @@ function acaoSalvarCombate(corpo, usuario) {
       criadoEm: agora,
       atualizadoEm: agora,
       rev: 1,
-      dadosJson: json,
+      dadosJson: jsonNovo,
     });
 
+    marcarMesa(ctx.campanha.id, ['combates']);
     return { ok: true, dados: { id: id }, rev: 1 };
   });
 }
@@ -1312,14 +1950,11 @@ function acaoSalvarCombate(corpo, usuario) {
    a ordem é um número. O snapshot da criatura passa como veio — ele é
    conteúdo do mestre, montado a partir de uma criatura que ele já podia
    ver quando montou o combate. */
-function normalizarParticipantes(lista, ctx) {
+function normalizarParticipantes(lista, ctx, daMesaPronta) {
   if (!Array.isArray(lista)) return [];
 
   /* Só id e nome interessam aqui, e os dois são colunas leves. */
-  var daMesa = {};
-  lerLeves(ABAS.PERSONAGENS).forEach(function (p) {
-    if (String(p.campanhaId) === String(ctx.campanha.id)) daMesa[p.id] = p.nome;
-  });
+  var daMesa = daMesaPronta || personagensDaMesaPorId(ctx);
 
   var saida = [];
 
@@ -1356,6 +1991,269 @@ function normalizarParticipantes(lista, ctx) {
   return saida;
 }
 
+function personagensDaMesaPorId(ctx) {
+  var daMesa = {};
+  lerLeves(ABAS.PERSONAGENS).forEach(function (p) {
+    if (String(p.campanhaId) === String(ctx.campanha.id)) daMesa[p.id] = p.nome;
+  });
+  return daMesa;
+}
+
+/* =====================================================================
+   OPERAÇÕES NUM COMBATE
+   ---------------------------------------------------------------------
+   Em vez de reenviar o combate inteiro a cada iniciativa digitada, a
+   tela manda um LOTE de operações: "a iniciativa de X é 14", "próximo
+   turno", "tirar Y". O servidor aplica todas, em ordem, de uma vez só:
+   ou o lote inteiro entra, ou nada entra.
+
+   Três proteções, e nenhuma substitui a outra:
+
+     rev    o lote diz sobre qual revisão foi montado. Se o combate mudou
+            em outro lugar — outro mestre, outra aba, outro aparelho —, a
+            resposta é `conflito` com o estado atual, e a tela decide o
+            que ainda vale reaplicar. Nada é sobrescrito em silêncio.
+
+     opId   cada lote tem um identificador. Ele fica guardado com o
+            combate, e um lote que chega de novo com o mesmo opId — a
+            resposta se perdeu e a tela repetiu — é reconhecido e NÃO é
+            aplicado duas vezes. É o que impede um "próximo turno"
+            repetido por causa da rede de pular dois turnos.
+
+     trava  duas gravações nunca se intercalam na planilha.
+
+   As operações:
+
+     iniciativa        { participanteId, valor }
+     criatura_status   { participanteId, statusId, valor }  — o snapshot
+                       da criatura NESTE combate; o modelo não muda
+     turno             { direcao: "proximo" | "anterior" }
+     estado            { valor: "ativo" | "encerrado" }
+     adicionar         { participantes: [...] }
+     remover           { participanteId }
+     renomear          { nome }
+     visiveis          { lista: [ids de usuário] }
+   ===================================================================== */
+
+var MAX_OPERACOES_POR_LOTE = 100;
+var MAX_OPS_GUARDADAS = 40;
+var LIMITE_DE_INICIATIVA = 9999;
+
+function numeroEstrito(valor) {
+  var ehNumero = typeof valor === 'number' ||
+    (typeof valor === 'string' && /^\s*-?\d+(\.\d+)?\s*$/.test(valor));
+  if (!ehNumero) return null;
+  var n = Number(valor);
+  return Number.isFinite(n) ? Math.round(n) : null;
+}
+
+function acaoAtualizarCombate(corpo, usuario) {
+  var opId = String(corpo.opId || '');
+  if (!/^[A-Za-z0-9_-]{8,80}$/.test(opId)) return { ok: false, erro: 'dados_invalidos' };
+
+  var ops = Array.isArray(corpo.ops) ? corpo.ops : null;
+  if (!ops || !ops.length || ops.length > MAX_OPERACOES_POR_LOTE) return { ok: false, erro: 'dados_invalidos' };
+
+  return comTrava(function () {
+    var ctx = exigirMestre(corpo.campanhaId, usuario);
+    if (!ctx.ok) return ctx;
+
+    var registro = acharPor(ABAS.CAMPANHA_COMBATES, 'id', corpo.combateId);
+    if (!registro || String(registro.campanhaId) !== String(ctx.campanha.id)) {
+      return { ok: false, erro: 'nao_encontrado' };
+    }
+
+    var dados = lerJson(registro.dadosJson, {});
+    var feitas = Array.isArray(dados.ops) ? dados.ops : [];
+    var revAtual = Number(registro.rev) || 0;
+
+    /* A repetição vem ANTES da revisão: o lote que já entrou subiu a
+       revisão, e a segunda chegada dele sempre pareceria um conflito. */
+    var jaFeita = feitas.some(function (o) { return o && String(o.id) === opId; });
+    if (jaFeita) {
+      return { ok: true, repetida: true, rev: revAtual, dados: combateParaCliente(registro, ctx) };
+    }
+
+    var revPedida = Number(corpo.rev);
+    if (!Number.isFinite(revPedida)) return { ok: false, erro: 'dados_invalidos' };
+    if (revPedida !== revAtual) {
+      return { ok: false, erro: 'conflito', rev: revAtual, dados: combateParaCliente(registro, ctx) };
+    }
+
+    var estadoAtual = estadoDeCombate(registro.estado);
+    var participantesAtuais = Array.isArray(dados.participantes) ? dados.participantes : [];
+
+    var combate = {
+      nome: registro.nome,
+      estado: estadoAtual,
+      visiveis: lerJson(registro.visiveisJson, []) || [],
+      participantes: JSON.parse(JSON.stringify(participantesAtuais)),
+      turno: turnoNormalizado(dados.turno, participantesAtuais, estadoAtual),
+    };
+
+    var resultado = aplicarOperacoesDeCombate(combate, ops, ctx);
+    if (!resultado.ok) return resultado;
+
+    feitas.push({ id: opId, rev: revAtual + 1 });
+    if (feitas.length > MAX_OPS_GUARDADAS) feitas = feitas.slice(feitas.length - MAX_OPS_GUARDADAS);
+
+    var json = JSON.stringify({ participantes: combate.participantes, turno: combate.turno, ops: feitas });
+    if (json.length > MAX_CELULA) return { ok: false, erro: 'dados_grandes' };
+
+    registro.nome = combate.nome;
+    registro.estado = combate.estado;
+    registro.visiveisJson = JSON.stringify(combate.visiveis);
+    registro.atualizadoEm = new Date().toISOString();
+    registro.rev = revAtual + 1;
+    registro.dadosJson = json;
+
+    atualizarLinha(ABAS.CAMPANHA_COMBATES, registro._linha, registro);
+    marcarMesa(ctx.campanha.id, ['combates']);
+
+    return {
+      ok: true,
+      rev: registro.rev,
+      avisos: resultado.avisos,
+      dados: combateParaCliente(registro, ctx, json),
+    };
+  });
+}
+
+/* Aplica o lote numa cópia. Qualquer operação inválida recusa o lote
+   inteiro, com o índice dela — metade de um lote aplicado deixaria o
+   combate num estado que ninguém pediu. */
+function aplicarOperacoesDeCombate(combate, ops, ctx) {
+  var avisos = [];
+  var daMesa = null;
+  var membros = null;
+
+  function recusar(indice, motivo) {
+    return { ok: false, erro: 'dados_invalidos', indice: indice, motivo: motivo };
+  }
+
+  function acharParticipante(id) {
+    for (var i = 0; i < combate.participantes.length; i++) {
+      if (String(combate.participantes[i].id) === String(id)) return combate.participantes[i];
+    }
+    return null;
+  }
+
+  for (var i = 0; i < ops.length; i++) {
+    var op = ops[i];
+    if (!op || typeof op !== 'object') return recusar(i, 'operacao');
+    var tipo = String(op.tipo || '');
+
+    if (tipo === 'iniciativa') {
+      var alvo = acharParticipante(op.participanteId);
+      if (!alvo) return recusar(i, 'participante');
+      var valor = numeroEstrito(op.valor);
+      if (valor === null || Math.abs(valor) > LIMITE_DE_INICIATIVA) return recusar(i, 'valor');
+      alvo.ordem = valor;
+      continue;
+    }
+
+    if (tipo === 'criatura_status') {
+      var criatura = acharParticipante(op.participanteId);
+      if (!criatura || criatura.tipo !== 'criatura') return recusar(i, 'participante');
+      var snapshot = (criatura.snapshot && typeof criatura.snapshot === 'object') ? criatura.snapshot : {};
+      var lista = Array.isArray(snapshot.status) ? snapshot.status : [];
+      var status = null;
+      for (var s = 0; s < lista.length; s++) {
+        if (lista[s] && String(lista[s].id) === String(op.statusId)) { status = lista[s]; break; }
+      }
+      if (!status) return recusar(i, 'status');
+      var novo = numeroEstrito(op.valor);
+      if (novo === null) return recusar(i, 'valor');
+      var maximo = Math.max(0, Math.round(Number(status.maximo)) || 0);
+      /* O mesmo limite de js/criaturas.js: de 0 ao máximo, ou só o piso
+         quando a criatura não tem máximo. */
+      status.atual = maximo > 0 ? Math.max(0, Math.min(maximo, novo)) : Math.max(0, Math.min(999999, novo));
+      continue;
+    }
+
+    if (tipo === 'turno') {
+      if (combate.estado !== 'ativo') return recusar(i, 'estado');
+      var direcao = String(op.direcao || '');
+      if (direcao !== 'proximo' && direcao !== 'anterior') return recusar(i, 'direcao');
+      var t = direcao === 'proximo'
+        ? turnoSeguinte(combate.turno, combate.participantes)
+        : turnoAnterior(combate.turno, combate.participantes);
+      if (t.inicio) avisos.push({ indice: i, aviso: 'inicio' });
+      combate.turno = { rodada: t.rodada, ativoId: t.ativoId };
+      continue;
+    }
+
+    if (tipo === 'estado') {
+      var destino = String(op.valor || '');
+      if (destino === combate.estado) continue;
+      if (combate.estado === 'preparando' && destino === 'ativo') {
+        combate.estado = 'ativo';
+        combate.turno = turnoNormalizado(null, combate.participantes, 'ativo');
+        continue;
+      }
+      if (combate.estado === 'ativo' && destino === 'encerrado') {
+        combate.estado = 'encerrado';
+        combate.turno = turnoNormalizado(combate.turno, combate.participantes, 'encerrado');
+        continue;
+      }
+      return recusar(i, 'transicao');
+    }
+
+    if (tipo === 'adicionar') {
+      if (!Array.isArray(op.participantes) || !op.participantes.length) return recusar(i, 'participantes');
+      if (!daMesa) daMesa = personagensDaMesaPorId(ctx);
+      var novos = normalizarParticipantes(op.participantes, ctx, daMesa);
+      novos.forEach(function (p) {
+        if (combate.participantes.length >= 200) return;
+        if (acharParticipante(p.id)) return;
+        if (p.tipo === 'personagem' && combate.participantes.some(function (x) {
+          return x.tipo === 'personagem' && String(x.personagemId) === String(p.personagemId);
+        })) return;
+        combate.participantes.push(p);
+      });
+      continue;
+    }
+
+    if (tipo === 'remover') {
+      var saindo = acharParticipante(op.participanteId);
+      /* Tirar quem já saiu não é erro: é a segunda metade de uma mesma
+         intenção, vinda de outra aba. */
+      if (!saindo) continue;
+      if (combate.estado === 'ativo') {
+        combate.turno = turnoSemParticipante(combate.turno, combate.participantes, saindo.id);
+      }
+      combate.participantes = combate.participantes.filter(function (p) { return String(p.id) !== String(saindo.id); });
+      continue;
+    }
+
+    if (tipo === 'renomear') {
+      var nome = String(op.nome || '').trim().slice(0, 120);
+      if (!nome) return recusar(i, 'nome');
+      combate.nome = nome;
+      continue;
+    }
+
+    if (tipo === 'visiveis') {
+      if (!Array.isArray(op.lista)) return recusar(i, 'lista');
+      if (!membros) membros = idsDaMesa(ctx.campanha);
+      var vistos = {};
+      combate.visiveis = op.lista.map(String).filter(function (id) {
+        if (!membros[id] || vistos[id]) return false;
+        vistos[id] = true;
+        return true;
+      });
+      continue;
+    }
+
+    return recusar(i, 'tipo');
+  }
+
+  /* Depois de tudo: quem tem o turno ainda existe? Um combate que estava
+     vazio e ganhou participantes passa o turno ao primeiro da ordem. */
+  combate.turno = turnoNormalizado(combate.turno, combate.participantes, combate.estado);
+  return { ok: true, avisos: avisos };
+}
+
 function acaoExcluirCombate(corpo, usuario) {
   return comTrava(function () {
     var ctx = exigirMestre(corpo.campanhaId, usuario);
@@ -1367,6 +2265,7 @@ function acaoExcluirCombate(corpo, usuario) {
     }
 
     apagarLinha(ABAS.CAMPANHA_COMBATES, combate._linha);
+    marcarMesa(ctx.campanha.id, ['combates']);
     return { ok: true };
   });
 }

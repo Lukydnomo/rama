@@ -326,7 +326,12 @@
       }
 
       global.RAMAAuth.exigirSessao(async function (agente, respostas) {
-        var casca = montar({ secao: secao, agente: agente });
+        /* semCasca: a página vai morar dentro de outra (a ficha no painel
+           lateral do combate). Cabeçalho, navegação e rodapé ficam com a
+           página de fora; a sessão é conferida do mesmo jeito. */
+        var casca = o.semCasca
+          ? { cabecalho: null, conteudo: U.$("#conteudo") }
+          : montar({ secao: secao, agente: agente });
         try {
           await aoPronto(agente, casca, respostas || []);
         } catch (e) {
