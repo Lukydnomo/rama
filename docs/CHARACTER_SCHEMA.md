@@ -410,21 +410,35 @@ descartada. É o que a ordem "de adição" usa (ver `ordem.organizacao`).
 "rituais": {
   "rotuloSecao": "Rituais",
   "rotulos": {
-    "circulo": "Círculo", "alcance": "Alcance", "duracao": "Duração",
-    "alvo": "Alvo", "efeito": "Efeito"
+    "circulo": "Círculo", "elemento": "Elemento", "execucao": "Execução",
+    "alcance": "Alcance", "alvo": "Alvo", "area": "Área", "efeito": "Efeito",
+    "duracao": "Duração", "resistencia": "Resistência", "descricao": "Descrição"
   },
   "itens": [
     {
-      "id", "nome", "circulo", "alcance", "duracao", "alvo", "efeito",
+      "id", "nome",
+      "circulo", "elemento", "execucao", "alcance",
+      "alvo", "area", "efeito",        // três campos diferentes; um ritual usa um
+      "duracao", "resistencia",
+      "descricao",                     // o texto longo do ritual
+      "origemCatalogoId",              // rastro do catálogo oficial
+      "origemHomebrewId",              // rastro da biblioteca Homebrew
+      "ordem": { /* … */ },            // os números que as regras de Ordem leem
       "versoes": [
         { "id": "uuid", "nome": "Normal",   "dano": "6d8" },
-        { "id": "uuid", "nome": "Discente", "dano": "10d8" },
+        { "id": "uuid", "nome": "Discente", "dano": "10d8", "custo": 3 },
         { "id": "uuid", "nome": "Ritual",   "dano": "" }
       ]
     }
   ]
 }
 ```
+
+**Alvo, Área e Efeito são três campos.** O livro de Ordem Paranormal usa uma das
+três linhas em cada ritual: um ritual tem um *alvo* (1 ser), ou afeta uma *área*
+(esfera de 6 m de raio), ou cria algo — o *efeito* (1 clone seu). São informações
+diferentes, e um campo só as misturaria. Um ritual normalmente preenche um; Dissipar
+Ritual, que o livro apresenta como "Alvo ou Área", preenche dois.
 
 **O nome da seção e os rótulos são configuráveis; as CHAVES internas não.**
 
@@ -462,6 +476,22 @@ sobrescrever a outra.
 | `id` | uuid, estável. Sobrevive a renomear, salvar, exportar e importar. |
 | `nome` | texto livre, até 40 caracteres. Em branco vira `Normal`. |
 | `dano` | expressão `NdX`, **opcional**. |
+| `danoExtra` | a parte fixa de um dano como `3d4+3`: número ou dado. Nunca é multiplicada no crítico. |
+| `custo` | os PE **adicionais** desta versão ("Discente (+3 PE)"). A forma básica não tem: o custo dela é o do círculo. |
+| `requisito` | texto: "3º círculo e afinidade". |
+| `alteracoes` | texto: o que muda em relação à forma básica. O que não estiver aqui continua igual. |
+| `rolagens` | as rolagens que **não** são dano: `{ id, tipo, rotulo, expressao, extra }`, com `tipo` em `dano`, `cura` ou `outra`. No máximo 6 por versão. |
+
+**Custo adicional nunca é custo total.** `custo` guarda só o acréscimo; o total sai
+de `RAMAOrdemRituais.custoDaVersao(ritual, versao)`, que soma o custo da forma
+básica uma vez. Gravar o total levaria a somar o básico duas vezes na primeira
+edição.
+
+**Cura não é dano.** Um ritual que recupera PV tem `dano` vazio e uma rolagem de
+`tipo: "cura"`; a ficha rola pelo mesmo motor de dados, e o resultado aparece
+como "Cura — Ritual · Versão" no mostrador e no histórico da campanha. Rolagem de
+outro tipo (PV temporários, um dado de auxílio) usa `outra`, com o rótulo do
+livro.
 
 **O dano é opcional de verdade.** Existe ritual que não causa dano, e campo
 vazio é uma resposta legítima — nunca zero. Versão sem dano não aparece na
@@ -487,8 +517,20 @@ uma regra de jogo.
 
 ## Migração
 
-`schemaVersion` é `7`. Toda ficha lida passa por `normalizarFicha()`, que aceita
+`schemaVersion` é `8`. Toda ficha lida passa por `normalizarFicha()`, que aceita
 o que faltar e conserta o que dá.
+
+**A v2.14 subiu o schema de 7 para 8 — e é a ÚNICA subida com migração.** O ritual
+ganhou `elemento`, `execucao`, `area`, `resistencia` e `descricao`, além do rastro
+de origem, do bloco `ordem` e dos campos novos das versões. O texto longo do
+ritual, que morava em `efeito`, passou para `descricao`, e `efeito` virou a linha
+"Efeito:" do livro.
+
+A migração acontece **na leitura de uma ficha de schema 7 ou menor**, e move duas
+coisas: o texto de `efeito` para `descricao`, e o rótulo personalizado de "Efeito"
+para "Descrição" (quem chamava o texto de "O que faz" continua vendo "O que faz").
+Nada é apagado, e uma ficha já no schema 8 não é tocada — um ritual novo, com a
+linha do livro preenchida e sem descrição, fica como está.
 
 **A v2.13 subiu o schema de 6 para 7 sem converter nada.** Os campos novos são os
 do catálogo de itens — `origemCatalogoId` no item e, dentro de `ordem`,
@@ -796,6 +838,30 @@ Espaços aceitam qualquer número a partir de 0 (0,1, 0,5, 2,75…), guardado co
 duas casas decimais. Quantidade e categoria são coisas
 diferentes: a quantidade diz quantas unidades existem; a categoria é o que conta
 contra o limite da patente — e cada unidade conta como um item.
+
+### O bloco `ordem` de um ritual
+
+Numa ficha de Ordem, cada ritual pode ter um bloco próprio, com **só o que as
+regras leem como número**. O resto do ritual é texto, igual numa ficha universal —
+e uma ficha universal nunca ganha este bloco.
+
+```jsonc
+"ordem": {
+  "elemento": "morte",                       // chave: conhecimento, energia, morte, sangue, medo
+  "circulo": 2,                              // 1 a 4
+  "custo": 3,                                // PE da forma básica; em branco vale o do círculo
+  "referencia": { "fonte": "OPRPG", "pagina": 126 }
+}
+```
+
+É esse bloco que faz os avisos da ficha funcionarem: círculo acima do que a classe
+conjura, custo além do limite de PE por turno, afinidade que uma forma avançada
+pede, e o preço em Sanidade dos rituais de Medo. **Nenhum deles bloqueia nada** —
+a mesa decide, e registrar um ritual não resolve pendência de progressão alguma.
+
+`origemCatalogoId` (`"op.ritual.cicatrizacao"`) e `origemHomebrewId` são **rastro,
+não vínculo**, como nos itens: o ritual na ficha é uma cópia com id próprio e ids
+de versão próprios. Corrigir o catálogo depois não muda o que já está na ficha.
 
 **Valor calculado não é gravado.** PV máximo, Defesa, carga e bônus de perícia
 nascem da soma completa toda vez que alguém pergunta. É isso que torna

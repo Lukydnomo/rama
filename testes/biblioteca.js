@@ -57,6 +57,10 @@
 
   function tique() { return new Promise(function (ok) { setTimeout(ok, 30); }); }
 
+  /* Espera curta para a tela se redesenhar depois de um clique. Toda
+     espera de RESULTADO é feita por ate(), com condição. */
+  function espera(ms) { return new Promise(function (ok) { setTimeout(ok, ms || 0); }); }
+
   async function ate(condicao, prazo) {
     var limite = Date.now() + (prazo || 10000);
     for (;;) {
@@ -133,11 +137,24 @@
     { id: "hb-hab", tipo: "habilidade", nome: "Habilidade que não é item", meu: true },
     { id: "hb-cri", tipo: "criatura", nome: "Criatura que não é item", meu: false },
   ];
+  var RITUAIS_HB = [
+    { id: "hb-ritual", tipo: "ritual", nome: "Selo da mesa", meu: true, circulo: "1º círculo", elemento: "Sangue",
+      execucao: "padrão", alcance: "toque", alvo: "1 ser", duracao: "cena", descricao: "Ritual caseiro.",
+      versoes: [{ id: "v1", nome: "Normal", dano: "2d6" }, { id: "v2", nome: "Discente", dano: "4d6", custo: 2, requisito: "2º círculo" }],
+      ordem: { elemento: "sangue", circulo: 1, custo: 1 } },
+    { id: "hb-ritual-pub", tipo: "ritual", nome: "Prece pública", meu: false, circulo: "2º círculo",
+      descricao: "Publicada por outra conta.",
+      versoes: [{ id: "v3", nome: "Normal", rolagens: [{ id: "r1", tipo: "cura", rotulo: "Cura", expressao: "2d8", extra: "2" }] }] },
+    { id: "hb-item-2", tipo: "item", nome: "Item que não é ritual", meu: true },
+  ];
   var pedidosHomebrew = [];
-  var respostaHomebrew = function () { return { ok: true, dados: JSON.parse(JSON.stringify(REGISTROS)) }; };
+  var respostaHomebrew = null;    /* quando o teste quer forçar a resposta */
   global.RAMAApi.listarHomebrew = function (opcoes) {
     pedidosHomebrew.push(opcoes);
-    return new Promise(function (ok) { setTimeout(function () { ok(respostaHomebrew(opcoes)); }, 20); });
+    var o = opcoes || {};
+    var dados = (o.tipos || []).indexOf("ritual") >= 0 ? RITUAIS_HB : REGISTROS;
+    var resposta = respostaHomebrew ? respostaHomebrew(o) : { ok: true, dados: JSON.parse(JSON.stringify(dados)) };
+    return new Promise(function (ok) { setTimeout(function () { ok(resposta); }, 20); });
   };
   var novoItemPedido = null;
   global.RAMASecaoInventario = { novoItem: function (ctx) { novoItemPedido = ctx; } };
@@ -373,7 +390,7 @@
     var tentarHb = await ate(function () { return janela() && botaoCom("Tentar novamente"); });
     t.ok("falha: mensagem de erro e tentar de novo", !!tentarHb);
     t.igual("  sem mexer no inventário", ctx.ficha.inventario.itens.length, 6);
-    respostaHomebrew = function () { return { ok: true, dados: JSON.parse(JSON.stringify(REGISTROS)) }; };
+    respostaHomebrew = null;
     tentarHb.focus();
     clicar(tentarHb);
     t.ok("tentar de novo carrega a lista", !!(await ate(function () { return linha("Lanterna pública"); })));
@@ -402,7 +419,168 @@
     t.igual("  e devolve o foco para quem abriu", document.activeElement, abridor);
     abridor.parentNode.removeChild(abridor);
 
-    /* ---------------------------------------------------------------- */
+    /* ================================================================
+       RITUAIS
+       ================================================================ */
+
+    t.grupo("Rituais · abrir a biblioteca e filtrar");
+
+    var ctxR = contexto(fichaDeOrdem());
+    var abridorR = el("button.r-botao", { type: "button", texto: "Da biblioteca (rituais)" });
+    document.querySelector("main").appendChild(abridorR);
+    abridorR.focus();
+    global.RAMABibliotecaDeRituais.abrir(ctxR);
+    var modalR = await ate(function () {
+      var m = document.querySelector(".r-modal--biblioteca");
+      return m && m.querySelector(".bib-item") ? m : null;
+    }, 25000);
+    t.ok("a janela abre com o catálogo carregado sob demanda", !!modalR && !!global.RAMAOrdemRituaisDados);
+    t.igual("  com as duas origens", U.$$(".biblioteca-origem", modalR).map(function (b) { return b.textContent; }).join(" | "),
+      "Ordem Paranormal | Homebrew");
+
+    function chipsDe(rotulo) {
+      return U.$$(".r-aba", modalR).filter(function (b) { return b.textContent.indexOf(rotulo) === 0; })[0];
+    }
+    var chips = U.$$(".r-aba", modalR).map(function (b) { return b.textContent; });
+    t.ok("os cinco elementos aparecem escritos, com contagem",
+      ["Conhecimento", "Energia", "Morte", "Sangue", "Medo"].every(function (nome) {
+        return chips.some(function (c) { return c.indexOf(nome) === 0 && /\(\d+\)/.test(c); });
+      }));
+    t.ok("os quatro círculos também", ["1º círculo", "2º círculo", "3º círculo", "4º círculo"].every(function (nome) {
+      return chips.some(function (c) { return c.indexOf(nome) === 0; });
+    }));
+    t.ok("nenhum chip de elemento inventado (sem “Varia”)", !chips.some(function (c) { return /^Varia/.test(c); }));
+    t.igual("98 rituais, os dois livros", modalR.querySelector(".bib-status").textContent, "98 rituais.");
+
+    clicar(chipsDe("Sangue"));
+    await espera(120);
+    clicar(chipsDe("2º círculo"));
+    await espera(150);
+    t.igual("Sangue + 2º círculo: 6 rituais", modalR.querySelector(".bib-status").textContent, "6 rituais.");
+    t.ok("  e as contagens dos chips acompanham os outros filtros",
+      U.$$(".r-aba[aria-pressed=true]", modalR).map(function (b) { return b.textContent; }).join(" | ") === "Sangue (6) | 2º círculo (6)");
+    digitar(busca(), "DESCARNAR");
+    await espera(150);
+    t.igual("busca sem acento e em maiúsculas dentro dos filtros", nomesNaLista().join(), "Descarnar");
+    clicar(botaoCom("Limpar busca e filtros"));
+    await espera(150);
+    t.ok("limpar devolve os 98", modalR.querySelector(".bib-status").textContent === "98 rituais." && busca().value === "");
+    t.ok("o filtro de livro traz as duas fontes", (function () {
+      var select = U.$$(".bib-filtro select", modalR)[0];
+      return select && select.options.length === 3;
+    })());
+    escolherNoFiltro("Livro", "SAH");
+    await espera(150);
+    t.igual("só o Sobrevivendo ao Horror: 16", modalR.querySelector(".bib-status").textContent, "16 rituais.");
+    escolherNoFiltro("Livro", "");
+    await espera(150);
+
+    t.grupo("Rituais · prévia, versões e custo");
+
+    digitar(busca(), "cicatrizacao");
+    var linhaR = await ate(function () { return linha("Cicatrização"); });
+    t.ok("o resultado fechado mostra círculo e elemento na classificação",
+      /1º círculo · Morte/.test(linhaR.querySelector(".bib-item__classe").textContent));
+    t.ok("  e custo, execução, alcance e duração na linha compacta", (function () {
+      var texto = linhaR.querySelector(".bib-item__dados").textContent.replace(/\s+/g, "");
+      return /Custo:1PE/.test(texto) && /Execução:padrão/.test(texto) && /Alcance:toque/.test(texto) && /Duração:instantânea/.test(texto);
+    })());
+    t.igual("  os detalhes ainda não foram montados", linhaR.querySelector(".bib-item__detalhes").childNodes.length, 0);
+    clicar(linhaR.querySelector(".bib-item__abrir"));
+    await espera(150);
+    var detR = linhaR.querySelector(".bib-item__detalhes");
+    t.ok("abrir mostra os campos do ritual", ["Elemento", "Círculo", "Custo", "Execução", "Alcance", "Alvo", "Duração", "Fonte"]
+      .every(function (r) { return U.$$("dt", detR).some(function (d) { return d.textContent === r; }); }));
+    t.ok("  as três versões, com custo adicional e total",
+      /Normal · 1 PE/.test(detR.innerText) && /Discente · \+2 PE \(total 3 PE\)/.test(detR.innerText) &&
+      /Verdadeiro · \+9 PE \(total 10 PE\)/.test(detR.innerText));
+    t.ok("  as rolagens aparecem como CURA, não como dano", /cura 3d8\+3/i.test(detR.innerText));
+    t.ok("  os requisitos de cada versão", /Discente: requer 2º círculo/.test(detR.innerText));
+    t.ok("  as regras que acompanham (componentes e Custo do Paranormal)", /Custo do Paranormal/.test(detR.innerText));
+    t.ok("  e o que a ficha faz — sem prometer conjuração", /não gasta PE/.test(detR.innerText));
+
+    t.grupo("Rituais · adicionar à ficha não conjura");
+
+    var adicionarR = detR.querySelector(".bib-item__adicionar");
+    clicar(adicionarR, 1);
+    clicar(adicionarR, 2);
+    t.igual("clique duplo adiciona UM ritual", ctxR.ficha.rituais.itens.length, 1);
+    var enterR = tecla(adicionarR, "Enter", { repeat: true });
+    t.ok("Enter segurado não repete", enterR.defaultPrevented);
+    t.ok("a confirmação diz que nada foi gasto", /Nenhum PE foi gasto/.test(detR.querySelector(".bib-item__status").textContent));
+    t.ok("  a janela continua aberta, com a busca e os filtros", !!janela() && busca().value === "cicatrizacao");
+    var adicionado = ctxR.ficha.rituais.itens[0];
+    t.ok("o ritual entra com campos, bloco de Ordem e versões",
+      adicionado.circulo === "1º círculo" && adicionado.elemento === "Morte" && adicionado.alvo === "1 ser" &&
+      adicionado.ordem.circulo === 1 && adicionado.ordem.custo === 1 && adicionado.versoes.length === 3);
+    t.ok("  com a cura como rolagem de cura", adicionado.versoes[0].rolagens[0].tipo === "cura");
+    t.ok("  e o rastro da origem", adicionado.origemCatalogoId === "op.ritual.cicatrizacao");
+    t.ok("nenhum dado foi rolado ao adicionar", !document.querySelector(".rolagem"));
+    clicar(adicionarR, 1);
+    t.igual("clicar de novo, de propósito, adiciona outra cópia", ctxR.ficha.rituais.itens.length, 2);
+    t.ok("  com id próprio e versões com ids próprios",
+      ctxR.ficha.rituais.itens[1].id !== adicionado.id &&
+      ctxR.ficha.rituais.itens[1].versoes[0].id !== adicionado.versoes[0].id);
+    t.igual("  e a marca “na ficha” conta as duas", linhaR.querySelector(".bib-item__na-ficha").textContent, "na ficha: 2");
+
+    digitar(busca(), "amaldicoar arma");
+    var multi = await ate(function () { return linha("Amaldiçoar Arma"); });
+    clicar(multi.querySelector(".bib-item__abrir"));
+    await espera(150);
+    var detMulti = multi.querySelector(".bib-item__detalhes");
+    t.ok("ritual de quatro elementos pede o elemento ao adicionar", !!detMulti.querySelector(".bib-campo select"));
+    clicar(detMulti.querySelector(".bib-item__adicionar"), 1);
+    t.ok("  sem escolher, a inclusão é recusada com o motivo",
+      ctxR.ficha.rituais.itens.length === 2 && /Escolha/i.test(detMulti.querySelector(".bib-item__status").textContent));
+    detMulti.querySelector(".bib-campo select").value = "morte";
+    clicar(detMulti.querySelector(".bib-item__adicionar"), 1);
+    t.igual("  escolhendo Morte, o ritual entra com esse elemento",
+      (ctxR.ficha.rituais.itens[2] || {}).elemento, "Morte");
+
+    t.grupo("Rituais · avisos da ficha, nunca bloqueio");
+
+    digitar(busca(), "controle mental");
+    var quarto = await ate(function () { return linha("Controle Mental"); });
+    clicar(quarto.querySelector(".bib-item__abrir"));
+    await espera(150);
+    var detQuarto = quarto.querySelector(".bib-item__detalhes");
+    t.ok("ritual acima do círculo da ficha avisa, e o botão continua lá",
+      /Nesta ficha/.test(detQuarto.innerText) && !!detQuarto.querySelector(".bib-item__adicionar"));
+    clicar(detQuarto.querySelector(".bib-item__adicionar"), 1);
+    t.igual("  e adicionar continua permitido (a mesa decide)", ctxR.ficha.rituais.itens.length, 4);
+
+    t.grupo("Rituais · Homebrew");
+
+    clicar(U.$$(".biblioteca-origem", janela()).filter(function (b) { return b.textContent === "Homebrew"; })[0]);
+    await ate(function () { return linha("Selo da mesa"); });
+    t.ok("pede ao servidor só o tipo ritual", pedidosHomebrew.some(function (p) {
+      return p && p.tipos && p.tipos.length === 1 && p.tipos[0] === "ritual";
+    }));
+    t.igual("  e item nenhum entra na lista", nomesNaLista().join(" | "), "Prece pública | Selo da mesa");
+    var linhaHb = await expandir("Selo da mesa");
+    clicar(linhaHb.querySelector(".bib-item__adicionar"), 1);
+    var copiaHb = ctxR.ficha.rituais.itens[4];
+    t.ok("o ritual Homebrew entra como cópia independente",
+      !!copiaHb && copiaHb.origemHomebrewId === "hb-ritual" && copiaHb.id !== "hb-ritual" &&
+      copiaHb.versoes[0].id !== "v1");
+    t.ok("  com as versões e o custo adicional preservados",
+      copiaHb.versoes.length === 2 && copiaHb.versoes[1].custo === 2 && copiaHb.versoes[1].dano === "4d6");
+    copiaHb.nome = "Selo editado na ficha";
+    t.igual("  e editar a cópia não muda o modelo", RITUAIS_HB[0].nome, "Selo da mesa");
+
+    t.grupo("Rituais · teclado e layout (" + window.innerWidth + " px)");
+
+    t.ok("tudo o que se usa é botão, campo ou seleção de verdade",
+      U.$$(".bib-item__abrir, .r-aba, .biblioteca-origem", janela()).every(function (b) { return b.tagName === "BUTTON"; }));
+    t.ok("a página não ganha rolagem horizontal", document.documentElement.scrollWidth <= window.innerWidth + 1);
+    var caixaR = janela().getBoundingClientRect();
+    t.ok("a janela cabe na tela", caixaR.left >= -1 && caixaR.right <= window.innerWidth + 1);
+    tecla(document, "Escape");
+    t.ok("Esc fecha", !!(await ate(function () { return !janela(); })));
+    t.igual("  e devolve o foco para quem abriu", document.activeElement, abridorR);
+    abridorR.parentNode.removeChild(abridorR);
+
+        /* ---------------------------------------------------------------- */
     t.grupo("Layout na largura atual (" + window.innerWidth + " px)");
 
     B.abrir(ctx, { origem: "oficial", aba: "armas" });

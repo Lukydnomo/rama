@@ -259,6 +259,7 @@ body { display: flex; flex-direction: column; }
 }
 .faixa--fim { justify-content: flex-end; }
 .faixa--entre { justify-content: space-between; }
+.faixa--centro { justify-content: center; }
 
 /* =====================================================================
    PAINEL DE RESUMO (visão geral da campanha)

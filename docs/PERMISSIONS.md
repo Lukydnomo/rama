@@ -131,11 +131,12 @@ como **privado**. Nenhuma biblioteca que já existia virou pública sozinha.
 Tentar editar um registro público de outra conta não atualiza o original: cria
 um registro novo sob quem pediu.
 
-A **biblioteca de itens do inventário** (`listar_homebrew` com `tipos`) não muda
-nada disso: ela pede os tipos de item, e o servidor devolve só o que esta conta
-alcança — os próprios, privados ou não, e os públicos de outras contas. Conteúdo
-privado de outra conta **não é carregado** para depois ser escondido na tela, e
-habilidade e criatura não chegam nem como item.
+As **bibliotecas da ficha** (`listar_homebrew` com `tipos`) não mudam nada disso:
+a do inventário pede os tipos de item e a da aba Rituais pede `ritual`, e o
+servidor devolve só o que esta conta alcança — os próprios, privados ou não, e os
+públicos de outras contas. Conteúdo privado de outra conta **não é carregado** para
+depois ser escondido na tela, e o que é de outro tipo não chega: habilidade e
+criatura não viram item, e item não vira ritual.
 
 ### Documentos
 

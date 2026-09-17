@@ -14,17 +14,19 @@
    TRÊS COISAS DIFERENTES, QUE NÃO SE MISTURAM
    ---------------------------------------------------------------------
 
-     versão do aplicativo   está aqui. É o que a pessoa vê: v2.13.0.
+     versão do aplicativo   está aqui. É o que a pessoa vê: v2.14.0.
      schemaVersion          está em js/ficha.js. É o formato da FICHA,
                             e só sobe quando a ficha muda de forma.
      versaoFormato          está em js/config.js. É o formato dos
                             arquivos de importação/exportação.
 
-   Elas sobem em ritmos próprios. A v2.13.0 leva schemaVersion 7 e
-   versaoFormato 1 — e isso é normal: o item da ficha ganhou os campos do
-   catálogo de itens (como a arma ataca, tipo de proteção, modificações e
-   maldições aplicadas), mas o formato dos arquivos de importação continua o
-   mesmo, porque um arquivo antigo continua sendo lido sem perder nada.
+   Elas sobem em ritmos próprios. A v2.14.0 leva schemaVersion 8 e
+   versaoFormato 1 — e isso é normal: o ritual da ficha ganhou os campos do
+   catálogo de rituais (elemento, execução, área, resistência, descrição,
+   versões com custo e rolagens), mas o formato dos arquivos de importação
+   continua o mesmo, porque um arquivo antigo continua sendo lido sem perder
+   nada. Esta é a única subida de schema com migração: o texto longo do ritual
+   sai de `efeito` e vai para `descricao`, junto com o rótulo personalizado.
 
    ---------------------------------------------------------------------
    A REGRA, PARA TODA ENTREGA FUTURA
@@ -57,6 +59,43 @@
   ];
 
   var CHANGELOG = [
+    {
+      versao: "2.14.0",
+      codinome: "COMPÊNDIO",
+      data: "17/09/2026",
+      mudancas: {
+        "Adicionado": [
+          "Aba Rituais da ficha de Ordem: botão “Da biblioteca”, no mesmo padrão das outras bibliotecas, com duas origens — Ordem Paranormal (o catálogo dos dois livros) e Homebrew (os rituais da própria conta e os que outras contas publicaram). Criar ritual à mão continua exatamente como era.",
+          "Catálogo oficial com 98 rituais: os 82 do livro básico (toda a Lista de Rituais, p. 122–143) e os 16 do Sobrevivendo ao Horror (p. 48–56). Cada entrada traz elemento, círculo, execução, alcance, alvo, área ou efeito, duração, resistência, resumo em redação própria, as versões que existem, os requisitos, o custo em PE e o livro com a página.",
+          "Filtros do material: elemento (Conhecimento, Energia, Morte, Sangue, Medo e “Todos”), círculo (1º ao 4º e “Todos”) e livro, que só aparece porque há duas fontes. Cada filtro mostra quantos resultados tem contando os outros, a busca ignora acento e maiúsculas, e a busca, os filtros e a posição da lista continuam onde estavam depois de cada inclusão.",
+          "Cada resultado mostra nome, elemento e círculo, com custo, execução, alcance e duração de relance; abrir mostra os campos, os efeitos, as versões com o custo adicional e o total, os requisitos, as regras que acompanham (componentes, Custo do Paranormal, Invocando o Medo) e o que a ficha faz — ou não faz — com aquele ritual.",
+          "“Adicionar à ficha” preenche os campos e as versões de uma vez, sem copiar descrição nem cadastrar dano à mão. Adicionar NÃO é conjurar: nenhum PE é gasto, nenhum dado é rolado, nenhum efeito é aplicado, e a confirmação diz isso. Um clique duplo não vira dois registros; incluir de novo, de propósito, cria outra cópia com id independente e a janela informa quantas já existem.",
+          "Rolagens por versão, com tipo: dano continua dano, cura aparece como cura (“Cura — Ritual · Versão”, no mostrador e no histórico da campanha) e o que não é nem um nem outro aparece com o rótulo do livro (PV temporários, dado de auxílio). Ritual sem expressão de dados não ganha botão nenhum — dos 98, 61 não têm dado para rolar.",
+          "Avisos da ficha ao consultar um ritual, sem bloquear nada: círculo acima do que a classe conjura, custo total além do limite de PE por turno, forma avançada que pede afinidade, preço em Sanidade dos rituais de Medo e a DT de resistência da ficha (10 + nível de exposição + Presença, OPRPG p. 121).",
+          "Campos novos no ritual, nas duas fichas: Elemento, Execução, Área, Resistência e Descrição. Alvo, Área e Efeito são três campos diferentes, como no livro — um ritual usa o que precisa. Os rótulos continuam configuráveis por seção.",
+          "Editor de versões com dano extra (a parte fixa de um 3d4+3), custo adicional em PE, requisito e o que a versão muda em relação à básica. As rolagens que vieram do catálogo são preservadas e mostradas.",
+          "Homebrew de rituais: o tipo `ritual` existe na biblioteca, com o MESMO editor e o mesmo schema da ficha. “Enviar à biblioteca” aparece no menu de cada ritual da ficha, e a página Homebrew lista, cria e edita rituais como faz com itens, criaturas e habilidades.",
+        ],
+        "Alterado": [
+          "O texto longo do ritual saiu do campo “Efeito” e passou para “Descrição”, porque “Efeito:” é uma das linhas do livro (o que o ritual cria). A ficha antiga é migrada na leitura: o texto vai para Descrição e o rótulo personalizado vai com ele — quem chamava o campo de “O que faz” continua vendo “O que faz”. Nada é apagado.",
+          "A faixa de rolagens do cartão do ritual mostra o tipo de cada uma e o custo em PE da forma básica e das versões avançadas.",
+          "O estado vazio da aba Rituais oferece os dois caminhos: criar à mão ou abrir a biblioteca.",
+        ],
+        "Conteúdo": [
+          "Livro básico: os 82 rituais do capítulo (Conhecimento 19, Energia 19, Morte 19, Sangue 19 e Medo 9, contando Amaldiçoar Arma nos quatro elementos em que o livro a coloca), com as formas discente e verdadeira que cada um tem.",
+          "Sobrevivendo ao Horror: os 16 rituais novos (quatro por elemento, de Conhecimento, Energia, Morte e Sangue).",
+          "Divergências registradas entrada por entrada: Milagre Ionizante impresso como 3º círculo num capítulo com um ritual por círculo, Deflagração de Energia sem duração e com dano “3d10 x 10”, Eco Espiral e Transfusão Vital sem expressão fixa para rolar, Espirais da Perdição com a mesma penalidade nas duas formas avançadas, “Alvos” no plural em três rituais, “Alvo ou Área” em Dissipar Ritual e a área de Purgatório escrita como alvo.",
+        ],
+        "Técnico": [
+          "Novos js/ordem/rituais-dados.js (o catálogo como dado puro, carregado sob demanda na primeira abertura da janela e congelado na memória), js/ordem/rituais.js (busca, filtros, apresentação, a cópia que vira ritual de ficha, o bloco `ordem` do ritual e os avisos da ficha) e js/paginas/ficha-rituais-biblioteca.js (a janela). Nenhuma página carrega o catálogo junto, e a ficha nunca o envia na gravação.",
+          "listar_homebrew e salvar_homebrew aceitam o tipo `ritual`. Requer nova implantação do Apps Script (só backend/Codigo.gs mudou) — sem ela, a biblioteca de rituais Homebrew fica vazia, porque o servidor antigo grava o tipo como `item`. setupRama() não é necessário: nenhuma aba nova.",
+          "schemaVersion 7 → 8, com a única migração do projeto: `efeito` → `descricao` no ritual (texto e rótulo), feita na leitura de fichas de schema 7 ou menor. Uma aba aberta na versão anterior recusa a ficha nova e pede para recarregar, em vez de gravar por cima.",
+          "O editor de ritual da ficha é reaproveitado pela página Homebrew (RAMASecaoRituais.camposDoRitual), para não existirem dois formulários de ritual. RAMAUI.vazio ganhou ação secundária.",
+          "Documentação: três trechos de docs/ORDEM-REGRAS.md que a v2.13.0 deveria ter atualizado (mapa dos arquivos, proteção em uso com escudo e proteção pesada, e a linha de equipamentos do SAH) não tinham sido aplicados; entraram agora.",
+          "Testes: 1487 verificações no modelo (122 novas), 469 no backend (9 novas), 151 no transporte do frontend (13 novas) e a página testes/biblioteca.html, que agora cobre as duas bibliotecas no navegador — 131 verificações, 133 em largura de celular.",
+        ],
+      },
+    },
     {
       versao: "2.13.0",
       codinome: "ALMOXARIFADO",

@@ -68,6 +68,8 @@ preferências de tela — nunca é tratado como banco.
       biblioteca.js     o catálogo de poderes arrumado para "Da biblioteca"
       itens-dados.js    o catálogo de itens dos dois livros (carregado sob demanda)
       itens.js          busca, filtros e a cópia de uma entrada para a ficha
+      rituais-dados.js  o catálogo de rituais dos dois livros (sob demanda)
+      rituais.js        busca, filtros, a cópia para a ficha e os avisos dela
       regras.js         os cálculos, com a composição de cada número
       opcionais.js      as regras opcionais, uma chave para cada
     historico.js        rolagem → histórico da campanha, num funil só
@@ -108,7 +110,7 @@ E abra `http://localhost:8099/rama/`.
 
 São três conjuntos.
 
-**Modelo e motor de dados** — 1363 verificações. No navegador, abra `testes/`;
+**Modelo e motor de dados** — 1487 verificações. No navegador, abra `testes/`;
 no terminal:
 
 ```bash
@@ -136,7 +138,17 @@ maldições (acréscimo de categoria, não acumulação, incompatibilidade, opos
 elementos, remoção que devolve o valor-base) e a ficha atravessando salvar,
 exportar e importar com tudo isso.
 
-**Permissões e concorrência do backend** — 460 verificações:
+E o catálogo de rituais: os 98 rituais conferidos contra os dois livros (elemento,
+círculo, execução, alcance, alvo/área/efeito, duração, resistência, página e o
+custo de cada versão), busca e filtros combinados, a cópia que vira ritual de ficha
+com campos e versões preenchidos, custo adicional que nunca vira custo total duas
+vezes, cura que não é tratada como dano, ritual sem dado que não ganha expressão
+nenhuma, avisos da ficha (círculo, limite de PE, afinidade, Sanidade do Medo) que
+avisam sem bloquear, adicionar que não resolve pendência de progressão, a migração
+do texto de "Efeito" para "Descrição" numa ficha antiga e a ficha atravessando
+salvar, exportar e importar.
+
+**Permissões e concorrência do backend** — 469 verificações:
 
 ```bash
 deno run --allow-read testes/executar-backend.js
@@ -152,11 +164,12 @@ capa, o que cada jogador recebe nos cartões e no combate (com e sem "Esconder
 status dos jogadores"), o resumo de recursos, as marcas da atualização automática,
 as operações em lote do combate (repetição pelo `opId`, conflito, lote atômico) e
 as regras de turno e rodada, rodadas também contra a cópia do navegador em 400
-combates sorteados. E a listagem da biblioteca de itens: só os itens que a conta
-alcança, sem o privado de outra conta, sem habilidade nem criatura — inclusive a
-habilidade antiga gravada com a coluna `item`.
+combates sorteados. E a listagem das bibliotecas da ficha: só o que a conta
+alcança, sem o privado de outra conta, sem habilidade nem criatura entre os itens
+— inclusive a habilidade antiga gravada com a coluna `item` — e o tipo `ritual`
+com o mesmo tratamento.
 
-**Transporte do frontend e carga das páginas** — 138 verificações:
+**Transporte do frontend e carga das páginas** — 151 verificações:
 
 ```bash
 deno run --allow-read testes/executar-frontend.js
@@ -181,14 +194,16 @@ escondida, espera crescente, perda de acesso). E o catálogo de itens carregado 
 demanda: um script só, falha que rejeita e não fica guardada, nova tentativa que
 carrega, e nenhuma página levando o catálogo junto.
 
-**A janela "Da biblioteca" no navegador** — 86 verificações. Sirva a pasta por
-HTTP e abra `testes/biblioteca.html`: a janela de verdade abre com uma ficha de
-teste e o roteiro confere as duas origens, busca e filtros, detalhes sob demanda,
-inclusão de cada tipo de item (com quantidade, escolha e sem duplicar por clique
-duplo), aplicação de modificação pelo menu do item, os estados de erro e de
-biblioteca vazia, o teclado (setas nas abas, Esc, foco de volta) e o layout na
-largura da janela — abra num tamanho de celular para conferir a versão estreita.
-A Homebrew é simulada nessa página; as permissões dela são testadas no backend.
+**As janelas "Da biblioteca" no navegador** — 131 verificações (133 em largura de
+celular). Sirva a pasta por HTTP e abra `testes/biblioteca.html`: as janelas de
+verdade abrem com uma ficha de teste e o roteiro confere, nas duas bibliotecas, as
+origens, busca e filtros, detalhes sob demanda, inclusão de cada tipo (com
+quantidade, escolha e sem duplicar por clique duplo), aplicação de modificação pelo
+menu do item, versões de ritual com custo adicional e total, adicionar que não
+gasta PE nem rola dado, os estados de erro e de biblioteca vazia, o teclado (setas
+nas abas, Esc, foco de volta) e o layout na largura da janela — abra num tamanho de
+celular para conferir a versão estreita. A Homebrew é simulada nessa página; as
+permissões dela são testadas no backend.
 
 **Custo das operações** — não é teste, é medição:
 
@@ -433,6 +448,11 @@ console não abre o registro de outra conta.
   Explosiva ficam no pacote) e não aplica sozinha a penalidade por falta de
   proficiência — ela avisa. O que é automático e o que é manual está entrada por
   entrada em [docs/ORDEM-REGRAS.md](docs/ORDEM-REGRAS.md).
+- **O catálogo de rituais também não conjura.** Adicionar preenche campos e
+  versões e rola o que a versão tem (dano, cura, outros dados), com o custo em PE
+  escrito — mas a ficha não gasta PE, não faz teste de resistência, não aplica
+  condição e não desconta Sanidade. Registrar um ritual não resolve pendência de
+  progressão: aprender continua sendo a escolha na aba Progressão.
 
 ## Próximos passos sugeridos
 

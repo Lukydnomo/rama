@@ -929,6 +929,88 @@ t.grupo("Biblioteca de itens — catálogo carregado sob demanda");
 }
 
 /* =====================================================================
+   v2.14 — BIBLIOTECA DE RITUAIS
+   ===================================================================== */
+
+t.grupo("Biblioteca de rituais — páginas, pedido à Homebrew e carga sob demanda");
+
+{
+  const scriptsDe = async (pagina) => {
+    const html = await Deno.readTextFile(new URL("../" + pagina, import.meta.url));
+    return [...html.matchAll(/<script\s+src="([^"]+)"/g)].map((m) => m[1].replace(/^(\.\.\/)+/, ""));
+  };
+  const ficha = await scriptsDe("ficha/index.html");
+  t.ok("a ficha carrega js/ordem/rituais.js depois das regras",
+    ficha.indexOf("js/ordem/rituais.js") > ficha.indexOf("js/ordem/regras.js"));
+  t.ok("  e a janela da biblioteca depois da aba Rituais",
+    ficha.indexOf("js/paginas/ficha-rituais-biblioteca.js") > ficha.indexOf("js/paginas/ficha-rituais.js"));
+  const homebrew = await scriptsDe("homebrew/index.html");
+  t.ok("a página Homebrew carrega o editor de rituais da ficha, para não haver dois formulários",
+    homebrew.includes("js/paginas/ficha-rituais.js") && homebrew.includes("js/ordem/rituais.js"));
+  const PAGINAS = ["index.html", "personagens/index.html", "campanhas/index.html", "campanha/index.html",
+    "perfil/index.html", "homebrew/index.html", "ficha/index.html"];
+  let carregaDados = false;
+  for (const pagina of PAGINAS) if ((await scriptsDe(pagina)).includes("js/ordem/rituais-dados.js")) carregaDados = true;
+  t.ok("nenhuma página carrega os dados do catálogo de rituais junto com ela", !carregaDados);
+}
+
+{
+  comSessaoGuardada();
+  let ultimo = null;
+  rede.responder = (corpo) => { ultimo = corpo; return { ok: true, dados: [] }; };
+  await RAMAApi.listarHomebrew({ escopo: "todos", tipos: ["ritual"] });
+  t.iguais("a biblioteca de rituais pede só o tipo ritual", [ultimo.acao, ultimo.escopo, ultimo.tipos],
+    ["listar_homebrew", "todos", ["ritual"]]);
+}
+
+{
+  /* O mesmo carregador sob demanda do catálogo de itens, com o arquivo
+     dos rituais: um script só, falha que não fica guardada. */
+  const scripts = [];
+  const documentoOriginal = globalThis.document;
+  globalThis.document = Object.assign({}, documentoOriginal, {
+    createElement: (nome) => ({ nome, src: "", async: false, onload: null, onerror: null, parentNode: null }),
+    head: {
+      appendChild(el) { el.parentNode = this; scripts.push(el); },
+      removeChild(el) { el.parentNode = null; el.removido = true; },
+    },
+  });
+  delete globalThis.RAMAOrdemRituaisDados;
+  delete globalThis.RAMAOrdemRituais;
+  (0, eval)(await Deno.readTextFile(new URL("../js/ordem/rituais.js", import.meta.url)));
+  const RT = globalThis.RAMAOrdemRituais;
+
+  const primeira = RT.carregar();
+  RT.carregar();
+  t.igual("abrir a biblioteca pede UM script do catálogo de rituais", scripts.length, 1);
+  t.ok("  o arquivo de dados, e assíncrono", /js\/ordem\/rituais-dados\.js$/.test(scripts[0].src) && scripts[0].async === true);
+  t.igual("  nada pronto antes de o script chegar", RT.catalogoPronto(), null);
+
+  scripts[0].onerror();
+  let falhou = null;
+  await primeira.then(() => {}, (e) => { falhou = e; });
+  t.ok("falha de rede rejeita e tira o script quebrado", falhou && falhou.message === "rede" && scripts[0].removido === true);
+
+  const nova = RT.carregar();
+  t.igual("tentar de novo pede o script outra vez", scripts.length, 2);
+  globalThis.RAMAOrdemRituaisDados = { versao: 1, rituais: [
+    { id: "op.ritual.teste", nome: "Ritual de teste", elemento: "sangue", circulo: 2, fonte: "OPRPG", pagina: 1,
+      execucao: "padrão", alcance: "toque", alvo: "1 ser", duracao: "cena", resumo: "Só para o teste.",
+      versoes: [{ nome: "Discente", custo: 3, alteracoes: "Dobra." }] },
+  ] };
+  scripts[1].onload();
+  const pronto = await nova;
+  t.ok("quando chega, o catálogo fica pronto e congelado",
+    pronto.rituais.length === 1 && Object.isFrozen(pronto.rituais[0]) && RT.catalogoPronto() === pronto);
+  t.iguais("  com a versão básica na frente e o custo total somado uma vez",
+    pronto.rituais[0].versoes.map((v) => v.nome + ":" + v.custo + ":" + v.custoTotal), ["Normal:0:3", "Discente:3:6"]);
+  await RT.carregar();
+  t.igual("  e a próxima abertura não pede nada", scripts.length, 2);
+
+  globalThis.document = documentoOriginal;
+}
+
+/* =====================================================================
    FIM
    ===================================================================== */
 

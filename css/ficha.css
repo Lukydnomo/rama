@@ -710,9 +710,17 @@ body.pagina-ficha .app-corpo {
 
 .versao {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 10rem) auto;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 9rem) minmax(0, 7rem) auto;
   gap: var(--e2);
   align-items: end;
+}
+
+/* Cada versão é um bloco: a linha de cima com nome e dano, embaixo o
+   custo, o requisito e o que ela muda. Sem a moldura, com quatro
+   versões ninguém sabe onde uma acaba e a outra começa. */
+.versao-bloco {
+  padding: var(--e2);
+  border: var(--borda) dashed var(--cor-traco-fraca);
 }
 
 /* O botão de remover alinha com a base dos campos, e não com o rótulo
@@ -725,6 +733,7 @@ body.pagina-ficha .app-corpo {
   }
   /* O nome ocupa a linha inteira; dano e remover dividem a de baixo. */
   .versao > .r-campo:first-child { grid-column: 1 / -1; }
+  .versao > .r-campo:nth-child(2) { grid-column: 1 / -1; }
 }
 
 /* =====================================================================
@@ -1418,3 +1427,30 @@ body.pagina-ficha--painel .ficha-topo__nome { font-size: var(--texto-medio); }
   .bib-filtro { min-width: 45%; }
   .bib-item__adicionar { flex: 1 1 100%; }
 }
+
+/* =====================================================================
+   BIBLIOTECA DE RITUAIS
+   ---------------------------------------------------------------------
+   Elemento e círculo são filtros de um toque, em duas faixas: é o que
+   se usa mais, e um seletor escondido custaria dois cliques. Elemento
+   também aparece escrito — cor sozinha não é informação.
+   ===================================================================== */
+
+.bib-chips { gap: var(--e1); }
+
+.bib-versoes {
+  display: flex;
+  flex-direction: column;
+  gap: var(--e2);
+}
+
+.bib-versao {
+  padding: var(--e2);
+  border-left: 3px solid var(--cor-traco-fraca);
+  background: var(--cor-superficie-2);
+}
+
+.bib-versao__topo { margin: 0; }
+
+/* A rolagem de cura não pode parecer dano. */
+.ritual-dano--cura .ritual-dano__expressao { color: var(--cor-ok); }

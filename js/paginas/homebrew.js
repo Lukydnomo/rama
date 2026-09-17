@@ -34,6 +34,7 @@
     { chave: "item", rotulo: "Itens" },
     { chave: "mochila", rotulo: "Mochilas" },
     { chave: "habilidade", rotulo: "Habilidades" },
+    { chave: "ritual", rotulo: "Rituais" },
   ];
 
   /* "Minhas" e "Públicas" são bibliotecas diferentes: a segunda é o que
@@ -197,9 +198,12 @@
 
       registro.tipo === "criatura"
         ? global.RAMAHomebrewCriatura.detalhes(registro)
-        : detalhes(registro),
+        : registro.tipo === "ritual" ? detalhesDoRitual(registro) : detalhes(registro),
 
       registro.descricao ? el("p.item__descricao", { texto: registro.descricao }) : null,
+      registro.tipo === "ritual" && registro.descricao === undefined && registro[F.CAMPO_LONGO_RITUAL]
+        ? el("p.item__descricao", { texto: registro[F.CAMPO_LONGO_RITUAL] })
+        : null,
 
       el("p.t-mini", { texto: "Registro // " + U.codigoCurto(registro.id) + " · " + U.dataCurta(registro.atualizadoEm) }),
     ]);
@@ -208,6 +212,7 @@
   function rotuloDoTipo(tipo) {
     if (tipo === "criatura") return "Criatura";
     if (tipo === "habilidade") return "Habilidade";
+    if (tipo === "ritual") return "Ritual";
     return F.rotuloDoTipo(tipo);
   }
 
@@ -290,6 +295,97 @@
     nome.entrada.focus();
   }
 
+  /* Um ritual da biblioteca: os campos preenchidos e as versões. O
+     schema é o mesmo da ficha — não existe ritual de dois formatos. */
+  function detalhesDoRitual(r) {
+    var linhas = [];
+    F.CAMPOS_RITUAL.forEach(function (campo) {
+      if (campo === F.CAMPO_LONGO_RITUAL) return;
+      var valor = U.aparar(r[campo]);
+      if (valor) linhas.push([F.ROTULOS_RITUAL_PADRAO[campo], valor]);
+    });
+    var versoes = (r.versoes || []).map(function (v) {
+      var extras = [];
+      if (v.dano) extras.push(v.dano + (v.danoExtra ? "+" + v.danoExtra : ""));
+      if (v.custo) extras.push("+" + v.custo + " PE");
+      return v.nome + (extras.length ? " (" + extras.join(", ") + ")" : "");
+    });
+    if (versoes.length) linhas.push(["Versões", versoes.join(" · ")]);
+
+    return el("dl.r-dados", {}, linhas.reduce(function (saida, par) {
+      saida.push(el("dt", { texto: par[0] }));
+      saida.push(el("dd", { texto: par[1] }));
+      return saida;
+    }, []));
+  }
+
+  /* Editor de ritual avulso: os MESMOS campos do editor da ficha
+     (js/paginas/ficha-rituais.js), com a visibilidade da biblioteca por
+     cima. Dois formulários de ritual divergiriam na primeira mudança. */
+  function editarRitual(registro) {
+    var S = global.RAMASecaoRituais;
+    if (!S || !S.camposDoRitual) {
+      UI.avisoErro("O editor de rituais não carregou nesta página.");
+      return;
+    }
+    var criando = !registro;
+    var atual = criando ? F.criarRitual({}) : (F.normalizarRitual(registro) || F.criarRitual({}));
+    var visibilidade = (registro && registro.visibilidade) || "privado";
+
+    var campos = S.camposDoRitual(atual, { comOrdem: true });
+
+    var seletorVis = el("div.filtros__grupo", { role: "group", "aria-label": "Visibilidade" },
+      [{ v: "privado", r: "Privado" }, { v: "publico", r: "Público" }].map(function (op) {
+        return el("button.filtro", {
+          type: "button",
+          "aria-pressed": String(visibilidade === op.v),
+          texto: op.r,
+          onclick: function (ev) {
+            visibilidade = op.v;
+            U.$$(".filtro", ev.target.parentNode).forEach(function (b) {
+              b.setAttribute("aria-pressed", String(b === ev.target));
+            });
+          },
+        });
+      })
+    );
+
+    UI.modal({
+      titulo: criando ? "Novo ritual" : "Editar ritual",
+      largo: true,
+      conteudo: el("div.pilha", {}, campos.elementos.concat([
+        el("div.r-campo", {}, [
+          el("span.r-rotulo", { texto: "Visibilidade" }),
+          seletorVis,
+          el("p.r-ajuda", { texto: "Público: outras contas encontram este ritual na biblioteca e podem copiá-lo." }),
+        ]),
+      ])),
+      botoes: [
+        { rotulo: "Cancelar", classe: "r-botao--fantasma" },
+        {
+          rotulo: criando ? "Criar" : "Salvar", classe: "r-botao--principal",
+          aoClicar: async function (fechar) {
+            var dados = campos.coletar();
+            if (!dados) return;
+
+            var pronto = F.criarRitual(dados);
+            pronto.tipo = "ritual";
+            pronto.visibilidade = visibilidade;
+            if (registro && registro.id) pronto.id = registro.id;
+
+            var r = await global.RAMAApi.salvarHomebrew(pronto);
+            if (!r.ok) { UI.avisoDeFalha(r, "gravação"); return; }
+
+            fechar();
+            await carregar();
+          },
+        },
+      ],
+    });
+
+    campos.focar();
+  }
+
   function detalhes(r) {
     var linhas = [];
 
@@ -325,6 +421,7 @@
         el("hr.r-linha"),
         opcao("Criatura", "Mini ficha: status, atributos, perícias, ataques e habilidades.", "criatura"),
         opcao("Habilidade", "Texto informativo, com cor e origem.", "habilidade"),
+        opcao("Ritual", "Campos do ritual e versões, com dano e custo.", "ritual"),
       ]),
     });
 
@@ -352,6 +449,10 @@
     }
     if (tipo === "habilidade") {
       editarHabilidade(criando ? null : registro);
+      return;
+    }
+    if (tipo === "ritual") {
+      editarRitual(criando ? null : registro);
       return;
     }
 

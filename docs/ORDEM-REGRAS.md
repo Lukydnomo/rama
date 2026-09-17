@@ -32,7 +32,13 @@ leitura que o R.A.M.A. adotou escrita por extenso.
 | `js/ordem/catalogo.js` | atributos, perícias, classes, progressão por classe, trilhas, origens, patentes, elementos |
 | `js/ordem/poderes.js` | poderes de classe, poderes gerais, poderes paranormais, habilidades de trilha, habilidades automáticas e alterações por NEX |
 | `js/ordem/progressao.js` | o motor de escolhas: vagas, requisitos, pendências, efeitos, afinidade |
-| `js/ordem/inventario.js` | espaços, quantidade, categoria e grupo dos itens |
+| `js/ordem/inventario.js` | espaços, quantidade, categoria, grupo e o resto dos dados de um item (como a arma ataca, tipo de proteção, modificações aplicadas) |
+| `js/ordem/itens-dados.js` | o catálogo de itens dos dois livros, como dado — carregado sob demanda |
+| `js/ordem/itens.js` | o catálogo de itens arrumado: busca, filtros, apresentação, a cópia que vira item de ficha e as regras de aplicação de modificações e maldições |
+| `js/ordem/rituais-dados.js` | o catálogo de rituais dos dois livros, como dado — carregado sob demanda |
+| `js/ordem/rituais.js` | o catálogo de rituais arrumado: busca, filtros, apresentação, a cópia que vira ritual de ficha, o bloco `ordem` do ritual e os avisos da ficha |
+| `js/paginas/ficha-inventario-biblioteca.js` | a janela "Da biblioteca" do inventário |
+| `js/paginas/ficha-rituais-biblioteca.js` | a janela "Da biblioteca" da aba Rituais |
 | `js/ordem/regras.js` | todas as contas, com a composição de cada número |
 | `js/ordem/opcionais.js` | as regras opcionais, uma chave para cada |
 | `js/ordem/biblioteca.js` | o catálogo de poderes arrumado para consulta na janela "Da biblioteca" |
@@ -420,9 +426,17 @@ Uma proteção (item do tipo proteção) só soma na Defesa quando está **em us
 cartão da proteção mostra o estado com o cartão fechado — "Em uso: soma +5 na
 Defesa" ou "Guardada: não soma na Defesa" — e o botão **Usar**/**Em uso** troca.
 
-- **Uma proteção em uso por vez**: usar uma tira as outras de uso. É a regra de
-  acumulação que o R.A.M.A. adota; o modelo de item não distingue escudo, então um
-  escudo usado junto de outra proteção entra como ajuste da mesa.
+- **Uma proteção vestida em uso por vez**: usar uma tira as outras de uso.
+- **O escudo é um lugar próprio** (`ordem.protecao.tipo: "escudo"`) e **acumula**
+  com a proteção vestida: "Precisa ser empunhado em uma mão e fornece Defesa +2"
+  (OPRPG p. 62). Proteção leve + escudo em uso somam +7, e a composição mostra as
+  duas parcelas. Um escudo por vez, também.
+- **Proteção pesada em uso** impõe −5 nas perícias que sofrem penalidade de carga
+  (OPRPG p. 62). A penalidade entra na composição da perícia, com o nome da
+  proteção, e soma com a da sobrecarga, que é outra regra.
+- **As modificações da proteção entram na Defesa**: Reforçada soma +2 (e +1
+  espaço); Blindada e Antibombas somam espaço e resistências que ficam no controle
+  manual. As parcelas aparecem com o nome da modificação.
 - A **quantidade não multiplica**: duas proteções leves na ficha são +5, não +10.
 - A composição da Defesa mostra a parcela com o nome da proteção. Sem nenhuma em
   uso, ela explica por que a proteção do inventário não entrou.
@@ -752,14 +766,102 @@ catálogo como **I**.
 
 ## Rituais
 
+**OPRPG p. 117–143; SAH p. 48–56.** A aba Rituais é a mesma nas duas fichas —
+universal e de Ordem —, com rótulos configuráveis. O que a camada de Ordem
+acrescenta é o catálogo oficial, o custo em PE e os avisos da ficha.
+
 | regra | fonte | comportamento | est. |
 |---|---|---|---|
-| Círculos 1º a 4º, elementos, execução, alcance, alvo, duração | OPRPG p.117-121 | campos do ritual | **A** |
-| Custo: 1º=1 PE, 2º=3 PE, 3º=6 PE, 4º=10 PE | OPRPG p.119 | tabela do catálogo | **A** |
-| Ocultista lança 1º círculo em NEX 5%, 2º em 25%, 3º em 55%, 4º em 85% | OPRPG p.33 | mostrado na ficha | **A** |
-| Limite de rituais aprendidos por Aprender Ritual = Intelecto | OPRPG p.119 | mostrado na ficha | **I** |
-| Um ritual aprendido a cada NEX (ocultista) | OPRPG p.32 | não vira vaga de escolha; ver Lacunas | — |
-| DT de resistência a ritual | OPRPG p.78 | ver **Lacunas** | — |
+| Círculos 1º a 4º, elementos, execução, alcance, alvo/área/efeito, duração, resistência | OPRPG p.117-121 | campos do ritual, preenchidos pelo catálogo | **A** |
+| Círculo máximo por classe e NEX (ocultista: 1º em 5%, 2º em 25%, 3º em 55%, 4º em 85%) | OPRPG p.33 | calculado, e avisado ao consultar um ritual | **A** |
+| Custo: 1º=1 PE, 2º=3 PE, 3º=6 PE, 4º=10 PE (Tabela 5.2) | OPRPG p.119 | no catálogo, no cartão do ritual e no bloco `ordem` | **A** |
+| Formas avançadas aumentam o custo | OPRPG p.121 | acréscimo e total calculados — o básico nunca é somado duas vezes | **A** |
+| O limite de PE por turno limita o custo total | OPRPG p.121 | avisado ao consultar o ritual | **I** |
+| DT de resistência = 10 + nível de exposição + Presença | OPRPG p.121 | calculada (`dtDeResistencia`) | **A** |
+| Requisitos das formas avançadas (círculo mínimo, afinidade) | OPRPG p.121 | texto, e avisos comparando com a ficha | **I** |
+| Custo do Paranormal: Ocultismo DT 20 + PE | OPRPG p.121 | texto em todo ritual que não é de Medo | **I** |
+| Invocando o Medo: só Marcados, Sanidade permanente por conjuração | OPRPG p.121 | texto e aviso na ficha | **I** |
+| Componentes, gestos, concentração, condições ruins e terríveis | OPRPG p.119 | texto | **I** |
+| Limite de rituais aprendidos = Intelecto | OPRPG p.119 | mostrado no painel de regras | **I** |
+| Aprender ritual (poder Aprender Ritual, habilidades de ocultista) | OPRPG p.114, 119 | escolha de progressão, na aba Progressão | **A** na escolha |
+| Um ritual aprendido a cada NEX (ocultista) | OPRPG p.32 | não vira vaga de escolha; ver **Lacunas** | — |
+| Conjurar: gastar PE, testar resistência, aplicar condição | OPRPG p.119-121 | **não automatizado**: a ficha mostra os números e rola o que a versão tem | **I** |
+
+**Registrar um ritual na ficha não é aprender nem conjurar.** Trazer da biblioteca
+cria o registro com campos e versões preenchidos; não gasta PE, não rola dado, não
+aplica efeito e **não resolve pendência de progressão** — aprender continua sendo
+a escolha, que valida a elegibilidade dela.
+
+### Biblioteca de rituais
+
+No modo edição da aba Rituais, **Da biblioteca** abre duas origens: **Ordem
+Paranormal** (o catálogo dos dois livros) e **Homebrew** (os rituais da conta e os
+que outras contas publicaram, filtrados no servidor). Na ficha universal, só a
+Homebrew. Criar ritual à mão continua igual.
+
+O catálogo é dado, separado da tela: `js/ordem/rituais-dados.js` só é carregado na
+primeira vez que a janela abre, fica congelado na memória e **nunca vai junto na
+gravação da ficha**.
+
+Os filtros são os do material: **elemento** (Conhecimento, Energia, Morte, Sangue
+e Medo, mais "Todos"), **círculo** (1º ao 4º, mais "Todos") e **livro**, que só
+aparece porque há conteúdo de duas fontes. Cada filtro mostra quantos resultados
+tem, contando com os outros filtros já aplicados; a busca ignora acento e caixa, e
+os filtros e a posição da lista continuam onde estavam depois de adicionar um
+ritual. Não existe filtro "Varia": nenhum ritual do material precisa dele —
+Amaldiçoar Arma pertence a quatro elementos e aparece em cada um.
+
+### Cobertura, ritual por ritual
+
+| elemento | 1º / 2º / 3º / 4º | livro básico | SAH | rituais |
+|---|---|---|---|---|
+| Conhecimento | 8 / 6 / 5 / 4 | 19 | 4 | Alterar Memória, Amaldiçoar Arma, Aprimorar Mente, Aurora da Verdade*, Compreensão Paranormal, Contato Paranormal, Controle Mental, Desfazer Sinapses*, Detecção de Ameaças, Enfeitiçar, Esconder dos Olhos, Inexistir, Invadir Mente, Localização, Mergulho Mental, Ouvir os Sussurros, Perturbação, Possessão, Pronunciar Sigilo*, Relembrar Fragmento*, Tecer Ilusão, Terceiro Olho, Vidência |
+| Energia | 8 / 6 / 6 / 3 | 19 | 4 | Alterar Destino, Amaldiçoar Arma, Amaldiçoar Tecnologia, Chamas do Caos, Coincidência Forçada, Contenção Fantasmagórica, Convocação Instantânea, Deflagração de Energia, Dissonância Acústica, Eletrocussão, Embaralhar, Luz, Milagre Ionizante*, Mutar*, Overclock*, Polarização Caótica, Salto Fantasma, Sopro do Caos, Tela de Ruído, Teletransporte, Transfigurar Terra, Transfigurar Água, Tremeluzir* |
+| Morte | 8 / 6 / 5 / 4 | 19 | 4 | Amaldiçoar Arma, Apagar as Luzes*, Cicatrização, Consumir Manancial, Convocar o Algoz, Decadência, Definhar, Desacelerar Impacto, Distorção Temporal, Eco Espiral, Espirais da Perdição, Fedor Pútrido*, Fim Inevitável, Língua Morta*, Miasma Entrópico, Nuvem de Cinzas, Paradoxo, Poeira da Podridão, Singularidade Temporal*, Tentáculos de Lodo, Velocidade Mortal, Zerar Entropia, Âncora Temporal |
+| Sangue | 8 / 6 / 5 / 4 | 19 | 4 | Amaldiçoar Arma, Aprimorar Físico, Arma Atroz, Armadura de Sangue, Capturar o Coração, Corpo Adaptado, Descarnar, Distorcer Aparência, Esfolar*, Ferver Sangue, Flagelo de Sangue, Forma Monstruosa, Fortalecimento Sensorial, Hemofagia, Invólucro de Carne, Martírio de Sangue*, Odor da Caçada*, Purgatório, Sede de Adrenalina*, Transfusão Vital, Vomitar Pestes, Vínculo de Sangue, Ódio Incontrolável |
+| Medo | 1 / 2 / 1 / 5 | 9 | 0 | Canalizar o Medo, Cinerária, Conhecendo o Medo, Dissipar Ritual, Lâmina do Medo, Medo Tangível, Presença do Medo, Proteção contra Rituais, Rejeitar Névoa |
+
+Total: **98 rituais** — 82 do livro básico (toda a Lista de Rituais, p. 122–143) e
+16 do Sobrevivendo ao Horror (Novos Rituais, p. 48–56). Os marcados com `*` são do
+SAH. Amaldiçoar Arma conta em quatro elementos, e é por isso que a soma por
+elemento passa de 98.
+
+### O que a ficha faz com o ritual adicionado
+
+| campo do catálogo | onde entra na ficha | est. |
+|---|---|---|
+| círculo, elemento, execução, alcance, alvo/área/efeito, duração, resistência | os campos do ritual, com os rótulos da seção | **A** |
+| resumo, efeitos, formas avançadas, regras e a fonte | a descrição da cópia, em redação própria | **A** |
+| custo em PE da forma básica | `ordem.custo` (o do círculo) e a linha "Custo" do cartão | **A** |
+| custo adicional de cada versão | `versoes[].custo`, com o total calculado | **A** |
+| requisito e alterações de cada versão | `versoes[].requisito` e `alteracoes`, mostrados no cartão | **I** |
+| expressão de dano | `versoes[].dano` + `danoExtra`, no botão de rolagem | **A** |
+| cura e outras rolagens | `versoes[].rolagens`, com tipo e rótulo próprios | **A** |
+| elemento e círculo como número | o bloco `ordem`, que alimenta os avisos | **A** |
+| escolha do elemento (Amaldiçoar Arma) | pedida ao adicionar e gravada no ritual | **A** |
+| efeitos com condição, teste, ação ou custo extra | texto na descrição | **I** |
+
+Dos 98 rituais, **37 têm alguma expressão de dados** (dano, cura ou outra rolagem)
+e 61 não têm nenhuma — e para esses a ficha não inventa botão. As rolagens saem
+pelo motor de dados da ficha e pelo mostrador de sempre, que entrega a rolagem ao
+histórico da campanha com a chave de idempotência: uma falha de envio não rola de
+novo nem duplica a linha.
+
+### Divergências e lacunas do capítulo de rituais
+
+Cada uma está na própria entrada, em `notas`, e aparece na janela como "Nota:".
+
+| conteúdo | divergência | o que o catálogo faz |
+|---|---|---|
+| Milagre Ionizante (SAH) | impresso como "ENERGIA 3", num capítulo em que cada elemento tem um ritual de cada círculo (Energia fica com dois de 3º e nenhum de 4º) | mantém o 3º círculo impresso |
+| Deflagração de Energia | o livro não informa a duração | o campo fica vazio, com nota |
+| Deflagração de Energia | dano "3d10 x 10" | a rolagem entrega os 3d10 e a multiplicação fica com quem joga — o motor não multiplica expressões |
+| Eco Espiral | o dano é igual ao que o alvo sofreu na rodada | sem expressão para rolar, com nota |
+| Transfusão Vital | a quantidade transferida é escolhida na hora (até 30, 50 ou 100 PV) | sem expressão para rolar, com nota |
+| Espirais da Perdição | a forma discente e a verdadeira imprimem a mesma penalidade (−2 dados) | registra as duas como estão, com nota |
+| Coincidência Forçada, Desacelerar Impacto, Descarnar | a linha do livro diz "Alvos" (plural) | entra no campo `alvo`, como nos outros |
+| Dissipar Ritual | "Alvo ou Área" | preenche os dois campos, com nota |
+| Purgatório | "Alvo: área de 6 m de raio" | o valor é uma área e está em `area`, com nota |
 
 ## Regras opcionais
 
@@ -841,7 +943,9 @@ Calejado dá +1 PV por nível.
 | Poderes paranormais (8) | SAH p.46-47 | **A** no catálogo e nas escolhas |
 | Novas origens | SAH p.7-13 | — |
 | Nova classe: Sobrevivente | SAH p.30-32 | — |
-| Equipamentos, rituais e itens amaldiçoados | SAH p.37-61 | — |
+| Equipamentos e itens amaldiçoados (Tabelas 1.4, 1.5 e 1.6) | SAH p.37-45, 55-61 | **A** no catálogo de itens; efeitos conforme a matriz da [Biblioteca de itens](#biblioteca-de-itens) |
+| Novos rituais (16, um por elemento e círculo) | SAH p.48-56 | **A** no catálogo de rituais |
+| Fabricação em campo | SAH p.94 | — |
 
 ---
 
@@ -850,9 +954,10 @@ Calejado dá +1 PV por nível.
 Registradas em vez de preenchidas por dedução. Onde o livro deixa uma leitura
 aberta, a adotada está escrita — e é a que os testes travam.
 
-1. **DT de resistência a rituais.** A fórmula está no capítulo de regras (OPRPG
-   p.78), que não foi estruturado. O campo de DT do ritual aceita o valor, mas não
-   é calculado.
+1. **DT de resistência a rituais.** A fórmula do capítulo de rituais (OPRPG p.121)
+   está implementada: 10 + nível de exposição + Presença, mostrada ao consultar um
+   ritual na biblioteca. A DT de outras habilidades (p.78) continua não
+   estruturada.
 
 2. **Tabela de PV/PE/SAN por NEX.** O livro dá o valor inicial e o incremento por
    nível de exposição, mas não uma tabela fechada para conferir linha a linha.
@@ -895,9 +1000,11 @@ aberta, a adotada está escrita — e é a que os testes travam.
     perícia Profissão só: o requisito confere o treinamento em Profissão, e a
     especialidade fica com a mesa.
 
-12. **Rituais aprendidos por NEX (ocultista, Saber Ampliado, Grimório).** Não há
-    catálogo de rituais nesta entrega. Esses rituais continuam sendo registrados à
-    mão na aba de rituais, e não viram vagas de escolha.
+12. **Rituais aprendidos por NEX (ocultista, Saber Ampliado, Grimório).** O
+    catálogo de rituais existe desde a v2.14, mas essas habilidades continuam sem
+    virar vagas de escolha: o ritual é registrado na aba Rituais (à mão ou pela
+    biblioteca) e a aquisição, quando a mesa quer registrá-la, vai na escolha
+    Aprender Ritual. Registrar um ritual nunca resolve uma pendência sozinho.
 
 13. **Monstruoso usa a Progressão de NEX mesmo sem a regra** (SAH p.17). A trilha
     está no catálogo com os efeitos permanentes de atributo; as alterações da

@@ -1414,7 +1414,7 @@ function acaoSalvarFoto(corpo, usuario) {
    HOMEBREW
    ===================================================================== */
 
-var TIPOS_HOMEBREW = ['item', 'arma', 'armadura', 'mochila', 'criatura', 'habilidade'];
+var TIPOS_HOMEBREW = ['item', 'arma', 'armadura', 'mochila', 'criatura', 'habilidade', 'ritual'];
 
 /* Até a v2.4.2, 'habilidade' faltava na lista acima e toda habilidade
    enviada à biblioteca era gravada com a coluna tipo = 'item' — mas o

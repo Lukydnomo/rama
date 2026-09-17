@@ -596,8 +596,12 @@
 
       t.igual("a seção nasce chamada Rituais", fichaR.rituais.rotuloSecao, "Rituais");
       t.igual("nasce sem nenhum ritual", fichaR.rituais.itens.length, 0);
-      t.iguais("os cinco campos padrão",
-        S.CAMPOS_RITUAL, ["circulo", "alcance", "duracao", "alvo", "efeito"]);
+      t.iguais("os campos padrão do ritual, na ordem da tela",
+        S.CAMPOS_RITUAL, ["circulo", "elemento", "execucao", "alcance", "alvo", "area", "efeito", "duracao", "resistencia", "descricao"]);
+      t.igual("  e o campo longo é a descrição", S.CAMPO_LONGO_RITUAL, "descricao");
+      t.ok("  Alvo, Área e Efeito são campos diferentes", S.ROTULOS_RITUAL_PADRAO.alvo === "Alvo" &&
+        S.ROTULOS_RITUAL_PADRAO.area === "Área" && S.ROTULOS_RITUAL_PADRAO.efeito === "Efeito" &&
+        S.ROTULOS_RITUAL_PADRAO.descricao === "Descrição");
       t.igual("rótulo padrão de circulo", fichaR.rituais.rotulos.circulo, "Círculo");
 
       var rit = S.criarRitual({ nome: "Cicatrização", circulo: "1", efeito: "Cura." });
@@ -630,7 +634,8 @@
       t.igual("  nem no campo alvo", depois.rituais.itens[1].alvo, "Área");
       t.iguais("  e a chave interna continua 'circulo'",
         Object.keys(depois.rituais.itens[0]).sort(),
-        ["alcance", "alvo", "circulo", "duracao", "efeito", "id", "nome", "versoes"]);
+        ["alcance", "alvo", "area", "circulo", "descricao", "duracao", "efeito", "elemento",
+         "execucao", "id", "nome", "resistencia", "versoes"]);
 
       t.grupo("Rituais — rótulo em branco volta ao padrão");
 
@@ -3067,6 +3072,383 @@
         ordem: { espacos: 2, quantidade: 1, categoria: 2, grupo: "arma" } });
       t.iguais("item de Ordem anterior à biblioteca abre igual", [legado.ordem.categoria, legado.ordem.espacos, legado.dano, "arma" in legado.ordem, "origemCatalogoId" in legado],
         [2, 2, "2d10", false, false]);
+    }
+
+    /* =================================================================
+       ORDEM — BIBLIOTECA DE RITUAIS (v2.14)
+       -----------------------------------------------------------------
+       O catálogo dos dois livros como dado, a busca, a cópia que vira
+       ritual de ficha — com campos e versões preenchidos — e a prova de
+       que adicionar NÃO conjura: nenhum PE some, nenhum dado rola.
+       ================================================================= */
+
+    if (global.RAMAOrdemRituais && global.RAMAOrdemRituaisDados && global.RAMAFicha) {
+      var RS = global.RAMAOrdemRituais;
+      var FR = global.RAMAFicha;
+      var catalogoR = RS.normalizarCatalogo(global.RAMAOrdemRituaisDados);
+      var ritual = function (id) { return catalogoR.porId[id]; };
+      var adicionarRitual = function (id, opcoes) {
+        var r = RS.paraFicha(ritual(id), opcoes || {});
+        if (!r.ok) throw new Error("não montou " + id + ": " + r.mensagem);
+        return FR.criarRitual(r.dados);
+      };
+
+      /* ---------------------------------------------------------------- */
+      t.grupo("Ordem · rituais — catálogo completo e estruturado");
+
+      t.igual("98 rituais nos dois livros", catalogoR.rituais.length, 98);
+      var porFonte = {};
+      var porElemento = {};
+      var porCirculo = {};
+      catalogoR.rituais.forEach(function (e) {
+        porFonte[e.fonte] = (porFonte[e.fonte] || 0) + 1;
+        porCirculo[e.circulo] = (porCirculo[e.circulo] || 0) + 1;
+        e.elementos.forEach(function (el) { porElemento[el] = (porElemento[el] || 0) + 1; });
+      });
+      t.igual("82 do livro básico", porFonte.OPRPG, 82);
+      t.igual("16 do Sobrevivendo ao Horror", porFonte.SAH, 16);
+      t.iguais("por círculo: 30, 26, 22 e 20", [porCirculo[1], porCirculo[2], porCirculo[3], porCirculo[4]], [30, 26, 22, 20]);
+      t.iguais("por elemento (Amaldiçoar Arma conta nos quatro em que o livro a coloca)",
+        [porElemento.conhecimento, porElemento.energia, porElemento.morte, porElemento.sangue, porElemento.medo],
+        [23, 23, 23, 23, 9]);
+
+      var idsR = {};
+      var repetidoR = "";
+      catalogoR.rituais.forEach(function (e) { if (idsR[e.id]) repetidoR = e.id; idsR[e.id] = true; });
+      t.igual("nenhum id se repete", repetidoR, "");
+      t.ok("todo id é estável e diz a fonte", catalogoR.rituais.every(function (e) {
+        return /^(op|sah)\.ritual\.[a-z0-9-]+$/.test(e.id) && (e.fonte === "SAH") === (e.id.indexOf("sah.") === 0);
+      }));
+      t.ok("toda entrada tem nome, resumo, elemento, círculo, execução, alcance, fonte e página",
+        catalogoR.rituais.every(function (e) {
+          return e.nome && e.resumo && e.elementos.length && e.circulo >= 1 && e.circulo <= 4 &&
+            e.execucao && e.alcance && (e.fonte === "OPRPG" || e.fonte === "SAH") && e.pagina > 0;
+        }));
+      t.ok("onde a duração falta, é porque o livro não informa — e a entrada registra isso",
+        catalogoR.rituais.filter(function (e) { return !e.duracao; }).every(function (e) {
+          return e.notas.some(function (n) { return /não informa a duração/.test(n); });
+        }));
+      t.igual("  e isso acontece em um ritual só", catalogoR.rituais.filter(function (e) { return !e.duracao; }).length, 1);
+      t.ok("o alcance só falta onde o livro não informa", catalogoR.rituais.filter(function (e) { return !e.alcance; }).length === 0);
+      t.ok("alvo, área e efeito são campos diferentes, e cada ritual usa UM (ou nenhum)",
+        catalogoR.rituais.every(function (e) {
+          var quantos = [e.alvo, e.area, e.efeito].filter(Boolean).length;
+          return quantos <= 1 || e.id === "op.ritual.dissipar-ritual";
+        }));
+      t.ok("Dissipar Ritual é a exceção do livro (“Alvo ou Área”), e diz isso na nota",
+        !!ritual("op.ritual.dissipar-ritual").alvo && !!ritual("op.ritual.dissipar-ritual").area &&
+        ritual("op.ritual.dissipar-ritual").notas.length > 0);
+      t.ok("o custo da forma básica vem da tabela do círculo (1, 3, 6, 10)",
+        catalogoR.rituais.every(function (e) { return e.custo === { 1: 1, 2: 3, 3: 6, 4: 10 }[e.circulo]; }));
+      t.ok("toda entrada tem a versão básica na frente, e só ela sem custo adicional",
+        catalogoR.rituais.every(function (e) {
+          return e.versoes[0].basica && e.versoes[0].custo === 0 &&
+            e.versoes.slice(1).every(function (v) { return !v.basica; });
+        }));
+      t.ok("o total de cada versão é o básico mais o acréscimo — nunca somado duas vezes",
+        catalogoR.rituais.every(function (e) {
+          return e.versoes.every(function (v) { return v.custoTotal === e.custo + v.custo; });
+        }));
+      t.ok("nenhuma versão inventa expressão de dados", catalogoR.rituais.every(function (e) {
+        return e.versoes.every(function (v) {
+          return (!v.dano || /^\d{1,3}d\d{1,3}$/.test(v.dano)) &&
+            v.rolagens.every(function (r) { return !r.expressao || /^\d{1,3}d\d{1,3}$/.test(r.expressao); });
+        });
+      }));
+      t.ok("o catálogo é congelado, até o fundo", Object.isFrozen(catalogoR) && Object.isFrozen(catalogoR.rituais) &&
+        Object.isFrozen(ritual("op.ritual.cicatrizacao")) && Object.isFrozen(ritual("op.ritual.cicatrizacao").versoes[0]));
+      RS._esquecer();
+      var cargaR = RS.carregar();
+      t.ok("carregar() devolve promessa e deixa o catálogo pronto", !!cargaR && typeof cargaR.then === "function" && !!RS.catalogoPronto());
+
+      /* Conferência pontual contra as páginas dos livros. */
+      var cica = ritual("op.ritual.cicatrizacao");
+      t.iguais("Cicatrização (OPRPG p. 126): Morte, 1º círculo, 1 PE, toque, instantânea",
+        [cica.elemento, cica.circulo, cica.custo, cica.execucao, cica.alcance, cica.alvo, cica.duracao, cica.fonte, cica.pagina],
+        ["morte", 1, 1, "padrão", "toque", "1 ser", "instantânea", "OPRPG", 126]);
+      t.iguais("  e a cura de cada versão: 3d8+3, 5d8+5, 7d8+7",
+        cica.versoes.map(function (v) { return v.rolagens[0].expressao + "+" + v.rolagens[0].extra; }),
+        ["3d8+3", "5d8+5", "7d8+7"]);
+      t.iguais("  com custo total 1, 3 e 10 PE", cica.versoes.map(function (v) { return v.custoTotal; }), [1, 3, 10]);
+      t.ok("  e a cura é CURA, não dano", cica.versoes.every(function (v) { return v.rolagens[0].tipo === "cura" && !v.dano; }));
+
+      var amaldicoar = ritual("op.ritual.amaldicoar-arma");
+      t.iguais("Amaldiçoar Arma existe em quatro elementos", amaldicoar.elementos, ["conhecimento", "energia", "morte", "sangue"]);
+      t.ok("  e pede o elemento ao adicionar", amaldicoar.escolha && amaldicoar.escolha.tipo === "elemento");
+      var esfolar = ritual("sah.ritual.esfolar");
+      t.iguais("Esfolar (SAH p. 48): Sangue, 1º círculo, dano 3d4+3, Reflexos parcial",
+        [esfolar.elemento, esfolar.circulo, esfolar.versoes[0].dano, esfolar.versoes[0].danoExtra, esfolar.resistencia],
+        ["sangue", 1, "3d4", "3", "Reflexos parcial"]);
+      t.igual("Presença do Medo é de Medo e 4º círculo", ritual("op.ritual.presenca-do-medo").elemento + "/" + ritual("op.ritual.presenca-do-medo").circulo, "medo/4");
+      t.ok("Deflagração de Energia não finge que 3d10 x 10 é uma expressão de dado",
+        ritual("op.ritual.deflagracao-de-energia").versoes[0].rolagens[0].expressao === "3d10" &&
+        ritual("op.ritual.deflagracao-de-energia").notas.some(function (n) { return /multiplica/.test(n); }));
+      t.ok("Milagre Ionizante registra a divergência do círculo impresso no SAH",
+        ritual("sah.ritual.milagre-ionizante").notas.some(function (n) { return /ENERGIA 3/.test(n); }));
+      t.ok("rituais sem nenhuma rolagem existem e são válidos",
+        catalogoR.rituais.filter(function (e) {
+          return e.versoes.every(function (v) { return !v.dano && !v.rolagens.length; });
+        }).length > 20);
+      t.ok("toda forma avançada diz o que muda", catalogoR.rituais.every(function (e) {
+        return e.versoes.slice(1).every(function (v) { return !!v.alteracoes; });
+      }));
+
+      /* ---------------------------------------------------------------- */
+      t.grupo("Ordem · rituais — busca e filtros");
+
+      var nomesR = function (lista) { return lista.map(function (e) { return e.nome; }); };
+      t.ok("busca ignora acento e caixa: CICATRIZACAO acha Cicatrização",
+        nomesR(RS.filtrar(catalogoR, { busca: "CICATRIZACAO" })).indexOf("Cicatrização") >= 0);
+      t.iguais("busca sem resultado devolve lista vazia", RS.filtrar(catalogoR, { busca: "xyzzy" }), []);
+      var sangue2 = RS.filtrar(catalogoR, { elemento: "sangue", circulo: 2 });
+      t.ok("elemento + círculo se combinam", sangue2.length === 6 &&
+        sangue2.every(function (e) { return e.elementos.indexOf("sangue") >= 0 && e.circulo === 2; }));
+      t.ok("o filtro de elemento acha o ritual multielemento",
+        RS.filtrar(catalogoR, { elemento: "morte" }).some(function (e) { return e.id === "op.ritual.amaldicoar-arma"; }) &&
+        RS.filtrar(catalogoR, { elemento: "sangue" }).some(function (e) { return e.id === "op.ritual.amaldicoar-arma"; }));
+      t.igual("filtro de livro: 16 no Sobrevivendo ao Horror", RS.filtrar(catalogoR, { fonte: "SAH" }).length, 16);
+      t.igual("elemento + círculo + livro juntos",
+        nomesR(RS.filtrar(catalogoR, { elemento: "morte", circulo: 4, fonte: "OPRPG" })).sort().join(", "),
+        "Convocar o Algoz, Distorção Temporal, Fim Inevitável");
+      t.igual("  e a busca entra na mesma combinação",
+        nomesR(RS.filtrar(catalogoR, { busca: "fim", elemento: "morte", circulo: 4, fonte: "OPRPG" })).join(", "),
+        "Fim Inevitável");
+      var contagens = RS.contagens(catalogoR, { elemento: "sangue" });
+      t.igual("a contagem de círculos respeita o elemento escolhido", contagens.circulos[2], 6);
+      t.igual("  e a de elementos ignora o próprio filtro de elemento", contagens.elementos.morte, 23);
+      t.iguais("as duas fontes aparecem no catálogo", RS.fontesDoCatalogo(catalogoR).sort(), ["OPRPG", "SAH"]);
+      var grupos = RS.porCirculo(RS.filtrar(catalogoR, { elemento: "medo" }));
+      t.iguais("agrupado por círculo, com o custo de cada um",
+        grupos.map(function (g) { return g.circulo + ":" + g.entradas.length + ":" + g.custo; }).join(" "),
+        "1:1:1 2:2:3 3:1:6 4:5:10");
+      t.ok("  e em ordem alfabética dentro do círculo", grupos[3].entradas.every(function (e, i, l) {
+        return i === 0 || l[i - 1].nome.localeCompare(e.nome, "pt-BR") <= 0;
+      }));
+
+      /* ---------------------------------------------------------------- */
+      t.grupo("Ordem · rituais — prévia, detalhes e honestidade");
+
+      var semVazioR = function (pares) { return pares.every(function (p) { return p[0] && p[1] !== "" && p[1] !== undefined; }); };
+      t.ok("o resumo compacto de TODOS os rituais não tem valor vazio",
+        catalogoR.rituais.every(function (e) { return semVazioR(RS.resumoCompacto(e)); }));
+      t.ok("os detalhes de TODOS não têm valor vazio", catalogoR.rituais.every(function (e) { return semVazioR(RS.detalhes(e)); }));
+      t.ok("  e todos dizem o custo e a fonte com página", catalogoR.rituais.every(function (e) {
+        var rotulos = RS.detalhes(e).map(function (p) { return p[0]; });
+        return rotulos.indexOf("Custo") >= 0 && RS.detalhes(e).some(function (p) { return p[0] === "Fonte" && /p\. \d+/.test(p[1]); });
+      }));
+      t.ok("o resumo compacto não repete o círculo e o elemento (já estão na classificação)",
+        RS.resumoCompacto(cica).every(function (p) { return p[0] !== "Círculo" && p[0] !== "Elemento"; }));
+      t.ok("ritual de Medo avisa do custo em Sanidade e de não ter afinidade",
+        RS.regrasGerais(ritual("op.ritual.cineraria")).join(" ").match(/Sanidade/) &&
+        /afinidade com Medo/.test(RS.regrasGerais(ritual("op.ritual.cineraria")).join(" ")));
+      t.ok("ritual de outro elemento avisa dos componentes e do Custo do Paranormal",
+        /componentes ritualísticos/.test(RS.regrasGerais(cica).join(" ")) && /Custo do Paranormal/.test(RS.regrasGerais(cica).join(" ")));
+      t.ok("os requisitos citam o círculo e o que cada versão exige",
+        /Conjurar 1º círculo/.test(RS.requisitos(cica).join(" ")) && /Discente: requer 2º círculo/.test(RS.requisitos(cica).join(" ")));
+      t.ok("toda entrada declara o que é automático", catalogoR.rituais.every(function (e) {
+        var n = RS.naFicha(e);
+        return ["calculo", "parcial", "texto"].indexOf(n.automacao) >= 0 && /não gasta PE/.test(n.texto);
+      }));
+      t.ok("ritual sem dados diz que nenhum botão de rolagem é inventado",
+        /não tem expressão de dados/.test(RS.naFicha(ritual("op.ritual.possessao")).texto));
+
+      /* ---------------------------------------------------------------- */
+      t.grupo("Ordem · rituais — adicionar preenche a ficha (e não conjura)");
+
+      var cicaFicha = adicionarRitual("op.ritual.cicatrizacao");
+      t.iguais("os campos do livro entram preenchidos",
+        [cicaFicha.circulo, cicaFicha.elemento, cicaFicha.execucao, cicaFicha.alcance, cicaFicha.alvo, cicaFicha.duracao],
+        ["1º círculo", "Morte", "padrão", "toque", "1 ser", "instantânea"]);
+      t.igual("  com o rastro da origem", cicaFicha.origemCatalogoId, "op.ritual.cicatrizacao");
+      t.iguais("  e o bloco de Ordem com elemento, círculo, custo e referência",
+        [cicaFicha.ordem.elemento, cicaFicha.ordem.circulo, cicaFicha.ordem.custo, cicaFicha.ordem.referencia.fonte, cicaFicha.ordem.referencia.pagina],
+        ["morte", 1, 1, "OPRPG", 126]);
+      t.igual("  a descrição resume e cita a fonte", /Fonte: Ordem Paranormal RPG, p\. 126/.test(cicaFicha.descricao), true);
+      t.ok("  e o campo “Efeito” fica vazio quando o livro não usa essa linha", cicaFicha.efeito === "");
+      t.igual("as três versões entram, com id próprio", cicaFicha.versoes.length, 3);
+      t.ok("  ids de versão são novos e diferentes entre si",
+        cicaFicha.versoes[0].id !== cicaFicha.versoes[1].id && cicaFicha.versoes[0].id.length > 8);
+      t.iguais("  custo ADICIONAL de cada versão avançada", cicaFicha.versoes.map(function (v) { return v.custo || 0; }), [0, 2, 9]);
+      t.ok("  a cura vem como rolagem de cura, não como dano",
+        cicaFicha.versoes[0].rolagens[0].tipo === "cura" && !cicaFicha.versoes[0].dano);
+      t.iguais("  e o custo total sai da soma com o círculo, uma vez só",
+        cicaFicha.versoes.map(function (v) { return RS.custoDaVersao(cicaFicha, v).total; }), [1, 3, 10]);
+
+      var esfolarFicha = adicionarRitual("sah.ritual.esfolar");
+      t.iguais("ritual de dano: dano e dano extra separados", [esfolarFicha.versoes[0].dano, esfolarFicha.versoes[0].danoExtra], ["3d4", "3"]);
+      t.ok("  e a ficha mostra as três versões com rolagem", FR.versoesComRolagem(esfolarFicha).length === 3);
+
+      var possessao = adicionarRitual("op.ritual.possessao");
+      t.igual("ritual sem dano não ganha expressão nenhuma", FR.versoesComRolagem(possessao).length, 0);
+      t.ok("  e continua com a versão Normal guardada", possessao.versoes.length === 1 && possessao.versoes[0].nome === "Normal");
+
+      t.ok("Amaldiçoar Arma sem elemento escolhido é recusada", !RS.paraFicha(amaldicoar, {}).ok);
+      t.ok("  elemento fora da lista também", !RS.paraFicha(amaldicoar, { escolha: "medo" }).ok);
+      var amaldicoada = adicionarRitual("op.ritual.amaldicoar-arma", { escolha: "morte" });
+      t.iguais("  com Morte, o elemento entra no ritual e no bloco de Ordem",
+        [amaldicoada.elemento, amaldicoada.ordem.elemento], ["Morte", "morte"]);
+      t.ok("  e a escolha aparece na descrição", /Elemento do ritual: Morte/.test(amaldicoada.descricao));
+
+      var todosMontam = catalogoR.rituais.every(function (e) {
+        var escolha = e.escolha ? (RS.opcoesDaEscolha(e.escolha)[0] || {}).valor : undefined;
+        var r = RS.paraFicha(e, { escolha: escolha });
+        if (!r.ok) return false;
+        var pronto = FR.normalizarRitual(FR.criarRitual(r.dados));
+        return pronto && pronto.nome === e.nome && pronto.origemCatalogoId === e.id &&
+          pronto.ordem.circulo === e.circulo && pronto.versoes.length === e.versoes.length;
+      });
+      t.ok("TODOS os 98 rituais viram ritual de ficha com campos, versões e origem", todosMontam);
+
+      /* ---------------------------------------------------------------- */
+      t.grupo("Ordem · rituais — cópia independente (snapshot)");
+
+      var copia1 = adicionarRitual("op.ritual.cicatrizacao");
+      var copia2 = adicionarRitual("op.ritual.cicatrizacao");
+      t.ok("duas inclusões do mesmo ritual: dois registros, ids diferentes",
+        copia1.id !== copia2.id && copia1.origemCatalogoId === copia2.origemCatalogoId);
+      t.ok("  e versões com ids diferentes", copia1.versoes[0].id !== copia2.versoes[0].id);
+      copia1.nome = "Cicatrização da mesa";
+      copia1.area = "esfera de 3 m";
+      copia1.versoes[1].custo = 5;
+      t.iguais("editar a cópia não muda a outra", [copia2.nome, copia2.area, copia2.versoes[1].custo], ["Cicatrização", "", 2]);
+      t.iguais("  nem o catálogo", [ritual("op.ritual.cicatrizacao").nome, ritual("op.ritual.cicatrizacao").versoes[1].custo], ["Cicatrização", 2]);
+      t.ok("o catálogo recusa alteração direta", (function () {
+        try { ritual("op.ritual.cicatrizacao").versoes[1].custo = 99; } catch (e) { /* modo estrito lança */ }
+        return ritual("op.ritual.cicatrizacao").versoes[1].custo === 2;
+      })());
+      var relido = FR.normalizarRitual(JSON.parse(JSON.stringify(copia1)));
+      t.iguais("salvar e reabrir preserva a cópia inteira",
+        [relido.id, relido.nome, relido.area, relido.origemCatalogoId, relido.ordem.circulo, relido.versoes[1].custo,
+          relido.versoes[0].rolagens[0].tipo],
+        [copia1.id, "Cicatrização da mesa", "esfera de 3 m", "op.ritual.cicatrizacao", 1, 5, "cura"]);
+      t.ok("o ritual salvo não leva o catálogo junto", JSON.stringify(relido).length < 2600);
+
+      /* ---------------------------------------------------------------- */
+      t.grupo("Ordem · rituais — a ficha olhando o ritual (avisos, nunca bloqueio)");
+
+      if (global.RAMAOrdemRegras) {
+        var RRR = global.RAMAOrdemRegras;
+        var ocultista = RRR.fichaVazia();
+        ocultista.classe = "ocultista";
+        ocultista.nex = 25;
+        ocultista.atributos = { agi: 1, for: 1, int: 3, pre: 3, vig: 1 };
+
+        t.igual("ocultista com NEX 25% conjura até o 2º círculo", RRR.rituais(ocultista).circuloMaximo, 2);
+        var avisos2 = RS.conferencias(ritual("op.ritual.aprimorar-fisico"), ocultista);
+        t.ok("ritual dentro do círculo não gera aviso de círculo", !avisos2.some(function (a) { return /círculo máximo/.test(a); }));
+        var avisos4 = RS.conferencias(ritual("op.ritual.controle-mental"), ocultista);
+        t.ok("ritual de 4º círculo avisa que a ficha não chega lá", avisos4.some(function (a) { return /círculo máximo é o 2º/.test(a); }));
+        t.ok("  e avisa que o custo passa do limite de PE por turno", avisos4.some(function (a) { return /limite de PE por turno/.test(a); }));
+        t.ok("sem afinidade, as formas que a pedem são avisadas",
+          RS.conferencias(ritual("op.ritual.arma-atroz"), ocultista).some(function (a) { return /afinidade/.test(a); }));
+        ocultista.afinidade = { elemento: "sangue", adiada: false };
+        t.ok("com afinidade de Sangue, Arma Atroz não avisa mais",
+          !RS.conferencias(ritual("op.ritual.arma-atroz"), ocultista).some(function (a) { return /afinidade/.test(a); }));
+        t.ok("  e um ritual de outro elemento avisa qual é a afinidade da ficha",
+          RS.conferencias(cica, ocultista).some(function (a) { return /afinidade desta ficha é Sangue/.test(a); }));
+        t.ok("ritual de Medo avisa do preço em Sanidade",
+          RS.conferencias(ritual("op.ritual.cineraria"), ocultista).some(function (a) { return /Sanidade permanente/.test(a); }));
+        var combatente = RRR.fichaVazia();
+        combatente.classe = "combatente";
+        combatente.nex = 60;
+        t.ok("classe que não conjura por NEX recebe aviso, não bloqueio",
+          RS.conferencias(cica, combatente).some(function (a) { return /não conjura rituais por NEX/.test(a); }));
+
+        var dt = RS.dtDeResistencia(ocultista);
+        t.iguais("a DT de resistência é 10 + nível de exposição + Presença (OPRPG p. 121)", [dt.nivel, dt.presenca, dt.total], [5, 3, 18]);
+        var forte = RRR.fichaVazia();
+        forte.classe = "ocultista";
+        forte.nex = 99;
+        forte.atributos = { agi: 1, for: 1, int: 1, pre: 5, vig: 1 };
+        t.igual("  com Presença 5 e NEX 99%, DT 35 — o exemplo do livro", RS.dtDeResistencia(forte).total, 35);
+
+        /* Registrar um ritual não resolve pendência de progressão. */
+        if (global.RAMAOrdemProgressao) {
+          var antes = global.RAMAOrdemProgressao.estado(ocultista).pendencias.length;
+          var fichaComRitual = FR.criarFicha({ nome: "Com ritual", tipoFicha: "ordem" });
+          fichaComRitual.ordem = ocultista;
+          fichaComRitual.rituais.itens.push(adicionarRitual("op.ritual.aprimorar-fisico"));
+          t.igual("adicionar um ritual não resolve pendência de progressão nenhuma",
+            global.RAMAOrdemProgressao.estado(ocultista).pendencias.length, antes);
+        }
+      }
+
+      /* ---------------------------------------------------------------- */
+      t.grupo("Ordem · rituais — ficha antiga, persistência e exportação");
+
+      /* O texto longo do ritual morava em `efeito` até a v2.13. */
+      var antiga = FR.normalizarFicha({
+        nome: "Antiga", schemaVersion: 7,
+        rituais: {
+          rotuloSecao: "Magias",
+          rotulos: { circulo: "Nível", efeito: "O que faz" },
+          itens: [{ id: "r1", nome: "Bola de Fogo", circulo: "3", alcance: "médio", alvo: "área",
+                    efeito: "Texto longo escrito pela mesa.", versoes: [{ id: "v1", nome: "Normal", dano: "6d6" }] }],
+        },
+      });
+      var migrado = antiga.rituais.itens[0];
+      t.igual("o texto longo de uma ficha 7 migra para a descrição", migrado.descricao, "Texto longo escrito pela mesa.");
+      t.igual("  e o campo Efeito fica livre para a linha do livro", migrado.efeito, "");
+      t.igual("  o rótulo personalizado vai junto com o texto", antiga.rituais.rotulos.descricao, "O que faz");
+      t.igual("  e o rótulo de Efeito volta ao padrão", antiga.rituais.rotulos.efeito, "Efeito");
+      t.iguais("  nada mais se perde", [migrado.circulo, migrado.alcance, migrado.alvo, migrado.versoes[0].dano, antiga.rituais.rotuloSecao],
+        ["3", "médio", "área", "6d6", "Magias"]);
+      t.igual("a ficha migrada sai no schema atual", antiga.schemaVersion, FR.VERSAO_SCHEMA);
+
+      var atual = FR.normalizarFicha({
+        nome: "Atual", schemaVersion: 8,
+        rituais: { itens: [{ id: "r2", nome: "Tecer Ilusão", efeito: "ilusão de até 4 cubos", descricao: "Cria uma ilusão." }] },
+      });
+      t.iguais("numa ficha 8, Efeito e Descrição ficam onde estão",
+        [atual.rituais.itens[0].efeito, atual.rituais.itens[0].descricao], ["ilusão de até 4 cubos", "Cria uma ilusão."]);
+      var semDescricao = FR.normalizarFicha({
+        nome: "Atual sem descrição", schemaVersion: 8,
+        rituais: { itens: [{ id: "r3", nome: "Nuvem", efeito: "nuvem de 6 m de raio" }] },
+      });
+      t.igual("  e um ritual novo só com a linha do livro não tem o campo movido",
+        semDescricao.rituais.itens[0].efeito, "nuvem de 6 m de raio");
+
+      var fichaRituais = FR.criarFicha({ nome: "Com rituais do catálogo", tipoFicha: "ordem" });
+      if (global.RAMAOrdemRegras) fichaRituais.ordem = global.RAMAOrdemRegras.normalizar({ classe: "ocultista", nex: 55 });
+      fichaRituais.rituais.itens = [adicionarRitual("op.ritual.cicatrizacao"), adicionarRitual("sah.ritual.esfolar"),
+        FR.criarRitual({ nome: "Ritual da mesa", circulo: "1", descricao: "Escrito à mão." })];
+      var voltou = FR.normalizarFicha(JSON.parse(JSON.stringify(fichaRituais)));
+      var retrato = function (f) {
+        return f.rituais.itens.map(function (r) {
+          return [r.nome, r.circulo, r.elemento, r.origemCatalogoId || "", (r.ordem || {}).custo || 0,
+            r.versoes.map(function (v) { return v.nome + ":" + (v.dano || "") + ":" + (v.custo || 0) + ":" + (v.rolagens || []).length; }).join("|")].join("/");
+        });
+      };
+      t.iguais("salvar e reabrir preserva campos, bloco de Ordem, versões e rolagens", retrato(voltou), retrato(fichaRituais));
+
+      if (V) {
+        var pacoteR = V.exportar("personagem", fichaRituais);
+        var impR = V.importado(JSON.parse(JSON.stringify(pacoteR)));
+        t.ok("a ficha com rituais do catálogo atravessa exportar e importar", impR.ok);
+        t.iguais("  com os mesmos dados", retrato(impR.dados), retrato(fichaRituais));
+        t.ok("  e com ids novos, de ritual e de versão", impR.dados.rituais.itens.every(function (r, i) {
+          return r.id !== fichaRituais.rituais.itens[i].id && r.versoes[0].id !== fichaRituais.rituais.itens[i].versoes[0].id;
+        }));
+      }
+
+      var lixoR = FR.normalizarRitual({
+        id: "x", nome: "Estranho",
+        ordem: { elemento: "caos", circulo: 9, custo: -5, referencia: { fonte: "PIRATA", pagina: 0 } },
+        versoes: [{ nome: "Normal", dano: "não é dado", custo: 999, rolagens: [{ tipo: "magia", rotulo: "", expressao: "xd" }] }],
+      });
+      t.ok("bloco de Ordem inválido é descartado na leitura", lixoR.ordem === undefined);
+      t.igual("  custo absurdo é aparado", lixoR.versoes[0].custo, 99);
+      t.igual("  expressão inválida é preservada como veio, para não sumir do olho de quem digitou", lixoR.versoes[0].dano, "não é dado");
+      t.igual("  expressão inválida de uma rolagem também é preservada, com o tipo corrigido",
+        lixoR.versoes[0].rolagens[0].tipo + ":" + lixoR.versoes[0].rolagens[0].expressao, "outra:xd");
+      t.ok("  e rolagem sem expressão nem valor nenhum é descartada",
+        !FR.normalizarRitual({ nome: "X", versoes: [{ nome: "Normal", rolagens: [{ tipo: "cura", rotulo: "Cura" }] }] }).versoes[0].rolagens);
+
+      var universalR = FR.normalizarFicha({ nome: "Universal", rituais: { itens: [{ id: "u1", nome: "Magia da casa", circulo: "1", descricao: "Texto." }] } });
+      t.ok("ficha universal: ritual sem bloco de Ordem e sem rastro de catálogo",
+        universalR.rituais.itens[0].ordem === undefined && !("origemCatalogoId" in universalR.rituais.itens[0]));
+      t.ok("  e continua com os campos e a versão Normal",
+        universalR.rituais.itens[0].circulo === "1" && universalR.rituais.itens[0].versoes.length === 1);
     }
 
     /* =================================================================

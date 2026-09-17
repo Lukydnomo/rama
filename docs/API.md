@@ -301,11 +301,12 @@ Os modelos que a conta **alcança**, com o conteúdo — são registros pequenos
   `todos` (os dois juntos). O padrão é o mais restrito de propósito, e **em
   nenhum escopo** entra registro privado de outra conta.
 - `tipo`: um tipo só, como a aba Habilidades da ficha pede.
-- `tipos`: uma **lista** de tipos, como a biblioteca de itens do inventário pede
-  (`["item", "arma", "armadura", "mochila"]`). Só tipos conhecidos passam; uma
-  lista sem nenhum tipo válido devolve lista vazia, não tudo. O filtro roda
-  **antes** de ler o conteúdo das linhas, e depois de novo sobre o tipo lido do
-  conteúdo — uma habilidade antiga gravada com a coluna `item` não vira item.
+- `tipos`: uma **lista** de tipos, como as bibliotecas da ficha pedem — a de itens
+  manda `["item", "arma", "armadura", "mochila"]`, a de rituais manda `["ritual"]`.
+  Só tipos conhecidos passam; uma lista sem nenhum tipo válido devolve lista vazia,
+  não tudo. O filtro roda **antes** de ler o conteúdo das linhas, e depois de novo
+  sobre o tipo lido do conteúdo — uma habilidade antiga gravada com a coluna `item`
+  não vira item.
 
 Um servidor anterior à v2.13 ignora `tipos` e devolve tudo do escopo; o navegador
 filtra de novo por isso.
@@ -318,8 +319,10 @@ filtra de novo por isso.
 Cria ou atualiza conforme o `id` vier — e conforme ele ser mesmo da conta. Um id
 de outra pessoa **não** vira atualização: vira registro novo, sob quem pediu.
 
-`tipo` aceita `item`, `arma`, `armadura`, `mochila`, `criatura` e `habilidade`;
-qualquer outro vira `item`. Até a v2.4.2 `habilidade` não estava na lista, e as
+`tipo` aceita `item`, `arma`, `armadura`, `mochila`, `criatura`, `habilidade` e
+`ritual`; qualquer outro vira `item`. Um `ritual` guarda o mesmo schema do ritual
+da ficha (campos, versões com custo e rolagens e o bloco `ordem`) — não existe um
+segundo formato de ritual no sistema. Até a v2.4.2 `habilidade` não estava na lista, e as
 habilidades enviadas à biblioteca ficaram com a coluna `tipo = item`. Elas não são
 reescritas: `listar_homebrew` e `ler_homebrew` leem o tipo do conteúdo guardado
 (que sempre disse `habilidade`), e o próximo salvamento do registro corrige a

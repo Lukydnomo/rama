@@ -49,6 +49,14 @@
      o bloco `ordem` do item ganhou `pericia`, `arma`, `protecao`,
      `elemento`, `amaldicoado`, `marcadores`, `referencia` e
      `modificacoes` (as modificações e maldições aplicadas).
+     7 → 8: o ritual ganhou `elemento`, `execucao`, `area`,
+     `resistencia` e `descricao` (o texto longo, que saiu de `efeito`;
+     `efeito` agora é a linha "Efeito:" do livro), o rastro
+     `origemCatalogoId`/`origemHomebrewId`, o bloco `ordem` (elemento,
+     círculo, custo e referência) e versões com custo adicional,
+     requisito, alterações e rolagens que não são dano. É a ÚNICA subida
+     com migração: o texto de `efeito` passa para `descricao` na
+     leitura, sem perder nada.
 
      Nenhuma das subidas exige migração: normalizarFicha() cria o que
      falta, vazio, e não toca no que existe. Um ritual gravado na 2 abre
@@ -59,7 +67,7 @@
      os campos novos e os descartaria ao gravar — com o schema maior ela
      recusa abrir a ficha e pede para recarregar.
      Ver docs/CHARACTER_SCHEMA.md. */
-  var VERSAO_SCHEMA = 7;
+  var VERSAO_SCHEMA = 8;
 
   var NATUREZA = { INFORMACAO: "informacao", ROLAVEL: "rolavel", DEPENDENTE: "dependente" };
 
@@ -142,15 +150,34 @@
      diferentes com o mesmo significado.
      ================================================================= */
 
-  var CAMPOS_RITUAL = ["circulo", "alcance", "duracao", "alvo", "efeito"];
+  /* Os campos de um ritual, na ordem em que a tela os mostra. Alvo,
+     Área e Efeito são TRÊS campos: o livro de Ordem Paranormal usa um
+     ou outro conforme o ritual (um alvo, uma área, ou algo que o ritual
+     cria), e forçar os três no mesmo campo perderia essa diferença.
+
+     `descricao` é o campo longo — o texto do ritual. Até a v2.13 esse
+     texto morava em `efeito`; a v2.14 o moveu para `descricao` e deixou
+     `efeito` para a linha "Efeito:" do livro. A migração está em
+     migrarCamposDoRitual(). */
+  var CAMPOS_RITUAL = ["circulo", "elemento", "execucao", "alcance", "alvo", "area", "efeito", "duracao", "resistencia", "descricao"];
+
+  var CAMPO_LONGO_RITUAL = "descricao";
 
   var ROTULOS_RITUAL_PADRAO = {
     circulo: "Círculo",
+    elemento: "Elemento",
+    execucao: "Execução",
     alcance: "Alcance",
-    duracao: "Duração",
     alvo: "Alvo",
+    area: "Área",
     efeito: "Efeito",
+    duracao: "Duração",
+    resistencia: "Resistência",
+    descricao: "Descrição",
   };
+
+  var MAX_ROLAGENS_VERSAO = 6;
+  var TIPOS_DE_ROLAGEM = ["dano", "cura", "outra"];
 
   var ROTULO_SECAO_RITUAIS = "Rituais";
 
@@ -359,11 +386,58 @@
 
   function criarVersaoRitual(dados) {
     var d = dados || {};
-    return {
-      id: U.uuid(),
-      nome: U.aparar(d.nome, 40) || NOME_VERSAO_PADRAO,
-      dano: danoDeVersao(d.dano),
+    return normalizarVersaoRitual(d, { idsNovos: true });
+  }
+
+  /* Uma versão de ritual. Só `id`, `nome` e `dano` são de sempre; o
+     resto nasceu com o catálogo de rituais (v2.14) e só existe quando
+     tem valor — uma versão criada à mão continua com três campos.
+
+       custo        os PE ADICIONAIS desta versão ("Discente (+3 PE)").
+                    A forma básica não tem: o custo dela é o do círculo
+       requisito    "3º círculo e afinidade", em texto
+       alteracoes   o que muda em relação à forma básica
+       danoExtra    a parte fixa de um dano como "3d4+3"
+       rolagens     o que NÃO é dano: cura, PV temporários, um dado de
+                    auxílio. Tipo e rótulo próprios, para a ficha não
+                    chamar cura de dano */
+  function normalizarVersaoRitual(v, opcoes) {
+    var o = opcoes || {};
+    var saida = {
+      id: (!o.idsNovos && v && v.id) ? String(v.id) : U.uuid(),
+      nome: U.aparar(v && v.nome, 40) || NOME_VERSAO_PADRAO,
+      dano: danoDeVersao(v && v.dano),
     };
+    if (!v || typeof v !== "object") return saida;
+
+    var extra = U.aparar(v.danoExtra, 40);
+    if (extra) saida.danoExtra = extra;
+    var custo = U.inteiro(v.custo, 0);
+    if (custo > 0) saida.custo = Math.min(99, custo);
+    var requisito = U.aparar(v.requisito, 200);
+    if (requisito) saida.requisito = requisito;
+    var alteracoes = U.aparar(v.alteracoes, 2000);
+    if (alteracoes) saida.alteracoes = alteracoes;
+
+    var rolagens = (Array.isArray(v.rolagens) ? v.rolagens : [])
+      .slice(0, MAX_ROLAGENS_VERSAO)
+      .map(function (r) {
+        if (!r || typeof r !== "object") return null;
+        var expressao = danoDeVersao(r.expressao);
+        var extraRol = U.aparar(r.extra, 40);
+        if (!expressao && !extraRol) return null;
+        return {
+          id: (!o.idsNovos && r.id) ? String(r.id) : U.uuid(),
+          tipo: TIPOS_DE_ROLAGEM.indexOf(r.tipo) >= 0 ? r.tipo : "outra",
+          rotulo: U.aparar(r.rotulo, 40) || "Rolagem",
+          expressao: expressao,
+          extra: extraRol,
+        };
+      })
+      .filter(Boolean);
+    if (rolagens.length) saida.rolagens = rolagens;
+
+    return saida;
   }
 
   /* normalizarVersoesRitual(bruto, { idsNovos })
@@ -397,15 +471,10 @@
          conciliação por id — e um arquivo importado pode trazer
          qualquer coisa. O segundo ganha um id novo em vez de derrubar
          o primeiro. */
-      var id = (!o.idsNovos && v.id) ? String(v.id) : U.uuid();
-      if (vistos[id]) id = U.uuid();
-      vistos[id] = true;
-
-      saida.push({
-        id: id,
-        nome: U.aparar(v.nome, 40) || NOME_VERSAO_PADRAO,
-        dano: danoDeVersao(v.dano),
-      });
+      var versao = normalizarVersaoRitual(v, o);
+      if (vistos[versao.id]) versao.id = U.uuid();
+      vistos[versao.id] = true;
+      saida.push(versao);
     });
 
     if (!saida.length) saida.push(criarVersaoRitual({}));
@@ -413,12 +482,34 @@
     return saida;
   }
 
-  /* As versões que a ficha mostra: só as que têm dano. Uma lista de
-     três nomes com o campo em branco do lado é ruído, não informação —
-     o mesmo critério dos campos do ritual. */
+  /* As versões que a ficha mostra: só as que têm algo para rolar. Uma
+     lista de três nomes com o campo em branco do lado é ruído, não
+     informação — o mesmo critério dos campos do ritual.
+
+     `versoesComDano` continua sendo só o dano, porque é o que a faixa
+     de dano do cartão sempre mostrou. `rolagensDaVersao` junta o dano e
+     as rolagens de outro tipo, cada uma com o próprio rótulo. */
   function versoesComDano(ritual) {
     if (!ritual || !Array.isArray(ritual.versoes)) return [];
     return ritual.versoes.filter(function (v) { return !!U.aparar(v && v.dano); });
+  }
+
+  function rolagensDaVersao(versao) {
+    if (!versao) return [];
+    var saida = [];
+    if (U.aparar(versao.dano)) {
+      saida.push({ id: versao.id + "-dano", tipo: "dano", rotulo: "Dano", expressao: versao.dano, extra: versao.danoExtra || "" });
+    }
+    (Array.isArray(versao.rolagens) ? versao.rolagens : []).forEach(function (r) {
+      if (!r) return;
+      saida.push({ id: r.id, tipo: r.tipo || "outra", rotulo: r.rotulo || "Rolagem", expressao: r.expressao || "", extra: r.extra || "" });
+    });
+    return saida;
+  }
+
+  function versoesComRolagem(ritual) {
+    if (!ritual || !Array.isArray(ritual.versoes)) return [];
+    return ritual.versoes.filter(function (v) { return rolagensDaVersao(v).length > 0; });
   }
 
   /* Cria um ritual NOVO a partir de dados quaisquer — inclusive de
@@ -429,9 +520,10 @@
     var d = dados || {};
     var ritual = { id: U.uuid(), nome: U.aparar(d.nome, 120) || "Novo ritual" };
     CAMPOS_RITUAL.forEach(function (campo) {
-      ritual[campo] = U.aparar(d[campo], campo === "efeito" ? 8000 : 200);
+      ritual[campo] = U.aparar(d[campo], campo === CAMPO_LONGO_RITUAL ? 8000 : 200);
     });
     ritual.versoes = normalizarVersoesRitual(d.versoes, { idsNovos: true });
+    aplicarExtrasDoRitual(ritual, d);
     var adicionadoEm = U.carimbo(d.adicionadoEm);
     if (adicionadoEm) ritual.adicionadoEm = adicionadoEm;
     return ritual;
@@ -750,15 +842,31 @@
        aviso, nenhuma célula editada à mão. */
     ficha.habilidades = global.RAMAHabilidades.normalizarArvore(b.habilidades);
 
-    /* ---- rituais (schema 2) ---- */
-    ficha.rituais = normalizarRituais(b.rituais);
+    /* ---- rituais (schema 2) ----
+       O schema gravado decide se os campos do ritual precisam migrar:
+       ficha de 7 ou menos tem o texto longo em `efeito`. */
+    ficha.rituais = normalizarRituais(b.rituais, {
+      deSchemaAntigo: U.inteiro(b.schemaVersion, 0) > 0 && U.inteiro(b.schemaVersion, 0) < 8,
+    });
 
     return ficha;
   }
 
-  function normalizarRituais(bruto) {
+  function normalizarRituais(bruto, opcoes) {
+    var o = opcoes || {};
     var b = (bruto && typeof bruto === "object") ? bruto : {};
     var rotulosBrutos = (b.rotulos && typeof b.rotulos === "object") ? b.rotulos : {};
+
+    /* Junto com o texto, o RÓTULO personalizado de "Efeito" também
+       migra para "Descrição": quem chamava o texto longo de "O que faz"
+       continua vendo "O que faz" no mesmo lugar. */
+    if (o.deSchemaAntigo && !U.aparar(rotulosBrutos.descricao) && U.aparar(rotulosBrutos.efeito)) {
+      var copia = {};
+      Object.keys(rotulosBrutos).forEach(function (k) { copia[k] = rotulosBrutos[k]; });
+      copia.descricao = rotulosBrutos.efeito;
+      copia.efeito = "";
+      rotulosBrutos = copia;
+    }
 
     var rotulos = {};
     CAMPOS_RITUAL.forEach(function (campo) {
@@ -770,27 +878,65 @@
     return {
       rotuloSecao: U.aparar(b.rotuloSecao, 40) || ROTULO_SECAO_RITUAIS,
       rotulos: rotulos,
-      itens: lista(b.itens).map(normalizarRitual).filter(Boolean),
+      itens: lista(b.itens).map(function (r) { return normalizarRitual(r, o); }).filter(Boolean),
     };
   }
 
-  function normalizarRitual(bruto) {
+  function normalizarRitual(bruto, opcoes) {
     if (!bruto || typeof bruto !== "object") return null;
     var nome = U.aparar(bruto.nome, 120);
     if (!nome) return null;
 
-    var ritual = { id: bruto.id || U.uuid(), nome: nome };
+    var b = migrarCamposDoRitual(bruto, opcoes);
+    var ritual = { id: b.id || U.uuid(), nome: nome };
     CAMPOS_RITUAL.forEach(function (campo) {
-      ritual[campo] = U.aparar(bruto[campo], campo === "efeito" ? 8000 : 200);
+      ritual[campo] = U.aparar(b[campo], campo === CAMPO_LONGO_RITUAL ? 8000 : 200);
     });
     /* Ler NUNCA troca id: é o mesmo registro voltando da planilha, de
        um arquivo importado ou de uma edição salva. Um ritual gravado
        antes de as versões existirem sai daqui com a Normal em branco, e
        a normalização seguinte não acrescenta uma segunda. */
-    ritual.versoes = normalizarVersoesRitual(bruto.versoes);
-    var adicionadoEm = U.carimbo(bruto.adicionadoEm);
+    ritual.versoes = normalizarVersoesRitual(b.versoes);
+    aplicarExtrasDoRitual(ritual, b);
+    var adicionadoEm = U.carimbo(b.adicionadoEm);
     if (adicionadoEm) ritual.adicionadoEm = adicionadoEm;
     return ritual;
+  }
+
+  /* O rastro da origem e o bloco `ordem` do ritual — os dois só existem
+     quando existem: um ritual escrito à mão não ganha campo novo. */
+  function aplicarExtrasDoRitual(ritual, bruto) {
+    var catalogo = U.aparar(bruto.origemCatalogoId, 80);
+    if (catalogo) ritual.origemCatalogoId = catalogo;
+    var homebrew = U.aparar(bruto.origemHomebrewId, 80);
+    if (homebrew) ritual.origemHomebrewId = homebrew;
+
+    if (bruto.ordem && typeof bruto.ordem === "object") {
+      var dados = global.RAMAOrdemRituais
+        ? global.RAMAOrdemRituais.normalizarDados(bruto.ordem)
+        : JSON.parse(JSON.stringify(bruto.ordem));
+      if (dados) ritual.ordem = dados;
+    }
+  }
+
+  /* v2.13 → v2.14: o texto longo do ritual saiu de `efeito` para
+     `descricao`, e `efeito` passou a guardar a linha "Efeito:" do livro
+     (o que o ritual cria ou invoca). A troca acontece só quando a ficha
+     vem de um schema anterior: assim um ritual novo, com a linha do
+     livro preenchida e sem descrição, não tem o campo movido.
+
+     Nada é apagado: o texto continua na ficha, com o rótulo
+     "Descrição". Uma aba aberta na versão anterior recusa a ficha pelo
+     schemaVersion e pede para recarregar, em vez de gravar por cima. */
+  function migrarCamposDoRitual(bruto, opcoes) {
+    var o = opcoes || {};
+    if (!o.deSchemaAntigo) return bruto;
+    if (U.aparar(bruto.descricao) || !U.aparar(bruto.efeito)) return bruto;
+    var copia = {};
+    Object.keys(bruto).forEach(function (k) { copia[k] = bruto[k]; });
+    copia.descricao = bruto.efeito;
+    copia.efeito = "";
+    return copia;
   }
 
   function lista(v) { return Array.isArray(v) ? v : []; }
@@ -957,7 +1103,10 @@
     PERICIAS_PADRAO: PERICIAS_PADRAO,
 
     CAMPOS_RITUAL: CAMPOS_RITUAL,
+    CAMPO_LONGO_RITUAL: CAMPO_LONGO_RITUAL,
     ROTULOS_RITUAL_PADRAO: ROTULOS_RITUAL_PADRAO,
+    MAX_ROLAGENS_VERSAO: MAX_ROLAGENS_VERSAO,
+    TIPOS_DE_ROLAGEM: TIPOS_DE_ROLAGEM,
     CATEGORIA_VAZIA: CATEGORIA_VAZIA,
 
     criarFicha: criarFicha,
@@ -965,10 +1114,13 @@
     criarVersaoRitual: criarVersaoRitual,
     normalizarVersoesRitual: normalizarVersoesRitual,
     versoesComDano: versoesComDano,
+    versoesComRolagem: versoesComRolagem,
+    rolagensDaVersao: rolagensDaVersao,
     NOME_VERSAO_PADRAO: NOME_VERSAO_PADRAO,
     MAX_VERSOES_RITUAL: MAX_VERSOES_RITUAL,
     rituaisVazios: rituaisVazios,
     normalizarRituais: normalizarRituais,
+    normalizarRitual: normalizarRitual,
     chaveDeCategoria: chaveDeCategoria,
     categoriasDe: categoriasDe,
     itemNaCategoria: itemNaCategoria,

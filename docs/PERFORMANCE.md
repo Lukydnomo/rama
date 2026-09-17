@@ -119,24 +119,28 @@ direto na planilha, com a mão. Isso leva até 120 segundos para valer.
 
 ---
 
-## O catálogo de itens, que não passa pelo servidor
+## Os catálogos de itens e de rituais, que não passam pelo servidor
 
-O catálogo de itens de Ordem Paranormal (`js/ordem/itens-dados.js`, 244 entradas)
-é arquivo estático, servido pelo GitHub Pages e guardado no cache do navegador.
-Ele **não** entra em nenhuma página: só é carregado na primeira vez que alguém
-abre a janela "Da biblioteca" do inventário, por um `<script>` injetado na hora.
-Uma falha de rede não fica guardada — a próxima tentativa carrega de novo.
+Os catálogos de Ordem Paranormal (`js/ordem/itens-dados.js`, 244 entradas, e
+`js/ordem/rituais-dados.js`, 98 rituais) são arquivos estáticos, servidos pelo
+GitHub Pages e guardados no cache do navegador. Eles **não** entram em nenhuma
+página: cada um é carregado na primeira vez que alguém abre a janela "Da
+biblioteca" correspondente, por um `<script>` injetado na hora. Uma falha de rede
+não fica guardada — a próxima tentativa carrega de novo, e abrir a biblioteca de
+itens não baixa a de rituais.
 
 Três consequências que interessam ao custo:
 
-1. **Abrir a ficha não paga por ele.** Quem nunca abre a biblioteca nunca o
+1. **Abrir a ficha não paga por eles.** Quem nunca abre a biblioteca nunca a
    baixa.
-2. **A planilha nunca o vê.** O item adicionado guarda a própria cópia (nome,
-   números, descrição resumida e a referência do livro); a ficha gravada não leva
-   catálogo nenhum, e `listar_homebrew` não é chamada na origem oficial.
+2. **A planilha nunca os vê.** O item ou ritual adicionado guarda a própria cópia
+   (nome, números, descrição resumida, versões e a referência do livro); a ficha
+   gravada não leva catálogo nenhum, e `listar_homebrew` não é chamada na origem
+   oficial.
 3. **A lista é montada por partes.** Os detalhes de um resultado só são
-   construídos quando alguém o abre — 244 entradas com descrição, efeitos e
-   regras de cada uma seriam DOM demais para montar de uma vez no celular.
+   construídos quando alguém o abre — 244 itens ou 98 rituais com descrição,
+   efeitos, versões e regras de cada um seriam DOM demais para montar de uma vez
+   no celular.
 
 ---
 

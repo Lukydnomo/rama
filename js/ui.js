@@ -611,16 +611,26 @@
     ]);
   }
 
-  /* vazio({ titulo, texto, acao: { rotulo, aoClicar } }) */
+  /* vazio({ titulo, texto, acao, acaoSecundaria }) — cada ação é
+     { rotulo, aoClicar }. A secundária existe para as telas que têm dois
+     caminhos igualmente legítimos (criar à mão ou trazer da
+     biblioteca). */
   function vazio(opcoes) {
     var o = opcoes || {};
+    var acoes = [
+      o.acao ? el("button.r-botao.r-botao--principal", {
+        type: "button", texto: o.acao.rotulo, onclick: o.acao.aoClicar,
+      }) : null,
+      o.acaoSecundaria ? el("button.r-botao.r-botao--fantasma", {
+        type: "button", texto: o.acaoSecundaria.rotulo, onclick: o.acaoSecundaria.aoClicar,
+      }) : null,
+    ].filter(Boolean);
+
     return el("div.r-vazio", {}, [
       el("div.r-vazio__marca", {}, [marca(40)]),
       el("p.r-vazio__titulo", { texto: o.titulo || "Nada arquivado" }),
       o.texto ? el("p.r-vazio__texto", { texto: o.texto }) : null,
-      o.acao ? el("button.r-botao.r-botao--principal", {
-        type: "button", texto: o.acao.rotulo, onclick: o.acao.aoClicar,
-      }) : null,
+      acoes.length ? el("div.faixa.faixa--centro", {}, acoes) : null,
     ]);
   }
 

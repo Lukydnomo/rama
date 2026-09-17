@@ -273,6 +273,46 @@ t.igual("um item de verdade continua item",
 t.igual("habilidade privada de B não chega a A",
   comoAna({ acao: "listar_homebrew", escopo: "publicos", tipo: "habilidade" }).dados.length, 0);
 
+t.grupo("Homebrew — rituais na biblioteca");
+
+{
+  const ritualDeB = comoBruno({ acao: "salvar_homebrew", dados: {
+    tipo: "ritual", nome: "Selo de Bruno", visibilidade: "privado",
+    circulo: "1º círculo", elemento: "Sangue", descricao: "Ritual da casa.",
+    versoes: [{ id: "v1", nome: "Normal", dano: "2d6" }],
+    ordem: { elemento: "sangue", circulo: 1, custo: 1 },
+  } }).dados.id;
+
+  const ritualPublico = comoBruno({ acao: "salvar_homebrew", dados: {
+    tipo: "ritual", nome: "Prece pública", visibilidade: "publico", circulo: "2º círculo",
+    versoes: [{ id: "v2", nome: "Normal", rolagens: [{ id: "r1", tipo: "cura", rotulo: "Cura", expressao: "2d8", extra: "2" }] }],
+  } }).dados.id;
+
+  t.igual("o tipo ritual é gravado como ritual, não como item",
+    String(acharPor(ABAS.HOMEBREW, "id", ritualDeB).tipo), "ritual");
+  t.ok("o conteúdo do ritual volta inteiro para o dono", (() => {
+    const r = comoBruno({ acao: "ler_homebrew", homebrewId: ritualDeB });
+    return r.ok && r.dados.versoes[0].dano === "2d6" && r.dados.ordem.circulo === 1;
+  })());
+  t.recusa("ritual privado de B não abre para A",
+    comoAna({ acao: "ler_homebrew", homebrewId: ritualDeB }), "nao_encontrado");
+
+  const paraAna = comoAna({ acao: "listar_homebrew", escopo: "todos", tipos: ["ritual"] });
+  const idsRituais = paraAna.dados.map((h) => h.id);
+  t.ok("A recebe o ritual PÚBLICO de B", idsRituais.includes(ritualPublico));
+  t.ok("  e não o privado", !idsRituais.includes(ritualDeB));
+  t.ok("  nem item, criatura ou habilidade", paraAna.dados.every((h) => h.tipo === "ritual"));
+  t.ok("  e a rolagem de cura chega junto", (() => {
+    const r = paraAna.dados.find((h) => h.id === ritualPublico);
+    return r && r.versoes[0].rolagens[0].tipo === "cura" && r.versoes[0].rolagens[0].expressao === "2d8";
+  })());
+  t.ok("pedindo itens, ritual não aparece",
+    !comoBruno({ acao: "listar_homebrew", escopo: "meus", tipos: ["item", "arma", "armadura", "mochila"] })
+      .dados.some((h) => h.tipo === "ritual"));
+  t.ok("pedindo rituais, item não aparece",
+    comoBruno({ acao: "listar_homebrew", escopo: "meus", tipos: ["ritual"] }).dados.every((h) => h.tipo === "ritual"));
+}
+
 t.grupo("Homebrew — biblioteca de itens da ficha (só itens que a conta alcança)");
 
 {
