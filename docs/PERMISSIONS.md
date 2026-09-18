@@ -313,3 +313,9 @@ por `doPost` como uma requisição de verdade. Entre elas:
   fora, e a jogadora tirada da mesa deixa de recebê-las na pergunta seguinte
 - a jogadora não opera o combate; lote com uma operação inválida não aplica nada;
   o mesmo `opId` repetido não é aplicado duas vezes
+- (v2.15) outra conta não lê, ajusta, duplica, exclui nem sobrescreve uma ficha em
+  blocos — nem pelo lote; não existe ação que leia blocos, gerações ou manifestos
+  direto, e as ferramentas de diagnóstico, restauração e limpeza (`diagnosticarPersonagem`,
+  `restaurarGeracaoAnterior`, `limparBlocosOrfaos`) não estão no roteamento — só
+  rodam no editor do Apps Script. Conhecer o id de um personagem ou de uma geração
+  não abre nada: tudo passa pela conferência de acesso do personagem

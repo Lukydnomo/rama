@@ -83,6 +83,9 @@
       podeAbrirFicha: p.podeAbrirFicha === undefined ? null : !!p.podeAbrirFicha,
       recursosOcultos: p.recursosVisiveis === false,
       recursosPendentes: !!p.recursosPendentes,
+      /* A ficha não se montou no servidor (v2.15): o cartão mostra a
+         identificação e o aviso, sem números nem controles. */
+      ilegivel: !!p.fichaIlegivel,
       /* Para quem vê a ficha inteira: o resumo que o cálculo dá, e se o
          guardado no servidor ficou para trás. */
       resumoCalculado: null,

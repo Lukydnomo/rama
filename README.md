@@ -110,7 +110,7 @@ E abra `http://localhost:8099/rama/`.
 
 São três conjuntos.
 
-**Modelo e motor de dados** — 1531 verificações. No navegador, abra `testes/`;
+**Modelo e motor de dados** — 1546 verificações. No navegador, abra `testes/`;
 no terminal:
 
 ```bash
@@ -150,7 +150,7 @@ avisam sem bloquear, adicionar que não resolve pendência de progressão, a mig
 do texto de "Efeito" para "Descrição" numa ficha antiga e a ficha atravessando
 salvar, exportar e importar.
 
-**Permissões e concorrência do backend** — 469 verificações:
+**Permissões, concorrência e armazenamento do backend** — 701 verificações:
 
 ```bash
 deno run --allow-read testes/executar-backend.js
@@ -171,7 +171,23 @@ alcança, sem o privado de outra conta, sem habilidade nem criatura entre os ite
 — inclusive a habilidade antiga gravada com a coluna `item` — e o tipo `ritual`
 com o mesmo tratamento.
 
-**Transporte do frontend e carga das páginas** — 151 verificações:
+E a ficha em blocos (v2.15), com um simulador que faz o que o Google faz — célula
+acima de 50 000 caracteres recusada, texto que vira fórmula ou número, meio emoji
+que vira "�", grade de linhas que estoura: fichas de 44 mil a 1 milhão de
+caracteres salvas, reabertas e comparadas caractere por caractere; os limites
+exatos entre blocos, com emoji partido na borda; acentos, aspas, barras, quebras
+de linha, `=SOMA()`, blocos só de dígitos; ficha antiga lida e migrada na gravação,
+setup que não converte nada e roda duas vezes; doze gravações que não acumulam;
+falha ao gravar os blocos, na conferência, na publicação e no envio final (flush)
+deixando a versão anterior inteira; resposta perdida que não aplica duas vezes
+(salvar, criar, duplicar, ajustar); bloco ausente, duplicado, corrompido ou sem
+marcador virando erro — nunca ficha vazia —, com diagnóstico e restauração da
+geração anterior; leitura concorrente com uma gravação que desloca as linhas;
+ajuste rápido do mestre, vínculo, cartões, combate, duplicação, importação,
+exportação e exclusão numa ficha grande; limpeza de órfãos; o cache de cabeçalhos
+que não passa de uma versão para outra; e outra conta sem alcançar nada disso.
+
+**Transporte do frontend e carga das páginas** — 194 verificações:
 
 ```bash
 deno run --allow-read testes/executar-frontend.js
@@ -195,6 +211,14 @@ velha que não apaga valor novo) e a sincronização (ritmo, pausa com a página
 escondida, espera crescente, perda de acesso). E o catálogo de itens carregado sob
 demanda: um script só, falha que rejeita e não fica guardada, nova tentativa que
 carrega, e nenhuma página levando o catálogo junto.
+
+E a gravação da ficha em blocos do lado do navegador: a resposta que se perde faz
+o salvador repetir o MESMO pedido (mesma ficha, revisão e id de operação), a edição
+feita no meio-tempo sobe no pedido seguinte, "Salvo" só depois da confirmação, erro
+que repetir não resolve (ficha acima do limite, ficha ilegível) para de insistir
+sem perder nada, e a fila do mestre repete o ajuste que falhou antes do clique
+seguinte — sem descartá-lo. E as mensagens: nenhuma manda apagar habilidades,
+rituais ou anotações.
 
 **As janelas "Da biblioteca" no navegador** — 131 verificações (133 em largura de
 celular). Sirva a pasta por HTTP e abra `testes/biblioteca.html`: as janelas de
@@ -345,6 +369,27 @@ exigiria mexer no `config.js`.
 Se a atualização acrescentar abas ou colunas, rode `setupRama()` de novo. Ele
 cria só o que falta e nunca apaga o que existe.
 
+**Atualizando para a v2.15 (a ficha em blocos)**, nesta ordem:
+
+1. cole os três `.gs` novos no editor do Apps Script;
+2. rode **`setupRama()`** — cria a aba `PERSONAGENS_BLOCOS`, a coluna
+   `armazenamento` no fim de `PERSONAGENS` e o formato texto do conteúdo dos
+   blocos. Não converte ficha nenhuma: cada ficha passa para blocos sozinha, na
+   próxima gravação. O relatório diz quantas já estão em blocos;
+3. rode `conferirInstalacao()` — tem de terminar sem pendências;
+4. **Implantar → Gerenciar implantações → editar → Versão: Nova versão**;
+5. publique o site.
+
+Sem o passo 2, as fichas antigas continuam abrindo, mas nenhuma ficha salva
+(`instalacao_incompleta`) — nada é gravado pela metade. **Não volte a implantação
+para uma versão anterior à v2.15** sem necessidade: a versão antiga não sabe abrir
+as fichas que já estão em blocos (o site mostra que o servidor precisa ser
+atualizado). O manifesto e os blocos sobrevivem à volta, e reimplantar a v2.15
+devolve tudo — ver "Voltar a uma versão anterior do backend" em
+[docs/DATABASE.md](docs/DATABASE.md). Para diagnosticar ou recuperar uma ficha:
+`diagnosticarPersonagem(id)`, `restaurarGeracaoAnterior(id)` e
+`limparBlocosOrfaos()`, no editor.
+
 Troque sempre **os três `.gs` juntos** (`Dados.gs`, `Codigo.gs`, `Campanhas.gs`):
 eles se chamam entre si, e um arquivo de uma versão com os outros de outra pode
 responder `instalacao_incompleta` ou pior. Publique o site **depois** da nova
@@ -431,9 +476,28 @@ console não abre o registro de outra conta.
 - **O painel lateral do combate carrega a página da ficha** dentro da aba (mesma
   origem). É a ficha de verdade, com o mesmo salvamento — e o mesmo tempo de
   abertura de uma ficha.
-- **Uma ficha cabe numa célula** (~45 000 caracteres de JSON). É muito para uma
-  ficha normal, mas anotações muito longas podem esbarrar; o servidor recusa com
-  `dados_grandes` em vez de truncar.
+- **Uma ficha tem limite total de 1 milhão de caracteres de JSON** (v2.15; antes,
+  45 000, o de uma célula). É um limite de operação, não do Google: cada salvamento
+  automático envia e regrava a ficha inteira, e numa ficha enorme isso segura a
+  trava do sistema por segundos. Acima dele o servidor recusa com
+  `ficha_grande_demais`, dizendo o tamanho e o limite; nada se perde na tela, e o
+  site oferece exportar. O número fica em `LIMITE_TOTAL_FICHA`, em
+  `backend/Dados.gs`.
+- **Os campos da ficha continuam com limite próprio**, que não é do armazenamento:
+  uma anotação tem até 20 000 caracteres, a descrição de um ritual até 8 000, a de
+  um item até 2 000 (`js/ficha.js`). A ficha cresce com mais anotações, rituais e
+  habilidades. Um valor maior do que isso que chegue por fora da tela — um arquivo
+  importado editado à mão — é cortado ao abrir, e espaços e quebras de linha nas
+  pontas de um texto são aparados. O servidor guarda e devolve exatamente o que
+  recebeu; quem corta é a normalização da ficha no navegador (`U.aparar`).
+- **Salvar e abrir uma ficha custam mais chamadas à planilha desde a v2.15**
+  (salvar: 13 → 18; abrir: 5 → 9, contados no simulador) — o preço de conferir
+  cada gravação e cada leitura. A listagem de personagens não mudou. Ver
+  [docs/PERFORMANCE.md](docs/PERFORMANCE.md).
+- **Outros campos grandes ainda moram numa célula**: o combate (com o snapshot de
+  cada criatura), a nota do mestre, o homebrew e as imagens. Todos recusam acima
+  do limite em vez de cortar; o combate é o que mais pode crescer. Ver "Os outros
+  campos grandes" em [docs/DATABASE.md](docs/DATABASE.md).
 - **A foto é uma miniatura** de 256 px, comprimida no navegador. A original
   nunca sobe.
 - **Sem histórico de alterações.** Há `criadoEm` e `atualizadoEm`; o schema está

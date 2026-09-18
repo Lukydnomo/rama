@@ -1,7 +1,17 @@
 # O banco
 
-Uma planilha do Google, quinze abas. Criadas e mantidas por `setupRama()` — não
+Uma planilha do Google, dezesseis abas. Criadas e mantidas por `setupRama()` — não
 monte nada à mão.
+
+> **Atualizando para a v2.15:** rode `setupRama()` de novo. Ele cria a aba
+> `PERSONAGENS_BLOCOS`, acrescenta a coluna `armazenamento` no fim de `PERSONAGENS`
+> e marca o conteúdo dos blocos como texto puro — e **não converte ficha nenhuma**.
+> Toda ficha antiga continua no formato antigo e abre normalmente; cada uma passa
+> para blocos sozinha, na próxima gravação que der certo. Rodar duas vezes dá o
+> mesmo resultado, e nenhuma aba, linha ou coluna existente é apagada ou movida. O
+> relatório do setup diz quantas fichas já estão em blocos. Antes de voltar a uma
+> versão anterior do backend, leia "Voltar a uma versão anterior", no fim de
+> [A ficha em blocos](#personagens_blocos--a-ficha-em-blocos).
 
 > **Atualizando para a v2.12:** rode `setupRama()` de novo. Ele cria a aba
 > `CAMPANHA_CAPAS` e **não toca em nada que já existe** — nenhuma aba é recriada,
@@ -102,17 +112,32 @@ validação de sessão. Junto, cada requisição arrastaria a imagem.
 | `criadoEm`     | ISO 8601                                      |
 | `atualizadoEm` | ISO 8601                                      |
 | `rev`          | inteiro, sobe a cada gravação                 |
-| `fichaJson`    | a ficha inteira — ver CHARACTER_SCHEMA.md     |
+| `fichaJson`    | formato antigo: a ficha inteira — ver CHARACTER_SCHEMA.md. Em blocos: só um aviso para servidor antigo |
+| `armazenamento`| vazio no formato antigo; em blocos, o **manifesto** (v2.15) |
 
-Numa ficha de Ordem, o `fichaJson` leva também `resumoRecursos`
-`{ versao, pv, pe, san }` (v2.12): o máximo de PV, PE e Sanidade calculado por quem
-pode editar a ficha, para a mesa ver sem receber a ficha. Ele é derivado — gravá-lo
-por `atualizar_resumo_personagem` não sobe o `rev`. Ver "Painel da mesa" em
-[CAMPAIGNS.md](CAMPAIGNS.md).
+A ficha — em `fichaJson` ou nos blocos — é a mesma, descrita em
+[CHARACTER_SCHEMA.md](CHARACTER_SCHEMA.md). Numa ficha de Ordem ela leva também
+`resumoRecursos` `{ versao, pv, pe, san }` (v2.12): o máximo de PV, PE e Sanidade
+calculado por quem pode editar a ficha, para a mesa ver sem receber a ficha. Ele é
+derivado — gravá-lo por `atualizar_resumo_personagem` não sobe o `rev`. Ver "Painel
+da mesa" em [CAMPAIGNS.md](CAMPAIGNS.md).
 
 As colunas de espelho existem para a listagem não precisar abrir e interpretar
-o JSON de trinta fichas só para escrever trinta nomes. Elas são reescritas a
-partir do JSON em toda gravação, então não têm como divergir.
+a ficha de trinta personagens só para escrever trinta nomes. Nome, classe e origem
+são reescritos a partir da ficha em toda gravação, e entram na MESMA gravação de
+linha que troca o conteúdo — não têm como divergir.
+
+**A coluna `campanhaId` é a que vale (v2.15).** É ela que decide permissão, e a
+leitura da ficha a coloca dentro do que sai para o navegador. Tirar um jogador da
+mesa (`salvar_participantes`, `excluir_campanha`) limpa só a coluna, e
+`vincular_personagem` também só grava colunas — nenhum dos três relê ou reescreve a
+ficha. Uma ficha antiga com outra campanha escrita dentro do JSON abre dizendo a da
+coluna, e a próxima gravação a corrige lá dentro.
+
+`armazenamento` fica depois de `fichaJson` de propósito: numa planilha atualizada o
+`setupRama()` a acrescenta no fim, e declarada no mesmo lugar as duas ordens
+coincidem. Ela NÃO está entre as colunas leves — a listagem de personagens não a
+lê.
 
 ## PERSONAGENS_FOTOS
 
@@ -129,6 +154,192 @@ imagem inteira — e a célula tem limite.
 
 O `ownerId` é repetido para a conferência de permissão não precisar consultar a
 aba de personagens antes de decidir.
+
+## PERSONAGENS_BLOCOS — a ficha em blocos
+
+| Coluna         | Conteúdo                                                      |
+|----------------|---------------------------------------------------------------|
+| `personagemId` | de quem é o bloco                                             |
+| `geracao`      | a gravação a que o bloco pertence (`g-` + UUID)               |
+| `indice`       | a posição do bloco, a partir de 0                             |
+| `total`        | quantos blocos a geração tem                                  |
+| `tamanho`      | quantos caracteres da ficha o bloco carrega                   |
+| `criadoEm`     | ISO 8601                                                      |
+| `conteudo`     | `RB\|` + um pedaço do JSON da ficha + `\|RB`                   |
+
+**Por que existe.** Até a v2.14 a ficha inteira ficava numa célula, `fichaJson`, e
+uma célula do Google aceita 50 000 caracteres. Uma ficha com muitas anotações,
+rituais e habilidades passava disso e **deixava de salvar** — o servidor recusava
+com `dados_grandes`, e o site tentava de novo para sempre. Aumentar o limite não
+resolve (o teto é do Google), e comprimir só adia (texto cresce). Desde a v2.15 a
+ficha é guardada em quantos blocos forem precisos, cada um abaixo do limite seguro
+da célula (`MAX_CELULA`, 45 000 caracteres, com os marcadores).
+
+**Geração.** Os blocos de uma gravação formam uma geração, escrita de uma vez e
+**nunca alterada depois**. Gravar de novo é escrever uma geração nova. É isso que
+deixa a versão anterior sempre inteira enquanto a nova ainda não foi confirmada.
+
+**O manifesto** mora na coluna `armazenamento` de `PERSONAGENS` e diz qual geração
+vale e como conferi-la:
+
+```jsonc
+{
+  "formato": "blocos", "versao": 1,
+  "geracao": "g-…",               // a geração que vale
+  "blocos": 4,                    // quantos blocos ela tem
+  "tamanho": 137915,              // caracteres do texto inteiro
+  "hash": "sha256:…",             // SHA-256 do texto inteiro, em UTF-8
+  "rev": 9,                       // a revisão da linha quando o manifesto foi escrito
+  "operacao": "op-…",             // o id da última gravação que subiu a revisão
+  "gravadoEm": "2026-09-18T…",
+  "anterior": { "geracao": "g-…", "blocos": 3, "tamanho": 131002,
+                "hash": "sha256:…", "rev": 8, "gravadoEm": "…" }   // o ponto de volta
+}
+```
+
+`rev` continua sendo a revisão **lógica** da ficha — a que o navegador manda e o
+conflito confere. A geração é só a identidade física do conteúdo: ela muda sem a
+revisão mudar (o resumo de recursos, que é derivado) e a revisão muda sem a geração
+mudar (o vínculo de campanha, que é coluna).
+
+### Formato antigo e blocos: o marcador
+
+| `armazenamento` | onde está a ficha | `fichaJson` guarda |
+|---|---|---|
+| vazio | formato antigo, em `fichaJson` | a ficha inteira |
+| manifesto `formato: "blocos"`, `versao: 1` | nos blocos da geração do manifesto | um **aviso** (abaixo) |
+| qualquer outra coisa | desconhecido: nada é lido **nem gravado por cima** | — |
+
+O aviso em `fichaJson` é um JSON pequeno com `_armazenamento: "blocos"`,
+`schemaVersion: 999999` e um nome que diz o que houve. Ele existe para uma versão
+**antiga** do servidor, que leria a célula como a ficha inteira: vazia, ela
+apareceria como uma ficha em branco; com o aviso, o site recusa abrir para edição
+(é uma ficha "de versão mais nova"). O aviso nunca é lido como ficha pelo servidor
+atual — sem manifesto ao lado, a leitura responde `ficha_ilegivel`.
+
+### Gravar
+
+Tudo dentro da trava, e nesta ordem:
+
+| passo | o que acontece | se parar aqui |
+|---|---|---|
+| 1 | confere sessão, acesso, revisão e tamanho | nada foi escrito |
+| 2 | decide o que a limpeza vai levar: as gerações deste personagem menos a que vale | nada foi escrito |
+| 3 | escreve a geração nova em linhas NOVAS, no fim da aba, numa chamada | sobram linhas que nenhum manifesto aponta — lixo, não estrago; a ficha continua na versão anterior |
+| 4 | lê essas linhas de volta e confere o texto inteiro, caractere por caractere | idem, e a resposta é `armazenamento_falhou` |
+| 5 | grava a linha do personagem: manifesto novo, aviso, revisão, nome, classe, origem, campanha — **uma** gravação de uma linha | idem: é esta gravação que troca de versão, e ela entra inteira ou não entra |
+| 6 | apaga as gerações decididas no passo 2 | sobra uma geração a mais, que a próxima gravação recolhe |
+| 7 | `SpreadsheetApp.flush()` antes de soltar a trava e de responder | a resposta é erro — nunca "salvo" |
+
+O Sheets não tem transação: várias escritas não viram uma. A segurança vem da ordem
+(nada existente é tocado antes de a versão nova estar provada) e da troca de uma
+linha só no passo 5. Ficam guardadas **duas** gerações por ficha: a que vale e a
+imediatamente anterior — para uma leitura que tenha começado antes da troca e como
+ponto de volta de `restaurarGeracaoAnterior()`.
+
+### Ler
+
+A leitura acha as linhas da geração do manifesto com uma varredura das seis
+colunas curtas da aba (nunca o conteúdo de outras fichas), lê o conteúdo só dessas
+linhas — os blocos de uma geração nascem lado a lado, então costuma ser uma chamada
+— e confere tudo **antes** de interpretar o JSON:
+
+- cada linha é mesmo deste personagem e desta geração;
+- cada posição de 0 a `blocos − 1` aparece uma vez (uma cópia idêntica é tolerada;
+  duas diferentes, não);
+- marcadores e tamanho de cada bloco batem;
+- o texto remontado tem o tamanho e o SHA-256 do manifesto.
+
+A leitura corre fora da trava. Se uma gravação trocar a geração no meio — e a
+limpeza apagar ou deslocar linhas —, a leitura percebe (linha fora do lugar, bloco
+ausente), lê a linha do personagem de novo e tenta com o manifesto novo, até três
+vezes. Uma falha que continua com o mesmo manifesto é defeito de verdade.
+
+**Ler nunca devolve ficha vazia.** Bloco ausente, bloco trocado, texto que não
+confere, JSON inválido — no formato antigo ou em blocos — respondem `ficha_ilegivel`
+com o `motivo` (`bloco_ausente`, `bloco_duplicado`, `integridade`, `json`, `vazia`,
+`manifesto_ausente`, `manifesto_ilegivel`, `formato_desconhecido`). Até a v2.14, JSON
+corrompido virava ficha em branco — e ficha em branco na tela é ficha que alguém
+edita e salva por cima da original. Nenhuma gravação parcial (ajuste do mestre,
+resumo, duplicação) toca numa ficha que não se montou.
+
+### Uma resposta perdida não aplica duas vezes
+
+Cada gravação de ficha leva um `operacaoId`. Quando a resposta não chega (prazo,
+rede), o navegador repete o **mesmo** pedido — mesma ficha, mesma revisão, mesmo id.
+O manifesto guarda o id da última gravação que subiu a revisão e a revisão que ela
+produziu: se os dois batem, a gravação já está aplicada, e o servidor responde
+`{ ok: true, repetida: true }` sem aplicar de novo — em vez de acusar conflito com a
+própria gravação. Criar e duplicar guardam o id no manifesto do personagem criado (e,
+por dez minutos, no cache): a mesma criação chegando de novo devolve o personagem
+que a primeira criou.
+
+### A migração
+
+Não há migração em massa. `setupRama()` cria a aba e a coluna e não toca em ficha
+nenhuma. Uma ficha no formato antigo é lida como sempre foi e passa para blocos na
+**primeira gravação que der certo** — a ficha salva, o ajuste do mestre, o resumo
+de recursos. Até lá nada muda para ela. Planilha sem o setup desta versão: as fichas
+antigas abrem; salvar responde `instalacao_incompleta`, sem gravar nada.
+
+### A limpeza
+
+Cada gravação apaga as gerações velhas da própria ficha (passo 6). Excluir um
+personagem apaga todas as gerações dele, e só dele. O que sobra — uma exclusão cuja
+limpeza falhou, uma criação que parou antes da linha — é recolhido por
+`limparBlocosOrfaos()`, rodada à mão no editor: ela nunca apaga a geração ativa nem a
+anterior de ninguém, nem os blocos de uma ficha cujo manifesto esta versão não
+entende, e espera dez minutos antes de apagar blocos de um personagem que não existe.
+`conferirInstalacao()` avisa quando há blocos sem dono.
+
+### Recuperação
+
+Rodadas à mão no editor do Apps Script (nenhuma está no roteamento):
+
+- `diagnosticarPersonagem(id)` — formato, manifesto, revisão do manifesto contra a da
+  linha, e a conferência da geração ativa e da anterior (CONFERE / NÃO CONFERE, com o
+  motivo). Não imprime o conteúdo da ficha.
+- `restaurarGeracaoAnterior(id)` — confere a geração anterior inteira e a faz voltar
+  a valer; a revisão sobe e a geração que valia vira a "anterior", sem ser apagada.
+  Com a geração ativa conferindo, recusa — a menos que se passe `true` como segundo
+  argumento, para desfazer a última gravação de propósito.
+
+Se nem a anterior conferir: a cópia exportada da ficha (Opções da ficha → Exportar
+ficha → Baixar arquivo, importável no Perfil) ou o histórico de versões da planilha
+no Google Drive.
+
+### Voltar a uma versão anterior do backend
+
+Uma implantação **anterior à v2.15** não entende blocos. Com ela:
+
+- fichas no formato antigo continuam funcionando normalmente;
+- fichas em blocos aparecem como o **aviso**: o site recusa abrir para edição. Um
+  site anterior a esse cuidado mostraria uma ficha com o nome "⚠ … — atualize o
+  servidor";
+- uma gravação feita assim mesmo por um servidor antigo só reescreve a linha até
+  `fichaJson`: o manifesto (`armazenamento`, depois dela) e os blocos ficam intactos,
+  e voltam a valer quando a v2.15 for implantada de novo. O que se escreveu por cima
+  do aviso nessa janela se perde (era edição do aviso, não da ficha), o nome da
+  listagem fica o do aviso até a próxima gravação, e `diagnosticarPersonagem` aponta
+  a revisão do manifesto diferente da coluna.
+
+Isso foi conferido rodando o backend **real** da v2.14 sobre a mesma planilha
+simulada: gravar pela v2.14 e reimplantar a v2.15 devolve a ficha idêntica. E só é
+verdade porque o mapa de colunas guardado no cache leva a assinatura do esquema
+(ver "Por que os cabeçalhos ficam em cache" em `Dados.gs`): sem ela, a v2.14 usaria
+o mapa da v2.15 — onze colunas — e gravaria vazio no manifesto.
+
+Por isso: **não volte a implantação sem necessidade**. Se precisar, volte e
+reimplante a v2.15 o quanto antes. Para desfazer a v2.15 de verdade seria preciso
+converter as fichas em blocos de volta para `fichaJson` — o que só cabe para as
+fichas abaixo de 45 000 caracteres, justamente as que não precisavam de blocos.
+
+### Permissões
+
+Nenhuma ação lê ou recebe blocos, gerações ou manifestos. Tudo passa pela mesma
+conferência de acesso do personagem (`personagemAcessivel`): conhecer o id de um
+personagem ou de uma geração não abre nada. As ferramentas de diagnóstico,
+restauração e limpeza só rodam no editor do Apps Script.
 
 ## HOMEBREW
 
@@ -347,7 +558,8 @@ Dois mecanismos, para dois problemas:
 |---|---|
 | **LockService** | duas execuções do script escrevendo ao mesmo tempo e embaralhando linhas |
 | **`rev`** | alguém salvando por cima de uma versão que já mudou |
-| **id da operação** | a mesma gravação chegando duas vezes porque a resposta se perdeu — o `id` da rolagem em `CAMPANHA_ROLAGENS`, o `opId` do lote em `CAMPANHA_COMBATES` |
+| **id da operação** | a mesma gravação chegando duas vezes porque a resposta se perdeu — o `id` da rolagem em `CAMPANHA_ROLAGENS`, o `opId` do lote em `CAMPANHA_COMBATES`, o `operacaoId` da ficha no manifesto (v2.15) |
+| **`SpreadsheetApp.flush()`** | a trava solta com escritas ainda no buffer do Apps Script, e a próxima execução lendo a planilha sem elas (v2.15) |
 
 Nenhum substitui os outros. Sem trava, duas gravações simultâneas podem corromper
 a linha; sem `rev`, a segunda apaga em silêncio o trabalho da primeira mesmo
@@ -356,6 +568,31 @@ novo ou passaria dois turnos.
 
 ## Limites
 
-Uma célula do Sheets aceita 50 000 caracteres. O servidor recusa acima de
-**45 000** com `dados_grandes`, deixando margem — e recusar é melhor do que
-truncar, que perderia dados sem avisar.
+Três números diferentes, centralizados em `backend/Dados.gs`:
+
+| limite | quanto | o que protege |
+|---|---|---|
+| `MAX_CELULA` | 45 000 caracteres | **uma célula.** O Google aceita 50 000; 45 000 deixa margem. Vale para cada bloco de ficha e para todo campo que ainda mora numa célula só. Acima dele o servidor recusa com `dados_grandes` — recusar é melhor do que truncar, que perderia dados sem avisar. |
+| `LIMITE_TOTAL_FICHA` | 1 000 000 caracteres | **uma ficha inteira.** Não é teto do Google (são 23 blocos). É o ponto a partir do qual cada salvamento automático — que envia e regrava a ficha inteira — segura a trava de todo o sistema por segundos, e numa mesa de vinte pessoas a gravação de uma vira espera para as outras. Acima dele: `ficha_grande_demais`, com o tamanho e o limite; nada é gravado, e o site mantém tudo na tela, oferece exportar e não fica tentando de novo sozinho. Quem precisar de mais muda o número — o site não guarda cópia dele. |
+| requisição e execução | 6 min por execução no Apps Script | uma ficha dentro do limite acima fica muito longe dos dois. |
+
+Uma ficha deixou de ter o limite de uma célula (v2.15). Os campos de dentro da
+ficha continuam com os limites próprios do modelo, em `js/ficha.js` — uma anotação
+tem até 20 000 caracteres, a descrição de um ritual até 8 000, a de um item até
+2 000; a ficha cresce com mais anotações, rituais e habilidades, não com um campo
+só. Esses limites não são do armazenamento.
+
+### Os outros campos grandes
+
+Conferidos na v2.15. Todos recusam acima de `MAX_CELULA` em vez de cortar; nenhum
+foi migrado — a camada de blocos (`gravarGeracao` / `lerGeracoes` em `Dados.gs`)
+recebe a aba de blocos como parâmetro e pode ser usada por outro deles quando
+precisar, com uma aba `_BLOCOS` própria.
+
+| campo | o que guarda | risco de passar do limite |
+|---|---|---|
+| `CAMPANHA_COMBATES.dadosJson` | participantes (até 200, criaturas com o snapshot inteiro), turno e os últimos 40 `opId` | **médio** — um combate com muitas criaturas de ficha longa. É o próximo candidato aos blocos |
+| `CAMPANHA_NOTAS.conteudo` | uma nota do mestre | médio — nota muito longa; dá para dividir em duas |
+| `HOMEBREW.dadosJson` | um item, criatura, habilidade ou ritual | baixo — só uma criatura com textos enormes |
+| imagens (`PERFIS.avatar`, `PERSONAGENS_FOTOS`, `CRIATURAS_IMAGENS`, `CAMPANHA_DOCUMENTOS_IMAGENS`, `CAMPANHA_CAPAS`) | data URL comprimida no navegador | baixo — o navegador reduz antes de enviar |
+| `CAMPANHAS.dadosJson`, `CAMPANHA_ROLAGENS.dadosJson`, `visiveisJson`, `preferenciasJson` | configuração, uma rolagem, listas de ids | nenhum na prática |

@@ -158,6 +158,22 @@
       return;
     }
 
+    /* O aviso que o servidor v2.15 deixa no lugar da ficha, quando a
+       ficha está em blocos. Só chega aqui se o Apps Script implantado for
+       ANTERIOR à v2.15 — ele não sabe montar os blocos e entrega o aviso
+       como se fosse a ficha. Abrir para edição e salvar por cima seria
+       gravar o aviso; a página para e diz o que fazer. */
+    if (rFicha.dados && rFicha.dados._armazenamento) {
+      U.trocar(alvo, UI.vazio({
+        titulo: "O servidor precisa ser atualizado",
+        texto: "Esta ficha está guardada em blocos (R.A.M.A. v2.15), e o Apps Script em uso é de uma versão anterior, " +
+               "que não sabe montá-la. Nada foi perdido. Quem administra o R.A.M.A. precisa implantar a versão atual do " +
+               "Apps Script; depois disso, recarregue esta página.",
+        acao: { rotulo: "Recarregar", aoClicar: function () { location.reload(); } },
+      }));
+      return;
+    }
+
     /* Uma ficha gravada por uma versão MAIS NOVA do R.A.M.A. — outra aba,
        outro aparelho, já atualizado — pode ter campos que este código
        não conhece. Normalizar e gravar aqui os descartaria. A página
@@ -289,9 +305,14 @@
 
       instantaneo: function () { return estado.ficha; },
 
-      enviar: function (dados, revisao) {
-        return global.RAMAApi.salvarPersonagem(estado.personagemId, revisao, comResumo(dados));
+      enviar: function (dados, revisao, operacaoId) {
+        return global.RAMAApi.salvarPersonagem(estado.personagemId, revisao, comResumo(dados), operacaoId);
       },
+
+      /* Um erro que tentar de novo sozinho não resolve (a ficha passou do
+         limite total, ou a versão guardada não se monta). Nada do que está
+         na tela se perde; o aviso diz o motivo e oferece a cópia. */
+      aoErroPermanente: avisarErroPermanente,
 
       aplicar: function (conciliada) {
         estado.ficha = F.normalizarFicha(conciliada);
@@ -303,6 +324,19 @@
 
     estado.salvador.definirBase(estado.ficha, rev);
     estado.indicador.salvoAgora();
+  }
+
+  /* O aviso fica até a pessoa fechar, com a saída à mão: exportar o que
+     está na tela. Exportar não substitui salvar — é a garantia de que,
+     enquanto o servidor não aceita, a versão local não depende de a aba
+     continuar aberta. */
+  function avisarErroPermanente(resposta) {
+    var f = global.RAMAApi.frase(resposta);
+    UI.aviso(f.titulo + " — " + f.texto, {
+      tipo: "erro",
+      duracao: 600000,
+      acao: { rotulo: "Exportar ficha", aoClicar: exportar },
+    });
   }
 
   /* O máximo de PV, PE e Sanidade vai junto de toda gravação de ficha
@@ -592,6 +626,34 @@
      EXPORTAR
      ================================================================= */
 
+  /* O nome do arquivo baixado: o nome da ficha, sem o que um sistema de
+     arquivos recusaria. */
+  function nomeDoArquivo() {
+    var base = String(estado.ficha.nome || "ficha").normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+      .replace(/[^A-Za-z0-9 _-]+/g, "").trim().replace(/\s+/g, "-").slice(0, 60) || "ficha";
+    return base + ".rama.json";
+  }
+
+  /* Uma ficha grande em uma caixa de texto é difícil de copiar inteira;
+     o arquivo vem pronto. É também a cópia de segurança quando o servidor
+     não aceita a gravação. */
+  function baixar(texto) {
+    try {
+      var blob = new Blob([texto], { type: "application/json" });
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement("a");
+      a.href = url;
+      a.download = nomeDoArquivo();
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(function () { URL.revokeObjectURL(url); }, 10000);
+      UI.avisoOk("Arquivo gerado: " + a.download);
+    } catch (e) {
+      UI.avisoAtencao("Não foi possível gerar o arquivo neste navegador — copie o texto da caixa.");
+    }
+  }
+
   function exportar() {
     var pacote = global.RAMAValidacao.exportar("personagem", estado.ficha);
     var texto = JSON.stringify(pacote, null, 2);
@@ -609,8 +671,12 @@
       ],
       botoes: [
         {
-          rotulo: "Copiar",
+          rotulo: "Baixar arquivo",
           classe: "r-botao--principal",
+          aoClicar: function () { baixar(texto); },
+        },
+        {
+          rotulo: "Copiar",
           aoClicar: async function () {
             try {
               await navigator.clipboard.writeText(texto);

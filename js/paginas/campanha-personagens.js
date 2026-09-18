@@ -325,7 +325,12 @@
             }))
         : null,
 
-      recursos.length
+      r.ilegivel
+        ? el("p.t-mini.mesa-cartao__reservado", {
+            texto: "A ficha deste personagem não se montou por inteiro no arquivo. Nada foi alterado; os números " +
+                   "ficam escondidos até ela ser recuperada — abra a ficha para ver o motivo.",
+          })
+        : recursos.length
         ? el("div.mesa-recursos", {}, recursos)
         : (r.recursosOcultos
             ? el("p.t-mini.mesa-cartao__reservado", { texto: "Status ocultos pelo mestre." })
@@ -541,8 +546,12 @@
 
     painel.fila = global.RAMAFila.criar({
       enviar: function (a) {
+        /* Um id por ajuste, criado no primeiro envio e mantido nas
+           repetições: é por ele que o servidor reconhece o mesmo ajuste
+           chegando de novo quando a resposta se perdeu. */
+        if (!a.operacaoId) a.operacaoId = global.RAMAApi.novaOperacao();
         return global.RAMAApi.ajustarPersonagem(
-          a.personagem.id, a.personagem.rev, a.alvo, a.itemId, a.campo, a.valor, painel.ctx.campanhaId
+          a.personagem.id, a.personagem.rev, a.alvo, a.itemId, a.campo, a.valor, painel.ctx.campanhaId, a.operacaoId
         );
       },
 

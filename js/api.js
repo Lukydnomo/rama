@@ -80,6 +80,30 @@
 
   function podeRepetir(acao) { return IDEMPOTENTES.indexOf(acao) >= 0; }
 
+  /* Criações que levam um id de operação (v2.15). Sem o id, repetir
+     criaria dois personagens; COM ele, o servidor reconhece a segunda
+     chegada e devolve o personagem que a primeira criou. É o caso da
+     importação de uma ficha grande que estoura o prazo do navegador
+     enquanto o servidor ainda termina de gravar.
+
+     salvar_personagem e ajustar_personagem também levam id, mas NÃO
+     entram aqui: quem os repete é o salvador e a fila, com espera
+     crescente e o MESMO pedido — repetir de novo aqui embaixo, com prazo
+     curto, só empilharia pedidos iguais na trava do servidor. */
+  var REPETIVEIS_COM_CHAVE = {
+    criar_personagem: true,
+    duplicar_personagem: true,
+  };
+
+  function podeRepetirPedido(dados) {
+    return podeRepetir(dados.acao) || (!!REPETIVEIS_COM_CHAVE[dados.acao] && !!dados.operacaoId);
+  }
+
+  /* Um id por intenção de gravar. Vai no pedido e, se a resposta se
+     perder, vai IGUAL na repetição — é por ele que o servidor sabe que
+     é a mesma gravação. */
+  function novaOperacao() { return "op-" + global.RAMAUtil.uuid(); }
+
   /* =================================================================
      DEDUPLICAÇÃO DE PEDIDOS EM VOO
      -----------------------------------------------------------------
@@ -233,7 +257,7 @@
   }
 
   async function enviar(dados) {
-    var r = await global.RAMARede.postar(dados, { repetir: podeRepetir(dados.acao) });
+    var r = await global.RAMARede.postar(dados, { repetir: podeRepetirPedido(dados) });
 
     /* Sessão morta é assunto de autenticação, não de tela: quem
        descobre avisa o RAMAAuth, que limpa e leva ao portão. Sem isto
@@ -356,14 +380,23 @@
     return post({ acao: "ler_personagem", personagemId: id });
   }
 
+  /* A criação (e a importação, que é uma criação) leva um id de
+     operação: repetida porque a resposta não chegou, não vira dois. */
   function criarPersonagem(dados) {
-    return post({ acao: "criar_personagem", dados: dados });
+    return post({ acao: "criar_personagem", dados: dados, operacaoId: novaOperacao() });
   }
 
   /* A rev é obrigatória: é ela que impede sobrescrever em silêncio o
-     que outro aparelho gravou enquanto esta tela estava aberta. */
-  function salvarPersonagem(id, rev, dados) {
-    return post({ acao: "salvar_personagem", personagemId: id, rev: rev, dados: dados });
+     que outro aparelho gravou enquanto esta tela estava aberta.
+
+     `operacaoId` identifica ESTA gravação. O salvador manda o mesmo id
+     quando repete o mesmo pedido depois de uma falha de rede: se o
+     servidor já tinha gravado, ele responde que deu certo em vez de
+     aplicar de novo — ou de acusar um conflito com a própria gravação. */
+  function salvarPersonagem(id, rev, dados, operacaoId) {
+    var corpo = { acao: "salvar_personagem", personagemId: id, rev: rev, dados: dados };
+    if (operacaoId) corpo.operacaoId = operacaoId;
+    return post(corpo);
   }
 
   function excluirPersonagem(id) {
@@ -371,7 +404,7 @@
   }
 
   function duplicarPersonagem(id) {
-    return post({ acao: "duplicar_personagem", personagemId: id });
+    return post({ acao: "duplicar_personagem", personagemId: id, operacaoId: novaOperacao() });
   }
 
   /* A foto anda fora da ficha, e por um motivo prático: ela é o campo
@@ -493,12 +526,16 @@
      ficha — é o mesmo controle sobre um payload menor. */
   /* `campanhaId` (opcional): o servidor confere que o personagem
      continua nesta campanha antes de ajustar. */
-  function ajustarPersonagem(personagemId, rev, alvo, itemId, campo, valor, campanhaId) {
+  /* `operacaoId` (opcional): a fila do painel manda o mesmo id quando
+     repete o mesmo ajuste, para uma resposta perdida não virar um
+     conflito com o próprio ajuste. */
+  function ajustarPersonagem(personagemId, rev, alvo, itemId, campo, valor, campanhaId, operacaoId) {
     var corpo = {
       acao: "ajustar_personagem", personagemId: personagemId, rev: rev,
       alvo: alvo, itemId: itemId, campo: campo, valor: valor,
     };
     if (campanhaId) corpo.campanhaId = campanhaId;
+    if (operacaoId) corpo.operacaoId = operacaoId;
     return post(corpo);
   }
 
@@ -662,7 +699,28 @@
     },
     instalacao_incompleta: {
       titulo: "SERVIDOR INCOMPLETO",
-      texto: "Falta um arquivo no Apps Script. Confira se Dados.gs, Codigo.gs e Campanhas.gs estão todos no projeto e reimplante.",
+      texto: "Falta uma parte da instalação no Apps Script: um dos arquivos (Dados.gs, Codigo.gs, Campanhas.gs) ou uma aba da planilha. " +
+             "Quem administra o R.A.M.A. confere os três arquivos e roda setupRama() no editor. O que você fez continua aqui.",
+    },
+    /* v2.15 — a ficha em blocos. Nenhuma destas frases sugere apagar
+       habilidades, rituais ou anotações: o problema nunca é o que a
+       pessoa escreveu. */
+    ficha_ilegivel: {
+      titulo: "A FICHA NÃO SE MONTOU POR INTEIRO",
+      texto: "Uma parte do que está guardado desta ficha não confere com a verificação do arquivo. Por segurança ela não abre " +
+             "nem é gravada por cima: nada foi alterado nem apagado. Quem administra o R.A.M.A. pode conferir e recuperar a " +
+             "versão anterior no Apps Script (diagnosticarPersonagem e restaurarGeracaoAnterior).",
+    },
+    armazenamento_falhou: {
+      titulo: "O ARQUIVO NÃO CONFIRMOU A GRAVAÇÃO",
+      texto: "A planilha não confirmou esta versão. A versão anterior continua guardada e intacta, e o que você fez continua " +
+             "neste aparelho — a gravação é repetida sozinha.",
+    },
+    dados_grandes: {
+      titulo: "CONTEÚDO GRANDE DEMAIS PARA UM CAMPO",
+      texto: "Este conteúdo passou do tamanho que um campo da planilha aceita (imagem, nota, item ou combate). Nada foi " +
+             "gravado pela metade. Se isto apareceu ao salvar uma ficha, o servidor ainda é de uma versão anterior à v2.15: " +
+             "quem administra o R.A.M.A. precisa implantar o Apps Script atual.",
     },
     acao_desconhecida: {
       titulo: "OPERAÇÃO NÃO RECONHECIDA",
@@ -670,8 +728,27 @@
     },
   };
 
+  function milhares(n) {
+    return String(Math.round(Number(n) || 0)).replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+  }
+
   function frase(resposta) {
     var codigo = (resposta && resposta.erro) || "servidor_falhou";
+
+    /* O limite de uma ficha inteira. Os números vêm do servidor — o site
+       não guarda cópia dele, então quem mudar o limite lá não precisa
+       mudar nada aqui. */
+    if (codigo === "ficha_grande_demais") {
+      var tamanho = resposta.tamanho ? milhares(resposta.tamanho) + " caracteres" : "o tamanho atual";
+      var limite = resposta.limite ? milhares(resposta.limite) : "o limite";
+      return {
+        titulo: "A FICHA PASSOU DO LIMITE DE GRAVAÇÃO",
+        texto: "Esta ficha tem " + tamanho + ", e o servidor aceita até " + limite + " por gravação — um limite de operação, " +
+               "para cada salvamento não segurar a mesa inteira. Nada foi perdido: o que está na tela continua aqui. Exporte uma " +
+               "cópia em Opções da ficha → Exportar ficha e avise quem administra o R.A.M.A. (o limite fica em backend/Dados.gs).",
+      };
+    }
+
     var f = FRASES[codigo];
     if (f) return f;
     return {
@@ -693,6 +770,8 @@
     operacoesEmAndamento: resumoDasOperacoes,
     aceitaLote: function () { return servidorAceitaLote; },
     podeRepetir: podeRepetir,
+    podeRepetirPedido: podeRepetirPedido,
+    novaOperacao: novaOperacao,
     ehErroDeSessao: ehErroDeSessao,
 
     login: login,

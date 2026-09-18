@@ -25,6 +25,24 @@
    E quando o servidor recusa por revisão, ninguém recarrega nada: o
    RAMASync compara as três versões e só o que os dois lados mudaram
    vira pergunta.
+
+   A RESPOSTA QUE SE PERDEU (v2.15)
+   ---------------------------------------------------------------------
+   Cada gravação leva um id de operação. Quando ela falha no caminho —
+   sem rede, prazo estourado, servidor que tropeçou —, o que volta a
+   ser enviado é o MESMO pedido: mesma ficha, mesma revisão, mesmo id.
+   Se o servidor tinha gravado e só a resposta se perdeu, é pelo id que
+   ele reconhece a repetição e responde que deu certo — em vez de
+   aplicar de novo ou de acusar um conflito com a própria gravação. O
+   que mudou na tela nesse meio-tempo sobe no pedido seguinte.
+
+   O QUE REPETIR NÃO RESOLVE
+   ---------------------------------------------------------------------
+   Ficha acima do limite total, versão guardada que não se monta: tentar
+   de novo daria a mesma resposta para sempre. O salvador para de
+   insistir sozinho, mantém tudo o que está na tela como pendente e
+   entrega o motivo a quem chamou, que mostra a saída (exportar a
+   ficha). "Salvar agora" tenta outra vez.
    ===================================================================== */
 
 (function (global) {
@@ -54,13 +72,31 @@
     return base + Math.floor(Math.random() * JANELA_ALEATORIA);
   }
 
+  /* Respostas que repetir sozinho não muda. `dados_grandes` só chega numa
+     ficha quando o servidor ainda é anterior à v2.15. */
+  var ERROS_QUE_PARAM = {
+    ficha_grande_demais: true,
+    ficha_ilegivel: true,
+    dados_grandes: true,
+  };
+
+  function novaOperacao() {
+    return global.RAMAApi && global.RAMAApi.novaOperacao
+      ? global.RAMAApi.novaOperacao()
+      : "op-" + U.uuid();
+  }
+
   /* criar({
        indicador,     objeto de RAMAUI.indicador
        instantaneo(), devolve o que deve ser gravado, já copiado
-       enviar(dados, rev), faz a chamada e devolve a resposta da API
+       enviar(dados, rev, operacaoId), faz a chamada e devolve a
+                      resposta da API. O id é o mesmo quando o pedido
+                      é repetido.
        aplicar(estado, rev), coloca o resultado da conciliação na tela
        esquema,       para o RAMASync
        aoSalvar(rev)  opcional
+       aoErroPermanente(resposta)  opcional: o servidor recusou por um
+                      motivo que repetir não muda (ver ERROS_QUE_PARAM)
      }) */
   function criar(opcoes) {
     var o = opcoes || {};
@@ -75,6 +111,14 @@
     var tentativa = 0;
     var conciliacoes = 0;
     var timer = null;
+
+    /* O pedido que falhou no caminho e vai de novo, igual. */
+    var repeticao = null;
+    /* Houve alteração depois do instantâneo que está voando ou esperando
+       para ser repetido? Então há mais a enviar depois dele. */
+    var novidades = false;
+    /* A resposta de um erro que repetir sozinho não resolve. */
+    var bloqueio = null;
 
     function definirBase(estado, novaRev) {
       base = U.copiar(estado);
@@ -97,33 +141,47 @@
       }
 
       pendente = true;
+      if (emVoo || repeticao) novidades = true;
+
+      /* Depois de um erro que repetir não resolve, cada tecla não vira
+         um pedido: a alteração fica pendente e sobe no "Salvar agora". */
+      if (bloqueio) { estadoVira("erro"); return; }
+
       estadoVira(tentativa ? "offline" : "pendente");
       clearTimeout(timer);
       timer = setTimeout(enviar, espera);
     }
 
     /* Sobe agora, sem esperar o debounce. Para sair da página ou trocar
-       de aba sem deixar nada para trás. */
+       de aba sem deixar nada para trás — e para tentar de novo depois de
+       um erro que parou as tentativas automáticas. */
     function agora() {
       clearTimeout(timer);
+      bloqueio = null;
       return enviar();
     }
 
     async function enviar() {
-      if (travado || emVoo || !pendente || conflitoAberto) return;
+      if (travado || emVoo || !pendente || conflitoAberto || bloqueio) return;
+
+      /* Um pedido que falhou no caminho vai de novo IGUAL. Só sem ele é
+         que se tira um instantâneo novo — cópia de verdade: se apontasse
+         para o estado vivo, a BASE mudaria junto com a tela e deixaria
+         de servir como ponto de partida da conciliação. */
+      var envio = repeticao;
+      repeticao = null;
+      if (!envio) {
+        envio = { dados: U.copiar(o.instantaneo()), rev: rev, operacaoId: novaOperacao() };
+        novidades = false;
+      }
 
       emVoo = true;
       pendente = false;
       estadoVira("salvando");
 
-      /* Cópia de verdade. Se isto apontasse para o estado vivo, a BASE
-         mudaria junto com a tela e deixaria de servir como ponto de
-         partida da conciliação. */
-      var instantaneo = U.copiar(o.instantaneo());
-
       var r;
       try {
-        r = await o.enviar(instantaneo, rev);
+        r = await o.enviar(envio.dados, envio.rev, envio.operacaoId);
       } catch (e) {
         r = { ok: false, erro: "sem_conexao" };
         console.error("[R.A.M.A. · salvar] exceção ao enviar", e);
@@ -132,10 +190,12 @@
       emVoo = false;
 
       if (r && r.ok) {
-        rev = U.inteiro(r.rev, rev + 1);
-        base = instantaneo;
+        rev = U.inteiro(r.rev, envio.rev + 1);
+        base = envio.dados;
         tentativa = 0;
         conciliacoes = 0;
+        if (novidades) pendente = true;
+        novidades = false;
 
         document.dispatchEvent(new CustomEvent("rama:atividade"));
 
@@ -143,11 +203,11 @@
         if (pendente) { estadoVira("pendente"); clearTimeout(timer); timer = setTimeout(enviar, 0); }
         else if (o.indicador) o.indicador.salvoAgora();
 
-        if (o.aoSalvar) o.aoSalvar(rev, instantaneo);
+        if (o.aoSalvar) o.aoSalvar(rev, envio.dados);
         return;
       }
 
-      if (r && r.erro === "conflito") { conciliar(r, instantaneo); return; }
+      if (r && r.erro === "conflito") { conciliar(r, envio.dados); return; }
 
       if (r && global.RAMAApi.ehErroDeSessao(r.erro)) {
         travado = true;
@@ -155,8 +215,23 @@
         return;
       }
 
-      /* Falha de transporte: reagenda com espera crescente e mantém o
-         que estava para enviar. Nada se perde. */
+      /* Um erro que repetir não resolve: nada se perde — tudo continua
+         pendente —, mas as tentativas automáticas param e quem chamou
+         mostra o motivo e a saída. */
+      if (r && ERROS_QUE_PARAM[r.erro]) {
+        pendente = true;
+        bloqueio = r;
+        tentativa = 0;
+        clearTimeout(timer);
+        estadoVira("erro");
+        if (o.aoErroPermanente) o.aoErroPermanente(r);
+        else global.RAMAUI.avisoErro(global.RAMAApi.recado(r));
+        return;
+      }
+
+      /* Falha no caminho ou do servidor: o MESMO pedido volta, com espera
+         crescente. Nada se perde. */
+      repeticao = envio;
       pendente = true;
       tentativa++;
 
@@ -170,7 +245,7 @@
         global.RAMAUI.aviso(
           semRede
             ? "Sem conexão com o arquivo — as alterações continuam aqui e sobem sozinhas."
-            : "O servidor recusou a gravação — vou tentar de novo.",
+            : global.RAMAApi.recado(r) + " Vou tentar de novo.",
           { tipo: semRede ? "atencao" : "erro" }
         );
       }
@@ -259,7 +334,7 @@
     /* A rede voltou: quem estava esperando sobe agora, sem esperar o
        fim do backoff. */
     function aoVoltarAConexao() {
-      if (pendente && !emVoo && !travado && !conflitoAberto) {
+      if (pendente && !emVoo && !travado && !conflitoAberto && !bloqueio) {
         tentativa = 0;
         clearTimeout(timer);
         timer = setTimeout(enviar, 200);
@@ -293,6 +368,7 @@
       revisao: revisaoAtual,
       temPendencia: function () { return pendente || emVoo; },
       emConflito: function () { return conflitoAberto; },
+      bloqueio: function () { return bloqueio; },
       travar: function () { travado = true; clearTimeout(timer); },
       parar: function () {
         clearTimeout(timer);

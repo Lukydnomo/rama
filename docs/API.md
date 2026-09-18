@@ -75,7 +75,10 @@ página de erro quando estoura), o `rede.js` reconhece pelo que é e converte em
 | `servidor_falhou`  | resposta inesperada, sem JSON                        |
 | `acao_desconhecida`| o campo `acao` não existe                            |
 | `dados_invalidos`  | o corpo não passou na validação                      |
-| `dados_grandes`    | o JSON não cabe numa célula                          |
+| `dados_grandes`    | um campo de célula única (imagem, nota do mestre, homebrew, combate) passou do limite seguro da célula. Numa **ficha** só aparece com servidor anterior à v2.15 |
+| `ficha_grande_demais` | a ficha inteira passou do limite operacional (`LIMITE_TOTAL_FICHA`); vem com `tamanho` e `limite`. Nada é gravado |
+| `ficha_ilegivel`   | o conteúdo guardado da ficha não se montou; vem com `motivo`. Nada é gravado, nunca volta ficha vazia |
+| `armazenamento_falhou` | a planilha não confirmou a gravação dos blocos; vem com `etapa`. A versão anterior continua valendo — repetir o mesmo pedido é seguro |
 | `sem_token`        | não veio token                                       |
 | `sessao`           | token não reconhecido ou encerrado                   |
 | `expirada`         | sessão vencida                                       |
@@ -86,7 +89,7 @@ página de erro quando estoura), o `rede.js` reconhece pelo que é e converte em
 | `conflito`         | a revisão mudou; vem com `rev` e `dados`             |
 | `ocupado`          | a trava não foi obtida em 25 s                       |
 | `sem_permissao`    | você alcança a campanha, mas não esta ação nela      |
-| `instalacao_incompleta` | falta um dos três `.gs`, ou o cabeçalho de uma aba ficou ilegível |
+| `instalacao_incompleta` | falta um dos três `.gs`, o cabeçalho de uma aba ficou ilegível, ou o `setupRama()` desta versão não rodou (a aba `PERSONAGENS_BLOCOS` não existe) |
 
 > **`nao_encontrado` também cobre "existe, mas é de outra conta".** Distinguir os
 > dois confirmaria que aquele id existe — o mesmo motivo pelo qual login errado
@@ -130,6 +133,19 @@ E três casos especiais, que só estão aqui por causa de uma chave:
   lote chegando de novo responde `repetida: true` e **não** é aplicado outra vez.
 - `atualizar_resumo_personagem` substitui um valor derivado, e só se a revisão da
   ficha ainda for a mesma: repetir grava o mesmo número ou é recusado por revisão.
+
+E, desde a v2.15, as gravações de ficha levam um `operacaoId` (texto de 8 a 80
+caracteres, `[A-Za-z0-9_-]`):
+
+- `criar_personagem` e `duplicar_personagem` **com** `operacaoId` podem ser repetidas
+  pelo transporte: a mesma criação chegando de novo devolve o personagem que a
+  primeira criou (`repetida: true`), em vez de criar outro. Sem o id, continuam sendo
+  tentadas uma vez só.
+- `salvar_personagem` e `ajustar_personagem` NÃO são repetidas pelo transporte —
+  quem as repete é o salvador da ficha e a fila do painel, com espera crescente e o
+  **mesmo** pedido (mesma ficha, mesma revisão, mesmo id). O servidor reconhece a
+  repetição pelo manifesto da ficha e responde `{ ok: true, repetida: true }` sem
+  aplicar de novo.
 
 ---
 
@@ -233,14 +249,23 @@ trinta nomes seriam megabytes por tela.
 #### `ler_personagem`
 ```js
 { acao: "ler_personagem", personagemId: "..." }
-→ { ok: true, rev: 12, dados: { ...ficha } }
+→ { ok: true, rev: 12, dono, mestre, dados: { ...ficha } }
+→ { ok: false, erro: "ficha_ilegivel", motivo: "bloco_ausente" }
 ```
+A ficha vem montada e conferida, no formato em que estiver guardada — numa célula
+(formato antigo) ou em blocos (v2.15); quem chama não vê diferença. `rev` é a da
+mesma leitura. `dados.campanhaId` vem da **coluna** do personagem, que é o que
+decide permissão. Se o conteúdo não se montar, a resposta é `ficha_ilegivel` com o
+motivo — **nunca** uma ficha vazia.
 
 #### `criar_personagem`
 ```js
-{ acao: "criar_personagem", dados: { ...ficha } }
+{ acao: "criar_personagem", dados: { ...ficha }, operacaoId?: "op-..." }
 → { ok: true, rev: 1, dados: { id: "..." } }
+→ { ok: true, rev: 1, dados: { id: "..." }, repetida: true }   // a mesma criação de novo
+→ { ok: false, erro: "ficha_grande_demais", tamanho: 1234567, limite: 1000000 }
 ```
+É também a ação da importação. A ficha nasce em blocos.
 `ownerId` e `id` que venham no corpo são **descartados**. O dono sai da sessão;
 o id nasce no servidor. `campanhaId` só vale se a conta for mestre ou jogadora
 daquela campanha; senão vira vazio — na coluna e dentro da ficha guardada.
@@ -252,13 +277,26 @@ ficha universal não guarda resumo.
 
 #### `salvar_personagem`
 ```js
-{ acao: "salvar_personagem", personagemId: "...", rev: 12, dados: { ...ficha } }
+{ acao: "salvar_personagem", personagemId: "...", rev: 12, dados: { ...ficha }, operacaoId?: "op-..." }
 → { ok: true, rev: 13 }
+→ { ok: true, rev: 13, repetida: true }       // este mesmo pedido já tinha sido gravado
 → { ok: false, erro: "conflito", rev: 13, dados: { ...estadoDoServidor } }
+→ { ok: false, erro: "ficha_grande_demais", tamanho, limite }
+→ { ok: false, erro: "armazenamento_falhou", etapa: "blocos" | "conferencia" | "publicacao" }
+→ { ok: false, erro: "ficha_ilegivel", motivo }   // conflito, e o estado atual não se monta
 ```
 Se a revisão no servidor ainda for 12, grava e sobe para 13. Se já estiver em
 13, **recusa** e devolve o estado atual. Sobrescrever em silêncio seria mais
 simples de programar e apagaria o trabalho de alguém sem ninguém perceber.
+
+A exceção é a repetição: se a revisão mudou porque ESTE pedido já foi gravado — o
+`operacaoId` é o da última gravação que subiu a revisão —, a resposta é
+`repetida: true`. É o caso do servidor que terminou a gravação quando o navegador já
+tinha desistido de esperar a resposta.
+
+A gravação é em blocos, conferida antes de publicar, e troca conteúdo, revisão e
+espelhos numa gravação de uma linha — ver [DATABASE.md](DATABASE.md). A migração de
+uma ficha antiga para blocos acontece aqui, na primeira gravação que der certo.
 
 `dados.campanhaId`: do **dono**, vale se ele for mestre ou jogador da campanha
 (senão vira vazio). De quem **não é dono** (o mestre editando a ficha de um
@@ -270,10 +308,16 @@ discordarem.
 de uma versão do site que não o calculava — mantém o que já estava.
 
 #### `excluir_personagem`
-Remove a ficha e a foto.
+Remove a ficha, os blocos dela (todas as gerações, e só as dela) e a foto.
 
 #### `duplicar_personagem`
-Copia ficha e foto num registro novo, com `rev` 1 e " (cópia)" no nome.
+```js
+{ acao: "duplicar_personagem", personagemId: "...", operacaoId?: "op-..." }
+→ { ok: true, dados: { id: "..." } }
+```
+Copia ficha e foto num registro novo, com `rev` 1, " (cópia)" no nome e blocos
+próprios. Uma ficha que não se monta não é duplicada (`ficha_ilegivel`) — a cópia
+seria vazia.
 
 ---
 
@@ -380,8 +424,8 @@ Todas em `backend/Campanhas.gs`. A primeira linha de cada uma é
 | `salvar_participantes` | mestre | ids de usuário; quem sai leva os personagens junto |
 | `listar_personagens_campanha` | membro | identificação para todos; recursos atuais e máximos dos outros só com a ocultação desligada; dados de cálculo e `resumoRecursos` só para mestre e dono; nunca a ficha inteira. Espectador recebe lista vazia |
 | `atualizar_resumo_personagem` | dono ou mestre | máximo de PV, PE e SAN de ficha de Ordem, **com `rev`**; a revisão não sobe |
-| `vincular_personagem` | dono ou mestre | só entra ficha de quem é mestre ou jogador da campanha; tira da campanha anterior; é o que o botão "Adicionar personagem" usa |
-| `ajustar_personagem` | dono ou mestre | um campo, por id, **com `rev`** |
+| `vincular_personagem` | dono ou mestre | só entra ficha de quem é mestre ou jogador da campanha; tira da campanha anterior; é o que o botão "Adicionar personagem" usa. Grava só colunas (e o manifesto, que acompanha a revisão) — a ficha não é lida nem reescrita |
+| `ajustar_personagem` | dono ou mestre | um campo, por id, **com `rev`** e `operacaoId` opcional |
 | `registrar_rolagem` | membro | idempotente pelo `rolagemId` |
 | `listar_rolagens` | membro | paginado; oculta do mestre não sai para jogador |
 | `limpar_rolagens` | mestre | só daquela campanha |
@@ -408,6 +452,11 @@ virar 0. Com `campanhaId`, o personagem precisa continuar vinculado a ela
 (`nao_encontrado` se não estiver). Alvo ou campo fora dessa lista responde
 `dados_invalidos`. **Não é um caminho
 paralelo mais frouxo** — é o mesmo controle de revisão sobre um payload menor.
+
+Desde a v2.15 o ajuste lê a ficha inteira, conferida, e a grava de novo em blocos: o
+pedido é pequeno, o conteúdo é um só. Ficha que não se monta não é ajustada
+(`ficha_ilegivel`). Com `operacaoId`, o mesmo ajuste chegando de novo responde
+`{ ok: true, repetida: true, dados: { valor } }` sem aplicar outra vez.
 
 ### `registrar_rolagem`
 
@@ -481,6 +530,9 @@ imagem.
 
 Com `recursosVisiveis: false` (ocultação ligada, personagem de outra conta),
 `recursos` e `status` **não vêm** — não há o que esconder na tela.
+`fichaIlegivel: true` (v2.15): a ficha daquele personagem não se montou; o cartão
+vem só com a identificação, sem números e com `podeEditarRecursos: false`, e as
+outras fichas da mesa carregam normalmente.
 `recursosPendentes: true` quer dizer que a ficha de Ordem ainda não tem resumo
 guardado. `podeEditarRecursos`, `podeAbrirFicha` e `recursosVisiveis` são rótulos
 para a tela: `ajustar_personagem` e `ler_personagem` conferem de novo.
@@ -494,7 +546,7 @@ para a tela: `ajustar_personagem` e `ler_personagem` conferem de novo.
 ```
 
 Só ficha de Ordem (`dados_invalidos` na universal), só dono ou mestre da campanha
-da ficha, revisão obrigatória. Grava o resumo dentro do `fichaJson` **sem subir a
+da ficha, revisão obrigatória. Grava o resumo dentro da ficha **sem subir a
 revisão** — o resumo é derivado, e subir a revisão poria em conflito a ficha aberta
 em outro aparelho. Inteiros de −999 a 99.999; `san` pode ser `null` ("Jogando sem
 Sanidade"). O atual de cada recurso não entra: ele é lido de `ordem.recursos` na

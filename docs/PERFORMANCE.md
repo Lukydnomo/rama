@@ -21,14 +21,51 @@ planilha. Vinte chamadas pequenas costumam sair mais caro do que uma
 grande, e é por isso que a recomendação da documentação do Apps Script é
 sempre agrupar.
 
-**3. O volume que atravessa.** Uma célula com a ficha inteira tem
-milhares de caracteres. Ler quinhentas dessas para achar uma é caro
-mesmo sendo uma chamada só.
+**3. O volume que atravessa.** Uma ficha tem milhares de caracteres —
+dezenas de milhares numa ficha grande. Ler quinhentas dessas para achar
+uma é caro mesmo sendo uma chamada só.
 
 Otimizar aqui é reduzir os três — e às vezes um deles briga com o outro,
 como está explicado em `lerCelulas()` no `backend/Dados.gs`.
 
 ---
+
+## A ficha em blocos (v2.15)
+
+Desde a v2.15 a ficha mora em blocos (ver [DATABASE.md](DATABASE.md)), e isso
+custa chamadas: a gravação escreve os blocos, lê de volta para conferir, publica
+o manifesto e limpa a geração velha; a leitura varre as colunas curtas da aba de
+blocos e lê só as linhas daquela ficha.
+
+Contado pelo `testes/medir.js`, na mesma mesa de 20 contas e fichas pequenas
+(chamadas ao Sheets e dados que atravessam — **não é tempo**):
+
+| operação | v2.14 | v2.15 |
+|---|---|---|
+| `ler_personagem` | 5 | 9 |
+| `salvar_personagem` | 13 | 18 |
+| `ajustar_personagem` | 9 | 17 |
+| `listar_personagens` | 14 | 14 |
+| lote de abrir campanha | 27 | 32 |
+
+A listagem de personagens não mudou: ela lê as colunas curtas e nunca toca na aba
+de blocos (há teste para isso). O preço está na gravação e na abertura de UMA ficha
+— e é o preço de conferir cada gravação antes de publicar e cada leitura antes de
+entregar. Três coisas o mantêm baixo:
+
+- os blocos de uma geração nascem lado a lado, então ler ou conferir uma ficha
+  inteira é uma chamada, seja de 1 bloco ou de 20;
+- a limpeza é decidida pela varredura feita antes de gravar — o ajuste do mestre,
+  que já leu a ficha, não varre de novo — e a última linha vista pela varredura é
+  reaproveitada para acrescentar os blocos;
+- a grade da aba só é consultada quando a gravação não cabe nela, e aí cresce com
+  folga de 200 linhas.
+
+Numa ficha grande o que cresce é o VOLUME, não o número de chamadas: uma ficha de
+300 mil caracteres são 7 blocos, escritos numa chamada e conferidos noutra. Cada
+salvamento automático envia e regrava a ficha inteira — por isso o limite
+operacional `LIMITE_TOTAL_FICHA` (1 milhão de caracteres), explicado em
+[DATABASE.md](DATABASE.md#limites).
 
 ## A trava, que é o limite estrutural
 
@@ -58,7 +95,8 @@ simultâneas. Se a mesa crescer a ponto de a fila incomodar, o limite não
 ## Coluna leve e coluna pesada
 
 Toda aba tem colunas curtas — id, dono, nome, datas — e normalmente uma
-que carrega o peso: o `fichaJson`, a imagem em base64, o `dadosJson`.
+que carrega o peso: o conteúdo da ficha (em blocos desde a v2.15), a
+imagem em base64, o `dadosJson`.
 
 O `backend/Dados.gs` separa as duas:
 
@@ -260,8 +298,10 @@ Nunca meça carga na produção.
 ### 2. Encher com dados
 
 Rode isto no editor do Apps Script, ajustando os números. Ele usa as
-funções do próprio backend, então o que ele cria é indistinguível do que
-o sistema cria.
+funções do próprio backend. As fichas nascem no **formato antigo**
+(inteiras em `fichaJson`), que continua sendo lido; para medir fichas em
+blocos, salve cada uma uma vez pelo site depois de criá-las — ou crie-as
+pelo próprio site.
 
 ```javascript
 function encherParaMedir() {

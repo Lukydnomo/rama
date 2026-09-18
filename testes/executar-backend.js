@@ -11,7 +11,7 @@
    não é dele, mesmo mandando o pedido direto, sem passar pela interface.
    ===================================================================== */
 
-import { instalarAmbiente, chamar } from "./apps-script-simulado.js";
+import { instalarAmbiente, chamar, comoOSheetsGuarda } from "./apps-script-simulado.js";
 
 const ARQUIVOS = ["backend/Dados.gs", "backend/Codigo.gs", "backend/Campanhas.gs"];
 
@@ -2513,6 +2513,830 @@ await (async () => {
   }
   t.igual("400 combates sorteados, " + "ordem, normalização, próximo, anterior e remoção: nenhuma divergência", divergencias, 0);
   t.ok("  (e os casos foram mesmo comparados)", casos > 1800);
+})();
+
+/* =====================================================================
+   v2.15 — A FICHA EM BLOCOS
+   ---------------------------------------------------------------------
+   A ficha inteira morava numa célula, e a célula do Google aceita 50 mil
+   caracteres: a ficha que crescia deixava de salvar. Os testes abaixo
+   usam o simulador com o limite de célula, a conversão de tipos e a
+   grade de linhas do Google (ver apps-script-simulado.js) — sem isso, o
+   defeito original nem apareceria aqui.
+
+   Nenhum teste confia só em "o JSON.parse não estourou": o que sai é
+   comparado com o que entrou, campo por campo e texto por texto.
+   ===================================================================== */
+
+const folhaDe = (nome) => ambiente.planilha.getSheetByName(nome);
+const colunaDe = (aba, nome) => folhaDe(aba).linhas[0].indexOf(nome);
+const linhasDe = (aba) => folhaDe(aba).linhas.slice(1);
+const linhaDoPersonagem = (id) => linhasDe("PERSONAGENS").find((l) => l[colunaDe("PERSONAGENS", "id")] === id);
+const manifestoDoPersonagem = (id) => {
+  const v = (linhaDoPersonagem(id) || [])[colunaDe("PERSONAGENS", "armazenamento")];
+  return v ? JSON.parse(v) : null;
+};
+const blocosDoPersonagem = (id) => linhasDe("PERSONAGENS_BLOCOS").filter((l) => l[0] === id);
+const geracoesNaAba = (id) => new Set(blocosDoPersonagem(id).map((l) => l[1])).size;
+const maiorCelula = () => {
+  let maior = 0;
+  ambiente.planilha.folhas.forEach((f) => f.linhas.forEach((l) => l.forEach((v) => {
+    if (typeof v === "string" && v.length > maior) maior = v.length;
+  })));
+  return maior;
+};
+
+/* Um texto "rico": tudo o que costuma quebrar quem guarda texto. */
+const RICO = "Ação, ãé ç — “aspas” \"duplas\" 'simples' \\barra\\ \n quebra \r\n tab\t " +
+  "emoji 🐉 família 👩🏽‍🚀 bandeira 🇧🇷 =SOMA(A1:A9) +1 -2 12345 TRUE 'apóstrofo <b>html</b>   fim";
+
+/* Ficha universal com uma anotação longa: `conteudo` é o campo que
+   cresce, e é o que a comparação exata confere. */
+function fichaGrande(nome, conteudo) {
+  return {
+    nome: nome,
+    classe: "Ocultista",
+    atributos: [{ id: "at-for", nome: "Força", sigla: "FOR", valor: 2, dado: "1d20" }],
+    status: [{ id: "st-pv", nome: "PV", atual: 20, maximo: 20 }],
+    anotacoes: { pastas: [], soltas: [{ id: "n1", titulo: "Diário", conteudo: conteudo }] },
+  };
+}
+
+/* Tira os campos que o servidor escreve, para comparar o resto. */
+function semCarimbos(ficha) {
+  const copia = JSON.parse(JSON.stringify(ficha));
+  delete copia.criadoEm; delete copia.atualizadoEm; delete copia.campanhaId;
+  delete copia.ownerId; delete copia.id; delete copia.resumoRecursos;
+  return copia;
+}
+
+/* ---------------------------------------------------------------------- */
+t.grupo("Blocos — o simulador faz o que o Google faz");
+
+(() => {
+  preparar();
+  const f = folhaDe("PERSONAGENS_BLOCOS");
+  let recusou = "";
+  try { f.appendRow(["x", "g", 0, 1, 1, "agora", "y".repeat(50001)]); } catch (e) { recusou = e.message; }
+  t.ok("uma célula com 50.001 caracteres é recusada, como no Google", /50000 characters/.test(recusou));
+  t.igual("  e nada da linha entra", f.linhas.length, 1);
+  t.igual("texto '=...' vira fórmula (aqui, #ERROR!)", comoOSheetsGuarda("=\"a\""), "#ERROR!");
+  t.igual("texto só de dígitos vira número", comoOSheetsGuarda("0012345"), 12345);
+  t.igual("'TRUE' vira booleano", comoOSheetsGuarda("TRUE"), true);
+  t.igual("o apóstrofo do começo some", comoOSheetsGuarda("'abc"), "abc");
+  t.igual("meio emoji solto vira U+FFFD, como em UTF-8", comoOSheetsGuarda("a\uD83D"), "a\uFFFD");
+  t.igual("um bloco com marcador fica texto", comoOSheetsGuarda("RB|12345|RB"), "RB|12345|RB");
+  let fora = "";
+  try { f.getRange(f.tamanhoDaGrade() + 1, 1, 1, 1).setValues([["x"]]); } catch (e) { fora = e.message; }
+  t.ok("escrever além da grade da aba estoura", /outside the dimensions/.test(fora));
+})();
+
+/* ---------------------------------------------------------------------- */
+t.grupo("Blocos — tamanhos exatos, limites entre blocos e caracteres difíceis");
+
+(() => {
+  preparar();
+  const T = tamanhoDoBloco();
+  t.igual("cada bloco leva o limite seguro da célula menos os marcadores", T, MAX_CELULA - BLOCO_ABRE.length - BLOCO_FECHA.length);
+
+  let seq = 0;
+  function gravarELer(texto) {
+    const id = "unidade-" + (++seq);
+    reiniciarExecucao();
+    const g = gravarGeracao(ABAS.PERSONAGENS_BLOCOS, id, texto);
+    const conferido = conferirGeracao(ABAS.PERSONAGENS_BLOCOS, id, g, texto);
+    reiniciarExecucao();
+    const lido = lerGeracoes(ABAS.PERSONAGENS_BLOCOS, [{ id, manifesto: g }])[id];
+    return { id, g, conferido, lido };
+  }
+  const exato = (r, texto) => r.conferido.ok && r.lido.ok && r.lido.texto === texto;
+
+  const casos = [
+    ["1 caractere", "x", 1],
+    ["um bloco menos 1", "a".repeat(T - 1), 1],
+    ["exatamente um bloco", "a".repeat(T), 1],
+    ["um bloco mais 1", "a".repeat(T + 1), 2],
+    ["exatamente dois blocos", "b".repeat(2 * T), 2],
+    ["dois blocos mais 1", "b".repeat(2 * T + 1), 3],
+  ];
+  casos.forEach(([nome, texto, blocos]) => {
+    const r = gravarELer(texto);
+    t.ok(nome + ": volta idêntico", exato(r, texto));
+    t.igual("  em " + blocos + " bloco(s)", r.g.blocos, blocos);
+  });
+
+  /* O par substituto bem em cima do corte: o emoji não pode ser partido. */
+  const naBorda = "c".repeat(T - 1) + "🐉" + "d".repeat(10);
+  const borda = gravarELer(naBorda);
+  t.ok("emoji exatamente na borda de um bloco volta inteiro", exato(borda, naBorda));
+  const cortes = blocosDoPersonagem(borda.id).map((l) => l[4]);
+  t.iguais("  e o corte recua uma unidade em vez de partir o par", cortes, [T - 1, 12]);
+
+  /* Um bloco que começaria com "=" ou seria só dígitos: sem o marcador, a
+     planilha o transformaria em fórmula ou número. */
+  const comIgual = "e".repeat(T) + "=SOMA(A1)" + "f".repeat(5);
+  t.ok("bloco que começa com '=' volta como texto", exato(gravarELer(comIgual), comIgual));
+  const soDigitos = "9".repeat(3 * T);
+  t.ok("blocos inteiros só de dígitos voltam como texto", exato(gravarELer(soDigitos), soDigitos));
+  const espacos = "g".repeat(T - 3) + "   " + "h";
+  t.ok("espaços no fim de um bloco não se perdem", exato(gravarELer(espacos), espacos));
+
+  const rico = RICO.repeat(Math.ceil((2 * T) / RICO.length));
+  t.ok("acentos, emojis, quebras de linha, aspas, barras e nulo, por vários blocos, voltam idênticos",
+    exato(gravarELer(rico), rico));
+
+  t.ok("nenhuma célula gravada passou do limite seguro", maiorCelula() <= MAX_CELULA);
+
+  /* Um meio-emoji solto (texto cortado no meio de um emoji por outro
+     programa) não vira "?" na planilha: vai escapado, e o JSON volta o
+     mesmo. */
+  const solto = JSON.stringify({ t: "a\uD83Db" });
+  const seguro = semSubstitutoSolto(solto);
+  t.ok("par substituto solto é escapado", seguro.indexOf("\\ud83d") >= 0);
+  t.igual("  e o JSON lido de volta é o mesmo", JSON.parse(seguro).t, "a\uD83Db");
+})();
+
+/* ---------------------------------------------------------------------- */
+t.grupo("Blocos — fichas de 44 mil a 300 mil caracteres salvam, reabrem e voltam iguais");
+
+(() => {
+  preparar();
+  const ana = novaConta("ana");
+  const comoAna = comoFn(ana);
+
+  const tamanhos = [
+    ["abaixo de 45 mil", 44000],
+    ["no limite de uma célula", 44990],
+    ["acima de 45 mil", 45100],
+    ["acima de 50 mil", 50500],
+    ["acima de 100 mil", 101000],
+    ["acima de 300 mil", 301000],
+  ];
+
+  tamanhos.forEach(([rotulo, n]) => {
+    const conteudo = RICO + "x".repeat(n - RICO.length);
+    const ficha = fichaGrande("Ficha " + rotulo, conteudo);
+    const criado = comoAna({ acao: "criar_personagem", dados: ficha });
+    t.ok(rotulo + ": criada", criado.ok);
+    if (!criado.ok) return;
+    const id = criado.dados.id;
+
+    const lido = comoAna({ acao: "ler_personagem", personagemId: id });
+    t.ok("  reaberta", lido.ok);
+    t.ok("  com a anotação longa idêntica, caractere por caractere",
+      lido.ok && lido.dados.anotacoes.soltas[0].conteudo === conteudo);
+    t.iguais("  e o resto da ficha igual", lido.ok && semCarimbos(lido.dados), semCarimbos(ficha));
+
+    /* Editar e salvar de novo, crescendo. */
+    const maior = conteudo + " — continuação " + "y".repeat(1000);
+    const salvo = comoAna({ acao: "salvar_personagem", personagemId: id, rev: lido.rev,
+      dados: Object.assign({}, lido.dados, fichaGrande(lido.dados.nome, maior)) });
+    t.ok("  editada e salva", salvo.ok);
+    const relido = comoAna({ acao: "ler_personagem", personagemId: id });
+    t.ok("  a edição volta inteira", relido.ok && relido.dados.anotacoes.soltas[0].conteudo === maior);
+    t.igual("  com a revisão certa", relido.rev, 2);
+
+    const m = manifestoDoPersonagem(id);
+    t.ok("  o manifesto confere com o que está na aba",
+      m && blocosDoPersonagem(id).filter((l) => l[1] === m.geracao).length === m.blocos);
+  });
+
+  t.ok("nenhuma célula da planilha passou do limite seguro", maiorCelula() <= MAX_CELULA);
+
+  /* A grade da aba cheia até a última linha: escrever além dela estoura no
+     Google, então a gravação precisa aumentá-la antes — com folga. */
+  const fb = folhaDe("PERSONAGENS_BLOCOS");
+  fb.maxLinhas = fb.linhas.length;
+  const cheia = comoAna({ acao: "criar_personagem", dados: fichaGrande("Na grade cheia", "c".repeat(100000)) });
+  t.ok("com a grade da aba de blocos cheia, a gravação aumenta a grade e dá certo", cheia.ok);
+  t.ok("  deixando linhas de folga no fim", fb.tamanhoDaGrade() >= fb.linhas.length + FOLGA_DA_GRADE);
+  t.ok("  e a ficha reabre inteira", comoAna({ acao: "ler_personagem", personagemId: cheia.dados.id }).dados.anotacoes.soltas[0].conteudo.length === 100000);
+
+  const grande = linhasDe("PERSONAGENS").find((l) => String(l[colunaDe("PERSONAGENS", "nome")]).indexOf("300 mil") >= 0);
+  t.ok("a linha do personagem guarda só o aviso, não a ficha",
+    grande && String(grande[colunaDe("PERSONAGENS", "fichaJson")]).length < 1000);
+  let tocouNosBlocos = false;
+  ambiente.antesDe({ aba: "PERSONAGENS_BLOCOS" }, () => { tocouNosBlocos = true; });
+  const listagem = comoAna({ acao: "listar_personagens" });
+  ambiente.removerGanchos();
+  t.ok("a listagem continua leve: não toca na aba de blocos", listagem.ok && listagem.dados.length === 7 && !tocouNosBlocos);
+  t.ok("  nem arrasta o conteúdo das fichas", JSON.stringify(listagem).length < 5000);
+})();
+
+/* ---------------------------------------------------------------------- */
+t.grupo("Blocos — ficha antiga abre, migra na próxima gravação e o setup não mexe em nada");
+
+(() => {
+  preparar();
+  const bia = novaConta("bia");
+  const comoBia = comoFn(bia);
+
+  /* Uma ficha gravada pela v2.14: inteira em fichaJson, armazenamento vazio. */
+  const antiga = fichaGrande("Antiga", "Texto da v2.14 com acentuação e 🐉. " + "z".repeat(30000));
+  reiniciarExecucao();
+  inserir(ABAS.PERSONAGENS, {
+    id: "legado-1", ownerId: bia.id, nome: "Antiga", campanhaId: "", classe: "Ocultista", origem: "",
+    criadoEm: "2026-01-01T00:00:00.000Z", atualizadoEm: "2026-01-01T00:00:00.000Z", rev: 7,
+    fichaJson: JSON.stringify(antiga),
+  });
+
+  setupRama();
+  t.igual("rodar o setup não converte a ficha antiga", manifestoDoPersonagem("legado-1"), null);
+  t.igual("  nem cria blocos para ela", blocosDoPersonagem("legado-1").length, 0);
+  const relatorio = setupRama();
+  t.ok("  e o relatório diz quantas já estão em blocos", /fichas em blocos: 0 de 1/.test(relatorio));
+  t.igual("  rodar de novo não duplica a coluna nova",
+    folhaDe("PERSONAGENS").linhas[0].filter((c) => c === "armazenamento").length, 1);
+  t.igual("  nem a aba de blocos", ambiente.planilha.folhas.filter((f) => f.nome === "PERSONAGENS_BLOCOS").length, 1);
+  t.igual("  e marca o conteúdo dos blocos como texto puro",
+    folhaDe("PERSONAGENS_BLOCOS").formatos[colunaDe("PERSONAGENS_BLOCOS", "conteudo") + 1], "@");
+
+  const lida = comoBia({ acao: "ler_personagem", personagemId: "legado-1" });
+  t.ok("a ficha antiga abre", lida.ok);
+  t.iguais("  igual ao que estava gravado", lida.ok && semCarimbos(lida.dados), semCarimbos(antiga));
+  t.igual("  com a revisão de antes", lida.rev, 7);
+
+  const salva = comoBia({ acao: "salvar_personagem", personagemId: "legado-1", rev: 7, dados: lida.dados });
+  t.ok("salvar a ficha antiga dá certo", salva.ok);
+  const m = manifestoDoPersonagem("legado-1");
+  t.ok("  e ela passa para blocos", !!m && m.formato === "blocos" && m.blocos >= 1);
+  t.ok("  com o aviso de formato novo no lugar da ficha em fichaJson",
+    JSON.parse(linhaDoPersonagem("legado-1")[colunaDe("PERSONAGENS", "fichaJson")])._armazenamento === "blocos");
+  const depois = comoBia({ acao: "ler_personagem", personagemId: "legado-1" });
+  t.iguais("  e continua igual depois da migração", semCarimbos(depois.dados), semCarimbos(antiga));
+  t.igual("  na revisão seguinte", depois.rev, 8);
+
+  /* Planilha de antes do setup desta versão: sem a aba de blocos e sem a
+     coluna do manifesto. Ler continua; gravar diz o que falta. */
+  preparar();
+  const caio = novaConta("caio");
+  const comoCaio = comoFn(caio);
+  const pAntigo = comoCaio({ acao: "criar_personagem", dados: fichaDeTeste("Pré-setup") }).dados.id;
+  const f = folhaDe("PERSONAGENS");
+  const ci = colunaDe("PERSONAGENS", "armazenamento");
+  f.linhas = f.linhas.map((l) => l.slice(0, ci));
+  const fj = colunaDe("PERSONAGENS", "fichaJson");
+  f.linhas[1][fj] = JSON.stringify(fichaDeTeste("Pré-setup"));
+  ambiente.planilha.folhas = ambiente.planilha.folhas.filter((x) => x.nome !== "PERSONAGENS_BLOCOS");
+  esquecerCabecalhos();
+
+  const lidaSemSetup = comoCaio({ acao: "ler_personagem", personagemId: pAntigo });
+  t.ok("sem o setup desta versão, a ficha antiga ainda abre", lidaSemSetup.ok && lidaSemSetup.dados.nome === "Pré-setup");
+  t.recusa("  e salvar diz que a instalação está incompleta, sem gravar nada",
+    comoCaio({ acao: "salvar_personagem", personagemId: pAntigo, rev: lidaSemSetup.rev, dados: lidaSemSetup.dados }), "instalacao_incompleta");
+  t.igual("  a ficha continua como estava", JSON.parse(folhaDe("PERSONAGENS").linhas[1][fj]).nome, "Pré-setup");
+  setupRama();
+  const aposSetup = comoCaio({ acao: "salvar_personagem", personagemId: pAntigo, rev: lidaSemSetup.rev, dados: lidaSemSetup.dados });
+  t.ok("  depois do setup, salva — e migra", aposSetup.ok && !!manifestoDoPersonagem(pAntigo));
+})();
+
+/* ---------------------------------------------------------------------- */
+t.grupo("Blocos — salvar muitas vezes não acumula, e cada ficha só mexe nos próprios blocos");
+
+(() => {
+  preparar();
+  const davi = novaConta("davi");
+  const comoDavi = comoFn(davi);
+
+  const outra = comoDavi({ acao: "criar_personagem", dados: fichaGrande("Vizinha", "v".repeat(100000)) }).dados.id;
+  const blocosDaVizinha = JSON.stringify(blocosDoPersonagem(outra));
+
+  const id = comoDavi({ acao: "criar_personagem", dados: fichaGrande("Muito salva", "w".repeat(120000)) }).dados.id;
+  let rev = 1;
+  for (let i = 0; i < 12; i++) {
+    const lida = comoDavi({ acao: "ler_personagem", personagemId: id });
+    const r = comoDavi({ acao: "salvar_personagem", personagemId: id, rev: lida.rev,
+      dados: Object.assign({}, lida.dados, { classe: "volta " + i }) });
+    if (r.ok) rev = r.rev;
+  }
+  t.igual("doze gravações seguidas, todas aceitas", rev, 13);
+  t.igual("só duas gerações ficam guardadas: a que vale e a anterior", geracoesNaAba(id), 2);
+  const m = manifestoDoPersonagem(id);
+  t.igual("  a anterior é a do manifesto", blocosDoPersonagem(id).some((l) => l[1] === m.anterior.geracao), true);
+  t.igual("os blocos da outra ficha não foram tocados", JSON.stringify(blocosDoPersonagem(outra)), blocosDaVizinha);
+  t.igual("e a última gravação é a que abre", comoDavi({ acao: "ler_personagem", personagemId: id }).dados.classe, "volta 11");
+})();
+
+/* ---------------------------------------------------------------------- */
+t.grupo("Blocos — falha no meio da gravação deixa a versão anterior inteira");
+
+(() => {
+  preparar();
+  const eli = novaConta("eli");
+  const comoEli = comoFn(eli);
+
+  const original = "Versão boa. " + "o".repeat(90000);
+  const id = comoEli({ acao: "criar_personagem", dados: fichaGrande("Resistente", original) }).dados.id;
+  const base = comoEli({ acao: "ler_personagem", personagemId: id });
+  const nova = Object.assign({}, base.dados, fichaGrande("Resistente", "Versão nova. " + "n".repeat(95000)));
+  const manifestoAntes = JSON.stringify(manifestoDoPersonagem(id));
+
+  /* 1. A escrita dos blocos cai. */
+  ambiente.falharUmaVez({ aba: "PERSONAGENS_BLOCOS", metodo: "setValues" });
+  const r1 = comoEli({ acao: "salvar_personagem", personagemId: id, rev: base.rev, dados: nova, operacaoId: "op-falha-blocos" });
+  t.recusa("a escrita dos blocos falha: a gravação responde erro", r1, "armazenamento_falhou");
+  t.igual("  o manifesto não mudou", JSON.stringify(manifestoDoPersonagem(id)), manifestoAntes);
+  let lida = comoEli({ acao: "ler_personagem", personagemId: id });
+  t.ok("  e a ficha abre na versão anterior, inteira", lida.ok && lida.dados.anotacoes.soltas[0].conteudo === original);
+  t.igual("  sem a revisão ter subido", lida.rev, base.rev);
+
+  /* 2. Os blocos entram, mas o que a planilha guardou não confere. */
+  /* A conferência lê as linhas completas (7 colunas); a varredura, só as 6 curtas. */
+  ambiente.antesDe({ aba: "PERSONAGENS_BLOCOS", metodo: "getValues", filtro: (d) => d.nc === 7 }, () => {
+    const f = folhaDe("PERSONAGENS_BLOCOS");
+    const ultima = f.linhas[f.linhas.length - 1];
+    ultima[6] = ultima[6].slice(0, 10) + "#" + ultima[6].slice(11);
+  });
+  const r2 = comoEli({ acao: "salvar_personagem", personagemId: id, rev: base.rev, dados: nova, operacaoId: "op-falha-conferencia" });
+  t.recusa("blocos gravados que não conferem: a gravação responde erro", r2, "armazenamento_falhou");
+  t.igual("  e o manifesto continua apontando a versão boa", JSON.stringify(manifestoDoPersonagem(id)), manifestoAntes);
+
+  /* 3. Blocos certos, e a troca do manifesto cai antes de publicar. */
+  ambiente.falharUmaVez({ aba: "PERSONAGENS", metodo: "setValues" });
+  const r3 = comoEli({ acao: "salvar_personagem", personagemId: id, rev: base.rev, dados: nova, operacaoId: "op-falha-publicacao" });
+  t.recusa("a publicação do manifesto cai: a gravação responde erro", r3, "armazenamento_falhou");
+  lida = comoEli({ acao: "ler_personagem", personagemId: id });
+  t.ok("  a versão anterior continua valendo", lida.ok && lida.dados.anotacoes.soltas[0].conteudo === original);
+  t.ok("  e sobram gerações sem manifesto (lixo, não estrago)", geracoesNaAba(id) > 1);
+
+  /* A mesma gravação, de novo: agora entra — uma vez. */
+  const r4 = comoEli({ acao: "salvar_personagem", personagemId: id, rev: base.rev, dados: nova, operacaoId: "op-falha-publicacao" });
+  t.ok("repetir a gravação depois da falha dá certo", r4.ok && r4.rev === base.rev + 1);
+  lida = comoEli({ acao: "ler_personagem", personagemId: id });
+  t.ok("  com a versão nova inteira", lida.dados.anotacoes.soltas[0].conteudo === nova.anotacoes.soltas[0].conteudo);
+  t.igual("  e a limpeza recolheu o lixo das tentativas: ficam duas gerações", geracoesNaAba(id), 2);
+
+  /* 4. Tudo gravado, e o envio final do buffer para a planilha falha. A
+     resposta NÃO pode ser "salvo". */
+  const antesDoFlush = comoEli({ acao: "ler_personagem", personagemId: id });
+  const outraVersao = Object.assign({}, antesDoFlush.dados, { classe: "depois do flush" });
+  const flushesAntes = ambiente.flush.vezes;
+  ambiente.flush.falhar = 1;
+  const r5 = comoEli({ acao: "salvar_personagem", personagemId: id, rev: antesDoFlush.rev, dados: outraVersao, operacaoId: "op-falha-flush" });
+  t.recusa("se o envio final para a planilha falha, a resposta é erro — nunca 'salvo'", r5, "servidor_falhou");
+  t.ok("  (a gravação passou pelo flush antes de soltar a trava)", ambiente.flush.vezes > flushesAntes);
+  t.igual("  e a trava foi solta mesmo assim", ambiente.trava.presa, false);
+  t.ok("  e a leitura segue", comoEli({ acao: "ler_personagem", personagemId: id }).ok);
+
+  /* No simulador as escritas não ficam em buffer, então ela entrou; na
+     planilha de verdade pode ter entrado ou não. O navegador repete o
+     MESMO pedido, e os dois casos terminam iguais — aplicada uma vez. */
+  const r6 = comoEli({ acao: "salvar_personagem", personagemId: id, rev: antesDoFlush.rev, dados: outraVersao, operacaoId: "op-falha-flush" });
+  t.ok("  a repetição do mesmo pedido é reconhecida, sem aplicar duas vezes", r6.ok && r6.repetida === true && r6.rev === antesDoFlush.rev + 1);
+  t.igual("  e a versão que vale é a dele", comoEli({ acao: "ler_personagem", personagemId: id }).dados.classe, "depois do flush");
+})();
+
+/* ---------------------------------------------------------------------- */
+t.grupo("Blocos — a resposta se perdeu: a repetição não aplica duas vezes");
+
+(() => {
+  preparar();
+  const fabi = novaConta("fabi");
+  const comoFabi = comoFn(fabi);
+
+  /* Criar (a importação de uma ficha grande que estourou o prazo). */
+  const pedido = { acao: "criar_personagem", dados: fichaGrande("Importada", "i".repeat(150000)), operacaoId: "op-criar-importada" };
+  const c1 = comoFabi(pedido);
+  const c2 = comoFabi(JSON.parse(JSON.stringify(pedido)));
+  t.ok("criar repetido com o mesmo id de operação devolve o MESMO personagem", c1.ok && c2.ok && c1.dados.id === c2.dados.id && c2.repetida === true);
+  t.igual("  e só um personagem existe", comoFabi({ acao: "listar_personagens" }).dados.length, 1);
+  ambiente.cache.clear();
+  const c3 = comoFabi(JSON.parse(JSON.stringify(pedido)));
+  t.ok("  mesmo sem o cache, pelo manifesto", c3.ok && c3.dados.id === c1.dados.id);
+  const id = c1.dados.id;
+
+  /* Salvar: o servidor terminou, a resposta não chegou, o navegador repete. */
+  const lida = comoFabi({ acao: "ler_personagem", personagemId: id });
+  const editada = Object.assign({}, lida.dados, { classe: "Editada uma vez" });
+  const s1 = comoFabi({ acao: "salvar_personagem", personagemId: id, rev: lida.rev, dados: editada, operacaoId: "op-salvar-1" });
+  const geracaoDepois = manifestoDoPersonagem(id).geracao;
+  const s2 = comoFabi({ acao: "salvar_personagem", personagemId: id, rev: lida.rev, dados: editada, operacaoId: "op-salvar-1" });
+  t.ok("a mesma gravação repetida é reconhecida", s1.ok && s2.ok && s2.repetida === true);
+  t.igual("  a revisão sobe uma vez só", s2.rev, lida.rev + 1);
+  t.igual("  e nenhuma geração nova foi escrita", manifestoDoPersonagem(id).geracao, geracaoDepois);
+
+  /* Outra gravação com a revisão velha é conflito de verdade. */
+  const outra = comoFabi({ acao: "salvar_personagem", personagemId: id, rev: lida.rev,
+    dados: Object.assign({}, lida.dados, { classe: "De outro aparelho" }), operacaoId: "op-outra" });
+  t.recusa("outra gravação com a revisão velha é conflito", outra, "conflito");
+  t.ok("  e vem com o estado do servidor, montado dos blocos", outra.dados && outra.dados.classe === "Editada uma vez" &&
+    outra.dados.anotacoes.soltas[0].conteudo.length === 150000);
+
+  /* Depois que outra coisa subiu a revisão, a repetição antiga não passa
+     mais por "já aplicada". */
+  const lida2 = comoFabi({ acao: "ler_personagem", personagemId: id });
+  comoFabi({ acao: "salvar_personagem", personagemId: id, rev: lida2.rev, dados: lida2.dados, operacaoId: "op-salvar-2" });
+  t.recusa("uma repetição tardia, depois de outra gravação, vira conflito",
+    comoFabi({ acao: "salvar_personagem", personagemId: id, rev: lida.rev, dados: editada, operacaoId: "op-salvar-1" }), "conflito");
+
+  /* Duplicar. */
+  const d1 = comoFabi({ acao: "duplicar_personagem", personagemId: id, operacaoId: "op-duplicar-1" });
+  const d2 = comoFabi({ acao: "duplicar_personagem", personagemId: id, operacaoId: "op-duplicar-1" });
+  t.ok("duplicar repetido devolve a mesma cópia", d1.ok && d2.ok && d1.dados.id === d2.dados.id);
+  t.igual("  e só uma cópia existe", comoFabi({ acao: "listar_personagens" }).dados.length, 2);
+})();
+
+/* ---------------------------------------------------------------------- */
+t.grupo("Blocos — bloco ausente, duplicado ou corrompido vira erro, nunca ficha vazia");
+
+(() => {
+  preparar();
+  const gil = novaConta("gil");
+  const comoGil = comoFn(gil);
+
+  const v1 = "Primeira versão. " + "p".repeat(100000);
+  const v2 = "Segunda versão. " + "q".repeat(100000);
+  const id = comoGil({ acao: "criar_personagem", dados: fichaGrande("Frágil", v1) }).dados.id;
+  let lida = comoGil({ acao: "ler_personagem", personagemId: id });
+  comoGil({ acao: "salvar_personagem", personagemId: id, rev: lida.rev, dados: Object.assign({}, lida.dados, fichaGrande("Frágil", v2)) });
+  lida = comoGil({ acao: "ler_personagem", personagemId: id });
+  const revBoa = lida.rev;
+
+  const f = folhaDe("PERSONAGENS_BLOCOS");
+  const m = manifestoDoPersonagem(id);
+  const linhaDoBloco = (i) => f.linhas.findIndex((l) => l[0] === id && l[1] === m.geracao && l[2] === i);
+  const guardadas = JSON.parse(JSON.stringify(f.linhas));
+  const restaurar = () => { f.linhas = JSON.parse(JSON.stringify(guardadas)); reiniciarExecucao(); };
+
+  /* Duplicado idêntico: o texto continua provado. */
+  f.linhas.push(f.linhas[linhaDoBloco(1)].slice());
+  t.ok("um bloco repetido, idêntico, não impede a leitura", comoGil({ acao: "ler_personagem", personagemId: id }).ok);
+  restaurar();
+
+  /* Duplicado diferente: não há como saber qual vale. */
+  const trocado = f.linhas[linhaDoBloco(1)].slice();
+  trocado[6] = trocado[6].slice(0, 20) + "!" + trocado[6].slice(21);
+  f.linhas.push(trocado);
+  const dup = comoGil({ acao: "ler_personagem", personagemId: id });
+  t.recusa("dois blocos diferentes na mesma posição: erro", dup, "ficha_ilegivel");
+  t.igual("  com o motivo", dup.motivo, "bloco_duplicado");
+  restaurar();
+
+  /* Corrompido: um caractere trocado, mesmo tamanho. */
+  f.linhas[linhaDoBloco(0)][6] = f.linhas[linhaDoBloco(0)][6].replace("q", "Q");
+  const corr = comoGil({ acao: "ler_personagem", personagemId: id });
+  t.recusa("um caractere trocado num bloco: erro", corr, "ficha_ilegivel");
+  t.igual("  pego pelo SHA-256", corr.motivo, "integridade");
+  restaurar();
+
+  f.linhas[linhaDoBloco(0)][6] = f.linhas[linhaDoBloco(0)][6].replace("RB|", "");
+  t.igual("um bloco sem o marcador: erro de integridade", comoGil({ acao: "ler_personagem", personagemId: id }).motivo, "integridade");
+  restaurar();
+
+  /* Ausente. */
+  f.linhas.splice(linhaDoBloco(1), 1);
+  const aus = comoGil({ acao: "ler_personagem", personagemId: id });
+  t.recusa("um bloco apagado: erro", aus, "ficha_ilegivel");
+  t.igual("  com o motivo", aus.motivo, "bloco_ausente");
+  t.ok("  e a resposta não traz ficha nenhuma", aus.dados === undefined);
+
+  const linhaAntes = JSON.stringify(linhaDoPersonagem(id));
+  t.recusa("com a ficha ilegível, o ajuste do mestre não grava nada",
+    comoGil({ acao: "ajustar_personagem", personagemId: id, rev: revBoa, alvo: "status", itemId: "st-pv", campo: "atual", valor: 3 }), "ficha_ilegivel");
+  t.recusa("  a duplicação também não", comoGil({ acao: "duplicar_personagem", personagemId: id }), "ficha_ilegivel");
+  t.igual("  e a linha do personagem continua exatamente igual", JSON.stringify(linhaDoPersonagem(id)), linhaAntes);
+  t.igual("  nenhuma cópia vazia apareceu", comoGil({ acao: "listar_personagens" }).dados.length, 1);
+
+  /* O diagnóstico aponta, e a restauração traz a geração anterior de volta. */
+  const diag = diagnosticarPersonagem(id);
+  t.ok("o diagnóstico diz que a geração ativa não confere", /geração ativa: .*NÃO CONFERE \(bloco_ausente\)/.test(diag));
+  t.ok("  e que a anterior confere", /geração anterior: .*CONFERE/.test(diag) && !/geração anterior: .*NÃO/.test(diag));
+  t.ok("  sem imprimir o conteúdo da ficha", diag.indexOf("Primeira versão") < 0 && diag.indexOf("qqqq") < 0);
+  const rest = restaurarGeracaoAnterior(id);
+  t.ok("restaurarGeracaoAnterior traz a versão anterior de volta", /restaurada a geração/.test(rest));
+  lida = comoGil({ acao: "ler_personagem", personagemId: id });
+  t.ok("  e a ficha abre, na versão anterior inteira", lida.ok && lida.dados.anotacoes.soltas[0].conteudo === v1);
+  t.igual("  com a revisão acima da que estava", lida.rev, revBoa + 1);
+  t.ok("com a geração ativa conferindo, restaurar é recusado sem 'forcar'",
+    /a geração ativa confere/.test(restaurarGeracaoAnterior(id)));
+
+  /* Manifesto de uma versão futura: nem lido, nem sobrescrito, nem limpo. */
+  const fp = folhaDe("PERSONAGENS");
+  const linha = fp.linhas.findIndex((l) => l[colunaDe("PERSONAGENS", "id")] === id);
+  const futuro = manifestoDoPersonagem(id);
+  futuro.versao = 2;
+  fp.linhas[linha][colunaDe("PERSONAGENS", "armazenamento")] = JSON.stringify(futuro);
+  reiniciarExecucao();
+  const fut = comoGil({ acao: "ler_personagem", personagemId: id });
+  t.igual("um manifesto de versão futura não é lido", fut.motivo, "formato_desconhecido");
+  t.recusa("  nem sobrescrito por uma gravação", comoGil({ acao: "salvar_personagem", personagemId: id, rev: fut.rev === undefined ? lida.rev : fut.rev, dados: fichaGrande("Por cima", "x") }), "ficha_ilegivel");
+  const antesDaLimpeza = blocosDoPersonagem(id).length;
+  limparBlocosOrfaos();
+  t.igual("  e os blocos dele não são limpos", blocosDoPersonagem(id).length, antesDaLimpeza);
+
+  /* JSON antigo corrompido: erro, não ficha vazia. */
+  reiniciarExecucao();
+  inserir(ABAS.PERSONAGENS, { id: "legado-quebrado", ownerId: gil.id, nome: "Quebrada", campanhaId: "", classe: "", origem: "",
+    criadoEm: "2026-01-01T00:00:00.000Z", atualizadoEm: "2026-01-01T00:00:00.000Z", rev: 2, fichaJson: '{"nome":"Queb' });
+  const q = comoGil({ acao: "ler_personagem", personagemId: "legado-quebrado" });
+  t.recusa("ficha antiga com JSON cortado: erro em vez de ficha em branco", q, "ficha_ilegivel");
+  t.igual("  com o motivo", q.motivo, "json");
+
+  /* O aviso de formato novo sem manifesto: alguém esvaziou a coluna. */
+  reiniciarExecucao();
+  inserir(ABAS.PERSONAGENS, { id: "sem-manifesto", ownerId: gil.id, nome: "Sem manifesto", campanhaId: "", classe: "", origem: "",
+    criadoEm: "2026-01-01T00:00:00.000Z", atualizadoEm: "2026-01-01T00:00:00.000Z", rev: 2, fichaJson: avisoDeFormatoNovo("Sem manifesto") });
+  t.igual("o aviso de formato novo nunca é lido como ficha", comoGil({ acao: "ler_personagem", personagemId: "sem-manifesto" }).motivo, "manifesto_ausente");
+})();
+
+/* ---------------------------------------------------------------------- */
+t.grupo("Blocos — leitura concorrente com uma gravação que desloca as linhas");
+
+(() => {
+  preparar();
+  const hel = novaConta("hel");
+  const comoHel = comoFn(hel);
+
+  /* Duas fichas. A de baixo (Leitora) é lida; a de cima (Escritora) é
+     regravada no meio da leitura, e a limpeza dela apaga linhas ACIMA dos
+     blocos da Leitora — que sobem de lugar. */
+  const escritora = comoHel({ acao: "criar_personagem", dados: fichaGrande("Escritora", "e".repeat(100000)) }).dados.id;
+  let le = comoHel({ acao: "ler_personagem", personagemId: escritora });
+  comoHel({ acao: "salvar_personagem", personagemId: escritora, rev: le.rev, dados: Object.assign({}, le.dados, { classe: "2" }) });
+  const conteudoLeitora = "Leitora " + "l".repeat(100000);
+  const leitora = comoHel({ acao: "criar_personagem", dados: fichaGrande("Leitora", conteudoLeitora) }).dados.id;
+
+  let varreduras = 0;
+  ambiente.antesDe({ aba: "PERSONAGENS_BLOCOS", metodo: "getValues", vez: 2 }, () => {
+    /* Outra execução, com a própria memória — como no Apps Script. */
+    const minha = globalThis._EXEC;
+    const ultima = comoHel({ acao: "ler_personagem", personagemId: escritora });
+    comoHel({ acao: "salvar_personagem", personagemId: escritora, rev: ultima.rev, dados: Object.assign({}, ultima.dados, { classe: "3" }) });
+    globalThis._EXEC = minha;
+    varreduras++;
+  });
+
+  const lida = comoHel({ acao: "ler_personagem", personagemId: leitora });
+  t.igual("a gravação concorrente aconteceu no meio da leitura", varreduras, 1);
+  t.ok("a leitura percebe as linhas deslocadas, lê de novo e devolve a ficha inteira",
+    lida.ok && lida.dados.anotacoes.soltas[0].conteudo === conteudoLeitora);
+  t.igual("a outra gravação entrou normalmente", comoHel({ acao: "ler_personagem", personagemId: escritora }).dados.classe, "3");
+
+  /* Duas gravações a partir da mesma revisão: uma entra, a outra é conflito. */
+  const base = comoHel({ acao: "ler_personagem", personagemId: leitora });
+  const a = comoHel({ acao: "salvar_personagem", personagemId: leitora, rev: base.rev, dados: Object.assign({}, base.dados, { classe: "A" }), operacaoId: "op-aparelho-a" });
+  const b = comoHel({ acao: "salvar_personagem", personagemId: leitora, rev: base.rev, dados: Object.assign({}, base.dados, { classe: "B" }), operacaoId: "op-aparelho-b" });
+  t.ok("duas gravações da mesma revisão: a primeira entra", a.ok);
+  t.recusa("  a segunda é conflito, e não sobrescreve", b, "conflito");
+  t.igual("  e o que vale é a primeira", comoHel({ acao: "ler_personagem", personagemId: leitora }).dados.classe, "A");
+})();
+
+/* ---------------------------------------------------------------------- */
+t.grupo("Blocos — mesa: ajuste rápido do mestre, vínculo, cartões e combate numa ficha grande");
+
+(() => {
+  preparar();
+  const mestra = novaConta("mestra");
+  const jogadora = novaConta("jogadora");
+  const outro = novaConta("outro");
+  const comoMestra = comoFn(mestra);
+  const comoJogadora = comoFn(jogadora);
+  const comoOutro = comoFn(outro);
+
+  const mesa = comoMestra({ acao: "criar_campanha", dados: { nome: "Mesa grande" } }).dados.id;
+  comoMestra({ acao: "salvar_participantes", campanhaId: mesa, membros: [
+    { userId: jogadora.id, papel: "jogador" }, { userId: outro.id, papel: "jogador" }] });
+
+  const diario = "Diário de campanha 🐉 " + "d".repeat(150000);
+  const ficha = Object.assign(fichaGrande("Grandona", diario), {
+    tipoFicha: "ordem",
+    ordem: { nex: 5, classe: "ocultista", recursos: { pv: null, pe: null, san: null } },
+    resumoRecursos: { pv: 20, pe: 6, san: 20 },
+  });
+  const id = comoJogadora({ acao: "criar_personagem", dados: ficha }).dados.id;
+
+  /* Vincular não regrava a ficha. */
+  const geracaoAntes = manifestoDoPersonagem(id).geracao;
+  const v = comoJogadora({ acao: "vincular_personagem", campanhaId: mesa, personagemId: id });
+  t.ok("a dona põe a ficha grande na mesa", v.ok && v.rev === 2);
+  t.igual("  sem regravar a ficha: a geração é a mesma", manifestoDoPersonagem(id).geracao, geracaoAntes);
+  t.igual("  e o manifesto acompanha a revisão", manifestoDoPersonagem(id).rev, 2);
+  t.igual("  a ficha aberta diz a campanha", comoJogadora({ acao: "ler_personagem", personagemId: id }).dados.campanhaId, mesa);
+
+  /* O mestre clica rápido: cada clique é uma gravação com a revisão nova. */
+  let rev = 2;
+  [19, 18, 17, 16, 15].forEach((valor, i) => {
+    const r = comoMestra({ acao: "ajustar_personagem", personagemId: id, rev: rev, alvo: "recurso", itemId: "pv",
+      campo: "atual", valor: valor, campanhaId: mesa, operacaoId: "op-ajuste-" + i });
+    if (r.ok) rev = r.rev;
+  });
+  t.igual("cinco ajustes seguidos do mestre, todos aceitos", rev, 7);
+  const depois = comoJogadora({ acao: "ler_personagem", personagemId: id });
+  t.igual("  o PV ficou no último valor", depois.dados.ordem.recursos.pv, 15);
+  t.ok("  e o diário de 150 mil caracteres continua inteiro", depois.dados.anotacoes.soltas[0].conteudo === diario);
+  t.igual("  sem acumular gerações", geracoesNaAba(id), 2);
+
+  const repetido = comoMestra({ acao: "ajustar_personagem", personagemId: id, rev: 6, alvo: "recurso", itemId: "pv",
+    campo: "atual", valor: 15, campanhaId: mesa, operacaoId: "op-ajuste-4" });
+  t.ok("o último ajuste repetido (resposta perdida) é reconhecido", repetido.ok && repetido.repetida === true && repetido.dados.valor === 15);
+  t.igual("  sem subir a revisão", repetido.rev, 7);
+
+  /* Cartões da mesa. */
+  const cartoesMestra = comoMestra({ acao: "listar_personagens_campanha", campanhaId: mesa }).dados;
+  const cartao = cartoesMestra.find((c) => c.id === id);
+  t.ok("o cartão da mestra monta a ficha grande", !!cartao && !cartao.fichaIlegivel && cartao.ordem && cartao.ordem.recursos.pv === 15);
+  const cartaoOutro = comoOutro({ acao: "listar_personagens_campanha", campanhaId: mesa }).dados.find((c) => c.id === id);
+  t.ok("o outro jogador vê só o público — sem ficha, escolhas ou inventário",
+    !!cartaoOutro && !cartaoOutro.inventario && cartaoOutro.ordem && cartaoOutro.ordem.recursos === undefined);
+
+  const resumo = comoMestra({ acao: "atualizar_resumo_personagem", personagemId: id, rev: 7, resumo: { pv: 22, pe: 6, san: 20 } });
+  t.ok("o resumo de recursos grava numa ficha grande", resumo.ok && resumo.dados.mudou === true);
+  t.igual("  sem subir a revisão", comoJogadora({ acao: "ler_personagem", personagemId: id }).rev, 7);
+  const repeticaoDepoisDoResumo = comoMestra({ acao: "ajustar_personagem", personagemId: id, rev: 6, alvo: "recurso", itemId: "pv",
+    campo: "atual", valor: 15, campanhaId: mesa, operacaoId: "op-ajuste-4" });
+  t.ok("  e o resumo não apaga o reconhecimento do último ajuste", repeticaoDepoisDoResumo.ok && repeticaoDepoisDoResumo.repetida === true);
+
+  /* Combate. */
+  const combate = comoMestra({ acao: "salvar_combate", campanhaId: mesa, dados: {
+    nome: "Luta", estado: "ativo", visiveis: [jogadora.id],
+    participantes: [{ id: "cp1", tipo: "personagem", personagemId: id, nome: "Grandona", ordem: 10 }] } });
+  const lista = comoJogadora({ acao: "listar_combates", campanhaId: mesa });
+  const noCombate = lista.ok && combate.ok && lista.dados[0].participantes.find((p) => p.personagemId === id);
+  t.ok("o combate lê os recursos da ficha grande", !!noCombate && Array.isArray(noCombate.recursos) &&
+    noCombate.recursos.some((r) => r.chave === "pv" && r.atual === 15));
+
+  /* Tirar da mesa: a coluna manda, mesmo sem regravar a ficha. */
+  comoMestra({ acao: "salvar_participantes", campanhaId: mesa, membros: [{ userId: outro.id, papel: "jogador" }] });
+  const fora = comoJogadora({ acao: "ler_personagem", personagemId: id });
+  t.igual("tirar a jogadora da mesa desvincula a ficha, e a ficha aberta diz isso", fora.dados.campanhaId, null);
+  t.recusa("  e o mestre deixa de alcançá-la", comoMestra({ acao: "ler_personagem", personagemId: id }), "nao_encontrado");
+
+  /* Uma ficha ilegível na mesa aparece como ilegível, sem números. */
+  comoMestra({ acao: "salvar_participantes", campanhaId: mesa, membros: [{ userId: jogadora.id, papel: "jogador" }] });
+  comoJogadora({ acao: "vincular_personagem", campanhaId: mesa, personagemId: id });
+  const f = folhaDe("PERSONAGENS_BLOCOS");
+  const m = manifestoDoPersonagem(id);
+  f.linhas.splice(f.linhas.findIndex((l) => l[0] === id && l[1] === m.geracao), 1);
+  reiniciarExecucao();
+  const ilegivel = comoMestra({ acao: "listar_personagens_campanha", campanhaId: mesa }).dados.find((c) => c.id === id);
+  t.ok("o cartão de uma ficha que não se monta vem marcado, sem recursos nem controles",
+    !!ilegivel && ilegivel.fichaIlegivel === true && ilegivel.podeEditarRecursos === false && !ilegivel.ordem && !ilegivel.recursos);
+  t.ok("  e a mesa continua carregando as outras", comoMestra({ acao: "listar_personagens_campanha", campanhaId: mesa }).ok);
+})();
+
+/* ---------------------------------------------------------------------- */
+t.grupo("Blocos — duplicar, importar, exportar e excluir");
+
+(() => {
+  preparar();
+  const ivo = novaConta("ivo");
+  const comoIvo = comoFn(ivo);
+
+  const conteudo = RICO + "k".repeat(200000);
+  const id = comoIvo({ acao: "criar_personagem", dados: fichaGrande("Original", conteudo) }).dados.id;
+  const original = comoIvo({ acao: "ler_personagem", personagemId: id });
+
+  const copia = comoIvo({ acao: "duplicar_personagem", personagemId: id });
+  t.ok("duplicar uma ficha de 200 mil caracteres dá certo", copia.ok);
+  const lidaCopia = comoIvo({ acao: "ler_personagem", personagemId: copia.dados.id });
+  t.igual("  a cópia tem o nome com '(cópia)'", lidaCopia.dados.nome, "Original (cópia)");
+  t.ok("  e o conteúdo inteiro igual", lidaCopia.dados.anotacoes.soltas[0].conteudo === conteudo);
+  t.ok("  com blocos próprios", blocosDoPersonagem(copia.dados.id).length > 0 &&
+    manifestoDoPersonagem(copia.dados.id).geracao !== manifestoDoPersonagem(id).geracao);
+  comoIvo({ acao: "salvar_personagem", personagemId: copia.dados.id, rev: lidaCopia.rev,
+    dados: Object.assign({}, lidaCopia.dados, fichaGrande("Original (cópia)", "Mudou só a cópia")) });
+  t.ok("  editar a cópia não muda o original",
+    comoIvo({ acao: "ler_personagem", personagemId: id }).dados.anotacoes.soltas[0].conteudo === conteudo);
+
+  /* Exportar é o navegador guardar o que ler_personagem devolveu;
+     importar é criar a partir disso. A volta inteira: */
+  const exportado = JSON.parse(JSON.stringify(original.dados));
+  const importado = comoIvo({ acao: "criar_personagem", dados: exportado, operacaoId: "op-importar-roundtrip" });
+  const lidoImportado = comoIvo({ acao: "ler_personagem", personagemId: importado.dados.id });
+  t.iguais("exportar e importar uma ficha grande devolve a mesma ficha", semCarimbos(lidoImportado.dados), semCarimbos(original.dados));
+
+  /* Excluir leva os blocos da ficha, e só os dela. */
+  const blocosDaCopia = JSON.stringify(blocosDoPersonagem(copia.dados.id));
+  const ex = comoIvo({ acao: "excluir_personagem", personagemId: id });
+  t.ok("excluir a ficha grande", ex.ok);
+  t.igual("  leva todos os blocos dela", blocosDoPersonagem(id).length, 0);
+  t.igual("  e deixa os das outras intactos", JSON.stringify(blocosDoPersonagem(copia.dados.id)), blocosDaCopia);
+  t.recusa("  a ficha não abre mais", comoIvo({ acao: "ler_personagem", personagemId: id }), "nao_encontrado");
+})();
+
+/* ---------------------------------------------------------------------- */
+t.grupo("Blocos — o cache de cabeçalhos não passa de uma versão para outra");
+
+(() => {
+  preparar();
+  const rui = novaConta("ruivo");
+  const comoRui = comoFn(rui);
+  const id = comoRui({ acao: "criar_personagem", dados: fichaGrande("Cacheada", "c".repeat(60000)) }).dados.id;
+
+  reiniciarExecucao();
+  t.ok("a chave do cache leva a assinatura das colunas declaradas",
+    /^rama\.cabecalhos\.\d+\.[0-9a-f]{12}$/.test(chaveDosCabecalhos()));
+
+  /* O mapa que uma versão ANTERIOR, com dez colunas em PERSONAGENS,
+     deixaria no cache na chave antiga: largura 10, sem armazenamento. */
+  const antigo = {
+    PERSONAGENS: { mapa: {}, posicoes: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10], declaradas: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+      recuperadas: [], ilegiveis: [], largura: 10, alinhado: true },
+  };
+  ambiente.cache.set("rama.cabecalhos." + epoca(), JSON.stringify(antigo));
+
+  reiniciarExecucao();
+  const lida = comoRui({ acao: "ler_personagem", personagemId: id });
+  const salva = comoRui({ acao: "salvar_personagem", personagemId: id, rev: lida.rev, dados: Object.assign({}, lida.dados, { classe: "depois" }) });
+  t.ok("com o mapa de outra versão no cache, esta não o usa: grava e o manifesto acompanha",
+    salva.ok && manifestoDoPersonagem(id).rev === salva.rev);
+  t.igual("  e a ficha continua abrindo", comoRui({ acao: "ler_personagem", personagemId: id }).dados.classe, "depois");
+})();
+
+/* ---------------------------------------------------------------------- */
+t.grupo("Blocos — limpeza de órfãos");
+
+(() => {
+  preparar();
+  const jo = novaConta("joana");
+  const comoJo = comoFn(jo);
+
+  const viva = comoJo({ acao: "criar_personagem", dados: fichaGrande("Viva", "v".repeat(60000)) }).dados.id;
+  let l = comoJo({ acao: "ler_personagem", personagemId: viva });
+  comoJo({ acao: "salvar_personagem", personagemId: viva, rev: l.rev, dados: Object.assign({}, l.dados, { classe: "2" }) });
+
+  /* Lixo de três tipos: uma gravação que parou antes do manifesto; blocos
+     de um personagem que não existe (velhos); e blocos recentes de um
+     personagem que não existe (podem ser de uma criação em andamento). */
+  ambiente.falharUmaVez({ aba: "PERSONAGENS", metodo: "setValues" });
+  l = comoJo({ acao: "ler_personagem", personagemId: viva });
+  comoJo({ acao: "salvar_personagem", personagemId: viva, rev: l.rev, dados: Object.assign({}, l.dados, { classe: "nunca" }) });
+  const f = folhaDe("PERSONAGENS_BLOCOS");
+  f.appendRow(["fantasma-velho", "g-x", 0, 1, 1, "2020-01-01T00:00:00.000Z", "RB|a|RB"]);
+  f.appendRow(["fantasma-novo", "g-y", 0, 1, 1, new Date().toISOString(), "RB|b|RB"]);
+
+  const ativo = manifestoDoPersonagem(viva);
+  const lixoDaViva = blocosDoPersonagem(viva).filter((b) => b[1] !== ativo.geracao && b[1] !== ativo.anterior.geracao).length;
+  t.ok("há uma geração sem manifesto na ficha viva", lixoDaViva > 0);
+  t.ok("a conferência da instalação avisa que há blocos sem dono", /sem ficha que as aponte/.test(conferirInstalacao()));
+
+  const texto = limparBlocosOrfaos();
+  t.ok("limparBlocosOrfaos recolhe o lixo", /recolhida/.test(texto));
+  t.igual("  a geração sem manifesto saiu", blocosDoPersonagem(viva).filter((b) => b[1] !== ativo.geracao && b[1] !== ativo.anterior.geracao).length, 0);
+  t.igual("  a ativa e a anterior ficaram", geracoesNaAba(viva), 2);
+  t.igual("  os blocos velhos de ninguém saíram", linhasDe("PERSONAGENS_BLOCOS").filter((b) => b[0] === "fantasma-velho").length, 0);
+  t.igual("  os recentes de ninguém ficam, pela carência", linhasDe("PERSONAGENS_BLOCOS").filter((b) => b[0] === "fantasma-novo").length, 1);
+  t.ok("  e a ficha continua abrindo", comoJo({ acao: "ler_personagem", personagemId: viva }).dados.classe === "2");
+  t.ok("rodar de novo não apaga mais nada", /: 0 linha/.test(limparBlocosOrfaos()));
+})();
+
+/* ---------------------------------------------------------------------- */
+t.grupo("Blocos — permissões: conhecer o id não abre nada");
+
+(() => {
+  preparar();
+  const kai = novaConta("kai");
+  const lia = novaConta("lia");
+  const comoKai = comoFn(kai);
+  const comoLia = comoFn(lia);
+
+  const segredo = "Segredo da Lia " + "s".repeat(80000);
+  const id = comoLia({ acao: "criar_personagem", dados: fichaGrande("Privada", segredo) }).dados.id;
+  const m = manifestoDoPersonagem(id);
+
+  t.recusa("outra conta não lê a ficha grande", comoKai({ acao: "ler_personagem", personagemId: id }), "nao_encontrado");
+  t.recusa("  nem pelo lote", (() => {
+    const r = comoKai({ acao: "lote", pedidos: [{ acao: "ler_personagem", personagemId: id }] });
+    return r.dados.respostas[0];
+  })(), "nao_encontrado");
+  t.recusa("  nem ajusta", comoKai({ acao: "ajustar_personagem", personagemId: id, rev: 1, alvo: "status", itemId: "st-pv", campo: "atual", valor: 1 }), "nao_encontrado");
+  t.recusa("  nem duplica", comoKai({ acao: "duplicar_personagem", personagemId: id }), "nao_encontrado");
+  t.recusa("  nem exclui", comoKai({ acao: "excluir_personagem", personagemId: id }), "nao_encontrado");
+  t.recusa("  nem sobrescreve", comoKai({ acao: "salvar_personagem", personagemId: id, rev: 1, dados: fichaGrande("x", "x") }), "nao_encontrado");
+  t.recusa("não existe ação que leia blocos direto", comoKai({ acao: "ler_blocos", personagemId: id, geracao: m.geracao }), "acao_desconhecida");
+  t.recusa("  nem as ferramentas de diagnóstico pela API", comoKai({ acao: "diagnosticarPersonagem", personagemId: id }), "acao_desconhecida");
+  t.recusa("  nem a restauração", comoKai({ acao: "restaurarGeracaoAnterior", personagemId: id }), "acao_desconhecida");
+  const respostaDoKai = JSON.stringify(comoKai({ acao: "listar_personagens" }));
+  t.ok("nada do conteúdo vaza nas respostas de outra conta", respostaDoKai.indexOf("Segredo da Lia") < 0);
+  t.ok("a dona continua lendo tudo", comoLia({ acao: "ler_personagem", personagemId: id }).dados.anotacoes.soltas[0].conteudo === segredo);
+})();
+
+/* ---------------------------------------------------------------------- */
+t.grupo("Blocos — limite total da ficha: explícito, com números, sem gravar nada");
+
+(() => {
+  preparar();
+  const leo = novaConta("leo");
+  const comoLeo = comoFn(leo);
+
+  const quase = comoLeo({ acao: "criar_personagem", dados: fichaGrande("Enorme", "m".repeat(LIMITE_TOTAL_FICHA - 2000)) });
+  t.ok("uma ficha logo abaixo do limite total (1 milhão) salva", quase.ok);
+  t.ok("  e reabre inteira", comoLeo({ acao: "ler_personagem", personagemId: quase.dados.id }).dados.anotacoes.soltas[0].conteudo.length === LIMITE_TOTAL_FICHA - 2000);
+
+  const blocosAntes = linhasDe("PERSONAGENS_BLOCOS").length;
+  const travasAntes = ambiente.travasPedidas();
+  const acima = comoLeo({ acao: "criar_personagem", dados: fichaGrande("Acima", "m".repeat(LIMITE_TOTAL_FICHA + 10)) });
+  t.recusa("acima do limite total, a gravação é recusada", acima, "ficha_grande_demais");
+  t.igual("  antes de entrar na fila da trava: ninguém espera por ela", ambiente.travasPedidas(), travasAntes);
+  t.ok("  dizendo o tamanho e o limite", acima.limite === LIMITE_TOTAL_FICHA && acima.tamanho > LIMITE_TOTAL_FICHA);
+  t.igual("  sem escrever bloco nenhum", linhasDe("PERSONAGENS_BLOCOS").length, blocosAntes);
+  t.igual("  nem criar personagem", comoLeo({ acao: "listar_personagens" }).dados.length, 1);
+
+  const lida = comoLeo({ acao: "ler_personagem", personagemId: quase.dados.id });
+  const crescida = comoLeo({ acao: "salvar_personagem", personagemId: quase.dados.id, rev: lida.rev,
+    dados: Object.assign({}, lida.dados, fichaGrande("Enorme", "m".repeat(LIMITE_TOTAL_FICHA + 10))) });
+  t.recusa("salvar passando do limite também é recusado", crescida, "ficha_grande_demais");
+  t.ok("  e a versão guardada continua a anterior", comoLeo({ acao: "ler_personagem", personagemId: quase.dados.id }).rev === lida.rev);
 })();
 
 /* =====================================================================

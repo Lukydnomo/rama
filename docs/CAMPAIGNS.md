@@ -56,9 +56,12 @@ campanha guarda, além da descrição e de `rolagensMestreOcultas`, a chave
 **O vínculo personagem↔campanha continua morando no personagem** (`campanhaId`),
 e só nele. Guardar dos dois lados exigiria manter dois lugares em sincronia, e a
 primeira gravação que falhasse deixaria um personagem numa campanha que não sabe
-dele. (A coluna `campanhaId` e o `campanhaId` dentro do `fichaJson` são o mesmo
-dado na mesma linha: `criar_personagem`, `salvar_personagem` e
-`vincular_personagem` gravam nos dois o valor que o servidor aceitou.)
+dele. A coluna `campanhaId` é a que vale: é ela que decide permissão, e desde a
+v2.15 a leitura da ficha a coloca dentro do que sai para o navegador.
+`criar_personagem` e `salvar_personagem` gravam o valor aceito nos dois lugares;
+`vincular_personagem`, `salvar_participantes` e `excluir_campanha` gravam só a
+coluna — a ficha, que pode ter centenas de milhares de caracteres, não é lida nem
+reescrita para mudar de mesa.
 
 **Três caminhos põem um personagem numa campanha**, todos conferidos no servidor:
 
@@ -664,6 +667,13 @@ Com `campanhaId` no pedido, o servidor confere também que o personagem continua
 vinculado àquela campanha — um cartão aberto há uma hora não mexe numa ficha que
 já saiu da mesa. A permissão continua a de sempre: dono, ou mestre da campanha em
 que o personagem está.
+
+Desde a v2.15 o pedido continua pequeno, mas o servidor lê a ficha inteira em
+blocos, conferida, e a grava de novo como uma geração nova — o conteúdo é um só.
+Uma ficha que não se monta não é ajustada, e o cartão dela aparece marcado ("a ficha
+deste personagem não se montou por inteiro"), sem números nem botões. Cada ajuste
+leva um id de operação: se a resposta se perde, a fila repete o MESMO ajuste antes
+do clique seguinte, e o servidor o reconhece em vez de acusar conflito com ele.
 
 ---
 

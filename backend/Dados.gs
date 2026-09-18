@@ -107,8 +107,16 @@ var ABAS = {
     leves: 1,
   },
   PERSONAGENS: {
+    /* `armazenamento` entrou na v2.15 e é o MANIFESTO da ficha em blocos
+       (ver "Conteúdo em blocos", abaixo). Vazio quer dizer formato
+       antigo: a ficha inteira está em `fichaJson`. Preenchido, a ficha
+       está em PERSONAGENS_BLOCOS e `fichaJson` guarda só um aviso para
+       uma versão antiga do servidor não abrir a ficha como se estivesse
+       vazia. Fica DEPOIS de fichaJson de propósito: numa planilha
+       atualizada o setupRama a acrescenta no fim, e declarada no mesmo
+       lugar as duas ordens coincidem. */
     nome: 'PERSONAGENS',
-    colunas: ['id', 'ownerId', 'nome', 'campanhaId', 'classe', 'origem', 'criadoEm', 'atualizadoEm', 'rev', 'fichaJson'],
+    colunas: ['id', 'ownerId', 'nome', 'campanhaId', 'classe', 'origem', 'criadoEm', 'atualizadoEm', 'rev', 'fichaJson', 'armazenamento'],
     chave: 'id',
     leves: 9,
   },
@@ -120,6 +128,23 @@ var ABAS = {
     colunas: ['personagemId', 'ownerId', 'imagem', 'atualizadoEm'],
     chave: 'personagemId',
     leves: 2,
+  },
+  PERSONAGENS_BLOCOS: {
+    /* A ficha em pedaços, cada um abaixo do limite seguro da célula
+       (v2.15). Uma linha por bloco; os blocos de uma gravação formam uma
+       GERAÇÃO, e o manifesto em PERSONAGENS.armazenamento diz qual
+       geração vale. Nenhuma ação lê esta aba direto: tudo passa pela
+       conferência de acesso do personagem, em Codigo.gs.
+
+       As seis primeiras colunas são leves — achar os blocos de uma
+       ficha varre só elas. `conteudo` é texto puro: o setupRama marca a
+       coluna com o formato "@", e cada bloco ainda vai entre marcadores
+       (BLOCO_ABRE / BLOCO_FECHA) para nunca virar fórmula nem número. */
+    nome: 'PERSONAGENS_BLOCOS',
+    colunas: ['personagemId', 'geracao', 'indice', 'total', 'tamanho', 'criadoEm', 'conteudo'],
+    registro: 'personagemId',
+    leves: 6,
+    somenteTexto: ['conteudo'],
   },
   HOMEBREW: {
     /* `visibilidade` entrou na v2. Registro antigo fica com a célula
@@ -219,8 +244,39 @@ var ABAS = {
   },
 };
 
-/* Limite prático de uma célula do Sheets é 50.000 caracteres. */
+/* =====================================================================
+   LIMITES
+   ---------------------------------------------------------------------
+   Três números diferentes, que não podem ser confundidos:
+
+     MAX_CELULA          o limite seguro de UMA célula. O Google aceita
+                         50.000 caracteres; 45.000 deixa margem. Protege
+                         cada bloco de ficha e todo campo que ainda mora
+                         numa célula só (imagens, homebrew, notas,
+                         combates). NÃO é mais o limite de uma ficha.
+
+     LIMITE_TOTAL_FICHA  o limite operacional de uma ficha INTEIRA, que
+                         mora em blocos. Não é teto do Google — são 23
+                         blocos, e a aba aguenta milhões de células. É o
+                         ponto a partir do qual cada salvamento
+                         automático, que envia e regrava a ficha inteira,
+                         passa a segurar a trava de TODO o sistema por
+                         segundos: com uma mesa de vinte pessoas, a
+                         gravação de uma vira espera para as outras. Uma
+                         ficha acima disso é recusada com uma mensagem
+                         que diz o tamanho e o limite, e nada do que está
+                         na tela se perde. A mesa que precisar de mais
+                         muda o número aqui — o site não guarda cópia
+                         dele: lê da resposta de erro.
+
+     requisição          o corpo e a resposta de uma chamada, e o tempo
+                         de uma execução (6 minutos no Apps Script). Uma
+                         ficha dentro do limite acima fica muito longe
+                         dos dois.
+   ===================================================================== */
+
 var MAX_CELULA = 45000;
+var LIMITE_TOTAL_FICHA = 1000000;
 
 /* =====================================================================
    A EXECUÇÃO
@@ -255,6 +311,11 @@ function exec() {
       folhas: {},
       cabecalhos: {},
       varreduras: {},
+      /* A última linha com conteúdo de cada aba, vista pela última
+         varredura. Esquecida junto com as varreduras — ao obter a trava e
+         a cada gravação na aba —, então dentro da trava ela é a de agora,
+         e acrescentar linhas não precisa perguntar de novo. */
+      ultimas: {},
       /* Sobe a cada trava obtida. Um registro lido na geração 2 não pode
          ser gravado com um número de linha colhido na geração 1. */
       geracao: 0,
@@ -269,6 +330,7 @@ function exec() {
 function esquecerVarreduras() {
   var e = exec();
   e.varreduras = {};
+  e.ultimas = {};
   e.geracao++;
 }
 
@@ -361,11 +423,28 @@ function aba(definicao) {
    cache, carregada de uma vez na primeira necessidade. Uma leitura de
    cache no lugar de quatro do Sheets.
 
-     chave       'rama.cabecalhos.' + a época
+     chave       'rama.cabecalhos.' + a época + '.' + a assinatura do
+                 esquema (v2.15)
      validade    seis horas
      invalidação setupRama() avança a época; toda entrada anterior
                  deixa de valer na hora
      ausência    lê da planilha, aba por aba, e regrava
+
+   A ASSINATURA DO ESQUEMA
+   ---------------------------------------------------------------------
+   O cache é do projeto, não da versão: uma implantação nova e uma
+   antiga, no ar uma depois da outra, leem as mesmas chaves. E o mapa
+   guardado leva a LARGURA da linha — quantas colunas uma gravação
+   escreve. Um backend que declara dez colunas lendo o mapa de outro que
+   declara onze gravaria vazio na décima primeira. Foi o risco real
+   achado na v2.15: voltar a implantação para a v2.14 com o mapa da v2.15
+   no cache apagaria o manifesto das fichas em blocos na primeira
+   gravação.
+
+   Por isso a chave leva um resumo das colunas declaradas. Versões com o
+   mesmo desenho de planilha dividem o cache; versões com desenhos
+   diferentes nunca leem o mapa uma da outra — cada uma calcula o seu a
+   partir da planilha.
 
    O cabeçalho de uma aba muda quando o setupRama acrescenta coluna, e
    é exatamente aí que a época avança. Mexer nas colunas À MÃO, direto
@@ -378,7 +457,27 @@ function aba(definicao) {
 
 var SEGUNDOS_CACHE_CABECALHO = 21600;
 
-function chaveDosCabecalhos() { return 'rama.cabecalhos.' + epoca(); }
+function chaveDosCabecalhos() { return 'rama.cabecalhos.' + epoca() + '.' + assinaturaDoEsquema(); }
+
+/* Doze caracteres do SHA-256 dos nomes das abas e das colunas
+   declaradas. Calculada uma vez por execução. */
+function assinaturaDoEsquema() {
+  var e = exec();
+  if (e.assinatura) return e.assinatura;
+
+  var desenho = Object.keys(ABAS).map(function (k) {
+    return ABAS[k].nome + ':' + ABAS[k].colunas.join(',');
+  }).join('|');
+
+  var bytes = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, desenho, Utilities.Charset.UTF_8);
+  var hex = '';
+  for (var i = 0; i < 6; i++) {
+    var b = (bytes[i] + 256) % 256;
+    hex += (b < 16 ? '0' : '') + b.toString(16);
+  }
+  e.assinatura = hex;
+  return hex;
+}
 
 function cabecalhosDoCache() {
   var e = exec();
@@ -626,6 +725,7 @@ function varrer(definicao, quantasColunas, rotulo) {
   var folha = aba(definicao);
   var cab = cabecalho(definicao);
   var ultima = folha.getLastRow();
+  e.ultimas[definicao.nome] = ultima;
 
   if (ultima < 2) { e.varreduras[chaveDoCache] = []; return []; }
 
@@ -821,6 +921,57 @@ function lerBloco(definicao, linhas, posicao, saida) {
   });
 }
 
+/* Linhas COMPLETAS, por número, para um punhado de linhas conhecidas.
+
+   Números próximos viram uma faixa só — a mesma conta de lerBloco:
+   pular até PESO_DA_CHAMADA linhas no meio custa menos que uma viagem a
+   mais. Os blocos de uma geração nascem lado a lado, então ler uma
+   ficha em blocos costuma ser UMA chamada.
+
+   Uma faixa que já não existe (a aba encolheu depois da varredura) não
+   derruba a leitura: as linhas dela voltam ausentes, e quem pediu
+   percebe que a varredura envelheceu. */
+function lerLinhas(definicao, numeros) {
+  var visto = {};
+  var unicos = [];
+  (numeros || []).forEach(function (n) {
+    var l = Number(n);
+    if (l >= 2 && !visto[l]) { visto[l] = true; unicos.push(l); }
+  });
+  if (!unicos.length) return [];
+  unicos.sort(function (a, b) { return a - b; });
+
+  var cab = cabecalho(definicao);
+  var folha = aba(definicao);
+  var porLinha = {};
+
+  var i = 0;
+  while (i < unicos.length) {
+    var inicio = unicos[i];
+    var fim = inicio;
+    var j = i + 1;
+    while (j < unicos.length && unicos[j] - fim - 1 <= PESO_DA_CHAMADA) { fim = unicos[j]; j++; }
+
+    var valores = [];
+    try {
+      valores = folha.getRange(inicio, 1, fim - inicio + 1, cab.largura).getValues();
+    } catch (erro) {
+      valores = [];
+    }
+
+    for (var k = i; k < j; k++) {
+      var l = unicos[k];
+      var crua = valores[l - inicio];
+      if (!crua) continue;
+      var daLinha = posicoesParaLinha(definicao, cab, crua, 1);
+      porLinha[l] = montarRegistro(definicao, definicao.colunas, daLinha, 1, crua, l, false);
+    }
+    i = j;
+  }
+
+  return unicos.map(function (l) { return porLinha[l]; }).filter(Boolean);
+}
+
 /* Uma coluna inteira, para todas as linhas de dados.
 
    O caso de uso é procurar por um valor quando não interessa mais nada
@@ -869,6 +1020,7 @@ function linhaDe(definicao, coluna, valor) {
 
 function invalidar(definicao) {
   var e = exec();
+  delete e.ultimas[definicao.nome];
   var prefixo = definicao.nome + '#';
   Object.keys(e.varreduras).forEach(function (k) {
     if (k.indexOf(prefixo) === 0) delete e.varreduras[k];
@@ -892,6 +1044,46 @@ function linhaCrua(definicao, registro) {
 function inserir(definicao, registro) {
   aba(definicao).appendRow(linhaCrua(definicao, registro));
   invalidar(definicao);
+}
+
+/* Várias linhas numa chamada só, logo abaixo da última linha com
+   conteúdo. Devolve o número da primeira linha escrita.
+
+   Escrever numa faixa além da grade da aba estoura no Google. Perguntar
+   o tamanho da grade a cada gravação seria uma viagem a mais em toda
+   gravação, para um caso raro — então a gravação tenta direto, e só
+   quando estoura é que a grade é conferida e cresce, com folga (a
+   próxima não paga de novo, e a aba sempre fica com linhas em branco no
+   fim: o Google não deixa apagar todas as linhas não congeladas). Se a
+   grade não era o problema, o erro original sobe.
+
+   Só DENTRO da trava: duas execuções calculando a mesma "última linha"
+   escreveriam uma por cima da outra. O appendRow o Google serializa
+   sozinho; uma faixa, não. */
+var FOLGA_DA_GRADE = 200;
+
+function inserirLinhas(definicao, registros) {
+  if (!registros || !registros.length) return 0;
+
+  var folha = aba(definicao);
+  var cab = cabecalho(definicao);
+  var vista = exec().ultimas[definicao.nome];
+  var ultima = vista !== undefined ? vista : folha.getLastRow();
+  var inicio = ultima + 1;
+  var necessario = ultima + registros.length;
+  var linhas = registros.map(function (r) { return linhaCrua(definicao, r); });
+
+  try {
+    folha.getRange(inicio, 1, registros.length, cab.largura).setValues(linhas);
+  } catch (erro) {
+    var grade = folha.getMaxRows();
+    if (necessario <= grade) throw erro;
+    folha.insertRowsAfter(grade, necessario - grade + FOLGA_DA_GRADE);
+    folha.getRange(inicio, 1, registros.length, cab.largura).setValues(linhas);
+  }
+
+  invalidar(definicao);
+  return inicio;
 }
 
 /* O número da linha guardado num registro é uma referência que pode
@@ -1013,10 +1205,36 @@ function apagarLinha(definicao, numeroDaLinha) {
    Indo do fim para o começo, cada número continua valendo quando chega
    a sua vez. */
 function apagarLinhas(definicao, linhas) {
-  var ordenadas = (linhas || []).slice().sort(function (a, b) { return b - a; });
+  var visto = {};
+  var ordenadas = [];
+  (linhas || []).forEach(function (l) {
+    var n = Number(l);
+    if (n >= 2 && !visto[n]) { visto[n] = true; ordenadas.push(n); }
+  });
+  ordenadas.sort(function (a, b) { return b - a; });
+  if (!ordenadas.length) return 0;
+
   var folha = aba(definicao);
-  ordenadas.forEach(function (l) { folha.deleteRow(l); });
-  if (ordenadas.length) invalidar(definicao);
+
+  /* O Google não deixa apagar TODAS as linhas não congeladas de uma
+     aba. Uma linha em branco no fim garante que sempre sobre uma. */
+  if (folha.getMaxRows() - ordenadas.length < 2) folha.insertRowsAfter(folha.getMaxRows(), 1);
+
+  /* Linhas vizinhas saem numa chamada só: os blocos de uma geração
+     nascem juntos, e apagar uma geração de dez blocos custa uma viagem,
+     não dez. */
+  var i = 0;
+  while (i < ordenadas.length) {
+    var fim = ordenadas[i];
+    var inicio = fim;
+    var j = i + 1;
+    while (j < ordenadas.length && ordenadas[j] === inicio - 1) { inicio = ordenadas[j]; j++; }
+    if (inicio === fim) folha.deleteRow(fim);
+    else folha.deleteRows(inicio, fim - inicio + 1);
+    i = j;
+  }
+
+  invalidar(definicao);
   return ordenadas.length;
 }
 
@@ -1053,6 +1271,17 @@ function apagarLinhas(definicao, linhas) {
    2. O que dá para fazer antes de entrar, é feito antes de entrar:
       serializar JSON, medir tamanho, validar formato. Só a leitura da
       revisão, a decisão e a escrita ficam dentro.
+
+   E uma terceira, desde a v2.15:
+
+   3. O Apps Script guarda as escritas num buffer e só as manda para a
+      planilha quando precisa. Soltar a trava com escritas ainda no
+      buffer deixaria a próxima execução ler a planilha SEM elas — e
+      responder "deu certo" antes de a gravação existir. Por isso, antes
+      de soltar a trava e antes de a resposta sair, SpreadsheetApp.flush()
+      manda tudo. É o que a documentação do LockService recomenda. Se o
+      envio falhar, a falha sobe: a resposta vira erro, e nunca um "salvo"
+      sobre uma gravação que não chegou.
    ===================================================================== */
 
 var ESPERA_TRAVA_MS = 25000;
@@ -1065,7 +1294,9 @@ function comTrava(fn) {
   esquecerVarreduras();
 
   try {
-    return fn();
+    var resultado = fn();
+    SpreadsheetApp.flush();
+    return resultado;
   } finally {
     trava.releaseLock();
   }
@@ -1135,9 +1366,14 @@ function cacheApagar(chave) {
 /* =====================================================================
    JSON
    ---------------------------------------------------------------------
-   JSON corrompido numa célula não pode derrubar a resposta inteira: a
-   ficha volta vazia, a pessoa vê que algo se perdeu e o log guarda o
-   motivo. Melhor uma ficha em branco do que um 500.
+   Para o JSON PEQUENO das outras abas (configuração de campanha,
+   homebrew, combate): corrompido, volta o padrão e o log guarda o
+   motivo — uma descrição de campanha em branco não custa nada.
+
+   A FICHA não passa mais por aqui (v2.15). Ficha que volta vazia pode
+   ser salva por cima da original, e aí o que era um defeito de leitura
+   vira perda de dados. A leitura da ficha, em Codigo.gs, devolve um
+   erro identificável (`ficha_ilegivel`) em vez de um objeto vazio.
    ===================================================================== */
 
 function lerJson(texto, padrao) {
@@ -1149,4 +1385,388 @@ function lerJson(texto, padrao) {
     console.warn('JSON inválido na planilha: ' + erro);
     return padrao;
   }
+}
+
+/* =====================================================================
+   CONTEÚDO EM BLOCOS
+   ---------------------------------------------------------------------
+   Até a v2.14 a ficha inteira morava numa célula só, a `fichaJson`, e a
+   célula do Google aceita 50.000 caracteres. Uma ficha com anotações,
+   rituais e habilidades longas passava disso e simplesmente deixava de
+   salvar. Aumentar o limite não resolve (o teto é do Google); comprimir
+   só adia (texto cresce). Esta camada guarda um texto de QUALQUER
+   tamanho em quantos blocos forem precisos, cada um abaixo do limite
+   seguro da célula, numa aba própria.
+
+   ---------------------------------------------------------------------
+   AS PEÇAS
+   ---------------------------------------------------------------------
+
+     bloco       uma linha da aba de blocos: de quem é, de que geração,
+                 que posição, quantos são no total, o tamanho do pedaço,
+                 quando foi escrito e o pedaço em si
+     geração     um conjunto completo de blocos, gravado de uma vez. Uma
+                 geração NUNCA é alterada depois de escrita: gravar de
+                 novo é escrever uma geração nova
+     manifesto   o que diz qual geração vale, e como conferi-la: formato,
+                 versão, geração, quantidade de blocos, tamanho total e
+                 o SHA-256 do texto. Mora no registro principal, e quem
+                 decide trocá-lo é quem chamou (o personagem, em
+                 Codigo.gs)
+
+   ---------------------------------------------------------------------
+   POR QUE ISTO É SEGURO SEM TRANSAÇÃO
+   ---------------------------------------------------------------------
+
+   O Sheets não tem transação: várias escritas não viram uma só. A
+   segurança vem da ORDEM e de uma troca atômica no fim:
+
+     1. a geração nova é escrita em linhas NOVAS — nada do que já existe
+        é tocado, então a versão anterior continua inteira e legível;
+     2. as linhas escritas são lidas de volta e conferidas (quantidade,
+        posição, tamanho e o texto inteiro) antes de qualquer outra
+        coisa;
+     3. só então o registro principal troca de manifesto, numa gravação
+        de UMA linha — que o Sheets aplica inteira ou não aplica;
+     4. a limpeza das gerações velhas vem depois, e falhar nela não
+        desfaz nada.
+
+   Uma queda entre 1 e 3 deixa blocos que ninguém aponta: lixo, não
+   estrago. A ficha continua na versão anterior, e a limpeza recolhe o
+   lixo depois.
+
+   ---------------------------------------------------------------------
+   O MARCADOR DE CADA BLOCO
+   ---------------------------------------------------------------------
+
+   setValues trata o texto como se alguém o tivesse digitado: um pedaço
+   de JSON que começasse com "=" viraria fórmula; um que fosse "12345"
+   viraria número; um que terminasse em espaço poderia perdê-lo. Por
+   isso cada bloco é gravado entre BLOCO_ABRE e BLOCO_FECHA — um começo
+   que nenhuma regra de conversão reconhece, e um fim que protege o
+   último caractere. A leitura confere os dois e o tamanho declarado; o
+   SHA-256 do texto remontado confere o resto.
+
+   ---------------------------------------------------------------------
+   PAR SUBSTITUTO
+   ---------------------------------------------------------------------
+
+   Um emoji ocupa DUAS unidades num texto JavaScript. Cortar entre elas
+   deixaria meio emoji em cada bloco — e meio emoji não existe em UTF-8,
+   então a planilha trocaria cada metade por "?". O corte nunca cai
+   entre as duas.
+   ===================================================================== */
+
+var FORMATO_BLOCOS = 'blocos';
+var VERSAO_BLOCOS = 1;
+var BLOCO_ABRE = 'RB|';
+var BLOCO_FECHA = '|RB';
+
+/* Quanto texto útil cabe num bloco: o limite seguro da célula menos os
+   marcadores. Função, e não `var`, para não depender da ordem em que as
+   `var` de topo deste arquivo são avaliadas. */
+function tamanhoDoBloco() {
+  return MAX_CELULA - BLOCO_ABRE.length - BLOCO_FECHA.length;
+}
+
+/* Um par substituto sozinho (meio emoji) vira a sequência \uXXXX. Num
+   texto JSON isso só pode acontecer dentro de uma string, e ali o
+   caractere cru e o escape são a MESMA coisa para o JSON.parse — o
+   objeto volta idêntico. O motor do Apps Script já escapa isso no
+   JSON.stringify; isto é a garantia para quando não escapar. */
+function semSubstitutoSolto(texto) {
+  var t = String(texto);
+  var partes = null;
+  var desde = 0;
+  for (var i = 0; i < t.length; i++) {
+    var c = t.charCodeAt(i);
+    if (c < 0xD800 || c > 0xDFFF) continue;
+    if (c <= 0xDBFF && i + 1 < t.length) {
+      var d = t.charCodeAt(i + 1);
+      if (d >= 0xDC00 && d <= 0xDFFF) { i++; continue; }
+    }
+    if (!partes) partes = [];
+    partes.push(t.slice(desde, i), '\\u' + c.toString(16));
+    desde = i + 1;
+  }
+  if (!partes) return t;
+  partes.push(t.slice(desde));
+  return partes.join('');
+}
+
+/* O texto em pedaços de até `tamanho` unidades, sem partir um par
+   substituto. Juntar os pedaços devolve o texto exato. */
+function dividirEmBlocos(texto, tamanho) {
+  var t = String(texto);
+  var max = Math.max(2, Math.floor(Number(tamanho) || 0));
+  var partes = [];
+  var i = 0;
+  while (i < t.length) {
+    var fim = Math.min(i + max, t.length);
+    if (fim < t.length) {
+      var c = t.charCodeAt(fim - 1);
+      if (c >= 0xD800 && c <= 0xDBFF) fim--;
+    }
+    partes.push(t.slice(i, fim));
+    i = fim;
+  }
+  return partes;
+}
+
+/* SHA-256 do texto em UTF-8, com o nome do algoritmo na frente — assim
+   uma versão futura pode trocar de algoritmo sem ambiguidade. */
+function resumoDoTexto(texto) {
+  var bytes = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, String(texto), Utilities.Charset.UTF_8);
+  var hex = '';
+  for (var i = 0; i < bytes.length; i++) {
+    var b = (bytes[i] + 256) % 256;
+    hex += (b < 16 ? '0' : '') + b.toString(16);
+  }
+  return 'sha256:' + hex;
+}
+
+function novaGeracao() {
+  return 'g-' + Utilities.getUuid();
+}
+
+/* ---------------------------------------------------------------------
+   O manifesto, lido de uma célula.
+
+     null                 a célula está vazia: o registro está no formato
+                          antigo, com o conteúdo inteiro na própria linha
+     { invalido, motivo } há algo ali, mas não é um manifesto que esta
+                          versão entenda — ninguém lê nem grava por cima
+     o manifesto          pronto para ser conferido
+   --------------------------------------------------------------------- */
+function manifestoDe(valor) {
+  var texto = String(valor === undefined || valor === null ? '' : valor).trim();
+  if (!texto) return null;
+
+  var m = null;
+  try { m = JSON.parse(texto); } catch (erro) { m = null; }
+  if (!m || typeof m !== 'object' || m.formato !== FORMATO_BLOCOS) {
+    return { invalido: true, motivo: 'manifesto_ilegivel' };
+  }
+  /* Um manifesto de versão futura (outra forma de guardar, outro
+     algoritmo) não é lido nem sobrescrito por esta versão. */
+  if (Number(m.versao) !== VERSAO_BLOCOS) return { invalido: true, motivo: 'formato_desconhecido' };
+
+  var blocos = Number(m.blocos);
+  var tamanho = Number(m.tamanho);
+  if (!m.geracao || !(blocos >= 1) || Math.floor(blocos) !== blocos ||
+      !(tamanho >= 0) || !/^sha256:[0-9a-f]{64}$/.test(String(m.hash || ''))) {
+    return { invalido: true, motivo: 'manifesto_ilegivel' };
+  }
+  return m;
+}
+
+/* ---------------------------------------------------------------------
+   GRAVAR
+   --------------------------------------------------------------------- */
+
+/* Escreve uma geração nova para `registroId` e devolve o que o manifesto
+   precisa. NÃO confere e NÃO publica: isso é de quem chamou, que ainda
+   pode desistir. As linhas entram de uma vez, numa chamada só. */
+function gravarGeracao(defBlocos, registroId, texto) {
+  var t = String(texto);
+  var partes = dividirEmBlocos(t, tamanhoDoBloco());
+  if (!partes.length) partes = [''];
+
+  var geracao = novaGeracao();
+  var agora = new Date().toISOString();
+  var colId = defBlocos.registro;
+
+  var registros = partes.map(function (parte, i) {
+    var r = {
+      geracao: geracao,
+      indice: i,
+      total: partes.length,
+      tamanho: parte.length,
+      criadoEm: agora,
+      conteudo: BLOCO_ABRE + parte + BLOCO_FECHA,
+    };
+    r[colId] = String(registroId);
+    return r;
+  });
+
+  var primeira = inserirLinhas(defBlocos, registros);
+
+  return {
+    geracao: geracao,
+    blocos: partes.length,
+    tamanho: t.length,
+    hash: resumoDoTexto(t),
+    criadoEm: agora,
+    primeiraLinha: primeira,
+  };
+}
+
+/* Lê de volta as linhas que gravarGeracao acabou de escrever e confere
+   que o texto remontado é EXATAMENTE o que foi mandado. É aqui que uma
+   conversão de tipo, um corte ou uma linha fora do lugar aparecem —
+   antes de o manifesto apontar para ela. */
+function conferirGeracao(defBlocos, registroId, gravado, textoOriginal) {
+  var linhas = [];
+  for (var i = 0; i < gravado.blocos; i++) linhas.push(gravado.primeiraLinha + i);
+
+  var lidos = lerLinhas(defBlocos, linhas);
+  var montado = montarGeracao(defBlocos, lidos, registroId, gravado);
+  if (!montado.ok) return montado;
+  if (montado.texto !== String(textoOriginal)) return { ok: false, motivo: 'integridade' };
+  return { ok: true };
+}
+
+/* ---------------------------------------------------------------------
+   LER
+   --------------------------------------------------------------------- */
+
+/* Junta as linhas de uma geração e confere tudo o que dá para conferir:
+
+     · cada linha é mesmo deste registro e desta geração — uma linha que
+       mudou de lugar entre a varredura e a leitura é 'deslocado', e
+       quem chamou procura de novo;
+     · cada posição de 0 a blocos−1 aparece, uma vez (uma cópia idêntica
+       é tolerada; duas diferentes, não);
+     · marcadores e tamanho de cada bloco batem;
+     · o texto inteiro tem o tamanho e o SHA-256 do manifesto.
+
+   O JSON NÃO é interpretado aqui: primeiro o texto é provado inteiro. */
+function montarGeracao(defBlocos, registros, registroId, manifesto) {
+  var colId = defBlocos.registro;
+  var n = Number(manifesto.blocos);
+  var porPosicao = {};
+
+  for (var i = 0; i < registros.length; i++) {
+    var r = registros[i];
+    if (String(r[colId]) !== String(registroId) || String(r.geracao) !== String(manifesto.geracao)) {
+      return { ok: false, motivo: 'deslocado' };
+    }
+
+    var p = Number(r.indice);
+    if (!(p >= 0) || p >= n || Math.floor(p) !== p || Number(r.total) !== n) {
+      return { ok: false, motivo: 'integridade' };
+    }
+
+    var bruto = r.conteudo;
+    if (typeof bruto !== 'string') return { ok: false, motivo: 'integridade' };
+    var fim = bruto.length - BLOCO_FECHA.length;
+    if (bruto.indexOf(BLOCO_ABRE) !== 0 || fim < BLOCO_ABRE.length || bruto.slice(fim) !== BLOCO_FECHA) {
+      return { ok: false, motivo: 'integridade' };
+    }
+    var carga = bruto.slice(BLOCO_ABRE.length, fim);
+    if (carga.length !== Number(r.tamanho)) return { ok: false, motivo: 'integridade' };
+
+    if (porPosicao[p] !== undefined) {
+      if (porPosicao[p] !== carga) return { ok: false, motivo: 'bloco_duplicado' };
+      continue;
+    }
+    porPosicao[p] = carga;
+  }
+
+  var partes = [];
+  for (var k = 0; k < n; k++) {
+    if (porPosicao[k] === undefined) return { ok: false, motivo: 'bloco_ausente' };
+    partes.push(porPosicao[k]);
+  }
+
+  var texto = partes.join('');
+  if (texto.length !== Number(manifesto.tamanho)) return { ok: false, motivo: 'integridade' };
+  if (resumoDoTexto(texto) !== String(manifesto.hash)) return { ok: false, motivo: 'integridade' };
+
+  return { ok: true, texto: texto };
+}
+
+/* As linhas (leves) de cada registro e geração, a partir de UMA
+   varredura das colunas curtas da aba de blocos. A varredura fica
+   guardada na execução, como toda varredura do Dados.gs. */
+function indiceDeBlocos(defBlocos) {
+  var colId = defBlocos.registro;
+  var indice = {};
+  lerLeves(defBlocos).forEach(function (r) {
+    var id = String(r[colId] || '');
+    var g = String(r.geracao || '');
+    if (!indice[id]) indice[id] = {};
+    if (!indice[id][g]) indice[id][g] = [];
+    indice[id][g].push(r);
+  });
+  return indice;
+}
+
+/* Lê e confere a geração de vários registros de uma vez.
+
+   pedidos: [{ id, manifesto }]
+   devolve: { id: { ok, texto } | { ok: false, motivo } }
+
+   Uma varredura das colunas curtas para achar as linhas, e o conteúdo
+   só das linhas pedidas — agrupado em faixas, porque os blocos de uma
+   geração nascem juntos e costumam estar lado a lado. Nenhum bloco de
+   outra ficha é lido. */
+function lerGeracoes(defBlocos, pedidos) {
+  var saida = {};
+  if (!pedidos || !pedidos.length) return saida;
+
+  var indice = indiceDeBlocos(defBlocos);
+  var alvos = [];
+  var linhasDe = {};
+
+  pedidos.forEach(function (p) {
+    var doRegistro = indice[String(p.id)] || {};
+    var leves = doRegistro[String(p.manifesto.geracao)] || [];
+    if (!leves.length) { saida[p.id] = { ok: false, motivo: 'bloco_ausente' }; return; }
+    linhasDe[p.id] = leves.map(function (r) { return r._linha; });
+    alvos = alvos.concat(linhasDe[p.id]);
+  });
+
+  if (!alvos.length) return saida;
+
+  var completos = lerLinhas(defBlocos, alvos);
+  var porLinha = {};
+  completos.forEach(function (r) { porLinha[r._linha] = r; });
+
+  pedidos.forEach(function (p) {
+    if (saida[p.id]) return;
+    var registros = linhasDe[p.id].map(function (l) { return porLinha[l]; }).filter(Boolean);
+    saida[p.id] = montarGeracao(defBlocos, registros, p.id, p.manifesto);
+  });
+
+  return saida;
+}
+
+/* ---------------------------------------------------------------------
+   LIMPAR
+   --------------------------------------------------------------------- */
+
+/* As linhas das gerações de um registro, menos as de `manter`
+   ({ geracao: true }). */
+function linhasDeGeracoes(defBlocos, registroId, manter) {
+  var colId = defBlocos.registro;
+  var alvo = String(registroId);
+  var guardar = manter || {};
+  return lerLeves(defBlocos)
+    .filter(function (r) { return String(r[colId]) === alvo && !guardar[String(r.geracao)]; })
+    .map(function (r) { return r._linha; });
+}
+
+/* Apaga as gerações de um registro, menos as de `manter`. Chamado DENTRO
+   da trava: nada que um manifesto aponte sai daqui. Devolve quantas
+   linhas saíram. */
+function apagarGeracoes(defBlocos, registroId, manter) {
+  return apagarLinhas(defBlocos, linhasDeGeracoes(defBlocos, registroId, manter));
+}
+
+/* As gerações de um registro, com linhas e data, para diagnóstico e
+   limpeza: { geracao: { linhas: [...], criadoEm, quantos, total } } */
+function geracoesDe(defBlocos, registroId) {
+  var porGeracao = indiceDeBlocos(defBlocos)[String(registroId)] || {};
+  var saida = {};
+  Object.keys(porGeracao).forEach(function (g) {
+    var leves = porGeracao[g];
+    saida[g] = {
+      linhas: leves.map(function (r) { return r._linha; }),
+      quantos: leves.length,
+      total: Number(leves[0].total) || 0,
+      criadoEm: String(leves[0].criadoEm || ''),
+    };
+  });
+  return saida;
 }

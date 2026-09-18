@@ -1092,19 +1092,417 @@ function acaoListarPersonagens(corpo, usuario) {
   return { ok: true, dados: lista };
 }
 
+/* =====================================================================
+   O CONTEÚDO DA FICHA
+   ---------------------------------------------------------------------
+   Toda leitura e toda gravação do conteúdo de um personagem passam por
+   aqui (v2.15). Nenhuma ação toca em `fichaJson`, `armazenamento` ou na
+   aba de blocos: elas recebem a ficha como objeto, igual antes, e não
+   sabem se ela estava numa célula ou em trinta.
+
+     lerFichaDoPersonagem(registro)       uma ficha, conferida
+     lerFichasDosPersonagens(registros)   várias, com uma varredura só
+     publicarFicha(registro, ficha, o)    grava, confere e troca
+     apagarBlocosDoPersonagem(id)         na exclusão
+
+   DOIS FORMATOS, UM MARCADOR
+   ---------------------------------------------------------------------
+     armazenamento vazio        formato antigo: a ficha inteira está em
+                                fichaJson. É lida como sempre foi, e vira
+                                blocos na próxima gravação que der certo
+                                — nenhuma migração em massa.
+     armazenamento preenchido   o manifesto (ver Dados.gs). A ficha está
+                                nos blocos da geração que ele aponta, e
+                                fichaJson guarda só o aviso de formato
+                                novo.
+
+   A gravação que publica o manifesto troca o fichaJson pelo aviso na
+   MESMA linha, de uma vez: uma ficha nunca fica com metade num formato
+   e metade no outro.
+
+   LER NUNCA DEVOLVE FICHA VAZIA
+   ---------------------------------------------------------------------
+   Até a v2.14, JSON corrompido virava ficha em branco — e uma ficha em
+   branco na tela é uma ficha que alguém edita e salva por cima da
+   original. Agora qualquer falha (bloco ausente, bloco trocado, texto
+   que não confere, JSON inválido) volta como `ficha_ilegivel`, com o
+   motivo, e nada é gravado.
+   ===================================================================== */
+
+/* O que fica em fichaJson de uma ficha em blocos.
+
+   Uma versão ANTIGA do servidor — alguém voltou a implantação — lê esta
+   célula como se fosse a ficha inteira. Vazia, ela apareceria como uma
+   ficha em branco, e editá-la gravaria por cima. Com isto aparece um
+   aviso: o nome diz o que houve, e o schemaVersion altíssimo faz a ficha
+   de qualquer site desde a v2.x se recusar a abrir para edição. Mesmo
+   que alguém grave assim mesmo por um servidor antigo, só ESTA célula
+   muda — o manifesto e os blocos ficam onde estão, e voltam a valer
+   quando o servidor atual for implantado de novo. */
+var SCHEMA_DO_AVISO = 999999;
+
+function avisoDeFormatoNovo(nome) {
+  return JSON.stringify({
+    _armazenamento: FORMATO_BLOCOS,
+    schemaVersion: SCHEMA_DO_AVISO,
+    nome: '⚠ ' + String(nome || 'Ficha').slice(0, 80) + ' — atualize o servidor',
+    aviso: 'Esta ficha foi salva em blocos pelo R.A.M.A. v2.15 ou mais novo, e este servidor ' +
+      'é mais antigo: ele não sabe montá-la. Nada foi perdido. Implante de novo a versão ' +
+      'atual do Apps Script para voltar a abri-la.',
+  });
+}
+
+function ehAvisoDeFormatoNovo(objeto) {
+  return !!objeto && typeof objeto === 'object' && objeto._armazenamento === FORMATO_BLOCOS;
+}
+
+/* ---------------------------------------------------------------------
+   IDEMPOTÊNCIA
+   ---------------------------------------------------------------------
+   O navegador manda um id por gravação (`operacaoId`) e o repete, com
+   a MESMA ficha e a MESMA revisão, quando a resposta não chega. O
+   manifesto guarda o id da última gravação que subiu a revisão, e a
+   revisão que ela produziu. Se os dois batem, a gravação que chegou de
+   novo já foi aplicada: responde que deu certo, sem aplicar outra vez.
+
+   Qualquer coisa que suba a revisão depois (outro aparelho, o mestre, o
+   vínculo de campanha) troca o id — e aí a repetição volta a ser um
+   conflito de verdade, como deve ser. */
+function idDeOperacao(valor) {
+  var s = String(valor === undefined || valor === null ? '' : valor);
+  return /^[A-Za-z0-9_-]{8,80}$/.test(s) ? s : '';
+}
+
+function operacaoJaAplicada(registro, operacao) {
+  if (!operacao) return false;
+  var m = manifestoDe(registro.armazenamento);
+  return !!(m && !m.invalido && String(m.operacao || '') === operacao &&
+    Number(m.rev) === (Number(registro.rev) || 0));
+}
+
+/* O personagem que uma CRIAÇÃO com este id já criou — a mesma criação
+   repetida porque a resposta se perdeu (uma importação grande que
+   estourou o prazo do navegador, por exemplo). Primeiro o cache, porque
+   a repetição costuma vir em segundos; sem ele, os manifestos dos
+   personagens da própria conta. */
+var SEGUNDOS_CACHE_OPERACAO = 600;
+
+function chaveDaOperacao(usuario, operacao) { return 'rama.op.' + usuario.id + '.' + operacao; }
+
+function lembrarOperacao(usuario, operacao, id) {
+  if (operacao) cacheGravar(chaveDaOperacao(usuario, operacao), String(id), SEGUNDOS_CACHE_OPERACAO);
+}
+
+function personagemDaOperacao(usuario, operacao) {
+  if (!operacao) return null;
+
+  var meus = lerLeves(ABAS.PERSONAGENS).filter(function (p) { return meu(p, usuario); });
+  if (!meus.length) return null;
+
+  var lembrado = cacheLer(chaveDaOperacao(usuario, operacao));
+  if (lembrado) {
+    for (var i = 0; i < meus.length; i++) if (String(meus[i].id) === String(lembrado)) return meus[i];
+  }
+
+  var manifestos = lerCelulas(ABAS.PERSONAGENS, meus, 'armazenamento');
+  for (var j = 0; j < meus.length; j++) {
+    var m = manifestoDe(manifestos[meus[j]._linha]);
+    if (m && !m.invalido && String(m.operacao || '') === operacao) return meus[j];
+  }
+  return null;
+}
+
+/* ---------------------------------------------------------------------
+   LER
+   --------------------------------------------------------------------- */
+
+function falhaDeLeitura(motivo) {
+  return { ok: false, erro: 'ficha_ilegivel', motivo: String(motivo || 'desconhecido') };
+}
+
+/* O texto já provado inteiro vira objeto — só aqui, e só depois. */
+function interpretarFicha(texto, formato, manifesto) {
+  if (!texto) return falhaDeLeitura('vazia');
+
+  var ficha;
+  try { ficha = JSON.parse(texto); } catch (erro) { return falhaDeLeitura('json'); }
+  if (!ficha || typeof ficha !== 'object' || Array.isArray(ficha)) return falhaDeLeitura('json');
+
+  /* O aviso de formato novo SEM manifesto ao lado: alguém esvaziou a
+     coluna armazenamento. A ficha está nos blocos, e tratar o aviso como
+     ficha seria abrir uma ficha vazia. */
+  if (ehAvisoDeFormatoNovo(ficha)) return falhaDeLeitura('manifesto_ausente');
+
+  return { ok: true, ficha: ficha, formato: formato, manifesto: manifesto || null, tamanho: texto.length };
+}
+
+/* Lê o conteúdo de UM registro, no formato em que ele estiver, uma vez. */
+function conteudoDoRegistro(registro) {
+  var m = manifestoDe(registro.armazenamento);
+
+  if (m === null) {
+    var bruto = registro.fichaJson;
+    return interpretarFicha(bruto === undefined || bruto === null ? '' : String(bruto), 'antigo');
+  }
+  if (m.invalido) return falhaDeLeitura(m.motivo);
+
+  var id = String(registro.id);
+  var lido = lerGeracoes(ABAS.PERSONAGENS_BLOCOS, [{ id: id, manifesto: m }])[id];
+  if (!lido || !lido.ok) return falhaDeLeitura((lido && lido.motivo) || 'bloco_ausente');
+  return interpretarFicha(lido.texto, 'blocos', m);
+}
+
+/* Uma ficha, conferida. Devolve { ok, ficha, registro } — o REGISTRO de
+   onde ela saiu, que pode ser mais novo do que o recebido, e cuja `rev`
+   é a que acompanha esta ficha.
+
+   Por que tentar de novo: a leitura corre FORA da trava. Entre ler a
+   linha do personagem e ler os blocos, uma gravação pode publicar outra
+   geração e a limpeza pode apagar ou deslocar as linhas antigas. Isso
+   aparece como bloco ausente ou fora do lugar — e a saída é ler a linha
+   de novo, porque o manifesto novo aponta blocos que existem. Uma falha
+   que continua com o MESMO manifesto é defeito de verdade, e volta como
+   erro. Formato antigo não repete: a célula é uma só. */
+var TENTATIVAS_DE_LEITURA = 3;
+
+function lerFichaDoPersonagem(registro) {
+  var atual = registro;
+  var r = conteudoDoRegistro(atual);
+
+  for (var t = 1; t < TENTATIVAS_DE_LEITURA && !r.ok; t++) {
+    var m = manifestoDe(atual.armazenamento);
+    if (!m || m.invalido) break;
+
+    invalidar(ABAS.PERSONAGENS);
+    invalidar(ABAS.PERSONAGENS_BLOCOS);
+    var novo = acharPor(ABAS.PERSONAGENS, 'id', registro.id);
+
+    /* Dono e campanha decidiram o acesso. Se mudaram no meio, a decisão
+       não vale mais para esta leitura. */
+    if (!novo || String(novo.ownerId) !== String(registro.ownerId) ||
+        String(novo.campanhaId || '') !== String(registro.campanhaId || '')) {
+      return { ok: false, erro: 'nao_encontrado' };
+    }
+
+    atual = novo;
+    r = conteudoDoRegistro(atual);
+  }
+
+  if (!r.ok) {
+    console.warn('R.A.M.A.: a ficha ' + registro.id + ' não se montou (' + r.motivo + ')');
+    return r;
+  }
+  r.registro = atual;
+  return r;
+}
+
+/* Várias fichas — as da mesa, as do combate — com UMA varredura dos
+   blocos e só o conteúdo delas. `registros` pode ser leve (de lerLeves):
+   o manifesto é lido aqui, e o fichaJson só das fichas que ainda estão
+   no formato antigo. Devolve { id: resultado }, cada um como
+   lerFichaDoPersonagem devolveria. Uma ficha ilegível não derruba as
+   outras. */
+function lerFichasDosPersonagens(registros) {
+  var saida = {};
+  if (!registros || !registros.length) return saida;
+
+  var manifestos = lerCelulas(ABAS.PERSONAGENS, registros, 'armazenamento');
+  var antigos = registros.filter(function (p) { return manifestoDe(manifestos[p._linha]) === null; });
+  var jsons = lerCelulas(ABAS.PERSONAGENS, antigos, 'fichaJson');
+
+  var pedidos = [];
+  registros.forEach(function (p) {
+    var m = manifestoDe(manifestos[p._linha]);
+    if (m === null) {
+      var bruto = jsons[p._linha];
+      saida[p.id] = interpretarFicha(bruto === undefined || bruto === null ? '' : String(bruto), 'antigo');
+      if (!saida[p.id].ok) console.warn('R.A.M.A.: a ficha ' + p.id + ' não se montou (' + saida[p.id].motivo + ')');
+      return;
+    }
+    if (m.invalido) { saida[p.id] = falhaDeLeitura(m.motivo); return; }
+    pedidos.push({ id: String(p.id), manifesto: m });
+  });
+
+  var lidos = lerGeracoes(ABAS.PERSONAGENS_BLOCOS, pedidos);
+
+  pedidos.forEach(function (pd) {
+    var lido = lidos[pd.id];
+    if (lido && lido.ok) {
+      saida[pd.id] = interpretarFicha(lido.texto, 'blocos', pd.manifesto);
+      return;
+    }
+    /* Pode ter sido regravada no meio da leitura: de novo, sozinha. */
+    var completo = acharPor(ABAS.PERSONAGENS, 'id', pd.id);
+    saida[pd.id] = completo ? lerFichaDoPersonagem(completo) : { ok: false, erro: 'nao_encontrado' };
+  });
+
+  return saida;
+}
+
+/* ---------------------------------------------------------------------
+   GRAVAR
+   ---------------------------------------------------------------------
+   Grava a ficha em blocos e troca o manifesto do personagem.
+
+   `registro` chega com as colunas já decididas por quem chamou (nome,
+   campanha, revisão…). Aqui ele ganha o manifesto novo e o aviso de
+   formato, e vai para a planilha numa gravação de UMA linha — é ela que
+   torna a versão nova a que vale.
+
+   opcoes
+     inserir    o registro é novo (criar, duplicar): a linha é acrescentada
+     operacao   o id desta gravação, para reconhecer uma repetição.
+                Ausente, fica o do manifesto anterior: é o caso de uma
+                gravação que NÃO sobe a revisão (o resumo de recursos)
+
+   Onde pode parar, e o que sobra em cada ponto:
+     1. blocos da geração nova       linhas que nenhum manifesto aponta;
+                                     a ficha continua na versão anterior
+     2. conferência desses blocos    idem, e a resposta é erro
+     3. a linha do personagem        idem — é esta gravação que troca de
+                                     versão, e ela entra inteira ou não
+     4. limpeza das gerações velhas  sobra uma geração a mais, que a
+                                     próxima gravação recolhe
+   --------------------------------------------------------------------- */
+function publicarFicha(registro, ficha, opcoes) {
+  var o = opcoes || {};
+  var texto = semSubstitutoSolto(JSON.stringify(ficha));
+
+  if (texto.length > LIMITE_TOTAL_FICHA) {
+    return { ok: false, erro: 'ficha_grande_demais', tamanho: texto.length, limite: LIMITE_TOTAL_FICHA };
+  }
+
+  /* Sem a aba de blocos (setupRama desta versão não rodou), gravar é
+     impossível — e dizer isso é melhor do que "falhou". Ler continua
+     funcionando para as fichas no formato antigo. */
+  try {
+    aba(ABAS.PERSONAGENS_BLOCOS);
+  } catch (erro) {
+    return { ok: false, erro: 'instalacao_incompleta', detalhe: 'PERSONAGENS_BLOCOS' };
+  }
+
+  var anterior = manifestoDe(registro.armazenamento);
+
+  /* Um manifesto que esta versão não entende não é sobrescrito: por cima
+     dele, a próxima leitura perderia o que ele guardava. */
+  if (anterior && anterior.invalido) return falhaDeLeitura(anterior.motivo);
+
+  /* O que a limpeza vai levar é decidido AGORA, antes de escrever: tudo
+     deste personagem menos a geração que vale — ela vira a "anterior" do
+     manifesto novo. A geração nova entra ABAIXO de todas as linhas, então
+     estes números continuam certos depois dela, e a trava garante que
+     nada mais mexe na aba no meio. Uma leitura da ficha feita há pouco,
+     nesta mesma execução (o ajuste do mestre, o resumo), já varreu a aba
+     — e aqui ela é reaproveitada em vez de varrida de novo. */
+  var manter = {};
+  if (anterior) manter[String(anterior.geracao)] = true;
+  var velhas;
+  try {
+    velhas = linhasDeGeracoes(ABAS.PERSONAGENS_BLOCOS, registro.id, manter);
+  } catch (erro) {
+    velhas = [];
+  }
+
+  var gravado;
+  try {
+    gravado = gravarGeracao(ABAS.PERSONAGENS_BLOCOS, registro.id, texto);
+  } catch (erro) {
+    console.error('R.A.M.A.: blocos da ficha ' + registro.id + ' não gravados: ' + erro);
+    return { ok: false, erro: 'armazenamento_falhou', etapa: 'blocos' };
+  }
+
+  var conferido;
+  try {
+    conferido = conferirGeracao(ABAS.PERSONAGENS_BLOCOS, registro.id, gravado, texto);
+  } catch (erro) {
+    conferido = { ok: false, motivo: 'leitura' };
+  }
+  if (!conferido.ok) {
+    console.error('R.A.M.A.: blocos da ficha ' + registro.id + ' não conferem (' + conferido.motivo + ')');
+    return { ok: false, erro: 'armazenamento_falhou', etapa: 'conferencia' };
+  }
+
+  var manifesto = {
+    formato: FORMATO_BLOCOS,
+    versao: VERSAO_BLOCOS,
+    geracao: gravado.geracao,
+    blocos: gravado.blocos,
+    tamanho: gravado.tamanho,
+    hash: gravado.hash,
+    rev: Number(registro.rev) || 0,
+    operacao: o.operacao !== undefined ? String(o.operacao || '') : (anterior ? String(anterior.operacao || '') : ''),
+    gravadoEm: gravado.criadoEm,
+    /* A geração que deixa de valer continua conferível: é o ponto de
+       volta de restaurarGeracaoAnterior(). */
+    anterior: anterior ? {
+      geracao: anterior.geracao, blocos: anterior.blocos, tamanho: anterior.tamanho,
+      hash: anterior.hash, rev: anterior.rev, gravadoEm: anterior.gravadoEm || '',
+    } : null,
+  };
+
+  registro.armazenamento = JSON.stringify(manifesto);
+  registro.fichaJson = avisoDeFormatoNovo(registro.nome);
+
+  try {
+    if (o.inserir) inserir(ABAS.PERSONAGENS, registro);
+    else atualizarLinha(ABAS.PERSONAGENS, registro._linha, registro);
+  } catch (erro) {
+    console.error('R.A.M.A.: a ficha ' + registro.id + ' não foi publicada: ' + erro);
+    return { ok: false, erro: 'armazenamento_falhou', etapa: 'publicacao' };
+  }
+
+  /* Ficam a geração nova e a imediatamente anterior: a anterior atende
+     uma leitura que tenha começado antes desta troca, e é o ponto de
+     volta. O resto sai — inclusive lixo de gravações que pararam no
+     meio. Falhar aqui não desfaz nada. */
+  try {
+    apagarLinhas(ABAS.PERSONAGENS_BLOCOS, velhas);
+  } catch (erro) {
+    console.warn('R.A.M.A.: limpeza dos blocos de ' + registro.id + ' adiada: ' + erro);
+  }
+
+  return { ok: true, manifesto: manifesto };
+}
+
+/* Na exclusão do personagem: todas as gerações dele, e só dele. Uma
+   falha aqui deixa blocos sem dono, que limparBlocosOrfaos() recolhe. */
+function apagarBlocosDoPersonagem(personagemId) {
+  try {
+    return apagarGeracoes(ABAS.PERSONAGENS_BLOCOS, personagemId, {});
+  } catch (erro) {
+    console.warn('R.A.M.A.: blocos de ' + personagemId + ' ficaram para a limpeza: ' + erro);
+    return 0;
+  }
+}
+
+/* A ficha que sai para o navegador e para as gravações parciais: o
+   vínculo de campanha vem da COLUNA, que é o que decide permissão. Tirar
+   um jogador da mesa limpa só a coluna (salvar_participantes,
+   excluir_campanha), e o vínculo trocado sem regravar a ficha também —
+   a ficha não pode abrir dizendo uma campanha que a coluna já não diz. */
+function comVinculoDaColuna(ficha, registro) {
+  ficha.campanhaId = registro.campanhaId || null;
+  return ficha;
+}
+
 function acaoLerPersonagem(corpo, usuario) {
   var acesso = personagemAcessivel(corpo.personagemId, usuario);
   if (!acesso.ok) return acesso;
 
+  /* Falhou em montar: erro, com o motivo — nunca uma ficha vazia. */
+  var lido = lerFichaDoPersonagem(acesso.personagem);
+  if (!lido.ok) return lido;
+
   return {
     ok: true,
-    rev: Number(acesso.personagem.rev) || 0,
+    /* A revisão da linha de onde a ficha saiu — a mesma leitura. */
+    rev: Number(lido.registro.rev) || 0,
     /* Quem abriu precisa saber se está como dono ou como mestre: a
        tela mostra um aviso e esconde o que é do dono. A decisão de
        permissão já foi tomada aqui; isto é só o rótulo. */
     dono: acesso.dono,
     mestre: acesso.mestre,
-    dados: lerJson(acesso.personagem.fichaJson, {}),
+    dados: comVinculoDaColuna(lido.ficha, lido.registro),
   };
 }
 
@@ -1164,9 +1562,19 @@ function avisarMesas(campanhaIds, partes) {
   });
 }
 
+/* Medida ANTES da trava: uma ficha acima do limite operacional é
+   recusada sem fazer ninguém esperar na fila. A resposta leva o tamanho
+   e o limite, para a tela explicar com números. */
+function grandeDemais(ficha) {
+  var tamanho = JSON.stringify(ficha).length;
+  if (tamanho <= LIMITE_TOTAL_FICHA) return null;
+  return { ok: false, erro: 'ficha_grande_demais', tamanho: tamanho, limite: LIMITE_TOTAL_FICHA };
+}
+
 function acaoCriarPersonagem(corpo, usuario) {
   var ficha = corpo.dados;
-  if (!ficha || typeof ficha !== 'object') return { ok: false, erro: 'dados_invalidos' };
+  if (!ficha || typeof ficha !== 'object' || Array.isArray(ficha)) return { ok: false, erro: 'dados_invalidos' };
+  var operacao = idDeOperacao(corpo.operacaoId);
 
   var agora = new Date().toISOString();
   var id = novoId();
@@ -1180,17 +1588,21 @@ function acaoCriarPersonagem(corpo, usuario) {
   ficha.atualizadoEm = agora;
   ficha.resumoRecursos = resumoParaGravar(ficha, null) || undefined;
 
-  if (JSON.stringify(ficha).length > MAX_CELULA) return { ok: false, erro: 'dados_grandes' };
+  var recusa = grandeDemais(ficha);
+  if (recusa) return recusa;
 
   return comTrava(function () {
+    /* A mesma criação chegando de novo — a resposta da primeira se
+       perdeu no caminho. Devolve o personagem que ela criou. */
+    var repetido = personagemDaOperacao(usuario, operacao);
+    if (repetido) return { ok: true, rev: Number(repetido.rev) || 1, dados: { id: repetido.id }, repetida: true };
+
     /* A campanha que o servidor aceitou é a que vai para dentro da
        ficha também — ver acaoSalvarPersonagem. */
     var campanhaId = campanhaValida(ficha.campanhaId, usuario);
     ficha.campanhaId = campanhaId || null;
-    var json = JSON.stringify(ficha);
-    if (json.length > MAX_CELULA) return { ok: false, erro: 'dados_grandes' };
 
-    inserir(ABAS.PERSONAGENS, {
+    var registro = {
       id: id,
       ownerId: usuario.id,
       nome: String(ficha.nome || 'Sem nome').slice(0, 120),
@@ -1200,8 +1612,12 @@ function acaoCriarPersonagem(corpo, usuario) {
       criadoEm: agora,
       atualizadoEm: agora,
       rev: 1,
-      fichaJson: json,
-    });
+    };
+
+    var publicado = publicarFicha(registro, ficha, { inserir: true, operacao: operacao });
+    if (!publicado.ok) return publicado;
+
+    lembrarOperacao(usuario, operacao, id);
     avisarMesas([campanhaId], ['personagens']);
     return { ok: true, rev: 1, dados: { id: id } };
   });
@@ -1221,9 +1637,11 @@ function acaoCriarPersonagem(corpo, usuario) {
 
 function acaoSalvarPersonagem(corpo, usuario) {
   var ficha = corpo.dados;
-  if (!ficha || typeof ficha !== 'object') return { ok: false, erro: 'dados_invalidos' };
+  if (!ficha || typeof ficha !== 'object' || Array.isArray(ficha)) return { ok: false, erro: 'dados_invalidos' };
+  var operacao = idDeOperacao(corpo.operacaoId);
 
-  if (JSON.stringify(ficha).length > MAX_CELULA) return { ok: false, erro: 'dados_grandes' };
+  var recusa = grandeDemais(ficha);
+  if (recusa) return recusa;
 
   return comTrava(function () {
     var acesso = personagemAcessivel(corpo.personagemId, usuario);
@@ -1234,17 +1652,35 @@ function acaoSalvarPersonagem(corpo, usuario) {
     var revPedida = Number(corpo.rev);
 
     if (Number.isFinite(revPedida) && revPedida !== revAtual) {
+      /* A MESMA gravação chegando de novo: o servidor terminou, a
+         resposta se perdeu, e o navegador repetiu. Já está aplicada. */
+      if (operacaoJaAplicada(registro, operacao)) return { ok: true, rev: revAtual, repetida: true };
+
+      /* Conflito de verdade: vai junto o estado atual, para o navegador
+         conciliar. Se nem o estado atual se monta, quem chamou precisa
+         saber disso — e não receber um "conflito" com uma ficha vazia. */
+      var atual = lerFichaDoPersonagem(registro);
+      if (!atual.ok) return atual;
       return {
         ok: false,
         erro: 'conflito',
-        rev: revAtual,
-        dados: lerJson(registro.fichaJson, {}),
+        rev: Number(atual.registro.rev) || revAtual,
+        dados: comVinculoDaColuna(atual.ficha, atual.registro),
       };
     }
 
     var agora = new Date().toISOString();
     ficha.atualizadoEm = agora;
-    ficha.resumoRecursos = resumoParaGravar(ficha, lerJson(registro.fichaJson, {})) || undefined;
+
+    /* A ficha anterior só é lida quando é preciso: uma gravação de uma
+       versão do site que não mandava o resumo mantém o que já estava. */
+    var resumo = resumoParaGravar(ficha, null);
+    var ehOrdem = String(ficha.tipoFicha || '') === 'ordem' && !!ficha.ordem && typeof ficha.ordem === 'object';
+    if (!resumo && ehOrdem) {
+      var anterior = lerFichaDoPersonagem(registro);
+      if (anterior.ok) resumo = resumoParaGravar(ficha, anterior.ficha);
+    }
+    ficha.resumoRecursos = resumo || undefined;
     var campanhaAnterior = registro.campanhaId;
 
     registro.nome = String(ficha.nome || 'Sem nome').slice(0, 120);
@@ -1262,11 +1698,12 @@ function acaoSalvarPersonagem(corpo, usuario) {
     registro.origem = String(ficha.origem || '').slice(0, 80);
     registro.atualizadoEm = agora;
     registro.rev = revAtual + 1;
-    registro.fichaJson = JSON.stringify(ficha);
-    /* Conferido de novo: o id da campanha que entrou acima ocupa espaço. */
-    if (registro.fichaJson.length > MAX_CELULA) return { ok: false, erro: 'dados_grandes' };
 
-    atualizarLinha(ABAS.PERSONAGENS, registro._linha, registro);
+    /* Conteúdo, revisão, espelhos e manifesto entram juntos, numa
+       gravação de uma linha: não existe instante em que a revisão nova
+       aponte para o conteúdo velho, nem o contrário. */
+    var publicado = publicarFicha(registro, ficha, { operacao: operacao });
+    if (!publicado.ok) return publicado;
 
     avisarMesas([campanhaAnterior, registro.campanhaId], ['personagens', 'combates']);
 
@@ -1284,6 +1721,11 @@ function acaoExcluirPersonagem(corpo, usuario) {
 
     apagarLinha(ABAS.PERSONAGENS, registro._linha);
 
+    /* Os blocos saem depois da linha: sem ela, nenhum caminho chega a
+       eles no meio tempo. Só os deste personagem — os das outras fichas
+       são de outros registros e nem entram na conta. */
+    apagarBlocosDoPersonagem(registro.id);
+
     /* Achar para apagar não precisa da imagem. */
     var foto = linhaLeve(ABAS.PERSONAGENS_FOTOS, 'personagemId', corpo.personagemId);
     if (foto && String(foto.ownerId) === String(usuario.id)) {
@@ -1297,12 +1739,23 @@ function acaoExcluirPersonagem(corpo, usuario) {
 }
 
 function acaoDuplicarPersonagem(corpo, usuario) {
+  var operacao = idDeOperacao(corpo.operacaoId);
+
   return comTrava(function () {
+    /* A mesma duplicação chegando de novo: devolve a cópia que ela fez. */
+    var repetido = personagemDaOperacao(usuario, operacao);
+    if (repetido) return { ok: true, dados: { id: repetido.id }, repetida: true };
+
     var acesso = personagemAcessivel(corpo.personagemId, usuario, { exigeDono: true });
     if (!acesso.ok) return acesso;
     var registro = acesso.personagem;
 
-    var ficha = lerJson(registro.fichaJson, {});
+    /* Duplicar o que não se conseguiu ler seria criar uma cópia vazia
+       com cara de cópia. */
+    var lido = lerFichaDoPersonagem(registro);
+    if (!lido.ok) return lido;
+
+    var ficha = comVinculoDaColuna(lido.ficha, registro);
     var agora = new Date().toISOString();
     var id = novoId();
 
@@ -1310,7 +1763,7 @@ function acaoDuplicarPersonagem(corpo, usuario) {
     ficha.criadoEm = agora;
     ficha.atualizadoEm = agora;
 
-    inserir(ABAS.PERSONAGENS, {
+    var novo = {
       id: id,
       ownerId: usuario.id,
       nome: ficha.nome.slice(0, 120),
@@ -1320,8 +1773,11 @@ function acaoDuplicarPersonagem(corpo, usuario) {
       criadoEm: agora,
       atualizadoEm: agora,
       rev: 1,
-      fichaJson: JSON.stringify(ficha),
-    });
+    };
+
+    var publicado = publicarFicha(novo, ficha, { inserir: true, operacao: operacao });
+    if (!publicado.ok) return publicado;
+    lembrarOperacao(usuario, operacao, id);
 
     var foto = acharPor(ABAS.PERSONAGENS_FOTOS, 'personagemId', corpo.personagemId);
     if (foto && String(foto.ownerId) === String(usuario.id) && foto.imagem) {
@@ -1809,6 +2265,25 @@ function setupRama() {
     if (folha.getFrozenRows() < 1) folha.setFrozenRows(1);
   });
 
+  /* As colunas de texto puro — o conteúdo dos blocos de ficha (v2.15).
+     O formato "@" faz a planilha guardar o que chega sem converter em
+     número, data ou fórmula. É defesa a mais: cada bloco já vai entre
+     marcadores e é conferido por SHA-256. Aplicar de novo não muda nada,
+     então roda sempre, inclusive numa aba que já existia. */
+  Object.keys(ABAS).forEach(function (chave) {
+    var definicao = ABAS[chave];
+    if (!definicao.somenteTexto) return;
+    var folha = arquivo.getSheetByName(definicao.nome);
+    if (!folha) return;
+    var nomes = folha.getRange(1, 1, 1, Math.max(folha.getLastColumn(), 1)).getValues()[0]
+      .map(function (v) { return String(v).trim(); });
+    definicao.somenteTexto.forEach(function (coluna) {
+      var posicao = nomes.indexOf(coluna) + 1;
+      if (!posicao) return;
+      folha.getRange(1, posicao, folha.getMaxRows(), 1).setNumberFormat('@');
+    });
+  });
+
   /* A aba padrão vazia que toda planilha nova traz só atrapalha. Sai,
      mas apenas se estiver realmente vazia. */
   var padrao = arquivo.getSheetByName('Página1') || arquivo.getSheetByName('Sheet1');
@@ -1845,6 +2320,21 @@ function setupRama() {
       }
     } catch (erro) { /* aba recém-criada, sem o que conferir */ }
   });
+
+  /* A ficha em blocos (v2.15) não pede migração: cada ficha antiga
+     continua no formato antigo até a próxima gravação que der certo, e
+     é lida normalmente até lá. O setup só conta, para quem roda saber
+     onde a planilha está. Contar não grava nada. */
+  try {
+    var personagens = lerLeves(ABAS.PERSONAGENS);
+    var manifestos = lerCelulas(ABAS.PERSONAGENS, personagens, 'armazenamento');
+    var emBlocos = personagens.filter(function (p) {
+      var m = manifestoDe(manifestos[p._linha]);
+      return m && !m.invalido;
+    }).length;
+    relatorio.push('fichas em blocos: ' + emBlocos + ' de ' + personagens.length +
+      ' — as outras passam para blocos sozinhas, na próxima gravação de cada uma');
+  } catch (erro) { /* aba recém-criada, nada a contar */ }
 
   var texto = 'R.A.M.A. — setup\n\n' + relatorio.join('\n');
   console.log(texto);
@@ -2067,6 +2557,24 @@ function conferirInstalacao() {
     /* já reportado acima */
   }
 
+  /* A ficha em blocos (v2.15): a aba e a coluna do manifesto precisam
+     existir para gravar. Sem elas, fichas antigas ainda abrem, mas
+     nenhuma ficha salva. */
+  try {
+    aba(ABAS.PERSONAGENS_BLOCOS);
+    if (!cabecalho(ABAS.PERSONAGENS).mapa.armazenamento) {
+      problemas.push('A aba PERSONAGENS não tem a coluna armazenamento — rode setupRama(). ' +
+        'Sem ela nenhuma ficha salva.');
+    }
+    var orfaos = contarBlocosSemDono();
+    if (orfaos) {
+      avisos.push(orfaos + ' linha(s) de blocos sem ficha que as aponte. Não atrapalham nada; ' +
+        'rode limparBlocosOrfaos() para recolhê-las.');
+    }
+  } catch (erro) {
+    /* a falta da aba já foi reportada acima */
+  }
+
   var iteracoes = Number(propriedade('RAMA_ITERACOES', '10000'));
   if (iteracoes < 5000) {
     avisos.push('RAMA_ITERACOES está em ' + iteracoes + '. Abaixo de 5000 a derivação fica fraca.');
@@ -2078,6 +2586,205 @@ function conferirInstalacao() {
 
   if (avisos.length) texto += '\n\nAVISOS:\n' + avisos.map(function (a) { return '· ' + a; }).join('\n');
 
+  console.log(texto);
+  return texto;
+}
+
+/* ---------------------------------------------------------------------
+   FICHAS EM BLOCOS — diagnóstico, restauração e limpeza (v2.15)
+
+   As três rodam À MÃO no editor do Apps Script, como as outras desta
+   seção; nenhuma está no roteamento, então não existe requisição capaz
+   de chamá-las. Quem roda é quem já tem a planilha aberta — e mesmo
+   assim o diagnóstico não imprime o conteúdo de ficha nenhuma.
+   --------------------------------------------------------------------- */
+
+/* Blocos que nenhum manifesto aponta: de gerações velhas, de gravações
+   que pararam no meio, de fichas excluídas. Uma geração que um manifesto
+   aponta — a ativa ou a anterior — nunca entra na conta, nem os blocos
+   de uma ficha cujo manifesto esta versão não entende. */
+var CARENCIA_ORFAOS_MS = 10 * 60 * 1000;
+
+function blocosSemDono() {
+  var personagens = lerLeves(ABAS.PERSONAGENS);
+  var manifestos = lerCelulas(ABAS.PERSONAGENS, personagens, 'armazenamento');
+
+  var guardar = {};
+  personagens.forEach(function (p) {
+    var m = manifestoDe(manifestos[p._linha]);
+    var g = {};
+    if (m && m.invalido) g['*'] = true;
+    else if (m) {
+      g[String(m.geracao)] = true;
+      if (m.anterior && m.anterior.geracao) g[String(m.anterior.geracao)] = true;
+    }
+    guardar[String(p.id)] = g;
+  });
+
+  /* Blocos de um personagem que não existe só saem depois de uma
+     carência: uma criação grava os blocos antes da linha, dentro da
+     trava — isto é só uma margem a mais. */
+  var limite = Date.now() - CARENCIA_ORFAOS_MS;
+  var linhas = [];
+  lerLeves(ABAS.PERSONAGENS_BLOCOS).forEach(function (b) {
+    var g = guardar[String(b.personagemId)];
+    if (g) {
+      if (g['*'] || g[String(b.geracao)]) return;
+      linhas.push(b._linha);
+      return;
+    }
+    var quando = Date.parse(String(b.criadoEm || ''));
+    if (isFinite(quando) && quando > limite) return;
+    linhas.push(b._linha);
+  });
+  return linhas;
+}
+
+function contarBlocosSemDono() {
+  return blocosSemDono().length;
+}
+
+/* ---------------------------------------------------------------------
+   limparBlocosOrfaos()
+   Recolhe os blocos que nenhuma ficha aponta. Cada gravação já limpa as
+   gerações velhas da própria ficha; isto é para o que sobra — ficha
+   excluída cuja limpeza falhou, gravação que parou no meio. Seguro de
+   rodar a qualquer hora, quantas vezes quiser.
+   --------------------------------------------------------------------- */
+function limparBlocosOrfaos() {
+  reiniciarExecucao();
+  var r = comTrava(function () {
+    var linhas = blocosSemDono();
+    return { ok: true, apagadas: apagarLinhas(ABAS.PERSONAGENS_BLOCOS, linhas) };
+  });
+  var texto = r.ok
+    ? 'R.A.M.A. — limpeza de blocos: ' + r.apagadas + ' linha(s) sem dono recolhida(s).'
+    : 'R.A.M.A. — limpeza de blocos: a trava não foi obtida (' + r.erro + '). Tente de novo.';
+  console.log(texto);
+  return texto;
+}
+
+/* ---------------------------------------------------------------------
+   diagnosticarPersonagem(personagemId)
+   Como uma ficha está guardada e se ela se monta. Diz formato,
+   manifesto, gerações presentes e o resultado da conferência de cada uma
+   que dá para conferir. NÃO imprime o conteúdo da ficha.
+   --------------------------------------------------------------------- */
+function diagnosticarPersonagem(personagemId) {
+  reiniciarExecucao();
+  var linhas = [];
+  function diz(rotulo, valor) { linhas.push(rotulo + ': ' + valor); }
+
+  var registro = acharPor(ABAS.PERSONAGENS, 'id', personagemId);
+  if (!registro) {
+    var nada = 'R.A.M.A. — diagnóstico: nenhum personagem com o id ' + personagemId + '.';
+    console.log(nada);
+    return nada;
+  }
+
+  diz('personagem', registro.nome + ' (' + registro.id + ')');
+  diz('rev', registro.rev);
+
+  var m = manifestoDe(registro.armazenamento);
+  if (m === null) {
+    diz('formato', 'antigo — a ficha inteira em fichaJson');
+    var antigo = conteudoDoRegistro(registro);
+    diz('leitura', antigo.ok ? 'ok, ' + antigo.tamanho + ' caracteres' : 'FALHOU — ' + antigo.motivo);
+  } else if (m.invalido) {
+    diz('formato', 'manifesto que esta versão não entende (' + m.motivo + ') — nada é lido nem gravado por cima');
+  } else {
+    diz('formato', 'blocos, versão ' + m.versao);
+    diz('revisão do manifesto', m.rev + (Number(m.rev) === (Number(registro.rev) || 0) ? ''
+      : ' — DIFERENTE da coluna rev (' + registro.rev + '): alguém gravou esta linha sem o servidor atual'));
+
+    var conferir = [{ rotulo: 'geração ativa', manifesto: m }];
+    if (m.anterior && m.anterior.geracao) {
+      conferir.push({ rotulo: 'geração anterior', manifesto: Object.assign({ formato: m.formato, versao: m.versao }, m.anterior) });
+    }
+    conferir.forEach(function (c) {
+      var id = String(registro.id);
+      var r = lerGeracoes(ABAS.PERSONAGENS_BLOCOS, [{ id: id, manifesto: c.manifesto }])[id];
+      var ficha = r && r.ok ? interpretarFicha(r.texto, 'blocos', c.manifesto) : null;
+      diz(c.rotulo, c.manifesto.geracao + ' — ' + c.manifesto.blocos + ' bloco(s), ' + c.manifesto.tamanho +
+        ' caracteres — ' + (ficha && ficha.ok ? 'CONFERE' : 'NÃO CONFERE (' + ((r && r.motivo) || (ficha && ficha.motivo)) + ')'));
+    });
+
+    var todas = geracoesDe(ABAS.PERSONAGENS_BLOCOS, registro.id);
+    Object.keys(todas).forEach(function (g) {
+      var info = todas[g];
+      var papel = g === String(m.geracao) ? 'ativa' : (m.anterior && g === String(m.anterior.geracao) ? 'anterior' : 'sem manifesto (sai na limpeza)');
+      diz('  linhas da geração ' + g, info.quantos + ' de ' + info.total + ', gravada em ' + info.criadoEm + ' — ' + papel);
+    });
+  }
+
+  var texto = 'R.A.M.A. — diagnóstico de ficha\n\n' + linhas.join('\n');
+  console.log(texto);
+  return texto;
+}
+
+/* ---------------------------------------------------------------------
+   restaurarGeracaoAnterior(personagemId, forcar)
+   Faz a geração ANTERIOR voltar a valer — só depois de conferi-la
+   inteira. Serve para a ficha cuja geração ativa não se monta (bloco
+   apagado à mão, planilha restaurada pela metade). Com a ativa
+   conferindo, recusa, a menos que `forcar` seja true: aí é desfazer a
+   última gravação, de propósito.
+
+   Nada é apagado: a geração ativa passa a ser a "anterior" do manifesto
+   novo, e continua lá para quem quiser examiná-la. A revisão sobe, para
+   uma ficha aberta noutro aparelho não gravar por cima sem conflito.
+   --------------------------------------------------------------------- */
+function restaurarGeracaoAnterior(personagemId, forcar) {
+  reiniciarExecucao();
+
+  var r = comTrava(function () {
+    var registro = acharPor(ABAS.PERSONAGENS, 'id', personagemId);
+    if (!registro) return { ok: false, texto: 'nenhum personagem com este id' };
+
+    var m = manifestoDe(registro.armazenamento);
+    if (!m || m.invalido) return { ok: false, texto: 'a ficha não está em blocos que esta versão entenda' };
+    if (!m.anterior || !m.anterior.geracao) return { ok: false, texto: 'não há geração anterior guardada' };
+
+    var id = String(registro.id);
+    var atual = conteudoDoRegistro(registro);
+    if (atual.ok && forcar !== true) {
+      return { ok: false, texto: 'a geração ativa confere. Para desfazer a última gravação assim mesmo, ' +
+        'rode restaurarGeracaoAnterior("' + id + '", true)' };
+    }
+
+    var anterior = Object.assign({ formato: m.formato, versao: m.versao }, m.anterior);
+    var lida = lerGeracoes(ABAS.PERSONAGENS_BLOCOS, [{ id: id, manifesto: anterior }])[id];
+    var ficha = lida && lida.ok ? interpretarFicha(lida.texto, 'blocos', anterior) : null;
+    if (!ficha || !ficha.ok) {
+      return { ok: false, texto: 'a geração anterior também não confere (' + ((lida && lida.motivo) || (ficha && ficha.motivo)) + '). ' +
+        'Nada foi mudado. Recupere pela cópia exportada ou pelo histórico de versões da planilha.' };
+    }
+
+    var agora = new Date().toISOString();
+    registro.rev = (Number(registro.rev) || 0) + 1;
+    registro.atualizadoEm = agora;
+    registro.armazenamento = JSON.stringify({
+      formato: m.formato,
+      versao: m.versao,
+      geracao: anterior.geracao,
+      blocos: anterior.blocos,
+      tamanho: anterior.tamanho,
+      hash: anterior.hash,
+      rev: registro.rev,
+      operacao: '',
+      gravadoEm: agora,
+      restauradaEm: agora,
+      anterior: { geracao: m.geracao, blocos: m.blocos, tamanho: m.tamanho, hash: m.hash, rev: m.rev, gravadoEm: m.gravadoEm || '' },
+    });
+    atualizarLinha(ABAS.PERSONAGENS, registro._linha, registro);
+
+    if (typeof marcarMesa === 'function' && registro.campanhaId) marcarMesa(registro.campanhaId, ['personagens', 'combates']);
+
+    return { ok: true, texto: 'restaurada a geração ' + anterior.geracao + ' (' + anterior.tamanho +
+      ' caracteres); rev ' + registro.rev + '. A geração que valia continua guardada como anterior.' };
+  });
+
+  var texto = 'R.A.M.A. — restauração de ficha: ' + (r.texto || ('a trava não foi obtida (' + r.erro + ')'));
   console.log(texto);
   return texto;
 }

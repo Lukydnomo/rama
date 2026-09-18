@@ -1,7 +1,9 @@
 # O formato da ficha
 
-O que vai dentro de `fichaJson`. Definido em `js/ficha.js`, que também é quem
-cria a ficha padrão e normaliza o que chega de fora.
+O que é uma ficha. Definido em `js/ficha.js`, que também é quem cria a ficha
+padrão e normaliza o que chega de fora. Onde ela é guardada — inteira em
+`fichaJson` (formato antigo) ou em blocos (v2.15) — é assunto do backend, e não muda
+nada aqui: ver [DATABASE.md](DATABASE.md).
 
 ## As duas ideias
 
@@ -681,7 +683,7 @@ espaços, de −99 a +99. Ele não tem duração: fica até alguém mudar.
 "resumoRecursos": { "versao": 1, "pv": 32, "pe": 9, "san": null }   // ao lado de "ordem", não dentro
 ```
 
-Desde a v2.12, o `fichaJson` gravado de uma ficha de Ordem leva os **máximos** de
+Desde a v2.12, a ficha gravada de uma ficha de Ordem leva os **máximos** de
 PV, PE e Sanidade, para os outros jogadores da campanha verem os recursos sem
 receber a ficha (ver "Painel da mesa" em [CAMPAIGNS.md](CAMPAIGNS.md)). Os atuais
 continuam só em `ordem.recursos`. `san` é `null` com "Jogando sem Sanidade".

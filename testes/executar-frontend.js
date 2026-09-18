@@ -1011,6 +1011,216 @@ t.grupo("Biblioteca de rituais — páginas, pedido à Homebrew e carga sob dema
 }
 
 /* =====================================================================
+   v2.15 — FICHA EM BLOCOS, DO LADO DO NAVEGADOR
+   ---------------------------------------------------------------------
+   O servidor passou a reconhecer a mesma gravação chegando de novo pelo
+   id de operação. Isso só funciona se o navegador REPETIR o mesmo pedido
+   — mesma ficha, mesma revisão, mesmo id — e nunca aproveitar a
+   repetição para mandar outra coisa. É o que se confere aqui, com um
+   servidor de mentira que grava e "perde" a resposta.
+   ===================================================================== */
+
+globalThis.removeEventListener = () => {};
+
+for (const caminho of ["js/salvar.js", "js/fila.js"]) {
+  (0, eval)(await Deno.readTextFile(new URL("../" + caminho, import.meta.url)));
+}
+
+/* Um servidor de personagem com revisão e id de operação, igual ao de
+   verdade no que importa aqui. `perderResposta` faz a próxima gravação
+   ACONTECER e a resposta não chegar. */
+function servidorDeFicha(fichaInicial, revInicial) {
+  const s = {
+    ficha: JSON.parse(JSON.stringify(fichaInicial)),
+    rev: revInicial,
+    ultimaOperacao: "",
+    pedidos: [],
+    perderResposta: 0,
+    responderComErro: null,
+    enviar(dados, rev, operacaoId) {
+      s.pedidos.push({ dados: JSON.parse(JSON.stringify(dados)), rev, operacaoId });
+      if (s.responderComErro) { const e = s.responderComErro; s.responderComErro = null; return Promise.resolve(e); }
+      if (rev !== s.rev) {
+        if (operacaoId && operacaoId === s.ultimaOperacao) return Promise.resolve({ ok: true, rev: s.rev, repetida: true });
+        return Promise.resolve({ ok: false, erro: "conflito", rev: s.rev, dados: JSON.parse(JSON.stringify(s.ficha)) });
+      }
+      s.ficha = JSON.parse(JSON.stringify(dados));
+      s.rev++;
+      s.ultimaOperacao = operacaoId || "";
+      if (s.perderResposta) { s.perderResposta--; return Promise.resolve({ ok: false, erro: "prazo" }); }
+      return Promise.resolve({ ok: true, rev: s.rev });
+    },
+  };
+  return s;
+}
+
+function salvadorDeTeste(servidor, estado, extra) {
+  const estados = [];
+  const erros = [];
+  const salvador = RAMASalvador.criar(Object.assign({
+    indicador: { definir: (n) => estados.push(n), salvoAgora: () => estados.push("salvo"), parar() {} },
+    instantaneo: () => estado.ficha,
+    enviar: (dados, rev, operacaoId) => servidor.enviar(dados, rev, operacaoId),
+    aplicar: (conciliada) => { estado.ficha = conciliada; },
+    esquema: {},
+    aoErroPermanente: (r) => erros.push(r),
+  }, extra || {}));
+  salvador.definirBase(estado.ficha, servidor.rev);
+  return { salvador, estados, erros };
+}
+
+t.grupo("Ficha em blocos — a resposta se perdeu: o salvador repete o MESMO pedido");
+
+{
+  const estado = { ficha: { nome: "Grande", anotacao: "a".repeat(120000) } };
+  const servidor = servidorDeFicha(estado.ficha, 4);
+  const { salvador, estados } = salvadorDeTeste(servidor, estado);
+
+  estado.ficha = Object.assign({}, estado.ficha, { nome: "Grande editada" });
+  servidor.perderResposta = 1;
+  salvador.alterou();
+  await salvador.agora();
+  t.igual("o servidor gravou, mas a resposta não chegou", servidor.rev, 5);
+  t.ok("  a tela não diz 'Salvo'", estados[estados.length - 1] !== "salvo" && salvador.temPendencia());
+
+  /* Enquanto espera para repetir, a pessoa continua editando. */
+  estado.ficha = Object.assign({}, estado.ficha, { nome: "Grande editada de novo" });
+  salvador.alterou();
+  await salvador.agora();
+  await new Promise((r) => setTimeout(r, 30));
+  await esvaziar();
+
+  const [primeiro, repetido, seguinte] = servidor.pedidos;
+  t.igual("a repetição leva o MESMO id de operação", repetido.operacaoId, primeiro.operacaoId);
+  t.igual("  a MESMA revisão", repetido.rev, 4);
+  t.ok("  e a MESMA ficha — não aproveita para mandar a edição nova", repetido.dados.nome === "Grande editada");
+  t.igual("o servidor reconhece a repetição e não aplica de novo", servidor.rev, 6);
+  t.ok("a edição feita no meio-tempo sobe no pedido seguinte", !!seguinte && seguinte.dados.nome === "Grande editada de novo");
+  t.ok("  com id novo", seguinte && seguinte.operacaoId !== primeiro.operacaoId);
+  t.igual("  na revisão que a repetição confirmou", seguinte && seguinte.rev, 5);
+  t.ok("nenhum conflito com a própria gravação", !salvador.emConflito());
+  t.igual("e só então 'Salvo'", estados[estados.length - 1], "salvo");
+  t.ok("  sem nada pendente", !salvador.temPendencia());
+  t.ok("a anotação de 120 mil caracteres foi inteira em todos os pedidos",
+    servidor.pedidos.every((p) => p.dados.anotacao.length === 120000));
+  salvador.parar();
+}
+
+t.grupo("Ficha em blocos — o que repetir não resolve para de repetir, sem perder nada");
+
+{
+  const estado = { ficha: { nome: "Enorme" } };
+  const servidor = servidorDeFicha(estado.ficha, 2);
+  const { salvador, estados, erros } = salvadorDeTeste(servidor, estado);
+
+  servidor.responderComErro = { ok: false, erro: "ficha_grande_demais", tamanho: 1200000, limite: 1000000 };
+  estado.ficha = { nome: "Enorme", texto: "z".repeat(10) };
+  salvador.alterou();
+  await salvador.agora();
+  t.igual("a ficha acima do limite total: o motivo vai para a tela, uma vez", erros.length, 1);
+  t.igual("  com os números do servidor", erros[0] && erros[0].limite, 1000000);
+  t.igual("  o estado é 'erro'", estados[estados.length - 1], "erro");
+  t.ok("  e a alteração continua pendente — nada se perdeu", salvador.temPendencia() && !!salvador.bloqueio());
+
+  const antes = servidor.pedidos.length;
+  estado.ficha = { nome: "Enorme", texto: "z".repeat(11) };
+  salvador.alterou();
+  await new Promise((r) => setTimeout(r, 600));
+  t.igual("editar depois disso não vira uma tentativa por tecla", servidor.pedidos.length, antes);
+
+  await salvador.agora();
+  t.igual("'Salvar agora' tenta de novo", servidor.pedidos.length, antes + 1);
+  t.ok("  e, aceito, fica salvo", !salvador.temPendencia() && estados[estados.length - 1] === "salvo");
+  salvador.parar();
+}
+
+{
+  const estado = { ficha: { nome: "Tropeço" } };
+  const servidor = servidorDeFicha(estado.ficha, 1);
+  const { salvador, erros } = salvadorDeTeste(servidor, estado);
+  servidor.responderComErro = { ok: false, erro: "armazenamento_falhou", etapa: "publicacao" };
+  estado.ficha = { nome: "Tropeço 2" };
+  salvador.alterou();
+  await salvador.agora();
+  t.igual("'o arquivo não confirmou' não para as tentativas", erros.length, 0);
+  await salvador.agora();
+  t.igual("  a repetição é o mesmo pedido, e entra", servidor.pedidos.length === 2 && servidor.pedidos[1].operacaoId === servidor.pedidos[0].operacaoId, true);
+  t.igual("  gravado uma vez", servidor.rev, 2);
+  salvador.parar();
+}
+
+t.grupo("Ficha em blocos — o painel do mestre repete o mesmo ajuste antes do clique seguinte");
+
+{
+  const pedidos = [];
+  let perder = 1;
+  let revServidor = 3;
+  let ultimaOp = "";
+  const personagem = { id: "p1", rev: 3 };
+  const concluidos = [];
+  const fila = RAMAFila.criar({
+    espera: 0,
+    enviar: (a) => {
+      if (!a.operacaoId) a.operacaoId = RAMAApi.novaOperacao();
+      pedidos.push({ valor: a.valor, rev: a.personagem.rev, operacaoId: a.operacaoId });
+      if (a.personagem.rev !== revServidor) {
+        if (a.operacaoId === ultimaOp) return Promise.resolve({ ok: true, rev: revServidor, repetida: true, dados: { valor: a.valor } });
+        return Promise.resolve({ ok: false, erro: "conflito", rev: revServidor });
+      }
+      revServidor++;
+      ultimaOp = a.operacaoId;
+      if (perder) { perder--; return Promise.resolve({ ok: false, erro: "prazo" }); }
+      return Promise.resolve({ ok: true, rev: revServidor, dados: { valor: a.valor } });
+    },
+    aoConcluir: (chave, a, r) => { a.personagem.rev = r.rev; concluidos.push(a.valor); },
+  });
+
+  fila.definir("p1/pv", { personagem, valor: 19 });
+  await fila.agora("p1/pv");
+  t.igual("o primeiro ajuste gravou, mas a resposta se perdeu", revServidor, 4);
+  fila.definir("p1/pv", { personagem, valor: 18 });
+  await fila.agora("p1/pv");
+  await esvaziar();
+  t.igual("a repetição vem antes do clique seguinte, com o mesmo id", pedidos[1] && pedidos[1].operacaoId, pedidos[0].operacaoId);
+  t.igual("  e o servidor não aplica de novo", pedidos[1] && pedidos[1].valor, 19);
+  t.ok("o clique que chegou no meio não foi descartado: sobe depois", pedidos.length === 3 && pedidos[2].valor === 18);
+  t.igual("  na revisão certa, sem conflito", pedidos[2] && pedidos[2].rev, 4);
+  t.iguais("  e os dois ajustes terminam confirmados, na ordem", concluidos, [19, 18]);
+  t.ok("  sem nada pendente", !fila.temPendencia());
+  fila.parar();
+}
+
+t.grupo("Ficha em blocos — pedidos e mensagens");
+
+{
+  t.ok("criar personagem leva um id de operação e pode ser repetido pelo transporte",
+    RAMAApi.podeRepetirPedido({ acao: "criar_personagem", operacaoId: "op-1234567890" }));
+  t.ok("  sem o id, não pode", !RAMAApi.podeRepetirPedido({ acao: "criar_personagem" }));
+  t.ok("duplicar com id também pode", RAMAApi.podeRepetirPedido({ acao: "duplicar_personagem", operacaoId: "op-1234567890" }));
+  t.ok("salvar NÃO é repetido pelo transporte — quem repete é o salvador, com espera",
+    !RAMAApi.podeRepetirPedido({ acao: "salvar_personagem", operacaoId: "op-1234567890" }));
+  t.ok("o id de operação tem o formato que o servidor aceita", /^[A-Za-z0-9_-]{8,80}$/.test(RAMAApi.novaOperacao()));
+
+  comSessaoGuardada();
+  let ultimo = null;
+  rede.responder = (corpo) => { ultimo = corpo; return { ok: true, rev: 1, dados: { id: "novo" } }; };
+  await RAMAApi.criarPersonagem({ nome: "Importada" });
+  t.ok("a criação (e a importação) sai com operacaoId", !!ultimo && /^op-/.test(ultimo.operacaoId));
+  await RAMAApi.salvarPersonagem("p1", 3, { nome: "A" }, "op-da-ficha-0001");
+  t.igual("a gravação sai com o id que o salvador deu", ultimo.operacaoId, "op-da-ficha-0001");
+
+  const grande = RAMAApi.frase({ ok: false, erro: "ficha_grande_demais", tamanho: 1234567, limite: 1000000 });
+  t.ok("a mensagem de limite total mostra o tamanho e o limite", grande.texto.indexOf("1.234.567") >= 0 && grande.texto.indexOf("1.000.000") >= 0);
+  const sugereApagar = /apag|remov|exclu|diminu|reduz|encurt|simplifi/i;
+  ["ficha_grande_demais", "ficha_ilegivel", "armazenamento_falhou", "dados_grandes"].forEach((codigo) => {
+    const f = RAMAApi.frase({ ok: false, erro: codigo, tamanho: 2000000, limite: 1000000 });
+    t.ok("'" + codigo + "' explica sem mandar apagar habilidades, rituais ou anotações",
+      f.titulo !== "ALGO DEU ERRADO" && !sugereApagar.test(f.texto.replace(/nada foi alterado nem apagado|nada foi perdido/gi, "")));
+  });
+  t.ok("a ficha ilegível diz que nada foi alterado", /nada foi alterado nem apagado/i.test(RAMAApi.frase({ erro: "ficha_ilegivel" }).texto));
+}
+
+/* =====================================================================
    FIM
    ===================================================================== */
 

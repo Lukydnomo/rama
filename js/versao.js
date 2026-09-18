@@ -14,19 +14,20 @@
    TRÊS COISAS DIFERENTES, QUE NÃO SE MISTURAM
    ---------------------------------------------------------------------
 
-     versão do aplicativo   está aqui. É o que a pessoa vê: v2.14.1.
+     versão do aplicativo   está aqui. É o que a pessoa vê: v2.15.0.
      schemaVersion          está em js/ficha.js. É o formato da FICHA,
                             e só sobe quando a ficha muda de forma.
      versaoFormato          está em js/config.js. É o formato dos
                             arquivos de importação/exportação.
 
-   Elas sobem em ritmos próprios. A v2.14.1 leva schemaVersion 8 e
-   versaoFormato 1 — e isso é normal: o ritual da ficha ganhou os campos do
-   catálogo de rituais (elemento, execução, área, resistência, descrição,
-   versões com custo e rolagens), mas o formato dos arquivos de importação
-   continua o mesmo, porque um arquivo antigo continua sendo lido sem perder
-   nada. Esta é a única subida de schema com migração: o texto longo do ritual
-   sai de `efeito` e vai para `descricao`, junto com o rótulo personalizado.
+   Elas sobem em ritmos próprios. A v2.15.0 leva schemaVersion 8 e
+   versaoFormato 1 — e isso é normal: a v2.15 mudou ONDE a ficha é guardada
+   (em blocos, no backend), não o que é uma ficha, então nem o formato da
+   ficha nem o dos arquivos de importação mudaram. A forma de guardar tem a
+   própria versão, no manifesto de cada ficha (`formato: "blocos"`,
+   `versao: 1` — ver docs/DATABASE.md). A última subida de schema com
+   migração foi a v2.14.0: o texto longo do ritual saiu de `efeito` e foi
+   para `descricao`, junto com o rótulo personalizado.
 
    ---------------------------------------------------------------------
    A REGRA, PARA TODA ENTREGA FUTURA
@@ -59,6 +60,44 @@
   ];
 
   var CHANGELOG = [
+    {
+      versao: "2.15.0",
+      codinome: "MOSAICO",
+      data: "18/09/2026",
+      mudancas: {
+        "Corrigido": [
+          "Ficha grande deixava de salvar. A ficha inteira morava numa célula da planilha, e a célula do Google aceita 50 mil caracteres: passando de ~45 mil, o servidor recusava a gravação e o site tentava de novo para sempre, sem dizer por quê. Agora a ficha é guardada em blocos e salva, reabre e é editada inteira — nada é cortado e ninguém precisa simplificar a ficha.",
+          "Ficha corrompida abria em branco. Um JSON ilegível virava uma ficha vazia na tela — e uma ficha vazia na tela é uma ficha que alguém edita e salva por cima da original. Agora a leitura confere o conteúdo e, se ele não se montar, a ficha não abre: aparece o motivo, e nada é gravado por cima.",
+          "A resposta perdida virava conflito com a própria gravação. Quando o servidor terminava de gravar mas a resposta não chegava ao navegador, a nova tentativa era acusada de conflito (e o painel do mestre dizia que o recurso tinha \"mudado em outro aparelho\"). Agora cada gravação leva um id de operação, a repetição é o mesmo pedido, e o servidor a reconhece sem aplicar de novo.",
+          "No painel do mestre, um clique feito enquanto um ajuste falhava no caminho podia ser descartado. A fila agora repete o ajuste que falhou e manda o clique mais novo em seguida.",
+        ],
+        "Adicionado": [
+          "A ficha em blocos: uma aba nova, PERSONAGENS_BLOCOS, guarda cada ficha em quantos pedaços forem precisos, todos abaixo do limite seguro da célula, com um manifesto na linha do personagem (geração, quantidade de blocos, tamanho e SHA-256 do texto). Cada gravação escreve uma geração nova, confere o que a planilha guardou e só então troca o manifesto, numa gravação de uma linha — uma falha no meio deixa a versão anterior inteira.",
+          "Limite total de uma ficha: 1 milhão de caracteres (antes, os 45 mil de uma célula). Acima dele a gravação é recusada com o tamanho e o limite na mensagem, nada se perde na tela e o site para de insistir sozinho — oferecendo exportar a ficha.",
+          "Exportar ficha ganhou \"Baixar arquivo\": a ficha vem num .json pronto, em vez de só uma caixa de texto para copiar — a cópia de segurança de uma ficha grande.",
+          "Ferramentas no editor do Apps Script: diagnosticarPersonagem(id) diz como a ficha está guardada e se ela se monta (sem imprimir o conteúdo); restaurarGeracaoAnterior(id) faz a versão anterior voltar a valer, depois de conferi-la; limparBlocosOrfaos() recolhe os blocos que nenhuma ficha aponta. conferirInstalacao() passa a avisar quando há blocos sem dono.",
+        ],
+        "Alterado": [
+          "Toda leitura e gravação de ficha passa por uma camada só no backend — abrir, criar, salvar, duplicar, importar, excluir, o ajuste rápido do mestre, o resumo de recursos, os cartões da mesa e os recursos do combate. O navegador continua recebendo a ficha inteira, como antes, sem saber de blocos.",
+          "A ficha antiga não é convertida de uma vez: ela continua abrindo como sempre e passa para blocos sozinha na próxima gravação que der certo.",
+          "O vínculo de campanha passa a valer pela coluna do personagem, que é a que decide permissão: tirar ou pôr uma ficha numa mesa grava só colunas, sem reler nem reescrever a ficha, e a ficha aberta mostra sempre o vínculo da coluna.",
+          "Uma ficha que não se monta aparece no painel da mesa como tal, sem números nem botões de ajuste — e as outras fichas da mesa continuam carregando.",
+          "As mensagens de erro de gravação dizem o motivo (limite total, ficha que não se monta, arquivo que não confirmou a gravação) sem nunca sugerir apagar habilidades, rituais ou anotações.",
+          "Criar, importar e duplicar personagem podem ser repetidos com segurança quando a resposta demora: a mesma criação chegando de novo devolve o personagem que a primeira criou.",
+        ],
+        "Performance": [
+          "Abrir e salvar uma ficha custam mais chamadas à planilha, contadas no simulador: salvar 13 → 18, abrir 5 → 9, ajuste do mestre 9 → 17 — o preço de conferir cada gravação e cada leitura. Os blocos de uma ficha nascem lado a lado e são lidos numa chamada; a limpeza reaproveita a varredura já feita; a grade da aba só é consultada quando a gravação não cabe. A listagem de personagens não mudou e não toca nos blocos.",
+        ],
+        "Técnico": [
+          "Requer nova implantação do Apps Script (os três .gs) e setupRama(), que cria a aba PERSONAGENS_BLOCOS, a coluna armazenamento no fim de PERSONAGENS e o formato texto do conteúdo dos blocos. Nenhuma ficha é convertida, nenhuma aba, linha ou coluna é apagada ou movida, e rodar duas vezes dá o mesmo resultado. Sem o setup, as fichas antigas abrem e nenhuma salva (instalacao_incompleta).",
+          "Cada bloco é gravado entre marcadores e a coluna é texto puro: um pedaço de JSON nunca vira fórmula, número ou data. O corte nunca parte um emoji ao meio.",
+          "comTrava() passa a chamar SpreadsheetApp.flush() antes de soltar a trava: o Apps Script guarda as escritas num buffer, e sem isto a próxima execução podia ler a planilha sem elas — e a resposta \"salvo\" sair antes de a gravação existir.",
+          "O cache de cabeçalhos das abas passa a ter a assinatura das colunas declaradas na chave. Sem isso, voltar a implantação para a v2.14 com o mapa da v2.15 no cache apagaria o manifesto das fichas em blocos na primeira gravação — conferido rodando o backend real da v2.14 sobre a mesma planilha simulada. Voltar a uma versão anterior continua desaconselhado: ela não abre as fichas em blocos (o site avisa que o servidor precisa ser atualizado), mas o manifesto e os blocos sobrevivem, e reimplantar a v2.15 devolve tudo.",
+          "O simulador do Apps Script dos testes faz o que o Google faz: recusa célula acima de 50 mil caracteres, converte texto em fórmula, número ou booleano, troca meio emoji por U+FFFD, tem grade de linhas, não deixa apagar todas as linhas, e permite derrubar uma chamada ou pôr outra execução no meio de uma leitura. Com ele, o defeito original aparece nos testes.",
+          "Testes: 1546 no modelo (as 15 a mais são as conferências do versionamento sobre este registro), 701 no backend (232 novas) e 194 no transporte do frontend (43 novas). Dezoito mutações propositais na camada de blocos e cinco no salvador e na fila, cada uma pega por algum teste.",
+        ],
+      },
+    },
     {
       versao: "2.14.1",
       codinome: "HOSPEDEIRO",

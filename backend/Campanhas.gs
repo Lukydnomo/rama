@@ -631,9 +631,10 @@ function acaoListarPersonagensCampanha(corpo, usuario) {
   /* Duas etapas, e a ordem é o ponto.
 
      Primeiro descobre QUAIS personagens são desta campanha, varrendo só
-     as colunas leves — nenhum fichaJson e nenhuma foto atravessam o
-     serviço nesta etapa. Só então busca o conteúdo das linhas que
-     sobraram.
+     as colunas leves — nenhum conteúdo de ficha e nenhuma foto
+     atravessam o serviço nesta etapa. Só então busca o conteúdo das
+     linhas que sobraram: os blocos só destas fichas, com uma varredura
+     da aba de blocos para a mesa inteira (v2.15).
 
      Antes, esta tela lia a ficha completa e a foto de TODOS os
      personagens do sistema para desenhar os sete da mesa. */
@@ -641,7 +642,7 @@ function acaoListarPersonagensCampanha(corpo, usuario) {
     return String(p.campanhaId) === String(ctx.campanha.id);
   });
 
-  var fichas = lerCelulas(ABAS.PERSONAGENS, daMesa, 'fichaJson');
+  var fichas = lerFichasDosPersonagens(daMesa);
 
   var idsDaMesa = {};
   daMesa.forEach(function (p) { idsDaMesa[String(p.id)] = true; });
@@ -657,8 +658,33 @@ function acaoListarPersonagensCampanha(corpo, usuario) {
 
   var lista = daMesa
     .map(function (p) {
-      var ficha = lerJson(fichas[p._linha], {});
+      var lida = fichas[p.id] || { ok: false, erro: 'ficha_ilegivel', motivo: 'bloco_ausente' };
       var souDono = meu(p, usuario);
+
+      /* Uma ficha que não se montou aparece como tal: identificação e o
+         aviso, sem números inventados e sem controles de ajuste — que
+         gravariam por cima de uma ficha que ninguém conseguiu ler. */
+      if (!lida.ok) {
+        return {
+          id: p.id,
+          nome: p.nome,
+          tipoFicha: 'universal',
+          classe: p.classe || '',
+          origem: p.origem || '',
+          ownerId: p.ownerId,
+          dono: donos[p.ownerId] || '',
+          souDono: souDono,
+          detalhado: false,
+          podeEditarRecursos: false,
+          podeAbrirFicha: ctx.mestre || souDono,
+          recursosVisiveis: false,
+          fichaIlegivel: true,
+          foto: fotos[p.id] || '',
+          rev: Number(p.rev) || 0,
+        };
+      }
+
+      var ficha = lida.ficha;
 
       /* O mestre e o dono veem o personagem inteiro no painel; os outros
          jogadores da mesa, a identificação e — se o mestre permitir — os
@@ -800,7 +826,11 @@ function acaoAtualizarResumoPersonagem(corpo, usuario) {
     var revAtual = Number(registro.rev) || 0;
     if (revPedida !== revAtual) return { ok: false, erro: 'conflito', rev: revAtual };
 
-    var ficha = lerJson(registro.fichaJson, {});
+    /* Ficha que não se monta não recebe resumo: gravar por cima dela
+       seria salvar o que ninguém conseguiu ler. */
+    var lido = lerFichaDoPersonagem(registro);
+    if (!lido.ok) return lido;
+    var ficha = comVinculoDaColuna(lido.ficha, registro);
     if (!ehFichaDeOrdem(ficha)) return { ok: false, erro: 'dados_invalidos' };
 
     var guardado = normalizarResumoRecursos(ficha.resumoRecursos);
@@ -809,15 +839,15 @@ function acaoAtualizarResumoPersonagem(corpo, usuario) {
     }
 
     ficha.resumoRecursos = resumo;
-    var json = JSON.stringify(ficha);
-    if (json.length > MAX_CELULA) return { ok: false, erro: 'dados_grandes' };
 
     /* A revisão NÃO sobe: o resumo é derivado da ficha, não uma decisão
        de ninguém. Subir a revisão faria toda ficha aberta em outro
        aparelho entrar em conflito por causa de uma conta. Quem gravar a
-       ficha depois manda o próprio resumo junto. */
-    registro.fichaJson = json;
-    atualizarLinha(ABAS.PERSONAGENS, registro._linha, registro);
+       ficha depois manda o próprio resumo junto. Por isso a gravação não
+       leva id de operação: o manifesto continua reconhecendo a última
+       gravação que subiu a revisão. */
+    var publicado = publicarFicha(registro, ficha, {});
+    if (!publicado.ok) return publicado;
 
     marcarMesa(registro.campanhaId, ['personagens', 'combates']);
     return { ok: true, rev: revAtual, dados: { mudou: true } };
@@ -898,17 +928,29 @@ function acaoVincularPersonagem(corpo, usuario) {
       personagem.campanhaId = '';
     }
 
-    /* O vínculo também vive dentro do fichaJson, e os dois precisam
-       concordar — senão a ficha abre dizendo uma campanha e a listagem
-       mostra outra. */
-    var ficha = lerJson(personagem.fichaJson, {});
-    ficha.campanhaId = personagem.campanhaId || null;
+    /* O vínculo é a COLUNA (v2.15): é ela que decide permissão, e a
+       leitura da ficha a põe dentro do que sai para o navegador — ver
+       comVinculoDaColuna. Então vincular não regrava a ficha: grava três
+       colunas e, se houver, o manifesto, que precisa acompanhar a
+       revisão nova. Uma ficha de 300 mil caracteres entra ou sai da mesa
+       sem ser lida nem reescrita.
 
+       A revisão sobe mesmo assim: uma ficha aberta noutro aparelho ainda
+       tem a campanha antiga, e gravá-la sem conflito a levaria de volta
+       para lá. */
     personagem.atualizadoEm = new Date().toISOString();
     personagem.rev = (Number(personagem.rev) || 0) + 1;
-    personagem.fichaJson = JSON.stringify(ficha);
 
-    atualizarLinha(ABAS.PERSONAGENS, personagem._linha, personagem);
+    var campos = ['campanhaId', 'atualizadoEm', 'rev'];
+    var manifesto = manifestoDe(personagem.armazenamento);
+    if (manifesto && !manifesto.invalido) {
+      manifesto.rev = personagem.rev;
+      manifesto.operacao = '';
+      personagem.armazenamento = JSON.stringify(manifesto);
+      campos.push('armazenamento');
+    }
+
+    atualizarCampos(ABAS.PERSONAGENS, personagem, campos);
 
     marcarMesa(ctx.campanha.id, ['personagens', 'combates']);
     if (campanhaAnterior && String(campanhaAnterior) !== String(ctx.campanha.id)) {
@@ -946,9 +988,34 @@ var RECURSOS_DE_ORDEM = ['pv', 'pe', 'san'];
 /* O mesmo piso da ficha de Ordem (js/paginas/ficha-ordem.js). */
 var PISO_DE_RECURSO = -99;
 
+/* O item e o campo que um ajuste mexe, dentro da ficha. Devolve
+   { item, campo } ou { erro }. Criar o bloco de recursos de uma ficha de
+   Ordem que ainda não o tinha é a única escrita aqui — e só na cópia em
+   memória. */
+function alvoDoAjuste(ficha, alvo, itemId, campo) {
+  if (alvo === 'recurso') {
+    /* Só existe em ficha de Ordem. Numa universal, o recurso é um
+       status — e mexer num bloco que ela não tem seria criar dado. */
+    if (String(ficha.tipoFicha || '') !== 'ordem' || !ficha.ordem || typeof ficha.ordem !== 'object') {
+      return { erro: 'dados_invalidos' };
+    }
+    if (!ficha.ordem.recursos || typeof ficha.ordem.recursos !== 'object') {
+      ficha.ordem.recursos = { pv: null, pe: null, san: null };
+    }
+    return { item: ficha.ordem.recursos, campo: String(itemId) };
+  }
+
+  var lista = alvo === 'status' ? (ficha.status || []) : (ficha.atributos || []);
+  for (var i = 0; i < lista.length; i++) {
+    if (String(lista[i].id) === String(itemId)) return { item: lista[i], campo: campo };
+  }
+  return { erro: 'nao_encontrado' };
+}
+
 function acaoAjustarPersonagem(corpo, usuario) {
   var alvo = String(corpo.alvo || '');
   var campo = String(corpo.campo || '');
+  var operacao = idDeOperacao(corpo.operacaoId);
 
   var permitidos = CAMPOS_AJUSTAVEIS[alvo];
   if (!permitidos || permitidos.indexOf(campo) < 0) return { ok: false, erro: 'dados_invalidos' };
@@ -985,30 +1052,29 @@ function acaoAjustarPersonagem(corpo, usuario) {
     var revPedida = Number(corpo.rev);
 
     if (Number.isFinite(revPedida) && revPedida !== revAtual) {
+      /* O mesmo ajuste chegando de novo (a resposta se perdeu): já está
+         aplicado. Responde com o valor que ficou, como a primeira
+         resposta teria feito. */
+      if (operacaoJaAplicada(registro, operacao)) {
+        var ja = lerFichaDoPersonagem(registro);
+        if (!ja.ok) return ja;
+        var feito = alvoDoAjuste(ja.ficha, alvo, corpo.itemId, campo);
+        return { ok: true, rev: revAtual, repetida: true, dados: { valor: feito.item ? feito.item[feito.campo] : valor } };
+      }
       return { ok: false, erro: 'conflito', rev: revAtual };
     }
 
-    var ficha = lerJson(registro.fichaJson, {});
-    var item = null;
+    /* A ficha inteira é lida e regravada: o ajuste muda um número, mas
+       o conteúdo é um só. Ficha que não se monta não é ajustada — o
+       número seria gravado sobre o que ninguém conseguiu ler. */
+    var lido = lerFichaDoPersonagem(registro);
+    if (!lido.ok) return lido;
+    var ficha = comVinculoDaColuna(lido.ficha, registro);
 
-    if (alvo === 'recurso') {
-      /* Só existe em ficha de Ordem. Numa universal, o recurso é um
-         status — e mexer num bloco que ela não tem seria criar dado. */
-      if (String(ficha.tipoFicha || '') !== 'ordem' || !ficha.ordem || typeof ficha.ordem !== 'object') {
-        return { ok: false, erro: 'dados_invalidos' };
-      }
-      if (!ficha.ordem.recursos || typeof ficha.ordem.recursos !== 'object') {
-        ficha.ordem.recursos = { pv: null, pe: null, san: null };
-      }
-      item = ficha.ordem.recursos;
-      campo = String(corpo.itemId);
-    } else {
-      var lista = alvo === 'status' ? (ficha.status || []) : (ficha.atributos || []);
-      for (var i = 0; i < lista.length; i++) {
-        if (String(lista[i].id) === String(corpo.itemId)) { item = lista[i]; break; }
-      }
-      if (!item) return { ok: false, erro: 'nao_encontrado' };
-    }
+    var achado = alvoDoAjuste(ficha, alvo, corpo.itemId, campo);
+    if (achado.erro) return { ok: false, erro: achado.erro };
+    var item = achado.item;
+    campo = achado.campo;
 
     item[campo] = valor;
 
@@ -1023,9 +1089,9 @@ function acaoAjustarPersonagem(corpo, usuario) {
 
     registro.atualizadoEm = agora;
     registro.rev = revAtual + 1;
-    registro.fichaJson = JSON.stringify(ficha);
 
-    atualizarLinha(ABAS.PERSONAGENS, registro._linha, registro);
+    var publicado = publicarFicha(registro, ficha, { operacao: operacao });
+    if (!publicado.ok) return publicado;
 
     marcarMesa(registro.campanhaId, ['personagens', 'combates']);
 
@@ -1688,10 +1754,14 @@ function recursosParaCombate(ctx, usuario, ids) {
     return ctx.mestre || meu(p, usuario) || !ocultar;
   });
 
-  var fichas = lerCelulas(ABAS.PERSONAGENS, permitidas, 'fichaJson');
+  var fichas = lerFichasDosPersonagens(permitidas);
 
   permitidas.forEach(function (p) {
-    var ficha = lerJson(fichas[p._linha], {});
+    /* Ficha que não se montou fica sem recursos na lista — ausente do
+       mapa quer dizer "não mostrar", e nenhum número é inventado. */
+    var lida = fichas[p.id];
+    if (!lida || !lida.ok) return;
+    var ficha = lida.ficha;
     var lista;
     if (ehFichaDeOrdem(ficha)) {
       lista = recursosResumidos(ficha);

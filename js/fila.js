@@ -46,6 +46,16 @@
    pode passar por aqui sem uma chave de idempotência própria, do jeito
    que as rolagens têm.
 
+   A REPETIÇÃO É DO MESMO PEDIDO (v2.15)
+   ---------------------------------------------------------------------
+
+   Quando um envio falha no caminho, o que volta é o MESMO item — com o
+   mesmo id de operação, se quem enviou o pôs no item. Se o servidor
+   tinha gravado e só a resposta se perdeu, ele reconhece o id e
+   responde que deu certo, em vez de acusar conflito com o próprio
+   ajuste. Um clique que chegou enquanto isso NÃO é descartado: ele
+   espera a repetição e sobe depois, com a revisão que ela trouxer.
+
    O QUE ESTA FILA NÃO É
    ---------------------------------------------------------------------
 
@@ -78,7 +88,7 @@
     var filas = {};
 
     function entrada(chave) {
-      if (!filas[chave]) filas[chave] = { pendente: null, voando: false, timer: null, tentativa: 0 };
+      if (!filas[chave]) filas[chave] = { pendente: null, repetir: null, voando: false, timer: null, tentativa: 0 };
       return filas[chave];
     }
 
@@ -109,10 +119,12 @@
     async function correr(chave) {
       var e = entrada(chave);
 
-      if (e.voando || !e.pendente) return;
+      if (e.voando || (!e.pendente && !e.repetir)) return;
 
-      var item = e.pendente;
-      e.pendente = null;
+      /* O que falhou no caminho vai antes, igual; o clique mais novo, depois. */
+      var item;
+      if (e.repetir) { item = e.repetir; e.repetir = null; }
+      else { item = e.pendente; e.pendente = null; }
       e.voando = true;
       avisar(chave, "salvando", item);
 
@@ -161,7 +173,7 @@
          podem recomeçar todas no mesmo instante. */
       if (e.tentativa < MAX_TENTATIVAS && ehPassageiro(r)) {
         e.tentativa++;
-        e.pendente = item;
+        e.repetir = item;
         avisar(chave, "erro", item, r);
         clearTimeout(e.timer);
         e.timer = setTimeout(function () { correr(chave); },
@@ -180,12 +192,13 @@
     function ehPassageiro(r) {
       var erro = r && r.erro;
       return erro === "sem_conexao" || erro === "prazo" ||
-             erro === "servidor_falhou" || erro === "ocupado";
+             erro === "servidor_falhou" || erro === "ocupado" ||
+             erro === "armazenamento_falhou";
     }
 
     function temPendencia() {
       return Object.keys(filas).some(function (k) {
-        return filas[k].pendente || filas[k].voando;
+        return filas[k].pendente || filas[k].repetir || filas[k].voando;
       });
     }
 
