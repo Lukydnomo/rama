@@ -193,7 +193,47 @@
       beneficio: "",
       origem: "",
       nexExposicao: 0,
+      soTranscender: false,
     }, extra || {});
+  }
+
+  /* -----------------------------------------------------------------
+     O POSSUÍDO NÃO ESCOLHE PODER DE OCULTISTA
+
+     "Sempre que receber um novo poder de ocultista, em vez disso você
+     recebe o poder Transcender" (Poder Não Desejado, SAH p.28). A
+     habilidade chega em NEX 10%, antes do primeiro poder de ocultista
+     (NEX 15%), então a troca vale para TODAS as vagas de poder de
+     ocultista — e para o poder de ocultista da Versatilidade (OPRPG
+     p.34), que é a mesma coisa por outra porta.
+
+     Poder geral entra na troca porque o Sobrevivendo ao Horror o define
+     como poder de todas as classes (SAH p.33): recebê-lo é receber um
+     poder de ocultista.
+
+     O que NÃO é poder de ocultista continua livre: o primeiro poder de
+     outra trilha (Versatilidade e Ele Me Ensina), poder de outra classe
+     e poder paranormal.
+
+     Com NEX & Experiência ligada, Transcender deixa de ser poder de
+     classe (SAH p.98): não há poder para receber no lugar, o livro não
+     diz o que acontece, e a vaga fica livre — a troca fica com a mesa.
+     ----------------------------------------------------------------- */
+
+  var TRILHA_SO_TRANSCENDE = "possuido";
+  var NEX_DA_TROCA = 10;
+  var VAGAS_DA_TROCA = { poderClasse: true, versatilidade: true };
+  var MOTIVO_TROCA = "Poder Não Desejado (Sobrevivendo ao Horror, p. 28): todo novo poder de ocultista vira Transcender.";
+
+  function soTranscende(ordem) {
+    if (!ordem || ordem.trilha !== TRILHA_SO_TRANSCENDE) return false;
+    var tr = C.trilha(ordem.trilha);
+    if (!tr || tr.classe !== ordem.classe) return false;
+    return !(OP() && OP().ligada(ordem, "nexExperiencia"));
+  }
+
+  function trocaPorTranscender(ordem, tipo, degrau) {
+    return !!VAGAS_DA_TROCA[tipo] && degrau >= degrauDoNex(NEX_DA_TROCA) && soTranscende(ordem);
   }
 
   function vagas(ordem) {
@@ -209,11 +249,21 @@
         var d = degrauDoNex(etapa.nex);
         if (d > t.passos) return;
         (etapa.escolhas || []).forEach(function (tipo) {
-          lista.push(vaga("d" + d + "." + tipo, tipo, {
+          var extra = {
             degrau: d,
             ordem: d * 100 + (POSICAO[tipo] || 60),
             rotuloEtapa: rotuloDoDegrau(d, t.separado),
-          }));
+          };
+          if (trocaPorTranscender(ordem, tipo, d)) {
+            extra.soTranscender = true;
+            if (tipo === "poderClasse") {
+              extra.rotulo = "Poder de ocultista → Transcender";
+              extra.explicacao = MOTIVO_TROCA + " Escolha o poder paranormal que vem com ele.";
+            } else {
+              extra.explicacao = "Escolha entre o poder de ocultista — que, para o Possuído, é Transcender — e o primeiro poder de uma trilha de ocultista que não a sua.";
+            }
+          }
+          lista.push(vaga("d" + d + "." + tipo, tipo, extra));
         });
       });
 
@@ -963,10 +1013,13 @@
       }
 
       case "poderClasse": {
-        if (!r.valor) { saida.faltam.push("Poder"); break; }
+        if (!r.valor) { saida.faltam.push(v.soTranscender ? "Transcender" : "Poder"); break; }
         var e = P.poder(r.valor);
         if (!e || (e.tipo !== "classe" && e.tipo !== "geral")) { saida.problemas.push("Poder desconhecido: " + (r.nome || r.valor) + "."); break; }
         if (!P.pertenceAClasse(e, ordem.classe)) { saida.problemas.push(e.nome + " não é um poder da sua classe."); break; }
+        if (v.soTranscender && e.chave !== "transcender") {
+          saida.problemas.push(MOTIVO_TROCA + " " + e.nome + " não entra no lugar dele.");
+        }
         juntar(saida, avaliarPoder(e, o, percurso, etapa, ordem, contexto, 0));
         saida.transcender = e.chave === "transcender";
         break;
@@ -980,6 +1033,9 @@
           if (!ev || !P.pertenceAClasse(ev, ordem.classe) || (ev.tipo !== "classe" && ev.tipo !== "geral")) {
             saida.problemas.push("Escolha um poder da sua classe.");
             break;
+          }
+          if (v.soTranscender && ev.chave !== "transcender") {
+            saida.problemas.push(MOTIVO_TROCA + " " + ev.nome + " não entra no lugar dele.");
           }
           juntar(saida, avaliarPoder(ev, val.opcoes || {}, percurso, etapa, ordem, contexto, 0));
           saida.transcender = ev.chave === "transcender";
@@ -1532,7 +1588,10 @@
   function candidatosPoderClasse(ordem, idVaga, contexto) {
     var c = contextoDaVaga(ordem, idVaga, contexto);
     if (!c) return [];
-    return P.poderesDeClasse(ordem.classe).map(function (e) {
+    var oferta = P.poderesDeClasse(ordem.classe);
+    /* O Possuído não escolhe: a vaga só aceita Transcender. */
+    if (c.vaga.soTranscender) oferta = oferta.filter(function (e) { return e.chave === "transcender"; });
+    return oferta.map(function (e) {
       var cand = candidato(e, c.percurso, c.etapa, ordem);
       cand.viaGeral = e.tipo === "geral" || (e.classes.indexOf(ordem.classe) < 0 && !!e.geral);
       return cand;

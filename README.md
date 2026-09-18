@@ -110,7 +110,7 @@ E abra `http://localhost:8099/rama/`.
 
 São três conjuntos.
 
-**Modelo e motor de dados** — 1487 verificações. No navegador, abra `testes/`;
+**Modelo e motor de dados** — 1531 verificações. No navegador, abra `testes/`;
 no terminal:
 
 ```bash
@@ -126,7 +126,9 @@ recálculo que não acumula bônus nem restaura recurso gasto, regras opcionais 
 a separação entre nível e NEX; o motor de progressão — cada tipo de pendência,
 requisitos e repetição, concessão automática sem duplicação, revisão com
 dependências, afinidade (inclusive adiada e Homebrew), patente com limites
-manuais, carga por quantidade e o ajuste temporário de capacidade.
+manuais, carga por quantidade e o ajuste temporário de capacidade. E o Possuído,
+que não escolhe poder de ocultista: as vagas só aceitam Transcender, a escolha
+antiga não é apagada e a regra opcional NEX & Experiência devolve a vaga.
 
 E o catálogo de itens: as 244 entradas conferidas contra as tabelas dos livros
 (categoria, espaços, dano, crítico, alcance, tipo de dano), busca e filtros, a

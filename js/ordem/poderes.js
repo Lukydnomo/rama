@@ -955,8 +955,9 @@
 
     /* --- SAH: Possuído, p.28-29 --- */
     trilha("possuido", 10, "poderNaoDesejado", "Poder Não Desejado", SAH, 28,
-      "Cada novo poder de ocultista vira Transcender. Ganha pontos de possessão (3 + 2 por Transcender) para recuperar PV ou PE.",
-      { nota: "A troca dos poderes de ocultista por Transcender é conduzida por quem joga ao escolher cada poder." }),
+      "Cada novo poder de ocultista vira Transcender. Tem pontos de possessão (3, mais 2 por Transcender; gasta até a Presença por turno) que recuperam 10 PV ou 2 PE cada, e dormir devolve 1.",
+      { automacao: "parcial",
+        nota: "A troca é aplicada pela ficha: as vagas de poder de ocultista, e o poder de ocultista da Versatilidade, só aceitam Transcender. Os pontos de possessão são contados pela mesa — a ficha não tem esse recurso." }),
     trilha("possuido", 40, "asSombrasDentroDeMim", "As Sombras Dentro de Mim", SAH, 28,
       "Recupera 2 pontos de possessão por sono e 2 PE dão +1 dado em Acrobacia, Atletismo e Furtividade por uma rodada."),
     trilha("possuido", 65, "eleMeEnsina", "Ele Me Ensina", SAH, 28,

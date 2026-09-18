@@ -2110,6 +2110,91 @@
       })());
 
       /* ---------------------------------------------------------------- */
+      t.grupo("Ordem — o Possuído não escolhe poder de ocultista");
+
+      /* "Sempre que receber um novo poder de ocultista, em vez disso você
+         recebe o poder Transcender" (Poder Não Desejado, SAH p.28). */
+      function ocultista(extra) {
+        var f = RR.fichaVazia();
+        f.classe = "ocultista";
+        f.nex = 90;
+        f.atributos = { agi: 1, for: 1, int: 3, pre: 3, vig: 1 };
+        f.pericias = { ocultismo: "treinado", vontade: "treinado", atualidades: "treinado" };
+        return Object.assign(f, extra || {});
+      }
+
+      var pos = ocultista({ trilha: "possuido" });
+      var vagasPos = EP.vagas(pos);
+      var poderesPos = vagasPos.filter(function (v) { return v.tipo === "poderClasse"; });
+      t.igual("o Possuído de NEX 90% tem as seis vagas de poder de ocultista", poderesPos.length, 6);
+      t.ok("  e todas as seis viram Transcender", poderesPos.every(function (v) { return v.soTranscender; }));
+      t.ok("  com o rótulo dizendo isso", poderesPos[0].rotulo.indexOf("Transcender") >= 0);
+      t.ok("  e a explicação citando Poder Não Desejado e a página", poderesPos[0].explicacao.indexOf("Poder Não Desejado") >= 0 && poderesPos[0].explicacao.indexOf("p. 28") >= 0);
+      t.ok("a versatilidade de NEX 50% também", vagasPos.filter(function (v) { return v.tipo === "versatilidade"; })[0].soTranscender);
+      t.ok("mas o aumento de atributo não muda", !vagasPos.filter(function (v) { return v.tipo === "atributo"; })[0].soTranscender);
+
+      var ofertaPos = EP.candidatosPoderClasse(pos, "d3.poderClasse", null);
+      t.igual("a vaga oferece um poder só", ofertaPos.length, 1);
+      t.igual("  e ele é Transcender", ofertaPos[0].entrada.chave, "transcender");
+      t.ok("  disponível", ofertaPos[0].disponivel);
+
+      t.ok("Transcender resolve a vaga", avaliar(pos, "d3.poderClasse", "transcender", { poder: { valor: "sensitivo", opcoes: {} } }).valido);
+      t.ok("  e a vaga vazia pede Transcender pelo nome", avaliar(pos, "d3.poderClasse", "").faltam.join(" ").indexOf("Transcender") >= 0);
+
+      var outroPoder = avaliar(pos, "d3.poderClasse", "treinamentoEmPericia", { pericias: ["ocultismo", "vontade"] });
+      t.ok("outro poder de ocultista não vale", !outroPoder.valido);
+      t.ok("  e o motivo cita Poder Não Desejado, com livro e página", outroPoder.motivos.join(" ").indexOf("Sobrevivendo ao Horror, p. 28") >= 0);
+      t.ok("  e diz qual poder não entra", outroPoder.motivos.join(" ").indexOf("Treinamento em Perícia") >= 0);
+      t.ok("poder geral do SAH também não entra (SAH p.33: poder de todas as classes)",
+        !avaliar(pos, "d3.poderClasse", "estigmado").valido);
+
+      /* O que não é poder de ocultista continua livre. */
+      t.ok("o primeiro poder de outra trilha continua valendo na versatilidade",
+        avaliar(pos, "d10.versatilidade", "trilha", { trilha: { valor: "exorcista", opcoes: {} } }).valido);
+      var versOutro = avaliar(pos, "d10.versatilidade", "poderClasse", { poder: { valor: "treinamentoEmPericia", opcoes: { pericias: ["ocultismo", "vontade"] } } });
+      t.ok("mas o poder de ocultista da versatilidade vira Transcender", !versOutro.valido);
+      t.ok("  pelo mesmo motivo", versOutro.motivos.join(" ").indexOf("Poder Não Desejado") >= 0);
+      t.ok("  e Transcender ali vale", avaliar(pos, "d10.versatilidade", "poderClasse", { poder: { valor: "transcender", opcoes: { poder: { valor: "sensitivo", opcoes: {} } } } }).valido);
+
+      /* Transcender continua custando a Sanidade daquele aumento de NEX. */
+      var sanPos = RR.sanidade(pos).total;
+      escolher(pos, "d3.poderClasse", "transcender", { poder: { valor: "sensitivo", opcoes: {} } });
+      t.igual("o Transcender recebido pela troca custa a Sanidade do degrau (5 do ocultista)", sanPos - RR.sanidade(pos).total, 5);
+      t.ok("  e o poder paranormal entra na ficha", nomesAdquiridos(pos).indexOf("Sensitivo") >= 0);
+      t.ok("  e a vaga sai das pendências", idsPendentes(pos).indexOf("d3.poderClasse") < 0);
+
+      /* Uma ficha feita antes: a escolha antiga não é apagada. */
+      var antesDaTroca = ocultista({ trilha: "conduite" });
+      escolher(antesDaTroca, "d3.poderClasse", "treinamentoEmPericia", { pericias: ["crime", "medicina"] });
+      t.igual("um ocultista de outra trilha escolhe poder de ocultista à vontade", RR.grauDaPericia(antesDaTroca, "crime"), "treinado");
+      antesDaTroca.trilha = "possuido";
+      var regAntigo = (antesDaTroca.escolhas || []).filter(function (r) { return r.etapa === "d3.poderClasse"; })[0];
+      var estAntigo = EP.estado(antesDaTroca);
+      t.ok("virar Possuído NÃO apaga a escolha antiga", !!regAntigo && antesDaTroca.escolhas.length === 1);
+      t.ok("  mas ela fica marcada, com o motivo", estAntigo.avaliacoes[regAntigo.id].valido === false);
+      t.ok("  e vira pendência a revisar", estAntigo.pendencias.some(function (p) { return p.id === "d3.poderClasse" && p.situacao === "invalida"; }));
+      t.igual("  com o efeito suspenso", RR.grauDaPericia(antesDaTroca, "crime"), "destreinado");
+      EP.definirIgnorarRequisitos(antesDaTroca, regAntigo.id, true);
+      t.ok("a mesa pode manter a escolha mesmo assim", EP.estado(antesDaTroca).avaliacoes[regAntigo.id].valido);
+      t.igual("  e o efeito volta", RR.grauDaPericia(antesDaTroca, "crime"), "treinado");
+
+      /* Só o Possuído, e só no ocultista. */
+      var exorcista = ocultista({ trilha: "exorcista" });
+      t.ok("outra trilha de ocultista não troca nada",
+        EP.vagas(exorcista).filter(function (v) { return v.tipo === "poderClasse"; }).every(function (v) { return !v.soTranscender; }));
+      t.ok("  e a vaga dela oferece a lista inteira", EP.candidatosPoderClasse(exorcista, "d3.poderClasse", null).length > 10);
+      t.ok("combatente com a mesma chave de trilha em branco não é afetado",
+        EP.vagas(agente({ nex: 90 })).filter(function (v) { return v.tipo === "poderClasse"; }).every(function (v) { return !v.soTranscender; }));
+
+      /* Com NEX & Experiência, Transcender deixa de ser poder de classe
+         (SAH p.98): sem poder para receber no lugar, a vaga fica livre. */
+      var posNiv = ocultista({ trilha: "possuido", opcionais: { nexExperiencia: true }, nivel: 10, nex: 50 });
+      t.ok("com NEX & Experiência a troca não é aplicada",
+        EP.vagas(posNiv).filter(function (v) { return v.tipo === "poderClasse"; }).every(function (v) { return !v.soTranscender; }));
+      t.ok("  e a vaga aceita um poder de ocultista normal",
+        avaliar(posNiv, "d3.poderClasse", "treinamentoEmPericia", { pericias: ["crime", "medicina"] }).valido);
+
+      /* ---------------------------------------------------------------- */
       t.grupo("Ordem — efeitos entram uma vez só");
 
       /* Potencial Aprimorado: "se escolher este poder em NEX 30%, recebe

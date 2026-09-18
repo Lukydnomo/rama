@@ -123,6 +123,7 @@ guardadas, sem efeito, e voltam a valer se o personagem chegar lá de novo.
 |---|---|---|---|
 | Trilha | uma trilha da classe; Médico de Campo exige Medicina | OPRPG p.24, 28, 31, 33 | **A** |
 | Poder de classe | poder da classe ou, pelo SAH, poder geral | OPRPG p.24, 29, 33; SAH p.33 | **A** |
+| Poder de classe do Possuído | não há escolha: vira Transcender | SAH p.28 | **A** |
 | Aumento de atributo | +1, sem passar de 5 por esta via | OPRPG p.26 | **A** |
 | Ponto de Intelecto | cada ponto de Intelecto aumentado treina uma perícia | OPRPG p.15 | **A** |
 | Grau de treinamento | 2 + Int (combatente), 5 + Int (especialista), 3 + Int (ocultista) perícias treinadas sobem um grau; veterano a partir de NEX 35%, expert a partir de 70% | OPRPG p.26, 30, 34 | **A** |
@@ -133,6 +134,24 @@ guardadas, sem efeito, e voltam a valer se o personagem chegar lá de novo.
 | Traços do Outro Lado (Cultista Arrependido) | um poder paranormal | OPRPG p.18 | **A** |
 | Ferramentas Favoritas (Engenheiro) | um item, exceto armas, conta uma categoria abaixo | OPRPG p.18 | **A** |
 | Perícias do Amnésico | duas perícias, escolhidas na criação | OPRPG p.16 | **A** |
+
+**O Possuído não escolhe poder de ocultista.** "Sempre que receber um novo poder
+de ocultista, em vez disso você recebe o poder Transcender" (Poder Não Desejado,
+SAH p.28). A habilidade chega em NEX 10%, antes do primeiro poder de ocultista
+(NEX 15%), então a troca vale para as seis vagas — e para o poder de ocultista da
+Versatilidade (OPRPG p.34), que é a mesma coisa por outra porta. Essas vagas só
+aceitam Transcender, e a tela mostra Transcender sozinho, sem busca nem filtro.
+Poder geral entra na troca porque o Sobrevivendo ao Horror o define como poder de
+todas as classes (p.33): recebê-lo é receber um poder de ocultista.
+
+O que **não** é poder de ocultista continua livre: o primeiro poder de outra
+trilha (na Versatilidade e em Ele Me Ensina), poder de outra classe e poder
+paranormal. E o Transcender recebido pela troca custa a Sanidade daquele aumento
+de NEX, como qualquer Transcender (OPRPG p.26).
+
+Uma escolha antiga que não seja Transcender — uma ficha feita antes, ou uma troca
+de trilha — **não é apagada**: fica marcada, com o motivo, os efeitos ficam
+suspensos, e a mesa pode mantê-la com "Manter mesmo assim".
 
 ### Repetição
 
@@ -1010,8 +1029,12 @@ aberta, a adotada está escrita — e é a que os testes travam.
     está no catálogo com os efeitos permanentes de atributo; as alterações da
     Progressão de NEX para essa trilha sem a regra ligada não são aplicadas.
 
-14. **Possuído: Poder Não Desejado** troca cada poder de ocultista por Transcender.
-    A troca é conduzida por quem joga; a vaga de poder de classe não é bloqueada.
+14. **Possuído: Poder Não Desejado com NEX & Experiência.** A troca de todo poder
+    de ocultista por Transcender é aplicada pela ficha (SAH p.28). Com a regra
+    opcional ligada, porém, Transcender deixa de ser poder de classe (SAH p.98) e
+    não sobra poder para receber no lugar: o livro não resolve o encontro das duas
+    regras, e o R.A.M.A. deixa a vaga livre, com a troca por conta da mesa. Os
+    pontos de possessão também ficam com a mesa — não são um recurso da ficha.
 
 15. **Escudo junto de proteção.** "Precisa ser empunhado em uma mão e fornece
     Defesa +2" (OPRPG p. 62) não diz explicitamente que ele soma com a proteção

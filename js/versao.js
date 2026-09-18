@@ -14,13 +14,13 @@
    TRÊS COISAS DIFERENTES, QUE NÃO SE MISTURAM
    ---------------------------------------------------------------------
 
-     versão do aplicativo   está aqui. É o que a pessoa vê: v2.14.0.
+     versão do aplicativo   está aqui. É o que a pessoa vê: v2.14.1.
      schemaVersion          está em js/ficha.js. É o formato da FICHA,
                             e só sobe quando a ficha muda de forma.
      versaoFormato          está em js/config.js. É o formato dos
                             arquivos de importação/exportação.
 
-   Elas sobem em ritmos próprios. A v2.14.0 leva schemaVersion 8 e
+   Elas sobem em ritmos próprios. A v2.14.1 leva schemaVersion 8 e
    versaoFormato 1 — e isso é normal: o ritual da ficha ganhou os campos do
    catálogo de rituais (elemento, execução, área, resistência, descrição,
    versões com custo e rolagens), mas o formato dos arquivos de importação
@@ -59,6 +59,28 @@
   ];
 
   var CHANGELOG = [
+    {
+      versao: "2.14.1",
+      codinome: "HOSPEDEIRO",
+      data: "17/09/2026",
+      mudancas: {
+        "Corrigido": [
+          "Trilha Possuído: a ficha deixava escolher poder de ocultista. “Sempre que receber um novo poder de ocultista, em vez disso você recebe o poder Transcender” (Poder Não Desejado, Sobrevivendo ao Horror, p. 28). Agora as seis vagas de poder de ocultista — e o poder de ocultista da Versatilidade, que é a mesma coisa por outra porta — só aceitam Transcender: a tela mostra Transcender sozinho, com o motivo e a fonte escritos.",
+          "Poder geral entra na troca, porque o Sobrevivendo ao Horror o define como poder de todas as classes (p. 33): recebê-lo seria receber um poder de ocultista.",
+          "O que não é poder de ocultista continua livre para o Possuído: o primeiro poder de outra trilha (na Versatilidade e em Ele Me Ensina), poder de outra classe e poder paranormal. E o Transcender recebido pela troca custa a Sanidade daquele aumento de NEX, como qualquer outro.",
+          "Ficha feita antes, ou troca de trilha: a escolha antiga NÃO é apagada. Fica marcada com o motivo, os efeitos dela ficam suspensos, e a mesa pode mantê-la com “Manter mesmo assim”.",
+        ],
+        "Alterado": [
+          "O resumo de Poder Não Desejado traz os números do livro: 3 pontos de possessão mais 2 por Transcender, gasto até a Presença por turno, 10 PV ou 2 PE por ponto e 1 ponto de volta ao dormir. Os pontos de possessão continuam com a mesa — a ficha não tem esse recurso, e a habilidade diz isso.",
+          "Vaga de escolha com uma opção só não mostra mais busca, filtros nem contagem.",
+        ],
+        "Técnico": [
+          "Com NEX & Experiência ligada a troca não é aplicada: Transcender deixa de ser poder de classe (SAH p.98) e não sobra poder para receber no lugar. O livro não resolve o encontro das duas regras; a vaga fica livre, e a divergência está nas lacunas de docs/ORDEM-REGRAS.md.",
+          "Mudaram só js/ordem/progressao.js, js/ordem/poderes.js e js/paginas/ordem-escolhas.js. Sem backend e sem schema: esta versão não pede nova implantação do Apps Script (a da v2.14.0 continua necessária para a biblioteca Homebrew de rituais).",
+          "Testes: 1531 verificações no modelo (44 novas), 469 no backend, 151 no transporte do frontend e 131 na página testes/biblioteca.html.",
+        ],
+      },
+    },
     {
       versao: "2.14.0",
       codinome: "COMPÊNDIO",

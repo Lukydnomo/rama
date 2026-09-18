@@ -202,6 +202,10 @@
 
     pintarLista();
 
+    /* Vaga com uma opção só — o Possuído, que só transcende — não
+       precisa de busca, filtros nem contagem. */
+    if (candidatos.length < 2) return el("div.pilha--curta.escolha-seletor", { class: "pilha" }, [lista]);
+
     return el("div.pilha--curta.escolha-seletor", { class: "pilha" }, [
       el("div.r-busca", {}, [el("span.r-busca__marca", {}, [UI.simbolo("busca")]), busca]),
       el("div.filtros", {}, [grupoFonte, grupoElemento]),
@@ -593,7 +597,7 @@
 
         case "versatilidade":
           partes.push(botoesDeEscolha([
-            { valor: "poderClasse", rotulo: "Um poder de classe" },
+            { valor: "poderClasse", rotulo: vaga.soTranscender ? "Transcender, no lugar do poder de ocultista" : "Um poder de classe" },
             { valor: "trilha", rotulo: "O primeiro poder de outra trilha" },
           ], candidato.valor, function (v) {
             if (candidato.valor === v) return;
