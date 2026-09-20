@@ -29,7 +29,10 @@
   global.RAMACampanhaRolagens = {
     aba: function (ctx) {
       var lista = el("div.pilha--curta", { class: "pilha" }, [UI.carregando("Consultando histórico")]);
-      var estado = { pulo: 0, total: 0, fim: false, linhas: [], carregado: false };
+      /* `cursor` é o que o servidor devolveu como "continue daqui"
+         (v2.16). Posição não servia: uma rolagem nova no topo empurrava
+         tudo e a página seguinte repetia a última linha. */
+      var estado = { cursor: null, fim: false, linhas: [], carregado: false };
 
       /* Uma busca por vez. "Carregar mais" e a atualização automática
          mexem na mesma lista: intercaladas, uma emendaria a página dela
@@ -42,20 +45,19 @@
 
       function carregar(maisUma) {
         return emOrdem(async function () {
-          var pulo = maisUma ? estado.linhas.length : 0;
-          var r = await global.RAMAApi.listarRolagens(ctx.campanhaId, { pulo: pulo, limite: 25 });
+          var cursor = maisUma ? estado.cursor : null;
+          var r = await global.RAMAApi.listarRolagens(ctx.campanhaId, { cursor: cursor, limite: 25 });
           if (!r.ok) { U.trocar(lista, UI.erroDeTela(r, function () { carregar(false); })); return; }
 
-          /* Uma rolagem nova no topo empurra as outras uma posição: a
-             página seguinte repetiria a última linha já mostrada. */
+          /* O cursor não repete linha, mas a rede repete requisição: a
+             conferência por id fica como rede de segurança. */
           var ja = {};
           var anteriores = maisUma ? estado.linhas : [];
           anteriores.forEach(function (l) { ja[l.id] = true; });
 
           estado.linhas = anteriores.concat(r.dados.rolagens.filter(function (l) { return !ja[l.id]; }));
-          estado.total = r.dados.total;
-          estado.fim = r.dados.fim;
-          estado.pulo = estado.linhas.length;
+          estado.cursor = r.dados.proximo || null;
+          estado.fim = r.dados.fim || !r.dados.proximo;
           estado.carregado = true;
 
           pintar();
@@ -75,9 +77,8 @@
           if (!r.ok || !document.body.contains(lista)) return;
 
           estado.linhas = r.dados.rolagens;
-          estado.total = r.dados.total;
-          estado.fim = r.dados.fim;
-          estado.pulo = estado.linhas.length;
+          estado.cursor = r.dados.proximo || null;
+          estado.fim = r.dados.fim || !r.dados.proximo;
 
           pintar();
         });
@@ -103,10 +104,13 @@
 
           /* Nada de baixar milhares de linhas de uma vez: o histórico
              cresce sem teto e a tela pede mais quando precisar. */
+          /* Sem contar quantas faltam: contar exigiria varrer o
+             histórico inteiro a cada página, que é justamente o que a
+             paginação por cursor deixou de fazer. */
           !estado.fim
             ? el("button.r-botao.r-botao--bloco", {
                 type: "button",
-                texto: "Carregar mais (" + (estado.total - estado.linhas.length) + " restantes)",
+                texto: "Carregar mais",
                 onclick: function () { carregar(true); },
               })
             : null,

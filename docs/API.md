@@ -108,6 +108,7 @@ nome é fácil de errar, lista é fácil de conferir.
 
 ```
 ping · sessao · resumo · listar_personagens · ler_personagem · ler_foto
+ler_fotos · ler_avatares
 listar_homebrew · ler_homebrew · ler_imagem_criatura
 listar_campanhas · ler_campanha · listar_usuarios · sincronizar_campanha
 listar_personagens_campanha · listar_rolagens · listar_documentos
@@ -150,6 +151,23 @@ caracteres, `[A-Za-z0-9_-]`):
 ---
 
 ## Ações
+
+### O campo `diag` (v2.16)
+
+Com o diagnóstico ligado no servidor (`ligarDiagnostico()`, no editor do Apps
+Script), **toda** resposta ganha um campo a mais:
+
+```jsonc
+"diag": { "acao": "listar_personagens_campanha", "ms": 812, "sessaoMs": 34,
+          "travaMs": 0, "presaMs": 0, "sheets": 13, "leituras": 5, "escritas": 0,
+          "celulas": 1840, "cache": "3/4", "fichas": 0, "blocos": 0,
+          "resumos": "8/8", "resposta": 6612 }
+```
+
+São números, nunca conteúdo: nada de token, id de conta, nome ou ficha. Ele existe
+para separar o tempo do servidor da latência da viagem — o navegador mede a viagem
+inteira e desconta o `ms` (ver `RAMARede.medicoes()` em `js/rede.js`). Desligado, o
+campo não existe, e o resto da resposta é idêntico.
 
 ### Sessão
 
@@ -243,8 +261,12 @@ própria conta.
 
 #### `listar_personagens`
 Devolve o **cabeçalho** de cada ficha — nome, campanha, classe, origem, datas,
-`rev` e a foto — nunca o `fichaJson`. Trinta fichas completas para desenhar
+`rev` e `fotoVersao` — nunca o `fichaJson`. Trinta fichas completas para desenhar
 trinta nomes seriam megabytes por tela.
+
+`fotoVersao` (v2.16) é a data da última gravação da foto, não a foto: o navegador
+pede as imagens em lote por `ler_fotos`, e só as que ainda não tem. Antes, abrir
+"Meus personagens" baixava as fotos todas a cada visita.
 
 #### `ler_personagem`
 ```js
@@ -329,6 +351,28 @@ seria vazia.
 ```
 Só aceita data URL de imagem, dentro do limite de célula. A foto anda **fora**
 do `fichaJson` para não subir junto a cada tecla digitada numa anotação.
+
+#### `ler_fotos` / `ler_avatares` / `ler_capas` (v2.16)
+```js
+{ acao: "ler_fotos", personagemIds: ["...", "..."] }       // no máximo 40
+→ { ok: true, dados: { "id": { imagem: "data:...", versao: "2026-09-19T…" } } }
+
+{ acao: "ler_avatares", userIds: ["...", "..."] }          // no máximo 40
+→ { ok: true, dados: { "userId": { imagem: "data:...", versao: "…" } } }
+
+{ acao: "ler_capas", campanhaIds: ["...", "..."] }         // no máximo 40
+→ { ok: true, dados: { "campanhaId": { imagem: "data:...", versao: "…" } } }
+```
+Várias imagens numa viagem, para as listagens não precisarem carregá-las. Quem
+não aparecer na resposta é quem não tem imagem **ou quem a conta não alcança** —
+a resposta não distingue os dois casos.
+
+A permissão é a mesma que o painel aplicava ao mandar a foto embutida: o dono do
+personagem e quem joga na mesma mesa que ele (mestre ou jogador; espectador não).
+O avatar segue a regra que já existia — toda conta ativa aparece em
+`listar_usuarios` para quem está conectado, e o avatar vai junto. A capa segue a
+de `ler_capa_campanha`: quem alcança a campanha (membro, ou espectador de campanha
+pública). Lista vazia ou com mais de 40 ids: `dados_invalidos`.
 
 ---
 
@@ -420,14 +464,15 @@ Todas em `backend/Campanhas.gs`. A primeira linha de cada uma é
 | `excluir_campanha` | **criador** | leva membros, rolagens, documentos, notas, combates e a capa; fichas ficam só sem campanha |
 | `ler_capa_campanha` | membro ou espectador | a imagem da capa; acesso conferido de novo; aceita no `lote` |
 | `salvar_capa_campanha` | mestre | substitui; `imagem` vazia remove |
-| `listar_usuarios` | qualquer | diretório mínimo: id, usuario, nome, avatar |
+| `listar_usuarios` | qualquer | diretório mínimo: id, usuario, nome, `avatarVersao` (a imagem vem por `ler_avatares`) |
+| `listar_campanhas` | qualquer | as que a conta alcança, com `capaVersao` (a imagem vem por `ler_capas`) |
 | `salvar_participantes` | mestre | ids de usuário; quem sai leva os personagens junto |
 | `listar_personagens_campanha` | membro | identificação para todos; recursos atuais e máximos dos outros só com a ocultação desligada; dados de cálculo e `resumoRecursos` só para mestre e dono; nunca a ficha inteira. Espectador recebe lista vazia |
 | `atualizar_resumo_personagem` | dono ou mestre | máximo de PV, PE e SAN de ficha de Ordem, **com `rev`**; a revisão não sobe |
 | `vincular_personagem` | dono ou mestre | só entra ficha de quem é mestre ou jogador da campanha; tira da campanha anterior; é o que o botão "Adicionar personagem" usa. Grava só colunas (e o manifesto, que acompanha a revisão) — a ficha não é lida nem reescrita |
 | `ajustar_personagem` | dono ou mestre | um campo, por id, **com `rev`** e `operacaoId` opcional |
 | `registrar_rolagem` | membro | idempotente pelo `rolagemId` |
-| `listar_rolagens` | membro | paginado; oculta do mestre não sai para jogador |
+| `listar_rolagens` | membro | paginado **por cursor**; oculta do mestre não sai para jogador |
 | `limpar_rolagens` | mestre | só daquela campanha |
 | `listar_documentos` | membro | filtrado no servidor |
 | `salvar_documento` / `excluir_documento` | mestre | `visiveis` só aceita membros |
@@ -470,6 +515,31 @@ envio**: é ele que impede a mesma rolagem de virar duas linhas. A resposta traz
 
 A `visibilidade` **não é aceita do cliente**. Rolagem de jogador é sempre
 pública na mesa; a do mestre segue a configuração da campanha.
+
+### `listar_rolagens`
+
+```js
+{ acao: "listar_rolagens", campanhaId, limite: 25, cursor? }
+→ { ok: true, dados: {
+      rolagens: [ { id, autorUserId, autor, personagemId, tipo, nome, oculta, criadoEm, resultado } ],
+      fim: false,             // true quando não há mais nada antes desta página
+      proximo: "…"            // o cursor da página seguinte; null quando acabou
+   } }
+```
+
+A página seguinte é pedida **por cursor** (v2.16): mande de volta o `proximo` que
+veio. Não é "pule 25" — é "mais velhas que esta", e por isso uma rolagem nova no
+topo não empurra a paginação nem faz a última linha de uma página reaparecer na
+seguinte.
+
+O cursor é opaco: trate como texto e não o interprete. Ele vale enquanto a rolagem
+que o gerou existir; limpar o histórico entre duas páginas devolve uma página vazia
+com `fim: true`, que é o correto — o histórico acabou.
+
+`limite` vai de 1 a 200 (padrão 25). O `pulo` da v2.15 continua aceito, para um
+site que ainda não foi publicado com esta versão, e custa ler as linhas que ele
+manda pular. **`total` não vem mais**: contar o que uma pessoa pode ver exigiria
+varrer o histórico inteiro a cada página — ver [DATABASE.md](DATABASE.md).
 
 ### `sincronizar_campanha`
 
@@ -514,7 +584,7 @@ imagem.
 ```js
 { acao: "listar_personagens_campanha", campanhaId }
 → { ok: true, config: { ocultarStatusJogadores: false }, dados: [ {
-      id, nome, tipoFicha: "ordem" | "universal", classe, origem, ownerId, dono, foto, rev,
+      id, nome, tipoFicha: "ordem" | "universal", classe, origem, ownerId, dono, fotoVersao, rev,
       souDono, detalhado, podeEditarRecursos, podeAbrirFicha, recursosVisiveis,
 
       // Ordem — mestre ou dono (detalhado):
@@ -536,6 +606,17 @@ outras fichas da mesa carregam normalmente.
 `recursosPendentes: true` quer dizer que a ficha de Ordem ainda não tem resumo
 guardado. `podeEditarRecursos`, `podeAbrirFicha` e `recursosVisiveis` são rótulos
 para a tela: `ajustar_personagem` e `ler_personagem` conferem de novo.
+
+**Desde a v2.16 esta ação não abre ficha nenhuma.** Os campos acima saem da
+projeção gravada junto com a ficha (a coluna `resumo`, em
+[DATABASE.md](DATABASE.md)); só as fichas cuja projeção não vale é que são
+remontadas. A resposta é a mesma de antes, menos a `foto`, que virou `fotoVersao`.
+
+Consequência a conhecer: com a projeção em dia, o cartão continua de pé mesmo que
+os blocos daquela ficha tenham se perdido — ele mostra os últimos números
+confirmados. O erro aparece onde ele importa, ao abrir ou ajustar a ficha, que são
+os caminhos que tocam o conteúdo. `fichaIlegivel: true` continua aparecendo quando
+não há projeção que valha (ficha ainda no formato antigo, por exemplo).
 
 ### `atualizar_resumo_personagem`
 

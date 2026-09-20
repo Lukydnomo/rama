@@ -40,24 +40,25 @@ blocos e lê só as linhas daquela ficha.
 Contado pelo `testes/medir.js`, na mesma mesa de 20 contas e fichas pequenas
 (chamadas ao Sheets e dados que atravessam — **não é tempo**):
 
-| operação | v2.14 | v2.15 |
-|---|---|---|
-| `ler_personagem` | 5 | 9 |
-| `salvar_personagem` | 13 | 18 |
-| `ajustar_personagem` | 9 | 17 |
-| `listar_personagens` | 14 | 14 |
-| lote de abrir campanha | 27 | 32 |
+| operação | v2.14 | v2.15 | v2.16 |
+|---|---|---|---|
+| `ler_personagem` | 5 | 9 | 7 |
+| `salvar_personagem` | 13 | 20 | 17 |
+| `ajustar_personagem` | 9 | 17 | 14 |
+| `listar_personagens` | 14 | 14 | 14 |
+| lote de abrir campanha | 27 | 33 | 25 |
 
 A listagem de personagens não mudou: ela lê as colunas curtas e nunca toca na aba
 de blocos (há teste para isso). O preço está na gravação e na abertura de UMA ficha
 — e é o preço de conferir cada gravação antes de publicar e cada leitura antes de
-entregar. Três coisas o mantêm baixo:
+entregar. Quatro coisas o mantêm baixo:
 
 - os blocos de uma geração nascem lado a lado, então ler ou conferir uma ficha
   inteira é uma chamada, seja de 1 bloco ou de 20;
-- a limpeza é decidida pela varredura feita antes de gravar — o ajuste do mestre,
-  que já leu a ficha, não varre de novo — e a última linha vista pela varredura é
-  reaproveitada para acrescentar os blocos;
+- desde a v2.16 o manifesto diz ONDE a geração está: ler é ir direto lá, sem
+  varrer a aba, e gravar é conferir uma faixa em vez de varrê-la;
+- a gravação escreve sobre a faixa que já não servia para nada, então a aba não
+  cresce e ninguém é deslocado;
 - a grade da aba só é consultada quando a gravação não cabe nela, e aí cresce com
   folga de 200 linhas.
 
@@ -66,6 +67,88 @@ Numa ficha grande o que cresce é o VOLUME, não o número de chamadas: uma fich
 salvamento automático envia e regrava a ficha inteira — por isso o limite
 operacional `LIMITE_TOTAL_FICHA` (1 milhão de caracteres), explicado em
 [DATABASE.md](DATABASE.md#limites).
+
+## A v2.16: medir primeiro, depois cortar
+
+A v2.16 começou com uma instrumentação e terminou com quatro cortes. A ordem
+importa: cada corte abaixo saiu de um número, não de um palpite.
+
+### Onde estava o peso
+
+Medido com `testes/medir.js` sobre a v2.15, numa mesa de 20 contas, 61 fichas com
+foto, três campanhas e 1 500 rolagens:
+
+| operação | dados da planilha | resposta |
+|---|---|---|
+| painel da mesa (8 fichas) | 525 KB | 124 KB |
+| "Meus personagens" | 778 KB | 60 KB |
+| uma página do histórico | 254 KB | 7,7 KB |
+| abrir a campanha (lote) | 558 KB | 155 KB |
+| editor de participantes | 64 KB | 61 KB |
+
+Três causas, nessa ordem de tamanho: **ficha remontada para desenhar cartão**,
+**imagem viajando dentro de listagem** e **varredura da aba inteira para mostrar
+uma página**.
+
+### Os quatro cortes
+
+**1. O cartão parou de abrir a ficha.** A projeção (coluna `resumo`, ver
+[DATABASE.md](DATABASE.md)) guarda o recorte que o painel desenha, gravado na
+mesma escrita de uma linha que publica o manifesto. Com ela em dia, listar a mesa
+não remonta ficha nenhuma nem lê um bloco sequer — e há teste que confere
+exatamente isso, pelo contador do próprio backend.
+
+**2. A imagem virou uma versão.** Listagens mandam `fotoVersao` / `avatarVersao` —
+a data da última gravação —, e o navegador pede as imagens em lote (`ler_fotos`,
+`ler_avatares`), só as que ainda não tem, priorizando os cartões à vista. O que
+chega fica guardado no aparelho por versão: trocar de tela, voltar no dia seguinte
+ou recarregar a página não baixa de novo. Imagem trocada muda a versão, muda a
+chave, e é buscada — sem invalidação manual em lugar nenhum.
+
+**3. O bloco passou a ser achado direto.** O manifesto guarda onde a geração foi
+escrita, e a leitura vai lá — conferindo tudo o que já conferia. Para a pista não
+envelhecer, a gravação deixou de apagar linhas (ver "O localizador" em
+[DATABASE.md](DATABASE.md)).
+
+**4. O histórico virou cursor.** Um índice de uma coluna acha as linhas da
+campanha; a página lê só o que vai mostrar; a próxima é pedida por cursor, não por
+posição.
+
+E duas economias menores que apareceram na mesma medição: o diretório de contas
+(id → nome), que quatro telas montavam varrendo a aba `USUARIOS`, passou a ser uma
+entrada de cache de cinco minutos; e abrir uma campanha parou de carregar a mesa
+antecipadamente — a primeira aba é a Visão geral, que mostra participantes, não
+fichas. Quem abre a aba Personagens (ou Combate, ou Notas) é quem paga por ela.
+
+### Antes e depois
+
+Mesmo cenário, v2.15 → v2.16. Chamadas ao Sheets, dados que atravessam entre o
+Sheets e o script, e tamanho da resposta:
+
+| operação | chamadas | da planilha | resposta |
+|---|---|---|---|
+| painel da mesa — 8 fichas | 20 → 13 | 525 KB → 27 KB | 124 KB → 6,6 KB |
+| painel da mesa — 2 fichas | 20 → 13 | 116 KB → 16 KB | 31 KB → 1,7 KB |
+| "Meus personagens" | 14 → 14 | 778 KB → 16 KB | 60 KB → 1,1 KB |
+| abrir a campanha (lote) | 33 → 25 | 558 KB → 35 KB | 155 KB → 14,5 KB |
+| editor de participantes | 9 → 6 | 64 KB → 1,2 KB | 61 KB → 2,5 KB |
+| ler a campanha (mestre) | 17 → 14 | 30 KB → 2,7 KB | 25 KB → 1,8 KB |
+| histórico — 1ª página de 1 500 | 13 → 13 | 254 KB → 65 KB | 7,7 KB |
+| histórico — 10ª página | 12 → 9 | 254 KB → 82 KB | 7,7 KB |
+| abrir uma ficha pequena | 9 → 7 | 24,6 KB → 18,4 KB | 7,9 KB |
+| abrir uma ficha de 300 KB | 9 → 7 | 303 KB → 297 KB | 286 KB |
+| salvar uma ficha pequena | 20 → 17 | 35,5 KB → 30,1 KB | — |
+| salvar uma ficha de 300 KB | 13 → 10 | 591 KB → 586 KB | — |
+| ajuste rápido do mestre | 17 → 14 | 42,6 KB → 36,5 KB | — |
+| pergunta da sincronização | 4 → 4 | 402 B | 205 B |
+
+As imagens passaram a ter um custo próprio, que antes estava escondido dentro das
+listagens: `ler_fotos` de 8 cartões são 12 chamadas e 118 KB de resposta — uma vez,
+não a cada abertura de tela nem a cada atualização automática.
+
+O salvamento **não** ficou mais lento: ele perdeu a varredura da aba de blocos e
+ganhou uma conferência de faixa, que é menor. E a leitura de uma ficha grande
+continua custando o tamanho dela — isso é o conteúdo, não o caminho.
 
 ## A trava, que é o limite estrutural
 
@@ -124,6 +207,8 @@ conteúdo. A camada recusa, e há teste para isso.
 | rolagem já registrada | `CacheService`, chave = id da rolagem | 30 min | atalho apenas; a planilha continua conferindo |
 | marcas da mesa | `CacheService`, uma chave por parte de cada campanha | 6 h, regravadas com o mesmo valor a cada 4 h | toda gravação da parte troca a marca; marca perdida vira uma reserva que muda a cada minuto |
 | papel para as marcas | `CacheService`, chave = época + campanha + conta + marcas de `membros` e `campanha` | 5 min | mudar membros, visibilidade ou nome troca a chave; `setupRama()` avança a época |
+| diretório de contas (v2.16) | `CacheService`, chave = época; guarda id → usuário, nome e ativo — nada além | 5 min | a época (senha, conta desativada, participantes); trocar o próprio nome apaga a entrada na hora |
+| imagens já baixadas (v2.16) | `localStorage` do navegador, chave = tipo + id + **versão** | enquanto couber, com descarte do mais velho | a versão muda quando a imagem muda; espaço cheio ou modo privado só fazem pedir de novo |
 
 Três limites que valem sem exceção:
 
@@ -223,10 +308,23 @@ Para trocar latência por menos execuções, aumente `INTERVALO_ATIVO` e
 
 ```bash
 deno run --allow-read testes/medir.js
+deno run --allow-read --allow-write testes/medir.js --json depois.json
+deno run --allow-read testes/medir.js --comparar antes.json
+deno run --allow-read testes/medir.js --backend caminho/da/versao/antiga
 ```
 
-Monta uma mesa de vinte contas, sessenta fichas com foto, três campanhas
-e mil e quinhentas rolagens, e conta o que cada operação custa.
+Monta uma mesa de vinte contas, 61 fichas com foto (uma delas de 300 KB, em
+vários blocos), avatares, três campanhas de tamanhos diferentes e mil e quinhentas
+rolagens, e conta o que cada operação custa. Os cenários incluem cache vazio e
+aquecido, ficha pequena e grande, mesa de dois e de oito personagens.
+
+`--backend` carrega os `.gs` de outra pasta: é assim que as duas versões são
+medidas sobre exatamente o mesmo conjunto de dados. `--comparar` põe as duas
+medições lado a lado, casadas pelo rótulo — um cenário que só existe de um lado
+aparece como "(novo)", para renomear um cenário não parecer melhoria.
+
+A comparação v2.15 → v2.16 está em "A v2.16: medir primeiro, depois cortar",
+acima.
 
 Comparação entre a v2.0.0 e a v2.1.0, no mesmo cenário:
 
@@ -278,6 +376,66 @@ dia do Google.
 no simulador de `testes/apps-script-simulado.js`, que é fiel no que
 importa — criptografia de verdade, entrada por `doPost`, limites do
 `CacheService` — mas não é o Google.
+
+---
+
+## A instrumentação, e como ligá-la
+
+O backend conta o que faz, sempre: chamadas ao Sheets, células, fichas remontadas,
+blocos lidos, projeções aproveitadas, acertos de cache, tempo esperando a trava e
+tempo com ela. Contar custa somas de inteiros numa memória que morre com a
+resposta.
+
+O que o interruptor liga é o REGISTRO disso:
+
+```js
+ligarDiagnostico()     // no editor do Apps Script
+desligarDiagnostico()
+```
+
+Com ele ligado, cada requisição escreve uma linha no log do Apps Script
+(Execuções → registros) e devolve o mesmo no campo `diag` da resposta:
+
+```
+R.A.M.A. perf {"acao":"listar_personagens_campanha","ms":812,"sessaoMs":34,
+"travaMs":0,"presaMs":0,"sheets":13,"leituras":5,"escritas":0,"celulas":1840,
+"cache":"3/4","fichas":0,"blocos":0,"resumos":"8/8","resposta":6612}
+```
+
+| campo | o que é |
+|---|---|
+| `ms` | o tempo do servidor: da entrada do `doPost` até a resposta ficar pronta |
+| `sessaoMs` | quanto disso foi conferir quem está pedindo |
+| `travaMs` / `presaMs` | esperando a trava / segurando a trava |
+| `sheets` | viagens ao serviço do Sheets, com `leituras` e `escritas` |
+| `celulas` | células que atravessaram numa direção ou na outra |
+| `cache` | acertos / consultas ao `CacheService` |
+| `fichas` | fichas remontadas — o número que o painel da mesa existe para manter em zero |
+| `blocos` | blocos de ficha lidos |
+| `resumos` | projeções aproveitadas / total |
+| `resposta` | caracteres da resposta |
+
+Três coisas que ela não faz, de propósito: **não grava nada na planilha** (uma
+linha por requisição numa aba seria uma escrita por leitura), **não registra
+token, senha, id de conta, nome nem conteúdo de ficha**, e **não muda decisão
+nenhuma** — ligada ou desligada, a resposta é a mesma fora do campo `diag`.
+
+### Do lado do navegador
+
+`js/rede.js` mede a viagem inteira e, quando a resposta traz `diag.ms`, desconta:
+
+```js
+RAMARede.medicoes()
+// { viagens: 12, totalMedioMs: 940, servidorMedioMs: 310, redeMediaMs: 630,
+//   ultimas: [ { acao, totalMs, servidorMs, redeMs, sheets, celulas, fichas } ] }
+```
+
+Com `localStorage.setItem("rama.diag", "1")`, cada viagem também vira uma linha no
+console. Tudo fica na memória da página, nas últimas cinquenta viagens; nada sai do
+navegador.
+
+É essa diferença que separa "o Apps Script está lento" de "a viagem até ele está
+lenta" — e só quem está nas duas pontas consegue separar.
 
 ---
 

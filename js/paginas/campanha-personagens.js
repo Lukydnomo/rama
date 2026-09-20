@@ -107,6 +107,10 @@
       });
       ctx.aoAtualizar("campanha", function () { pintarOcultacao(ctx); });
 
+      if (!ctx.temPersonagens() && !ctx.falhaPersonagens) {
+        return UI.carregando("Carregando a mesa");
+      }
+
       if (ctx.falhaPersonagens) {
         return UI.erroDeTela(ctx.falhaPersonagens, function () { return ctx.atualizarPersonagens(); });
       }
@@ -381,10 +385,14 @@
     });
   }
 
+  /* A foto do cartão chega depois, e só se o cartão estiver à vista —
+     ver js/imagens.js. O cartão nasce com as iniciais no lugar dela,
+     que é o mesmo que ele mostra quando não há foto. */
   function foto(r) {
-    var caixa = el("span.r-avatar.mesa-cartao__foto", { "aria-hidden": "true" });
-    if (r.foto) caixa.appendChild(el("img", { src: r.foto, alt: "" }));
-    else caixa.textContent = U.iniciais(r.nome);
+    var caixa = el("span.r-avatar.mesa-cartao__foto", { "aria-hidden": "true", texto: U.iniciais(r.nome) });
+    if (r.fotoVersao && global.RAMAImagens) {
+      global.RAMAImagens.aplicar(caixa, { tipo: "foto", id: r.id, versao: r.fotoVersao });
+    }
     return caixa;
   }
 
@@ -894,9 +902,10 @@
   }
 
   function avatar(p) {
-    var caixa = el("span.r-avatar.r-avatar--p", { "aria-hidden": "true" });
-    if (p.foto) caixa.appendChild(el("img", { src: p.foto, alt: "" }));
-    else caixa.textContent = U.iniciais(p.nome);
+    var caixa = el("span.r-avatar.r-avatar--p", { "aria-hidden": "true", texto: U.iniciais(p.nome) });
+    if (p.fotoVersao && global.RAMAImagens) {
+      global.RAMAImagens.aplicar(caixa, { tipo: "foto", id: p.id, versao: p.fotoVersao });
+    }
     return caixa;
   }
 

@@ -412,6 +412,23 @@
      cada tecla digitada numa anotação reenviaria a imagem inteira. */
   function lerFoto(id) { return post({ acao: "ler_foto", personagemId: id }); }
 
+  /* Várias fotos numa viagem (v2.16). As listagens passaram a devolver
+     só a VERSÃO de cada foto; quem desenha os cartões pede aqui as que
+     ainda não tem — ver js/imagens.js. O servidor devolve só as que a
+     conta alcança, e quem não aparecer na resposta é quem não tem foto
+     ou não pode ser visto. */
+  function lerFotos(ids) {
+    return post({ acao: "ler_fotos", personagemIds: ids });
+  }
+
+  function lerAvatares(ids) {
+    return post({ acao: "ler_avatares", userIds: ids });
+  }
+
+  function lerCapas(ids) {
+    return post({ acao: "ler_capas", campanhaIds: ids });
+  }
+
   function salvarFoto(id, imagem) {
     return post({ acao: "salvar_foto", personagemId: id, imagem: imagem });
   }
@@ -544,13 +561,17 @@
      ================================================================= */
 
   /* `envio` vai para post(): { segundoPlano: true } na atualização
-     automática da aba. */
+     automática da aba.
+
+     A página seguinte é pedida por CURSOR (v2.16), não por posição: o
+     servidor devolve `proximo`, e mandá-lo de volta continua de onde
+     parou. Uma rolagem nova no topo deixa de empurrar a paginação — com
+     posição, a última linha de uma página reaparecia na seguinte. */
   function listarRolagens(campanhaId, opcoes, envio) {
     var o = opcoes || {};
-    return post({
-      acao: "listar_rolagens", campanhaId: campanhaId,
-      limite: o.limite, pulo: o.pulo,
-    }, envio);
+    var corpo = { acao: "listar_rolagens", campanhaId: campanhaId, limite: o.limite };
+    if (o.cursor) corpo.cursor = o.cursor;
+    return post(corpo, envio);
   }
 
   /* A rolagem JÁ aconteceu. O `rolagemId` é gerado por quem rolou e é a
@@ -787,6 +808,9 @@
     excluirPersonagem: excluirPersonagem,
     duplicarPersonagem: duplicarPersonagem,
     lerFoto: lerFoto,
+    lerFotos: lerFotos,
+    lerAvatares: lerAvatares,
+    lerCapas: lerCapas,
     salvarFoto: salvarFoto,
 
     listarHomebrew: listarHomebrew,

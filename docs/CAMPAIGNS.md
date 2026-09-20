@@ -85,6 +85,11 @@ pode dar nem tirar acesso de ninguém.
 
 ## Capa da campanha
 
+Ela aparece em dois lugares: na Visão geral, em tamanho grande, e no cartão da
+**lista de campanhas**, no lugar das iniciais (v2.16). Nos dois casos a imagem vem
+sob demanda: a listagem manda `capaVersao`, e o navegador pede em lote por
+`ler_capas` só as que ainda não tem, guardando por versão no aparelho.
+
 Uma imagem por campanha, numa faixa 3:1 no topo da Visão geral, com o nome da
 campanha e o papel de quem olha escritos por cima — a imagem nunca é a única
 identificação.
@@ -216,6 +221,16 @@ disso não tem como ser "desvisto".
 
 ## Carregamento e gravação
 
+**Abrir a campanha carrega a aba ativa, e só ela (v2.16).** A pré-carga traz a
+campanha (com participantes e marcas) e a capa — o que a Visão geral desenha. A
+MESA não vem: ela é buscada quando alguém abre Personagens, Combate ou Notas, que
+são as abas que mostram fichas, e a aba mostra "Carregando a mesa" enquanto isso.
+Quem entra na campanha para ler um documento não paga pelo painel.
+
+A sincronização automática segue a mesma regra: quando a marca de `personagens`
+muda e ninguém abriu a mesa nesta página, ela não busca nada — quando a aba for
+aberta, a mesa vem já atualizada.
+
 Toda ida à planilha passa por `RAMAApi.post` (`js/api.js`), que anuncia o início e o
 fim de cada operação (`RAMAApi.aoOperar`, e o evento `rama:operacao` no
 `document`). Nenhuma espera fica muda:
@@ -276,11 +291,20 @@ repetir seria o mesmo que rolar de novo, com um disfarce.**
 
 ### Paginação
 
-O histórico cresce sem teto. `listar_rolagens` aceita `pulo` e `limite` (padrão
-50, máximo 200), e a tela pede mais quando precisa. Baixar a tabela inteira para
-desenhar as últimas vinte linhas seria pagar caro por nada.
+O histórico cresce sem teto, e desde a v2.16 a página não cresce com ele:
+`listar_rolagens` devolve `proximo` — um cursor — e a tela manda de volta esse
+cursor para carregar mais. Não é "pule 25": é "mais velhas que esta". Uma rolagem
+nova no topo enquanto alguém lê o histórico deixou de empurrar a paginação, e o
+custo de uma página deixou de depender do tamanho do histórico (ver
+[DATABASE.md](DATABASE.md) e [PERFORMANCE.md](PERFORMANCE.md)).
 
-O mestre pode limpar o histórico da própria campanha, com confirmação.
+O botão diz **Carregar mais**, sem contar quantas faltam: contar exigiria varrer o
+histórico inteiro a cada página, que é justamente o que a paginação por cursor
+existe para não fazer.
+
+O mestre pode limpar o histórico da própria campanha, com confirmação. Limpar entre
+uma página e outra faz a página seguinte voltar vazia, com "acabou" — que é o
+correto: o histórico acabou.
 
 ---
 
@@ -543,6 +567,19 @@ mesa estava vazia) e a janela continua aberta para adicionar outros. O mestre n�
 vê ali as fichas dos jogadores: cada conta adiciona as suas. Listar fichas de
 outra conta que ainda não estão na mesa daria ao mestre um alcance que ele não
 tem.
+
+**De onde vêm os dados do cartão (v2.16).** O servidor não abre mais a ficha para
+montar a lista: ele lê a PROJEÇÃO gravada junto com ela — o mesmo recorte que a
+v2.15 mandava, só que guardado em vez de recalculado (ver "A projeção do painel"
+em [DATABASE.md](DATABASE.md)). Para o painel nada muda: chegam os mesmos campos,
+e o cálculo continua sendo feito no navegador pelo motor de Ordem. Quando a
+projeção de alguma ficha não vale — ficha ainda no formato antigo, por exemplo —,
+aquela ficha é remontada, e só ela.
+
+**A foto chega depois.** A listagem manda `fotoVersao`, e o cartão nasce com as
+iniciais; a imagem entra quando chega, pedida em lote e priorizando os cartões que
+estão à vista (`js/imagens.js`). O que já foi baixado fica guardado no aparelho por
+versão: trocar de aba, voltar depois ou recarregar a página não baixa de novo.
 
 **O que cada cartão mostra** sai de `js/campanha-painel.js`, sem fórmula própria.
 Para os números serem os da ficha, `campanha/index.html` carrega o motor de Ordem

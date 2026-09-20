@@ -63,6 +63,7 @@ function rotasDeCampanha() {
 
     sincronizar_campanha:        { publica: false, fn: acaoSincronizarCampanha },
     ler_capa_campanha:           { publica: false, fn: acaoLerCapaCampanha },
+    ler_capas:                   { publica: false, fn: acaoLerCapas },
     salvar_capa_campanha:        { publica: false, fn: acaoSalvarCapaCampanha },
     atualizar_resumo_personagem: { publica: false, fn: acaoAtualizarResumoPersonagem },
   };
@@ -223,6 +224,18 @@ function acaoListarCampanhas(corpo, usuario) {
      três. */
   var alcance = campanhasDoUsuarioCompletas(usuario);
 
+  /* A VERSÃO da capa de cada uma, sem a imagem: a lista mostra a capa
+     no lugar das iniciais, e o navegador pede as imagens em lote só das
+     que ainda não tem (v2.16). As quatro primeiras colunas da aba de
+     capas são curtas — a imagem é a quinta e não é tocada aqui. */
+  var versaoDaCapa = {};
+  lerLeves(ABAS.CAMPANHA_CAPAS).forEach(function (capa) {
+    var id = String(capa.campanhaId);
+    if (!alcance[id]) return;
+    var quando = String(capa.atualizadoEm || '');
+    if (quando) versaoDaCapa[id] = quando;
+  });
+
   var lista = Object.keys(alcance).map(function (id) {
     var c = alcance[id].campanha;
     var papel = alcance[id].papel;
@@ -238,6 +251,7 @@ function acaoListarCampanhas(corpo, usuario) {
       criadoEm: c.criadoEm,
       atualizadoEm: c.atualizadoEm,
       rev: Number(c.rev) || 0,
+      capaVersao: versaoDaCapa[String(c.id)] || '',
     };
   });
 
@@ -306,51 +320,34 @@ function acaoLerCampanha(corpo, usuario) {
    lista, e nada além. Nunca hashSenha, salt, token, sessão ou qualquer
    campo interno — nem por engano, porque a montagem é explícita campo a
    campo e não um "espalha o registro inteiro". */
-function usuarioParaCliente(u, avatarPorId) {
+function usuarioParaCliente(u, versaoPorId) {
   return {
     id: u.id,
     usuario: u.usuario,
     nome: u.nome || u.usuario,
-    avatar: (avatarPorId && avatarPorId[u.id]) || '',
+    /* O avatar não vem aqui (v2.16): vem a versão dele, e o navegador
+       pede as imagens em lote — ver "Imagens sob demanda" em
+       Codigo.gs. Uma mesa de oito pessoas deixou de carregar oito
+       avatares em toda abertura de campanha. */
+    avatarVersao: (versaoPorId && versaoPorId[u.id]) || '',
   };
 }
 
-/* Os avatares de um conjunto de contas, e só dele.
-
-   O avatar é base64 e mora na segunda coluna de PERFIS. Ler a aba
-   inteira para montar uma lista de sete participantes trazia o avatar
-   de todas as vinte contas do sistema. A varredura leva só o userId; as
-   imagens vêm pelas linhas que interessam. */
-function avataresDe(ids) {
-  var querido = {};
-  (ids || []).forEach(function (id) { querido[String(id)] = true; });
-
-  var linhas = lerLeves(ABAS.PERFIS).filter(function (perfil) {
-    return querido[String(perfil.userId)];
-  });
-
-  var imagens = lerCelulas(ABAS.PERFIS, linhas, 'avatar');
-
-  var saida = {};
-  linhas.forEach(function (p) { saida[String(p.userId)] = imagens[p._linha] || ''; });
-  return saida;
-}
-
 function membrosParaCliente(campanha, membros) {
-  var usuarios = {};
-  lerTudo(ABAS.USUARIOS).forEach(function (u) { usuarios[u.id] = u; });
+  var usuarios = contasDoSistema();
 
   var envolvidos = [String(campanha.ownerId)];
   membros.forEach(function (m) { envolvidos.push(String(m.userId)); });
 
-  var perfis = avataresDe(envolvidos);
+  var perfis = versoesDeAvatar(envolvidos);
 
   var saida = [];
   var vistos = {};
 
   /* O criador entra sempre, mesmo sem linha em MEMBROS. */
   if (usuarios[campanha.ownerId]) {
-    saida.push(Object.assign(usuarioParaCliente(usuarios[campanha.ownerId], perfis), {
+    saida.push(Object.assign(usuarioParaCliente(
+      Object.assign({ id: campanha.ownerId }, usuarios[campanha.ownerId]), perfis), {
       papel: PAPEL_MESTRE,
       criador: true,
     }));
@@ -360,7 +357,8 @@ function membrosParaCliente(campanha, membros) {
   membros.forEach(function (m) {
     if (vistos[m.userId] || !usuarios[m.userId]) return;
     vistos[m.userId] = true;
-    saida.push(Object.assign(usuarioParaCliente(usuarios[m.userId], perfis), {
+    saida.push(Object.assign(usuarioParaCliente(
+      Object.assign({ id: m.userId }, usuarios[m.userId]), perfis), {
       papel: String(m.papel) === PAPEL_MESTRE ? PAPEL_MESTRE : PAPEL_JOGADOR,
       criador: false,
     }));
@@ -381,9 +379,12 @@ function idsDaMesa(campanha) {
 }
 
 function acaoListarUsuarios(corpo, usuario) {
-  var ativos = lerTudo(ABAS.USUARIOS).filter(function (u) { return String(u.ativo) === 'true'; });
+  var contas = contasDoSistema();
+  var ativos = Object.keys(contas)
+    .filter(function (id) { return contas[id].ativo; })
+    .map(function (id) { return Object.assign({ id: id }, contas[id]); });
 
-  var perfis = avataresDe(ativos.map(function (u) { return u.id; }));
+  var perfis = versoesDeAvatar(ativos.map(function (u) { return u.id; }));
 
   var lista = ativos
     .map(function (u) { return usuarioParaCliente(u, perfis); })
@@ -625,46 +626,36 @@ function acaoListarPersonagensCampanha(corpo, usuario) {
   var configDaMesa = lerJson(ctx.campanha.dadosJson, {});
   var ocultarStatus = !!configDaMesa.ocultarStatusJogadores;
 
-  var donos = {};
-  lerTudo(ABAS.USUARIOS).forEach(function (u) { donos[u.id] = u.nome || u.usuario; });
+  var donos = nomesDasContas();
 
-  /* Duas etapas, e a ordem é o ponto.
+  /* Três etapas, e a ordem é o ponto.
 
      Primeiro descobre QUAIS personagens são desta campanha, varrendo só
-     as colunas leves — nenhum conteúdo de ficha e nenhuma foto
-     atravessam o serviço nesta etapa. Só então busca o conteúdo das
-     linhas que sobraram: os blocos só destas fichas, com uma varredura
-     da aba de blocos para a mesa inteira (v2.15).
+     as colunas leves. Depois lê a PROJEÇÃO de cada um — uma coluna
+     curta, sem ficha, sem bloco, sem anotação (v2.16). Só as fichas
+     cuja projeção não vale é que são remontadas.
 
-     Antes, esta tela lia a ficha completa e a foto de TODOS os
-     personagens do sistema para desenhar os sete da mesa. */
+     Antes da v2.15 esta tela lia a ficha completa e a foto de TODOS os
+     personagens do sistema para desenhar os sete da mesa; até a v2.15
+     ela remontava as sete fichas inteiras. Agora, com as projeções em
+     dia, ela não abre ficha nenhuma — e a foto vira uma versão curta,
+     pedida em lote só quando o navegador ainda não a tem. */
   var daMesa = lerLeves(ABAS.PERSONAGENS).filter(function (p) {
     return String(p.campanhaId) === String(ctx.campanha.id);
   });
 
-  var fichas = lerFichasDosPersonagens(daMesa);
-
-  var idsDaMesa = {};
-  daMesa.forEach(function (p) { idsDaMesa[String(p.id)] = true; });
-
-  var linhasDeFoto = lerLeves(ABAS.PERSONAGENS_FOTOS).filter(function (f) {
-    return idsDaMesa[String(f.personagemId)];
-  });
-
-  var imagens = lerCelulas(ABAS.PERSONAGENS_FOTOS, linhasDeFoto, 'imagem');
-
-  var fotos = {};
-  linhasDeFoto.forEach(function (f) { fotos[String(f.personagemId)] = imagens[f._linha] || ''; });
+  var painel = projecoesDosPersonagens(daMesa);
+  var fotos = versoesDeFoto(daMesa);
 
   var lista = daMesa
     .map(function (p) {
-      var lida = fichas[p.id] || { ok: false, erro: 'ficha_ilegivel', motivo: 'bloco_ausente' };
       var souDono = meu(p, usuario);
+      var proj = painel.porId[p.id];
 
       /* Uma ficha que não se montou aparece como tal: identificação e o
          aviso, sem números inventados e sem controles de ajuste — que
          gravariam por cima de uma ficha que ninguém conseguiu ler. */
-      if (!lida.ok) {
+      if (!proj) {
         return {
           id: p.id,
           nome: p.nome,
@@ -679,19 +670,17 @@ function acaoListarPersonagensCampanha(corpo, usuario) {
           podeAbrirFicha: ctx.mestre || souDono,
           recursosVisiveis: false,
           fichaIlegivel: true,
-          foto: fotos[p.id] || '',
+          fotoVersao: fotos[p.id] || '',
           rev: Number(p.rev) || 0,
         };
       }
-
-      var ficha = lida.ficha;
 
       /* O mestre e o dono veem o personagem inteiro no painel; os outros
          jogadores da mesa, a identificação e — se o mestre permitir — os
          recursos. */
       var detalhado = ctx.mestre || souDono;
       var recursosVisiveis = detalhado || !ocultarStatus;
-      var ehOrdem = ehFichaDeOrdem(ficha);
+      var ehOrdem = projecaoDeOrdem(proj);
 
       var saida = {
         id: p.id,
@@ -708,7 +697,10 @@ function acaoListarPersonagensCampanha(corpo, usuario) {
         podeEditarRecursos: detalhado,
         podeAbrirFicha: detalhado,
         recursosVisiveis: recursosVisiveis,
-        foto: fotos[p.id] || '',
+        /* A imagem não vem na listagem (v2.16): vem a VERSÃO dela, e o
+           navegador pede em lote só as que ainda não tem — ver
+           ler_fotos. */
+        fotoVersao: fotos[p.id] || '',
         rev: Number(p.rev) || 0,
       };
 
@@ -717,18 +709,18 @@ function acaoListarPersonagensCampanha(corpo, usuario) {
            ela os tem só como padrão de nascimento. Os números dela são
            calculados pelas regras no navegador (js/ordem/regras.js), o
            mesmo cálculo da ficha: o painel recebe os dados de entrada
-           desse cálculo, não um resultado paralelo. Textos longos
-           (personalizações, descrições de item) ficam de fora. */
+           desse cálculo, não um resultado paralelo. É exatamente isso
+           que a projeção guarda. */
         if (detalhado) {
-          saida.ordem = ordemParaPainel(ficha.ordem);
-          saida.inventario = { itens: itensParaPainel(ficha.inventario) };
+          saida.ordem = proj.ordem;
+          saida.inventario = { itens: proj.itens || [] };
           /* O resumo guardado, para quem calcula conferir se ele ainda
              bate com a ficha — ver atualizar_resumo_personagem. */
-          saida.resumoRecursos = normalizarResumoRecursos(ficha.resumoRecursos);
+          saida.resumoRecursos = normalizarResumoRecursos(proj.resumoRecursos);
         } else {
-          saida.ordem = ordemPublicaParaPainel(ficha.ordem);
+          saida.ordem = ordemPublicaParaPainel(proj.ordem);
           if (recursosVisiveis) {
-            var resumidos = recursosResumidos(ficha);
+            var resumidos = recursosResumidos(proj);
             saida.recursos = resumidos || [];
             if (!resumidos) saida.recursosPendentes = true;
           }
@@ -737,14 +729,8 @@ function acaoListarPersonagensCampanha(corpo, usuario) {
         /* O painel precisa de status e atributos para os controles
            rápidos, mas não da ficha inteira: perícias, inventário e
            anotações ficam para quando alguém abrir a ficha de verdade. */
-        saida.atributos = (ficha.atributos || []).map(function (a) {
-          return { id: a.id, nome: a.nome, sigla: a.sigla, valor: a.valor, dado: a.dado };
-        });
-        if (recursosVisiveis) {
-          saida.status = (ficha.status || []).map(function (s) {
-            return { id: s.id, nome: s.nome, atual: s.atual, maximo: s.maximo };
-          });
-        }
+        saida.atributos = proj.atributos || [];
+        if (recursosVisiveis) saida.status = proj.status || [];
       }
       return saida;
     })
@@ -753,9 +739,230 @@ function acaoListarPersonagensCampanha(corpo, usuario) {
   return { ok: true, dados: lista, config: { ocultarStatusJogadores: ocultarStatus } };
 }
 
+/* ---------------------------------------------------------------------
+   As projeções de um punhado de personagens.
+
+   Devolve { porId, remontadas }: a projeção de cada um, venha ela da
+   coluna (o caminho normal) ou da ficha remontada (ficha ainda no
+   formato antigo, projeção de outra versão do formato, coluna apagada,
+   gravação feita por um backend que não conhece a coluna). Quem não
+   estiver em `porId` é quem não se montou — e o cartão dele diz isso.
+
+   Nenhuma listagem GRAVA para consertar projeção: a próxima gravação da
+   ficha resolve sozinha, e reconstruirResumos() resolve em lote. Uma
+   tela de leitura que grava é uma tela de leitura que disputa a trava.
+   --------------------------------------------------------------------- */
+function projecoesDosPersonagens(registros) {
+  var saida = { porId: {}, remontadas: 0 };
+  if (!registros || !registros.length) return saida;
+
+  var textos = lerCelulas(ABAS.PERSONAGENS, registros, 'resumo');
+  var faltando = [];
+  var duvidosos = [];
+
+  registros.forEach(function (p) {
+    var proj = projecaoDoRegistro(p, textos[p._linha]);
+    if (proj) { saida.porId[p.id] = proj; anotar('resumosUsados'); return; }
+
+    /* Tem projeção, mas de outra revisão. Pode ser só uma revisão que
+       subiu sem o conteúdo mudar — a geração do manifesto diz. */
+    var talvez = projecaoGuardada(textos[p._linha]);
+    if (talvez && talvez.geracao) { duvidosos.push({ registro: p, projecao: talvez }); return; }
+
+    faltando.push(p);
+  });
+
+  if (duvidosos.length) {
+    var manifestos = lerCelulas(ABAS.PERSONAGENS,
+      duvidosos.map(function (d) { return d.registro; }), 'armazenamento');
+
+    duvidosos.forEach(function (d) {
+      var m = manifestoDe(manifestos[d.registro._linha]);
+      if (m && !m.invalido && String(m.geracao) === String(d.projecao.geracao)) {
+        saida.porId[d.registro.id] = d.projecao;
+        anotar('resumosUsados');
+        return;
+      }
+      faltando.push(d.registro);
+    });
+  }
+
+  if (!faltando.length) return saida;
+
+  var fichas = lerFichasDosPersonagens(faltando);
+  faltando.forEach(function (p) {
+    var lida = fichas[p.id];
+    if (!lida || !lida.ok) return;
+    try {
+      saida.porId[p.id] = projecaoDaFicha(lida.ficha);
+      saida.remontadas++;
+      anotar('resumosRefeitos');
+    } catch (erro) {
+      console.warn('R.A.M.A.: projeção de ' + p.id + ' não montada: ' + erro);
+    }
+  });
+
+  return saida;
+}
+
+/* A VERSÃO da foto de cada personagem — a data da última gravação —,
+   sem a imagem. É o que deixa o navegador reaproveitar o que já baixou
+   e pedir só o que mudou. A coluna da data é curta; a da imagem não é
+   tocada aqui. */
+function versoesDeFoto(registros) {
+  var querido = {};
+  (registros || []).forEach(function (p) { querido[String(p.id)] = true; });
+
+  var linhas = lerLeves(ABAS.PERSONAGENS_FOTOS).filter(function (f) {
+    return querido[String(f.personagemId)];
+  });
+  if (!linhas.length) return {};
+
+  var datas = lerCelulas(ABAS.PERSONAGENS_FOTOS, linhas, 'atualizadoEm');
+
+  var saida = {};
+  linhas.forEach(function (f) {
+    var v = String(datas[f._linha] || '');
+    if (v) saida[String(f.personagemId)] = v;
+  });
+  return saida;
+}
+
 function ehFichaDeOrdem(ficha) {
   return !!ficha && String(ficha.tipoFicha || '') === 'ordem' && !!ficha.ordem && typeof ficha.ordem === 'object';
 }
+
+/* A projeção também responde por "é de Ordem", porque ela carrega o
+   tipo decidido na hora da gravação. */
+function projecaoDeOrdem(p) {
+  return !!p && String(p.tipo || '') === 'ordem' && !!p.ordem && typeof p.ordem === 'object';
+}
+
+/* =====================================================================
+   A PROJEÇÃO DO PERSONAGEM
+   ---------------------------------------------------------------------
+   O painel da mesa desenha oito cartões. Até a v2.15 ele remontava as
+   oito fichas inteiras para isso — anotações, perícias, rituais,
+   inventário completo — e jogava fora 95% do que leu. Numa mesa de oito
+   fichas com anotações de verdade, meio megabyte atravessava o serviço
+   do Sheets para desenhar oito caixinhas.
+
+   A projeção é o que o cartão usa, e só isso, gravado na coluna
+   `resumo` do personagem na MESMA gravação que publica a ficha. Ler a
+   mesa passa a ser: varrer as colunas leves, ler uma coluna curta, e
+   pronto — nenhuma ficha remontada, nenhum bloco lido.
+
+   O QUE ELA CONTÉM, E POR QUE NÃO CONTÉM CONTA NENHUMA
+   ---------------------------------------------------------------------
+   Para uma ficha de Ordem, o máximo de PV/PE/Sanidade NÃO é calculado
+   aqui: ele sai do motor de regras, que mora no navegador. A projeção
+   guarda as mesmas ENTRADAS que a v2.15 mandava para o painel —
+   `ordemParaPainel`, `itensParaPainel`, `resumoRecursos` — montadas
+   pelas MESMAS funções que o painel já usava. Não existe uma segunda
+   fórmula no servidor: existe o mesmo recorte, gravado em vez de
+   recalculado.
+
+     tipo            'ordem' ou 'universal'
+     ordem           o bloco de Ordem do painel (sem organização, sem
+                     textos longos de personalização)
+     itens           id, tipo, nome, defesa e bloco de Ordem de cada item
+     resumoRecursos  { pv, pe, san } validado, calculado por quem podia
+                     ver a ficha inteira
+     atributos       ficha universal: id, nome, sigla, valor, dado
+     status          ficha universal: id, nome, atual, maximo
+
+   QUANDO ELA VALE
+   ---------------------------------------------------------------------
+   A projeção carrega a REVISÃO e a GERAÇÃO da ficha de onde saiu. Ela
+   vale enquanto a revisão for a mesma da linha — e a revisão está entre
+   as colunas leves, então conferir isso não custa leitura nenhuma. Se
+   não bater (ficha ainda no formato antigo, coluna vazia, projeção de
+   uma versão anterior do formato, gravação feita por um backend que não
+   conhece esta coluna), o painel remonta AQUELA ficha e monta o cartão
+   como sempre fez. Nenhuma listagem grava nada para consertar isso: a
+   próxima gravação da ficha resolve sozinha, e reconstruirResumos()
+   resolve em lote quando alguém quiser.
+
+   Ela é DERIVADA e RECUPERÁVEL. A ficha continua sendo a fonte; perder
+   toda a coluna custa desempenho, nunca dado.
+   ===================================================================== */
+
+var VERSAO_RESUMO = 1;
+
+/* Uma projeção maior que isto não é gravada: fica o marcador `grande`,
+   e o painel remonta a ficha. Nenhuma projeção real chega perto —
+   `ordemParaPainel` já deixa os textos longos de fora —, e a célula não
+   pode ser o teto de nada (v2.15). */
+var LIMITE_RESUMO_PROJECAO = 40000;
+
+function projecaoDaFicha(ficha) {
+  var p = { v: VERSAO_RESUMO };
+
+  if (ehFichaDeOrdem(ficha)) {
+    p.tipo = 'ordem';
+    p.ordem = ordemParaPainel(ficha.ordem);
+    p.itens = itensParaPainel(ficha.inventario);
+    p.resumoRecursos = normalizarResumoRecursos(ficha.resumoRecursos);
+    return p;
+  }
+
+  p.tipo = 'universal';
+  p.atributos = (Array.isArray(ficha.atributos) ? ficha.atributos : [])
+    .filter(function (a) { return a && typeof a === 'object'; })
+    .map(function (a) { return { id: a.id, nome: a.nome, sigla: a.sigla, valor: a.valor, dado: a.dado }; });
+  p.status = (Array.isArray(ficha.status) ? ficha.status : [])
+    .filter(function (s) { return s && typeof s === 'object'; })
+    .map(function (s) { return { id: s.id, nome: s.nome, atual: s.atual, maximo: s.maximo }; });
+  return p;
+}
+
+/* O texto que vai para a coluna. Chamado por publicarFicha, dentro da
+   mesma gravação de uma linha que publica o manifesto: a projeção nunca
+   fica apontando para uma geração que não foi confirmada, porque ela
+   entra na planilha junto com o manifesto dela. */
+function textoDaProjecao(ficha, geracao, rev) {
+  var p;
+  try {
+    p = projecaoDaFicha(ficha);
+  } catch (erro) {
+    console.warn('R.A.M.A.: projeção não montada: ' + erro);
+    return '';
+  }
+
+  p.geracao = String(geracao || '');
+  p.rev = Number(rev) || 0;
+
+  var texto = JSON.stringify(p);
+  if (texto.length > LIMITE_RESUMO_PROJECAO) {
+    return JSON.stringify({ v: VERSAO_RESUMO, geracao: p.geracao, rev: p.rev, grande: true });
+  }
+  return texto;
+}
+
+/* A projeção guardada, em forma legível — sem dizer ainda se ela vale
+   para a linha de agora. */
+function projecaoGuardada(texto) {
+  if (!texto) return null;
+  var p = lerJson(String(texto), null);
+  if (!p || Number(p.v) !== VERSAO_RESUMO || p.grande) return null;
+  return p;
+}
+
+/* A projeção guardada, se ela ainda valer para ESTE registro.
+
+   A conferência barata é a REVISÃO, que está entre as colunas leves:
+   bateu, vale. Não bateu, ainda pode valer — há gravações que sobem a
+   revisão sem tocar no conteúdo (tirar alguém da mesa, excluir a
+   campanha, vincular) —, e aí quem decide é a GERAÇÃO do manifesto, que
+   só muda quando o conteúdo muda. Ver projecoesDosPersonagens. */
+function projecaoDoRegistro(registro, texto) {
+  var p = projecaoGuardada(texto === undefined ? registro.resumo : texto);
+  if (!p) return null;
+  if (Number(p.rev) !== (Number(registro.rev) || 0)) return null;
+  return p;
+}
+
+
 
 /* =====================================================================
    RESUMO DE RECURSOS
@@ -948,6 +1155,19 @@ function acaoVincularPersonagem(corpo, usuario) {
       manifesto.operacao = '';
       personagem.armazenamento = JSON.stringify(manifesto);
       campos.push('armazenamento');
+    }
+
+    /* A projeção continua valendo — o conteúdo da ficha não mudou —,
+       mas ela é conferida pela revisão, que mudou. Carimbar a revisão
+       nova nela custa uma célula vizinha na mesma gravação; não fazer
+       isso obrigaria o painel a remontar a ficha inteira na próxima
+       abertura da mesa. */
+    var projecaoAtual = projecaoDoRegistro(
+      { rev: (Number(personagem.rev) || 0) - 1 }, personagem.resumo);
+    if (projecaoAtual) {
+      projecaoAtual.rev = personagem.rev;
+      personagem.resumo = JSON.stringify(projecaoAtual);
+      campos.push('resumo');
     }
 
     atualizarCampos(ABAS.PERSONAGENS, personagem, campos);
@@ -1190,58 +1410,226 @@ function acaoRegistrarRolagem(corpo, usuario) {
   });
 }
 
+/* =====================================================================
+   O HISTÓRICO, EM PÁGINAS DE CUSTO CONTROLADO
+   ---------------------------------------------------------------------
+   Até a v2.15 cada página do histórico varria as oito colunas leves da
+   aba INTEIRA — 1.500 rolagens para mostrar 25 —, ordenava tudo e
+   fatiava. O custo era o do histórico, não o da página, e crescia para
+   sempre.
+
+   Agora são duas coisas:
+
+     o índice    uma chamada, UMA coluna (campanhaId), que dá os números
+                 de linha desta campanha em ordem cronológica — porque
+                 rolagem só entra no fim da aba, nunca no meio
+     a página    as linhas do fim do índice para trás, lidas inteiras, só
+                 as que a página precisa (mais uma margem para o que for
+                 filtrado)
+
+   O CURSOR
+   ---------------------------------------------------------------------
+   A página seguinte não é "pule 25": é "mais velhas que esta". O cursor
+   carrega a data, a linha e o id, e o que decide é a DATA, com a LINHA
+   desempatando. Assim uma rolagem nova no topo não empurra a paginação:
+   nada é repetido e nada é pulado, mesmo com a mesa rolando dados
+   enquanto alguém lê o histórico.
+
+ONDE A PÁGINA SEGUINTE COMEÇA
+   ---------------------------------------------------------------------
+   O cursor se localiza pelo ID da última rolagem que ele entregou. Com
+   o id, o índice diz exatamente em que posição parar — e isso vale
+   mesmo que as linhas tenham mudado de número (o mestre limpou o
+   histórico de OUTRA campanha e tudo subiu) e mesmo que várias
+   rolagens tenham sido gravadas no mesmo milissegundo, caso em que a
+   data não desempata nada.
+
+   Por isso a primeira página lê UMA coluna (campanhaId) e as seguintes
+   leem DUAS (id e campanhaId, que são vizinhas): a viagem é a mesma, e
+   a coluna a mais só é paga por quem está rolando o histórico para
+   trás.
+
+   Se o id não estiver mais lá — o histórico foi limpo entre uma página
+   e outra —, sobra a pista: a linha do cursor, com a data como
+   conferência. Nesse caso, no pior cenário, uma rolagem já mostrada
+   aparece de novo, e a tela a reconhece pelo id. Nunca o contrário:
+   rolagem mais antiga não some.
+
+   O TOTAL EXATO NÃO É CALCULADO
+   ---------------------------------------------------------------------
+   Contar quantas rolagens uma pessoa pode ver exige aplicar a
+   filtragem de ocultas em todas as linhas — ou seja, a varredura que
+   esta mudança existe para não fazer. A tela deixou de mostrar "N
+   restantes" e passou a mostrar "Carregar mais", que é o que ela usa de
+   verdade.
+   ===================================================================== */
+
+/* Quantas linhas a mais ler, além do tamanho da página, para cobrir as
+   que a filtragem vai descartar. */
+var MARGEM_DA_PAGINA = 10;
+
+/* Quantas vezes insistir quando a filtragem come a página inteira (uma
+   campanha em que quase tudo é rolagem oculta do mestre). */
+var VOLTAS_DA_PAGINA = 4;
+
+function cursorDaRolagem(r) {
+  return String(r._linha) + '|' + String(r.criadoEm || '') + '|' + String(r.id);
+}
+
+function lerCursorDeRolagem(valor) {
+  var texto = String(valor || '');
+  if (!texto || texto.length > 200) return null;
+
+  var partes = texto.split('|');
+  if (partes.length < 3) return null;
+
+  var linha = Number(partes[0]);
+  var id = partes.slice(2).join('|');
+  if (!(linha >= 2) || !/^[A-Za-z0-9_-]{8,80}$/.test(id)) return null;
+
+  return { linha: linha, criadoEm: String(partes[1]), id: id };
+}
+
+/* Mais velha que o cursor? Data primeiro, linha desempatando. */
+function antesDoCursor(r, cursor) {
+  var data = String(r.criadoEm || '');
+  if (data !== cursor.criadoEm) return data < cursor.criadoEm;
+  return Number(r._linha) < Number(cursor.linha);
+}
+
+/* A ordem da página é EXATAMENTE a chave do cursor, ao contrário: data
+   e, no empate, linha. As duas precisam concordar — uma ordenando por
+   linha e a outra comparando por id deixaria escapar as rolagens
+   gravadas no mesmo milissegundo. */
+function maisNovaPrimeiro(a, b) {
+  var da = String(a.criadoEm || '');
+  var db = String(b.criadoEm || '');
+  if (da !== db) return db < da ? -1 : 1;
+  return Number(b._linha) - Number(a._linha);
+}
+
+/* As linhas desta campanha, em ordem cronológica — porque rolagem só
+   entra no fim da aba. Com `comIds`, cada linha vem com o id junto, que
+   é o que o cursor usa para se localizar. Uma chamada; uma coluna, ou
+   duas vizinhas. */
+function linhasDasRolagens(campanhaId, comIds) {
+  if (!comIds) {
+    var soCampanha = linhasPorValor(ABAS.CAMPANHA_ROLAGENS, ['campanhaId']);
+    return (soCampanha[String(campanhaId)] || []).map(function (l) { return { linha: l, id: '' }; });
+  }
+
+  var mapa = linhasPorValor(ABAS.CAMPANHA_ROLAGENS, ['id', 'campanhaId']);
+  var sufixo = '\n' + String(campanhaId);
+  var lista = [];
+
+  Object.keys(mapa).forEach(function (chave) {
+    if (chave.length <= sufixo.length) return;
+    if (chave.slice(chave.length - sufixo.length) !== sufixo) return;
+    var id = chave.slice(0, chave.length - sufixo.length);
+    mapa[chave].forEach(function (l) { lista.push({ linha: l, id: id }); });
+  });
+
+  lista.sort(function (a, b) { return a.linha - b.linha; });
+  return lista;
+}
+
 function acaoListarRolagens(corpo, usuario) {
   var ctx = contextoDaCampanha(corpo.campanhaId, usuario);
   if (!ctx.ok) return ctx;
+
   if (ctx.papel === PAPEL_ESPECTADOR) return { ok: true, dados: { rolagens: [], fim: true } };
 
   var limite = Number(corpo.limite) || PAGINA_ROLAGENS;
   limite = Math.max(1, Math.min(MAX_PAGINA_ROLAGENS, limite));
 
-  var nomes = {};
-  lerTudo(ABAS.USUARIOS).forEach(function (u) { nomes[u.id] = u.nome || u.usuario; });
+  var nomes = nomesDasContas();
 
-  /* O CUSTO REAL DESTA PAGINAÇÃO
-     -----------------------------------------------------------------
-     A varredura abaixo percorre TODAS as linhas de CAMPANHA_ROLAGENS,
-     não só as da página. Não adianta fingir o contrário: para saber
-     quais são as vinte e cinco mais recentes DESTA campanha, e quantas
-     existem ao todo, é preciso olhar o campanhaId de cada linha.
+  var cursor = lerCursorDeRolagem(corpo.cursor);
+  var linhas = linhasDasRolagens(ctx.campanha.id, !!cursor);
 
-     O que mudou é o que a varredura carrega. Ela lê oito colunas
-     curtas — id, autor, tipo, nome, visibilidade, data — e deixa o
-     dadosJson para trás. O resultado de cada rolagem, que é o volume,
-     é buscado depois, só para as linhas que a página realmente mostra.
+  /* `pulo` é o contrato antigo (v2.15): "já tenho N". Continua aceito
+     para um site que ainda não foi publicado com esta versão, e custa
+     ler as N linhas que ele manda pular. */
+  var pular = cursor ? 0 : Math.max(0, Number(corpo.pulo) || 0);
 
-     Com 1.500 rolagens gravadas, uma página deixou de trazer 1.500
-     resultados para trazer 25.
+  var alto = linhas.length;
+  var achouOCursor = false;
 
-     O que continua verdadeiro: o custo cresce com o tamanho da aba, não
-     com o da página. Numa mesa de dezenas de milhares de linhas isso
-     volta a pesar, e a saída continua sendo o botão "Limpar" do
-     mestre. Um índice de verdade exigiria uma estrutura que a planilha
-     não oferece. */
-  var todas = daCampanhaLeves(ABAS.CAMPANHA_ROLAGENS, ctx.campanha.id)
-    /* A FILTRAGEM ACONTECE AQUI, no servidor. Uma rolagem oculta do
-       mestre não é escondida com CSS: ela nem chega ao navegador do
-       jogador. */
-    .filter(function (r) {
-      if (ctx.mestre) return true;
-      return String(r.visibilidade) !== VIS_ROLAGEM_OCULTA;
-    })
-    .sort(function (a, b) { return String(b.criadoEm).localeCompare(String(a.criadoEm)); });
+  if (cursor) {
+    for (var c = linhas.length - 1; c >= 0; c--) {
+      if (linhas[c].id !== cursor.id) continue;
+      alto = c;
+      achouOCursor = true;
+      break;
+    }
+    /* O id sumiu (histórico limpo no meio da paginação): sobra a pista
+       da linha, e a comparação por data conferindo. */
+    if (!achouOCursor) {
+      while (alto > 0 && linhas[alto - 1].linha >= cursor.linha) alto--;
+    }
+  }
 
-  /* Página simples por posição: o cliente diz quantas já tem. */
-  var pulo = Math.max(0, Number(corpo.pulo) || 0);
-  var pagina = todas.slice(pulo, pulo + limite);
+  var pagina = [];
+  var maisVelhaVista = null;
+  var encheu = false;
+  var voltas = 0;
+  var i = alto;
 
-  var resultados = lerCelulas(ABAS.CAMPANHA_ROLAGENS, pagina, 'dadosJson');
+  while (!encheu && i > 0 && voltas < VOLTAS_DA_PAGINA) {
+    var quantas = (limite - pagina.length) + MARGEM_DA_PAGINA + pular;
+    var inicio = Math.max(0, i - quantas);
+
+    var registros = lerLinhas(ABAS.CAMPANHA_ROLAGENS,
+      linhas.slice(inicio, i).map(function (x) { return x.linha; }));
+    registros.sort(maisNovaPrimeiro);
+
+    for (var k = 0; k < registros.length; k++) {
+      var r = registros[k];
+      maisVelhaVista = r;
+
+      /* O índice pode ter envelhecido: a linha é conferida no próprio
+         registro, nunca presumida. */
+      if (String(r.campanhaId) !== String(ctx.campanha.id)) continue;
+
+      /* A FILTRAGEM ACONTECE AQUI, no servidor. Uma rolagem oculta do
+         mestre não é escondida com CSS: ela nem chega ao navegador do
+         jogador. */
+      if (!ctx.mestre && String(r.visibilidade) === VIS_ROLAGEM_OCULTA) continue;
+
+      /* Com o cursor localizado pelo id, o corte já garantiu que só
+         vêm rolagens anteriores a ele. A comparação por data só entra
+         quando o id não foi achado. */
+      if (cursor && !achouOCursor && !antesDoCursor(r, cursor)) continue;
+      if (pular > 0) { pular--; continue; }
+
+      pagina.push(r);
+      if (pagina.length >= limite) { encheu = true; break; }
+    }
+
+    /* Encheu no meio do lote: o que sobrou dele fica para a próxima
+       página, que começa pelo cursor. Avançar `i` aqui pularia essas
+       linhas para sempre. */
+    if (encheu) break;
+
+    i = inicio;
+    voltas++;
+  }
+
+  /* Só é o fim quando as linhas acabaram sem encher a página. */
+  var acabou = !encheu && i <= 0;
+
+  /* O cursor da próxima página: a última que entrou. Se a filtragem
+     comeu tudo, o da mais velha que foi OLHADA — senão pedir de novo
+     devolveria a mesma coisa para sempre. */
+  var ultima = pagina.length ? pagina[pagina.length - 1] : maisVelhaVista;
 
   return {
     ok: true,
     dados: {
       rolagens: pagina.map(function (r) {
-        var d = lerJson(resultados[r._linha], {});
+        /* A linha já veio inteira da leitura da página: o resultado
+           não custa uma segunda viagem. */
+        var d = lerJson(r.dadosJson, {});
         return {
           id: r.id,
           autorUserId: r.autorUserId,
@@ -1254,8 +1642,9 @@ function acaoListarRolagens(corpo, usuario) {
           resultado: d,
         };
       }),
-      total: todas.length,
-      fim: pulo + pagina.length >= todas.length,
+      /* Verdadeiro quando não há mais nada antes desta página. */
+      fim: acabou,
+      proximo: acabou || !ultima ? null : cursorDaRolagem(ultima),
     },
   };
 }
@@ -1265,9 +1654,10 @@ function acaoLimparRolagens(corpo, usuario) {
     var ctx = exigirMestre(corpo.campanhaId, usuario);
     if (!ctx.ok) return ctx;
 
-    var linhas = daCampanhaLeves(ABAS.CAMPANHA_ROLAGENS, ctx.campanha.id);
+    /* Pelo índice de uma coluna, como a listagem: limpar não precisa
+       ler o resultado de cada rolagem para apagá-la. */
     var removidas = apagarLinhas(ABAS.CAMPANHA_ROLAGENS,
-      linhas.map(function (r) { return r._linha; }));
+      linhasDasRolagens(ctx.campanha.id, false).map(function (x) { return x.linha; }));
     marcarMesa(ctx.campanha.id, ['rolagens']);
 
     return { ok: true, dados: { removidas: removidas } };
@@ -1519,6 +1909,38 @@ function acaoLerCapaCampanha(corpo, usuario) {
 }
 
 /* imagem vazia remove a capa. */
+/* As capas de um punhado de campanhas, numa viagem.
+
+   A regra de acesso é a mesma de `ler_capa_campanha`: quem alcança a
+   campanha vê a capa dela — membro, ou espectador de campanha pública.
+   Campanha que a conta não alcança simplesmente não aparece na
+   resposta, sem dizer se ela existe. */
+function acaoLerCapas(corpo, usuario) {
+  var ids = Array.isArray(corpo.campanhaIds) ? corpo.campanhaIds : [];
+  if (!ids.length || ids.length > MAX_IMAGENS_POR_PEDIDO) return { ok: false, erro: 'dados_invalidos' };
+
+  var alcance = campanhasDoUsuario(usuario);
+  var querido = {};
+  ids.forEach(function (id) { if (alcance[String(id)]) querido[String(id)] = true; });
+
+  var linhas = lerLeves(ABAS.CAMPANHA_CAPAS).filter(function (capa) {
+    return querido[String(capa.campanhaId)];
+  });
+  if (!linhas.length) return { ok: true, dados: {} };
+
+  var imagens = lerCelulas(ABAS.CAMPANHA_CAPAS, linhas, 'imagem');
+
+  var saida = {};
+  linhas.forEach(function (capa) {
+    saida[String(capa.campanhaId)] = {
+      imagem: imagens[capa._linha] || '',
+      versao: String(capa.atualizadoEm || ''),
+    };
+  });
+
+  return { ok: true, dados: saida };
+}
+
 function acaoSalvarCapaCampanha(corpo, usuario) {
   if (typeof corpo.imagem !== 'string') return { ok: false, erro: 'dados_invalidos' };
   var imagem = corpo.imagem;
@@ -1754,21 +2176,21 @@ function recursosParaCombate(ctx, usuario, ids) {
     return ctx.mestre || meu(p, usuario) || !ocultar;
   });
 
-  var fichas = lerFichasDosPersonagens(permitidas);
+  /* Pela projeção, como o painel da mesa (v2.16): o combate mostra os
+     mesmos números e não precisa da ficha para isso. */
+  var painel = projecoesDosPersonagens(permitidas);
 
   permitidas.forEach(function (p) {
     /* Ficha que não se montou fica sem recursos na lista — ausente do
        mapa quer dizer "não mostrar", e nenhum número é inventado. */
-    var lida = fichas[p.id];
-    if (!lida || !lida.ok) return;
-    var ficha = lida.ficha;
+    var proj = painel.porId[p.id];
+    if (!proj) return;
     var lista;
-    if (ehFichaDeOrdem(ficha)) {
-      lista = recursosResumidos(ficha);
+    if (projecaoDeOrdem(proj)) {
+      lista = recursosResumidos(proj);
       if (!lista) { saida[String(p.id)] = { pendente: true, lista: [] }; return; }
     } else {
-      lista = (Array.isArray(ficha.status) ? ficha.status : [])
-        .filter(function (s) { return s && typeof s === 'object'; })
+      lista = (Array.isArray(proj.status) ? proj.status : [])
         .map(function (s) {
           return { chave: String(s.id), rotulo: String(s.nome || ''), atual: Number(s.atual) || 0, maximo: Number(s.maximo) || 0 };
         });

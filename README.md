@@ -110,7 +110,7 @@ E abra `http://localhost:8099/rama/`.
 
 São três conjuntos.
 
-**Modelo e motor de dados** — 1546 verificações. No navegador, abra `testes/`;
+**Modelo e motor de dados** — 1561 verificações. No navegador, abra `testes/`;
 no terminal:
 
 ```bash
@@ -150,7 +150,7 @@ avisam sem bloquear, adicionar que não resolve pendência de progressão, a mig
 do texto de "Efeito" para "Descrição" numa ficha antiga e a ficha atravessando
 salvar, exportar e importar.
 
-**Permissões, concorrência e armazenamento do backend** — 701 verificações:
+**Permissões, concorrência e armazenamento do backend** — 812 verificações:
 
 ```bash
 deno run --allow-read testes/executar-backend.js
@@ -187,7 +187,22 @@ ajuste rápido do mestre, vínculo, cartões, combate, duplicação, importaçã
 exportação e exclusão numa ficha grande; limpeza de órfãos; o cache de cabeçalhos
 que não passa de uma versão para outra; e outra conta sem alcançar nada disso.
 
-**Transporte do frontend e carga das páginas** — 194 verificações:
+E o que a v2.16 mudou para ser mais barato, cada garantia com o seu caso: o painel
+da mesa que não remonta ficha nenhuma nem lê um bloco (conferido pelo contador do
+próprio backend) e devolve o cartão idêntico ao que a ficha daria; a projeção
+recusada quando é de outra gravação, de outra versão do formato ou grande demais;
+toda gravação que mexe no painel mantendo-a em dia — salvar, ajuste rápido, resumo
+de recursos, entrar e sair da mesa, duplicar, restaurar; listar que nunca grava
+para consertá-la; o localizador de blocos que não deixa uma pista velha gravar por
+cima dos blocos de outra ficha; a gravação que não desloca os blocos de ninguém,
+nem quando a ficha encolhe; o histórico por cursor sem repetir nem pular, com
+rolagem nova no topo, com id fora da ordem das linhas, com as linhas deslocadas
+por uma limpeza de outra campanha e com o id do cursor apagado; as imagens em lote
+com a regra de quem pode ver; o diretório de contas que não guarda segredo e
+esquece o nome trocado na hora; e o diagnóstico que fica de fora da resposta quando
+está desligado.
+
+**Transporte do frontend e carga das páginas** — 219 verificações:
 
 ```bash
 deno run --allow-read testes/executar-frontend.js
@@ -211,6 +226,13 @@ velha que não apaga valor novo) e a sincronização (ritmo, pausa com a página
 escondida, espera crescente, perda de acesso). E o catálogo de itens carregado sob
 demanda: um script só, falha que rejeita e não fica guardada, nova tentativa que
 carrega, e nenhuma página levando o catálogo junto.
+
+E as imagens sob demanda (v2.16): três cartões que pedem numa viagem só, o que já
+chegou não sendo pedido de novo nem depois de trocar de página, versão nova sendo
+buscada, personagem sem foto que não vira pedido repetido, falha que não fica
+guardada e trinta cartões virando duas viagens em vez de trinta. E a medição da
+viagem: o tempo do servidor separado do tempo de rede, e a viagem continuando
+medida quando o servidor não manda números.
 
 E a gravação da ficha em blocos do lado do navegador: a resposta que se perde faz
 o salvador repetir o MESMO pedido (mesma ficha, revisão e id de operação), a edição
@@ -380,6 +402,21 @@ cria só o que falta e nunca apaga o que existe.
 4. **Implantar → Gerenciar implantações → editar → Versão: Nova versão**;
 5. publique o site.
 
+**Atualizando para a v2.16 (o painel sem abrir ficha)**, na mesma ordem: cole os
+três `.gs`, rode **`setupRama()`** (que acrescenta a coluna `resumo` em
+`PERSONAGENS`), rode `conferirInstalacao()`, crie a **Nova versão** da implantação
+e publique o site. Nenhuma ficha é convertida: cada uma ganha a projeção do painel
+na próxima gravação, e até lá o painel a remonta como fazia antes. Para resolver em
+lote, sem esperar, rode `reconstruirResumos()` quantas vezes ele pedir — ele
+trabalha em lotes de 25 e diz quantas faltam.
+
+O site e o servidor desta versão mudam juntos duas respostas: as listagens passam a
+mandar a VERSÃO da foto e do avatar em vez da imagem, e o histórico pagina por
+cursor. Um site antigo contra o servidor novo mostra as iniciais no lugar das fotos
+e um "Carregar mais" que repete a primeira página; um site novo contra o servidor
+antigo mostra as fotos normalmente (ele as manda embutidas) e pagina como antes.
+Publicar os dois na mesma janela evita as duas coisas.
+
 Sem o passo 2, as fichas antigas continuam abrindo, mas nenhuma ficha salva
 (`instalacao_incompleta`) — nada é gravado pela metade. **Não volte a implantação
 para uma versão anterior à v2.15** sem necessidade: a versão antiga não sabe abrir
@@ -387,8 +424,10 @@ as fichas que já estão em blocos (o site mostra que o servidor precisa ser
 atualizado). O manifesto e os blocos sobrevivem à volta, e reimplantar a v2.15
 devolve tudo — ver "Voltar a uma versão anterior do backend" em
 [docs/DATABASE.md](docs/DATABASE.md). Para diagnosticar ou recuperar uma ficha:
-`diagnosticarPersonagem(id)`, `restaurarGeracaoAnterior(id)` e
-`limparBlocosOrfaos()`, no editor.
+`diagnosticarPersonagem(id)`, `restaurarGeracaoAnterior(id)`,
+`reconstruirResumos()` e `limparBlocosOrfaos()`, no editor. Para medir o que está
+custando caro numa implantação de verdade, `ligarDiagnostico()` e
+`desligarDiagnostico()` — ver [docs/PERFORMANCE.md](docs/PERFORMANCE.md).
 
 Troque sempre **os três `.gs` juntos** (`Dados.gs`, `Codigo.gs`, `Campanhas.gs`):
 eles se chamam entre si, e um arquivo de uma versão com os outros de outra pode
@@ -490,10 +529,20 @@ console não abre o registro de outra conta.
   importado editado à mão — é cortado ao abrir, e espaços e quebras de linha nas
   pontas de um texto são aparados. O servidor guarda e devolve exatamente o que
   recebeu; quem corta é a normalização da ficha no navegador (`U.aparar`).
-- **Salvar e abrir uma ficha custam mais chamadas à planilha desde a v2.15**
-  (salvar: 13 → 18; abrir: 5 → 9, contados no simulador) — o preço de conferir
-  cada gravação e cada leitura. A listagem de personagens não mudou. Ver
-  [docs/PERFORMANCE.md](docs/PERFORMANCE.md).
+- **Salvar e abrir uma ficha custam mais chamadas à planilha do que na v2.14**
+  (salvar: 13 → 17; abrir: 5 → 7, contados no simulador) — o preço de conferir
+  cada gravação e cada leitura. A v2.16 devolveu parte disso com o localizador de
+  blocos. Ver [docs/PERFORMANCE.md](docs/PERFORMANCE.md).
+- **As imagens passaram a ter custo próprio (v2.16)**: elas saíram das listagens e
+  são pedidas em lote, só quando faltam. Quem abre a mesa pela primeira vez num
+  aparelho baixa as fotos uma vez; depois disso, não baixa mais enquanto elas não
+  mudarem. O armazenamento do navegador é por aparelho e pode ser descartado por
+  ele a qualquer momento — o efeito é baixar de novo, nunca perder dado.
+- **O histórico cobra uma coluna por página (v2.16)**: achar as rolagens de uma
+  campanha custa ler a coluna `campanhaId` da aba inteira (uma chamada). Com
+  dezenas de milhares de rolagens isso volta a pesar, e aí a saída continua sendo
+  o botão "Limpar" do mestre — ou um índice persistido, que não cabia nesta
+  entrega.
 - **Outros campos grandes ainda moram numa célula**: o combate (com o snapshot de
   cada criatura), a nota do mestre, o homebrew e as imagens. Todos recusam acima
   do limite em vez de cortar; o combate é o que mais pode crescer. Ver "Os outros

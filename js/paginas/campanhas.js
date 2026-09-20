@@ -74,6 +74,19 @@
     var doGrupo = personagens.filter(function (p) { return p.campanhaId === c.id; });
     var destino = U.url("campanha/?id=" + encodeURIComponent(c.id));
 
+    /* A capa da campanha no lugar das iniciais, quando ela existe. A
+       listagem manda só a VERSÃO da imagem; quem desenha pede em lote e
+       reaproveita o que o aparelho já tem — ver js/imagens.js. */
+    function capaOuIniciais(campanha) {
+      var caixa = el("span.r-avatar.r-avatar--quadrado", {
+        "aria-hidden": "true", texto: U.iniciais(campanha.nome),
+      });
+      if (campanha.capaVersao && global.RAMAImagens) {
+        global.RAMAImagens.aplicar(caixa, { tipo: "capa", id: campanha.id, versao: campanha.capaVersao });
+      }
+      return caixa;
+    }
+
     /* Papel e visibilidade ficam à vista na lista: saber de cara se
        você é o mestre de uma mesa ou só um jogador nela evita abrir a
        campanha errada. */
@@ -90,7 +103,7 @@
     return el("div.r-cartao.registro", { estilo: { position: "relative" } }, [
       el("a.registro__link", { href: destino, "aria-label": "Abrir " + c.nome }),
 
-      el("span.r-avatar.r-avatar--quadrado", { "aria-hidden": "true", texto: U.iniciais(c.nome) }),
+      capaOuIniciais(c),
 
       el("div.registro__corpo", {}, [
         el("span.registro__nome", { texto: c.nome }),

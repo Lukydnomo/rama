@@ -146,10 +146,14 @@
     ]);
   }
 
+  /* A listagem traz a VERSÃO da foto, não a foto (v2.16). A imagem
+     entra quando chegar — do que já está guardado no aparelho, quase
+     sempre sem viagem nenhuma. */
   function avatar(p) {
-    var caixa = el("span.r-avatar", { "aria-hidden": "true" });
-    if (p.foto) caixa.appendChild(el("img", { src: p.foto, alt: "" }));
-    else caixa.textContent = U.iniciais(p.nome);
+    var caixa = el("span.r-avatar", { "aria-hidden": "true", texto: U.iniciais(p.nome) });
+    if (p.fotoVersao && global.RAMAImagens) {
+      global.RAMAImagens.aplicar(caixa, { tipo: "foto", id: p.id, versao: p.fotoVersao });
+    }
     return caixa;
   }
 
