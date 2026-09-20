@@ -123,6 +123,8 @@
      de try/catch para saber o que aconteceu. */
   async function postar(corpo, opcoes) {
     var o = opcoes || {};
+    var comecou = Date.now();
+    var acao = (corpo && corpo.acao) || (typeof corpo === "string" ? "(texto)" : "(sem ação)");
 
     if (!configurado()) {
       registrar("erro", "API_URL não configurada em js/config.js");
@@ -179,6 +181,7 @@
 
       if (resposta.ok && lido.ok) {
         if (i > 0) registrar("info", "Resposta veio na tentativa " + (i + 1));
+        anotarMedicao(acao, Date.now() - comecou, lido.dados);
         return lido.dados;
       }
 
@@ -193,6 +196,79 @@
     registrar("erro", "Servidor respondeu " + ultimoStatus + " sem JSON", detalhe);
 
     return { ok: false, erro: "servidor_falhou", status: ultimoStatus, detalhe: detalhe };
+  }
+
+
+  /* =================================================================
+     MEDIÇÃO: O QUE É SERVIDOR E O QUE É VIAGEM
+     -----------------------------------------------------------------
+     "Está lento" pode ser duas coisas muito diferentes: o Apps Script
+     demorando a responder, ou a viagem até ele. Só quem está nas duas
+     pontas consegue separar.
+
+     Aqui se mede a viagem inteira. Quando o backend está com o
+     diagnóstico ligado (ligarDiagnostico(), em Codigo.gs), a resposta
+     traz `diag.ms` — o tempo DENTRO do servidor. A diferença entre os
+     dois é a rede mais o arranque do contêiner.
+
+     Fica tudo na memória desta página, nas últimas cinquenta viagens, e
+     só aparece quando alguém pede: RAMARede.medicoes(). Com
+     localStorage["rama.diag"] = "1", cada viagem também vira uma linha
+     no console. Nada disto sai do navegador.
+     ================================================================= */
+
+  var MEDICOES = 50;
+  var medicoes = [];
+
+  function anotarMedicao(acao, ms, resposta) {
+    var diag = resposta && resposta.diag;
+    var servidor = diag && typeof diag.ms === "number" ? diag.ms : null;
+
+    var linha = {
+      acao: acao,
+      quando: Date.now(),
+      /* a viagem inteira, do clique à resposta */
+      totalMs: ms,
+      /* o tempo dentro do servidor, quando ele conta */
+      servidorMs: servidor,
+      /* o que sobrou: rede, fila e arranque do Apps Script */
+      redeMs: servidor === null ? null : Math.max(0, ms - servidor),
+      sheets: diag ? diag.sheets : null,
+      celulas: diag ? diag.celulas : null,
+      fichas: diag ? diag.fichas : null,
+    };
+
+    medicoes.push(linha);
+    if (medicoes.length > MEDICOES) medicoes.shift();
+
+    var ligado = false;
+    try { ligado = localStorage.getItem("rama.diag") === "1"; } catch (e) { ligado = false; }
+
+    if (ligado) {
+      console.info("[R.A.M.A. · rede] " + acao + ": " + ms + " ms" +
+        (servidor === null ? "" : " (servidor " + servidor + " ms, rede " + linha.redeMs + " ms, " +
+          diag.sheets + " chamadas ao Sheets, " + diag.fichas + " fichas remontadas)"));
+    }
+
+    return linha;
+  }
+
+  /* As últimas viagens, e a média de cada parte. Para o console de quem
+     está investigando — a tela não usa nada disto. */
+  function resumoDasMedicoes() {
+    var comServidor = medicoes.filter(function (m) { return m.servidorMs !== null; });
+    var media = function (lista, campo) {
+      if (!lista.length) return null;
+      var soma = lista.reduce(function (s, m) { return s + m[campo]; }, 0);
+      return Math.round(soma / lista.length);
+    };
+    return {
+      viagens: medicoes.length,
+      totalMedioMs: media(medicoes, "totalMs"),
+      servidorMedioMs: media(comServidor, "servidorMs"),
+      redeMediaMs: media(comServidor, "redeMs"),
+      ultimas: medicoes.slice(-10),
+    };
   }
 
   /* Uma espera silenciosa de meio minuto é indistinguível de travamento.
@@ -221,5 +297,6 @@
     endereco: endereco,
     configurado: configurado,
     registrar: registrar,
+    medicoes: resumoDasMedicoes,
   };
 })(window);

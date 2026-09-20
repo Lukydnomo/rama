@@ -112,6 +112,9 @@ var MINUTOS_BLOQUEIO = 15;
    ===================================================================== */
 
 function doPost(e) {
+  var comecou = Date.now();
+  var acao = '';
+
   /* Uma requisição do Apps Script começa com o escopo global limpo, e o
      Dados.gs conta com isso para guardar o que leu sem risco de servir
      dado de outra pessoa. Dizer isso em voz alta custa nada e faz o
@@ -131,24 +134,26 @@ function doPost(e) {
     var corpo = lerCorpo(e);
     if (!corpo) return responder({ ok: false, erro: 'dados_invalidos' });
 
-    var acao = String(corpo.acao || '');
+    acao = String(corpo.acao || '');
     var rota = rotaDe(acao);
-    if (!rota) return responder({ ok: false, erro: 'acao_desconhecida' });
+    if (!rota) return responder({ ok: false, erro: 'acao_desconhecida' }, acao, comecou);
 
     /* Login e ping são as únicas portas abertas. Todo o resto exige
        uma sessão que o servidor reconheça — e a identidade sai dela,
        nunca do que o pedido afirma ser. */
-    if (rota.publica) return responder(rota.fn(corpo, null));
+    if (rota.publica) return responder(rota.fn(corpo, null), acao, comecou);
 
+    var antesDaSessao = Date.now();
     var sessao = validarSessao(corpo.token);
-    if (!sessao.ok) return responder({ ok: false, erro: sessao.erro });
+    anotar('msSessao', Date.now() - antesDaSessao);
+    if (!sessao.ok) return responder({ ok: false, erro: sessao.erro }, acao, comecou);
 
-    return responder(rota.fn(corpo, sessao.usuario));
+    return responder(rota.fn(corpo, sessao.usuario), acao, comecou);
   } catch (erro) {
     /* A mensagem interna vai para o log do Apps Script; o cliente
        recebe um código, não a pilha de execução. */
     console.error('R.A.M.A. falhou: ' + (erro && erro.stack ? erro.stack : erro));
-    return responder({ ok: false, erro: 'servidor_falhou' });
+    return responder({ ok: false, erro: 'servidor_falhou' }, acao, comecou);
   }
 }
 
@@ -168,11 +173,102 @@ function lerCorpo(e) {
   }
 }
 
-function responder(objeto) {
+/* A única saída. Com o diagnóstico ligado, ela é também o único lugar
+   que sabe quanto a requisição inteira custou — ver "Diagnóstico de
+   desempenho", abaixo. */
+function responder(objeto, acao, comecou) {
+  var resposta = objeto;
+  var ligado = false;
+
+  try { ligado = comecou !== undefined && diagnosticoLigado(); } catch (erro) { ligado = false; }
+
+  if (ligado) {
+    var numeros = numerosDaRequisicao(acao, Date.now() - comecou, 0);
+    resposta.diag = numeros;
+  }
+
+  var texto = JSON.stringify(resposta);
+
+  if (ligado) {
+    resposta.diag.resposta = texto.length;
+    texto = JSON.stringify(resposta);
+    console.log('R.A.M.A. perf ' + JSON.stringify(resposta.diag));
+  }
+
   return ContentService
-    .createTextOutput(JSON.stringify(objeto))
+    .createTextOutput(texto)
     .setMimeType(ContentService.MimeType.JSON);
 }
+/* =====================================================================
+   DIAGNÓSTICO DE DESEMPENHO
+   ---------------------------------------------------------------------
+   O medidor de Dados.gs conta sempre. Este interruptor decide se a
+   contagem vira LOG e se ela volta na resposta:
+
+     RAMA_DIAGNOSTICO = 1   uma linha no log por requisição, e o campo
+                            `diag` na resposta
+     ausente ou 0           nada
+
+   Ligar e desligar pelo editor: ligarDiagnostico() / desligarDiagnostico().
+
+   Três coisas que esta instrumentação NÃO faz, de propósito:
+
+     · não grava nada na planilha. Uma linha de log por requisição numa
+       aba seria uma escrita por leitura — o contrário de medir;
+     · não registra token, senha, id de conta, nome nem conteúdo de
+       ficha. O que sai são números e o nome da ação;
+     · não muda decisão nenhuma. Com o diagnóstico ligado ou desligado,
+       a resposta é a mesma fora do campo `diag`.
+
+   O campo `diag` existe para separar o que é tempo de servidor do que é
+   latência de rede: o navegador mede a viagem inteira e desconta o `ms`
+   que veio de dentro — ver js/rede.js.
+   ===================================================================== */
+
+function diagnosticoLigado() {
+  var e = exec();
+  if (e.diagnostico === undefined) {
+    e.diagnostico = String(propriedade('RAMA_DIAGNOSTICO', '0')) === '1';
+  }
+  return e.diagnostico;
+}
+
+function ligarDiagnostico() {
+  definirPropriedade('RAMA_DIAGNOSTICO', '1');
+  console.log('R.A.M.A.: diagnóstico LIGADO. Cada requisição passa a registrar uma linha "R.A.M.A. perf".');
+  return true;
+}
+
+function desligarDiagnostico() {
+  definirPropriedade('RAMA_DIAGNOSTICO', '0');
+  console.log('R.A.M.A.: diagnóstico desligado.');
+  return false;
+}
+
+/* Os números desta requisição, prontos para o log e para a resposta.
+   `ms` é o tempo do servidor: da entrada do doPost até a serialização
+   da resposta. */
+function numerosDaRequisicao(acao, ms, tamanho) {
+  var m = medidor();
+  return {
+    acao: String(acao || ''),
+    ms: ms,
+    sessaoMs: m.msSessao,
+    travaMs: m.msTrava,
+    presaMs: m.msPresa,
+    sheets: m.chamadas,
+    leituras: m.leituras,
+    escritas: m.escritas,
+    celulas: m.celulas,
+    cache: m.cacheAcertos + '/' + (m.cacheAcertos + m.cacheFalhas),
+    fichas: m.fichas,
+    blocos: m.blocos,
+    resumos: m.resumosUsados + '/' + (m.resumosUsados + m.resumosRefeitos),
+    resposta: tamanho,
+  };
+}
+
+
 
 /* =====================================================================
    ROTEAMENTO
@@ -225,6 +321,10 @@ function rotasDoNucleo() {
   duplicar_personagem:   { publica: false, fn: acaoDuplicarPersonagem },
 
   ler_foto:              { publica: false, fn: acaoLerFoto },
+  /* Várias fotos numa viagem, sem a listagem carregá-las. Ver
+     "Imagens sob demanda". */
+  ler_fotos:             { publica: false, fn: acaoLerFotos },
+  ler_avatares:          { publica: false, fn: acaoLerAvatares },
   salvar_foto:           { publica: false, fn: acaoSalvarFoto },
 
   listar_homebrew:       { publica: false, fn: acaoListarHomebrew },
@@ -289,6 +389,8 @@ function acoesDeLote() {
     listar_personagens: true,
     ler_personagem: true,
     ler_foto: true,
+    ler_fotos: true,
+    ler_avatares: true,
     listar_homebrew: true,
     ler_homebrew: true,
     ler_imagem_criatura: true,
@@ -1038,6 +1140,186 @@ function campanhasDoUsuarioCompletas(usuario) {
   return alcance;
 }
 
+
+/* =====================================================================
+   O DIRETÓRIO DE CONTAS
+   ---------------------------------------------------------------------
+   Quatro telas precisam da mesma coisa: o nome que acompanha um id de
+   conta. O painel da mesa, a lista de participantes, o histórico de
+   rolagens e o editor de membros. Cada uma varria a aba USUARIOS
+   inteira para montar o mesmo mapa.
+
+   Agora o mapa é montado uma vez e fica no cache por alguns minutos:
+
+     conteúdo     id → { usuario, nome, ativo }. NADA além disso — nem
+                  hashSenha, nem salt, nem iterações. O que está aqui é
+                  o que qualquer conta já vê em listar_usuarios.
+     chave        'rama.contas.' + a época
+     validade     300 segundos
+     invalidação  a época (troca de senha, conta desativada, mexida em
+                  participantes) derruba tudo na hora; trocar o próprio
+                  nome apaga a entrada explicitamente
+     sem cache    lê a aba, como antes. O cache acelera; não decide
+     desatualizado  no pior caso um nome trocado aparece velho por até
+                  cinco minutos numa lista. Nenhuma permissão sai daqui
+
+   Permissão NUNCA vem deste mapa: quem decide acesso é a sessão e as
+   relações no banco, lidas na hora.
+   ===================================================================== */
+
+var SEGUNDOS_CACHE_CONTAS = 300;
+var LIMITE_CACHE_CONTAS = 90000;
+
+function chaveDasContas() { return 'rama.contas.' + epoca(); }
+
+function contasDoSistema() {
+  var e = exec();
+  if (e.contas) return e.contas;
+
+  var doCache = lerJson(cacheLer(chaveDasContas()), null);
+  if (doCache) { e.contas = doCache; return doCache; }
+
+  var mapa = {};
+  lerTudo(ABAS.USUARIOS).forEach(function (u) {
+    mapa[String(u.id)] = { usuario: u.usuario, nome: u.nome || u.usuario, ativo: String(u.ativo) === 'true' };
+  });
+
+  var texto = JSON.stringify(mapa);
+  if (texto.length <= LIMITE_CACHE_CONTAS) cacheGravar(chaveDasContas(), texto, SEGUNDOS_CACHE_CONTAS);
+
+  e.contas = mapa;
+  return mapa;
+}
+
+/* id → nome, que é o que as listagens usam. */
+function nomesDasContas() {
+  var e = exec();
+  if (e.nomesDeContas) return e.nomesDeContas;
+
+  var mapa = {};
+  var contas = contasDoSistema();
+  Object.keys(contas).forEach(function (id) { mapa[id] = contas[id].nome; });
+
+  e.nomesDeContas = mapa;
+  return mapa;
+}
+
+function esquecerContas() {
+  cacheApagar(chaveDasContas());
+  var e = exec();
+  e.contas = null;
+  e.nomesDeContas = null;
+}
+
+/* =====================================================================
+   IMAGENS SOB DEMANDA
+   ---------------------------------------------------------------------
+   Foto de personagem e avatar de conta são os campos mais pesados do
+   sistema e os que menos mudam. Até a v2.15 eles viajavam DENTRO das
+   listagens: abrir uma mesa de oito fichas baixava 120 KB de imagem
+   toda vez, inclusive quando nenhuma tinha mudado, e a sincronização da
+   mesa repetia isso a cada alteração de qualquer cartão.
+
+   Agora a listagem devolve a VERSÃO (a data da última gravação) e o
+   navegador pede as imagens em lote, só as que ainda não tem — ver
+   js/imagens.js. Uma foto trocada muda a versão e é buscada de novo;
+   as outras não são pedidas.
+
+   PERMISSÃO
+   ---------------------------------------------------------------------
+   Não é um caminho lateral: a regra é a MESMA que o painel aplica ao
+   mandar a foto hoje — o dono do personagem e quem joga na mesma mesa
+   que ele (mestre ou jogador; espectador não). Conhecer o id não basta,
+   e o pedido de quem não alcança volta sem aquela chave: nenhuma
+   imagem, nenhum aviso de que ela existe.
+
+   O avatar segue a regra que já existia: toda conta ativa aparece em
+   listar_usuarios para qualquer pessoa conectada, e o avatar vai junto.
+   ===================================================================== */
+
+var MAX_IMAGENS_POR_PEDIDO = 40;
+
+function acaoLerFotos(corpo, usuario) {
+  var ids = Array.isArray(corpo.personagemIds) ? corpo.personagemIds : [];
+  if (!ids.length || ids.length > MAX_IMAGENS_POR_PEDIDO) return { ok: false, erro: 'dados_invalidos' };
+
+  var pedidos = {};
+  ids.forEach(function (id) { pedidos[String(id)] = true; });
+
+  var alcance = campanhasDoUsuario(usuario);
+
+  var permitidos = {};
+  lerLeves(ABAS.PERSONAGENS).forEach(function (p) {
+    if (!pedidos[String(p.id)]) return;
+    if (meu(p, usuario)) { permitidos[String(p.id)] = true; return; }
+
+    var daMesa = alcance[String(p.campanhaId || '')];
+    if (daMesa && daMesa.papel !== PAPEL_ESPECTADOR) permitidos[String(p.id)] = true;
+  });
+
+  var linhas = lerLeves(ABAS.PERSONAGENS_FOTOS).filter(function (f) {
+    return permitidos[String(f.personagemId)];
+  });
+
+  var imagens = lerCelulas(ABAS.PERSONAGENS_FOTOS, linhas, 'imagem');
+  var datas = lerCelulas(ABAS.PERSONAGENS_FOTOS, linhas, 'atualizadoEm');
+
+  var saida = {};
+  linhas.forEach(function (f) {
+    saida[String(f.personagemId)] = {
+      imagem: imagens[f._linha] || '',
+      versao: String(datas[f._linha] || ''),
+    };
+  });
+
+  return { ok: true, dados: saida };
+}
+
+function acaoLerAvatares(corpo, usuario) {
+  var ids = Array.isArray(corpo.userIds) ? corpo.userIds : [];
+  if (!ids.length || ids.length > MAX_IMAGENS_POR_PEDIDO) return { ok: false, erro: 'dados_invalidos' };
+
+  var contas = contasDoSistema();
+  var querido = {};
+  ids.forEach(function (id) {
+    var conta = contas[String(id)];
+    if (conta && conta.ativo) querido[String(id)] = true;
+  });
+
+  var linhas = lerLeves(ABAS.PERFIS).filter(function (p) { return querido[String(p.userId)]; });
+
+  var imagens = lerCelulas(ABAS.PERFIS, linhas, 'avatar');
+  var datas = lerCelulas(ABAS.PERFIS, linhas, 'atualizadoEm');
+
+  var saida = {};
+  linhas.forEach(function (p) {
+    saida[String(p.userId)] = {
+      imagem: imagens[p._linha] || '',
+      versao: String(datas[p._linha] || ''),
+    };
+  });
+
+  return { ok: true, dados: saida };
+}
+
+/* A versão do avatar de um punhado de contas, sem a imagem. */
+function versoesDeAvatar(ids) {
+  var querido = {};
+  (ids || []).forEach(function (id) { querido[String(id)] = true; });
+
+  var linhas = lerLeves(ABAS.PERFIS).filter(function (p) { return querido[String(p.userId)]; });
+  if (!linhas.length) return {};
+
+  var datas = lerCelulas(ABAS.PERFIS, linhas, 'atualizadoEm');
+
+  var saida = {};
+  linhas.forEach(function (p) {
+    var v = String(datas[p._linha] || '');
+    if (v) saida[String(p.userId)] = v;
+  });
+  return saida;
+}
+
 /* =====================================================================
    PERSONAGENS
    ===================================================================== */
@@ -1051,22 +1333,21 @@ function acaoListarPersonagens(corpo, usuario) {
   var alcance = campanhasDoUsuario(usuario);
   Object.keys(alcance).forEach(function (id) { campanhas[id] = alcance[id].campanha.nome; });
 
-  /* As fotos são o campo mais pesado da planilha inteira, e esta tela
-     precisa das do usuário — não das de todo mundo.
-
-     Antes, a aba de fotos era lida inteira e filtrada depois: sessenta
-     imagens em base64 atravessavam o serviço do Sheets para três
-     aparecerem na tela. Agora a varredura leva só as duas colunas de
-     identificação, e as imagens são buscadas pelas linhas que
-     sobraram. */
+  /* As fotos são o campo mais pesado da planilha inteira, e nenhuma
+     delas atravessa esta listagem (v2.16): sai daqui a VERSÃO de cada
+     uma — a data da última gravação —, e o navegador pede em lote as
+     que ainda não tem, ver ler_fotos. Antes, abrir "Meus personagens"
+     baixava as imagens de todas as fichas da conta a cada visita, e a
+     faixa de leitura ainda arrastava as fotos das fichas vizinhas na
+     planilha. */
   var minhasFotos = lerLeves(ABAS.PERSONAGENS_FOTOS).filter(function (f) {
     return String(f.ownerId) === String(usuario.id);
   });
 
-  var imagens = lerCelulas(ABAS.PERSONAGENS_FOTOS, minhasFotos, 'imagem');
+  var datas = lerCelulas(ABAS.PERSONAGENS_FOTOS, minhasFotos, 'atualizadoEm');
 
   var fotos = {};
-  minhasFotos.forEach(function (f) { fotos[f.personagemId] = imagens[f._linha] || ''; });
+  minhasFotos.forEach(function (f) { fotos[f.personagemId] = String(datas[f._linha] || ''); });
 
   /* A listagem devolve o cabeçalho de cada ficha, nunca o fichaJson.
      Trinta fichas completas para desenhar trinta nomes seriam
@@ -1084,7 +1365,7 @@ function acaoListarPersonagens(corpo, usuario) {
         criadoEm: p.criadoEm,
         atualizadoEm: p.atualizadoEm,
         rev: Number(p.rev) || 0,
-        foto: fotos[p.id] || '',
+        fotoVersao: fotos[p.id] || '',
       };
     })
     .sort(function (a, b) { return String(b.atualizadoEm).localeCompare(String(a.atualizadoEm)); });
@@ -1224,6 +1505,10 @@ function falhaDeLeitura(motivo) {
 function interpretarFicha(texto, formato, manifesto) {
   if (!texto) return falhaDeLeitura('vazia');
 
+  /* Uma ficha remontada é o item mais caro de uma listagem, e é o
+     número que o painel da mesa existe para manter em zero. */
+  anotar('fichas');
+
   var ficha;
   try { ficha = JSON.parse(texto); } catch (erro) { return falhaDeLeitura('json'); }
   if (!ficha || typeof ficha !== 'object' || Array.isArray(ficha)) return falhaDeLeitura('json');
@@ -1362,7 +1647,8 @@ function lerFichasDosPersonagens(registros) {
      3. a linha do personagem        idem — é esta gravação que troca de
                                      versão, e ela entra inteira ou não
      4. limpeza das gerações velhas  sobra uma geração a mais, que a
-                                     próxima gravação recolhe
+                                     próxima gravação (ou limparBlocosOrfaos)
+                                     recolhe
    --------------------------------------------------------------------- */
 function publicarFicha(registro, ficha, opcoes) {
   var o = opcoes || {};
@@ -1387,25 +1673,69 @@ function publicarFicha(registro, ficha, opcoes) {
      dele, a próxima leitura perderia o que ele guardava. */
   if (anterior && anterior.invalido) return falhaDeLeitura(anterior.motivo);
 
-  /* O que a limpeza vai levar é decidido AGORA, antes de escrever: tudo
-     deste personagem menos a geração que vale — ela vira a "anterior" do
-     manifesto novo. A geração nova entra ABAIXO de todas as linhas, então
-     estes números continuam certos depois dela, e a trava garante que
-     nada mais mexe na aba no meio. Uma leitura da ficha feita há pouco,
-     nesta mesma execução (o ajuste do mestre, o resumo), já varreu a aba
-     — e aqui ela é reaproveitada em vez de varrida de novo. */
-  var manter = {};
-  if (anterior) manter[String(anterior.geracao)] = true;
-  var velhas;
-  try {
-    velhas = linhasDeGeracoes(ABAS.PERSONAGENS_BLOCOS, registro.id, manter);
-  } catch (erro) {
-    velhas = [];
+  /* ONDE a geração nova vai (v2.16).
+
+     Três faixas de linhas ficam vivas para cada ficha, e cada uma tem
+     um papel:
+
+       a que VALE           o manifesto aponta para ela. Ninguém a toca
+                            enquanto ela valer — é ela que atende quem
+                            está lendo neste instante
+       a ANTERIOR           o ponto de volta de restaurarGeracaoAnterior()
+                            e a resposta para uma leitura que começou
+                            antes da última troca. Também intocável
+       a REUTILIZÁVEL       duas gerações atrás: nenhum manifesto a
+                            aponta, ninguém volta para ela. É sobre ela
+                            que a gravação nova escreve
+
+     Escrever sobre a reutilizável — e não sobre a anterior — é o que
+     faz uma gravação que morre no meio não destruir o ponto de volta: o
+     estrago cai sempre numa faixa que já não servia para nada.
+
+     E é o que impede a aba de crescer: um personagem salvo cem vezes
+     roda entre as mesmas três faixas, sem apagar linha nenhuma e sem
+     deslocar o localizador de ninguém.
+
+     Sem pista boa (primeiro salvamento depois desta atualização, aba
+     compactada, gravação anterior que morreu em cima da reutilizável),
+     a geração nova vai para o fim da aba e a limpeza é decidida pelo
+     índice curto: tudo deste personagem menos a que vale e a anterior. */
+  var pontoDeVolta = anterior ? anterior.anterior : null;
+  var reutilizavel = anterior ? anterior.reutilizavel : null;
+  var reaproveitar = null;
+  var sobras = [];
+
+  if (reutilizavel && reutilizavel.local &&
+      String(reutilizavel.geracao) !== String(anterior.geracao) &&
+      (!pontoDeVolta || String(reutilizavel.geracao) !== String(pontoDeVolta.geracao)) &&
+      !faixasSeCruzam(reutilizavel.local, anterior.local) &&
+      !faixasSeCruzam(reutilizavel.local, pontoDeVolta && pontoDeVolta.local)) {
+    var faixa = null;
+    try {
+      faixa = conferirFaixaDaGeracao(ABAS.PERSONAGENS_BLOCOS, registro.id,
+        reutilizavel.geracao, reutilizavel.local);
+    } catch (erro) {
+      faixa = null;
+    }
+    if (faixa) {
+      reaproveitar = { linha: Number(reutilizavel.local.linha), blocos: Number(reutilizavel.local.blocos) };
+    }
+  }
+
+  if (!reaproveitar) {
+    var manter = {};
+    if (anterior) manter[String(anterior.geracao)] = true;
+    if (pontoDeVolta) manter[String(pontoDeVolta.geracao)] = true;
+    try {
+      sobras = linhasDeGeracoes(ABAS.PERSONAGENS_BLOCOS, registro.id, manter);
+    } catch (erro) {
+      sobras = [];
+    }
   }
 
   var gravado;
   try {
-    gravado = gravarGeracao(ABAS.PERSONAGENS_BLOCOS, registro.id, texto);
+    gravado = gravarGeracao(ABAS.PERSONAGENS_BLOCOS, registro.id, texto, reaproveitar);
   } catch (erro) {
     console.error('R.A.M.A.: blocos da ficha ' + registro.id + ' não gravados: ' + erro);
     return { ok: false, erro: 'armazenamento_falhou', etapa: 'blocos' };
@@ -1422,6 +1752,14 @@ function publicarFicha(registro, ficha, opcoes) {
     return { ok: false, erro: 'armazenamento_falhou', etapa: 'conferencia' };
   }
 
+  /* O que sobrou da faixa reaproveitada: as linhas que a geração nova
+     não ocupou (ela pode ter menos blocos do que a que saiu), ou a
+     faixa inteira se ela não coube e a gravação foi para o fim. */
+  if (reaproveitar) {
+    var desde = gravado.reaproveitou ? gravado.blocos : 0;
+    for (var s = desde; s < reaproveitar.blocos; s++) sobras.push(reaproveitar.linha + s);
+  }
+
   var manifesto = {
     formato: FORMATO_BLOCOS,
     versao: VERSAO_BLOCOS,
@@ -1429,6 +1767,9 @@ function publicarFicha(registro, ficha, opcoes) {
     blocos: gravado.blocos,
     tamanho: gravado.tamanho,
     hash: gravado.hash,
+    /* A pista: onde esta geração foi escrita. Ver "O localizador" em
+       Dados.gs — é pista, não prova: toda leitura confere o conteúdo. */
+    local: { linha: gravado.primeiraLinha, blocos: gravado.blocos },
     rev: Number(registro.rev) || 0,
     operacao: o.operacao !== undefined ? String(o.operacao || '') : (anterior ? String(anterior.operacao || '') : ''),
     gravadoEm: gravado.criadoEm,
@@ -1437,11 +1778,24 @@ function publicarFicha(registro, ficha, opcoes) {
     anterior: anterior ? {
       geracao: anterior.geracao, blocos: anterior.blocos, tamanho: anterior.tamanho,
       hash: anterior.hash, rev: anterior.rev, gravadoEm: anterior.gravadoEm || '',
+      local: anterior.local || null,
     } : null,
+    /* A faixa que a PRÓXIMA gravação pode tomar: a que acabou de deixar
+       de ser o ponto de volta. Nada aponta para ela. */
+    reutilizavel: pontoDeVolta ? { geracao: pontoDeVolta.geracao, local: pontoDeVolta.local || null } : null,
   };
 
   registro.armazenamento = JSON.stringify(manifesto);
   registro.fichaJson = avisoDeFormatoNovo(registro.nome);
+
+  /* A projeção do painel entra na MESMA gravação de uma linha que
+     publica o manifesto — ver "A projeção do personagem", em
+     Campanhas.gs. Conteúdo, manifesto e projeção nunca ficam de
+     versões diferentes, porque são a mesma escrita. Sem Campanhas.gs
+     instalado, a coluna fica vazia e o painel remonta a ficha. */
+  registro.resumo = (typeof textoDaProjecao === 'function')
+    ? textoDaProjecao(ficha, manifesto.geracao, manifesto.rev)
+    : '';
 
   try {
     if (o.inserir) inserir(ABAS.PERSONAGENS, registro);
@@ -1451,12 +1805,17 @@ function publicarFicha(registro, ficha, opcoes) {
     return { ok: false, erro: 'armazenamento_falhou', etapa: 'publicacao' };
   }
 
-  /* Ficam a geração nova e a imediatamente anterior: a anterior atende
-     uma leitura que tenha começado antes desta troca, e é o ponto de
-     volta. O resto sai — inclusive lixo de gravações que pararam no
-     meio. Falhar aqui não desfaz nada. */
+  /* Ficam a geração nova, a que acabou de sair de cena (o ponto de
+     volta) e a reutilizável, que é a faixa da próxima gravação. O resto
+     sai.
+
+     As linhas ficam EM BRANCO em vez de serem apagadas: apagar puxaria
+     para cima todas as linhas de baixo e envelheceria o localizador de
+     todas as outras fichas. Em branco elas não deslocam ninguém e são o
+     lugar onde a próxima gravação desta ficha vai escrever. Falhar aqui
+     não desfaz nada. */
   try {
-    apagarLinhas(ABAS.PERSONAGENS_BLOCOS, velhas);
+    limparBlocos(ABAS.PERSONAGENS_BLOCOS, sobras);
   } catch (erro) {
     console.warn('R.A.M.A.: limpeza dos blocos de ' + registro.id + ' adiada: ' + erro);
   }
@@ -2129,6 +2488,9 @@ function acaoSalvarPerfil(corpo, usuario) {
       var registro = acharPor(ABAS.USUARIOS, 'id', usuario.id);
       if (registro) {
         registro.nome = String(dados.nome).trim().slice(0, 80) || registro.usuario;
+        /* O diretório de contas guarda nomes: trocar o seu tem de
+           aparecer para os outros agora, não em cinco minutos. */
+        esquecerContas();
         registro.atualizadoEm = agora;
         atualizarLinha(ABAS.USUARIOS, registro._linha, registro);
       }
@@ -2334,6 +2696,15 @@ function setupRama() {
     }).length;
     relatorio.push('fichas em blocos: ' + emBlocos + ' de ' + personagens.length +
       ' — as outras passam para blocos sozinhas, na próxima gravação de cada uma');
+
+    /* A projeção do painel (v2.16) segue a mesma regra: nasce com a
+       gravação, e quem não tem só faz o painel remontar aquela ficha. */
+    var guardados = lerCelulas(ABAS.PERSONAGENS, personagens, 'resumo');
+    var comProjecao = personagens.filter(function (p) {
+      return typeof projecaoDoRegistro === 'function' && !!projecaoDoRegistro(p, guardados[p._linha]);
+    }).length;
+    relatorio.push('resumos do painel em dia: ' + comProjecao + ' de ' + personagens.length +
+      ' — reconstruirResumos() refaz os que faltam, em lotes, sem tocar nas fichas');
   } catch (erro) { /* aba recém-criada, nada a contar */ }
 
   var texto = 'R.A.M.A. — setup\n\n' + relatorio.join('\n');
@@ -2566,10 +2937,35 @@ function conferirInstalacao() {
       problemas.push('A aba PERSONAGENS não tem a coluna armazenamento — rode setupRama(). ' +
         'Sem ela nenhuma ficha salva.');
     }
-    var orfaos = contarBlocosSemDono();
-    if (orfaos) {
-      avisos.push(orfaos + ' linha(s) de blocos sem ficha que as aponte. Não atrapalham nada; ' +
+    var achado = blocosSemDono();
+    if (achado.orfas.length) {
+      avisos.push(achado.orfas.length + ' linha(s) de blocos sem ficha que as aponte. Não atrapalham nada; ' +
         'rode limparBlocosOrfaos() para recolhê-las.');
+    }
+    /* Linha em branco é o espaço que a gravação deixa para a próxima
+       geração da mesma ficha (v2.16). Ela só vira aviso quando há muita:
+       aí sobrou mais espaço do que as fichas vão reaproveitar. */
+    if (achado.vazias.length > 200) {
+      avisos.push(achado.vazias.length + ' linha(s) em branco na aba de blocos. É espaço reaproveitável; ' +
+        'rode limparBlocosOrfaos() se quiser devolvê-lo à planilha.');
+    }
+
+    /* A projeção do painel (v2.16). Sem a coluna, a mesa continua
+       carregando — remontando cada ficha, como na v2.15. */
+    if (!cabecalho(ABAS.PERSONAGENS).mapa.resumo) {
+      avisos.push('A aba PERSONAGENS não tem a coluna resumo — rode setupRama(). ' +
+        'Sem ela o painel da mesa remonta todas as fichas para desenhar os cartões.');
+    } else {
+      var personagens = lerLeves(ABAS.PERSONAGENS);
+      var guardados = lerCelulas(ABAS.PERSONAGENS, personagens, 'resumo');
+      var semProjecao = personagens.filter(function (p) {
+        return typeof projecaoDoRegistro !== 'function' || !projecaoDoRegistro(p, guardados[p._linha]);
+      }).length;
+      if (semProjecao) {
+        avisos.push(semProjecao + ' de ' + personagens.length + ' ficha(s) sem projeção em dia. ' +
+          'Cada uma será remontada ao abrir a mesa até a próxima gravação dela; ' +
+          'reconstruirResumos() resolve em lote.');
+      }
     }
   } catch (erro) {
     /* a falta da aba já foi reportada acima */
@@ -2621,12 +3017,20 @@ function blocosSemDono() {
     guardar[String(p.id)] = g;
   });
 
-  /* Blocos de um personagem que não existe só saem depois de uma
+  /* Devolve { orfas, vazias }: as linhas que nenhum manifesto aponta e
+     as que a gravação deixou em branco.
+
+     Blocos de um personagem que não existe só saem depois de uma
      carência: uma criação grava os blocos antes da linha, dentro da
      trava — isto é só uma margem a mais. */
   var limite = Date.now() - CARENCIA_ORFAOS_MS;
   var linhas = [];
+  var vazias = [];
   lerLeves(ABAS.PERSONAGENS_BLOCOS).forEach(function (b) {
+    /* Linha em branco: espaço que a gravação deixou para trás (v2.16).
+       Não é bloco de ninguém — é o que a compactação recolhe. */
+    if (String(b.personagemId || '') === '') { vazias.push(b._linha); return; }
+
     var g = guardar[String(b.personagemId)];
     if (g) {
       if (g['*'] || g[String(b.geracao)]) return;
@@ -2637,32 +3041,145 @@ function blocosSemDono() {
     if (isFinite(quando) && quando > limite) return;
     linhas.push(b._linha);
   });
-  return linhas;
+  return { orfas: linhas, vazias: vazias };
 }
 
 function contarBlocosSemDono() {
-  return blocosSemDono().length;
+  return blocosSemDono().orfas.length;
 }
 
 /* ---------------------------------------------------------------------
    limparBlocosOrfaos()
-   Recolhe os blocos que nenhuma ficha aponta. Cada gravação já limpa as
-   gerações velhas da própria ficha; isto é para o que sobra — ficha
-   excluída cuja limpeza falhou, gravação que parou no meio. Seguro de
-   rodar a qualquer hora, quantas vezes quiser.
+   Recolhe o que a aba de blocos tem de sobra: as linhas que nenhuma
+   ficha aponta (ficha excluída cuja limpeza falhou, gravação que parou
+   no meio) e as linhas em branco que as gravações deixaram para trás.
+   Cada gravação já recolhe as gerações velhas da própria ficha; isto é a
+   faxina. Seguro de rodar a qualquer hora, quantas vezes quiser.
+
+   Esta é a ÚNICA operação do sistema que apaga linhas da aba de blocos —
+   e apagar desloca. Os localizadores guardados nos manifestos passam a
+   apontar para o lugar errado; a leitura percebe (ela confere personagem,
+   geração e SHA-256), acha os blocos pelo índice e devolve a ficha
+   inteira do mesmo jeito. A gravação seguinte de cada ficha grava o
+   localizador novo. Nada se perde; as primeiras leituras depois da
+   faxina é que custam uma chamada a mais.
    --------------------------------------------------------------------- */
 function limparBlocosOrfaos() {
   reiniciarExecucao();
   var r = comTrava(function () {
-    var linhas = blocosSemDono();
-    return { ok: true, apagadas: apagarLinhas(ABAS.PERSONAGENS_BLOCOS, linhas) };
+    var achado = blocosSemDono();
+    return {
+      ok: true,
+      apagadas: apagarLinhas(ABAS.PERSONAGENS_BLOCOS, achado.orfas.concat(achado.vazias)),
+      orfas: achado.orfas.length,
+      vazias: achado.vazias.length,
+    };
   });
   var texto = r.ok
-    ? 'R.A.M.A. — limpeza de blocos: ' + r.apagadas + ' linha(s) sem dono recolhida(s).'
+    ? 'R.A.M.A. — limpeza de blocos: ' + r.apagadas + ' linha(s) recolhida(s) (' +
+      r.orfas + ' sem dono, ' + r.vazias + ' em branco).'
     : 'R.A.M.A. — limpeza de blocos: a trava não foi obtida (' + r.erro + '). Tente de novo.';
   console.log(texto);
   return texto;
 }
+/* ---------------------------------------------------------------------
+   reconstruirResumos([quantos])
+   Refaz a PROJEÇÃO (coluna `resumo`) das fichas que estiverem sem ela —
+   as gravadas antes da v2.16, por exemplo. Nada disto é obrigatório: um
+   personagem sem projeção só faz o painel da mesa remontar aquela ficha,
+   e a primeira gravação dele já resolve sozinha. Isto é para resolver em
+   lote, sem esperar as pessoas salvarem.
+
+   Em LOTES, com ponto de retomada: uma planilha com centenas de fichas
+   não cabe numa execução de seis minutos. Cada chamada processa
+   `quantos` fichas (25 por padrão) e guarda onde parou; chamar de novo
+   continua dali. Terminou, o relatório diz que não falta nada e o ponto
+   de retomada é esquecido.
+
+   Cada ficha é tratada dentro da própria trava, e só a coluna `resumo` é
+   escrita: nem manifesto, nem blocos, nem revisão. Uma ficha que não se
+   monta é contada e deixada em paz.
+   --------------------------------------------------------------------- */
+var RESUMOS_POR_LOTE = 25;
+var CHECKPOINT_DOS_RESUMOS = 'RAMA_RESUMOS_DESDE';
+
+function reconstruirResumos(quantos) {
+  reiniciarExecucao();
+
+  if (typeof textoDaProjecao !== 'function') {
+    var semCampanhas = 'R.A.M.A. — reconstrução de resumos: Campanhas.gs não está instalado.';
+    console.log(semCampanhas);
+    return semCampanhas;
+  }
+
+  var limite = Math.max(1, Math.min(200, Number(quantos) || RESUMOS_POR_LOTE));
+  var desde = String(propriedade(CHECKPOINT_DOS_RESUMOS, ''));
+
+  var todos = lerLeves(ABAS.PERSONAGENS).slice().sort(function (a, b) {
+    return String(a.id).localeCompare(String(b.id));
+  });
+  var resumos = lerCelulas(ABAS.PERSONAGENS, todos, 'resumo');
+
+  var pendentes = todos.filter(function (p) {
+    if (desde && String(p.id) <= desde) return false;
+    return !projecaoDoRegistro(p, resumos[p._linha]);
+  });
+
+  var lote = pendentes.slice(0, limite);
+  var feitos = 0;
+  var antigas = 0;
+  var ilegiveis = 0;
+
+  lote.forEach(function (p) {
+    var r = comTrava(function () {
+      var atual = acharPor(ABAS.PERSONAGENS, 'id', p.id);
+      if (!atual) return { ok: true, pulado: true };
+
+      var m = manifestoDe(atual.armazenamento);
+      /* Ficha ainda no formato antigo: a projeção nasce com a primeira
+         gravação em blocos, junto com o manifesto. Forçar aqui seria
+         gravar uma projeção sem geração para conferir contra. */
+      if (!m || m.invalido) return { ok: true, antiga: true };
+
+      var lido = lerFichaDoPersonagem(atual);
+      if (!lido.ok) return { ok: true, ilegivel: true };
+
+      var registro = lido.registro;
+      registro.resumo = textoDaProjecao(lido.ficha, m.geracao, Number(registro.rev) || 0);
+      if (!registro.resumo) return { ok: true, pulado: true };
+
+      try {
+        atualizarCampos(ABAS.PERSONAGENS, registro, ['resumo']);
+      } catch (erro) {
+        console.warn('R.A.M.A.: resumo de ' + p.id + ' não gravado: ' + erro);
+        return { ok: true, pulado: true };
+      }
+      return { ok: true, feito: true };
+    });
+
+    if (!r || !r.ok) return;
+    if (r.feito) feitos++;
+    if (r.antiga) antigas++;
+    if (r.ilegivel) ilegiveis++;
+  });
+
+  var faltam = pendentes.length - lote.length;
+
+  if (lote.length) definirPropriedade(CHECKPOINT_DOS_RESUMOS, String(lote[lote.length - 1].id));
+  else definirPropriedade(CHECKPOINT_DOS_RESUMOS, '');
+
+  var texto = 'R.A.M.A. — reconstrução de resumos: ' + feitos + ' refeito(s)' +
+    (antigas ? ', ' + antigas + ' ainda no formato antigo (migram na próxima gravação)' : '') +
+    (ilegiveis ? ', ' + ilegiveis + ' que não se montam' : '') +
+    (faltam > 0
+      ? '. Faltam ' + faltam + ' — rode reconstruirResumos() de novo para continuar.'
+      : '. Não falta nenhum.');
+
+  console.log(texto);
+  return texto;
+}
+
+
 
 /* ---------------------------------------------------------------------
    diagnosticarPersonagem(personagemId)
@@ -2774,8 +3291,22 @@ function restaurarGeracaoAnterior(personagemId, forcar) {
       operacao: '',
       gravadoEm: agora,
       restauradaEm: agora,
-      anterior: { geracao: m.geracao, blocos: m.blocos, tamanho: m.tamanho, hash: m.hash, rev: m.rev, gravadoEm: m.gravadoEm || '' },
+      /* Onde a geração restaurada está, para a leitura ir direto. */
+      local: anterior.local || null,
+      anterior: { geracao: m.geracao, blocos: m.blocos, tamanho: m.tamanho, hash: m.hash,
+                  rev: m.rev, gravadoEm: m.gravadoEm || '', local: m.local || null },
+      /* A faixa reutilizável some: depois de uma restauração, a próxima
+         gravação decide tudo de novo pelo índice. */
+      reutilizavel: null,
     });
+
+    /* A projeção do painel acompanha o conteúdo restaurado. Sem isto o
+       cartão da mesa ficaria mostrando a gravação desfeita até alguém
+       salvar a ficha. */
+    registro.resumo = (typeof textoDaProjecao === 'function')
+      ? textoDaProjecao(ficha.ficha, anterior.geracao, registro.rev)
+      : '';
+
     atualizarLinha(ABAS.PERSONAGENS, registro._linha, registro);
 
     if (typeof marcarMesa === 'function' && registro.campanhaId) marcarMesa(registro.campanhaId, ['personagens', 'combates']);

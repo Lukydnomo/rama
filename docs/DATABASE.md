@@ -114,6 +114,7 @@ validação de sessão. Junto, cada requisição arrastaria a imagem.
 | `rev`          | inteiro, sobe a cada gravação                 |
 | `fichaJson`    | formato antigo: a ficha inteira — ver CHARACTER_SCHEMA.md. Em blocos: só um aviso para servidor antigo |
 | `armazenamento`| vazio no formato antigo; em blocos, o **manifesto** (v2.15) |
+| `resumo`       | a **projeção** do painel da mesa (v2.16); vazio quer dizer "não tenho" |
 
 A ficha — em `fichaJson` ou nos blocos — é a mesma, descrita em
 [CHARACTER_SCHEMA.md](CHARACTER_SCHEMA.md). Numa ficha de Ordem ela leva também
@@ -134,10 +135,59 @@ mesa (`salvar_participantes`, `excluir_campanha`) limpa só a coluna, e
 ficha. Uma ficha antiga com outra campanha escrita dentro do JSON abre dizendo a da
 coluna, e a próxima gravação a corrige lá dentro.
 
-`armazenamento` fica depois de `fichaJson` de propósito: numa planilha atualizada o
-`setupRama()` a acrescenta no fim, e declarada no mesmo lugar as duas ordens
-coincidem. Ela NÃO está entre as colunas leves — a listagem de personagens não a
-lê.
+`armazenamento` e `resumo` ficam depois de `fichaJson` de propósito: numa planilha
+atualizada o `setupRama()` as acrescenta no fim, e declaradas no mesmo lugar as duas
+ordens coincidem. Nenhuma das duas está entre as colunas leves — a listagem de
+personagens não lê nem uma nem outra.
+
+### `resumo`: a projeção do painel (v2.16)
+
+O painel da mesa desenha cartões: nome, foto, recursos, e — numa ficha de Ordem —
+os dados de entrada do cálculo de PV, PE e Sanidade. Até a v2.15 ele remontava a
+ficha INTEIRA de cada personagem para isso e jogava fora quase tudo o que leu. Numa
+mesa de oito fichas com anotações de verdade, meio megabyte atravessava o serviço
+do Sheets para desenhar oito caixinhas.
+
+A projeção é esse recorte, gravado:
+
+```jsonc
+{
+  "v": 1,                       // versão do formato da projeção
+  "tipo": "ordem",              // ou "universal"
+  "ordem": { … },               // o bloco de Ordem do painel, sem textos longos
+  "itens": [ … ],               // id, tipo, nome, defesa e bloco de Ordem de cada item
+  "resumoRecursos": { … },      // { pv, pe, san } validado
+  "atributos": [ … ],           // ficha universal
+  "status": [ … ],              // ficha universal
+  "geracao": "g-…",             // a geração da ficha de onde ela saiu
+  "rev": 12                     // a revisão da linha quando ela foi escrita
+}
+```
+
+**Ela não calcula nada.** O máximo de PV/PE/Sanidade de uma ficha de Ordem sai do
+motor de regras, que mora no navegador (`js/ordem/regras.js`). A projeção guarda as
+mesmas ENTRADAS que a v2.15 mandava para o painel, montadas pelas MESMAS funções
+(`ordemParaPainel`, `itensParaPainel`, `resumoRecursos`). Não existe uma segunda
+fórmula no servidor: existe o mesmo recorte, gravado em vez de recalculado.
+
+**Quando ela vale.** Enquanto a `rev` dela for a da linha — e a `rev` está entre as
+colunas leves, então conferir isso não custa leitura nenhuma. Quando não bate, a
+`geracao` decide: há gravações que sobem a revisão sem tocar no conteúdo (entrar e
+sair de uma mesa), e nessas a projeção continua valendo. Não valendo — ficha ainda
+no formato antigo, coluna vazia, projeção de outra versão do formato, gravação feita
+por um backend que não conhece a coluna —, o painel remonta AQUELA ficha e monta o
+cartão como sempre fez.
+
+**Ela entra na mesma gravação de uma linha que publica o manifesto.** Conteúdo,
+manifesto e projeção nunca ficam de versões diferentes, porque são a mesma escrita —
+e essa escrita só acontece depois de a geração nova ter sido conferida.
+
+**Listar nunca grava para consertar projeção.** Uma tela de leitura que grava é uma
+tela de leitura que disputa a trava. A próxima gravação da ficha resolve sozinha, e
+`reconstruirResumos()` resolve em lote (ver "Recuperação").
+
+A projeção é derivada e recuperável: perder a coluna inteira custa desempenho,
+nunca dado. A ficha continua sendo a fonte.
 
 ## PERSONAGENS_FOTOS
 
@@ -192,8 +242,10 @@ vale e como conferi-la:
   "rev": 9,                       // a revisão da linha quando o manifesto foi escrito
   "operacao": "op-…",             // o id da última gravação que subiu a revisão
   "gravadoEm": "2026-09-18T…",
-  "anterior": { "geracao": "g-…", "blocos": 3, "tamanho": 131002,
-                "hash": "sha256:…", "rev": 8, "gravadoEm": "…" }   // o ponto de volta
+  "local": { "linha": 214, "blocos": 4 },   // onde ela foi escrita (v2.16) — pista, não prova
+  "anterior": { "geracao": "g-…", "blocos": 3, "tamanho": 131002, "hash": "sha256:…",
+                "rev": 8, "gravadoEm": "…", "local": { … } },      // o ponto de volta
+  "reutilizavel": { "geracao": "g-…", "local": { … } }             // a faixa livre (v2.16)
 }
 ```
 
@@ -201,6 +253,41 @@ vale e como conferi-la:
 conflito confere. A geração é só a identidade física do conteúdo: ela muda sem a
 revisão mudar (o resumo de recursos, que é derivado) e a revisão muda sem a geração
 mudar (o vínculo de campanha, que é coluna).
+
+### O localizador, e por que a gravação não apaga mais linhas (v2.16)
+
+Até a v2.15, achar os blocos de uma ficha custava uma varredura das seis colunas
+curtas da aba INTEIRA — todas as fichas, todas as gerações — para ficar com duas
+linhas. Numa planilha com centenas de personagens isso era o custo dominante de
+abrir uma ficha.
+
+Agora o manifesto guarda `local: { linha, blocos }`, e a leitura vai direto nessas
+linhas, numa chamada. **É pista, não prova:** ela confere tudo o que já conferia —
+personagem, geração, posição, marcadores, tamanho e SHA-256 do texto inteiro — e,
+se a pista falhar, acha os blocos pelo índice de duas colunas (personagem +
+geração). Nenhum checksum, nenhuma conferência de completude e nenhuma retentativa
+foram removidos para isto caber.
+
+Um número de linha só envelhece quando alguém APAGA uma linha acima dele. Então a
+gravação parou de apagar: ela deixa a faixa descartada **em branco** e, quando o
+tamanho permite, escreve a geração nova exatamente nela. Três faixas ficam vivas
+por ficha, e cada uma tem um papel:
+
+| faixa | quem aponta para ela | pode ser escrita? |
+|---|---|---|
+| a que vale | o manifesto | não |
+| a anterior | `manifesto.anterior` — ponto de volta e leitura em andamento | não |
+| a reutilizável | `manifesto.reutilizavel` — ninguém | **sim**: é onde a próxima gravação escreve |
+
+Escrever sobre a reutilizável, e não sobre a anterior, é o que faz uma gravação que
+morre no meio não destruir o ponto de volta: o estrago cai sempre numa faixa que já
+não servia para nada. E é o que impede a aba de crescer — um personagem salvo cem
+vezes roda entre as mesmas três faixas, sem apagar linha nenhuma e sem deslocar o
+localizador de ninguém.
+
+Apagar de verdade ficou para a manutenção do editor (`limparBlocosOrfaos()`), que
+roda raramente. Depois dela, a primeira leitura de cada ficha cai no índice — que é
+o caminho correto, só mais lento — e a gravação seguinte grava a pista nova.
 
 ### Formato antigo e blocos: o marcador
 
@@ -224,25 +311,27 @@ Tudo dentro da trava, e nesta ordem:
 | passo | o que acontece | se parar aqui |
 |---|---|---|
 | 1 | confere sessão, acesso, revisão e tamanho | nada foi escrito |
-| 2 | decide o que a limpeza vai levar: as gerações deste personagem menos a que vale | nada foi escrito |
-| 3 | escreve a geração nova em linhas NOVAS, no fim da aba, numa chamada | sobram linhas que nenhum manifesto aponta — lixo, não estrago; a ficha continua na versão anterior |
+| 2 | decide ONDE escrever: confere a faixa reutilizável (uma chamada, colunas curtas). Sem pista boa, decide pelo índice o que é lixo deste personagem | nada foi escrito |
+| 3 | escreve a geração nova — na faixa reutilizável, ou no fim da aba se não couber | a faixa reutilizável fica com lixo; a que vale e a anterior continuam inteiras |
 | 4 | lê essas linhas de volta e confere o texto inteiro, caractere por caractere | idem, e a resposta é `armazenamento_falhou` |
-| 5 | grava a linha do personagem: manifesto novo, aviso, revisão, nome, classe, origem, campanha — **uma** gravação de uma linha | idem: é esta gravação que troca de versão, e ela entra inteira ou não entra |
-| 6 | apaga as gerações decididas no passo 2 | sobra uma geração a mais, que a próxima gravação recolhe |
+| 5 | grava a linha do personagem: manifesto novo (com o localizador), projeção, aviso, revisão, nome, classe, origem, campanha — **uma** gravação de uma linha | idem: é esta gravação que troca de versão, e ela entra inteira ou não entra |
+| 6 | deixa EM BRANCO o que sobrou da faixa reaproveitada (ou o lixo que o índice apontou) | sobra espaço ocupado, que a próxima gravação ou `limparBlocosOrfaos()` recolhe |
 | 7 | `SpreadsheetApp.flush()` antes de soltar a trava e de responder | a resposta é erro — nunca "salvo" |
 
 O Sheets não tem transação: várias escritas não viram uma. A segurança vem da ordem
-(nada existente é tocado antes de a versão nova estar provada) e da troca de uma
-linha só no passo 5. Ficam guardadas **duas** gerações por ficha: a que vale e a
-imediatamente anterior — para uma leitura que tenha começado antes da troca e como
-ponto de volta de `restaurarGeracaoAnterior()`.
+(nada que alguém aponte é tocado antes de a versão nova estar provada) e da troca de
+uma linha só no passo 5.
+
+Uma gravação que morre entre 3 e 5 leva junto a faixa reutilizável — e só ela. A que
+vale e o ponto de volta ficam. A gravação seguinte percebe que a pista não confere e
+recomeça pelo índice.
 
 ### Ler
 
-A leitura acha as linhas da geração do manifesto com uma varredura das seis
-colunas curtas da aba (nunca o conteúdo de outras fichas), lê o conteúdo só dessas
-linhas — os blocos de uma geração nascem lado a lado, então costuma ser uma chamada
-— e confere tudo **antes** de interpretar o JSON:
+A leitura vai direto às linhas que o localizador aponta (v2.16) — uma chamada — e,
+sem ele ou com ele errado, acha as linhas pelo índice de duas colunas curtas
+(personagem + geração), que nunca traz o conteúdo de outras fichas. Em qualquer dos
+dois caminhos ela confere tudo **antes** de interpretar o JSON:
 
 - cada linha é mesmo deste personagem e desta geração;
 - cada posição de 0 a `blocos − 1` aparece uma vez (uma cópia idêntica é tolerada;
@@ -250,10 +339,12 @@ linhas — os blocos de uma geração nascem lado a lado, então costuma ser uma
 - marcadores e tamanho de cada bloco batem;
 - o texto remontado tem o tamanho e o SHA-256 do manifesto.
 
-A leitura corre fora da trava. Se uma gravação trocar a geração no meio — e a
-limpeza apagar ou deslocar linhas —, a leitura percebe (linha fora do lugar, bloco
-ausente), lê a linha do personagem de novo e tenta com o manifesto novo, até três
-vezes. Uma falha que continua com o mesmo manifesto é defeito de verdade.
+A leitura corre fora da trava. Se uma gravação trocar a geração no meio, a leitura
+percebe (linha fora do lugar, bloco ausente), lê a linha do personagem de novo e
+tenta com o manifesto novo, até três vezes. Uma falha que continua com o mesmo
+manifesto é defeito de verdade. Desde a v2.16 a gravação não desloca mais linha
+nenhuma, então esse caminho ficou raro: ele cobre a manutenção
+(`limparBlocosOrfaos()`), que é a única coisa que apaga linhas.
 
 **Ler nunca devolve ficha vazia.** Bloco ausente, bloco trocado, texto que não
 confere, JSON inválido — no formato antigo ou em blocos — respondem `ficha_ilegivel`
@@ -284,13 +375,20 @@ antigas abrem; salvar responde `instalacao_incompleta`, sem gravar nada.
 
 ### A limpeza
 
-Cada gravação apaga as gerações velhas da própria ficha (passo 6). Excluir um
-personagem apaga todas as gerações dele, e só dele. O que sobra — uma exclusão cuja
-limpeza falhou, uma criação que parou antes da linha — é recolhido por
-`limparBlocosOrfaos()`, rodada à mão no editor: ela nunca apaga a geração ativa nem a
-anterior de ninguém, nem os blocos de uma ficha cujo manifesto esta versão não
-entende, e espera dez minutos antes de apagar blocos de um personagem que não existe.
-`conferirInstalacao()` avisa quando há blocos sem dono.
+Cada gravação deixa em branco o que sobrou da própria ficha (passo 6), sem apagar
+linha nenhuma. Excluir um personagem esvazia todas as gerações dele, e só dele.
+
+`limparBlocosOrfaos()`, rodada à mão no editor, é a faxina: ela APAGA as linhas que
+nenhuma ficha aponta (uma exclusão cuja limpeza falhou, uma criação que parou antes
+da linha) e as linhas em branco que as gravações deixaram para trás. Nunca toca na
+geração ativa, na anterior nem na reutilizável de ninguém, nem nos blocos de uma
+ficha cujo manifesto esta versão não entende, e espera dez minutos antes de apagar
+blocos de um personagem que não existe. Como ela apaga, ela DESLOCA: depois dela os
+localizadores apontam para o lugar errado, a leitura cai no índice (e devolve a
+ficha inteira do mesmo jeito) e a gravação seguinte grava a pista nova.
+
+`conferirInstalacao()` avisa quando há blocos sem dono e quando há muita linha em
+branco.
 
 ### Recuperação
 
@@ -300,9 +398,18 @@ Rodadas à mão no editor do Apps Script (nenhuma está no roteamento):
   linha, e a conferência da geração ativa e da anterior (CONFERE / NÃO CONFERE, com o
   motivo). Não imprime o conteúdo da ficha.
 - `restaurarGeracaoAnterior(id)` — confere a geração anterior inteira e a faz voltar
-  a valer; a revisão sobe e a geração que valia vira a "anterior", sem ser apagada.
-  Com a geração ativa conferindo, recusa — a menos que se passe `true` como segundo
-  argumento, para desfazer a última gravação de propósito.
+  a valer; a revisão sobe, a geração que valia vira a "anterior" sem ser apagada, e a
+  projeção do painel é refeita a partir do conteúdo restaurado. Com a geração ativa
+  conferindo, recusa — a menos que se passe `true` como segundo argumento, para
+  desfazer a última gravação de propósito.
+- `reconstruirResumos([quantos])` — refaz a projeção do painel das fichas que
+  estiverem sem ela, em lotes de 25 por chamada, com ponto de retomada: chamar de
+  novo continua de onde parou, e o relatório diz quantas faltam. Escreve SÓ a coluna
+  `resumo` — nem manifesto, nem blocos, nem revisão. Nada disto é obrigatório: uma
+  ficha sem projeção só faz o painel remontá-la, e a primeira gravação dela já
+  resolve.
+- `ligarDiagnostico()` / `desligarDiagnostico()` — a medição por requisição (ver
+  [PERFORMANCE.md](PERFORMANCE.md)).
 
 Se nem a anterior conferir: a cópia exportada da ficha (Opções da ficha → Exportar
 ficha → Baixar arquivo, importável no Perfil) ou o histórico de versões da planilha
@@ -404,6 +511,34 @@ fora da própria mesa.
 O `id` vem do CLIENTE e é a chave de idempotência: uma retentativa de rede
 encontra a linha que já existe e não cria a segunda. `visibilidade` é decidida
 no servidor, nunca aceita do pedido.
+
+**A aba que mais cresce, e a página que não cresce com ela (v2.16).** Até a v2.15
+cada página do histórico varria as oito colunas curtas da aba INTEIRA — 1 500
+rolagens para mostrar 25 —, ordenava tudo e fatiava. O custo era o do histórico,
+não o da página.
+
+Agora são duas coisas: um índice, que é UMA chamada lendo UMA coluna
+(`campanhaId`) e devolve os números de linha desta campanha em ordem cronológica —
+porque rolagem só entra no fim da aba, nunca no meio —, e a página, que lê do fim
+do índice para trás só as linhas que ela vai mostrar, mais uma margem para o que a
+filtragem descartar.
+
+A página seguinte é pedida por **cursor**, não por posição: o servidor devolve
+`proximo`, e mandá-lo de volta continua de onde parou. O cursor carrega a data, a
+linha e o id da última rolagem entregue, e quem localiza é o **id** — assim uma
+rolagem nova no topo não empurra a paginação, e limpar o histórico de outra
+campanha (que desloca as linhas desta) não repete nem pula nada. A primeira página
+lê uma coluna; as seguintes leem duas vizinhas (`id` e `campanhaId`), que é o preço
+de achar o cursor sem varrer.
+
+Se o id não estiver mais lá — o histórico foi limpo entre uma página e outra —,
+sobra a pista da linha, com a data conferindo. No pior caso uma rolagem já mostrada
+aparece de novo e a tela a reconhece pelo id; rolagem mais antiga não some.
+
+O **total exato** deixou de ser calculado: contar o que uma pessoa pode ver exige
+aplicar a filtragem de ocultas em todas as linhas, que é a varredura que esta
+mudança existe para não fazer. A tela mostra "Carregar mais" em vez de "N
+restantes".
 
 ### CAMPANHA_DOCUMENTOS + CAMPANHA_DOCUMENTOS_IMAGENS
 
@@ -525,8 +660,16 @@ anterior por até seis horas.
 ## Coluna leve e coluna pesada
 
 Toda aba tem colunas curtas — id, dono, nome, datas — e normalmente uma que
-carrega o peso: o `fichaJson`, a imagem em base64, o `dadosJson`. O campo
-`leves` de cada definição diz quantas colunas do começo são as curtas.
+carrega o peso: a imagem em base64, o conteúdo de um bloco, o `dadosJson`. O campo
+`leves` de cada definição diz quantas colunas do começo são as curtas, e `pesadas`
+diz quais são as caras de verdade (v2.16).
+
+A diferença entre as duas listas importa numa decisão só, mas é a que mais pesou:
+para ler uma coluna de um punhado de linhas espalhadas, vale mais uma faixa que
+arrasta as linhas do meio ou uma chamada por linha? A conta usa o preço de uma
+célula desperdiçada — e uma célula com 15 KB de imagem não vale o mesmo que uma
+com uma data. Sem essa distinção, a tela "Meus personagens" arrastava as sessenta
+fotos da planilha para mostrar as quatro do dono.
 
 Com isso dá para varrer uma aba inteira sem tocar no peso: descobrir **quais**
 registros interessam custa pouco, e só então o conteúdo dos escolhidos é
@@ -560,6 +703,7 @@ Dois mecanismos, para dois problemas:
 | **`rev`** | alguém salvando por cima de uma versão que já mudou |
 | **id da operação** | a mesma gravação chegando duas vezes porque a resposta se perdeu — o `id` da rolagem em `CAMPANHA_ROLAGENS`, o `opId` do lote em `CAMPANHA_COMBATES`, o `operacaoId` da ficha no manifesto (v2.15) |
 | **`SpreadsheetApp.flush()`** | a trava solta com escritas ainda no buffer do Apps Script, e a próxima execução lendo a planilha sem elas (v2.15) |
+| **linha que não se mexe** | um número de linha guardado (o localizador de blocos, o índice do histórico) apontando para outra coisa depois que alguém apagou uma linha acima. A gravação de ficha deixa em branco em vez de apagar (v2.16); quem apaga é a manutenção, e toda pista é conferida antes de ser usada |
 
 Nenhum substitui os outros. Sem trava, duas gravações simultâneas podem corromper
 a linha; sem `rev`, a segunda apaga em silêncio o trabalho da primeira mesmo
@@ -581,6 +725,11 @@ ficha continuam com os limites próprios do modelo, em `js/ficha.js` — uma ano
 tem até 20 000 caracteres, a descrição de um ritual até 8 000, a de um item até
 2 000; a ficha cresce com mais anotações, rituais e habilidades, não com um campo
 só. Esses limites não são do armazenamento.
+
+A **projeção** do painel (`resumo`, v2.16) mora numa célula e tem teto próprio:
+40 000 caracteres. Uma projeção real fica muito abaixo disso — ela já deixa os
+textos longos de fora —, mas se passar, a coluna guarda só um marcador e o painel
+remonta aquela ficha. Nada é cortado, e a ficha não é afetada.
 
 ### Os outros campos grandes
 

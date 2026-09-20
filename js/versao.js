@@ -14,16 +14,17 @@
    TRÊS COISAS DIFERENTES, QUE NÃO SE MISTURAM
    ---------------------------------------------------------------------
 
-     versão do aplicativo   está aqui. É o que a pessoa vê: v2.15.0.
+     versão do aplicativo   está aqui. É o que a pessoa vê: v2.16.0.
      schemaVersion          está em js/ficha.js. É o formato da FICHA,
                             e só sobe quando a ficha muda de forma.
      versaoFormato          está em js/config.js. É o formato dos
                             arquivos de importação/exportação.
 
-   Elas sobem em ritmos próprios. A v2.15.0 leva schemaVersion 8 e
+   Elas sobem em ritmos próprios. A v2.16.0 leva schemaVersion 8 e
    versaoFormato 1 — e isso é normal: a v2.15 mudou ONDE a ficha é guardada
-   (em blocos, no backend), não o que é uma ficha, então nem o formato da
-   ficha nem o dos arquivos de importação mudaram. A forma de guardar tem a
+   (em blocos, no backend) e a v2.16 mudou como ela é ACHADA e o que o painel
+   lê para desenhar um cartão. Nenhuma das duas mudou o que é uma ficha, então
+   nem o formato da ficha nem o dos arquivos de importação mudaram. A forma de guardar tem a
    própria versão, no manifesto de cada ficha (`formato: "blocos"`,
    `versao: 1` — ver docs/DATABASE.md). A última subida de schema com
    migração foi a v2.14.0: o texto longo do ritual saiu de `efeito` e foi
@@ -60,6 +61,41 @@
   ];
 
   var CHANGELOG = [
+    {
+      versao: "2.16.0",
+      codinome: "PISTA",
+      data: "20/09/2026",
+      mudancas: {
+        "Performance": [
+          "Abrir a mesa deixou de carregar as fichas. O painel desenha os cartões a partir de um resumo gravado junto com cada ficha, em vez de abrir as oito fichas inteiras e jogar fora quase tudo: numa mesa de oito personagens, o que atravessa a planilha caiu de 525 KB para 27 KB, e o que o navegador baixa, de 124 KB para 6,6 KB. Os números do cartão continuam sendo calculados pelas mesmas regras, no navegador.",
+          "As fotos e os avatares saíram das listagens. Em vez da imagem, a listagem manda a VERSÃO dela, e o navegador pede em lote só as que ainda não tem — começando pelos cartões que estão à vista. O que já foi baixado fica guardado no aparelho e só é buscado de novo quando a imagem muda. \"Meus personagens\" caiu de 60 KB para 1,1 KB de resposta; o editor de participantes, de 61 KB para 2,5 KB.",
+          "Uma página do histórico deixou de custar o histórico inteiro. Antes, mostrar 25 rolagens varria as 1.500 linhas da aba; agora um índice de uma coluna acha as rolagens da campanha e a página lê só o que vai mostrar — de 254 KB para 65 KB, e a décima página custa menos do que a primeira custava.",
+          "Abrir uma ficha ficou mais barato: o manifesto passou a guardar ONDE os blocos estão, e a leitura vai direto lá em vez de varrer a aba de blocos inteira (9 → 7 chamadas). Salvar também (20 → 17), e a aba parou de crescer a cada gravação: a ficha roda entre as mesmas faixas de linhas.",
+          "Abrir uma campanha carrega a aba que está aberta, e só ela: a Visão geral mostra participantes, não fichas, então a mesa passou a ser buscada quando alguém abre Personagens, Combate ou Notas. O lote de abertura caiu de 558 KB para 35 KB.",
+        ],
+        "Adicionado": [
+          "Medição de verdade, para quando \"está lento\": ligarDiagnostico(), no editor do Apps Script, faz cada requisição registrar quanto tempo passou no servidor, quantas chamadas à planilha ela fez, quantas fichas remontou e quanto do cache acertou. No navegador, RAMARede.medicoes() separa o tempo do servidor do tempo de rede. Desligado por padrão, não grava nada na planilha e não registra token, nome nem conteúdo de ficha.",
+          "reconstruirResumos(), no editor: refaz em lote o resumo do painel das fichas gravadas antes desta versão, 25 por vez, com ponto de retomada. Não é obrigatório — cada ficha ganha o dela na próxima gravação.",
+        ],
+        "Alterado": [
+          "O botão do histórico diz \"Carregar mais\", sem contar quantas faltam. Contar exigia varrer o histórico inteiro a cada página — e, para quem não é mestre, a conta ainda incluía as rolagens ocultas, que essa pessoa nem vê.",
+          "Um cartão da mesa continua de pé mesmo que os blocos daquela ficha se percam: ele mostra os últimos números confirmados, e o erro aparece ao abrir ou ajustar a ficha, que são os caminhos que tocam o conteúdo. Sem resumo gravado, o cartão volta a dizer que a ficha não se montou, como na v2.15.",
+          "Desfazer a última gravação (restaurarGeracaoAnterior) também acerta o cartão da mesa, em vez de deixá-lo mostrando o que foi desfeito.",
+        ],
+        "Corrigido": [
+          "O histórico podia pular uma rolagem ao carregar mais. A página seguinte era pedida por posição (\"pule 25\"), e uma rolagem nova no topo empurrava todas uma casa. Agora ela é pedida por cursor — \"mais velhas que esta\" —, e nada é repetido nem pulado, nem com a mesa rolando dados enquanto alguém lê.",
+        ],
+        "Técnico": [
+          "Requer nova implantação dos três .gs e setupRama(), que acrescenta a coluna `resumo` em PERSONAGENS. Nenhuma ficha é convertida e nada é apagado; rodar duas vezes dá o mesmo resultado. Sem o setup, o painel funciona como na v2.15 (remontando as fichas) e conferirInstalacao() avisa.",
+          "Site e servidor mudam juntos duas respostas: as listagens mandam a versão da foto e do avatar em vez da imagem, e o histórico pagina por cursor. Site antigo com servidor novo mostra as iniciais no lugar das fotos e um \"Carregar mais\" que repete a primeira página; publique os dois na mesma janela.",
+          "A gravação de ficha parou de APAGAR linhas na aba de blocos: ela deixa em branco a faixa que saiu de circulação e escreve a geração nova nela. Apagar deslocaria todas as linhas de baixo e envelheceria o localizador das outras fichas. Quem apaga é limparBlocosOrfaos(), que agora recolhe também as linhas em branco — e, depois dela, a primeira leitura de cada ficha usa o índice e a gravação seguinte grava a pista nova.",
+          "Ficam vivas três faixas por ficha: a que vale, a anterior (ponto de volta) e a reutilizável, que é onde a próxima gravação escreve. Uma gravação que morre no meio estraga só a reutilizável — a que vale e o ponto de volta ficam inteiros.",
+          "O diretório de contas (id → nome) virou uma entrada de cache de cinco minutos, no lugar de quatro varreduras da aba USUARIOS por tela. Ele guarda usuário, nome e se a conta está ativa; nada mais. Trocar o próprio nome apaga a entrada na hora.",
+          "testes/medir.js ganhou cenários (cache vazio e aquecido, ficha de 300 KB, mesa de dois e de oito, avatares), a opção --backend para medir outra versão sobre os mesmos dados e --comparar para pôr as duas lado a lado.",
+          "Testes: 1561 no modelo, 805 no backend (104 novas) e 214 no transporte do frontend (20 novas). Vinte e uma mutações propositais nas garantias novas; vinte foram pegas por algum teste.",
+        ],
+      },
+    },
     {
       versao: "2.15.0",
       codinome: "MOSAICO",

@@ -105,6 +105,7 @@ var ABAS = {
     colunas: ['userId', 'avatar', 'preferenciasJson', 'atualizadoEm'],
     chave: 'userId',
     leves: 1,
+    pesadas: ['avatar'],
   },
   PERSONAGENS: {
     /* `armazenamento` entrou na v2.15 e é o MANIFESTO da ficha em blocos
@@ -114,11 +115,18 @@ var ABAS = {
        uma versão antiga do servidor não abrir a ficha como se estivesse
        vazia. Fica DEPOIS de fichaJson de propósito: numa planilha
        atualizada o setupRama a acrescenta no fim, e declarada no mesmo
-       lugar as duas ordens coincidem. */
+       lugar as duas ordens coincidem.
+
+       `resumo` entrou na v2.16 e é a PROJEÇÃO do personagem: o punhado
+       de campos que o painel da mesa e o combate desenham, gravado
+       junto com a ficha e lido sem abrir a ficha. Ver "A projeção do
+       personagem" em Codigo.gs. Vazio quer dizer "não tenho" — e aí o
+       painel remonta aquela ficha, como fazia antes. */
     nome: 'PERSONAGENS',
-    colunas: ['id', 'ownerId', 'nome', 'campanhaId', 'classe', 'origem', 'criadoEm', 'atualizadoEm', 'rev', 'fichaJson', 'armazenamento'],
+    colunas: ['id', 'ownerId', 'nome', 'campanhaId', 'classe', 'origem', 'criadoEm', 'atualizadoEm', 'rev', 'fichaJson', 'armazenamento', 'resumo'],
     chave: 'id',
     leves: 9,
+    pesadas: ['fichaJson'],
   },
   PERSONAGENS_FOTOS: {
     /* A foto mora fora da ficha de propósito: é o campo mais pesado e o
@@ -128,6 +136,7 @@ var ABAS = {
     colunas: ['personagemId', 'ownerId', 'imagem', 'atualizadoEm'],
     chave: 'personagemId',
     leves: 2,
+    pesadas: ['imagem'],
   },
   PERSONAGENS_BLOCOS: {
     /* A ficha em pedaços, cada um abaixo do limite seguro da célula
@@ -145,6 +154,7 @@ var ABAS = {
     registro: 'personagemId',
     leves: 6,
     somenteTexto: ['conteudo'],
+    pesadas: ['conteudo'],
   },
   HOMEBREW: {
     /* `visibilidade` entrou na v2. Registro antigo fica com a célula
@@ -164,6 +174,7 @@ var ABAS = {
     colunas: ['criaturaId', 'ownerId', 'imagem', 'atualizadoEm'],
     chave: 'criaturaId',
     leves: 2,
+    pesadas: ['imagem'],
   },
   CAMPANHAS: {
     nome: 'CAMPANHAS',
@@ -213,6 +224,7 @@ var ABAS = {
     colunas: ['documentoId', 'campanhaId', 'imagem', 'atualizadoEm'],
     chave: 'documentoId',
     leves: 2,
+    pesadas: ['imagem'],
   },
   CAMPANHA_NOTAS: {
     /* Privadas do mestre. Nenhuma resposta destinada a jogador toca
@@ -222,6 +234,7 @@ var ABAS = {
               'criadoEm', 'atualizadoEm', 'conteudo'],
     chave: 'id',
     leves: 7,
+    pesadas: ['conteudo'],
   },
   CAMPANHA_COMBATES: {
     nome: 'CAMPANHA_COMBATES',
@@ -229,6 +242,7 @@ var ABAS = {
               'criadoEm', 'atualizadoEm', 'rev', 'dadosJson'],
     chave: 'id',
     leves: 8,
+    pesadas: ['dadosJson'],
   },
   CAMPANHA_CAPAS: {
     /* A capa (banner) da campanha. Fora do dadosJson pelo mesmo motivo
@@ -241,6 +255,7 @@ var ABAS = {
     colunas: ['campanhaId', 'atualizadoEm', 'largura', 'altura', 'imagem'],
     chave: 'campanhaId',
     leves: 4,
+    pesadas: ['imagem'],
   },
 };
 
@@ -311,6 +326,8 @@ function exec() {
       folhas: {},
       cabecalhos: {},
       varreduras: {},
+      /* Os contadores desta requisição. Ver "O medidor", abaixo. */
+      medidor: novoMedidor(),
       /* A última linha com conteúdo de cada aba, vista pela última
          varredura. Esquecida junto com as varreduras — ao obter a trava e
          a cada gravação na aba —, então dentro da trava ela é a de agora,
@@ -348,6 +365,112 @@ function esquecerCabecalhos() {
 }
 
 /* =====================================================================
+   O MEDIDOR
+   ---------------------------------------------------------------------
+   Contadores da execução: quantas viagens ao Sheets, quantas células
+   atravessaram, quantas fichas foram remontadas, quanto tempo a trava
+   custou. Nada aqui decide coisa alguma — é só o que permite dizer
+   ONDE o tempo foi parar em vez de adivinhar.
+
+   A contagem é sempre feita: são somas de inteiros na memória da
+   execução, e ela morre com a resposta. O que o interruptor liga e
+   desliga (RAMA_DIAGNOSTICO, em Script Properties) é o registro no log
+   e o campo `diag` da resposta — ver `diagnosticoLigado()` em
+   Codigo.gs. Nada é gravado na planilha por causa disto.
+
+   O que NUNCA entra num contador nem num log: token, senha, conteúdo de
+   ficha, nome de pessoa, id de conta. Contadores são números.
+   ===================================================================== */
+
+function novoMedidor() {
+  return {
+    /* viagens ao serviço do Sheets, por tipo */
+    chamadas: 0,
+    leituras: 0,
+    escritas: 0,
+    /* células que atravessaram numa direção ou na outra */
+    celulas: 0,
+    /* CacheService */
+    cacheAcertos: 0,
+    cacheFalhas: 0,
+    /* fichas remontadas a partir do conteúdo guardado, e blocos lidos */
+    fichas: 0,
+    blocos: 0,
+    /* resumos de personagem aproveitados e reconstruídos */
+    resumosUsados: 0,
+    resumosRefeitos: 0,
+    /* milissegundos esperando a trava, segurando a trava e
+       conferindo quem está pedindo */
+    msTrava: 0,
+    msPresa: 0,
+    msSessao: 0,
+  };
+}
+
+function medidor() {
+  var e = exec();
+  if (!e.medidor) e.medidor = novoMedidor();
+  return e.medidor;
+}
+
+/* Uma chamada que não move células (getLastRow, getMaxRows, deleteRow,
+   abrir a planilha, achar a aba). */
+function anotarChamada(quantas) {
+  var m = medidor();
+  m.chamadas += (quantas || 1);
+}
+
+function anotarLeitura(celulas) {
+  var m = medidor();
+  m.chamadas++;
+  m.leituras++;
+  m.celulas += (celulas || 0);
+}
+
+function anotarEscrita(celulas) {
+  var m = medidor();
+  m.chamadas++;
+  m.escritas++;
+  m.celulas += (celulas || 0);
+}
+
+function anotar(campo, quanto) {
+  var m = medidor();
+  m[campo] = (m[campo] || 0) + (quanto === undefined ? 1 : quanto);
+}
+
+/* =====================================================================
+   AS DUAS PORTAS DO SHEETS
+   ---------------------------------------------------------------------
+   Toda leitura e toda gravação de faixa passam por estas duas funções.
+   Não é enfeite de contagem: com elas existe UM lugar para medir, UM
+   lugar para registrar e UM lugar onde um limite futuro caberia. Chamar
+   getRange().getValues() direto neste arquivo é considerado engano.
+   ===================================================================== */
+
+function lerFaixa(folha, linha, coluna, nLinhas, nColunas) {
+  anotarLeitura(nLinhas * nColunas);
+  return folha.getRange(linha, coluna, nLinhas, nColunas).getValues();
+}
+
+function gravarFaixa(folha, linha, coluna, valores) {
+  var nc = (valores.length && valores[0]) ? valores[0].length : 0;
+  anotarEscrita(valores.length * nc);
+  folha.getRange(linha, coluna, valores.length, nc).setValues(valores);
+}
+
+function ultimaLinha(folha) {
+  anotarChamada();
+  return folha.getLastRow();
+}
+
+function grade(folha) {
+  anotarChamada();
+  return folha.getMaxRows();
+}
+
+
+/* =====================================================================
    PROPRIEDADES
    ---------------------------------------------------------------------
    `getProperties()` traz todas de uma vez. Antes, cada `propriedade()`
@@ -383,6 +506,7 @@ function planilha() {
   if (e.planilha) return e.planilha;
 
   var id = propriedade('RAMA_PLANILHA_ID', '');
+  anotarChamada();
   if (id) { e.planilha = SpreadsheetApp.openById(id); return e.planilha; }
 
   var ativa = SpreadsheetApp.getActiveSpreadsheet();
@@ -391,11 +515,20 @@ function planilha() {
   throw new Error('Sem planilha: defina RAMA_PLANILHA_ID em Script Properties ou vincule o script a uma planilha.');
 }
 
+/* Cada aba é procurada uma vez por execução, pelo nome.
+
+   A tentação aqui é trocar isto por `getSheets()` uma vez e um mapa
+   nome→aba. Não vale: montar o mapa pede `getName()` de cada aba da
+   planilha (são dezesseis), e se o Google cobrar por isso a conta piora
+   em vez de melhorar. Este arquivo mede chamadas; ele não tem como
+   decidir o que o serviço cobra por dentro. O ganho seguro é o outro:
+   tocar em MENOS abas por requisição. */
 function aba(definicao) {
   var e = exec();
   var guardada = e.folhas[definicao.nome];
   if (guardada) return guardada;
 
+  anotarChamada();
   var folha = planilha().getSheetByName(definicao.nome);
   if (!folha) throw new Error('A aba ' + definicao.nome + ' não existe. Rode setupRama().');
 
@@ -512,8 +645,9 @@ function cabecalho(definicao) {
   }
 
   var folha = aba(definicao);
+  anotarChamada();
   var largura = Math.max(folha.getLastColumn(), definicao.colunas.length);
-  var linha = folha.getRange(1, 1, 1, largura).getValues()[0];
+  var linha = lerFaixa(folha, 1, 1, 1, largura)[0];
 
   var mapa = {};
   for (var i = 0; i < linha.length; i++) {
@@ -724,7 +858,7 @@ function varrer(definicao, quantasColunas, rotulo) {
 
   var folha = aba(definicao);
   var cab = cabecalho(definicao);
-  var ultima = folha.getLastRow();
+  var ultima = ultimaLinha(folha);
   e.ultimas[definicao.nome] = ultima;
 
   if (ultima < 2) { e.varreduras[chaveDoCache] = []; return []; }
@@ -740,7 +874,7 @@ function varrer(definicao, quantasColunas, rotulo) {
   });
   if (!menor) { e.varreduras[chaveDoCache] = []; return []; }
 
-  var valores = folha.getRange(2, menor, ultima - 1, maior - menor + 1).getValues();
+  var valores = lerFaixa(folha, 2, menor, ultima - 1, maior - menor + 1);
   var leve = quantasColunas < definicao.colunas.length;
 
   var saida = valores.map(function (crua, i) {
@@ -778,7 +912,7 @@ function lerLinha(definicao, numeroDaLinha) {
   if (!numeroDaLinha || numeroDaLinha < 2) return null;
 
   var cab = cabecalho(definicao);
-  var crua = aba(definicao).getRange(numeroDaLinha, 1, 1, cab.largura).getValues()[0];
+  var crua = lerFaixa(aba(definicao), numeroDaLinha, 1, 1, cab.largura)[0];
 
   var daLinha = posicoesParaLinha(definicao, cab, crua, 1);
   var registro = montarRegistro(definicao, definicao.colunas, daLinha, 1, crua, numeroDaLinha, false);
@@ -856,9 +990,27 @@ function acharPor(definicao, coluna, valor) {
 
    E há um teto: acima de LIMITE_INDIVIDUAL leituras avulsas a faixa
    vence de qualquer jeito, porque trinta viagens numa requisição é o
-   tipo de coisa que estoura o tempo de execução. */
+   tipo de coisa que estoura o tempo de execução.
+
+   CÉLULA LEVE E CÉLULA PESADA NÃO VALEM O MESMO
+   ---------------------------------------------------------------------
+   A conta acima trata toda célula desperdiçada como igual, e isso
+   estava errado para a coluna que mais importa. Medindo a tela "Meus
+   personagens" numa planilha de sessenta fichas: para trazer as QUATRO
+   fotos do dono, a faixa arrastava as sessenta — 900 KB de imagem em
+   base64 para usar 60 KB. O desperdício era aceito porque "cinquenta e
+   seis células" parecia pouco.
+
+   Então a coluna pesada — a que fica depois das leves na declaração da
+   aba: imagem, avatar, conteúdo de bloco — tem peso próprio:
+   PESO_DA_CHAMADA_PESADA células desperdiçadas já valem uma viagem a
+   mais. Três, e não vinte, porque uma célula dessas tem dezenas de
+   milhares de caracteres e uma viagem tem alguns milissegundos. Como o
+   outro, é uma ESTIMATIVA declarada aqui para poder ser corrigida com
+   dados de uma implantação real. */
 
 var PESO_DA_CHAMADA = 20;
+var PESO_DA_CHAMADA_PESADA = 3;
 var LIMITE_INDIVIDUAL = 25;
 
 /* `alvos` aceita números de linha ou os próprios registros devolvidos
@@ -872,6 +1024,11 @@ function lerCelulas(definicao, alvos, coluna) {
   var cab = cabecalho(definicao);
   var indice = definicao.colunas.indexOf(coluna);
   var padrao = cab.mapa[coluna] || 0;
+
+  /* Pesada é a coluna DECLARADA como tal: imagem, conteúdo de bloco,
+     ficha antiga. Não basta "não estar entre as leves" — a data de uma
+     foto também não está, e ela é barata. */
+  var pesada = (definicao.pesadas || []).indexOf(coluna) >= 0;
 
   /* Linhas de gramáticas diferentes ficam em colunas diferentes, então
      cada grupo é lido por conta própria. Na esmagadora maioria das abas
@@ -891,13 +1048,13 @@ function lerCelulas(definicao, alvos, coluna) {
   });
 
   Object.keys(grupos).forEach(function (posicao) {
-    lerBloco(definicao, grupos[posicao], Number(posicao), saida);
+    lerBloco(definicao, grupos[posicao], Number(posicao), saida, pesada);
   });
 
   return saida;
 }
 
-function lerBloco(definicao, linhas, posicao, saida) {
+function lerBloco(definicao, linhas, posicao, saida, pesada) {
   var folha = aba(definicao);
   var ordenadas = linhas.slice().sort(function (a, b) { return a - b; });
   var menor = ordenadas[0];
@@ -906,18 +1063,19 @@ function lerBloco(definicao, linhas, posicao, saida) {
 
   var desperdicio = vao - ordenadas.length;
   var viagensPoupadas = ordenadas.length - 1;
+  var peso = pesada ? PESO_DA_CHAMADA_PESADA : PESO_DA_CHAMADA;
 
   var porFaixa = ordenadas.length > LIMITE_INDIVIDUAL ||
-                 desperdicio <= PESO_DA_CHAMADA * viagensPoupadas;
+                 desperdicio <= peso * viagensPoupadas;
 
   if (porFaixa) {
-    var bloco = folha.getRange(menor, posicao, vao, 1).getValues();
+    var bloco = lerFaixa(folha, menor, posicao, vao, 1);
     ordenadas.forEach(function (l) { saida[l] = bloco[l - menor][0]; });
     return;
   }
 
   ordenadas.forEach(function (l) {
-    saida[l] = folha.getRange(l, posicao, 1, 1).getValues()[0][0];
+    saida[l] = lerFaixa(folha, l, posicao, 1, 1)[0][0];
   });
 }
 
@@ -954,7 +1112,7 @@ function lerLinhas(definicao, numeros) {
 
     var valores = [];
     try {
-      valores = folha.getRange(inicio, 1, fim - inicio + 1, cab.largura).getValues();
+      valores = lerFaixa(folha, inicio, 1, fim - inicio + 1, cab.largura);
     } catch (erro) {
       valores = [];
     }
@@ -987,11 +1145,12 @@ function lerColuna(definicao, coluna) {
 
   var posicao = cabecalho(definicao).mapa[coluna] || 0;
   var folha = aba(definicao);
-  var ultima = folha.getLastRow();
+  var ultima = ultimaLinha(folha);
+  e.ultimas[definicao.nome] = ultima;
 
   var mapa = {};
   if (posicao && ultima >= 2) {
-    var valores = folha.getRange(2, posicao, ultima - 1, 1).getValues();
+    var valores = lerFaixa(folha, 2, posicao, ultima - 1, 1);
     for (var i = 0; i < valores.length; i++) {
       var v = String(valores[i][0]);
       if (v !== '' && mapa[v] === undefined) mapa[v] = i + 2;
@@ -1007,6 +1166,116 @@ function linhaDe(definicao, coluna, valor) {
   var mapa = lerColuna(definicao, coluna);
   var linha = mapa[String(valor)];
   return linha || 0;
+}
+
+/* TODAS as linhas em que cada valor aparece, para uma ou duas colunas
+   VIZINHAS lidas de uma vez.
+
+   É o índice barato de uma aba que cresce: uma chamada, uma ou duas
+   colunas curtas, em vez das seis colunas leves. Com duas colunas, a
+   chave é `valor1 + '\n' + valor2` — é assim que a aba de blocos acha
+   as linhas de uma geração sem arrastar o conteúdo de ninguém.
+
+   Fica guardado entre as varreduras da execução, então uma gravação na
+   aba o invalida junto com o resto. */
+function linhasPorValor(definicao, colunas) {
+  var e = exec();
+  var nomes = [].concat(colunas);
+  var chaveDoCache = definicao.nome + '#por:' + nomes.join(',');
+  if (e.varreduras[chaveDoCache]) return e.varreduras[chaveDoCache];
+
+  var mapaDeColunas = cabecalho(definicao).mapa;
+  var posicoes = nomes.map(function (c) { return mapaDeColunas[c] || 0; });
+
+  var mapa = {};
+  var folha = aba(definicao);
+  var ultima = ultimaLinha(folha);
+  e.ultimas[definicao.nome] = ultima;
+
+  var menor = 0, maior = 0;
+  posicoes.forEach(function (p) {
+    if (!p) return;
+    if (!menor || p < menor) menor = p;
+    if (p > maior) maior = p;
+  });
+
+  if (menor && ultima >= 2) {
+    var valores = lerFaixa(folha, 2, menor, ultima - 1, maior - menor + 1);
+    for (var i = 0; i < valores.length; i++) {
+      var partes = [];
+      var vazio = true;
+      for (var j = 0; j < posicoes.length; j++) {
+        var v = posicoes[j] ? String(valores[i][posicoes[j] - menor]) : '';
+        if (v !== '') vazio = false;
+        partes.push(v);
+      }
+      /* Linha em branco (bloco recolhido) não entra no índice. */
+      if (vazio) continue;
+      var chave = partes.join('\n');
+      if (!mapa[chave]) mapa[chave] = [];
+      mapa[chave].push(i + 2);
+    }
+  }
+
+  e.varreduras[chaveDoCache] = mapa;
+  return mapa;
+}
+
+/* As colunas leves de uma faixa contígua de linhas. Uma chamada, e sem
+   tocar na coluna pesada — é o que a gravação usa para conferir que as
+   linhas que ela vai reaproveitar são mesmo as que ela pensa. */
+function lerFaixaLeve(definicao, inicio, quantas) {
+  if (!(inicio >= 2) || !(quantas >= 1)) return [];
+
+  var cab = cabecalho(definicao);
+  var n = quantasLeves(definicao);
+  var colunas = definicao.colunas.slice(0, n);
+  var posicoes = cab.posicoes.slice(0, n);
+
+  var menor = 0, maior = 0;
+  posicoes.forEach(function (p) {
+    if (!p) return;
+    if (!menor || p < menor) menor = p;
+    if (p > maior) maior = p;
+  });
+  if (!menor) return [];
+
+  var valores;
+  try {
+    valores = lerFaixa(aba(definicao), inicio, menor, quantas, maior - menor + 1);
+  } catch (erro) {
+    return [];
+  }
+
+  return valores.map(function (crua, i) {
+    return montarRegistro(definicao, colunas, posicoes, menor, crua, inicio + i, true);
+  });
+}
+
+/* Deixa linhas EM BRANCO, sem apagá-las.
+
+   A diferença é toda: apagar uma linha puxa para cima todas as de
+   baixo, e qualquer número de linha guardado por outra ficha passa a
+   apontar para o lugar errado. Deixar em branco não mexe em ninguém —
+   e a linha em branco pode ser reaproveitada pela próxima geração do
+   mesmo personagem, que é o caso comum.
+
+   Quem apaga de verdade são as ferramentas de manutenção, que rodam
+   raramente e no editor. */
+function limparLinhas(definicao, inicio, quantas) {
+  if (!(inicio >= 2) || !(quantas >= 1)) return 0;
+
+  var cab = cabecalho(definicao);
+  var vazias = [];
+  for (var i = 0; i < quantas; i++) {
+    var linha = [];
+    for (var j = 0; j < cab.largura; j++) linha.push('');
+    vazias.push(linha);
+  }
+
+  gravarFaixa(aba(definicao), inicio, 1, vazias);
+  invalidar(definicao);
+  return quantas;
 }
 
 /* =====================================================================
@@ -1042,7 +1311,9 @@ function linhaCrua(definicao, registro) {
 }
 
 function inserir(definicao, registro) {
-  aba(definicao).appendRow(linhaCrua(definicao, registro));
+  var crua = linhaCrua(definicao, registro);
+  anotarEscrita(crua.length);
+  aba(definicao).appendRow(crua);
   invalidar(definicao);
 }
 
@@ -1068,20 +1339,32 @@ function inserirLinhas(definicao, registros) {
   var folha = aba(definicao);
   var cab = cabecalho(definicao);
   var vista = exec().ultimas[definicao.nome];
-  var ultima = vista !== undefined ? vista : folha.getLastRow();
+  var ultima = vista !== undefined ? vista : ultimaLinha(folha);
   var inicio = ultima + 1;
   var necessario = ultima + registros.length;
   var linhas = registros.map(function (r) { return linhaCrua(definicao, r); });
 
   try {
-    folha.getRange(inicio, 1, registros.length, cab.largura).setValues(linhas);
+    gravarFaixa(folha, inicio, 1, linhas);
   } catch (erro) {
-    var grade = folha.getMaxRows();
-    if (necessario <= grade) throw erro;
-    folha.insertRowsAfter(grade, necessario - grade + FOLGA_DA_GRADE);
-    folha.getRange(inicio, 1, registros.length, cab.largura).setValues(linhas);
+    var tamanhoDaGrade = grade(folha);
+    if (necessario <= tamanhoDaGrade) throw erro;
+    anotarChamada();
+    folha.insertRowsAfter(tamanhoDaGrade, necessario - tamanhoDaGrade + FOLGA_DA_GRADE);
+    gravarFaixa(folha, inicio, 1, linhas);
   }
 
+  invalidar(definicao);
+  return inicio;
+}
+
+/* Grava registros numa faixa que já se sabe qual é — e que quem chamou
+   já conferiu. Só DENTRO da trava, e só sobre linhas em branco ou sobre
+   as da geração que está sendo descartada. */
+function gravarRegistros(definicao, inicio, registros) {
+  if (!registros || !registros.length) return 0;
+  gravarFaixa(aba(definicao), inicio, 1,
+    registros.map(function (r) { return linhaCrua(definicao, r); }));
   invalidar(definicao);
   return inicio;
 }
@@ -1108,8 +1391,7 @@ function atualizarLinha(definicao, numeroDaLinha, registro) {
       ' não corresponde mais ao registro ' + registro[definicao.chave] + '.');
   }
 
-  var cab = cabecalho(definicao);
-  aba(definicao).getRange(linha, 1, 1, cab.largura).setValues([linhaCrua(definicao, registro)]);
+  gravarFaixa(aba(definicao), linha, 1, [linhaCrua(definicao, registro)]);
   invalidar(definicao);
 }
 
@@ -1156,9 +1438,7 @@ function atualizarCampos(definicao, registro, campos) {
   var corrida = [pares[0]];
 
   function despejar() {
-    var inicio = corrida[0].coluna;
-    folha.getRange(linha, inicio, 1, corrida.length)
-      .setValues([corrida.map(function (par) { return par.valor; })]);
+    gravarFaixa(folha, linha, corrida[0].coluna, [corrida.map(function (par) { return par.valor; })]);
   }
 
   for (var i = 1; i < pares.length; i++) {
@@ -1184,7 +1464,7 @@ function conferirLinha(definicao, numeroDaLinha, registro) {
   var posicao = cabecalho(definicao).mapa[chave] || 0;
   if (!posicao) return numeroDaLinha;
 
-  var atual = aba(definicao).getRange(numeroDaLinha, posicao, 1, 1).getValues()[0][0];
+  var atual = lerFaixa(aba(definicao), numeroDaLinha, posicao, 1, 1)[0][0];
   if (String(atual) === String(registro[chave])) return numeroDaLinha;
 
   /* A linha se mexeu. Procura de novo — e desta vez sem cache, porque o
@@ -1195,6 +1475,7 @@ function conferirLinha(definicao, numeroDaLinha, registro) {
 }
 
 function apagarLinha(definicao, numeroDaLinha) {
+  anotarChamada();
   aba(definicao).deleteRow(numeroDaLinha);
   invalidar(definicao);
 }
@@ -1218,7 +1499,11 @@ function apagarLinhas(definicao, linhas) {
 
   /* O Google não deixa apagar TODAS as linhas não congeladas de uma
      aba. Uma linha em branco no fim garante que sempre sobre uma. */
-  if (folha.getMaxRows() - ordenadas.length < 2) folha.insertRowsAfter(folha.getMaxRows(), 1);
+  var tamanhoDaGrade = grade(folha);
+  if (tamanhoDaGrade - ordenadas.length < 2) {
+    anotarChamada();
+    folha.insertRowsAfter(tamanhoDaGrade, 1);
+  }
 
   /* Linhas vizinhas saem numa chamada só: os blocos de uma geração
      nascem juntos, e apagar uma geração de dez blocos custa uma viagem,
@@ -1229,6 +1514,7 @@ function apagarLinhas(definicao, linhas) {
     var inicio = fim;
     var j = i + 1;
     while (j < ordenadas.length && ordenadas[j] === inicio - 1) { inicio = ordenadas[j]; j++; }
+    anotarChamada();
     if (inicio === fim) folha.deleteRow(fim);
     else folha.deleteRows(inicio, fim - inicio + 1);
     i = j;
@@ -1289,15 +1575,20 @@ var ESPERA_TRAVA_MS = 25000;
 function comTrava(fn) {
   var trava = LockService.getScriptLock();
 
-  if (!trava.tryLock(ESPERA_TRAVA_MS)) return { ok: false, erro: 'ocupado' };
+  var pedida = Date.now();
+  var obtida = trava.tryLock(ESPERA_TRAVA_MS);
+  anotar('msTrava', Date.now() - pedida);
+  if (!obtida) return { ok: false, erro: 'ocupado' };
 
   esquecerVarreduras();
 
+  var entrou = Date.now();
   try {
     var resultado = fn();
     SpreadsheetApp.flush();
     return resultado;
   } finally {
+    anotar('msPresa', Date.now() - entrou);
     trava.releaseLock();
   }
 }
@@ -1352,7 +1643,10 @@ function cache() {
 /* Ler, gravar e apagar sem nunca deixar o cache derrubar a requisição.
    Uma falha do CacheService é um cache que não ajudou, não um erro. */
 function cacheLer(chave) {
-  try { return cache().get(chave); } catch (erro) { return null; }
+  var valor = null;
+  try { valor = cache().get(chave); } catch (erro) { valor = null; }
+  anotar(valor === null || valor === undefined ? 'cacheFalhas' : 'cacheAcertos');
+  return valor;
 }
 
 function cacheGravar(chave, valor, segundos) {
@@ -1456,6 +1750,42 @@ function lerJson(texto, padrao) {
    então a planilha trocaria cada metade por "?". O corte nunca cai
    entre as duas.
    ===================================================================== */
+
+/* ---------------------------------------------------------------------
+   O LOCALIZADOR (v2.16)
+   ---------------------------------------------------------------------
+   Até a v2.15, achar os blocos de uma ficha custava uma varredura das
+   seis colunas leves da aba INTEIRA — de todas as fichas, de todas as
+   gerações — para ficar com duas linhas. Numa planilha com centenas de
+   personagens isso é o custo dominante de abrir uma ficha.
+
+   Agora o manifesto guarda ONDE a geração foi escrita:
+
+     local: { linha, blocos }
+
+   A leitura vai direto nessas linhas, numa chamada. E ela confere tudo
+   o que já conferia — personagem, geração, posição, marcadores, tamanho
+   e SHA-256 do texto inteiro —, porque um número de linha é uma PISTA,
+   nunca uma prova. Se a pista falhar, a leitura cai no índice de duas
+   colunas (personagem + geração) e acha as linhas de verdade. Nenhum
+   checksum, nenhuma conferência de completude e nenhuma retentativa
+   foram removidas para isto caber.
+
+   PARA A PISTA NÃO ENVELHECER
+   ---------------------------------------------------------------------
+   Um número de linha só envelhece quando alguém APAGA uma linha acima
+   dele. Então a gravação parou de apagar: ela deixa em branco as linhas
+   da geração descartada (limparLinhas) e, quando o tamanho permite,
+   escreve a geração nova exatamente nelas. Um personagem salvo cem
+   vezes fica alternando entre duas faixas de linhas, sem deslocar nada
+   e sem fazer a aba crescer.
+
+   Apagar de verdade (o que desloca) ficou para as ferramentas de
+   manutenção do editor: limparBlocosOrfaos() e compactarBlocos(). Elas
+   rodam raramente, e depois delas a primeira leitura de cada ficha cai
+   no índice — que é o caminho correto, só mais lento — e a gravação
+   seguinte grava a pista nova.
+   --------------------------------------------------------------------- */
 
 var FORMATO_BLOCOS = 'blocos';
 var VERSAO_BLOCOS = 1;
@@ -1566,8 +1896,13 @@ function manifestoDe(valor) {
 
 /* Escreve uma geração nova para `registroId` e devolve o que o manifesto
    precisa. NÃO confere e NÃO publica: isso é de quem chamou, que ainda
-   pode desistir. As linhas entram de uma vez, numa chamada só. */
-function gravarGeracao(defBlocos, registroId, texto) {
+   pode desistir. As linhas entram de uma vez, numa chamada só.
+
+   `reaproveitar` ({ linha, blocos }) é uma faixa que quem chamou JÁ
+   conferiu ser da geração que está sendo descartada — nunca a que vale.
+   Cabendo, a geração nova é escrita ali; não cabendo, vai para o fim da
+   aba. */
+function gravarGeracao(defBlocos, registroId, texto, reaproveitar) {
   var t = String(texto);
   var partes = dividirEmBlocos(t, tamanhoDoBloco());
   if (!partes.length) partes = [''];
@@ -1589,7 +1924,12 @@ function gravarGeracao(defBlocos, registroId, texto) {
     return r;
   });
 
-  var primeira = inserirLinhas(defBlocos, registros);
+  var cabe = reaproveitar && Number(reaproveitar.blocos) >= partes.length &&
+             Number(reaproveitar.linha) >= 2;
+
+  var primeira = cabe
+    ? gravarRegistros(defBlocos, Number(reaproveitar.linha), registros)
+    : inserirLinhas(defBlocos, registros);
 
   return {
     geracao: geracao,
@@ -1598,6 +1938,7 @@ function gravarGeracao(defBlocos, registroId, texto) {
     hash: resumoDoTexto(t),
     criadoEm: agora,
     primeiraLinha: primeira,
+    reaproveitou: !!cabe,
   };
 }
 
@@ -1616,6 +1957,40 @@ function conferirGeracao(defBlocos, registroId, gravado, textoOriginal) {
   return { ok: true };
 }
 
+/* A faixa de um localizador, conferida linha a linha: é mesmo deste
+   registro e desta geração? Devolve as linhas leves ou null. Uma
+   chamada, sem tocar no conteúdo.
+
+   É o que autoriza escrever por cima: sem esta conferência, um número
+   de linha velho mandaria a gravação escrever sobre os blocos de outra
+   ficha. */
+function conferirFaixaDaGeracao(defBlocos, registroId, geracao, local) {
+  if (!local) return null;
+  var inicio = Number(local.linha);
+  var quantas = Number(local.blocos);
+  if (!(inicio >= 2) || !(quantas >= 1)) return null;
+
+  var leves = lerFaixaLeve(defBlocos, inicio, quantas);
+  if (leves.length !== quantas) return null;
+
+  var colId = defBlocos.registro;
+  for (var i = 0; i < leves.length; i++) {
+    if (String(leves[i][colId]) !== String(registroId)) return null;
+    if (String(leves[i].geracao) !== String(geracao)) return null;
+  }
+  return leves;
+}
+
+/* Duas faixas se sobrepõem? A geração que vale nunca pode ser o alvo de
+   uma gravação — esta é a conferência que garante isso mesmo se um
+   manifesto vier com números estranhos. */
+function faixasSeCruzam(a, b) {
+  if (!a || !b) return false;
+  var ai = Number(a.linha), af = ai + Number(a.blocos) - 1;
+  var bi = Number(b.linha), bf = bi + Number(b.blocos) - 1;
+  return ai <= bf && bi <= af;
+}
+
 /* ---------------------------------------------------------------------
    LER
    --------------------------------------------------------------------- */
@@ -1632,6 +2007,7 @@ function conferirGeracao(defBlocos, registroId, gravado, textoOriginal) {
 
    O JSON NÃO é interpretado aqui: primeiro o texto é provado inteiro. */
 function montarGeracao(defBlocos, registros, registroId, manifesto) {
+  anotar('blocos', registros.length);
   var colId = defBlocos.registro;
   var n = Number(manifesto.blocos);
   var porPosicao = {};
@@ -1676,9 +2052,18 @@ function montarGeracao(defBlocos, registros, registroId, manifesto) {
   return { ok: true, texto: texto };
 }
 
+/* As linhas de uma geração, pelo índice de duas colunas — o caminho de
+   quando o localizador não existe (manifesto de antes da v2.16) ou não
+   vale (a aba foi compactada). Uma chamada, duas colunas curtas. */
+function linhasDaGeracao(defBlocos, registroId, geracao) {
+  var mapa = linhasPorValor(defBlocos, [defBlocos.registro, 'geracao']);
+  return (mapa[String(registroId) + '\n' + String(geracao)] || []).slice();
+}
+
 /* As linhas (leves) de cada registro e geração, a partir de UMA
-   varredura das colunas curtas da aba de blocos. A varredura fica
-   guardada na execução, como toda varredura do Dados.gs. */
+   varredura das colunas curtas da aba de blocos. Usada pelo
+   diagnóstico e pela manutenção, que precisam de data e total; o
+   caminho de leitura usa o localizador e o índice curto. */
 function indiceDeBlocos(defBlocos) {
   var colId = defBlocos.registro;
   var indice = {};
@@ -1705,31 +2090,60 @@ function lerGeracoes(defBlocos, pedidos) {
   var saida = {};
   if (!pedidos || !pedidos.length) return saida;
 
-  var indice = indiceDeBlocos(defBlocos);
-  var alvos = [];
   var linhasDe = {};
+  var pelaPista = {};
 
   pedidos.forEach(function (p) {
-    var doRegistro = indice[String(p.id)] || {};
-    var leves = doRegistro[String(p.manifesto.geracao)] || [];
-    if (!leves.length) { saida[p.id] = { ok: false, motivo: 'bloco_ausente' }; return; }
-    linhasDe[p.id] = leves.map(function (r) { return r._linha; });
-    alvos = alvos.concat(linhasDe[p.id]);
+    var local = p.manifesto && p.manifesto.local;
+    if (local && Number(local.linha) >= 2 && Number(local.blocos) >= 1) {
+      var linhas = [];
+      for (var i = 0; i < Number(local.blocos); i++) linhas.push(Number(local.linha) + i);
+      linhasDe[p.id] = linhas;
+      pelaPista[p.id] = true;
+      return;
+    }
+    linhasDe[p.id] = linhasDaGeracao(defBlocos, p.id, p.manifesto.geracao);
   });
 
-  if (!alvos.length) return saida;
+  var refazer = montarPedidos(defBlocos, pedidos, linhasDe, saida, pelaPista);
 
-  var completos = lerLinhas(defBlocos, alvos);
-  var porLinha = {};
-  completos.forEach(function (r) { porLinha[r._linha] = r; });
-
-  pedidos.forEach(function (p) {
-    if (saida[p.id]) return;
-    var registros = linhasDe[p.id].map(function (l) { return porLinha[l]; }).filter(Boolean);
-    saida[p.id] = montarGeracao(defBlocos, registros, p.id, p.manifesto);
-  });
+  /* A pista não valeu (a aba foi compactada, uma linha saiu do lugar):
+     o índice de duas colunas diz onde os blocos estão de verdade. */
+  if (refazer.length) {
+    var outras = {};
+    refazer.forEach(function (p) {
+      outras[p.id] = linhasDaGeracao(defBlocos, p.id, p.manifesto.geracao);
+    });
+    montarPedidos(defBlocos, refazer, outras, saida, {});
+  }
 
   return saida;
+}
+
+/* Lê as linhas apontadas, monta cada geração e devolve os pedidos que
+   falharam POR PISTA — esses ainda têm uma segunda chance. */
+function montarPedidos(defBlocos, pedidos, linhasDe, saida, pelaPista) {
+  var alvos = [];
+  pedidos.forEach(function (p) { alvos = alvos.concat(linhasDe[p.id] || []); });
+
+  var porLinha = {};
+  if (alvos.length) {
+    lerLinhas(defBlocos, alvos).forEach(function (r) { porLinha[r._linha] = r; });
+  }
+
+  var refazer = [];
+
+  pedidos.forEach(function (p) {
+    var registros = (linhasDe[p.id] || []).map(function (l) { return porLinha[l]; }).filter(Boolean);
+    var montado = registros.length
+      ? montarGeracao(defBlocos, registros, p.id, p.manifesto)
+      : { ok: false, motivo: 'bloco_ausente' };
+
+    if (!montado.ok && pelaPista[p.id]) { refazer.push(p); return; }
+    saida[p.id] = montado;
+  });
+
+  return refazer;
 }
 
 /* ---------------------------------------------------------------------
@@ -1739,19 +2153,51 @@ function lerGeracoes(defBlocos, pedidos) {
 /* As linhas das gerações de um registro, menos as de `manter`
    ({ geracao: true }). */
 function linhasDeGeracoes(defBlocos, registroId, manter) {
-  var colId = defBlocos.registro;
-  var alvo = String(registroId);
   var guardar = manter || {};
-  return lerLeves(defBlocos)
-    .filter(function (r) { return String(r[colId]) === alvo && !guardar[String(r.geracao)]; })
-    .map(function (r) { return r._linha; });
+  var prefixo = String(registroId) + '\n';
+  var mapa = linhasPorValor(defBlocos, [defBlocos.registro, 'geracao']);
+
+  var linhas = [];
+  Object.keys(mapa).forEach(function (chave) {
+    if (chave.indexOf(prefixo) !== 0) return;
+    if (guardar[chave.slice(prefixo.length)]) return;
+    linhas = linhas.concat(mapa[chave]);
+  });
+  return linhas;
 }
 
-/* Apaga as gerações de um registro, menos as de `manter`. Chamado DENTRO
-   da trava: nada que um manifesto aponte sai daqui. Devolve quantas
-   linhas saíram. */
+/* Deixa em branco as linhas indicadas, em faixas contíguas — os blocos
+   de uma geração nascem juntos, então costuma ser uma chamada só.
+   Ninguém é deslocado: ver "O localizador". */
+function limparBlocos(defBlocos, linhas) {
+  var visto = {};
+  var ordenadas = [];
+  (linhas || []).forEach(function (l) {
+    var n = Number(l);
+    if (n >= 2 && !visto[n]) { visto[n] = true; ordenadas.push(n); }
+  });
+  if (!ordenadas.length) return 0;
+  ordenadas.sort(function (a, b) { return a - b; });
+
+  var i = 0;
+  while (i < ordenadas.length) {
+    var inicio = ordenadas[i];
+    var fim = inicio;
+    var j = i + 1;
+    while (j < ordenadas.length && ordenadas[j] === fim + 1) { fim = ordenadas[j]; j++; }
+    limparLinhas(defBlocos, inicio, fim - inicio + 1);
+    i = j;
+  }
+
+  return ordenadas.length;
+}
+
+/* Recolhe as gerações de um registro, menos as de `manter`. Chamado
+   DENTRO da trava: nada que um manifesto aponte sai daqui. As linhas
+   ficam em branco em vez de serem apagadas, para não deslocar os
+   localizadores das outras fichas. Devolve quantas linhas saíram. */
 function apagarGeracoes(defBlocos, registroId, manter) {
-  return apagarLinhas(defBlocos, linhasDeGeracoes(defBlocos, registroId, manter));
+  return limparBlocos(defBlocos, linhasDeGeracoes(defBlocos, registroId, manter));
 }
 
 /* As gerações de um registro, com linhas e data, para diagnóstico e

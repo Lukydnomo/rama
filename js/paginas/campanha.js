@@ -41,7 +41,13 @@
     mestre: false,
     aba: "visao",
     membros: [],
-    personagens: [],
+    /* null quer dizer "ainda não busquei" — diferente de [], que é
+       "busquei e a mesa está vazia". Abrir a campanha não busca: a
+       primeira aba é a Visão geral, que mostra participantes, e não
+       fichas. Quem precisa da mesa (Personagens, Combate, Notas) pede
+       quando é desenhada. */
+    personagens: null,
+    buscandoPersonagens: false,
     /* A resposta de erro quando a lista de personagens não veio. Sem
        isto, uma falha de rede aparecia como "nenhum personagem". */
     falhaPersonagens: null,
@@ -87,11 +93,12 @@
     pedidos: function () {
       var id = U.parametro("id");
       if (!id) return [];
+      /* Só o que a primeira tela usa: a campanha (com participantes e
+         marcas) e a capa. A mesa NÃO entra aqui — a Visão geral não
+         desenha ficha nenhuma, e carregá-la à toa era o pedido mais
+         caro da abertura. */
       return [
         { acao: "ler_campanha", campanhaId: id },
-        { acao: "listar_personagens_campanha", campanhaId: id },
-        /* A capa vem junto: a Visão geral é a primeira aba, e sem isto
-           ela abriria e pediria a imagem numa segunda viagem. */
         { acao: "ler_capa_campanha", campanhaId: id },
       ];
     },
@@ -100,6 +107,7 @@
   async function carregar(prontas) {
     var alvo = U.$("#painel-campanha");
     var prontasValidas = prontas && prontas.length >= 2 ? prontas : null;
+    var capaPronta = prontasValidas ? prontasValidas[1] : null;
 
     var r = prontasValidas ? prontasValidas[0] : await global.RAMAApi.lerCampanha(estado.campanhaId);
     if (!r.ok) {
@@ -113,19 +121,12 @@
        não há histórico, não há nada além da existência da campanha. */
     if (estado.papel === "espectador") {
       montarContexto();
-      if (prontasValidas && prontasValidas[2]) guardarCapa(prontasValidas[2]);
+      if (capaPronta) guardarCapa(capaPronta);
       desenharEspectador();
       return;
     }
 
-    var rp = prontasValidas
-      ? prontasValidas[1]
-      : await global.RAMAApi.listarPersonagensCampanha(estado.campanhaId);
-
-    estado.personagens = (rp.ok && rp.dados) || [];
-    estado.falhaPersonagens = rp.ok ? null : rp;
-
-    if (prontasValidas && prontasValidas[2]) guardarCapa(prontasValidas[2]);
+    if (capaPronta) guardarCapa(capaPronta);
 
     montarContexto();
     configurarHistorico();
@@ -163,7 +164,10 @@
       get campanhaId() { return estado.campanhaId; },
       get campanha() { return estado.campanha; },
       get membros() { return estado.membros; },
-      get personagens() { return estado.personagens; },
+      get personagens() { return estado.personagens || []; },
+      /* Falso enquanto a mesa não foi buscada: a aba mostra
+         "carregando" em vez de "nenhum personagem". */
+      temPersonagens: function () { return estado.personagens !== null; },
       get falhaPersonagens() { return estado.falhaPersonagens; },
       get rev() { return estado.rev; },
 
@@ -297,7 +301,7 @@
       if (estado.papel === "espectador") {
         /* Tirado da mesa de uma campanha pública: vira espectador. O que
            era da mesa sai da memória. */
-        estado.personagens = [];
+        estado.personagens = null;
         if (estado.sincronia) estado.sincronia.parar();
         desenharEspectador();
         UI.avisoAtencao("Você não participa mais desta campanha.");
@@ -305,7 +309,7 @@
       }
 
       if (papelAntes !== estado.papel) {
-        await buscarPersonagensEmSegundoPlano();
+        if (estado.personagens !== null) await buscarPersonagensEmSegundoPlano();
         UI.avisoAtencao(estado.mestre ? "Você agora é mestre desta campanha." : "Você agora é jogador nesta campanha.");
         desenhar();
         return;
@@ -316,7 +320,9 @@
       if (tem("membros")) notificar("membros");
     }
 
-    if (tem("personagens") || tem("membros")) {
+    /* Mesa que ninguém abriu não é buscada pela sincronização: quando
+       alguém abrir a aba, ela vem — já atualizada. */
+    if ((tem("personagens") || tem("membros")) && estado.personagens !== null) {
       await buscarPersonagensEmSegundoPlano();
       notificar("personagens");
     }
@@ -328,6 +334,7 @@
 
   async function buscarPersonagensEmSegundoPlano() {
     var rp = await global.RAMAApi.listarPersonagensCampanha(estado.campanhaId, { segundoPlano: true });
+    estado.buscandoPersonagens = false;
     if (rp.ok) {
       estado.personagens = rp.dados || [];
       estado.falhaPersonagens = null;
@@ -346,7 +353,7 @@
     }
 
     /* O que era desta campanha sai da memória da página. */
-    estado.personagens = [];
+    estado.personagens = null;
     estado.membros = [];
     estado.capa = { atualizadoEm: "", imagem: "", carregando: false, erro: null };
     estado.ouvintes = {};
@@ -391,12 +398,24 @@
     if (caixa) U.trocar(caixa, topo());
   }
 
+  /* As abas que desenham fichas da mesa. As outras não pagam por ela. */
+  var PRECISAM_DA_MESA = { personagens: true, combate: true, notas: true };
+
   function desenhar() {
     if (estado.semAcesso) return;
     var alvo = U.$("#painel-campanha");
     var visiveis = abasVisiveis();
     var secao = visiveis.filter(function (a) { return a.chave === estado.aba; })[0] || visiveis[0];
     estado.aba = secao.chave;
+
+    /* A aba que precisa da mesa e ainda não a tem: busca agora e
+       redesenha quando chegar. Uma busca por vez. */
+    if (PRECISAM_DA_MESA[estado.aba] && estado.personagens === null && !estado.buscandoPersonagens) {
+      estado.buscandoPersonagens = true;
+      buscarPersonagensEmSegundoPlano().then(function () {
+        if (!estado.semAcesso) desenhar();
+      });
+    }
 
     /* Os ouvintes são da aba que estava desenhada. */
     estado.ouvintes = {};
@@ -536,9 +555,10 @@
   }
 
   function cartaoDeMembro(m) {
-    var avatar = el("span.r-avatar", { "aria-hidden": "true" });
-    if (m.avatar) avatar.appendChild(el("img", { src: m.avatar, alt: "" }));
-    else avatar.textContent = U.iniciais(m.nome);
+    var avatar = el("span.r-avatar", { "aria-hidden": "true", texto: U.iniciais(m.nome) });
+    if (m.avatarVersao && global.RAMAImagens) {
+      global.RAMAImagens.aplicar(avatar, { tipo: "avatar", id: m.id, versao: m.avatarVersao });
+    }
 
     return el("div.membro", {}, [
       avatar,

@@ -313,6 +313,13 @@ por `doPost` como uma requisição de verdade. Entre elas:
   fora, e a jogadora tirada da mesa deixa de recebê-las na pergunta seguinte
 - a jogadora não opera o combate; lote com uma operação inválida não aplica nada;
   o mesmo `opId` repetido não é aplicado duas vezes
+- (v2.16) `ler_fotos` e `ler_avatares` devolvem imagem só de quem a conta alcança:
+  o dono do personagem e quem joga na mesma mesa que ele (espectador não); conta
+  ativa, no caso do avatar. Quem não alcança não recebe aquela chave na resposta —
+  e a resposta não distingue "não tem imagem" de "não pode ver"
+- (v2.16) a projeção do painel (coluna `resumo`) não muda regra nenhuma: ela é
+  recortada das MESMAS funções que montavam o cartão, e quem pode ver cada campo
+  continua sendo decidido a cada listagem, pelo papel de quem pede
 - (v2.15) outra conta não lê, ajusta, duplica, exclui nem sobrescreve uma ficha em
   blocos — nem pelo lote; não existe ação que leia blocos, gerações ou manifestos
   direto, e as ferramentas de diagnóstico, restauração e limpeza (`diagnosticarPersonagem`,

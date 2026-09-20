@@ -73,7 +73,9 @@
     var base = {
       id: p.id,
       nome: U.texto(p.nome) || "Sem nome",
-      foto: p.foto || "",
+      /* A versão da foto, não a foto: quem desenha pede a imagem a
+         js/imagens.js e reaproveita o que já baixou (v2.16). */
+      fotoVersao: p.fotoVersao || "",
       dono: p.dono || "",
       souDono: !!p.souDono,
       detalhado: p.detalhado !== false,

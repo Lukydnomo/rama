@@ -1220,6 +1220,154 @@ t.grupo("Ficha em blocos — pedidos e mensagens");
   t.ok("a ficha ilegível diz que nada foi alterado", /nada foi alterado nem apagado/i.test(RAMAApi.frase({ erro: "ficha_ilegivel" }).texto));
 }
 
+
+/* =====================================================================
+   IMAGENS SOB DEMANDA
+   ---------------------------------------------------------------------
+   As listagens deixaram de carregar foto e avatar (v2.16): elas mandam
+   a VERSÃO, e quem desenha pede a imagem. O que precisa valer:
+
+     · pedidos de vários cartões viram UMA viagem;
+     · o que já chegou não é pedido de novo — nem nesta página, nem na
+       próxima, porque fica guardado no aparelho;
+     · imagem trocada muda a versão e é buscada de novo;
+     · falha não envenena o cache: pedir de novo tenta de novo.
+   ===================================================================== */
+
+t.grupo("Imagens sob demanda");
+
+{
+  const imagens = { pedidos: [], resposta: null };
+
+  RAMAApi.lerFotos = (ids) => {
+    imagens.pedidos.push(ids.slice());
+    return Promise.resolve(imagens.resposta ? imagens.resposta(ids) : { ok: true, dados: {} });
+  };
+  RAMAApi.lerAvatares = RAMAApi.lerFotos;
+
+  const codigoDasImagens = await Deno.readTextFile(new URL("../js/imagens.js", import.meta.url));
+  const recarregarModulo = () => { (0, eval)(codigoDasImagens); };
+
+  imagens.resposta = (ids) => ({
+    ok: true,
+    dados: ids.reduce((mapa, id) => {
+      mapa[id] = { imagem: "data:image/png;base64," + id, versao: "v1" };
+      return mapa;
+    }, {}),
+  });
+
+  guardado.clear();
+  recarregarModulo();
+
+  const a = RAMAImagens.foto("p1", "v1");
+  const b = RAMAImagens.foto("p2", "v1");
+  const c = RAMAImagens.foto("p3", "v1");
+  const vieram = await Promise.all([a, b, c]);
+
+  t.igual("três cartões pedem numa viagem só", imagens.pedidos.length, 1);
+  t.iguais("  com os três ids", imagens.pedidos[0], ["p1", "p2", "p3"]);
+  t.igual("  e cada um recebe a sua imagem", vieram[1], "data:image/png;base64,p2");
+
+  imagens.pedidos.length = 0;
+  await RAMAImagens.foto("p1", "v1");
+  t.igual("a mesma imagem não é pedida de novo", imagens.pedidos.length, 0);
+
+  /* Outra página: o módulo começa do zero, o aparelho não. */
+  recarregarModulo();
+  imagens.pedidos.length = 0;
+  const guardadaEntrePaginas = await RAMAImagens.foto("p1", "v1");
+  t.igual("outra página reaproveita o que o aparelho guardou", imagens.pedidos.length, 0);
+  t.igual("  e a imagem é a mesma", guardadaEntrePaginas, "data:image/png;base64,p1");
+
+  imagens.pedidos.length = 0;
+  imagens.resposta = (ids) => ({
+    ok: true,
+    dados: ids.reduce((mapa, id) => {
+      mapa[id] = { imagem: "data:image/png;base64,NOVA-" + id, versao: "v2" };
+      return mapa;
+    }, {}),
+  });
+  const trocada = await RAMAImagens.foto("p1", "v2");
+  t.igual("versão nova é buscada de novo", imagens.pedidos.length, 1);
+  t.igual("  com a imagem nova", trocada, "data:image/png;base64,NOVA-p1");
+
+  imagens.pedidos.length = 0;
+  imagens.resposta = () => ({ ok: true, dados: {} });
+  const semFoto = await RAMAImagens.foto("p9", "v1");
+  t.igual("personagem sem foto volta vazio", semFoto, "");
+  await RAMAImagens.foto("p9", "v1");
+  t.igual("  e não é pedido de novo", imagens.pedidos.length, 1);
+
+  imagens.pedidos.length = 0;
+  imagens.resposta = () => ({ ok: false, erro: "sem_conexao" });
+  const falhou = await RAMAImagens.foto("p10", "v1");
+  t.igual("falha devolve vazio", falhou, "");
+  recarregarModulo();
+  imagens.resposta = (ids) => ({
+    ok: true,
+    dados: ids.reduce((mapa, id) => { mapa[id] = { imagem: "tarde-" + id, versao: "v1" }; return mapa; }, {}),
+  });
+  imagens.pedidos.length = 0;
+  const depoisDaFalha = await RAMAImagens.foto("p10", "v1");
+  t.igual("  e a falha não fica guardada: pedir de novo busca", depoisDaFalha, "tarde-p10");
+
+  /* Uma mesa grande não vira um pedido gigante. */
+  recarregarModulo();
+  guardado.clear();
+  imagens.pedidos.length = 0;
+  imagens.resposta = (ids) => ({
+    ok: true,
+    dados: ids.reduce((mapa, id) => { mapa[id] = { imagem: "x" + id, versao: "v1" }; return mapa; }, {}),
+  });
+  const muitos = [];
+  for (let i = 0; i < 30; i++) muitos.push(RAMAImagens.foto("m" + i, "v1"));
+  await Promise.all(muitos);
+  t.igual("trinta cartões viram duas viagens, não trinta", imagens.pedidos.length, 2);
+  t.igual("  a primeira com o máximo por viagem", imagens.pedidos[0].length, 24);
+}
+
+/* =====================================================================
+   A MEDIÇÃO DA VIAGEM
+   ---------------------------------------------------------------------
+   O backend, com o diagnóstico ligado, devolve quanto tempo passou
+   DENTRO dele. O transporte mede a viagem inteira. A diferença é rede —
+   e é isso que permite dizer "o servidor está lento" sem chutar.
+   ===================================================================== */
+
+t.grupo("Medição da viagem");
+
+{
+  const codigoDaRede = await Deno.readTextFile(new URL("../js/rede.js", import.meta.url));
+  const redeDeVerdade = globalThis.RAMARede;
+
+  globalThis.RAMA_CONFIG = { API_URL: "https://script.google.com/exec", TEMPO_LIMITE_MS: 5000 };
+  globalThis.AbortController = class { constructor() { this.signal = null; } abort() {} };
+
+  let resposta = { diag: { ms: 40, sheets: 7, celulas: 120, fichas: 0 } };
+  globalThis.fetch = async () => ({
+    ok: true,
+    status: 200,
+    text: async () => JSON.stringify(Object.assign({ ok: true }, resposta)),
+  });
+
+  (0, eval)(codigoDaRede);
+
+  await RAMARede.postar({ acao: "listar_personagens_campanha" });
+  const m1 = RAMARede.medicoes();
+  t.igual("a viagem fica registrada", m1.viagens, 1);
+  t.igual("  com o tempo do servidor separado", m1.ultimas[0].servidorMs, 40);
+  t.ok("  e o resto contado como rede", m1.ultimas[0].redeMs !== null && m1.ultimas[0].redeMs >= 0);
+  t.ok("  somando o total da viagem", m1.ultimas[0].totalMs >= 40 || m1.ultimas[0].totalMs >= 0);
+
+  resposta = {};
+  await RAMARede.postar({ acao: "sessao" });
+  const m2 = RAMARede.medicoes();
+  t.igual("sem diagnóstico ligado, a viagem continua medida", m2.viagens, 2);
+  t.igual("  e o tempo de servidor fica em branco", m2.ultimas[1].servidorMs, null);
+
+  globalThis.RAMARede = redeDeVerdade;
+}
+
 /* =====================================================================
    FIM
    ===================================================================== */

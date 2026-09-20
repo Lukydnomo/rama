@@ -571,7 +571,7 @@ const repetida = comoBruno({
 t.ok("reenviar a MESMA rolagem responde ok", repetida.ok);
 t.igual("  e avisa que já estava registrada", repetida.dados.repetida, true);
 t.igual("  e o histórico continua com uma linha",
-  comoAna({ acao: "listar_rolagens", campanhaId: privada }).dados.total, 1);
+  comoAna({ acao: "listar_rolagens", campanhaId: privada }).dados.rolagens.length, 1);
 
 t.grupo("Rolagem do mestre — visível e oculta");
 
@@ -629,7 +629,7 @@ t.recusa("o jogador não limpa o histórico",
   comoBruno({ acao: "limpar_rolagens", campanhaId: privada }), "sem_permissao");
 t.ok("o mestre limpa", comoAna({ acao: "limpar_rolagens", campanhaId: privada }).ok);
 t.igual("  e o histórico fica vazio",
-  comoAna({ acao: "listar_rolagens", campanhaId: privada }).dados.total, 0);
+  comoAna({ acao: "listar_rolagens", campanhaId: privada }).dados.rolagens.length, 0);
 
 /* =====================================================================
    DOCUMENTOS
@@ -813,8 +813,8 @@ t.ok("o diretório responde", diretorio.ok && diretorio.dados.length >= 3);
 
 const camposDoDiretorio = new Set();
 diretorio.dados.forEach((u) => Object.keys(u).forEach((k) => camposDoDiretorio.add(k)));
-t.igual("devolve SÓ id, usuario, nome e avatar",
-  [...camposDoDiretorio].sort().join(","), "avatar,id,nome,usuario");
+t.igual("devolve SÓ id, usuario, nome e a versão do avatar",
+  [...camposDoDiretorio].sort().join(","), "avatarVersao,id,nome,usuario");
 
 const proibidos = ["hashSenha", "salt", "token", "tokenHash", "iteracoes", "pepper", "senha"];
 t.ok("nenhum campo interno vaza no diretório",
@@ -1231,7 +1231,7 @@ t.grupo("Rolagem repetida");
     terceira.ok && terceira.dados.repetida === true);
 
   const historico = comoJogador({ acao: "listar_rolagens", campanhaId: campanha });
-  t.igual("e o histórico tem UMA linha", historico.dados.total, 1);
+  t.igual("e o histórico tem UMA linha", historico.dados.rolagens.length, 1);
   t.igual("com o resultado original", historico.dados.rolagens[0].resultado.total, 17);
 })();
 
@@ -1257,25 +1257,52 @@ t.grupo("Histórico volumoso");
     });
   }
 
-  const pagina1 = comoJogador({ acao: "listar_rolagens", campanhaId: campanha, limite: 25, pulo: 0 });
+  const pagina1 = comoJogador({ acao: "listar_rolagens", campanhaId: campanha, limite: 25 });
   t.igual("a primeira página traz 25", pagina1.dados.rolagens.length, 25);
-  t.igual("o total conta todas", pagina1.dados.total, 121);
   t.ok("e não é o fim", pagina1.dados.fim === false);
+  t.ok("  com o cursor da próxima", typeof pagina1.dados.proximo === "string" && pagina1.dados.proximo.length > 0);
 
   t.ok("o resultado de cada rolagem veio junto",
     pagina1.dados.rolagens.every((r) => r.resultado && typeof r.resultado.total === "number"));
 
-  const pagina2 = comoJogador({ acao: "listar_rolagens", campanhaId: campanha, limite: 25, pulo: 25 });
+  const pagina2 = comoJogador({ acao: "listar_rolagens", campanhaId: campanha, limite: 25, cursor: pagina1.dados.proximo });
   const ids1 = new Set(pagina1.dados.rolagens.map((r) => r.id));
   t.ok("a segunda página não repete a primeira",
     pagina2.dados.rolagens.every((r) => !ids1.has(r.id)));
+  t.ok("  e continua de onde a primeira parou",
+    pagina2.dados.rolagens[0].criadoEm <= pagina1.dados.rolagens[24].criadoEm);
 
-  const ultima = comoJogador({ acao: "listar_rolagens", campanhaId: campanha, limite: 25, pulo: 100 });
-  t.igual("a última página traz o resto", ultima.dados.rolagens.length, 21);
-  t.ok("e diz que acabou", ultima.dados.fim === true);
+  const todas = todasAsRolagens(comoJogador, campanha);
+  t.igual("as páginas cobrem o histórico inteiro", todas.length, 121);
+  t.igual("  sem repetir nenhuma", new Set(todas).size, 121);
+  t.igual("  em ordem, da mais nova para a mais velha",
+    todas.slice(0, 3).join(","), ["rol-0119", "rol-0118", "rol-0117"].join(","));
+
+  /* Uma rolagem nova no topo enquanto alguém pagina: a página seguinte
+     não pode repetir nem pular nada. É para isso que o cursor existe. */
+  const meio = comoJogador({ acao: "listar_rolagens", campanhaId: campanha, limite: 30 });
+  comoJogador({
+    acao: "registrar_rolagem", campanhaId: campanha, personagemId: ficha,
+    rolagemId: "rol-intrusa-0001", tipo: "livre", nome: "No meio da paginação",
+    dados: { formula: "1d6", total: 4, dados: [4] },
+  });
+  const seguinte = comoJogador({ acao: "listar_rolagens", campanhaId: campanha, limite: 30, cursor: meio.dados.proximo });
+  const idsDoMeio = new Set(meio.dados.rolagens.map((r) => r.id));
+  t.ok("uma rolagem nova no topo não faz a página seguinte repetir",
+    seguinte.dados.rolagens.every((r) => !idsDoMeio.has(r.id)));
+  t.ok("  nem pular: a mais velha da primeira e a mais nova da segunda são vizinhas",
+    seguinte.dados.rolagens[0].id === "rol-" + String(119 - 30).padStart(4, "0"));
 
   t.igual("o limite é limitado pelo servidor",
-    comoJogador({ acao: "listar_rolagens", campanhaId: campanha, limite: 99999 }).dados.rolagens.length, 121);
+    comoJogador({ acao: "listar_rolagens", campanhaId: campanha, limite: 99999 }).dados.rolagens.length, 122);
+
+  /* O contrato antigo (`pulo`), para um site ainda não publicado. */
+  const primeiraPorPulo = comoJogador({ acao: "listar_rolagens", campanhaId: campanha, limite: 25 });
+  const segundaPorPulo = comoJogador({ acao: "listar_rolagens", campanhaId: campanha, limite: 25, pulo: 25 });
+  const idsDaPrimeira = new Set(primeiraPorPulo.dados.rolagens.map((r) => r.id));
+  t.igual("o `pulo` da v2.15 continua paginando", segundaPorPulo.dados.rolagens.length, 25);
+  t.ok("  sem repetir a primeira página",
+    segundaPorPulo.dados.rolagens.every((r) => !idsDaPrimeira.has(r.id)));
 
   /* A rolagem oculta do mestre continua fora da resposta do jogador —
      a filtragem acontece antes da paginação, e não depois. */
@@ -1287,11 +1314,13 @@ t.grupo("Histórico volumoso");
   });
 
   const doJogador = comoJogador({ acao: "listar_rolagens", campanhaId: campanha, limite: 200 });
-  t.igual("o jogador não vê a rolagem oculta", doJogador.dados.total, 121);
+  t.igual("o jogador não vê a rolagem oculta", doJogador.dados.rolagens.length, 122);
   t.ok("nem o resultado dela em lugar nenhum",
     JSON.stringify(doJogador).indexOf("Nos bastidores") < 0);
   t.igual("o mestre vê as suas",
-    comoMestre({ acao: "listar_rolagens", campanhaId: campanha, limite: 200 }).dados.total, 122);
+    comoMestre({ acao: "listar_rolagens", campanhaId: campanha, limite: 200 }).dados.rolagens.length, 123);
+  t.igual("  e a filtragem não deixa buraco na paginação do jogador",
+    new Set(todasAsRolagens(comoJogador, campanha, 10)).size, 122);
 })();
 
 /* =====================================================================
@@ -2536,8 +2565,39 @@ const manifestoDoPersonagem = (id) => {
   const v = (linhaDoPersonagem(id) || [])[colunaDe("PERSONAGENS", "armazenamento")];
   return v ? JSON.parse(v) : null;
 };
+/* Todas as rolagens que uma conta alcança, página por página, pelo
+   cursor. Devolve os ids na ordem em que chegaram — é com isto que os
+   testes conferem total, ordem, repetição e buraco. */
+function todasAsRolagens(como, campanhaId, limite) {
+  const ids = [];
+  let cursor = null;
+  for (let volta = 0; volta < 80; volta++) {
+    const r = como({ acao: "listar_rolagens", campanhaId, limite: limite || 25, cursor });
+    if (!r.ok) break;
+    r.dados.rolagens.forEach((x) => ids.push(x.id));
+    if (r.dados.fim || !r.dados.proximo) break;
+    cursor = r.dados.proximo;
+  }
+  return ids;
+}
+
 const blocosDoPersonagem = (id) => linhasDe("PERSONAGENS_BLOCOS").filter((l) => l[0] === id);
 const geracoesNaAba = (id) => new Set(blocosDoPersonagem(id).map((l) => l[1])).size;
+
+/* Deixa o manifesto como a v2.15 o escrevia: sem localizador. É assim
+   que se testa o caminho do índice — o de toda ficha gravada antes
+   desta atualização. */
+const semLocalizador = (id) => {
+  const linha = linhaDoPersonagem(id);
+  const coluna = colunaDe("PERSONAGENS", "armazenamento");
+  const m = JSON.parse(linha[coluna]);
+  delete m.local;
+  delete m.reutilizavel;
+  if (m.anterior) delete m.anterior.local;
+  linha[coluna] = JSON.stringify(m);
+  reiniciarExecucao();
+  return m;
+};
 const maiorCelula = () => {
   let maior = 0;
   ambiente.planilha.folhas.forEach((f) => f.linhas.forEach((l) => l.forEach((v) => {
@@ -2810,11 +2870,25 @@ t.grupo("Blocos — salvar muitas vezes não acumula, e cada ficha só mexe nos 
     if (r.ok) rev = r.rev;
   }
   t.igual("doze gravações seguidas, todas aceitas", rev, 13);
-  t.igual("só duas gerações ficam guardadas: a que vale e a anterior", geracoesNaAba(id), 2);
+  /* v2.16: ficam TRÊS faixas vivas — a que vale, a anterior (ponto de
+     volta) e a reutilizável, que é onde a próxima gravação escreve. */
+  t.igual("três faixas ficam guardadas: a que vale, a anterior e a reutilizável", geracoesNaAba(id), 3);
   const m = manifestoDoPersonagem(id);
   t.igual("  a anterior é a do manifesto", blocosDoPersonagem(id).some((l) => l[1] === m.anterior.geracao), true);
+  t.igual("  e a reutilizável também", blocosDoPersonagem(id).some((l) => l[1] === m.reutilizavel.geracao), true);
+  t.igual("  a ficha ocupa três faixas de blocos, não doze", blocosDoPersonagem(id).length, 3 * m.blocos);
+
+  /* O que a aba NÃO faz: crescer. A gravação escreve sobre a faixa
+     reutilizável, então mais gravações não pedem mais linhas. */
+  const linhasAntes = linhasDe("PERSONAGENS_BLOCOS").length;
+  for (let i = 0; i < 5; i++) {
+    const lida = comoDavi({ acao: "ler_personagem", personagemId: id });
+    comoDavi({ acao: "salvar_personagem", personagemId: id, rev: lida.rev,
+      dados: Object.assign({}, lida.dados, { classe: "mais " + i }) });
+  }
+  t.igual("mais cinco gravações não acrescentam uma linha sequer", linhasDe("PERSONAGENS_BLOCOS").length, linhasAntes);
   t.igual("os blocos da outra ficha não foram tocados", JSON.stringify(blocosDoPersonagem(outra)), blocosDaVizinha);
-  t.igual("e a última gravação é a que abre", comoDavi({ acao: "ler_personagem", personagemId: id }).dados.classe, "volta 11");
+  t.igual("e a última gravação é a que abre", comoDavi({ acao: "ler_personagem", personagemId: id }).dados.classe, "mais 4");
 })();
 
 /* ---------------------------------------------------------------------- */
@@ -2963,12 +3037,22 @@ t.grupo("Blocos — bloco ausente, duplicado ou corrompido vira erro, nunca fich
   t.ok("um bloco repetido, idêntico, não impede a leitura", comoGil({ acao: "ler_personagem", personagemId: id }).ok);
   restaurar();
 
-  /* Duplicado diferente: não há como saber qual vale. */
+  /* Duplicado diferente, longe da faixa: o localizador diz exatamente
+     quais linhas são a geração, e o texto continua provado pelo
+     SHA-256. Uma linha perdida na aba não derruba mais a ficha. */
   const trocado = f.linhas[linhaDoBloco(1)].slice();
   trocado[6] = trocado[6].slice(0, 20) + "!" + trocado[6].slice(21);
   f.linhas.push(trocado);
+  reiniciarExecucao();
+  t.ok("um bloco repetido fora da faixa não confunde a leitura",
+    comoGil({ acao: "ler_personagem", personagemId: id }).ok);
+
+  /* Sem localizador (manifesto gravado pela v2.15), quem acha os blocos
+     é o índice — e aí dois blocos diferentes na mesma posição voltam a
+     ser ambíguos, como antes. */
+  semLocalizador(id);
   const dup = comoGil({ acao: "ler_personagem", personagemId: id });
-  t.recusa("dois blocos diferentes na mesma posição: erro", dup, "ficha_ilegivel");
+  t.recusa("sem localizador, dois blocos diferentes na mesma posição: erro", dup, "ficha_ilegivel");
   t.igual("  com o motivo", dup.motivo, "bloco_duplicado");
   restaurar();
 
@@ -3040,37 +3124,71 @@ t.grupo("Blocos — bloco ausente, duplicado ou corrompido vira erro, nunca fich
 })();
 
 /* ---------------------------------------------------------------------- */
-t.grupo("Blocos — leitura concorrente com uma gravação que desloca as linhas");
+t.grupo("Blocos — concorrência: a gravação não desloca, e a pista velha não engana");
 
 (() => {
   preparar();
   const hel = novaConta("hel");
   const comoHel = comoFn(hel);
 
-  /* Duas fichas. A de baixo (Leitora) é lida; a de cima (Escritora) é
-     regravada no meio da leitura, e a limpeza dela apaga linhas ACIMA dos
-     blocos da Leitora — que sobem de lugar. */
+  /* Duas fichas grandes. A de cima (Escritora) é regravada no meio da
+     leitura da de baixo (Leitora).
+
+     Até a v2.15 isso deslocava as linhas da Leitora — a limpeza apagava
+     linhas ACIMA dela — e a leitura precisava perceber e recomeçar.
+     Desde a v2.16 a gravação escreve sobre a própria faixa reutilizável
+     e deixa em branco o que sai: ninguém é deslocado, e a leitura da
+     Leitora atravessa a gravação da Escritora sem perceber. */
   const escritora = comoHel({ acao: "criar_personagem", dados: fichaGrande("Escritora", "e".repeat(100000)) }).dados.id;
   let le = comoHel({ acao: "ler_personagem", personagemId: escritora });
   comoHel({ acao: "salvar_personagem", personagemId: escritora, rev: le.rev, dados: Object.assign({}, le.dados, { classe: "2" }) });
   const conteudoLeitora = "Leitora " + "l".repeat(100000);
   const leitora = comoHel({ acao: "criar_personagem", dados: fichaGrande("Leitora", conteudoLeitora) }).dados.id;
+  const linhasDaLeitora = () => blocosDoPersonagem(leitora).length;
+  const ondeEstaLeitora = JSON.stringify(manifestoDoPersonagem(leitora).local);
 
-  let varreduras = 0;
-  ambiente.antesDe({ aba: "PERSONAGENS_BLOCOS", metodo: "getValues", vez: 2 }, () => {
+  let entrou = 0;
+  ambiente.antesDe({ aba: "PERSONAGENS_BLOCOS", metodo: "getValues", vez: 1 }, () => {
     /* Outra execução, com a própria memória — como no Apps Script. */
     const minha = globalThis._EXEC;
     const ultima = comoHel({ acao: "ler_personagem", personagemId: escritora });
     comoHel({ acao: "salvar_personagem", personagemId: escritora, rev: ultima.rev, dados: Object.assign({}, ultima.dados, { classe: "3" }) });
     globalThis._EXEC = minha;
-    varreduras++;
+    entrou++;
   });
 
   const lida = comoHel({ acao: "ler_personagem", personagemId: leitora });
-  t.igual("a gravação concorrente aconteceu no meio da leitura", varreduras, 1);
-  t.ok("a leitura percebe as linhas deslocadas, lê de novo e devolve a ficha inteira",
+  t.igual("a gravação concorrente aconteceu no meio da leitura", entrou, 1);
+  t.ok("a leitura devolve a ficha inteira mesmo assim",
     lida.ok && lida.dados.anotacoes.soltas[0].conteudo === conteudoLeitora);
+  t.igual("  e os blocos da Leitora não saíram do lugar", JSON.stringify(manifestoDoPersonagem(leitora).local), ondeEstaLeitora);
   t.igual("a outra gravação entrou normalmente", comoHel({ acao: "ler_personagem", personagemId: escritora }).dados.classe, "3");
+  ambiente.removerGanchos();
+
+  /* A manutenção, essa, desloca mesmo: limparBlocosOrfaos apaga linhas.
+     Depois dela a pista do manifesto aponta para o lugar errado — e a
+     leitura tem de achar os blocos pelo índice, sem devolver nada
+     pela metade. */
+  const f = folhaDe("PERSONAGENS_BLOCOS");
+  f.linhas.splice(1, 0, ["fantasma-velho", "g-zz", 0, 1, 1, "2020-01-01T00:00:00.000Z", "RB|a|RB"]);
+  reiniciarExecucao();
+  t.ok("a pista aponta para a linha errada depois que alguém entrou na frente",
+    linhasDaLeitora() > 0 && (() => {
+      const m = manifestoDoPersonagem(leitora);
+      const linha = linhasDe("PERSONAGENS_BLOCOS")[m.local.linha - 2];
+      return !linha || linha[0] !== leitora;
+    })());
+  const depoisDoDeslocamento = comoHel({ acao: "ler_personagem", personagemId: leitora });
+  t.ok("mesmo assim a ficha abre inteira, pelo índice",
+    depoisDoDeslocamento.ok && depoisDoDeslocamento.dados.anotacoes.soltas[0].conteudo === conteudoLeitora);
+
+  const consertada = comoHel({ acao: "salvar_personagem", personagemId: leitora,
+    rev: depoisDoDeslocamento.rev, dados: Object.assign({}, depoisDoDeslocamento.dados, { classe: "C" }) });
+  t.ok("e a gravação seguinte grava a pista certa", consertada.ok &&
+    (() => {
+      const m = manifestoDoPersonagem(leitora);
+      return linhasDe("PERSONAGENS_BLOCOS")[m.local.linha - 2][0] === leitora;
+    })());
 
   /* Duas gravações a partir da mesma revisão: uma entra, a outra é conflito. */
   const base = comoHel({ acao: "ler_personagem", personagemId: leitora });
@@ -3124,7 +3242,7 @@ t.grupo("Blocos — mesa: ajuste rápido do mestre, vínculo, cartões e combate
   const depois = comoJogadora({ acao: "ler_personagem", personagemId: id });
   t.igual("  o PV ficou no último valor", depois.dados.ordem.recursos.pv, 15);
   t.ok("  e o diário de 150 mil caracteres continua inteiro", depois.dados.anotacoes.soltas[0].conteudo === diario);
-  t.igual("  sem acumular gerações", geracoesNaAba(id), 2);
+  t.igual("  sem acumular gerações", geracoesNaAba(id), 3);
 
   const repetido = comoMestra({ acao: "ajustar_personagem", personagemId: id, rev: 6, alvo: "recurso", itemId: "pv",
     campo: "atual", valor: 15, campanhaId: mesa, operacaoId: "op-ajuste-4" });
@@ -3168,10 +3286,34 @@ t.grupo("Blocos — mesa: ajuste rápido do mestre, vínculo, cartões e combate
   const m = manifestoDoPersonagem(id);
   f.linhas.splice(f.linhas.findIndex((l) => l[0] === id && l[1] === m.geracao), 1);
   reiniciarExecucao();
-  const ilegivel = comoMestra({ acao: "listar_personagens_campanha", campanhaId: mesa }).dados.find((c) => c.id === id);
-  t.ok("o cartão de uma ficha que não se monta vem marcado, sem recursos nem controles",
-    !!ilegivel && ilegivel.fichaIlegivel === true && ilegivel.podeEditarRecursos === false && !ilegivel.ordem && !ilegivel.recursos);
+  const cartaoPerdido = comoMestra({ acao: "listar_personagens_campanha", campanhaId: mesa }).dados.find((c) => c.id === id);
+  /* v2.16: o painel não abre mais a ficha para desenhar o cartão — ele
+     lê a projeção, que continua valendo. Então o cartão segue de pé com
+     os últimos números confirmados, e o erro aparece onde ele importa:
+     ao abrir e ao ajustar, que são os caminhos que tocam a ficha. */
+  t.ok("com a projeção em dia, o cartão continua de pé mesmo com o bloco perdido",
+    !!cartaoPerdido && cartaoPerdido.fichaIlegivel !== true && !!cartaoPerdido.ordem &&
+    cartaoPerdido.ordem.recursos.pv === 15);
+  t.recusa("  mas abrir a ficha recusa", comoMestra({ acao: "ler_personagem", personagemId: id }), "ficha_ilegivel");
+  t.recusa("  e o ajuste rápido recusa, sem gravar por cima",
+    comoMestra({ acao: "ajustar_personagem", personagemId: id, rev: cartaoPerdido.rev, alvo: "status", itemId: "s1",
+      campo: "atual", valor: 3, campanhaId: mesa }), "ficha_ilegivel");
   t.ok("  e a mesa continua carregando as outras", comoMestra({ acao: "listar_personagens_campanha", campanhaId: mesa }).ok);
+
+  /* Sem projeção que valha — ficha ainda no formato antigo, corrompida —
+     o cartão volta a dizer que não se montou. */
+  const antiga = comoJogadora({ acao: "criar_personagem", dados: { nome: "Antiga", tipoFicha: "universal",
+    status: [{ id: "s1", nome: "Vida", atual: 4, maximo: 9 }] } }).dados.id;
+  comoJogadora({ acao: "vincular_personagem", campanhaId: mesa, personagemId: antiga });
+  const linhaAntiga = folhaDe("PERSONAGENS").linhas.find((l) => l[0] === antiga);
+  linhaAntiga[9] = '{"nome":"Antiga"';   /* JSON cortado */
+  linhaAntiga[10] = "";                   /* sem manifesto: formato antigo */
+  linhaAntiga[11] = "";                   /* sem projeção */
+  reiniciarExecucao();
+  const semProjecao = comoMestra({ acao: "listar_personagens_campanha", campanhaId: mesa }).dados.find((c) => c.id === antiga);
+  t.ok("sem projeção, o cartão de uma ficha que não se monta vem marcado, sem recursos nem controles",
+    !!semProjecao && semProjecao.fichaIlegivel === true && semProjecao.podeEditarRecursos === false &&
+    !semProjecao.ordem && !semProjecao.recursos);
 })();
 
 /* ---------------------------------------------------------------------- */
@@ -3337,6 +3479,627 @@ t.grupo("Blocos — limite total da ficha: explícito, com números, sem gravar 
     dados: Object.assign({}, lida.dados, fichaGrande("Enorme", "m".repeat(LIMITE_TOTAL_FICHA + 10))) });
   t.recusa("salvar passando do limite também é recusado", crescida, "ficha_grande_demais");
   t.ok("  e a versão guardada continua a anterior", comoLeo({ acao: "ler_personagem", personagemId: quase.dados.id }).rev === lida.rev);
+})();
+
+/* =====================================================================
+   A PROJEÇÃO DO PAINEL (v2.16)
+   ---------------------------------------------------------------------
+   O painel da mesa parou de remontar as fichas para desenhar os
+   cartões: ele lê a projeção gravada junto com a ficha. O que precisa
+   valer, e é o que os casos abaixo trancam:
+
+     · desenhar a mesa não abre ficha nenhuma nem lê bloco nenhum;
+     · o cartão mostra exatamente o que mostrava quando vinha da ficha;
+     · toda gravação que muda o painel atualiza a projeção junto —
+       salvar, ajuste rápido, resumo de recursos, vínculo, duplicação;
+     · projeção ausente, velha ou de outra versão do formato não dá
+       cartão errado: dá o cartão certo, remontando aquela ficha;
+     · listar NUNCA grava para consertar projeção.
+   ===================================================================== */
+
+t.grupo("Projeção — cartões sem abrir ficha");
+
+(() => {
+  preparar();
+  const mestra = novaConta("mestra");
+  const jogadora = novaConta("jogadora");
+  const comoMestra = comoFn(mestra);
+  const comoJogadora = comoFn(jogadora);
+
+  const mesa = comoMestra({ acao: "criar_campanha", dados: { nome: "Projeção" } }).dados.id;
+  comoMestra({ acao: "salvar_participantes", campanhaId: mesa, membros: [{ userId: jogadora.id, papel: "jogador" }] });
+
+  const fichaDeOrdem = {
+    nome: "Vitória", tipoFicha: "ordem", schemaVersion: 8,
+    ordem: {
+      classe: "combatente", origem: "militar", trilha: "aniquilador", nex: 45,
+      atributos: { agi: 2, for: 3, int: 1, pre: 1, vig: 2 },
+      recursos: { pv: 18, pe: 4, san: 20 },
+      escolhas: [], personalizacoes: [], excluidas: [],
+      organizacao: { habilidades: "nome" },
+    },
+    resumoRecursos: { pv: 30, pe: 9, san: 24 },
+    inventario: { limite: 20, itens: [{ id: "i1", tipo: "armadura", nome: "Colete", defesa: 5, ordem: { categoria: "I" }, descricao: "d".repeat(2000) }] },
+    anotacoes: { pastas: [], soltas: [{ id: "n1", titulo: "Diário", conteudo: "z".repeat(90000) }] },
+    pericias: [], habilidades: [], status: [], atributos: [],
+  };
+
+  const universal = {
+    nome: "Base", tipoFicha: "universal", schemaVersion: 8,
+    atributos: [{ id: "a1", nome: "Força", sigla: "FOR", valor: 3, dado: "d20" }],
+    status: [{ id: "s1", nome: "Vida", atual: 12, maximo: 20 }],
+    anotacoes: { pastas: [], soltas: [{ id: "n1", titulo: "x", conteudo: "y".repeat(50000) }] },
+  };
+
+  const daJogadora = comoJogadora({ acao: "criar_personagem", dados: fichaDeOrdem }).dados.id;
+  const daMestra = comoMestra({ acao: "criar_personagem", dados: universal }).dados.id;
+  comoJogadora({ acao: "vincular_personagem", campanhaId: mesa, personagemId: daJogadora });
+  comoMestra({ acao: "vincular_personagem", campanhaId: mesa, personagemId: daMestra });
+
+  /* Com o diagnóstico ligado a resposta diz quantas fichas foram
+     remontadas e quantos blocos foram lidos. É a prova direta. */
+  ambiente.propriedades.set("RAMA_DIAGNOSTICO", "1");
+
+  const comProjecao = comoMestra({ acao: "listar_personagens_campanha", campanhaId: mesa });
+  t.igual("o painel da mesa não remonta ficha nenhuma", comProjecao.diag.fichas, 0);
+  t.igual("  nem lê um bloco sequer", comProjecao.diag.blocos, 0);
+  t.igual("  e as duas projeções vieram da coluna", comProjecao.diag.resumos, "2/2");
+
+  const cartaoOrdem = comProjecao.dados.find((c) => c.id === daJogadora);
+  t.igual("o cartão de Ordem traz o NEX", cartaoOrdem.ordem.nex, 45);
+  t.igual("  os recursos gravados", cartaoOrdem.ordem.recursos.pv, 18);
+  t.igual("  o resumo de máximos", cartaoOrdem.resumoRecursos.pv, 30);
+  t.igual("  a defesa do item do inventário", cartaoOrdem.inventario.itens[0].defesa, 5);
+  t.ok("  e nenhum texto longo da ficha", JSON.stringify(cartaoOrdem).indexOf("zzzz") < 0 &&
+    JSON.stringify(cartaoOrdem).indexOf("dddd") < 0);
+
+  const cartaoUniversal = comProjecao.dados.find((c) => c.id === daMestra);
+  t.igual("o cartão universal traz o status", cartaoUniversal.status[0].atual, 12);
+  t.igual("  e o atributo", cartaoUniversal.atributos[0].valor, 3);
+
+  /* A prova de que a projeção diz a mesma coisa que a ficha: apagada a
+     coluna, o cartão é remontado — e sai idêntico. */
+  const semColuna = (id) => {
+    const linha = linhaDoPersonagem(id);
+    linha[colunaDe("PERSONAGENS", "resumo")] = "";
+    reiniciarExecucao();
+  };
+  semColuna(daJogadora);
+  semColuna(daMestra);
+
+  const remontado = comoMestra({ acao: "listar_personagens_campanha", campanhaId: mesa });
+  t.igual("sem projeção, o painel remonta as fichas", remontado.diag.fichas, 2);
+  t.iguais("  e o cartão sai igualzinho",
+    remontado.dados.find((c) => c.id === daJogadora), cartaoOrdem);
+  t.iguais("  inclusive o universal",
+    remontado.dados.find((c) => c.id === daMestra), cartaoUniversal);
+
+  /* E listar não conserta gravando: a coluna continua vazia. */
+  t.igual("listar não grava para consertar a projeção",
+    String(linhaDoPersonagem(daJogadora)[colunaDe("PERSONAGENS", "resumo")] || ""), "");
+
+  /* Projeção de outra versão do formato, e projeção corrompida. */
+  const porProjecao = (id, valor) => {
+    linhaDoPersonagem(id)[colunaDe("PERSONAGENS", "resumo")] = valor;
+    reiniciarExecucao();
+  };
+  porProjecao(daJogadora, JSON.stringify({ v: 99, rev: 2, tipo: "ordem", ordem: { nex: 1 } }));
+  const futura = comoMestra({ acao: "listar_personagens_campanha", campanhaId: mesa });
+  t.igual("projeção de uma versão futura é ignorada", futura.dados.find((c) => c.id === daJogadora).ordem.nex, 45);
+
+  porProjecao(daJogadora, "{isto não é json");
+  const quebrada = comoMestra({ acao: "listar_personagens_campanha", campanhaId: mesa });
+  t.igual("projeção corrompida é ignorada", quebrada.dados.find((c) => c.id === daJogadora).ordem.nex, 45);
+
+  /* Projeção grande demais não é gravada: fica o marcador, e o painel
+     remonta aquela ficha. */
+  const manifestoDela = manifestoDoPersonagem(daJogadora);
+  porProjecao(daJogadora, JSON.stringify({ v: 1, rev: 2, geracao: manifestoDela.geracao, grande: true }));
+  const marcada = comoMestra({ acao: "listar_personagens_campanha", campanhaId: mesa });
+  t.ok("projeção marcada como grande demais manda remontar a ficha", marcada.diag.fichas >= 1);
+  t.igual("  e o cartão sai certo do mesmo jeito", marcada.dados.find((c) => c.id === daJogadora).ordem.nex, 45);
+
+  ambiente.propriedades.set("RAMA_DIAGNOSTICO", "0");
+  t.igual("com o diagnóstico desligado a resposta não leva números",
+    comoMestra({ acao: "listar_personagens_campanha", campanhaId: mesa }).diag, undefined);
+  ambiente.propriedades.set("RAMA_DIAGNOSTICO", "1");
+
+  /* --------- toda gravação que muda o painel atualiza a projeção --------- */
+
+  /* De volta ao normal: as duas fichas ganham projeção outra vez, para
+     os casos abaixo medirem a gravação e não a bagunça de cima. */
+  [daJogadora, daMestra].forEach((id) => {
+    const r = comoMestra({ acao: "ler_personagem", personagemId: id });
+    comoMestra({ acao: "salvar_personagem", personagemId: id, rev: r.rev, dados: r.dados });
+  });
+
+  const cartaoDe = (como, id) => {
+    const r = como({ acao: "listar_personagens_campanha", campanhaId: mesa });
+    return { cartao: r.dados.find((c) => c.id === id), diag: r.diag };
+  };
+
+  const lida = comoJogadora({ acao: "ler_personagem", personagemId: daJogadora });
+  const nova = JSON.parse(JSON.stringify(lida.dados));
+  nova.ordem.nex = 50;
+  nova.resumoRecursos = { pv: 33, pe: 10, san: 26 };
+  comoJogadora({ acao: "salvar_personagem", personagemId: daJogadora, rev: lida.rev, dados: nova });
+
+  const depoisDeSalvar = cartaoDe(comoMestra, daJogadora);
+  t.igual("salvar a ficha atualiza o cartão", depoisDeSalvar.cartao.ordem.nex, 50);
+  t.igual("  sem remontar nada", depoisDeSalvar.diag.fichas, 0);
+  t.igual("  com o resumo novo", depoisDeSalvar.cartao.resumoRecursos.pv, 33);
+
+  const revAtual = comoJogadora({ acao: "ler_personagem", personagemId: daJogadora }).rev;
+  comoMestra({ acao: "ajustar_personagem", personagemId: daJogadora, rev: revAtual,
+    alvo: "recurso", itemId: "pv", campo: "atual", valor: 7, campanhaId: mesa });
+  const depoisDoAjuste = cartaoDe(comoMestra, daJogadora);
+  t.igual("o ajuste rápido do mestre atualiza o cartão", depoisDoAjuste.cartao.ordem.recursos.pv, 7);
+  t.igual("  sem remontar nada", depoisDoAjuste.diag.fichas, 0);
+
+  const revDoResumo = comoJogadora({ acao: "ler_personagem", personagemId: daJogadora }).rev;
+  comoMestra({ acao: "atualizar_resumo_personagem", personagemId: daJogadora, rev: revDoResumo,
+    resumo: { pv: 40, pe: 12, san: 28 } });
+  const depoisDoResumo = cartaoDe(comoMestra, daJogadora);
+  t.igual("o resumo de recursos atualiza o cartão", depoisDoResumo.cartao.resumoRecursos.pv, 40);
+  t.igual("  sem remontar nada", depoisDoResumo.diag.fichas, 0);
+
+  /* Vincular sobe a revisão sem tocar no conteúdo: a projeção acompanha
+     em vez de obrigar a remontar. */
+  comoJogadora({ acao: "vincular_personagem", campanhaId: mesa, personagemId: daJogadora, vincular: false });
+  comoJogadora({ acao: "vincular_personagem", campanhaId: mesa, personagemId: daJogadora });
+  const depoisDoVinculo = cartaoDe(comoMestra, daJogadora);
+  t.igual("tirar e pôr na mesa não obriga a remontar", depoisDoVinculo.diag.fichas, 0);
+  t.igual("  e o cartão continua certo", depoisDoVinculo.cartao.ordem.recursos.pv, 7);
+
+  /* Tirar a jogadora da mesa também sobe a revisão das fichas dela, e
+     por um caminho que não escreve a projeção: quem salva o cartão é a
+     conferência pela geração. */
+  comoMestra({ acao: "salvar_participantes", campanhaId: mesa, membros: [] });
+  comoMestra({ acao: "salvar_participantes", campanhaId: mesa, membros: [{ userId: jogadora.id, papel: "jogador" }] });
+  comoJogadora({ acao: "vincular_personagem", campanhaId: mesa, personagemId: daJogadora });
+  const depoisDeVoltar = cartaoDe(comoMestra, daJogadora);
+  t.igual("sair e voltar para a mesa não obriga a remontar", depoisDeVoltar.diag.fichas, 0);
+
+  const copia = comoJogadora({ acao: "duplicar_personagem", personagemId: daJogadora }).dados.id;
+  comoJogadora({ acao: "vincular_personagem", campanhaId: mesa, personagemId: copia });
+  const comCopia = comoMestra({ acao: "listar_personagens_campanha", campanhaId: mesa });
+  t.igual("a cópia nasce com projeção", comCopia.diag.fichas, 0);
+  t.igual("  e o cartão dela está certo",
+    comCopia.dados.find((c) => c.id === copia).ordem.recursos.pv, 7);
+
+  /* O combate desenha os mesmos números, e também sem abrir ficha. */
+  comoMestra({ acao: "salvar_combate", campanhaId: mesa, dados: {
+    nome: "Luta", estado: "ativo", visiveis: [jogadora.id],
+    participantes: [{ id: "cp1", tipo: "personagem", personagemId: daJogadora, nome: "Vitória", ordem: 10 }] } });
+  const combates = comoMestra({ acao: "listar_combates", campanhaId: mesa });
+  const participante = combates.dados[0].participantes[0];
+  t.igual("o combate mostra os recursos pela projeção",
+    participante.recursos.find((r) => r.chave === "pv").atual, 7);
+  t.igual("  sem remontar ficha", combates.diag.fichas, 0);
+
+  /* A ficha continua sendo a fonte: o que a projeção diz nunca entra
+     na ficha gravada. */
+  porProjecao(daJogadora, JSON.stringify({ v: 1, rev: 99, tipo: "ordem", ordem: { nex: 1, recursos: { pv: 1 } } }));
+  t.igual("a ficha aberta vem da ficha, não da projeção",
+    comoJogadora({ acao: "ler_personagem", personagemId: daJogadora }).dados.ordem.recursos.pv, 7);
+
+  ambiente.propriedades.set("RAMA_DIAGNOSTICO", "0");
+})();
+
+/* ---------------------------------------------------------------------- */
+t.grupo("Projeção — reconstrução em lotes");
+
+(() => {
+  preparar();
+  const rita = novaConta("rita");
+  const comoRita = comoFn(rita);
+
+  const ids = [];
+  for (let i = 0; i < 5; i++) {
+    ids.push(comoRita({ acao: "criar_personagem", dados: {
+      nome: "P" + i, tipoFicha: "universal",
+      status: [{ id: "s1", nome: "Vida", atual: i, maximo: 10 }],
+    } }).dados.id);
+  }
+
+  /* Como se as fichas tivessem sido gravadas por uma versão anterior:
+     manifesto em dia, coluna de projeção vazia. */
+  ids.forEach((id) => { linhaDoPersonagem(id)[colunaDe("PERSONAGENS", "resumo")] = ""; });
+  reiniciarExecucao();
+
+  const semNenhuma = ids.filter((id) => !String(linhaDoPersonagem(id)[colunaDe("PERSONAGENS", "resumo")] || "")).length;
+  t.igual("cinco fichas sem projeção", semNenhuma, 5);
+
+  const primeiro = reconstruirResumos(2);
+  t.ok("o primeiro lote refaz duas", /2 refeito/.test(primeiro));
+  t.ok("  e avisa quantas faltam", /Faltam 3/.test(primeiro));
+
+  reconstruirResumos(2);
+  const ultimo = reconstruirResumos(2);
+  t.ok("o último lote termina o serviço", /Não falta nenhum/.test(ultimo));
+
+  reiniciarExecucao();
+  const comProjecao = ids.filter((id) => String(linhaDoPersonagem(id)[colunaDe("PERSONAGENS", "resumo")] || "")).length;
+  t.igual("todas ficaram com projeção", comProjecao, 5);
+
+  t.ok("rodar de novo não tem o que fazer", /0 refeito/.test(reconstruirResumos(10)));
+
+  /* A reconstrução não mexe na ficha: nem revisão, nem manifesto. */
+  const rev = comoRita({ acao: "ler_personagem", personagemId: ids[0] }).rev;
+  t.igual("a revisão não sobe", rev, 1);
+  t.ok("e a ficha continua abrindo",
+    comoRita({ acao: "ler_personagem", personagemId: ids[0] }).dados.status[0].atual === 0);
+})();
+
+/* ---------------------------------------------------------------------- */
+t.grupo("Imagens sob demanda — quem pode ver o quê");
+
+(() => {
+  preparar();
+  const mestre = novaConta("mestre2");
+  const jogador = novaConta("jogador2");
+  const outro = novaConta("outro2");
+  const forasteiro = novaConta("forasteiro2");
+  const comoMestre = comoFn(mestre);
+  const comoJogador = comoFn(jogador);
+  const comoOutro = comoFn(outro);
+  const comoForasteiro = comoFn(forasteiro);
+
+  const mesa = comoMestre({ acao: "criar_campanha", dados: { nome: "Fotos" } }).dados.id;
+  comoMestre({ acao: "salvar_participantes", campanhaId: mesa, membros: [
+    { userId: jogador.id, papel: "jogador" }, { userId: outro.id, papel: "jogador" },
+  ] });
+
+  const ficha = { nome: "Com foto", tipoFicha: "universal", status: [] };
+  const naMesa = comoJogador({ acao: "criar_personagem", dados: ficha }).dados.id;
+  const fora = comoJogador({ acao: "criar_personagem", dados: ficha }).dados.id;
+  comoJogador({ acao: "vincular_personagem", campanhaId: mesa, personagemId: naMesa });
+
+  const imagem = "data:image/png;base64," + "F".repeat(500);
+  comoJogador({ acao: "salvar_foto", personagemId: naMesa, imagem });
+  comoJogador({ acao: "salvar_foto", personagemId: fora, imagem });
+
+  const listada = comoMestre({ acao: "listar_personagens_campanha", campanhaId: mesa }).dados[0];
+  t.ok("a listagem manda a versão da foto, não a foto",
+    !!listada.fotoVersao && listada.foto === undefined);
+  t.ok("  e a imagem não está na resposta",
+    JSON.stringify(listada).indexOf("FFFF") < 0);
+
+  const minhas = comoJogador({ acao: "listar_personagens" }).dados;
+  t.ok("a lista pessoal também manda só a versão",
+    minhas.every((p) => p.foto === undefined) && minhas.some((p) => !!p.fotoVersao));
+
+  const doMestre = comoMestre({ acao: "ler_fotos", personagemIds: [naMesa, fora] });
+  t.ok("o mestre recebe a foto da ficha que está na mesa dele",
+    doMestre.ok && !!doMestre.dados[naMesa] && doMestre.dados[naMesa].imagem === imagem);
+  t.ok("  e não a da ficha que não está", !doMestre.dados[fora]);
+
+  const doOutro = comoOutro({ acao: "ler_fotos", personagemIds: [naMesa, fora] });
+  t.ok("quem joga na mesma mesa vê a foto do cartão", !!doOutro.dados[naMesa]);
+  t.ok("  mas não a de fora da mesa", !doOutro.dados[fora]);
+
+  const doForasteiro = comoForasteiro({ acao: "ler_fotos", personagemIds: [naMesa, fora] });
+  t.iguais("quem está fora não recebe nenhuma", doForasteiro.dados, {});
+
+  t.recusa("pedido vazio é recusado", comoMestre({ acao: "ler_fotos", personagemIds: [] }), "dados_invalidos");
+  const demais = [];
+  for (let i = 0; i < 41; i++) demais.push("id-" + i);
+  t.recusa("pedido grande demais é recusado", comoMestre({ acao: "ler_fotos", personagemIds: demais }), "dados_invalidos");
+
+  /* Avatares: a mesma ideia, com a regra que já existia — conta ativa
+     aparece para quem está conectado. */
+  const avatar = "data:image/png;base64," + "A".repeat(300);
+  comoJogador({ acao: "salvar_perfil", dados: { avatar } });
+
+  const campanhaLida = comoOutro({ acao: "ler_campanha", campanhaId: mesa });
+  const membro = campanhaLida.dados.membros.find((m) => m.id === jogador.id);
+  t.ok("a campanha manda a versão do avatar, não o avatar",
+    !!membro.avatarVersao && membro.avatar === undefined);
+
+  const avatares = comoOutro({ acao: "ler_avatares", userIds: [jogador.id] });
+  t.igual("e o avatar vem em lote", avatares.dados[jogador.id].imagem, avatar);
+
+  const diretorio = comoForasteiro({ acao: "listar_usuarios" }).dados;
+  t.ok("o diretório também manda só a versão",
+    diretorio.every((u) => u.avatar === undefined));
+
+  /* O diretório de contas fica em cache por alguns minutos. Trocar o
+     próprio nome tem de aparecer para os outros AGORA, não depois. */
+  comoJogador({ acao: "salvar_perfil", dados: { nome: "Nome Novo" } });
+  const depoisDaTroca = comoForasteiro({ acao: "listar_usuarios" }).dados
+    .find((u) => u.id === jogador.id);
+  t.igual("trocar o nome aparece na hora para os outros", depoisDaTroca.nome, "Nome Novo");
+  const cartaoComNomeNovo = comoMestre({ acao: "listar_personagens_campanha", campanhaId: mesa }).dados[0];
+  t.igual("  inclusive no cartão da mesa", cartaoComNomeNovo.dono, "Nome Novo");
+})();
+
+/* =====================================================================
+   O QUE AS MUTAÇÕES ACHARAM
+   ---------------------------------------------------------------------
+   Cada caso aqui nasceu de uma mutação proposital que a bateria não
+   pegava: a garantia existia no código e não estava trancada por
+   nenhum teste.
+   ===================================================================== */
+
+t.grupo("Projeção — quando ela NÃO pode ser usada");
+
+(() => {
+  preparar();
+  const nara = novaConta("nara");
+  const comoNara = comoFn(nara);
+  const mesa = comoNara({ acao: "criar_campanha", dados: { nome: "Velharia" } }).dados.id;
+
+  const id = comoNara({ acao: "criar_personagem", dados: {
+    nome: "Cobaia", tipoFicha: "universal",
+    status: [{ id: "s1", nome: "Vida", atual: 10, maximo: 20 }],
+  } }).dados.id;
+  comoNara({ acao: "vincular_personagem", campanhaId: mesa, personagemId: id });
+
+  const coluna = colunaDe("PERSONAGENS", "resumo");
+  const projecaoVelha = linhaDoPersonagem(id)[coluna];
+
+  /* Uma gravação feita por um backend que não conhece a coluna `resumo`
+     — a v2.15, por exemplo, ou a planilha editada à mão: o conteúdo
+     muda, a revisão sobe, a projeção fica como estava. O painel NÃO
+     pode desenhar o cartão com ela. */
+  const lida = comoNara({ acao: "ler_personagem", personagemId: id });
+  const nova = JSON.parse(JSON.stringify(lida.dados));
+  nova.status[0].atual = 3;
+  comoNara({ acao: "salvar_personagem", personagemId: id, rev: lida.rev, dados: nova });
+
+  linhaDoPersonagem(id)[coluna] = projecaoVelha;
+  reiniciarExecucao();
+
+  const cartao = comoNara({ acao: "listar_personagens_campanha", campanhaId: mesa }).dados[0];
+  t.igual("projeção de outra gravação não vira cartão", cartao.status[0].atual, 3);
+
+  /* Desfazer a última gravação também acerta o cartão: sem isso o
+     painel continuaria mostrando o que foi desfeito. */
+  restaurarGeracaoAnterior(id, true);
+  reiniciarExecucao();
+
+  const cartao2 = comoNara({ acao: "listar_personagens_campanha", campanhaId: mesa }).dados[0];
+  t.igual("restaurar a geração anterior acerta o cartão", cartao2.status[0].atual, 10);
+  t.igual("  e a ficha volta junto",
+    comoNara({ acao: "ler_personagem", personagemId: id }).dados.status[0].atual, 10);
+})();
+
+/* ---------------------------------------------------------------------- */
+t.grupo("Blocos — a pista velha não manda gravar em cima de ninguém");
+
+(() => {
+  preparar();
+  const olavo = novaConta("olavo");
+  const comoOlavo = comoFn(olavo);
+
+  /* Duas fichas, cada uma com três gerações — a terceira gravação é a
+     que passa a ter faixa reutilizável. */
+  const conteudoVizinha = "Vizinha " + "v".repeat(90000);
+  const vizinha = comoOlavo({ acao: "criar_personagem", dados: fichaGrande("Vizinha", conteudoVizinha) }).dados.id;
+  const alvo = comoOlavo({ acao: "criar_personagem", dados: fichaGrande("Alvo", "a".repeat(90000)) }).dados.id;
+
+  const salvar = (id, classe) => {
+    const l = comoOlavo({ acao: "ler_personagem", personagemId: id });
+    return comoOlavo({ acao: "salvar_personagem", personagemId: id, rev: l.rev,
+      dados: Object.assign({}, l.dados, { classe: classe }) });
+  };
+  salvar(vizinha, "v2"); salvar(vizinha, "v3");
+  salvar(alvo, "a2"); salvar(alvo, "a3");
+
+  t.ok("a ficha tem faixa reutilizável", !!manifestoDoPersonagem(alvo).reutilizavel);
+
+  /* Alguém entrou na frente: todas as linhas desceram uma casa, e o
+     localizador guardado aponta para a linha de outra pessoa. */
+  const f = folhaDe("PERSONAGENS_BLOCOS");
+  f.linhas.splice(1, 0, ["intruso", "g-int", 0, 1, 1, new Date().toISOString(), "RB|x|RB"]);
+  reiniciarExecucao();
+
+  const gravou = salvar(alvo, "a4");
+  t.ok("a gravação seguinte dá certo mesmo com a pista velha", gravou.ok);
+  t.igual("  e a ficha da vizinha continua inteira",
+    comoOlavo({ acao: "ler_personagem", personagemId: vizinha }).dados.anotacoes.soltas[0].conteudo, conteudoVizinha);
+  t.igual("  e a ficha gravada abre com o valor novo",
+    comoOlavo({ acao: "ler_personagem", personagemId: alvo }).dados.classe, "a4");
+
+  /* O caso extremo: a pista aponta EXATAMENTE para os blocos que valem
+     de outra ficha. A conferência é o que impede a gravação de escrever
+     por cima deles. */
+  const mAlvo = manifestoDoPersonagem(alvo);
+  const mVizinha = manifestoDoPersonagem(vizinha);
+  mAlvo.reutilizavel = { geracao: mAlvo.reutilizavel.geracao, local: mVizinha.local };
+  linhaDoPersonagem(alvo)[colunaDe("PERSONAGENS", "armazenamento")] = JSON.stringify(mAlvo);
+  reiniciarExecucao();
+
+  const porCima = salvar(alvo, "a5");
+  t.ok("com a pista apontando para os blocos de outra ficha, a gravação dá certo", porCima.ok);
+  t.igual("  sem tocar na ficha da vizinha",
+    comoOlavo({ acao: "ler_personagem", personagemId: vizinha }).dados.anotacoes.soltas[0].conteudo, conteudoVizinha);
+  t.igual("  e a própria abre com o valor novo",
+    comoOlavo({ acao: "ler_personagem", personagemId: alvo }).dados.classe, "a5");
+})();
+
+/* ---------------------------------------------------------------------- */
+t.grupo("Blocos — gravar não desloca os blocos de ninguém");
+
+(() => {
+  preparar();
+  const pedro = novaConta("pedro");
+  const comoPedro = comoFn(pedro);
+
+  /* A movimentada vem PRIMEIRO na aba, e já com as três faixas dela
+     criadas: assim TODA linha que a gravação dela venha a recolher está
+     acima das linhas da parada, e apagar qualquer uma puxaria a parada
+     para cima. */
+  const movimentada = comoPedro({ acao: "criar_personagem", dados: fichaGrande("Movimentada", "m".repeat(80000)) }).dados.id;
+  for (let i = 0; i < 2; i++) {
+    const l = comoPedro({ acao: "ler_personagem", personagemId: movimentada });
+    comoPedro({ acao: "salvar_personagem", personagemId: movimentada, rev: l.rev,
+      dados: Object.assign({}, l.dados, { classe: "inicio" + i }) });
+  }
+  const parada = comoPedro({ acao: "criar_personagem", dados: fichaGrande("Parada", "p".repeat(80000)) }).dados.id;
+
+  /* O que importa não é o número guardado no manifesto — esse não muda
+     sozinho —, é a LINHA continuar sendo a dela. */
+  const apontaParaEla = () => {
+    const local = manifestoDoPersonagem(parada).local;
+    const linhas = linhasDe("PERSONAGENS_BLOCOS");
+    for (let i = 0; i < local.blocos; i++) {
+      const linha = linhas[local.linha - 2 + i];
+      if (!linha || linha[0] !== parada) return false;
+    }
+    return true;
+  };
+  const primeiraLinhaDaParada = () => linhasDe("PERSONAGENS_BLOCOS").findIndex((l) => l[0] === parada);
+  const linhaInicial = primeiraLinhaDaParada();
+  t.ok("o localizador da ficha parada aponta para os blocos dela", apontaParaEla());
+  const linhasDaParada = JSON.stringify(blocosDoPersonagem(parada));
+
+  for (let i = 0; i < 6; i++) {
+    const l = comoPedro({ acao: "ler_personagem", personagemId: movimentada });
+    comoPedro({ acao: "salvar_personagem", personagemId: movimentada, rev: l.rev,
+      dados: Object.assign({}, l.dados, { classe: "c" + i }) });
+  }
+
+  t.ok("seis gravações da vizinha não movem os blocos da ficha parada", apontaParaEla());
+  t.igual("  e o conteúdo delas continua o mesmo", JSON.stringify(blocosDoPersonagem(parada)), linhasDaParada);
+  t.ok("  a ficha parada abre sem precisar do índice",
+    comoPedro({ acao: "ler_personagem", personagemId: parada }).ok);
+
+  /* E quando a vizinha ENCOLHE: a faixa dela sobra, e o que sobra fica
+     em branco. Apagar essas linhas puxaria a ficha parada para cima. */
+  const antesDeEncolher = comoPedro({ acao: "ler_personagem", personagemId: movimentada });
+  const encolhida = Object.assign({}, antesDeEncolher.dados);
+  encolhida.anotacoes = { pastas: [], soltas: [{ id: "n1", titulo: "curta", conteudo: "fim" }] };
+  const encolheu = comoPedro({ acao: "salvar_personagem", personagemId: movimentada,
+    rev: antesDeEncolher.rev, dados: encolhida });
+  t.ok("a vizinha encolhe de três blocos para um", encolheu.ok && manifestoDoPersonagem(movimentada).blocos === 1);
+  t.ok("  e mesmo assim os blocos da ficha parada não saem do lugar", apontaParaEla());
+  t.igual("  na mesma posição da aba", primeiraLinhaDaParada(), linhaInicial);
+  t.igual("  com o conteúdo intacto", JSON.stringify(blocosDoPersonagem(parada)), linhasDaParada);
+})();
+
+/* ---------------------------------------------------------------------- */
+t.grupo("Histórico — o cursor aguenta linha deslocada e id fora de ordem");
+
+(() => {
+  preparar();
+  const quim = novaConta("quim");
+  const comoQuim = comoFn(quim);
+
+  const outra = comoQuim({ acao: "criar_campanha", dados: { nome: "Outra mesa" } }).dados.id;
+  const minha = comoQuim({ acao: "criar_campanha", dados: { nome: "Minha mesa" } }).dados.id;
+
+  /* O histórico da outra mesa vem ANTES na planilha: limpá-lo puxa as
+     linhas desta para cima. */
+  for (let i = 0; i < 20; i++) {
+    comoQuim({ acao: "registrar_rolagem", campanhaId: outra, rolagemId: "outra-" + String(i).padStart(4, "0"),
+      tipo: "livre", nome: "x", dados: { total: i } });
+  }
+  for (let i = 0; i < 30; i++) {
+    comoQuim({ acao: "registrar_rolagem", campanhaId: minha, rolagemId: "minha-" + String(i).padStart(4, "0"),
+      tipo: "livre", nome: "y", dados: { total: i } });
+  }
+
+  const pagina1 = comoQuim({ acao: "listar_rolagens", campanhaId: minha, limite: 10 });
+  comoQuim({ acao: "limpar_rolagens", campanhaId: outra });
+
+  const pagina2 = comoQuim({ acao: "listar_rolagens", campanhaId: minha, limite: 10, cursor: pagina1.dados.proximo });
+  const ids1 = pagina1.dados.rolagens.map((r) => r.id);
+  const ids2 = pagina2.dados.rolagens.map((r) => r.id);
+
+  t.igual("a segunda página vem inteira mesmo com as linhas deslocadas", ids2.length, 10);
+  t.igual("  sem repetir a primeira", ids2.filter((id) => ids1.indexOf(id) >= 0).length, 0);
+  t.igual("  e sem buraco entre elas", ids2[0], "minha-0019");
+
+  /* Ids que NÃO estão na mesma ordem das linhas: a página é ordenada
+     pela mesma chave que o cursor compara, senão some rolagem. */
+  const nova = comoQuim({ acao: "criar_campanha", dados: { nome: "Fora de ordem" } }).dados.id;
+  /* Ids de oito caracteres (o mínimo que o servidor aceita) em ordem
+     que NÃO acompanha a das linhas. */
+  const ordemDeEntrada = ["zz-00001", "aa-00002", "mm-00003", "bb-00004", "yy-00005", "cc-00006"];
+  ordemDeEntrada.forEach((id, i) => {
+    comoQuim({ acao: "registrar_rolagem", campanhaId: nova, rolagemId: id, tipo: "livre", nome: "z", dados: { total: i } });
+  });
+
+  const todas = todasAsRolagens(comoQuim, nova, 2);
+  t.igual("paginando de dois em dois, com ids fora da ordem das linhas", todas.length, 6);
+  t.igual("  sem repetir", new Set(todas).size, 6);
+
+  /* O id do cursor sumiu da planilha entre uma página e outra. Sobra a
+     pista da linha — e a data conferindo, para nada que já foi mostrado
+     voltar. */
+  const p1 = comoQuim({ acao: "listar_rolagens", campanhaId: minha, limite: 5 });
+  const ultimaDaPagina = p1.dados.rolagens[p1.dados.rolagens.length - 1].id;
+  const folhaR = folhaDe("CAMPANHA_ROLAGENS");
+  /* O id do cursor sai da planilha E as linhas sobem: a pista da linha
+     passa a apontar para uma rolagem MAIS NOVA, das que já foram
+     mostradas. É a data que impede a página de repeti-las. */
+  folhaR.linhas.splice(folhaR.linhas.findIndex((l) => l[0] === ultimaDaPagina), 1);
+  for (let i = 0; i < 6; i++) {
+    folhaR.linhas.splice(folhaR.linhas.findIndex((l) => String(l[0]).indexOf("minha-00") === 0) - 1, 1);
+  }
+  reiniciarExecucao();
+
+  const p2 = comoQuim({ acao: "listar_rolagens", campanhaId: minha, limite: 5, cursor: p1.dados.proximo });
+  t.igual("com o id do cursor apagado, a página seguinte vem inteira", p2.dados.rolagens.length, 5);
+
+  /* A promessa, nesse caso extremo, é não PERDER: uma rolagem já
+     mostrada pode voltar (a tela a reconhece pelo id), mas nenhuma das
+     mais antigas pode sumir. */
+  const restantes = linhasDe("CAMPANHA_ROLAGENS")
+    .filter((l) => String(l[0]).indexOf("minha-") === 0).map((l) => l[0]);
+  const alcancadas = new Set(todasAsRolagens(comoQuim, minha, 5));
+  t.igual("  e a paginação alcança todas as que sobraram",
+    restantes.filter((id) => !alcancadas.has(id)).length, 0);
+
+  /* Com datas distintas — que é o caso de uma mesa de verdade, onde
+     ninguém rola dois dados no mesmo milissegundo — a data faz mais do
+     que não perder: ela impede a página de repetir o que já mostrou,
+     mesmo com a pista da linha apontando para o lugar errado. */
+  const colunaData = colunaDe("CAMPANHA_ROLAGENS", "criadoEm");
+  linhasDe("CAMPANHA_ROLAGENS")
+    .filter((l) => String(l[0]).indexOf("minha-") === 0)
+    .forEach((l, i) => {
+      l[colunaData] = new Date(Date.UTC(2026, 0, 1, 0, 0, i)).toISOString();
+    });
+  reiniciarExecucao();
+
+  const d1 = comoQuim({ acao: "listar_rolagens", campanhaId: minha, limite: 5 });
+  const idDoCursor = d1.dados.rolagens[d1.dados.rolagens.length - 1].id;
+  const folhaR2 = folhaDe("CAMPANHA_ROLAGENS");
+  folhaR2.linhas.splice(folhaR2.linhas.findIndex((l) => l[0] === idDoCursor), 1);
+  for (let i = 0; i < 4; i++) {
+    folhaR2.linhas.splice(folhaR2.linhas.findIndex((l) => String(l[0]).indexOf("minha-") === 0) - 1, 1);
+  }
+  reiniciarExecucao();
+
+  const d2 = comoQuim({ acao: "listar_rolagens", campanhaId: minha, limite: 5, cursor: d1.dados.proximo });
+  const mostradas = new Set(d1.dados.rolagens.map((r) => r.id));
+  t.igual("  com datas distintas, a página seguinte não repete nenhuma",
+    d2.dados.rolagens.filter((r) => mostradas.has(r.id)).length, 0);
+})();
+
+/* ---------------------------------------------------------------------- */
+t.grupo("Cache — o que fica guardado entre requisições");
+
+(() => {
+  preparar();
+  const sara = novaConta("sara");
+  const comoSara = comoFn(sara);
+
+  comoSara({ acao: "listar_usuarios" });
+
+  const chaves = [...ambiente.cache.keys()];
+  const doDiretorio = chaves.filter((k) => k.indexOf("rama.contas.") === 0);
+  t.igual("o diretório de contas fica em cache", doDiretorio.length, 1);
+
+  const guardadoNoCache = ambiente.cache.get(doDiretorio[0]);
+  const proibidos = ["hashSenha", "salt", "iteracoes", "pepper", "token", "senha"];
+  t.ok("e não leva nada de secreto",
+    !proibidos.some((c) => guardadoNoCache.indexOf(c) >= 0));
+
+  t.ok("nenhuma entrada de cache leva ficha inteira",
+    chaves.every((k) => (ambiente.cache.get(k) || "").indexOf("anotacoes") < 0));
 })();
 
 /* =====================================================================
