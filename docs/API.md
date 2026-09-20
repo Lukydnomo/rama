@@ -359,9 +359,8 @@ do `fichaJson` para não subir junto a cada tecla digitada numa anotação.
 
 { acao: "ler_avatares", userIds: ["...", "..."] }          // no máximo 40
 → { ok: true, dados: { "userId": { imagem: "data:...", versao: "…" } } }
-
 { acao: "ler_capas", campanhaIds: ["...", "..."] }         // no máximo 40
-→ { ok: true, dados: { "campanhaId": { imagem: "data:...", versao: "…" } } }
+→ { ok: true, dados: { "campanhaId": { imagem: "data:...", versao: "..." } } }
 ```
 Várias imagens numa viagem, para as listagens não precisarem carregá-las. Quem
 não aparecer na resposta é quem não tem imagem **ou quem a conta não alcança** —
@@ -370,9 +369,7 @@ a resposta não distingue os dois casos.
 A permissão é a mesma que o painel aplicava ao mandar a foto embutida: o dono do
 personagem e quem joga na mesma mesa que ele (mestre ou jogador; espectador não).
 O avatar segue a regra que já existia — toda conta ativa aparece em
-`listar_usuarios` para quem está conectado, e o avatar vai junto. A capa segue a
-de `ler_capa_campanha`: quem alcança a campanha (membro, ou espectador de campanha
-pública). Lista vazia ou com mais de 40 ids: `dados_invalidos`.
+A capa segue a regra que já existia — toda conta ativa aparece em `listar_usuarios` para quem está conectado, e o avatar vai junto. A capa segue a regra de `ler_capa_campanha`: quem alcança a campanha (membro, ou espectador de campanha pública). Lista vazia ou com mais de 40 ids: `dados_invalidos`.
 
 ---
 

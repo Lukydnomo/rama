@@ -1324,7 +1324,6 @@ t.grupo("Imagens sob demanda");
   await Promise.all(muitos);
   t.igual("trinta cartões viram duas viagens, não trinta", imagens.pedidos.length, 2);
   t.igual("  a primeira com o máximo por viagem", imagens.pedidos[0].length, 24);
-
   /* A capa da campanha usa o mesmo caminho, com a ação dela. */
   const capas = { pedidos: [] };
   RAMAApi.lerCapas = (ids) => {
@@ -1369,6 +1368,7 @@ t.grupo("Imagens sob demanda");
   t.igual("  numa viagem só", imagens.pedidos.length, 1);
 
   delete globalThis.IntersectionObserver;
+
 }
 
 /* =====================================================================

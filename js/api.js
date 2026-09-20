@@ -811,6 +811,7 @@
     lerFotos: lerFotos,
     lerAvatares: lerAvatares,
     lerCapas: lerCapas,
+
     salvarFoto: salvarFoto,
 
     listarHomebrew: listarHomebrew,

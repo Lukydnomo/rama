@@ -313,10 +313,7 @@ por `doPost` como uma requisição de verdade. Entre elas:
   fora, e a jogadora tirada da mesa deixa de recebê-las na pergunta seguinte
 - a jogadora não opera o combate; lote com uma operação inválida não aplica nada;
   o mesmo `opId` repetido não é aplicado duas vezes
-- (v2.16) `ler_fotos`, `ler_avatares` e `ler_capas` devolvem imagem só de quem a
-  conta alcança: o dono do personagem e quem joga na mesma mesa que ele (espectador
-  não); conta ativa, no caso do avatar; campanha que a conta alcança, no caso da
-  capa. Quem não alcança não recebe aquela chave na resposta —
+- (v2.16) `ler_fotos`, `ler_avatares` e `ler_capas` devolvem imagem só de quem a conta alcança: o dono do personagem e quem joga na mesma mesa que ele (espectador não); conta ativa, no caso do avatar; campanha que a conta alcança, no caso da capa. Quem não alcança não recebe aquela chave na resposta —
   e a resposta não distingue "não tem imagem" de "não pode ver"
 - (v2.16) a projeção do painel (coluna `resumo`) não muda regra nenhuma: ela é
   recortada das MESMAS funções que montavam o cartão, e quem pode ver cada campo

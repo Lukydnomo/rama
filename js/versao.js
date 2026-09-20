@@ -77,6 +77,7 @@
           "Medição de verdade, para quando \"está lento\": ligarDiagnostico(), no editor do Apps Script, faz cada requisição registrar quanto tempo passou no servidor, quantas chamadas à planilha ela fez, quantas fichas remontou e quanto do cache acertou. No navegador, RAMARede.medicoes() separa o tempo do servidor do tempo de rede. Desligado por padrão, não grava nada na planilha e não registra token, nome nem conteúdo de ficha.",
           "reconstruirResumos(), no editor: refaz em lote o resumo do painel das fichas gravadas antes desta versão, 25 por vez, com ponto de retomada. Não é obrigatório — cada ficha ganha o dela na próxima gravação.",
           "A capa da campanha aparece também na lista de campanhas, no lugar das iniciais. Ela chega pelo mesmo caminho das outras imagens: a lista manda a versão, o navegador pede em lote e reaproveita o que já baixou.",
+
         ],
         "Alterado": [
           "O botão do histórico diz \"Carregar mais\", sem contar quantas faltam. Contar exigia varrer o histórico inteiro a cada página — e, para quem não é mestre, a conta ainda incluía as rolagens ocultas, que essa pessoa nem vê.",
@@ -95,6 +96,7 @@
           "testes/medir.js ganhou cenários (cache vazio e aquecido, ficha de 300 KB, mesa de dois e de oito, avatares), a opção --backend para medir outra versão sobre os mesmos dados e --comparar para pôr as duas lado a lado.",
           "A imagem de um cartão é pedida quando ele chega perto da tela, mas com prazo: se o navegador não avisar que ele está à vista — aba em segundo plano, página ainda não pintada —, ela é pedida assim mesmo depois de um instante. Priorizar o que está à vista é otimização; a imagem chegar é requisito.",
           "Testes: 1561 no modelo, 812 no backend (111 novas) e 219 no transporte do frontend (25 novas). Vinte e uma mutações propositais nas garantias novas; vinte foram pegas por algum teste.",
+
         ],
       },
     },

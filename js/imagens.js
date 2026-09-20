@@ -63,6 +63,7 @@
     foto: { acao: "lerFotos", campo: "personagemIds" },
     avatar: { acao: "lerAvatares", campo: "userIds" },
     capa: { acao: "lerCapas", campo: "campanhaIds" },
+
   };
 
   var memoria = {};
@@ -76,6 +77,7 @@
     timers[tipo] = null;
     emVoo[tipo] = false;
   });
+
 
   function chaveDe(tipo, id, versao) {
     return tipo + "." + String(id) + "." + String(versao || "");
@@ -289,6 +291,7 @@
     var observador = new global.IntersectionObserver(function (entradas) {
       entradas.forEach(function (e) {
         if (e.isIntersecting) pedirUmaVez();
+
       });
     }, { rootMargin: "300px" });
 
@@ -298,6 +301,7 @@
     return function () {
       vivo = false;
       if (relogio) { clearTimeout(relogio); relogio = null; }
+
       observador.disconnect();
     };
   }
@@ -315,6 +319,7 @@
     foto: function (id, versao) { return buscar("foto", id, versao); },
     avatar: function (id, versao) { return buscar("avatar", id, versao); },
     capa: function (id, versao) { return buscar("capa", id, versao); },
+
     aplicar: aplicar,
     lembrar: lembrar,
     /* para os testes */
