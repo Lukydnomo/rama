@@ -32,6 +32,7 @@ leitura que o R.A.M.A. adotou escrita por extenso.
 | `js/ordem/catalogo.js` | atributos, perícias, classes, progressão por classe, trilhas, origens, patentes, elementos |
 | `js/ordem/poderes.js` | poderes de classe, poderes gerais, poderes paranormais, habilidades de trilha, habilidades automáticas e alterações por NEX |
 | `js/ordem/progressao.js` | o motor de escolhas: vagas, requisitos, pendências, efeitos, afinidade |
+| `js/ordem/aprendizado.js` | o que a classe e a trilha concedem em RITUAIS: quantos, de que círculo, guardados onde |
 | `js/ordem/inventario.js` | espaços, quantidade, categoria, grupo e o resto dos dados de um item (como a arma ataca, tipo de proteção, modificações aplicadas) |
 | `js/ordem/itens-dados.js` | o catálogo de itens dos dois livros, como dado — carregado sob demanda |
 | `js/ordem/itens.js` | o catálogo de itens arrumado: busca, filtros, apresentação, a cópia que vira item de ficha e as regras de aplicação de modificações e maldições |
@@ -72,6 +73,11 @@ onde a vaga veio, nunca o texto mostrado:
 | `x25.transcender` | NEX de exposição 25%, com NEX & Experiência |
 | `x25.alteracao` | a alteração de NEX 25%, com NEX & Experiência |
 | `afinidade` | a afinidade elemental |
+| `d1.rituaisIniciais` | os três rituais de 1º círculo do ocultista |
+| `d4.ritualClasse` | o ritual daquele avanço de NEX (um por degrau) |
+| `d2.saberAmpliado` | o ritual que Saber Ampliado concede naquele círculo |
+| `d8.grimorio` | os rituais do grimório de Graduado |
+| `d20.conhecendoOMedo` | o ritual que a trilha concede pelo nome |
 
 "Degrau" é o passo de progressão: NEX 5% é o 1º, NEX 99% é o 20º. Com NEX &
 Experiência, o degrau é o nível. Por isso o id não fala em NEX: ligar ou
@@ -88,6 +94,16 @@ outra parecida de outro degrau, porque cada registro aponta para uma vaga só.
 | automático | Ataque Especial; os poderes da trilha escolhida em NEX 40%, 65% e 99% | nunca |
 | escolhido | poder de classe, aumento de atributo, grau de treinamento, versatilidade | até ser escolhido |
 | com opções internas | A Favorita (a arma), Resistir a Elemento (o elemento) | até a opção ser preenchida |
+| concessão de ritual | os três iniciais, o ritual de cada avanço, Saber Ampliado, o grimório | até a quantidade estar completa |
+| ritual concedido pelo nome | "Você aprende o ritual Presença do Medo" | até a cópia estar na aba Rituais |
+
+Uma concessão de ritual é **contada**: a pendência diz quantos rituais ela
+permite, quantos já foram escolhidos e quantos faltam. Escolher menos do que ela
+dá é permitido — a pendência fica aberta com o resto, e quem joga volta depois.
+
+Um ritual **concedido pelo nome** não é escolha: o R.A.M.A. não o insere sozinho
+porque adicionar um ritual é escrever na ficha, mas o caminho é um botão só, e o
+cartão diz "automática".
 
 As habilidades de trilha **não** são vagas de escolha: "Você recebe um novo
 poder da trilha escolhida em NEX 40%, 65% e 99%" (OPRPG p.24, 28, 33). Até a
@@ -134,6 +150,11 @@ guardadas, sem efeito, e voltam a valer se o personagem chegar lá de novo.
 | Traços do Outro Lado (Cultista Arrependido) | um poder paranormal | OPRPG p.18 | **A** |
 | Ferramentas Favoritas (Engenheiro) | um item, exceto armas, conta uma categoria abaixo | OPRPG p.18 | **A** |
 | Perícias do Amnésico | duas perícias, escolhidas na criação | OPRPG p.16 | **A** |
+| Rituais iniciais | três rituais de 1º círculo, na criação do ocultista | OPRPG p.32 | **A** |
+| Ritual de ocultista | um ritual de qualquer círculo que a classe lance NAQUELE degrau | OPRPG p.32 | **A** |
+| Saber Ampliado | um ritual de 1º círculo, mais um daquele círculo a cada círculo novo | OPRPG p.35 | **A** |
+| Grimório Ritualístico | rituais de 1º ou 2º círculo iguais ao Intelecto, mais um por círculo novo (opcional) | OPRPG p.35 | **A** |
+| Aprender Ritual | um ritual de 1º círculo; 2º a partir de NEX 45%, 3º a partir de 75% | OPRPG p.114 | **A** |
 
 **O Possuído não escolhe poder de ocultista.** "Sempre que receber um novo poder
 de ocultista, em vez disso você recebe o poder Transcender" (Poder Não Desejado,
@@ -177,7 +198,7 @@ página, e a marca honesta de automação.
 | Poderes de classe | 76 | 45 | 31 | 8 | 5 | 63 |
 | Poderes gerais | 34 | — | 34 | 7 | 22 | 5 |
 | Poderes paranormais | 30 | 22 | 8 | 6 | 2 | 22 |
-| Habilidades de trilha (24 trilhas) | 96 | 60 | 36 | 5 | 17 | 74 |
+| Habilidades de trilha (24 trilhas) | 96 | 60 | 36 | 6 | 20 | 70 |
 | Habilidades automáticas de classe | 5 | 5 | — | — | — | 5 |
 | Alterações por NEX (NEX & Experiência) | 2 | — | 2 | 2 | — | — |
 
@@ -801,9 +822,14 @@ acrescenta é o catálogo oficial, o custo em PE e os avisos da ficha.
 | Custo do Paranormal: Ocultismo DT 20 + PE | OPRPG p.121 | texto em todo ritual que não é de Medo | **I** |
 | Invocando o Medo: só Marcados, Sanidade permanente por conjuração | OPRPG p.121 | texto e aviso na ficha | **I** |
 | Componentes, gestos, concentração, condições ruins e terríveis | OPRPG p.119 | texto | **I** |
-| Limite de rituais aprendidos = Intelecto | OPRPG p.119 | mostrado no painel de regras | **I** |
-| Aprender ritual (poder Aprender Ritual, habilidades de ocultista) | OPRPG p.114, 119 | escolha de progressão, na aba Progressão | **A** na escolha |
-| Um ritual aprendido a cada NEX (ocultista) | OPRPG p.32 | não vira vaga de escolha; ver **Lacunas** | — |
+| Limite de rituais conhecidos = Intelecto, e só para Aprender Ritual | OPRPG p.119 | contado: a aba Rituais e a Progressão mostram "usados de total" | **A** |
+| Aprender Ritual: círculo por NEX de exposição, e a substituição que ele permite | OPRPG p.114 | escolha de progressão, presa a um ritual da ficha | **A** |
+| Três rituais iniciais de 1º círculo (ocultista) | OPRPG p.32 | concessão na criação | **A** |
+| Um ritual a cada avanço de NEX, de qualquer círculo que possa lançar | OPRPG p.32 | uma concessão por degrau, com o círculo daquele degrau | **A** |
+| Saber Ampliado e Grimório Ritualístico (Graduado) | OPRPG p.35 | concessões próprias, com quantidade e círculo próprios | **A** |
+| Rituais Eficientes: +5 na DT de resistir aos seus rituais (Graduado) | OPRPG p.35 | entra na DT calculada | **A** |
+| Rituais que uma trilha concede pelo nome (Canalizar o Medo, Lâmina Maldita…) | OPRPG p.34-35; SAH p.20 | concessão automática, com o botão de trazer a cópia | **A** |
+| Limite por aprendizado lento e por aprendizado em campo | SAH p.113 | duas regras opcionais; ver **Regras opcionais** | **A** |
 | Conjurar: gastar PE, testar resistência, aplicar condição | OPRPG p.119-121 | **não automatizado**: a ficha mostra os números e rola o que a versão tem | **I** |
 
 **Registrar um ritual na ficha não é aprender nem conjurar.** Trazer da biblioteca
@@ -811,12 +837,65 @@ cria o registro com campos e versões preenchidos; não gasta PE, não rola dado
 aplica efeito e **não resolve pendência de progressão** — aprender continua sendo
 a escolha, que valida a elegibilidade dela.
 
+### O aprendizado como progressão
+
+Desde a v2.17, o que a classe e a trilha concedem em rituais é **progressão**, com
+o mesmo modelo do resto: uma vaga por concessão, id estável, registro por vaga e
+nada gravado que não tenha sido decidido.
+
+| de onde vem | quantos | círculo | onde fica | conta no limite? |
+|---|---|---|---|---|
+| Escolhido pelo Outro Lado, na criação | 3 | 1º | conhecido | não |
+| Escolhido pelo Outro Lado, a cada avanço | 1 por degrau | qualquer um que a classe lance **naquele degrau** | conhecido | não |
+| Saber Ampliado (Graduado, NEX 10%) | 1 + 1 a cada círculo novo | 1º; depois, o círculo que acabou de abrir | conhecido | não |
+| Grimório Ritualístico (Graduado, NEX 40%) | Intelecto + 1 opcional por círculo novo | 1º ou 2º; depois, o círculo novo | **grimório** | não |
+| Aprender Ritual (poder paranormal) | 1 por escolha, repetível | 1º; 2º a partir de NEX 45%; 3º a partir de 75% | conhecido | **sim** |
+| Trilha que concede pelo nome | 1, fixo | o do ritual | conhecido | não |
+
+**O círculo é conferido na ETAPA que concedeu.** Uma concessão de NEX 20% aceita
+1º círculo mesmo num personagem de NEX 99% — o livro não dá acesso retroativo, e
+resolver uma pendência antiga não empresta o alcance de hoje.
+
+**O grimório é outro lugar, não outra etiqueta.** Os rituais dele aparecem numa
+seção própria da aba Rituais, com a condição de uso escrita: para conjurar, é
+preciso empunhar o grimório e gastar uma ação completa folheando; ele ocupa 1
+espaço no inventário e, perdido, é replicado com duas ações de interlúdio (OPRPG
+p.35).
+
+**O limite por Intelecto conta só Aprender Ritual.** "Ocultistas aprendem rituais
+através de suas habilidades de classe. Esses rituais não contam no limite" (OPRPG
+p.119). A aba Rituais mostra a conta separada.
+
+**Um ritual da ficha ocupa uma concessão só.** O vínculo é com o id do ritual, e a
+concessão mais antiga reivindica primeiro; a segunda que tentar aparece com o
+motivo, sem apagar nada. Um ritual sem concessão nenhuma também é legítimo — é
+registro da mesa, aprendizado em campo ou ficha anterior a esta versão —, e o
+menu do cartão oferece prendê-lo a uma concessão aberta que o aceite, **sem criar
+outra cópia**.
+
+**Trocar trilha, classe ou regra não apaga ritual.** A concessão some da
+progressão, o registro dela fica guardado com o motivo, e os rituais continuam na
+ficha, agora sem origem. Se a concessão voltar, o vínculo volta sozinho.
+
+**A mesa pode abrir exceção.** Um ritual fora da regra da concessão é recusado —
+mas "Manter mesmo assim" o aceita, marcado como exceção, com o motivo continuando
+escrito. É a mesma porta que as outras escolhas de progressão já tinham.
+
 ### Biblioteca de rituais
 
 No modo edição da aba Rituais, **Da biblioteca** abre duas origens: **Ordem
 Paranormal** (o catálogo dos dois livros) e **Homebrew** (os rituais da conta e os
 que outras contas publicaram, filtrados no servidor). Na ficha universal, só a
 Homebrew. Criar ritual à mão continua igual.
+
+**A mesma janela resolve uma concessão de aprendizado (v2.17).** Quando ela é
+aberta por uma pendência de ritual, o topo mostra de onde o benefício veio, em que
+etapa, quantos rituais ele dá e quantos faltam; os filtros já abrem no círculo (e
+no elemento) que a concessão aceita; cada ritual diz se é elegível ali, e o que
+não é continua à vista, com o motivo e com a saída "só registrar na ficha, sem
+concessão". O botão passa a **prender** o ritual à concessão além de trazer a
+cópia — e é esse vínculo, não a cópia, que resolve a pendência. Busca, filtros,
+prévia, fontes e versões são os mesmos: nada foi duplicado para isto.
 
 O catálogo é dado, separado da tela: `js/ordem/rituais-dados.js` só é carregado na
 primeira vez que a janela abre, fica congelado na memória e **nunca vai junto na
@@ -894,8 +973,10 @@ Todas do **SAH**, capítulo 2, "Novas Regras Opcionais" (p.98-123). Começam
 | Ferimentos Debilitantes | SAH p.105 | registro de ferimentos | **P** |
 | Jogando sem Mapa | SAH p.106 | não afeta a ficha | **I** |
 | Evolução por Patentes | SAH p.108-112 | progressão por patente em vez de NEX | **P** |
-| Os Limites da Compreensão Humana | SAH p.113 | teto de perícias | **P** |
+| Limite de rituais por aprendizado lento (A) | SAH p.113 | o ritual por avanço vem só nos degraus ímpares | **A** |
+| Limite de rituais por aprendizado em campo (B) | SAH p.113 | nenhum ritual por avanço; o estudo é da mesa | **P** |
 | Conjuração Complexa | SAH p.114-116 | campos a mais no ritual | **P** |
+| Aprender um ritual sobe o NEX pelo círculo dele | SAH p.99 | avisado; o NEX é ajustado pela mesa | **I** |
 | Conjurando Rituais Desconhecidos | SAH p.117 | não afeta a ficha | **I** |
 | Desastres Paranormais | SAH p.117-118 | não afeta a ficha | **I** |
 | Combate Narrativo | SAH p.119-123 | não afeta a ficha | **I** |
@@ -1019,53 +1100,77 @@ aberta, a adotada está escrita — e é a que os testes travam.
     perícia Profissão só: o requisito confere o treinamento em Profissão, e a
     especialidade fica com a mesa.
 
-12. **Rituais aprendidos por NEX (ocultista, Saber Ampliado, Grimório).** O
-    catálogo de rituais existe desde a v2.14, mas essas habilidades continuam sem
-    virar vagas de escolha: o ritual é registrado na aba Rituais (à mão ou pela
-    biblioteca) e a aquisição, quando a mesa quer registrá-la, vai na escolha
-    Aprender Ritual. Registrar um ritual nunca resolve uma pendência sozinho.
+12. **"NEX ímpar", no limite por aprendizado lento.** "Um ocultista começa com
+    três rituais de 1º círculo, mas aprende um novo ritual sempre que atinge um NEX
+    ímpar (NEX 15%, 25%, 35% etc.), e não a cada novo NEX. Se estiver usando a
+    regra opcional de Nível de Experiência, o ocultista aprende um novo ritual a
+    cada nível ímpar" (SAH p.113). O R.A.M.A. lê **degrau ímpar**, que é o que faz
+    as duas metades da frase coincidirem: NEX 15% é o 3º degrau e o nível 3, NEX
+    25% é o 5º e o nível 5. A única divergência entre as duas leituras é NEX 99%,
+    que é ímpar como número e é o 20º degrau: pela leitura do R.A.M.A. ele não dá
+    ritual. A mesa que quiser o contrário resolve com uma concessão à mão.
 
-13. **Monstruoso usa a Progressão de NEX mesmo sem a regra** (SAH p.17). A trilha
+13. **O que "substituir um ritual que já conhece" alcança.** Aprender Ritual
+    permite a troca (OPRPG p.114) e não diz se o ritual trocado pode ser um do
+    grimório ou um vindo da classe. O R.A.M.A. oferece qualquer ritual da ficha e
+    registra a troca; o ritual substituído continua na ficha, marcado, sem ocupar
+    concessão. É a ÚNICA substituição que as regras dão — trocar uma escolha na
+    Progressão é corrigir a ficha, e aparece como correção.
+
+14. **Monstruoso usa a Progressão de NEX mesmo sem a regra** (SAH p.17). A trilha
     está no catálogo com os efeitos permanentes de atributo; as alterações da
     Progressão de NEX para essa trilha sem a regra ligada não são aplicadas.
 
-14. **Possuído: Poder Não Desejado com NEX & Experiência.** A troca de todo poder
+15. **Possuído: Poder Não Desejado com NEX & Experiência.** A troca de todo poder
     de ocultista por Transcender é aplicada pela ficha (SAH p.28). Com a regra
     opcional ligada, porém, Transcender deixa de ser poder de classe (SAH p.98) e
     não sobra poder para receber no lugar: o livro não resolve o encontro das duas
     regras, e o R.A.M.A. deixa a vaga livre, com a troca por conta da mesa. Os
     pontos de possessão também ficam com a mesa — não são um recurso da ficha.
 
-15. **Escudo junto de proteção.** "Precisa ser empunhado em uma mão e fornece
+16. **Escudo junto de proteção.** "Precisa ser empunhado em uma mão e fornece
     Defesa +2" (OPRPG p. 62) não diz explicitamente que ele soma com a proteção
     vestida. O R.A.M.A. soma: são equipamentos diferentes, em lugares diferentes,
     e a tabela dá Defesa própria ao escudo.
 
-16. **Categoria de item que o livro não informa.** O medidor de estabilidade da
+17. **Categoria de item que o livro não informa.** O medidor de estabilidade da
     membrana (OPRPG p. 67) está descrito, mas não na Tabela 3.10. A entrada fica
     **sem** categoria — nada é deduzido — e o item entra listado para a mesa
     classificar, com os espaços no padrão do livro.
 
-17. **Selo paranormal.** "A categoria de um selo é igual ao círculo do ritual
+18. **Selo paranormal.** "A categoria de um selo é igual ao círculo do ritual
     contido nele" (OPRPG p. 151): a janela pede o círculo ao adicionar e grava a
     categoria correspondente.
 
-18. **Itens amaldiçoados sem estatísticas de arma.** A Primeira Adaga (SAH) e a
+19. **Itens amaldiçoados sem estatísticas de arma.** A Primeira Adaga (SAH) e a
     Coletora (OPRPG) são descritas como arma, mas sem dano, margem ou
     multiplicador. O catálogo não inventa números: a nota diz de onde a mesa pode
     tirá-los (o punhal, no caso da Coletora).
 
-19. **Munição não é contagem de projéteis.** A unidade é o pacote, o tanque, o
+20. **Munição não é contagem de projéteis.** A unidade é o pacote, o tanque, o
     foguete ou a caixa, como o livro descreve (OPRPG p. 60). A quantidade do item
     é de pacotes, e a duração em cenas — ou a contagem opcional de 20 ataques por
     pacote (p. 174) — fica no controle manual.
 
-20. **Modificações de munição.** Dum dum e Explosiva mudam o crítico e o dano da
+21. **Modificações de munição.** Dum dum e Explosiva mudam o crítico e o dano da
     arma que usar aquela munição (OPRPG p. 60). A ficha não liga munição a arma —
     o campo "Munição" da arma é texto —, então elas são aplicadas ao pacote e o
     efeito na arma fica no controle manual.
 
-21. **Proficiência da arma é aviso.** A penalidade de −2 dados por falta de
+22. **Proficiência da arma é aviso.** A penalidade de −2 dados por falta de
     proficiência (OPRPG p. 54) não entra sozinha: as proficiências de poderes vêm
     em texto ("armas táticas exceto de fogo", "armas de fogo que usam balas
     longas") e a mesa pode ter decidido outra coisa. A ficha compara e avisa.
+
+23. **Evolução por Patentes e os rituais.** A tabela do ocultista por patente
+    (SAH p.112) dá três rituais iniciais e **dois** a cada nova patente, com os
+    círculos por patente. A regra opcional de patentes ainda não tem o trilho de
+    progressão estruturado no R.A.M.A. (ver a entrada dela acima), então as
+    concessões de ritual continuam seguindo os degraus de NEX ou de nível
+    enquanto ela estiver ligada. A ficha não inventa a tabela.
+
+24. **Aprender um ritual sobe o NEX.** Com NEX & Experiência, "sempre que o
+    personagem aprende um ritual, seu NEX aumenta em um valor igual ao círculo do
+    ritual (isso inclui os rituais iniciais)" (SAH p.99). O R.A.M.A. **não** mexe
+    no NEX sozinho: o NEX é um campo da mesa, e subi-lo a cada aprendizado faria
+    recalcular a ficha conceder progressão. O aviso aparece na aba Rituais.

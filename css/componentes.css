@@ -1641,6 +1641,50 @@
 }
 .ordem-pendencia[data-situacao="incompleta"] { border-left-color: var(--cor-aviso); }
 .ordem-pendencia[data-situacao="invalida"] { border-left-color: var(--cor-erro); }
+/* Concessão de ritual já resolvida: continua na lista, sem chamar
+   atenção — ver é diferente de ter o que fazer. */
+.ordem-pendencia[data-situacao="ok"] { border-left-color: var(--cor-traco-media); }
+
+/* =====================================================================
+   APRENDIZADO DE RITUAIS
+   ---------------------------------------------------------------------
+   O topo da biblioteca quando ela abre presa a uma concessão, e o
+   resumo no alto da aba Rituais.
+   ===================================================================== */
+
+.bib-aprendizado {
+  padding: var(--e3);
+  background: var(--cor-superficie);
+  border-left: 3px solid var(--cor-paranormal);
+}
+.bib-aprendizado__titulo { overflow-wrap: anywhere; }
+.bib-aprendizado__conta {
+  font-family: var(--fonte-mini);
+  color: var(--cor-paranormal);
+}
+.bib-aprendizado__lista {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--e1);
+}
+.bib-aprendizado__item {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--e2);
+}
+
+.rituais-aprendizado {
+  display: flex;
+  flex-direction: column;
+  gap: var(--e1);
+  padding: var(--e2) var(--e3);
+  background: var(--cor-superficie);
+  border-left: 3px solid var(--cor-paranormal);
+}
 
 .ordem-regra {
   display: flex;

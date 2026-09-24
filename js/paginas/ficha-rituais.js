@@ -32,6 +32,20 @@
    catálogo oficial dos dois livros e a Homebrew da conta
    (js/paginas/ficha-rituais-biblioteca.js). O ritual trazido de lá é uma
    cópia com id próprio; editar a cópia não muda o catálogo.
+
+   ---------------------------------------------------------------------
+   DE ONDE CADA RITUAL VEIO
+   ---------------------------------------------------------------------
+
+   Numa ficha de Ordem, cada ritual mostra a concessão que ele ocupa: os
+   três iniciais, o ritual daquele NEX, Saber Ampliado, o grimório de
+   Graduado, Aprender Ritual — ou nenhuma, quando é registro da mesa. A
+   informação é DERIVADA do motor de progressão, não gravada no ritual:
+   a ficha continua com uma fonte só para "quem concedeu o quê".
+
+   O grimório aparece SEPARADO, e não como uma etiqueta. Conjurar de lá
+   tem condição própria (empunhar o grimório e gastar uma ação completa,
+   OPRPG p.35), e um ritual do grimório não é "mais um conhecido".
    ===================================================================== */
 
 (function (global) {
@@ -44,8 +58,24 @@
   var V = global.RAMAValidacao;
   var el = U.el;
 
+  function E() { return global.RAMAOrdemProgressao; }
+  function RT() { return global.RAMAOrdemRituais; }
+
   function rotulo(ctx) {
     return ctx.ficha.rituais.rotuloSecao || "Rituais";
+  }
+
+  /* O aprendizado de rituais desta ficha, quando ela é de Ordem e o
+     motor está carregado. Fora disso a aba continua exatamente como
+     era — uma ficha universal não ganha regra de Ordem. */
+  function aprendizadoDe(ctx) {
+    if (!F.ehDeOrdem(ctx.ficha) || !E() || !global.RAMAOrdemPoderes) return null;
+    var est = E().estado(ctx.ficha.ordem, { inventario: ctx.ficha.inventario, rituais: rituaisDe(ctx) });
+    return (est && est.rituais && est.rituais.disponivel) ? est.rituais : null;
+  }
+
+  function rituaisDe(ctx) {
+    return (ctx.ficha.rituais && ctx.ficha.rituais.itens) || [];
   }
 
   function aba(ctx) {
@@ -92,14 +122,81 @@
     var org = global.RAMAOrdemOrganizacao;
     var modo = org ? org.modo(ctx, "rituais") : "personalizada";
     var lista = U.ordenarLista(rituais.itens, modo);
+    var apr = aprendizadoDe(ctx);
+
+    /* O grimório é outro lugar, não outra etiqueta: ele sai da lista
+       dos conhecidos e ganha a própria seção, com a condição de uso
+       escrita uma vez, em cima. */
+    var noGrimorio = apr
+      ? lista.filter(function (r) { return apr.porRitual[r.id] && apr.porRitual[r.id].destino === "grimorio"; })
+      : [];
+    var demais = noGrimorio.length
+      ? lista.filter(function (r) { return noGrimorio.indexOf(r) < 0; })
+      : lista;
 
     return el("div.pilha--curta", { class: "pilha" }, [
       org ? org.barra(ctx, "rituais") : null,
-    ].concat(lista.map(function (r) { return cartao(ctx, r, modo); })));
+      painelDoAprendizado(ctx, apr),
+    ].concat(demais.map(function (r) { return cartao(ctx, r, modo, apr); }))
+     .concat(noGrimorio.length ? [
+       el("h3.t-rotulo", { texto: "Grimório (" + noGrimorio.length + ")" }),
+       el("p.t-mini", { texto: (RT() ? RT().condicoesDoDestino("grimorio").join(" ") : "") }),
+     ].concat(noGrimorio.map(function (r) { return cartao(ctx, r, modo, apr); })) : []));
   }
 
-  function cartao(ctx, ritual, modo) {
+  /* =================================================================
+     O APRENDIZADO, NO TOPO DA ABA
+     -----------------------------------------------------------------
+     Só o essencial: quantas concessões faltam e o limite por Intelecto.
+     A lista inteira mora na aba Progressão — repeti-la aqui faria a aba
+     Rituais virar outra Progressão.
+     ================================================================= */
+
+  function painelDoAprendizado(ctx, apr) {
+    if (!apr) return null;
+    var abertas = apr.concessoes.filter(function (c) { return !c.completa; });
+    var dt = RT() ? RT().dtDeResistencia(ctx.ficha.ordem) : null;
+
+    var linhas = [
+      el("p.t-mini", {
+        texto: abertas.length
+          ? "Faltam " + abertas.length + " concessão(ões) de ritual: " +
+            abertas.slice(0, 3).map(function (c) { return c.rotulo + " (" + c.rotuloEtapa + ", " + c.restantes + ")"; }).join("; ") +
+            (abertas.length > 3 ? "…" : "") + "."
+          : "Todas as concessões de ritual da progressão estão resolvidas.",
+      }),
+      el("p.t-mini", {
+        texto: "Limite de rituais conhecidos (Intelecto): " + apr.limite.usados + " de " + apr.limite.total +
+               " — só Aprender Ritual conta nele." +
+               (dt ? " DT para resistir aos seus rituais: " + dt.total + (dt.extra ? " (com +" + dt.extra + " de trilha)" : "") + "." : ""),
+      }),
+    ];
+
+    if (apr.semOrigem.length) {
+      linhas.push(el("p.t-mini", {
+        texto: apr.semOrigem.length + " ritual(is) sem concessão: registro da mesa, aprendizado em campo ou ficha anterior a esta versão. " +
+               "Eles contam como estão e podem ocupar uma concessão aberta pelo menu de cada cartão.",
+      }));
+    }
+
+    return el("div.rituais-aprendizado", {}, linhas.concat(abertas.length ? [
+      el("button.r-botao.r-botao--mini.r-botao--principal", {
+        type: "button", texto: "Escolher rituais",
+        onclick: function () {
+          if (!global.RAMAOrdemEscolhas) return;
+          global.RAMAOrdemEscolhas.abrirRituais({
+            ctx: ctx,
+            aoMudarRituais: function () { ctx.redesenhar(); },
+          }, { id: abertas[0].id });
+        },
+      }),
+    ] : []));
+  }
+
+  function cartao(ctx, ritual, modo, apr) {
     var rotulos = ctx.ficha.rituais.rotulos;
+    var vindo = apr ? apr.porRitual[ritual.id] : null;
+    var substituido = apr ? apr.substituidos[ritual.id] : null;
 
     /* Só campo preenchido aparece: uma lista de cinco rótulos com
        travessão do lado é ruído, não informação. */
@@ -129,12 +226,46 @@
       linhas.push(el("dd", { texto: partes.join(" — ") }));
     });
 
+    /* De onde este ritual veio — e, quando não veio de lugar nenhum,
+       a oferta de prendê-lo a uma concessão aberta que o aceite. Nunca
+       sozinho: registrar um ritual não quita pendência. */
+    if (apr) {
+      var origem = [];
+      if (vindo) {
+        origem.push(el("dt", { texto: "Aprendizado" }));
+        origem.push(el("dd", {
+          texto: vindo.nomePoder + " · " + vindo.rotuloEtapa +
+                 (vindo.destino === "grimorio" ? " · guardado no grimório" : "") +
+                 (vindo.contaNoLimite ? " · conta no limite por Intelecto" : " · fora do limite de rituais conhecidos") +
+                 (vindo.legado ? " · vínculo guardado só pelo nome, de uma ficha anterior" : "") +
+                 (vindo.excecao ? " · mantido pela mesa fora da regra desta concessão" : ""),
+        }));
+      } else {
+        origem.push(el("dt", { texto: "Aprendizado" }));
+        origem.push(el("dd", {
+          texto: apr.emCampo
+            ? "Sem concessão da progressão — com o aprendizado em campo, é assim que um ritual entra: estudo na mesa."
+            : "Sem concessão da progressão: registro da mesa, ou de uma ficha anterior a esta versão.",
+        }));
+      }
+      if (substituido) {
+        origem.push(el("dt", { texto: "Substituído" }));
+        origem.push(el("dd", {
+          texto: "Trocado por " + (substituido.nome || "outro ritual") + " em " + substituido.rotuloEtapa +
+                 " (Aprender Ritual, Ordem Paranormal RPG, p. 114). Ele continua na ficha, sem ocupar concessão.",
+        }));
+      }
+      linhas = origem.concat(linhas);
+    }
+
     var acoes = ctx.emEdicao() ? [
       UI.menu([
         { rotulo: "Editar", aoClicar: function () { editar(ctx, ritual); } },
         { rotulo: "Duplicar", aoClicar: function () { duplicar(ctx, ritual); } },
         { rotulo: "Enviar à biblioteca", aoClicar: function () { enviarParaHomebrew(ctx, ritual); } },
-      ].concat(modo && modo !== "personalizada" ? [] : [
+      ].concat(apr && !vindo ? [{ rotulo: "Prender a uma concessão", aoClicar: function () { prender(ctx, ritual, apr); } }] : [])
+       .concat(apr && vindo && !vindo.legado ? [{ rotulo: "Soltar da concessão", aoClicar: function () { soltar(ctx, ritual, vindo); } }] : [])
+       .concat(modo && modo !== "personalizada" ? [] : [
         /* Subir e Descer mexem na ordem guardada: com a tela ordenada
            por nome ou por adição, não mudariam nada visível. */
         { rotulo: "Subir", aoClicar: function () { reordenar(ctx, ritual, -1); } },
@@ -655,14 +786,92 @@
     ctx.redesenhar();
   }
 
+  /* =================================================================
+     PRENDER E SOLTAR
+     -----------------------------------------------------------------
+     A associação é sempre EXPLÍCITA: a janela lista as concessões
+     abertas que aceitam este ritual e diz por que as outras não. Nada
+     é escolhido sozinho, e nenhuma cópia é criada.
+     ================================================================= */
+
+  function prender(ctx, ritual, apr) {
+    var A = global.RAMAOrdemAprendizado;
+    var dados = RT() ? RT().dadosDoRitual(ritual) : {};
+    var candidato = { circulo: dados.circulo || 0, elemento: dados.elemento || "", catalogo: ritual.origemCatalogoId || "" };
+
+    var aceitam = [];
+    var recusam = [];
+    apr.concessoes.forEach(function (c) {
+      var teste = A ? A.elegibilidade(c.concessao, candidato) : { ok: false, motivo: "" };
+      if (c.completa) recusam.push({ c: c, motivo: "Já está completa." });
+      else if (!teste.ok) recusam.push({ c: c, motivo: teste.motivo });
+      else aceitam.push(c);
+    });
+
+    if (!aceitam.length) {
+      UI.avisoAtencao(ritual.nome + " não cabe em nenhuma concessão aberta. " +
+        (recusam.length ? recusam[0].c.rotulo + ": " + recusam[0].motivo : "Não há concessão em aberto."));
+      return;
+    }
+
+    var janela;
+    janela = UI.modal({
+      titulo: "Prender " + ritual.nome + " a uma concessão",
+      conteudo: el("div.pilha--curta", { class: "pilha" }, [
+        el("p.t-mini", { texto: "O ritual continua sendo este — nenhuma cópia é criada. Soltar depois também não o apaga." }),
+      ].concat(aceitam.map(function (c) {
+        return el("button.criacao-opcao", {
+          type: "button",
+          onclick: function () {
+            E().adicionarRitual(ctx.ficha.ordem, c.id, ritual);
+            ctx.alterou();
+            ctx.redesenhar();
+            UI.avisoOk(ritual.nome + " passou a ocupar " + c.rotulo + " (" + c.rotuloEtapa + ").");
+            if (janela) janela.fechar();
+          },
+        }, [
+          el("span.criacao-opcao__nome", { texto: c.rotulo + " · " + c.rotuloEtapa }),
+          el("span.criacao-opcao__texto", { texto: c.explicacao }),
+          el("span.criacao-opcao__fonte", { texto: "Faltam " + c.restantes + " de " + c.quantidade + "." }),
+        ]);
+      })).concat(recusam.length ? [
+        el("h4.t-rotulo", { texto: "Não aceitam este ritual" }),
+        el("ul.bib-lista-textos", {}, recusam.slice(0, 8).map(function (x) {
+          return el("li.t-mini", { texto: x.c.rotulo + " (" + x.c.rotuloEtapa + "): " + x.motivo });
+        })),
+      ] : [])),
+      botoes: [{ rotulo: "Cancelar", classe: "r-botao--fantasma" }],
+    });
+  }
+
+  async function soltar(ctx, ritual, vindo) {
+    var certeza = await UI.confirmar({
+      titulo: "Soltar " + ritual.nome + " da concessão?",
+      texto: "Ele sai de " + vindo.nomePoder + " (" + vindo.rotuloEtapa + ") e a concessão volta a ficar pendente.",
+      detalhe: "O ritual continua na ficha, com tudo o que tem.",
+      rotuloConfirmar: "Soltar",
+    });
+    if (!certeza) return;
+    E().removerRitual(ctx.ficha.ordem, vindo.concessao, ritual.id);
+    ctx.alterou();
+    ctx.redesenhar();
+  }
+
   async function remover(ctx, ritual) {
+    var apr = aprendizadoDe(ctx);
+    var vindo = apr ? apr.porRitual[ritual.id] : null;
     var certeza = await UI.confirmar({
       titulo: "Remover " + ritual.nome + "?",
-      texto: "O registro sai desta ficha.",
+      texto: vindo
+        ? "O registro sai desta ficha, e " + vindo.nomePoder + " (" + vindo.rotuloEtapa + ") volta a ficar pendente na Progressão."
+        : "O registro sai desta ficha.",
       detalhe: "Esta ação não pode ser desfeita.",
       rotuloConfirmar: "Remover", perigo: true,
     });
     if (!certeza) return;
+    /* O vínculo sai junto: uma concessão apontando para um ritual que
+       não existe mais seria uma pendência escondida. */
+    if (vindo) E().removerRitual(ctx.ficha.ordem, vindo.concessao, ritual.id);
 
     ctx.ficha.rituais.itens = ctx.ficha.rituais.itens.filter(function (r) { return r.id !== ritual.id; });
     ctx.alterou();

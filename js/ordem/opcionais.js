@@ -166,19 +166,57 @@
       ],
     },
 
+    /* "Os Limites da Compreensão Humana" (SAH p.113) apresenta DUAS
+       alternativas para a raridade dos rituais, e o livro as numera: A,
+       aprendizado lento, e B, aprendizado em campo. São duas chaves
+       porque são duas regras, e uma exclui a outra.
+
+       Até a v2.16 esta chave descrevia um teto de perícias, que não é o
+       que está nessa página do livro. A correção está no changelog: uma
+       ficha que já tinha a chave ligada passa a receber a regra certa
+       — antes ela não recebia nenhuma. */
     {
       chave: "limitesCompreensao",
-      nome: "Os Limites da Compreensão Humana",
-      resumo: "Põe um teto no quanto um personagem pode saber e treinar.",
+      nome: "Limite de rituais por aprendizado lento",
+      resumo: "O ocultista aprende um ritual novo só a cada NEX ímpar, em vez de a cada avanço.",
+      fonte: SAH, pagina: 113,
+      afetaFicha: true,
+      automacao: "calculo",
+      efeito:
+        "Os três rituais iniciais continuam. O ritual que Escolhido pelo Outro Lado dá a cada " +
+        "avanço passa a vir só nos degraus ímpares (NEX 15%, 25%, 35%… ou nível 3, 5, 7…). " +
+        "Saber Ampliado, o grimório e Aprender Ritual não mudam.",
+      parametros: [],
+      depende: [],
+      incompativel: ["aprendizadoEmCampo"],
+      consequencias: [
+        "As concessões de ritual dos degraus pares somem da progressão. Os rituais já escolhidos " +
+        "nelas NÃO são apagados: ficam guardados, sem concessão, e voltam a valer se a regra for desligada.",
+        "Até a v2.16 esta chave não fazia nada (ela descrevia um teto de perícias, que não é a regra " +
+        "desta página do livro). Ligada numa ficha antiga, ela agora tem efeito.",
+      ],
+    },
+
+    {
+      chave: "aprendizadoEmCampo",
+      nome: "Limite de rituais por aprendizado em campo",
+      resumo: "O ocultista não ganha rituais ao avançar: eles são encontrados em missão e aprendidos por estudo.",
       fonte: SAH, pagina: 113,
       afetaFicha: true,
       automacao: "parcial",
-      efeito: "Limita o grau de treinamento das perícias. Os valores exatos do teto ainda não foram estruturados.",
+      efeito:
+        "Os três rituais iniciais continuam, e mais nenhum vem por avanço de NEX ou nível. " +
+        "Novos rituais são encontrados em jogo e aprendidos com uma ação de interlúdio e um teste " +
+        "de Ocultismo (DT 20, 25, 30 ou 35, conforme o círculo), sem limite de quantidade, só em " +
+        "círculos a que o personagem tenha acesso.",
       parametros: [],
       depende: [],
-      incompativel: [],
+      incompativel: ["limitesCompreensao"],
       consequencias: [
-        "Perícias acima do teto continuam na ficha e aparecem marcadas, em vez de serem rebaixadas sozinhas.",
+        "As concessões de ritual por avanço somem da progressão. Os rituais já escolhidos nelas NÃO " +
+        "são apagados: ficam guardados e voltam a valer se a regra for desligada.",
+        "O estudo em campo acontece na mesa: o R.A.M.A. mostra a DT por círculo e marca o ritual " +
+        "como aprendido em campo, mas não rola o teste nem gasta a ação de interlúdio.",
       ],
     },
 

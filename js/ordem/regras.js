@@ -1404,7 +1404,7 @@
      RITUAIS — OPRPG p.119, p.33
      ================================================================= */
 
-  function rituais(ficha) {
+  function rituais(ficha, contexto) {
     var classe = C.classe(ficha.classe);
     var t = trilho(ficha);
 
@@ -1415,11 +1415,35 @@
       });
     }
 
+    /* O limite por Intelecto conta SÓ o que veio de Aprender Ritual:
+       "ocultistas aprendem rituais através de suas habilidades de
+       classe. Esses rituais não contam no limite" (OPRPG p.119). Sem o
+       motor de progressão carregado, sobra o limite sem a conta —
+       nenhuma página que não calcula a ficha precisa dela. */
+    var est = estadoDe(ficha, contexto && contexto.inventario ? contexto.inventario : null);
+    var aprendizado = est && est.rituais ? est.rituais : null;
+
     return {
       limitePorIntelecto: atributo(ficha, "int"),
+      limite: aprendizado ? aprendizado.limite : null,
+      aprendizado: aprendizado,
       circuloMaximo: circuloMaximo,
       custoPorCirculo: C.CUSTO_RITUAL,
+      /* Rituais Eficientes (Graduado, OPRPG p.35) soma +5 na DT de
+         resistir a TODOS os rituais do personagem. */
+      dtExtra: somaDeDtDeRitual(ficha),
     };
+  }
+
+  function somaDeDtDeRitual(ficha) {
+    var total = 0;
+    var partes = [];
+    efeitosDaProgressao(ficha).forEach(function (ef) {
+      if (ef.tipo !== "dtRitual") return;
+      total += inteiro(ef.valor, 0);
+      partes.push({ fonte: ef.fonte, valor: inteiro(ef.valor, 0), detalhe: ef.detalhe || "" });
+    });
+    return { total: total, partes: partes };
   }
 
   /* =================================================================

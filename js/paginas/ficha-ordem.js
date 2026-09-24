@@ -50,8 +50,12 @@
     return ctx.ficha.ordem;
   }
 
+  /* O contexto que o motor de progressão recebe. Os rituais entram
+     porque as concessões de aprendizado conferem CÍRCULO e ELEMENTO —
+     e quem sabe o círculo de um ritual da ficha é a ficha, não o que
+     ficou guardado junto da escolha. */
   function contextoDe(ctx) {
-    return { inventario: ctx.ficha.inventario };
+    return { inventario: ctx.ficha.inventario, rituais: rituaisDe(ctx) };
   }
 
   function rituaisDe(ctx) {
@@ -1527,6 +1531,7 @@
       return el("div.pilha--larga", { class: "pilha" }, [
         painelNivel(ctx, o, c),
         painelPendencias(ctx, o, c, est),
+        painelAprendizado(ctx, o, c, est),
         painelAfinidade(ctx, o, c, est),
         painelEscolhas(ctx, o, c, est),
         painelForaDaProgressao(ctx, o, est),
@@ -1619,9 +1624,14 @@
       ordem: o,
       contexto: contextoDe(ctx),
       rituais: rituaisDe(ctx),
+      ctx: ctx,
       vagaId: p.id,
       aoRegistrar: function () { aoMudarOrdem(ctx); UI.avisoOk("Escolha registrada."); },
       aoConfirmar: function () { aoMudarOrdem(ctx); UI.avisoOk("Afinidade registrada."); },
+      /* A janela de rituais fica aberta enquanto a pessoa escolhe: cada
+         ritual preso já é uma mudança gravada, e um aviso por clique
+         seria barulho. */
+      aoMudarRituais: function () { aoMudarOrdem(ctx); },
       aoAdiar: function () { aoMudarOrdem(ctx); },
     });
   }
@@ -1650,6 +1660,81 @@
         return ES.cartaoDePendencia(p, function () { resolver(ctx, p); });
       })),
     ]));
+  }
+
+  /* O aprendizado de rituais, reunido: de onde cada concessão vem, o
+     que ela dá, o que já foi escolhido e o que falta. As pendências
+     continuam aparecendo acima, junto das outras — este painel é o
+     lugar de VER a progressão inteira, inclusive o que já foi
+     resolvido. */
+  function painelAprendizado(ctx, o, c, est) {
+    if (!est || !est.rituais || !est.rituais.disponivel) return null;
+    var a = est.rituais;
+    var abertas = a.concessoes.filter(function (x) { return !x.completa; });
+
+    var linhas = a.concessoes.map(function (x) {
+      return el("div.ordem-pendencia", { dataset: { situacao: x.completa ? "ok" : "aberta" } }, [
+        el("span.ordem-pendencia__nex", { texto: x.rotuloEtapa }),
+        el("div.ordem-pendencia__corpo", {}, [
+          el("span.ordem-pendencia__rotulo", { texto: x.rotulo }),
+          el("span.escolha-marcas", {}, [
+            el("span.etiqueta", { texto: x.origem === "trilha" ? "Trilha" : "Classe" }),
+            el("span.etiqueta", { texto: x.nomePoder }),
+            x.fixo ? el("span.etiqueta", { texto: "automática" }) : null,
+            x.destino === "grimorio" ? el("span.etiqueta.etiqueta--parcial", { texto: "grimório" }) : null,
+            x.opcional ? el("span.etiqueta", { texto: "opcional" }) : null,
+          ]),
+          el("span.t-mini", {
+            texto: "Escolhidos: " + x.escolhidos.length + " de " + x.quantidade +
+                   (x.escolhidos.length ? " — " + x.escolhidos.map(function (i) { return i.nome || "(sem nome)"; }).join(", ") : "") + ".",
+          }),
+          x.escolhidos.some(function (i) { return i.excecao; })
+            ? el("span.t-mini.t-aviso", { texto: "Há ritual mantido pela mesa fora da regra desta concessão." })
+            : null,
+        ]),
+        el("button.r-botao.r-botao--mini", {
+          type: "button",
+          class: x.completa ? "" : "r-botao--principal",
+          texto: x.completa ? "Revisar" : (x.fixo ? "Trazer ritual" : "Escolher rituais"),
+          "aria-label": (x.completa ? "Revisar " : "Escolher rituais de ") + x.rotulo + ", " + x.rotuloEtapa,
+          onclick: function () { resolver(ctx, { id: x.id }); },
+        }),
+      ]);
+    });
+
+    var limite = a.limite;
+    var avisos = [];
+    if (a.emCampo) {
+      avisos.push("Aprendizado em campo (Sobrevivendo ao Horror, p. 113): nenhum ritual vem por avanço. " +
+        "Encontrar e estudar acontece na mesa — ação de interlúdio e Ocultismo DT 20 (1º), 25 (2º), 30 (3º) ou 35 (4º).");
+    }
+    if (a.lento) {
+      avisos.push("Aprendizado lento (Sobrevivendo ao Horror, p. 113): o ritual por avanço vem só nos degraus ímpares.");
+    }
+    /* SAH p.99: aprender um ritual sobe o NEX pelo círculo dele. O
+       R.A.M.A. não mexe no NEX sozinho — subir um campo da mesa a cada
+       leitura da ficha seria conceder progressão por recalcular. */
+    if (c.trilho.separado) {
+      avisos.push("Com NEX & Experiência, aprender um ritual soma o círculo dele ao NEX de exposição " +
+        "(Sobrevivendo ao Horror, p. 99) — inclusive os iniciais. O R.A.M.A. não mexe no NEX: ajuste-o acima.");
+    }
+    if (limite.excedido) {
+      avisos.push("Aprender Ritual foi escolhido " + limite.usados + " vezes, e o limite é o Intelecto (" + limite.total + "). " +
+        "Nada foi apagado: reveja as escolhas na lista acima ou combine a exceção com a mesa.");
+    }
+
+    return UI.painel("Aprendizado de rituais" + (abertas.length ? " (" + abertas.length + " em aberto)" : ""),
+      el("div.pilha--curta", { class: "pilha" }, [
+        el("p.t-mini", {
+          texto: "Os rituais que a classe e a trilha concedem. Cada botão abre a biblioteca presa àquela concessão: " +
+                 "o que não cabe nela aparece com o motivo, e escolher menos agora é permitido.",
+        }),
+        el("p.t-mini", {
+          texto: "Limite de rituais conhecidos (Intelecto): " + limite.usados + " de " + limite.total +
+                 " — só Aprender Ritual conta nele (Ordem Paranormal RPG, p. 119).",
+        }),
+      ].concat(avisos.map(function (x) { return el("p.t-mini.t-aviso", { texto: x }); }))
+       .concat([el("div.pilha--curta", { class: "pilha" }, linhas)])));
   }
 
   function painelAfinidade(ctx, o, c, est) {

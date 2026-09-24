@@ -14,17 +14,19 @@
    TRÊS COISAS DIFERENTES, QUE NÃO SE MISTURAM
    ---------------------------------------------------------------------
 
-     versão do aplicativo   está aqui. É o que a pessoa vê: v2.16.0.
+     versão do aplicativo   está aqui. É o que a pessoa vê: v2.17.0.
      schemaVersion          está em js/ficha.js. É o formato da FICHA,
                             e só sobe quando a ficha muda de forma.
      versaoFormato          está em js/config.js. É o formato dos
                             arquivos de importação/exportação.
 
-   Elas sobem em ritmos próprios. A v2.16.0 leva schemaVersion 8 e
+   Elas sobem em ritmos próprios. A v2.17.0 leva schemaVersion 8 e
    versaoFormato 1 — e isso é normal: a v2.15 mudou ONDE a ficha é guardada
-   (em blocos, no backend) e a v2.16 mudou como ela é ACHADA e o que o painel
-   lê para desenhar um cartão. Nenhuma das duas mudou o que é uma ficha, então
-   nem o formato da ficha nem o dos arquivos de importação mudaram. A forma de guardar tem a
+   (em blocos, no backend), a v2.16 mudou como ela é ACHADA e o que o painel
+   lê para desenhar um cartão, e a v2.17 acrescentou decisões dentro de
+   `ordem.escolhas`, que é uma coleção aberta desde que existe. Nenhuma das
+   três mudou o que é uma ficha, então nem o formato da ficha nem o dos
+   arquivos de importação mudaram. A forma de guardar tem a
    própria versão, no manifesto de cada ficha (`formato: "blocos"`,
    `versao: 1` — ver docs/DATABASE.md). A última subida de schema com
    migração foi a v2.14.0: o texto longo do ritual saiu de `efeito` e foi
@@ -61,6 +63,39 @@
   ];
 
   var CHANGELOG = [
+    {
+      versao: "2.17.0",
+      codinome: "GRIMÓRIO",
+      data: "23/09/2026",
+      mudancas: {
+        "Adicionado": [
+          "O ocultista deixou de controlar os rituais da classe no papel. A ficha agora sabe quantos rituais ele pode aprender em cada etapa, mostra as escolhas que faltam com a conta aberta (\"Escolhidos: 1 de 3\") e resolve cada uma pela biblioteca de rituais que já existia. São os três rituais iniciais de 1º círculo e mais um a cada avanço de NEX (Ordem Paranormal RPG, p. 32).",
+          "A trilha Graduado entrou inteira: Saber Ampliado dá um ritual de 1º círculo e mais um a cada círculo novo; o Grimório Ritualístico guarda rituais de 1º ou 2º círculo iguais ao Intelecto, mais um por círculo novo — esse opcional, porque o livro diz \"pode incluir\". E Rituais Eficientes passou a somar +5 na DT de resistir aos seus rituais (p. 35).",
+          "O grimório não é uma pasta com outro nome: os rituais dele ficam numa seção própria da aba Rituais, com a condição de uso escrita — para conjurar, é preciso empunhá-lo e gastar uma ação completa folheando — e fora da contagem de rituais conhecidos.",
+          "Abrir a biblioteca por uma pendência abre a MESMA janela de sempre, presa àquela concessão: o topo diz de onde o benefício veio e quantos faltam, os filtros já abrem no círculo certo, cada ritual diz se é elegível ali, e o que não é continua à vista, com o motivo e com a saída \"só registrar na ficha, sem concessão\".",
+          "O limite de rituais conhecidos virou conta de verdade: ele conta só o que veio do poder Aprender Ritual, que é o que o livro manda (p. 119), e aparece na aba Rituais e na Progressão.",
+          "Os rituais que uma trilha concede pelo nome — Canalizar o Medo, Medo Tangível, Presença do Medo, Conhecendo o Medo, Lâmina do Medo, Amaldiçoar Arma e os de Ser Aterrorizante — aparecem como concessão automática, com um botão que traz a cópia. O R.A.M.A. não escreve na ficha sozinho.",
+          "Aprender Ritual passou a escolher um ritual DA FICHA, em vez de um nome digitado, com o círculo conferido pelo NEX de exposição (1º; 2º a partir de 45%; 3º a partir de 75%) e com a substituição que o poder permite, marcada como troca das regras.",
+          "Duas regras opcionais novas, as do Sobrevivendo ao Horror p. 113: o limite por aprendizado lento (um ritual só a cada degrau ímpar) e o limite por aprendizado em campo (nenhum por avanço; rituais são encontrados e estudados na mesa).",
+        ],
+        "Alterado": [
+          "Na criação de um ocultista, os três rituais iniciais aparecem em \"Falta decidir\" e podem ser escolhidos ali mesmo. A revisão lista o que foi escolhido, com a concessão de cada um, e a ficha nasce com os rituais dentro.",
+          "Cada ritual da ficha mostra de onde veio: a habilidade que o concedeu, a etapa, se está no grimório e se conta no limite. Um ritual sem concessão continua legítimo — registro da mesa, aprendizado em campo ou ficha anterior — e o menu dele oferece prendê-lo a uma concessão aberta, sem criar outra cópia.",
+          "\"Os Limites da Compreensão Humana\" descrevia um teto de perícias, que não é a regra dessa página do livro. Agora ela é o limite de rituais por aprendizado lento, e ganhou uma irmã para o aprendizado em campo. Uma ficha que já tinha a chave ligada não recebia nada antes e passa a receber a regra certa.",
+        ],
+        "Corrigido": [
+          "Exportar e importar uma ficha não perde mais de onde cada ritual veio. A importação troca todos os ids, então o arquivo leva cada vínculo como posição na lista e a importação o refaz — só quando o ritual daquela posição ainda é o mesmo. Quando não é, nenhum vínculo é refeito no palpite: a concessão volta a ficar pendente, com os rituais do lado.",
+        ],
+        "Técnico": [
+          "Não requer nada do backend: nenhum `.gs` mudou, não há setupRama() a rodar e não há implantação nova a criar. O que a versão acrescenta mora em `ordem.escolhas`, e o schemaVersion continua 8. Um site antigo abrindo uma ficha da v2.17 mostra os rituais e ignora os vínculos, sem apagá-los.",
+          "O vínculo é com o ID do ritual na ficha, e um ritual ocupa uma concessão só: a etapa mais antiga reivindica primeiro, e a segunda que apontar para ele aparece com o motivo, sem apagar nada. Nada da conta é gravado — quantos faltam, o limite e a separação entre conhecido e grimório saem do motor a cada leitura.",
+          "O círculo é conferido na ETAPA que concedeu: uma concessão de NEX 20% continua só de 1º círculo num personagem de NEX 99%. Trocar trilha, classe ou baixar o NEX não apaga ritual: a concessão some, o registro fica guardado com o motivo e o vínculo volta sozinho se a concessão voltar.",
+          "Com nível e NEX separados, cada benefício olha o que é dele: as concessões de classe e de trilha seguem o NÍVEL, e Aprender Ritual continua olhando o NEX de exposição (Sobrevivendo ao Horror, p. 98). Aprender um ritual sobe o NEX pelo círculo dele (p. 99), e isso a ficha avisa em vez de fazer sozinha.",
+          "js/ordem/aprendizado.js é novo: ele responde \"quantos rituais, de que círculo, vindos de onde, guardados onde\" sem tela, sem ficha e sem o catálogo de rituais carregado. A tabela dos rituais concedidos pelo nome é conferida contra o catálogo por teste.",
+          "Testes: 1687 no modelo (126 novas), 812 no backend e 219 no transporte do frontend. Vinte e cinco mutações propositais nas garantias novas; todas foram pegas por algum teste.",
+        ],
+      },
+    },
     {
       versao: "2.16.0",
       codinome: "PISTA",

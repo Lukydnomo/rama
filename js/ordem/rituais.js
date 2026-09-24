@@ -416,6 +416,18 @@
     return avisos;
   }
 
+  /* O que muda num ritual por causa de ONDE ele está guardado. O
+     grimório de Graduado não é uma pasta com outro nome: conjurar de lá
+     tem condição própria (OPRPG p.35). */
+  function condicoesDoDestino(destino) {
+    var A = global.RAMAOrdemAprendizado;
+    if (!A || destino !== A.DESTINOS.grimorio.chave) return [];
+    return [
+      "Está no grimório: para conjurar, é preciso empunhá-lo e gastar uma ação completa folheando para relembrar o ritual.",
+      "O grimório ocupa 1 espaço no inventário. Perdido, é replicado com duas ações de interlúdio.",
+    ];
+  }
+
   /* A DT de resistência dos rituais desta ficha — informação, não
      automação: 10 + nível de exposição + Presença (OPRPG p. 121). O
      "nível de exposição" é o mesmo degrau de progressão que o motor já
@@ -426,7 +438,18 @@
     var t = R.trilho(ordem);
     if (!t || !t.passos) return null;
     var presenca = R.atributo(ordem, "pre");
-    return { total: 10 + t.passos + presenca, nivel: t.passos, rotulo: t.rotulo, presenca: presenca };
+    /* Habilidades que sobem a DT de todos os rituais — hoje só Rituais
+       Eficientes, de Graduado (OPRPG p.35). Vem da progressão, não de
+       uma segunda tabela aqui. */
+    var extra = (R.rituais ? (R.rituais(ordem).dtExtra || null) : null) || { total: 0, partes: [] };
+    return {
+      total: 10 + t.passos + presenca + extra.total,
+      nivel: t.passos,
+      rotulo: t.rotulo,
+      presenca: presenca,
+      extra: extra.total,
+      partesExtra: extra.partes,
+    };
   }
 
   /* =================================================================
@@ -611,6 +634,7 @@
     quantasNaFicha: quantasNaFicha,
 
     conferencias: conferencias,
+    condicoesDoDestino: condicoesDoDestino,
     dtDeResistencia: dtDeResistencia,
 
     opcoesDaEscolha: opcoesDaEscolha,

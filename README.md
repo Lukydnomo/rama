@@ -110,7 +110,7 @@ E abra `http://localhost:8099/rama/`.
 
 São três conjuntos.
 
-**Modelo e motor de dados** — 1561 verificações. No navegador, abra `testes/`;
+**Modelo e motor de dados** — 1687 verificações. No navegador, abra `testes/`;
 no terminal:
 
 ```bash
@@ -139,6 +139,20 @@ atributo no dano, penalidade de dados, margem dobrada por Predadora, tabela de
 maldições (acréscimo de categoria, não acumulação, incompatibilidade, oposição de
 elementos, remoção que devolve o valor-base) e a ficha atravessando salvar,
 exportar e importar com tudo isso.
+
+E o aprendizado de rituais (v2.17): os três rituais iniciais do ocultista e o
+ritual de cada avanço de NEX, com o círculo conferido na ETAPA que concedeu — uma
+concessão de NEX 20% continua só de 1º círculo num personagem de NEX 99%; Saber
+Ampliado e o grimório de Graduado, cada um com a quantidade e o círculo que o
+livro dá (o grimório com "rituais iguais ao Intelecto", contado no Intelecto
+daquela etapa); escolher pela metade e voltar depois; um ritual ocupando uma
+concessão só; recalcular, salvar, reabrir, exportar e importar sem conceder de
+novo nem duplicar ritual nenhum; trocar trilha, classe ou NEX guardando a escolha
+em vez de apagar o ritual; o limite por Intelecto contando só Aprender Ritual; as
+duas variantes de SAH p.113; nível e NEX separados mandando cada um no que é seu;
+associar um ritual antigo sem criar outra cópia; os rituais que uma trilha concede
+pelo nome, conferidos um a um contra o catálogo; e a exceção da mesa, que entra
+marcada e com o motivo escrito.
 
 E o catálogo de rituais: os 98 rituais conferidos contra os dois livros (elemento,
 círculo, execução, alcance, alvo/área/efeito, duração, resistência, página e o
@@ -417,6 +431,13 @@ e um "Carregar mais" que repete a primeira página; um site novo contra o servid
 antigo mostra as fotos normalmente (ele as manda embutidas) e pagina como antes.
 Publicar os dois na mesma janela evita as duas coisas.
 
+**Atualizando para a v2.17 (o aprendizado de rituais): só o site.** Esta versão
+não toca no backend — nenhum `.gs` mudou, não há `setupRama()` a rodar e não há
+implantação nova a criar. O que ela acrescenta mora na ficha, dentro de
+`ordem.escolhas`, e o servidor guarda isso como já guardava o resto. Um site
+antigo abrindo uma ficha da v2.17 mostra os rituais e ignora os vínculos, sem
+apagá-los; nenhuma ficha é convertida e o `schemaVersion` não muda.
+
 Sem o passo 2, as fichas antigas continuam abrindo, mas nenhuma ficha salva
 (`instalacao_incompleta`) — nada é gravado pela metade. **Não volte a implantação
 para uma versão anterior à v2.15** sem necessidade: a versão antiga não sabe abrir
@@ -568,6 +589,25 @@ console não abre o registro de outra conta.
   escrito — mas a ficha não gasta PE, não faz teste de resistência, não aplica
   condição e não desconta Sanidade. Registrar um ritual não resolve pendência de
   progressão: aprender continua sendo a escolha na aba Progressão.
+- **O aprendizado de rituais é do ocultista (v2.17).** Quem concede rituais por
+  progressão é a classe Ocultista e as trilhas dela — mais os rituais que algumas
+  trilhas dão pelo nome, em qualquer classe. Outras classes só aprendem pelo poder
+  paranormal Aprender Ritual, que é o único aprendizado que conta no limite por
+  Intelecto.
+- **Evolução por Patentes não muda as concessões de ritual.** A tabela do
+  ocultista por patente (Sobrevivendo ao Horror, p. 112) dá dois rituais por
+  patente, e essa regra opcional ainda não tem o trilho de progressão estruturado:
+  com ela ligada, as concessões continuam seguindo os degraus de NEX ou de nível.
+  Ver `docs/ORDEM-REGRAS.md`.
+- **Aprender um ritual não mexe no NEX.** Com NEX & Experiência, o livro soma o
+  círculo do ritual ao NEX de exposição (SAH p. 99). O R.A.M.A. avisa e deixa o
+  ajuste com a mesa: subir um campo da ficha a cada leitura faria recalcular
+  conceder progressão.
+- **"Os Limites da Compreensão Humana" mudou de significado na v2.17.** Até a
+  v2.16 essa chave descrevia um teto de perícias, que não é a regra dessa página
+  do livro; ela agora é o limite de rituais por aprendizado lento, e ganhou uma
+  irmã para o aprendizado em campo. Uma ficha que já tinha a chave ligada não
+  recebia nada antes e passa a receber a regra certa.
 
 ## Próximos passos sugeridos
 

@@ -275,6 +275,91 @@
     return valor;
   }
 
+  /* =================================================================
+     O VÍNCULO DE RITUAL ATRAVESSANDO A IMPORTAÇÃO
+     -----------------------------------------------------------------
+     Uma concessão de progressão aponta para um ritual da ficha pelo ID
+     dele, e exportar apaga todos os ids — ninguém leva a identidade de
+     uma ficha para outra. Sem a travessia abaixo, um ocultista
+     importado abriria com os rituais na ficha e todas as concessões
+     pendentes, como se nunca tivesse aprendido nada.
+
+     A travessia é por POSIÇÃO: ao exportar, cada vínculo anota em que
+     lugar da lista o ritual está; ao importar, a posição vira o id novo
+     daquele ritual.
+
+     E ela só é aceita quando o ritual daquela posição AINDA é o mesmo:
+     mesma origem de catálogo e mesmo nome. Um arquivo editado à mão que
+     embaralhe a lista não ganha um vínculo errado — ganha nenhum, e a
+     concessão volta a ficar pendente, com os rituais do lado. Vínculo
+     faltando quem joga resolve; vínculo errado mentiria sobre de onde o
+     ritual veio.
+     ================================================================= */
+
+  var MARCA_POSICAO = "_pos";
+
+  /* Uma cópia da ficha com cada vínculo de ritual marcado com a posição
+     dele na lista. Só é chamada ao exportar. */
+  function comPosicoesDeRitual(ficha) {
+    var itens = (ficha && ficha.rituais && Array.isArray(ficha.rituais.itens)) ? ficha.rituais.itens : [];
+    var escolhas = (ficha && ficha.ordem && Array.isArray(ficha.ordem.escolhas)) ? ficha.ordem.escolhas : [];
+    if (!itens.length || !escolhas.length) return ficha;
+
+    var mapa = {};
+    itens.forEach(function (r, i) {
+      if (r && typeof r === "object" && typeof r.id === "string" && r.id) mapa[r.id] = i;
+    });
+
+    var copia = JSON.parse(JSON.stringify(ficha));
+    marcarPosicoes(copia.ordem.escolhas, mapa, 0);
+    return copia;
+  }
+
+  function marcarPosicoes(valor, mapa, profundidade) {
+    if (profundidade > 12 || !valor || typeof valor !== "object") return;
+    if (Array.isArray(valor)) {
+      valor.forEach(function (v) { marcarPosicoes(v, mapa, profundidade + 1); });
+      return;
+    }
+    if (typeof valor.id === "string" && mapa[valor.id] !== undefined) valor[MARCA_POSICAO] = mapa[valor.id];
+    Object.keys(valor).forEach(function (k) {
+      if (k === "id") return;
+      marcarPosicoes(valor[k], mapa, profundidade + 1);
+    });
+  }
+
+  function refazerVinculos(ficha) {
+    var itens = (ficha.rituais && Array.isArray(ficha.rituais.itens)) ? ficha.rituais.itens : [];
+    var escolhas = (ficha.ordem && Array.isArray(ficha.ordem.escolhas)) ? ficha.ordem.escolhas : [];
+    aplicarPosicoes(escolhas, itens, 0);
+  }
+
+  /* O ritual daquela posição ainda é o que o vínculo descrevia? */
+  function mesmoRitual(ritual, vinculo) {
+    if (!ritual || !ritual.id) return false;
+    var catalogo = typeof vinculo.catalogo === "string" ? vinculo.catalogo : "";
+    if (catalogo && String(ritual.origemCatalogoId || "") !== catalogo) return false;
+    var nome = typeof vinculo.nome === "string" ? vinculo.nome : "";
+    if (nome && String(ritual.nome || "") !== nome) return false;
+    return !!(catalogo || nome);
+  }
+
+  function aplicarPosicoes(valor, itens, profundidade) {
+    if (profundidade > 12 || !valor || typeof valor !== "object") return;
+    if (Array.isArray(valor)) {
+      valor.forEach(function (v) { aplicarPosicoes(v, itens, profundidade + 1); });
+      return;
+    }
+    var pos = valor[MARCA_POSICAO];
+    if (typeof pos === "number" && pos >= 0) {
+      if (mesmoRitual(itens[pos], valor)) valor.id = itens[pos].id;
+      delete valor[MARCA_POSICAO];
+    }
+    Object.keys(valor).forEach(function (k) {
+      aplicarPosicoes(valor[k], itens, profundidade + 1);
+    });
+  }
+
   function importado(pacote) {
     if (!pacote || typeof pacote !== "object") {
       return ruim("formato", "O arquivo não contém um objeto JSON.");
@@ -301,9 +386,16 @@
     var limpo = limparProibidos(pacote.dados, 0);
 
     if (pacote.tipo === "personagem") {
+      /* O vínculo entre uma concessão de progressão e um ritual da ficha
+         é por id, e a importação apaga TODOS os ids — ninguém importa a
+         identidade de outra ficha. Sem a travessia abaixo, um ocultista
+         importado abriria com os rituais na ficha e todas as concessões
+         pendentes, como se nunca tivesse aprendido nada. */
       var ficha = F.normalizarFicha(limpo);
       var v = personagem(ficha);
       if (!v.ok) return { ok: false, erro: "invalido", mensagem: "A ficha tem problemas.", problemas: v.problemas };
+
+      refazerVinculos(ficha);
       return { ok: true, tipo: "personagem", dados: ficha };
     }
 
@@ -345,12 +437,16 @@
 
   /* Monta o pacote de saída. A contraparte de importado(). */
   function exportar(tipo, dados) {
+    /* Numa ficha, o vínculo entre concessão e ritual vira posição antes
+       de os ids irem embora. Ver "O VÍNCULO DE RITUAL ATRAVESSANDO A
+       IMPORTAÇÃO", acima. */
+    var preparado = tipo === "personagem" ? comPosicoesDeRitual(dados) : dados;
     return {
       rama: true,
       tipo: tipo,
       versaoFormato: (global.RAMA_CONFIG && global.RAMA_CONFIG.VERSAO_FORMATO) || 1,
       geradoEm: U.agoraISO(),
-      dados: limparProibidos(dados, 0),
+      dados: limparProibidos(preparado, 0),
     };
   }
 

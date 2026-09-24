@@ -98,6 +98,11 @@
       opcionais: {},
       nivel: 1,
       nivelDefinido: false,
+      /* Os rituais escolhidos na revisão. A criação de um ocultista
+         abre os três iniciais, e o ritual tem de ir para algum lugar
+         antes de a ficha existir — aqui. Eles vão inteiros para a ficha
+         em `gravar`, com o vínculo que as escolhas já guardam. */
+      rituais: [],
     };
 
     var etapa = 0;
@@ -636,18 +641,57 @@
       var ordem = rascunhoParaRegras();
       ES.abrir({
         ordem: ordem,
-        contexto: null,
+        contexto: { inventario: { itens: [] }, rituais: d.rituais },
+        rituais: d.rituais,
+        /* A biblioteca de rituais escreve numa ficha; o rascunho ainda
+           não é uma. Este objeto é a ficha que ele seria: a mesma
+           janela, os mesmos botões, e nada gravado no servidor até
+           alguém criar o personagem. */
+        ctx: fichaDoRascunho(ordem),
         vagaId: p.id,
         aoRegistrar: function () { trazerDeVolta(ordem); pintar(); },
         aoConfirmar: function () { trazerDeVolta(ordem); pintar(); },
+        aoMudarRituais: function () { trazerDeVolta(ordem); pintar(); },
         aoAdiar: function () { trazerDeVolta(ordem); pintar(); },
       });
+    }
+
+    function fichaDoRascunho(ordem) {
+      var ficha = {
+        tipoFicha: "ordem",
+        ordem: ordem,
+        inventario: { itens: [] },
+        rituais: { rotuloSecao: "Rituais", rotulos: F.ROTULOS_RITUAL_PADRAO, itens: d.rituais },
+      };
+      return {
+        ficha: ficha,
+        emEdicao: function () { return true; },
+        alterou: function () { trazerDeVolta(ordem); },
+        redesenhar: function () { pintar(); },
+      };
     }
 
     function trazerDeVolta(ordem) {
       d.escolhas = ordem.escolhas || [];
       d.afinidade = ordem.afinidade || d.afinidade;
       d.trilha = ordem.trilha || "";
+    }
+
+    /* Os rituais escolhidos aparecem na revisão como aparecerão na
+       ficha: com a concessão que cada um ocupa. */
+    function resumoDosRituais() {
+      if (!d.rituais.length) return null;
+      var est = E.estado(rascunhoParaRegras(), { inventario: { itens: [] }, rituais: d.rituais });
+      return el("div.pilha--curta", { class: "pilha" }, [
+        el("h4.t-secao", { texto: "Rituais escolhidos (" + d.rituais.length + ")" }),
+        el("ul.bib-lista-textos", {}, d.rituais.map(function (r) {
+          var v = est.rituais.porRitual[r.id];
+          return el("li.t-mini", {
+            texto: r.nome + (v ? " — " + v.nomePoder + " · " + v.rotuloEtapa +
+              (v.destino === "grimorio" ? " · grimório" : "") : " — sem concessão"),
+          });
+        })),
+      ]);
     }
 
     function etapaRevisao() {
@@ -695,6 +739,7 @@
         ]),
 
         regrasDeProgressao(rascunho),
+        resumoDosRituais(),
 
         pend.length
           ? el("div.pilha--curta", { class: "pilha" }, [
@@ -917,6 +962,10 @@
       });
 
       ficha.ordem = ordem;
+      /* Os rituais escolhidos na revisão entram inteiros: o vínculo
+         que `ordem.escolhas` guarda aponta para o id de cada um, e
+         criar outra cópia aqui quebraria esse vínculo. */
+      d.rituais.forEach(function (r) { ficha.rituais.itens.push(r); });
       /* A mesa já vê a vida do personagem novo — ver "Resumo de
          recursos" em backend/Campanhas.gs. */
       if (R.resumoDeRecursos) ficha.resumoRecursos = R.resumoDeRecursos(ordem);

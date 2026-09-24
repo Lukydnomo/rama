@@ -527,11 +527,14 @@
       "",
       { repetivel: true,
         opcoes: [
-          { chave: "ritual", tipo: "ritual", rotulo: "Ritual aprendido" },
+          { chave: "aprendido", tipo: "ritualAprendido", rotulo: "Ritual aprendido",
+            ajuda: "Escolha pela biblioteca. O círculo permitido sobe com o NEX de exposição: 1º, 2º a partir de 45% e 3º a partir de 75%." },
+          { chave: "substituido", tipo: "ritualDaFicha", opcional: true, rotulo: "Ritual substituído",
+            ajuda: "“Além disso, você pode substituir um ritual que já conhece por outro” (OPRPG p.114). É a única troca que as regras dão; deixar em branco não substitui nada." },
           { chave: "elemento", tipo: "elemento", comMedo: true, rotulo: "Elemento do ritual",
             ajuda: "Este poder conta como um poder do elemento do ritual." },
         ],
-        nota: "O ritual em si fica na aba de rituais. O elemento escolhido conta para requisitos como Morte 2." }),
+        nota: "Este é o único aprendizado que conta no limite de rituais conhecidos (Intelecto). O elemento escolhido conta para requisitos como Morte 2." }),
 
     paranormal("resistirAElemento", "Resistir a Elemento", "", OPRPG, 114,
       "Resistência 10 contra o elemento escolhido. Conta como poder desse elemento.",
@@ -822,11 +825,17 @@
 
     /* --- Graduado, OPRPG p.35 --- */
     trilha("graduado", 10, "saberAmpliado", "Saber Ampliado", OPRPG, 35,
-      "Aprende um ritual de 1º círculo e mais um a cada novo círculo, fora do limite de rituais."),
+      "Aprende um ritual de 1º círculo e mais um a cada novo círculo, fora do limite de rituais.",
+      { automacao: "parcial",
+        nota: "As escolhas aparecem na Progressão e na aba Rituais, uma por círculo novo." }),
     trilha("graduado", 40, "grimorioRitualistico", "Grimório Ritualístico", OPRPG, 35,
-      "Um grimório de 1 espaço guarda rituais de 1º ou 2º círculo iguais ao Intelecto; consultá-lo exige empunhá-lo e uma ação completa."),
+      "Um grimório de 1 espaço guarda rituais de 1º ou 2º círculo iguais ao Intelecto; consultá-lo exige empunhá-lo e uma ação completa.",
+      { automacao: "parcial",
+        nota: "Os rituais do grimório ficam separados dos conhecidos na aba Rituais, com a condição de uso escrita. O grimório em si é um item de 1 espaço no inventário." }),
     trilha("graduado", 65, "rituaisEficientes", "Rituais Eficientes", OPRPG, 35,
-      "A DT para resistir a todos os seus rituais aumenta em +5."),
+      "A DT para resistir a todos os seus rituais aumenta em +5.",
+      { efeitos: [{ tipo: "dtRitual", valor: 5 }], automacao: "calculo",
+        nota: "O +5 entra na DT de resistência mostrada na aba Rituais." }),
     trilha("graduado", 99, "conhecendoOMedo", "Conhecendo o Medo", OPRPG, 35,
       "Aprende o ritual Conhecendo o Medo."),
 

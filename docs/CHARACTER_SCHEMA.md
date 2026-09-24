@@ -436,6 +436,13 @@ descartada. É o que a ordem "de adição" usa (ver `ordem.organizacao`).
 }
 ```
 
+**De onde um ritual veio não fica gravado nele.** A concessão de progressão que
+cada ritual ocupa — os três iniciais, o ritual daquele NEX, o grimório de
+Graduado, Aprender Ritual — mora em `ordem.escolhas`, apontando para o `id` do
+ritual (ver "O vínculo de ritual", adiante). O ritual continua sendo só o ritual:
+uma fonte só para "quem concedeu o quê", e nenhuma migração quando a progressão
+muda.
+
 **Alvo, Área e Efeito são três campos.** O livro de Ordem Paranormal usa uma das
 três linhas em cada ritual: um ritual tem um *alvo* (1 ser), ou afeta uma *área*
 (esfera de 6 m de raio), ou cria algo — o *efeito* (1 clone seu). São informações
@@ -606,6 +613,18 @@ Só existe na ficha de Ordem. Guarda **escolhas**, **recursos gastos** e
     "nome": "Transcender → Resistir a Morte",   // retrato do rótulo, só para leitura
     "ignorarRequisitos": false,   // "manter mesmo assim", decisão da mesa
     "registradoEm": "2026-09-12T10:00:00.000Z"
+  }, {
+    "id": "uuid",
+    "etapa": "d1.rituaisIniciais",  // uma concessão de ritual
+    "tipo": "rituais",
+    "valor": "",
+    "opcoes": { "rituais": [       // o VÍNCULO com rituais de `rituais.itens`
+      { "id": "uuid-do-ritual", "nome": "Luz", "circulo": 1,
+        "elemento": "energia", "catalogo": "op.ritual.luz" }
+    ] },
+    "nome": "Luz, Cicatrização, Ouvir os Sussurros",
+    "ignorarRequisitos": false,
+    "registradoEm": "2026-09-23T10:00:00.000Z"
   } ],
   "afinidade": { "elemento": "", "nomeOutro": "", "adiada": false },
   "personalizacoes": [ {          // versão desta ficha de uma habilidade oficial
@@ -656,6 +675,43 @@ Ids de vaga (`etapa`):
 | `b.<chave>` | opção interna de uma habilidade automática de trilha |
 | `b.origem.<chave>` | opção interna do poder de origem |
 | `x<nex>.transcender`, `x<nex>.alteracao` | vagas de exposição, só com NEX & Experiência |
+| `d1.rituaisIniciais` | os três rituais de 1º círculo do ocultista |
+| `d<degrau>.ritualClasse` | o ritual daquele avanço de NEX ou de nível |
+| `d<degrau>.saberAmpliado`, `d<degrau>.grimorio` | as concessões da trilha Graduado |
+| `d<degrau>.<chaveDoPoder>` | o ritual que uma trilha concede pelo nome (`d20.conhecendoOMedo`) |
+
+### O vínculo de ritual (v2.17)
+
+Uma concessão de ritual guarda, em `opcoes.rituais`, o **vínculo** com rituais que
+estão em `rituais.itens` — nunca uma cópia do ritual:
+
+| campo | para que serve |
+|---|---|
+| `id` | o id do ritual NA FICHA. É ele que diz "este ritual, e não outro com o mesmo nome" |
+| `nome` | retrato, para a Progressão continuar legível sem a lista de rituais à mão |
+| `circulo`, `elemento` | retrato, usado só quando a lista de rituais não está por perto; com ela, vale o ritual de verdade |
+| `catalogo` | o id do catálogo oficial, quando o ritual veio de lá |
+
+**Um ritual ocupa uma concessão só.** A concessão da etapa mais antiga reivindica
+primeiro; a segunda que apontar para o mesmo ritual aparece com o motivo, sem
+apagar nada. Um ritual que nenhuma concessão reivindica continua na ficha, sem
+origem — é registro da mesa, aprendizado em campo ou ficha anterior a esta versão.
+
+**Nada disso é calculado e gravado.** A conta de quantos rituais faltam, o limite
+por Intelecto e a separação entre conhecido e grimório saem do motor de progressão
+a cada leitura, a partir de `escolhas` e de `rituais.itens`.
+
+Aprender Ritual guarda o vínculo dentro das opções do poder:
+`opcoes.poder.opcoes.aprendido` (o ritual aprendido) e `opcoes.substituido` (o
+ritual que ele trocou, opcional — OPRPG p.114). Uma ficha anterior à v2.17 guarda
+só o nome, em `opcoes.ritual`: ela continua completa, o texto fica à vista, e a
+tela oferece prendê-lo a um ritual de verdade.
+
+**Exportar e importar preservam o vínculo.** A importação troca todos os ids, então
+o pacote leva cada vínculo como POSIÇÃO na lista de rituais, e a importação a
+converte de volta no id novo — só quando o ritual daquela posição ainda é o mesmo
+(mesma origem de catálogo, mesmo nome). Quando não é, nenhum vínculo é refeito no
+palpite: a concessão volta a ficar pendente e os rituais continuam na ficha.
 
 A trilha **não** é registro: continua em `trilha`. A afinidade também não: está
 em `afinidade`.

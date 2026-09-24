@@ -23,6 +23,12 @@
                  x25.transcender       NEX de exposição 25%, só com
                                        NEX & Experiência
                  afinidade             a afinidade elemental
+                 d1.rituaisIniciais    os três rituais de 1º círculo do
+                                       ocultista
+                 d4.ritualClasse       o ritual do avanço de NEX
+                 d8.grimorio           o grimório de Graduado
+                 d20.conhecendoOMedo   o ritual que a trilha concede
+                                       pelo nome
 
                "Degrau" é o passo de progressão: NEX 5% é o 1º, NEX 99%
                é o 20º — ou, com NEX & Experiência, o nível. Por isso o
@@ -79,6 +85,7 @@
 
   var C = global.RAMAOrdemCatalogo;
   var P = global.RAMAOrdemPoderes;
+  var A = global.RAMAOrdemAprendizado;
 
   /* As outras camadas são lidas na hora da chamada, não na carga do
      arquivo: regras.js carrega depois deste e é quem decide o trilho. */
@@ -141,6 +148,10 @@
       rotulo: "Afinidade elemental", verbo: "Escolher elemento",
       explicacao: "Com NEX 50% você se conecta a um elemento. A afinidade em si vem na próxima vez que transcender.",
     },
+    rituais: {
+      rotulo: "Rituais", verbo: "Escolher rituais",
+      explicacao: "Escolha os rituais que esta etapa concede. A biblioteca abre no contexto desta concessão.",
+    },
   };
 
   /* A posição de cada tipo dentro do mesmo degrau. Aumento de atributo
@@ -149,6 +160,10 @@
   var POSICAO = {
     poderOrigem: 1, trilha: 5, trilhaAuto: 10, opcoesBeneficio: 11, perito: 15,
     poderClasse: 20, atributo: 30, grauTreinamento: 40, versatilidade: 50,
+    /* Depois do aumento de atributo do mesmo degrau: o grimório guarda
+       "rituais iguais ao seu Intelecto", e o Intelecto que vale é o
+       daquela etapa, já aumentado. */
+    rituais: 55,
   };
 
   function degrauDoNex(nex) {
@@ -322,6 +337,8 @@
       });
     }
 
+    vagasDeRitual(ordem, t).forEach(function (v) { lista.push(v); });
+
     /* A afinidade olha o NEX de EXPOSIÇÃO nos dois modos: com a regra
        separada, "o NEX continua sendo usado para afinidade elemental"
        (SAH p.98). */
@@ -334,6 +351,60 @@
     }
 
     return lista.sort(function (a, b) { return a.ordem - b.ordem; });
+  }
+
+  /* -----------------------------------------------------------------
+     AS VAGAS DE APRENDIZADO DE RITUAL
+
+     Uma vaga por CONCESSÃO — não uma por ritual e não uma por degrau.
+     Classe e trilha aparecem separadas mesmo caindo no mesmo degrau,
+     porque são benefícios diferentes, com contagens e círculos
+     diferentes (OPRPG p.32 e p.35).
+     ----------------------------------------------------------------- */
+
+  function elementoDaMaldicao(ordem) {
+    var r = (ordem.escolhas || []).filter(function (x) { return x.etapa === "b.serAmaldicoado"; })[0];
+    return (r && r.opcoes && typeof r.opcoes.elemento === "string") ? r.opcoes.elemento : "";
+  }
+
+  function contextoDeConcessao(ordem, t) {
+    return {
+      classe: ordem.classe,
+      trilha: trilhaValida(ordem) ? ordem.trilha : "",
+      passos: t.passos,
+      separado: t.separado,
+      lento: !!(OP() && A && OP().ligada(ordem, A.REGRA_LENTO)),
+      campo: !!(OP() && A && OP().ligada(ordem, A.REGRA_CAMPO)),
+      elementoMaldicao: elementoDaMaldicao(ordem),
+    };
+  }
+
+  /* A trilha só concede o que concede quando é uma trilha DA CLASSE da
+     ficha — trocar de classe não mantém o grimório de pé sozinho. */
+  function trilhaValida(ordem) {
+    var tr = C.trilha(ordem.trilha);
+    return !!(tr && tr.classe === ordem.classe);
+  }
+
+  function concessoesDeRitual(ordem) {
+    if (!A || !ordem) return [];
+    return A.concessoes(contextoDeConcessao(ordem, R().trilho(ordem)));
+  }
+
+  function vagasDeRitual(ordem, t) {
+    if (!A) return [];
+    return A.concessoes(contextoDeConcessao(ordem, t)).map(function (c) {
+      return vaga(c.id, "rituais", {
+        degrau: c.degrau,
+        ordem: c.degrau * 100 + POSICAO.rituais,
+        rotulo: A.rotuloDaConcessao(c),
+        verbo: c.fixo ? "Trazer ritual" : "Escolher rituais",
+        explicacao: A.explicacaoDaConcessao(c),
+        rotuloEtapa: rotuloDoDegrau(c.degrau, t.separado),
+        opcional: c.opcional,
+        concessao: c,
+      });
+    });
   }
 
   /* =================================================================
@@ -458,7 +529,12 @@
     if (e.chave === "especialistaEmElemento" && o.elemento) return "Especialista em " + nomeDoElemento(o.elemento);
     if (e.chave === "mestreEmElemento" && o.elemento) return "Mestre em " + nomeDoElemento(o.elemento);
     if (e.chave === "focoEmPericia" && o.pericia) return "Foco em Perícia (" + nomeDaPericia(o.pericia) + ")";
-    if (e.chave === "aprenderRitual" && o.ritual) return "Aprender Ritual (" + o.ritual + ")";
+    if (e.chave === "aprenderRitual") {
+      /* O ritual escolhido pelo vínculo; o texto de uma ficha anterior
+         quando é só o que existe. */
+      var nomeRitual = (o.aprendido && o.aprendido.nome) || (typeof o.ritual === "string" ? o.ritual : "");
+      if (nomeRitual) return "Aprender Ritual (" + nomeRitual + ")";
+    }
     return e.nome;
   }
 
@@ -505,9 +581,29 @@
       case "poderOrigem":
         if (o.poder) return descreverPoderAninhado(o.poder);
         return "";
+      case "rituais": {
+        var nomes = rituaisDoRegistro(r).map(function (x) { return x.nome || x.id; });
+        return nomes.length ? nomes.join(", ") : "";
+      }
       default:
         return "";
     }
+  }
+
+  /* As entradas de ritual de um registro, já saneadas. Cada uma é o
+     VÍNCULO entre uma concessão e um ritual da ficha:
+
+       id         o id do ritual NA FICHA — é ele que diz "este ritual,
+                  e não outro com o mesmo nome"
+       nome       retrato do nome, para a Progressão continuar legível
+                  sem a lista de rituais à mão
+       circulo    retrato do círculo, usado só quando a ficha não está
+                  por perto; com ela, vale o círculo do ritual de
+                  verdade
+       catalogo   o id do catálogo oficial, quando veio de lá */
+  function rituaisDoRegistro(r) {
+    var lista = (r && r.opcoes && Array.isArray(r.opcoes.rituais)) ? r.opcoes.rituais : [];
+    return lista.filter(function (x) { return x && typeof x === "object" && x.id; });
   }
 
   /* =================================================================
@@ -536,6 +632,19 @@
       fontesGrau: fontesGrau,
       adquiridos: [],
       afinidadeAtiva: false,
+      /* ritualId → id da concessão que já o reivindicou. Um ritual da
+         ficha ocupa UMA vaga de aprendizado, nunca duas: a segunda que
+         tentar aparece com o motivo, sem apagar nada. */
+      rituaisUsados: {},
+      /* O que foi aprendido, em ordem de etapa. É daqui que sai a conta
+         do limite por Intelecto e a separação entre conhecido e
+         grimório. */
+      aprendizados: [],
+      /* id da vaga de ritual → quantos ela concede NAQUELE degrau. O
+         grimório guarda "rituais iguais ao seu Intelecto", e o Intelecto
+         que vale é o da etapa — por isso o número é anotado quando a
+         etapa passa, não no fim. */
+      quantidades: {},
       ids: {},
       /* Aquisições cujos efeitos a mesa desligou numa versão
          personalizada (personalizacao.js). */
@@ -573,6 +682,9 @@
       fontesGrau: JSON.parse(JSON.stringify(p.fontesGrau)),
       adquiridos: p.adquiridos.slice(),
       afinidadeAtiva: p.afinidadeAtiva,
+      rituaisUsados: Object.assign({}, p.rituaisUsados),
+      aprendizados: p.aprendizados.slice(),
+      quantidades: Object.assign({}, p.quantidades),
       ids: Object.assign({}, p.ids),
       desligadas: p.desligadas,
     };
@@ -755,6 +867,48 @@
     return (contexto && contexto.inventario && Array.isArray(contexto.inventario.itens)) ? contexto.inventario.itens : null;
   }
 
+  /* Os rituais da ficha, quando quem chamou os entregou. Sem eles a
+     conta continua: o que está gravado no registro é aceito como está,
+     como já acontece com os itens do inventário. O que NÃO acontece é o
+     contrário — com a lista à mão, é ela que manda, e nunca o número
+     que veio guardado junto da escolha. */
+  function rituaisDoContexto(contexto) {
+    return (contexto && Array.isArray(contexto.rituais)) ? contexto.rituais : null;
+  }
+
+  function dadosDoRitualDaFicha(ritual) {
+    if (!ritual) return null;
+    var RT = global.RAMAOrdemRituais;
+    var dados = RT ? RT.dadosDoRitual(ritual) : ((ritual.ordem && typeof ritual.ordem === "object") ? ritual.ordem : {});
+    return {
+      id: ritual.id,
+      nome: ritual.nome || "",
+      circulo: Number(dados.circulo) || 0,
+      elemento: dados.elemento || "",
+      catalogo: ritual.origemCatalogoId || "",
+    };
+  }
+
+  /* O que se sabe do ritual de uma entrada: o da ficha quando a ficha
+     está à mão, o retrato guardado quando não está. */
+  function resolverRitual(entrada, rituais) {
+    if (!rituais) {
+      return {
+        id: entrada.id,
+        nome: String(entrada.nome || ""),
+        circulo: Number(entrada.circulo) || 0,
+        elemento: String(entrada.elemento || ""),
+        catalogo: String(entrada.catalogo || ""),
+        naFicha: null,
+      };
+    }
+    var achado = rituais.filter(function (x) { return x && x.id === entrada.id; })[0];
+    if (!achado) return { id: entrada.id, nome: String(entrada.nome || ""), circulo: 0, elemento: "", catalogo: "", naFicha: false };
+    var d = dadosDoRitualDaFicha(achado);
+    d.naFicha = true;
+    return d;
+  }
+
   function grupoDoItem(item) {
     var I = global.RAMAOrdemInventario;
     return I ? I.dadosDoItem(item).grupo : (item.tipo === "arma" ? "arma" : "geral");
@@ -774,6 +928,10 @@
       var valor = v[op.chave];
 
       if (vazio(valor)) {
+        /* Ficha anterior a esta versão: Aprender Ritual guardava só o
+           NOME do ritual, em texto. Ela continua completa — o que falta
+           é o vínculo, e pedi-lo de volta é trabalho da aba Rituais. */
+        if (op.tipo === "ritualAprendido" && legadoDeRitual(v)) return;
         if (!op.opcional) {
           if (op.tipo === "item" && !itensDoContexto(contexto)) {
             saida.faltam.push(op.rotulo + ": adicione o item ao inventário e escolha depois");
@@ -845,6 +1003,46 @@
         case "texto":
           if (typeof valor !== "string" || !valor.trim()) saida.faltam.push(op.rotulo);
           break;
+
+        /* "Você pode substituir um ritual que já conhece por outro"
+           (Aprender Ritual, OPRPG p.114). É a ÚNICA substituição que as
+           regras concedem — trocar uma escolha na Progressão é corrigir
+           a ficha, e não isto. */
+        case "ritualDaFicha": {
+          if (typeof valor !== "object" || !valor.id) {
+            saida.problemas.push(op.rotulo + ": vínculo de ritual inválido.");
+            break;
+          }
+          var dadoSub = resolverRitual(valor, rituaisDoContexto(contexto));
+          if (dadoSub.naFicha === false) {
+            saida.problemas.push(op.rotulo + ": " + (dadoSub.nome || "o ritual escolhido") + " não está mais na aba Rituais.");
+          }
+          break;
+        }
+
+        /* Aprender Ritual (OPRPG p.114): o círculo sobe com o NEX de
+           EXPOSIÇÃO, não com o nível — é poder paranormal, e com NEX &
+           Experiência os poderes paranormais continuam olhando para o
+           NEX (SAH p.98). */
+        case "ritualAprendido": {
+          if (typeof valor !== "object" || !valor.id) {
+            saida.problemas.push(op.rotulo + ": vínculo de ritual inválido.");
+            break;
+          }
+          var maximo = A ? A.circuloDeAprenderRitual(etapa.exposicao) : 1;
+          var dadoAp = resolverRitual(valor, rituaisDoContexto(contexto));
+          if (dadoAp.naFicha === false) {
+            saida.problemas.push(op.rotulo + ": o ritual escolhido não está mais na aba Rituais.");
+            break;
+          }
+          if (!dadoAp.circulo) {
+            saida.problemas.push(op.rotulo + ": este ritual não informa o círculo, e o poder é por círculo.");
+          } else if (dadoAp.circulo > maximo) {
+            saida.problemas.push(op.rotulo + ": Aprender Ritual alcança o " + maximo + "º círculo com NEX de exposição " +
+              etapa.exposicao + "%; " + (dadoAp.nome || "o ritual escolhido") + " é de " + dadoAp.circulo + "º.");
+          }
+          break;
+        }
         case "escolha":
           if ((op.valores || []).indexOf(valor) < 0) saida.problemas.push(op.rotulo + ": opção inválida.");
           break;
@@ -876,6 +1074,14 @@
     });
 
     return saida;
+  }
+
+  /* O nome em texto que as fichas anteriores guardavam em
+     `opcoes.ritual`. Nada é convertido sozinho: o texto fica, e a aba
+     Rituais oferece prendê-lo a um ritual de verdade. */
+  function legadoDeRitual(valores) {
+    var v = (valores || {}).ritual;
+    return typeof v === "string" && !!v.trim();
   }
 
   function juntar(saida, parte) {
@@ -1085,6 +1291,54 @@
         break;
       }
 
+      /* A concessão de rituais. Cada entrada é conferida sozinha, e o
+         resultado de cada uma é guardado em `saida.rituais`: é ele que
+         diz ao percurso quais vínculos valem — mesmo quando a concessão
+         ainda está pela metade, porque escolher 1 de 3 e voltar depois
+         é permitido. */
+      case "rituais": {
+        var c = v.concessao;
+        if (!c || !A) { saida.problemas.push("Esta concessão de rituais não faz mais parte da progressão."); break; }
+
+        var rituaisFicha = rituaisDoContexto(contexto);
+        var quantos = A.quantidadeDa(c, percurso.atributos.int || 0);
+        var entradas = rituaisDoRegistro(r);
+        var vistos = {};
+        saida.rituais = [];
+
+        entradas.forEach(function (entrada) {
+          var dado = resolverRitual(entrada, rituaisFicha);
+          var motivo = "";
+          var estrutural = false;
+
+          if (dado.naFicha === false) {
+            motivo = (dado.nome || "Um ritual escolhido") + " não está mais na aba Rituais.";
+            estrutural = true;
+          } else if (vistos[dado.id]) {
+            motivo = (dado.nome || "Este ritual") + " foi escolhido duas vezes nesta concessão.";
+            estrutural = true;
+          } else if (percurso.rituaisUsados[dado.id]) {
+            motivo = (dado.nome || "Este ritual") + " já ocupa outra concessão de aprendizado.";
+            estrutural = true;
+          } else {
+            var eleg = A.elegibilidade(c, dado);
+            if (!eleg.ok) motivo = (dado.nome || "Um ritual escolhido") + ": " + eleg.motivo;
+          }
+
+          vistos[dado.id] = true;
+          if (motivo) saida.problemas.push(motivo);
+          saida.rituais.push({ dado: dado, ok: !motivo, estrutural: estrutural, motivo: motivo });
+        });
+
+        if (entradas.length > quantos) {
+          saida.problemas.push("Esta concessão dá " + quantos + (quantos === 1 ? " ritual" : " rituais") +
+            ", e há " + entradas.length + " escolhido" + (entradas.length === 1 ? "" : "s") + ".");
+        } else if (entradas.length < quantos && !v.opcional) {
+          saida.faltam.push("Rituais: faltam " + (quantos - entradas.length) + " de " + quantos);
+        }
+        break;
+      }
+
       default:
         break;
     }
@@ -1154,6 +1408,83 @@
     });
 
     if (e.tipo === "paranormal" && info.etapa.exposicao >= 50) percurso.afinidadeAtiva = true;
+
+    /* Aprender Ritual é o ÚNICO aprendizado que conta no limite por
+       Intelecto (OPRPG p.119). Ele é registrado aqui, junto da
+       aquisição do poder, para o limite ser contado uma vez por poder
+       escolhido — e não uma vez por leitura da ficha. */
+    if (e.chave === "aprenderRitual") anotarAprenderRitual(percurso, filho.opcoes || {}, info);
+  }
+
+  function anotarAprenderRitual(percurso, opcoes, info) {
+    var escolhido = (opcoes.aprendido && typeof opcoes.aprendido === "object") ? opcoes.aprendido : null;
+    var legado = legadoDeRitual(opcoes);
+    if (!escolhido && !legado) return;
+
+    var id = escolhido ? String(escolhido.id || "") : "";
+    if (id && percurso.rituaisUsados[id]) return;
+    if (id) percurso.rituaisUsados[id] = info.etapa.id;
+
+    percurso.aprendizados.push({
+      concessao: info.etapa.id,
+      degrau: info.etapa.degrau,
+      rotuloEtapa: info.etapa.rotulo,
+      origem: "poder",
+      poder: "aprenderRitual",
+      nomePoder: "Aprender Ritual",
+      fonte: "OPRPG",
+      pagina: 114,
+      destino: "conhecido",
+      contaNoLimite: true,
+      ritualId: id,
+      nome: escolhido ? String(escolhido.nome || "") : String(opcoes.ritual || ""),
+      circulo: escolhido ? (Number(escolhido.circulo) || 0) : 0,
+      legado: !escolhido,
+      excecao: false,
+      substituido: (opcoes.substituido && typeof opcoes.substituido === "object" && opcoes.substituido.id)
+        ? { id: String(opcoes.substituido.id), nome: String(opcoes.substituido.nome || "") }
+        : null,
+    });
+  }
+
+  /* Prende à concessão os vínculos que passaram. Acontece mesmo com a
+     concessão incompleta: 1 de 3 escolhidos é 1 ritual aprendido.
+
+     "Manter mesmo assim" vale para a ELEGIBILIDADE — um ritual que a
+     mesa liberou fora da regra entra marcado como exceção. Não vale
+     para o que é estrutural: ritual que sumiu da ficha, repetido na
+     mesma concessão ou já preso a outra. */
+  function reivindicarRituais(percurso, v, r, aval) {
+    var c = v.concessao;
+    if (!c) return;
+    var excecaoPermitida = r.ignorarRequisitos === true;
+
+    (aval.rituais || []).forEach(function (linha) {
+      if (linha.estrutural) return;
+      if (!linha.ok && !excecaoPermitida) return;
+      if (percurso.rituaisUsados[linha.dado.id]) return;
+
+      percurso.rituaisUsados[linha.dado.id] = c.id;
+      percurso.aprendizados.push({
+        concessao: c.id,
+        degrau: c.degrau,
+        rotuloEtapa: v.rotuloEtapa,
+        origem: c.origem,
+        poder: c.poder,
+        nomePoder: c.nomePoder,
+        fonte: c.fonte,
+        pagina: c.pagina,
+        destino: c.destino,
+        contaNoLimite: !!c.contaNoLimite,
+        ritualId: linha.dado.id,
+        nome: linha.dado.nome,
+        circulo: linha.dado.circulo,
+        legado: false,
+        excecao: !linha.ok,
+        motivoDaExcecao: linha.motivo,
+        substituido: null,
+      });
+    });
   }
 
   function subirGrau(percurso, chave, para, fonte, detalhe) {
@@ -1238,12 +1569,20 @@
 
   function assinatura(ordem, contexto) {
     var itens = itensDoContexto(contexto);
+    var rituais = rituaisDoContexto(contexto);
     return JSON.stringify([
       ordem.classe, ordem.origem, ordem.trilha, ordem.nex, ordem.nivel,
       ordem.atributos, ordem.pericias, ordem.escolhas, ordem.afinidade, ordem.opcionais,
       Object.keys(desativadasDe(ordem)).sort(),
       ordem.progressao ? ordem.progressao.length : 0,
       itens ? itens.map(function (i) { return i ? [i.id, i.tipo, i.nome, i.ordem && i.ordem.grupo] : null; }) : null,
+      /* O círculo e o elemento de cada ritual entram na assinatura: é
+         por eles que a elegibilidade de uma concessão é conferida, e
+         mudar um à mão precisa refazer a conta. */
+      rituais ? rituais.map(function (x) {
+        var d = x ? dadosDoRitualDaFicha(x) : null;
+        return d ? [d.id, d.nome, d.circulo, d.elemento, d.catalogo] : null;
+      }) : null,
     ]);
   }
 
@@ -1377,6 +1716,10 @@
         return;
       }
 
+      if (v.tipo === "rituais") {
+        percurso.quantidades[v.id] = A ? A.quantidadeDa(v.concessao, percurso.atributos.int || 0) : 0;
+      }
+
       var r = porEtapa[v.id];
       if (!r) {
         if (legado[v.id]) {
@@ -1389,6 +1732,11 @@
       }
 
       var aval = avaliarRegistro(r, v, percurso, ordem, contexto);
+
+      /* Antes de decidir se a vaga está completa: os vínculos de ritual
+         que passaram valem já, porque uma concessão pela metade continua
+         tendo entregado o que entregou. */
+      if (v.tipo === "rituais") reivindicarRituais(percurso, v, r, aval);
 
       if (v.tipo === "opcoesBeneficio" && !trilhaOk) aval.problemas.unshift(motivoTrilha);
 
@@ -1441,6 +1789,21 @@
       }
     });
 
+    /* Toda pendência de ritual diz quantos a concessão permite, quantos
+       já foram escolhidos e quantos faltam — é o que o cartão mostra. */
+    pendencias.forEach(function (p) {
+      if (p.tipo !== "rituais") return;
+      var quantidade = percurso.quantidades[p.id] || 0;
+      var feitos = percurso.aprendizados.filter(function (a) { return a.concessao === p.id; }).length;
+      p.aprendizado = {
+        concessao: p.vaga.concessao,
+        quantidade: quantidade,
+        escolhidos: feitos,
+        restantes: Math.max(0, quantidade - feitos),
+      };
+      p.explicacao = A ? A.explicacaoDaConcessao(p.vaga.concessao, quantidade) : p.explicacao;
+    });
+
     /* Registros de etapas que não existem mais: o NEX baixou, a classe
        mudou, a regra foi desligada. Ficam guardados e voltam a valer
        sozinhos se a etapa voltar a existir. */
@@ -1458,6 +1821,7 @@
       antes: antes,
       trilho: t,
       exposicao: exposicao,
+      rituais: resumoDeRituais(ordem, contexto, percurso, vs, t),
       vagas: vs,
       atributos: percurso.atributos,
       graus: mapaDeGraus(percurso.graus),
@@ -1480,6 +1844,149 @@
         conflito: conflitoDeAfinidade(ordem, percurso, af),
       },
     };
+  }
+
+  /* =================================================================
+     O APRENDIZADO DE RITUAIS, VISTO DE FORA
+     -----------------------------------------------------------------
+     O que a aba Rituais, a Progressão e a biblioteca leem. É DERIVADO:
+     nada aqui é gravado, e recalcular não concede nada de novo.
+     ================================================================= */
+
+  function resumoDeRituais(ordem, contexto, percurso, todasAsVagas, t) {
+    var rituaisFicha = rituaisDoContexto(contexto);
+    var porRitual = {};
+    var substituidos = {};
+    var usadosNoLimite = 0;
+
+    percurso.aprendizados.forEach(function (a) {
+      if (a.contaNoLimite) usadosNoLimite++;
+      if (a.ritualId) porRitual[a.ritualId] = a;
+      if (a.substituido && a.substituido.id) substituidos[a.substituido.id] = a;
+    });
+
+    var concessoes = todasAsVagas.filter(function (v) { return v.tipo === "rituais"; }).map(function (v) {
+      var c = v.concessao;
+      var quantidade = percurso.quantidades[v.id] || 0;
+      var escolhidos = percurso.aprendizados.filter(function (a) { return a.concessao === v.id; });
+      return {
+        id: v.id,
+        vaga: v,
+        concessao: c,
+        rotulo: v.rotulo,
+        rotuloEtapa: v.rotuloEtapa,
+        explicacao: A ? A.explicacaoDaConcessao(c, quantidade) : "",
+        degrau: c.degrau,
+        origem: c.origem,
+        poder: c.poder,
+        nomePoder: c.nomePoder,
+        fonte: c.fonte,
+        pagina: c.pagina,
+        destino: c.destino,
+        circulos: c.circulos.slice(),
+        elemento: c.elemento,
+        fixo: c.fixo,
+        opcional: c.opcional,
+        quantidade: quantidade,
+        escolhidos: escolhidos,
+        restantes: Math.max(0, quantidade - escolhidos.length),
+        completa: escolhidos.length >= quantidade,
+      };
+    });
+
+    /* Um ritual da ficha que nenhuma concessão reivindicou. Ele NÃO é
+       um erro: pode ser anotação da mesa, pode ter vindo antes desta
+       versão, pode ter sido aprendido em campo. O que o R.A.M.A. faz é
+       dizer isso e oferecer prendê-lo a uma concessão aberta. */
+    var semOrigem = [];
+    if (rituaisFicha) {
+      rituaisFicha.forEach(function (x) {
+        if (!x || !x.id || porRitual[x.id]) return;
+        semOrigem.push(dadosDoRitualDaFicha(x));
+      });
+    }
+
+    return {
+      disponivel: concessoes.length > 0,
+      temFicha: !!rituaisFicha,
+      concessoes: concessoes,
+      aprendizados: percurso.aprendizados.slice(),
+      porRitual: porRitual,
+      substituidos: substituidos,
+      limite: A ? A.limite(percurso.atributos.int || 0, usadosNoLimite)
+                : { total: 0, usados: 0, restantes: 0, excedido: false },
+      semOrigem: semOrigem,
+      emCampo: !!(OP() && A && OP().ligada(ordem, A.REGRA_CAMPO)),
+      lento: !!(OP() && A && OP().ligada(ordem, A.REGRA_LENTO)),
+      circuloMaximo: A ? A.circuloMaximoNoDegrau(ordem.classe, t.passos) : 0,
+    };
+  }
+
+  /* =================================================================
+     PRENDER E SOLTAR UM RITUAL
+     -----------------------------------------------------------------
+     A ÚNICA porta para mexer no vínculo entre uma concessão e um ritual
+     da ficha. Adicionar um ritual pela biblioteca não passa por aqui —
+     e é por isso que registrar um ritual nunca quita uma pendência
+     sozinho.
+     ================================================================= */
+
+  function vinculoDeRitual(ritual) {
+    var d = dadosDoRitualDaFicha(ritual);
+    if (!d || !d.id) return null;
+    var saida = { id: d.id, nome: d.nome };
+    if (d.circulo) saida.circulo = d.circulo;
+    if (d.elemento) saida.elemento = d.elemento;
+    if (d.catalogo) saida.catalogo = d.catalogo;
+    return saida;
+  }
+
+  function rituaisEscolhidos(ordem, idVaga) {
+    var r = (ordem.escolhas || []).filter(function (x) { return x.etapa === idVaga; })[0];
+    return rituaisDoRegistro(r).map(function (x) { return JSON.parse(JSON.stringify(x)); });
+  }
+
+  function definirRituais(ordem, idVaga, entradas) {
+    var v = vagas(ordem).filter(function (x) { return x.id === idVaga; })[0];
+    if (!v || v.tipo !== "rituais") return null;
+
+    var existente = (ordem.escolhas || []).filter(function (x) { return x.etapa === idVaga; })[0];
+    var mantidaPelaMesa = !!(existente && existente.ignorarRequisitos);
+    var limpas = (entradas || []).filter(function (x) { return x && x.id; });
+
+    /* Concessão esvaziada: o registro sai inteiro, em vez de ficar uma
+       casca vazia que a Progressão mostraria como decidida. Os rituais
+       continuam na ficha — soltar o vínculo não apaga ritual nenhum. */
+    if (!limpas.length) {
+      if (existente) remover(ordem, existente.id);
+      return null;
+    }
+
+    var registro = registrar(ordem, v, { valor: "", opcoes: { rituais: limpas } });
+    if (mantidaPelaMesa) definirIgnorarRequisitos(ordem, registro.id, true);
+    return registro;
+  }
+
+  function adicionarRitual(ordem, idVaga, ritual) {
+    var vinculo = vinculoDeRitual(ritual);
+    if (!vinculo) return null;
+    var atuais = rituaisEscolhidos(ordem, idVaga);
+    if (atuais.some(function (x) { return x.id === vinculo.id; })) return null;
+    return definirRituais(ordem, idVaga, atuais.concat([vinculo]));
+  }
+
+  function removerRitual(ordem, idVaga, ritualId) {
+    var atuais = rituaisEscolhidos(ordem, idVaga).filter(function (x) { return x.id !== ritualId; });
+    return definirRituais(ordem, idVaga, atuais);
+  }
+
+  /* Quantos rituais uma concessão dá, conferido contra o personagem
+     COMO ELE ESTAVA naquela etapa — é o que a janela de escolha mostra
+     em "Escolhidos: 1 de 3". */
+  function quantidadeDeRituais(ordem, idVaga, contexto) {
+    var c = contextoDaVaga(ordem, idVaga, contexto);
+    if (!c || !c.vaga.concessao || !A) return 0;
+    return A.quantidadeDa(c.vaga.concessao, c.percurso.atributos.int || 0);
   }
 
   /* Uma habilidade automática que ainda espera a opção interna aparece
@@ -1519,6 +2026,11 @@
   }
 
   function motivoFora(ordem, r, t) {
+    if (/^d\d+\.(rituaisIniciais|ritualClasse|saberAmpliado|grimorio)$/.test(r.etapa)) {
+      return "Esta concessão de rituais não existe mais — a classe, a trilha, o degrau ou uma regra " +
+        "opcional mudou. Os rituais continuam na aba Rituais, agora sem concessão, e o vínculo volta " +
+        "sozinho se a concessão voltar.";
+    }
     var m = /^d(\d+)\./.exec(r.etapa);
     if (m) {
       var d = parseInt(m[1], 10);
@@ -1776,6 +2288,14 @@
     definirIgnorarRequisitos: definirIgnorarRequisitos,
     descrever: descrever,
     nomeDoPoder: nomeDoPoder,
+
+    concessoesDeRitual: concessoesDeRitual,
+    quantidadeDeRituais: quantidadeDeRituais,
+    rituaisEscolhidos: rituaisEscolhidos,
+    vinculoDeRitual: vinculoDeRitual,
+    definirRituais: definirRituais,
+    adicionarRitual: adicionarRitual,
+    removerRitual: removerRitual,
 
     candidatosPoderClasse: candidatosPoderClasse,
     candidatosParanormais: candidatosParanormais,

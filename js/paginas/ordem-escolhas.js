@@ -33,6 +33,9 @@
   var P = global.RAMAOrdemPoderes;
   var E = global.RAMAOrdemProgressao;
   var OP = global.RAMAOrdemOpcionais;
+  function A() { return global.RAMAOrdemAprendizado; }
+  function RT() { return global.RAMAOrdemRituais; }
+  function BIB() { return global.RAMABibliotecaDeRituais; }
   var el = U.el;
 
   var ROTULO_FONTE = { OPRPG: "Livro básico", SAH: "Sobrevivendo ao Horror" };
@@ -337,6 +340,71 @@
         return campo;
       }
 
+      /* Aprender Ritual (OPRPG p.114). O vínculo é com um ritual DA
+         FICHA, não com um nome escrito: é ele que diz depois "este
+         ritual veio daqui". O círculo permitido vem do NEX de
+         exposição, e o que não cabe aparece com o motivo. */
+      case "ritualAprendido":
+      case "ritualDaFicha": {
+        var daFicha = sessao.rituais || [];
+        var soConhecidos = op.tipo === "ritualDaFicha";
+        var maximo = (op.tipo === "ritualAprendido" && A())
+          ? A().circuloDeAprenderRitual(R_exposicao(ordem))
+          : 0;
+
+        var cartoes = daFicha.map(function (r) {
+          var dados = RT() ? RT().dadosDoRitual(r) : {};
+          var circulo = Number(dados.circulo) || 0;
+          var motivo = "";
+          if (maximo) {
+            if (!circulo) motivo = "Este ritual não informa o círculo.";
+            else if (circulo > maximo) motivo = "Aprender Ritual alcança o " + maximo + "º círculo com NEX de exposição " + R_exposicao(ordem) + "%.";
+          }
+          return {
+            valor: r.id,
+            rotulo: r.nome + (circulo ? " · " + circulo + "º círculo" : ""),
+            motivo: motivo,
+          };
+        });
+
+        var escolhido = (atual && typeof atual === "object") ? atual.id : "";
+
+        return el("div.pilha--curta", { class: "pilha" }, [
+          cartoes.length
+            ? botoesDeEscolha(cartoes, escolhido, function (v) {
+                var r = daFicha.filter(function (x) { return x.id === v; })[0];
+                valores[op.chave] = (escolhido === v) ? undefined : (E.vinculoDeRitual(r) || undefined);
+                sessao.pintar();
+              })
+            : el("p.t-mini", { texto: "Esta ficha ainda não tem rituais registrados." }),
+
+          (!soConhecidos && sessao.ctx && BIB())
+            ? el("button.r-botao.r-botao--mini", {
+                type: "button", texto: "Trazer um ritual da biblioteca",
+                onclick: function () {
+                  BIB().abrir(sessao.ctx, {
+                    aoAdicionarRitual: function (ritual) {
+                      sessao.rituais = (sessao.ctx.ficha.rituais && sessao.ctx.ficha.rituais.itens) || sessao.rituais;
+                      valores[op.chave] = E.vinculoDeRitual(ritual) || undefined;
+                      sessao.pintar();
+                    },
+                  });
+                },
+              })
+            : null,
+
+          /* O texto que as fichas anteriores guardavam. Ele fica à
+             vista até alguém prendê-lo a um ritual de verdade — apagar
+             seria perder a única informação que sobrou. */
+          (op.tipo === "ritualAprendido" && typeof valores.ritual === "string" && valores.ritual.trim())
+            ? el("p.t-mini.t-aviso", {
+                texto: "Ficha anterior: este Aprender Ritual guarda só o nome “" + valores.ritual +
+                       "”. Escolher acima prende a escolha a um ritual da ficha; o nome continua guardado.",
+              })
+            : null,
+        ]);
+      }
+
       case "ritual": {
         var rituais = sessao.rituais || [];
         var campoR = UI.campo({
@@ -533,6 +601,7 @@
     }
     if (vaga.tipo === "afinidade") return abrirAfinidade(o);
     if (vaga.tipo === "trilha") return abrirTrilha(o, vaga);
+    if (vaga.tipo === "rituais") return abrirRituais(o, vaga);
 
     var existente = registroDaVaga(ordem, vaga.id);
     var candidato = existente
@@ -546,6 +615,9 @@
       ordem: ordem,
       vaga: vaga,
       contexto: o.contexto || null,
+      /* A ficha inteira, quando quem chamou a tem: é por ela que a
+         biblioteca de rituais entra em cima desta janela. */
+      ctx: o.ctx || null,
       rituais: o.rituais || [],
       filtros: {},
       entradaAtual: null,
@@ -767,6 +839,35 @@
 
     pintar();
     return m;
+  }
+
+  /* =================================================================
+     RITUAIS
+     -----------------------------------------------------------------
+     Esta vaga não tem tela própria: ela ABRE A BIBLIOTECA no contexto
+     da concessão. É a mesma janela de "Da biblioteca" — mesma busca,
+     mesmos filtros, mesma prévia —, com o topo dizendo de onde o
+     benefício veio e quantos rituais faltam.
+     ================================================================= */
+
+  function abrirRituais(o, vaga) {
+    if (!BIB() || !o.ctx) {
+      UI.avisoAtencao("A escolha de rituais precisa da aba Rituais da ficha. Abra o personagem para resolvê-la.");
+      return null;
+    }
+    return BIB().abrir(o.ctx, {
+      aprendizado: {
+        vagaId: vaga.id,
+        aoMudar: o.aoMudarRituais || o.aoRegistrar || null,
+      },
+    });
+  }
+
+  /* O NEX de exposição, que é o que vale para poder paranormal mesmo
+     com nível e NEX separados (SAH p.98). */
+  function R_exposicao(ordem) {
+    var R = global.RAMAOrdemRegras;
+    return R && R.exposicao ? R.exposicao(ordem) : (Number(ordem.nex) || 0);
   }
 
   /* =================================================================
@@ -995,6 +1096,13 @@
   function cartaoDePendencia(p, aoResolver) {
     var detalhe = [];
     if (p.situacao === "aberta") detalhe.push(p.explicacao);
+    /* A concessão de rituais conta em voz alta: permitido, escolhido e
+       o que falta, como manda o pedido da tela. */
+    if (p.aprendizado) {
+      detalhe.push("Escolhidos: " + p.aprendizado.escolhidos + " de " + p.aprendizado.quantidade +
+        (p.aprendizado.restantes ? " · faltam " + p.aprendizado.restantes : "") + ".");
+      if (p.situacao !== "aberta" && p.vaga && p.vaga.concessao) detalhe.push(p.explicacao);
+    }
     if (p.faltam && p.faltam.length) detalhe.push("Falta: " + p.faltam.join("; ") + ".");
     if (p.motivos && p.motivos.length) detalhe.push(p.motivos.join(" "));
     if (p.adiada) detalhe.push("Adiada: fica aqui até você decidir.");
@@ -1004,6 +1112,12 @@
       el("span.ordem-pendencia__nex", { texto: p.rotuloEtapa }),
       el("div.ordem-pendencia__corpo", {}, [
         el("span.ordem-pendencia__rotulo", { texto: p.rotulo }),
+        p.aprendizado ? el("span.escolha-marcas", {}, [
+          el("span.etiqueta", { texto: p.aprendizado.concessao.origem === "trilha" ? "Trilha" : "Classe" }),
+          el("span.etiqueta", { texto: p.aprendizado.concessao.nomePoder }),
+          p.aprendizado.concessao.fixo ? el("span.etiqueta", { texto: "automática" }) : null,
+          p.aprendizado.concessao.destino === "grimorio" ? el("span.etiqueta.etiqueta--parcial", { texto: "grimório" }) : null,
+        ]) : null,
         detalhe.length ? el("span.t-mini", { texto: detalhe.join(" ") }) : null,
       ]),
       aoResolver
@@ -1021,6 +1135,7 @@
   global.RAMAOrdemEscolhas = {
     abrir: abrir,
     abrirAfinidade: abrirAfinidade,
+    abrirRituais: abrirRituais,
     cartaoDePendencia: cartaoDePendencia,
     etiquetaAutomacao: etiquetaAutomacao,
     rotuloTipoPoder: rotuloTipoPoder,
