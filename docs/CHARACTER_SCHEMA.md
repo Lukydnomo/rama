@@ -336,6 +336,13 @@ Ao importar, nesta ordem:
 4. mostra a **prévia**;
 5. só então grava, sempre como registro **novo**, sob a conta de quem importou.
 
+A importação cria ids novos para os nós da árvore de habilidades. Por isso, desde
+a v2.19, o que aponta para eles na apresentação (`organizacao.habilidades.lugares`
+e `ordem`) sai no arquivo pelo **caminho na árvore** (`#arv:0.2` = terceiro filho
+do primeiro nó) e volta para o id novo ao importar. E os eventos das condições
+saem com o id em `evento`: o `id` seria arrancado no passo 2, e um personagem
+importado "morrendo, 2 de 3" voltaria "0 de 3".
+
 **Nenhuma ficha existente é sobrescrita**, nem quando o arquivo traz o mesmo id.
 O servidor repete essa limpeza — o frontend avisa cedo, o servidor é quem
 protege.
@@ -526,8 +533,14 @@ uma regra de jogo.
 
 ## Migração
 
-`schemaVersion` é `9`. Toda ficha lida passa por `normalizarFicha()`, que aceita
+`schemaVersion` é `10`. Toda ficha lida passa por `normalizarFicha()`, que aceita
 o que faltar e conserta o que dá.
+
+**A v2.19 subiu o schema de 9 para 10 sem converter nada.** O bloco `ordem`
+ganhou `condicoes`, `recursos.pd` e, em `organizacao`, `rituais.criterios`,
+`pericias` e `habilidades.lugares`/`ordem`. Uma ficha 9 abre igual: sem condição
+ativa, sem PD gasto e com as listas na ordem de antes. A subida protege os campos
+novos de uma aba ainda aberta na v2.18, que os descartaria ao gravar.
 
 **A v2.18 subiu o schema de 8 para 9 sem converter nada.** O bloco `ordem` ganhou
 `registrosDeRitual` (o estudo em campo e a concessão da mesa), e a escolha de
@@ -663,7 +676,7 @@ Só existe na ficha de Ordem. Guarda **escolhas**, **recursos gastos** e
   } ],
   "patente": { "aplicar": true, "limites": null },
   "progressao": [ { "id", "nex", "tipo", "valor", "rotulo" } ],   // texto livre da v2.3, preservado
-  "recursos": { "pv": null, "pe": null, "san": null },
+  "recursos": { "pv": null, "pe": null, "san": null, "pd": null },   // pd: com "Jogando sem Sanidade" (v2.19)
   "ajustes": [ { "id", "alvo", "valor", "motivo", "manual": true } ],
   "temporarios": { "pv": 0, "pe": 0, "san": 0, "defesa": 0, "capacidade": 0 },
   "bonusExtra": { "defesa": 2, "bloqueio": 3, "esquiva": -1 },   // −99 a +99; fica até mudar
@@ -672,9 +685,33 @@ Só existe na ficha de Ordem. Guarda **escolhas**, **recursos gastos** e
     "fortitude": { "extra": 2 }               // bônus extra da perícia
   },
   "organizacao": {                // como cada aba ordena a lista — só apresentação
-    "habilidades": { "modo": "personalizada", "regras": [ "auto|ataqueEspecial" ] },
-    "rituais": { "modo": "az" },
-    "inventario": { "modo": "adicao" }
+    "habilidades": {
+      "modo": "personalizada",
+      "regras": [ "auto|ataqueEspecial" ],
+      "lugares": { "d3.poderClasse|reflexosDefensivos": "uuid-da-pasta" },  // v2.19
+      "ordem": { "*": [ "r:auto|ataqueEspecial", "n:uuid-do-no" ] }        // v2.19
+    },
+    "rituais": { "modo": "az", "criterios": [ "circulo", "elemento" ] },   // v2.19
+    "inventario": { "modo": "adicao" },
+    "pericias": { "modo": "maior", "ordem": [ "luta", "pontaria" ] }        // v2.19
+  },
+  "condicoes": {                  // morrendo, enlouquecendo e os contadores da mesa (v2.19)
+    "cena": { "id": "cena-uuid", "iniciadaEm": "2026-09-25T20:00:00.000Z" },
+    "integrarCombate": true,
+    "morrendo": { "ativa": true, "desde": "...", "eventos": [
+      { "id": "cb:<combate>:2:<participante>", "origem": "combate", "cena": "cena-uuid",
+        "em": "...", "rodada": 2, "combate": "<combate>" },
+      { "id": "m-uuid", "origem": "manual", "cena": "cena-uuid", "em": "..." }
+    ], "descartados": [] },
+    "inconsciente": { "ativa": true, "desde": "..." },
+    "enlouquecendo": { "ativa": false, "desde": "", "eventos": [], "descartados": [] },
+    "perturbado": { "ativa": false, "desde": "" },
+    "mesa": {
+      "exaustao": { "usar": false, "limite": null, "ativacao": "manual", "consequencia": "",
+                    "ativa": false, "desde": "", "eventos": [], "descartados": [] },
+      "desmaio": { "usar": false, "limite": null, "ativacao": "manual", "consequencia": "",
+                   "ativa": false, "desde": "", "eventos": [], "descartados": [] }
+    }
   },
   "opcionais": { "nexExperiencia": true }
 }
@@ -789,16 +826,50 @@ chaves `"0"` a `"4"`: `null` é **sem limite**, um número é o máximo, e `0` �
 `temporarios.capacidade` é o ajuste temporário de capacidade de carga, em
 espaços, de −99 a +99. Ele não tem duração: fica até alguém mudar.
 
+### Condições (v2.19)
+
+`condicoes` guarda, separados, o que a regra separa: a **condição ativa**
+(`ativa`, com `desde`) e a **contagem da cena** (`eventos`). O valor do recurso
+fica em `recursos`, e nenhum dos três é deduzido do outro — uma ficha com PV 0 não
+ganha morrendo ao ser lida.
+
+- `cena.id` identifica a cena atual. Começa vazio (uma ficha antiga lida duas
+  vezes não pode ganhar duas cenas) e muda em "Nova cena", que esvazia `eventos` e
+  `descartados` de todas as listas e mantém as condições ativas.
+- Cada **evento** é um início de turno: `origem` `"manual"` (id `m-…`) ou
+  `"combate"` (id `cb:<combate>:<rodada>:<participante>`, com `rodada` e
+  `combate`), e a `cena` em que contou. A contagem é o número de eventos da cena
+  atual. No máximo 60 por lista.
+- `descartados` guarda os ids de inícios do combate tirados à mão ("−1"): o
+  mesmo turno não volta a contar.
+- `integrarCombate` (padrão `true`) deixa o combate da campanha somar inícios de
+  turno — o servidor escreve aqui, no mesmo formato.
+- `inconsciente` e `perturbado` não contam turnos.
+- `mesa.exaustao` e `mesa.desmaio` são contadores da mesa: `usar` (padrão
+  `false`), `limite` (1 a 20, ou `null` — sem limite), `ativacao` (`"manual"` ou
+  `"recursoZero"`: PE/PD chegando a 0 por gasto ou dano) e `consequencia` (texto
+  da mesa, até 200 caracteres). Nenhuma consequência é aplicada.
+
+Ficha sem `condicoes` lê tudo inativo e sem contagem. Tudo o que chega é
+normalizado (`RAMAOrdemCondicoes.normalizar`): ids fora do padrão, eventos
+repetidos e limites fora da faixa são descartados.
+
+Com "Jogando sem Sanidade", `recursos.pd` guarda os PD gastos (nulo = cheio), e
+`recursos.pe` e `recursos.san` continuam guardados, sem conversão — voltam a valer
+quando a regra é desligada.
+
 ### O resumo de recursos
 
 ```jsonc
-"resumoRecursos": { "versao": 1, "pv": 32, "pe": 9, "san": null }   // ao lado de "ordem", não dentro
+"resumoRecursos": { "versao": 1, "pv": 32, "pe": 9, "san": 14, "pd": null }   // ao lado de "ordem", não dentro
 ```
 
 Desde a v2.12, a ficha gravada de uma ficha de Ordem leva os **máximos** de
 PV, PE e Sanidade, para os outros jogadores da campanha verem os recursos sem
 receber a ficha (ver "Painel da mesa" em [CAMPAIGNS.md](CAMPAIGNS.md)). Os atuais
-continuam só em `ordem.recursos`. `san` é `null` com "Jogando sem Sanidade".
+continuam só em `ordem.recursos`. Com "Jogando sem Sanidade" (v2.19), `pe` e `san`
+vêm `null` e `pd` traz o máximo de pontos de determinação; sem a regra, `pd` é
+`null`. Um resumo de uma versão anterior do site, sem `pd`, continua válido.
 
 Ele **não** faz parte da ficha que a tela edita nem do arquivo exportado: é
 calculado a cada gravação a partir do bloco `ordem`
@@ -819,14 +890,13 @@ leitura, e por isso nunca acumulam.
 
 ### Organização das listas
 
-`organizacao` guarda, por aba (Habilidades, Rituais, Inventário), o **modo** de
-exibição. É da ficha — vale em qualquer aparelho — e é só apresentação: nenhuma
-conta, requisito ou permissão lê isto, e escolher um modo **não reescreve** a
-lista guardada.
+`organizacao` guarda, por aba, como a lista é mostrada. É da ficha — vale em
+qualquer aparelho — e é só apresentação: nenhuma conta, requisito ou permissão lê
+isto, e escolher um modo **não reescreve** a lista guardada.
 
-| `modo` | a tela mostra |
+| `modo` (Habilidades, Rituais, Inventário) | a tela mostra |
 |---|---|
-| `personalizada` (padrão) | a ordem guardada; Subir e Descer mexem nela |
+| `personalizada` (padrão) | a ordem guardada; arrastar, ↑ ↓ na alça e Subir/Descer mexem nela |
 | `adicao` | pela data de `adicionadoEm`, do mais antigo ao mais novo. O que não tem data (anterior à v2.7) vem primeiro, na ordem guardada. Uma habilidade escolhida na progressão usa o `registradoEm` da escolha; uma automática não tem data |
 | `az` / `za` | pelo nome, sem diferença de acento nem de maiúscula, com números em ordem natural ("Nível 2" antes de "Nível 10"). Pastas vêm antes das habilidades |
 
@@ -837,8 +907,27 @@ ficha anterior. Empates desempatam pela posição guardada.
 de aquisição), que não moram na árvore. As que não estão na lista entram no fim,
 na ordem da progressão. Ids repetidos ou fora do padrão são descartados.
 
-Numa ficha Universal não há `organizacao`: as abas mostram a ordem guardada, e o
-inventário continua com as armas primeiro.
+Desde a v2.19:
+
+- `habilidades.lugares` — em que pasta da árvore aparece cada habilidade das
+  regras (id de aquisição → id da pasta). Pasta que não existe mais devolve a
+  habilidade à raiz, sem apagar a preferência.
+- `habilidades.ordem` — por contêiner (`"*"` é a raiz; o resto, ids de pasta), a
+  sequência mostrada, com `r:` (habilidade das regras) e `n:` (nó da árvore). Entre
+  os nós, manda a ordem da árvore; a lista só posiciona as das regras entre eles.
+  Nada disso cria nó, e a aquisição não muda.
+- `rituais.criterios` — `[]`, `["circulo"]`, `["elemento"]`, `["circulo","elemento"]`
+  ou `["elemento","circulo"]`: os agrupamentos ligados, na ordem de prioridade. O
+  modo continua sendo a ordem base dentro de cada grupo.
+- `pericias.modo` — `az` (padrão, e o de toda ficha antiga), `maior`, `menor` ou
+  `personalizada`; `pericias.ordem` é a ordem personalizada, pelas chaves do
+  catálogo (perícia desconhecida é descartada; a que falta entra no fim, pelo
+  nome).
+
+Uma ficha antiga abre na ordem em que estava: sem critério de ritual, perícias em
+ordem alfabética, habilidades das regras na raiz. Numa ficha Universal não há
+`organizacao`: as abas mostram a ordem guardada, e o inventário continua com as
+armas primeiro.
 
 ### Versões personalizadas e habilidades excluídas
 

@@ -61,6 +61,11 @@
      campo e a concessão da mesa), e a escolha de Aprender Ritual ganhou
      `substituicao`, mais funda do que a limpeza da v2.17 alcançava. Sem
      conversão: uma ficha 8 abre igual, com a lista vazia.
+     9 → 10: o bloco `ordem` ganhou `condicoes` (morrendo, enlouquecendo
+     e os contadores da mesa), `recursos.pd` (pontos de determinação) e,
+     em `organizacao`, os critérios dos rituais, a ordem das perícias e o
+     lugar das habilidades das regras nas pastas. Sem conversão: uma
+     ficha 9 abre igual — nenhuma condição ativa, nenhuma ordem mudada.
 
      Nenhuma das subidas exige migração: normalizarFicha() cria o que
      falta, vazio, e não toca no que existe. Um ritual gravado na 2 abre
@@ -71,7 +76,7 @@
      os campos novos e os descartaria ao gravar — com o schema maior ela
      recusa abrir a ficha e pede para recarregar.
      Ver docs/CHARACTER_SCHEMA.md. */
-  var VERSAO_SCHEMA = 9;
+  var VERSAO_SCHEMA = 10;
 
   var NATUREZA = { INFORMACAO: "informacao", ROLAVEL: "rolavel", DEPENDENTE: "dependente" };
 

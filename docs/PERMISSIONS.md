@@ -96,7 +96,7 @@ Os cartões da aba Personagens (`listar_personagens_campanha`):
 |---|---|
 | mestre | todos os personagens da mesa, com os dados de cálculo |
 | dono | os próprios personagens (todos eles) com os dados de cálculo |
-| outro jogador | identificação e os recursos atuais e máximos, **só leitura** — ou só a identificação, com **Esconder status dos jogadores** ligada |
+| outro jogador | identificação, os recursos atuais e máximos e as condições ativas com a contagem da cena, **só leitura** — ou só a identificação, com **Esconder status dos jogadores** ligada |
 | espectador | lista vazia |
 
 **Ver o resumo não é abrir a ficha.** Nenhuma resposta ao outro jogador traz
@@ -107,8 +107,8 @@ direto responde `nao_encontrado`.
 
 **Esconder status dos jogadores** é do mestre: `salvar_campanha` começa por
 `exigirMestre`, e um jogador que mande `ocultarStatusJogadores` recebe
-`sem_permissao`. Ligada, os recursos dos personagens dos outros **não entram na
-resposta** — nem nos cartões, nem na lista do combate. Não há número, barra,
+`sem_permissao`. Ligada, os recursos e as condições dos personagens dos outros
+**não entram na resposta** — nem nos cartões, nem na lista do combate. Não há número, barra,
 percentual, dica ou atributo HTML para esconder, porque eles não chegam. O mestre
 continua vendo tudo; o jogador, os próprios. O que alguém já recebeu antes de a
 chave ser ligada não tem como ser apagado.
@@ -167,9 +167,10 @@ Quatro decisões, e nenhuma decide pela outra:
 | decisão | quem | onde é conferida |
 |---|---|---|
 | ver o combate | quem o mestre escolheu em **Quem pode ver** | `podeVerCombate` |
-| ver os recursos dos personagens na lista | a regra dos cartões (e a chave de ocultação) | `recursosParaCombate` |
+| ver os recursos e as condições dos personagens na lista | a regra dos cartões (e a chave de ocultação) | `recursosParaCombate` |
 | abrir a ficha de um personagem | dono ou mestre da campanha, sempre | `personagemAcessivel` |
 | administrar (turno, iniciativa, vida de criatura, participantes, quem vê) | só o mestre | `exigirMestre` em `atualizar_combate`, `salvar_combate` e `excluir_combate` |
+| contar o início de turno na ficha (v2.19) | o servidor, dentro do lote do mestre | `aplicarTurnosAsFichas`: só ficha vinculada à campanha do combate, só o evento do turno, com a revisão subindo |
 
 Quem tem acesso recebe a lista, a ordem de iniciativa, a rodada e de quem é a vez —
 e **não** a ficha interna das criaturas, o id do modelo na biblioteca nem a lista de
@@ -313,6 +314,10 @@ por `doPost` como uma requisição de verdade. Entre elas:
   fora, e a jogadora tirada da mesa deixa de recebê-las na pergunta seguinte
 - a jogadora não opera o combate; lote com uma operação inválida não aplica nada;
   o mesmo `opId` repetido não é aplicado duas vezes
+- (v2.19) o lote do combate só escreve o início de turno em ficha que continua na
+  campanha dele; a jogadora não passa turno (e não conta nada por isso); as
+  condições alheias seguem a ocultação de status, nos cartões e no combate, e
+  nunca levam os eventos; o ajuste rápido de PD segue as portas de sempre
 - (v2.16) `ler_fotos`, `ler_avatares` e `ler_capas` devolvem imagem só de quem a conta alcança: o dono do personagem e quem joga na mesma mesa que ele (espectador não); conta ativa, no caso do avatar; campanha que a conta alcança, no caso da capa. Quem não alcança não recebe aquela chave na resposta —
   e a resposta não distingue "não tem imagem" de "não pode ver"
 - (v2.16) a projeção do painel (coluna `resumo`) não muda regra nenhuma: ela é

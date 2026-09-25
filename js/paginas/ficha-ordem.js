@@ -284,6 +284,7 @@
           avisoDePendencias(ctx, c),
           UI.painel("Atributos", painelAtributosCorpo(ctx, o)),
           UI.painel("Recursos", painelRecursosCorpo(ctx, o, c)),
+          CD() ? painelDeCondicoes(ctx, o, c) : null,
           UI.painel("Defesa e movimento", painelDerivadosCorpo(ctx, o, c)),
         ]),
       ]);
@@ -493,14 +494,24 @@
     var ordemAtual = ativas.map(function (aq) { return aq.id; });
 
     var nomes = [];
-    var itens = [];
+    /* Cada habilidade das regras vai para a aba como um DESCRITOR: a aba
+       decide em que pasta ela aparece e em que posição, e monta o cartão
+       com a alça e com Subir/Descer daquela pasta. Arrastar uma delas
+       grava só isso — lugar e posição, em `organizacao.habilidades` —, e
+       a aquisição, o texto e a personalização ficam como estavam. */
+    var regras = [];
     ativas.forEach(function (aq) {
       /* Excluída da ficha: não aparece na lista, e o motor já tirou os
          efeitos dela da conta. Fica na seção de excluídas, no fim. */
       var pz = PZ() ? PZ().daAquisicao(o, aq.id) : null;
       nomes.push(aq.nome);
       if (pz) nomes.push(pz.nome);
-      itens.push(cartaoDeAquisicao(ctx, o, aq, pz, ordemAtual));
+      regras.push({
+        id: aq.id,
+        nome: pz ? pz.nome : aq.nome + (aq.estagio ? " · " + aq.estagio : ""),
+        adicionado: aq.adicionadoEm || "",
+        criar: function (opcoes) { return cartaoDeAquisicao(ctx, o, aq, pz, opcoes); },
+      });
     });
 
     var idsAtuais = aquisicoes.map(function (aq) { return aq.id; });
@@ -511,11 +522,14 @@
     if (secaoExcluidas) fim.push(secaoExcluidas);
 
     return {
-      itens: itens,
+      regras: regras,
+      ordemDasRegras: ordemAtual,
+      org: Organizacao.dados(o).habilidades,
+      arrastar: Organizacao.podeArrastar(ctx, "habilidades"),
       fim: fim,
       ordenacao: { modo: Organizacao.modo(ctx, "habilidades"), barra: Organizacao.barra(ctx, "habilidades") },
       biblioteca: { classe: o.classe, nomes: nomes.concat(nomesPersonalizados(o)) },
-      aviso: itens.length
+      aviso: regras.length
         ? "“Entra na conta”: o efeito já está nos números da ficha. “Parte na conta”: uma parte está, o resto é aplicado na cena. “Anotação”: o efeito depende da cena ou de gasto de PE. As que vêm das regras são escolhidas na aba Progressão; no modo edição, o menu de cada uma cria uma versão personalizada só desta ficha."
         : "",
     };
@@ -554,7 +568,10 @@
      efeitos daquela ocorrência explicitamente.
      ================================================================= */
 
-  function cartaoDeAquisicao(ctx, o, aq, pz, ordemAtual) {
+  /* opcoes = { acoesDeOrdem: [itens de menu], alca: elemento } — quem
+     sabe em que pasta o cartão mora é a aba Habilidades. */
+  function cartaoDeAquisicao(ctx, o, aq, pz, opcoes) {
+    var op = opcoes || {};
     var situacaoExtra = aq.situacao === "suspensa" ? "suspenso" : (aq.situacao === "incompleta" ? "incompleto" : "");
     var nomeOficial = aq.nome + (aq.estagio ? " · " + aq.estagio : "");
     var titulo = pz ? pz.nome : nomeOficial;
@@ -568,10 +585,7 @@
       if (pz) {
         opcoes.push({ rotulo: "Salvar na minha biblioteca Homebrew", aoClicar: function () { salvarPersonalizadaNaBiblioteca(ctx, o, aq, pz); } });
       }
-      if (ordemAtual && Organizacao.modo(ctx, "habilidades") === "personalizada") {
-        opcoes.push({ rotulo: "Subir", aoClicar: function () { moverRegra(ctx, o, ordemAtual, aq.id, -1); } });
-        opcoes.push({ rotulo: "Descer", aoClicar: function () { moverRegra(ctx, o, ordemAtual, aq.id, 1); } });
-      }
+      (op.acoesDeOrdem || []).forEach(function (x) { opcoes.push(x); });
       opcoes.push("separador");
       if (pz) {
         opcoes.push({ rotulo: "Restaurar versão oficial", perigo: true, aoClicar: function () { restaurarOficial(ctx, o, aq, pz); } });
@@ -619,6 +633,7 @@
       classe: "ordem-poder ordem-poder--" + aq.situacao + (pz ? " ordem-poder--personalizada" : ""),
       conteudo: el("div.pilha--curta", { class: "pilha" }, conteudo),
       acoes: acoes,
+      alca: op.alca || null,
     });
     caixa.dataset.aquisicao = aq.id;
     caixa.dataset.adicionado = aq.adicionadoEm || "";
@@ -996,16 +1011,29 @@
     }, { nome: a.nome });
   }
 
-  /* Os recursos: o que sobrou. */
+  /* Os recursos: o que sobrou.
+
+     O número editável é AJUSTE MANUAL: muda o valor e mais nada — ele
+     não diz se foi dano, cura ou correção, e a ficha não inventa. As
+     ações com origem ficam na linha de baixo: dano, cura, gasto, dano
+     mental, recuperação. Só elas aplicam o que as regras ligam a cada
+     uma (condicoes.js).
+
+     Com "Jogando sem Sanidade" (SAH p.104), os recursos em jogo são PV e
+     PD. PE e Sanidade continuam gravados, intactos, para quando a regra
+     for desligada. */
+  function CD() { return global.RAMAOrdemCondicoes || null; }
+
+  var NOMES_DE_ACAO = {
+    dano: "Dano", cura: "Cura", gastar: "Gastar", danoMental: "Dano mental", recuperar: "Recuperar",
+  };
+
   function painelRecursosCorpo(ctx, o, c) {
-    var semSanidade = OP && OP.ligada(o, "semSanidade");
-
-    var itens = [
-      { chave: "pv", nome: "Pontos de vida", conta: c.pv, atual: c.atual.pv },
-      { chave: "pe", nome: "Pontos de esforço", conta: c.pe, atual: c.atual.pe },
-    ];
-
-    if (!semSanidade) {
+    var itens = [{ chave: "pv", nome: "Pontos de vida", conta: c.pv, atual: c.atual.pv }];
+    if (c.determinacao) {
+      itens.push({ chave: "pd", nome: "Pontos de determinação", conta: c.pd, atual: c.atual.pd });
+    } else {
+      itens.push({ chave: "pe", nome: "Pontos de esforço", conta: c.pe, atual: c.atual.pe });
       itens.push({ chave: "san", nome: "Sanidade", conta: c.san, atual: c.atual.san });
     }
 
@@ -1018,20 +1046,335 @@
           ]),
           UI.passo({
             valor: item.atual, minimo: -99, maximo: item.conta.total,
-            rotulo: item.nome + " atual",
+            rotulo: item.nome + " atual (ajuste manual)",
             aoMudar: function (v) {
-              if (!o.recursos) o.recursos = { pv: null, pe: null, san: null };
+              if (!o.recursos) o.recursos = { pv: null, pe: null, san: null, pd: null };
               o.recursos[item.chave] = v;
               ctx.alterou();
+              /* O ajuste não muda condição nenhuma. Só a sugestão do
+                 painel de condições (PV ou SAN em 0) acompanha — sem
+                 redesenhar a ficha, para o foco ficar no campo. */
+              atualizarCondicoes(ctx);
             },
           }),
+          CD() ? acoesDoRecurso(ctx, o, c, item) : null,
         ]);
       })),
-      semSanidade
-        ? el("p.t-mini", { texto: "A Sanidade está escondida pela regra opcional “Jogando sem Sanidade”. O valor continua gravado." })
+      c.determinacao
+        ? el("p.t-mini", {
+            texto: "Jogando sem Sanidade (SAH p. 104): PE e Sanidade viraram pontos de determinação. Custos em PE são pagos com PD, " +
+                   "e o limite de PE por turno vale para PD. PE e Sanidade continuam gravados e voltam se a regra for desligada.",
+          })
         : null,
-      el("p.t-mini", { texto: "Os máximos são calculados. O número editável é o que sobrou depois do gasto." }),
+      el("p.t-mini", {
+        texto: "Os máximos são calculados. O número editável é ajuste manual: muda o valor e mais nada. Os botões dizem de onde veio a " +
+               "mudança — e só eles aplicam as condições que as regras ligam a ela.",
+      }),
     ]);
+  }
+
+  function acoesDoRecurso(ctx, o, c, item) {
+    var entrada = el("input.r-entrada.recurso-acoes__valor", {
+      type: "text", inputmode: "numeric", maxlength: 4, value: "1",
+      "aria-label": "Quanto, para as ações de " + item.nome.toLowerCase(),
+      dataset: { foco: "acao-valor-" + item.chave },
+      onkeydown: function (ev) { if (ev.key === "Enter") ev.preventDefault(); },
+    });
+    return el("div.recurso-acoes", { role: "group", "aria-label": "Ações de " + item.nome.toLowerCase() }, [entrada].concat(
+      CD().ACOES[item.chave].map(function (acao) {
+        return el("button.r-botao.r-botao--mini", {
+          type: "button",
+          texto: NOMES_DE_ACAO[acao],
+          dataset: { foco: "acao-" + item.chave + "-" + acao },
+          onclick: function () { aplicarAcaoDeRecurso(ctx, o, c, item, acao, entrada.value); },
+        });
+      })
+    ));
+  }
+
+  function aplicarAcaoDeRecurso(ctx, o, c, item, acao, valor) {
+    var r = CD().aplicarAcao(item.chave, acao, {
+      cond: o.condicoes, atual: item.atual, maximo: item.conta.total, valor: valor, pd: c.determinacao,
+    });
+    if (!r.ok) { UI.avisoAtencao(r.motivo); return; }
+    if (!o.recursos) o.recursos = { pv: null, pe: null, san: null, pd: null };
+    o.recursos[item.chave] = r.valor;
+    ctx.alterou();
+    ctx.redesenhar();
+    var foco = document.querySelector('[data-foco="acao-' + item.chave + "-" + acao + '"]');
+    if (foco) foco.focus();
+    if (r.mensagens.length) UI.avisoAtencao(r.mensagens.join(" "), { duracao: 9000 });
+  }
+
+  /* =================================================================
+     CONDIÇÕES — morrendo, enlouquecendo e os contadores da mesa
+     -----------------------------------------------------------------
+     Três coisas separadas, e a tela mostra as três: o valor do recurso
+     (acima), se a condição está ativa, e quantos inícios de turno ela
+     já contou NESTA cena. Encerrar para a contagem sem apagá-la; só
+     "Nova cena" recomeça. Nada aqui rola teste: Medicina e Diplomacia
+     continuam sendo rolados por quem joga.
+     ================================================================= */
+
+  function atualizarCondicoes(ctx) {
+    var alvo = document.querySelector("[data-painel-condicoes]");
+    if (!alvo) return;
+    var corpo = alvo.querySelector(".condicoes");
+    if (!corpo) return;
+    var novo = painelCondicoesCorpo(ctx, ordemDe(ctx), calculo(ctx));
+    if (novo) corpo.replaceWith(novo);
+  }
+
+  function painelCondicoesCorpo(ctx, o, c) {
+    if (!CD()) return null;
+    if (!o.condicoes || !o.condicoes.morrendo) o.condicoes = CD().normalizar(o.condicoes);
+    var cond = o.condicoes;
+    var partes = [
+      linhaDaCena(ctx, cond),
+      linhaDeCondicao(ctx, o, c, "morrendo"),
+      linhaDeCondicao(ctx, o, c, "enlouquecendo"),
+    ];
+    if (c.determinacao && cond.perturbado.ativa) {
+      partes.push(el("div.condicao.condicao--simples", {}, [
+        el("span.condicao__nome", { texto: "Perturbado" }),
+        el("span.t-mini", { texto: "O dano mental deixou os PD abaixo da metade (SAH p. 104)." }),
+        botaoDeCondicao(ctx, "Encerrar", function () { return CD().marcar(cond, "perturbado", false); }, "perturbado-encerrar"),
+      ]));
+    }
+    partes.push(secaoDaMesa(ctx, o, c));
+    return el("div.pilha--curta.condicoes", { class: "pilha" }, partes);
+  }
+
+  function painelDeCondicoes(ctx, o, c) {
+    var painel = UI.painel("Condições", painelCondicoesCorpo(ctx, o, c));
+    painel.dataset.painelCondicoes = "sim";
+    return painel;
+  }
+
+  function mudarCondicao(ctx, fn, foco) {
+    var r = fn();
+    if (r && r.mudou === false) {
+      if (r.mensagem) UI.avisoAtencao(r.mensagem);
+      return;
+    }
+    ctx.alterou();
+    ctx.redesenhar();
+    if (foco) {
+      var alvo = document.querySelector('[data-foco="' + foco + '"]');
+      if (alvo) alvo.focus();
+    }
+  }
+
+  function botaoDeCondicao(ctx, rotulo, fn, foco, extra) {
+    return el("button.r-botao.r-botao--mini", Object.assign({
+      type: "button", texto: rotulo, dataset: { foco: foco },
+      onclick: function () { mudarCondicao(ctx, fn, foco); },
+    }, extra || {}));
+  }
+
+  function linhaDaCena(ctx, cond) {
+    var desde = cond.cena.iniciadaEm ? "desde " + U.dataHora(cond.cena.iniciadaEm) : "a primeira desta ficha";
+    return el("div.condicoes__cena", {}, [
+      el("span.t-mini", { texto: "Cena atual: " + desde + "." }),
+      el("button.r-botao.r-botao--mini", {
+        type: "button", texto: "Nova cena", dataset: { foco: "condicoes-nova-cena" },
+        onclick: async function () {
+          var certo = await UI.confirmar({
+            titulo: "Começar uma nova cena?",
+            texto: "Zera a contagem de inícios de turno de morrendo, enlouquecendo e dos contadores da mesa.",
+            detalhe: "As condições ativas continuam ativas — morrendo não termina com a cena (OPRPG p. 88). Encerrar um combate não faz isto sozinho.",
+            rotuloConfirmar: "Nova cena",
+          });
+          if (!certo) return;
+          mudarCondicao(ctx, function () { return CD().novaCena(cond); }, "condicoes-nova-cena");
+        },
+      }),
+      el("label.r-marca.condicoes__combate", {}, [
+        el("input", {
+          type: "checkbox", checked: cond.integrarCombate,
+          dataset: { foco: "condicoes-combate" },
+          onchange: function (ev) {
+            var ligar = ev.target.checked;
+            mudarCondicao(ctx, function () { cond.integrarCombate = ligar; return { mudou: true }; }, "condicoes-combate");
+          },
+        }),
+        el("span.t-mini", { texto: "Contar pelos turnos do combate da campanha (só o início do turno deste personagem)" }),
+      ]),
+    ]);
+  }
+
+  function marcadores(contagem, limite) {
+    if (limite === null || limite === undefined) {
+      return el("span.condicao__numero", { texto: String(contagem) });
+    }
+    var marcas = [];
+    for (var i = 0; i < limite; i++) {
+      marcas.push(el("span.condicao__marca", { class: i < contagem ? "condicao__marca--cheia" : "" }));
+    }
+    return el("span.condicao__marcas", { "aria-hidden": "true" }, marcas);
+  }
+
+  function descricaoDaContagem(e) {
+    var n = e.contagem;
+    var total = e.limite === null ? n + " início(s) de turno" : n + " de " + e.limite;
+    var origem = n ? " (" + [e.doCombate ? e.doCombate + " pelo combate" : "", e.manuais ? e.manuais + " à mão" : ""].filter(Boolean).join(", ") + ")" : "";
+    return total + " nesta cena" + origem;
+  }
+
+  function linhaDeCondicao(ctx, o, c, chave) {
+    var cond = o.condicoes;
+    var e = CD().estado(cond, chave, { pd: c.determinacao });
+    var nomeDoRecurso = chave === "morrendo" ? "PV" : (c.determinacao ? "PD" : "Sanidade");
+    var estadoTexto = e.ativa
+      ? e.nome + ": " + descricaoDaContagem(e)
+      : (e.contagem
+          ? "Encerrada. Nesta cena já contou " + e.contagem + (e.limite ? " de " + e.limite : "") + " — se voltar, a conta continua daí."
+          : (chave === "morrendo" ? "Não está morrendo." : "Não está enlouquecendo."));
+
+    var sugestao = null;
+    if (!e.ativa && chave === "morrendo" && c.atual.pv <= 0) {
+      sugestao = "PV em " + c.atual.pv + ". Pela regra, quem é reduzido a 0 PV fica inconsciente e morrendo (OPRPG p. 88).";
+    }
+    if (!e.ativa && chave === "enlouquecendo" && !c.determinacao && c.atual.san <= 0) {
+      sugestao = "Sanidade em " + c.atual.san + ". Pela regra, quem é reduzido a Sanidade 0 fica enlouquecendo (OPRPG p. 88).";
+    }
+
+    var botoes = e.ativa
+      ? [
+          botaoDeCondicao(ctx, "+1 início de turno", function () { return CD().somarInicio(cond, chave); }, chave + "-mais",
+            { disabled: e.atingiu, title: "Um início de turno do personagem com a condição, registrado à mão" }),
+          botaoDeCondicao(ctx, "−1 corrigir", function () { return CD().corrigirMenos(cond, chave); }, chave + "-menos",
+            { disabled: !e.contagem }),
+          botaoDeCondicao(ctx, "Encerrar", function () { return CD().encerrar(cond, chave); }, chave + "-encerrar"),
+        ]
+      : [
+          botaoDeCondicao(ctx, chave === "morrendo" ? "Ficar morrendo" : "Ficar enlouquecendo",
+            function () { return CD().ativar(cond, chave); }, chave + "-ativar"),
+          e.contagem ? botaoDeCondicao(ctx, "−1 corrigir", function () { return CD().corrigirMenos(cond, chave); }, chave + "-menos") : null,
+        ];
+
+    var inconsciente = null;
+    if (chave === "morrendo" && (e.ativa || cond.inconsciente.ativa)) {
+      inconsciente = el("div.condicao__sub", {}, [
+        el("span.t-mini", { texto: cond.inconsciente.ativa ? "Inconsciente: sim." : "Inconsciente: não — curou PV, mas continua morrendo." }),
+        cond.inconsciente.ativa
+          ? botaoDeCondicao(ctx, "Encerrar inconsciência", function () { return CD().marcar(cond, "inconsciente", false); }, "inconsciente-encerrar")
+          : botaoDeCondicao(ctx, "Marcar inconsciente", function () { return CD().marcar(cond, "inconsciente", true); }, "inconsciente-marcar"),
+      ]);
+    }
+
+    return el("div.condicao", {
+      class: (e.ativa ? "condicao--ativa" : "") + (e.atingiu && e.ativa ? " condicao--limite" : ""),
+      role: "group", "aria-label": e.nome,
+    }, [
+      el("div.condicao__topo", {}, [
+        el("span.condicao__nome", { texto: e.nome }),
+        el("span.condicao__recurso", { texto: "ligada a " + nomeDoRecurso }),
+        marcadores(e.contagem, e.limite),
+        el("span.so-leitor", { texto: e.contagem + (e.limite ? " de " + e.limite : "") + " inícios de turno nesta cena." }),
+      ]),
+      el("p.t-mini", { texto: estadoTexto }),
+      e.ativa && e.atingiu ? el("p.condicao__resultado", { role: "status", texto: e.resultado }) : null,
+      sugestao ? el("p.t-mini.t-aviso", { texto: sugestao }) : null,
+      el("div.faixa.condicao__botoes", {}, botoes),
+      inconsciente,
+      e.ativa ? el("p.t-mini", { texto: e.encerra }) : null,
+    ]);
+  }
+
+  /* Exaustão e desmaio: da MESA. Desligados até a mesa ligar, sem limite
+     até ela escrever um, e sem consequência automática nenhuma. */
+  function secaoDaMesa(ctx, o, c) {
+    var cond = o.condicoes;
+    var linhas = CD().CHAVES_DA_MESA.map(function (chave) {
+      var e = CD().estado(cond, chave, { pd: c.determinacao });
+      var configurar = el("button.r-botao.r-botao--mini.r-botao--fantasma", {
+        type: "button", texto: e.usar ? "Configurar" : "Ligar…", dataset: { foco: "mesa-" + chave + "-configurar" },
+        onclick: function () { configurarContadorDaMesa(ctx, o, chave); },
+      });
+      if (!e.usar) {
+        return el("div.condicao.condicao--mesa.condicao--desligada", {}, [
+          el("div.condicao__topo", {}, [el("span.condicao__nome", { texto: e.nome }), el("span.t-mini", { texto: "desligado" }), configurar]),
+        ]);
+      }
+      var botoes = e.ativa
+        ? [
+            botaoDeCondicao(ctx, "+1 início de turno", function () { return CD().somarInicio(cond, chave); }, "mesa-" + chave + "-mais",
+              { disabled: e.atingiu }),
+            botaoDeCondicao(ctx, "−1 corrigir", function () { return CD().corrigirMenos(cond, chave); }, "mesa-" + chave + "-menos",
+              { disabled: !e.contagem }),
+            botaoDeCondicao(ctx, "Encerrar", function () { return CD().encerrar(cond, chave); }, "mesa-" + chave + "-encerrar"),
+          ]
+        : [botaoDeCondicao(ctx, "Ativar", function () { return CD().ativar(cond, chave); }, "mesa-" + chave + "-ativar")];
+      return el("div.condicao.condicao--mesa", { class: e.ativa ? "condicao--ativa" : "", role: "group", "aria-label": e.nome + " (regra da mesa)" }, [
+        el("div.condicao__topo", {}, [
+          el("span.condicao__nome", { texto: e.nome }),
+          el("span.condicao__recurso", { texto: "regra da mesa" }),
+          marcadores(e.contagem, e.limite),
+          configurar,
+        ]),
+        el("p.t-mini", {
+          texto: (e.ativa ? "Ativa: " + descricaoDaContagem(e) : (e.contagem ? "Encerrada; nesta cena: " + e.contagem + "." : "Inativa.")) +
+                 (e.limite === null ? " Sem limite definido." : "") +
+                 (e.ativacao === "recursoZero" ? " Ativa sozinha quando " + (c.determinacao ? "os PD" : "os PE") + " chegam a 0 por gasto ou dano." : " Ativação à mão."),
+        }),
+        e.ativa && e.atingiu
+          ? el("p.condicao__resultado", { role: "status", texto: "Limite da mesa atingido." + (e.consequencia ? " Combinado: " + e.consequencia : "") + " A ficha não aplica nada sozinha." })
+          : null,
+        el("div.faixa.condicao__botoes", {}, botoes),
+      ]);
+    });
+    return el("div.pilha--curta.condicoes__mesa", { class: "pilha" }, [
+      el("p.t-rotulo", { texto: "Contadores da mesa" }),
+      el("p.t-mini", { texto: "Não são regra do livro: o livro não liga exaustão nem desmaio a PD ou PE chegando a 0, nem dá prazo em turnos. Cada mesa decide se usa, o limite e como ativa." }),
+    ].concat(linhas));
+  }
+
+  function configurarContadorDaMesa(ctx, o, chave) {
+    var cond = o.condicoes;
+    var r = cond.mesa[chave];
+    var def = CD().DA_MESA[chave];
+    var usar = el("input", { type: "checkbox", checked: r.usar, id: "mesa-usar-" + chave });
+    var limite = UI.campo({
+      rotulo: "Limite de inícios de turno (vazio = sem limite)", valor: r.limite === null ? "" : String(r.limite), limite: 2,
+      dica: "1 a " + CD().MAX_LIMITE_DA_MESA,
+    });
+    var ativacao = UI.campo({
+      rotulo: "Ativação", tipo: "selecao", valor: r.ativacao,
+      opcoes: CD().ATIVACOES.map(function (a) { return { valor: a.chave, rotulo: a.nome }; }),
+    });
+    var consequencia = UI.campo({
+      rotulo: "O que acontece no limite, nas palavras da mesa (só é mostrado)", valor: r.consequencia, limite: 200,
+    });
+    UI.modal({
+      titulo: def.nome + " — contador da mesa",
+      conteudo: [
+        el("p.t-mini", { texto: def.explicacao }),
+        el("label.r-marca", { for: "mesa-usar-" + chave }, [usar, el("span", { texto: "Usar este contador nesta ficha" })]),
+        limite, ativacao, consequencia,
+        el("p.t-mini", { texto: "Desligar não apaga os turnos já contados: eles só deixam de valer." }),
+      ],
+      botoes: [
+        { rotulo: "Cancelar", classe: "r-botao--fantasma" },
+        {
+          rotulo: "Salvar", classe: "r-botao--principal",
+          aoClicar: function (fechar) {
+            var bruto = limite.entrada.value.trim();
+            if (bruto && !/^\d{1,2}$/.test(bruto)) { limite.marcarErro("Use um número de 1 a " + CD().MAX_LIMITE_DA_MESA + ", ou deixe vazio."); return; }
+            if (bruto && (Number(bruto) < 1 || Number(bruto) > CD().MAX_LIMITE_DA_MESA)) {
+              limite.marcarErro("Use um número de 1 a " + CD().MAX_LIMITE_DA_MESA + ", ou deixe vazio.");
+              return;
+            }
+            var feito = CD().configurarDaMesa(cond, chave, {
+              usar: usar.checked, limite: bruto ? Number(bruto) : null,
+              ativacao: ativacao.entrada.value, consequencia: consequencia.entrada.value,
+            });
+            fechar();
+            if (feito.mudou) { ctx.alterou(); ctx.redesenhar(); }
+          },
+        },
+      ],
+    });
   }
 
   function painelDerivadosCorpo(ctx, o, c) {
@@ -1043,7 +1386,7 @@
         valorComExtra(ctx, o, c, "bloqueio"),
         valorComExtra(ctx, o, c, "esquiva"),
         valorCalculado("Deslocamento", c.deslocamento, "metros"),
-        valorCalculado("Limite de PE por turno", c.limitePe),
+        valorCalculado(c.determinacao ? "Limite de PD por turno" : "Limite de PE por turno", c.limitePe),
       ]),
 
       el("div.ordem-carga", {}, [
@@ -1318,26 +1661,107 @@
      PERÍCIAS
      ================================================================= */
 
+  /* A ordem das perícias (v2.19): alfabética, pelo total — o MESMO total
+     que a linha mostra, de R.bonusDePericia, com treino, extra, poderes,
+     carga e ajustes; nunca dado extra nem quantidade de dados —, ou a
+     personalizada, pelas chaves do catálogo. Empate desempata pelo nome.
+     O catálogo e as regras das perícias não mudam: é só a tela. */
+  var ROTULOS_DE_ORDEM_DE_PERICIA = {
+    az: "Alfabética",
+    maior: "Maior bônus primeiro",
+    menor: "Menor bônus primeiro",
+    personalizada: "Personalizada",
+  };
+
+  function organizacaoDasPericias(o) {
+    return Organizacao.dados(o).pericias;
+  }
+
+  function definirModoDasPericias(ctx, o, modo, ordemAtual) {
+    var org = organizacaoDasPericias(o);
+    if (org.modo === modo) return;
+    /* A primeira vez na personalizada começa da ordem que está na tela,
+       para nada pular. Uma personalizada já guardada nunca é tocada. */
+    if (modo === "personalizada" && !org.ordem.length) org.ordem = ordemAtual.slice();
+    org.modo = modo;
+    ctx.alterou();
+    ctx.redesenhar();
+    var s = document.querySelector('[data-foco="ordem-pericias"]');
+    if (s) s.focus();
+  }
+
+  function barraDasPericias(ctx, o, ordemAtual) {
+    var org = organizacaoDasPericias(o);
+    var id = "ordem-pericias-" + U.uuid().slice(0, 6);
+    return el("div.pilha--curta", { class: "pilha" }, [
+      el("div.ordenacao-barra", {}, [
+        el("span.ordenacao", {}, [
+          el("label.ordenacao__rotulo", { for: id, texto: "Ordenar" }),
+          el("select.r-selecao.ordenacao__selecao", {
+            id: id,
+            dataset: { foco: "ordem-pericias" },
+            onchange: function (ev) { definirModoDasPericias(ctx, o, ev.target.value, ordemAtual); },
+          }, R.MODOS_DE_PERICIA.map(function (m) {
+            return el("option", { value: m, selected: m === org.modo, texto: ROTULOS_DE_ORDEM_DE_PERICIA[m] });
+          })),
+        ]),
+      ]),
+      ctx.emEdicao()
+        ? (org.modo === "personalizada"
+            ? el("span.t-mini", { texto: "Arraste pela alça para mudar esta ordem — ou, com o foco na alça, use ↑ e ↓." })
+            : el("div.ordenacao-arrastar", {}, [
+                el("span.t-mini", { texto: "Esta ordem é automática. Para arrastar, use a ordem personalizada — a guardada continua como estava." }),
+                el("button.r-botao.r-botao--mini", {
+                  type: "button", texto: "Usar ordem personalizada",
+                  onclick: function () { definirModoDasPericias(ctx, o, "personalizada", ordemAtual); },
+                }),
+              ]))
+        : null,
+    ]);
+  }
+
   var SecaoPericias = {
     aba: function (ctx) {
       var o = ordemDe(ctx);
       var edicao = ctx.emEdicao();
-      var linhas = C.PERICIAS.map(function (p) { return linhaDePericia(ctx, o, p); });
+      var org = organizacaoDasPericias(o);
+
+      /* O total de cada perícia, calculado UMA vez: é o número da coluna
+         Total e é o que a ordem por bônus compara. */
+      var bonusPorChave = {};
+      C.PERICIAS.forEach(function (p) { bonusPorChave[p.chave] = R.bonusDePericia(o, p.chave, ctx.ficha.inventario); });
+      var ordenadas = global.RAMAOrganizar
+        ? global.RAMAOrganizar.ordenarPericias(C.PERICIAS, org.modo, function (p) { return bonusPorChave[p.chave].total; }, org.ordem)
+        : C.PERICIAS.slice();
+      var ordemAtual = ordenadas.map(function (p) { return p.chave; });
+      var arrastar = edicao && org.modo === "personalizada" && !!global.RAMAArrastar;
+
+      var linhas = ordenadas.map(function (p) {
+        var linha = linhaDePericia(ctx, o, p, bonusPorChave[p.chave], arrastar);
+        linha.dataset.arrastarItem = p.chave;
+        linha.dataset.arrastarRotulo = p.nome;
+        return linha;
+      });
+
+      var tabela = el("div.ordem-pericias", { role: "table", "aria-label": "Perícias", class: edicao ? "ordem-pericias--edicao" : "" }, [
+        el("div.ordem-pericia.ordem-pericia--cabecalho", { role: "row" }, [
+          el("span", { role: "columnheader", texto: "Perícia" }),
+          el("span", { role: "columnheader", texto: "Atributo" }),
+          el("span", { role: "columnheader", texto: "Grau" }),
+          el("span", { role: "columnheader", texto: "Treino" }),
+          el("span", { role: "columnheader", texto: "Extra" }),
+          el("span", { role: "columnheader", texto: "Total" }),
+          el("span", { role: "columnheader" }, [el("span.so-leitor", { texto: "Rolar" })]),
+          el("span", { role: "columnheader", texto: "Notas" }),
+        ]),
+        el("div.ordem-pericias__corpo", { role: "rowgroup", dataset: { arrastarLista: "pericias" } }, linhas),
+      ]);
+      if (arrastar) ligarArrasteDasPericias(ctx, o, tabela, ordemAtual);
 
       return el("div.pilha--larga", { class: "pilha" }, [
         UI.painel("Perícias", el("div.pilha", {}, [
-          el("div.ordem-pericias", { role: "table", "aria-label": "Perícias", class: edicao ? "ordem-pericias--edicao" : "" }, [
-            el("div.ordem-pericia.ordem-pericia--cabecalho", { role: "row" }, [
-              el("span", { role: "columnheader", texto: "Perícia" }),
-              el("span", { role: "columnheader", texto: "Atributo" }),
-              el("span", { role: "columnheader", texto: "Grau" }),
-              el("span", { role: "columnheader", texto: "Treino" }),
-              el("span", { role: "columnheader", texto: "Extra" }),
-              el("span", { role: "columnheader", texto: "Total" }),
-              el("span", { role: "columnheader" }, [el("span.so-leitor", { texto: "Rolar" })]),
-              el("span", { role: "columnheader", texto: "Notas" }),
-            ]),
-          ].concat(linhas)),
+          barraDasPericias(ctx, o, ordemAtual),
+          tabela,
           el("p.t-mini", {
             texto: "Treino: Destreinado 0 · Treinado +5 · Veterano +10 · Expert +15. Total = treino + extra + outros modificadores (poderes, carga, ajustes da mesa) — toque no total para ver a conta. " +
                    "“Só treinada” exige treinamento para ser usada.",
@@ -1352,9 +1776,37 @@
     },
   };
 
-  function linhaDePericia(ctx, o, p) {
+  /* Arrastar uma perícia muda só `organizacao.pericias.ordem` — a lista
+     de chaves. Grau, atributo, extra e rolagem não são tocados. */
+  function ligarArrasteDasPericias(ctx, o, tabela, ordemAtual) {
+    var O = global.RAMAOrganizar;
+    function aplicar(mudou) {
+      if (!mudou) return false;
+      ctx.alterou();
+      ctx.redesenhar();
+      return true;
+    }
+    global.RAMAArrastar.ligar(tabela, {
+      podeSoltar: function () { return { ok: true }; },
+      aoSoltar: function (item, destino) {
+        var org = organizacaoDasPericias(o);
+        org.ordem = ordemAtual.slice();
+        aplicar(O.reposicionar(org.ordem, item.id, destino.indice));
+      },
+      aoTeclado: function (item, direcao) {
+        var org = organizacaoDasPericias(o);
+        org.ordem = ordemAtual.slice();
+        if (!aplicar(O.passo(org.ordem, item.id, direcao))) {
+          return { ok: false, motivo: direcao < 0 ? "Já é a primeira." : "Já é a última." };
+        }
+        return { ok: true };
+      },
+    });
+  }
+
+  function linhaDePericia(ctx, o, p, bonusPronto, arrastar) {
     var edicao = ctx.emEdicao();
-    var bonus = R.bonusDePericia(o, p.chave, ctx.ficha.inventario);
+    var bonus = bonusPronto || R.bonusDePericia(o, p.chave, ctx.ficha.inventario);
     var dado = R.dadoDePericia(o, p.chave);
     var g = R.grauDaPericia(o, p.chave);
     var grau = C.grau(g);
@@ -1445,7 +1897,10 @@
               return;
             }
             R.definirAjusteDePericia(o, p.chave, { extra: v.valor });
-            mudouPericia(ctx, null);
+            /* Confirmado (Enter ou saída do campo): só agora a linha pode
+               mudar de lugar, e o foco vai para onde a pessoa foi — ou
+               volta a este campo, no Enter. */
+            mudouPericia(ctx, "extra-" + p.chave, true);
           },
         })
       : el("span.ordem-pericia__extra", { class: ajuste.extra ? "" : "ordem-pericia__extra--zero", texto: U.comSinal(ajuste.extra) });
@@ -1454,7 +1909,12 @@
       role: "row",
       class: (destreinada ? "ordem-pericia--destreinada" : ""),
     }, [
-      el("span.ordem-pericia__nome", { role: "rowheader", texto: p.nome, title: p.nome }),
+      arrastar
+        ? el("span.ordem-pericia__nome.ordem-pericia__nome--alca", { role: "rowheader", title: p.nome }, [
+            global.RAMAArrastar.alca({ id: p.chave, rotulo: p.nome }),
+            el("span", { texto: p.nome }),
+          ])
+        : el("span.ordem-pericia__nome", { role: "rowheader", texto: p.nome, title: p.nome }),
       el("span.ordem-pericia__celula.ordem-pericia__c-atrib", { role: "cell", "data-rotulo": "Atributo" }, [celulaAtributo]),
       el("span.ordem-pericia__celula.ordem-pericia__c-grau", { role: "cell", "data-rotulo": "Grau" }, [celulaGrau]),
       el("span.ordem-pericia__celula.ordem-pericia__c-treino", { role: "cell", "data-rotulo": "Treino" }, [
@@ -1464,6 +1924,7 @@
       el("span.ordem-pericia__celula.ordem-pericia__c-total", { role: "cell", "data-rotulo": "Total" }, [
         el("button.ordem-pericia__bonus", {
           type: "button",
+          dataset: { foco: "total-" + p.chave },
           "aria-label": "Total de " + p.nome + ": " + U.comSinal(bonus.total) + (outros ? ", inclui outros modificadores" : "") + ". Ver a composição",
           title: "Ver a composição",
           onclick: function () { abrirComposicao("Bônus de " + p.nome, bonus); },
@@ -1476,6 +1937,7 @@
         podeRolar
           ? el("button.r-icone.ordem-pericia__rolar", {
               type: "button",
+              dataset: { foco: "rolar-" + p.chave },
               "aria-label": "Rolar " + p.nome + ", " + dado + " " + U.comSinal(bonus.total),
               title: "Rolar " + dado + " " + U.comSinal(bonus.total),
               onclick: function () { rolarPericia(ctx, o, p, dado, bonus, atributo); },
@@ -1491,12 +1953,21 @@
   }
 
   /* Recalcula e devolve o foco ao controle que mudou — redesenhar a aba
-     recria os elementos, e quem usa teclado não pode perder o lugar. */
-  function mudouPericia(ctx, foco) {
-    aoMudarOrdem(ctx);
-    if (!foco) return;
-    var alvo = document.querySelector('[data-foco="' + foco + '"]');
-    if (alvo) alvo.focus();
+     recria os elementos, e quem usa teclado não pode perder o lugar.
+
+     O redesenho espera o navegador terminar de mover o foco (Tab): com a
+     ordem pelo bônus, a linha editada pode ir para outro lugar, e o foco
+     vai para o controle aonde a pessoa estava indo — nunca se perde. */
+  function mudouPericia(ctx, foco, preferirOAtivo) {
+    setTimeout(function () {
+      var ativo = document.activeElement;
+      var doAtivo = ativo && ativo !== document.body && ativo.dataset ? (ativo.dataset.foco || "") : "";
+      var destino = preferirOAtivo && doAtivo ? doAtivo : (foco || doAtivo);
+      aoMudarOrdem(ctx);
+      if (!destino) return;
+      var alvo = document.querySelector('[data-foco="' + destino + '"]');
+      if (alvo) alvo.focus();
+    }, 0);
   }
 
   /* A rolagem de perícia usa o motor central — o mesmo `dependente` da
@@ -2742,10 +3213,36 @@
     },
 
     dados: function (o) {
-      if (!o.organizacao || !o.organizacao.habilidades || !o.organizacao.rituais || !o.organizacao.inventario) {
-        o.organizacao = R.normalizar({ organizacao: o.organizacao }).organizacao;
+      var org = o.organizacao;
+      if (!org || !org.habilidades || !org.rituais || !org.inventario || !org.pericias ||
+          !org.habilidades.lugares || !org.habilidades.ordem || !Array.isArray(org.rituais.criterios)) {
+        o.organizacao = R.normalizarOrganizacao(o.organizacao);
       }
       return o.organizacao;
+    },
+
+    /* Arrastar muda a ordem PERSONALIZADA. Com um modo automático na
+       tela, o arraste não é aceito para depois ser desfeito: a alça
+       fica desligada e a barra oferece trocar de modo. */
+    podeArrastar: function (ctx, aba) {
+      if (!ctx.emEdicao()) return false;
+      return Organizacao.modo(ctx, aba) === "personalizada";
+    },
+
+    /* Os critérios de círculo e elemento da aba Rituais, na ordem de
+       prioridade. */
+    criterios: function (ctx) {
+      if (!Organizacao.ativa(ctx)) return [];
+      return Organizacao.dados(ordemDe(ctx)).rituais.criterios.slice();
+    },
+
+    definirCriterios: function (ctx, lista) {
+      var org = Organizacao.dados(ordemDe(ctx));
+      var limpa = (lista || []).filter(function (c, i, xs) { return R.CRITERIOS_DE_RITUAL.indexOf(c) >= 0 && xs.indexOf(c) === i; });
+      if (JSON.stringify(limpa) === JSON.stringify(org.rituais.criterios)) return;
+      org.rituais.criterios = limpa;
+      ctx.alterou();
+      ctx.redesenhar();
     },
 
     modo: function (ctx, aba) {
@@ -2769,30 +3266,87 @@
     barra: function (ctx, aba) {
       if (!Organizacao.ativa(ctx)) return null;
       var modo = Organizacao.modo(ctx, aba);
-      return el("div.ordenacao-barra", { dataset: { ordenacao: aba } }, [
-        UI.seletorDeOrdem({
-          valor: modo,
-          rotulo: "Ordenar",
-          aoMudar: function (m) { Organizacao.definir(ctx, aba, m); },
+      return el("div.pilha--curta", { class: "pilha" }, [
+        el("div.ordenacao-barra", { dataset: { ordenacao: aba } }, [
+          UI.seletorDeOrdem({
+            valor: modo,
+            rotulo: aba === "rituais" ? "Ordem base" : "Ordenar",
+            aoMudar: function (m) { Organizacao.definir(ctx, aba, m); },
+          }),
+          aba === "rituais" ? Organizacao.controlesDeCriterio(ctx) : null,
+        ]),
+        Organizacao.avisoDeArraste(ctx, aba, modo),
+        modo === "adicao" ? el("span.t-mini", { texto: "O mais antigo primeiro. O que entrou antes da v2.7 vem no topo, na ordem guardada." }) : null,
+      ]);
+    },
+
+    /* O que o modo de agora permite fazer com a alça — e, num modo
+       automático, o comando para voltar à ordem personalizada. Trocar
+       de modo não apaga a ordem personalizada guardada. */
+    avisoDeArraste: function (ctx, aba, modo) {
+      if (!ctx.emEdicao()) return null;
+      if (modo === "personalizada") {
+        return el("span.t-mini", {
+          texto: aba === "rituais" && Organizacao.criterios(ctx).length
+            ? "Arraste pela alça para mudar a ordem dentro de cada grupo; círculo e elemento vêm do ritual, e Conhecidos, Grimório e Registros não trocam entre si."
+            : "Arraste pela alça para mudar esta ordem — ou, com o foco na alça, use ↑ e ↓. Subir e Descer continuam no menu de cada um.",
+        });
+      }
+      return el("div.ordenacao-arrastar", {}, [
+        el("span.t-mini", { texto: "Esta ordem é automática. Para arrastar, use a ordem personalizada — ela continua guardada como estava." }),
+        el("button.r-botao.r-botao--mini", {
+          type: "button", texto: "Usar ordem personalizada",
+          onclick: function () { Organizacao.definir(ctx, aba, "personalizada"); },
         }),
-        modo === "personalizada" && ctx.emEdicao()
-          ? el("span.t-mini", { texto: "Subir e Descer, no menu de cada um, mudam esta ordem." })
-          : (modo === "adicao" ? el("span.t-mini", { texto: "O mais antigo primeiro. O que entrou antes da v2.7 vem no topo, na ordem guardada." }) : null),
+      ]);
+    },
+
+    /* Círculo e elemento: dois interruptores independentes, e a ordem de
+       prioridade quando os dois estão ligados — o primeiro agrupa, o
+       segundo organiza dentro de cada grupo. O padrão de prioridade é o
+       círculo. */
+    controlesDeCriterio: function (ctx) {
+      var atuais = Organizacao.criterios(ctx);
+      function alternar(c) {
+        var novos = atuais.indexOf(c) >= 0
+          ? atuais.filter(function (x) { return x !== c; })
+          : (c === "circulo" ? ["circulo"].concat(atuais) : atuais.concat(["elemento"]));
+        Organizacao.definirCriterios(ctx, novos);
+        var botao = document.querySelector('[data-foco="criterio-' + c + '"]');
+        if (botao) botao.focus();
+      }
+      var botoes = el("span.filtros__grupo", { role: "group", "aria-label": "Agrupar rituais por" }, [
+        el("span.ordenacao__rotulo", { texto: "Agrupar" }),
+      ].concat(["circulo", "elemento"].map(function (c) {
+        return el("button.filtro", {
+          type: "button",
+          "aria-pressed": String(atuais.indexOf(c) >= 0),
+          dataset: { foco: "criterio-" + c },
+          texto: c === "circulo" ? "Círculo" : "Elemento",
+          onclick: function () { alternar(c); },
+        });
+      })));
+      if (atuais.length < 2) return botoes;
+      return el("span.faixa", {}, [
+        botoes,
+        el("label.ordenacao", {}, [
+          el("span.ordenacao__rotulo", { texto: "Prioridade" }),
+          el("select.r-selecao.ordenacao__selecao", {
+            "aria-label": "Qual critério agrupa primeiro",
+            dataset: { foco: "criterio-prioridade" },
+            onchange: function (ev) {
+              Organizacao.definirCriterios(ctx, ev.target.value === "elemento" ? ["elemento", "circulo"] : ["circulo", "elemento"]);
+              var s = document.querySelector('[data-foco="criterio-prioridade"]');
+              if (s) s.focus();
+            },
+          }, [
+            el("option", { value: "circulo", selected: atuais[0] === "circulo", texto: "Círculo, depois elemento" }),
+            el("option", { value: "elemento", selected: atuais[0] === "elemento", texto: "Elemento, depois círculo" }),
+          ]),
+        ]),
       ]);
     },
   };
-
-  function moverRegra(ctx, o, ordemAtual, id, direcao) {
-    var lista = ordemAtual.slice();
-    var i = lista.indexOf(id);
-    var j = i + (direcao < 0 ? -1 : 1);
-    if (i < 0 || j < 0 || j >= lista.length) return;
-    lista[i] = lista[j];
-    lista[j] = id;
-    Organizacao.dados(o).habilidades.regras = lista;
-    ctx.alterou();
-    ctx.redesenhar();
-  }
 
   var SecaoHabilidadesOrdem = {
     aba: function (ctx) {
@@ -2809,11 +3363,7 @@
      ele sobe. */
   function aoMudarOrdem(ctx) {
     var o = ordemDe(ctx);
-    R.aparar(o, {
-      pv: R.pontosDeVida(o).total,
-      pe: R.pontosDeEsforco(o).total,
-      san: R.sanidade(o).total,
-    });
+    R.aparar(o, R.maximosDosRecursos(o));
     ctx.alterou();
     ctx.redesenhar();
   }

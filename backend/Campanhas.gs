@@ -723,6 +723,9 @@ function acaoListarPersonagensCampanha(corpo, usuario) {
             var resumidos = recursosResumidos(proj);
             saida.recursos = resumidos || [];
             if (!resumidos) saida.recursosPendentes = true;
+            /* Morrendo e enlouquecendo seguem a MESMA regra dos recursos:
+               escondidos com "Esconder status dos jogadores". */
+            saida.condicoes = resumoPublicoDeCondicoes(proj.ordem);
           }
         }
       } else {
@@ -998,9 +1001,9 @@ function recursosResumidos(ficha) {
 
   var guardados = (ficha.ordem && ficha.ordem.recursos && typeof ficha.ordem.recursos === 'object')
     ? ficha.ordem.recursos : {};
-  var rotulos = { pv: 'PV', pe: 'PE', san: 'SAN' };
+  var rotulos = { pv: 'PV', pe: 'PE', san: 'SAN', pd: 'PD' };
 
-  return ['pv', 'pe', 'san']
+  return ['pv', 'pe', 'san', 'pd']
     .filter(function (k) { return resumo[k] !== null; })
     .map(function (k) {
       return { chave: k, rotulo: rotulos[k], atual: recursoAtualGuardado(guardados[k], resumo[k]), maximo: resumo[k] };
@@ -1041,7 +1044,8 @@ function acaoAtualizarResumoPersonagem(corpo, usuario) {
     if (!ehFichaDeOrdem(ficha)) return { ok: false, erro: 'dados_invalidos' };
 
     var guardado = normalizarResumoRecursos(ficha.resumoRecursos);
-    if (guardado && guardado.pv === resumo.pv && guardado.pe === resumo.pe && guardado.san === resumo.san) {
+    if (guardado && guardado.pv === resumo.pv && guardado.pe === resumo.pe && guardado.san === resumo.san &&
+        guardado.pd === resumo.pd) {
       return { ok: true, rev: revAtual, dados: { mudou: false } };
     }
 
@@ -1198,12 +1202,13 @@ function acaoVincularPersonagem(corpo, usuario) {
 var CAMPOS_AJUSTAVEIS = {
   status: ['atual', 'maximo'],
   atributo: ['valor'],
-  /* Ficha de Ordem: o que sobrou de PV, PE e Sanidade. O máximo é
-     calculado pelas regras e nunca é gravado. */
+  /* Ficha de Ordem: o que sobrou de PV, PE e Sanidade — ou de PD, com
+     "Jogando sem Sanidade". O máximo é calculado pelas regras e nunca é
+     gravado. */
   recurso: ['atual'],
 };
 
-var RECURSOS_DE_ORDEM = ['pv', 'pe', 'san'];
+var RECURSOS_DE_ORDEM = ['pv', 'pe', 'san', 'pd'];
 
 /* O mesmo piso da ficha de Ordem (js/paginas/ficha-ordem.js). */
 var PISO_DE_RECURSO = -99;
@@ -1220,7 +1225,7 @@ function alvoDoAjuste(ficha, alvo, itemId, campo) {
       return { erro: 'dados_invalidos' };
     }
     if (!ficha.ordem.recursos || typeof ficha.ordem.recursos !== 'object') {
-      ficha.ordem.recursos = { pv: null, pe: null, san: null };
+      ficha.ordem.recursos = { pv: null, pe: null, san: null, pd: null };
     }
     return { item: ficha.ordem.recursos, campo: String(itemId) };
   }
@@ -2188,7 +2193,10 @@ function recursosParaCombate(ctx, usuario, ids) {
     var lista;
     if (projecaoDeOrdem(proj)) {
       lista = recursosResumidos(proj);
-      if (!lista) { saida[String(p.id)] = { pendente: true, lista: [] }; return; }
+      var condicoes = resumoPublicoDeCondicoes(proj.ordem);
+      if (!lista) { saida[String(p.id)] = { pendente: true, lista: [], condicoes: condicoes }; return; }
+      saida[String(p.id)] = { pendente: false, lista: lista, condicoes: condicoes };
+      return;
     } else {
       lista = (Array.isArray(proj.status) ? proj.status : [])
         .map(function (s) {
@@ -2227,6 +2235,7 @@ function combateParaCliente(c, ctx, jsonPronto, recursos) {
     if (r) {
       objeto.recursos = r.lista;
       if (r.pendente) objeto.recursosPendentes = true;
+      if (r.condicoes && r.condicoes.length) objeto.condicoes = r.condicoes;
     }
     return objeto;
   }
@@ -2344,6 +2353,199 @@ function turnoSemParticipante(turno, participantes, removidoId) {
   if (i < 0) return { rodada: turno.rodada, ativoId: String(restantes[0].id) };
   if (i + 1 < lista.length) return { rodada: turno.rodada, ativoId: String(lista[i + 1].id) };
   return { rodada: turno.rodada + 1, ativoId: String(restantes[0].id) };
+}
+
+/* =====================================================================
+   CONDIÇÕES E TURNOS (v2.19)
+   ---------------------------------------------------------------------
+   Morrendo e enlouquecendo contam os INÍCIOS DE TURNO do personagem na
+   cena (Ordem Paranormal RPG, p. 88). Com o combate da campanha, quem
+   conta é o servidor, aqui, no mesmo lote que muda o turno — e só ele:
+
+     · um evento por início de turno, com id `cb:<combate>:<rodada>:<participante>`.
+       O mesmo turno é o mesmo evento: mestre e jogador, duas abas, uma
+       recarga ou uma resposta repetida não contam duas vezes;
+     · conta só o início do turno DO PERSONAGEM — não o turno de outro
+       participante, nem a rodada;
+     · "voltar turno" retira o evento do turno desfeito, e só ele;
+       correções feitas à mão depois ficam onde estão;
+     · encerrar o combate não zera nada: cena e combate são coisas
+       diferentes, e a cena nova é decisão de quem joga.
+
+   Espelho de js/ordem/condicoes.js (registrarInicioDeTurno e
+   retirarInicioDeTurno): os testes rodam os mesmos casos nas duas.
+   ===================================================================== */
+
+var CONDICOES_CONTADAS = ['morrendo', 'enlouquecendo'];
+var CONDICOES_DA_MESA = ['exaustao', 'desmaio'];
+var LIMITE_DAS_CONDICOES = { morrendo: 3, enlouquecendo: 3 };
+var NOMES_DAS_CONDICOES = { morrendo: 'Morrendo', enlouquecendo: 'Enlouquecendo', exaustao: 'Exaustão', desmaio: 'Desmaio' };
+var MAX_EVENTOS_DE_CONDICAO = 60;
+var CONDICAO_SEM_TETO = 99;
+var ID_DE_EVENTO = /^[A-Za-z0-9_.:|#-]{1,160}$/;
+
+function rastreadorDeCondicao(cond, chave) {
+  if (!cond || typeof cond !== 'object') return null;
+  var r;
+  if (CONDICOES_CONTADAS.indexOf(chave) >= 0) r = cond[chave];
+  else if (CONDICOES_DA_MESA.indexOf(chave) >= 0) r = cond.mesa && typeof cond.mesa === 'object' ? cond.mesa[chave] : null;
+  if (!r || typeof r !== 'object') return null;
+  if (!Array.isArray(r.eventos)) r.eventos = [];
+  if (!Array.isArray(r.descartados)) r.descartados = [];
+  return r;
+}
+
+function cenaDaCondicao(cond) {
+  return cond && cond.cena && typeof cond.cena === 'object' && typeof cond.cena.id === 'string' ? cond.cena.id : '';
+}
+
+function limiteDaCondicao(chave, r) {
+  if (LIMITE_DAS_CONDICOES[chave]) return LIMITE_DAS_CONDICOES[chave];
+  var n = Math.round(Number(r && r.limite));
+  return n >= 1 && n <= 20 ? n : null;
+}
+
+function contagemDaCondicao(cond, r) {
+  var cena = cenaDaCondicao(cond);
+  return r.eventos.filter(function (e) { return e && String(e.cena || '') === cena; }).length;
+}
+
+function idDoInicioDeTurno(combateId, rodada, participanteId) {
+  var id = 'cb:' + String(combateId).slice(0, 60) + ':' + Math.round(Number(rodada)) + ':' + String(participanteId).slice(0, 60);
+  return ID_DE_EVENTO.test(id) ? id : '';
+}
+
+/* Devolve as chaves que contaram. */
+function registrarInicioNaFicha(ficha, evento) {
+  var cond = ficha && ficha.ordem ? ficha.ordem.condicoes : null;
+  if (!cond || typeof cond !== 'object' || cond.integrarCombate === false) return [];
+  if (!evento || !ID_DE_EVENTO.test(String(evento.id || ''))) return [];
+  var cena = cenaDaCondicao(cond);
+  var contou = [];
+  CONDICOES_CONTADAS.concat(CONDICOES_DA_MESA).forEach(function (chave) {
+    var r = rastreadorDeCondicao(cond, chave);
+    if (!r || r.ativa !== true) return;
+    if (CONDICOES_DA_MESA.indexOf(chave) >= 0 && r.usar !== true) return;
+    if (r.eventos.some(function (e) { return e && e.id === evento.id; })) return;
+    if (r.descartados.indexOf(evento.id) >= 0) return;
+    var limite = limiteDaCondicao(chave, r);
+    if (contagemDaCondicao(cond, r) >= (limite === null ? CONDICAO_SEM_TETO : limite)) return;
+    r.eventos.push({ id: evento.id, origem: 'combate', cena: cena, em: evento.em, rodada: evento.rodada, combate: evento.combate });
+    if (r.eventos.length > MAX_EVENTOS_DE_CONDICAO) r.eventos = r.eventos.slice(r.eventos.length - MAX_EVENTOS_DE_CONDICAO);
+    contou.push(chave);
+  });
+  return contou;
+}
+
+function retirarInicioDaFicha(ficha, id) {
+  var cond = ficha && ficha.ordem ? ficha.ordem.condicoes : null;
+  if (!cond || typeof cond !== 'object' || !ID_DE_EVENTO.test(String(id || ''))) return [];
+  var tirou = [];
+  CONDICOES_CONTADAS.concat(CONDICOES_DA_MESA).forEach(function (chave) {
+    var r = rastreadorDeCondicao(cond, chave);
+    if (!r) return;
+    var antes = r.eventos.length;
+    r.eventos = r.eventos.filter(function (e) { return !(e && e.id === id && e.origem === 'combate'); });
+    if (r.eventos.length !== antes) tirou.push(chave);
+  });
+  return tirou;
+}
+
+/* Há o que fazer nesta ficha com estes eventos? Pergunta feita à
+   projeção do painel, sem abrir a ficha: só quem tem uma condição ativa
+   (ou o evento a retirar) é lido e regravado. */
+function condicoesPedemLeitura(cond, eventos) {
+  if (!cond || typeof cond !== 'object' || cond.integrarCombate === false) return false;
+  return eventos.some(function (ev) {
+    return CONDICOES_CONTADAS.concat(CONDICOES_DA_MESA).some(function (chave) {
+      var r = rastreadorDeCondicao(JSON.parse(JSON.stringify(cond)), chave);
+      if (!r) return false;
+      if (ev.tipo === 'inicio') return r.ativa === true && (CONDICOES_DA_MESA.indexOf(chave) < 0 || r.usar === true);
+      return r.eventos.some(function (e) { return e && e.id === ev.id; });
+    });
+  });
+}
+
+/* O que outro jogador pode ver das condições — só com o status visível:
+   as ativas e as que já contaram nesta cena. */
+function resumoPublicoDeCondicoes(ordem) {
+  var cond = ordem && ordem.condicoes && typeof ordem.condicoes === 'object' ? JSON.parse(JSON.stringify(ordem.condicoes)) : null;
+  if (!cond) return [];
+  var saida = [];
+  CONDICOES_CONTADAS.concat(CONDICOES_DA_MESA).forEach(function (chave) {
+    var r = rastreadorDeCondicao(cond, chave);
+    if (!r) return;
+    if (CONDICOES_DA_MESA.indexOf(chave) >= 0 && r.usar !== true) return;
+    var n = contagemDaCondicao(cond, r);
+    if (r.ativa !== true && !n) return;
+    saida.push({
+      chave: chave, nome: NOMES_DAS_CONDICOES[chave], oficial: CONDICOES_CONTADAS.indexOf(chave) >= 0,
+      ativa: r.ativa === true, contagem: n, limite: limiteDaCondicao(chave, r),
+    });
+  });
+  ['inconsciente', 'perturbado'].forEach(function (chave) {
+    if (cond[chave] && cond[chave].ativa === true) {
+      saida.push({ chave: chave, nome: chave === 'inconsciente' ? 'Inconsciente' : 'Perturbado', oficial: true, ativa: true, contagem: 0, limite: null });
+    }
+  });
+  return saida;
+}
+
+/* Aplica os inícios e as retiradas de um lote de combate às fichas dos
+   personagens. Cada ficha é gravada uma vez, com a revisão subindo como
+   em qualquer gravação: quem estiver com ela aberta concilia na próxima
+   gravação, evento a evento (js/sync.js). Uma ficha que não se monta não
+   é tocada, e o mestre recebe o aviso para contar à mão. */
+function aplicarTurnosAsFichas(ctx, combateId, eventos, participantesPorId, opId) {
+  var avisos = [];
+  if (!eventos.length) return avisos;
+  var porPersonagem = {};
+  eventos.forEach(function (ev) {
+    var p = participantesPorId[ev.participanteId];
+    if (!p || p.tipo !== 'personagem' || !p.personagemId) return;
+    var id = idDoInicioDeTurno(combateId, ev.rodada, ev.participanteId);
+    if (!id) return;
+    var chave = String(p.personagemId);
+    if (!porPersonagem[chave]) porPersonagem[chave] = [];
+    porPersonagem[chave].push({ tipo: ev.tipo, id: id, rodada: ev.rodada });
+  });
+
+  Object.keys(porPersonagem).forEach(function (personagemId) {
+    var lista = porPersonagem[personagemId];
+    var registro = acharPor(ABAS.PERSONAGENS, 'id', personagemId);
+    if (!registro || String(registro.campanhaId) !== String(ctx.campanha.id)) return;
+
+    var proj = projecaoDoRegistro(registro);
+    if (proj && (!projecaoDeOrdem(proj) || !condicoesPedemLeitura(proj.ordem.condicoes, lista))) return;
+
+    try {
+      var lido = lerFichaDoPersonagem(registro);
+      if (!lido.ok) { avisos.push({ aviso: 'condicao_nao_contada', personagemId: personagemId }); return; }
+      var ficha = comVinculoDaColuna(lido.ficha, registro);
+      if (!ehFichaDeOrdem(ficha)) return;
+
+      var agora = new Date().toISOString();
+      var mudou = false;
+      lista.forEach(function (ev) {
+        var r = ev.tipo === 'inicio'
+          ? registrarInicioNaFicha(ficha, { id: ev.id, rodada: ev.rodada, combate: String(combateId).slice(0, 60), em: agora })
+          : retirarInicioDaFicha(ficha, ev.id);
+        if (r.length) mudou = true;
+      });
+      if (!mudou) return;
+
+      ficha.atualizadoEm = agora;
+      registro.atualizadoEm = agora;
+      registro.rev = (Number(registro.rev) || 0) + 1;
+      var publicado = publicarFicha(registro, ficha, { operacao: idDeOperacao(('turno-' + opId).slice(0, 80)) });
+      if (!publicado.ok) { avisos.push({ aviso: 'condicao_nao_contada', personagemId: personagemId }); return; }
+      marcarMesa(ctx.campanha.id, ['personagens']);
+    } catch (erro) {
+      console.warn('R.A.M.A.: condição de ' + personagemId + ' não contada: ' + erro);
+      avisos.push({ aviso: 'condicao_nao_contada', personagemId: personagemId });
+    }
+  });
+  return avisos;
 }
 
 /* =====================================================================
@@ -2602,10 +2804,20 @@ function acaoAtualizarCombate(corpo, usuario) {
     atualizarLinha(ABAS.CAMPANHA_COMBATES, registro._linha, registro);
     marcarMesa(ctx.campanha.id, ['combates']);
 
+    /* Os inícios de turno deste lote, nas fichas dos personagens com
+       morrendo, enlouquecendo ou contador da mesa ativo (v2.19). O lote
+       repetido (mesmo opId) já voltou lá em cima, sem chegar aqui: um
+       "próximo turno" reenviado pela rede não conta duas vezes. */
+    var participantesPorId = {};
+    participantesAtuais.concat(combate.participantes).forEach(function (p) {
+      if (p && p.id !== undefined) participantesPorId[String(p.id)] = p;
+    });
+    var avisosDasFichas = aplicarTurnosAsFichas(ctx, registro.id, resultado.turnos || [], participantesPorId, opId);
+
     return {
       ok: true,
       rev: registro.rev,
-      avisos: resultado.avisos,
+      avisos: resultado.avisos.concat(avisosDasFichas),
       dados: combateParaCliente(registro, ctx, json),
     };
   });
@@ -2618,6 +2830,21 @@ function aplicarOperacoesDeCombate(combate, ops, ctx) {
   var avisos = [];
   var daMesa = null;
   var membros = null;
+
+  /* Os inícios de turno que este lote produziu, e os que ele desfez
+     ("voltar turno"), na ordem em que aconteceram. Quem os aplica às
+     fichas é acaoAtualizarCombate, depois de gravar o combate. */
+  var turnos = [];
+  function mudouOTurno(antes, depois, voltando) {
+    if (combate.estado !== 'ativo' || !depois) return;
+    var mesmo = antes && String(antes.ativoId) === String(depois.ativoId) && Number(antes.rodada) === Number(depois.rodada);
+    if (mesmo) return;
+    if (voltando) {
+      if (antes && antes.ativoId) turnos.push({ tipo: 'retirada', rodada: Number(antes.rodada), participanteId: String(antes.ativoId) });
+      return;
+    }
+    if (depois.ativoId) turnos.push({ tipo: 'inicio', rodada: Number(depois.rodada), participanteId: String(depois.ativoId) });
+  }
 
   function recusar(indice, motivo) {
     return { ok: false, erro: 'dados_invalidos', indice: indice, motivo: motivo };
@@ -2671,7 +2898,9 @@ function aplicarOperacoesDeCombate(combate, ops, ctx) {
         ? turnoSeguinte(combate.turno, combate.participantes)
         : turnoAnterior(combate.turno, combate.participantes);
       if (t.inicio) avisos.push({ indice: i, aviso: 'inicio' });
+      var antesDoTurno = combate.turno;
       combate.turno = { rodada: t.rodada, ativoId: t.ativoId };
+      mudouOTurno(antesDoTurno, combate.turno, direcao === 'anterior');
       continue;
     }
 
@@ -2681,6 +2910,7 @@ function aplicarOperacoesDeCombate(combate, ops, ctx) {
       if (combate.estado === 'preparando' && destino === 'ativo') {
         combate.estado = 'ativo';
         combate.turno = turnoNormalizado(null, combate.participantes, 'ativo');
+        mudouOTurno(null, combate.turno, false);
         continue;
       }
       if (combate.estado === 'ativo' && destino === 'encerrado') {
@@ -2712,7 +2942,9 @@ function aplicarOperacoesDeCombate(combate, ops, ctx) {
          intenção, vinda de outra aba. */
       if (!saindo) continue;
       if (combate.estado === 'ativo') {
+        var antesDeSair = combate.turno;
         combate.turno = turnoSemParticipante(combate.turno, combate.participantes, saindo.id);
+        mudouOTurno(antesDeSair, combate.turno, false);
       }
       combate.participantes = combate.participantes.filter(function (p) { return String(p.id) !== String(saindo.id); });
       continue;
@@ -2742,8 +2974,10 @@ function aplicarOperacoesDeCombate(combate, ops, ctx) {
 
   /* Depois de tudo: quem tem o turno ainda existe? Um combate que estava
      vazio e ganhou participantes passa o turno ao primeiro da ordem. */
+  var antesDoFim = combate.turno;
   combate.turno = turnoNormalizado(combate.turno, combate.participantes, combate.estado);
-  return { ok: true, avisos: avisos };
+  mudouOTurno(antesDoFim, combate.turno, false);
+  return { ok: true, avisos: avisos, turnos: turnos };
 }
 
 function acaoExcluirCombate(corpo, usuario) {

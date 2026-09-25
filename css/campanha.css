@@ -789,3 +789,46 @@ button.combate-linha__nome[aria-pressed="true"] { text-decoration-color: var(--c
   .combate-linha__remover { grid-area: remover; }
   .combate-linha__cabeca { flex-wrap: wrap; row-gap: 0; }
 }
+
+/* Condições no cartão (v2.19): nome e contagem, só leitura. A borda diz
+   ativa, e o texto diz o resto — a cor nunca é a única pista. */
+.mesa-condicoes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--e1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.mesa-condicao {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--e1);
+  padding: 2px var(--e2);
+  border: var(--borda) solid var(--cor-traco-fraca);
+  font-size: var(--texto-mini);
+  color: var(--cor-texto-3);
+}
+
+.mesa-condicao--ativa { border-color: var(--cor-aviso); color: var(--cor-texto); }
+.mesa-condicao--limite { border-color: var(--cor-erro); }
+.mesa-condicao--mesa { border-style: dashed; }
+.mesa-condicao__nome { text-transform: uppercase; letter-spacing: var(--espaco-letra-titulo); }
+.mesa-condicao__conta { font-variant-numeric: tabular-nums; }
+
+.combate-condicao {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--e1);
+  padding: 0 var(--e1);
+  border: var(--borda) solid var(--cor-traco-fraca);
+  font-size: var(--texto-mini);
+  text-transform: uppercase;
+  letter-spacing: var(--espaco-letra-titulo);
+  color: var(--cor-texto-3);
+}
+
+.combate-condicao--ativa { border-color: var(--cor-aviso); color: var(--cor-texto); }
+.combate-condicao--limite { border-color: var(--cor-erro); }
+.combate-condicao__conta { font-variant-numeric: tabular-nums; text-transform: none; }

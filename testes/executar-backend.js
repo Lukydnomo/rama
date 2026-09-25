@@ -4126,6 +4126,470 @@ t.grupo("Cache — o que fica guardado entre requisições");
 })();
 
 /* =====================================================================
+   v2.19 — CONDIÇÕES, TURNOS DO COMBATE E PONTOS DE DETERMINAÇÃO
+   ---------------------------------------------------------------------
+   Morrendo e enlouquecendo contam os INÍCIOS DE TURNO do personagem na
+   cena (Ordem Paranormal RPG, p. 88). No combate da campanha, quem conta
+   é o servidor, no mesmo lote que muda o turno. Cada início é um evento
+   com id próprio (`cb:<combate>:<rodada>:<participante>`): o mesmo turno
+   — visto pelo mestre e pelo jogador, repetido pela rede, relido numa
+   recarga — é o mesmo evento, e conta uma vez.
+
+   As fichas daqui são montadas com js/ordem/condicoes.js, o mesmo
+   módulo da ficha: é esse o formato que o site grava.
+   ===================================================================== */
+
+t.grupo("Condições — o combate conta só o início do turno do personagem, e uma vez");
+
+await (async () => {
+  (0, eval)(await Deno.readTextFile(new URL("../js/ordem/condicoes.js", import.meta.url)));
+  const CD = globalThis.RAMAOrdemCondicoes;
+
+  preparar();
+  const mestra = novaConta("mestra");
+  const lia = novaConta("lia");
+  const beto = novaConta("beto");
+  const comoMestra = comoFn(mestra);
+  const comoLia = comoFn(lia);
+  const comoBeto = comoFn(beto);
+
+  const mesa = comoMestra({ acao: "criar_campanha", dados: { nome: "Porão" } }).dados.id;
+  comoMestra({ acao: "salvar_participantes", campanhaId: mesa,
+    membros: [{ userId: lia.id, papel: "jogador" }, { userId: beto.id, papel: "jogador" }] });
+
+  const QUANDO = "2026-09-25T12:00:00.000Z";
+  const condicoesCom = (ajuste) => {
+    const c = CD.vazio();
+    CD.novaCena(c, QUANDO);
+    if (ajuste) ajuste(c);
+    return c;
+  };
+  const fichaOrdem = (nome, condicoes) => {
+    const ordem = {
+      classe: "combatente", origem: "militar", trilha: "", nex: 10,
+      atributos: { agi: 1, for: 2, int: 1, pre: 1, vig: 2 },
+      recursos: { pv: 0, pe: null, san: null, pd: null },
+      escolhas: [],
+    };
+    if (condicoes) ordem.condicoes = condicoes;
+    return { nome, tipoFicha: "ordem", schemaVersion: 10, ordem, resumoRecursos: { pv: 20, pe: 3, san: 12 } };
+  };
+  const criar = (como, nome, condicoes) => {
+    const id = como({ acao: "criar_personagem", dados: fichaOrdem(nome, condicoes) }).dados.id;
+    como({ acao: "vincular_personagem", campanhaId: mesa, personagemId: id });
+    return id;
+  };
+
+  const pLia = criar(comoLia, "Lia", condicoesCom((c) => CD.ativar(c, "morrendo", QUANDO)));
+  const pBeto = criar(comoBeto, "Beto", condicoesCom());
+  const pNina = criar(comoLia, "Nina", condicoesCom((c) => { CD.ativar(c, "morrendo", QUANDO); c.integrarCombate = false; }));
+  const pVelho = criar(comoBeto, "Velho", null);
+  const pRui = criar(comoLia, "Rui", condicoesCom((c) => CD.ativar(c, "morrendo", QUANDO)));
+
+  const ler = (id) => comoMestra({ acao: "ler_personagem", personagemId: id });
+  const cond = (id) => ler(id).dados.ordem.condicoes;
+  const rastro = (c, chave) => (chave === "exaustao" || chave === "desmaio") ? c.mesa[chave] : c[chave];
+  const ids = (id, chave) => rastro(cond(id), chave).eventos.map((e) => e.id);
+  const revDe = (id) => ler(id).rev;
+  const revs = () => ({ lia: revDe(pLia), beto: revDe(pBeto), nina: revDe(pNina), velho: revDe(pVelho), rui: revDe(pRui) });
+
+  /* O que a jogadora faz na ficha: lê, mexe com o módulo, grava. */
+  const naFicha = (como, id, fazer) => {
+    const lida = como({ acao: "ler_personagem", personagemId: id });
+    const c = CD.normalizar(lida.dados.ordem.condicoes);
+    fazer(c);
+    lida.dados.ordem.condicoes = c;
+    return como({ acao: "salvar_personagem", personagemId: id, rev: lida.rev, dados: lida.dados });
+  };
+
+  const novoCombate = (nome) => comoMestra({ acao: "salvar_combate", campanhaId: mesa,
+    dados: { nome, estado: "preparando", visiveis: [lia.id, beto.id], participantes: [] } }).dados.id;
+  const operador = (combateId) => {
+    let rev = 1;
+    let seq = 0;
+    const operar = (ops, opcoes) => {
+      const o = opcoes || {};
+      const r = comoMestra({ acao: "atualizar_combate", campanhaId: mesa, combateId,
+        rev: o.rev !== undefined ? o.rev : rev, opId: o.opId || ("cond-" + combateId.slice(0, 8) + "-" + String(++seq).padStart(4, "0")), ops });
+      if (r.ok) rev = r.rev;
+      return r;
+    };
+    operar.rev = () => rev;
+    operar.proximo = (vezes) => {
+      let r;
+      for (let i = 0; i < (vezes || 1); i++) r = operar([{ tipo: "turno", direcao: "proximo" }]);
+      return r;
+    };
+    operar.voltar = () => operar([{ tipo: "turno", direcao: "anterior" }]);
+    operar.ev = (rodada, participante) => "cb:" + combateId + ":" + rodada + ":" + participante;
+    return operar;
+  };
+
+  const combate = novoCombate("Emboscada");
+  const operar = operador(combate);
+  const ev = operar.ev;
+
+  /* Ordem: Lia 20, criatura 15, Beto 10, Nina 8, Velho 6, Rui 4 — seis
+     turnos por rodada. */
+  operar([{ tipo: "adicionar", participantes: [
+    { id: "p-lia", tipo: "personagem", personagemId: pLia, ordem: 20 },
+    { id: "c-mon", tipo: "criatura", nome: "Existido", ordem: 15, snapshot: { status: [{ id: "vida", nome: "Vida", atual: 20, maximo: 20 }] } },
+    { id: "p-beto", tipo: "personagem", personagemId: pBeto, ordem: 10 },
+    { id: "p-nina", tipo: "personagem", personagemId: pNina, ordem: 8 },
+    { id: "p-velho", tipo: "personagem", personagemId: pVelho, ordem: 6 },
+    { id: "p-rui", tipo: "personagem", personagemId: pRui, ordem: 4 },
+  ] }]);
+  t.iguais("em preparação, nada conta", ids(pLia, "morrendo"), []);
+
+  const antes = revs();
+  const comecou = operar([{ tipo: "estado", valor: "ativo" }]);
+  t.iguais("iniciar o combate dá o turno à Lia, rodada 1", comecou.dados.turno, { rodada: 1, ativoId: "p-lia" });
+  t.iguais("  e o início do turno dela conta em morrendo, com o id do turno", ids(pLia, "morrendo"), [ev(1, "p-lia")]);
+  const primeiro = cond(pLia).morrendo.eventos[0];
+  t.ok("  como evento do combate, na cena da ficha, com rodada e combate", primeiro.origem === "combate" &&
+    primeiro.cena === cond(pLia).cena.id && primeiro.rodada === 1 && primeiro.combate === combate);
+  t.igual("  a ficha dela sobe uma revisão, como numa gravação qualquer", revDe(pLia), antes.lia + 1);
+  t.ok("  e o lote não avisa falha", !(comecou.avisos || []).some((a) => a.aviso === "condicao_nao_contada"));
+
+  const depoisDoInicio = revs();
+  operar.proximo(5);
+  t.iguais("os turnos da criatura e dos outros NÃO contam para a Lia", ids(pLia, "morrendo"), [ev(1, "p-lia")]);
+  t.igual("  nem tocam na ficha dela", revDe(pLia), depoisDoInicio.lia);
+  t.igual("sem condição ativa, a ficha do Beto não é regravada", revDe(pBeto), depoisDoInicio.beto);
+  t.igual("com \"Contar pelo combate\" desligado, o morrendo da Nina não conta", ids(pNina, "morrendo").length, 0);
+  t.igual("  e a ficha dela fica como estava", revDe(pNina), depoisDoInicio.nina);
+  t.ok("ficha de antes desta versão, sem condições, continua sem elas",
+    ler(pVelho).dados.ordem.condicoes === undefined && revDe(pVelho) === depoisDoInicio.velho);
+  t.iguais("o Rui, morrendo, conta no turno DELE", ids(pRui, "morrendo"), [ev(1, "p-rui")]);
+
+  /* Rodada 2: o segundo início da Lia — com cinco turnos de outros no meio. */
+  const opDaRodada2 = "cond-rodada-dois-da-lia";
+  const revDoCombate = operar.rev();
+  const r2 = operar([{ tipo: "turno", direcao: "proximo" }], { opId: opDaRodada2 });
+  t.iguais("a rodada 2 volta à Lia", r2.dados.turno, { rodada: 2, ativoId: "p-lia" });
+  t.iguais("  e o segundo início conta: turnos não consecutivos, a mesma cena", ids(pLia, "morrendo"), [ev(1, "p-lia"), ev(2, "p-lia")]);
+  const revLia2 = revDe(pLia);
+  const repetido = operar([{ tipo: "turno", direcao: "proximo" }], { opId: opDaRodada2, rev: revDoCombate });
+  t.ok("o mesmo lote repetido (resposta perdida) é reconhecido", repetido.ok && repetido.repetida === true);
+  t.iguais("  e NÃO conta de novo", ids(pLia, "morrendo"), [ev(1, "p-lia"), ev(2, "p-lia")]);
+  t.igual("  nem regrava a ficha", revDe(pLia), revLia2);
+
+  const outraAba = comoMestra({ acao: "atualizar_combate", campanhaId: mesa, combateId: combate, rev: revDoCombate,
+    opId: "cond-outra-aba-0001", ops: [{ tipo: "turno", direcao: "proximo" }] });
+  t.recusa("outra aba do mestre, com a revisão velha, não passa o turno de novo", outraAba, "conflito");
+  t.igual("  e nada conta por ela", ids(pLia, "morrendo").length, 2);
+
+  t.recusa("a jogadora não passa turno — e não conta nada por isso",
+    comoLia({ acao: "atualizar_combate", campanhaId: mesa, combateId: combate, rev: operar.rev(), opId: "cond-da-lia-0001",
+      ops: [{ tipo: "turno", direcao: "proximo" }] }), "sem_permissao");
+
+  /* A ficha aberta num aparelho antigo não apaga o que o combate contou:
+     a revisão subiu, a gravação vira conflito e o site concilia. */
+  const aberta = comoLia({ acao: "ler_personagem", personagemId: pLia });
+  operar.voltar();
+  operar.proximo();
+  const velha = JSON.parse(JSON.stringify(aberta.dados));
+  velha.nome = "Lia (aparelho antigo)";
+  velha.ordem.condicoes.morrendo.eventos = [];
+  const porCima = comoLia({ acao: "salvar_personagem", personagemId: pLia, rev: aberta.rev, dados: velha });
+  t.recusa("gravar a ficha sobre uma revisão velha é conflito", porCima, "conflito");
+  t.iguais("  e a contagem do servidor continua lá", ids(pLia, "morrendo"), [ev(1, "p-lia"), ev(2, "p-lia")]);
+
+  /* Medicina encerra morrendo (p. 88): a contagem para, mas os turnos da
+     cena ficam. */
+  t.ok("a jogadora encerra morrendo (Medicina)", naFicha(comoLia, pLia, (c) => CD.encerrar(c, "morrendo")).ok);
+  const voltou = operar.voltar();
+  t.iguais("voltar turno devolve o turno ao Rui, rodada 1", voltou.dados.turno, { rodada: 1, ativoId: "p-rui" });
+  t.iguais("  e retira só o início desfeito", ids(pLia, "morrendo"), [ev(1, "p-lia")]);
+  t.igual("  sem desfazer o que a jogadora fez depois dele: morrendo continua encerrado", cond(pLia).morrendo.ativa, false);
+  t.iguais("  o Rui, que tem o turno de novo, não conta outra vez", ids(pRui, "morrendo"), [ev(1, "p-rui")]);
+  operar.proximo();
+  t.iguais("com morrendo encerrado, o início do turno não conta", ids(pLia, "morrendo"), [ev(1, "p-lia")]);
+
+  naFicha(comoLia, pLia, (c) => CD.ativar(c, "morrendo", QUANDO));
+  t.igual("morrendo de novo na mesma cena: a contagem continua de onde estava",
+    CD.estado(CD.normalizar(cond(pLia)), "morrendo").contagem, 1);
+  operar.proximo(6);
+  t.iguais("  e o próximo início dela soma", ids(pLia, "morrendo"), [ev(1, "p-lia"), ev(3, "p-lia")]);
+
+  /* −1 à mão tira o último início da cena; o do combate fica descartado. */
+  naFicha(comoLia, pLia, (c) => CD.corrigirMenos(c, "morrendo"));
+  t.iguais("−1 à mão tira o último início da cena", ids(pLia, "morrendo"), [ev(1, "p-lia")]);
+  t.iguais("  e o turno do combate tirado fica descartado", cond(pLia).morrendo.descartados, [ev(3, "p-lia")]);
+  operar.voltar();
+  operar.proximo();
+  t.iguais("voltar e avançar sobre o turno descartado NÃO o conta de novo", ids(pLia, "morrendo"), [ev(1, "p-lia")]);
+
+  naFicha(comoLia, pLia, (c) => CD.somarInicio(c, "morrendo", QUANDO));
+  const manual = cond(pLia).morrendo.eventos.filter((e) => e.origem === "manual").map((e) => e.id);
+  t.igual("+1 à mão soma um início", manual.length, 1);
+  operar.proximo(6);
+  t.iguais("  e a rodada 4 fecha os três inícios da cena", ids(pLia, "morrendo"), [ev(1, "p-lia"), manual[0], ev(4, "p-lia")]);
+  const noLimite = CD.estado(CD.normalizar(cond(pLia)), "morrendo");
+  t.ok("  3 de 3: a ficha mostra o resultado da regra", noLimite.atingiu === true && /morre/.test(noLimite.resultado));
+  t.ok("  e nada foi apagado nem mudou de dono", ler(pLia).ok &&
+    comoLia({ acao: "ler_personagem", personagemId: pLia }).dono === true);
+  operar.proximo(6);
+  t.igual("no limite, a rodada 5 não conta mais", ids(pLia, "morrendo").length, 3);
+  const revNoLimite = revDe(pLia);
+  operar.voltar();
+  t.iguais("voltar sobre um turno que não contou não tira nada", ids(pLia, "morrendo"), [ev(1, "p-lia"), manual[0], ev(4, "p-lia")]);
+  t.igual("  nem regrava a ficha", revDe(pLia), revNoLimite);
+
+  /* Quem sai da mesa sai da contagem: o servidor só grava ficha da
+     campanha. Cena nova antes, para o Rui não estar no limite. */
+  naFicha(comoLia, pRui, (c) => CD.novaCena(c, QUANDO));
+  comoLia({ acao: "vincular_personagem", campanhaId: mesa, personagemId: pRui, vincular: false });
+  const ruiFora = comoLia({ acao: "ler_personagem", personagemId: pRui });
+  operar.proximo(6);
+  const ruiDepois = comoLia({ acao: "ler_personagem", personagemId: pRui });
+  t.ok("personagem tirado da campanha não é contado pelo combate dela",
+    CD.contagem(CD.normalizar(ruiDepois.dados.ordem.condicoes), "morrendo") === 0 && ruiDepois.rev === ruiFora.rev &&
+    ruiDepois.dados.ordem.condicoes.morrendo.ativa === true);
+
+  /* Encerrar o combate não é encerrar a cena. */
+  const antesDeEncerrar = ids(pLia, "morrendo");
+  const revAntesDeEncerrar = revDe(pLia);
+  operar([{ tipo: "estado", valor: "encerrado" }]);
+  t.iguais("encerrar o combate não zera a contagem da cena", ids(pLia, "morrendo"), antesDeEncerrar);
+  t.igual("  nem mexe na ficha", revDe(pLia), revAntesDeEncerrar);
+
+  /* ---- O que os outros jogadores veem ---- */
+  const cartao = (como, id) => comoFn(como)({ acao: "listar_personagens_campanha", campanhaId: mesa }).dados.find((c) => c.id === id);
+  const naLista = (como, combateId, participanteId) => comoFn(como)({ acao: "listar_combates", campanhaId: mesa }).dados
+    .find((c) => c.id === combateId).participantes.find((p) => p.id === participanteId);
+
+  const combateVisto = combate;
+
+  const vistoPeloBeto = cartao(beto, pLia);
+  const morrendoVisto = (vistoPeloBeto.condicoes || []).find((c) => c.chave === "morrendo");
+  t.ok("outro jogador vê as condições da Lia no painel da mesa",
+    !!morrendoVisto && morrendoVisto.ativa === true && morrendoVisto.contagem === 3 && morrendoVisto.limite === 3);
+  t.ok("  inclusive inconsciente", (vistoPeloBeto.condicoes || []).some((c) => c.chave === "inconsciente" && c.ativa));
+  t.ok("  e só o resumo: sem eventos, ids de turno ou descartes",
+    !JSON.stringify(vistoPeloBeto.condicoes).includes("cb:") && !JSON.stringify(vistoPeloBeto).includes("descartados"));
+  t.ok("  e no combate, na linha da Lia", (naLista(beto, combateVisto, "p-lia").condicoes || []).some((c) => c.chave === "morrendo"));
+
+  comoMestra({ acao: "salvar_campanha", campanhaId: mesa, dados: { ocultarStatusJogadores: true } });
+  t.ok("com \"Esconder status dos jogadores\", as condições alheias NÃO chegam", cartao(beto, pLia).condicoes === undefined);
+  t.ok("  nem no combate", naLista(beto, combateVisto, "p-lia").condicoes === undefined);
+  t.ok("  a dona continua vendo tudo", !!cartao(lia, pLia).ordem.condicoes.morrendo.ativa);
+  t.ok("  e a mestra também", !!cartao(mestra, pLia).ordem.condicoes.morrendo.ativa &&
+    (naLista(mestra, combateVisto, "p-lia").condicoes || []).some((c) => c.chave === "morrendo"));
+  comoMestra({ acao: "salvar_campanha", campanhaId: mesa, dados: { ocultarStatusJogadores: false } });
+  t.ok("desligada a ocultação, voltam", (cartao(beto, pLia).condicoes || []).length > 0);
+
+  /* ---- Enlouquecendo e os contadores da mesa, de combate em combate ---- */
+  naFicha(comoBeto, pBeto, (c) => {
+    CD.ativar(c, "enlouquecendo", QUANDO);
+    CD.configurarDaMesa(c, "exaustao", { usar: true, limite: 5 });
+    CD.ativar(c, "exaustao", QUANDO);
+    CD.configurarDaMesa(c, "desmaio", { usar: true });
+  });
+  const combate3 = novoCombate("Corredor");
+  const operar3 = operador(combate3);
+  operar3([{ tipo: "adicionar", participantes: [
+    { id: "p-beto", tipo: "personagem", personagemId: pBeto, ordem: 10 },
+    { id: "c-som", tipo: "criatura", nome: "Sombra", ordem: 5, snapshot: { status: [{ id: "vida", nome: "Vida", atual: 9, maximo: 9 }] } },
+  ] }]);
+  operar3([{ tipo: "estado", valor: "ativo" }]);
+  t.iguais("o início do turno conta em cada condição ativa: enlouquecendo", ids(pBeto, "enlouquecendo"), [operar3.ev(1, "p-beto")]);
+  t.iguais("  e o contador da mesa ligado e ativo (exaustão)", ids(pBeto, "exaustao"), [operar3.ev(1, "p-beto")]);
+  t.iguais("  mas não o contador ligado e inativo (desmaio)", ids(pBeto, "desmaio"), []);
+
+  naFicha(comoBeto, pBeto, (c) => CD.encerrar(c, "enlouquecendo"));
+  operar3.proximo(2);
+  t.igual("curada a Sanidade, enlouquecendo para de contar", ids(pBeto, "enlouquecendo").length, 1);
+  t.igual("  e a exaustão, que segue ativa, conta", ids(pBeto, "exaustao").length, 2);
+  naFicha(comoBeto, pBeto, (c) => CD.ativar(c, "enlouquecendo", QUANDO));
+  operar3.proximo(2);
+  t.iguais("enlouquecendo de novo: a contagem continua", ids(pBeto, "enlouquecendo"), [operar3.ev(1, "p-beto"), operar3.ev(3, "p-beto")]);
+
+  /* Voltar o turno não é começar um turno: quem recebe a vez de volta não
+     conta de novo — nem numa condição que ganhou depois do início dele. */
+  operar3.proximo();
+  naFicha(comoBeto, pBeto, (c) => CD.ativar(c, "desmaio", QUANDO));
+  operar3.voltar();
+  t.iguais("voltar a vez a quem ganhou uma condição depois do início do turno não conta aquele início", ids(pBeto, "desmaio"), []);
+  t.iguais("  nem conta de novo o que já estava contado", ids(pBeto, "enlouquecendo"), [operar3.ev(1, "p-beto"), operar3.ev(3, "p-beto")]);
+  operar3([{ tipo: "estado", valor: "encerrado" }]);
+
+  const combate4 = novoCombate("Escada");
+  const operar4 = operador(combate4);
+  operar4([{ tipo: "adicionar", participantes: [{ id: "p-beto", tipo: "personagem", personagemId: pBeto, ordem: 1 }] }]);
+  operar4([{ tipo: "estado", valor: "ativo" }]);
+  t.iguais("outro combate na mesma cena continua a contagem (o id do turno é de outro combate)",
+    ids(pBeto, "enlouquecendo"), [operar3.ev(1, "p-beto"), operar3.ev(3, "p-beto"), operar4.ev(1, "p-beto")]);
+  t.igual("  e chega a 3 de 3", CD.estado(CD.normalizar(cond(pBeto)), "enlouquecendo").atingiu, true);
+
+  naFicha(comoBeto, pBeto, (c) => CD.novaCena(c, QUANDO));
+  const cenaNova = CD.normalizar(cond(pBeto));
+  t.ok("cena nova zera as contagens e mantém a condição ativa",
+    CD.contagem(cenaNova, "enlouquecendo") === 0 && cenaNova.enlouquecendo.ativa === true);
+  operar4.proximo();
+  t.igual("  e os inícios seguintes contam na cena nova", CD.contagem(CD.normalizar(cond(pBeto)), "enlouquecendo"), 1);
+
+  /* ---- Ficha que não se monta: o combate anda, e o mestre é avisado ---- */
+  const pIvo = criar(comoBeto, "Ivo", condicoesCom((c) => CD.ativar(c, "morrendo", QUANDO)));
+  const combate5 = novoCombate("Beco");
+  const operar5 = operador(combate5);
+  operar5([{ tipo: "adicionar", participantes: [
+    { id: "c-cao", tipo: "criatura", nome: "Cão", ordem: 9, snapshot: { status: [{ id: "vida", nome: "Vida", atual: 5, maximo: 5 }] } },
+    { id: "p-ivo", tipo: "personagem", personagemId: pIvo, ordem: 1 },
+  ] }]);
+  operar5([{ tipo: "estado", valor: "ativo" }]);
+  const blocos = folhaDe("PERSONAGENS_BLOCOS");
+  const manifestoDoIvo = manifestoDoPersonagem(pIvo);
+  blocos.linhas.splice(blocos.linhas.findIndex((l) => l[0] === pIvo && l[1] === manifestoDoIvo.geracao), 1);
+  reiniciarExecucao();
+  const semFicha = operar5.proximo();
+  t.ok("ficha que não se monta: o turno anda mesmo assim", semFicha.ok && semFicha.dados.turno.ativoId === "p-ivo");
+  t.ok("  e o mestre recebe o aviso para contar à mão",
+    (semFicha.avisos || []).some((a) => a.aviso === "condicao_nao_contada" && a.personagemId === pIvo));
+  t.recusa("  sem nada gravado por cima dela", comoBeto({ acao: "ler_personagem", personagemId: pIvo }), "ficha_ilegivel");
+})();
+
+t.grupo("Pontos de determinação — resumo, painel e ajuste rápido");
+
+(() => {
+  preparar();
+  const mestra = novaConta("mestra");
+  const duda = novaConta("duda");
+  const eli = novaConta("eli");
+  const comoMestra = comoFn(mestra);
+  const comoDuda = comoFn(duda);
+  const comoEli = comoFn(eli);
+
+  const mesa = comoMestra({ acao: "criar_campanha", dados: { nome: "Sem Sanidade" } }).dados.id;
+  comoMestra({ acao: "salvar_participantes", campanhaId: mesa,
+    membros: [{ userId: duda.id, papel: "jogador" }, { userId: eli.id, papel: "jogador" }] });
+
+  /* Ocultista, NEX 5, Presença 2: 10 + 2 = 12 PD (SAH p. 104). PE e SAN
+     antigos ficam guardados, sem conversão. */
+  const ficha = {
+    nome: "Duda", tipoFicha: "ordem", schemaVersion: 10,
+    ordem: {
+      classe: "ocultista", origem: "academico", trilha: "", nex: 5,
+      atributos: { agi: 1, for: 1, int: 2, pre: 2, vig: 1 },
+      opcionais: { semSanidade: true },
+      recursos: { pv: 12, pe: 4, san: 9, pd: 7 },
+      escolhas: [],
+    },
+    resumoRecursos: { pv: 12, pe: null, san: null, pd: 12 },
+  };
+  const pDuda = comoDuda({ acao: "criar_personagem", dados: ficha }).dados.id;
+  comoDuda({ acao: "vincular_personagem", campanhaId: mesa, personagemId: pDuda });
+
+  const cartao = (como) => comoFn(como)({ acao: "listar_personagens_campanha", campanhaId: mesa }).dados.find((c) => c.id === pDuda);
+  t.iguais("com \"Jogando sem Sanidade\", a mesa vê PV e PD — sem PE nem SAN",
+    cartao(eli).recursos, [{ chave: "pv", rotulo: "PV", atual: 12, maximo: 12 }, { chave: "pd", rotulo: "PD", atual: 7, maximo: 12 }]);
+  t.ok("o resumo guardado leva PD e deixa PE e SAN nulos",
+    (() => { const r = cartao(duda).resumoRecursos; return r.pd === 12 && r.pe === null && r.san === null; })());
+
+  t.ok("a dona ajusta os PD pelo painel", comoDuda({ acao: "ajustar_personagem", personagemId: pDuda, campanhaId: mesa,
+    alvo: "recurso", itemId: "pd", campo: "atual", valor: 3 }).ok);
+  t.igual("  e a mesa vê o valor novo", cartao(eli).recursos[1].atual, 3);
+  const lida = comoDuda({ acao: "ler_personagem", personagemId: pDuda }).dados;
+  t.ok("  sem tocar nos PE e na SAN guardados", lida.ordem.recursos.pe === 4 && lida.ordem.recursos.san === 9);
+  t.recusa("o outro jogador não ajusta os PD dela", comoEli({ acao: "ajustar_personagem", personagemId: pDuda, campanhaId: mesa,
+    alvo: "recurso", itemId: "pd", campo: "atual", valor: 1 }), "nao_encontrado");
+
+  const rev = () => comoDuda({ acao: "ler_personagem", personagemId: pDuda }).rev;
+  const novoResumo = comoDuda({ acao: "atualizar_resumo_personagem", personagemId: pDuda, rev: rev(),
+    resumo: { pv: 12, pe: null, san: null, pd: 15 } });
+  t.ok("o resumo com PD é aceito", novoResumo.ok && novoResumo.dados.mudou === true && cartao(eli).recursos[1].maximo === 15);
+  t.recusa("resumo sem PD e com PE nulo é recusado", comoDuda({ acao: "atualizar_resumo_personagem", personagemId: pDuda, rev: rev(),
+    resumo: { pv: 12, pe: null, san: null } }), "dados_invalidos");
+  t.recusa("PD que não é número é recusado", comoDuda({ acao: "atualizar_resumo_personagem", personagemId: pDuda, rev: rev(),
+    resumo: { pv: 12, pe: null, san: null, pd: "12" } }), "dados_invalidos");
+
+  /* Desligar a regra: o site volta a mandar PE e SAN — os valores
+     guardados, intactos. Resumo de uma versão anterior (sem `pd`) vale. */
+  const antigo = comoDuda({ acao: "atualizar_resumo_personagem", personagemId: pDuda, rev: rev(),
+    resumo: { pv: 12, pe: 5, san: 14 } });
+  t.ok("resumo sem PD (regra desligada, ou site antigo) continua valendo", antigo.ok);
+  t.iguais("  e a mesa volta a ver PE e SAN com os valores guardados", cartao(eli).recursos.map((r) => r.chave + ":" + r.atual + "/" + r.maximo),
+    ["pv:12/12", "pe:4/5", "san:9/14"]);
+
+  t.iguais("normalizarResumoRecursos: PD com PE e SAN nulos", normalizarResumoRecursos({ pv: 1, pe: null, san: null, pd: 2 }),
+    { versao: 1, pv: 1, pe: null, san: null, pd: 2 });
+  t.igual("  PE nulo sem PD é inválido", normalizarResumoRecursos({ pv: 1, pe: null, san: null }), null);
+  t.iguais("  resumo antigo ganha pd nulo", normalizarResumoRecursos({ pv: 1, pe: 2, san: 3 }), { versao: 1, pv: 1, pe: 2, san: 3, pd: null });
+})();
+
+t.grupo("Condições — as regras do navegador e as do servidor contam igual");
+
+(() => {
+  const CD = globalThis.RAMAOrdemCondicoes;
+  const QUANDO = "2026-09-25T12:00:00.000Z";
+
+  /* Gerador determinístico: o mesmo conjunto de casos a cada execução. */
+  let semente = 20260925;
+  const aleatorio = () => { semente = (semente * 1103515245 + 12345) % 2147483648; return semente / 2147483648; };
+  const inteiro = (min, max) => min + Math.floor(aleatorio() * (max - min + 1));
+  const copia = (x) => JSON.parse(JSON.stringify(x));
+  const CHAVES = ["morrendo", "enlouquecendo", "exaustao", "desmaio"];
+  const rastro = (c, chave) => (chave === "exaustao" || chave === "desmaio") ? c.mesa[chave] : c[chave];
+  const retrato = (c) => JSON.stringify(CHAVES.map((k) => [
+    rastro(c, k).eventos.map((e) => e.id + "|" + e.origem + "|" + e.cena), rastro(c, k).descartados]));
+  const publico = (lista) => JSON.stringify(lista.map((x) => [x.chave, x.nome, x.oficial, x.ativa, x.contagem, x.limite]));
+
+  let divergencias = 0;
+  let casos = 0;
+  const primeiras = [];
+  const comparar = (rotulo, a, b) => {
+    casos++;
+    if (a !== b) { divergencias++; if (primeiras.length < 3) primeiras.push(rotulo + ": " + a + " ≠ " + b); }
+  };
+
+  for (let k = 0; k < 300; k++) {
+    const c = CD.vazio();
+    if (aleatorio() < 0.8) CD.novaCena(c, QUANDO);
+    c.integrarCombate = aleatorio() < 0.85;
+    ["morrendo", "enlouquecendo"].forEach((ch) => { if (aleatorio() < 0.6) CD.ativar(c, ch, QUANDO); });
+    ["exaustao", "desmaio"].forEach((ch) => {
+      CD.configurarDaMesa(c, ch, { usar: aleatorio() < 0.6, limite: [null, 1, 2, 5, 20][inteiro(0, 4)] });
+      if (aleatorio() < 0.6) CD.ativar(c, ch, QUANDO);
+    });
+    /* Um início de uma cena anterior, que não pode contar nesta. */
+    if (aleatorio() < 0.3) c.morrendo.eventos.push({ id: "cb:velho:1:p1", origem: "combate", cena: "cena-anterior", em: QUANDO });
+
+    const navegador = copia(c);
+    const servidor = { ordem: { condicoes: copia(c) } };
+
+    for (let passo = 0; passo < 14; passo++) {
+      const sorte = aleatorio();
+      const id = CD.idDoTurno("comb-" + inteiro(1, 2), inteiro(1, 4), "p" + inteiro(1, 3));
+      comparar("id do turno", id, idDoInicioDeTurno(id.split(":")[1], id.split(":")[2], id.split(":")[3]));
+      if (sorte < 0.55) {
+        const evento = { id, rodada: 1, combate: "comb", em: QUANDO };
+        comparar("início", JSON.stringify(CD.registrarInicioDeTurno(navegador, evento)), JSON.stringify(registrarInicioNaFicha(servidor, copia(evento))));
+      } else if (sorte < 0.8) {
+        comparar("retirada", JSON.stringify(CD.retirarInicioDeTurno(navegador, id)), JSON.stringify(retirarInicioDaFicha(servidor, id)));
+      } else {
+        /* O que a jogadora faz na ficha entre um turno e outro — gravado,
+           o servidor recebe exatamente o mesmo estado. */
+        const ch = CHAVES[inteiro(0, 3)];
+        const acao = inteiro(0, 3);
+        [navegador, servidor.ordem.condicoes].forEach((alvo) => {
+          if (acao === 0) CD.encerrar(alvo, ch);
+          else if (acao === 1) CD.ativar(alvo, ch, QUANDO);
+          else if (acao === 2) CD.corrigirMenos(alvo, ch);
+          else alvo.integrarCombate = !alvo.integrarCombate;
+        });
+      }
+      comparar("estado", retrato(navegador), retrato(servidor.ordem.condicoes));
+    }
+    comparar("resumo público", publico(CD.resumoPublico(navegador)), publico(resumoPublicoDeCondicoes(servidor.ordem)));
+  }
+  t.igual("300 fichas sorteadas — início, retirada, correções e resumo público: nenhuma divergência", divergencias, 0,
+  );
+  if (primeiras.length) primeiras.forEach((p) => t.ok("  divergência: " + p, false));
+  t.ok("  (e os casos foram mesmo comparados)", casos > 8000);
+  t.igual("o id do turno não aceita caracteres de fora do formato", idDoInicioDeTurno("comb 1", 1, "p1"), "");
+})();
+
+/* =====================================================================
    FIM
    ===================================================================== */
 

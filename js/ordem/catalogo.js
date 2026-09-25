@@ -146,6 +146,10 @@
       pePorNex: { base: 2, atributo: "pre" },
       sanInicial: { base: 12, atributo: null },
       sanPorNex: { base: 3, atributo: null },
+      /* Pontos de determinação, só com "Jogando sem Sanidade" (SAH p.104):
+         substituem PE e Sanidade juntos. */
+      pdInicial: { base: 6, atributo: "pre" },
+      pdPorNex: { base: 3, atributo: "pre" },
       /* Duas escolhas obrigatórias, uma de cada par, mais livres. */
       periciasEscolhaObrigatoria: [
         { entre: ["luta", "pontaria"] },
@@ -169,6 +173,8 @@
       pePorNex: { base: 3, atributo: "pre" },
       sanInicial: { base: 16, atributo: null },
       sanPorNex: { base: 4, atributo: null },
+      pdInicial: { base: 8, atributo: "pre" },
+      pdPorNex: { base: 4, atributo: "pre" },
       periciasEscolhaObrigatoria: [],
       periciasFixas: [],
       periciasLivres: { base: 7, atributo: "int" },
@@ -187,6 +193,8 @@
       pePorNex: { base: 4, atributo: "pre" },
       sanInicial: { base: 20, atributo: null },
       sanPorNex: { base: 5, atributo: null },
+      pdInicial: { base: 10, atributo: "pre" },
+      pdPorNex: { base: 5, atributo: "pre" },
       periciasEscolhaObrigatoria: [],
       periciasFixas: ["ocultismo", "vontade"],
       periciasLivres: { base: 3, atributo: "int" },

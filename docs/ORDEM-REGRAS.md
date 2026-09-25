@@ -42,6 +42,9 @@ leitura que o R.A.M.A. adotou escrita por extenso.
 | `js/paginas/ficha-rituais-biblioteca.js` | a janela "Da biblioteca" da aba Rituais — a mesma janela, presa a uma aquisição, na Progressão e em Aprender Ritual |
 | `js/ordem/regras.js` | todas as contas, com a composição de cada número |
 | `js/ordem/opcionais.js` | as regras opcionais, uma chave para cada |
+| `js/ordem/condicoes.js` | morrendo, enlouquecendo, inconsciente, perturbado e os contadores da mesa: a contagem de inícios de turno por cena e as ações com origem nos recursos (dano, cura, dano mental, gastar, recuperar) |
+| `js/organizar.js` | o que muda de lugar quando alguém reorganiza uma lista — com filtro, em pastas, entre as habilidades das regras —, o agrupamento dos rituais por círculo e elemento e a ordem das perícias |
+| `js/arrastar.js` | o gesto de arrastar e soltar, igual nas cinco abas: alça, prévia, destino, recusa com motivo, cancelamento, rolagem perto da borda e teclado |
 | `js/ordem/biblioteca.js` | o catálogo de poderes arrumado para consulta na janela "Da biblioteca" |
 | `js/ordem/personalizacao.js` | versões personalizadas e exclusão de habilidades oficiais, por aquisição |
 | `js/paginas/ordem-escolhas.js` | as janelas de escolha, iguais na criação e na ficha |
@@ -305,15 +308,14 @@ no fim da lista como **sem aquisição**, sem conceder nada, com as opções de
 transformá-la em habilidade comum ou excluí-la. Se a mesma aquisição voltar, ela
 volta a valer sozinha.
 
-### Ordem das listas: Habilidades, Rituais e Inventário
+### Ordem das listas e arrastar (v2.19)
 
 Na ficha de Ordem, as abas Habilidades, Rituais e Inventário têm uma barra
 **Ordenar** no topo da lista, fora e dentro do modo edição:
 
-- **Personalizada** — a ordem guardada. No modo edição, **Subir** e **Descer**, no
-  menu de cada um, mudam essa ordem. Na aba Habilidades, as das regras têm a
-  própria ordem e vêm antes das criadas à mão; no Inventário, com um filtro de
-  categoria ligado, Subir e Descer trocam com o vizinho **visível**.
+- **Personalizada** — a ordem guardada. É a única que se muda à mão: arrastando
+  pela alça (⠿), com ↑ e ↓ no teclado quando a alça tem o foco, ou por **Subir** e
+  **Descer**, no menu de cada um.
 - **Ordem de adição** — do mais antigo ao mais novo. O que entrou antes da v2.7
   não tem data e vem no topo, na ordem guardada; habilidades automáticas das
   regras também. Um poder escolhido conta a partir de quando a escolha foi feita.
@@ -321,10 +323,67 @@ Na ficha de Ordem, as abas Habilidades, Rituais e Inventário têm uma barra
   quando houver), sem diferença de acento ou maiúscula. Na aba Habilidades, as das
   regras e as criadas à mão formam uma lista só, com as pastas antes.
 
-Subir e Descer só aparecem na ordem personalizada: com a tela ordenada por nome ou
-por adição, eles não mudariam nada visível. O modo fica gravado na ficha
-(`ordem.organizacao`) e nenhuma conta o lê. Personalizações e habilidades
-excluídas continuam no fim da lista, em qualquer modo.
+Num modo automático, a alça some e a barra oferece **Usar ordem personalizada**:
+um arraste aceito para depois ser desfeito pela ordem automática seria pior que
+nenhum. Trocar de modo nunca apaga a ordem personalizada guardada — ela volta
+como estava. O modo fica gravado na ficha (`ordem.organizacao`) e nenhuma conta o
+lê. Personalizações e habilidades excluídas continuam no fim da lista, em
+qualquer modo.
+
+**O gesto.** Uma implementação só (`js/arrastar.js`) serve às cinco abas que se
+reorganizam — habilidades, rituais, inventário, perícias e anotações. A alça é a
+única parte que começa um arraste: o resto do cartão continua abrindo, rolando
+dado e, no celular, rolando a página. Durante o arraste só a prévia muda — o
+cartão levado aparece ao lado do ponteiro, a origem fica apagada e uma linha
+mostra onde ele vai cair (ou a pasta de destino fica marcada). Um destino
+recusado aparece recusado **enquanto** se arrasta, com o motivo, e soltar ali não
+muda nada. Esc, o cancelamento do sistema e soltar fora de uma lista cancelam;
+perto da borda de cima ou de baixo a página rola sozinha; e o clique que o
+navegador dispara no fim do gesto é engolido, para nada abrir por engano. A ficha
+muda uma vez, ao soltar, e é gravada pelo salvador de sempre.
+
+**Com filtro.** No inventário, com uma categoria filtrada, a posição é contada
+entre os **visíveis**: o item vai para logo antes do vizinho visível que fica
+depois dele, e os ocultos não trocam de ordem entre si nem de categoria.
+
+**Pastas das habilidades.** Soltar no nome de uma pasta põe dentro dela; soltar
+entre os itens de uma pasta, naquele ponto. Uma pasta não entra em si mesma nem
+numa pasta que está dentro dela, e nenhum movimento deixa a árvore mais funda do
+que o modelo guarda — os três são recusados com o motivo. As habilidades das
+regras também vão para as pastas, e a posição delas é **preferência de
+apresentação** (`organizacao.habilidades.lugares` e `ordem`): a aquisição, o texto,
+a versão personalizada e a exclusão não mudam, e nada vira Homebrew. Uma pasta
+apagada devolve as habilidades das regras que estavam nela para a raiz, sem
+apagar a preferência.
+
+**Rituais.** A **Ordem base** (as quatro de cima) ganha dois critérios
+independentes, **Círculo** e **Elemento**, ligados e desligados em separado. Com
+os dois, um seletor de **Prioridade** diz qual agrupa primeiro — "Círculo, depois
+elemento" é o padrão. Dentro de cada grupo, a ordem base desempata, então nada
+pula de lugar entre um desenho e outro. O círculo vem só dos dados do ritual
+(`ritual.ordem.circulo`), em ordem numérica, nunca do nome. O elemento vem dos
+dados; na falta deles, do campo Elemento quando o texto é o nome de um elemento;
+um texto que não é elemento (Homebrew) forma o próprio grupo, depois dos do
+livro; e o que não tem nada vai para "Círculo não informado" ou "Elemento não
+informado", no fim. Um ritual aparece uma vez só, mesmo com dois elementos no
+texto. Conhecidos, Grimório e Registros continuam separados, e os grupos ficam
+dentro de cada um: arrastar muda só a ordem dentro do grupo — trocar de lugar
+seria mudar o aprendizado, e isso tem regra própria no menu do ritual.
+
+**Perícias.** Ordem alfabética (o padrão, e a de toda ficha antiga), maior bônus
+primeiro, menor bônus primeiro ou personalizada. O bônus comparado é o **total que
+a linha mostra** — o mesmo cálculo da coluna Total (`bonusDePericia`), com
+treinamento, extra e os outros modificadores —, nunca o grau sozinho nem os dados
+do atributo. Empates, pelo nome. A personalizada guarda as chaves das perícias
+(`organizacao.pericias.ordem`) e começa, na primeira vez, da ordem que estava na
+tela. Editar o extra não move a linha a cada tecla: a lista se reorganiza quando
+a edição é confirmada, com o foco no mesmo campo (Enter) ou onde a pessoa foi.
+
+**Anotações.** Arrastar funciona também fora do modo edição, para quem pode editar
+a ficha — organizar as notas faz parte de anotar. Uma nota muda de pasta
+(soltando no nome dela ou entre as notas de lá), sai da pasta (soltando entre as
+sem pasta) ou muda de lugar; as pastas mudam de ordem entre si e não entram umas
+nas outras. É sempre a mesma nota: id, título, conteúdo e datas.
 
 ---
 
@@ -782,6 +841,137 @@ SAN      = SANinicial + (passos − 1) × (SANporNex)
 | Deslocamento padrão 9m | OPRPG p.36 | calculado; −3m sobrecarregado | **A** |
 | Força soma no dano corpo a corpo e de arremesso | OPRPG p.15 | somado na rolagem de dano da ficha universal | **I** |
 
+## Condições contadas por turno (v2.19)
+
+Morrendo e enlouquecendo são regras de dano e de **Insanidade & Loucura**, OPRPG
+p.88: ser reduzido a 0 PV deixa **inconsciente** e **morrendo**; iniciar três
+turnos morrendo na mesma cena — não necessariamente consecutivos — mata. A
+inconsciência termina com qualquer efeito que cure pelo menos 1 PV; morrendo, só
+com Medicina (DT 20) ou efeitos específicos. Sanidade reduzida a 0 deixa
+**enlouquecendo**; três inícios de turno enlouquecendo na mesma cena deixam o
+personagem **insano** — um NPC sob controle do mestre. Enlouquecendo termina com
+Diplomacia (DT 20) ou com qualquer efeito que cure pelo menos 1 de Sanidade.
+
+| regra | fonte | comportamento | est. |
+|---|---|---|---|
+| 0 PV por dano → inconsciente e morrendo | OPRPG p.88 | pela ação **Dano** do PV | **A** |
+| curar 1 PV encerra a inconsciência, não o morrendo | OPRPG p.88 | pela ação **Cura** do PV; morrendo continua, com o lembrete de Medicina | **A** |
+| morrendo termina com Medicina (DT 20) ou efeito | OPRPG p.88 | **Encerrar**, à mão: a ficha não rola o teste | **P** |
+| 0 SAN por dano mental → enlouquecendo | OPRPG p.88 | pela ação **Dano mental** da SAN | **A** |
+| curar 1 SAN encerra enlouquecendo | OPRPG p.88 | pela ação **Recuperar** da SAN | **A** |
+| Diplomacia (DT 20) encerra enlouquecendo | OPRPG p.88 | **Encerrar**, à mão | **P** |
+| três inícios de turno na mesma cena | OPRPG p.88 | contagem por cena, com o resultado da regra no limite | **A** |
+| inícios de turno pelo combate | OPRPG p.88 | só o início do turno do próprio personagem, no combate da campanha | **A** |
+| Loucura Não Letal | OPRPG p.175 | citada no resultado; a ficha não a aplica | **I** |
+| Machucado e Lesões | OPRPG p.88 e 174 | não marcados | **—** |
+
+**Três coisas separadas.** O valor do recurso (`ordem.recursos`), a condição ativa
+(`ordem.condicoes.<condição>.ativa`) e a contagem da cena (os eventos de início de
+turno, `eventos`) são guardados cada um no seu lugar, e nenhum é deduzido de "PV
+ou SAN é 0": uma ficha aberta com PV 0 não passa a morrer sozinha. As condições
+mudam por três caminhos, e só por eles:
+
+- as **ações com origem**, ao lado de cada recurso — Dano e Cura no PV; Dano mental e
+  Recuperar na SAN; Gastar e Recuperar nos PE; Gastar, Dano mental e Recuperar nos
+  PD. São elas que aplicam o que a regra liga àquela origem;
+- os **controles da condição** — ficar morrendo/enlouquecendo, encerrar, "+1 início
+  de turno", "−1 corrigir", "Nova cena";
+- o **combate da campanha**, que soma inícios de turno (abaixo).
+
+O número digitado no recurso continua sendo **ajuste manual**: muda o valor e mais
+nada — sem origem, não há como saber se foi dano, custo ou correção. Quando o PV
+ou a SAN chegam a 0 assim, a ficha sugere a condição, sem aplicá-la.
+
+**A contagem.** Cada início de turno é um evento (`manual` ou `combate`) gravado
+na cena atual: "Morrendo: 2 de 3 nesta cena", com marcadores. Encerrar a condição
+interrompe a contagem enquanto ela estiver encerrada, mas **não apaga** os turnos
+da cena: se ela voltar na mesma cena, a conta continua de onde estava. "+1" só
+conta com a condição ativa e não passa do limite; "−1" tira o último da cena — e,
+se ele veio do combate, o id fica descartado, para o mesmo turno não voltar a
+contar. "Nova cena" zera a contagem e mantém as condições ativas: morrendo não
+termina com a cena. No limite, a ficha mostra o resultado da regra — "o
+personagem morre", "vira um NPC sob controle do mestre" — e **nada** mais
+acontece: a ficha não é apagada, não muda de dono e não perde permissões. Nenhum
+teste é rolado por um clique num marcador.
+
+**O combate da campanha.** Com "Contar pelos turnos do combate" ligado (o
+padrão), quem conta é o servidor, no mesmo lote que muda o turno
+(`backend/Campanhas.gs`, "CONDIÇÕES E TURNOS"):
+
+- conta só o **início do turno do personagem** afetado: o turno de outro
+  participante não conta, e a rodada também não;
+- cada início é um evento com id `cb:<combate>:<rodada>:<participante>`. O mesmo
+  turno é o mesmo evento: mestre e jogador vendo a mesma mesa, duas abas, uma
+  recarga ou um lote repetido pela rede não contam duas vezes;
+- **Voltar turno** retira o evento do turno desfeito, e só ele: o que foi feito na
+  ficha depois — uma condição encerrada, um "+1" ou um "−1" à mão — fica. Quem
+  recebe a vez de volta não conta de novo: o início dele já tinha contado, ou não
+  contava;
+- **encerrar o combate não zera nada**: cena e combate são coisas diferentes, e
+  outro combate na mesma cena continua a contagem;
+- só a ficha que ainda está na campanha do combate é gravada. A ficha sobe uma
+  revisão, como em qualquer gravação; quem está com ela aberta concilia os eventos
+  pela união dos ids (`js/sync.js`). Uma ficha que não se monta não é tocada, e o
+  mestre recebe o aviso para contar à mão.
+
+Não há temporizador: nada conta porque o tempo passou.
+
+**Visibilidade.** O painel da campanha e a lista do combate mostram as condições
+ativas (e as encerradas que ainda têm turnos na cena) com a contagem, e só isso —
+nunca os eventos. Seguem a regra dos recursos: com "Esconder status dos
+jogadores", outros jogadores não as recebem.
+
+### Jogando sem Sanidade: pontos de determinação
+
+Com a regra ligada (SAH p.104-105), Sanidade e pontos de esforço viram um
+recurso só, os **pontos de determinação** (PD):
+
+| classe | PD iniciais | a cada novo NEX |
+|---|---|---|
+| Combatente | 6 + Pre | 3 + Pre |
+| Especialista | 8 + Pre | 4 + Pre |
+| Ocultista | 10 + Pre | 5 + Pre |
+| Sobrevivente | 4 + Pre | 2 por estágio (a classe não está no R.A.M.A.) |
+
+- o que soma PE soma PD (Dedicação, do Universitário, por exemplo); o que soma
+  Sanidade, não — a regra manda ignorar as referências a Sanidade;
+- efeitos que gastam PE gastam PD, e o limite de PE por turno vale para PD;
+- **gastar PD não causa condição nenhuma** (SAH p.105): Gastar só tira pontos;
+- **Dano mental** maior que os PD atuais deixa **enlouquecendo**; dano mental que
+  deixa os PD abaixo da metade do total deixa **perturbado**. Recuperar pelo menos
+  1 PD encerra enlouquecendo; voltar à metade ou mais encerra perturbado;
+- o painel da mesa e a lista do combate mostram PV e PD.
+
+**Os valores antigos ficam.** Ligar a regra não converte nada: os PE e a SAN
+gastos continuam guardados (`recursos.pe` e `recursos.san`) e voltam como estavam
+ao desligá-la. Os PD começam cheios na primeira vez e depois guardam o próprio
+valor (`recursos.pd`). Somar PE e SAN, ou pegar o menor dos dois, seria inventar
+uma conversão que o livro não dá.
+
+**O que não é automático.** Reduzir os dados de dano mental das criaturas (um
+passo por dado, metade dos dados), as visões de Medo, O Custo do Paranormal em
+PD e as ações de interlúdio (dormir recupera só PV; relaxar recupera PD; prato
+favorito dá 2 PD temporários) ficam com a mesa: a ficha não rola esses dados nem
+tem interlúdio.
+
+### Exaustão e desmaio: contadores da mesa
+
+Nenhum dos dois livros tem uma contagem de exaustão ou de desmaio por PD (ou PE)
+chegar a 0. Então eles são **contadores da mesa**, e a ficha diz isso em cada um:
+
+- começam **desligados**, e ninguém é afetado até a mesa ligar;
+- a mesa escolhe o limite (de 1 a 20 inícios de turno, ou nenhum) e como o
+  contador fica ativo — **só à mão**, ou quando os PE/PD chegam a 0 por **gasto ou
+  dano** (um ajuste manual não diz a origem e não ativa nada);
+- a consequência é um texto da mesa; nenhuma consequência é aplicada;
+- contam inícios de turno como morrendo — à mão e pelo combate —, cada um na sua
+  lista. Exaustão, inconsciência e enlouquecendo são coisas separadas.
+
+"Fatigado" e "exausto" existem no livro como condições de outros efeitos
+(OPRPG p.310), e "inconsciente" é o que o 0 PV causa — nenhum deles tem prazo em
+turnos. O R.A.M.A. não inventa um prazo de três turnos para eles.
+
+
 ## Origens
 
 **OPRPG p.16-21.** As 26 origens, cada uma com duas perícias treinadas e um
@@ -1124,7 +1314,7 @@ Todas do **SAH**, capítulo 2, "Novas Regras Opcionais" (p.98-123). Começam
 | regra | fonte | efeito na ficha | est. |
 |---|---|---|---|
 | NEX & Experiência (separar nível e NEX) | SAH p.98-103 | ver seção própria | **A** |
-| Jogando sem Sanidade | SAH p.104 | esconde Sanidade da ficha | **P** |
+| Jogando sem Sanidade | SAH p.104-105 | pontos de determinação (PD) no lugar de PE e SAN — ver [Jogando sem Sanidade: pontos de determinação](#jogando-sem-sanidade-pontos-de-determinação) | **P** |
 | Ferimentos Debilitantes | SAH p.105 | registro de ferimentos | **P** |
 | Jogando sem Mapa | SAH p.106 | não afeta a ficha | **I** |
 | Evolução por Patentes | SAH p.108-112 | progressão por patente em vez de NEX | **P** |
@@ -1458,3 +1648,34 @@ aberta, a adotada está escrita — e é a que os testes travam.
     O R.A.M.A. as trata como incompatíveis desde que as duas chaves existem: sem
     o trilho de patentes estruturado, não há como aplicar as duas ao mesmo tempo
     sem inventar a combinação.
+
+28. **Morrendo no apêndice de condições.** O apêndice diz que o personagem morre
+    se "ficar mais de três rodadas" morrendo e que a condição termina se ele
+    "voltar a ter pelo menos 1 PV" (OPRPG p.310-311). O capítulo de regras diz
+    três **inícios de turno** na mesma cena, e que curar 1 PV encerra só a
+    inconsciência — morrendo exige Medicina ou um efeito específico (p.88). O
+    R.A.M.A. segue a p.88, que é a regra detalhada, com exemplo.
+
+29. **Perturbado com PD.** "Fica perturbado quando, após sofrer dano mental, seus
+    PD resultantes são menores que a metade" (SAH p.104) não diz quando deixa de
+    estar. Como na Sanidade ("se estiver com menos da metade", OPRPG p.88), o
+    R.A.M.A. o encerra quando os PD voltam à metade ou mais, e deixa o botão
+    Encerrar à mão. Sem a regra, perturbado é só a leitura da SAN abaixo da
+    metade, e a ficha não o marca como condição.
+
+30. **"Essa condição pode ser removida se o personagem recuperar pelo menos 1
+    PD"** (SAH p.105) vem logo depois de enlouquecendo, e o R.A.M.A. a lê como
+    enlouquecendo — perturbado tem o próprio limiar.
+
+31. **Quem conta o início de turno sem o combate.** Fora do combate da campanha,
+    a contagem é à mão: "+1 início de turno". Se mestre e jogador apertarem os dois
+    pelo mesmo turno, são duas correções explícitas, e a ficha mostra as duas — o
+    "−1" desfaz. Só o que vem do combate tem identidade de turno e não duplica.
+
+32. **Voltar o turno depois de uma correção.** Se um início de turno do combate
+    foi tirado à mão ("−1"), voltar e avançar o turno não o conta de novo: o id
+    fica descartado. Uma "Nova cena" esquece os descartes, junto com a contagem.
+
+33. **Exaustão e desmaio.** Não são regras do livro com contagem por turno — ver
+    [Exaustão e desmaio: contadores da mesa](#exaustão-e-desmaio-contadores-da-mesa).
+    O limite, a ativação e a consequência são da mesa.

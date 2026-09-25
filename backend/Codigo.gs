@@ -1889,12 +1889,17 @@ function normalizarResumoRecursos(bruto) {
     return n;
   }
 
+  /* `pd` (v2.19): pontos de determinação, com "Jogando sem Sanidade"
+     (SAH p.104). Com ele, PE e SAN vêm nulos — os dois viraram PD. Sem
+     ele, `pd` é nulo, e um resumo de uma versão anterior do site (que
+     não manda `pd`) continua valendo. */
   var pv = numero(bruto.pv, false);
-  var pe = numero(bruto.pe, false);
+  var pd = numero(bruto.pd, true);
+  var pe = numero(bruto.pe, pd !== null && pd !== undefined);
   var san = numero(bruto.san, true);
-  if (pv === undefined || pe === undefined || san === undefined) return null;
+  if (pv === undefined || pe === undefined || san === undefined || pd === undefined) return null;
 
-  return { versao: 1, pv: pv, pe: pe, san: san };
+  return { versao: 1, pv: pv, pe: pe, san: san, pd: pd };
 }
 
 /* O resumo que vai gravado com a ficha. Ficha que não é de Ordem não tem

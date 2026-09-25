@@ -365,6 +365,9 @@
   }
 
   function editandoAlgo() {
+    /* Um arraste em andamento é edição: redesenhar agora tiraria o item
+       da mão de quem arrasta (v2.19). */
+    if (global.RAMAArrastar && global.RAMAArrastar.arrastando()) return true;
     var ativo = document.activeElement;
     if (!ativo || ativo === document.body) return false;
     return /^(INPUT|TEXTAREA|SELECT)$/.test(ativo.tagName) || ativo.isContentEditable;

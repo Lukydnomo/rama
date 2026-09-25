@@ -134,17 +134,22 @@
     var org = global.RAMAOrdemOrganizacao;
     var modo = org ? org.modo(ctx, "rituais") : "personalizada";
     var lista = U.ordenarLista(rituais.itens, modo);
+    var criterios = org && O() ? org.criterios(ctx) : [];
+    var arrastar = org ? org.podeArrastar(ctx, "rituais") : ctx.emEdicao();
 
     var partes = [org ? org.barra(ctx, "rituais") : null, painelDoAprendizado(ctx, est)];
+    var raiz;
     if (!apr) {
-      return el("div.pilha--curta", { class: "pilha" }, partes.concat(lista.map(function (r) { return cartao(ctx, r, modo, null); })));
+      raiz = el("div.pilha--curta", { class: "pilha" }, partes.concat(listaAgrupada(ctx, "rituais", lista, criterios, modo, null, arrastar)));
+      return ligarArraste(ctx, raiz, arrastar);
     }
 
     /* Três lugares, e não três etiquetas: o que o personagem CONHECE, o
        que está no GRIMÓRIO (outra condição de uso, OPRPG p.35) e o que é
        só REGISTRO na ficha, para consulta. Um ritual conta como
        conhecido quando alguma aquisição o reivindica — nunca pelo nome,
-       nunca por estar na ficha. */
+       nunca por estar na ficha. Agrupar por círculo e elemento acontece
+       DENTRO de cada lugar, e arrastar não troca um ritual de lugar. */
     var conhecidos = [];
     var grimorio = [];
     var registros = [];
@@ -157,12 +162,12 @@
     var separar = grimorio.length || registros.length;
 
     if (conhecidos.length && separar) partes.push(el("h3.t-rotulo", { texto: "Conhecidos (" + conhecidos.length + ")" }));
-    conhecidos.forEach(function (r) { partes.push(cartao(ctx, r, modo, apr)); });
+    partes = partes.concat(listaAgrupada(ctx, "conhecidos", conhecidos, criterios, modo, apr, arrastar));
 
     if (grimorio.length) {
       partes.push(el("h3.t-rotulo", { texto: "Grimório (" + grimorio.length + ")" }));
       partes.push(el("p.t-mini", { texto: RT() ? RT().condicoesDoDestino("grimorio").join(" ") : "" }));
-      grimorio.forEach(function (r) { partes.push(cartao(ctx, r, modo, apr)); });
+      partes = partes.concat(listaAgrupada(ctx, "grimorio", grimorio, criterios, modo, apr, arrastar));
     }
 
     if (registros.length) {
@@ -180,10 +185,79 @@
                  "(Sobrevivendo ao Horror, p. 117). Tentar não é aprender.",
         }));
       }
-      registros.forEach(function (r) { partes.push(cartao(ctx, r, modo, apr)); });
+      partes = partes.concat(listaAgrupada(ctx, "registros", registros, criterios, modo, apr, arrastar));
     }
 
-    return el("div.pilha--curta", { class: "pilha" }, partes);
+    raiz = el("div.pilha--curta", { class: "pilha" }, partes);
+    return ligarArraste(ctx, raiz, arrastar);
+  }
+
+  function O() { return global.RAMAOrganizar || null; }
+  function A() { return global.RAMAArrastar || null; }
+
+  /* Uma seção (Conhecidos, Grimório, Registros — ou a lista inteira da
+     ficha universal), agrupada pelos critérios. Cada grupo é uma lista
+     de arraste separada: o ritual só se move dentro do grupo em que o
+     círculo e o elemento dele o puseram. */
+  function listaAgrupada(ctx, secao, itens, criterios, modo, apr, arrastar) {
+    if (!itens.length) return [];
+    var grupos = O() ? O().agruparRituais(itens, criterios) : [{ chave: "", rotulo: "", itens: itens, subgrupos: null }];
+    var saida = [];
+    grupos.forEach(function (g) {
+      if (g.rotulo) saida.push(el("h4.rituais-grupo", { texto: g.rotulo + " (" + g.itens.length + ")" }));
+      if (g.subgrupos) {
+        g.subgrupos.forEach(function (s) {
+          saida.push(el("h5.rituais-subgrupo", { texto: s.rotulo + " (" + s.itens.length + ")" }));
+          saida.push(listaDeArraste(ctx, secao + "|" + s.chave, s.itens, modo, apr, arrastar));
+        });
+      } else {
+        saida.push(listaDeArraste(ctx, secao + "|" + g.chave, g.itens, modo, apr, arrastar));
+      }
+    });
+    return saida;
+  }
+
+  function listaDeArraste(ctx, chave, itens, modo, apr, arrastar) {
+    var ids = itens.map(function (r) { return r.id; });
+    return el("div.pilha--curta.rituais-lista", { class: "pilha", dataset: { arrastarLista: chave } }, itens.map(function (r) {
+      var c = cartao(ctx, r, modo, apr, { visiveis: ids, arrastar: arrastar });
+      c.dataset.arrastarItem = r.id;
+      c.dataset.arrastarRotulo = r.nome || "Ritual";
+      return c;
+    }));
+  }
+
+  /* O lugar e o grupo de um ritual vêm do que ele é — aquisição, círculo,
+     elemento. Arrastar muda só a ordem entre os vizinhos do mesmo grupo. */
+  function ligarArraste(ctx, raiz, arrastar) {
+    if (!arrastar || !A() || !O()) return raiz;
+    function visiveisDe(chave) {
+      var lista = raiz.querySelector('[data-arrastar-lista="' + (global.CSS && CSS.escape ? CSS.escape(chave) : chave) + '"]');
+      return lista ? Array.prototype.map.call(lista.children, function (x) { return x.dataset.arrastarItem; }).filter(Boolean) : [];
+    }
+    function secaoDe(chave) { return String(chave).split("|")[0]; }
+    return A().ligar(raiz, {
+      podeSoltar: function (item, destino) {
+        if (destino.lista === item.lista) return { ok: true };
+        if (secaoDe(destino.lista) !== secaoDe(item.lista)) {
+          return { ok: false, motivo: "Conhecidos, Grimório e Registros não se trocam arrastando: isso muda o aprendizado, e tem regra própria no menu do ritual." };
+        }
+        return { ok: false, motivo: "O grupo vem do círculo e do elemento do ritual. Arrastar muda só a ordem dentro do grupo." };
+      },
+      aoSoltar: function (item, destino) {
+        if (!O().reposicionar(ctx.ficha.rituais.itens, item.id, destino.indice, visiveisDe(destino.lista))) return;
+        ctx.alterou();
+        ctx.redesenhar();
+      },
+      aoTeclado: function (item, direcao) {
+        if (!O().passo(ctx.ficha.rituais.itens, item.id, direcao, visiveisDe(item.lista))) {
+          return { ok: false, motivo: direcao < 0 ? "Já é o primeiro do grupo." : "Já é o último do grupo." };
+        }
+        ctx.alterou();
+        ctx.redesenhar();
+        return { ok: true };
+      },
+    });
   }
 
   /* =================================================================
@@ -276,7 +350,8 @@
     return el("div.rituais-aprendizado", {}, linhas.concat(botoes.length ? [el("div.faixa", {}, botoes)] : []));
   }
 
-  function cartao(ctx, ritual, modo, apr) {
+  function cartao(ctx, ritual, modo, apr, lugar) {
+    var l = lugar || {};
     var rotulos = ctx.ficha.rituais.rotulos;
     var vindo = apr ? apr.porRitual[ritual.id] : null;
     var substituido = apr ? apr.substituidos[ritual.id] : null;
@@ -366,9 +441,10 @@
       ].concat(acoesDeAprendizado)
        .concat(modo && modo !== "personalizada" ? [] : [
         /* Subir e Descer mexem na ordem guardada: com a tela ordenada
-           por nome ou por adição, não mudariam nada visível. */
-        { rotulo: "Subir", aoClicar: function () { reordenar(ctx, ritual, -1); } },
-        { rotulo: "Descer", aoClicar: function () { reordenar(ctx, ritual, 1); } },
+           por nome ou por adição, não mudariam nada visível. Entre os
+           VIZINHOS DO GRUPO, como o arraste. */
+        { rotulo: "Subir", aoClicar: function () { reordenar(ctx, ritual, -1, l.visiveis); } },
+        { rotulo: "Descer", aoClicar: function () { reordenar(ctx, ritual, 1, l.visiveis); } },
       ], [
         "separador",
         { rotulo: "Remover", perigo: true, aoClicar: function () { remover(ctx, ritual); } },
@@ -389,6 +465,7 @@
         ? [el("dl.r-dados", {}, linhas)]
         : [el("p.t-mini", { texto: "Sem informações preenchidas." })],
       acoes: acoes,
+      alca: l.arrastar && A() ? A().alca({ id: ritual.id, rotulo: ritual.nome }) : null,
       faixa: faixaDeDanos(ctx, ritual),
     });
   }
@@ -873,8 +950,17 @@
     ctx.redesenhar();
   }
 
-  function reordenar(ctx, ritual, direcao) {
+  /* Com `visiveis` (os vizinhos do mesmo grupo na tela), troca com o
+     vizinho visível — a mesma conta do arraste. Sem ela, com o da lista
+     guardada, como sempre foi. */
+  function reordenar(ctx, ritual, direcao, visiveis) {
     var itens = ctx.ficha.rituais.itens;
+    if (visiveis && O()) {
+      if (!O().passo(itens, ritual.id, direcao, visiveis)) return;
+      ctx.alterou();
+      ctx.redesenhar();
+      return;
+    }
     var i = U.indiceDe(itens, ritual.id);
     var destino = i + direcao;
     if (i < 0 || destino < 0 || destino >= itens.length) return;

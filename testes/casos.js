@@ -1922,7 +1922,10 @@
 
         var semSan = JSON.parse(JSON.stringify(listadoMari));
         semSan.ordem.opcionais = { semSanidade: true };
-        t.igual("com “Jogando sem Sanidade”, a Sanidade não aparece", PMs.resumir(semSan).recursos.map(function (r) { return r.rotulo; }).join(","), "PV,PE");
+        /* Até a v2.18 a regra só escondia a Sanidade. Pelo livro, PE e
+           Sanidade viram pontos de determinação (SAH p.104). */
+        t.igual("com “Jogando sem Sanidade”, o cartão mostra PV e PD (PE e Sanidade viraram PD)",
+          PMs.resumir(semSan).recursos.map(function (r) { return r.rotulo; }).join(","), "PV,PD");
 
         var nivelado = JSON.parse(JSON.stringify(listadoMari));
         nivelado.ordem.opcionais = { nexExperiencia: true };
@@ -4362,10 +4365,10 @@
          O schema subiu para 9 SEM converter nada: é o que faz uma aba
          aberta na versão anterior recusar a ficha, em vez de gravar por
          cima dela sem esses dados. */
-      t.igual("o schema da ficha é 9", APf.VERSAO_SCHEMA, 9);
+      t.ok("o schema da ficha subiu para guardar os campos novos (9 na v2.18, 10 na v2.19)", APf.VERSAO_SCHEMA >= 9);
       var sc8 = APf.normalizarFicha({ nome: "Ficha 8", schemaVersion: 8, tipoFicha: "ordem", ordem: { classe: "ocultista", nex: 20 } });
-      t.ok("  uma ficha 8 abre igual, com a lista de registros vazia, e sai no schema 9",
-        sc8.schemaVersion === 9 && Array.isArray(sc8.ordem.registrosDeRitual) && !sc8.ordem.registrosDeRitual.length &&
+      t.ok("  uma ficha 8 abre igual, com a lista de registros vazia, e sai no schema atual",
+        sc8.schemaVersion === APf.VERSAO_SCHEMA && Array.isArray(sc8.ordem.registrosDeRitual) && !sc8.ordem.registrosDeRitual.length &&
         sc8.ordem.classe === "ocultista" && sc8.ordem.nex === 20);
 
       if (V) {
@@ -4438,6 +4441,17 @@
       paO.opcionais = { evolucaoPatentes: true };
       t.ok("com Evolução por Patentes, a ficha avisa que o trilho por patente não é calculado",
         APe.estado(paO, { rituais: [] }).rituais.avisos.some(function (a) { return /dois a cada nova patente/.test(a); }));
+    }
+
+    /* =================================================================
+       v2.19 — CONDIÇÕES, DETERMINAÇÃO E ORGANIZAÇÃO
+       ================================================================= */
+
+    var CDs = global.RAMAOrdemCondicoes;
+    var RRs = global.RAMAOrdemRegras;
+    var ORG = global.RAMAOrganizar;
+    if (CDs && RRs && ORG && S && H) {
+      casosDaV219(t, CDs, RRs, ORG, S, H, V);
     }
 
     /* =================================================================
@@ -4640,6 +4654,481 @@
       t.ok("ownerId de fora é descartado", bom.dados.ownerId === undefined || bom.dados.ownerId === "");
       t.ok("token de fora é descartado", bom.dados.token === undefined);
       t.ok("id de fora é descartado", bom.dados.id === undefined || bom.dados.id !== "ID-ANTIGO");
+    }
+  }
+
+  /* =====================================================================
+     v2.19 — condições por turno, pontos de determinação e organização
+     ===================================================================== */
+
+  function casosDaV219(t, CD, R, O, S, H, V) {
+    function nomes(lista) { return lista.map(function (x) { return x.id; }).join(""); }
+
+    /* ---------------------------------------------------------------- */
+    t.grupo("Condições · morrendo (Ordem Paranormal RPG, p. 88)");
+
+    var c1 = CD.vazio();
+    var e0 = CD.estado(c1, "morrendo");
+    t.ok("começa sem nada ativo, sem contagem e com o limite do livro",
+      !e0.ativa && e0.contagem === 0 && e0.limite === 3 && !c1.inconsciente.ativa);
+
+    var dano = CD.aplicarAcao("pv", "dano", { cond: c1, atual: 5, maximo: 20, valor: 7 });
+    t.ok("dano que leva o PV a 0 deixa inconsciente e morrendo",
+      dano.ok && c1.morrendo.ativa && c1.inconsciente.ativa && /OPRPG p\. 88/.test(dano.mensagens.join(" ")));
+    t.igual("  não existem PV negativos: o dano para em 0", dano.valor, 0);
+    t.ok("  dano com o PV já em 0 não é uma redução nova",
+      !CD.aplicarAcao("pv", "dano", { cond: c1, atual: 0, maximo: 20, valor: 3 }).mudouCondicao);
+
+    CD.somarInicio(c1, "morrendo");
+    t.igual("um início de turno morrendo conta 1 de 3", CD.contagem(c1, "morrendo"), 1);
+    var cura = CD.aplicarAcao("pv", "cura", { cond: c1, atual: 0, maximo: 20, valor: 1 });
+    t.ok("curar 1 PV encerra a inconsciência", cura.ok && cura.valor === 1 && !c1.inconsciente.ativa);
+    t.ok("  e NÃO encerra morrendo", c1.morrendo.ativa && /Medicina/.test(cura.mensagens.join(" ")));
+    CD.encerrar(c1, "morrendo");
+    t.ok("encerrar (o teste de Medicina, rolado por quem joga) para a condição", !c1.morrendo.ativa);
+    t.igual("  sem apagar o turno já contado nesta cena", CD.contagem(c1, "morrendo"), 1);
+    t.ok("  e, inativa, um início de turno não conta",
+      !CD.somarInicio(c1, "morrendo").mudou && CD.contagem(c1, "morrendo") === 1);
+    CD.aplicarAcao("pv", "dano", { cond: c1, atual: 1, maximo: 20, valor: 5 });
+    CD.somarInicio(c1, "morrendo");
+    CD.somarInicio(c1, "morrendo");
+    var e3 = CD.estado(c1, "morrendo");
+    t.ok("voltando a morrer na mesma cena, a conta continua: 3 de 3, não consecutivos",
+      e3.ativa && e3.contagem === 3 && e3.atingiu);
+    t.ok("  o resultado é o da regra, sem apagar nada", /morre/.test(e3.resultado) && /nada é apagado/.test(e3.resultado));
+    t.ok("  e a contagem não passa do limite",
+      !CD.somarInicio(c1, "morrendo").mudou && CD.contagem(c1, "morrendo") === 3);
+    CD.corrigirMenos(c1, "morrendo");
+    t.igual("−1 corrige a contagem", CD.contagem(c1, "morrendo"), 2);
+    CD.novaCena(c1);
+    t.ok("nova cena zera a contagem e mantém a condição",
+      CD.contagem(c1, "morrendo") === 0 && c1.morrendo.ativa && !!c1.cena.id);
+
+    var fichaPv0 = R.normalizar({ classe: "combatente", nex: 5, recursos: { pv: 0 } });
+    t.ok("uma ficha aberta com PV 0 não passa a morrer sozinha",
+      !fichaPv0.condicoes.morrendo.ativa && !fichaPv0.condicoes.inconsciente.ativa);
+
+    /* ---------------------------------------------------------------- */
+    t.grupo("Condições · enlouquecendo e Sanidade");
+
+    var c2 = CD.vazio();
+    var dm = CD.aplicarAcao("san", "danoMental", { cond: c2, atual: 4, maximo: 30, valor: 4 });
+    t.ok("dano mental que leva a Sanidade a 0 deixa enlouquecendo", dm.ok && dm.valor === 0 && c2.enlouquecendo.ativa);
+    CD.somarInicio(c2, "enlouquecendo");
+    CD.somarInicio(c2, "enlouquecendo");
+    CD.somarInicio(c2, "enlouquecendo");
+    var eE = CD.estado(c2, "enlouquecendo");
+    t.ok("três inícios de turno: insano, NPC do mestre — e a ficha continua de quem é",
+      eE.atingiu && /NPC/.test(eE.resultado) && /continua de quem é/.test(eE.resultado));
+    var rec = CD.aplicarAcao("san", "recuperar", { cond: c2, atual: 0, maximo: 30, valor: 1 });
+    t.ok("curar 1 de Sanidade encerra enlouquecendo", rec.ok && !c2.enlouquecendo.ativa);
+    t.igual("  a contagem da cena fica guardada", CD.contagem(c2, "enlouquecendo"), 3);
+    CD.ativar(c2, "enlouquecendo");
+    t.ok("  e, se ele voltar, continua de onde estava", CD.estado(c2, "enlouquecendo").atingiu);
+    t.ok("recuperar não passa do máximo", CD.aplicarAcao("san", "recuperar", { cond: c2, atual: 29, maximo: 30, valor: 9 }).valor === 30);
+
+    /* ---------------------------------------------------------------- */
+    t.grupo("Determinação · Jogando sem Sanidade (SAH p.104-105)");
+
+    function comPd(classe, nex, pre, extra) {
+      return R.normalizar(Object.assign({
+        classe: classe, nex: nex, origem: "academico",
+        atributos: { agi: 1, for: 1, int: 1, pre: pre, vig: 1 },
+        opcionais: { semSanidade: true },
+      }, extra || {}));
+    }
+    t.iguais("PD iniciais por classe: 6, 8 e 10 + Presença",
+      [R.determinacao(comPd("combatente", 5, 2)).total, R.determinacao(comPd("especialista", 5, 2)).total,
+       R.determinacao(comPd("ocultista", 5, 2)).total], [8, 10, 12]);
+    t.iguais("  e a cada NEX: 3, 4 e 5 + Presença",
+      [R.determinacao(comPd("combatente", 10, 2)).total, R.determinacao(comPd("especialista", 10, 2)).total,
+       R.determinacao(comPd("ocultista", 10, 2)).total], [13, 16, 19]);
+
+    var pdF = comPd("combatente", 5, 2);
+    var pdC = R.calcular(pdF, { itens: [] });
+    var pdR = R.resumoDeRecursos(pdF);
+    t.ok("com a regra, a ficha calcula PD e o resumo da mesa traz PD no lugar de PE e SAN",
+      pdC.determinacao && pdC.pd.total === 8 && pdR.pd === 8 && pdR.pe === null && pdR.san === null);
+    var semPd = R.normalizar({ classe: "combatente", nex: 5, atributos: { agi: 1, for: 1, int: 1, pre: 2, vig: 1 } });
+    t.ok("sem a regra, nada de PD", !R.calcular(semPd, { itens: [] }).determinacao && R.resumoDeRecursos(semPd).pd === null);
+
+    var pdUniv = comPd("ocultista", 5, 2, { origem: "universitario" });
+    t.igual("o que soma PE soma PD (Dedicação, do Universitário)", R.determinacao(pdUniv).total, 13);
+    var pdVitima = comPd("ocultista", 5, 2, { origem: "vitima" });
+    t.igual("  o que soma Sanidade não soma PD (Vítima)", R.determinacao(pdVitima).total, 12);
+    var pdAjuste = comPd("combatente", 5, 2);
+    pdAjuste.ajustes = [R.criarAjuste("pe", 2, "Ajuste da mesa nos PE"), R.criarAjuste("san", 5, "Ajuste da mesa na Sanidade")];
+    t.igual("  e o ajuste da mesa nos PE também vale para PD; o da Sanidade, não", R.determinacao(pdAjuste).total, 10);
+
+    var guardado = R.normalizar({ classe: "combatente", nex: 5, recursos: { pv: 10, pe: 3, san: 7, pd: 4 }, opcionais: { semSanidade: true } });
+    var desligado = R.normalizar(Object.assign({}, guardado, { opcionais: {} }));
+    t.iguais("ligar e desligar a regra preserva PE, SAN e PD guardados",
+      [desligado.recursos.pe, desligado.recursos.san, desligado.recursos.pd], [3, 7, 4]);
+
+    var cP = CD.vazio();
+    var gasto = CD.aplicarAcao("pd", "gastar", { cond: cP, atual: 4, maximo: 10, valor: 4, pd: true });
+    t.ok("gastar PD até 0 para pagar custos não causa perturbado nem enlouquecendo",
+      gasto.ok && gasto.valor === 0 && !cP.enlouquecendo.ativa && !cP.perturbado.ativa);
+    t.ok("  gastar mais do que tem é recusado", !CD.aplicarAcao("pd", "gastar", { cond: cP, atual: 2, maximo: 10, valor: 3, pd: true }).ok);
+    var dmOk = CD.aplicarAcao("pd", "danoMental", { cond: cP, atual: 8, maximo: 10, valor: 2, pd: true });
+    t.ok("dano mental que deixa os PD na metade ou mais não causa nada",
+      dmOk.valor === 6 && !cP.perturbado.ativa && !cP.enlouquecendo.ativa);
+    var dmMeio = CD.aplicarAcao("pd", "danoMental", { cond: cP, atual: 6, maximo: 10, valor: 2, pd: true });
+    t.ok("dano mental que deixa os PD abaixo da metade: perturbado (SAH p.104)",
+      dmMeio.valor === 4 && cP.perturbado.ativa && !cP.enlouquecendo.ativa);
+    var dmIgual = CD.vazio();
+    CD.aplicarAcao("pd", "danoMental", { cond: dmIgual, atual: 4, maximo: 10, valor: 4, pd: true });
+    t.ok("dano mental IGUAL aos PD atuais não deixa enlouquecendo — o livro diz maior", !dmIgual.enlouquecendo.ativa);
+    var dmMaior = CD.aplicarAcao("pd", "danoMental", { cond: cP, atual: 4, maximo: 10, valor: 5, pd: true });
+    t.ok("dano mental maior que os PD atuais: enlouquecendo (SAH p.105)",
+      dmMaior.valor === 0 && cP.enlouquecendo.ativa && /SAH p\. 105/.test(dmMaior.mensagens.join(" ")));
+    CD.aplicarAcao("pd", "recuperar", { cond: cP, atual: 0, maximo: 10, valor: 1, pd: true });
+    t.ok("recuperar 1 PD encerra enlouquecendo", !cP.enlouquecendo.ativa && cP.perturbado.ativa);
+    CD.aplicarAcao("pd", "recuperar", { cond: cP, atual: 1, maximo: 10, valor: 5, pd: true });
+    t.ok("  e voltar à metade encerra perturbado", !cP.perturbado.ativa);
+    t.ok("ação que não existe para o recurso é recusada", !CD.aplicarAcao("pd", "cura", { cond: cP, atual: 1, maximo: 10, valor: 1 }).ok);
+
+    /* ---------------------------------------------------------------- */
+    t.grupo("Condições · contadores da mesa, sem regra inventada");
+
+    var cM = CD.vazio();
+    var ex = CD.estado(cM, "exaustao");
+    t.ok("começam desligados, sem limite e com ativação à mão", !ex.usar && ex.limite === null && ex.ativacao === "manual");
+    t.ok("  desligado, não ativa", !CD.ativar(cM, "exaustao").mudou && !cM.mesa.exaustao.ativa);
+    CD.configurarDaMesa(cM, "exaustao", { usar: true });
+    CD.ativar(cM, "exaustao");
+    for (var mi = 0; mi < 5; mi++) CD.somarInicio(cM, "exaustao");
+    var exL = CD.estado(cM, "exaustao");
+    t.ok("sem limite definido, não há prazo de três turnos", exL.contagem === 5 && !exL.atingiu);
+    CD.configurarDaMesa(cM, "exaustao", { limite: 5, consequencia: "fica exausto" });
+    var exA = CD.estado(cM, "exaustao");
+    t.ok("com o limite da mesa, chegar a ele só mostra o combinado", exA.atingiu && exA.resultado === "fica exausto");
+    t.ok("  e não mexe em inconsciente, morrendo nem enlouquecendo",
+      !cM.inconsciente.ativa && !cM.morrendo.ativa && !cM.enlouquecendo.ativa);
+    t.ok("limite fora de 1 a 20 vira sem limite", CD.normalizar({ mesa: { desmaio: { usar: true, limite: 50 } } }).mesa.desmaio.limite === null);
+    var cZ = CD.vazio();
+    CD.configurarDaMesa(cZ, "desmaio", { usar: true, ativacao: "recursoZero" });
+    CD.aplicarAcao("pe", "gastar", { cond: cZ, atual: 3, maximo: 5, valor: 3 });
+    t.ok("com a ativação escolhida pela mesa, gastar até 0 ativa o contador", cZ.mesa.desmaio.ativa);
+    var cManual = CD.vazio();
+    CD.configurarDaMesa(cManual, "desmaio", { usar: true });
+    CD.aplicarAcao("pe", "gastar", { cond: cManual, atual: 3, maximo: 5, valor: 3 });
+    t.ok("  com a ativação à mão (o padrão), gastar até 0 não ativa nada", !cManual.mesa.desmaio.ativa);
+    CD.somarInicio(cZ, "desmaio");
+    CD.configurarDaMesa(cZ, "desmaio", { usar: false });
+    t.ok("desligar o contador não apaga os turnos já contados", !cZ.mesa.desmaio.ativa && cZ.mesa.desmaio.eventos.length === 1);
+
+    /* ---------------------------------------------------------------- */
+    t.grupo("Condições · início de turno do combate, uma vez só");
+
+    var cC = CD.vazio();
+    var ev1 = { id: CD.idDoTurno("comb-1", 2, "pt-a"), combate: "comb-1", rodada: 2 };
+    t.igual("o id do evento é o do próprio turno", ev1.id, "cb:comb-1:2:pt-a");
+    t.igual("inativa, o início de turno não conta", CD.registrarInicioDeTurno(cC, ev1).length, 0);
+    CD.ativar(cC, "morrendo");
+    t.ok("ativa, conta", CD.registrarInicioDeTurno(cC, ev1).indexOf("morrendo") >= 0 && CD.contagem(cC, "morrendo") === 1);
+    CD.registrarInicioDeTurno(cC, ev1);
+    t.igual("  o mesmo turno de novo — outra aba, recarga, mestre e jogador — conta uma vez", CD.contagem(cC, "morrendo"), 1);
+    CD.somarInicio(cC, "morrendo");
+    CD.retirarInicioDeTurno(cC, ev1.id);
+    t.igual("voltar turno tira só o evento do turno desfeito; a correção à mão fica", CD.contagem(cC, "morrendo"), 1);
+    CD.registrarInicioDeTurno(cC, ev1);
+    t.igual("  e o turno, retomado, volta a contar uma vez", CD.contagem(cC, "morrendo"), 2);
+    CD.corrigirMenos(cC, "morrendo");
+    CD.registrarInicioDeTurno(cC, ev1);
+    t.igual("um evento do combate tirado à mão não volta a contar", CD.contagem(cC, "morrendo"), 1);
+    cC.integrarCombate = false;
+    t.igual("sem a integração, o combate não conta", CD.registrarInicioDeTurno(cC, { id: CD.idDoTurno("comb-1", 3, "pt-a") }).length, 0);
+    var pub = CD.resumoPublico(cC);
+    t.ok("o resumo público traz a condição ativa com a contagem",
+      pub.some(function (x) { return x.chave === "morrendo" && x.ativa && x.contagem === 1 && x.limite === 3; }) &&
+      pub.some(function (x) { return x.chave === "inconsciente"; }));
+    t.igual("  e uma ficha sem nada ativo não mostra nada", CD.resumoPublico(CD.vazio()).length, 0);
+
+    /* ---------------------------------------------------------------- */
+    t.grupo("Organizar · mover é o mesmo objeto, e o filtro não embaralha");
+
+    var la = [{ id: "a" }, { id: "b" }, { id: "c" }, { id: "d" }, { id: "e" }];
+    var objC = la[2];
+    O.reposicionar(la, "c", 0);
+    t.igual("reposicionar leva o item à posição", nomes(la), "cabde");
+    t.ok("  é o mesmo objeto, não uma cópia", la[0] === objC);
+    var lf = [{ id: "a" }, { id: "b" }, { id: "c" }, { id: "d" }, { id: "e" }];
+    O.reposicionar(lf, "e", 0, ["b", "d", "e"]);
+    t.igual("com filtro, o item vai para antes do vizinho visível; os ocultos não trocam entre si", nomes(lf), "aebcd");
+    var lg = [{ id: "a" }, { id: "b" }, { id: "c" }, { id: "d" }, { id: "e" }];
+    O.reposicionar(lg, "b", 2, ["b", "d", "e"]);
+    t.igual("  e para o fim dos visíveis, logo depois do último deles", nomes(lg), "acdeb");
+    var lp = [{ id: "a" }, { id: "b" }, { id: "c" }, { id: "d" }, { id: "e" }];
+    O.passo(lp, "d", -1, ["b", "d", "e"]);
+    t.igual("um passo para cima troca com o vizinho VISÍVEL", nomes(lp), "adbce");
+    t.ok("  o primeiro não sobe", !O.passo(lp, "a", -1));
+    var chaves = ["luta", "crime", "artes"];
+    O.reposicionar(chaves, "artes", 0);
+    t.igual("funciona também com uma lista de chaves", chaves.join(","), "artes,luta,crime");
+
+    /* ---------------------------------------------------------------- */
+    t.grupo("Organizar · pastas sem ciclo nem profundidade demais");
+
+    var h1 = H.criarHabilidade({ nome: "Um" });
+    var h2 = H.criarHabilidade({ nome: "Dois" });
+    var h3 = H.criarHabilidade({ nome: "Três", texto: "texto intacto", cor: "#C6564B" });
+    var p2 = H.criarPasta("Interna");
+    p2.filhos.push(h2);
+    var p1 = H.criarPasta("Externa");
+    p1.filhos.push(h1, p2);
+    var arv = { filhos: [p1, h3] };
+    t.ok("uma pasta não entra em si mesma", /si mesma/.test(O.podeMoverNaArvore(arv, p1.id, p1.id).motivo));
+    t.ok("  nem numa pasta que está dentro dela", /dentro dela/.test(O.podeMoverNaArvore(arv, p1.id, p2.id).motivo));
+    var mv = O.moverNaArvore(arv, h3.id, p2.id, 0);
+    t.ok("mover para dentro de uma pasta, na posição pedida", mv.ok && p2.filhos[0] === h3 && arv.filhos.length === 1);
+    t.ok("  com id, texto e cor intactos", p2.filhos[0].id === h3.id && h3.texto === "texto intacto" && h3.cor === "#C6564B");
+    O.moverNaArvore(arv, h2.id, "", 1);
+    t.ok("tirar da pasta para a raiz", arv.filhos[1] === h2 && p2.filhos.indexOf(h2) < 0);
+    var fundo = { filhos: [] };
+    var atual = fundo;
+    var pastas = [];
+    for (var nv = 0; nv < 6; nv++) {
+      var pn = H.criarPasta("Nível " + nv);
+      if (atual === fundo) fundo.filhos.push(pn); else atual.filhos.push(pn);
+      pastas.push(pn);
+      atual = pn;
+    }
+    var alta = H.criarPasta("Alta");
+    var altaDentro = H.criarPasta("Dentro");
+    altaDentro.filhos.push(H.criarHabilidade({ nome: "Funda" }));
+    alta.filhos.push(altaDentro);
+    fundo.filhos.push(alta);
+    t.ok("uma pasta com subpastas não vai para onde passaria do teto de profundidade",
+      /fundo demais/.test(O.podeMoverNaArvore(fundo, alta.id, pastas[4].id).motivo));
+    t.ok("  e a janela Mover, do menu, também não oferece esse destino (antes oferecia)",
+      !H.destinosPossiveis(fundo, alta.id).some(function (d) { return d.id === pastas[4].id; }) &&
+      H.destinosPossiveis(fundo, alta.id).some(function (d) { return d.id === pastas[2].id; }));
+
+    /* ---------------------------------------------------------------- */
+    t.grupo("Organizar · notas entre pastas");
+
+    var n1 = S.criarNota("Primeira");
+    n1.conteudo = "conteúdo que não pode sumir";
+    var n2 = S.criarNota("Segunda");
+    var n3 = S.criarNota("Solta");
+    var an = { pastas: [{ id: "pa", nome: "A", notas: [n1, n2] }, { id: "pb", nome: "B", notas: [] }], soltas: [n3] };
+    t.ok("uma nota vai para outra pasta, o mesmo objeto",
+      O.moverNota(an, n1.id, "pb", 0).ok && an.pastas[1].notas[0] === n1 && an.pastas[0].notas.indexOf(n1) < 0);
+    t.igual("  com o conteúdo intacto", an.pastas[1].notas[0].conteudo, "conteúdo que não pode sumir");
+    O.moverNota(an, n2.id, null, 0);
+    t.ok("sai da pasta para as soltas, na posição pedida", an.soltas[0] === n2 && an.pastas[0].notas.length === 0);
+    t.ok("pasta que não existe é recusada, sem mexer em nada",
+      !O.moverNota(an, n3.id, "fantasma", 0).ok && an.soltas.indexOf(n3) >= 0);
+
+    /* ---------------------------------------------------------------- */
+    t.grupo("Organizar · habilidades das regras dentro das pastas");
+
+    var hx = H.criarHabilidade({ nome: "Da mesa X" });
+    var hy = H.criarHabilidade({ nome: "Da mesa Y" });
+    var pa = H.criarPasta("Pasta A");
+    pa.filhos.push(hx);
+    var arvR = { filhos: [pa, hy] };
+    var org = { lugares: {}, ordem: {} };
+    function regrasDe(pid) {
+      return ["r1", "r2"].filter(function (r) { return (org.lugares[r] || "") === (pid || ""); });
+    }
+    function lugar(r) { return org.lugares[r] || ""; }
+    function entradasRaiz() {
+      return O.entradasDoConteiner(arvR.filhos, regrasDe(""), org.ordem["*"], true).map(function (e) { return e.id; });
+    }
+    t.igual("sem nada guardado, a raiz mostra as das regras antes (o de sempre)", entradasRaiz().join(","), ["r1", "r2", pa.id, hy.id].join(","));
+    var ctxR = { arvore: arvR, org: org, regrasDe: regrasDe, pastaDaRegra: lugar };
+    O.moverNaApresentacao(ctxR, { tipo: "regra", id: "r2" }, pa.id, 1);
+    t.igual("arrastar uma das regras para a pasta guarda só o lugar", org.lugares.r2, pa.id);
+    t.igual("  e ela aparece lá, na posição", O.entradasDoConteiner(pa.filhos, regrasDe(pa.id), org.ordem[pa.id], false)
+      .map(function (e) { return e.id; }).join(","), [hx.id, "r2"].join(","));
+    t.ok("  sem virar habilidade da mesa: a árvore não ganhou nó", H.contar(arvR).habilidades === 2);
+    O.moverNaApresentacao(ctxR, { tipo: "no", id: hy.id }, "", 0);
+    t.igual("um nó da mesa movido na raiz vai para o começo, antes das regras", entradasRaiz().join(","), [hy.id, "r1", pa.id].join(","));
+    t.ok("  e a árvore segue a mesma ordem", arvR.filhos[0] === hy && arvR.filhos[1] === pa);
+    var fora = O.moverNaApresentacao(ctxR, { tipo: "no", id: pa.id }, pa.id, 0);
+    t.ok("uma pasta não entra em si mesma nem pela apresentação", !fora.ok);
+
+    /* ---------------------------------------------------------------- */
+    t.grupo("Organizar · rituais por círculo e elemento");
+
+    function rit(nome, circulo, elemento, texto) {
+      return S.criarRitual(S.normalizarRitual({ nome: nome, elemento: texto || "", ordem: circulo || elemento ? { circulo: circulo, elemento: elemento } : undefined }));
+    }
+    var rs = [
+      rit("Tecer Ilusão", 2, "conhecimento"),
+      rit("Luz", 1, "energia"),
+      rit("Arma Atroz", 1, "sangue"),
+      rit("Voz do Vazio", 3, "", "Vazio"),
+      rit("3º Círculo no nome", 0, "", ""),
+      rit("Elemento escrito", 1, "", "Energia"),
+      rit("Dois elementos", 2, "", "Sangue ou Morte"),
+    ];
+    var base = rs.map(function (r) { return r.id; }).join(",");
+    var semC = O.agruparRituais(rs, []);
+    t.ok("sem critério, um grupo só, na ordem de antes", semC.length === 1 && semC[0].itens.map(function (r) { return r.id; }).join(",") === base);
+    var porC = O.agruparRituais(rs, ["circulo"]);
+    t.iguais("por círculo: numérico, e sem dados no fim", porC.map(function (g) { return g.rotulo; }),
+      ["1º círculo", "2º círculo", "3º círculo", "Círculo não informado"]);
+    t.iguais("  dentro do grupo, a ordem de base (personalizada, A–Z…) desempata", porC[0].itens.map(function (r) { return r.nome; }),
+      ["Luz", "Arma Atroz", "Elemento escrito"]);
+    t.ok("  o círculo vem dos dados do ritual, nunca do nome", porC[3].itens[0].nome === "3º Círculo no nome");
+    var porE = O.agruparRituais(rs, ["elemento"]);
+    t.iguais("por elemento: os do livro na ordem deles, depois os da mesa, depois o não informado",
+      porE.map(function (g) { return g.rotulo; }), ["Conhecimento", "Energia", "Sangue", "Sangue ou Morte", "Vazio", "Elemento não informado"]);
+    t.ok("  o texto do campo Elemento que é o nome de um elemento conta como ele",
+      porE[1].itens.map(function (r) { return r.nome; }).indexOf("Elemento escrito") >= 0);
+    var soma = 0;
+    porE.forEach(function (g) { soma += g.itens.length; });
+    t.igual("  cada ritual aparece uma vez só, mesmo com dois elementos no texto", soma, rs.length);
+    var ambos = O.agruparRituais(rs, ["circulo", "elemento"]);
+    t.ok("círculo e, dentro dele, elemento", ambos[0].rotulo === "1º círculo" &&
+      ambos[0].subgrupos.map(function (s) { return s.rotulo; }).join(",") === "Energia,Sangue");
+    var inverso = O.agruparRituais(rs, ["elemento", "circulo"]);
+    t.ok("elemento e, dentro dele, círculo", inverso[0].rotulo === "Conhecimento" && inverso[0].subgrupos[0].rotulo === "2º círculo");
+    t.igual("agrupar não mexe na lista guardada", rs.map(function (r) { return r.id; }).join(","), base);
+
+    /* ---------------------------------------------------------------- */
+    t.grupo("Organizar · perícias pelo total que a linha mostra");
+
+    var ps = [{ chave: "acrobacia", nome: "Acrobacia" }, { chave: "luta", nome: "Luta" }, { chave: "crime", nome: "Crime" }, { chave: "artes", nome: "Artes" }];
+    var tot = { acrobacia: 0, luta: -4, crime: -3, artes: 0 };
+    function totalDe(p) { return tot[p.chave]; }
+    function ordem(modo, pers) { return O.ordenarPericias(ps, modo, totalDe, pers).map(function (p) { return p.nome; }).join(","); }
+    t.igual("alfabética", ordem("az"), "Acrobacia,Artes,Crime,Luta");
+    t.igual("maior bônus primeiro, com negativos e empate pelo nome", ordem("maior"), "Acrobacia,Artes,Crime,Luta");
+    t.igual("menor bônus primeiro", ordem("menor"), "Luta,Crime,Acrobacia,Artes");
+    t.igual("personalizada pelas chaves; o que não está nela vem depois, pelo nome", ordem("personalizada", ["crime", "acrobacia"]), "Crime,Acrobacia,Artes,Luta");
+    var foraDeOrdem = [{ chave: "luta", nome: "Luta" }, { chave: "artes", nome: "Artes" }, { chave: "acrobacia", nome: "Acrobacia" }];
+    t.igual("  o empate desempata pelo nome mesmo quando a lista chega em outra ordem",
+      O.ordenarPericias(foraDeOrdem, "maior", function () { return 2; }).map(function (p) { return p.nome; }).join(","), "Acrobacia,Artes,Luta");
+    t.igual("  a lista de entrada não muda", ps.map(function (p) { return p.nome; }).join(","), "Acrobacia,Luta,Crime,Artes");
+    var fP = R.normalizar({ classe: "combatente", nex: 5, periciasAjustes: { crime: { extra: -3 }, artes: { extra: 2 } } });
+    var ordReal = O.ordenarPericias(global.RAMAOrdemCatalogo.PERICIAS, "menor", function (p) { return R.bonusDePericia(fP, p.chave, { itens: [] }).total; });
+    t.ok("com a ficha de verdade, o total usado é o de R.bonusDePericia (com o extra)",
+      ordReal[0].chave === "crime" && ordReal[ordReal.length - 1].chave !== "crime");
+
+    /* ---------------------------------------------------------------- */
+    t.grupo("Organização · ficha antiga não muda de ordem");
+
+    var velha = R.normalizar({ organizacao: { rituais: { modo: "az" }, inventario: { modo: "za" } } }).organizacao;
+    t.ok("os modos guardados continuam", velha.rituais.modo === "az" && velha.inventario.modo === "za");
+    t.ok("e o que é novo começa neutro: sem critério, perícias em ordem alfabética, habilidades onde estavam",
+      velha.rituais.criterios.length === 0 && velha.pericias.modo === "az" && !velha.pericias.ordem.length &&
+      !Object.keys(velha.habilidades.lugares).length && !Object.keys(velha.habilidades.ordem).length);
+    var suja = R.normalizar({ organizacao: {
+      rituais: { criterios: ["cor", "circulo", "circulo", "elemento"] },
+      pericias: { modo: "aleatoria", ordem: ["luta", "voar", "luta"] },
+      habilidades: { lugares: { "ok|1": "pasta-1", "mau id!": "x" }, ordem: { "*": ["r:ok|1", "x:ruim"] } },
+    } }).organizacao;
+    t.ok("valores estranhos saem na normalização",
+      suja.rituais.criterios.join(",") === "circulo,elemento" && suja.pericias.modo === "az" &&
+      suja.pericias.ordem.join(",") === "luta" && Object.keys(suja.habilidades.lugares).join(",") === "ok|1" &&
+      suja.habilidades.ordem["*"].join(",") === "r:ok|1");
+
+    /* ---------------------------------------------------------------- */
+    var SY = global.RAMASync;
+    if (SY) {
+      t.grupo("Sincronia · reordenar não atropela o resto");
+
+      var esquema = SY.ESQUEMA_FICHA;
+      var bR = { status: [{ id: "pv", nome: "PV", atual: 10 }], rituais: { itens: [{ id: "a", nome: "A" }, { id: "b", nome: "B" }, { id: "c", nome: "C" }] } };
+      var lR = JSON.parse(JSON.stringify(bR));
+      lR.rituais.itens = [lR.rituais.itens[2], lR.rituais.itens[0], lR.rituais.itens[1]];
+      var sR = JSON.parse(JSON.stringify(bR));
+      sR.status[0].atual = 7;
+      var mR = SY.mesclar(bR, lR, sR, esquema);
+      t.ok("só este aparelho reordenou: a ordem daqui fica, e o PV mudado lá também",
+        mR.estado.rituais.itens.map(function (x) { return x.id; }).join("") === "cab" && mR.estado.status[0].atual === 7 && !mR.conflitos.length);
+      var sR2 = JSON.parse(JSON.stringify(bR));
+      sR2.rituais.itens = [sR2.rituais.itens[1], sR2.rituais.itens[0], sR2.rituais.itens[2]];
+      var mR2 = SY.mesclar(bR, lR, sR2, esquema);
+      t.igual("  os dois reordenaram: fica a do servidor, como antes", mR2.estado.rituais.itens.map(function (x) { return x.id; }).join(""), "bac");
+
+      var bN = { anotacoes: { pastas: [{ id: "p1", nome: "P", notas: [] }], soltas: [{ id: "n1", titulo: "Nota", conteudo: "velho" }] } };
+      var lN = JSON.parse(JSON.stringify(bN));
+      lN.anotacoes.pastas[0].notas.push(lN.anotacoes.soltas.pop());
+      var sN = JSON.parse(JSON.stringify(bN));
+      sN.anotacoes.soltas[0].conteudo = "novo, escrito lá";
+      var mN = SY.mesclar(bN, lN, sN, esquema);
+      var ondeN = [];
+      mN.estado.anotacoes.soltas.forEach(function (n) { if (n.id === "n1") ondeN.push("solta"); });
+      mN.estado.anotacoes.pastas[0].notas.forEach(function (n) { if (n.id === "n1") ondeN.push("pasta:" + n.conteudo); });
+      t.igual("nota movida aqui e editada lá: uma nota só, na pasta, com o texto novo", ondeN.join("|"), "pasta:novo, escrito lá");
+
+      var bC = { ordem: { condicoes: { morrendo: { ativa: true, eventos: [{ id: "e1", origem: "manual", cena: "" }] } } } };
+      var lC = JSON.parse(JSON.stringify(bC));
+      lC.ordem.condicoes.morrendo.eventos.push({ id: "m-2", origem: "manual", cena: "" });
+      var sC = JSON.parse(JSON.stringify(bC));
+      sC.ordem.condicoes.morrendo.eventos.push({ id: "cb:x:2:p", origem: "combate", cena: "" });
+      var mC = SY.mesclar(bC, lC, sC, esquema);
+      t.igual("inícios de turno dos dois lados somam, casando pelo id",
+        mC.estado.ordem.condicoes.morrendo.eventos.map(function (e) { return e.id; }).sort().join(","), "cb:x:2:p,e1,m-2");
+    }
+
+    /* ---------------------------------------------------------------- */
+    t.grupo("Exportar e importar · condições e lugar das habilidades");
+
+    var fx = S.criarFicha({ nome: "Com condições", tipoFicha: "ordem" });
+    fx.ordem = R.normalizar({ classe: "combatente", nex: 20 });
+    var pastaX = H.criarPasta("Combate");
+    var noX = H.criarHabilidade({ nome: "Da mesa" });
+    pastaX.filhos.push(noX);
+    fx.habilidades = { filhos: [pastaX] };
+    fx.ordem.organizacao.habilidades.lugares = { "auto|ataqueEspecial": pastaX.id };
+    fx.ordem.organizacao.habilidades.ordem = {};
+    fx.ordem.organizacao.habilidades.ordem[pastaX.id] = ["r:auto|ataqueEspecial", "n:" + noX.id];
+    CD.ativar(fx.ordem.condicoes, "morrendo");
+    CD.somarInicio(fx.ordem.condicoes, "morrendo");
+    CD.registrarInicioDeTurno(fx.ordem.condicoes, { id: CD.idDoTurno("c9", 1, "p9") });
+    var impX = V.importado(JSON.parse(JSON.stringify(V.exportar("personagem", fx))));
+    var oX = impX.ok ? impX.dados.ordem : null;
+    var pastaNova = impX.ok ? impX.dados.habilidades.filhos[0] : null;
+    t.ok("importar mantém morrendo e os dois inícios de turno", !!oX && oX.condicoes.morrendo.ativa && CD.contagem(oX.condicoes, "morrendo") === 2);
+    t.ok("  a pasta ganha id novo, e a habilidade das regras continua nela",
+      !!pastaNova && pastaNova.id !== pastaX.id && oX.organizacao.habilidades.lugares["auto|ataqueEspecial"] === pastaNova.id);
+    t.igual("  com a posição apontando para os ids novos",
+      oX && pastaNova ? (oX.organizacao.habilidades.ordem[pastaNova.id] || []).join(",") : "",
+      "r:auto|ataqueEspecial,n:" + (pastaNova ? pastaNova.filhos[0].id : "?"));
+
+    /* ---------------------------------------------------------------- */
+    t.grupo("Schema 10 · os campos novos atravessam, e a ficha 9 abre igual");
+
+    t.igual("o schema da ficha é 10", S.VERSAO_SCHEMA, 10);
+    var f9 = S.normalizarFicha({ nome: "Ficha 9", schemaVersion: 9, tipoFicha: "ordem",
+      ordem: { classe: "ocultista", nex: 20, recursos: { pv: 5 } } });
+    t.ok("uma ficha 9 abre com as condições vazias, PD em branco e a ordem de antes",
+      f9.schemaVersion === 10 && !f9.ordem.condicoes.morrendo.ativa && f9.ordem.recursos.pd === null &&
+      f9.ordem.recursos.pv === 5 && f9.ordem.organizacao.pericias.modo === "az");
+
+    /* ---------------------------------------------------------------- */
+    var PM = global.RAMAPainelMesa;
+    if (PM) {
+      t.grupo("Painel da mesa · condições com a mesma visibilidade do status");
+
+      var cartao = PM.resumir({
+        id: "x", nome: "Lia", tipoFicha: "ordem", detalhado: true,
+        ordem: { classe: "combatente", nex: 20, condicoes: { morrendo: { ativa: true, eventos: [{ id: "m-1", origem: "manual", cena: "" }] } } },
+        inventario: { itens: [] },
+      });
+      t.ok("quem vê a ficha inteira vê a condição, calculada do bloco de Ordem",
+        cartao.condicoes.some(function (c) { return c.chave === "morrendo" && c.ativa && c.texto === "1/3"; }));
+      var outro = PM.resumir({ id: "y", nome: "Lia", tipoFicha: "ordem", detalhado: false, ordem: { classe: "combatente" },
+        recursos: [], condicoes: [{ chave: "enlouquecendo", nome: "Enlouquecendo", ativa: true, contagem: 2, limite: 3 }] });
+      t.ok("outro jogador vê o resumo que o servidor mandou", outro.condicoes.length === 1 && outro.condicoes[0].texto === "2/3");
+      var encerrada = PM.resumir({ id: "e", nome: "Lia", tipoFicha: "ordem", detalhado: false, ordem: { classe: "combatente" },
+        recursos: [], condicoes: [{ chave: "morrendo", nome: "Morrendo", ativa: false, contagem: 2, limite: 3 }] });
+      t.ok("  a encerrada que ainda tem turnos na cena aparece como encerrada, não como ativa",
+        encerrada.condicoes.length === 1 && !encerrada.condicoes[0].ativa && encerrada.condicoes[0].texto === "encerrada · 2/3");
+      t.iguais("  e o leitor de tela ouve por extenso, sem \"2/3\"",
+        [outro.condicoes[0].leitura, encerrada.condicoes[0].leitura],
+        ["Enlouquecendo: 2 de 3 inícios de turno nesta cena", "Morrendo, encerrada: 2 de 3 inícios de turno nesta cena"]);
+      var escondido = PM.resumir({ id: "z", nome: "Lia", tipoFicha: "ordem", detalhado: false, ordem: { classe: "combatente" }, recursosVisiveis: false });
+      t.igual("  e, com o status escondido pelo mestre, nada", escondido.condicoes.length, 0);
+      var comPdCartao = PM.resumir({ id: "w", nome: "Pd", tipoFicha: "ordem", detalhado: true,
+        ordem: { classe: "ocultista", nex: 5, opcionais: { semSanidade: true } }, inventario: { itens: [] } });
+      t.igual("com Jogando sem Sanidade, o cartão mostra PV e PD", comPdCartao.recursos.map(function (r) { return r.rotulo; }).join(","), "PV,PD");
     }
   }
 

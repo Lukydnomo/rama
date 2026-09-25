@@ -238,14 +238,24 @@
      Uma pasta não pode receber a si mesma nem um descendente seu — isso
      desligaria o ramo da árvore e ele sumiria da tela sem ter sido
      apagado. */
+  /* Quantos níveis descem de um nó: 0 para habilidade ou pasta vazia. */
+  function altura(no) {
+    if (!no || no.tipo !== TIPO_PASTA || !Array.isArray(no.filhos) || !no.filhos.length) return 0;
+    var m = 0;
+    no.filhos.forEach(function (f) { m = Math.max(m, 1 + altura(f)); });
+    return m;
+  }
+
   function destinosPossiveis(arvore, idMovido) {
     var proibidos = {};
+    var alturaDoMovido = 0;
 
     if (idMovido) {
       var alvo = achar(arvore, idMovido);
       if (alvo && alvo.no.tipo === TIPO_PASTA) {
         proibidos[alvo.no.id] = true;
         percorrer({ filhos: alvo.no.filhos }, function (no) { proibidos[no.id] = true; });
+        alturaDoMovido = altura(alvo.no);
       }
     }
 
@@ -257,8 +267,11 @@
       var prefixo = pai ? caminhoDe[pai.id] + " / " : "";
       caminhoDe[no.id] = prefixo + no.nome;
       if (proibidos[no.id]) return;
-      /* Uma pasta no último nível não pode receber outra pasta. */
+      /* Uma pasta no último nível não pode receber outra pasta. E uma
+         pasta com subpastas precisa caber inteira: o que passasse do
+         teto seria cortado pela normalização na próxima leitura. */
       if (profundidade >= MAX_PROFUNDIDADE - 1) return;
+      if (profundidade + 1 + alturaDoMovido > MAX_PROFUNDIDADE) return;
       destinos.push({ id: no.id, caminho: caminhoDe[no.id], profundidade: profundidade });
     });
 
@@ -368,6 +381,7 @@
     contar: contar,
     todasAsHabilidades: todasAsHabilidades,
     destinosPossiveis: destinosPossiveis,
+    altura: altura,
 
     inserir: inserir,
     remover: remover,

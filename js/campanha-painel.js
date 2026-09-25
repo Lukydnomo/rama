@@ -45,7 +45,39 @@
     pv: { rotulo: "PV", nome: "Pontos de vida", cor: "vida" },
     pe: { rotulo: "PE", nome: "Pontos de esforço", cor: "esforco" },
     san: { rotulo: "SAN", nome: "Sanidade", cor: "sanidade" },
+    /* Jogando sem Sanidade (SAH p.104): PD no lugar de PE e SAN. */
+    pd: { rotulo: "PD", nome: "Pontos de determinação", cor: "esforco" },
   };
+
+  function CD() { return global.RAMAOrdemCondicoes; }
+
+  /* As condições como o cartão mostra: só as ativas ou com turnos nesta
+     cena. Para quem vê a ficha inteira, sai do bloco de Ordem; para os
+     outros, do resumo que o servidor mandou (e só se o status estiver
+     visível). */
+  function condicoesDoCartao(lista) {
+    return (Array.isArray(lista) ? lista : []).map(function (c) {
+      if (!c || typeof c !== "object") return null;
+      var limite = c.limite === null || c.limite === undefined ? null : U.inteiro(c.limite, null);
+      var contagem = Math.max(0, U.inteiro(c.contagem, 0));
+      return {
+        chave: U.texto(c.chave).slice(0, 40),
+        nome: U.texto(c.nome).slice(0, 40) || U.texto(c.chave),
+        oficial: c.oficial !== false,
+        ativa: c.ativa === true,
+        contagem: contagem,
+        limite: limite,
+        atingiu: limite !== null && contagem >= limite,
+        texto: (c.ativa === true ? "" : "encerrada · ") + (limite !== null ? contagem + "/" + limite : (contagem ? String(contagem) : "")),
+        /* O mesmo, por extenso, para leitor de tela: "2/3" lido em voz
+           alta não diz o que é. */
+        leitura: (U.texto(c.nome).slice(0, 40) || U.texto(c.chave)) + (c.ativa === true ? "" : ", encerrada") +
+          (limite !== null ? ": " + contagem + " de " + limite + " inícios de turno nesta cena"
+            : (contagem ? ": " + contagem + " inícios de turno nesta cena" : "")) +
+          (c.oficial === false ? " (contador da mesa)" : ""),
+      };
+    }).filter(Boolean);
+  }
 
   /* A cor de um status universal. Os nomes de sempre ganham a mesma cor
      dos recursos de Ordem (vida, esforço, sanidade) — assim "Sanidade"
@@ -99,6 +131,7 @@
       atributos: [],
       recursos: [],
       estatisticas: [],
+      condicoes: [],
     };
     return base.tipo === "ordem" ? resumirOrdem(p, base) : resumirUniversal(p, base);
   }
@@ -130,6 +163,7 @@
           minimo: PISO_ORDEM, teto: maximo, cru: null,
         };
       }).filter(Boolean);
+      base.condicoes = condicoesDoCartao(p.condicoes);
       return base;
     }
 
@@ -143,12 +177,13 @@
       return { sigla: a.sigla, nome: a.nome, valor: R().atributo(o, a.chave) };
     });
 
-    var semSanidade = global.RAMAOrdemOpcionais && global.RAMAOrdemOpcionais.ligada(o, "semSanidade");
     var recursos = [
       { chave: "pv", rotulo: "PV", nome: "Pontos de vida", cor: "vida", conta: c.pv, atual: c.atual.pv },
-      { chave: "pe", rotulo: "PE", nome: "Pontos de esforço", cor: "esforco", conta: c.pe, atual: c.atual.pe },
     ];
-    if (!semSanidade) {
+    if (c.determinacao) {
+      recursos.push({ chave: "pd", rotulo: "PD", nome: "Pontos de determinação", cor: "esforco", conta: c.pd, atual: c.atual.pd });
+    } else {
+      recursos.push({ chave: "pe", rotulo: "PE", nome: "Pontos de esforço", cor: "esforco", conta: c.pe, atual: c.atual.pe });
       recursos.push({ chave: "san", rotulo: "SAN", nome: "Sanidade", cor: "sanidade", conta: c.san, atual: c.atual.san });
     }
 
@@ -177,15 +212,17 @@
       var guardado = p.resumoRecursos;
       base.resumoDesatualizado = !guardado ||
         guardado.pv !== base.resumoCalculado.pv ||
-        guardado.pe !== base.resumoCalculado.pe ||
-        (guardado.san === undefined ? null : guardado.san) !== base.resumoCalculado.san;
+        (guardado.pe === undefined ? null : guardado.pe) !== base.resumoCalculado.pe ||
+        (guardado.san === undefined ? null : guardado.san) !== base.resumoCalculado.san ||
+        (guardado.pd === undefined ? null : guardado.pd) !== (base.resumoCalculado.pd === undefined ? null : base.resumoCalculado.pd);
     }
+    base.condicoes = CD() ? condicoesDoCartao(CD().resumoPublico(o.condicoes)) : [];
 
     base.estatisticas = [
       { chave: "defesa", rotulo: "Defesa", valor: String(c.defesa.total) },
       { chave: "bloqueio", rotulo: "Bloqueio", valor: String(c.bloqueio.total) },
       { chave: "esquiva", rotulo: "Esquiva", valor: String(c.esquiva.total) },
-      { chave: "limitePe", rotulo: "PE por turno", valor: String(c.limitePe.total) },
+      { chave: "limitePe", rotulo: c.determinacao ? "PD por turno" : "PE por turno", valor: String(c.limitePe.total) },
       { chave: "deslocamento", rotulo: "Deslocamento", valor: c.deslocamento.total + " m" },
     ];
     return base;
@@ -283,6 +320,7 @@
     PISO_ORDEM: PISO_ORDEM,
     PISO_UNIVERSAL: PISO_UNIVERSAL,
     resumir: resumir,
+    condicoesDoCartao: condicoesDoCartao,
     preenchimento: preenchimento,
     validarEntrada: validarEntrada,
     limitar: limitar,

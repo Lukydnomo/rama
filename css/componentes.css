@@ -2569,3 +2569,153 @@
     border-right: 0;
   }
 }
+
+/* =====================================================================
+   ARRASTAR E SOLTAR (v2.19)
+   ---------------------------------------------------------------------
+   Uma alça visível é o único lugar de segurar: o cartão continua
+   abrindo, rolando dado e rolando a página como antes. No toque, só a
+   alça bloqueia a rolagem (touch-action), e ela ganha o alvo de 40px.
+   O fantasma segue o ponteiro com o nome do item; a linha diz onde ele
+   vai cair; o recusado aparece como recusado, com o motivo, antes de
+   alguém soltar. Ver js/arrastar.js.
+   ===================================================================== */
+
+.arrastar-alca {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: var(--borda) solid transparent;
+  background: transparent;
+  color: var(--cor-texto-3);
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.arrastar-alca:hover { color: var(--cor-texto); border-color: var(--cor-traco-fraca); }
+.arrastar-alca:focus-visible { outline: 2px solid var(--cor-traco-forte); outline-offset: 1px; color: var(--cor-texto); }
+.arrastar-alca[aria-disabled="true"] { opacity: 0.35; cursor: not-allowed; }
+
+@media (pointer: coarse) {
+  .arrastar-alca { width: var(--alvo-toque); height: var(--alvo-toque); }
+}
+
+.arrastar-origem {
+  opacity: 0.45;
+  outline: var(--borda) dashed var(--cor-traco-media);
+  outline-offset: -1px;
+}
+
+html.arrastando,
+html.arrastando * {
+  cursor: grabbing !important;
+  user-select: none !important;
+  -webkit-user-select: none !important;
+}
+
+.arrastar-fantasma {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: var(--z-flutuante);
+  pointer-events: none;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-width: 280px;
+  padding: var(--e1) var(--e2);
+  border: var(--borda) solid var(--cor-traco-forte);
+  background: var(--cor-superficie-3);
+  color: var(--cor-texto);
+  font-size: var(--texto-mini);
+  letter-spacing: var(--espaco-letra-titulo);
+  text-transform: uppercase;
+  box-shadow: 4px 4px 0 rgba(0, 0, 0, 0.6);
+}
+
+.arrastar-fantasma--recusado { border-color: var(--cor-erro); }
+
+.arrastar-fantasma__motivo {
+  color: var(--cor-erro);
+  text-transform: none;
+  letter-spacing: var(--espaco-letra);
+}
+
+.arrastar-fantasma__motivo:empty { display: none; }
+
+.arrastar-linha {
+  position: fixed;
+  z-index: var(--z-flutuante);
+  height: 3px;
+  pointer-events: none;
+  background: var(--cor-paranormal);
+  box-shadow: 0 0 0 1px var(--cor-fundo);
+}
+
+.arrastar-linha::before,
+.arrastar-linha::after {
+  content: "";
+  position: absolute;
+  top: -3px;
+  width: 3px;
+  height: 9px;
+  background: inherit;
+}
+
+.arrastar-linha::before { left: 0; }
+.arrastar-linha::after { right: 0; }
+.arrastar-linha--recusada { background: var(--cor-erro); }
+
+.arrastar-alvo-dentro {
+  outline: 2px solid var(--cor-paranormal);
+  outline-offset: -2px;
+  background: var(--cor-superficie-2);
+}
+
+.arrastar-alvo-recusado {
+  outline: 2px dashed var(--cor-erro);
+  outline-offset: -2px;
+}
+
+/* O aviso que troca um modo automático pela ordem personalizada. */
+.ordenacao-arrastar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--e2);
+}
+
+/* A alça no cartão recolhível: primeira coisa da linha, colada à borda
+   esquerda, sem aumentar a altura do cartão fechado. */
+.recolhivel__alca {
+  display: inline-flex;
+  flex: 0 0 auto;
+  margin: calc(-1 * var(--e1)) calc(-1 * var(--e1)) calc(-1 * var(--e1)) calc(-1 * var(--e2));
+  cursor: default;
+}
+
+/* Grupos de círculo e elemento na aba Rituais (v2.19). */
+.rituais-grupo {
+  margin: var(--e2) 0 0;
+  font-size: var(--texto-mini);
+  letter-spacing: var(--espaco-letra-titulo);
+  text-transform: uppercase;
+  color: var(--cor-texto-2);
+  border-bottom: var(--borda) solid var(--cor-traco-fraca);
+  padding-bottom: var(--e1);
+}
+
+.rituais-subgrupo {
+  margin: var(--e1) 0 0 var(--e3);
+  font-size: var(--texto-mini);
+  font-weight: normal;
+  color: var(--cor-texto-3);
+}
+
+.rituais-lista:empty { min-height: var(--e4); }

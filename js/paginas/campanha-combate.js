@@ -530,10 +530,28 @@
         itens = p.snapshot.status.map(function (s) { return { rotulo: s.nome, atual: s.atual, maximo: s.maximo, chave: s.nome }; });
       }
 
+      /* Morrendo e enlouquecendo do personagem, com a mesma regra de quem
+         vê os recursos (o servidor só manda para quem pode ver). A
+         contagem por turno é feita pelo servidor, no próprio "próximo
+         turno": esta tela só mostra. */
+      var condicoes = p.tipo === "personagem" && global.RAMAPainelMesa && global.RAMAPainelMesa.condicoesDoCartao
+        ? global.RAMAPainelMesa.condicoesDoCartao(p.condicoes)
+        : [];
+      var marcas = condicoes.map(function (cd) {
+        return el("span.combate-condicao", {
+          class: (cd.ativa ? "combate-condicao--ativa" : "") + (cd.atingiu && cd.ativa ? " combate-condicao--limite" : ""),
+          title: cd.oficial ? "" : "Contador da mesa, não regra do livro",
+        }, [
+          el("span", { texto: cd.nome, "aria-hidden": "true" }),
+          cd.texto ? el("span.combate-condicao__conta", { texto: cd.texto, "aria-hidden": "true" }) : null,
+          el("span.so-leitor", { texto: cd.leitura || cd.nome }),
+        ]);
+      });
+
       if (!itens.length) {
-        U.trocar(linha.recursos, p.recursosPendentes
+        U.trocar(linha.recursos, (p.recursosPendentes
           ? [el("span.t-mini", { texto: "recursos a calcular" })]
-          : []);
+          : []).concat(marcas));
         return;
       }
 
@@ -542,7 +560,7 @@
           el("span.combate-recurso__rotulo", { texto: r.rotulo }),
           el("span.combate-recurso__valor", { texto: r.atual + " / " + r.maximo }),
         ]);
-      }));
+      }).concat(marcas));
     }
 
     function pintarBarra(est) {
@@ -951,6 +969,7 @@
     if (/\b(pv|vida|pontos de vida|hp|saude)\b/.test(k)) return "vida";
     if (/\b(san|sanidade)\b/.test(k)) return "sanidade";
     if (/\b(pe|esforco|pontos de esforco|energia|mana)\b/.test(k)) return "esforco";
+    if (/\b(pd|determinacao|pontos de determinacao)\b/.test(k)) return "esforco";
     return "neutro";
   }
 

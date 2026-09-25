@@ -100,20 +100,30 @@
       ],
     },
 
+    /* Até a v2.18 esta chave só escondia a Sanidade. O livro faz outra
+       coisa: junta Sanidade e PE num recurso só, pontos de determinação
+       (SAH p.104-105). A chave continua a mesma, e ligar ou desligar
+       continua sem converter nada. */
     {
       chave: "semSanidade",
       nome: "Jogando sem Sanidade",
-      resumo: "Remove a Sanidade do jogo, para mesas que preferem o medo sem a mecânica.",
+      resumo: "Sanidade e pontos de esforço viram um recurso só: pontos de determinação (PD).",
       fonte: SAH, pagina: 104,
       afetaFicha: true,
       automacao: "parcial",
-      efeito: "A Sanidade some da ficha. O valor guardado é preservado e volta se a regra for desligada.",
+      efeito: "A ficha passa a ter PV e PD. PD por classe: combatente 6 + Pre (+3 + Pre por NEX), especialista 8 + Pre " +
+              "(+4 + Pre), ocultista 10 + Pre (+5 + Pre). Tudo o que soma ou gasta PE vale para PD; o que mexe em " +
+              "Sanidade não vale. Dano mental maior que os PD atuais deixa enlouquecendo, e gastar PD para pagar custos " +
+              "não causa condição nenhuma.",
       parametros: [],
       depende: [],
       incompativel: [],
       consequencias: [
-        "A Sanidade deixa de aparecer na ficha. O valor atual continua gravado e volta intacto ao desligar.",
-        "Origens e habilidades que mexem em Sanidade continuam listadas, mas sem efeito enquanto a regra estiver ligada.",
+        "PE e Sanidade saem da ficha, mas os valores atuais continuam gravados e voltam intactos ao desligar. Nada é " +
+        "convertido: os PD começam cheios na primeira vez e, depois, guardam o próprio valor.",
+        "Custos em PE (rituais, habilidades) são pagos com PD, e o limite de PE por turno vale para PD.",
+        "O que a ficha não faz sozinha: reduzir os dados do dano mental das criaturas, trocar Cicatrizes Psicológicas " +
+        "e mudar o interlúdio (dormir recupera só PV; relaxar recupera PD). Isso fica com a mesa.",
       ],
     },
 

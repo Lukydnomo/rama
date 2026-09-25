@@ -367,6 +367,20 @@ t.grupo("Páginas que calculam ficha de Ordem carregam o motor inteiro");
     t.ok(pagina + ": poderes → progressão → regras, nesta ordem",
       poderes >= 0 && poderes < progressao && progressao < regras,
       `poderes ${poderes}, progressão ${progressao}, regras ${regras}`);
+    /* As condições (v2.19) são lidas por regras.js ao normalizar: sem
+       elas antes, a página guarda as condições como vieram, e o cartão
+       não as mostra. */
+    const condicoes = s.indexOf("js/ordem/condicoes.js");
+    t.ok(pagina + ": condições antes das regras", condicoes >= 0 && condicoes < regras, `condições ${condicoes}, regras ${regras}`);
+  }
+
+  /* A ficha arrasta e soltar: organizar.js e arrastar.js antes das abas. */
+  {
+    const s = await scriptsDe("ficha/index.html");
+    const primeiraAba = s.indexOf("js/paginas/ficha-habilidades.js");
+    t.ok("ficha/index.html carrega organizar.js e arrastar.js antes das abas",
+      s.indexOf("js/organizar.js") >= 0 && s.indexOf("js/arrastar.js") >= 0 &&
+      s.indexOf("js/organizar.js") < primeiraAba && s.indexOf("js/arrastar.js") < primeiraAba);
   }
 
   /* E o efeito, com uma ficha que depende da progressão para cada um
@@ -732,6 +746,36 @@ for (const escolha of ["minha", "deles"]) {
   velho.participantes[0].ordem = -50;
   fila.receberRemoto(velho);
   t.igual("resposta atrasada (revisão menor) não apaga valor novo", fila.vista().participantes[0].ordem, 10);
+}
+
+t.grupo("Fila do combate — condições dos personagens (v2.19)");
+
+{
+  const inicial = combateDeTeste();
+  inicial.participantes[0].condicoes = [{ chave: "morrendo", nome: "Morrendo", ativa: true, contagem: 1, limite: 3 }];
+  const servidor = servidorDeCombate(inicial);
+  /* O servidor de verdade responde a um lote SEM os recursos e as
+     condições dos personagens: eles não mudam por operação de combate
+     — a contagem por turno vem na listagem seguinte. */
+  const processarDeVerdade = servidor.processar;
+  servidor.processar = (pedido) => {
+    const r = processarDeVerdade(pedido);
+    if (r && r.dados) r.dados.participantes.forEach((p) => { if (p.tipo === "personagem") { delete p.recursos; delete p.condicoes; } });
+    return r;
+  };
+  const { fila, relogio } = filaDeTeste(servidor);
+  fila.definirIniciativa("a", 12);
+  await relogio.avancar(5200);
+  t.igual("depois de um lote, a condição do personagem continua na vista", (fila.vista().participantes[0].condicoes || [])[0].contagem, 1);
+
+  const remoto = JSON.parse(JSON.stringify(fila.confirmado()));
+  remoto.participantes[0].condicoes = [{ chave: "morrendo", nome: "Morrendo", ativa: true, contagem: 2, limite: 3 }];
+  fila.receberRemoto(remoto);
+  t.igual("a listagem da mesma revisão traz a contagem que o servidor fez no turno", fila.vista().participantes[0].condicoes[0].contagem, 2);
+  const acabou = JSON.parse(JSON.stringify(remoto));
+  delete acabou.participantes[0].condicoes;
+  fila.receberRemoto(acabou);
+  t.ok("  e, quando a condição acaba, ela some da vista", fila.vista().participantes[0].condicoes === undefined);
 }
 
 {

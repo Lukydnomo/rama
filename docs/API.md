@@ -488,7 +488,7 @@ Todas em `backend/Campanhas.gs`. A primeira linha de cada uma é
 ```
 
 `campo` só aceita `atual` e `maximo` para status, `valor` para atributo e `atual`
-para recurso (ficha de Ordem; `itemId` é `pv`, `pe` ou `san`, piso −99). `valor`
+para recurso (ficha de Ordem; `itemId` é `pv`, `pe`, `san` ou `pd`, piso −99). `valor`
 precisa ser número — vazio, `null` ou texto responde `dados_invalidos` em vez de
 virar 0. Com `campanhaId`, o personagem precisa continuar vinculado a ela
 (`nao_encontrado` se não estiver). Alvo ou campo fora dessa lista responde
@@ -645,7 +645,9 @@ hora.
 O mestre recebe cada participante inteiro (a criatura com `snapshot` e `origemId`).
 O jogador recebe de cada um só `id`, `tipo`, `nome`, `ordem` e `personagemId` (nulo
 em criatura) e, em personagem, `recursos` pela regra dos cartões: os dos próprios
-personagens sempre, os dos outros só com a ocultação desligada. Um combate em
+personagens sempre, os dos outros só com a ocultação desligada. As `condicoes`
+(v2.19: `chave`, `nome`, `oficial`, `ativa`, `contagem`, `limite`, sem eventos)
+seguem a mesma regra. Um combate em
 andamento sem turno guardado (anterior à v2.12) vem com rodada 1 e o primeiro da
 ordem.
 
@@ -680,6 +682,11 @@ ordem.
   pareceria um conflito.
 - Até 100 operações por lote, aplicadas em ordem e **todas ou nenhuma**.
 - Só o mestre (`exigirMestre`).
+- Desde a v2.19, um lote que começa o turno de um personagem com morrendo,
+  enlouquecendo ou contador da mesa ativo grava também o início de turno na ficha
+  dele, depois de gravar o combate (ver [CAMPAIGNS.md](CAMPAIGNS.md#condições-pelo-turno-do-combate-v219)).
+  Uma ficha que não se monta não é tocada, e `avisos` traz
+  `{ aviso: "condicao_nao_contada", personagemId }`.
 
 As regras de turno estão em [CAMPAIGNS.md](CAMPAIGNS.md#turnos-e-rodadas).
 

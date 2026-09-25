@@ -29,17 +29,18 @@
      Ordem escolhe outro modo; na universal é sempre a ordem guardada. */
   var modoDaArvore = "personalizada";
 
-  /* `dasRegras` só vem da ficha de Ordem: { itens, aviso, biblioteca }
-     com o que as regras entregaram. Esses itens entram na MESMA lista,
-     antes da árvore, e não têm menu — mudam pela Progressão, não por
-     aqui. `biblioteca` ({ classe, nomes }) liga os livros de Ordem na
-     janela "Da biblioteca". */
+  /* `dasRegras` só vem da ficha de Ordem: { regras, org, arrastar,
+     aviso, biblioteca } com o que as regras entregaram. Elas entram na
+     MESMA lista que a árvore — na raiz ou dentro de uma pasta, onde a
+     pessoa as pôs — e mudam pela Progressão, não por aqui. `biblioteca`
+     ({ classe, nomes }) liga os livros de Ordem na janela "Da
+     biblioteca". */
   function aba(ctx, dasRegras) {
     bibliotecaOficial = (dasRegras && dasRegras.biblioteca) || null;
     modoDaArvore = (dasRegras && dasRegras.ordenacao && dasRegras.ordenacao.modo) || "personalizada";
     var arvore = ctx.ficha.habilidades;
     var total = H.contar(arvore);
-    var regras = (dasRegras && dasRegras.itens) || [];
+    var regras = (dasRegras && dasRegras.regras) || [];
     var quantas = total.habilidades + regras.length;
 
     return el("div.pilha--larga", { class: "pilha" }, [
@@ -66,15 +67,17 @@
   }
 
   function corpo(ctx, arvore, dasRegras) {
-    var regras = (dasRegras && dasRegras.itens) || [];
+    var regras = (dasRegras && dasRegras.regras) || [];
     var fim = (dasRegras && dasRegras.fim) || [];
     var aviso = dasRegras && dasRegras.aviso ? el("p.t-mini", { texto: dasRegras.aviso }) : null;
+    var tela = novaTela(ctx, arvore, dasRegras);
 
     if (dasRegras && (regras.length || fim.length || arvore.filhos.length)) {
       return el("div.pilha", {}, [
         dasRegras.ordenacao ? dasRegras.ordenacao.barra : null,
         aviso,
-        el("div.arvore-hab", {}, primeiroNivel(ctx, arvore.filhos, regras).concat(fim)),
+        ligarArraste(tela, el("div.arvore-hab", { dataset: { arrastarLista: RAIZ } }, conteiner(tela, "", 0))),
+        fim.length ? el("div.arvore-hab", {}, fim) : null,
       ]);
     }
 
@@ -104,55 +107,109 @@
       });
     }
 
-    return el("div.arvore-hab", {}, ramos(ctx, arvore.filhos, 0));
+    return ligarArraste(tela, el("div.arvore-hab", { dataset: { arrastarLista: RAIZ } }, conteiner(tela, "", 0)));
   }
 
-  /* O primeiro nível da ficha de Ordem: as habilidades das regras e o
-     primeiro nível da árvore. Na ordem personalizada, as das regras vêm
-     antes, cada grupo na ordem guardada. Nos outros modos, as duas
-     formam uma lista só — o nome que conta é o do cartão (o da versão
-     personalizada, quando houver), e em A–Z e Z–A as pastas vêm antes. */
-  function primeiroNivel(ctx, filhos, regras) {
-    if (modoDaArvore === "personalizada") return regras.concat(ramos(ctx, filhos, 0));
+  /* =================================================================
+     A TELA DA ÁRVORE
+     -----------------------------------------------------------------
+     Cada pasta — e a raiz — é um CONTÊINER: os nós da árvore que moram
+     nela e, na ficha de Ordem, as habilidades das regras que a pessoa
+     pôs ali. Na ordem personalizada, a posição vem de
+     RAMAOrganizar.entradasDoConteiner (a árvore manda entre os nós; a
+     posição guardada, entre as das regras). Nos outros modos, as duas
+     viram uma lista só, ordenada pelo nome que o cartão mostra — pastas
+     antes em A–Z e Z–A.
 
-    var entradas = regras.map(function (cartao) {
-      var titulo = cartao.querySelector ? cartao.querySelector(".recolhivel__titulo") : null;
-      return {
-        cartao: cartao,
-        nome: titulo ? titulo.textContent : "",
-        adicionado: cartao.dataset ? cartao.dataset.adicionado : "",
-        pasta: false,
-      };
-    }).concat((filhos || []).map(function (no) {
-      return { no: no, nome: no.nome, adicionado: no.adicionadoEm, pasta: no.tipo === H.TIPO_PASTA };
+     A árvore é desenhada por recursão, do mesmo jeito que é modelada.
+     ================================================================= */
+
+  var RAIZ = "*";
+
+  function O() { return global.RAMAOrganizar || null; }
+  function A() { return global.RAMAArrastar || null; }
+
+  function novaTela(ctx, arvore, dasRegras) {
+    var regras = (dasRegras && dasRegras.regras) || [];
+    var porId = {};
+    regras.forEach(function (r) { porId[r.id] = r; });
+    var org = dasRegras ? dasRegras.org || null : null;
+    var tela = {
+      ctx: ctx,
+      arvore: arvore,
+      regras: regras,
+      porId: porId,
+      org: org,
+      /* Arrastar: na universal, no modo edição; na de Ordem, também só
+         com a ordem personalizada na tela. */
+      arrastar: !!(A() && O() && (dasRegras ? dasRegras.arrastar : ctx.emEdicao())),
+    };
+    /* Uma pasta que não existe mais devolve a habilidade para a raiz —
+       sem apagar a preferência, que volta a valer se a pasta voltar. */
+    tela.lugarDe = function (aqId) {
+      var p = org && org.lugares ? org.lugares[aqId] : "";
+      if (!p) return "";
+      var achado = H.achar(arvore, p);
+      return achado && achado.no.tipo === H.TIPO_PASTA ? p : "";
+    };
+    tela.regrasDe = function (pastaId) {
+      return regras.filter(function (r) { return tela.lugarDe(r.id) === (pastaId || ""); }).map(function (r) { return r.id; });
+    };
+    return tela;
+  }
+
+  function nosDe(tela, pastaId) {
+    if (!pastaId) return tela.arvore.filhos || [];
+    var achado = H.achar(tela.arvore, pastaId);
+    return achado && achado.no.filhos ? achado.no.filhos : [];
+  }
+
+  /* As entradas de um contêiner, na ordem da tela. */
+  function entradas(tela, pastaId) {
+    var nos = nosDe(tela, pastaId);
+    var ids = tela.regrasDe(pastaId);
+    if (modoDaArvore === "personalizada") {
+      if (!O()) return nos.map(function (n) { return { tipo: "no", id: n.id, no: n }; });
+      return O().entradasDoConteiner(nos, ids, tela.org && tela.org.ordem ? tela.org.ordem[pastaId || RAIZ] : null, !pastaId);
+    }
+    var lista = ids.map(function (id) {
+      var r = tela.porId[id];
+      return { tipo: "regra", id: id, nome: r.nome, adicionado: r.adicionado, pasta: false };
+    }).concat(nos.map(function (n) {
+      return { tipo: "no", id: n.id, no: n, nome: n.nome, adicionado: n.adicionadoEm, pasta: n.tipo === H.TIPO_PASTA };
     }));
-
-    return U.ordenarLista(entradas, modoDaArvore, {
+    return U.ordenarLista(lista, modoDaArvore, {
       nome: function (e) { return e.nome; },
       adicionado: function (e) { return e.adicionado; },
       grupo: function (e) { return e.pasta ? 0 : 1; },
-    }).map(function (e) {
-      if (e.cartao) return e.cartao;
-      return e.pasta ? pasta(ctx, e.no, 0) : habilidade(ctx, e.no, 0);
     });
   }
 
-  /* A recursão. Cada nível devolve os próprios filhos e chama a si
-     mesmo para as pastas — sem limite escrito aqui, porque o limite é
-     do modelo e já foi aplicado na normalização. */
-  function ramos(ctx, filhos, profundidade) {
-    var ordenados = modoDaArvore === "personalizada"
-      ? (filhos || [])
-      : U.ordenarLista(filhos, modoDaArvore, { grupo: function (no) { return no.tipo === H.TIPO_PASTA ? 0 : 1; } });
-    return ordenados.map(function (no) {
-      return no.tipo === H.TIPO_PASTA
-        ? pasta(ctx, no, profundidade)
-        : habilidade(ctx, no, profundidade);
+  function conteiner(tela, pastaId, profundidade) {
+    return entradas(tela, pastaId).map(function (e) {
+      var elemento;
+      if (e.tipo === "regra") {
+        elemento = tela.porId[e.id].criar({
+          acoesDeOrdem: opcoesDeOrdem(tela, { tipo: "regra", id: e.id }, tela.porId[e.id].nome),
+          alca: tela.arrastar ? A().alca({ id: e.id, rotulo: tela.porId[e.id].nome }) : null,
+        });
+        elemento.dataset.arrastarItem = e.id;
+        elemento.dataset.arrastarTipo = "regra";
+        elemento.dataset.arrastarRotulo = tela.porId[e.id].nome;
+        return elemento;
+      }
+      elemento = e.no.tipo === H.TIPO_PASTA ? pasta(tela, e.no, profundidade) : habilidade(tela, e.no, profundidade);
+      elemento.dataset.arrastarItem = e.no.id;
+      elemento.dataset.arrastarTipo = "no";
+      elemento.dataset.arrastarRotulo = e.no.nome;
+      return elemento;
     });
   }
 
-  function pasta(ctx, no, profundidade) {
+  function pasta(tela, no, profundidade) {
+    var ctx = tela.ctx;
     var conteudo = H.conteudoDaPasta(no);
+    var regrasAqui = tela.regrasDe(no.id).length;
 
     var acoes = ctx.emEdicao() ? [
       UI.menu([
@@ -162,23 +219,24 @@
         "separador",
         { rotulo: "Renomear", aoClicar: function () { renomear(ctx, no); } },
         { rotulo: "Mover", aoClicar: function () { mover(ctx, no); } },
-      ].concat(opcoesDeOrdem(ctx, no), [
+      ].concat(opcoesDeOrdem(tela, { tipo: "no", id: no.id }, no.nome), [
         "separador",
         { rotulo: "Excluir pasta", perigo: true, aoClicar: function () { excluirPasta(ctx, no); } },
       ]), { rotulo: "Opções da pasta " + no.nome, icone: "tresPontos" }),
     ] : null;
 
-    var dentro = no.filhos.length
-      ? ramos(ctx, no.filhos, profundidade + 1)
-      : [el("p.t-mini", { texto: "Pasta vazia." })];
+    var dentro = conteiner(tela, no.id, profundidade + 1);
+    var lista = el("div.arvore-hab__lista", { dataset: { arrastarLista: no.id } },
+      dentro.length ? dentro : [el("p.t-mini.arvore-hab__vazia", { texto: tela.arrastar ? "Pasta vazia. Solte uma habilidade aqui." : "Pasta vazia." })]);
 
     var caixa = UI.recolhivel({
       titulo: no.nome,
-      extra: conteudo.habilidades + (conteudo.pastas ? " · " + conteudo.pastas + " pasta(s)" : ""),
+      extra: (conteudo.habilidades + regrasAqui) + (conteudo.pastas ? " · " + conteudo.pastas + " pasta(s)" : ""),
       aberto: no.aberta !== false,
       classe: "recolhivel--pasta",
-      conteudo: dentro,
+      conteudo: [lista],
       acoes: acoes,
+      alca: tela.arrastar ? A().alca({ id: no.id, rotulo: "a pasta " + no.nome }) : null,
       /* O estado aberto/fechado é da ficha, e sobe junto: quem organizou
          a árvore em pastas fechadas não quer encontrá-las abertas no
          outro aparelho. */
@@ -188,27 +246,135 @@
         ctx.alterou();
       },
     });
+    /* Soltar no NOME da pasta põe dentro dela, no fim. */
+    var topo = caixa.querySelector("summary");
+    if (topo) topo.dataset.arrastarPasta = no.id;
 
     return caixa;
   }
 
-  /* Subir e Descer mexem na ordem guardada. Com a tela em A–Z, Z–A ou
-     por adição, eles não mudariam nada que se visse — então só aparecem
-     na ordem personalizada. */
-  function opcoesDeOrdem(ctx, no) {
-    if (modoDaArvore !== "personalizada") return [];
-    return [
-      { rotulo: "Subir", aoClicar: function () { reordenar(ctx, no.id, -1); } },
-      { rotulo: "Descer", aoClicar: function () { reordenar(ctx, no.id, 1); } },
+  /* Subir e Descer mexem na ordem personalizada — a mesma conta do
+     arraste e das setas. Com a tela em A–Z, Z–A ou por adição, eles não
+     mudariam nada que se visse — então só aparecem na personalizada. As
+     habilidades das regras ganham também "Mover para pasta". */
+  function opcoesDeOrdem(tela, entrada, nome) {
+    if (modoDaArvore !== "personalizada" || !tela.ctx.emEdicao()) return [];
+    var itens = [
+      { rotulo: "Subir", aoClicar: function () { passoNaTela(tela, entrada, -1); } },
+      { rotulo: "Descer", aoClicar: function () { passoNaTela(tela, entrada, 1); } },
     ];
+    if (entrada.tipo === "regra" && tela.org) {
+      itens.push({ rotulo: "Mover para pasta…", aoClicar: function () { moverRegraParaPasta(tela, entrada.id, nome); } });
+    }
+    return itens;
   }
 
-  function habilidade(ctx, no, profundidade) {
+  function pastaAtualDe(tela, entrada) {
+    if (entrada.tipo === "regra") return tela.lugarDe(entrada.id);
+    var achado = H.achar(tela.arvore, entrada.id);
+    return achado && achado.pai ? achado.pai.id : "";
+  }
+
+  /* Mover na tela: a árvore (nós da mesa) e a preferência de lugar e
+     posição (habilidades das regras), numa operação só. */
+  function moverNaTela(tela, entrada, pastaId, indice) {
+    var r;
+    if (tela.org && O()) {
+      r = O().moverNaApresentacao({
+        arvore: tela.arvore, org: tela.org,
+        regrasDe: tela.regrasDe,
+        pastaDaRegra: tela.lugarDe,
+      }, entrada, pastaId, indice);
+    } else if (O()) {
+      r = entrada.tipo === "no" ? O().moverNaArvore(tela.arvore, entrada.id, pastaId, indice) : { ok: false, motivo: "" };
+    } else {
+      r = { ok: false, motivo: "" };
+    }
+    if (!r.ok) {
+      if (r.motivo) UI.avisoAtencao(r.motivo);
+      return r;
+    }
+    tela.ctx.alterou();
+    tela.ctx.redesenhar();
+    return r;
+  }
+
+  function passoNaTela(tela, entrada, direcao) {
+    var pastaId = pastaAtualDe(tela, entrada);
+    var lista = entradas(tela, pastaId);
+    var i = -1;
+    lista.forEach(function (e, k) { if (e.tipo === entrada.tipo && e.id === entrada.id) i = k; });
+    var j = i + (direcao < 0 ? -1 : 1);
+    if (i < 0 || j < 0 || j >= lista.length) {
+      return { ok: false, motivo: direcao < 0 ? "Já é o primeiro desta pasta." : "Já é o último desta pasta." };
+    }
+    return moverNaTela(tela, entrada, pastaId, j);
+  }
+
+  function moverRegraParaPasta(tela, aqId, nome) {
+    var destinos = H.destinosPossiveis(tela.arvore, null);
+    var atual = tela.lugarDe(aqId);
+    var escolhido = atual;
+    var seletor = UI.campo({
+      rotulo: "Mostrar em",
+      tipo: "selecao",
+      valor: atual || "",
+      opcoes: destinos.map(function (d) { return { valor: d.id || "", rotulo: d.caminho }; }),
+      aoMudar: function (v) { escolhido = v; },
+    });
+    UI.modal({
+      titulo: "Mover " + nome,
+      conteudo: [
+        seletor,
+        el("p.t-mini", { texto: "Muda só onde esta habilidade aparece. A aquisição, os efeitos e a versão personalizada continuam como estão." }),
+      ],
+      botoes: [
+        { rotulo: "Cancelar", classe: "r-botao--fantasma" },
+        {
+          rotulo: "Mover", classe: "r-botao--principal",
+          aoClicar: function (fechar) {
+            var destino = escolhido || seletor.entrada.value || "";
+            fechar();
+            moverNaTela(tela, { tipo: "regra", id: aqId }, destino, entradas(tela, destino).length);
+          },
+        },
+      ],
+    });
+  }
+
+  /* O arraste na árvore inteira: um nó da mesa vai para qualquer pasta
+     que o aceite (nunca para dentro de si mesmo ou de um descendente, e
+     nunca mais fundo do que o modelo guarda); uma habilidade das regras,
+     para qualquer pasta. */
+  function ligarArraste(tela, raiz) {
+    if (!tela.arrastar) return raiz;
+    return A().ligar(raiz, {
+      podeSoltar: function (item, destino) {
+        var pastaId = destino.lista === RAIZ ? "" : destino.lista;
+        if (item.tipo === "no") return O().podeMoverNaArvore(tela.arvore, item.id, pastaId);
+        if (item.tipo === "regra") {
+          if (!tela.org) return { ok: false, motivo: "" };
+          if (pastaId && !H.achar(tela.arvore, pastaId)) return { ok: false, motivo: "A pasta não existe mais." };
+          return { ok: true };
+        }
+        return { ok: false, motivo: "" };
+      },
+      aoSoltar: function (item, destino) {
+        moverNaTela(tela, { tipo: item.tipo, id: item.id }, destino.lista === RAIZ ? "" : destino.lista, destino.indice);
+      },
+      aoTeclado: function (item, direcao) {
+        return passoNaTela(tela, { tipo: item.tipo, id: item.id }, direcao);
+      },
+    });
+  }
+
+  function habilidade(tela, no, profundidade) {
+    var ctx = tela.ctx;
     var acoes = ctx.emEdicao() ? [
       UI.menu([
         { rotulo: "Editar", aoClicar: function () { editar(ctx, no, null); } },
         { rotulo: "Mover", aoClicar: function () { mover(ctx, no); } },
-      ].concat(opcoesDeOrdem(ctx, no), [
+      ].concat(opcoesDeOrdem(tela, { tipo: "no", id: no.id }, no.nome), [
         { rotulo: "Enviar à biblioteca", aoClicar: function () { paraBiblioteca(ctx, no); } },
         "separador",
         { rotulo: "Remover", perigo: true, aoClicar: function () { remover(ctx, no); } },
@@ -229,6 +395,7 @@
       extra: no.origem || "",
       conteudo: [texto],
       acoes: acoes,
+      alca: tela.arrastar ? A().alca({ id: no.id, rotulo: no.nome }) : null,
     });
 
     /* A cor é aplicada como VALOR de propriedade, nunca concatenada
@@ -358,11 +525,6 @@
     });
   }
 
-  function reordenar(ctx, id, direcao) {
-    if (!H.reordenar(ctx.ficha.habilidades, id, direcao)) return;
-    ctx.alterou();
-    ctx.redesenhar();
-  }
 
   /* =================================================================
      CRIAR E EDITAR

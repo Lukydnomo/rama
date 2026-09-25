@@ -57,6 +57,9 @@
     };
 
     var saida = mesclarObjeto("", base, local, servidor, estado, "");
+    (e.movimentos || []).forEach(function (m) {
+      repararMovimentos(m, saida, base, local, servidor, estado);
+    });
     return { estado: saida, conflitos: estado.conflitos, automaticos: estado.automaticos };
   }
 
@@ -145,9 +148,21 @@
 
     /* A ordem do servidor manda, e o que só existe aqui vai no fim.
        Assim duas listas reordenadas nos dois lados não brigam por
-       ordem — brigariam por algo que ninguém percebeu que mudou. */
-    var ordem = (servidor || []).map(function (r) { return String(r[chave]); })
-      .concat((local || []).map(function (r) { return String(r[chave]); }));
+       ordem — brigariam por algo que ninguém percebeu que mudou.
+
+       A exceção (v2.19): só ESTE aparelho reordenou — arrastou um item —
+       e o servidor não mexeu na ordem. Aí a ordem daqui vale, e o que
+       só existe no servidor vai no fim. Sem isso, qualquer gravação de
+       outra pessoa (um PV ajustado pelo mestre) desfaria em silêncio a
+       reordenação de quem arrastou. */
+    var idsB = idsDe(base, chave);
+    var idsL = idsDe(local, chave);
+    var idsS = idsDe(servidor, chave);
+    var soAqui = !mesmaOrdem(idsB, idsL) && mesmaOrdem(idsB, idsS);
+    if (soAqui) {
+      ctx.automaticos.push({ caminho: caminho, rotulo: "Ordem deste aparelho", contexto: contexto, valor: null });
+    }
+    var ordem = soAqui ? idsL.concat(idsS) : idsS.concat(idsL);
 
     ordem.forEach(function (id) {
       if (vistos[id]) return;
@@ -188,6 +203,113 @@
     });
 
     return saida;
+  }
+
+  function idsDe(lista, chave) {
+    return (Array.isArray(lista) ? lista : [])
+      .filter(function (r) { return r && r[chave] !== undefined && r[chave] !== null; })
+      .map(function (r) { return String(r[chave]); });
+  }
+
+  /* As duas listas põem os ids que têm em comum na mesma ordem? Entrar
+     ou sair um item não é reordenar. */
+  function mesmaOrdem(a, b) {
+    var emB = {};
+    b.forEach(function (id) { emB[id] = true; });
+    var emA = {};
+    a.forEach(function (id) { emA[id] = true; });
+    var x = a.filter(function (id) { return emB[id]; });
+    var y = b.filter(function (id) { return emA[id]; });
+    if (x.length !== y.length) return false;
+    for (var i = 0; i < x.length; i++) if (x[i] !== y[i]) return false;
+    return true;
+  }
+
+  /* =================================================================
+     ITEM QUE MUDOU DE CONTÊINER
+     -----------------------------------------------------------------
+     Uma nota arrastada de "sem pasta" para uma pasta, aqui, enquanto
+     outra pessoa editava o texto dela no servidor: casando lista a
+     lista, ela ficaria nas DUAS — a versão do servidor onde estava e a
+     daqui onde entrou. É o mesmo id em dois lugares, e a próxima
+     edição iria para um deles só.
+
+     movimento = { conteineres: [ "anotacoes.soltas", "anotacoes.pastas.notas" ] }
+     Depois da mescla comum, cada id que aparecer em mais de um lugar
+     fica num só: onde ESTE aparelho o pôs, se só ele mudou o lugar;
+     onde o servidor o pôs, nos outros casos. O conteúdo é a mescla das
+     três versões, campo a campo, como sempre.
+     ================================================================= */
+
+  function lugaresDe(raiz, movimento) {
+    var mapa = {};
+    if (!ehObjeto(raiz)) return mapa;
+    movimento.conteineres.forEach(function (caminho) {
+      pegarListas(raiz, caminho).forEach(function (par) {
+        par.lista.forEach(function (item, i) {
+          if (!item || item.id === undefined) return;
+          var id = String(item.id);
+          if (!mapa[id]) mapa[id] = [];
+          mapa[id].push({ conteiner: par.chave, lista: par.lista, indice: i, item: item });
+        });
+      });
+    });
+    return mapa;
+  }
+
+  /* As listas de um caminho, descendo por listas de objetos com id:
+     "anotacoes.pastas.notas" são as notas de cada pasta, cada uma com a
+     chave "anotacoes.pastas.notas#<idDaPasta>". */
+  function pegarListas(raiz, caminho) {
+    var partes = caminho.split(".");
+    var atuais = [{ valor: raiz, chave: "" }];
+    partes.forEach(function (parte) {
+      var proximos = [];
+      atuais.forEach(function (a) {
+        if (Array.isArray(a.valor)) {
+          a.valor.forEach(function (x) {
+            if (ehObjeto(x) && x[parte] !== undefined) {
+              proximos.push({ valor: x[parte], chave: a.chave + "#" + String(x.id) + "." + parte });
+            }
+          });
+        } else if (ehObjeto(a.valor) && a.valor[parte] !== undefined) {
+          proximos.push({ valor: a.valor[parte], chave: (a.chave ? a.chave + "." : "") + parte });
+        }
+      });
+      atuais = proximos;
+    });
+    return atuais.filter(function (a) { return Array.isArray(a.valor); }).map(function (a) {
+      return { chave: a.chave, lista: a.valor };
+    });
+  }
+
+  function repararMovimentos(movimento, saida, base, local, servidor, ctx) {
+    var S = lugaresDe(saida, movimento);
+    var B = lugaresDe(base, movimento);
+    var L = lugaresDe(local, movimento);
+    var V = lugaresDe(servidor, movimento);
+
+    Object.keys(S).forEach(function (id) {
+      var ocorrencias = S[id];
+      if (ocorrencias.length < 2) return;
+      var lugarB = B[id] && B[id][0] ? B[id][0].conteiner : null;
+      var lugarL = L[id] && L[id][0] ? L[id][0].conteiner : null;
+      var lugarV = V[id] && V[id][0] ? V[id][0].conteiner : null;
+
+      var destino = (lugarL && lugarL !== lugarB && lugarV === lugarB) ? lugarL : (lugarV || lugarL);
+      var fica = ocorrencias.filter(function (o) { return o.conteiner === destino; })[0] || ocorrencias[0];
+
+      var conteudo = mesclarObjeto("", B[id] ? B[id][0].item : undefined,
+        L[id] ? L[id][0].item : undefined, V[id] ? V[id][0].item : undefined, ctx, nomeDe(fica.item));
+      fica.lista[fica.lista.indexOf(fica.item)] = conteudo;
+
+      ocorrencias.forEach(function (o) {
+        if (o === fica) return;
+        var i = o.lista.indexOf(o.item);
+        if (i >= 0) o.lista.splice(i, 1);
+      });
+      ctx.automaticos.push({ caminho: fica.conteiner, rotulo: "Movido", contexto: nomeDe(conteudo), valor: null });
+    });
   }
 
   function nomeDe(registro) {
@@ -349,7 +471,18 @@
       "ordem.progressao": "id",
       "ordem.personalizacoes": "id",
       "ordem.excluidas": "id",
+      /* Inícios de turno das condições (v2.19): cada evento casa pelo id.
+         O mesmo turno contado pelo combate no servidor e aqui é UM
+         evento — e dois eventos diferentes somam, sem briga. */
+      "ordem.condicoes.morrendo.eventos": "id",
+      "ordem.condicoes.enlouquecendo.eventos": "id",
+      "ordem.condicoes.mesa.exaustao.eventos": "id",
+      "ordem.condicoes.mesa.desmaio.eventos": "id",
     },
+    /* Uma nota pode mudar de pasta: ver repararMovimentos. */
+    movimentos: [
+      { conteineres: ["anotacoes.soltas", "anotacoes.pastas.notas"] },
+    ],
     /* Carimbos de tempo mudam em toda gravação e não são decisão de
        ninguém: perguntar sobre eles seria ruído puro. */
     ignorar: ["atualizadoEm", "schemaVersion"],
@@ -377,6 +510,12 @@
       periciasAjustes: "Ajustes das perícias", extra: "Bônus extra", atributo: "Atributo",
       adicionadoEm: "Adicionado em", aquisicao: "Aquisição", efeitos: "Efeitos automáticos",
       etiqueta: "Etiqueta", texto: "Texto", cor: "Cor", negrito: "Negrito",
+      condicoes: "Condições", morrendo: "Morrendo", enlouquecendo: "Enlouquecendo", inconsciente: "Inconsciente",
+      perturbado: "Perturbado", exaustao: "Exaustão (mesa)", desmaio: "Desmaio (mesa)", ativa: "Condição ativa",
+      eventos: "Inícios de turno", descartados: "Inícios de turno descartados", cena: "Cena",
+      integrarCombate: "Contar pelos turnos do combate", usar: "Contador da mesa ligado", ativacao: "Ativação",
+      consequencia: "Consequência combinada", pd: "Pontos de determinação", criterios: "Critérios dos rituais",
+      lugares: "Pastas das habilidades das regras", pericias: "Perícias",
     },
   };
 

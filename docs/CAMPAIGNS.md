@@ -381,6 +381,31 @@ implementações e exige o mesmo resultado; se uma mudar, a outra tem de mudar j
 consulta no painel lateral. Selecionar nunca passa a vez; só **Próximo turno** e
 **Voltar turno** passam.
 
+### Condições pelo turno do combate (v2.19)
+
+Numa ficha de Ordem com morrendo, enlouquecendo ou um contador da mesa ativo, o
+**início do turno do personagem** conta sozinho — ver
+[ORDEM-REGRAS.md](ORDEM-REGRAS.md#condições-contadas-por-turno-v219). Quem conta é
+o servidor, no mesmo `atualizar_combate` que muda o turno, e só ele:
+
+- o lote registra os turnos que começaram (e o que "voltar turno" desfez); depois
+  de gravar o combate, cada ficha afetada é lida, recebe o evento
+  `cb:<combate>:<rodada>:<participante>` e é gravada uma vez, com a revisão subindo
+  como em qualquer gravação;
+- a projeção do painel diz, sem abrir a ficha, se há o que fazer: ficha sem
+  condição ativa não é lida nem regravada;
+- o mesmo turno é o mesmo evento — um lote repetido (mesmo `opId`) nem chega aqui,
+  e mestre e jogador não contam duas vezes por verem a mesma mesa;
+- "voltar turno" retira só o evento do turno desfeito; encerrar o combate não mexe
+  em nada;
+- só ficha que continua na campanha do combate é tocada. A que não se monta fica
+  como está, e a resposta leva `{ aviso: "condicao_nao_contada", personagemId }`
+  para o mestre contar à mão.
+
+A ficha aberta no aparelho do jogador recebe a revisão nova na próxima gravação,
+como conflito, e a conciliação une os eventos pelos ids (`js/sync.js`): nada que o
+jogador fez some, e o turno contado pelo combate não some.
+
 ### Operações em lote e a fila
 
 Antes da v2.12, cada iniciativa digitada gravava o combate inteiro meio segundo
@@ -590,7 +615,7 @@ v2.11.1); `testes/executar-frontend.js` confere isso lendo o HTML.
 
 | ficha | recursos | atributos | estatísticas |
 |---|---|---|---|
-| Ordem | PV, PE e Sanidade (sem Sanidade com "Jogando sem Sanidade"), atual e máximo calculados por `RAMAOrdemRegras.calcular` | efetivos | Defesa, Bloqueio, Esquiva, PE por turno, deslocamento — com os bônus extras |
+| Ordem | PV, PE e Sanidade — ou PV e PD, com "Jogando sem Sanidade" —, atual e máximo calculados por `RAMAOrdemRegras.calcular`; e as condições ativas, com a contagem da cena | efetivos | Defesa, Bloqueio, Esquiva, PE (ou PD) por turno, deslocamento — com os bônus extras |
 | Universal | os status configurados na ficha, com os nomes dela | os configurados | nenhuma — nada de Ordem é imposto |
 
 Bloqueio e Esquiva vêm do mesmo cálculo da ficha. A barra limita só a
@@ -606,7 +631,7 @@ chegou.
 |---|---|
 | mestre | todos os personagens por inteiro: dados de cálculo, recursos com ajuste rápido, atributos, estatísticas, **Abrir ficha** e **Tirar da campanha** |
 | dono | o mesmo, dos próprios personagens — de todos eles, se tiver mais de um na mesa |
-| outro jogador | identificação (nome, foto, classe e trilha, NEX ou nível, jogador), os atributos de uma ficha universal e os recursos **atuais e máximos, só leitura** — PV, PE e SAN numa ficha de Ordem, os status configurados numa universal. Sem estatísticas, escolhas, inventário, controles nem **Abrir ficha** |
+| outro jogador | identificação (nome, foto, classe e trilha, NEX ou nível, jogador), os atributos de uma ficha universal e os recursos **atuais e máximos, só leitura** — PV, PE e SAN (ou PV e PD) numa ficha de Ordem, com as condições ativas e a contagem da cena; os status configurados numa universal. Sem estatísticas, escolhas, inventário, eventos de turno, controles nem **Abrir ficha** |
 | outro jogador, com a ocultação ligada | só a identificação (e os atributos da universal); o cartão diz "Status ocultos pelo mestre." |
 | espectador | nada: a mesa não é dele |
 
@@ -627,7 +652,8 @@ que mande o campo recebe `sem_permissao`).
   mestre continua vendo todos.
 
 Ligada, o servidor **não manda** ao jogador os recursos dos personagens dos outros —
-nem nos cartões, nem na lista do combate (`listar_combates`). Não há barra, número,
+nem nos cartões, nem na lista do combate (`listar_combates`) —, nem as condições
+(morrendo, enlouquecendo, os contadores da mesa), que seguem a mesma regra. Não há barra, número,
 percentual, dica nem atributo HTML para esconder, porque eles não chegam. Mudar a
 chave troca as marcas de `campanha`, `personagens` e `combates`: quem está com a
 campanha aberta recebe as listas novas na próxima pergunta da sincronização, já sem
@@ -640,8 +666,9 @@ ligada não tem como ser apagado.
 O máximo de PV, PE e Sanidade sai de classe, trilha, escolhas e poderes — o build
 inteiro —, e o motor de regras mora no navegador. Para o outro jogador ver o máximo
 sem receber a ficha, quem já pode ver a ficha inteira (dono ou mestre) calcula e
-guarda esse máximo dentro dela, em `resumoRecursos` `{ versao, pv, pe, san }` (`san`
-nula com "Jogando sem Sanidade"):
+guarda esse máximo dentro dela, em `resumoRecursos` `{ versao, pv, pe, san, pd }`
+(com "Jogando sem Sanidade", `pe` e `san` nulos e `pd` com o máximo de pontos de
+determinação; sem a regra, `pd` nulo):
 
 - toda gravação de ficha de Ordem (a ficha e a criação) manda o resumo junto;
 - quando a aba Personagens desenha o cartão de quem pode ver a ficha, compara o

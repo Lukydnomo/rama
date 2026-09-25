@@ -149,19 +149,51 @@
        e usados por cabeçalho e detalhes de cada cartão. */
     var efetivos = perfilDe(ctx) && perfilDe(ctx).preparar ? perfilDe(ctx).preparar(ctx) : null;
 
-    return el("div.pilha--curta", { class: "pilha" }, [
+    /* Arrastar existe onde existe ordem personalizada: na ficha de Ordem,
+       no modo edição. A universal continua com armas primeiro. Com uma
+       categoria filtrada, o item muda de lugar entre os VISÍVEIS, e os
+       outros não saem da ordem em que estavam. */
+    var arrastar = !!(org && org.podeArrastar(ctx, "inventario") && global.RAMAArrastar && global.RAMAOrganizar);
+    var ids = visiveis.map(function (i) { return i.id; });
+
+    var raiz = el("div.pilha--curta", { class: "pilha" }, [
       org ? org.barra(ctx, "inventario") : null,
 
       /* O filtro só aparece quando há mais de uma gaveta: um seletor com
          uma opção só é ruído. */
       categorias.length > 1 ? filtro(ctx, categorias, itens.length) : null,
+      arrastar && categoriaAtiva
+        ? el("p.t-mini", { texto: "Com o filtro, arrastar muda a posição entre os itens mostrados; os outros continuam onde estavam." })
+        : null,
 
       visiveis.length
-        ? el("div.itens", {}, visiveis.map(function (i) {
-            return cartao(ctx, i, modo === "personalizada" ? visiveis : null, efetivos);
+        ? el("div.itens", { dataset: { arrastarLista: "inventario" } }, visiveis.map(function (i) {
+            var c = cartao(ctx, i, modo === "personalizada" ? visiveis : null, efetivos, arrastar);
+            c.dataset.arrastarItem = i.id;
+            c.dataset.arrastarRotulo = i.nome || "Item";
+            return c;
           }))
         : el("p.t-mini", { texto: "Nenhum item nesta categoria." }),
     ]);
+
+    if (!arrastar) return raiz;
+    var O = global.RAMAOrganizar;
+    return global.RAMAArrastar.ligar(raiz, {
+      podeSoltar: function () { return { ok: true }; },
+      aoSoltar: function (item, destino) {
+        if (!O.reposicionar(ctx.ficha.inventario.itens, item.id, destino.indice, ids)) return;
+        ctx.alterou();
+        ctx.redesenhar();
+      },
+      aoTeclado: function (item, direcao) {
+        if (!O.passo(ctx.ficha.inventario.itens, item.id, direcao, ids)) {
+          return { ok: false, motivo: direcao < 0 ? "Já é o primeiro." : "Já é o último." };
+        }
+        ctx.alterou();
+        ctx.redesenhar();
+        return { ok: true };
+      },
+    });
   }
 
   /* O filtro casa pela CATEGORIA do item, e não por texto solto na
@@ -195,7 +227,7 @@
      durante um combate e não podem custar um clique a mais. */
   /* `visiveis` só vem na ordem personalizada da ficha de Ordem: é a
      lista na tela, para Subir e Descer trocarem com o vizinho visível. */
-  function cartao(ctx, item, visiveis, efetivos) {
+  function cartao(ctx, item, visiveis, efetivos, arrastar) {
     var arma = item.tipo === "arma" && !ctx.emEdicao();
 
     var perfil = perfilDe(ctx);
@@ -208,6 +240,7 @@
         item.descricao ? el("p.item__descricao", { texto: item.descricao }) : null,
       ],
       acoes: [UI.menu(opcoesDoItem(ctx, item, visiveis), { rotulo: "Opções de " + item.nome, icone: "tresPontos" })],
+      alca: arrastar ? global.RAMAArrastar.alca({ id: item.id, rotulo: item.nome || "item" }) : null,
       /* Ataque e Dano precisam estar à vista com o item FECHADO. Até a
          v2.2 eles eram pendurados dentro do <details> depois da
          montagem, e um <details> fechado não pinta nada além do

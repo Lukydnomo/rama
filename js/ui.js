@@ -692,6 +692,9 @@
     lixeira: "M3 4 h10 M6 4 V2 h4 v2 M5 4 l0.5 10 h5 L11 4",
     baixar: "M8 2 V11 M4 8 L8 12 L12 8 M3 14 h10",
     salvar: "M3 3 h10 v10 h-10z M6 3 v4 h4 V3 M5 13 v-4 h6 v4",
+    /* A alça de arrastar: seis pontos com comprimento de verdade, pelo
+       mesmo motivo do dado. */
+    alca: "M5.25 3.5 h1.5 M9.25 3.5 h1.5 M5.25 8 h1.5 M9.25 8 h1.5 M5.25 12.5 h1.5 M9.25 12.5 h1.5",
   };
 
   function simbolo(nome, tamanho) {
@@ -870,6 +873,12 @@
     if (o.acoes) resumo.appendChild(el("span.recolhivel__acoes", {
       onclick: function (ev) { ev.preventDefault(); ev.stopPropagation(); },
     }, o.acoes));
+
+    /* A alça de arrastar (js/arrastar.js) vai na frente de tudo, pelo
+       mesmo motivo das ações: segurá-la não pode abrir o cartão. */
+    if (o.alca) resumo.insertBefore(el("span.recolhivel__alca", {
+      onclick: function (ev) { ev.preventDefault(); ev.stopPropagation(); },
+    }, [o.alca]), resumo.firstChild);
 
     resumo.setAttribute("aria-expanded", String(!!o.aberto));
     caixa.addEventListener("toggle", function () {

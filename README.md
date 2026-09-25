@@ -53,6 +53,8 @@ preferências de tela — nunca é tratado como banco.
     app.js              casca: cabeçalho, navegação, preferências, changelog
     versao.js           FONTE ÚNICA da versão e do changelog
     habilidades.js      modelo e árvore recursiva de habilidades
+    organizar.js        o que muda de lugar ao reorganizar uma lista (filtro, pastas, grupos)
+    arrastar.js         o gesto de arrastar e soltar, o mesmo nas cinco abas
     criaturas.js        mini ficha de criatura
     fila.js             fila de gravação por entidade
     campanha-painel.js  o que cada cartão do painel da mesa mostra (sem fórmula própria)
@@ -72,6 +74,7 @@ preferências de tela — nunca é tratado como banco.
       rituais.js        busca, filtros, a cópia para a ficha e os avisos dela
       regras.js         os cálculos, com a composição de cada número
       opcionais.js      as regras opcionais, uma chave para cada
+      condicoes.js      morrendo, enlouquecendo e contadores da mesa, por início de turno
     historico.js        rolagem → histórico da campanha, num funil só
     paginas/            um arquivo por tela
 
@@ -108,9 +111,9 @@ E abra `http://localhost:8099/rama/`.
 
 ### Testes
 
-São três conjuntos.
+São três conjuntos no terminal e duas páginas no navegador.
 
-**Modelo e motor de dados** — 1773 verificações. No navegador, abra `testes/`;
+**Modelo e motor de dados** — 1906 verificações. No navegador, abra `testes/`;
 no terminal:
 
 ```bash
@@ -170,6 +173,24 @@ importados, lista embaralhada sem palpite); e ligar e desligar regras sem apagar
 nada. Cada garantia nova foi conferida também por mutação: 26 alterações
 propositais no código, todas pegas pelos testes.
 
+E as condições e a organização da v2.19: morrendo e enlouquecendo pela regra de
+OPRPG p.88 — três inícios de turno na mesma cena, não consecutivos; curar 1 PV que
+encerra a inconsciência e não o morrendo; encerrar que não apaga a contagem e o
+retorno que a continua; "+1" com a condição inativa ou no limite recusado; "−1"
+que descarta o turno do combate; cena nova que zera a conta e mantém a condição —;
+Jogando sem Sanidade com os PD de cada classe, o que soma PE somando PD, gastar
+PD sem condição nenhuma, dano mental maior que os PD (enlouquecendo) e abaixo da
+metade (perturbado), e PE e SAN guardados sem conversão ao ligar e desligar a
+regra; contadores da mesa desligados por padrão, sem prazo inventado, ativados só
+por gasto ou dano com origem; os rituais por círculo e por elemento, separados e
+juntos, nas duas prioridades, com Homebrew, dados ausentes e um ritual com dois
+elementos aparecendo uma vez só; as perícias pelo total, com negativos e empates;
+a ordem personalizada que sobrevive à troca de modo; mover com filtro sem
+embaralhar os ocultos; pastas sem ciclo e sem passar da profundidade; notas
+mudando de pasta sem duplicar na conciliação; reordenar aqui sem atropelar o PV
+ou a nota editados lá; e exportar e importar levando condições e o lugar das
+habilidades das regras.
+
 E o catálogo de rituais: os 98 rituais conferidos contra os dois livros (elemento,
 círculo, execução, alcance, alvo/área/efeito, duração, resistência, página e o
 custo de cada versão), busca e filtros combinados, a cópia que vira ritual de ficha
@@ -180,7 +201,7 @@ avisam sem bloquear, adicionar que não resolve pendência de progressão, a mig
 do texto de "Efeito" para "Descrição" numa ficha antiga e a ficha atravessando
 salvar, exportar e importar.
 
-**Permissões, concorrência e armazenamento do backend** — 812 verificações:
+**Permissões, concorrência e armazenamento do backend** — 897 verificações:
 
 ```bash
 deno run --allow-read testes/executar-backend.js
@@ -232,7 +253,20 @@ com a regra de quem pode ver; o diretório de contas que não guarda segredo e
 esquece o nome trocado na hora; e o diagnóstico que fica de fora da resposta quando
 está desligado.
 
-**Transporte do frontend e carga das páginas** — 219 verificações:
+E a contagem de turnos da v2.19, pelo `doPost` do combate: o início do turno do
+personagem contado uma vez, e o de outro participante nunca; turnos não
+consecutivos na mesma cena; o lote repetido, a outra aba do mestre com revisão
+velha e a jogadora tentando passar o turno sem contar nada; voltar turno tirando
+só o início desfeito, sem desfazer o que a jogadora fez depois e sem contar de
+novo quem recebe a vez; o turno descartado à mão que não volta; o limite; a
+integração desligada; a ficha antiga sem condições, a ficha fora da campanha e a
+ficha ilegível (o turno anda e o mestre é avisado); encerrar o combate sem zerar a
+cena, e outro combate na mesma cena continuando a conta; as condições alheias
+seguindo "Esconder status dos jogadores" nos cartões e no combate, sem eventos; e
+o PD no resumo, no painel e no ajuste rápido. As regras de contagem do servidor e
+as do navegador rodam os mesmos 300 casos sorteados e dão o mesmo resultado.
+
+**Transporte do frontend e carga das páginas** — 226 verificações:
 
 ```bash
 deno run --allow-read testes/executar-frontend.js
@@ -291,6 +325,28 @@ vezes, cancelar que descarta, o resumo antes de gravar, confirmar que grava uma
 vez só); e Transcender → Aprender Ritual de ponta a ponta — a biblioteca no
 contexto do poder, a cópia pendente que só entra ao confirmar, o elemento vindo
 do ritual, cancelar sem deixar ritual nem poder, e confirmar sem duplicar.
+
+**Arrastar e soltar no navegador** — 126 verificações (131 em largura de celular,
+com toque). Sirva a pasta por HTTP e abra `testes/arrastar.html`: as cinco abas de
+verdade — habilidades, rituais, inventário, perícias e anotações — abrem com uma
+ficha de Ordem de teste, e o roteiro arrasta com eventos de ponteiro de mouse e de
+toque e move pelo teclado. Confere a prévia sem gravação no meio, a gravação uma
+vez ao soltar, o destino recusado com o motivo (pasta dentro de si mesma ou de uma
+subpasta, ritual trocando de lugar ou de grupo, pasta entre as notas), Esc e o
+cancelamento do sistema, a rolagem perto das bordas, o clique depois do arraste
+que não abre nada, o limiar que separa toque de arraste, o filtro do inventário
+sem mexer nos ocultos, a habilidade das regras numa pasta sem virar Homebrew, os
+critérios dos rituais, as perícias pelo total com o foco preservado ao editar, as
+notas organizadas fora do modo edição, gravar e reabrir a ficha com a mesma ordem,
+a conciliação com o outro aparelho e a ficha universal, que ganha o gesto sem
+ganhar regra de Ordem. Com `?parar=1` a página abre sem rodar, para
+investigar à mão.
+
+Cada garantia nova da v2.19 foi conferida também por mutação: 55 alterações
+propositais nas três suítes do terminal e 6 no gesto de arrastar, pela página do
+navegador. Todas as do terminal foram pegas; das do gesto, cinco — a sexta é
+equivalente: tirar a guarda de clique da alça não muda nada, porque a alça é um
+botão, e um botão dentro do resumo de um cartão não o abre.
 
 **Custo das operações** — não é teste, é medição:
 
@@ -473,7 +529,26 @@ gravar. Com o schema 9, essa aba recusa a ficha e pede para recarregar; nada se
 perde. Depois de publicar, peça a quem estiver com a ficha aberta para recarregar
 a página.
 
-Sem o passo 2, as fichas antigas continuam abrindo, mas nenhuma ficha salva
+**Atualizando para a v2.19 (condições e organização): backend e site.** Mudaram
+`Codigo.gs` e `Campanhas.gs`: o lote do combate passa a contar o início de turno
+nas fichas, o resumo de recursos aceita PD e o ajuste rápido também. Não há aba nem
+coluna nova, então **não é preciso rodar `setupRama()`**:
+
+1. cole os três `.gs` (sempre juntos) no editor do Apps Script;
+2. **Implantar → Gerenciar implantações → editar → Versão: Nova versão**;
+3. publique o site;
+4. peça a quem estiver com uma ficha aberta para recarregar a página.
+
+O `schemaVersion` sobe de 9 para 10 **sem converter nada** (o bloco de Ordem ganhou
+`condicoes`, `recursos.pd` e preferências novas de organização): uma ficha 9 abre
+igual e passa a 10 na próxima gravação, e uma aba ainda na v2.18 recusa a ficha em
+vez de descartar os campos novos. Um site antigo diante do servidor novo continua
+funcionando — só não manda condição nenhuma para contar. O site novo diante do
+servidor antigo grava as fichas, mas o combate não conta turnos, o resumo com PD
+não é aceito (o painel fica com o anterior) e o ajuste rápido de PD é recusado —
+por isso o servidor vai primeiro.
+
+Sem o passo 2 da v2.15, as fichas antigas continuam abrindo, mas nenhuma ficha salva
 (`instalacao_incompleta`) — nada é gravado pela metade. **Não volte a implantação
 para uma versão anterior à v2.15** sem necessidade: a versão antiga não sabe abrir
 as fichas que já estão em blocos (o site mostra que o servidor precisa ser
@@ -555,8 +630,9 @@ console não abre o registro de outra conta.
   linhas, o mestre precisará limpar o histórico de vez em quando.
 - **Um mestre só por campanha na interface.** O banco já guarda o papel por
   membro e aceita mais de um mestre, mas a tela não oferece promover ninguém.
-- **Combate tem turno e rodada, e só.** Não há grid, distância, condições, ações
-  por turno nem duração de efeitos. Nada disso foi especificado.
+- **Combate tem turno e rodada, e as condições contadas por turno.** Morrendo,
+  enlouquecendo e os contadores da mesa contam o início do turno do personagem
+  (v2.19); não há grid, distância, ações por turno nem duração de efeitos.
 - **A atualização automática não é tempo real.** O navegador pergunta a cada ~8 s
   nas abas Personagens e Combate e a cada ~20 s nas outras: a mudança de outra
   pessoa chega em 2 a 15 s (até ~25 s fora das abas de mesa), mais quando o Apps
@@ -650,6 +726,26 @@ console não abre o registro de outra conta.
   círculo do ritual ao NEX de exposição (SAH p. 99). O R.A.M.A. avisa e deixa o
   ajuste com a mesa: subir um campo da ficha a cada leitura faria recalcular
   conceder progressão.
+- **As condições não rolam testes (v2.19).** Medicina contra morrendo e
+  Diplomacia contra enlouquecendo são rolados por quem joga; a ficha encerra a
+  condição quando alguém aperta Encerrar. No limite, ela mostra o resultado da
+  regra — e não apaga a ficha nem transfere nada. Loucura Não Letal (OPRPG p.175)
+  é citada, não aplicada; machucado e lesões não são marcados.
+- **Fora do combate, a contagem é à mão (v2.19).** Só o combate da campanha tem
+  identidade de turno. Se mestre e jogador apertarem "+1 início de turno" pelo
+  mesmo turno, a ficha registra os dois — o "−1" corrige. O servidor não confere
+  regra de condição: ele conta o turno do combate e guarda o que a ficha manda.
+- **Jogando sem Sanidade é parcial (v2.19).** PD substituem PE e SAN nas contas,
+  nos custos e nas condições; a redução dos dados de dano mental das criaturas,
+  as visões de Medo, O Custo do Paranormal em PD e as ações de interlúdio ficam
+  com a mesa. A classe Sobrevivente, que o livro inclui na tabela de PD, não está
+  no R.A.M.A.
+- **Na ficha universal, arrastar vale para habilidades, rituais e anotações
+  (v2.19).** O inventário dela continua com as armas primeiro, e as perícias não
+  ganharam ordem nova: a ordem por bônus é da ficha de Ordem, que é a que tem o
+  total calculado. A página de testes confere o gesto com eventos de ponteiro e
+  teclado — o mesmo caminho do navegador —, mas não substitui experimentar num
+  celular de verdade.
 - **"Os Limites da Compreensão Humana" mudou de significado na v2.17.** Até a
   v2.16 essa chave descrevia um teto de perícias, que não é a regra dessa página
   do livro; ela agora é o limite de rituais por aprendizado lento, e ganhou uma
@@ -661,7 +757,8 @@ console não abre o registro de outra conta.
 1. Auditoria: quem mudou o quê e quando, aproveitando o `rev` que já existe.
 2. Promover um segundo mestre pela interface (o banco já suporta).
 3. Aplicativo instalável (Service Worker) para a ficha abrir sem rede.
-4. Condições e efeitos temporários, que hoje moram no bônus temporário.
+4. Outras condições e efeitos temporários (machucado, lesões, fatigado, duração
+   de efeitos), que hoje moram no bônus temporário e no texto.
 5. Guardar no navegador as alterações pendentes do combate, para sobreviverem a
    fechar a aba (revalidadas contra o servidor ao voltar).
 

@@ -141,6 +141,8 @@
       if (antes && antes.recursos !== undefined) {
         p.recursos = copiar(antes.recursos);
         if (antes.recursosPendentes) p.recursosPendentes = true;
+        /* As condições (v2.19) vêm junto dos recursos, na listagem. */
+        if (antes.condicoes !== undefined) p.condicoes = copiar(antes.condicoes);
       }
     });
     return novo;
@@ -605,6 +607,9 @@
             if (meu && p.tipo === "personagem") {
               meu.recursos = copiar(p.recursos);
               if (p.recursosPendentes) meu.recursosPendentes = true; else delete meu.recursosPendentes;
+              /* Morrendo e enlouquecendo contam no servidor, no próprio
+                 "próximo turno": a listagem traz a contagem nova. */
+              if (p.condicoes !== undefined) meu.condicoes = copiar(p.condicoes); else delete meu.condicoes;
             }
           });
           mudou();

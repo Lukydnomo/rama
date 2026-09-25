@@ -301,6 +301,114 @@
   /* Uma cópia da ficha com cada vínculo de ritual marcado com a posição
      dele na lista. Só é chamada ao exportar. */
   function comPosicoesDeRitual(ficha) {
+    return comApresentacaoPortavel(comPosicoesDosRituais(ficha));
+  }
+
+  /* =================================================================
+     O QUE MAIS PRECISA ATRAVESSAR (v2.19)
+     -----------------------------------------------------------------
+     · As habilidades das regras que a pessoa pôs numa pasta guardam o
+       id da pasta (`organizacao.habilidades.lugares` e `ordem`). A
+       importação troca o id de toda pasta — então a pasta vai como
+       CAMINHO na árvore ("#arv:0.2": a terceira coisa da primeira), que
+       a importação refaz com o id novo. A árvore atravessa com a mesma
+       forma, e o caminho continua certo.
+     · Os inícios de turno das condições têm `id`, e `id` não atravessa.
+       Eles vão como `evento` e voltam a ser `id` antes da normalização —
+       sem isso, um personagem importado morrendo "2 de 3" voltaria "0
+       de 3".
+     ================================================================= */
+
+  var PREFIXO_ARVORE = "#arv:";
+
+  function caminhosDaArvore(arvore) {
+    var porId = {};
+    var porCaminho = {};
+    (function andar(filhos, prefixo, prof) {
+      if (prof > 12) return;
+      (Array.isArray(filhos) ? filhos : []).forEach(function (no, i) {
+        if (!no || typeof no !== "object") return;
+        var caminho = prefixo ? prefixo + "." + i : String(i);
+        if (typeof no.id === "string" && no.id) {
+          porId[no.id] = caminho;
+          porCaminho[caminho] = no.id;
+        }
+        if (Array.isArray(no.filhos)) andar(no.filhos, caminho, prof + 1);
+      });
+    })(arvore && arvore.filhos, "", 0);
+    return { porId: porId, porCaminho: porCaminho };
+  }
+
+  function trocarIdsDaApresentacao(org, trocar) {
+    if (!org || typeof org !== "object") return;
+    if (org.lugares && typeof org.lugares === "object") {
+      Object.keys(org.lugares).forEach(function (aq) {
+        var novo = trocar(org.lugares[aq]);
+        if (novo) org.lugares[aq] = novo; else delete org.lugares[aq];
+      });
+    }
+    if (org.ordem && typeof org.ordem === "object") {
+      var nova = {};
+      Object.keys(org.ordem).forEach(function (conteiner) {
+        var chave = conteiner === "*" ? "*" : trocar(conteiner);
+        if (!chave || !Array.isArray(org.ordem[conteiner])) return;
+        nova[chave] = org.ordem[conteiner].map(function (k) {
+          if (typeof k !== "string" || k.indexOf("n:") !== 0) return k;
+          var id = trocar(k.slice(2));
+          return id ? "n:" + id : null;
+        }).filter(Boolean);
+      });
+      org.ordem = nova;
+    }
+  }
+
+  function comApresentacaoPortavel(ficha) {
+    var org = ficha && ficha.ordem && ficha.ordem.organizacao ? ficha.ordem.organizacao.habilidades : null;
+    var cond = ficha && ficha.ordem ? ficha.ordem.condicoes : null;
+    var temLugares = org && ((org.lugares && Object.keys(org.lugares).length) || (org.ordem && Object.keys(org.ordem).length));
+    if (!temLugares && !(cond && typeof cond === "object")) return ficha;
+
+    var copia = JSON.parse(JSON.stringify(ficha));
+    if (temLugares) {
+      var mapa = caminhosDaArvore(copia.habilidades).porId;
+      trocarIdsDaApresentacao(copia.ordem.organizacao.habilidades, function (id) {
+        return mapa[id] !== undefined ? PREFIXO_ARVORE + mapa[id] : "";
+      });
+    }
+    percorrerEventos(copia.ordem.condicoes, function (e) {
+      if (typeof e.id === "string") { e.evento = e.id; delete e.id; }
+    });
+    return copia;
+  }
+
+  function percorrerEventos(cond, fn) {
+    if (!cond || typeof cond !== "object") return;
+    var listas = [cond.morrendo, cond.enlouquecendo];
+    if (cond.mesa && typeof cond.mesa === "object") listas.push(cond.mesa.exaustao, cond.mesa.desmaio);
+    listas.forEach(function (r) {
+      if (r && Array.isArray(r.eventos)) r.eventos.forEach(function (e) { if (e && typeof e === "object") fn(e); });
+    });
+  }
+
+  /* Antes de normalizar o que veio do arquivo: `evento` volta a ser `id`. */
+  function devolverIdsDosEventos(dados) {
+    percorrerEventos(dados && dados.ordem ? dados.ordem.condicoes : null, function (e) {
+      if (typeof e.evento === "string") { e.id = e.evento; delete e.evento; }
+    });
+  }
+
+  /* Depois de normalizar: o caminho na árvore vira o id novo da pasta. */
+  function refazerApresentacao(ficha) {
+    var org = ficha && ficha.ordem && ficha.ordem.organizacao ? ficha.ordem.organizacao.habilidades : null;
+    if (!org) return;
+    var mapa = caminhosDaArvore(ficha.habilidades).porCaminho;
+    trocarIdsDaApresentacao(org, function (valor) {
+      if (typeof valor !== "string" || valor.indexOf(PREFIXO_ARVORE) !== 0) return valor;
+      return mapa[valor.slice(PREFIXO_ARVORE.length)] || "";
+    });
+  }
+
+  function comPosicoesDosRituais(ficha) {
     var itens = (ficha && ficha.rituais && Array.isArray(ficha.rituais.itens)) ? ficha.rituais.itens : [];
     var escolhas = (ficha && ficha.ordem && Array.isArray(ficha.ordem.escolhas)) ? ficha.ordem.escolhas : [];
     var registros = (ficha && ficha.ordem && Array.isArray(ficha.ordem.registrosDeRitual)) ? ficha.ordem.registrosDeRitual : [];
@@ -408,11 +516,13 @@
          identidade de outra ficha. Sem a travessia abaixo, um ocultista
          importado abriria com os rituais na ficha e todas as concessões
          pendentes, como se nunca tivesse aprendido nada. */
+      devolverIdsDosEventos(limpo);
       var ficha = F.normalizarFicha(limpo);
       var v = personagem(ficha);
       if (!v.ok) return { ok: false, erro: "invalido", mensagem: "A ficha tem problemas.", problemas: v.problemas };
 
       refazerVinculos(ficha);
+      refazerApresentacao(ficha);
       return { ok: true, tipo: "personagem", dados: ficha };
     }
 

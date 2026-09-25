@@ -344,6 +344,22 @@
                     ? el("p.t-mini.mesa-cartao__reservado", { texto: "Recursos e estatísticas ficam visíveis para o mestre e para quem joga com este personagem." })
                     : (r.tipo === "universal" ? el("p.t-mini", { texto: "Esta ficha não tem status configurados." }) : null)))),
 
+      /* Morrendo, enlouquecendo e os contadores da mesa: a MESMA fonte da
+         ficha (o bloco de Ordem), com a mesma regra de quem pode ver o
+         status. Só leitura aqui — os controles ficam na ficha. */
+      r.condicoes && r.condicoes.length
+        ? el("ul.mesa-condicoes", { "aria-label": "Condições de " + r.nome }, r.condicoes.map(function (cd) {
+            return el("li.mesa-condicao", {
+              class: (cd.ativa ? "mesa-condicao--ativa" : "") + (cd.atingiu && cd.ativa ? " mesa-condicao--limite" : "") + (cd.oficial ? "" : " mesa-condicao--mesa"),
+              title: cd.oficial ? "" : "Contador da mesa, não regra do livro",
+            }, [
+              el("span.mesa-condicao__nome", { texto: cd.nome, "aria-hidden": "true" }),
+              cd.texto ? el("span.mesa-condicao__conta", { texto: cd.texto, "aria-hidden": "true" }) : null,
+              el("span.so-leitor", { texto: cd.leitura || cd.nome }),
+            ]);
+          }))
+        : null,
+
       r.estatisticas.length
         ? el("dl.mesa-estatisticas", {}, r.estatisticas.map(function (s) {
             return el("div.mesa-estatistica", {}, [

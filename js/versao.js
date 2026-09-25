@@ -14,13 +14,13 @@
    TRÊS COISAS DIFERENTES, QUE NÃO SE MISTURAM
    ---------------------------------------------------------------------
 
-     versão do aplicativo   está aqui. É o que a pessoa vê: v2.18.0.
+     versão do aplicativo   está aqui. É o que a pessoa vê: v2.19.0.
      schemaVersion          está em js/ficha.js. É o formato da FICHA,
                             e só sobe quando a ficha muda de forma.
      versaoFormato          está em js/config.js. É o formato dos
                             arquivos de importação/exportação.
 
-   Elas sobem em ritmos próprios. A v2.18.0 leva schemaVersion 9 e
+   Elas sobem em ritmos próprios. A v2.19.0 leva schemaVersion 10 e
    versaoFormato 1 — e isso é normal: a v2.15 mudou ONDE a ficha é guardada
    (em blocos, no backend), a v2.16 mudou como ela é ACHADA e o que o painel
    lê para desenhar um cartão, e a v2.17 acrescentou decisões dentro de
@@ -28,7 +28,10 @@
    três mudou o que é uma ficha. A v2.18 mudou: o bloco de Ordem ganhou
    `registrosDeRitual`, e o schema subiu para 9 SEM conversão, só para uma
    aba aberta na versão anterior recusar a ficha em vez de descartar o
-   campo ao gravar. O arquivo de importação continua no mesmo formato. A
+   campo ao gravar. A v2.19 fez o mesmo, pelo mesmo motivo: `condicoes`,
+   `recursos.pd` e as preferências novas de `organizacao` levaram o schema
+   a 10, também sem conversão. O arquivo de importação continua no mesmo
+   formato. A
    forma de guardar tem a própria versão, no manifesto de cada ficha
    (`formato: "blocos"`, `versao: 1` — ver docs/DATABASE.md). A última
    subida de schema com migração foi a v2.14.0: o texto longo do ritual
@@ -66,6 +69,40 @@
   ];
 
   var CHANGELOG = [
+    {
+      versao: "2.19.0",
+      codinome: "LIMIAR",
+      data: "25/09/2026",
+      mudancas: {
+        "Adicionado": [
+          "Condições na ficha de Ordem, num painel logo abaixo dos recursos: Morrendo, ligado ao PV, e Enlouquecendo, ligado à Sanidade — ou aos pontos de determinação, com \"Jogando sem Sanidade\". Cada uma mostra se está ativa e quantos inícios de turno já contaram na cena (\"Morrendo: 1 de 3\", com marcadores), com +1 início de turno, −1 para corrigir, Encerrar e Nova cena. A regra é a do livro (Ordem Paranormal RPG, p. 88): contam os inícios do turno do próprio personagem, três na mesma cena, não necessariamente seguidos; curar 1 PV encerra a inconsciência e não o morrendo, que pede Medicina (DT 20) ou um efeito específico; enlouquecendo termina com Diplomacia (DT 20) ou com 1 de Sanidade curado. Encerrar não apaga os turnos da cena — se a condição voltar, a conta continua. No limite, a ficha mostra o resultado da regra; nada é apagado e a ficha não muda de dono.",
+          "Ações com origem ao lado de cada recurso: Dano e Cura no PV, Dano mental e Recuperar na Sanidade, Gastar e Recuperar nos PE, Gastar, Dano mental e Recuperar nos PD. Só elas ligam ou desligam condições. O número digitado continua sendo ajuste manual: muda o valor e mais nada, e quando o PV ou a Sanidade chegam a 0 assim, a ficha só sugere a condição.",
+          "Contadores da mesa para exaustão e desmaio, que o livro não conta por turno: começam desligados, dizem que são regra da mesa, e a mesa escolhe o limite, se ativam só à mão ou quando os PE ou PD chegam a 0 por gasto ou dano, e escreve a consequência. Nenhum prazo é inventado e nada acontece sozinho.",
+          "Rituais agrupados por círculo e por elemento — um, outro ou os dois, com a prioridade à vista (\"Círculo, depois elemento\", o padrão, ou o contrário) e a ordem de sempre desempatando dentro de cada grupo. O círculo vem dos dados do ritual, em ordem numérica, nunca do nome; o elemento da mesa forma o próprio grupo; o que não tem dado fica em \"não informado\", no fim; e um ritual com dois elementos aparece uma vez só. Conhecidos, Grimório e Registros continuam separados.",
+          "Perícias em ordem alfabética, do maior bônus para o menor, do menor para o maior ou personalizada. O bônus comparado é o total que a linha mostra — treino, extra e os demais modificadores, pelo mesmo cálculo —, com empate pelo nome. Editar o extra não move a linha a cada tecla: a lista se reorganiza ao confirmar, com o foco no lugar.",
+          "Arrastar e soltar em habilidades, rituais, inventário, perícias e anotações, pela alça ⠿: o cartão levado ao lado do ponteiro, a linha de destino, o destino recusado já durante o arraste, com o motivo, Esc para cancelar, rolagem sozinha perto da borda, mouse, toque (a página continua rolando fora da alça) e teclado — ↑ e ↓ com o foco na alça. Subir e Descer continuam no menu, como alternativa.",
+          "Pastas por arraste. Nas habilidades, um item entra, sai ou muda de pasta, e as pastas mudam de lugar — nunca para dentro de si mesmas ou de uma subpasta. As habilidades das regras também vão para as pastas, como preferência de apresentação: não viram Homebrew e a aquisição não muda. Nas anotações, notas mudam de pasta ou saem dela e as pastas mudam de ordem, também fora do modo edição, para quem pode editar a ficha.",
+        ],
+        "Alterado": [
+          "\"Jogando sem Sanidade\" passou a ser a regra do livro, e não só esconder a Sanidade (Sobrevivendo ao Horror, p. 104-105): PE e Sanidade viram pontos de determinação — 6, 8 ou 10 + Presença, e 3, 4 ou 5 + Presença a cada NEX, por classe —, o que soma PE soma PD, custos em PE são pagos com PD, gastar PD não causa condição nenhuma, dano mental maior que os PD deixa enlouquecendo e abaixo da metade deixa perturbado, e recuperar 1 PD encerra enlouquecendo. Os PE e a Sanidade guardados não são convertidos: desligar a regra devolve os valores de antes. O painel da mesa e o combate mostram PV e PD.",
+          "Num modo de ordem automático (A–Z, Z–A, por adição, por bônus), a alça some e aparece \"Usar ordem personalizada\": arrastar não é aceito para ser desfeito em seguida. Trocar de modo nunca apaga a ordem personalizada guardada.",
+        ],
+        "Melhorado": [
+          "O combate da campanha conta morrendo, enlouquecendo e os contadores da mesa sozinho: só no início do turno do próprio personagem, uma vez por turno — o mesmo turno visto pelo mestre e pelo jogador, reenviado pela rede ou relido numa recarga não conta de novo. Voltar turno retira só o início desfeito, sem desfazer o que foi corrigido depois; encerrar o combate não zera a cena, e outro combate na mesma cena continua a conta. Cada ficha pode desligar a integração.",
+          "O painel da campanha e a lista do combate mostram as condições ativas com a contagem da cena, com a mesma visibilidade dos recursos: com \"Esconder status dos jogadores\", os outros jogadores não as recebem.",
+        ],
+        "Corrigido": [
+          "\"Mover\", na árvore de habilidades, oferecia pastas que deixariam a árvore mais funda do que a ficha guarda — a parte mais funda seria cortada ao reabrir. Esses destinos não aparecem mais, e o arraste os recusa com o motivo.",
+        ],
+        "Técnico": [
+          "schemaVersion 9 → 10, sem conversão: o bloco de Ordem ganhou `condicoes`, `recursos.pd` e, em `organizacao`, os critérios dos rituais, a ordem das perícias e o lugar das habilidades das regras. Uma ficha antiga abre como estava — sem condição ativa, perícias em ordem alfabética, rituais sem grupo, habilidades onde estavam —, e uma aba aberta na versão anterior recusa a ficha em vez de descartar os campos ao gravar.",
+          "O backend mudou (Codigo.gs e Campanhas.gs), sem aba nem coluna nova: cole os três `.gs`, crie uma nova versão da implantação — setupRama() não é necessário — e só depois publique o site. O lote do combate grava o início de turno nas fichas pela mesma gravação de sempre (revisão, blocos, projeção), só em ficha que continua na campanha; o resumo de recursos e o ajuste rápido aceitam PD; e o mestre é avisado quando uma ficha ilegível não pôde ser contada.",
+          "Uma implementação de arrastar (js/arrastar.js) e uma de reorganizar (js/organizar.js) para as cinco abas. A conciliação ganhou três garantias: reordenar aqui não atropela o PV nem o texto de uma nota editados em outro aparelho, uma nota movida de pasta não fica duplicada, e os inícios de turno se unem pelo id. Exportar e importar levam as condições e o lugar das habilidades das regras.",
+          "Regras, fontes e leituras em docs/ORDEM-REGRAS.md: a divergência entre a p. 88 e o apêndice de condições (p. 310-311), seguida pela p. 88; quando perturbado termina com PD; e por que exaustão e desmaio são contadores da mesa.",
+          "Testes: 1906 no modelo (133 novas), 897 no backend (85 novas), 226 no transporte do frontend e uma página nova, testes/arrastar.html, que arrasta de verdade nas cinco abas com mouse, toque e teclado — 126 verificações, 131 em largura de celular. Mutações propositais nas garantias novas: 55 nas suítes do terminal, todas pegas; 6 no gesto de arrastar, 5 pegas pela página do navegador e a sexta equivalente (sem efeito observável).",
+        ],
+      },
+    },
     {
       versao: "2.18.0",
       codinome: "VÍNCULO",

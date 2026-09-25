@@ -70,6 +70,16 @@
 
   function E() { return global.RAMAOrdemProgressao; }
   function I() { return global.RAMAOrdemInventario; }
+  function CD() { return global.RAMAOrdemCondicoes; }
+
+  /* "Jogando sem Sanidade" (SAH p.104): PE e Sanidade saem, e os dois
+     viram um recurso só, pontos de determinação. A chave da regra é a
+     mesma desde a v2.3 (`semSanidade`). */
+  var REGRA_DETERMINACAO = "semSanidade";
+
+  function usaDeterminacao(ficha) {
+    return !!(ficha && ficha.opcionais && ficha.opcionais[REGRA_DETERMINACAO] === true);
+  }
 
   /* =================================================================
      COMPOSIÇÃO
@@ -142,8 +152,13 @@
       /* --- regra de patente e limites manuais --- */
       patente: { aplicar: true, limites: null },
 
-      /* --- recurso: o que sobrou --- */
-      recursos: { pv: null, pe: null, san: null },
+      /* --- recurso: o que sobrou. `pd` só vale com "Jogando sem
+             Sanidade"; PE e SAN ficam guardados enquanto isso --- */
+      recursos: { pv: null, pe: null, san: null, pd: null },
+
+      /* --- condições contadas por turno: morrendo, enlouquecendo e os
+             contadores da mesa (condicoes.js) --- */
+      condicoes: CD() ? CD().vazio() : {},
 
       /* --- ajuste manual, com motivo --- */
       ajustes: [],
@@ -320,11 +335,19 @@
 
     var inicial = classe[qual + "Inicial"];
     var porNex = classe[qual + "PorNex"];
+    if (!inicial || !porNex) return c;
+
+    /* Pontos de determinação (SAH p.104): "todos os demais efeitos e
+       mecânicas relacionados a pontos de esforço se aplicam diretamente a
+       pontos de determinação". Então os PD somam, além da tabela da
+       classe, tudo o que soma PE — e nada do que soma Sanidade ("ignore
+       as demais referências a Sanidade"). */
+    var comoPe = qual === "pe" || qual === "pd";
 
     /* Racionalidade Inflexível troca a Presença pelo Intelecto no
        cálculo dos PE (SAH p.35). */
     var atribPe = null;
-    if (qual === "pe") {
+    if (comoPe) {
       efeitosDoTipo(ficha, "atributoDoPe").forEach(function (m) { atribPe = m.efeito.atributo; });
     }
     var chaveInicial = inicial.atributo ? (atribPe || inicial.atributo) : null;
@@ -354,7 +377,7 @@
     }
 
     /* --- efeitos de poder e habilidade, por degrau --- */
-    var porDegrauDoPoder = qual === "pv" ? "pvPorDegrau" : (qual === "pe" ? "pePorDegrau" : null);
+    var porDegrauDoPoder = qual === "pv" ? "pvPorDegrau" : (comoPe ? "pePorDegrau" : null);
     if (porDegrauDoPoder) {
       efeitosDoTipo(ficha, porDegrauDoPoder).forEach(function (m) {
         var n = passosDoEfeito(ficha, m.efeito);
@@ -363,7 +386,7 @@
       });
     }
 
-    if (qual === "pe") {
+    if (comoPe) {
       efeitosDoTipo(ficha, "dedicacao").forEach(function (m) {
         /* "+1 PE, e mais 1 PE adicional a cada NEX ímpar (15%, 25%…)"
            — OPRPG p.21. Os degraus ímpares são o 3º (15%), o 5º (25%)…
@@ -400,6 +423,9 @@
       }
     }
 
+    /* Um ajuste da mesa nos PE é mecânica de PE: com a regra ligada, ele
+       vale para os PD — e volta aos PE quando ela é desligada. */
+    if (qual === "pd") somarAjustes(c, ficha, "pe");
     somarAjustes(c, ficha, qual);
 
     c.piso(0);
@@ -409,6 +435,7 @@
   function pontosDeVida(ficha) { return maximoDeRecurso(ficha, "pv"); }
   function pontosDeEsforco(ficha) { return maximoDeRecurso(ficha, "pe"); }
   function sanidade(ficha) { return maximoDeRecurso(ficha, "san"); }
+  function determinacao(ficha) { return maximoDeRecurso(ficha, "pd"); }
 
   /* =================================================================
      LIMITE DE PE POR TURNO — OPRPG p.23, Tabela 1.2
@@ -1499,14 +1526,27 @@
   }
 
   function aparar(ficha, maximos) {
-    if (!ficha.recursos) ficha.recursos = { pv: null, pe: null, san: null };
-    ["pv", "pe", "san"].forEach(function (qual) {
+    if (!ficha.recursos) ficha.recursos = { pv: null, pe: null, san: null, pd: null };
+    ["pv", "pe", "san", "pd"].forEach(function (qual) {
       var atual = ficha.recursos[qual];
       if (atual === null || atual === undefined) return;
       var teto = maximos[qual];
+      if (teto === undefined || teto === null) return;
       if (inteiro(atual, 0) > teto) ficha.recursos[qual] = teto;
     });
     return ficha.recursos;
+  }
+
+  /* Os máximos que `aparar` confere, para quem mexeu nas escolhas. PE e
+     SAN continuam sendo aparados com "Jogando sem Sanidade" ligada: eles
+     ficam guardados e voltam quando a regra for desligada. */
+  function maximosDosRecursos(ficha) {
+    return {
+      pv: pontosDeVida(ficha).total,
+      pe: pontosDeEsforco(ficha).total,
+      san: sanidade(ficha).total,
+      pd: determinacao(ficha).total,
+    };
   }
 
   /* =================================================================
@@ -1517,18 +1557,23 @@
     var pv = pontosDeVida(ficha);
     var pe = pontosDeEsforco(ficha);
     var san = sanidade(ficha);
+    var comPd = usaDeterminacao(ficha);
+    var pd = comPd ? determinacao(ficha) : null;
 
     return {
       trilho: trilho(ficha),
       exposicao: exposicao(ficha),
       estado: estadoDe(ficha, inventario),
 
-      pv: pv, pe: pe, san: san,
+      pv: pv, pe: pe, san: san, pd: pd,
+      /* Com "Jogando sem Sanidade", os recursos em jogo são PV e PD. */
+      determinacao: comPd,
 
       atual: {
         pv: recursoAtual(ficha, "pv", pv.total),
         pe: recursoAtual(ficha, "pe", pe.total),
         san: recursoAtual(ficha, "san", san.total),
+        pd: pd ? recursoAtual(ficha, "pd", pd.total) : null,
       },
 
       limitePe: limiteDeEsforco(ficha),
@@ -1552,16 +1597,18 @@
      recursos" em backend/Campanhas.gs). É calculado aqui, pelo mesmo
      motor, por quem pode ver a ficha inteira: a própria ficha ao
      gravar, a criação guiada e o painel da campanha do dono ou do
-     mestre. Sanidade é nula com "Jogando sem Sanidade". */
+     mestre. Com "Jogando sem Sanidade", PE e Sanidade são nulos e vem o
+     máximo de PD; sem ela, `pd` é nulo. */
   function resumoDeRecursos(ficha) {
-    var semSanidade = !!(global.RAMAOrdemOpcionais && global.RAMAOrdemOpcionais.ligada(ficha, "semSanidade"));
+    var comPd = usaDeterminacao(ficha);
     /* Inteiros, como o servidor guarda: um total fracionário nunca
        bateria com o guardado, e o painel regravaria o resumo a cada
        atualização. */
     return {
       pv: Math.round(pontosDeVida(ficha).total),
-      pe: Math.round(pontosDeEsforco(ficha).total),
-      san: semSanidade ? null : Math.round(sanidade(ficha).total),
+      pe: comPd ? null : Math.round(pontosDeEsforco(ficha).total),
+      san: comPd ? null : Math.round(sanidade(ficha).total),
+      pd: comPd ? Math.round(determinacao(ficha).total) : null,
     };
   }
 
@@ -1612,7 +1659,7 @@
       progressao: [],
       afinidade: normalizarAfinidade(b.afinidade),
       patente: normalizarPatente(b.patente),
-      recursos: { pv: null, pe: null, san: null },
+      recursos: { pv: null, pe: null, san: null, pd: null },
       ajustes: [],
       temporarios: { pv: 0, pe: 0, san: 0, defesa: 0, capacidade: 0 },
       opcionais: global.RAMAOrdemOpcionais
@@ -1674,10 +1721,16 @@
     });
 
     var rec = (b.recursos && typeof b.recursos === "object") ? b.recursos : {};
-    ["pv", "pe", "san"].forEach(function (qual) {
+    ["pv", "pe", "san", "pd"].forEach(function (qual) {
       var v = rec[qual];
       ficha.recursos[qual] = (v === null || v === undefined || v === "") ? null : inteiro(v, null);
     });
+
+    /* Condições contadas por turno (v2.19). Sem o módulo, passam como
+       vieram: uma página que não as desenha não pode apagá-las. */
+    ficha.condicoes = CD()
+      ? CD().normalizar(b.condicoes)
+      : (b.condicoes && typeof b.condicoes === "object" ? JSON.parse(JSON.stringify(b.condicoes)) : {});
 
     (Array.isArray(b.ajustes) ? b.ajustes : []).forEach(function (a) {
       if (!a || typeof a !== "object" || !a.alvo) return;
@@ -1703,26 +1756,71 @@
   /* A ordem de exibição de cada aba — personalizada, de adição, A–Z ou
      Z–A — e a ordem personalizada das habilidades que vêm das regras
      (ids de aquisição). É apresentação: nenhuma conta lê isto. Modo
-     ausente ou desconhecido é "personalizada", o comportamento de antes. */
+     ausente ou desconhecido é "personalizada", o comportamento de antes.
+
+     v2.19 acrescenta, sem mudar a ordem de ficha nenhuma:
+       rituais.criterios     ["circulo", "elemento"] — agrupar por um, pelos
+                             dois, em qualquer prioridade, ou por nenhum
+       pericias              { modo: az | maior | menor | personalizada,
+                               ordem: [chaves de perícia] }
+       habilidades.lugares   { idDaAquisição: idDaPasta } — a pasta em que
+                             uma habilidade das regras aparece
+       habilidades.ordem     { idDaPasta ou "*": ["r:…", "n:…"] } — a
+                             posição dela entre as da mesa, naquela pasta */
+  var ID_DE_ORGANIZACAO = /^[A-Za-z0-9_.:|#-]+$/;
+  var CRITERIOS_DE_RITUAL = ["circulo", "elemento"];
+  var MODOS_DE_PERICIA = ["az", "maior", "menor", "personalizada"];
+
+  function listaDeIds(bruto, limite, filtro) {
+    var vistas = {};
+    return (Array.isArray(bruto) ? bruto : [])
+      .map(function (id) { return String(id || "").slice(0, 160); })
+      .filter(function (id) {
+        if (!id || vistas[id] || !ID_DE_ORGANIZACAO.test(id)) return false;
+        if (filtro && !filtro(id)) return false;
+        vistas[id] = true;
+        return true;
+      })
+      .slice(0, limite);
+  }
+
   function normalizarOrganizacao(bruto) {
     var b = (bruto && typeof bruto === "object") ? bruto : {};
     var modo = function (aba) {
       var valor = b[aba] && typeof b[aba] === "object" ? b[aba].modo : "";
       return global.RAMAUtil ? global.RAMAUtil.modoDeOrdem(valor) : (valor || "personalizada");
     };
-    var vistas = {};
-    var regras = (b.habilidades && Array.isArray(b.habilidades.regras) ? b.habilidades.regras : [])
-      .map(function (id) { return String(id || "").slice(0, 160); })
-      .filter(function (id) {
-        if (!id || vistas[id] || !/^[A-Za-z0-9_.:|#-]+$/.test(id)) return false;
-        vistas[id] = true;
-        return true;
-      })
-      .slice(0, 500);
+    var hab = b.habilidades && typeof b.habilidades === "object" ? b.habilidades : {};
+    var rit = b.rituais && typeof b.rituais === "object" ? b.rituais : {};
+    var per = b.pericias && typeof b.pericias === "object" ? b.pericias : {};
+
+    var lugares = {};
+    if (hab.lugares && typeof hab.lugares === "object" && !Array.isArray(hab.lugares)) {
+      Object.keys(hab.lugares).slice(0, 500).forEach(function (id) {
+        var pasta = String(hab.lugares[id] || "").slice(0, 160);
+        if (ID_DE_ORGANIZACAO.test(id) && id.length <= 160 && pasta && ID_DE_ORGANIZACAO.test(pasta)) lugares[id] = pasta;
+      });
+    }
+    var ordemHab = {};
+    if (hab.ordem && typeof hab.ordem === "object" && !Array.isArray(hab.ordem)) {
+      Object.keys(hab.ordem).slice(0, 200).forEach(function (conteiner) {
+        if (!ID_DE_ORGANIZACAO.test(conteiner) && conteiner !== "*") return;
+        var ids = listaDeIds(hab.ordem[conteiner], 500, function (id) { return /^[rn]:/.test(id); });
+        if (ids.length) ordemHab[conteiner.slice(0, 160)] = ids;
+      });
+    }
+
     return {
-      habilidades: { modo: modo("habilidades"), regras: regras },
-      rituais: { modo: modo("rituais") },
+      habilidades: { modo: modo("habilidades"), regras: listaDeIds(hab.regras, 500), lugares: lugares, ordem: ordemHab },
+      rituais: {
+        modo: modo("rituais"),
+        criterios: listaDeIds(rit.criterios, 2, function (c) { return CRITERIOS_DE_RITUAL.indexOf(c) >= 0; }),
+      },
       inventario: { modo: modo("inventario") },
+      pericias: {
+        modo: MODOS_DE_PERICIA.indexOf(per.modo) >= 0 ? per.modo : "az",
+        ordem: listaDeIds(per.ordem, 60, function (k) { return !!C.pericia(k); }),
+      },
     };
   }
 
@@ -1832,6 +1930,10 @@
     pontosDeVida: pontosDeVida,
     pontosDeEsforco: pontosDeEsforco,
     sanidade: sanidade,
+    determinacao: determinacao,
+    usaDeterminacao: usaDeterminacao,
+    REGRA_DETERMINACAO: REGRA_DETERMINACAO,
+    maximosDosRecursos: maximosDosRecursos,
     limiteDeEsforco: limiteDeEsforco,
     defesa: defesa,
     bloqueio: bloqueio,
@@ -1876,5 +1978,9 @@
 
     calcular: calcular,
     resumoDeRecursos: resumoDeRecursos,
+
+    normalizarOrganizacao: normalizarOrganizacao,
+    CRITERIOS_DE_RITUAL: CRITERIOS_DE_RITUAL,
+    MODOS_DE_PERICIA: MODOS_DE_PERICIA,
   };
 })(typeof window !== "undefined" ? window : globalThis);

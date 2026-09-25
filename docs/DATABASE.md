@@ -572,6 +572,14 @@ Privadas do mestre. Nenhuma resposta destinada a jogador toca nesta aba.
 
 `salvar_combate` (a gravação completa) preserva `turno` e `ops` que já estavam lá.
 
+Desde a v2.19, um lote de `atualizar_combate` que começa o turno de um personagem
+com condição contada ativa (morrendo, enlouquecendo ou um contador da mesa) grava,
+depois da linha do combate, a ficha desse personagem em PERSONAGENS e
+PERSONAGENS_BLOCOS — pelo mesmo `publicarFicha` de qualquer gravação, com a revisão
+subindo, a projeção nova e o id de operação `turno-<opId>`. Nenhuma coluna nova: o
+evento mora dentro da ficha (`ordem.condicoes`, ver
+[CHARACTER_SCHEMA.md](CHARACTER_SCHEMA.md#condições-v219)).
+
 ### CAMPANHA_CAPAS
 
 `campanhaId · atualizadoEm · largura · altura · imagem`

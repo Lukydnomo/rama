@@ -54,6 +54,13 @@
      ÁRVORE
      ================================================================= */
 
+  /* Organizar as notas é parte de anotar: arrastar funciona também no
+     modo normal, para quem pode editar a ficha. Pastas são de um nível
+     só — uma pasta não entra em outra. */
+  function podeOrganizar(ctx) {
+    return !!(ctx.podeEditar && ctx.podeEditar() && global.RAMAArrastar && global.RAMAOrganizar);
+  }
+
   function arvore(ctx, anotacoes) {
     var pastas = anotacoes.pastas || [];
     var soltas = anotacoes.soltas || [];
@@ -62,18 +69,24 @@
       return el("p.t-mini", { texto: "Nenhuma anotação. Crie uma pasta ou uma nota solta." });
     }
 
-    return el("div.arvore", {}, [
-      pastas.map(function (pasta) { return ramoDePasta(ctx, pasta); }),
-      soltas.length
-        ? el("div.arvore__notas", { estilo: { paddingLeft: "0" } },
-            soltas.map(function (nota) { return itemDeNota(ctx, nota, null); }))
+    var organizar = podeOrganizar(ctx);
+    var raiz = el("div.arvore", {}, [
+      el("div.arvore__pastas", { dataset: { arrastarLista: "pastas" } },
+        pastas.map(function (pasta) { return ramoDePasta(ctx, pasta, organizar); })),
+      (soltas.length || (organizar && pastas.length))
+        ? el("div.arvore__notas.arvore__soltas", { estilo: { paddingLeft: "0" }, dataset: { arrastarLista: "soltas" } },
+            soltas.length
+              ? soltas.map(function (nota) { return itemDeNota(ctx, nota, null, organizar); })
+              : [el("p.t-mini.arvore__vazia", { texto: "Solte aqui para tirar uma nota da pasta." })])
         : null,
     ]);
+    return organizar ? ligarArraste(ctx, raiz) : raiz;
   }
 
-  function ramoDePasta(ctx, pasta) {
-    return el("details.arvore__pasta", { open: true }, [
-      el("summary", {}, [
+  function ramoDePasta(ctx, pasta, organizar) {
+    var caixa = el("details.arvore__pasta", { open: true }, [
+      el("summary", { dataset: { arrastarPasta: "notas:" + pasta.id } }, [
+        organizar ? global.RAMAArrastar.alca({ id: pasta.id, rotulo: "a pasta " + pasta.nome }) : null,
         el("span", { texto: pasta.nome, estilo: { flex: "1", minWidth: "0", overflow: "hidden", textOverflow: "ellipsis" } }),
         el("span.t-mini", { texto: String((pasta.notas || []).length) }),
         UI.menu([
@@ -83,20 +96,78 @@
           { rotulo: "Excluir pasta", perigo: true, aoClicar: function () { excluirPasta(ctx, pasta); } },
         ], { rotulo: "Opções da pasta " + pasta.nome, icone: "tresPontos" }),
       ]),
-      el("div.arvore__notas", {}, (pasta.notas || []).length
-        ? (pasta.notas || []).map(function (n) { return itemDeNota(ctx, n, pasta.id); })
-        : [el("p.t-mini", { texto: "Pasta vazia", estilo: { padding: "var(--e1) var(--e2)" } })]
+      el("div.arvore__notas", { dataset: { arrastarLista: "notas:" + pasta.id } }, (pasta.notas || []).length
+        ? (pasta.notas || []).map(function (n) { return itemDeNota(ctx, n, pasta.id, organizar); })
+        : [el("p.t-mini.arvore__vazia", { texto: "Pasta vazia", estilo: { padding: "var(--e1) var(--e2)" } })]
       ),
     ]);
+    caixa.dataset.arrastarItem = pasta.id;
+    caixa.dataset.arrastarTipo = "pasta";
+    caixa.dataset.arrastarRotulo = pasta.nome;
+    return caixa;
   }
 
-  function itemDeNota(ctx, nota, pastaId) {
-    return el("button.arvore__nota", {
+  /* A linha da nota: a alça e o botão que abre são irmãos — um botão não
+     fica dentro do outro. */
+  function itemDeNota(ctx, nota, pastaId, organizar) {
+    var abrir = el("button.arvore__nota", {
       type: "button",
       "aria-current": notaAberta === nota.id ? "true" : null,
       dataset: { pasta: pastaId || "" },
       texto: nota.titulo,
       onclick: function () { notaAberta = nota.id; ctx.redesenhar(); },
+    });
+    if (!organizar) return abrir;
+    return el("div.arvore__item", {
+      dataset: { arrastarItem: nota.id, arrastarTipo: "nota", arrastarRotulo: nota.titulo },
+    }, [global.RAMAArrastar.alca({ id: nota.id, rotulo: nota.titulo }), abrir]);
+  }
+
+  /* =================================================================
+     ARRASTAR
+     -----------------------------------------------------------------
+     Uma nota vai para outra pasta (soltando no nome dela ou entre as
+     notas de lá), sai da pasta (soltando em "sem pasta") ou muda de
+     lugar entre as vizinhas. Uma pasta só muda de lugar entre as pastas.
+     É sempre o MESMO objeto: título, conteúdo e datas vão junto.
+     ================================================================= */
+
+  function pastaDaLista(chave) {
+    return chave && chave.indexOf("notas:") === 0 ? chave.slice(6) : null;
+  }
+
+  function ligarArraste(ctx, raiz) {
+    var O = global.RAMAOrganizar;
+    var an = function () { return ctx.ficha.anotacoes; };
+    function feito(mudou) {
+      if (!mudou) return false;
+      ctx.alterou();
+      ctx.redesenhar();
+      return true;
+    }
+    return global.RAMAArrastar.ligar(raiz, {
+      podeSoltar: function (item, destino) {
+        if (item.tipo === "pasta") {
+          return destino.lista === "pastas" ? { ok: true }
+            : { ok: false, motivo: "Pastas de anotação não ficam dentro de outras pastas: arraste entre as pastas." };
+        }
+        if (destino.lista === "pastas") return { ok: false, motivo: "Solte a nota dentro de uma pasta, ou em “sem pasta”." };
+        return { ok: true };
+      },
+      aoSoltar: function (item, destino) {
+        if (item.tipo === "pasta") { feito(O.reposicionar(an().pastas, item.id, destino.indice)); return; }
+        var r = O.moverNota(an(), item.id, pastaDaLista(destino.lista), destino.indice);
+        if (!r.ok) { UI.avisoAtencao(r.motivo); return; }
+        feito(true);
+      },
+      aoTeclado: function (item, direcao) {
+        if (item.tipo === "pasta") {
+          return feito(O.passo(an().pastas, item.id, direcao)) ? { ok: true } : { ok: false, motivo: "Não há mais para onde mover." };
+        }
+        var achado = O.acharNotaEm(an(), item.id);
+        if (!achado || !feito(O.passo(achado.lista, item.id, direcao))) return { ok: false, motivo: "Não há mais para onde mover nesta pasta." };
+        return { ok: true };
+      },
     });
   }
 

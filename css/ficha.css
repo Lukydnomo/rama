@@ -460,6 +460,15 @@
 
 .arvore__notas { display: flex; flex-direction: column; padding-left: var(--e4); }
 
+/* Arrastar (v2.19): a alça e o botão da nota lado a lado; a lista das
+   pastas e a de "sem pasta" são alvos de soltar. */
+.arvore__pastas { display: flex; flex-direction: column; gap: var(--e1); }
+.arvore__item { display: flex; align-items: center; min-width: 0; }
+.arvore__item > .arvore__nota { flex: 1 1 auto; min-width: 0; }
+.arvore__pasta > summary > .arrastar-alca { margin-left: calc(-1 * var(--e1)); }
+.arvore__soltas { min-height: var(--e5); }
+.arvore__vazia { margin: 0; padding: var(--e1) var(--e2); }
+
 .arvore__nota {
   display: flex;
   align-items: center;
@@ -577,6 +586,10 @@ body.pagina-ficha .app-corpo {
 .arvore-hab { display: flex; flex-direction: column; gap: var(--e2); }
 
 .arvore-hab .recolhivel__corpo > .recolhivel { margin-left: var(--e2); }
+/* v2.19: os filhos de uma pasta moram numa lista própria — é ela que
+   recebe o que se solta dentro da pasta. */
+.arvore-hab__lista { display: flex; flex-direction: column; gap: var(--e2); margin-left: var(--e2); min-height: var(--e4); }
+.arvore-hab__vazia { margin: 0; }
 
 @media (min-width: 720px) {
   .arvore-hab .recolhivel__corpo > .recolhivel { margin-left: var(--e3); }
@@ -947,6 +960,10 @@ body.pagina-ficha .app-corpo {
 .ordem-pericia--destreinada .ordem-pericia__nome { color: var(--cor-texto-3); }
 
 .ordem-pericia__nome { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ordem-pericias__corpo { display: flex; flex-direction: column; }
+/* Com a alça de arrastar (ordem personalizada, modo edição). */
+.ordem-pericia__nome--alca { display: flex; align-items: center; gap: var(--e1); }
+.ordem-pericia__nome--alca > span:last-child { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .ordem-pericia__celula { display: flex; align-items: center; gap: var(--e1); min-width: 0; }
 
 .ordem-pericia__atrib,
@@ -1234,3 +1251,108 @@ body.pagina-ficha--painel .ficha-topo__nome { font-size: var(--texto-medio); }
 
 /* A rolagem de cura não pode parecer dano. */
 .ritual-dano--cura .ritual-dano__expressao { color: var(--cor-ok); }
+
+/* =====================================================================
+   RECURSOS COM ORIGEM E CONDIÇÕES (v2.19)
+   ---------------------------------------------------------------------
+   A linha de ações embaixo de cada recurso diz de onde veio a mudança
+   (dano, cura, gasto, dano mental, recuperação). As condições mostram o
+   estado e os inícios de turno da cena com marcadores de forma, não só
+   de cor: cheio e vazio se leem sem distinguir cores.
+   ===================================================================== */
+
+.recurso-acoes {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--e1);
+  margin-top: var(--e1);
+}
+
+.recurso-acoes__valor {
+  width: 3.5rem;
+  min-height: 32px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.condicoes__cena {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--e2);
+}
+
+.condicoes__combate { flex-basis: 100%; }
+
+.condicao {
+  display: flex;
+  flex-direction: column;
+  gap: var(--e1);
+  padding: var(--e2);
+  border: var(--borda) solid var(--cor-traco-fraca);
+  border-left-width: 3px;
+}
+
+.condicao--ativa { border-left-color: var(--cor-aviso); background: var(--cor-superficie-2); }
+.condicao--limite { border-left-color: var(--cor-erro); }
+.condicao--desligada { padding: var(--e1) var(--e2); border-left-width: 1px; }
+.condicao--simples { flex-direction: row; flex-wrap: wrap; align-items: center; }
+
+.condicao__topo {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--e2);
+}
+
+.condicao__nome {
+  font-weight: 700;
+  letter-spacing: var(--espaco-letra-titulo);
+  text-transform: uppercase;
+  font-size: var(--texto-mini);
+}
+
+.condicao__recurso {
+  font-size: var(--texto-mini);
+  color: var(--cor-texto-3);
+}
+
+.condicao__marcas { display: inline-flex; gap: 4px; margin-left: auto; }
+.condicao__topo .r-botao { margin-left: auto; }
+.condicao__marcas + .r-botao { margin-left: var(--e2); }
+
+.condicao__marca {
+  width: 12px;
+  height: 12px;
+  border: var(--borda) solid var(--cor-traco-media);
+  background: transparent;
+}
+
+.condicao__marca--cheia { background: var(--cor-texto); border-color: var(--cor-texto); }
+.condicao--limite .condicao__marca--cheia { background: var(--cor-erro); border-color: var(--cor-erro); }
+
+.condicao__numero {
+  margin-left: auto;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.condicao__resultado {
+  margin: 0;
+  color: var(--cor-erro);
+  font-weight: 700;
+}
+
+.condicao__botoes { gap: var(--e1); }
+
+.condicao__sub {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--e2);
+  padding-left: var(--e2);
+  border-left: var(--borda) dashed var(--cor-traco-fraca);
+}
+
+.condicoes__mesa { margin-top: var(--e2); }
