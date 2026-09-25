@@ -1668,8 +1668,10 @@
      lugar de VER a progressão inteira, inclusive o que já foi
      resolvido. */
   function painelAprendizado(ctx, o, c, est) {
-    if (!est || !est.rituais || !est.rituais.disponivel) return null;
+    if (!est || !est.rituais) return null;
     var a = est.rituais;
+    var foraDaProgressao = a.aprendizados.filter(function (x) { return (x.origem === "poder" || x.registroDeRitual) && !x.substituidoEm; });
+    if (!a.concessoes.length && !foraDaProgressao.length && !a.registros.length && !a.avisos.length) return null;
     var abertas = a.concessoes.filter(function (x) { return !x.completa; });
 
     var linhas = a.concessoes.map(function (x) {
@@ -1703,21 +1705,10 @@
     });
 
     var limite = a.limite;
-    var avisos = [];
-    if (a.emCampo) {
-      avisos.push("Aprendizado em campo (Sobrevivendo ao Horror, p. 113): nenhum ritual vem por avanço. " +
-        "Encontrar e estudar acontece na mesa — ação de interlúdio e Ocultismo DT 20 (1º), 25 (2º), 30 (3º) ou 35 (4º).");
-    }
-    if (a.lento) {
-      avisos.push("Aprendizado lento (Sobrevivendo ao Horror, p. 113): o ritual por avanço vem só nos degraus ímpares.");
-    }
-    /* SAH p.99: aprender um ritual sobe o NEX pelo círculo dele. O
-       R.A.M.A. não mexe no NEX sozinho — subir um campo da mesa a cada
-       leitura da ficha seria conceder progressão por recalcular. */
-    if (c.trilho.separado) {
-      avisos.push("Com NEX & Experiência, aprender um ritual soma o círculo dele ao NEX de exposição " +
-        "(Sobrevivendo ao Horror, p. 99) — inclusive os iniciais. O R.A.M.A. não mexe no NEX: ajuste-o acima.");
-    }
+    /* Os avisos das regras ligadas saem do motor, os mesmos da aba
+       Rituais: Patentes (não calculadas), aprendizado em campo e lento,
+       e o NEX que sobe ao aprender com NEX & Experiência (SAH p.99). */
+    var avisos = a.avisos.slice();
     if (limite.excedido) {
       avisos.push("Aprender Ritual foi escolhido " + limite.usados + " vezes, e o limite é o Intelecto (" + limite.total + "). " +
         "Nada foi apagado: reveja as escolhas na lista acima ou combine a exceção com a mesa.");
@@ -1734,7 +1725,16 @@
                  " — só Aprender Ritual conta nele (Ordem Paranormal RPG, p. 119).",
         }),
       ].concat(avisos.map(function (x) { return el("p.t-mini.t-aviso", { texto: x }); }))
-       .concat([el("div.pilha--curta", { class: "pilha" }, linhas)])));
+       .concat([el("div.pilha--curta", { class: "pilha" }, linhas)])
+       /* O que foi aprendido FORA das concessões: Aprender Ritual, estudo
+          em campo e concessão da mesa — cada um com a própria origem. */
+       .concat(foraDaProgressao.length ? [
+         el("h4.t-rotulo", { texto: "Aprendidos por outras aquisições" }),
+         el("ul.bib-lista-textos", {}, foraDaProgressao.map(function (x) {
+           return el("li.t-mini", { texto: (x.nome || "(sem nome)") + " — " + x.nomePoder + ", " + x.rotuloEtapa +
+             (x.contaNoLimite ? " · conta no limite" : "") + (x.origem === "mesa" ? " · exceção da mesa" : "") });
+         })),
+       ] : [])));
   }
 
   function painelAfinidade(ctx, o, c, est) {

@@ -119,6 +119,9 @@
 
       /* --- decisões de progressão, por etapa (progressao.js) --- */
       escolhas: [],
+      /* --- rituais aprendidos fora da progressão: estudo em campo e
+             concessão da mesa --- */
+      registrosDeRitual: [],
       /* --- versões personalizadas de habilidades oficiais
              (personalizacao.js): apresentação por aquisição --- */
       personalizacoes: [],
@@ -1641,6 +1644,13 @@
     ficha.escolhas = E()
       ? E().normalizarEscolhas(b.escolhas)
       : (Array.isArray(b.escolhas) ? b.escolhas.slice() : []);
+
+    /* Aprendizado de ritual fora da progressão — estudo em campo e
+       concessão da mesa (v2.18). Mesmo cuidado: sem o motor, passa como
+       veio, e nunca some numa gravação. */
+    ficha.registrosDeRitual = (E() && E().normalizarRegistrosDeRitual)
+      ? E().normalizarRegistrosDeRitual(b.registrosDeRitual)
+      : (Array.isArray(b.registrosDeRitual) ? JSON.parse(JSON.stringify(b.registrosDeRitual)) : []);
 
     /* Sem o módulo carregado (uma página que não edita habilidades), as
        personalizações passam como vieram — nunca somem numa gravação. */

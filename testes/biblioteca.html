@@ -10,7 +10,9 @@
 <link rel="stylesheet" href="../css/base.css">
 <link rel="stylesheet" href="../css/componentes.css">
 <link rel="stylesheet" href="../css/layout.css">
-<link rel="stylesheet" href="../css/ficha.css">
+<!-- Sem ficha.css de propósito (v2.18): a biblioteca abre também na criação
+     guiada, que não carrega esse arquivo. Se ela precisar dele, o teste de
+     layout quebra aqui antes de quebrar na tela de alguém. -->
 <style>
   /* Ferramenta de quem está consertando, não parte do sistema. */
   .placar { display: flex; gap: var(--e4); align-items: baseline; flex-wrap: wrap; }
@@ -80,6 +82,7 @@
 <script src="../js/paginas/ficha-inventario-biblioteca.js"></script>
 <script src="../js/paginas/ficha-rituais.js"></script>
 <script src="../js/paginas/ficha-rituais-biblioteca.js"></script>
+<script src="../js/paginas/ordem-escolhas.js"></script>
 <script src="biblioteca.js"></script>
 </body>
 </html>

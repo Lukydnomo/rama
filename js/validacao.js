@@ -303,7 +303,8 @@
   function comPosicoesDeRitual(ficha) {
     var itens = (ficha && ficha.rituais && Array.isArray(ficha.rituais.itens)) ? ficha.rituais.itens : [];
     var escolhas = (ficha && ficha.ordem && Array.isArray(ficha.ordem.escolhas)) ? ficha.ordem.escolhas : [];
-    if (!itens.length || !escolhas.length) return ficha;
+    var registros = (ficha && ficha.ordem && Array.isArray(ficha.ordem.registrosDeRitual)) ? ficha.ordem.registrosDeRitual : [];
+    if (!itens.length || (!escolhas.length && !registros.length)) return ficha;
 
     var mapa = {};
     itens.forEach(function (r, i) {
@@ -311,9 +312,17 @@
     });
 
     var copia = JSON.parse(JSON.stringify(ficha));
-    marcarPosicoes(copia.ordem.escolhas, mapa, 0);
+    if (Array.isArray(copia.ordem.escolhas)) marcarPosicoes(copia.ordem.escolhas, mapa, 0);
+    /* Os registros de estudo e da mesa apontam para o ritual por
+       `ritualId`, e a normalização deles não guarda campo de fora — a
+       posição vai no próprio `ritualId`, como "#pos:N". */
+    (Array.isArray(copia.ordem.registrosDeRitual) ? copia.ordem.registrosDeRitual : []).forEach(function (r) {
+      if (r && typeof r.ritualId === "string" && mapa[r.ritualId] !== undefined) r.ritualId = PREFIXO_POSICAO + mapa[r.ritualId];
+    });
     return copia;
   }
+
+  var PREFIXO_POSICAO = "#pos:";
 
   function marcarPosicoes(valor, mapa, profundidade) {
     if (profundidade > 12 || !valor || typeof valor !== "object") return;
@@ -332,6 +341,14 @@
     var itens = (ficha.rituais && Array.isArray(ficha.rituais.itens)) ? ficha.rituais.itens : [];
     var escolhas = (ficha.ordem && Array.isArray(ficha.ordem.escolhas)) ? ficha.ordem.escolhas : [];
     aplicarPosicoes(escolhas, itens, 0);
+    /* Registro que não acha o ritual continua guardado, apontando para
+       lugar nenhum: a ficha mostra o registro sem efeito, com o motivo,
+       e quem joga decide. */
+    ((ficha.ordem && Array.isArray(ficha.ordem.registrosDeRitual)) ? ficha.ordem.registrosDeRitual : []).forEach(function (r) {
+      if (!r || typeof r.ritualId !== "string" || r.ritualId.indexOf(PREFIXO_POSICAO) !== 0) return;
+      var pos = parseInt(r.ritualId.slice(PREFIXO_POSICAO.length), 10);
+      if (mesmoRitual(itens[pos], { nome: r.nome })) r.ritualId = itens[pos].id;
+    });
   }
 
   /* O ritual daquela posição ainda é o que o vínculo descrevia? */

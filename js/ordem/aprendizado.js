@@ -46,6 +46,28 @@
                           completa)
 
    ---------------------------------------------------------------------
+   AS AQUISIÇÕES, TODAS ELAS
+   ---------------------------------------------------------------------
+
+   Um ritual da ficha é aprendido por UMA aquisição, e cada aquisição
+   tem a própria regra (v2.18):
+
+     concessão        a progressão concede (iniciais, avanço, Graduado,
+                      ritual pelo nome) — conferida no degrau que a abriu
+     Aprender Ritual  o poder paranormal — círculo pelo NEX de EXPOSIÇÃO
+                      daquela etapa, e o único que conta no limite por
+                      Intelecto
+     estudo em campo  só com a regra opcional de SAH p. 113 (B): exige que
+                      a mesa confirme que a fonte foi achada e o teste de
+                      Ocultismo passou
+     mesa             a mesa concedeu fora das regras — exceção declarada
+
+   E um ritual que nenhuma aquisição reivindica é REGISTRO: está na
+   ficha para consulta, mas não é conhecido. A regra de cada aquisição
+   mora em avaliarContraRegra(), a única função que decide se um ritual
+   cabe — a tela pergunta a ela, e a gravação também.
+
+   ---------------------------------------------------------------------
    NADA AQUI É DEDUZIDO
    ---------------------------------------------------------------------
 
@@ -151,6 +173,27 @@
 
   var REGRA_LENTO = "limitesCompreensao";
   var REGRA_CAMPO = "aprendizadoEmCampo";
+  var REGRA_PATENTES = "evolucaoPatentes";
+  var REGRA_NEX_EXPERIENCIA = "nexExperiencia";
+
+  /* Aprendizado em campo (SAH p. 113): "uma ação de interlúdio estudando
+     o ritual e [...] um teste de Ocultismo (DT conforme o círculo do
+     ritual: 20 para 1º círculo, 25 para 2º, 30 para 3º e 35 para 4º)". */
+  var DT_DE_ESTUDO = { 1: 20, 2: 25, 3: 30, 4: 35 };
+
+  /* De onde o ritual estudado veio. O livro fala em "uma composição
+     descrevendo seu processo completo e seu símbolo, ou um objeto
+     amaldiçoado pela essência desse ritual", e no selo paranormal — que
+     é destruído pelo estudo, "qualquer que seja o resultado". */
+  var FONTES_DE_ESTUDO = [
+    { chave: "texto", nome: "Composição ou registro do ritual" },
+    { chave: "objeto", nome: "Objeto amaldiçoado pelo ritual" },
+    { chave: "selo", nome: "Selo paranormal (destruído pelo estudo)" },
+  ];
+
+  function dtDeEstudo(circulo) {
+    return DT_DE_ESTUDO[Math.round(Number(circulo))] || 0;
+  }
 
   /* =================================================================
      CÍRCULOS
@@ -534,6 +577,84 @@
   }
 
   /* =================================================================
+     A REGRA DE CADA AQUISIÇÃO
+     -----------------------------------------------------------------
+     `regra` diz de que tipo é a aquisição e o que a limita:
+
+       { tipo: "concessao", concessao }   a concessão da progressão
+       { tipo: "aprenderRitual", maximo } o círculo do poder na etapa
+       { tipo: "campo", maximo }          o círculo que a classe lança
+                                          no momento do estudo
+       { tipo: "mesa" }                   exceção declarada: nada limita
+       { tipo: "registro" }               não é aquisição
+
+     É a mesma pergunta feita por quem desenha a biblioteca, por quem
+     grava a escolha e por quem lê a ficha depois. Nenhuma das três
+     tem uma cópia desta conta.
+     ================================================================= */
+
+  function avaliarContraRegra(regra, dados) {
+    var r = regra || {};
+    var d = dados || {};
+    switch (r.tipo) {
+      case "concessao":
+        return elegibilidade(r.concessao, d);
+
+      case "aprenderRitual":
+      case "campo": {
+        var circulo = Math.round(Number(d.circulo));
+        if (!Number.isFinite(circulo) || circulo < 1) {
+          return { ok: false, motivo: "Este ritual não informa o círculo, e o aprendizado é por círculo." };
+        }
+        if (circulo > (r.maximo || 0)) {
+          return {
+            ok: false,
+            motivo: (r.tipo === "campo"
+              ? "No estudo em campo, só se aprendem rituais de círculos a que o personagem tem acesso: até o "
+              : "Aprender Ritual alcança até o ") + (r.maximo || 0) + "º círculo aqui; este ritual é de " + circulo + "º.",
+          };
+        }
+        return { ok: true, motivo: "" };
+      }
+
+      case "mesa":
+      case "registro":
+        return { ok: true, motivo: "" };
+
+      default:
+        return { ok: false, motivo: "Esta aquisição não existe mais." };
+    }
+  }
+
+  /* Avisos que valem para o aprendizado inteiro, reunidos aqui para a
+     aba Rituais e a Progressão dizerem a MESMA coisa. `flags` vem do
+     motor: { patentes, nexExperiencia, campo, lento, ocultista }. */
+  function avisosDoAprendizado(flags) {
+    var f = flags || {};
+    var saida = [];
+    if (f.patentes) {
+      saida.push("Evolução por Patentes está ligada, mas o R.A.M.A. ainda não calcula o trilho por patente: " +
+        "as concessões abaixo seguem o NEX. Pelo livro, o ocultista começa com três rituais de 1º círculo e " +
+        "aprende dois a cada nova patente, com o 2º círculo como agente especial, o 3º como oficial de operações " +
+        "e o 4º como agente de elite (Sobrevivendo ao Horror, p. 112). A diferença fica com a mesa.");
+    }
+    if (f.campo && f.ocultista) {
+      saida.push("Aprendizado em campo (Sobrevivendo ao Horror, p. 113): nenhum ritual vem por avanço. Um ritual " +
+        "novo precisa ser encontrado e estudado — uma ação de interlúdio e Ocultismo DT 20 (1º círculo), 25 (2º), " +
+        "30 (3º) ou 35 (4º), só em círculos a que o personagem tem acesso. Os três iniciais continuam.");
+    }
+    if (f.lento && f.ocultista) {
+      saida.push("Aprendizado lento (Sobrevivendo ao Horror, p. 113): o ritual do avanço vem só nos degraus ímpares " +
+        "— NEX 15%, 25%, 35%… ou nível 3, 5, 7….");
+    }
+    if (f.nexExperiencia) {
+      saida.push("Com NEX & Experiência, aprender um ritual soma o círculo dele ao NEX de exposição, inclusive os " +
+        "iniciais (Sobrevivendo ao Horror, p. 99). O R.A.M.A. não mexe no NEX sozinho: ajuste-o na Progressão.");
+    }
+    return saida;
+  }
+
+  /* =================================================================
      LIMITE DE RITUAIS CONHECIDOS
      -----------------------------------------------------------------
      "Qualquer personagem pode aprender rituais através do poder
@@ -577,6 +698,15 @@
     explicacaoDaConcessao: explicacaoDaConcessao,
     textoDosCirculos: textoDosCirculos,
     elegibilidade: elegibilidade,
+    avaliarContraRegra: avaliarContraRegra,
+    avisosDoAprendizado: avisosDoAprendizado,
     limite: limite,
+    ate: ate,
+
+    REGRA_PATENTES: REGRA_PATENTES,
+    REGRA_NEX_EXPERIENCIA: REGRA_NEX_EXPERIENCIA,
+    DT_DE_ESTUDO: DT_DE_ESTUDO,
+    FONTES_DE_ESTUDO: FONTES_DE_ESTUDO,
+    dtDeEstudo: dtDeEstudo,
   };
 })(typeof window !== "undefined" ? window : globalThis);

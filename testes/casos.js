@@ -3791,7 +3791,7 @@
       var apAltoEst = APe.estado(apAlto, { rituais: [apAltoRit] });
       t.ok("um ritual de 2º círculo com NEX 30% é recusado em Aprender Ritual",
         apAltoEst.problemas.concat(apAltoEst.pendencias).some(function (x) {
-          return (x.motivos || []).some(function (m) { return /alcança o 1º círculo/.test(m); });
+          return (x.motivos || []).some(function (m) { return /alcança até o 1º círculo/.test(m); });
         }));
 
       /* ---------------------------------------------------------------- */
@@ -4014,6 +4014,430 @@
       t.igual("Rituais Eficientes soma +5 na DT de resistir aos rituais",
         APrt.dtDeResistencia(apDt).total - APrt.dtDeResistencia(apSemGrad).total, 5);
       t.igual("  e a parcela aparece aberta", APrt.dtDeResistencia(apDt).extra, 5);
+
+      /* =============================================================
+         v2.18 — UMA LÓGICA DE AQUISIÇÃO, UMA PORTA DE GRAVAÇÃO
+         ============================================================= */
+
+      function apClasse(classe, nex, int) {
+        var o = APr.fichaVazia();
+        o.classe = classe;
+        o.origem = "academico";
+        o.nex = nex;
+        o.atributos = { agi: 2, "for": 2, int: int === undefined ? 2 : int, pre: 1, vig: 1 };
+        return o;
+      }
+      function apCandidatoAprender(ritual, elemento, extra) {
+        return { valor: "transcender", opcoes: { poder: { valor: "aprenderRitual",
+          opcoes: Object.assign({ aprendido: APe.vinculoDeRitual(ritual), elemento: elemento || "energia" }, extra || {}) } } };
+      }
+      function apFoto(ordem, lista) {
+        return JSON.stringify([ordem.escolhas || [], ordem.registrosDeRitual || [], lista.map(function (r) { return r.id; })]);
+      }
+
+      /* ---------------------------------------------------------------- */
+      t.grupo("Ordem · aquisição — o contexto diz por que se escolhe");
+
+      var aqO = apOcultista(20);
+      var aqLista = [];
+      var aqConc = APe.contextoDeAquisicao(aqO, { tipo: "concessao", vaga: "d4.ritualClasse" }, { rituais: aqLista });
+      t.iguais("a concessão de NEX 20% diz quantos e de que círculo",
+        [aqConc.tipo, aqConc.quantidade, aqConc.circulos.join(","), aqConc.origem, aqConc.nomePoder],
+        ["concessao", 1, "1", "classe", "Escolhido pelo Outro Lado"]);
+      t.ok("  e recusa um ritual de 2º círculo com o motivo",
+        !aqConc.avaliar({ circulo: 2, nome: "X" }).ok && /aceita 1º círculo/.test(aqConc.avaliar({ circulo: 2 }).motivo));
+
+      var aqOcup = apOcultista(20);
+      var aqOcupL = [apRitual("Luz")];
+      APe.confirmarAquisicao(aqOcup, aqOcupL, { tipo: "concessao", vaga: "d1.rituaisIniciais", rituais: [aqOcupL[0].id] });
+      var aqOcupC = APe.contextoDeAquisicao(aqOcup, { tipo: "concessao", vaga: "d2.ritualClasse" }, { rituais: aqOcupL });
+      var aqOcupT = aqOcupC.avaliar({ ritualId: aqOcupL[0].id, circulo: 1, nome: "Luz" });
+      t.ok("um ritual que já é de outra aquisição aparece como ocupado, com o motivo",
+        !aqOcupT.ok && aqOcupT.estado === "ocupado" && /Rituais iniciais|Escolhido pelo Outro Lado/.test(aqOcupT.motivo));
+      t.igual("  e na própria aquisição, como escolhido",
+        APe.contextoDeAquisicao(aqOcup, { tipo: "concessao", vaga: "d1.rituaisIniciais" }, { rituais: aqOcupL })
+          .avaliar({ ritualId: aqOcupL[0].id, circulo: 1 }).estado, "escolhido");
+
+      var aqAp = APe.contextoDeAquisicao(apOcultista(45, "", 2), { tipo: "aprenderRitual", vaga: "d3.poderClasse" }, { rituais: [] });
+      t.iguais("Aprender Ritual numa vaga de NEX 15% alcança o 1º círculo, mesmo num personagem de NEX 45%",
+        [aqAp.circulos.join(","), aqAp.contaNoLimite, aqAp.limite.total], ["1", true, 2]);
+      t.igual("  a vaga de NEX 45% alcança o 2º",
+        APe.contextoDeAquisicao(apOcultista(45, "", 2), { tipo: "aprenderRitual", vaga: "d9.poderClasse" }, { rituais: [] }).circulos.join(","), "1,2");
+
+      t.igual("sem a regra de campo, não existe aquisição por estudo",
+        APe.contextoDeAquisicao(apOcultista(20), { tipo: "campo" }, { rituais: [] }), null);
+      var aqCampoO = apOcultista(30);
+      aqCampoO.opcionais = { aprendizadoEmCampo: true };
+      var aqCampo = APe.contextoDeAquisicao(aqCampoO, { tipo: "campo" }, { rituais: [] });
+      t.ok("com ela, o estudo aceita os círculos a que o personagem tem acesso AGORA e pede confirmação",
+        aqCampo.circulos.join(",") === "1,2" && aqCampo.exigeConfirmacao === true && aqCampo.quantidade === null);
+      var aqCombCampo = apClasse("combatente", 30);
+      aqCombCampo.opcionais = { aprendizadoEmCampo: true };
+      t.igual("  e não existe para quem não é ocultista", APe.contextoDeAquisicao(aqCombCampo, { tipo: "campo" }, { rituais: [] }), null);
+      t.ok("a concessão da mesa aceita qualquer círculo, como exceção declarada",
+        APe.contextoDeAquisicao(aqO, { tipo: "mesa" }, { rituais: [] }).avaliar({ circulo: 4 }).ok);
+
+      /* ---------------------------------------------------------------- */
+      t.grupo("Ordem · aquisição — gravar é uma operação só");
+
+      var gO = apOcultista(5);
+      var gLista = [];
+      var gAlto = apRitual("Canalizar o Medo");
+      var gLuz = apRitual("Luz");
+      var gAntes = apFoto(gO, gLista);
+      var gRuim = APe.confirmarAquisicao(gO, gLista, { tipo: "concessao", vaga: "d1.rituaisIniciais", rituais: [gLuz.id, gAlto.id], novos: [gLuz, gAlto] });
+      t.ok("uma operação com um ritual que não cabe é recusada inteira", !gRuim.ok && /4º/.test(gRuim.motivos.join(" ")));
+      t.igual("  e nada muda: nem escolha, nem ritual, nem o que cabia", apFoto(gO, gLista), gAntes);
+
+      var gBom = APe.confirmarAquisicao(gO, gLista, { tipo: "concessao", vaga: "d1.rituaisIniciais", rituais: [gLuz.id], novos: [gLuz] });
+      t.ok("a operação válida entra", gBom.ok && gLista.length === 1);
+      APe.confirmarAquisicao(gO, gLista, { tipo: "concessao", vaga: "d1.rituaisIniciais", rituais: [gLuz.id], novos: [gLuz] });
+      APe.confirmarAquisicao(gO, gLista, { tipo: "concessao", vaga: "d1.rituaisIniciais", rituais: [gLuz.id], novos: [gLuz] });
+      t.igual("repetir a mesma confirmação não duplica ritual", gLista.length, 1);
+      t.igual("  nem escolha", gO.escolhas.length, 1);
+
+      var gSobra = apRitual("Cicatrização");
+      APe.confirmarAquisicao(gO, gLista, { tipo: "concessao", vaga: "d1.rituaisIniciais", rituais: [gLuz.id], novos: [gSobra] });
+      t.igual("cópia montada e não usada não entra na ficha", gLista.length, 1);
+
+      var gDois = [apRitual("Cicatrização"), apRitual("Ouvir os Sussurros")];
+      var gO2 = apOcultista(20);
+      var gLista2 = [];
+      var gLote = APe.confirmarAquisicao(gO2, gLista2, [
+        { tipo: "concessao", vaga: "d1.rituaisIniciais", rituais: [gDois[0].id], novos: [gDois[0]] },
+        { tipo: "concessao", vaga: "d2.ritualClasse", rituais: [gDois[0].id] },
+      ]);
+      t.ok("um lote em que duas concessões disputam o mesmo ritual é recusado inteiro",
+        !gLote.ok && gLista2.length === 0 && (gO2.escolhas || []).length === 0);
+
+      var gReg = APe.confirmarAquisicao(gO2, gLista2, { tipo: "registro", novos: [gDois[1]] });
+      t.ok("só registrar põe o ritual na ficha sem aquisição", gReg.ok && gLista2.length === 1 &&
+        !APe.estado(gO2, { rituais: gLista2 }).rituais.porRitual[gDois[1].id]);
+      t.igual("  e nenhuma pendência é resolvida por isso",
+        APe.estado(gO2, { rituais: gLista2 }).pendencias.filter(function (x) { return x.tipo === "rituais"; }).length, 4);
+
+      /* ---------------------------------------------------------------- */
+      t.grupo("Ordem · aquisição — Transcender → Aprender Ritual");
+
+      [["combatente", "Combatente"], ["especialista", "Especialista"], ["ocultista", "Ocultista"]].forEach(function (par) {
+        var o = apClasse(par[0], 15, 2);
+        var l = [];
+        var r = apRitual("Luz");
+        var ok = APe.confirmarAquisicao(o, l, { tipo: "escolha", vaga: "d3.poderClasse", candidato: apCandidatoAprender(r), novos: [r] });
+        var est = APe.estado(o, { rituais: l });
+        t.ok(par[1] + " de NEX 15% aprende um ritual de 1º círculo por Transcender",
+          ok.ok && l.length === 1 && !!est.rituais.porRitual[r.id] && est.rituais.porRitual[r.id].nomePoder === "Aprender Ritual");
+      });
+
+      var trO = apClasse("combatente", 15, 2);
+      var trL = [];
+      var trAlto = apRitual("Aprimorar Físico");
+      var trR = APe.confirmarAquisicao(trO, trL, { tipo: "escolha", vaga: "d3.poderClasse", candidato: apCandidatoAprender(trAlto, "sangue"), novos: [trAlto] });
+      t.ok("um ritual acima do círculo é recusado, e o poder não entra sem ele",
+        !trR.ok && trL.length === 0 && (trO.escolhas || []).length === 0);
+
+      var trLim = apClasse("combatente", 45, 1);
+      var trLimL = [];
+      var trA = apRitual("Luz");
+      var trB = apRitual("Cicatrização");
+      APe.confirmarAquisicao(trLim, trLimL, { tipo: "escolha", vaga: "d3.poderClasse", candidato: apCandidatoAprender(trA), novos: [trA] });
+      var trLimR = APe.confirmarAquisicao(trLim, trLimL, { tipo: "escolha", vaga: "d6.poderClasse", candidato: apCandidatoAprender(trB, "morte"), novos: [trB] });
+      t.ok("com Intelecto 1, o segundo Aprender Ritual passa do limite e é recusado",
+        !trLimR.ok && /Intelecto \(1/.test(trLimR.motivos.join(" ")) && trLimL.length === 1);
+
+      var trJa = apOcultista(20);
+      var trJaL = [apRitual("Luz")];
+      APe.confirmarAquisicao(trJa, trJaL, { tipo: "concessao", vaga: "d1.rituaisIniciais", rituais: [trJaL[0].id] });
+      var trJaR = APe.confirmarAquisicao(trJa, trJaL, { tipo: "escolha", vaga: "d3.poderClasse", candidato: apCandidatoAprender(trJaL[0]) });
+      t.ok("um ritual que já é de outra aquisição não quita Aprender Ritual", !trJaR.ok && /outra aquisição/.test(trJaR.motivos.join(" ")));
+
+      var trSolto = apOcultista(20);
+      var trSoltoL = [apRitual("Luz")];
+      var trSoltoR = APe.confirmarAquisicao(trSolto, trSoltoL, { tipo: "escolha", vaga: "d3.poderClasse", candidato: apCandidatoAprender(trSoltoL[0]) });
+      t.ok("um ritual da ficha sem aquisição ocupa Aprender Ritual sem virar cópia", trSoltoR.ok && trSoltoL.length === 1);
+
+      var trNex = apClasse("especialista", 50, 2);
+      trNex.opcionais = { nexExperiencia: true };
+      trNex.nivel = 3;
+      var trNexL = [];
+      var trDois = apRitual("Aprimorar Físico");
+      var trNexX50 = APe.confirmarAquisicao(trNex, trNexL, { tipo: "escolha", vaga: "x50.transcender",
+        candidato: { valor: "transcender", opcoes: { poder: { valor: "aprenderRitual", opcoes: { aprendido: APe.vinculoDeRitual(trDois), elemento: "sangue" } } } },
+        novos: [trDois] });
+      t.ok("com nível e NEX separados, Aprender Ritual em NEX de exposição 50% alcança o 2º círculo — no nível 3",
+        trNexX50.ok && trNexL.length === 1);
+      var trNex25 = apClasse("especialista", 50, 2);
+      trNex25.opcionais = { nexExperiencia: true };
+      trNex25.nivel = 3;
+      var trNex25L = [];
+      var trDois25 = apRitual("Aprimorar Físico");
+      var trNexX25 = APe.confirmarAquisicao(trNex25, trNex25L, { tipo: "escolha", vaga: "x25.transcender",
+        candidato: { valor: "transcender", opcoes: { poder: { valor: "aprenderRitual", opcoes: { aprendido: APe.vinculoDeRitual(trDois25), elemento: "sangue" } } } },
+        novos: [trDois25] });
+      t.ok("  e a de NEX de exposição 25% continua só no 1º", !trNexX25.ok && trNex25L.length === 0);
+
+      /* Versatilidade → Transcender → Aprender Ritual guarda o ritual a
+         sete níveis de profundidade; até a v2.17 a limpeza cortava em 4. */
+      var trVers = apOcultista(50, "", 3);
+      var trVersL = [];
+      var trVersR = apRitual("Luz");
+      var trVersOk = APe.confirmarAquisicao(trVers, trVersL, { tipo: "escolha", vaga: "d10.versatilidade",
+        candidato: { valor: "poderClasse", opcoes: { poder: { valor: "transcender", opcoes: { poder: { valor: "aprenderRitual",
+          opcoes: { aprendido: APe.vinculoDeRitual(trVersR), elemento: "energia" } } } } } },
+        novos: [trVersR] });
+      var trVersSalvo = APr.normalizar(JSON.parse(JSON.stringify(trVers)));
+      t.ok("Versatilidade → Transcender → Aprender Ritual sobrevive a salvar e reabrir",
+        trVersOk.ok && !!APe.estado(trVersSalvo, { rituais: trVersL }).rituais.porRitual[trVersR.id]);
+
+      /* "Este poder conta como um poder do elemento do ritual escolhido"
+         (OPRPG p.114): o elemento não é escolha livre quando o ritual
+         diz o dele. */
+      var trEl = apClasse("combatente", 15, 2);
+      var trElL = [];
+      var trElR = apRitual("Luz");
+      var trElRuim = APe.confirmarAquisicao(trEl, trElL, { tipo: "escolha", vaga: "d3.poderClasse",
+        candidato: apCandidatoAprender(trElR, "morte"), novos: [trElR] });
+      t.ok("Aprender Ritual com um elemento que não é o do ritual é recusado, com o motivo e a página",
+        !trElRuim.ok && /Luz é de Energia/.test(trElRuim.motivos.join(" ")) && /p\. 114/.test(trElRuim.motivos.join(" ")) &&
+        trElL.length === 0 && (trEl.escolhas || []).length === 0);
+      var trElBom = APe.confirmarAquisicao(trEl, trElL, { tipo: "escolha", vaga: "d3.poderClasse",
+        candidato: apCandidatoAprender(trElR, "energia"), novos: [trElR] });
+      var trElAdq = APe.estado(trEl, { rituais: trElL }).adquiridos.filter(function (a) { return a.chave === "aprenderRitual"; })[0];
+      t.ok("  com o elemento do ritual, entra — e conta como poder de Energia",
+        trElBom.ok && trElL.length === 1 && !!trElAdq && trElAdq.elemento === "energia");
+
+      /* Uma cópia editada depois — a mesa mudou o elemento do ritual —
+         não apaga nada: a escolha passa a mostrar o problema. */
+      trElL[0].ordem.elemento = "sangue";
+      var trElDepois = APe.estado(trEl, { rituais: trElL });
+      var trElAval = Object.keys(trElDepois.avaliacoes).map(function (k) { return trElDepois.avaliacoes[k]; })
+        .filter(function (a) { return a && a.vaga && a.vaga.id === "d3.poderClasse"; })[0];
+      t.ok("  mudar o elemento da cópia depois marca a escolha, sem apagá-la",
+        !!trElAval && !trElAval.valido && /é de Sangue/.test(trElAval.motivos.join(" ")) && trEl.escolhas.length === 1);
+
+      var trElLivre = apClasse("combatente", 15, 2);
+      var trElLivreL = [APf.criarRitual(APf.normalizarRitual({ nome: "Ritual da mesa", ordem: { circulo: 1, custo: 1 } }))];
+      var trElLivreR = APe.confirmarAquisicao(trElLivre, trElLivreL, { tipo: "escolha", vaga: "d3.poderClasse",
+        candidato: apCandidatoAprender(trElLivreL[0], "morte") });
+      t.ok("  um ritual sem elemento informado deixa o elemento com quem joga",
+        trElLivreR.ok && !!APe.estado(trElLivre, { rituais: trElLivreL }).rituais.porRitual[trElLivreL[0].id]);
+
+      /* ---------------------------------------------------------------- */
+      t.grupo("Ordem · aquisição — a troca que Aprender Ritual permite");
+
+      var sbO = apOcultista(20, "", 3);
+      var sbL = [];
+      var sbIni = [apRitual("Luz"), apRitual("Cicatrização"), apRitual("Ouvir os Sussurros")];
+      APe.confirmarAquisicao(sbO, sbL, { tipo: "concessao", vaga: "d1.rituaisIniciais", rituais: sbIni.map(function (r) { return r.id; }), novos: sbIni });
+      var sbAprende = apRitual("Amaldiçoar Tecnologia");
+      var sbEntra = apRitual("Arma Atroz");
+      var sbOk = APe.confirmarAquisicao(sbO, sbL, { tipo: "escolha", vaga: "d3.poderClasse", novos: [sbAprende, sbEntra],
+        candidato: apCandidatoAprender(sbAprende, "energia", { substituicao: { sai: { id: sbIni[0].id, nome: sbIni[0].nome }, entra: APe.vinculoDeRitual(sbEntra) } }) });
+      var sbEst = APe.estado(sbO, { rituais: sbL });
+      t.ok("o ritual que sai deixa de ser conhecido e continua na ficha",
+        sbOk.ok && !sbEst.rituais.porRitual[sbIni[0].id] && sbL.some(function (r) { return r.id === sbIni[0].id; }));
+      t.ok("  o que entra herda a aquisição do que saiu",
+        sbEst.rituais.porRitual[sbEntra.id].concessao === "d1.rituaisIniciais" && !!sbEst.rituais.porRitual[sbEntra.id].substitui);
+      t.ok("  a concessão continua completa, sem contar duas vezes", sbEst.rituais.concessoes[0].completa &&
+        sbEst.rituais.concessoes[0].escolhidos.length === 3);
+      t.ok("  e a ficha registra a troca", !!sbEst.rituais.substituidos[sbIni[0].id]);
+
+      var sbAlto = apOcultista(20, "", 3);
+      var sbAltoL = [];
+      var sbAltoIni = [apRitual("Luz"), apRitual("Cicatrização"), apRitual("Ouvir os Sussurros")];
+      APe.confirmarAquisicao(sbAlto, sbAltoL, { tipo: "concessao", vaga: "d1.rituaisIniciais", rituais: sbAltoIni.map(function (r) { return r.id; }), novos: sbAltoIni });
+      var sbAltoAp = apRitual("Amaldiçoar Tecnologia");
+      var sbAltoEntra = apRitual("Aprimorar Físico");   /* 2º círculo, no lugar de um inicial de 1º */
+      var sbAltoR = APe.confirmarAquisicao(sbAlto, sbAltoL, { tipo: "escolha", vaga: "d3.poderClasse", novos: [sbAltoAp, sbAltoEntra],
+        candidato: apCandidatoAprender(sbAltoAp, "energia", { substituicao: { sai: { id: sbAltoIni[1].id, nome: sbAltoIni[1].nome }, entra: APe.vinculoDeRitual(sbAltoEntra) } }) });
+      t.ok("o que entra precisa caber na regra do que sai", !sbAltoR.ok && /não cabe no lugar/.test(sbAltoR.motivos.join(" ")));
+      t.igual("  e a recusa não deixa nenhum dos dois rituais na ficha", sbAltoL.length, 3);
+
+      var sbMeio = apOcultista(20, "", 3);
+      var sbMeioL = [];
+      var sbMeioIni = [apRitual("Luz"), apRitual("Cicatrização"), apRitual("Ouvir os Sussurros")];
+      APe.confirmarAquisicao(sbMeio, sbMeioL, { tipo: "concessao", vaga: "d1.rituaisIniciais", rituais: sbMeioIni.map(function (r) { return r.id; }), novos: sbMeioIni });
+      var sbMeioAp = apRitual("Amaldiçoar Tecnologia");
+      var sbMeioR = APe.confirmarAquisicao(sbMeio, sbMeioL, { tipo: "escolha", vaga: "d3.poderClasse", novos: [sbMeioAp],
+        candidato: apCandidatoAprender(sbMeioAp, "energia", { substituicao: { sai: { id: sbMeioIni[2].id, nome: sbMeioIni[2].nome } } }) });
+      t.ok("uma troca pela metade (só o que sai) não é gravada", !sbMeioR.ok && /o ritual que entra/.test(sbMeioR.motivos.join(" ")));
+
+      /* O grimório guarda o que a mente não guarda (OPRPG p.35): ele não
+         é um ritual conhecido para Aprender Ritual trocar. */
+      var sbGr = apOcultista(45, "graduado", 3);
+      var sbGrL = [];
+      var sbGrRit = apRitual("Luz");
+      APe.confirmarAquisicao(sbGr, sbGrL, { tipo: "concessao", vaga: "d8.grimorio", rituais: [sbGrRit.id], novos: [sbGrRit] });
+      var sbGrEst = APe.estado(sbGr, { rituais: sbGrL });
+      t.ok("um ritual do grimório não está entre os que Aprender Ritual pode trocar",
+        !!sbGrEst.rituais.porRitual[sbGrRit.id] && sbGrEst.rituais.porRitual[sbGrRit.id].destino === "grimorio" &&
+        !APe.conhecidosAntes(sbGr, "d9.poderClasse", { rituais: sbGrL }).some(function (k) { return k.id === sbGrRit.id; }));
+      var sbGrNovo = apRitual("Arma Atroz");
+      var sbGrEntra = apRitual("Cicatrização");
+      var sbGrR = APe.confirmarAquisicao(sbGr, sbGrL, { tipo: "escolha", vaga: "d9.poderClasse", novos: [sbGrNovo, sbGrEntra],
+        candidato: apCandidatoAprender(sbGrNovo, "sangue", { substituicao: { sai: { id: sbGrRit.id, nome: sbGrRit.nome }, entra: APe.vinculoDeRitual(sbGrEntra) } }) });
+      t.ok("  e a troca que tenta é recusada, com o motivo, sem deixar nada na ficha",
+        !sbGrR.ok && /grimório/.test(sbGrR.motivos.join(" ")) && sbGrL.length === 1);
+
+      /* ---------------------------------------------------------------- */
+      t.grupo("Ordem · aquisição — estudo em campo precisa de confirmação");
+
+      var ecO = apOcultista(30);
+      ecO.opcionais = { aprendizadoEmCampo: true };
+      var ecL = [];
+      var ecR = apRitual("Luz");
+      var ecSem = APe.confirmarAquisicao(ecO, ecL, { tipo: "campo", ritualId: ecR.id, novos: [ecR] });
+      t.ok("selecionar o ritual não prova o estudo: sem confirmação, nada entra", !ecSem.ok && ecL.length === 0);
+      var ecCom = APe.confirmarAquisicao(ecO, ecL, { tipo: "campo", ritualId: ecR.id, novos: [ecR], confirmado: true, fonte: "selo", nota: "Selo da missão 2" });
+      var ecEst = APe.estado(ecO, { rituais: ecL });
+      t.ok("com a confirmação, o ritual passa a ser conhecido por estudo",
+        ecCom.ok && ecEst.rituais.porRitual[ecR.id].nomePoder === "Estudo em campo" && !ecEst.rituais.porRitual[ecR.id].contaNoLimite);
+      t.iguais("  com a fonte e a nota guardadas", [ecO.registrosDeRitual[0].fonte, ecO.registrosDeRitual[0].nota], ["selo", "Selo da missão 2"]);
+      var ecAlto = apRitual("Ferver Sangue");
+      t.ok("um ritual de círculo sem acesso é recusado",
+        !APe.confirmarAquisicao(ecO, ecL, { tipo: "campo", ritualId: ecAlto.id, novos: [ecAlto], confirmado: true }).ok);
+      t.ok("o mesmo ritual não é estudado duas vezes",
+        !APe.confirmarAquisicao(ecO, ecL, { tipo: "campo", ritualId: ecR.id, confirmado: true }).ok && ecO.registrosDeRitual.length === 1);
+
+      ecO.opcionais = {};
+      var ecOff = APe.estado(ecO, { rituais: ecL });
+      t.ok("desligar a regra guarda o estudo sem efeito, com o motivo",
+        !ecOff.rituais.porRitual[ecR.id] && ecOff.rituais.registros[0].valido === false && /desligado/.test(ecOff.rituais.registros[0].motivo));
+      t.igual("  sem apagar o registro", ecO.registrosDeRitual.length, 1);
+      ecO.opcionais = { aprendizadoEmCampo: true };
+      t.ok("  e religar devolve o efeito", !!APe.estado(ecO, { rituais: ecL }).rituais.porRitual[ecR.id]);
+
+      /* O estudo foi registrado em NEX 30%. Corrigir o NEX para baixo faz
+         dele o que uma escolha acima do NEX atual é: guardado, sem efeito. */
+      ecO.nex = 20;
+      var ecBaixo = APe.estado(ecO, { rituais: ecL });
+      t.ok("um estudo de uma etapa que a ficha não alcança mais fica sem efeito, com o motivo",
+        !ecBaixo.rituais.porRitual[ecR.id] && ecBaixo.rituais.registros[0].valido === false &&
+        /NEX 30%/.test(ecBaixo.rituais.registros[0].motivo) && ecO.registrosDeRitual.length === 1);
+      ecO.nex = 30;
+      t.ok("  e volta a valer quando a ficha chega lá", !!APe.estado(ecO, { rituais: ecL }).rituais.porRitual[ecR.id]);
+
+      var ecDesfaz = APe.confirmarAquisicao(ecO, ecL, { tipo: "desfazerRegistro", id: ecO.registrosDeRitual[0].id });
+      t.ok("desfazer o estudo tira o registro e deixa o ritual como registro",
+        ecDesfaz.ok && ecO.registrosDeRitual.length === 0 && ecL.length === 1 && !APe.estado(ecO, { rituais: ecL }).rituais.porRitual[ecR.id]);
+
+      /* ---------------------------------------------------------------- */
+      t.grupo("Ordem · aquisição — concessão da mesa é exceção, não atalho");
+
+      var msO = apOcultista(5);
+      var msL = [apRitual("Canalizar o Medo")];
+      var msR = APe.confirmarAquisicao(msO, msL, { tipo: "mesa", ritualId: msL[0].id, nota: "presente do mestre" });
+      var msEst = APe.estado(msO, { rituais: msL });
+      t.ok("a mesa pode conceder um ritual fora das regras", msR.ok && msEst.rituais.porRitual[msL[0].id].origem === "mesa");
+      t.ok("  marcado como exceção", msEst.rituais.porRitual[msL[0].id].excecao === true);
+      t.igual("  e a pendência de progressão continua aberta",
+        msEst.pendencias.filter(function (x) { return x.id === "d1.rituaisIniciais"; }).length, 1);
+
+      /* ---------------------------------------------------------------- */
+      t.grupo("Ordem · aquisição — Homebrew e ritual escrito à mão");
+
+      var hbO = apOcultista(5);
+      var hbComCirculo = APf.criarRitual(APf.normalizarRitual({ nome: "Selo caseiro", ordem: { elemento: "sangue", circulo: 1, custo: 1 } }));
+      var hbSem = APf.criarRitual({ nome: "Ritual sem círculo", circulo: "1º círculo" });
+      var hbAq = APe.contextoDeAquisicao(hbO, { tipo: "concessao", vaga: "d1.rituaisIniciais" }, { rituais: [] });
+      t.ok("um ritual Homebrew com o círculo informado pode ocupar a concessão",
+        hbAq.avaliar({ circulo: 1, elemento: "sangue", nome: hbComCirculo.nome }).ok);
+      t.ok("  sem o círculo, é recusado com o motivo — o texto livre não é lido como número",
+        /não informa o círculo/.test(hbAq.avaliar({ circulo: RAMAOrdemRituais.dadosDoRitual(hbSem).circulo || 0 }).motivo));
+
+      /* ---------------------------------------------------------------- */
+      t.grupo("Ordem · aquisição — ficha antiga e arquivos");
+
+      var fvO = apOcultista(20, "", 3);
+      var fvR = apRitual("Luz");
+      fvO.escolhas = [{ id: "v17", etapa: "d3.poderClasse", tipo: "poderClasse", valor: "transcender", nome: "", ignorarRequisitos: false, registradoEm: "",
+        opcoes: { poder: { valor: "aprenderRitual", opcoes: { aprendido: APe.vinculoDeRitual(fvR), elemento: "energia",
+          substituido: { id: "fora-da-ficha", nome: "Algum ritual" } } } } }];
+      var fvEst = APe.estado(APr.normalizar(JSON.parse(JSON.stringify(fvO))), { rituais: [fvR] });
+      t.ok("a troca registrada pela metade na v2.17 não quebra a ficha nem vale como troca",
+        !!fvEst.rituais.porRitual[fvR.id] && !Object.keys(fvEst.rituais.substituidos).length);
+
+      /* `registrosDeRitual` é campo novo do bloco de Ordem, e a troca de
+         Aprender Ritual é mais funda do que a limpeza da v2.17 alcançava.
+         O schema subiu para 9 SEM converter nada: é o que faz uma aba
+         aberta na versão anterior recusar a ficha, em vez de gravar por
+         cima dela sem esses dados. */
+      t.igual("o schema da ficha é 9", APf.VERSAO_SCHEMA, 9);
+      var sc8 = APf.normalizarFicha({ nome: "Ficha 8", schemaVersion: 8, tipoFicha: "ordem", ordem: { classe: "ocultista", nex: 20 } });
+      t.ok("  uma ficha 8 abre igual, com a lista de registros vazia, e sai no schema 9",
+        sc8.schemaVersion === 9 && Array.isArray(sc8.ordem.registrosDeRitual) && !sc8.ordem.registrosDeRitual.length &&
+        sc8.ordem.classe === "ocultista" && sc8.ordem.nex === 20);
+
+      if (V) {
+        var arqO = apOcultista(30);
+        arqO.opcionais = { aprendizadoEmCampo: true };
+        var arqL = [apRitual("Luz"), apRitual("Cicatrização")];
+        APe.confirmarAquisicao(arqO, arqL, { tipo: "campo", ritualId: arqL[0].id, confirmado: true, fonte: "texto" });
+        APe.confirmarAquisicao(arqO, arqL, { tipo: "mesa", ritualId: arqL[1].id });
+        var arqFicha = APf.criarFicha({ nome: "Com registros", tipoFicha: "ordem" });
+        arqFicha.ordem = arqO;
+        arqFicha.rituais.itens = arqL;
+        var arqImp = V.importado(JSON.parse(JSON.stringify(V.exportar("personagem", APf.normalizarFicha(JSON.parse(JSON.stringify(arqFicha)))))));
+        var arqEst = APe.estado(arqImp.dados.ordem, { rituais: arqImp.dados.rituais.itens });
+        t.ok("estudo em campo e concessão da mesa atravessam exportar e importar, nos ids novos",
+          arqImp.ok && arqEst.rituais.registros.length === 2 && arqEst.rituais.registros.every(function (x) { return x.valido; }) &&
+          arqImp.dados.rituais.itens.every(function (r) { return !!arqEst.rituais.porRitual[r.id]; }));
+
+        var arqTorto = JSON.parse(JSON.stringify(V.exportar("personagem", APf.normalizarFicha(JSON.parse(JSON.stringify(arqFicha))))));
+        arqTorto.dados.rituais.itens.reverse();
+        var arqTortoImp = V.importado(arqTorto);
+        var arqTortoEst = APe.estado(arqTortoImp.dados.ordem, { rituais: arqTortoImp.dados.rituais.itens });
+        t.ok("  e numa lista embaralhada o registro não é refeito no palpite",
+          arqTortoEst.rituais.registros.every(function (x) { return !x.valido; }) && arqTortoImp.dados.ordem.registrosDeRitual.length === 2);
+      }
+
+      /* ---------------------------------------------------------------- */
+      t.grupo("Ordem · aquisição — trocar regra não apaga, e recalcular não concede");
+
+      var trR2 = apOcultista(40);
+      var trR2L = [];
+      var trR2Rit = [apRitual("Luz"), apRitual("Cicatrização")];
+      APe.confirmarAquisicao(trR2, trR2L, [
+        { tipo: "concessao", vaga: "d2.ritualClasse", rituais: [trR2Rit[0].id], novos: [trR2Rit[0]] },
+        { tipo: "concessao", vaga: "d3.ritualClasse", rituais: [trR2Rit[1].id], novos: [trR2Rit[1]] },
+      ]);
+      trR2.opcionais = { limitesCompreensao: true };
+      var trR2Lento = APe.estado(trR2, { rituais: trR2L });
+      t.ok("com o aprendizado lento, a escolha do degrau par fica guardada fora, e a do ímpar continua",
+        !trR2Lento.rituais.porRitual[trR2Rit[0].id] && !!trR2Lento.rituais.porRitual[trR2Rit[1].id] &&
+        trR2Lento.fora.some(function (f) { return f.registro.etapa === "d2.ritualClasse"; }));
+      t.igual("  sem apagar ritual nenhum", trR2L.length, 2);
+      trR2.opcionais = {};
+      t.ok("  e desligar devolve tudo", !!APe.estado(trR2, { rituais: trR2L }).rituais.porRitual[trR2Rit[0].id]);
+      var trR2Foto = apFoto(trR2, trR2L);
+      for (var ri = 0; ri < 3; ri++) APe.estado(trR2, { rituais: trR2L.slice() });
+      t.igual("recalcular três vezes não muda nada gravado", apFoto(trR2, trR2L), trR2Foto);
+
+      /* Tirar um ritual da ficha leva junto os vínculos DIRETOS a ele; o
+         de uma escolha de poder fica, para a Progressão pedir revisão. */
+      var esO = apOcultista(20, "", 3);
+      esO.opcionais = {};
+      var esL = [];
+      var esR = [apRitual("Luz"), apRitual("Cicatrização"), apRitual("Canalizar o Medo")];
+      APe.confirmarAquisicao(esO, esL, { tipo: "concessao", vaga: "d1.rituaisIniciais", rituais: [esR[0].id], novos: [esR[0]] });
+      APe.confirmarAquisicao(esO, esL, { tipo: "escolha", vaga: "d3.poderClasse", candidato: apCandidatoAprender(esR[1], "morte"), novos: [esR[1]] });
+      APe.confirmarAquisicao(esO, esL, { tipo: "registro", novos: [esR[2]] });
+      APe.confirmarAquisicao(esO, esL, { tipo: "mesa", ritualId: esR[2].id });
+      t.igual("antes de esquecer, a mesa concedeu um ritual", esO.registrosDeRitual.length, 1);
+      APe.esquecerRitual(esO, esR[0].id);
+      APe.esquecerRitual(esO, esR[1].id);
+      APe.esquecerRitual(esO, esR[2].id);
+      t.ok("esquecer um ritual tira o vínculo da concessão e o registro da mesa",
+        !esO.escolhas.some(function (r) { return r.etapa === "d1.rituaisIniciais"; }) && esO.registrosDeRitual.length === 0);
+      var esEst = APe.estado(esO, { rituais: [] });
+      t.ok("  e a escolha de Aprender Ritual fica, pedindo revisão",
+        esO.escolhas.some(function (r) { return r.etapa === "d3.poderClasse"; }) &&
+        esEst.pendencias.some(function (p) { return p.id === "d3.poderClasse" && p.situacao === "invalida"; }));
+
+      var paO = apOcultista(40);
+      paO.opcionais = { evolucaoPatentes: true };
+      t.ok("com Evolução por Patentes, a ficha avisa que o trilho por patente não é calculado",
+        APe.estado(paO, { rituais: [] }).rituais.avisos.some(function (a) { return /dois a cada nova patente/.test(a); }));
     }
 
     /* =================================================================

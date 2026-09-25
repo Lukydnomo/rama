@@ -1652,17 +1652,13 @@
    resumo no alto da aba Rituais.
    ===================================================================== */
 
-.bib-aprendizado {
+.bib-aquisicao {
   padding: var(--e3);
   background: var(--cor-superficie);
   border-left: 3px solid var(--cor-paranormal);
 }
-.bib-aprendizado__titulo { overflow-wrap: anywhere; }
-.bib-aprendizado__conta {
-  font-family: var(--fonte-mini);
-  color: var(--cor-paranormal);
-}
-.bib-aprendizado__lista {
+.bib-aquisicao__titulo { overflow-wrap: anywhere; margin: 0; }
+.bib-aquisicao__lista {
   list-style: none;
   margin: 0;
   padding: 0;
@@ -1670,11 +1666,16 @@
   flex-direction: column;
   gap: var(--e1);
 }
-.bib-aprendizado__item {
+.bib-aquisicao__item {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
+  justify-content: space-between;
   gap: var(--e2);
+}
+.bib-aquisicao__item--sai > span:first-child {
+  color: var(--cor-texto-3);
+  text-decoration: line-through;
 }
 
 .rituais-aprendizado {
@@ -2022,6 +2023,340 @@
   grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
 }
 
+/* =====================================================================
+   INVENTÁRIO · "DA BIBLIOTECA"
+   ---------------------------------------------------------------------
+   Resultado compacto numa linha (nome, classificação, os números que
+   se consultam de relance e as marcas de categoria, espaços e fonte);
+   os detalhes só aparecem, e só são montados, quando alguém abre.
+
+   Mora AQUI, e não em ficha.css, porque a janela abre também fora da
+   ficha: na criação guiada, na página Personagens. Até a v2.17 estas
+   regras estavam em ficha.css, e lá a janela aparecia sem elas — botões
+   com o fundo cinza do navegador e nome, círculo e custos colados numa
+   linha só.
+   ===================================================================== */
+
+.r-modal--biblioteca { max-width: 900px; }
+
+.bib-filtros {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--e2) var(--e3);
+}
+
+.bib-filtro {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 9rem;
+  flex: 1 1 9rem;
+}
+
+.bib-filtro .r-selecao { min-height: var(--alvo-toque); width: 100%; }
+
+.bib-limpar { align-self: flex-end; }
+
+.bib-status { margin: 0; }
+
+.bib-lista { max-height: 52vh; }
+
+.bib-itens {
+  display: flex;
+  flex-direction: column;
+  gap: var(--e1);
+}
+
+.bib-item {
+  background: var(--cor-superficie);
+  border: var(--borda) solid var(--cor-traco-fraca);
+}
+
+.bib-item--melhoria { border-style: dashed; }
+
+.bib-item__topo {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--e2);
+  padding-right: var(--e2);
+}
+
+.bib-item__abrir {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  align-items: flex-start;
+  gap: var(--e2);
+  min-height: var(--alvo-toque);
+  padding: var(--e2) var(--e2) var(--e2) var(--e3);
+  background: transparent;
+  border: 0;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.bib-item__abrir:hover { background: var(--cor-superficie-2); }
+
+.bib-item__seta {
+  flex: 0 0 auto;
+  width: 10px;
+  padding-top: 2px;
+  color: var(--cor-texto-3);
+  transition: transform var(--tempo-curto) var(--curva);
+}
+.bib-item__seta::before { content: "▸"; }
+.bib-item__abrir[aria-expanded="true"] .bib-item__seta { transform: rotate(90deg); }
+
+@media (prefers-reduced-motion: reduce) {
+  .bib-item__seta { transition: none; }
+}
+
+.bib-item__texto {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.bib-item__nome {
+  font-weight: 700;
+  color: var(--cor-texto);
+  overflow-wrap: anywhere;
+}
+
+.bib-item__classe {
+  font-family: var(--fonte-mini);
+  font-size: var(--texto-mini);
+  color: var(--cor-texto-3);
+}
+
+.bib-item__dados {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 var(--e3);
+  font-size: var(--texto-mini);
+}
+
+.bib-item__marcas {
+  flex: 0 1 auto;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--e1);
+  padding-top: var(--e2);
+  max-width: 45%;
+}
+
+.bib-item__na-ficha { border-color: var(--cor-ok); color: var(--cor-ok); }
+
+.bib-elemento { border-left-width: 3px; }
+.bib-elemento--sangue { border-left-color: #B64A4A; }
+.bib-elemento--morte { border-left-color: #8C8C8C; }
+.bib-elemento--conhecimento { border-left-color: var(--cor-aviso); }
+.bib-elemento--energia { border-left-color: var(--cor-paranormal); }
+.bib-elemento--medo { border-left-color: var(--cor-texto); }
+.bib-elemento--varia { border-left-style: dashed; }
+
+.bib-item__detalhes {
+  display: flex;
+  flex-direction: column;
+  gap: var(--e2);
+  padding: var(--e2) var(--e3) var(--e3);
+  border-top: var(--borda) solid var(--cor-traco-fraca);
+}
+
+.bib-item__resumo { color: var(--cor-texto-2); }
+
+.bib-item__pares { margin: 0; }
+
+.bib-lista-textos {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding-left: var(--e4);
+  list-style: square;
+}
+
+.bib-automacao {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--e1);
+}
+
+.bib-item__acao {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--e2) var(--e3);
+  padding-top: var(--e2);
+  border-top: var(--borda) dashed var(--cor-traco-fraca);
+}
+
+.bib-campo { margin: 0; min-width: 10rem; }
+
+.bib-quantidade { width: 6rem; }
+
+.bib-item__status { flex: 1 1 100%; margin: 0; min-height: 1em; }
+
+.bib-aplicar { flex-direction: column; align-items: stretch; }
+
+.bib-alvos {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--e1) var(--e2);
+}
+
+.bib-alvo-recusado { flex: 1 1 100%; color: var(--cor-texto-3); }
+
+.bib-alvo {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--e2);
+}
+
+.bib-nada { padding: var(--e4) 0; }
+
+@media (max-width: 640px) {
+  .bib-item__topo { flex-direction: column; gap: 0; padding: 0 0 var(--e2); }
+  .bib-item__marcas { justify-content: flex-start; max-width: none; padding: 0 var(--e3); }
+  .bib-lista { max-height: none; }
+  .bib-filtro { min-width: 45%; }
+  .bib-item__adicionar { flex: 1 1 100%; }
+}
+
+/* =====================================================================
+   BIBLIOTECA DE RITUAIS
+   ---------------------------------------------------------------------
+   Elemento e círculo são filtros de um toque, em duas faixas: é o que
+   se usa mais, e um seletor escondido custaria dois cliques. Elemento
+   também aparece escrito — cor sozinha não é informação.
+   ===================================================================== */
+
+.bib-chips { gap: var(--e1); }
+
+.bib-versoes {
+  display: flex;
+  flex-direction: column;
+  gap: var(--e2);
+}
+
+.bib-versao {
+  padding: var(--e2);
+  border-left: 3px solid var(--cor-traco-fraca);
+  background: var(--cor-superficie-2);
+}
+
+.bib-versao__topo { margin: 0; }
+
+/* ---------------------------------------------------------------------
+   A BIBLIOTECA NUMA AQUISIÇÃO (v2.18)
+   ---------------------------------------------------------------------
+   Uma rolagem só: dentro da janela da biblioteca, a lista não rola
+   sozinha — quem rola é o corpo da janela. Duas barras de rolagem, uma
+   dentro da outra, perdem quem está no celular e escondem o fim da
+   lista de quem está no computador.
+
+   Cada resultado tem três estados, e nenhum deles é só cor: o texto do
+   estado vem escrito ("Disponível", "Selecionado", "Indisponível") e o
+   motivo da indisponibilidade aparece embaixo.
+   --------------------------------------------------------------------- */
+
+.r-modal--biblioteca .biblioteca-lista,
+.r-modal--biblioteca .bib-lista {
+  max-height: none;
+  overflow: visible;
+  padding-right: 0;
+}
+
+.bib-item__escolha {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--e1) var(--e2);
+  padding: 0 var(--e3) var(--e2) calc(var(--e3) + 10px + var(--e2));
+}
+
+.bib-item__estado {
+  font-family: var(--fonte-mini);
+  font-size: var(--texto-mini);
+  letter-spacing: var(--espaco-letra-titulo);
+  text-transform: uppercase;
+}
+.bib-item__estado--disponivel { color: var(--cor-ok); }
+.bib-item__estado--escolhido { color: var(--cor-paranormal); font-weight: 700; }
+.bib-item__estado--indisponivel { color: var(--cor-texto-3); }
+
+.bib-item__selecionar { margin-left: auto; min-width: 8.5rem; }
+.bib-item__selecionar[aria-disabled="true"] { opacity: 0.55; cursor: not-allowed; }
+
+.bib-item__motivo {
+  flex: 1 1 100%;
+  margin: 0;
+  color: var(--cor-aviso);
+}
+
+.bib-item__escolha .bib-item__status { flex: 1 1 100%; margin: 0; min-height: 0; }
+.bib-item__escolha .bib-campo { min-width: 9rem; }
+
+.bib-item--escolhido {
+  border-color: var(--cor-paranormal);
+  box-shadow: inset 3px 0 0 var(--cor-paranormal);
+}
+.bib-item--indisponivel .bib-item__nome { color: var(--cor-texto-2); }
+
+/* O resultado que vem da própria ficha não tem detalhes para abrir. */
+.bib-item__texto--fixo {
+  flex: 1 1 auto;
+  padding: var(--e2) var(--e2) var(--e1) calc(var(--e3) + 10px + var(--e2));
+}
+
+.bib-ficha { padding-top: var(--e1); }
+
+.bib-alternar {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--e2);
+  min-height: var(--alvo-toque);
+  cursor: pointer;
+}
+.bib-alternar input { width: 18px; height: 18px; accent-color: var(--cor-paranormal); }
+
+.bib-rodape__status {
+  flex: 1 1 auto;
+  align-self: center;
+  margin: 0 auto 0 0;
+  color: var(--cor-texto-2);
+}
+
+.bib-resumo {
+  padding: var(--e3);
+  background: var(--cor-superficie);
+  border-left: 3px solid var(--cor-paranormal);
+}
+.bib-resumo h3:focus { outline: none; }
+.bib-resumo__erro {
+  padding: var(--e2) var(--e3);
+  border: var(--borda) solid var(--cor-erro);
+}
+
+.bib-estudo {
+  padding: var(--e3);
+  border: var(--borda) dashed var(--cor-traco-media);
+}
+
+@media (max-width: 640px) {
+  .bib-item__escolha { padding-left: var(--e3); }
+  .bib-item__selecionar { flex: 1 1 100%; margin-left: 0; }
+  .bib-item__texto--fixo { padding-left: var(--e3); }
+  /* O rodapé empilha de baixo para cima no celular: a contagem vai por
+     último na ordem para aparecer em cima dos botões. */
+  .r-modal__rodape .bib-rodape__status { order: 99; margin: 0; text-align: center; }
+}
+
 .escolha-cartao {
   position: relative;
 }
@@ -2037,6 +2372,14 @@
 .escolha-cartao--indisponivel .criacao-opcao__nome,
 .escolha-cartao--indisponivel .escolha-cartao__resumo {
   color: var(--cor-texto-3);
+}
+
+/* Um botão de escolha com motivo (o elemento que não é o do ritual de
+   Aprender Ritual, o atributo que a regra exclui) continua à vista e
+   clicável — o clique explica o motivo —, mas não se passa por opção. */
+.escolha-botoes .r-botao[aria-disabled="true"] {
+  opacity: 0.55;
+  cursor: not-allowed;
 }
 
 .escolha-marcas {

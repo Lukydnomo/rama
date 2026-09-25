@@ -14,23 +14,26 @@
    TRÊS COISAS DIFERENTES, QUE NÃO SE MISTURAM
    ---------------------------------------------------------------------
 
-     versão do aplicativo   está aqui. É o que a pessoa vê: v2.17.0.
+     versão do aplicativo   está aqui. É o que a pessoa vê: v2.18.0.
      schemaVersion          está em js/ficha.js. É o formato da FICHA,
                             e só sobe quando a ficha muda de forma.
      versaoFormato          está em js/config.js. É o formato dos
                             arquivos de importação/exportação.
 
-   Elas sobem em ritmos próprios. A v2.17.0 leva schemaVersion 8 e
+   Elas sobem em ritmos próprios. A v2.18.0 leva schemaVersion 9 e
    versaoFormato 1 — e isso é normal: a v2.15 mudou ONDE a ficha é guardada
    (em blocos, no backend), a v2.16 mudou como ela é ACHADA e o que o painel
    lê para desenhar um cartão, e a v2.17 acrescentou decisões dentro de
    `ordem.escolhas`, que é uma coleção aberta desde que existe. Nenhuma das
-   três mudou o que é uma ficha, então nem o formato da ficha nem o dos
-   arquivos de importação mudaram. A forma de guardar tem a
-   própria versão, no manifesto de cada ficha (`formato: "blocos"`,
-   `versao: 1` — ver docs/DATABASE.md). A última subida de schema com
-   migração foi a v2.14.0: o texto longo do ritual saiu de `efeito` e foi
-   para `descricao`, junto com o rótulo personalizado.
+   três mudou o que é uma ficha. A v2.18 mudou: o bloco de Ordem ganhou
+   `registrosDeRitual`, e o schema subiu para 9 SEM conversão, só para uma
+   aba aberta na versão anterior recusar a ficha em vez de descartar o
+   campo ao gravar. O arquivo de importação continua no mesmo formato. A
+   forma de guardar tem a própria versão, no manifesto de cada ficha
+   (`formato: "blocos"`, `versao: 1` — ver docs/DATABASE.md). A última
+   subida de schema com migração foi a v2.14.0: o texto longo do ritual
+   saiu de `efeito` e foi para `descricao`, junto com o rótulo
+   personalizado.
 
    ---------------------------------------------------------------------
    A REGRA, PARA TODA ENTREGA FUTURA
@@ -63,6 +66,44 @@
   ];
 
   var CHANGELOG = [
+    {
+      versao: "2.18.0",
+      codinome: "VÍNCULO",
+      data: "25/09/2026",
+      mudancas: {
+        "Corrigido": [
+          "O seletor de rituais aparecia cinza e apertado na criação guiada. Os estilos da biblioteca moravam num arquivo que só a página da ficha carrega, e a janela, aberta na lista de personagens, chegava sem nenhum. Eles passaram para os componentes comuns, e cada ritual voltou a ter hierarquia: o nome em destaque, a classificação embaixo, custo, execução, alcance e duração com rótulo, e etiquetas com o elemento e o livro de origem.",
+          "A lista de rituais rolava dentro da janela, que também rola. Numa escolha, agora é uma rolagem só.",
+          "Transcender → Aprender Ritual podia perder o ritual na gravação: a limpeza das opções cortava no quarto nível, e o caminho Versatilidade → Transcender → Aprender Ritual — ou a troca dentro de Transcender — fica mais fundo do que isso. Agora ela vai a oito.",
+          "A troca que Aprender Ritual permite guardava só o ritual que saía. Agora são as duas pontas, obrigatórias juntas: sai um ritual conhecido antes daquela etapa (o do grimório fica de fora), e o que entra toma o lugar dele e segue a regra daquela aquisição. O que saiu continua na ficha, marcado como substituído.",
+          "Aprender Ritual deixava escolher qualquer elemento para o poder. O livro diz que ele \"conta como um poder do elemento do ritual escolhido\" (Ordem Paranormal RPG, p. 114): o elemento agora vem do ritual, e outro é recusado com o motivo.",
+        ],
+        "Melhorado": [
+          "Cada ritual do seletor diz o próprio estado — Disponível, Selecionado ou Indisponível —, com o motivo por extenso, num controle ao lado do botão de detalhes: consultar um ritual não o seleciona, e o cartão deixou de ser um botão com botões dentro. O rodapé conta o que falta (\"Escolhidos: 2 de 3 · faltam 1\"), e busca, filtros e a posição da lista ficam onde estavam.",
+          "Escolher numa aquisição é provisório até confirmar. \"Revisar e confirmar\" mostra o resumo — cada ritual, se é cópia nova ou um que já está na ficha, e a que aquisição fica preso —, e Cancelar, fechar ou Esc descartam a seleção e devolvem o foco a quem abriu.",
+          "Transcender → Aprender Ritual abre a mesma biblioteca de rituais, com Ordem Paranormal e Homebrew, no contexto do poder: o círculo que ele alcança naquela etapa, o limite por Intelecto e os rituais da ficha que podem ocupá-lo sem virar cópia. A cópia nova só entra na ficha junto com a escolha confirmada; cancelar não deixa ritual nem poder para trás.",
+          "Um ritual que já está na ficha, sem aquisição, pode ocupar uma concessão ou Aprender Ritual sem ganhar outra cópia. Um ritual que já é de outra aquisição aparece indisponível, com o motivo: um ritual não quita duas.",
+        ],
+        "Adicionado": [
+          "Estudo em campo, para o limite por aprendizado em campo (Sobrevivendo ao Horror, p. 113). \"Registrar estudo em campo\" pede a fonte (composição, objeto amaldiçoado ou selo), uma nota e a confirmação de que a fonte foi achada e o teste de Ocultismo passou — selecionar o ritual não prova nada disso. A ficha mostra a DT (20, 25, 30 ou 35) e não rola o teste.",
+          "Concessão da mesa: um ritual pode ser marcado como conhecido por decisão da mesa, como exceção declarada. Isso não resolve pendência nenhuma.",
+          "A aba Rituais separa Conhecidos, Grimório e Registros sem aquisição, com a origem de cada ritual (a aquisição, a etapa, se conta no limite, o que ele substituiu) e as saídas no menu: prender a uma aquisição aberta, registrar o estudo, registrar como concessão da mesa, soltar.",
+          "Os avisos das regras opcionais que mexem no aprendizado aparecem iguais na aba Rituais e na Progressão: Evolução por Patentes (que o R.A.M.A. ainda não calcula — o aviso traz os números do livro), os dois limites de Sobrevivendo ao Horror e o NEX que sobe ao aprender um ritual, com NEX & Experiência.",
+        ],
+        "Alterado": [
+          "Toda aquisição de ritual é gravada por uma porta só, como operação única: aplica numa cópia, recalcula a progressão, confere e só então troca. Ou tudo entra, ou nada; uma escolha inválida mostra \"Não foi gravado\" e o motivo, em vez de virar registro manual; e repetir a confirmação não duplica ritual nem aquisição.",
+          "O limite de rituais conhecidos passou a ser conferido na escolha: um Aprender Ritual que passaria do Intelecto daquela etapa é recusado, com o motivo.",
+          "Um estudo em campo ou uma concessão da mesa registrados numa etapa que a ficha não alcança mais (o NEX foi corrigido para baixo) ficam guardados, sem efeito, como uma escolha acima do NEX atual — e voltam a valer sozinhos.",
+        ],
+        "Técnico": [
+          "schemaVersion 8 → 9, sem conversão: o bloco de Ordem ganhou `registrosDeRitual`, que uma aba aberta na versão anterior descartaria ao gravar. Com a subida, ela recusa a ficha e pede para recarregar. Não requer nada do backend: nenhum `.gs` mudou, não há setupRama() a rodar nem implantação nova.",
+          "A regra de cada aquisição mora numa função só (avaliarContraRegra), consultada pela biblioteca, pela gravação e por toda leitura da ficha. O servidor continua guardando a ficha sem conhecer regras de Ordem: o que chega inválido por fora da tela aparece na Progressão com o motivo e não conta como aprendido.",
+          "Leituras registradas em docs/ORDEM-REGRAS.md, com a fonte de cada uma: Graduado não muda com os limites de Sobrevivendo ao Horror (as duas regras falam de Escolhido pelo Outro Lado); a troca de Aprender Ritual segue a regra do que sai; e o que o livro não diz sobre patentes fica com a mesa.",
+          "Exportar e importar levam também os registros de ritual pela posição na lista, com a mesma guarda: nenhum vínculo é refeito no palpite.",
+          "Testes: 1773 no modelo (86 novas), 812 no backend, 219 no transporte do frontend e 171 no navegador (173 em largura de celular), agora abrindo a janela sem o arquivo de estilo da ficha. Vinte e seis mutações propositais nas garantias novas; todas foram pegas por algum teste.",
+        ],
+      },
+    },
     {
       versao: "2.17.0",
       codinome: "GRIMÓRIO",

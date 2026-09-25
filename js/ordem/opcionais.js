@@ -185,7 +185,7 @@
       efeito:
         "Os três rituais iniciais continuam. O ritual que Escolhido pelo Outro Lado dá a cada " +
         "avanço passa a vir só nos degraus ímpares (NEX 15%, 25%, 35%… ou nível 3, 5, 7…). " +
-        "Saber Ampliado, o grimório e Aprender Ritual não mudam.",
+        "Saber Ampliado, o grimório e Aprender Ritual não mudam — a regra não fala deles.",
       parametros: [],
       depende: [],
       incompativel: ["aprendizadoEmCampo"],
@@ -215,8 +215,13 @@
       consequencias: [
         "As concessões de ritual por avanço somem da progressão. Os rituais já escolhidos nelas NÃO " +
         "são apagados: ficam guardados e voltam a valer se a regra for desligada.",
-        "O estudo em campo acontece na mesa: o R.A.M.A. mostra a DT por círculo e marca o ritual " +
-        "como aprendido em campo, mas não rola o teste nem gasta a ação de interlúdio.",
+        "Um ritual novo só conta como aprendido depois de REGISTRAR o estudo em campo, confirmando " +
+        "que a fonte foi achada e o teste de Ocultismo passou. O R.A.M.A. mostra a DT por círculo, " +
+        "mas não rola o teste nem gasta a ação de interlúdio.",
+        "Ao desligar, os estudos registrados ficam guardados sem efeito e voltam a valer se a regra " +
+        "for religada.",
+        "Saber Ampliado, o grimório de Graduado e Aprender Ritual não mudam: a regra fala só do " +
+        "ritual que o ocultista aprende ao avançar.",
       ],
     },
 

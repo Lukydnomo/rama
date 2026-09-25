@@ -529,10 +529,10 @@
         opcoes: [
           { chave: "aprendido", tipo: "ritualAprendido", rotulo: "Ritual aprendido",
             ajuda: "Escolha pela biblioteca. O círculo permitido sobe com o NEX de exposição: 1º, 2º a partir de 45% e 3º a partir de 75%." },
-          { chave: "substituido", tipo: "ritualDaFicha", opcional: true, rotulo: "Ritual substituído",
-            ajuda: "“Além disso, você pode substituir um ritual que já conhece por outro” (OPRPG p.114). É a única troca que as regras dão; deixar em branco não substitui nada." },
-          { chave: "elemento", tipo: "elemento", comMedo: true, rotulo: "Elemento do ritual",
-            ajuda: "Este poder conta como um poder do elemento do ritual." },
+          { chave: "substituicao", tipo: "substituicaoDeRitual", opcional: true, rotulo: "Substituir um ritual conhecido",
+            ajuda: "“Além disso, você pode substituir um ritual que já conhece por outro” (OPRPG p.114). É a única troca que as regras dão, e é opcional: deixar em branco não troca nada." },
+          { chave: "elemento", tipo: "elemento", comMedo: true, doRitual: "aprendido", rotulo: "Elemento do ritual",
+            ajuda: "Este poder conta como um poder do elemento do ritual escolhido: com o ritual escolhido, o elemento vem dele." },
         ],
         nota: "Este é o único aprendizado que conta no limite de rituais conhecidos (Intelecto). O elemento escolhido conta para requisitos como Morte 2." }),
 

@@ -110,7 +110,7 @@ E abra `http://localhost:8099/rama/`.
 
 São três conjuntos.
 
-**Modelo e motor de dados** — 1687 verificações. No navegador, abra `testes/`;
+**Modelo e motor de dados** — 1773 verificações. No navegador, abra `testes/`;
 no terminal:
 
 ```bash
@@ -153,6 +153,22 @@ duas variantes de SAH p.113; nível e NEX separados mandando cada um no que é s
 associar um ritual antigo sem criar outra cópia; os rituais que uma trilha concede
 pelo nome, conferidos um a um contra o catálogo; e a exceção da mesa, que entra
 marcada e com o motivo escrito.
+
+E o aprendizado revisto na v2.18: o contexto de cada aquisição (de onde veio, a
+regra, o limite, por que um ritual está ocupado); a gravação como operação única,
+que aplica numa cópia, confere e só então troca — nada pela metade, nada em
+dobro ao repetir, nenhuma cópia sem aquisição; Transcender → Aprender Ritual em
+combatente, especialista e ocultista, com o círculo pelo NEX de exposição da
+etapa, o limite por Intelecto, o ritual de outra aquisição recusado, o ritual da
+ficha usado sem cópia, o elemento do poder vindo do ritual e o caminho
+Versatilidade → Transcender → Aprender Ritual sobrevivendo a salvar e reabrir; a
+troca que o poder permite (as duas pontas, a regra de quem sai, o grimório de
+fora); o estudo em campo que precisa de confirmação e guarda o degrau; a
+concessão da mesa que não resolve pendência; Homebrew e ritual escrito à mão;
+fichas antigas e arquivos (a troca pela metade da v2.17, registros exportados e
+importados, lista embaralhada sem palpite); e ligar e desligar regras sem apagar
+nada. Cada garantia nova foi conferida também por mutação: 26 alterações
+propositais no código, todas pegas pelos testes.
 
 E o catálogo de rituais: os 98 rituais conferidos contra os dois livros (elemento,
 círculo, execução, alcance, alvo/área/efeito, duração, resistência, página e o
@@ -256,7 +272,7 @@ sem perder nada, e a fila do mestre repete o ajuste que falhou antes do clique
 seguinte — sem descartá-lo. E as mensagens: nenhuma manda apagar habilidades,
 rituais ou anotações.
 
-**As janelas "Da biblioteca" no navegador** — 131 verificações (133 em largura de
+**As janelas "Da biblioteca" no navegador** — 171 verificações (173 em largura de
 celular). Sirva a pasta por HTTP e abra `testes/biblioteca.html`: as janelas de
 verdade abrem com uma ficha de teste e o roteiro confere, nas duas bibliotecas, as
 origens, busca e filtros, detalhes sob demanda, inclusão de cada tipo (com
@@ -266,6 +282,15 @@ gasta PE nem rola dado, os estados de erro e de biblioteca vazia, o teclado (set
 nas abas, Esc, foco de volta) e o layout na largura da janela — abra num tamanho de
 celular para conferir a versão estreita. A Homebrew é simulada nessa página; as
 permissões dela são testadas no backend.
+
+E, desde a v2.18, a biblioteca de rituais presa a uma aquisição: a janela de pé
+**sem** `css/ficha.css` (como na criação guiada), sem rolagem dentro de rolagem; a
+escolha provisória de uma concessão (a conta no rodapé, o estado de cada ritual
+com o motivo, detalhes que não selecionam, clique duplo que não alterna duas
+vezes, cancelar que descarta, o resumo antes de gravar, confirmar que grava uma
+vez só); e Transcender → Aprender Ritual de ponta a ponta — a biblioteca no
+contexto do poder, a cópia pendente que só entra ao confirmar, o elemento vindo
+do ritual, cancelar sem deixar ritual nem poder, e confirmar sem duplicar.
 
 **Custo das operações** — não é teste, é medição:
 
@@ -438,6 +463,16 @@ implantação nova a criar. O que ela acrescenta mora na ficha, dentro de
 antigo abrindo uma ficha da v2.17 mostra os rituais e ignora os vínculos, sem
 apagá-los; nenhuma ficha é convertida e o `schemaVersion` não muda.
 
+**Atualizando para a v2.18 (o seletor de rituais e as aquisições): só o site.**
+Nenhum `.gs` mudou, não há `setupRama()` a rodar nem implantação nova a criar. O
+`schemaVersion` sobe de 8 para 9 **sem converter nada**: uma ficha 8 abre igual, e
+passa a 9 na próxima gravação. A subida existe porque a v2.18 guarda um campo novo
+no bloco de Ordem (`registrosDeRitual`) e uma troca de Aprender Ritual mais funda do
+que a v2.17 lia — uma aba ainda aberta na versão anterior descartaria os dois ao
+gravar. Com o schema 9, essa aba recusa a ficha e pede para recarregar; nada se
+perde. Depois de publicar, peça a quem estiver com a ficha aberta para recarregar
+a página.
+
 Sem o passo 2, as fichas antigas continuam abrindo, mas nenhuma ficha salva
 (`instalacao_incompleta`) — nada é gravado pela metade. **Não volte a implantação
 para uma versão anterior à v2.15** sem necessidade: a versão antiga não sabe abrir
@@ -594,6 +629,18 @@ console não abre o registro de outra conta.
   trilhas dão pelo nome, em qualquer classe. Outras classes só aprendem pelo poder
   paranormal Aprender Ritual, que é o único aprendizado que conta no limite por
   Intelecto.
+- **As regras de aprendizado são conferidas no navegador (v2.18).** A tela, a
+  gravação e toda leitura usam a mesma função; o Apps Script continua conferindo
+  sessão, dono, revisão e tamanho, e guarda a ficha sem conhecer regra de Ordem.
+  Uma aquisição inválida que chegue por fora da tela (arquivo editado à mão) não é
+  recusada pelo servidor — ela aparece na Progressão com o motivo e não conta como
+  aprendida.
+- **O estudo em campo é registrado, não jogado.** Com a regra B de SAH p.113, a
+  ficha mostra a DT e pede a confirmação da mesa, mas não rola o teste de
+  Ocultismo nem gasta a ação de interlúdio.
+- **Graduado não muda com os limites de SAH p.113.** As duas regras falam do
+  ritual de Escolhido pelo Outro Lado; Saber Ampliado e o grimório seguem o texto
+  da trilha. É leitura registrada em `docs/ORDEM-REGRAS.md` (lacuna 25).
 - **Evolução por Patentes não muda as concessões de ritual.** A tabela do
   ocultista por patente (Sobrevivendo ao Horror, p. 112) dá dois rituais por
   patente, e essa regra opcional ainda não tem o trilho de progressão estruturado:

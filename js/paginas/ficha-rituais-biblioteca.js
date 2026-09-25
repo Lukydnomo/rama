@@ -13,45 +13,49 @@
    Ordem a quem não joga Ordem.
 
    ---------------------------------------------------------------------
-   O QUE A JANELA PROMETE
+   DOIS JEITOS DE ABRIR
+   ---------------------------------------------------------------------
+
+   REGISTRO (sem `aquisicao`)
+     "Da biblioteca", na aba Rituais. Cada "Adicionar à ficha" é uma
+     cópia confirmada ali mesmo, e o ritual entra como REGISTRO: está na
+     ficha para consulta, não é aprendido e não resolve pendência.
+
+   AQUISIÇÃO (`aquisicao: { tipo, … }`)
+     Aberta por uma pendência, por Aprender Ritual dentro de Transcender,
+     pela troca que Aprender Ritual permite ou pelo estudo em campo. A
+     janela sabe POR QUE o personagem está escolhendo, e pergunta ao
+     motor (E.contextoDeAquisicao) quantos rituais cabem, de que círculo
+     e com que limite. Muda o que ela promete:
+
+     · a escolha é PROVISÓRIA: selecionar não escreve nada na ficha;
+       cancelar, fechar ou apertar Esc descarta a seleção inteira;
+     · o rodapé mostra, sempre à vista, quantos faltam;
+     · cada ritual diz se está disponível, selecionado ou indisponível —
+       e, quando indisponível, por quê;
+     · antes de gravar, um resumo diz o que entra, o que sai e a que
+       aquisição cada ritual fica preso;
+     · gravar é UMA operação, validada pelo motor (E.confirmarAquisicao):
+       ou tudo entra, ou nada entra, e repetir a confirmação não duplica;
+     · não existe "só registrar" dentro de uma aquisição. Registrar é a
+       outra porta, a da aba Rituais, e nunca resolve pendência.
+
+     Aprender Ritual e a troca são escolhidos DENTRO de outra janela (a
+     de Transcender). Nesses dois casos a biblioteca não grava nada: ela
+     devolve o ritual escolhido para a janela de quem pediu, que só
+     grava quando aquela escolha inteira for confirmada.
+
+   ---------------------------------------------------------------------
+   O QUE A JANELA CONTINUA PROMETENDO
    ---------------------------------------------------------------------
 
    · Cada resultado aparece compacto; os detalhes só são montados quando
-     alguém abre. O catálogo carrega sob demanda, na primeira abertura.
+     alguém abre, e abrir os detalhes nunca seleciona nada.
    · Adicionar cria uma CÓPIA independente, com id próprio, ids de
-     versão próprios e rastro da origem. A janela continua aberta, com a
-     mesma busca, os mesmos filtros e a mesma posição da lista.
-   · Um clique duplo não vira dois rituais; clicar de novo depois, de
-     propósito, vira — e a janela diz quantas cópias já existem.
-   · ADICIONAR NÃO É CONJURAR: nenhum PE é gasto, nenhum dado é rolado e
-     nenhum efeito é aplicado. Os custos aparecem escritos.
-   · Registrar um ritual não resolve pendência de progressão nenhuma:
-     aprender vem da escolha (Aprender Ritual, habilidades de ocultista)
-     e continua na aba Progressão.
-
-   ---------------------------------------------------------------------
-   A MESMA JANELA, NO CONTEXTO DE UMA CONCESSÃO
-   ---------------------------------------------------------------------
-
-   Com `opcoes.aprendizado`, esta janela abre PRESA a uma concessão de
-   aprendizado (os três rituais iniciais, o ritual daquele NEX, o
-   grimório de Graduado, Aprender Ritual). Muda o que ela promete:
-
-   · a busca, os filtros, a prévia, as fontes e as versões são as
-     mesmas — nada foi duplicado para isto;
-   · o topo mostra de onde o benefício veio, em que etapa, quantos
-     rituais ele dá, quantos já foram escolhidos e quantos faltam;
-   · cada ritual do catálogo diz se é elegível NAQUELA concessão, e o
-     que não é continua à vista, com o motivo;
-   · o botão prende o ritual à concessão além de trazer a cópia — e é
-     esse vínculo, não a cópia, que resolve a pendência;
-   · um ritual que já está na ficha sem concessão pode ocupar a vaga
-     sem virar uma segunda cópia;
-   · escolher menos do que a concessão dá é permitido: a pendência fica
-     aberta, com o que falta, e a janela pode ser fechada.
-
-   Sem `aprendizado`, a janela continua exatamente como era: trazer uma
-   cópia para a ficha, sem tocar em progressão nenhuma.
+     versão próprios e rastro da origem.
+   · Um clique duplo não vira dois rituais.
+   · ADICIONAR NÃO É CONJURAR: nenhum PE é gasto e nenhum dado é rolado.
+   · Uma rolagem só: a lista não rola dentro do corpo da janela.
    ===================================================================== */
 
 (function (global) {
@@ -63,7 +67,6 @@
   var el = U.el;
 
   function RT() { return global.RAMAOrdemRituais; }
-  function R() { return global.RAMAOrdemRegras; }
   function E() { return global.RAMAOrdemProgressao; }
   function AP() { return global.RAMAOrdemAprendizado; }
 
@@ -88,6 +91,10 @@
     return (ctx.ficha.rituais && ctx.ficha.rituais.rotulos) || F.ROTULOS_RITUAL_PADRAO;
   }
 
+  function nomeDaFonte(sigla) {
+    return sigla === "SAH" ? "Sobrevivendo ao Horror" : (sigla === "OPRPG" ? "Ordem Paranormal RPG" : "");
+  }
+
   /* =================================================================
      ABRIR
      ================================================================= */
@@ -97,35 +104,113 @@
     var ordem = deOrdem(ctx);
     var id = "bibr-" + (++contador);
 
-    /* A concessão que está sendo resolvida, quando há uma. Ela não é
-       guardada: é relida do motor a cada desenho, para a janela nunca
-       mostrar uma contagem que a ficha já não tem. */
-    var vagaId = (ordem && o.aprendizado && E() && AP()) ? String(o.aprendizado.vagaId || "") : "";
-    var aoMudarAprendizado = (o.aprendizado && o.aprendizado.aoMudar) || null;
-    var inicial = vagaId ? concessaoAtual() : null;
+    /* A v2.17 abria por `aprendizado: { vagaId }`; o nome continua
+       aceito, e vira uma aquisição de concessão. */
+    var pedido = o.aquisicao || (o.aprendizado && o.aprendizado.vagaId
+      ? { tipo: "concessao", vaga: o.aprendizado.vagaId } : null);
+    var aoMudar = o.aoConfirmar || (o.aprendizado && o.aprendizado.aoMudar) || null;
+
+    var modoAquisicao = !!(ordem && pedido && E() && E().contextoDeAquisicao);
+    var devolve = modoAquisicao && (pedido.tipo === "aprenderRitual" || pedido.tipo === "substituicao");
+
+    function contextoDaFicha() {
+      return Object.assign({ inventario: ctx.ficha.inventario }, o.contexto || {}, { rituais: rituaisDaFicha(ctx) });
+    }
+
+    function lerAquisicao() {
+      return modoAquisicao ? E().contextoDeAquisicao(ordemDe(ctx), pedido, contextoDaFicha()) : null;
+    }
+
+    var aq = lerAquisicao();
+    if (modoAquisicao && !aq) {
+      UI.avisoAtencao("Esta aquisição de ritual não está disponível agora — a progressão, a trilha ou uma regra opcional mudou.");
+      return null;
+    }
 
     var estado = {
-      origem: ordem ? (o.origem || lembrado.origem) : "homebrew",
+      /* Numa aquisição, a janela começa sempre no catálogo oficial — é
+         de lá que vêm os rituais concedidos pelo nome, e é o que quem
+         abriu por uma pendência espera ver. Fora dela, volta onde a
+         pessoa estava. */
+      origem: ordem ? (o.origem || (modoAquisicao ? "oficial" : lembrado.origem)) : "homebrew",
       busca: "", elemento: o.elemento || "", circulo: o.circulo || "", fonte: "",
+      soElegiveis: modoAquisicao,
       abertos: {},
       catalogo: null, carregandoCatalogo: false, falhaCatalogo: null,
       homebrew: null,
       hb: { busca: "", escopo: "" },
     };
 
-    /* Os filtros já abrem onde a concessão manda: um círculo só, ou o
-       elemento exigido. Não é trava — a lista continua inteira com
-       "Todos", e o que não cabe aparece com o motivo. */
-    if (inicial) {
-      if (inicial.circulos.length === 1) estado.circulo = inicial.circulos[0];
-      if (inicial.elemento) estado.elemento = inicial.elemento;
-      if (inicial.fixo) estado.busca = inicial.fixo.nome;
+    /* Os filtros já abrem onde a aquisição manda: um círculo só, o
+       elemento exigido, o ritual concedido pelo nome. Não é trava — a
+       lista continua inteira com "Todos". */
+    if (aq) {
+      if (aq.circulos.length === 1) estado.circulo = aq.circulos[0];
+      if (aq.elemento) estado.elemento = aq.elemento;
+      if (aq.fixo) estado.busca = aq.fixo.nome;
     }
 
+    /* ---------------------------------------------------------------
+       A SELEÇÃO PROVISÓRIA
+       ---------------------------------------------------------------
+       Nada disto está na ficha até a confirmação.
+
+         itens   o que entra: { chave, ritual, novo, nome, circulo,
+                 elemento, origem }. `ritual` já é a cópia montada
+                 (para o catálogo e a Homebrew) ou o da própria ficha
+         saem    ids de rituais que hoje ocupam a concessão e vão sair
+       --------------------------------------------------------------- */
+
+    var sel = { itens: [], saem: {} };
+    var passo = "lista";
+    var gravando = false;
+    var rolagemDaLista = 0;
+
+    function selecionado(chave) {
+      return sel.itens.filter(function (i) { return i.chave === chave; })[0] || null;
+    }
+
+    function escolhidosQueFicam() {
+      return aq ? aq.escolhidos.filter(function (rid) { return !sel.saem[rid]; }) : [];
+    }
+
+    function totalDepois() {
+      return escolhidosQueFicam().length + sel.itens.length;
+    }
+
+    function capacidade() {
+      if (!aq) return Infinity;
+      if (devolve || aq.tipo === "campo") return 1;
+      if (aq.quantidade === null || aq.quantidade === undefined) return Infinity;
+      return aq.quantidade;
+    }
+
+    function cheio() {
+      return totalDepois() >= capacidade();
+    }
+
+    function alternar(item) {
+      var existente = selecionado(item.chave);
+      if (existente) {
+        sel.itens = sel.itens.filter(function (i) { return i !== existente; });
+      } else {
+        if (capacidade() === 1) sel.itens = [];
+        if (cheio()) return false;
+        sel.itens.push(item);
+      }
+      atualizarRodape();
+      return true;
+    }
+
+    /* ---------------------------------------------------------------
+       O ESQUELETO
+       --------------------------------------------------------------- */
+
     var janela = el("div.pilha.biblioteca.bib", { id: id });
-    var cabecalho = el("div.pilha--curta.bib-aprendizado", { class: "pilha", hidden: !vagaId });
+    var cabecalho = el("div.pilha--curta.bib-aquisicao", { class: "pilha" });
     var anuncio = el("p.so-leitor", { role: "status", "aria-live": "polite" });
     var corpo = el("div.pilha");
+    var resumo = el("div.pilha.bib-resumo", { hidden: true });
     var aberta = true;
 
     function anunciar(texto) {
@@ -133,163 +218,19 @@
       setTimeout(function () { anuncio.textContent = texto; }, 30);
     }
 
-    /* ---------------------------------------------------------------
-       ORIGENS
-       --------------------------------------------------------------- */
-
     function pintar() {
       var partes = [];
-      if (vagaId) partes.push(cabecalho);
+      if (aq) partes.push(cabecalho);
       if (ordem) {
         partes.push(el("div.biblioteca-origens", { role: "group", "aria-label": "Origem dos rituais" }, [
           botaoOrigem("oficial", "Ordem Paranormal"),
           botaoOrigem("homebrew", "Homebrew"),
         ]));
       }
-      partes.push(corpo, anuncio);
+      partes.push(corpo, resumo, anuncio);
       U.trocar(janela, partes);
-      if (vagaId) pintarCabecalho();
+      if (aq) pintarCabecalho();
       pintarOrigem();
-    }
-
-    /* ---------------------------------------------------------------
-       A CONCESSÃO
-       --------------------------------------------------------------- */
-
-    function contextoDaFicha() {
-      return { inventario: ctx.ficha.inventario, rituais: rituaisDaFicha(ctx) };
-    }
-
-    function concessaoAtual() {
-      if (!vagaId || !E() || !ordem) return null;
-      var est = E().estado(ordemDe(ctx), contextoDaFicha());
-      if (!est || !est.rituais) return null;
-      return est.rituais.concessoes.filter(function (c) { return c.id === vagaId; })[0] || null;
-    }
-
-    /* O que se sabe de uma entrada do catálogo para conferir a
-       elegibilidade. O elemento de um ritual que pede escolha (Amaldiçoar
-       Arma) só é decidido ao adicionar, então os quatro entram. */
-    function dadosDaEntrada(e, elementoEscolhido) {
-      return {
-        circulo: e.circulo,
-        elemento: elementoEscolhido || e.elemento,
-        elementos: elementoEscolhido ? [elementoEscolhido] : e.elementos,
-        catalogo: e.id,
-      };
-    }
-
-    function elegivel(c, e, elementoEscolhido) {
-      if (!c || !AP()) return { ok: true, motivo: "" };
-      if (c.restantes <= 0) {
-        return { ok: false, motivo: "Esta concessão já está completa: solte um ritual antes de prender outro." };
-      }
-      return AP().elegibilidade(c.concessao, dadosDaEntrada(e, elementoEscolhido));
-    }
-
-    function pintarCabecalho() {
-      var c = concessaoAtual();
-      if (!c) {
-        U.trocar(cabecalho, el("p.t-mini.t-aviso", {
-          texto: "Esta concessão de rituais não faz mais parte da progressão do personagem. " +
-                 "A janela continua funcionando como biblioteca: o que for adicionado entra como registro, sem vínculo.",
-        }));
-        return;
-      }
-
-      var escolhidos = c.escolhidos.map(function (a) {
-        return el("li.bib-aprendizado__item", {}, [
-          el("span", { texto: a.nome || "(ritual sem nome)" }),
-          a.excecao ? el("span.r-etiqueta.etiqueta--parcial", { texto: "exceção da mesa" }) : null,
-          el("button.r-botao.r-botao--mini.r-botao--fantasma", {
-            type: "button", texto: "Soltar",
-            "aria-label": "Soltar " + (a.nome || "este ritual") + " desta concessão",
-            onclick: function () { soltar(a); },
-          }),
-        ]);
-      });
-
-      var soltos = (function () {
-        var est = E().estado(ordemDe(ctx), contextoDaFicha());
-        if (!est.rituais.temFicha) return [];
-        return est.rituais.semOrigem.filter(function (d) {
-          return c.restantes > 0 && AP().elegibilidade(c.concessao, d).ok;
-        });
-      })();
-
-      U.trocar(cabecalho, [
-        el("p.bib-aprendizado__titulo", {}, [
-          el("strong", { texto: c.rotulo }),
-          el("span.t-mini", { texto: " · " + c.rotuloEtapa + " · " + (c.origem === "trilha" ? "Trilha" : "Classe") + ": " + c.nomePoder }),
-        ]),
-        el("p.bib-aprendizado__conta", {
-          role: "status",
-          texto: "Escolhidos: " + c.escolhidos.length + " de " + c.quantidade +
-                 (c.restantes ? " · faltam " + c.restantes : " · concessão completa"),
-        }),
-        el("p.t-mini", { texto: c.explicacao }),
-        el("p.criacao-fonte", { texto: (c.fonte === "SAH" ? "Sobrevivendo ao Horror" : "Ordem Paranormal RPG") + ", p. " + c.pagina }),
-        escolhidos.length ? el("ul.bib-aprendizado__lista", {}, escolhidos) : null,
-        c.fixo ? botaoDoRitualFixo(c) : null,
-        soltos.length ? el("div.pilha--curta", { class: "pilha" }, [
-          el("p.t-mini", { texto: "Já na ficha, sem concessão — prender um destes não cria outra cópia:" }),
-          el("div.faixa", {}, soltos.map(function (d) {
-            return el("button.r-botao.r-botao--mini", {
-              type: "button", texto: "Usar " + (d.nome || "ritual"),
-              onclick: function () { prender(d.id, d.nome); },
-            });
-          })),
-        ]) : null,
-        el("p.t-mini", { texto: "Dá para escolher menos agora e voltar depois: a pendência continua na Progressão com o que falta. Aprender não gasta PE nem rola dado." }),
-      ]);
-    }
-
-    /* Concessão automática: a trilha já disse qual é o ritual. O
-       R.A.M.A. não o insere sozinho — escrever na ficha é decisão de
-       quem joga —, mas o caminho é um botão. */
-    function botaoDoRitualFixo(c) {
-      if (c.escolhidos.length) return null;
-      var entrada = estado.catalogo ? estado.catalogo.porId[c.fixo.id] : null;
-      var aviso = el("p.t-mini.bib-item__status", { role: "status" });
-      /* Amaldiçoar Arma pertence a quatro elementos e pede o elemento ao
-         entrar na ficha — mesmo vindo por concessão automática. */
-      var escolhaFixa = entrada ? campoDeEscolha(entrada) : null;
-      return el("div.pilha--curta", { class: "pilha" }, [
-        el("p.t-mini", { texto: "Concessão automática: não há o que escolher, só trazer a cópia de " + c.fixo.nome + "." }),
-        c.concessao.nota ? el("p.t-mini.t-aviso", { texto: c.concessao.nota }) : null,
-        escolhaFixa ? escolhaFixa.caixa : null,
-        el("button.r-botao.r-botao--principal.r-botao--mini", {
-          type: "button",
-          texto: entrada ? "Trazer " + c.fixo.nome + " para a ficha" : "Abrindo o catálogo…",
-          disabled: !entrada,
-          onclick: function () {
-            if (!entrada) return;
-            aprenderDoCatalogo(entrada, escolhaFixa, aviso, null, null);
-          },
-        }),
-        aviso,
-      ]);
-    }
-
-    function prender(ritualId, nome) {
-      var ritual = rituaisDaFicha(ctx).filter(function (x) { return x && x.id === ritualId; })[0];
-      if (!ritual) return;
-      E().adicionarRitual(ordemDe(ctx), vagaId, ritual);
-      avisarMudanca((nome || ritual.nome) + " passou a ocupar esta concessão. Nenhuma cópia foi criada.");
-    }
-
-    function soltar(aprendizado) {
-      E().removerRitual(ordemDe(ctx), vagaId, aprendizado.ritualId);
-      avisarMudanca((aprendizado.nome || "O ritual") + " saiu da concessão. Ele continua na aba Rituais.");
-    }
-
-    function avisarMudanca(texto) {
-      ctx.alterou();
-      ctx.redesenhar();
-      pintarCabecalho();
-      pintarOrigem();
-      anunciar(texto);
-      if (aoMudarAprendizado) aoMudarAprendizado();
     }
 
     function botaoOrigem(chave, rotulo) {
@@ -314,6 +255,204 @@
     }
 
     /* ---------------------------------------------------------------
+       O CABEÇALHO DA AQUISIÇÃO
+       --------------------------------------------------------------- */
+
+    function pintarCabecalho() {
+      if (!aq) return;
+      var partes = [
+        el("p.bib-aquisicao__titulo", {}, [
+          el("strong", { texto: aq.rotulo }),
+          el("span.t-mini", {
+            texto: (aq.rotuloEtapa ? " · " + aq.rotuloEtapa : "") +
+                   (aq.nomePoder && aq.nomePoder !== aq.rotulo ? " · " + rotuloDaOrigem(aq) + ": " + aq.nomePoder : ""),
+          }),
+        ]),
+        el("p.t-mini", { texto: aq.explicacao }),
+      ];
+      if (aq.fonte && aq.pagina) partes.push(el("p.criacao-fonte", { texto: nomeDaFonte(aq.fonte) + ", p. " + aq.pagina }));
+      if (aq.fixo) {
+        partes.push(el("p.t-mini", { texto: "Concessão automática: o único ritual que serve é " + aq.fixo.nome + ". Selecione-o e confirme para trazer a cópia." }));
+      }
+      if (aq.limite && aq.limite.esgotado) partes.push(el("p.t-mini.t-aviso", { texto: aq.limite.motivo }));
+
+      /* O que hoje ocupa a concessão — e pode sair, também só na
+         confirmação. */
+      if (aq.tipo === "concessao" && aq.escolhidos.length) {
+        partes.push(el("div.pilha--curta", { class: "pilha" }, [
+          el("h3.t-rotulo", { texto: "Já nesta concessão" }),
+          el("ul.bib-aquisicao__lista", {}, aq.escolhidos.map(function (rid) {
+            var r = ritualDaFicha(rid);
+            var sai = !!sel.saem[rid];
+            return el("li.bib-aquisicao__item", { class: sai ? "bib-aquisicao__item--sai" : "" }, [
+              el("span", { texto: (r ? r.nome : "(ritual fora da ficha)") + (sai ? " — sai ao confirmar" : "") }),
+              el("button.r-botao.r-botao--mini.r-botao--fantasma", {
+                type: "button",
+                texto: sai ? "Manter" : "Tirar desta concessão",
+                "aria-pressed": String(sai),
+                onclick: function () {
+                  if (sai) delete sel.saem[rid]; else sel.saem[rid] = true;
+                  pintarCabecalho();
+                  atualizarRodape();
+                  pintarOrigem();
+                },
+              }),
+            ]);
+          })),
+        ]));
+      }
+
+      partes.push(blocoDaFicha());
+      U.trocar(cabecalho, partes);
+    }
+
+    function rotuloDaOrigem(a) {
+      return { classe: "Classe", trilha: "Trilha", poder: "Poder", campo: "Regra opcional", mesa: "Mesa" }[a.origem] || "Origem";
+    }
+
+    function ritualDaFicha(rid) {
+      return rituaisDaFicha(ctx).filter(function (x) { return x && x.id === rid; })[0] || null;
+    }
+
+    /* Rituais que já estão na ficha e não têm aquisição: podem ocupar
+       esta sem virar outra cópia. Os que já têm aquisição não aparecem
+       — um ritual não quita duas. */
+    function blocoDaFicha() {
+      var est = E().estado(ordemDe(ctx), contextoDaFicha());
+      var candidatos = (est && est.rituais ? est.rituais.semAquisicao : []).filter(function (d) {
+        return !sel.saem[d.id] && aq.escolhidos.indexOf(d.id) < 0;
+      });
+      if (!candidatos.length) return null;
+      return el("div.pilha--curta.bib-ficha", { class: "pilha" }, [
+        el("h3.t-rotulo", { texto: "Já na ficha, sem aquisição" }),
+        el("p.t-mini", { texto: "Usar um destes não cria outra cópia. Rituais que já têm aquisição não aparecem: um ritual não quita duas." }),
+        el("div.bib-itens", {}, candidatos.map(function (d) {
+          var r = ritualDaFicha(d.id);
+          return linhaDaFicha(r, d);
+        })),
+      ]);
+    }
+
+    function linhaDaFicha(r, d) {
+      var chave = "ficha:" + d.id;
+      var teste = aq.avaliar({ ritualId: d.id, circulo: d.circulo, elemento: d.elemento, catalogo: d.catalogo, nome: d.nome });
+      return el("article.bib-item", { class: classeDeEstado(chave, teste) }, [
+        el("div.bib-item__topo", {}, [
+          el("span.bib-item__texto.bib-item__texto--fixo", {}, [
+            el("span.bib-item__nome", { texto: d.nome || "(sem nome)" }),
+            el("span.bib-item__classe", {
+              texto: (d.circulo ? d.circulo + "º círculo" : "círculo não informado") +
+                     (d.elemento && RT() ? " · " + RT().nomeDoElemento(d.elemento) : "") + " · na ficha, sem aquisição",
+            }),
+          ]),
+        ]),
+        controleDeEscolha(chave, teste, function () {
+          return { chave: chave, ritual: r, novo: false, nome: d.nome, circulo: d.circulo, elemento: d.elemento, origem: "ficha" };
+        }, d.nome),
+      ]);
+    }
+
+    /* ---------------------------------------------------------------
+       O CONTROLE DE ESCOLHA DE CADA RESULTADO
+       ---------------------------------------------------------------
+       Irmão do botão que abre os detalhes — nunca dentro dele. Abrir
+       os detalhes não seleciona, selecionar não abre os detalhes.
+       --------------------------------------------------------------- */
+
+    function classeDeEstado(chave, teste) {
+      if (selecionado(chave)) return "bib-item--escolhido";
+      if (!teste.ok) return "bib-item--indisponivel";
+      return "bib-item--disponivel";
+    }
+
+    function controleDeEscolha(chave, teste, montar, nome, escolha) {
+      var marcado = !!selecionado(chave);
+      var motivo = "";
+      if (!marcado) {
+        if (!teste.ok) motivo = teste.motivo;
+        else if (cheio() && capacidade() !== 1) motivo = "A seleção já tem o que esta aquisição dá: tire um antes de pôr outro.";
+      }
+      var estadoTexto = marcado ? "Selecionado" : (motivo ? "Indisponível" : "Disponível");
+      var aviso = el("p.t-mini.bib-item__motivo", { texto: motivo, hidden: !motivo });
+      var status = el("p.t-mini.bib-item__status", { role: "status" });
+
+      var botao = el("button.r-botao.r-botao--mini.bib-item__selecionar", {
+        type: "button",
+        class: marcado ? "r-botao--principal" : "",
+        "aria-pressed": String(marcado),
+        "aria-disabled": motivo ? "true" : null,
+        "aria-label": (marcado ? "Tirar " : "Selecionar ") + nome + (motivo ? " — indisponível: " + motivo : ""),
+        texto: marcado ? "✓ Selecionado" : "Selecionar",
+        onkeydown: function (ev) { if (ev.key === "Enter" && ev.repeat) ev.preventDefault(); },
+        onclick: function (ev) {
+          if (ev.detail > 1) return;
+          if (motivo && !selecionado(chave)) {
+            status.textContent = motivo;
+            return;
+          }
+          var item = selecionado(chave) || montar(escolha ? escolha.entrada.value : "");
+          if (!item) return;
+          if (item.erro) {
+            status.textContent = item.erro;
+            status.classList.add("t-erro");
+            if (escolha) escolha.entrada.focus();
+            return;
+          }
+          alternar(item);
+          anunciar((selecionado(chave) ? "Selecionado: " : "Fora da seleção: ") + nome + ".");
+          /* Redesenha a lista inteira: a capacidade mudou para todos. A
+             busca, os filtros e a posição continuam onde estavam. */
+          var rolagem = m.corpo.scrollTop;
+          if (aq) pintarCabecalho();
+          pintarOrigem();
+          m.corpo.scrollTop = rolagem;
+          var volta = U.$$(".bib-item__selecionar", janela).filter(function (b) {
+            return b.getAttribute("data-chave") === chave;
+          })[0];
+          if (volta) volta.focus();
+        },
+      });
+      botao.setAttribute("data-chave", chave);
+
+      return el("div.bib-item__escolha", {}, [
+        el("span.bib-item__estado", { class: "bib-item__estado--" + (marcado ? "escolhido" : (motivo ? "indisponivel" : "disponivel")), texto: estadoTexto }),
+        escolha && !marcado && !motivo ? escolha.caixa : null,
+        botao,
+        aviso,
+        status,
+      ]);
+    }
+
+    /* O que se sabe de uma entrada do catálogo para conferir a regra. O
+       elemento de um ritual que pede escolha (Amaldiçoar Arma) só é
+       decidido ao selecionar, então os quatro entram. */
+    function dadosDaEntrada(e) {
+      return { circulo: e.circulo, elemento: e.elemento, elementos: e.elementos, catalogo: e.id, nome: e.nome };
+    }
+
+    function avaliarEntrada(e) {
+      return aq ? aq.avaliar(dadosDaEntrada(e)) : { ok: true, motivo: "" };
+    }
+
+    function montarDoCatalogo(e, elementoEscolhido) {
+      var montado = RT().paraFicha(e, { escolha: e.escolha ? elementoEscolhido : undefined });
+      if (!montado.ok) return { erro: montado.mensagem };
+      var ritual = F.criarRitual(montado.dados);
+      ritual.adicionadoEm = U.agoraISO();
+      var d = RT().dadosDoRitual(ritual);
+      return { chave: "cat:" + e.id, ritual: ritual, novo: true, nome: ritual.nome, circulo: d.circulo, elemento: d.elemento, origem: "catalogo" };
+    }
+
+    function montarDaHomebrew(h) {
+      var ritual = F.criarRitual(F.normalizarRitual(h) || {});
+      ritual.origemHomebrewId = h.id;
+      delete ritual.origemCatalogoId;
+      ritual.adicionadoEm = U.agoraISO();
+      var d = RT() ? RT().dadosDoRitual(ritual) : {};
+      return { chave: "hb:" + h.id, ritual: ritual, novo: true, nome: ritual.nome, circulo: d.circulo || 0, elemento: d.elemento || "", origem: "homebrew" };
+    }
+
+    /* ---------------------------------------------------------------
        ORDEM PARANORMAL
        --------------------------------------------------------------- */
 
@@ -324,10 +463,10 @@
       RT().carregar().then(function (catalogo) {
         estado.catalogo = catalogo;
         estado.carregandoCatalogo = false;
-        /* O botão da concessão automática depende do catálogo: enquanto
-           ele não chega, o cabeçalho mostra "abrindo". */
-        if (aberta && vagaId) pintarCabecalho();
-        if (aberta && estado.origem === "oficial") { pintarOficial(); if (focar) focarEm("input[type=search]"); }
+        if (aberta && estado.origem === "oficial" && passo === "lista") {
+          pintarOficial();
+          if (focar) focarEm("input[type=search]");
+        }
       }, function (erro) {
         console.error("[R.A.M.A. · rituais] o catálogo não carregou", erro);
         estado.falhaCatalogo = erro || new Error("falha");
@@ -408,6 +547,7 @@
         var fontes = RT().fontesDoCatalogo(estado.catalogo);
         var ativos = !!(estado.busca || estado.elemento || estado.circulo || estado.fonte);
         var idFonte = id + "-fonte";
+        var idSo = id + "-so-elegiveis";
         U.trocar(filtroFonte, [
           fontes.length > 1 ? el("div.bib-filtro", {}, [
             el("label.t-mini", { for: idFonte, texto: "Livro" }),
@@ -417,6 +557,15 @@
             }, [el("option", { value: "", texto: "Todos" })].concat(fontes.map(function (k) {
               return el("option", { value: k, texto: RT().ROTULO_FONTE[k] + " (" + c.fontes[k] + ")", selected: estado.fonte === k });
             }))),
+          ]) : null,
+          /* Numa aquisição, o que não cabe some por padrão — e volta com
+             o motivo escrito, para quem quiser ver por quê. */
+          aq ? el("label.bib-alternar", { for: idSo }, [
+            el("input", {
+              id: idSo, type: "checkbox", checked: estado.soElegiveis,
+              onchange: function (ev) { estado.soElegiveis = ev.target.checked; pintarLista(); },
+            }),
+            el("span.t-mini", { texto: "Só os que cabem nesta aquisição" }),
           ]) : null,
           ativos ? el("button.r-botao.r-botao--mini.r-botao--fantasma.bib-limpar", {
             type: "button", texto: "Limpar busca e filtros",
@@ -432,15 +581,29 @@
 
       function pintarLista() {
         var entradas = RT().filtrar(estado.catalogo, estado);
+        var escondidos = 0;
+        if (aq && estado.soElegiveis) {
+          entradas = entradas.filter(function (e) {
+            var fica = avaliarEntrada(e).ok || !!selecionado("cat:" + e.id);
+            if (!fica) escondidos++;
+            return fica;
+          });
+        }
         if (!entradas.length) {
-          status.textContent = "Nenhum resultado.";
+          status.textContent = "Nenhum resultado." + (escondidos ? " " + escondidos + " não cabem nesta aquisição." : "");
           U.trocar(lista, el("div.r-vazio.bib-nada", {}, [
             el("p.r-vazio__titulo", { texto: "Nenhum ritual encontrado" }),
-            el("p.r-vazio__texto", { texto: "Tente outro nome, ou limpe a busca e os filtros." }),
+            el("p.r-vazio__texto", {
+              texto: escondidos
+                ? "Nenhum ritual com esta busca cabe nesta aquisição. Desmarque “Só os que cabem” para ver os outros e o motivo de cada um."
+                : "Tente outro nome, ou limpe a busca e os filtros.",
+            }),
           ]));
           return;
         }
-        status.textContent = entradas.length + (entradas.length === 1 ? " ritual." : " rituais.");
+        status.textContent = entradas.length + (entradas.length === 1 ? " ritual" : " rituais") +
+          (aq && estado.soElegiveis ? (entradas.length === 1 ? " cabe" : " cabem") + " nesta aquisição" : "") + "." +
+          (escondidos ? " " + escondidos + " escondido" + (escondidos === 1 ? "" : "s") + " por não caber." : "");
         U.trocar(lista, RT().porCirculo(entradas).map(function (g) {
           return el("section.biblioteca-secao", { "aria-label": g.titulo }, [
             el("h3.t-rotulo", { texto: g.titulo + " (" + g.entradas.length + ") · " + g.custo + " PE" }),
@@ -460,8 +623,13 @@
         status,
         lista,
         el("p.t-mini", {
-          texto: "Cada ritual entra na ficha como cópia: editar a cópia não muda o catálogo, e o catálogo não muda a cópia. " +
-                 "Adicionar não conjura — nenhum PE é gasto e nenhum dado é rolado.",
+          texto: aq
+            ? "Selecionar não escreve nada na ficha: a cópia só entra quando a escolha inteira for confirmada. Aprender não gasta PE nem rola dado."
+            : (ordem
+              ? "Aqui o ritual entra como REGISTRO, para consulta: não é aprendido e não resolve pendência — aprender vem das pendências da Progressão. " +
+                "A cópia é independente: editá-la não muda o catálogo. Adicionar não conjura — nenhum PE é gasto e nenhum dado é rolado."
+              : "Cada ritual entra na ficha como cópia: editar a cópia não muda o catálogo, e o catálogo não muda a cópia. " +
+                "Adicionar não conjura — nenhum PE é gasto e nenhum dado é rolado."),
         }),
       ]);
     }
@@ -472,6 +640,8 @@
       var aberto = !!estado.abertos[e.id];
       var detalhes = el("div.bib-item__detalhes", { id: idDet, hidden: !aberto });
       var naFicha = el("span.r-etiqueta.bib-item__na-ficha", { hidden: true });
+      var chave = "cat:" + e.id;
+      var teste = avaliarEntrada(e);
 
       function atualizarNaFicha() {
         var n = RT().quantasNaFicha(e, rituaisDaFicha(ctx));
@@ -484,6 +654,7 @@
         type: "button",
         "aria-expanded": String(aberto),
         "aria-controls": idDet,
+        "aria-label": "Detalhes de " + e.nome,
         onclick: function () {
           var abrirAgora = detalhes.hidden;
           estado.abertos[e.id] = abrirAgora;
@@ -500,8 +671,8 @@
         ]),
       ]);
 
-      var marcas = el("span.bib-item__marcas", {}, e.elementos.map(function (chave) {
-        return el("span.r-etiqueta.bib-elemento.bib-elemento--" + chave, { texto: RT().nomeDoElemento(chave) });
+      var marcas = el("span.bib-item__marcas", {}, e.elementos.map(function (chaveEl) {
+        return el("span.r-etiqueta.bib-elemento.bib-elemento--" + chaveEl, { texto: RT().nomeDoElemento(chaveEl) });
       }).concat([
         el("span.r-etiqueta.bib-fonte", { texto: RT().SIGLA_FONTE[e.fonte] + " p. " + e.pagina, title: RT().referencia(e) }),
         naFicha,
@@ -509,8 +680,10 @@
 
       if (aberto) montarDetalhes(e, detalhes, atualizarNaFicha);
 
-      return el("article.bib-item", {}, [
+      var escolha = aq ? campoDeEscolha(e) : null;
+      return el("article.bib-item", { class: aq ? classeDeEstado(chave, teste) : "" }, [
         el("div.bib-item__topo", {}, [botaoAbrir, marcas]),
+        aq ? controleDeEscolha(chave, teste, function (elemento) { return montarDoCatalogo(e, elemento); }, e.nome, escolha) : null,
         detalhes,
       ]);
     }
@@ -562,6 +735,7 @@
     function montarDetalhes(e, caixa, aoAdicionar) {
       var automacao = RT().naFicha(e);
       var conferencias = deOrdem(ctx) ? RT().conferencias(e, ordemDe(ctx)) : [];
+      var teste = aq ? avaliarEntrada(e) : null;
 
       U.trocar(caixa, [
         el("p.bib-item__resumo", { texto: e.resumo }),
@@ -579,7 +753,10 @@
         listaDeTextos(RT().regrasGerais(e), "t-mini"),
         conferencias.length ? el("h4.t-rotulo", { texto: "Nesta ficha" }) : null,
         listaDeTextos(conferencias, "t-mini.t-aviso"),
-        marcaDeElegibilidade(e),
+        teste ? el("p.t-mini", {
+          class: teste.ok ? "t-ok" : "t-aviso",
+          texto: teste.ok ? "Cabe em " + aq.rotulo + (aq.rotuloEtapa ? " (" + aq.rotuloEtapa + ")" : "") + "." : teste.motivo,
+        }) : null,
         el("p.t-mini.bib-automacao", {}, [
           el("span.r-etiqueta", {
             class: automacao.automacao === "calculo" ? "etiqueta--calculo" : "",
@@ -588,22 +765,10 @@
           el("span", { texto: " " + automacao.texto }),
         ]),
         e.notas.length ? listaDeTextos(e.notas.map(function (n) { return "Nota: " + n; }), "t-mini.t-aviso") : null,
-        acaoAdicionar(e, aoAdicionar),
+        /* Numa aquisição, o controle de escolha fica no resultado, fora
+           dos detalhes: consultar nunca seleciona. */
+        aq ? null : acaoAdicionar(e, aoAdicionar),
       ]);
-    }
-
-    /* "Elegível" ou o motivo de não ser, dentro da concessão aberta. */
-    function marcaDeElegibilidade(e) {
-      if (!vagaId) return null;
-      var c = concessaoAtual();
-      if (!c) return null;
-      var teste = elegivel(c, e, "");
-      return el("p.t-mini", {
-        class: teste.ok ? "t-ok" : "t-aviso",
-        texto: teste.ok
-          ? "Elegível para " + c.rotulo + " (" + c.rotuloEtapa + ")."
-          : teste.motivo,
-      });
     }
 
     function campoDeEscolha(e) {
@@ -620,65 +785,36 @@
       };
     }
 
+    /* ---------------------------------------------------------------
+       REGISTRO: adicionar à ficha, uma cópia por clique
+       --------------------------------------------------------------- */
+
     function acaoAdicionar(e, aoAdicionar) {
       var escolha = campoDeEscolha(e);
       var status = el("p.t-mini.bib-item__status", { role: "status" });
-      var c = vagaId ? concessaoAtual() : null;
-      var teste = c ? elegivel(c, e, escolha ? escolha.entrada.value : "") : { ok: true, motivo: "" };
-
       var botao = el("button.r-botao.r-botao--principal.bib-item__adicionar", {
         type: "button",
-        texto: c ? "Aprender este ritual" : "Adicionar à ficha",
-        "aria-label": (c ? "Aprender " + e.nome + " nesta concessão" : "Adicionar " + e.nome + " à ficha"),
+        texto: "Adicionar à ficha",
+        "aria-label": "Adicionar " + e.nome + " à ficha",
         onkeydown: function (ev) { if (ev.key === "Enter" && ev.repeat) ev.preventDefault(); },
         onclick: function (ev) {
           /* O segundo clique de um clique duplo não é outra intenção. */
           if (ev.detail > 1) return;
-          aprenderDoCatalogo(e, escolha, status, aoAdicionar, botao);
+          adicionarOficial(e, escolha, botao, status, aoAdicionar);
         },
       });
-
       return el("div.bib-item__acao", {}, [
         escolha ? escolha.caixa : null,
-        /* Um ritual que não cabe nesta concessão continua visível e
-           continua podendo entrar na ficha como registro — o que ele não
-           faz é ocupar a vaga. O motivo já está escrito logo acima, em
-           marcaDeElegibilidade; aqui fica só a saída. */
         botao,
-        (c && !teste.ok) ? el("button.r-botao.r-botao--mini.r-botao--fantasma", {
-          type: "button", texto: "Só registrar na ficha, sem concessão",
-          onclick: function (ev) {
-            if (ev.detail > 1) return;
-            aprenderDoCatalogo(e, escolha, status, aoAdicionar, null, true);
-          },
-        }) : null,
         status,
       ]);
     }
 
-    /* Traz a cópia e, quando há concessão, PRENDE o ritual a ela. As
-       duas coisas na mesma ação porque é uma decisão só: quem clica em
-       "Aprender este ritual" está resolvendo a pendência.
-
-       `soRegistrar` é a saída para o que não cabe na concessão: a cópia
-       entra, o vínculo não. */
-    function aprenderDoCatalogo(e, escolha, status, aoAdicionar, botao, soRegistrar) {
-      if (botao && botao.getAttribute("aria-busy") === "true") return;
+    function adicionarOficial(e, escolha, botao, status, aoAdicionar) {
+      if (botao.getAttribute("aria-busy") === "true") return;
       status.classList.remove("t-erro");
 
-      var elementoEscolhido = escolha ? escolha.entrada.value : "";
-      var c = (vagaId && !soRegistrar) ? concessaoAtual() : null;
-
-      if (c) {
-        var teste = elegivel(c, e, elementoEscolhido);
-        if (!teste.ok) {
-          status.textContent = teste.motivo;
-          status.classList.add("t-erro");
-          return;
-        }
-      }
-
-      var montado = RT().paraFicha(e, { escolha: escolha ? elementoEscolhido : undefined });
+      var montado = RT().paraFicha(e, { escolha: escolha ? escolha.entrada.value : undefined });
       if (!montado.ok) {
         status.textContent = montado.mensagem;
         status.classList.add("t-erro");
@@ -688,29 +824,27 @@
 
       var jaTinha = RT().quantasNaFicha(e, rituaisDaFicha(ctx));
 
-      if (botao) { botao.setAttribute("aria-busy", "true"); botao.disabled = true; }
+      botao.setAttribute("aria-busy", "true");
+      botao.disabled = true;
       var ritual;
       try {
         ritual = F.criarRitual(montado.dados);
         ritual.adicionadoEm = U.agoraISO();
         ctx.ficha.rituais.itens.push(ritual);
-        if (c) E().adicionarRitual(ordemDe(ctx), vagaId, ritual);
         ctx.alterou();
         ctx.redesenhar();
       } finally {
-        if (botao) { botao.removeAttribute("aria-busy"); botao.disabled = false; }
+        botao.removeAttribute("aria-busy");
+        botao.disabled = false;
       }
 
       if (aoAdicionar) aoAdicionar();
-      if (o.aoAdicionarRitual) o.aoAdicionarRitual(ritual);
-      if (vagaId) { pintarCabecalho(); if (aoMudarAprendizado) aoMudarAprendizado(); }
-
       var texto = ritual.nome + " entrou na ficha" + (jaTinha ? " (" + (jaTinha + 1) + " cópias)" : "") +
-        (c ? " e ocupa " + c.rotulo + " (" + c.rotuloEtapa + ")" : "") +
+        (ordem ? " como registro" : "") +
         ". Nenhum PE foi gasto: aprender e conjurar continuam com você.";
       status.textContent = texto;
       anunciar(texto);
-      if (botao) botao.focus();
+      botao.focus();
     }
 
     /* ---------------------------------------------------------------
@@ -730,7 +864,7 @@
             registros: (r.dados || []).filter(function (h) { return h && h.tipo === "ritual"; }),
           };
         }
-        if (aberta && estado.origem === "homebrew") {
+        if (aberta && estado.origem === "homebrew" && passo === "lista") {
           pintarHomebrew();
           if (focar) focarEm(estado.homebrew.falha ? "button" : "input[type=search], button");
         }
@@ -750,9 +884,9 @@
         U.trocar(corpo, el("div.pilha", {}, [
           UI.vazio({
             titulo: "Nenhum ritual na Homebrew",
-            texto: "Você ainda não guardou rituais na sua biblioteca, e nenhuma conta publicou rituais. " +
-                   "Crie um ritual agora — ele pode ir para a Homebrew ao mesmo tempo.",
-            acao: {
+            texto: "Você ainda não guardou rituais na sua biblioteca, e nenhuma conta publicou rituais." +
+                   (aq ? "" : " Crie um ritual agora — ele pode ir para a Homebrew ao mesmo tempo."),
+            acao: aq ? null : {
               rotulo: "Criar ritual",
               aoClicar: function () {
                 m.fechar();
@@ -822,7 +956,11 @@
         filtros,
         status,
         lista,
-        el("p.t-mini", { texto: "O ritual entra na ficha como cópia. Editá-lo aqui não muda o modelo da biblioteca, e editar o modelo não muda esta ficha." }),
+        el("p.t-mini", {
+          texto: aq
+            ? "Um ritual Homebrew ocupa uma aquisição quando informa o círculo — é por ele que a regra confere. Selecionar não escreve nada na ficha."
+            : "O ritual entra na ficha como cópia. Editá-lo aqui não muda o modelo da biblioteca, e editar o modelo não muda esta ficha.",
+        }),
       ]);
     }
 
@@ -843,9 +981,15 @@
       var idDet = id + "-hb-" + String(h.id).replace(/[^a-z0-9]+/gi, "-");
       var aberto = !!estado.abertos["hb:" + h.id];
       var detalhes = el("div.bib-item__detalhes", { id: idDet, hidden: !aberto });
+      var chave = "hb:" + h.id;
+      var dados = RT() ? RT().dadosDoRitual(h) : {};
+      var teste = aq
+        ? aq.avaliar({ circulo: dados.circulo || 0, elemento: dados.elemento || "", elementos: dados.elemento ? [dados.elemento] : [], nome: h.nome })
+        : null;
 
       var botaoAbrir = el("button.bib-item__abrir", {
         type: "button", "aria-expanded": String(aberto), "aria-controls": idDet,
+        "aria-label": "Detalhes de " + h.nome,
         onclick: function () {
           var abrirAgora = detalhes.hidden;
           estado.abertos["hb:" + h.id] = abrirAgora;
@@ -857,14 +1001,16 @@
         el("span.bib-item__seta", { "aria-hidden": "true" }),
         el("span.bib-item__texto", {}, [
           el("span.bib-item__nome", { texto: h.nome }),
-          el("span.bib-item__classe", { texto: "Ritual Homebrew" }),
+          el("span.bib-item__classe", {
+            texto: "Ritual Homebrew" + (dados.circulo ? " · " + dados.circulo + "º círculo" : ""),
+          }),
           dadosCompactos(paresHomebrew(h)),
         ]),
       ]);
 
       if (aberto) montarDetalhesHb(h, detalhes);
 
-      return el("article.bib-item", {}, [
+      return el("article.bib-item", { class: aq ? classeDeEstado(chave, teste) : "" }, [
         el("div.bib-item__topo", {}, [
           botaoAbrir,
           el("span.bib-item__marcas", {}, [
@@ -872,6 +1018,7 @@
             h.atualizadoEm ? el("span.r-etiqueta.bib-fonte", { texto: U.dataCurta(h.atualizadoEm) }) : null,
           ]),
         ]),
+        aq ? controleDeEscolha(chave, teste, function () { return montarDaHomebrew(h); }, h.nome, null) : null,
         detalhes,
       ]);
     }
@@ -879,7 +1026,7 @@
     function montarDetalhesHb(h, caixa) {
       var rotulos = rotulosDaFicha(ctx);
       var status = el("p.t-mini.bib-item__status", { role: "status" });
-      var botao = el("button.r-botao.r-botao--principal.bib-item__adicionar", {
+      var botao = aq ? null : el("button.r-botao.r-botao--principal.bib-item__adicionar", {
         type: "button", texto: "Adicionar à ficha", "aria-label": "Adicionar " + h.nome + " à ficha",
         onkeydown: function (ev) { if (ev.key === "Enter" && ev.repeat) ev.preventDefault(); },
         onclick: function (ev) {
@@ -907,7 +1054,7 @@
               return v.nome + (v.dano ? " (" + v.dano + (v.danoExtra ? "+" + v.danoExtra : "") + ")" : "");
             }).join(", ") + "." })
           : null,
-        el("div.bib-item__acao", {}, [botao, status]),
+        botao ? el("div.bib-item__acao", {}, [botao, status]) : null,
       ]);
     }
 
@@ -915,26 +1062,14 @@
       if (botao.getAttribute("aria-busy") === "true") return;
       status.classList.remove("t-erro");
 
-      /* Um ritual Homebrew também pode ocupar uma concessão — desde
-         que informe o círculo, que é por onde a regra confere. Quando
-         não informa, a cópia entra e o vínculo não, com o motivo
-         escrito. */
-      var c = vagaId ? concessaoAtual() : null;
-      var dados = RT() ? RT().dadosDoRitual(h) : {};
-      var teste = c ? elegivel(c, { circulo: dados.circulo || 0, elemento: dados.elemento || "", elementos: [], id: "" }, "") : { ok: true, motivo: "" };
-
       botao.setAttribute("aria-busy", "true");
       botao.disabled = true;
       var copia;
       try {
         /* criarRitual gera ids novos, inclusive das versões: a cópia é
            outro registro, e editá-la não mexe no modelo. */
-        copia = F.criarRitual(F.normalizarRitual(h) || {});
-        copia.origemHomebrewId = h.id;
-        delete copia.origemCatalogoId;
-        copia.adicionadoEm = U.agoraISO();
+        copia = montarDaHomebrew(h).ritual;
         ctx.ficha.rituais.itens.push(copia);
-        if (c && teste.ok) E().adicionarRitual(ordemDe(ctx), vagaId, copia);
         ctx.alterou();
         ctx.redesenhar();
       } finally {
@@ -942,21 +1077,241 @@
         botao.disabled = false;
       }
 
-      var presa = (c && teste.ok) ? (c.rotulo + " (" + c.rotuloEtapa + ")") : "";
-      if (o.aoAdicionarRitual) o.aoAdicionarRitual(copia);
-      if (vagaId) { pintarCabecalho(); if (aoMudarAprendizado) aoMudarAprendizado(); }
-      if (c && !teste.ok) {
-        status.classList.add("t-erro");
-        status.textContent = copia.nome + " entrou na ficha como registro, sem ocupar a concessão: " + teste.motivo;
-        anunciar(status.textContent);
-        botao.focus();
-        return;
-      }
-
-      var texto = copia.nome + " entrou na ficha" + (presa ? " e ocupa " + presa + "." : ".");
+      var texto = copia.nome + " entrou na ficha" + (ordem ? " como registro" : "") + ".";
       status.textContent = texto;
       anunciar(texto);
       botao.focus();
+    }
+
+    /* ---------------------------------------------------------------
+       O RODAPÉ E O RESUMO
+       --------------------------------------------------------------- */
+
+    var rodapeStatus = el("p.t-mini.bib-rodape__status", { role: "status", "aria-live": "polite" });
+
+    function textoDaConta() {
+      if (!aq) return "";
+      if (devolve) {
+        return sel.itens.length ? "Escolhido: " + sel.itens[0].nome + "." : "Nenhum ritual escolhido.";
+      }
+      if (aq.tipo === "campo") {
+        return sel.itens.length ? "Para estudar: " + sel.itens[0].nome + "." : "Escolha o ritual estudado.";
+      }
+      var total = totalDepois();
+      var q = aq.quantidade;
+      var faltam = Math.max(0, q - total);
+      return "Escolhidos: " + total + " de " + q + (faltam ? " · faltam " + faltam : " · completa") +
+        (sel.itens.length || Object.keys(sel.saem).length ? " (a confirmar)" : "");
+    }
+
+    function haMudanca() {
+      return sel.itens.length > 0 || Object.keys(sel.saem).length > 0;
+    }
+
+    function atualizarRodape() {
+      if (!aq) return;
+      rodapeStatus.textContent = textoDaConta();
+      var principal = botaoPrincipal();
+      if (principal) {
+        principal.disabled = !haMudanca() || gravando;
+        principal.textContent = rotuloPrincipal();
+      }
+      var secundario = botaoSecundario();
+      if (secundario) secundario.textContent = passo === "resumo" ? "Voltar" : "Cancelar";
+    }
+
+    function rotuloPrincipal() {
+      if (passo === "resumo") return aq.tipo === "campo" ? "Registrar estudo" : "Confirmar";
+      if (devolve) return "Usar este ritual";
+      return "Revisar e confirmar";
+    }
+
+    function botaoPrincipal() {
+      return m ? m.janela.querySelector(".r-modal__rodape .r-botao--principal") : null;
+    }
+
+    function botaoSecundario() {
+      return m ? m.janela.querySelector(".r-modal__rodape .r-botao--fantasma") : null;
+    }
+
+    function aoPrincipal(fechar) {
+      if (!aq || gravando) return;
+      if (!haMudanca()) return;
+      if (devolve) { devolver(fechar); return; }
+      if (passo === "lista") { mostrarResumo(); return; }
+      gravar(fechar);
+    }
+
+    function aoSecundario(fechar) {
+      if (passo === "resumo") { voltarParaLista(); return; }
+      fechar();
+    }
+
+    /* Aprender Ritual e a troca: devolve o ritual para a janela de quem
+       pediu. Nada é gravado aqui. */
+    function devolver(fechar) {
+      var item = sel.itens[0];
+      if (!item) return;
+      if (o.aoEscolher) o.aoEscolher({ ritual: item.ritual, novo: item.novo, nome: item.nome, origem: item.origem });
+      fechar();
+    }
+
+    var resumoCampo = { confirmado: false, fonte: "", nota: "" };
+
+    function mostrarResumo() {
+      rolagemDaLista = m.corpo.scrollTop;
+      passo = "resumo";
+      corpo.hidden = true;
+      cabecalho.hidden = true;
+      U.$$(".biblioteca-origens", janela).forEach(function (b) { b.hidden = true; });
+      resumo.hidden = false;
+      pintarResumo();
+      atualizarRodape();
+      m.corpo.scrollTop = 0;
+      var titulo = resumo.querySelector("h3");
+      if (titulo) { titulo.tabIndex = -1; titulo.focus(); }
+    }
+
+    function voltarParaLista() {
+      passo = "lista";
+      resumo.hidden = true;
+      corpo.hidden = false;
+      cabecalho.hidden = false;
+      U.$$(".biblioteca-origens", janela).forEach(function (b) { b.hidden = false; });
+      atualizarRodape();
+      m.corpo.scrollTop = rolagemDaLista;
+    }
+
+    function pintarResumo(motivos) {
+      var entram = sel.itens.map(function (i) {
+        return el("li", {}, [
+          el("strong", { texto: i.nome }),
+          el("span.t-mini", {
+            texto: " · " + (i.circulo ? i.circulo + "º círculo" : "círculo não informado") +
+                   (i.elemento && RT() ? " · " + RT().nomeDoElemento(i.elemento) : "") +
+                   (i.novo ? " · cópia nova, " + (i.origem === "homebrew" ? "da Homebrew" : "do catálogo") : " · já na ficha, sem cópia"),
+          }),
+        ]);
+      });
+      var saem = Object.keys(sel.saem).map(function (rid) {
+        var r = ritualDaFicha(rid);
+        return el("li", { texto: (r ? r.nome : "ritual") + " — sai desta concessão e continua na ficha, como registro" });
+      });
+
+      var partes = [
+        el("h3.t-secao", { texto: "Antes de gravar" }),
+        el("p", {}, [
+          el("span", { texto: "Aquisição: " }),
+          el("strong", { texto: aq.rotulo }),
+          el("span", { texto: (aq.rotuloEtapa ? " · " + aq.rotuloEtapa : "") + (aq.nomePoder && aq.nomePoder !== aq.rotulo ? " · " + aq.nomePoder : "") }),
+        ]),
+        entram.length ? el("h4.t-rotulo", { texto: "Entram" }) : null,
+        entram.length ? el("ul.bib-lista-textos", {}, entram) : null,
+        saem.length ? el("h4.t-rotulo", { texto: "Saem" }) : null,
+        saem.length ? el("ul.bib-lista-textos", {}, saem) : null,
+      ];
+
+      if (aq.tipo === "concessao") {
+        var total = totalDepois();
+        partes.push(el("p.t-mini", {
+          texto: "Depois de gravar: " + total + " de " + aq.quantidade +
+                 (total < aq.quantidade ? " — a pendência continua aberta com o que falta." : " — a concessão fica completa."),
+        }));
+      }
+
+      if (aq.tipo === "campo") partes.push(formularioDeEstudo());
+
+      partes.push(el("p.t-mini", { texto: "Nenhum PE é gasto e nenhum dado é rolado." }));
+      if (motivos && motivos.length) {
+        partes.push(el("div.pilha--curta.bib-resumo__erro", { class: "pilha", role: "alert" },
+          [el("p.t-erro", { texto: "Não foi gravado:" })].concat(motivos.map(function (x) { return el("p.t-mini.t-erro", { texto: x }); }))));
+      }
+      U.trocar(resumo, partes);
+    }
+
+    /* O estudo em campo depende de acontecimentos da mesa: a fonte foi
+       achada e o teste passou. A janela pergunta — selecionar o ritual
+       na biblioteca não prova nenhum dos dois. */
+    function formularioDeEstudo() {
+      var item = sel.itens[0];
+      var dt = item && AP() ? AP().dtDeEstudo(item.circulo) : 0;
+      var idConf = id + "-estudo-conf";
+      var idFonte = id + "-estudo-fonte";
+      var idNota = id + "-estudo-nota";
+      return el("div.pilha--curta.bib-estudo", { class: "pilha" }, [
+        el("p.t-mini", {
+          texto: "Sobrevivendo ao Horror, p. 113: o estudo gasta uma ação de interlúdio e exige Ocultismo DT " + (dt || "—") +
+                 (item && item.circulo ? " (" + item.circulo + "º círculo)" : "") + ". Na falha, pode tentar de novo com outra ação de interlúdio.",
+        }),
+        el("div.r-campo", {}, [
+          el("label.r-rotulo", { for: idFonte, texto: "De onde veio o ritual" }),
+          el("select.r-selecao", {
+            id: idFonte,
+            onchange: function (ev) { resumoCampo.fonte = ev.target.value; },
+          }, [el("option", { value: "", texto: "Não informar" })].concat((AP() ? AP().FONTES_DE_ESTUDO : []).map(function (f) {
+            return el("option", { value: f.chave, texto: f.nome, selected: resumoCampo.fonte === f.chave });
+          }))),
+        ]),
+        el("div.r-campo", {}, [
+          el("label.r-rotulo", { for: idNota, texto: "Nota (opcional)" }),
+          el("input.r-entrada", {
+            id: idNota, type: "text", maxlength: "300", value: resumoCampo.nota,
+            placeholder: "Pergaminho do porão, missão 3…",
+            oninput: function (ev) { resumoCampo.nota = ev.target.value; },
+          }),
+        ]),
+        el("label.bib-alternar", { for: idConf }, [
+          el("input", {
+            id: idConf, type: "checkbox", checked: resumoCampo.confirmado,
+            onchange: function (ev) { resumoCampo.confirmado = ev.target.checked; },
+          }),
+          el("span", { texto: "Confirmo que o personagem encontrou a fonte deste ritual e passou no teste de Ocultismo." }),
+        ]),
+      ]);
+    }
+
+    function gravar(fechar) {
+      if (gravando) return;
+      if (aq.tipo === "campo" && !resumoCampo.confirmado) {
+        pintarResumo(["Falta confirmar o estudo: a fonte achada e o teste de Ocultismo que passou."]);
+        return;
+      }
+      gravando = true;
+      atualizarRodape();
+
+      var operacao;
+      var novos = sel.itens.filter(function (i) { return i.novo; }).map(function (i) { return i.ritual; });
+      if (aq.tipo === "concessao") {
+        operacao = {
+          tipo: "concessao", vaga: aq.vaga, novos: novos,
+          rituais: escolhidosQueFicam().concat(sel.itens.map(function (i) { return i.ritual.id; })),
+        };
+      } else if (aq.tipo === "campo") {
+        operacao = {
+          tipo: "campo", ritualId: sel.itens[0].ritual.id, novos: novos,
+          fonte: resumoCampo.fonte, nota: resumoCampo.nota, confirmado: resumoCampo.confirmado === true,
+        };
+      }
+
+      var r = operacao
+        ? E().confirmarAquisicao(ordemDe(ctx), rituaisDaFicha(ctx), operacao, contextoDaFicha())
+        : { ok: false, motivos: ["Esta aquisição não grava por aqui."] };
+      gravando = false;
+
+      if (!r.ok) {
+        pintarResumo(r.motivos);
+        atualizarRodape();
+        return;
+      }
+
+      sel = { itens: [], saem: {} };
+      ctx.alterou();
+      ctx.redesenhar();
+      if (aoMudar) aoMudar();
+      fechar();
+      UI.avisoOk(aq.tipo === "campo"
+        ? "Estudo registrado: o ritual passou a ser conhecido."
+        : "Rituais gravados em " + aq.rotulo + ".");
     }
 
     /* --------------------------------------------------------------- */
@@ -964,13 +1319,30 @@
     pintar();
 
     var m = UI.modal({
-      titulo: inicial ? (inicial.fixo ? ("Trazer " + inicial.fixo.nome) : ("Escolher rituais — " + inicial.rotulo)) : "Da biblioteca",
+      titulo: aq
+        ? (aq.fixo ? "Trazer " + aq.fixo.nome : (aq.tipo === "campo" ? "Estudo em campo" : "Escolher rituais — " + aq.rotulo))
+        : "Da biblioteca",
       largo: true,
-      classe: "r-modal--biblioteca",
+      classe: "r-modal--biblioteca" + (aq ? " r-modal--aquisicao" : ""),
       conteudo: janela,
-      botoes: [{ rotulo: "Fechar", classe: "r-botao--fantasma" }],
-      aoFechar: function () { aberta = false; },
+      botoes: aq
+        ? [
+            { rotulo: "Cancelar", classe: "r-botao--fantasma", aoClicar: aoSecundario },
+            { rotulo: rotuloPrincipal(), classe: "r-botao--principal", aoClicar: aoPrincipal },
+          ]
+        : [{ rotulo: "Fechar", classe: "r-botao--fantasma" }],
+      aoFechar: function () {
+        aberta = false;
+        /* Fechar descarta a seleção inteira: nada dela chegou à ficha. */
+        sel = { itens: [], saem: {} };
+      },
     });
+
+    if (aq) {
+      var rodape = m.janela.querySelector(".r-modal__rodape");
+      if (rodape) rodape.insertBefore(rodapeStatus, rodape.firstChild);
+      atualizarRodape();
+    }
 
     return m;
   }

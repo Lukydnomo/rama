@@ -57,17 +57,21 @@
      requisito, alterações e rolagens que não são dano. É a ÚNICA subida
      com migração: o texto de `efeito` passa para `descricao` na
      leitura, sem perder nada.
+     8 → 9: o bloco `ordem` ganhou `registrosDeRitual` (o estudo em
+     campo e a concessão da mesa), e a escolha de Aprender Ritual ganhou
+     `substituicao`, mais funda do que a limpeza da v2.17 alcançava. Sem
+     conversão: uma ficha 8 abre igual, com a lista vazia.
 
      Nenhuma das subidas exige migração: normalizarFicha() cria o que
      falta, vazio, e não toca no que existe. Um ritual gravado na 2 abre
      na 3 com a versão Normal em branco; uma ficha de Ordem gravada na 4
      abre na 5 sem escolhas registradas, com as pendências calculadas a
-     partir da classe e do NEX. As duas últimas subidas existem para
+     partir da classe e do NEX. As subidas sem conversão existem para
      PROTEGER dado: uma aba ainda aberta na versão anterior não conhece
      os campos novos e os descartaria ao gravar — com o schema maior ela
      recusa abrir a ficha e pede para recarregar.
      Ver docs/CHARACTER_SCHEMA.md. */
-  var VERSAO_SCHEMA = 8;
+  var VERSAO_SCHEMA = 9;
 
   var NATUREZA = { INFORMACAO: "informacao", ROLAVEL: "rolavel", DEPENDENTE: "dependente" };
 

@@ -342,6 +342,9 @@
          dois aparelhos resolvendo etapas diferentes não brigam pela
          lista inteira. */
       "ordem.escolhas": "id",
+      /* Estudo em campo e concessão da mesa (v2.18): cada registro casa
+         pelo id, como as escolhas. */
+      "ordem.registrosDeRitual": "id",
       "ordem.ajustes": "id",
       "ordem.progressao": "id",
       "ordem.personalizacoes": "id",
@@ -364,6 +367,8 @@
       alvo: "Alvo", efeito: "Efeito", versoes: "Versões",
       quantidade: "Quantidade", espacos: "Espaços", capacidade: "Capacidade",
       escolhas: "Escolhas de progressão", afinidade: "Afinidade", elemento: "Elemento",
+      registrosDeRitual: "Rituais aprendidos fora da progressão", ritualId: "Ritual", nota: "Nota",
+      confirmado: "Estudo confirmado",
       nomeOutro: "Elemento Homebrew", adiada: "Afinidade adiada", aplicar: "Aplicar regras de patente",
       limites: "Limites por categoria", opcoes: "Opções da escolha", etapa: "Etapa",
       personalizacoes: "Habilidades personalizadas", excluidas: "Habilidades oficiais excluídas",

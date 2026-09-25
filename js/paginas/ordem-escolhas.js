@@ -268,6 +268,75 @@
   }
 
   /* =================================================================
+     RITUAIS DENTRO DE UMA ESCOLHA
+     -----------------------------------------------------------------
+     O ritual que uma escolha de poder aprende fica PROVISÓRIO na janela
+     até a confirmação: `sessao.novos` guarda as cópias montadas e ainda
+     fora da ficha, e o contexto da simulação as enxerga como se já
+     estivessem lá — é a mesma conta que a gravação vai fazer.
+     ================================================================= */
+
+  function contextoComNovos(sessao) {
+    var novos = Object.keys(sessao.novos).map(function (k) { return sessao.novos[k]; });
+    return Object.assign({}, sessao.contextoBase || {}, { rituais: (sessao.rituais || []).concat(novos) });
+  }
+
+  function abrirBibliotecaDeAquisicao(sessao, pedido, focoChave, aoEscolher) {
+    if (!BIB() || !sessao.ctx) {
+      UI.avisoAtencao("A biblioteca de rituais não está disponível nesta tela.");
+      return;
+    }
+    BIB().abrir(sessao.ctx, {
+      aquisicao: pedido,
+      contexto: sessao.contextoBase,
+      aoEscolher: function (pick) {
+        if (!pick || !pick.ritual) return;
+        if (pick.novo) sessao.novos[pick.ritual.id] = pick.ritual;
+        aoEscolher(pick);
+        sessao.contexto = contextoComNovos(sessao);
+        sessao.pintar();
+        /* O botão que abriu a biblioteca foi redesenhado: o foco volta
+           para o novo, e não para o fim da página. */
+        setTimeout(function () {
+          var alvo = sessao.raiz ? sessao.raiz.querySelector('[data-foco="' + focoChave + '"]') : null;
+          if (alvo) alvo.focus();
+        }, 0);
+      },
+    });
+  }
+
+  function cartaoDoRitualEscolhido(vinculo, novo) {
+    var elemento = vinculo.elemento && RT() ? RT().nomeDoElemento(vinculo.elemento) : "";
+    return el("div.escolha-ritual__escolhido", {}, [
+      el("strong", { texto: vinculo.nome || "(sem nome)" }),
+      el("span.t-mini", {
+        texto: " · " + (vinculo.circulo ? vinculo.circulo + "º círculo" : "círculo não informado") + (elemento ? " · " + elemento : ""),
+      }),
+      el("p.t-mini", {
+        texto: novo
+          ? "Cópia nova — entra na aba Rituais só quando esta escolha for confirmada."
+          : "Já está na aba Rituais: nenhuma cópia é criada.",
+      }),
+    ]);
+  }
+
+  /* Os vínculos de ritual de um candidato, onde quer que estejam. */
+  function vinculosDoCandidato(valor, saida, prof) {
+    var lista = saida || [];
+    if ((prof || 0) > 10 || !valor || typeof valor !== "object") return lista;
+    if (Array.isArray(valor)) {
+      valor.forEach(function (x) { vinculosDoCandidato(x, lista, (prof || 0) + 1); });
+      return lista;
+    }
+    Object.keys(valor).forEach(function (k) {
+      var v = valor[k];
+      if ((k === "aprendido" || k === "entra") && v && typeof v === "object" && v.id) lista.push(v);
+      else vinculosDoCandidato(v, lista, (prof || 0) + 1);
+    });
+    return lista;
+  }
+
+  /* =================================================================
      OPÇÕES INTERNAS
      ================================================================= */
 
@@ -320,10 +389,26 @@
 
       case "elemento": {
         var lista3 = E.ELEMENTOS_PODER.concat(op.comMedo ? ["medo"] : []);
-        return botoesDeEscolha(lista3.map(function (k) {
+        /* Aprender Ritual conta como poder do elemento do ritual
+           escolhido (OPRPG p.114): com o ritual escolhido, o elemento
+           dele é o único que cabe. O motor confere o mesmo. */
+        var ritualDoPoder = op.doRitual && valores[op.doRitual] && typeof valores[op.doRitual] === "object" ? valores[op.doRitual] : null;
+        var elementoFixo = ritualDoPoder && ritualDoPoder.elemento ? ritualDoPoder.elemento : "";
+        var nomeFixo = elementoFixo && C.elemento(elementoFixo) ? C.elemento(elementoFixo).nome : elementoFixo;
+        var botoesEl = botoesDeEscolha(lista3.map(function (k) {
           var e = C.elemento(k);
-          return { valor: k, rotulo: e ? e.nome : k, ajuda: e ? e.resumo : "" };
+          return {
+            valor: k, rotulo: e ? e.nome : k, ajuda: e ? e.resumo : "",
+            motivo: elementoFixo && k !== elementoFixo
+              ? "Este poder conta como poder do elemento do ritual escolhido: " + (ritualDoPoder.nome || "o ritual") + " é de " + nomeFixo + " (OPRPG p.114)."
+              : "",
+          };
         }), atual, function (v) { valores[op.chave] = v; sessao.pintar(); });
+        if (!elementoFixo) return botoesEl;
+        return el("div.pilha--curta", { class: "pilha" }, [
+          el("p.t-mini", { texto: "Vem do ritual escolhido: " + (ritualDoPoder.nome || "o ritual") + " é de " + nomeFixo + "." }),
+          botoesEl,
+        ]);
       }
 
       case "escolha":
@@ -340,69 +425,115 @@
         return campo;
       }
 
-      /* Aprender Ritual (OPRPG p.114). O vínculo é com um ritual DA
-         FICHA, não com um nome escrito: é ele que diz depois "este
-         ritual veio daqui". O círculo permitido vem do NEX de
-         exposição, e o que não cabe aparece com o motivo. */
-      case "ritualAprendido":
-      case "ritualDaFicha": {
-        var daFicha = sessao.rituais || [];
-        var soConhecidos = op.tipo === "ritualDaFicha";
-        var maximo = (op.tipo === "ritualAprendido" && A())
-          ? A().circuloDeAprenderRitual(R_exposicao(ordem))
-          : 0;
-
-        var cartoes = daFicha.map(function (r) {
-          var dados = RT() ? RT().dadosDoRitual(r) : {};
-          var circulo = Number(dados.circulo) || 0;
-          var motivo = "";
-          if (maximo) {
-            if (!circulo) motivo = "Este ritual não informa o círculo.";
-            else if (circulo > maximo) motivo = "Aprender Ritual alcança o " + maximo + "º círculo com NEX de exposição " + R_exposicao(ordem) + "%.";
-          }
-          return {
-            valor: r.id,
-            rotulo: r.nome + (circulo ? " · " + circulo + "º círculo" : ""),
-            motivo: motivo,
-          };
-        });
-
-        var escolhido = (atual && typeof atual === "object") ? atual.id : "";
-
-        return el("div.pilha--curta", { class: "pilha" }, [
-          cartoes.length
-            ? botoesDeEscolha(cartoes, escolhido, function (v) {
-                var r = daFicha.filter(function (x) { return x.id === v; })[0];
-                valores[op.chave] = (escolhido === v) ? undefined : (E.vinculoDeRitual(r) || undefined);
-                sessao.pintar();
-              })
-            : el("p.t-mini", { texto: "Esta ficha ainda não tem rituais registrados." }),
-
-          (!soConhecidos && sessao.ctx && BIB())
-            ? el("button.r-botao.r-botao--mini", {
-                type: "button", texto: "Trazer um ritual da biblioteca",
-                onclick: function () {
-                  BIB().abrir(sessao.ctx, {
-                    aoAdicionarRitual: function (ritual) {
-                      sessao.rituais = (sessao.ctx.ficha.rituais && sessao.ctx.ficha.rituais.itens) || sessao.rituais;
-                      valores[op.chave] = E.vinculoDeRitual(ritual) || undefined;
-                      sessao.pintar();
-                    },
-                  });
-                },
-              })
-            : null,
+      /* Aprender Ritual (OPRPG p.114). A escolha abre a MESMA biblioteca
+         da aba Rituais, no contexto desta aquisição: o círculo que o
+         poder alcança nesta etapa, o limite por Intelecto e os rituais
+         da ficha que podem ocupá-la sem virar cópia. A biblioteca
+         devolve o ritual escolhido e NÃO grava nada: a cópia só entra na
+         ficha quando esta escolha inteira for confirmada. */
+      case "ritualAprendido": {
+        var escolhidoAp = (atual && typeof atual === "object" && atual.id) ? atual : null;
+        var ctxAp = E.contextoDeAquisicao(ordem, { tipo: "aprenderRitual", vaga: vagaId }, sessao.contexto);
+        return el("div.pilha--curta.escolha-ritual", { class: "pilha" }, [
+          ctxAp ? el("p.t-mini", { texto: ctxAp.explicacao }) : null,
+          ctxAp && ctxAp.limite && ctxAp.limite.esgotado ? el("p.t-mini.t-aviso", { texto: ctxAp.limite.motivo }) : null,
+          escolhidoAp
+            ? cartaoDoRitualEscolhido(escolhidoAp, sessao.novos[escolhidoAp.id])
+            : el("p.t-mini", { texto: "Nenhum ritual escolhido ainda." }),
+          el("div.faixa", {}, [
+            el("button.r-botao.r-botao--mini", {
+              type: "button",
+              class: escolhidoAp ? "" : "r-botao--principal",
+              texto: escolhidoAp ? "Trocar o ritual" : "Escolher na biblioteca",
+              "data-foco": caminho,
+              onclick: function () {
+                abrirBibliotecaDeAquisicao(sessao, { tipo: "aprenderRitual", vaga: vagaId }, caminho, function (pick) {
+                  var vinculo = E.vinculoDeRitual(pick.ritual);
+                  valores[op.chave] = vinculo;
+                  /* O elemento do poder é o do ritual (OPRPG p.114). */
+                  if (vinculo && vinculo.elemento) valores.elemento = vinculo.elemento;
+                });
+              },
+            }),
+            escolhidoAp ? el("button.r-botao.r-botao--mini.r-botao--fantasma", {
+              type: "button", texto: "Tirar o ritual",
+              onclick: function () { valores[op.chave] = undefined; sessao.pintar(); },
+            }) : null,
+          ]),
 
           /* O texto que as fichas anteriores guardavam. Ele fica à
              vista até alguém prendê-lo a um ritual de verdade — apagar
-             seria perder a única informação que sobrou. */
-          (op.tipo === "ritualAprendido" && typeof valores.ritual === "string" && valores.ritual.trim())
+             seria perder a única informação que sobrou, e adivinhar o
+             ritual pelo nome seria inventar um vínculo. */
+          (typeof valores.ritual === "string" && valores.ritual.trim())
             ? el("p.t-mini.t-aviso", {
                 texto: "Ficha anterior: este Aprender Ritual guarda só o nome “" + valores.ritual +
-                       "”. Escolher acima prende a escolha a um ritual da ficha; o nome continua guardado.",
+                       "”. Escolher acima prende a escolha a um ritual de verdade; o nome continua guardado.",
               })
             : null,
         ]);
+      }
+
+      /* A troca que Aprender Ritual permite: um ritual conhecido sai, e
+         outro entra no lugar dele. Opcional. */
+      case "substituicaoDeRitual": {
+        var sub = (atual && typeof atual === "object") ? atual : {};
+        var conhecidos = E.conhecidosAntes(ordem, vagaId, sessao.contexto);
+        var saiId = sub.sai && sub.sai.id ? String(sub.sai.id) : "";
+        var partesSub = [];
+
+        if (valores.substituido && typeof valores.substituido === "object" && valores.substituido.id) {
+          partesSub.push(el("p.t-mini.t-aviso", {
+            texto: "Registro anterior: esta escolha marcava " + (valores.substituido.nome || "um ritual") +
+                   " como substituído, sem dizer o que entrou no lugar. Complete a troca abaixo, ou deixe em branco para não trocar nada.",
+          }));
+        }
+
+        if (!conhecidos.length) {
+          partesSub.push(el("p.t-mini", { texto: "Nenhum ritual conhecido antes desta etapa — não há o que trocar." }));
+          return el("div.pilha--curta", { class: "pilha" }, partesSub);
+        }
+
+        partesSub.push(el("p.t-rotulo", { texto: "Sai" }));
+        partesSub.push(botoesDeEscolha(conhecidos.map(function (k) {
+          return { valor: k.id, rotulo: k.nome + " · " + k.nomePoder + ", " + k.rotuloEtapa };
+        }), saiId, function (vid) {
+          delete valores.substituido;
+          if (saiId === vid) {
+            valores[op.chave] = undefined;
+          } else {
+            var k = conhecidos.filter(function (x) { return x.id === vid; })[0];
+            valores[op.chave] = { sai: { id: k.id, nome: k.nome } };
+          }
+          sessao.pintar();
+        }));
+
+        if (saiId) {
+          var ctxSub = E.contextoDeAquisicao(ordem, { tipo: "substituicao", vaga: vagaId, sai: saiId }, sessao.contexto);
+          partesSub.push(el("p.t-rotulo", { texto: "Entra" }));
+          if (ctxSub) partesSub.push(el("p.t-mini", { texto: ctxSub.explicacao }));
+          partesSub.push(sub.entra && sub.entra.id
+            ? cartaoDoRitualEscolhido(sub.entra, sessao.novos[sub.entra.id])
+            : el("p.t-mini.t-aviso", { texto: "Falta escolher o ritual que entra — ou desmarque o que sai para não trocar." }));
+          partesSub.push(el("div.faixa", {}, [
+            el("button.r-botao.r-botao--mini", {
+              type: "button",
+              class: sub.entra ? "" : "r-botao--principal",
+              texto: sub.entra ? "Trocar o que entra" : "Escolher o que entra",
+              "data-foco": caminho,
+              onclick: function () {
+                abrirBibliotecaDeAquisicao(sessao, { tipo: "substituicao", vaga: vagaId, sai: saiId }, caminho, function (pick) {
+                  valores[op.chave] = { sai: { id: sub.sai.id, nome: sub.sai.nome }, entra: E.vinculoDeRitual(pick.ritual) };
+                });
+              },
+            }),
+            el("button.r-botao.r-botao--mini.r-botao--fantasma", {
+              type: "button", texto: "Não trocar",
+              onclick: function () { delete valores.substituido; valores[op.chave] = undefined; sessao.pintar(); },
+            }),
+          ]));
+        }
+        return el("div.pilha--curta", { class: "pilha" }, partesSub);
       }
 
       case "ritual": {
@@ -614,16 +745,23 @@
     var sessao = {
       ordem: ordem,
       vaga: vaga,
-      contexto: o.contexto || null,
+      contextoBase: o.contexto || {},
+      contexto: null,
       /* A ficha inteira, quando quem chamou a tem: é por ela que a
          biblioteca de rituais entra em cima desta janela. */
       ctx: o.ctx || null,
-      rituais: o.rituais || [],
+      /* A lista VIVA de rituais da ficha: é nela que a confirmação põe
+         as cópias novas. */
+      rituais: o.rituais || (o.contexto && o.contexto.rituais) || [],
+      novos: {},
+      raiz: corpo,
       filtros: {},
       entradaAtual: null,
       pintar: pintar,
       atualizarStatus: atualizarStatus,
     };
+    sessao.contexto = contextoComNovos(sessao);
+    var gravando = false;
 
     var m = UI.modal({
       titulo: vaga.rotulo + " — " + vaga.rotuloEtapa,
@@ -812,6 +950,15 @@
       }
       if (pronto) {
         linhas.push(el("p.t-mini", { texto: "Pronto: " + (E.descrever(ordem, { tipo: vaga.tipo, valor: candidato.valor, opcoes: candidato.opcoes }) || "escolha completa") + "." }));
+        /* O resumo dos rituais, antes de gravar: qual ritual, se é
+           cópia nova ou já está na ficha, e a que aquisição fica preso. */
+        vinculosDoCandidato(candidato.opcoes).forEach(function (vinc) {
+          linhas.push(el("p.t-mini", {
+            texto: "Ritual: " + (vinc.nome || "(sem nome)") + (vinc.circulo ? " (" + vinc.circulo + "º círculo)" : "") + " — " +
+                   (sessao.novos[vinc.id] ? "cópia nova, entra na aba Rituais ao confirmar" : "já está na ficha, sem cópia") +
+                   ", vinculado a esta escolha de " + vaga.rotuloEtapa + ".",
+          }));
+        });
         if (existente) {
           var imp = E.impacto(ordem, vaga, candidato, sessao.contexto);
           if (imp.saem.length) linhas.push(el("p.t-mini", { texto: "Sai: " + imp.saem.join(", ") + "." }));
@@ -829,10 +976,31 @@
       U.trocar(status, linhas);
     }
 
+    /* A confirmação é UMA operação: o motor refaz a conta com as
+       cópias que vão entrar, recusa se algo não fechar e só então troca
+       as escolhas e põe as cópias na ficha. Nada fica pela metade — nem
+       ritual sem aquisição, nem poder sem o ritual. */
     function confirmar(fechar) {
+      if (gravando) return;
       var sim = E.simular(ordem, vaga, candidato, sessao.contexto);
       if (!sim.avaliacao.completo || !sim.avaliacao.valido) { atualizarStatus(); return; }
-      var registro = E.registrar(ordem, vaga, candidato);
+
+      var usados = vinculosDoCandidato(candidato.opcoes).map(function (v) { return v.id; });
+      var novos = usados.filter(function (idR) { return !!sessao.novos[idR]; }).map(function (idR) { return sessao.novos[idR]; });
+
+      gravando = true;
+      botao.disabled = true;
+      var r = E.confirmarAquisicao
+        ? E.confirmarAquisicao(ordem, sessao.rituais, { tipo: "escolha", vaga: vaga.id, candidato: candidato, novos: novos }, sessao.contextoBase)
+        : { ok: true, legado: E.registrar(ordem, vaga, candidato) };
+      gravando = false;
+      botao.disabled = false;
+
+      if (!r.ok) {
+        U.trocar(status, [el("p.t-mini.t-erro", { role: "alert", texto: "Não foi gravado: " + (r.motivos || []).join(" ") })]);
+        return;
+      }
+      var registro = registroDaVaga(ordem, vaga.id) || r.legado || null;
       fechar();
       if (o.aoRegistrar) o.aoRegistrar(registro);
     }
@@ -856,18 +1024,10 @@
       return null;
     }
     return BIB().abrir(o.ctx, {
-      aprendizado: {
-        vagaId: vaga.id,
-        aoMudar: o.aoMudarRituais || o.aoRegistrar || null,
-      },
+      aquisicao: { tipo: "concessao", vaga: vaga.id },
+      contexto: o.contexto || null,
+      aoConfirmar: o.aoMudarRituais || o.aoRegistrar || null,
     });
-  }
-
-  /* O NEX de exposição, que é o que vale para poder paranormal mesmo
-     com nível e NEX separados (SAH p.98). */
-  function R_exposicao(ordem) {
-    var R = global.RAMAOrdemRegras;
-    return R && R.exposicao ? R.exposicao(ordem) : (Number(ordem.nex) || 0);
   }
 
   /* =================================================================

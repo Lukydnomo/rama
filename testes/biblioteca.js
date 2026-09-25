@@ -580,6 +580,195 @@
     t.igual("  e devolve o foco para quem abriu", document.activeElement, abridorR);
     abridorR.parentNode.removeChild(abridorR);
 
+    /* ---------------------------------------------------------------- */
+    t.grupo("Rituais · a janela fica de pé sem ficha.css");
+
+    global.RAMABibliotecaDeRituais.abrir(contexto(fichaDeOrdem()));
+    await ate(function () { return janela() && linhas().length; }, 25000);
+    var abrirCss = linhas()[0].querySelector(".bib-item__abrir");
+    t.igual("o botão do resultado não tem o fundo cinza do navegador",
+      getComputedStyle(abrirCss).backgroundColor, "rgba(0, 0, 0, 0)");
+    t.igual("  e o topo do resultado é flexível (nome, marcas)",
+      getComputedStyle(linhas()[0].querySelector(".bib-item__topo")).display, "flex");
+    var listaCss = janela().querySelector(".bib-lista");
+    t.ok("a lista não rola sozinha: uma rolagem só, a da janela",
+      getComputedStyle(listaCss).overflowY === "visible" && getComputedStyle(listaCss).maxHeight === "none");
+    await fecharJanela();
+
+    /* ---------------------------------------------------------------- */
+    t.grupo("Rituais · escolha de concessão, provisória");
+
+    function fichaDeOcultista(nex) {
+      return F.normalizarFicha({
+        nome: "Ocultista de teste", tipoFicha: "ordem",
+        ordem: {
+          classe: "ocultista", origem: "academico", nex: nex || 5,
+          atributos: { agi: 1, for: 1, int: 3, pre: 2, vig: 1 },
+          pericias: { ocultismo: "treinado", vontade: "treinado" },
+        },
+        inventario: { limite: 0, itens: [] },
+      });
+    }
+    function rodapeStatus() { var s = janela() && janela().querySelector(".bib-rodape__status"); return s ? s.textContent : ""; }
+    function principal() { return janela().querySelector(".r-modal__rodape .r-botao--principal"); }
+    function secundario() { return janela().querySelector(".r-modal__rodape .r-botao--fantasma"); }
+    function selecionar(nome) {
+      var l = linha(nome);
+      if (!l) return false;
+      clicar(l.querySelector(".bib-item__selecionar"), 1);
+      return true;
+    }
+
+    var ctxO = contexto(fichaDeOcultista(5));
+    global.RAMABibliotecaDeRituais.abrir(ctxO, { aquisicao: { tipo: "concessao", vaga: "d1.rituaisIniciais" } });
+    await ate(function () { return janela() && linhas().length; }, 25000);
+    t.ok("o topo diz de onde vem a escolha", /Rituais iniciais/.test(janela().querySelector(".bib-aquisicao").textContent) &&
+      /Escolhido pelo Outro Lado/.test(janela().querySelector(".bib-aquisicao").textContent));
+    t.igual("o rodapé conta o que falta", rodapeStatus(), "Escolhidos: 0 de 3 · faltam 3");
+    t.ok("  e confirmar começa desligado", principal().disabled);
+    t.igual("só os de 1º círculo aparecem", janela().querySelector(".bib-status").textContent, "30 rituais cabem nesta aquisição.");
+
+    selecionar("Luz");
+    await espera(120);
+    selecionar("Cicatrização");
+    await espera(120);
+    t.igual("selecionar dois atualiza a conta", rodapeStatus(), "Escolhidos: 2 de 3 · faltam 1 (a confirmar)");
+    t.igual("  e nada foi escrito na ficha", ctxO.ficha.rituais.itens.length, 0);
+    t.igual("  nem nas escolhas", (ctxO.ficha.ordem.escolhas || []).length, 0);
+    t.ok("o selecionado fica marcado, com o estado escrito",
+      linha("Luz").classList.contains("bib-item--escolhido") && /Selecionado/i.test(linha("Luz").querySelector(".bib-item__estado").textContent));
+
+    var sel2 = linha("Luz").querySelector(".bib-item__selecionar");
+    clicar(sel2, 1);
+    clicar(sel2, 2);
+    await espera(120);
+    t.igual("clique duplo não alterna duas vezes", rodapeStatus(), "Escolhidos: 1 de 3 · faltam 2 (a confirmar)");
+
+    var detalhe = linha("Ouvir os Sussurros");
+    clicar(detalhe.querySelector(".bib-item__abrir"));
+    await espera(120);
+    t.ok("abrir os detalhes não seleciona", !detalhe.classList.contains("bib-item--escolhido") &&
+      rodapeStatus() === "Escolhidos: 1 de 3 · faltam 2 (a confirmar)");
+    t.ok("  e o botão de abrir não contém botão nenhum",
+      !detalhe.querySelector(".bib-item__abrir button"));
+
+    clicar(secundario());
+    t.ok("cancelar fecha", !!(await ate(function () { return !janela(); })));
+    t.igual("  e descarta a seleção inteira", ctxO.ficha.rituais.itens.length, 0);
+
+    global.RAMABibliotecaDeRituais.abrir(ctxO, { aquisicao: { tipo: "concessao", vaga: "d1.rituaisIniciais" } });
+    await ate(function () { return janela() && linhas().length; });
+    t.igual("reabrir começa do que está gravado", rodapeStatus(), "Escolhidos: 0 de 3 · faltam 3");
+    ["Luz", "Cicatrização", "Ouvir os Sussurros"].forEach(selecionar);
+    await espera(150);
+    var quarto = linha("Arma Atroz");
+    t.ok("com a concessão cheia, o resto fica indisponível com o motivo",
+      /Indisponível/i.test(quarto.querySelector(".bib-item__estado").textContent) &&
+      /tire um antes/.test(quarto.querySelector(".bib-item__motivo").textContent));
+
+    clicar(principal());
+    await espera(150);
+    t.ok("revisar mostra o resumo antes de gravar", /Antes de gravar/i.test(janela().querySelector(".bib-resumo").textContent) &&
+      /cópia nova, do catálogo/.test(janela().querySelector(".bib-resumo").textContent));
+    t.igual("  e o botão principal vira Confirmar", principal().textContent, "Confirmar");
+    t.igual("  ainda sem nada na ficha", ctxO.ficha.rituais.itens.length, 0);
+
+    clicar(secundario());
+    await espera(120);
+    t.ok("Voltar devolve a lista com a seleção", !!linha("Luz") && linha("Luz").classList.contains("bib-item--escolhido"));
+    clicar(principal());
+    await espera(120);
+    var confirmar = principal();
+    clicar(confirmar);
+    clicar(confirmar);
+    await ate(function () { return !janela(); });
+    t.igual("confirmar grava os três rituais, uma vez só", ctxO.ficha.rituais.itens.length, 3);
+    t.igual("  numa alteração só da ficha", ctxO.alteracoes, 1);
+    var estO = global.RAMAOrdemProgressao.estado(ctxO.ficha.ordem, { rituais: ctxO.ficha.rituais.itens });
+    t.ok("  e os três ocupam a concessão", estO.rituais.concessoes[0].completa &&
+      ctxO.ficha.rituais.itens.every(function (r) { return !!estO.rituais.porRitual[r.id]; }));
+
+    /* ---------------------------------------------------------------- */
+    t.grupo("Rituais · Transcender → Aprender Ritual, sem gravar pela metade");
+
+    var ctxT = contexto(fichaDeOcultista(15));
+    var ES = global.RAMAOrdemEscolhas;
+    function janelaEscolha() {
+      return U.$$(".r-modal").filter(function (m) { return !m.classList.contains("r-modal--biblioteca"); }).slice(-1)[0] || null;
+    }
+    function abrirEscolha() {
+      ES.abrir({
+        ordem: ctxT.ficha.ordem, vagaId: "d3.poderClasse", ctx: ctxT,
+        contexto: { inventario: ctxT.ficha.inventario, rituais: ctxT.ficha.rituais.itens },
+        rituais: ctxT.ficha.rituais.itens,
+        aoRegistrar: function () { ctxT.alterou(); },
+      });
+    }
+    async function ateAprenderRitual() {
+      var j = await ate(function () { return janelaEscolha(); });
+      clicar(U.$$(".escolha-cartao", j).filter(function (c) { return /^Transcender/.test(c.textContent); })[0]);
+      await espera(150);
+      j = janelaEscolha();
+      clicar(U.$$(".escolha-cartao", j).filter(function (c) { return /^Aprender Ritual/.test(c.textContent); })[0]);
+      await espera(150);
+      return janelaEscolha();
+    }
+
+    abrirEscolha();
+    var jT = await ateAprenderRitual();
+    t.ok("a escolha mostra a regra do poder nesta etapa",
+      /até 1º círculo/.test(jT.querySelector(".escolha-ritual").textContent) && /0 de 3/.test(jT.querySelector(".escolha-ritual").textContent));
+    clicar(jT.querySelector(".escolha-ritual button"));
+    await ate(function () { return janela() && linhas().length; }, 25000);
+    t.igual("a biblioteca abre no contexto de Aprender Ritual", janela().querySelector("h2").textContent, "Escolher rituais — Aprender Ritual");
+    t.ok("  com a divisão Ordem Paranormal e Homebrew", U.$$(".biblioteca-origem", janela()).length === 2);
+    selecionar("Luz");
+    await espera(120);
+    t.igual("  o rodapé diz o escolhido", rodapeStatus(), "Escolhido: Luz.");
+    clicar(principal());
+    await ate(function () { return !janela(); });
+    jT = janelaEscolha();
+    t.ok("o ritual volta para a escolha, como cópia pendente",
+      /Luz/.test(jT.querySelector(".escolha-ritual").textContent) && /só quando esta escolha for confirmada/.test(jT.querySelector(".escolha-ritual").textContent));
+    t.igual("  e a ficha continua sem ritual", ctxT.ficha.rituais.itens.length, 0);
+
+    clicar(U.$$(".r-modal__rodape button", jT).filter(function (b) { return b.textContent === "Cancelar"; })[0]);
+    await ate(function () { return !janelaEscolha(); });
+    t.igual("cancelar a escolha não deixa ritual nenhum para trás", ctxT.ficha.rituais.itens.length, 0);
+    t.igual("  nem poder nenhum", (ctxT.ficha.ordem.escolhas || []).length, 0);
+
+    abrirEscolha();
+    jT = await ateAprenderRitual();
+    clicar(jT.querySelector(".escolha-ritual button"));
+    await ate(function () { return janela() && linhas().length; }, 25000);
+    selecionar("Luz");
+    await espera(120);
+    clicar(principal());
+    await ate(function () { return !janela(); });
+    jT = janelaEscolha();
+    var elemento = U.$$(".escolha-opcao", jT).filter(function (s) { return /Elemento do ritual/i.test(s.querySelector("h4").textContent); })[0];
+    function botaoDoElemento(nome) { return U.$$("button", elemento).filter(function (b) { return b.textContent === nome; })[0]; }
+    t.ok("o elemento do poder vem do ritual escolhido, sem outro clique (OPRPG p.114)",
+      /Vem do ritual escolhido: Luz é de Energia/.test(elemento.textContent) && botaoDoElemento("Energia").getAttribute("aria-pressed") === "true");
+    t.ok("  e os outros elementos ficam indisponíveis, com o motivo",
+      botaoDoElemento("Morte").getAttribute("aria-disabled") === "true" && /Luz é de Energia/.test(botaoDoElemento("Morte").title));
+    clicar(botaoDoElemento("Morte"));
+    await espera(150);
+    t.igual("  clicar num deles não troca o elemento", botaoDoElemento("Energia").getAttribute("aria-pressed"), "true");
+    jT = janelaEscolha();
+    t.ok("o resumo diz qual ritual entra e a que ele fica preso",
+      /Luz \(1º círculo\) — cópia nova, entra na aba Rituais ao confirmar/.test(jT.querySelector(".escolha-status").textContent));
+    var botaoConfirmar = U.$$(".r-modal__rodape button", jT).filter(function (b) { return b.textContent === "Confirmar"; })[0];
+    clicar(botaoConfirmar);
+    clicar(botaoConfirmar);
+    await ate(function () { return !janelaEscolha(); });
+    t.igual("confirmar grava o ritual uma vez", ctxT.ficha.rituais.itens.length, 1);
+    var estT = global.RAMAOrdemProgressao.estado(ctxT.ficha.ordem, { rituais: ctxT.ficha.rituais.itens });
+    var vindoT = estT.rituais.porRitual[ctxT.ficha.rituais.itens[0].id];
+    t.ok("  preso a Aprender Ritual, contando no limite",
+      !!vindoT && vindoT.nomePoder === "Aprender Ritual" && vindoT.contaNoLimite && estT.rituais.limite.usados === 1);
+    t.ok("  e o poder, preso ao ritual", estT.pendencias.every(function (p) { return p.id !== "d3.poderClasse"; }));
+
         /* ---------------------------------------------------------------- */
     t.grupo("Layout na largura atual (" + window.innerWidth + " px)");
 

@@ -35,7 +35,7 @@ Fazem parte do **dado**, não só da tela:
 
 ```jsonc
 {
-  "schemaVersion": 5,
+  "schemaVersion": 9,
   "tipoFicha": "universal",
 
   "nome": "Michael",
@@ -526,8 +526,16 @@ uma regra de jogo.
 
 ## Migração
 
-`schemaVersion` é `8`. Toda ficha lida passa por `normalizarFicha()`, que aceita
+`schemaVersion` é `9`. Toda ficha lida passa por `normalizarFicha()`, que aceita
 o que faltar e conserta o que dá.
+
+**A v2.18 subiu o schema de 8 para 9 sem converter nada.** O bloco `ordem` ganhou
+`registrosDeRitual` (o estudo em campo e a concessão da mesa), e a escolha de
+Aprender Ritual ganhou `substituicao`, guardada mais fundo do que a limpeza de
+opções da v2.17 alcançava. Uma ficha 8 abre igual, com a lista vazia. Sem a
+subida, uma aba ainda aberta na v2.17 abriria uma ficha da v2.18 e, na gravação
+seguinte, descartaria os dois — com o schema 9 ela recusa a ficha e pede para
+recarregar.
 
 **A v2.14 subiu o schema de 7 para 8 — e é a ÚNICA subida com migração.** O ritual
 ganhou `elemento`, `execucao`, `area`, `resistencia` e `descricao`, além do rastro
@@ -551,9 +559,9 @@ criado à mão continua sem eles.
 (`etiqueta` em habilidades e itens; `ordem.personalizacoes` e `ordem.excluidas`)
 são opcionais, e uma ficha 5 abre igual.
 
-As duas subidas existem para proteger os dados: uma aba ainda aberta com a versão
-anterior do aplicativo não conhece esses campos e os descartaria ao gravar — com o
-schema maior ela recusa abrir a ficha e pede para recarregar.
+As subidas sem conversão existem para proteger os dados: uma aba ainda aberta com
+a versão anterior do aplicativo não conhece esses campos e os descartaria ao
+gravar — com o schema maior ela recusa abrir a ficha e pede para recarregar.
 
 **Ficha gravada na v1 continua abrindo.** Ela não tem `habilidades`, não tem
 `rituais` e os itens não têm `categoria`; a normalização cria a árvore vazia, a
@@ -626,6 +634,17 @@ Só existe na ficha de Ordem. Guarda **escolhas**, **recursos gastos** e
     "ignorarRequisitos": false,
     "registradoEm": "2026-09-23T10:00:00.000Z"
   } ],
+  "registrosDeRitual": [ {        // aquisições de ritual FORA da progressão (v2.18)
+    "id": "uuid",
+    "tipo": "campo",              // "campo" (estudo, SAH p.113) ou "mesa" (concessão da mesa)
+    "ritualId": "uuid-do-ritual", // o ritual de `rituais.itens`
+    "nome": "Tecer Ilusão", "circulo": 1,   // retrato, para ler sem a lista
+    "degrau": 6,                  // a etapa em que foi registrado (NEX 30%, ou o nível)
+    "fonte": "selo",              // só no estudo: "texto", "objeto" ou "selo"
+    "nota": "Selo da missão 2",
+    "confirmado": true,           // a mesa confirmou a fonte e o teste; sem isso, não vale
+    "registradoEm": "2026-09-24T10:00:00.000Z"
+  } ],
   "afinidade": { "elemento": "", "nomeOutro": "", "adiada": false },
   "personalizacoes": [ {          // versão desta ficha de uma habilidade oficial
     "id": "uuid",
@@ -692,26 +711,63 @@ estão em `rituais.itens` — nunca uma cópia do ritual:
 | `circulo`, `elemento` | retrato, usado só quando a lista de rituais não está por perto; com ela, vale o ritual de verdade |
 | `catalogo` | o id do catálogo oficial, quando o ritual veio de lá |
 
-**Um ritual ocupa uma concessão só.** A concessão da etapa mais antiga reivindica
-primeiro; a segunda que apontar para o mesmo ritual aparece com o motivo, sem
-apagar nada. Um ritual que nenhuma concessão reivindica continua na ficha, sem
-origem — é registro da mesa, aprendizado em campo ou ficha anterior a esta versão.
+**Um ritual ocupa uma aquisição só.** A aquisição da etapa mais antiga reivindica
+primeiro (as vagas de progressão, na ordem das etapas; depois os registros de
+ritual, na ordem em que foram feitos); a segunda que apontar para o mesmo ritual
+aparece com o motivo, sem apagar nada. Um ritual que nenhuma aquisição reivindica
+continua na ficha como **registro**, para consulta, e não é conhecido.
 
 **Nada disso é calculado e gravado.** A conta de quantos rituais faltam, o limite
-por Intelecto e a separação entre conhecido e grimório saem do motor de progressão
-a cada leitura, a partir de `escolhas` e de `rituais.itens`.
+por Intelecto e a separação entre conhecido, grimório e registro saem do motor de
+progressão a cada leitura, a partir de `escolhas`, `registrosDeRitual` e
+`rituais.itens`.
 
-Aprender Ritual guarda o vínculo dentro das opções do poder:
-`opcoes.poder.opcoes.aprendido` (o ritual aprendido) e `opcoes.substituido` (o
-ritual que ele trocou, opcional — OPRPG p.114). Uma ficha anterior à v2.17 guarda
-só o nome, em `opcoes.ritual`: ela continua completa, o texto fica à vista, e a
-tela oferece prendê-lo a um ritual de verdade.
+Aprender Ritual guarda o vínculo dentro das opções do poder, onde quer que ele
+esteja (numa vaga de poder, em Transcender, em Versatilidade → Transcender):
+
+```jsonc
+"opcoes": { "poder": { "valor": "aprenderRitual", "opcoes": {
+  "aprendido": { "id": "uuid-do-ritual", "nome": "Luz", "circulo": 1, "elemento": "energia" },
+  "substituicao": {                        // opcional — OPRPG p.114 (v2.18)
+    "sai":   { "id": "uuid-de-outro", "nome": "Cicatrização" },
+    "entra": { "id": "uuid-do-novo", "nome": "Arma Atroz", "circulo": 1, "elemento": "sangue" }
+  },
+  "elemento": "energia"                    // o do ritual aprendido — conferido
+} } }
+```
+
+Uma ficha anterior à v2.17 guarda só o nome, em `opcoes.ritual`: ela continua
+completa, o texto fica à vista, e a tela oferece prendê-lo a um ritual de verdade
+— nunca pelo nome. A v2.17 chegou a guardar `opcoes.substituido` (só o que saía,
+sem o que entrava): o campo continua guardado até a troca ser refeita, aparece
+como nota e não vale como troca.
+
+**A limpeza das opções vai a 8 níveis (v2.18).** Até a v2.17 ela cortava no
+quarto, e o que ficava mais fundo — o ritual de Versatilidade → Transcender →
+Aprender Ritual, a troca dentro de Transcender — sumia na gravação seguinte.
+
+### Registros de ritual (v2.18)
+
+`registrosDeRitual` guarda as duas aquisições que não são vaga de progressão:
+
+| tipo | o que é | vale quando |
+|---|---|---|
+| `campo` | o estudo em campo da regra B de SAH p.113 | a regra está ligada, o personagem é ocultista, `confirmado` é `true`, o círculo cabia no `degrau` do registro e a ficha alcança esse degrau |
+| `mesa` | a mesa concedeu o ritual fora das regras | a ficha alcança o `degrau`. É exceção declarada e **não resolve pendência nenhuma** |
+
+Nos dois, o ritual precisa estar na aba Rituais e não ter outra aquisição. Um
+registro que deixou de valer **não é apagado**: fica guardado, com o motivo na
+aba Rituais, e volta a valer sozinho quando puder. Tirar o ritual da ficha tira
+junto os vínculos diretos a ele (a concessão e o registro); o de uma escolha de
+poder fica, e a Progressão mostra o problema. Até 300 registros, com ids únicos.
 
 **Exportar e importar preservam o vínculo.** A importação troca todos os ids, então
-o pacote leva cada vínculo como POSIÇÃO na lista de rituais, e a importação a
-converte de volta no id novo — só quando o ritual daquela posição ainda é o mesmo
-(mesma origem de catálogo, mesmo nome). Quando não é, nenhum vínculo é refeito no
-palpite: a concessão volta a ficar pendente e os rituais continuam na ficha.
+o pacote leva cada vínculo como POSIÇÃO na lista de rituais — nas escolhas, com a
+marca `_pos`; nos registros, com `ritualId: "#pos:N"` — e a importação a converte
+de volta no id novo, só quando o ritual daquela posição ainda é o mesmo (mesma
+origem de catálogo, mesmo nome). Quando não é, nenhum vínculo é refeito no
+palpite: a concessão volta a ficar pendente, o registro fica sem efeito e os
+rituais continuam na ficha.
 
 A trilha **não** é registro: continua em `trilha`. A afinidade também não: está
 em `afinidade`.
