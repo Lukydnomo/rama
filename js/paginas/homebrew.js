@@ -86,7 +86,14 @@
             type: "search", value: busca,
             placeholder: "Buscar na biblioteca",
             "aria-label": "Buscar na biblioteca",
-            oninput: function (ev) { busca = ev.target.value; desenhar(); },
+            /* Redesenhar recria o campo: o foco e o cursor voltam para ele. */
+            oninput: function (ev) {
+              busca = ev.target.value;
+              var pos = ev.target.selectionStart;
+              desenhar();
+              var novo = painel.querySelector('input[type="search"]');
+              if (novo) { novo.focus(); try { novo.setSelectionRange(pos, pos); } catch (e) { /* nada */ } }
+            },
           }),
         ]),
         el("div.filtros__grupo", { role: "group", "aria-label": "Biblioteca" },

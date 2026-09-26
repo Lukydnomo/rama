@@ -75,7 +75,15 @@
             value: busca,
             placeholder: "Buscar por nome, campanha, classe ou origem",
             "aria-label": "Buscar personagem",
-            oninput: function (ev) { busca = ev.target.value; desenhar(); },
+            /* A lista é redesenhada inteira: o campo novo recebe o foco
+               e o cursor de volta, para a digitação não ser interrompida. */
+            oninput: function (ev) {
+              busca = ev.target.value;
+              var pos = ev.target.selectionStart;
+              desenhar();
+              var novo = painel.querySelector('input[type="search"]');
+              if (novo) { novo.focus(); try { novo.setSelectionRange(pos, pos); } catch (e) { /* nada */ } }
+            },
           }),
         ]),
       ]) : null,
