@@ -71,6 +71,27 @@
   function E() { return global.RAMAOrdemProgressao; }
   function I() { return global.RAMAOrdemInventario; }
   function CD() { return global.RAMAOrdemCondicoes; }
+  function EF() { return global.RAMAOrdemEfeitos || null; }
+
+  /* As condições e os efeitos aplicados que estão valendo nesta ficha
+     (js/ordem/efeitos.js), com o que o rastreador de morrendo e
+     enlouquecendo diz. Sem o módulo, nada muda nas contas. */
+  function efeitosDaFicha(ficha) {
+    if (!EF() || !ficha || !ficha.condicoes) return null;
+    var cond = ficha.condicoes;
+    var extra = CD() && CD().extrasDoRastreador ? CD().extrasDoRastreador(cond) : {};
+    return { cond: cond, extra: extra };
+  }
+
+  /* Soma na conta as parcelas de um efeito combinado, e mostra — com
+     valor 0 — o que não acumulou e por quê. */
+  function somarEfeitos(c, combinado) {
+    if (!combinado) return;
+    combinado.parcelas.forEach(function (x) { c.soma(x.rotulo, x.valor, x.origem); });
+    combinado.ignorados.forEach(function (x) {
+      c.soma(x.rotulo + " (" + (x.valor > 0 ? "+" : "") + x.valor + ", não acumula)", 0, x.motivo);
+    });
+  }
 
   /* "Jogando sem Sanidade" (SAH p.104): PE e Sanidade saem, e os dois
      viram um recurso só, pontos de determinação. A chave da regra é a
@@ -159,6 +180,8 @@
       /* --- condições contadas por turno: morrendo, enlouquecendo e os
              contadores da mesa (condicoes.js) --- */
       condicoes: CD() ? CD().vazio() : {},
+      componentes: global.RAMAOrdemConsumo ? global.RAMAOrdemConsumo.normalizarControle(null) : {},
+      consumos: [],
 
       /* --- ajuste manual, com motivo --- */
       ajustes: [],
@@ -500,6 +523,16 @@
 
     somarAjustes(c, ficha, "defesa");
     somarExtra(c, ficha, "defesa", "Bônus extra de Defesa");
+
+    /* Condições e efeitos: a Defesa geral entra na conta; a que depende
+       de quem ataca (caído: −5 contra corpo a corpo, +5 contra à
+       distância) fica ao lado, como observação. */
+    var ef = efeitosDaFicha(ficha);
+    c.contextuais = [];
+    if (ef) {
+      somarEfeitos(c, EF().bonusEm(ef.cond, ef.extra, ["defesa"]));
+      c.contextuais = EF().contextuais(ef.cond, ef.extra).filter(function (x) { return /^defesa:/.test(x.alvo); });
+    }
     return c;
   }
 
@@ -527,7 +560,7 @@
 
   function bloqueio(ficha, inventario) {
     var c = conta();
-    var fortitude = bonusDePericia(ficha, "fortitude", inventario);
+    var fortitude = bonusDePericia(ficha, "fortitude", inventario, false);
     parcelasDaPericia(c, "Fortitude", fortitude);
     somarAjustes(c, ficha, "bloqueio");
     somarExtra(c, ficha, "bloqueio", "Bônus extra de Bloqueio");
@@ -539,7 +572,7 @@
     var c = conta();
     var def = defesa(ficha, inventario);
     c.soma("Defesa final", def.total, "a Defesa inteira, já com os modificadores e o extra de Defesa");
-    var reflexos = bonusDePericia(ficha, "reflexos", inventario);
+    var reflexos = bonusDePericia(ficha, "reflexos", inventario, false);
     parcelasDaPericia(c, "Reflexos", reflexos);
     somarAjustes(c, ficha, "esquiva");
     somarExtra(c, ficha, "esquiva", "Bônus extra de Esquiva");
@@ -582,6 +615,16 @@
 
     somarAjustes(c, ficha, "deslocamento");
     c.piso(0);
+
+    var ef = efeitosDaFicha(ficha);
+    if (ef) {
+      var d = EF().deslocamento(ef.cond, ef.extra, c.total);
+      d.parcelas.forEach(function (x) {
+        c.parcelas.push({ rotulo: x.rotulo + (x.texto ? " (" + x.texto + ")" : ""), valor: x.valor, origem: "condição ou efeito" });
+        c.total += x.valor;
+      });
+      c.total = Math.max(0, Math.round(c.total * 10) / 10);
+    }
     return c;
   }
 
@@ -989,9 +1032,13 @@
       agil = true;
     }
     var quantosDados = atributoDoTeste ? atributo(ficha, atributoDoTeste) + (a.dadosAtaque || 0) : 0;
-    var dado = quantosDados <= 0 ? "-2d20" : quantosDados + "d20";
+    /* O contexto do ataque: corpo a corpo ou à distância. Um efeito que
+       vale só num deles não vira bônus de todo ataque. */
+    var contexto = { ataque: a.tipo === "corpoACorpo" ? "corpo" : (a.tipo ? "distancia" : (chave === "luta" ? "corpo" : "distancia")) };
+    var dados = dadosDoTeste(ficha, chave, Object.assign({ atributo: atributoDoTeste }, contexto), quantosDados);
+    var dado = atributoDoTeste ? dados.expressao : "-2d20";
 
-    var ataque = pe ? bonusDePericia(ficha, chave, inventario) : conta();
+    var ataque = pe ? bonusDePericia(ficha, chave, inventario, contexto) : conta();
     if (a.bonusAtaque) ataque.soma(item.nome || "Arma", a.bonusAtaque, "bônus de ataque da arma");
     aj.ataque.forEach(function (x) { ataque.soma(x.fonte, x.valor, "modificação da arma"); });
 
@@ -1013,6 +1060,8 @@
       extra.soma("Agilidade", atributo(ficha, "agi"), "atributo no dano da arma");
     }
     aj.dano.forEach(function (x) { extra.soma(x.fonte, x.valor, "modificação da arma"); });
+    var efDano = efeitosDaFicha(ficha);
+    if (efDano) somarEfeitos(extra, EF().bonusEm(efDano.cond, efDano.extra, ["dano", "dano:" + contexto.ataque]));
 
     var margemBase = inteiro(item.critico, 0);
     var margem = margemBase;
@@ -1035,6 +1084,8 @@
       atributoDoTeste: atributoDoTeste,
       agilNoTeste: agil,
       dado: dado,
+      dados: dados,
+      contexto: contexto.ataque,
       ataque: ataque,
       dano: dano,
       alternativo: alternativo,
@@ -1116,7 +1167,10 @@
     return est && est.fontesGrau ? (est.fontesGrau[chave] || []) : [];
   }
 
-  function bonusDePericia(ficha, chave, inventario) {
+  /* `teste`: o contexto do teste — { ataque: "corpo" | "distancia" } num
+     ataque com arma. `false` pede o VALOR da perícia, sem os efeitos que
+     valem só em testes (Bloqueio e Esquiva usam o valor, não um teste). */
+  function bonusDePericia(ficha, chave, inventario, teste) {
     var c = conta();
     var pe = C.pericia(chave);
     if (!pe) return c;
@@ -1159,6 +1213,14 @@
 
     var ajuste = ajusteDePericia(ficha, chave);
     if (ajuste.extra) c.soma("Bônus extra", ajuste.extra, "ajuste da ficha");
+
+    /* Condições e efeitos aplicados — ao teste, com o contexto dele. Não
+       tocam no grau nem no bônus extra: saem quando o efeito sai. */
+    var ef = teste === false ? null : efeitosDaFicha(ficha);
+    if (ef) {
+      var t = Object.assign({ pericia: chave, atributo: atributoDaPericia(ficha, chave) }, teste || {});
+      somarEfeitos(c, EF().bonusNoTeste(ef.cond, ef.extra, t));
+    }
     return c;
   }
 
@@ -1195,11 +1257,33 @@
 
   /* Os dados que a perícia rola: um d20 por ponto do atributo-base.
      Atributo 0 rola 2d20 e pega o pior — que é o `-2d20` do motor. */
-  function dadoDePericia(ficha, chave) {
-    var pe = C.pericia(chave);
-    if (!pe) return "1d20";
-    var valor = atributo(ficha, atributoDaPericia(ficha, chave));
-    return valor <= 0 ? "-2d20" : valor + "d20";
+  function dadoDePericia(ficha, chave, teste) {
+    if (!C.pericia(chave)) return "1d20";
+    return dadosDoTeste(ficha, chave, teste).expressao;
+  }
+
+  /* Os dados de um teste, abertos: o atributo, os dados a mais ou a
+     menos das condições e efeitos, e a expressão final. Com menos de um
+     dado, rola-se mais e fica-se com o pior (efeitos.js). */
+  function dadosDoTeste(ficha, chave, teste, base) {
+    var pe = chave ? C.pericia(chave) : null;
+    var atrib = teste && teste.atributoPuro ? teste.atributo : ((teste && teste.atributo) || (pe ? atributoDaPericia(ficha, chave) : ""));
+    var valor = base !== undefined ? base : atributo(ficha, atrib);
+    var c = conta();
+    c.soma(atrib ? "Dados de " + siglaDe(atrib) : "Dados", valor, "1d20 por ponto do atributo");
+    var ef = efeitosDaFicha(ficha);
+    if (ef && (pe || (teste && teste.atributoPuro))) {
+      var t = Object.assign({ pericia: pe ? chave : "", atributo: atrib }, teste || {});
+      somarEfeitos(c, EF().dadosNoTeste(ef.cond, ef.extra, t));
+    }
+    var expressao = EF() ? EF().expressaoDeDados(c.total) : (c.total <= 0 ? "-2d20" : c.total + "d20");
+    return { expressao: expressao, quantos: c.total, parcelas: c.parcelas, base: valor };
+  }
+
+  /* Teste de atributo puro (OPRPG p. 75), com os efeitos que valem em
+     "todos os testes" e em testes daquele atributo. */
+  function dadoDeAtributo(ficha, chave) {
+    return dadosDoTeste(ficha, "", { atributoPuro: true, atributo: chave });
   }
 
   /* =================================================================
@@ -1587,6 +1671,29 @@
       rituais: rituais(ficha),
       resistencias: resistencias(ficha, inventario),
       proficiencias: proficiencias(ficha),
+      efeitos: resumoDosEfeitos(ficha, pv, san, comPd),
+    };
+  }
+
+  /* O que a tela de condições precisa, pronto: as condições valendo
+     (diretas, derivadas e do rastreador), restrições, ações que pedem
+     um teste ou rolagem, e os modificadores que não entram numa conta
+     geral (Defesa contra corpo a corpo, custo de PE, resistência). As
+     automáticas — machucado e perturbado — vêm dos recursos atuais. */
+  function resumoDosEfeitos(ficha, pv, san, comPd) {
+    var ef = efeitosDaFicha(ficha);
+    if (!ef) return null;
+    var atualPv = recursoAtual(ficha, "pv", pv.total);
+    var atualSan = recursoAtual(ficha, "san", san.total);
+    var automaticas = [];
+    if (pv.total > 0 && atualPv * 2 < pv.total) automaticas.push({ chave: "machucado", nome: "Machucado", motivo: "PV " + atualPv + " de " + pv.total });
+    if (!comPd && san.total > 0 && atualSan * 2 < san.total) automaticas.push({ chave: "perturbado", nome: "Perturbado", motivo: "Sanidade " + atualSan + " de " + san.total });
+    return {
+      condicoes: EF().condicoesEfetivas(ef.cond, ef.extra),
+      restricoes: EF().restricoes(ef.cond, ef.extra),
+      acoes: EF().acoes(ef.cond, ef.extra),
+      contextuais: EF().contextuais(ef.cond, ef.extra),
+      automaticas: automaticas,
     };
   }
 
@@ -1731,6 +1838,16 @@
     ficha.condicoes = CD()
       ? CD().normalizar(b.condicoes)
       : (b.condicoes && typeof b.condicoes === "object" ? JSON.parse(JSON.stringify(b.condicoes)) : {});
+
+    /* Controle de componentes e registro de usos (v2.20, regras
+       opcionais). Sem o módulo, passam como vieram. */
+    var CS = global.RAMAOrdemConsumo || null;
+    ficha.componentes = CS
+      ? CS.normalizarControle(b.componentes)
+      : (b.componentes && typeof b.componentes === "object" ? JSON.parse(JSON.stringify(b.componentes)) : {});
+    ficha.consumos = CS
+      ? CS.normalizarRegistros(b.consumos)
+      : (Array.isArray(b.consumos) ? JSON.parse(JSON.stringify(b.consumos)) : []);
 
     (Array.isArray(b.ajustes) ? b.ajustes : []).forEach(function (a) {
       if (!a || typeof a !== "object" || !a.alvo) return;
@@ -1971,6 +2088,9 @@
     atributoPadraoDaPericia: atributoPadraoDaPericia,
     atributoDaPericia: atributoDaPericia,
     dadoDePericia: dadoDePericia,
+    dadosDoTeste: dadosDoTeste,
+    dadoDeAtributo: dadoDeAtributo,
+    aumentarDados: aumentarDados,
 
     criarAjuste: criarAjuste,
     recursoAtual: recursoAtual,

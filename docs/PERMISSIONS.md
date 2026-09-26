@@ -171,6 +171,9 @@ Quatro decisões, e nenhuma decide pela outra:
 | abrir a ficha de um personagem | dono ou mestre da campanha, sempre | `personagemAcessivel` |
 | administrar (turno, iniciativa, vida de criatura, participantes, quem vê) | só o mestre | `exigirMestre` em `atualizar_combate`, `salvar_combate` e `excluir_combate` |
 | contar o início de turno na ficha (v2.19) | o servidor, dentro do lote do mestre | `aplicarTurnosAsFichas`: só ficha vinculada à campanha do combate, só o evento do turno, com a revisão subindo |
+| aplicar, renovar e encerrar condições e efeitos (v2.20) | o dono no próprio personagem; o mestre nos personagens da campanha | `acaoEfeitoPersonagem` → `personagemAcessivel`, e a campanha do pedido tem de ser a do personagem; `aplicadoPor` e `aplicadoEm` vêm da sessão e do relógio do servidor |
+| ver a vida das criaturas (v2.20) | o mestre sempre; jogadores só com **Mostrar vida das criaturas aos jogadores** (desligada por padrão) | `combateParaCliente`: desligada, o jogador não recebe PV, máximo nem ficha da criatura; ligada, só `vida { atual, maximo }`. Independente de "Esconder status dos jogadores" |
+| a imagem de quem tem o turno (v2.20) | quem pode ver o combate | `acaoLerImagemDoTurno` → `podeVerCombate`; devolve só `participanteId`, `tipo`, `nome` e `imagem` |
 
 Quem tem acesso recebe a lista, a ordem de iniciativa, a rodada e de quem é a vez —
 e **não** a ficha interna das criaturas, o id do modelo na biblioteca nem a lista de

@@ -539,7 +539,8 @@
     }
     if (e.municao) {
       automacao = "parcial";
-      partes.push("A quantidade é de " + (e.municao.unidade === "foguete" ? "foguetes" : e.municao.unidade + "s") + "; a ficha não desconta munição — " +
+      partes.push("A quantidade é de " + (e.municao.unidade === "foguete" ? "foguetes" : e.municao.unidade + "s") +
+        ". Com a regra opcional Contagem de munição ligada, cada ataque é descontado; sem ela, " +
         (e.municao.duracao ? "a duração é controle manual." : "o que sai de cada " + e.municao.unidade + " é controle manual."));
     }
     if (e.capacidade) {

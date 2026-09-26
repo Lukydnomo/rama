@@ -1,12 +1,18 @@
 /* =====================================================================
    R.A.M.A. — Ordem Paranormal · condições que se contam por turno
    =====================================================================
-   Morrendo e enlouquecendo (Ordem Paranormal RPG, p. 88), e os
-   contadores que a MESA pode criar para exaustão e desmaio. Sem tela e
-   sem rede: a ficha desenha, o painel da campanha mostra, e o servidor
-   repete só a parte da contagem por turno de combate
-   (backend/Campanhas.gs, "Condições e turnos"). Os testes rodam os mesmos
-   casos nas duas implementações.
+   Morrendo e enlouquecendo (Ordem Paranormal RPG, p. 88), com a
+   inconsciência e o perturbado que andam com eles. Sem tela e sem rede:
+   a ficha desenha, o painel da campanha mostra, e o servidor repete só a
+   parte da contagem por turno de combate (backend/Campanhas.gs,
+   "Condições e turnos"). Os testes rodam os mesmos casos nas duas
+   implementações.
+
+   As OUTRAS condições do livro e os efeitos aplicados (rituais, itens,
+   efeitos da mesa) moram em js/ordem/efeitos.js, dentro deste mesmo
+   bloco (`efeitos`, `imunidades`). Morrendo e enlouquecendo continuam
+   aqui, com a regra própria: não viram efeito genérico que some depois
+   de três turnos.
 
    ---------------------------------------------------------------------
    TRÊS COISAS SEPARADAS, E NENHUMA DEDUZIDA DAS OUTRAS
@@ -24,6 +30,21 @@
    estava. Só "Nova cena" começa do zero.
 
    ---------------------------------------------------------------------
+   ENLOUQUECENDO É UM SÓ
+   ---------------------------------------------------------------------
+
+   Com Sanidade, vem da Sanidade reduzida a 0 por dano mental. Com
+   "Jogando sem Sanidade" (Sobrevivendo ao Horror, p. 104-105), vem do
+   dano mental MAIOR que os PD atuais, e termina ao recuperar 1 PD. É o
+   mesmo contador nos dois casos — nunca dois em paralelo. Gastar PD para
+   pagar custos não causa nada.
+
+   Os contadores "Exaustão" e "Desmaio" da v2.19 foram retirados: o
+   pedido era enlouquecendo com PD. Uma ficha que os tinha os perde ao
+   ser lida, e os turnos deles NÃO viram turnos de enlouquecendo.
+   Exausto e inconsciente continuam na biblioteca de condições.
+
+   ---------------------------------------------------------------------
    CADA INÍCIO DE TURNO É UM EVENTO COM ID
    ---------------------------------------------------------------------
 
@@ -35,30 +56,17 @@
    mão ("corrigir −1") fica em `descartados`, para o mesmo turno não
    voltar a contar numa sincronização. "Voltar turno" retira o evento do
    turno desfeito, e só ele: correções manuais feitas depois ficam.
-
-   ---------------------------------------------------------------------
-   O QUE É DA MESA NÃO É REGRA
-   ---------------------------------------------------------------------
-
-   O livro não liga exaustão nem desmaio a PD ou PE chegando a 0, e não
-   dá prazo em turnos para nenhum dos dois. Os contadores da mesa começam
-   DESLIGADOS, sem limite e com ativação manual; o limite, a ativação e o
-   texto da consequência são da mesa, e chegar ao limite só mostra o que
-   a mesa escreveu — nada é aplicado sozinho.
    ===================================================================== */
 
 (function (global) {
   "use strict";
 
   var OPRPG = "OPRPG";
-  var SAH = "SAH";
 
   /* Guardar mais do que isto por condição não serve para nada: a cena
      muda e a contagem recomeça. É teto contra arquivo adulterado. */
   var MAX_EVENTOS = 60;
   var MAX_DESCARTADOS = 60;
-  var MAX_LIMITE_DA_MESA = 20;
-  var LIMITE_SEM_TETO = 99;
 
   var OFICIAIS = {
     morrendo: {
@@ -88,31 +96,9 @@
     },
   };
 
-  var DA_MESA = {
-    exaustao: {
-      chave: "exaustao",
-      nome: "Exaustão",
-      explicacao: "Contador da mesa, não regra do livro. “Exausto” é uma condição de fadiga (debilitado, lento e " +
-        "vulnerável — Ordem Paranormal RPG, p. 310), mas o livro não a liga a PD ou PE chegando a 0 nem dá prazo em turnos.",
-    },
-    desmaio: {
-      chave: "desmaio",
-      nome: "Desmaio",
-      explicacao: "Contador da mesa, não regra do livro. O livro não tem uma condição chamada desmaio; a mais próxima é " +
-        "inconsciente (Ordem Paranormal RPG, p. 310), que vem de 0 PV ou de ficar debilitado de novo.",
-    },
-  };
-
   var CHAVES_CONTADAS = ["morrendo", "enlouquecendo"];
-  var CHAVES_DA_MESA = ["exaustao", "desmaio"];
 
-  /* Como um contador da mesa pode ficar ativo. Só o que tem origem
-     conhecida conta como "chegar a 0": gastar e dano. Um número digitado
-     à mão não diz de onde veio, e não ativa nada. */
-  var ATIVACOES = [
-    { chave: "manual", nome: "Só à mão" },
-    { chave: "recursoZero", nome: "Quando os pontos de esforço (ou de determinação) chegarem a 0 por gasto ou dano" },
-  ];
+  function EF() { return global.RAMAOrdemEfeitos || null; }
 
   function uuid() {
     if (global.RAMAUtil && global.RAMAUtil.uuid) return global.RAMAUtil.uuid();
@@ -190,32 +176,16 @@
     return { ativa: b.ativa === true, desde: carimbo(b.desde) };
   }
 
-  function limiteDaMesa(v) {
-    if (v === null || v === undefined || v === "") return null;
-    var n = Math.round(Number(v));
-    return n >= 1 && n <= MAX_LIMITE_DA_MESA ? n : null;
-  }
-
-  function normalizarDaMesa(bruto) {
-    var b = (bruto && typeof bruto === "object") ? bruto : {};
-    var base = normalizarContada(b);
-    base.usar = b.usar === true;
-    base.limite = limiteDaMesa(b.limite);
-    base.ativacao = b.ativacao === "recursoZero" ? "recursoZero" : "manual";
-    base.consequencia = texto(b.consequencia, 200).trim();
-    return base;
-  }
-
   function vazio() {
     return normalizar(null);
   }
 
   /* A cena começa sem id: uma ficha antiga lida duas vezes não pode
-     ganhar duas cenas diferentes. O primeiro "Nova cena" cria o id. */
+     ganhar duas cenas diferentes. O primeiro "Nova cena" cria o id.
+     `mesa` (v2.19) não é lido: os contadores da mesa foram retirados. */
   function normalizar(bruto) {
     var b = (bruto && typeof bruto === "object") ? bruto : {};
     var cena = (b.cena && typeof b.cena === "object") ? b.cena : {};
-    var mesa = (b.mesa && typeof b.mesa === "object") ? b.mesa : {};
     return {
       cena: { id: idValido(cena.id), iniciadaEm: carimbo(cena.iniciadaEm) },
       integrarCombate: b.integrarCombate !== false,
@@ -223,10 +193,8 @@
       inconsciente: normalizarSimples(b.inconsciente),
       enlouquecendo: normalizarContada(b.enlouquecendo),
       perturbado: normalizarSimples(b.perturbado),
-      mesa: {
-        exaustao: normalizarDaMesa(mesa.exaustao),
-        desmaio: normalizarDaMesa(mesa.desmaio),
-      },
+      efeitos: EF() ? EF().normalizarLista(b.efeitos) : (Array.isArray(b.efeitos) ? JSON.parse(JSON.stringify(b.efeitos)) : []),
+      imunidades: EF() ? EF().normalizarImunidades(b.imunidades) : (Array.isArray(b.imunidades) ? b.imunidades.slice(0, 40) : []),
     };
   }
 
@@ -237,14 +205,11 @@
   function rastreador(cond, chave) {
     if (!cond) return null;
     if (CHAVES_CONTADAS.indexOf(chave) >= 0) return cond[chave] || null;
-    if (CHAVES_DA_MESA.indexOf(chave) >= 0) return cond.mesa ? cond.mesa[chave] || null : null;
     return null;
   }
 
   function limiteDe(cond, chave) {
-    if (OFICIAIS[chave]) return OFICIAIS[chave].limite;
-    var r = rastreador(cond, chave);
-    return r && r.limite ? r.limite : null;
+    return OFICIAIS[chave] ? OFICIAIS[chave].limite : null;
   }
 
   function eventosDaCena(cond, chave) {
@@ -266,12 +231,12 @@
     var limite = limiteDe(cond, chave);
     var n = contagem(cond, chave);
     var eventos = eventosDaCena(cond, chave);
-    var def = OFICIAIS[chave] || DA_MESA[chave];
+    var def = OFICIAIS[chave];
     return {
       chave: chave,
       nome: def.nome,
-      oficial: !!OFICIAIS[chave],
-      usar: OFICIAIS[chave] ? true : !!r.usar,
+      oficial: true,
+      usar: true,
       ativa: !!r.ativa,
       desde: r.desde,
       contagem: n,
@@ -280,32 +245,49 @@
       doCombate: eventos.filter(function (e) { return e.origem === "combate"; }).length,
       manuais: eventos.filter(function (e) { return e.origem !== "combate"; }).length,
       eventos: eventos,
-      resultado: OFICIAIS[chave] ? OFICIAIS[chave].resultado : (r.consequencia || ""),
-      encerra: chave === "enlouquecendo" && o.pd ? OFICIAIS.enlouquecendo.encerraComPd
-        : (OFICIAIS[chave] ? OFICIAIS[chave].encerra : ""),
-      fonte: OFICIAIS[chave] ? OFICIAIS[chave].fonte : "",
-      pagina: OFICIAIS[chave] ? OFICIAIS[chave].pagina : 0,
-      ativacao: r.ativacao || "",
-      consequencia: r.consequencia || "",
-      explicacao: DA_MESA[chave] ? DA_MESA[chave].explicacao : "",
+      resultado: def.resultado,
+      encerra: chave === "enlouquecendo" && o.pd ? def.encerraComPd : def.encerra,
+      recurso: chave === "morrendo" ? "pv" : (o.pd ? "pd" : "san"),
+      fonte: def.fonte,
+      pagina: def.pagina,
     };
   }
 
   /* O resumo que o painel da campanha mostra a quem pode ver o status:
-     só o que está ativo ou já tem turnos nesta cena. */
+     o que está ativo ou já tem turnos nesta cena, e as condições do
+     livro aplicadas (só os nomes; efeitos da mesa entram contados). */
   function resumoPublico(cond) {
     var c = cond ? normalizar(cond) : null;
     if (!c) return [];
     var saida = [];
-    CHAVES_CONTADAS.concat(CHAVES_DA_MESA).forEach(function (chave) {
+    CHAVES_CONTADAS.forEach(function (chave) {
       var e = estado(c, chave);
-      if (!e || !e.usar) return;
       if (!e.ativa && !e.contagem) return;
-      saida.push({ chave: chave, nome: e.nome, oficial: e.oficial, ativa: e.ativa, contagem: e.contagem, limite: e.limite, atingiu: e.atingiu });
+      saida.push({ chave: chave, nome: e.nome, oficial: true, ativa: e.ativa, contagem: e.contagem, limite: e.limite, atingiu: e.atingiu });
     });
     if (c.inconsciente.ativa) saida.push({ chave: "inconsciente", nome: "Inconsciente", oficial: true, ativa: true, contagem: 0, limite: null, atingiu: false });
     if (c.perturbado.ativa) saida.push({ chave: "perturbado", nome: "Perturbado", oficial: true, ativa: true, contagem: 0, limite: null, atingiu: false });
+    if (EF()) {
+      var pub = EF().resumoPublico(c);
+      pub.condicoes.forEach(function (nome) {
+        if (saida.some(function (x) { return x.nome === nome; })) return;
+        saida.push({ chave: "efeito", nome: nome, oficial: true, ativa: true, contagem: 0, limite: null, atingiu: false });
+      });
+      if (pub.outros) {
+        saida.push({ chave: "outros", nome: pub.outros === 1 ? "1 efeito" : pub.outros + " efeitos", oficial: false, ativa: true, contagem: 0, limite: null, atingiu: false });
+      }
+    }
     return saida;
+  }
+
+  /* O que o rastreador diz, para as contas dos efeitos. */
+  function extrasDoRastreador(cond) {
+    return {
+      morrendo: !!(cond && cond.morrendo && cond.morrendo.ativa),
+      inconsciente: !!(cond && cond.inconsciente && cond.inconsciente.ativa),
+      enlouquecendo: !!(cond && cond.enlouquecendo && cond.enlouquecendo.ativa),
+      perturbado: !!(cond && cond.perturbado && cond.perturbado.ativa),
+    };
   }
 
   /* =================================================================
@@ -313,9 +295,9 @@
      ================================================================= */
 
   function ativar(cond, chave, quando) {
+    if (chave === "inconsciente" || chave === "perturbado") return marcar(cond, chave, true, quando);
     var r = rastreador(cond, chave);
     if (!r) return { mudou: false, mensagem: "" };
-    if (DA_MESA[chave] && !r.usar) return { mudou: false, mensagem: "Este contador da mesa está desligado." };
     var mudou = !r.ativa;
     r.ativa = true;
     if (mudou) r.desde = quando || agora();
@@ -353,8 +335,7 @@
        combate. Para corrigir uma contagem antiga, ative antes. */
     if (!r.ativa) return { mudou: false, mensagem: "A condição não está ativa: um início de turno só conta com ela." };
     var limite = limiteDe(cond, chave);
-    var teto = limite === null ? LIMITE_SEM_TETO : limite;
-    if (contagem(cond, chave) >= teto) return { mudou: false, mensagem: "A contagem já chegou ao limite." };
+    if (contagem(cond, chave) >= limite) return { mudou: false, mensagem: "A contagem já chegou ao limite." };
     r.eventos.push({ id: "m-" + uuid(), origem: "manual", cena: cond.cena.id || "", em: quando || agora() });
     if (r.eventos.length > MAX_EVENTOS) r.eventos = r.eventos.slice(-MAX_EVENTOS);
     return { mudou: true, mensagem: "" };
@@ -379,37 +360,29 @@
   }
 
   /* Uma cena nova zera as contagens. As condições ativas continuam
-     ativas — morrendo não termina com a cena (OPRPG p.88). */
+     ativas — morrendo não termina com a cena (OPRPG p.88). Dos efeitos
+     aplicados, só os que duram "até o fim da cena" terminam. */
   function novaCena(cond, quando) {
     cond.cena = { id: "cena-" + uuid(), iniciadaEm: quando || agora() };
-    CHAVES_CONTADAS.concat(CHAVES_DA_MESA).forEach(function (chave) {
+    CHAVES_CONTADAS.forEach(function (chave) {
       var r = rastreador(cond, chave);
       r.eventos = [];
       r.descartados = [];
     });
-    return { mudou: true };
-  }
-
-  function configurarDaMesa(cond, chave, config) {
-    var r = rastreador(cond, chave);
-    if (!r || !DA_MESA[chave]) return { mudou: false };
-    var c = config || {};
-    var antes = JSON.stringify([r.usar, r.limite, r.ativacao, r.consequencia]);
-    if (c.usar !== undefined) r.usar = c.usar === true;
-    if (c.limite !== undefined) r.limite = limiteDaMesa(c.limite);
-    if (c.ativacao !== undefined) r.ativacao = c.ativacao === "recursoZero" ? "recursoZero" : "manual";
-    if (c.consequencia !== undefined) r.consequencia = texto(c.consequencia, 200).trim();
-    /* Desligar o contador não apaga os turnos: ele só para de valer. */
-    if (!r.usar) r.ativa = false;
-    return { mudou: antes !== JSON.stringify([r.usar, r.limite, r.ativacao, r.consequencia]) };
+    var fim = EF() ? EF().novaCena(cond, quando) : { encerradas: [] };
+    return { mudou: true, encerradas: fim.encerradas };
   }
 
   /* =================================================================
      O COMBATE
      -----------------------------------------------------------------
      evento = { id, combate, rodada, em }
-     Conta em toda condição ATIVA (e contador da mesa ligado) que ainda
-     não tem o evento nem o descartou. Devolve as chaves que contaram.
+     Conta em morrendo e enlouquecendo ATIVOS que ainda não têm o evento
+     nem o descartaram. Devolve as chaves que contaram.
+
+     registrarTurno(cond, ev, meu) é a porta completa: um início DESTE
+     personagem conta no rastreador e nos efeitos; o início ou o fim de
+     qualquer participante conta nos efeitos que contam os turnos dele.
      ================================================================= */
 
   function registrarInicioDeTurno(cond, evento) {
@@ -419,14 +392,12 @@
     ev.cena = cond.cena.id || "";
     if (!ev.em) ev.em = agora();
     var contou = [];
-    CHAVES_CONTADAS.concat(CHAVES_DA_MESA).forEach(function (chave) {
+    CHAVES_CONTADAS.forEach(function (chave) {
       var r = rastreador(cond, chave);
       if (!r.ativa) return;
-      if (DA_MESA[chave] && !r.usar) return;
       if (r.eventos.some(function (e) { return e.id === ev.id; })) return;
       if (r.descartados.indexOf(ev.id) >= 0) return;
-      var limite = limiteDe(cond, chave);
-      if (contagem(cond, chave) >= (limite === null ? LIMITE_SEM_TETO : limite)) return;
+      if (contagem(cond, chave) >= limiteDe(cond, chave)) return;
       r.eventos.push(Object.assign({}, ev));
       if (r.eventos.length > MAX_EVENTOS) r.eventos = r.eventos.slice(-MAX_EVENTOS);
       contou.push(chave);
@@ -438,7 +409,7 @@
     var alvo = idValido(id);
     if (!alvo) return [];
     var tirou = [];
-    CHAVES_CONTADAS.concat(CHAVES_DA_MESA).forEach(function (chave) {
+    CHAVES_CONTADAS.forEach(function (chave) {
       var r = rastreador(cond, chave);
       var antes = r.eventos.length;
       r.eventos = r.eventos.filter(function (e) { return !(e.id === alvo && e.origem === "combate"); });
@@ -447,8 +418,28 @@
     return tirou;
   }
 
+  /* ev = { tipo: "inicio"|"fim", id, participanteId, rodada, combate, em, desde }
+     meu = o participante desta ficha. Devolve o que contou. */
+  function registrarTurno(cond, ev, meu) {
+    if (!cond || !ev) return { condicoes: [], efeitos: [] };
+    var condicoes = [];
+    if (ev.tipo === "inicio" && meu && String(ev.participanteId) === String(meu)) {
+      condicoes = registrarInicioDeTurno(cond, ev);
+    }
+    var efeitos = EF() ? EF().registrarTurno(cond, ev, meu) : [];
+    return { condicoes: condicoes, efeitos: efeitos };
+  }
+
+  function retirarTurno(cond, id) {
+    return { condicoes: retirarInicioDeTurno(cond, id), efeitos: EF() ? EF().retirarTurno(cond, id) : [] };
+  }
+
   function idDoTurno(combateId, rodada, participanteId) {
     return idValido("cb:" + texto(combateId, 60) + ":" + Math.round(Number(rodada)) + ":" + texto(participanteId, 60));
+  }
+
+  function idDoFimDeTurno(combateId, rodada, participanteId) {
+    return idValido("cf:" + texto(combateId, 60) + ":" + Math.round(Number(rodada)) + ":" + texto(participanteId, 60));
   }
 
   /* =================================================================
@@ -509,21 +500,10 @@
       var r = chave === "inconsciente" || chave === "perturbado" ? marcar(cond, chave, false) : encerrar(cond, chave);
       if (r.mudou) { mudouCondicao = true; mensagens.push(frase); }
     }
-    function contadoresDaMesaNoZero() {
-      if (!cond) return;
-      CHAVES_DA_MESA.forEach(function (chave) {
-        var r = cond.mesa[chave];
-        if (!r.usar || r.ativacao !== "recursoZero" || r.ativa) return;
-        ativar(cond, chave, quando);
-        mudouCondicao = true;
-        mensagens.push(DA_MESA[chave].nome + " (contador da mesa) ativado: os pontos chegaram a 0.");
-      });
-    }
 
     if (acao === "gastar") {
       if (v > atual) return { ok: false, motivo: "Não há " + (recurso === "pd" ? "PD" : "PE") + " suficientes: sobram " + atual + "." };
       novo = atual - v;
-      if (novo === 0 && atual > 0) contadoresDaMesaNoZero();
       return { ok: true, valor: novo, mensagens: mensagens, mudouCondicao: mudouCondicao };
     }
 
@@ -562,26 +542,22 @@
         mudouCondicao = true;
         mensagens.push("Depois do dano mental, os PD ficaram abaixo da metade: perturbado (SAH p. 104).");
       }
-      if (atual > 0 && novo === 0) contadoresDaMesaNoZero();
     }
     return { ok: true, valor: novo, mensagens: mensagens, mudouCondicao: mudouCondicao };
   }
 
   global.RAMAOrdemCondicoes = {
     OFICIAIS: OFICIAIS,
-    DA_MESA: DA_MESA,
     CHAVES_CONTADAS: CHAVES_CONTADAS,
-    CHAVES_DA_MESA: CHAVES_DA_MESA,
-    ATIVACOES: ATIVACOES,
     ACOES: ACOES,
     MAX_EVENTOS: MAX_EVENTOS,
-    MAX_LIMITE_DA_MESA: MAX_LIMITE_DA_MESA,
 
     vazio: vazio,
     normalizar: normalizar,
     estado: estado,
     contagem: contagem,
     resumoPublico: resumoPublico,
+    extrasDoRastreador: extrasDoRastreador,
 
     ativar: ativar,
     encerrar: encerrar,
@@ -589,11 +565,13 @@
     somarInicio: somarInicio,
     corrigirMenos: corrigirMenos,
     novaCena: novaCena,
-    configurarDaMesa: configurarDaMesa,
 
     idDoTurno: idDoTurno,
+    idDoFimDeTurno: idDoFimDeTurno,
     registrarInicioDeTurno: registrarInicioDeTurno,
     retirarInicioDeTurno: retirarInicioDeTurno,
+    registrarTurno: registrarTurno,
+    retirarTurno: retirarTurno,
 
     aplicarAcao: aplicarAcao,
   };

@@ -165,6 +165,14 @@
     if (ref) dados.referencia = ref;
     var mods = (Array.isArray(b.modificacoes) ? b.modificacoes : []).map(modificacaoValida).filter(Boolean).slice(0, MAX_MODIFICACOES);
     if (mods.length) dados.modificacoes = mods;
+    /* Contagem de munição (v2.20, regra opcional): o que está carregado
+       numa arma e o que já saiu dos pacotes de uma munição. Sem o módulo
+       (uma página que não conta munição), passa como veio. */
+    if (b.contagem && typeof b.contagem === "object") {
+      var CS = global.RAMAOrdemConsumo;
+      var contagem = CS ? CS.contagemValida(b.contagem, tipo, dados.grupo) : JSON.parse(JSON.stringify(b.contagem));
+      if (contagem) dados.contagem = contagem;
+    }
     return dados;
   }
 

@@ -49,6 +49,7 @@
     "listar_combates",
     "ler_homebrew",
     "ler_imagem_criatura",
+    "ler_imagem_do_turno",
     "ler_capa_campanha",
     "sincronizar_campanha",
 
@@ -93,6 +94,10 @@
   var REPETIVEIS_COM_CHAVE = {
     criar_personagem: true,
     duplicar_personagem: true,
+    /* Aplicar ou encerrar um efeito pelo combate (v2.20): o id de
+       operação e o id da aplicação fazem a segunda chegada não aplicar
+       nada de novo. */
+    efeito_personagem: true,
   };
 
   function podeRepetirPedido(dados) {
@@ -636,6 +641,18 @@
   /* Um lote de operações sobre um combate. `opId` identifica o lote e é
      o MESMO em toda repetição dele — gerar outro ao repetir seria pedir
      para aplicar duas vezes. */
+  /* op: "aplicar" | "renovar" | "encerrar" | "rastreador" — ver
+     backend/Campanhas.gs, acaoEfeitoPersonagem. */
+  function efeitoPersonagem(campanhaId, personagemId, operacaoId, dados) {
+    return post(Object.assign({
+      acao: "efeito_personagem", campanhaId: campanhaId, personagemId: personagemId, operacaoId: operacaoId,
+    }, dados || {}));
+  }
+
+  function lerImagemDoTurno(campanhaId, combateId) {
+    return post({ acao: "ler_imagem_do_turno", campanhaId: campanhaId, combateId: combateId });
+  }
+
   function atualizarCombate(campanhaId, combateId, rev, opId, ops) {
     return post({
       acao: "atualizar_combate", campanhaId: campanhaId, combateId: combateId,
@@ -858,6 +875,8 @@
     listarCombates: listarCombates,
     salvarCombate: salvarCombate,
     atualizarCombate: atualizarCombate,
+    efeitoPersonagem: efeitoPersonagem,
+    lerImagemDoTurno: lerImagemDoTurno,
     excluirCombate: excluirCombate,
 
     frase: frase,

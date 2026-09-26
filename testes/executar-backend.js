@@ -4142,6 +4142,7 @@ t.grupo("Cache — o que fica guardado entre requisições");
 t.grupo("Condições — o combate conta só o início do turno do personagem, e uma vez");
 
 await (async () => {
+  (0, eval)(await Deno.readTextFile(new URL("../js/ordem/efeitos.js", import.meta.url)));
   (0, eval)(await Deno.readTextFile(new URL("../js/ordem/condicoes.js", import.meta.url)));
   const CD = globalThis.RAMAOrdemCondicoes;
 
@@ -4379,40 +4380,73 @@ await (async () => {
   comoMestra({ acao: "salvar_campanha", campanhaId: mesa, dados: { ocultarStatusJogadores: false } });
   t.ok("desligada a ocultação, voltam", (cartao(beto, pLia).condicoes || []).length > 0);
 
-  /* ---- Enlouquecendo e os contadores da mesa, de combate em combate ---- */
+  /* ---- Enlouquecendo e a duração dos efeitos, de combate em combate ---- */
+  const EF = globalThis.RAMAOrdemEfeitos;
+  const aplicacao = (nome, duracao, extra) => EF.criarInstancia(Object.assign({
+    modelo: "cond:abalado", nome, duracao, quando: new Date(Date.now() - 60000).toISOString(),
+  }, extra || {}));
+  const efeito = (id, nome) => cond(id).efeitos.filter((x) => x.nome === nome)[0];
   naFicha(comoBeto, pBeto, (c) => {
     CD.ativar(c, "enlouquecendo", QUANDO);
-    CD.configurarDaMesa(c, "exaustao", { usar: true, limite: 5 });
-    CD.ativar(c, "exaustao", QUANDO);
-    CD.configurarDaMesa(c, "desmaio", { usar: true });
+    EF.aplicar(c, aplicacao("Abalado por 3 turnos", { tipo: "turnos", turnos: 3, contador: "alvo", momento: "inicio" }), "nova");
+    EF.aplicar(c, EF.criarInstancia({ nome: "Até o fim do 2º turno da Sombra", origem: { tipo: "criatura", nome: "Sombra" },
+      modificadores: [{ alvo: "defesa", tipo: "bonus", valor: -2 }],
+      duracao: { tipo: "turnos", turnos: 2, contador: "participante", momento: "fim", participante: { id: "c-som", nome: "Sombra" } },
+      quando: new Date(Date.now() - 60000).toISOString() }), "nova");
+    EF.aplicar(c, EF.criarInstancia({ nome: "Pela cena", duracao: { tipo: "cena" } }), "nova");
   });
   const combate3 = novoCombate("Corredor");
   const operar3 = operador(combate3);
+  const fimDe = (rodada, participante) => "cf:" + combate3 + ":" + rodada + ":" + participante;
   operar3([{ tipo: "adicionar", participantes: [
     { id: "p-beto", tipo: "personagem", personagemId: pBeto, ordem: 10 },
     { id: "c-som", tipo: "criatura", nome: "Sombra", ordem: 5, snapshot: { status: [{ id: "vida", nome: "Vida", atual: 9, maximo: 9 }] } },
   ] }]);
   operar3([{ tipo: "estado", valor: "ativo" }]);
-  t.iguais("o início do turno conta em cada condição ativa: enlouquecendo", ids(pBeto, "enlouquecendo"), [operar3.ev(1, "p-beto")]);
-  t.iguais("  e o contador da mesa ligado e ativo (exaustão)", ids(pBeto, "exaustao"), [operar3.ev(1, "p-beto")]);
-  t.iguais("  mas não o contador ligado e inativo (desmaio)", ids(pBeto, "desmaio"), []);
+  t.iguais("o início do turno conta em enlouquecendo", ids(pBeto, "enlouquecendo"), [operar3.ev(1, "p-beto")]);
+  t.iguais("  e na duração do efeito que conta os turnos do afetado", efeito(pBeto, "Abalado por 3 turnos").eventos.map((e) => e.id), [operar3.ev(1, "p-beto")]);
+  t.igual("  mas não no que conta o FIM dos turnos da Sombra", efeito(pBeto, "Até o fim do 2º turno da Sombra").eventos.length, 0);
+  t.igual("  nem no que dura a cena", efeito(pBeto, "Pela cena").eventos.length, 0);
 
   naFicha(comoBeto, pBeto, (c) => CD.encerrar(c, "enlouquecendo"));
   operar3.proximo(2);
   t.igual("curada a Sanidade, enlouquecendo para de contar", ids(pBeto, "enlouquecendo").length, 1);
-  t.igual("  e a exaustão, que segue ativa, conta", ids(pBeto, "exaustao").length, 2);
+  t.igual("  e o efeito, que segue valendo, conta o segundo turno", efeito(pBeto, "Abalado por 3 turnos").eventos.length, 2);
+  t.iguais("o fim do turno da Sombra conta no efeito que conta os turnos DELA — no personagem afetado",
+    efeito(pBeto, "Até o fim do 2º turno da Sombra").eventos.map((e) => e.id), [fimDe(1, "c-som")]);
   naFicha(comoBeto, pBeto, (c) => CD.ativar(c, "enlouquecendo", QUANDO));
   operar3.proximo(2);
   t.iguais("enlouquecendo de novo: a contagem continua", ids(pBeto, "enlouquecendo"), [operar3.ev(1, "p-beto"), operar3.ev(3, "p-beto")]);
+  const abalado = efeito(pBeto, "Abalado por 3 turnos");
+  t.ok("três turnos contados: o efeito terminou pela duração — e não conta mais", abalado.eventos.length === 3 && !EF.ativa(EF.normalizarInstancia(abalado)));
+  const daSombra = efeito(pBeto, "Até o fim do 2º turno da Sombra");
+  t.ok("  o da Sombra também, no fim do 2º turno dela", daSombra.eventos.length === 2 && !EF.ativa(EF.normalizarInstancia(daSombra)));
 
   /* Voltar o turno não é começar um turno: quem recebe a vez de volta não
-     conta de novo — nem numa condição que ganhou depois do início dele. */
+     conta de novo — nem num efeito que ganhou depois do início dele. */
   operar3.proximo();
-  naFicha(comoBeto, pBeto, (c) => CD.ativar(c, "desmaio", QUANDO));
+  naFicha(comoBeto, pBeto, (c) => EF.aplicar(c, EF.criarInstancia({ nome: "Ganho no turno da Sombra",
+    duracao: { tipo: "turnos", turnos: 2, contador: "alvo", momento: "inicio" } }), "nova"));
   operar3.voltar();
-  t.iguais("voltar a vez a quem ganhou uma condição depois do início do turno não conta aquele início", ids(pBeto, "desmaio"), []);
+  t.iguais("voltar a vez a quem ganhou um efeito depois do início do turno não conta aquele início", efeito(pBeto, "Ganho no turno da Sombra").eventos, []);
   t.iguais("  nem conta de novo o que já estava contado", ids(pBeto, "enlouquecendo"), [operar3.ev(1, "p-beto"), operar3.ev(3, "p-beto")]);
+
+  /* Aplicar durante um turno não gasta aquele turno: um efeito contado no
+     fim dos turnos do afetado, aplicado no turno dele, não perde um turno
+     quando esse mesmo turno termina. */
+  naFicha(comoBeto, pBeto, (c) => CD.encerrar(c, "enlouquecendo"));
+  naFicha(comoBeto, pBeto, (c) => EF.aplicar(c, EF.criarInstancia({ nome: "Até o fim do próximo turno",
+    duracao: { tipo: "turnos", turnos: 1, contador: "alvo", momento: "fim" } }), "nova"));
+  operar3.proximo();
+  t.igual("o fim do turno em que o efeito foi aplicado não conta", efeito(pBeto, "Até o fim do próximo turno").eventos.length, 0);
+  operar3.proximo(2);
+  t.iguais("  o fim do turno seguinte, sim — e aí ele termina", efeito(pBeto, "Até o fim do próximo turno").eventos.map((e) => e.id), [fimDe(4, "p-beto")]);
+  operar3.voltar();
+  t.igual("voltar do turno seguinte desfaz aquele fim, e o efeito volta a valer", efeito(pBeto, "Até o fim do próximo turno").eventos.length, 0);
   operar3([{ tipo: "estado", valor: "encerrado" }]);
+  t.ok("encerrar o combate não termina os efeitos nem zera a contagem",
+    efeito(pBeto, "Pela cena").encerrado === null && ids(pBeto, "enlouquecendo").length === 2);
+  naFicha(comoBeto, pBeto, (c) => CD.ativar(c, "enlouquecendo", QUANDO));
 
   const combate4 = novoCombate("Escada");
   const operar4 = operador(combate4);
@@ -4426,6 +4460,9 @@ await (async () => {
   const cenaNova = CD.normalizar(cond(pBeto));
   t.ok("cena nova zera as contagens e mantém a condição ativa",
     CD.contagem(cenaNova, "enlouquecendo") === 0 && cenaNova.enlouquecendo.ativa === true);
+  t.ok("  e encerra só os efeitos que duravam a cena",
+    efeito(pBeto, "Pela cena").encerrado && efeito(pBeto, "Pela cena").encerrado.motivo === "cena" &&
+    efeito(pBeto, "Ganho no turno da Sombra").encerrado === null);
   operar4.proximo();
   t.igual("  e os inícios seguintes contam na cena nova", CD.contagem(CD.normalizar(cond(pBeto)), "enlouquecendo"), 1);
 
@@ -4528,11 +4565,13 @@ t.grupo("Condições — as regras do navegador e as do servidor contam igual");
   const aleatorio = () => { semente = (semente * 1103515245 + 12345) % 2147483648; return semente / 2147483648; };
   const inteiro = (min, max) => min + Math.floor(aleatorio() * (max - min + 1));
   const copia = (x) => JSON.parse(JSON.stringify(x));
-  const CHAVES = ["morrendo", "enlouquecendo", "exaustao", "desmaio"];
-  const rastro = (c, chave) => (chave === "exaustao" || chave === "desmaio") ? c.mesa[chave] : c[chave];
-  const retrato = (c) => JSON.stringify(CHAVES.map((k) => [
-    rastro(c, k).eventos.map((e) => e.id + "|" + e.origem + "|" + e.cena), rastro(c, k).descartados]));
+  const EF = globalThis.RAMAOrdemEfeitos;
+  const CHAVES = ["morrendo", "enlouquecendo"];
+  const retrato = (c) => JSON.stringify([CHAVES.map((k) => [
+    c[k].eventos.map((e) => e.id + "|" + e.origem + "|" + e.cena), c[k].descartados]),
+    (c.efeitos || []).map((x) => [x.id, x.eventos.map((e) => e.id + "|" + e.origem), x.descartados, !!x.encerrado])]);
   const publico = (lista) => JSON.stringify(lista.map((x) => [x.chave, x.nome, x.oficial, x.ativa, x.contagem, x.limite]));
+  const PARTES = ["p1", "p2", "p3"];
 
   let divergencias = 0;
   let casos = 0;
@@ -4547,34 +4586,63 @@ t.grupo("Condições — as regras do navegador e as do servidor contam igual");
     if (aleatorio() < 0.8) CD.novaCena(c, QUANDO);
     c.integrarCombate = aleatorio() < 0.85;
     ["morrendo", "enlouquecendo"].forEach((ch) => { if (aleatorio() < 0.6) CD.ativar(c, ch, QUANDO); });
-    ["exaustao", "desmaio"].forEach((ch) => {
-      CD.configurarDaMesa(c, ch, { usar: aleatorio() < 0.6, limite: [null, 1, 2, 5, 20][inteiro(0, 4)] });
-      if (aleatorio() < 0.6) CD.ativar(c, ch, QUANDO);
-    });
+    /* Aplicações sorteadas: condição do livro ou efeito, cena ou turnos,
+       contando o afetado ou outro participante, no início ou no fim. */
+    const quantas = inteiro(0, 4);
+    for (let q = 0; q < quantas; q++) {
+      const turnos = aleatorio() < 0.7;
+      const deOutro = aleatorio() < 0.4;
+      EF.aplicar(c, EF.criarInstancia({
+        modelo: aleatorio() < 0.5 ? "cond:" + ["abalado", "vulneravel", "lento", "exausto"][inteiro(0, 3)] : "",
+        nome: "Efeito " + q,
+        duracao: turnos ? { tipo: "turnos", turnos: inteiro(1, 3), momento: aleatorio() < 0.5 ? "inicio" : "fim",
+          contador: deOutro ? "participante" : "alvo", participante: deOutro ? { id: PARTES[inteiro(0, 2)], nome: "X" } : undefined }
+          : { tipo: ["cena", "ateRemover"][inteiro(0, 1)] },
+        quando: ["2026-09-25T11:00:00.000Z", "2026-09-25T12:30:00.000Z"][inteiro(0, 1)],
+      }), "nova");
+    }
     /* Um início de uma cena anterior, que não pode contar nesta. */
     if (aleatorio() < 0.3) c.morrendo.eventos.push({ id: "cb:velho:1:p1", origem: "combate", cena: "cena-anterior", em: QUANDO });
 
     const navegador = copia(c);
     const servidor = { ordem: { condicoes: copia(c) } };
+    const meu = PARTES[inteiro(0, 2)];
 
-    for (let passo = 0; passo < 14; passo++) {
+    for (let passo = 0; passo < 16; passo++) {
       const sorte = aleatorio();
-      const id = CD.idDoTurno("comb-" + inteiro(1, 2), inteiro(1, 4), "p" + inteiro(1, 3));
-      comparar("id do turno", id, idDoInicioDeTurno(id.split(":")[1], id.split(":")[2], id.split(":")[3]));
-      if (sorte < 0.55) {
-        const evento = { id, rodada: 1, combate: "comb", em: QUANDO };
-        comparar("início", JSON.stringify(CD.registrarInicioDeTurno(navegador, evento)), JSON.stringify(registrarInicioNaFicha(servidor, copia(evento))));
+      const quem = PARTES[inteiro(0, 2)];
+      const rodada = inteiro(1, 4);
+      const combateId = "comb-" + inteiro(1, 2);
+      const id = CD.idDoTurno(combateId, rodada, quem);
+      const idFim = CD.idDoFimDeTurno(combateId, rodada, quem);
+      comparar("id do turno", id, idDoInicioDeTurno(combateId, rodada, quem));
+      comparar("id do fim do turno", idFim, idDoFimDeTurno(combateId, rodada, quem));
+      if (sorte < 0.4) {
+        const ev = { tipo: "inicio", id, participanteId: quem, rodada: 1, combate: "comb", em: QUANDO };
+        const n = CD.registrarTurno(navegador, ev, meu);
+        const s1 = quem === meu ? registrarInicioNaFicha(servidor, { id, rodada: 1, combate: "comb", em: QUANDO }) : [];
+        const s2 = registrarTurnoNosEfeitos(servidor.ordem.condicoes, ev, meu);
+        comparar("início", JSON.stringify([n.condicoes, n.efeitos]), JSON.stringify([s1, s2]));
+      } else if (sorte < 0.6) {
+        const ev = { tipo: "fim", id: idFim, participanteId: quem, desde: "2026-09-25T12:00:00.000Z", em: QUANDO };
+        comparar("fim", JSON.stringify(CD.registrarTurno(navegador, ev, meu).efeitos), JSON.stringify(registrarTurnoNosEfeitos(servidor.ordem.condicoes, ev, meu)));
       } else if (sorte < 0.8) {
-        comparar("retirada", JSON.stringify(CD.retirarInicioDeTurno(navegador, id)), JSON.stringify(retirarInicioDaFicha(servidor, id)));
+        const alvo = aleatorio() < 0.5 ? id : idFim;
+        const n = CD.retirarTurno(navegador, alvo);
+        comparar("retirada", JSON.stringify([n.condicoes, n.efeitos]),
+          JSON.stringify([retirarInicioDaFicha(servidor, alvo), retirarTurnoDosEfeitos(servidor.ordem.condicoes, alvo)]));
       } else {
         /* O que a jogadora faz na ficha entre um turno e outro — gravado,
            o servidor recebe exatamente o mesmo estado. */
-        const ch = CHAVES[inteiro(0, 3)];
-        const acao = inteiro(0, 3);
+        const ch = CHAVES[inteiro(0, 1)];
+        const acao = inteiro(0, 5);
+        const alvoEf = (navegador.efeitos[inteiro(0, Math.max(0, navegador.efeitos.length - 1))] || {}).id;
         [navegador, servidor.ordem.condicoes].forEach((alvo) => {
           if (acao === 0) CD.encerrar(alvo, ch);
           else if (acao === 1) CD.ativar(alvo, ch, QUANDO);
           else if (acao === 2) CD.corrigirMenos(alvo, ch);
+          else if (acao === 3 && alvoEf) EF.encerrar(alvo, alvoEf, "manual", "", QUANDO);
+          else if (acao === 4 && alvoEf) EF.corrigirTurno(alvo, alvoEf);
           else alvo.integrarCombate = !alvo.integrarCombate;
         });
       }
@@ -4582,11 +4650,107 @@ t.grupo("Condições — as regras do navegador e as do servidor contam igual");
     }
     comparar("resumo público", publico(CD.resumoPublico(navegador)), publico(resumoPublicoDeCondicoes(servidor.ordem)));
   }
-  t.igual("300 fichas sorteadas — início, retirada, correções e resumo público: nenhuma divergência", divergencias, 0,
-  );
+  t.igual("300 fichas sorteadas — início, fim, retirada, correções, efeitos e resumo público: nenhuma divergência", divergencias, 0);
   if (primeiras.length) primeiras.forEach((p) => t.ok("  divergência: " + p, false));
-  t.ok("  (e os casos foram mesmo comparados)", casos > 8000);
+  t.ok("  (e os casos foram mesmo comparados)", casos > 10000);
   t.igual("o id do turno não aceita caracteres de fora do formato", idDoInicioDeTurno("comb 1", 1, "p1"), "");
+})();
+
+t.grupo("Efeitos pelo servidor — quem pode aplicar, repetição e o que o jogador recebe do combate");
+
+await (async () => {
+  const EF = globalThis.RAMAOrdemEfeitos;
+  preparar();
+  const mestra = novaConta("mestra2");
+  const lia = novaConta("lia2");
+  const beto = novaConta("beto2");
+  const intrusa = novaConta("intrusa2");
+  const comoMestra = comoFn(mestra);
+  const comoLia = comoFn(lia);
+  const comoBeto = comoFn(beto);
+  const comoIntrusa = comoFn(intrusa);
+
+  const mesa = comoMestra({ acao: "criar_campanha", dados: { nome: "Arquivo" } }).dados.id;
+  comoMestra({ acao: "salvar_participantes", campanhaId: mesa,
+    membros: [{ userId: lia.id, papel: "jogador" }, { userId: beto.id, papel: "jogador" }] });
+  const ficha = (nome) => ({ nome, tipoFicha: "ordem", schemaVersion: 11,
+    ordem: { classe: "combatente", origem: "militar", nex: 10, atributos: { agi: 1, for: 1, int: 1, pre: 1, vig: 1 } } });
+  const pLia = comoLia({ acao: "criar_personagem", dados: ficha("Lia") }).dados.id;
+  const pBeto = comoBeto({ acao: "criar_personagem", dados: ficha("Beto") }).dados.id;
+  comoLia({ acao: "vincular_personagem", campanhaId: mesa, personagemId: pLia });
+  comoBeto({ acao: "vincular_personagem", campanhaId: mesa, personagemId: pBeto });
+
+  let seq = 0;
+  const op = () => "efeito-teste-" + String(++seq).padStart(6, "0");
+  const efeito = (modelo, extra) => Object.assign({ id: "ef-" + String(++seq).padStart(8, "0"), modelo, nome: modelo ? modelo.split(":")[1] : "Efeito",
+    duracao: { tipo: "cena" }, origem: { tipo: "manual", nome: "" }, modificadores: [] }, extra || {});
+  const aplicar = (como, pid, ef, opId) => como({ acao: "efeito_personagem", campanhaId: mesa, personagemId: pid,
+    operacaoId: opId || op(), op: "aplicar", efeito: ef });
+  const efeitosDe = (pid) => comoMestra({ acao: "ler_personagem", personagemId: pid }).dados.ordem.condicoes.efeitos || [];
+
+  const proprio = aplicar(comoLia, pLia, efeito("cond:abalado", { aplicadoPor: { id: "forjado", nome: "Outra pessoa", papel: "mestre" }, aplicadoEm: "2000-01-01T00:00:00.000Z" }));
+  const gravado = efeitosDe(pLia)[0];
+  t.ok("a jogadora aplica uma condição no próprio personagem", proprio.ok && !!gravado && gravado.modelo === "cond:abalado");
+  t.ok("  quem aplicou e quando vêm da sessão e do servidor, não do pedido",
+    gravado.aplicadoPor.id === lia.id && gravado.aplicadoPor.papel === "jogador" && gravado.aplicadoEm !== "2000-01-01T00:00:00.000Z");
+  t.ok("a mestra aplica no personagem da campanha", aplicar(comoMestra, pBeto, efeito("cond:caido")).ok &&
+    efeitosDe(pBeto).some((x) => x.modelo === "cond:caido" && x.aplicadoPor.papel === "mestre"));
+  const alheio = aplicar(comoLia, pBeto, efeito("cond:cego"));
+  t.ok("a jogadora NÃO aplica no personagem de outro jogador, mesmo trocando o id",
+    !alheio.ok && alheio.erro === "nao_encontrado" && !efeitosDe(pBeto).some((x) => x.modelo === "cond:cego"));
+  t.ok("  nem quem está fora da campanha", !aplicar(comoIntrusa, pLia, efeito("cond:cego")).ok);
+  const outraMesa = comoMestra({ acao: "criar_campanha", dados: { nome: "Outra" } }).dados.id;
+  const trocada = comoMestra({ acao: "efeito_personagem", campanhaId: outraMesa, personagemId: pBeto, operacaoId: op(), op: "aplicar", efeito: efeito("cond:cego") });
+  t.ok("  nem por uma campanha que não é a do personagem", !trocada.ok && trocada.erro === "nao_encontrado");
+
+  const repetido = efeito("cond:fraco");
+  const opRep = op();
+  aplicar(comoLia, pLia, repetido, opRep);
+  const deNovo = aplicar(comoLia, pLia, repetido, opRep);
+  t.ok("o mesmo pedido repetido (resposta perdida, clique duplo) aplica uma vez",
+    deNovo.ok && efeitosDe(pLia).filter((x) => x.modelo === "cond:fraco").length === 1);
+  t.igual("  e a mesma aplicação com outro pedido também não duplica",
+    (aplicar(comoLia, pLia, repetido), efeitosDe(pLia).filter((x) => x.modelo === "cond:fraco").length), 1);
+  t.ok("Morrendo não vira um efeito paralelo: vai pelo rastreador",
+    !aplicar(comoLia, pLia, efeito("cond:morrendo")).ok && !efeitosDe(pLia).some((x) => x.modelo === "cond:morrendo"));
+  const rastro = comoLia({ acao: "efeito_personagem", campanhaId: mesa, personagemId: pLia, operacaoId: op(), op: "rastreador", chave: "morrendo" });
+  t.ok("  e o rastreador liga morrendo", rastro.ok && comoMestra({ acao: "ler_personagem", personagemId: pLia }).dados.ordem.condicoes.morrendo.ativa);
+  const enc = comoLia({ acao: "efeito_personagem", campanhaId: mesa, personagemId: pLia, operacaoId: op(), op: "encerrar", efeitoId: gravado.id });
+  t.ok("encerrar pelo servidor marca a aplicação como encerrada, sem apagá-la",
+    enc.ok && efeitosDe(pLia).some((x) => x.id === gravado.id && x.encerrado));
+
+  /* Combate: vida das criaturas, imagem do turno. */
+  const combate = comoMestra({ acao: "salvar_combate", campanhaId: mesa, dados: {
+    nome: "Porão", estado: "preparando", visiveis: [lia.id, beto.id], participantes: [
+      { id: "pt-lia", tipo: "personagem", personagemId: pLia, nome: "Lia", ordem: 15 },
+      { id: "pt-cr", tipo: "criatura", nome: "Existido", ordem: 10, snapshot: { nome: "Existido", status: [{ id: "v", nome: "Vida", atual: 17, maximo: 30 }] } },
+    ] } }).dados.id;
+  let rev = 1;
+  const operar = (ops, como) => {
+    const r = (como || comoMestra)({ acao: "atualizar_combate", campanhaId: mesa, combateId: combate, rev, opId: op(), ops });
+    if (r.ok) rev = r.rev;
+    return r;
+  };
+  const doJogador = () => comoLia({ acao: "listar_combates", campanhaId: mesa }).dados.find((c) => c.id === combate);
+  const daMestra = () => comoMestra({ acao: "listar_combates", campanhaId: mesa }).dados.find((c) => c.id === combate);
+  const criaturaTexto = () => JSON.stringify(doJogador().participantes.find((p) => p.tipo === "criatura"));
+  t.ok("vida das criaturas: oculta por padrão — nada de PV, máximo, porcentagem ou atributos na resposta do jogador",
+    doJogador().config.mostrarVidaCriaturas === false && !/17|30|atual|maximo|snapshot|status/.test(criaturaTexto()));
+  t.ok("  a mestra sempre vê", JSON.stringify(daMestra().participantes.find((p) => p.tipo === "criatura")).indexOf('"atual":17') >= 0);
+  t.ok("  jogador não muda a configuração", !operar([{ tipo: "config", mostrarVidaCriaturas: true }], comoLia).ok);
+  t.ok("  a mestra liga", operar([{ tipo: "config", mostrarVidaCriaturas: true }]).ok);
+  const vis = doJogador().participantes.find((p) => p.tipo === "criatura");
+  t.ok("  ligada, o jogador recebe só o resumo da vida", !!vis.vida && vis.vida.atual === 17 && vis.vida.maximo === 30 && !vis.snapshot);
+  operar([{ tipo: "config", mostrarVidaCriaturas: false }]);
+  t.ok("  desligada de novo, some da resposta", !/"vida"/.test(criaturaTexto()));
+
+  const semTurno = comoLia({ acao: "ler_imagem_do_turno", campanhaId: mesa, combateId: combate });
+  t.ok("em preparação não há turno ativo, nem imagem", !semTurno.ok || !semTurno.dados || !semTurno.dados.participanteId);
+  operar([{ tipo: "estado", valor: "ativo" }]);
+  const img = comoLia({ acao: "ler_imagem_do_turno", campanhaId: mesa, combateId: combate });
+  t.ok("iniciado, o jogador recebe quem tem o turno", img.ok && img.dados.participanteId === "pt-lia" && img.dados.tipo === "personagem");
+  t.ok("  e só o necessário: sem ficha, sem status", Object.keys(img.dados).sort().join(",") === "imagem,nome,participanteId,tipo");
+  t.ok("quem não vê o combate não recebe a imagem", !comoIntrusa({ acao: "ler_imagem_do_turno", campanhaId: mesa, combateId: combate }).ok);
 })();
 
 /* =====================================================================

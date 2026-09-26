@@ -690,6 +690,34 @@ ordem.
 
 As regras de turno estão em [CAMPAIGNS.md](CAMPAIGNS.md#turnos-e-rodadas).
 
+Operação `{ tipo: "config", mostrarVidaCriaturas: boolean }` (v2.20): só o mestre.
+O combate devolvido ganha `config` e, para jogadores, `ativo { participanteId, tipo,
+nome }` e — só com a configuração ligada — `vida { atual, maximo }` nas criaturas.
+
+### `efeito_personagem` (v2.20)
+
+`{ campanhaId, personagemId, operacaoId, op, ... }`, repetível pela `operacaoId`
+(o mesmo pedido não aplica duas vezes). `op`:
+
+- `aplicar` — `efeito` (uma instância, ver CHARACTER_SCHEMA.md) e, opcional,
+  `encerrar` (id da aplicação que a repetição substitui). O servidor normaliza os
+  modificadores, recusa modelos de rastreador (morrendo, enlouquecendo,
+  inconsciente, perturbado) e imunidade (`dados_invalidos`, `motivo: "imune"`), e
+  grava `aplicadoPor`/`aplicadoEm` pela sessão;
+- `renovar` — `efeitoId`, `duracao`;
+- `encerrar` — `efeitoId`;
+- `rastreador` — `chave` (`morrendo`, `enlouquecendo`, `inconsciente`,
+  `perturbado`) e, opcional, `encerrar`.
+
+Dono ou mestre da campanha; outro jogador recebe `nao_encontrado`, mesmo
+trocando o id. Grava pela mesma gravação da ficha (revisão, blocos, projeção).
+
+### `ler_imagem_do_turno` (v2.20)
+
+`{ campanhaId, combateId }` → `{ participanteId, tipo, nome, imagem }` de quem tem
+o turno: a foto do personagem ou a imagem da criatura. Só para quem pode ver o
+combate, e só com o combate em andamento.
+
 ---
 
 ## Segurança — o contrato

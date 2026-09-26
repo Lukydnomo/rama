@@ -718,9 +718,10 @@
      dado para rolar. Só entram as versões com dano preenchido. */
   function faixaDeDanos(ctx, ritual) {
     var comRolagem = F.versoesComRolagem(ritual);
-    if (!comRolagem.length) return null;
+    var usar = botaoUsarRitual(ctx, ritual);
+    if (!comRolagem.length) return usar ? el("div.ritual-danos", {}, [usar]) : null;
 
-    var linhas = [];
+    var linhas = usar ? [usar] : [];
     comRolagem.forEach(function (v) {
       F.rolagensDaVersao(v).forEach(function (rolagem) {
         var expressao = (rolagem.expressao || "") + (rolagem.extra ? (rolagem.expressao ? "+" : "") + rolagem.extra : "");
@@ -747,6 +748,24 @@
     });
 
     return linhas.length ? el("div.ritual-danos", {}, linhas) : null;
+  }
+
+  /* "Usar ritual" (fichas de Ordem): a conjuração com versão, custo e
+     componentes revistos antes de confirmar (js/paginas/ficha-consumo.js).
+     Rolar o dano pela faixa continua não gastando nada — o gasto é do
+     uso, não da rolagem. Vale também para ritual sem rolagem nenhuma. */
+  function botaoUsarRitual(ctx, ritual) {
+    if (!F.ehDeOrdem(ctx.ficha) || !global.RAMASecaoConsumo) return null;
+    return el("button.r-botao.r-botao--mini.ritual-usar", {
+      type: "button", texto: "Usar ritual",
+      "aria-label": "Usar " + ritual.nome,
+      dataset: { foco: "usar-" + ritual.id },
+      onclick: function (ev) {
+        ev.preventDefault();
+        ev.stopPropagation();
+        global.RAMASecaoConsumo.usarRitual(ctx, ritual);
+      },
+    });
   }
 
   /* =================================================================

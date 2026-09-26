@@ -1343,7 +1343,11 @@
 
       t.grupo("Ordem — regras opcionais");
 
-      t.igual("onze regras opcionais", OP.REGRAS.length, 11);
+      /* v2.20: + contagem de munição (OPRPG p. 174) e controle de
+         componentes ritualísticos (da mesa). */
+      t.igual("treze regras opcionais", OP.REGRAS.length, 13);
+      t.ok("as duas novas começam desligadas numa ficha nova",
+        !OP.ligada(R2.fichaVazia(), "contagemMunicao") && !OP.ligada(R2.fichaVazia(), "controleComponentes"));
       t.ok("todas com fonte e página",
         OP.REGRAS.every(function (r) { return r.fonte && r.pagina > 0; }));
       t.ok("todas com resumo e efeito",
@@ -4455,6 +4459,16 @@
     }
 
     /* =================================================================
+       v2.20 — CONDIÇÕES E EFEITOS APLICADOS, MUNIÇÃO E COMPONENTES
+       ================================================================= */
+
+    var EFs = global.RAMAOrdemEfeitos;
+    var CSs = global.RAMAOrdemConsumo;
+    if (EFs && CSs && CDs && RRs) {
+      casosDaV220(t, EFs, CDs, RRs, CSs, S, V, global.RAMASync);
+    }
+
+    /* =================================================================
        MIGRAÇÃO — FICHA ANTIGA (schema 1)
        ================================================================= */
 
@@ -4658,6 +4672,398 @@
   }
 
   /* =====================================================================
+     v2.20 — condições e efeitos aplicados, munição e componentes
+     ===================================================================== */
+
+  function casosDaV220(t, EF, CD, R, CS, S, V, SY) {
+    var INV_VAZIO = { itens: [] };
+    function fichaBase(extra) {
+      return R.normalizar(Object.assign({
+        classe: "combatente", nex: 5, origem: "militar",
+        atributos: { agi: 2, for: 2, int: 1, pre: 1, vig: 1 },
+        pericias: { luta: "treinado", pontaria: "treinado" },
+      }, extra || {}));
+    }
+    function aplicarCond(cond, chave, opcoes) {
+      var inst = EF.criarInstancia(Object.assign({ modelo: "cond:" + chave, alvoNome: "Alvo" }, opcoes || {}));
+      return EF.aplicar(cond, inst, (opcoes && opcoes.modo) || "nova");
+    }
+    function chaves(cond) { return EF.condicoesEfetivas(cond, {}).filter(function (e) { return !e.imune; }).map(function (e) { return e.chave; }); }
+
+    /* ---------------------------------------------------------------- */
+    t.grupo("Efeitos · a biblioteca de condições do livro");
+
+    var todas = EF.CONDICOES;
+    t.ok("a biblioteca traz as condições do apêndice (OPRPG p. 310-311), todas com id, nome, explicação e página",
+      todas.length >= 38 && todas.every(function (c) {
+        return /^[a-z][a-zA-Z]+$/.test(c.chave) && c.nome && c.texto && (c.pagina === 310 || c.pagina === 311 || c.pagina === 88);
+      }));
+    t.ok("  com ids únicos", todas.map(function (c) { return c.chave; }).filter(function (k, i, l) { return l.indexOf(k) === i; }).length === todas.length);
+    t.ok("  Exausto, Inconsciente, Fatigado, Vulnerável e Sangrando estão lá",
+      ["exausto", "inconsciente", "fatigado", "vulneravel", "sangrando"].every(function (k) { return !!EF.condicao(k); }));
+    t.ok("Morrendo e Enlouquecendo são rastreadores: o catálogo não substitui a lógica deles",
+      EF.condicao("morrendo").rastreador && EF.condicao("enlouquecendo").rastreador);
+    var cM = CD.vazio();
+    var rastro = aplicarCond(cM, "morrendo");
+    t.ok("  aplicar Morrendo pela biblioteca liga o rastreador, sem criar uma segunda contagem",
+      rastro.ok && rastro.acao === "rastreador" && !cM.efeitos.length);
+    var copiaDoModelo = JSON.stringify(EF.condicao("abalado"));
+    var cU = CD.vazio();
+    aplicarCond(cU, "abalado", { nome: "Abalado pela cena", modificadores: [{ alvo: "testes", tipo: "dados", valor: -2 }] });
+    t.ok("usar a condição como modelo e ajustar a aplicação não muda o catálogo", JSON.stringify(EF.condicao("abalado")) === copiaDoModelo);
+    t.ok("  a aplicação ajustada guarda o modelo de origem e fica marcada",
+      cU.efeitos[0].modelo === "cond:abalado" && cU.efeitos[0].personalizado === true);
+    var textoLivre = EF.normalizarInstancia(Object.assign({}, cU.efeitos[0], { descricao: "total = 2 + alert(1)", modificadores: [{ alvo: "testes", tipo: "bonus", valor: "2+3" }] }));
+    t.ok("texto livre é só texto: nenhum modificador sai de fórmula escrita",
+      textoLivre.descricao === "total = 2 + alert(1)" && textoLivre.modificadores.length === 0);
+
+    /* ---------------------------------------------------------------- */
+    t.grupo("Efeitos · Coincidência Forçada entra nas contas, nas parcelas e nas rolagens");
+
+    var fc = fichaBase();
+    var semEfeito = R.bonusDePericia(fc, "atletismo", INV_VAZIO).total;
+    var dadosAntes = R.dadoDePericia(fc, "atletismo").expressao;
+    var luta = R.bonusDePericia(fc, "luta", INV_VAZIO).total;
+    var grauAntes = JSON.stringify(fc.pericias);
+    var cf = EF.criarInstancia({
+      modelo: "ritual:op.ritual.coincidencia-forcada", nome: "Coincidência Forçada", versao: "Normal",
+      origem: { tipo: "ritual", nome: "Coincidência Forçada" },
+      modificadores: EF.ritualComEfeito("op.ritual.coincidencia-forcada").versoes.Normal,
+      duracao: { tipo: "cena" }, alvoNome: "Alvo", cena: fc.condicoes.cena.id,
+    });
+    EF.aplicar(fc.condicoes, cf, "nova");
+    var comEfeito = R.bonusDePericia(fc, "atletismo", INV_VAZIO);
+    t.igual("+2 no total de uma perícia destreinada", comEfeito.total, semEfeito + 2);
+    t.ok("  e a parcela aparece com o nome do efeito",
+      comEfeito.parcelas.some(function (p) { return /Coincidência Forçada/.test(p.rotulo) && p.valor === 2; }));
+    t.igual("  e numa treinada também", R.bonusDePericia(fc, "luta", INV_VAZIO).total, luta + 2);
+    t.igual("o número de dados não muda: bônus numérico e dado são coisas distintas", R.dadoDePericia(fc, "atletismo").expressao, dadosAntes);
+    t.ok("o treinamento e o bônus da ficha não foram tocados", JSON.stringify(fc.pericias) === grauAntes);
+    var faca = { id: "w1", tipo: "arma", nome: "Faca", dano: "1d4", critico: 19, multiplicador: 2,
+      ordem: { grupo: "arma", pericia: "luta", arma: { tipo: "corpoACorpo", empunhadura: "leve" } } };
+    var pistola = { id: "w2", tipo: "arma", nome: "Pistola", dano: "1d12", critico: 18, multiplicador: 2,
+      ordem: { grupo: "arma", pericia: "pontaria", arma: { tipo: "fogo", empunhadura: "leve", capacidade: 12, municao: "Balas curtas" } } };
+    var invArmas = { itens: [faca, pistola] };
+    t.igual("o ataque (um teste de Luta) leva o +2", R.armaEfetiva(fc, invArmas, faca).ataque.total, luta + 2);
+    t.igual("um teste de atributo puro não leva: o efeito é em testes de perícia",
+      EF.bonusNoTeste(fc.condicoes, {}, { atributo: "agi", atributoPuro: true }).valor, 0);
+    t.igual("a Esquiva (um número derivado, não um teste) fica como estava",
+      R.calcular(fc, INV_VAZIO).esquiva.total, R.calcular(fichaBase(), INV_VAZIO).esquiva.total);
+    EF.encerrar(fc.condicoes, cf.id, "manual", "teste");
+    t.igual("encerrado, o bônus sai na hora", R.bonusDePericia(fc, "atletismo", INV_VAZIO).total, semEfeito);
+    EF.reativar(fc.condicoes, cf.id);
+    t.igual("  e reativado, volta", R.bonusDePericia(fc, "atletismo", INV_VAZIO).total, semEfeito + 2);
+    var outraVez = EF.avaliarAplicacao(fc.condicoes, EF.criarInstancia({ modelo: cf.modelo, nome: cf.nome, origem: cf.origem, modificadores: cf.modificadores }));
+    t.ok("aplicar o mesmo ritual de novo é conflito: renovar, não somar", outraVez.ok && !!outraVez.conflito);
+    EF.aplicar(fc.condicoes, EF.criarInstancia({ modelo: cf.modelo, nome: cf.nome, origem: cf.origem, modificadores: cf.modificadores }), "renovar");
+    t.igual("  renovado, continua +2 — uma aplicação só", R.bonusDePericia(fc, "atletismo", INV_VAZIO).total, semEfeito + 2);
+    var outroRitual = EF.criarInstancia({ nome: "Outro ritual", origem: { tipo: "ritual", nome: "Outro" },
+      modificadores: [{ alvo: "pericias", tipo: "bonus", valor: 5 }] });
+    EF.aplicar(fc.condicoes, outroRitual, "nova");
+    var dois = R.bonusDePericia(fc, "atletismo", INV_VAZIO);
+    t.igual("dois rituais no mesmo número: vale o maior, não a soma (OPRPG p. 312)", dois.total, semEfeito + 5);
+    t.ok("  e o que não acumula aparece explicado",
+      dois.parcelas.some(function (p) { return /não acumula/.test(String(p.rotulo) + " " + String(p.detalhe || "")); }));
+    var hab = EF.criarInstancia({ nome: "Inspiração da mesa", origem: { tipo: "habilidade", nome: "Líder" },
+      modificadores: [{ alvo: "pericias", tipo: "bonus", valor: 1 }] });
+    EF.aplicar(fc.condicoes, hab, "nova");
+    t.igual("  uma habilidade é outra fonte: soma com o ritual", R.bonusDePericia(fc, "atletismo", INV_VAZIO).total, semEfeito + 6);
+    var nc = EF.novaCena(fc.condicoes);
+    t.ok("nova cena encerra os efeitos de cena", nc.mudou && R.bonusDePericia(fc, "atletismo", INV_VAZIO).total === semEfeito);
+
+    /* ---------------------------------------------------------------- */
+    t.grupo("Efeitos · corpo a corpo e à distância, e dados abaixo de um");
+
+    var fx = fichaBase();
+    aplicarCond(fx.condicoes, "caido");
+    var mel = R.armaEfetiva(fx, invArmas, faca);
+    var dist = R.armaEfetiva(fx, invArmas, pistola);
+    t.igual("caído: −2 dados no ataque corpo a corpo (2 de FOR − 2 = 0 → rola dois e fica com o pior)", mel.dado, "-2d20");
+    t.igual("  e nada no ataque à distância", dist.dado, "2d20");
+    t.igual("  a Defesa contra corpo a corpo e contra distância fica à parte, como aviso",
+      R.calcular(fx, INV_VAZIO).defesa.contextuais.length, 2);
+    t.iguais("expressão dos dados: 1 → 1d20, 0 → -2d20, −1 → -3d20",
+      [EF.expressaoDeDados(1), EF.expressaoDeDados(0), EF.expressaoDeDados(-1)], ["1d20", "-2d20", "-3d20"]);
+    var cAg = CD.vazio();
+    aplicarCond(cAg, "agarrado");
+    t.ok("restrição de uso fica separada dos números: Agarrado só ataca com armas leves",
+      EF.restricoes(cAg, {}).some(function (r) { return /armas leves/.test(typeof r === "string" ? r : JSON.stringify(r)); }));
+
+    /* ---------------------------------------------------------------- */
+    t.grupo("Efeitos · condições que trazem outras, repetição e imunidade");
+
+    var cD = CD.vazio();
+    var ag = aplicarCond(cD, "agarrado").instancia;
+    t.ok("Agarrado traz Desprevenido e Imóvel", chaves(cD).indexOf("desprevenido") >= 0 && chaves(cD).indexOf("imovel") >= 0);
+    t.igual("  a Defesa perde 5 uma vez só", EF.bonusEm(cD, {}, ["defesa"]).valor, -5);
+    aplicarCond(cD, "surpreendido");
+    t.igual("Surpreendido também traz Desprevenido: os −5 não somam", EF.bonusEm(cD, {}, ["defesa"]).valor, -5);
+    EF.encerrar(cD, ag.id, "manual", "");
+    t.ok("encerrar Agarrado não tira Desprevenido, que ainda vem de Surpreendido",
+      chaves(cD).indexOf("desprevenido") >= 0 && chaves(cD).indexOf("imovel") < 0);
+    var cR = CD.vazio();
+    aplicarCond(cR, "abalado");
+    var rep = EF.avaliarAplicacao(cR, EF.criarInstancia({ modelo: "cond:abalado" }));
+    t.ok("Abalado de novo: a tela pergunta, oferecendo Apavorado",
+      rep.ok && !!rep.conflito && !!rep.conflito.repeticao && rep.conflito.repeticao.chave === "apavorado");
+    t.igual("  sem escolher, nada muda sozinho", chaves(cR).join(","), "abalado");
+    aplicarCond(cR, "abalado", { modo: "repetir" });
+    t.ok("  escolhida a repetição, Abalado encerra e Apavorado entra",
+      chaves(cR).indexOf("apavorado") >= 0 && chaves(cR).indexOf("abalado") < 0 &&
+      cR.efeitos.some(function (x) { return x.modelo === "cond:abalado" && x.encerrado && x.encerrado.motivo === "repeticao"; }));
+    var cI = CD.vazio();
+    cI.imunidades = ["categoria:medo", "desprevenido"];
+    t.ok("imunidade a medo recusa Abalado", !aplicarCond(cI, "abalado").ok);
+    aplicarCond(cI, "agarrado");
+    t.ok("imune a Desprevenido: Agarrado entra, mas a Defesa não cai",
+      chaves(cI).indexOf("agarrado") >= 0 && chaves(cI).indexOf("desprevenido") < 0 && EF.bonusEm(cI, {}, ["defesa"]).valor === 0);
+    var cS = CD.vazio();
+    aplicarCond(cS, "sangrando");
+    t.ok("Sangrando mostra a ação (teste de Vigor) e não rola nada sozinho",
+      EF.acoes(cS, {}).some(function (a) { return /Vigor/.test(JSON.stringify(a)); }) && cS.efeitos[0].eventos.length === 0);
+
+    /* ---------------------------------------------------------------- */
+    t.grupo("Efeitos · duração em turnos, fim da cena e voltar turno");
+
+    var aplicadoEm = "2026-09-26T10:00:05.000Z";
+    function ev(r, p, tipo, desde) {
+      return { id: (tipo === "fim" ? "cf:" : "cb:") + "comb:" + r + ":" + p, tipo: tipo || "inicio", participanteId: p, desde: desde || "" };
+    }
+    var cT = CD.vazio();
+    var tur = aplicarCond(cT, "abalado", { quando: aplicadoEm, duracao: { tipo: "turnos", turnos: 2, contador: "alvo", momento: "inicio" } }).instancia;
+    EF.registrarTurno(cT, ev(1, "p-outro"), "p-eu");
+    t.igual("o turno de outro participante não conta", EF.turnosContados(tur), 0);
+    EF.registrarTurno(cT, ev(2, "p-eu"), "p-eu");
+    EF.registrarTurno(cT, ev(2, "p-eu"), "p-eu");
+    t.igual("o próprio início de turno conta — uma vez, mesmo repetido (recarga, duas abas)", EF.turnosContados(tur), 1);
+    EF.retirarTurno(cT, ev(2, "p-eu").id);
+    t.igual("voltar turno retira aquele turno", EF.turnosContados(tur), 0);
+    EF.registrarTurno(cT, ev(2, "p-eu"), "p-eu");
+    EF.registrarTurno(cT, ev(3, "p-eu"), "p-eu");
+    t.ok("dois turnos contados: terminou, e o modificador sai", !EF.ativa(tur) && EF.expirou(tur) && chaves(cT).length === 0);
+    EF.corrigirTurno(cT, tur.id);
+    t.ok("corrigir (−1) reabre a aplicação", EF.ativa(tur));
+    EF.registrarTurno(cT, ev(3, "p-eu"), "p-eu");
+    t.ok("  e o turno tirado à mão não volta a contar", EF.ativa(tur) && EF.turnosContados(tur) === 1);
+
+    var cF = CD.vazio();
+    var fim = aplicarCond(cF, "abalado", { quando: aplicadoEm, duracao: { tipo: "turnos", turnos: 1, contador: "alvo", momento: "fim" } }).instancia;
+    EF.registrarTurno(cF, ev(1, "p-eu", "fim", "2026-09-26T10:00:00.000Z"), "p-eu");
+    t.igual("aplicar durante um turno não gasta aquele turno: o fim dele não conta", EF.turnosContados(fim), 0);
+    EF.registrarTurno(cF, ev(2, "p-eu", "fim", "2026-09-26T10:01:00.000Z"), "p-eu");
+    t.ok("  o fim do turno seguinte conta, e a aplicação termina", !EF.ativa(fim));
+
+    var cP = CD.vazio();
+    var doOutro = aplicarCond(cP, "atordoado", { duracao: { tipo: "turnos", turnos: 1, contador: "participante", momento: "inicio", participante: { id: "p-mago", nome: "Mago" } } }).instancia;
+    EF.registrarTurno(cP, ev(1, "p-eu"), "p-eu");
+    t.igual("contando os turnos de outro participante, o do afetado não conta", EF.turnosContados(doOutro), 0);
+    EF.registrarTurno(cP, ev(1, "p-mago"), "p-eu");
+    t.ok("  o do participante escolhido conta", !EF.ativa(doOutro));
+
+    var cN = CD.vazio();
+    aplicarCond(cN, "abalado");
+    aplicarCond(cN, "caido", { duracao: { tipo: "ateRemover" } });
+    aplicarCond(cN, "fraco", { duracao: { tipo: "turnos", turnos: 3, contador: "alvo", momento: "inicio" } });
+    var nova = CD.novaCena(cN);
+    t.ok("nova cena encerra só os de cena", chaves(cN).indexOf("abalado") < 0 && chaves(cN).indexOf("caido") >= 0 && chaves(cN).indexOf("fraco") >= 0);
+    t.ok("  e diz quais terminaram", (nova.encerradas || []).indexOf("Abalado") >= 0);
+    var cMan = CD.vazio();
+    var man = aplicarCond(cMan, "abalado", { duracao: { tipo: "turnos", turnos: 2, contador: "alvo", momento: "inicio" } }).instancia;
+    EF.somarTurno(cMan, man.id);
+    t.igual("fora de combate, o turno é contado à mão", EF.turnosContados(man), 1);
+
+    /* ---------------------------------------------------------------- */
+    t.grupo("Munição · carregada e reserva, um saldo só");
+
+    function arsenal() {
+      return { itens: [
+        { id: "a-pis", tipo: "arma", nome: "Pistola", origemCatalogoId: "op.arma.pistola",
+          ordem: { grupo: "arma", arma: { tipo: "fogo", capacidade: 12, municao: "Balas curtas" } } },
+        { id: "a-smg", tipo: "arma", nome: "Submetralhadora", origemCatalogoId: "op.arma.submetralhadora",
+          ordem: { grupo: "arma", arma: { tipo: "fogo", automatica: true, capacidade: 20, municao: "Balas curtas" } } },
+        { id: "a-cd", tipo: "arma", nome: "Espingarda de cano duplo", origemCatalogoId: CS.CANO_DUPLO,
+          ordem: { grupo: "arma", arma: { tipo: "fogo", capacidade: 2, municao: "Cartuchos" } } },
+        { id: "a-arco", tipo: "arma", nome: "Arco", ordem: { grupo: "arma", arma: { tipo: "disparo", municao: "Flechas" } } },
+        { id: "m-bc", tipo: "item", nome: "Balas curtas", origemCatalogoId: "op.municao.balas-curtas", ordem: { grupo: "municao", quantidade: 2 } },
+        { id: "m-car", tipo: "item", nome: "Cartuchos", origemCatalogoId: "op.municao.cartuchos", ordem: { grupo: "municao", quantidade: 1 } },
+        { id: "m-fl", tipo: "item", nome: "Flechas", origemCatalogoId: "op.municao.flechas", ordem: { grupo: "municao", quantidade: 1 } },
+        { id: "faca", tipo: "arma", nome: "Faca", ordem: { grupo: "arma", arma: { tipo: "corpoACorpo" } } },
+      ] };
+    }
+    function item(inv, id) { return inv.itens.filter(function (i) { return i.id === id; })[0]; }
+    var inv = arsenal();
+    var ord = { consumos: [] };
+    var pis = item(inv, "a-pis"), bc = item(inv, "m-bc");
+    t.ok("armas de fogo e de disparo usam munição; a faca, não",
+      CS.usaMunicao(pis) && CS.usaMunicao(item(inv, "a-arco")) && !CS.usaMunicao(item(inv, "faca")));
+    t.igual("dois pacotes de balas: 40 ataques na reserva (OPRPG p. 174)", CS.reserva(bc), 40);
+    t.ok("a munição da arma é achada pelo nome do catálogo", CS.municaoDaArma(inv, pis).item === bc);
+    var semCatalogo = { id: "x", tipo: "arma", nome: "Pistola", ordem: { grupo: "arma", arma: { tipo: "fogo", municao: "op.municao.balas-curtas" } } };
+    t.ok("  e pelo id do catálogo, quando a ficha guardou o id", CS.municaoDaArma(inv, semCatalogo).item === bc);
+    var desc = CS.planoDeAtaque(inv, pis, "unico");
+    t.ok("arma descarregada: o ataque diz o motivo e oferece recarregar", !desc.ok && desc.acao === "recarregar" && /descarregada/.test(desc.motivo));
+    var rc = CS.recarregar(ord, inv, pis, "op-rec-1");
+    t.ok("recarregar tira da reserva o que entra na arma", rc.ok && CS.carregada(pis) === 12 && CS.reserva(bc) === 28);
+    t.ok("  o mesmo pedido de recarga, repetido, não tira de novo",
+      CS.recarregar(ord, inv, pis, "op-rec-1").repetido && CS.reserva(bc) === 28 && CS.carregada(pis) === 12);
+    var p1 = CS.planoDeAtaque(inv, pis, "unico");
+    t.ok("o plano mostra o gasto e o saldo depois, sem mexer em nada",
+      p1.ok && p1.gasto === 1 && p1.antes === 12 && p1.depois === 11 && CS.carregada(pis) === 12);
+    CS.aplicarAtaque(ord, inv, pis, p1, "op-atk-1");
+    CS.aplicarAtaque(ord, inv, pis, p1, "op-atk-1");
+    t.ok("o ataque confirmado gasta 1 da carregada — uma vez, com o clique repetido", CS.carregada(pis) === 11 && CS.reserva(bc) === 28);
+    t.igual("  e o registro de consumo guarda um ataque", ord.consumos.filter(function (x) { return x.tipo === "ataque"; }).length, 1);
+    var smg = item(inv, "a-smg");
+    CS.recarregar(ord, inv, smg, "op-rec-2");
+    t.ok("a submetralhadora carrega 20 da mesma reserva", CS.carregada(smg) === 20 && CS.reserva(bc) === 8);
+    var raj = CS.planoDeAtaque(inv, smg, "rajada");
+    t.ok("rajada gasta 10 balas (OPRPG p. 174)", raj.ok && raj.gasto === 10 && raj.depois === 10);
+    t.ok("  arma não automática não faz rajada", !CS.planoDeAtaque(inv, pis, "rajada").ok);
+    CS.aplicarAtaque(ord, inv, smg, raj, "op-raj-1");
+    CS.aplicarAtaque(ord, inv, smg, CS.planoDeAtaque(inv, smg, "rajada"), "op-raj-2");
+    var semBalas = CS.planoDeAtaque(inv, smg, "rajada");
+    t.ok("sem balas para a rajada: recusa com o motivo, e nunca saldo negativo",
+      !semBalas.ok && CS.carregada(smg) === 0 && !CS.aplicarAtaque(ord, inv, smg, semBalas, "op-raj-3").ok && CS.carregada(smg) === 0);
+    var rcIncomp = CS.planoDeRecarga(inv, smg);
+    t.ok("a recarga com a reserva curta enche o que dá, e avisa", rcIncomp.ok && rcIncomp.quanto === 8 && rcIncomp.incompleta);
+    var cdup = item(inv, "a-cd");
+    CS.recarregar(ord, inv, cdup, "op-rec-3");
+    var dc = CS.planoDeAtaque(inv, cdup, "doisCanos");
+    t.ok("cano duplo: disparar os dois canos gasta 2 cartuchos", dc.ok && dc.gasto === 2);
+    t.ok("  e só a espingarda de cano duplo faz isso", !CS.planoDeAtaque(inv, pis, "doisCanos").ok);
+    var pa = CS.planoDeAtaque(inv, item(inv, "a-arco"), "unico");
+    t.ok("arma sem carregador atira direto da reserva", pa.ok && pa.deOnde === "reserva" && pa.antes === 20);
+    CS.associar(pis, "m-car");
+    t.ok("associar outra munição muda a que a arma usa", CS.municaoDaArma(inv, pis).item === item(inv, "m-car"));
+    CS.associar(pis, "m-bc");
+    CS.repor(ord, bc, 1, "op-rep-1");
+    CS.repor(ord, bc, 1, "op-rep-1");
+    t.igual("repor um pacote soma 20 — uma vez (8 + 20)", CS.reserva(bc), 28);
+    t.ok("ajustar a reserva à mão fixa o saldo, sem passar dos pacotes",
+      CS.ajustarReserva(ord, bc, 15, "op-aj-1").ok && CS.reserva(bc) === 15 && !CS.ajustarReserva(ord, bc, 999, "op-aj-2").ok);
+    t.ok("carregadas ajustadas à mão ficam entre 0 e a capacidade",
+      CS.ajustarCarregada(ord, pis, 5, "op-aj-3").ok && CS.carregada(pis) === 5 && !CS.ajustarCarregada(ord, pis, 13, "op-aj-4").ok);
+    var itemNorm = global.RAMAOrdemInventario.dadosDoItem({ tipo: "arma", ordem: { grupo: "arma", contagem: { carregada: -4, municao: "m-bc" } } });
+    t.ok("a normalização nunca guarda carregada negativa", !itemNorm.contagem || !(itemNorm.contagem.carregada < 0));
+
+    /* ---------------------------------------------------------------- */
+    t.grupo("Componentes · o que o livro exige e o que é regra da mesa");
+
+    t.ok("rituais de Medo não usam componentes (OPRPG p. 119)", !CS.exigencia(null, { elemento: "medo" }).precisa);
+    t.ok("a afinidade dispensa os do seu elemento (OPRPG p. 114)", !CS.exigencia(null, { elemento: "sangue", afinidade: "sangue" }).precisa);
+    t.ok("  e não os de outro elemento", CS.exigencia(null, { elemento: "morte", afinidade: "sangue" }).precisa);
+    var controle = CS.normalizarControle({});
+    var invC = { itens: [{ id: "comp-en", tipo: "item", nome: "Componentes ritualísticos de Energia", origemCatalogoId: "op.paranormal.componentes", ordem: { quantidade: 1 } }] };
+    var pP = CS.planoDeRitual({ elemento: "energia", controle: controle, inventario: invC, controleLigado: true, custo: 1 });
+    t.ok("pelo livro, ter os componentes basta: nada é gasto ao conjurar",
+      pP.situacao.tem && !pP.consumirComponentes && !pP.consumirItem && !pP.avisos.length);
+    var semComp = CS.planoDeRitual({ elemento: "morte", controle: controle, inventario: invC, controleLigado: true, custo: 1 });
+    t.ok("sem componentes do elemento: aviso, sem bloquear", semComp.semComponentes && semComp.avisos.length === 1);
+    var dispensa = CS.planoDeRitual({ elemento: "morte", controle: controle, inventario: invC, controleLigado: true, custo: 1, dispensa: "camuflar" });
+    t.ok("Camuflar Ocultismo dispensa os componentes e custa +2 PE (OPRPG p. 33)", !dispensa.semComponentes && dispensa.custo === 3);
+    var desligado = CS.planoDeRitual({ elemento: "morte", controle: controle, inventario: invC, controleLigado: false, custo: 1 });
+    t.ok("com o controle desligado, nada de componente entra no plano", !desligado.situacao && !desligado.avisos.length);
+    controle.elementos.sangue = { modo: "quantidade", tem: false, quantidade: 3, unidade: "frascos", porUso: 2 };
+    var mesa = CS.planoDeRitual({ elemento: "sangue", controle: controle, inventario: INV_VAZIO, controleLigado: true, custo: 1 });
+    t.ok("com a contagem da mesa, cada uso gasta o que a mesa definiu — marcado como da mesa",
+      mesa.consumirComponentes === 2 && mesa.situacao.oficial === false);
+    var ordR = { consumos: [], componentes: controle, recursos: { pe: null } };
+    var usoR = CS.aplicarRitual(ordR, INV_VAZIO, "Arma Atroz", mesa, { gastar: true, recurso: "pe", atual: 10, elemento: "sangue", versao: "Normal" }, "op-rit-1");
+    t.ok("usar o ritual gasta o PE marcado e os componentes da mesa", usoR.ok && ordR.recursos.pe === 9 && controle.elementos.sangue.quantidade === 1);
+    CS.aplicarRitual(ordR, INV_VAZIO, "Arma Atroz", mesa, { gastar: true, recurso: "pe", atual: 9, elemento: "sangue" }, "op-rit-1");
+    t.ok("  o mesmo uso repetido não gasta de novo", ordR.recursos.pe === 9 && controle.elementos.sangue.quantidade === 1);
+    var falta = CS.planoDeRitual({ elemento: "sangue", controle: controle, inventario: INV_VAZIO, controleLigado: true });
+    t.ok("com menos do que o uso pede, o plano avisa e não gasta", falta.semComponentes && !falta.consumirComponentes);
+    var ordPd = { consumos: [], recursos: { pd: 5 } };
+    t.ok("PD que não bastam: recusado, sem gasto parcial",
+      !CS.aplicarRitual(ordPd, INV_VAZIO, "Luz", { custo: 6 }, { gastar: true, recurso: "pd", atual: 5 }, "op-rit-2").ok && ordPd.recursos.pd === 5);
+    var semDano = CS.aplicarRitual(ordPd, INV_VAZIO, "Coincidência Forçada", { custo: 1 }, { gastar: true, recurso: "pd", atual: 5 }, "op-rit-3");
+    t.ok("ritual sem dano (Coincidência Forçada) usa do mesmo jeito, pagando em PD", semDano.ok && ordPd.recursos.pd === 4);
+    var semGasto = CS.aplicarRitual(ordPd, INV_VAZIO, "Luz", { custo: 1 }, { gastar: false, recurso: "pd", atual: 4 }, "op-rit-4");
+    t.ok("  desmarcado o gasto, nada sai — e o registro diz isso", semGasto.ok && ordPd.recursos.pd === 4 &&
+      /sem gasto registrado/.test(ordPd.consumos[ordPd.consumos.length - 1].resumo));
+    var invCat = { itens: [{ id: "cat-1", tipo: "item", nome: "Catalisador ritualístico", origemCatalogoId: "sah.paranormal.catalisador-ampliador", ordem: { quantidade: 2 } }] };
+    var comCat = CS.planoDeRitual({ elemento: "energia", controle: CS.normalizarControle({}), inventario: invCat, catalisadorId: "cat-1" });
+    CS.aplicarRitual({ consumos: [] }, invCat, "Luz", comCat, {}, "op-rit-5");
+    t.igual("o catalisador escolhido é gasto (SAH p. 44)", global.RAMAOrdemInventario.dadosDoItem(invCat.itens[0]).quantidade, 1);
+    var entregar = CS.planoDeRitual({ elemento: "energia", controle: CS.normalizarControle({}), inventario: invC, controleLigado: true, entregar: true });
+    t.ok("Conjuração Complexa: entregar os componentes gasta o item (SAH p. 115)", entregar.consumirItem === invC.itens[0]);
+    var hb = CS.normalizarControle({ extras: [{ id: "cx-1", nome: "Componentes Homebrew", modo: "quantidade", quantidade: 4, porUso: 1 }] });
+    t.ok("elementos Homebrew entram como componentes da mesa", hb.extras.length === 1 && hb.extras[0].quantidade === 4);
+
+    /* ---------------------------------------------------------------- */
+    t.grupo("Regras opcionais · começam desligadas e desligar guarda os saldos");
+
+    var fo = fichaBase();
+    t.ok("contagem de munição e controle de componentes começam desligados",
+      !CS.ligada(fo, "contagemMunicao") && !CS.ligada(fo, "controleComponentes"));
+    var fGuardada = fichaBase({ opcionais: { contagemMunicao: true, controleComponentes: true },
+      componentes: { elementos: { morte: { modo: "quantidade", quantidade: 5 } } },
+      consumos: [{ id: "op-x", tipo: "ataque", resumo: "Pistola: 1 disparo" }] });
+    t.ok("ligadas, valem só nesta ficha", CS.ligada(fGuardada, "contagemMunicao") && !CS.ligada(fichaBase(), "contagemMunicao"));
+    var fDesl = R.normalizar(Object.assign({}, fGuardada, { opcionais: {} }));
+    t.ok("desligar preserva os saldos e o registro", fDesl.componentes.elementos.morte.quantidade === 5 && fDesl.consumos.length === 1);
+
+    /* ---------------------------------------------------------------- */
+    if (SY) {
+      t.grupo("Sincronia · dois aparelhos gastando somam, e as aplicações casam por id");
+
+      var fichaSync = function () {
+        return {
+          inventario: { itens: [{ id: "m", tipo: "item", nome: "Balas", ordem: { contagem: { retiradas: 5 } } },
+            { id: "w", tipo: "arma", nome: "Pistola", ordem: { contagem: { carregada: 10 } } }] },
+          ordem: { condicoes: { efeitos: [] }, consumos: [] },
+        };
+      };
+      var base = fichaSync(), aqui = fichaSync(), la = fichaSync();
+      aqui.inventario.itens[1].ordem.contagem.carregada = 9;
+      la.inventario.itens[1].ordem.contagem.carregada = 8;
+      aqui.inventario.itens[0].ordem.contagem.retiradas = 7;
+      la.inventario.itens[0].ordem.contagem.retiradas = 6;
+      aqui.ordem.condicoes.efeitos.push({ id: "ef-a", nome: "Abalado" });
+      la.ordem.condicoes.efeitos.push({ id: "ef-b", nome: "Caído" });
+      aqui.ordem.consumos.push({ id: "op-a", tipo: "ataque" });
+      la.ordem.consumos.push({ id: "op-b", tipo: "ataque" });
+      var mx = SY.mesclar(base, aqui, la, SY.ESQUEMA_FICHA);
+      t.ok("um disparo aqui e dois lá: 10 → 7 carregadas, sem conflito",
+        mx.estado.inventario.itens[1].ordem.contagem.carregada === 7 && !mx.conflitos.length);
+      t.igual("  e a reserva soma os dois gastos", mx.estado.inventario.itens[0].ordem.contagem.retiradas, 8);
+      t.ok("as duas aplicações e os dois registros ficam",
+        mx.estado.ordem.condicoes.efeitos.length === 2 && mx.estado.ordem.consumos.length === 2);
+      var b2 = fichaSync(), a2 = fichaSync(), l2 = fichaSync();
+      a2.inventario.itens[1].ordem.contagem.carregada = 0;
+      l2.inventario.itens[1].ordem.contagem.carregada = 0;
+      t.igual("  a soma nunca fica negativa",
+        SY.mesclar(b2, a2, l2, SY.ESQUEMA_FICHA).estado.inventario.itens[1].ordem.contagem.carregada, 0);
+    }
+
+    /* ---------------------------------------------------------------- */
+    if (S && V) {
+      t.grupo("Exportar e importar · aplicações, turnos, registro e munição associada");
+
+      var fe = S.criarFicha({ nome: "Com efeitos", tipoFicha: "ordem" });
+      fe.ordem = fichaBase();
+      var instE = EF.criarInstancia({ modelo: "cond:abalado", duracao: { tipo: "turnos", turnos: 3, contador: "alvo", momento: "inicio" } });
+      EF.aplicar(fe.ordem.condicoes, instE, "nova");
+      EF.registrarTurno(fe.ordem.condicoes, { id: "cb:c1:1:p1", tipo: "inicio", participanteId: "p1" }, "p1");
+      fe.ordem.consumos = [{ id: "op-e1", tipo: "ataque", resumo: "Pistola: 1 disparo" }];
+      fe.inventario = { limite: 0, itens: [
+        { id: "arma-e", tipo: "arma", nome: "Pistola", ordem: { grupo: "arma", arma: { tipo: "fogo", capacidade: 12 }, contagem: { carregada: 7, municao: "mun-e" } } },
+        { id: "mun-e", tipo: "item", nome: "Balas curtas", origemCatalogoId: "op.municao.balas-curtas", ordem: { grupo: "municao", quantidade: 1, contagem: { retiradas: 12 } } },
+      ] };
+      var imp = V.importado(JSON.parse(JSON.stringify(V.exportar("personagem", fe))));
+      var oE = imp.ok ? imp.dados.ordem : null;
+      t.ok("a aplicação atravessa, com o turno já contado", !!oE && oE.condicoes.efeitos.length === 1 &&
+        oE.condicoes.efeitos[0].eventos.length === 1 && oE.condicoes.efeitos[0].eventos[0].id === "cb:c1:1:p1");
+      t.ok("  o registro de consumo também", !!oE && oE.consumos.length === 1);
+      var itensE = imp.ok ? imp.dados.inventario.itens : [];
+      t.ok("a arma continua apontando para a munição — pelo id novo",
+        itensE.length === 2 && !!itensE[0].ordem.contagem && itensE[0].ordem.contagem.municao === itensE[1].id &&
+        itensE[1].id !== "mun-e" && itensE[0].ordem.contagem.carregada === 7);
+    }
+  }
+
+  /* =====================================================================
      v2.19 — condições por turno, pontos de determinação e organização
      ===================================================================== */
 
@@ -4789,34 +5195,32 @@
     t.ok("ação que não existe para o recurso é recusada", !CD.aplicarAcao("pd", "cura", { cond: cP, atual: 1, maximo: 10, valor: 1 }).ok);
 
     /* ---------------------------------------------------------------- */
-    t.grupo("Condições · contadores da mesa, sem regra inventada");
+    t.grupo("Condições · os contadores da mesa da v2.19 saíram, sem virar enlouquecendo");
 
-    var cM = CD.vazio();
-    var ex = CD.estado(cM, "exaustao");
-    t.ok("começam desligados, sem limite e com ativação à mão", !ex.usar && ex.limite === null && ex.ativacao === "manual");
-    t.ok("  desligado, não ativa", !CD.ativar(cM, "exaustao").mudou && !cM.mesa.exaustao.ativa);
-    CD.configurarDaMesa(cM, "exaustao", { usar: true });
-    CD.ativar(cM, "exaustao");
-    for (var mi = 0; mi < 5; mi++) CD.somarInicio(cM, "exaustao");
-    var exL = CD.estado(cM, "exaustao");
-    t.ok("sem limite definido, não há prazo de três turnos", exL.contagem === 5 && !exL.atingiu);
-    CD.configurarDaMesa(cM, "exaustao", { limite: 5, consequencia: "fica exausto" });
-    var exA = CD.estado(cM, "exaustao");
-    t.ok("com o limite da mesa, chegar a ele só mostra o combinado", exA.atingiu && exA.resultado === "fica exausto");
-    t.ok("  e não mexe em inconsciente, morrendo nem enlouquecendo",
-      !cM.inconsciente.ativa && !cM.morrendo.ativa && !cM.enlouquecendo.ativa);
-    t.ok("limite fora de 1 a 20 vira sem limite", CD.normalizar({ mesa: { desmaio: { usar: true, limite: 50 } } }).mesa.desmaio.limite === null);
+    var EFm = global.RAMAOrdemEfeitos;
+    var velhaMesa = CD.normalizar({
+      cena: { id: "cena-1" },
+      enlouquecendo: { ativa: false, eventos: [] },
+      mesa: {
+        exaustao: { usar: true, ativa: true, limite: 3, eventos: [{ id: "m-1", origem: "manual", cena: "cena-1" }, { id: "cb:c:1:p", origem: "combate", cena: "cena-1" }] },
+        desmaio: { usar: true, ativa: true, eventos: [{ id: "m-2", origem: "manual", cena: "cena-1" }] },
+      },
+    });
+    t.ok("ficha da v2.19 com exaustão e desmaio: os contadores somem ao ler", velhaMesa.mesa === undefined);
+    t.igual("  e os turnos deles NÃO viram turnos de enlouquecendo", CD.contagem(velhaMesa, "enlouquecendo"), 0);
+    t.ok("  enlouquecendo continua como estava — inativo", !velhaMesa.enlouquecendo.ativa);
+    t.ok("  e nenhuma condição foi criada no lugar deles", velhaMesa.efeitos.length === 0);
     var cZ = CD.vazio();
-    CD.configurarDaMesa(cZ, "desmaio", { usar: true, ativacao: "recursoZero" });
-    CD.aplicarAcao("pe", "gastar", { cond: cZ, atual: 3, maximo: 5, valor: 3 });
-    t.ok("com a ativação escolhida pela mesa, gastar até 0 ativa o contador", cZ.mesa.desmaio.ativa);
-    var cManual = CD.vazio();
-    CD.configurarDaMesa(cManual, "desmaio", { usar: true });
-    CD.aplicarAcao("pe", "gastar", { cond: cManual, atual: 3, maximo: 5, valor: 3 });
-    t.ok("  com a ativação à mão (o padrão), gastar até 0 não ativa nada", !cManual.mesa.desmaio.ativa);
-    CD.somarInicio(cZ, "desmaio");
-    CD.configurarDaMesa(cZ, "desmaio", { usar: false });
-    t.ok("desligar o contador não apaga os turnos já contados", !cZ.mesa.desmaio.ativa && cZ.mesa.desmaio.eventos.length === 1);
+    var gasto = CD.aplicarAcao("pe", "gastar", { cond: cZ, atual: 3, maximo: 5, valor: 3 });
+    t.ok("gastar PE até 0 não ativa nada", gasto.ok && gasto.valor === 0 && !gasto.mudouCondicao &&
+      !cZ.morrendo.ativa && !cZ.enlouquecendo.ativa && !cZ.perturbado.ativa && !cZ.inconsciente.ativa);
+    var gastoPd = CD.aplicarAcao("pd", "gastar", { cond: cZ, atual: 4, maximo: 12, valor: 4, pd: true });
+    t.ok("gastar PD até 0 também não — nem enlouquecendo, nem perturbado (SAH p. 105)",
+      gastoPd.ok && gastoPd.valor === 0 && !cZ.enlouquecendo.ativa && !cZ.perturbado.ativa);
+    t.ok("Exausto e Inconsciente continuam na biblioteca de condições",
+      !!EFm.condicao("exausto") && !!EFm.condicao("inconsciente") && /debilitado/.test(EFm.condicao("exausto").inclui.join(",")));
+    t.igual("enlouquecendo com PD é o mesmo contador, ligado a PD", CD.estado(CD.vazio(), "enlouquecendo", { pd: true }).recurso, "pd");
+    t.igual("  e com Sanidade, ligado à Sanidade", CD.estado(CD.vazio(), "enlouquecendo").recurso, "san");
 
     /* ---------------------------------------------------------------- */
     t.grupo("Condições · início de turno do combate, uma vez só");
@@ -5095,11 +5499,11 @@
     /* ---------------------------------------------------------------- */
     t.grupo("Schema 10 · os campos novos atravessam, e a ficha 9 abre igual");
 
-    t.igual("o schema da ficha é 10", S.VERSAO_SCHEMA, 10);
+    t.ok("o schema da ficha é 10 ou maior (11 na v2.20)", S.VERSAO_SCHEMA >= 10);
     var f9 = S.normalizarFicha({ nome: "Ficha 9", schemaVersion: 9, tipoFicha: "ordem",
       ordem: { classe: "ocultista", nex: 20, recursos: { pv: 5 } } });
     t.ok("uma ficha 9 abre com as condições vazias, PD em branco e a ordem de antes",
-      f9.schemaVersion === 10 && !f9.ordem.condicoes.morrendo.ativa && f9.ordem.recursos.pd === null &&
+      f9.schemaVersion === S.VERSAO_SCHEMA && !f9.ordem.condicoes.morrendo.ativa && f9.ordem.recursos.pd === null &&
       f9.ordem.recursos.pv === 5 && f9.ordem.organizacao.pericias.modo === "az");
 
     /* ---------------------------------------------------------------- */

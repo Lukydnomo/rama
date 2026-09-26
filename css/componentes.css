@@ -1593,6 +1593,75 @@
   color: var(--cor-texto-3);
 }
 .rolagem__parcela { display: flex; justify-content: space-between; gap: var(--e2); }
+
+.rolagem__notas { margin-top: var(--e1); }
+.rolagem__nota { margin: 0; font-size: var(--texto-mini); color: var(--cor-aviso); }
+
+/* =====================================================================
+   JANELA "ADICIONAR CONDIÇÃO" (v2.20) — ficha e combate
+   ===================================================================== */
+
+.efeitos-lista {
+  display: flex;
+  flex-direction: column;
+  gap: var(--e2);
+}
+
+.efeitos-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: var(--e2);
+  border: var(--borda) solid var(--cor-traco-fraca);
+  min-width: 0;
+}
+
+.efeitos-item p { margin: 0; }
+.efeitos-item .r-botao { align-self: flex-start; margin-top: var(--e1); }
+
+.efeitos-item__topo {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--e2);
+}
+
+.efeitos-item__nome { font-weight: 700; }
+.efeitos-item__texto { color: var(--cor-texto-2); overflow-wrap: anywhere; }
+
+.efeitos-abas { flex-wrap: wrap; }
+
+.efeitos-mods { display: flex; flex-direction: column; gap: var(--e1); }
+
+.efeitos-mod {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) auto auto;
+  gap: var(--e1);
+  align-items: center;
+}
+
+.efeitos-mod select:nth-child(3) { min-width: 0; }
+.efeitos-mod .r-entrada--numero { width: 5em; }
+
+.efeitos-janela__linha {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
+  gap: var(--e2);
+}
+
+.efeitos-janela__botoes { justify-content: flex-end; gap: var(--e2); }
+
+.efeitos-imunidades {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(11em, 1fr));
+  gap: var(--e1) var(--e2);
+  margin-bottom: var(--e2);
+}
+
+@media (max-width: 560px) {
+  .efeitos-mod { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+  .efeitos-janela__linha { grid-template-columns: minmax(0, 1fr); }
+}
 .rolagem__parcela span:last-child { color: var(--cor-texto-2); font-variant-numeric: tabular-nums; }
 
 .rolagem__marca {

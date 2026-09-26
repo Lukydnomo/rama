@@ -113,7 +113,7 @@ E abra `http://localhost:8099/rama/`.
 
 São três conjuntos no terminal e duas páginas no navegador.
 
-**Modelo e motor de dados** — 1906 verificações. No navegador, abra `testes/`;
+**Modelo e motor de dados** — 2022 verificações. No navegador, abra `testes/`;
 no terminal:
 
 ```bash
@@ -201,7 +201,7 @@ avisam sem bloquear, adicionar que não resolve pendência de progressão, a mig
 do texto de "Efeito" para "Descrição" numa ficha antiga e a ficha atravessando
 salvar, exportar e importar.
 
-**Permissões, concorrência e armazenamento do backend** — 897 verificações:
+**Permissões, concorrência e armazenamento do backend** — 927 verificações:
 
 ```bash
 deno run --allow-read testes/executar-backend.js
@@ -529,6 +529,15 @@ gravar. Com o schema 9, essa aba recusa a ficha e pede para recarregar; nada se
 perde. Depois de publicar, peça a quem estiver com a ficha aberta para recarregar
 a página.
 
+**Atualizando para a v2.20 (efeitos, munição e componentes): backend e site.**
+Mudou `Campanhas.gs`: as ações `efeito_personagem` (aplicar, renovar e encerrar
+condições e efeitos, com a permissão conferida no servidor) e `ler_imagem_do_turno`,
+a contagem da duração dos efeitos pelos turnos do combate e a opção de vida das
+criaturas. Não há aba nem coluna nova — **não é preciso rodar `setupRama()`**. Cole os
+três `.gs`, crie uma **nova versão** da implantação, publique o site e peça a quem
+estiver com uma ficha aberta para recarregar (o schema subiu para 11; uma aba antiga
+recusa a ficha em vez de descartar os campos novos).
+
 **Atualizando para a v2.19 (condições e organização): backend e site.** Mudaram
 `Codigo.gs` e `Campanhas.gs`: o lote do combate passa a contar o início de turno
 nas fichas, o resumo de recursos aceita PD e o ajuste rápido também. Não há aba nem
@@ -631,8 +640,18 @@ console não abre o registro de outra conta.
 - **Um mestre só por campanha na interface.** O banco já guarda o papel por
   membro e aceita mais de um mestre, mas a tela não oferece promover ninguém.
 - **Combate tem turno e rodada, e as condições contadas por turno.** Morrendo,
-  enlouquecendo e os contadores da mesa contam o início do turno do personagem
-  (v2.19); não há grid, distância, ações por turno nem duração de efeitos.
+  enlouquecendo e a duração dos efeitos aplicados contam pelos turnos (v2.19,
+  v2.20); não há grid, distância nem ações por turno.
+- **Quando o jogador aplica um efeito pela própria ficha (v2.20)**, o momento da
+  aplicação é o relógio do aparelho dele — é o que decide se o fim do turno em
+  andamento conta. Pelo painel do mestre, o momento é o do servidor.
+- **Duas recargas simultâneas da mesma arma em dois aparelhos (v2.20)** somam as
+  duas: a carregada pode passar da capacidade até alguém ajustar. Disparos e
+  gastos simultâneos somam corretamente.
+- **Efeitos com teste ou decisão da mesa não rolam sozinhos (v2.20).** Sangrando,
+  Em Chamas, Confuso e afins mostram a ação e o botão para rolar; quem joga
+  decide. Efeitos de rituais estruturados são cinco (ver docs/ORDEM-REGRAS.md);
+  os outros entram como efeito da mesa, com os modificadores escritos à mão.
 - **A atualização automática não é tempo real.** O navegador pergunta a cada ~8 s
   nas abas Personagens e Combate e a cada ~20 s nas outras: a mudança de outra
   pessoa chega em 2 a 15 s (até ~25 s fora das abas de mesa), mais quando o Apps

@@ -1355,4 +1355,133 @@ body.pagina-ficha--painel .ficha-topo__nome { font-size: var(--texto-medio); }
   border-left: var(--borda) dashed var(--cor-traco-fraca);
 }
 
-.condicoes__mesa { margin-top: var(--e2); }
+.condicoes__efeitos { margin-top: var(--e2); }
+
+.condicoes__efeitos-topo {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--e2);
+}
+
+.condicoes__imunidades {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--e2);
+}
+
+.efeito {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: var(--e2);
+  border: var(--borda) solid var(--cor-traco-fraca);
+  border-left: 3px solid var(--cor-paranormal);
+  background: var(--cor-superficie-2);
+  min-width: 0;
+}
+
+.efeito--terminado { background: transparent; border-left-color: var(--cor-traco-media); padding: var(--e1) var(--e2); }
+
+.efeito__topo {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--e2);
+}
+
+.efeito__topo .condicao__marcas { margin-left: auto; }
+
+.efeito__nome {
+  font-weight: 700;
+  letter-spacing: var(--espaco-letra-titulo);
+  text-transform: uppercase;
+  font-size: var(--texto-mini);
+  overflow-wrap: anywhere;
+}
+
+.efeito p { margin: 0; overflow-wrap: anywhere; }
+.efeito__mods { color: var(--cor-texto); }
+.efeito__botoes { gap: var(--e1); margin-top: var(--e1); }
+.efeito__descricao summary { cursor: pointer; font-size: var(--texto-mini); color: var(--cor-texto-3); }
+
+.efeitos-automaticas,
+.efeitos-derivadas {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--e1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.efeitos-chip {
+  padding: 2px var(--e2);
+  border: var(--borda) dashed var(--cor-traco-media);
+  font-size: var(--texto-mini);
+}
+
+.efeitos-chip--imune { text-decoration: line-through; color: var(--cor-texto-3); }
+
+.efeitos-restricoes p { margin: 0; }
+.efeitos-acoes { gap: var(--e1); }
+.efeitos-terminados summary { cursor: pointer; font-size: var(--texto-mini); color: var(--cor-texto-3); }
+
+.ordem-derivados__nota { margin: 0; }
+
+/* =====================================================================
+   MUNIÇÃO, COMPONENTES E "USAR RITUAL" (regras opcionais de consumo)
+   ---------------------------------------------------------------------
+   Os painéis da aba Geral e a confirmação compacta do ataque e do uso
+   de ritual (js/paginas/ficha-consumo.js).
+   ===================================================================== */
+
+.consumo > p { margin: 0; }
+
+.consumo-item {
+  display: flex;
+  flex-direction: column;
+  gap: var(--e1);
+  padding: var(--e2);
+  border: var(--borda) solid var(--cor-traco-fraca);
+  background: var(--cor-superficie-2);
+  min-width: 0;
+}
+
+.consumo-item__topo {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--e1) var(--e2);
+}
+
+.consumo-item__nome {
+  font-weight: 700;
+  letter-spacing: var(--espaco-letra-titulo);
+  text-transform: uppercase;
+  font-size: var(--texto-mini);
+  overflow-wrap: anywhere;
+}
+
+.consumo-item__saldo { font-variant-numeric: tabular-nums; }
+.consumo-item__botoes { gap: var(--e1); align-items: center; }
+.consumo-item__rotulo { display: inline-flex; align-items: center; gap: var(--e1); }
+.consumo-item__rotulo .r-selecao { max-width: 14rem; }
+
+.consumo-registro summary { cursor: pointer; font-size: var(--texto-mini); color: var(--cor-texto-3); }
+.consumo-registro ul { margin: var(--e1) 0 0; padding-left: var(--e4); }
+
+.consumo-confirmacao p { margin: 0; }
+.consumo-confirmacao__gasto { font-weight: 700; font-variant-numeric: tabular-nums; }
+.consumo-confirmacao__botoes { gap: var(--e2); }
+.consumo-confirmacao .filtros__grupo { flex-wrap: wrap; }
+
+.ritual-usar { align-self: center; }
+
+@media (max-width: 560px) {
+  .consumo-item__rotulo { width: 100%; }
+  .consumo-item__rotulo .r-selecao { flex: 1 1 auto; max-width: none; }
+  .consumo-confirmacao__botoes .r-botao { flex: 1 1 100%; }
+}

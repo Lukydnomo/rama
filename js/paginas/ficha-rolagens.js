@@ -82,6 +82,12 @@
 
       parcelas(r),
 
+      /* O que a conta não mostra em números: dados que uma condição
+         tirou, uma restrição que vale neste teste, a munição gasta. */
+      (o.notas || []).length
+        ? el("div.rolagem__notas", {}, o.notas.map(function (n) { return el("p.rolagem__nota", { texto: n }); }))
+        : null,
+
       o.acao ? el("button.r-botao.r-botao--mini.rolagem__acao", {
         type: "button",
         texto: o.acao.rotulo,

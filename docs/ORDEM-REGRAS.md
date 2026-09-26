@@ -42,7 +42,9 @@ leitura que o R.A.M.A. adotou escrita por extenso.
 | `js/paginas/ficha-rituais-biblioteca.js` | a janela "Da biblioteca" da aba Rituais — a mesma janela, presa a uma aquisição, na Progressão e em Aprender Ritual |
 | `js/ordem/regras.js` | todas as contas, com a composição de cada número |
 | `js/ordem/opcionais.js` | as regras opcionais, uma chave para cada |
-| `js/ordem/condicoes.js` | morrendo, enlouquecendo, inconsciente, perturbado e os contadores da mesa: a contagem de inícios de turno por cena e as ações com origem nos recursos (dano, cura, dano mental, gastar, recuperar) |
+| `js/ordem/condicoes.js` | morrendo, enlouquecendo, inconsciente, perturbado: a contagem de inícios de turno por cena e as ações com origem nos recursos (dano, cura, dano mental, gastar, recuperar) |
+| `js/ordem/efeitos.js` | a biblioteca de condições do livro, os efeitos de rituais, as aplicações (duração, turnos, repetição, imunidade) e o cálculo dos modificadores com as regras de acúmulo |
+| `js/ordem/consumo.js` | munição (carregada, reserva, recarga, rajada) e componentes ritualísticos, com o registro de consumo por id |
 | `js/organizar.js` | o que muda de lugar quando alguém reorganiza uma lista — com filtro, em pastas, entre as habilidades das regras —, o agrupamento dos rituais por círculo e elemento e a ordem das perícias |
 | `js/arrastar.js` | o gesto de arrastar e soltar, igual nas cinco abas: alça, prévia, destino, recusa com motivo, cancelamento, rolagem perto da borda e teclado |
 | `js/ordem/biblioteca.js` | o catálogo de poderes arrumado para consulta na janela "Da biblioteca" |
@@ -954,23 +956,93 @@ PD e as ações de interlúdio (dormir recupera só PV; relaxar recupera PD; pra
 favorito dá 2 PD temporários) ficam com a mesa: a ficha não rola esses dados nem
 tem interlúdio.
 
-### Exaustão e desmaio: contadores da mesa
+### Exaustão e desmaio: não são contadores (v2.20)
 
-Nenhum dos dois livros tem uma contagem de exaustão ou de desmaio por PD (ou PE)
-chegar a 0. Então eles são **contadores da mesa**, e a ficha diz isso em cada um:
+Os contadores da mesa de exaustão e desmaio da v2.19 vieram de um mal-entendido
+e saíram na v2.20. O pedido era acompanhar **Enlouquecendo** quando a ficha usa
+Determinação: Enlouquecendo é um contador só, ligado à Sanidade ou aos PD
+conforme "Jogando sem Sanidade". Pelos gatilhos de SAH p. 104-105, dano mental
+maior que os PD atuais deixa enlouquecendo; **gastar** PD para pagar uma
+habilidade ou ritual não ativa nada. Fichas antigas perdem os contadores ao ler,
+sem que os turnos deles virem turnos de enlouquecendo. Exausto e Inconsciente
+continuam como condições do livro, na biblioteca.
 
-- começam **desligados**, e ninguém é afetado até a mesa ligar;
-- a mesa escolhe o limite (de 1 a 20 inícios de turno, ou nenhum) e como o
-  contador fica ativo — **só à mão**, ou quando os PE/PD chegam a 0 por **gasto ou
-  dano** (um ajuste manual não diz a origem e não ativa nada);
-- a consequência é um texto da mesa; nenhuma consequência é aplicada;
-- contam inícios de turno como morrendo — à mão e pelo combate —, cada um na sua
-  lista. Exaustão, inconsciência e enlouquecendo são coisas separadas.
+### Condições e efeitos aplicados (v2.20)
 
-"Fatigado" e "exausto" existem no livro como condições de outros efeitos
-(OPRPG p.310), e "inconsciente" é o que o 0 PV causa — nenhum deles tem prazo em
-turnos. O R.A.M.A. não inventa um prazo de três turnos para eles.
+**A biblioteca.** As 38 condições do apêndice (OPRPG p. 310-311), com texto
+próprio, categoria (medo, paralisia, mental, sentidos, fadiga), modificadores,
+condições que trazem junto, repetição e página. Sobrevivendo ao Horror não cria
+condição nova com nome. Machucado e Perturbado vêm dos recursos atuais (metade
+dos PV ou da Sanidade). Morrendo, Enlouquecendo, Inconsciente e Perturbado usam o
+contador próprio da ficha: aplicá-los pela biblioteca liga esse contador.
 
+**Morrendo: p. 88 contra o apêndice.** O apêndice resume morrendo de forma
+diferente do capítulo de regras (p. 88). A ficha segue a p. 88 (três inícios de
+turno na mesma cena, não necessariamente seguidos); a biblioteca só aponta para
+ela, e o catálogo nunca substitui essa lógica.
+
+**Acúmulo (p. 312-313).** A mesma condição, ou condições com o mesmo efeito, não
+somam: vale a mais severa. Efeitos de rituais, de itens e de aliados não somam
+entre si — vale o maior bônus e a pior penalidade de cada tipo. Fontes de tipos
+diferentes somam. O que ficou de fora aparece na explicação, "não acumula".
+Armadura de Sangue, que o livro deixa acumular, é marcada como tal.
+
+**Dados.** "−O" é um dado a menos. Com menos de um dado, rola-se 2 − n e fica o
+pior (atributo 0: dois dados, o pior — p. 75; cada dado a menos abaixo disso, mais
+um — p. 9).
+
+**Condições que trazem outras.** Agarrado traz Desprevenido e Imóvel; Exausto
+traz Debilitado, Lento e Vulnerável, e assim por diante. As derivadas são
+calculadas, nunca guardadas: encerrar uma fonte não tira a derivada que outra
+fonte ainda causa. Imunidade (por condição ou categoria) recusa a aplicação
+direta e anula a derivada.
+
+**Repetição.** "Ficar abalado de novo deixa apavorado" é oferecido na hora, nunca
+aplicado sozinho. Quando chega a Inconsciente, liga o contador da ficha.
+
+**Contexto.** Efeitos que valem só corpo a corpo ou à distância (Caído, Ódio
+Incontrolável) entram só no ataque ou no dano daquele tipo; na Defesa, ficam como
+aviso ("contra corpo a corpo: −5"), porque a Defesa geral não sabe quem ataca.
+Restrições (só armas leves, não pode agir) e ações (Sangrando: Vigor DT 20)
+aparecem na ficha e nas rolagens; nenhuma decisão narrativa ou rolagem é feita
+sozinha.
+
+**Duração.** Cena (encerra na Nova cena), turnos, até ser removido ou especial
+(acompanhada à mão). Em turnos: de quem (o afetado ou outro participante), início
+ou fim. Aplicar durante um turno não gasta aquele turno: o fim de um turno que
+começou antes da aplicação não conta. Pelo combate, cada turno conta uma vez por
+id; voltar turno retira o início desfeito e o fim do turno que volta a valer.
+
+**Rituais com efeito estruturado.** Coincidência Forçada (+2 em testes de perícia;
+Verdadeiro +5 — p. 126), Armadura de Sangue, Embaralhar, Ódio Incontrolável e Forma
+Monstruosa. O +2 é bônus em **testes** de perícia: entra no total, nos ataques e
+nas rolagens, e não em números derivados como a Esquiva. Um efeito lançado por
+outro personagem é registrado pelo alvo (na própria ficha) ou pelo mestre.
+
+### Contagem de munição (regra opcional, OPRPG p. 174)
+
+Cada pacote dá munição para 20 ataques (foguete: 1; dardos: 2). Armas de fogo
+têm capacidade (pistola 12, revólver 6, fuzil de caça 4, submetralhadora 20,
+espingarda 6, fuzil de assalto 30, fuzil de precisão 1, metralhadora 50; SAH p. 38:
+pistola pesada 10, revólver compacto 5, espingarda de cano duplo 2). Recarregar é
+ação de movimento. A reserva é o próprio item de munição; o que está carregado já
+saiu dela — um saldo só. Rajada (armas automáticas, p. 59): 10 balas, −1 dado no
+ataque (o Compensador anula) e, com esta regra, +2 dados de dano em vez de +1.
+Espingarda de cano duplo: os dois canos gastam 2 cartuchos, −1 dado no ataque,
+dano 6d6. O gasto pertence ao ataque confirmado, acerte ou erre; rolar o dano
+depois não gasta.
+
+### Componentes ritualísticos (regra opcional, OPRPG p. 119)
+
+Pelo livro, conjurar exige componentes do elemento do ritual, exceto Medo; a
+afinidade dispensa os do seu elemento (p. 114). Os componentes **não se gastam**
+ao conjurar. Dispensas: Selo paranormal (p. 151), acólito (p. 171), Camuflar
+Ocultismo (+2 PE, p. 33), Improvisar Componentes (p. 34). Catalisadores se gastam
+(SAH p. 44); com Conjuração Complexa, entregar os componentes à entidade os gasta
+em troca de +1 dado (SAH p. 115). **Contar usos** (quantidade e gasto por uso) é
+regra da mesa, marcada como tal. Falta de componente é aviso, nunca bloqueio.
+"Usar ritual" mostra o custo em PE ou PD e tudo o que será gasto antes de
+confirmar; consultar, aprender ou adicionar um ritual nunca gasta nada.
 
 ## Origens
 
@@ -1676,6 +1748,5 @@ aberta, a adotada está escrita — e é a que os testes travam.
     foi tirado à mão ("−1"), voltar e avançar o turno não o conta de novo: o id
     fica descartado. Uma "Nova cena" esquece os descartes, junto com a contagem.
 
-33. **Exaustão e desmaio.** Não são regras do livro com contagem por turno — ver
-    [Exaustão e desmaio: contadores da mesa](#exaustão-e-desmaio-contadores-da-mesa).
-    O limite, a ativação e a consequência são da mesa.
+33. **Exaustão e desmaio.** Os contadores da v2.19 saíram na v2.20 — ver
+    [Exaustão e desmaio: não são contadores](#exaustão-e-desmaio-não-são-contadores-v220).

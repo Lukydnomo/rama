@@ -533,7 +533,7 @@ uma regra de jogo.
 
 ## Migração
 
-`schemaVersion` é `10`. Toda ficha lida passa por `normalizarFicha()`, que aceita
+`schemaVersion` é `11`. Toda ficha lida passa por `normalizarFicha()`, que aceita
 o que faltar e conserta o que dá.
 
 **A v2.19 subiu o schema de 9 para 10 sem converter nada.** O bloco `ordem`
@@ -695,7 +695,7 @@ Só existe na ficha de Ordem. Guarda **escolhas**, **recursos gastos** e
     "inventario": { "modo": "adicao" },
     "pericias": { "modo": "maior", "ordem": [ "luta", "pontaria" ] }        // v2.19
   },
-  "condicoes": {                  // morrendo, enlouquecendo e os contadores da mesa (v2.19)
+  "condicoes": {                  // morrendo e enlouquecendo (v2.19); efeitos aplicados (v2.20)
     "cena": { "id": "cena-uuid", "iniciadaEm": "2026-09-25T20:00:00.000Z" },
     "integrarCombate": true,
     "morrendo": { "ativa": true, "desde": "...", "eventos": [
@@ -706,13 +706,26 @@ Só existe na ficha de Ordem. Guarda **escolhas**, **recursos gastos** e
     "inconsciente": { "ativa": true, "desde": "..." },
     "enlouquecendo": { "ativa": false, "desde": "", "eventos": [], "descartados": [] },
     "perturbado": { "ativa": false, "desde": "" },
-    "mesa": {
-      "exaustao": { "usar": false, "limite": null, "ativacao": "manual", "consequencia": "",
-                    "ativa": false, "desde": "", "eventos": [], "descartados": [] },
-      "desmaio": { "usar": false, "limite": null, "ativacao": "manual", "consequencia": "",
-                   "ativa": false, "desde": "", "eventos": [], "descartados": [] }
-    }
+    "efeitos": [                  // v2.20: cada aplicação é uma instância
+      { "id": "ef-uuid", "modelo": "cond:abalado", "tipo": "condicao", "nome": "Abalado",
+        "descricao": "...", "versao": "", "origem": { "tipo": "criatura", "nome": "Existido" },
+        "alvo": { "nome": "Lia" }, "modificadores": [ { "alvo": "testes", "tipo": "dados", "valor": -1 } ],
+        "inclui": [], "restricoes": [], "acumula": false,
+        "duracao": { "tipo": "turnos", "turnos": 2, "contador": "alvo", "momento": "inicio" },
+        "eventos": [ { "id": "cb:<combate>:3:<participante>", "origem": "combate", "em": "..." } ],
+        "descartados": [], "aplicadoEm": "...", "aplicadoPor": { "id": "...", "nome": "Mestra", "papel": "mestre" },
+        "cena": "cena-uuid", "combate": "<combate>", "personalizado": false, "encerrado": null }
+    ],
+    "imunidades": [ "abalado", "categoria:medo" ]
   },
+  "componentes": {                // v2.20, regra opcional "Controle de componentes"
+    "elementos": { "sangue": { "modo": "posse", "tem": true, "quantidade": 0, "unidade": "usos", "porUso": 1 },
+                   "morte": { ... }, "conhecimento": { ... }, "energia": { ... } },
+    "extras": [ { "id": "cx-...", "nome": "Componentes da mesa", "modo": "quantidade", ... } ]
+  },
+  "consumos": [                   // v2.20: o registro do que foi gasto, pelo id do uso
+    { "id": "ataque-uuid", "tipo": "ataque", "em": "...", "resumo": "Pistola: 1 disparo · sobram 11 carregadas" }
+  ],
   "opcionais": { "nexExperiencia": true }
 }
 ```
@@ -845,10 +858,28 @@ ganha morrendo ao ser lida.
 - `integrarCombate` (padrão `true`) deixa o combate da campanha somar inícios de
   turno — o servidor escreve aqui, no mesmo formato.
 - `inconsciente` e `perturbado` não contam turnos.
-- `mesa.exaustao` e `mesa.desmaio` são contadores da mesa: `usar` (padrão
-  `false`), `limite` (1 a 20, ou `null` — sem limite), `ativacao` (`"manual"` ou
-  `"recursoZero"`: PE/PD chegando a 0 por gasto ou dano) e `consequencia` (texto
-  da mesa, até 200 caracteres). Nenhuma consequência é aplicada.
+- `mesa` (os contadores de exaustão e desmaio da v2.19) saiu na v2.20 e é
+  descartado ao ler, sem virar turnos de enlouquecendo.
+- `efeitos` (v2.20, no máximo 80): cada condição ou efeito aplicado. `modelo` é
+  `cond:<chave>` (a biblioteca do livro), `ritual:<id do catálogo>` ou vazio
+  (efeito da mesa); aplicar pela biblioteca nunca muda o catálogo, e
+  `personalizado` marca a aplicação ajustada. `modificadores` são dados
+  estruturados (`alvo`, `tipo` = `bonus` | `dados` | `deslocamento`, `valor`,
+  `operacao` no deslocamento) — nunca texto executado. `duracao.tipo` é `cena`,
+  `turnos`, `ateRemover` ou `especial`; em turnos, `contador` (`alvo` ou
+  `participante`, com `participante.id`), `momento` (`inicio` ou `fim`) e os
+  `eventos` contados (ids `cb:`/`cf:` do combate ou `m-` manuais), com
+  `descartados` como nas condições. `encerrado` guarda quando, por quê
+  (`manual`, `cena`, `duracao`, `repeticao`) e por quem. Condições derivadas
+  (Agarrado → Desprevenido) nunca são guardadas: são calculadas.
+- `imunidades`: chaves de condição ou `categoria:<medo|paralisia|mental|sentidos|fadiga>`.
+- Morrendo, Enlouquecendo, Inconsciente e Perturbado nunca viram instância: a
+  biblioteca liga o contador próprio delas.
+
+**Item com contagem de munição (v2.20).** Arma: `ordem.contagem = { municao
+(id do item de munição), carregada, capacidade? }`. Munição: `ordem.contagem =
+{ porPacote?, retiradas }` — a reserva é `quantidade × porPacote − retiradas`, o
+mesmo item do inventário, sem outro saldo.
 
 Ficha sem `condicoes` lê tudo inativo e sem contagem. Tudo o que chega é
 normalizado (`RAMAOrdemCondicoes.normalizar`): ids fora do padrão, eventos

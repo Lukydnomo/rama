@@ -74,7 +74,7 @@
         leitura: (U.texto(c.nome).slice(0, 40) || U.texto(c.chave)) + (c.ativa === true ? "" : ", encerrada") +
           (limite !== null ? ": " + contagem + " de " + limite + " inícios de turno nesta cena"
             : (contagem ? ": " + contagem + " inícios de turno nesta cena" : "")) +
-          (c.oficial === false ? " (contador da mesa)" : ""),
+          (c.oficial === false ? " (efeitos que não são condições do livro)" : ""),
       };
     }).filter(Boolean);
   }

@@ -181,6 +181,12 @@
 
       if (op.tipo === "visiveis") {
         if (Array.isArray(op.lista)) c.visiveis = op.lista.map(String);
+        return;
+      }
+
+      if (op.tipo === "config") {
+        c.config = Object.assign({}, c.config || {});
+        if (typeof op.mostrarVidaCriaturas === "boolean") c.config.mostrarVidaCriaturas = op.mostrarVidaCriaturas;
       }
     });
 

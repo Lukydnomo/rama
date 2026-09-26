@@ -381,9 +381,27 @@ implementações e exige o mesmo resultado; se uma mudar, a outra tem de mudar j
 consulta no painel lateral. Selecionar nunca passa a vez; só **Próximo turno** e
 **Voltar turno** passam.
 
+### Efeitos, vida das criaturas e a vez para os jogadores (v2.20)
+
+- **Aplicar condição**, nos controles do mestre: alvo, condição do livro, efeito
+  de ritual ou da mesa, revisão da descrição e dos modificadores, duração e
+  confirmação — pelo mesmo modelo da ficha, gravado por `efeito_personagem`. O
+  que o mestre escreve ali vai para a ficha, e o dono vê; anotações privadas ficam
+  nas notas da campanha.
+- **A duração dos efeitos** conta pelos turnos do combate como morrendo: início
+  (`cb:`) ou fim (`cf:`) do turno de quem a aplicação conta, uma vez por id. O
+  combate guarda `turnoDesde` para o fim do turno em que o efeito foi aplicado não
+  contar. Voltar turno retira o início desfeito e o fim do turno que volta a valer.
+- **Mostrar vida das criaturas aos jogadores**: desligada por padrão, também nos
+  combates que já existiam. Mudar reenvia a lista a todos na próxima sincronia.
+- **Quem tem a vez**: para os jogadores, um painel com a foto do personagem ou a
+  imagem da criatura, pedida por `ler_imagem_do_turno` só quando a vez muda
+  (guardada 2 minutos), com as iniciais quando não há imagem. Independe do que o
+  mestre selecionou.
+
 ### Condições pelo turno do combate (v2.19)
 
-Numa ficha de Ordem com morrendo, enlouquecendo ou um contador da mesa ativo, o
+Numa ficha de Ordem com morrendo, enlouquecendo ou um efeito com duração em turnos, o
 **início do turno do personagem** conta sozinho — ver
 [ORDEM-REGRAS.md](ORDEM-REGRAS.md#condições-contadas-por-turno-v219). Quem conta é
 o servidor, no mesmo `atualizar_combate` que muda o turno, e só ele:

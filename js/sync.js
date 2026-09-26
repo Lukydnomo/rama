@@ -36,6 +36,7 @@
      -----------------------------------------------------------------
      esquema = {
        listas:  { "pericias": "id", "inventario.itens": "id" },
+       somaveis: ["inventario.itens.ordem.contagem.retiradas"],
        ignorar: ["atualizadoEm"],
        rotulos: { "pericias": "Perícia", "bonus": "Bônus" },
      }
@@ -50,6 +51,7 @@
     var e = esquema || {};
     var estado = {
       listas: e.listas || {},
+      somaveis: e.somaveis || [],
       ignorar: e.ignorar || [],
       rotulos: e.rotulos || {},
       conflitos: [],
@@ -117,6 +119,15 @@
       ctx.automaticos.push({ caminho: caminho, rotulo: rotuloDe(ctx, chave), contexto: contexto, valor: l });
       return U.copiar(l);
     }
+    /* Contador de gasto (v2.20): munição carregada, retirada da
+       reserva, componentes da mesa. Dois aparelhos gastando ao mesmo
+       tempo gastaram os DOIS — a diferença de cada lado se soma, sem
+       pergunta e sem ninguém perder um disparo. Nunca abaixo de zero. */
+    if ((ctx.somaveis || []).indexOf(caminho) >= 0 && numero(b) && numero(l) && numero(s)) {
+      var soma = Math.max(0, s + (l - b));
+      ctx.automaticos.push({ caminho: caminho, rotulo: rotuloDe(ctx, chave) + " (somado)", contexto: contexto, valor: soma });
+      return soma;
+    }
     if (U.iguais(l, s)) return U.copiar(s);        // os dois, para o mesmo valor
 
     /* Os dois mexeram, para valores diferentes. O padrão fica com o
@@ -134,6 +145,8 @@
 
     return U.copiar(s);
   }
+
+  function numero(v) { return typeof v === "number" && isFinite(v); }
 
   /* Casar por id, e nunca por posição: comparar posição faria o sistema
      achar que a Acrobacia virou Atletismo porque alguém acrescentou uma
@@ -476,9 +489,27 @@
          evento — e dois eventos diferentes somam, sem briga. */
       "ordem.condicoes.morrendo.eventos": "id",
       "ordem.condicoes.enlouquecendo.eventos": "id",
-      "ordem.condicoes.mesa.exaustao.eventos": "id",
-      "ordem.condicoes.mesa.desmaio.eventos": "id",
+      /* Condições e efeitos aplicados (v2.20): cada aplicação é uma
+         instância com id, e os turnos que ela contou também. O mestre
+         aplicando pelo combate e o jogador encerrando outra, ao mesmo
+         tempo, não brigam. */
+      "ordem.condicoes.efeitos": "id",
+      "ordem.condicoes.efeitos.eventos": "id",
+      /* O registro do que foi gasto: é por ele que o mesmo uso não gasta
+         duas vezes, então as duas abas precisam ver os dois lados. */
+      "ordem.consumos": "id",
+      "ordem.componentes.extras": "id",
     },
+    /* Contadores de gasto: a diferença de cada lado se soma. */
+    somaveis: [
+      "inventario.itens.ordem.contagem.carregada",
+      "inventario.itens.ordem.contagem.retiradas",
+      "ordem.componentes.elementos.sangue.quantidade",
+      "ordem.componentes.elementos.morte.quantidade",
+      "ordem.componentes.elementos.conhecimento.quantidade",
+      "ordem.componentes.elementos.energia.quantidade",
+      "ordem.componentes.extras.quantidade",
+    ],
     /* Uma nota pode mudar de pasta: ver repararMovimentos. */
     movimentos: [
       { conteineres: ["anotacoes.soltas", "anotacoes.pastas.notas"] },
@@ -511,9 +542,13 @@
       adicionadoEm: "Adicionado em", aquisicao: "Aquisição", efeitos: "Efeitos automáticos",
       etiqueta: "Etiqueta", texto: "Texto", cor: "Cor", negrito: "Negrito",
       condicoes: "Condições", morrendo: "Morrendo", enlouquecendo: "Enlouquecendo", inconsciente: "Inconsciente",
-      perturbado: "Perturbado", exaustao: "Exaustão (mesa)", desmaio: "Desmaio (mesa)", ativa: "Condição ativa",
-      eventos: "Inícios de turno", descartados: "Inícios de turno descartados", cena: "Cena",
-      integrarCombate: "Contar pelos turnos do combate", usar: "Contador da mesa ligado", ativacao: "Ativação",
+      perturbado: "Perturbado", ativa: "Condição ativa",
+      eventos: "Turnos contados", descartados: "Turnos descartados", cena: "Cena",
+      integrarCombate: "Contar pelos turnos do combate",
+      encerrado: "Encerramento", imunidades: "Imunidades", modificadores: "Modificadores", restricoes: "Restrições",
+      contagem: "Contagem de munição", carregada: "Munição carregada", retiradas: "Munição gasta da reserva",
+      porPacote: "Ataques por pacote", municao: "Munição associada", consumos: "Registro de consumo",
+      componentes: "Componentes ritualísticos", tem: "Tem componentes", porUso: "Gasto por uso", unidade: "Unidade",
       consequencia: "Consequência combinada", pd: "Pontos de determinação", criterios: "Critérios dos rituais",
       lugares: "Pastas das habilidades das regras", pericias: "Perícias",
     },

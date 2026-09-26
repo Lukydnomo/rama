@@ -70,6 +70,35 @@
 
   var CHANGELOG = [
     {
+      versao: "2.20.0",
+      codinome: "RASTRO",
+      data: "26/09/2026",
+      mudancas: {
+        "Adicionado": [
+          "\"+ Adicionar condição\" na ficha de Ordem, sem destravar o modo edição: a biblioteca com as 38 condições do livro (Ordem Paranormal RPG, p. 310-311), com busca, categoria, explicação e página; efeitos de rituais (Coincidência Forçada, Armadura de Sangue, Embaralhar, Ódio Incontrolável, Forma Monstruosa); e efeitos criados pela mesa. Cada aplicação é independente: origem, descrição, modificadores, duração, quem aplicou, cena e combate. Ajustar uma aplicação não muda o catálogo — ela guarda o modelo e fica marcada como ajustada.",
+          "Os efeitos entram nas contas: o total das perícias, a explicação de cada parcela, as rolagens, a Defesa, o deslocamento e o dano, sem mexer no treinamento nem no bônus manual. Bônus, dados a mais ou a menos e restrições de uso são coisas separadas; o que vale só corpo a corpo ou à distância só entra nesse ataque. Acúmulo pela regra do livro (p. 312-313): a mesma condição e efeitos do mesmo tipo de fonte não somam, e o que ficou de fora aparece explicado. Condições que trazem outras (Agarrado traz Desprevenido e Imóvel) continuam valendo enquanto alguma fonte as causar; imunidades por condição ou por categoria.",
+          "Duração: até o fim da cena, por turnos (de quem — o afetado ou outro participante —, no início ou no fim), até ser removido ou especial. Aplicar durante um turno não gasta aquele turno; +1 turno, −1 para corrigir, editar, encerrar e reativar. No combate, os turnos contam sozinhos, uma vez; voltar turno desfaz só o que desfez; nova cena encerra só os efeitos de cena.",
+          "O mestre aplica condições pelo painel de combate: escolhe o alvo, a condição ou o efeito, revisa e confirma — com o mesmo modelo e as mesmas funções da ficha.",
+          "Regras opcionais \"Contagem de munição\" (OPRPG p. 174) e \"Controle de componentes ritualísticos\" (OPRPG p. 119), desligadas por padrão e por ficha. A munição ganha um painel na aba Geral (carregada em cada arma, reserva no próprio item — um saldo só —, recarga, reposição e ajuste) e o ataque ganha uma confirmação compacta: o que gasta, o saldo depois, atacar e registrar ou atacar sem registrar. Rajada gasta 10 balas, com −1 dado no ataque e +2 dados de dano; a espingarda de cano duplo dispara os dois canos (Sobrevivendo ao Horror). Rolar o dano depois não gasta de novo.",
+          "\"Usar ritual\" em cada ritual da ficha de Ordem: versão, custo em PE ou PD, componentes (Medo e afinidade dispensam; Selo, acólito, Camuflar Ocultismo e Improvisar Componentes como dispensas; catalisador e Conjuração Complexa gastam), tudo revisto antes de confirmar. Funciona para ritual sem dano — e Coincidência Forçada pode ser registrada no próprio personagem na mesma confirmação.",
+          "Para os jogadores, o combate mostra a imagem de quem tem o turno — a foto do personagem ou a imagem da criatura —, acompanhando a passagem de turno.",
+          "\"Mostrar vida das criaturas aos jogadores\", por combate e desligado por padrão: desligado, o servidor não envia PV, máximo nem nada que os revele; ligado, só o resumo da vida.",
+        ],
+        "Removido": [
+          "Os contadores da mesa de exaustão e desmaio da v2.19, que vieram de um mal-entendido: a configuração, os gatilhos e a integração com os turnos saíram. Os registros antigos são descartados ao ler — nunca viram turnos de enlouquecendo. Exausto e Inconsciente continuam na biblioteca, como as condições do livro.",
+        ],
+        "Alterado": [
+          "Enlouquecendo usa a Sanidade ou os pontos de determinação, conforme a regra ligada — uma contagem só. Gastar PE ou PD para pagar uma habilidade não ativa condição nenhuma (SAH p. 104-105).",
+        ],
+        "Técnico": [
+          "schemaVersion 10 → 11, sem conversão: `condicoes` ganhou `efeitos` e `imunidades` e perdeu `mesa`; o bloco de Ordem ganhou `componentes` e `consumos`; o item, `ordem.contagem`.",
+          "O backend mudou (Campanhas.gs), sem aba nem coluna nova: cole os três `.gs`, crie uma nova versão da implantação e só depois publique o site. Novas ações `efeito_personagem` (o jogador só no próprio personagem, o mestre nos da campanha, conferido no servidor; quem aplicou e quando vêm da sessão) e `ler_imagem_do_turno`; o combate guarda `turnoDesde` e `config`.",
+          "Cada gasto confirmado leva um id: clique repetido, resposta perdida, recarga ou outra aba não gastam de novo. Dois aparelhos gastando munição ou componentes ao mesmo tempo têm os gastos somados, nunca abaixo de zero. Exportar e importar levam as aplicações, os turnos contados, o registro de consumo e a munição associada a cada arma.",
+          "Testes: 2022 no modelo (115 novas), 927 no backend (21 novas), 226 no transporte do frontend; testes/arrastar.html com 126 verificações (131 no celular) e testes/biblioteca.html com 171. Mutações nas garantias novas: 6, todas pegas.",
+        ],
+      },
+    },
+    {
       versao: "2.19.0",
       codinome: "LIMIAR",
       data: "25/09/2026",

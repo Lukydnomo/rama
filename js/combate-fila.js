@@ -238,6 +238,7 @@
       if (op.tipo === "estado") return estado.estado;
       if (op.tipo === "renomear") return estado.nome;
       if (op.tipo === "visiveis") return (estado.visiveis || []).slice();
+      if (op.tipo === "config") return !!(estado.config && estado.config.mostrarVidaCriaturas);
       return null;
     }
 
@@ -551,6 +552,14 @@
           if (atual.nome === op.nome) jaEsta();
           else if (atual.nome === p.base) volta();
           else cai("O nome do combate foi trocado em outro lugar (agora \"" + atual.nome + "\"). O seu não foi aplicado.");
+          return;
+        }
+
+        if (op.tipo === "config") {
+          var agora = !!(atual.config && atual.config.mostrarVidaCriaturas);
+          if (agora === op.mostrarVidaCriaturas) jaEsta();
+          else if (agora === p.base) volta();
+          else cai("\"Mostrar vida das criaturas\" foi mudado em outro lugar. A sua escolha não foi aplicada.");
           return;
         }
 

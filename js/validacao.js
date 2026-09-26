@@ -301,7 +301,7 @@
   /* Uma cópia da ficha com cada vínculo de ritual marcado com a posição
      dele na lista. Só é chamada ao exportar. */
   function comPosicoesDeRitual(ficha) {
-    return comApresentacaoPortavel(comPosicoesDosRituais(ficha));
+    return comConsumoPortavel(comApresentacaoPortavel(comPosicoesDosRituais(ficha)));
   }
 
   /* =================================================================
@@ -381,19 +381,90 @@
     return copia;
   }
 
+  /* Os turnos contados de Morrendo, Enlouquecendo e de cada condição ou
+     efeito aplicado (v2.20). O id do evento É o turno ("cb:combate:
+     rodada:participante") — sem ele, o mesmo turno contaria de novo. */
   function percorrerEventos(cond, fn) {
     if (!cond || typeof cond !== "object") return;
     var listas = [cond.morrendo, cond.enlouquecendo];
-    if (cond.mesa && typeof cond.mesa === "object") listas.push(cond.mesa.exaustao, cond.mesa.desmaio);
+    if (Array.isArray(cond.efeitos)) listas = listas.concat(cond.efeitos);
     listas.forEach(function (r) {
       if (r && Array.isArray(r.eventos)) r.eventos.forEach(function (e) { if (e && typeof e === "object") fn(e); });
     });
   }
 
-  /* Antes de normalizar o que veio do arquivo: `evento` volta a ser `id`. */
+  /* =================================================================
+     O QUE ATRAVESSA DO CONSUMO E DOS EFEITOS (v2.20)
+     -----------------------------------------------------------------
+     · Cada condição ou efeito aplicado é uma instância com id, e o
+       registro de consumo também: o id vai como `efeito`/`registro` e
+       volta a ser id ao importar. Sem ele a normalização descartaria a
+       instância inteira.
+     · Os componentes da mesa (extras) idem, como `extra`.
+     · A munição associada a uma arma aponta para o item de munição pelo
+       id — que a importação troca. Ela atravessa por POSIÇÃO no
+       inventário ("#pos:N"), e só é aceita se aquele item ainda for
+       munição.
+     ================================================================= */
+
+  function comConsumoPortavel(ficha) {
+    var o = ficha && ficha.ordem;
+    var itens = ficha && ficha.inventario && Array.isArray(ficha.inventario.itens) ? ficha.inventario.itens : [];
+    var temEfeitos = o && o.condicoes && Array.isArray(o.condicoes.efeitos) && o.condicoes.efeitos.length;
+    var temConsumos = o && Array.isArray(o.consumos) && o.consumos.length;
+    var temExtras = o && o.componentes && Array.isArray(o.componentes.extras) && o.componentes.extras.length;
+    var temVinculo = itens.some(function (i) { return i && i.ordem && i.ordem.contagem && i.ordem.contagem.municao; });
+    if (!temEfeitos && !temConsumos && !temExtras && !temVinculo) return ficha;
+
+    var copia = JSON.parse(JSON.stringify(ficha));
+    function guardar(lista, campo) {
+      (Array.isArray(lista) ? lista : []).forEach(function (x) {
+        if (x && typeof x === "object" && typeof x.id === "string") { x[campo] = x.id; delete x.id; }
+      });
+    }
+    if (temEfeitos) guardar(copia.ordem.condicoes.efeitos, "efeito");
+    if (temConsumos) guardar(copia.ordem.consumos, "registro");
+    if (temExtras) guardar(copia.ordem.componentes.extras, "extra");
+    if (temVinculo) {
+      var posicao = {};
+      copia.inventario.itens.forEach(function (i, n) { if (i && typeof i.id === "string") posicao[i.id] = n; });
+      copia.inventario.itens.forEach(function (i) {
+        var c = i && i.ordem && i.ordem.contagem;
+        if (!c || !c.municao) return;
+        if (posicao[c.municao] !== undefined) c.municao = PREFIXO_POSICAO + posicao[c.municao];
+        else delete c.municao;
+      });
+    }
+    return copia;
+  }
+
+  /* Antes de normalizar o que veio do arquivo: `evento`, `efeito`,
+     `registro` e `extra` voltam a ser `id`. */
   function devolverIdsDosEventos(dados) {
-    percorrerEventos(dados && dados.ordem ? dados.ordem.condicoes : null, function (e) {
+    var o = dados && dados.ordem;
+    function devolver(lista, campo) {
+      (Array.isArray(lista) ? lista : []).forEach(function (x) {
+        if (x && typeof x === "object" && typeof x[campo] === "string") { x.id = x[campo]; delete x[campo]; }
+      });
+    }
+    if (o && o.condicoes && typeof o.condicoes === "object") devolver(o.condicoes.efeitos, "efeito");
+    if (o) devolver(o.consumos, "registro");
+    if (o && o.componentes && typeof o.componentes === "object") devolver(o.componentes.extras, "extra");
+    percorrerEventos(o ? o.condicoes : null, function (e) {
       if (typeof e.evento === "string") { e.id = e.evento; delete e.evento; }
+    });
+  }
+
+  /* Depois de normalizar: "#pos:N" vira o id novo do item de munição. */
+  function refazerMunicao(ficha) {
+    var itens = ficha && ficha.inventario && Array.isArray(ficha.inventario.itens) ? ficha.inventario.itens : [];
+    var CS = global.RAMAOrdemConsumo;
+    itens.forEach(function (i) {
+      var c = i && i.ordem && i.ordem.contagem;
+      if (!c || typeof c.municao !== "string" || c.municao.indexOf(PREFIXO_POSICAO) !== 0) return;
+      var alvo = itens[parseInt(c.municao.slice(PREFIXO_POSICAO.length), 10)];
+      if (alvo && alvo.id && (!CS || CS.ehMunicao(alvo))) c.municao = alvo.id;
+      else delete c.municao;
     });
   }
 
@@ -523,6 +594,7 @@
 
       refazerVinculos(ficha);
       refazerApresentacao(ficha);
+      refazerMunicao(ficha);
       return { ok: true, tipo: "personagem", dados: ficha };
     }
 

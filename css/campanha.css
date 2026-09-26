@@ -573,6 +573,61 @@ button.mesa-recurso__valor { cursor: text; }
 
 .combate__lista { display: flex; flex-direction: column; gap: var(--e2); min-width: 0; }
 
+/* O jogador: a lista e, ao lado, quem está com o turno (v2.20). */
+.combate--jogador {
+  grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+}
+
+/* Duas classes: a regra base de .combate__painel, mais abaixo, fixa a
+   altura da tela inteira — o painel do turno mede o próprio conteúdo. */
+.combate__painel.combate__painel--turno {
+  height: auto;
+  min-height: 12rem;
+  padding: var(--e3);
+}
+
+.combate-turno-imagem {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--e2);
+  align-items: stretch;
+}
+
+.combate-turno-imagem__foto {
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  object-fit: cover;
+  border: var(--borda) solid var(--cor-traco-fraca);
+  background: var(--cor-superficie-2);
+}
+
+.combate-turno-imagem__vazia {
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  display: grid;
+  place-items: center;
+  border: var(--borda) dashed var(--cor-traco-media);
+  background: var(--cor-superficie-2);
+  font-size: 2.5rem;
+  font-weight: 700;
+  letter-spacing: var(--espaco-letra-titulo);
+  color: var(--cor-texto-3);
+}
+
+.combate-turno-imagem figcaption {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--e2);
+}
+
+.combate-turno-imagem__vez { font-size: var(--texto-mini); color: var(--cor-texto-3); text-transform: uppercase; letter-spacing: var(--espaco-letra-titulo); }
+.combate-turno-imagem__nome { font-weight: 700; overflow-wrap: anywhere; }
+.combate-turno-imagem--vazio { display: grid; place-items: center; min-height: 10rem; text-align: center; }
+
+.combate-controles__vida { font-size: var(--texto-mini); }
+
 .combate__painel {
   position: sticky;
   top: var(--e3);
@@ -597,6 +652,13 @@ button.mesa-recurso__valor { cursor: text; }
 @media (max-width: 900px) {
   .combate--mestre { grid-template-columns: minmax(0, 1fr); }
   .combate__painel { display: none; }
+  /* No celular, a imagem do turno fica acima da lista, pequena. */
+  .combate--jogador { grid-template-columns: minmax(0, 1fr); }
+  .combate__painel.combate__painel--turno { display: block; order: -1; position: static; height: auto; min-height: 0; padding: var(--e2); }
+  .combate__painel--turno .combate-turno-imagem { flex-direction: row; align-items: center; }
+  .combate__painel--turno .combate-turno-imagem__foto,
+  .combate__painel--turno .combate-turno-imagem__vazia { width: 64px; flex: 0 0 64px; font-size: 1.2rem; }
+  .combate__painel--turno .combate-turno-imagem--vazio { min-height: 0; }
 }
 
 .combate-turno {

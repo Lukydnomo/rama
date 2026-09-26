@@ -266,12 +266,18 @@
     var controles = mestre ? el("div.combate-controles") : null;
 
     var painelLateral = mestre ? el("aside.combate__painel", { "aria-label": "Ficha do participante selecionado" }) : null;
+    /* O jogador vê, no mesmo lugar, quem está com o turno: a imagem e o
+       nome, e nada da ficha. Acompanha o turno, não a seleção do mestre. */
+    var painelDoTurno = mestre ? null : el("aside.combate__painel.combate__painel--turno", {
+      "aria-label": "Quem está com o turno", "aria-live": "polite",
+    });
+    c.imagens = {};
 
-    var corpo = el("div.combate", { class: mestre ? "combate--mestre" : "" }, [
+    var corpo = el("div.combate", { class: mestre ? "combate--mestre" : "combate--jogador" }, [
       el("section.combate__lista", { "aria-label": "Ordem de iniciativa" }, [
         cabecaTurno, anuncio, barra, participantes, controles,
       ]),
-      painelLateral,
+      painelLateral || painelDoTurno,
     ]);
 
     var botoes = {};
@@ -297,7 +303,18 @@
         type: "button", texto: "Encerrar",
         onclick: function (ev) { mudarEstado(ev.currentTarget, "encerrado"); },
       });
-      U.trocar(controles, [botoes.criatura, botoes.personagens, botoes.quemVe, botoes.iniciar, botoes.encerrar]);
+      botoes.condicao = el("button.r-botao.r-botao--mini", {
+        type: "button", texto: "Aplicar condição",
+        onclick: function (ev) { aplicarCondicao(ev.currentTarget); },
+      });
+      botoes.vida = el("input", {
+        type: "checkbox", id: "vida-" + combate.id,
+        onchange: function (ev) { mudarVidaVisivel(ev.currentTarget.checked); },
+      });
+      var rotuloVida = el("label.r-marca.combate-controles__vida", { for: "vida-" + combate.id }, [
+        botoes.vida, el("span", { texto: "Mostrar vida das criaturas aos jogadores" }),
+      ]);
+      U.trocar(controles, [botoes.criatura, botoes.personagens, botoes.condicao, botoes.quemVe, botoes.iniciar, botoes.encerrar, rotuloVida]);
 
       botoes.voltar = el("button.r-botao.r-botao--mini", {
         type: "button", texto: "Voltar turno",
@@ -356,7 +373,74 @@
         pintarBarra(est);
         pintarControles(v, est, ordem);
         atualizarPainel(v);
+      } else {
+        pintarPainelDoTurno(v);
       }
+    }
+
+    /* ---------- o painel do jogador: quem está com o turno ---------- */
+
+    var IMAGEM_VALE_MS = 120000;
+
+    function pintarPainelDoTurno(v) {
+      if (!painelDoTurno) return;
+      var chave = v.estado + "|" + (v.ativo ? v.ativo.participanteId : "");
+      if (painelDoTurno.dataset.chave === chave && painelDoTurno.dataset.imagem === String(!!imagemEmCache(v))) return;
+      painelDoTurno.dataset.chave = chave;
+
+      if (v.estado !== "ativo") {
+        painelDoTurno.dataset.imagem = "false";
+        U.trocar(painelDoTurno, el("div.combate-turno-imagem.combate-turno-imagem--vazio", {}, [
+          el("p.t-mini", { texto: v.estado === "encerrado" ? "Combate encerrado." : "O combate ainda não começou." }),
+        ]));
+        return;
+      }
+      if (!v.ativo) {
+        painelDoTurno.dataset.imagem = "false";
+        U.trocar(painelDoTurno, el("div.combate-turno-imagem.combate-turno-imagem--vazio", {}, [
+          el("p.t-mini", { texto: "Ninguém está com o turno agora." }),
+        ]));
+        return;
+      }
+
+      var guardada = imagemEmCache(v);
+      painelDoTurno.dataset.imagem = String(!!guardada);
+      var nome = v.ativo.nome || "Participante";
+      var figura = guardada && guardada.imagem
+        ? el("img.combate-turno-imagem__foto", { src: guardada.imagem, alt: "Imagem de " + nome })
+        : el("div.combate-turno-imagem__vazia", { "aria-hidden": "true", texto: iniciais(nome) });
+      U.trocar(painelDoTurno, el("figure.combate-turno-imagem", {}, [
+        figura,
+        el("figcaption", {}, [
+          el("span.combate-turno-imagem__vez", { texto: "Vez de" }),
+          el("span.combate-turno-imagem__nome", { texto: nome }),
+          el("span.r-etiqueta", { texto: v.ativo.tipo === "criatura" ? "Criatura" : "Personagem" }),
+          guardada && !guardada.imagem ? el("span.t-mini", { texto: "sem imagem" }) : null,
+        ]),
+      ]));
+      if (!guardada) buscarImagemDoTurno(v.ativo.participanteId);
+    }
+
+    function imagemEmCache(v) {
+      var g = v.ativo ? c.imagens[v.ativo.participanteId] : null;
+      return g && Date.now() - g.em < IMAGEM_VALE_MS ? g : null;
+    }
+
+    function iniciais(nome) {
+      return String(nome || "?").trim().split(/\s+/).slice(0, 2).map(function (x) { return x.charAt(0).toUpperCase(); }).join("") || "?";
+    }
+
+    var buscando = {};
+    async function buscarImagemDoTurno(participanteId) {
+      if (buscando[participanteId]) return;
+      buscando[participanteId] = true;
+      var r = await global.RAMAApi.lerImagemDoTurno(c.ctx.campanhaId, combate.id);
+      buscando[participanteId] = false;
+      if (!r || !r.ok || !r.dados) return;
+      /* A resposta diz de quem é a imagem: se o turno andou enquanto ela
+         vinha, ela vai para quem ela é, e o painel pede a nova. */
+      if (r.dados.participanteId) c.imagens[r.dados.participanteId] = { imagem: r.dados.imagem || "", em: Date.now() };
+      pintarPainelDoTurno(c.fila.vista());
     }
 
     function nomeDe(v, id) {
@@ -528,6 +612,9 @@
         itens = p.recursos.map(function (r) { return { rotulo: r.rotulo || String(r.chave).toUpperCase(), atual: r.atual, maximo: r.maximo, chave: r.chave }; });
       } else if (mestre && p.tipo === "criatura" && p.snapshot && Array.isArray(p.snapshot.status)) {
         itens = p.snapshot.status.map(function (s) { return { rotulo: s.nome, atual: s.atual, maximo: s.maximo, chave: s.nome }; });
+      } else if (!mestre && p.tipo === "criatura" && p.vida) {
+        /* Só chega com "Mostrar vida das criaturas aos jogadores". */
+        itens = [{ rotulo: "Vida", atual: p.vida.atual, maximo: p.vida.maximo, chave: "vida" }];
       }
 
       /* Morrendo e enlouquecendo do personagem, com a mesma regra de quem
@@ -640,6 +727,8 @@
       }
 
       var ativo = v.estado === "ativo";
+      botoes.vida.checked = !!(v.config && v.config.mostrarVidaCriaturas);
+      botoes.condicao.hidden = !(v.participantes || []).some(function (p) { return p.tipo === "personagem"; });
       botoes.iniciar.hidden = v.estado !== "preparando";
       botoes.encerrar.hidden = !ativo;
       botoes.voltar.hidden = !ativo;
@@ -660,6 +749,82 @@
     }
 
     /* ---------- ações pontuais ---------- */
+
+    function mudarVidaVisivel(mostrar) {
+      c.fila.enfileirar({ tipo: "config", mostrarVidaCriaturas: !!mostrar }).then(function (r) {
+        if (r && r.ok) UI.aviso(mostrar ? "Os jogadores passam a ver a vida das criaturas deste combate." : "A vida das criaturas voltou a ficar só com você.");
+      });
+    }
+
+    /* Aplicar uma condição ou efeito num personagem do combate — a MESMA
+       janela e o mesmo formato da ficha. Quem grava é o servidor
+       (efeito_personagem), que confere de novo se quem pede é o mestre
+       da campanha do personagem. */
+    function aplicarCondicao(botao) {
+      var v = c.fila.vista();
+      var alvos = (v.participantes || []).filter(function (p) { return p.tipo === "personagem" && p.personagemId; });
+      if (!alvos.length) { UI.avisoAtencao("Não há personagens neste combate."); return; }
+      if (alvos.length === 1) { abrirJanelaDeCondicao(alvos[0], v); return; }
+      var janela = UI.modal({
+        titulo: "Aplicar condição em quem?",
+        conteudo: [el("div.pilha--curta", { class: "pilha" }, alvos.map(function (p) {
+          return el("button.r-botao", {
+            type: "button", texto: p.nome,
+            onclick: function () { janela.fechar(); abrirJanelaDeCondicao(p, c.fila.vista()); },
+          });
+        }))],
+        botoes: [{ rotulo: "Cancelar", classe: "r-botao--fantasma" }],
+      });
+    }
+
+    function abrirJanelaDeCondicao(alvo, v) {
+      if (!global.RAMAJanelaDeEfeitos) return;
+      var CDm = global.RAMAOrdemCondicoes;
+      var EFm = global.RAMAOrdemEfeitos;
+      var daMesa = (c.ctx.personagens || []).filter(function (p) { return String(p.id) === String(alvo.personagemId); })[0];
+      var cond = CDm && daMesa && daMesa.ordem ? CDm.normalizar(daMesa.ordem.condicoes) : null;
+      var eu = global.RAMAAuth && global.RAMAAuth.agente ? global.RAMAAuth.agente() : null;
+
+      function enviar(dados) {
+        var opId = "efeito-" + U.uuid().replace(/[^A-Za-z0-9_-]/g, "");
+        return global.RAMAApi.efeitoPersonagem(c.ctx.campanhaId, alvo.personagemId, opId, dados).then(function (r) {
+          if (!r.ok) {
+            if (r.motivo === "imune") return { ok: false, motivo: alvo.nome + " tem imunidade a esta condição." };
+            UI.avisoDeFalha(r, "aplicação do efeito");
+            return { ok: false };
+          }
+          UI.avisoOk(r.dados && r.dados.mudou === false ? "Nada mudou em " + alvo.nome + "." : "Aplicado em " + alvo.nome + ".");
+          if (c.ctx.recarregarPersonagens) c.ctx.recarregarPersonagens();
+          return { ok: true };
+        });
+      }
+
+      global.RAMAJanelaDeEfeitos.abrir({
+        titulo: "Condição ou efeito em " + alvo.nome,
+        alvoNome: alvo.nome,
+        cond: cond,
+        participantes: (v.participantes || []).map(function (p) { return { id: p.id, nome: p.nome }; }),
+        combateId: combate.id,
+        cena: cond ? cond.cena.id : "",
+        aplicadoPor: { id: eu ? eu.id : "", nome: eu ? (eu.nome || eu.usuario || "") : "", papel: "mestre" },
+        avisoPrivacidade: true,
+        aoRastreador: function (chave) { return enviar({ op: "rastreador", chave: chave }); },
+        aoConfirmar: function (inst, modo) {
+          if (modo === "renovar" && cond) {
+            var existente = EFm.avaliarAplicacao(cond, inst).conflito;
+            if (existente) return enviar({ op: "renovar", efeitoId: existente.existente.id, duracao: inst.duracao });
+          }
+          if (modo === "repetir" && cond) {
+            var copia = JSON.parse(JSON.stringify(cond));
+            var r = EFm.aplicar(copia, inst, "repetir");
+            if (!r.ok) return { ok: false, motivo: r.motivo };
+            if (r.acao === "rastreador") return enviar({ op: "rastreador", chave: r.rastreador, encerrar: r.encerrada.id });
+            if (r.acao === "repetida") return enviar({ op: "aplicar", efeito: r.instancia, encerrar: r.encerrada.id });
+          }
+          return enviar({ op: "aplicar", efeito: inst });
+        },
+      });
+    }
 
     async function mudarEstado(botao, valor) {
       if (valor === "encerrado") {

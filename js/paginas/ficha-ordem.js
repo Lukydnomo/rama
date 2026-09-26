@@ -241,6 +241,17 @@
     return { ok: true, valor: n };
   }
 
+  /* Os dados do teste, abertos, quando uma condição ou efeito os muda. */
+  function composicaoDosDados(o, chave) {
+    var dados = R.dadosDoTeste(o, chave);
+    if (dados.parcelas.length < 2) return null;
+    return el("div.pilha--curta", { class: "pilha" }, [
+      el("p.t-rotulo", { texto: "Dados" }),
+      el("div.composicao", {}, linhasDaComposicao(dados)),
+      el("p.t-mini", { texto: "Rola " + dados.expressao + (dados.quantos < 1 ? ": com menos de um dado, rolam-se mais e fica o pior (OPRPG p. 9)." : ".") }),
+    ]);
+  }
+
   function abrirComposicao(rotulo, conta, extra) {
     UI.modal({
       titulo: rotulo,
@@ -298,9 +309,15 @@
       var o = ordemDe(ctx);
       var c = calculo(ctx);
 
+      /* As regras opcionais de consumo aparecem só ligadas. Desligar
+         esconde o painel, mas guarda saldos e registros. */
+      var CS = global.RAMAOrdemConsumo;
+      var SC = global.RAMASecaoConsumo;
       return el("div.pilha--larga", { class: "pilha" }, [
         painelIdentidade(ctx, o, c),
         painelResistencias(ctx, o, c),
+        CS && SC && CS.ligada(o, "contagemMunicao") ? SC.painelMunicao(ctx) : null,
+        CS && SC && CS.ligada(o, "controleComponentes") ? SC.painelComponentes(ctx, c) : null,
         UI.painel("Ajustes da mesa", botaoAjuste(ctx, o, true)),
       ]);
     },
@@ -955,7 +972,8 @@
     var grade = el("div.ordem-atributos", {}, C.ATRIBUTOS.map(function (a) {
       var efetivo = R.atributo(o, a.chave);
       var base = R.atributoBase(o, a.chave);
-      var expressao = efetivo <= 0 ? "-2d20" : efetivo + "d20";
+      var dadosDoTeste = R.dadoDeAtributo(o, a.chave);
+      var expressao = dadosDoTeste.expressao;
       var composicao = R.composicaoDoAtributo(o, a.chave);
       var alterado = efetivo !== base;
 
@@ -974,7 +992,7 @@
               "aria-label": "Rolar " + a.nome + ", " + expressao,
               title: "Rolar " + expressao,
               texto: String(efetivo),
-              onclick: function () { rolarAtributo(ctx, a, expressao); },
+              onclick: function () { rolarAtributo(ctx, a, expressao, dadosDoTeste); },
             }),
         el("span.ordem-atributo__dado", { texto: ctx.emEdicao() && alterado ? "efetivo " + efetivo : expressao }),
         alterado
@@ -996,7 +1014,7 @@
     ]);
   }
 
-  function rolarAtributo(ctx, a, expressao) {
+  function rolarAtributo(ctx, a, expressao, dadosDoTeste) {
     var r = D.rolar(expressao);
     if (!r.ok) { UI.avisoErro("Expressão de dado inválida para " + a.nome + "."); return; }
 
@@ -1008,7 +1026,7 @@
       natural: r.principal,
       total: r.principal,
       parcelas: [],
-    }, { nome: a.nome });
+    }, { nome: a.nome, notas: notasDosDados(dadosDoTeste) });
   }
 
   /* Os recursos: o que sobrou.
@@ -1141,7 +1159,7 @@
         botaoDeCondicao(ctx, "Encerrar", function () { return CD().marcar(cond, "perturbado", false); }, "perturbado-encerrar"),
       ]));
     }
-    partes.push(secaoDaMesa(ctx, o, c));
+    partes.push(secaoDeEfeitos(ctx, o, c));
     return el("div.pilha--curta.condicoes", { class: "pilha" }, partes);
   }
 
@@ -1181,12 +1199,14 @@
         onclick: async function () {
           var certo = await UI.confirmar({
             titulo: "Começar uma nova cena?",
-            texto: "Zera a contagem de inícios de turno de morrendo, enlouquecendo e dos contadores da mesa.",
-            detalhe: "As condições ativas continuam ativas — morrendo não termina com a cena (OPRPG p. 88). Encerrar um combate não faz isto sozinho.",
+            texto: "Zera a contagem de inícios de turno de morrendo e enlouquecendo, e encerra os efeitos que duram até o fim da cena.",
+            detalhe: "As condições ativas continuam ativas — morrendo não termina com a cena (OPRPG p. 88) —, e efeitos por turnos ou até serem removidos também continuam. Encerrar um combate não faz isto sozinho.",
             rotuloConfirmar: "Nova cena",
           });
           if (!certo) return;
-          mudarCondicao(ctx, function () { return CD().novaCena(cond); }, "condicoes-nova-cena");
+          var fim = null;
+          mudarCondicao(ctx, function () { fim = CD().novaCena(cond); return fim; }, "condicoes-nova-cena");
+          if (fim && fim.encerradas && fim.encerradas.length) UI.aviso("Terminaram com a cena: " + fim.encerradas.join(", ") + ".");
         },
       }),
       el("label.r-marca.condicoes__combate", {}, [
@@ -1198,7 +1218,7 @@
             mudarCondicao(ctx, function () { cond.integrarCombate = ligar; return { mudou: true }; }, "condicoes-combate");
           },
         }),
-        el("span.t-mini", { texto: "Contar pelos turnos do combate da campanha (só o início do turno deste personagem)" }),
+        el("span.t-mini", { texto: "Contar pelos turnos do combate da campanha (os inícios de turno deste personagem, e a duração dos efeitos)" }),
       ]),
     ]);
   }
@@ -1282,105 +1302,334 @@
     ]);
   }
 
-  /* Exaustão e desmaio: da MESA. Desligados até a mesa ligar, sem limite
-     até ela escrever um, e sem consequência automática nenhuma. */
-  function secaoDaMesa(ctx, o, c) {
-    var cond = o.condicoes;
-    var linhas = CD().CHAVES_DA_MESA.map(function (chave) {
-      var e = CD().estado(cond, chave, { pd: c.determinacao });
-      var configurar = el("button.r-botao.r-botao--mini.r-botao--fantasma", {
-        type: "button", texto: e.usar ? "Configurar" : "Ligar…", dataset: { foco: "mesa-" + chave + "-configurar" },
-        onclick: function () { configurarContadorDaMesa(ctx, o, chave); },
-      });
-      if (!e.usar) {
-        return el("div.condicao.condicao--mesa.condicao--desligada", {}, [
-          el("div.condicao__topo", {}, [el("span.condicao__nome", { texto: e.nome }), el("span.t-mini", { texto: "desligado" }), configurar]),
-        ]);
-      }
-      var botoes = e.ativa
-        ? [
-            botaoDeCondicao(ctx, "+1 início de turno", function () { return CD().somarInicio(cond, chave); }, "mesa-" + chave + "-mais",
-              { disabled: e.atingiu }),
-            botaoDeCondicao(ctx, "−1 corrigir", function () { return CD().corrigirMenos(cond, chave); }, "mesa-" + chave + "-menos",
-              { disabled: !e.contagem }),
-            botaoDeCondicao(ctx, "Encerrar", function () { return CD().encerrar(cond, chave); }, "mesa-" + chave + "-encerrar"),
-          ]
-        : [botaoDeCondicao(ctx, "Ativar", function () { return CD().ativar(cond, chave); }, "mesa-" + chave + "-ativar")];
-      return el("div.condicao.condicao--mesa", { class: e.ativa ? "condicao--ativa" : "", role: "group", "aria-label": e.nome + " (regra da mesa)" }, [
-        el("div.condicao__topo", {}, [
-          el("span.condicao__nome", { texto: e.nome }),
-          el("span.condicao__recurso", { texto: "regra da mesa" }),
-          marcadores(e.contagem, e.limite),
-          configurar,
-        ]),
-        el("p.t-mini", {
-          texto: (e.ativa ? "Ativa: " + descricaoDaContagem(e) : (e.contagem ? "Encerrada; nesta cena: " + e.contagem + "." : "Inativa.")) +
-                 (e.limite === null ? " Sem limite definido." : "") +
-                 (e.ativacao === "recursoZero" ? " Ativa sozinha quando " + (c.determinacao ? "os PD" : "os PE") + " chegam a 0 por gasto ou dano." : " Ativação à mão."),
-        }),
-        e.ativa && e.atingiu
-          ? el("p.condicao__resultado", { role: "status", texto: "Limite da mesa atingido." + (e.consequencia ? " Combinado: " + e.consequencia : "") + " A ficha não aplica nada sozinha." })
-          : null,
-        el("div.faixa.condicao__botoes", {}, botoes),
-      ]);
-    });
-    return el("div.pilha--curta.condicoes__mesa", { class: "pilha" }, [
-      el("p.t-rotulo", { texto: "Contadores da mesa" }),
-      el("p.t-mini", { texto: "Não são regra do livro: o livro não liga exaustão nem desmaio a PD ou PE chegando a 0, nem dá prazo em turnos. Cada mesa decide se usa, o limite e como ativa." }),
-    ].concat(linhas));
+  /* =================================================================
+     CONDIÇÕES E EFEITOS APLICADOS (v2.20)
+     -----------------------------------------------------------------
+     As condições do livro e os efeitos (rituais, itens, efeitos da
+     mesa) aplicados neste personagem — cada um uma aplicação própria,
+     em `condicoes.efeitos`. Funciona fora do modo edição: administrar as
+     condições do próprio personagem é jogar, não montar a ficha. As
+     contas (perícias, dados, ataque, Defesa, deslocamento) leem daqui
+     pelo js/ordem/regras.js; encerrar uma aplicação tira só a parte dela.
+     ================================================================= */
+
+  function EF() { return global.RAMAOrdemEfeitos || null; }
+  function JE() { return global.RAMAJanelaDeEfeitos || null; }
+
+  function quemAplica(ctx) {
+    var ag = global.RAMAAuth && global.RAMAAuth.agente ? global.RAMAAuth.agente() : null;
+    return { id: ag ? ag.id : "", nome: ag ? (ag.nome || ag.usuario || "") : "", papel: ctx.ehDono && !ctx.ehDono() ? "mestre" : "jogador" };
   }
 
-  function configurarContadorDaMesa(ctx, o, chave) {
+  function adicionarCondicao(ctx, o) {
+    if (!JE() || !EF()) return;
     var cond = o.condicoes;
-    var r = cond.mesa[chave];
-    var def = CD().DA_MESA[chave];
-    var usar = el("input", { type: "checkbox", checked: r.usar, id: "mesa-usar-" + chave });
-    var limite = UI.campo({
-      rotulo: "Limite de inícios de turno (vazio = sem limite)", valor: r.limite === null ? "" : String(r.limite), limite: 2,
-      dica: "1 a " + CD().MAX_LIMITE_DA_MESA,
+    JE().abrir({
+      alvoNome: ctx.ficha.nome,
+      cond: cond,
+      rituaisDaFicha: (ctx.ficha.rituais && ctx.ficha.rituais.itens) || [],
+      cena: cond.cena.id,
+      aplicadoPor: quemAplica(ctx),
+      aoRastreador: function (chave) {
+        var r = CD().ativar(cond, chave);
+        if (!r.mudou) return { ok: false, motivo: "Já está ativa." };
+        ctx.alterou();
+        ctx.redesenhar();
+        UI.aviso(CD().OFICIAIS[chave] ? CD().OFICIAIS[chave].nome + ": contador ligado." : "Condição marcada.");
+        return { ok: true };
+      },
+      aoConfirmar: function (inst, modo) {
+        var r = EF().aplicar(cond, inst, modo);
+        if (!r.ok) return r;
+        if (r.acao === "rastreador") CD().ativar(cond, r.rastreador);
+        ctx.alterou();
+        ctx.redesenhar();
+        var feito = r.acao === "renovada" ? inst.nome + ": duração renovada."
+          : (r.acao === "repetida" ? r.encerrada.nome + " virou " + r.instancia.nome + "."
+            : (r.acao === "rastreador" ? r.encerrada.nome + " terminou: o personagem fica " + r.rastreador + "." : inst.nome + " aplicada."));
+        UI.aviso(feito);
+        focarEm("efeitos-adicionar");
+        return { ok: true };
+      },
     });
-    var ativacao = UI.campo({
-      rotulo: "Ativação", tipo: "selecao", valor: r.ativacao,
-      opcoes: CD().ATIVACOES.map(function (a) { return { valor: a.chave, rotulo: a.nome }; }),
+  }
+
+  function editarAplicacao(ctx, o, inst) {
+    if (!JE() || !EF()) return;
+    JE().abrir({
+      inicial: inst,
+      alvoNome: ctx.ficha.nome,
+      cena: o.condicoes.cena.id,
+      aoConfirmar: function (editada) {
+        var r = EF().editar(o.condicoes, inst.id, editada);
+        if (r.mudou) { ctx.alterou(); ctx.redesenhar(); }
+        return { ok: true };
+      },
     });
-    var consequencia = UI.campo({
-      rotulo: "O que acontece no limite, nas palavras da mesa (só é mostrado)", valor: r.consequencia, limite: 200,
+  }
+
+  function focarEm(chave) {
+    setTimeout(function () {
+      var alvo = document.querySelector('[data-foco="' + chave + '"]');
+      if (alvo) alvo.focus();
+    }, 0);
+  }
+
+  function mudarEfeito(ctx, fn, foco) {
+    var r = fn();
+    if (r && r.mudou === false) {
+      if (r.mensagem) UI.avisoAtencao(r.mensagem);
+      return;
+    }
+    ctx.alterou();
+    ctx.redesenhar();
+    if (foco) focarEm(foco);
+  }
+
+  function secaoDeEfeitos(ctx, o, c) {
+    if (!EF()) return null;
+    var cond = o.condicoes;
+    var resumo = c.efeitos || { condicoes: [], restricoes: [], acoes: [], contextuais: [], automaticas: [] };
+    var todas = cond.efeitos || [];
+    var ativas = todas.filter(function (x) { return EF().ativa(x); });
+    var terminadas = todas.filter(function (x) { return !EF().ativa(x); }).slice(-12).reverse();
+
+    /* As que só estão valendo porque outra as traz (exausto → lento). */
+    var derivadas = resumo.condicoes.filter(function (e) {
+      return !e.instancias.length && e.derivada && ["morrendo", "enlouquecendo", "inconsciente", "perturbado"].indexOf(e.chave) < 0;
+    });
+
+    var partes = [
+      el("div.condicoes__efeitos-topo", {}, [
+        el("p.t-rotulo", { texto: "Condições e efeitos" }),
+        el("button.r-botao.r-botao--mini.r-botao--principal", {
+          type: "button", texto: "+ Adicionar condição", dataset: { foco: "efeitos-adicionar" },
+          onclick: function () { adicionarCondicao(ctx, o); },
+        }),
+      ]),
+    ];
+
+    if (resumo.automaticas.length) {
+      partes.push(el("ul.efeitos-automaticas", { "aria-label": "Condições automáticas" }, resumo.automaticas.map(function (a) {
+        return el("li.efeitos-chip", { title: "Automática: aparece sozinha, pelo recurso." }, [
+          el("span", { texto: a.nome }), el("span.t-mini", { texto: " · " + a.motivo }),
+        ]);
+      })));
+    }
+
+    if (!ativas.length && !derivadas.length) {
+      partes.push(el("p.t-mini", { texto: "Nenhuma condição nem efeito aplicado. A biblioteca traz as condições do livro; efeitos de rituais e da mesa também entram por ali." }));
+    }
+
+    ativas.forEach(function (inst) { partes.push(cartaoDeEfeito(ctx, o, inst)); });
+
+    if (derivadas.length) {
+      partes.push(el("ul.efeitos-derivadas", { "aria-label": "Condições trazidas por outras" }, derivadas.map(function (e) {
+        return el("li.efeitos-chip", { class: e.imune ? "efeitos-chip--imune" : "" }, [
+          el("span", { texto: e.nome }),
+          el("span.t-mini", { texto: e.imune ? " · imune" : " · por " + e.fontes.join(", ") }),
+        ]);
+      })));
+    }
+
+    if (resumo.contextuais.length) {
+      partes.push(el("p.t-mini", {
+        texto: "Depende do contexto: " + resumo.contextuais.map(function (x) {
+          return x.nome + " " + U.comSinal(x.valor) + " (" + x.fonte + ")";
+        }).join("; ") + ".",
+      }));
+    }
+
+    if (resumo.restricoes.length) {
+      partes.push(el("div.efeitos-restricoes", {}, [el("p.t-rotulo", { texto: "Enquanto valerem" })].concat(
+        resumo.restricoes.map(function (r) { return el("p.t-mini", { texto: r.texto + " (" + r.fonte + ")" }); }))));
+    }
+
+    if (resumo.acoes.length) {
+      partes.push(el("div.faixa.efeitos-acoes", { role: "group", "aria-label": "Rolagens pedidas pelas condições" },
+        resumo.acoes.map(function (a) {
+          return el("button.r-botao.r-botao--mini", {
+            type: "button", texto: a.rotulo + " · " + a.fonte,
+            title: "Pedido pela condição " + a.fonte + ", " + a.quando + ". A ficha só rola quando você manda.",
+            onclick: function () { rolarAcaoDeCondicao(ctx, o, a); },
+          });
+        })));
+      partes.push(el("p.t-mini", { texto: "Estas rolagens são pedidas pelas condições, mas o resultado é da mesa: a ficha não encerra nem aplica nada sozinha." }));
+    }
+
+    if (terminadas.length) {
+      partes.push(el("details.efeitos-terminados", {}, [
+        el("summary", { texto: "Terminados (" + terminadas.length + ")" }),
+        el("div.pilha--curta", { class: "pilha" }, terminadas.map(function (inst) { return linhaDeTerminado(ctx, o, inst); })),
+      ]));
+    }
+
+    partes.push(linhaDeImunidades(ctx, o));
+    return el("div.pilha--curta.condicoes__efeitos", { class: "pilha", dataset: { secaoEfeitos: "sim" } }, partes);
+  }
+
+  function cartaoDeEfeito(ctx, o, inst) {
+    var cond = o.condicoes;
+    var turnos = inst.duracao.tipo === "turnos";
+    var base = inst.tipo === "condicao" ? EF().condicao(inst.modelo.slice(5)) : null;
+    var origem = [EF().NOMES_DE_ORIGEM[inst.origem.tipo], inst.origem.nome].filter(Boolean).join(" · ");
+    var por = inst.aplicadoPor && inst.aplicadoPor.nome ? "aplicado por " + inst.aplicadoPor.nome + (inst.aplicadoPor.papel === "mestre" ? " (mestre)" : "") : "";
+    var mods = inst.modificadores.map(function (m) { return JE() ? JE().textoDoModificador(m) : ""; }).filter(Boolean);
+    return el("div.efeito", { role: "group", "aria-label": inst.nome, dataset: { efeitoId: inst.id } }, [
+      el("div.efeito__topo", {}, [
+        el("span.efeito__nome", { texto: inst.nome }),
+        el("span.r-etiqueta", { texto: inst.tipo === "condicao" ? "condição" : "efeito" }),
+        inst.personalizado ? el("span.r-etiqueta", { texto: "ajustada", title: "Diferente do modelo da biblioteca, que continua igual." }) : null,
+        turnos ? marcadores(inst.eventos.length, inst.duracao.turnos) : null,
+      ]),
+      el("p.t-mini", { texto: [origem, por].filter(Boolean).join(" — ") }),
+      el("p.t-mini.efeito__duracao", { texto: "Duração: " + EF().textoDaDuracao(inst) }),
+      mods.length ? el("p.t-mini.efeito__mods", { texto: mods.join(" · ") }) : null,
+      inst.inclui.length ? el("p.t-mini", { texto: "Traz junto: " + inst.inclui.map(function (k) { return EF().condicao(k).nome; }).join(", ") + "." }) : null,
+      inst.descricao ? el("details.efeito__descricao", {}, [el("summary", { texto: "Descrição" }), el("p.t-mini", { texto: inst.descricao })]) : null,
+      base && base.repeticao ? el("p.t-mini", { texto: "Se acontecer de novo: " + EF().condicao(base.repeticao).nome.toLowerCase() + " (OPRPG p. " + base.pagina + ")." }) : null,
+      el("div.faixa.efeito__botoes", {}, [
+        turnos ? botaoDeEfeito("+1 turno", function () { return EF().somarTurno(cond, inst.id); }, ctx, "efeito-mais-" + inst.id,
+          { title: "Um turno de duração que passou fora do combate" }) : null,
+        turnos && inst.eventos.length ? botaoDeEfeito("−1 corrigir", function () { return EF().corrigirTurno(cond, inst.id); }, ctx, "efeito-menos-" + inst.id) : null,
+        el("button.r-botao.r-botao--mini", {
+          type: "button", texto: "Editar", dataset: { foco: "efeito-editar-" + inst.id },
+          onclick: function () { editarAplicacao(ctx, o, inst); },
+        }),
+        botaoDeEfeito("Encerrar", function () { return EF().encerrar(cond, inst.id, "manual", quemAplica(ctx).nome); }, ctx, "efeitos-adicionar"),
+      ]),
+    ]);
+  }
+
+  function botaoDeEfeito(rotulo, fn, ctx, foco, extra) {
+    return el("button.r-botao.r-botao--mini", Object.assign({
+      type: "button", texto: rotulo, dataset: { foco: foco },
+      onclick: function () { mudarEfeito(ctx, fn, foco); },
+    }, extra || {}));
+  }
+
+  var MOTIVOS_DE_FIM = { manual: "encerrado", cena: "fim da cena", duracao: "duração", repeticao: "virou outra condição" };
+
+  function linhaDeTerminado(ctx, o, inst) {
+    var cond = o.condicoes;
+    var motivo = inst.encerrado ? MOTIVOS_DE_FIM[inst.encerrado.motivo] || "encerrado" : "a duração terminou";
+    return el("div.efeito.efeito--terminado", { dataset: { efeitoId: inst.id } }, [
+      el("div.efeito__topo", {}, [
+        el("span.efeito__nome", { texto: inst.nome }),
+        el("span.t-mini", { texto: motivo }),
+      ]),
+      el("div.faixa.efeito__botoes", {}, [
+        EF().expirou(inst)
+          ? botaoDeEfeito("−1 corrigir", function () { return EF().corrigirTurno(cond, inst.id); }, ctx, "efeitos-adicionar",
+              { title: "Tira o último turno contado: a aplicação volta a valer" })
+          : botaoDeEfeito("Reativar", function () { return EF().reativar(cond, inst.id); }, ctx, "efeitos-adicionar"),
+        botaoDeEfeito("Remover da lista", function () {
+          if (EF().ativa(inst)) return { mudou: false };
+          if (inst.encerrado === null && EF().expirou(inst)) EF().encerrar(cond, inst.id, "duracao");
+          return EF().remover(cond, inst.id);
+        }, ctx, "efeitos-adicionar"),
+      ]),
+    ]);
+  }
+
+  function linhaDeImunidades(ctx, o) {
+    var cond = o.condicoes;
+    var lista = cond.imunidades || [];
+    var nomes = lista.map(function (k) {
+      var m = /^categoria:(.+)$/.exec(k);
+      return m ? EF().CATEGORIAS[m[1]] : (EF().condicao(k) ? EF().condicao(k).nome : k);
+    });
+    return el("div.condicoes__imunidades", {}, [
+      el("span.t-mini", { texto: "Imunidades: " + (nomes.length ? nomes.join(", ") : "nenhuma") + "." }),
+      el("button.r-botao.r-botao--mini.r-botao--fantasma", {
+        type: "button", texto: "Editar imunidades", dataset: { foco: "efeitos-imunidades" },
+        onclick: function () { editarImunidades(ctx, o); },
+      }),
+    ]);
+  }
+
+  function editarImunidades(ctx, o) {
+    var cond = o.condicoes;
+    var marcadas = {};
+    (cond.imunidades || []).forEach(function (k) { marcadas[k] = true; });
+    var caixas = [];
+    var grupos = Object.keys(EF().CATEGORIAS).map(function (cat) {
+      var chave = "categoria:" + cat;
+      var cb = el("input", { type: "checkbox", checked: !!marcadas[chave], dataset: { imunidade: chave } });
+      caixas.push(cb);
+      return el("label.r-marca", {}, [cb, el("span", { texto: EF().CATEGORIAS[cat] + " (todas)" })]);
+    });
+    var individuais = EF().CONDICOES.filter(function (c) { return !c.automatica && !c.rastreador; }).map(function (c) {
+      var cb = el("input", { type: "checkbox", checked: !!marcadas[c.chave], dataset: { imunidade: c.chave } });
+      caixas.push(cb);
+      return el("label.r-marca", {}, [cb, el("span", { texto: c.nome })]);
     });
     UI.modal({
-      titulo: def.nome + " — contador da mesa",
+      titulo: "Imunidades a condições",
       conteudo: [
-        el("p.t-mini", { texto: def.explicacao }),
-        el("label.r-marca", { for: "mesa-usar-" + chave }, [usar, el("span", { texto: "Usar este contador nesta ficha" })]),
-        limite, ativacao, consequencia,
-        el("p.t-mini", { texto: "Desligar não apaga os turnos já contados: eles só deixam de valer." }),
+        el("p.t-mini", { texto: "De habilidades, itens ou decisões da mesa. Uma condição imune não pode ser aplicada, e a que viria junto de outra não vale." }),
+        el("div.efeitos-imunidades", {}, grupos),
+        el("div.efeitos-imunidades", {}, individuais),
       ],
       botoes: [
         { rotulo: "Cancelar", classe: "r-botao--fantasma" },
         {
           rotulo: "Salvar", classe: "r-botao--principal",
           aoClicar: function (fechar) {
-            var bruto = limite.entrada.value.trim();
-            if (bruto && !/^\d{1,2}$/.test(bruto)) { limite.marcarErro("Use um número de 1 a " + CD().MAX_LIMITE_DA_MESA + ", ou deixe vazio."); return; }
-            if (bruto && (Number(bruto) < 1 || Number(bruto) > CD().MAX_LIMITE_DA_MESA)) {
-              limite.marcarErro("Use um número de 1 a " + CD().MAX_LIMITE_DA_MESA + ", ou deixe vazio.");
-              return;
-            }
-            var feito = CD().configurarDaMesa(cond, chave, {
-              usar: usar.checked, limite: bruto ? Number(bruto) : null,
-              ativacao: ativacao.entrada.value, consequencia: consequencia.entrada.value,
-            });
+            var novas = caixas.filter(function (cb) { return cb.checked; }).map(function (cb) { return cb.dataset.imunidade; });
+            var antes = JSON.stringify(cond.imunidades || []);
+            cond.imunidades = EF().normalizarImunidades(novas);
             fechar();
-            if (feito.mudou) { ctx.alterou(); ctx.redesenhar(); }
+            if (antes !== JSON.stringify(cond.imunidades)) { ctx.alterou(); ctx.redesenhar(); focarEm("efeitos-imunidades"); }
           },
         },
       ],
     });
   }
 
+  /* A rolagem que uma condição pede (sangrando: Vigor DT 20). Só quando
+     a pessoa manda; o resultado não encerra nem aplica nada sozinho. */
+  function rolarAcaoDeCondicao(ctx, o, a) {
+    if (a.atributo) {
+      var dados = R.dadoDeAtributo(o, a.atributo);
+      var r = D.rolar(dados.expressao);
+      if (!r.ok) return;
+      global.RAMARolagens.mostrar({
+        tipo: "atributo", nome: a.rotulo, expressao: r.expressao, rolagens: r.rolagens,
+        natural: r.principal, total: r.principal, parcelas: [],
+      }, { nome: a.fonte + " · " + a.rotulo, notas: notasDosDados(dados) });
+      return;
+    }
+    var d = D.rolar(a.expressao);
+    if (!d.ok) return;
+    global.RAMARolagens.mostrar({
+      tipo: a.dano ? "dano" : "livre", nome: a.rotulo, expressao: d.expressao, rolagens: d.rolagens,
+      natural: d.principal, total: d.total !== undefined ? d.total : d.principal, parcelas: [],
+    }, { nome: a.fonte + " · " + a.rotulo });
+  }
+
+  /* O que mudou nos dados de um teste, para o resultado dizer: "2 dados
+     de AGI, −1 de Abalado → 1d20". */
+  function notasDosDados(dados) {
+    if (!dados || !dados.parcelas || dados.parcelas.length < 2) return [];
+    var partes = dados.parcelas.map(function (x, i) {
+      if (i === 0) return x.valor + " " + (x.valor === 1 ? "dado" : "dados") + " (" + x.rotulo.replace(/^Dados de /, "") + ")";
+      return (x.valor > 0 ? "+" : "") + x.valor + " " + x.rotulo;
+    });
+    return ["Dados: " + partes.join(", ") + " → " + dados.expressao + (dados.quantos < 1 ? " (fica com o pior)" : "")];
+  }
+
   function painelDerivadosCorpo(ctx, o, c) {
     var carga = c.carga;
 
     return el("div.pilha", {}, [
+      c.defesa.contextuais && c.defesa.contextuais.length
+        ? el("p.t-mini.ordem-derivados__nota", {
+            texto: "Defesa, conforme quem ataca: " + c.defesa.contextuais.map(function (x) {
+              return x.nome.replace(/^Defesa /, "") + " " + U.comSinal(x.valor) + " (" + x.fonte + ")";
+            }).join("; ") + ".",
+          })
+        : null,
       el("div.ordem-derivados", {}, [
         valorComExtra(ctx, o, c, "defesa"),
         valorComExtra(ctx, o, c, "bloqueio"),
@@ -1927,7 +2176,7 @@
           dataset: { foco: "total-" + p.chave },
           "aria-label": "Total de " + p.nome + ": " + U.comSinal(bonus.total) + (outros ? ", inclui outros modificadores" : "") + ". Ver a composição",
           title: "Ver a composição",
-          onclick: function () { abrirComposicao("Bônus de " + p.nome, bonus); },
+          onclick: function () { abrirComposicao("Bônus de " + p.nome, bonus, composicaoDosDados(o, p.chave)); },
         }, [
           el("span", { texto: U.comSinal(bonus.total) }),
           outros ? el("span.ordem-pericia__outros", { "aria-hidden": "true", texto: "*" }) : null,
@@ -1986,7 +2235,19 @@
     /* As parcelas do bônus aparecem abertas no resultado: grau, poder,
        penalidade de carga — em vez de um "+15" sem explicação. */
     r.parcelas = [r.parcelas[0]].concat(bonus.parcelas.map(function (x) { return { rotulo: x.rotulo, valor: x.valor }; }));
-    global.RAMARolagens.mostrar(Object.assign(r, { tipo: "pericia", nome: p.nome }), { nome: p.nome });
+    var dados = R.dadosDoTeste(o, p.chave);
+    var restr = restricoesDaPericia(ctx, p.chave);
+    global.RAMARolagens.mostrar(Object.assign(r, { tipo: "pericia", nome: p.nome }), { nome: p.nome, notas: notasDosDados(dados).concat(restr) });
+  }
+
+  /* Uma restrição de condição que fala desta perícia ("não faz testes
+     de Percepção para observar") aparece no resultado — como aviso. */
+  function restricoesDaPericia(ctx, chave) {
+    var c = calculo(ctx);
+    if (!c.efeitos) return [];
+    var nome = C.pericia(chave) ? U.chaveDeBusca(C.pericia(chave).nome) : "";
+    return c.efeitos.restricoes.filter(function (x) { return nome && U.chaveDeBusca(x.texto).indexOf(nome) >= 0; })
+      .map(function (x) { return "Atenção: " + x.texto + " (" + x.fonte + ")"; });
   }
 
   /* =================================================================
@@ -2458,8 +2719,8 @@
 
         UI.painel("Regras opcionais", el("div.pilha", {}, [
           el("p.t-mini", {
-            texto: "Todas do Sobrevivendo ao Horror, e todas começam desligadas — é o que o " +
-                   "próprio livro pede. O Livro de Regras continua sendo a versão padrão do jogo.",
+            texto: "Do Sobrevivendo ao Horror e do Livro de Regras (contagem de munição), mais o controle de componentes, " +
+                   "que é da mesa. Todas começam desligadas, e valem só para esta ficha. O Livro de Regras continua sendo a versão padrão do jogo.",
           }),
           el("div.pilha--curta", { class: "pilha" }, afetam.map(function (r) {
             return cartaoDeRegra(ctx, o, r);
@@ -2939,12 +3200,45 @@
       ]);
     },
 
+    /* Com "Contagem de munição" ligada, a arma que usa munição passa
+       antes pela confirmação compacta (js/paginas/ficha-consumo.js): o
+       gasto pertence ao ATAQUE, acertando ou errando. O dano rolado
+       depois não gasta de novo. */
     atacar: function (ctx, arma) {
       var ef = R.armaEfetiva(ordemDe(ctx), ctx.ficha.inventario, arma, ctx.ficha.pericias);
       if (!ef.pericia) { UI.avisoErro(ef.avisos[0] || "Escolha a perícia de ataque no modo edição."); return; }
+      var CS = global.RAMAOrdemConsumo;
+      if (CS && global.RAMASecaoConsumo && CS.ligada(ordemDe(ctx), "contagemMunicao") && CS.usaMunicao(arma)) {
+        global.RAMASecaoConsumo.confirmarAtaque(ctx, arma, function (res) { SecaoInventarioOrdem.rolarAtaque(ctx, arma, res); });
+        return;
+      }
+      SecaoInventarioOrdem.rolarAtaque(ctx, arma, null);
+    },
+
+    /* modo.modo: "unico" | "rajada" | "doisCanos". Rajada: −1 dado no
+       ataque (anulado por Compensador) e +1 dado de dano — +2 com a
+       contagem de munição (OPRPG p. 59 e 174). Dois canos: −1 dado no
+       ataque e dano 6d6 (SAH, Espingarda de Cano Duplo). */
+    rolarAtaque: function (ctx, arma, modo) {
+      var ef = R.armaEfetiva(ordemDe(ctx), ctx.ficha.inventario, arma, ctx.ficha.pericias);
+      var m = modo || {};
+      var notas = [];
+      var dado = ef.dado;
+      var menos = 0;
+      if (m.modo === "rajada") {
+        var compensador = (ef.modificacoes || []).some(function (x) { return x.id === "op.mod.arma.compensador" || /compensador/i.test(x.nome || ""); });
+        if (compensador) notas.push("Rajada: o Compensador anula a penalidade no ataque.");
+        else { menos = 1; notas.push("Rajada: −1 dado no ataque (OPRPG p. 59)."); }
+      } else if (m.modo === "doisCanos") {
+        menos = 1;
+        notas.push("Dois canos: −1 dado no ataque; o dano vira 6d6.");
+      }
+      if (menos && ef.atributoDoTeste && global.RAMAOrdemEfeitos) dado = global.RAMAOrdemEfeitos.expressaoDeDados(ef.dados.quantos - menos);
+      notas = notasDosDados(ef.dados).concat(notas);
+      if (m.nota) notas.push(m.nota);
 
       var r = D.dependente({
-        expressao: ef.dado,
+        expressao: dado,
         sigla: siglaDe(ef.atributoDoTeste),
         nome: arma.nome,
         bonus: ef.ataque.total,
@@ -2958,21 +3252,23 @@
       var temDano = !!(ef.dano || ef.tabelaD6);
 
       global.RAMARolagens.mostrar(r, {
-        nome: arma.nome + " · Ataque (" + ef.periciaNome + ")",
+        nome: arma.nome + " · Ataque (" + ef.periciaNome + ")" + (m.modo === "rajada" ? " · rajada" : m.modo === "doisCanos" ? " · dois canos" : ""),
         critico: critico,
+        notas: notas,
         acao: temDano ? {
           rotulo: critico ? "Rolar dano crítico" : "Rolar dano",
-          aoClicar: function () { SecaoInventarioOrdem.rolarDano(ctx, arma, critico); },
+          aoClicar: function () { SecaoInventarioOrdem.rolarDano(ctx, arma, critico, false, m.modo); },
         } : null,
       });
 
       if (ef.proficiencia.proficiente === false) UI.avisoAtencao(ef.proficiencia.texto);
     },
 
-    rolarDano: function (ctx, arma, critico, alternativo) {
+    rolarDano: function (ctx, arma, critico, alternativo, modo) {
       var ef = R.armaEfetiva(ordemDe(ctx), ctx.ficha.inventario, arma, ctx.ficha.pericias);
       var dano = alternativo && ef.alternativo ? ef.alternativo.dano : ef.dano;
       var escolhaD6 = 0;
+      var nota = "";
 
       /* Arma de dano variável (Arcabuz dos Moretti): 1d6 escolhe o dano
          da tabela, pelo mesmo motor. */
@@ -2982,6 +3278,14 @@
         dano = ef.tabelaD6[d6.principal - 1];
       }
       if (!dano) { UI.avisoErro(arma.nome + " não tem dano configurado."); return; }
+      if (modo === "rajada") {
+        var comContagem = global.RAMAOrdemConsumo && global.RAMAOrdemConsumo.ligada(ordemDe(ctx), "contagemMunicao");
+        dano = R.aumentarDados(dano, comContagem ? 2 : 1);
+        nota = comContagem ? "Rajada: +2 dados de dano (contagem de munição, OPRPG p. 174)." : "Rajada: +1 dado de dano (OPRPG p. 59).";
+      } else if (modo === "doisCanos") {
+        dano = "6d6";
+        nota = "Dois canos: dano 6d6.";
+      }
 
       var r = D.dano({
         nome: arma.nome,
@@ -3005,6 +3309,7 @@
           (alternativo && ef.alternativo ? " (" + ef.alternativo.rotulo + ")" : "") +
           (escolhaD6 ? " · 1d6 = " + escolhaD6 + " → " + dano : ""),
         critico: !!critico,
+        notas: nota ? [nota] : [],
       });
     },
 

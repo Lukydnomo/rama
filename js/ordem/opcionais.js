@@ -46,6 +46,7 @@
   "use strict";
 
   var SAH = "SAH";
+  var OPRPG = "OPRPG";
 
   /* Cada regra:
 
@@ -248,6 +249,47 @@
       incompativel: [],
       consequencias: [
         "Os rituais ganham campos a mais. Nenhum ritual existente é alterado nem perde o que já tinha.",
+      ],
+    },
+
+    {
+      chave: "contagemMunicao",
+      nome: "Contagem de munição",
+      resumo: "Cada pacote vira munição para 20 ataques, e as armas de fogo guardam o que foi carregado.",
+      fonte: OPRPG, pagina: 174,
+      afetaFicha: true,
+      automacao: "parcial",
+      efeito: "A aba Geral ganha o controle de munição: a reserva de cada pacote do inventário (20 ataques por pacote; " +
+        "foguete, 1), o que está carregado em cada arma de fogo (pistola 12, revólver 6, fuzil de caça 4, " +
+        "submetralhadora 20, espingarda 6, fuzil de assalto 30, fuzil de precisão 1, metralhadora 50; e as do " +
+        "Sobrevivendo ao Horror, p. 38), recarga, reposição e ajuste. O ataque pede a confirmação do gasto. Uma rajada " +
+        "gasta 10 balas e, com esta regra, causa +2 dados de dano em vez de +1.",
+      parametros: [],
+      depende: [],
+      incompativel: [],
+      consequencias: [
+        "Desligar não apaga nada: o que está carregado e o que já saiu dos pacotes ficam guardados, e voltam se a regra for religada.",
+        "A reserva é o próprio item de munição do inventário — não existe outro saldo.",
+      ],
+    },
+
+    {
+      chave: "controleComponentes",
+      nome: "Controle de componentes ritualísticos",
+      resumo: "Acompanha, por elemento, se há componentes para conjurar — e, se a mesa quiser, quanto cada uso gasta.",
+      fonte: OPRPG, pagina: 119,
+      afetaFicha: true,
+      automacao: "parcial",
+      efeito: "A aba Geral ganha o controle de componentes por elemento, e o \"Usar ritual\" de cada ritual passa a " +
+        "conferir os componentes. Pelo livro, conjurar exige componentes do elemento (exceto Medo; a afinidade dispensa) e eles " +
+        "não se gastam; o catalisador se gasta (SAH p. 44), e com Conjuração Complexa quem conjura pode entregar os " +
+        "componentes por +1 dado (SAH p. 115). Contar usos é uma escolha da mesa, marcada como tal.",
+      parametros: [],
+      depende: [],
+      incompativel: [],
+      consequencias: [
+        "Desligar não apaga nada: os saldos ficam guardados e voltam se a regra for religada.",
+        "Nenhum ritual é bloqueado: faltar componente aparece como aviso na hora de usar.",
       ],
     },
 

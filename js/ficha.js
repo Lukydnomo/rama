@@ -66,6 +66,13 @@
      em `organizacao`, os critérios dos rituais, a ordem das perícias e o
      lugar das habilidades das regras nas pastas. Sem conversão: uma
      ficha 9 abre igual — nenhuma condição ativa, nenhuma ordem mudada.
+     10 → 11: `condicoes` perdeu os contadores da mesa (exaustão e
+     desmaio, um mal-entendido da v2.19) e ganhou `efeitos` (cada
+     condição ou efeito aplicado, com duração e modificadores) e
+     `imunidades`; o bloco `ordem` ganhou `componentes` e `consumos`, e
+     o item de inventário, `ordem.contagem` (munição). Os contadores da
+     mesa são descartados na leitura — nunca viram turnos de
+     enlouquecendo. Uma ficha 10 abre sem efeitos e sem saldos.
 
      Nenhuma das subidas exige migração: normalizarFicha() cria o que
      falta, vazio, e não toca no que existe. Um ritual gravado na 2 abre
@@ -76,7 +83,7 @@
      os campos novos e os descartaria ao gravar — com o schema maior ela
      recusa abrir a ficha e pede para recarregar.
      Ver docs/CHARACTER_SCHEMA.md. */
-  var VERSAO_SCHEMA = 10;
+  var VERSAO_SCHEMA = 11;
 
   var NATUREZA = { INFORMACAO: "informacao", ROLAVEL: "rolavel", DEPENDENTE: "dependente" };
 
