@@ -993,7 +993,7 @@
       t.igual("cinco atributos", OC.ATRIBUTOS.length, 5);
       t.igual("28 perícias", OC.PERICIAS.length, 28);
       t.igual("26 origens", OC.ORIGENS.length, 26);
-      t.igual("três classes", OC.CLASSES.length, 3);
+      t.igual("três classes de agente, e Mundano e Sobrevivente à parte", OC.classesDeAgente().length + "+" + OC.CLASSES.length, "3+5");
       /* Quinze do livro básico e nove do Sobrevivendo ao Horror, três
          por classe. A fonte distingue as duas. */
       t.igual("quinze trilhas do livro básico",
@@ -1243,8 +1243,8 @@
           return k;
         };
 
-        t.igual("cinco abas: três classes, gerais e paranormais", OB.ABAS.map(function (a) { return a.chave; }).join(","),
-          "combatente,especialista,ocultista,gerais,paranormais");
+        t.igual("sete abas: três classes de agente, Mundano, Sobrevivente, gerais e paranormais", OB.ABAS.map(function (a) { return a.chave; }).join(","),
+          "combatente,especialista,ocultista,mundano,sobrevivente,gerais,paranormais");
 
         var todasAsChaves = {};
         OB.ABAS.forEach(function (a) { Object.assign(todasAsChaves, chavesDe(OB.secoes(a.chave))); });
@@ -1271,7 +1271,7 @@
         t.ok("gerais incluem os poderes de classe que o SAH tornou gerais",
           OPod.PODERES_CLASSE.filter(function (p) { return p.geral; }).every(function (p) { return gerais[p.chave]; }));
         t.igual("  e todos os poderes gerais", OPod.PODERES_GERAIS.filter(function (p) { return !gerais[p.chave]; }).length, 0);
-        t.igual("aba desconhecida não tem nada", OB.secoes("sobrevivente").length, 0);
+        t.igual("aba desconhecida não tem nada", OB.secoes("inexistente").length, 0);
 
         t.ok("busca ignora acento e caixa", soma(OB.filtrar(OB.secoes("combatente"), "ATAQUE especial")) >= 1);
         t.igual("busca sem resultado esvazia", OB.filtrar(OB.secoes("combatente"), "zzzz").length, 0);
@@ -4469,6 +4469,14 @@
     }
 
     /* =================================================================
+       v2.21 — MUNDANO E SOBREVIVENTE
+       ================================================================= */
+
+    if (RRs && global.RAMAOrdemProgressao && global.RAMAOrdemPoderes) {
+      casosDaV221(t, global.RAMAOrdemCatalogo, RRs, global.RAMAOrdemProgressao, global.RAMAOrdemPoderes, global.RAMAOrdemAprendizado, S, V);
+    }
+
+    /* =================================================================
        MIGRAÇÃO — FICHA ANTIGA (schema 1)
        ================================================================= */
 
@@ -4668,6 +4676,243 @@
       t.ok("ownerId de fora é descartado", bom.dados.ownerId === undefined || bom.dados.ownerId === "");
       t.ok("token de fora é descartado", bom.dados.token === undefined);
       t.ok("id de fora é descartado", bom.dados.id === undefined || bom.dados.id !== "ID-ANTIGO");
+    }
+  }
+
+  /* =====================================================================
+     v2.21 — Mundano e Sobrevivente
+     ===================================================================== */
+
+  function casosDaV221(t, C, R, E, P, A, S, V) {
+    var INV = { itens: [] };
+    var QUANDO = "2026-09-27T12:00:00.000Z";
+    var seq = 0;
+    function reg(etapa, tipo, valor, opcoes) {
+      seq++;
+      return { id: "r-" + seq, etapa: etapa, tipo: tipo, valor: valor, opcoes: opcoes || {}, registradoEm: "2026-09-27T12:00:" + String(10 + seq).slice(-2) + ".000Z" };
+    }
+    function ficha(extra) {
+      return R.normalizar(Object.assign({
+        origem: "militar", atributos: { agi: 1, for: 1, int: 2, pre: 2, vig: 2 },
+        pericias: { luta: "treinado", pontaria: "treinado" },
+      }, extra || {}));
+    }
+    function calc(o) { return R.calcular(o, INV); }
+    function pend(o) { return E.estado(o, null).pendencias.map(function (p) { return p.id; }); }
+    function adq(o) { return E.estado(o, null).adquiridos; }
+
+    /* ---------------------------------------------------------------- */
+    t.grupo("Mundano · NEX 0%, recursos, Empenho e equipamento (OPRPG p. 171-172)");
+
+    var m = ficha({ classe: "mundano", nex: 0 });
+    var cm = calc(m);
+    t.ok("Mundano é classe própria, e as três classes de agente continuam", C.classe("mundano").perfil === "mundano" &&
+      C.classesDeAgente().map(function (x) { return x.chave; }).join(",") === "combatente,especialista,ocultista");
+    t.igual("rótulo: Mundano · NEX 0%", R.rotuloDeProgressao(m), "Mundano · NEX 0%");
+    t.iguais("PV 8 + Vig, PE 1 + Pre, SAN 8", [cm.pv.total, cm.pe.total, cm.san.total], [10, 3, 8]);
+    t.igual("NEX 0% e degrau 0: nada por NEX soma", cm.trilho.passos, 0);
+    t.igual("limite de PE 1", cm.limitePe.total, 1);
+    t.ok("Empenho está na ficha, e nenhuma habilidade de agente", E.automaticas(m).map(function (a) { return a.entrada.chave; }).join(",") === "empenho");
+    t.ok("  sem trilha, poder, aumento nem ritual de agente", pend(m).length === 0 && !adq(m).length);
+    t.ok("sem patente: nem Recruta, nem patente inventada", cm.patente.semPatente === true);
+    t.iguais("equipamento: um item de categoria I, categoria 0 livre, o resto nenhum",
+      [cm.patente.limites[1].limite, cm.patente.limites[0].limite, cm.patente.limites[2].limite], [1, null, 0]);
+    var mManual = ficha({ classe: "mundano", patente: { aplicar: false, limites: { "1": 3 } } });
+    t.igual("  com a regra de patente desligada, valem os limites da mesa", calc(mManual).patente.limites[1].limite, 3);
+    t.ok("Empenho é ação no teste, não bônus permanente: nenhuma perícia muda",
+      R.bonusDePericia(m, "atletismo", INV).total === R.bonusDePericia(ficha({ classe: "combatente" }), "atletismo", INV).total);
+
+    /* ---------------------------------------------------------------- */
+    t.grupo("Sobrevivente · estágios 1 a 5, incrementos fixos (SAH p. 30-31)");
+
+    var esperados = [[10, 4, 8], [12, 5, 10], [14, 6, 12], [16, 7, 14], [18, 8, 16]];
+    [1, 2, 3, 4, 5].forEach(function (e) {
+      var o = ficha({ classe: "sobrevivente", estagio: e });
+      var c = calc(o);
+      t.iguais("estágio " + e + ": PV, PE e SAN (8+Vig, 2+Pre, 8, e +2/+1/+2 por estágio)", [c.pv.total, c.pe.total, c.san.total], esperados[e - 1]);
+    });
+    var s1 = ficha({ classe: "sobrevivente", estagio: 1 });
+    var sVig = ficha({ classe: "sobrevivente", estagio: 4, atributos: { agi: 1, for: 1, int: 2, pre: 2, vig: 3 } });
+    t.igual("o Vigor NÃO se soma de novo a cada estágio", calc(sVig).pv.total - calc(ficha({ classe: "sobrevivente", estagio: 4 })).pv.total, 1);
+    t.igual("rótulo: Sobrevivente · Estágio 1", R.rotuloDeProgressao(s1), "Sobrevivente · Estágio 1 · NEX 0%");
+    t.ok("estágio fica entre 1 e 5", R.normalizar({ classe: "sobrevivente", estagio: 9 }).estagio === 5 && R.normalizar({ classe: "sobrevivente", estagio: 0 }).estagio === 1);
+    t.ok("limite de PE sempre 1, com a exceção do custo mínimo à vista",
+      [1, 3, 5].every(function (e) { return calc(ficha({ classe: "sobrevivente", estagio: e })).limitePe.total === 1; }) &&
+      /custo mínimo/.test(calc(s1).limitePe.excecao));
+    t.igual("subir de estágio não mexe no NEX", calc(ficha({ classe: "sobrevivente", estagio: 5, nex: 40 })).exposicao, 0);
+    t.iguais("pendências por estágio", [pend(ficha({ classe: "sobrevivente", estagio: 1 })).join(","), pend(ficha({ classe: "sobrevivente", estagio: 3 })).join(","),
+      pend(ficha({ classe: "sobrevivente", estagio: 5 })).join(",")], ["", "s2.trilha,s3.atributo", "s2.trilha,s3.atributo,b.cicatrizado"]);
+    t.ok("não existe estágio 6", C.ESTAGIO_MAXIMO === 5 && C.ESTAGIOS_SOBREVIVENTE.length === 5);
+
+    /* ---------------------------------------------------------------- */
+    t.grupo("Sobrevivente · as trilhas e suas escolhas");
+
+    var durao = ficha({ classe: "sobrevivente", estagio: 2, escolhas: [reg("s2.trilha", "trilhaSobrevivente", "durao")] });
+    t.igual("Durão no 2º estágio: +4 PV", calc(durao).pv.total, 12 + 4);
+    durao.estagio = 3;
+    t.igual("  ao subir para o 3º: +2 PV a mais", calc(durao).pv.total, 14 + 6);
+    durao.estagio = 4;
+    t.ok("  4º estágio: Pancada Forte", adq(durao).some(function (a) { return a.chave === "pancadaForte"; }));
+    var esp = ficha({ classe: "sobrevivente", estagio: 4, escolhas: [reg("s2.trilha", "trilhaSobrevivente", "esperto")] });
+    t.ok("Esperto abre a perícia adicional e, no 4º, Entendido", pend(esp).indexOf("b.esperto") >= 0 && pend(esp).indexOf("b.entendido") >= 0);
+    var simE = E.simular(esp, E.vagas(esp).filter(function (v) { return v.id === "b.esperto"; })[0], { valor: "", opcoes: { pericia: "luta" } }, null);
+    t.ok("  a perícia adicional precisa ser nova", !simE.avaliacao.valido);
+    esp.escolhas.push(reg("b.esperto", "opcoesBeneficio", "", { pericia: "furtividade" }));
+    t.igual("  escolhida, fica treinada", E.estado(esp, null).graus.furtividade, "treinado");
+    var vEnt = E.vagas(esp).filter(function (v) { return v.id === "b.entendido"; })[0];
+    t.ok("  Entendido não aceita Luta nem Pontaria", !E.simular(esp, vEnt, { valor: "", opcoes: { pericias: ["luta", "furtividade"] } }, null).avaliacao.valido);
+    esp.pericias.tatica = "treinado";
+    esp.pericias.medicina = "treinado";
+    t.ok("  e aceita duas treinadas", E.simular(esp, vEnt, { valor: "", opcoes: { pericias: ["tatica", "medicina"] } }, null).avaliacao.valido);
+    var eso = ficha({ classe: "sobrevivente", estagio: 4, escolhas: [reg("s2.trilha", "trilhaSobrevivente", "esoterico")] });
+    t.ok("Esotérico: a habilidade inicial e, no 4º, a concessão de Iniciado", adq(eso).some(function (a) { return a.chave === "esoterico"; }) &&
+      pend(eso).indexOf("s4.iniciado") >= 0);
+    var conc = E.concessoesDeRitual(eso).filter(function (x) { return x.id === "s4.iniciado"; })[0];
+    t.ok("  Iniciado: 1 ritual de 1º círculo, mesmo em NEX 0%", conc && conc.quantidade === 1 && conc.circulos.join() === "1" && calc(eso).trilho.passos === 0);
+    t.ok("  e só ele: nenhuma outra concessão", E.concessoesDeRitual(eso).length === 1);
+    t.ok("  o 2º círculo não cabe", A && !A.elegibilidade(conc, { circulo: 2, elemento: "energia" }).ok && A.elegibilidade(conc, { circulo: 1, elemento: "energia" }).ok);
+    var iniRit = { id: "rit-ini", nome: "Luz", circulo: "1º círculo", origemCatalogoId: "op.ritual.luz", ordem: { elemento: "energia", circulo: 1 } };
+    eso.escolhas.push(reg("s4.iniciado", "rituais", "", { rituais: [{ id: "rit-ini", nome: "Luz", circulo: 1, catalogo: "op.ritual.luz" }] }));
+    var estEso = E.estado(eso, { inventario: INV, rituais: [iniRit] });
+    t.ok("  o ritual escolhido fica preso a Iniciado, e pode ser conjurado", pend(eso).indexOf("s4.iniciado") < 0 &&
+      estEso.rituais.porRitual["rit-ini"] && estEso.rituais.porRitual["rit-ini"].nomePoder === "Iniciado" &&
+      R.rituais(eso, { inventario: INV }).circuloMaximo === 1);
+
+    /* ---------------------------------------------------------------- */
+    t.grupo("Sobrevivente · aumento de atributo do 3º estágio");
+
+    var at = ficha({ classe: "sobrevivente", estagio: 3, escolhas: [reg("s3.atributo", "atributo", "pre")] });
+    t.iguais("Presença +1: os PE sobem 1 (e só o inicial conta o atributo)", [R.atributo(at, "pre"), calc(at).pe.total], [3, 7]);
+    var atV = ficha({ classe: "sobrevivente", estagio: 3, escolhas: [reg("s3.atributo", "atributo", "vig")] });
+    t.igual("Vigor +1: PV sobem 1", calc(atV).pv.total, 15);
+    var atI = ficha({ classe: "sobrevivente", estagio: 3, escolhas: [reg("s3.atributo", "atributo", "int", { pericia: "medicina" })] });
+    t.ok("Intelecto +1: uma perícia treinada nova", E.estado(atI, null).graus.medicina === "treinado");
+    var at3 = ficha({ classe: "sobrevivente", estagio: 3, atributos: { agi: 3, for: 1, int: 1, pre: 1, vig: 1 } });
+    var vAt = E.vagas(at3).filter(function (v) { return v.id === "s3.atributo"; })[0];
+    t.ok("não passa de 3", !E.simular(at3, vAt, { valor: "agi", opcoes: {} }, null).avaliacao.valido && E.simular(at3, vAt, { valor: "for", opcoes: {} }, null).avaliacao.valido);
+
+    /* ---------------------------------------------------------------- */
+    t.grupo("Cicatrizado · trauma, sessão e sacrifícios permanentes");
+
+    var cic = ficha({ classe: "sobrevivente", estagio: 5, escolhas: [reg("b.cicatrizado", "opcoesBeneficio", "", { elemento: "sangue", perigo: "O Açougueiro" })] });
+    var antesCic = calc(cic);
+    t.ok("Cicatrizado guarda o elemento e o perigo", adq(cic).some(function (a) { return a.chave === "cicatrizado" && a.opcoes.elemento === "sangue"; }));
+    cic.sessao = { id: "ses-1", iniciadaEm: QUANDO };
+    cic.sacrificios = [{ id: "sac-1", recurso: "pv", motivo: "danoMental", sessao: "ses-1", em: QUANDO }];
+    var depoisCic = calc(cic);
+    t.igual("sacrificar 1 PV tira 1 do máximo, com a origem na conta", depoisCic.pv.total, antesCic.pv.total - 1);
+    t.ok("  a parcela diz de onde veio", depoisCic.pv.parcelas.some(function (x) { return /Cicatrizado/.test(x.rotulo) && x.valor === -1; }));
+    var relida = R.normalizar(JSON.parse(JSON.stringify(cic)));
+    t.ok("  e não some ao recalcular nem ao reler", calc(relida).pv.total === depoisCic.pv.total && relida.sacrificios.length === 1 && relida.sessao.id === "ses-1");
+    cic.sacrificios.push({ id: "sac-2", recurso: "pe", motivo: "danoFisico", sessao: "ses-2", em: QUANDO });
+    t.igual("sacrificar 1 PE tira 1 PE", calc(cic).pe.total, antesCic.pe.total - 1);
+    var cicPd = R.normalizar(Object.assign({}, JSON.parse(JSON.stringify(cic)), { opcionais: { semSanidade: true } }));
+    t.ok("  com Determinação, o sacrifício de PE vale para os PD", calc(cicPd).pd.parcelas.some(function (x) { return /Cicatrizado/.test(x.rotulo); }));
+    t.ok("sacrifício com recurso inventado é descartado", R.normalizar({ classe: "sobrevivente", sacrificios: [{ id: "x", recurso: "san" }] }).sacrificios.length === 0);
+
+    /* ---------------------------------------------------------------- */
+    t.grupo("Sobrevivente com Determinação (SAH p. 104) e Mundano sem tabela");
+
+    var pd1 = ficha({ classe: "sobrevivente", estagio: 1, opcionais: { semSanidade: true } });
+    var pd4 = ficha({ classe: "sobrevivente", estagio: 4, opcionais: { semSanidade: true } });
+    t.iguais("PD: 4 + Pre no 1º estágio, +2 fixos por estágio", [calc(pd1).pd.total, calc(pd4).pd.total], [6, 12]);
+    var mpd = ficha({ classe: "mundano", opcionais: { semSanidade: true } });
+    t.ok("Mundano: sem tabela oficial de PD — base 0 e o motivo à vista", calc(mpd).pd.total === 0 && /não traz pontos de determinação/.test(calc(mpd).pd.semTabela));
+    mpd.ajustes = [R.criarAjuste("pd", 5, "Decisão da mesa")];
+    t.ok("  um ajuste da mesa aparece separado, como ajuste", calc(mpd).pd.total === 5);
+
+    /* ---------------------------------------------------------------- */
+    t.grupo("Classe, NEX, nível e estágio são coisas diferentes");
+
+    var ag0 = ficha({ classe: "combatente", nex: 0, nivel: 1, opcionais: { nexExperiencia: true } });
+    t.ok("combatente com NEX de exposição 0% continua combatente, nível 1", R.faseDe(ag0).perfil === "agente" && calc(ag0).trilho.passos === 1 &&
+      R.rotuloDeProgressao(ag0) === "Combatente · Nível 1 · exposição 0%");
+    var sExp = ficha({ classe: "sobrevivente", estagio: 3, nex: 3, nivel: 7, opcionais: { nexExperiencia: true } });
+    t.ok("Sobrevivente com NEX & Experiência: nível 0, exposição própria, estágio sem virar nível",
+      calc(sExp).trilho.passos === 0 && calc(sExp).exposicao === 3 && /Estágio 3 · Nível 0/.test(R.rotuloDeProgressao(sExp)));
+    t.igual("  o nível gravado não sobe os PV", calc(sExp).pv.total, 14);
+
+    /* ---------------------------------------------------------------- */
+    t.grupo("Transição · Mundano → agente (Atingindo NEX 5%, OPRPG p. 172)");
+
+    [["combatente", [22, 4, 12]], ["especialista", [18, 5, 16]], ["ocultista", [14, 6, 20]]].forEach(function (par) {
+      var o = ficha({ classe: "mundano", recursos: { pv: 6 } });
+      var r = E.transicionar(o, par[0], { id: "tr-m-" + par[0], quando: QUANDO });
+      var c = calc(o);
+      t.ok("Mundano → " + par[0] + ": classe, NEX 5% e trajetória", r.ok && o.classe === par[0] && o.nex === 5 && o.trajetoria[0].de === "mundano");
+      t.iguais("  recursos = os de um agente novato", [c.pv.total, c.pe.total, c.san.total], par[1]);
+      t.ok("  o ponto de atributo e as perícias ficam em Falta decidir", pend(o).indexOf("t.atributo") >= 0 && pend(o).indexOf("t.treinamento") >= 0);
+      t.igual("  o PV atual não é restaurado", o.recursos.pv, 6);
+    });
+    var mt = ficha({ classe: "mundano", atributos: { agi: 3, for: 1, int: 1, pre: 1, vig: 1 } });
+    E.transicionar(mt, "especialista", { id: "tr-mt" });
+    var vTa = E.vagas(mt).filter(function (v) { return v.id === "t.atributo"; })[0];
+    t.ok("o ponto do treinamento não passa de 3", !E.simular(mt, vTa, { valor: "agi", opcoes: {} }, null).avaliacao.valido);
+    t.ok("Empenho não fica com o agente vindo de Mundano", !E.automaticas(mt).some(function (a) { return a.entrada.chave === "empenho"; }));
+    var rep = E.transicionar(mt, "especialista", { id: "tr-mt" });
+    t.ok("repetir a mesma operação não aplica de novo", rep.ok && rep.repetida && mt.trajetoria.length === 1);
+    t.ok("  e outra transição é recusada", !E.transicionar(mt, "combatente", { id: "tr-outra" }).ok && mt.classe === "especialista");
+    var planoCancelado = ficha({ classe: "mundano" });
+    var copiaAntes = JSON.stringify(planoCancelado);
+    E.planoDeTransicao(planoCancelado, "ocultista");
+    t.ok("o resumo (plano) não muda nada — cancelar não aplica parte dos benefícios", JSON.stringify(planoCancelado) === copiaAntes);
+
+    /* ---------------------------------------------------------------- */
+    t.grupo("Transição · Sobrevivente → agente (Treinamento Especial, SAH p. 32)");
+
+    function sobreviventeCom(trilha, estagio) {
+      var o = ficha({ classe: "sobrevivente", estagio: estagio, escolhas: [reg("s2.trilha", "trilhaSobrevivente", trilha)] });
+      return o;
+    }
+    var sc = sobreviventeCom("durao", 4);
+    var pvAntes = calc(sc).pv.total;
+    E.transicionar(sc, "combatente", { id: "tr-sc", quando: QUANDO });
+    var csc = calc(sc);
+    t.igual("→ combatente: +8 PV sobre o que o Sobrevivente tinha", csc.pv.total, pvAntes + 8);
+    t.ok("  sem PE nem SAN a mais, e sem ponto de atributo", csc.pe.total === calc(sobreviventeCom("durao", 4)).pe.total && pend(sc).indexOf("t.atributo") < 0);
+    t.ok("  o 5º estágio NÃO é concedido junto", sc.trajetoria[0].estagio === 4 && !pend(sc).some(function (x) { return x === "b.cicatrizado"; }));
+    t.ok("  Durão continua; Pancada Forte vira −1 PE no Ataque Especial",
+      adq(sc).some(function (a) { return a.chave === "durao"; }) && adq(sc).some(function (a) { return a.chave === "pancadaForte" && a.substituida; }) &&
+      E.automaticas(sc).some(function (a) { return a.entrada.chave === "ataqueEspecial" && /-1 PE \(Pancada Forte/.test(a.estagio); }));
+    t.ok("  e o Empenho fica", E.automaticas(sc).some(function (a) { return a.entrada.chave === "empenho" && a.preservada; }));
+    var se = sobreviventeCom("esperto", 4);
+    var seAntes = calc(se);
+    E.transicionar(se, "especialista", { id: "tr-se" });
+    var cse = calc(se);
+    t.iguais("→ especialista: +4 PV, +1 PE, +4 SAN", [cse.pv.total - seAntes.pv.total, cse.pe.total - seAntes.pe.total, cse.san.total - seAntes.san.total], [4, 1, 4]);
+    t.ok("  Entendido vira −1 PE no Perito", adq(se).length >= 0 && E.estado(se, null).efeitos.some(function (ef) { return ef.tipo === "custoHabilidade" && ef.habilidade === "perito"; }));
+    var so = sobreviventeCom("esoterico", 4);
+    E.transicionar(so, "ocultista", { id: "tr-so" });
+    var conc2 = E.concessoesDeRitual(so).map(function (x) { return x.id; });
+    t.ok("→ ocultista: o ritual de Iniciado se SOMA aos três iniciais", conc2.indexOf("s4.iniciado") >= 0 && conc2.indexOf("d1.rituaisIniciais") >= 0 &&
+      E.concessoesDeRitual(so).filter(function (x) { return x.id === "d1.rituaisIniciais"; })[0].quantidade === 3);
+    var soC = calc(so);
+    var soBase = calc(sobreviventeCom("esoterico", 4));
+    t.iguais("  +2 PE e +8 SAN, sem PV", [soC.pv.total - soBase.pv.total, soC.pe.total - soBase.pe.total, soC.san.total - soBase.san.total], [0, 2, 8]);
+    so.nex = 10;
+    t.igual("depois, sobe de NEX como a classe nova (ocultista: +2+Vig PV)", calc(so).pv.total - soC.pv.total, 2 + 2);
+    var sd = R.normalizar(Object.assign(JSON.parse(JSON.stringify(sobreviventeCom("durao", 3))), { opcionais: { semSanidade: true } }));
+    var sdAntes = calc(sd).pd.total;
+    E.transicionar(sd, "especialista", { id: "tr-sd" });
+    t.igual("com Determinação: os PD do Sobrevivente mais o ganho de PE da transição", calc(sd).pd.total, sdAntes + 1);
+    var trocada = JSON.parse(JSON.stringify(sc));
+    trocada.classe = "ocultista";
+    var nTrocada = R.normalizar(trocada);
+    t.ok("trocar a classe à mão depois deixa a trajetória guardada, sem efeito", nTrocada.trajetoria.length === 1 && R.faseDe(nTrocada).trajetoriaSemEfeito === true);
+
+    /* ---------------------------------------------------------------- */
+    if (S && V) {
+      t.grupo("Exportar e importar · estágio, trajetória e sacrifícios");
+      var fx = S.criarFicha({ nome: "Sobreviveu", tipoFicha: "ordem" });
+      fx.ordem = sobreviventeCom("durao", 5);
+      fx.ordem.escolhas.push(reg("b.cicatrizado", "opcoesBeneficio", "", { elemento: "morte", perigo: "Enterrados" }));
+      fx.ordem.sacrificios = [{ id: "sac-x", recurso: "pv", motivo: "gastoPe", sessao: "", em: QUANDO }];
+      E.transicionar(fx.ordem, "combatente", { id: "tr-exp", quando: QUANDO });
+      var pvExp = calc(fx.ordem).pv.total;
+      var imp = V.importado(JSON.parse(JSON.stringify(V.exportar("personagem", fx))));
+      var oi = imp.ok ? imp.dados.ordem : null;
+      t.ok("a trajetória e o sacrifício atravessam", !!oi && oi.trajetoria.length === 1 && oi.trajetoria[0].estagio === 5 && oi.sacrificios.length === 1);
+      t.igual("  e os PV ficam iguais", oi ? calc(oi).pv.total : -1, pvExp);
     }
   }
 

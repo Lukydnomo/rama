@@ -138,6 +138,7 @@
     {
       chave: "combatente",
       nome: "Combatente",
+      perfil: "agente",
       pagina: 24,
       resumo: "Perito em armas brancas e de fogo. A linha de frente contra o Outro Lado.",
       pvInicial: { base: 20, atributo: "vig" },
@@ -165,6 +166,7 @@
     {
       chave: "especialista",
       nome: "Especialista",
+      perfil: "agente",
       pagina: 28,
       resumo: "Conhecimento, esperteza e lábia. Versátil e habilidoso.",
       pvInicial: { base: 16, atributo: "vig" },
@@ -185,6 +187,7 @@
     {
       chave: "ocultista",
       nome: "Ocultista",
+      perfil: "agente",
       pagina: 32,
       resumo: "Estudioso do paranormal, que domina rituais e os poderes do Outro Lado.",
       pvInicial: { base: 12, atributo: "vig" },
@@ -210,7 +213,154 @@
         { nex: 85, circulo: 4 },
       ],
     },
+
+    /* -----------------------------------------------------------------
+       PESSOAS COMUNS — antes de a Ordem aparecer
+       -----------------------------------------------------------------
+       Mundano (OPRPG p. 171-172) e Sobrevivente (SAH p. 30-32) NÃO têm
+       NEX de agente: ficam em NEX 0% (ou nível 0, com NEX & Experiência).
+       O Mundano não evolui — ao atingir NEX 5%, treina e vira agente. O
+       Sobrevivente evolui em ESTÁGIOS, de 1 a 5, com incrementos fixos
+       (não se soma Vigor nem Presença de novo a cada estágio).
+
+       `perfil` separa os dois de um agente; ninguém vira Mundano ou
+       Sobrevivente só por estar em NEX 0%: um combatente com NEX de
+       exposição 0% (NEX & Experiência) continua combatente.
+       ----------------------------------------------------------------- */
+    {
+      chave: "mundano",
+      nome: "Mundano",
+      perfil: "mundano",
+      pagina: 171,
+      resumo: "Uma pessoa comum, de NEX 0%, sem treinamento da Ordem. Compensa com Empenho; ao atingir NEX 5%, treina e vira agente.",
+      pvInicial: { base: 8, atributo: "vig" },
+      peInicial: { base: 1, atributo: "pre" },
+      sanInicial: { base: 8, atributo: null },
+      /* O livro não traz pontos de determinação para o Mundano (SAH
+         p. 104 só lista as três classes e o Sobrevivente). */
+      pdInicial: null,
+      periciasEscolhaObrigatoria: [],
+      periciasFixas: [],
+      periciasLivres: { base: 1, atributo: "int" },
+      proficiencias: ["Armas simples"],
+      limitePe: 1,
+    },
+    {
+      chave: "sobrevivente",
+      nome: "Sobrevivente",
+      perfil: "sobrevivente",
+      pagina: 30,
+      fonte: SAH,
+      resumo: "Uma pessoa comum diante do horror, de NEX 0%, que evolui em estágios de 1 a 5: Empenho, trilha, aumento de atributo e Cicatrizado.",
+      pvInicial: { base: 8, atributo: "vig" },
+      peInicial: { base: 2, atributo: "pre" },
+      sanInicial: { base: 8, atributo: null },
+      /* "A cada novo estágio": valores FIXOS, sem atributo. */
+      pvPorEstagio: 2,
+      pePorEstagio: 1,
+      sanPorEstagio: 2,
+      /* SAH p. 104: "Sobrevivente. PD Iniciais: 4 + Pre. A cada novo
+         estágio: 2." */
+      pdInicial: { base: 4, atributo: "pre" },
+      pdPorEstagio: 2,
+      periciasEscolhaObrigatoria: [],
+      periciasFixas: [],
+      periciasLivres: { base: 1, atributo: "int" },
+      proficiencias: ["Armas simples"],
+      /* "Seu limite de PE é sempre 1, em qualquer estágio. Entretanto,
+         você sempre pode usar pelo menos uma habilidade em seu custo
+         mínimo por turno" (SAH p. 31). */
+      limitePe: 1,
+    },
   ];
+
+  /* A geração de atributos de quem ainda não é agente: "começa com cada
+     atributo em 1. Porém, por não ter passado pelo treinamento de
+     agente, recebe apenas 3 pontos para distribuir, em vez de 4. Você
+     ainda pode reduzir um único atributo para 0 para receber 1 ponto
+     adicional" (OPRPG p. 171; SAH p. 30). O teto inicial é o de sempre. */
+  var GERACAO_ATRIBUTOS_COMUM = {
+    inicial: 1,
+    pontos: 3,
+    maximoInicial: 3,
+    reducoesPermitidas: 1,
+    pontoPorReducao: 1,
+    fonte: OPRPG, pagina: 171,
+  };
+
+  /* SAH p. 31, Tabela 1.2. */
+  var ESTAGIOS_SOBREVIVENTE = [
+    { estagio: 1, rotulos: ["Empenho"] },
+    { estagio: 2, rotulos: ["Trilha (1ª habilidade)"] },
+    { estagio: 3, rotulos: ["Aumento de atributo"] },
+    { estagio: 4, rotulos: ["Trilha (2ª habilidade)"] },
+    { estagio: 5, rotulos: ["Cicatrizado"] },
+  ];
+  var ESTAGIO_MAXIMO = 5;
+
+  /* As trilhas do Sobrevivente (SAH p. 31-32). Não são trilhas de
+     agente: ficam fora de TRILHAS e são escolhidas no 2º estágio. */
+  var TRILHAS_SOBREVIVENTE = [
+    { chave: "durao", nome: "Durão", pagina: 31, fonte: SAH,
+      resumo: "Resistente, defende a si mesmo e aos outros: atleta, segurança, trabalhador da construção civil.",
+      habilidades: ["durao", "pancadaForte"] },
+    { chave: "esperto", nome: "Esperto", pagina: 32, fonte: SAH,
+      resumo: "Conhecimento, inteligência e persuasão: estudante, técnico, engenheiro.",
+      habilidades: ["esperto", "entendido"] },
+    { chave: "esoterico", nome: "Esotérico", pagina: 32, fonte: SAH,
+      resumo: "Ligado a aspectos espirituais — religião, astrologia, cartomancia — ou com um sexto sentido para o Outro Lado.",
+      habilidades: ["esoterico", "iniciado"] },
+  ];
+
+  /* =================================================================
+     VIRAR AGENTE
+     -----------------------------------------------------------------
+     As duas transições são DIFERENTES, e nenhuma é uma conversão
+     genérica:
+
+     Mundano — "Atingindo NEX 5%" (OPRPG p. 172): 1 ponto de atributo
+     (sem passar de 3) e os ganhos da classe escolhida. Somados ao
+     Mundano, dão exatamente os valores de um agente novato.
+
+     Sobrevivente — "Treinamento Especial" (SAH p. 32): no lugar da
+     próxima subida de estágio, vira NEX 5% da classe, com ganhos
+     MENORES, sem ponto de atributo, e mantém tudo o que já tinha.
+     ================================================================= */
+
+  var TRANSICOES = {
+    mundano: {
+      pagina: 172, fonte: OPRPG, titulo: "Atingindo NEX 5%",
+      atributo: { pontos: 1, maximo: 3 },
+      preservaHabilidades: false,
+      classes: {
+        combatente: { pv: 12, pe: 1, san: 4,
+          pericias: { pares: [["fortitude", "reflexos"], ["luta", "pontaria"]], fixas: [], livres: 0 },
+          proficiencias: ["Armas táticas", "Proteções leves"], habilidades: ["Ataque Especial"] },
+        especialista: { pv: 8, pe: 2, san: 8,
+          pericias: { pares: [], fixas: [], livres: 6 },
+          proficiencias: ["Proteções leves"], habilidades: ["Eclético", "Perito"] },
+        ocultista: { pv: 4, pe: 3, san: 12,
+          pericias: { pares: [], fixas: ["ocultismo", "vontade"], livres: 2 },
+          proficiencias: [], habilidades: ["Escolhido pelo Outro Lado"] },
+      },
+    },
+    sobrevivente: {
+      pagina: 32, fonte: SAH, titulo: "Treinamento Especial",
+      atributo: null,
+      preservaHabilidades: true,
+      classes: {
+        combatente: { pv: 8, pe: 0, san: 0,
+          pericias: { pares: [["fortitude", "reflexos"], ["luta", "pontaria"]], fixas: [], livres: 0 },
+          proficiencias: ["Armas táticas", "Proteções leves"], habilidades: ["Ataque Especial"] },
+        especialista: { pv: 4, pe: 1, san: 4,
+          pericias: { pares: [], fixas: [], livres: 6 },
+          proficiencias: ["Proteções leves"], habilidades: ["Eclético", "Perito"] },
+        ocultista: { pv: 0, pe: 2, san: 8,
+          pericias: { pares: [], fixas: ["ocultismo", "vontade"], livres: 2 },
+          proficiencias: [], habilidades: ["Escolhido pelo Outro Lado"] },
+      },
+    },
+  };
 
   /* =================================================================
      O QUE CADA NEX ENTREGA — OPRPG p.25, p.29, p.33
@@ -698,6 +848,22 @@
   function grau(chave) { return POR_CHAVE.graus[chave] || POR_CHAVE.graus.destreinado; }
   function elemento(chave) { return POR_CHAVE.elementos[chave] || null; }
 
+  /* "agente", "mundano" ou "sobrevivente". Sem classe, "". */
+  function perfilDaClasse(chave) {
+    var c = classe(chave);
+    return c ? (c.perfil || "agente") : "";
+  }
+
+  function ehAgente(chave) { return perfilDaClasse(chave) === "agente"; }
+
+  function classesDeAgente() {
+    return CLASSES.filter(function (c) { return (c.perfil || "agente") === "agente"; });
+  }
+
+  function trilhaSobrevivente(chave) {
+    return TRILHAS_SOBREVIVENTE.filter(function (t) { return t.chave === chave; })[0] || null;
+  }
+
   function trilhasDaClasse(chaveClasse) {
     return TRILHAS.filter(function (t) { return t.classe === chaveClasse; });
   }
@@ -722,6 +888,11 @@
     PERICIAS: PERICIAS,
     GRAUS: GRAUS,
     CLASSES: CLASSES,
+    GERACAO_ATRIBUTOS_COMUM: GERACAO_ATRIBUTOS_COMUM,
+    ESTAGIOS_SOBREVIVENTE: ESTAGIOS_SOBREVIVENTE,
+    ESTAGIO_MAXIMO: ESTAGIO_MAXIMO,
+    TRILHAS_SOBREVIVENTE: TRILHAS_SOBREVIVENTE,
+    TRANSICOES: TRANSICOES,
     PROGRESSAO: PROGRESSAO,
     TRILHAS: TRILHAS,
     ORIGENS: ORIGENS,
@@ -744,6 +915,10 @@
     elemento: elemento,
     trilhasDaClasse: trilhasDaClasse,
     progressaoDaClasse: progressaoDaClasse,
+    perfilDaClasse: perfilDaClasse,
+    ehAgente: ehAgente,
+    classesDeAgente: classesDeAgente,
+    trilhaSobrevivente: trilhaSobrevivente,
     referencia: referencia,
   };
 })(typeof window !== "undefined" ? window : globalThis);

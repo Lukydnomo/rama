@@ -113,7 +113,7 @@ E abra `http://localhost:8099/rama/`.
 
 São três conjuntos no terminal e duas páginas no navegador.
 
-**Modelo e motor de dados** — 2022 verificações. No navegador, abra `testes/`;
+**Modelo e motor de dados** — 2117 verificações. No navegador, abra `testes/`;
 no terminal:
 
 ```bash
@@ -201,7 +201,7 @@ avisam sem bloquear, adicionar que não resolve pendência de progressão, a mig
 do texto de "Efeito" para "Descrição" numa ficha antiga e a ficha atravessando
 salvar, exportar e importar.
 
-**Permissões, concorrência e armazenamento do backend** — 927 verificações:
+**Permissões, concorrência e armazenamento do backend** — 934 verificações:
 
 ```bash
 deno run --allow-read testes/executar-backend.js
@@ -529,6 +529,12 @@ gravar. Com o schema 9, essa aba recusa a ficha e pede para recarregar; nada se
 perde. Depois de publicar, peça a quem estiver com a ficha aberta para recarregar
 a página.
 
+**Atualizando para a v2.21 (Mundano e Sobrevivente): backend e site.** Mudou
+`Campanhas.gs`: o resumo que os colegas recebem traz o estágio do Sobrevivente.
+Sem aba nem coluna nova — **não é preciso rodar `setupRama()`**. Cole os três
+`.gs`, crie uma **nova versão** da implantação, publique o site e peça a quem
+estiver com uma ficha aberta para recarregar (o schema subiu para 12).
+
 **Atualizando para a v2.20 (efeitos, munição e componentes): backend e site.**
 Mudou `Campanhas.gs`: as ações `efeito_personagem` (aplicar, renovar e encerrar
 condições e efeitos, com a permissão conferida no servidor) e `ler_imagem_do_turno`,
@@ -757,8 +763,13 @@ console não abre o registro de outra conta.
 - **Jogando sem Sanidade é parcial (v2.19).** PD substituem PE e SAN nas contas,
   nos custos e nas condições; a redução dos dados de dano mental das criaturas,
   as visões de Medo, O Custo do Paranormal em PD e as ações de interlúdio ficam
-  com a mesa. A classe Sobrevivente, que o livro inclui na tabela de PD, não está
-  no R.A.M.A.
+  com a mesa. O Mundano não tem tabela de PD no livro: a ficha fica com base 0 e
+  diz por quê (v2.21).
+- **Mundano e Sobrevivente (v2.21).** O Empenho é oferecido no resultado do teste
+  (depois do dado); o trauma de Cicatrizado é um lembrete, e a mesa decide quando ele
+  vale; a combinação com NEX & Experiência e com Jogando sem Sanidade depois da
+  transição segue leituras documentadas em docs/ORDEM-REGRAS.md, porque o livro não
+  a trata. A lista de personagens mostra a classe, sem o estágio.
 - **Na ficha universal, arrastar vale para habilidades, rituais e anotações
   (v2.19).** O inventário dela continua com as armas primeiro, e as perícias não
   ganharam ordem nova: a ordem por bônus é da ficha de Ordem, que é a que tem o

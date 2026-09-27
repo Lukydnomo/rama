@@ -443,8 +443,15 @@
        SUGESTÃO gravada uma vez só, e quem joga pode mudar: sem ela, um
        personagem de NEX 50% abriria em nível 1 e pareceria ter sido
        zerado. */
-    if (chave === "nexExperiencia" && ligar && !ficha.nivelDefinido) {
-      var equivalente = Math.max(1, Math.round((Number(ficha.nex) || 5) / 5));
+    /* Mundano e Sobrevivente ficam em nível 0 (SAH p. 30): não há nível a
+       sugerir, e o NEX gravado passa a ser só exposição. */
+    var CAT = global.RAMAOrdemCatalogo;
+    var comum = CAT && CAT.perfilDaClasse && ficha.classe && CAT.perfilDaClasse(ficha.classe) !== "agente";
+    if (chave === "nexExperiencia" && ligar && comum) {
+      aviso = "Nível 0: " + (CAT.classe(ficha.classe) || {}).nome + " não tem nível. O NEX de exposição é " + (Number(ficha.nex) || 0) + "%.";
+    } else if (chave === "nexExperiencia" && ligar && !ficha.nivelDefinido) {
+      var nexGravado = Number(ficha.nex);
+      var equivalente = Math.max(1, Math.round((Number.isFinite(nexGravado) && nexGravado > 0 ? nexGravado : 5) / 5));
       ficha.nivel = equivalente;
       ficha.nivelDefinido = true;
       aviso = "O nível começou em " + equivalente + ", equivalente ao NEX " +

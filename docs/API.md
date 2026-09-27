@@ -712,6 +712,13 @@ nome }` e — só com a configuração ligada — `vida { atual, maximo }` nas c
 Dono ou mestre da campanha; outro jogador recebe `nao_encontrado`, mesmo
 trocando o id. Grava pela mesma gravação da ficha (revisão, blocos, projeção).
 
+### O resumo de Ordem que os colegas recebem (v2.21)
+
+`listar_personagens_campanha` manda, para quem não é dono nem mestre, só
+`{ classe, trilha, nex, nivel, estagio, opcionais: { nexExperiencia } }` do bloco de
+Ordem — o estágio entrou para o cartão mostrar "Sobrevivente · Estágio 3". Escolhas,
+trajetória e sacrifícios continuam fora.
+
 ### `ler_imagem_do_turno` (v2.20)
 
 `{ campanhaId, combateId }` → `{ participanteId, tipo, nome, imagem }` de quem tem

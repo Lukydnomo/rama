@@ -119,6 +119,11 @@
       efeitosAfinidade: d.efeitosAfinidade || [],
       automacao: d.automacao || "informacao",
       nota: d.nota || "",
+      /* Só nas habilidades de Sobrevivente: o estágio em que chegam. */
+      estagio: d.estagio || 0,
+      trilhaSobrevivente: d.trilhaSobrevivente || "",
+      /* O que a habilidade vira ao virar agente (SAH p. 32). */
+      substituicao: d.substituicao || null,
     };
   }
 
@@ -1008,7 +1013,122 @@
       resumo: "Usando Eclético, PE adicionais dão os benefícios de veterano (NEX 40%) ou de expert (NEX 75%)." }),
     entrada({ chave: "escolhidoPeloOutroLado", nome: "Escolhido pelo Outro Lado", tipo: "automatica", classes: ["ocultista"], pagina: 32,
       resumo: "Conjura rituais: começa com três de 1º círculo e aprende um a cada NEX, fora do limite de rituais." }),
+    /* OPRPG p. 172 e SAH p. 31, com o mesmo texto. É uma AÇÃO no teste:
+       1 PE por +2 naquele teste. Não é bônus permanente em perícia
+       nenhuma. */
+    entrada({ chave: "empenho", nome: "Empenho", tipo: "automatica", classes: ["mundano", "sobrevivente"], pagina: 172,
+      paginas: { sobrevivente: 31 },
+      resumo: "Ao fazer um teste de perícia, gaste 1 PE para receber +2 nesse teste.",
+      automacao: "parcial",
+      nota: "Na rolagem de perícia, a ficha oferece o Empenho: gasta 1 PE (ou PD) e soma +2 só naquele teste." }),
   ];
+
+  /* =================================================================
+     SOBREVIVENTE — SAH p. 31-32
+     -----------------------------------------------------------------
+     Habilidades que chegam por ESTÁGIO, não por NEX. As trilhas dão
+     duas cada (2º e 4º estágio); Cicatrizado chega no 5º.
+     ================================================================= */
+
+  function sobrevivente(chaveTrilha, estagio, chave, nome, pagina, resumo, extra) {
+    return entrada(Object.assign({
+      chave: chave, nome: nome, tipo: "sobrevivente", trilhaSobrevivente: chaveTrilha, estagio: estagio,
+      classes: ["sobrevivente"], fonte: SAH, pagina: pagina, resumo: resumo,
+    }, extra || {}));
+  }
+
+  var HABILIDADES_SOBREVIVENTE = [
+    sobrevivente("durao", 2, "durao", "Durão", 31,
+      "Você recebe +4 PV. Quando subir para o 3º estágio, recebe +2 PV.",
+      { efeitos: [{ tipo: "pvFixo", valor: 4 }], automacao: "calculo",
+        nota: "Os +4 PV entram no 2º estágio; os +2, a partir do 3º." }),
+    sobrevivente("durao", 4, "pancadaForte", "Pancada Forte", 31,
+      "Ao fazer um ataque, gaste 1 PE para receber +1 dado no teste de ataque.",
+      { automacao: "informacao",
+        substituicao: { classe: "combatente", habilidade: "ataqueEspecial", custo: -1,
+          texto: "Virando combatente, Pancada Forte some e Ataque Especial custa 1 PE a menos (SAH p. 31)." } }),
+    sobrevivente("esperto", 2, "esperto", "Esperto", 32,
+      "Você se torna treinado em uma perícia adicional à sua escolha.",
+      { opcoes: [{ chave: "pericia", tipo: "pericia", modo: "treinar", rotulo: "Perícia adicional" }],
+        efeitos: [{ tipo: "treinar", opcao: "pericia" }], automacao: "calculo" }),
+    sobrevivente("esperto", 4, "entendido", "Entendido", 32,
+      "Em duas perícias treinadas (exceto Luta e Pontaria), gaste 1 PE para somar +1d4 ao teste.",
+      { opcoes: [{ chave: "pericias", tipo: "pericias", quantidade: 2, exceto: ["luta", "pontaria"], modo: "treinada",
+          rotulo: "Perícias de Entendido" }],
+        automacao: "informacao",
+        substituicao: { classe: "especialista", habilidade: "perito", custo: -1,
+          texto: "Virando especialista, Entendido some e Perito custa 1 PE a menos (SAH p. 32)." } }),
+    sobrevivente("esoterico", 2, "esoterico", "Esotérico", 32,
+      "Ação padrão e 1 PE: você sente energias paranormais em alcance curto. O mestre diz o que você percebe, se houver algo.",
+      { automacao: "informacao" }),
+    sobrevivente("esoterico", 4, "iniciado", "Iniciado", 32,
+      "Você aprende e pode conjurar um ritual de 1º círculo à sua escolha — mesmo em NEX 0%. Virando ocultista, ele se soma aos três rituais de Escolhido pelo Outro Lado.",
+      { automacao: "parcial",
+        nota: "O ritual é escolhido pela biblioteca, como qualquer concessão, e fica preso a esta habilidade." }),
+    entrada({ chave: "cicatrizado", nome: "Cicatrizado", tipo: "sobrevivente", classes: ["sobrevivente"], estagio: 5,
+      fonte: SAH, pagina: 31,
+      resumo: "Um perigo paranormal de um elemento deixou trauma: –1 dado em testes de resistência contra ele. Uma vez por sessão, como reação, sacrifique 1 PV para sempre para ignorar um dano mental ou gasto de PE, ou 1 PE para sempre para reduzir um dano físico à metade.",
+      opcoes: [
+        { chave: "elemento", tipo: "elemento", comMedo: true, rotulo: "Elemento do perigo" },
+        { chave: "perigo", tipo: "texto", rotulo: "O perigo enfrentado", dica: "um tipo de criatura, um culto, um lugar…", limite: 80 },
+      ],
+      automacao: "parcial",
+      nota: "O –1 dado vale só contra aquele perigo: a mesa decide quando ele se aplica. Os sacrifícios ficam registrados e tiram PV ou PE do máximo, para sempre." }),
+  ];
+
+  /* O treinamento que transforma quem não é agente em agente. Um por
+     transição e classe, montado a partir de RAMAOrdemCatalogo.TRANSICOES
+     — o catálogo diz os ganhos, e aqui eles viram opções a escolher. */
+  function treinamentosDeTransicao() {
+    var CAT = global.RAMAOrdemCatalogo;
+    if (!CAT || !CAT.TRANSICOES) return [];
+    var lista = [];
+    Object.keys(CAT.TRANSICOES).forEach(function (de) {
+      var t = CAT.TRANSICOES[de];
+      Object.keys(t.classes).forEach(function (para) {
+        var g = t.classes[para];
+        var opcoes = [];
+        var efeitos = [];
+        g.pericias.pares.forEach(function (par, i) {
+          var nomes = par.map(function (k) { var pr = CAT.pericia(k); return pr ? pr.nome : k; });
+          opcoes.push({ chave: "par" + i, tipo: "pericia", entre: par.slice(), modo: "treinar", rotulo: nomes.join(" ou ") });
+          efeitos.push({ tipo: "treinar", opcao: "par" + i });
+        });
+        g.pericias.fixas.forEach(function (k) {
+          efeitos.push({ tipo: "grauMinimo", pericia: k, grau: "treinado" });
+        });
+        if (g.pericias.livres) {
+          opcoes.push({ chave: "livres", tipo: "pericias", quantidade: g.pericias.livres, modo: "treinar",
+            rotulo: g.pericias.livres + " perícias à sua escolha" });
+          efeitos.push({ tipo: "treinarLista", opcao: "livres" });
+        }
+        var nomeClasse = CAT.classe(para) ? CAT.classe(para).nome : para;
+        var ganhos = [];
+        if (g.pv) ganhos.push("+" + g.pv + " PV");
+        if (g.pe) ganhos.push("+" + g.pe + " PE");
+        if (g.san) ganhos.push("+" + g.san + " SAN");
+        lista.push(entrada({
+          chave: "treinamento." + de + "." + para,
+          nome: t.titulo + " · " + nomeClasse,
+          tipo: "treinamento",
+          classes: [para],
+          fonte: t.fonte, pagina: t.pagina,
+          resumo: (ganhos.length ? ganhos.join(", ") + "; " : "") + "perícias: " +
+            [].concat(g.pericias.pares.map(function (par) { return par.map(function (k) { return CAT.pericia(k).nome; }).join(" ou "); }))
+              .concat(g.pericias.fixas.map(function (k) { return CAT.pericia(k).nome; }))
+              .concat(g.pericias.livres ? [g.pericias.livres + " à sua escolha"] : []).join(", ") +
+            "; proficiências: " + (g.proficiencias.length ? g.proficiencias.join(" e ") : "nenhuma") +
+            "; habilidades: " + g.habilidades.join(" e ") + ".",
+          opcoes: opcoes,
+          efeitos: efeitos,
+          automacao: "calculo",
+        }));
+      });
+    });
+    return lista;
+  }
+
+  var TREINAMENTOS = treinamentosDeTransicao();
 
   /* Os estágios de cada habilidade automática, por NEX. */
   var ESTAGIOS = {
@@ -1032,6 +1152,8 @@
   /* A partir de quando cada automática existe. */
   var NEX_INICIAL_AUTOMATICA = {
     ataqueEspecial: 5, ecletico: 5, perito: 5, engenhosidade: 40, escolhidoPeloOutroLado: 5,
+    /* Empenho existe em NEX 0%: é justamente de quem ainda não é agente. */
+    empenho: 0,
   };
 
   /* =================================================================
@@ -1068,7 +1190,8 @@
      ÍNDICES
      ================================================================= */
 
-  var TODOS = [].concat(PODERES_CLASSE, PODERES_GERAIS, PODERES_PARANORMAIS, HABILIDADES_TRILHA, AUTOMATICAS, ALTERACOES_GERAIS);
+  var TODOS = [].concat(PODERES_CLASSE, PODERES_GERAIS, PODERES_PARANORMAIS, HABILIDADES_TRILHA, AUTOMATICAS, ALTERACOES_GERAIS,
+    HABILIDADES_SOBREVIVENTE, TREINAMENTOS);
 
   var POR_CHAVE = {};
   TODOS.forEach(function (p) { POR_CHAVE[p.chave] = p; });
@@ -1100,6 +1223,14 @@
       .sort(function (a, b) { return a.nex - b.nex; });
   }
 
+  /* As habilidades de uma trilha de Sobrevivente, pelo estágio. */
+  function habilidadesDaTrilhaSobrevivente(chaveTrilha) {
+    return HABILIDADES_SOBREVIVENTE.filter(function (h) { return h.trilhaSobrevivente === chaveTrilha; })
+      .sort(function (a, b) { return a.estagio - b.estagio; });
+  }
+
+  function treinamento(de, para) { return POR_CHAVE["treinamento." + de + "." + para] || null; }
+
   function primeiraDaTrilha(chaveTrilha) {
     return habilidadesDaTrilha(chaveTrilha)[0] || null;
   }
@@ -1127,12 +1258,16 @@
     NEX_INICIAL_AUTOMATICA: NEX_INICIAL_AUTOMATICA,
     NEX_DE_ALTERACAO: NEX_DE_ALTERACAO,
     ALTERACOES_GERAIS: ALTERACOES_GERAIS,
+    HABILIDADES_SOBREVIVENTE: HABILIDADES_SOBREVIVENTE,
+    TREINAMENTOS: TREINAMENTOS,
     TODOS: TODOS,
 
     poder: poder,
     poderesDeClasse: poderesDeClasse,
     pertenceAClasse: pertenceAClasse,
     habilidadesDaTrilha: habilidadesDaTrilha,
+    habilidadesDaTrilhaSobrevivente: habilidadesDaTrilhaSobrevivente,
+    treinamento: treinamento,
     primeiraDaTrilha: primeiraDaTrilha,
     paginaPara: paginaPara,
     referencia: referencia,

@@ -533,7 +533,7 @@ uma regra de jogo.
 
 ## Migração
 
-`schemaVersion` é `11`. Toda ficha lida passa por `normalizarFicha()`, que aceita
+`schemaVersion` é `12`. Toda ficha lida passa por `normalizarFicha()`, que aceita
 o que faltar e conserta o que dá.
 
 **A v2.19 subiu o schema de 9 para 10 sem converter nada.** O bloco `ordem`
@@ -875,6 +875,23 @@ ganha morrendo ao ser lida.
 - `imunidades`: chaves de condição ou `categoria:<medo|paralisia|mental|sentidos|fadiga>`.
 - Morrendo, Enlouquecendo, Inconsciente e Perturbado nunca viram instância: a
   biblioteca liga o contador próprio delas.
+
+**Mundano e Sobrevivente (v2.21).** `classe` aceita `mundano` e `sobrevivente`.
+Campos novos do bloco `ordem`:
+
+- `estagio` (1 a 5): o estágio do Sobrevivente. Não é nível nem NEX; nas outras
+  classes fica guardado sem efeito.
+- `trajetoria`: `[{ id, de: "mundano" | "sobrevivente", para: classe de agente,
+  estagio, em, nota }]`, no máximo uma entrada. Os ganhos da transição são
+  recalculados dela; ela só vale se `para` for a classe atual.
+- `sessao`: `{ id, iniciadaEm }` — a sessão de jogo, para o que é "uma vez por
+  sessão" (Cicatrizado). Separada da cena das condições.
+- `sacrificios`: `[{ id, recurso: "pv" | "pe", motivo: "danoMental" | "gastoPe" |
+  "danoFisico", sessao, em, nota }]` — cada um tira 1 do máximo, para sempre.
+- Escolhas novas em `escolhas`: `s2.trilha` (tipo `trilhaSobrevivente`, valor
+  `durao` | `esperto` | `esoterico`), `s3.atributo`, `b.esperto`, `b.entendido`,
+  `b.cicatrizado`, `s4.iniciado` (rituais) e, depois da transição, `t.treinamento` e
+  `t.atributo`.
 
 **Item com contagem de munição (v2.20).** Arma: `ordem.contagem = { municao
 (id do item de munição), carregada, capacidade? }`. Munição: `ordem.contagem =

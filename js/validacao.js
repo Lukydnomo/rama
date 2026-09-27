@@ -413,8 +413,10 @@
     var temEfeitos = o && o.condicoes && Array.isArray(o.condicoes.efeitos) && o.condicoes.efeitos.length;
     var temConsumos = o && Array.isArray(o.consumos) && o.consumos.length;
     var temExtras = o && o.componentes && Array.isArray(o.componentes.extras) && o.componentes.extras.length;
+    var temSacrificios = o && Array.isArray(o.sacrificios) && o.sacrificios.length;
+    var temTrajetoria = o && Array.isArray(o.trajetoria) && o.trajetoria.length;
     var temVinculo = itens.some(function (i) { return i && i.ordem && i.ordem.contagem && i.ordem.contagem.municao; });
-    if (!temEfeitos && !temConsumos && !temExtras && !temVinculo) return ficha;
+    if (!temEfeitos && !temConsumos && !temExtras && !temVinculo && !temSacrificios && !temTrajetoria) return ficha;
 
     var copia = JSON.parse(JSON.stringify(ficha));
     function guardar(lista, campo) {
@@ -425,6 +427,8 @@
     if (temEfeitos) guardar(copia.ordem.condicoes.efeitos, "efeito");
     if (temConsumos) guardar(copia.ordem.consumos, "registro");
     if (temExtras) guardar(copia.ordem.componentes.extras, "extra");
+    if (temSacrificios) guardar(copia.ordem.sacrificios, "sacrificio");
+    if (temTrajetoria) guardar(copia.ordem.trajetoria, "transicao");
     if (temVinculo) {
       var posicao = {};
       copia.inventario.itens.forEach(function (i, n) { if (i && typeof i.id === "string") posicao[i.id] = n; });
@@ -450,6 +454,8 @@
     if (o && o.condicoes && typeof o.condicoes === "object") devolver(o.condicoes.efeitos, "efeito");
     if (o) devolver(o.consumos, "registro");
     if (o && o.componentes && typeof o.componentes === "object") devolver(o.componentes.extras, "extra");
+    if (o) devolver(o.sacrificios, "sacrificio");
+    if (o) devolver(o.trajetoria, "transicao");
     percorrerEventos(o ? o.condicoes : null, function (e) {
       if (typeof e.evento === "string") { e.id = e.evento; delete e.evento; }
     });

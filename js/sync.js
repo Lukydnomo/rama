@@ -498,6 +498,11 @@
       /* O registro do que foi gasto: é por ele que o mesmo uso não gasta
          duas vezes, então as duas abas precisam ver os dois lados. */
       "ordem.consumos": "id",
+      /* A trajetória (uma transição) e os sacrifícios de Cicatrizado
+         (v2.21): cada registro pelo id — dois aparelhos sacrificando na
+         mesma sessão ficam com os dois registros, e a ficha mostra. */
+      "ordem.trajetoria": "id",
+      "ordem.sacrificios": "id",
       "ordem.componentes.extras": "id",
     },
     /* Contadores de gasto: a diferença de cada lado se soma. */

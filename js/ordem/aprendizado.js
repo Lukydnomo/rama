@@ -304,6 +304,26 @@
     var c = ctx || {};
     var passos = Math.max(0, Number(c.passos) || 0);
     var lista = [];
+
+    /* Iniciado (SAH p. 32): o Sobrevivente Esotérico do 4º estágio
+       "aprende e pode conjurar um ritual de 1º círculo" — em NEX 0%, sem
+       liberar nenhum outro. Virando ocultista, ele se SOMA aos três de
+       Escolhido pelo Outro Lado: é outra concessão, com o próprio id. */
+    if (c.iniciado) {
+      lista.push(concessao({
+        id: "s4.iniciado",
+        degrau: 0,
+        estagio: 4,
+        origem: ORIGENS.trilha.chave,
+        poder: "iniciado",
+        nomePoder: "Iniciado",
+        fonte: SAH,
+        pagina: 32,
+        quantidade: 1,
+        circulos: [1],
+        nota: "Vem do 4º estágio do Sobrevivente Esotérico e vale mesmo em NEX 0%. Virando ocultista, soma-se aos três rituais iniciais.",
+      }));
+    }
     if (!passos) return lista;
 
     concessoesDaClasse(lista, c, passos);

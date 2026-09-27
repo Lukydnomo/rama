@@ -1962,7 +1962,7 @@ t.grupo("Painel da campanha — fichas de Ordem e permissões");
   t.ok("outro jogador NÃO recebe os dados de cálculo da ficha alheia",
     !ordemColega.detalhado && ordemColega.inventario === undefined && ordemColega.ordem.recursos === undefined &&
     ordemColega.ordem.escolhas === undefined && ordemColega.ordem.atributos === undefined);
-  t.igual("  só a identificação", Object.keys(ordemColega.ordem).sort().join(","), "classe,nex,nivel,opcionais,trilha");
+  t.igual("  só a identificação", Object.keys(ordemColega.ordem).sort().join(","), "classe,estagio,nex,nivel,opcionais,trilha");
   t.ok("  e a dona recebe tudo da própria", comoDona({ acao: "listar_personagens_campanha", campanhaId: campanha })
     .dados.find((x) => x.id === pOrdem).detalhado);
 
@@ -4751,6 +4751,61 @@ await (async () => {
   t.ok("iniciado, o jogador recebe quem tem o turno", img.ok && img.dados.participanteId === "pt-lia" && img.dados.tipo === "personagem");
   t.ok("  e só o necessário: sem ficha, sem status", Object.keys(img.dados).sort().join(",") === "imagem,nome,participanteId,tipo");
   t.ok("quem não vê o combate não recebe a imagem", !comoIntrusa({ acao: "ler_imagem_do_turno", campanhaId: mesa, combateId: combate }).ok);
+})();
+
+t.grupo("Mundano e Sobrevivente pelo servidor — estágio, trajetória e o que o colega vê");
+
+await (() => {
+  preparar();
+  const mestra = novaConta("mestra3");
+  const lia = novaConta("lia3");
+  const beto = novaConta("beto3");
+  const comoMestra = comoFn(mestra);
+  const comoLia = comoFn(lia);
+  const comoBeto = comoFn(beto);
+  const mesa = comoMestra({ acao: "criar_campanha", dados: { nome: "Casa" } }).dados.id;
+  comoMestra({ acao: "salvar_participantes", campanhaId: mesa,
+    membros: [{ userId: lia.id, papel: "jogador" }, { userId: beto.id, papel: "jogador" }] });
+
+  const ordem = {
+    classe: "sobrevivente", origem: "universitario", nex: 0, estagio: 4,
+    atributos: { agi: 1, for: 1, int: 2, pre: 2, vig: 2 },
+    escolhas: [{ id: "e1", etapa: "s2.trilha", tipo: "trilhaSobrevivente", valor: "esoterico", opcoes: {}, registradoEm: "2026-09-27T10:00:00.000Z" }],
+    sessao: { id: "ses-1", iniciadaEm: "2026-09-27T10:00:00.000Z" },
+    sacrificios: [{ id: "sac-1", recurso: "pv", motivo: "danoMental", sessao: "ses-1", em: "2026-09-27T10:10:00.000Z" }],
+  };
+  const pLia = comoLia({ acao: "criar_personagem", dados: { nome: "Lia", tipoFicha: "ordem", classe: "Sobrevivente", schemaVersion: 12, ordem } }).dados.id;
+  comoLia({ acao: "vincular_personagem", campanhaId: mesa, personagemId: pLia });
+
+  const lida = comoLia({ acao: "ler_personagem", personagemId: pLia });
+  t.ok("a ficha de Sobrevivente volta com classe, estágio, sessão e sacrifícios",
+    lida.ok && lida.dados.ordem.classe === "sobrevivente" && lida.dados.ordem.estagio === 4 &&
+    lida.dados.ordem.sacrificios.length === 1 && lida.dados.ordem.sessao.id === "ses-1");
+
+  /* A transição é gravada pela gravação de sempre, com revisão. */
+  lida.dados.ordem.classe = "ocultista";
+  lida.dados.ordem.nex = 5;
+  lida.dados.ordem.trajetoria = [{ id: "tr-1", de: "sobrevivente", para: "ocultista", estagio: 4, em: "2026-09-27T11:00:00.000Z" }];
+  lida.dados.classe = "Ocultista";
+  const salvo = comoLia({ acao: "salvar_personagem", personagemId: pLia, rev: lida.rev, dados: lida.dados });
+  t.ok("a transição grava com a revisão", salvo.ok);
+  const repetido = comoLia({ acao: "salvar_personagem", personagemId: pLia, rev: lida.rev, dados: lida.dados });
+  t.ok("  repetir a gravação com a revisão velha é recusado, sem duplicar nada", !repetido.ok);
+  const relida = comoLia({ acao: "ler_personagem", personagemId: pLia });
+  t.ok("  a trajetória volta inteira", relida.dados.ordem.trajetoria.length === 1 && relida.dados.ordem.trajetoria[0].estagio === 4);
+
+  const p2 = comoBeto({ acao: "criar_personagem", dados: { nome: "Beto", tipoFicha: "ordem", classe: "Sobrevivente", schemaVersion: 12,
+    ordem: { classe: "sobrevivente", estagio: 3, escolhas: [{ id: "x", etapa: "s2.trilha", tipo: "trilhaSobrevivente", valor: "durao", opcoes: {} }],
+      sacrificios: [{ id: "s", recurso: "pv" }] } } }).dados.id;
+  comoBeto({ acao: "vincular_personagem", campanhaId: mesa, personagemId: p2 });
+  const lista = comoLia({ acao: "listar_personagens_campanha", campanhaId: mesa });
+  const colega = (lista.dados || []).find((x) => x.id === p2);
+  const oc = colega && colega.ordem ? colega.ordem : {};
+  t.ok("o colega vê o estágio do Sobrevivente", oc.estagio === 3 && oc.classe === "sobrevivente");
+  t.ok("  e não vê escolhas nem sacrifícios", oc.escolhas === undefined && oc.sacrificios === undefined && oc.trajetoria === undefined);
+  const daMestra = (comoMestra({ acao: "listar_personagens_campanha", campanhaId: mesa }).dados || []).find((x) => x.id === p2);
+  t.ok("a mestra recebe a ficha de Ordem completa para calcular o cartão", !!daMestra && daMestra.ordem && daMestra.ordem.estagio === 3 &&
+    Array.isArray(daMestra.ordem.escolhas));
 })();
 
 /* =====================================================================

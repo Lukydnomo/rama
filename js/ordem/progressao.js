@@ -112,6 +112,10 @@
      ================================================================= */
 
   var TIPOS = {
+    trilhaSobrevivente: {
+      rotulo: "Trilha de sobrevivente", verbo: "Escolher trilha",
+      explicacao: "No 2º estágio, escolha uma das trilhas de sobrevivente: Durão, Esperto ou Esotérico. A primeira habilidade vem agora; a segunda, no 4º estágio (Sobrevivendo ao Horror, p. 31).",
+    },
     trilha: {
       rotulo: "Trilha", verbo: "Escolher trilha",
       explicacao: "Escolha uma trilha da sua classe. Os poderes dela chegam sozinhos nas etapas seguintes.",
@@ -196,6 +200,49 @@
   function rotuloDoDegrau(d, separado) {
     return separado ? "Nível " + d : "NEX " + nexDoDegrau(d) + "%";
   }
+
+  /* =================================================================
+     ESTÁGIOS DO SOBREVIVENTE E A TRANSIÇÃO
+     -----------------------------------------------------------------
+     O Sobrevivente não tem degraus de NEX: tem estágios (SAH p. 30-31).
+     As vagas dele ficam ANTES do 1º degrau de agente, na ordem dos
+     estágios — depois da origem —, com ids próprios:
+
+       s2.trilha           a trilha de sobrevivente
+       s3.atributo         o aumento de atributo do 3º estágio (teto 3)
+       b.esperto, b.entendido, b.cicatrizado
+                           as habilidades com escolha
+       s4.iniciado         o ritual de Iniciado (concessão de ritual)
+
+     Virar agente abre as vagas da transição, entre a fase anterior e o
+     1º degrau da classe nova:
+
+       t.atributo          o ponto de atributo do Mundano (teto 3)
+       t.treinamento       as perícias da transição
+
+     Um Sobrevivente que virou agente continua com as vagas dos estágios
+     que alcançou: "mantém todas as habilidades já recebidas" (SAH p. 32).
+     ================================================================= */
+
+  function estagioDaFase(ordem) {
+    var f = R().faseDe(ordem);
+    if (f.perfil === "sobrevivente") return f.estagio;
+    if (f.anterior === "sobrevivente") return f.estagioAnterior;
+    return 0;
+  }
+
+  /* A posição na ordem das vagas: depois da origem (101) e antes do 1º
+     degrau de agente (105 em diante). */
+  function ordemDoEstagio(e, pos) { return 101 + e * 0.1 + (pos || 0) * 0.001; }
+  var ORDEM_DA_TRANSICAO = 101.9;
+
+  function trilhaSobreviventeDe(ordem) {
+    var r = (ordem.escolhas || []).filter(function (x) { return x.etapa === "s2.trilha"; })
+      .sort(function (a, b) { return String(b.registradoEm || "").localeCompare(String(a.registradoEm || "")); })[0];
+    return r && C.trilhaSobrevivente(r.valor) ? r.valor : "";
+  }
+
+  function rotuloDoEstagio(e) { return "Estágio " + e; }
 
   /* =================================================================
      VAGAS
@@ -319,6 +366,63 @@
       }));
     }
 
+    /* Os estágios do Sobrevivente — de quem é, ou de quem foi e virou
+       agente. */
+    var estagio = estagioDaFase(ordem);
+    if (estagio) {
+      var comum = { degrau: 0, nexEtapa: 0 };
+      if (estagio >= 2) {
+        lista.push(vaga("s2.trilha", "trilhaSobrevivente", Object.assign({}, comum, {
+          estagio: 2, ordem: ordemDoEstagio(2, POSICAO.trilha), rotuloEtapa: rotuloDoEstagio(2),
+        })));
+      }
+      var trilhaS = estagio >= 2 ? trilhaSobreviventeDe(ordem) : "";
+      if (trilhaS) {
+        P.habilidadesDaTrilhaSobrevivente(trilhaS).forEach(function (h) {
+          if (h.estagio > estagio || !h.opcoes.length) return;
+          lista.push(vaga("b." + h.chave, "opcoesBeneficio", Object.assign({}, comum, {
+            estagio: h.estagio, ordem: ordemDoEstagio(h.estagio, POSICAO.opcoesBeneficio),
+            rotulo: h.nome, explicacao: h.resumo, beneficio: h.chave, rotuloEtapa: rotuloDoEstagio(h.estagio),
+          })));
+        });
+      }
+      if (estagio >= 3) {
+        lista.push(vaga("s3.atributo", "atributo", Object.assign({}, comum, {
+          estagio: 3, ordem: ordemDoEstagio(3, POSICAO.atributo), rotuloEtapa: rotuloDoEstagio(3),
+          maximo: 3, fonteTexto: "Sobrevivendo ao Horror, p. 31",
+          explicacao: "Aumente um atributo em +1, sem passar de 3. Vigor aumentado aumenta os PV; Presença, os PE; Intelecto, treina uma perícia nova (Sobrevivendo ao Horror, p. 31).",
+        })));
+      }
+      if (estagio >= 5) {
+        var cic = P.poder("cicatrizado");
+        lista.push(vaga("b.cicatrizado", "opcoesBeneficio", Object.assign({}, comum, {
+          estagio: 5, ordem: ordemDoEstagio(5, POSICAO.opcoesBeneficio), rotuloEtapa: rotuloDoEstagio(5),
+          rotulo: cic ? cic.nome : "Cicatrizado", explicacao: cic ? cic.resumo : "", beneficio: "cicatrizado",
+        })));
+      }
+    }
+
+    /* A transição para agente: o que ela pede para escolher. */
+    var fase = R().faseDe(ordem);
+    if (fase.transicao) {
+      var tr = C.TRANSICOES[fase.anterior];
+      var treino = P.treinamento(fase.anterior, ordem.classe);
+      if (treino) {
+        lista.push(vaga("t.treinamento", "opcoesBeneficio", {
+          degrau: 1, ordem: ORDEM_DA_TRANSICAO + POSICAO.opcoesBeneficio * 0.001,
+          rotulo: treino.nome, explicacao: treino.resumo, beneficio: treino.chave, rotuloEtapa: tr.titulo,
+        }));
+      }
+      if (tr.atributo) {
+        lista.push(vaga("t.atributo", "atributo", {
+          degrau: 1, ordem: ORDEM_DA_TRANSICAO + POSICAO.atributo * 0.001, rotuloEtapa: tr.titulo,
+          rotulo: "Ponto de atributo do treinamento", maximo: tr.atributo.maximo,
+          fonteTexto: "Ordem Paranormal RPG, p. 172",
+          explicacao: "Ao fim do treinamento, você recebe 1 ponto de atributo, mas não pode usá-lo para passar um atributo de 3 (Ordem Paranormal RPG, p. 172).",
+        }));
+      }
+    }
+
     /* Com NEX & Experiência, a exposição abre as próprias vagas. */
     if (t.separado) {
       P.ALTERACOES_GERAIS.forEach(function (a) {
@@ -376,7 +480,11 @@
   }
 
   function contextoDeConcessao(ordem, t) {
+    var estagio = estagioDaFase(ordem);
     return {
+      /* Iniciado (SAH p. 32): 4º estágio da trilha Esotérico. Vale mesmo
+         em NEX 0%, e continua valendo depois de virar agente. */
+      iniciado: estagio >= 4 && trilhaSobreviventeDe(ordem) === "esoterico",
       classe: ordem.classe,
       trilha: trilhaValida(ordem) ? ordem.trilha : "",
       passos: t.passos,
@@ -404,11 +512,13 @@
     return A.concessoes(contextoDeConcessao(ordem, t)).map(function (c) {
       return vaga(c.id, "rituais", {
         degrau: c.degrau,
-        ordem: c.degrau * 100 + POSICAO.rituais,
+        ordem: c.estagio ? ordemDoEstagio(c.estagio, POSICAO.rituais) : c.degrau * 100 + POSICAO.rituais,
+        estagio: c.estagio || 0,
+        nexEtapa: c.estagio ? 0 : undefined,
         rotulo: A.rotuloDaConcessao(c),
         verbo: c.fixo ? "Trazer ritual" : "Escolher rituais",
         explicacao: A.explicacaoDaConcessao(c),
-        rotuloEtapa: rotuloDoDegrau(c.degrau, t.separado),
+        rotuloEtapa: c.estagio ? rotuloDoEstagio(c.estagio) : rotuloDoDegrau(c.degrau, t.separado),
         opcional: c.opcional,
         concessao: c,
       });
@@ -555,6 +665,10 @@
   function descrever(ordem, r) {
     var o = r.opcoes || {};
     switch (r.tipo) {
+      case "trilhaSobrevivente": {
+        var ts = C.trilhaSobrevivente(r.valor);
+        return ts ? "Trilha " + ts.nome : "";
+      }
       case "atributo":
         return "+1 em " + nomeDoAtributo(r.valor) + (r.valor === "int" && o.pericia ? " (treina " + nomeDaPericia(o.pericia) + ")" : "");
       case "grauTreinamento":
@@ -713,15 +827,18 @@
     var exposicaoAtual = R().exposicao(ordem);
     var d = v.degrau || 0;
 
+    /* Estágio de Sobrevivente: NEX 0%, e nada de exposição. */
+    var nexDaEtapa = v.nexEtapa !== undefined ? v.nexEtapa : nexDoDegrau(Math.max(1, d));
+
     var exposicao;
     if (v.nexExposicao) exposicao = v.nexExposicao;
     else if (t.separado) exposicao = 0;
-    else exposicao = nexDoDegrau(Math.max(1, d));
+    else exposicao = nexDaEtapa;
 
     return {
       id: v.id,
       degrau: d,
-      nex: nexDoDegrau(Math.max(1, d)),
+      nex: nexDaEtapa,
       exposicao: Math.min(exposicao, t.separado ? exposicaoAtual : 99),
       separado: t.separado,
       rotulo: v.rotuloEtapa || rotuloDoDegrau(d, t.separado),
@@ -958,6 +1075,10 @@
           if (!C.pericia(valor)) { saida.problemas.push(op.rotulo + ": perícia desconhecida."); break; }
           if (op.entre && op.entre.indexOf(valor) < 0) saida.problemas.push(op.rotulo + ": escolha entre " + op.entre.map(nomeDaPericia).join(", ") + ".");
           if (op.exceto && op.exceto.indexOf(valor) >= 0) saida.problemas.push(op.rotulo + ": " + nomeDaPericia(valor) + " não pode ser escolhida aqui.");
+          /* "Se receber uma perícia que já havia recebido, escolha outra"
+             (OPRPG p. 22). */
+          if (op.modo === "treinar" && (percurso.graus[valor] || 0) >= 1) saida.problemas.push(op.rotulo + ": " + nomeDaPericia(valor) + " já é treinada — escolha outra.");
+          if (op.modo === "treinada" && (percurso.graus[valor] || 0) < 1) saida.problemas.push(op.rotulo + ": " + nomeDaPericia(valor) + " não é treinada.");
           break;
         }
         case "pericias": {
@@ -970,6 +1091,9 @@
               var motivo = motivoParaSubir(percurso.graus[k] || 0, etapa, k, true);
               if (motivo) saida.problemas.push(motivo);
             }
+            if (op.exceto && op.exceto.indexOf(k) >= 0) saida.problemas.push(op.rotulo + ": " + nomeDaPericia(k) + " não pode ser escolhida aqui.");
+            if (op.modo === "treinar" && (percurso.graus[k] || 0) >= 1) saida.problemas.push(op.rotulo + ": " + nomeDaPericia(k) + " já é treinada — escolha outra.");
+            if (op.modo === "treinada" && (percurso.graus[k] || 0) < 1) saida.problemas.push(op.rotulo + ": " + nomeDaPericia(k) + " não é treinada.");
           });
           if (op.quantidade && unicas.length < op.quantidade) {
             saida.faltam.push(op.rotulo + ": faltam " + (op.quantidade - unicas.length));
@@ -1241,11 +1365,20 @@
     var saida = { faltam: [], problemas: [], filhos: [], transcender: false };
 
     switch (v.tipo) {
+      case "trilhaSobrevivente":
+        if (!r.valor) { saida.faltam.push("Trilha"); break; }
+        if (!C.trilhaSobrevivente(r.valor)) saida.problemas.push("Trilha de sobrevivente desconhecida.");
+        break;
+
       case "atributo": {
         if (!C.ATRIBUTOS.some(function (a) { return a.chave === r.valor; })) { saida.faltam.push("Atributo"); break; }
-        if ((percurso.atributos[r.valor] || 0) >= C.GERACAO_ATRIBUTOS.maximoPorAumento) {
+        /* O teto é o da regra da vaga: 5 no aumento de agente (OPRPG
+           p. 26); 3 no 3º estágio do Sobrevivente (SAH p. 31) e no ponto
+           do treinamento do Mundano (OPRPG p. 172). */
+        var tetoA = v.maximo || C.GERACAO_ATRIBUTOS.maximoPorAumento;
+        if ((percurso.atributos[r.valor] || 0) >= tetoA) {
           saida.problemas.push(nomeDoAtributo(r.valor) + " já está em " + percurso.atributos[r.valor] +
-            " nesta etapa; o aumento de atributo não passa de " + C.GERACAO_ATRIBUTOS.maximoPorAumento + " (OPRPG p.26).");
+            " nesta etapa; este aumento não passa de " + tetoA + " (" + (v.fonteTexto || "OPRPG p.26") + ").");
         }
         /* OPRPG p.15: "Caso seu Intelecto aumente, você aprende uma
            perícia adicional para cada ponto." */
@@ -1635,6 +1768,19 @@
         });
         return;
 
+      /* Treinar: leva a treinado, sem passar disso (Esperto; as perícias
+         da transição para agente). */
+      case "treinar": {
+        var kt = o[ef.opcao];
+        if (typeof kt === "string" && C.pericia(kt)) subirGrau(percurso, kt, 1, fonte, detalhe);
+        return;
+      }
+      case "treinarLista":
+        (Array.isArray(o[ef.opcao]) ? o[ef.opcao] : []).forEach(function (k) {
+          if (C.pericia(k)) subirGrau(percurso, k, 1, fonte, detalhe);
+        });
+        return;
+
       case "treinarOuBonus": {
         var k = ef.pericia || o[ef.opcao];
         if (!k || !C.pericia(k)) return;
@@ -1700,6 +1846,9 @@
     var rituais = rituaisDoContexto(contexto);
     return JSON.stringify([
       ordem.classe, ordem.origem, ordem.trilha, ordem.nex, ordem.nivel,
+      /* O estágio e a trajetória decidem as vagas do Sobrevivente e da
+         transição (v2.21). */
+      ordem.estagio, ordem.trajetoria || null,
       ordem.atributos, ordem.pericias, ordem.escolhas, ordem.afinidade, ordem.opcionais,
       ordem.registrosDeRitual || null, ordem.prestigio,
       Object.keys(desativadasDe(ordem)).sort(),
@@ -1781,6 +1930,17 @@
     /* Os eventos em ordem: vagas e habilidades automáticas de trilha. */
     var eventos = vs.map(function (v) { return { ordem: v.ordem, vaga: v }; });
 
+    /* As habilidades automáticas das trilhas de Sobrevivente, pelo
+       estágio alcançado. */
+    var estagioF = estagioDaFase(ordem);
+    var trilhaS = estagioF >= 2 ? trilhaSobreviventeDe(ordem) : "";
+    if (trilhaS) {
+      P.habilidadesDaTrilhaSobrevivente(trilhaS).forEach(function (h) {
+        if (h.estagio > estagioF || h.opcoes.length) return;
+        eventos.push({ ordem: ordemDoEstagio(h.estagio, POSICAO.trilhaAuto), sobreviventeAuto: h });
+      });
+    }
+
     var trilhaEscolhida = classe ? C.trilha(ordem.trilha) : null;
     if (trilhaEscolhida && trilhaEscolhida.classe !== ordem.classe) trilhaEscolhida = null;
     if (trilhaEscolhida) {
@@ -1797,6 +1957,29 @@
 
     eventos.forEach(function (ev) {
       if (pararEm && ev.vaga && ev.vaga.id === pararEm && !antes) antes = copiarPercurso(percurso);
+
+      if (ev.sobreviventeAuto) {
+        var hs = ev.sobreviventeAuto;
+        var etapaS = etapaDe(ordem, { id: "s." + hs.chave, degrau: 0, nexEtapa: 0, rotuloEtapa: rotuloDoEstagio(hs.estagio) });
+        var idS = idDeAquisicao(percurso, "s." + hs.chave, hs.chave);
+        var desligadaS = !!percurso.desligadas[idS];
+        percurso.adquiridos.push({
+          id: idS, chave: hs.chave, nome: hs.nome, tipo: "sobrevivente", elemento: "", opcoes: {},
+          afinidade: false, valido: true, completo: true, via: "estagio", degrau: 0, estagio: hs.estagio,
+          etapaId: "s." + hs.chave, rotuloEtapa: etapaS.rotulo, entrada: hs, motivos: [],
+          efeitosDesativados: desligadaS,
+        });
+        if (!desligadaS) {
+          (hs.efeitos || []).forEach(function (ef) {
+            aplicarEfeito(percurso, efeitos, ef, {}, { nome: hs.nome, detalhe: etapaS.rotulo }, etapaS);
+          });
+          /* Durão: "Quando subir para o 3º estágio, recebe +2 PV." */
+          if (hs.chave === "durao" && estagioF >= 3) {
+            efeitos.push({ tipo: "pvFixo", valor: 2, fonte: hs.nome, detalhe: rotuloDoEstagio(3), degrau: 0 });
+          }
+        }
+        return;
+      }
 
       if (ev.trilhaAuto) {
         var etapaAuto = etapaDe(ordem, { id: "t." + ev.trilhaAuto.chave, degrau: ev.degrau });
@@ -1917,6 +2100,20 @@
         }
       }
     });
+
+    /* Treinamento Especial (SAH p. 31-32): virando combatente, Pancada
+       Forte some e Ataque Especial custa 1 PE a menos; virando
+       especialista, Entendido some e Perito custa 1 PE a menos. A
+       habilidade continua listada, marcada como substituída. */
+    var faseAtual = R().faseDe(ordem);
+    if (faseAtual.anterior === "sobrevivente") {
+      percurso.adquiridos.forEach(function (a) {
+        var sub = a.entrada && a.entrada.substituicao;
+        if (!sub || sub.classe !== ordem.classe) return;
+        a.substituida = sub.texto;
+        efeitos.push({ tipo: "custoHabilidade", habilidade: sub.habilidade, valor: sub.custo, fonte: a.nome, detalhe: "Treinamento Especial" });
+      });
+    }
 
     /* Toda pendência de ritual diz quantos a concessão permite, quantos
        já foram escolhidos e quantos faltam — é o que o cartão mostra. */
@@ -2666,6 +2863,12 @@
   }
 
   function motivoFora(ordem, r, t) {
+    if (/^s\d\./.test(r.etapa) || r.etapa === "b.cicatrizado" || /^b\.(esperto|entendido)$/.test(r.etapa)) {
+      return "Esta escolha é de um estágio de Sobrevivente que a ficha não alcança agora (o estágio baixou, a trilha ou a classe mudou). Ela fica guardada e volta a valer se o estágio voltar.";
+    }
+    if (/^t\./.test(r.etapa)) {
+      return "Esta escolha é da transição para agente, que não vale mais (a classe mudou depois). Ela fica guardada.";
+    }
     if (/^d\d+\.(rituaisIniciais|ritualClasse|saberAmpliado|grimorio)$/.test(r.etapa)) {
       return "Esta concessão de rituais não existe mais — a classe, a trilha, o degrau ou uma regra " +
         "opcional mudou. Os rituais continuam na aba Rituais, agora sem concessão, e o vínculo volta " +
@@ -2788,7 +2991,7 @@
   function candidatosAtributo(ordem, idVaga, contexto) {
     var c = contextoDaVaga(ordem, idVaga, contexto);
     if (!c) return [];
-    var teto = C.GERACAO_ATRIBUTOS.maximoPorAumento;
+    var teto = c.vaga.maximo || C.GERACAO_ATRIBUTOS.maximoPorAumento;
     return C.ATRIBUTOS.map(function (a) {
       var atual = c.percurso.atributos[a.chave] || 0;
       return {
@@ -2898,14 +3101,174 @@
     var classe = C.classe(ordem.classe);
     if (!classe) return [];
     var t = R().trilho(ordem);
+    var fase = R().faseDe(ordem);
+    /* O Sobrevivente que virou agente "mantém todas as habilidades já
+       recebidas" (SAH p. 32) — o Empenho também. A transição do Mundano
+       não diz isso (OPRPG p. 172), e ele não fica. */
+    var preservada = fase.anterior === "sobrevivente" ? "sobrevivente" : "";
+    var custos = {};
+    var est = estado(ordem);
+    (est ? est.efeitos : []).forEach(function (ef) {
+      if (ef.tipo === "custoHabilidade") (custos[ef.habilidade] = custos[ef.habilidade] || []).push(ef);
+    });
     return P.AUTOMATICAS.filter(function (a) {
-      return a.classes.indexOf(classe.chave) >= 0 && t.nexEquivalente >= (P.NEX_INICIAL_AUTOMATICA[a.chave] || 5);
+      if (a.classes.indexOf(classe.chave) >= 0) {
+        var inicio = P.NEX_INICIAL_AUTOMATICA[a.chave];
+        return t.nexEquivalente >= (inicio === undefined ? 5 : inicio);
+      }
+      return !!preservada && a.classes.indexOf(preservada) >= 0;
     }).map(function (a) {
       var estagios = P.ESTAGIOS[a.chave] || [];
       var atual = null;
       estagios.forEach(function (s) { if (t.nexEquivalente >= s.nex) atual = s; });
-      return { id: "auto|" + a.chave, entrada: a, estagio: atual ? atual.texto : "" };
+      var texto = atual ? atual.texto : "";
+      (custos[a.chave] || []).forEach(function (ef) {
+        texto += (texto ? " · " : "") + "custo " + (ef.valor > 0 ? "+" : "") + ef.valor + " PE (" + ef.fonte + ", Treinamento Especial)";
+      });
+      return { id: "auto|" + a.chave, entrada: a, estagio: texto, preservada: a.classes.indexOf(classe.chave) < 0 };
     });
+  }
+
+  /* =================================================================
+     VIRAR AGENTE — o fluxo explícito
+     -----------------------------------------------------------------
+     `planoDeTransicao` não mexe em nada: mostra o que muda, o que fica e
+     o que vai faltar decidir. `transicionar` aplica, de uma vez:
+
+       · a trajetória { id, de, para, estágio, em } — a única coisa que a
+         transição GRAVA; os ganhos são recalculados dela a cada leitura,
+         e por isso reabrir ou salvar de novo não os concede outra vez;
+       · a classe nova, sem trilha de agente, em NEX 5% (ou nível 1);
+       · os recursos atuais "cheios" congelados no valor de antes: o
+         máximo sobe, o atual NÃO é restaurado sozinho.
+
+     Nada é apagado: escolhas, rituais, inventário, notas, condições e
+     personalizações ficam. As escolhas da transição (perícias, o ponto
+     de atributo do Mundano) aparecem em "Falta decidir".
+     ================================================================= */
+
+  var RECURSOS_DA_TRANSICAO = ["pv", "pe", "san", "pd"];
+
+  function simularTransicao(ordem, para, quando, id) {
+    var copia = JSON.parse(JSON.stringify(ordem));
+    var fase = R().faseDe(ordem);
+    copia.trajetoria = [{
+      id: id || "tr-previa", de: fase.perfil, para: para,
+      estagio: fase.perfil === "sobrevivente" ? fase.estagio : 0,
+      em: quando || agora(), nota: "",
+    }];
+    copia.classe = para;
+    copia.trilha = "";
+    if (OP() && OP().ligada(copia, "nexExperiencia")) {
+      copia.nivel = 1;
+      copia.nivelDefinido = true;
+    } else {
+      copia.nex = 5;
+    }
+    return copia;
+  }
+
+  function recursosDe(ordem) {
+    var saida = {};
+    var comPd = R().usaDeterminacao ? R().usaDeterminacao(ordem) : !!(ordem.opcionais && ordem.opcionais.semSanidade);
+    saida.pv = R().pontosDeVida(ordem).total;
+    saida.pe = R().pontosDeEsforco(ordem).total;
+    saida.san = R().sanidade(ordem).total;
+    saida.pd = comPd ? R().determinacao(ordem).total : null;
+    return saida;
+  }
+
+  function planoDeTransicao(ordem, para, contexto) {
+    var fase = R().faseDe(ordem);
+    if (!fase.comum) return { ok: false, motivo: "Só um Mundano ou um Sobrevivente vira agente por treinamento. Esta ficha já é de " + ((C.classe(ordem.classe) || {}).nome || "outra classe") + "." };
+    if (!C.ehAgente(para)) return { ok: false, motivo: "Escolha combatente, especialista ou ocultista." };
+    var de = fase.perfil;
+    var tr = C.TRANSICOES[de];
+    var g = tr.classes[para];
+    var depois = simularTransicao(ordem, para);
+    var antesR = recursosDe(ordem);
+    var depoisR = recursosDe(depois);
+    var atuais = ordem.recursos || {};
+    var recursos = {};
+    RECURSOS_DA_TRANSICAO.forEach(function (q) {
+      if (antesR[q] === null && depoisR[q] === null) return;
+      var guardado = atuais[q];
+      var atual = guardado === null || guardado === undefined ? antesR[q] : Math.min(guardado, antesR[q] === null ? guardado : antesR[q]);
+      recursos[q] = { maximoAntes: antesR[q], maximoDepois: depoisR[q], atual: atual };
+    });
+    var estDepois = estado(depois, contexto || null);
+    var novas = estDepois.pendencias.filter(function (p) {
+      return /^t\./.test(p.id) || /^d1\./.test(p.id);
+    });
+    var substituicoes = [];
+    if (de === "sobrevivente") {
+      estDepois.adquiridos.forEach(function (a) { if (a.substituida) substituicoes.push(a.nome + ": " + a.substituida); });
+    }
+    var avisos = [
+      "Os máximos mudam; os valores atuais não são restaurados — quem estava ferido continua ferido.",
+    ];
+    if (de === "sobrevivente") {
+      avisos.push((fase.estagio < C.ESTAGIO_MAXIMO
+        ? "A transição toma o lugar da subida para o " + (fase.estagio + 1) + "º estágio: esse estágio não é concedido (Sobrevivendo ao Horror, p. 32)."
+        : "O Sobrevivente já está no último estágio: a transição toma o lugar da próxima subida, e não há estágio a perder (Sobrevivendo ao Horror, p. 32).") +
+        " Daqui em diante, a ficha sobe de NEX como " + C.classe(para).nome.toLowerCase() + ".");
+      avisos.push("Tudo o que o Sobrevivente já tinha continua: Empenho, a trilha e o que ela deu" + (fase.estagio >= 5 ? ", Cicatrizado" : "") + ".");
+      if (fase.estagio < 5) avisos.push("O Sobrevivente não chega mais aos estágios seguintes.");
+      if (para === "ocultista" && estDepois.vagas.some(function (v) { return v.id === "s4.iniciado"; })) {
+        avisos.push("O ritual de Iniciado se soma aos três rituais iniciais de Escolhido pelo Outro Lado (Sobrevivendo ao Horror, p. 32).");
+      }
+    } else {
+      avisos.push("O Empenho é do Mundano: o texto de \u201cAtingindo NEX 5%\u201d (Ordem Paranormal RPG, p. 172) lista o que o agente recebe e não diz que ele fica. A ficha não o mantém; a mesa pode anotá-lo.");
+    }
+    if (de === "mundano" && R().usaDeterminacao && R().usaDeterminacao(ordem)) {
+      avisos.push("Pontos de determinação: o livro não tem tabela para o Mundano; depois da transição, valem os da classe nova, como num agente novato.");
+    }
+    if (OP() && OP().ligada(ordem, "nexExperiencia")) {
+      avisos.push("Com NEX & Experiência, o personagem passa ao nível 1; o NEX de exposição (" + R().exposicao(ordem) + "%) não muda.");
+    }
+    return {
+      ok: true,
+      de: de,
+      para: para,
+      titulo: tr.titulo,
+      referencia: (tr.fonte === "SAH" ? "Sobrevivendo ao Horror" : "Ordem Paranormal RPG") + ", p. " + tr.pagina,
+      ganhos: g,
+      atributo: tr.atributo,
+      estagio: fase.estagio,
+      recursos: recursos,
+      pendencias: novas,
+      substituicoes: substituicoes,
+      avisos: avisos,
+      rotuloDepois: R().rotuloDeProgressao(depois),
+    };
+  }
+
+  /* Aplica a transição. `opcoes.id` identifica a operação: o mesmo id
+     repetido (clique duplo, outra aba) não aplica duas vezes. */
+  function transicionar(ordem, para, opcoes) {
+    var o = opcoes || {};
+    var ja = Array.isArray(ordem.trajetoria) ? ordem.trajetoria[0] : null;
+    if (ja && o.id && ja.id === o.id && ordem.classe === ja.para) return { ok: true, repetida: true, trajetoria: ja };
+    if (ja && ordem.classe === ja.para) return { ok: false, motivo: "Esta ficha já fez a transição para " + ((C.classe(ja.para) || {}).nome || ja.para) + "." };
+    var plano = planoDeTransicao(ordem, para, o.contexto);
+    if (!plano.ok) return plano;
+    var antes = recursosDe(ordem);
+    var nova = simularTransicao(ordem, para, o.quando, o.id || ("tr-" + uuid()));
+    if (o.nota) nova.trajetoria[0].nota = String(o.nota).slice(0, 200);
+    /* O que estava "cheio" (nulo) fica no máximo de antes. */
+    if (!ordem.recursos) ordem.recursos = { pv: null, pe: null, san: null, pd: null };
+    RECURSOS_DA_TRANSICAO.forEach(function (q) {
+      if ((ordem.recursos[q] === null || ordem.recursos[q] === undefined) && antes[q] !== null && antes[q] !== undefined) {
+        ordem.recursos[q] = antes[q];
+      }
+    });
+    ordem.trajetoria = nova.trajetoria;
+    ordem.classe = nova.classe;
+    ordem.trilha = "";
+    ordem.nex = nova.nex;
+    ordem.nivel = nova.nivel;
+    ordem.nivelDefinido = nova.nivelDefinido;
+    return { ok: true, plano: plano, trajetoria: ordem.trajetoria[0] };
   }
 
   global.RAMAOrdemProgressao = {
@@ -2954,5 +3317,9 @@
     impacto: impacto,
     automaticas: automaticas,
     textosDosRequisitos: textosDosRequisitos,
+    estagioDaFase: estagioDaFase,
+    trilhaSobreviventeDe: trilhaSobreviventeDe,
+    planoDeTransicao: planoDeTransicao,
+    transicionar: transicionar,
   };
 })(typeof window !== "undefined" ? window : globalThis);

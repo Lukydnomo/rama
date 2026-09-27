@@ -140,6 +140,19 @@
       /* Só usado com a regra opcional NEX & Experiência. Guardado
          sempre, para ligar e desligar a regra não perder o valor. */
       nivel: 1,
+      /* Estágio do Sobrevivente (SAH p. 30-31), de 1 a 5. Só vale para
+         quem é — ou foi — Sobrevivente; nas outras classes fica guardado
+         sem efeito. Não é nível nem NEX. */
+      estagio: 1,
+      /* A trajetória: quem era antes de virar agente (v2.21). Uma
+         entrada por transição, com o estágio em que ela aconteceu. */
+      trajetoria: [],
+      /* A sessão de jogo atual — o que é "uma vez por sessão" conta
+         nela, separado da cena (condições). */
+      sessao: { id: "", iniciadaEm: "" },
+      /* Sacrifícios permanentes (Cicatrizado): cada um tira 1 do máximo
+         para sempre, e aparece na conta com a origem. */
+      sacrificios: [],
       classe: "",
       origem: "",
       trilha: "",
@@ -218,7 +231,91 @@
     return !!(ficha && ficha.opcionais && ficha.opcionais.nexExperiencia);
   }
 
+  /* =================================================================
+     A FASE DO PERSONAGEM
+     -----------------------------------------------------------------
+     Classe, NEX, nível e estágio são quatro coisas:
+
+       mundano        NEX 0% (nível 0 com NEX & Experiência). Não evolui
+                      como mundano; ao atingir NEX 5%, vira agente.
+       sobrevivente   NEX 0% (nível 0), evolui em ESTÁGIOS de 1 a 5.
+       agente         combatente, especialista ou ocultista, com NEX (ou
+                      nível) a partir de 5% (1). Pode ter uma trajetória
+                      anterior — mundano ou sobrevivente —, e então os
+                      recursos partem do que aquela fase deu.
+
+     Ninguém vira Mundano ou Sobrevivente por estar em NEX 0%: um
+     combatente com NEX de exposição 0% continua combatente.
+     ================================================================= */
+
+  var ESTAGIO_MAXIMO = 5;
+
+  function estagioValido(v) {
+    return Math.max(1, Math.min(ESTAGIO_MAXIMO, inteiro(v, 1)));
+  }
+
+  /* A transição que vale: a trajetória só conta se leva à classe atual.
+     Trocar a classe à mão depois não apaga a trajetória — ela fica
+     guardada, sem efeito, e a ficha avisa. */
+  function transicaoValida(ficha) {
+    var tr = ficha && Array.isArray(ficha.trajetoria) ? ficha.trajetoria[0] : null;
+    if (!tr || !tr.de || !tr.para) return null;
+    if (tr.para !== ficha.classe) return null;
+    if (!C.ehAgente(tr.para) || C.ehAgente(tr.de) || !C.classe(tr.de)) return null;
+    return tr;
+  }
+
+  function faseDe(ficha) {
+    var perfil = C.perfilDaClasse(ficha && ficha.classe);
+    if (perfil === "mundano") return { perfil: "mundano", comum: true, estagio: 0, anterior: "", transicao: null };
+    if (perfil === "sobrevivente") {
+      return { perfil: "sobrevivente", comum: true, estagio: estagioValido(ficha.estagio), anterior: "", transicao: null };
+    }
+    var tr = perfil === "agente" ? transicaoValida(ficha) : null;
+    return {
+      perfil: perfil,
+      comum: false,
+      estagio: 0,
+      anterior: tr ? tr.de : "",
+      /* O estágio em que o Sobrevivente virou agente: é o que as
+         habilidades de estágio preservadas enxergam. */
+      estagioAnterior: tr && tr.de === "sobrevivente" ? estagioValido(tr.estagio) : 0,
+      transicao: tr,
+      /* Guardada mas sem efeito: a classe foi trocada depois. */
+      trajetoriaSemEfeito: !tr && ficha && Array.isArray(ficha.trajetoria) && ficha.trajetoria.length > 0,
+    };
+  }
+
+  /* O que a ficha mostra ao lado do nome: "Mundano · NEX 0%",
+     "Sobrevivente · Estágio 3", "Combatente · NEX 15%". Com NEX &
+     Experiência, o nível e a exposição aparecem separados. */
+  function rotuloDeProgressao(ficha) {
+    var classe = C.classe(ficha && ficha.classe);
+    var nome = classe ? classe.nome : "Sem classe";
+    var fase = faseDe(ficha || {});
+    var sep = separaNivelENex(ficha);
+    var exp = sep ? " · exposição " + exposicao(ficha) + "%" : "";
+    if (fase.perfil === "mundano") return nome + " · " + (sep ? "Nível 0" : "NEX 0%") + exp;
+    if (fase.perfil === "sobrevivente") return nome + " · Estágio " + fase.estagio + (sep ? " · Nível 0" + exp : " · NEX 0%");
+    var t = trilho(ficha);
+    return nome + " · " + t.rotulo + exp;
+  }
+
   function trilho(ficha) {
+    var fase = faseDe(ficha || {});
+    if (fase.comum) {
+      var sep = separaNivelENex(ficha);
+      return {
+        passos: 0,
+        rotulo: sep ? "Nível 0" : "NEX 0%",
+        curto: sep ? "Nv 0" : "0%",
+        nexEquivalente: 0,
+        separado: sep,
+        comum: true,
+        perfil: fase.perfil,
+        estagio: fase.estagio,
+      };
+    }
     if (separaNivelENex(ficha)) {
       var nivel = Math.max(1, inteiro(ficha.nivel, 1));
       return {
@@ -245,6 +342,9 @@
      elemental, poderes paranormais e imunidade à Presença Perturbadora
      (SAH p.98). */
   function exposicao(ficha) {
+    /* Sem NEX & Experiência, quem ainda não é agente está em NEX 0%: o
+       NEX é o próprio trilho, e ele é zero (OPRPG p. 171; SAH p. 30). */
+    if (!separaNivelENex(ficha) && C.perfilDaClasse(ficha && ficha.classe) !== "agente" && ficha && ficha.classe) return 0;
     return nexValido(ficha && ficha.nex);
   }
 
@@ -345,7 +445,28 @@
 
   function passosDoEfeito(ficha, ef) {
     if (ef.trilho === "exposicao" && E()) return E().degrauDeExposicao(exposicao(ficha));
-    return Math.max(1, trilho(ficha).passos);
+    var t = trilho(ficha);
+    return t.comum ? 0 : Math.max(1, t.passos);
+  }
+
+  /* A base de quem é — ou foi — Mundano ou Sobrevivente: o valor
+     inicial da classe e, no Sobrevivente, o incremento FIXO por estágio
+     ("A cada novo estágio: +2 PV, +1 PE, +2 SAN"; PD +2, SAH p. 104).
+     Vigor e Presença NÃO se somam de novo a cada estágio. Devolve false
+     quando a classe não tem tabela para o recurso (PD do Mundano). */
+  function baseDeComum(c, ficha, cl, qual, estagio, atribPe) {
+    var inicial = cl[qual + "Inicial"];
+    if (!inicial) return false;
+    var chave = inicial.atributo ? ((qual === "pe" || qual === "pd") && atribPe ? atribPe : inicial.atributo) : null;
+    var valorAtrib = chave ? atributo(ficha, chave) : 0;
+    c.soma(cl.nome + ", inicial", inicial.base + valorAtrib,
+      chave ? "base " + inicial.base + " + " + siglaDe(chave) + " " + valorAtrib : "");
+    var porEstagio = cl[qual + "PorEstagio"];
+    if (porEstagio && estagio > 1) {
+      c.soma((estagio - 1) + "× novo estágio", porEstagio * (estagio - 1),
+        porEstagio + " por estágio, fixo, até o " + estagio + "º (Sobrevivendo ao Horror, p. " + (qual === "pd" ? 104 : 30) + ")");
+    }
+    return true;
   }
 
   function maximoDeRecurso(ficha, qual) {
@@ -354,11 +475,13 @@
     if (!classe) return c;
 
     var t = trilho(ficha);
-    var passos = Math.max(1, t.passos);
+    var fase = faseDe(ficha);
+    /* Quem não é agente está no degrau 0: nada "por NEX" soma ainda. */
+    var passos = fase.comum ? 0 : Math.max(1, t.passos);
 
     var inicial = classe[qual + "Inicial"];
     var porNex = classe[qual + "PorNex"];
-    if (!inicial || !porNex) return c;
+    if (!fase.comum && (!inicial || !porNex)) return c;
 
     /* Pontos de determinação (SAH p.104): "todos os demais efeitos e
        mecânicas relacionados a pontos de esforço se aplicam diretamente a
@@ -373,19 +496,49 @@
     if (comoPe) {
       efeitosDoTipo(ficha, "atributoDoPe").forEach(function (m) { atribPe = m.efeito.atributo; });
     }
-    var chaveInicial = inicial.atributo ? (atribPe || inicial.atributo) : null;
-    var chavePorNex = porNex.atributo ? (atribPe || porNex.atributo) : null;
+    if (fase.comum) {
+      /* Mundano ou Sobrevivente, hoje. */
+      if (!baseDeComum(c, ficha, classe, qual, fase.estagio, atribPe)) {
+        c.semTabela = qual === "pd"
+          ? "O livro não traz pontos de determinação para o " + classe.nome + " (Sobrevivendo ao Horror, p. 104, lista só as três classes e o Sobrevivente). A base fica em 0; um ajuste da mesa, se houver, aparece separado."
+          : "";
+      }
+    } else {
+      var chavePorNex = porNex.atributo ? (atribPe || porNex.atributo) : null;
+      var atribPorNex = chavePorNex ? atributo(ficha, chavePorNex) : 0;
 
-    var atribInicial = chaveInicial ? atributo(ficha, chaveInicial) : 0;
-    var atribPorNex = chavePorNex ? atributo(ficha, chavePorNex) : 0;
+      var anterior = fase.anterior ? C.classe(fase.anterior) : null;
+      var ganhos = anterior && C.TRANSICOES[fase.anterior] ? C.TRANSICOES[fase.anterior].classes[classe.chave] : null;
 
-    c.soma(classe.nome + ", inicial", inicial.base + atribInicial,
-      chaveInicial ? "base " + inicial.base + " + " + siglaDe(chaveInicial) + " " + atribInicial : "");
+      if (anterior && ganhos && !(qual === "pd" && fase.anterior === "mundano")) {
+        /* Agente que foi Mundano ou Sobrevivente: parte do que aquela
+           fase deu, soma os ganhos da transição e, dali em diante, sobe
+           como a classe nova. */
+        baseDeComum(c, ficha, anterior, qual, fase.estagioAnterior, atribPe);
+        var tr = C.TRANSICOES[fase.anterior];
+        /* Com "Jogando sem Sanidade", o que soma PE soma PD (SAH p. 104):
+           o ganho de PE da transição vale para os PD; o de Sanidade, não. */
+        var ganho = qual === "pd" ? (ganhos.pe || 0) : (ganhos[qual] || 0);
+        c.soma(tr.titulo + " (" + classe.nome + ")", ganho,
+          (qual === "pd" ? "o ganho de PE da transição vale para os PD — " : "") +
+          (tr.fonte === "SAH" ? "Sobrevivendo ao Horror" : "Ordem Paranormal RPG") + ", p. " + tr.pagina);
+      } else {
+        /* Agente de sempre — e o Mundano que virou agente, nos PD: o
+           livro não tem PD de Mundano, e a transição dele dá exatamente
+           os valores de um agente novato; os PD seguem a tabela da classe
+           a partir daí. Ver docs/ORDEM-REGRAS.md. */
+        var chaveInicial = inicial.atributo ? (atribPe || inicial.atributo) : null;
+        var atribInicial = chaveInicial ? atributo(ficha, chaveInicial) : 0;
+        c.soma(classe.nome + ", inicial", inicial.base + atribInicial,
+          (chaveInicial ? "base " + inicial.base + " + " + siglaDe(chaveInicial) + " " + atribInicial : "") +
+          (anterior ? " — sem tabela de PD para o " + anterior.nome + ", vale a da classe desde a transição" : ""));
+      }
 
-    if (passos > 1) {
-      var porDegrau = porNex.base + atribPorNex;
-      c.soma((passos - 1) + "× degrau de progressão", porDegrau * (passos - 1),
-        porDegrau + " por degrau até " + t.rotulo);
+      if (passos > 1) {
+        var porDegrau = porNex.base + atribPorNex;
+        c.soma((passos - 1) + "× degrau de progressão", porDegrau * (passos - 1),
+          porDegrau + " por degrau até " + t.rotulo);
+      }
     }
 
     /* --- efeitos de origem, por degrau de progressão ---
@@ -396,6 +549,13 @@
     if (chaveDegrau) {
       efeitosDoTipo(ficha, chaveDegrau).forEach(function (m) {
         c.soma(m.fonte, m.efeito.valor * passos, m.detalhe);
+      });
+    }
+
+    /* --- PV fixos de habilidade (Durão, SAH p. 31) --- */
+    if (qual === "pv") {
+      efeitosDoTipo(ficha, "pvFixo").forEach(function (m) {
+        c.soma(m.fonte, m.efeito.valor, m.detalhe);
       });
     }
 
@@ -446,6 +606,18 @@
       }
     }
 
+    /* Sacrifícios permanentes (Cicatrizado, SAH p. 31): cada um tira 1
+       do máximo, para sempre, com a origem na conta. O de PE vale para
+       os PD com "Jogando sem Sanidade" — é mecânica de PE. */
+    var recursoDoSacrificio = qual === "pv" ? "pv" : (comoPe ? "pe" : "");
+    if (recursoDoSacrificio) {
+      var sacrificados = (ficha.sacrificios || []).filter(function (x) { return x && x.recurso === recursoDoSacrificio; });
+      if (sacrificados.length) {
+        c.soma("Cicatrizado · sacrifício permanente", -sacrificados.length,
+          sacrificados.length + " × 1 " + recursoDoSacrificio.toUpperCase() + " sacrificado para sempre");
+      }
+    }
+
     /* Um ajuste da mesa nos PE é mecânica de PE: com a regra ligada, ele
        vale para os PD — e volta aos PE quando ela é desligada. */
     if (qual === "pd") somarAjustes(c, ficha, "pe");
@@ -467,6 +639,22 @@
   function limiteDeEsforco(ficha) {
     var c = conta();
     var t = trilho(ficha);
+    var classe = C.classe(ficha && ficha.classe);
+
+    if (t.comum && classe && classe.limitePe) {
+      /* Sobrevivente: "sempre 1, em qualquer estágio. Entretanto, você
+         sempre pode usar pelo menos uma habilidade em seu custo mínimo
+         por turno" (SAH p. 31). O Mundano não tem tabela própria; o
+         R.A.M.A. usa o mesmo 1 — o custo do Empenho, a única habilidade
+         dele. Ver docs/ORDEM-REGRAS.md. */
+      c.soma(classe.nome, classe.limitePe, t.perfil === "sobrevivente"
+        ? "sempre 1, em qualquer estágio (SAH p. 31)"
+        : "NEX 0%: o livro não traz limite; vale o custo do Empenho");
+      c.excecao = "Pelo menos uma habilidade pode ser usada no custo mínimo por turno, mesmo acima do limite.";
+      somarAjustes(c, ficha, "limitePe");
+      c.piso(1);
+      return c;
+    }
 
     c.soma(t.rotulo, t.passos, "1 por degrau de progressão");
 
@@ -1324,9 +1512,13 @@
     });
 
     var aplicada = regraDePatente(ficha);
+    var comum = faseDe(ficha).comum;
 
     return {
       aplicada: aplicada,
+      /* Mundano e Sobrevivente não têm patente: nem Recruta, nem
+         "patente de mundano" (OPRPG p. 171). */
+      semPatente: comum,
       patente: atual,
       credito: C.CREDITOS[indiceCredito],
       creditoElevado: indiceCredito !== C.CREDITOS.indexOf(atual.credito),
@@ -1337,8 +1529,26 @@
     };
   }
 
+  /* Mundano e Sobrevivente não usam o sistema de patentes: "escolha um
+     item de categoria I e quantos itens de categoria 0 quiser, desde que
+     sejam itens que você pudesse ter por sua origem" (OPRPG p. 171; SAH
+     p. 31). O limite é o da regra; o que a origem permite é decisão da
+     mesa. Com a regra de patente desligada, valem os limites manuais,
+     como em qualquer ficha. */
+  function limitesDeComum(ficha) {
+    var saida = {};
+    var nome = C.classe(ficha.classe) ? C.classe(ficha.classe).nome : "";
+    CATEGORIAS.forEach(function (n) {
+      saida[n] = n === 0
+        ? { limite: null, origem: "comum", texto: "Quantos quiser, desde que a origem permita — decisão da mesa (" + nome + ")." }
+        : { limite: n === 1 ? 1 : 0, origem: "comum", texto: nome + ": um item de categoria I, sem patente (OPRPG p. 171)." };
+    });
+    return saida;
+  }
+
   function limitesPorCategoria(ficha, patenteAtual) {
     var saida = {};
+    if (regraDePatente(ficha) && faseDe(ficha).comum) return limitesDeComum(ficha);
     if (regraDePatente(ficha)) {
       var tabela = patenteAtual || C.PATENTES[0];
       CATEGORIAS.forEach(function (n) {
@@ -1537,6 +1747,12 @@
     var est = estadoDe(ficha, contexto && contexto.inventario ? contexto.inventario : null);
     var aprendizado = est && est.rituais ? est.rituais : null;
 
+    /* Iniciado (SAH p. 32): o Sobrevivente Esotérico "aprende e pode
+       conjurar" um ritual de 1º círculo — sem NEX, e sem liberar outros. */
+    if (!circuloMaximo && est && est.adquiridos.some(function (a) { return a.chave === "iniciado" && a.valido !== false; })) {
+      circuloMaximo = 1;
+    }
+
     return {
       limitePorIntelecto: atributo(ficha, "int"),
       limite: aprendizado ? aprendizado.limite : null,
@@ -1646,6 +1862,8 @@
 
     return {
       trilho: trilho(ficha),
+      fase: faseDe(ficha),
+      rotulo: rotuloDeProgressao(ficha),
       exposicao: exposicao(ficha),
       estado: estadoDe(ficha, inventario),
 
@@ -1751,6 +1969,10 @@
       nex: nexValido(b.nex),
       nivel: Math.max(1, Math.min(20, inteiro(b.nivel, 1))),
       nivelDefinido: b.nivelDefinido === true,
+      estagio: estagioValido(b.estagio),
+      trajetoria: normalizarTrajetoria(b.trajetoria),
+      sessao: normalizarSessao(b.sessao),
+      sacrificios: normalizarSacrificios(b.sacrificios),
       classe: chaveConhecida(b.classe, C.CLASSES),
       origem: chaveConhecida(b.origem, C.ORIGENS),
       trilha: chaveConhecida(b.trilha, C.TRILHAS),
@@ -2022,6 +2244,65 @@
     };
   }
 
+  var ID_SIMPLES = /^[A-Za-z0-9_.:|#-]{1,80}$/;
+
+  function carimbo(v) {
+    var t = typeof v === "string" ? v.slice(0, 40) : "";
+    return /^\d{4}-\d{2}-\d{2}T/.test(t) ? t : "";
+  }
+
+  /* Uma transição por ficha: de Mundano ou Sobrevivente para uma das três
+     classes de agente. O resto é descartado — nunca uma segunda. */
+  function normalizarTrajetoria(bruto) {
+    var lista = Array.isArray(bruto) ? bruto : [];
+    var saida = [];
+    lista.forEach(function (t) {
+      if (saida.length || !t || typeof t !== "object") return;
+      var de = String(t.de || "");
+      var para = String(t.para || "");
+      if (!C.classe(de) || C.ehAgente(de) || !C.ehAgente(para)) return;
+      saida.push({
+        id: ID_SIMPLES.test(String(t.id || "")) ? String(t.id) : "tr-" + (global.RAMAUtil ? global.RAMAUtil.uuid() : String(Date.now())),
+        de: de,
+        para: para,
+        estagio: de === "sobrevivente" ? estagioValido(t.estagio) : 0,
+        em: carimbo(t.em),
+        nota: String(t.nota || "").slice(0, 200),
+      });
+    });
+    return saida;
+  }
+
+  function normalizarSessao(bruto) {
+    var b = bruto && typeof bruto === "object" ? bruto : {};
+    return {
+      id: ID_SIMPLES.test(String(b.id || "")) ? String(b.id) : "",
+      iniciadaEm: carimbo(b.iniciadaEm),
+    };
+  }
+
+  var RECURSOS_SACRIFICAVEIS = ["pv", "pe"];
+  var MOTIVOS_DE_SACRIFICIO = ["danoMental", "gastoPe", "danoFisico"];
+
+  function normalizarSacrificios(bruto) {
+    var vistos = {};
+    return (Array.isArray(bruto) ? bruto : []).map(function (x) {
+      if (!x || typeof x !== "object") return null;
+      var id = String(x.id || "");
+      if (!ID_SIMPLES.test(id) || vistos[id]) return null;
+      if (RECURSOS_SACRIFICAVEIS.indexOf(x.recurso) < 0) return null;
+      vistos[id] = true;
+      return {
+        id: id,
+        recurso: x.recurso,
+        motivo: MOTIVOS_DE_SACRIFICIO.indexOf(x.motivo) >= 0 ? x.motivo : "",
+        sessao: ID_SIMPLES.test(String(x.sessao || "")) ? String(x.sessao) : "",
+        em: carimbo(x.em),
+        nota: String(x.nota || "").slice(0, 120),
+      };
+    }).filter(Boolean).slice(0, 60);
+  }
+
   function chaveConhecida(valor, lista) {
     var v = String(valor === undefined || valor === null ? "" : valor);
     var achou = lista.filter(function (x) { return x.chave === v; })[0];
@@ -2033,6 +2314,12 @@
     fichaVazia: fichaVazia,
 
     trilho: trilho,
+    faseDe: faseDe,
+    rotuloDeProgressao: rotuloDeProgressao,
+    estagioValido: estagioValido,
+    ESTAGIO_MAXIMO: ESTAGIO_MAXIMO,
+    normalizarTrajetoria: normalizarTrajetoria,
+    normalizarSacrificios: normalizarSacrificios,
     exposicao: exposicao,
     separaNivelENex: separaNivelENex,
     nexValido: nexValido,

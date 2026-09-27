@@ -805,6 +805,33 @@
           break;
         }
 
+        case "trilhaSobrevivente":
+          partes.push(el("div.criacao-lista.escolha-lista", {}, C.TRILHAS_SOBREVIVENTE.map(function (ts) {
+            var marcada = candidato.valor === ts.chave;
+            var habs = P.habilidadesDaTrilhaSobrevivente(ts.chave);
+            return el("button.criacao-opcao.escolha-cartao", {
+              type: "button",
+              class: marcada ? "criacao-opcao--escolhida" : "",
+              "aria-pressed": String(marcada),
+              dataset: { foco: "trilha-sobrevivente-" + ts.chave },
+              onclick: function () {
+                if (candidato.valor === ts.chave) return;
+                candidato.valor = ts.chave;
+                candidato.opcoes = {};
+                pintar();
+              },
+            }, [
+              el("span.criacao-opcao__nome", { texto: ts.nome }),
+              el("span.criacao-opcao__texto", { texto: ts.resumo }),
+              el("span.criacao-opcao__meta", { texto: habs.map(function (h) { return h.estagio + "º estágio: " + h.nome; }).join(" · ") }),
+              el("span.criacao-opcao__fonte", { texto: "Sobrevivendo ao Horror, p. " + ts.pagina }),
+            ]);
+          })));
+          if (existente && candidato.valor && candidato.valor !== existente.valor) {
+            partes.push(el("p.t-mini.t-aviso", { texto: "Trocar de trilha tira as habilidades da trilha antiga; as escolhas feitas nelas ficam guardadas, sem efeito." }));
+          }
+          break;
+
         case "versatilidade":
           partes.push(botoesDeEscolha([
             { valor: "poderClasse", rotulo: vaga.soTranscender ? "Transcender, no lugar do poder de ocultista" : "Um poder de classe" },
@@ -855,7 +882,7 @@
                 }),
             ]));
           }
-          partes.push(el("p.criacao-fonte", { texto: "Ordem Paranormal RPG, p. 26" }));
+          partes.push(el("p.criacao-fonte", { texto: vaga.fonteTexto || "Ordem Paranormal RPG, p. 26" }));
           break;
         }
 

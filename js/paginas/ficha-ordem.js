@@ -315,6 +315,7 @@
       var SC = global.RAMASecaoConsumo;
       return el("div.pilha--larga", { class: "pilha" }, [
         painelIdentidade(ctx, o, c),
+        painelCicatrizado(ctx, o, c),
         painelResistencias(ctx, o, c),
         CS && SC && CS.ligada(o, "contagemMunicao") ? SC.painelMunicao(ctx) : null,
         CS && SC && CS.ligada(o, "controleComponentes") ? SC.painelComponentes(ctx, c) : null,
@@ -343,11 +344,14 @@
     var classe = C.classe(o.classe);
     var origem = C.origem(o.origem);
 
+    var sobrevivente = c.fase && c.fase.perfil === "sobrevivente";
     return el("dl.r-dados.ficha-identidade__dados", {}, [
       el("dt", { texto: "Classe" }), el("dd", { texto: classe ? classe.nome : "—" }),
       el("dt", { texto: "Origem" }), el("dd", { texto: origem ? origem.nome : "—" }),
+      sobrevivente ? el("dt", { texto: "Estágio" }) : null,
+      sobrevivente ? el("dd", { texto: String(c.fase.estagio) }) : null,
       el("dt", { texto: c.trilho.separado ? "Nível" : "NEX" }), el("dd", { texto: c.trilho.curto }),
-      el("dt", { texto: "Patente" }), el("dd", { texto: c.patente.aplicada ? c.patente.patente.nome : "não aplicada" }),
+      el("dt", { texto: "Patente" }), el("dd", { texto: c.patente.semPatente ? "sem patente" : (c.patente.aplicada ? c.patente.patente.nome : "não aplicada") }),
     ]);
   }
 
@@ -357,12 +361,23 @@
     var trilha = C.trilha(o.trilha);
     var est = c.estado;
 
+    var fase = c.fase || {};
     var linhas = [
-      ["Classe", classe ? classe.nome : "—"],
+      ["Classe", c.rotulo || (classe ? classe.nome : "—")],
       ["Origem", origem ? origem.nome : "—"],
-      ["Trilha", trilha ? trilha.nome : "—"],
-      [c.trilho.separado ? "Nível de experiência" : "NEX", c.trilho.rotulo],
     ];
+    if (fase.perfil === "sobrevivente") {
+      var ts = C.trilhaSobrevivente(E.trilhaSobreviventeDe(o));
+      linhas.push(["Estágio", fase.estagio + " de " + C.ESTAGIO_MAXIMO]);
+      linhas.push(["Trilha de sobrevivente", ts ? ts.nome : (fase.estagio >= 2 ? "a escolher" : "a partir do 2º estágio")]);
+    } else if (!fase.comum) {
+      linhas.push(["Trilha", trilha ? trilha.nome : "—"]);
+    }
+    linhas.push([c.trilho.separado ? "Nível de experiência" : "NEX", c.trilho.rotulo]);
+    if (fase.transicao) linhas.push(["Trajetória", textoDaTrajetoria(fase)]);
+    if (fase.trajetoriaSemEfeito) {
+      linhas.push(["Trajetória", "guardada, sem efeito: a classe foi trocada depois da transição"]);
+    }
 
     if (c.trilho.separado) linhas.push(["NEX por exposição", c.exposicao + "%"]);
 
@@ -370,7 +385,10 @@
       linhas.push(["Afinidade", textoAfinidade(est.afinidade)]);
     }
 
-    if (c.patente.aplicada) {
+    if (c.patente.semPatente) {
+      linhas.push(["Patente", "sem patente — " + (classe ? classe.nome : "") + " não usa o sistema de patentes (Ordem Paranormal RPG, p. 171)"]);
+      if (c.patente.aplicada) linhas.push(["Equipamento", "um item de categoria I e itens de categoria 0 que a origem permita"]);
+    } else if (c.patente.aplicada) {
       linhas.push(["Patente", c.patente.patente.nome]);
       linhas.push(["Limite de crédito", c.patente.credito + (c.patente.creditoElevado ? " (elevado)" : "")]);
     } else {
@@ -398,6 +416,129 @@
       editarCampanha ? global.RAMASecaoGeral.campoCampanha(ctx) : null,
       poderDaOrigem,
     ]));
+  }
+
+  /* =================================================================
+     CICATRIZADO — SAH p. 31
+     -----------------------------------------------------------------
+     O trauma é um lembrete: –1 dado em testes de resistência contra
+     AQUELE perigo, que a mesa reconhece — a ficha não sabe de onde vem
+     cada teste e não aplica sozinha. Os sacrifícios são "uma vez por
+     sessão de jogo" (não por cena): a sessão tem o próprio marcador,
+     separado da cena das condições. Cada sacrifício tira 1 do máximo,
+     para sempre, e fica listado com a data e o motivo.
+     ================================================================= */
+
+  var MOTIVOS_DE_SACRIFICIO = {
+    danoMental: { recurso: "pv", rotulo: "1 PV para ignorar um dano mental" },
+    gastoPe: { recurso: "pv", rotulo: "1 PV para ignorar um gasto de PE" },
+    danoFisico: { recurso: "pe", rotulo: "1 PE para reduzir um dano físico à metade" },
+  };
+
+  function painelCicatrizado(ctx, o, c) {
+    var est = c.estado;
+    var cic = est ? est.adquiridos.filter(function (a) { return a.chave === "cicatrizado" && a.valido !== false; })[0] : null;
+    if (!cic) return null;
+    var op = cic.opcoes || {};
+    var elemento = op.elemento ? ((C.elemento(op.elemento) || {}).nome || op.elemento) : "";
+    if (!o.sessao) o.sessao = { id: "", iniciadaEm: "" };
+    var sessao = o.sessao.id;
+    var sacrificios = o.sacrificios || [];
+    var nestaSessao = sacrificios.filter(function (x) { return x.sessao === sessao; });
+    var usado = nestaSessao.length > 0;
+    var qualPe = c.determinacao ? "PD" : "PE";
+
+    var botoes = Object.keys(MOTIVOS_DE_SACRIFICIO).map(function (k) {
+      var m = MOTIVOS_DE_SACRIFICIO[k];
+      return el("button.r-botao.r-botao--mini", {
+        type: "button", disabled: usado,
+        texto: "Sacrificar " + m.rotulo.replace(" PE para", " " + qualPe + " para"),
+        title: usado ? "Já usado nesta sessão." : "",
+        dataset: { foco: "sacrificio-" + k },
+        onclick: function () { sacrificar(ctx, o, k); },
+      });
+    });
+
+    return UI.painel("Cicatrizado", el("div.pilha", {}, [
+      el("p.t-mini", { texto: P.poder("cicatrizado").resumo }),
+      el("dl.r-dados", {}, [
+        el("dt", { texto: "Trauma" }),
+        el("dd", { texto: (op.perigo || "perigo a registrar") + (elemento ? " (" + elemento + ")" : "") + " — –1 dado em testes de resistência contra ele, quando a mesa reconhecer" }),
+        el("dt", { texto: "Sessão" }),
+        el("dd", { texto: sessao ? "iniciada em " + U.dataHora(o.sessao.iniciadaEm) : "nenhuma marcada — os usos contam juntos até alguém marcar uma sessão" }),
+        el("dt", { texto: "Nesta sessão" }),
+        el("dd", { texto: usado ? "já usado" + (MOTIVOS_DE_SACRIFICIO[nestaSessao[0].motivo] ? " (" + MOTIVOS_DE_SACRIFICIO[nestaSessao[0].motivo].rotulo + ")" : "") : "disponível — uma vez por sessão, como reação" }),
+        el("dt", { texto: "Sacrifícios permanentes" }),
+        el("dd", { texto: sacrificios.length ? sacrificios.filter(function (x) { return x.recurso === "pv"; }).length + " PV · " +
+          sacrificios.filter(function (x) { return x.recurso === "pe"; }).length + " " + qualPe + " — já descontados do máximo" : "nenhum" }),
+      ]),
+      el("div.faixa", {}, botoes),
+      el("div.faixa", {}, [
+        el("button.r-botao.r-botao--mini.r-botao--fantasma", {
+          type: "button", texto: "Nova sessão de jogo", dataset: { foco: "nova-sessao" },
+          title: "Marca o começo de uma sessão: o uso de Cicatrizado volta a ficar disponível. Não muda a cena das condições.",
+          onclick: function () { novaSessao(ctx, o); },
+        }),
+        sacrificios.length ? el("button.r-botao.r-botao--mini.r-botao--fantasma", {
+          type: "button", texto: "Desfazer o último sacrifício",
+          onclick: function () { desfazerSacrificio(ctx, o); },
+        }) : null,
+      ]),
+      sacrificios.length ? el("details", {}, [
+        el("summary.t-mini", { texto: "Registro (" + sacrificios.length + ")" }),
+        el("ul.bib-lista-textos", {}, sacrificios.slice().reverse().map(function (x) {
+          var m = MOTIVOS_DE_SACRIFICIO[x.motivo];
+          return el("li.t-mini", { texto: (x.em ? U.dataHora(x.em) + " · " : "") + (m ? m.rotulo : "1 " + x.recurso.toUpperCase()) });
+        })),
+      ]) : null,
+      el("p.criacao-fonte", { texto: "Sobrevivendo ao Horror, p. 31" }),
+    ]));
+  }
+
+  function sacrificar(ctx, o, motivo) {
+    var m = MOTIVOS_DE_SACRIFICIO[motivo];
+    if (!m) return;
+    if (!o.sessao) o.sessao = { id: "", iniciadaEm: "" };
+    var ja = (o.sacrificios || []).some(function (x) { return x.sessao === o.sessao.id; });
+    if (ja) { UI.avisoAtencao("Cicatrizado já foi usado nesta sessão."); return; }
+    UI.confirmar({
+      titulo: "Sacrificar " + m.rotulo + "?",
+      texto: "O sacrifício é permanente: o máximo de " + (m.recurso === "pv" ? "PV" : "PE") + " cai 1 para sempre. O efeito (ignorar o dano, reduzir à metade) é aplicado por você, no próprio dano ou gasto.",
+      rotuloConfirmar: "Sacrificar",
+    }).then(function (ok) {
+      if (!ok) return;
+      if (!Array.isArray(o.sacrificios)) o.sacrificios = [];
+      o.sacrificios.push({ id: "sac-" + U.uuid(), recurso: m.recurso, motivo: motivo, sessao: o.sessao.id, em: new Date().toISOString(), nota: "" });
+      aoMudarOrdem(ctx);
+      UI.avisoOk("Sacrifício registrado: o máximo já está menor.");
+    });
+  }
+
+  function novaSessao(ctx, o) {
+    o.sessao = { id: "ses-" + U.uuid(), iniciadaEm: new Date().toISOString() };
+    aoMudarOrdem(ctx);
+    UI.aviso("Nova sessão marcada. O uso de Cicatrizado está disponível.");
+  }
+
+  function desfazerSacrificio(ctx, o) {
+    UI.confirmar({
+      titulo: "Desfazer o último sacrifício?",
+      texto: "Para corrigir um registro feito por engano. O máximo volta a subir 1.",
+      rotuloConfirmar: "Desfazer",
+    }).then(function (ok) {
+      if (!ok || !o.sacrificios || !o.sacrificios.length) return;
+      o.sacrificios.pop();
+      aoMudarOrdem(ctx);
+    });
+  }
+
+  function textoDaTrajetoria(fase) {
+    var tr = fase.transicao;
+    var de = C.classe(tr.de);
+    var para = C.classe(tr.para);
+    var t = C.TRANSICOES[tr.de];
+    return (de ? de.nome : tr.de) + (tr.de === "sobrevivente" ? " (estágio " + tr.estagio + ")" : "") + " → " +
+      (para ? para.nome : tr.para) + " · " + (t ? t.titulo : "treinamento") + (tr.em ? " em " + U.dataHora(tr.em) : "");
   }
 
   function textoAfinidade(af) {
@@ -436,9 +577,9 @@
         nome: a.entrada.nome,
         estagio: a.estagio,
         resumo: a.entrada.resumo,
-        origem: "Automática da classe",
+        origem: a.preservada ? "Mantida da fase de Sobrevivente" : "Automática da classe",
         automacao: a.entrada.automacao,
-        referencia: P.referencia(a.entrada),
+        referencia: P.referencia(a.entrada, a.preservada ? "sobrevivente" : o.classe),
         situacao: "ok",
         /* As automáticas de classe não têm efeito na conta: são gasto de
            PE e anotação. Não há o que desativar. */
@@ -470,8 +611,8 @@
       aquisicoes.push({
         id: a.id,
         chave: e.chave,
-        nome: a.nome,
-        resumo: e.resumo,
+        nome: a.nome + (a.substituida ? " (substituída)" : ""),
+        resumo: a.substituida ? a.substituida + " " + e.resumo : e.resumo,
         afinidade: a.afinidade && e.afinidade ? e.afinidade : "",
         origem: rotuloDaVia(a) + (a.rotuloEtapa ? " · " + a.rotuloEtapa : ""),
         automacao: e.automacao,
@@ -560,7 +701,12 @@
 
   function rotuloDaVia(a) {
     if (a.via === "trilha") return "Trilha";
-    if (a.via === "opcoesBeneficio") return "Trilha";
+    if (a.via === "estagio") return "Sobrevivente";
+    if (a.via === "opcoesBeneficio") {
+      if (a.entrada && a.entrada.tipo === "sobrevivente") return "Sobrevivente";
+      if (a.entrada && a.entrada.tipo === "treinamento") return "Transição";
+      return "Trilha";
+    }
     if (a.via === "poderClasse") return "Poder de classe";
     if (a.via === "versatilidade") return "Versatilidade";
     if (a.via === "transcenderExposicao") return "Transcender";
@@ -1637,6 +1783,8 @@
         valorCalculado("Deslocamento", c.deslocamento, "metros"),
         valorCalculado(c.determinacao ? "Limite de PD por turno" : "Limite de PE por turno", c.limitePe),
       ]),
+      c.limitePe.excecao ? el("p.t-mini.ordem-derivados__nota", { texto: c.limitePe.excecao }) : null,
+      c.pd && c.pd.semTabela ? el("p.t-mini.ordem-derivados__nota", { texto: c.pd.semTabela }) : null,
 
       el("div.ordem-carga", {}, [
         el("span.t-rotulo", { texto: "Carga" }),
@@ -2237,7 +2385,49 @@
     r.parcelas = [r.parcelas[0]].concat(bonus.parcelas.map(function (x) { return { rotulo: x.rotulo, valor: x.valor }; }));
     var dados = R.dadosDoTeste(o, p.chave);
     var restr = restricoesDaPericia(ctx, p.chave);
-    global.RAMARolagens.mostrar(Object.assign(r, { tipo: "pericia", nome: p.nome }), { nome: p.nome, notas: notasDosDados(dados).concat(restr) });
+    global.RAMARolagens.mostrar(Object.assign(r, { tipo: "pericia", nome: p.nome }), {
+      nome: p.nome,
+      notas: notasDosDados(dados).concat(restr),
+      acao: acaoDeEmpenho(ctx, o, p, r),
+    });
+  }
+
+  /* Empenho (OPRPG p. 172; SAH p. 31): "quando faz um teste de perícia,
+     você pode gastar 1 PE para receber +2 nesse teste". A ficha oferece
+     no resultado; usar gasta 1 PE (ou PD) e mostra o MESMO teste com +2
+     — sem rolar de novo e sem virar bônus permanente em perícia nenhuma.
+     Um uso por resultado. */
+  function acaoDeEmpenho(ctx, o, p, r) {
+    var tem = E.automaticas(o).some(function (a) { return a.entrada.chave === "empenho"; });
+    if (!tem) return null;
+    var usado = false;
+    return {
+      rotulo: "Empenho: +2 (1 " + (R.usaDeterminacao(o) ? "PD" : "PE") + ")",
+      aoClicar: function (cartao) {
+        if (usado) return;
+        var c = calculo(ctx);
+        var qual = c.determinacao ? "pd" : "pe";
+        var maximo = qual === "pd" ? c.pd.total : c.pe.total;
+        var atual = c.atual[qual];
+        var gasto = CD() ? CD().aplicarAcao(qual, "gastar", { cond: o.condicoes, atual: atual, maximo: maximo, valor: 1, pd: c.determinacao }) : null;
+        if (!gasto || !gasto.ok) { UI.avisoAtencao((gasto && gasto.motivo) || "Sem " + qual.toUpperCase() + " para o Empenho."); return; }
+        usado = true;
+        if (!o.recursos) o.recursos = { pv: null, pe: null, san: null, pd: null };
+        o.recursos[qual] = gasto.valor;
+        ctx.alterou();
+        ctx.redesenhar();
+        var botao = cartao && cartao.querySelector(".rolagem__acao.r-botao");
+        if (botao) botao.disabled = true;
+        var novo = Object.assign({}, r, {
+          total: r.total + 2,
+          parcelas: (r.parcelas || []).concat([{ rotulo: "Empenho", valor: 2 }]),
+        });
+        global.RAMARolagens.mostrar(novo, {
+          nome: p.nome + " · com Empenho",
+          notas: ["Mesmo teste, +2 do Empenho. Gastou 1 " + qual.toUpperCase() + " (" + atual + " → " + gasto.valor + ")."],
+        });
+      },
+    };
   }
 
   /* Uma restrição de condição que fala desta perícia ("não faz testes
@@ -2295,6 +2485,7 @@
   };
 
   function painelNivel(ctx, o, c) {
+    if (c.fase && c.fase.comum) return painelFaseComum(ctx, o, c);
     var separado = c.trilho.separado;
     var campos = [];
 
@@ -2339,6 +2530,160 @@
       el("p.t-mini", { texto: "Baixar o NEX não apaga escolha nenhuma: as das etapas acima ficam guardadas, sem efeito, e voltam a valer se o personagem chegar lá de novo." }),
       el("div.editar-grade", {}, campos),
     ]));
+  }
+
+  /* Mundano e Sobrevivente: NEX 0% fixo (nível 0 com NEX & Experiência),
+     o estágio do Sobrevivente e a porta para virar agente. */
+  function painelFaseComum(ctx, o, c) {
+    var fase = c.fase;
+    var separado = c.trilho.separado;
+    var partes = [];
+    if (fase.perfil === "sobrevivente") {
+      partes.push(el("p.t-mini", {
+        texto: "O Sobrevivente fica em " + (separado ? "nível 0" : "NEX 0%") + " e evolui em estágios, de 1 a 5 — normalmente um por missão " +
+               "concluída. Subir de estágio não dá NEX. Os ganhos de cada estágio são fixos (Sobrevivendo ao Horror, p. 30-31).",
+      }));
+      partes.push(el("div.ordem-estagio", {}, [
+        el("span.t-secao", { texto: "Estágio" }),
+        UI.passo({
+          valor: fase.estagio, minimo: 1, maximo: C.ESTAGIO_MAXIMO, rotulo: "Estágio do sobrevivente",
+          aoMudar: function (v) {
+            o.estagio = R.estagioValido(v);
+            aoMudarOrdem(ctx);
+          },
+        }),
+      ]));
+      partes.push(el("p.t-mini", {
+        texto: "Baixar o estágio não apaga escolha nenhuma: as dos estágios acima ficam guardadas, sem efeito, e voltam se o estágio voltar.",
+      }));
+    } else {
+      partes.push(el("p.t-mini", {
+        texto: "O Mundano é uma pessoa comum, de " + (separado ? "nível 0" : "NEX 0%") + " (Ordem Paranormal RPG, p. 171). Ele não evolui como " +
+               "mundano: ao atingir NEX 5%, escolhe uma classe e treina com um agente experiente.",
+      }));
+    }
+    if (separado) {
+      partes.push(el("div.editar-grade", {}, [UI.campo({
+        rotulo: "NEX por exposição (%)", tipo: "numero", valor: String(o.nex), limite: 2,
+        ajuda: "Com NEX & Experiência, a exposição anda sozinha: contato com o paranormal e rituais aprendidos. O nível continua 0.",
+        aoMudar: function (v) { o.nex = R.nexValido(v); aoMudarOrdem(ctx); },
+      })]));
+    }
+    if (OP.ligada(o, "evolucaoPatentes")) {
+      partes.push(el("p.t-mini.t-aviso", { texto: "“Evolução por Patentes” está ligada, mas " + C.classe(o.classe).nome + " não usa patente: " + (fase.perfil === "sobrevivente" ? "os estágios continuam valendo." : "o NEX continua 0%.") }));
+    }
+    var t = C.TRANSICOES[fase.perfil];
+    partes.push(el("div.faixa", {}, [
+      el("button.r-botao", {
+        type: "button",
+        texto: fase.perfil === "sobrevivente" ? "Treinamento Especial — virar agente" : "Atingir NEX 5% — virar agente",
+        dataset: { foco: "virar-agente" },
+        onclick: function () { abrirTransicao(ctx); },
+      }),
+    ]));
+    partes.push(el("p.t-mini", {
+      texto: fase.perfil === "sobrevivente"
+        ? "Não é decisão de quem joga: depende da história — a Ordem acolher e treinar o personagem. A transição toma o lugar da próxima subida de estágio (" + (t ? "Sobrevivendo ao Horror, p. " + t.pagina : "") + ")."
+        : "Depende do treinamento com um agente de NEX 20% ou mais, pelo tempo que o mestre decidir (" + (t ? "Ordem Paranormal RPG, p. " + t.pagina : "") + ").",
+    }));
+    return UI.painel(fase.perfil === "sobrevivente" ? "Estágio e treinamento" : "NEX 0% e treinamento", el("div.pilha", {}, partes));
+  }
+
+  /* =================================================================
+     VIRAR AGENTE
+     -----------------------------------------------------------------
+     Uma janela: a classe, o resumo do que muda — ganhos, recursos, o
+     que fica e o que vai faltar decidir — e a confirmação. Cancelar não
+     aplica nada. O id da operação nasce ao abrir: confirmar duas vezes
+     (clique duplo, outra aba com a mesma ficha) aplica uma vez.
+     ================================================================= */
+
+  function abrirTransicao(ctx) {
+    var o = ordemDe(ctx);
+    var fase = R.faseDe(o);
+    if (!fase.comum) { UI.avisoAtencao("Esta ficha já é de agente."); return; }
+    var idOperacao = "tr-" + U.uuid();
+    var escolhida = "";
+    var corpo = el("div.pilha.transicao");
+    var gravando = false;
+
+    var m = UI.modal({
+      titulo: C.TRANSICOES[fase.perfil].titulo,
+      largo: true,
+      conteudo: [corpo],
+      botoes: [
+        { rotulo: "Cancelar", classe: "r-botao--fantasma" },
+        { rotulo: "Confirmar a transição", classe: "r-botao--principal", aoClicar: confirmar },
+      ],
+    });
+    var botao = m.janela.querySelector(".r-modal__rodape .r-botao--principal");
+
+    function pintar() {
+      var partes = [el("p", {
+        texto: fase.perfil === "sobrevivente"
+          ? "Acolhido e treinado pela Ordem, o sobrevivente vira um personagem de NEX 5% da classe escolhida, no lugar da próxima subida de estágio, e mantém tudo o que já tinha (Sobrevivendo ao Horror, p. 32)."
+          : "Depois do treinamento, o mundano recebe 1 ponto de atributo (sem passar de 3) e o que a classe escolhida dá (Ordem Paranormal RPG, p. 172).",
+      })];
+      partes.push(el("div.criacao-lista.transicao__classes", {}, C.classesDeAgente().map(function (cl) {
+        var g = C.TRANSICOES[fase.perfil].classes[cl.chave];
+        var ganhos = [];
+        if (g.pv) ganhos.push("+" + g.pv + " PV");
+        if (g.pe) ganhos.push("+" + g.pe + " PE");
+        if (g.san) ganhos.push("+" + g.san + " SAN");
+        return el("button.criacao-opcao", {
+          type: "button", "aria-pressed": String(escolhida === cl.chave),
+          class: escolhida === cl.chave ? "criacao-opcao--escolhida" : "",
+          dataset: { foco: "transicao-" + cl.chave },
+          onclick: function () { escolhida = cl.chave; pintar(); },
+        }, [
+          el("span.criacao-opcao__nome", { texto: cl.nome }),
+          el("span.criacao-opcao__meta", { texto: ganhos.join(" · ") || "sem ganho de recursos" }),
+          el("span.criacao-opcao__texto", { texto: "Proficiências: " + (g.proficiencias.join(", ") || "nenhuma") + ". Habilidades: " + g.habilidades.join(", ") + "." }),
+        ]);
+      })));
+      if (escolhida) partes.push(resumoDoPlano(E.planoDeTransicao(o, escolhida, contextoDe(ctx))));
+      U.trocar(corpo, partes);
+      botao.disabled = !escolhida;
+    }
+
+    function resumoDoPlano(pl) {
+      if (!pl.ok) return el("p.t-erro", { texto: pl.motivo });
+      var nomes = { pv: "Pontos de vida", pe: "Pontos de esforço", san: "Sanidade", pd: "Pontos de determinação" };
+      var linhas = Object.keys(pl.recursos).map(function (q) {
+        var r = pl.recursos[q];
+        return el("li", { texto: nomes[q] + ": máximo " + r.maximoAntes + " → " + r.maximoDepois + "; atual " + r.atual + " (não muda)" });
+      });
+      return el("div.pilha--curta.transicao__resumo", { class: "pilha" }, [
+        el("h4.t-secao", { texto: "Depois: " + pl.rotuloDepois }),
+        el("ul.bib-lista-textos", {}, linhas),
+        pl.atributo ? el("p.t-mini", { texto: "+" + pl.atributo.pontos + " ponto de atributo, sem passar de " + pl.atributo.maximo + " — a escolher em “Falta decidir”." }) : null,
+        pl.substituicoes.length ? el("p.t-mini", { texto: "Substituições: " + pl.substituicoes.join(" ") }) : null,
+        pl.pendencias.length ? el("div.pilha--curta", { class: "pilha" }, [
+          el("p.t-secao", { texto: "Vai faltar decidir (" + pl.pendencias.length + ")" }),
+          el("ul.bib-lista-textos", {}, pl.pendencias.map(function (p) { return el("li.t-mini", { texto: p.rotulo + " — " + p.rotuloEtapa }); })),
+        ]) : null,
+        el("ul.bib-lista-textos.transicao__avisos", {}, pl.avisos.map(function (a) { return el("li.t-mini", { texto: a }); })),
+        el("p.criacao-fonte", { texto: pl.referencia }),
+      ]);
+    }
+
+    function confirmar(fechar) {
+      if (gravando || !escolhida) return;
+      gravando = true;
+      var r = E.transicionar(o, escolhida, { id: idOperacao, contexto: contextoDe(ctx) });
+      gravando = false;
+      if (!r.ok) { UI.avisoErro(r.motivo); return; }
+      /* O nome da classe que a ficha mostra no topo acompanha. */
+      var cl = C.classe(o.classe);
+      if (cl) ctx.ficha.classe = cl.nome;
+      fechar();
+      aoMudarOrdem(ctx);
+      UI.avisoOk(r.repetida ? "A transição já estava registrada." : "Agora " + R.rotuloDeProgressao(o) + ". O que falta decidir está na Progressão.");
+      if (ctx.irParaAba) ctx.irParaAba("progressao");
+    }
+
+    pintar();
+    return m;
   }
 
   function opcoesDeNex() {
@@ -2678,12 +3023,30 @@
   }
 
   function painelDegraus(ctx, o, c) {
+    var estagio = E.estagioDaFase(o);
+    if (c.fase && c.fase.comum && c.fase.perfil === "mundano") {
+      return UI.painel("Progressão do Mundano", el("p.t-mini", {
+        texto: "O Mundano não tem progressão própria: fica em NEX 0% com Empenho até o treinamento que o torna agente (Ordem Paranormal RPG, p. 172).",
+      }));
+    }
+    var tabelaEstagios = estagio ? el("div.pilha--curta", { class: "pilha" }, [
+      c.fase && !c.fase.comum ? el("p.t-secao", { texto: "Antes de virar agente: Sobrevivente, até o " + estagio + "º estágio" }) : null,
+      el("div.ordem-degraus", {}, C.ESTAGIOS_SOBREVIVENTE.map(function (s) {
+        return el("div.ordem-degrau", { class: s.estagio <= estagio ? "ordem-degrau--alcancado" : "" }, [
+          el("span.ordem-degrau__nex", { texto: "Est. " + s.estagio }),
+          el("span.ordem-degrau__texto", { texto: s.rotulos.join(" · ") }),
+        ]);
+      })),
+      el("p.t-mini", { texto: "Sobrevivendo ao Horror, p. 31 · limite de PE sempre 1" }),
+    ]) : null;
+    if (c.fase && c.fase.comum) return UI.painel("Progressão do Sobrevivente", tabelaEstagios);
     var progressao = C.progressaoDaClasse(o.classe);
     if (!progressao.length) {
       return UI.painel("Progressão", el("p.t-mini", { texto: "Escolha uma classe para ver a progressão." }));
     }
 
     return UI.painel("Progressão da classe", el("div.pilha", {}, [
+      tabelaEstagios,
       el("div.ordem-degraus", {}, progressao.map(function (degrau) {
         var alcancado = degrau.nex <= c.trilho.nexEquivalente;
         return el("div.ordem-degrau", {

@@ -26,6 +26,8 @@
     { chave: "combatente",   rotulo: "Combatente" },
     { chave: "especialista", rotulo: "Especialista" },
     { chave: "ocultista",    rotulo: "Ocultista" },
+    { chave: "mundano",      rotulo: "Mundano" },
+    { chave: "sobrevivente", rotulo: "Sobrevivente" },
     { chave: "gerais",       rotulo: "Poderes gerais" },
     { chave: "paranormais",  rotulo: "Poderes paranormais" },
   ];
@@ -65,6 +67,7 @@
     }
 
     if (!C.classe(aba)) return [];
+    if (!C.ehAgente(aba)) return secoesDeComum(aba);
 
     var lista = [
       {
@@ -94,9 +97,47 @@
     return lista.filter(function (s) { return s.entradas.length; });
   }
 
+  /* Mundano e Sobrevivente: Empenho, as trilhas por estágio, Cicatrizado
+     e o treinamento que transforma em agente. */
+  function secoesDeComum(aba) {
+    var lista = [{
+      chave: "automaticas",
+      titulo: "Habilidades de classe",
+      nota: aba === "sobrevivente" ? "Empenho no 1º estágio e Cicatrizado no 5º (Sobrevivendo ao Horror, p. 31)." : "Ordem Paranormal RPG, p. 172.",
+      entradas: P.AUTOMATICAS.filter(function (p) { return p.classes.indexOf(aba) >= 0; })
+        .concat(aba === "sobrevivente" ? [P.poder("cicatrizado")] : [])
+        .map(function (p) { return { entrada: p, classe: aba }; }),
+    }];
+    if (aba === "sobrevivente") {
+      C.TRILHAS_SOBREVIVENTE.forEach(function (t) {
+        lista.push({
+          chave: "trilha." + t.chave,
+          titulo: "Trilha · " + t.nome,
+          nota: t.resumo,
+          entradas: P.habilidadesDaTrilhaSobrevivente(t.chave).map(function (p) { return { entrada: p, classe: aba }; }),
+        });
+      });
+    }
+    lista.push({
+      chave: "transicao",
+      titulo: "Virar agente · " + (C.TRANSICOES[aba] ? C.TRANSICOES[aba].titulo : ""),
+      nota: aba === "sobrevivente"
+        ? "No lugar da próxima subida de estágio, depois do treinamento da Ordem. Mantém tudo o que já tinha (Sobrevivendo ao Horror, p. 32)."
+        : "Ao atingir NEX 5%, depois do treinamento com um agente experiente, com 1 ponto de atributo (Ordem Paranormal RPG, p. 172).",
+      entradas: P.TREINAMENTOS.filter(function (p) { return p.chave.indexOf("treinamento." + aba + ".") === 0; })
+        .map(function (p) { return { entrada: p, classe: p.classes[0] }; }),
+    });
+    return lista.filter(function (s) { return s.entradas.length; });
+  }
+
   /* De onde a habilidade vem, curto (o campo origem tem 60 caracteres). */
   function origem(p, classe) {
-    if (p.tipo === "automatica") return nomeDaClasse(p.classes[0]) + " · Habilidade de classe";
+    if (p.tipo === "automatica") return nomeDaClasse(classe && p.classes.indexOf(classe) >= 0 ? classe : p.classes[0]) + " · Habilidade de classe";
+    if (p.tipo === "sobrevivente") {
+      var ts = C.trilhaSobrevivente(p.trilhaSobrevivente);
+      return ("Sobrevivente" + (ts ? " · " + ts.nome : "") + " · Estágio " + p.estagio).slice(0, 60);
+    }
+    if (p.tipo === "treinamento") return p.nome.slice(0, 60);
     if (p.tipo === "trilha") {
       var t = C.trilha(p.trilha);
       return (t ? t.nome : "Trilha") + " · NEX " + p.nex + "%";

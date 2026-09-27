@@ -143,10 +143,19 @@
     var o = R().normalizar(bruto);
     var classe = nomeDoCatalogo(C() && C().CLASSES, o.classe);
     var trilha = nomeDoCatalogo(C() && C().TRILHAS, o.trilha);
+    /* A trilha do Sobrevivente mora nas escolhas: só quem recebe a ficha
+       inteira a vê. */
+    var PR = global.RAMAOrdemProgressao;
+    var trilhaS = PR && PR.trilhaSobreviventeDe && C() && C().trilhaSobrevivente ? C().trilhaSobrevivente(PR.trilhaSobreviventeDe(o)) : null;
+    if (trilhaS && !trilha) trilha = trilhaS.nome;
     if (classe || trilha) base.linhas.push([classe, trilha].filter(Boolean).join(" · "));
 
     var t = R().trilho(o);
-    base.progressao = t.separado ? t.rotulo + " · NEX " + R().exposicao(o) + "%" : t.rotulo;
+    var fase = R().faseDe ? R().faseDe(o) : { comum: false };
+    /* "Sobrevivente · Estágio 3" / "Mundano · NEX 0%": o estágio é a
+       progressão dele; o NEX continua 0% (ou nível 0). */
+    var prefixo = fase.comum && fase.perfil === "sobrevivente" ? "Estágio " + fase.estagio + " · " : "";
+    base.progressao = prefixo + (t.separado ? t.rotulo + " · NEX " + R().exposicao(o) + "%" : t.rotulo);
 
     /* Outro jogador da mesa: a identificação e, se o mestre permitir, o
        resumo dos recursos que o servidor mandou — atual e máximo, sem

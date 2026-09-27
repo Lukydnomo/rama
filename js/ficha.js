@@ -73,6 +73,12 @@
      o item de inventário, `ordem.contagem` (munição). Os contadores da
      mesa são descartados na leitura — nunca viram turnos de
      enlouquecendo. Uma ficha 10 abre sem efeitos e sem saldos.
+     11 → 12: Mundano e Sobrevivente (v2.21). O bloco `ordem` aceita as
+     classes `mundano` e `sobrevivente` e ganhou `estagio` (1 a 5),
+     `trajetoria` (a transição para agente), `sessao` e `sacrificios`
+     (Cicatrizado). Sem conversão: uma ficha 11 abre igual. Uma aba
+     antiga apagaria a classe nova ao gravar — com o schema maior, ela
+     recusa a ficha.
 
      Nenhuma das subidas exige migração: normalizarFicha() cria o que
      falta, vazio, e não toca no que existe. Um ritual gravado na 2 abre
@@ -83,7 +89,7 @@
      os campos novos e os descartaria ao gravar — com o schema maior ela
      recusa abrir a ficha e pede para recarregar.
      Ver docs/CHARACTER_SCHEMA.md. */
-  var VERSAO_SCHEMA = 11;
+  var VERSAO_SCHEMA = 12;
 
   var NATUREZA = { INFORMACAO: "informacao", ROLAVEL: "rolavel", DEPENDENTE: "dependente" };
 

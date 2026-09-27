@@ -1093,6 +1093,9 @@ function ordemPublicaParaPainel(ordem) {
     trilha: ordem.trilha || '',
     nex: ordem.nex === undefined ? null : ordem.nex,
     nivel: ordem.nivel === undefined ? null : ordem.nivel,
+    /* O estágio do Sobrevivente (v2.21): é a progressão dele, e o cartão
+       mostra "Sobrevivente · Estágio 3". Não revela escolha nenhuma. */
+    estagio: ordem.estagio === undefined ? null : ordem.estagio,
     opcionais: { nexExperiencia: opcionais.nexExperiencia === true },
   };
 }

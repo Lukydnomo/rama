@@ -823,6 +823,99 @@ PE       = PEinicial + (passos − 1) × (PEporNex)
 SAN      = SANinicial + (passos − 1) × (SANporNex)
 ```
 
+## Mundano e Sobrevivente (v2.21)
+
+Duas classes de **pessoas comuns**, distintas entre si e das três de agente.
+Ninguém vira uma delas por estar em NEX 0%: um combatente com NEX de exposição 0%
+(NEX & Experiência) continua combatente. Classe, NEX, nível e estágio são quatro
+informações diferentes — `R.faseDe(ordem)` diz em que fase a ficha está.
+
+| | Mundano (OPRPG p. 171-172) | Sobrevivente (SAH p. 30-32) |
+|---|---|---|
+| NEX | 0% (nível 0 com NEX & Experiência) | 0% (nível 0), evolui em **estágios 1 a 5** |
+| PV | 8 + Vigor | 8 + Vigor; **+2 fixos** por novo estágio |
+| PE | 1 + Presença | 2 + Presença; **+1 fixo** por estágio |
+| Sanidade | 8 | 8; **+2 fixos** por estágio |
+| PD (Jogando sem Sanidade) | sem tabela no livro — base 0 | 4 + Presença; +2 por estágio (SAH p. 104) |
+| Perícias | 1 + Intelecto (a origem à parte) | 1 + Intelecto, e o que os benefícios derem |
+| Proficiências | armas simples | armas simples |
+| Habilidade | Empenho | Empenho; trilha no 2º e 4º estágio; +1 atributo no 3º; Cicatrizado no 5º |
+| Limite de PE | 1 (ver abaixo) | sempre 1, com a exceção do custo mínimo |
+| Atributos na criação | começam em 1, **3 pontos**, um pode ir a 0 por +1, teto 3 | igual |
+| Equipamento | sem patente: 1 item de categoria I e itens de categoria 0 que a origem permita | igual |
+
+- Os incrementos por estágio são **fixos**: Vigor e Presença não se somam de novo.
+- **Empenho**: no resultado de um teste de perícia, a ficha oferece "Empenho: +2
+  (1 PE)". Usar gasta 1 PE (ou PD) e mostra o **mesmo** teste com +2 — não rola de
+  novo e não vira bônus permanente em perícia nenhuma. A ficha oferece depois de
+  ver o dado; se a mesa exige declarar antes, é só não usar depois.
+- **Limite de PE do Mundano**: o livro não dá limite para NEX 0%. O R.A.M.A. usa 1,
+  o custo do Empenho (a única habilidade dele), e a ficha diz que é leitura.
+- **Patente**: nenhuma — nem Recruta, nem "patente de mundano". Com "Aplicar regras
+  de patente" ligada, o limite é o da regra comum (1 item de categoria I); desligada,
+  valem os limites manuais, como em qualquer ficha. O que a origem permite é da mesa.
+- **Evolução por Patentes** ligada não substitui os estágios: a ficha avisa.
+
+### Trilhas do Sobrevivente (SAH p. 31-32)
+
+| trilha | 2º estágio | 4º estágio |
+|---|---|---|
+| Durão | +4 PV; e +2 PV ao subir para o 3º | Pancada Forte (1 PE: +1 dado no ataque) |
+| Esperto | treinado em uma perícia adicional (nova) | Entendido: duas perícias treinadas, exceto Luta e Pontaria (1 PE: +1d4) |
+| Esotérico | sentir energias paranormais (ação padrão, 1 PE) | Iniciado: aprende e conjura um ritual de 1º círculo |
+
+- A trilha é uma escolha registrada (`s2.trilha`); as habilidades com opção viram
+  vagas (`b.esperto`, `b.entendido`, `b.cicatrizado`), e as outras chegam sozinhas.
+- **Iniciado** abre a concessão `s4.iniciado`: 1 ritual de 1º círculo, pela
+  biblioteca e pelo modelo de aquisição de sempre, **mesmo em NEX 0%**. Não libera
+  outro ritual nem outro círculo. O ritual fica preso a "Iniciado".
+- **Aumento de atributo do 3º estágio** (`s3.atributo`): +1, teto **3**. Vigor sobe
+  os PV, Presença os PE, Intelecto treina uma perícia nova.
+- **Cicatrizado**: escolha do elemento e do perigo; o trauma (–1 dado em resistência
+  contra ele) é lembrete — a mesa reconhece quando vale. Uma vez **por sessão** (não
+  por cena), como reação: sacrificar 1 PV para ignorar um dano mental ou um gasto de
+  PE, ou 1 PE para reduzir um dano físico à metade. O sacrifício é gravado
+  (`ordem.sacrificios`), aparece na composição do máximo como "Cicatrizado ·
+  sacrifício permanente" e nunca some ao recalcular. A sessão tem marcador próprio
+  ("Nova sessão de jogo"), separado da cena das condições.
+
+### Virar agente — duas transições diferentes
+
+**Mundano — "Atingindo NEX 5%" (OPRPG p. 172).** Depois do treinamento, 1 ponto
+de atributo (sem passar de 3) e os ganhos da classe: combatente +12 PV, +1 PE, +4
+SAN; especialista +8 PV, +2 PE, +8 SAN; ocultista +4 PV, +3 PE, +12 SAN; as perícias,
+proficiências e habilidades da classe. Somado ao Mundano, dá **exatamente** um
+agente novato.
+
+**Sobrevivente — "Treinamento Especial" (SAH p. 32).** Depende da história; toma o
+lugar da **próxima** subida de estágio (esse estágio não é concedido); ganhos
+menores e **sem** ponto de atributo: combatente +8 PV; especialista +4 PV, +1 PE, +4
+SAN; ocultista +2 PE, +8 SAN. Mantém tudo o que já tinha — e as substituições do
+livro: virando combatente, Pancada Forte sai e **Ataque Especial custa −1 PE**;
+virando especialista, Entendido sai e **Perito custa −1 PE**; virando ocultista, o
+ritual de Iniciado **se soma** aos três de Escolhido pelo Outro Lado.
+
+- A transição é uma janela com a classe, o resumo (máximos antes e depois, o que
+  fica, o que vai faltar decidir, substituições e avisos) e a confirmação. Cancelar
+  não aplica nada. Ela grava **só** a trajetória (`ordem.trajetoria`: de, para,
+  estágio, data); os ganhos são recalculados dela, e por isso reabrir ou salvar de
+  novo não os concede outra vez. O id da operação evita aplicar duas vezes.
+- As escolhas da transição (`t.treinamento` — as perícias; `t.atributo` — o ponto
+  do Mundano) ficam em "Falta decidir".
+- **Recursos atuais não são restaurados**: os que estavam cheios ficam no máximo de
+  antes; o máximo sobe, e quem estava ferido continua ferido.
+- A classe nova começa sem trilha de agente, em NEX 5% (ou nível 1, com NEX &
+  Experiência — a exposição não muda).
+- **Empenho**: fica com quem veio de Sobrevivente ("mantém todas as habilidades").
+  O texto do Mundano não diz que ele fica, e a ficha não o mantém; a mesa pode
+  anotá-lo.
+- **PD depois da transição**: vindo de Sobrevivente, os PD dele mais o ganho de PE da
+  transição (o que soma PE soma PD, SAH p. 104); vindo de Mundano, que não tem tabela
+  de PD, os PD da classe nova, como num agente novato. As duas leituras são do
+  R.A.M.A.; o livro não trata a combinação.
+- Trocar a classe à mão depois da transição deixa a trajetória guardada, sem
+  efeito, e a ficha avisa.
+
 ## NEX
 
 | regra | fonte | comportamento | est. |
@@ -933,7 +1026,8 @@ recurso só, os **pontos de determinação** (PD):
 | Combatente | 6 + Pre | 3 + Pre |
 | Especialista | 8 + Pre | 4 + Pre |
 | Ocultista | 10 + Pre | 5 + Pre |
-| Sobrevivente | 4 + Pre | 2 por estágio (a classe não está no R.A.M.A.) |
+| Sobrevivente | 4 + Pre | 2 por estágio (fixo) |
+| Mundano | — | o livro não traz tabela: base 0, e a ficha diz por quê |
 
 - o que soma PE soma PD (Dedicação, do Universitário, por exemplo); o que soma
   Sanidade, não — a regra manda ignorar as referências a Sanidade;

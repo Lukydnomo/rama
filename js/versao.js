@@ -70,6 +70,34 @@
 
   var CHANGELOG = [
     {
+      versao: "2.21.0",
+      codinome: "TRAVESSIA",
+      data: "27/09/2026",
+      mudancas: {
+        "Adicionado": [
+          "Mundano (Ordem Paranormal RPG, p. 171-172): pessoa comum de NEX 0%, com PV 8 + Vigor, PE 1 + Presença, Sanidade 8, 1 + Intelecto perícias, armas simples e Empenho. Sem patente: o equipamento é um item de categoria I e itens de categoria 0 que a origem permita.",
+          "Sobrevivente (Sobrevivendo ao Horror, p. 30-32): pessoa comum que evolui em estágios de 1 a 5, com incrementos fixos (+2 PV, +1 PE, +2 SAN por estágio), limite de PE sempre 1, Empenho, trilha no 2º e 4º estágio (Durão, Esperto e Esotérico, com todas as habilidades e escolhas), aumento de atributo no 3º (teto 3) e Cicatrizado no 5º. Pode ser criado direto em qualquer estágio, com o que falta decidir na Progressão.",
+          "Empenho na rolagem de perícia: o resultado oferece +2 por 1 PE (ou PD), no mesmo teste, sem rolar de novo e sem virar bônus permanente.",
+          "Iniciado aprende um ritual de 1º círculo pela biblioteca e pelo modelo de aquisição de sempre, mesmo em NEX 0%, sem liberar outros rituais.",
+          "Cicatrizado com trauma registrado (elemento e perigo), marcador de sessão de jogo separado da cena, e sacrifícios permanentes de PV ou PE, uma vez por sessão, que ficam gravados e aparecem na conta do máximo.",
+          "Virar agente: uma janela com a classe, o resumo do que muda — máximos antes e depois, o que fica, substituições, o que vai faltar decidir — e a confirmação. Mundano segue “Atingindo NEX 5%” (1 ponto de atributo, teto 3, e os ganhos da classe); Sobrevivente segue “Treinamento Especial” (ganhos menores, sem ponto de atributo, no lugar da próxima subida de estágio, mantendo tudo — com Pancada Forte e Entendido virando −1 PE em Ataque Especial e Perito, e o ritual de Iniciado somado aos três iniciais do ocultista). A trajetória fica registrada na ficha.",
+          "Sobrevivente com Jogando sem Sanidade: PD 4 + Presença e +2 por estágio (SAH p. 104).",
+        ],
+        "Alterado": [
+          "A criação guiada pergunta o perfil — agente da Ordem, Mundano ou Sobrevivente — na primeira etapa, antes dos atributos, porque ele muda a distribuição (3 pontos em vez de 4). Trocar de perfil não apaga nada: a tela aponta o que precisa ser ajustado.",
+          "Classe, NEX, nível e estágio são mostrados separados: “Mundano · NEX 0%”, “Sobrevivente · Estágio 3”, e a exposição com NEX & Experiência. Um combatente com NEX de exposição 0% continua combatente.",
+          "O cartão da campanha mostra o estágio do Sobrevivente; a biblioteca de habilidades ganhou as abas Mundano e Sobrevivente.",
+        ],
+        "Técnico": [
+          "schemaVersion 11 → 12, sem conversão: o bloco de Ordem aceita as classes novas e ganhou `estagio`, `trajetoria`, `sessao` e `sacrificios`. Uma aba aberta na versão anterior recusa a ficha em vez de apagar a classe nova ao gravar.",
+          "O backend mudou (Campanhas.gs), sem aba nem coluna nova: o resumo que os colegas recebem traz o estágio. Cole os três `.gs`, crie uma nova versão da implantação e só depois publique o site.",
+          "A transição grava só a trajetória, com id de operação: os ganhos são recalculados dela, e repetir, reabrir ou salvar de novo não concede nada duas vezes. Os recursos atuais não são restaurados. Exportar e importar levam estágio, trajetória e sacrifícios; a conciliação casa trajetória e sacrifícios pelo id.",
+          "Regras, leituras e limitações em docs/ORDEM-REGRAS.md: o limite de PE do Mundano, os PD depois da transição e o Empenho do Mundano, que o livro não diz que fica.",
+          "Testes: 2117 no modelo (95 novas), 934 no backend (7 novas); biblioteca, arrastar e a página geral no navegador passando; 6 mutações nas garantias novas, todas pegas.",
+        ],
+      },
+    },
+    {
       versao: "2.20.0",
       codinome: "RASTRO",
       data: "26/09/2026",

@@ -7,7 +7,12 @@
    A ORDEM DOS PASSOS É A DO LIVRO, E ISSO IMPORTA
    ---------------------------------------------------------------------
 
-     1. conceito    quem é essa pessoa
+     1. conceito    quem é essa pessoa — e o PERFIL: agente da Ordem,
+                    Mundano (NEX 0%, OPRPG p. 171) ou Sobrevivente
+                    (estágios, SAH p. 30). O perfil vem antes dos
+                    atributos porque muda a distribuição: 3 pontos em
+                    vez de 4. Trocar de perfil depois não apaga nada: a
+                    etapa que ficou inválida diz o que ajustar.
      2. atributos   4 pontos, teto 3, um pode ir a 0 por +1
      3. origem      duas perícias treinadas e um poder
      4. classe      PV, PE, Sanidade, perícias e proficiências
@@ -79,6 +84,10 @@
       conceito: "",
       campanhaId: "",
       nex: 5,
+      /* "agente", "mundano" ou "sobrevivente". Mundano e Sobrevivente
+         SÃO a classe; o agente escolhe a classe na etapa Classe. */
+      perfil: "agente",
+      estagio: 1,
       atributos: { agi: 1, "for": 1, int: 1, pre: 1, vig: 1 },
       origem: "",
       /* Amnésico deixa as duas perícias à escolha do mestre; a tela
@@ -184,14 +193,96 @@
        1. CONCEITO — OPRPG p.14
        ================================================================= */
 
-    var campoNome, campoConceito, campoCampanha, campoNex, campoExposicao;
+    var campoNome, campoConceito, campoCampanha, campoNex, campoExposicao, campoEstagio;
 
     function separaNivel() {
       return !!(OP && OP.ligada(d, "nexExperiencia"));
     }
 
+    function comum() { return d.perfil === "mundano" || d.perfil === "sobrevivente"; }
+
+    function geracao() { return comum() ? C.GERACAO_ATRIBUTOS_COMUM : C.GERACAO_ATRIBUTOS; }
+
+    var PERFIS = [
+      { chave: "agente", nome: "Agente da Ordem", texto: "Combatente, especialista ou ocultista, a partir de NEX 5%.", fonte: "Ordem Paranormal RPG, p. 22-35" },
+      { chave: "mundano", nome: "Mundano", texto: "Uma pessoa comum, de NEX 0%, com Empenho. Vira agente ao treinar.", fonte: "Ordem Paranormal RPG, p. 171-172" },
+      { chave: "sobrevivente", nome: "Sobrevivente", texto: "Uma pessoa comum que evolui em estágios de 1 a 5, sem ganhar NEX.", fonte: "Sobrevivendo ao Horror, p. 30-32" },
+    ];
+
+    /* Redesenhar a etapa recria os campos: o que já foi digitado vai
+       para o rascunho antes, para trocar de perfil não apagar nada. */
+    function guardarCamposDoConceito() {
+      if (campoNome) d.nome = campoNome.entrada.value.trim();
+      if (campoConceito) d.conceito = campoConceito.entrada.value.trim();
+      if (campoCampanha) d.campanhaId = campoCampanha.entrada.value || "";
+      if (campoEstagio) d.estagio = R.estagioValido(campoEstagio.entrada.value);
+    }
+
+    function escolherPerfil(chave) {
+      if (d.perfil === chave) return;
+      guardarCamposDoConceito();
+      var antes = d.perfil;
+      d.perfil = chave;
+      if (chave === "agente") {
+        /* A classe de agente ainda não foi escolhida: a etapa Classe pede. */
+        if (!C.ehAgente(d.classe)) d.classe = "";
+      } else {
+        d.classe = chave;
+        d.escolhasDeClasse = [];
+        d.trilha = "";
+        if (!separaNivel()) d.nex = 0;
+      }
+      if (chave === "agente" && antes !== "agente" && !separaNivel() && !d.nex) d.nex = 5;
+      pintarFocando("criacao-perfil-" + chave);
+    }
+
+    /* O que ficou inválido — depois de trocar de perfil, por exemplo. A
+       tela aponta; nada é apagado sozinho. */
+    function ajustesPendentes() {
+      var lista = [];
+      var s = saldoDeAtributos();
+      if (s.gastos !== s.disponivel || s.reducoesDemais) {
+        lista.push("Atributos: " + (s.gastos > s.disponivel ? "há " + (s.gastos - s.disponivel) + " ponto(s) a mais" : "faltam " + (s.disponivel - s.gastos) + " ponto(s)") +
+          " — " + (comum() ? "Mundano e Sobrevivente têm 3 pontos" : "agentes têm 4 pontos") + ".");
+      }
+      if (!d.classe) lista.push("Classe: escolha combatente, especialista ou ocultista.");
+      if (d.classe && d.periciasEscolhidas.length && d.periciasEscolhidas.length !== quantasLivres()) {
+        lista.push("Perícias: " + d.periciasEscolhidas.length + " escolhida(s), e a classe dá " + quantasLivres() + ".");
+      }
+      return lista;
+    }
+
+    function seletorDePerfil() {
+      var ajustes = ajustesPendentes().filter(function (x) { return !/^Classe:/.test(x) || d.perfil === "agente"; });
+      return el("div.pilha--curta", { class: "pilha" }, [
+        el("h4.t-secao", { texto: "Perfil de progressão" }),
+        el("div.criacao-lista.criacao-perfis", { role: "group", "aria-label": "Perfil de progressão" }, PERFIS.map(function (pf) {
+          var marcado = d.perfil === pf.chave;
+          return el("button.criacao-opcao", {
+            type: "button", id: "criacao-perfil-" + pf.chave,
+            "aria-pressed": String(marcado), class: marcado ? "criacao-opcao--escolhida" : "",
+            onclick: function () { escolherPerfil(pf.chave); },
+          }, [
+            el("span.criacao-opcao__nome", { texto: pf.nome }),
+            el("span.criacao-opcao__texto", { texto: pf.texto }),
+            el("span.criacao-opcao__fonte", { texto: pf.fonte }),
+          ]);
+        })),
+        ajustes.length && (d.origem || d.periciasEscolhidas.length || somaDeAtributosMexida())
+          ? el("div.pilha--curta", { class: "pilha", role: "status" }, [
+              el("p.t-mini.t-aviso", { texto: "Com este perfil, revise:" }),
+              el("ul.bib-lista-textos", {}, ajustes.map(function (a) { return el("li.t-mini", { texto: a }); })),
+            ])
+          : null,
+      ]);
+    }
+
+    function somaDeAtributosMexida() {
+      return C.ATRIBUTOS.some(function (a) { return d.atributos[a.chave] !== 1; });
+    }
+
     function etapaConceito() {
-      campoNome = UI.campo({ rotulo: "Nome do agente", valor: d.nome, limite: 80 });
+      campoNome = UI.campo({ rotulo: "Nome do personagem", valor: d.nome, limite: 80 });
       campoConceito = UI.campo({
         rotulo: "Conceito", valor: d.conceito, tipo: "area", linhas: 3, limite: 400,
         ajuda: "Uma frase. O que essa pessoa fazia antes do paranormal, e o que faz agora.",
@@ -204,7 +295,22 @@
         })),
       });
 
-      if (separaNivel()) {
+      campoEstagio = null;
+      if (comum()) {
+        if (d.perfil === "sobrevivente") {
+          campoEstagio = UI.campo({
+            rotulo: "Estágio inicial", tipo: "selecao", valor: String(d.estagio),
+            opcoes: [1, 2, 3, 4, 5].map(function (n) { return { valor: String(n), rotulo: n + "º estágio" }; }),
+            ajuda: "Começar adiantado reúne na revisão o que os estágios anteriores pedem: trilha, aumento de atributo, Cicatrizado.",
+          });
+        }
+        campoNex = null;
+        campoExposicao = separaNivel() ? UI.campo({
+          rotulo: "NEX por exposição", tipo: "selecao", valor: String(d.nex),
+          opcoes: opcoesDeParametro({ chave: "nex", minimo: 0, maximo: C.REGRAS.nexMaximo }),
+          ajuda: "Nível 0: a regra “NEX & Experiência” separa a exposição, que pode crescer mesmo antes da Ordem.",
+        }) : null;
+      } else if (separaNivel()) {
         campoNex = UI.campo({
           rotulo: "Nível de experiência inicial", tipo: "selecao", valor: String(d.nivel),
           opcoes: opcoesDeParametro({ chave: "nivel", minimo: 1, maximo: 20 }),
@@ -230,7 +336,9 @@
         el("p", { texto: "Comece pelo que dá vontade de jogar. O resto se encaixa depois." }),
         campoNome,
         campoConceito,
-        el("div.editar-grade", {}, [campoCampanha, campoNex, campoExposicao]),
+        seletorDePerfil(),
+        comum() && !separaNivel() ? el("p.t-mini", { texto: (d.perfil === "mundano" ? "O Mundano" : "O Sobrevivente") + " começa em NEX 0% — e o NEX não sobe até o treinamento que o torna agente." }) : null,
+        el("div.editar-grade", {}, [campoCampanha, campoEstagio, campoNex, campoExposicao]),
       ]);
     }
 
@@ -247,11 +355,19 @@
       d.nome = campoNome.entrada.value.trim();
       d.conceito = campoConceito.entrada.value.trim();
       d.campanhaId = campoCampanha.entrada.value || "";
-      if (campoExposicao) {
+      if (campoEstagio) d.estagio = R.estagioValido(campoEstagio.entrada.value);
+      if (comum()) {
+        /* NEX 0%: sem campo. Com NEX & Experiência, a exposição continua
+           editável. */
+        d.nex = campoExposicao ? R.nexValido(campoExposicao.entrada.value) : 0;
+      } else if (campoExposicao) {
         d.nivel = Math.max(1, Math.min(20, parseInt(campoNex.entrada.value, 10) || 1));
         d.nex = R.nexValido(campoExposicao.entrada.value);
       } else {
-        d.nex = parseInt(campoNex.entrada.value, 10) || 5;
+        /* Um agente sem a regra está entre NEX 5% e 99%: um valor que não
+           dá número volta ao mínimo, nunca a 0. */
+        var nexLido = parseInt(campoNex.entrada.value, 10);
+        d.nex = Number.isFinite(nexLido) && nexLido >= C.REGRAS.nexMinimo ? nexLido : C.REGRAS.nexMinimo;
       }
 
       if (!d.nome) { campoNome.marcarErro("Informe um nome."); campoNome.entrada.focus(); return "O agente precisa de um nome."; }
@@ -269,7 +385,7 @@
        ================================================================= */
 
     function saldoDeAtributos() {
-      var g = C.GERACAO_ATRIBUTOS;
+      var g = geracao();
       var gastos = 0;
       var reducoes = 0;
 
@@ -288,7 +404,7 @@
     }
 
     function etapaAtributos() {
-      var g = C.GERACAO_ATRIBUTOS;
+      var g = geracao();
       var resumo = el("p.t-secao", {});
       var aviso = el("p.t-mini", {});
 
@@ -330,12 +446,12 @@
         el("p", {
           texto: "Todo atributo começa em 1. Você tem " + g.pontos + " pontos para distribuir, e o " +
                  "máximo inicial é " + g.maximoInicial + ". Baixar um atributo para 0 devolve 1 ponto — " +
-                 "mas só um deles.",
+                 "mas só um deles." + (comum() ? " Sem o treinamento de agente, são 3 pontos, não 4." : ""),
         }),
         resumo,
         linhas,
         aviso,
-        referencia("Ordem Paranormal RPG, p. 14"),
+        referencia(comum() ? (d.perfil === "sobrevivente" ? "Sobrevivendo ao Horror, p. 30" : "Ordem Paranormal RPG, p. 171") : "Ordem Paranormal RPG, p. 14"),
       ]);
     }
 
@@ -449,7 +565,8 @@
        ================================================================= */
 
     function etapaClasse() {
-      var lista = el("div.criacao-lista", {}, C.CLASSES.map(cartaoDeClasse));
+      if (comum()) return etapaClasseComum();
+      var lista = el("div.criacao-lista", {}, C.classesDeAgente().map(cartaoDeClasse));
 
       var extra = [];
       var classe = C.classe(d.classe);
@@ -487,6 +604,35 @@
         el("p", { texto: "A classe é o treinamento que você recebeu dentro da Ordem." }),
         lista,
       ].concat(extra).concat([referencia("Ordem Paranormal RPG, p. 22-35")]));
+    }
+
+    /* Mundano e Sobrevivente: a classe É o perfil. A etapa mostra o que
+       ela dá e como a ficha fica — sem outra escolha a fazer aqui. */
+    function etapaClasseComum() {
+      var cl = C.classe(d.perfil);
+      var previa = R.calcular(rascunhoParaRegras(), { itens: [] });
+      return el("div.pilha", {}, [
+        el("p", { texto: cl.resumo }),
+        el("div.criacao-opcao.criacao-opcao--escolhida", {}, [
+          el("span.criacao-opcao__nome", { texto: cl.nome }),
+          el("span.criacao-opcao__meta", {
+            texto: "PV " + cl.pvInicial.base + "+Vig · PE " + cl.peInicial.base + "+Pre · SAN " + cl.sanInicial.base +
+              (cl.pvPorEstagio ? " · por estágio: +" + cl.pvPorEstagio + " PV, +" + cl.pePorEstagio + " PE, +" + cl.sanPorEstagio + " SAN" : ""),
+          }),
+          el("span.criacao-opcao__texto", { texto: cl.periciasLivres.base + " + Intelecto perícias à escolha. Proficiências: " + cl.proficiencias.join(", ") + ". Habilidade: Empenho." }),
+          el("span.criacao-opcao__texto", { texto: "Equipamento: sem patente — um item de categoria I e quantos itens de categoria 0 a origem permitir." }),
+          el("span.criacao-opcao__fonte", { texto: C.referencia(cl) }),
+        ]),
+        el("h4.t-secao", { texto: "Como a ficha fica" }),
+        el("dl.r-dados", {}, [
+          el("dt", { texto: "Progressão" }), el("dd", { texto: previa.rotulo }),
+          el("dt", { texto: "Pontos de vida" }), el("dd", { texto: String(previa.pv.total) }),
+          el("dt", { texto: "Pontos de esforço" }), el("dd", { texto: String(previa.pe.total) }),
+          el("dt", { texto: "Sanidade" }), el("dd", { texto: String(previa.san.total) }),
+          el("dt", { texto: "Limite de PE" }), el("dd", { texto: String(previa.limitePe.total) }),
+          el("dt", { texto: "Defesa" }), el("dd", { texto: String(previa.defesa.total) }),
+        ]),
+      ]);
     }
 
     function cartaoDeClasse(cl) {
@@ -717,9 +863,9 @@
         el("dl.r-dados", {}, [
           el("dt", { texto: "Nome" }), el("dd", { texto: d.nome }),
           el("dt", { texto: "Origem" }), el("dd", { texto: org ? org.nome : "—" }),
-          el("dt", { texto: "Classe" }), el("dd", { texto: cl ? cl.nome : "—" }),
+          el("dt", { texto: "Classe" }), el("dd", { texto: cl ? previa.rotulo : "—" }),
           trilho.separado ? el("dt", { texto: "Nível de experiência" }) : el("dt", { texto: "NEX" }),
-          trilho.separado ? el("dd", { texto: String(d.nivel) }) : el("dd", { texto: d.nex + "%" }),
+          trilho.separado ? el("dd", { texto: String(trilho.comum ? 0 : d.nivel) }) : el("dd", { texto: (trilho.comum ? 0 : d.nex) + "%" }),
           trilho.separado ? el("dt", { texto: "NEX por exposição" }) : null,
           trilho.separado ? el("dd", { texto: d.nex + "%" }) : null,
           el("dt", { texto: "Atributos" }), el("dd", {
@@ -733,7 +879,9 @@
             texto: todasPericias.map(function (p) { return C.pericia(p).nome; }).sort().join(", ") || "—",
           }),
           el("dt", { texto: "Proficiências" }), el("dd", { texto: cl ? cl.proficiencias.join(", ") : "—" }),
-          el("dt", { texto: "Trilha" }), el("dd", { texto: trilha ? trilha.nome : semTrilha }),
+          trilho.comum ? null : el("dt", { texto: "Trilha" }), trilho.comum ? null : el("dd", { texto: trilha ? trilha.nome : semTrilha }),
+          trilho.comum ? el("dt", { texto: "Equipamento" }) : null,
+          trilho.comum ? el("dd", { texto: "Sem patente: um item de categoria I e itens de categoria 0 que a origem permita (decisão da mesa)." }) : null,
           feitas.length ? el("dt", { texto: "Já decidido" }) : null,
           feitas.length ? el("dd", { texto: feitas.join(" · ") }) : null,
         ]),
@@ -752,7 +900,7 @@
                 return ES.cartaoDePendencia(p, resolverNoRascunho);
               })),
             ])
-          : el("p.t-mini", { texto: "Nada pendente: a ficha nasce completa para este " + (trilho.separado ? "nível." : "NEX.") }),
+          : el("p.t-mini", { texto: "Nada pendente: a ficha nasce completa para este " + (trilho.comum && d.perfil === "sobrevivente" ? "estágio." : (trilho.separado ? "nível." : "NEX.")) }),
       ]);
     }
 
@@ -891,6 +1039,17 @@
       /* No rascunho, o nível parte sempre do NEX escolhido agora — não de
          uma vez anterior em que a regra foi ligada e desligada. */
       if (ligar && r.chave === "nexExperiencia") ordem.nivelDefinido = false;
+      /* Mundano e Sobrevivente ficam em nível 0 e NEX 0%: não há o que
+         converter, só a exposição passa a ser um campo próprio. */
+      if (comum() && r.chave === "nexExperiencia") {
+        var res = OP.definir(ordem, r.chave, ligar);
+        if (!res.ok) { UI.avisoErro((res.problemas || []).map(function (p) { return p.texto; }).join(" ")); return; }
+        d.opcionais = ordem.opcionais || {};
+        d.nex = 0;
+        pintarFocando("criacao-regra-" + r.chave);
+        UI.aviso(ligar ? "Nível 0, NEX de exposição 0%. A exposição fica editável na primeira etapa." : "NEX 0%, como o livro manda sem a regra.");
+        return;
+      }
 
       var resultado = OP.definir(ordem, r.chave, ligar);
       if (!resultado.ok) {
@@ -927,6 +1086,7 @@
     function rascunhoParaRegras() {
       var ordem = R.fichaVazia();
       ordem.nex = d.nex;
+      ordem.estagio = d.estagio;
       ordem.nivel = d.nivel;
       ordem.nivelDefinido = d.nivelDefinido;
       ordem.opcionais = Object.assign({}, d.opcionais);
@@ -1015,7 +1175,7 @@
        ================================================================= */
 
     var m = UI.modal({
-      titulo: "Novo agente da Ordem",
+      titulo: "Novo personagem de Ordem",
       largo: true,
       conteudo: [corpo, rodapeInfo],
       botoes: [{ rotulo: "Cancelar", classe: "r-botao--fantasma" }],
