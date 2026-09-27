@@ -238,6 +238,19 @@ e em NEX 35% dá 7 (OPRPG p.115); Sangue de Ferro em NEX 50% dá 20 PV (OPRPG
 p.116); Técnico com Força 1 e Intelecto 3 carrega 20 espaços (OPRPG p.31); Morte 2
 exige dois poderes de Morte antes (OPRPG p.114).
 
+### O poder da origem na aba Habilidades (v2.22)
+
+O poder da origem da ficha aparece sozinho na aba Habilidades, como os outros
+cartões das regras: nome, "Origem · <nome>", descrição, marca de automação do
+catálogo, página e — quando a origem tem opção interna — a escolha feita ou "escolha
+pendente na Progressão". Ele aparece mesmo sem classe escolhida. O id do cartão é
+`orig|<chave da origem>`: trocar a origem troca o cartão, e recarregar não cria
+cópia. O cartão é **apresentação**: o efeito numérico continua vindo do catálogo de
+origens na camada de cálculo, e a opção continua sendo decidida na Progressão —
+personalizar ou excluir o cartão não mexe na conta. Poderes de outras origens
+recebidos por Flashback continuam como aquisições próprias. A aba Geral mantém o
+campo Origem e não mostra mais o bloco do poder.
+
 ### Biblioteca oficial na aba Habilidades
 
 No modo edição da ficha de Ordem, o botão **Da biblioteca** abre duas origens:
@@ -245,10 +258,12 @@ No modo edição da ficha de Ordem, o botão **Da biblioteca** abre duas origens
 outras contas publicaram). Na ficha universal a janela continua só com a
 Homebrew.
 
-Nos livros há cinco abas, e a da classe da ficha abre primeiro:
+Nos livros há oito abas, e a da classe da ficha abre primeiro:
 
 | aba | o que mostra |
 |---|---|
+| Mundano, Sobrevivente | Empenho, as trilhas por estágio, Cicatrizado e o treinamento que vira agente |
+| Origens | o poder de cada origem do catálogo (hoje, as 26 do livro básico), com a origem ao lado; a busca acha pelo nome do poder e pelo da origem. Trazer um deles copia o texto e **não** troca a origem nem concede o benefício — a janela pede confirmação dizendo isso |
 | Combatente, Especialista, Ocultista | habilidades de classe (com os estágios por NEX), poderes da classe e uma seção por trilha, livro básico e SAH |
 | Poderes gerais | os poderes gerais do SAH e os quatro poderes de classe que o SAH tornou gerais |
 | Poderes paranormais | um grupo por elemento, mais os sem elemento fixo |

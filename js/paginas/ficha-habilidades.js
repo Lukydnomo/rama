@@ -930,7 +930,7 @@
         }));
 
       var busca = el("input.r-entrada", {
-        type: "search", placeholder: "Buscar por nome ou efeito", "aria-label": "Buscar habilidade oficial",
+        type: "search", placeholder: estado.aba === "origens" ? "Buscar por poder ou origem" : "Buscar por nome ou efeito", "aria-label": "Buscar habilidade oficial",
         value: estado.busca,
         oninput: function (ev) { estado.busca = ev.target.value; pintarLista(); },
       });
@@ -982,6 +982,15 @@
     }
 
     async function escolher(x, ja) {
+      if (x.entrada.tipo === "origem" && !ja) {
+        var ok = await UI.confirmar({
+          titulo: "Trazer " + x.entrada.nome + "?",
+          texto: "Entra uma cópia de texto, para consulta ou personalização. Ela NÃO troca a origem do personagem nem concede o benefício de " +
+            x.entrada.origemNome + " — o poder que vale é o da origem escolhida na aba Geral.",
+          rotuloConfirmar: "Trazer a cópia",
+        });
+        if (!ok) return;
+      }
       if (ja) {
         var certeza = await UI.confirmar({
           titulo: "Trazer " + x.entrada.nome + " de novo?",

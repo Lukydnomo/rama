@@ -1243,8 +1243,17 @@
           return k;
         };
 
-        t.igual("sete abas: três classes de agente, Mundano, Sobrevivente, gerais e paranormais", OB.ABAS.map(function (a) { return a.chave; }).join(","),
-          "combatente,especialista,ocultista,mundano,sobrevivente,gerais,paranormais");
+        t.igual("oito abas: três classes de agente, Mundano, Sobrevivente, origens, gerais e paranormais", OB.ABAS.map(function (a) { return a.chave; }).join(","),
+          "combatente,especialista,ocultista,mundano,sobrevivente,origens,gerais,paranormais");
+        var secOrig = OB.secoes("origens");
+        var todasOrig = secOrig.reduce(function (l, s) { return l.concat(s.entradas); }, []);
+        t.igual("a aba Origens lista o poder de todas as origens do catálogo", todasOrig.length, OC.ORIGENS.length);
+        t.ok("  cada uma com nome do poder, origem, descrição e fonte", todasOrig.every(function (x) {
+          return x.entrada.nome && x.entrada.origemNome && x.entrada.resumo && /p\. \d+/.test(global.RAMAOrdemPoderes.referencia(x.entrada));
+        }));
+        t.igual("  a busca acha pelo nome do poder", OB.filtrar(secOrig, "saber e poder").reduce(function (n, s) { return n + s.entradas.length; }, 0), 1);
+        t.ok("  e pelo nome da origem", OB.filtrar(secOrig, "academico").some(function (s) { return s.entradas.some(function (x) { return x.entrada.nome === "Saber é Poder"; }); }));
+        t.igual("  a cópia diz de onde veio", OB.modelo(todasOrig.filter(function (x) { return x.entrada.nome === "Saber é Poder"; })[0].entrada, "").origem, "Origem · Acadêmico");
 
         var todasAsChaves = {};
         OB.ABAS.forEach(function (a) { Object.assign(todasAsChaves, chavesDe(OB.secoes(a.chave))); });

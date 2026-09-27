@@ -70,6 +70,23 @@
 
   var CHANGELOG = [
     {
+      versao: "2.22.0",
+      codinome: "PROCEDÊNCIA",
+      data: "27/09/2026",
+      mudancas: {
+        "Adicionado": [
+          "Aba Origens na biblioteca de habilidades (Ordem Paranormal): o poder de cada origem do catálogo, com a origem, a descrição e a página. A busca acha pelo nome do poder e pelo nome da origem. Trazer um deles copia o texto, com uma confirmação que diz que a cópia não troca a origem nem concede o benefício.",
+        ],
+        "Alterado": [
+          "O poder da origem saiu do painel Identidade da aba Geral e passou para a aba Habilidades, como cartão automático: nome, “Origem · <nome>”, descrição, automação, página e a escolha feita (ou pendente na Progressão). Aparece em toda ficha de Ordem, inclusive Mundano, Sobrevivente e sem classe escolhida, e acompanha a troca de origem. O campo Origem continua na aba Geral.",
+        ],
+        "Técnico": [
+          "O cartão tem id estável (orig|<origem>) e é só apresentação: o efeito da origem continua vindo do catálogo na camada de cálculo, sem aplicar de novo nem desligar nada, e as escolhas da Progressão não mudam. Sem mudança no formato da ficha nem no backend — só o site.",
+          "Testes: 2133 no modelo (5 novas sobre a aba Origens) e a verificação no navegador, no computador e no celular.",
+        ],
+      },
+    },
+    {
       versao: "2.21.0",
       codinome: "TRAVESSIA",
       data: "27/09/2026",

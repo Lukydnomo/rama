@@ -400,21 +400,13 @@
     var editarCampanha = ctx.emEdicao() && global.RAMASecaoGeral && global.RAMASecaoGeral.campoCampanha;
     if (!editarCampanha) linhas.push(["Campanha", ctx.nomeDaCampanha() || "—"]);
 
-    var poderDaOrigem = origem
-      ? el("div.pilha--curta", { class: "pilha" }, [
-          el("p.t-secao", { texto: origem.poder }),
-          el("p.t-mini", { texto: origem.resumo }),
-          ES.etiquetaAutomacao(origem.automacao),
-          el("p.criacao-fonte", { texto: C.referencia(origem) }),
-        ])
-      : null;
-
     return UI.painel("Identidade", el("div.pilha", {}, [
       el("dl.r-dados", {}, linhas.reduce(function (saida, par) {
         return saida.concat([el("dt", { texto: par[0] }), el("dd", { texto: par[1] })]);
       }, [])),
       editarCampanha ? global.RAMASecaoGeral.campoCampanha(ctx) : null,
-      poderDaOrigem,
+      /* O poder da origem mora na aba Habilidades (v2.22), com os outros
+         cartões das regras. */
     ]));
   }
 
@@ -559,7 +551,7 @@
 
   function poderesDasRegras(ctx, o, c) {
     var est = c.estado;
-    if (!est || !C.classe(o.classe)) {
+    if (!est || (!C.classe(o.classe) && !C.origem(o.origem))) {
       return {
         itens: [],
         fim: cartoesSemAquisicao(ctx, o, []),
@@ -569,6 +561,36 @@
     }
 
     var aquisicoes = [];
+
+    /* O poder da origem (v2.22): um cartão só, com id estável ligado à
+       origem — trocar a origem troca o cartão, e recarregar não cria
+       cópia. É APRESENTAÇÃO: o efeito numérico da origem continua vindo
+       do catálogo, na camada de cálculo, e a opção interna (quando há)
+       continua sendo decidida na Progressão. Excluir ou personalizar o
+       cartão não mexe no cálculo. */
+    var orgDaFicha = C.origem(o.origem);
+    if (orgDaFicha) {
+      var regOrigem = (o.escolhas || []).filter(function (r) { return r.etapa === "b.origem." + orgDaFicha.chave; })[0];
+      var pendOrigem = est.pendencias.filter(function (p) { return p.id === "b.origem." + orgDaFicha.chave; })[0];
+      var textoEscolha = "";
+      if (orgDaFicha.escolha) {
+        textoEscolha = pendOrigem ? "escolha pendente na Progressão"
+          : (regOrigem ? (E.descrever(o, { tipo: "poderOrigem", valor: regOrigem.valor, opcoes: regOrigem.opcoes }) || "escolha registrada") : "");
+      }
+      aquisicoes.push({
+        id: "orig|" + orgDaFicha.chave,
+        chave: "origem:" + orgDaFicha.chave,
+        nome: orgDaFicha.poder,
+        estagio: textoEscolha,
+        resumo: orgDaFicha.resumo,
+        origem: "Origem · " + orgDaFicha.nome,
+        automacao: orgDaFicha.automacao,
+        referencia: C.referencia(orgDaFicha),
+        situacao: pendOrigem ? "incompleta" : "ok",
+        motivos: pendOrigem ? ["A escolha deste poder está pendente na aba Progressão."] : [],
+        temEfeitos: false,
+      });
+    }
 
     E.automaticas(o).forEach(function (a) {
       aquisicoes.push({
@@ -687,7 +709,9 @@
       fim: fim,
       ordenacao: { modo: Organizacao.modo(ctx, "habilidades"), barra: Organizacao.barra(ctx, "habilidades") },
       biblioteca: { classe: o.classe, nomes: nomes.concat(nomesPersonalizados(o)) },
-      aviso: regras.length
+      aviso: !C.classe(o.classe)
+        ? "O poder da origem já aparece aqui. Escolha uma classe para ver as outras habilidades das regras."
+        : regras.length
         ? "“Entra na conta”: o efeito já está nos números da ficha. “Parte na conta”: uma parte está, o resto é aplicado na cena. “Anotação”: o efeito depende da cena ou de gasto de PE. As que vêm das regras são escolhidas na aba Progressão; no modo edição, o menu de cada uma cria uma versão personalizada só desta ficha."
         : "",
     };

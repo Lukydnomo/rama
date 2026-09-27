@@ -28,6 +28,7 @@
     { chave: "ocultista",    rotulo: "Ocultista" },
     { chave: "mundano",      rotulo: "Mundano" },
     { chave: "sobrevivente", rotulo: "Sobrevivente" },
+    { chave: "origens",      rotulo: "Origens" },
     { chave: "gerais",       rotulo: "Poderes gerais" },
     { chave: "paranormais",  rotulo: "Poderes paranormais" },
   ];
@@ -66,6 +67,7 @@
       }).filter(function (s) { return s.entradas.length; });
     }
 
+    if (aba === "origens") return secoesDeOrigens();
     if (!C.classe(aba)) return [];
     if (!C.ehAgente(aba)) return secoesDeComum(aba);
 
@@ -95,6 +97,30 @@
     });
 
     return lista.filter(function (s) { return s.entradas.length; });
+  }
+
+  /* Os poderes de origem (v2.22), do catálogo de origens, por livro. Uma
+     entrada é só texto: trazê-la não troca a origem da ficha nem dá o
+     benefício — o da origem de verdade vem das regras. */
+  function entradaDeOrigem(org) {
+    return {
+      chave: "origem." + org.chave, nome: org.poder, tipo: "origem", origemNome: org.nome,
+      classes: [], requisitos: [], opcoes: [], efeitos: [], resumo: org.resumo || "",
+      fonte: org.fonte || "OPRPG", pagina: org.pagina || 0, automacao: org.automacao || "informacao",
+    };
+  }
+
+  function secoesDeOrigens() {
+    var fontes = [{ chave: "OPRPG", titulo: "Livro básico" }, { chave: "SAH", titulo: "Sobrevivendo ao Horror" }];
+    return fontes.map(function (f) {
+      return {
+        chave: "origens." + f.chave,
+        titulo: "Origens · " + f.titulo,
+        nota: "O poder de cada origem. Trazer um daqui copia o texto; não troca a origem do personagem nem dá o benefício.",
+        entradas: C.ORIGENS.filter(function (o) { return (o.fonte || "OPRPG") === f.chave; })
+          .map(entradaDeOrigem).sort(porNome).map(function (p) { return { entrada: p, classe: "" }; }),
+      };
+    }).filter(function (s) { return s.entradas.length; });
   }
 
   /* Mundano e Sobrevivente: Empenho, as trilhas por estágio, Cicatrizado
@@ -138,6 +164,7 @@
       return ("Sobrevivente" + (ts ? " · " + ts.nome : "") + " · Estágio " + p.estagio).slice(0, 60);
     }
     if (p.tipo === "treinamento") return p.nome.slice(0, 60);
+    if (p.tipo === "origem") return ("Origem · " + p.origemNome).slice(0, 60);
     if (p.tipo === "trilha") {
       var t = C.trilha(p.trilha);
       return (t ? t.nome : "Trilha") + " · NEX " + p.nex + "%";
@@ -189,7 +216,7 @@
     return lista.map(function (s) {
       return Object.assign({}, s, {
         entradas: s.entradas.filter(function (x) {
-          return normalizar(x.entrada.nome + " " + x.entrada.resumo + " " + (x.entrada.afinidade || "")).indexOf(chave) >= 0;
+          return normalizar(x.entrada.nome + " " + x.entrada.resumo + " " + (x.entrada.afinidade || "") + " " + (x.entrada.origemNome || "")).indexOf(chave) >= 0;
         }),
       });
     }).filter(function (s) { return s.entradas.length; });
