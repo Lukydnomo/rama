@@ -238,6 +238,80 @@ e em NEX 35% dá 7 (OPRPG p.115); Sangue de Ferro em NEX 50% dá 20 PV (OPRPG
 p.116); Técnico com Força 1 e Intelecto 3 carrega 20 espaços (OPRPG p.31); Morte 2
 exige dois poderes de Morte antes (OPRPG p.114).
 
+### Origens do Sobrevivendo ao Horror (v2.23)
+
+As 20 origens do SAH (p. 7-13, Tabela 1.1) estão no mesmo catálogo das 26 do
+livro básico — as 10 "da comunidade" também, porque o livro as publica (o crédito
+fica em `comunidade`). Valem para qualquer classe e não pedem regra opcional
+nenhuma. A criação, a troca de origem, a biblioteca (Origens), o Flashback e o
+cartão em Habilidades leem o mesmo catálogo.
+
+**Perícias.** Profetizado tem Vontade **e** mais uma à escolha, ligada à
+premonição (a mesa confere) — fixa e escolhida somam. O que a origem treinou fica
+em `ordem.periciasDaOrigem`; é por isso que trocar a origem sabe o que tirar.
+Repetição com a classe: "escolha outra", como sempre.
+
+**Profissão.** A ficha tem uma perícia Profissão; a origem diz a especialidade
+(cozinheiro, engenheiro, psicólogo — e o Chef do livro básico, cozinheiro). A linha
+mostra "Profissão (cozinheiro)", e o treinamento vale para as especialidades
+listadas — a da origem e as anotadas à mão no modo edição —, não para todas.
+
+**O que entra na conta (permanente):**
+
+| origem | efeito |
+|---|---|
+| Diplomata | +2 em Diplomacia |
+| Experimento | resistência a dano 2 (todos os tipos); +2 na perícia escolhida, que precisa ser **originalmente** de Força, Agilidade ou Vigor (o atributo do catálogo — trocar o da ficha não contorna); –1 **dado** em Diplomacia |
+| Mergulhador | +5 PV |
+| Profetizado | +2 em Vontade |
+| Amigo dos Animais | +2 (aliado) na perícia escolhida, enquanto o companheiro estiver vivo |
+
+**Por clique, no resultado do teste** — oferecido só nas perícias do poder, com a
+condição dita antes de gastar: Explorador, Fotógrafo, Legista, Motorista e Repórter
+(2 PE: +5 no mesmo teste), Mateiro (2 PE: rola de novo e fica com o melhor).
+Trocas de perícia numa situação: Terapia (Profissão (psicólogo) no lugar de
+Diplomacia), Encontrar a Verdade (Investigação no lugar de Diplomacia, para
+persuadir) e cosplay (Artes no lugar de Enganação, para disfarce) — oferecidas no
+resultado da perícia original; nada troca as rolagens da ficha de vez.
+
+**Por controles no cartão da origem**, com estado gravado em
+`ordem.estadoDasOrigens` (por origem; recarregar não reinicia):
+
+- Companheiro Animal: a morte do companheiro — perder 10 de Sanidade permanente
+  (como ajuste visível) e ficar perturbado, cada um marcado; com Jogando sem
+  Sanidade, a referência a Sanidade é ignorada. Os marcos de NEX 35% e 70% (tipo e
+  habilidade de aliado) são mostrados e aplicados pela mesa.
+- Acostumado ao Extremo: custo 1 PE, +1 por uso na mesma cena, contado.
+- Fome do Outro Lado: ingrediente (item de categoria I, 0,5 espaço), preparo (o
+  teste é do mestre, com resultado oculto — a ficha não rola nem mostra), prato e
+  refeição separados. Só **comer** aplica: RD 10 ou vulnerabilidade até o fim da
+  próxima cena (conforme o mestre informar), –1 de Sanidade permanente por refeição
+  e, com NEX & Experiência, +3% de NEX por parte de criatura diferente.
+- Poder da Amizade: "+2 com o amigo por perto" é um efeito ligado e encerrado por
+  clique; a morte do amigo tira 1 PE por 5% de NEX até "Fim da missão".
+- Cosplay: +2 nas perícias que a mesa aceitar para a fantasia, como efeito.
+- Conhecimento Oculto: a criatura identificada fica registrada como efeito "até o
+  fim da missão"; o +2 vale só contra ela e é somado no teste contra ela.
+- Invenção Paranormal: o ritual (1º círculo) é escolhido no catálogo e fica preso
+  ao invento — **não é aprendido**, não entra na aba Rituais, não conta em limite.
+  Ativar rola Profissão (engenheiro) contra DT 15 +5 por ativação na missão; falhar
+  enguiça até a manutenção (interlúdio), que volta a DT a 15; "Nova missão" zera.
+- A Culpa é das Estrelas: 1 PE e 1d6 no início da cena, uma vez por cena; acertar dá
+  +2 em testes de perícia até o fim da cena (efeito). Errar pede mais um número na
+  próxima vez; acertar volta a quantidade a 1 — o R.A.M.A. volta ao número escolhido
+  na Progressão (leitura: o livro não diz qual número fica).
+- Luta ou Fuga: +2 PE temporários, em parcela própria, até o fim da cena, quando a
+  mesa reconhece a referência. A premonição é o que o personagem sabe; detalhes
+  secretos ficam com o mestre, fora da ficha.
+- Terapia: 2 PE e o teste de Profissão (psicólogo) no lugar da resistência falha.
+
+**Só texto (a mesa aplica):** Luto Habitual (metade do dano mental), O Inteligentão
+(a ação de interlúdio ler), Mapa Celeste e Manual do Sobrevivente fora do teste,
+Conexões (a troca pelo contato), Fôlego de Nadador (fôlego e natação).
+
+**Flashback** dá só o poder: os efeitos fixos entram; perícias e o que depende de
+uma escolha da origem (o +2 da Mutação, o companheiro) não vêm.
+
 ### O poder da origem na aba Habilidades (v2.22)
 
 O poder da origem da ficha aparece sozinho na aba Habilidades, como os outros
@@ -263,7 +337,7 @@ Nos livros há oito abas, e a da classe da ficha abre primeiro:
 | aba | o que mostra |
 |---|---|
 | Mundano, Sobrevivente | Empenho, as trilhas por estágio, Cicatrizado e o treinamento que vira agente |
-| Origens | o poder de cada origem do catálogo (hoje, as 26 do livro básico), com a origem ao lado; a busca acha pelo nome do poder e pelo da origem. Trazer um deles copia o texto e **não** troca a origem nem concede o benefício — a janela pede confirmação dizendo isso |
+| Origens | o poder de cada origem do catálogo (as 26 do livro básico e as 20 do SAH, em duas seções), com a origem ao lado; a busca acha pelo nome do poder e pelo da origem. Trazer um deles copia o texto e **não** troca a origem nem concede o benefício — a janela pede confirmação dizendo isso |
 | Combatente, Especialista, Ocultista | habilidades de classe (com os estágios por NEX), poderes da classe e uma seção por trilha, livro básico e SAH |
 | Poderes gerais | os poderes gerais do SAH e os quatro poderes de classe que o SAH tornou gerais |
 | Poderes paranormais | um grupo por elemento, mais os sem elemento fixo |

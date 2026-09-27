@@ -70,6 +70,30 @@
 
   var CHANGELOG = [
     {
+      versao: "2.23.0",
+      codinome: "PROVENIÊNCIA",
+      data: "27/09/2026",
+      mudancas: {
+        "Adicionado": [
+          "As 20 origens do Sobrevivendo ao Horror (p. 7-13), com poder, perícias, fonte e página, para qualquer classe e sem exigir regra opcional: Amigo dos Animais, Astronauta, Chef do Outro Lado, Colegial, Cosplayer, Diplomata, Explorador, Experimento, Fanático por Criaturas, Fotógrafo, Inventor Paranormal, Jovem Místico, Legista do Turno da Noite, Mateiro, Mergulhador, Motorista, Nerd Entusiasta, Profetizado, Psicólogo e Repórter Investigativo. As da comunidade são oficiais, com o crédito guardado.",
+          "Efeitos na conta: +2 em Diplomacia (Diplomata), resistência a dano 2, +2 na perícia escolhida e –1 dado em Diplomacia (Experimento), +5 PV (Mergulhador), +2 em Vontade (Profetizado) e o +2 do companheiro animal enquanto ele estiver vivo.",
+          "No resultado do teste, por clique: os “gaste 2 PE para +5” das origens, o rolar de novo do Mateiro e as trocas de perícia numa situação (Terapia, Encontrar a Verdade, disfarce com Artes). O mostrador de rolagens aceita várias ações.",
+          "Controles no cartão da origem, com estado gravado: morte do companheiro animal, usos de Acostumado ao Extremo na cena, ingrediente, preparo e refeição do Chef, Poder da Amizade e o melhor amigo, cosplay, criatura identificada, o invento (DT por ativação, enguiço e manutenção), os números da sorte e os PE temporários de Luta ou Fuga.",
+          "Trocar a origem de uma ficha existente, no modo edição, com as perícias que saem, as já treinadas e as substitutas antes de confirmar.",
+          "Profissão com especialidade: “Profissão (cozinheiro)”, “(engenheiro)”, “(psicólogo)” vêm da origem, e outras podem ser anotadas; o treinamento vale para as listadas, não para todas.",
+        ],
+        "Alterado": [
+          "A criação guiada separa as origens por livro, busca pela origem e pelo poder e trata a perícia fixa e a escolhida juntas (Profetizado). O poder da origem que pede decisão aparece em “Falta decidir”, com as opções liberadas pelo marco de NEX.",
+          "A aba Origens da biblioteca lista as 46 origens, em duas seções.",
+        ],
+        "Técnico": [
+          "schemaVersion 12 → 13, sem conversão: o bloco de Ordem ganhou `periciasDaOrigem`, `especialidades` e `estadoDasOrigens`. Só o site mudou.",
+          "Flashback dá só o poder: os efeitos fixos da origem, sem as perícias e sem o que depende de uma escolha dela. O ritual do invento fica preso ao invento, sem virar ritual aprendido.",
+          "Testes: 2190 no modelo (46 novas sobre as origens) e verificação no navegador, no computador e no celular.",
+        ],
+      },
+    },
+    {
       versao: "2.22.0",
       codinome: "PROCEDÊNCIA",
       data: "27/09/2026",

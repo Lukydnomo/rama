@@ -88,11 +88,20 @@
         ? el("div.rolagem__notas", {}, o.notas.map(function (n) { return el("p.rolagem__nota", { texto: n }); }))
         : null,
 
-      o.acao ? el("button.r-botao.r-botao--mini.rolagem__acao", {
-        type: "button",
-        texto: o.acao.rotulo,
-        onclick: function () { o.acao.aoClicar(cartao); },
-      }) : null,
+      /* Uma ou várias ações depois do dado (rolar dano, Empenho, um
+         poder de origem): cada uma é um botão, e quem a define decide se
+         ela se desliga depois de usada. */
+      (o.acoes || (o.acao ? [o.acao] : [])).length
+        ? el("div.rolagem__acoes", {}, (o.acoes || [o.acao]).filter(Boolean).map(function (ac) {
+            var botao = el("button.r-botao.r-botao--mini.rolagem__acao", {
+              type: "button",
+              texto: ac.rotulo,
+              title: ac.dica || "",
+              onclick: function () { ac.aoClicar(cartao, botao); },
+            });
+            return botao;
+          }))
+        : null,
 
       el("button.r-icone.rolagem__acao", {
         type: "button",

@@ -609,7 +609,7 @@
 
     { chave: "chef", nome: "Chef", pagina: 17,
       pericias: ["fortitude", "profissao"],
-      periciasObservacao: "Profissão (cozinheiro).",
+      periciasObservacao: "Profissão (cozinheiro).", especialidades: { profissao: "cozinheiro" },
       poder: "Ingrediente Secreto", automacao: "informacao",
       resumo: "No interlúdio, cozinha um prato especial: você e quem se alimentar recebem o benefício de dois pratos." },
 
@@ -728,6 +728,173 @@
       poder: "Cicatrizes Psicológicas", automacao: "calculo",
       efeito: { tipo: "sanPorNex", valor: 1 },
       resumo: "+1 de Sanidade para cada 5% de NEX." },
+
+    /* -----------------------------------------------------------------
+       SOBREVIVENDO AO HORROR v1.2, p. 7-13 (Tabela 1.1, p. 12)
+       -----------------------------------------------------------------
+       Material oficial — as 10 "origens da comunidade" também: o livro
+       as publica, com o crédito de quem criou (`comunidade`).
+
+       Campos novos, todos opcionais, lidos pela criação, pela
+       biblioteca, pelo cartão da habilidade e pela camada de cálculo:
+         especialidades   a especialidade da perícia concedida
+                          ({ profissao: "cozinheiro" })
+         efeitos          efeitos permanentes objetivos, sem escolha
+         escolhas         o que o poder pede para decidir (vaga
+                          b.origem.<chave> na Progressão); `nexMinimo`
+                          adia uma opção até o marco
+         efeitosEscolha   efeitos que dependem do que foi escolhido
+         acoesNoTeste     "gaste PE para…" oferecido no resultado de um
+                          teste daquelas perícias, sempre por clique
+         substituicoes    usar uma perícia no lugar de outra, numa
+                          situação: oferecido no resultado da outra
+         controles        o cartão da origem ganha botões próprios
+                          (js/paginas/ficha-origens.js)
+       ----------------------------------------------------------------- */
+
+    { chave: "amigoDosAnimais", nome: "Amigo dos Animais", fonte: SAH, pagina: 7, comunidade: "Gabriela “Louie” · Arsenal Paranormal",
+      pericias: ["adestramento", "percepcao"],
+      poder: "Companheiro Animal", automacao: "parcial", controles: true,
+      resumo: "Entende intenções e sentimentos de animais e pode usar Adestramento para mudar a atitude deles. Tem um melhor amigo animal: um aliado que dá +2 numa perícia à sua escolha (aprovada pelo mestre). Em NEX 35%, ele também dá o bônus de um tipo de aliado à sua escolha; em NEX 70%, a habilidade desse tipo. Se ele morrer, você perde 10 de Sanidade permanente e fica perturbado até o fim da cena.",
+      escolhas: [
+        { chave: "pericia", tipo: "pericia", rotulo: "Perícia do bônus do companheiro (+2, aprovada pelo mestre)" },
+        { chave: "companheiro", tipo: "texto", opcional: true, rotulo: "Nome e espécie do companheiro", limite: 80 },
+        { chave: "aliado", tipo: "texto", nexMinimo: 35, rotulo: "Tipo de aliado do companheiro (NEX 35%, aprovado pelo mestre)", dica: "o tipo de aliado da regra de aliados", limite: 60 },
+      ],
+      efeitosEscolha: [{ tipo: "bonusPericia", opcao: "pericia", valor: 2, seNao: "companheiroPerdido" }],
+      nota: "O +2 do companheiro entra na conta enquanto ele estiver vivo. O bônus e a habilidade do tipo de aliado (NEX 35% e 70%) são aplicados pela mesa." },
+
+    { chave: "astronauta", nome: "Astronauta", fonte: SAH, pagina: 8,
+      pericias: ["ciencias", "fortitude"],
+      poder: "Acostumado ao Extremo", automacao: "parcial", controles: true,
+      resumo: "Ao sofrer dano de fogo, de frio ou mental, gaste 1 PE para reduzir esse dano em 5. A cada uso de novo na mesma cena, o custo aumenta em +1 PE.",
+      nota: "A ficha conta os usos da cena e cobra o custo certo; a redução é aplicada por você no dano." },
+
+    { chave: "chefDoOutroLado", nome: "Chef do Outro Lado", fonte: SAH, pagina: 8, comunidade: "Julie Sathler · Ateliê Secreto",
+      pericias: ["ocultismo", "profissao"], especialidades: { profissao: "cozinheiro" },
+      periciasObservacao: "Ocultismo e Profissão (cozinheiro).",
+      poder: "Fome do Outro Lado", automacao: "parcial", controles: true,
+      resumo: "Partes de criaturas do Outro Lado viram ingredientes (itens de categoria I, 0,5 espaço; pedidos no início da missão ou tirados de criaturas derrotadas — uma por criatura Pequena ou maior). No interlúdio, 1 ingrediente e um teste de Profissão (cozinheiro) DT 15 + 1 dado, oculto pelo mestre, preparam um prato: se passou, RD 10 contra o dano do elemento da criatura; se não, vulnerabilidade a ele, até o fim da próxima cena. Cada refeição custa 1 de Sanidade permanente e, com NEX & Experiência, cada parte de criatura diferente dá +3% de NEX.",
+      nota: "Ingrediente, preparo, prato e refeição são passos separados, cada um por clique. O resultado do teste fica com o mestre." },
+
+    { chave: "colegial", nome: "Colegial", fonte: SAH, pagina: 9,
+      pericias: ["atualidades", "tecnologia"],
+      poder: "Poder da Amizade", automacao: "parcial", controles: true,
+      resumo: "Escolha um personagem como melhor amigo. Em alcance médio dele, podendo ao menos trocar olhares, você recebe +2 em todos os testes de perícia. Se ele morrer, seu total de PE cai 1 para cada 5% de NEX até o fim da missão; na missão seguinte você pode escolher outro.",
+      escolhas: [{ chave: "amigo", tipo: "texto", rotulo: "Melhor amigo (personagem)", limite: 80 }],
+      nota: "O +2 só vale com o amigo por perto: um botão o ativa como efeito, e ele sai quando você encerra." },
+
+    { chave: "cosplayer", nome: "Cosplayer", fonte: SAH, pagina: 9, comunidade: "Rafael “Damnu” e Victor Moda · Toca dos Monstros",
+      pericias: ["artes", "vontade"],
+      poder: "Não É Fantasia, É Cosplay!", automacao: "parcial", controles: true,
+      resumo: "Faz testes de disfarce com Artes em vez de Enganação. Usando um cosplay relacionado ao teste, recebe +2 nele (vestido de um gato agente secreto, +2 para ser furtivo e se equilibrar).",
+      substituicoes: [{ de: "enganacao", para: "artes", rotulo: "Disfarce: usar Artes", condicao: "Só em testes de disfarce." }],
+      nota: "O +2 do cosplay entra como efeito, nas perícias que você indicar, enquanto estiver com a fantasia." },
+
+    { chave: "diplomata", nome: "Diplomata", fonte: SAH, pagina: 9,
+      pericias: ["atualidades", "diplomacia"],
+      poder: "Conexões", automacao: "parcial",
+      resumo: "+2 em Diplomacia. Podendo contatar um NPC capaz de ajudar, gaste 10 minutos e 2 PE para trocar um teste de perícia ligada ao conhecimento dele, feito até o fim da cena, por um teste de Diplomacia.",
+      efeitos: [{ tipo: "bonusPericia", pericias: ["diplomacia"], valor: 2 }],
+      nota: "O +2 em Diplomacia entra na conta. A troca pelo contato é decidida na cena." },
+
+    { chave: "explorador", nome: "Explorador", fonte: SAH, pagina: 9, comunidade: "Guilherme “Guirassol” e João Vitor “Vapor” · Arquivo do Medo",
+      pericias: ["fortitude", "sobrevivencia"],
+      poder: "Manual do Sobrevivente", automacao: "parcial",
+      resumo: "Para resistir a armadilhas, clima, doenças, fome, sede, fumaça, sono, sufocamento ou veneno (inclusive paranormais), gaste 2 PE para receber +5 no teste. No interlúdio, sono precário conta como normal.",
+      acoesNoTeste: [{ id: "manual", rotulo: "Manual do Sobrevivente", pericias: ["fortitude", "reflexos", "vontade"], custo: 2, tipo: "bonus", valor: 5,
+        condicao: "Só para resistir a armadilhas, clima, doenças, fome, sede, fumaça, sono, sufocamento ou veneno." }] },
+
+    { chave: "experimento", nome: "Experimento", fonte: SAH, pagina: 9,
+      pericias: ["atletismo", "fortitude"],
+      poder: "Mutação", automacao: "calculo",
+      resumo: "Resistência a dano 2 e +2 numa perícia à sua escolha originalmente baseada em Força, Agilidade ou Vigor. Em troca, sofre –1 dado em Diplomacia.",
+      efeitos: [{ tipo: "resistenciaDano", dano: "geral", valor: 2 }, { tipo: "dadosPericia", pericias: ["diplomacia"], valor: -1 }],
+      escolhas: [{ chave: "pericia", tipo: "pericia", atributosOriginais: ["for", "agi", "vig"], rotulo: "Perícia da Mutação (+2; originalmente de Força, Agilidade ou Vigor)" }],
+      efeitosEscolha: [{ tipo: "bonusPericia", opcao: "pericia", valor: 2 }] },
+
+    { chave: "fanaticoPorCriaturas", nome: "Fanático por Criaturas", fonte: SAH, pagina: 10, comunidade: "Everson “Akkiel” e Yasmim Furtado · Grimório Paranormal",
+      pericias: ["investigacao", "ocultismo"],
+      poder: "Conhecimento Oculto", automacao: "parcial", controles: true,
+      resumo: "Faz testes de Ocultismo para identificar criatura a partir de imagens, rastros, indícios ou pistas que o mestre aceite: passando, descobre as características dela, mas não a identidade. Passando num teste de Ocultismo para identificar criatura, recebe +2 em todos os testes contra ela até o fim da missão.",
+      nota: "O +2 vale só contra a criatura identificada: a ficha registra a criatura e o prazo, e o bônus é somado no teste contra ela." },
+
+    { chave: "fotografo", nome: "Fotógrafo", fonte: SAH, pagina: 10,
+      pericias: ["artes", "percepcao"],
+      poder: "Através da Lente", automacao: "parcial",
+      resumo: "Em teste de Investigação ou Percepção para achar pistas olhando por uma câmera ou analisando fotos, gaste 2 PE para receber +5. Quem se move olhando pela lente anda metade do deslocamento.",
+      acoesNoTeste: [{ id: "lente", rotulo: "Através da Lente", pericias: ["investigacao", "percepcao"], custo: 2, tipo: "bonus", valor: 5,
+        condicao: "Só procurando pistas por uma câmera ou em fotos." }] },
+
+    { chave: "inventorParanormal", nome: "Inventor Paranormal", fonte: SAH, pagina: 10, comunidade: "Bruno Sargi · C.R.I.S.",
+      pericias: ["profissao", "vontade"], especialidades: { profissao: "engenheiro" },
+      periciasObservacao: "Profissão (engenheiro) e Vontade.",
+      poder: "Invenção Paranormal", automacao: "parcial", controles: true,
+      resumo: "Escolha um ritual de 1º círculo: você tem um invento paranormal (item de categoria 0, 1 espaço) que executa o efeito dele. Ativar custa uma ação padrão (ou a do ritual, se maior) e um teste de Profissão (engenheiro) DT 15, +5 por ativação na mesma missão: passando, é como conjurar a forma básica sem pagar PE; falhando, enguiça. Uma ação de interlúdio conserta e volta a DT a 15. O ritual pode ser trocado no início de cada missão.",
+      escolhas: [{ chave: "ritual", tipo: "ritualCatalogo", circulo: 1, rotulo: "Ritual do invento (1º círculo)" }],
+      nota: "O ritual do invento NÃO é um ritual aprendido: fica preso ao invento, não entra na aba Rituais e não conta em limite nenhum." },
+
+    { chave: "jovemMistico", nome: "Jovem Místico", fonte: SAH, pagina: 11, comunidade: "Ramon “PlayRay” e João “Portill” · A Passagem",
+      pericias: ["ocultismo", "religiao"],
+      poder: "A Culpa é das Estrelas", automacao: "parcial", controles: true,
+      resumo: "Escolha um número da sorte de 1 a 6. No início de cada cena, gaste 1 PE e role 1d6: se sair um número da sorte, +2 em testes de perícia até o fim da cena; se não, na próxima vez escolha mais um número. Quando rolar um número da sorte, a quantidade volta a 1.",
+      escolhas: [{ chave: "numero", tipo: "escolha", valores: ["1", "2", "3", "4", "5", "6"], rotulo: "Número da sorte" }],
+      nota: "Os números acumulados ficam gravados na ficha; recarregar não os reinicia." },
+
+    { chave: "legistaDoTurnoDaNoite", nome: "Legista do Turno da Noite", fonte: SAH, pagina: 11, comunidade: "Ivo “Eddu” e Ana Beatriz “Bix” · Arquivos Confidenciais",
+      pericias: ["ciencias", "medicina"],
+      poder: "Luto Habitual", automacao: "parcial",
+      resumo: "Sofre metade do dano mental de cenas ligadas à rotina de um legista (uma morte, um cadáver, órgãos humanos — a critério do mestre). Em teste de Medicina para primeiros socorros ou necropsia, gaste 2 PE para receber +5.",
+      acoesNoTeste: [{ id: "legista", rotulo: "Luto Habitual", pericias: ["medicina"], custo: 2, tipo: "bonus", valor: 5,
+        condicao: "Só em primeiros socorros ou necropsia." }] },
+
+    { chave: "mateiro", nome: "Mateiro", fonte: SAH, pagina: 12,
+      pericias: ["percepcao", "sobrevivencia"],
+      poder: "Mapa Celeste", automacao: "parcial",
+      resumo: "Vendo o céu, sabe os pontos cardeais e chega sem se perder a qualquer lugar em que já esteve. Em teste de Sobrevivência, gaste 2 PE para rolar de novo e ficar com o melhor. No interlúdio, sono precário conta como normal.",
+      acoesNoTeste: [{ id: "mapa", rotulo: "Mapa Celeste", pericias: ["sobrevivencia"], custo: 2, tipo: "rerrolar", condicao: "" }] },
+
+    { chave: "mergulhador", nome: "Mergulhador", fonte: SAH, pagina: 12,
+      pericias: ["atletismo", "fortitude"],
+      poder: "Fôlego de Nadador", automacao: "parcial",
+      resumo: "+5 PV e prende a respiração por rodadas iguais ao dobro do Vigor. Passando em Atletismo para natação, avança o deslocamento normal (não a metade).",
+      efeitos: [{ tipo: "pvFixo", valor: 5 }],
+      nota: "Os +5 PV entram na conta. Fôlego e natação são aplicados na cena." },
+
+    { chave: "motorista", nome: "Motorista", fonte: SAH, pagina: 13,
+      pericias: ["pilotagem", "reflexos"],
+      poder: "Mãos no Volante", automacao: "parcial",
+      resumo: "Sem penalidade em ataques por estar num veículo em movimento. Pilotando, em teste de Pilotagem ou de resistência, gaste 2 PE para receber +5.",
+      acoesNoTeste: [{ id: "volante", rotulo: "Mãos no Volante", pericias: ["pilotagem", "fortitude", "reflexos", "vontade"], custo: 2, tipo: "bonus", valor: 5,
+        condicao: "Só pilotando." }] },
+
+    { chave: "nerdEntusiasta", nome: "Nerd Entusiasta", fonte: SAH, pagina: 13, comunidade: "Daniel Dill e Lukas Castanho · Remate Paranormal",
+      pericias: ["ciencias", "tecnologia"],
+      poder: "O Inteligentão", automacao: "informacao",
+      resumo: "O bônus da ação de interlúdio ler aumenta em +1 dado (de +1d6 para +2d6)." },
+
+    { chave: "profetizado", nome: "Profetizado", fonte: SAH, pagina: 13,
+      pericias: ["vontade"], periciasAEscolher: 1,
+      periciasObservacao: "Vontade e mais uma à sua escolha, relacionada à sua premonição (a mesa confere).",
+      poder: "Luta ou Fuga", automacao: "parcial", controles: true,
+      resumo: "Você sabe como vai morrer: uma premonição, clara ou enigmática, da sua cena de morte (o mestre pode guardar detalhes em segredo). +2 em Vontade. Quando surge uma referência à premonição, recebe também +2 PE temporários até o fim da cena.",
+      efeitos: [{ tipo: "bonusPericia", pericias: ["vontade"], valor: 2 }],
+      escolhas: [{ chave: "premonicao", tipo: "texto", rotulo: "O que você sabe da premonição", dica: "só o que o personagem premuniu — detalhes secretos ficam com o mestre", limite: 200 }],
+      nota: "O +2 em Vontade entra na conta. Os PE temporários chegam por um botão, quando a mesa reconhece a referência, e saem com a cena." },
+
+    { chave: "psicologo", nome: "Psicólogo", fonte: SAH, pagina: 13, comunidade: "Luiz Giovane e Matheus Santana · Missões Ordem",
+      pericias: ["intuicao", "profissao"], especialidades: { profissao: "psicólogo" },
+      periciasObservacao: "Intuição e Profissão (psicólogo).",
+      poder: "Terapia", automacao: "parcial", controles: true,
+      resumo: "Usa Profissão (psicólogo) como Diplomacia. Uma vez por rodada, quando você ou um aliado em alcance curto falha num teste de resistência contra efeito que causa dano mental, gaste 2 PE para fazer um teste de Profissão (psicólogo) e usar esse resultado no lugar.",
+      substituicoes: [{ de: "diplomacia", para: "profissao", rotulo: "Terapia: usar Profissão (psicólogo)", condicao: "" }] },
+
+    { chave: "reporterInvestigativo", nome: "Repórter Investigativo", fonte: SAH, pagina: 13,
+      pericias: ["atualidades", "investigacao"],
+      poder: "Encontrar a Verdade", automacao: "parcial",
+      resumo: "Usa Investigação no lugar de Diplomacia para persuadir e mudar atitude. Em teste de Investigação, gaste 2 PE para receber +5.",
+      substituicoes: [{ de: "diplomacia", para: "investigacao", rotulo: "Encontrar a Verdade: usar Investigação", condicao: "Só para persuadir e mudar atitude." }],
+      acoesNoTeste: [{ id: "verdade", rotulo: "Encontrar a Verdade", pericias: ["investigacao"], custo: 2, tipo: "bonus", valor: 5, condicao: "" }] },
   ];
 
   /* =================================================================
@@ -864,6 +1031,35 @@
     return TRILHAS_SOBREVIVENTE.filter(function (t) { return t.chave === chave; })[0] || null;
   }
 
+  /* Os efeitos permanentes de uma origem, na forma de lista (as do livro
+     básico usam `efeito`, uma só). */
+  function efeitosDaOrigem(org) {
+    if (!org) return [];
+    if (Array.isArray(org.efeitos)) return org.efeitos;
+    return org.efeito ? [org.efeito] : [];
+  }
+
+  /* As opções que o poder da origem pede, até o marco alcançado. */
+  function escolhasDaOrigem(org, nexEquivalente) {
+    if (!org) return [];
+    var lista = Array.isArray(org.escolhas) ? org.escolhas : (org.escolha ? [org.escolha] : []);
+    return lista.filter(function (op) { return !op.nexMinimo || (nexEquivalente || 0) >= op.nexMinimo; });
+  }
+
+  function efeitosDaEscolhaDaOrigem(org) {
+    if (!org) return [];
+    if (Array.isArray(org.efeitosEscolha)) return org.efeitosEscolha;
+    return org.efeitoEscolha ? [org.efeitoEscolha] : [];
+  }
+
+  /* "Profissão (cozinheiro)": o nome da perícia com a especialidade que
+     a origem dá. */
+  function nomeComEspecialidade(org, chavePericia) {
+    var pe = pericia(chavePericia);
+    var esp = org && org.especialidades ? org.especialidades[chavePericia] : "";
+    return (pe ? pe.nome : chavePericia) + (esp ? " (" + esp + ")" : "");
+  }
+
   function trilhasDaClasse(chaveClasse) {
     return TRILHAS.filter(function (t) { return t.classe === chaveClasse; });
   }
@@ -916,6 +1112,10 @@
     trilhasDaClasse: trilhasDaClasse,
     progressaoDaClasse: progressaoDaClasse,
     perfilDaClasse: perfilDaClasse,
+    efeitosDaOrigem: efeitosDaOrigem,
+    escolhasDaOrigem: escolhasDaOrigem,
+    efeitosDaEscolhaDaOrigem: efeitosDaEscolhaDaOrigem,
+    nomeComEspecialidade: nomeComEspecialidade,
     ehAgente: ehAgente,
     classesDeAgente: classesDeAgente,
     trilhaSobrevivente: trilhaSobrevivente,

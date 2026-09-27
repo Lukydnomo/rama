@@ -79,6 +79,10 @@
      (Cicatrizado). Sem conversão: uma ficha 11 abre igual. Uma aba
      antiga apagaria a classe nova ao gravar — com o schema maior, ela
      recusa a ficha.
+     12 → 13: as origens do Sobrevivendo ao Horror (v2.23). O bloco
+     `ordem` ganhou `periciasDaOrigem`, `especialidades` (de Profissão) e
+     `estadoDasOrigens` (números da sorte, invento, refeições…). Sem
+     conversão: uma ficha 12 abre igual.
 
      Nenhuma das subidas exige migração: normalizarFicha() cria o que
      falta, vazio, e não toca no que existe. Um ritual gravado na 2 abre
@@ -89,7 +93,7 @@
      os campos novos e os descartaria ao gravar — com o schema maior ela
      recusa abrir a ficha e pede para recarregar.
      Ver docs/CHARACTER_SCHEMA.md. */
-  var VERSAO_SCHEMA = 12;
+  var VERSAO_SCHEMA = 13;
 
   var NATUREZA = { INFORMACAO: "informacao", ROLAVEL: "rolavel", DEPENDENTE: "dependente" };
 

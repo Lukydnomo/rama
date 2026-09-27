@@ -360,7 +360,11 @@
     switch (op.tipo) {
       case "pericia": {
         var modo = op.modo || (sessao.entradaAtual && sessao.entradaAtual.chave === "focoEmPericia" ? "treinada" : "livre");
-        var cands = E.candidatosPericia(ordem, vagaId, contexto, modo, { entre: op.entre, exceto: op.exceto });
+        /* "Originalmente baseada em…": o atributo do catálogo. */
+        var entre = op.entre || (op.atributosOriginais
+          ? C.PERICIAS.filter(function (pe) { return op.atributosOriginais.indexOf(pe.atributo) >= 0; }).map(function (pe) { return pe.chave; })
+          : undefined);
+        var cands = E.candidatosPericia(ordem, vagaId, contexto, modo, { entre: entre, exceto: op.exceto });
         return gradeDePericias(cands, atual ? [atual] : [], 1, function (k) {
           valores[op.chave] = atual === k ? "" : k;
           sessao.pintar();
@@ -415,6 +419,40 @@
         return botoesDeEscolha((op.valores || []).map(function (v) {
           return { valor: v, rotulo: v.charAt(0).toUpperCase() + v.slice(1) };
         }), atual, function (v) { valores[op.chave] = v; sessao.pintar(); });
+
+      /* Um ritual do catálogo que NÃO é aprendido (o invento do Inventor
+         Paranormal): a lista do catálogo, só daquele círculo. Escolher
+         aqui não põe nada na aba Rituais. */
+      case "ritualCatalogo": {
+        var caixa = el("div.pilha--curta", { class: "pilha" }, [el("p.t-mini", { texto: "Carregando o catálogo de rituais…" })]);
+        var RTc = global.RAMAOrdemRituais;
+        if (!RTc) return el("p.t-mini.t-aviso", { texto: "O catálogo de rituais não está disponível nesta página." });
+        RTc.carregar().then(function (cat) {
+          var busca = "";
+          var lista = el("div.escolha-lista-ritual");
+          function pintarLista() {
+            var itens = RTc.filtrar(cat, { circulo: op.circulo || "", busca: busca });
+            U.trocar(lista, botoesDeEscolha(itens.map(function (e) {
+              return { valor: e.id, rotulo: e.nome + " (" + RTc.nomeDoElemento(e.elemento) + ")" };
+            }), atual && atual.catalogo, function (id) {
+              var e = itens.filter(function (x) { return x.id === id; })[0];
+              valores[op.chave] = e ? { catalogo: e.id, nome: e.nome, circulo: e.circulo, elemento: e.elemento } : null;
+              sessao.pintar();
+            }));
+          }
+          var campoBusca = el("input.r-entrada", { type: "search", placeholder: "Buscar ritual", "aria-label": "Buscar ritual do invento",
+            oninput: function (ev) { busca = ev.target.value; pintarLista(); } });
+          pintarLista();
+          U.trocar(caixa, [
+            el("p.t-mini", { texto: "O ritual fica preso ao invento: não é aprendido, não vai para a aba Rituais e não conta em limite de rituais." }),
+            atual && atual.nome ? el("p.t-mini", { texto: "Escolhido: " + atual.nome + "." }) : null,
+            campoBusca, lista,
+          ]);
+        }, function () {
+          U.trocar(caixa, [el("p.t-mini.t-erro", { texto: "Não foi possível carregar o catálogo de rituais." })]);
+        });
+        return caixa;
+      }
 
       case "texto": {
         var campo = UI.campo({ rotulo: op.rotulo, valor: atual || "", limite: op.limite || 80, dica: op.dica });
@@ -933,9 +971,14 @@
 
         case "poderOrigem": {
           var org = C.origem(vaga.origem);
-          if (org && org.escolha) {
-            partes.push(el("p.criacao-fonte", { texto: C.referencia(org) }));
-            partes.push(painelDeOpcoes(sessao, [org.escolha], candidato.opcoes, "raiz", 0));
+          var esquemaOrg = C.escolhasDaOrigem(org, global.RAMAOrdemRegras.trilho(ordem).nexEquivalente);
+          if (org && esquemaOrg.length) {
+            partes.push(el("div.criacao-opcao", {}, [
+              el("span.criacao-opcao__nome", { texto: org.poder + " · " + org.nome }),
+              org.nota ? el("span.criacao-opcao__fonte", { texto: org.nota }) : null,
+              el("span.criacao-opcao__fonte", { texto: C.referencia(org) }),
+            ]));
+            partes.push(painelDeOpcoes(sessao, esquemaOrg, candidato.opcoes, "raiz", 0));
           }
           break;
         }

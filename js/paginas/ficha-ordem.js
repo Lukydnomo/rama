@@ -405,8 +405,14 @@
         return saida.concat([el("dt", { texto: par[0] }), el("dd", { texto: par[1] })]);
       }, [])),
       editarCampanha ? global.RAMASecaoGeral.campoCampanha(ctx) : null,
-      /* O poder da origem mora na aba Habilidades (v2.22), com os outros
-         cartões das regras. */
+      /* Trocar a origem (v2.23): no modo edição, com as perícias mostradas
+         antes de confirmar. O poder mora na aba Habilidades (v2.22). */
+      ctx.emEdicao() && global.RAMASecaoOrigens
+        ? el("div.faixa", {}, [el("button.r-botao.r-botao--mini", {
+            type: "button", texto: origem ? "Trocar origem" : "Escolher origem", dataset: { foco: "trocar-origem" },
+            onclick: function () { global.RAMASecaoOrigens.trocarOrigem(ctx); },
+          })])
+        : null,
     ]));
   }
 
@@ -580,9 +586,11 @@
       aquisicoes.push({
         id: "orig|" + orgDaFicha.chave,
         chave: "origem:" + orgDaFicha.chave,
+        origemChave: orgDaFicha.chave,
         nome: orgDaFicha.poder,
         estagio: textoEscolha,
         resumo: orgDaFicha.resumo,
+        nota: orgDaFicha.nota || "",
         origem: "Origem · " + orgDaFicha.nome,
         automacao: orgDaFicha.automacao,
         referencia: C.referencia(orgDaFicha),
@@ -807,6 +815,8 @@
         aq.afinidade ? el("p.t-mini", { texto: "Com afinidade: " + aq.afinidade }) : null,
         linhaDeAutomacao(aq, null),
         aq.nota ? el("p.t-mini", { texto: aq.nota }) : null,
+        /* O poder da origem que se usa: os controles dele. */
+        aq.origemChave && global.RAMASecaoOrigens ? global.RAMASecaoOrigens.controles(ctx, C.origem(aq.origemChave)) : null,
       ].concat(avisos, [
         aq.referencia ? el("p.criacao-fonte", { texto: aq.referencia }) : null,
       ]);
@@ -2192,6 +2202,7 @@
                 texto: "No modo edição: o seletor de grau muda o grau da ficha (o da criação) — graus ganhos na progressão somam por cima. Trocar o atributo muda os dados da rolagem, não o grau nem o bônus. O extra é um bônus fixo desta perícia.",
               })
             : null,
+          campoDeEspecialidades(ctx, o, edicao),
         ])),
       ]);
     },
@@ -2225,8 +2236,35 @@
     });
   }
 
+  /* As especialidades de Profissão: a da origem vem sozinha; as outras
+     (de um poder, da mesa) ficam anotadas aqui, separadas por vírgula. */
+  function campoDeEspecialidades(ctx, o, edicao) {
+    var lista = R.especialidadesDeProfissao ? R.especialidadesDeProfissao(o) : [];
+    var texto = lista.length
+      ? "Profissão: treinamento vale para " + lista.map(function (x) { return x.nome + " (" + x.fonte.toLowerCase() + ")"; }).join(", ") + " — não para todas as profissões."
+      : "";
+    if (!edicao) return texto ? el("p.t-mini", { texto: texto }) : null;
+    return el("div.pilha--curta", { class: "pilha" }, [
+      texto ? el("p.t-mini", { texto: texto }) : null,
+      UI.campo({
+        rotulo: "Outras especialidades de Profissão (separadas por vírgula)", valor: (o.especialidades || []).join(", "), limite: 200,
+        aoMudar: function (v) {
+          o.especialidades = String(v || "").split(",").map(function (x) { return x.trim().slice(0, 40); })
+            .filter(function (x, i, l) { return x && l.indexOf(x) === i; }).slice(0, 12);
+          aoMudarOrdem(ctx);
+        },
+      }),
+    ]);
+  }
+
   function linhaDePericia(ctx, o, p, bonusPronto, arrastar) {
     var edicao = ctx.emEdicao();
+    /* Profissão com as especialidades da ficha — "Profissão (cozinheiro)"
+       —, para ninguém ler o treinamento como valendo para todas. */
+    if (p.chave === "profissao" && R.especialidadesDeProfissao) {
+      var esp = R.especialidadesDeProfissao(o);
+      if (esp.length) p = Object.assign({}, p, { nome: "Profissão (" + esp.map(function (x) { return x.nome; }).join(", ") + ")" });
+    }
     var bonus = bonusPronto || R.bonusDePericia(o, p.chave, ctx.ficha.inventario);
     var dado = R.dadoDePericia(o, p.chave);
     var g = R.grauDaPericia(o, p.chave);
@@ -2412,7 +2450,7 @@
     global.RAMARolagens.mostrar(Object.assign(r, { tipo: "pericia", nome: p.nome }), {
       nome: p.nome,
       notas: notasDosDados(dados).concat(restr),
-      acao: acaoDeEmpenho(ctx, o, p, r),
+      acoes: [acaoDeEmpenho(ctx, o, p, r)].concat(global.RAMASecaoOrigens ? global.RAMASecaoOrigens.acoesNoTeste(ctx, o, p, r, dado, bonus, atributo) : []).filter(Boolean),
     });
   }
 
@@ -2427,7 +2465,7 @@
     var usado = false;
     return {
       rotulo: "Empenho: +2 (1 " + (R.usaDeterminacao(o) ? "PD" : "PE") + ")",
-      aoClicar: function (cartao) {
+      aoClicar: function (cartao, botaoUsado) {
         if (usado) return;
         var c = calculo(ctx);
         var qual = c.determinacao ? "pd" : "pe";
@@ -2440,7 +2478,7 @@
         o.recursos[qual] = gasto.valor;
         ctx.alterou();
         ctx.redesenhar();
-        var botao = cartao && cartao.querySelector(".rolagem__acao.r-botao");
+        var botao = botaoUsado || (cartao && cartao.querySelector(".rolagem__acao.r-botao"));
         if (botao) botao.disabled = true;
         var novo = Object.assign({}, r, {
           total: r.total + 2,
@@ -4064,6 +4102,16 @@
     var a = C.ATRIBUTOS.filter(function (x) { return x.chave === chave; })[0];
     return a ? a.sigla : chave;
   }
+
+  /* Rolar uma perícia pela chave, com o nome que o resultado mostra —
+     as trocas de perícia dos poderes de origem usam (ficha-origens.js). */
+  global.RAMAOrdemRolarPericia = function (ctx, chave, rotulo) {
+    var o = ordemDe(ctx);
+    var p = C.pericia(chave);
+    if (!p) return;
+    rolarPericia(ctx, o, Object.assign({}, p, { nome: rotulo || p.nome }), R.dadoDePericia(o, chave),
+      R.bonusDePericia(o, chave, ctx.ficha.inventario), R.atributoDaPericia(o, chave));
+  };
 
   global.RAMASecaoOrdemGeral = SecaoGeral;
   global.RAMASecaoOrdemPericias = SecaoPericias;

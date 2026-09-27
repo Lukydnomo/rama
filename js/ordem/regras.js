@@ -153,6 +153,14 @@
       /* Sacrifícios permanentes (Cicatrizado): cada um tira 1 do máximo
          para sempre, e aparece na conta com a origem. */
       sacrificios: [],
+      /* Origens (v2.23): as perícias que a origem deu (as fixas e as
+         escolhidas, já com as trocas por repetição), as especialidades
+         de Profissão da ficha e o estado dos poderes de origem que
+         guardam algo entre usos (números da sorte, invento, refeições…),
+         por origem. */
+      periciasDaOrigem: [],
+      especialidades: [],
+      estadoDasOrigens: {},
       classe: "",
       origem: "",
       trilha: "",
@@ -386,13 +394,13 @@
     var lista = [];
 
     var origem = C.origem(ficha.origem);
-    if (origem && origem.efeito) {
+    C.efeitosDaOrigem(origem).forEach(function (ef) {
       lista.push({
         fonte: origem.poder,
         detalhe: "Origem: " + origem.nome,
-        efeito: origem.efeito,
+        efeito: ef,
       });
-    }
+    });
 
     efeitosDaProgressao(ficha, inventario).forEach(function (ef) {
       lista.push({ fonte: ef.fonte, detalhe: ef.detalhe, efeito: ef });
@@ -604,6 +612,29 @@
         var perdido = c.total - Math.floor(c.total / 2);
         c.soma(metade[0].fonte, -perdido, metade[0].detalhe + " — metade da Sanidade da classe");
       }
+    }
+
+    /* Poderes de origem que mexem nos recursos (SAH p. 8-13), sempre a
+       partir de um registro feito por clique:
+         Poder da Amizade — o melhor amigo morreu: –1 PE por 5% de NEX até
+           o fim da missão (com NEX & Experiência, por nível);
+         Luta ou Fuga — +2 PE temporários até o fim da cena;
+         Fome do Outro Lado — cada refeição, –1 de Sanidade permanente
+           (com Jogando sem Sanidade, referência a Sanidade é ignorada). */
+    if (comoPe) {
+      var col = estadoDaOrigem(ficha, "colegial");
+      if (col && col.amigoPerdido && passos > 0) {
+        c.soma("Poder da Amizade · melhor amigo morreu", -passos, "–1 por 5% de NEX, até o fim da missão (SAH p. 9)");
+      }
+      var pro = estadoDaOrigem(ficha, "profetizado");
+      var cenaAtual = (ficha.condicoes && ficha.condicoes.cena && ficha.condicoes.cena.id) || "inicial";
+      if (pro && pro.peTemporarios && pro.cena && pro.cena === cenaAtual) {
+        c.soma("Luta ou Fuga · temporários", pro.peTemporarios, "até o fim da cena (SAH p. 13)");
+      }
+    }
+    if (qual === "san") {
+      var chef = estadoDaOrigem(ficha, "chefDoOutroLado");
+      if (chef && chef.refeicoes) c.soma("Fome do Outro Lado · refeições", -chef.refeicoes, "–1 de Sanidade permanente por refeição (SAH p. 8)");
     }
 
     /* Sacrifícios permanentes (Cicatrizado, SAH p. 31): cada um tira 1
@@ -1464,6 +1495,13 @@
       var t = Object.assign({ pericia: pe ? chave : "", atributo: atrib }, teste || {});
       somarEfeitos(c, EF().dadosNoTeste(ef.cond, ef.extra, t));
     }
+    /* Dados a mais ou a menos numa perícia, permanentes (Mutação, SAH
+       p. 9: –1 dado em Diplomacia). Não é bônus numérico. */
+    if (pe) {
+      efeitosDoTipo(ficha, "dadosPericia").forEach(function (m) {
+        if ((m.efeito.pericias || []).indexOf(chave) >= 0) c.soma(m.fonte, m.efeito.valor, m.detalhe);
+      });
+    }
     var expressao = EF() ? EF().expressaoDeDados(c.total) : (c.total <= 0 ? "-2d20" : c.total + "d20");
     return { expressao: expressao, quantos: c.total, parcelas: c.parcelas, base: valor };
   }
@@ -1674,7 +1712,7 @@
      RESISTÊNCIAS E PROFICIÊNCIAS
      ================================================================= */
 
-  var ROTULOS_DANO = { mental: "Dano mental", paranormal: "Dano paranormal" };
+  var ROTULOS_DANO = { mental: "Dano mental", paranormal: "Dano paranormal", geral: "Todos os tipos de dano" };
 
   function resistencias(ficha, inventario) {
     var dano = {};
@@ -1973,6 +2011,11 @@
       trajetoria: normalizarTrajetoria(b.trajetoria),
       sessao: normalizarSessao(b.sessao),
       sacrificios: normalizarSacrificios(b.sacrificios),
+      periciasDaOrigem: (Array.isArray(b.periciasDaOrigem) ? b.periciasDaOrigem : [])
+        .filter(function (k, i, l) { return typeof k === "string" && !!C.pericia(k) && l.indexOf(k) === i; }).slice(0, 6),
+      especialidades: (Array.isArray(b.especialidades) ? b.especialidades : [])
+        .map(function (x) { return String(x || "").trim().slice(0, 40); }).filter(function (x, i, l) { return x && l.indexOf(x) === i; }).slice(0, 12),
+      estadoDasOrigens: normalizarEstadoDasOrigens(b.estadoDasOrigens),
       classe: chaveConhecida(b.classe, C.CLASSES),
       origem: chaveConhecida(b.origem, C.ORIGENS),
       trilha: chaveConhecida(b.trilha, C.TRILHAS),
@@ -2303,6 +2346,65 @@
     }).filter(Boolean).slice(0, 60);
   }
 
+  /* O estado dos poderes de origem, por origem. Só campos conhecidos,
+     cada um no tipo e na faixa certos: é daqui que saem PE, Sanidade e
+     números da sorte. O de uma origem que a ficha não tem mais fica
+     guardado — volta se a origem voltar. */
+  var CAMPOS_DE_ESTADO = {
+    amigoDosAnimais: { companheiroPerdido: "bool" },
+    astronauta: { cena: "id", usos: "int" },
+    chefDoOutroLado: { refeicoes: "int", partes: "lista" },
+    colegial: { amigoPerdido: "bool" },
+    inventorParanormal: { ativacoes: "int", enguicado: "bool" },
+    jovemMistico: { numeros: "numeros", adicionar: "bool", cena: "id" },
+    profetizado: { peTemporarios: "int", cena: "id" },
+  };
+
+  function normalizarEstadoDasOrigens(bruto) {
+    var b = bruto && typeof bruto === "object" && !Array.isArray(bruto) ? bruto : {};
+    var saida = {};
+    Object.keys(CAMPOS_DE_ESTADO).forEach(function (org) {
+      var e = b[org] && typeof b[org] === "object" ? b[org] : null;
+      if (!e) return;
+      var campos = CAMPOS_DE_ESTADO[org];
+      var n = {};
+      Object.keys(campos).forEach(function (k) {
+        var v = e[k];
+        var tipo = campos[k];
+        if (tipo === "bool") n[k] = v === true;
+        else if (tipo === "int") n[k] = Math.max(0, Math.min(999, inteiro(v, 0)));
+        else if (tipo === "id") n[k] = ID_SIMPLES.test(String(v || "")) ? String(v) : "";
+        else if (tipo === "lista") n[k] = (Array.isArray(v) ? v : []).map(function (x) { return String(x || "").trim().slice(0, 60); }).filter(Boolean).slice(0, 60);
+        else if (tipo === "numeros") {
+          n[k] = (Array.isArray(v) ? v : []).map(function (x) { return inteiro(x, 0); })
+            .filter(function (x, i, l) { return x >= 1 && x <= 6 && l.indexOf(x) === i; }).slice(0, 6);
+        }
+      });
+      saida[org] = n;
+    });
+    return saida;
+  }
+
+  function estadoDaOrigem(ficha, chave) {
+    var e = ficha && ficha.estadoDasOrigens && ficha.estadoDasOrigens[chave];
+    return e && ficha.origem === chave ? e : null;
+  }
+
+  /* As especialidades de Profissão que a ficha tem: a da origem e as
+     anotadas à mão. Ser treinado em Profissão vale para ESTAS — a
+     ficha não dá todas as especialidades por ter a perícia. */
+  function especialidadesDeProfissao(ficha) {
+    var org = C.origem(ficha && ficha.origem);
+    var lista = [];
+    if (org && org.especialidades && org.especialidades.profissao) {
+      lista.push({ nome: org.especialidades.profissao, fonte: "Origem: " + org.nome });
+    }
+    (ficha && Array.isArray(ficha.especialidades) ? ficha.especialidades : []).forEach(function (x) {
+      if (!lista.some(function (y) { return String(y.nome).toLowerCase() === String(x).toLowerCase(); })) lista.push({ nome: x, fonte: "Anotada na ficha" });
+    });
+    return lista;
+  }
+
   function chaveConhecida(valor, lista) {
     var v = String(valor === undefined || valor === null ? "" : valor);
     var achou = lista.filter(function (x) { return x.chave === v; })[0];
@@ -2320,6 +2422,9 @@
     ESTAGIO_MAXIMO: ESTAGIO_MAXIMO,
     normalizarTrajetoria: normalizarTrajetoria,
     normalizarSacrificios: normalizarSacrificios,
+    normalizarEstadoDasOrigens: normalizarEstadoDasOrigens,
+    estadoDaOrigem: estadoDaOrigem,
+    especialidadesDeProfissao: especialidadesDeProfissao,
     exposicao: exposicao,
     separaNivelENex: separaNivelENex,
     nexValido: nexValido,

@@ -355,7 +355,7 @@
     }
 
     var origem = C.origem(ordem.origem);
-    if (origem && origem.escolha) {
+    if (origem && (origem.escolha || (Array.isArray(origem.escolhas) && origem.escolhas.length))) {
       lista.push(vaga("b.origem." + origem.chave, "poderOrigem", {
         degrau: 1,
         ordem: 100 + POSICAO.poderOrigem,
@@ -700,9 +700,17 @@
       case "transcenderExposicao":
         if (r.valor === "nao") return "Não transcendeu neste NEX";
         return "Transcender → " + descreverPoderAninhado(o.poder);
-      case "poderOrigem":
+      case "poderOrigem": {
         if (o.poder) return descreverPoderAninhado(o.poder);
-        return "";
+        var partes = [];
+        Object.keys(o).forEach(function (k) {
+          var v = o[k];
+          if (typeof v === "string" && C.pericia(v)) partes.push(nomeDaPericia(v));
+          else if (v && typeof v === "object" && v.nome) partes.push(v.nome);
+          else if (typeof v === "string" && v.trim()) partes.push(/^\d$/.test(v) ? "número " + v : v.trim());
+        });
+        return partes.join(" · ");
+      }
       case "rituais": {
         var nomes = rituaisDoRegistro(r).map(function (x) { return x.nome || x.id; });
         return nomes.length ? nomes.join(", ") : "";
@@ -1075,6 +1083,12 @@
           if (!C.pericia(valor)) { saida.problemas.push(op.rotulo + ": perícia desconhecida."); break; }
           if (op.entre && op.entre.indexOf(valor) < 0) saida.problemas.push(op.rotulo + ": escolha entre " + op.entre.map(nomeDaPericia).join(", ") + ".");
           if (op.exceto && op.exceto.indexOf(valor) >= 0) saida.problemas.push(op.rotulo + ": " + nomeDaPericia(valor) + " não pode ser escolhida aqui.");
+          /* Mutação: "originalmente baseada em Força, Agilidade ou Vigor"
+             — o atributo do CATÁLOGO, não o que a ficha trocou à mão. */
+          if (op.atributosOriginais && op.atributosOriginais.indexOf(C.pericia(valor).atributo) < 0) {
+            saida.problemas.push(op.rotulo + ": " + nomeDaPericia(valor) + " não é originalmente de " +
+              op.atributosOriginais.map(nomeDoAtributo).join(", ") + ".");
+          }
           /* "Se receber uma perícia que já havia recebido, escolha outra"
              (OPRPG p. 22). */
           if (op.modo === "treinar" && (percurso.graus[valor] || 0) >= 1) saida.problemas.push(op.rotulo + ": " + nomeDaPericia(valor) + " já é treinada — escolha outra.");
@@ -1240,6 +1254,16 @@
         case "escolha":
           if ((op.valores || []).indexOf(valor) < 0) saida.problemas.push(op.rotulo + ": opção inválida.");
           break;
+        /* Um ritual do catálogo que NÃO é aprendido: fica preso a quem o
+           usa (o invento do Inventor Paranormal, SAH p. 10). Não entra na
+           aba Rituais, não ocupa concessão e não conta em limite. */
+        case "ritualCatalogo": {
+          if (typeof valor !== "object" || !valor.catalogo) { saida.faltam.push(op.rotulo); break; }
+          if (op.circulo && Number(valor.circulo) !== op.circulo) {
+            saida.problemas.push(op.rotulo + ": " + (valor.nome || "o ritual") + " não é de " + op.circulo + "º círculo.");
+          }
+          break;
+        }
         case "origem":
           if (!C.origem(valor)) saida.problemas.push(op.rotulo + ": origem desconhecida.");
           else if (valor === ordem.origem) saida.problemas.push(op.rotulo + ": escolha uma origem que não seja a sua.");
@@ -1468,12 +1492,20 @@
 
       case "poderOrigem": {
         var org = C.origem(v.origem);
-        if (!org || !org.escolha) break;
-        var sub2 = avaliarOpcoes([org.escolha], o, percurso, etapa, ordem, contexto, 0);
+        /* As opções valem até o marco alcançado: o tipo de aliado do
+           companheiro animal só é pedido em NEX 35% (SAH p. 7). */
+        var esquema = C.escolhasDaOrigem(org, R().trilho(ordem).nexEquivalente);
+        if (!org || !esquema.length) break;
+        var sub2 = avaliarOpcoes(esquema, o, percurso, etapa, ordem, contexto, 0);
         saida.faltam = sub2.faltam;
         saida.problemas = sub2.problemas;
         saida.filhos = sub2.filhos;
-        if (org.efeitoEscolha) saida.filhos.push({ efeitoDeOrigem: org.efeitoEscolha, opcoes: o, origem: org.chave, nome: org.poder });
+        var estadoOrg = (ordem.estadoDasOrigens && ordem.estadoDasOrigens[org.chave]) || {};
+        C.efeitosDaEscolhaDaOrigem(org).forEach(function (ef) {
+          /* "Se ele morrer…": o efeito some enquanto o registro disser. */
+          if (ef.seNao && estadoOrg[ef.seNao]) return;
+          saida.filhos.push({ efeitoDeOrigem: ef, opcoes: o, origem: org.chave, nome: org.poder });
+        });
         break;
       }
 
@@ -1567,7 +1599,13 @@
           resumo: org.resumo, automacao: org.automacao, fonteRef: C.referencia(org),
           efeitosDesativados: origemDesligada,
         });
-        if (org.efeito && !origemDesligada) efeitos.push(Object.assign({}, org.efeito, { tipo: org.efeito.tipo, fonte: org.poder, detalhe: "Flashback: " + org.nome }));
+        /* Só o poder: os efeitos fixos dele. Perícias da origem e o que
+           depende de uma escolha dela não vêm pelo Flashback. */
+        if (!origemDesligada) {
+          C.efeitosDaOrigem(org).forEach(function (ef) {
+            efeitos.push(Object.assign({}, ef, { tipo: ef.tipo, fonte: org.poder, detalhe: "Flashback: " + org.nome }));
+          });
+        }
       }
       return;
     }
@@ -1849,6 +1887,9 @@
       /* O estágio e a trajetória decidem as vagas do Sobrevivente e da
          transição (v2.21). */
       ordem.estagio, ordem.trajetoria || null,
+      /* O estado dos poderes de origem liga e desliga efeitos (o
+         companheiro animal que morreu). */
+      ordem.estadoDasOrigens || null,
       ordem.atributos, ordem.pericias, ordem.escolhas, ordem.afinidade, ordem.opcionais,
       ordem.registrosDeRitual || null, ordem.prestigio,
       Object.keys(desativadasDe(ordem)).sort(),

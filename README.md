@@ -113,7 +113,7 @@ E abra `http://localhost:8099/rama/`.
 
 São três conjuntos no terminal e duas páginas no navegador.
 
-**Modelo e motor de dados** — 2133 verificações. No navegador, abra `testes/`;
+**Modelo e motor de dados** — 2190 verificações. No navegador, abra `testes/`;
 no terminal:
 
 ```bash
@@ -528,6 +528,10 @@ que a v2.17 lia — uma aba ainda aberta na versão anterior descartaria os dois
 gravar. Com o schema 9, essa aba recusa a ficha e pede para recarregar; nada se
 perde. Depois de publicar, peça a quem estiver com a ficha aberta para recarregar
 a página.
+
+**Atualizando para a v2.23 (origens do Sobrevivendo ao Horror): só o site.** O
+backend não mudou. Publique o site e peça a quem estiver com uma ficha aberta para
+recarregar (o schema subiu para 13).
 
 **Atualizando para a v2.21 (Mundano e Sobrevivente): backend e site.** Mudou
 `Campanhas.gs`: o resumo que os colegas recebem traz o estágio do Sobrevivente.

@@ -992,7 +992,8 @@
 
       t.igual("cinco atributos", OC.ATRIBUTOS.length, 5);
       t.igual("28 perícias", OC.PERICIAS.length, 28);
-      t.igual("26 origens", OC.ORIGENS.length, 26);
+      t.igual("46 origens: 26 do livro básico e 20 do Sobrevivendo ao Horror", OC.ORIGENS.filter(function (o) { return o.fonte !== "SAH"; }).length + "+" +
+        OC.ORIGENS.filter(function (o) { return o.fonte === "SAH"; }).length, "26+20");
       t.igual("três classes de agente, e Mundano e Sobrevivente à parte", OC.classesDeAgente().length + "+" + OC.CLASSES.length, "3+5");
       /* Quinze do livro básico e nove do Sobrevivendo ao Horror, três
          por classe. A fonte distingue as duas. */
@@ -1030,8 +1031,8 @@
 
       t.igual("toda origem tem duas perícias ou diz que são à escolha",
         OC.ORIGENS.filter(function (o) {
-          return o.pericias.length === 2 || o.periciasAEscolher === 2;
-        }).length, 26);
+          return o.pericias.length + (o.periciasAEscolher || 0) === 2;
+        }).length, OC.ORIGENS.length);
 
       t.ok("toda origem tem página do livro",
         OC.ORIGENS.every(function (o) { return o.pagina > 0; }));
@@ -4485,6 +4486,11 @@
       casosDaV221(t, global.RAMAOrdemCatalogo, RRs, global.RAMAOrdemProgressao, global.RAMAOrdemPoderes, global.RAMAOrdemAprendizado, S, V);
     }
 
+    /* v2.23 — ORIGENS DO SOBREVIVENDO AO HORROR */
+    if (RRs && global.RAMAOrdemProgressao) {
+      casosDaV223(t, global.RAMAOrdemCatalogo, RRs, global.RAMAOrdemProgressao, global.RAMAOrdemPoderes, S, V, global.RAMAOrdemBiblioteca);
+    }
+
     /* =================================================================
        MIGRAÇÃO — FICHA ANTIGA (schema 1)
        ================================================================= */
@@ -4685,6 +4691,180 @@
       t.ok("ownerId de fora é descartado", bom.dados.ownerId === undefined || bom.dados.ownerId === "");
       t.ok("token de fora é descartado", bom.dados.token === undefined);
       t.ok("id de fora é descartado", bom.dados.id === undefined || bom.dados.id !== "ID-ANTIGO");
+    }
+  }
+
+  /* =====================================================================
+     v2.23 — as origens do Sobrevivendo ao Horror
+     ===================================================================== */
+
+  function casosDaV223(t, C, R, E, P, S, V, B) {
+    var INV = { itens: [] };
+    var seq = 0;
+    function reg(etapa, opcoes) {
+      seq++;
+      return { id: "o-" + seq, etapa: etapa, tipo: "poderOrigem", valor: "", opcoes: opcoes || {}, registradoEm: "2026-09-27T13:00:" + String(10 + seq).slice(-2) + ".000Z" };
+    }
+    function ficha(extra) {
+      return R.normalizar(Object.assign({ classe: "combatente", nex: 5, atributos: { agi: 1, for: 1, int: 1, pre: 1, vig: 2 } }, extra || {}));
+    }
+    function pend(o) { return E.estado(o, null).pendencias.map(function (p) { return p.id; }); }
+
+    /* ---------------------------------------------------------------- */
+    t.grupo("Origens do SAH · as 20, com poder, perícias, fonte e página");
+
+    var esperadas = {
+      amigoDosAnimais: ["Companheiro Animal", 7, "adestramento,percepcao"],
+      astronauta: ["Acostumado ao Extremo", 8, "ciencias,fortitude"],
+      chefDoOutroLado: ["Fome do Outro Lado", 8, "ocultismo,profissao"],
+      colegial: ["Poder da Amizade", 9, "atualidades,tecnologia"],
+      cosplayer: ["Não É Fantasia, É Cosplay!", 9, "artes,vontade"],
+      diplomata: ["Conexões", 9, "atualidades,diplomacia"],
+      explorador: ["Manual do Sobrevivente", 9, "fortitude,sobrevivencia"],
+      experimento: ["Mutação", 9, "atletismo,fortitude"],
+      fanaticoPorCriaturas: ["Conhecimento Oculto", 10, "investigacao,ocultismo"],
+      fotografo: ["Através da Lente", 10, "artes,percepcao"],
+      inventorParanormal: ["Invenção Paranormal", 10, "profissao,vontade"],
+      jovemMistico: ["A Culpa é das Estrelas", 11, "ocultismo,religiao"],
+      legistaDoTurnoDaNoite: ["Luto Habitual", 11, "ciencias,medicina"],
+      mateiro: ["Mapa Celeste", 12, "percepcao,sobrevivencia"],
+      mergulhador: ["Fôlego de Nadador", 12, "atletismo,fortitude"],
+      motorista: ["Mãos no Volante", 13, "pilotagem,reflexos"],
+      nerdEntusiasta: ["O Inteligentão", 13, "ciencias,tecnologia"],
+      profetizado: ["Luta ou Fuga", 13, "vontade"],
+      psicologo: ["Terapia", 13, "intuicao,profissao"],
+      reporterInvestigativo: ["Encontrar a Verdade", 13, "atualidades,investigacao"],
+    };
+    var sah = C.ORIGENS.filter(function (o) { return o.fonte === "SAH"; });
+    t.igual("são 20, todas do Sobrevivendo ao Horror", sah.length, 20);
+    t.ok("cada uma com o poder, a página e as perícias da Tabela 1.1 e do texto", Object.keys(esperadas).every(function (k) {
+      var o = C.origem(k);
+      var e = esperadas[k];
+      return o && o.fonte === "SAH" && o.poder === e[0] && o.pagina === e[1] && o.pericias.join(",") === e[2] && !!o.resumo;
+    }));
+    t.ok("as da comunidade são oficiais (fonte SAH), com o crédito guardado", C.origem("cosplayer").fonte === "SAH" && /Toca dos Monstros/.test(C.origem("cosplayer").comunidade));
+    t.ok("as 26 do livro básico continuam", C.ORIGENS.filter(function (o) { return o.fonte !== "SAH"; }).length === 26 && !!C.origem("academico"));
+    t.iguais("especialidades de Profissão", [C.nomeComEspecialidade(C.origem("chefDoOutroLado"), "profissao"),
+      C.nomeComEspecialidade(C.origem("inventorParanormal"), "profissao"), C.nomeComEspecialidade(C.origem("psicologo"), "profissao")],
+      ["Profissão (cozinheiro)", "Profissão (engenheiro)", "Profissão (psicólogo)"]);
+    t.ok("Profetizado: Vontade fixa E mais uma à escolha", C.origem("profetizado").pericias.join() === "vontade" && C.origem("profetizado").periciasAEscolher === 1);
+
+    /* ---------------------------------------------------------------- */
+    t.grupo("Origens do SAH · especialidades de Profissão sem dar todas");
+
+    var chef = ficha({ origem: "chefDoOutroLado" });
+    t.ok("a ficha conhece só a especialidade da origem", R.especialidadesDeProfissao(chef).map(function (x) { return x.nome; }).join() === "cozinheiro");
+    chef.especialidades = ["armeiro"];
+    t.ok("  e as anotadas à mão, separadas", R.especialidadesDeProfissao(chef).map(function (x) { return x.nome; }).join() === "cozinheiro,armeiro");
+    t.igual("ficha antiga, sem o campo, abre sem especialidade", R.especialidadesDeProfissao(ficha({ origem: "atleta" })).length, 0);
+
+    /* ---------------------------------------------------------------- */
+    t.grupo("Origens do SAH · efeitos permanentes na conta");
+
+    var base = ficha({ origem: "atleta" });
+    var dip = ficha({ origem: "diplomata" });
+    t.igual("Diplomata: +2 em Diplomacia", R.bonusDePericia(dip, "diplomacia", INV).total - R.bonusDePericia(base, "diplomacia", INV).total, 2);
+    var mer = ficha({ origem: "mergulhador" });
+    t.igual("Mergulhador: +5 PV", R.pontosDeVida(mer).total - R.pontosDeVida(base).total, 5);
+    var pro = ficha({ origem: "profetizado" });
+    t.igual("Profetizado: +2 em Vontade", R.bonusDePericia(pro, "vontade", INV).total - R.bonusDePericia(base, "vontade", INV).total, 2);
+    var exp = ficha({ origem: "experimento" });
+    t.ok("Experimento: resistência a dano 2", R.resistencias(exp, INV).dano.some(function (d) { return d.tipo === "geral" && d.conta.total === 2; }));
+    t.igual("  e –1 dado em Diplomacia (dado, não bônus)", R.dadosDoTeste(exp, "diplomacia").quantos, R.dadosDoTeste(base, "diplomacia").quantos - 1);
+    t.igual("  sem mexer no bônus de Diplomacia", R.bonusDePericia(exp, "diplomacia", INV).total, R.bonusDePericia(base, "diplomacia", INV).total);
+    t.ok("  a perícia da Mutação fica pendente", pend(exp).indexOf("b.origem.experimento") >= 0);
+    var vExp = E.vagas(exp).filter(function (v) { return v.id === "b.origem.experimento"; })[0];
+    t.ok("  Luta (originalmente Força) serve; Diplomacia não", E.simular(exp, vExp, { valor: "", opcoes: { pericia: "luta" } }, null).avaliacao.valido &&
+      !E.simular(exp, vExp, { valor: "", opcoes: { pericia: "diplomacia" } }, null).avaliacao.valido);
+    exp.periciasAjustes = { intuicao: { atributo: "agi" } };
+    t.ok("  trocar o atributo da perícia na ficha não contorna o requisito", !E.simular(exp, vExp, { valor: "", opcoes: { pericia: "intuicao" } }, null).avaliacao.valido);
+    exp.escolhas = [reg("b.origem.experimento", { pericia: "atletismo" })];
+    t.igual("  escolhida, +2 nela", R.bonusDePericia(exp, "atletismo", INV).total - R.bonusDePericia(base, "atletismo", INV).total, 2);
+    var novamente = R.normalizar(JSON.parse(JSON.stringify(exp)));
+    t.igual("  e recalcular ou reler não soma de novo", R.bonusDePericia(novamente, "atletismo", INV).total - R.bonusDePericia(base, "atletismo", INV).total, 2);
+
+    /* ---------------------------------------------------------------- */
+    t.grupo("Origens do SAH · escolhas, marcos e estados guardados");
+
+    var ami = ficha({ origem: "amigoDosAnimais", nex: 30 });
+    var vAmi = E.vagas(ami).filter(function (v) { return v.id === "b.origem.amigoDosAnimais"; })[0];
+    t.ok("Companheiro Animal: a perícia do bônus é pedida", pend(ami).indexOf("b.origem.amigoDosAnimais") >= 0 &&
+      E.simular(ami, vAmi, { valor: "", opcoes: { pericia: "furtividade" } }, null).avaliacao.completo);
+    ami.escolhas = [reg("b.origem.amigoDosAnimais", { pericia: "furtividade", companheiro: "Pipoca" })];
+    t.igual("  +2 do companheiro na perícia escolhida", R.bonusDePericia(ami, "furtividade", INV).total - R.bonusDePericia(base, "furtividade", INV).total, 2);
+    ami.nex = 35;
+    t.ok("  em NEX 35%, o tipo de aliado passa a faltar", pend(ami).indexOf("b.origem.amigoDosAnimais") >= 0);
+    ami.estadoDasOrigens = { amigoDosAnimais: { companheiroPerdido: true } };
+    t.igual("  com o companheiro morto, o +2 sai", R.bonusDePericia(ami, "furtividade", INV).total, R.bonusDePericia(base, "furtividade", INV).total);
+    var col = ficha({ origem: "colegial", nex: 15 });
+    var peCol = R.pontosDeEsforco(col).total;
+    col.estadoDasOrigens = { colegial: { amigoPerdido: true } };
+    t.igual("Poder da Amizade: melhor amigo morto, –1 PE por 5% de NEX", R.pontosDeEsforco(col).total, peCol - 3);
+    t.igual("  selecionar a origem não liga nada: sem registro, nenhum bônus", R.bonusDePericia(ficha({ origem: "colegial" }), "atletismo", INV).total, R.bonusDePericia(base, "atletismo", INV).total);
+    var profT = ficha({ origem: "profetizado", condicoes: { cena: { id: "cena-a" } } });
+    var peP = R.pontosDeEsforco(profT).total;
+    profT.estadoDasOrigens = { profetizado: { peTemporarios: 2, cena: profT.condicoes.cena.id } };
+    t.igual("Luta ou Fuga: +2 PE temporários, separados, na cena", R.pontosDeEsforco(profT).total, peP + 2);
+    t.ok("  com parcela própria", R.pontosDeEsforco(profT).parcelas.some(function (x) { return /temporários/.test(x.rotulo); }));
+    profT.estadoDasOrigens.profetizado.cena = "outra-cena";
+    t.igual("  e somem em outra cena", R.pontosDeEsforco(profT).total, peP);
+    var chefS = ficha({ origem: "chefDoOutroLado" });
+    var sanChef = R.sanidade(chefS).total;
+    chefS.estadoDasOrigens = { chefDoOutroLado: { refeicoes: 2, partes: ["Zumbi de Sangue"] } };
+    t.igual("Fome do Outro Lado: cada refeição, –1 de Sanidade permanente", R.sanidade(chefS).total, sanChef - 2);
+    t.igual("  cadastrar a origem ou um ingrediente não tira nada", R.sanidade(ficha({ origem: "chefDoOutroLado" })).total, sanChef);
+    var jov = ficha({ origem: "jovemMistico", estadoDasOrigens: { jovemMistico: { numeros: [4, 2, 9, 4], adicionar: true, cena: "c1" } } });
+    t.ok("Jovem Místico: os números da sorte ficam gravados (válidos e sem repetição)", jov.estadoDasOrigens.jovemMistico.numeros.join() === "4,2" && jov.estadoDasOrigens.jovemMistico.adicionar === true);
+    var rel = R.normalizar(JSON.parse(JSON.stringify(jov)));
+    t.ok("  e recarregar não os reinicia", rel.estadoDasOrigens.jovemMistico.numeros.join() === "4,2");
+    t.ok("estado de origem inventado é descartado", !R.normalizar({ estadoDasOrigens: { hacker: { x: 1 } } }).estadoDasOrigens.hacker);
+
+    /* ---------------------------------------------------------------- */
+    t.grupo("Origens do SAH · invento sem aprender ritual");
+
+    var inv = ficha({ classe: "combatente", origem: "inventorParanormal" });
+    var vInv = E.vagas(inv).filter(function (v) { return v.id === "b.origem.inventorParanormal"; })[0];
+    t.ok("o ritual do invento é pedido, só de 1º círculo", !!vInv &&
+      !E.simular(inv, vInv, { valor: "", opcoes: { ritual: { catalogo: "op.ritual.x", nome: "X", circulo: 2 } } }, null).avaliacao.valido &&
+      E.simular(inv, vInv, { valor: "", opcoes: { ritual: { catalogo: "op.ritual.luz", nome: "Luz", circulo: 1 } } }, null).avaliacao.valido);
+    inv.escolhas = [reg("b.origem.inventorParanormal", { ritual: { catalogo: "op.ritual.luz", nome: "Luz", circulo: 1, elemento: "energia" } })];
+    var estInv = E.estado(inv, { inventario: INV, rituais: [] });
+    t.ok("  e não vira ritual aprendido: nenhuma concessão, nada no limite, e um combatente continua sem conjurar",
+      estInv.rituais.aprendizados.length === 0 && E.concessoesDeRitual(inv).length === 0 && R.rituais(inv, { inventario: INV }).circuloMaximo === 0);
+    t.ok("  a Progressão descreve o invento", /Luz/.test(E.descrever(inv, inv.escolhas[0])));
+
+    /* ---------------------------------------------------------------- */
+    t.grupo("Origens do SAH · Flashback, biblioteca e troca de origem");
+
+    var fb = R.normalizar({ classe: "especialista", nex: 15, origem: "atleta", atributos: { agi: 1, for: 1, int: 1, pre: 1, vig: 2 },
+      escolhas: [{ id: "f1", etapa: "d3.poderClasse", tipo: "poderClasse", valor: "flashback", opcoes: { origem: "mergulhador" }, registradoEm: "2026-09-27T13:30:00.000Z" }] });
+    var baseFb = R.normalizar(Object.assign({}, JSON.parse(JSON.stringify(fb)), { escolhas: [] }));
+    t.igual("Flashback em Mergulhador dá o poder (+5 PV)", R.pontosDeVida(fb).total - R.pontosDeVida(baseFb).total, 5);
+    t.ok("  e não as perícias da origem", E.estado(fb, null).graus.atletismo === undefined || E.estado(fb, null).graus.atletismo === E.estado(baseFb, null).graus.atletismo);
+    var fbExp = R.normalizar(Object.assign({}, JSON.parse(JSON.stringify(fb)), { escolhas: [{ id: "f2", etapa: "d3.poderClasse", tipo: "poderClasse", valor: "flashback", opcoes: { origem: "experimento" }, registradoEm: "2026-09-27T13:31:00.000Z" }] }));
+    t.ok("Flashback em Experimento: a RD e o –1 dado, sem o +2 que depende da escolha da origem",
+      R.resistencias(fbExp, INV).dano.some(function (d) { return d.tipo === "geral"; }) && R.dadosDoTeste(fbExp, "diplomacia").quantos === R.dadosDoTeste(baseFb, "diplomacia").quantos - 1);
+    if (B) {
+      var todas = B.secoes("origens").reduce(function (l, s) { return l.concat(s.entradas); }, []);
+      t.ok("a aba Origens da biblioteca tem as 46, em duas seções por livro", todas.length === 46 && B.secoes("origens").length === 2);
+      t.ok("  busca pelo poder e pela origem", B.filtrar(B.secoes("origens"), "luta ou fuga").some(function (s) { return s.entradas.length; }) &&
+        B.filtrar(B.secoes("origens"), "profetizado").some(function (s) { return s.entradas.length; }));
+      var copia = B.modelo(todas.filter(function (x) { return x.entrada.nome === "Conexões"; })[0].entrada, "");
+      t.ok("  a cópia é só texto: nome, origem e fonte, sem efeito", copia.nome === "Conexões" && copia.origem === "Origem · Diplomata" && /Sobrevivendo ao Horror, p\. 9/.test(copia.texto));
+    }
+    var antiga = ficha({ origem: "militar", pericias: { pontaria: "treinado", tatica: "treinado", luta: "treinado" } });
+    t.ok("ficha antiga sem perícias da origem gravadas abre igual", antiga.periciasDaOrigem.length === 0 && antiga.pericias.tatica === "treinado");
+    t.ok("uma perícia desconhecida na lista da origem é descartada", ficha({ periciasDaOrigem: ["vontade", "hackear", "vontade"] }).periciasDaOrigem.join() === "vontade");
+
+    if (S && V) {
+      var fx = S.criarFicha({ nome: "Sorte", tipoFicha: "ordem" });
+      fx.ordem = ficha({ origem: "jovemMistico", periciasDaOrigem: ["ocultismo", "religiao"], especialidades: ["astrólogo"],
+        estadoDasOrigens: { jovemMistico: { numeros: [3, 5], adicionar: false, cena: "" } },
+        escolhas: [reg("b.origem.jovemMistico", { numero: "3" })] });
+      var imp = V.importado(JSON.parse(JSON.stringify(V.exportar("personagem", fx))));
+      var oi = imp.ok ? imp.dados.ordem : null;
+      t.ok("exportar e importar levam os números da sorte, as perícias da origem e as especialidades",
+        !!oi && oi.estadoDasOrigens.jovemMistico.numeros.join() === "3,5" && oi.periciasDaOrigem.join() === "ocultismo,religiao" && oi.especialidades.join() === "astrólogo");
     }
   }
 

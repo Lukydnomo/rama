@@ -533,7 +533,7 @@ uma regra de jogo.
 
 ## Migração
 
-`schemaVersion` é `12`. Toda ficha lida passa por `normalizarFicha()`, que aceita
+`schemaVersion` é `13`. Toda ficha lida passa por `normalizarFicha()`, que aceita
 o que faltar e conserta o que dá.
 
 **A v2.19 subiu o schema de 9 para 10 sem converter nada.** O bloco `ordem`
@@ -892,6 +892,21 @@ Campos novos do bloco `ordem`:
   `durao` | `esperto` | `esoterico`), `s3.atributo`, `b.esperto`, `b.entendido`,
   `b.cicatrizado`, `s4.iniciado` (rituais) e, depois da transição, `t.treinamento` e
   `t.atributo`.
+
+**Origens (v2.23).** Campos novos do bloco `ordem`:
+
+- `periciasDaOrigem`: as perícias que a origem treinou (fixas e escolhidas, já com
+  as trocas por repetição). Fichas antigas: vazio — a troca de origem usa as do
+  catálogo.
+- `especialidades`: especialidades de Profissão anotadas à mão (a da origem vem do
+  catálogo).
+- `estadoDasOrigens`: `{ <origem>: { … } }` — companheiro perdido, usos na cena,
+  refeições e partes comidas, melhor amigo perdido, ativações e enguiço do invento,
+  números da sorte, PE temporários da cena. Só campos conhecidos, por origem.
+- A escolha do poder de origem (`b.origem.<chave>`) guarda as opções por chave:
+  `pericia`, `companheiro`, `aliado`, `amigo`, `numero`, `premonicao`, `ritual`
+  (`{ catalogo, nome, circulo, elemento }` — um ritual preso ao invento, não
+  aprendido).
 
 **Item com contagem de munição (v2.20).** Arma: `ordem.contagem = { municao
 (id do item de munição), carregada, capacidade? }`. Munição: `ordem.contagem =

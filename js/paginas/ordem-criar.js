@@ -470,14 +470,20 @@
     var buscaOrigem;
 
     function etapaOrigem() {
-      buscaOrigem = UI.campo({ rotulo: "Buscar origem", valor: "", limite: 40, dica: "nome da origem" });
+      buscaOrigem = UI.campo({ rotulo: "Buscar origem", valor: "", limite: 40, dica: "nome da origem ou do poder" });
       var lista = el("div.criacao-lista", {});
 
       function pintarLista() {
         var termo = U.chaveDeBusca(buscaOrigem.entrada.value);
-        U.trocar(lista, C.ORIGENS.filter(function (org) {
-          return !termo || U.chaveDeBusca(org.nome).indexOf(termo) >= 0;
-        }).map(cartaoDeOrigem));
+        /* Por livro, e a busca acha pela origem e pelo poder. */
+        var achadas = C.ORIGENS.filter(function (org) {
+          return !termo || U.chaveDeBusca(org.nome + " " + org.poder).indexOf(termo) >= 0;
+        });
+        U.trocar(lista, [{ f: "OPRPG", t: "Livro básico" }, { f: "SAH", t: "Sobrevivendo ao Horror" }].map(function (livro) {
+          var doLivro = achadas.filter(function (org) { return (org.fonte || "OPRPG") === livro.f; });
+          if (!doLivro.length) return null;
+          return el("div.pilha--curta", { class: "pilha" }, [el("h4.t-secao", { texto: livro.t })].concat(doLivro.map(cartaoDeOrigem)));
+        }).filter(Boolean));
       }
 
       buscaOrigem.entrada.addEventListener("input", pintarLista);
@@ -494,15 +500,19 @@
 
     /* Amnésico: "Duas à escolha do mestre" (OPRPG p.16). A tela precisa
        de um lugar para registrar a decisão da mesa. */
+    /* Amnésico: as duas à escolha do mestre. Profetizado: Vontade E mais
+       uma — a fixa e a escolhida somam, não são alternativas. */
     function periciasAEscolherDaOrigem() {
       var org = C.origem(d.origem);
       if (!org || !org.periciasAEscolher) return null;
       var alvo = org.periciasAEscolher;
+      var fixas = org.pericias || [];
 
       return el("div.pilha--curta", { class: "pilha" }, [
         el("h4.t-secao", { texto: "Perícias da origem (" + d.periciasDaOrigem.length + " de " + alvo + ")" }),
         el("p.t-mini", { texto: org.periciasObservacao || "Escolha as perícias." }),
-        el("div.criacao-pericias", {}, C.PERICIAS.map(function (p) {
+        fixas.length ? el("p.t-mini", { texto: "Já vem da origem: " + fixas.map(function (k) { return C.nomeComEspecialidade(org, k); }).join(", ") + "." }) : null,
+        el("div.criacao-pericias", {}, C.PERICIAS.filter(function (p) { return fixas.indexOf(p.chave) < 0; }).map(function (p) {
           var marcada = d.periciasDaOrigem.indexOf(p.chave) >= 0;
           var cheia = !marcada && d.periciasDaOrigem.length >= alvo;
           return el("button.criacao-pericia", {
@@ -530,7 +540,8 @@
       var escolhida = d.origem === org.chave;
 
       var pericias = org.pericias.length
-        ? org.pericias.map(function (p) { return C.pericia(p).nome; }).join(" e ")
+        ? org.pericias.map(function (p) { return C.nomeComEspecialidade(org, p); }).join(" e ") +
+          (org.periciasAEscolher ? " e mais " + org.periciasAEscolher + " à escolha" : "")
         : (org.periciasObservacao || "à escolha");
 
       return el("button.criacao-opcao", {
@@ -682,7 +693,8 @@
       var org = C.origem(d.origem);
       var conjunto = {};
 
-      (org && org.pericias.length ? org.pericias : d.periciasDaOrigem).forEach(function (p) {
+      /* As fixas e as escolhidas, juntas (Profetizado tem as duas). */
+      ((org ? org.pericias : []).concat(org && org.periciasAEscolher ? d.periciasDaOrigem : [])).forEach(function (p) {
         if (p) conjunto[p] = "Origem";
       });
 
@@ -1100,6 +1112,9 @@
       var jaTem = periciasJaTreinadas();
       Object.keys(jaTem).forEach(function (p) { ordem.pericias[p] = "treinado"; });
       d.periciasEscolhidas.forEach(function (p) { ordem.pericias[p] = "treinado"; });
+      /* O que a origem treinou — é por isto que trocar a origem depois
+         sabe o que tirar. */
+      ordem.periciasDaOrigem = Object.keys(jaTem).filter(function (p) { return jaTem[p] === "Origem"; });
 
       return ordem;
     }
