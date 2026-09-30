@@ -614,6 +614,10 @@
           (servidor.participantes || []).forEach(function (p) {
             var meu = acharParticipante(confirmado, p.id);
             if (meu && p.tipo === "personagem") {
+              if (p.nome !== undefined) {
+                meu.nome = p.nome;
+                if (confirmado.ativo && String(confirmado.ativo.participanteId) === String(p.id)) confirmado.ativo.nome = p.nome;
+              }
               meu.recursos = copiar(p.recursos);
               if (p.recursosPendentes) meu.recursosPendentes = true; else delete meu.recursosPendentes;
               /* Morrendo e enlouquecendo contam no servidor, no próprio

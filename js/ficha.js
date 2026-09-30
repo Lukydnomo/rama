@@ -84,6 +84,10 @@
      `estadoDasOrigens` (números da sorte, invento, refeições…). Sem
      conversão: uma ficha 12 abre igual.
 
+     13 → 14: módulos da universal e aliados nos dois modelos (v2.24).
+     Módulos ausentes permanecem ativos; aliados ausentes viram [].
+     Perícias existentes, inclusive listas vazias, são preservadas.
+
      Nenhuma das subidas exige migração: normalizarFicha() cria o que
      falta, vazio, e não toca no que existe. Um ritual gravado na 2 abre
      na 3 com a versão Normal em branco; uma ficha de Ordem gravada na 4
@@ -93,7 +97,23 @@
      os campos novos e os descartaria ao gravar — com o schema maior ela
      recusa abrir a ficha e pede para recarregar.
      Ver docs/CHARACTER_SCHEMA.md. */
-  var VERSAO_SCHEMA = 13;
+  var VERSAO_SCHEMA = 14;
+
+  var MODULOS = {
+    atributos: "Atributos", status: "Status/recursos", defesa: "Defesa",
+    pericias: "Perícias", habilidades: "Habilidades", rituais: "Rituais",
+    inventario: "Inventário", anotacoes: "Anotações", aliados: "Aliados",
+  };
+
+  function normalizarModulos(bruto) {
+    var m = {};
+    Object.keys(MODULOS).forEach(function (chave) { m[chave] = !bruto || bruto[chave] !== false; });
+    return m;
+  }
+
+  function moduloAtivo(ficha, chave) {
+    return ehDeOrdem(ficha) || !ficha.modulos || ficha.modulos[chave] !== false;
+  }
 
   var NATUREZA = { INFORMACAO: "informacao", ROLAVEL: "rolavel", DEPENDENTE: "dependente" };
 
@@ -336,7 +356,10 @@
       atributos: atributos,
       status: STATUS_PADRAO.map(criarStatus),
       defesa: Object.assign({}, DEFESA_PADRAO),
-      pericias: PERICIAS_PADRAO.map(function (p) { return criarPericia(p, porSigla); }),
+      pericias: tipoDeFicha(i.tipoFicha) === "ordem"
+        ? PERICIAS_PADRAO.map(function (p) { return criarPericia(p, porSigla); }) : [],
+      modulos: normalizarModulos(i.modulos),
+      aliados: [],
 
       habilidades: global.RAMAHabilidades.arvoreVazia(),
       rituais: rituaisVazios(),
@@ -875,6 +898,9 @@
       deSchemaAntigo: U.inteiro(b.schemaVersion, 0) > 0 && U.inteiro(b.schemaVersion, 0) < 8,
     });
 
+    ficha.modulos = normalizarModulos(b.modulos);
+    ficha.aliados = global.RAMACriaturas.normalizarAliados(b.aliados);
+
     return ficha;
   }
 
@@ -1117,6 +1143,9 @@
   }
 
   global.RAMAFicha = {
+    MODULOS: MODULOS,
+    normalizarModulos: normalizarModulos,
+    moduloAtivo: moduloAtivo,
     VERSAO_SCHEMA: VERSAO_SCHEMA,
     TIPOS_FICHA: TIPOS_FICHA,
     TIPO_FICHA_PADRAO: TIPO_FICHA_PADRAO,

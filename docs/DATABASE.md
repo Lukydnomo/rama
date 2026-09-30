@@ -1,5 +1,26 @@
 # O banco
 
+Na v2.24.1, GIFs são guardados integralmente nos mesmos campos de imagem já
+existentes (ou nos blocos da ficha, para aliados). Não há conversão para quadro
+estático. O seletor limita o original a 29.982 bytes para caber em uma data URL
+de até 40.000 caracteres. Arquivos maiores são recusados antes do envio, sem
+apagar a imagem anterior. Nenhuma aba/coluna é acrescentada para GIFs.
+
+## Aliados — v2.24
+
+Aliados e imagens integram o JSON da ficha e usam os blocos existentes de
+`PERSONAGENS_BLOCOS`; não são concatenados em uma célula de Homebrew. O seletor,
+recorte e compressão de `js/imagem.js` são reutilizados. Importar lê a imagem
+pela API autorizada e a incorpora à ocorrência. O modelo continua usando
+`CRIATURAS_IMAGENS` e não é alterado.
+
+Revisão, integridade, geração de recuperação, idempotência e limite total seguem
+iguais: **1.000.000 de caracteres por ficha**, incluindo aliados e imagens.
+Exceder gera erro explícito e mantém o trabalho na tela com opção de exportação;
+nunca truncar imagem/ficha. Projeções de cartões não carregam aliados ou imagens.
+Não há novas abas/colunas nem migração. Em uma instalação na v2.23, não é necessário
+rodar `setupRama()` novamente.
+
 Uma planilha do Google, dezesseis abas. Criadas e mantidas por `setupRama()` — não
 monte nada à mão.
 
@@ -587,7 +608,7 @@ evento mora dentro da ficha (`ordem.condicoes`, ver
 A capa da campanha (v2.12), uma linha por campanha. Fora do `dadosJson` pela mesma
 razão da foto de personagem: dentro do JSON, salvar a descrição reenviaria a imagem
 inteira. As quatro primeiras colunas são leves — dá para saber se há capa, de que
-tamanho e de quando sem ler a imagem. `imagem` é uma data URL WebP, JPEG ou PNG que
+tamanho e de quando sem ler a imagem. `imagem` é uma data URL WebP, JPEG, PNG ou GIF que
 cabe na célula; acima disso a gravação é recusada, nunca truncada. Excluir a
 campanha apaga a linha.
 

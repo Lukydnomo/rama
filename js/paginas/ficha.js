@@ -59,6 +59,7 @@
       rotulo: function () { return global.RAMASecaoRituais.rotulo(ctx); } },
     { chave: "inventario",   rotulo: "Inventário",  secao: "RAMASecaoInventario" },
     { chave: "anotacoes",    rotulo: "Anotações",   secao: "RAMASecaoAnotacoes" },
+    { chave: "aliados",      rotulo: "Aliados",     secao: "RAMASecaoAliados" },
   ];
 
   var ABAS_ORDEM = [
@@ -71,6 +72,7 @@
     { chave: "inventario",   rotulo: "Inventário",  secao: "RAMASecaoInventario" },
     { chave: "anotacoes",    rotulo: "Anotações",   secao: "RAMASecaoAnotacoes" },
     { chave: "regras",       rotulo: "Regras",      secao: "RAMASecaoOrdemRegras" },
+    { chave: "aliados",      rotulo: "Aliados",     secao: "RAMASecaoAliados" },
   ];
 
   /* Lida do TIPO gravado, nunca deduzida do conteúdo. E com uma rede:
@@ -87,7 +89,10 @@
   }
 
   function abasDaFicha() {
-    if (!estado.ficha || !F.ehDeOrdem(estado.ficha)) return ABAS_UNIVERSAL;
+    if (!estado.ficha) return ABAS_UNIVERSAL;
+    if (!F.ehDeOrdem(estado.ficha)) return ABAS_UNIVERSAL.filter(function (a) {
+      return a.chave === "geral" || F.moduloAtivo(estado.ficha, a.chave);
+    });
     if (!global.RAMASecaoOrdemGeral) return ABAS_UNIVERSAL;
     return ABAS_ORDEM;
   }
@@ -462,6 +467,8 @@
         el("div.ficha-topo__ferramentas", {}, [
           indicador,
           modoSeletor(),
+          estado.modo === "edicao" && !F.ehDeOrdem(estado.ficha)
+            ? el("button.r-botao.r-botao--mini", { type: "button", texto: "Configurar módulos", onclick: configurarModulos }) : null,
           PAINEL
             ? el("a.r-botao.r-botao--mini.r-botao--fantasma", {
                 href: U.url("ficha/?id=" + encodeURIComponent(estado.personagemId)),
@@ -490,6 +497,32 @@
     if (estado.ficha.origem) partes.push(estado.ficha.origem);
     partes.push("Registro // " + U.codigoCurto(estado.personagemId));
     return partes.join(" · ");
+  }
+
+  function configurarModulos() {
+    if (!ctx.emEdicao() || F.ehDeOrdem(ctx.ficha)) return;
+    var escolhas = F.normalizarModulos(ctx.ficha.modulos);
+    UI.modal({
+      titulo: "Configurar módulos",
+      conteudo: el("div.pilha", {}, [
+        el("p", { texto: "Desativar esconde a seção e seus atalhos. Os dados continuam guardados e reaparecem ao reativar." }),
+        el("p.r-ajuda", { texto: "Perícias e ataques continuam usando seus atributos e vínculos, mesmo com Atributos ou Perícias ocultos. Esconder não altera cálculos nem permissões." }),
+        el("p.r-ajuda", { texto: "Armaduras continuam contribuindo para a Defesa mesmo com Inventário oculto. Ocultar Status não impede gastos de recursos por ações que os utilizem." }),
+        el("div.pilha", {}, Object.keys(F.MODULOS).map(function (chave) {
+          return el("label.faixa", {}, [
+            el("input", { type: "checkbox", checked: escolhas[chave], onchange: function (ev) { escolhas[chave] = ev.target.checked; } }),
+            el("span", { texto: F.MODULOS[chave] }),
+          ]);
+        })),
+      ]),
+      botoes: [
+        { rotulo: "Cancelar", classe: "r-botao--fantasma" },
+        { rotulo: "Aplicar", classe: "r-botao--principal", aoClicar: function (fechar) {
+          ctx.ficha.modulos = escolhas;
+          ctx.alterou(); fechar(); desenhar();
+        } },
+      ],
+    });
   }
 
   function atualizarTitulo() {

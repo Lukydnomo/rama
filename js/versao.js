@@ -70,6 +70,50 @@
 
   var CHANGELOG = [
     {
+      versao: "2.24.1", codinome: "PULSO", data: "29/09/2026",
+      mudancas: {
+        "Corrigido": [
+          "GIFs preservam a animação em fotos de personagens, criaturas, aliados, avatares, documentos e capas de campanha. Antes eram convertidos em imagem parada.",
+        ],
+        "Alterado": [
+          "Capas GIF têm prévia animada e exibição centralizada. Fotos estáticas mantêm o editor de recorte. GIFs acima de 29.982 bytes recebem aviso para escolher uma versão menor; não são congelados ou truncados.",
+        ],
+        "Técnico": [
+          "Arquivo GIF preservado integralmente dentro do limite existente de 40.000 caracteres de saída. Atualizar Campanhas.gs e a implantação do Apps Script para aceitar GIF na capa. Sem mudança de schema ou novas abas.",
+        ],
+      },
+    },
+    {
+      versao: "2.24.0", codinome: "CONFLUÊNCIA", data: "29/09/2026",
+      mudancas: {
+        "Adicionado": [
+          "Configurar módulos na universal: esconder e reativar atributos, recursos, defesa, perícias, habilidades, rituais, inventário, anotações e aliados sem apagar conteúdo ou alterar permissões.",
+          "Aliados nas fichas universais e de Ordem: criar, importar cópias independentes da biblioteca, editar, consultar, ajustar recursos, rolar e remover com confirmação. Sem entrada automática no combate.",
+        ],
+        "Alterado": [
+          "Novas universais começam sem perícias. Fichas existentes mantêm suas listas; Ordem continua com suas perícias próprias.",
+          "Nome de Ordem editável na identificação. Listagens, cartões e combate consultam o nome atual; nomes históricos das ações são preservados.",
+        ],
+        "Técnico": [
+          "Schema 14: módulos ausentes ficam ativos, aliados ausentes viram lista vazia. Aliados e imagens comprimidas usam blocos, revisão, conciliação por ID e exportação dos vínculos internos.",
+          "Consulta compartilhada de criaturas e rolagens pelo mostrador/histórico centrais. Atualizar Campanhas.gs e a implantação do Apps Script para os nomes atuais no combate; sem novas abas ou colunas.",
+        ],
+      },
+    },
+    {
+      versao: "2.23.1",
+      codinome: "RESGUARDO",
+      data: "29/09/2026",
+      mudancas: {
+        "Corrigido": [
+          "Clicar fora de uma janela pede confirmação antes de fechá-la, evitando perder por acidente o preenchimento de personagens, itens, rituais, habilidades e outros formulários. Voltar à janela preserva o conteúdo preenchido.",
+        ],
+        "Técnico": [
+          "Proteção central no componente de janelas, incluindo janelas sobrepostas e fechamento durante uma ação assíncrona. Só o site mudou; sem alteração de schema ou backend.",
+        ],
+      },
+    },
+    {
       versao: "2.23.0",
       codinome: "PROVENIÊNCIA",
       data: "27/09/2026",

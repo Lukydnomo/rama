@@ -31,7 +31,7 @@
       UI.painel("Perícias", corpo(ctx), {
         acoes: ctx.emEdicao() ? [
           el("button.r-botao.r-botao--mini", {
-            type: "button", texto: "+ Perícia", onclick: function () { nova(ctx); },
+            type: "button", texto: "Adicionar perícia", onclick: function () { nova(ctx); },
           }),
         ] : null,
       }),

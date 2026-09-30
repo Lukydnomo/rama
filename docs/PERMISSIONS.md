@@ -2,6 +2,20 @@
 
 Quem alcança o quê, e onde isso é decidido.
 
+### Aliados e módulos — v2.24
+
+Aliados são conteúdo da ficha: dono e mestre autorizado podem abrir/salvar.
+Outros jogadores e espectadores não ganham acesso aos aliados por verem o cartão
+da campanha; listagens não incluem suas fichas/imagens. Ocultar módulos não altera acesso.
+
+Importação usa criaturas próprias ou públicas, com autorização em `ler_homebrew`
+e `ler_imagem_criatura`. A cópia independe de mudanças/exclusão do original.
+Compartilhar a ficha com o mestre dá acesso à cópia, sem abrir o Homebrew privado original.
+
+Rolagens usam o contexto do personagem e a autorização/visibilidade existentes
+de `registrar_rolagem`. Modo edição reserva alterações estruturais na interface;
+não substitui as verificações do servidor.
+
 ## A regra que vale para tudo
 
 **A identidade vem da SESSÃO. As relações vêm do BANCO.**

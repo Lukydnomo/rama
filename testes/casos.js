@@ -20,6 +20,76 @@
     var H = global.RAMAHabilidades;
     var Ver = global.RAMAVersion;
 
+    t.grupo("Módulos e aliados · schema 14");
+    var C14 = global.RAMACriaturas, U14 = global.RAMAUtil, Sync14 = global.RAMASync;
+    var antiga14 = S.normalizarFicha({ schemaVersion: 13, nome: "Legado", pericias: [] });
+    t.ok("ficha antiga mantém todos os módulos disponíveis", Object.keys(S.MODULOS).every(function (k) { return S.moduloAtivo(antiga14, k); }));
+    t.igual("perícias vazias do legado continuam vazias", antiga14.pericias.length, 0);
+    var modelo14 = C14.normalizar({ id: "modelo", nome: "Corvo", visibilidade: "publico", categoria: "Animal", descricao: "Companheiro",
+      status: [{ id: "vida", nome: "Vida", atual: 8, maximo: 12 }],
+      atributos: [{ id: "for", nome: "Força", sigla: "FOR", valor: 2, dado: "1d20" }, { id: "agi", nome: "Agilidade", sigla: "AGI", valor: 3, dado: "2d20" }],
+      pericias: [{ id: "voo", nome: "Voo", atributoId: "agi", bonus: 5, bonusTemporario: 1 }],
+      ataques: [{ id: "bico", nome: "Bico", periciaId: "voo", dano: "1d6", danoExtra: "2", critico: 19, multiplicador: 2, descricao: "Bicada" }],
+      habilidades: [{ id: "h", nome: "Vigília", texto: "Observa ao redor." }] });
+    var imagem14 = "data:image/png;base64," + "A".repeat(60000);
+    var aliado14 = C14.criarAliado(modelo14, imagem14), outro14 = C14.criarAliado(modelo14, imagem14);
+    t.ok("cópias recebem IDs distintos e não publicam a criatura", aliado14.id !== outro14.id && !aliado14.criatura.id && aliado14.criatura.visibilidade === "privado");
+    aliado14.criatura.status[0].atual = 4;
+    t.igual("alterar a cópia não muda outra instância", outro14.criatura.status[0].atual, 8);
+    t.igual("alterar a cópia não muda o Homebrew", modelo14.status[0].atual, 8);
+    modelo14.nome = "Modelo alterado";
+    t.igual("alterar o modelo não muda a cópia", aliado14.criatura.nome, "Corvo");
+    var modular14 = S.criarFicha({ nome: "Modular" });
+    modular14.aliados = [aliado14, outro14];
+    modular14.pericias = [{ id: "p14", nome: "Luta", atributoId: modular14.atributos[0].id, bonus: 5 }];
+    modular14.habilidades.filhos.push(H.criarHabilidade({ nome: "Habilidade guardada", texto: "Texto preservado" }));
+    modular14.rituais.itens.push(S.criarRitual({ nome: "Ritual guardado" }));
+    modular14.inventario.itens.push(S.criarItem("arma", { nome: "Arma guardada" }));
+    modular14.anotacoes.soltas.push(S.criarNota("Nota guardada"));
+    modular14 = S.normalizarFicha(modular14);
+    var antes14 = U14.copiar(modular14);
+    Object.keys(S.MODULOS).forEach(function (k) { modular14.modulos[k] = false; });
+    modular14 = S.normalizarFicha(JSON.parse(JSON.stringify(modular14)));
+    t.ok("módulos desligados persistem ao recarregar", Object.keys(S.MODULOS).every(function (k) { return !S.moduloAtivo(modular14, k); }));
+    Object.keys(S.MODULOS).forEach(function (k) {
+      t.iguais("ocultar preserva conteúdo de " + k, modular14[k], antes14[k]);
+      modular14.modulos[k] = true;
+    });
+    t.iguais("reativar restaura toda a ficha", S.normalizarFicha(modular14), S.normalizarFicha(antes14));
+    t.igual("imagem do aliado não é truncada na normalização", modular14.aliados[0].imagem, imagem14);
+    var ordem14 = S.criarFicha({ nome: "Agente", tipoFicha: "ordem" });
+    Object.keys(S.MODULOS).forEach(function (k) { ordem14.modulos[k] = false; });
+    t.ok("configuração nunca oculta seções de Ordem", Object.keys(S.MODULOS).every(function (k) { return S.moduloAtivo(ordem14, k); }));
+    ordem14.aliados = [aliado14];
+    t.iguais("Ordem preserva aliados", S.normalizarFicha(ordem14).aliados, C14.normalizarAliados([aliado14]));
+    var pacote14 = V.exportar("personagem", modular14);
+    var importado14 = V.importado(JSON.parse(JSON.stringify(pacote14)));
+    t.ok("ficha com aliados pode ser exportada e importada", importado14.ok);
+    if (importado14.ok) {
+      var ic14 = importado14.dados.aliados[0].criatura;
+      t.igual("exportação preserva imagem inteira", importado14.dados.aliados[0].imagem, imagem14);
+      t.ok("importação cria nova identidade do aliado", importado14.dados.aliados[0].id !== aliado14.id);
+      t.igual("perícia importada conserva o SEGUNDO atributo", ic14.pericias[0].atributoId, ic14.atributos[1].id);
+      t.igual("ataque importado conserva vínculo à perícia", ic14.ataques[0].periciaId, ic14.pericias[0].id);
+      t.igual("ataque importado conserva descrição", ic14.ataques[0].descricao, "Bicada");
+    }
+    var local14 = U14.copiar(modular14), remoto14 = U14.copiar(modular14);
+    local14.aliados[0].criatura.nome = "Corvino";
+    remoto14.aliados[0].criatura.status[0].atual = 2;
+    remoto14.aliados.reverse();
+    var mescla14 = Sync14.mesclar(modular14, local14, remoto14, Sync14.ESQUEMA_FICHA);
+    t.igual("nome e recurso independentes conciliam sem conflito", mescla14.conflitos.length, 0);
+    var unido14 = mescla14.estado.aliados.find(function (a) { return a.id === aliado14.id; });
+    t.ok("conciliação usa ID mesmo ao reordenar", unido14.criatura.nome === "Corvino" && unido14.criatura.status[0].atual === 2);
+    remoto14.aliados.find(function (a) { return a.id === aliado14.id; }).criatura.nome = "Outra escolha";
+    t.igual("edição concorrente do mesmo nome exige decisão", Sync14.mesclar(modular14, local14, remoto14, Sync14.ESQUEMA_FICHA).conflitos.length, 1);
+    comFila([10, 19], function () {
+      var ataque = D.dependente(C14.pedidoDeAtaque(aliado14.criatura, aliado14.criatura.ataques[0]));
+      t.ok("ataque do aliado usa atributo, bônus e crítico existentes", ataque.ok && ataque.total === 25 && D.ehCritico(ataque.natural, 19));
+    });
+    comFila([3], function () { t.igual("dano do aliado inclui extra", D.dano({ dano: "1d6", danoExtra: "2" }).total, 5); });
+    comFila([3, 4], function () { t.igual("crítico multiplica base e mantém extra", D.dano({ dano: "1d6", danoExtra: "2", critico: true, multiplicador: 2 }).total, 9); });
+
     /* Fila de faces: cada chamada de sorteio consome a próxima. Se a
        fila acabar antes da conta terminar, o teste falha por aqui — e
        não com um número aleatório disfarçando o erro. */
@@ -288,14 +358,17 @@
       t.iguais("PV, PE e Sanidade",
         ficha.status.map(function (s) { return s.nome; }), ["PV", "PE", "Sanidade"]);
 
-      t.igual("nasce com 28 perícias", ficha.pericias.length, 28);
+      t.igual("universal nasce sem perícias", ficha.pericias.length, 0);
+      t.igual("perícias vazias sobrevivem à normalização", S.normalizarFicha(ficha).pericias.length, 0);
+      var fichaOrdem = S.criarFicha({ nome: "Ordem", tipoFicha: "ordem" });
+      t.igual("Ordem mantém suas 28 perícias", fichaOrdem.pericias.length, 28);
 
-      var comAsterisco = ficha.pericias.filter(function (p) { return p.nome.indexOf("*") >= 0; });
+      var comAsterisco = fichaOrdem.pericias.filter(function (p) { return p.nome.indexOf("*") >= 0; });
       t.igual("os asteriscos foram preservados", comAsterisco.length, 10);
       t.ok("Ocultismo* mantém o asterisco",
-        ficha.pericias.some(function (p) { return p.nome === "Ocultismo*"; }));
+        fichaOrdem.pericias.some(function (p) { return p.nome === "Ocultismo*"; }));
 
-      var sobrevivencia = ficha.pericias.find(function (p) { return p.nome === "Sobrevivência"; });
+      var sobrevivencia = fichaOrdem.pericias.find(function (p) { return p.nome === "Sobrevivência"; });
       t.ok("Sobrevivência existe", !!sobrevivencia);
       t.igual("Sobrevivência permite dois atributos",
         (sobrevivencia.atributosPermitidos || []).length, 2);

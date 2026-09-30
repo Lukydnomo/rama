@@ -663,7 +663,34 @@
     aviso();
 
     if (!aberta.ok) { UI.avisoErro(aberta.mensagem || "Não foi possível usar esta imagem."); return; }
+    if (aberta.gif) { confirmarCapaGif(ctx, aberta); return; }
     enquadrarCapa(ctx, aberta);
+  }
+
+  function confirmarCapaGif(ctx, aberta) {
+    if (aberta.origem && aberta.origem.close) aberta.origem.close();
+    if (aberta.largura > 4096 || aberta.altura > 4096) {
+      UI.avisoErro("A capa GIF precisa ter até 4096 pixels de largura e altura. Escolha uma versão menor.");
+      return;
+    }
+    UI.modal({ titulo: "Capa animada da campanha", largo: true,
+      conteudo: [
+        el("p.t-mini", { texto: "O GIF mantém a animação original. A faixa mostra o centro da imagem, sem recortar o arquivo. Para outro enquadramento, prepare o GIF antes de escolher." }),
+        el("div.capa-editor__moldura", {}, [el("img.capa-editor__previa.capa-editor__previa--gif", {
+          src: aberta.imagem, alt: "Prévia da capa animada",
+        })]),
+      ],
+      botoes: [
+        { rotulo: "Escolher outra", classe: "r-botao--fantasma", aoClicar: function (fechar) { fechar(); escolherCapa(ctx); } },
+        { rotulo: "Cancelar", classe: "r-botao--fantasma" },
+        { rotulo: "Salvar capa", classe: "r-botao--principal", aoClicar: async function (fechar) {
+          var r = await global.RAMAApi.salvarCapaCampanha(ctx.campanhaId, aberta.imagem, aberta.largura, aberta.altura);
+          if (!r.ok) { UI.avisoDeFalha(r, "envio da capa animada"); return; }
+          ctx.definirCapa(r.dados, aberta.imagem);
+          fechar(); UI.avisoOk("Capa animada salva.");
+        } },
+      ],
+    });
   }
 
   /* O ENQUADRAMENTO
@@ -671,7 +698,7 @@
      A faixa é 3:1. A prévia mostra exatamente o que vai ser gravado, e a
      pessoa move o recorte com três controles (aproximação, horizontal,
      vertical) — ou arrastando a prévia. Nada é salvo antes de "Salvar
-     capa", e a imagem original nunca sobe: só o recorte, reduzido e
+     capa", e a foto estática original nunca sobe: só o recorte, reduzido e
      comprimido para caber no arquivo. */
   var PROPORCAO_DA_CAPA = 3;
   var LARGURA_DA_CAPA = 1500;

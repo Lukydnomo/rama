@@ -31,21 +31,22 @@
      ================================================================= */
 
   function blocoSuperior(ctx) {
-    return el("div.ficha-geral", {}, [
+    var temBlocos = ["atributos", "status", "defesa"].some(function (k) { return F.moduloAtivo(ctx.ficha, k); });
+    return el("div.ficha-geral", { class: temBlocos ? "" : "ficha-geral--sem-modulos" }, [
       el("div.ficha-identidade", {}, [foto(ctx), identidade(ctx)]),
-      el("div.pilha--larga", { class: "pilha" }, [
-        UI.painel("Atributos", atributos(ctx), { acoes: ctx.emEdicao() ? [
+      temBlocos ? el("div.pilha--larga", { class: "pilha" }, [
+        F.moduloAtivo(ctx.ficha, "atributos") ? UI.painel("Atributos", atributos(ctx), { acoes: ctx.emEdicao() ? [
           el("button.r-botao.r-botao--mini", {
             type: "button", texto: "+ Atributo", onclick: function () { novoAtributo(ctx); },
           }),
-        ] : null }),
-        UI.painel("Status", status(ctx), { acoes: ctx.emEdicao() ? [
+        ] : null }) : null,
+        F.moduloAtivo(ctx.ficha, "status") ? UI.painel("Status", status(ctx), { acoes: ctx.emEdicao() ? [
           el("button.r-botao.r-botao--mini", {
             type: "button", texto: "+ Status", onclick: function () { novoStatus(ctx); },
           }),
-        ] : null }),
-        UI.painel("Defesa", defesa(ctx)),
-      ]),
+        ] : null }) : null,
+        F.moduloAtivo(ctx.ficha, "defesa") ? UI.painel("Defesa", defesa(ctx)) : null,
+      ]) : null,
     ]);
   }
 
@@ -107,14 +108,7 @@
     }
 
     return el("div.pilha--curta", { class: "pilha" }, [
-      UI.campo({
-        rotulo: "Nome", valor: ctx.ficha.nome, limite: 80,
-        aoMudar: function (v) {
-          ctx.ficha.nome = U.aparar(v, 80) || "Sem nome";
-          ctx.alterou();
-          ctx.atualizarTitulo();
-        },
-      }),
+      campoNome(ctx),
       UI.campo({
         rotulo: "Classe", valor: ctx.ficha.classe, limite: 60,
         aoMudar: function (v) { ctx.ficha.classe = U.aparar(v, 60); ctx.alterou(); ctx.atualizarTitulo(); },
@@ -125,6 +119,16 @@
       }),
       campoCampanha(ctx),
     ]);
+  }
+
+  function campoNome(ctx) {
+    return UI.campo({ rotulo: "Nome", valor: ctx.ficha.nome, limite: 80,
+      aoMudar: function (v, entrada) {
+        var r = V.nome(v, 80);
+        if (!r.ok) { entrada.value = ctx.ficha.nome; UI.avisoErro(r.mensagem); return; }
+        ctx.ficha.nome = r.valor; ctx.alterou(); ctx.atualizarTitulo();
+      },
+    });
   }
 
   /* =================================================================
@@ -573,5 +577,5 @@
     ctx.redesenhar();
   }
 
-  global.RAMASecaoGeral = { blocoSuperior: blocoSuperior, aba: aba, foto: foto, campoCampanha: campoCampanha };
+  global.RAMASecaoGeral = { blocoSuperior: blocoSuperior, aba: aba, foto: foto, campoCampanha: campoCampanha, campoNome: campoNome };
 })(window);

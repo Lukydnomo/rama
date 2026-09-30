@@ -111,7 +111,12 @@ E abra `http://localhost:8099/rama/`.
 
 ### Testes
 
-São três conjuntos no terminal e duas páginas no navegador.
+Há conjuntos de testes no terminal e páginas específicas no navegador.
+
+**Fechamento de janelas** — abra `testes/janelas.html`. Confere a confirmação de
+clique fora, a preservação dos campos ao voltar, janelas sobrepostas, foco,
+rolagem e o fechamento por uma ação que termina enquanto a pergunta está aberta.
+Os testes usam a interface real, sem acessar o backend.
 
 **Modelo e motor de dados** — 2190 verificações. No navegador, abra `testes/`;
 no terminal:
@@ -478,6 +483,55 @@ segredo nenhum — ele os lê das Script Properties. Publicá-lo não expõe nad
 
 ### Atualizar o backend
 
+**v2.24.1 — PULSO:** GIFs mantêm a animação em todos os seletores de imagem:
+personagens, criaturas, aliados, avatar, documentos e capa da campanha. Publique
+o site e atualize `Campanhas.gs` na implantação do Apps Script para aceitar capas
+GIF. Sem novas abas/colunas ou mudança do schema 14.
+
+O GIF é guardado integralmente: até **29.982 bytes** (aprox. 29 KB), para caber nos
+40.000 caracteres do processamento atual. GIFs maiores são recusados com aviso,
+sem substituir a imagem anterior. Não há compressão animada automática. Fotos
+estáticas mantêm compressão/recorte; GIFs conservam dimensões e animação originais
+e são enquadrados pela exibição. Capas GIF usam centro da imagem, sem editor de
+recorte, e aceitam até 4096 px em cada dimensão.
+
+Teste em `testes/imagens.html` ou com
+`node testes/imagens-interface.mjs /caminho/do/pacote/playwright` (opcionalmente
+`RAMA_CHROME` indicando um Chrome instalado). A suíte do backend também verifica
+os bytes dos GIFs após gravar/ler todos os tipos de imagem e as permissões.
+
+**v2.24.0 — CONFLUÊNCIA:** módulos configuráveis na universal, novas universais
+sem perícias, nome de Ordem editável e Aliados nos dois modelos. Schema 14:
+fichas antigas mantêm os módulos habilitados e todos os dados existentes.
+
+Publique os arquivos do site e atualize **`backend/Campanhas.gs`** no Apps Script,
+criando uma nova versão da implantação existente, para o combate consultar nomes
+atuais. Sem novas abas/colunas; não é necessário rodar `setupRama()` se a instalação
+já estava na v2.23. Não foi feita publicação automática.
+
+Aliados usam o modelo/editor de criaturas, imagens comprimidas e blocos da ficha,
+com revisão e conciliação. Cópias são independentes; o original privado alheio
+continua bloqueado no servidor. Não há entrada automática no combate. O limite
+existente de 1.000.000 de caracteres por ficha inclui aliados/imagens; erros não truncam dados.
+
+As suítes existentes incluem os casos novos. Teste de interface com Playwright:
+
+```sh
+node testes/aliados-interface.mjs /caminho/do/pacote/playwright
+```
+
+`RAMA_CHROME` pode indicar um executável instalado. O teste intercepta a API e
+usa dados fictícios, sem acessar o Apps Script real. Exercita os dois modelos
+em 1280 e 390 px. O simulador cobre autorização, revisão, imagens maiores que uma
+célula e nomes no combate. Esses testes não substituem conferir a implantação Google.
+
+Verificação local desta entrega (29/09/2026): **2.243** verificações de modelos,
+**977** do backend simulado, **228** de transporte/fila e **82** de interface,
+todas passando. A interface inclui a conferência das 21 regressões de janelas.
+Como Deno não estava instalado neste ambiente, as três suítes de terminal rodaram
+via Node com adaptação das funções de leitura/saída do executor; a interface foi
+executada em Chrome com Playwright e dados fictícios. Nenhuma planilha real foi alterada.
+
 Cole a versão nova no editor do Apps Script e faça **Implantar → Gerenciar
 implantações → editar (lápis) → Versão: Nova versão**. Editar a implantação
 existente mantém a mesma URL; criar uma implantação nova gera outra URL e
@@ -620,6 +674,13 @@ Para instalar, veja `assets/fonts/LEIA-ME.md`.
 
 ## Como o sistema se comporta
 
+**Janelas.** Clicar no fundo, fora de uma janela, abre a confirmação "Fechar
+janela?". "Voltar à janela" preserva o preenchimento; "Fechar janela" confirma o
+fechamento e descarta o que ainda não foi salvo. A confirmação não fecha ao clicar
+fora dela. Janelas que já exigem uma decisão continuam ignorando cliques no fundo.
+Os botões de fechar/cancelar, a tecla Esc e o fechamento após salvar mantêm o
+comportamento anterior. A proteção é compartilhada pelos formulários do site.
+
 **Salvamento.** A tela muda na hora; o envio vai atrás, juntando alterações
 seguidas num só POST (400 ms). Só uma gravação voa por vez — o que chegar
 durante o voo entra na fila. O indicador diz sempre onde as coisas estão:
@@ -708,8 +769,8 @@ console não abre o registro de outra conta.
   cada criatura), a nota do mestre, o homebrew e as imagens. Todos recusam acima
   do limite em vez de cortar; o combate é o que mais pode crescer. Ver "Os outros
   campos grandes" em [docs/DATABASE.md](docs/DATABASE.md).
-- **A foto é uma miniatura** de 256 px, comprimida no navegador. A original
-  nunca sobe.
+- **Fotos estáticas são miniaturas** de 256 px, comprimidas no navegador.
+  GIFs preservam o arquivo animado original e precisam ter até 29.982 bytes.
 - **Sem histórico de alterações.** Há `criadoEm` e `atualizadoEm`; o schema está
   preparado para auditoria, mas ela não foi construída.
 - **O freio de tentativas usa CacheService**, que é volátil. Ele cumpre a janela

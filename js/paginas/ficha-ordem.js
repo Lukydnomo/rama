@@ -289,7 +289,10 @@
           global.RAMASecaoGeral.foto
             ? global.RAMASecaoGeral.foto(ctx)
             : el("div.ficha-foto", {}, [el("div.ficha-foto__vazio", {}, [UI.marca(48)])]),
-          identidadeCurta(ctx, o, c),
+          el("div.pilha", {}, [
+            ctx.emEdicao() ? global.RAMASecaoGeral.campoNome(ctx) : null,
+            identidadeCurta(ctx, o, c),
+          ]),
         ]),
         el("div.pilha--larga", { class: "pilha" }, [
           avisoDePendencias(ctx, c),

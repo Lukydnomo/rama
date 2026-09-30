@@ -6,7 +6,10 @@
    antes de qualquer coisa subir: recorte quadrado pelo centro,
    redução para o lado configurado e compressão até o tamanho alvo.
 
-   A imagem original NUNCA sobe. Não é economia de espaço apenas — o
+   Fotos estáticas são convertidas. GIFs são preservados integralmente
+   para manter quadros, tempos, transparência e repetição da animação.
+   Só são aceitos se o arquivo original couber no mesmo limite de saída.
+   Não é economia de espaço apenas — o
    Apps Script tem limite por célula e por resposta, e uma foto grande
    derrubaria a gravação inteira da ficha junto com ela.
 
@@ -35,6 +38,8 @@
   /* Alvo do resultado, em bytes de dataURL. A planilha do Google
      aceita até 50.000 caracteres por célula; 40.000 deixa margem. */
   var MAX_SAIDA = 40000;
+  var PREFIXO_GIF = "data:image/gif;base64,";
+  var MAX_GIF = Math.floor((MAX_SAIDA - PREFIXO_GIF.length) / 4) * 3;
 
   function config() { return global.RAMA_CONFIG || {}; }
 
@@ -50,8 +55,9 @@
   async function decodificar(arquivo) {
     if (!arquivo) return { ok: false, erro: "sem_arquivo", mensagem: "Nenhuma imagem escolhida." };
 
-    if (TIPOS_ACEITOS.indexOf(arquivo.type) < 0) {
-      return { ok: false, erro: "tipo", mensagem: "Formato não aceito. Use PNG, JPG ou WebP." };
+    var tipo = arquivo.type || (/\.gif$/i.test(arquivo.name || "") ? "image/gif" : "");
+    if (TIPOS_ACEITOS.indexOf(tipo) < 0) {
+      return { ok: false, erro: "tipo", mensagem: "Formato não aceito. Use PNG, JPG, WebP, GIF ou BMP." };
     }
 
     if (arquivo.size > MAX_ARQUIVO) {
@@ -62,9 +68,23 @@
     }
 
     try {
+      // Verificar a assinatura evita depender apenas da extensão/MIME do arquivo.
+      var inicio = new Uint8Array(await arquivo.slice(0, 6).arrayBuffer());
+      var assinatura = String.fromCharCode.apply(null, inicio);
+      var gif = assinatura === "GIF87a" || assinatura === "GIF89a";
+      if (tipo === "image/gif" && !gif) {
+        return { ok: false, erro: "leitura", mensagem: "Este arquivo não é um GIF válido." };
+      }
+      if (gif && arquivo.size > MAX_GIF) {
+        return { ok: false, erro: "grande", mensagem: "Para preservar a animação, o GIF precisa ter até " +
+          MAX_GIF.toLocaleString("pt-BR") + " bytes (aprox. 29 KB). Escolha uma versão menor ou com menos quadros." };
+      }
+      var imagemGif = gif ? await lerGif(arquivo) : "";
       var bitmap = await carregar(arquivo);
       return {
         ok: true,
+        gif: gif,
+        imagem: imagemGif,
         origem: bitmap,
         largura: bitmap.width || bitmap.naturalWidth,
         altura: bitmap.height || bitmap.naturalHeight,
@@ -81,6 +101,12 @@
     if (!aberta.ok) return aberta;
     var bitmap = aberta.origem;
 
+    if (aberta.gif) {
+      if (bitmap.close) bitmap.close();
+      return { ok: true, imagem: aberta.imagem, largura: aberta.largura, altura: aberta.altura,
+        bytes: aberta.imagem.length, gif: true };
+    }
+
     var quadro = o.quadrado === false
       ? redimensionar(bitmap, o.lado || lado())
       : recortarQuadrado(bitmap, o.lado || lado());
@@ -92,6 +118,17 @@
     }
 
     return { ok: true, imagem: resultado.dados, largura: quadro.width, bytes: resultado.dados.length };
+  }
+
+  function lerGif(arquivo) {
+    return new Promise(function (resolver, recusar) {
+      var leitor = new FileReader();
+      leitor.onerror = function () { recusar(new Error("leitura do GIF")); };
+      leitor.onload = function () {
+        resolver(PREFIXO_GIF + String(leitor.result).split(",")[1]);
+      };
+      leitor.readAsDataURL(arquivo);
+    });
   }
 
   function carregar(arquivo) {
@@ -349,5 +386,6 @@
     comprimirTela: comprimirTela,
     TIPOS_ACEITOS: TIPOS_ACEITOS,
     MAX_SAIDA: MAX_SAIDA,
+    MAX_GIF: MAX_GIF,
   };
 })(window);
