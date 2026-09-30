@@ -1,5 +1,20 @@
 # O banco
 
+## Aliados — v2.24
+
+Aliados e imagens integram o JSON da ficha e usam os blocos existentes de
+`PERSONAGENS_BLOCOS`; não são concatenados em uma célula de Homebrew. O seletor,
+recorte e compressão de `js/imagem.js` são reutilizados. Importar lê a imagem
+pela API autorizada e a incorpora à ocorrência. O modelo continua usando
+`CRIATURAS_IMAGENS` e não é alterado.
+
+Revisão, integridade, geração de recuperação, idempotência e limite total seguem
+iguais: **1.000.000 de caracteres por ficha**, incluindo aliados e imagens.
+Exceder gera erro explícito e mantém o trabalho na tela com opção de exportação;
+nunca truncar imagem/ficha. Projeções de cartões não carregam aliados ou imagens.
+Não há novas abas/colunas nem migração. Em uma instalação na v2.23, não é necessário
+rodar `setupRama()` novamente.
+
 Uma planilha do Google, dezesseis abas. Criadas e mantidas por `setupRama()` — não
 monte nada à mão.
 

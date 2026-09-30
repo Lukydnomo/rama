@@ -24,12 +24,13 @@
   var el = U.el;
 
   /* editar(criatura|null, aoSalvar) */
-  function editar(original, aoSalvar) {
+  function editar(original, aoSalvar, opcoes) {
+    var o = opcoes || {};
     var criando = !original;
     var c = criando ? C.criar({}) : C.normalizar(original);
     if (!criando && original.id) c.id = original.id;
 
-    var imagem = "";
+    var imagem = o.imagem || "";
 
     var nome = UI.campo({ rotulo: "Nome", valor: c.nome, limite: 120 });
     var categoria = UI.campo({ rotulo: "Categoria", valor: c.categoria || "", limite: 60 });
@@ -55,7 +56,8 @@
     );
 
     var previa = el("span.r-avatar.r-avatar--g", { "aria-hidden": "true", texto: "?" });
-    if (!criando && original.id) {
+    if (imagem) U.trocar(previa, [el("img", { src: imagem, alt: "" })]);
+    if (!o.salvar && !criando && original.id) {
       global.RAMAApi.lerImagemCriatura(original.id).then(function (r) {
         if (r.ok && r.dados.imagem) {
           imagem = r.dados.imagem;
@@ -86,7 +88,7 @@
     };
 
     UI.modal({
-      titulo: criando ? "Nova criatura" : "Editar criatura",
+      titulo: o.titulo || (criando ? "Nova criatura" : "Editar criatura"),
       largo: true,
       conteudo: el("div.pilha", {}, [
         el("div.faixa", {}, [
@@ -109,7 +111,7 @@
         el("div.editar-grade", {}, [categoria]),
         descricao,
 
-        el("div.r-campo", {}, [
+        o.salvar ? null : el("div.r-campo", {}, [
           el("span.r-rotulo", { texto: "Visibilidade" }),
           seletorVis,
           el("p.r-ajuda", {
@@ -139,6 +141,13 @@
 
             var pronta = C.normalizar(c);
             if (c.id) pronta.id = c.id;
+
+            if (o.salvar) {
+              if (await o.salvar(pronta, imagem) === false) return;
+              fechar();
+              if (aoSalvar) aoSalvar();
+              return;
+            }
 
             var r = await global.RAMAApi.salvarHomebrew(pronta);
             if (!r.ok) { UI.avisoDeFalha(r, "gravação da criatura"); return; }
@@ -281,6 +290,8 @@
         aoMudar: function (v) { a.critico = Math.max(0, U.inteiro(v, a.critico)); } }),
       UI.campo({ rotulo: "Multiplicador", tipo: "numero", valor: a.multiplicador,
         aoMudar: function (v) { a.multiplicador = Math.max(1, U.inteiro(v, a.multiplicador)); } }),
+      UI.campo({ rotulo: "Descrição do ataque", tipo: "area", valor: a.descricao, limite: 1000,
+        aoMudar: function (v) { a.descricao = U.aparar(v, 1000); } }),
     ];
   }
 

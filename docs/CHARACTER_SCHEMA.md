@@ -5,6 +5,44 @@ padrão e normaliza o que chega de fora. Onde ela é guardada — inteira em
 `fichaJson` (formato antigo) ou em blocos (v2.15) — é assunto do backend, e não muda
 nada aqui: ver [DATABASE.md](DATABASE.md).
 
+## Módulos e aliados — v2.24 / schema 14
+
+`modulos` guarda booleanos: `atributos`, `status`, `defesa`, `pericias`,
+`habilidades`, `rituais`, `inventario`, `anotacoes` e `aliados`. Só `false` oculta
+a parte correspondente na **universal**. Ausentes recebem `true`, preservando
+a apresentação antiga. Ordem não aplica essa configuração. Geral, identificação,
+edição, salvamento e configuração ficam disponíveis; ocultar a aba ativa seleciona Geral.
+
+Nenhum conteúdo ou vínculo é removido. Perícias e ataques usam atributos/perícias
+ocultos; armaduras continuam na defesa e ações podem consumir recursos ocultos.
+O diálogo explica essas dependências. Não muda autorização ou visibilidade na campanha.
+
+`aliados: []` existe nos dois tipos. Cada ocorrência guarda:
+
+```js
+{ id: "uuid-da-ocorrencia", origemId: "id-do-modelo-ou-null",
+  criatura: { /* RAMACriaturas.normalizar: mesmo schema da biblioteca */ },
+  imagem: "data:image/...;base64,..." /* opcional */ }
+```
+
+O ID externo identifica o aliado; os IDs internos identificam seus elementos.
+`origemId` é procedência: nenhuma alteração/exclusão do modelo afeta a cópia.
+A criatura interna não tem ID de Homebrew e fica privada, subordinada ao acesso
+da ficha. Aliados não são publicados nem entram automaticamente em combate.
+
+Modo normal: consulta, valores atuais dos recursos e rolagens. Modo edição:
+criar, importar, alterar estrutura e remover com confirmação. O editor da
+biblioteca recebe callback para salvar na ficha; conflitos usam a conciliação
+existente por ID, inclusive com alterações recebidas enquanto o editor está aberto.
+
+Exportar converte vínculos atributo → perícia → ataque em posições; importar
+cria novas identidades e reconstrói os vínculos. Campos e imagens acompanham o
+arquivo. `versaoFormato` continua em 1. Normalização acrescenta os campos sem
+migração manual; abas anteriores ao schema 14 recusam abrir uma ficha atualizada.
+
+O nome de Ordem usa o campo validado da universal. Renomear mantém o registro,
+ID, progressão e vínculos.
+
 ## As duas ideias
 
 **Nada é campo fixo além do que precisa ser.** Força e PV são *padrões
@@ -35,7 +73,7 @@ Fazem parte do **dado**, não só da tela:
 
 ```jsonc
 {
-  "schemaVersion": 9,
+  "schemaVersion": 14,
   "tipoFicha": "universal",
 
   "nome": "Michael",
@@ -50,6 +88,9 @@ Fazem parte do **dado**, não só da tela:
   "status": [ /* ... */ ],
   "defesa": { "dt": 0, "esquiva": 0, "bloqueio": 0, "resistencia": 0 },
   "pericias": [ /* ... */ ],
+  "modulos": { "atributos": true, "status": true, "defesa": true, "pericias": true,
+    "habilidades": true, "rituais": true, "inventario": true, "anotacoes": true, "aliados": true },
+  "aliados": [],
   "habilidades": { "filhos": [] },
   "rituais": { "rotuloSecao": "Rituais", "rotulos": { }, "itens": [] },
 
@@ -128,7 +169,9 @@ que um digitado à mão.
 }
 ```
 
-As 28 perícias padrão, com o atributo de cada uma:
+Novas universais começam com `pericias: []`; normalizar, salvar e reabrir mantém
+essa lista vazia. Perícias antigas são preservadas. As 28 perícias padrão legadas
+abaixo continuam na criação de Ordem; as efetivas vêm do catálogo e bloco `ordem`:
 
 | | | | |
 |---|---|---|---|
@@ -533,7 +576,7 @@ uma regra de jogo.
 
 ## Migração
 
-`schemaVersion` é `13`. Toda ficha lida passa por `normalizarFicha()`, que aceita
+`schemaVersion` é `14`. Toda ficha lida passa por `normalizarFicha()`, que aceita
 o que faltar e conserta o que dá.
 
 **A v2.19 subiu o schema de 9 para 10 sem converter nada.** O bloco `ordem`

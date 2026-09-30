@@ -2221,6 +2221,13 @@ function recursosParaCombate(ctx, usuario, ids) {
 function combateParaCliente(c, ctx, jsonPronto, recursos) {
   var dados = lerJson(jsonPronto === undefined ? c.dadosJson : jsonPronto, {});
   var participantes = Array.isArray(dados.participantes) ? dados.participantes : [];
+  /* Nome é dado atual da ficha; o combate preserva o ID e a iniciativa.
+     O histórico de rolagens continua com o retrato do momento da ação. */
+  var nomesAtuais = personagensDaMesaPorId(ctx);
+  participantes = participantes.map(function (p) {
+    return p.tipo === 'personagem' && nomesAtuais[p.personagemId]
+      ? Object.assign({}, p, { nome: nomesAtuais[p.personagemId] }) : p;
+  });
   var estado = estadoDeCombate(c.estado);
   var porPersonagem = recursos || null;
 
@@ -2329,7 +2336,8 @@ function acaoLerImagemDoTurno(corpo, usuario) {
     var img = acharPor(ABAS.CRIATURAS_IMAGENS, 'criaturaId', p.origemId);
     imagem = (img && img.imagem) || '';
   }
-  return { ok: true, dados: { participanteId: p.id, tipo: p.tipo, nome: p.nome || '', imagem: String(imagem) } };
+  var nomeAtual = p.tipo === 'personagem' ? personagensDaMesaPorId(ctx)[p.personagemId] : null;
+  return { ok: true, dados: { participanteId: p.id, tipo: p.tipo, nome: nomeAtual || p.nome || '', imagem: String(imagem) } };
 }
 
 /* =====================================================================

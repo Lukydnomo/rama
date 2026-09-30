@@ -1,5 +1,24 @@
 # A API
 
+## Aliados e nomes atuais — v2.24
+
+Sem novas ações: `aliados` e `modulos` integram os dados de `criar_personagem`,
+`ler_personagem` e `salvar_personagem`, com as mesmas revisões, IDs de operação,
+limites e autorizações. A configuração modular não é permissão.
+
+Importar consulta `listar_homebrew` (criatura), `ler_homebrew` e
+`ler_imagem_criatura`. Leituras individuais reconferem acesso no servidor;
+criatura privada alheia permanece indisponível mesmo com ID conhecido. Salvar
+a cópia usa apenas `salvar_personagem`.
+
+`registrar_rolagem` recebe o resultado pronto, o personagem como contexto e o
+nome do aliado na ação. Mantém visibilidade e o mesmo ID/resultado nas retentativas.
+
+Combates e `ler_imagem_do_turno` consultam o nome atual do personagem vinculado.
+Exige atualizar `Campanhas.gs` na implantação. Não altera ID, iniciativa ou revisão
+do combate; o frontend recebe o nome mesmo com revisão igual. Nomes históricos
+das ações não são reescritos.
+
 Um endereço só, sempre `POST`, sempre JSON. A operação vai no campo `acao`.
 
 ```js

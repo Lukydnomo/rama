@@ -111,7 +111,12 @@ E abra `http://localhost:8099/rama/`.
 
 ### Testes
 
-São três conjuntos no terminal e duas páginas no navegador.
+Há conjuntos de testes no terminal e páginas específicas no navegador.
+
+**Fechamento de janelas** — abra `testes/janelas.html`. Confere a confirmação de
+clique fora, a preservação dos campos ao voltar, janelas sobrepostas, foco,
+rolagem e o fechamento por uma ação que termina enquanto a pergunta está aberta.
+Os testes usam a interface real, sem acessar o backend.
 
 **Modelo e motor de dados** — 2190 verificações. No navegador, abra `testes/`;
 no terminal:
@@ -478,6 +483,38 @@ segredo nenhum — ele os lê das Script Properties. Publicá-lo não expõe nad
 
 ### Atualizar o backend
 
+**v2.24.0 — CONFLUÊNCIA:** módulos configuráveis na universal, novas universais
+sem perícias, nome de Ordem editável e Aliados nos dois modelos. Schema 14:
+fichas antigas mantêm os módulos habilitados e todos os dados existentes.
+
+Publique os arquivos do site e atualize **`backend/Campanhas.gs`** no Apps Script,
+criando uma nova versão da implantação existente, para o combate consultar nomes
+atuais. Sem novas abas/colunas; não é necessário rodar `setupRama()` se a instalação
+já estava na v2.23. Não foi feita publicação automática.
+
+Aliados usam o modelo/editor de criaturas, imagens comprimidas e blocos da ficha,
+com revisão e conciliação. Cópias são independentes; o original privado alheio
+continua bloqueado no servidor. Não há entrada automática no combate. O limite
+existente de 1.000.000 de caracteres por ficha inclui aliados/imagens; erros não truncam dados.
+
+As suítes existentes incluem os casos novos. Teste de interface com Playwright:
+
+```sh
+node testes/aliados-interface.mjs /caminho/do/pacote/playwright
+```
+
+`RAMA_CHROME` pode indicar um executável instalado. O teste intercepta a API e
+usa dados fictícios, sem acessar o Apps Script real. Exercita os dois modelos
+em 1280 e 390 px. O simulador cobre autorização, revisão, imagens maiores que uma
+célula e nomes no combate. Esses testes não substituem conferir a implantação Google.
+
+Verificação local desta entrega (29/09/2026): **2.243** verificações de modelos,
+**977** do backend simulado, **228** de transporte/fila e **82** de interface,
+todas passando. A interface inclui a conferência das 21 regressões de janelas.
+Como Deno não estava instalado neste ambiente, as três suítes de terminal rodaram
+via Node com adaptação das funções de leitura/saída do executor; a interface foi
+executada em Chrome com Playwright e dados fictícios. Nenhuma planilha real foi alterada.
+
 Cole a versão nova no editor do Apps Script e faça **Implantar → Gerenciar
 implantações → editar (lápis) → Versão: Nova versão**. Editar a implantação
 existente mantém a mesma URL; criar uma implantação nova gera outra URL e
@@ -619,6 +656,13 @@ Para instalar, veja `assets/fonts/LEIA-ME.md`.
 ---
 
 ## Como o sistema se comporta
+
+**Janelas.** Clicar no fundo, fora de uma janela, abre a confirmação "Fechar
+janela?". "Voltar à janela" preserva o preenchimento; "Fechar janela" confirma o
+fechamento e descarta o que ainda não foi salvo. A confirmação não fecha ao clicar
+fora dela. Janelas que já exigem uma decisão continuam ignorando cliques no fundo.
+Os botões de fechar/cancelar, a tecla Esc e o fechamento após salvar mantêm o
+comportamento anterior. A proteção é compartilhada pelos formulários do site.
 
 **Salvamento.** A tela muda na hora; o envio vai atrás, juntando alterações
 seguidas num só POST (400 ms). Só uma gravação voa por vez — o que chegar

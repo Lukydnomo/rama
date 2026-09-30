@@ -594,6 +594,7 @@
          importado abriria com os rituais na ficha e todas as concessões
          pendentes, como se nunca tivesse aprendido nada. */
       devolverIdsDosEventos(limpo);
+      refazerVinculosAliados(limpo);
       var ficha = F.normalizarFicha(limpo);
       var v = personagem(ficha);
       if (!v.ok) return { ok: false, erro: "invalido", mensagem: "A ficha tem problemas.", problemas: v.problemas };
@@ -645,7 +646,7 @@
     /* Numa ficha, o vínculo entre concessão e ritual vira posição antes
        de os ids irem embora. Ver "O VÍNCULO DE RITUAL ATRAVESSANDO A
        IMPORTAÇÃO", acima. */
-    var preparado = tipo === "personagem" ? comPosicoesDeRitual(dados) : dados;
+    var preparado = tipo === "personagem" ? comAliadosPortaveis(comPosicoesDeRitual(dados)) : dados;
     return {
       rama: true,
       tipo: tipo,
@@ -653,6 +654,44 @@
       geradoEm: U.agoraISO(),
       dados: limparProibidos(preparado, 0),
     };
+  }
+
+  /* A limpeza da exportação retira IDs. Levar posições evita religar
+     todas as perícias ao primeiro atributo e perder ataques vinculados. */
+  function comAliadosPortaveis(ficha) {
+    var copia = U.copiar(ficha);
+    (copia.aliados || []).forEach(function (a) {
+      var c = a.criatura;
+      if (!c) return;
+      (c.pericias || []).forEach(function (p) {
+        p.atributoId = "#aliado:" + (c.atributos || []).findIndex(function (at) { return at.id === p.atributoId; });
+      });
+      (c.ataques || []).forEach(function (at) {
+        at.periciaId = "#aliado:" + (c.pericias || []).findIndex(function (p) { return p.id === at.periciaId; });
+      });
+    });
+    return copia;
+  }
+
+  function refazerVinculosAliados(ficha) {
+    (Array.isArray(ficha.aliados) ? ficha.aliados : []).forEach(function (a) {
+      var c = a && a.criatura;
+      if (!c || typeof c !== "object") return;
+      var atributos = Array.isArray(c.atributos) ? c.atributos : [];
+      var pericias = Array.isArray(c.pericias) ? c.pericias : [];
+      atributos.forEach(function (x) { if (x && typeof x === "object") x.id = U.uuid(); });
+      pericias.forEach(function (p) {
+        if (!p || typeof p !== "object") return;
+        p.id = U.uuid();
+        var m = /^#aliado:(\d+)$/.exec(p.atributoId || "");
+        if (m && atributos[Number(m[1])]) p.atributoId = atributos[Number(m[1])].id;
+      });
+      (Array.isArray(c.ataques) ? c.ataques : []).forEach(function (at) {
+        if (!at || typeof at !== "object") return;
+        var m = /^#aliado:(\d+)$/.exec(at.periciaId || "");
+        at.periciaId = m && pericias[Number(m[1])] ? pericias[Number(m[1])].id : null;
+      });
+    });
   }
 
   global.RAMAValidacao = {

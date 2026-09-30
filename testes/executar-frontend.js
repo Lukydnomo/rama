@@ -753,6 +753,7 @@ t.grupo("Fila do combate — condições dos personagens (v2.19)");
 {
   const inicial = combateDeTeste();
   inicial.participantes[0].condicoes = [{ chave: "morrendo", nome: "Morrendo", ativa: true, contagem: 1, limite: 3 }];
+  inicial.ativo = { participanteId: inicial.participantes[0].id, tipo: "personagem", nome: inicial.participantes[0].nome };
   const servidor = servidorDeCombate(inicial);
   /* O servidor de verdade responde a um lote SEM os recursos e as
      condições dos personagens: eles não mudam por operação de combate
@@ -770,7 +771,10 @@ t.grupo("Fila do combate — condições dos personagens (v2.19)");
 
   const remoto = JSON.parse(JSON.stringify(fila.confirmado()));
   remoto.participantes[0].condicoes = [{ chave: "morrendo", nome: "Morrendo", ativa: true, contagem: 2, limite: 3 }];
+  remoto.participantes[0].nome = "Agente renomeado";
   fila.receberRemoto(remoto);
+  t.igual("nome atual chega mesmo sem subir revisão do combate", fila.vista().participantes[0].nome, "Agente renomeado");
+  t.igual("painel do jogador também recebe o nome atual do turno", fila.vista().ativo.nome, "Agente renomeado");
   t.igual("a listagem da mesma revisão traz a contagem que o servidor fez no turno", fila.vista().participantes[0].condicoes[0].contagem, 2);
   const acabou = JSON.parse(JSON.stringify(remoto));
   delete acabou.participantes[0].condicoes;

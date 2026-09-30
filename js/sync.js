@@ -458,6 +458,12 @@
 
   var ESQUEMA_FICHA = {
     listas: {
+      "aliados": "id",
+      "aliados.criatura.status": "id",
+      "aliados.criatura.atributos": "id",
+      "aliados.criatura.pericias": "id",
+      "aliados.criatura.ataques": "id",
+      "aliados.criatura.habilidades": "id",
       "atributos": "id",
       "status": "id",
       "pericias": "id",
@@ -523,6 +529,7 @@
        ninguém: perguntar sobre eles seria ruído puro. */
     ignorar: ["atualizadoEm", "schemaVersion"],
     rotulos: {
+      aliados: "Aliados", criatura: "Criatura", imagem: "Imagem", modulos: "Módulos",
       nome: "Nome", classe: "Classe", origem: "Origem", campanhaId: "Campanha",
       valor: "Valor", dado: "Dado", sigla: "Sigla",
       atual: "Atual", maximo: "Máximo",

@@ -196,7 +196,32 @@
     };
   }
 
+  /* Aliados usam a mesma criatura, em uma ocorrência independente. A
+     imagem comprimida acompanha a ficha em BLOCOS, nunca o Homebrew. */
+  function criarAliado(modelo, imagem) {
+    var c = normalizar(modelo || criar());
+    delete c.id;
+    c.visibilidade = "privado";
+    return { id: U.uuid(), origemId: modelo && modelo.id || null, criatura: c, imagem: imagem || "" };
+  }
+
+  function normalizarAliados(bruto) {
+    var ids = {};
+    return lista(bruto).filter(function (a) { return a && a.criatura && typeof a.criatura === "object"; })
+      .map(function (a) {
+        var id = a.id && !ids[a.id] ? String(a.id) : U.uuid();
+        ids[id] = true;
+        var c = normalizar(a.criatura);
+        delete c.id;
+        c.visibilidade = "privado";
+        return { id: id, origemId: a.origemId || null, criatura: c,
+          imagem: typeof a.imagem === "string" && /^data:image\/(png|jpeg|webp|gif|bmp);base64,[A-Za-z0-9+/=]+$/.test(a.imagem) ? a.imagem : "" };
+      });
+  }
+
   global.RAMACriaturas = {
+    criarAliado: criarAliado,
+    normalizarAliados: normalizarAliados,
     STATUS_SUGERIDOS: STATUS_SUGERIDOS,
     criar: criar,
     normalizar: normalizar,

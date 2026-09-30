@@ -2,6 +2,21 @@
 
 O que a campanha guarda, onde cada coisa mora e por quê.
 
+### Aliados e nome do personagem — v2.24
+
+Aliados pertencem à ficha universal ou de Ordem. Cada um é uma cópia independente
+de criatura com recursos próprios. Vincular não cria participante de combate nem
+aplica bônus ou regras de companheiro automaticamente. A consulta do aliado e o
+painel de criatura do combate compartilham `js/criatura-painel.js` e o motor de dados.
+
+O aliado registra a ação na campanha do personagem com seu nome identificado.
+O cartão do mostrador central aparece dentro da janela de consulta. Reenviar
+resultado não rola novamente nem duplica o histórico, que mantém sua visibilidade.
+
+Renomear mantém o ID do personagem. Cartões e respostas do combate consultam o
+nome atual. A sincronização de personagens atualiza o combate mesmo sem mudar
+a revisão dele; nomes históricos guardados nas ações permanecem intactos.
+
 Permissões estão em [PERMISSIONS.md](PERMISSIONS.md); este documento trata da
 estrutura.
 

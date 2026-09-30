@@ -118,7 +118,7 @@
       }
 
       ctx.aoAtualizar("combates", function () { carregar(true); });
-      ctx.aoAtualizar("personagens", function () { recarregarFichasAbertas(); });
+      ctx.aoAtualizar("personagens", function () { recarregarFichasAbertas(); carregar(true); });
 
       carregar(false);
       return raiz;
@@ -1068,6 +1068,10 @@
         return;
       }
       if (c.painel.atualizar) c.painel.atualizar(p);
+      if (c.gaveta) {
+        var tituloDaGaveta = U.$(".r-modal__topo h2", c.gaveta.janela);
+        if (tituloDaGaveta) tituloDaGaveta.textContent = c.painel.titulo;
+      }
     }
 
     function placeholderDoPainel() {
@@ -1092,7 +1096,11 @@
       return {
         titulo: p.nome,
         raiz: el("div.combate-ficha-caixa", {}, [iframe]),
-        atualizar: function () { /* a ficha se atualiza sozinha; ver recarregarFicha */ },
+        atualizar: function (atual) {
+          p = atual;
+          this.titulo = p.nome;
+          iframe.title = "Ficha de " + p.nome;
+        },
         recarregar: function () {
           var f = janelaDaFicha();
           if (f && f.recarregarSeLivre) f.recarregarSeLivre();
@@ -1188,124 +1196,12 @@
      ================================================================= */
 
   function painelDeCriatura(controlador, participante) {
-    var c = global.RAMACriaturas.normalizar(participante.snapshot);
-    var controles = {};
-
-    var status = c.status.length ? UI.painel("Status", el("div.painel-numeros", {}, c.status.map(function (s) {
-      var passo = UI.passo({
-        valor: s.atual, minimo: 0, maximo: s.maximo > 0 ? s.maximo : 999999,
-        rotulo: s.nome + " de " + participante.nome,
-        aoMudar: function (v) { controlador.fila.definirStatusCriatura(participante.id, s.id, v); },
-      });
-      controles[s.id] = passo;
-      return el("div.painel-numero", {}, [
-        el("span.t-rotulo", { texto: s.nome + " / " + s.maximo }),
-        passo,
-      ]);
-    }))) : null;
-
-    function rolar(nome, resultado, critico) {
-      if (global.RAMARolagens) {
-        global.RAMARolagens.mostrar(resultado, { nome: participante.nome + " · " + nome, tipo: "criatura", critico: !!critico });
-      }
-    }
-
-    var corpo = el("div.pilha.criatura-painel", {}, [
-      el("div.criatura-painel__topo", {}, [
-        el("p.t-secao", { texto: participante.nome }),
-        el("span.r-etiqueta", { texto: "Criatura deste combate" }),
-      ]),
-      el("p.t-mini", { texto: "Mudanças aqui valem só para esta ocorrência. O modelo na biblioteca e as outras cópias não mudam." }),
-
-      status,
-
-      c.atributos.length ? UI.painel("Atributos", el("div.atributos", {}, c.atributos.map(function (a) {
-        return el("div.atributo", {}, [
-          el("button.atributo__caixa", {
-            type: "button",
-            "aria-label": "Rolar " + a.nome + ", " + a.dado,
-            onclick: function () {
-              var r = global.RAMADados.rolar(a.dado);
-              if (!r.ok) { UI.avisoErro("Dado inválido: " + a.dado); return; }
-              rolar(a.nome, {
-                tipo: "atributo", expressao: r.expressao, rolagens: r.rolagens,
-                natural: r.principal, total: r.principal, parcelas: [],
-              });
-            },
-          }, [
-            el("span.atributo__sigla", { texto: a.sigla }),
-            el("span.atributo__valor", { texto: String(a.valor) }),
-            el("span.atributo__dado", { texto: a.dado }),
-          ]),
-        ]);
-      }))) : null,
-
-      c.pericias.length ? UI.painel("Perícias", el("div.pericias", {}, c.pericias.map(function (p) {
-        return el("button.pericia", {
-          type: "button",
-          "aria-label": "Rolar " + p.nome,
-          onclick: function () { rolar(p.nome, global.RAMADados.dependente(global.RAMACriaturas.pedidoDePericia(c, p))); },
-        }, [
-          el("span.pericia__nome", { texto: p.nome }),
-          el("span.pericia__bonus", { texto: U.comSinal(p.bonus + p.bonusTemporario) }),
-        ]);
-      }))) : null,
-
-      c.ataques.length ? UI.painel("Ataques", el("div.pilha--curta", { class: "pilha" }, c.ataques.map(function (a) {
-        return el("div.item", {}, [
-          el("p.item__nome", { texto: a.nome }),
-          el("dl.r-dados", {}, [
-            el("dt", { texto: "Dano" }),
-            el("dd", { texto: (a.dano || "—") + (a.danoExtra ? " + " + a.danoExtra : "") }),
-            el("dt", { texto: "Crítico" }),
-            el("dd", { texto: a.critico ? a.critico + " / x" + a.multiplicador : "—" }),
-          ]),
-          el("div.item__acoes", {}, [
-            el("button.r-botao.r-botao--mini", {
-              type: "button", texto: "Ataque",
-              onclick: function () {
-                var r = global.RAMADados.dependente(global.RAMACriaturas.pedidoDeAtaque(c, a));
-                rolar(a.nome + " · Ataque", r, global.RAMADados.ehCritico(r.natural, a.critico));
-              },
-            }),
-            el("button.r-botao.r-botao--mini", {
-              type: "button", texto: "Dano", disabled: !a.dano,
-              onclick: function () {
-                rolar(a.nome + " · Dano", global.RAMADados.dano({
-                  nome: a.nome, dano: a.dano, danoExtra: a.danoExtra,
-                  critico: false, multiplicador: a.multiplicador,
-                }));
-              },
-            }),
-          ]),
-        ]);
-      }))) : null,
-
-      c.habilidades.length ? UI.painel("Habilidades",
-        el("div.pilha--curta", { class: "pilha" }, c.habilidades.map(function (h) {
-          return UI.recolhivel({ titulo: h.nome, extra: h.origem, conteudo: [el("p", { texto: h.texto })] });
-        }))
-      ) : null,
-
-      c.descricao ? UI.painel("Descrição", el("p", { texto: c.descricao, estilo: { whiteSpace: "pre-wrap" } })) : null,
-    ]);
-
-    return {
-      titulo: participante.nome,
-      raiz: el("div.combate-criatura-caixa", {}, [corpo]),
-      /* Mudança vinda de fora (outra aba) ou confirmada pelo servidor: o
-         número acompanha, a menos que a pessoa esteja digitando nele. */
-      atualizar: function (p) {
-        var snap = global.RAMACriaturas.normalizar(p.snapshot);
-        snap.status.forEach(function (s) {
-          var passo = controles[s.id];
-          if (!passo) return;
-          var campo = U.$(".r-passo__valor", passo);
-          if (campo && document.activeElement === campo) return;
-          if (passo.valor() !== s.atual) passo.definir(s.atual);
-        });
-      },
-    };
+    var painel = global.RAMACriaturaPainel.criar(participante.snapshot, {
+      nome: participante.nome, rotulo: "Criatura deste combate",
+      aoStatus: function (id, valor) { controlador.fila.definirStatusCriatura(participante.id, id, valor); },
+    });
+    return { titulo: painel.titulo, raiz: el("div.combate-criatura-caixa", {}, [painel.raiz]),
+      atualizar: function (p) { painel.atualizar(p.snapshot); } };
   }
 
   /* =================================================================

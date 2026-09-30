@@ -70,6 +70,36 @@
 
   var CHANGELOG = [
     {
+      versao: "2.24.0", codinome: "CONFLUÊNCIA", data: "29/09/2026",
+      mudancas: {
+        "Adicionado": [
+          "Configurar módulos na universal: esconder e reativar atributos, recursos, defesa, perícias, habilidades, rituais, inventário, anotações e aliados sem apagar conteúdo ou alterar permissões.",
+          "Aliados nas fichas universais e de Ordem: criar, importar cópias independentes da biblioteca, editar, consultar, ajustar recursos, rolar e remover com confirmação. Sem entrada automática no combate.",
+        ],
+        "Alterado": [
+          "Novas universais começam sem perícias. Fichas existentes mantêm suas listas; Ordem continua com suas perícias próprias.",
+          "Nome de Ordem editável na identificação. Listagens, cartões e combate consultam o nome atual; nomes históricos das ações são preservados.",
+        ],
+        "Técnico": [
+          "Schema 14: módulos ausentes ficam ativos, aliados ausentes viram lista vazia. Aliados e imagens comprimidas usam blocos, revisão, conciliação por ID e exportação dos vínculos internos.",
+          "Consulta compartilhada de criaturas e rolagens pelo mostrador/histórico centrais. Atualizar Campanhas.gs e a implantação do Apps Script para os nomes atuais no combate; sem novas abas ou colunas.",
+        ],
+      },
+    },
+    {
+      versao: "2.23.1",
+      codinome: "RESGUARDO",
+      data: "29/09/2026",
+      mudancas: {
+        "Corrigido": [
+          "Clicar fora de uma janela pede confirmação antes de fechá-la, evitando perder por acidente o preenchimento de personagens, itens, rituais, habilidades e outros formulários. Voltar à janela preserva o conteúdo preenchido.",
+        ],
+        "Técnico": [
+          "Proteção central no componente de janelas, incluindo janelas sobrepostas e fechamento durante uma ação assíncrona. Só o site mudou; sem alteração de schema ou backend.",
+        ],
+      },
+    },
+    {
       versao: "2.23.0",
       codinome: "PROVENIÊNCIA",
       data: "27/09/2026",

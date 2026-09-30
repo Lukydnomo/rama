@@ -217,6 +217,8 @@
   function modal(opcoes) {
     var o = opcoes || {};
     var focoAnterior = document.activeElement;
+    var fechada = false;
+    var confirmacaoFora = null;
 
     var corpo = el("div.r-modal__corpo");
     U.anexar(corpo, o.conteudo);
@@ -265,8 +267,25 @@
 
     var fundo = el("div.r-fundo", {
       onclick: function (ev) {
-        /* clique fora fecha, mas só quando a janela não exige decisão */
-        if (ev.target === fundo && !o.exigeDecisao) fechar();
+        /* Um clique acidental no fundo não descarta o formulário. Só a
+           janela do topo pode pedir fechamento; a confirmação não abre
+           outra confirmação ao receber um clique fora. */
+        if (ev.target !== fundo || o.exigeDecisao || fechada || confirmacaoFora) return;
+        if (pilhaDeModais[pilhaDeModais.length - 1].fundo !== fundo) return;
+        confirmacaoFora = modal({
+          titulo: "Fechar janela?",
+          exigeDecisao: true,
+          conteudo: el("p", { texto: "Deseja fechar esta janela? O que ainda não foi salvo será perdido." }),
+          botoes: [
+            { rotulo: "Voltar à janela", classe: "r-botao--principal" },
+            {
+              rotulo: "Fechar janela",
+              classe: "r-botao--perigo",
+              aoClicar: function (fecharConfirmacao) { fecharConfirmacao(); fechar(); },
+            },
+          ],
+          aoFechar: function () { confirmacaoFora = null; },
+        });
       },
     }, [janela]);
 
@@ -306,6 +325,11 @@
     }
 
     function fechar(resultado) {
+      if (fechada) return;
+      fechada = true;
+      /* Se a ação original terminar enquanto a pergunta está aberta,
+         não deixar uma confirmação órfã nem executar aoFechar duas vezes. */
+      if (confirmacaoFora) confirmacaoFora.fechar();
       document.removeEventListener("keydown", escapar);
       if (fundo.parentNode) fundo.parentNode.removeChild(fundo);
       pilhaDeModais = pilhaDeModais.filter(function (m) { return m.fundo !== fundo; });
