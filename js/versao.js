@@ -70,6 +70,19 @@
 
   var CHANGELOG = [
     {
+      versao: "2.23.1",
+      codinome: "RESGUARDO",
+      data: "29/09/2026",
+      mudancas: {
+        "Corrigido": [
+          "Clicar fora de uma janela pede confirmação antes de fechá-la, evitando perder por acidente o preenchimento de personagens, itens, rituais, habilidades e outros formulários. Voltar à janela preserva o conteúdo preenchido.",
+        ],
+        "Técnico": [
+          "Proteção central no componente de janelas, incluindo janelas sobrepostas e fechamento durante uma ação assíncrona. Só o site mudou; sem alteração de schema ou backend.",
+        ],
+      },
+    },
+    {
       versao: "2.23.0",
       codinome: "PROVENIÊNCIA",
       data: "27/09/2026",

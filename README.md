@@ -111,7 +111,12 @@ E abra `http://localhost:8099/rama/`.
 
 ### Testes
 
-São três conjuntos no terminal e duas páginas no navegador.
+Há conjuntos de testes no terminal e páginas específicas no navegador.
+
+**Fechamento de janelas** — abra `testes/janelas.html`. Confere a confirmação de
+clique fora, a preservação dos campos ao voltar, janelas sobrepostas, foco,
+rolagem e o fechamento por uma ação que termina enquanto a pergunta está aberta.
+Os testes usam a interface real, sem acessar o backend.
 
 **Modelo e motor de dados** — 2190 verificações. No navegador, abra `testes/`;
 no terminal:
@@ -619,6 +624,13 @@ Para instalar, veja `assets/fonts/LEIA-ME.md`.
 ---
 
 ## Como o sistema se comporta
+
+**Janelas.** Clicar no fundo, fora de uma janela, abre a confirmação "Fechar
+janela?". "Voltar à janela" preserva o preenchimento; "Fechar janela" confirma o
+fechamento e descarta o que ainda não foi salvo. A confirmação não fecha ao clicar
+fora dela. Janelas que já exigem uma decisão continuam ignorando cliques no fundo.
+Os botões de fechar/cancelar, a tecla Esc e o fechamento após salvar mantêm o
+comportamento anterior. A proteção é compartilhada pelos formulários do site.
 
 **Salvamento.** A tela muda na hora; o envio vai atrás, juntando alterações
 seguidas num só POST (400 ms). Só uma gravação voa por vez — o que chegar
