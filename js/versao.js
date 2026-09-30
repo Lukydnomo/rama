@@ -84,6 +84,7 @@
       },
     },
     {
+
       versao: "2.24.0", codinome: "CONFLUÊNCIA", data: "29/09/2026",
       mudancas: {
         "Adicionado": [

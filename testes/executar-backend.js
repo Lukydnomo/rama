@@ -4817,6 +4817,7 @@ testarAliadosBackend({ t, preparar, novaConta, comoFn });
 const { testarGifBackend } = await import("./imagens-backend.js");
 testarGifBackend({ t, preparar, novaConta, comoFn });
 
+
 escrever(`\n${FORTE}${passaram + falharam} verificações${FIM} · ${VERDE}${passaram} ok${FIM} · ${falharam ? VERMELHO : CINZA}${falharam} falhas${FIM}`);
 
 if (falhas.length) {
