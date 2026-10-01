@@ -96,11 +96,10 @@
           el("button.r-botao.r-botao--fantasma", {
             type: "button", texto: imagem ? "Trocar imagem" : "Imagem",
             onclick: async function () {
-              var img = await global.RAMAImagem.escolher();
-              if (!img.ok) {
-                if (img.erro !== "cancelado") UI.avisoErro(img.mensagem || "Não foi possível usar esta imagem.");
-                return;
-              }
+              /* Rascunho: a imagem recortada só sobe com "Criar"/"Salvar".
+                 O mesmo editor serve aos aliados da ficha (destinoImagem). */
+              var img = await global.RAMAEditorImagem.escolher(o.destinoImagem || "criatura");
+              if (!img.ok) return;
               imagem = img.imagem;
               U.trocar(previa, [el("img", { src: imagem, alt: "" })]);
             },

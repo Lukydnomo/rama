@@ -40,6 +40,8 @@ window.RAMAApp = { iniciar: async function(_, iniciar) {
     registrarRolagem:async(id,r)=>{TESTE.envios.push(JSON.parse(JSON.stringify(r))); if(TESTE.falharUma){TESTE.falharUma=false;return {ok:false,erro:'sem_conexao'};} TESTE.historico.push(r);return {ok:true};}
   });
   RAMAImagem.escolher=async()=>({ok:true,imagem});
+  /* v2.27: o editor de criatura/aliado escolhe pelo editor de recorte. */
+  if(window.RAMAEditorImagem) RAMAEditorImagem.escolher=async()=>({ok:true,imagem});
   await iniciar({id:'dono',nome:'Teste'},{});
 }};`;
 let checks = 0;

@@ -2792,3 +2792,122 @@ html.arrastando * {
 }
 
 .rituais-lista:empty { min-height: var(--e4); }
+
+/* =====================================================================
+   EDITOR DE IMAGEM (v2.27) — js/imagem-editor.js
+   O palco mostra a imagem inteira em volta do recorte; fora dele, um véu.
+   A miniatura ao lado é o arquivo que vai ser salvo.
+   ===================================================================== */
+
+.editor-imagem { display: flex; flex-direction: column; gap: var(--e3); }
+
+.editor-imagem__area {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 180px;
+  gap: var(--e3);
+  align-items: start;
+}
+
+.editor-imagem__palco {
+  position: relative;
+  height: clamp(220px, 52vh, 460px);
+  background: var(--cor-superficie-2);
+  border: var(--borda) solid var(--cor-traco-fraca);
+  overflow: hidden;
+}
+
+.editor-imagem__tela {
+  display: block;
+  width: 100%;
+  height: 100%;
+  cursor: grab;
+  touch-action: none;
+}
+.editor-imagem__tela:active { cursor: grabbing; }
+.editor-imagem__tela:focus-visible { outline: 2px solid var(--cor-traco-forte); outline-offset: -2px; }
+.editor-imagem__tela[aria-disabled="true"] { cursor: progress; }
+
+.editor-imagem__lado { display: flex; flex-direction: column; gap: var(--e2); min-width: 0; }
+
+.editor-imagem__resultado {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--e1);
+}
+.editor-imagem__miniatura {
+  display: block;
+  max-width: 100%;
+  border: var(--borda) solid var(--cor-traco-media);
+  background: var(--cor-superficie);
+}
+.editor-imagem__miniatura--circulo { border-radius: 50%; }
+
+.editor-imagem__info { color: var(--cor-texto-3); overflow-wrap: anywhere; }
+.editor-imagem__aviso { color: var(--cor-aviso); }
+.editor-imagem__acoes { display: flex; flex-wrap: wrap; gap: var(--e1); }
+
+.editor-imagem__controles {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: var(--e2) var(--e4);
+}
+.editor-imagem__controles[hidden] { display: none; }
+
+.editor-imagem__zoom { display: flex; align-items: flex-end; gap: var(--e1); }
+.editor-imagem__zoom .editor-imagem__controle { flex: 1 1 auto; }
+.editor-imagem__passo { min-width: var(--alvo-toque); font-size: var(--texto-medio); }
+
+.editor-imagem__controle {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 2px var(--e2);
+  min-width: 0;
+}
+.editor-imagem__controle label {
+  grid-column: 1 / -1;
+  font-family: var(--fonte-mini);
+  font-size: var(--texto-mini);
+  letter-spacing: var(--espaco-letra-titulo);
+  text-transform: uppercase;
+  color: var(--cor-texto-3);
+}
+.editor-imagem__faixa {
+  width: 100%;
+  min-height: var(--alvo-toque);
+  accent-color: var(--cor-texto-2);
+}
+.editor-imagem__faixa:disabled { opacity: 0.45; }
+.editor-imagem__valor {
+  min-width: 4ch;
+  text-align: right;
+  font-family: var(--fonte-mini);
+  font-size: var(--texto-mini);
+  font-variant-numeric: tabular-nums;
+  color: var(--cor-texto-2);
+}
+
+/* GIF: a prévia da animação original, no formato do destino. */
+.editor-imagem__gif { margin: 0; display: flex; flex-direction: column; gap: var(--e1); }
+.editor-imagem__gif-moldura {
+  width: min(100%, 420px);
+  max-height: 46vh;
+  overflow: hidden;
+  border: var(--borda) solid var(--cor-traco-media);
+  background: var(--cor-superficie-2);
+}
+.editor-imagem__gif-moldura img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.editor-imagem__gif-moldura--circulo { width: min(100%, 240px); border-radius: 50%; }
+
+@media (max-width: 640px) {
+  .editor-imagem__area { grid-template-columns: minmax(0, 1fr); }
+  .editor-imagem__palco { height: clamp(200px, 44vh, 360px); }
+  .editor-imagem__lado {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: flex-start;
+  }
+  .editor-imagem__info { flex: 1 1 140px; }
+}

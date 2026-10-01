@@ -70,6 +70,29 @@
 
   var CHANGELOG = [
     {
+      versao: "2.27.0", codinome: "MOLDURA", data: "01/10/2026",
+      mudancas: {
+        "Adicionado": [
+          "Editor de recorte e enquadramento para toda imagem enviada: avatar da conta, foto do personagem (criação e ficha), criatura do Homebrew, aliados, capa da campanha e imagens de documentos. Prévia com a área aproveitada em destaque, arrastar a imagem (mouse, toque e pinça), zoom, posições, “Redefinir enquadramento”, “Cancelar” e “Usar imagem”.",
+          "A proporção segue o destino: 1:1 para avatares e retratos (com prévia redonda onde a exibição é redonda, sem transformar o arquivo em círculo), faixa 3:1 para a capa e, nos documentos, a imagem inteira por padrão ou recorte livre.",
+        ],
+        "Alterado": [
+          "Nada é enviado nem substituído antes de “Usar imagem”. Em criações e edições ainda não salvas, o recorte só atualiza o rascunho; cancelar o editor (ou Esc) não fecha o formulário de baixo nem apaga o que foi preenchido. Uma falha de envio mantém o editor aberto com o mesmo enquadramento.",
+          "GIF animado: “Usar GIF original” mantém a animação e os limites atuais; recortar exige converter para imagem estática, só por escolha explícita e com a prévia do resultado. Um GIF grande demais para ficar animado ainda pode ser convertido.",
+          "A capa da campanha passou a usar o mesmo editor, com o mesmo resultado de antes (até 1500 × 500).",
+        ],
+        "Corrigido": [
+          "Imagens com transparência não ganham mais fundo preto: viram WebP ou PNG, nunca JPEG.",
+          "Fotos de celular abrem na orientação certa (EXIF) antes do recorte.",
+          "Uma imagem que não cabe no limite depois da compressão é recusada com o motivo, em vez de seguir para o servidor.",
+        ],
+        "Técnico": [
+          "js/imagem-editor.js: um modal só, configurado por destino (avatar, retrato, criatura, aliado, capa, documento). Recorte feito sobre a imagem original decodificada e só depois reduzido e codificado (js/imagem.js: codificar, com validação do data URL e do limite). Bitmaps, observadores e eventos são liberados ao fechar. Só o site mudou.",
+          "Testes: 40 da geometria (novo executar-editor-imagem.js) e 48 no navegador (testes/editor-imagem.html), com imagens sintéticas.",
+        ],
+      },
+    },
+    {
       versao: "2.26.0", codinome: "FICHÁRIO", data: "01/10/2026",
       mudancas: {
         "Adicionado": [

@@ -497,25 +497,8 @@ button.mesa-recurso__valor { cursor: text; }
   .campanha-capa__vazio { aspect-ratio: auto; min-height: 140px; }
 }
 
-.capa-editor__moldura {
-  border: var(--borda) solid var(--cor-traco-media);
-  background: var(--cor-superficie-2);
-}
-
-.capa-editor__previa {
-  display: block;
-  width: 100%;
-  height: auto;
-  aspect-ratio: 3 / 1;
-  cursor: grab;
-  touch-action: none;
-}
-
-.capa-editor__previa:active { cursor: grabbing; }
-.capa-editor__previa--gif { aspect-ratio: 3 / 1; object-fit: cover; cursor: default; }
-.capa-editor__previa:focus-visible { outline: 2px solid var(--cor-traco-forte); outline-offset: 2px; }
-
-.capa-editor__faixa { width: 100%; accent-color: var(--cor-texto-2); }
+/* O enquadramento da capa mora no editor compartilhado (v2.27):
+   .editor-imagem, em componentes.css. */
 
 /* =====================================================================
    PERSONAGENS — ESCONDER STATUS DOS JOGADORES

@@ -65,7 +65,7 @@ try {
     await dialog.getByRole('button',{name:'Cancelar',exact:true}).click();
     check(await page.evaluate(()=>GIF_TESTE.salvos.length)===0,'cancelar não salva');
     await escolher('+ Adicionar capa',gif);
-    await page.getByRole('dialog').last().getByRole('button',{name:'Salvar capa',exact:true}).click();
+    await page.getByRole('dialog').last().getByRole('button',{name:'Usar GIF original',exact:true}).click();
     await page.waitForFunction(()=>GIF_TESTE.salvos.length===1);
     check(await page.evaluate(d=>GIF_TESTE.salvos[0].imagem===d && GIF_TESTE.salvos[0].largura===32 && GIF_TESTE.salvos[0].altura===16,data),'capa salva bytes e dimensões originais');
     check(await page.locator('.campanha-capa__imagem img').getAttribute('src')===data,'capa exibida continua GIF');
@@ -77,7 +77,7 @@ try {
     await escolher('Trocar capa',Buffer.from(png,'base64'),'image/png');
     dialog=page.getByRole('dialog').last();
     await dialog.locator('canvas').waitFor();
-    check(await dialog.getByLabel('Aproximação',{exact:true}).isVisible(),'PNG mantém editor de recorte');
+    check(await dialog.getByLabel('Zoom',{exact:true}).isVisible(),'PNG abre o editor de recorte compartilhado (v2.27)');
     await dialog.getByRole('button',{name:'Cancelar',exact:true}).click();
     check(errors.length===0,'nenhum erro de interface: '+errors.join(', '));
     await context.close();

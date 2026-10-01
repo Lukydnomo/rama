@@ -69,6 +69,8 @@
    --cor-scanline: rgba(0, 0, 0, 0.03);
    --cor-vinheta: rgba(0, 0, 0, 0.1);
    --cor-veu-modal: rgba(24, 24, 28, 0.5);
+   /* o que fica FORA do recorte no editor de imagem: apagado, mas visível */
+   --cor-veu-recorte: rgba(244, 244, 241, 0.74);
    --cor-sombra: rgba(20, 20, 24, 0.25);
    /* contorno de uma cor escolhida (etiqueta, amostra): separa do fundo
       uma cor clara demais sem mexer nela */
@@ -121,6 +123,7 @@
    --cor-scanline: rgba(255, 255, 255, 0.022);
    --cor-vinheta: rgba(0, 0, 0, 0.45);
    --cor-veu-modal: rgba(8, 8, 10, 0.86);
+   --cor-veu-recorte: rgba(8, 8, 10, 0.68);
    --cor-sombra: #000000;
    --cor-contorno-cor: rgba(255, 255, 255, 0.16);
 }

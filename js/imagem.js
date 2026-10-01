@@ -13,16 +13,17 @@
    Apps Script tem limite por célula e por resposta, e uma foto grande
    derrubaria a gravação inteira da ficha junto com ela.
 
-   Uma decisão importante: o recorte é centralizado e automático, sem
-   editor de enquadramento. É o caminho mais simples que resolve o caso
-   real (avatar redondo pequeno) — e a estrutura aceita um editor
-   depois sem mudar quem chama.
+   Desde a v2.27 quem escolhe o enquadramento é a pessoa, no editor
+   compartilhado (js/imagem-editor.js): ele usa as peças daqui — escolher
+   o arquivo (escolherArquivo), abrir com as conferências de tipo, tamanho
+   e orientação (decodificar), recortar o retângulo escolhido a partir da
+   imagem ORIGINAL decodificada (recortar) e só então reduzir e codificar
+   até caber (codificar). preparar/escolher, com o recorte central
+   automático, continuam aqui para quem ainda os chama.
 
-   A capa da campanha usa as mesmas peças por outro caminho: escolher o
-   arquivo (escolherArquivo), abrir com as mesmas conferências de tipo e
-   tamanho (decodificar), recortar o retângulo que a pessoa enquadrou
-   (recortar) e comprimir até caber (comprimirTela). Quem enquadra é a
-   tela — ver o editor de capa em js/paginas/campanha.js.
+   Transparência: uma tela com pixels transparentes nunca vira JPEG (o
+   JPEG não tem canal alfa e o transparente sairia preto). Vai WebP, que
+   guarda o alfa, ou PNG; não cabendo, a imagem é recusada com o motivo.
    ===================================================================== */
 
 (function (global) {
@@ -41,6 +42,14 @@
   var PREFIXO_GIF = "data:image/gif;base64,";
   var MAX_GIF = Math.floor((MAX_SAIDA - PREFIXO_GIF.length) / 4) * 3;
 
+  /* Resolução máxima aceita para abrir (80 megapixels). Acima disso o
+     celular costuma ficar sem memória no meio do recorte — melhor dizer
+     antes. */
+  var MAX_PIXELS = 80 * 1000 * 1000;
+
+  var MENSAGEM_GIF_GRANDE = "Para preservar a animação, o GIF precisa ter até " +
+    MAX_GIF.toLocaleString("pt-BR") + " bytes (aprox. 29 KB). Escolha uma versão menor ou com menos quadros.";
+
   function config() { return global.RAMA_CONFIG || {}; }
 
   function lado() { return config().LADO_FOTO || 256; }
@@ -51,8 +60,14 @@
      um documento precisa ser LEGÍVEL — uma planta baixa a 256px não
      serve para nada —, então a tela de documentos pede 1024 e aceita
      o retângulo original em vez de forçar o quadrado. */
-  /* As conferências de tipo e tamanho, e a decodificação. */
-  async function decodificar(arquivo) {
+  /* As conferências de tipo e tamanho, e a decodificação.
+
+     opcoes.gifGrande === "aceitar": um GIF que passa do limite não é
+     recusado aqui — ele volta com `gifCabe: false`, sem os bytes, para o
+     editor oferecer a conversão para imagem estática (com escolha
+     explícita). Sem a opção, o comportamento de sempre: recusado. */
+  async function decodificar(arquivo, opcoes) {
+    var o = opcoes || {};
     if (!arquivo) return { ok: false, erro: "sem_arquivo", mensagem: "Nenhuma imagem escolhida." };
 
     var tipo = arquivo.type || (/\.gif$/i.test(arquivo.name || "") ? "image/gif" : "");
@@ -75,23 +90,49 @@
       if (tipo === "image/gif" && !gif) {
         return { ok: false, erro: "leitura", mensagem: "Este arquivo não é um GIF válido." };
       }
-      if (gif && arquivo.size > MAX_GIF) {
-        return { ok: false, erro: "grande", mensagem: "Para preservar a animação, o GIF precisa ter até " +
-          MAX_GIF.toLocaleString("pt-BR") + " bytes (aprox. 29 KB). Escolha uma versão menor ou com menos quadros." };
+      var gifCabe = !gif || arquivo.size <= MAX_GIF;
+      if (gif && !gifCabe && o.gifGrande !== "aceitar") {
+        return { ok: false, erro: "grande", mensagem: MENSAGEM_GIF_GRANDE };
       }
-      var imagemGif = gif ? await lerGif(arquivo) : "";
-      var bitmap = await carregar(arquivo);
+      var imagemGif = gif && gifCabe ? await lerGif(arquivo) : "";
+      var bitmap;
+      try {
+        bitmap = await carregar(arquivo);
+      } catch (e) {
+        /* Um GIF grande que nem abre: o motivo útil é o do tamanho. */
+        if (gif && !gifCabe) return { ok: false, erro: "grande", mensagem: MENSAGEM_GIF_GRANDE };
+        throw e;
+      }
+      var largura = bitmap.width || bitmap.naturalWidth;
+      var altura = bitmap.height || bitmap.naturalHeight;
+      if (!largura || !altura) {
+        if (bitmap.close) bitmap.close();
+        return { ok: false, erro: "leitura", mensagem: "Esta imagem está vazia ou corrompida." };
+      }
+      if (largura * altura > MAX_PIXELS) {
+        if (bitmap.close) bitmap.close();
+        return {
+          ok: false, erro: "resolucao",
+          mensagem: "A imagem tem resolução alta demais (" + largura + " × " + altura + " px) para abrir com segurança " +
+            "neste aparelho. Use uma versão com até 80 megapixels.",
+        };
+      }
       return {
         ok: true,
         gif: gif,
+        gifCabe: gifCabe,
         imagem: imagemGif,
         origem: bitmap,
-        largura: bitmap.width || bitmap.naturalWidth,
-        altura: bitmap.height || bitmap.naturalHeight,
+        largura: largura,
+        altura: altura,
+        tipo: tipo,
       };
     } catch (e) {
       console.error("[R.A.M.A. · imagem] falha ao decodificar", e);
-      return { ok: false, erro: "leitura", mensagem: "Não foi possível ler esta imagem." };
+      return {
+        ok: false, erro: "leitura",
+        mensagem: "Não foi possível ler esta imagem. O arquivo pode estar corrompido ou num formato que este navegador não abre.",
+      };
     }
   }
 
@@ -112,12 +153,11 @@
       : recortarQuadrado(bitmap, o.lado || lado());
     if (bitmap.close) bitmap.close();
 
-    var resultado = comprimir(quadro);
-    if (!resultado) {
-      return { ok: false, erro: "compressao", mensagem: "Não foi possível preparar a imagem." };
-    }
-
-    return { ok: true, imagem: resultado.dados, largura: quadro.width, bytes: resultado.dados.length };
+    /* Mesmo codificador do editor: transparência preservada e resultado
+       conferido contra o limite — nunca "sucesso" acima dele. */
+    var resultado = codificar(quadro);
+    if (!resultado.ok) return resultado;
+    return { ok: true, imagem: resultado.imagem, largura: resultado.largura, altura: resultado.altura, bytes: resultado.bytes };
   }
 
   function lerGif(arquivo) {
@@ -134,8 +174,13 @@
   function carregar(arquivo) {
     if (global.createImageBitmap) {
       /* createImageBitmap decodifica fora da thread principal: a
-         interface não congela enquanto uma foto grande abre. */
-      return global.createImageBitmap(arquivo);
+         interface não congela enquanto uma foto grande abre.
+         "from-image" aplica a orientação EXIF: a foto que o celular gravou
+         deitada (com a marca de "gire 90°") abre em pé, e o recorte é
+         feito sobre o que a pessoa vê. Navegador que não conhece a opção
+         tenta sem ela — o <img> abaixo já respeita o EXIF por padrão. */
+      return global.createImageBitmap(arquivo, { imageOrientation: "from-image" })
+        .catch(function () { return global.createImageBitmap(arquivo); });
     }
     return new Promise(function (ok, falhou) {
       var url = URL.createObjectURL(arquivo);
@@ -192,46 +237,86 @@
     return tela;
   }
 
-  /* Tenta WebP e cai em JPEG; baixa a qualidade até caber no alvo.
-     Um navegador que não faz WebP devolve um PNG gigante disfarçado —
-     por isso o resultado é conferido, e não presumido. */
-  function comprimir(tela) {
-    var formatos = ["image/webp", "image/jpeg"];
-    var qualidades = [0.82, 0.7, 0.6, 0.5, 0.4];
+  /* Há algum pixel não totalmente opaco? Uma tela de até ~2 Mpx lê rápido;
+     maior que isso, lê-se uma versão reduzida (o alfa sobrevive à
+     redução). */
+  function temTransparencia(tela) {
+    var alvo = tela;
+    var area = tela.width * tela.height;
+    if (area > 2000000) {
+      var f = Math.sqrt(2000000 / area);
+      alvo = document.createElement("canvas");
+      alvo.width = Math.max(1, Math.round(tela.width * f));
+      alvo.height = Math.max(1, Math.round(tela.height * f));
+      alvo.getContext("2d").drawImage(tela, 0, 0, alvo.width, alvo.height);
+    }
+    try {
+      var dados = alvo.getContext("2d").getImageData(0, 0, alvo.width, alvo.height).data;
+      for (var i = 3; i < dados.length; i += 4) if (dados[i] < 255) return true;
+      return false;
+    } catch (e) {
+      /* Sem leitura de pixels (tela "suja"): na dúvida, trata como
+         transparente — nunca arrisca o fundo preto. */
+      return true;
+    }
+  }
 
-    var melhor = null;
+  var PASSOS = [1, 0.85, 0.72, 0.6, 0.5, 0.42];
+  var QUALIDADES = [0.86, 0.78, 0.7, 0.62, 0.55, 0.48];
+  var DATA_URL_VALIDA = /^data:image\/(webp|png|jpeg);base64,[A-Za-z0-9+/]+={0,2}$/;
 
-    for (var f = 0; f < formatos.length; f++) {
-      for (var q = 0; q < qualidades.length; q++) {
-        var dados = tela.toDataURL(formatos[f], qualidades[q]);
+  function reduzida(tela, passo) {
+    if (passo >= 1) return tela;
+    var alvo = document.createElement("canvas");
+    alvo.width = Math.max(1, Math.round(tela.width * passo));
+    alvo.height = Math.max(1, Math.round(tela.height * passo));
+    var ctx = alvo.getContext("2d");
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = "high";
+    ctx.drawImage(tela, 0, 0, alvo.width, alvo.height);
+    return alvo;
+  }
 
-        /* O navegador que não conhece o formato devolve PNG e ignora a
-           qualidade. Descobre-se pelo cabeçalho do dataURL. */
-        if (dados.indexOf("data:" + formatos[f]) !== 0) break;
+  /* codificar(tela, { limite, transparente })
 
-        if (!melhor || dados.length < melhor.dados.length) {
-          melhor = { dados: dados, formato: formatos[f], qualidade: qualidades[q] };
+     Codifica uma tela até caber no limite de caracteres do destino,
+     reduzindo aos poucos se preciso. Sem transparência: WebP e, se o
+     navegador não fizer WebP, JPEG. Com transparência: WebP (guarda o
+     alfa) e PNG — nunca JPEG, que pintaria o transparente de preto.
+
+     O navegador que não conhece um formato devolve PNG e ignora a
+     qualidade: o cabeçalho é conferido, não presumido. O texto final é
+     conferido inteiro (data URL válida e dentro do limite). Não cabendo,
+     RECUSA com o motivo: imagem cortada no meio é imagem quebrada. */
+  function codificar(tela, opcoes) {
+    var o = opcoes || {};
+    var limite = o.limite || MAX_SAIDA;
+    var transparente = o.transparente !== undefined ? !!o.transparente : temTransparencia(tela);
+    var formatos = transparente ? ["image/webp", "image/png"] : ["image/webp", "image/jpeg"];
+
+    for (var p = 0; p < PASSOS.length; p++) {
+      var alvo = reduzida(tela, PASSOS[p]);
+      for (var f = 0; f < formatos.length; f++) {
+        var qualidades = formatos[f] === "image/png" ? [1] : QUALIDADES;
+        for (var q = 0; q < qualidades.length; q++) {
+          var dados = alvo.toDataURL(formatos[f], qualidades[q]);
+          if (dados.indexOf("data:" + formatos[f] + ";") !== 0) break;
+          if (dados.length <= limite && DATA_URL_VALIDA.test(dados)) {
+            return {
+              ok: true, imagem: dados, largura: alvo.width, altura: alvo.height, bytes: dados.length,
+              formato: formatos[f], transparente: transparente,
+            };
+          }
         }
-        if (dados.length <= MAX_SAIDA) return melhor;
       }
     }
-
-    if (melhor && melhor.dados.length <= MAX_SAIDA) return melhor;
-
-    /* Ainda grande: reduz o lado pela metade e tenta de novo, uma vez.
-       Duas reduções seguidas já entregariam um avatar ilegível. */
-    if (tela.width > 96) {
-      var menor = document.createElement("canvas");
-      menor.width = Math.round(tela.width / 2);
-      menor.height = Math.round(tela.height / 2);
-      var ctx = menor.getContext("2d");
-      ctx.imageSmoothingEnabled = true;
-      ctx.imageSmoothingQuality = "high";
-      ctx.drawImage(tela, 0, 0, menor.width, menor.height);
-      return comprimir(menor);
-    }
-
-    return melhor;
+    return {
+      ok: false, erro: "grande",
+      mensagem: transparente
+        ? "Mesmo reduzida, esta imagem com transparência não cabe no arquivo sem perder o fundo transparente. " +
+          "Escolha uma área menor, uma imagem com menos detalhes ou sem transparência."
+        : "Mesmo reduzida, esta imagem não cabe no arquivo. Escolha uma área menor ou uma imagem com menos detalhes.",
+    };
   }
 
   /* Um retângulo da origem, desenhado em largura × altura. Nunca amplia
@@ -249,43 +334,8 @@
     return tela;
   }
 
-  /* Comprime uma tela até caber no limite da célula, reduzindo aos poucos
-     se preciso (em vez de cortar pela metade de uma vez, como o avatar).
-     Não cabendo nem assim, RECUSA: imagem cortada no meio é imagem
-     quebrada, e o servidor recusaria de qualquer jeito. */
-  function comprimirTela(tela, opcoes) {
-    var o = opcoes || {};
-    var limite = o.limite || MAX_SAIDA;
-    var passos = [1, 0.85, 0.72, 0.6, 0.5, 0.42];
-    var formatos = ["image/webp", "image/jpeg"];
-    var qualidades = [0.86, 0.78, 0.7, 0.62, 0.55, 0.48];
-
-    for (var p = 0; p < passos.length; p++) {
-      var alvo = tela;
-      if (passos[p] < 1) {
-        alvo = document.createElement("canvas");
-        alvo.width = Math.max(1, Math.round(tela.width * passos[p]));
-        alvo.height = Math.max(1, Math.round(tela.height * passos[p]));
-        var ctx = alvo.getContext("2d");
-        ctx.imageSmoothingEnabled = true;
-        ctx.imageSmoothingQuality = "high";
-        ctx.drawImage(tela, 0, 0, alvo.width, alvo.height);
-      }
-      for (var f = 0; f < formatos.length; f++) {
-        for (var q = 0; q < qualidades.length; q++) {
-          var dados = alvo.toDataURL(formatos[f], qualidades[q]);
-          if (dados.indexOf("data:" + formatos[f]) !== 0) break;
-          if (dados.length <= limite) {
-            return { ok: true, imagem: dados, largura: alvo.width, altura: alvo.height, bytes: dados.length };
-          }
-        }
-      }
-    }
-    return {
-      ok: false, erro: "grande",
-      mensagem: "Mesmo reduzida, esta imagem não cabe no arquivo. Escolha outra com menos detalhes.",
-    };
-  }
+  /* O nome antigo: hoje é o mesmo codificador. */
+  function comprimirTela(tela, opcoes) { return codificar(tela, opcoes); }
 
   /* Só o arquivo, sem preparar: quem chama decide o que fazer com ele. */
   function escolherArquivo() {
@@ -384,8 +434,13 @@
     decodificar: decodificar,
     recortar: recortar,
     comprimirTela: comprimirTela,
+    codificar: codificar,
+    temTransparencia: temTransparencia,
+    lado: lado,
     TIPOS_ACEITOS: TIPOS_ACEITOS,
     MAX_SAIDA: MAX_SAIDA,
     MAX_GIF: MAX_GIF,
+    MAX_PIXELS: MAX_PIXELS,
+    MENSAGEM_GIF_GRANDE: MENSAGEM_GIF_GRANDE,
   };
 })(window);

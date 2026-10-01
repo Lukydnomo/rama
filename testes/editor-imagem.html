@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Testes do editor de imagem — R.A.M.A.</title>
+<meta name="color-scheme" content="light dark">
+<meta name="theme-color" content="#F4F4F1">
+<script src="../js/tema.js"></script>
+<link rel="stylesheet" href="../css/tokens.css">
+<link rel="stylesheet" href="../css/base.css">
+<link rel="stylesheet" href="../css/componentes.css">
+<link rel="stylesheet" href="../css/layout.css">
+</head>
+<body>
+<main class="app-corpo">
+  <h1 class="t-titulo">Editor de imagem</h1>
+  <p>Imagens sintéticas geradas aqui mesmo. Nada é enviado: o envio é simulado e conferido.</p>
+  <button type="button" class="r-botao" id="executar">Executar novamente</button>
+  <p id="placar" role="status">Executando… as janelas abrem e fecham sozinhas.</p>
+  <ol id="saida"></ol>
+</main>
+<script>window.RAMA_CONFIG = { LADO_FOTO: 256 };</script>
+<script src="../js/util.js"></script>
+<script>window.RAMAApi = { frase: function (r) { return { titulo: "FALHA", texto: String(r && r.erro) }; } };</script>
+<script src="../js/ui.js"></script>
+<script src="../js/imagem.js"></script>
+<script src="../js/imagem-editor.js"></script>
+<script src="editor-imagem.js"></script>
+</body>
+</html>

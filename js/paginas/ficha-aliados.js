@@ -12,6 +12,7 @@
     var base = aliado ? U.copiar(aliado) : null;
     global.RAMAHomebrewCriatura.editar(aliado ? aliado.criatura : null, null, {
       titulo: aliado ? "Editar aliado" : "Criar aliado", imagem: aliado && aliado.imagem || "",
+      destinoImagem: "aliado",
       salvar: async function (criatura, imagem) {
         if (!ctx.emEdicao() || !permitido(ctx)) return false;
         var existente = aliado && atual(ctx, aliado.id);

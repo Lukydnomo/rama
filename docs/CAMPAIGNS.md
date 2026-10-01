@@ -118,24 +118,29 @@ aba não a baixa de novo.
 
 **O fluxo do mestre:**
 
-1. **+ Adicionar capa** (ou **Trocar capa**) escolhe o arquivo. `js/imagem.js`
-   confere tipo e tamanho e abre a imagem com as mesmas peças da foto de
-   personagem.
-2. Uma janela mostra a **prévia exata** do que vai ser gravado. O recorte se ajusta
-   com aproximação e posição horizontal e vertical — pelos controles, arrastando a
-   prévia ou com as setas do teclado (Shift anda mais). Nada sobe antes de
-   **Salvar capa**; **Cancelar** não grava nada.
-3. Ao salvar, sobe só o recorte: até 1500 × 500 px, comprimido (WebP ou JPEG, o que
-   couber) até 40.000 caracteres, reduzindo aos poucos se preciso. Se nem assim
-   couber, o envio é recusado com o motivo — nunca truncado. O servidor confere de
-   novo: formato `data:image/(webp|jpeg|png)`, dimensões de 1 a 4096 px e o limite
-   da célula (`dados_grandes`).
-4. **Remover** pede confirmação e apaga a linha.
+1. **+ Adicionar capa** (ou **Trocar capa**) escolhe o arquivo e abre o **editor de
+   imagem compartilhado** (`js/imagem-editor.js`, destino `capa`, v2.27): faixa 3:1,
+   a imagem inteira em volta com a área de fora apagada, e a miniatura do arquivo
+   que vai ser salvo.
+2. O recorte se ajusta arrastando a imagem (mouse ou dedo; pinça no celular), pelo
+   **Zoom** (controle, botões − e +, roda do mouse) e pelas posições horizontal e
+   vertical — ou com as setas e +/− no palco. **Redefinir enquadramento** volta ao
+   início. Nada sobe antes de **Usar imagem**; **Cancelar** ou Esc não grava nada.
+3. Ao confirmar, sobe só o recorte: até 1500 × 500 px, codificado (WebP, ou JPEG
+   quando não há transparência; PNG quando há) até 40.000 caracteres, reduzindo aos
+   poucos se preciso. Se nem assim couber, o envio é recusado com o motivo — nunca
+   truncado — e o editor continua aberto. O servidor confere de novo: formato
+   `data:image/(webp|jpeg|png)`, dimensões de 1 a 4096 px e o limite da célula
+   (`dados_grandes`).
+4. **GIF animado:** a janela oferece **Usar GIF original** (bytes intactos, até
+   ~29 KB e 4096 px; a faixa mostra o centro) ou **Recortar como imagem estática**
+   (o primeiro quadro, por escolha explícita, com a prévia do resultado).
+5. **Remover** pede confirmação e apaga a linha.
 
 A imagem chega na proporção da faixa, então a ocupa sem distorcer e sem cortar nada
-que o mestre não tenha visto na prévia. O botão mostra "Enviando imagem…" enquanto
-a planilha trabalha; uma falha de rede oferece **Tentar de novo** com o mesmo
-recorte.
+que o mestre não tenha visto na prévia. O botão mostra "Enviando…" enquanto a
+planilha trabalha, e o editor não fecha nesse meio-tempo; uma falha mantém o
+editor aberto com o mesmo recorte, para tentar de novo.
 
 **Quem faz o quê.** Só o mestre grava, troca ou remove (`exigirMestre`). Ler passa
 por `contextoDaCampanha`: a capa de campanha privada não sai para quem está de

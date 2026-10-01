@@ -74,20 +74,17 @@
     return caixa;
   }
 
+  /* A foto anda fora da ficha e sobe sozinha — com o editor de recorte
+     aberto (v2.27): só em "Usar imagem", e uma falha mantém o
+     enquadramento para tentar de novo. */
   async function trocarFoto(ctx) {
-    var img = await global.RAMAImagem.escolher();
-    if (!img.ok) {
-      if (img.erro !== "cancelado") UI.avisoErro(img.mensagem || "Não foi possível usar esta imagem.");
-      return;
-    }
+    var r = await global.RAMAEditorImagem.escolher("retrato", {
+      contexto: "envio da foto",
+      aoUsar: function (img) { return global.RAMAApi.salvarFoto(ctx.personagemId, img.imagem); },
+    });
+    if (!r.ok) return;
 
-    var aviso = UI.aviso("Enviando foto…", { duracao: 30000 });
-    var r = await global.RAMAApi.salvarFoto(ctx.personagemId, img.imagem);
-    aviso();
-
-    if (!r.ok) { UI.avisoDeFalha(r, "envio da foto"); return; }
-
-    ctx.definirFoto(img.imagem);
+    ctx.definirFoto(r.imagem);
     UI.avisoOk("Foto atualizada.");
   }
 

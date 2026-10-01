@@ -788,13 +788,13 @@
     var botaoFoto = el("button.r-botao.r-botao--fantasma", {
       type: "button", texto: "Escolher foto",
       onclick: async function () {
+        /* O recorte vira rascunho da criação: nada sobe antes de "Criar
+           registro", e cancelar o editor não mexe no formulário. */
         botaoFoto.disabled = true;
-        var img = await global.RAMAImagem.escolher();
-        botaoFoto.disabled = false;
-        if (!img.ok) {
-          if (img.erro !== "cancelado") UI.avisoErro(img.mensagem || "Não foi possível usar esta imagem.");
-          return;
-        }
+        var img;
+        try { img = await global.RAMAEditorImagem.escolher("retrato"); }
+        finally { botaoFoto.disabled = false; }
+        if (!img.ok) return;
         fotoPreparada = img.imagem;
         U.trocar(previa, [el("img", { src: img.imagem, alt: "" })]);
       },

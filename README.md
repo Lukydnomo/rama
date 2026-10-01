@@ -48,7 +48,8 @@ preferências de tela — nunca é tratado como banco.
     validacao.js        validação central, incluindo importação
     sync.js             conciliação de três vias e tela de conflito
     salvar.js           debounce, fila, backoff, revisão
-    imagem.js           recorte, redução e compressão de foto
+    imagem.js           decodificação (com orientação EXIF), recorte, redução e codificação
+    imagem-editor.js    o editor de recorte e enquadramento, o mesmo para todo envio de imagem
     importar.js         janela de importação com prévia
     ui.js               avisos, janelas, menus, indicadores, recolhível
     app.js              casca: cabeçalho, navegação, preferências, changelog
@@ -320,6 +321,22 @@ velha sem passar por cima) e outra aba da mesma conta. O lado do servidor —
 remendo sem apagar as outras preferências, valores recusados, conta tirada da
 sessão — está na suíte do backend (`testes/tema-backend.js`).
 
+**Editor de imagem** — 40 verificações da geometria no Deno e 48 no navegador:
+
+```bash
+deno run --allow-read testes/executar-editor-imagem.js
+```
+
+No terminal: destinos, enquadramento inicial de imagens quadradas, verticais e
+horizontais, zoom e deslocamento que nunca deixam espaço vazio nem deformam a
+proporção (1.000 sequências aleatórias) e o tamanho salvo sem ampliação. No
+navegador, abra `testes/editor-imagem.html`: rosto fora do centro, prévia igual ao
+arquivo salvo, arraste, pinça, teclado, redefinir, cancelar e Esc dentro de outro
+formulário, confirmação dupla, transparência sem fundo preto, foto de celular com
+orientação EXIF, GIF original preservado e conversão estática explícita, GIF
+grande, documento inteiro e recorte livre, capa 1500 × 500, limite de saída,
+falha de envio, arquivo inválido e abrir/fechar sem acumular janelas.
+
 **Pastas e sistemas na página Personagens** — 35 verificações:
 
 ```bash
@@ -558,15 +575,16 @@ usa dados fictícios, sem acessar o Apps Script real. Exercita os dois modelos
 em 1280 e 390 px. O simulador cobre autorização, revisão, imagens maiores que uma
 célula e nomes no combate. Esses testes não substituem conferir a implantação Google.
 
-Verificação local desta entrega (01/10/2026, v2.26): **2.275** verificações de
-modelos, **1.075** do backend simulado, **228** de transporte/fila, **52** do tema e
-**35** das pastas, no Deno; no navegador, com o servidor simulado e dados fictícios,
-`testes/` (2.275), bibliotecas (171), arrastar (126), janelas (21) e imagens (19),
-todas passando. A página Personagens foi exercitada em 1024 e 375 px, nos dois
-temas: criar, renomear e excluir pasta, mover por arraste e pela lista, retirar,
-duplicar, combinar pasta, busca, sistema e agrupamento, recarregar, outra conta,
-falha de rede e operação lenta. Nenhuma planilha real foi alterada; isso não
-substitui conferir a implantação Google.
+Verificação local desta entrega (01/10/2026, v2.27): **2.288** verificações de
+modelos, **1.075** do backend simulado, **228** de transporte/fila, **52** do tema,
+**35** das pastas e **40** da geometria do editor de imagem, no Deno; no navegador,
+com o servidor simulado e dados fictícios, `testes/` (2.288), editor de imagem
+(48), imagens (19), bibliotecas (171) e janelas (21), todas passando. O editor foi
+exercitado em todos os pontos de envio — avatar, foto na criação e na ficha,
+criatura, aliado, capa (estática e GIF) e documento — em 1024 e 375 px, nos dois
+temas. `testes/imagens-interface.mjs` e `aliados-interface.mjs` (Playwright)
+foram ajustados aos rótulos novos, mas não rodaram aqui (sem Node). Nenhuma
+planilha real foi alterada; isso não substitui conferir a implantação Google.
 
 Cole a versão nova no editor do Apps Script e faça **Implantar → Gerenciar
 implantações → editar (lápis) → Versão: Nova versão**. Editar a implantação
@@ -618,6 +636,11 @@ que a v2.17 lia — uma aba ainda aberta na versão anterior descartaria os dois
 gravar. Com o schema 9, essa aba recusa a ficha e pede para recarregar; nada se
 perde. Depois de publicar, peça a quem estiver com a ficha aberta para recarregar
 a página.
+
+**Atualizando para a v2.27 (editor de recorte de imagens): só o site.** Nenhum
+`.gs` mudou, não há `setupRama()` nem implantação nova. Os limites de imagem são os
+mesmos (40.000 caracteres por imagem; GIF original até ~29 KB) e o servidor
+continua conferindo formato e tamanho.
 
 **Atualizando para a v2.26 (pastas e sistemas em Personagens): backend, planilha e
 site.** Mudaram `Dados.gs` (duas abas novas) e `Codigo.gs` (as ações `criar_pasta`,
@@ -738,6 +761,18 @@ fechamento e descarta o que ainda não foi salvo. A confirmação não fecha ao 
 fora dela. Janelas que já exigem uma decisão continuam ignorando cliques no fundo.
 Os botões de fechar/cancelar, a tecla Esc e o fechamento após salvar mantêm o
 comportamento anterior. A proteção é compartilhada pelos formulários do site.
+
+**Imagens.** Toda imagem que sobe passa pelo mesmo editor de recorte: avatar da
+conta (prévia redonda, arquivo quadrado), foto do personagem na criação e na ficha,
+criatura do Homebrew, aliado, capa da campanha (faixa 3:1) e imagem de documento
+(inteira por padrão, ou recorte livre). Arraste a imagem, use o zoom (controle,
+− e +, roda do mouse ou pinça) e as posições; a miniatura ao lado é exatamente o
+arquivo que vai ser salvo. Nada é enviado nem substituído antes de **Usar imagem**:
+num formulário ainda não salvo (criação de personagem, criatura, aliado) o recorte
+só atualiza o rascunho; nos demais, o envio acontece com o editor aberto e uma
+falha não perde o enquadramento. GIF animado vai como está (até ~29 KB) ou, por
+escolha explícita, vira imagem estática recortada. Transparência é preservada
+(WebP ou PNG, nunca fundo preto), e fotos de celular abrem na orientação certa.
 
 **Pastas e sistemas (Personagens).** Cada conta organiza os seus personagens em
 pastas próprias — uma ficha em no máximo uma pasta, e uma pasta pode misturar

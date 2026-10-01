@@ -128,13 +128,17 @@
     ]);
   }
 
+  /* O editor de recorte (v2.27): o avatar só é enviado em "Usar
+     imagem", com o editor aberto; falhou, o enquadramento continua lá. */
   async function trocarAvatar() {
-    var img = await global.RAMAImagem.escolher();
-    if (!img.ok) {
-      if (img.erro !== "cancelado") UI.avisoErro(img.mensagem || "Não foi possível usar esta imagem.");
-      return;
-    }
-    await gravarAvatar(img.imagem);
+    var r = await global.RAMAEditorImagem.escolher("avatar", {
+      contexto: "gravação do avatar",
+      aoUsar: function (img) { return global.RAMAApi.salvarPerfil({ avatar: img.imagem }); },
+    });
+    if (!r.ok) return;
+    perfil.avatar = r.imagem;
+    UI.avisoOk("Avatar atualizado.");
+    desenhar();
   }
 
   async function gravarAvatar(imagem) {

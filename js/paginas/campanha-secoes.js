@@ -447,18 +447,14 @@
     nome.entrada.focus();
   }
 
+  /* Documento: imagem inteira por padrão, recorte livre se a pessoa
+     quiser (v2.27). Sobe com o editor aberto, em "Usar imagem". */
   async function trocarImagem(ctx, documento, recarregar) {
-    var img = await global.RAMAImagem.escolher({ lado: 1024, quadrado: false });
-    if (!img.ok) {
-      if (img.erro !== "cancelado") UI.avisoErro(img.mensagem || "Não foi possível usar esta imagem.");
-      return;
-    }
-
-    var aviso = UI.aviso("Enviando imagem…", { duracao: 30000 });
-    var r = await global.RAMAApi.salvarImagemDocumento(ctx.campanhaId, documento.id, img.imagem);
-    aviso();
-
-    if (!r.ok) { UI.avisoDeFalha(r, "envio da imagem"); return; }
+    var r = await global.RAMAEditorImagem.escolher("documento", {
+      contexto: "envio da imagem",
+      aoUsar: function (img) { return global.RAMAApi.salvarImagemDocumento(ctx.campanhaId, documento.id, img.imagem); },
+    });
+    if (!r.ok) return;
     UI.avisoOk("Imagem atualizada.");
     recarregar();
   }

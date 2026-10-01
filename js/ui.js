@@ -233,7 +233,7 @@
           var botao = ev.currentTarget;
           /* Um botão que já está esperando a planilha não dispara de novo. */
           if (botao.getAttribute("aria-busy") === "true") return;
-          if (!b.aoClicar) { fechar(); return; }
+          if (!b.aoClicar) { pedirFechamento(); return; }
           var resultado = b.aoClicar(fechar);
           /* Ação assíncrona (salvar, criar, excluir…): o próprio botão
              mostra que está trabalhando até ela terminar — em toda janela
@@ -258,7 +258,7 @@
         o.semFechar ? null : el("button.r-icone", {
           type: "button",
           "aria-label": "Fechar",
-          onclick: function () { fechar(); },
+          onclick: function () { pedirFechamento(); },
         }, [simbolo("x")]),
       ]),
       corpo,
@@ -281,7 +281,7 @@
             {
               rotulo: "Fechar janela",
               classe: "r-botao--perigo",
-              aoClicar: function (fecharConfirmacao) { fecharConfirmacao(); fechar(); },
+              aoClicar: function (fecharConfirmacao) { fecharConfirmacao(); pedirFechamento(); },
             },
           ],
           aoFechar: function () { confirmacaoFora = null; },
@@ -321,6 +321,14 @@
       if (pilhaDeModais[pilhaDeModais.length - 1] && pilhaDeModais[pilhaDeModais.length - 1].fundo !== fundo) return;
       if (o.exigeDecisao) return;
       ev.stopPropagation();
+      pedirFechamento();
+    }
+
+    /* Fechamento pedido pela pessoa (X, Esc, Cancelar, fundo). A janela
+       pode recusar enquanto trabalha — `podeFechar` devolve false, por
+       exemplo, durante um envio que não pode ficar sem dono. */
+    function pedirFechamento() {
+      if (o.podeFechar && o.podeFechar() === false) return;
       fechar();
     }
 
