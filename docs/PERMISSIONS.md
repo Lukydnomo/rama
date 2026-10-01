@@ -51,6 +51,8 @@ Três coisas, e são deliberadas:
 1. **Virar dono de ficha alguma.** O `ownerId` nunca muda, nem quando enviado
    de propósito numa gravação.
 2. **Apagar o personagem de outra pessoa.** Excluir e duplicar exigem ser dono.
+   Também mover entre pastas (v2.26): as pastas da página Personagens são da
+   conta, e editar a ficha de um jogador não dá acesso à organização dele.
 3. **Abrir o catálogo Homebrew privado do jogador.**
 
 > **Catálogo e conteúdo já anexado à ficha são coisas diferentes.**

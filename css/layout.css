@@ -374,6 +374,154 @@ body { display: flex; flex-direction: column; }
   .registro .r-menu { grid-area: menu; }
 }
 
+/* ---------- Personagens: pastas e sistemas (v2.26) ----------
+   A pasta e o sistema aparecem ESCRITOS no cartão — nunca só por cor. A
+   alça de arrastar fica por cima do link do cartão, como o menu: segurar
+   nela não abre a ficha, e o resto do cartão rola a página normalmente. */
+
+.registro--organizavel { grid-template-columns: auto auto 1fr auto auto; }
+.registro .arrastar-alca { position: relative; z-index: 2; }
+
+.registro__marcas {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--e1) var(--e2);
+  margin-top: 2px;
+}
+.etiqueta--desconhecida { border-style: dashed; color: var(--cor-texto-2); }
+.registro__pasta,
+.registro__estado {
+  font-family: var(--fonte-mini);
+  font-size: var(--texto-mini);
+  letter-spacing: var(--espaco-letra-titulo);
+  text-transform: uppercase;
+  color: var(--cor-texto-3);
+}
+.registro__estado { color: var(--cor-aviso); }
+.registro--movendo { border-style: dashed; }
+
+@media (max-width: 560px) {
+  .registro--organizavel {
+    grid-template-columns: auto auto 1fr auto;
+    grid-template-areas:
+      "alca foto corpo menu"
+      "alca foto data menu";
+  }
+  .registro--organizavel > .arrastar-alca { grid-area: alca; }
+}
+
+.pastas { display: flex; flex-direction: column; gap: var(--e2); }
+.pastas__lista { display: flex; flex-wrap: wrap; gap: var(--e1); }
+.pastas__dica { color: var(--cor-texto-3); }
+
+.pasta {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--e2);
+  max-width: 100%;
+  min-height: var(--alvo-toque);
+  padding: var(--e1) var(--e3);
+  background: var(--cor-superficie);
+  border: var(--borda) solid var(--cor-traco-fraca);
+  color: var(--cor-texto-2);
+  font-family: var(--fonte-mini);
+  font-size: var(--texto-mini);
+  letter-spacing: var(--espaco-letra-titulo);
+  text-transform: uppercase;
+  cursor: pointer;
+}
+.pasta:hover { border-color: var(--cor-traco-media); color: var(--cor-texto); }
+.pasta[aria-pressed="true"] {
+  background: var(--cor-texto);
+  border-color: var(--cor-traco-forte);
+  color: var(--cor-fundo);
+  font-weight: 700;
+}
+.pasta__nome { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; max-width: 32ch; }
+.pasta__n {
+  padding-left: var(--e2);
+  border-left: var(--borda) solid currentColor;
+  font-variant-numeric: tabular-nums;
+}
+.pasta[data-pasta="todos"] .pasta__nome { max-width: none; }
+.pasta--nova { border-style: dashed; color: var(--cor-texto-3); }
+.pasta--ocupada { border-style: dashed; }
+
+/* Durante o arraste, os destinos possíveis se mostram; o que está sob o
+   dedo ganha o contorno de arrastar.js. */
+html.arrastando .pasta[data-arrastar-pasta] { border-style: dashed; border-color: var(--cor-paranormal); }
+.pasta.arrastar-alvo-dentro { color: var(--cor-texto); }
+
+/* A confirmação de que algo chegou: um contorno que se apaga. */
+.organizacao-recebeu { animation: organizacao-recebeu 1.4s var(--curva); }
+@keyframes organizacao-recebeu {
+  0%, 40% { box-shadow: 0 0 0 3px var(--cor-ok); }
+  100% { box-shadow: 0 0 0 0 transparent; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .organizacao-recebeu { animation: none; outline: 2px solid var(--cor-ok); outline-offset: 1px; }
+}
+
+.pasta-aberta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--e2);
+  padding-bottom: var(--e2);
+  border-bottom: var(--borda) solid var(--cor-traco-fraca);
+}
+.pasta-aberta__titulo { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--e2); min-width: 0; }
+.pasta-aberta__titulo .t-secao { margin: 0; overflow-wrap: anywhere; }
+.pasta-aberta__titulo .t-mini { color: var(--cor-texto-3); }
+
+.filtros--personagens .r-busca { flex: 1 1 260px; }
+.filtro-sistema { display: inline-flex; align-items: center; gap: var(--e2); }
+.filtro-sistema .r-selecao { width: auto; min-width: 12rem; max-width: 100%; }
+
+.aviso-organizacao { color: var(--cor-aviso); }
+
+.grupos-sistema { display: flex; flex-direction: column; gap: var(--e5); }
+.grupo-sistema__titulo {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--e2);
+  margin: 0 0 var(--e2);
+  padding-bottom: var(--e1);
+  border-bottom: var(--borda) solid var(--cor-traco-fraca);
+  font-size: var(--texto-base);
+  letter-spacing: var(--espaco-letra-titulo);
+  text-transform: uppercase;
+  color: var(--cor-texto);
+}
+.grupo-sistema__titulo .t-mini { color: var(--cor-texto-3); }
+
+.pasta-opcoes { display: flex; flex-direction: column; gap: var(--e1); }
+.pasta-opcao {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--e2);
+  min-height: var(--alvo-toque);
+  padding: var(--e2) var(--e3);
+  background: var(--cor-fundo);
+  border: var(--borda) solid var(--cor-traco-fraca);
+  color: var(--cor-texto);
+  text-align: left;
+  cursor: pointer;
+  overflow-wrap: anywhere;
+}
+.pasta-opcao:hover:not(:disabled) { border-color: var(--cor-traco-forte); }
+.pasta-opcao:disabled { color: var(--cor-texto-3); border-style: dashed; cursor: default; }
+
+@media (max-width: 560px) {
+  .filtro-sistema { flex: 1 1 100%; }
+  .filtro-sistema .r-selecao { flex: 1 1 auto; min-width: 0; }
+  .pasta__nome { max-width: 20ch; }
+}
+
 /* =====================================================================
    BARRA DE FILTRO
    ===================================================================== */

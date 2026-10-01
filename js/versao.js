@@ -70,6 +70,25 @@
 
   var CHANGELOG = [
     {
+      versao: "2.26.0", codinome: "FICHÁRIO", data: "01/10/2026",
+      mudancas: {
+        "Adicionado": [
+          "Pastas na página Personagens: criar, renomear, abrir e excluir pastas próprias da conta. Cada personagem fica em no máximo uma pasta, e uma pasta pode misturar sistemas. “Todos os personagens” mostra tudo; “Sem pasta”, só o que não está organizado.",
+          "Mover para uma pasta arrastando o cartão pela alça (⠿), com os destinos à vista durante o arraste e a confirmação ao soltar; ou tocando na alça / “Mover para pasta…” no menu, pelo teclado e no celular. “Retirar da pasta” devolve para “Sem pasta”.",
+          "Filtro Sistema (Todos, Ordem Paranormal, Universal e qualquer outro presente) e “Agrupar por sistema”, que funcionam dentro da pasta aberta e junto com a busca.",
+        ],
+        "Alterado": [
+          "Excluir uma pasta explica que os personagens dela vão para “Sem pasta” e pede confirmação; nenhum personagem é excluído junto. Duplicar mantém a pasta e o sistema da original.",
+          "A pasta aberta, o filtro e o agrupamento ficam no endereço da página: recarregar volta ao mesmo lugar. Estados vazios distintos para pasta vazia, nenhum personagem e filtros sem resultado, com “Limpar filtros”.",
+        ],
+        "Técnico": [
+          "Atualizar Dados.gs e Codigo.gs, rodar setupRama() (abas PASTAS e PERSONAGENS_ORGANIZACAO) e criar nova versão da implantação. Pastas e sistema são um índice próprio e leve: mover não toca na ficha, na revisão nem na campanha, e salvar a ficha não traz uma pasta antiga de volta. Só o dono organiza — nem o mestre da mesa.",
+          "Fichas existentes começam em “Sem pasta”; o sistema de cada uma é lido uma vez e anotado (ou de uma vez por indexarPersonagens()). Ficha sem tipoFicha segue como universal; identificador desconhecido aparece como “não reconhecido”, sem sumir nem ser alterado. Os sistemas ficam num registro único, js/sistemas.js.",
+          "Testes: 35 da organização (novo executar-pastas.js), 61 novas no backend (1075) e a página exercitada no navegador em 1024 e 375 px, nos dois temas.",
+        ],
+      },
+    },
+    {
       versao: "2.25.0", codinome: "PENUMBRA", data: "01/10/2026",
       mudancas: {
         "Adicionado": [

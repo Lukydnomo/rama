@@ -320,6 +320,13 @@ function rotasDoNucleo() {
   excluir_personagem:    { publica: false, fn: acaoExcluirPersonagem },
   duplicar_personagem:   { publica: false, fn: acaoDuplicarPersonagem },
 
+  /* A organização pessoal da página Personagens (v2.26). Só o dono:
+     ser mestre de uma mesa dá acesso à ficha, não às pastas da conta. */
+  criar_pasta:           { publica: false, fn: acaoCriarPasta },
+  renomear_pasta:        { publica: false, fn: acaoRenomearPasta },
+  excluir_pasta:         { publica: false, fn: acaoExcluirPasta },
+  mover_personagem:      { publica: false, fn: acaoMoverPersonagem },
+
   ler_foto:              { publica: false, fn: acaoLerFoto },
   /* Várias fotos numa viagem, sem a listagem carregá-las. Ver
      "Imagens sob demanda". */
@@ -1395,9 +1402,16 @@ function acaoListarPersonagens(corpo, usuario) {
   /* A listagem devolve o cabeçalho de cada ficha, nunca o fichaJson.
      Trinta fichas completas para desenhar trinta nomes seriam
      megabytes por tela — e agora nem chegam a ser lidas da planilha. */
-  var lista = lerLeves(ABAS.PERSONAGENS)
-    .filter(function (p) { return meu(p, usuario); })
+  var meus = lerLeves(ABAS.PERSONAGENS).filter(function (p) { return meu(p, usuario); });
+
+  /* Sistema e pasta (v2.26) vêm do índice de organização, que é leve.
+     Ficha sem linha no índice — anterior à v2.26 — tem o sistema lido da
+     ficha uma vez e anotado; ver organizacaoDaListagem. */
+  var org = organizacaoDaListagem(usuario, meus);
+
+  var lista = meus
     .map(function (p) {
+      var ind = org.indice[String(p.id)];
       return {
         id: p.id,
         nome: p.nome,
@@ -1409,11 +1423,286 @@ function acaoListarPersonagens(corpo, usuario) {
         atualizadoEm: p.atualizadoEm,
         rev: Number(p.rev) || 0,
         fotoVersao: fotos[p.id] || '',
+        sistema: ind ? ind.sistema : null,
+        pastaId: (ind && ind.pastaId && org.pastasValidas[ind.pastaId]) ? ind.pastaId : null,
       };
     })
     .sort(function (a, b) { return String(b.atualizadoEm).localeCompare(String(a.atualizadoEm)); });
 
-  return { ok: true, dados: lista };
+  /* `dados` continua sendo a lista: um site antigo lê o que sempre leu e
+     ignora o resto. */
+  return {
+    ok: true,
+    dados: lista,
+    organizacao: { disponivel: org.disponivel, pastas: org.pastas },
+  };
+}
+
+/* =====================================================================
+   ORGANIZAÇÃO PESSOAL — PASTAS E SISTEMA (v2.26)
+   ---------------------------------------------------------------------
+   Duas abas leves: PASTAS (as pastas de cada conta) e
+   PERSONAGENS_ORGANIZACAO (o índice: sistema e pasta de cada ficha).
+
+   Tudo é do DONO. Cada ação confere, contra a sessão, que a pasta e o
+   personagem são da conta — um id de outra conta responde como se não
+   existisse. O mestre que edita a ficha de um jogador não alcança as
+   pastas dele.
+
+   Nada aqui toca na ficha: mover não sobe a revisão, não muda a
+   campanha nem a data. E salvar a ficha não toca aqui (a não ser para
+   CRIAR a linha que falta, sem pasta) — uma gravação atrasada nunca
+   devolve uma pasta antiga.
+   ===================================================================== */
+
+var LIMITE_PASTAS = 100;
+var LIMITE_NOME_PASTA = 60;
+var LIMITE_SISTEMAS_LIDOS = 25;
+
+/* O sistema de uma ficha, como ela diz. Ficha antiga, sem tipoFicha,
+   fica vazia — o site a trata pelo modelo universal, a compatibilidade
+   de sempre. Um valor que nenhuma versão conhece fica como veio (só
+   aparado): não some da lista nem é trocado por outro. */
+function sistemaDaFicha(ficha) {
+  var t = ficha && ficha.tipoFicha;
+  if (t === undefined || t === null) return '';
+  return String(t).trim().toLowerCase().slice(0, 40);
+}
+
+function organizacaoPronta() {
+  try {
+    aba(ABAS.PASTAS);
+    aba(ABAS.PERSONAGENS_ORGANIZACAO);
+    return true;
+  } catch (erro) {
+    return false;
+  }
+}
+
+function pastasDaConta(usuario) {
+  return lerLeves(ABAS.PASTAS).filter(function (p) { return meu(p, usuario); });
+}
+
+function indiceDaConta(usuario) {
+  return lerLeves(ABAS.PERSONAGENS_ORGANIZACAO).filter(function (l) { return meu(l, usuario); });
+}
+
+function pastaPublica(p) {
+  return { id: String(p.id), nome: String(p.nome || ''), criadoEm: p.criadoEm || '' };
+}
+
+/* O que a listagem precisa, sem abrir ficha — salvo as que ainda não
+   têm linha no índice. Essas têm o sistema lido UMA vez (até
+   LIMITE_SISTEMAS_LIDOS por listagem) e anotado no índice, na trava, se
+   ela estiver livre; ocupada, fica para a próxima. indexarPersonagens()
+   faz isso de uma vez, pelo editor. */
+function organizacaoDaListagem(usuario, meus) {
+  var saida = { disponivel: false, pastas: [], pastasValidas: {}, indice: {} };
+  if (!organizacaoPronta()) return saida;
+  saida.disponivel = true;
+
+  pastasDaConta(usuario)
+    .sort(function (a, b) { return String(a.nome).localeCompare(String(b.nome), 'pt-BR', { sensitivity: 'base' }); })
+    .forEach(function (p) {
+      saida.pastas.push(pastaPublica(p));
+      saida.pastasValidas[String(p.id)] = true;
+    });
+
+  indiceDaConta(usuario).forEach(function (l) {
+    saida.indice[String(l.personagemId)] = { sistema: String(l.sistema || ''), pastaId: String(l.pastaId || '') };
+  });
+
+  var faltando = meus.filter(function (p) { return !saida.indice[String(p.id)]; });
+  if (!faltando.length) return saida;
+
+  var lidas = lerFichasDosPersonagens(faltando.slice(0, LIMITE_SISTEMAS_LIDOS));
+  var novos = [];
+  faltando.slice(0, LIMITE_SISTEMAS_LIDOS).forEach(function (p) {
+    var r = lidas[p.id];
+    if (!r || !r.ok) return;
+    var sistema = sistemaDaFicha(r.ficha);
+    saida.indice[String(p.id)] = { sistema: sistema, pastaId: '' };
+    novos.push({ personagemId: p.id, ownerId: p.ownerId, sistema: sistema });
+  });
+
+  if (novos.length) {
+    try {
+      comTrava(function () {
+        var ja = {};
+        lerLeves(ABAS.PERSONAGENS_ORGANIZACAO).forEach(function (l) { ja[String(l.personagemId)] = true; });
+        var agora = new Date().toISOString();
+        var linhas = novos.filter(function (n) { return !ja[String(n.personagemId)]; }).map(function (n) {
+          return { personagemId: n.personagemId, ownerId: n.ownerId, sistema: n.sistema, pastaId: '', atualizadoEm: agora };
+        });
+        if (linhas.length) inserirLinhas(ABAS.PERSONAGENS_ORGANIZACAO, linhas);
+        return { ok: true };
+      });
+    } catch (erro) {
+      console.warn('R.A.M.A.: índice de organização não anotado agora: ' + erro);
+    }
+  }
+  return saida;
+}
+
+/* O índice nunca derruba a gravação da ficha: se ele falhar, a linha é
+   criada depois, pela listagem. */
+function indiceSemFalhar(registro, ficha, pastaId) {
+  try {
+    garantirIndice(registro, ficha, pastaId);
+  } catch (erro) {
+    console.warn('R.A.M.A.: índice de organização não gravado para ' + registro.id + ': ' + erro);
+  }
+}
+
+/* A linha do índice de um personagem, criada se faltar — sem pasta. Só
+   CRIA: uma linha que já existe não é tocada, então salvar a ficha nunca
+   desfaz uma mudança de pasta. Chamada DENTRO da trava. Sem as abas
+   (setupRama ainda não rodou), não faz nada. */
+function garantirIndice(registro, ficha, pastaId) {
+  if (!organizacaoPronta()) return;
+  var existente = linhaLeve(ABAS.PERSONAGENS_ORGANIZACAO, 'personagemId', registro.id);
+  if (existente) return;
+  inserir(ABAS.PERSONAGENS_ORGANIZACAO, {
+    personagemId: registro.id,
+    ownerId: registro.ownerId,
+    sistema: sistemaDaFicha(ficha),
+    pastaId: pastaId || '',
+    atualizadoEm: new Date().toISOString(),
+  });
+}
+
+/* Nome de pasta: texto, aparado, espaços juntados, sem caractere de
+   controle, de 1 a LIMITE_NOME_PASTA. Devolve null quando não serve. */
+function nomeDePasta(valor) {
+  if (typeof valor !== 'string') return null;
+  var s = valor.replace(/[\u0000-\u001F\u007F]/g, ' ').replace(/\s+/g, ' ').trim();
+  if (!s || s.length > LIMITE_NOME_PASTA) return null;
+  return s;
+}
+
+function idValido(valor) {
+  return typeof valor === 'string' && /^[A-Za-z0-9_-]{8,80}$/.test(valor);
+}
+
+function nomeRepetido(pastas, nome, excetoId) {
+  var alvo = nome.toLocaleLowerCase('pt-BR');
+  return pastas.some(function (p) {
+    return String(p.id) !== String(excetoId || '') && String(p.nome || '').toLocaleLowerCase('pt-BR') === alvo;
+  });
+}
+
+function acaoCriarPasta(corpo, usuario) {
+  var nome = nomeDePasta(corpo.nome);
+  if (!nome) return { ok: false, erro: 'dados_invalidos' };
+  var operacao = idDeOperacao(corpo.operacaoId);
+  if (!organizacaoPronta()) return { ok: false, erro: 'instalacao_incompleta' };
+
+  return comTrava(function () {
+    var minhas = pastasDaConta(usuario);
+
+    /* A mesma criação chegando de novo — a resposta se perdeu no
+       caminho. Devolve a pasta que ela criou, sem criar outra. */
+    if (operacao) {
+      for (var i = 0; i < minhas.length; i++) {
+        if (String(minhas[i].operacao || '') === operacao) return { ok: true, dados: pastaPublica(minhas[i]), repetida: true };
+      }
+    }
+
+    if (minhas.length >= LIMITE_PASTAS) return { ok: false, erro: 'limite_pastas' };
+    if (nomeRepetido(minhas, nome)) return { ok: false, erro: 'pasta_repetida' };
+
+    var agora = new Date().toISOString();
+    var pasta = { id: novoId(), ownerId: usuario.id, nome: nome, operacao: operacao, criadoEm: agora, atualizadoEm: agora };
+    inserir(ABAS.PASTAS, pasta);
+    return { ok: true, dados: pastaPublica(pasta) };
+  });
+}
+
+/* A pasta, se for desta conta. De outra conta ou inexistente: null —
+   a resposta não diz qual dos dois. */
+function minhaPasta(pastaId, usuario) {
+  if (!idValido(pastaId)) return null;
+  var p = acharPor(ABAS.PASTAS, 'id', pastaId);
+  return meu(p, usuario) ? p : null;
+}
+
+function acaoRenomearPasta(corpo, usuario) {
+  var nome = nomeDePasta(corpo.nome);
+  if (!nome || !idValido(corpo.pastaId)) return { ok: false, erro: 'dados_invalidos' };
+  if (!organizacaoPronta()) return { ok: false, erro: 'instalacao_incompleta' };
+
+  return comTrava(function () {
+    var pasta = minhaPasta(corpo.pastaId, usuario);
+    if (!pasta) return { ok: false, erro: 'nao_encontrado' };
+    if (nomeRepetido(pastasDaConta(usuario), nome, pasta.id)) return { ok: false, erro: 'pasta_repetida' };
+
+    pasta.nome = nome;
+    pasta.atualizadoEm = new Date().toISOString();
+    atualizarLinha(ABAS.PASTAS, pasta._linha, pasta);
+    return { ok: true, dados: pastaPublica(pasta) };
+  });
+}
+
+/* Excluir a pasta não exclui personagem nenhum: os dela voltam para
+   "Sem pasta", e só então a pasta sai. */
+function acaoExcluirPasta(corpo, usuario) {
+  if (!idValido(corpo.pastaId)) return { ok: false, erro: 'dados_invalidos' };
+  if (!organizacaoPronta()) return { ok: false, erro: 'instalacao_incompleta' };
+
+  return comTrava(function () {
+    var pasta = minhaPasta(corpo.pastaId, usuario);
+    if (!pasta) return { ok: false, erro: 'nao_encontrado' };
+
+    var agora = new Date().toISOString();
+    var liberados = 0;
+    indiceDaConta(usuario).forEach(function (l) {
+      if (String(l.pastaId) !== String(pasta.id)) return;
+      l.pastaId = '';
+      l.atualizadoEm = agora;
+      atualizarLinha(ABAS.PERSONAGENS_ORGANIZACAO, l._linha, l);
+      liberados++;
+    });
+
+    apagarLinha(ABAS.PASTAS, pasta._linha);
+    return { ok: true, dados: { pastaId: String(pasta.id), liberados: liberados } };
+  });
+}
+
+/* Põe o personagem numa pasta (ou em nenhuma, com pastaId vazio). Só
+   aquele registro muda, e só no índice. */
+function acaoMoverPersonagem(corpo, usuario) {
+  var destino = corpo.pastaId === null || corpo.pastaId === undefined || corpo.pastaId === '' ? '' : corpo.pastaId;
+  if (destino !== '' && !idValido(destino)) return { ok: false, erro: 'dados_invalidos' };
+  if (!idValido(corpo.personagemId)) return { ok: false, erro: 'dados_invalidos' };
+  if (!organizacaoPronta()) return { ok: false, erro: 'instalacao_incompleta' };
+
+  return comTrava(function () {
+    var registro = linhaLeve(ABAS.PERSONAGENS, 'id', corpo.personagemId);
+    if (!meu(registro, usuario)) return { ok: false, erro: 'nao_encontrado' };
+
+    if (destino && !minhaPasta(destino, usuario)) return { ok: false, erro: 'pasta_nao_encontrada' };
+
+    var agora = new Date().toISOString();
+    var linha = linhaLeve(ABAS.PERSONAGENS_ORGANIZACAO, 'personagemId', registro.id);
+    if (linha) {
+      if (String(linha.pastaId || '') !== destino) {
+        linha.pastaId = destino;
+        linha.atualizadoEm = agora;
+        atualizarLinha(ABAS.PERSONAGENS_ORGANIZACAO, linha._linha, linha);
+      }
+    } else {
+      /* Ficha anterior ao índice: o sistema é lido dela agora, uma vez. */
+      var lido = lerFichaDoPersonagem(registro);
+      inserir(ABAS.PERSONAGENS_ORGANIZACAO, {
+        personagemId: registro.id,
+        ownerId: registro.ownerId,
+        sistema: lido.ok ? sistemaDaFicha(lido.ficha) : '',
+        pastaId: destino,
+        atualizadoEm: agora,
+      });
+    }
+    return { ok: true, dados: { personagemId: String(registro.id), pastaId: destino || null } };
+  });
 }
 
 /* =====================================================================
@@ -2025,6 +2314,7 @@ function acaoCriarPersonagem(corpo, usuario) {
     if (!publicado.ok) return publicado;
 
     lembrarOperacao(usuario, operacao, id);
+    indiceSemFalhar(registro, ficha, '');
     avisarMesas([campanhaId], ['personagens']);
     return { ok: true, rev: 1, dados: { id: id } };
   });
@@ -2112,6 +2402,10 @@ function acaoSalvarPersonagem(corpo, usuario) {
     var publicado = publicarFicha(registro, ficha, { operacao: operacao });
     if (!publicado.ok) return publicado;
 
+    /* Só cria a linha do índice que falta (sem pasta). A pasta que já
+       estiver lá fica: a ficha não sabe nada de pastas. */
+    indiceSemFalhar(registro, ficha, '');
+
     avisarMesas([campanhaAnterior, registro.campanhaId], ['personagens', 'combates']);
 
     return { ok: true, rev: registro.rev };
@@ -2137,6 +2431,12 @@ function acaoExcluirPersonagem(corpo, usuario) {
     var foto = linhaLeve(ABAS.PERSONAGENS_FOTOS, 'personagemId', corpo.personagemId);
     if (foto && String(foto.ownerId) === String(usuario.id)) {
       apagarLinha(ABAS.PERSONAGENS_FOTOS, foto._linha);
+    }
+
+    /* A linha do índice sai junto; a pasta continua (pode ter outros). */
+    if (organizacaoPronta()) {
+      var ind = linhaLeve(ABAS.PERSONAGENS_ORGANIZACAO, 'personagemId', registro.id);
+      if (ind) apagarLinha(ABAS.PERSONAGENS_ORGANIZACAO, ind._linha);
     }
 
     avisarMesas([registro.campanhaId], ['personagens', 'combates']);
@@ -2185,6 +2485,17 @@ function acaoDuplicarPersonagem(corpo, usuario) {
     var publicado = publicarFicha(novo, ficha, { inserir: true, operacao: operacao });
     if (!publicado.ok) return publicado;
     lembrarOperacao(usuario, operacao, id);
+
+    /* A cópia fica na mesma pasta da original e com o mesmo sistema —
+       nenhuma pasta nova. */
+    var pastaDaOriginal = '';
+    if (organizacaoPronta()) {
+      var indOriginal = linhaLeve(ABAS.PERSONAGENS_ORGANIZACAO, 'personagemId', registro.id);
+      if (indOriginal && meu(indOriginal, usuario) && indOriginal.pastaId && minhaPasta(String(indOriginal.pastaId), usuario)) {
+        pastaDaOriginal = String(indOriginal.pastaId);
+      }
+    }
+    indiceSemFalhar(novo, ficha, pastaDaOriginal);
 
     var foto = acharPor(ABAS.PERSONAGENS_FOTOS, 'personagemId', corpo.personagemId);
     if (foto && String(foto.ownerId) === String(usuario.id) && foto.imagem) {
@@ -2762,9 +3073,61 @@ function setupRama() {
     }).length;
     relatorio.push('resumos do painel em dia: ' + comProjecao + ' de ' + personagens.length +
       ' — reconstruirResumos() refaz os que faltam, em lotes, sem tocar nas fichas');
+
+    /* O índice de organização (v2.26) também nasce sozinho: na criação,
+       na gravação e na listagem de cada conta. Contar não grava nada. */
+    var indexados = {};
+    lerLeves(ABAS.PERSONAGENS_ORGANIZACAO).forEach(function (l) { indexados[String(l.personagemId)] = true; });
+    var comIndice = personagens.filter(function (p) { return indexados[String(p.id)]; }).length;
+    relatorio.push('fichas no índice de pastas e sistemas: ' + comIndice + ' de ' + personagens.length +
+      ' — as outras entram na próxima listagem de cada conta, ou de uma vez com indexarPersonagens()');
   } catch (erro) { /* aba recém-criada, nada a contar */ }
 
   var texto = 'R.A.M.A. — setup\n\n' + relatorio.join('\n');
+  console.log(texto);
+  return texto;
+}
+
+/* ---------------------------------------------------------------------
+   indexarPersonagens()
+   Põe no índice de organização (v2.26) as fichas que ainda não estão
+   nele, lendo o sistema de cada uma — sem pasta, sem tocar na ficha.
+   Opcional: a listagem de cada conta faz o mesmo aos poucos. Roda em
+   lotes; se parar pelo tempo, rode de novo, que continua de onde estava.
+   --------------------------------------------------------------------- */
+function indexarPersonagens() {
+  reiniciarExecucao();
+  if (!organizacaoPronta()) {
+    var falta = 'R.A.M.A. — índice: rode setupRama() antes, para criar as abas PASTAS e PERSONAGENS_ORGANIZACAO.';
+    console.log(falta);
+    return falta;
+  }
+  var inicio = Date.now();
+  var feitos = 0;
+  var restantes = 0;
+  var indexados = {};
+  lerLeves(ABAS.PERSONAGENS_ORGANIZACAO).forEach(function (l) { indexados[String(l.personagemId)] = true; });
+  var faltando = lerLeves(ABAS.PERSONAGENS).filter(function (p) { return !indexados[String(p.id)]; });
+
+  for (var i = 0; i < faltando.length; i += 20) {
+    if (Date.now() - inicio > 4 * 60 * 1000) { restantes = faltando.length - i; break; }
+    var lote = faltando.slice(i, i + 20);
+    var lidas = lerFichasDosPersonagens(lote);
+    comTrava(function () {
+      var ja = {};
+      lerLeves(ABAS.PERSONAGENS_ORGANIZACAO).forEach(function (l) { ja[String(l.personagemId)] = true; });
+      var agora = new Date().toISOString();
+      var linhas = lote.filter(function (p) { return !ja[String(p.id)] && lidas[p.id] && lidas[p.id].ok; }).map(function (p) {
+        return { personagemId: p.id, ownerId: p.ownerId, sistema: sistemaDaFicha(lidas[p.id].ficha), pastaId: '', atualizadoEm: agora };
+      });
+      if (linhas.length) inserirLinhas(ABAS.PERSONAGENS_ORGANIZACAO, linhas);
+      feitos += linhas.length;
+      return { ok: true };
+    });
+  }
+
+  var texto = 'R.A.M.A. — índice de pastas e sistemas: ' + feitos + ' ficha(s) indexada(s)' +
+    (restantes ? '; faltam ' + restantes + ' — rode de novo.' : '; nada pendente.');
   console.log(texto);
   return texto;
 }

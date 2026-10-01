@@ -55,6 +55,8 @@ preferências de tela — nunca é tratado como banco.
     versao.js           FONTE ÚNICA da versão e do changelog
     habilidades.js      modelo e árvore recursiva de habilidades
     organizar.js        o que muda de lugar ao reorganizar uma lista (filtro, pastas, grupos)
+    sistemas.js         o registro dos sistemas de RPG (Ordem Paranormal, Universal…)
+    personagens-organizacao.js  pasta aberta, busca, sistema e agrupamento da página Personagens
     arrastar.js         o gesto de arrastar e soltar, o mesmo nas cinco abas
     criaturas.js        mini ficha de criatura
     fila.js             fila de gravação por entidade
@@ -207,7 +209,7 @@ avisam sem bloquear, adicionar que não resolve pendência de progressão, a mig
 do texto de "Efeito" para "Descrição" numa ficha antiga e a ficha atravessando
 salvar, exportar e importar.
 
-**Permissões, concorrência e armazenamento do backend** — 1014 verificações:
+**Permissões, concorrência e armazenamento do backend** — 1075 verificações:
 
 ```bash
 deno run --allow-read testes/executar-backend.js
@@ -278,20 +280,6 @@ as do navegador rodam os mesmos 300 casos sorteados e dão o mesmo resultado.
 deno run --allow-read testes/executar-frontend.js
 ```
 
-**Tema claro e escuro** — 52 verificações:
-
-```bash
-deno run --allow-read testes/executar-tema.js
-```
-
-Preferência → tema efetivo (com e sem `prefers-color-scheme`), o aparelho trocando
-de tema com o site aberto, o cache por conta, a troca de conta sem herdar o tema,
-a sessão trazendo o tema salvo em outro aparelho, a falha de rede sem falso
-"salvo", alternâncias rápidas (um pedido por vez, só o último valor, resposta
-velha sem passar por cima) e outra aba da mesma conta. O lado do servidor —
-remendo sem apagar as outras preferências, valores recusados, conta tirada da
-sessão — está na suíte do backend (`testes/tema-backend.js`).
-
 O site e o Apps Script são publicados separadamente e podem estar em versões
 diferentes. Estes testes trancam as duas regras que valem nesse intervalo: o
 lote é otimização e não requisito, e o portão de login só aparece quando o
@@ -317,6 +305,36 @@ buscada, personagem sem foto que não vira pedido repetido, falha que não fica
 guardada e trinta cartões virando duas viagens em vez de trinta. E a medição da
 viagem: o tempo do servidor separado do tempo de rede, e a viagem continuando
 medida quando o servidor não manda números.
+
+**Tema claro e escuro** — 52 verificações:
+
+```bash
+deno run --allow-read testes/executar-tema.js
+```
+
+Preferência → tema efetivo (com e sem `prefers-color-scheme`), o aparelho trocando
+de tema com o site aberto, o cache por conta, a troca de conta sem herdar o tema,
+a sessão trazendo o tema salvo em outro aparelho, a falha de rede sem falso
+"salvo", alternâncias rápidas (um pedido por vez, só o último valor, resposta
+velha sem passar por cima) e outra aba da mesma conta. O lado do servidor —
+remendo sem apagar as outras preferências, valores recusados, conta tirada da
+sessão — está na suíte do backend (`testes/tema-backend.js`).
+
+**Pastas e sistemas na página Personagens** — 35 verificações:
+
+```bash
+deno run --allow-read testes/executar-pastas.js
+```
+
+O registro de sistemas (`js/sistemas.js`: conhecidos, ficha antiga sem
+`tipoFicha` tratada como universal, identificador desconhecido preservado) e a
+conta da listagem (`js/personagens-organizacao.js`): Todos, Sem pasta e uma pasta;
+busca e sistema dentro da seleção; agrupar por sistema; os estados vazios; e nada
+mudando de pasta por filtrar ou agrupar. O lado do servidor — criar (sem duplicar
+na repetição), renomear sem quebrar vínculos, mover e retirar, excluir pasta sem
+excluir personagem, duplicar na mesma pasta, salvar a ficha sem trazer a pasta
+antiga de volta, conta contra conta (inclusive mestre de mesa), fichas anteriores
+ao índice e a listagem sem abrir fichas — está em `testes/pastas-backend.js`.
 
 E a gravação da ficha em blocos do lado do navegador: a resposta que se perde faz
 o salvador repetir o MESMO pedido (mesma ficha, revisão e id de operação), a edição
@@ -540,14 +558,15 @@ usa dados fictícios, sem acessar o Apps Script real. Exercita os dois modelos
 em 1280 e 390 px. O simulador cobre autorização, revisão, imagens maiores que uma
 célula e nomes no combate. Esses testes não substituem conferir a implantação Google.
 
-Verificação local desta entrega (01/10/2026, v2.25): **2.264** verificações de
-modelos, **1.014** do backend simulado, **228** de transporte/fila e **52** do tema,
-no Deno; no navegador, com o servidor simulado e dados fictícios, `testes/` (2.264),
-bibliotecas (171), arrastar (126), janelas (21) e imagens (19), todas passando. Os
-dois temas foram conferidos tela a tela (início, login, Perfil, fichas universal e
-de Ordem em todas as abas, nos modos normal e edição, campanha, combate, Homebrew,
-janelas) em 820 e 375 px, com uma varredura automática de contraste de texto. Nenhuma
-planilha real foi alterada; isso não substitui conferir a implantação Google.
+Verificação local desta entrega (01/10/2026, v2.26): **2.275** verificações de
+modelos, **1.075** do backend simulado, **228** de transporte/fila, **52** do tema e
+**35** das pastas, no Deno; no navegador, com o servidor simulado e dados fictícios,
+`testes/` (2.275), bibliotecas (171), arrastar (126), janelas (21) e imagens (19),
+todas passando. A página Personagens foi exercitada em 1024 e 375 px, nos dois
+temas: criar, renomear e excluir pasta, mover por arraste e pela lista, retirar,
+duplicar, combinar pasta, busca, sistema e agrupamento, recarregar, outra conta,
+falha de rede e operação lenta. Nenhuma planilha real foi alterada; isso não
+substitui conferir a implantação Google.
 
 Cole a versão nova no editor do Apps Script e faça **Implantar → Gerenciar
 implantações → editar (lápis) → Versão: Nova versão**. Editar a implantação
@@ -599,6 +618,19 @@ que a v2.17 lia — uma aba ainda aberta na versão anterior descartaria os dois
 gravar. Com o schema 9, essa aba recusa a ficha e pede para recarregar; nada se
 perde. Depois de publicar, peça a quem estiver com a ficha aberta para recarregar
 a página.
+
+**Atualizando para a v2.26 (pastas e sistemas em Personagens): backend, planilha e
+site.** Mudaram `Dados.gs` (duas abas novas) e `Codigo.gs` (as ações `criar_pasta`,
+`renomear_pasta`, `excluir_pasta`, `mover_personagem` e o sistema e a pasta na
+listagem). Cole os três `.gs` no editor, **rode `setupRama()`** — ele cria as abas
+`PASTAS` e `PERSONAGENS_ORGANIZACAO` sem tocar nas outras —, faça **Implantar →
+Gerenciar implantações → editar (lápis) → Versão: Nova versão** e publique o site.
+Nenhuma ficha é convertida: todas começam em "Sem pasta", e o sistema de cada uma é
+lido uma vez e anotado no índice na primeira listagem da conta (até 25 por
+listagem). Para fazer isso de uma vez, rode `indexarPersonagens()` no editor
+(opcional, repetível). Com o site novo e o backend antigo, a lista aparece completa,
+sem pastas, com um aviso; sem o `setupRama()`, a lista mostra os sistemas e avisa
+que as pastas dependem da planilha.
 
 **Atualizando para a v2.25 (tema claro e escuro): backend e site.** Mudou
 `Codigo.gs`: o login e a `sessao` passam a devolver `agente.preferencias.tema`, e o
@@ -706,6 +738,17 @@ fechamento e descarta o que ainda não foi salvo. A confirmação não fecha ao 
 fora dela. Janelas que já exigem uma decisão continuam ignorando cliques no fundo.
 Os botões de fechar/cancelar, a tecla Esc e o fechamento após salvar mantêm o
 comportamento anterior. A proteção é compartilhada pelos formulários do site.
+
+**Pastas e sistemas (Personagens).** Cada conta organiza os seus personagens em
+pastas próprias — uma ficha em no máximo uma pasta, e uma pasta pode misturar
+sistemas. "Todos os personagens" mostra tudo, "Sem pasta" só o que não está
+organizado, e abrir uma pasta restringe a lista a ela. Busca e filtro de sistema
+atuam sobre o que está aberto; "Agrupar por sistema" só arruma o resultado em
+grupos. Para mover: arraste o cartão pela alça (⠿) até uma pasta, ou toque na
+alça / use "Mover para pasta…" no menu (teclado e celular). O cartão fica
+"Movendo…" até o servidor confirmar. Excluir a pasta manda os personagens dela
+para "Sem pasta", com confirmação; excluir personagem continua sendo outra ação.
+A pasta aberta, o filtro e o agrupamento ficam no endereço da página.
 
 **Tema.** O padrão segue o tema do aparelho (`prefers-color-scheme`) e acompanha a
 troca com o site aberto; aparelho que não informa fica no claro. Em **Perfil →

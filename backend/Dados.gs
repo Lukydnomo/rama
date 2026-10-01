@@ -156,6 +156,30 @@ var ABAS = {
     somenteTexto: ['conteudo'],
     pesadas: ['conteudo'],
   },
+  PASTAS: {
+    /* As pastas pessoais da página Personagens (v2.26). O id é do
+       servidor e não muda: renomear troca só `nome`, e os vínculos
+       apontam para o id. `operacao` é o id da criação — a mesma criação
+       chegando de novo devolve a pasta que já existe, em vez de outra. */
+    nome: 'PASTAS',
+    colunas: ['id', 'ownerId', 'nome', 'operacao', 'criadoEm', 'atualizadoEm'],
+    chave: 'id',
+  },
+  PERSONAGENS_ORGANIZACAO: {
+    /* O índice da organização pessoal (v2.26): uma linha por personagem,
+       com o SISTEMA da ficha e a PASTA do dono. Metadado próprio, fora da
+       ficha e fora da linha de PERSONAGENS: salvar a ficha não reescreve
+       esta aba, então uma gravação atrasada não traz de volta uma pasta
+       antiga — e mover não mexe em revisão, campanha nem conteúdo.
+       Tudo leve: a listagem lê esta aba inteira sem abrir ficha nenhuma.
+
+       `sistema` é o tipoFicha guardado na ficha, como estava: vazio quer
+       dizer ficha antiga, sem o campo (o modelo universal, pela
+       compatibilidade de sempre); um valor desconhecido fica como veio. */
+    nome: 'PERSONAGENS_ORGANIZACAO',
+    colunas: ['personagemId', 'ownerId', 'sistema', 'pastaId', 'atualizadoEm'],
+    chave: 'personagemId',
+  },
   HOMEBREW: {
     /* `visibilidade` entrou na v2. Registro antigo fica com a célula
        vazia, e vazio é lido como 'privado' — nenhuma biblioteca que já

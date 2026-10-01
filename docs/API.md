@@ -299,6 +299,46 @@ trinta nomes seriam megabytes por tela.
 pede as imagens em lote por `ler_fotos`, e só as que ainda não tem. Antes, abrir
 "Meus personagens" baixava as fotos todas a cada visita.
 
+**Sistema e pasta (v2.26).** Cada item traz também `sistema` e `pastaId`, e a
+resposta ganha `organizacao` ao lado de `dados` (que continua sendo a lista — um
+site antigo lê o que sempre leu):
+
+```js
+→ { ok: true,
+    dados: [ { id, nome, …, sistema: "ordem" | "universal" | "" | "<outro>" | null,
+               pastaId: "<id>" | null } ],
+    organizacao: { disponivel: true, pastas: [ { id, nome, criadoEm } ] } }
+```
+
+`sistema` é o `tipoFicha` da ficha como ela o guarda: `""` é ficha antiga, sem o
+campo (o site a trata como universal); um identificador desconhecido vem como está;
+`null` quer dizer que o servidor ainda não sabe. Os dois vêm do índice leve
+`PERSONAGENS_ORGANIZACAO` — a listagem não abre fichas. Uma ficha anterior ao
+índice tem o sistema lido dela uma vez (até 25 por listagem) e anotado.
+`disponivel: false` quer dizer que as abas novas não existem (falta `setupRama()`):
+a lista vem completa, sem pastas.
+
+#### `criar_pasta` · `renomear_pasta` · `excluir_pasta` · `mover_personagem` (v2.26)
+```js
+{ acao: "criar_pasta", nome: "Campanha de sábado", operacaoId: "op-..." }
+→ { ok: true, dados: { id, nome, criadoEm } }     // a mesma operacaoId de novo: a mesma pasta, repetida: true
+{ acao: "renomear_pasta", pastaId: "...", nome: "Sábado à noite" }
+→ { ok: true, dados: { id, nome, criadoEm } }     // o id não muda
+{ acao: "excluir_pasta", pastaId: "..." }
+→ { ok: true, dados: { pastaId, liberados: 2 } }  // os personagens dela vão para Sem pasta
+{ acao: "mover_personagem", personagemId: "...", pastaId: "..." | null }
+→ { ok: true, dados: { personagemId, pastaId } }  // null: Sem pasta
+```
+Só o **dono** — o da sessão. Pasta ou personagem de outra conta respondem como
+inexistentes (`nao_encontrado`; destino de mover: `pasta_nao_encontrada`); ser
+mestre da mesa não muda isso. Nome: texto de 1 a 60 caracteres (espaços juntados),
+único por conta sem diferenciar maiúsculas (`pasta_repetida`); até 100 pastas
+(`limite_pastas`). Ids malformados: `dados_invalidos`. Sem as abas:
+`instalacao_incompleta`. Mover grava só no índice — não sobe a `rev`, não muda
+campanha, datas nem conteúdo. `criar_pasta` repete com segurança pelo
+`operacaoId`; `mover_personagem` e `renomear_pasta` gravam um valor e também
+podem ser repetidos.
+
 #### `ler_personagem`
 ```js
 { acao: "ler_personagem", personagemId: "..." }
@@ -361,7 +401,8 @@ discordarem.
 de uma versão do site que não o calculava — mantém o que já estava.
 
 #### `excluir_personagem`
-Remove a ficha, os blocos dela (todas as gerações, e só as dela) e a foto.
+Remove a ficha, os blocos dela (todas as gerações, e só as dela), a foto e a linha
+dela no índice de organização (a pasta fica).
 
 #### `duplicar_personagem`
 ```js
@@ -369,7 +410,8 @@ Remove a ficha, os blocos dela (todas as gerações, e só as dela) e a foto.
 → { ok: true, dados: { id: "..." } }
 ```
 Copia ficha e foto num registro novo, com `rev` 1, " (cópia)" no nome e blocos
-próprios. Uma ficha que não se monta não é duplicada (`ficha_ilegivel`) — a cópia
+próprios. A cópia fica na mesma pasta e com o mesmo sistema da original (v2.26),
+sem criar pasta. Uma ficha que não se monta não é duplicada (`ficha_ilegivel`) — a cópia
 seria vazia.
 
 ---

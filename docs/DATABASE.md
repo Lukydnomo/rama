@@ -216,6 +216,38 @@ tela de leitura que disputa a trava. A próxima gravação da ficha resolve sozi
 A projeção é derivada e recuperável: perder a coluna inteira custa desempenho,
 nunca dado. A ficha continua sendo a fonte.
 
+## PASTAS (v2.26)
+
+| Coluna         | Conteúdo                                                   |
+|----------------|------------------------------------------------------------|
+| `id`           | chave, do servidor; renomear não muda                      |
+| `ownerId`      | a conta dona — só ela vê e altera                          |
+| `nome`         | 1 a 60 caracteres, único por conta                         |
+| `operacao`     | o id da criação: a mesma criação repetida devolve esta     |
+| `criadoEm`     | ISO 8601                                                   |
+| `atualizadoEm` | ISO 8601                                                   |
+
+## PERSONAGENS_ORGANIZACAO (v2.26)
+
+O índice da página Personagens: uma linha por personagem, toda leve.
+
+| Coluna         | Conteúdo                                                   |
+|----------------|------------------------------------------------------------|
+| `personagemId` | chave                                                      |
+| `ownerId`      | o dono da ficha                                            |
+| `sistema`      | o `tipoFicha` da ficha como estava; vazio = ficha antiga   |
+| `pastaId`      | a pasta, ou vazio (Sem pasta)                              |
+| `atualizadoEm` | ISO 8601                                                   |
+
+**Metadado próprio.** A pasta não está na ficha nem na linha de `PERSONAGENS`:
+salvar a ficha não reescreve esta aba (só cria a linha que falta, sem pasta), então
+uma gravação atrasada nunca devolve uma pasta antiga, e mover não muda revisão,
+campanha, datas nem conteúdo. A linha nasce na criação e na duplicação (com a pasta
+da original); fichas anteriores entram na primeira listagem da conta ou por
+`indexarPersonagens()`. Excluir a pasta esvazia o `pastaId` das linhas dela;
+excluir o personagem apaga a linha. `setupRama()` cria as duas abas sem mexer nas
+outras, e pode ser rodado de novo.
+
 ## PERSONAGENS_FOTOS
 
 | Coluna         | Conteúdo                              |

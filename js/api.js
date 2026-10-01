@@ -77,6 +77,11 @@
     /* O lote só aceita leitura — a lista de ações permitidas está
        fechada no servidor. Repeti-lo repete leituras. */
     "lote",
+
+    /* Pastas pessoais (v2.26): pôr um personagem numa pasta e dar um
+       nome a uma pasta gravam um VALOR — repetir grava o mesmo valor. */
+    "mover_personagem",
+    "renomear_pasta",
   ];
 
   function podeRepetir(acao) { return IDEMPOTENTES.indexOf(acao) >= 0; }
@@ -98,6 +103,9 @@
        operação e o id da aplicação fazem a segunda chegada não aplicar
        nada de novo. */
     efeito_personagem: true,
+    /* Criar uma pasta (v2.26): a segunda chegada do mesmo id devolve a
+       pasta que a primeira criou. */
+    criar_pasta: true,
   };
 
   function podeRepetirPedido(dados) {
@@ -406,6 +414,22 @@
 
   function excluirPersonagem(id) {
     return post({ acao: "excluir_personagem", personagemId: id });
+  }
+
+  /* Pastas da página Personagens (v2.26). Só o dono; o servidor confere
+     pasta e personagem contra a sessão. */
+  function criarPasta(nome) {
+    return post({ acao: "criar_pasta", nome: nome, operacaoId: novaOperacao() });
+  }
+  function renomearPasta(pastaId, nome) {
+    return post({ acao: "renomear_pasta", pastaId: pastaId, nome: nome });
+  }
+  function excluirPasta(pastaId) {
+    return post({ acao: "excluir_pasta", pastaId: pastaId });
+  }
+  /* pastaId nulo: Sem pasta. */
+  function moverPersonagem(personagemId, pastaId) {
+    return post({ acao: "mover_personagem", personagemId: personagemId, pastaId: pastaId || null });
   }
 
   function duplicarPersonagem(id) {
@@ -760,6 +784,18 @@
              "gravado pela metade. Se isto apareceu ao salvar uma ficha, o servidor ainda é de uma versão anterior à v2.15: " +
              "quem administra o R.A.M.A. precisa implantar o Apps Script atual.",
     },
+    pasta_repetida: {
+      titulo: "NOME JÁ USADO",
+      texto: "Você já tem uma pasta com este nome. Escolha outro.",
+    },
+    pasta_nao_encontrada: {
+      titulo: "PASTA NÃO ENCONTRADA",
+      texto: "A pasta pode ter sido excluída em outro aparelho. A lista foi mantida como estava.",
+    },
+    limite_pastas: {
+      titulo: "LIMITE DE PASTAS",
+      texto: "Esta conta já tem 100 pastas. Exclua uma que não use mais antes de criar outra.",
+    },
     acao_desconhecida: {
       titulo: "OPERAÇÃO NÃO RECONHECIDA",
       texto: "Esta versão do site pediu algo que o servidor não conhece. Atualize a implantação do Apps Script.",
@@ -824,6 +860,10 @@
     salvarPersonagem: salvarPersonagem,
     excluirPersonagem: excluirPersonagem,
     duplicarPersonagem: duplicarPersonagem,
+    criarPasta: criarPasta,
+    renomearPasta: renomearPasta,
+    excluirPasta: excluirPasta,
+    moverPersonagem: moverPersonagem,
     lerFoto: lerFoto,
     lerFotos: lerFotos,
     lerAvatares: lerAvatares,
