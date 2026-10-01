@@ -113,8 +113,14 @@ lento a cada entrada.
 |--------------------|-----------------------------------|
 | `userId`           | chave                             |
 | `avatar`           | data URL da miniatura             |
-| `preferenciasJson` | reservado                         |
+| `preferenciasJson` | objeto JSON: `{ tema }` (v2.25)   |
 | `atualizadoEm`     | ISO 8601                          |
+
+`preferenciasJson.tema` é a preferência de tema da conta: `"sistema"` (segue o
+aparelho), `"claro"` ou `"escuro"`. Ausente vale `"sistema"`. O servidor grava por
+remendo (`salvar_perfil`): outras chaves que estejam na célula ficam. O navegador
+guarda uma cópia por conta em `rama.tema.<userId>` só para aplicar o tema antes da
+sessão responder; a planilha é a fonte.
 
 Separado de `USUARIOS` de propósito: o avatar tem dezenas de milhares de
 caracteres, e a aba de usuários é lida em **todo** login e em **toda**

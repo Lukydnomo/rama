@@ -10,42 +10,122 @@
    reescala a interface inteira de uma vez.
    ===================================================================== */
 
+/* ---------- cores: duas paletas ----------
+   O tema vem de js/tema.js, que roda no <head> antes deste arquivo pintar
+   e põe data-tema="claro" ou "escuro" no <html> (a preferência da conta,
+   ou a do aparelho). O claro é o padrão desta folha: sem data-tema, é o
+   que aparece. Os nomes são os mesmos nas duas — o resto do CSS não sabe
+   em qual tema está. Nada de filtro de inversão: fotos, capas e cores
+   escolhidas por quem joga ficam como são. */
+
 :root {
-   color-scheme: dark;
+   color-scheme: light;
 
    /* ---------- fundos ---------- */
+   --cor-fundo: #F4F4F1;
+   --cor-superficie: #FFFFFF;
+   --cor-superficie-2: #ECECE8;
+   --cor-superficie-3: #E0E0DB;
+
+   /* ---------- texto ---------- */
+   --cor-texto: #111114;
+   --cor-texto-2: #33333A;
+   --cor-texto-3: #5C5C64;
+   /* dica dentro de campo vazio (placeholder) */
+   --cor-texto-dica: #7A7A82;
+
+   /* ---------- traços ---------- */
+   --cor-traco-forte: #111114;
+   --cor-traco-media: #6E6E76;
+   --cor-traco-fraca: #BCBCB5;
+
+   /* ---------- cor temática ----------
+     Escurecidas para ler sobre papel claro com o mesmo peso. */
+   --cor-ok: #2E7A3C;
+   --cor-aviso: #8A6500;
+   --cor-erro: #B3362B;
+   --cor-paranormal: #5A469E;
+
+   /* ---------- graus de treinamento ---------- */
+   --cor-grau: #4B3A9A;
+
+   /* ---------- recursos (barras da mesa e do combate) ----------
+     Cor própria E o nome escrito: a cor nunca é a única pista. */
+   --cor-vida: #A8362D;
+   --cor-esforco: #A85A10;
+   --cor-sanidade: #5A469E;
+   --cor-azul: #2F5F94;
+   --cor-verde: #3F7A3B;
+   --cor-cinza: #5E5E66;
+   /* o preenchimento da barra: no claro, mais leve, para o número em
+      cima continuar legível */
+   --opacidade-barra: 0.45;
+
+   /* ---------- elementos do Outro Lado ---------- */
+   --cor-elemento-sangue: #A33838;
+   --cor-elemento-morte: #6E6E6E;
+
+   /* ---------- camadas ---------- */
+   --cor-scanline: rgba(0, 0, 0, 0.03);
+   --cor-vinheta: rgba(0, 0, 0, 0.1);
+   --cor-veu-modal: rgba(24, 24, 28, 0.5);
+   --cor-sombra: rgba(20, 20, 24, 0.25);
+   /* contorno de uma cor escolhida (etiqueta, amostra): separa do fundo
+      uma cor clara demais sem mexer nela */
+   --cor-contorno-cor: rgba(0, 0, 0, 0.22);
+}
+
+:root[data-tema="escuro"] {
+   color-scheme: dark;
+
    --cor-fundo: #08080A;
    --cor-superficie: #101012;
    --cor-superficie-2: #18181B;
    --cor-superficie-3: #222225;
 
-   /* ---------- texto ---------- */
    --cor-texto: #FFFFFF;
    --cor-texto-2: #DEDEDE;
    --cor-texto-3: #A0A0A0;
+   --cor-texto-dica: #4A4A4A;
 
-   /* ---------- traços ----------
-     forte para o que está ativo, media para o corpo da interface,
-     fraca para separações internas que não devem competir com o dado */
+   /* forte para o que está ativo, media para o corpo da interface,
+      fraca para separações internas que não devem competir com o dado */
    --cor-traco-forte: #FFFFFF;
    --cor-traco-media: #AAAAAA;
    --cor-traco-fraca: #4A4A4A;
 
-   /* ---------- cor temática ----------
-     Dessaturada de propósito: ela existe para avisar, não para decorar.
-     Um sistema quase todo preto e branco faz o amarelo pesar mais. */
+   /* Dessaturada de propósito: ela existe para avisar, não para decorar.
+      Um sistema quase todo preto e branco faz o amarelo pesar mais. */
    --cor-ok: #6FB07A;
    --cor-aviso: #C9A227;
    --cor-erro: #C6564B;
    --cor-paranormal: #7E6BB5;
 
-   /* ---------- graus de treinamento ----------
-     Uma cor só para os três graus; a subida aparece no peso da letra:
-     treinado só a cor, veterano em negrito, expert em negrito e itálico.
-     A cor acompanha o NOME do grau, nunca o substitui, e depende só do
-     grau — não do total. */
+   /* Uma cor só para os três graus; a subida aparece no peso da letra:
+      treinado só a cor, veterano em negrito, expert em negrito e itálico.
+      A cor acompanha o NOME do grau, nunca o substitui, e depende só do
+      grau — não do total. */
    --cor-grau: #9f91dd;
 
+   --cor-vida: #B8433A;
+   --cor-esforco: #C9772A;
+   --cor-sanidade: #7E6BB5;
+   --cor-azul: #3B6EA3;
+   --cor-verde: #4F8A4B;
+   --cor-cinza: #6B6B73;
+   --opacidade-barra: 0.8;
+
+   --cor-elemento-sangue: #B64A4A;
+   --cor-elemento-morte: #8C8C8C;
+
+   --cor-scanline: rgba(255, 255, 255, 0.022);
+   --cor-vinheta: rgba(0, 0, 0, 0.45);
+   --cor-veu-modal: rgba(8, 8, 10, 0.86);
+   --cor-sombra: #000000;
+   --cor-contorno-cor: rgba(255, 255, 255, 0.16);
+}
+
+:root {
    /* ---------- tipografia ---------- */
    --fonte-corpo: "PixelMplus12", "PixelMplus12 Regular", ui-monospace,
       "Cascadia Mono", "Segoe UI Mono", "DejaVu Sans Mono", monospace;

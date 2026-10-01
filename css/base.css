@@ -202,8 +202,8 @@ a:hover { border-bottom-color: var(--cor-traco-forte); }
   inset: 0;
   background: repeating-linear-gradient(
     to bottom,
-    rgba(255, 255, 255, 0.022) 0px,
-    rgba(255, 255, 255, 0.022) 1px,
+    var(--cor-scanline) 0px,
+    var(--cor-scanline) 1px,
     transparent 1px,
     transparent 3px
   );
@@ -216,7 +216,7 @@ a:hover { border-bottom-color: var(--cor-traco-forte); }
   background: radial-gradient(
     ellipse at center,
     transparent 55%,
-    rgba(0, 0, 0, 0.45) 100%
+    var(--cor-vinheta) 100%
   );
 }
 

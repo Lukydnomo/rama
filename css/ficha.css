@@ -151,7 +151,7 @@
   position: absolute;
   left: 0; right: 0; bottom: 0;
   padding: var(--e1);
-  background: rgba(8, 8, 10, 0.85);
+  background: color-mix(in srgb, var(--cor-fundo) 85%, transparent);
   border: none;
   border-top: var(--borda) solid var(--cor-traco-fraca);
   color: var(--cor-texto-2);
@@ -400,8 +400,8 @@
   font-size: var(--texto-mini);
   color: var(--cor-texto-2);
 }
-.dado-extra--mais  { border-color: rgba(111, 176, 122, 0.5); }
-.dado-extra--menos { border-color: rgba(198, 86, 75, 0.5); }
+.dado-extra--mais  { border-color: color-mix(in srgb, var(--cor-ok) 50%, transparent); }
+.dado-extra--menos { border-color: color-mix(in srgb, var(--cor-erro) 50%, transparent); }
 
 /* =====================================================================
    INVENTÁRIO

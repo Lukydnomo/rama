@@ -4,7 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Testes das bibliotecas da ficha — R.A.M.A.</title>
-<meta name="color-scheme" content="dark">
+<meta name="color-scheme" content="light dark">
+<meta name="theme-color" content="#F4F4F1">
+<script src="../js/tema.js"></script>
 <link rel="icon" href="../assets/icons/favicon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="../css/tokens.css">
 <link rel="stylesheet" href="../css/base.css">
@@ -25,7 +27,7 @@
   }
   .caso { display: grid; grid-template-columns: 3em 1fr; gap: var(--e2); padding: 2px var(--e1); align-items: baseline; }
   .caso--ok { color: var(--cor-texto-3); }
-  .caso--falhou { color: var(--cor-erro); background: rgba(198, 86, 75, 0.08); }
+  .caso--falhou { color: var(--cor-erro); background: color-mix(in srgb, var(--cor-erro) 8%, transparent); }
   .caso__marca { font-family: var(--fonte-mini); font-size: var(--texto-mini); font-weight: 700; }
   .caso__detalhe { font-family: var(--fonte-mini); font-size: var(--texto-mini); color: var(--cor-aviso); }
 </style>

@@ -48,14 +48,8 @@
    nome escrito — a cor nunca é a única pista.
    ===================================================================== */
 
-.mesa-cartao {
-  --cor-vida: #B8433A;
-  --cor-esforco: #C9772A;
-  --cor-sanidade: #7E6BB5;
-  --cor-azul: #3B6EA3;
-  --cor-verde: #4F8A4B;
-  --cor-cinza: #6B6B73;
-}
+/* As cores dos recursos (--cor-vida, --cor-esforco…) moram em
+   css/tokens.css, uma por tema. */
 
 .mesa-barra {
   display: flex;
@@ -261,7 +255,7 @@
   height: 100%;
   width: 0;
   background: var(--cor-recurso);
-  opacity: 0.8;
+  opacity: var(--opacidade-barra);
   transition: width var(--tempo-curto) var(--curva);
 }
 
@@ -452,7 +446,7 @@ button.mesa-recurso__valor { cursor: text; }
   flex-direction: column;
   gap: 2px;
   padding: var(--e5) var(--e4) var(--e3);
-  background: linear-gradient(to top, rgba(8, 8, 10, 0.92), rgba(8, 8, 10, 0));
+  background: linear-gradient(to top, color-mix(in srgb, var(--cor-fundo) 92%, transparent), transparent);
   pointer-events: none;
 }
 
@@ -481,7 +475,7 @@ button.mesa-recurso__valor { cursor: text; }
   gap: var(--e1);
 }
 
-.campanha-capa__acoes .r-botao { background: rgba(8, 8, 10, 0.82); }
+.campanha-capa__acoes .r-botao { background: color-mix(in srgb, var(--cor-fundo) 82%, transparent); }
 
 .campanha-capa--vazia { border-style: dashed; }
 
@@ -559,9 +553,6 @@ button.mesa-recurso__valor { cursor: text; }
    ===================================================================== */
 
 .combate {
-  --cor-vida: #B8433A;
-  --cor-esforco: #C9772A;
-  --cor-sanidade: #7E6BB5;
   display: grid;
   gap: var(--e4);
   grid-template-columns: minmax(0, 1fr);

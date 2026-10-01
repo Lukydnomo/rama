@@ -44,6 +44,10 @@
     }
 
     perfil = r.dados || {};
+    /* A leitura do perfil é a mais nova: o tema salvo vale sobre o cache. */
+    if (global.RAMATema && perfil.preferencias) {
+      global.RAMATema.sincronizarDaConta(perfil.id, perfil.preferencias.tema);
+    }
     desenhar();
   });
 
@@ -160,6 +164,8 @@
     var prefs = global.RAMAApp.preferencias();
 
     return el("div.pilha", {}, [
+      campoTema(),
+
       el("div.r-campo", {}, [
         el("span.r-rotulo", { texto: "Tamanho da interface" }),
         el("div.filtros__grupo", { role: "group", "aria-label": "Tamanho da interface" },
@@ -183,7 +189,58 @@
         el("span", { texto: "Efeito de tela antiga (linhas e vinheta)" }),
       ]),
 
-      el("p.t-mini", { texto: "Estas preferências valem só neste aparelho e não sobem para a planilha." }),
+      el("p.t-mini", { texto: "O tema fica salvo na sua conta e vale em qualquer aparelho. Tamanho e efeito de tela valem só neste aparelho." }),
+    ]);
+  }
+
+  /* Tema (v2.25): Sistema, Claro ou Escuro, salvo na conta. A troca é na
+     hora e não redesenha a página — o que estiver sendo editado fica — e
+     a linha de situação diz se a planilha guardou ou não. */
+  var ROTULOS_TEMA = { sistema: "Sistema", claro: "Claro", escuro: "Escuro" };
+  var pararTema = null;
+
+  function campoTema() {
+    var T = global.RAMATema;
+    if (pararTema) { pararTema(); pararTema = null; }
+    if (!T) return null;
+
+    var botoes = T.PREFERENCIAS.map(function (p) {
+      return el("button.filtro", {
+        type: "button", texto: ROTULOS_TEMA[p], dataset: { tema: p },
+        onclick: function () { T.salvar(p); },
+      });
+    });
+    var situacao = el("p.r-ajuda", { role: "status", "aria-live": "polite" });
+    var tentar = el("button.r-botao.r-botao--mini", {
+      type: "button", texto: "Tentar de novo", hidden: true,
+      onclick: function () { T.tentarDeNovo(); },
+    });
+
+    function pintar(info) {
+      botoes.forEach(function (b) {
+        b.setAttribute("aria-pressed", String(b.dataset.tema === info.preferencia));
+      });
+      var base = info.preferencia === "sistema"
+        ? "Acompanha o tema do aparelho (agora: " + info.efetivo + ")."
+        : "Sempre " + info.efetivo + ", seja qual for o tema do aparelho.";
+      var fala = {
+        salvando: "Salvando na conta…",
+        salvo: "Salvo na conta.",
+        erro: "Não foi possível salvar na conta: o tema vale nesta página até recarregar.",
+      }[info.estado] || "";
+      situacao.textContent = base + (fala ? " " + fala : "");
+      situacao.classList.toggle("t-erro", info.estado === "erro");
+      tentar.hidden = info.estado !== "erro";
+    }
+
+    pararTema = T.aoMudar(pintar);
+    pintar({ preferencia: T.preferencia(), efetivo: T.efetivo(), estado: T.estado() });
+
+    return el("div.r-campo", {}, [
+      el("span.r-rotulo", { texto: "Tema" }),
+      el("div.filtros__grupo", { role: "group", "aria-label": "Tema" }, botoes),
+      situacao,
+      tentar,
     ]);
   }
 

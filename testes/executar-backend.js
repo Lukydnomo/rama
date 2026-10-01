@@ -4816,6 +4816,8 @@ const { testarAliadosBackend } = await import("./aliados-backend.js");
 testarAliadosBackend({ t, preparar, novaConta, comoFn });
 const { testarGifBackend } = await import("./imagens-backend.js");
 testarGifBackend({ t, preparar, novaConta, comoFn });
+const { testarTemaBackend } = await import("./tema-backend.js");
+testarTemaBackend({ t, preparar, novaConta, comoFn, chamar });
 
 
 escrever(`\n${FORTE}${passaram + falharam} verificações${FIM} · ${VERDE}${passaram} ok${FIM} · ${falharam ? VERMELHO : CINZA}${falharam} falhas${FIM}`);

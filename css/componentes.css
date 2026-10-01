@@ -179,7 +179,7 @@
 
 .r-entrada::placeholder,
 .r-area::placeholder {
-  color: var(--cor-traco-fraca);
+  color: var(--cor-texto-dica);
 }
 
 .r-entrada:disabled,
@@ -440,7 +440,7 @@
 
 .r-estado[data-estado="salvo"] {
   color: var(--cor-ok);
-  border-color: rgba(111, 176, 122, 0.4);
+  border-color: color-mix(in srgb, var(--cor-ok) 40%, transparent);
 }
 
 .r-estado[data-estado="salvando"] {
@@ -449,17 +449,17 @@
 
 .r-estado[data-estado="pendente"] {
   color: var(--cor-aviso);
-  border-color: rgba(201, 162, 39, 0.4);
+  border-color: color-mix(in srgb, var(--cor-aviso) 40%, transparent);
 }
 
 .r-estado[data-estado="offline"] {
   color: var(--cor-aviso);
-  border-color: rgba(201, 162, 39, 0.4);
+  border-color: color-mix(in srgb, var(--cor-aviso) 40%, transparent);
 }
 
 .r-estado[data-estado="erro"] {
   color: var(--cor-erro);
-  border-color: rgba(198, 86, 75, 0.4);
+  border-color: color-mix(in srgb, var(--cor-erro) 40%, transparent);
 }
 
 .r-estado[data-estado="conflito"] {
@@ -507,7 +507,7 @@
   padding: var(--e1);
   background: var(--cor-superficie-2);
   border: var(--borda) solid var(--cor-traco-media);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.8);
+  box-shadow: 0 8px 24px color-mix(in srgb, var(--cor-sombra) 80%, transparent);
 }
 
 .r-menu__lista[hidden] {
@@ -570,7 +570,7 @@
   grid-template-columns: minmax(0, 1fr);
   place-items: center;
   padding: var(--e4);
-  background: rgba(8, 8, 10, 0.86);
+  background: var(--cor-veu-modal);
   animation: r-surgir var(--tempo-curto) var(--curva);
 }
 
@@ -693,7 +693,7 @@
   background: var(--cor-superficie-2);
   border: var(--borda) solid var(--cor-traco-media);
   border-left-width: 3px;
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.7);
+  box-shadow: 0 6px 20px color-mix(in srgb, var(--cor-sombra) 70%, transparent);
   pointer-events: auto;
   animation: r-entrar var(--tempo-medio) var(--curva);
 }
@@ -1271,6 +1271,9 @@
 
 .etiqueta-cor {
   display: inline-block;
+  /* separa do fundo uma cor clara (ou escura) demais para o tema, sem
+     mexer na cor salva */
+  box-shadow: inset 0 0 0 1px var(--cor-contorno-cor);
   align-self: flex-start;
   max-width: 100%;
   padding: 1px var(--e2);
@@ -1383,6 +1386,7 @@
   padding: 0;
   background: var(--cor-escolhida, transparent);
   border: var(--borda) solid var(--cor-traco-fraca);
+  box-shadow: inset 0 0 0 1px var(--cor-contorno-cor);
   cursor: pointer;
 }
 
@@ -1515,7 +1519,7 @@
   padding: var(--e3);
   background: var(--cor-superficie-2);
   border: var(--borda) solid var(--cor-traco-media);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.85);
+  box-shadow: 0 8px 24px color-mix(in srgb, var(--cor-sombra) 85%, transparent);
   pointer-events: auto;
   animation: r-rolar var(--tempo-medio) var(--curva);
 }
@@ -2221,8 +2225,8 @@
 .bib-item__na-ficha { border-color: var(--cor-ok); color: var(--cor-ok); }
 
 .bib-elemento { border-left-width: 3px; }
-.bib-elemento--sangue { border-left-color: #B64A4A; }
-.bib-elemento--morte { border-left-color: #8C8C8C; }
+.bib-elemento--sangue { border-left-color: var(--cor-elemento-sangue); }
+.bib-elemento--morte { border-left-color: var(--cor-elemento-morte); }
 .bib-elemento--conhecimento { border-left-color: var(--cor-aviso); }
 .bib-elemento--energia { border-left-color: var(--cor-paranormal); }
 .bib-elemento--medo { border-left-color: var(--cor-texto); }
@@ -2705,7 +2709,7 @@ html.arrastando * {
   font-size: var(--texto-mini);
   letter-spacing: var(--espaco-letra-titulo);
   text-transform: uppercase;
-  box-shadow: 4px 4px 0 rgba(0, 0, 0, 0.6);
+  box-shadow: 4px 4px 0 color-mix(in srgb, var(--cor-sombra) 60%, transparent);
 }
 
 .arrastar-fantasma--recusado { border-color: var(--cor-erro); }

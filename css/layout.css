@@ -233,6 +233,19 @@
   text-transform: uppercase;
 }
 
+/* O botão da versão no rodapé: texto, não botão nativo — o cinza do
+   sistema não acompanhava o tema. */
+.app-rodape .versao {
+  display: inline;
+  padding: 0;
+  background: none;
+  border: 0;
+  color: inherit;
+  text-transform: inherit;
+  cursor: pointer;
+}
+.app-rodape .versao:hover { color: var(--cor-texto); text-decoration: underline; }
+
 body { display: flex; flex-direction: column; }
 .app-corpo { flex: 1 0 auto; width: 100%; }
 

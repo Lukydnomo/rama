@@ -30,7 +30,7 @@ preferências de tela — nunca é tratado como banco.
   testes/               casos de teste, no navegador e no terminal
 
   css/
-    tokens.css          cor, espaço, traço, tempo — os valores literais
+    tokens.css          cor (paleta clara e escura), espaço, traço, tempo — os valores literais
     base.css            reset, @font-face, tipografia, véu de CRT
     componentes.css     botão, campo, painel, cartão, modal, aviso…
     layout.css          cabeçalho, navegação, listas, rodapé
@@ -42,6 +42,7 @@ preferências de tela — nunca é tratado como banco.
     rede.js             transporte: POST, prazos, retentativas
     api.js              uma função por ação do servidor
     auth.js             sessão, portão de entrada, guarda de página
+    tema.js             tema claro/escuro: preferência da conta → tema na tela (no <head>)
     dados.js            motor de dados — o único Math.random do sistema
     ficha.js            modelo da ficha, padrões e normalização
     validacao.js        validação central, incluindo importação
@@ -118,7 +119,7 @@ clique fora, a preservação dos campos ao voltar, janelas sobrepostas, foco,
 rolagem e o fechamento por uma ação que termina enquanto a pergunta está aberta.
 Os testes usam a interface real, sem acessar o backend.
 
-**Modelo e motor de dados** — 2190 verificações. No navegador, abra `testes/`;
+**Modelo e motor de dados** — 2264 verificações. No navegador, abra `testes/`;
 no terminal:
 
 ```bash
@@ -206,7 +207,7 @@ avisam sem bloquear, adicionar que não resolve pendência de progressão, a mig
 do texto de "Efeito" para "Descrição" numa ficha antiga e a ficha atravessando
 salvar, exportar e importar.
 
-**Permissões, concorrência e armazenamento do backend** — 934 verificações:
+**Permissões, concorrência e armazenamento do backend** — 1014 verificações:
 
 ```bash
 deno run --allow-read testes/executar-backend.js
@@ -271,11 +272,25 @@ seguindo "Esconder status dos jogadores" nos cartões e no combate, sem eventos;
 o PD no resumo, no painel e no ajuste rápido. As regras de contagem do servidor e
 as do navegador rodam os mesmos 300 casos sorteados e dão o mesmo resultado.
 
-**Transporte do frontend e carga das páginas** — 226 verificações:
+**Transporte do frontend e carga das páginas** — 228 verificações:
 
 ```bash
 deno run --allow-read testes/executar-frontend.js
 ```
+
+**Tema claro e escuro** — 52 verificações:
+
+```bash
+deno run --allow-read testes/executar-tema.js
+```
+
+Preferência → tema efetivo (com e sem `prefers-color-scheme`), o aparelho trocando
+de tema com o site aberto, o cache por conta, a troca de conta sem herdar o tema,
+a sessão trazendo o tema salvo em outro aparelho, a falha de rede sem falso
+"salvo", alternâncias rápidas (um pedido por vez, só o último valor, resposta
+velha sem passar por cima) e outra aba da mesma conta. O lado do servidor —
+remendo sem apagar as outras preferências, valores recusados, conta tirada da
+sessão — está na suíte do backend (`testes/tema-backend.js`).
 
 O site e o Apps Script são publicados separadamente e podem estar em versões
 diferentes. Estes testes trancam as duas regras que valem nesse intervalo: o
@@ -525,12 +540,14 @@ usa dados fictícios, sem acessar o Apps Script real. Exercita os dois modelos
 em 1280 e 390 px. O simulador cobre autorização, revisão, imagens maiores que uma
 célula e nomes no combate. Esses testes não substituem conferir a implantação Google.
 
-Verificação local desta entrega (29/09/2026): **2.243** verificações de modelos,
-**977** do backend simulado, **228** de transporte/fila e **82** de interface,
-todas passando. A interface inclui a conferência das 21 regressões de janelas.
-Como Deno não estava instalado neste ambiente, as três suítes de terminal rodaram
-via Node com adaptação das funções de leitura/saída do executor; a interface foi
-executada em Chrome com Playwright e dados fictícios. Nenhuma planilha real foi alterada.
+Verificação local desta entrega (01/10/2026, v2.25): **2.264** verificações de
+modelos, **1.014** do backend simulado, **228** de transporte/fila e **52** do tema,
+no Deno; no navegador, com o servidor simulado e dados fictícios, `testes/` (2.264),
+bibliotecas (171), arrastar (126), janelas (21) e imagens (19), todas passando. Os
+dois temas foram conferidos tela a tela (início, login, Perfil, fichas universal e
+de Ordem em todas as abas, nos modos normal e edição, campanha, combate, Homebrew,
+janelas) em 820 e 375 px, com uma varredura automática de contraste de texto. Nenhuma
+planilha real foi alterada; isso não substitui conferir a implantação Google.
 
 Cole a versão nova no editor do Apps Script e faça **Implantar → Gerenciar
 implantações → editar (lápis) → Versão: Nova versão**. Editar a implantação
@@ -582,6 +599,15 @@ que a v2.17 lia — uma aba ainda aberta na versão anterior descartaria os dois
 gravar. Com o schema 9, essa aba recusa a ficha e pede para recarregar; nada se
 perde. Depois de publicar, peça a quem estiver com a ficha aberta para recarregar
 a página.
+
+**Atualizando para a v2.25 (tema claro e escuro): backend e site.** Mudou
+`Codigo.gs`: o login e a `sessao` passam a devolver `agente.preferencias.tema`, e o
+`salvar_perfil` grava preferências por remendo, com validação. **Sem aba nem coluna
+nova** — o tema mora em `PERFIS.preferenciasJson`, que já existia, e **não é preciso
+rodar `setupRama()`**. Cole os três `.gs` no editor, faça **Implantar → Gerenciar
+implantações → editar (lápis) → Versão: Nova versão** (a URL continua a mesma) e
+publique o site. Com o site novo e o backend antigo, o tema segue o aparelho e a
+escolha no Perfil avisa que não foi salva na conta — nada se perde.
 
 **Atualizando para a v2.23 (origens do Sobrevivendo ao Horror): só o site.** O
 backend não mudou. Publique o site e peça a quem estiver com uma ficha aberta para
@@ -680,6 +706,17 @@ fechamento e descarta o que ainda não foi salvo. A confirmação não fecha ao 
 fora dela. Janelas que já exigem uma decisão continuam ignorando cliques no fundo.
 Os botões de fechar/cancelar, a tecla Esc e o fechamento após salvar mantêm o
 comportamento anterior. A proteção é compartilhada pelos formulários do site.
+
+**Tema.** O padrão segue o tema do aparelho (`prefers-color-scheme`) e acompanha a
+troca com o site aberto; aparelho que não informa fica no claro. Em **Perfil →
+Exibição → Tema** dá para escolher Sistema, Claro ou Escuro: a tela troca na hora,
+sem recarregar nem perder o que estiver sendo editado, e a escolha vai para a
+conta (vale em qualquer aparelho). A linha embaixo diz "Salvando…", "Salvo na
+conta" ou que não foi possível salvar, com "Tentar de novo". Sem conta — no login,
+por exemplo — vale o do aparelho; trocar de conta nunca herda o tema da anterior.
+`js/tema.js` roda no `<head>`, antes do CSS, para a página não piscar no tema
+errado. As duas paletas moram em `css/tokens.css`; fotos, capas, criaturas e cores
+escolhidas por quem joga não são invertidas nem reescritas.
 
 **Salvamento.** A tela muda na hora; o envio vai atrás, juntando alterações
 seguidas num só POST (400 ms). Só uma gravação voa por vez — o que chegar

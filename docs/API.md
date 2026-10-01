@@ -202,7 +202,7 @@ publicação.
 #### `login` — pública
 ```js
 { acao: "login", usuario: "agente", senha: "..." }
-→ { ok: true, token: "...", agente: { id, usuario, nome, avatar } }
+→ { ok: true, token: "...", agente: { id, usuario, nome, avatar, preferencias: { tema } } }
 → { ok: false, erro: "credenciais", restam: 6 }
 → { ok: false, erro: "bloqueado", minutos: 15 }
 → { ok: false, erro: "instalacao_incompleta" }
@@ -217,6 +217,13 @@ A senha viaja uma vez e não volta nunca. O que fica no navegador é o token.
 #### `sessao`
 Confere o token e devolve o agente. **É a única resposta que vale**: um token
 presente no `localStorage` não prova nada.
+
+```js
+→ { ok: true, agente: { id, usuario, nome, avatar, preferencias: { tema } } }
+```
+`tema` (v2.25) é a preferência salva na conta — `"sistema"`, `"claro"` ou
+`"escuro"`; conta sem preferência (ou com a célula ilegível) vem `"sistema"`. Vem
+com o login e a sessão para a página aplicar o tema sem outra consulta.
 
 #### `logout`
 Encerra a sessão do token enviado.
@@ -464,8 +471,19 @@ campanha.
 #### `salvar_perfil`
 ```js
 { acao: "salvar_perfil", dados: { nome?, avatar?, preferencias? } }
+→ { ok: true }                                   // sem preferências no pedido
+→ { ok: true, preferencias: { tema, ... } }      // com: o objeto como ficou gravado
+→ { ok: false, erro: "dados_invalidos" }
 ```
-Só os campos enviados mudam. **Não existe troca de senha por aqui** — senha é
+Só os campos enviados mudam. A conta é sempre a da sessão — um `userId` no corpo
+é ignorado.
+
+**`preferencias` é um remendo, não uma substituição (v2.25).** Vão só as chaves
+que mudaram; o servidor relê `preferenciasJson` dentro da trava, troca essas
+chaves e mantém as outras. `null` apaga a chave (volta ao padrão). Cada chave tem
+lista de valores aceitos — hoje só `tema: "sistema" | "claro" | "escuro"`; chave
+desconhecida, valor fora da lista, objeto vazio ou algo que não seja objeto é
+recusado com `dados_invalidos`, sem gravar nada. **Não existe troca de senha por aqui** — senha é
 assunto exclusivo do editor do Apps Script.
 
 ---

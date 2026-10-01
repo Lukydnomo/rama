@@ -809,7 +809,49 @@ function perfilPublico(usuario) {
     usuario: usuario.usuario,
     nome: usuario.nome || usuario.usuario,
     avatar: (perfil && perfil.avatar) || '',
+    /* O tema vem com a sessão: a página o aplica sem outra consulta. */
+    preferencias: { tema: temaDaConta(perfil) },
   };
+}
+
+/* ---- Preferências da conta (v2.25) ----
+   `preferenciasJson` guarda um objeto; quem salva manda só as chaves que
+   mudou, e o resto fica. Cada chave aceita tem a sua validação; chave
+   desconhecida ou valor fora da lista é recusado — nada vira "sucesso"
+   sem ter sido gravado. `null` apaga a chave (volta ao padrão). */
+var PREFERENCIAS_ACEITAS = {
+  tema: ['sistema', 'claro', 'escuro'],
+};
+
+function temaDaConta(perfil) {
+  var prefs = lerJson(perfil && perfil.preferenciasJson, {});
+  var tema = prefs && prefs.tema;
+  return PREFERENCIAS_ACEITAS.tema.indexOf(tema) >= 0 ? tema : 'sistema';
+}
+
+/* Valida o pedido. Devolve null quando algo não serve. */
+function validarPreferencias(pedido) {
+  if (!pedido || typeof pedido !== 'object' || Array.isArray(pedido)) return null;
+  var chaves = Object.keys(pedido);
+  if (!chaves.length) return null;
+  for (var i = 0; i < chaves.length; i++) {
+    var aceitos = PREFERENCIAS_ACEITAS[chaves[i]];
+    if (!aceitos) return null;
+    var v = pedido[chaves[i]];
+    if (v !== null && aceitos.indexOf(v) < 0) return null;
+  }
+  return pedido;
+}
+
+/* Junta o pedido ao que está gravado — lido de novo, dentro da trava. */
+function juntarPreferencias(gravadoJson, pedido) {
+  var atual = lerJson(gravadoJson, {});
+  if (!atual || typeof atual !== 'object' || Array.isArray(atual)) atual = {};
+  Object.keys(pedido).forEach(function (chave) {
+    if (pedido[chave] === null) delete atual[chave];
+    else atual[chave] = pedido[chave];
+  });
+  return atual;
 }
 
 /* Sessões encerradas ou vencidas há mais de 30 dias saem da planilha.
@@ -2487,8 +2529,14 @@ function acaoSalvarPerfil(corpo, usuario) {
     if (img.length > MAX_CELULA) return { ok: false, erro: 'dados_grandes' };
   }
 
+  /* A conta é sempre a da sessão (`usuario`); o corpo não escolhe. */
+  if (dados.preferencias !== undefined && !validarPreferencias(dados.preferencias)) {
+    return { ok: false, erro: 'dados_invalidos' };
+  }
+
   return comTrava(function () {
     var agora = new Date().toISOString();
+    var preferenciasGravadas = null;
 
     if (dados.nome !== undefined) {
       var registro = acharPor(ABAS.USUARIOS, 'id', usuario.id);
@@ -2512,13 +2560,16 @@ function acaoSalvarPerfil(corpo, usuario) {
       }
 
       if (dados.avatar !== undefined) perfil.avatar = String(dados.avatar || '');
-      if (dados.preferencias !== undefined) perfil.preferenciasJson = JSON.stringify(dados.preferencias || {});
+      if (dados.preferencias !== undefined) {
+        preferenciasGravadas = juntarPreferencias(perfil.preferenciasJson, dados.preferencias);
+        perfil.preferenciasJson = JSON.stringify(preferenciasGravadas);
+      }
       perfil.atualizadoEm = agora;
 
       atualizarLinha(ABAS.PERFIS, perfil._linha, perfil);
     }
 
-    return { ok: true };
+    return preferenciasGravadas ? { ok: true, preferencias: preferenciasGravadas } : { ok: true };
   });
 }
 

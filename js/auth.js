@@ -76,6 +76,10 @@
       avatar: (dados && dados.avatar) || "",
     };
     guardar(CHAVE_AGENTE, JSON.stringify(agenteAtual));
+    /* O tema salvo na conta chega junto com a sessão (tema.js). */
+    if (global.RAMATema) {
+      global.RAMATema.sincronizarDaConta(agenteAtual.id, dados && dados.preferencias && dados.preferencias.tema);
+    }
   }
 
   function esquecer() {
@@ -83,6 +87,8 @@
     apagar(CHAVE_AGENTE);
     apagar(CHAVE_ATIVIDADE);
     agenteAtual = null;
+    /* Sem conta, o tema volta ao do sistema. */
+    if (global.RAMATema) global.RAMATema.esquecerConta();
   }
 
   function tocarAtividade() { guardar(CHAVE_ATIVIDADE, String(Date.now())); }

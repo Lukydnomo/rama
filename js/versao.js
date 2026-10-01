@@ -70,6 +70,25 @@
 
   var CHANGELOG = [
     {
+      versao: "2.25.0", codinome: "PENUMBRA", data: "01/10/2026",
+      mudancas: {
+        "Adicionado": [
+          "Modo claro completo. O padrão acompanha o tema do aparelho — inclusive quando ele muda com o site aberto — e o tema claro vale quando o aparelho não informa.",
+          "Perfil → Exibição → Tema: Sistema, Claro ou Escuro. A troca é imediata, sem recarregar e sem perder o que estiver sendo editado, e a escolha fica salva na conta, valendo em qualquer aparelho. A tela diz quando salvou e quando não foi possível salvar, com “Tentar de novo”.",
+        ],
+        "Visual": [
+          "Paleta clara própria, com a mesma tipografia, bordas e organização. Login, início, Perfil, fichas universais e de Ordem, campanhas, combate, bibliotecas, Homebrew, aliados, janelas, menus, avisos e campos nos dois temas.",
+          "Barras de recurso, cores paranormais, graus, etiquetas, sombras, véu das janelas e linhas de tela antiga ajustados a cada tema. Fotos, capas, criaturas e cores escolhidas por quem joga não são invertidas nem reescritas; etiquetas ganharam um contorno fino para não sumir no fundo.",
+          "O botão da versão no rodapé deixou de usar o cinza do sistema.",
+        ],
+        "Técnico": [
+          "Atualizar Codigo.gs e criar nova versão da implantação: login e sessão trazem o tema salvo; salvar_perfil grava preferências por remendo (as outras ficam), valida os valores e usa sempre a conta da sessão. Sem aba, coluna ou setupRama.",
+          "js/tema.js no <head> de todas as páginas: preferência separada do tema efetivo, cache por conta, um salvamento por vez com só o último valor, sem resposta velha passando por cima. Cores fixas viraram tokens semânticos em css/tokens.css.",
+          "Testes: 52 do tema (novo executar-tema.js), 1014 no backend (24 novas) e revisão dos dois temas no navegador, no computador e no celular, com varredura de contraste.",
+        ],
+      },
+    },
+    {
       versao: "2.24.1", codinome: "PULSO", data: "29/09/2026",
       mudancas: {
         "Corrigido": [
