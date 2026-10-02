@@ -2664,7 +2664,45 @@ function acaoListarHomebrew(corpo, usuario) {
     .filter(function (d) { return !tipos.length || tipos.indexOf(d.tipo) >= 0; })
     .sort(function (a, b) { return String(a.nome).localeCompare(String(b.nome), 'pt-BR'); });
 
+  /* resumo (v2.28): a biblioteca de criaturas lista dezenas de fichas e
+     só desenha nome, VD, elementos e PV. A ficha inteira vem depois, por
+     ler_homebrew, quando alguém escolhe — e aí a permissão é conferida
+     de novo. */
+  if (corpo.resumo === true) {
+    lista = lista.map(function (d) {
+      if (d.tipo !== 'criatura') return d;
+      return {
+        id: d.id, tipo: d.tipo, nome: d.nome, visibilidade: d.visibilidade,
+        criadoEm: d.criadoEm, atualizadoEm: d.atualizadoEm, meu: d.meu,
+        resumo: resumoDeCriatura(d),
+      };
+    });
+  }
+
   return { ok: true, dados: lista };
+}
+
+var ELEMENTOS_DE_CRIATURA = ['sangue', 'morte', 'conhecimento', 'energia', 'medo'];
+
+function resumoDeCriatura(d) {
+  var ordem = d.sistema === 'ordem' && d.ordem && typeof d.ordem === 'object' ? d.ordem : null;
+  var status = Array.isArray(d.status) ? d.status : [];
+  var vida = status.filter(function (s) { return s && String(s.id) === 'vida'; })[0] || status[0] || null;
+  var r = {
+    sistema: ordem ? 'ordem' : 'universal',
+    natureza: ['paranormal', 'humana', 'animal'].indexOf(d.natureza) >= 0 ? d.natureza : '',
+    categoria: String(d.categoria || '').slice(0, 60),
+  };
+  if (vida) r.pv = Math.max(0, Math.round(Number(vida.maximo)) || 0);
+  if (ordem) {
+    r.vd = typeof ordem.vd === 'number' && isFinite(ordem.vd) ? ordem.vd : null;
+    r.nivel = String(ordem.nivel || '').slice(0, 60);
+    r.elementos = (Array.isArray(ordem.elementos) ? ordem.elementos : [])
+      .filter(function (e) { return ELEMENTOS_DE_CRIATURA.indexOf(e) >= 0; });
+    r.tamanho = String(ordem.tamanho || '').slice(0, 30);
+    r.tipo = String(ordem.tipo || '').slice(0, 40);
+  }
+  return r;
 }
 
 /* A forma como um registro chega ao navegador. As colunas mandam sobre

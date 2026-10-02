@@ -261,12 +261,30 @@ var ABAS = {
     pesadas: ['conteudo'],
   },
   CAMPANHA_COMBATES: {
+    /* `armazenamento` entrou na v2.28 e é o MANIFESTO do combate em
+       blocos, como o da ficha: vazio quer dizer que o combate inteiro
+       está em `dadosJson`; preenchido, ele está em
+       CAMPANHA_COMBATES_BLOCOS. Uma criatura de Ordem completa ocupa
+       alguns KB, e um combate com vários chefes passa do limite de uma
+       célula. Fica depois de dadosJson pelo mesmo motivo da ficha. */
     nome: 'CAMPANHA_COMBATES',
     colunas: ['id', 'campanhaId', 'nome', 'estado', 'visiveisJson',
-              'criadoEm', 'atualizadoEm', 'rev', 'dadosJson'],
+              'criadoEm', 'atualizadoEm', 'rev', 'dadosJson', 'armazenamento'],
     chave: 'id',
     leves: 8,
     pesadas: ['dadosJson'],
+  },
+  CAMPANHA_COMBATES_BLOCOS: {
+    /* O combate em pedaços (v2.28), com as mesmas regras e as mesmas
+       funções dos blocos de ficha (gravarGeracao, lerGeracoes…). Nenhuma
+       ação lê esta aba direto: tudo passa pela permissão do combate, em
+       Campanhas.gs. */
+    nome: 'CAMPANHA_COMBATES_BLOCOS',
+    colunas: ['combateId', 'geracao', 'indice', 'total', 'tamanho', 'criadoEm', 'conteudo'],
+    registro: 'combateId',
+    leves: 6,
+    somenteTexto: ['conteudo'],
+    pesadas: ['conteudo'],
   },
   CAMPANHA_CAPAS: {
     /* A capa (banner) da campanha. Fora do dadosJson pelo mesmo motivo

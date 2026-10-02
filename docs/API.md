@@ -1,5 +1,24 @@
 # A API
 
+## Criaturas — v2.28
+
+- `listar_homebrew` aceita `resumo: true`: cada criatura volta só com `id`, `tipo`,
+  `nome`, `visibilidade`, `meu`, datas e `resumo { sistema, natureza, categoria,
+  pv, vd, nivel, elementos, tamanho, tipo }`. A ficha inteira vem por
+  `ler_homebrew`, que reconfere o acesso. Sem `resumo`, a resposta é a de antes.
+- `atualizar_combate` ganhou a operação `criatura_instancia`
+  (`participanteId`, `chave`, `valor`) — ver a tabela abaixo.
+- `ler_imagem_do_turno` devolve `retratoCatalogo` (o id do catálogo, como
+  `op.criatura.zumbi-de-sangue`) quando a criatura do turno vem do catálogo e não
+  tem imagem enviada; o site monta o caminho em `assets/criaturas/`. O campo só
+  existe quando há o que mostrar.
+- Combates grandes vão para blocos (`CAMPANHA_COMBATES_BLOCOS`) sem mudar
+  nenhuma ação: `listar_combates` e `atualizar_combate` respondem igual. Blocos
+  que não conferem fazem o combate vir com `ilegivel: true` (sem participantes) e
+  qualquer gravação nele responde `armazenamento_falhou` — nada é sobrescrito.
+  Sem a aba (setupRama não rodado), um combate grande demais para a célula
+  responde `instalacao_incompleta`.
+
 GIFs (v2.24.1) usam as mesmas ações de foto, avatar, criatura e documento, com
 `data:image/gif;base64,…`. A capa também passa a aceitar esse formato no servidor.
 O cliente preserva o arquivo animado completo, com até 29.982 bytes, para caber
@@ -753,6 +772,7 @@ ordem.
 |---|---|---|
 | `iniciativa` | `participanteId`, `valor` | número de verdade (texto é recusado), até ±9999 |
 | `criatura_status` | `participanteId`, `statusId`, `valor` | só criatura; muda o snapshot **deste** combate, de 0 ao máximo (sem máximo, até 999.999) |
+| `criatura_instancia` (v2.28) | `participanteId`, `chave`, `valor` | só criatura; o estado **desta** ocorrência em `snapshot.instancia`: `estado:<id>` (inteiro de 0 ao máximo de um estado que a ficha tem), `uso:<id>` (inteiro 0–999), `marcador:<id>` (booleano), `enigma` (booleano), `nota` (texto até 1000). Ocorrência que já saiu é ignorada, sem recusar o lote |
 | `turno` | `direcao`: `"proximo"` ou `"anterior"` | só com o combate `ativo`; voltar do primeiro turno da rodada 1 não muda nada e devolve o aviso `{ aviso: "inicio" }` |
 | `estado` | `valor`: `"ativo"` ou `"encerrado"` | só `preparando → ativo → encerrado`; iniciar põe rodada 1 e o primeiro da ordem; pedir o estado atual não é erro |
 | `adicionar` | `participantes` | personagem só da mesa e sem repetir; criatura entra como snapshot; até 200 no combate |

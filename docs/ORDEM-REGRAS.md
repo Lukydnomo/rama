@@ -1738,6 +1738,58 @@ rituais continuam na ficha.
 
 ---
 
+## Criaturas (v2.28)
+
+Fonte: OPRPG p. 178–289 (Sangue, Morte, Conhecimento, Energia, Medo e Ameaças da
+Realidade) e SAH p. 125–165 e 192–218 (ameaças paranormais, novas ameaças da
+Realidade e as fichas das duas missões). Dados em `js/ordem/criaturas-dados.js`,
+conferidos por `testes/executar-criaturas.js`.
+
+| | Livro básico | Sobrevivendo ao Horror |
+|---|---|---|
+| paranormais | 49 (+ 5 facetas do Anfitrião como variantes) | 13 (com O Terminal) |
+| pessoas | 11 | 11 (com Amanda/Antonella e o Vigia Ensandecido) |
+| animais | 7 | 8 |
+| **total** | **67 + 5** | **32** |
+
+Fora do catálogo, de propósito: a ficha de exemplo do Marcado (SAH p. 132, exemplo
+de regra), o modelo de espectro (SAH p. 131, receita que depende da ficha de um
+Marcado — o catálogo traz a ficha de exemplo publicada na p. 133) e perigos e
+armadilhas, que não são criaturas.
+
+**Automatizado:** teste de cada estatística, atributo e perícia pela expressão
+publicada; ataques um a um pela quantidade do livro, com crítico pelo natural e
+pela margem; dano em partes com o total por tipo; dano mental da Presença;
+rolagens de habilidades e ações; contadores de uso, fases e marcadores por
+ocorrência; a vista do Enigma resolvido e das fases quando o livro dá números.
+
+**Fica com o mestre (consulta):** alvos, áreas e alcance; aplicar dano, cura,
+resistências, vulnerabilidades e condições; testes de resistência dos alvos;
+agarrar e manobras; quando um uso "por cena" volta; efeitos sem número no livro;
+Enigmas sem alteração numérica (marcar como resolvido só registra).
+
+**Leituras e pendências do livro** (cada uma também é nota na ficha):
+
+- Perturbado de Energia: teste de agarrar impresso "4d+10", lido como 4d20+10.
+- Amigo Imaginário: Fortitude do Frenesi impressa "5D+30", lida como 5d20+30; a
+  Presença não informa NEX de imunidade.
+- Sempiternal: machucado impresso 445 (a metade de 990 seria 495), mantido.
+- Tempestuoso: deslocamento impresso 24 m | 12 quadrados, mantido.
+- Viajante: linha da Presença impressa "NEX 60%", sem o "+ é imune" das outras; mantida como impressa.
+- O Anfitrião: PV impressos "01413", lidos como 1413; a ficha lista imunidade a
+  dano e as facetas têm resistência a dano 20 — o mestre decide como convivem.
+- Degolificada: o texto chama a forma de Sangue de "devoradora" e a legenda, de
+  "devorada"; o catálogo usa "devoradora".
+- Espectro Inesquecido (exemplo): Aterrorizar impresso com 2d8 e DT 15, enquanto a
+  Tabela 3.1 indica 6d8 e DT 35 para VD 220; mantido como publicado.
+- Religioso: o bônus da Voz Guia está impresso como "+" e um ornamento, sem valor;
+  não é rolado nem aplicado.
+- Memento Mori: garras com 5d20 embora AGI e FOR sejam 1, mantido.
+- O Terminal: Reflexos "veja texto" (falha automaticamente) e deslocamento impresso
+  apesar de não se mover; o texto da missão remete à p. 217, a ficha está na 218.
+- Crítico de dano em várias partes: só os dados da primeira parte multiplicam
+  (interpretação do R.A.M.A., igual ao "dano extra" das armas).
+
 ## Lacunas e interpretações
 
 Registradas em vez de preenchidas por dedução. Onde o livro deixa uma leitura

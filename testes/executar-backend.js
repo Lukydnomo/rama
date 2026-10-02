@@ -4820,6 +4820,8 @@ const { testarTemaBackend } = await import("./tema-backend.js");
 testarTemaBackend({ t, preparar, novaConta, comoFn, chamar });
 const { testarPastasBackend } = await import("./pastas-backend.js");
 testarPastasBackend({ t, preparar, novaConta, comoFn, ambiente });
+const { testarCriaturasBackend } = await import("./criaturas-backend.js");
+testarCriaturasBackend({ t, preparar, novaConta, comoFn, ambiente });
 
 
 escrever(`\n${FORTE}${passaram + falharam} verificações${FIM} · ${VERDE}${passaram} ok${FIM} · ${falharam ? VERMELHO : CINZA}${falharam} falhas${FIM}`);

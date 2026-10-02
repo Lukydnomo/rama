@@ -70,6 +70,30 @@
 
   var CHANGELOG = [
     {
+      versao: "2.28.0", codinome: "BESTIÁRIO", data: "02/10/2026",
+      mudancas: {
+        "Adicionado": [
+          "Catálogo oficial de criaturas de Ordem Paranormal: as 67 ameaças do livro básico (49 paranormais, 11 pessoas e 7 animais), as 5 facetas do Anfitrião como variantes e as 32 do Sobrevivendo ao Horror (13 paranormais — com O Terminal, da missão O Terminal do Fim —, 11 pessoas — com os NPCs da missão Noite de Compras — e 8 animais). Cada ficha traz livro e página, e o texto é resumo próprio, com os números, testes e condições do livro.",
+          "Biblioteca de criaturas, a mesma no combate, nos aliados e no Homebrew: abas Ordem Paranormal e Homebrew, busca e filtros combináveis (livro, natureza, elementos — qualquer um ou todos os marcados —, faixa de VD) e consulta da ficha completa antes de escolher. “Copiar para o Homebrew” cria uma cópia privada e editável; o modelo oficial não muda.",
+          "Ficha de ameaça de Ordem: VD ou nível, elementos, natureza, tipo e tamanho, Presença Perturbadora (DT, dano mental e imunidade), Percepção, Iniciativa e sentidos, Defesa, Fortitude, Reflexos e Vontade, PV e machucado, PE, resistências, imunidades e vulnerabilidades, atributos, perícias com expressão própria, deslocamentos, habilidades, ações (padrão, movimento, completa, livre e reação) com ataques, fases e Enigma de Medo. “Não informado”, “não se aplica” (—) e “veja texto” aparecem como tais e nunca são rolados.",
+          "Rolagens da ficha pelo motor de sempre: testes e perícias (“3d20+10”; “-2d20” é o pior de dois d20), ataques que rolam cada um da quantidade do livro (×2 = dois testes) com crítico pelo natural, dano em partes de tipos diferentes com o total de cada tipo, dano mental da Presença, iniciativa e as rolagens de cada habilidade. O dano sai do cartão de cada acerto, por clique, e tudo vai para o histórico da mesa com o nome da ocorrência e a visibilidade da mesa.",
+          "Cada ocorrência — no combate ou como aliado — tem estado próprio: PV e PE, fases (flores da Dama de Sangue, metamorfoses, atos), usos de habilidades limitadas, marcadores (“Murcha”, “Em recarga”), Enigma de Medo resolvido e uma anotação. Resolver o Enigma ou ativar uma fase muda o que a mesa vê (Defesa, testes, resistências, habilidades desativadas), sem reescrever os valores de referência.",
+          "Editor de criatura de Ordem no Homebrew, com todos os campos da ficha, ações com ataques e rolagens, fases e Enigma. As criaturas universais continuam com o editor de antes.",
+          "Imagens provisórias para cada criatura do catálogo em assets/criaturas: retrato 1:1 e corpo inteiro (qualquer tamanho), trocáveis mantendo o nome do arquivo. O retrato aparece na biblioteca, no cabeçalho da ficha, no cartão do aliado e no painel do turno do jogador; o corpo inteiro abre pelo retrato.",
+        ],
+        "Alterado": [
+          "“+ Criatura” no combate abre a biblioteca, que fica aberta para acrescentar várias ocorrências; “Da biblioteca”, nos aliados, também. No combate, “Usar na ordem” no cartão da iniciativa grava o total como iniciativa daquela ocorrência — só com o clique do mestre.",
+          "Nada é aplicado sozinho: nenhum dano é descontado, nenhuma condição vai para outro ser e nenhum bloqueio ou esquiva é rolado. Sistema de regras (ordem ou universal) e origem (catálogo ou Homebrew) passam a ser campos separados; Homebrew é origem, não sistema.",
+        ],
+        "Técnico": [
+          "Atualizar Dados.gs, Codigo.gs e Campanhas.gs, rodar setupRama() (aba CAMPANHA_COMBATES_BLOCOS e coluna CAMPANHA_COMBATES.armazenamento) e criar nova versão da implantação. Um combate que passa do limite seguro de uma célula vai para blocos, com as mesmas funções e conferências (SHA-256) dos blocos de ficha; os pequenos continuam inteiros em dadosJson e nenhum combate antigo é convertido.",
+          "Nova operação de combate criatura_instancia (fase, uso, marcador, Enigma, anotação), conferida no servidor com a mesma regra do site; listar_homebrew aceita `resumo` e manda só o que a lista desenha; ler_imagem_do_turno indica o retrato do catálogo sem mandar nada da ficha. O jogador continua sem receber ficha, PV escondido ou estado de criatura.",
+          "Novos js/ordem/criaturas-dados.js (o catálogo, carregado só quando a biblioteca abre), js/ordem/criaturas.js (carga, conversão, busca, conferência) e js/paginas/criaturas-biblioteca.js. js/criaturas.js ganhou o modelo multi-sistema; js/dados.js, testes com expressão própria, dano composto e somas; js/criatura-painel.js desenha as duas fichas. Criaturas antigas, aliados e combates continuam funcionando sem migração; a exportação leva os ids de referência da ficha de Ordem como `chave`.",
+          "Testes: 88 das criaturas (novo executar-criaturas.js: catálogo contra o inventário, ids, expressões, compatibilidade, ida e volta, ocorrências, filtros, exportação), 41 novas no backend (1116) e os fluxos no navegador em 1024 e 375 px, nos dois temas.",
+        ],
+      },
+    },
+    {
       versao: "2.27.0", codinome: "MOLDURA", data: "01/10/2026",
       mudancas: {
         "Adicionado": [

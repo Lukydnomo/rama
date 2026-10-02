@@ -496,6 +496,11 @@ function acaoExcluirCampanha(corpo, usuario) {
 
     apagarLinha(ABAS.CAMPANHAS, registro._linha);
 
+    /* Os blocos dos combates grandes (v2.28) moram em outra aba, sem
+       campanhaId: saem pelos ids dos combates, antes de as linhas deles
+       sumirem. */
+    apagarBlocosDeCombates(daCampanhaLeves(ABAS.CAMPANHA_COMBATES, id).map(function (c) { return c.id; }));
+
     /* Tudo o que pendurava nesta campanha sai junto. Deixar para trás
        encheria a planilha de linhas que ninguém mais alcança. Fichas
        NÃO entram nisso: elas são dos jogadores e só perdem o vínculo. */
@@ -2145,7 +2150,9 @@ function acaoListarCombates(corpo, usuario) {
   var visiveis = daCampanhaLeves(ABAS.CAMPANHA_COMBATES, ctx.campanha.id)
     .filter(function (c) { return podeVerCombate(c, ctx, usuario); });
 
-  var conteudos = lerCelulas(ABAS.CAMPANHA_COMBATES, visiveis, 'dadosJson');
+  var conteudos = textosDosCombates(visiveis,
+    lerCelulas(ABAS.CAMPANHA_COMBATES, visiveis, 'dadosJson'),
+    lerCelulas(ABAS.CAMPANHA_COMBATES, visiveis, 'armazenamento'));
 
   /* Os recursos dos personagens que estão em algum destes combates, já
      filtrados pela permissão de quem pede. */
@@ -2243,6 +2250,9 @@ function combateParaCliente(c, ctx, jsonPronto, recursos) {
     turno: turno,
     config: config,
   };
+  /* Manifesto presente e blocos que não conferem (v2.28): o combate sai
+     vazio e marcado, e nenhuma gravação passa por cima dele. */
+  if (jsonPronto === null) saida.ilegivel = true;
 
   function comRecursos(p, objeto) {
     if (!porPersonagem || p.tipo !== 'personagem') return objeto;
@@ -2320,7 +2330,7 @@ function acaoLerImagemDoTurno(corpo, usuario) {
   if (!registro || String(registro.campanhaId) !== String(ctx.campanha.id)) return { ok: false, erro: 'nao_encontrado' };
   if (!podeVerCombate(registro, ctx, usuario)) return { ok: false, erro: 'nao_encontrado' };
 
-  var dados = lerJson(registro.dadosJson, {});
+  var dados = lerJson(textoDoCombate(registro), {});
   var participantes = Array.isArray(dados.participantes) ? dados.participantes : [];
   var estado = estadoDeCombate(registro.estado);
   var turno = turnoNormalizado(dados.turno, participantes, estado);
@@ -2336,8 +2346,19 @@ function acaoLerImagemDoTurno(corpo, usuario) {
     var img = acharPor(ABAS.CRIATURAS_IMAGENS, 'criaturaId', p.origemId);
     imagem = (img && img.imagem) || '';
   }
+  /* Criatura do catálogo (ou cópia dela) sem imagem enviada: só o id do
+     catálogo sai, e o site monta o caminho do retrato (v2.28). Nada da
+     ficha vai junto. */
+  var retratoCatalogo = '';
+  if (p.tipo === 'criatura' && !imagem) {
+    var origem = p.snapshot && p.snapshot.origem && typeof p.snapshot.origem === 'object' ? p.snapshot.origem : {};
+    var candidato = String(origem.catalogoId || origem.copiadoDe || p.origemId || '');
+    if (/^(op|sah)\.criatura\.[a-z0-9.-]+$/.test(candidato)) retratoCatalogo = candidato;
+  }
   var nomeAtual = p.tipo === 'personagem' ? personagensDaMesaPorId(ctx)[p.personagemId] : null;
-  return { ok: true, dados: { participanteId: p.id, tipo: p.tipo, nome: nomeAtual || p.nome || '', imagem: String(imagem) } };
+  var dadosDoTurno = { participanteId: p.id, tipo: p.tipo, nome: nomeAtual || p.nome || '', imagem: String(imagem) };
+  if (retratoCatalogo) dadosDoTurno.retratoCatalogo = retratoCatalogo;
+  return { ok: true, dados: dadosDoTurno };
 }
 
 /* =====================================================================
@@ -2959,6 +2980,216 @@ function aplicarTurnosAsFichas(ctx, combateId, eventos, participantesPorId, opId
 }
 
 /* =====================================================================
+   O COMBATE EM BLOCOS (v2.28)
+   ---------------------------------------------------------------------
+   Uma criatura de Ordem completa ocupa alguns KB, e um combate com
+   vários chefes passa do limite seguro de uma célula. Quando isso
+   acontece, o combate vai para CAMPANHA_COMBATES_BLOCOS pelas MESMAS
+   funções dos blocos de ficha (Dados.gs): geração, SHA-256, conferência
+   antes de publicar, leitura com pista de linha. A coluna `armazenamento`
+   guarda o manifesto; vazia, o combate está inteiro em `dadosJson`, como
+   sempre esteve — nenhum combate antigo é convertido.
+
+   Duas gerações ficam vivas: a que vale e a anterior (para quem começou
+   a ler antes da troca). A gravação seguinte escreve por cima da faixa
+   de DUAS gerações atrás, conferida linha a linha, e a aba não cresce.
+   ===================================================================== */
+
+var LIMITE_TOTAL_COMBATE = 900000;
+
+/* O texto do combate, venha de onde vier. null = há manifesto e os
+   blocos não conferem: quem chamou não pode gravar por cima. */
+function textoDoCombate(registro) {
+  var m = manifestoDe(registro.armazenamento);
+  if (m === null) return registro.dadosJson;
+  if (m.invalido) return null;
+  var id = String(registro.id);
+  var lido = lerGeracoes(ABAS.CAMPANHA_COMBATES_BLOCOS, [{ id: id, manifesto: m }])[id];
+  return lido && lido.ok ? lido.texto : null;
+}
+
+/* Os textos de vários combates (a lista), com UMA leitura de blocos. */
+function textosDosCombates(registros, conteudos, manifestos) {
+  var saida = {};
+  var pedidos = [];
+  registros.forEach(function (c) {
+    var m = manifestoDe(manifestos[c._linha]);
+    if (m === null) { saida[c._linha] = conteudos[c._linha]; return; }
+    if (m.invalido) { saida[c._linha] = null; return; }
+    pedidos.push({ id: String(c.id), manifesto: m, linha: c._linha });
+  });
+  if (pedidos.length) {
+    var lidos = {};
+    try {
+      lidos = lerGeracoes(ABAS.CAMPANHA_COMBATES_BLOCOS, pedidos.map(function (p) { return { id: p.id, manifesto: p.manifesto }; }));
+    } catch (erro) {
+      lidos = {};
+    }
+    pedidos.forEach(function (p) {
+      var l = lidos[p.id];
+      saida[p.linha] = l && l.ok ? l.texto : null;
+    });
+  }
+  return saida;
+}
+
+/* Põe o texto no registro — na célula, se couber; em blocos, se não —
+   ANTES de a linha ser gravada, e devolve o que limpar depois. Dentro da
+   trava. */
+function prepararTextoDoCombate(registro, json) {
+  if (json.length > LIMITE_TOTAL_COMBATE) return { ok: false, erro: 'dados_grandes' };
+  var anterior = manifestoDe(registro.armazenamento);
+  /* Um manifesto que esta versão não entende não é sobrescrito. */
+  if (anterior && anterior.invalido) return { ok: false, erro: 'armazenamento_falhou', etapa: 'manifesto' };
+
+  if (json.length <= MAX_CELULA) {
+    registro.dadosJson = json;
+    registro.armazenamento = '';
+    return { ok: true, limpar: anterior ? { tudo: true } : null };
+  }
+
+  var def = ABAS.CAMPANHA_COMBATES_BLOCOS;
+  try {
+    aba(def);
+  } catch (erro) {
+    return { ok: false, erro: 'instalacao_incompleta', detalhe: 'CAMPANHA_COMBATES_BLOCOS' };
+  }
+
+  var reutilizavel = anterior ? anterior.reutilizavel : null;
+  var reaproveitar = null;
+  if (reutilizavel && reutilizavel.local && String(reutilizavel.geracao) !== String(anterior.geracao) &&
+      !faixasSeCruzam(reutilizavel.local, anterior.local)) {
+    var faixa = null;
+    try {
+      faixa = conferirFaixaDaGeracao(def, registro.id, reutilizavel.geracao, reutilizavel.local);
+    } catch (erro) {
+      faixa = null;
+    }
+    if (faixa) reaproveitar = { linha: Number(reutilizavel.local.linha), blocos: Number(reutilizavel.local.blocos) };
+  }
+
+  var gravado;
+  try {
+    gravado = gravarGeracao(def, registro.id, json, reaproveitar);
+  } catch (erro) {
+    console.error('R.A.M.A.: blocos do combate ' + registro.id + ' não gravados: ' + erro);
+    return { ok: false, erro: 'armazenamento_falhou', etapa: 'blocos' };
+  }
+
+  var conferido;
+  try {
+    conferido = conferirGeracao(def, registro.id, gravado, json);
+  } catch (erro) {
+    conferido = { ok: false };
+  }
+  if (!conferido.ok) return { ok: false, erro: 'armazenamento_falhou', etapa: 'conferencia' };
+
+  registro.armazenamento = JSON.stringify({
+    formato: FORMATO_BLOCOS,
+    versao: VERSAO_BLOCOS,
+    geracao: gravado.geracao,
+    blocos: gravado.blocos,
+    tamanho: gravado.tamanho,
+    hash: gravado.hash,
+    local: { linha: gravado.primeiraLinha, blocos: gravado.blocos },
+    gravadoEm: gravado.criadoEm,
+    reutilizavel: anterior ? { geracao: anterior.geracao, local: anterior.local || null } : null,
+  });
+  /* Um servidor anterior à v2.28 que abrisse esta linha veria um aviso,
+     e não um combate vazio que ele pudesse regravar como se fosse novo. */
+  registro.dadosJson = JSON.stringify({ aviso: 'Combate guardado em blocos (v2.28). Atualize o servidor.' });
+
+  if (reaproveitar && gravado.reaproveitou) {
+    var sobras = [];
+    for (var s = gravado.blocos; s < reaproveitar.blocos; s++) sobras.push(reaproveitar.linha + s);
+    return { ok: true, limpar: { linhas: sobras } };
+  }
+  var manter = {};
+  manter[String(gravado.geracao)] = true;
+  if (anterior) manter[String(anterior.geracao)] = true;
+  return { ok: true, limpar: { manter: manter } };
+}
+
+/* Depois de a linha estar gravada. Falhar aqui não desfaz nada: as
+   linhas ficam para limparBlocosOrfaos(). */
+function limparDepoisDoCombate(combateId, limpar) {
+  if (!limpar) return;
+  try {
+    if (limpar.linhas) limparBlocos(ABAS.CAMPANHA_COMBATES_BLOCOS, limpar.linhas);
+    else apagarGeracoes(ABAS.CAMPANHA_COMBATES_BLOCOS, combateId, limpar.tudo ? {} : limpar.manter);
+  } catch (erro) {
+    console.warn('R.A.M.A.: limpeza dos blocos do combate ' + combateId + ' adiada: ' + erro);
+  }
+}
+
+/* Os blocos de vários combates de uma vez (exclusão da campanha). */
+function apagarBlocosDeCombates(ids) {
+  if (!ids || !ids.length) return;
+  var alvo = {};
+  ids.forEach(function (id) { alvo[String(id)] = true; });
+  try {
+    var mapa = linhasPorValor(ABAS.CAMPANHA_COMBATES_BLOCOS, ['combateId', 'geracao']);
+    var linhas = [];
+    Object.keys(mapa).forEach(function (chave) {
+      if (alvo[chave.split('\n')[0]]) linhas = linhas.concat(mapa[chave]);
+    });
+    limparBlocos(ABAS.CAMPANHA_COMBATES_BLOCOS, linhas);
+  } catch (erro) {
+    /* Sem a aba (instalação anterior à v2.28) não há o que limpar. */
+  }
+}
+
+/* O estado de UMA ocorrência de criatura (v2.28) — a mesma regra de
+   RAMACriaturas.definirNaInstancia (js/criaturas.js):
+
+     "estado:<id>"    inteiro de 0 ao máximo de um estado que a ficha tem
+     "uso:<id>"       inteiro de 0 a 999
+     "marcador:<id>"  booleano
+     "enigma"         booleano
+     "nota"           texto, até 1000
+
+   Valor zero ou falso sai do objeto, para a ocorrência não engordar. */
+var CHAVE_DE_INSTANCIA = /^[A-Za-z0-9_.:-]{1,90}$/;
+
+function definirNaInstanciaDaCriatura(snapshot, chave, valor) {
+  if (typeof chave !== 'string') return false;
+  var inst = snapshot.instancia && typeof snapshot.instancia === 'object' ? snapshot.instancia : {};
+  ['estados', 'usos', 'marcadores'].forEach(function (k) {
+    if (!inst[k] || typeof inst[k] !== 'object' || Array.isArray(inst[k])) inst[k] = {};
+  });
+  if (typeof inst.enigma !== 'boolean') inst.enigma = false;
+  if (typeof inst.nota !== 'string') inst.nota = '';
+
+  if (chave === 'enigma') {
+    if (typeof valor !== 'boolean') return false;
+    inst.enigma = valor;
+  } else if (chave === 'nota') {
+    if (typeof valor !== 'string') return false;
+    inst.nota = valor.trim().slice(0, 1000);
+  } else {
+    var m = /^(estado|uso|marcador):(.+)$/.exec(chave);
+    if (!m || !CHAVE_DE_INSTANCIA.test(m[2])) return false;
+    if (m[1] === 'marcador') {
+      if (typeof valor !== 'boolean') return false;
+      if (valor) inst.marcadores[m[2]] = true; else delete inst.marcadores[m[2]];
+    } else {
+      if (typeof valor !== 'number' || Math.round(valor) !== valor) return false;
+      if (m[1] === 'estado') {
+        var estados = snapshot.ordem && Array.isArray(snapshot.ordem.estados) ? snapshot.ordem.estados : [];
+        var e = estados.filter(function (x) { return x && String(x.id) === m[2]; })[0];
+        if (!e || valor < 0 || valor > Math.max(1, Math.round(Number(e.maximo)) || 1)) return false;
+        if (valor) inst.estados[m[2]] = valor; else delete inst.estados[m[2]];
+      } else {
+        if (valor < 0 || valor > 999) return false;
+        if (valor) inst.usos[m[2]] = valor; else delete inst.usos[m[2]];
+      }
+    }
+  }
+  snapshot.instancia = inst;
+  return true;
+}
+
+/* =====================================================================
    GRAVAÇÃO COMPLETA
    ---------------------------------------------------------------------
    Criar um combate, e o caminho das versões anteriores do site, que
@@ -3000,7 +3231,9 @@ function acaoSalvarCombate(corpo, usuario) {
         return { ok: false, erro: 'conflito', rev: revAtual };
       }
 
-      var anteriores = lerJson(existente.dadosJson, {});
+      var textoAnterior = textoDoCombate(existente);
+      if (textoAnterior === null) return { ok: false, erro: 'armazenamento_falhou', etapa: 'leitura' };
+      var anteriores = lerJson(textoAnterior, {});
       var turnoAntes = turnoNormalizado(anteriores.turno, participantes, estadoDeCombate(existente.estado));
       var turno = estadoDeCombate(existente.estado) === 'preparando' && estado === 'ativo'
         ? turnoNormalizado(null, participantes, estado)
@@ -3013,16 +3246,17 @@ function acaoSalvarCombate(corpo, usuario) {
         turnoDesde: anteriores.turnoDesde || '',
         config: configDoCombate(anteriores.config),
       });
-      if (json.length > MAX_CELULA) return { ok: false, erro: 'dados_grandes' };
+      var preparo = prepararTextoDoCombate(existente, json);
+      if (!preparo.ok) return preparo;
 
       existente.nome = nome;
       existente.estado = estado;
       existente.visiveisJson = JSON.stringify(visiveis);
       existente.atualizadoEm = agora;
       existente.rev = revAtual + 1;
-      existente.dadosJson = json;
 
       atualizarLinha(ABAS.CAMPANHA_COMBATES, existente._linha, existente);
+      limparDepoisDoCombate(existente.id, preparo.limpar);
       marcarMesa(ctx.campanha.id, ['combates']);
       return { ok: true, dados: { id: existente.id }, rev: existente.rev };
     }
@@ -3032,10 +3266,9 @@ function acaoSalvarCombate(corpo, usuario) {
       turno: turnoNormalizado(null, participantes, estado),
       ops: [],
     });
-    if (jsonNovo.length > MAX_CELULA) return { ok: false, erro: 'dados_grandes' };
 
     var id = novoId();
-    inserir(ABAS.CAMPANHA_COMBATES, {
+    var novo = {
       id: id,
       campanhaId: ctx.campanha.id,
       nome: nome,
@@ -3044,8 +3277,13 @@ function acaoSalvarCombate(corpo, usuario) {
       criadoEm: agora,
       atualizadoEm: agora,
       rev: 1,
-      dadosJson: jsonNovo,
-    });
+      dadosJson: '',
+      armazenamento: '',
+    };
+    var preparoNovo = prepararTextoDoCombate(novo, jsonNovo);
+    if (!preparoNovo.ok) return preparoNovo;
+    inserir(ABAS.CAMPANHA_COMBATES, novo);
+    limparDepoisDoCombate(id, preparoNovo.limpar);
 
     marcarMesa(ctx.campanha.id, ['combates']);
     return { ok: true, dados: { id: id }, rev: 1 };
@@ -3133,6 +3371,9 @@ function personagensDaMesaPorId(ctx) {
      iniciativa        { participanteId, valor }
      criatura_status   { participanteId, statusId, valor }  — o snapshot
                        da criatura NESTE combate; o modelo não muda
+     criatura_instancia { participanteId, chave, valor } — fase, uso,
+                       marcador, Enigma ou anotação DESTA ocorrência
+                       (v2.28); ver definirNaInstanciaDaCriatura
      turno             { direcao: "proximo" | "anterior" }
      estado            { valor: "ativo" | "encerrado" }
      adicionar         { participantes: [...] }
@@ -3169,7 +3410,9 @@ function acaoAtualizarCombate(corpo, usuario) {
       return { ok: false, erro: 'nao_encontrado' };
     }
 
-    var dados = lerJson(registro.dadosJson, {});
+    var textoAtual = textoDoCombate(registro);
+    if (textoAtual === null) return { ok: false, erro: 'armazenamento_falhou', etapa: 'leitura' };
+    var dados = lerJson(textoAtual, {});
     var feitas = Array.isArray(dados.ops) ? dados.ops : [];
     var revAtual = Number(registro.rev) || 0;
 
@@ -3177,13 +3420,13 @@ function acaoAtualizarCombate(corpo, usuario) {
        revisão, e a segunda chegada dele sempre pareceria um conflito. */
     var jaFeita = feitas.some(function (o) { return o && String(o.id) === opId; });
     if (jaFeita) {
-      return { ok: true, repetida: true, rev: revAtual, dados: combateParaCliente(registro, ctx) };
+      return { ok: true, repetida: true, rev: revAtual, dados: combateParaCliente(registro, ctx, textoAtual) };
     }
 
     var revPedida = Number(corpo.rev);
     if (!Number.isFinite(revPedida)) return { ok: false, erro: 'dados_invalidos' };
     if (revPedida !== revAtual) {
-      return { ok: false, erro: 'conflito', rev: revAtual, dados: combateParaCliente(registro, ctx) };
+      return { ok: false, erro: 'conflito', rev: revAtual, dados: combateParaCliente(registro, ctx, textoAtual) };
     }
 
     var estadoAtual = estadoDeCombate(registro.estado);
@@ -3209,16 +3452,17 @@ function acaoAtualizarCombate(corpo, usuario) {
       participantes: combate.participantes, turno: combate.turno, ops: feitas,
       turnoDesde: combate.turnoDesde || '', config: combate.config,
     });
-    if (json.length > MAX_CELULA) return { ok: false, erro: 'dados_grandes' };
+    var preparo = prepararTextoDoCombate(registro, json);
+    if (!preparo.ok) return preparo;
 
     registro.nome = combate.nome;
     registro.estado = combate.estado;
     registro.visiveisJson = JSON.stringify(combate.visiveis);
     registro.atualizadoEm = new Date().toISOString();
     registro.rev = revAtual + 1;
-    registro.dadosJson = json;
 
     atualizarLinha(ABAS.CAMPANHA_COMBATES, registro._linha, registro);
+    limparDepoisDoCombate(registro.id, preparo.limpar);
     marcarMesa(ctx.campanha.id, ['combates']);
 
     /* Os inícios de turno deste lote, nas fichas dos personagens com
@@ -3313,6 +3557,17 @@ function aplicarOperacoesDeCombate(combate, ops, ctx) {
       /* O mesmo limite de js/criaturas.js: de 0 ao máximo, ou só o piso
          quando a criatura não tem máximo. */
       status.atual = maximo > 0 ? Math.max(0, Math.min(maximo, novo)) : Math.max(0, Math.min(999999, novo));
+      continue;
+    }
+
+    if (tipo === 'criatura_instancia') {
+      var ocorrencia = acharParticipante(op.participanteId);
+      /* A ocorrência já saiu (outra aba a tirou): o ajuste não tem onde
+         cair, e isso não é erro do lote. */
+      if (!ocorrencia) continue;
+      if (ocorrencia.tipo !== 'criatura') return recusar(i, 'participante');
+      if (!ocorrencia.snapshot || typeof ocorrencia.snapshot !== 'object') ocorrencia.snapshot = {};
+      if (!definirNaInstanciaDaCriatura(ocorrencia.snapshot, op.chave, op.valor)) return recusar(i, 'valor');
       continue;
     }
 
@@ -3427,6 +3682,7 @@ function acaoExcluirCombate(corpo, usuario) {
     }
 
     apagarLinha(ABAS.CAMPANHA_COMBATES, combate._linha);
+    if (manifestoDe(combate.armazenamento)) limparDepoisDoCombate(combate.id, { tudo: true });
     marcarMesa(ctx.campanha.id, ['combates']);
     return { ok: true };
   });

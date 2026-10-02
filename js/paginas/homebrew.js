@@ -66,6 +66,9 @@
         el("button.r-botao", {
           type: "button", texto: "Importar", onclick: importar,
         }),
+        el("button.r-botao", {
+          type: "button", texto: "Catálogo de criaturas", onclick: function () { catalogo(); },
+        }),
         el("button.r-botao.r-botao--principal", {
           type: "button", texto: "+ Criar", onclick: function () { escolherTipo(); },
         }),
@@ -172,7 +175,9 @@
        recusaria de qualquer forma. */
     var meu = registro.meu !== false;
 
-    var opcoes = meu
+    var consulta = registro.tipo === "criatura"
+      ? [{ rotulo: "Consultar ficha", aoClicar: function () { consultarCriatura(registro); } }] : [];
+    var opcoes = consulta.concat(meu
       ? [
           { rotulo: "Editar", aoClicar: function () { editar(registro); } },
           { rotulo: "Duplicar", aoClicar: function () { duplicar(registro); } },
@@ -183,7 +188,7 @@
       : [
           { rotulo: "Copiar para minha biblioteca", aoClicar: function () { duplicar(registro); } },
           { rotulo: "Exportar", aoClicar: function () { exportar(registro); } },
-        ];
+        ]);
 
     var etiquetas = [
       el("span.r-etiqueta", { texto: rotuloDoTipo(registro.tipo) }),
@@ -214,6 +219,25 @@
 
       el("p.t-mini", { texto: "Registro // " + U.codigoCurto(registro.id) + " · " + U.dataCurta(registro.atualizadoEm) }),
     ]);
+  }
+
+  /* O catálogo oficial a partir do Homebrew (v2.28): consultar e copiar.
+     A cópia é um registro NOVO e privado; o catálogo não muda. */
+  function catalogo() {
+    global.RAMABibliotecaCriaturas.abrir({
+      titulo: "Catálogo de criaturas",
+      aba: "oficial",
+      homebrew: false,
+      ajuda: "As fichas oficiais não são editáveis. Para ajustar uma, copie para o seu Homebrew e edite a cópia.",
+      acoes: [],
+      aoCopiar: function () { carregar(); },
+    });
+  }
+
+  /* A ficha inteira de uma criatura, só para leitura. */
+  function consultarCriatura(registro) {
+    var painel = global.RAMACriaturaPainel.criar(registro, { consulta: true, rotulo: "Homebrew" });
+    UI.modal({ titulo: registro.nome, largo: true, conteudo: [painel.raiz], botoes: [{ rotulo: "Fechar" }] });
   }
 
   function rotuloDoTipo(tipo) {
@@ -426,7 +450,8 @@
         opcao("Armadura", "Com um valor de defesa.", "armadura"),
         opcao("Mochila", "Reduz o peso total carregado.", "mochila"),
         el("hr.r-linha"),
-        opcao("Criatura", "Mini ficha: status, atributos, perícias, ataques e habilidades.", "criatura"),
+        opcao("Criatura de Ordem Paranormal", "Ficha de ameaça: VD, elementos, Presença Perturbadora, defesas, ações, fases e Enigma de Medo.", "criatura-ordem"),
+        opcao("Criatura universal", "Mini ficha: status, atributos, perícias, ataques e habilidades.", "criatura"),
         opcao("Habilidade", "Texto informativo, com cor e origem.", "habilidade"),
         opcao("Ritual", "Campos do ritual e versões, com dano e custo.", "ritual"),
       ]),
@@ -450,8 +475,9 @@
 
     /* Criatura e habilidade têm editores próprios: os campos delas não
        se parecem em nada com peso e dano. */
-    if (tipo === "criatura") {
-      global.RAMAHomebrewCriatura.editar(criando ? null : registro, carregar);
+    if (tipo === "criatura" || tipo === "criatura-ordem") {
+      global.RAMAHomebrewCriatura.editar(criando ? null : registro, carregar,
+        tipo === "criatura-ordem" ? { sistema: global.RAMACriaturas.SISTEMA_ORDEM } : undefined);
       return;
     }
     if (tipo === "habilidade") {

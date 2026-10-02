@@ -578,7 +578,49 @@ Nenhuma migração é necessária, e nada é apagado.
 
 ## Criaturas
 
-Modelo em `js/criaturas.js`, editor em `js/paginas/homebrew-criatura.js`.
+Modelo em `js/criaturas.js`, editor em `js/paginas/homebrew-criatura.js`, ficha na
+tela em `js/criatura-painel.js` e a janela de escolha em
+`js/paginas/criaturas-biblioteca.js`.
+
+### Sistema, origem e o catálogo (v2.28)
+
+Dois eixos, que não se misturam: **`sistema`** diz as regras da ficha (`"ordem"` ou,
+sem o campo, a mini ficha universal de sempre) e **`origem`** diz de onde ela veio
+(`{ tipo: "catalogo", catalogoId, livro, pagina }` ou `{ tipo: "homebrew",
+copiadoDe? }`). Homebrew é origem, não sistema. Criatura sem `sistema` continua
+exatamente como era — nenhuma é convertida.
+
+O catálogo oficial (`js/ordem/criaturas-dados.js`, sob demanda) tem as 67 ameaças
+do livro básico, as 5 facetas do Anfitrião (variantes, `ordem.variante.de`) e as 32
+do Sobrevivendo ao Horror, com ids estáveis (`op.criatura.<nome>`,
+`sah.criatura.<nome>`). Ele é congelado: copiar para o Homebrew cria um registro
+novo e privado; editar mexe na cópia ou na ocorrência.
+
+A ficha de Ordem usa o núcleo comum (`status` com a vida em id `"vida"` e o
+esforço em `"pe"`, `atributos`, `pericias` com expressão própria, `habilidades`,
+`acoes`) e um bloco `ordem` com VD/nível, elementos, tipo, tamanho, Presença
+Perturbadora, Percepção, Iniciativa, sentidos, Defesa, Fortitude, Reflexos,
+Vontade, machucado, resistências, imunidades, vulnerabilidades, deslocamentos,
+estados de fase, notas e Enigma de Medo. Os números publicados já incluem os
+modificadores; nada é recalculado. Valores: `0` é zero, `null` é "não informado",
+`"—"` é "não se aplica", outro texto é mostrado e nunca rolado.
+
+### Ocorrência, rolagem e aplicação
+
+Cada ocorrência (combate ou aliado) guarda o próprio estado em `instancia`:
+`estados` (fases), `usos`, `marcadores`, `enigma` e `nota`. No combate, ele muda pela
+operação `criatura_instancia`, conferida no servidor com a mesma regra de
+`RAMACriaturas.definirNaInstancia`. A vista do jogo (`vistaEfetiva`) aplica por
+cima as fases ativas e o Enigma resolvido; os valores de referência ficam.
+
+Consulta não muda nada. Rolar sorteia pelo motor (`teste`, `danoComposto`,
+`total` em `js/dados.js`) e registra no histórico com o nome da ocorrência e a
+visibilidade da mesa. Aplicar é sempre um controle que o mestre aciona na
+ocorrência: o sistema não desconta dano, não aplica condição a outro ser, não
+rola bloqueio nem esquiva e não zera usos por cena sozinho. No crítico de um dano
+em partes, só os dados da primeira parte multiplicam.
+
+### Mini ficha universal
 
 Ela **reusa** os conceitos que já existem — atributo com valor e dado separados,
 perícia como rolagem dependente, ataque com dano e crítico, habilidade igual à da

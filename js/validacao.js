@@ -646,7 +646,8 @@
     /* Numa ficha, o vínculo entre concessão e ritual vira posição antes
        de os ids irem embora. Ver "O VÍNCULO DE RITUAL ATRAVESSANDO A
        IMPORTAÇÃO", acima. */
-    var preparado = tipo === "personagem" ? comAliadosPortaveis(comPosicoesDeRitual(dados)) : dados;
+    var preparado = tipo === "personagem" ? comAliadosPortaveis(comPosicoesDeRitual(dados))
+      : (tipo === "homebrew-criatura" ? criaturaPortavel(U.copiar(dados)) : dados);
     return {
       rama: true,
       tipo: tipo,
@@ -658,11 +659,37 @@
 
   /* A limpeza da exportação retira IDs. Levar posições evita religar
      todas as perícias ao primeiro atributo e perder ataques vinculados. */
+  /* Numa ficha de Ordem (v2.28) o id de uma parte é REFERÊNCIA: a fase
+     que uma habilidade exige, o uso e o marcador da ocorrência. A
+     exportação apaga todo `id`, então ele atravessa como `chave`, e a
+     normalização da criatura o devolve como id. */
+  function criaturaPortavel(c) {
+    if (!c || c.sistema !== "ordem") return c;
+    function marcar(lista) {
+      (Array.isArray(lista) ? lista : []).forEach(function (x) { if (x && typeof x === "object" && x.id) x.chave = String(x.id); });
+    }
+    marcar(c.status);
+    marcar(c.pericias);
+    marcar(c.habilidades);
+    marcar(c.acoes);
+    (c.habilidades || []).concat(c.acoes || []).forEach(function (ef) {
+      if (!ef || typeof ef !== "object") return;
+      marcar(ef.ataques);
+      marcar(ef.rolagens);
+    });
+    if (c.ordem && typeof c.ordem === "object") {
+      marcar(c.ordem.estados);
+      if (c.ordem.enigma) marcar(c.ordem.enigma.rolagens);
+    }
+    return c;
+  }
+
   function comAliadosPortaveis(ficha) {
     var copia = U.copiar(ficha);
     (copia.aliados || []).forEach(function (a) {
       var c = a.criatura;
       if (!c) return;
+      if (c.sistema === "ordem") { criaturaPortavel(c); return; }
       (c.pericias || []).forEach(function (p) {
         p.atributoId = "#aliado:" + (c.atributos || []).findIndex(function (at) { return at.id === p.atributoId; });
       });

@@ -28,6 +28,7 @@ preferências de tela — nunca é tratado como banco.
   perfil/               conta, exibição e importação
   ficha/                a ficha (?id=...)
   testes/               casos de teste, no navegador e no terminal
+  assets/criaturas/     retrato 1:1 e corpo inteiro de cada criatura do catálogo (trocáveis)
 
   css/
     tokens.css          cor (paleta clara e escura), espaço, traço, tempo — os valores literais
@@ -59,7 +60,8 @@ preferências de tela — nunca é tratado como banco.
     sistemas.js         o registro dos sistemas de RPG (Ordem Paranormal, Universal…)
     personagens-organizacao.js  pasta aberta, busca, sistema e agrupamento da página Personagens
     arrastar.js         o gesto de arrastar e soltar, o mesmo nas cinco abas
-    criaturas.js        mini ficha de criatura
+    criaturas.js        o modelo de criatura: universal e Ordem, sistema x origem, ocorrências
+    criatura-painel.js  a ficha de criatura na tela (combate, aliados, biblioteca, Homebrew)
     fila.js             fila de gravação por entidade
     campanha-painel.js  o que cada cartão do painel da mesa mostra (sem fórmula própria)
     sincronia.js        atualização automática da campanha: marcas, ritmo, espera
@@ -79,6 +81,8 @@ preferências de tela — nunca é tratado como banco.
       regras.js         os cálculos, com a composição de cada número
       opcionais.js      as regras opcionais, uma chave para cada
       condicoes.js      morrendo, enlouquecendo e contadores da mesa, por início de turno
+      criaturas-dados.js o catálogo de criaturas dos dois livros (sob demanda)
+      criaturas.js      carga, conversão, busca, filtros e conferência do catálogo de criaturas
     historico.js        rolagem → histórico da campanha, num funil só
     paginas/            um arquivo por tela
 
@@ -122,11 +126,21 @@ clique fora, a preservação dos campos ao voltar, janelas sobrepostas, foco,
 rolagem e o fechamento por uma ação que termina enquanto a pergunta está aberta.
 Os testes usam a interface real, sem acessar o backend.
 
-**Modelo e motor de dados** — 2264 verificações. No navegador, abra `testes/`;
+**Modelo e motor de dados** — 2299 verificações. No navegador, abra `testes/`;
 no terminal:
 
 ```bash
 deno run --allow-read testes/executar.js
+```
+
+**Criaturas** — 88 verificações: o catálogo contra o inventário dos livros (ids
+únicos, campos obrigatórios, expressões válidas, contagem por livro e natureza),
+testes com expressão própria, dano composto e crítico, criatura antiga intacta,
+ida e volta da ficha de Ordem, ocorrências independentes, Enigma e fases, filtros,
+modelo oficial imutável, as imagens de cada criatura e a exportação/importação:
+
+```bash
+deno run --allow-read testes/executar-criaturas.js
 ```
 
 Cobrem expressões de dado válidas e inválidas, dado principal, perícia, dano,
@@ -533,6 +547,15 @@ segredo nenhum — ele os lê das Script Properties. Publicá-lo não expõe nad
 
 ### Atualizar o backend
 
+**v2.28.0 — BESTIÁRIO:** criaturas de Ordem Paranormal, biblioteca e combate
+em blocos. Troque os três `.gs`, rode **`setupRama()`** (cria a aba
+`CAMPANHA_COMBATES_BLOCOS` e a coluna `CAMPANHA_COMBATES.armazenamento`), crie uma
+**nova versão** da implantação e só então publique o site. Combates, fichas,
+aliados e criaturas existentes não são convertidos. Sem o `setupRama()`, um
+combate que passe do limite de uma célula é recusado com `instalacao_incompleta`
+— nada é gravado pela metade; os menores continuam funcionando.
+
+
 **v2.24.1 — PULSO:** GIFs mantêm a animação em todos os seletores de imagem:
 personagens, criaturas, aliados, avatar, documentos e capa da campanha. Publique
 o site e atualize `Campanhas.gs` na implantação do Apps Script para aceitar capas
@@ -785,6 +808,23 @@ alça / use "Mover para pasta…" no menu (teclado e celular). O cartão fica
 para "Sem pasta", com confirmação; excluir personagem continua sendo outra ação.
 A pasta aberta, o filtro e o agrupamento ficam no endereço da página.
 
+**Criaturas.** "+ Criatura" (combate), "Da biblioteca" (aliados) e "Catálogo de
+criaturas" (Homebrew) abrem a mesma biblioteca: a aba **Ordem Paranormal** traz as
+ameaças dos dois livros (com página) e a aba **Homebrew**, as suas e as públicas.
+Busca e filtros se combinam — livro, natureza (paranormal, pessoa, animal),
+elementos (qualquer um ou todos os marcados) e faixa de VD — e cada linha abre a
+ficha completa para consulta antes de escolher. Escolher leva uma **cópia**: o
+catálogo não é editável (copie para o Homebrew) e mudar uma ocorrência não muda o
+modelo nem as outras. Na ficha de Ordem, os números já incluem os modificadores do
+livro; "—" é "não se aplica", e "veja texto" é mostrado, nunca rolado. Rolar é
+consulta + sorteio, nunca aplicação: ataques rolam um teste por ataque (×2 = dois)
+com crítico pelo natural, o dano sai do cartão de cada acerto, por clique, e
+dano de tipos diferentes mostra o total de cada tipo. Cada ocorrência guarda PV,
+PE, fases, usos, marcadores, Enigma resolvido e uma anotação; resolver o Enigma
+muda o que a mesa vê, sem apagar o valor de referência. Nada é descontado de
+alvo nenhum, nenhuma condição é aplicada a outro ser e nenhum bloqueio ou esquiva
+é rolado sozinho. O jogador vê a lista e a ordem do combate — nunca a ficha.
+
 **Tema.** O padrão segue o tema do aparelho (`prefers-color-scheme`) e acompanha a
 troca com o site aberto; aparelho que não informa fica no claro. Em **Perfil →
 Exibição → Tema** dá para escolher Sistema, Claro ou Escuro: a tela troca na hora,
@@ -819,6 +859,14 @@ console não abre o registro de outra conta.
 ---
 
 ## Limitações conhecidas
+
+- **Criaturas: o que fica com o mestre.** O R.A.M.A. não aplica dano, cura,
+  condições nem resistências a outro ser, não decide alvos nem áreas e não zera
+  usos por cena sozinho (há o contador e o botão). No crítico de um dano em
+  várias partes, só os dados da primeira parte multiplicam. O modelo de espectro
+  inesquecido (SAH p. 131) não é montado automaticamente — o catálogo traz a
+  ficha de exemplo. As imagens das criaturas são provisórias até serem trocadas
+  em `assets/criaturas/`.
 
 - **O histórico de rolagens é lido inteiro do lado do servidor** antes de ser
   paginado. Para uma mesa isso é irrelevante; para dezenas de milhares de

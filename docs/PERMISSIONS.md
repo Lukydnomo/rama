@@ -2,6 +2,21 @@
 
 Quem alcança o quê, e onde isso é decidido.
 
+## Criaturas — v2.28
+
+- O catálogo oficial é público (arquivo do site) e somente leitura: ninguém o
+  edita pela interface, e o servidor nunca o recebe como fonte de verdade.
+- Homebrew: privada só para o dono; pública pode ser lida e copiada, nunca editada
+  por outra conta. `listar_homebrew` com `resumo` aplica a mesma regra antes de ler
+  o conteúdo, e `ler_homebrew` reconfere o acesso ao escolher.
+- Combate: só o mestre altera (`atualizar_combate`, inclusive `criatura_instancia`).
+  O jogador recebe nome, ordem e — só com "Mostrar vida das criaturas" — o par de
+  vida; nunca `snapshot`, `instancia`, Enigma, ações ou PV escondido. O filtro é
+  feito na resposta do servidor, não com CSS. `ler_imagem_do_turno` manda no máximo
+  o id do retrato do catálogo.
+- Aliados continuam dentro da ficha do jogador, com as permissões da ficha.
+
+
 ### Aliados e módulos — v2.24
 
 Aliados são conteúdo da ficha: dono e mestre autorizado podem abrir/salvar.

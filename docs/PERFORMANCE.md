@@ -1,5 +1,16 @@
 # Desempenho
 
+## Criaturas — v2.28
+
+- O catálogo de criaturas (~210 KB) não vem com nenhuma página: carrega na primeira
+  abertura da biblioteca e fica congelado na memória. Nunca vai numa gravação.
+- A lista do Homebrew na biblioteca pede `resumo`: nome, VD, elementos, PV — a
+  ficha inteira só ao escolher. A lista desenha 60 linhas por vez ("Mostrar mais").
+- Os retratos da lista carregam com `loading="lazy"`; as imagens provisórias têm
+  1–2 KB cada.
+- Combates grandes vão para blocos em vez de serem recusados; a leitura de vários
+  combates junta todos os blocos numa leitura só.
+
 Como o R.A.M.A. gasta tempo, o que foi feito a respeito, e como medir de
 verdade.
 

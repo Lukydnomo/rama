@@ -1,5 +1,33 @@
 # O banco
 
+## Criaturas e combate em blocos — v2.28
+
+> **Atualizando para a v2.28:** rode `setupRama()` de novo. Ele cria a aba
+> `CAMPANHA_COMBATES_BLOCOS` (conteúdo marcado como texto puro) e acrescenta a
+> coluna `armazenamento` no fim de `CAMPANHA_COMBATES` — e **não converte combate
+> nenhum**. Um combate só vai para blocos na primeira gravação em que passar do
+> limite seguro de uma célula; os pequenos continuam inteiros em `dadosJson`.
+
+O catálogo oficial de criaturas **não mora na planilha**: é um arquivo do site
+(`js/ordem/criaturas-dados.js`), carregado só quando a biblioteca abre. O que vai
+para o banco é a CÓPIA que alguém escolheu — no Homebrew (`HOMEBREW.dadosJson`,
+uma criatura de Ordem tem de 2 a 8 KB), num combate (`snapshot` do participante)
+ou como aliado (dentro da ficha, nos blocos dela). As imagens do catálogo também
+são arquivos do site (`assets/criaturas/`), não linhas de `CRIATURAS_IMAGENS`.
+
+**CAMPANHA_COMBATES_BLOCOS** — `combateId · geracao · indice · total · tamanho ·
+criadoEm · conteudo`. As mesmas regras de `PERSONAGENS_BLOCOS` (geração, SHA-256 do
+texto inteiro, conferência antes de publicar, pista de linha no manifesto). Duas
+gerações ficam vivas — a que vale e a anterior —, e a gravação seguinte escreve
+sobre a faixa de duas gerações atrás, conferida linha a linha: a aba não cresce
+com o uso. Voltar a caber numa célula limpa os blocos; excluir o combate ou a
+campanha também. Limite total de um combate: 900.000 caracteres.
+
+`CAMPANHA_COMBATES.armazenamento` é o manifesto (`formato: "blocos"`, `versao: 1`).
+Com ele preenchido, `dadosJson` guarda só um aviso, para um servidor antigo não
+abrir o combate como se estivesse vazio. Blocos que não conferem nunca são
+sobrescritos: o combate aparece como ilegível e a gravação é recusada.
+
 Na v2.24.1, GIFs são guardados integralmente nos mesmos campos de imagem já
 existentes (ou nos blocos da ficha, para aliados). Não há conversão para quadro
 estático. O seletor limita o original a 29.982 bytes para caber em uma data URL
@@ -21,7 +49,7 @@ nunca truncar imagem/ficha. Projeções de cartões não carregam aliados ou ima
 Não há novas abas/colunas nem migração. Em uma instalação na v2.23, não é necessário
 rodar `setupRama()` novamente.
 
-Uma planilha do Google, dezesseis abas. Criadas e mantidas por `setupRama()` — não
+Uma planilha do Google, dezenove abas. Criadas e mantidas por `setupRama()` — não
 monte nada à mão.
 
 > **Atualizando para a v2.15:** rode `setupRama()` de novo. Ele cria a aba
@@ -618,7 +646,10 @@ Privadas do mestre. Nenhuma resposta destinada a jogador toca nesta aba.
 
 ### CAMPANHA_COMBATES
 
-`id · campanhaId · nome · estado · visiveisJson · criadoEm · atualizadoEm · rev · dadosJson`
+`id · campanhaId · nome · estado · visiveisJson · criadoEm · atualizadoEm · rev · dadosJson · armazenamento`
+
+`armazenamento` (v2.28): manifesto do combate em `CAMPANHA_COMBATES_BLOCOS`, vazio
+quando ele cabe inteiro em `dadosJson` — ver o topo deste documento.
 
 `dadosJson` guarda `{ participantes, turno, ops }`:
 
@@ -807,7 +838,7 @@ precisar, com uma aba `_BLOCOS` própria.
 
 | campo | o que guarda | risco de passar do limite |
 |---|---|---|
-| `CAMPANHA_COMBATES.dadosJson` | participantes (até 200, criaturas com o snapshot inteiro), turno e os últimos 40 `opId` | **médio** — um combate com muitas criaturas de ficha longa. É o próximo candidato aos blocos |
+| `CAMPANHA_COMBATES.dadosJson` | participantes (até 200, criaturas com o snapshot inteiro), turno e os últimos 40 `opId` | **resolvido na v2.28** — acima do limite, o combate vai para `CAMPANHA_COMBATES_BLOCOS` |
 | `CAMPANHA_NOTAS.conteudo` | uma nota do mestre | médio — nota muito longa; dá para dividir em duas |
 | `HOMEBREW.dadosJson` | um item, criatura, habilidade ou ritual | baixo — só uma criatura com textos enormes |
 | imagens (`PERFIS.avatar`, `PERSONAGENS_FOTOS`, `CRIATURAS_IMAGENS`, `CAMPANHA_DOCUMENTOS_IMAGENS`, `CAMPANHA_CAPAS`) | data URL comprimida no navegador | baixo — o navegador reduz antes de enviar |

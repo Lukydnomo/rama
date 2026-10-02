@@ -464,6 +464,7 @@
       "aliados.criatura.pericias": "id",
       "aliados.criatura.ataques": "id",
       "aliados.criatura.habilidades": "id",
+      "aliados.criatura.acoes": "id",
       "atributos": "id",
       "status": "id",
       "pericias": "id",

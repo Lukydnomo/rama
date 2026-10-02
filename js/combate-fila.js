@@ -532,6 +532,13 @@
           return;
         }
 
+        /* A ocorrência saiu do combate em outro lugar: o ajuste dela não
+           tem mais onde cair. */
+        if (op.tipo === "criatura_instancia") {
+          if (!acharParticipante(atual, op.participanteId)) cai(); else volta();
+          return;
+        }
+
         if (op.tipo === "turno") {
           var mesmoTurno = atual.estado === "ativo" && p.base &&
             atual.turno.rodada === p.base.rodada && String(atual.turno.ativoId) === String(p.base.ativoId);
@@ -695,6 +702,12 @@
       estado: estado,
       definirIniciativa: function (participanteId, valor) { return definirCampo("iniciativa", participanteId, null, valor); },
       definirStatusCriatura: function (participanteId, statusId, valor) { return definirCampo("criatura_status", participanteId, statusId, valor); },
+      /* Fase, uso, marcador, Enigma e anotação de UMA ocorrência (v2.28).
+         Vai como operação pontual: cada clique é uma intenção, e a
+         última a chegar vale. */
+      definirInstanciaCriatura: function (participanteId, chave, valor) {
+        return enfileirar({ tipo: "criatura_instancia", participanteId: String(participanteId), chave: String(chave), valor: valor });
+      },
       enfileirar: enfileirar,
       salvarAgora: salvarAgora,
       tentarAgora: tentarAgora,

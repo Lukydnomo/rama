@@ -68,6 +68,15 @@
         status.atual = U.limitar(valor, 0, status.maximo > 0 ? status.maximo : 999999);
         ctx.alterou();
       },
+      /* Fase, usos, marcadores, Enigma e anotação DESTE aliado (v2.28):
+         a mesma regra do combate, gravada com a ficha. */
+      aoInstancia: function (chave, valor) {
+        var existente = atual(ctx, id);
+        if (!existente || !permitido(ctx)) return;
+        if (C.definirNaInstancia(existente.criatura, chave, valor)) ctx.alterou();
+      },
+      /* A imagem própria do aliado manda; sem ela, o retrato do catálogo. */
+      semImagem: !!a.imagem,
     });
     UI.modal({ titulo: a.criatura.nome, largo: true,
       conteudo: [a.imagem ? el("img.aliado-imagem", { src: a.imagem, alt: a.criatura.nome }) : null, painel.raiz],
@@ -75,44 +84,48 @@
     });
   }
 
-  async function biblioteca(ctx, botao) {
+  /* A mesma biblioteca do combate (v2.28): catálogo oficial e Homebrew,
+     com consulta antes de escolher. A ficha inteira chega já relida no
+     servidor (uma permissão pode ter mudado desde a lista). */
+  function biblioteca(ctx, botao) {
     if (!ctx.emEdicao() || !permitido(ctx)) return;
-    var r = await UI.ocupar(botao, function () { return global.RAMAApi.listarHomebrew({ escopo: "todos", tipo: "criatura" }); });
-    if (!r || r.ignorado) return;
-    if (!r.ok) { UI.avisoDeFalha(r, "leitura das criaturas"); return; }
-    var modelos = (r.dados || []).filter(function (m) { return m.tipo === "criatura"; });
-    var aberta = true;
-    var lista = el("div.pilha");
-    var busca = UI.campo({ rotulo: "Buscar criatura", valor: "", aoDigitar: true, aoMudar: pintar });
-    function pintar() {
-      var termo = U.chaveDeBusca(busca.entrada.value);
-      var visiveis = modelos.filter(function (m) { return U.chaveDeBusca(m.nome).indexOf(termo) >= 0; });
-      U.trocar(lista, visiveis.length ? visiveis.map(function (m) {
-        return el("button.r-botao", { type: "button", texto: m.nome, onclick: async function (ev) {
-          await UI.ocupar(ev.currentTarget, async function () {
-            // Busca novamente no servidor: uma permissão pode ter mudado desde a lista.
-            var respostas = await Promise.all([global.RAMAApi.lerHomebrew(m.id), global.RAMAApi.lerImagemCriatura(m.id)]);
-            var criatura = respostas[0], imagem = respostas[1];
-            if (!criatura.ok) { UI.avisoDeFalha(criatura, "leitura da criatura"); return; }
-            if (!imagem.ok) { UI.avisoDeFalha(imagem, "leitura da imagem"); return; }
-            if (!aberta || !ctx.emEdicao() || !permitido(ctx) || criatura.dados.tipo !== "criatura") return;
-            ctx.ficha.aliados.push(C.criarAliado(criatura.dados, imagem.dados.imagem));
-            ctx.alterou(); janela.fechar(); ctx.redesenhar();
-          });
-        } });
-      }) : UI.vazio({ titulo: "Nenhuma criatura disponível", texto: "Aqui aparecem suas criaturas e as públicas que você pode acessar." }));
-    }
-    var janela = UI.modal({ titulo: "Aliado da biblioteca", conteudo: [
-      el("p", { texto: "Será criada uma cópia independente, incluindo a imagem. Ela não será publicada nem adicionada a um combate." }), busca, lista,
-    ], botoes: [{ rotulo: "Cancelar" }], aoFechar: function () { aberta = false; } });
-    pintar();
+    if (botao) botao.blur();
+    global.RAMABibliotecaCriaturas.abrir({
+      titulo: "Aliado da biblioteca",
+      ajuda: "Será criada uma cópia independente, incluindo a imagem. Ela não será publicada nem adicionada a um combate.",
+      acoes: [{
+        rotulo: "Usar como aliado", principal: true,
+        aoEscolher: async function (criatura, origem) {
+          var imagem = "";
+          if (origem.tipo === "homebrew") {
+            var ri = await global.RAMAApi.lerImagemCriatura(origem.id);
+            if (!ri.ok) { UI.avisoDeFalha(ri, "leitura da imagem"); return false; }
+            imagem = ri.dados.imagem || "";
+          }
+          if (!ctx.emEdicao() || !permitido(ctx) || criatura.tipo !== "criatura") return false;
+          ctx.ficha.aliados.push(C.criarAliado(Object.assign({}, criatura, { id: origem.tipo === "homebrew" ? origem.id : undefined }), imagem));
+          ctx.alterou(); ctx.redesenhar();
+          return true;
+        },
+      }],
+    });
+  }
+
+  /* O retrato do cartão: a imagem do aliado ou, sem ela, a do catálogo. */
+  function retratoDoAliado(a) {
+    if (a.imagem) return el("img.aliado-imagem", { src: a.imagem, alt: a.criatura.nome, loading: "lazy" });
+    var imagens = C.imagensDoCatalogo(a.criatura);
+    if (!imagens) return null;
+    var img = el("img.aliado-imagem", { src: imagens.retrato, alt: a.criatura.nome, loading: "lazy" });
+    img.addEventListener("error", function () { img.hidden = true; });
+    return img;
   }
 
   function aba(ctx) {
     var aliados = ctx.ficha.aliados || [];
     return UI.painel("Aliados", aliados.length ? el("div.aliados-grade", {}, aliados.map(function (a) {
       return el("article.r-painel", {}, [
-        a.imagem ? el("img.aliado-imagem", { src: a.imagem, alt: a.criatura.nome, loading: "lazy" }) : null,
+        retratoDoAliado(a),
         el("h3.t-secao", { texto: a.criatura.nome }),
         global.RAMAHomebrewCriatura.detalhes(a.criatura),
         el("div.faixa", {}, [

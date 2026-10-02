@@ -475,6 +475,9 @@
     var o = opcoes || {};
     var corpo = { acao: "listar_homebrew", escopo: o.escopo || "meus", tipo: o.tipo || "" };
     if (Array.isArray(o.tipos) && o.tipos.length) corpo.tipos = o.tipos;
+    /* resumo (v2.28): só o que uma LISTA desenha — a ficha inteira vem
+       depois, por ler_homebrew, quando alguém escolhe. */
+    if (o.resumo) corpo.resumo = true;
     return post(corpo, o.segundoPlano ? { segundoPlano: true } : undefined);
   }
 

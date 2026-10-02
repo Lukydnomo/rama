@@ -439,7 +439,10 @@
       if (!r || !r.ok || !r.dados) return;
       /* A resposta diz de quem é a imagem: se o turno andou enquanto ela
          vinha, ela vai para quem ela é, e o painel pede a nova. */
-      if (r.dados.participanteId) c.imagens[r.dados.participanteId] = { imagem: r.dados.imagem || "", em: Date.now() };
+      /* Criatura do catálogo sem imagem enviada: o retrato que mora no
+         próprio site (v2.28). O servidor só diz QUAL — o caminho é daqui. */
+      var catalogo = !r.dados.imagem && r.dados.retratoCatalogo ? global.RAMACriaturas.imagensDoCatalogo(r.dados.retratoCatalogo) : null;
+      if (r.dados.participanteId) c.imagens[r.dados.participanteId] = { imagem: r.dados.imagem || (catalogo ? catalogo.retrato : ""), em: Date.now() };
       pintarPainelDoTurno(c.fila.vista());
     }
 
@@ -900,67 +903,35 @@
       if (r && r.ok) UI.avisoOk(faltando.length === 1 ? faltando[0].nome + " entrou no combate." : faltando.length + " personagens entraram no combate.");
     }
 
-    async function escolherCriatura(botao) {
-      var r = await UI.ocupar(botao, function () {
-        return global.RAMAApi.listarHomebrew({ escopo: "todos", tipo: "criatura" });
-      }, { rotulo: "Consultando…" });
-      if (!r || r.ignorado) return;
-      if (!r.ok) { UI.avisoDeFalha(r, "leitura das criaturas", { tentarDeNovo: function () { escolherCriatura(botao); } }); return; }
-
-      var criaturas = r.dados || [];
-
-      if (!criaturas.length) {
-        UI.modal({
-          titulo: "Nenhuma criatura disponível",
-          conteudo: [
-            el("p", { texto: "Você ainda não criou criaturas, e nenhuma foi publicada por outras contas." }),
-            el("p.t-mini", { texto: "Crie criaturas na aba Homebrew. Elas podem ser privadas (só suas) ou públicas." }),
-          ],
-          botoes: [
-            { rotulo: "Ir para Homebrew", classe: "r-botao--principal",
-              aoClicar: function () { location.href = U.url("homebrew/"); } },
-            { rotulo: "Fechar", classe: "r-botao--fantasma" },
-          ],
-        });
-        return;
-      }
-
-      var m = UI.modal({
+    /* A biblioteca de criaturas (v2.28): o catálogo oficial e o Homebrew
+       na mesma janela, com consulta antes de escolher. A janela fica
+       aberta — três zumbis são três cliques, cada um uma ocorrência. */
+    function escolherCriatura(botao) {
+      if (botao) botao.blur();
+      global.RAMABibliotecaCriaturas.abrir({
         titulo: "Acrescentar criatura",
-        largo: true,
-        conteudo: [
-          el("div.pilha--curta", { class: "pilha" }, criaturas.map(function (modelo) {
-            return el("button.r-cartao", {
-              type: "button",
-              estilo: { textAlign: "left", width: "100%", cursor: "pointer" },
-              onclick: function () { trazerCriatura(modelo); m.fechar(); },
-            }, [
-              el("div.faixa.faixa--entre", {}, [
-                el("span.t-forte", { texto: modelo.nome }),
-                el("span.r-etiqueta", { texto: modelo.meu ? "Sua" : "Pública" }),
-              ]),
-              el("p.t-mini", {
-                texto: (modelo.status || []).map(function (s) { return s.nome + " " + s.maximo; }).join(" · ") || "Sem status",
-              }),
-            ]);
-          })),
-          el("p.t-mini", {
-            texto: "A criatura entra como cópia independente. Acrescente a mesma quantas vezes precisar — cada uma terá o próprio estado.",
-          }),
-        ],
-        botoes: [{ rotulo: "Fechar", classe: "r-botao--fantasma" }],
+        ajuda: "Cada clique em \"Adicionar ao combate\" acrescenta uma ocorrência independente, com vida, estados e usos próprios.",
+        acoes: [{
+          rotulo: "Adicionar ao combate", principal: true,
+          aoEscolher: function (criatura, origem) {
+            return trazerCriatura(criatura, origem).then(function () { return false; });
+          },
+        }],
       });
     }
 
-    async function trazerCriatura(modelo) {
+    async function trazerCriatura(modelo, origem) {
+      var participante = global.RAMACriaturas.paraCombate(
+        Object.assign({}, modelo, { id: origem && origem.tipo === "homebrew" ? origem.id : modelo.id }), 0);
+
       /* Quantas dessa mesma criatura já estão aqui: a numeração continua
          de onde parou, então #1 e #2 convivem sem se confundir. */
       var v = c.fila.vista();
       var quantas = (v.participantes || []).filter(function (p) {
-        return p.tipo === "criatura" && p.origemId === modelo.id;
+        return p.tipo === "criatura" && participante.origemId && String(p.origemId) === String(participante.origemId);
       }).length;
+      participante.nome = participante.snapshot.nome + " #" + (quantas + 1);
 
-      var participante = global.RAMACriaturas.paraCombate(modelo, quantas + 1);
       var r = await c.fila.enfileirar({ tipo: "adicionar", participantes: [participante] });
       if (r && r.ok) UI.avisoOk(participante.nome + " entrou no combate.");
     }
@@ -1199,6 +1170,12 @@
     var painel = global.RAMACriaturaPainel.criar(participante.snapshot, {
       nome: participante.nome, rotulo: "Criatura deste combate",
       aoStatus: function (id, valor) { controlador.fila.definirStatusCriatura(participante.id, id, valor); },
+      /* Estado de fase, usos, marcadores, Enigma e anotação: só desta
+         ocorrência, pela fila do combate (v2.28). */
+      aoInstancia: function (chave, valor) { controlador.fila.definirInstanciaCriatura(participante.id, chave, valor); },
+      /* A iniciativa continua sendo do mestre: o total rolado só vira
+         ordem quando ele clica em "Usar na ordem". */
+      aoIniciativa: function (total) { controlador.fila.definirIniciativa(participante.id, total); },
     });
     return { titulo: painel.titulo, raiz: el("div.combate-criatura-caixa", {}, [painel.raiz]),
       atualizar: function (p) { painel.atualizar(p.snapshot); } };

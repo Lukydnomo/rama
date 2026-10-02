@@ -23,9 +23,15 @@
   var V = global.RAMAValidacao;
   var el = U.el;
 
-  /* editar(criatura|null, aoSalvar) */
+  /* editar(criatura|null, aoSalvar, { sistema, salvar, imagem, titulo,
+     destinoImagem }) — a ficha de Ordem tem editor próprio (v2.28); a
+     criatura sem sistema continua no editor de sempre. */
   function editar(original, aoSalvar, opcoes) {
     var o = opcoes || {};
+    if ((original && C.ehOrdem(original)) || (!original && o.sistema === C.SISTEMA_ORDEM)) {
+      editarOrdem(original, aoSalvar, o);
+      return;
+    }
     var criando = !original;
     var c = criando ? C.criar({}) : C.normalizar(original);
     if (!criando && original.id) c.id = original.id;
@@ -171,7 +177,7 @@
   /* Uma lista editável genérica: título, itens, botão de acrescentar e
      um X por linha. Escrever isso cinco vezes seria cinco chances de
      divergir. */
-  function bloco(titulo, lista, camposDe, criar) {
+  function bloco(titulo, lista, camposDe, criar, textoVazio) {
     var corpo = el("div.pilha--curta", { class: "pilha" });
 
     function pintar() {
@@ -189,7 +195,7 @@
               }, [UI.simbolo("x")]),
             ]);
           })
-        : el("p.t-mini", { texto: "Nenhum registro. A criatura só carrega o que ela realmente tem." })
+        : el("p.t-mini", { texto: textoVazio || "Nenhum registro. A criatura só carrega o que ela realmente tem." })
       );
     }
 
@@ -303,9 +309,455 @@
     ];
   }
 
+  /* =================================================================
+     ORDEM PARANORMAL (v2.28)
+     -----------------------------------------------------------------
+     O editor da ficha de ameaça. Os campos de teste aceitam a expressão
+     publicada ("3d20+10", "-2d20" = o pior de dois d20), "—" para "não
+     se aplica", vazio para "não informado" ou um texto curto ("veja
+     texto"), que é mostrado e nunca rolado. O que o editor não mostra
+     — partes do Enigma sem campo, por exemplo — continua na ficha: ele
+     edita uma cópia do original, não monta uma ficha nova.
+     ================================================================= */
+
+  var PERIODOS = ["rodada", "turno", "cena", "combate", "interlúdio", "dia", "missão"];
+  var NOMES_ACAO = { padrao: "Padrão", movimento: "Movimento", completa: "Completa", livre: "Livre", reacao: "Reação" };
+  var NOMES_ELEMENTO = { sangue: "Sangue", morte: "Morte", conhecimento: "Conhecimento", energia: "Energia", medo: "Medo" };
+
+  function descreverValor(v) {
+    var x = C.classificar(v);
+    if (x.tipo === "expressao") return "Rola " + x.texto + ".";
+    if (x.tipo === "na") return "Não se aplica.";
+    if (x.tipo === "nd") return "Não informado.";
+    if (x.tipo === "numero") return "Número.";
+    return "Texto: mostrado, nunca rolado.";
+  }
+
+  /* Um campo de valor de ficha: teste ("3d20+10") ou número (Defesa). */
+  function campoValor(rotulo, obj, chave, tipo) {
+    var atual = obj[chave];
+    var campo = UI.campo({
+      rotulo: rotulo, valor: atual === null || atual === undefined ? "" : String(atual), limite: 160,
+      ajuda: descreverValor(atual),
+      aoMudar: function (v, entrada) {
+        var novo = tipo === "numero" ? C.valorNumerico(v) : C.valorDeTeste(v);
+        obj[chave] = novo;
+        entrada.value = novo === null ? "" : String(novo);
+        campo.marcarErro("");
+        U.$(".r-ajuda", campo).textContent = descreverValor(novo);
+        U.$(".r-ajuda", campo).hidden = false;
+      },
+    });
+    return campo;
+  }
+
+  function campoTexto(rotulo, obj, chave, limite, extra) {
+    return UI.campo(Object.assign({
+      rotulo: rotulo, valor: obj[chave] || "", limite: limite || 120,
+      aoMudar: function (v) { obj[chave] = U.aparar(v, limite || 120); },
+    }, extra || {}));
+  }
+
+  function campoArea(rotulo, obj, chave, limite, linhas) {
+    return UI.campo({
+      rotulo: rotulo, tipo: "area", valor: obj[chave] || "", linhas: linhas || 3, limite: limite || 4000,
+      aoMudar: function (v) { obj[chave] = U.aparar(v, limite || 4000); },
+    });
+  }
+
+  /* Uma lista de textos, um por linha (imunidades, sentidos, notas). */
+  function campoLinhas(rotulo, obj, chave, ajuda) {
+    return UI.campo({
+      rotulo: rotulo, tipo: "area", linhas: 2, limite: 4000, valor: (obj[chave] || []).join("\n"),
+      ajuda: ajuda || "Um por linha.",
+      aoMudar: function (v) { obj[chave] = v.split(/\n+/).map(function (t) { return t.trim(); }).filter(Boolean); },
+    });
+  }
+
+  function campoInteiro(rotulo, obj, chave, minimo, maximo) {
+    return UI.campo({
+      rotulo: rotulo, tipo: "numero", valor: obj[chave] === null || obj[chave] === undefined ? "" : obj[chave],
+      aoMudar: function (v, entrada) {
+        if (String(v).trim() === "") { obj[chave] = null; return; }
+        obj[chave] = U.limitar(U.inteiro(v, minimo || 0), minimo || 0, maximo || 999999);
+        entrada.value = String(obj[chave]);
+      },
+    });
+  }
+
+  function selecao(rotulo, valor, opcoes, aoMudar) {
+    return UI.campo({ rotulo: rotulo, tipo: "selecao", valor: valor, opcoes: opcoes, aoMudar: aoMudar });
+  }
+
+  /* O dano de um ataque ou rolagem: as partes separadas por ";" —
+     "2d8+8 impacto; 2d12 Morte". */
+  function campoDano(rotulo, obj, chave) {
+    var campo = UI.campo({
+      rotulo: rotulo, valor: (obj[chave] || []).join("; "), limite: 300,
+      ajuda: "Expressão e tipo; partes de tipos diferentes separadas por “;”.",
+      aoMudar: function (v) {
+        var partes = v.split(";").map(function (p) { return p.trim(); }).filter(Boolean);
+        obj[chave] = partes;
+        campo.marcarErro(partes.length && !global.RAMADados.danoValido(partes) ? "Confira as expressões de dano." : "");
+      },
+    });
+    return campo;
+  }
+
+  function campoTeste(rotulo, obj, chave) {
+    var campo = UI.campo({
+      rotulo: rotulo, valor: obj[chave] || "", limite: 80,
+      aoMudar: function (v, entrada) {
+        var t = String(v).replace(/\s+/g, "");
+        if (!t) { obj[chave] = ""; campo.marcarErro(""); return; }
+        if (!global.RAMADados.testeValido(t)) { campo.marcarErro("Use um teste como 3d20+10 (ou -2d20 para o pior de dois)."); obj[chave] = t; return; }
+        obj[chave] = global.RAMADados.termos(t).expressao;
+        entrada.value = obj[chave];
+        campo.marcarErro("");
+      },
+    });
+    return campo;
+  }
+
+  function camposDeRolagem(r) {
+    return [
+      selecao("Tipo", r.tipo, [{ valor: "teste", rotulo: "Teste" }, { valor: "dano", rotulo: "Dano" }, { valor: "soma", rotulo: "Soma" }],
+        function (v) {
+          r.tipo = v;
+          if (v === "dano" && !r.partes) { r.partes = r.expressao ? [r.expressao] : []; delete r.expressao; }
+          if (v !== "dano" && r.partes) { r.expressao = (r.partes[0] || "").split(" ")[0]; delete r.partes; }
+        }),
+      campoTexto("Rótulo", r, "rotulo", 80),
+      UI.campo({
+        rotulo: "Expressão", valor: r.tipo === "dano" ? (r.partes || []).join("; ") : (r.expressao || ""), limite: 200,
+        ajuda: "Teste: 3d20+10 · Dano: 4d6 Sangue; 2d6 fogo · Soma: 1d4+1",
+        aoMudar: function (v) {
+          if (r.tipo === "dano") r.partes = v.split(";").map(function (p) { return p.trim(); }).filter(Boolean);
+          else r.expressao = v.replace(/\s+/g, "");
+        },
+      }),
+    ];
+  }
+
+  function camposDeAtaqueOrdem(a) {
+    return [
+      campoTexto("Ataque", a, "nome", 80),
+      campoTexto("Alcance", a, "alcance", 60, { ajuda: "corpo a corpo, curto, médio, longo…" }),
+      campoInteiro("Quantidade", a, "quantidade", 1, 20),
+      campoTeste("Teste", a, "teste"),
+      campoDano("Dano", a, "dano"),
+      UI.campo({
+        rotulo: "Crítico", valor: C.textoDoCritico(a.critico), limite: 12, ajuda: "Margem/multiplicador: 19/x3, x3, 18.",
+        aoMudar: function (v, entrada) { a.critico = C.normalizarCritico(v); entrada.value = C.textoDoCritico(a.critico); },
+      }),
+      campoTexto("Nota", a, "nota", 400),
+    ];
+  }
+
+  function camposDeEfeito(ef, ehAcao, c) {
+    var limite = ef.limite || { quantidade: 0, periodo: "cena" };
+    var requer = ef.requer || { estado: "", minimo: 1 };
+    function salvarLimite() { if (limite.quantidade > 0) ef.limite = { quantidade: limite.quantidade, periodo: limite.periodo }; else delete ef.limite; }
+    function salvarRequer() { if (requer.estado) ef.requer = { estado: requer.estado, minimo: requer.minimo }; else delete ef.requer; }
+    if (!ef.rolagens) ef.rolagens = [];
+    if (ehAcao && !ef.ataques) ef.ataques = [];
+
+    var campos = [
+      ehAcao ? selecao("Ação", ef.tipo, Object.keys(NOMES_ACAO).map(function (k) { return { valor: k, rotulo: NOMES_ACAO[k] }; }),
+        function (v) { ef.tipo = v; }) : null,
+      campoTexto("Nome", ef, "nome", 120),
+      campoArea("Texto", ef, "texto", 8000, 3),
+      campoTexto("Resistência", ef, "resistencia", 200, { ajuda: "Ex.: Fortitude DT 30 reduz à metade." }),
+      UI.campo({ rotulo: "Usos (0 = sem limite)", tipo: "numero", valor: limite.quantidade,
+        aoMudar: function (v) { limite.quantidade = U.limitar(U.inteiro(v, 0), 0, 99); salvarLimite(); } }),
+      selecao("Por", limite.periodo, PERIODOS.map(function (p) { return { valor: p, rotulo: p }; }),
+        function (v) { limite.periodo = v; salvarLimite(); }),
+      campoTexto("Marcador", ef, "marcador", 60, { ajuda: "Um liga/desliga da ocorrência (“Murcha”, “Ativo”)." }),
+      campoTexto("Custo", ef, "custo", 60),
+      campoTexto("Recarga", ef, "recarga", 120),
+      selecao("Exige o estado", requer.estado, [{ valor: "", rotulo: "Nenhum" }].concat(c.ordem.estados.map(function (e) {
+        return { valor: e.id, rotulo: e.nome };
+      })), function (v) { requer.estado = v; salvarRequer(); }),
+      UI.campo({ rotulo: "No mínimo", tipo: "numero", valor: requer.minimo,
+        aoMudar: function (v) { requer.minimo = Math.max(0, U.inteiro(v, 1)); salvarRequer(); } }),
+    ];
+    if (ehAcao) {
+      campos.push(bloco("Ataques", ef.ataques, camposDeAtaqueOrdem, function () {
+        return { id: U.uuid(), nome: "Novo ataque", alcance: "corpo a corpo", quantidade: 1, teste: "1d20", dano: ["1d6"], critico: { margem: 20, multiplicador: 2 }, nota: "" };
+      }, "Sem ataques. Ataques da mesma ação são feitos juntos (a ação agredir)."));
+    }
+    campos.push(bloco("Rolagens", ef.rolagens, camposDeRolagem, function () {
+      return { id: U.uuid(), tipo: "dano", rotulo: "Dano", partes: ["1d6"] };
+    }, "Sem rolagens próprias."));
+    return campos.filter(Boolean);
+  }
+
+  function editarOrdem(original, aoSalvar, o) {
+    var criando = !original;
+    var c = criando ? C.criarOrdem({}) : C.normalizar(original);
+    if (!criando && original.id) c.id = original.id;
+    /* No Homebrew o modelo não tem estado de jogo; num aliado (o.salvar), a
+       ocorrência guarda o dela e editar a ficha não o apaga. */
+    if (!o.salvar) delete c.instancia;
+    var od = c.ordem;
+    var imagem = o.imagem || "";
+    var visibilidade = c.visibilidade;
+
+    var vida = U.porId(c.status, C.ID_VIDA);
+    if (!vida) { vida = { id: C.ID_VIDA, nome: "Pontos de vida", atual: 0, maximo: 0 }; c.status.unshift(vida); }
+    var pe = U.porId(c.status, C.ID_PE);
+    var recursos = { pv: vida.maximo || null, pe: pe ? pe.maximo : null };
+
+    var nome = UI.campo({ rotulo: "Nome", valor: c.nome, limite: 120 });
+    var seletorVis = el("div.filtros__grupo", { role: "group", "aria-label": "Visibilidade" },
+      [{ v: "privado", r: "Privada" }, { v: "publico", r: "Pública" }].map(function (op) {
+        return el("button.filtro", {
+          type: "button", "aria-pressed": String(visibilidade === op.v), texto: op.r,
+          onclick: function (ev) {
+            visibilidade = op.v;
+            U.$$(".filtro", ev.target.parentNode).forEach(function (b) { b.setAttribute("aria-pressed", String(b === ev.target)); });
+          },
+        });
+      }));
+
+    var previa = el("span.r-avatar.r-avatar--g", { "aria-hidden": "true", texto: "?" });
+    if (imagem) U.trocar(previa, [el("img", { src: imagem, alt: "" })]);
+    if (!o.salvar && !criando && original.id) {
+      global.RAMAApi.lerImagemCriatura(original.id).then(function (r) {
+        if (r.ok && r.dados.imagem) { imagem = r.dados.imagem; U.trocar(previa, [el("img", { src: imagem, alt: "" })]); }
+      });
+    }
+
+    var elementos = el("div.r-abas", { role: "group", "aria-label": "Elementos" }, Object.keys(NOMES_ELEMENTO).map(function (e) {
+      return el("button.r-aba.bib-elemento.bib-elemento--" + e, {
+        type: "button", "aria-pressed": String(od.elementos.indexOf(e) >= 0), texto: NOMES_ELEMENTO[e],
+        onclick: function (ev) {
+          var i = od.elementos.indexOf(e);
+          if (i >= 0) od.elementos.splice(i, 1); else od.elementos.push(e);
+          ev.currentTarget.setAttribute("aria-pressed", String(i < 0));
+        },
+      });
+    }));
+
+    if (!od.presenca) od.presenca = { dt: null, dano: "", imune: "" };
+    var presenca = od.presenca;
+
+    var atributos = c.atributos.map(function (a) {
+      return UI.campo({
+        rotulo: a.sigla, valor: a.naoAplica ? "—" : (a.valor === null ? "" : a.valor), limite: 4,
+        ajuda: "Número, “—” ou vazio.",
+        aoMudar: function (v, entrada) {
+          var t = String(v).trim();
+          if (/^[—–-]$/.test(t)) { a.naoAplica = true; a.valor = null; entrada.value = "—"; return; }
+          a.naoAplica = false;
+          a.valor = t === "" ? null : U.limitar(U.inteiro(t, 0), 0, 20);
+          entrada.value = a.valor === null ? "" : String(a.valor);
+        },
+      });
+    });
+
+    if (!od.enigma) od.enigma = { texto: "", efeito: "", altera: null, rolagens: [] };
+    var enigma = od.enigma;
+    var altera = enigma.altera || {};
+    var alteraDesativar = { lista: altera.desativar || [] };
+
+    UI.modal({
+      titulo: o.titulo || (criando ? "Nova criatura de Ordem" : "Editar criatura"),
+      largo: true,
+      conteudo: el("div.pilha", {}, [
+        el("div.faixa", {}, [
+          previa,
+          el("button.r-botao.r-botao--fantasma", {
+            type: "button", texto: imagem ? "Trocar imagem" : "Imagem",
+            onclick: async function () {
+              var img = await global.RAMAEditorImagem.escolher(o.destinoImagem || "criatura");
+              if (!img.ok) return;
+              imagem = img.imagem;
+              U.trocar(previa, [el("img", { src: imagem, alt: "" })]);
+            },
+          }),
+        ]),
+        nome,
+        c.origem && c.origem.copiadoDe ? el("p.t-mini", { texto: "Cópia de " + c.origem.copiadoDe + (c.origem.pagina ? " (p. " + c.origem.pagina + ")" : "") + ". O catálogo oficial não muda." }) : null,
+        o.salvar ? null : el("div.r-campo", {}, [
+          el("span.r-rotulo", { texto: "Visibilidade" }),
+          seletorVis,
+          el("p.r-ajuda", { texto: "Privada: só você lista, abre e usa. Pública: outros agentes podem usá-la como modelo — mas só você edita ou apaga." }),
+        ]),
+
+        UI.painel("Identidade", el("div.editar-grade", {}, [
+          selecao("Natureza", c.natureza, [{ valor: "paranormal", rotulo: "Paranormal" }, { valor: "humana", rotulo: "Pessoa" }, { valor: "animal", rotulo: "Animal" }],
+            function (v) { c.natureza = v; }),
+          campoTexto("Tipo", od, "tipo", 40, { ajuda: "Criatura, Relíquia, Pessoa, Animal…" }),
+          campoTexto("Tamanho", od, "tamanho", 30),
+          campoInteiro("VD", od, "vd", 0, 9999),
+          campoTexto("Nível (sem VD)", od, "nivel", 60),
+          campoTexto("Categoria", c, "categoria", 60),
+          el("div.r-campo.editar-grade__largo", {}, [el("span.r-rotulo", { texto: "Elementos" }), elementos]),
+          el("div.editar-grade__largo", {}, [campoArea("Descrição", c, "descricao", 4000, 3)]),
+        ])),
+
+        UI.painel("Presença Perturbadora", el("div.editar-grade", {}, [
+          campoInteiro("DT", presenca, "dt", 0, 99),
+          UI.campo({ rotulo: "Dano mental", valor: presenca.dano || "", limite: 40, ajuda: "Ex.: 4d8. Vazio = sem Presença.",
+            aoMudar: function (v) { presenca.dano = v.replace(/\s+/g, ""); } }),
+          campoTexto("Imunidade", presenca, "imune", 60, { ajuda: "Ex.: NEX 50%+" }),
+        ])),
+
+        UI.painel("Sentidos e defesas", el("div.editar-grade", {}, [
+          campoValor("Percepção", od, "percepcao", "teste"),
+          campoValor("Iniciativa", od, "iniciativa", "teste"),
+          campoValor("Defesa", od, "defesa", "numero"),
+          campoValor("Fortitude", od, "fortitude", "teste"),
+          campoValor("Reflexos", od, "reflexos", "teste"),
+          campoValor("Vontade", od, "vontade", "teste"),
+          el("div.editar-grade__largo", {}, [campoLinhas("Sentidos", od, "sentidos")]),
+        ])),
+
+        UI.painel("Vida e esforço", el("div.editar-grade", {}, [
+          campoInteiro("PV máximo", recursos, "pv", 0, 999999),
+          campoValor("Machucado", od, "machucado", "numero"),
+          campoInteiro("PE (opcional)", recursos, "pe", 0, 9999),
+        ])),
+
+        bloco("Resistências", od.resistencias, function (r) {
+          return [
+            campoInteiro("Valor", r, "valor", 0, 999),
+            UI.campo({ rotulo: "Tipos", valor: r.tipos.join(", "), limite: 300, ajuda: "Separados por vírgula; “dano” = qualquer dano.",
+              aoMudar: function (v) { r.tipos = v.split(",").map(function (t) { return t.trim(); }).filter(Boolean); } }),
+          ];
+        }, function () { return { valor: 5, tipos: ["corte", "impacto", "perfuração"] }; }, "Sem resistências."),
+
+        UI.painel("Imunidades e vulnerabilidades", el("div.editar-grade", {}, [
+          campoLinhas("Imunidades", od, "imunidades"),
+          campoLinhas("Vulnerabilidades", od, "vulnerabilidades"),
+        ])),
+
+        bloco("Deslocamento", od.deslocamento, function (d) {
+          return [
+            campoInteiro("Metros", d, "metros", 0, 999),
+            campoInteiro("Quadrados", d, "quadrados", 0, 999),
+            campoTexto("Modo", d, "modo", 30, { ajuda: "Vazio = em terra; escalada, natação, voo…" }),
+          ];
+        }, function () { return { metros: 9, quadrados: 6, modo: "" }; }, "Sem deslocamento."),
+
+        UI.painel("Atributos", el("div.editar-grade", {}, atributos)),
+
+        bloco("Perícias", c.pericias, function (p) {
+          return [campoTexto("Perícia", p, "nome", 80), campoTeste("Teste", p, "expressao")];
+        }, function () { return { id: U.uuid(), nome: "Nova perícia", expressao: "1d20" }; }, "Sem perícias treinadas."),
+
+        bloco("Estados de fase", od.estados, function (e) {
+          return [campoTexto("Nome", e, "nome", 80), campoInteiro("Máximo", e, "maximo", 1, 99), campoInteiro("Inicial", e, "inicial", 0, 99)];
+        }, function () { return { id: "e" + U.uuid().replace(/-/g, "").slice(0, 8), nome: "Nova fase", maximo: 1, inicial: 0 }; },
+        "Contadores de fase ou forma (flores, metamorfoses, atos). Cada ocorrência marca o seu."),
+
+        bloco("Habilidades", c.habilidades, function (h) { return camposDeEfeito(h, false, c); }, function () {
+          return { id: U.uuid(), nome: "Nova habilidade", texto: "", rolagens: [] };
+        }, "Sem habilidades passivas."),
+
+        bloco("Ações", c.acoes, function (a) { return camposDeEfeito(a, true, c); }, function () {
+          return { id: U.uuid(), tipo: "padrao", nome: "Agredir", texto: "", ataques: [], rolagens: [] };
+        }, "Sem ações."),
+
+        UI.painel("Enigma de Medo", el("div.editar-grade", {}, [
+          el("div.editar-grade__largo", {}, [campoArea("Enigma", enigma, "texto", 4000, 3)]),
+          el("div.editar-grade__largo", {}, [campoArea("Efeito ao resolver", enigma, "efeito", 2000, 2)]),
+          campoValor("Defesa resolvido", altera, "defesa", "numero"),
+          campoValor("Fortitude resolvido", altera, "fortitude", "teste"),
+          campoValor("Reflexos resolvido", altera, "reflexos", "teste"),
+          campoValor("Vontade resolvido", altera, "vontade", "teste"),
+          el("div.editar-grade__largo", {}, [campoLinhas("Habilidades e ações desativadas", alteraDesativar, "lista", "O nome exato, uma por linha.")]),
+        ])),
+
+        UI.painel("Notas", campoLinhas("Notas", od, "notas")),
+      ]),
+      botoes: [
+        { rotulo: "Cancelar", classe: "r-botao--fantasma" },
+        {
+          rotulo: criando ? "Criar" : "Salvar",
+          classe: "r-botao--principal",
+          aoClicar: async function (fechar) {
+            var valor = nome.entrada.value.trim();
+            if (!valor) { nome.marcarErro("Informe um nome."); nome.entrada.focus(); return; }
+            c.nome = valor;
+            c.visibilidade = visibilidade;
+
+            vida.maximo = Math.max(0, recursos.pv || 0);
+            vida.atual = vida.maximo;
+            c.status = c.status.filter(function (s) { return s.id !== C.ID_PE; });
+            if (recursos.pe > 0) c.status.push({ id: C.ID_PE, nome: "Pontos de esforço", atual: recursos.pe, maximo: recursos.pe });
+
+            if (!presenca.dano && presenca.dt === null && !presenca.imune) od.presenca = null;
+            else od.presenca = presenca;
+
+            ["defesa", "fortitude", "reflexos", "vontade"].forEach(function (k) {
+              if (altera[k] === null || altera[k] === undefined) delete altera[k];
+            });
+            if (alteraDesativar.lista.length) altera.desativar = alteraDesativar.lista; else delete altera.desativar;
+            enigma.altera = Object.keys(altera).length ? altera : null;
+            od.enigma = enigma.texto || enigma.efeito ? enigma : null;
+
+            var pronta = C.normalizar(c);
+            if (c.id) pronta.id = c.id;
+            var problemas = C.validar(pronta);
+            if (problemas.length) {
+              UI.avisoErro("Confira antes de salvar: " + problemas.slice(0, 3).join("; ") + (problemas.length > 3 ? " (e mais " + (problemas.length - 3) + ")" : "") + ".");
+              return;
+            }
+
+            if (o.salvar) {
+              if (await o.salvar(pronta, imagem) === false) return;
+              fechar();
+              if (aoSalvar) aoSalvar();
+              return;
+            }
+
+            var r = await global.RAMAApi.salvarHomebrew(pronta);
+            if (!r.ok) { UI.avisoDeFalha(r, "gravação da criatura"); return; }
+            var id = (r.dados && r.dados.id) || c.id;
+            if (imagem && id) {
+              var ri = await global.RAMAApi.salvarImagemCriatura(id, imagem);
+              if (!ri.ok) UI.avisoAtencao("A criatura foi salva, mas a imagem não subiu.");
+            }
+            fechar();
+            if (aoSalvar) aoSalvar();
+          },
+        },
+      ],
+    });
+
+    nome.entrada.focus();
+  }
+
+  /* O resumo de leitura de uma ficha de Ordem, para cartões. */
+  function detalhesOrdem(c) {
+    var od = c.ordem;
+    var vida = U.porId(c.status, C.ID_VIDA);
+    var linha = [];
+    if (typeof od.vd === "number") linha.push("VD " + od.vd);
+    if (od.nivel) linha.push(od.nivel);
+    linha.push(od.tipo);
+    if (od.tamanho) linha.push(od.tamanho);
+    var partes = [
+      ["Ficha", linha.join(" · ")],
+      ["Elementos", od.elementos.length ? od.elementos.map(function (e) { return NOMES_ELEMENTO[e]; }).join(", ") : "—"],
+      ["PV / Defesa", (vida ? vida.maximo : "—") + " / " + C.classificar(od.defesa).texto],
+    ];
+    if (c.acoes.length) partes.push(["Ações", c.acoes.map(function (a) { return a.nome; }).join(" · ")]);
+    if (c.habilidades.length) partes.push(["Habilidades", c.habilidades.map(function (h) { return h.nome; }).join(" · ")]);
+    if (c.origem && (c.origem.copiadoDe || c.origem.catalogoId)) partes.push(["Origem", "Catálogo · " + (c.origem.copiadoDe || c.origem.catalogoId)]);
+    return el("dl.r-dados", {}, partes.reduce(function (saida, par) {
+      saida.push(el("dt", { texto: par[0] }));
+      saida.push(el("dd", { texto: par[1] }));
+      return saida;
+    }, []));
+  }
+
   /* Cartão de leitura, para a lista da biblioteca. */
   function detalhes(registro) {
     var c = C.normalizar(registro);
+    if (C.ehOrdem(c)) return detalhesOrdem(c);
     var partes = [];
 
     if (c.status.length) {

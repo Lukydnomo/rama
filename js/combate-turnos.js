@@ -136,6 +136,16 @@
         return;
       }
 
+      /* O estado DESTA ocorrência (v2.28): fase, uso, marcador, Enigma,
+         anotação. A regra é a de RAMACriaturas.definirNaInstancia — a
+         mesma que o servidor confere em Campanhas.gs. */
+      if (op.tipo === "criatura_instancia") {
+        var dona = acharParticipante(c, op.participanteId);
+        if (!dona || dona.tipo !== "criatura" || !dona.snapshot || !global.RAMACriaturas) return;
+        global.RAMACriaturas.definirNaInstancia(dona.snapshot, String(op.chave || ""), op.valor);
+        return;
+      }
+
       if (op.tipo === "turno") {
         if (c.estado !== "ativo") return;
         var t = op.direcao === "anterior" ? anterior(c.turno, c.participantes) : seguinte(c.turno, c.participantes);
