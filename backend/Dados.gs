@@ -102,10 +102,11 @@ var ABAS = {
     /* O avatar é base64 e vem logo na segunda coluna. Varrer PERFIS
        para achar um userId não pode arrastar o avatar de todo mundo. */
     nome: 'PERFIS',
-    colunas: ['userId', 'avatar', 'preferenciasJson', 'atualizadoEm'],
+    colunas: ['userId', 'avatar', 'preferenciasJson', 'atualizadoEm', 'avatarCont'],
     chave: 'userId',
     leves: 1,
-    pesadas: ['avatar'],
+    pesadas: ['avatar', 'avatarCont'],
+    somenteTexto: ['avatarCont'],
   },
   PERSONAGENS: {
     /* `armazenamento` entrou na v2.15 e é o MANIFESTO da ficha em blocos
@@ -133,10 +134,11 @@ var ABAS = {
        que menos muda. Junto no fichaJson, cada tecla digitada numa
        anotação reenviaria a imagem inteira — e a célula tem limite. */
     nome: 'PERSONAGENS_FOTOS',
-    colunas: ['personagemId', 'ownerId', 'imagem', 'atualizadoEm'],
+    colunas: ['personagemId', 'ownerId', 'imagem', 'atualizadoEm', 'imagemCont'],
     chave: 'personagemId',
     leves: 2,
-    pesadas: ['imagem'],
+    pesadas: ['imagem', 'imagemCont'],
+    somenteTexto: ['imagemCont'],
   },
   PERSONAGENS_BLOCOS: {
     /* A ficha em pedaços, cada um abaixo do limite seguro da célula
@@ -195,10 +197,11 @@ var ABAS = {
     /* Mesma razão da foto de personagem: imagem fora do JSON que é
        reenviado a cada edição. */
     nome: 'CRIATURAS_IMAGENS',
-    colunas: ['criaturaId', 'ownerId', 'imagem', 'atualizadoEm'],
+    colunas: ['criaturaId', 'ownerId', 'imagem', 'atualizadoEm', 'imagemCont'],
     chave: 'criaturaId',
     leves: 2,
-    pesadas: ['imagem'],
+    pesadas: ['imagem', 'imagemCont'],
+    somenteTexto: ['imagemCont'],
   },
   CAMPANHAS: {
     nome: 'CAMPANHAS',
@@ -245,10 +248,11 @@ var ABAS = {
   },
   CAMPANHA_DOCUMENTOS_IMAGENS: {
     nome: 'CAMPANHA_DOCUMENTOS_IMAGENS',
-    colunas: ['documentoId', 'campanhaId', 'imagem', 'atualizadoEm'],
+    colunas: ['documentoId', 'campanhaId', 'imagem', 'atualizadoEm', 'imagemCont'],
     chave: 'documentoId',
     leves: 2,
-    pesadas: ['imagem'],
+    pesadas: ['imagem', 'imagemCont'],
+    somenteTexto: ['imagemCont'],
   },
   CAMPANHA_NOTAS: {
     /* Privadas do mestre. Nenhuma resposta destinada a jogador toca
@@ -294,10 +298,11 @@ var ABAS = {
        saber se existe capa, de que tamanho e de quando, sem ler a
        imagem. */
     nome: 'CAMPANHA_CAPAS',
-    colunas: ['campanhaId', 'atualizadoEm', 'largura', 'altura', 'imagem'],
+    colunas: ['campanhaId', 'atualizadoEm', 'largura', 'altura', 'imagem', 'imagemCont'],
     chave: 'campanhaId',
     leves: 4,
-    pesadas: ['imagem'],
+    pesadas: ['imagem', 'imagemCont'],
+    somenteTexto: ['imagemCont'],
   },
 };
 
@@ -333,6 +338,62 @@ var ABAS = {
    ===================================================================== */
 
 var MAX_CELULA = 45000;
+
+/* =====================================================================
+   IMAGEM EM DUAS CÉLULAS (v2.28.1)
+   ---------------------------------------------------------------------
+   Um GIF animado de até 50 KB vai inteiro, e em data URL isso dá ~68
+   mil caracteres — mais que uma célula do Google (50 mil). A imagem
+   passa a caber em DUAS: a coluna de sempre (`imagem`, `avatar`) com
+   o começo, e a de continuação (`imagemCont`, `avatarCont`) com o
+   resto, depois de um "~" que impede a planilha de ler o pedaço como
+   fórmula ou número. Imagem que cabe numa célula fica só na primeira,
+   como sempre — nenhuma imagem antiga muda.
+   ===================================================================== */
+
+var MAX_IMAGEM = 2 * MAX_CELULA - 1;
+var MARCA_CONTINUACAO = '~';
+
+function colunaContinuacao(coluna) { return coluna + 'Cont'; }
+
+function temColuna(definicao, nome) {
+  try { return !!cabecalho(definicao).mapa[nome]; } catch (erro) { return false; }
+}
+
+/* A imagem inteira de um registro lido com as colunas pesadas. */
+function imagemDe(registro, coluna) {
+  if (!registro) return '';
+  var cont = String(registro[colunaContinuacao(coluna)] || '');
+  return String(registro[coluna] || '') + (cont.charAt(0) === MARCA_CONTINUACAO ? cont.slice(1) : '');
+}
+
+/* Põe a imagem no registro, em uma ou duas células. Devolve a lista de
+   colunas a gravar, ou null quando ela precisa da segunda célula e a
+   aba ainda não tem a coluna (setupRama não rodou) — quem chamou
+   recusa em vez de gravar a imagem cortada. */
+function aplicarImagem(definicao, registro, coluna, texto) {
+  var t = String(texto || '');
+  var cont = colunaContinuacao(coluna);
+  var resto = t.length > MAX_CELULA ? t.slice(MAX_CELULA) : '';
+  var existe = temColuna(definicao, cont);
+  if (resto && !existe) return null;
+  registro[coluna] = t.slice(0, MAX_CELULA);
+  if (existe) registro[cont] = resto ? MARCA_CONTINUACAO + resto : '';
+  return existe ? [coluna, cont] : [coluna];
+}
+
+/* A imagem de várias linhas, lendo as duas colunas. */
+function imagensDasLinhas(definicao, linhas, coluna) {
+  var inicio = lerCelulas(definicao, linhas, coluna);
+  var cont = temColuna(definicao, colunaContinuacao(coluna))
+    ? lerCelulas(definicao, linhas, colunaContinuacao(coluna)) : {};
+  var saida = {};
+  linhas.forEach(function (l) {
+    var c = String(cont[l._linha] || '');
+    saida[l._linha] = String(inicio[l._linha] || '') + (c.charAt(0) === MARCA_CONTINUACAO ? c.slice(1) : '');
+  });
+  return saida;
+}
 var LIMITE_TOTAL_FICHA = 1000000;
 
 /* =====================================================================

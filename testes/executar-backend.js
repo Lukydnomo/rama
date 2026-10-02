@@ -2132,8 +2132,8 @@ t.grupo("Capa da campanha — quem grava, quem lê");
   t.recusa("texto que não é imagem é recusado", comoMestra({ acao: "salvar_capa_campanha", campanhaId: privada,
     imagem: "javascript:alert(1)", largura: 10, altura: 10 }), "dados_invalidos");
   t.recusa("imagem sem medidas é recusada", comoMestra({ acao: "salvar_capa_campanha", campanhaId: privada, imagem: CAPA_PEQUENA }), "dados_invalidos");
-  const grande = "data:image/webp;base64," + "A".repeat(46000);
-  t.recusa("imagem maior que a célula é recusada — nunca aparada", comoMestra({ acao: "salvar_capa_campanha", campanhaId: privada,
+  const grande = "data:image/webp;base64," + "A".repeat(90000);
+  t.recusa("imagem maior que duas células é recusada — nunca aparada", comoMestra({ acao: "salvar_capa_campanha", campanhaId: privada,
     imagem: grande, largura: 10, altura: 10 }), "dados_grandes");
   t.igual("  e a capa anterior continua inteira", comoMestra({ acao: "ler_capa_campanha", campanhaId: privada }).dados.imagem, CAPA_PEQUENA);
 

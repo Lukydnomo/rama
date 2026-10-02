@@ -70,6 +70,18 @@
 
   var CHANGELOG = [
     {
+      versao: "2.28.1", codinome: "AMPLITUDE", data: "02/10/2026",
+      mudancas: {
+        "Alterado": [
+          "GIF animado agora pode ter até 50 KB (antes, ~29 KB), em todos os lugares que aceitam imagem: avatar, foto do personagem, criatura, aliado, capa da campanha e documento. Continua indo inteiro, sem recompressão; acima de 50 KB, o aviso de sempre pede uma versão menor.",
+        ],
+        "Técnico": [
+          "Atualizar Dados.gs, Codigo.gs e Campanhas.gs, rodar setupRama() (colunas imagemCont em PERSONAGENS_FOTOS, CRIATURAS_IMAGENS, CAMPANHA_DOCUMENTOS_IMAGENS e CAMPANHA_CAPAS, e avatarCont em PERFIS) e criar nova versão da implantação. Um GIF de 50 KB passa de uma célula do Google (~68 mil caracteres): a imagem passa a ser guardada em até duas células, e volta byte a byte. Imagens que cabem numa célula não mudam. Sem o setupRama(), uma imagem que precise da segunda célula é recusada (instalacao_incompleta), nunca cortada.",
+          "Testes: 8 novos no backend (1124), com GIF de 50 KB em todos os destinos.",
+        ],
+      },
+    },
+    {
       versao: "2.28.0", codinome: "BESTIÁRIO", data: "02/10/2026",
       mudancas: {
         "Adicionado": [

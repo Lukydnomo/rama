@@ -815,7 +815,7 @@ function perfilPublico(usuario) {
     id: usuario.id,
     usuario: usuario.usuario,
     nome: usuario.nome || usuario.usuario,
-    avatar: (perfil && perfil.avatar) || '',
+    avatar: imagemDe(perfil, 'avatar'),
     /* O tema vem com a sessão: a página o aplica sem outra consulta. */
     preferencias: { tema: temaDaConta(perfil) },
   };
@@ -1311,7 +1311,7 @@ function acaoLerFotos(corpo, usuario) {
     return permitidos[String(f.personagemId)];
   });
 
-  var imagens = lerCelulas(ABAS.PERSONAGENS_FOTOS, linhas, 'imagem');
+  var imagens = imagensDasLinhas(ABAS.PERSONAGENS_FOTOS, linhas, 'imagem');
   var datas = lerCelulas(ABAS.PERSONAGENS_FOTOS, linhas, 'atualizadoEm');
 
   var saida = {};
@@ -1338,7 +1338,7 @@ function acaoLerAvatares(corpo, usuario) {
 
   var linhas = lerLeves(ABAS.PERFIS).filter(function (p) { return querido[String(p.userId)]; });
 
-  var imagens = lerCelulas(ABAS.PERFIS, linhas, 'avatar');
+  var imagens = imagensDasLinhas(ABAS.PERFIS, linhas, 'avatar');
   var datas = lerCelulas(ABAS.PERFIS, linhas, 'atualizadoEm');
 
   var saida = {};
@@ -2499,12 +2499,10 @@ function acaoDuplicarPersonagem(corpo, usuario) {
 
     var foto = acharPor(ABAS.PERSONAGENS_FOTOS, 'personagemId', corpo.personagemId);
     if (foto && String(foto.ownerId) === String(usuario.id) && foto.imagem) {
-      inserir(ABAS.PERSONAGENS_FOTOS, {
-        personagemId: id,
-        ownerId: usuario.id,
-        imagem: foto.imagem,
-        atualizadoEm: agora,
-      });
+      var copiaFoto = { personagemId: id, ownerId: usuario.id, atualizadoEm: agora };
+      if (aplicarImagem(ABAS.PERSONAGENS_FOTOS, copiaFoto, 'imagem', imagemDe(foto, 'imagem'))) {
+        inserir(ABAS.PERSONAGENS_FOTOS, copiaFoto);
+      }
     }
 
     avisarMesas([registro.campanhaId], ['personagens']);
@@ -2541,14 +2539,14 @@ function acaoLerFoto(corpo, usuario) {
      ownerId da FOTO de novo trancaria o mestre para fora de uma imagem
      que ele pode ver na ficha inteira. */
   var foto = acharPor(ABAS.PERSONAGENS_FOTOS, 'personagemId', corpo.personagemId);
-  return { ok: true, dados: { imagem: (foto && foto.imagem) || '' } };
+  return { ok: true, dados: { imagem: imagemDe(foto, 'imagem') } };
 }
 
 function acaoSalvarFoto(corpo, usuario) {
   var imagem = String(corpo.imagem || '');
 
   if (imagem && imagem.indexOf('data:image/') !== 0) return { ok: false, erro: 'dados_invalidos' };
-  if (imagem.length > MAX_CELULA) return { ok: false, erro: 'dados_grandes' };
+  if (imagem.length > MAX_IMAGEM) return { ok: false, erro: 'dados_grandes' };
 
   return comTrava(function () {
     var acesso = personagemAcessivel(corpo.personagemId, usuario);
@@ -2566,16 +2564,14 @@ function acaoSalvarFoto(corpo, usuario) {
       /* O dono da foto é o dono do PERSONAGEM, não quem gravou: se o
          mestre trocar a imagem, a ficha continua sendo do jogador. */
       existente.ownerId = acesso.personagem.ownerId;
-      existente.imagem = imagem;
       existente.atualizadoEm = agora;
-      atualizarCampos(ABAS.PERSONAGENS_FOTOS, existente, ['ownerId', 'imagem', 'atualizadoEm']);
+      var colunasFoto = aplicarImagem(ABAS.PERSONAGENS_FOTOS, existente, 'imagem', imagem);
+      if (!colunasFoto) return { ok: false, erro: 'instalacao_incompleta', detalhe: 'imagemCont' };
+      atualizarCampos(ABAS.PERSONAGENS_FOTOS, existente, ['ownerId', 'atualizadoEm'].concat(colunasFoto));
     } else {
-      inserir(ABAS.PERSONAGENS_FOTOS, {
-        personagemId: corpo.personagemId,
-        ownerId: acesso.personagem.ownerId,
-        imagem: imagem,
-        atualizadoEm: agora,
-      });
+      var novaFoto = { personagemId: corpo.personagemId, ownerId: acesso.personagem.ownerId, atualizadoEm: agora };
+      if (!aplicarImagem(ABAS.PERSONAGENS_FOTOS, novaFoto, 'imagem', imagem)) return { ok: false, erro: 'instalacao_incompleta', detalhe: 'imagemCont' };
+      inserir(ABAS.PERSONAGENS_FOTOS, novaFoto);
     }
 
     avisarMesas([acesso.personagem.campanhaId], ['personagens']);
@@ -2814,14 +2810,14 @@ function acaoLerImagemCriatura(corpo, usuario) {
   if (!homebrewAlcancavel(registro, usuario)) return { ok: false, erro: 'nao_encontrado' };
 
   var imagem = acharPor(ABAS.CRIATURAS_IMAGENS, 'criaturaId', corpo.criaturaId);
-  return { ok: true, dados: { imagem: (imagem && imagem.imagem) || '' } };
+  return { ok: true, dados: { imagem: imagemDe(imagem, 'imagem') } };
 }
 
 function acaoSalvarImagemCriatura(corpo, usuario) {
   var imagem = String(corpo.imagem || '');
 
   if (imagem && imagem.indexOf('data:image/') !== 0) return { ok: false, erro: 'dados_invalidos' };
-  if (imagem.length > MAX_CELULA) return { ok: false, erro: 'dados_grandes' };
+  if (imagem.length > MAX_IMAGEM) return { ok: false, erro: 'dados_grandes' };
 
   return comTrava(function () {
     var registro = meuRegistro(ABAS.HOMEBREW, corpo.criaturaId, usuario);
@@ -2832,16 +2828,14 @@ function acaoSalvarImagemCriatura(corpo, usuario) {
 
     if (existente) {
       existente.ownerId = usuario.id;
-      existente.imagem = imagem;
       existente.atualizadoEm = agora;
-      atualizarCampos(ABAS.CRIATURAS_IMAGENS, existente, ['ownerId', 'imagem', 'atualizadoEm']);
+      var colunasCriatura = aplicarImagem(ABAS.CRIATURAS_IMAGENS, existente, 'imagem', imagem);
+      if (!colunasCriatura) return { ok: false, erro: 'instalacao_incompleta', detalhe: 'imagemCont' };
+      atualizarCampos(ABAS.CRIATURAS_IMAGENS, existente, ['ownerId', 'atualizadoEm'].concat(colunasCriatura));
     } else {
-      inserir(ABAS.CRIATURAS_IMAGENS, {
-        criaturaId: corpo.criaturaId,
-        ownerId: usuario.id,
-        imagem: imagem,
-        atualizadoEm: agora,
-      });
+      var novaImagem = { criaturaId: corpo.criaturaId, ownerId: usuario.id, atualizadoEm: agora };
+      if (!aplicarImagem(ABAS.CRIATURAS_IMAGENS, novaImagem, 'imagem', imagem)) return { ok: false, erro: 'instalacao_incompleta', detalhe: 'imagemCont' };
+      inserir(ABAS.CRIATURAS_IMAGENS, novaImagem);
     }
 
     return { ok: true };
@@ -2862,7 +2856,7 @@ function acaoLerPerfil(corpo, usuario) {
       id: usuario.id,
       usuario: usuario.usuario,
       nome: usuario.nome || usuario.usuario,
-      avatar: (perfil && perfil.avatar) || '',
+      avatar: imagemDe(perfil, 'avatar'),
       criadoEm: usuario.criadoEm,
       preferencias: lerJson(perfil && perfil.preferenciasJson, {}),
     },
@@ -2875,7 +2869,8 @@ function acaoSalvarPerfil(corpo, usuario) {
   if (dados.avatar !== undefined) {
     var img = String(dados.avatar || '');
     if (img && img.indexOf('data:image/') !== 0) return { ok: false, erro: 'dados_invalidos' };
-    if (img.length > MAX_CELULA) return { ok: false, erro: 'dados_grandes' };
+    if (img.length > MAX_IMAGEM) return { ok: false, erro: 'dados_grandes' };
+    if (img.length > MAX_CELULA && !temColuna(ABAS.PERFIS, 'avatarCont')) return { ok: false, erro: 'instalacao_incompleta', detalhe: 'imagemCont' };
   }
 
   /* A conta é sempre a da sessão (`usuario`); o corpo não escolhe. */
@@ -2908,7 +2903,7 @@ function acaoSalvarPerfil(corpo, usuario) {
         perfil = acharPor(ABAS.PERFIS, 'userId', usuario.id);
       }
 
-      if (dados.avatar !== undefined) perfil.avatar = String(dados.avatar || '');
+      if (dados.avatar !== undefined) aplicarImagem(ABAS.PERFIS, perfil, 'avatar', String(dados.avatar || ''));
       if (dados.preferencias !== undefined) {
         preferenciasGravadas = juntarPreferencias(perfil.preferenciasJson, dados.preferencias);
         perfil.preferenciasJson = JSON.stringify(preferenciasGravadas);

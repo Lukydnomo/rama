@@ -23,7 +23,7 @@
     ok("assinatura GIF impede congelar arquivo com MIME impreciso", errado.ok && errado.imagem === original);
     var limite = new Uint8Array(I.MAX_GIF); limite.set(bytes);
     var noLimite = await I.preparar(new File([limite], "limite.gif", { type: "image/gif" }));
-    ok("GIF no limite cabe integralmente no armazenamento", noLimite.ok && noLimite.bytes <= I.MAX_SAIDA);
+    ok("GIF no limite cabe integralmente no armazenamento", noLimite.ok && noLimite.bytes <= I.MAX_SAIDA_GIF && I.MAX_GIF === 51200);
     var grande = await I.preparar(new File([limite, new Uint8Array(1)], "grande.gif", { type: "image/gif" }));
     ok("GIF grande é recusado com orientação, sem virar foto estática", !grande.ok && grande.erro === "grande" && /quadros/.test(grande.mensagem));
     var invalido = await I.preparar(new File(["isto não é um GIF"], "falso.gif", { type: "image/gif" }));

@@ -1820,14 +1820,14 @@ function acaoLerImagemDocumento(corpo, usuario) {
   if (!podeVerDocumento(documento, ctx, usuario)) return { ok: false, erro: 'nao_encontrado' };
 
   var imagem = acharPor(ABAS.CAMPANHA_DOCUMENTOS_IMAGENS, 'documentoId', corpo.documentoId);
-  return { ok: true, dados: { imagem: (imagem && imagem.imagem) || '' } };
+  return { ok: true, dados: { imagem: imagemDe(imagem, 'imagem') } };
 }
 
 function acaoSalvarImagemDocumento(corpo, usuario) {
   var imagem = String(corpo.imagem || '');
 
   if (imagem && imagem.indexOf('data:image/') !== 0) return { ok: false, erro: 'dados_invalidos' };
-  if (imagem.length > MAX_CELULA) return { ok: false, erro: 'dados_grandes' };
+  if (imagem.length > MAX_IMAGEM) return { ok: false, erro: 'dados_grandes' };
 
   return comTrava(function () {
     var ctx = exigirMestre(corpo.campanhaId, usuario);
@@ -1842,16 +1842,13 @@ function acaoSalvarImagemDocumento(corpo, usuario) {
     var existente = acharPor(ABAS.CAMPANHA_DOCUMENTOS_IMAGENS, 'documentoId', corpo.documentoId);
 
     if (existente) {
-      existente.imagem = imagem;
       existente.atualizadoEm = agora;
+      if (!aplicarImagem(ABAS.CAMPANHA_DOCUMENTOS_IMAGENS, existente, 'imagem', imagem)) return { ok: false, erro: 'instalacao_incompleta', detalhe: 'imagemCont' };
       atualizarLinha(ABAS.CAMPANHA_DOCUMENTOS_IMAGENS, existente._linha, existente);
     } else {
-      inserir(ABAS.CAMPANHA_DOCUMENTOS_IMAGENS, {
-        documentoId: corpo.documentoId,
-        campanhaId: ctx.campanha.id,
-        imagem: imagem,
-        atualizadoEm: agora,
-      });
+      var novaDoc = { documentoId: corpo.documentoId, campanhaId: ctx.campanha.id, atualizadoEm: agora };
+      if (!aplicarImagem(ABAS.CAMPANHA_DOCUMENTOS_IMAGENS, novaDoc, 'imagem', imagem)) return { ok: false, erro: 'instalacao_incompleta', detalhe: 'imagemCont' };
+      inserir(ABAS.CAMPANHA_DOCUMENTOS_IMAGENS, novaDoc);
     }
 
     /* A data do documento acompanha a da imagem: é por ela que a aba
@@ -1911,7 +1908,7 @@ function acaoLerCapaCampanha(corpo, usuario) {
   var capa = capaDaCampanha(ctx.campanha.id);
   if (!capa.existe) return { ok: true, dados: { imagem: '', atualizadoEm: '', largura: 0, altura: 0 } };
 
-  var celulas = lerCelulas(ABAS.CAMPANHA_CAPAS, [capa.registro], 'imagem');
+  var celulas = imagensDasLinhas(ABAS.CAMPANHA_CAPAS, [capa.registro], 'imagem');
   return {
     ok: true,
     dados: {
@@ -1943,7 +1940,7 @@ function acaoLerCapas(corpo, usuario) {
   });
   if (!linhas.length) return { ok: true, dados: {} };
 
-  var imagens = lerCelulas(ABAS.CAMPANHA_CAPAS, linhas, 'imagem');
+  var imagens = imagensDasLinhas(ABAS.CAMPANHA_CAPAS, linhas, 'imagem');
 
   var saida = {};
   linhas.forEach(function (capa) {
@@ -1960,7 +1957,7 @@ function acaoSalvarCapaCampanha(corpo, usuario) {
   if (typeof corpo.imagem !== 'string') return { ok: false, erro: 'dados_invalidos' };
   var imagem = corpo.imagem;
 
-  if (imagem.length > MAX_CELULA) return { ok: false, erro: 'dados_grandes' };
+  if (imagem.length > MAX_IMAGEM) return { ok: false, erro: 'dados_grandes' };
   if (imagem && !FORMATO_DE_CAPA.test(imagem)) return { ok: false, erro: 'dados_invalidos' };
 
   var largura = Math.round(Number(corpo.largura));
@@ -1988,16 +1985,13 @@ function acaoSalvarCapaCampanha(corpo, usuario) {
       existente.atualizadoEm = agora;
       existente.largura = largura;
       existente.altura = altura;
-      existente.imagem = imagem;
-      atualizarCampos(ABAS.CAMPANHA_CAPAS, existente, ['atualizadoEm', 'largura', 'altura', 'imagem']);
+      var colunasCapa = aplicarImagem(ABAS.CAMPANHA_CAPAS, existente, 'imagem', imagem);
+      if (!colunasCapa) return { ok: false, erro: 'instalacao_incompleta', detalhe: 'imagemCont' };
+      atualizarCampos(ABAS.CAMPANHA_CAPAS, existente, ['atualizadoEm', 'largura', 'altura'].concat(colunasCapa));
     } else {
-      inserir(ABAS.CAMPANHA_CAPAS, {
-        campanhaId: ctx.campanha.id,
-        atualizadoEm: agora,
-        largura: largura,
-        altura: altura,
-        imagem: imagem,
-      });
+      var novaCapa = { campanhaId: ctx.campanha.id, atualizadoEm: agora, largura: largura, altura: altura };
+      if (!aplicarImagem(ABAS.CAMPANHA_CAPAS, novaCapa, 'imagem', imagem)) return { ok: false, erro: 'instalacao_incompleta', detalhe: 'imagemCont' };
+      inserir(ABAS.CAMPANHA_CAPAS, novaCapa);
     }
 
     marcarMesa(ctx.campanha.id, ['campanha']);
@@ -2341,10 +2335,10 @@ function acaoLerImagemDoTurno(corpo, usuario) {
   var imagem = '';
   if (p.tipo === 'personagem' && p.personagemId) {
     var foto = acharPor(ABAS.PERSONAGENS_FOTOS, 'personagemId', p.personagemId);
-    imagem = (foto && foto.imagem) || '';
+    imagem = imagemDe(foto, 'imagem');
   } else if (p.tipo === 'criatura' && p.origemId) {
     var img = acharPor(ABAS.CRIATURAS_IMAGENS, 'criaturaId', p.origemId);
-    imagem = (img && img.imagem) || '';
+    imagem = imagemDe(img, 'imagem');
   }
   /* Criatura do catálogo (ou cópia dela) sem imagem enviada: só o id do
      catálogo sai, e o site monta o caminho do retrato (v2.28). Nada da

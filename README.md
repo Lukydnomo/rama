@@ -547,6 +547,11 @@ segredo nenhum — ele os lê das Script Properties. Publicá-lo não expõe nad
 
 ### Atualizar o backend
 
+**v2.28.1 — AMPLITUDE:** GIF animado de até **50 KB**. Troque os três `.gs`, rode
+**`setupRama()`** (colunas `imagemCont` nas abas de imagem e `avatarCont` em
+`PERFIS`), crie uma nova versão da implantação e publique o site. Um GIF de 50 KB
+não cabe numa célula do Google; o servidor guarda a imagem em até duas.
+
 **v2.28.0 — BESTIÁRIO:** criaturas de Ordem Paranormal, biblioteca e combate
 em blocos. Troque os três `.gs`, rode **`setupRama()`** (cria a aba
 `CAMPANHA_COMBATES_BLOCOS` e a coluna `CAMPANHA_COMBATES.armazenamento`), crie uma

@@ -18,10 +18,28 @@ export function testarGifBackend({ t, preparar, novaConta, comoFn }) {
   t.ok("capa GIF é aceita", D({ acao: "salvar_capa_campanha", campanhaId: mesa, imagem: gif, largura: 32, altura: 16 }).ok);
   t.igual("capa reabre sem alterar bytes", D({ acao: "ler_capa_campanha", campanhaId: mesa }).dados.imagem, gif);
   t.recusa("terceiro não troca capa GIF", X({ acao: "salvar_capa_campanha", campanhaId: mesa, imagem: gif, largura: 32, altura: 16 }));
-  t.recusa("GIF acima do limite de célula é recusado", D({ acao: "salvar_capa_campanha", campanhaId: mesa,
-    imagem: "data:image/gif;base64," + "A".repeat(50000), largura: 32, altura: 16 }), "dados_grandes");
+  t.recusa("GIF acima do limite de duas células é recusado", D({ acao: "salvar_capa_campanha", campanhaId: mesa,
+    imagem: "data:image/gif;base64," + "A".repeat(90000), largura: 32, altura: 16 }), "dados_grandes");
   t.igual("falha não destrói a capa anterior", D({ acao: "ler_capa_campanha", campanhaId: mesa }).dados.imagem, gif);
   const doc = D({ acao: "salvar_documento", campanhaId: mesa, dados: { nome: "Documento animado", visiveis: [] } }).dados.id;
   t.ok("documento aceita GIF", D({ acao: "salvar_imagem_documento", campanhaId: mesa, documentoId: doc, imagem: gif }).ok);
   t.igual("documento mantém bytes", D({ acao: "ler_imagem_documento", campanhaId: mesa, documentoId: doc }).dados.imagem, gif);
+
+  /* v2.28.1: GIF de 50 KB (~68 mil caracteres) passa de uma célula e vai
+     em duas, em todos os destinos, voltando byte a byte. */
+  const pedaco = "R0lGODlh+/0123456789".repeat(4000);
+  const gif50 = "data:image/gif;base64," + pedaco.slice(0, Math.ceil(51200 / 3) * 4);
+  t.ok("(o GIF de 50 KB passa de uma célula)", gif50.length > 50000 && gif50.length < 90000);
+  t.ok("foto de 50 KB é aceita", D({ acao: "salvar_foto", personagemId: ficha, imagem: gif50 }).ok);
+  t.igual("  e volta inteira", D({ acao: "ler_foto", personagemId: ficha }).dados.imagem, gif50);
+  t.ok("avatar de 50 KB", D({ acao: "salvar_perfil", dados: { avatar: gif50 } }).ok &&
+    D({ acao: "ler_avatares", userIds: [dona.id] }).dados[dona.id].imagem === gif50);
+  t.ok("criatura de 50 KB", D({ acao: "salvar_imagem_criatura", criaturaId: criatura, imagem: gif50 }).ok &&
+    D({ acao: "ler_imagem_criatura", criaturaId: criatura }).dados.imagem === gif50);
+  t.ok("capa de 50 KB", D({ acao: "salvar_capa_campanha", campanhaId: mesa, imagem: gif50, largura: 32, altura: 16 }).ok &&
+    D({ acao: "ler_capa_campanha", campanhaId: mesa }).dados.imagem === gif50);
+  t.ok("documento de 50 KB", D({ acao: "salvar_imagem_documento", campanhaId: mesa, documentoId: doc, imagem: gif50 }).ok &&
+    D({ acao: "ler_imagem_documento", campanhaId: mesa, documentoId: doc }).dados.imagem === gif50);
+  t.ok("voltar para um GIF pequeno limpa a segunda célula", D({ acao: "salvar_foto", personagemId: ficha, imagem: gif }).ok &&
+    D({ acao: "ler_foto", personagemId: ficha }).dados.imagem === gif);
 }

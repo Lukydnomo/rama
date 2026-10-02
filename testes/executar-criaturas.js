@@ -257,7 +257,14 @@ const faltando = [];
 for (const c of DADOS.criaturas) {
   const m = /^(op|sah)\.criatura\.(.+)$/.exec(c.id);
   for (const arq of ["retrato.png", "corpo.png"]) {
-    try { await Deno.stat(new URL(`../assets/criaturas/${m[1]}/${m[2]}/${arq}`, import.meta.url)); } catch (e) { faltando.push(c.id + "/" + arq); }
+    /* A pasta pode estar num disco sincronizado (Google Drive), que às
+       vezes demora a responder: uma segunda tentativa antes de acusar. */
+    const url = new URL(`../assets/criaturas/${m[1]}/${m[2]}/${arq}`, import.meta.url);
+    let achou = false;
+    for (let tentativa = 0; tentativa < 3 && !achou; tentativa++) {
+      try { await Deno.stat(url); achou = true; } catch (e) { await new Promise((r) => setTimeout(r, 100)); }
+    }
+    if (!achou) faltando.push(c.id + "/" + arq);
   }
 }
 t.igual("toda criatura tem as duas imagens (provisórias) no site", faltando, []);

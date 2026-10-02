@@ -40,7 +40,12 @@
      aceita até 50.000 caracteres por célula; 40.000 deixa margem. */
   var MAX_SAIDA = 40000;
   var PREFIXO_GIF = "data:image/gif;base64,";
-  var MAX_GIF = Math.floor((MAX_SAIDA - PREFIXO_GIF.length) / 4) * 3;
+  /* O GIF animado vai inteiro, sem recompressão: até 50 KB de arquivo
+     (v2.28.1). Em data URL isso passa de uma célula (~68 mil caracteres),
+     e o servidor guarda a imagem em duas — ver partirImagem em Dados.gs.
+     MAX_SAIDA_GIF é o teto do data URL, com folga sobre os 50 KB. */
+  var MAX_GIF = 50 * 1024;
+  var MAX_SAIDA_GIF = PREFIXO_GIF.length + Math.ceil(MAX_GIF / 3) * 4;
 
   /* Resolução máxima aceita para abrir (80 megapixels). Acima disso o
      celular costuma ficar sem memória no meio do recorte — melhor dizer
@@ -48,7 +53,7 @@
   var MAX_PIXELS = 80 * 1000 * 1000;
 
   var MENSAGEM_GIF_GRANDE = "Para preservar a animação, o GIF precisa ter até " +
-    MAX_GIF.toLocaleString("pt-BR") + " bytes (aprox. 29 KB). Escolha uma versão menor ou com menos quadros.";
+    MAX_GIF.toLocaleString("pt-BR") + " bytes (50 KB). Escolha uma versão menor ou com menos quadros.";
 
   function config() { return global.RAMA_CONFIG || {}; }
 
@@ -440,6 +445,7 @@
     TIPOS_ACEITOS: TIPOS_ACEITOS,
     MAX_SAIDA: MAX_SAIDA,
     MAX_GIF: MAX_GIF,
+    MAX_SAIDA_GIF: MAX_SAIDA_GIF,
     MAX_PIXELS: MAX_PIXELS,
     MENSAGEM_GIF_GRANDE: MENSAGEM_GIF_GRANDE,
   };

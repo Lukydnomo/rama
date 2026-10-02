@@ -1,5 +1,16 @@
 # O banco
 
+## Imagem em duas células — v2.28.1
+
+GIF animado vai inteiro, com até 50 KB — ~68 mil caracteres em data URL, mais que
+uma célula do Google. `PERSONAGENS_FOTOS`, `CRIATURAS_IMAGENS`,
+`CAMPANHA_DOCUMENTOS_IMAGENS` e `CAMPANHA_CAPAS` ganharam a coluna `imagemCont`, e
+`PERFIS`, `avatarCont` (rode `setupRama()`). A imagem fica na coluna de sempre até
+45.000 caracteres e o resto na de continuação, depois de um `~` que impede a
+planilha de interpretar o pedaço. Limite: 89.999 caracteres. Imagens antigas e
+pequenas não mudam (a continuação fica vazia). Ver `aplicarImagem`, `imagemDe` e
+`imagensDasLinhas` em `Dados.gs`.
+
 ## Criaturas e combate em blocos — v2.28
 
 > **Atualizando para a v2.28:** rode `setupRama()` de novo. Ele cria a aba
