@@ -69,6 +69,14 @@
      conjurarRitual  { circulo, elemento?,   conhecer um ritual de pelo
                        elementoDaOpcao? }    menos esse círculo (e desse
                                              elemento) — AS1 p. 44-47
+     atributoUm      { atributos, minimo }   um dos atributos no mínimo
+                                             (“For 2 ou Agi 2”, AS2)
+     grau            { pericia, grau }       grau mínimo numa perícia
+                                             (2 = veterano, 3 = expert)
+     grauEmUma       { pericias, grau }      o grau em pelo menos uma
+     coroaDeEspinhos {}                      o contato com a Coroa de
+                                             Espinhos registrado na ficha
+                                             (poderes de Intenção, AS2 p. 94)
      declaracao      { texto }               condição narrativa que a
                                              ficha não mede (“ter
                                              cicatrizes”): sempre aceita,
@@ -81,6 +89,7 @@
   var OPRPG = "OPRPG";
   var SAH = "SAH";
   var AS1 = "AS1";
+  var AS2 = "AS2";
 
   /* ------------------------------------------------------------------
      Atalhos de montagem. Existem só para a lista abaixo caber na tela.
@@ -95,6 +104,10 @@
     elem: function (e, n) { return { tipo: "elemento", elemento: e, quantidade: n }; },
     conj: function (c, e) { return e ? { tipo: "conjurarRitual", circulo: c, elemento: e } : { tipo: "conjurarRitual", circulo: c }; },
     regra: function (k) { return { tipo: "comRegra", regra: k }; },
+    atrUm: function (lista, n) { return { tipo: "atributoUm", atributos: lista, minimo: n }; },
+    grau: function (p, g) { return { tipo: "grau", pericia: p, grau: g }; },
+    grauUma: function (lista, g) { return { tipo: "grauEmUma", pericias: lista, grau: g }; },
+    capaz: function () { return { tipo: "conjurarRitual", circulo: 1, texto: "Capacidade de conjurar rituais" }; },
   };
 
   var ef = {
@@ -129,6 +142,15 @@
       /* Quantas vezes a MESMA opção pode ser escolhida (<Habilidade>
          Aprimorada: duas, AS1 p. 46). Sem o campo, uma. */
       repeticaoMaxima: d.repeticaoMaxima || 0,
+      /* Quantas vezes o poder pode ser adquirido no TOTAL, somando as
+         opções (Dominar Habilidade Ritualística: três, AS2 p. 75). */
+      maximoTotal: d.maximoTotal || 0,
+      /* A habilidade que precisa existir antes para esta funcionar
+         (Maldição Suprema depende de Reproduzir Maldição). Dominar
+         Habilidade Ritualística confere isto (AS2 p. 75). */
+      dependeDe: d.dependeDe || "",
+      /* Só nos poderes de Intenção (AS2 p. 94-95). */
+      intencao: d.intencao || null,
       opcoes: d.opcoes || [],
       efeitos: d.efeitos || [],
       efeitosAfinidade: d.efeitosAfinidade || [],
@@ -281,6 +303,42 @@
 
     entrada({ chave: "primeiraImpressao", nome: "Primeira Impressão", tipo: "classe", classes: ["especialista"], pagina: 30,
       resumo: "+2 dados no primeiro teste de Diplomacia, Enganação, Intimidação ou Intuição de cada cena." }),
+
+    /* --- combatente · Arquivos Secretos 2 --- */
+    entrada({ chave: "predadorPerfeito", nome: "Predador Perfeito", tipo: "classe", classes: ["combatente"], fonte: AS2, pagina: 41,
+      resumo: "Uma vez por rodada, 5 PE dão uma ação padrão adicional — e ela precisa ter intenção de causar dano (golpe, disparo, armar uma armadilha, ritual de dano…).",
+      requisitos: [req.grauUma(["luta", "pontaria"], 2), req.grau("sobrevivencia", 2)],
+      automacao: "parcial", nota: "O botão do cartão gasta os 5 PE. A ação e o limite de uma por rodada são da cena." }),
+    entrada({ chave: "golpesDeArena", nome: "Golpes de Arena", tipo: "classe", classes: ["combatente"], fonte: AS2, pagina: 47,
+      resumo: "Ao acertar um ataque corpo a corpo, 2 PE dão um ataque corpo a corpo adicional ou uma manobra de combate contra o mesmo alvo.",
+      requisitos: [req.trein("luta")],
+      automacao: "parcial", nota: "O botão do cartão gasta os 2 PE; o ataque adicional é rolado como qualquer outro." }),
+    entrada({ chave: "marteladas", nome: "Marteladas", tipo: "classe", classes: ["combatente"], fonte: AS2, pagina: 87,
+      resumo: "Ação completa e 3 PE: três ataques desarmados no mesmo alvo. Os testes só dizem se há crítico (não se comparam à Defesa); os três danos são somados e causados como uma única fonte (Fortitude DT For reduz à metade).",
+      requisitos: [req.atr("for", 2), req.trein("luta"), req.poder("artistaMarcial")],
+      automacao: "calculo", nota: "O botão do cartão gasta os 3 PE, rola os três testes (só para o crítico) e os três danos desarmados de Artista Marcial, e mostra a soma como um dano só, com a DT." }),
+
+    /* --- especialista · Arquivos Secretos 2 --- */
+    entrada({ chave: "assassinatoFurtivo", nome: "Assassinato Furtivo", tipo: "classe", classes: ["especialista"], fonte: AS2, pagina: 53,
+      resumo: "O dano de Ataque Furtivo aumenta em +1d6. Ao acertar um ataque furtivo, 2 PE trocam os dados de dano furtivo de d6 para d8.",
+      requisitos: [req.poder("ataqueFurtivo")] }),
+    entrada({ chave: "especialistaEmMatar", nome: "Especialista em Matar", tipo: "classe", classes: ["especialista"], fonte: AS2, pagina: 59,
+      resumo: "Ao atacar, 2 PE dão +4 no ataque ou no dano. Com o NEX, +1 PE compra mais um +4: NEX 25% (3 PE, dois +4), 55% (4 PE, três), 85% (5 PE, quatro). Cada +4 vai para o ataque ou para o dano, à sua escolha.",
+      requisitos: [req.atrUm(["agi", "for"], 2), req.treinUma(["luta", "pontaria"])],
+      automacao: "calculo", nota: "O ataque com arma pergunta antes de rolar: quantos +4 e onde cada um vai. O PE sai na hora, o do ataque entra no teste e o do dano fica guardado para a rolagem de dano desse ataque." }),
+
+    /* --- ocultista · Arquivos Secretos 2 --- */
+    entrada({ chave: "dominarHabilidadeRitualistica", nome: "Dominar Habilidade Ritualística", tipo: "classe", classes: ["ocultista"], fonte: AS2, pagina: 75,
+      resumo: "Aprenda uma habilidade de trilha de ocultista, desde que tenha o NEX dela (com NEX 65%, Anular Ritual, por exemplo). Habilidades que dependem de uma anterior continuam dependendo. Até três vezes.",
+      requisitos: [req.atr("int", 3), req.trein("ocultismo"), req.capaz()],
+      repetivel: true, repeticaoPorOpcao: "habilidade", maximoTotal: 3,
+      opcoes: [{ chave: "habilidade", tipo: "habilidadeDeTrilha", classe: "ocultista", rotulo: "Habilidade de trilha de ocultista",
+        ajuda: "O NEX desta etapa precisa alcançar o da habilidade; uma que depende de outra exige a anterior." }],
+      automacao: "calculo", nota: "A habilidade escolhida entra como adquirida, com os efeitos e as concessões de ritual dela, a partir desta etapa." }),
+    entrada({ chave: "liturgiaDeFortalecimento", nome: "Liturgia de Fortalecimento Ritualístico", tipo: "classe", classes: ["ocultista"], fonte: AS2, pagina: 93,
+      resumo: "Numa cena de interlúdio, 2 PE e uma ação de interlúdio fortalecem um ritual que você conhece: a DT dele sobe +2 até o início da próxima cena de interlúdio.",
+      requisitos: [req.atr("int", 2), req.atr("pre", 2)],
+      automacao: "calculo", nota: "O botão do cartão escolhe o ritual e gasta os 2 PE; a DT mostrada na aba Rituais soma o +2 até o próximo interlúdio." }),
 
     /* --- ocultista --- */
     entrada({ chave: "camuflarOcultismo", nome: "Camuflar Ocultismo", tipo: "classe", classes: ["ocultista"], pagina: 33,
@@ -542,6 +600,62 @@
     geral("vontadeInabalavel", "Vontade Inabalável", 36, "+1 PE para cada 10% de NEX (ou a cada 2 níveis) e +2 em Vontade.",
       [req.atr("pre", 2)], [{ tipo: "pePorDoisDegraus", valor: 1 }, ef.pericia(["vontade"], 2)], "calculo"),
 
+    /* --- Arquivos Secretos 2 (as fichas “na sua mesa”) --- */
+    geral("revidarViolento", "Revidar Violento", 41,
+      "Pode fazer uma segunda reação especial de defesa na mesma rodada, desde que ela seja um contra-ataque.",
+      [req.atrUm(["for", "agi"], 2)], [], "informacao", { fonte: AS2,
+        nota: "A segunda reação vale só para contra-ataque; a primeira continua a de sempre." }),
+    geral("corpoFechado", "Corpo Fechado", 47,
+      "Pode fazer uma segunda reação especial de defesa na mesma rodada, desde que ela seja um bloqueio.",
+      [req.atr("vig", 2)], [], "informacao", { fonte: AS2, nota: "A segunda reação vale só para bloqueio." }),
+    geral("esquivaTatica", "Esquiva Tática", 53,
+      "Pode fazer uma segunda reação especial de defesa na mesma rodada, desde que ela seja uma esquiva.",
+      [req.atr("agi", 2)], [], "informacao", { fonte: AS2, nota: "A segunda reação vale só para esquiva." }),
+    geral("palpiteConfiante", "Palpite Confiante", 59,
+      "Num teste de perícia baseado em Intelecto ou Presença, 1 PE soma o seu Intelecto ao teste.",
+      [req.atr("int", 2)], [], "calculo", { fonte: AS2,
+        nota: "Aparece no resultado de um teste de perícia de Intelecto ou Presença, por 1 PE." }),
+    geral("especialistaEmCorrentes", "Especialista em Correntes", 70,
+      "Ação completa para prender um item numa corrente amarrada ao corpo (o seu ou o de um aliado em alcance de toque): ele não pode ser desarmado nem tirado sem quebrar a corrente. +2 em manobras com correntes, chicotes e armas presas assim. Cada item preso além do primeiro dá –1 em perícias afetadas por carga.",
+      [req.atr("agi", 2)], [], "informacao", { fonte: AS2 }),
+    geral("especialistaEmCorrentesPuxar", "Especialista em Correntes (puxar o alvo)", 70,
+      "Ao acertar um ataque com corrente ou semelhante (chicote, corda…), 2 PE puxam o alvo para um espaço vazio adjacente. Se ele se afastar de você por vontade própria, sofre –1 dado em ataques contra outros alvos por 1 rodada.",
+      [req.atrUm(["for", "agi"], 2), req.trein("luta")], [], "informacao", { fonte: AS2,
+        nota: "O livro imprime este poder com o mesmo nome do anterior, “Especialista em Correntes”, na mesma página. São dois poderes diferentes; o R.A.M.A. os separa pelo efeito." }),
+    geral("praticaComMateriaisRitualisticos", "Prática com Materiais Ritualísticos", 74,
+      "Na conjuração complexa (SAH p. 115), não sofre –1 dado para empregar materiais específicos de uma Entidade na 1ª etapa.",
+      [req.atr("int", 2), req.trein("ocultismo"), req.capaz()], [], "informacao", { fonte: AS2 }),
+    geral("estagioTerminal", "Estágio Terminal", 78,
+      "Uma vez por rodada, machucado, 2 PE dão uma ação de movimento extra.",
+      [req.atr("agi", 2)], [], "parcial", { fonte: AS2, nota: "O botão do cartão gasta os 2 PE e só se acende com a ficha machucada." }),
+    geral("kianVaiNosSalvar", "Kian Vai Nos Salvar", 78,
+      "A critério do mestre, diante de um desafio em que a sua fé em Kian esteja envolvida, você aprende a conjurar um ritual de Conhecimento de até 3º círculo como se o conhecesse (fora do limite), até o fim da cena. Não pode ter dois rituais assim na mesma cena.",
+      [req.atr("pre", 2), req.capaz()], [], "informacao", { fonte: AS2,
+        nota: "Depende da mesa: o ritual escolhido entra pela biblioteca como concessão da mesa, se ela quiser registrar." }),
+    geral("tratamentoDeEmergencia", "Tratamento de Emergência", 79,
+      "Ação padrão e 2 PE dão 2d10+10 PV temporários a um ser em alcance de toque. Quando todos forem perdidos, ele fica fraco até o fim da cena. O mesmo alvo não se beneficia de novo na mesma cena.",
+      [req.atr("int", 2), req.trein("medicina")], [], "parcial", { fonte: AS2,
+        nota: "O botão do cartão gasta os 2 PE e rola os PV temporários; em você mesmo, eles entram na ficha até o fim da cena." }),
+    geral("arteDaMusicaMacabra", "Arte da Música Macabra", 83,
+      "Ação padrão e 2 PE causam um efeito num ser em alcance curto que possa ouvi-lo: o próximo dano dele +5; o próximo ataque +2 na margem de ameaça; o próximo teste de ataque +5; ou +9 m no alcance do próximo ataque ou habilidade.",
+      [], [], "parcial", { fonte: AS2,
+        nota: "Em você mesmo, o efeito fica guardado e é gasto no próximo ataque, dano ou habilidade. O texto impresso tem duas frases soltas sobre “gastar 1d6 no mesmo ritual” e um trecho cortado (“No fim da cena”), copiados do Catalisador; o livro não lista pré-requisito. Ver docs/ORDEM-REGRAS.md." }),
+    geral("sintonizacaoMentalComArma", "Sintonização Mental com Arma", 83,
+      "Numa cena de interlúdio, uma ação de interlúdio e 3 PE sintonizam uma arma que você empunha: até o início da próxima cena de interlúdio, ela usa o atributo que você escolher para ataque e dano, em vez do padrão. Só vale com a arma empunhada por você.",
+      [req.atrUm(["int", "pre"], 2), req.trein("ocultismo"), req.capaz()], [], "calculo", { fonte: AS2,
+        nota: "O botão do cartão escolhe a arma e o atributo e gasta os 3 PE; o ataque e o dano da arma passam a usar o atributo até o próximo interlúdio." }),
+    geral("sintonizacaoMentalComProtecao", "Sintonização Mental com Proteção", 83,
+      "Numa cena de interlúdio, uma ação de interlúdio e 3 PE sintonizam uma proteção que você veste: até o início da próxima cena de interlúdio, ela usa o atributo que você escolher na Defesa, em vez de Agilidade. Só vale com a proteção vestida por você.",
+      [req.atrUm(["int", "pre"], 2), req.trein("ocultismo"), req.capaz()], [], "calculo", { fonte: AS2,
+        nota: "O botão do cartão escolhe a proteção e o atributo e gasta os 3 PE; a Defesa troca a Agilidade pelo atributo enquanto a proteção estiver em uso, até o próximo interlúdio." }),
+    geral("movimentacaoTatica", "Movimentação Tática", 87,
+      "Movendo-se em direção a uma cobertura ou a um inimigo, 1 PE permite percorrer o dobro do seu deslocamento.",
+      [req.atr("for", 2), req.trein("atletismo"), req.trein("tatica")], [], "informacao", { fonte: AS2 }),
+    geral("sentidoTaticoMilitar", "Sentido Tático (geral)", 87,
+      "Fica imune à condição desprevenido. Ao causar dano num alvo, 2 PE fazem ele falhar automaticamente em Furtividade contra você por 1 rodada.",
+      [req.atr("pre", 2), req.trein("percepcao"), req.trein("tatica")], [], "informacao", { fonte: AS2,
+        nota: "O livro chama este poder geral de “Sentido Tático”, o mesmo nome do poder de combatente do livro básico (p. 26), que é outro. Marque desprevenido em Condições → Editar imunidades (a ficha recusa aplicar uma condição de que você é imune). A falha em Furtividade é aplicada na cena." }),
+
     /* --- Arquivos Secretos 1, p. 46 --- */
     geral("habilidadeAprimorada", "Habilidade Aprimorada", 46,
       "Escolha uma habilidade ou um ritual que tenha DT: a DT para resistir a ele aumenta em +2. Pode ser escolhido de novo para outra habilidade ou ritual, e até duas vezes para a mesma (a DT sobe +5 no total).",
@@ -731,6 +845,28 @@
       "Pode receber +1 dado num teste; se falhar ou esse dado tirar 5 ou menos, perde 1d4 de Sanidade.",
       "Só perde Sanidade se falhar ou se o dado extra tirar 1 ou 2."),
 
+    /* --- Arquivos Secretos 2 --- */
+    paranormal("predadorDeSangue", "Predador de Sangue", "sangue", AS2, 41,
+      "Ação padrão e 3 PE memorizam o odor de uma vítima (com uma fonte do odor): +1d20 para rastreá-la, percebê-la e atacá-la. Uma vítima por vez; dura até memorizar outra.",
+      "Pode memorizar até três vítimas ao mesmo tempo.",
+      { automacao: "parcial", nota: "O cartão guarda as vítimas memorizadas (uma, ou três com afinidade); o +1d20 é somado no teste contra elas." }),
+    paranormal("pressaoAtmosferica", "Pressão Atmosférica", "energia", AS2, 47,
+      "Ao acertar um ataque corpo a corpo num alvo agarrado, 3 PE causam +1d10 de dano de Energia e deixam o alvo atordoado por uma rodada (Fortitude DT For evita a condição). Um mesmo ser só é atordoado assim uma vez por cena.",
+      "O alvo também fica caído e sangrando (o teste não evita essas condições).",
+      { automacao: "parcial", nota: "O botão do cartão gasta os 3 PE e rola o +1d10 de Energia com a DT; as condições ficam com a cena." }),
+    paranormal("zonaDosSussurros", "Zona dos Sussurros", "conhecimento", AS2, 53,
+      "Ação completa e 3 PE marcam uma área do tamanho de um cômodo pequeno: nela, +5 nos testes de ataque e nenhuma penalidade em Furtividade depois de atacar ou de outras ações chamativas. No máximo três áreas; a quarta apaga uma anterior.",
+      "Contra alvo desprevenido (corpo a corpo ou em alcance curto) ou flanqueado, pode rolar de novo os dados de dano que deram 1 ou 2 e ficar com os melhores.",
+      { automacao: "parcial", nota: "O cartão guarda as áreas (até três, a quarta tira a mais antiga); o +5 é da cena." }),
+    paranormal("disparoDaMorte", "Disparo da Morte", "morte", AS2, 59,
+      "Antes do teste de ataque com arma de fogo ou de disparo, 3 PE dão +2 na margem de ameaça desse ataque.",
+      "O ataque também ignora cobertura e 10 pontos de resistência a dano do alvo.",
+      { automacao: "calculo", nota: "O ataque com arma de fogo ou de disparo pergunta antes de rolar; o +2 entra na margem desse ataque." }),
+    paranormal("engolirSangue", "Engolir Sangue", "sangue", AS2, 93,
+      "Ação completa para consumir uma porção de carne humana (1 espaço): recupera 2d8+2 PV, mas perde 1d4 de Sanidade.",
+      "A cura muda para 4d8+4 PV.",
+      { automacao: "calculo", nota: "O botão do cartão rola a cura e a perda de Sanidade e as aplica na ficha." }),
+
     /* --- Arquivos Secretos 1, p. 47 (todos de Sangue) --- */
     paranormal("ferroMaculado", "Ferro Maculado", "sangue", AS1, 47,
       "Ação de movimento e 2 PV amaldiçoam 1 projétil de munição: ele causa +1d6 de dano de Sangue, uma única vez.",
@@ -750,6 +886,61 @@
       "Machucado, também recebe 20 PV temporários, uma vez por cena.",
       { requisitos: [req.elem("sangue", 1)], efeitos: [{ tipo: "resistenciaDanoMachucado", valor: 5 }], automacao: "parcial",
         nota: "A resistência a dano entra na conta enquanto os PV atuais estiverem na metade ou abaixo. Os 20 PV temporários da afinidade vêm pelo botão do cartão, uma vez por cena." }),
+  ];
+
+  /* =================================================================
+     PODERES DE INTENÇÃO — Arquivos Secretos 2, p. 94-95
+     -----------------------------------------------------------------
+     "Um poder paranormal de Intenção não funciona como os poderes das
+     demais entidades": pede contato com a Coroa de Espinhos e só pode
+     ser usado depois que o GATILHO é atendido — e de novo só quando ele
+     for atendido de novo. Intenção não tem afinidade, componentes,
+     oposição elemental nem aquisição por Transcender no livro, e o
+     R.A.M.A. não inventa nada disso: o poder é concedido pela mesa,
+     com o contato registrado (ordem.intencao, js/ordem/intencao.js).
+
+     `intencao`:
+       gatilho     o texto do gatilho
+       tipo        "ferimentos" (contado pela ficha) | "acao" (o gesto
+                   do próprio personagem) | "confirmacao" (a mesa diz)
+       ferimentos  quantos, e o dano mínimo de cada um (Filho da Dor)
+       uso         a ação de usar
+       efeito      "ativo" (fica ligado até desligar ou a cena acabar)
+                   | "instantaneo"
+       porCena     usos por cena, quando o livro limita
+       versoesNpc  onde a ficha de NPC diverge do texto da p. 94-95
+     ================================================================= */
+
+  function intencao(chave, nome, pagina, lema, resumo, dados) {
+    return entrada({ chave: chave, nome: nome, tipo: "intencao", elemento: "intencao", fonte: AS2, pagina: pagina,
+      resumo: resumo, requisitos: [{ tipo: "coroaDeEspinhos" }], intencao: Object.assign({ lema: lema }, dados),
+      automacao: "parcial" });
+  }
+
+  var PODERES_INTENCAO = [
+    intencao("desejoDiabolico", "Desejo Diabólico", 94, "Prove-se digno.",
+      "Gatilho: obedecer a Ele. Ao fazer um teste, em vez de rolar, uma reação torna o resultado um sucesso automático (como um 20 natural). Uma vez por cena, e na mesma cena em que obedeceu a uma vontade d’Ele.",
+      { gatilho: "Obedecer a Ele.", tipo: "confirmacao", uso: "reação", efeito: "instantaneo", porCena: 1, mesmaCena: true,
+        versoesNpc: [{ ficha: "Juan Davo (p. 91-92)", texto: "Igual ao texto da p. 94." }] }),
+    intencao("filhoDaDor", "Filho da Dor", 95, "Você foi torturado, mas a dor não o derrotou. Pelo contrário, tornou-se sua amiga.",
+      "Gatilho: ser ferido três vezes, cada ferimento com pelo menos 5 de dano. Uma reação dá resistência a dano 25; enquanto ela durar, você perde 5 PV no início dos seus turnos. Outra reação desliga o efeito.",
+      { gatilho: "Ser ferido três vezes, cada ferimento com pelo menos 5 pontos de dano.", tipo: "ferimentos", ferimentos: 3, danoMinimo: 5,
+        uso: "reação", efeito: "ativo", rd: 25, perdaPorTurno: 5,
+        versoesNpc: [{ ficha: "Jonas Aguiar e Mutilador Noturno (p. 39-40)", texto: "A ficha de NPC não menciona a reação para desligar o efeito." }] }),
+    intencao("novoCaminho", "Novo Caminho", 95, "A Intenção dos mortos é a matéria-prima do labirinto da sua própria criação.",
+      "Gatilho: testemunhar a morte de uma pessoa. Ação padrão para absorver as intenções de uma pessoa morta em alcance curto: um ser em alcance curto recupera PV iguais à metade dos PV máximos do cadáver.",
+      { gatilho: "Testemunhar a morte de uma pessoa.", tipo: "confirmacao", uso: "ação padrão", efeito: "instantaneo",
+        versoesNpc: [{ ficha: "Labirinto (p. 63-65)", texto: "A ficha de NPC traz o poder como REAÇÃO no destaque e como ação PADRÃO na lista de ações; a p. 95 diz ação padrão." }] }),
+    intencao("oSaborDoSilencio", "O Sabor do Silêncio", 95, "O silêncio que te atormentou agora assombra o pesadelo dos outros.",
+      "Gatilho: gastar uma ação padrão para provar o sangue de um ser adjacente que esteja machucado. Até o fim da cena, seus ataques causam +1d8 de dano e têm +2 na margem de ameaça; num crítico, você corta a boca do alvo, que fica sem poder se comunicar nem usar poderes ou rituais por 1d4 rodadas.",
+      { gatilho: "Gastar uma ação padrão para provar o sangue de um ser adjacente machucado.", tipo: "acao", uso: "ação padrão (o gatilho)",
+        efeito: "ativo", duracao: "cena",
+        versoesNpc: [{ ficha: "Jae-Yoon e X (p. 51-52)", texto: "A ficha de NPC usa uma REAÇÃO para provar o sangue; a p. 95 pede uma ação padrão." }] }),
+    intencao("sedeDeVinganca", "Sede de Vingança", 95, "Uma vez, você cuidou de alguém, mas a perdeu. É hora de fazer os responsáveis pagarem.",
+      "Gatilho: ouvir o grito de morte de alguém que você tentou proteger (um aliado morrendo que você escute ou veja). Como reação, ataque quem o deixou morrendo — ou, antes de ficar inconsciente, quem deixou você morrendo.",
+      { gatilho: "Ouvir o grito de morte de alguém que tentou proteger (aliado morrendo à vista ou ao alcance da voz).", tipo: "confirmacao",
+        uso: "reação", efeito: "instantaneo",
+        versoesNpc: [{ ficha: "Kemi e Fantasma (p. 57-58)", texto: "A ficha de NPC acrescenta “uma vez por rodada”." }] }),
   ];
 
   /* =================================================================
@@ -1054,7 +1245,8 @@
       { automacao: "parcial",
         nota: "A troca é aplicada pela ficha: as vagas de poder de ocultista, e o poder de ocultista da Versatilidade, só aceitam Transcender. Os pontos de possessão são contados pela mesa — a ficha não tem esse recurso." }),
     trilha("possuido", 40, "asSombrasDentroDeMim", "As Sombras Dentro de Mim", SAH, 28,
-      "Recupera 2 pontos de possessão por sono e 2 PE dão +1 dado em Acrobacia, Atletismo e Furtividade por uma rodada."),
+      "Recupera 2 pontos de possessão por sono e 2 PE dão +1 dado em Acrobacia, Atletismo e Furtividade por uma rodada.",
+      { dependeDe: "poderNaoDesejado" }),
     trilha("possuido", 65, "eleMeEnsina", "Ele Me Ensina", SAH, 28,
       "Escolha entre transcender ou receber o primeiro poder de outra trilha de ocultista.",
       { opcoes: [{ chave: "caminho", tipo: "caminho", rotulo: "Caminho",
@@ -1090,7 +1282,7 @@
         nota: "Memorizar e aplicar ficam no menu do item (“Maldições do Maledictólogo…”). A maldição aplicada fica marcada como temporária, até o fim da missão." }),
     trilha("maledictologo", 99, "maldicaoSuprema", "Maldição Suprema", AS1, 45,
       "Em Reproduzir Maldição, o item conta como três categorias a menos: um item IV conta como I, e recebe maldições até voltar à IV.",
-      { automacao: "calculo", nota: "O limite de categoria de Reproduzir Maldição já desconta as três categorias." }),
+      { automacao: "calculo", dependeDe: "reproduzirMaldicao", nota: "O limite de categoria de Reproduzir Maldição já desconta as três categorias." }),
   ];
 
   /* =================================================================
@@ -1287,7 +1479,7 @@
      ÍNDICES
      ================================================================= */
 
-  var TODOS = [].concat(PODERES_CLASSE, PODERES_GERAIS, PODERES_PARANORMAIS, HABILIDADES_TRILHA, AUTOMATICAS, ALTERACOES_GERAIS,
+  var TODOS = [].concat(PODERES_CLASSE, PODERES_GERAIS, PODERES_PARANORMAIS, PODERES_INTENCAO, HABILIDADES_TRILHA, AUTOMATICAS, ALTERACOES_GERAIS,
     HABILIDADES_SOBREVIVENTE, TREINAMENTOS);
 
   var POR_CHAVE = {};
@@ -1346,10 +1538,11 @@
   }
 
   global.RAMAOrdemPoderes = {
-    FONTES: { OPRPG: OPRPG, SAH: SAH, AS1: AS1 },
+    FONTES: { OPRPG: OPRPG, SAH: SAH, AS1: AS1, AS2: AS2 },
     PODERES_CLASSE: PODERES_CLASSE,
     PODERES_GERAIS: PODERES_GERAIS,
     PODERES_PARANORMAIS: PODERES_PARANORMAIS,
+    PODERES_INTENCAO: PODERES_INTENCAO,
     HABILIDADES_TRILHA: HABILIDADES_TRILHA,
     AUTOMATICAS: AUTOMATICAS,
     ESTAGIOS: ESTAGIOS,

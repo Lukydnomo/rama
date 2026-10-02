@@ -226,6 +226,16 @@
       maldicoesMemorizadas: [],
       contadores: {},
 
+      /* --- Arquivos Secretos 2 (v2.30): ver js/ordem/arquivo2.js --- */
+      intencao: { contato: { registrado: false, em: "", nota: "", por: "" }, poderes: [] },
+      formaSuprema: { configurada: false, aprovada: false, nome: "", descricao: "", sugestoes: [], custoComPd: "", ativa: null, historico: [] },
+      sintonizacoes: [],
+      pendentes: [],
+      fortalecimentos: [],
+      reservas: [],
+      marcas: {},
+      hexatombe: { campanhaId: "", dia: 0, lancamentos: [] },
+
       /* --- regras opcionais ligadas --- */
       opcionais: {},
     };
@@ -671,6 +681,25 @@
       c.soma(x.fonte || "Temporário", x.valor, "até o fim da cena");
     });
 
+    /* Forma suprema (AS2 p. 97): +20 PV e +10 PE atuais e máximos. O
+       que soma PE soma PD sem Sanidade (SAH p. 104). */
+    if (formaAtivaDe(ficha)) {
+      if (qual === "pv") c.soma("Forma suprema", A2().BENEFICIOS_DA_FORMA.pv, "enquanto ativa (Arquivos Secretos 2, p. 97)");
+      if (comoPe) c.soma("Forma suprema", A2().BENEFICIOS_DA_FORMA.pe, "enquanto ativa (Arquivos Secretos 2, p. 97)");
+    }
+
+    /* Hexatombe (AS2 p. 11, 20 e 24): sede (–10 PV máx.), fome (–10 PE
+       máx.), recompensas de Intenção e o desertor — cada lançamento com
+       origem, e um lançamento desfeito não conta. */
+    if (A2()) {
+      var chaveHex = qual === "pv" ? "pvMax" : (comoPe ? "peMax" : "");
+      if (chaveHex) {
+        A2().lancamentosValendo(ficha, chaveHex).forEach(function (l) {
+          c.soma(l.origem || "Hexatombe", l.valor, (l.motivo || "") + (l.dia ? " · dia " + l.dia : ""));
+        });
+      }
+    }
+
     /* Reter Ritual (AS1 p. 58): enquanto retido, o custo sai do máximo
        — e é mecânica de PE, então vale para os PD sem Sanidade. */
     if (comoPe) {
@@ -685,6 +714,12 @@
        vale para os PD — e volta aos PE quando ela é desligada. */
     if (qual === "pd") somarAjustes(c, ficha, "pe");
     somarAjustes(c, ficha, qual);
+
+    /* Desertor do Hexatombe (AS2 p. 11): "PV máximos são reduzidos pela
+       metade" — depois de tudo, sobre o total. */
+    if (qual === "pv" && A2() && A2().lancamentosValendo(ficha, "pvMetade").length && c.total > 0) {
+      c.soma("Desertor do Hexatombe", -Math.floor(c.total / 2), "PV máximos pela metade (Arquivos Secretos 2, p. 11)");
+    }
 
     c.piso(0);
     return c;
@@ -738,13 +773,20 @@
     var c = conta();
 
     c.soma("Base", C.REGRAS.defesaBase, "OPRPG p.36");
-    c.soma("Agilidade", atributo(ficha, "agi"));
 
     /* A proteção em uso soma a Defesa cadastrada nela — uma vez, seja
        qual for a quantidade (duas proteções leves na mochila não são
        duas vestidas). As que não estão em uso não somam. O escudo em
        uso acumula (OPRPG p. 62). Modificações entram como parcelas. */
     var protecao = protecaoEmUso(inventario);
+
+    /* Sintonização Mental com Proteção (AS2 p. 83): com a proteção
+       sintonizada vestida, outro atributo no lugar da Agilidade, até o
+       próximo interlúdio. */
+    var sintP = A2() && protecao.item ? A2().sintonizacaoValendo(ficha, "protecao", protecao.item.id) : null;
+    if (sintP) c.soma(nomeDoAtributoCurto(sintP.atributo), atributo(ficha, sintP.atributo), "no lugar da Agilidade: Sintonização Mental com Proteção (AS2 p. 83)");
+    else c.soma("Agilidade", atributo(ficha, "agi"));
+    if (formaAtivaDe(ficha)) c.soma("Forma suprema", A2().BENEFICIOS_DA_FORMA.defesa, "enquanto ativa (Arquivos Secretos 2, p. 97)");
     if (protecao.item) {
       c.soma(protecao.item.nome, protecao.composicao.base, "proteção em uso");
       protecao.composicao.ajustes.forEach(function (x) {
@@ -1266,6 +1308,27 @@
     return Math.max(1, parseInt(m[1], 10) + (mais || 0)) + "d" + m[2];
   }
 
+  function nomeDoAtributoCurto(k) {
+    var a = C.ATRIBUTOS.filter(function (x) { return x.chave === k; })[0];
+    return a ? a.nome : k;
+  }
+
+  /* Acoplável (AS2 p. 71): a arma principal de um par acoplado. A outra
+     metade não ataca nem conta sozinha enquanto o par estiver unido. */
+  function acoplamentoDe(inventario, item) {
+    var d = I() ? I().dadosDoItem(item) : ((item && item.ordem) || {});
+    var ac = d.acoplavel;
+    if (!ac || !ac.acoplada || !ac.principal || !ac.par) return null;
+    var par = itensDe(inventario).filter(function (x) { return x && x.id === ac.par; })[0];
+    if (!par) return null;
+    return { aprimoramento: ac.aprimoramento === "multiplicador" ? "multiplicador" : "margem", parNome: par.nome, par: par };
+  }
+
+  function metadeAcoplada(item) {
+    var d = I() ? I().dadosDoItem(item) : ((item && item.ordem) || {});
+    return !!(d.acoplavel && d.acoplavel.acoplada && !d.acoplavel.principal);
+  }
+
   function armaEfetiva(ficha, inventario, item, periciasUniversais) {
     var d = I() ? I().dadosDoItem(item) : {};
     var a = d.arma || {};
@@ -1282,6 +1345,10 @@
       atributoDoTeste = "agi";
       agil = true;
     }
+    /* Sintonização Mental com Arma (AS2 p. 83): até o próximo
+       interlúdio, o atributo escolhido no ataque e no dano. */
+    var sintA = A2() ? A2().sintonizacaoValendo(ficha, "arma", item.id) : null;
+    if (sintA && pe) { atributoDoTeste = sintA.atributo; agil = false; }
     var quantosDados = atributoDoTeste ? atributo(ficha, atributoDoTeste) + (a.dadosAtaque || 0) : 0;
     /* O contexto do ataque: corpo a corpo ou à distância. Um efeito que
        vale só num deles não vira bônus de todo ataque. */
@@ -1294,8 +1361,16 @@
     aj.ataque.forEach(function (x) { ataque.soma(x.fonte, x.valor, "modificação da arma"); });
 
     var maisDados = somaDe(aj.dadosDano);
-    var dano = aumentarDados(item.dano, maisDados);
-    var alternativo = a.danoAlternativo ? { dano: aumentarDados(a.danoAlternativo.dano, maisDados), rotulo: a.danoAlternativo.rotulo } : null;
+    var acop = acoplamentoDe(inventario, item);
+    var baseDano = item.dano;
+    if (acop) {
+      /* Acoplável (AS2 p. 71): o dano da forma separada (o de duas mãos,
+         quando a arma tem) mais um dado do mesmo tipo. */
+      baseDano = a.danoAlternativo && a.danoAlternativo.dano ? a.danoAlternativo.dano : item.dano;
+      maisDados += 1;
+    }
+    var dano = aumentarDados(baseDano, maisDados);
+    var alternativo = (!acop && a.danoAlternativo) ? { dano: aumentarDados(a.danoAlternativo.dano, maisDados), rotulo: a.danoAlternativo.rotulo } : null;
     var tabelaD6 = a.danoPorD6 ? a.danoPorD6.map(function (x) { return aumentarDados(x, maisDados); }) : null;
 
     var extra = conta();
@@ -1310,18 +1385,34 @@
     } else if (atributoDano === "agi") {
       extra.soma("Agilidade", atributo(ficha, "agi"), "atributo no dano da arma");
     }
+    /* A arma sintonizada troca o atributo do dano, quando a arma soma um. */
+    if (sintA && extra.parcelas.length) {
+      var antigo = extra.parcelas[0];
+      extra.total -= antigo.valor;
+      extra.parcelas.shift();
+      extra.soma(nomeDoAtributoCurto(sintA.atributo), atributo(ficha, sintA.atributo), "Sintonização Mental com Arma (AS2 p. 83)");
+    }
+    /* Rancor (recompensa de Intenção no Hexatombe): +5 de dano. */
+    if (A2()) {
+      A2().lancamentosValendo(ficha, "dano").forEach(function (l) { extra.soma(l.origem || "Hexatombe", l.valor, l.motivo || ""); });
+    }
     aj.dano.forEach(function (x) { extra.soma(x.fonte, x.valor, "modificação da arma"); });
     var efDano = efeitosDaFicha(ficha);
     if (efDano) somarEfeitos(extra, EF().bonusEm(efDano.cond, efDano.extra, ["dano", "dano:" + contexto.ataque]));
 
     var margemBase = inteiro(item.critico, 0);
     var margem = margemBase;
+    var efIntencao = A2() ? A2().efeitosDaIntencao(ficha) : { margem: 0, danoDados: "", fontes: [] };
+    var multiplicadorBase = Math.max(1, inteiro(item.multiplicador, 2));
     if (margemBase > 0) {
       var faces = 21 - Math.min(20, margemBase);
       if (aj.margemDobra.length) faces *= 2;
       faces += somaDe(aj.margem);
+      if (acop && acop.aprimoramento === "margem") faces += 1;
+      faces += efIntencao.margem || 0;
       margem = Math.max(1, 21 - faces);
     }
+    if (acop && acop.aprimoramento === "multiplicador") multiplicadorBase += 1;
 
     var alcance = a.alcance || "";
     var passos = somaDe(aj.alcance) + (a.tipo && a.tipo !== "corpoACorpo" ? somaDe(aj.alcanceSeDistancia) : 0);
@@ -1343,9 +1434,17 @@
       tabelaD6: tabelaD6,
       extra: extra,
       danoExtraManual: item.danoExtra || "",
+      /* "Mais": o dano depois dele é adicional e não multiplica no
+         crítico, salvo indicação expressa (AS2 p. 104) — o Machado do
+         Mutilador é a exceção. */
+      extraMultiplica: !!a.extraMultiplica,
+      /* Dados de dano que vêm de fora da arma (O Sabor do Silêncio). */
+      danoDados: efIntencao.danoDados ? [{ dados: efIntencao.danoDados, fonte: efIntencao.fontes.join(", ") }] : [],
+      acoplada: acop ? { par: acop.parNome, aprimoramento: acop.aprimoramento } : null,
+      sintonizada: sintA ? sintA.atributo : "",
       margem: margem,
       margemBase: margemBase,
-      multiplicador: Math.max(1, inteiro(item.multiplicador, 2)),
+      multiplicador: multiplicadorBase,
       alcance: alcance,
       alcanceBase: a.alcance || "",
       automatica: !!(a.automatica || aj.automatica),
@@ -1462,6 +1561,14 @@
 
     somarAjustes(c, ficha, "pericia:" + chave);
 
+    /* Desertor do Hexatombe: –1 em testes por sacrifício, até –6 (AS2
+       p. 11), lançado com origem. */
+    if (A2()) {
+      A2().lancamentosValendo(ficha, "testes").forEach(function (l) {
+        c.soma(l.origem || "Hexatombe", l.valor, l.motivo || "");
+      });
+    }
+
     var ajuste = ajusteDePericia(ficha, chave);
     if (ajuste.extra) c.soma("Bônus extra", ajuste.extra, "ajuste da ficha");
 
@@ -1532,6 +1639,12 @@
     if (pe) {
       efeitosDoTipo(ficha, "dadosPericia").forEach(function (m) {
         if ((m.efeito.pericias || []).indexOf(chave) >= 0) c.soma(m.fonte, m.efeito.valor, m.detalhe);
+      });
+    }
+    /* Desertor do Hexatombe: –1 dado em testes (AS2 p. 11). */
+    if (A2() && (pe || (teste && teste.atributoPuro))) {
+      A2().lancamentosValendo(ficha, "dadosTestes").forEach(function (l) {
+        c.soma(l.origem || "Hexatombe", l.valor, l.motivo || "");
       });
     }
     var expressao = EF() ? EF().expressaoDeDados(c.total) : (c.total <= 0 ? "-2d20" : c.total + "d20");
@@ -1719,6 +1832,10 @@
       });
 
       var acrescimos = ajustesDoItem(item).categoria;
+      /* Acoplável (AS2 p. 71): o par unido é UM item, de categoria +I; a
+         outra metade não conta enquanto estiver acoplada. */
+      if (metadeAcoplada(item)) return;
+      if (acoplamentoDe(inventario, item)) acrescimos = acrescimos.concat([{ valor: 1, fonte: "Acoplada" }]);
       var total = lista.reduce(function (s, r) { return s + r.valor; }, 0);
       var efetiva = Math.max(0, d.categoria + somaDe(acrescimos) - total);
 
@@ -1779,6 +1896,21 @@
     if (efeitosMachucado.length && machucado(ficha)) {
       efeitosMachucado.forEach(function (m) { contaDe("geral").soma(m.fonte, m.efeito.valor, m.detalhe + " · machucado"); });
     }
+
+    /* Arquivos Secretos 2: a RD da Intenção ativa (Filho da Dor, 25), a
+       recompensa de Obsessão no Hexatombe e as vestimentas com RD (Elmo
+       do Colosso, vestido). */
+    if (A2()) {
+      var efI = A2().efeitosDaIntencao(ficha);
+      if (efI.rd) contaDe("geral").soma(efI.fontes.join(", "), efI.rd, "Intenção ativa (AS2 p. 95)");
+      A2().lancamentosValendo(ficha, "rd").forEach(function (l) {
+        contaDe("geral").soma(l.origem || "Hexatombe", l.valor, l.motivo || "");
+      });
+    }
+    itensDe(inventario).forEach(function (item) {
+      var dv = I() ? I().dadosDoItem(item) : (item.ordem || {});
+      if (dv.vestida && dv.rd) contaDe("geral").soma(item.nome, dv.rd, "vestimenta vestida");
+    });
 
     var testes = conta();
     efeitosDoTipo(ficha, "resistenciaTestes", inventario).forEach(function (m) {
@@ -2223,6 +2355,7 @@
     ficha.retencoes = normalizarRetencoes(b.retencoes);
     ficha.maldicoesMemorizadas = normalizarMaldicoesMemorizadas(b.maldicoesMemorizadas);
     ficha.contadores = normalizarContadores(b.contadores);
+    if (A2()) A2().normalizar(ficha, b);
 
     var temp = (b.temporarios && typeof b.temporarios === "object") ? b.temporarios : {};
     ["pv", "pe", "san", "defesa"].forEach(function (qual) {
@@ -2557,6 +2690,11 @@
   }
 
   /* Machucado: metade dos PV ou menos (OPRPG p. 82). */
+  function A2() { return global.RAMAOrdemArquivo2 || null; }
+
+  /* Forma suprema ativa (AS2 p. 97). */
+  function formaAtivaDe(ficha) { return !!(A2() && A2().formaAtiva(ficha)); }
+
   function machucado(ficha) {
     var maximo = pontosDeVida(ficha).total;
     var atual = recursoAtual(ficha, "pv", maximo);
@@ -2652,6 +2790,9 @@
 
   global.RAMAOrdemRegras = {
     normalizar: normalizar,
+    acoplamentoDe: acoplamentoDe,
+    metadeAcoplada: metadeAcoplada,
+    formaAtivaDe: formaAtivaDe,
     peRetidos: peRetidos,
     retencoesValendo: retencoesValendo,
     temporariosDaCena: temporariosDaCena,

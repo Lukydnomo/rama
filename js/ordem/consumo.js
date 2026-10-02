@@ -217,7 +217,7 @@
   function ehMunicao(item) {
     if (!item) return false;
     var d = dados(item);
-    return d.grupo === "municao" || /^(op|sah|as1)\.municao\./.test(item.origemCatalogoId || "");
+    return d.grupo === "municao" || /^(op|sah|as1|as2)\.municao\./.test(item.origemCatalogoId || "");
   }
 
   function porPacote(item) {

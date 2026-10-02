@@ -742,8 +742,11 @@
     var partes = [
       ["Ficha", linha.join(" · ")],
       ["Elementos", od.elementos.length ? od.elementos.map(function (e) { return NOMES_ELEMENTO[e]; }).join(", ") : "—"],
-      ["PV / Defesa", (vida ? vida.maximo : "—") + " / " + C.classificar(od.defesa).texto],
     ];
+    /* Perfil "como aliado" (AS1/AS2): sem PV nem Defesa para mostrar. */
+    if (od.aliada) partes.push(["Aliado", "Benefícios para quem acompanha; sem PV nem PE (OPRPG p. 170)"]);
+    else partes.push(["PV / Defesa", (vida ? vida.maximo : "—") + " / " + C.classificar(od.defesa).texto]);
+    if (od.formas && od.formas.length) partes.push(["Formas", od.formas.map(function (f) { return f.nome + " (" + f.pv + " PV)"; }).join(" · ")]);
     if (c.acoes.length) partes.push(["Ações", c.acoes.map(function (a) { return a.nome; }).join(" · ")]);
     if (c.habilidades.length) partes.push(["Habilidades", c.habilidades.map(function (h) { return h.nome; }).join(" · ")]);
     if (c.origem && (c.origem.copiadoDe || c.origem.catalogoId)) partes.push(["Origem", "Catálogo · " + (c.origem.copiadoDe || c.origem.catalogoId)]);

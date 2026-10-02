@@ -20,6 +20,9 @@
             Equipamentos (p. 37–45) e Novos Itens Amaldiçoados (p. 57–61)
      AS1    Arquivos Secretos 1, v1.1 (Jambô, pacote de conteúdo oficial)
             Itens Paranormais e Itens Amaldiçoados (p. 54–55)
+     AS2    Arquivos Secretos 2, v1.0 (Jambô, pacote de conteúdo oficial)
+            Recursos do Hexatombe (p. 20–21), Catalisador Sofisticado e
+            Horrorizado (p. 75) e os itens amaldiçoados das fichas
 
    As páginas são as do livro, não as do PDF. Os resumos são redação
    própria: guardam os números e as condições que o jogo precisa, e não
@@ -52,6 +55,7 @@
   var OP = "OPRPG";
   var SAH = "SAH";
   var AS1 = "AS1";
+  var AS2 = "AS2";
 
   var T33 = "Tabela 3.3 (p. 56–57)";
   var T14 = "Tabela 1.4 (p. 38)";
@@ -1707,6 +1711,127 @@
         "Num acerto crítico, o alvo faz Fortitude (DT For): falhando, um osso se quebra e ele fica fraco até receber cuidados prolongados num interlúdio; ficando fraco de novo por ela, fica debilitado.",
       ],
       notas: ["A perda de 1d6 PV aparece como lembrete no ataque com a arma; o dano é aplicado nos recursos."] },
+    /* =================================================================
+       ARQUIVOS SECRETOS 2 — Hexatombe e "na sua mesa"
+       -----------------------------------------------------------------
+       Recursos (p. 20: água, comida e sucata, categoria 0, 1 espaço),
+       Novos Itens de Recursos (p. 21), o Catalisador Sofisticado e
+       Horrorizado (p. 75) e os itens amaldiçoados das fichas (p. 41-93).
+       "Mais" separa o dano base do adicional, que não multiplica no
+       crítico salvo indicação (AS2 p. 104): o Machado do Mutilador é a
+       exceção escrita (`extraMultiplica`).
+       ================================================================= */
+
+    { id: "as2.recurso.agua", nome: "Água (unidade)", fonte: AS2, pagina: 20, aba: "geral", secao: "recursos",
+      categoria: "0", espacos: 1, consumivel: true, recurso: "agua",
+      resumo: "Uma unidade de água do Hexatombe.",
+      efeitos: ["Até a conclusão de cada dia, cada participante consome ao menos 1 unidade; sem isso, –10 PV máximos pelo dia seguinte. Recuperar esses PV exige consumir 1 unidade a mais no fim do dia seguinte."] },
+    { id: "as2.recurso.comida", nome: "Comida (unidade)", fonte: AS2, pagina: 20, aba: "geral", secao: "recursos",
+      categoria: "0", espacos: 1, consumivel: true, recurso: "comida",
+      resumo: "Uma unidade de comida do Hexatombe.",
+      efeitos: ["Como a água, mas a falta tira 10 PE máximos pelo dia seguinte."] },
+    { id: "as2.recurso.sucata", nome: "Sucata (unidade)", fonte: AS2, pagina: 20, aba: "geral", secao: "recursos",
+      categoria: "0", espacos: 1, recurso: "sucata",
+      resumo: "Tábuas, chapas, pregos, arames, motores, galões, baterias — o que serve para melhorar a base.",
+      efeitos: ["Gasta nas melhorias de base (p. 16-17)."] },
+
+    { id: "as2.recurso.bandagem", nome: "Bandagem", fonte: AS2, pagina: 21, tabela: "Novos Itens de Recursos (p. 21)", aba: "geral", secao: "recursos",
+      categoria: "I", espacos: 0.5, consumivel: true,
+      resumo: "Tecido eficiente para estancar sangramentos.",
+      efeitos: ["Ação padrão e o item: cura 2d4+2 PV e remove a condição sangrando, em você ou num ser adjacente. Com uma dose de álcool junto, a cura vira 2d8+2."] },
+    { id: "as2.recurso.bussola", nome: "Bússola", fonte: AS2, pagina: 21, tabela: "Novos Itens de Recursos (p. 21)", aba: "geral", secao: "recursos",
+      categoria: "I", espacos: 1, acessorio: true, utensilio: true,
+      resumo: "Instrumento de navegação magnético.",
+      efeitos: ["Utensílio: +2 em Sobrevivência para se guiar e não se perder."] },
+    { id: "as2.recurso.caixa-de-ferramentas", nome: "Caixa de ferramentas", fonte: AS2, pagina: 21, tabela: "Novos Itens de Recursos (p. 21)", aba: "geral", secao: "recursos",
+      categoria: "I", espacos: 2, acessorio: true, utensilio: true,
+      resumo: "Caixa metálica com ferramentas mecânicas.",
+      efeitos: ["Utensílio: +2 em Profissão, quando fizer sentido o teste ser auxiliado pelas ferramentas."] },
+    { id: "as2.recurso.dose-de-alcool", nome: "Dose de álcool", fonte: AS2, pagina: 21, tabela: "Novos Itens de Recursos (p. 21)", aba: "geral", secao: "recursos",
+      categoria: "I", espacos: 0.5, consumivel: true,
+      resumo: "Antisséptico útil para limpar feridas — ou começar um incêndio.",
+      efeitos: ["Ação padrão e o item: +2 em testes contra infecções e doenças transmitidas por contato.", "Junto com uma bandagem, a cura dela vira 2d8+2 PV.", "Pega fogo facilmente, mas não o bastante para explodir."],
+      notas: ["O livro não diz quanto tempo dura o +2: a ficha registra o efeito até alguém removê-lo."] },
+    { id: "as2.recurso.incenso", nome: "Incenso", fonte: AS2, pagina: 21, tabela: "Novos Itens de Recursos (p. 21)", aba: "geral", secao: "recursos",
+      categoria: "I", espacos: 0.5, consumivel: true,
+      resumo: "Substância aromática queimada em rituais, meditação ou purificação.",
+      efeitos: ["Ação de interlúdio para queimar: todos os personagens na mesma cena de interlúdio recuperam 1d4 PE. Cada um só se beneficia uma vez por dia."] },
+    { id: "as2.recurso.kit-de-escalada", nome: "Kit de escalada", fonte: AS2, pagina: 21, tabela: "Novos Itens de Recursos (p. 21)", aba: "geral", secao: "recursos",
+      categoria: "I", espacos: 2, acessorio: true, utensilio: true,
+      resumo: "Corda dinâmica, cadeirinha, capacete, freio, mosquetões, fitas e magnésio.",
+      efeitos: ["Utensílio: +2 em Atletismo para escalar."] },
+    { id: "as2.recurso.pedra-de-amolar", nome: "Pedra de amolar", fonte: AS2, pagina: 21, tabela: "Novos Itens de Recursos (p. 21)", aba: "geral", secao: "recursos",
+      categoria: "I", espacos: 0.5,
+      resumo: "Ferramenta abrasiva para restaurar o fio de lâminas.",
+      efeitos: ["Ação de interlúdio para amolar uma arma corpo a corpo de corte ou perfuração: ela causa +1d4 de dano do mesmo tipo na primeira cena em que for usada depois de amolada."] },
+
+    { id: "as2.paranormal.catalisador-sofisticado", nome: "Catalisador sofisticado e horrorizado", fonte: AS2, pagina: 75, aba: "geral", secao: "paranormais",
+      categoria: "III", espacos: 1, catalisador: true, vestimenta: true,
+      resumo: "Catalisador ritualístico (SAH p. 44) intensamente horrorizado, usado como bijuteria ou acessório: não precisa ser empunhado e não é consumido.",
+      efeitos: [
+        "Uma vez por cena, você recebe 3d6. Como ação livre, ao conjurar um ritual, gaste 1d6 para +1d6 no dano, +1d6 na cura ou +1d6 na DT desse ritual.",
+        "Só 1d6 por ritual, no momento de conjurá-lo; os d6 não gastos se perdem no fim da cena.",
+      ] },
+
+    { id: "as2.amaldicoado.machado-do-mutilador", nome: "Machado do Mutilador", elemento: "sangue", fonte: AS2, pagina: 41, aba: "amaldicoados", secao: "especiais",
+      categoria: "IV", espacos: 1,
+      arma: { proficiencia: "tatica", tipo: "corpoACorpo", empunhadura: "umaMao", dano: "1d8", danoExtra: "1d8", tipoDanoExtra: "Sangue", extraMultiplica: true, critico: "x3", alcance: "", tipoDano: "C" },
+      resumo: "Machado de cabo de madeira e lâmina vermelha que anseia por mais sangue.",
+      efeitos: [
+        "Arma tática corpo a corpo de uma mão: 1d8 de corte mais 1d8 de Sangue — multiplicado no crítico (exceção escrita) —, crítico 20/x3.",
+        "Ao atingir, 1 PE deixa a vítima sangrando; é cumulativo: vários sangramentos ao mesmo tempo, 1d6 PV cada.",
+      ] },
+    { id: "as2.amaldicoado.elmo-do-colosso", nome: "Elmo do Colosso", elemento: "energia", fonte: AS2, pagina: 47, aba: "amaldicoados", secao: "especiais",
+      categoria: "III", espacos: 2, vestimenta: true, rd: 5,
+      resumo: "Elmo de escafandro em metal, carregado de pressão eletrostática de Energia.",
+      efeitos: ["Vestimenta: resistência a dano 5.", "Com o resto do equipamento de escafandro, conta como traje de mergulho (SAH p. 44)."],
+      notas: ["A RD entra na ficha com o elmo marcado como vestido no inventário."] },
+    { id: "as2.amaldicoado.manoplas-do-colosso", nome: "Manoplas do Colosso", elemento: "energia", fonte: AS2, pagina: 47, aba: "amaldicoados", secao: "especiais",
+      categoria: "IV", espacos: 2,
+      arma: { proficiencia: "tatica", tipo: "corpoACorpo", empunhadura: "umaMao", dano: "1d6", danoExtra: "1d10", tipoDanoExtra: "Energia", critico: "x2", alcance: "", tipoDano: "I", desarmado: true },
+      resumo: "Par de manoplas de metal com uma violenta onda de Energia.",
+      efeitos: [
+        "Cada manopla é arma tática corpo a corpo de uma mão, mas só funcionam em par: 1d6 de impacto mais 1d10 de Energia, crítico 20/x2.",
+        "Todas as regras de ataque desarmado valem para elas; efeitos que aumentam o dado desarmado (Artista Marcial) não mudam o dano delas.",
+      ],
+      notas: ["O livro dá categoria e espaços do par (IV, 2 espaços): o catálogo trata o par como um item."] },
+    { id: "as2.amaldicoado.punhal-x", nome: "Punhal X", elemento: "conhecimento", fonte: AS2, pagina: 53, aba: "amaldicoados", secao: "especiais",
+      categoria: "IV", espacos: 1,
+      arma: { proficiencia: "simples", tipo: "corpoACorpo", empunhadura: "leve", dano: "1d4", danoExtra: "1d6", tipoDanoExtra: "Conhecimento", critico: "19", alcance: "curto", tipoDano: "P", agil: true, arremessavel: true },
+      resumo: "Grande faca de cabo sombrio e guarda dourada.",
+      efeitos: [
+        "Arma simples corpo a corpo, de uma mão e ágil, arremessável em alcance curto: 1d4 de perfuração mais 1d6 de Conhecimento, crítico 19/x2.",
+        "Ao atacar, 2 PE deixam o alvo desprevenido contra o ataque; acertando, ele fica cego por 1 rodada. Um mesmo alvo, uma vez por cena.",
+      ],
+      notas: ["O livro diz “de uma mão”; a empunhadura leve do catálogo é a de uma mão das armas ágeis (OPRPG p. 54)."] },
+    { id: "as2.amaldicoado.sniper-fantasma", nome: "Sniper Fantasma", elemento: "morte", fonte: AS2, pagina: 59, aba: "amaldicoados", secao: "especiais",
+      categoria: "IV", espacos: 2,
+      arma: { proficiencia: "tatica", tipo: "fogo", empunhadura: "duasMaos", dano: "2d10", danoExtra: "2d4", tipoDanoExtra: "Morte", critico: "19/x3", alcance: "longo", tipoDano: "B" },
+      resumo: "Fuzil de precisão sombrio, enrolado em bandagens amaldiçoadas.",
+      efeitos: [
+        "Arma de fogo tática de duas mãos, alcance longo: 2d10 balístico mais 2d4 de Morte, crítico 19/x3.",
+        "Veterano em Pontaria que mira com ela (OPRPG p. 87) recebe +5 na margem de ameaça.",
+        "Um ser reduzido a 0 PV por ela morre se iniciar 2 turnos morrendo (em vez de 3).",
+      ],
+      notas: ["O livro não diz a munição; é um fuzil de precisão."] },
+    { id: "as2.amaldicoado.a-antena", nome: "A Antena", fonte: AS2, pagina: 67, aba: "amaldicoados", secao: "especiais",
+      categoria: "IV", espacos: 2,
+      arma: { proficiencia: "simples", tipo: "corpoACorpo", empunhadura: "duasMaos", dano: "1d6", critico: "x2", alcance: "", tipoDano: "I", dadosAtaque: -1 },
+      resumo: "Antena parabólica na ponta de um bastão de ferro que transmite medo primal.",
+      efeitos: [
+        "Arma simples corpo a corpo de duas mãos, improvisada (–1d20 no ataque): 1d6 de impacto, crítico 20/x2.",
+        "Nas mãos de um conjurador, a DT dos seus rituais aumenta em +3.",
+        "Pode conjurar um ritual n’A Antena: ele não faz efeito na hora e fica contido; uma ação padrão o liberta, com o efeito, sem ações de conjuração nem PE. Um ritual por vez.",
+      ],
+      notas: ["O livro não imprime o elemento d’A Antena (o texto fala em medo primal); o catálogo não inventa um.", "A Antena marcada como empunhada no inventário soma +3 na DT mostrada na aba Rituais."] },
+    { id: "as2.amaldicoado.faca-predadora", nome: "Faca Predadora", elemento: "sangue", fonte: AS2, pagina: 93, aba: "amaldicoados", secao: "especiais",
+      categoria: "IV", espacos: 1,
+      arma: { proficiencia: "simples", tipo: "corpoACorpo", empunhadura: "leve", dano: "1d4", danoExtra: "2d10", tipoDanoExtra: "Sangue", critico: "19/x3", alcance: "curto", tipoDano: "P", agil: true, arremessavel: true },
+      resumo: "Faca de cabo escuro com ondas na lâmina.",
+      efeitos: [
+        "Arma simples corpo a corpo, de uma mão e ágil, arremessável em alcance curto: 1d4 de perfuração mais 2d10 de Sangue, crítico 19/x3.",
+        "Ao atacar, 2 PE: acertando, você recupera 2d10 PV; o que passar do máximo vira PV temporários.",
+      ] },
   ];
 
   global.RAMAOrdemItensDados = {
@@ -1715,6 +1840,7 @@
       OPRPG: { nome: "Ordem Paranormal RPG", curto: "Livro básico", edicao: "v1.1" },
       SAH: { nome: "Sobrevivendo ao Horror", curto: "Sobrevivendo ao Horror", edicao: "v1.2" },
       AS1: { nome: "Arquivos Secretos 1", curto: "Arquivos Secretos 1", edicao: "v1.1" },
+      AS2: { nome: "Arquivos Secretos 2", curto: "Arquivos Secretos 2", edicao: "v1.0" },
     },
     itens: ITENS,
   };

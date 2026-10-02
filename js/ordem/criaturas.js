@@ -34,6 +34,7 @@
     OPRPG: { nome: "Ordem Paranormal RPG", sigla: "LB", rotulo: "Livro básico" },
     SAH: { nome: "Sobrevivendo ao Horror", sigla: "SAH", rotulo: "Sobrevivendo ao Horror" },
     AS1: { nome: "Arquivos Secretos 1", sigla: "AS1", rotulo: "Arquivos Secretos 1" },
+    AS2: { nome: "Arquivos Secretos 2", sigla: "AS2", rotulo: "Arquivos Secretos 2" },
   };
 
   var NOMES_ELEMENTO = { sangue: "Sangue", morte: "Morte", conhecimento: "Conhecimento", energia: "Energia", medo: "Medo" };
@@ -63,9 +64,31 @@
     return (rolagens || []).map(function (r, i) { return Object.assign(copia(r), { id: prefixo + ".r" + i }); });
   }
 
+  function efeitosComIds(lista, prefixo, ehAcao) {
+    return (lista || []).map(function (x, i) {
+      var id = prefixo + (ehAcao ? "a" : "h") + i;
+      var saida = Object.assign(copia(x), { id: id, rolagens: comIds(x.rolagens, id) });
+      if (ehAcao) saida.ataques = (x.ataques || []).map(function (t, j) { return Object.assign(copia(t), { id: id + ".t" + j }); });
+      return saida;
+    });
+  }
+
+  /* Formas da mesma ocorrência (AS2): ids próprios, prefixados pelo id da
+     forma, para o uso de uma ação da forma não cair na da ficha base. */
+  function formasDe(e) {
+    return (e.formas || []).map(function (f) {
+      return Object.assign(copia(f), {
+        pericias: (f.pericias || []).map(function (p, i) { return { id: f.id + ".p" + i, nome: p[0], expressao: p[1] }; }),
+        habilidades: efeitosComIds(f.habilidades, f.id + ".", false),
+        acoes: efeitosComIds(f.acoes, f.id + ".", true),
+      });
+    });
+  }
+
   function paraCriatura(e) {
-    var status = [{ id: "vida", nome: "Pontos de vida", atual: e.pv, maximo: e.pv }];
-    if (e.pe) status.push({ id: "pe", nome: "Pontos de esforço", atual: e.pe, maximo: e.pe });
+    /* Perfil de aliado: sem PV nem PE inventados (OPRPG p. 170). */
+    var status = e.aliada ? [] : [{ id: "vida", nome: "Pontos de vida", atual: e.pv, maximo: e.pv }];
+    if (e.pe && !e.aliada) status.push({ id: "pe", nome: "Pontos de esforço", atual: e.pe, maximo: e.pe });
 
     var bruta = {
       tipo: "criatura",
@@ -103,6 +126,10 @@
         notas: e.notas || [],
         enigma: e.enigma ? Object.assign(copia(e.enigma), { rolagens: comIds(e.enigma.rolagens, "enigma") }) : null,
         variante: e.variante || null,
+        formas: e.formas ? formasDe(e) : undefined,
+        pvBase: e.formas ? e.pv : undefined,
+        aliada: e.aliada === true ? true : undefined,
+        ficha: e.ficha || undefined,
       },
     };
     return C().normalizar(bruta);
@@ -112,7 +139,8 @@
     return {
       id: e.id,
       nome: c.nome,
-      chave: busca(c.nome + " " + (c.categoria || "") + " " + (e.tipo || "")),
+      /* As formas (AS2) entram na busca: "Mutilador Noturno" acha Jonas. */
+      chave: busca(c.nome + " " + (c.categoria || "") + " " + (e.tipo || "") + " " + (c.ordem.formas || []).map(function (f) { return f.nome; }).join(" ")),
       livro: e.livro,
       pagina: e.pagina,
       natureza: c.natureza,
@@ -124,6 +152,8 @@
       categoria: c.categoria || "",
       pv: (c.status[0] || {}).maximo || 0,
       variante: c.ordem.variante ? c.ordem.variante.de : null,
+      formas: (c.ordem.formas || []).map(function (f) { return f.nome; }),
+      aliada: !!c.ordem.aliada,
     };
   }
 
@@ -247,7 +277,7 @@
      expressões válidas, variantes apontando para uma base que existe.
      ================================================================= */
 
-  var FORMATO_ID = /^(op|sah|as1)\.criatura\.[a-z0-9-]+(\.[a-z0-9-]+)?$/;
+  var FORMATO_ID = /^(op|sah|as1|as2)\.criatura\.[a-z0-9-]+(\.[a-z0-9-]+)?$/;
 
   function conferir(dados) {
     var erros = [];

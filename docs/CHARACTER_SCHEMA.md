@@ -823,6 +823,56 @@ guardadas sem efeito. Nas maldições de um item, `temporaria: "missao"` marca a
 reproduzida e `transferidaDe` guarda de onde ela veio. As armas podem ter
 `arma.tipoDanoExtra` ("Sangue") ao lado do `danoExtra` da ficha.
 
+### Arquivos Secretos 2 no bloco `ordem` (v2.30)
+
+Campos novos e opcionais, normalizados em `js/ordem/arquivo2.js` e vazios numa
+ficha antiga. Sem subida de schema e sem conversão.
+
+```jsonc
+"ordem": {
+  "intencao": {                      // poderes de Intenção (AS2 p. 94–95)
+    "contato": { "registrado": true, "em": "…", "nota": "Hexatombe", "por": "mesa" },
+    "poderes": [ {
+      "id": "int-…", "chave": "filhoDaDor", "concedidoEm": "…", "nota": "",
+      "gatilho": { "atendido": false, "em": "", "cena": "", "por": "" },
+      "ferimentos": [ { "id": "fer-…", "dano": 7, "em": "…", "cena": "cena-…" } ],
+      "ativo": null,                 // { desde, cena } enquanto o efeito dura
+      "usos": [ { "cena": "cena-…", "em": "…" } ]
+    } ]
+  },
+  "formaSuprema": {                  // As Máscaras na Sua Mesa (AS2 p. 96–97)
+    "configurada": true, "aprovada": true, "nome": "", "descricao": "", "sugestoes": [],
+    "custoComPd": "",                // "" | "ignorar" | "pd" (Jogando sem Sanidade)
+    "ativa": null,                   // { desde, cena, rodadasExtras }
+    "historico": [ { "id": "fs-…", "tipo": "ativar", "em": "…", "custo": 6, "recurso": "san" } ]
+  },
+  "sintonizacoes": [ { "id": "sin-…", "tipo": "arma", "itemId": "uuid", "atributo": "int", "interludio": 3, "em": "…" } ],
+  "pendentes": [ { "id": "pen-…", "tipo": "dano", "valor": 5, "fonte": "Arte da Música Macabra", "cena": "cena-…", "em": "…", "consumido": "" } ],
+  "fortalecimentos": [ { "id": "lit-…", "ritualId": "uuid", "nome": "…", "interludio": 3, "em": "…" } ],
+  "reservas": [ { "id": "res-…", "fonte": "catalisador", "cena": "cena-…", "total": 3, "gastos": 1, "rituais": ["…"] } ],
+  "marcas": { "incensoDia": 2, "tratamentoAlvos": ["cena|alvo"], "vitimas": [], "zonas": [], "pressaoAlvos": [], "kianCena": "" },
+  "hexatombe": {                     // o que o modo Hexatombe lança na ficha
+    "campanhaId": "uuid", "dia": 2,
+    "lancamentos": [ {
+      "id": "hx.sede.pt-1.d1",       // estável: repetir não duplica
+      "tipo": "pvMax",               // pvMax | peMax | pvMetade | rd | testes | dadosTestes | dano | nota
+      "valor": -10, "dia": 2, "motivo": "Sem água no dia 1…", "origem": "Hexatombe",
+      "em": "…", "por": "Mestre", "desfeito": ""   // desfazer marca, nunca apaga
+    } ]
+  }
+}
+```
+
+Nos itens (`item.ordem`): `empunhada` e `vestida` (A Antena, Elmo do Colosso),
+`amolada` (`{ desde, cena }`, Pedra de Amolar), `antena` (`{ ritualId, nome, versao,
+custo, em }`, o ritual contido) e `acoplavel` (`{ par, aprimoramento: "margem" |
+"multiplicador", acoplada, principal }`). Nos aliados: `perigo` (`{ cena, feridas,
+morto, pendente, registros: [{ id, em, cena, d6, ferido, situacao }] }`, Aliados em
+Perigo). Na criatura de Ordem (aliado ou combate): `ordem.formas` (as fichas
+publicadas da forma, com `pv`, estatísticas, perícias, habilidades e ações),
+`ordem.pvBase`, `ordem.aliada`, `ordem.ficha` e `instancia.forma`; nos ataques,
+`multiplicaTudo` (o dano extra também multiplica no crítico).
+
 ### O vínculo de ritual (v2.17)
 
 Uma concessão de ritual guarda, em `opcoes.rituais`, o **vínculo** com rituais que

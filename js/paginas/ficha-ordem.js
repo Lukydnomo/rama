@@ -824,6 +824,7 @@
         /* Os poderes que são uma ação registrável (Arquivos Secretos 1). */
         !aq.origemChave && aq.situacao === "ok" && global.RAMASecaoOrigens && global.RAMASecaoOrigens.controlesDePoder
           ? global.RAMASecaoOrigens.controlesDePoder(ctx, aq) : null,
+        !aq.origemChave && aq.situacao === "ok" && global.RAMAFichaArquivo2 ? global.RAMAFichaArquivo2.controles(ctx, aq) : null,
       ].concat(avisos, [
         aq.referencia ? el("p.criacao-fonte", { texto: aq.referencia }) : null,
       ]);
@@ -1380,7 +1381,7 @@
   function linhaDaCena(ctx, cond) {
     var desde = cond.cena.iniciadaEm ? "desde " + U.dataHora(cond.cena.iniciadaEm) : "a primeira desta ficha";
     return el("div.condicoes__cena", {}, [
-      el("span.t-mini", { texto: "Cena atual: " + desde + "." }),
+      el("span.t-mini", { texto: "Cena atual: " + desde + (cond.cena.interludio ? " (interlúdio nº " + ((cond.interludio && cond.interludio.numero) || 0) + ")" : "") + "." }),
       el("button.r-botao.r-botao--mini", {
         type: "button", texto: "Nova cena", dataset: { foco: "condicoes-nova-cena" },
         onclick: async function () {
@@ -1393,6 +1394,23 @@
           if (!certo) return;
           var fim = null;
           mudarCondicao(ctx, function () { fim = CD().novaCena(cond); return fim; }, "condicoes-nova-cena");
+          if (fim && fim.encerradas && fim.encerradas.length) UI.aviso("Terminaram com a cena: " + fim.encerradas.join(", ") + ".");
+        },
+      }),
+      /* Cena de interlúdio (v2.30): o que dura "até o início da próxima
+         cena de interlúdio" (Sintonização Mental, Liturgia — AS2) vence
+         aqui. */
+      el("button.r-botao.r-botao--mini", {
+        type: "button", texto: "Novo interlúdio", dataset: { foco: "condicoes-novo-interludio" },
+        onclick: async function () {
+          var certo = await UI.confirmar({
+            titulo: "Começar uma cena de interlúdio?",
+            texto: "É uma nova cena (como “Nova cena”), marcada como interlúdio. O que dura até o início da próxima cena de interlúdio termina agora.",
+            rotuloConfirmar: "Novo interlúdio",
+          });
+          if (!certo) return;
+          var fim = null;
+          mudarCondicao(ctx, function () { fim = CD().novaCena(cond, null, { interludio: true }); return fim; }, "condicoes-novo-interludio");
           if (fim && fim.encerradas && fim.encerradas.length) UI.aviso("Terminaram com a cena: " + fim.encerradas.join(", ") + ".");
         },
       }),
@@ -2457,7 +2475,8 @@
     global.RAMARolagens.mostrar(Object.assign(r, { tipo: "pericia", nome: p.nome }), {
       nome: p.nome,
       notas: notasDosDados(dados).concat(restr),
-      acoes: [acaoDeEmpenho(ctx, o, p, r)].concat(global.RAMASecaoOrigens ? global.RAMASecaoOrigens.acoesNoTeste(ctx, o, p, r, dado, bonus, atributo) : []).filter(Boolean),
+      acoes: [acaoDeEmpenho(ctx, o, p, r)].concat(global.RAMASecaoOrigens ? global.RAMASecaoOrigens.acoesNoTeste(ctx, o, p, r, dado, bonus, atributo) : [],
+        global.RAMAFichaArquivo2 ? global.RAMAFichaArquivo2.acoesNoTeste(ctx, o, p, r, dado, bonus, atributo) : []).filter(Boolean),
     });
   }
 
@@ -3637,6 +3656,10 @@
        gasto pertence ao ATAQUE, acertando ou errando. O dano rolado
        depois não gasta de novo. */
     atacar: function (ctx, arma) {
+      if (R.metadeAcoplada && R.metadeAcoplada(arma)) {
+        UI.avisoAtencao(arma.nome + " está acoplada: o par ataca pela outra arma (Acoplável, Arquivos Secretos 2, p. 71).");
+        return;
+      }
       var ef = R.armaEfetiva(ordemDe(ctx), ctx.ficha.inventario, arma, ctx.ficha.pericias);
       if (!ef.pericia) { UI.avisoErro(ef.avisos[0] || "Escolha a perícia de ataque no modo edição."); return; }
       var CS = global.RAMAOrdemConsumo;
@@ -3669,18 +3692,35 @@
       notas = notasDosDados(ef.dados).concat(notas);
       if (m.nota) notas.push(m.nota);
 
+      /* Arquivos Secretos 2: o que se decide ANTES de rolar (Especialista
+         em Matar, Disparo da Morte) e o "próximo ataque" guardado (Arte
+         da Música Macabra). `m.as2` vem da janela de opções. */
+      var as2 = m.as2 || { ataque: 0, margem: 0, dano: 0, notas: [] };
+      if (!m.as2 && global.RAMAFichaArquivo2 && global.RAMAFichaArquivo2.precisaPerguntar(ctx, arma, ef)) {
+        global.RAMAFichaArquivo2.perguntarAntesDoAtaque(ctx, arma, ef, function (escolha) {
+          SecaoInventarioOrdem.rolarAtaque(ctx, arma, Object.assign({}, m, { as2: escolha }));
+        });
+        return;
+      }
+      var pendAtaque = global.RAMAFichaArquivo2 ? global.RAMAFichaArquivo2.gastarNoAtaque(ctx) : { ataque: 0, margem: 0, notas: [] };
+      var bonusAS2 = (as2.ataque || 0) + pendAtaque.ataque;
+      var margemAS2 = (as2.margem || 0) + pendAtaque.margem;
+      notas = notas.concat(as2.notas || [], pendAtaque.notas);
+
       var r = D.dependente({
         expressao: dado,
         sigla: siglaDe(ef.atributoDoTeste),
         nome: arma.nome,
-        bonus: ef.ataque.total,
+        bonus: ef.ataque.total + bonusAS2,
         modificadores: [],
       });
       if (!r || !r.ok) { UI.avisoErro("O dado de ataque de " + arma.nome + " não é válido."); return; }
 
       r.parcelas = [r.parcelas[0]].concat(ef.ataque.parcelas.map(function (x) { return { rotulo: x.rotulo, valor: x.valor }; }));
+      if (bonusAS2) r.parcelas.push({ rotulo: "Arquivos Secretos 2", valor: bonusAS2 });
       /* O crítico olha o natural principal, com a margem EFETIVA. */
-      var critico = D.ehCritico(r.natural, ef.margem);
+      var margemDoAtaque = margemAS2 && ef.margem ? Math.max(1, ef.margem - margemAS2) : ef.margem;
+      var critico = D.ehCritico(r.natural, margemDoAtaque);
       var temDano = !!(ef.dano || ef.tabelaD6);
 
       global.RAMARolagens.mostrar(r, {
@@ -3689,14 +3729,14 @@
         notas: notas,
         acao: temDano ? {
           rotulo: critico ? "Rolar dano crítico" : "Rolar dano",
-          aoClicar: function () { SecaoInventarioOrdem.rolarDano(ctx, arma, critico, false, m.modo); },
+          aoClicar: function () { SecaoInventarioOrdem.rolarDano(ctx, arma, critico, false, m.modo, { dano: as2.dano || 0, ignoraRd: as2.ignoraRd || 0 }); },
         } : null,
       });
 
       if (ef.proficiencia.proficiente === false) UI.avisoAtencao(ef.proficiencia.texto);
     },
 
-    rolarDano: function (ctx, arma, critico, alternativo, modo) {
+    rolarDano: function (ctx, arma, critico, alternativo, modo, extras) {
       var ef = R.armaEfetiva(ordemDe(ctx), ctx.ficha.inventario, arma, ctx.ficha.pericias);
       var dano = alternativo && ef.alternativo ? ef.alternativo.dano : ef.dano;
       var escolhaD6 = 0;
@@ -3725,8 +3765,10 @@
         danoExtra: ef.danoExtraManual,
         critico: !!critico,
         multiplicador: ef.multiplicador,
+        extraMultiplica: ef.extraMultiplica,
       });
       if (!r.ok) { UI.avisoErro("O dano de " + arma.nome + " (" + dano + ") não é válido."); return; }
+      var notasAS2 = global.RAMAFichaArquivo2 ? global.RAMAFichaArquivo2.noDano(ctx, arma, r, ef, extras) : [];
 
       /* Atributo e modificações: parcelas próprias, fora da multiplicação
          do crítico, como qualquer bônus numérico (OPRPG p.54). */
@@ -3741,7 +3783,7 @@
           (alternativo && ef.alternativo ? " (" + ef.alternativo.rotulo + ")" : "") +
           (escolhaD6 ? " · 1d6 = " + escolhaD6 + " → " + dano : ""),
         critico: !!critico,
-        notas: nota ? [nota] : [],
+        notas: (nota ? [nota] : []).concat(notasAS2),
       });
     },
 
@@ -4087,7 +4129,10 @@
 
   var SecaoHabilidadesOrdem = {
     aba: function (ctx) {
-      return global.RAMASecaoHabilidades.aba(ctx, poderesDasRegras(ctx, ordemDe(ctx), calculo(ctx)));
+      var dasRegras = poderesDasRegras(ctx, ordemDe(ctx), calculo(ctx));
+      /* Arquivos Secretos 2: Intenção, forma suprema e o Hexatombe. */
+      dasRegras.topo = global.RAMAFichaArquivo2 ? global.RAMAFichaArquivo2.painel(ctx) : null;
+      return global.RAMASecaoHabilidades.aba(ctx, dasRegras);
     },
   };
 

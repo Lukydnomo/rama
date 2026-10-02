@@ -58,9 +58,9 @@
      Vem do catálogo de regras quando ele está carregado — uma fonte só. */
   var CUSTO_PADRAO = { 1: 1, 2: 3, 3: 6, 4: 10 };
 
-  var ROTULO_FONTE = { OPRPG: "Livro básico", SAH: "Sobrevivendo ao Horror", AS1: "Arquivos Secretos 1" };
-  var NOME_FONTE = { OPRPG: "Ordem Paranormal RPG", SAH: "Sobrevivendo ao Horror", AS1: "Arquivos Secretos 1" };
-  var SIGLA_FONTE = { OPRPG: "LB", SAH: "SAH", AS1: "AS1" };
+  var ROTULO_FONTE = { OPRPG: "Livro básico", SAH: "Sobrevivendo ao Horror", AS1: "Arquivos Secretos 1", AS2: "Arquivos Secretos 2" };
+  var NOME_FONTE = { OPRPG: "Ordem Paranormal RPG", SAH: "Sobrevivendo ao Horror", AS1: "Arquivos Secretos 1", AS2: "Arquivos Secretos 2" };
+  var SIGLA_FONTE = { OPRPG: "LB", SAH: "SAH", AS1: "AS1", AS2: "AS2" };
 
   var ROTULO_ESCOPO = { alvo: "Alvo", area: "Área", efeito: "Efeito" };
 
@@ -153,6 +153,9 @@
     e.custo = custoDoCirculo(e.circulo);
     e.efeitos = Array.isArray(e.efeitos) ? e.efeitos : [];
     e.notas = Array.isArray(e.notas) ? e.notas : [];
+    /* Publicação com erro (AS2): o texto impresso e a leitura adotada,
+       lado a lado — nunca uma substituição silenciosa. */
+    e.divergencias = Array.isArray(e.divergencias) ? e.divergencias : [];
     e.alias = Array.isArray(e.alias) ? e.alias : [];
     e.escopo = escopoDaEntrada(e);
     e.versoes = normalizarVersoes(e);
@@ -560,6 +563,11 @@
     var regras = regrasGerais(e);
     if (regras.length) partes.push(regras.map(function (x) { return "• " + x; }).join("\n"));
     if (e.notas.length) partes.push(e.notas.map(function (x) { return "Nota: " + x; }).join("\n"));
+    if (e.divergencias.length) {
+      partes.push(e.divergencias.map(function (d) {
+        return "Divergência — " + d.trecho + ". Impresso: " + d.publicado + " Adotado: " + d.adotado;
+      }).join("\n"));
+    }
     partes.push("Fonte: " + referencia(e) + ".");
 
     var texto = partes.filter(Boolean).join("\n\n");
@@ -574,7 +582,7 @@
      ritual é texto, igual numa ficha universal.
      ================================================================= */
 
-  var FONTES = ["OPRPG", "SAH", "AS1"];
+  var FONTES = ["OPRPG", "SAH", "AS1", "AS2"];
 
   function normalizarDados(bruto) {
     if (!bruto || typeof bruto !== "object") return null;

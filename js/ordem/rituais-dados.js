@@ -21,6 +21,9 @@
             Novos Rituais (p. 48–56)
      AS1    Arquivos Secretos 1, v1.1 (Jambô, pacote de conteúdo oficial)
             Passagem de Conhecimento e a versão Expandida (p. 48–51)
+     AS2    Arquivos Secretos 2, v1.0 (Jambô, pacote de conteúdo oficial)
+            Mapa Sanguíneo, Labirinto Mental, Capturar Momento e Rajada
+            Caótica (p. 65–67)
 
    As páginas são as do livro, não as do PDF. Os resumos são redação
    própria: guardam os números, as condições e os testes que o jogo
@@ -89,6 +92,7 @@
   var OP = "OPRPG";
   var SAH = "SAH";
   var AS1 = "AS1";
+  var AS2 = "AS2";
 
   var CO = "conhecimento";
   var EN = "energia";
@@ -1111,6 +1115,64 @@
         "Só pode ser aprendido por quem já conjura Passagem de Conhecimento.",
       ] },
 
+    /* =================================================================
+       ARQUIVOS SECRETOS 2 — Labirinto na sua mesa, p. 65-67
+       -----------------------------------------------------------------
+       Os blocos completos dos quatro rituais. As versões da ficha de
+       Labirinto (p. 63-64: Consumir Momento, Labirinto Abissal,
+       Revelação Sanguínea, Tempestade Caótica, com círculo "???") são
+       ações de NPC e ficam só na ficha dele — não viram ritual
+       aprendível. Capturar Momento tem o bloco impresso trocado: o
+       texto publicado e a leitura adotada estão em `divergencias`.
+       ================================================================= */
+
+    { id: "as2.ritual.mapa-sanguineo", nome: "Mapa Sanguíneo", elemento: SA, circulo: 2, fonte: AS2, pagina: 65,
+      execucao: "padrão", alcance: "toque", alvo: "1 superfície", duracao: "cena", resistencia: "Vontade evita",
+      resumo: "Você desenha, numa superfície tocada, um mapa de gotas de sangue que mostra em tempo real onde estão todos os seres num raio de 1 km dela. Cada ser pode resistir para não aparecer.",
+      efeitos: [],
+      versoes: [
+        { nome: "Discente", custo: 3, alteracoes: "O mapa também mostra a saúde de quem falhou na resistência: ileso (100% dos PV), ferido (99% a 51%), machucado (50% a 1%) ou morrendo (0% ou a condição)." },
+      ] },
+
+    { id: "as2.ritual.labirinto-mental", nome: "Labirinto Mental", elemento: CO, circulo: 2, fonte: AS2, pagina: 66,
+      execucao: "padrão", alcance: "médio", alvo: "1 pessoa", duracao: "1d4 rodadas", resistencia: "Vontade evita",
+      resumo: "A mente do alvo fica presa num labirinto: pela duração, ele gasta as ações se movendo numa direção aleatória. No início de cada turno dele, pode repetir o teste; passando, se liberta.",
+      efeitos: [],
+      versoes: [
+        { nome: "Normal", rolagens: [{ tipo: "outra", rotulo: "Duração (rodadas)", expressao: "1d4" }] },
+        { nome: "Discente", custo: 3, alteracoes: "Alcance longo." },
+        { nome: "Verdadeiro", custo: 7, requisito: "3º círculo", alteracoes: "Alcance longo e duração cena; o alvo ainda pode tentar se libertar no início dos turnos dele." },
+      ] },
+
+    { id: "as2.ritual.capturar-momento", nome: "Capturar Momento", elemento: MO, circulo: 2, fonte: AS2, pagina: 66,
+      execucao: "padrão", alcance: "médio", alvo: "1 local (o símbolo capta numa esfera de 18 m de raio)", duracao: "permanente até ser dissipado", resistencia: "veja texto",
+      resumo: "Você marca um local em alcance médio com um símbolo de Morte invisível, que capta imagens e sons em alcance médio dele. Com uma ação padrão, você vê e ouve o que o símbolo capta, mesmo longe. No máximo três símbolos; um quarto apaga um anterior.",
+      efeitos: [],
+      versoes: [
+        { nome: "Discente", custo: 3, alteracoes: "Acrescenta a opção de, com uma ação padrão, fazer o símbolo explodir: 4d8 de dano de Morte em todos os seres captados por ele naquele momento (Fortitude contra a DT do ritual reduz à metade).",
+          rolagens: [{ tipo: "dano", rotulo: "Dano da explosão (Morte)", expressao: "4d8" }] },
+        { nome: "Verdadeiro", custo: 7, requisito: "3º círculo", alteracoes: "Como discente, mas a explosão causa 8d8 de dano de Morte.",
+          rolagens: [{ tipo: "dano", rotulo: "Dano da explosão (Morte)", expressao: "8d8" }] },
+      ],
+      divergencias: [
+        { trecho: "Efeito básico", publicado: "O bloco da p. 66 repete o texto de Mapa Sanguíneo (mapa de gotas de sangue num raio de 1 km).",
+          adotado: "O efeito do símbolo de Morte que capta imagens e sons, como na ficha de Labirinto (p. 63) — é o único texto que combina com as formas discente e verdadeira (o símbolo que explode)." },
+        { trecho: "Alvo, duração e resistência", publicado: "Alvo “esfera de 18m de raio”, duração “cena” e resistência “permanente até ser dissipado”.",
+          adotado: "Alvo: o local marcado (o símbolo capta numa esfera de 18 m, o alcance médio). Duração: permanente até ser dissipado (o texto da linha de resistência). Resistência: nenhuma no efeito básico; Fortitude reduz à metade o dano da explosão nas formas avançadas." },
+      ],
+      notas: ["Bloco impresso com campos trocados: veja as divergências. A mesa pode preferir outra leitura."] },
+
+    { id: "as2.ritual.rajada-caotica", nome: "Rajada Caótica", elemento: EN, circulo: 2, fonte: AS2, pagina: 67,
+      execucao: "padrão", alcance: "médio", alvo: "1 ser", duracao: "instantânea", resistencia: "Reflexos reduz à metade",
+      resumo: "Você concentra a estática caótica da Energia e dispara um raio contra o alvo.",
+      efeitos: [],
+      versoes: [
+        { nome: "Normal", rolagens: [{ tipo: "dano", rotulo: "Dano (Energia)", expressao: "8d6" }] },
+        { nome: "Discente", custo: 3, alteracoes: "O dano muda para 8d8 de Energia.", rolagens: [{ tipo: "dano", rotulo: "Dano (Energia)", expressao: "8d8" }] },
+        { nome: "Verdadeiro", custo: 7, requisito: "3º círculo", alteracoes: "Você canaliza relâmpagos e dispara um raio de 8d10 de Energia num ser dentro do alcance; nos próximos turnos, até o fim da cena, uma ação padrão dispara outro raio igual.",
+          rolagens: [{ tipo: "dano", rotulo: "Dano (Energia)", expressao: "8d10" }] },
+      ] },
+
   ];
 
   /* FIM DOS RITUAIS — o próximo lote entra acima desta linha. */
@@ -1121,6 +1183,7 @@
       OPRPG: { nome: "Ordem Paranormal RPG", curto: "Livro básico", edicao: "v1.1" },
       SAH: { nome: "Sobrevivendo ao Horror", curto: "Sobrevivendo ao Horror", edicao: "v1.2" },
       AS1: { nome: "Arquivos Secretos 1", curto: "Arquivos Secretos 1", edicao: "v1.1" },
+      AS2: { nome: "Arquivos Secretos 2", curto: "Arquivos Secretos 2", edicao: "v1.0" },
     },
     rituais: RITUAIS,
   };

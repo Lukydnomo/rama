@@ -49,6 +49,7 @@
   var SAH = "SAH";
   var OPRPG = "OPRPG";
   var AS1 = "AS1";
+  var AS2 = "AS2";
 
   /* Cada regra:
 
@@ -347,7 +348,7 @@
       automacao: "parcial",
       efeito: "“Usar ritual” ganha a opção Reter (rituais de duração cena), que gasta o custo, prende os PE no máximo e tira 1 de Sanidade. " +
         "A aba Rituais lista os retidos, com “Deixar de reter” (volta o máximo, não o atual) e “Liberar com calma” (Ocultismo DT 20 + custo: " +
-        "passando, volta o máximo e o atual), e avisa quando atordoado, exausto ou pasmo fazem perder o foco. Com Conjuração Complexa (SAH " +
+        "passando, volta o máximo e o atual), e avisa quando uma condição como atordoado, exausto ou pasmo pode tirar o foco — o mestre decide pela natureza do efeito (AS2 p. 104). Com Conjuração Complexa (SAH " +
         "p. 114), Preparando Rituais passa a usar a duração retida, e cada ritual preparado exige uma tatuagem dele. Libera o poder Reter " +
         "Ritual de Combate.",
       parametros: [],
@@ -378,6 +379,25 @@
       ],
     },
   ];
+
+  /* --- Arquivos Secretos 2 --- */
+  REGRAS.push({
+    chave: "aliadosEmPerigo",
+    nome: "Aliados em Perigo",
+    resumo: "Usar a habilidade de um aliado numa situação de risco pede 1d6: ímpar, ele se fere; dois ferimentos na mesma cena, ele morre.",
+    fonte: AS2, pagina: 24,
+    afetaFicha: true,
+    automacao: "parcial",
+    efeito: "Cada aliado da aba Aliados ganha “Uso arriscado (1d6)”. A rolagem fica registrada no aliado, uma vez só por rolagem; os " +
+      "ferimentos contam por cena (a cena da ficha) e o segundo deixa a morte PENDENTE até a mesa confirmar. Aliados continuam sem PV e PE; " +
+      "decidir se a situação é arriscada é da mesa.",
+    parametros: [],
+    depende: [],
+    incompativel: [],
+    consequencias: [
+      "Desligar não apaga os registros: ferimentos, mortes e rolagens ficam guardados no aliado e voltam a aparecer se a regra voltar.",
+    ],
+  });
 
   var POR_CHAVE = {};
   REGRAS.forEach(function (r) { POR_CHAVE[r.chave] = r; });

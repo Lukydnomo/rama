@@ -67,6 +67,9 @@
     { chave: "rolagens",    rotulo: "Rolagens",    secao: "RAMACampanhaRolagens" },
     { chave: "documentos",  rotulo: "Documentos",  secao: "RAMACampanhaDocumentos" },
     { chave: "combate",     rotulo: "Combate",     secao: "RAMACampanhaCombate" },
+    /* Arquivos Secretos 2 (v2.30): o mestre sempre vê; o jogador só com
+       o modo ativo (ler_campanha devolve `hexatombe`). */
+    { chave: "hexatombe",   rotulo: "Hexatombe",   secao: "RAMACampanhaHexatombe", soComModo: "hexatombe" },
     { chave: "notas",       rotulo: "Notas",       secao: "RAMACampanhaNotas", soMestre: true },
     { chave: "config",      rotulo: "Configurações", secao: "RAMACampanhaConfig", soMestre: true },
   ];
@@ -296,6 +299,7 @@
         return;
       }
       var papelAntes = estado.papel;
+      var hexatombeAntes = !!(estado.campanha && estado.campanha.hexatombe);
       aplicarCampanha(r);
 
       if (estado.papel === "espectador") {
@@ -316,7 +320,10 @@
       }
 
       pintarTopo();
-      notificar("campanha");
+      /* O modo Hexatombe ligou ou desligou: a aba aparece ou some para o
+         jogador. */
+      if (!estado.mestre && hexatombeAntes !== !!estado.campanha.hexatombe) desenhar();
+      else notificar("campanha");
       if (tem("membros")) notificar("membros");
     }
 
@@ -330,6 +337,7 @@
     if (tem("combates")) notificar("combates");
     if (tem("documentos")) notificar("documentos");
     if (tem("rolagens")) notificar("rolagens");
+    if (tem("hexatombe")) notificar("hexatombe");
   }
 
   async function buscarPersonagensEmSegundoPlano() {
@@ -370,7 +378,11 @@
      ================================================================= */
 
   function abasVisiveis() {
-    return ABAS.filter(function (a) { return !a.soMestre || estado.mestre; });
+    return ABAS.filter(function (a) {
+      if (a.soMestre && !estado.mestre) return false;
+      if (a.soComModo && !estado.mestre && !(estado.campanha && estado.campanha[a.soComModo])) return false;
+      return !!global[a.secao];
+    });
   }
 
   function topo() {
@@ -399,7 +411,7 @@
   }
 
   /* As abas que desenham fichas da mesa. As outras não pagam por ela. */
-  var PRECISAM_DA_MESA = { personagens: true, combate: true, notas: true };
+  var PRECISAM_DA_MESA = { personagens: true, combate: true, notas: true, hexatombe: true };
 
   function desenhar() {
     if (estado.semAcesso) return;

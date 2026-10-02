@@ -1,5 +1,28 @@
 # A API
 
+## Hexatombe e Arquivos Secretos 2 — v2.30
+
+- `ler_hexatombe { campanhaId }` — membro da campanha (espectador não). Mestre:
+  `{ mestre: true, rev, estado }`; jogador: `{ mestre: false, rev, vista }`, a vista
+  montada no servidor (`RAMAHexatombe.vistaDoJogador`) com os personagens dele
+  nesta campanha. Com o modo desligado, a vista é `{ ativo: false }`.
+- `salvar_hexatombe { campanhaId, rev, opId, estado }` — só o mestre. `opId`
+  (8–80 caracteres) repetido devolve `repetida: true` sem gravar; `rev` diferente
+  devolve `conflito` com o estado atual. O estado é normalizado e os vínculos com
+  personagens de fora da campanha são desfeitos. Marca a parte `hexatombe` da mesa
+  (e `campanha`, quando o modo liga ou desliga).
+- `lancar_hexatombe { campanhaId, personagemId, operacaoId, dia, itens }` — só o
+  mestre, num personagem desta campanha (de fora: `nao_encontrado`). `itens`
+  (até 30): `{ lancamento: { id, tipo, valor, dia, motivo, origem, atualPv?, refazer? },
+  desfazer? }`. Id já presente não lança de novo; `desfazer` marca; `refazer` tira a
+  marca; `atualPv` negativo desce os PV atuais guardados. Tipos: `pvMax`, `peMax`,
+  `pvMetade`, `rd`, `testes`, `dadosTestes`, `dano`, `nota`.
+- `ler_campanha` devolve `hexatombe: true|false` (só se o modo está ligado).
+- `sincronizar_campanha` tem a marca nova `hexatombe`.
+- `atualizar_combate`, operação `criatura_instancia`: chave `forma` (id de
+  `ordem.formas` ou `""`) troca a forma da ocorrência — PV máximos da forma, atuais
+  presos no novo máximo, nunca restaurados.
+
 ## Criaturas — v2.28
 
 - `listar_homebrew` aceita `resumo: true`: cada criatura volta só com `id`, `tipo`,

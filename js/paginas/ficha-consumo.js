@@ -481,9 +481,9 @@
     var efeito = efeitoConhecido(ritual);
 
     /* Arquivos Secretos 1 (v2.29): o que muda o uso deste ritual. */
-    var as1 = extrasDoArquivo(o, c, ritual);
+    var as1 = extrasDoArquivo(o, c, ritual, inv);
     var estado = { versao: 0, gastar: true, dispensa: "", entregar: false, catalisador: "", emMim: false,
-      macula: false, reter: false, negativo: false, placas: !!as1.placas };
+      macula: false, reter: false, negativo: false, placas: !!as1.placas, sofisticado: "", naAntena: false };
     var opId = novoOpId("ritual");
     var usado = false;
     var corpo = el("div.pilha--curta.consumo-confirmacao", { class: "pilha" });
@@ -610,7 +610,7 @@
       }, opId);
       if (!r.ok) { usado = false; UI.avisoAtencao(r.motivo); return; }
       var registro = "";
-      if (!r.repetido && efeito && estado.emMim) registro = registrarEfeito(ctx, ritual, efeito, pl.v.nome);
+      if (!r.repetido && efeito && estado.emMim && !estado.naAntena) registro = registrarEfeito(ctx, ritual, efeito, pl.v.nome);
       if (!r.repetido) {
         var extras = aplicarDoArquivo(ctx, o, c, ritual, as1, estado, pl, recurso);
         if (extras) registro = (registro ? registro + " " : "") + extras;
@@ -637,7 +637,7 @@
               igual ao círculo (+2 com afinidade) até o próximo turno
      ================================================================= */
 
-  function extrasDoArquivo(o, c, ritual) {
+  function extrasDoArquivo(o, c, ritual, inv) {
     var est = c && c.estado;
     var dados = RT() ? RT().dadosDoRitual(ritual) : {};
     var circulo = Number(dados.circulo) || 0;
@@ -657,6 +657,17 @@
         ? { valor: circulo + (placas.some(function (a) { return a.afinidade; }) ? 2 : 0), afinidade: placas.some(function (a) { return a.afinidade; }) }
         : null,
     };
+    /* Arquivos Secretos 2: o Catalisador Sofisticado e Horrorizado (3d6
+       por cena, 1d6 por ritual, p. 75) e A Antena (um ritual contido,
+       p. 67). */
+    var itens = (inv && inv.itens) || [];
+    var sofisticado = itens.filter(function (i) { return i && i.origemCatalogoId === "as2.paranormal.catalisador-sofisticado"; })[0];
+    if (sofisticado && global.RAMAOrdemArquivo2) {
+      var res = (o.reservas || []).filter(function (r) { return r.fonte === "catalisador" && r.cena === cena; })[0];
+      x.sofisticado = { restantes: res ? res.total - res.gastos : 3 };
+    }
+    var antena = itens.filter(function (i) { return i && i.origemCatalogoId === "as2.amaldicoado.a-antena"; })[0];
+    if (antena) x.antena = { item: antena, ocupada: !!(antena.ordem && antena.ordem.antena) };
     return x;
   }
 
@@ -682,6 +693,25 @@
           el("span", { texto: "O ritual afeta um alvo negativamente (precisa mantê-lo na linha de efeito)." }),
         ]));
       }
+    }
+    if (x.sofisticado) {
+      partes.push(el("label.ordenacao", {}, [
+        el("span.ordenacao__rotulo", { texto: "Catalisador sofisticado (" + x.sofisticado.restantes + "d6 nesta cena)" }),
+        el("select.r-selecao", { disabled: x.sofisticado.restantes <= 0, onchange: function (ev) { estado.sofisticado = ev.target.value; } }, [
+          el("option", { value: "", texto: x.sofisticado.restantes > 0 ? "Não gastar" : "Os 3d6 da cena já foram" }),
+          el("option", { value: "dano", texto: "+1d6 no dano" }),
+          el("option", { value: "cura", texto: "+1d6 na cura" }),
+          el("option", { value: "dt", texto: "+1d6 na DT" }),
+        ]),
+      ]));
+    }
+    if (x.antena) {
+      partes.push(el("label.r-marca", {}, [
+        el("input", { type: "checkbox", checked: estado.naAntena, disabled: x.antena.ocupada, onchange: function (ev) { estado.naAntena = ev.target.checked; } }),
+        el("span", { texto: x.antena.ocupada
+          ? "A Antena já contém um ritual (liberte-o antes, pelo menu do item)."
+          : "Conjurar n’A Antena: o ritual não faz efeito agora e fica contido; uma ação padrão o liberta depois, sem ações nem PE (Arquivos Secretos 2, p. 67)." }),
+      ]));
     }
     if (x.placas) {
       partes.push(el("label.r-marca", {}, [
@@ -715,6 +745,20 @@
       } else {
         notas.push("Retido: " + pe + " PD presos no máximo.");
       }
+    }
+    if (x.sofisticado && estado.sofisticado && global.RAMAOrdemArquivo2) {
+      var gasto = global.RAMAOrdemArquivo2.gastarDaReserva(o, "catalisador", "rit-" + ritual.id + "-" + Date.now());
+      if (gasto.ok) {
+        var dado = global.RAMADados && global.RAMADados.total ? global.RAMADados.total("1d6") : null;
+        var n = dado && dado.ok ? dado.total : 0;
+        notas.push("Catalisador sofisticado: +" + n + " " + (estado.sofisticado === "dano" ? "no dano" : estado.sofisticado === "cura" ? "na cura" : "na DT") +
+          " deste ritual (1d6; restam " + gasto.restantes + "d6 na cena).");
+      } else notas.push(gasto.motivo);
+    }
+    if (x.antena && estado.naAntena && !x.antena.ocupada) {
+      if (!x.antena.item.ordem) x.antena.item.ordem = {};
+      x.antena.item.ordem.antena = { ritualId: ritual.id, nome: ritual.nome, versao: pl.v.nome, custo: pl.p ? pl.p.custo : 0, em: new Date().toISOString() };
+      notas.push(ritual.nome + " ficou contido n’A Antena: o efeito acontece quando você o libertar.");
     }
     if (x.placas && estado.placas && EF()) {
       var ag = global.RAMAAuth && global.RAMAAuth.agente ? global.RAMAAuth.agente() : null;

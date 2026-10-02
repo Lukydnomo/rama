@@ -422,6 +422,7 @@
     concessoesDaClasse(lista, c, passos);
     concessoesDaTrilha(lista, c, passos);
     concessoesAutomaticas(lista, c, passos);
+    concessoesDominadas(lista, c, passos);
 
     return lista.sort(function (a, b) {
       return (a.degrau - b.degrau) || (a.origem === b.origem ? 0 : (a.origem === "classe" ? -1 : 1));
@@ -594,6 +595,52 @@
         elemento: entrada.ritual.elemento,
         fixo: entrada.ritual,
       })));
+    });
+  }
+
+  /* ---------------------------------------------------------------
+     DOMINAR HABILIDADE RITUALÍSTICA (AS2 p. 75)
+     ---------------------------------------------------------------
+     A habilidade de outra trilha, dominada num degrau, concede o que
+     concederia na trilha dela — a partir DESSE degrau: o ritual pelo
+     nome, Saber Ampliado e o Grimório (com os círculos novos dali em
+     diante). Ids próprios ("dom"), para nunca colidir com a trilha. */
+
+  function concessoesDominadas(lista, c, passos) {
+    (c.dominadas || []).forEach(function (dom) {
+      var d = dom.degrau;
+      if (!d || d > passos) return;
+      if (dom.poder === "saberAmpliado") {
+        lista.push(concessao({ id: "dom" + d + ".saberAmpliado", degrau: d, origem: ORIGENS.poder.chave,
+          poder: "saberAmpliado", nomePoder: "Saber Ampliado (dominado)", fonte: OPRPG, pagina: 35, quantidade: 1, circulos: [1],
+          nota: "Dominado com Dominar Habilidade Ritualística (Arquivos Secretos 2, p. 75)." }));
+        degrausDeCirculoNovo(c.classe, d).forEach(function (novo) {
+          if (novo.degrau > passos) return;
+          lista.push(concessao({ id: "dom" + novo.degrau + ".saberAmpliado.c" + novo.circulo, degrau: novo.degrau, origem: ORIGENS.poder.chave,
+            poder: "saberAmpliado", nomePoder: "Saber Ampliado (dominado)", fonte: OPRPG, pagina: 35, quantidade: 1, circulos: [novo.circulo] }));
+        });
+        return;
+      }
+      if (dom.poder === "grimorioRitualistico") {
+        lista.push(concessao({ id: "dom" + d + ".grimorio", degrau: d, origem: ORIGENS.poder.chave,
+          poder: "grimorioRitualistico", nomePoder: "Grimório Ritualístico (dominado)", fonte: OPRPG, pagina: 35,
+          quantidade: "intelecto", circulos: [1, 2], destino: DESTINOS.grimorio.chave,
+          nota: "Dominado com Dominar Habilidade Ritualística (Arquivos Secretos 2, p. 75)." }));
+        degrausDeCirculoNovo(c.classe, d).forEach(function (novo) {
+          if (novo.degrau > passos) return;
+          lista.push(concessao({ id: "dom" + novo.degrau + ".grimorio.c" + novo.circulo, degrau: novo.degrau, origem: ORIGENS.poder.chave,
+            poder: "grimorioRitualistico", nomePoder: "Grimório Ritualístico (dominado)", fonte: OPRPG, pagina: 35, quantidade: 1,
+            circulos: [novo.circulo], destino: DESTINOS.grimorio.chave, opcional: true }));
+        });
+        return;
+      }
+      RITUAIS_DE_TRILHA.forEach(function (entrada) {
+        if (entrada.poder !== dom.poder || !entrada.ritual) return;
+        lista.push(concessao({ id: "dom" + d + "." + entrada.poder, degrau: d, origem: ORIGENS.poder.chave,
+          poder: entrada.poder, nomePoder: entrada.nome + " (dominado)", fonte: entrada.fonte, pagina: entrada.pagina, quantidade: 1,
+          circulos: [entrada.ritual.circulo], elemento: entrada.ritual.elemento, fixo: entrada.ritual,
+          nota: "Dominado com Dominar Habilidade Ritualística (Arquivos Secretos 2, p. 75)." + (entrada.nota ? " " + entrada.nota : "") }));
+      });
     });
   }
 

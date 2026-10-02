@@ -774,6 +774,9 @@
           el("span", { texto: " " + automacao.texto }),
         ]),
         e.notas.length ? listaDeTextos(e.notas.map(function (n) { return "Nota: " + n; }), "t-mini.t-aviso") : null,
+        (e.divergencias || []).length ? listaDeTextos(e.divergencias.map(function (d) {
+          return "Divergência na publicação — " + d.trecho + ". Impresso: " + d.publicado + " Adotado: " + d.adotado;
+        }), "t-mini.t-aviso") : null,
         /* Numa aquisição, o controle de escolha fica no resultado, fora
            dos detalhes: consultar nunca seleciona. */
         aq ? null : acaoAdicionar(e, aoAdicionar),

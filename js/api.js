@@ -52,6 +52,7 @@
     "ler_imagem_do_turno",
     "ler_capa_campanha",
     "sincronizar_campanha",
+    "ler_hexatombe",
 
     "salvar_foto",
     "salvar_perfil",
@@ -68,6 +69,9 @@
        aplicada de novo. É isso — e só isso — que põe esta gravação na
        lista. */
     "atualizar_combate",
+
+    /* O mesmo para o Hexatombe (v2.30): o estado leva rev e opId. */
+    "salvar_hexatombe",
 
     /* registrar_rolagem repete com segurança porque carrega um id
        próprio: o servidor reconhece a segunda chegada e não cria a
@@ -103,6 +107,9 @@
        operação e o id da aplicação fazem a segunda chegada não aplicar
        nada de novo. */
     efeito_personagem: true,
+    /* Lançamentos do Hexatombe na ficha (v2.30): id de operação e id
+       estável de cada lançamento. */
+    lancar_hexatombe: true,
     /* Criar uma pasta (v2.26): a segunda chegada do mesmo id devolve a
        pasta que a primeira criou. */
     criar_pasta: true,
@@ -148,6 +155,7 @@
     registrar_rolagem: true,
     atualizar_resumo_personagem: true,
     atualizar_combate: true,
+    salvar_hexatombe: true,
   };
 
   var LEITURAS = {};
@@ -676,6 +684,20 @@
     }, dados || {}));
   }
 
+  /* Modo Hexatombe (v2.30): o mestre grava o estado inteiro (rev + opId);
+     o jogador só lê a vista dele. */
+  function lerHexatombe(campanhaId, opcoes) {
+    return post({ acao: "ler_hexatombe", campanhaId: campanhaId }, opcoes);
+  }
+
+  function salvarHexatombe(campanhaId, rev, opId, estado) {
+    return post({ acao: "salvar_hexatombe", campanhaId: campanhaId, rev: rev, opId: opId, estado: estado });
+  }
+
+  function lancarHexatombe(campanhaId, personagemId, operacaoId, dia, itens) {
+    return post({ acao: "lancar_hexatombe", campanhaId: campanhaId, personagemId: personagemId, operacaoId: operacaoId, dia: dia, itens: itens });
+  }
+
   function lerImagemDoTurno(campanhaId, combateId) {
     return post({ acao: "ler_imagem_do_turno", campanhaId: campanhaId, combateId: combateId });
   }
@@ -919,6 +941,9 @@
     salvarCombate: salvarCombate,
     atualizarCombate: atualizarCombate,
     efeitoPersonagem: efeitoPersonagem,
+    lerHexatombe: lerHexatombe,
+    salvarHexatombe: salvarHexatombe,
+    lancarHexatombe: lancarHexatombe,
     lerImagemDoTurno: lerImagemDoTurno,
     excluirCombate: excluirCombate,
 

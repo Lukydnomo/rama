@@ -71,7 +71,7 @@
   var TIPOS_PROTECAO = ["leve", "pesada", "escudo"];
   var ELEMENTOS = ["sangue", "morte", "conhecimento", "energia", "medo", "varia"];
   var MARCADORES = ["acessorio", "utensilio", "vestimenta", "eletrico", "camera", "corpoACorpo", "besta", "balas"];
-  var FONTES = ["OPRPG", "SAH", "AS1"];
+  var FONTES = ["OPRPG", "SAH", "AS1", "AS2"];
   var MAX_MODIFICACOES = 12;
   var DADO = /^[1-9]\d{0,2}d([1-9]\d{0,2})$/;
 
@@ -159,6 +159,23 @@
     /* Tatuagem de maldição (Compreensão de Maldições, AS1 p. 45): o
        símbolo no corpo que carrega as maldições de um item consumido. */
     if (b.tatuagem === true) dados.tatuagem = true;
+    /* Arquivos Secretos 2 (v2.30). Cada campo só existe quando vale. */
+    if (b.empunhada === true) dados.empunhada = true;          /* A Antena: +3 na DT */
+    if (b.vestida === true) dados.vestida = true;              /* vestimenta com RD */
+    var rd = inteiroEntre(b.rd, 0, 50);
+    if (rd) dados.rd = rd;
+    if (b.amolada && typeof b.amolada === "object") {          /* Pedra de Amolar */
+      dados.amolada = { desde: textoCurto(b.amolada.desde, 40), cena: textoCurto(b.amolada.cena, 80) };
+    }
+    if (b.antena && typeof b.antena === "object" && textoCurto(b.antena.nome, 120)) {   /* ritual guardado */
+      dados.antena = { ritualId: textoCurto(b.antena.ritualId, 80), nome: textoCurto(b.antena.nome, 120),
+        versao: textoCurto(b.antena.versao, 40), custo: inteiroEntre(b.antena.custo, 0, 99), em: textoCurto(b.antena.em, 40) };
+    }
+    if (b.acoplavel && typeof b.acoplavel === "object" && textoCurto(b.acoplavel.par, 80)) {   /* Acoplável */
+      dados.acoplavel = { par: textoCurto(b.acoplavel.par, 80),
+        aprimoramento: b.acoplavel.aprimoramento === "multiplicador" ? "multiplicador" : "margem",
+        acoplada: b.acoplavel.acoplada === true, principal: b.acoplavel.principal === true };
+    }
     if (ELEMENTOS.indexOf(b.elemento) >= 0) dados.elemento = b.elemento;
     var marcadores = (Array.isArray(b.marcadores) ? b.marcadores : []).filter(function (m, i, lista) {
       return MARCADORES.indexOf(m) >= 0 && lista.indexOf(m) === i;
@@ -220,6 +237,9 @@
     if (tipoDano) saida.tipoDano = tipoDano;
     var tipoDanoExtra = textoCurto(a.tipoDanoExtra, 20);
     if (tipoDanoExtra) saida.tipoDanoExtra = tipoDanoExtra;
+    /* O dano depois do "mais" multiplica no crítico só quando o item diz
+       (Machado do Mutilador, AS2 p. 41; regra do Inquérito, p. 104). */
+    if (a.extraMultiplica === true) saida.extraMultiplica = true;
     var municao = textoCurto(a.municao, 80);
     if (municao) saida.municao = municao;
     if (ATRIBUTOS_DANO.indexOf(a.atributoDano) >= 0) saida.atributoDano = a.atributoDano;

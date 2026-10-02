@@ -121,6 +121,52 @@
     return img;
   }
 
+  /* Aliados em Perigo (Arquivos Secretos 2, p. 24 — regra opcional). */
+  function A2() { return global.RAMAOrdemArquivo2; }
+  function perigoLigado(ctx) {
+    var o = ctx.ficha && ctx.ficha.ordem;
+    return !!(o && A2() && global.RAMAOrdemOpcionais && global.RAMAOrdemOpcionais.ligada(o, "aliadosEmPerigo"));
+  }
+
+  function linhaDePerigo(ctx, a) {
+    if (!perigoLigado(ctx)) return null;
+    var cena = A2().cenaDe(ctx.ficha.ordem);
+    var e = A2().estadoDoPerigo(a, cena);
+    var texto = e.morto ? "Morto (Aliados em Perigo)." : e.pendente ? "Segundo ferimento nesta cena: a morte espera a confirmação da mesa."
+      : e.feridas ? "Ferido nesta cena: mais um ferimento nesta cena é fatal." : "Sem ferimentos nesta cena.";
+    return el("div.pilha--curta", { class: "pilha" }, [
+      el("p.t-mini", { texto: texto }),
+      el("div.faixa", {}, [
+        !e.morto && !e.pendente ? el("button.r-botao.r-botao--mini", { type: "button", texto: "Uso arriscado (1d6)", disabled: !permitido(ctx),
+          onclick: function () { arriscar(ctx, a.id); } }) : null,
+        e.pendente ? el("button.r-botao.r-botao--mini.r-botao--perigo", { type: "button", texto: "Confirmar morte", disabled: !permitido(ctx),
+          onclick: function () { confirmar(ctx, a.id, true); } }) : null,
+        e.pendente ? el("button.r-botao.r-botao--mini", { type: "button", texto: "A mesa decidiu que não", disabled: !permitido(ctx),
+          onclick: function () { confirmar(ctx, a.id, false); } }) : null,
+      ]),
+    ]);
+  }
+
+  function arriscar(ctx, id) {
+    var a = atual(ctx, id);
+    if (!a || !permitido(ctx)) return;
+    var r = global.RAMADados.total("1d6", { nome: "Aliados em Perigo · " + a.criatura.nome });
+    if (!r.ok) return;
+    var res = A2().arriscarAliado(a, A2().cenaDe(ctx.ficha.ordem), r.total, "perigo-" + U.uuid(), "");
+    if (!res.ok) { UI.avisoAtencao(res.motivo); return; }
+    if (global.RAMARolagens) global.RAMARolagens.mostrar(r, { nome: "Aliados em Perigo · " + a.criatura.nome,
+      notas: [res.ferido ? (res.pendente ? "Ímpar: segundo ferimento nesta cena — a morte espera a confirmação da mesa." : "Ímpar: o aliado se feriu.") : "Par: o aliado segue intacto."] });
+    ctx.alterou(); ctx.redesenhar();
+  }
+
+  function confirmar(ctx, id, morreu) {
+    var a = atual(ctx, id);
+    if (!a || !permitido(ctx)) return;
+    var r = A2().confirmarPerigo(a, morreu);
+    if (!r.ok) { UI.avisoAtencao(r.motivo); return; }
+    ctx.alterou(); ctx.redesenhar();
+  }
+
   function aba(ctx) {
     var aliados = ctx.ficha.aliados || [];
     return UI.painel("Aliados", aliados.length ? el("div.aliados-grade", {}, aliados.map(function (a) {
@@ -128,6 +174,7 @@
         retratoDoAliado(a),
         el("h3.t-secao", { texto: a.criatura.nome }),
         global.RAMAHomebrewCriatura.detalhes(a.criatura),
+        linhaDePerigo(ctx, a),
         el("div.faixa", {}, [
           el("button.r-botao.r-botao--mini", { type: "button", texto: "Abrir ficha", onclick: function () { consultar(ctx, a.id); } }),
           ctx.emEdicao() ? el("button.r-botao.r-botao--mini", { type: "button", texto: "Editar aliado", onclick: function () { editar(ctx, a); } }) : null,

@@ -239,12 +239,14 @@
       if (r.porTipo && r.porTipo.length > 1) {
         notas.push("Por tipo: " + r.porTipo.map(function (p) { return (p.tipo || "sem tipo") + " " + p.total; }).join(" · "));
       }
-      if (r.critico) notas.push("Crítico: só os dados da primeira parte foram multiplicados; números fixos e outras partes ficam de fora.");
+      if (r.critico) notas.push(r.multiplicaTodas
+        ? "Crítico: os dados de todas as partes foram multiplicados (a ficha manda); números fixos ficam de fora."
+        : "Crítico: só os dados da primeira parte foram multiplicados; números fixos e outras partes ficam de fora.");
       return notas;
     }
 
-    function rolarDano(rotulo, partes, critico, multiplicador) {
-      var r = D().danoComposto({ nome: rotulo, partes: partes, critico: critico, multiplicador: multiplicador });
+    function rolarDano(rotulo, partes, critico, multiplicador, todas) {
+      var r = D().danoComposto({ nome: rotulo, partes: partes, critico: critico, multiplicador: multiplicador, multiplicaTodas: !!todas });
       return rolar(rotulo + (critico ? " · dano crítico" : " · dano"), r, { critico: critico, notas: notasDeDano(r) });
     }
 
@@ -283,7 +285,7 @@
             aoClicar: (function (critico, rotulo) {
               return function (cartao, botao) {
                 botao.disabled = true;
-                rolarDano(rotulo, ataque.dano, critico, ataque.critico.multiplicador);
+                rolarDano(rotulo, ataque.dano, critico, ataque.critico.multiplicador, ataque.multiplicaTudo);
               };
             })(critico, rotulo),
           }] : [],
@@ -350,8 +352,8 @@
       return el("div.pilha--curta.criatura-cabeca", { class: "pilha" }, [
         el("div.criatura-painel__topo", {}, [
           imagens ? retratoComCorpo(imagens, nome) : null,
-          el("p.t-secao", { texto: nome }),
-          el("span.r-etiqueta", { texto: o.rotulo || "Criatura" }),
+          el("p.t-secao", { texto: nome + (v.formaAtiva ? " · " + v.formaAtiva.nome : "") }),
+          el("span.r-etiqueta", { texto: o.rotulo || (od.aliada ? "Aliado" : "Criatura") }),
         ]),
         el("p.t-mini.criatura-linha", { texto: linha.filter(Boolean).join(" · ") }),
         el("div.faixa.criatura-elementos", {}, od.elementos.map(function (e) {
@@ -401,6 +403,7 @@
       }
 
       if (od.forma) partes.push(el("p.t-mini", { texto: "Forma inicial: " + (od.forma.nota || od.forma.inicial) }));
+      if (od.formas && od.formas.length) partes.push(blocoDeFormas(v));
 
       if (instancia && o.aoInstancia) {
         var nota = el("textarea.r-area", { rows: 2, maxlength: 1000, "aria-label": "Condições e anotações desta ocorrência" });
@@ -410,6 +413,56 @@
       }
 
       return UI.painel(instancia ? "Esta ocorrência" : "Recursos", el("div.pilha--curta", { class: "pilha" }, partes));
+    }
+
+    /* Arquivos Secretos 2: a ficha transformada é a mesma ocorrência.
+       A troca pede confirmação, porque mexe nos PV máximos. */
+    function blocoDeFormas(v) {
+      var od = v.ordem;
+      var ativa = (v.instancia && v.instancia.forma) || "";
+      var opcoes = [{ id: "", nome: "Ficha de partida", pv: od.pvBase }].concat(od.formas.map(function (f) {
+        return { id: f.id, nome: f.nome, pv: f.pv, pagina: f.pagina, ativacao: f.ativacao };
+      }));
+      function rotulo(x) { return x.nome + (x.pv ? " (" + x.pv + " PV)" : ""); }
+      var partes = [];
+      if (instancia && o.aoInstancia) {
+        partes.push(el("div.faixa", { role: "group", "aria-label": "Forma desta ocorrência" }, opcoes.map(function (x) {
+          return el("button.filtro", {
+            type: "button", texto: rotulo(x), "aria-pressed": String(x.id === ativa),
+            onclick: function () {
+              if (x.id === ativa) return;
+              UI.confirmar({
+                titulo: "Trocar de forma",
+                texto: (x.id ? nome + " assume a forma " + x.nome : nome + " volta à ficha de partida") + ".",
+                detalhe: "Os PV máximos passam a " + (x.pv || "os da ficha") + "; os PV atuais ficam como estão (presos no novo máximo, nunca restaurados). Estados, usos, marcadores e a anotação continuam os desta ocorrência.",
+                rotuloConfirmar: "Trocar",
+              }).then(function (sim) { if (sim) aplicar("forma", x.id); });
+            },
+          });
+        })));
+      } else {
+        partes.push(el("p.t-mini", { texto: "Forma: " + rotulo(opcoes.filter(function (x) { return x.id === ativa; })[0] || opcoes[0]) }));
+      }
+      od.formas.forEach(function (f) {
+        if (f.ativacao) partes.push(el("p.t-mini", { texto: f.nome + (f.pagina ? " (p. " + f.pagina + ")" : "") + ": " + f.ativacao }));
+      });
+      return el("div.pilha--curta", { class: "pilha" }, partes);
+    }
+
+    /* Perfil "como aliado": benefícios, sem PV, PE nem ficha de combate. */
+    function blocoDoAliado(v) {
+      var od = v.ordem;
+      var partes = [el("p.t-mini", { texto: "Aliados não têm PV, PE nem ficha de combate: dão os benefícios abaixo a quem acompanham (OPRPG p. 170). O mestre decide quando o aliado pode agir." })];
+      if (od.ficha && od.ficha.nome) {
+        partes.push(el("p.t-mini", { texto: "Como ameaça, a mesma pessoa tem ficha própria: " + od.ficha.nome + (od.ficha.pagina ? " (p. " + od.ficha.pagina + ")" : "") + " — o perfil de aliado não herda nada dela." }));
+      }
+      if (instancia && o.aoInstancia) {
+        var nota = el("textarea.r-area", { rows: 2, maxlength: 1000, "aria-label": "Anotações deste aliado" });
+        nota.value = (v.instancia && v.instancia.nota) || "";
+        nota.addEventListener("change", function () { aplicar("nota", nota.value); });
+        partes.push(el("div.r-campo", {}, [el("label.t-mini", { texto: "Anotações deste aliado" }), nota]));
+      }
+      return UI.painel("Como aliado", el("div.pilha--curta", { class: "pilha" }, partes));
     }
 
     function listaTexto(lista) { return lista && lista.length ? lista.join("; ") : "—"; }
@@ -571,7 +624,7 @@
           }));
           botoes.push(el("button.r-botao.r-botao--mini.r-botao--fantasma", {
             type: "button", texto: "Crítico", disabled: !danoOk, "aria-label": "Rolar dano crítico de " + a.nome,
-            onclick: function () { rolarDano(ef.nome + " · " + a.nome, a.dano, true, a.critico.multiplicador); },
+            onclick: function () { rolarDano(ef.nome + " · " + a.nome, a.dano, true, a.critico.multiplicador, a.multiplicaTudo); },
           }));
         });
         (ef.rolagens || []).forEach(function (r) {
@@ -629,6 +682,20 @@
         return v.acoes.filter(function (a) { return a.tipo === tipo; });
       }).reduce(function (a, b) { return a.concat(b); }, []);
 
+      if (v.ordem.aliada) {
+        U.trocar(raiz, [
+          cabecalho(v),
+          blocoDoAliado(v),
+          v.habilidades.length ? UI.painel("Benefícios", el("div.pilha--curta", { class: "pilha" }, v.habilidades.map(function (h) { return efeito(h, v, false); }))) : null,
+          acoes.length ? UI.painel("Ações", el("div.pilha--curta", { class: "pilha" }, acoes.map(function (a) { return efeito(a, v, true); }))) : null,
+          v.descricao ? UI.painel("Descrição", el("p", { texto: v.descricao, estilo: { whiteSpace: "pre-wrap" } })) : null,
+          v.ordem.notas.length ? UI.painel("Notas do catálogo", el("ul.bib-lista-textos", {}, v.ordem.notas.map(function (n) { return el("li.t-mini", { texto: n }); }))) : null,
+        ].filter(Boolean));
+        return;
+      }
+
+      var notasDaForma = v.formaAtiva ? v.formaAtiva.notas : [];
+      var notas = v.ordem.notas.concat(notasDaForma);
       U.trocar(raiz, [
         cabecalho(v),
         blocoDaOcorrencia(v),
@@ -637,7 +704,7 @@
         acoes.length ? UI.painel("Ações", el("div.pilha--curta", { class: "pilha" }, acoes.map(function (a) { return efeito(a, v, true); }))) : null,
         blocoDeEnigma(v),
         v.descricao ? UI.painel("Descrição", el("p", { texto: v.descricao, estilo: { whiteSpace: "pre-wrap" } })) : null,
-        v.ordem.notas.length ? UI.painel("Notas do catálogo", el("ul.bib-lista-textos", {}, v.ordem.notas.map(function (n) { return el("li.t-mini", { texto: n }); }))) : null,
+        notas.length ? UI.painel("Notas do catálogo", el("ul.bib-lista-textos", {}, notas.map(function (n) { return el("li.t-mini", { texto: n }); }))) : null,
       ]).filter(Boolean));
 
       pintarCabecaDeVida();

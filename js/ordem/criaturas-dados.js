@@ -26,6 +26,10 @@
      AS1    Arquivos Secretos 1, v1.1 (Jambô, pacote de conteúdo oficial)
             Transtornados (p. 28–39), o anulado (p. 53), a Volante e o
             Cangaceiro (p. 68–71) e Agatha como aliada (p. 19)
+     AS2    Arquivos Secretos 2, v1.0 (Jambô, pacote de conteúdo oficial)
+            Ameaças do Hexatombe (p. 26–32), os Mascarados com as formas
+            da intenção assassina (p. 39–64), os agentes (p. 70–86),
+            Juan Davo (p. 91–92) e os perfis "como aliado" (p. 41–93)
 
    As páginas são as do livro, não as do PDF. Os resumos são redação
    própria: guardam os números, as condições e os testes que o jogo
@@ -39,7 +43,7 @@
    FORMATO DE UMA ENTRADA
    ---------------------------------------------------------------------
 
-     id            estável: op.criatura.<nome> ou sah.criatura.<nome>.
+     id            estável: <livro>.criatura.<nome> (op, sah, as1, as2).
                    Nunca muda, mesmo que o nome mude. Variantes têm o id
                    da base mais um sufixo (op.criatura.o-anfitriao.liber)
      livro, pagina a referência impressa
@@ -72,6 +76,12 @@
      enigma        { texto, efeito, altera } — `altera` só existe quando
                    o livro dá números para o efeito
      notas         divergências do livro e leituras feitas aqui
+     formas        (AS2) fichas da MESMA ocorrência, como a forma tomada
+                   pela intenção assassina: { id, nome, pagina, vd, pv,
+                   machucado, defesa, testes, pericias, habilidades,
+                   acoes, ativacao, notas } — valores publicados, finais
+     aliada, ficha perfil "como aliado" (sem PV/PE) e a ficha de ameaça
+                   da mesma pessoa
 
    VALORES ESPECIAIS: 0 é zero; null (ou ausente) é "não informado";
    "—" é "não se aplica"; qualquer outro texto ("veja texto") é exibido
@@ -96,6 +106,7 @@
   var OP = "OPRPG";
   var SAH = "SAH";
   var AS1 = "AS1";
+  var AS2 = "AS2";
 
   var SA = "sangue";
   var MO = "morte";
@@ -137,6 +148,22 @@
   function teste(rotulo, expressao) { return { tipo: "teste", rotulo: rotulo, expressao: expressao }; }
   function dano(rotulo, partes) { return { tipo: "dano", rotulo: rotulo, partes: Array.isArray(partes) ? partes : [partes] }; }
   function soma(rotulo, expressao) { return { tipo: "soma", rotulo: rotulo, expressao: expressao }; }
+
+  /* Perfil "como aliado" do Arquivos Secretos 2: benefícios de aliado
+     (OPRPG p. 170), sem PV, PE nem ficha de combate. */
+  function aliadoAs2(chave, nome, pagina, paginaDaFicha, descricao, habilidades, tipo, notas) {
+    var t = tipo || "Aliado";
+    return {
+      id: "as2.criatura." + chave + "-aliado", livro: AS2, pagina: pagina, aliada: true,
+      nome: nome + " (" + t.toLowerCase() + ")", natureza: "humana", tipo: t, tamanho: null, categoria: "Aliados",
+      nivel: t + " (OPRPG p. 170)", elementos: [], vd: null,
+      descricao: descricao,
+      ficha: { id: "as2.criatura." + chave, nome: nome, pagina: paginaDaFicha },
+      notas: ["Perfil “como aliado”: são os benefícios para quem o acompanha, sem estatísticas de combate. A ficha de ameaça é outra entrada."].concat(notas || []),
+      habilidades: habilidades,
+      acoes: [],
+    };
+  }
 
   var CRIATURAS = [
     /* ---------------- OPRPG · Criaturas de Sangue (p. 182–203) ---------------- */
@@ -3152,6 +3179,693 @@
       ],
       acoes: [],
     },
+
+    /* ---------------- AS2 · Arquivos Secretos 2 (v1.0) ---------------- */
+
+    /* Ameaças do Hexatombe (p. 26–32). O suplemento também cita o
+       Quibungo (SAH p. 142) e os zumbis de Sangue (OPRPG p. 202–203),
+       que já estão no catálogo. */
+    {
+      id: "as2.criatura.arara-vermelha", livro: AS2, pagina: 26,
+      nome: "Arara-vermelha", natureza: "animal", tipo: "Animal", tamanho: "Pequeno", categoria: "Ameaças do Hexatombe",
+      elementos: [], vd: 10,
+      descricao: "A grande arara de plumagem vermelha, amarela e azul da região do Hexatombe — ainda sem a corrupção do Sangue.",
+      percepcao: "2d20+5", iniciativa: "2d20+5",
+      defesa: 12, fortitude: "1d20", reflexos: "2d20+5", vontade: "2d20",
+      pv: 8, machucado: 4,
+      atributos: [2, 1, 0, 2, 1],
+      deslocamento: [[3, 2], [9, 6, "voo"]],
+      habilidades: [
+        hab("E do Nada", "Na primeira rodada de combate, quem age depois dela na iniciativa fica desprevenido contra ela."),
+      ],
+      acoes: [
+        agredir([
+          at("Bicada", "corpo a corpo", 1, "2d20+5", "1d6+2 perfuração"),
+          at("Arranhão", "corpo a corpo", 2, "2d20+5", "1d4+2 corte"),
+        ]),
+      ],
+    },
+
+    {
+      id: "as2.criatura.arara-devorada", livro: AS2, pagina: 27,
+      nome: "Arara-devorada", natureza: "paranormal", tipo: "Criatura", tamanho: "Médio", categoria: "Ameaças do Hexatombe",
+      elementos: [SA], vd: 80,
+      descricao: "A arara-vermelha tomada pelo Sangue: maior, com garras nas asas, presas no bico e ossos rompendo a pele.",
+      presenca: { dt: 20, dano: "3d8", imune: "NEX 40%" },
+      percepcao: "2d20+5", iniciativa: "3d20+10",
+      defesa: 21, fortitude: "2d20+5", reflexos: "3d20+10", vontade: "2d20",
+      pv: 120, machucado: 60,
+      resistencias: [[5, "balístico", "impacto", "perfuração"], [10, "Sangue"]],
+      vulnerabilidades: ["Morte"],
+      atributos: [3, 2, 0, 2, 2],
+      deslocamento: [[9, 6], [12, 8, "voo"]],
+      habilidades: [
+        hab("E do Nada", "Na primeira rodada de combate, quem age depois dela na iniciativa fica desprevenido contra ela."),
+      ],
+      acoes: [
+        agredir([
+          at("Bicada", "corpo a corpo", 1, "3d20+5", ["1d8+5 perfuração", "1d8 Sangue"]),
+          at("Garras", "corpo a corpo", 2, "3d20+5", "1d6+5 corte"),
+        ]),
+        acao("livre", "Agarrão", "Acertando um ataque de garras, usa os braços extras para agarrar a vítima.",
+          { rolagens: [teste("Agarrar", "3d20+7")] }),
+        acao("completa", "Penas Afiadas", "Grita e dispara as penas em todos os seres num raio de 9 m (Reflexos DT 20 evita). Cada atingido rola 1d6 para a cor: 1–2 vermelha (sangrando); 3–4 azul (lento até recuperar qualquer quantidade de PV); 5–6 amarela (fraco até o fim da cena ou até um efeito que remova veneno).",
+          { rolagens: [soma("Cor da pena (1d6)", "1d6")], resistencia: "Reflexos DT 20 evita" }),
+      ],
+    },
+
+    {
+      id: "as2.criatura.arara-infernal", livro: AS2, pagina: 28,
+      nome: "Arara-infernal", natureza: "paranormal", tipo: "Criatura", tamanho: "Grande", categoria: "Ameaças do Hexatombe",
+      elementos: [SA], vd: 120,
+      descricao: "O estágio final da arara corrompida: quatro garras, braços extras e uma bocarra no abdome que mastiga e engole.",
+      presenca: { dt: 23, dano: "4d6", imune: "NEX 50%" },
+      percepcao: "2d20+5", iniciativa: "4d20+10",
+      defesa: 26, fortitude: "3d20+10", reflexos: "4d20+10", vontade: "2d20+5",
+      pv: 220, machucado: 110,
+      resistencias: [[10, "balístico", "impacto", "perfuração"], [20, "Sangue"]],
+      vulnerabilidades: ["Morte"],
+      atributos: [4, 2, 0, 2, 3],
+      deslocamento: [[12, 8], [15, 10, "voo"]],
+      habilidades: [
+        hab("E do Nada", "Na primeira rodada de combate, quem age depois dela na iniciativa fica desprevenido contra ela."),
+      ],
+      acoes: [
+        agredir([
+          at("Bicada", "corpo a corpo", 1, "4d20+10", ["1d10+10 perfuração", "1d10 Sangue"]),
+          at("Garras", "corpo a corpo", 4, "4d20+10", "1d8+10 corte"),
+        ]),
+        acao("livre", "Agarrão", "Acertando um ataque de garras, usa os braços extras para agarrar a vítima.",
+          { rolagens: [teste("Agarrar", "4d20+12")] }),
+        acao("movimento", "Mastigar", "Mastiga um ser que está agarrando: 6d10 de dano de Sangue (Fortitude DT 23 reduz à metade). Quem fica morrendo por isso é engolido, e a arara recupera 2d10 PV.",
+          { rolagens: [dano("Mastigar", "6d10 Sangue"), soma("PV recuperados", "2d10")], resistencia: "Fortitude DT 23 reduz à metade" }),
+        acao("completa", "Penas Afiadas", "Grita e dispara as penas em todos os seres num raio de 9 m (Reflexos DT 23 evita). Cada atingido perde 2d6 PV e rola 1d6 para a cor: 1–2 vermelha (sangrando); 3–4 azul (lento até recuperar qualquer quantidade de PV); 5–6 amarela (fraco até o fim da cena ou até um efeito que remova veneno).",
+          { rolagens: [soma("Cor da pena (1d6)", "1d6"), soma("PV perdidos", "2d6")], resistencia: "Reflexos DT 23 evita" }),
+      ],
+    },
+
+    {
+      id: "as2.criatura.jaguatirica", livro: AS2, pagina: 30,
+      nome: "Jaguatirica", natureza: "animal", tipo: "Animal", tamanho: "Pequeno", categoria: "Ameaças do Hexatombe",
+      elementos: [], vd: 10,
+      descricao: "Felino esguio do tamanho de um gato doméstico, de pelagem manchada e olhos âmbar — antes da corrupção do Sangue.",
+      percepcao: "1d20+5", iniciativa: "2d20+5",
+      defesa: 13, fortitude: "1d20", reflexos: "2d20+5", vontade: "1d20",
+      pv: 16, machucado: 8,
+      atributos: [2, 1, 0, 1, 1],
+      deslocamento: [[12, 8]],
+      acoes: [
+        agredir([
+          at("Mordida", "corpo a corpo", 1, "2d20+5", "1d6+2 corte"),
+          at("Arranhar", "corpo a corpo", 2, "2d20+5", "1d4+2 corte"),
+        ]),
+        acao("movimento", "Pulo do Gato", "Salta na direção de um alvo em alcance curto; agredindo com mordida ou arranhar no mesmo turno, causa +1d4 de dano. Contra alvo desprevenido, pode ser ação livre uma vez por rodada.",
+          { rolagens: [dano("Pulo (dano adicional)", "1d4")] }),
+      ],
+    },
+
+    {
+      id: "as2.criatura.felino-devorado", livro: AS2, pagina: 31,
+      nome: "Felino-devorado", natureza: "paranormal", tipo: "Criatura", tamanho: "Médio", categoria: "Ameaças do Hexatombe",
+      elementos: [SA], vd: 80,
+      descricao: "A jaguatirica tomada pelo Sangue: músculos inchados de veias expostas, cauda com um osso pontiagudo e duas bocas dentadas no lugar da face.",
+      presenca: { dt: 20, dano: "3d8", imune: "NEX 40%" },
+      percepcao: "2d20+10", iniciativa: "3d20+10",
+      defesa: 23, fortitude: "2d20+5", reflexos: "3d20+10", vontade: "2d20",
+      pv: 140, machucado: 70,
+      resistencias: [[5, "balístico", "impacto", "perfuração"], [10, "Sangue"]],
+      vulnerabilidades: ["Morte"],
+      atributos: [3, 2, 0, 2, 2],
+      deslocamento: [[12, 8]],
+      habilidades: [
+        hab("Camuflagem Perversa", "Está sempre com camuflagem leve, e testes para percebê-lo ou seguir seus rastros sofrem −1d20. Uma vez por cena, quando sofre um acerto crítico, ignora os efeitos do crítico e o trata como acerto comum.",
+          { limite: [1, "cena"] }),
+      ],
+      acoes: [
+        agredir([
+          at("Mordidas", "corpo a corpo", 2, "3d20+10", ["1d8+5 corte", "1d8 Sangue"]),
+          at("Garras", "corpo a corpo", 2, "3d20+10", "1d6+5 corte"),
+        ]),
+        acao("movimento", "Pulo do Felino", "Salta na direção de um alvo em alcance curto; agredindo com mordidas ou garras no mesmo turno, causa +1d8 de dano. Contra alvo desprevenido, pode ser ação livre uma vez por rodada.",
+          { rolagens: [dano("Pulo (dano adicional)", "1d8")] }),
+        acao("padrao", "Chicotada Perfurante", "A cauda perfura e puxa um ser em alcance curto: 4d8 de dano de Sangue, caído e movido para um espaço livre em alcance curto à escolha do felino (Reflexos DT 20 reduz o dano à metade e evita condição e movimento).",
+          { rolagens: [dano("Chicotada", "4d8 Sangue")], resistencia: "Reflexos DT 20 reduz à metade e evita condição e movimento" }),
+      ],
+    },
+
+    {
+      id: "as2.criatura.felino-infernal", livro: AS2, pagina: 32,
+      nome: "Felino-infernal", natureza: "paranormal", tipo: "Criatura", tamanho: "Grande", categoria: "Ameaças do Hexatombe",
+      elementos: [SA], vd: 120,
+      descricao: "A forma mais terrível do felino-devorado: maior, de cauda mais longa, com as bocas abertas como uma flor de ossos.",
+      presenca: { dt: 23, dano: "4d6", imune: "NEX 50%" },
+      percepcao: "2d20+10", iniciativa: "4d20+10",
+      defesa: 28, fortitude: "3d20+10", reflexos: "4d20+10", vontade: "2d20+5",
+      pv: 230, machucado: 125,
+      resistencias: [[10, "balístico", "impacto", "perfuração"], [20, "Sangue"]],
+      vulnerabilidades: ["Morte"],
+      atributos: [4, 2, 0, 2, 3],
+      deslocamento: [[12, 8]],
+      notas: [
+        "O quadro de estatísticas saiu com o título “Arara-infernal”, um erro de diagramação: os números são do felino-infernal.",
+        "Machucado impresso como 125 com 230 PV (não é a metade); mantido como publicado.",
+        "Boca da Loucura cita o “felino-infernal supremo”; é o próprio felino-infernal.",
+      ],
+      habilidades: [
+        hab("Camuflagem Perversa", "Está sempre com camuflagem leve, e testes para percebê-lo ou seguir seus rastros sofrem −2d20. Uma vez por cena, quando sofre um acerto crítico, ignora os efeitos do crítico e o trata como acerto comum.",
+          { limite: [1, "cena"] }),
+      ],
+      acoes: [
+        agredir([
+          at("Mordidas", "corpo a corpo", 2, "4d20+10", ["2d8+5 corte", "2d8 Sangue"]),
+          at("Garras", "corpo a corpo", 2, "4d20+10", "2d6+5 corte"),
+        ]),
+        acao("movimento", "Pulo do Felino", "Salta na direção de um alvo em alcance curto; agredindo com mordidas ou garras no mesmo turno, causa +2d8 de dano. Contra alvo desprevenido, pode ser ação livre uma vez por rodada.",
+          { rolagens: [dano("Pulo (dano adicional)", "2d8")] }),
+        acao("padrao", "Boca da Loucura", "Tenta envolver a cabeça de um ser adjacente (Reflexos DT 23). Falhando, o alvo fica agarrado e sofre 4d6 de dano de Sangue e 4d6 de dano mental — e de novo no início de cada turno do felino enquanto continuar agarrado. Soltar-se: uma ação e Acrobacia, Atletismo ou Luta DT 23. Enquanto agarra, o felino não usa as mordidas.",
+          { rolagens: [dano("Boca da Loucura", ["4d6 Sangue", "4d6 mental"])], resistencia: "Reflexos DT 23 evita", marcador: "Agarrando com a boca" }),
+        acao("padrao", "Chicotada Perfurante", "A cauda perfura e puxa um ser em alcance curto: 6d8 de dano de Sangue, caído, sangrando e movido para um espaço livre em alcance curto à escolha do felino (Reflexos DT 23 reduz o dano à metade e evita condições e movimento).",
+          { rolagens: [dano("Chicotada", "6d8 Sangue")], resistencia: "Reflexos DT 23 reduz à metade e evita condições e movimento" }),
+      ],
+    },
+
+    /* Os Mascarados (p. 34–67): os corpos dos assassinos em série, cada
+       um com a forma tomada pela intenção assassina. A forma é a MESMA
+       ocorrência (o seletor de forma do painel), nunca outra criatura. */
+    {
+      id: "as2.criatura.jonas-aguiar", livro: AS2, pagina: 39,
+      nome: "Jonas Aguiar", natureza: "humana", tipo: "Pessoa", tamanho: "Médio", categoria: "Mascarados",
+      elementos: [], vd: 80,
+      descricao: "Patrulheiro criado por um casal de assassinos que o ensinou a separar “dignos” de “indignos”: o serial killer chamado Mutilador Noturno.",
+      percepcao: "1d20+5", iniciativa: "2d20+5",
+      defesa: 21, fortitude: "2d20+5", reflexos: "2d20+5", vontade: "1d20+5",
+      pv: 120, machucado: 60,
+      atributos: [2, 3, 1, 2, 2],
+      pericias: [["Adestramento", "2d20+5"], ["Atletismo", "3d20+10"], ["Crime", "2d20+5"], ["Enganação", "2d20+5"], ["Furtividade", "2d20+5"],
+        ["Investigação", "1d20+5"], ["Pilotagem", "2d20+5"], ["Sobrevivência", "1d20+5"]],
+      deslocamento: [[9, 6]],
+      estados: [{ id: "ferimentos", nome: "Ferimentos de 5+ de dano", maximo: 3 }, { id: "adormecida", nome: "Intenção adormecida (até dormir)", maximo: 1 }],
+      notas: [
+        "Biografia nas p. 36–38; a forma Mutilador Noturno está na p. 40 e o perfil como aliado na p. 41.",
+        "As fichas do suplemento são as de mesa: as da transmissão tinham mais dano e menos PV (p. 38).",
+        "O poder de Intenção (Filho da Dor, p. 95) usa outra reação para desligar a RD; a ficha não fala disso.",
+      ],
+      acoes: [
+        agredir([at("Machado", "corpo a corpo", 2, "3d20+10", ["1d8+10 corte", "1d8 Sangue"], { critico: "x3", multiplicaTudo: true, nota: "o dano de Sangue também multiplica no crítico; o alvo fica sangrando" })]),
+        agredir([at("Revólver", "curto", 2, "2d20+10", "2d6+10 balístico", { critico: "19/x3" })], { nome: "Agredir (revólver)" }),
+        acao("reacao", "Revidar", "Uma vez por rodada, quando um ataque contra ele erra, faz um ataque corpo a corpo contra o atacante.", { limite: [1, "rodada"] }),
+        acao("livre", "Golpe Cruel", "Uma vez por rodada, ao atacar, recebe +5 no teste de ataque e na rolagem de dano.", { limite: [1, "rodada"] }),
+        acao("padrao", "Predador de Sangue", "Memoriza o odor de uma vítima (precisa de uma fonte, como um retalho da roupa): +1d20 para rastreá-la, percebê-la e atacá-la. Uma vítima por vez.", { marcador: "Vítima memorizada" }),
+        acao("reacao", "Filho da Dor (poder de Intenção)", "Depois de ser ferido três vezes (cada ferimento com pelo menos 5 de dano), ativa resistência a dano 25; enquanto ela durar, perde 5 PV no início de cada turno.",
+          { requer: ["ferimentos", 3], marcador: "RD 25 ativa" }),
+        acao("padrao", "Intenção Assassina", "Desperta a intenção assassina e vira o Mutilador Noturno — use o seletor de forma desta ocorrência."),
+      ],
+      formas: [{
+        id: "mutilador-noturno", nome: "Mutilador Noturno", pagina: 40, vd: 140,
+        percepcao: "1d20+10", iniciativa: "2d20+10", defesa: 29, fortitude: "2d20+10", reflexos: "2d20+10", vontade: "1d20+10",
+        pv: 260, machucado: 130,
+        ativacao: "Intenção Assassina (ação padrão). Sem limite de duração; se não matar uma pessoa até o fim da cena, a intenção adormece e só volta depois de dormir (p. 41).",
+        pericias: [["Adestramento", "2d20+10"], ["Atletismo", "3d20+15"], ["Crime", "2d20+10"], ["Enganação", "2d20+10"], ["Furtividade", "2d20+10"],
+          ["Investigação", "1d20+10"], ["Pilotagem", "2d20+10"], ["Sobrevivência", "1d20+10"]],
+        habilidades: [hab("Predador Perfeito", "Faz uma ação padrão adicional por rodada.")],
+        acoes: [
+          agredir([at("Machado", "corpo a corpo", 2, "3d20+15", ["1d8+20 corte", "2d8 Sangue"], { critico: "x3", multiplicaTudo: true, nota: "o dano de Sangue também multiplica no crítico; o alvo fica sangrando" })]),
+          agredir([at("Revólver", "curto", 2, "2d20+15", "3d6+20 balístico", { critico: "19/x3" })], { nome: "Agredir (revólver)" }),
+          acao("reacao", "Revidar Violento", "Duas vezes por rodada, quando um ataque corpo a corpo contra ele erra, faz um ataque corpo a corpo contra o atacante.", { limite: [2, "rodada"] }),
+          acao("livre", "Golpe Mutilador", "Uma vez por rodada, ao atacar, recebe +5 no teste de ataque e +10 na rolagem de dano.", { limite: [1, "rodada"] }),
+          acao("padrao", "Predador Sanguinário", "Memoriza o odor de uma vítima (precisa de uma fonte): +1d20 para rastreá-la, percebê-la e atacá-la. Uma vítima por vez.", { marcador: "Vítima memorizada" }),
+          acao("reacao", "Filho da Dor (poder de Intenção)", "Depois de ser ferido três vezes (cada ferimento com pelo menos 5 de dano), ativa resistência a dano 25; enquanto ela durar, perde 5 PV no início de cada turno.",
+            { requer: ["ferimentos", 3], marcador: "RD 25 ativa" }),
+          acao("padrao", "Intenção Assassina", "Adormece a intenção: volta a ser Jonas (seletor de forma) e não a desperta de novo até dormir."),
+        ],
+      }],
+    },
+
+    {
+      id: "as2.criatura.dalmo-magno", livro: AS2, pagina: 45,
+      nome: "Dalmo Magno", natureza: "humana", tipo: "Pessoa", tamanho: "Médio", categoria: "Mascarados",
+      elementos: [], vd: 80,
+      descricao: "Motorista de ônibus que virou lutador de arena clandestina para pagar o tratamento da filha — e, na jaula, o Colosso.",
+      percepcao: "1d20+5", iniciativa: "1d20+5",
+      defesa: 23, fortitude: "3d20+10", reflexos: "1d20+5", vontade: "1d20+5",
+      pv: 140, machucado: 70,
+      atributos: [1, 4, 1, 1, 3],
+      pericias: [["Atletismo", "4d20+10"], ["Intimidação", "1d20+10"], ["Pilotagem", "1d20+10"]],
+      deslocamento: [[9, 6]],
+      estados: [{ id: "adormecida", nome: "Intenção adormecida (até dormir)", maximo: 1 }],
+      notas: [
+        "Biografia nas p. 42–44; a forma Colosso está na p. 46 e o perfil como aliado na p. 47.",
+        "A ficha de Dalmo não traz poder de Intenção.",
+      ],
+      habilidades: [
+        hab("Lutador de Arena", "+5 em testes de manobras de combate, inclusive para resistir a elas."),
+      ],
+      acoes: [
+        agredir([at("Pancada", "corpo a corpo", 2, "4d20+10", ["2d6+10 impacto", "1d10 Energia"])]),
+        acao("reacao", "Corpo Fechado", "Uma vez por rodada, ao sofrer dano, levanta a guarda: resistência a dano 10 contra esse dano.", { limite: [1, "rodada"] }),
+        acao("reacao", "Pressão Atmosférica", "Uma vez por rodada, ao acertar um ataque corpo a corpo num alvo agarrado: +1d10 de dano de Energia e atordoado por uma rodada (Fortitude DT 20 evita a condição). Cada ser só pode ser atordoado assim uma vez por cena.",
+          { limite: [1, "rodada"], rolagens: [dano("Pressão (adicional)", "1d10 Energia")], resistencia: "Fortitude DT 20 evita atordoado" }),
+        acao("livre", "Golpes de Arena", "Uma vez por rodada, ao acertar um ataque corpo a corpo, faz uma pancada adicional ou uma manobra de combate contra o mesmo alvo.", { limite: [1, "rodada"] }),
+        acao("padrao", "Intenção Assassina", "Desperta a intenção assassina e vira o Colosso — use o seletor de forma desta ocorrência."),
+      ],
+      formas: [{
+        id: "colosso", nome: "Colosso", pagina: 46, vd: 140,
+        percepcao: "1d20+10", iniciativa: "1d20+10", defesa: 31, fortitude: "3d20+15", reflexos: "1d20+10", vontade: "1d20+10",
+        pv: 280, machucado: 140,
+        ativacao: "Intenção Assassina (ação padrão). Sem limite de duração; se não matar uma pessoa até o fim da cena, a intenção adormece e só volta depois de dormir (p. 47).",
+        pericias: [["Atletismo", "4d20+15"], ["Intimidação", "1d20+15"], ["Pilotagem", "1d20+15"]],
+        notas: ["A Pancada do Colosso não tem a parte de Energia da ficha de Dalmo; mantido como publicado."],
+        habilidades: [hab("Campeão de Arena", "+10 em testes de manobras de combate, inclusive para resistir a elas.")],
+        acoes: [
+          agredir([at("Pancada", "corpo a corpo", 2, "4d20+15", "4d6+20 impacto")]),
+          acao("reacao", "Campo de Pressão", "Uma vez por rodada, ao sofrer dano, levanta a guarda: resistência a dano 15 contra esse dano.", { limite: [1, "rodada"] }),
+          acao("reacao", "Implosão Atmosférica", "Uma vez por rodada, ao acertar um ataque corpo a corpo num alvo agarrado: +1d10 de dano de Energia; o alvo fica atordoado por uma rodada (Fortitude DT 24 evita), caído e sangrando. Cada ser só pode ser atordoado assim uma vez por cena.",
+            { limite: [1, "rodada"], rolagens: [dano("Implosão (adicional)", "1d10 Energia")], resistencia: "Fortitude DT 24 evita atordoado" }),
+          acao("livre", "Golpes de Jaula", "Uma vez por rodada, ao acertar um ataque corpo a corpo, faz uma pancada adicional ou uma manobra de combate contra o mesmo alvo; acertando essa segunda, causa também 1d10 de dano de impacto.",
+            { limite: [1, "rodada"], rolagens: [dano("Golpe de jaula (adicional)", "1d10 impacto")] }),
+          acao("padrao", "Intenção Assassina", "Adormece a intenção: volta a ser Dalmo (seletor de forma) e não a desperta de novo até dormir."),
+        ],
+      }],
+    },
+
+    {
+      id: "as2.criatura.jae-yoon", livro: AS2, pagina: 51,
+      nome: "Park Jae-Yoon", natureza: "humana", tipo: "Pessoa", tamanho: "Médio", categoria: "Mascarados",
+      elementos: [], vd: 80,
+      descricao: "Filha de um empresário de hotéis, criada entre regras e silêncios; vive como influenciadora — e, nas sombras, como X, a assassina que marca as vítimas com um “X”.",
+      percepcao: "1d20+5", iniciativa: "3d20+10",
+      defesa: 22, fortitude: "1d20+5", reflexos: "3d20+10", vontade: "1d20+5",
+      pv: 100, machucado: 50,
+      atributos: [3, 2, 3, 1, 1],
+      pericias: [["Acrobacia", "3d20+5"], ["Atletismo", "2d20+5"], ["Crime", "3d20+10"], ["Enganação", "1d20+10"], ["Furtividade", "3d20+10"],
+        ["Investigação", "3d20+10"], ["Tecnologia", "3d20+5"]],
+      deslocamento: [[9, 6]],
+      estados: [{ id: "areas", nome: "Áreas “X” marcadas", maximo: 3 }, { id: "adormecida", nome: "Intenção adormecida (até dormir)", maximo: 1 }],
+      notas: [
+        "Biografia nas p. 48–50; a forma X está na p. 52 e o perfil como aliada na p. 53.",
+        "Na ficha, o poder de Intenção (O Sabor do Silêncio) é uma reação; o texto do poder (p. 95) pede uma ação padrão.",
+      ],
+      acoes: [
+        agredir([at("Punhal", "corpo a corpo", 2, "3d20+10", ["2d4+10 perfuração", "1d6 Conhecimento"], { critico: "19/x2" })]),
+        acao("reacao", "Esquiva Tática", "Uma vez por rodada, ao sofrer um ataque, esquiva: +10 na Defesa contra ele.", { limite: [1, "rodada"] }),
+        acao("reacao", "Perito", "Uma vez por rodada, num teste de perícia treinada, soma +1d8.", { limite: [1, "rodada"], rolagens: [soma("Perito (+1d8)", "1d8")] }),
+        acao("livre", "Assassinato Furtivo", "Uma vez por rodada, ao atingir alvo desprevenido ou que esteja flanqueando, causa +3d8 de dano.", { limite: [1, "rodada"], rolagens: [dano("Assassinato furtivo", "3d8")] }),
+        acao("livre", "Punhal X", "Uma vez por rodada, ao atacar, deixa o alvo desprevenido; causando dano, ele fica cego por 1 rodada. Cada alvo só fica cego assim uma vez por cena.", { limite: [1, "rodada"] }),
+        acao("completa", "Zona dos Sussurros", "Marca uma área do tamanho de um cômodo com vários “X” (áreas maiores pedem mais usos): ali recebe +5 nos ataques e não sofre penalidade em Furtividade depois de atacar ou chamar atenção. No máximo três áreas; a quarta apaga uma das anteriores."),
+        acao("reacao", "O Sabor do Silêncio (poder de Intenção)", "Prova o sangue de uma pessoa adjacente machucada. Até o fim da cena, seus ataques causam +1d8 de dano e têm +2 na margem de ameaça; num crítico, corta a boca do alvo em “X”: ele não se comunica nem usa poderes ou rituais por 1d4 rodadas.",
+          { marcador: "Sangue provado (até o fim da cena)", rolagens: [dano("Dano extra", "1d8"), soma("Rodadas silenciado", "1d4")] }),
+        acao("padrao", "Intenção Assassina", "Desperta a intenção assassina e vira X — use o seletor de forma desta ocorrência."),
+      ],
+      formas: [{
+        id: "x", nome: "X", pagina: 52, vd: 140,
+        percepcao: "1d20+10", iniciativa: "3d20+15", defesa: 30, fortitude: "1d20+10", reflexos: "3d20+15", vontade: "1d20+10",
+        pv: 200, machucado: 100,
+        ativacao: "Intenção Assassina (ação padrão). Sem limite de duração; se não matar uma pessoa até o fim da cena, a intenção adormece e só volta depois de dormir (p. 53).",
+        pericias: [["Acrobacia", "3d20+10"], ["Atletismo", "2d20+10"], ["Crime", "3d20+15"], ["Enganação", "1d20+15"], ["Furtividade", "3d20+15"],
+          ["Investigação", "3d20+15"], ["Tecnologia", "3d20+10"]],
+        acoes: [
+          agredir([at("Punhal", "corpo a corpo", 2, "3d20+15", ["4d4+20 perfuração", "2d6 Conhecimento"], { critico: "19/x2" })]),
+          acao("reacao", "Analítico", "Uma vez por rodada, num teste de perícia treinada, soma +1d12.", { limite: [1, "rodada"], rolagens: [soma("Analítico (+1d12)", "1d12")] }),
+          acao("reacao", "Esquiva Sombria", "Duas vezes por rodada, ao sofrer um ataque, esquiva: +10 na Defesa contra ele.", { limite: [2, "rodada"] }),
+          acao("livre", "Assassinato Cruel", "Uma vez por rodada, ao atingir alvo desprevenido ou que esteja flanqueando, causa +6d8 de dano.", { limite: [1, "rodada"], rolagens: [dano("Assassinato cruel", "6d8")] }),
+          acao("livre", "Punhal X", "Uma vez por rodada, ao atacar, deixa o alvo desprevenido; causando dano, ele fica cego por 2 rodadas. Cada alvo só fica cego assim uma vez por cena.", { limite: [1, "rodada"] }),
+          acao("completa", "Zona das Sombras", "Como Zona dos Sussurros (+5 nos ataques, sem penalidade em Furtividade depois de atacar, no máximo três áreas). Além disso, dentro da área, ao usar Assassinato Cruel pode rolar de novo os resultados 7 ou 8 dos dados e somar ao dano."),
+          acao("reacao", "O Sabor do Silêncio (poder de Intenção)", "Prova o sangue de uma pessoa adjacente machucada. Até o fim da cena, seus ataques causam +1d8 de dano e têm +2 na margem de ameaça; num crítico, corta a boca do alvo em “X”: ele não se comunica nem usa poderes ou rituais por 1d4 rodadas.",
+            { marcador: "Sangue provado (até o fim da cena)", rolagens: [dano("Dano extra", "1d8"), soma("Rodadas silenciado", "1d4")] }),
+          acao("padrao", "Intenção Assassina", "Adormece a intenção: volta a ser Jae (seletor de forma) e não a desperta de novo até dormir."),
+        ],
+      }],
+    },
+
+    {
+      id: "as2.criatura.kemi", livro: AS2, pagina: 57,
+      nome: "Kemi", natureza: "humana", tipo: "Pessoa", tamanho: "Médio", categoria: "Mascarados",
+      elementos: [], vd: 80,
+      descricao: "Atiradora de elite de precisão impossível — a assassina chamada Fantasma.",
+      percepcao: "2d20+5", iniciativa: "3d20+10",
+      defesa: 23, fortitude: "1d20+5", reflexos: "3d20+10", vontade: "2d20+5",
+      pv: 90, machucado: 45,
+      atributos: [3, 1, 3, 2, 1],
+      pericias: [["Acrobacia", "3d20+10"], ["Atletismo", "1d20+5"], ["Crime", "3d20+10"], ["Furtividade", "3d20+10"], ["Investigação", "3d20+10"],
+        ["Medicina", "3d20+5"], ["Ocultismo", "3d20+5"], ["Sobrevivência", "2d20+5"]],
+      deslocamento: [[9, 6]],
+      estados: [{ id: "adormecida", nome: "Intenção adormecida (até dormir)", maximo: 1 }],
+      notas: [
+        "A forma Fantasma está na p. 58 e o perfil como aliada na p. 59.",
+        "A ficha de NPC limita Sede de Vingança a uma vez por rodada; o texto do poder (p. 95) não.",
+      ],
+      habilidades: [
+        hab("Sniper da Morte", "Quem cai a 0 PV pelo dano do fuzil dela morre se começar 2 turnos morrendo, em vez de 3."),
+      ],
+      acoes: [
+        agredir([at("Facada", "corpo a corpo", 2, "3d20+10", "2d4+10 perfuração", { critico: "19/x2" })]),
+        agredir([at("Fuzil de Precisão", "longo", 1, "3d20+10", ["2d10+20 balístico", "2d4 Morte"], { critico: "17/x3" })], { nome: "Agredir (fuzil)" }),
+        acao("reacao", "Esquiva Tática", "Uma vez por rodada, ao sofrer um ataque, esquiva: +10 na Defesa contra ele.", { limite: [1, "rodada"] }),
+        acao("reacao", "Perito", "Uma vez por rodada, num teste de perícia treinada, soma +1d8.", { limite: [1, "rodada"], rolagens: [soma("Perito (+1d8)", "1d8")] }),
+        acao("livre", "Disparo da Morte", "Uma vez por rodada, ao atacar com arma de fogo, +2 na margem de ameaça.", { limite: [1, "rodada"] }),
+        acao("reacao", "Sede de Vingança (poder de Intenção)", "Uma vez por rodada, ao ouvir o grito de morte de alguém à vista que tentou proteger, ataca quem deixou o aliado morrendo. Também serve para atacar o inimigo que a deixou morrendo.", { limite: [1, "rodada"] }),
+        acao("padrao", "Intenção Assassina", "Desperta a intenção assassina e vira Fantasma — use o seletor de forma desta ocorrência."),
+      ],
+      formas: [{
+        id: "fantasma", nome: "Fantasma", pagina: 58, vd: 140,
+        percepcao: "2d20+10", iniciativa: "3d20+15", defesa: 30, fortitude: "1d20+10", reflexos: "3d20+15", vontade: "2d20+10",
+        pv: 180, machucado: 90,
+        ativacao: "Intenção Assassina (ação padrão). Sem limite de duração; se não matar uma pessoa até o fim da cena, a intenção adormece e só volta depois de dormir (p. 59).",
+        pericias: [["Acrobacia", "3d20+15"], ["Atletismo", "1d20+10"], ["Crime", "3d20+15"], ["Furtividade", "3d20+15"], ["Investigação", "3d20+15"],
+          ["Medicina", "3d20+10"], ["Ocultismo", "3d20+10"], ["Sobrevivência", "2d20+10"]],
+        habilidades: [hab("Sniper da Morte", "Quem cai a 0 PV pelo dano do fuzil dela morre se começar 2 turnos morrendo, em vez de 3.")],
+        acoes: [
+          agredir([at("Facada", "corpo a corpo", 2, "3d20+15", "4d4+20 perfuração", { critico: "19/x2" })]),
+          agredir([at("Fuzil de Precisão", "longo", 1, "3d20+15", ["4d10+40 balístico", "4d4 Morte"], { critico: "17/x3" })], { nome: "Agredir (fuzil)" }),
+          acao("reacao", "Esquiva Fantasma", "Duas vezes por rodada, ao sofrer um ataque, esquiva: +10 na Defesa contra ele.", { limite: [2, "rodada"] }),
+          acao("reacao", "Analítica", "Uma vez por rodada, num teste de perícia treinada, soma +1d12.", { limite: [1, "rodada"], rolagens: [soma("Analítica (+1d12)", "1d12")] }),
+          acao("livre", "Disparo Espiral", "Uma vez por rodada, ao atacar com arma de fogo, +2 na margem de ameaça; o disparo curva até o alvo e ignora cobertura e 10 pontos de resistência a dano.", { limite: [1, "rodada"] }),
+          acao("reacao", "Sede de Vingança (poder de Intenção)", "Uma vez por rodada, ao ouvir o grito de morte de alguém à vista que tentou proteger, ataca quem deixou o aliado morrendo. Também serve para atacar o inimigo que a deixou morrendo.", { limite: [1, "rodada"] }),
+          acao("padrao", "Intenção Assassina", "Adormece a intenção: volta a ser Kemi (seletor de forma) e não a desperta de novo até dormir."),
+        ],
+      }],
+    },
+
+    {
+      id: "as2.criatura.labirinto", livro: AS2, pagina: 62,
+      nome: "Labirinto", natureza: "humana", tipo: "Pessoa", tamanho: "Médio", categoria: "Mascarados",
+      elementos: [], vd: 80,
+      descricao: "Ocultista de capacidades que nem ele compreende, sempre com a antena parabólica que guarda um ritual pronto.",
+      percepcao: "3d20+5", iniciativa: "1d20+5",
+      defesa: 20, fortitude: "1d20+5", reflexos: "1d20+5", vontade: "3d20+10",
+      pv: 120, machucado: 60,
+      atributos: [1, 1, 3, 3, 2],
+      pericias: [["Ciências", "3d20+10"], ["Intuição", "3d20+5"], ["Investigação", "3d20+10"], ["Medicina", "3d20+10"], ["Ocultismo", "3d20+15"],
+        ["Sobrevivência", "3d20+5"], ["Tecnologia", "3d20+10"]],
+      deslocamento: [[9, 6]],
+      estados: [{ id: "simbolos", nome: "Símbolos de Morte ativos", maximo: 3 }, { id: "adormecida", nome: "Intenção adormecida (até dormir)", maximo: 1 }],
+      notas: [
+        "Ficha nas p. 62–63; a forma tomada pela intenção assassina está na p. 64 e o perfil como aliado na p. 67.",
+        "Novo Caminho aparece duas vezes: como reação no destaque do poder de Intenção e como ação padrão na lista de ações; a p. 95 diz ação padrão.",
+        "Os quatro rituais da ficha também estão no catálogo de rituais do suplemento; a ficha usa a versão de 8d8 da Rajada Caótica.",
+      ],
+      habilidades: [
+        hab("Antena do Medo", "Pode conjurar um ritual NA antena: ele não faz efeito na hora e fica contido. Com uma ação padrão, liberta o ritual e gera o efeito, sem ações de conjuração nem outro custo. Um ritual por vez.",
+          { marcador: "Ritual contido na antena" }),
+      ],
+      acoes: [
+        agredir([at("Pancada com Antena", "corpo a corpo", 2, "1d20+5", "1d8+10 impacto")]),
+        acao("padrao", "Novo Caminho (poder de Intenção)", "Depois de testemunhar a morte de uma pessoa, absorve as intenções dela (em alcance curto): um ser em alcance curto recupera PV iguais à metade dos PV máximos do cadáver."),
+        acao("padrao", "Ritual: Capturar Momento (Morte 2)", "Marca um local em alcance médio com um símbolo invisível que capta imagens e sons em alcance médio dele; com uma ação padrão, vê e ouve o que o símbolo capta, mesmo longe. No máximo três símbolos; o quarto apaga um dos anteriores."),
+        acao("padrao", "Ritual: Labirinto Mental (Conhecimento 2)", "Prende a mente de uma pessoa em alcance médio: por 1d4 rodadas ela gasta as ações se movendo em direção aleatória. No início de cada turno dela, Vontade DT 20 liberta.",
+          { rolagens: [soma("Rodadas", "1d4")], resistencia: "Vontade DT 20 (a cada turno) liberta" }),
+        acao("padrao", "Ritual: Mapa Sanguíneo (Sangue 2)", "Desenha com gotas de sangue um mapa que mostra, em tempo real, onde estão todos os seres num raio de 1 km. Vontade DT 20 evita aparecer. Dura até o fim da cena.",
+          { resistencia: "Vontade DT 20 evita", marcador: "Mapa ativo" }),
+        acao("padrao", "Ritual: Rajada Caótica (Energia 2)", "Um raio em um ser em alcance médio: 8d8 de dano de Energia (Reflexos DT 20 reduz à metade).",
+          { rolagens: [dano("Rajada", "8d8 Energia")], resistencia: "Reflexos DT 20 reduz à metade" }),
+        acao("padrao", "Intenção Assassina", "Desperta a intenção assassina — use o seletor de forma desta ocorrência."),
+      ],
+      formas: [{
+        id: "intencao-assassina", nome: "Intenção assassina", pagina: 64, vd: 140,
+        percepcao: "3d20+10", iniciativa: "1d20+10", defesa: 28, fortitude: "1d20+10", reflexos: "1d20+10", vontade: "3d20+15",
+        pv: 240, machucado: 120,
+        ativacao: "Intenção Assassina (ação padrão). A forma não ganha outro nome no livro; a ficha da p. 64 também se chama Labirinto. Adormece até dormir quando ele abandona a forma.",
+        pericias: [["Ciências", "3d20+15"], ["Intuição", "3d20+10"], ["Investigação", "3d20+15"], ["Medicina", "3d20+15"], ["Ocultismo", "3d20+20"],
+          ["Sobrevivência", "3d20+10"], ["Tecnologia", "3d20+15"]],
+        notas: [
+          "Os rituais desta forma trazem o círculo impresso como “???”: nenhum círculo foi deduzido do dano.",
+          "A ficha da forma não repete Novo Caminho.",
+        ],
+        habilidades: [
+          hab("Antena do Medo", "Pode conjurar um ritual NA antena: ele não faz efeito na hora e fica contido. Com uma ação padrão, liberta o ritual e gera o efeito, sem ações de conjuração nem outro custo. Um ritual por vez.",
+            { marcador: "Ritual contido na antena" }),
+        ],
+        acoes: [
+          agredir([at("Pancada com Antena", "corpo a corpo", 2, "1d20+10", "2d8+20 impacto")]),
+          acao("padrao", "Ritual: Consumir Momento (Morte, círculo ???)", "Como Capturar Momento (símbolos que captam imagens e sons, no máximo três). Além disso, com uma ação padrão, faz um símbolo explodir: 8d8 de dano de Morte em todos os seres captados por ele no momento (Fortitude DT 25 reduz à metade).",
+            { rolagens: [dano("Explosão", "8d8 Morte")], resistencia: "Fortitude DT 25 reduz à metade" }),
+          acao("padrao", "Ritual: Labirinto Abissal (Conhecimento, círculo ???)", "Prende a mente de uma pessoa em alcance médio: até o fim da cena ela gasta as ações se movendo em direção aleatória. No início de cada turno dela, Vontade DT 25 liberta.",
+            { resistencia: "Vontade DT 25 (a cada turno) liberta" }),
+          acao("padrao", "Ritual: Revelação Sanguínea (Sangue, círculo ???)", "Mapa de sangue de todos os seres num raio de 1 km, em tempo real, com o estado de saúde de cada um (ileso, ferido, machucado ou morrendo). Vontade DT 25 evita aparecer. Até o fim da cena.",
+            { resistencia: "Vontade DT 25 evita", marcador: "Mapa ativo" }),
+          acao("padrao", "Ritual: Tempestade Caótica (Energia, círculo ???)", "Um raio em um ser em alcance médio: 8d10 de dano de Energia (Reflexos DT 25 reduz à metade). Até o fim da cena, nas rodadas seguintes, uma ação padrão dispara outro raio igual.",
+            { rolagens: [dano("Raio", "8d10 Energia")], resistencia: "Reflexos DT 25 reduz à metade", marcador: "Tempestade ativa" }),
+          acao("padrao", "Intenção Assassina", "Adormece a intenção: volta à ficha de partida (seletor de forma) e não a desperta de novo até dormir."),
+        ],
+      }],
+    },
+
+    /* Os agentes da Ordem nos corpos dos Mascarados (p. 68–87): fichas
+       próprias, sem forma transformada. */
+    {
+      id: "as2.criatura.jasper", livro: AS2, pagina: 70,
+      nome: "Jasper", natureza: "humana", tipo: "Pessoa", tamanho: "Médio", categoria: "Agentes no Hexatombe",
+      elementos: [], vd: 80,
+      descricao: "Agente que cresceu como cobaia de um culto e ficou tolerante ao paranormal; luta com duas foices presas ao corpo por correntes.",
+      percepcao: "2d20", iniciativa: "3d20+5",
+      defesa: 23, fortitude: "2d20+5", reflexos: "3d20+10", vontade: "2d20",
+      pv: 90, machucado: 45,
+      resistencias: [[5, "paranormal"]],
+      atributos: [3, 3, 1, 1, 2],
+      pericias: [["Atletismo", "3d20+10"], ["Religião", "1d20+5"]],
+      deslocamento: [[9, 6]],
+      estados: [{ id: "acopladas", nome: "Foices acopladas", maximo: 1 }],
+      notas: ["O perfil como aliado está na p. 71, junto da regra de armas acopláveis."],
+      habilidades: [
+        hab("Conduíte Paranormal", "Resistência a dano paranormal 5 e +5 em testes de resistência contra rituais e habilidades de criaturas paranormais."),
+        hab("Correntes Acopladas", "As foices são presas ao corpo por correntes: não podem ser desarmadas, atacam alvos a até 4,5 m e dão +5 em manobras de combate."),
+      ],
+      acoes: [
+        agredir([at("Foices Acorrentadas", "corpo a corpo (4,5 m)", 2, "3d20+10", "3d4+10 corte", { critico: "19" })]),
+        agredir([at("Foices Acopladas", "corpo a corpo (4,5 m)", 1, "3d20+10", "6d4+10 corte", { critico: "x4" })], { nome: "Agredir (foices acopladas)", requer: ["acopladas", 1] }),
+        acao("livre", "Puxar pra Briga", "Acertando um ataque com as foices, puxa o alvo para um espaço livre adjacente. Se o alvo se afastar dele, sofre −1d20 nos ataques contra outros alvos por 1 rodada."),
+        acao("movimento", "Acoplar Foices", "Junta as duas foices numa única arma: menos versatilidade, mais letalidade. Marque “Foices acopladas” nesta ocorrência."),
+        acao("completa", "Ceifar", "Com as foices acopladas, faz um único teste de ataque contra a Defesa de todos os seres adjacentes que escolher. Os atingidos sofrem +4d4 de dano de corte (multiplicado no crítico) e ficam sangrando.",
+          { requer: ["acopladas", 1], ataques: [at("Foices Acopladas (Ceifar)", "adjacentes", 1, "3d20+10", ["6d4+10 corte", "4d4 corte"], { critico: "x4", multiplicaTudo: true })] }),
+      ],
+    },
+
+    {
+      id: "as2.criatura.lena-viegas", livro: AS2, pagina: 74,
+      nome: "Lena Viegas", natureza: "humana", tipo: "Pessoa", tamanho: "Médio", categoria: "Agentes no Hexatombe",
+      elementos: [], vd: 80,
+      descricao: "Ocultista de conhecimento amplo e técnicas versáteis, de brincos e acessórios impregnados pelo Outro Lado.",
+      percepcao: "3d20", iniciativa: "2d20+5",
+      defesa: 22, fortitude: "1d20", reflexos: "2d20+5", vontade: "3d20+10",
+      pv: 80, machucado: 40,
+      atributos: [2, 1, 3, 3, 1],
+      pericias: [["Diplomacia", "3d20+5"], ["Investigação", "3d20+5"], ["Ocultismo", "3d20+10"]],
+      deslocamento: [[9, 6]],
+      estados: [{ id: "catalisadores", nome: "d6 dos catalisadores gastos na cena", maximo: 3 }],
+      notas: [
+        "O perfil como aliada está na p. 75.",
+        "Eletrocussão e Flagelo de Sangue não trazem a DT ao lado do teste; vale a DT 20 dos rituais da ficha.",
+      ],
+      habilidades: [
+        hab("Catalisadores Sofisticados", "Uma vez por cena recebe 3d6. Ao conjurar um ritual, pode gastar 1d6 (ação livre) para somar +1d6 ao dano, à cura ou à DT dele — só 1d6 por ritual, e só no momento de conjurar. Os d6 que sobram se perdem no fim da cena.",
+          { rolagens: [soma("Catalisador (+1d6)", "1d6")] }),
+        hab("Rituais (DT 20)", "Conjura os rituais abaixo sem pagar PE, até 6 PE por conjuração, com a ação de cada um."),
+      ],
+      acoes: [
+        agredir([at("Pistola", "curto", 2, "2d20+10", "1d12+10 balístico", { critico: "18" })]),
+        acao("padrao", "Ritual: Cicatrização Discente (Morte 1)", "Toca um ser: ele recupera 5d8+5 PV, mas envelhece 1 ano.", { rolagens: [soma("Cura", "5d8+5")] }),
+        acao("padrao", "Ritual: Eletrocussão Discente (Energia 1)", "Raio em linha de 30 m: 6d6 de dano de Energia em todos os seres e objetos livres nela (Fortitude reduz à metade).",
+          { rolagens: [dano("Eletrocussão", "6d6 Energia")], resistencia: "Fortitude DT 20 reduz à metade" }),
+        acao("padrao", "Ritual: Esconder dos Olhos (Conhecimento 2)", "Fica invisível, com o equipamento, por 1 rodada: camuflagem total e +15 em Furtividade; quem não a vê fica desprevenido. Termina se atacar ou usar habilidade hostil.", { marcador: "Invisível" }),
+        acao("padrao", "Ritual: Flagelo de Sangue (Sangue 2)", "Grava uma marca no corpo de uma pessoa tocada junto de uma ordem; até o fim da cena, a cada rodada de desobediência, 10d6 de dano de Sangue e enjoado pela rodada (Fortitude reduz à metade e evita a condição). Passar no teste dois turnos seguidos apaga a marca.",
+          { rolagens: [dano("Flagelo", "10d6 Sangue")], resistencia: "Fortitude DT 20 reduz à metade e evita enjoado" }),
+      ],
+    },
+
+    {
+      id: "as2.criatura.maria", livro: AS2, pagina: 78,
+      nome: "Maria", natureza: "humana", tipo: "Pessoa", tamanho: "Médio", categoria: "Agentes no Hexatombe",
+      elementos: [], vd: 80,
+      descricao: "Profissional de saúde de métodos duvidosos e fé cega em Kian — que, às vezes, de fato a salva.",
+      percepcao: "2d20+5", iniciativa: "3d20+5",
+      defesa: 21, fortitude: "1d20+5", reflexos: "3d20+10", vontade: "2d20+5",
+      pv: 80, machucado: 40,
+      atributos: [3, 1, 3, 2, 1],
+      pericias: [["Enganação", "2d20+10"], ["Medicina", "3d20+5"], ["Ocultismo", "3d20+5"]],
+      deslocamento: [[9, 6]],
+      notas: ["O número da página saiu duplicado (“7878”); é a p. 78. O perfil como aliada está na p. 79."],
+      habilidades: [
+        hab("Estágio Terminal", "Machucada, recebe uma ação de movimento extra até o fim da cena.", { marcador: "Ação extra (machucada)" }),
+        hab("Fim Precoce", "Quando é responsável pela morte de alguém, recebe +1d20 em todos os testes até o fim da cena.", { marcador: "+1d20 até o fim da cena" }),
+        hab("Kian Vai Nos Salvar", "A critério do mestre, diante de um desafio em que a fé em Kian a motive, conjura um único ritual de Conhecimento de até 3º círculo como se o conhecesse (fora do limite de rituais), disponível até o fim da cena. Nunca dois rituais assim na mesma cena.",
+          { marcador: "Ritual de Kian nesta cena" }),
+        hab("Rituais (DT 20)", "Conjura os rituais abaixo sem pagar PE, até 6 PE por conjuração, com a ação de cada um."),
+      ],
+      acoes: [
+        agredir([at("Pistola", "curto", 2, "2d20+10", "1d12+10 balístico", { critico: "18" })]),
+        acao("padrao", "Ritual: Hemofagia (Sangue 2)", "Arranca o sangue de um ser tocado: 6d6 de dano de Sangue (Fortitude reduz à metade); recupera PV iguais à metade do dano causado.",
+          { rolagens: [dano("Hemofagia", "6d6 Sangue")], resistencia: "Fortitude DT 20 reduz à metade" }),
+        acao("padrao", "Tratamento de Emergência", "Uma aplicação arriscada dá 2d10+10 PV temporários a um ser tocado; quando eles acabam, o ser fica fraco até o fim da cena. O mesmo alvo só uma vez por cena.",
+          { rolagens: [soma("PV temporários", "2d10+10")] }),
+      ],
+    },
+
+    {
+      id: "as2.criatura.remi", livro: AS2, pagina: 82,
+      nome: "Remi", natureza: "humana", tipo: "Pessoa", tamanho: "Médio", categoria: "Agentes no Hexatombe",
+      elementos: [], vd: 80,
+      descricao: "Musicista e conjurador profundamente perturbado, de espada enferrujada e harpa acoplada ao braço.",
+      percepcao: "2d20+5", iniciativa: "3d20+5",
+      defesa: 21, fortitude: "2d20", reflexos: "2d20+5", vontade: "2d20+10",
+      pv: 90, machucado: 45,
+      atributos: [2, 1, 3, 2, 2],
+      pericias: [["Artes", "2d20+10"], ["Ocultismo", "3d20+5"]],
+      deslocamento: [[9, 6]],
+      notas: ["Os poderes e o perfil como aliado estão na p. 83."],
+      habilidades: [
+        hab("Sem Espaço para Erro", "Uma vez por rodada, errando um ataque com a espada, rola de novo; acertando na segunda tentativa, causa +1 dado de dano do mesmo tipo. Com a espada, ataque e dano usam Intelecto em vez de Força.",
+          { limite: [1, "rodada"], rolagens: [dano("Dado extra (segunda tentativa)", "1d8 corte")] }),
+        hab("Rituais (DT 20)", "Conjura os rituais abaixo sem pagar PE, até 6 PE por conjuração, com a ação de cada um."),
+      ],
+      acoes: [
+        agredir([at("Espada Enferrujada", "corpo a corpo", 2, "3d20+10", "2d8+10 corte", { critico: "19" })]),
+        acao("movimento", "Dedilhar Harpa", "Toca a harpa e a melodia afeta a espada até o início do próximo turno, com um efeito à escolha: +5 no ataque, +5 de dano, +2 na margem de ameaça ou alcance corpo a corpo de 9 m.",
+          { marcador: "Melodia ativa" }),
+        acao("padrao", "Ritual: Amaldiçoar Arma Discente (Sangue 1 ou Conhecimento 1)", "Uma arma ou munição tocada causa +2d6 de dano de Sangue ou de Conhecimento até o fim da cena.",
+          { rolagens: [dano("Arma amaldiçoada (adicional)", "2d6")], marcador: "Arma amaldiçoada" }),
+        acao("padrao", "Ritual: Distorcer Aparência (Sangue 1)", "Muda a própria aparência até o fim da cena: +10 em Enganação para disfarce, sem habilidades nem estatísticas da nova forma."),
+        acao("padrao", "Ritual: Desfazer Sinapses Discente (Conhecimento 1)", "Até 5 seres com cérebro em alcance longo sofrem 3d6+3 de dano de Conhecimento e ficam frustrados por uma rodada (Vontade reduz à metade e evita a condição).",
+          { rolagens: [dano("Sinapses", "3d6+3 Conhecimento")], resistencia: "Vontade DT 20 reduz à metade e evita frustrado" }),
+      ],
+    },
+
+    {
+      id: "as2.criatura.tuco", livro: AS2, pagina: 86,
+      nome: "Tuco", natureza: "humana", tipo: "Pessoa", tamanho: "Médio", categoria: "Agentes no Hexatombe",
+      elementos: [], vd: 80,
+      descricao: "Ex-militar de aparência distraída e treinamento intacto: tática e pancadaria.",
+      percepcao: "1d20+5", iniciativa: "1d20+10",
+      defesa: 24, fortitude: "3d20+5", reflexos: "1d20+10", vontade: "2d20+5",
+      pv: 90, machucado: 45,
+      atributos: [1, 3, 1, 2, 3],
+      pericias: [["Atletismo", "3d20+10"], ["Furtividade", "1d20+10"]],
+      deslocamento: [[9, 6]],
+      notas: [
+        "O primeiro ataque saiu com o nome “Foices Acorrentadas” e dano de impacto; Imobilização Militar o chama de porrada. Mantido como publicado.",
+        "Imobilização Militar traz o teste como “+12”, sem o número de dados; não há rolagem pronta para ele.",
+        "Os poderes e o perfil como aliado estão na p. 87.",
+      ],
+      habilidades: [
+        hab("Aí Sim, Neném", "+1d20 nos ataques contra alvos que não estão engajados em combate."),
+        hab("Sentido Tático", "Imune a desprevenido. Quem sofre dano dele falha automaticamente em Furtividade contra ele por 1 rodada."),
+      ],
+      acoes: [
+        agredir([at("Foices Acorrentadas (porrada)", "corpo a corpo", 2, "3d20+10", "2d6+10 impacto", { critico: "19" })]),
+        agredir([at("Pistola", "curto", 2, "1d20+10", "1d12+10 balístico", { critico: "18" })], { nome: "Agredir (pistola)" }),
+        acao("livre", "Imobilização Militar", "Uma vez por rodada, acertando uma porrada, tenta agarrar o alvo (teste +12).", { limite: [1, "rodada"] }),
+        acao("movimento", "Movimentação Tática", "Movendo-se em direção a uma cobertura ou a um inimigo, percorre o dobro do deslocamento."),
+        acao("completa", "Marteladas", "Uma série de porradas num ser adjacente: 6d6+20 de dano de impacto (Fortitude DT 20 reduz à metade).",
+          { rolagens: [dano("Marteladas", "6d6+20 impacto")], resistencia: "Fortitude DT 20 reduz à metade" }),
+      ],
+    },
+
+    {
+      id: "as2.criatura.juan-davo", livro: AS2, pagina: 91,
+      nome: "Juan Davo", natureza: "humana", tipo: "Pessoa", tamanho: "Médio", categoria: "Hexatombe",
+      elementos: [], vd: 80,
+      descricao: "O sacrifício que encontrou o símbolo do Pacto na própria memória e quer provar ser digno do Trono.",
+      percepcao: "3d20+5", iniciativa: "3d20+10",
+      defesa: 20, fortitude: "1d20+5", reflexos: "2d20+10", vontade: "3d20+10",
+      pv: 100, machucado: 50,
+      atributos: [2, 1, 2, 2, 3],
+      pericias: [["Atletismo", "2d20+5"], ["Enganação", "3d20+5"], ["Intimidação", "3d20+10"], ["Ocultismo", "2d20+10"]],
+      deslocamento: [[9, 6]],
+      estados: [{ id: "obedeceu", nome: "Obedeceu a Ele nesta cena", maximo: 1 }, { id: "adormecida", nome: "Forma diabólica adormecida (até dormir)", maximo: 1 }],
+      notas: [
+        "A abertura está nas p. 88–90; a forma Juan Diabólico na p. 92 e o perfil como aliado na p. 93.",
+        "O ritual saiu impresso como “Descansar Discente”; o efeito é o de Descarnar.",
+      ],
+      acoes: [
+        agredir([at("Facada", "corpo a corpo", 2, "2d20+10", ["2d4+10 perfuração", "2d10 Sangue"], { critico: "19/x2" })]),
+        acao("reacao", "Faca Predadora", "Uma vez por rodada, ao acertar um ataque, recupera 2d10 PV; o que passar dos PV máximos vira PV temporário.",
+          { limite: [1, "rodada"], rolagens: [soma("PV recuperados", "2d10")] }),
+        acao("padrao", "Armadura de Sangue Diabólica", "Conjura a armadura e vira Juan Diabólico — use o seletor de forma desta ocorrência."),
+        acao("padrao", "Ritual: Descarnar Discente (Sangue 2)", "Toca um ser: 10d8 de dano (metade corte, metade Sangue) e hemorragia severa. No início de cada turno, Fortitude DT 20: falhando, 4d8 de dano de Sangue; dois sucessos seguidos estancam.",
+          { rolagens: [dano("Descarnar (metade corte, metade Sangue)", "10d8"), dano("Hemorragia", "4d8 Sangue")], resistencia: "Fortitude DT 20 (a cada turno)" }),
+        acao("padrao", "Ritual: Perturbação Discente (Conhecimento 2)", "Uma ordem a um ser em alcance curto (Vontade DT 20 anula): Fuja, Largue, Senta, Venha ou Sofra (3d8 de dano de Conhecimento e abalado por 1 rodada).",
+          { rolagens: [dano("Sofra", "3d8 Conhecimento")], resistencia: "Vontade DT 20 anula" }),
+        acao("padrao", "Ritual: Vínculo de Sangue (Sangue 4)", "Um símbolo nele e num ser em alcance curto até o fim da cena (Fortitude DT 20 evita, se involuntário): metade do dano que Juan sofre passa para o alvo — ou o inverso, se conjurado assim.",
+          { resistencia: "Fortitude DT 20 evita", marcador: "Vínculo ativo" }),
+        acao("reacao", "Desejo Diabólico (poder de Intenção)", "Uma vez por cena, na cena em que obedeceu a uma vontade d’Ele, decide que um teste é um sucesso automático (como um 20 natural), sem rolar.",
+          { requer: ["obedeceu", 1], limite: [1, "cena"] }),
+      ],
+      formas: [{
+        id: "juan-diabolico", nome: "Juan Diabólico", pagina: 92, vd: 140,
+        percepcao: "3d20+10", iniciativa: "3d20+15", defesa: 31, fortitude: "1d20+10", reflexos: "2d20+15", vontade: "3d20+15",
+        pv: 280, machucado: 140,
+        ativacao: "Armadura de Sangue Diabólica (ação padrão). Sem limite de duração; se não matar uma pessoa até o fim da cena, a forma diabólica adormece e só volta depois de dormir (p. 92–93).",
+        pericias: [["Atletismo", "2d20+10"], ["Enganação", "3d20+10"], ["Intimidação", "3d20+15"], ["Ocultismo", "2d20+15"]],
+        notas: [
+          "O tipo da ficha saiu impresso como “PPESSOA”.",
+          "Os rituais desta forma trazem o círculo impresso como “???”: nenhum círculo foi deduzido do dano.",
+        ],
+        acoes: [
+          agredir([at("Facada", "corpo a corpo", 2, "2d20+15", ["4d4+20 perfuração", "4d10 Sangue"], { critico: "19/x2" })]),
+          acao("reacao", "Faca Predadora", "Uma vez por rodada, ao acertar um ataque, recupera 4d10 PV; o que passar dos PV máximos vira PV temporário.",
+            { limite: [1, "rodada"], rolagens: [soma("PV recuperados", "4d10")] }),
+          acao("padrao", "Armadura de Sangue Diabólica", "Abandona a forma diabólica: volta a ser Juan (seletor de forma) e não a usa de novo até dormir."),
+          acao("padrao", "Ritual: Descarnar Discente Diabólico (Sangue, círculo ???)", "Um ser em alcance curto: 12d8 de dano (metade corte, metade Sangue) e hemorragia severa. No início de cada turno, Fortitude DT 25: falhando, 5d8 de dano de Sangue; dois sucessos seguidos estancam.",
+            { rolagens: [dano("Descarnar (metade corte, metade Sangue)", "12d8"), dano("Hemorragia", "5d8 Sangue")], resistencia: "Fortitude DT 25 (a cada turno)" }),
+          acao("padrao", "Ritual: Perturbação Discente Diabólica (Conhecimento, círculo ???)", "Uma ordem a um ser em alcance médio (Vontade DT 25 anula): Fuja, Largue, Senta, Venha ou Sofra (5d8 de dano de Conhecimento e abalado por 1 rodada).",
+            { rolagens: [dano("Sofra", "5d8 Conhecimento")], resistencia: "Vontade DT 25 anula" }),
+          acao("padrao", "Ritual: Vínculo de Sangue Diabólico (Sangue, círculo ???)", "Um símbolo nele e num ser em alcance médio até o fim da cena (Fortitude DT 25 evita, se involuntário): metade do dano que Juan sofre passa para o alvo — ou o inverso, se conjurado assim.",
+            { resistencia: "Fortitude DT 25 evita", marcador: "Vínculo ativo" }),
+          acao("reacao", "Desejo Diabólico (poder de Intenção)", "Uma vez por cena, na cena em que obedeceu a uma vontade d’Ele, decide que um teste é um sucesso automático (como um 20 natural), sem rolar.",
+            { requer: ["obedeceu", 1], limite: [1, "cena"] }),
+        ],
+      }],
+    },
+
+    /* Perfis "como aliado" (OPRPG p. 170): benefícios para quem o NPC
+       acompanha, sem PV nem PE. `ficha` aponta a ficha de ameaça. */
+    aliadoAs2("jonas-aguiar", "Jonas Aguiar", 41, 39, "Policial e serial killer ao mesmo tempo.", [
+      hab("Bônus", "Você recebe +1d20 nos testes de ataque."),
+      hab("Investigador e Caçador", "Num teste de Investigação ou Sobrevivência para achar pistas ou rastros, 1 PE dá +1d8 no teste.",
+        { custo: "1 PE", rolagens: [soma("Investigador e Caçador (+1d8)", "1d8")] }),
+    ]),
+    aliadoAs2("dalmo-magno", "Dalmo Magno", 47, 45, "Motorista e lutador de arena.", [
+      hab("Bônus", "Sempre que você causa dano, causa +1d10 de dano de Energia.", { rolagens: [dano("Bônus de Dalmo", "1d10 Energia")] }),
+      hab("Motorista Veterano", "2 PE dão treinamento em Pilotagem até o fim da cena; se já for treinado, +1d20 em Pilotagem.", { custo: "2 PE", marcador: "Até o fim da cena" }),
+    ]),
+    aliadoAs2("jae-yoon", "Park Jae-Yoon", 53, 51, "Influenciadora e serial killer.", [
+      hab("Bônus", "Você pode usar a habilidade de trilha Ataque Furtivo; se já a tiver, o dano furtivo aumenta em +1d6.", { rolagens: [dano("Furtivo extra", "1d6")] }),
+      hab("Figura Influente", "Num teste de Diplomacia, Enganação ou Intimidação, 3 PE permitem rolar de novo e ficar com o melhor resultado.", { custo: "3 PE" }),
+    ], "Aliada"),
+    aliadoAs2("kemi", "Kemi", 59, 57, "Atiradora de elite.", [
+      hab("Bônus", "Sempre que você causa dano, causa +3d4 de dano de Morte, que ignora 10 pontos de resistência a dano do alvo.", { rolagens: [dano("Bônus de Kemi", "3d4 Morte")] }),
+      hab("Figura Influente", "Uma vez por rodada, depois de um ataque à distância com arma de fogo ou de disparo, 2 PE dão uma ação de movimento adicional, só para se deslocar logo após o ataque.",
+        { custo: "2 PE", limite: [1, "rodada"] }),
+    ], "Aliada", ["A segunda habilidade saiu com o mesmo nome da de Jae-Yoon (“Figura Influente”); mantido como publicado."]),
+    aliadoAs2("labirinto", "Labirinto", 67, 62, "Ocultista de capacidades que nem ele compreende.", [
+      hab("Bônus", "Uma vez por dia, você recebe +2d4 PE atuais e máximos, até o fim do dia; no dia seguinte, rola de novo.",
+        { limite: [1, "dia"], rolagens: [soma("PE do dia", "2d4")], marcador: "Bônus do dia aplicado" }),
+      hab("Labirinto para o Outro Lado", "2 PE aumentam em +3 a DT das suas habilidades (poderes, rituais etc.) até o fim da cena; acumula com A Antena e outras fontes.",
+        { custo: "2 PE", marcador: "+3 na DT até o fim da cena" }),
+    ]),
+    aliadoAs2("jasper", "Jasper", 71, 70, "Defensor contra o paranormal e combatente letal.", [
+      hab("Bônus", "Você recebe resistência a dano paranormal 5."),
+      hab("Letalidade do Ceifador", "Ao fazer um ataque, 2 PE aumentam a margem de ameaça dele em +2.", { custo: "2 PE" }),
+    ]),
+    aliadoAs2("lena-viegas", "Lena Viegas", 75, 74, "Ocultista de conhecimento amplo e técnicas versáteis.", [
+      hab("Bônus", "Você recebe +1d20 em Ocultismo e Vontade."),
+      hab("Versatilidade Mística", "3 PE dão os efeitos de um Catalisador Sofisticado e Horrorizado até o fim da cena, como se você o vestisse.", { custo: "3 PE", marcador: "Catalisador até o fim da cena" }),
+    ], "Aliada"),
+    aliadoAs2("maria", "Maria", 79, 78, "Profissional de saúde de habilidades duvidosas, que surpreende.", [
+      hab("Bônus", "Você recebe +1d20 em Medicina."),
+      hab("De Onde Veio Isso?", "Você pode usar a habilidade Kian Vai Nos Salvar, mesmo sem saber da fé de Maria — nem ela sabe como funciona."),
+    ], "Aliada"),
+    aliadoAs2("remi", "Remi", 83, 82, "Musicista e conjurador extremamente perturbado.", [
+      hab("Bônus", "Você recebe +1d20 em Artes e Ocultismo."),
+      hab("Sintonização e Sincronia", "Você pode usar os poderes Sintonização Mental com Arma e Sintonização Mental com Proteção como se os tivesse."),
+    ], "Aliado", ["O perfil chama os poderes de “Sintonia Mental”; são os poderes Sintonização Mental da mesma página."]),
+    aliadoAs2("tuco", "Tuco", 87, 86, "Máquina militar de tática e pancadaria.", [
+      hab("Bônus", "Você recebe +1d20 em testes de Luta e +1d6 nas rolagens de dano corpo a corpo.", { rolagens: [dano("Bônus de Tuco", "1d6")] }),
+      hab("Instintos Militares de Combate", "Você pode usar o poder Sentido Tático como se o tivesse."),
+    ]),
+    aliadoAs2("juan-davo", "Juan Davo", 93, 91, "Aliado assustador, de habilidades ocultistas temidas.", [
+      hab("Bônus", "Você recebe +1d20 em Intimidação e Ocultismo."),
+      hab("Ligado ao Sangue", "Você conjura Armadura de Sangue e Descarnar como se os conhecesse (fora do limite de rituais), respeitando o círculo das formas avançadas. Se já conhece um deles, o custo dele cai em 1 PE."),
+    ]),
   ];
 
   /* ---------------------------------------------------------------------
@@ -3191,6 +3905,7 @@
       OPRPG: { nome: "Ordem Paranormal RPG", sigla: "LB" },
       SAH: { nome: "Sobrevivendo ao Horror", sigla: "SAH" },
       AS1: { nome: "Arquivos Secretos 1", sigla: "AS1" },
+      AS2: { nome: "Arquivos Secretos 2", sigla: "AS2" },
     },
     criaturas: CRIATURAS,
   };

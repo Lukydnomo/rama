@@ -547,6 +547,12 @@ segredo nenhum — ele os lê das Script Properties. Publicá-lo não expõe nad
 
 ### Atualizar o backend
 
+**v2.30.0 — ESTIGMA:** Arquivos Secretos 2 e o modo Hexatombe. Troque os três
+`.gs`, rode **`setupRama()`** (cria a aba `CAMPANHA_HEXATOMBE`), crie uma **nova
+versão** da implantação e só então publique o site. Nada existente é convertido.
+Sem o `setupRama()`, só o modo Hexatombe recusa gravar (`instalacao_incompleta`);
+o resto funciona.
+
 **v2.29.0 — MÁCULA:** conteúdo do Arquivos Secretos 1. Publique o site. No
 backend, só o `Campanhas.gs` mudou (uma linha, para o retrato das ameaças do AS1
 no painel do turno): troque-o e crie uma nova versão da implantação. Não precisa

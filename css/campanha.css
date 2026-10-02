@@ -869,3 +869,12 @@ button.combate-linha__nome[aria-pressed="true"] { text-decoration-color: var(--c
 .combate-condicao--ativa { border-color: var(--cor-aviso); color: var(--cor-texto); }
 .combate-condicao--limite { border-color: var(--cor-erro); }
 .combate-condicao__conta { font-variant-numeric: tabular-nums; text-transform: none; }
+
+/* ---------- Hexatombe (v2.30) ---------- */
+.hx-participante {
+  justify-content: space-between;
+  flex-wrap: nowrap;
+  padding: var(--e1) 0;
+  border-bottom: var(--borda) solid var(--cor-traco-fraca);
+}
+.hx-participante > .pilha { min-width: 0; overflow-wrap: anywhere; }

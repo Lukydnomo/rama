@@ -70,10 +70,12 @@
     var regras = (dasRegras && dasRegras.regras) || [];
     var fim = (dasRegras && dasRegras.fim) || [];
     var aviso = dasRegras && dasRegras.aviso ? el("p.t-mini", { texto: dasRegras.aviso }) : null;
+    var topo = dasRegras && dasRegras.topo ? dasRegras.topo : null;
     var tela = novaTela(ctx, arvore, dasRegras);
 
     if (dasRegras && (regras.length || fim.length || arvore.filhos.length)) {
       return el("div.pilha", {}, [
+        topo,
         dasRegras.ordenacao ? dasRegras.ordenacao.barra : null,
         aviso,
         ligarArraste(tela, el("div.arvore-hab", { dataset: { arrastarLista: RAIZ } }, conteiner(tela, "", 0))),
@@ -84,6 +86,7 @@
     if (!arvore.filhos.length) {
       if (aviso) {
         return el("div.pilha", {}, [
+          topo,
           aviso,
           UI.vazio({
             titulo: "Nenhuma habilidade",

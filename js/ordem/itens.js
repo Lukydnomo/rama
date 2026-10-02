@@ -74,6 +74,8 @@
       { chave: "explosivos", titulo: "Explosivos" },
       { chave: "operacionais", titulo: "Itens operacionais" },
       { chave: "paranormais", titulo: "Itens paranormais" },
+      { chave: "recursos", titulo: "Recursos (Hexatombe)",
+        nota: "Água, comida e sucata do Hexatombe e os novos itens de recursos (Arquivos Secretos 2, p. 20-21)." },
       { chave: "modificacoes", titulo: "Modificações para acessórios e itens paranormais",
         nota: "Aplicam-se a um item do inventário. As de acessório somam I à categoria dele." },
     ],
@@ -89,9 +91,9 @@
     ],
   };
 
-  var ROTULO_FONTE = { OPRPG: "Livro básico", SAH: "Sobrevivendo ao Horror", AS1: "Arquivos Secretos 1" };
-  var NOME_FONTE = { OPRPG: "Ordem Paranormal RPG", SAH: "Sobrevivendo ao Horror", AS1: "Arquivos Secretos 1" };
-  var SIGLA_FONTE = { OPRPG: "LB", SAH: "SAH", AS1: "AS1" };
+  var ROTULO_FONTE = { OPRPG: "Livro básico", SAH: "Sobrevivendo ao Horror", AS1: "Arquivos Secretos 1", AS2: "Arquivos Secretos 2" };
+  var NOME_FONTE = { OPRPG: "Ordem Paranormal RPG", SAH: "Sobrevivendo ao Horror", AS1: "Arquivos Secretos 1", AS2: "Arquivos Secretos 2" };
+  var SIGLA_FONTE = { OPRPG: "LB", SAH: "SAH", AS1: "AS1", AS2: "AS2" };
 
   var PROFICIENCIAS = { simples: "Arma simples", tatica: "Arma tática", pesada: "Arma pesada" };
   var PROFICIENCIAS_PLURAL = { simples: "armas simples", tatica: "armas táticas", pesada: "armas pesadas" };
@@ -229,7 +231,7 @@
     if (e.natureza === "maldicao") return "Maldição de " + (ELEMENTOS[e.elemento] || "elemento variável") + " · " + rotuloAplicaEm(e);
     if (e.arma && e.aba !== "geral") {
       var partes = [];
-      if (e.aba === "amaldicoados") partes.push("Item amaldiçoado de " + (ELEMENTOS[e.elemento] || e.elemento));
+      if (e.aba === "amaldicoados") partes.push((e.elemento ? "Item amaldiçoado de " + (ELEMENTOS[e.elemento] || e.elemento) : "Item amaldiçoado (elemento não informado)"));
       if (e.arma.proficiencia) partes.push(PROFICIENCIAS[e.arma.proficiencia]);
       if (e.arma.tipo) partes.push(TIPOS_ARMA[e.arma.tipo]);
       if (e.arma.empunhadura) partes.push(EMPUNHADURAS[e.arma.empunhadura]);
@@ -237,7 +239,7 @@
     }
     if (e.aba === "municoes") return "Munição · " + apresentacaoDaMunicao(e.municao);
     if (e.protecao) return TIPOS_PROTECAO[e.protecao.tipo];
-    if (e.aba === "amaldicoados") return "Item amaldiçoado de " + (ELEMENTOS[e.elemento] || e.elemento);
+    if (e.aba === "amaldicoados") return (e.elemento ? "Item amaldiçoado de " + (ELEMENTOS[e.elemento] || e.elemento) : "Item amaldiçoado (elemento não informado)");
     var base = ROTULOS_TIPO_FILTRO[tipoFiltro(e)] || "Item";
     if (e.arma) base += " · usada como arma de " + TIPOS_ARMA[e.arma.tipo].toLowerCase();
     return base;
@@ -738,11 +740,13 @@
       /* Dano de outro tipo que a arma soma (Arpão do Pescador, AS1 p. 55). */
       dados.danoExtra = a.danoExtra || "";
       if (a.tipoDanoExtra) ordem.arma.tipoDanoExtra = rotuloDano(a.tipoDanoExtra);
+      if (a.extraMultiplica) ordem.arma.extraMultiplica = true;
       dados.critico = a.margem;
       dados.multiplicador = a.multiplicador;
       dados.periciaId = o.periciaUniversal ? o.periciaUniversal(ordem.pericia) : null;
     }
 
+    if (e.rd) ordem.rd = e.rd;
     if (e.tipoItem === "armadura") {
       ordem.protecao = { tipo: e.protecao.tipo };
       dados.defesa = e.protecao.defesa;

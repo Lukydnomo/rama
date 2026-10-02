@@ -290,6 +290,19 @@ var ABAS = {
     somenteTexto: ['conteudo'],
     pesadas: ['conteudo'],
   },
+  CAMPANHA_HEXATOMBE: {
+    /* O modo Hexatombe da campanha (v2.30, Arquivos Secretos 2): uma
+       linha por campanha, com o estado normalizado (equipes, participantes,
+       sacrifícios, base, estoques, mapa, diário). Só o mestre grava; o
+       jogador recebe a vista filtrada (Campanhas.gs, "HEXATOMBE"). `ops`
+       guarda os últimos lotes aplicados, para a repetição não contar
+       duas vezes. */
+    nome: 'CAMPANHA_HEXATOMBE',
+    colunas: ['campanhaId', 'ativo', 'dia', 'atualizadoEm', 'rev', 'opsJson', 'dadosJson'],
+    chave: 'campanhaId',
+    leves: 5,
+    pesadas: ['dadosJson'],
+  },
   CAMPANHA_CAPAS: {
     /* A capa (banner) da campanha. Fora do dadosJson pelo mesmo motivo
        da foto de personagem: é o campo mais pesado e o que menos muda.

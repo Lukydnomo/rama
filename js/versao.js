@@ -70,6 +70,29 @@
 
   var CHANGELOG = [
     {
+      versao: "2.30.0", codinome: "ESTIGMA", data: "02/10/2026",
+      mudancas: {
+        "Conteúdo": [
+          "Arquivos Secretos 2 (v1.0, pacote oficial) no R.A.M.A., com livro e página em cada entrada e resumos próprios: 7 poderes de classe, 15 poderes gerais, 5 poderes paranormais com afinidade, os 5 poderes de Intenção, 4 rituais, 18 itens (água, comida, sucata, 7 itens de recurso, o Catalisador Sofisticado e Horrorizado e 7 itens amaldiçoados), a regra opcional Aliados em Perigo, as 17 fichas de ameaças e pessoas (com as 6 formas transformadas) e os 11 perfis “como aliado”.",
+          "O livro aparece em busca, filtros de fonte, seletores e bibliotecas como “Arquivos Secretos 2”. As inconsistências da publicação ficam registradas com o texto publicado e a leitura adotada.",
+        ],
+        "Adicionado": [
+          "Modo Hexatombe na campanha (aba Hexatombe, ativada pelo mestre): seis dias com fases ajustáveis, equipes, participantes e sacrifícios com estigma, herança do estigma e a escolha da Coroa, desertores e o castigo de cada sacrifício, base com melhorias (DT 20, falha por 5 gasta a sucata), estoques e produção diária, consumo de água e comida, mapa com caminhos já percorridos, teste de jornada e consequências, procura de recursos, as quatro tabelas de encontros, intenções desbloqueadas e cumpridas e a Lua de Sangue. Avançar o dia não resolve nada sozinho.",
+          "O que o Hexatombe muda na ficha chega como lançamento com origem e id estável (sede, fome, desertor, castigo, recompensa de intenção): repetir não duplica, desfazer marca, e o que não chegou fica pendente para reenviar.",
+          "Formas transformadas na MESMA ocorrência de criatura (Mutilador Noturno, Colosso, X, Fantasma, a forma de Labirinto e Juan Diabólico): trocar de forma muda os PV máximos e nunca restaura os atuais; estados, usos e anotações continuam. Funciona no combate, nos aliados e na consulta.",
+          "Perfis “como aliado” sem PV nem PE inventados, com o cartão “Como aliado” e o vínculo à ficha de ameaça — Agatha (AS1) passou a usar o mesmo cartão.",
+          "Aliados em Perigo (regra opcional): “Uso arriscado (1d6)” em cada aliado, ferimentos contados por cena e a morte no segundo só depois da confirmação da mesa.",
+          "Poderes com conta ou botão: Especialista em Matar (patamares por NEX, cada +4 no ataque ou no dano), Marteladas (três danos desarmados somados num só, testes só para o crítico), Dominar Habilidade Ritualística (uma habilidade de trilha de ocultista com NEX e dependência conferidos, até três), Liturgia (+2 na DT até o próximo interlúdio), Sintonização Mental com Arma e com Proteção, Arte da Música Macabra (“o próximo…” guardado e gasto uma vez), poderes de Intenção (contato com a Coroa, gatilho, ferimentos contados, uso por cena, efeito ativo) e a forma alternativa de “As Máscaras na Sua Mesa” (aprovação, SAN por rodada, +20 PV, +10 PE e +10 Defesa, morrendo ao sair com menos de 20 PV).",
+          "Itens com regra: bandagem (com álcool, 2d8+2), incenso uma vez por dia, pedra de amolar na primeira cena, Catalisador Sofisticado (3d6 por cena, 1d6 por ritual), A Antena (um ritual contido e libertado sem ações nem PE), Faca Predadora, armas acopláveis (acoplar, separar, duas mãos, categoria, dado, margem ou multiplicador, Combater com Duas Armas) e o dano extra do Machado do Mutilador que multiplica no crítico.",
+        ],
+        "Técnico": [
+          "Troque os três .gs, rode setupRama() (aba CAMPANHA_HEXATOMBE) e crie uma nova versão da implantação antes de publicar o site. Ações novas: ler_hexatombe, salvar_hexatombe (rev + opId) e lancar_hexatombe (id estável); ler_campanha diz se o modo está ligado; criatura_instancia aceita a chave forma. O jogador recebe a vista filtrada no servidor — equipe rival só com o nome, nada de notas do mestre.",
+          "Novos js/ordem/hexatombe.js (as regras, copiado byte a byte em Campanhas.gs e conferido por teste), js/paginas/campanha-hexatombe.js, js/ordem/arquivo2.js e js/paginas/ficha-arquivo2.js. Campos novos e opcionais na ficha (intencao, formaSuprema, sintonizacoes, pendentes, fortalecimentos, reservas, marcas, hexatombe), nos itens, nos aliados (perigo) e na criatura (formas, pvBase, aliada, instancia.forma). Fichas e combates antigos abrem iguais.",
+          "Testes: 118 novos na suíte principal (2533), 28 nas criaturas (124) e 33 no backend (1157), mais os fluxos no navegador (morte de sacrifício, intenção lançada na ficha, vista do jogador, troca de forma, Aliados em Perigo) em celular e nos temas claro e escuro.",
+        ],
+      },
+    },
+    {
       versao: "2.29.0", codinome: "MÁCULA", data: "02/10/2026",
       mudancas: {
         "Conteúdo": [

@@ -833,3 +833,14 @@ conferida de novo na hora de entregá-la.
 
 O servidor recusa acima do limite de célula com `dados_grandes` em vez de
 truncar. **Conteúdo truncado em silêncio é pior do que uma recusa.**
+
+## Hexatombe (v2.30)
+
+Aba **Hexatombe**: o mestre ativa o modo e conduz os seis dias — fase do dia,
+equipes e participantes (com a ficha vinculada que recebe os lançamentos),
+sacrifícios, estigmas e herdeiros, desertores, base e melhorias, estoques e
+produção, consumo de água e comida, mapa (áreas e caminhos), teste de jornada,
+procura de recursos, encontros, intenções e a Lua de Sangue. Nada se resolve
+sozinho ao avançar o dia. Os jogadores só veem a aba com o modo ativo e só o que
+é deles (ver PERMISSIONS.md). As regras estão em docs/ORDEM-REGRAS.md
+("Arquivos Secretos 2").

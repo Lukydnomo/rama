@@ -1843,6 +1843,154 @@ cópias de ritual: `ordem.elementos` + `ordem.todosOsElementos`. Nas armas:
 `arma.tipoDanoExtra`. Registros de ritual ganharam o tipo `maldicao`. Nada disso
 muda o backend: o bloco `ordem` vai inteiro no JSON da ficha.
 
+## Arquivos Secretos 2 (v2.30)
+
+Fonte: `AS2` = *Arquivos Secretos 2*, v1.0, pacote de conteúdo oficial (Jambô) —
+o Hexatombe. Páginas impressas. Resumos próprios, com os números, testes e
+condições do livro. O livro entra no registro único (`C.LIVROS`, edição v1.0):
+busca, filtros, seletores e bibliotecas o mostram como "Arquivos Secretos 2".
+Estado: **A** automatizado · **P** parcial (a tela registra e cobra, a mesa
+decide o resto) · **I** informativo · **—** fora por decisão ou narrativa.
+
+### Inventário, item por item
+
+| conteúdo | página | destino no R.A.M.A. | estado |
+|---|---|---|---|
+| Regras de Hexatombe: estigmas, sacrifícios, desertores, dias e fases, base, recursos, jornada, procura, encontros, intenções, Lua de Sangue | 4–24 | modo de campanha (aba Hexatombe, `js/ordem/hexatombe.js` + `CAMPANHA_HEXATOMBE`) — ver abaixo | **P** |
+| Aliados em Perigo (regra opcional) | 24 | chave `aliadosEmPerigo` (desligada); “Uso arriscado (1d6)” em cada aliado; ferimentos por cena; o 2º deixa a morte pendente até a mesa confirmar (`A2.arriscarAliado`, `aliado.perigo`) | **A** (decidir se a situação é arriscada é da mesa) |
+| Ameaças do Hexatombe: arara-vermelha, arara-devorada, arara-infernal, jaguatirica, felino-devorado, felino-infernal | 26–32 | bestiário (`as2.criatura.*`); Quibungo e zumbis de Sangue citados já estavam no catálogo | **A** (como v2.28) |
+| Mascarados: Jonas Aguiar, Dalmo Magno, Park Jae-Yoon, Kemi, Labirinto | 39–64 | bestiário, cada um com a forma da intenção assassina (Mutilador Noturno, Colosso, X, Fantasma, a forma de Labirinto) na MESMA ficha (`ordem.formas`) | **A** |
+| Agentes: Jasper, Lena Viegas, Maria, Remi, Tuco | 70–86 | bestiário | **A** |
+| Juan Davo e Juan Diabólico | 91–92 | bestiário, forma na mesma ficha | **A** |
+| Perfis “como aliado” (11) | 41–93 | bestiário (`as2.criatura.<nome>-aliado`): benefícios, sem PV/PE, com `ficha` apontando a ameaça; o painel mostra “Como aliado”. Agatha (AS1) passou a usar o mesmo cartão | **I** (os benefícios são aplicados pela mesa) |
+| Predador Perfeito | 41 | combatente; requisitos veterano em Luta ou Pontaria e em Sobrevivência; botão gasta 5 PE | **P** |
+| Golpes de Arena | 47 | combatente; treinado em Luta; botão gasta 2 PE | **P** |
+| Marteladas | 87 | combatente; For 2, Luta, Artista Marcial; 3 PE: três testes só para o crítico, três danos desarmados somados num dano só, Fortitude DT For | **A** |
+| Assassinato Furtivo | 53 | especialista; +1d6 no furtivo; 2 PE trocam d6 por d8 | **P** |
+| Especialista em Matar | 59 | especialista; patamares por NEX (2/3/4/5 PE), cada +4 escolhido para ataque ou dano antes de rolar (`A2.planoDeEspecialistaEmMatar`) | **A** |
+| Dominar Habilidade Ritualística | 75 | ocultista; Int 3, Ocultismo, conjurar; opção `habilidadeDeTrilha` (NEX da etapa ≥ o da habilidade, dependências exigidas, não a da própria trilha); até 3, uma por habilidade; a habilidade entra como adquirida com efeitos e concessões | **A** |
+| Liturgia de Fortalecimento Ritualístico | 93 | ocultista; Int e Pre 2; 2 PE no interlúdio: +2 na DT do ritual até o próximo interlúdio | **A** |
+| Revidar Violento, Corpo Fechado, Esquiva Tática | 41, 47, 53 | gerais; a segunda reação de defesa só do tipo dito | **I** |
+| Palpite Confiante | 59 | geral; 1 PE soma o Intelecto no resultado de perícia de Int ou Pre | **A** |
+| Especialista em Correntes (dois poderes com o mesmo nome) | 70 | `especialistaEmCorrentes` e `especialistaEmCorrentesPuxar` | **I** |
+| Prática com Materiais Ritualísticos | 74 | geral | **I** |
+| Estágio Terminal | 78 | geral; botão só machucado, 2 PE | **P** |
+| Kian Vai Nos Salvar | 78 | geral; marca da cena | **I** |
+| Tratamento de Emergência | 79 | geral; 2 PE, 2d10+10 PV temporários, um por alvo por cena | **P** |
+| Arte da Música Macabra | 83 | geral; o efeito em si mesmo fica guardado como “o próximo dano/ataque/teste/alcance” (`ordem.pendentes`) e é gasto uma vez | **P** |
+| Sintonização Mental com Arma / com Proteção | 83 | gerais; 3 PE no interlúdio; o atributo escolhido vale até o início do próximo interlúdio (`ordem.sintonizacoes`); na proteção, a Defesa troca a Agilidade | **A** |
+| Movimentação Tática, Sentido Tático (geral) | 87 | gerais (`sentidoTaticoMilitar`, para não colidir com o poder de combatente do livro básico) | **I** |
+| Predador de Sangue, Pressão Atmosférica, Zona dos Sussurros, Disparo da Morte, Engolir Sangue | 41–93 | paranormais com afinidade; listas e limites no cartão (vítimas, zonas, um atordoamento por alvo por cena), Engolir Sangue cura e tira SAN | **P** |
+| Poderes de Intenção: Desejo Diabólico, Filho da Dor, Novo Caminho, O Sabor do Silêncio, Sede de Vingança | 94–95 | `PODERES_INTENCAO`, requisito “contato com a Coroa de Espinhos” registrado; gatilho (contado, por ação ou confirmado), uso, efeito ativo, por cena e na mesma cena; Filho da Dor conta ferimentos de 5+ e liga RD 25 com −5 PV por turno; O Sabor do Silêncio soma +1d8 e +2 de margem na cena | **P** |
+| As Máscaras na Sua Mesa (forma alternativa) | 96–97 | `ordem.formaSuprema`: configuração, aprovação da mesa, ação de movimento, 6 SAN + 2 por rodada, +20 PV, +10 PE e +10 Defesa, desativar com menos de 20 PV deixa em 0 e morrendo; com Jogando sem Sanidade, a mesa escolhe ignorar o custo ou pagar em PD antes da 1ª ativação; as “sugestões” são texto | **P** |
+| Rituais Mapa Sanguíneo, Labirinto Mental, Capturar Momento, Rajada Caótica | 65–67 | catálogo de rituais (`as2.ritual.*`), 2º círculo; divergências em `divergencias` (abaixo) | **A** |
+| Água, Comida, Sucata | 20 | itens de recurso (cat. 0, 1 espaço), “Consumir uma unidade” | **P** |
+| Bandagem, Dose de Álcool, Incenso, Pedra de Amolar, Bússola, Caixa de Ferramentas, Kit de Escalada | 21 | itens; bandagem 2d4+2 e remove sangrando (com álcool, 2d8+2 e gasta a dose); incenso 1d4 PE uma vez por dia; pedra de amolar +1d4 na primeira cena em que a arma for usada; utensílios +2 | **P** |
+| Catalisador Sofisticado e Horrorizado | 75 | 3d6 por cena, 1d6 por ritual no momento de conjurar (dano, cura ou DT) (`ordem.reservas`) | **A** |
+| Machado do Mutilador, Elmo e Manoplas do Colosso, Punhal X, Sniper Fantasma, A Antena, Faca Predadora | 41–93 | itens amaldiçoados; dano extra que multiplica no crítico (Machado), sangramentos cumulativos, RD do elmo, cegueira uma vez por alvo por cena, morte em 2 turnos (Sniper), A Antena (+3 na DT empunhada, um ritual contido e libertado sem ações nem PE), Faca Predadora (2 PE, 2d10 PV, excesso em temporários) | **P** |
+| Armas acopláveis | 71 | par marcado no inventário; acoplar/separar (ação de movimento); a principal ataca com duas mãos, categoria +I, +1 dado, +1 na margem ou no multiplicador (escolhido ao criar), espaços dobram; a outra metade não ataca enquanto acoplada; vale com Combater com Duas Armas | **A** |
+| Inquérito Mensal (esclarecimentos) | 104 | Reter Ritual: a perda de foco depende da natureza do efeito e da mesa — a ficha avisa, não cancela sozinha | **I** |
+| Contos, biografias, mural e trilha sonora | — | narrativa | — |
+
+### O modo Hexatombe na campanha
+
+Ligado pelo mestre na aba **Hexatombe**; o jogador só vê a aba com o modo ativo.
+Cada operação é uma função pura de `js/ordem/hexatombe.js`, aplicada numa cópia
+do estado; os lançamentos de ficha vão primeiro (`lancar_hexatombe`), e o estado
+é gravado com `rev` e `opId` (`salvar_hexatombe`).
+
+- **Dias e fases.** Seis dias; preparação, execução e conclusão são sugestões, e o
+  mestre troca a fase livremente. Avançar o dia só muda o dia, a fase e a produção
+  da base (filtro: 6 águas; geladeira: 6 comidas — uma vez por dia). Avisa, sem
+  resolver: dia sem sacrifício válido (o fracasso é marcado pela mesa) e quem ficou
+  sem consumo registrado.
+- **Sacrifícios e estigmas.** O primeiro sacrifício morto à noite é o do dia:
+  desbloqueia a intenção do estigma, castiga os desertores que já existiam
+  (−1d10 PV máximos e atuais e −1 em testes, até 6 vezes; Fortitude DT 20 avisada)
+  e só então a equipe que perdeu o sacrifício vira desertora (−1 dado em testes,
+  PV máximos pela metade). Um segundo na mesma noite, ou morto de dia, passa o
+  estigma a quem matou; se quem matou não pode herdar, ou foi suicídio ou
+  acidente, fica uma pendência “a Coroa escolhe”.
+- **Desertores.** Quem sai da arena é desertor até voltar (os lançamentos são
+  desfeitos); quem perdeu o sacrifício, para sempre. Na sexta noite, sem o
+  sacrifício final, os desertores definham (confirmado pela mesa); com ele, a tela
+  confere os seis presentes e lembra a regra VI.
+- **Consumo.** Até a conclusão, cada participante registra água e comida (sai do
+  estoque da equipe). Menos de 1: −10 PV ou PE máximos a partir do dia seguinte.
+  2 ou mais recupera o déficit mais antigo ainda aberto (o lançamento é desfeito;
+  desfazer o consumo o refaz). Fome e sede do livro básico (p. 292) continuam à
+  parte.
+- **Base.** Limpeza antes de tudo; teste contra DT 20: passou, faz e gasta;
+  falhou, nada; falhou por 5 ou mais, gasta a sucata. Melhorias de recurso
+  especial (enfermaria, biblioteca, sala de música, adega, garagem) são
+  instaladas pela mesa. Camas: descanso normal (senão precário).
+- **Exploração.** Áreas e caminhos; caminho já percorrido dispensa o teste. O teste
+  de jornada é informado pela mesa (passou/falhou); falhar não impede de chegar e
+  sorteia a consequência (1d6). Perícia que não Sobrevivência: uma vez no
+  Hexatombe, por personagem. Procurar recursos: um teste por personagem em cada
+  local; 15+, 20+ e 25+ abrem as colunas (1d12); o achado vai para o estoque.
+- **Encontros.** As quatro tabelas (noturno/diurno, base/exploração), rolagem ou
+  valor escolhido, registradas no diário do mestre.
+- **Intenções.** Só com o estigma desbloqueado e uma vez por participante; a
+  recompensa vira lançamento na ficha vinculada: Rancor +5 de dano, Obsessão RD 5,
+  Prazer +10 PV máx., Orgulho +10 PE máx.; Desejo e Culpa entram como registro.
+- **Lançamentos na ficha.** Id estável `hx.<regra>.<participante>.<marca>`;
+  repetir não lança de novo; desfazer marca; “refazer” devolve o mesmo. Os que
+  não chegaram ficam pendentes no estado e são reenviados.
+- **O que o jogador recebe** (filtrado no servidor): dia, fase, sacrifícios
+  realizados (dia e estigma), intenções desbloqueadas, mapa, a própria equipe
+  (base, estoque, descanso, colegas) e, do próprio participante, consumo,
+  déficits, castigos e intenções cumpridas. Equipe rival: só o nome. Nunca notas
+  do mestre, pendências, lançamentos pendentes ou diário alheio.
+
+### Formas de criatura e perfis de aliado
+
+`ordem.formas` guarda as fichas publicadas da forma transformada; `ordem.pvBase`, os
+PV da ficha de partida. A chave de ocorrência `forma` (a mesma regra no site e em
+`definirNaInstanciaDaCriatura`) troca os PV máximos para os da ficha da forma e só
+prende os atuais no novo máximo: **trocar de forma nunca restaura PV**. Estados,
+usos, marcadores e anotação são da ocorrência e continuam. A vista mostra a ficha
+da forma (estatísticas, perícias, habilidades e ações, com ids próprios). Uma
+ocorrência nova começa na ficha de partida. Perfis `aliada` não têm PV nem PE.
+
+### Divergências da publicação (texto publicado × leitura adotada)
+
+- **Capturar Momento (p. 66):** o bloco repete o efeito de Mapa Sanguíneo; adotado o
+  efeito da ficha de Labirinto (símbolo que capta imagens e sons), o único que fecha
+  com as formas discente e verdadeira. Alvo, duração e resistência também lidos
+  dessa forma (ver `divergencias` do ritual).
+- **Rituais das formas de Labirinto e de Juan:** círculo impresso “???”; nenhum
+  círculo foi deduzido do dano, e as ações de NPC não viram rituais de personagem.
+- **Felino-infernal (p. 32):** o quadro saiu com o título “Arara-infernal”; PV 230
+  com machucado 125; o texto cita “felino-infernal supremo”. Mantido como publicado.
+- **Tuco (p. 86):** o primeiro ataque se chama “Foices Acorrentadas” e causa impacto;
+  Imobilização Militar traz “teste +12” sem dados (sem rolagem pronta).
+- **Juan (p. 91):** “Descansar Discente” é Descarnar; a forma diz “PPESSOA”.
+- **Kemi como aliada:** a segunda habilidade repete o nome “Figura Influente”.
+- **Remi como aliado:** chama os poderes de “Sintonia Mental”.
+- **Poderes de Intenção nas fichas de NPC:** Novo Caminho como reação e como ação
+  padrão; O Sabor do Silêncio como reação (p. 95: ação padrão); Sede de Vingança
+  “uma vez por rodada” só na ficha; Filho da Dor sem a reação de desligar.
+- **Arte da Música Macabra (p. 83):** frases soltas copiadas do Catalisador e sem
+  pré-requisito; o R.A.M.A. ignora as frases e não inventa requisito.
+- **Especialista em Correntes (p. 70):** dois poderes com o mesmo nome; separados
+  pelo efeito.
+- **Acoplável (p. 71):** o exemplo publicado (duas espadas 1d8/1d10 → 2d10, 19/x3)
+  soma o dado sobre o dano de duas mãos e escolhe o multiplicador; a regra é a do
+  texto (+1 dado do mesmo tipo e +1 na margem OU no multiplicador).
+- **Jae-Yoon:** a pentágono dá Presença 1, apesar do perfil de influenciadora;
+  mantido como publicado (ordem dos atributos no pentágono: AGI, FOR, PRE, VIG, INT).
+
+### O que a ficha e a campanha guardam de novo
+
+Na ficha: `ordem.intencao`, `ordem.formaSuprema`, `ordem.sintonizacoes`,
+`ordem.pendentes`, `ordem.fortalecimentos`, `ordem.reservas`, `ordem.marcas` e
+`ordem.hexatombe` (dia, lançamentos) — normalizados em `R.normalizar`, vazios numa
+ficha antiga; nos itens, `ordem.acoplavel`, `ordem.antena`, `ordem.amolada`;
+nos aliados, `perigo`. Na criatura: `ordem.formas`, `ordem.pvBase`, `ordem.aliada`,
+`ordem.ficha` e `instancia.forma`; nos ataques, `multiplicaTudo`. Na campanha: a
+linha de `CAMPANHA_HEXATOMBE`.
+
 ## Lacunas e interpretações
 
 Registradas em vez de preenchidas por dedução. Onde o livro deixa uma leitura
@@ -2091,3 +2239,28 @@ aberta, a adotada está escrita — e é a que os testes travam.
 45. **Agatha Volkomenn (AS1 p. 19)** é aliada pela regra de aliados (OPRPG p. 170),
     sem estatística de combate: no bestiário, aparece sem PV e com os benefícios
     como habilidades.
+
+46. **Teste de jornada (AS2 p. 18).** O livro não dá a DT: a mesa decide e informa
+    se o teste passou. A ajuda dos outros e o NPC que conhece a arena também são
+    da mesa.
+
+47. **Recursos encontrados (AS2 p. 20).** “O resultado determina a quantidade de
+    recursos” com uma tabela de três colunas (15+, 20+, 25+): a leitura padrão é
+    uma rolagem de 1d12 na maior coluna alcançada; o mestre pode trocar para uma
+    rolagem em cada coluna alcançada.
+
+48. **Melhorias de recurso especial (AS2 p. 17).** O custo delas é um recurso, não
+    sucata, e o texto do teste de melhoria fala em sucata: a mesa instala, sem
+    teste.
+
+49. **Trocar de forma (AS2, fichas transformadas).** O livro dá PV próprios a cada
+    forma e não diz o que acontece com os atuais. O R.A.M.A. troca só o máximo e
+    prende os atuais nele — nunca restaura; o mestre ajusta à mão se a mesa ler
+    de outro jeito.
+
+50. **Perfil “como aliado” × ficha de ameaça.** São entradas separadas do
+    bestiário; o perfil não herda nada da ameaça (nem PV nem ações).
+
+51. **Castigo do desertor.** O castigo vale para quem já era desertor quando o
+    sino toca; a equipe que perde o sacrifício naquela noite deserta depois dele e
+    só é castigada a partir do sacrifício seguinte.

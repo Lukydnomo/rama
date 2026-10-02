@@ -1432,7 +1432,7 @@
 
       /* v2.20: + contagem de munição (OPRPG p. 174) e controle de
          componentes ritualísticos (da mesa). */
-      t.igual("quinze regras opcionais: treze do SAH e duas do Arquivos Secretos 1", OP.REGRAS.length, 15);
+      t.igual("dezesseis regras opcionais: treze do SAH, duas do Arquivos Secretos 1 e uma do 2", OP.REGRAS.length, 16);
       t.iguais("  as duas do AS1 começam desligadas", ["reterRitual", "transcenderComItens"].map(function (k) { return OP.ligada(R.fichaVazia(), k); }), [false, false]);
       t.ok("as duas novas começam desligadas numa ficha nova",
         !OP.ligada(R2.fichaVazia(), "contagemMunicao") && !OP.ligada(R2.fichaVazia(), "controleComponentes"));
@@ -1688,7 +1688,7 @@
       var duplicada = "";
       PO.TODOS.forEach(function (p) { if (chaves[p.chave]) duplicada = p.chave; chaves[p.chave] = true; });
       t.igual("nenhuma chave de poder se repete", duplicada, "");
-      t.ok("todo poder tem fonte e página", PO.TODOS.every(function (p) { return (p.fonte === "OPRPG" || p.fonte === "SAH" || p.fonte === "AS1") && p.pagina > 0; }));
+      t.ok("todo poder tem fonte e página", PO.TODOS.every(function (p) { return (p.fonte === "OPRPG" || p.fonte === "SAH" || p.fonte === "AS1" || p.fonte === "AS2") && p.pagina > 0; }));
       t.ok("todo poder tem resumo", PO.TODOS.every(function (p) { return p.resumo.length > 10; }));
       t.ok("toda automação é calculo, parcial ou informacao",
         PO.TODOS.every(function (p) { return ["calculo", "parcial", "informacao"].indexOf(p.automacao) >= 0; }));
@@ -2772,7 +2772,7 @@
       /* ---------------------------------------------------------------- */
       t.grupo("Ordem · itens — catálogo completo e estruturado");
 
-      t.igual("250 entradas nos três livros", catalogo.itens.length, 250);
+      t.igual("268 entradas nos quatro livros", catalogo.itens.length, 268);
       var contagem = {};
       catalogo.itens.forEach(function (e) {
         var k = e.aba + "/" + e.natureza + "/" + e.fonte;
@@ -2797,18 +2797,20 @@
         ["amaldicoados/item/SAH", 19, "itens amaldiçoados do SAH (Tabela 1.6)"],
         ["geral/item/AS1", 3, "itens paranormais do Arquivos Secretos 1 (p. 54)"],
         ["amaldicoados/item/AS1", 3, "itens amaldiçoados do Arquivos Secretos 1 (p. 55)"],
+        ["geral/item/AS2", 11, "recursos e itens paranormais do Arquivos Secretos 2"],
+        ["amaldicoados/item/AS2", 7, "itens amaldiçoados do Arquivos Secretos 2"],
       ].forEach(function (c) { t.igual(c[2] + ": " + c[1], contagem[c[0]] || 0, c[1]); });
 
       var idsVistos = {};
       var idRepetido = "";
       catalogo.itens.forEach(function (e) { if (idsVistos[e.id]) idRepetido = e.id; idsVistos[e.id] = true; });
       t.igual("nenhum id se repete", idRepetido, "");
-      t.ok("todo id é estável e diz a fonte (op.…, sah.… ou as1.…)", catalogo.itens.every(function (e) {
-        return /^(op|sah|as1)\.[a-z0-9.-]+$/.test(e.id) && (e.fonte === "SAH") === (e.id.indexOf("sah.") === 0) &&
-          (e.fonte === "AS1") === (e.id.indexOf("as1.") === 0);
+      t.ok("todo id é estável e diz a fonte (op.…, sah.…, as1.… ou as2.…)", catalogo.itens.every(function (e) {
+        return /^(op|sah|as1|as2)\.[a-z0-9.-]+$/.test(e.id) && (e.fonte === "SAH") === (e.id.indexOf("sah.") === 0) &&
+          (e.fonte === "AS1") === (e.id.indexOf("as1.") === 0) && (e.fonte === "AS2") === (e.id.indexOf("as2.") === 0);
       }));
       t.ok("toda entrada tem nome, resumo, fonte e página", catalogo.itens.every(function (e) {
-        return e.nome && e.resumo && (e.fonte === "OPRPG" || e.fonte === "SAH" || e.fonte === "AS1") && e.pagina > 0;
+        return e.nome && e.resumo && ["OPRPG", "SAH", "AS1", "AS2"].indexOf(e.fonte) >= 0 && e.pagina > 0;
       }));
       t.ok("todo item tem tipo de ficha e grupo; modificações e maldições não", catalogo.itens.every(function (e) {
         return e.natureza === "item" ? !!(e.tipoItem && e.grupo) : (e.tipoItem === null && e.grupo === null);
@@ -2839,7 +2841,7 @@
       IT._esquecer();
       var carga = IT.carregar();
       t.ok("carregar() devolve uma promessa e deixa o catálogo pronto", !!carga && typeof carga.then === "function" && !!IT.catalogoPronto());
-      t.igual("  com as mesmas 250 entradas", IT.catalogoPronto().itens.length, 250);
+      t.igual("  com as mesmas 268 entradas", IT.catalogoPronto().itens.length, 268);
 
       /* Conferência pontual contra as tabelas dos livros. */
       var katana = entrada("op.arma.katana");
@@ -3280,7 +3282,7 @@
       /* ---------------------------------------------------------------- */
       t.grupo("Ordem · rituais — catálogo completo e estruturado");
 
-      t.igual("100 rituais nos três livros", catalogoR.rituais.length, 100);
+      t.igual("104 rituais nos quatro livros", catalogoR.rituais.length, 104);
       var porFonte = {};
       var porElemento = {};
       var porCirculo = {};
@@ -3292,23 +3294,24 @@
       t.igual("82 do livro básico", porFonte.OPRPG, 82);
       t.igual("16 do Sobrevivendo ao Horror", porFonte.SAH, 16);
       t.igual("2 do Arquivos Secretos 1", porFonte.AS1, 2);
-      t.iguais("por círculo: 30, 27, 22 e 21", [porCirculo[1], porCirculo[2], porCirculo[3], porCirculo[4]], [30, 27, 22, 21]);
+      t.igual("4 do Arquivos Secretos 2", porFonte.AS2, 4);
+      t.iguais("por círculo: 30, 31, 22 e 21", [porCirculo[1], porCirculo[2], porCirculo[3], porCirculo[4]], [30, 31, 22, 21]);
       t.iguais("por elemento (Amaldiçoar Arma conta nos quatro; Passagem de Conhecimento, em Sangue e Conhecimento)",
         [porElemento.conhecimento, porElemento.energia, porElemento.morte, porElemento.sangue, porElemento.medo],
-        [25, 23, 23, 25, 9]);
+        [26, 24, 24, 26, 9]);
 
       var idsR = {};
       var repetidoR = "";
       catalogoR.rituais.forEach(function (e) { if (idsR[e.id]) repetidoR = e.id; idsR[e.id] = true; });
       t.igual("nenhum id se repete", repetidoR, "");
       t.ok("todo id é estável e diz a fonte", catalogoR.rituais.every(function (e) {
-        return /^(op|sah|as1)\.ritual\.[a-z0-9-]+$/.test(e.id) && (e.fonte === "SAH") === (e.id.indexOf("sah.") === 0) &&
-          (e.fonte === "AS1") === (e.id.indexOf("as1.") === 0);
+        return /^(op|sah|as1|as2)\.ritual\.[a-z0-9-]+$/.test(e.id) && (e.fonte === "SAH") === (e.id.indexOf("sah.") === 0) &&
+          (e.fonte === "AS1") === (e.id.indexOf("as1.") === 0) && (e.fonte === "AS2") === (e.id.indexOf("as2.") === 0);
       }));
       t.ok("toda entrada tem nome, resumo, elemento, círculo, execução, alcance, fonte e página",
         catalogoR.rituais.every(function (e) {
           return e.nome && e.resumo && e.elementos.length && e.circulo >= 1 && e.circulo <= 4 &&
-            e.execucao && e.alcance && (e.fonte === "OPRPG" || e.fonte === "SAH" || e.fonte === "AS1") && e.pagina > 0;
+            e.execucao && e.alcance && ["OPRPG", "SAH", "AS1", "AS2"].indexOf(e.fonte) >= 0 && e.pagina > 0;
         }));
       t.ok("onde a duração falta, é porque o livro não informa — e a entrada registra isso",
         catalogoR.rituais.filter(function (e) { return !e.duracao; }).every(function (e) {
@@ -3387,7 +3390,7 @@
         nomesR(RS.filtrar(catalogoR, { busca: "CICATRIZACAO" })).indexOf("Cicatrização") >= 0);
       t.iguais("busca sem resultado devolve lista vazia", RS.filtrar(catalogoR, { busca: "xyzzy" }), []);
       var sangue2 = RS.filtrar(catalogoR, { elemento: "sangue", circulo: 2 });
-      t.ok("elemento + círculo se combinam (6 de Sangue, mais Passagem de Conhecimento, de Sangue e Conhecimento)", sangue2.length === 7 &&
+      t.ok("elemento + círculo se combinam (7 de Sangue com o Mapa Sanguíneo, mais Passagem de Conhecimento)", sangue2.length === 8 &&
         sangue2.every(function (e) { return e.elementos.indexOf("sangue") >= 0 && e.circulo === 2; }));
       t.ok("o filtro de elemento acha o ritual multielemento",
         RS.filtrar(catalogoR, { elemento: "morte" }).some(function (e) { return e.id === "op.ritual.amaldicoar-arma"; }) &&
@@ -3400,9 +3403,9 @@
         nomesR(RS.filtrar(catalogoR, { busca: "fim", elemento: "morte", circulo: 4, fonte: "OPRPG" })).join(", "),
         "Fim Inevitável");
       var contagens = RS.contagens(catalogoR, { elemento: "sangue" });
-      t.igual("a contagem de círculos respeita o elemento escolhido", contagens.circulos[2], 7);
-      t.igual("  e a de elementos ignora o próprio filtro de elemento", contagens.elementos.morte, 23);
-      t.iguais("as três fontes aparecem no catálogo", RS.fontesDoCatalogo(catalogoR).sort(), ["AS1", "OPRPG", "SAH"]);
+      t.igual("a contagem de círculos respeita o elemento escolhido", contagens.circulos[2], 8);
+      t.igual("  e a de elementos ignora o próprio filtro de elemento", contagens.elementos.morte, 24);
+      t.iguais("as quatro fontes aparecem no catálogo", RS.fontesDoCatalogo(catalogoR).sort(), ["AS1", "AS2", "OPRPG", "SAH"]);
       var grupos = RS.porCirculo(RS.filtrar(catalogoR, { elemento: "medo" }));
       t.iguais("agrupado por círculo, com o custo de cada um",
         grupos.map(function (g) { return g.circulo + ":" + g.entradas.length + ":" + g.custo; }).join(" "),
@@ -4582,6 +4585,12 @@
         global.RAMAOrdemItens, global.RAMAOrdemItensDados);
     }
 
+    /* v2.30 — ARQUIVOS SECRETOS 2 */
+    if (global.RAMAOrdemArquivo2 && global.RAMAHexatombe && global.RAMAOrdemPoderes && global.RAMAOrdemOpcionais) {
+      casosDaV230(t, global.RAMAOrdemCatalogo, global.RAMAOrdemPoderes, global.RAMAOrdemArquivo2, global.RAMAHexatombe,
+        global.RAMAOrdemOpcionais, global.RAMADados, global.RAMASync);
+    }
+
     /* =================================================================
        MIGRAÇÃO — FICHA ANTIGA (schema 1)
        ================================================================= */
@@ -4797,6 +4806,302 @@
      Maldições), os requisitos novos, as regras opcionais e a
      compatibilidade das fichas antigas.
      ================================================================= */
+
+  /* =================================================================
+     v2.30 — ARQUIVOS SECRETOS 2
+     ================================================================= */
+
+  function casosDaV230(t, C, P, A2, HX, OP, D, SY) {
+    t.grupo("Arquivos Secretos 2 · fonte registrada");
+    var as2 = C.LIVROS.filter(function (l) { return l.sigla === "AS2"; })[0];
+    t.ok("o livro entra na lista de fontes, com edição v1.0", !!as2 && as2.edicao === "v1.0" && as2.nome === "Arquivos Secretos 2");
+    t.igual("  e no mapa de nomes curtos", C.mapaDosLivros("curto").AS2, "Arquivos Secretos 2");
+
+    t.grupo("Arquivos Secretos 2 · poderes");
+    var chaves = ["predadorPerfeito", "golpesDeArena", "marteladas", "assassinatoFurtivo", "especialistaEmMatar",
+      "dominarHabilidadeRitualistica", "liturgiaDeFortalecimento", "revidarViolento", "corpoFechado", "esquivaTatica",
+      "palpiteConfiante", "especialistaEmCorrentes", "especialistaEmCorrentesPuxar", "praticaComMateriaisRitualisticos",
+      "estagioTerminal", "kianVaiNosSalvar", "tratamentoDeEmergencia", "arteDaMusicaMacabra", "sintonizacaoMentalComArma",
+      "sintonizacaoMentalComProtecao", "movimentacaoTatica", "sentidoTaticoMilitar", "predadorDeSangue", "pressaoAtmosferica",
+      "zonaDosSussurros", "disparoDaMorte", "engolirSangue",
+      "desejoDiabolico", "filhoDaDor", "novoCaminho", "oSaborDoSilencio", "sedeDeVinganca"];
+    var faltam = chaves.filter(function (k) { var p = P.poder(k); return !p || p.fonte !== "AS2" || !(p.pagina > 0); });
+    t.iguais("todos os poderes do suplemento existem, com fonte AS2 e página", faltam, []);
+    t.ok("Sentido Tático do livro básico continua sendo outro poder", !!P.poder("sentidoTatico") && P.poder("sentidoTatico").fonte !== "AS2");
+    t.ok("Dominar Habilidade Ritualística vai até três vezes, uma por habilidade",
+      P.poder("dominarHabilidadeRitualistica").maximoTotal === 3 && P.poder("dominarHabilidadeRitualistica").repeticaoPorOpcao === "habilidade");
+    t.ok("os cinco poderes de Intenção pedem o contato com a Coroa de Espinhos", P.PODERES_INTENCAO.length === 5 &&
+      P.PODERES_INTENCAO.every(function (p) { return p.requisitos.some(function (r) { return r.tipo === "coroaDeEspinhos"; }) && p.intencao && p.intencao.gatilho; }));
+    t.ok("  e nenhum ganha afinidade, componente ou elemento inventado", P.PODERES_INTENCAO.every(function (p) { return p.elemento === "intencao" && !p.afinidade; }));
+    t.ok("as divergências das fichas de NPC ficam registradas", P.PODERES_INTENCAO.every(function (p) { return (p.intencao.versoesNpc || []).length >= 1; }));
+
+    t.grupo("Arquivos Secretos 2 · Especialista em Matar");
+    t.iguais("patamares por NEX (5%, 25%, 55%, 85%)",
+      [5, 25, 55, 85].map(function (n) { return A2.patamaresDeEspecialistaEmMatar(n).length; }), [1, 2, 3, 4]);
+    var plano = A2.planoDeEspecialistaEmMatar(55, 1, 2);
+    t.iguais("NEX 55%: +4 no ataque e +8 no dano por 4 PE", [plano.ok, plano.custo, plano.ataque, plano.dano], [true, 4, 4, 8]);
+    t.ok("  mais +4 do que o NEX permite é recusado", !A2.planoDeEspecialistaEmMatar(20, 1, 1).ok);
+    t.iguais("  comprar menos é permitido (NEX 85%, só um +4 no dano)", [A2.planoDeEspecialistaEmMatar(85, 0, 1).custo, A2.planoDeEspecialistaEmMatar(85, 0, 1).dano], [2, 4]);
+
+    t.grupo("Arquivos Secretos 2 · reservas, liturgia e pendentes");
+    var o = A2.normalizar({ condicoes: { cena: { id: "cena-1" }, interludio: { numero: 2 } } }, {});
+    o.condicoes = { cena: { id: "cena-1" }, interludio: { numero: 2 } };
+    t.ok("catalisador: 1d6 por ritual", A2.gastarDaReserva(o, "catalisador", "r1").ok && !A2.gastarDaReserva(o, "catalisador", "r1").ok);
+    A2.gastarDaReserva(o, "catalisador", "r2"); A2.gastarDaReserva(o, "catalisador", "r3");
+    t.ok("  e 3d6 por cena, nem um a mais", !A2.gastarDaReserva(o, "catalisador", "r4").ok);
+    o.condicoes.cena = { id: "cena-2" };
+    t.ok("  a cena nova traz 3d6 de novo", A2.gastarDaReserva(o, "catalisador", "r4").ok);
+    A2.fortalecer(o, "rit-1", "Ritual");
+    t.igual("Liturgia: +2 na DT do ritual neste interlúdio", A2.dtDeFortalecimento(o, "rit-1"), 2);
+    o.condicoes.interludio = { numero: 3 };
+    t.igual("  e nada a partir do interlúdio seguinte", A2.dtDeFortalecimento(o, "rit-1"), 0);
+    A2.sintonizar(o, "arma", "item-1", "int");
+    t.ok("Sintonização: vale no interlúdio em que foi feita", !!A2.sintonizacaoValendo(o, "arma", "item-1"));
+    o.condicoes.interludio = { numero: 4 };
+    t.ok("  e vence no início do próximo", !A2.sintonizacaoValendo(o, "arma", "item-1"));
+    A2.guardarPendente(o, "dano", 5, "Arte da Música Macabra");
+    t.igual("“o próximo dano” fica guardado e é gasto uma vez", [A2.consumirPendentes(o, "dano").soma, A2.consumirPendentes(o, "dano").soma].join(","), "5,0");
+
+    t.grupo("Arquivos Secretos 2 · poderes de Intenção");
+    var oi = A2.normalizar({}, {});
+    t.ok("sem o contato registrado, nada é concedido", !A2.concederIntencao(oi, "filhoDaDor").ok);
+    A2.registrarContato(oi, "Hexatombe", "mesa");
+    var conc = A2.concederIntencao(oi, "filhoDaDor");
+    t.ok("com o contato, Filho da Dor é concedido uma vez", conc.ok && !A2.concederIntencao(oi, "filhoDaDor").ok);
+    var pid = conc.poder.id;
+    t.ok("ferimento de menos de 5 não conta", !A2.registrarFerimento(oi, pid, 4).ok);
+    A2.registrarFerimento(oi, pid, 5); A2.registrarFerimento(oi, pid, 9);
+    t.ok("  o terceiro ferimento atende o gatilho", A2.registrarFerimento(oi, pid, 6).atendido === true);
+    t.ok("usar liga o efeito (RD 25, −5 PV por turno)", A2.usarIntencao(oi, pid).ok && A2.efeitosDaIntencao(oi).rd === 25 && A2.efeitosDaIntencao(oi).perdaPorTurno === 5);
+    t.ok("  e o gatilho volta a zero", oi.intencao.poderes[0].ferimentos.length === 0 && !oi.intencao.poderes[0].gatilho.atendido);
+    A2.encerrarIntencao(oi, pid);
+    t.igual("encerrar desliga a RD", A2.efeitosDaIntencao(oi).rd, 0);
+    var dd = A2.concederIntencao(oi, "desejoDiabolico").poder.id;
+    oi.condicoes = { cena: { id: "c1" } };
+    A2.atenderGatilho(oi, dd, "mesa");
+    oi.condicoes = { cena: { id: "c2" } };
+    t.ok("Desejo Diabólico: gatilho de outra cena não vale", !A2.usarIntencao(oi, dd).ok);
+    A2.atenderGatilho(oi, dd, "mesa");
+    oi.intencao.poderes.filter(function (p) { return p.id === dd; })[0].gatilho.atendido = false;
+    A2.atenderGatilho(oi, dd, "mesa");
+    t.ok("  na mesma cena vale, uma vez por cena", A2.usarIntencao(oi, dd).ok);
+    A2.atenderGatilho(oi, dd, "mesa");
+    t.ok("  e a segunda na mesma cena é recusada", !A2.usarIntencao(oi, dd).ok);
+
+    t.grupo("Arquivos Secretos 2 · forma alternativa (As Máscaras na Sua Mesa)");
+    var of = A2.normalizar({}, { formaSuprema: { configurada: true, nome: "Forma" } });
+    t.ok("sem aprovação da mesa, não ativa", !A2.podeAtivar(of, false).ok);
+    of.formaSuprema.aprovada = true;
+    t.ok("Jogando sem Sanidade pede a decisão da mesa sobre o custo", !A2.podeAtivar(of, true).ok);
+    var at = A2.ativarForma(of, false);
+    t.iguais("ativar custa 6 SAN; cada rodada além da primeira, 2", [at.custo, at.recurso, A2.manterForma(of, false).custo], [6, "san", 2]);
+    var des = A2.desativarForma(of, 15, 30);
+    t.iguais("desativar com menos de 20 PV deixa em 0 e morrendo", [des.pv, des.pe, des.morrendo], [0, 20, true]);
+
+    t.grupo("Arquivos Secretos 2 · Aliados em Perigo");
+    var regra = OP.regra("aliadosEmPerigo");
+    t.ok("é regra opcional da p. 24, desligada por padrão", !!regra && regra.fonte === "AS2" && regra.pagina === 24 && !OP.ligada({ opcionais: {} }, "aliadosEmPerigo"));
+    var aliado = { id: "a1" };
+    t.ok("par: segue intacto", A2.arriscarAliado(aliado, "cena-1", 4, "r1").ferido === false);
+    t.ok("ímpar: ferido", A2.arriscarAliado(aliado, "cena-1", 3, "r2").ferido === true && aliado.perigo.feridas === 1);
+    t.ok("a mesma rolagem não conta duas vezes", A2.arriscarAliado(aliado, "cena-1", 5, "r2").repetido === true && aliado.perigo.feridas === 1);
+    var segunda = A2.arriscarAliado(aliado, "cena-1", 1, "r3");
+    t.ok("o segundo ferimento na cena deixa a morte pendente", segunda.pendente === true && !aliado.perigo.morto);
+    t.ok("  e nada rola até a mesa confirmar", !A2.arriscarAliado(aliado, "cena-1", 2, "r4").ok);
+    A2.confirmarPerigo(aliado, true);
+    t.ok("  confirmada, o aliado morre", aliado.perigo.morto === true && !A2.arriscarAliado(aliado, "cena-2", 2, "r5").ok);
+    var outro = { id: "a2" };
+    A2.arriscarAliado(outro, "cena-1", 1, "x1");
+    A2.arriscarAliado(outro, "cena-2", 1, "x2");
+    t.ok("ferimentos contam por cena e cada aliado tem o seu registro", outro.perigo.feridas === 1 && !outro.perigo.pendente && A2.estadoDoPerigo(outro, "cena-3").feridas === 0);
+    t.ok("o registro do perigo sincroniza item a item", JSON.stringify(SY.ESQUEMA_FICHA).indexOf("aliados.perigo.registros") >= 0);
+
+    t.grupo("Arquivos Secretos 2 · dano extra que multiplica no crítico");
+    var r = D.danoComposto({ partes: ["1d8+10 corte", "1d8 Sangue"], critico: true, multiplicador: 3, multiplicaTodas: true });
+    t.ok("Machado do Mutilador: as duas partes multiplicam", /^3d8\+10 corte \+ 3d8 sangue$/i.test(r.expressao), r.expressao);
+    var r2 = D.danoComposto({ partes: ["1d8+10 corte", "1d8 Sangue"], critico: true, multiplicador: 3 });
+    t.ok("  sem a marca, só a primeira (a regra geral)", /^3d8\+10 corte \+ 1d8 sangue$/i.test(r2.expressao), r2.expressao);
+
+    casosDoHexatombe(t, HX);
+  }
+
+  function casosDoHexatombe(t, HX) {
+    function seqDe(valores) { var i = 0; return function () { return valores[i++ % valores.length]; }; }
+    function novo() {
+      var e = HX.vazio();
+      HX.ligar(e, true);
+      HX.salvarEquipe(e, { id: "eqA", nome: "Mascarados" });
+      HX.salvarEquipe(e, { id: "eqB", nome: "Vampiros", notas: "segredo do mestre" });
+      HX.salvarEquipe(e, { id: "eqC", nome: "Couraças" });
+      HX.salvarParticipante(e, { id: "pA1", nome: "Ana", equipeId: "eqA", personagemId: "per-ana" });
+      HX.salvarParticipante(e, { id: "pA2", nome: "Beto", equipeId: "eqA", personagemId: "per-beto", sacrificio: true, estigma: "rancor", original: true });
+      HX.salvarParticipante(e, { id: "pB1", nome: "Caio", equipeId: "eqB", sacrificio: true, estigma: "prazer", original: true, notas: "nota privada" });
+      HX.salvarParticipante(e, { id: "pB2", nome: "Duda", equipeId: "eqB" });
+      HX.salvarParticipante(e, { id: "pC1", nome: "Eva", equipeId: "eqC", sacrificio: true, estigma: "orgulho", original: true });
+      HX.salvarParticipante(e, { id: "pC2", nome: "Fê", equipeId: "eqC" });
+      return e;
+    }
+
+    t.grupo("Hexatombe · estado e dias");
+    var e = novo();
+    t.ok("ligado, com três equipes e seis participantes", e.ativo && e.equipes.length === 3 && e.participantes.length === 6);
+    t.ok("sacrifício sem estigma é recusado", !HX.salvarParticipante(e, { nome: "X", sacrificio: true }).ok);
+    e.equipes[0].base.melhorias = ["limpeza", "filtro"];
+    var d1 = HX.avancarDia(e);
+    t.iguais("avançar: dia 1, preparação, e o filtro produz 6 águas", [d1.ok, e.dia, e.fase, e.equipes[0].estoque.agua], [true, 1, "preparacao", 6]);
+    e.dia = 0;
+    HX.avancarDia(e);
+    t.igual("  a produção de um dia não entra duas vezes", e.equipes[0].estoque.agua, 6);
+    var mortos = HX.vivos(e).length;
+    var d2 = HX.avancarDia(e);
+    t.igual("  o dia seguinte produz de novo", e.equipes[0].estoque.agua, 12);
+    t.ok("avançar sem sacrifício avisa (o fracasso é da mesa)", d2.avisos.some(function (a) { return /fracassa/.test(a); }) && !e.fracassou);
+    t.igual("  e não resolve mortes, encontros nem intenções", [HX.vivos(e).length, e.intencoes.length].join(","), mortos + ",0");
+    t.ok("fase ajustável pelo mestre", HX.definirFase(e, "conclusao", "noite longa").ok && e.fase === "conclusao" && !HX.definirFase(e, "madrugada").ok);
+
+    t.grupo("Hexatombe · consumo, fome e sede");
+    e = novo(); HX.avancarDia(e);
+    e.equipes[0].estoque.agua = 5; e.equipes[0].estoque.comida = 5;
+    var c1 = HX.consumir(e, "pA1", 0, 1);
+    t.ok("sem água: −10 PV máximos a partir do dia seguinte, com id estável",
+      c1.lancamentos.length === 1 && c1.lancamentos[0].lancamento.id === "hx.sede.pA1.d1" && c1.lancamentos[0].lancamento.valor === -10 &&
+      c1.lancamentos[0].lancamento.tipo === "pvMax" && c1.lancamentos[0].lancamento.dia === 2 && c1.lancamentos[0].personagemId === "per-ana");
+    t.ok("  sai do estoque da equipe", e.equipes[0].estoque.comida === 4);
+    t.ok("o mesmo dia não é registrado duas vezes", !HX.consumir(e, "pA1", 1, 1).ok);
+    HX.avancarDia(e);
+    var c2 = HX.consumir(e, "pA1", 2, 1);
+    t.ok("1 água a mais no fim de um dia seguinte recupera o déficit", c2.desfazer.length === 1 && c2.desfazer[0].id === "hx.sede.pA1.d1" && e.participantes[0].sede === 0);
+    var desf = HX.desfazerConsumo(e, "pA1", 2);
+    t.ok("  desfazer esse consumo devolve o estoque e o déficit volta", desf.ok && e.participantes[0].sede === 1 &&
+      desf.lancamentos.some(function (x) { return x.lancamento.id === "hx.sede.pA1.d1" && x.lancamento.refazer === true; }));
+    t.ok("fome e sede convivem (cada uma no seu máximo)", HX.consumir(e, "pA2", 0, 0).lancamentos.map(function (x) { return x.lancamento.tipo; }).sort().join(",") === "peMax,pvMax");
+    t.ok("estoque insuficiente é recusado", !HX.consumir(e, "pB2", 9, 0).ok);
+
+    t.grupo("Hexatombe · sacrifícios, desertores e estigmas");
+    e = novo(); HX.avancarDia(e);
+    HX.marcarDesertor(e, "pC2", "saiu");
+    var m1 = HX.registrarMorte(e, { participanteId: "pB1", por: "pA1", momento: "noite", rolar: seqDe([7]) });
+    t.ok("o primeiro sacrifício da noite é válido e desbloqueia a intenção do estigma", e.sacrificios[0].valido && HX.desbloqueada(e, "prazer"));
+    t.ok("  o desertor que já existia é castigado (−1d10 PV máx. e atuais, −1 em testes)",
+      e.participantes.filter(function (p) { return p.id === "pC2"; })[0].castigos === 1 && m1.avisos.some(function (a) { return /Fê: −7/.test(a); }));
+    var lancB2 = m1.lancamentos.filter(function (x) { return x.personagemId === "per-beto"; });
+    t.ok("  a equipe que perdeu o sacrifício vira desertora", e.participantes.filter(function (p) { return p.id === "pB2"; })[0].desertor.motivo === "equipe" &&
+      HX.equipeDesertora(e, "eqB") && lancB2.length === 0);
+    var m2 = HX.registrarMorte(e, { participanteId: "pC1", por: "pA1", momento: "noite" });
+    t.ok("o segundo sacrifício da mesma noite não conta e quem matou herda o estigma",
+      !e.sacrificios[1].valido && e.participantes[0].sacrificio && e.participantes[0].estigma === "orgulho" && !e.participantes[0].original);
+    t.ok("  e a intenção dele não é desbloqueada", !HX.desbloqueada(e, "orgulho"));
+    t.ok("  o castigo não se repete por ele", m2.lancamentos.every(function (x) { return !/castigo/.test(x.lancamento.id); }));
+
+    e = novo(); HX.avancarDia(e);
+    HX.registrarMorte(e, { participanteId: "pB1", por: "pA1", momento: "dia" });
+    t.ok("sacrifício morto de dia: quem matou herda, sem desbloquear intenção", e.participantes[0].estigma === "prazer" && !HX.desbloqueada(e, "prazer"));
+    e = novo(); HX.avancarDia(e);
+    HX.registrarMorte(e, { participanteId: "pB1", momento: "noite" });
+    HX.registrarMorte(e, { participanteId: "pC1", momento: "noite", causa: "suicidio" });
+    t.ok("segundo sacrifício que tira a própria vida: a Coroa escolhe (pendência)", e.pendencias.length === 1 && e.pendencias[0].estigma === "orgulho");
+    t.ok("  sacrifício não herda outro estigma", !HX.escolherHerdeiro(e, e.pendencias[0].id, "pA2").ok);
+    t.ok("  o herdeiro escolhido vira sacrifício", HX.escolherHerdeiro(e, e.pendencias[0].id, "pA1").ok && e.participantes[0].estigma === "orgulho" && !e.pendencias.length);
+
+    e = novo(); HX.avancarDia(e);
+    HX.marcarDesertor(e, "pA1", "saiu");
+    for (var k = 0; k < 8; k++) {
+      HX.salvarParticipante(e, { id: "s" + k, nome: "S" + k, sacrificio: true, estigma: "culpa" });
+      e.dia = Math.min(6, k + 1);
+      HX.registrarMorte(e, { participanteId: "s" + k, momento: "noite", rolar: seqDe([10]) });
+    }
+    t.igual("o castigo acumula até seis vezes (−6d10 e −6)", e.participantes[0].castigos, 6);
+    var volta = HX.retornarDaArena(e, "pA1");
+    t.ok("quem saiu da arena deixa de ser desertor ao voltar (desfaz os lançamentos)", volta.ok && volta.desfazer.length === 2 && !e.participantes[0].desertor);
+    e.participantes[1].desertor = { desde: 1, motivo: "equipe" };
+    t.ok("  quem perdeu o sacrifício não", !HX.retornarDaArena(e, "pA2").ok);
+
+    t.grupo("Hexatombe · base e melhorias");
+    e = novo(); HX.avancarDia(e);
+    var q = e.equipes[0];
+    q.estoque.sucata = 3;
+    t.ok("sem limpeza, nenhuma outra melhoria", !HX.tentarMelhoria(e, "eqA", "camas", 25).ok);
+    t.ok("limpeza com teste 20 passa e custa 0", HX.tentarMelhoria(e, "eqA", "limpeza", 20).feito && q.estoque.sucata === 3);
+    var falhou = HX.tentarMelhoria(e, "eqA", "camas", 17);
+    t.ok("falhou por menos de 5: nada feito, nada gasto", falhou.ok && !falhou.feito && q.estoque.sucata === 3);
+    var quebrou = HX.tentarMelhoria(e, "eqA", "camas", 15);
+    t.ok("falhou por 5 ou mais: a sucata é gasta sem a melhoria", quebrou.perdeu && q.estoque.sucata === 2 && q.base.melhorias.indexOf("camas") < 0);
+    HX.tentarMelhoria(e, "eqA", "camas", 22);
+    t.igual("camas: o descanso passa a normal", HX.condicaoDeDescanso(e, "eqA"), "normal");
+    t.ok("melhoria de recurso especial não tem teste: a mesa instala", !HX.tentarMelhoria(e, "eqA", "enfermaria", 30).ok && HX.instalarMelhoriaEspecial(e, "eqA", "enfermaria").ok);
+    t.ok("sucata insuficiente é recusada", !HX.tentarMelhoria(e, "eqA", "casaNaArvore", 30).ok);
+
+    t.grupo("Hexatombe · exploração e recursos");
+    e = novo(); HX.avancarDia(e);
+    var a1 = HX.salvarArea(e, { nome: "Povoado", explorada: true }).id;
+    var a2 = HX.salvarArea(e, { nome: "Capela" }).id;
+    var a3 = HX.salvarArea(e, { nome: "Rancho" }).id;
+    var j1 = HX.registrarJornada(e, { de: a1, para: a2, testadorId: "pA1", pericia: "Tática", passou: false, d6: 2 });
+    t.ok("falhar a jornada não impede de chegar: sorteia a consequência", j1.ok && j1.consequencia.nome === "Barranco" && e.areas[1].explorada);
+    t.ok("perícia que não Sobrevivência: uma vez no Hexatombe", !HX.registrarJornada(e, { de: a2, para: a3, testadorId: "pA1", pericia: "Tática", passou: true }).ok);
+    t.ok("  outra pessoa pode usar a mesma perícia", HX.registrarJornada(e, { de: a2, para: a3, testadorId: "pA2", pericia: "Tática", passou: true }).ok);
+    t.ok("caminho já percorrido dispensa o teste", HX.registrarJornada(e, { de: a2, para: a1 }).semTeste === true);
+    var pr = HX.procurarRecursos(e, { participanteId: "pA1", areaId: a2, total: 21, d12: [3] });
+    t.ok("teste 21: uma rolagem na coluna 20+ (leitura padrão)", pr.achados.length === 1 && pr.achados[0].nome === "Pedra de Amolar" &&
+      e.equipes[0].estoque.itens.some(function (i) { return i.nome === "Pedra de Amolar"; }));
+    t.ok("  um teste por personagem no mesmo local", !HX.procurarRecursos(e, { participanteId: "pA1", areaId: a2, total: 25 }).ok);
+    e.leituraDeRecursos = "cumulativa";
+    var pr2 = HX.procurarRecursos(e, { participanteId: "pA2", areaId: a2, total: 26, d12: [1, 2, 9] });
+    t.iguais("leitura cumulativa: uma rolagem em cada coluna alcançada", pr2.achados.map(function (a) { return a.nome; }), ["Comida", "Incenso", "Água"]);
+    t.ok("  água e comida entram no estoque como unidades", e.equipes[0].estoque.agua === 1 && e.equipes[0].estoque.comida === 1);
+    t.igual("menos de 15: nada", HX.procurarRecursos(e, { participanteId: "pB2", areaId: a2, total: 9 }).achados.length, 0);
+    var enc = HX.rolarEncontro(e, "diurnoBase", { valor: 8 });
+    t.igual("encontro diurno de base: 7–8 é a invasão acanhada", enc.encontro.nome, "Invasão acanhada");
+
+    t.grupo("Hexatombe · intenções");
+    e = novo(); HX.avancarDia(e);
+    t.ok("intenção bloqueada não pode ser cumprida", !HX.cumprirIntencao(e, "pA1", "prazer").ok);
+    HX.registrarMorte(e, { participanteId: "pB1", momento: "noite" });
+    var ci = HX.cumprirIntencao(e, "pA1", "prazer");
+    t.ok("desbloqueada: a recompensa vira lançamento na ficha (+10 PV máx.)", ci.ok && ci.lancamentos[0].lancamento.tipo === "pvMax" &&
+      ci.lancamentos[0].lancamento.valor === 10 && ci.lancamentos[0].lancamento.id === "hx.intencao.pA1.prazer");
+    t.ok("  uma vez por participante", !HX.cumprirIntencao(e, "pA1", "prazer").ok);
+    t.ok("  desfazer devolve o lançamento", HX.desfazerIntencao(e, "pA1", "prazer").desfazer[0].id === "hx.intencao.pA1.prazer");
+    t.iguais("recompensas: Rancor +5 dano, Obsessão RD 5, Orgulho +10 PE",
+      ["rancor", "obsessao", "orgulho"].map(function (k) { var l = HX.POR_ESTIGMA[k].lancamento; return l.tipo + l.valor; }), ["dano5", "rd5", "peMax10"]);
+
+    t.grupo("Hexatombe · a sexta noite");
+    e = novo();
+    t.ok("Lua de Sangue só na sexta noite", !HX.luaDeSangue(e, false).ok);
+    e.dia = 6;
+    HX.marcarDesertor(e, "pC2", "saiu");
+    HX.luaDeSangue(e, false);
+    t.ok("sem o sacrifício final, os desertores definham", !e.participantes.filter(function (p) { return p.id === "pC2"; })[0].vivo);
+    t.ok("o sétimo dia não existe", !HX.avancarDia(e).ok);
+    var fim = HX.luaDeSangue(novo6(), true);
+    function novo6() { var x = novo(); x.dia = 6; HX.salvarParticipante(x, { id: "pX", nome: "Sétimo", equipeId: "eqC" }); return x; }
+    t.ok("o sacrifício final confere os seis presentes e a regra VI", fim.avisos.some(function (a) { return /seis presentes/.test(a); }) && fim.avisos.some(function (a) { return /regra VI/.test(a); }));
+
+    t.grupo("Hexatombe · o que o jogador vê");
+    e = novo(); HX.avancarDia(e);
+    HX.anotar(e, "só o mestre sabe", "mestre");
+    HX.anotar(e, "todos sabem", "todos");
+    HX.anotar(e, "só os Vampiros", "eqB");
+    var v = HX.vistaDoJogador(e, ["per-ana"]);
+    var rival = v.equipes.filter(function (q2) { return q2.id === "eqB"; })[0];
+    t.ok("equipe rival: só o nome (sem base, estoque nem notas)", rival.rival && !rival.estoque && !rival.base && !rival.notas);
+    t.ok("  participantes de outras equipes não aparecem", v.participantes.every(function (p) { return p.equipeId === "eqA"; }));
+    t.ok("  o próprio participante traz consumo e intenções; o colega, não", v.participantes.filter(function (p) { return p.meu; })[0].consumo &&
+      !v.participantes.filter(function (p) { return !p.meu; })[0].consumo);
+    t.ok("  diário: público e da própria equipe, nunca do mestre ou de rival",
+      v.registro.some(function (r) { return r.texto === "todos sabem"; }) && !v.registro.some(function (r) { return /mestre sabe|Vampiros/.test(r.texto); }));
+    t.ok("  nada de notas, pendências ou lançamentos pendentes", JSON.stringify(v).indexOf("nota privada") < 0 && JSON.stringify(v).indexOf("segredo do mestre") < 0 &&
+      v.pendencias === undefined && v.pendentes === undefined);
+    t.igual("modo desligado: o jogador não vê nada", JSON.stringify(HX.vistaDoJogador(HX.vazio(), ["per-ana"])), JSON.stringify({ ativo: false }));
+    var sujo = HX.normalizar({ ativo: true, dia: 9, fase: "x", equipes: [{ id: "a", nome: "A", base: { melhorias: ["limpeza", "foguete"] } }, { id: "a", nome: "B" }],
+      participantes: [{ id: "p", nome: "P", equipeId: "zz", estigma: "inexistente", castigos: 99 }] });
+    t.ok("normalizar: limites, chaves conhecidas e ids sem repetição", sujo.dia === 6 && sujo.fase === "preparacao" && sujo.equipes.length === 1 &&
+      sujo.equipes[0].base.melhorias.join() === "limpeza" && sujo.participantes[0].equipeId === "" && sujo.participantes[0].estigma === "" && sujo.participantes[0].castigos === 6);
+    var pend = HX.vazio();
+    HX.guardarPendentes(pend, { lancamentos: [{ personagemId: "per-1", lancamento: { id: "hx.a", tipo: "pvMax", valor: -10 } }], desfazer: [{ personagemId: "per-1", id: "hx.b" }] });
+    HX.tirarPendente(pend, "per-1", "hx.a", false);
+    t.ok("pendentes: o que chegou sai, o que falta fica", pend.pendentes.length === 1 && pend.pendentes[0].desfazer);
+  }
 
   function casosDaV229(t, C, R, E, P, A, RT, RTD, F, OP, M, IT, ITD) {
     var INV = { itens: [] };

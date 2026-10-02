@@ -363,3 +363,18 @@ por `doPost` como uma requisição de verdade. Entre elas:
   `restaurarGeracaoAnterior`, `limparBlocosOrfaos`) não estão no roteamento — só
   rodam no editor do Apps Script. Conhecer o id de um personagem ou de uma geração
   não abre nada: tudo passa pela conferência de acesso do personagem
+
+## Hexatombe — v2.30
+
+| ação | mestre | jogador da campanha | espectador / de fora |
+|---|---|---|---|
+| ver o estado inteiro (`ler_hexatombe`) | sim | não — recebe a vista dele | não |
+| ver a própria equipe (base, estoque, colegas) | sim | sim, se tem personagem nela | não |
+| ver equipe rival | sim | só o nome | não |
+| ver notas do mestre, pendências, lançamentos pendentes | sim | não | não |
+| ver o próprio consumo, déficits, castigos e intenções | sim | sim (só do próprio participante) | não |
+| ver o diário | inteiro | público e da própria equipe | não |
+| gravar (`salvar_hexatombe`) | sim | não (`sem_permissao`) | não (`nao_encontrado`) |
+| lançar na ficha (`lancar_hexatombe`) | sim, só em personagem da campanha | não | não |
+
+O filtro é do servidor: o navegador do jogador nunca recebe o estado inteiro.

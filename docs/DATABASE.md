@@ -1,5 +1,22 @@
 # O banco
 
+## Hexatombe — v2.30
+
+> **Atualizando para a v2.30:** troque os três `.gs`, rode `setupRama()` (cria a aba
+> `CAMPANHA_HEXATOMBE`) e crie uma nova versão da implantação. Nada existente é
+> convertido.
+
+**CAMPANHA_HEXATOMBE** — `campanhaId · ativo · dia · atualizadoEm · rev · opsJson ·
+dadosJson`. Uma linha por campanha, criada na primeira gravação do mestre.
+`dadosJson` é o estado normalizado pelo módulo `RAMAHexatombe` (cópia fiel de
+`js/ordem/hexatombe.js` dentro de `Campanhas.gs`): até 8 equipes, 48 participantes,
+24 sacrifícios, 40 áreas, 80 caminhos, 60 entradas de diário e 60 lançamentos
+pendentes. Acima de 45.000 caracteres, o servidor encurta o diário antes de
+recusar (`dados_grandes`). `opsJson` guarda os últimos 50 `opId` aplicados. As
+colunas leves (`ativo`, `dia`) respondem a `ler_campanha` sem abrir o estado. Os
+lançamentos na ficha vão no bloco `ordem.hexatombe` da própria ficha (nos blocos
+dela), não nesta aba.
+
 ## Imagem em duas células — v2.28.1
 
 GIF animado vai inteiro, com até 50 KB — ~68 mil caracteres em data URL, mais que

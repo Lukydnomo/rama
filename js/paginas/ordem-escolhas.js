@@ -38,7 +38,7 @@
   function BIB() { return global.RAMABibliotecaDeRituais; }
   var el = U.el;
 
-  var ROTULO_FONTE = { OPRPG: "Livro básico", SAH: "Sobrevivendo ao Horror", AS1: "Arquivos Secretos 1" };
+  var ROTULO_FONTE = C.mapaDosLivros("curto");
 
   function copiar(v) { return v === undefined ? undefined : JSON.parse(JSON.stringify(v)); }
 
@@ -185,10 +185,9 @@
 
     var grupoFonte = el("div.filtros__grupo", { role: "group", "aria-label": "Livro" }, [
       botaoFiltro("Todos os livros", !f.fonte, function () { f.fonte = ""; sessao.pintar(); }),
-      botaoFiltro("Livro básico", f.fonte === "OPRPG", function () { f.fonte = "OPRPG"; sessao.pintar(); }),
-      botaoFiltro("Sobrevivendo ao Horror", f.fonte === "SAH", function () { f.fonte = "SAH"; sessao.pintar(); }),
-      botaoFiltro("Arquivos Secretos 1", f.fonte === "AS1", function () { f.fonte = "AS1"; sessao.pintar(); }),
-    ]);
+    ].concat(C.LIVROS.map(function (l) {
+      return botaoFiltro(l.curto, f.fonte === l.sigla, function () { f.fonte = l.sigla; sessao.pintar(); });
+    })));
 
     var grupoElemento = o.porElemento
       ? el("div.filtros__grupo", { role: "group", "aria-label": "Elemento" },
@@ -696,6 +695,36 @@
             ? el("div.escolha-aninhada", {}, [
                 el("p.t-secao", { texto: "Opções de " + primeira.nome }),
                 painelDeOpcoes(sessao, primeira.opcoes, subT.opcoes, caminho, prof + 1),
+              ])
+            : null,
+        ]);
+      }
+
+      /* Dominar Habilidade Ritualística (AS2 p. 75): as habilidades das
+         trilhas da classe, com o porquê de cada uma indisponível. */
+      case "habilidadeDeTrilha": {
+        var subH = atual && typeof atual === "object" ? atual : null;
+        var candH = E.candidatosHabilidadeDeTrilha(ordem, vagaId, contexto, op.classe);
+        var escolhidaH = subH && subH.valor ? P.poder(subH.valor) : null;
+        return el("div.pilha", {}, [
+          el("div.criacao-lista.escolha-lista", {}, candH.map(function (c) {
+            var h = c.habilidade;
+            var marcada = !!(subH && subH.valor === h.chave);
+            return el("button.criacao-opcao", {
+              type: "button", "aria-pressed": String(marcada),
+              class: (marcada ? "criacao-opcao--escolhida " : "") + (c.disponivel ? "" : "criacao-opcao--indisponivel"),
+              onclick: function () { valores[op.chave] = { valor: h.chave, opcoes: {} }; sessao.pintar(); },
+            }, [
+              el("span.criacao-opcao__nome", { texto: h.nome + " · " + c.trilha.nome + " · NEX " + h.nex + "%" }),
+              el("span.criacao-opcao__texto", { texto: h.resumo }),
+              c.disponivel ? null : el("span.criacao-opcao__fonte.t-aviso", { texto: c.motivos.join(" ") }),
+              el("span.criacao-opcao__fonte", { texto: P.referencia(h) }),
+            ]);
+          })),
+          escolhidaH && escolhidaH.opcoes.length && prof < 3
+            ? el("div.escolha-aninhada", {}, [
+                el("p.t-secao", { texto: "Opções de " + escolhidaH.nome }),
+                painelDeOpcoes(sessao, escolhidaH.opcoes, subH.opcoes, caminho, prof + 1),
               ])
             : null,
         ]);

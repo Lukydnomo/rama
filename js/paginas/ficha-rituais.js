@@ -294,7 +294,8 @@
     linhas.push(el("p.t-mini", {
       texto: "Limite de rituais conhecidos (Intelecto): " + apr.limite.usados + " de " + apr.limite.total +
              " — só Aprender Ritual conta nele." +
-             (dt ? " DT para resistir aos seus rituais: " + dt.total + (dt.extra ? " (com +" + dt.extra + " de trilha)" : "") + "." : ""),
+             (dt ? " DT para resistir aos seus rituais: " + (dt.total + dtDaAntena(ctx)) + (dt.extra ? " (com +" + dt.extra + " de trilha)" : "") +
+               (dtDaAntena(ctx) ? " (com +3 d’A Antena)" : "") + "." : ""),
     }));
     if (apr.limite.excedido) {
       linhas.push(el("p.t-mini.t-aviso", {
@@ -741,8 +742,26 @@
     if (!base) return "";
     var R = global.RAMAOrdemRegras;
     var aprim = R && R.dtAprimoradaDe ? R.dtAprimoradaDe(ctx.ficha.ordem, ritual.nome) : null;
-    var total = base.total + (aprim ? aprim.valor : 0);
-    return String(total) + (aprim ? " (com +" + aprim.valor + " de Habilidade Aprimorada" + (aprim.vezes > 1 ? ", escolhida duas vezes" : "") + ")" : "");
+    var A2 = global.RAMAOrdemArquivo2;
+    var liturgia = A2 ? A2.dtDeFortalecimento(ctx.ficha.ordem, ritual.id) : 0;
+    var antena = dtDaAntena(ctx);
+    var total = base.total + (aprim ? aprim.valor : 0) + liturgia + antena;
+    var partes = [];
+    if (aprim) partes.push("+" + aprim.valor + " de Habilidade Aprimorada" + (aprim.vezes > 1 ? ", escolhida duas vezes" : ""));
+    if (liturgia) partes.push("+" + liturgia + " de Liturgia, até o próximo interlúdio");
+    if (antena) partes.push("+" + antena + " d’A Antena empunhada");
+    return String(total) + (partes.length ? " (com " + partes.join("; ") + ")" : "");
+  }
+
+  /* A Antena (AS2 p. 67): "a DT de seus rituais aumenta em +3" — com ela
+     empunhada (o item marca). */
+  function dtDaAntena(ctx) {
+    var I = global.RAMAOrdemInventario;
+    var itens = (ctx.ficha.inventario && ctx.ficha.inventario.itens) || [];
+    return itens.some(function (i) {
+      var d = I ? I.dadosDoItem(i) : (i.ordem || {});
+      return i.origemCatalogoId === "as2.amaldicoado.a-antena" && d.empunhada;
+    }) ? 3 : 0;
   }
 
   function retencaoDe(ctx, ritual) {
@@ -791,7 +810,7 @@
         : "A regra opcional Reter Ritual está desligada: estas retenções ficam guardadas e não tiram nada do máximo." }),
     ];
     if (ligada && foco.length) {
-      linhas.push(el("p.t-mini.t-aviso", { texto: "Perdendo o foco (" + foco.join(", ") + "): pela regra, você deixa de reter todos os rituais na hora — recupera os " +
+      linhas.push(el("p.t-mini.t-aviso", { texto: "Pode ter perdido o foco (" + foco.join(", ") + "): o que conta é se o efeito perturba a mente — a fonte importa, e quem decide é o mestre (Inquérito Mensal, Arquivos Secretos 2, p. 104). Se perdeu, deixa de reter todos os rituais na hora e recupera os " +
         sigla + " máximos, não os atuais." + (combate ? " Com Reter Ritual de Combate, pode gastar uma reação e 1 " + sigla + " por ritual para mudar a duração deles para cena." : "") }));
     }
     lista.forEach(function (ret) {

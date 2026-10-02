@@ -20,7 +20,9 @@ as1.criatura.apostolo-do-sangue     → assets/criaturas/as1/apostolo-do-sangue/
 ```
 
 `op` é o livro básico (Ordem Paranormal RPG); `sah`, Sobrevivendo ao Horror;
-`as1`, Arquivos Secretos 1.
+`as1`, Arquivos Secretos 1; `as2`, Arquivos Secretos 2 (os perfis "como aliado"
+têm pasta própria, com `-aliado` no fim; as formas transformadas, não — são a
+mesma criatura).
 As facetas do Anfitrião são variantes e têm pasta própria.
 
 ## Como trocar

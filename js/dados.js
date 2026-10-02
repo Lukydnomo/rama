@@ -289,6 +289,11 @@
     if (!vazio(p.danoExtra)) {
       var comoDado = analisar(p.danoExtra);
       if (comoDado.ok) {
+        /* O dano extra fica fora do crítico — salvo quando o item diz que
+           ele multiplica (Machado do Mutilador, AS2 p. 41 e 104). */
+        if (p.extraMultiplica && critico && multiplicador > 1) {
+          comoDado = analisar(Math.min(MAX_QUANTIDADE, comoDado.quantidade * multiplicador) + "d" + comoDado.faces);
+        }
         var r = somar(comoDado.expressao);
         extraTotal = r.total;
         extraRolagens = r.rolagens;
@@ -484,6 +489,9 @@
       var parte = lista[i];
       var t = termos(parte.expressao);
       if (!t.ok) return Object.assign(falha, { erro: t.erro, expressao: parte.expressao });
+      /* multiplicaTodas: o primeiro dado de CADA parte multiplica (AS2,
+         dano extra "multiplica em caso de crítico"). */
+      if (i > 0 && critico && p.multiplicaTodas) multiplicou = false;
 
       var subtotal = 0;
       var sufixo = parte.tipo ? " " + parte.tipo : "";
@@ -521,6 +529,7 @@
       expressao: textos.join(" + "),
       critico: critico,
       multiplicador: multiplicador,
+      multiplicaTodas: critico && !!p.multiplicaTodas,
       rolagens: rolagens,
       parcelas: parcelas,
       porTipo: porTipo,

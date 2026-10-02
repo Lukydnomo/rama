@@ -187,7 +187,13 @@
     var b = (bruto && typeof bruto === "object") ? bruto : {};
     var cena = (b.cena && typeof b.cena === "object") ? b.cena : {};
     return {
-      cena: { id: idValido(cena.id), iniciadaEm: carimbo(cena.iniciadaEm) },
+      cena: { id: idValido(cena.id), iniciadaEm: carimbo(cena.iniciadaEm), interludio: cena.interludio === true },
+      /* O interlúdio em curso (v2.30): um número que sobe a cada cena de
+         interlúdio. O que dura "até o início da próxima cena de
+         interlúdio" (AS2 p. 83 e 93) guarda o número e vence quando ele
+         muda. */
+      interludio: { numero: Math.max(0, Math.min(99999, Math.round(Number(b.interludio && b.interludio.numero) || 0))),
+        iniciadoEm: carimbo(b.interludio && b.interludio.iniciadoEm) },
       integrarCombate: b.integrarCombate !== false,
       morrendo: normalizarContada(b.morrendo),
       inconsciente: normalizarSimples(b.inconsciente),
@@ -362,8 +368,13 @@
   /* Uma cena nova zera as contagens. As condições ativas continuam
      ativas — morrendo não termina com a cena (OPRPG p.88). Dos efeitos
      aplicados, só os que duram "até o fim da cena" terminam. */
-  function novaCena(cond, quando) {
-    cond.cena = { id: "cena-" + uuid(), iniciadaEm: quando || agora() };
+  function novaCena(cond, quando, opcoes) {
+    var deInterludio = !!(opcoes && opcoes.interludio);
+    cond.cena = { id: "cena-" + uuid(), iniciadaEm: quando || agora(), interludio: deInterludio };
+    if (deInterludio) {
+      var n = cond.interludio && typeof cond.interludio.numero === "number" ? cond.interludio.numero : 0;
+      cond.interludio = { numero: n + 1, iniciadoEm: quando || agora() };
+    }
     CHAVES_CONTADAS.forEach(function (chave) {
       var r = rastreador(cond, chave);
       r.eventos = [];

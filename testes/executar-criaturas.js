@@ -58,12 +58,12 @@ function faces(lista) {
 t.grupo("Catálogo · inventário e integridade");
 const conferencia = OC.conferir(DADOS);
 t.igual("nenhum erro de conferência (ids, campos, expressões, variantes)", conferencia.erros.slice(0, 5), []);
-t.igual("contagem por livro bate com o inventário", conferencia.porLivro, { OPRPG: 67, SAH: 32, AS1: 12, "OPRPG (variantes)": 5 });
+t.igual("contagem por livro bate com o inventário", conferencia.porLivro, { OPRPG: 67, SAH: 32, AS1: 12, AS2: 28, "OPRPG (variantes)": 5 });
 const porNatureza = {};
 DADOS.criaturas.filter((c) => !c.variante).forEach((c) => { const k = c.livro + ":" + c.natureza; porNatureza[k] = (porNatureza[k] || 0) + 1; });
 t.igual("paranormais, pessoas e animais de cada livro", porNatureza,
   { "OPRPG:paranormal": 49, "OPRPG:humana": 11, "OPRPG:animal": 7, "SAH:paranormal": 13, "SAH:humana": 11, "SAH:animal": 8,
-    "AS1:paranormal": 1, "AS1:humana": 11 });
+    "AS1:paranormal": 1, "AS1:humana": 11, "AS2:animal": 2, "AS2:paranormal": 4, "AS2:humana": 22 });
 const ids = DADOS.criaturas.map((c) => c.id);
 t.ok("ids únicos", new Set(ids).size === ids.length);
 t.ok("O Terminal (aventura do SAH) está no catálogo, com página", DADOS.criaturas.some((c) => c.id === "sah.criatura.o-terminal" && c.pagina === 218));
@@ -256,7 +256,7 @@ t.igual("imagens do catálogo pelo id (retrato 1:1 e corpo inteiro)", C.imagensD
 t.ok("  a cópia no Homebrew usa a do original; criatura sem catálogo não tem", !!C.imagensDoCatalogo(copia) && C.imagensDoCatalogo(antigaNorm) === null);
 const faltando = [];
 for (const c of DADOS.criaturas) {
-  const m = /^(op|sah|as1)\.criatura\.(.+)$/.exec(c.id);
+  const m = /^(op|sah|as1|as2)\.criatura\.(.+)$/.exec(c.id);
   for (const arq of ["retrato.png", "corpo.png"]) {
     /* A pasta pode estar num disco sincronizado (Google Drive), que às
        vezes demora a responder: uma segunda tentativa antes de acusar. */
@@ -310,6 +310,65 @@ const maximos = OC.gerarTranstornado((faces) => faces);
 t.igual("  com os dados no máximo: Convertido, o 6º traço duas vezes e a 20ª aparência",
   [maximos.perfil, maximos.tracos[0], maximos.aparencia[0], maximos.dados.perfil], ["Convertido", "Atraído por lugares tocados pelo Sangue", "Uma terceira perna", 10]);
 t.igual("  com 1 no d10, Desesperado", OC.gerarTranstornado(() => 1).perfil, "Desesperado");
+
+t.grupo("Arquivos Secretos 2 · ameaças, formas e aliados");
+const as2 = DADOS.criaturas.filter((c) => c.livro === "AS2");
+t.igual("17 fichas de ameaça e 11 perfis como aliado", [as2.filter((c) => !c.aliada).length, as2.filter((c) => c.aliada).length], [17, 11]);
+t.igual("seis formas transformadas, cada uma na ficha de partida",
+  as2.filter((c) => c.formas).map((c) => c.formas[0].nome).sort(), ["Colosso", "Fantasma", "Intenção assassina", "Juan Diabólico", "Mutilador Noturno", "X"]);
+t.ok("as formas são da MESMA entrada: nenhuma vira criatura própria no catálogo", !as2.some((c) => /mutilador|colosso|fantasma|diabolico/.test(c.id)));
+const busca = OC.filtrar(cat.indice, { busca: "mutilador" });
+t.ok("buscar o nome da forma acha a ficha de partida", busca.some((x) => x.id === "as2.criatura.jonas-aguiar"));
+const jonas = C.iniciarInstancia(OC.criatura("as2.criatura.jonas-aguiar"));
+t.igual("ficha de partida: 120 PV, pvBase guardado", [jonas.status[0].maximo, jonas.ordem.pvBase], [120, 120]);
+jonas.status[0].atual = 90;
+C.definirNaInstancia(jonas, "estado:ferimentos", 2);
+C.definirNaInstancia(jonas, "uso:a2", 1);
+t.ok("trocar para o Mutilador Noturno vale", C.definirNaInstancia(jonas, "forma", "mutilador-noturno"));
+t.igual("  máximo vira o da forma (260) e os PV atuais NÃO são restaurados", [jonas.status[0].atual, jonas.status[0].maximo], [90, 260]);
+t.igual("  estados e usos da ocorrência continuam", [jonas.instancia.estados.ferimentos, jonas.instancia.usos.a2], [2, 1]);
+const vj = C.vistaEfetiva(jonas);
+t.ok("a vista mostra a ficha publicada da forma (Defesa 29, VD 140, Predador Perfeito)",
+  vj.formaAtiva.nome === "Mutilador Noturno" && vj.ordem.defesa === 29 && vj.ordem.vd === 140 && vj.habilidades.some((h) => h.nome === "Predador Perfeito"));
+t.ok("  as ações da forma têm ids próprios (o uso de uma não cai na outra)", vj.acoes.every((a) => a.id.indexOf("mutilador-noturno.") === 0));
+t.ok("  o Filho da Dor da forma usa o mesmo contador de ferimentos", vj.acoes.some((a) => /Filho da Dor/.test(a.nome) && a.requer && a.requer.estado === "ferimentos"));
+t.ok("  machucado pelo valor da forma (130)", C.estaMachucada(jonas));
+t.ok("forma inexistente é recusada", !C.definirNaInstancia(jonas, "forma", "colosso"));
+t.ok("criatura sem formas recusa a chave", !C.definirNaInstancia(C.iniciarInstancia(OC.criatura("op.criatura.zumbi-de-sangue")), "forma", ""));
+C.definirNaInstancia(jonas, "forma", "");
+t.igual("voltar à ficha de partida prende os atuais no máximo dela (120), sem restaurar", [jonas.status[0].atual, jonas.status[0].maximo], [90, 120]);
+jonas.status[0].atual = 120;
+C.definirNaInstancia(jonas, "forma", "mutilador-noturno");
+C.definirNaInstancia(jonas, "forma", "");
+t.igual("  ida e volta não ganha PV", jonas.status[0].atual, 120);
+C.definirNaInstancia(jonas, "forma", "mutilador-noturno");
+const jn = C.normalizar(JSON.parse(JSON.stringify(jonas)));
+t.ok("a forma ativa atravessa a normalização (gravação, combate, aliado)", jn.instancia.forma === "mutilador-noturno" && jn.ordem.formas.length === 1);
+const comb = C.paraCombate(jonas, 1);
+t.ok("  uma ocorrência NOVA começa na ficha de partida, com os PV dela", !comb.snapshot.instancia.forma && comb.snapshot.status[0].maximo === 120);
+const turnos = globalThis.RAMACombateTurnos;
+const combateJ = { estado: "ativo", participantes: [Object.assign({}, comb, { id: "p1" })], turno: { rodada: 1, ativoId: "p1" } };
+const depoisJ = turnos.aplicar(combateJ, [{ tipo: "criatura_instancia", participanteId: "p1", chave: "forma", valor: "colosso" },
+  { tipo: "criatura_instancia", participanteId: "p1", chave: "forma", valor: "mutilador-noturno" }]);
+t.igual("a operação de combate troca a forma pela mesma regra (forma alheia ignorada)",
+  [depoisJ.participantes[0].snapshot.instancia.forma, depoisJ.participantes[0].snapshot.status[0].maximo], ["mutilador-noturno", 260]);
+t.ok("Machado do Mutilador: o dano de Sangue multiplica no crítico", vj.acoes[0].ataques[0].multiplicaTudo === true);
+faces([8, 8, 8, 8, 8, 8]);
+const crit = D.danoComposto({ partes: vj.acoes[0].ataques[0].dano, critico: true, multiplicador: 3, multiplicaTodas: true });
+t.igual("  crítico x3: 3d8+20 corte e 6d8 Sangue", crit.expressao.replace(/\s+/g, " "), "3d8+20 corte + 6d8 Sangue");
+D.usarSorteio(null);
+const kemiA = OC.criatura("as2.criatura.kemi-aliado");
+t.ok("perfil como aliado: sem PV nem PE inventados", kemiA.status.length === 0 && kemiA.ordem.aliada === true);
+t.ok("  aponta a ficha de ameaça da mesma pessoa", kemiA.ordem.ficha.id === "as2.criatura.kemi" && kemiA.ordem.ficha.pagina === 57);
+t.ok("  passa na validação do catálogo e vira aliado", C.validar(kemiA).length === 0 && !!C.criarAliado(kemiA, "").criatura);
+t.ok("Agatha (AS1) passa a usar o mesmo perfil de aliado", OC.criatura("as1.criatura.agatha-volkomenn").status.length === 0);
+const felino = as2.filter((c) => c.id === "as2.criatura.felino-infernal")[0];
+t.ok("os erros de impressão ficam em nota, com os valores publicados", felino.pv === 230 && felino.machucado === 125 && felino.notas.some((n) => /Arara-infernal/.test(n)));
+const labirinto = as2.filter((c) => c.id === "as2.criatura.labirinto")[0];
+t.ok("rituais de círculo “???” não ganham círculo deduzido", labirinto.formas[0].acoes.filter((a) => /Ritual/.test(a.nome)).every((a) => /círculo \?\?\?/.test(a.nome)));
+const aliadoP = { id: "x", criatura: C.normalizar(kemiA), perigo: { cena: "c1", feridas: 1, morto: false, pendente: true, registros: [{ id: "r1", d6: 3, ferido: true, cena: "c1" }] } };
+const aliadosN = C.normalizarAliados([aliadoP]);
+t.ok("o registro de Aliados em Perigo atravessa a normalização do aliado", aliadosN[0].perigo.pendente === true && aliadosN[0].perigo.registros.length === 1);
 
 t.grupo("Desempenho · catálogo leve");
 t.ok("cada ficha cabe com folga numa célula de Homebrew (45 000)", Object.values(cat.porId).every((c) => JSON.stringify(c).length < 20000));

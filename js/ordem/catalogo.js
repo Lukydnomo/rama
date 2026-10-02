@@ -15,6 +15,7 @@
      OPRPG  Ordem Paranormal RPG — Livro de Regras, v1.1, Jambô, 2022
      SAH    Sobrevivendo ao Horror, v1.2, Jambô, 2024
      AS1    Arquivos Secretos 1, v1.1, Jambô (pacote de conteúdo oficial)
+     AS2    Arquivos Secretos 2, v1.0, Jambô (pacote de conteúdo oficial — Hexatombe)
 
    As páginas são as do LIVRO, não as do PDF.
 
@@ -51,6 +52,7 @@
   var OPRPG = "OPRPG";
   var SAH = "SAH";
   var AS1 = "AS1";
+  var AS2 = "AS2";
 
   /* Os livros, num lugar só (v2.29). Quem precisa do nome de um livro
      pergunta aqui — nomeDoLivro(sigla) — em vez de repetir uma conta
@@ -59,7 +61,17 @@
     { sigla: OPRPG, nome: "Ordem Paranormal RPG", curto: "Livro básico", abreviacao: "LB", edicao: "v1.1" },
     { sigla: SAH, nome: "Sobrevivendo ao Horror", curto: "Sobrevivendo ao Horror", abreviacao: "SAH", edicao: "v1.2" },
     { sigla: AS1, nome: "Arquivos Secretos 1", curto: "Arquivos Secretos 1", abreviacao: "AS1", edicao: "v1.1" },
+    { sigla: AS2, nome: "Arquivos Secretos 2", curto: "Arquivos Secretos 2", abreviacao: "AS2", edicao: "v1.0" },
   ];
+
+  /* Os mapas que os módulos de catálogo usam (rótulo de filtro, nome por
+     extenso, sigla de referência) saem daqui — um livro novo entra em
+     todos de uma vez. */
+  function mapaDosLivros(campo) {
+    var m = {};
+    LIVROS.forEach(function (l) { m[l.sigla] = l[campo]; });
+    return m;
+  }
 
   function livro(sigla) {
     return LIVROS.filter(function (l) { return l.sigla === sigla; })[0] || LIVROS[0];
@@ -1127,8 +1139,9 @@
   }
 
   global.RAMAOrdemCatalogo = {
-    FONTES: { OPRPG: OPRPG, SAH: SAH, AS1: AS1 },
+    FONTES: { OPRPG: OPRPG, SAH: SAH, AS1: AS1, AS2: AS2 },
     LIVROS: LIVROS,
+    mapaDosLivros: mapaDosLivros,
     livro: livro,
     nomeDoLivro: nomeDoLivro,
     curtoDoLivro: curtoDoLivro,

@@ -397,7 +397,7 @@
     if (!a || typeof a !== "object") return null;
     var nome = U.aparar(a.nome, 80);
     if (!nome) return null;
-    return {
+    var saida = {
       id: idDe(a),
       nome: nome,
       alcance: U.aparar(a.alcance, 60),
@@ -407,6 +407,10 @@
       critico: normalizarCritico(a.critico),
       nota: U.aparar(a.nota, 400),
     };
+    /* AS2: "multiplica em caso de crítico" — o dano extra da ficha
+       também multiplica (Machado do Mutilador). */
+    if (a.multiplicaTudo === true) saida.multiplicaTudo = true;
+    return saida;
   }
 
   function normalizarRolagem(r) {
@@ -580,7 +584,74 @@
       saida.variante = { de: U.aparar(o.variante.de, 120), rotulo: U.aparar(o.variante.rotulo, 60) };
     }
 
+    /* Arquivos Secretos 2 (v2.30): as fichas transformadas (Mutilador
+       Noturno, Colosso...) são FORMAS da mesma ocorrência, não outra
+       criatura. `pvBase` guarda os PV máximos da ficha de partida. */
+    var vistasF = {};
+    var formas = lista(o.formas).map(normalizarForma).filter(function (f) {
+      if (!f || vistasF[f.id]) return false;
+      vistasF[f.id] = true;
+      return true;
+    }).slice(0, 6);
+    if (formas.length) {
+      saida.formas = formas;
+      var base = U.inteiro(o.pvBase, 0);
+      saida.pvBase = base > 0 ? base : null;
+    }
+    /* Perfil "como aliado" (OPRPG p. 170): benefícios, sem PV nem PE.
+       `ficha` aponta a ficha de ameaça da mesma pessoa, quando existe. */
+    if (o.aliada === true) {
+      saida.aliada = true;
+      if (o.ficha && typeof o.ficha === "object" && o.ficha.id) {
+        saida.ficha = { id: U.aparar(o.ficha.id, 120), nome: U.aparar(o.ficha.nome, 120), pagina: o.ficha.pagina ? U.inteiro(o.ficha.pagina, 0) : null };
+      }
+    }
+
     return saida;
+  }
+
+  var CAMPOS_DE_TESTE_DA_FORMA = ["percepcao", "iniciativa", "fortitude", "reflexos", "vontade"];
+
+  function normalizarForma(f) {
+    if (!f || typeof f !== "object") return null;
+    var id = U.aparar(f.id, 60).replace(/[^A-Za-z0-9_.-]/g, "");
+    var nome = U.aparar(f.nome, 120);
+    var pv = U.inteiro(f.pv, 0);
+    if (!id || !nome || !(pv > 0)) return null;
+    var forma = {
+      id: id, nome: nome,
+      pagina: f.pagina ? U.inteiro(f.pagina, 0) : null,
+      vd: f.vd === null || f.vd === undefined || f.vd === "" ? null : U.inteiro(f.vd, 0),
+      pv: pv,
+      machucado: valorNumerico(f.machucado),
+      defesa: valorNumerico(f.defesa),
+      ativacao: U.aparar(f.ativacao, 2000),
+      notas: textos(f.notas, 10, 1000),
+      pericias: unicos(lista(f.pericias).map(normalizarPericiaOrdem)),
+      habilidades: unicos(lista(f.habilidades).map(function (h) { return normalizarEfeito(h, false); })),
+      acoes: unicos(lista(f.acoes).map(function (a) { return normalizarEfeito(a, true); })),
+    };
+    CAMPOS_DE_TESTE_DA_FORMA.forEach(function (k) { if (f[k] !== undefined && f[k] !== null) forma[k] = valorDeTeste(f[k]); });
+    if (Array.isArray(f.deslocamento)) forma.deslocamento = normalizarDeslocamento(f.deslocamento);
+    if (Array.isArray(f.resistencias)) forma.resistencias = normalizarResistencias(f.resistencias);
+    return forma;
+  }
+
+  function formaAtivaDe(c) {
+    var id = c && c.instancia && c.instancia.forma;
+    return id ? U.porId(lista(c.ordem && c.ordem.formas), id) : null;
+  }
+
+  /* Trocar de forma muda os PV MÁXIMOS para os da ficha publicada da
+     forma (ou da ficha de partida) e só PRENDE os atuais no novo
+     máximo — nunca os restaura. */
+  function ajustarVidaDaForma(c, forma) {
+    var vida = U.porId(c.status, ID_VIDA);
+    if (!vida) return;
+    var maximo = forma ? forma.pv : (c.ordem && c.ordem.pvBase) || vida.maximo;
+    if (!(maximo > 0)) return;
+    vida.maximo = maximo;
+    vida.atual = Math.max(0, Math.min(vida.atual, maximo));
   }
 
   /* ---------------- ocorrência ---------------- */
@@ -606,6 +677,7 @@
     Object.keys(i.marcadores || {}).forEach(function (id) {
       if (CHAVE_LIVRE.test(id) && i.marcadores[id] === true) saida.marcadores[id] = true;
     });
+    if (typeof i.forma === "string" && i.forma && U.porId(lista(criatura.ordem && criatura.ordem.formas), i.forma)) saida.forma = i.forma;
     return saida;
   }
 
@@ -614,6 +686,8 @@
     var estados = {};
     lista(c.ordem && c.ordem.estados).forEach(function (e) { if (e.inicial) estados[e.id] = e.inicial; });
     c.instancia = { estados: estados, usos: {}, marcadores: {}, enigma: false, nota: "" };
+    /* Com formas (AS2), a ocorrência nova começa na ficha de partida. */
+    if (lista(c.ordem && c.ordem.formas).length && c.ordem.pvBase) ajustarVidaDaForma(c, null);
     return c;
   }
 
@@ -626,6 +700,9 @@
        "marcador:<id>"  booleano
        "enigma"         booleano
        "nota"           texto (até 1000)
+       "forma"          id de uma forma de ordem.formas, ou "" para a
+                        ficha de partida (v2.30): troca os PV máximos e
+                        prende os atuais, sem restaurar nada
 
      Devolve false se a chave ou o valor não valem — nada muda. */
   function definirNaInstancia(c, chave, valor) {
@@ -640,6 +717,16 @@
     if (chave === "nota") {
       if (typeof valor !== "string") return false;
       inst.nota = U.aparar(valor, 1000);
+      return true;
+    }
+    if (chave === "forma") {
+      var formas = lista(c.ordem && c.ordem.formas);
+      if (typeof valor !== "string" || !formas.length) return false;
+      var alvo = valor ? U.porId(formas, valor) : null;
+      if (valor && !alvo) return false;
+      if ((inst.forma || "") === valor) return true;
+      if (valor) inst.forma = valor; else delete inst.forma;
+      ajustarVidaDaForma(c, alvo);
       return true;
     }
     var m = /^(estado|uso|marcador):(.+)$/.exec(chave);
@@ -682,6 +769,19 @@
     if (!ehOrdem(c)) return c;
     var o = c.ordem;
     var alteracoes = [];
+
+    /* A forma ativa troca a ficha publicada por inteiro; vida, estados,
+       usos, marcadores e anotação continuam os da ocorrência. */
+    var forma = formaAtivaDe(c);
+    if (forma) {
+      ["vd", "defesa", "machucado", "percepcao", "iniciativa", "fortitude", "reflexos", "vontade", "deslocamento", "resistencias"].forEach(function (k) {
+        if (forma[k] !== undefined && forma[k] !== null) o[k] = U.copiar(forma[k]);
+      });
+      if (forma.pericias.length) c.pericias = U.copiar(forma.pericias);
+      c.habilidades = U.copiar(forma.habilidades);
+      c.acoes = U.copiar(forma.acoes);
+      c.formaAtiva = { id: forma.id, nome: forma.nome, pagina: forma.pagina, ativacao: forma.ativacao, notas: forma.notas.slice() };
+    }
 
     lista(o.estados).forEach(function (e) {
       if (e.altera && valorDoEstado(c, e.id) >= 1) alteracoes.push({ origem: e.nome, altera: e.altera });
@@ -730,7 +830,8 @@
   function estaMachucada(c) {
     if (!ehOrdem(c)) return false;
     var vida = U.porId(c.status, ID_VIDA);
-    var limite = c.ordem && c.ordem.machucado;
+    var forma = formaAtivaDe(c);
+    var limite = forma && typeof forma.machucado === "number" ? forma.machucado : c.ordem && c.ordem.machucado;
     return !!(vida && typeof limite === "number" && vida.maximo > 0 && vida.atual <= limite);
   }
 
@@ -752,7 +853,7 @@
 
   function imagensDoCatalogo(alvo) {
     var id = typeof alvo === "string" ? alvo : idDoCatalogo(alvo);
-    var m = /^(op|sah|as1)\.criatura\.([a-z0-9.-]+)$/.exec(String(id || ""));
+    var m = /^(op|sah|as1|as2)\.criatura\.([a-z0-9.-]+)$/.exec(String(id || ""));
     if (!m) return null;
     var base = "assets/criaturas/" + m[1] + "/" + m[2] + "/";
     var url = U.url || function (x) { return x; };
@@ -793,7 +894,7 @@
       var bruto = bruta.ordem && bruta.ordem[k];
       if (bruto && typeof bruto === "string" && /\d+d\d+/i.test(bruto) && !D.testeValido(bruto)) erros.push(k + ": expressão inválida");
     });
-    if (!U.porId(c.status, ID_VIDA)) erros.push("sem pontos de vida");
+    if (!U.porId(c.status, ID_VIDA) && !o.aliada) erros.push("sem pontos de vida");
     lista(c.pericias).forEach(function (p) {
       if (!p.expressao || !D.testeValido(p.expressao)) erros.push("perícia " + p.nome + ": expressão inválida");
     });
@@ -812,6 +913,12 @@
     }
     c.habilidades.forEach(function (h) { conferir(h, "habilidade"); });
     c.acoes.forEach(function (a) { conferir(a, "ação"); });
+    lista(o.formas).forEach(function (f) {
+      f.pericias.forEach(function (p) { if (!p.expressao || !D.testeValido(p.expressao)) erros.push("forma " + f.nome + " · perícia " + p.nome + ": expressão inválida"); });
+      f.habilidades.forEach(function (h) { conferir(h, "forma " + f.nome + " · habilidade"); });
+      f.acoes.forEach(function (a) { conferir(a, "forma " + f.nome + " · ação"); });
+    });
+    if (lista(o.formas).length && !(o.pvBase > 0)) erros.push("formas sem os PV da ficha de partida");
     if (o.presenca && o.presenca.dano && !D.termos(o.presenca.dano).ok) erros.push("presença: dano inválido");
     return erros;
   }
@@ -905,9 +1012,29 @@
         var c = normalizar(a.criatura);
         delete c.id;
         c.visibilidade = "privado";
-        return { id: id, origemId: a.origemId || null, criatura: c,
+        var saida = { id: id, origemId: a.origemId || null, criatura: c,
           imagem: typeof a.imagem === "string" && /^data:image\/(png|jpeg|webp|gif|bmp);base64,[A-Za-z0-9+/=]+$/.test(a.imagem) ? a.imagem : "" };
+        var perigo = normalizarPerigo(a.perigo);
+        if (perigo) saida.perigo = perigo;
+        return saida;
       });
+  }
+
+  /* Aliados em Perigo (Arquivos Secretos 2, p. 24 — regra opcional):
+     cada uso arriscado do aliado é uma rolagem de 1d6 registrada; ímpar
+     fere. Os ferimentos contam POR CENA (`cena` é a marca da cena da
+     ficha) e o segundo na mesma cena mata — só depois que a mesa
+     confirma. Cada aliado tem o seu registro. */
+  function normalizarPerigo(p) {
+    if (!p || typeof p !== "object") return null;
+    var registros = lista(p.registros).filter(function (r) { return r && typeof r === "object" && r.id; }).slice(-20).map(function (r) {
+      return { id: U.aparar(r.id, 80), em: U.aparar(r.em, 40), cena: U.aparar(r.cena, 80), d6: U.limitar(U.inteiro(r.d6, 0), 0, 6),
+        ferido: r.ferido === true, situacao: U.aparar(r.situacao, 200) };
+    });
+    var saida = { cena: U.aparar(p.cena, 80), feridas: U.limitar(U.inteiro(p.feridas, 0), 0, 1), morto: p.morto === true,
+      pendente: p.pendente === true, registros: registros };
+    if (!saida.registros.length && !saida.feridas && !saida.morto && !saida.pendente) return null;
+    return saida;
   }
 
   global.RAMACriaturas = {
@@ -937,6 +1064,8 @@
     valorDoEstado: valorDoEstado,
     vistaEfetiva: vistaEfetiva,
     estaMachucada: estaMachucada,
+    formaAtivaDe: formaAtivaDe,
+    normalizarPerigo: normalizarPerigo,
     resumo: resumo,
     validar: validar,
     idDoCatalogo: idDoCatalogo,

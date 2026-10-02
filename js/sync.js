@@ -465,6 +465,7 @@
       "aliados.criatura.ataques": "id",
       "aliados.criatura.habilidades": "id",
       "aliados.criatura.acoes": "id",
+      "aliados.perigo.registros": "id",
       "atributos": "id",
       "status": "id",
       "pericias": "id",
@@ -511,6 +512,12 @@
       "ordem.trajetoria": "id",
       "ordem.sacrificios": "id",
       "ordem.componentes.extras": "id",
+      /* Arquivos Secretos 1 (v2.29) e 2 (v2.30): cada registro casa pelo
+         id — reter um ritual num aparelho e soltar outro no outro não
+         briga pela lista inteira. */
+      "ordem.retencoes": "id",
+      "ordem.maldicoesMemorizadas": "id",
+      "ordem.temporariosDeCena": "chave",
     },
     /* Contadores de gasto: a diferença de cada lado se soma. */
     somaveis: [

@@ -536,6 +536,7 @@
       campo: !!(OP() && A && OP().ligada(ordem, A.REGRA_CAMPO)),
       elementoMaldicao: elementoDaMaldicao(ordem),
       macula: elementoDaMacula(ordem),
+      dominadas: dominadasDe(ordem),
     };
   }
 
@@ -940,6 +941,8 @@
     return separado ? "nível " + Math.ceil(n / 5) : "NEX " + n + "%";
   }
 
+  var GRAUS_POR_NUMERO = { 1: "Treinado", 2: "Veterano", 3: "Expert" };
+
   function requisito(r, percurso, etapa, opcoes, ordem) {
     var o = opcoes || {};
     switch (r.tipo) {
@@ -1005,10 +1008,32 @@
         var txtR = "Conjurar ritual de " + r.circulo + "º círculo" +
           (elR ? " de " + nomeDoElemento(elR) : (r.elementoDaOpcao ? " do elemento escolhido" : ""));
         if (r.elemento && r.circulo === 1) txtR = "Conjurar ritual de " + nomeDoElemento(r.elemento);
+        if (r.texto) txtR = r.texto;
         return { ok: conhece, texto: txtR, falta: txtR + " (nenhum ritual conhecido assim nesta etapa)" };
       }
       case "declaracao":
         return { ok: true, texto: r.texto, falta: "" };
+      /* "For 2 ou Agi 2" (AS2). */
+      case "atributoUm": {
+        var algumAtr = r.atributos.some(function (a) { return (percurso.atributos[a] || 0) >= r.minimo; });
+        var txtAtr = r.atributos.map(function (a) { return nomeDoAtributo(a) + " " + r.minimo; }).join(" ou ");
+        return { ok: algumAtr, texto: txtAtr, falta: txtAtr };
+      }
+      case "grau": {
+        var txtG = GRAUS_POR_NUMERO[r.grau] + " em " + nomeDaPericia(r.pericia);
+        return { ok: (percurso.graus[r.pericia] || 0) >= r.grau, texto: txtG, falta: txtG };
+      }
+      case "grauEmUma": {
+        var txtGU = GRAUS_POR_NUMERO[r.grau] + " em " + r.pericias.map(nomeDaPericia).join(" ou ");
+        var umG = r.pericias.some(function (k) { return (percurso.graus[k] || 0) >= r.grau; });
+        return { ok: umG, texto: txtGU, falta: txtGU };
+      }
+      /* Poderes de Intenção (AS2 p. 94): o contato com a Coroa de
+         Espinhos precisa estar registrado na ficha. */
+      case "coroaDeEspinhos": {
+        var contato = !!(ordem && ordem.intencao && ordem.intencao.contato && ordem.intencao.contato.registrado);
+        return { ok: contato, texto: "Contato com a Coroa de Espinhos", falta: "Contato com a Coroa de Espinhos (registre na aba Habilidades)" };
+      }
       case "semRegra": {
         var ligada = OP() ? OP().ligada(ordem, r.regra) : false;
         return { ok: !ligada, texto: "Sem a regra opcional " + (OP() && OP().regra(r.regra) ? OP().regra(r.regra).nome : r.regra),
@@ -1037,6 +1062,7 @@
   /* "Decadência" e "decadência " são a mesma escolha de texto. */
   function mesmaOpcao(a, b) {
     if (typeof a === "string" && typeof b === "string") return a.trim().toLowerCase() === b.trim().toLowerCase();
+    if (a && b && typeof a === "object" && typeof b === "object" && a.valor !== undefined) return a.valor === b.valor;
     return a === b;
   }
 
@@ -1048,6 +1074,14 @@
       return true;
     });
 
+    /* Dominar Habilidade Ritualística: "até três vezes" (AS2 p. 75) —
+       somando todas as escolhas, e cada uma com uma habilidade. */
+    if (e.maximoTotal) {
+      var todas = percurso.adquiridos.filter(function (a) { return vale(a) && a.chave === e.chave; }).length;
+      if (todas >= e.maximoTotal) {
+        return { ok: false, afinidade: false, texto: nomeDoPoder(e, o) + " já foi adquirido " + e.maximoTotal + " vezes, o máximo." };
+      }
+    }
     if (!iguais.length) return { ok: true, afinidade: false, texto: "" };
     if (e.repetivel && !e.repeticaoPorOpcao) return { ok: true, afinidade: false, texto: "" };
     if (e.repeticaoMaxima && e.repeticaoPorOpcao) {
@@ -1382,6 +1416,9 @@
         case "trilhaOutra":
           juntar(saida, avaliarTrilhaOutra(valor, percurso, etapa, ordem, contexto, (prof || 0) + 1));
           break;
+        case "habilidadeDeTrilha":
+          juntar(saida, avaliarHabilidadeDeTrilha(op, valor, percurso, etapa, ordem, contexto, (prof || 0) + 1));
+          break;
         case "caminho": {
           var cam = (op.caminhos || []).filter(function (c) { return valor && c.valor === valor.valor; })[0];
           if (!cam) { saida.faltam.push(op.rotulo); break; }
@@ -1462,6 +1499,73 @@
       return { faltam: [], problemas: [e.nome + " pertence à sua classe (ou a todas) e não pode ser escolhido aqui."], filhos: [] };
     }
     return avaliarPoder(e, valor.opcoes || {}, percurso, etapa, ordem, contexto, prof);
+  }
+
+  /* Dominar Habilidade Ritualística (AS2 p. 75): uma habilidade de trilha
+     da classe, com o NEX dela e a dependência dela. A habilidade entra
+     como aquisição — com os efeitos que tiver. */
+  function motivosDaHabilidadeDeTrilha(h, classe, percurso, etapa, ordem) {
+    var motivos = [];
+    var tr = h ? C.trilha(h.trilha) : null;
+    if (!h || h.tipo !== "trilha" || !tr) return ["Habilidade de trilha desconhecida."];
+    if (tr.classe !== classe) motivos.push(h.nome + " não é de uma trilha de " + (C.classe(classe) || { nome: classe }).nome.toLowerCase() + ".");
+    if (ordem.trilha === tr.chave) motivos.push(h.nome + " já é da sua trilha.");
+    if (etapa.nex < h.nex) motivos.push(h.nome + " pede NEX " + h.nex + "% (esta escolha é de " + etapa.rotulo + ").");
+    if (h.dependeDe) {
+      var tem = percurso.adquiridos.some(function (a) { return vale(a) && a.chave === h.dependeDe; });
+      if (!tem) {
+        var base = P.poder(h.dependeDe);
+        motivos.push(h.nome + " depende de " + (base ? base.nome : h.dependeDe) + ", que a ficha não tem nesta etapa.");
+      }
+    }
+    if (percurso.adquiridos.some(function (a) { return vale(a) && a.chave === h.chave; })) motivos.push("A ficha já tem " + h.nome + ".");
+    return motivos;
+  }
+
+  function avaliarHabilidadeDeTrilha(op, valor, percurso, etapa, ordem, contexto, prof) {
+    if (!valor || !valor.valor) return { faltam: [op.rotulo || "Habilidade de trilha"], problemas: [], filhos: [] };
+    var h = P.poder(valor.valor);
+    var motivos = motivosDaHabilidadeDeTrilha(h, op.classe || ordem.classe, percurso, etapa, ordem);
+    if (motivos.length) return { faltam: [], problemas: motivos, filhos: [] };
+    var sub = avaliarOpcoes(h.opcoes, valor.opcoes || {}, percurso, etapa, ordem, contexto, prof);
+    return {
+      faltam: sub.faltam,
+      problemas: sub.problemas,
+      filhos: [{ entrada: h, opcoes: valor.opcoes || {}, afinidade: false }].concat(sub.filhos),
+    };
+  }
+
+  function candidatosHabilidadeDeTrilha(ordem, idVaga, contexto, classe) {
+    var c = contextoDaVaga(ordem, idVaga, contexto);
+    var alvo = classe || ordem.classe;
+    var lista = [];
+    C.trilhasDaClasse(alvo).forEach(function (tr) {
+      P.habilidadesDaTrilha(tr.chave).forEach(function (h) {
+        var motivos = c ? motivosDaHabilidadeDeTrilha(h, alvo, c.percurso, c.etapa, ordem) : [];
+        lista.push({ habilidade: h, trilha: tr, disponivel: !motivos.length, motivos: motivos });
+      });
+    });
+    return lista;
+  }
+
+  /* As habilidades de trilha que a ficha dominou, com o degrau — para as
+     concessões de ritual delas (js/ordem/aprendizado.js). Lê as escolhas
+     como estão, em qualquer profundidade. */
+  function dominadasDe(ordem) {
+    var saida = [];
+    (ordem.escolhas || []).forEach(function (r) {
+      var m = /^d(\d+)\./.exec(String(r && r.etapa || ""));
+      if (!m) return;
+      var degrau = Number(m[1]);
+      (function andar(v, prof) {
+        if (!v || typeof v !== "object" || prof > 6) return;
+        if (v.valor === "dominarHabilidadeRitualistica" && v.opcoes && v.opcoes.habilidade && v.opcoes.habilidade.valor) {
+          saida.push({ poder: String(v.opcoes.habilidade.valor), degrau: degrau });
+        }
+        Object.keys(v).forEach(function (k) { if (v[k] && typeof v[k] === "object") andar(v[k], prof + 1); });
+      })({ valor: r.valor, opcoes: r.opcoes }, 0);
+    });
+    return saida;
   }
 
   function avaliarTrilhaOutra(valor, percurso, etapa, ordem, contexto, prof) {
@@ -3581,6 +3685,8 @@
     candidatosParanormais: candidatosParanormais,
     candidatosOutraClasse: candidatosOutraClasse,
     candidatosTrilha: candidatosTrilha,
+    candidatosHabilidadeDeTrilha: candidatosHabilidadeDeTrilha,
+    dominadasDe: dominadasDe,
     candidatosAtributo: candidatosAtributo,
     candidatosPericia: candidatosPericia,
     quantasNoGrau: quantasNoGrau,
