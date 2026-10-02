@@ -901,36 +901,6 @@
       });
     }
 
-    /* Blindar a Mente (novo uso de Ocultismo, AS1 p. 43): Veterano, DT 20,
-       ação completa e 1 PE. Passando, +5 no próximo teste de Vontade até
-       o fim da cena. Num aliado adjacente, a DT é 25 e ele faz Vontade DT
-       20 — falhando, perde 1d4 de Sanidade e fica sem o bônus. */
-    if (p.chave === "ocultismo" && ["veterano", "expert"].indexOf(R().grauDaPericia(o, "ocultismo")) >= 0) {
-      var feito = false;
-      saida.push({
-        rotulo: "Blindar a Mente (1 " + sigla + ")",
-        dica: "Veterano em Ocultismo: ação completa, DT 20 (em você) ou 25 (num aliado adjacente).",
-        aoClicar: function (cartao, botaoUsado) {
-          if (feito) return;
-          var g = gastar(ctx, 1);
-          if (!g) return;
-          feito = true;
-          if (botaoUsado) botaoUsado.disabled = true;
-          var passou = r.total >= 20;
-          if (passou) {
-            efeitoDePoder(ctx, "Blindar a Mente", {
-              modelo: "uso:blindarAMente", nome: "Mente blindada",
-              descricao: "+5 no próximo teste de Vontade, até o fim da cena (Blindar a Mente, Arquivos Secretos 1, p. 43). Encerre depois do teste.",
-              modificadores: [{ alvo: "pericia:vontade", tipo: "bonus", valor: 5 }], duracao: { tipo: "cena" },
-            });
-          }
-          salvar(ctx);
-          UI.aviso(passou
-            ? "Blindar a Mente: " + r.total + " contra DT 20 — +5 no próximo teste de Vontade até o fim da cena (encerre o efeito depois de usar). Num aliado, a DT seria 25, e ele faria Vontade DT 20 (falhando, perde 1d4 de Sanidade e não recebe o bônus)."
-            : "Blindar a Mente: " + r.total + " não alcança a DT 20. Gastou 1 " + g.qual + ".");
-        },
-      });
-    }
     return saida;
   }
 

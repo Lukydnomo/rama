@@ -73,7 +73,7 @@
       versao: "2.29.0", codinome: "MÁCULA", data: "02/10/2026",
       mudancas: {
         "Conteúdo": [
-          "Arquivos Secretos 1 (v1.1, pacote oficial) no R.A.M.A., com livro e página em cada entrada e resumos próprios: 2 origens (Ferido por Ritual e Transtornado Arrependido), a trilha de ocultista Maledictólogo, 4 poderes de ocultista, 5 poderes gerais, 4 poderes paranormais de Sangue, 2 rituais (Passagem de Conhecimento e a versão Expandida), 3 itens paranormais, 3 itens amaldiçoados de Sangue, 2 regras opcionais, o novo uso de Ocultismo Blindar a Mente e as 12 fichas de ameaças e aliada no bestiário.",
+          "Arquivos Secretos 1 (v1.1, pacote oficial) no R.A.M.A., com livro e página em cada entrada e resumos próprios: 2 origens (Ferido por Ritual e Transtornado Arrependido), a trilha de ocultista Maledictólogo, 4 poderes de ocultista, 5 poderes gerais, 4 poderes paranormais de Sangue, 2 rituais (Passagem de Conhecimento e a versão Expandida), 3 itens paranormais, 3 itens amaldiçoados de Sangue, 2 regras opcionais e as 12 fichas de ameaças e aliada no bestiário.",
           "O livro aparece em busca, filtros de fonte, seletores e bibliotecas (origens, poderes, rituais, itens e criaturas) como “Arquivos Secretos 1”, ao lado do livro básico e do Sobrevivendo ao Horror.",
         ],
         "Adicionado": [
