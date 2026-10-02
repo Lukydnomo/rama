@@ -752,7 +752,7 @@
 
   function imagensDoCatalogo(alvo) {
     var id = typeof alvo === "string" ? alvo : idDoCatalogo(alvo);
-    var m = /^(op|sah)\.criatura\.([a-z0-9.-]+)$/.exec(String(id || ""));
+    var m = /^(op|sah|as1)\.criatura\.([a-z0-9.-]+)$/.exec(String(id || ""));
     if (!m) return null;
     var base = "assets/criaturas/" + m[1] + "/" + m[2] + "/";
     var url = U.url || function (x) { return x; };

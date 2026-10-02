@@ -19,6 +19,8 @@
             descrições em 124–143
      SAH    Sobrevivendo ao Horror, v1.2 (Jambô, 2024)
             Novos Rituais (p. 48–56)
+     AS1    Arquivos Secretos 1, v1.1 (Jambô, pacote de conteúdo oficial)
+            Passagem de Conhecimento e a versão Expandida (p. 48–51)
 
    As páginas são as do livro, não as do PDF. Os resumos são redação
    própria: guardam os números, as condições e os testes que o jogo
@@ -86,6 +88,7 @@
 
   var OP = "OPRPG";
   var SAH = "SAH";
+  var AS1 = "AS1";
 
   var CO = "conhecimento";
   var EN = "energia";
@@ -1059,6 +1062,55 @@
       versoes: [],
       notas: ["O SAH imprime “ENERGIA 3” para este ritual. Nos outros elementos o capítulo traz um ritual de cada círculo (1º ao 4º), e aqui Energia fica com dois de 3º e nenhum de 4º; o catálogo mantém o círculo impresso."] },
 
+    /* =================================================================
+       ARQUIVOS SECRETOS 1 — p. 48–51
+       -----------------------------------------------------------------
+       Rituais de VÁRIOS elementos (p. 49): o ritual pertence a todos ao
+       mesmo tempo (`todosOsElementos`), o que é diferente de Amaldiçoar
+       Arma, que pertence a um elemento escolhido. Aprender exige os
+       pré-requisitos com todas as entidades e afinidade com pelo menos
+       uma delas — conferido por js/ordem/aprendizado.js.
+       ================================================================= */
+
+    { id: "as1.ritual.passagem-de-conhecimento", nome: "Passagem de Conhecimento", elemento: [SA, CO], todosOsElementos: true, circulo: 2, fonte: AS1, pagina: 48,
+      execucao: "completa", alcance: "toque", alvo: "1 pessoa", duracao: "cena", resistencia: "Vontade evita",
+      resumo: "Você transfere sua consciência para o corpo do alvo. Ao conjurar, escolha: sobrepor a mente dele (você assume o corpo e o seu cai inconsciente) ou trocar as consciências (cada um passa a habitar o corpo do outro).",
+      efeitos: [
+        "Sobrepor: se o alvo falhar, você controla o corpo dele com a sua ficha, trocando Força, Agilidade e Vigor pelos do corpo (e, a critério do mestre, usando outras características inatas dele). No início de cada turno dele, o alvo repete o teste — o mestre pode permitir mais de uma tentativa por rodada; passando, você volta ao seu corpo, que desperta na hora.",
+        "Se o corpo do alvo morrer com você dentro, você morre. Se o seu corpo morrer, você fica preso no corpo do alvo, e morre se ele retomar o controle.",
+        "Trocar: se o alvo falhar, cada um controla o corpo do outro, com a própria ficha e os atributos físicos do corpo; o alvo não pode tentar se libertar. Só se volta com o fim da duração ou conjurando este ritual contra quem tomou o corpo. Se um dos corpos morrer, quem o ocupa morre, e não há volta para um corpo morto.",
+      ],
+      versoes: [
+        { nome: "Discente", custo: 3, requisito: "2º círculo", alteracoes: "Alcance curto e duração 1 dia. Na sobreposição, o alvo só tenta retomar o corpo uma vez por dia ou uma vez por cena (o que for maior), em vez de uma vez por rodada." },
+        { nome: "Verdadeiro", custo: 7, requisito: "4º círculo e afinidade", alteracoes: "Alcance médio e duração permanente. Na sobreposição, o alvo só tenta retomar o corpo uma vez por ano." },
+      ],
+      notas: [
+        "A forma discente está impressa com “Requer 2º círculo” num ritual que já é de 2º círculo; mantida como impressa.",
+      ] },
+
+    { id: "as1.ritual.passagem-de-conhecimento-expandido", nome: "Passagem de Conhecimento Expandido", elemento: [SA, CO], todosOsElementos: true, circulo: 4, fonte: AS1, pagina: 50,
+      requisitoRitual: "as1.ritual.passagem-de-conhecimento",
+      execucao: "1 dia", alcance: "curto", alvo: "10 pessoas", duracao: "veja texto",
+      resumo: "Ritual criado por Agatha Volkomenn: cinco voluntários têm a consciência transportada para cinco receptáculos inconscientes, escolhidos pelas intenções de cada um (veja “Os Passos da Passagem”, p. 51).",
+      efeitos: [
+        "Exige dez pessoas: cinco receptáculos inconscientes e cinco voluntários. Os corpos vazios precisam ser isolados e protegidos — se morrerem, a consciência não tem para onde voltar.",
+        "Os transportados controlam os corpos invadidos, com efeitos colaterais a critério do mestre (conflito ou perda de memória, transtorno de personalidade, perda de autocontrole).",
+        "Sempre que o personagem fica enlouquecendo, insano ou perturbado, rola 1d4: com 1, perde o controle para a pessoa invadida por 1d4 rodadas.",
+        "Sem duração determinada; um corpo muito tempo sem consciência (em geral 1d6+3 dias) pode virar um anulado (p. 52), e quem era dele fica sem invólucro para voltar.",
+        "Quem conjura este ritual pode conjurá-lo de novo para devolver as consciências aos corpos de origem.",
+        "Os Passos da Passagem (p. 51): o mestre cria os personagens-receptáculo e guarda de 5 a 10 palavras-chave de cada um; cada jogador escolhe em segredo; as escolhas são reveladas juntas; empatando, quem acertar primeiro uma palavra-chave fica com o corpo.",
+      ],
+      versoes: [
+        { nome: "Normal", rolagens: [
+          { tipo: "outra", rotulo: "Perda de controle (1 = perde)", expressao: "1d4" },
+          { tipo: "outra", rotulo: "Rodadas sem controle", expressao: "1d4" },
+          { tipo: "outra", rotulo: "Dias até virar anulado", expressao: "1d6", extra: "3" },
+        ] },
+      ],
+      notas: [
+        "Só pode ser aprendido por quem já conjura Passagem de Conhecimento.",
+      ] },
+
   ];
 
   /* FIM DOS RITUAIS — o próximo lote entra acima desta linha. */
@@ -1068,6 +1120,7 @@
     fontes: {
       OPRPG: { nome: "Ordem Paranormal RPG", curto: "Livro básico", edicao: "v1.1" },
       SAH: { nome: "Sobrevivendo ao Horror", curto: "Sobrevivendo ao Horror", edicao: "v1.2" },
+      AS1: { nome: "Arquivos Secretos 1", curto: "Arquivos Secretos 1", edicao: "v1.1" },
     },
     rituais: RITUAIS,
   };

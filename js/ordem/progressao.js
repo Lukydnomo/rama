@@ -22,6 +22,9 @@
                                        de origem
                  x25.transcender       NEX de exposição 25%, só com
                                        NEX & Experiência
+                 t2.transcenderItem    Transcender com Itens, 2º
+                                       intervalo de NEX (regra opcional
+                                       de Arquivos Secretos 1)
                  afinidade             a afinidade elemental
                  d1.rituaisIniciais    os três rituais de 1º círculo do
                                        ocultista
@@ -148,6 +151,10 @@
       rotulo: "Opção do poder de origem", verbo: "Completar",
       explicacao: "O poder da sua origem pede uma decisão para ficar completo.",
     },
+    transcenderItem: {
+      rotulo: "Transcender com item amaldiçoado", verbo: "Resolver",
+      explicacao: "Com a regra opcional Transcender com Itens (Arquivos Secretos 1, p. 56-57), um item amaldiçoado pode render um poder paranormal do mesmo elemento: um por intervalo de NEX. O item perde os efeitos e vira mundano.",
+    },
     transcenderExposicao: {
       rotulo: "Transcender", verbo: "Resolver",
       explicacao: "Com NEX & Experiência, este valor de NEX permite transcender e receber um poder paranormal. É uma oportunidade: dá para recusar.",
@@ -247,6 +254,14 @@
   /* =================================================================
      VAGAS
      ================================================================= */
+
+  /* A tabela "Limite de Poderes Paranormais (por Itens)", AS1 p. 57. */
+  var INTERVALOS_DE_TRANSCENDER_ITEM = [
+    { de: 0, ate: 25 },
+    { de: 26, ate: 50 },
+    { de: 51, ate: 75 },
+    { de: 76, ate: 99 },
+  ];
 
   function vaga(id, tipo, extra) {
     var info = TIPOS[tipo] || { rotulo: tipo, verbo: "Resolver", explicacao: "" };
@@ -449,6 +464,24 @@
       });
     }
 
+    /* Transcender com Itens (regra opcional, AS1 p. 56-57): um poder
+       paranormal por item amaldiçoado a cada intervalo de NEX — o limite
+       acumulado é 1, 2, 3 e 4. A vaga mora no começo do intervalo, e é
+       lá que os requisitos do poder são conferidos. */
+    if (OP() && OP().ligada(ordem, "transcenderComItens")) {
+      INTERVALOS_DE_TRANSCENDER_ITEM.forEach(function (faixa, i) {
+        if (exposicao < faixa.de) return;
+        var degrauDaFaixa = Math.max(1, Math.ceil(faixa.de / 5));
+        lista.push(vaga("t" + (i + 1) + ".transcenderItem", "transcenderItem", {
+          degrau: degrauDaFaixa,
+          ordem: degrauDaFaixa * 100 + 57,
+          opcional: true,
+          nexExposicao: Math.max(5, faixa.de),
+          rotuloEtapa: "NEX de exposição " + faixa.de + "–" + faixa.ate + "%",
+        }));
+      });
+    }
+
     vagasDeRitual(ordem, t).forEach(function (v) { lista.push(v); });
 
     /* A afinidade olha o NEX de EXPOSIÇÃO nos dois modos: com a regra
@@ -479,6 +512,16 @@
     return (r && r.opcoes && typeof r.opcoes.elemento === "string") ? r.opcoes.elemento : "";
   }
 
+  /* O elemento do ritual que feriu o personagem (Ferido por Ritual, AS1
+     p. 43): é a escolha da vaga da origem, e só vale enquanto a origem
+     for essa. Sem o elemento, a Mácula ainda não sabe o que conceder. */
+  function elementoDaMacula(ordem) {
+    if (ordem.origem !== "feridoPorRitual") return "";
+    var r = (ordem.escolhas || []).filter(function (x) { return x.etapa === "b.origem.feridoPorRitual"; })[0];
+    var el = (r && r.opcoes && typeof r.opcoes.elemento === "string") ? r.opcoes.elemento : "";
+    return ELEMENTOS_PODER.indexOf(el) >= 0 ? el : "";
+  }
+
   function contextoDeConcessao(ordem, t) {
     var estagio = estagioDaFase(ordem);
     return {
@@ -492,6 +535,7 @@
       lento: !!(OP() && A && OP().ligada(ordem, A.REGRA_LENTO)),
       campo: !!(OP() && A && OP().ligada(ordem, A.REGRA_CAMPO)),
       elementoMaldicao: elementoDaMaldicao(ordem),
+      macula: elementoDaMacula(ordem),
     };
   }
 
@@ -518,7 +562,7 @@
         rotulo: A.rotuloDaConcessao(c),
         verbo: c.fixo ? "Trazer ritual" : "Escolher rituais",
         explicacao: A.explicacaoDaConcessao(c),
-        rotuloEtapa: c.estagio ? rotuloDoEstagio(c.estagio) : rotuloDoDegrau(c.degrau, t.separado),
+        rotuloEtapa: c.rotuloEtapa || (c.estagio ? rotuloDoEstagio(c.estagio) : rotuloDoDegrau(c.degrau, t.separado)),
         opcional: c.opcional,
         concessao: c,
       });
@@ -700,6 +744,9 @@
       case "transcenderExposicao":
         if (r.valor === "nao") return "Não transcendeu neste NEX";
         return "Transcender → " + descreverPoderAninhado(o.poder);
+      case "transcenderItem":
+        if (r.valor === "nao") return "Não transcendeu com item neste intervalo";
+        return "Transcender com item" + (o.itemNome ? " (" + o.itemNome + ")" : "") + " → " + descreverPoderAninhado(o.poder);
       case "poderOrigem": {
         if (o.poder) return descreverPoderAninhado(o.poder);
         var partes = [];
@@ -939,6 +986,29 @@
         return { ok: (percurso.graus[k] || 0) >= 1, texto: "Treinado na perícia escolhida",
           falta: "Treinado em " + nomeDaPericia(k) };
       }
+      case "comRegra": {
+        var nomeRegra = OP() && OP().regra(r.regra) ? OP().regra(r.regra).nome : r.regra;
+        var regraLigada = OP() ? OP().ligada(ordem, r.regra) : false;
+        return { ok: regraLigada, texto: "Regra opcional " + nomeRegra + " ligada",
+          falta: "Só com a regra opcional " + nomeRegra + " ligada (Regras opcionais, na aba Geral)" };
+      }
+      /* "Conjurar ritual de Nº círculo [do elemento]" (AS1 p. 44-47): a
+         ficha conhece, naquela etapa, um ritual de pelo menos esse
+         círculo — e desse elemento, quando pedido. Um ritual de vários
+         elementos conta em cada um deles. */
+      case "conjurarRitual": {
+        var elR = r.elemento || (r.elementoDaOpcao ? (o[r.elementoDaOpcao] || "") : "");
+        var conhece = (percurso.aprendizados || []).some(function (a) {
+          return !a.substituidoEm && (Number(a.circulo) || 0) >= r.circulo &&
+            (!elR || (Array.isArray(a.elementos) && a.elementos.indexOf(elR) >= 0));
+        });
+        var txtR = "Conjurar ritual de " + r.circulo + "º círculo" +
+          (elR ? " de " + nomeDoElemento(elR) : (r.elementoDaOpcao ? " do elemento escolhido" : ""));
+        if (r.elemento && r.circulo === 1) txtR = "Conjurar ritual de " + nomeDoElemento(r.elemento);
+        return { ok: conhece, texto: txtR, falta: txtR + " (nenhum ritual conhecido assim nesta etapa)" };
+      }
+      case "declaracao":
+        return { ok: true, texto: r.texto, falta: "" };
       case "semRegra": {
         var ligada = OP() ? OP().ligada(ordem, r.regra) : false;
         return { ok: !ligada, texto: "Sem a regra opcional " + (OP() && OP().regra(r.regra) ? OP().regra(r.regra).nome : r.regra),
@@ -964,16 +1034,28 @@
 
   /* ---------------- repetição ---------------- */
 
+  /* "Decadência" e "decadência " são a mesma escolha de texto. */
+  function mesmaOpcao(a, b) {
+    if (typeof a === "string" && typeof b === "string") return a.trim().toLowerCase() === b.trim().toLowerCase();
+    return a === b;
+  }
+
   function repeticao(e, percurso, opcoes, etapa, ordem) {
     var o = opcoes || {};
     var iguais = percurso.adquiridos.filter(function (a) {
       if (!vale(a) || a.chave !== e.chave) return false;
-      if (e.repeticaoPorOpcao) return (a.opcoes || {})[e.repeticaoPorOpcao] === o[e.repeticaoPorOpcao];
+      if (e.repeticaoPorOpcao) return mesmaOpcao((a.opcoes || {})[e.repeticaoPorOpcao], o[e.repeticaoPorOpcao]);
       return true;
     });
 
     if (!iguais.length) return { ok: true, afinidade: false, texto: "" };
     if (e.repetivel && !e.repeticaoPorOpcao) return { ok: true, afinidade: false, texto: "" };
+    if (e.repeticaoMaxima && e.repeticaoPorOpcao) {
+      if (iguais.length < e.repeticaoMaxima) {
+        return { ok: true, afinidade: false, texto: "Escolha nº " + (iguais.length + 1) + " para a mesma opção (o máximo é " + e.repeticaoMaxima + ")." };
+      }
+      return { ok: false, afinidade: false, texto: "Você já escolheu " + nomeDoPoder(e, o) + " " + e.repeticaoMaxima + " vezes para esta mesma opção." };
+    }
 
     if (e.tipo === "paranormal") {
       var el = elementoDoPoder(e, o);
@@ -1021,8 +1103,27 @@
       nome: ritual.nome || "",
       circulo: Number(dados.circulo) || 0,
       elemento: dados.elemento || "",
+      elementos: Array.isArray(dados.elementos) ? dados.elementos.slice() : [],
+      todosOsElementos: dados.todosOsElementos === true,
       catalogo: ritual.origemCatalogoId || "",
     };
+  }
+
+  /* O que a regra de um ritual precisa saber da ficha NAQUELA etapa
+     (Arquivos Secretos 1, p. 49-50): a afinidade já desenvolvida e os
+     rituais do catálogo que o personagem já conhece. Sem a aba Rituais à
+     mão, os conhecidos ficam de fora — e a exigência deles não é julgada
+     por quem não tem como saber. */
+  function comConhecimento(dado, ordem, percurso, etapa, contexto) {
+    var af = afinidadeNaEtapa(ordem, percurso, etapa || { exposicao: 0 });
+    var extra = { afinidade: af.disponivel ? af.elemento : "" };
+    var rituais = rituaisDoContexto(contexto);
+    if (rituais) {
+      var catalogoDe = {};
+      rituais.forEach(function (x) { if (x && x.id) catalogoDe[x.id] = x.origemCatalogoId || ""; });
+      extra.conhecidos = ativos(percurso).map(function (a) { return catalogoDe[a.ritualId] || ""; }).filter(Boolean);
+    }
+    return Object.assign({}, dado, extra);
   }
 
   /* O que se sabe do ritual de uma entrada: o da ficha quando a ficha
@@ -1034,6 +1135,8 @@
         nome: String(entrada.nome || ""),
         circulo: Number(entrada.circulo) || 0,
         elemento: String(entrada.elemento || ""),
+        elementos: Array.isArray(entrada.elementos) ? entrada.elementos.map(String) : [],
+        todosOsElementos: entrada.todosOsElementos === true,
         catalogo: String(entrada.catalogo || ""),
         naFicha: null,
       };
@@ -1132,7 +1235,8 @@
              com quem joga. */
           var doRitual = op.doRitual && v[op.doRitual] && typeof v[op.doRitual] === "object" && v[op.doRitual].id
             ? resolverRitual(v[op.doRitual], rituaisDoContexto(contexto)) : null;
-          if (doRitual && doRitual.elemento && doRitual.elemento !== valor) {
+          var cabeNoRitual = doRitual && doRitual.todosOsElementos && (doRitual.elementos || []).indexOf(valor) >= 0;
+          if (doRitual && doRitual.elemento && doRitual.elemento !== valor && !cabeNoRitual) {
             saida.problemas.push(op.rotulo + ": o poder conta como poder do elemento do ritual escolhido, e " +
               (doRitual.nome || "o ritual") + " é de " + nomeDoElemento(doRitual.elemento) + " (Ordem Paranormal RPG, p. 114).");
           }
@@ -1208,7 +1312,7 @@
             saida.problemas.push(op.rotulo + ": " + (novo.nome || "o ritual que entra") + " já é o ritual de outra aquisição.");
             break;
           }
-          var cabe = A ? A.avaliarContraRegra(velho.regra, novo) : { ok: true };
+          var cabe = A ? A.avaliarContraRegra(velho.regra, comConhecimento(novo, ordem, percurso, etapa, contexto)) : { ok: true };
           if (!cabe.ok) {
             saida.problemas.push(op.rotulo + ": " + (novo.nome || "o ritual que entra") + " não cabe no lugar de " +
               (velho.nome || "o que sai") + " (" + velho.nomePoder + ", " + velho.rotuloEtapa + "). " + cabe.motivo);
@@ -1233,7 +1337,7 @@
             break;
           }
           var regraAp = regraDeAprenderRitual(etapa);
-          var testeAp = A ? A.avaliarContraRegra(regraAp, dadoAp) : { ok: true };
+          var testeAp = A ? A.avaliarContraRegra(regraAp, comConhecimento(dadoAp, ordem, percurso, etapa, contexto)) : { ok: true };
           if (!testeAp.ok) {
             saida.problemas.push(op.rotulo + ": " + (dadoAp.nome || "o ritual escolhido") + " — " + testeAp.motivo +
               " (NEX de exposição " + etapa.exposicao + "%).");
@@ -1500,6 +1604,15 @@
         saida.faltam = sub2.faltam;
         saida.problemas = sub2.problemas;
         saida.filhos = sub2.filhos;
+        /* Ferido por Ritual (AS1 p. 43): o elemento escolhido decide a
+           segunda perícia da origem. Treinada por qualquer caminho, vale. */
+        if (org.periciaPorElemento && o.elemento && org.periciaPorElemento[o.elemento]) {
+          var peEl = org.periciaPorElemento[o.elemento];
+          if ((percurso.graus[peEl] || 0) < 1) {
+            saida.problemas.push(org.poder + ": com " + nomeDoElemento(o.elemento) + ", a perícia da origem é " + nomeDaPericia(peEl) +
+              ", e ela não está treinada. Troque a perícia escolhida da origem (aba Geral, trocar origem) ou o elemento (Arquivos Secretos 1, p. 43).");
+          }
+        }
         var estadoOrg = (ordem.estadoDasOrigens && ordem.estadoDasOrigens[org.chave]) || {};
         C.efeitosDaEscolhaDaOrigem(org).forEach(function (ef) {
           /* "Se ele morrer…": o efeito some enquanto o registro disser. */
@@ -1513,6 +1626,36 @@
         if (r.valor === "nao") break;
         if (r.valor !== "transcender") { saida.faltam.push("Transcender ou não"); break; }
         juntar(saida, avaliarParanormal(o.poder, percurso, etapa, ordem, contexto, 0));
+        break;
+      }
+
+      /* Transcender com Itens (AS1 p. 56-57): o poder tem de ser do
+         elemento do item amaldiçoado, e cumprir os próprios requisitos. */
+      case "transcenderItem": {
+        if (r.valor === "nao") break;
+        if (r.valor !== "transcender") { saida.faltam.push("Transcender ou não"); break; }
+        var elItem = typeof o.itemElemento === "string" ? o.itemElemento : "";
+        if (!o.item) saida.faltam.push("Item amaldiçoado");
+        else {
+          var itensT = itensDoContexto(contexto);
+          if (itensT) {
+            var itemT = itensT.filter(function (i) { return i && i.id === o.item; })[0];
+            if (!itemT) saida.problemas.push("O item amaldiçoado escolhido não está mais no inventário.");
+            else {
+              var dT = global.RAMAOrdemInventario ? global.RAMAOrdemInventario.dadosDoItem(itemT) : (itemT.ordem || {});
+              if (dT.grupo !== "amaldicoado" && dT.amaldicoado !== true) saida.problemas.push(itemT.nome + " não está marcado como item amaldiçoado.");
+              if (dT.elemento) elItem = dT.elemento;
+            }
+          }
+        }
+        if (!elItem) saida.faltam.push("Elemento do item");
+        juntar(saida, avaliarParanormal(o.poder, percurso, etapa, ordem, contexto, 0));
+        var poderT = o.poder && o.poder.valor ? P.poder(o.poder.valor) : null;
+        var elPoder = elementoDoPoder(poderT, o.poder && o.poder.opcoes);
+        if (poderT && elItem && elPoder !== elItem) {
+          saida.problemas.push(poderT.nome + (elPoder ? " é de " + nomeDoElemento(elPoder) : " não é de elemento nenhum") +
+            "; com Transcender com Itens, o poder tem de ser do elemento do item (" + nomeDoElemento(elItem) + ").");
+        }
         break;
       }
 
@@ -1556,7 +1699,7 @@
             motivo = (dado.nome || "Este ritual") + " já ocupa outra concessão de aprendizado.";
             estrutural = true;
           } else {
-            var eleg = A.elegibilidade(c, dado);
+            var eleg = A.elegibilidade(c, comConhecimento(dado, ordem, percurso, etapa, contexto));
             if (!eleg.ok) motivo = (dado.nome || "Um ritual escolhido") + ": " + eleg.motivo;
           }
 
@@ -1680,6 +1823,7 @@
       ritualId: id,
       nome: escolhido ? String(escolhido.nome || "") : String(opcoes.ritual || ""),
       circulo: escolhido ? (Number(escolhido.circulo) || 0) : 0,
+      elementos: escolhido ? elementosDoDado(escolhido) : [],
       legado: !escolhido,
       regra: regraDeAprenderRitual(info.etapa),
     }));
@@ -1707,6 +1851,7 @@
       ritualId: entraId,
       nome: String(sub.entra.nome || ""),
       circulo: Number(sub.entra.circulo) || 0,
+      elementos: elementosDoDado(sub.entra),
       legado: false,
       substituidoEm: "",
       substituidoPor: "",
@@ -1719,7 +1864,7 @@
     return Object.assign({
       concessao: "", degrau: 0, rotuloEtapa: "", origem: "", poder: "", nomePoder: "",
       fonte: "", pagina: 0, destino: "conhecido", contaNoLimite: false,
-      ritualId: "", nome: "", circulo: 0, legado: false, excecao: false, motivoDaExcecao: "",
+      ritualId: "", nome: "", circulo: 0, elementos: [], legado: false, excecao: false, motivoDaExcecao: "",
       regra: null, substituidoEm: "", substituidoPor: "", substitui: null, viaSubstituicao: "",
       registroDeRitual: "",
     }, dados || {});
@@ -1779,6 +1924,7 @@
         ritualId: linha.dado.id,
         nome: linha.dado.nome,
         circulo: linha.dado.circulo,
+        elementos: elementosDoDado(linha.dado),
         excecao: !linha.ok,
         motivoDaExcecao: linha.motivo,
         regra: { tipo: "concessao", concessao: c },
@@ -1859,6 +2005,7 @@
           else if (ef.tipo === "categoriaFavorita") copia.itens = Array.isArray(valor) ? valor : [valor];
           else if (ef.tipo === "peAtributo") copia.atributo = valor;
           else if (ef.tipo === "atributoBasePericia") copia.pericia = valor;
+          else if (ef.tipo === "dtAprimorada") copia.alvo = String(valor);
           delete copia.opcao;
         } else if (ef.tipo === "categoriaFavorita") {
           copia.itens = [];
@@ -2318,6 +2465,10 @@
       patentes: flags.patentes,
       ocultista: flags.ocultista,
       avisos: A ? A.avisosDoAprendizado(flags) : [],
+      /* O que a regra de um ritual pergunta da ficha HOJE (AS1 p. 49-50):
+         a biblioteca confere com isto; a gravação, com a etapa. */
+      conhecimento: comConhecimento({}, ordem, percurso, { exposicao: R().exposicao(ordem) }, contexto),
+      maldicao: compreensaoDisponivel(ordem, t),
       circuloMaximo: A ? A.circuloMaximoNoDegrau(ordem.classe, t.passos) : 0,
       degrauAtual: t.passos,
     };
@@ -2341,7 +2492,30 @@
      guardado, com o motivo, e volta a valer sozinho quando puder.
      ================================================================= */
 
-  var TIPOS_DE_REGISTRO = { campo: true, mesa: true };
+  var TIPOS_DE_REGISTRO = { campo: true, mesa: true, maldicao: true };
+
+  /* Compreensão de Maldições (Maledictólogo NEX 40%, Arquivos Secretos 1
+     p. 45): estudar um item amaldiçoado que contém um ritual ensina o
+     ritual, fora do limite. Como o estudo em campo, depende do que
+     aconteceu na mesa (o teste de Ocultismo passou e o item foi
+     consumido), por isso é um REGISTRO confirmado, não uma vaga. */
+  var DEGRAU_COMPREENSAO = 8;
+
+  function compreensaoDisponivel(ordem, t) {
+    return ordem.trilha === "maledictologo" && trilhaValida(ordem) && t.passos >= DEGRAU_COMPREENSAO;
+  }
+
+  function motivoDaMaldicao(ordem, reg, dado, t) {
+    if (!(ordem.trilha === "maledictologo" && trilhaValida(ordem))) {
+      return "Compreensão de Maldições é da trilha Maledictólogo (Arquivos Secretos 1, p. 45), e esta ficha não está nela. O registro fica guardado e volta a valer se a trilha voltar.";
+    }
+    if ((reg.degrau || t.passos) < DEGRAU_COMPREENSAO) {
+      return "Compreensão de Maldições chega em " + rotuloDoDegrau(DEGRAU_COMPREENSAO, t.separado) + ".";
+    }
+    if (!reg.confirmado) return "O estudo do item não foi confirmado: faltou dizer que o teste de Ocultismo passou e o item foi consumido.";
+    var teste = A ? A.avaliarContraRegra({ tipo: "maldicao" }, dado) : { ok: true };
+    return teste.ok ? "" : teste.motivo;
+  }
   var CHAVES_DE_FONTE = { texto: true, objeto: true, selo: true };
 
   function normalizarRegistroDeRitual(bruto) {
@@ -2358,6 +2532,10 @@
       ritualId: ritualId,
       nome: String(bruto.nome || "").slice(0, 120),
       circulo: circulo >= 1 && circulo <= 4 ? circulo : 0,
+      elemento: ELEMENTOS_PODER.concat(["medo"]).indexOf(bruto.elemento) >= 0 ? bruto.elemento : "",
+      elementos: Array.isArray(bruto.elementos) && bruto.todosOsElementos === true
+        ? bruto.elementos.filter(function (k) { return ELEMENTOS_PODER.indexOf(k) >= 0; }).slice(0, 4) : [],
+      todosOsElementos: bruto.todosOsElementos === true && Array.isArray(bruto.elementos) && bruto.elementos.length > 1,
       degrau: degrau >= 1 && degrau <= 40 ? degrau : 0,
       fonte: CHAVES_DE_FONTE[bruto.fonte] ? bruto.fonte : "",
       nota: String(bruto.nota || "").slice(0, 300),
@@ -2398,7 +2576,8 @@
 
     lista.forEach(function (reg) {
       if (!reg || !TIPOS_DE_REGISTRO[reg.tipo] || !reg.ritualId) return;
-      var dado = resolverRitual({ id: reg.ritualId, nome: reg.nome, circulo: reg.circulo }, rituais);
+      var dado = resolverRitual({ id: reg.ritualId, nome: reg.nome, circulo: reg.circulo, elemento: reg.elemento,
+        elementos: reg.elementos, todosOsElementos: reg.todosOsElementos }, rituais);
       var motivo = "";
       if (dado.naFicha === false) motivo = (reg.nome || "O ritual") + " não está mais na aba Rituais.";
       else if (percurso.rituaisUsados[dado.id]) motivo = (dado.nome || reg.nome || "O ritual") + " já tem outra aquisição.";
@@ -2409,7 +2588,8 @@
         motivo = "Registrado em " + rotuloDoDegrau(reg.degrau, t.separado) + ", uma etapa que a ficha não alcança agora (" +
           rotuloDoDegrau(t.passos, t.separado) + "). Fica guardado e volta a valer quando ela chegar lá.";
       }
-      else if (reg.tipo === "campo") motivo = motivoDoEstudo(ordem, reg, dado, t);
+      else if (reg.tipo === "campo") motivo = motivoDoEstudo(ordem, reg, comConhecimento(dado, ordem, percurso, { exposicao: R().exposicao(ordem) }, contexto), t);
+      else if (reg.tipo === "maldicao") motivo = motivoDaMaldicao(ordem, reg, comConhecimento(dado, ordem, percurso, { exposicao: R().exposicao(ordem) }, contexto), t);
 
       var degrau = reg.degrau || t.passos;
       if (motivo) {
@@ -2424,17 +2604,18 @@
         degrau: degrau,
         rotuloEtapa: rotuloDoDegrau(degrau, t.separado),
         origem: reg.tipo,
-        poder: reg.tipo === "campo" ? "estudoEmCampo" : "concessaoDaMesa",
-        nomePoder: reg.tipo === "campo" ? "Estudo em campo" : "Concessão da mesa",
-        fonte: reg.tipo === "campo" ? "SAH" : "",
-        pagina: reg.tipo === "campo" ? 113 : 0,
+        poder: reg.tipo === "campo" ? "estudoEmCampo" : (reg.tipo === "maldicao" ? "compreensaoDeMaldicoes" : "concessaoDaMesa"),
+        nomePoder: reg.tipo === "campo" ? "Estudo em campo" : (reg.tipo === "maldicao" ? "Compreensão de Maldições" : "Concessão da mesa"),
+        fonte: reg.tipo === "campo" ? "SAH" : (reg.tipo === "maldicao" ? "AS1" : ""),
+        pagina: reg.tipo === "campo" ? 113 : (reg.tipo === "maldicao" ? 45 : 0),
         destino: "conhecido",
         contaNoLimite: false,
         ritualId: dado.id,
         nome: dado.nome || reg.nome,
         circulo: dado.circulo || reg.circulo,
+        elementos: elementosDoDado(dado.naFicha === null ? reg : dado),
         excecao: reg.tipo === "mesa",
-        regra: reg.tipo === "campo"
+        regra: reg.tipo === "maldicao" ? { tipo: "maldicao" } : reg.tipo === "campo"
           ? { tipo: "campo", maximo: A ? A.circuloMaximoNoDegrau(ordem.classe, degrau) : 0 }
           : { tipo: "mesa" },
       }));
@@ -2459,8 +2640,21 @@
     var saida = { id: d.id, nome: d.nome };
     if (d.circulo) saida.circulo = d.circulo;
     if (d.elemento) saida.elemento = d.elemento;
+    if (d.todosOsElementos && d.elementos.length > 1) {
+      saida.elementos = d.elementos.slice();
+      saida.todosOsElementos = true;
+    }
     if (d.catalogo) saida.catalogo = d.catalogo;
     return saida;
+  }
+
+  /* Os elementos a que um ritual pertence, para quem conta "rituais de
+     Sangue" (Transtornado Arrependido, AS1 p. 43): um ritual de vários
+     elementos conta em cada um deles. */
+  function elementosDoDado(d) {
+    if (!d) return [];
+    if (d.todosOsElementos === true && Array.isArray(d.elementos) && d.elementos.length > 1) return d.elementos.slice();
+    return d.elemento ? [d.elemento] : [];
   }
 
   function rituaisEscolhidos(ordem, idVaga) {
@@ -2555,7 +2749,7 @@
           }
         }
         if (desc.limite && desc.limite.esgotado) return { ok: false, estado: "limite", motivo: desc.limite.motivo };
-        var teste = A.avaliarContraRegra(desc.regra, d);
+        var teste = A.avaliarContraRegra(desc.regra, Object.assign({}, d, agora.rituais.conhecimento || {}));
         return teste.ok ? { ok: true, estado: "disponivel", motivo: "" } : { ok: false, estado: "indisponivel", motivo: teste.motivo };
       };
       return desc;
@@ -2644,6 +2838,23 @@
         });
       }
 
+      case "maldicao": {
+        if (!compreensaoDisponivel(ordem, t)) return null;
+        return montar({
+          tipo: "maldicao", id: "maldicao", vaga: "",
+          rotulo: "Compreensão de Maldições", rotuloEtapa: rotuloDoDegrau(t.passos, t.separado),
+          origem: "maldicao", nomePoder: "Compreensão de Maldições", fonte: "AS1", pagina: 45, destino: "conhecido",
+          quantidade: null, escolhidos: [], circulos: [1, 2, 3, 4], elemento: "",
+          contaNoLimite: false, limite: null,
+          exigeConfirmacao: true, degrau: t.passos,
+          explicacao: "Uma ação de interlúdio e 3 PE de leituras e rituais de identificação num item amaldiçoado, e um teste de " +
+            "Ocultismo DT 10 + 5 por categoria do item. Passando, se o item contém um ritual, você perde 1d4+1 de Sanidade, aprende o " +
+            "ritual (fora do limite de rituais) e o item é consumido. Falhando, perde 2d4+2 de Sanidade e não pode tentar de novo com " +
+            "o mesmo item. Selecionar aqui não prova o estudo: a confirmação vem antes de gravar.",
+          regra: { tipo: "maldicao" },
+        });
+      }
+
       case "mesa":
         return montar({
           tipo: "mesa", id: "mesa", vaga: "",
@@ -2725,12 +2936,14 @@
         return { ok: true, registroId: reg.id };
       }
       case "campo":
+      case "maldicao":
       case "mesa": {
         var ritual = achar(op.ritualId);
         if (!ritual) return falhaDeGravacao("O ritual não existe na ficha.");
         var d = dadosDoRitualDaFicha(ritual);
         var novo = normalizarRegistroDeRitual({
           id: op.id || uuid(), tipo: op.tipo, ritualId: ritual.id, nome: d.nome, circulo: d.circulo,
+          elemento: d.elemento, elementos: d.elementos, todosOsElementos: d.todosOsElementos,
           degrau: op.degrau || t.passos, fonte: op.fonte || "", nota: op.nota || "",
           confirmado: op.confirmado === true, registradoEm: agora(),
         });
@@ -2772,6 +2985,7 @@
         return "";
       }
       case "campo":
+      case "maldicao":
       case "mesa": {
         var r = (depois.rituais.registros || []).filter(function (x) { return x.registro.id === marca.registroId; })[0];
         if (!r) return "O registro não foi aceito.";
@@ -3272,7 +3486,7 @@
       de: de,
       para: para,
       titulo: tr.titulo,
-      referencia: (tr.fonte === "SAH" ? "Sobrevivendo ao Horror" : "Ordem Paranormal RPG") + ", p. " + tr.pagina,
+      referencia: global.RAMAOrdemCatalogo.nomeDoLivro(tr.fonte) + ", p. " + tr.pagina,
       ganhos: g,
       atributo: tr.atributo,
       estagio: fase.estagio,
@@ -3312,7 +3526,24 @@
     return { ok: true, plano: plano, trajetoria: ordem.trajetoria[0] };
   }
 
+  /* Os itens amaldiçoados que viraram mundanos em Transcender com Itens
+     (AS1 p. 57): derivado das escolhas — desfazer a escolha devolve o
+     item. Só conta enquanto a regra está ligada. */
+  function itensTranscendidos(ordem) {
+    var saida = {};
+    if (!ordem || !(OP() && OP().ligada(ordem, "transcenderComItens"))) return saida;
+    (ordem.escolhas || []).forEach(function (r) {
+      if (!r || !/^t[1-4]\.transcenderItem$/.test(String(r.etapa || "")) || r.valor !== "transcender") return;
+      var o = r.opcoes || {};
+      if (typeof o.item !== "string" || !o.item) return;
+      var poder = o.poder && o.poder.valor ? P.poder(o.poder.valor) : null;
+      saida[o.item] = { poder: poder ? poder.nome : "", etapa: r.etapa };
+    });
+    return saida;
+  }
+
   global.RAMAOrdemProgressao = {
+    itensTranscendidos: itensTranscendidos,
     TIPOS: TIPOS,
     GRAUS: GRAUS,
     ELEMENTOS_PODER: ELEMENTOS_PODER,

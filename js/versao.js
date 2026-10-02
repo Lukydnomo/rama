@@ -70,6 +70,33 @@
 
   var CHANGELOG = [
     {
+      versao: "2.29.0", codinome: "MÁCULA", data: "02/10/2026",
+      mudancas: {
+        "Conteúdo": [
+          "Arquivos Secretos 1 (v1.1, pacote oficial) no R.A.M.A., com livro e página em cada entrada e resumos próprios: 2 origens (Ferido por Ritual e Transtornado Arrependido), a trilha de ocultista Maledictólogo, 4 poderes de ocultista, 5 poderes gerais, 4 poderes paranormais de Sangue, 2 rituais (Passagem de Conhecimento e a versão Expandida), 3 itens paranormais, 3 itens amaldiçoados de Sangue, 2 regras opcionais, o novo uso de Ocultismo Blindar a Mente e as 12 fichas de ameaças e aliada no bestiário.",
+          "O livro aparece em busca, filtros de fonte, seletores e bibliotecas (origens, poderes, rituais, itens e criaturas) como “Arquivos Secretos 1”, ao lado do livro básico e do Sobrevivendo ao Horror.",
+        ],
+        "Adicionado": [
+          "Ritual de vários elementos (AS1 p. 49): Passagem de Conhecimento é de Sangue E Conhecimento — diferente de Amaldiçoar Arma, que é de um elemento escolhido. Aprender exige afinidade com pelo menos um dos elementos, em qualquer aquisição que não seja concessão da mesa; a versão Expandida exige a base já conhecida. A biblioteca e a gravação dizem o motivo da recusa.",
+          "Ferido por Ritual: o elemento escolhido decide a perícia da origem (conferida na Progressão) e abre a Mácula Ritualística — uma concessão de ritual de 1º círculo do elemento, fora do limite, para qualquer classe; em “Usar ritual”, conjurar sem o PE do círculo uma vez por cena.",
+          "Transtornado Arrependido: resistência a dano mental 2, +1 a cada dois rituais ou poderes paranormais de Sangue, calculada sozinha.",
+          "Maledictólogo: Identificação Macabra (+1d10 por 1 PE no resultado de Ocultismo), Compreensão de Maldições (aprender o ritual de um item, fora do limite, e transferir maldições para outro item ou para uma tatuagem), Reproduzir Maldição (memorizar e aplicar até o fim da missão, sem passar da categoria IV) e Maldição Suprema (três categorias a menos nessa conta).",
+          "Poderes com conta ou botão: Ritual Intenso soma a Presença nas rolagens de dano e cura dos rituais; Saúde Sobrenatural, Sangue Prazeroso (RD 5 machucado e os 20 PV da afinidade), Sangue Corrosivo e Cicatrizes Expostas registram custo, uso da cena e efeito; Placas Sanguinolentas dá a Defesa ao usar um ritual de Sangue; Curiosidade Oculta troca Vontade por Ocultismo por 2 PE; Habilidade Aprimorada soma +2 (+5 com duas escolhas) na DT do ritual na aba Rituais.",
+          "Requisitos novos na Progressão: conjurar ritual de um círculo (e de um elemento), regra opcional ligada (Reter Ritual de Combate) e condição declarada (ter cicatrizes); repetição até duas vezes na mesma escolha.",
+          "Regra opcional Reter Ritual (desligada): rituais de duração cena podem ser retidos — os PE saem do atual e do máximo, com –1 de Sanidade; a aba Rituais lista os retidos com “Deixar de reter”, “Liberar com calma” (Ocultismo DT 20 + custo) e o aviso de perda de foco.",
+          "Regra opcional Transcender com Itens (desligada): uma vaga por intervalo de NEX alcançado, com o item amaldiçoado do inventário e um poder do mesmo elemento; o item passa a constar como mundano.",
+          "Rubra: “Usar uma dose” gasta a dose, aplica +5 em Força, Agilidade e Vigor e 10 PV temporários e mostra a DT de Vontade, que sobe com os usos. Armas com dano de outro tipo (Arpão do Pescador, Marreta Transtornada) somam o dado extra fora do crítico.",
+          "Gerador de Transtornados na biblioteca de criaturas (perfil, dois traços e duas marcas de aparência).",
+        ],
+        "Técnico": [
+          "Só o site muda — exceto uma linha de Campanhas.gs (o retrato do turno reconhece ids as1.criatura.*): troque o Campanhas.gs e crie uma nova versão da implantação para o retrato das ameaças do AS1 aparecer no painel do turno. Sem isso, tudo funciona e só esse retrato fica de fora. Não precisa de setupRama().",
+          "Campos novos e opcionais no bloco ordem (temporariosDeCena, retencoes, maldicoesMemorizadas, contadores, estadoDasOrigens.feridoPorRitual), nos rituais (elementos e todosOsElementos), nos itens (tatuagem; maldição temporária e de origem) e nas armas (tipoDanoExtra); registro de ritual do tipo maldicao. Fichas antigas abrem iguais, com tudo vazio; exportar e importar levam os campos.",
+          "Novos js/ordem/maldicoes.js (regra do Maledictólogo) e js/paginas/ficha-maldicoes.js (menu do item). O livro entrou no registro único C.LIVROS, e as telas pedem o nome do livro a ele.",
+          "Testes: 94 novos na suíte principal (2412), 8 nas criaturas (96) e os fluxos no navegador (Mácula, Reter Ritual, Compreensão de Maldições, Rubra, transferência de maldição, Transcender com Itens e o gerador).",
+        ],
+      },
+    },
+    {
       versao: "2.28.1", codinome: "AMPLITUDE", data: "02/10/2026",
       mudancas: {
         "Alterado": [

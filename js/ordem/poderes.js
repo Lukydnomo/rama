@@ -64,6 +64,15 @@
      treinadoNaOpcao { opcao }               treinado na perícia
                                              escolhida nesta opção
      semRegra        { regra, motivo }       a regra opcional desligada
+     comRegra        { regra }               a regra opcional LIGADA (Reter
+                                             Ritual de Combate, AS1 p. 44)
+     conjurarRitual  { circulo, elemento?,   conhecer um ritual de pelo
+                       elementoDaOpcao? }    menos esse círculo (e desse
+                                             elemento) — AS1 p. 44-47
+     declaracao      { texto }               condição narrativa que a
+                                             ficha não mede (“ter
+                                             cicatrizes”): sempre aceita,
+                                             sempre escrita
    ===================================================================== */
 
 (function (global) {
@@ -71,6 +80,7 @@
 
   var OPRPG = "OPRPG";
   var SAH = "SAH";
+  var AS1 = "AS1";
 
   /* ------------------------------------------------------------------
      Atalhos de montagem. Existem só para a lista abaixo caber na tela.
@@ -83,6 +93,8 @@
     nex: function (n) { return { tipo: "nex", minimo: n }; },
     poder: function (k) { return { tipo: "poder", poder: k }; },
     elem: function (e, n) { return { tipo: "elemento", elemento: e, quantidade: n }; },
+    conj: function (c, e) { return e ? { tipo: "conjurarRitual", circulo: c, elemento: e } : { tipo: "conjurarRitual", circulo: c }; },
+    regra: function (k) { return { tipo: "comRegra", regra: k }; },
   };
 
   var ef = {
@@ -114,6 +126,9 @@
       requisitos: d.requisitos || [],
       repetivel: !!d.repetivel,
       repeticaoPorOpcao: d.repeticaoPorOpcao || "",
+      /* Quantas vezes a MESMA opção pode ser escolhida (<Habilidade>
+         Aprimorada: duas, AS1 p. 46). Sem o campo, uma. */
+      repeticaoMaxima: d.repeticaoMaxima || 0,
       opcoes: d.opcoes || [],
       efeitos: d.efeitos || [],
       efeitosAfinidade: d.efeitosAfinidade || [],
@@ -410,6 +425,28 @@
       requisitos: [req.atr("pre", 2)] }),
     entrada({ chave: "tracadoConjuratorio", nome: "Traçado Conjuratório", tipo: "classe", classes: ["ocultista"], fonte: SAH, pagina: 27,
       resumo: "1 PE e ação completa traçam um símbolo de 1,5m: dentro dele, +2 em Ocultismo e resistência, e +2 na DT dos seus rituais." }),
+
+    /* --- Arquivos Secretos 1, p. 44 --- */
+    entrada({ chave: "ritualIntenso", nome: "Ritual Intenso", tipo: "classe", classes: ["ocultista"], fonte: AS1, pagina: 44,
+      resumo: "Soma a Presença nas rolagens de dano e de cura dos seus rituais.",
+      requisitos: [req.atr("pre", 2)],
+      efeitos: [{ tipo: "rolagemDeRitual", atributo: "pre" }], automacao: "calculo",
+      nota: "A Presença entra nas rolagens de dano e de cura feitas pela aba Rituais." }),
+    entrada({ chave: "saudeSobrenatural", nome: "Saúde Sobrenatural", tipo: "classe", classes: ["ocultista"], fonte: AS1, pagina: 44,
+      resumo: "Uma vez por cena, ação de movimento e 3 PE: PV temporários iguais à Presença × 10 (Pre 3 dá 30), que somem no fim da cena e não acumulam com eles mesmos.",
+      requisitos: [req.atr("int", 2), req.atr("pre", 2), req.conj(1)],
+      automacao: "parcial",
+      nota: "O botão do cartão gasta os 3 PE, registra o uso da cena e põe os PV temporários na ficha (sem somar a um uso anterior)." }),
+    entrada({ chave: "acostumadoAMaldicao", nome: "Acostumado à Maldição de Elemento", tipo: "classe", classes: ["ocultista"], fonte: AS1, pagina: 44,
+      resumo: "Escolha um elemento (exceto Medo). Ao falhar num teste ligado ao preço da maldição de um item amaldiçoado desse elemento (OPRPG p. 145), você não perde Sanidade; os outros efeitos negativos continuam.",
+      requisitos: [req.atr("int", 2), { tipo: "conjurarRitual", circulo: 2, elementoDaOpcao: "elemento" }],
+      opcoes: [{ chave: "elemento", tipo: "elemento", rotulo: "Elemento (exceto Medo)" }],
+      nota: "O nome no livro é “Acostumado à Maldição de <Elemento>”. A perda de Sanidade é do teste, na cena." }),
+    entrada({ chave: "reterRitualDeCombate", nome: "Reter Ritual de Combate", tipo: "classe", classes: ["ocultista"], fonte: AS1, pagina: 44,
+      resumo: "Com a regra opcional Reter Ritual: como reação, muda para cena a duração retida de um ritual que afeta negativamente um alvo, no instante em que ele sai da linha de efeito. E, ao sofrer uma condição que faz deixar de reter rituais, reação e 1 PE por ritual mudam a duração deles para cena, sem perder os efeitos.",
+      requisitos: [req.atr("int", 2), req.conj(1), req.regra("reterRitual")],
+      automacao: "parcial",
+      nota: "Os rituais retidos ganham, na aba Rituais, o botão “Mudar para cena” (reação; 1 PE quando é para não perder o foco)." }),
   ];
 
   /* =================================================================
@@ -504,6 +541,30 @@
       [req.atr("vig", 2)], [{ tipo: "pvPorDegrau", valor: 1 }, ef.pericia(["fortitude"], 2)], "calculo"),
     geral("vontadeInabalavel", "Vontade Inabalável", 36, "+1 PE para cada 10% de NEX (ou a cada 2 níveis) e +2 em Vontade.",
       [req.atr("pre", 2)], [{ tipo: "pePorDoisDegraus", valor: 1 }, ef.pericia(["vontade"], 2)], "calculo"),
+
+    /* --- Arquivos Secretos 1, p. 46 --- */
+    geral("habilidadeAprimorada", "Habilidade Aprimorada", 46,
+      "Escolha uma habilidade ou um ritual que tenha DT: a DT para resistir a ele aumenta em +2. Pode ser escolhido de novo para outra habilidade ou ritual, e até duas vezes para a mesma (a DT sobe +5 no total).",
+      [], [{ tipo: "dtAprimorada", opcao: "alvo" }], "parcial",
+      { fonte: AS1, repetivel: true, repeticaoPorOpcao: "alvo", repeticaoMaxima: 2,
+        opcoes: [{ chave: "alvo", tipo: "texto", rotulo: "Habilidade ou ritual com DT", dica: "o nome, como está na ficha (ex.: Decadência)", limite: 60 }],
+        nota: "O nome no livro é “<Habilidade> Aprimorada”. Num ritual da ficha com o mesmo nome, a DT mostrada na aba Rituais já soma o +2 (ou +5, com duas escolhas). Numa habilidade, o aumento é aplicado na cena." }),
+    geral("instintosUrbanos", "Instintos Urbanos", 46,
+      "Treinado em Crime, ou +2 se já for. Ao entrar num ambiente fechado, Crime DT 20 identifica uma rota de fuga: decidindo fugir, ganha uma ação de movimento extra no primeiro turno da fuga e +2 na Defesa até fugir. Sem rota possível, +2 na Defesa enquanto estiver no lugar.",
+      [req.atr("agi", 2)], [ef.treinarOuBonus("crime")], "parcial", { fonte: AS1, nota: PARCIAL_TREINO }),
+    geral("cicatrizesExpostas", "Cicatrizes Expostas", 46,
+      "Ação de movimento para expor suas cicatrizes (ou quando outro ser as expõe): até o fim da cena, +1d8 de dano do mesmo tipo, mas –1 dado em Vontade e em testes que exijam calma (furtividade, traduzir um idioma…).",
+      [{ tipo: "declaracao", texto: "Ter cicatrizes" }], [], "parcial",
+      { fonte: AS1,
+        opcoes: [{ chave: "cicatrizes", tipo: "texto", rotulo: "As cicatrizes (físicas ou psicológicas)", limite: 120 }],
+        nota: "O botão do cartão registra o estado exposto como efeito de cena (–1 dado em Vontade); o +1d8 de dano é somado na rolagem de dano." }),
+    geral("curiosidadeOculta", "Curiosidade Oculta", 46,
+      "Treinado em Ocultismo, ou +2 se já for. Num teste de Vontade, pode gastar 2 PE para usar Ocultismo no lugar.",
+      [req.atr("int", 2)], [ef.treinarOuBonus("ocultismo")], "parcial",
+      { fonte: AS1, nota: "O treinamento (ou o +2) entra na conta. A troca aparece no resultado de um teste de Vontade, por 2 PE." }),
+    geral("especialistaEsoterico", "Especialista Esotérico", 46,
+      "Ao conjurar um ritual, combina os efeitos de até três catalisadores ritualísticos diferentes ao mesmo tempo.",
+      [req.atr("int", 3), req.conj(2), req.poder("dominioEsoterico")], [], "informacao", { fonte: AS1 }),
   ];
 
   /* =================================================================
@@ -669,6 +730,26 @@
     paranormal("valerSeDoCaos", "Valer-se do Caos", "energia", SAH, 47,
       "Pode receber +1 dado num teste; se falhar ou esse dado tirar 5 ou menos, perde 1d4 de Sanidade.",
       "Só perde Sanidade se falhar ou se o dado extra tirar 1 ou 2."),
+
+    /* --- Arquivos Secretos 1, p. 47 (todos de Sangue) --- */
+    paranormal("ferroMaculado", "Ferro Maculado", "sangue", AS1, 47,
+      "Ação de movimento e 2 PV amaldiçoam 1 projétil de munição: ele causa +1d6 de dano de Sangue, uma única vez.",
+      "O dano muda para +1d8 de Sangue.",
+      { nota: "Os 2 PV saem pelos recursos; o dado extra é somado na rolagem de dano do disparo." }),
+    paranormal("placasSanguinolentas", "Placas Sanguinolentas", "sangue", AS1, 47,
+      "Ao conjurar um ritual de Sangue, +Defesa igual ao círculo dele até o início do seu próximo turno (3º círculo: +3).",
+      "O bônus passa a ser o círculo +2 (+3 no 1º círculo, +4 no 2º…).",
+      { requisitos: [req.conj(1, "sangue")], automacao: "parcial",
+        nota: "Em “Usar ritual” de um ritual de Sangue, a Defesa entra como efeito até o seu próximo turno." }),
+    paranormal("sangueCorrosivo", "Sangue Corrosivo", "sangue", AS1, 47,
+      "Ação de movimento e 1 PE: até o fim da cena, quem estiver adjacente e causar dano a você sofre 1d10 de dano de Sangue.",
+      "O dano muda para 2d10 de Sangue.",
+      { automacao: "parcial", nota: "O botão do cartão gasta o PE e registra o estado até o fim da cena; o dano é rolado pela mesa a cada golpe." }),
+    paranormal("sanguePrazeroso", "Sangue Prazeroso", "sangue", AS1, 47,
+      "Enquanto estiver machucado (metade dos PV ou menos), resistência a dano 5.",
+      "Machucado, também recebe 20 PV temporários, uma vez por cena.",
+      { requisitos: [req.elem("sangue", 1)], efeitos: [{ tipo: "resistenciaDanoMachucado", valor: 5 }], automacao: "parcial",
+        nota: "A resistência a dano entra na conta enquanto os PV atuais estiverem na metade ou abaixo. Os 20 PV temporários da afinidade vêm pelo botão do cartão, uma vez por cena." }),
   ];
 
   /* =================================================================
@@ -994,6 +1075,22 @@
       "5 PE e um interlúdio dão a um voluntário um poder até o próximo interlúdio."),
     trilha("parapsicologo", 99, "aSanidadeEstaLaFora", "A Sanidade Está Lá Fora", SAH, 29,
       "Ação de movimento e 5 PE removem todas as condições de medo ou mentais de alguém adjacente."),
+
+    /* --- Maledictólogo, Arquivos Secretos 1 p. 45 --- */
+    trilha("maledictologo", 10, "identificacaoMacabra", "Identificação Macabra", AS1, 45,
+      "Num teste para identificar item amaldiçoado ou ritual, 1 PE dá +1d10. Identificar item amaldiçoado como ação completa sofre só –1 dado.",
+      { automacao: "parcial", nota: "O +1d10 aparece no resultado de um teste de Ocultismo, por 1 PE." }),
+    trilha("maledictologo", 40, "compreensaoDeMaldicoes", "Compreensão de Maldições", AS1, 45,
+      "Ação de interlúdio e 3 PE para estudar um item amaldiçoado: Ocultismo DT 10 +5 por categoria. Falhando, perde 2d4+2 de Sanidade e não pode tentar de novo com o item. Passando e o item contendo um ritual: perde 1d4+1 de Sanidade, aprende o ritual (fora do limite) e o item é consumido. Passando sem ritual: perde 1d4+1 de Sanidade e transfere as maldições para outro item ou para um símbolo tatuado em você ou num aliado adjacente (uma tatuagem dessas por pessoa, que pode ser destruída com uma ação de interlúdio); o item original é consumido.",
+      { automacao: "parcial",
+        nota: "O ritual aprendido é registrado na aba Rituais (“Compreensão de Maldições”). A transferência das maldições é feita pelo menu do item no inventário (“Maldições do Maledictólogo…”)." }),
+    trilha("maledictologo", 65, "reproduzirMaldicao", "Reproduzir Maldição", AS1, 45,
+      "Ação de interlúdio e 3 PE memorizam uma maldição de item com que já lidou. Outra ação de interlúdio e 3 PE a aplicam num item novo, com Ocultismo DT 10 +5 por categoria: falhando, perde 2d8+2 de Sanidade; passando, perde 1d8+1 e o item recebe a maldição até o fim da missão. Maldições sobem a categoria, e nenhum item passa da IV.",
+      { automacao: "parcial",
+        nota: "Memorizar e aplicar ficam no menu do item (“Maldições do Maledictólogo…”). A maldição aplicada fica marcada como temporária, até o fim da missão." }),
+    trilha("maledictologo", 99, "maldicaoSuprema", "Maldição Suprema", AS1, 45,
+      "Em Reproduzir Maldição, o item conta como três categorias a menos: um item IV conta como I, e recebe maldições até voltar à IV.",
+      { automacao: "calculo", nota: "O limite de categoria de Reproduzir Maldição já desconta as três categorias." }),
   ];
 
   /* =================================================================
@@ -1243,12 +1340,13 @@
 
   function referencia(p, classe) {
     if (!p) return "";
-    var livro = p.fonte === SAH ? "Sobrevivendo ao Horror" : "Ordem Paranormal RPG";
+    var C = global.RAMAOrdemCatalogo;
+    var livro = C && C.nomeDoLivro ? C.nomeDoLivro(p.fonte) : (p.fonte === SAH ? "Sobrevivendo ao Horror" : "Ordem Paranormal RPG");
     return livro + ", p. " + paginaPara(p, classe);
   }
 
   global.RAMAOrdemPoderes = {
-    FONTES: { OPRPG: OPRPG, SAH: SAH },
+    FONTES: { OPRPG: OPRPG, SAH: SAH, AS1: AS1 },
     PODERES_CLASSE: PODERES_CLASSE,
     PODERES_GERAIS: PODERES_GERAIS,
     PODERES_PARANORMAIS: PODERES_PARANORMAIS,

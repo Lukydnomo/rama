@@ -14,6 +14,7 @@
 
      OPRPG  Ordem Paranormal RPG — Livro de Regras, v1.1, Jambô, 2022
      SAH    Sobrevivendo ao Horror, v1.2, Jambô, 2024
+     AS1    Arquivos Secretos 1, v1.1, Jambô (pacote de conteúdo oficial)
 
    As páginas são as do LIVRO, não as do PDF.
 
@@ -49,6 +50,23 @@
 
   var OPRPG = "OPRPG";
   var SAH = "SAH";
+  var AS1 = "AS1";
+
+  /* Os livros, num lugar só (v2.29). Quem precisa do nome de um livro
+     pergunta aqui — nomeDoLivro(sigla) — em vez de repetir uma conta
+     "SAH ? … : …" que esquece o terceiro livro. A ordem é a de exibição. */
+  var LIVROS = [
+    { sigla: OPRPG, nome: "Ordem Paranormal RPG", curto: "Livro básico", abreviacao: "LB", edicao: "v1.1" },
+    { sigla: SAH, nome: "Sobrevivendo ao Horror", curto: "Sobrevivendo ao Horror", abreviacao: "SAH", edicao: "v1.2" },
+    { sigla: AS1, nome: "Arquivos Secretos 1", curto: "Arquivos Secretos 1", abreviacao: "AS1", edicao: "v1.1" },
+  ];
+
+  function livro(sigla) {
+    return LIVROS.filter(function (l) { return l.sigla === sigla; })[0] || LIVROS[0];
+  }
+
+  function nomeDoLivro(sigla) { return livro(sigla || OPRPG).nome; }
+  function curtoDoLivro(sigla) { return livro(sigla || OPRPG).curto; }
 
   /* =================================================================
      ATRIBUTOS — OPRPG p.14-15
@@ -563,6 +581,12 @@
       requisitoNota: "O livro pede Profissão (psicólogo). A ficha confere o treinamento em Profissão; a especialidade é conferida pela mesa.",
       poderes: [poder(10, "Terapia", 29), poder(40, "Palavras-chave", 29),
                 poder(65, "Reprogramação Mental", 29), poder(99, "A Sanidade Está Lá Fora", 29)] },
+
+    /* --- Arquivos Secretos 1, p. 45 --- */
+    { chave: "maledictologo", classe: "ocultista", nome: "Maledictólogo", pagina: 45, fonte: AS1,
+      resumo: "Estuda as maldições do Outro Lado para usá-las contra ele: identifica, absorve, transfere e reproduz.",
+      poderes: [poder(10, "Identificação Macabra", 45), poder(40, "Compreensão de Maldições", 45),
+                poder(65, "Reproduzir Maldição", 45), poder(99, "Maldição Suprema", 45)] },
   ];
 
   /* =================================================================
@@ -895,6 +919,33 @@
       resumo: "Usa Investigação no lugar de Diplomacia para persuadir e mudar atitude. Em teste de Investigação, gaste 2 PE para receber +5.",
       substituicoes: [{ de: "diplomacia", para: "investigacao", rotulo: "Encontrar a Verdade: usar Investigação", condicao: "Só para persuadir e mudar atitude." }],
       acoesNoTeste: [{ id: "verdade", rotulo: "Encontrar a Verdade", pericias: ["investigacao"], custo: 2, tipo: "bonus", valor: 5, condicao: "" }] },
+
+    /* -----------------------------------------------------------------
+       ARQUIVOS SECRETOS 1 v1.1, p. 43
+       -----------------------------------------------------------------
+       Campos novos, opcionais:
+         periciasOpcoes      as perícias à escolha ficam restritas a esta
+                             lista (a criação e a troca de origem só
+                             mostram estas)
+         periciaPorElemento  a perícia que o elemento escolhido exige; a
+                             Progressão confere se ela está treinada
+       ----------------------------------------------------------------- */
+
+    { chave: "feridoPorRitual", nome: "Ferido por Ritual", fonte: AS1, pagina: 43,
+      pericias: ["ocultismo"], periciasAEscolher: 1, periciasOpcoes: ["fortitude", "vontade", "reflexos"],
+      periciaPorElemento: { sangue: "fortitude", morte: "vontade", conhecimento: "vontade", energia: "reflexos" },
+      periciasObservacao: "Ocultismo e a perícia do elemento do ritual que o feriu: Fortitude (Sangue), Vontade (Morte ou Conhecimento) ou Reflexos (Energia).",
+      poder: "Mácula Ritualística", automacao: "parcial", controles: true,
+      resumo: "Um ritual de Sangue, Morte, Conhecimento ou Energia deturpou sua vida. A entidade marcou você com um ritual de 1º círculo desse elemento, à sua escolha: você aprende a conjurá-lo (fora do limite de rituais conhecidos) e, uma vez por cena, pode conjurá-lo sem gastar PE — efeitos adicionais e formas avançadas ainda custam. Em troca, sofre –1 dado em testes de resistência contra efeitos desse elemento (rituais, poderes paranormais…).",
+      escolhas: [{ chave: "elemento", tipo: "elemento", rotulo: "Elemento do ritual que o feriu" }],
+      nota: "O ritual vira uma concessão na Progressão (Mácula Ritualística), restrita ao elemento escolhido. A conjuração sem PE é uma opção de “Usar ritual”, uma vez por cena. O –1 dado contra o elemento é do teste de resistência, na cena." },
+
+    { chave: "transtornadoArrependido", nome: "Transtornado Arrependido", fonte: AS1, pagina: 43,
+      pericias: ["luta", "ocultismo"],
+      poder: "Sofrimento de Sangue", automacao: "parcial",
+      resumo: "Resistência a dano mental 2, +1 para cada dois rituais de Sangue ou poderes paranormais de Sangue que você possua. Os pesadelos tornam sua condição de descanso sempre uma categoria pior (luxuosa vira confortável, confortável vira normal, normal vira precária).",
+      efeitos: [{ tipo: "resistenciaMentalPorSangue", base: 2 }],
+      nota: "A resistência mental entra na conta e sobe sozinha com os rituais de Sangue conhecidos e os poderes paranormais de Sangue. A piora do descanso é aplicada pela mesa no interlúdio." },
   ];
 
   /* =================================================================
@@ -1072,12 +1123,15 @@
      de cada entrada do catálogo. */
   function referencia(entrada) {
     if (!entrada || !entrada.pagina) return "";
-    var livro = entrada.fonte === SAH ? "Sobrevivendo ao Horror" : "Ordem Paranormal RPG";
-    return livro + ", p. " + entrada.pagina;
+    return nomeDoLivro(entrada.fonte) + ", p. " + entrada.pagina;
   }
 
   global.RAMAOrdemCatalogo = {
-    FONTES: { OPRPG: OPRPG, SAH: SAH },
+    FONTES: { OPRPG: OPRPG, SAH: SAH, AS1: AS1 },
+    LIVROS: LIVROS,
+    livro: livro,
+    nomeDoLivro: nomeDoLivro,
+    curtoDoLivro: curtoDoLivro,
 
     ATRIBUTOS: ATRIBUTOS,
     GERACAO_ATRIBUTOS: GERACAO_ATRIBUTOS,

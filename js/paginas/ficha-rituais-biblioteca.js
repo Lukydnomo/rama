@@ -92,7 +92,7 @@
   }
 
   function nomeDaFonte(sigla) {
-    return sigla === "SAH" ? "Sobrevivendo ao Horror" : (sigla === "OPRPG" ? "Ordem Paranormal RPG" : "");
+    return RT().NOME_FONTE[sigla] || "";
   }
 
   /* =================================================================
@@ -174,13 +174,19 @@
       return aq ? aq.escolhidos.filter(function (rid) { return !sel.saem[rid]; }) : [];
     }
 
+    /* Estudo em campo (SAH p. 113) e Compreensão de Maldições (AS1 p. 45)
+       são a mesma coisa para a janela: um ritual, confirmado pela mesa. */
+    function ehEstudo() {
+      return !!aq && (aq.tipo === "campo" || aq.tipo === "maldicao");
+    }
+
     function totalDepois() {
       return escolhidosQueFicam().length + sel.itens.length;
     }
 
     function capacidade() {
       if (!aq) return Infinity;
-      if (devolve || aq.tipo === "campo") return 1;
+      if (devolve || ehEstudo()) return 1;
       if (aq.quantidade === null || aq.quantidade === undefined) return Infinity;
       return aq.quantidade;
     }
@@ -335,7 +341,8 @@
 
     function linhaDaFicha(r, d) {
       var chave = "ficha:" + d.id;
-      var teste = aq.avaliar({ ritualId: d.id, circulo: d.circulo, elemento: d.elemento, catalogo: d.catalogo, nome: d.nome });
+      var teste = aq.avaliar({ ritualId: d.id, circulo: d.circulo, elemento: d.elemento, elementos: d.elementos, todosOsElementos: d.todosOsElementos,
+        catalogo: d.catalogo, nome: d.nome });
       return el("article.bib-item", { class: classeDeEstado(chave, teste) }, [
         el("div.bib-item__topo", {}, [
           el("span.bib-item__texto.bib-item__texto--fixo", {}, [
@@ -427,7 +434,8 @@
        elemento de um ritual que pede escolha (Amaldiçoar Arma) só é
        decidido ao selecionar, então os quatro entram. */
     function dadosDaEntrada(e) {
-      return { circulo: e.circulo, elemento: e.elemento, elementos: e.elementos, catalogo: e.id, nome: e.nome };
+      return { circulo: e.circulo, elemento: e.elemento, elementos: e.elementos, todosOsElementos: e.todosOsElementos,
+        requisitoRitual: e.requisitoRitual, catalogo: e.id, nome: e.nome };
     }
 
     function avaliarEntrada(e) {
@@ -440,7 +448,8 @@
       var ritual = F.criarRitual(montado.dados);
       ritual.adicionadoEm = U.agoraISO();
       var d = RT().dadosDoRitual(ritual);
-      return { chave: "cat:" + e.id, ritual: ritual, novo: true, nome: ritual.nome, circulo: d.circulo, elemento: d.elemento, origem: "catalogo" };
+      return { chave: "cat:" + e.id, ritual: ritual, novo: true, nome: ritual.nome, circulo: d.circulo, elemento: d.elemento,
+        elementos: d.todosOsElementos ? d.elementos : null, origem: "catalogo" };
     }
 
     function montarDaHomebrew(h) {
@@ -1094,8 +1103,8 @@
       if (devolve) {
         return sel.itens.length ? "Escolhido: " + sel.itens[0].nome + "." : "Nenhum ritual escolhido.";
       }
-      if (aq.tipo === "campo") {
-        return sel.itens.length ? "Para estudar: " + sel.itens[0].nome + "." : "Escolha o ritual estudado.";
+      if (ehEstudo()) {
+        return sel.itens.length ? "Para estudar: " + sel.itens[0].nome + "." : (aq.tipo === "maldicao" ? "Escolha o ritual contido no item." : "Escolha o ritual estudado.");
       }
       var total = totalDepois();
       var q = aq.quantidade;
@@ -1121,7 +1130,7 @@
     }
 
     function rotuloPrincipal() {
-      if (passo === "resumo") return aq.tipo === "campo" ? "Registrar estudo" : "Confirmar";
+      if (passo === "resumo") return ehEstudo() ? "Registrar estudo" : "Confirmar";
       if (devolve) return "Usar este ritual";
       return "Revisar e confirmar";
     }
@@ -1188,7 +1197,7 @@
           el("strong", { texto: i.nome }),
           el("span.t-mini", {
             texto: " · " + (i.circulo ? i.circulo + "º círculo" : "círculo não informado") +
-                   (i.elemento && RT() ? " · " + RT().nomeDoElemento(i.elemento) : "") +
+                   (i.elementos && RT() ? " · " + i.elementos.map(RT().nomeDoElemento).join(" e ") : (i.elemento && RT() ? " · " + RT().nomeDoElemento(i.elemento) : "")) +
                    (i.novo ? " · cópia nova, " + (i.origem === "homebrew" ? "da Homebrew" : "do catálogo") : " · já na ficha, sem cópia"),
           }),
         ]);
@@ -1219,7 +1228,7 @@
         }));
       }
 
-      if (aq.tipo === "campo") partes.push(formularioDeEstudo());
+      if (ehEstudo()) partes.push(aq.tipo === "maldicao" ? formularioDeMaldicao() : formularioDeEstudo());
 
       partes.push(el("p.t-mini", { texto: "Nenhum PE é gasto e nenhum dado é rolado." }));
       if (motivos && motivos.length) {
@@ -1270,10 +1279,39 @@
       ]);
     }
 
+    /* Compreensão de Maldições: o item, o teste e o custo são da mesa. A
+       janela registra o que aconteceu — os 3 PE e a Sanidade são gastos
+       nos recursos da ficha, e o item sai do inventário por quem joga. */
+    function formularioDeMaldicao() {
+      var idConf = id + "-maldicao-conf";
+      var idNota = id + "-maldicao-nota";
+      return el("div.pilha--curta.bib-estudo", { class: "pilha" }, [
+        el("p.t-mini", { texto: aq.explicacao }),
+        el("p.t-mini", { texto: "Arquivos Secretos 1, p. 45. Os 3 PE e a perda de Sanidade são aplicados nos recursos da ficha; o item amaldiçoado consumido sai do inventário." }),
+        el("div.r-campo", {}, [
+          el("label.r-rotulo", { for: idNota, texto: "Item amaldiçoado estudado" }),
+          el("input.r-entrada", {
+            id: idNota, type: "text", maxlength: "300", value: resumoCampo.nota,
+            placeholder: "Medalhão de Sangue da missão 4…",
+            oninput: function (ev) { resumoCampo.nota = ev.target.value; },
+          }),
+        ]),
+        el("label.bib-alternar", { for: idConf }, [
+          el("input", {
+            id: idConf, type: "checkbox", checked: resumoCampo.confirmado,
+            onchange: function (ev) { resumoCampo.confirmado = ev.target.checked; },
+          }),
+          el("span", { texto: "Confirmo que o teste de Ocultismo passou e que o item continha este ritual e foi consumido." }),
+        ]),
+      ]);
+    }
+
     function gravar(fechar) {
       if (gravando) return;
-      if (aq.tipo === "campo" && !resumoCampo.confirmado) {
-        pintarResumo(["Falta confirmar o estudo: a fonte achada e o teste de Ocultismo que passou."]);
+      if (ehEstudo() && !resumoCampo.confirmado) {
+        pintarResumo([aq.tipo === "maldicao"
+          ? "Falta confirmar o estudo do item: o teste de Ocultismo que passou e o item consumido."
+          : "Falta confirmar o estudo: a fonte achada e o teste de Ocultismo que passou."]);
         return;
       }
       gravando = true;
@@ -1286,10 +1324,10 @@
           tipo: "concessao", vaga: aq.vaga, novos: novos,
           rituais: escolhidosQueFicam().concat(sel.itens.map(function (i) { return i.ritual.id; })),
         };
-      } else if (aq.tipo === "campo") {
+      } else if (ehEstudo()) {
         operacao = {
-          tipo: "campo", ritualId: sel.itens[0].ritual.id, novos: novos,
-          fonte: resumoCampo.fonte, nota: resumoCampo.nota, confirmado: resumoCampo.confirmado === true,
+          tipo: aq.tipo, ritualId: sel.itens[0].ritual.id, novos: novos,
+          fonte: aq.tipo === "maldicao" ? "objeto" : resumoCampo.fonte, nota: resumoCampo.nota, confirmado: resumoCampo.confirmado === true,
         };
       }
 
@@ -1309,7 +1347,7 @@
       ctx.redesenhar();
       if (aoMudar) aoMudar();
       fechar();
-      UI.avisoOk(aq.tipo === "campo"
+      UI.avisoOk(ehEstudo()
         ? "Estudo registrado: o ritual passou a ser conhecido."
         : "Rituais gravados em " + aq.rotulo + ".");
     }
@@ -1320,7 +1358,7 @@
 
     var m = UI.modal({
       titulo: aq
-        ? (aq.fixo ? "Trazer " + aq.fixo.nome : (aq.tipo === "campo" ? "Estudo em campo" : "Escolher rituais — " + aq.rotulo))
+        ? (aq.fixo ? "Trazer " + aq.fixo.nome : (aq.tipo === "campo" ? "Estudo em campo" : (aq.tipo === "maldicao" ? "Compreensão de Maldições" : "Escolher rituais — " + aq.rotulo)))
         : "Da biblioteca",
       largo: true,
       classe: "r-modal--biblioteca" + (aq ? " r-modal--aquisicao" : ""),

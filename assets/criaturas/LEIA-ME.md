@@ -16,9 +16,11 @@ A pasta sai do id da criatura, sem o `criatura.`:
 op.criatura.zumbi-de-sangue         → assets/criaturas/op/zumbi-de-sangue/
 sah.criatura.memento-mori           → assets/criaturas/sah/memento-mori/
 op.criatura.o-anfitriao.amphitruo   → assets/criaturas/op/o-anfitriao.amphitruo/
+as1.criatura.apostolo-do-sangue     → assets/criaturas/as1/apostolo-do-sangue/
 ```
 
-`op` é o livro básico (Ordem Paranormal RPG); `sah`, Sobrevivendo ao Horror.
+`op` é o livro básico (Ordem Paranormal RPG); `sah`, Sobrevivendo ao Horror;
+`as1`, Arquivos Secretos 1.
 As facetas do Anfitrião são variantes e têm pasta própria.
 
 ## Como trocar

@@ -1065,13 +1065,17 @@
 
       t.igual("cinco atributos", OC.ATRIBUTOS.length, 5);
       t.igual("28 perícias", OC.PERICIAS.length, 28);
-      t.igual("46 origens: 26 do livro básico e 20 do Sobrevivendo ao Horror", OC.ORIGENS.filter(function (o) { return o.fonte !== "SAH"; }).length + "+" +
-        OC.ORIGENS.filter(function (o) { return o.fonte === "SAH"; }).length, "26+20");
+      t.igual("48 origens: 26 do livro básico, 20 do Sobrevivendo ao Horror e 2 do Arquivos Secretos 1",
+        OC.ORIGENS.filter(function (o) { return !o.fonte || o.fonte === "OPRPG"; }).length + "+" +
+        OC.ORIGENS.filter(function (o) { return o.fonte === "SAH"; }).length + "+" +
+        OC.ORIGENS.filter(function (o) { return o.fonte === "AS1"; }).length, "26+20+2");
       t.igual("três classes de agente, e Mundano e Sobrevivente à parte", OC.classesDeAgente().length + "+" + OC.CLASSES.length, "3+5");
       /* Quinze do livro básico e nove do Sobrevivendo ao Horror, três
          por classe. A fonte distingue as duas. */
       t.igual("quinze trilhas do livro básico",
-        OC.TRILHAS.filter(function (tr) { return tr.fonte !== "SAH"; }).length, 15);
+        OC.TRILHAS.filter(function (tr) { return !tr.fonte || tr.fonte === "OPRPG"; }).length, 15);
+      t.igual("uma trilha do Arquivos Secretos 1 (Maledictólogo, de ocultista)",
+        OC.TRILHAS.filter(function (tr) { return tr.fonte === "AS1"; }).map(function (tr) { return tr.chave + ":" + tr.classe; }).join(), "maledictologo:ocultista");
       t.igual("nove trilhas do Sobrevivendo ao Horror",
         OC.TRILHAS.filter(function (tr) { return tr.fonte === "SAH"; }).length, 9);
       t.igual("cinco do livro básico por classe",
@@ -1428,7 +1432,8 @@
 
       /* v2.20: + contagem de munição (OPRPG p. 174) e controle de
          componentes ritualísticos (da mesa). */
-      t.igual("treze regras opcionais", OP.REGRAS.length, 13);
+      t.igual("quinze regras opcionais: treze do SAH e duas do Arquivos Secretos 1", OP.REGRAS.length, 15);
+      t.iguais("  as duas do AS1 começam desligadas", ["reterRitual", "transcenderComItens"].map(function (k) { return OP.ligada(R.fichaVazia(), k); }), [false, false]);
       t.ok("as duas novas começam desligadas numa ficha nova",
         !OP.ligada(R2.fichaVazia(), "contagemMunicao") && !OP.ligada(R2.fichaVazia(), "controleComponentes"));
       t.ok("todas com fonte e página",
@@ -1683,7 +1688,7 @@
       var duplicada = "";
       PO.TODOS.forEach(function (p) { if (chaves[p.chave]) duplicada = p.chave; chaves[p.chave] = true; });
       t.igual("nenhuma chave de poder se repete", duplicada, "");
-      t.ok("todo poder tem fonte e página", PO.TODOS.every(function (p) { return (p.fonte === "OPRPG" || p.fonte === "SAH") && p.pagina > 0; }));
+      t.ok("todo poder tem fonte e página", PO.TODOS.every(function (p) { return (p.fonte === "OPRPG" || p.fonte === "SAH" || p.fonte === "AS1") && p.pagina > 0; }));
       t.ok("todo poder tem resumo", PO.TODOS.every(function (p) { return p.resumo.length > 10; }));
       t.ok("toda automação é calculo, parcial ou informacao",
         PO.TODOS.every(function (p) { return ["calculo", "parcial", "informacao"].indexOf(p.automacao) >= 0; }));
@@ -1691,8 +1696,9 @@
         PO.PODERES_PARANORMAIS.filter(function (p) { return p.fonte === "OPRPG"; }).length, 22);
       t.igual("8 poderes paranormais do Sobrevivendo ao Horror (Tabela 1.6)",
         PO.PODERES_PARANORMAIS.filter(function (p) { return p.fonte === "SAH"; }).length, 8);
-      t.igual("34 poderes gerais do Sobrevivendo ao Horror (Tabela 2.3)", PO.PODERES_GERAIS.length, 34);
-      t.igual("quatro habilidades por trilha, nas 24 trilhas", PO.HABILIDADES_TRILHA.length, 96);
+      t.igual("34 poderes gerais do Sobrevivendo ao Horror (Tabela 2.3)", PO.PODERES_GERAIS.filter(function (p) { return p.fonte === "SAH"; }).length, 34);
+      t.igual("cinco poderes gerais do Arquivos Secretos 1 (p. 46)", PO.PODERES_GERAIS.filter(function (p) { return p.fonte === "AS1"; }).length, 5);
+      t.igual("quatro habilidades por trilha, nas 25 trilhas", PO.HABILIDADES_TRILHA.length, 100);
       t.ok("os nomes das habilidades batem com os das trilhas do catálogo",
         CC.TRILHAS.every(function (tr) {
           var h = PO.habilidadesDaTrilha(tr.chave).map(function (x) { return x.nome; });
@@ -2766,7 +2772,7 @@
       /* ---------------------------------------------------------------- */
       t.grupo("Ordem · itens — catálogo completo e estruturado");
 
-      t.igual("244 entradas nos dois livros", catalogo.itens.length, 244);
+      t.igual("250 entradas nos três livros", catalogo.itens.length, 250);
       var contagem = {};
       catalogo.itens.forEach(function (e) {
         var k = e.aba + "/" + e.natureza + "/" + e.fonte;
@@ -2789,17 +2795,20 @@
         ["amaldicoados/maldicao/OPRPG", 35, "maldições para armas, proteções e acessórios"],
         ["amaldicoados/item/OPRPG", 28, "itens amaldiçoados especiais do livro básico"],
         ["amaldicoados/item/SAH", 19, "itens amaldiçoados do SAH (Tabela 1.6)"],
+        ["geral/item/AS1", 3, "itens paranormais do Arquivos Secretos 1 (p. 54)"],
+        ["amaldicoados/item/AS1", 3, "itens amaldiçoados do Arquivos Secretos 1 (p. 55)"],
       ].forEach(function (c) { t.igual(c[2] + ": " + c[1], contagem[c[0]] || 0, c[1]); });
 
       var idsVistos = {};
       var idRepetido = "";
       catalogo.itens.forEach(function (e) { if (idsVistos[e.id]) idRepetido = e.id; idsVistos[e.id] = true; });
       t.igual("nenhum id se repete", idRepetido, "");
-      t.ok("todo id é estável e diz a fonte (op.… ou sah.…)", catalogo.itens.every(function (e) {
-        return /^(op|sah)\.[a-z0-9.-]+$/.test(e.id) && (e.fonte === "SAH") === (e.id.indexOf("sah.") === 0);
+      t.ok("todo id é estável e diz a fonte (op.…, sah.… ou as1.…)", catalogo.itens.every(function (e) {
+        return /^(op|sah|as1)\.[a-z0-9.-]+$/.test(e.id) && (e.fonte === "SAH") === (e.id.indexOf("sah.") === 0) &&
+          (e.fonte === "AS1") === (e.id.indexOf("as1.") === 0);
       }));
       t.ok("toda entrada tem nome, resumo, fonte e página", catalogo.itens.every(function (e) {
-        return e.nome && e.resumo && (e.fonte === "OPRPG" || e.fonte === "SAH") && e.pagina > 0;
+        return e.nome && e.resumo && (e.fonte === "OPRPG" || e.fonte === "SAH" || e.fonte === "AS1") && e.pagina > 0;
       }));
       t.ok("todo item tem tipo de ficha e grupo; modificações e maldições não", catalogo.itens.every(function (e) {
         return e.natureza === "item" ? !!(e.tipoItem && e.grupo) : (e.tipoItem === null && e.grupo === null);
@@ -2830,7 +2839,7 @@
       IT._esquecer();
       var carga = IT.carregar();
       t.ok("carregar() devolve uma promessa e deixa o catálogo pronto", !!carga && typeof carga.then === "function" && !!IT.catalogoPronto());
-      t.igual("  com as mesmas 244 entradas", IT.catalogoPronto().itens.length, 244);
+      t.igual("  com as mesmas 250 entradas", IT.catalogoPronto().itens.length, 250);
 
       /* Conferência pontual contra as tabelas dos livros. */
       var katana = entrada("op.arma.katana");
@@ -3271,7 +3280,7 @@
       /* ---------------------------------------------------------------- */
       t.grupo("Ordem · rituais — catálogo completo e estruturado");
 
-      t.igual("98 rituais nos dois livros", catalogoR.rituais.length, 98);
+      t.igual("100 rituais nos três livros", catalogoR.rituais.length, 100);
       var porFonte = {};
       var porElemento = {};
       var porCirculo = {};
@@ -3282,22 +3291,24 @@
       });
       t.igual("82 do livro básico", porFonte.OPRPG, 82);
       t.igual("16 do Sobrevivendo ao Horror", porFonte.SAH, 16);
-      t.iguais("por círculo: 30, 26, 22 e 20", [porCirculo[1], porCirculo[2], porCirculo[3], porCirculo[4]], [30, 26, 22, 20]);
-      t.iguais("por elemento (Amaldiçoar Arma conta nos quatro em que o livro a coloca)",
+      t.igual("2 do Arquivos Secretos 1", porFonte.AS1, 2);
+      t.iguais("por círculo: 30, 27, 22 e 21", [porCirculo[1], porCirculo[2], porCirculo[3], porCirculo[4]], [30, 27, 22, 21]);
+      t.iguais("por elemento (Amaldiçoar Arma conta nos quatro; Passagem de Conhecimento, em Sangue e Conhecimento)",
         [porElemento.conhecimento, porElemento.energia, porElemento.morte, porElemento.sangue, porElemento.medo],
-        [23, 23, 23, 23, 9]);
+        [25, 23, 23, 25, 9]);
 
       var idsR = {};
       var repetidoR = "";
       catalogoR.rituais.forEach(function (e) { if (idsR[e.id]) repetidoR = e.id; idsR[e.id] = true; });
       t.igual("nenhum id se repete", repetidoR, "");
       t.ok("todo id é estável e diz a fonte", catalogoR.rituais.every(function (e) {
-        return /^(op|sah)\.ritual\.[a-z0-9-]+$/.test(e.id) && (e.fonte === "SAH") === (e.id.indexOf("sah.") === 0);
+        return /^(op|sah|as1)\.ritual\.[a-z0-9-]+$/.test(e.id) && (e.fonte === "SAH") === (e.id.indexOf("sah.") === 0) &&
+          (e.fonte === "AS1") === (e.id.indexOf("as1.") === 0);
       }));
       t.ok("toda entrada tem nome, resumo, elemento, círculo, execução, alcance, fonte e página",
         catalogoR.rituais.every(function (e) {
           return e.nome && e.resumo && e.elementos.length && e.circulo >= 1 && e.circulo <= 4 &&
-            e.execucao && e.alcance && (e.fonte === "OPRPG" || e.fonte === "SAH") && e.pagina > 0;
+            e.execucao && e.alcance && (e.fonte === "OPRPG" || e.fonte === "SAH" || e.fonte === "AS1") && e.pagina > 0;
         }));
       t.ok("onde a duração falta, é porque o livro não informa — e a entrada registra isso",
         catalogoR.rituais.filter(function (e) { return !e.duracao; }).every(function (e) {
@@ -3376,7 +3387,7 @@
         nomesR(RS.filtrar(catalogoR, { busca: "CICATRIZACAO" })).indexOf("Cicatrização") >= 0);
       t.iguais("busca sem resultado devolve lista vazia", RS.filtrar(catalogoR, { busca: "xyzzy" }), []);
       var sangue2 = RS.filtrar(catalogoR, { elemento: "sangue", circulo: 2 });
-      t.ok("elemento + círculo se combinam", sangue2.length === 6 &&
+      t.ok("elemento + círculo se combinam (6 de Sangue, mais Passagem de Conhecimento, de Sangue e Conhecimento)", sangue2.length === 7 &&
         sangue2.every(function (e) { return e.elementos.indexOf("sangue") >= 0 && e.circulo === 2; }));
       t.ok("o filtro de elemento acha o ritual multielemento",
         RS.filtrar(catalogoR, { elemento: "morte" }).some(function (e) { return e.id === "op.ritual.amaldicoar-arma"; }) &&
@@ -3389,9 +3400,9 @@
         nomesR(RS.filtrar(catalogoR, { busca: "fim", elemento: "morte", circulo: 4, fonte: "OPRPG" })).join(", "),
         "Fim Inevitável");
       var contagens = RS.contagens(catalogoR, { elemento: "sangue" });
-      t.igual("a contagem de círculos respeita o elemento escolhido", contagens.circulos[2], 6);
+      t.igual("a contagem de círculos respeita o elemento escolhido", contagens.circulos[2], 7);
       t.igual("  e a de elementos ignora o próprio filtro de elemento", contagens.elementos.morte, 23);
-      t.iguais("as duas fontes aparecem no catálogo", RS.fontesDoCatalogo(catalogoR).sort(), ["OPRPG", "SAH"]);
+      t.iguais("as três fontes aparecem no catálogo", RS.fontesDoCatalogo(catalogoR).sort(), ["AS1", "OPRPG", "SAH"]);
       var grupos = RS.porCirculo(RS.filtrar(catalogoR, { elemento: "medo" }));
       t.iguais("agrupado por círculo, com o custo de cada um",
         grupos.map(function (g) { return g.circulo + ":" + g.entradas.length + ":" + g.custo; }).join(" "),
@@ -4564,6 +4575,13 @@
       casosDaV223(t, global.RAMAOrdemCatalogo, RRs, global.RAMAOrdemProgressao, global.RAMAOrdemPoderes, S, V, global.RAMAOrdemBiblioteca);
     }
 
+    /* v2.29 — ARQUIVOS SECRETOS 1 */
+    if (RRs && global.RAMAOrdemProgressao && global.RAMAOrdemRituaisDados && global.RAMAOrdemItensDados && global.RAMAOrdemMaldicoes) {
+      casosDaV229(t, global.RAMAOrdemCatalogo, RRs, global.RAMAOrdemProgressao, global.RAMAOrdemPoderes, global.RAMAOrdemAprendizado,
+        global.RAMAOrdemRituais, global.RAMAOrdemRituaisDados, global.RAMAFicha, global.RAMAOrdemOpcionais, global.RAMAOrdemMaldicoes,
+        global.RAMAOrdemItens, global.RAMAOrdemItensDados);
+    }
+
     /* =================================================================
        MIGRAÇÃO — FICHA ANTIGA (schema 1)
        ================================================================= */
@@ -4771,6 +4789,324 @@
      v2.23 — as origens do Sobrevivendo ao Horror
      ===================================================================== */
 
+  /* =================================================================
+     v2.29 — ARQUIVOS SECRETOS 1
+     -----------------------------------------------------------------
+     O inventário do suplemento (cada item com destino), as regras novas
+     de aprendizado (ritual de vários elementos, Mácula, Compreensão de
+     Maldições), os requisitos novos, as regras opcionais e a
+     compatibilidade das fichas antigas.
+     ================================================================= */
+
+  function casosDaV229(t, C, R, E, P, A, RT, RTD, F, OP, M, IT, ITD) {
+    var INV = { itens: [] };
+    var cat = RT.normalizarCatalogo(RTD);
+    var seq = 0;
+
+    function ritual(nome, elemento) {
+      var e = cat.rituais.filter(function (x) { return x.nome === nome; })[0];
+      if (!e) throw new Error("ritual inexistente: " + nome);
+      var m = RT.paraFicha(e, { escolha: e.escolha ? (elemento || "conhecimento") : undefined });
+      if (!m.ok) throw new Error(nome + ": " + m.mensagem);
+      return F.criarRitual(m.dados);
+    }
+    function ficha(extra) {
+      var o = R.fichaVazia();
+      Object.keys(extra || {}).forEach(function (k) { o[k] = extra[k]; });
+      return R.normalizar(o);
+    }
+    function ocultista(nex, extra) {
+      return ficha(Object.assign({ classe: "ocultista", origem: "academico", nex: nex,
+        atributos: { agi: 1, "for": 1, int: 3, pre: 2, vig: 1 } }, extra || {}));
+    }
+    function vaga(o, id) { return E.vagas(o).filter(function (v) { return v.id === id; })[0]; }
+    function registrar(o, id, valor, opcoes) {
+      var v = vaga(o, id);
+      if (!v) throw new Error("vaga inexistente: " + id);
+      return E.registrar(o, v, { valor: valor, opcoes: opcoes || {} });
+    }
+    function simular(o, id, valor, opcoes, contexto) {
+      return E.simular(o, vaga(o, id), { valor: valor, opcoes: opcoes || {} }, contexto || null).avaliacao;
+    }
+    function rdMental(o) {
+      var d = R.resistencias(o, INV).dano.filter(function (x) { return x.tipo === "mental"; })[0];
+      return d ? d.conta.total : 0;
+    }
+
+    /* ---------------------------------------------------------------- */
+    t.grupo("Arquivos Secretos 1 · o inventário do suplemento, item por item");
+
+    t.iguais("o livro está no registro único, com nome e edição", [C.nomeDoLivro("AS1"), C.livro("AS1").edicao, C.curtoDoLivro("AS1")],
+      ["Arquivos Secretos 1", "v1.1", "Arquivos Secretos 1"]);
+    var origensAS1 = C.ORIGENS.filter(function (o) { return o.fonte === "AS1"; });
+    t.iguais("duas origens (p. 43), com poder e perícias", origensAS1.map(function (o) { return [o.chave, o.poder, o.pagina, o.pericias.join(",")].join("|"); }),
+      ["feridoPorRitual|Mácula Ritualística|43|ocultismo", "transtornadoArrependido|Sofrimento de Sangue|43|luta,ocultismo"]);
+    t.iguais("Ferido por Ritual: 1 perícia à escolha, só entre Fortitude, Vontade e Reflexos",
+      [C.origem("feridoPorRitual").periciasAEscolher, C.origem("feridoPorRitual").periciasOpcoes.join(",")], [1, "fortitude,vontade,reflexos"]);
+    t.iguais("a trilha Maledictólogo tem as quatro habilidades, em NEX 10, 40, 65 e 99 (p. 45)",
+      P.habilidadesDaTrilha("maledictologo").map(function (h) { return h.nex + ":" + h.chave; }),
+      ["10:identificacaoMacabra", "40:compreensaoDeMaldicoes", "65:reproduzirMaldicao", "99:maldicaoSuprema"]);
+    var poderesAS1 = P.TODOS.filter(function (p) { return p.fonte === "AS1"; });
+    var porTipo = {};
+    poderesAS1.forEach(function (p) { porTipo[p.tipo] = (porTipo[p.tipo] || 0) + 1; });
+    t.iguais("17 poderes: 4 de ocultista, 5 gerais, 4 paranormais e 4 de trilha", porTipo, { classe: 4, geral: 5, paranormal: 4, trilha: 4 });
+    t.ok("os paranormais são todos de Sangue (p. 47)", poderesAS1.filter(function (p) { return p.tipo === "paranormal"; }).every(function (p) { return p.elemento === "sangue" && p.afinidade; }));
+    t.igual("a referência diz o livro e a página", P.referencia(P.poder("ritualIntenso")), "Arquivos Secretos 1, p. 44");
+    var rituaisAS1 = cat.rituais.filter(function (e) { return e.fonte === "AS1"; });
+    t.iguais("dois rituais (p. 48-50)", rituaisAS1.map(function (e) { return e.id + ":" + e.circulo; }),
+      ["as1.ritual.passagem-de-conhecimento:2", "as1.ritual.passagem-de-conhecimento-expandido:4"]);
+    var passagem = cat.porId["as1.ritual.passagem-de-conhecimento"];
+    t.iguais("Passagem de Conhecimento pertence a Sangue E Conhecimento, com as duas formas avançadas",
+      [passagem.todosOsElementos, passagem.elementos.join(","), passagem.versoes.map(function (v) { return v.nome + "+" + v.custo; }).join(",")],
+      [true, "sangue,conhecimento", "Normal+0,Discente+3,Verdadeiro+7"]);
+    t.igual("a expandida exige a base", cat.porId["as1.ritual.passagem-de-conhecimento-expandido"].requisitoRitual, "as1.ritual.passagem-de-conhecimento");
+    t.ok("as exigências copiadas no aprendizado batem com o catálogo", Object.keys(A.RITUAIS_COM_EXIGENCIA).every(function (id) {
+      var x = A.RITUAIS_COM_EXIGENCIA[id], e = cat.porId[id];
+      return e && e.elementos.join() === x.elementos.join() && e.todosOsElementos === x.todosOsElementos && (e.requisitoRitual || "") === (x.requisitoRitual || "");
+    }));
+    var itensAS1 = IT.normalizarCatalogo(ITD).itens.filter(function (e) { return e.fonte === "AS1"; });
+    t.iguais("seis itens (p. 54-55), com categoria e espaços da tabela", itensAS1.map(function (e) { return e.id.replace(/^as1\./, "") + ":" + e.categoria + ":" + e.espacos; }), [
+      "paranormal.amuleto-sinalizador:2:1", "paranormal.agrupador-ritualistico:2:1", "paranormal.rubra:2:1",
+      "amaldicoado.arpao-do-pescador:3:1", "amaldicoado.combustivel-de-sangue:3:1", "amaldicoado.marreta-transtornada:4:2"]);
+    var arpao = IT.paraInventario(itensAS1.filter(function (e) { return /arpao/.test(e.id); })[0], {});
+    t.iguais("o arpão vira arma com o dano de Sangue à parte e crítico x3",
+      [arpao.dados.dano, arpao.dados.danoExtra, arpao.dados.ordem.arma.tipoDanoExtra, arpao.dados.multiplicador, arpao.dados.ordem.arma.arremessavel],
+      ["1d8", "1d12", "Sangue", 3, true]);
+    t.iguais("duas regras opcionais (p. 56-59), desligadas por padrão", ["reterRitual", "transcenderComItens"].map(function (k) {
+      return OP.regra(k).fonte + ":" + OP.ligada(R.fichaVazia(), k);
+    }), ["AS1:false", "AS1:false"]);
+
+    /* ---------------------------------------------------------------- */
+    t.grupo("Arquivos Secretos 1 · ritual de vários elementos (p. 49)");
+
+    var dPass = { circulo: 2, catalogo: passagem.id, elementos: ["sangue", "conhecimento"], todosOsElementos: true };
+    t.ok("sem afinidade, não aprende", !A.requisitosDoRitual(Object.assign({ afinidade: "" }, dPass)).ok);
+    t.ok("  com afinidade em Morte, também não", !A.requisitosDoRitual(Object.assign({ afinidade: "morte" }, dPass)).ok);
+    t.ok("  com afinidade em Sangue ou em Conhecimento, aprende",
+      A.requisitosDoRitual(Object.assign({ afinidade: "sangue" }, dPass)).ok && A.requisitosDoRitual(Object.assign({ afinidade: "conhecimento" }, dPass)).ok);
+    t.ok("  quem não sabe a afinidade (consulta) não julga", A.requisitosDoRitual(dPass).ok);
+    t.ok("  pelo id de catálogo também (a cópia da ficha não guarda tudo)", !A.requisitosDoRitual({ catalogo: passagem.id, afinidade: "energia" }).ok);
+    t.ok("a expandida pede a base conhecida", !A.requisitosDoRitual({ catalogo: "as1.ritual.passagem-de-conhecimento-expandido", afinidade: "sangue", conhecidos: [] }).ok &&
+      A.requisitosDoRitual({ catalogo: "as1.ritual.passagem-de-conhecimento-expandido", afinidade: "sangue", conhecidos: [passagem.id] }).ok);
+    var copiaPass = ritual("Passagem de Conhecimento");
+    var dadosPass = RT.dadosDoRitual(copiaPass);
+    t.iguais("a cópia na ficha guarda os dois elementos", [copiaPass.elemento, dadosPass.todosOsElementos, dadosPass.elementos.join(",")],
+      ["Sangue e Conhecimento", true, "sangue,conhecimento"]);
+    t.ok("  e o retrato da escolha também", E.vinculoDeRitual(copiaPass).todosOsElementos === true);
+    t.ok("uma concessão restrita a Conhecimento aceita o ritual (ele é de Conhecimento)",
+      A.elegibilidade({ circulos: [2], elemento: "conhecimento" }, Object.assign({ afinidade: "conhecimento" }, dPass)).ok);
+
+    var semAf = ocultista(50, { afinidade: { elemento: "energia" } });
+    var comAf = ocultista(50, { afinidade: { elemento: "sangue" } });
+    var aqSem = E.contextoDeAquisicao(semAf, { tipo: "concessao", vaga: "d10.ritualClasse" }, { rituais: [] });
+    var aqCom = E.contextoDeAquisicao(comAf, { tipo: "concessao", vaga: "d10.ritualClasse" }, { rituais: [] });
+    var candPass = { circulo: 2, catalogo: passagem.id, elementos: passagem.elementos, todosOsElementos: true, nome: passagem.nome };
+    t.ok("na biblioteca: com afinidade em Energia, recusa com o motivo", !aqSem.avaliar(candPass).ok && /afinidade/.test(aqSem.avaliar(candPass).motivo));
+    t.ok("  com afinidade em Sangue, aceita", aqCom.avaliar(candPass).ok);
+    var gravaSem = E.confirmarAquisicao(semAf, [], { tipo: "concessao", vaga: "d10.ritualClasse", rituais: [copiaPass.id], novos: [copiaPass] }, {});
+    t.ok("a gravação recusa também — a regra é a mesma", !gravaSem.ok && /afinidade/.test(gravaSem.motivos.join(" ")));
+    var listaCom = [];
+    var gravaCom = E.confirmarAquisicao(comAf, listaCom, { tipo: "concessao", vaga: "d10.ritualClasse", rituais: [copiaPass.id], novos: [copiaPass] }, {});
+    t.ok("  e aceita com a afinidade certa", gravaCom.ok);
+    var antes = ocultista(45, { afinidade: { elemento: "sangue" } });
+    t.ok("em NEX 45% a afinidade ainda não se desenvolveu: recusa",
+      !E.contextoDeAquisicao(antes, { tipo: "concessao", vaga: "d9.ritualClasse" }, { rituais: [] }).avaliar(candPass).ok);
+
+    /* ---------------------------------------------------------------- */
+    t.grupo("Arquivos Secretos 1 · Ferido por Ritual e Mácula Ritualística (p. 43)");
+
+    var ferido = ficha({ classe: "combatente", nex: 5, origem: "feridoPorRitual", atributos: { agi: 1, "for": 1, int: 1, pre: 1, vig: 2 },
+      pericias: { ocultismo: "treinado", vontade: "treinado" }, periciasDaOrigem: ["ocultismo", "vontade"] });
+    t.ok("o elemento é uma pendência da origem", E.estado(ferido, null).pendencias.some(function (p) { return p.id === "b.origem.feridoPorRitual"; }));
+    t.ok("  e sem ele a Mácula ainda não concede nada", !E.concessoesDeRitual(ferido).some(function (c) { return c.id === "b.origem.macula"; }));
+    t.ok("Medo não é elemento possível", !simular(ferido, "b.origem.feridoPorRitual", "", { elemento: "medo" }).valido);
+    t.ok("Sangue pede Fortitude treinada: com Vontade, recusa com o motivo",
+      /Fortitude/.test(simular(ferido, "b.origem.feridoPorRitual", "", { elemento: "sangue" }).motivos.join(" ")));
+    registrar(ferido, "b.origem.feridoPorRitual", "", { elemento: "morte" });
+    var macula = E.concessoesDeRitual(ferido).filter(function (c) { return c.id === "b.origem.macula"; })[0];
+    t.iguais("com Morte: um ritual de 1º círculo de Morte, fora do limite, desde a origem (também para combatente)",
+      macula ? [macula.elemento, macula.circulos.join(), macula.contaNoLimite, macula.degrau, A.rotuloDaConcessao(macula), macula.fonte, macula.pagina] : null,
+      ["morte", "1", false, 0, "Mácula Ritualística", "AS1", 43]);
+    var decad = ritual("Decadência");
+    var errado = ritual("Arma Atroz");
+    var feridoLista = [];
+    t.ok("um ritual de Sangue não cabe", !E.confirmarAquisicao(ferido, feridoLista, { tipo: "concessao", vaga: "b.origem.macula", rituais: [errado.id], novos: [errado] }, {}).ok);
+    t.ok("Decadência (Morte, 1º) cabe", E.confirmarAquisicao(ferido, feridoLista, { tipo: "concessao", vaga: "b.origem.macula", rituais: [decad.id], novos: [decad] }, {}).ok);
+    var estFerido = E.estado(ferido, { rituais: feridoLista });
+    t.iguais("  vem da origem e não conta no limite", [estFerido.rituais.porRitual[decad.id].poder, estFerido.rituais.limite.usados], ["maculaRitualistica", 0]);
+    t.ok("o uso da cena é guardado no estado da origem", R.normalizar({ estadoDasOrigens: { feridoPorRitual: { cena: "c1" } } }).estadoDasOrigens.feridoPorRitual.cena === "c1");
+
+    /* ---------------------------------------------------------------- */
+    t.grupo("Arquivos Secretos 1 · Transtornado Arrependido (p. 43)");
+
+    var transt = ocultista(30, { origem: "transtornadoArrependido" });
+    t.igual("RD mental 2, sem nada de Sangue", rdMental(transt), 2);
+    var sangue1 = ritual("Arma Atroz"), sangue2 = ritual("Armadura de Sangue"), outro = ritual("Decadência");
+    var transtLista = [sangue1, sangue2, outro];
+    E.confirmarAquisicao(transt, transtLista, { tipo: "concessao", vaga: "d1.rituaisIniciais", rituais: [sangue1.id, sangue2.id, outro.id] }, {});
+    t.igual("dois rituais de Sangue: +1", rdMental(transt), 3);
+    registrar(transt, "d3.poderClasse", "transcender", { poder: { valor: "ferroMaculado", opcoes: {} } });
+    registrar(transt, "d6.poderClasse", "transcender", { poder: { valor: "sangueCorrosivo", opcoes: {} } });
+    t.iguais("  mais dois poderes paranormais de Sangue: +2", [rdMental(transt), R.quantosDeSangue(transt, INV).total], [4, 4]);
+
+    /* ---------------------------------------------------------------- */
+    t.grupo("Arquivos Secretos 1 · requisitos novos (p. 44-47)");
+
+    t.ok("Placas Sanguinolentas: conjurar ritual de Sangue", E.textosDosRequisitos(P.poder("placasSanguinolentas")).indexOf("Conjurar ritual de Sangue") >= 0);
+    var oc = ocultista(15);
+    var ocLista = [ritual("Decadência"), ritual("Arma Atroz"), ritual("Cicatrização")];
+    E.confirmarAquisicao(oc, ocLista, { tipo: "concessao", vaga: "d1.rituaisIniciais", rituais: ocLista.map(function (r) { return r.id; }) }, {});
+    var ctxOc = { rituais: ocLista };
+    t.ok("Reter Ritual de Combate só com a regra opcional ligada",
+      !simular(oc, "d3.poderClasse", "reterRitualDeCombate", {}, ctxOc).valido);
+    oc.opcionais.reterRitual = true;
+    t.ok("  ligada, cabe (Int 2 e um ritual conhecido)", simular(oc, "d3.poderClasse", "reterRitualDeCombate", {}, ctxOc).valido);
+    t.ok("Acostumado à Maldição de Sangue pede ritual de 2º círculo de Sangue", !simular(oc, "d3.poderClasse", "acostumadoAMaldicao", { elemento: "sangue" }, ctxOc).valido);
+    t.ok("Saúde Sobrenatural: Int 2, Pre 2 e um ritual de 1º círculo", simular(oc, "d3.poderClasse", "saudeSobrenatural", {}, ctxOc).valido &&
+      !simular(ocultista(15, { atributos: { agi: 1, "for": 1, int: 3, pre: 1, vig: 1 } }), "d3.poderClasse", "saudeSobrenatural", {}, ctxOc).valido);
+    t.ok("Especialista Esotérico pede Domínio Esotérico", !simular(ocultista(30, { atributos: { agi: 1, "for": 1, int: 3, pre: 2, vig: 1 } }), "d3.poderClasse", "especialistaEsoterico", {}, ctxOc).valido);
+
+    var aprim = ocultista(30);
+    registrar(aprim, "d3.poderClasse", "habilidadeAprimorada", { alvo: "Decadência" });
+    t.igual("Habilidade Aprimorada: +2 na DT do ritual escolhido", R.dtAprimoradaDe(aprim, "decadencia").valor, 2);
+    t.ok("  a mesma escolha, uma segunda vez, cabe", simular(aprim, "d6.poderClasse", "habilidadeAprimorada", { alvo: "decadência " }).valido);
+    registrar(aprim, "d6.poderClasse", "habilidadeAprimorada", { alvo: "decadência " });
+    t.iguais("  e a DT sobe +5 no total, não +4", [R.dtAprimoradaDe(aprim, "Decadência").valor, R.dtAprimoradaDe(aprim, "Decadência").vezes], [5, 2]);
+    var aprim3 = ocultista(45);
+    registrar(aprim3, "d3.poderClasse", "habilidadeAprimorada", { alvo: "Decadência" });
+    registrar(aprim3, "d6.poderClasse", "habilidadeAprimorada", { alvo: "Decadência" });
+    t.ok("  a terceira para a mesma não cabe", !simular(aprim3, "d9.poderClasse", "habilidadeAprimorada", { alvo: "Decadência" }).valido);
+    t.ok("  para outra, cabe", simular(aprim3, "d9.poderClasse", "habilidadeAprimorada", { alvo: "Definhar" }).valido);
+
+    /* ---------------------------------------------------------------- */
+    t.grupo("Arquivos Secretos 1 · Reter Ritual (p. 58-59), o exemplo dos 20 PE");
+
+    var ret = ocultista(5, { atributos: { agi: 1, "for": 1, int: 1, pre: 2, vig: 1 } });
+    var maximo = R.pontosDeEsforco(ret).total;
+    ret.opcionais.reterRitual = true;
+    ret.retencoes = [{ id: "r1", ritualId: "x", nome: "Amaldiçoar Arma", versao: "Discente", pe: 3, recurso: "pe", cena: "inicial" }];
+    ret.recursos.pe = maximo - 3;
+    ret = R.normalizar(JSON.parse(JSON.stringify(ret)));
+    var cRet = R.calcular(ret, INV);
+    t.iguais("retendo 3: o máximo e o atual caem 3 (" + maximo + "/" + maximo + " → " + (maximo - 3) + "/" + (maximo - 3) + ")",
+      [cRet.pe.total, cRet.atual.pe], [maximo - 3, maximo - 3]);
+    t.ok("  a parcela diz de onde veio", cRet.pe.parcelas.some(function (p) { return p.rotulo === "Rituais retidos" && p.valor === -3; }));
+    ret.opcionais.reterRitual = false;
+    t.iguais("desligar a regra não apaga a retenção, só deixa de tirar do máximo", [R.pontosDeEsforco(ret).total, R.normalizar(ret).retencoes.length], [maximo, 1]);
+    ret.opcionais.reterRitual = true;
+    ret.retencoes = [];
+    var cSolto = R.calcular(ret, INV);
+    t.iguais("deixar de reter volta o máximo, não o atual (20/17)", [cSolto.pe.total, cSolto.atual.pe], [maximo, maximo - 3]);
+    t.ok("um ritual retido sem PE (Mácula) continua registrado", R.normalizar({ retencoes: [{ id: "r2", nome: "Decadência", pe: 0 }] }).retencoes.length === 1);
+
+    /* ---------------------------------------------------------------- */
+    t.grupo("Arquivos Secretos 1 · Transcender com Itens (p. 56-57)");
+
+    var item = { id: "it-coracao", tipo: "item", nome: "Coração pulsante", ordem: { grupo: "amaldicoado", elemento: "sangue", categoria: 2 } };
+    var invT = { itens: [item] };
+    var tr = ocultista(30);
+    t.ok("desligada, não há vaga", !E.vagas(tr).some(function (v) { return v.tipo === "transcenderItem"; }));
+    tr.opcionais.transcenderComItens = true;
+    t.iguais("ligada, NEX 30%: uma vaga por intervalo alcançado (0–25% e 26–50%)",
+      E.vagas(tr).filter(function (v) { return v.tipo === "transcenderItem"; }).map(function (v) { return v.id; }), ["t1.transcenderItem", "t2.transcenderItem"]);
+    t.ok("  com 76–99% alcançado, as quatro", E.vagas(Object.assign(ocultista(80), { opcionais: { transcenderComItens: true } })).filter(function (v) { return v.tipo === "transcenderItem"; }).length === 4);
+    t.ok("poder do elemento do item: cabe", simular(tr, "t1.transcenderItem", "transcender", { item: item.id, itemElemento: "sangue", poder: { valor: "ferroMaculado", opcoes: {} } }, { inventario: invT }).valido);
+    var errElem = simular(tr, "t1.transcenderItem", "transcender", { item: item.id, itemElemento: "sangue", poder: { valor: "afortunado", opcoes: {} } }, { inventario: invT });
+    t.ok("  de outro elemento: recusa, com o motivo", !errElem.valido && /elemento do item/.test(errElem.motivos.join(" ")));
+    t.ok("  e os requisitos do poder continuam valendo", !simular(tr, "t1.transcenderItem", "transcender", { item: item.id, itemElemento: "sangue", poder: { valor: "sanguePrazeroso", opcoes: {} } }, { inventario: invT }).valido);
+    registrar(tr, "t1.transcenderItem", "transcender", { item: item.id, itemNome: item.nome, itemElemento: "sangue", poder: { valor: "ferroMaculado", opcoes: {} } });
+    t.ok("o poder entra na ficha", E.estado(tr, { inventario: invT }).adquiridos.some(function (a) { return a.chave === "ferroMaculado"; }));
+    t.ok("  e o item consta como mundano", !!E.itensTranscendidos(tr)[item.id]);
+    tr.opcionais.transcenderComItens = false;
+    t.ok("desligar a regra guarda a escolha, sem efeito", tr.escolhas.length === 1 && !E.itensTranscendidos(tr)[item.id] &&
+      !E.estado(tr, null).adquiridos.some(function (a) { return a.chave === "ferroMaculado" && a.valido !== false; }));
+
+    /* ---------------------------------------------------------------- */
+    t.grupo("Arquivos Secretos 1 · Maledictólogo: Compreensão de Maldições (p. 45)");
+
+    var mal = ocultista(40, { trilha: "maledictologo" });
+    var ritItem = ritual("Definhar");
+    var malLista = [];
+    var semConf = E.confirmarAquisicao(mal, malLista, { tipo: "maldicao", ritualId: ritItem.id, novos: [ritItem], confirmado: false }, {});
+    t.ok("sem confirmar o teste e o item consumido, não grava", !semConf.ok);
+    var comConf = E.confirmarAquisicao(mal, malLista, { tipo: "maldicao", ritualId: ritItem.id, novos: [ritItem], confirmado: true, nota: "Medalhão" }, {});
+    t.ok("confirmado, o ritual passa a ser conhecido", comConf.ok);
+    var estMal = E.estado(mal, { rituais: malLista });
+    t.iguais("  por Compreensão de Maldições, fora do limite", [estMal.rituais.porRitual[ritItem.id].nomePoder, estMal.rituais.limite.usados], ["Compreensão de Maldições", 0]);
+    var mal35 = ocultista(35, { trilha: "maledictologo" });
+    t.ok("em NEX 35% ainda não há a aquisição", E.contextoDeAquisicao(mal35, { tipo: "maldicao" }, { rituais: [] }) === null);
+
+    t.grupo("Arquivos Secretos 1 · Maledictólogo: transferir, tatuar e reproduzir");
+
+    function arma(nome, cat, mods) {
+      return { id: "a-" + (++seq), tipo: "arma", nome: nome, ordem: { categoria: cat, grupo: "arma", modificacoes: mods || [] } };
+    }
+    var maldicao = { id: "m-1", catalogoId: "op.maldicao.arma.sanguinaria", nome: "Sanguinária", natureza: "maldicao", elemento: "sangue", resumo: "x" };
+    var velha = arma("Faca velha", 0, [maldicao]);
+    var nova = arma("Machete", 0, []);
+    t.igual("DT de Compreensão de Maldições: 10 + 5 por categoria (0 + II da maldição)", M.dtDoItem(velha), 20);
+    var trf = M.transferir(velha, nova);
+    t.ok("transferir move o retrato inteiro, com o mesmo id", trf.ok && nova.ordem.modificacoes[0].id === "m-1" && nova.ordem.modificacoes[0].transferidaDe === "Faca velha");
+    t.ok("  e a maldição igual no destino é recusada", !M.planoDeTransferencia(velha, nova).ok);
+    var invM = { itens: [velha] };
+    var tat = M.tatuagem(velha, invM);
+    t.ok("tatuagem: um item sem espaço, que carrega as maldições", tat.ok && tat.item.ordem.tatuagem && tat.item.ordem.espacos === 0 && tat.item.ordem.modificacoes.length === 1);
+    invM.itens.push(tat.item);
+    t.ok("  uma por pessoa", !M.tatuagem(velha, invM).ok);
+    var cat2 = arma("Pistola", 2, []);
+    var cat3 = arma("Fuzil", 3, []);
+    var mem = { id: "mem", catalogoId: "op.maldicao.arma.sanguinaria", nome: "Sanguinária", elemento: "sangue" };
+    t.iguais("Reproduzir: categoria II + maldição (II) = IV, cabe", [M.planoDeReproducao(cat2, mem, false).ok, M.planoDeReproducao(cat2, mem, false).depois], [true, 4]);
+    t.ok("  III + II passaria da IV: recusa", !M.planoDeReproducao(cat3, mem, false).ok);
+    t.iguais("  com Maldição Suprema, conta três a menos (V efetiva II)", [M.planoDeReproducao(cat3, mem, true).ok, M.planoDeReproducao(cat3, mem, true).efetiva], [true, 2]);
+    M.reproduzir(cat2, mem, false);
+    t.ok("a reproduzida dura até o fim da missão", M.temporariasDe(cat2).length === 1);
+    t.igual("  e sai no fim da missão", M.encerrarMissao({ itens: [cat2] }), 1);
+    var normal = global.RAMAOrdemInventario.normalizarDados({ tatuagem: true, modificacoes: [{ id: "x", nome: "Sanguinária", natureza: "maldicao", temporaria: "missao", transferidaDe: "Faca" }] }, "item");
+    t.iguais("o inventário guarda tatuagem, maldição temporária e de onde ela veio",
+      [normal.tatuagem, normal.modificacoes[0].temporaria, normal.modificacoes[0].transferidaDe], [true, "missao", "Faca"]);
+    var memo = { maldicoesMemorizadas: [] };
+    t.ok("memorizar guarda o retrato, uma vez", M.memorizar(memo, nova, "m-1").ok && !M.memorizar(memo, nova, "m-1").ok &&
+      R.normalizar(memo).maldicoesMemorizadas.length === 1);
+
+    /* ---------------------------------------------------------------- */
+    t.grupo("Arquivos Secretos 1 · contas: Ritual Intenso, Sangue Prazeroso e temporários da cena");
+
+    var intenso = ocultista(15);
+    registrar(intenso, "d3.poderClasse", "ritualIntenso", {});
+    t.iguais("Ritual Intenso: a Presença nas rolagens de dano e cura dos rituais", [R.rituais(intenso).rolagemExtra.total, R.rituais(intenso).rolagemExtra.partes[0].fonte], [2, "Ritual Intenso"]);
+    var prazer = ocultista(30, { atributos: { agi: 1, "for": 1, int: 3, pre: 2, vig: 3 } });
+    var lPrazer = [ritual("Arma Atroz")];
+    E.confirmarAquisicao(prazer, lPrazer, { tipo: "concessao", vaga: "d1.rituaisIniciais", rituais: [lPrazer[0].id], novos: [] }, {});
+    registrar(prazer, "d3.poderClasse", "transcender", { poder: { valor: "ferroMaculado", opcoes: {} } });
+    registrar(prazer, "d6.poderClasse", "transcender", { poder: { valor: "sanguePrazeroso", opcoes: {} } });
+    var rdGeral = function (o) { var d = R.resistencias(o, INV).dano.filter(function (x) { return x.tipo === "geral"; })[0]; return d ? d.conta.total : 0; };
+    t.igual("Sangue Prazeroso: nada com os PV cheios", rdGeral(prazer), 0);
+    prazer.recursos.pv = Math.floor(R.pontosDeVida(prazer).total / 2);
+    t.igual("  RD 5 machucado (metade dos PV ou menos)", rdGeral(prazer), 5);
+    var temp = ocultista(15);
+    var pvAntes = R.pontosDeVida(temp).total;
+    temp.temporariosDeCena = [{ chave: "saudeSobrenatural", recurso: "pv", valor: 20, cena: "inicial", fonte: "Saúde Sobrenatural" }];
+    temp = R.normalizar(JSON.parse(JSON.stringify(temp)));
+    t.igual("PV temporários da cena somam enquanto a cena durar", R.pontosDeVida(temp).total, pvAntes + 20);
+    temp.condicoes.cena.id = "outra";
+    t.igual("  e somem quando ela troca", R.pontosDeVida(temp).total, pvAntes);
+
+    /* ---------------------------------------------------------------- */
+    t.grupo("Arquivos Secretos 1 · ficha antiga, exportar e importar");
+
+    var velhaFicha = R.normalizar({ classe: "ocultista", nex: 20, origem: "academico" });
+    t.iguais("ficha antiga abre com os campos novos vazios",
+      [velhaFicha.retencoes, velhaFicha.maldicoesMemorizadas, velhaFicha.temporariosDeCena, velhaFicha.contadores], [[], [], [], {}]);
+    var cheia = R.normalizar({ classe: "ocultista", nex: 20, origem: "feridoPorRitual",
+      retencoes: [{ id: "r1", nome: "Luz", pe: 1 }], maldicoesMemorizadas: [{ id: "m1", nome: "Sanguinária", elemento: "sangue" }],
+      contadores: { rubra: 2, outro: 9 }, temporariosDeCena: [{ chave: "rubra", recurso: "pv", valor: 10, cena: "inicial" }] });
+    var volta = R.normalizar(JSON.parse(JSON.stringify(cheia)));
+    t.iguais("exportar e importar devolve tudo, sem o que não é conhecido",
+      [volta.retencoes.length, volta.maldicoesMemorizadas[0].elemento, volta.contadores, volta.temporariosDeCena[0].valor, volta.origem],
+      [1, "sangue", { rubra: 2 }, 10, "feridoPorRitual"]);
+  }
+
   function casosDaV223(t, C, R, E, P, S, V, B) {
     var INV = { itens: [] };
     var seq = 0;
@@ -4816,7 +5152,7 @@
       return o && o.fonte === "SAH" && o.poder === e[0] && o.pagina === e[1] && o.pericias.join(",") === e[2] && !!o.resumo;
     }));
     t.ok("as da comunidade são oficiais (fonte SAH), com o crédito guardado", C.origem("cosplayer").fonte === "SAH" && /Toca dos Monstros/.test(C.origem("cosplayer").comunidade));
-    t.ok("as 26 do livro básico continuam", C.ORIGENS.filter(function (o) { return o.fonte !== "SAH"; }).length === 26 && !!C.origem("academico"));
+    t.ok("as 26 do livro básico continuam", C.ORIGENS.filter(function (o) { return !o.fonte || o.fonte === "OPRPG"; }).length === 26 && !!C.origem("academico"));
     t.iguais("especialidades de Profissão", [C.nomeComEspecialidade(C.origem("chefDoOutroLado"), "profissao"),
       C.nomeComEspecialidade(C.origem("inventorParanormal"), "profissao"), C.nomeComEspecialidade(C.origem("psicologo"), "profissao")],
       ["Profissão (cozinheiro)", "Profissão (engenheiro)", "Profissão (psicólogo)"]);
@@ -4919,7 +5255,7 @@
       R.resistencias(fbExp, INV).dano.some(function (d) { return d.tipo === "geral"; }) && R.dadosDoTeste(fbExp, "diplomacia").quantos === R.dadosDoTeste(baseFb, "diplomacia").quantos - 1);
     if (B) {
       var todas = B.secoes("origens").reduce(function (l, s) { return l.concat(s.entradas); }, []);
-      t.ok("a aba Origens da biblioteca tem as 46, em duas seções por livro", todas.length === 46 && B.secoes("origens").length === 2);
+      t.ok("a aba Origens da biblioteca tem as 48, numa seção por livro", todas.length === 48 && B.secoes("origens").length === 3);
       t.ok("  busca pelo poder e pela origem", B.filtrar(B.secoes("origens"), "luta ou fuga").some(function (s) { return s.entradas.length; }) &&
         B.filtrar(B.secoes("origens"), "profetizado").some(function (s) { return s.entradas.length; }));
       var copia = B.modelo(todas.filter(function (x) { return x.entrada.nome === "Conexões"; })[0].entrada, "");

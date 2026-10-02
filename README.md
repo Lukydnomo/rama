@@ -547,6 +547,11 @@ segredo nenhum — ele os lê das Script Properties. Publicá-lo não expõe nad
 
 ### Atualizar o backend
 
+**v2.29.0 — MÁCULA:** conteúdo do Arquivos Secretos 1. Publique o site. No
+backend, só o `Campanhas.gs` mudou (uma linha, para o retrato das ameaças do AS1
+no painel do turno): troque-o e crie uma nova versão da implantação. Não precisa
+de `setupRama()`.
+
 **v2.28.1 — AMPLITUDE:** GIF animado de até **50 KB**. Troque os três `.gs`, rode
 **`setupRama()`** (colunas `imagemCont` nas abas de imagem e `avatarCont` em
 `PERFIS`), crie uma nova versão da implantação e publique o site. Um GIF de 50 KB

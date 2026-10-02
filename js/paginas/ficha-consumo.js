@@ -479,7 +479,11 @@
     (c.efeitos ? c.efeitos.contextuais : []).forEach(function (x) { if (x.alvo === "custoPe") custoPeExtra += x.valor; });
 
     var efeito = efeitoConhecido(ritual);
-    var estado = { versao: 0, gastar: true, dispensa: "", entregar: false, catalisador: "", emMim: false };
+
+    /* Arquivos Secretos 1 (v2.29): o que muda o uso deste ritual. */
+    var as1 = extrasDoArquivo(o, c, ritual);
+    var estado = { versao: 0, gastar: true, dispensa: "", entregar: false, catalisador: "", emMim: false,
+      macula: false, reter: false, negativo: false, placas: !!as1.placas };
     var opId = novoOpId("ritual");
     var usado = false;
     var corpo = el("div.pilha--curta.consumo-confirmacao", { class: "pilha" });
@@ -488,13 +492,17 @@
     function plano() {
       var v = versoes[estado.versao];
       var custo = RT() ? RT().custoDaVersao(ritual, v) : null;
+      /* Mácula Ritualística: sem o PE do círculo; a forma avançada ainda
+         custa o que acrescenta (AS1 p. 43). */
+      var semBase = estado.macula && custo ? custo.base : 0;
       return {
         v: v,
         custo: custo,
+        semBase: semBase,
         p: CS().planoDeRitual({
           elemento: elemento, afinidade: afinidade, controle: o.componentes, inventario: inv,
           controleLigado: controle, dispensa: estado.dispensa, entregar: complexa && estado.entregar,
-          catalisadorId: estado.catalisador, custo: custo ? custo.total : 0, acrescimoPe: custoPeExtra,
+          catalisadorId: estado.catalisador, custo: custo ? Math.max(0, custo.total - semBase) : 0, acrescimoPe: custoPeExtra,
         }),
       };
     }
@@ -518,6 +526,7 @@
         var detalhes = [pl.custo.base + " do círculo"];
         if (pl.custo.adicional) detalhes.push("+" + pl.custo.adicional + " da versão");
         if (custoPeExtra) detalhes.push((custoPeExtra > 0 ? "+" : "") + custoPeExtra + " de condição (alquebrado)");
+        if (pl.semBase) detalhes.push("–" + pl.semBase + " da Mácula Ritualística");
         if (estado.dispensa === "camuflar") detalhes.push("+2 de Camuflar Ocultismo");
         partes.push(el("label.r-marca", {}, [
           el("input", { type: "checkbox", checked: estado.gastar, onchange: function (ev) { estado.gastar = ev.target.checked; } }),
@@ -573,6 +582,7 @@
       if (elemento === "medo") {
         partes.push(el("p.t-mini", { texto: "Ritual de Medo: cada conjuração custa Sanidade permanente e dano mental (OPRPG p. 119). Isso não é descontado aqui — registre na ficha." }));
       }
+      partes = partes.concat(opcoesDoArquivo(as1, estado, pl, pintar));
       if (efeito) {
         partes.push(el("label.r-marca", {}, [
           el("input", { type: "checkbox", checked: estado.emMim, dataset: { foco: "usar-ritual-em-mim" }, onchange: function (ev) { estado.emMim = ev.target.checked; } }),
@@ -601,6 +611,10 @@
       if (!r.ok) { usado = false; UI.avisoAtencao(r.motivo); return; }
       var registro = "";
       if (!r.repetido && efeito && estado.emMim) registro = registrarEfeito(ctx, ritual, efeito, pl.v.nome);
+      if (!r.repetido) {
+        var extras = aplicarDoArquivo(ctx, o, c, ritual, as1, estado, pl, recurso);
+        if (extras) registro = (registro ? registro + " " : "") + extras;
+      }
       janela.fechar();
       if (!r.repetido) ctx.alterou();
       ctx.redesenhar();
@@ -609,6 +623,114 @@
     }
 
     pintar();
+  }
+
+  /* =================================================================
+     ARQUIVOS SECRETOS 1 NO USO DE UM RITUAL (v2.29)
+     -----------------------------------------------------------------
+     macula   Mácula Ritualística (Ferido por Ritual, p. 43): o ritual da
+              origem, uma vez por cena, sem o PE do círculo
+     reter    Reter Ritual (regra opcional, p. 58): duração cena vira
+              retida — os PE gastos saem também do máximo, e 1 de
+              Sanidade vai embora
+     placas   Placas Sanguinolentas (p. 47): ritual de Sangue dá Defesa
+              igual ao círculo (+2 com afinidade) até o próximo turno
+     ================================================================= */
+
+  function extrasDoArquivo(o, c, ritual) {
+    var est = c && c.estado;
+    var dados = RT() ? RT().dadosDoRitual(ritual) : {};
+    var circulo = Number(dados.circulo) || 0;
+    var elementos = Array.isArray(dados.elementos) && dados.todosOsElementos ? dados.elementos : [dados.elemento || elementoDoRitual(ritual)];
+    var vindo = est && est.rituais ? est.rituais.porRitual[ritual.id] : null;
+    var cena = R().cenaDe ? R().cenaDe(o) : "inicial";
+    var feridoEstado = (o.estadoDasOrigens && o.estadoDasOrigens.feridoPorRitual) || {};
+    var adq = est ? est.adquiridos.filter(function (a) { return a.valido !== false; }) : [];
+    var placas = adq.filter(function (a) { return a.chave === "placasSanguinolentas"; });
+    var x = {
+      circulo: circulo,
+      macula: !!(vindo && vindo.poder === "maculaRitualistica" && o.origem === "feridoPorRitual"),
+      maculaUsada: feridoEstado.cena === cena,
+      cena: cena,
+      reter: !!(OPC() && OPC().ligada(o, "reterRitual") && /^\s*cena\b/i.test(String(ritual.duracao || ""))),
+      placas: placas.length && elementos.indexOf("sangue") >= 0 && circulo
+        ? { valor: circulo + (placas.some(function (a) { return a.afinidade; }) ? 2 : 0), afinidade: placas.some(function (a) { return a.afinidade; }) }
+        : null,
+    };
+    return x;
+  }
+
+  function opcoesDoArquivo(x, estado, pl, pintar) {
+    var partes = [];
+    if (x.macula) {
+      partes.push(el("label.r-marca", {}, [
+        el("input", { type: "checkbox", checked: estado.macula, disabled: x.maculaUsada && !estado.macula,
+          onchange: function (ev) { estado.macula = ev.target.checked; pintar(); } }),
+        el("span", { texto: x.maculaUsada
+          ? "Mácula Ritualística: já usada nesta cena (uma vez por cena)."
+          : "Mácula Ritualística: conjurar sem o PE do círculo (uma vez por cena; formas avançadas ainda custam) — Arquivos Secretos 1, p. 43" }),
+      ]));
+    }
+    if (x.reter) {
+      partes.push(el("label.r-marca", {}, [
+        el("input", { type: "checkbox", checked: estado.reter, onchange: function (ev) { estado.reter = ev.target.checked; pintar(); } }),
+        el("span", { texto: "Reter: a duração vira retida. Os " + (pl.p ? pl.p.custo : 0) + " PE gastos também saem do máximo enquanto o ritual for mantido, e você perde 1 de Sanidade (Reter Ritual, Arquivos Secretos 1, p. 58)." }),
+      ]));
+      if (estado.reter) {
+        partes.push(el("label.r-marca", {}, [
+          el("input", { type: "checkbox", checked: estado.negativo, onchange: function (ev) { estado.negativo = ev.target.checked; } }),
+          el("span", { texto: "O ritual afeta um alvo negativamente (precisa mantê-lo na linha de efeito)." }),
+        ]));
+      }
+    }
+    if (x.placas) {
+      partes.push(el("label.r-marca", {}, [
+        el("input", { type: "checkbox", checked: estado.placas, onchange: function (ev) { estado.placas = ev.target.checked; } }),
+        el("span", { texto: "Placas Sanguinolentas: +" + x.placas.valor + " na Defesa até o início do seu próximo turno" + (x.placas.afinidade ? " (com afinidade)" : "") + " — Arquivos Secretos 1, p. 47" }),
+      ]));
+    }
+    return partes;
+  }
+
+  function aplicarDoArquivo(ctx, o, c, ritual, x, estado, pl, recurso) {
+    var notas = [];
+    if (x.macula && estado.macula) {
+      if (!o.estadoDasOrigens || typeof o.estadoDasOrigens !== "object") o.estadoDasOrigens = {};
+      o.estadoDasOrigens.feridoPorRitual = Object.assign({}, o.estadoDasOrigens.feridoPorRitual || {}, { cena: x.cena });
+      notas.push("Mácula Ritualística usada nesta cena.");
+    }
+    if (x.reter && estado.reter) {
+      if (!Array.isArray(o.retencoes)) o.retencoes = [];
+      var pe = pl.p ? Math.max(0, pl.p.custo) : 0;
+      o.retencoes.push({
+        id: novoOpId("retido"), ritualId: ritual.id, nome: ritual.nome, versao: pl.v.nome, pe: pe, circulo: x.circulo,
+        recurso: recurso, negativo: !!estado.negativo, cena: x.cena, desde: new Date().toISOString(),
+      });
+      /* "sempre que retiver um ritual, você perde 1 SAN" — com Jogando
+         sem Sanidade, referências a Sanidade são ignoradas (SAH p. 104). */
+      if (!c.determinacao) {
+        if (!o.recursos) o.recursos = { pv: null, pe: null, san: null, pd: null };
+        o.recursos.san = Math.max(0, (c.atual.san || 0) - 1);
+        notas.push("Retido: " + pe + " PE presos no máximo e –1 de Sanidade.");
+      } else {
+        notas.push("Retido: " + pe + " PD presos no máximo.");
+      }
+    }
+    if (x.placas && estado.placas && EF()) {
+      var ag = global.RAMAAuth && global.RAMAAuth.agente ? global.RAMAAuth.agente() : null;
+      var inst = EF().criarInstancia({
+        modelo: "poder:placasSanguinolentas", nome: "Placas Sanguinolentas",
+        descricao: "+" + x.placas.valor + " na Defesa até o início do seu próximo turno (Arquivos Secretos 1, p. 47).",
+        origem: { tipo: "habilidade", nome: "Placas Sanguinolentas" },
+        modificadores: [{ alvo: "defesa", tipo: "bonus", valor: x.placas.valor }],
+        duracao: { tipo: "turnos", turnos: 1 }, alvoNome: ctx.ficha.nome, cena: x.cena,
+        aplicadoPor: { id: ag ? ag.id : "", nome: ag ? (ag.nome || ag.usuario || "") : "", papel: "jogador" },
+      });
+      var av = EF().avaliarAplicacao(o.condicoes, inst);
+      var r = EF().aplicar(o.condicoes, inst, av.ok && av.conflito ? "renovar" : "nova");
+      if (r && r.ok) notas.push("Placas Sanguinolentas: +" + x.placas.valor + " na Defesa.");
+    }
+    return notas.join(" ");
   }
 
   function efeitoConhecido(ritual) {

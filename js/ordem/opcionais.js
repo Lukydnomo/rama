@@ -2,7 +2,8 @@
    R.A.M.A. — Ordem Paranormal · regras opcionais
    =====================================================================
    As regras do capítulo "Novas Regras Opcionais" do Sobrevivendo ao
-   Horror (SAH p.98-123), uma chave por regra.
+   Horror (SAH p.98-123), uma chave por regra — e as do pacote Arquivos
+   Secretos 1 (AS1 p. 56-59), que seguem as mesmas três decisões.
 
    ---------------------------------------------------------------------
    TRÊS DECISÕES QUE ESTE ARQUIVO TOMA, E POR QUÊ
@@ -47,6 +48,7 @@
 
   var SAH = "SAH";
   var OPRPG = "OPRPG";
+  var AS1 = "AS1";
 
   /* Cada regra:
 
@@ -333,6 +335,47 @@
       depende: [],
       incompativel: [],
       consequencias: [],
+    },
+
+    /* --- Arquivos Secretos 1 --- */
+    {
+      chave: "reterRitual",
+      nome: "Reter Ritual",
+      resumo: "Um ritual de duração cena pode virar duração retida: os PE ficam presos, saindo do atual e do máximo, enquanto o efeito durar.",
+      fonte: AS1, pagina: 58,
+      afetaFicha: true,
+      automacao: "parcial",
+      efeito: "“Usar ritual” ganha a opção Reter (rituais de duração cena), que gasta o custo, prende os PE no máximo e tira 1 de Sanidade. " +
+        "A aba Rituais lista os retidos, com “Deixar de reter” (volta o máximo, não o atual) e “Liberar com calma” (Ocultismo DT 20 + custo: " +
+        "passando, volta o máximo e o atual), e avisa quando atordoado, exausto ou pasmo fazem perder o foco. Com Conjuração Complexa (SAH " +
+        "p. 114), Preparando Rituais passa a usar a duração retida, e cada ritual preparado exige uma tatuagem dele. Libera o poder Reter " +
+        "Ritual de Combate.",
+      parametros: [],
+      depende: [],
+      incompativel: [],
+      consequencias: [
+        "Desligar não apaga nenhum ritual retido: eles ficam guardados, sem tirar nada do máximo de PE, e voltam a valer se a regra voltar.",
+        "Reter Ritual de Combate (poder de ocultista) só pode ser escolhido com esta regra ligada; desligada, ele fica marcado na Progressão.",
+      ],
+    },
+
+    {
+      chave: "transcenderComItens",
+      nome: "Transcender com Itens",
+      resumo: "Um item amaldiçoado pode render um poder paranormal do mesmo elemento, num ritual de Transcender: um por intervalo de NEX.",
+      fonte: AS1, pagina: 56,
+      afetaFicha: true,
+      automacao: "parcial",
+      efeito: "A Progressão ganha uma vaga opcional por intervalo de NEX de exposição alcançado (0–25%, 26–50%, 51–75%, 76–99%): o limite " +
+        "acumulado é 1, 2, 3 e 4 poderes. Cada vaga pede o item amaldiçoado do inventário e um poder paranormal do elemento dele, com os " +
+        "requisitos conferidos. O item passa a constar como mundano. A cena (símbolo, memórias e a pergunta da entidade) é da mesa.",
+      parametros: [],
+      depende: [],
+      incompativel: [],
+      consequencias: [
+        "O livro não recomenda usar esta regra junto com o poder Transcender do livro básico; com NEX & Experiência e Os Limites da Compreensão Humana, pode.",
+        "Desligar não apaga as escolhas feitas: os poderes recebidos assim ficam guardados na Progressão, sem efeito, e voltam se a regra voltar.",
+      ],
     },
   ];
 

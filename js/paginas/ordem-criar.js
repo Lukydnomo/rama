@@ -479,7 +479,7 @@
         var achadas = C.ORIGENS.filter(function (org) {
           return !termo || U.chaveDeBusca(org.nome + " " + org.poder).indexOf(termo) >= 0;
         });
-        U.trocar(lista, [{ f: "OPRPG", t: "Livro básico" }, { f: "SAH", t: "Sobrevivendo ao Horror" }].map(function (livro) {
+        U.trocar(lista, C.LIVROS.map(function (l) { return { f: l.sigla, t: l.curto }; }).map(function (livro) {
           var doLivro = achadas.filter(function (org) { return (org.fonte || "OPRPG") === livro.f; });
           if (!doLivro.length) return null;
           return el("div.pilha--curta", { class: "pilha" }, [el("h4.t-secao", { texto: livro.t })].concat(doLivro.map(cartaoDeOrigem)));
@@ -512,7 +512,9 @@
         el("h4.t-secao", { texto: "Perícias da origem (" + d.periciasDaOrigem.length + " de " + alvo + ")" }),
         el("p.t-mini", { texto: org.periciasObservacao || "Escolha as perícias." }),
         fixas.length ? el("p.t-mini", { texto: "Já vem da origem: " + fixas.map(function (k) { return C.nomeComEspecialidade(org, k); }).join(", ") + "." }) : null,
-        el("div.criacao-pericias", {}, C.PERICIAS.filter(function (p) { return fixas.indexOf(p.chave) < 0; }).map(function (p) {
+        el("div.criacao-pericias", {}, C.PERICIAS.filter(function (p) {
+          return fixas.indexOf(p.chave) < 0 && (!org.periciasOpcoes || org.periciasOpcoes.indexOf(p.chave) >= 0);
+        }).map(function (p) {
           var marcada = d.periciasDaOrigem.indexOf(p.chave) >= 0;
           var cheia = !marcada && d.periciasDaOrigem.length >= alvo;
           return el("button.criacao-pericia", {
@@ -956,7 +958,7 @@
         el("p.t-mini", { texto: r.resumo }),
         el("p.t-mini", { texto: r.efeito }),
         ES.etiquetaAutomacao(r.automacao),
-        referencia((r.fonte === "SAH" ? "Sobrevivendo ao Horror" : "Ordem Paranormal RPG") + ", p. " + r.pagina),
+        referencia(C.nomeDoLivro(r.fonte) + ", p. " + r.pagina),
       ];
 
       /* Evolução por Patentes ainda não tem a tabela estruturada: ligar

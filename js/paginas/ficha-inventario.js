@@ -297,6 +297,9 @@
       /* Arma e proteção de Ordem: o perfil traz ataque, dano, crítico e
          Defesa efetivos, com o que as modificações somam. */
       linhas = linhas.concat(perfil.detalhes(ctx, item, efetivos));
+      /* Arquivos Secretos 1: item que virou mundano, tatuagem, maldição
+         reproduzida (js/paginas/ficha-maldicoes.js). */
+      if (global.RAMAMaldicoesDaFicha) linhas = linhas.concat(global.RAMAMaldicoesDaFicha.observacoes(ctx, item));
     } else {
       if (item.tipo === "mochila") linhas.push(["Reduz", formatarPeso(item.reducaoPeso) + " de peso"]);
       else linhas.push(["Peso", formatarPeso(item.peso)]);
@@ -346,7 +349,7 @@
           ctx.alterou();
           ctx.redesenhar();
         } },
-    ].concat(modificar, ordem, [
+    ].concat(modificar, perfilDe(ctx) && global.RAMAMaldicoesDaFicha ? global.RAMAMaldicoesDaFicha.opcoes(ctx, item) : [], ordem, [
       { rotulo: "Enviar à biblioteca", aoClicar: function () { paraHomebrew(ctx, item); } },
       "separador",
       { rotulo: "Remover", perigo: true, aoClicar: function () { remover(ctx, item); } },

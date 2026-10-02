@@ -113,6 +113,7 @@
 
     if (!rituais.itens.length) {
       return el("div.pilha--curta", { class: "pilha" }, [
+        painelDeRetencao(ctx),
         painelDoAprendizado(ctx, est),
         UI.vazio({
           titulo: "Nenhum registro em " + rotulo(ctx).toLowerCase(),
@@ -137,7 +138,7 @@
     var criterios = org && O() ? org.criterios(ctx) : [];
     var arrastar = org ? org.podeArrastar(ctx, "rituais") : ctx.emEdicao();
 
-    var partes = [org ? org.barra(ctx, "rituais") : null, painelDoAprendizado(ctx, est)];
+    var partes = [org ? org.barra(ctx, "rituais") : null, painelDeRetencao(ctx), painelDoAprendizado(ctx, est)];
     var raiz;
     if (!apr) {
       raiz = el("div.pilha--curta", { class: "pilha" }, partes.concat(listaAgrupada(ctx, "rituais", lista, criterios, modo, null, arrastar)));
@@ -310,7 +311,7 @@
     }
     registrosSemEfeito.forEach(function (x) {
       linhas.push(el("p.t-mini.t-aviso", {
-        texto: (x.registro.tipo === "campo" ? "Estudo em campo" : "Concessão da mesa") + " de " + (x.registro.nome || "um ritual") +
+        texto: (x.registro.tipo === "campo" ? "Estudo em campo" : (x.registro.tipo === "maldicao" ? "Compreensão de Maldições" : "Concessão da mesa")) + " de " + (x.registro.nome || "um ritual") +
                " guardado sem efeito: " + x.motivo,
       }));
     });
@@ -346,6 +347,13 @@
         onclick: function () { global.RAMABibliotecaDeRituais.abrir(ctx, { aquisicao: { tipo: "campo" } }); },
       }));
     }
+    if (ctx.emEdicao() && apr.maldicao && global.RAMABibliotecaDeRituais) {
+      botoes.push(el("button.r-botao.r-botao--mini", {
+        type: "button", texto: "Compreensão de Maldições",
+        title: "Registrar o ritual aprendido de um item amaldiçoado (Maledictólogo, Arquivos Secretos 1, p. 45).",
+        onclick: function () { global.RAMABibliotecaDeRituais.abrir(ctx, { aquisicao: { tipo: "maldicao" } }); },
+      }));
+    }
 
     return el("div.rituais-aprendizado", {}, linhas.concat(botoes.length ? [el("div.faixa", {}, botoes)] : []));
   }
@@ -372,6 +380,20 @@
     if (custos) {
       linhas.push(el("dt", { texto: "Custo" }));
       linhas.push(el("dd", { texto: custos }));
+    }
+
+    /* A DT deste ritual: a de todos os seus rituais, mais <Habilidade>
+       Aprimorada quando ela foi escolhida para ele (AS1 p. 46). */
+    var dtR = dtDoRitual(ctx, ritual);
+    if (dtR) {
+      linhas.push(el("dt", { texto: "DT" }));
+      linhas.push(el("dd", { texto: dtR }));
+    }
+
+    var retido = retencaoDe(ctx, ritual);
+    if (retido) {
+      linhas.push(el("dt", { texto: "Retido" }));
+      linhas.push(el("dd", { texto: retido.pe + " PE presos no máximo" + (retido.versao ? " (" + retido.versao + ")" : "") + " — ver Rituais retidos, no alto da aba." }));
     }
 
     /* O que cada versão avançada muda, e o que ela exige. */
@@ -428,7 +450,7 @@
     }
     if (apr && vindo && vindo.registroDeRitual) {
       acoesDeAprendizado.push({
-        rotulo: vindo.origem === "campo" ? "Desfazer o registro do estudo" : "Desfazer a concessão da mesa",
+        rotulo: vindo.origem === "campo" || vindo.origem === "maldicao" ? "Desfazer o registro do estudo" : "Desfazer a concessão da mesa",
         aoClicar: function () { desfazerRegistro(ctx, ritual, vindo); },
       });
     }
@@ -685,6 +707,16 @@
   function rolar(ctx, ritual, versao, rolagem) {
     var r = D.dano({ dano: rolagem.expressao, danoExtra: rolagem.extra, nome: ritual.nome });
 
+    /* Ritual Potente (Int) e Ritual Intenso (Pre, AS1 p. 44): somam nas
+       rolagens de dano e de cura dos rituais da ficha. */
+    if (r.ok && (rolagem.tipo === "dano" || rolagem.tipo === "cura") && F.ehDeOrdem(ctx.ficha) && global.RAMAOrdemRegras) {
+      var extra = global.RAMAOrdemRegras.rituais(ctx.ficha.ordem).rolagemExtra;
+      if (extra && extra.total) {
+        extra.partes.forEach(function (x) { r.parcelas.push({ rotulo: x.fonte + " (" + x.detalhe + ")", valor: x.valor }); });
+        r.total += extra.total;
+      }
+    }
+
     if (!r.ok) {
       UI.avisoErro(
         "A rolagem “" + rolagem.rotulo + "” de " + ritual.nome + " · " + versao.nome +
@@ -697,6 +729,173 @@
     global.RAMARolagens.mostrar(r, {
       nome: rolagem.rotulo + " — " + ritual.nome + " · " + versao.nome,
     });
+  }
+
+  /* =================================================================
+     ARQUIVOS SECRETOS 1 NA ABA RITUAIS (v2.29)
+     ================================================================= */
+
+  function dtDoRitual(ctx, ritual) {
+    if (!F.ehDeOrdem(ctx.ficha) || !RT() || !U.texto(ritual.resistencia).trim()) return "";
+    var base = RT().dtDeResistencia(ctx.ficha.ordem);
+    if (!base) return "";
+    var R = global.RAMAOrdemRegras;
+    var aprim = R && R.dtAprimoradaDe ? R.dtAprimoradaDe(ctx.ficha.ordem, ritual.nome) : null;
+    var total = base.total + (aprim ? aprim.valor : 0);
+    return String(total) + (aprim ? " (com +" + aprim.valor + " de Habilidade Aprimorada" + (aprim.vezes > 1 ? ", escolhida duas vezes" : "") + ")" : "");
+  }
+
+  function retencaoDe(ctx, ritual) {
+    var o = ctx.ficha.ordem;
+    if (!o || !Array.isArray(o.retencoes)) return null;
+    return o.retencoes.filter(function (x) { return x && x.ritualId === ritual.id; })[0] || null;
+  }
+
+  /* Rituais retidos — regra opcional Reter Ritual (AS1 p. 58-59). O
+     painel só aparece quando há retenção; com a regra desligada, avisa
+     que elas estão guardadas e não tiram nada do máximo. */
+  var CONDICOES_SEM_FOCO = ["atordoado", "exausto", "pasmo"];
+
+  function semFoco(o) {
+    var EF = global.RAMAOrdemEfeitos;
+    if (!EF || !o.condicoes) return [];
+    return EF.condicoesEfetivas(o.condicoes).filter(function (x) {
+      return !x.imune && CONDICOES_SEM_FOCO.indexOf(x.chave) >= 0;
+    }).map(function (x) { return x.nome; });
+  }
+
+  function temPoderDaFicha(ctx, chave) {
+    var est = estadoDe(ctx);
+    return !!(est && est.adquiridos.some(function (a) { return a.chave === chave && a.valido !== false; }));
+  }
+
+  function recursoDeRetencao(ctx) {
+    var R = global.RAMAOrdemRegras;
+    return R && R.usaDeterminacao(ctx.ficha.ordem) ? "pd" : "pe";
+  }
+
+  function painelDeRetencao(ctx) {
+    if (!F.ehDeOrdem(ctx.ficha)) return null;
+    var o = ctx.ficha.ordem;
+    var lista = Array.isArray(o.retencoes) ? o.retencoes : [];
+    if (!lista.length) return null;
+    var ligada = !!(OP() && OP().ligada(o, "reterRitual"));
+    var combate = temPoderDaFicha(ctx, "reterRitualDeCombate");
+    var foco = semFoco(o);
+    var total = lista.reduce(function (t, x) { return t + (x.pe || 0); }, 0);
+    var sigla = recursoDeRetencao(ctx).toUpperCase();
+    var linhas = [
+      el("h4.t-secao", { texto: "Rituais retidos" }),
+      el("p.t-mini", { texto: ligada
+        ? total + " " + sigla + " presos no máximo enquanto estes rituais forem mantidos (Reter Ritual, Arquivos Secretos 1, p. 58)."
+        : "A regra opcional Reter Ritual está desligada: estas retenções ficam guardadas e não tiram nada do máximo." }),
+    ];
+    if (ligada && foco.length) {
+      linhas.push(el("p.t-mini.t-aviso", { texto: "Perdendo o foco (" + foco.join(", ") + "): pela regra, você deixa de reter todos os rituais na hora — recupera os " +
+        sigla + " máximos, não os atuais." + (combate ? " Com Reter Ritual de Combate, pode gastar uma reação e 1 " + sigla + " por ritual para mudar a duração deles para cena." : "") }));
+    }
+    lista.forEach(function (ret) {
+      var botoes = [
+        el("button.r-botao.r-botao--mini", { type: "button", texto: "Deixar de reter",
+          title: "Ação livre ou reação: volta o máximo, não o atual.",
+          onclick: function () { deixarDeReter(ctx, ret, false); } }),
+        el("button.r-botao.r-botao--mini", { type: "button", texto: "Liberar com calma",
+          title: "Ação padrão e Ocultismo DT " + (20 + (ret.pe || 0)) + ": passando, volta o máximo e o atual.",
+          onclick: function () { liberarComCalma(ctx, ret); } }),
+        combate ? el("button.r-botao.r-botao--mini", { type: "button", texto: "Mudar para cena",
+          title: "Reter Ritual de Combate: reação (1 " + sigla + " quando é para não perder o foco).",
+          onclick: function () { mudarParaCena(ctx, ret, foco.length ? 1 : 0); } }) : null,
+      ];
+      linhas.push(el("div.ritual-retido", {}, [
+        el("p.t-mini", { texto: ret.nome + (ret.versao && ret.versao !== "Normal" ? " (" + ret.versao + ")" : "") + " · " + (ret.pe || 0) + " " + sigla +
+          (ret.negativo ? " · afeta um alvo: só faz efeito com ele na linha de efeito" : "") }),
+        el("div.faixa", {}, botoes),
+      ]));
+    });
+    if (ligada && foco.length && lista.length > 1) {
+      linhas.push(el("div.faixa", {}, [
+        el("button.r-botao.r-botao--mini", { type: "button", texto: "Deixar de reter todos",
+          onclick: function () { lista.slice().forEach(function (ret) { tirarRetencao(ctx.ficha.ordem, ret.id); }); salvarRetencao(ctx, "Os rituais deixaram de ser retidos: os máximos voltaram, os atuais não."); } }),
+      ]));
+    }
+    return el("div.pilha--curta.rituais-retidos", { class: "pilha" }, linhas);
+  }
+
+  function tirarRetencao(o, id) {
+    o.retencoes = (o.retencoes || []).filter(function (x) { return x.id !== id; });
+  }
+
+  function salvarRetencao(ctx, aviso) {
+    ctx.alterou();
+    ctx.redesenhar();
+    if (aviso) UI.avisoOk(aviso, { duracao: 6000 });
+  }
+
+  /* Volta os atuais retidos, sem passar do máximo novo. */
+  function devolverAtuais(ctx, ret) {
+    var R = global.RAMAOrdemRegras;
+    var o = ctx.ficha.ordem;
+    var qual = recursoDeRetencao(ctx);
+    if (!o.recursos || o.recursos[qual] === null || o.recursos[qual] === undefined) return;
+    var c = R.calcular(o, ctx.ficha.inventario);
+    var maximo = qual === "pd" ? (c.pd ? c.pd.total : 0) : c.pe.total;
+    o.recursos[qual] = Math.min(maximo, (Number(o.recursos[qual]) || 0) + (ret.pe || 0));
+  }
+
+  function deixarDeReter(ctx, ret) {
+    tirarRetencao(ctx.ficha.ordem, ret.id);
+    salvarRetencao(ctx, ret.nome + " deixou de ser retido: os " + (ret.pe || 0) + " " + recursoDeRetencao(ctx).toUpperCase() +
+      " máximos voltaram; os atuais voltam com descanso ou itens (Arquivos Secretos 1, p. 58).");
+  }
+
+  function liberarComCalma(ctx, ret) {
+    var dt = 20 + (ret.pe || 0);
+    var janela = UI.modal({
+      titulo: "Liberar " + ret.nome + " com calma",
+      conteudo: [el("div.pilha--curta", { class: "pilha" }, [
+        el("p.t-mini", { texto: "Ação padrão e teste de Ocultismo DT " + dt + " (20 + o custo em PE do ritual). Passando, volta o máximo e o atual; falhando, só o máximo (Arquivos Secretos 1, p. 58)." }),
+        el("div.faixa", {}, [
+          el("button.r-botao.r-botao--mini", { type: "button", texto: "Rolar Ocultismo",
+            onclick: function () { if (global.RAMAOrdemRolarPericia) global.RAMAOrdemRolarPericia(ctx, "ocultismo", "Ocultismo · liberar " + ret.nome + " (DT " + dt + ")"); } }),
+        ]),
+      ])],
+      botoes: [
+        { rotulo: "Cancelar", classe: "r-botao--fantasma" },
+        { rotulo: "Falhou", aoClicar: function (fechar) {
+          tirarRetencao(ctx.ficha.ordem, ret.id);
+          salvarRetencao(ctx, ret.nome + " deixou de ser retido: só os máximos voltaram.");
+          fechar();
+        } },
+        { rotulo: "Passou", classe: "r-botao--principal", aoClicar: function (fechar) {
+          tirarRetencao(ctx.ficha.ordem, ret.id);
+          devolverAtuais(ctx, ret);
+          salvarRetencao(ctx, ret.nome + " liberado com calma: voltaram os máximos e os atuais.");
+          fechar();
+        } },
+      ],
+    });
+    return janela;
+  }
+
+  /* Reter Ritual de Combate (AS1 p. 44): a duração vira cena — o ritual
+     deixa de ser retido (o máximo volta) e o efeito vai até o fim da
+     cena. Quando é para não perder o foco, custa 1 PE por ritual. */
+  function mudarParaCena(ctx, ret, custo) {
+    var R = global.RAMAOrdemRegras;
+    var CD = global.RAMAOrdemCondicoes;
+    var o = ctx.ficha.ordem;
+    if (custo) {
+      var c = R.calcular(o, ctx.ficha.inventario);
+      var qual = c.determinacao ? "pd" : "pe";
+      var maximo = qual === "pd" ? c.pd.total : c.pe.total;
+      var r = CD ? CD.aplicarAcao(qual, "gastar", { cond: o.condicoes, atual: c.atual[qual], maximo: maximo, valor: custo, pd: c.determinacao }) : null;
+      if (!r || !r.ok) { UI.avisoAtencao((r && r.motivo) || "Sem " + qual.toUpperCase() + " para mudar a duração."); return; }
+      if (!o.recursos) o.recursos = { pv: null, pe: null, san: null, pd: null };
+      o.recursos[qual] = r.valor;
+    }
+    tirarRetencao(o, ret.id);
+    salvarRetencao(ctx, ret.nome + ": a duração passou a ser cena (Reter Ritual de Combate). O efeito continua até o fim da cena; os máximos voltaram." +
+      (custo ? " Gastou " + custo + "." : ""));
   }
 
   /* O custo em PE escrito: a forma básica e o total de cada avançada. */
@@ -1170,7 +1369,7 @@
 
   async function desfazerRegistro(ctx, ritual, vindo) {
     var certeza = await UI.confirmar({
-      titulo: vindo.origem === "campo" ? "Desfazer o estudo de " + ritual.nome + "?" : "Desfazer a concessão da mesa?",
+      titulo: vindo.origem === "campo" || vindo.origem === "maldicao" ? "Desfazer o estudo de " + ritual.nome + "?" : "Desfazer a concessão da mesa?",
       texto: "O ritual deixa de contar como conhecido e continua na ficha, como registro.",
       rotuloConfirmar: "Desfazer",
     });
@@ -1287,7 +1486,7 @@
     var consequencia = "O registro sai desta ficha.";
     if (vindo) {
       if (vindo.registroDeRitual) {
-        consequencia = "O registro sai desta ficha, e com ele o " + (vindo.origem === "campo" ? "estudo em campo" : "registro da concessão da mesa") + ".";
+        consequencia = "O registro sai desta ficha, e com ele o " + (vindo.origem === "campo" ? "estudo em campo" : (vindo.origem === "maldicao" ? "registro da Compreensão de Maldições" : "registro da concessão da mesa")) + ".";
       } else if (vindo.regra && vindo.regra.tipo === "concessao" && !vindo.substitui) {
         consequencia = "O registro sai desta ficha, e " + vindo.nomePoder + " (" + vindo.rotuloEtapa + ") volta a ficar pendente na Progressão.";
       } else {

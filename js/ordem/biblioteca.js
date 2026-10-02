@@ -33,7 +33,7 @@
     { chave: "paranormais",  rotulo: "Poderes paranormais" },
   ];
 
-  var ROTULO_FONTE = { OPRPG: "Livro básico", SAH: "Sobrevivendo ao Horror" };
+  var ROTULO_FONTE = { OPRPG: "Livro básico", SAH: "Sobrevivendo ao Horror", AS1: "Arquivos Secretos 1" };
 
   function porNome(a, b) { return a.nome.localeCompare(b.nome, "pt-BR"); }
 
@@ -111,7 +111,7 @@
   }
 
   function secoesDeOrigens() {
-    var fontes = [{ chave: "OPRPG", titulo: "Livro básico" }, { chave: "SAH", titulo: "Sobrevivendo ao Horror" }];
+    var fontes = C.LIVROS.map(function (l) { return { chave: l.sigla, titulo: l.curto }; });
     return fontes.map(function (f) {
       return {
         chave: "origens." + f.chave,

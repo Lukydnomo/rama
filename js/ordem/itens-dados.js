@@ -18,6 +18,8 @@
             Capítulo 3 (p. 50–67) e Itens Amaldiçoados (p. 144–151)
      SAH    Sobrevivendo ao Horror, v1.2 (Jambô, 2024)
             Equipamentos (p. 37–45) e Novos Itens Amaldiçoados (p. 57–61)
+     AS1    Arquivos Secretos 1, v1.1 (Jambô, pacote de conteúdo oficial)
+            Itens Paranormais e Itens Amaldiçoados (p. 54–55)
 
    As páginas são as do livro, não as do PDF. Os resumos são redação
    própria: guardam os números e as condições que o jogo precisa, e não
@@ -49,6 +51,7 @@
 
   var OP = "OPRPG";
   var SAH = "SAH";
+  var AS1 = "AS1";
 
   var T33 = "Tabela 3.3 (p. 56–57)";
   var T14 = "Tabela 1.4 (p. 38)";
@@ -1645,6 +1648,65 @@
         "O conjurador perde metade dos PV totais (conta como dano massivo). Pagar com uma vítima de sacrifício é possível — e um ato de extrema crueldade.",
       ],
       notas: ["O livro não dá estatísticas de arma para a adaga."] },
+    /* =================================================================
+       ARQUIVOS SECRETOS 1 — p. 54–55
+       -----------------------------------------------------------------
+       Itens paranormais (p. 54, tabela sem elemento) e itens
+       amaldiçoados de Sangue (p. 55, sob o título "Itens Amaldiçoados ·
+       Sangue"; a tabela da página traz os três com elemento Sangue).
+       `danoExtra`/`tipoDanoExtra`: o dano de outro tipo que a arma soma
+       ao dela — fora da multiplicação do crítico, como todo dado extra.
+       ================================================================= */
+
+    { id: "as1.paranormal.amuleto-sinalizador", nome: "Amuleto sinalizador de (elemento)", fonte: AS1, pagina: 54, tabela: "Tabela da p. 54", aba: "geral", secao: "paranormais",
+      categoria: "II", espacos: 1, acessorio: true,
+      escolha: { tipo: "elemento", semMedo: true, rotulo: "Elemento do amuleto" },
+      resumo: "Amuleto preso a um cordão ou corrente que sinaliza criaturas do elemento escolhido (exceto Medo).",
+      efeitos: [
+        "Vestido, dá um sinal tênue quando uma criatura do elemento entra em alcance longo, mesmo atrás de paredes: pinga gotas vermelhas (Sangue), solta fumaça como incenso (Morte), brilha dourado (Conhecimento) ou muda de cor bruscamente (Energia).",
+      ] },
+    { id: "as1.paranormal.agrupador-ritualistico", nome: "Agrupador ritualístico", fonte: AS1, pagina: 54, tabela: "Tabela da p. 54", aba: "geral", secao: "paranormais",
+      categoria: "II", espacos: 1,
+      resumo: "Peça pequena, do tamanho de uma faca no máximo, que segura componentes e catalisadores ritualísticos.",
+      efeitos: [
+        "Ação padrão para prender um componente ou catalisador; cabem até quatro.",
+        "Empunhando o agrupador, todos os componentes e catalisadores presos nele contam como empunhados — vários com uma mão só.",
+      ] },
+    { id: "as1.paranormal.rubra", nome: "Rubra", fonte: AS1, pagina: 54, tabela: "Tabela da p. 54", aba: "geral", secao: "paranormais",
+      categoria: "II", espacos: 1, consumivel: true, droga: true,
+      resumo: "Droga paranormal: pó viscoso vermelho-amarronzado esfregado numa ferida aberta.",
+      efeitos: [
+        "Ação de movimento, com pelo menos 1 ponto de dano sofrido: +5 em testes de Força, Agilidade e Vigor e 10 PV temporários até o fim da cena.",
+        "No fim da cena, sem outra dose, perde 1d3 pontos de atributos físicos (1d6 por ponto: 1–2 Força, 3–4 Agilidade, 5–6 Vigor), que voltam depois de dormir numa cena de interlúdio.",
+        "A cada uso, Vontade DT 15 (+2 por uso anterior da droga). Falhando, fica insano por 1d3 rodadas, atacando os seres mais próximos; falhando por 10 ou mais, a mente é destruída pela droga (e, com a Membrana fragilizada, pode até virar uma criatura).",
+      ],
+      notas: ["Em “Usar” no inventário, a dose é gasta, o bônus e os PV temporários entram na ficha e a DT de Vontade já vem com os usos anteriores."] },
+
+    { id: "as1.amaldicoado.arpao-do-pescador", nome: "Arpão do pescador", elemento: "sangue", fonte: AS1, pagina: 55, tabela: "Tabela da p. 55", aba: "amaldicoados", secao: "especiais",
+      categoria: "III", espacos: 1,
+      arma: { proficiencia: "simples", tipo: "corpoACorpo", empunhadura: "umaMao", dano: "1d8", danoExtra: "1d12", tipoDanoExtra: "Sangue", critico: "x3", alcance: "curto", tipoDano: "P", arremessavel: true },
+      resumo: "Arpão de pesca rústico, sujo de sangue de um pacto com o Diabo.",
+      efeitos: [
+        "Arma simples corpo a corpo de uma mão, arremessável em alcance curto: 1d8 de perfuração + 1d12 de Sangue, crítico 20/x3.",
+        "Acertando um ataque de arremesso, o alvo fica lento até tirar o arpão do corpo: ação padrão e Atletismo (DT For).",
+      ] },
+    { id: "as1.amaldicoado.combustivel-de-sangue", nome: "Combustível de Sangue", elemento: "sangue", fonte: AS1, pagina: 55, tabela: "Tabela da p. 55", aba: "amaldicoados", secao: "especiais",
+      categoria: "III", espacos: 1, consumivel: true,
+      resumo: "Tanque de combustível inflamável misturado com Sangue, feito para enfrentar criaturas de Conhecimento.",
+      efeitos: [
+        "Gasto como munição de lança-chamas ou para encher galões (SAH p. 41): todo o dano vira Sangue e cada dado de dano sobe uma categoria (d6 vira d8).",
+      ],
+      notas: ["Quanto do tanque cada disparo ou galão consome não está escrito; a mesa decide (ver docs/ORDEM-REGRAS.md)."] },
+    { id: "as1.amaldicoado.marreta-transtornada", nome: "Marreta transtornada", elemento: "sangue", fonte: AS1, pagina: 55, tabela: "Tabela da p. 55", aba: "amaldicoados", secao: "especiais",
+      categoria: "IV", espacos: 2,
+      arma: { proficiencia: "tatica", tipo: "corpoACorpo", empunhadura: "duasMaos", dano: "2d10", danoExtra: "2d12", tipoDanoExtra: "Sangue", critico: "x4", alcance: "", tipoDano: "I" },
+      resumo: "Marreta banhada em fluidos humanos e enrolada em espinhos, amaldiçoada em seis sacrifícios ao longo de seis rituais de Sangue.",
+      efeitos: [
+        "Arma tática corpo a corpo de duas mãos: 2d10 de impacto + 2d12 de Sangue, crítico 20/x4.",
+        "Sempre que a empunha ou ataca com ela, perde 1d6 PV.",
+        "Num acerto crítico, o alvo faz Fortitude (DT For): falhando, um osso se quebra e ele fica fraco até receber cuidados prolongados num interlúdio; ficando fraco de novo por ela, fica debilitado.",
+      ],
+      notas: ["A perda de 1d6 PV aparece como lembrete no ataque com a arma; o dano é aplicado nos recursos."] },
   ];
 
   global.RAMAOrdemItensDados = {
@@ -1652,6 +1714,7 @@
     fontes: {
       OPRPG: { nome: "Ordem Paranormal RPG", curto: "Livro básico", edicao: "v1.1" },
       SAH: { nome: "Sobrevivendo ao Horror", curto: "Sobrevivendo ao Horror", edicao: "v1.2" },
+      AS1: { nome: "Arquivos Secretos 1", curto: "Arquivos Secretos 1", edicao: "v1.1" },
     },
     itens: ITENS,
   };

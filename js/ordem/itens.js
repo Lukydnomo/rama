@@ -89,9 +89,9 @@
     ],
   };
 
-  var ROTULO_FONTE = { OPRPG: "Livro básico", SAH: "Sobrevivendo ao Horror" };
-  var NOME_FONTE = { OPRPG: "Ordem Paranormal RPG", SAH: "Sobrevivendo ao Horror" };
-  var SIGLA_FONTE = { OPRPG: "LB", SAH: "SAH" };
+  var ROTULO_FONTE = { OPRPG: "Livro básico", SAH: "Sobrevivendo ao Horror", AS1: "Arquivos Secretos 1" };
+  var NOME_FONTE = { OPRPG: "Ordem Paranormal RPG", SAH: "Sobrevivendo ao Horror", AS1: "Arquivos Secretos 1" };
+  var SIGLA_FONTE = { OPRPG: "LB", SAH: "SAH", AS1: "AS1" };
 
   var PROFICIENCIAS = { simples: "Arma simples", tatica: "Arma tática", pesada: "Arma pesada" };
   var PROFICIENCIAS_PLURAL = { simples: "armas simples", tatica: "armas táticas", pesada: "armas pesadas" };
@@ -434,7 +434,7 @@
     var pares = [];
     if (e.natureza === "item") {
       if (e.arma) {
-        if (e.arma.dano) pares.push(["Dano", e.arma.dano + (e.arma.danoAlternativo ? " / " + e.arma.danoAlternativo.dano : "")]);
+        if (e.arma.dano) pares.push(["Dano", e.arma.dano + (e.arma.danoExtra ? " + " + e.arma.danoExtra : "") + (e.arma.danoAlternativo ? " / " + e.arma.danoAlternativo.dano : "")]);
         else if (e.arma.danoPorD6) pares.push(["Dano", "varia (1d6)"]);
         pares.push(["Crítico", rotuloCritico(e.arma.margem, e.arma.multiplicador)]);
         if (e.arma.alcance) pares.push(["Alcance", (ROTULO_ALCANCE[e.arma.alcance] || e.arma.alcance).replace(/ \(.*\)$/, "")]);
@@ -578,6 +578,7 @@
         par("Crítico", (e.arma.margem >= 20 ? "20" : e.arma.margem + "–20") + ", x" + e.arma.multiplicador + (e.arma.criticoPadrao ? " (regra geral)" : ""));
         par("Alcance", e.arma.alcance ? ROTULO_ALCANCE[e.arma.alcance] : "—");
         par("Tipo de dano", rotuloDano(e.arma.tipoDano));
+        if (e.arma.danoExtra) par("Dano extra", e.arma.danoExtra + (e.arma.tipoDanoExtra ? " de " + rotuloDano(e.arma.tipoDanoExtra) : "") + " (fora do crítico)");
         if (e.arma.bonusAtaque) par("Bônus de ataque", "+" + e.arma.bonusAtaque);
         if (e.arma.municao) {
           var m = catalogo && catalogo.porId[e.arma.municao];
@@ -734,7 +735,9 @@
       if (a.semEspacoSeTreinado) ordem.arma.semEspacoSeTreinado = a.semEspacoSeTreinado;
 
       dados.dano = a.dano || "";
-      dados.danoExtra = "";
+      /* Dano de outro tipo que a arma soma (Arpão do Pescador, AS1 p. 55). */
+      dados.danoExtra = a.danoExtra || "";
+      if (a.tipoDanoExtra) ordem.arma.tipoDanoExtra = rotuloDano(a.tipoDanoExtra);
       dados.critico = a.margem;
       dados.multiplicador = a.multiplicador;
       dados.periciaId = o.periciaUniversal ? o.periciaUniversal(ordem.pericia) : null;

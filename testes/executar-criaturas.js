@@ -58,11 +58,12 @@ function faces(lista) {
 t.grupo("Catálogo · inventário e integridade");
 const conferencia = OC.conferir(DADOS);
 t.igual("nenhum erro de conferência (ids, campos, expressões, variantes)", conferencia.erros.slice(0, 5), []);
-t.igual("contagem por livro bate com o inventário", conferencia.porLivro, { OPRPG: 67, SAH: 32, "OPRPG (variantes)": 5 });
+t.igual("contagem por livro bate com o inventário", conferencia.porLivro, { OPRPG: 67, SAH: 32, AS1: 12, "OPRPG (variantes)": 5 });
 const porNatureza = {};
 DADOS.criaturas.filter((c) => !c.variante).forEach((c) => { const k = c.livro + ":" + c.natureza; porNatureza[k] = (porNatureza[k] || 0) + 1; });
 t.igual("paranormais, pessoas e animais de cada livro", porNatureza,
-  { "OPRPG:paranormal": 49, "OPRPG:humana": 11, "OPRPG:animal": 7, "SAH:paranormal": 13, "SAH:humana": 11, "SAH:animal": 8 });
+  { "OPRPG:paranormal": 49, "OPRPG:humana": 11, "OPRPG:animal": 7, "SAH:paranormal": 13, "SAH:humana": 11, "SAH:animal": 8,
+    "AS1:paranormal": 1, "AS1:humana": 11 });
 const ids = DADOS.criaturas.map((c) => c.id);
 t.ok("ids únicos", new Set(ids).size === ids.length);
 t.ok("O Terminal (aventura do SAH) está no catálogo, com página", DADOS.criaturas.some((c) => c.id === "sah.criatura.o-terminal" && c.pagina === 218));
@@ -255,7 +256,7 @@ t.igual("imagens do catálogo pelo id (retrato 1:1 e corpo inteiro)", C.imagensD
 t.ok("  a cópia no Homebrew usa a do original; criatura sem catálogo não tem", !!C.imagensDoCatalogo(copia) && C.imagensDoCatalogo(antigaNorm) === null);
 const faltando = [];
 for (const c of DADOS.criaturas) {
-  const m = /^(op|sah)\.criatura\.(.+)$/.exec(c.id);
+  const m = /^(op|sah|as1)\.criatura\.(.+)$/.exec(c.id);
   for (const arq of ["retrato.png", "corpo.png"]) {
     /* A pasta pode estar num disco sincronizado (Google Drive), que às
        vezes demora a responder: uma segunda tentativa antes de acusar. */
@@ -294,6 +295,22 @@ const damaVolta = fichaVolta.ok ? fichaVolta.dados.aliados[1].criatura : null;
 t.igual("  o estado da ocorrência do aliado atravessa (fase, marcador, uso)", damaVolta && damaVolta.instancia,
   { estados: { corpos: 4 }, usos: { a1: 1 }, marcadores: { a3: true }, enigma: false, nota: "" });
 t.igual("  e o bloco de Ordem do aliado é o mesmo", damaVolta && JSON.stringify(damaVolta.ordem), JSON.stringify(damaAliada.criatura.ordem));
+t.grupo("Arquivos Secretos 1 · ameaças, aliada e gerador");
+const as1 = DADOS.criaturas.filter((c) => c.livro === "AS1");
+t.igual("doze fichas, com página", as1.filter((c) => c.pagina > 0).length, 12);
+t.ok("o Anulado é a criatura de Sangue (VD 100, p. 53)", as1.some((c) => c.id === "as1.criatura.anulado" && c.vd === 100 && c.pagina === 53 && c.natureza === "paranormal"));
+const agatha = OC.criatura("as1.criatura.agatha-volkomenn");
+const agathaDados = DADOS.criaturas.filter((c) => c.id === "as1.criatura.agatha-volkomenn")[0];
+t.ok("Agatha Volkomenn é aliada (regras de aliado, OPRPG p. 170), sem estatística de combate", !!agatha && agathaDados.aliada === true && agathaDados.vd === null);
+t.ok("  e vira aliado numa ficha como qualquer criatura", !!C.criarAliado(agatha, "").criatura);
+t.ok("as ameaças do AS1 viram aliado ou combatente com id próprio", !!C.criarAliado(OC.criatura("as1.criatura.apostolo-do-sangue"), "").criatura.ordem);
+const G = OC.GERADOR_DE_TRANSTORNADOS;
+t.igual("gerador: cinco perfis com seis traços e vinte aparências (p. 23)", [G.perfis.length, G.perfis.every((p) => p.tracos.length === 6), G.aparencia.length], [5, true, 20]);
+const maximos = OC.gerarTranstornado((faces) => faces);
+t.igual("  com os dados no máximo: Convertido, o 6º traço duas vezes e a 20ª aparência",
+  [maximos.perfil, maximos.tracos[0], maximos.aparencia[0], maximos.dados.perfil], ["Convertido", "Atraído por lugares tocados pelo Sangue", "Uma terceira perna", 10]);
+t.igual("  com 1 no d10, Desesperado", OC.gerarTranstornado(() => 1).perfil, "Desesperado");
+
 t.grupo("Desempenho · catálogo leve");
 t.ok("cada ficha cabe com folga numa célula de Homebrew (45 000)", Object.values(cat.porId).every((c) => JSON.stringify(c).length < 20000));
 t.ok("o resumo de lista é pequeno", JSON.stringify(C.resumo(OC.criatura("op.criatura.o-anfitriao"))).length < 300);

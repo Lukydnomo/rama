@@ -23,6 +23,9 @@
             Ameaças paranormais (p. 125–157), novas ameaças da Realidade
             (p. 158–165) e as fichas das missões Noite de Compras
             (p. 192–193) e O Terminal do Fim (p. 218)
+     AS1    Arquivos Secretos 1, v1.1 (Jambô, pacote de conteúdo oficial)
+            Transtornados (p. 28–39), o anulado (p. 53), a Volante e o
+            Cangaceiro (p. 68–71) e Agatha como aliada (p. 19)
 
    As páginas são as do livro, não as do PDF. Os resumos são redação
    própria: guardam os números, as condições e os testes que o jogo
@@ -92,6 +95,7 @@
 
   var OP = "OPRPG";
   var SAH = "SAH";
+  var AS1 = "AS1";
 
   var SA = "sangue";
   var MO = "morte";
@@ -2849,6 +2853,305 @@
         efeito: "Com o ritual feito, a neblina se dissipa e o combate final pode acontecer; o livro não traz alteração numérica.",
       },
     },
+
+    /* ---------------- AS1 · Arquivos Secretos 1 (v1.1) ---------------- */
+
+    {
+      id: "as1.criatura.anulado", livro: AS1, pagina: 53,
+      nome: "Anulado", natureza: "paranormal", tipo: "Criatura", tamanho: "Médio",
+      elementos: [SA], vd: 100,
+      descricao: "Corpo abandonado por tempo demais depois de uma Passagem de Conhecimento: um quase ser de carne e memórias, instável, que suga órgãos para completar a si mesmo.",
+      presenca: { dt: 20, dano: "4d6", imune: "NEX 45%" },
+      percepcao: "3d20+10", iniciativa: "2d20+10", sentidos: ["visão no escuro"],
+      defesa: 25, fortitude: "3d20+10", reflexos: "2d20+5", vontade: "1d20+10",
+      pv: 190, machucado: 95,
+      atributos: [2, 3, 1, 1, 3],
+      deslocamento: [[9, 6]],
+      notas: ["A imunidade da Presença está impressa como “NEX 45% é imune”, sem o “+”; mantida como impressa."],
+      habilidades: [
+        hab("Corpo Oscilante", "Na primeira vez que um ser olha diretamente para ele (qualquer ação que o tenha como alvo), sofre 2d6 de dano mental. Quem age contra ele sem olhar não sofre isso, mas tem −1d20 nos testes.",
+          { rolagens: [dano("Olhar", "2d6 mental")] }),
+        hab("Golpes Anulados", "Pode distribuir os ataques entre até três alvos diferentes."),
+        hab("Quero o Seu Corpo", "Quem ataca e erra faz Reflexos (DT 25) ou fica agarrado. Começando o turno agarrando alguém, suga os órgãos dele: 4d10 de dano de Sangue, e o anulado recupera PV iguais à metade do dano.",
+          { rolagens: [dano("Sugar órgãos", "4d10 Sangue")], resistencia: "Reflexos DT 25 evita ficar agarrado" }),
+      ],
+      acoes: [
+        agredir([
+          at("Braços Grotescos", "corpo a corpo", 2, "3d20+15", "1d8+10 impacto"),
+          at("Mordida Asquerosa", "corpo a corpo", 1, "3d20+15", "1d10+10 Sangue"),
+        ]),
+      ],
+    },
+
+    {
+      id: "as1.criatura.assecla", livro: AS1, pagina: 28,
+      nome: "Assecla", natureza: "humana", tipo: "Pessoa", tamanho: "Médio", categoria: "Transtornados",
+      elementos: [], vd: 40,
+      descricao: "Recém-chegado ao culto dos Transtornados: alguém quebrado pela vida ou pelo paranormal, usado em tarefas básicas e rituais menores.",
+      percepcao: "1d20+5", iniciativa: "1d20+5",
+      defesa: 18, fortitude: "2d20+5", reflexos: "1d20+5", vontade: "1d20+5",
+      pv: 30, machucado: 15,
+      atributos: [1, 2, 2, 1, 2],
+      pericias: [["Atletismo", "2d20+5"], ["Intimidação", "1d20+5"], ["Ocultismo", "2d20+5"]],
+      deslocamento: [[9, 6]],
+      notas: ["O título da ficha traz a marca “WIP” no PDF v1.1, um resto de diagramação; a ficha está completa."],
+      habilidades: [
+        hab("Rituais (DT 15)", "Conjura os rituais abaixo sem pagar PE, até 3 PE por conjuração, com a ação de cada um."),
+        hab("Corrente Farpada", "A corrente alcança 3 m e dá +2 em testes para desarmar e derrubar."),
+      ],
+      acoes: [
+        agredir([at("Corrente Farpada", "corpo a corpo (3 m)", 1, "2d20+5", "1d8+10 corte", { critico: "19" })]),
+        acao("padrao", "Ritual: Armadura de Sangue (Sangue 1)", "+5 na Defesa até o fim da cena.", { marcador: "Ativa" }),
+        acao("padrao", "Ritual: Esfolar Discente (Sangue 1)", "Explosão de 6 m de raio em alcance médio: 5d4+5 de dano de corte e sangrando em todos ali (Reflexos DT 15 reduz à metade e evita a condição).",
+          { rolagens: [dano("Esfolar", "5d4+5 corte")], resistencia: "Reflexos DT 15 reduz à metade e evita sangrando" }),
+      ],
+    },
+
+    {
+      id: "as1.criatura.investido", livro: AS1, pagina: 29,
+      nome: "Investido", natureza: "humana", tipo: "Pessoa", tamanho: "Médio", categoria: "Transtornados",
+      elementos: [], vd: 80,
+      descricao: "Cultista que já participou de rituais e sobreviveu, marcado para sempre: o executor fanático da vontade do culto.",
+      percepcao: "2d20+10", iniciativa: "3d20+5",
+      defesa: 23, fortitude: "2d20+10", reflexos: "1d20+5", vontade: "2d20+10",
+      pv: 90, machucado: 45,
+      atributos: [1, 3, 2, 2, 2],
+      pericias: [["Atletismo", "3d20+10"], ["Intimidação", "2d20+10"], ["Ocultismo", "2d20+10"]],
+      deslocamento: [[9, 6]],
+      habilidades: [
+        hab("Rituais (DT 20)", "Conjura os rituais abaixo sem pagar PE, até 6 PE por conjuração, com a ação de cada um."),
+      ],
+      acoes: [
+        agredir([at("Cutelo", "corpo a corpo", 2, "4d20+15", "1d6+15 corte", { critico: "x3" })]),
+        acao("padrao", "Ritual: Armadura de Sangue Discente (Sangue 1)", "+10 na Defesa e resistência a balístico, corte, impacto e perfuração 5 até o fim da cena.", { marcador: "Ativa" }),
+        acao("padrao", "Ritual: Descarnar Discente (Sangue 2)", "Toca um ser: 10d8 de dano (metade corte, metade Sangue) e hemorragia (Fortitude DT 20 reduz à metade e evita a hemorragia). Com hemorragia, no início de cada turno faz Fortitude DT 20: falhando, 4d8 de dano de Sangue; passando, nada, e dois sucessos seguidos estancam.",
+          { rolagens: [dano("Descarnar (metade corte, metade Sangue)", "10d8"), dano("Hemorragia", "4d8 Sangue")], resistencia: "Fortitude DT 20 reduz à metade e evita hemorragia" }),
+        acao("padrao", "Ritual: Esfolar Discente (Sangue 1)", "Explosão de 6 m de raio em alcance médio: 5d4+5 de dano de corte e sangrando (Reflexos DT 20 reduz à metade e evita a condição).",
+          { rolagens: [dano("Esfolar", "5d4+5 corte")], resistencia: "Reflexos DT 20 reduz à metade e evita sangrando" }),
+        acao("padrao", "Ritual: Transfusão Vital (Sangue 2)", "Perde até 50 PV e toca um aliado, que recupera a mesma quantidade."),
+      ],
+    },
+
+    {
+      id: "as1.criatura.apostolo-do-sangue", livro: AS1, pagina: 30,
+      nome: "Apóstolo do Sangue", natureza: "humana", tipo: "Pessoa", tamanho: "Médio", categoria: "Transtornados",
+      elementos: [], vd: 200,
+      descricao: "O topo da hierarquia dos Transtornados: sádico, deformado, dizendo falar com o Diabo — e capaz de esmagar ossos com a marreta.",
+      percepcao: "3d20+15", iniciativa: "2d20+10", sentidos: ["percepção às cegas"],
+      defesa: 30, fortitude: "3d20+15", reflexos: "2d20+10", vontade: "3d20+15",
+      pv: 300, machucado: 150,
+      atributos: [2, 4, 2, 3, 3],
+      pericias: [["Atletismo", "4d20+15"], ["Intimidação", "3d20+15"], ["Ocultismo", "2d20+15"]],
+      deslocamento: [[9, 6]],
+      habilidades: [
+        hab("Marreta Transtornada", "Num acerto crítico com a marreta, quebra um osso: o alvo fica fraco até cuidados prolongados num interlúdio (Fortitude DT 29 evita). Ficando fraco de novo por ela, fica debilitado.",
+          { resistencia: "Fortitude DT 29 evita" }),
+        hab("Rituais (DT 29)", "Conjura os rituais abaixo sem pagar PE, até 10 PE por conjuração, com a ação de cada um."),
+      ],
+      acoes: [
+        agredir([at("Marreta Sanguinária", "corpo a corpo", 2, "4d20+20", "4d10+30 impacto, perfuração ou Sangue", { critico: "x4", nota: "o tipo do dano é escolhido a cada golpe" })]),
+        acao("livre", "Rituais Acelerados", "Uma vez por rodada, ao conjurar ritual de execução completa ou menor, a execução vira livre.", { limite: [1, "rodada"] }),
+        acao("padrao", "Ritual: Armadura de Sangue Discente (Sangue 1)", "+10 na Defesa e resistência a balístico, corte, impacto e perfuração 5 até o fim da cena.", { marcador: "Ativa" }),
+        acao("padrao", "Ritual: Descarnar Discente (Sangue 2)", "Toca um ser: 10d8 de dano (metade corte, metade Sangue) e hemorragia (Fortitude DT 29 reduz à metade e evita). Com hemorragia, Fortitude DT 29 no início de cada turno: falhando, 4d8 de Sangue; dois sucessos seguidos estancam.",
+          { rolagens: [dano("Descarnar (metade corte, metade Sangue)", "10d8"), dano("Hemorragia", "4d8 Sangue")], resistencia: "Fortitude DT 29 reduz à metade e evita hemorragia" }),
+        acao("padrao", "Ritual: Esfolar Verdadeiro (Sangue 1)", "Explosão de 6 m de raio em alcance longo: 10d4+10 de dano de corte e sangrando (Reflexos DT 29 reduz à metade e evita a condição).",
+          { rolagens: [dano("Esfolar", "10d4+10 corte")], resistencia: "Reflexos DT 29 reduz à metade e evita sangrando" }),
+        acao("padrao", "Ritual: Hemofagia Discente (Sangue 2)", "Ataca com a marreta como parte do ritual; acertando, causa também +6d6 de dano de Sangue e recupera PV iguais à metade do dano total.",
+          { rolagens: [dano("Hemofagia (extra)", "6d6 Sangue")] }),
+        acao("padrao", "Ritual: Transfusão Vital (Sangue 2)", "Perde até 50 PV e toca um aliado, que recupera a mesma quantidade."),
+        acao("padrao", "Ritual: Vomitar Pestes Discente (Sangue 3)", "Vomita um enxame Grande (3 m) num ponto adjacente. O enxame passa por outros seres e não os bloqueia; no fim de cada turno dele, 5d12 de dano de Sangue e agarrado em quem estiver no espaço (Reflexos DT 29 reduz à metade e evita a condição). Ação de movimento move o enxame 12 m; um alvo escapa com ação padrão e Acrobacia ou Atletismo DT 29, ou quando o enxame se move.",
+          { rolagens: [dano("Enxame", "5d12 Sangue")], resistencia: "Reflexos DT 29 reduz à metade e evita agarrado", marcador: "Enxame em cena" }),
+      ],
+    },
+
+    {
+      id: "as1.criatura.giovanni-opspor", livro: AS1, pagina: 33,
+      nome: "Giovanni Opspor", natureza: "humana", tipo: "Pessoa", tamanho: "Médio", categoria: "Transtornados",
+      elementos: [], vd: 80,
+      descricao: "Empresário sociopata e líder de Transtornados, sempre dois passos à frente: manipula, assassina e espalhou a droga rubra pelo país.",
+      percepcao: "3d20+10", iniciativa: "2d20+5",
+      defesa: 23, fortitude: "1d20+5", reflexos: "2d20+5", vontade: "3d20+10",
+      pv: 70, machucado: 35,
+      atributos: [2, 1, 4, 3, 1],
+      pericias: [["Crime", "2d20+10"], ["Enganação", "3d20+10"], ["Furtividade", "2d20+10"], ["Ocultismo", "2d20+5"]],
+      deslocamento: [[9, 6]],
+      notas: ["A biografia está na p. 32 e a ficha na p. 33.", "O ritual Espelho (Sangue e Conhecimento, 2º círculo) aparece só nesta ficha, sem os campos de um ritual de personagem; por isso não entra no catálogo de rituais."],
+      habilidades: [
+        hab("Rituais (DT 20)", "Conjura os rituais abaixo sem pagar PE, até 6 PE por conjuração, com a ação de cada um."),
+      ],
+      acoes: [
+        agredir([at("Revólver", "curto", 2, "2d20+5", "2d6+10 balístico", { critico: "19" })]),
+        agredir([at("Faca", "corpo a corpo", 1, "2d20+5", "1d4+10 perfuração", { critico: "19" })], { nome: "Agredir (faca)" }),
+        acao("padrao", "Ritual: Distorcer Aparência (Sangue 1)", "Muda a aparência dele ou de um ser em alcance curto até o fim da cena: +10 em Enganação para disfarce, sem habilidades nem estatísticas da nova forma. Vontade DT 20 resiste ou identifica.",
+          { resistencia: "Vontade DT 20 resiste ou identifica" }),
+        acao("padrao", "Ritual: Esconder dos Olhos (Conhecimento 2)", "Fica invisível (camuflagem total e +15 em Furtividade) até atacar ou usar uma habilidade hostil.", { marcador: "Invisível" }),
+        acao("padrao", "Ritual: Espelho (Sangue e Conhecimento 2)", "Cria uma cópia de carne e sangue de si ou de um ser que já viu, com as mesmas estatísticas; controla a cópia e percebe o que ela percebe, mas fica atordoado enquanto se concentra nela. Se a cópia morrer ou ele sair do atordoamento, o ritual acaba. Identificar a cópia: Intuição, Ocultismo, Percepção ou Vontade DT 20.",
+          { marcador: "Cópia ativa" }),
+        acao("padrao", "Ritual: Fortalecimento Sensorial Discente (Sangue 1)", "Até o fim da cena, +1d20 em Investigação, Luta, Percepção e Pontaria, e os inimigos sofrem −1d20 nos ataques contra ele.", { marcador: "Ativo" }),
+        acao("padrao", "Ritual: Terceiro Olho (Conhecimento 1)", "Enxerga auras paranormais em alcance longo por 1 dia; com ação de movimento, descobre se um ser em alcance médio tem poderes paranormais ou conjura rituais, e de quais elementos.", { marcador: "Ativo" }),
+      ],
+    },
+
+    {
+      id: "as1.criatura.mosto", livro: AS1, pagina: 35,
+      nome: "Mosto", natureza: "humana", tipo: "Pessoa", tamanho: "Médio", categoria: "Transtornados",
+      elementos: [], vd: 60,
+      descricao: "Brutamontes silencioso de rosto desfigurado coberto por um saco de pão: lutador do submundo e guarda-costas fiel de Giovanni.",
+      percepcao: "1d20", iniciativa: "2d20+5",
+      defesa: 20, fortitude: "3d20+10", reflexos: "1d20+5", vontade: "1d20",
+      pv: 100, machucado: 50,
+      atributos: [1, 4, 1, 1, 3],
+      pericias: [["Atletismo", "4d20+10"]],
+      deslocamento: [[9, 6]],
+      notas: ["A biografia está na p. 34 e a ficha na p. 35."],
+      estados: [{ id: "furioso", nome: "Furioso (rosto exposto)", maximo: 1 }],
+      habilidades: [
+        hab("Rosto Desfigurado", "Se tirarem o saco do rosto dele, fica furioso: +1d8 nas rolagens de dano e pode usar Trocação Justa.",
+          { rolagens: [dano("Fúria (dano extra)", "1d8")] }),
+      ],
+      acoes: [
+        agredir([at("Cutelo", "corpo a corpo", 1, "4d20+10", "1d6+10 corte", { critico: "19/x3" })]),
+        agredir([at("Desarmado", "corpo a corpo", 1, "4d20+10", "1d4+10 impacto")], { nome: "Agredir (desarmado)" }),
+        acao("completa", "Surra Brutal", "Um ataque com o cutelo e outro desarmado; abre a guarda e sofre −5 na Defesa até o próximo turno.",
+          { ataques: [at("Cutelo", "corpo a corpo", 1, "4d20+10", "1d6+10 corte", { critico: "19/x3" }), at("Desarmado", "corpo a corpo", 1, "4d20+10", "1d4+10 impacto")] }),
+        acao("completa", "Trocação Justa", "Salta sobre um inimigo. O alvo escolhe: partir para a trocação (os dois rolam dano alternadamente, sem bloqueio, até um cair ou desistir) ou se defender com Fortitude DT 20 (passando, 1d6+10 de dano; falhando, 1d6+1d4+20 — esses podem ser bloqueados).",
+          { requer: ["furioso", 1], rolagens: [dano("Defendeu-se e passou", "1d6+10"), dano("Defendeu-se e falhou", "1d6+1d4+20")], resistencia: "Fortitude DT 20 (na defesa)" }),
+      ],
+    },
+
+    {
+      id: "as1.criatura.tarrafa", livro: AS1, pagina: 37,
+      nome: "Tarrafa", natureza: "humana", tipo: "Pessoa", tamanho: "Médio", categoria: "Transtornados",
+      elementos: [], vd: 60,
+      descricao: "Pescador que vendeu a alma por uma rede cheia e virou Transtornado: sente prazer na dor e engole metal.",
+      percepcao: "1d20+5", iniciativa: "3d20+10",
+      defesa: 21, fortitude: "2d20+5", reflexos: "3d20+10", vontade: "1d20",
+      pv: 80, machucado: 40,
+      atributos: [3, 2, 1, 1, 2],
+      pericias: [["Acrobacia", "3d20+10"], ["Atletismo", "2d20+10"]],
+      deslocamento: [[9, 6]],
+      notas: ["A biografia está na p. 36 e a ficha na p. 37."],
+      estados: [{ id: "ingeridos", nome: "Itens de metal ingeridos", maximo: 3 }],
+      habilidades: [
+        hab("Perfuração Permanente", "Acertando o arremesso do arpão, o alvo fica lento e precisa de uma ação padrão e Atletismo ou Luta (DT 20) para tirar o arpão."),
+        hab("Prazer na Dor", "Machucado, tem resistência a dano 5."),
+      ],
+      acoes: [
+        agredir([at("Arpão do Pescador", "curto", 1, "3d20+10", ["1d6+10 perfuração", "1d6 Sangue"], { critico: "x3" })]),
+        agredir([at("Faca", "corpo a corpo", 2, "3d20+10", "1d4+10 perfuração", { critico: "19" })], { nome: "Agredir (faca)" }),
+        acao("padrao", "Engolir Metal", "Engole um objeto de metal Pequeno ou menor: perde 1d6 PV e recebe +2 em testes baseados em Força e Agilidade. Cumulativo, até três itens ingeridos (costuma esconder a faca assim).",
+          { rolagens: [soma("PV perdidos", "1d6")] }),
+      ],
+    },
+
+    {
+      id: "as1.criatura.carrara", livro: AS1, pagina: 38,
+      nome: "Carrara", natureza: "humana", tipo: "Pessoa", tamanho: "Médio", categoria: "Transtornados",
+      elementos: [], vd: 60,
+      descricao: "Transtornado de meia-idade com pregos cravados no crânio e nos braços, de onde o sangue não para de escorrer.",
+      percepcao: "2d20+5", iniciativa: "2d20+10",
+      defesa: 18, fortitude: "1d20", reflexos: "2d20+10", vontade: "2d20+5",
+      pv: 70, machucado: 35,
+      atributos: [2, 1, 2, 2, 1],
+      pericias: [["Atletismo", "1d20+10"], ["Enganação", "2d20+10"]],
+      deslocamento: [[9, 6]],
+      habilidades: [
+        hab("Sangue Maldito", "Munição banhada no sangue dele causa +1d6 de dano de Sangue, uma única vez.",
+          { rolagens: [dano("Munição banhada", "1d6 Sangue")] }),
+      ],
+      acoes: [
+        agredir([at("Soco com Pregos", "corpo a corpo", 2, "1d20+10", "1d4+10 impacto")]),
+        agredir([at("Pregador Pneumático", "curto", 2, "2d20+10", ["3d4+10 perfuração", "1d6 Sangue"], { critico: "x4" })], { nome: "Agredir (pregador)" }),
+        acao("completa", "Pregos de Sangue", "Arranca pregos do corpo e recarrega o pregador com eles, aproveitando Sangue Maldito."),
+      ],
+    },
+
+    {
+      id: "as1.criatura.nando-salles", livro: AS1, pagina: 39,
+      nome: "Nando Salles", natureza: "humana", tipo: "Pessoa", tamanho: "Médio", categoria: "Transtornados",
+      elementos: [], vd: 20,
+      descricao: "Influenciador de finanças e apostador de lutas ilegais, sacrifício da equipe dos Transtornados no Hexatombe: cínico e imprudente.",
+      percepcao: "2d20+5", iniciativa: "2d20+5",
+      defesa: 16, fortitude: "2d20+5", reflexos: "2d20+5", vontade: "2d20+5",
+      pv: 35, machucado: 17,
+      atributos: [2, 1, 2, 2, 2],
+      pericias: [["Enganação", "2d20+5"]],
+      deslocamento: [[9, 6]],
+      acoes: [
+        agredir([at("Pistola", "curto", 1, "2d20+5", "1d12+5 balístico", { critico: "18" })]),
+        acao("completa", "Arrogância Diabólica", "Diz a uma pessoa em alcance longo que ela pode tudo, “basta ter o mindset certo”: Vontade DT 25. Falhando, ela faz algo extremamente imprudente no próximo turno; se recusar, sofre 2d6 de dano mental que não pode ser evitado, reduzido nem resistido.",
+          { rolagens: [dano("Recusou (mental)", "2d6 mental")], resistencia: "Vontade DT 25 evita" }),
+      ],
+    },
+
+    {
+      id: "as1.criatura.cleo-brisa", livro: AS1, pagina: 69,
+      nome: "Cleo Brisa", natureza: "humana", tipo: "Pessoa", tamanho: "Médio", categoria: "Hexatombe",
+      elementos: [], vd: 60,
+      descricao: "Investigadora da Polícia Civil de Inquisidor do Vale arrastada para o Hexatombe no lugar de um cultista; sobreviveu fugindo, até virar cobaia dos Vampiros.",
+      percepcao: "2d20+5", iniciativa: "2d20+10",
+      defesa: 20, fortitude: "2d20+5", reflexos: "2d20+5", vontade: "2d20+10",
+      pv: 80, machucado: 40,
+      atributos: [2, 2, 2, 2, 2],
+      pericias: [["Atletismo", "2d20+5"], ["Crime", "2d20+5"], ["Intuição", "2d20+10"], ["Investigação", "2d20+10"], ["Tática", "2d20+5"]],
+      deslocamento: [[9, 6]],
+      notas: ["A biografia está nas p. 68–69. O texto de Empurrar e Atirar escreve “Cloe”; é a mesma Cleo."],
+      acoes: [
+        agredir([at("Pistola", "curto", 2, "2d20+10", "1d12+10 balístico", { critico: "18" })]),
+        agredir([at("Pé de Cabra", "corpo a corpo", 2, "2d20+10", "1d8+10 impacto")], { nome: "Agredir (pé de cabra)" }),
+        acao("completa", "Empurrar e Atirar", "Empurra um alvo 3 m com o pé de cabra (Fortitude DT 20 evita) e atira com a pistola; se o empurrão deu certo, +1d20 no ataque e, acertando, +1d12 de dano.",
+          { rolagens: [dano("Dano extra (se empurrou)", "1d12")], resistencia: "Fortitude DT 20 evita o empurrão",
+            ataques: [at("Pistola", "curto", 1, "2d20+10", "1d12+10 balístico", { critico: "18" }), at("Pistola (alvo empurrado)", "curto", 1, "3d20+10", ["1d12+10 balístico", "1d12 balístico"], { critico: "18" })] }),
+      ],
+    },
+
+    {
+      id: "as1.criatura.cristino", livro: AS1, pagina: 71,
+      nome: "Cristino", natureza: "humana", tipo: "Pessoa", tamanho: "Médio", categoria: "Hexatombe",
+      elementos: [], vd: 180,
+      descricao: "Cangaceiro enigmático que chegou a pé à Coroa de Espinhos para cumprir a promessa do irmão: caçador metódico e implacável.",
+      percepcao: "2d20+5", iniciativa: "2d20+15",
+      defesa: 36, fortitude: "3d20+15", reflexos: "3d20+15", vontade: "2d20+10",
+      pv: 240, machucado: 120,
+      atributos: [3, 3, 2, 2, 3],
+      pericias: [["Atletismo", "3d20+15"], ["Furtividade", "3d20+15"], ["Medicina", "2d20+15"], ["Sobrevivência", "2d20+15"]],
+      deslocamento: [[9, 6]],
+      notas: ["A biografia está na p. 70 e a ficha na p. 71.", "A coronha da espingarda causa dano de perfuração, como impresso."],
+      habilidades: [
+        hab("Combinação Cruel", "Em vez do normal, pode fazer dois ataques por rodada combinando tipos de ataque diferentes (um disparo e um golpe de coronha, por exemplo)."),
+      ],
+      acoes: [
+        agredir([at("Peixeira", "corpo a corpo", 2, "3d20+20", "3d8+30 corte", { critico: "19" })]),
+        agredir([at("Coronha da Espingarda", "corpo a corpo", 2, "3d20+20", "3d6+30 perfuração", { critico: "x3" })], { nome: "Agredir (coronha)" }),
+        agredir([at("Espingarda", "curto", 2, "3d20+20", "4d6+30 balístico", { critico: "x3" })], { nome: "Agredir (espingarda)" }),
+        acao("padrao", "Luzernas", "Posiciona uma lamparina que ilumina em alcance curto: quem estiver iluminado é percebido por ele, a qualquer distância. Atirando na lamparina, ela explode: 6d6 de dano de fogo e em chamas em quem estiver em alcance curto dela (Reflexos DT 28 reduz à metade e evita a condição).",
+          { rolagens: [dano("Explosão", "6d6 fogo")], resistencia: "Reflexos DT 28 reduz à metade e evita em chamas", marcador: "Lamparina posicionada" }),
+        acao("completa", "Emboscada do Cangaço", "Escondido, espera os inimigos (Percepção DT 30). Se ninguém passar, dispara duas vezes a espingarda e salta com um golpe de coronha — três ataques na mesma ação; os alvos ficam desprevenidos (−5 na Defesa e −1d20 em Reflexos) e não podem usar reações.",
+          { ataques: [at("Espingarda", "curto", 2, "3d20+20", "4d6+30 balístico", { critico: "x3" }), at("Coronha da Espingarda", "corpo a corpo", 1, "3d20+20", "3d6+30 perfuração", { critico: "x3" })] }),
+      ],
+    },
+
+    /* Agatha não tem ficha de ameaça: o suplemento a apresenta como aliada,
+       pelas regras de aliados do livro básico (OPRPG p. 170). */
+    {
+      id: "as1.criatura.agatha-volkomenn", livro: AS1, pagina: 19, aliada: true,
+      nome: "Agatha Volkomenn (aliada)", natureza: "humana", tipo: "Aliada", tamanho: null, categoria: "Aliados",
+      nivel: "Aliada (OPRPG p. 170)",
+      elementos: [], vd: null,
+      descricao: "Ocultista e maledictóloga: passa missões, identifica itens, ajuda com mistérios, conjura rituais aos quais os agentes não têm acesso — e, se o mestre quiser, acompanha o grupo como aliada.",
+      notas: [
+        "Não é ficha de ameaça: são os benefícios de Agatha como aliada (OPRPG p. 170). Sem estatísticas de combate no livro.",
+        "Os benefícios valem para o personagem acompanhado por ela, à escolha da mesa.",
+      ],
+      habilidades: [
+        hab("Bônus", "Você é considerado treinado em Ocultismo; se já for, recebe +1d20 nessa perícia."),
+        hab("Maledictóloga Ocultista", "Ao identificar item amaldiçoado ou ritual, 1 PE dá +1d10 no teste; identificar item amaldiçoado como ação completa dá só −1d20. Ao conjurar um ritual, 1 PE aumenta a DT dele em +2.",
+          { custo: "1 PE", rolagens: [soma("Identificação (+1d10)", "1d10")] }),
+        hab("Ferida pelo Medo", "No início de cada cena, role 1d4: com 1, ela sangra e sente dor, e não pode atuar como aliada até o fim da cena. O mestre pode pedir a rolagem também quando ela faz um feito extremo, como combater ou conjurar um ritual poderoso.",
+          { rolagens: [soma("Ferida (1 = fora da cena)", "1d4")], marcador: "Fora de ação nesta cena" }),
+      ],
+      acoes: [],
+    },
   ];
 
   /* ---------------------------------------------------------------------
@@ -2887,6 +3190,7 @@
     fontes: {
       OPRPG: { nome: "Ordem Paranormal RPG", sigla: "LB" },
       SAH: { nome: "Sobrevivendo ao Horror", sigla: "SAH" },
+      AS1: { nome: "Arquivos Secretos 1", sigla: "AS1" },
     },
     criaturas: CRIATURAS,
   };

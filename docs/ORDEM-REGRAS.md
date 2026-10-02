@@ -4,8 +4,9 @@ O que o R.A.M.A. implementa das regras de Ordem Paranormal, de onde cada
 regra veio e como ela se comporta.
 
 **Fontes.** `OPRPG` = *Ordem Paranormal RPG — Livro de Regras*, v1.1, Jambô,
-2022. `SAH` = *Sobrevivendo ao Horror*, v1.2, Jambô, 2024. As páginas citadas
-são as do livro, não as do PDF.
+2022. `SAH` = *Sobrevivendo ao Horror*, v1.2, Jambô, 2024. `AS1` = *Arquivos
+Secretos 1*, v1.1, pacote de conteúdo oficial, Jambô. As páginas citadas são as
+do livro, não as do PDF.
 
 **Regra de ouro deste documento.** Nada aqui foi deduzido de memória nem
 preenchido por analogia. O que não foi encontrado nos dois livros, ou o que o
@@ -1790,6 +1791,58 @@ Enigmas sem alteração numérica (marcar como resolvido só registra).
 - Crítico de dano em várias partes: só os dados da primeira parte multiplicam
   (interpretação do R.A.M.A., igual ao "dano extra" das armas).
 
+## Arquivos Secretos 1 (v2.29)
+
+Fonte: `AS1` = *Arquivos Secretos 1*, v1.1, pacote de conteúdo oficial (Jambô).
+As páginas são as impressas. Os textos do catálogo são resumos próprios, com os
+números, testes e condições do livro. O livro entra no registro único de livros
+(`C.LIVROS`, `js/ordem/catalogo.js`): busca, filtros de fonte, seletores e
+bibliotecas o mostram como "Arquivos Secretos 1" ao lado do livro básico e do
+Sobrevivendo ao Horror.
+
+### Inventário, item por item
+
+| conteúdo | página | destino no R.A.M.A. | estado |
+|---|---|---|---|
+| Origem Ferido por Ritual | 43 | `C.ORIGENS` (feridoPorRitual): Ocultismo fixa + 1 perícia restrita a Fortitude/Vontade/Reflexos (`periciasOpcoes`), elemento escolhido na vaga `b.origem.feridoPorRitual`; a Progressão confere a perícia do elemento (`periciaPorElemento`) | **A** |
+| Mácula Ritualística | 43 | concessão de ritual `b.origem.macula` (1 ritual de 1º círculo do elemento, fora do limite, desde a origem, para qualquer classe); “Usar ritual” oferece conjurar sem o PE do círculo uma vez por cena (`estadoDasOrigens.feridoPorRitual.cena`); o –1 dado contra o elemento aparece no cartão da origem | **P** (o –1 dado é do teste da cena) |
+| Origem Transtornado Arrependido / Sofrimento de Sangue | 43 | efeito `resistenciaMentalPorSangue`: RD mental 2 + 1 a cada dois rituais de Sangue conhecidos ou poderes paranormais de Sangue (`R.quantosDeSangue`) | **P** (a piora do descanso é da mesa: a ficha não tem condição de descanso) |
+| Blindar a Mente (novo uso de Ocultismo) | 43 | ação no resultado de um teste de Ocultismo, para Veterano ou Expert: gasta 1 PE e, com 20+, aplica o efeito “Mente blindada” (+5 em Vontade até o fim da cena) | **P** (a versão no aliado — DT 25 e Vontade DT 20 dele — é lembrada no aviso) |
+| Ritual Intenso | 44 | efeito `rolagemDeRitual` (Pre): soma nas rolagens de dano e cura da aba Rituais. Ritual Potente (OPRPG) segue informativo | **A** |
+| Saúde Sobrenatural | 44 | botão no cartão: 3 PE, uso da cena, Pre × 10 PV temporários (`temporariosDeCena`, a mesma fonte não acumula) | **A** |
+| Acostumado à Maldição de \<Elemento\> | 44 | poder com opção de elemento (sem Medo) e requisito `conjurarRitual` 2º círculo do elemento | **I** (a Sanidade não perdida é do teste) |
+| Reter Ritual de Combate | 44 | requisito `comRegra: reterRitual`; botão “Mudar para cena” nos rituais retidos (1 PE quando é para não perder o foco) | **P** |
+| Trilha Maledictólogo (NEX 10/40/65/99) | 45 | `C.TRILHAS` + 4 habilidades; Identificação Macabra (+1d10 por 1 PE no resultado de Ocultismo); Compreensão de Maldições (aquisição de ritual `maldicao`, fora do limite, confirmada; e transferir maldições ou tatuar pelo menu do item); Reproduzir Maldição (memorizar e aplicar até o fim da missão, com o limite IV); Maldição Suprema (–3 categorias na conta) | **P** (testes, PE e Sanidade da mesa: a tela pergunta e lembra) |
+| \<Habilidade\> Aprimorada | 46 | poder geral repetível por alvo, até 2× no mesmo (`repeticaoMaxima`); a DT do ritual de mesmo nome na aba Rituais soma +2 (+5 com duas) | **P** (DT de habilidades é da mesa) |
+| Instintos Urbanos | 46 | treinar Crime ou +2 | **P** |
+| Cicatrizes Expostas | 46 | requisito declarado (`declaracao`) e opção de texto; botão aplica o efeito de cena (–1 dado em Vontade); o +1d8 é somado na rolagem | **P** |
+| Curiosidade Oculta | 46 | treinar Ocultismo ou +2; no resultado de Vontade, 2 PE trocam por Ocultismo | **A** |
+| Especialista Esotérico | 46 | requisitos Int 3, 2º círculo e Domínio Esotérico | **I** |
+| Ferro Maculado | 47 | poder paranormal de Sangue (afinidade d8) | **I** |
+| Placas Sanguinolentas | 47 | requisito “conjurar ritual de Sangue”; “Usar ritual” de Sangue aplica +círculo na Defesa (+2 com afinidade) até o próximo turno | **A** |
+| Sangue Corrosivo | 47 | botão: 1 PE e o estado até o fim da cena (1d10 / 2d10) | **P** |
+| Sangue Prazeroso | 47 | `resistenciaDanoMachucado`: RD 5 com PV na metade ou menos; afinidade: 20 PV temporários uma vez por cena, pelo botão | **A** |
+| Rituais de vários elementos | 49 | `todosOsElementos` no catálogo e na cópia; aprender exige afinidade com pelo menos um (`A.requisitosDoRitual`), em toda aquisição que não seja da mesa | **A** |
+| Passagem de Conhecimento | 48 | ritual de 2º círculo de Sangue e Conhecimento, com Discente (+3) e Verdadeiro (+7) | **I** (efeito narrativo) |
+| Passagem de Conhecimento Expandido | 50–51 | ritual de 4º círculo; aprender exige conhecer o ritual base (`requisitoRitual`); as rolagens 1d4 e 1d6+3 ficam na faixa de rolagens | **I** |
+| Itens paranormais: Amuleto Sinalizador, Agrupador Ritualístico, Rubra | 54 | catálogo de itens (aba Geral, Itens paranormais); Rubra: “Usar uma dose” gasta a dose, aplica +5 (For, Agi, Vig) e 10 PV temporários, conta os usos (`contadores.rubra`) e mostra a DT de Vontade (15 + 2 por uso) | Amuleto e Agrupador **I**; Rubra **P** |
+| Itens amaldiçoados de Sangue: Arpão do Pescador, Combustível de Sangue, Marreta Transtornada | 55 | catálogo (aba Itens Amaldiçoados); armas com `danoExtra`/`tipoDanoExtra` (fora do crítico) | Arpão e Marreta **P** (lento, ossos e 1d6 PV são da cena); Combustível **I** |
+| Transcender com Itens (regra opcional) | 56–57 | chave `transcenderComItens`, desligada: vagas `t1…t4.transcenderItem` por intervalo de NEX alcançado; item amaldiçoado do inventário + poder do mesmo elemento, com requisitos; o item consta como mundano (`E.itensTranscendidos`) | **A** (a cena é da mesa) |
+| Reter Ritual (regra opcional) | 58–59 | chave `reterRitual`, desligada: opção Reter em rituais de duração cena (gasta, prende no máximo, –1 SAN), painel de retidos com “Deixar de reter” e “Liberar com calma” (DT 20 + custo), aviso de perda de foco (atordoado, exausto, pasmo); com Conjuração Complexa, a nota de Preparando Rituais | **P** (perder o foco avisa e tira com um clique; não tira sozinho) |
+| Ameaças e aliada | 19–39, 53, 68–71 | 12 fichas no bestiário (`as1.criatura.*`): Assecla, Investido, Apóstolo do Sangue, Giovanni Opspor, Mosto, Tarrafa, Carrara, Nando Salles, Anulado, Cleo Brisa, Cristino e Agatha Volkomenn (aliada, OPRPG p. 170) — biblioteca, combate, aliados, cópia para o Homebrew | **A** (como v2.28) |
+| Gerador de Transtornados | 23 | ferramenta na biblioteca de criaturas (`OC.gerarTranstornado`): 1d10 perfil, 2d6 traços, 2d20 aparência | **A** |
+| Missões, contos e a aventura (p. 8–18, 40–41, 60–71) | — | narrativa: nada mecânico além das fichas acima | — |
+
+### O que a ficha guarda de novo
+
+`ordem.temporariosDeCena`, `ordem.retencoes`, `ordem.maldicoesMemorizadas`,
+`ordem.contadores` e `estadoDasOrigens.feridoPorRitual` — todos normalizados em
+`R.normalizar`, com ficha antiga abrindo com listas vazias. No inventário:
+`ordem.tatuagem`, e nas maldições `temporaria: "missao"` e `transferidaDe`. Nas
+cópias de ritual: `ordem.elementos` + `ordem.todosOsElementos`. Nas armas:
+`arma.tipoDanoExtra`. Registros de ritual ganharam o tipo `maldicao`. Nada disso
+muda o backend: o bloco `ordem` vai inteiro no JSON da ficha.
+
 ## Lacunas e interpretações
 
 Registradas em vez de preenchidas por dedução. Onde o livro deixa uma leitura
@@ -1985,3 +2038,56 @@ aberta, a adotada está escrita — e é a que os testes travam.
 
 33. **Exaustão e desmaio.** Os contadores da v2.19 saíram na v2.20 — ver
     [Exaustão e desmaio: não são contadores](#exaustão-e-desmaio-não-são-contadores-v220).
+
+34. **Requisito “pré-requisitos com todas as entidades” (AS1 p. 49).** Lido como:
+    exigências que citam um elemento (uma concessão “de Conhecimento”, Aprender
+    Ritual do elemento) aceitam o ritual por qualquer dos elementos dele. A
+    exigência nova é a afinidade com pelo menos um, conferida em toda aquisição
+    que não seja concessão da mesa.
+
+35. **Discente de Passagem de Conhecimento (AS1 p. 48)** está impressa com “Requer
+    2º círculo” num ritual que já é de 2º círculo. Mantida como impressa.
+
+36. **“Conjurar ritual de Nº círculo” (AS1 p. 44-47)** é lido como conhecer, naquela
+    etapa, um ritual de pelo menos esse círculo (e do elemento, quando pedido) —
+    contando grimório e rituais de vários elementos em cada elemento.
+
+37. **Ferido por Ritual (AS1 p. 43).** A perícia do elemento é a escolhida da
+    origem, restrita a Fortitude, Vontade e Reflexos; a Progressão acusa se a do
+    elemento não estiver treinada. A Mácula conta desde a origem (NEX 0%) para
+    qualquer classe.
+
+38. **Sofrimento de Sangue (AS1 p. 43).** Aprender Ritual não conta como poder de
+    Sangue (o ritual que ele ensina já conta), e a segunda escolha de um poder pela
+    afinidade não é outro poder.
+
+39. **Saúde Sobrenatural e PV temporários.** “Não cumulativos com eles mesmos”: a
+    mesma fonte substitui; fontes diferentes (Rubra, Sangue Prazeroso) somam. Os
+    temporários entram no máximo e no atual e somem com a troca de cena, como os
+    PE temporários do Profetizado.
+
+40. **Reter Ritual (AS1 p. 58-59).** Retenção sem PE (Mácula) continua registrada.
+    Perder o foco não é automático: a aba Rituais avisa e solta todos com um clique.
+    Reter Ritual de Combate “muda para cena” tirando a retenção (o máximo volta) e
+    lembrando que o efeito dura até o fim da cena.
+
+41. **Transcender com Itens (AS1 p. 56-57).** A vaga de cada intervalo mora no
+    começo dele (0%, 26%, 51%, 76% de exposição): é lá que os requisitos do poder
+    são conferidos. O item “mundano” é derivado da escolha — desfazer a escolha
+    devolve o item.
+
+42. **Compreensão de Maldições (AS1 p. 45).** Transferir aceita item do mesmo tipo
+    (arma para arma, proteção para proteção) ou a tatuagem; maldições iguais e
+    elementos opressores seguem a regra de OPRPG p. 144. O original sai do
+    inventário.
+
+43. **Reproduzir Maldição.** A DT usa a categoria antes da maldição nova (com
+    Maldição Suprema, já descontada). “Nenhum item pode ter categoria maior do que
+    IV” é conferido depois da maldição nova.
+
+44. **Combustível de Sangue (AS1 p. 55).** Quanto do tanque cada disparo ou galão
+    consome não está escrito: fica com a mesa.
+
+45. **Agatha Volkomenn (AS1 p. 19)** é aliada pela regra de aliados (OPRPG p. 170),
+    sem estatística de combate: no bestiário, aparece sem PV e com os benefícios
+    como habilidades.

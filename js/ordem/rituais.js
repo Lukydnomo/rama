@@ -58,9 +58,9 @@
      Vem do catálogo de regras quando ele está carregado — uma fonte só. */
   var CUSTO_PADRAO = { 1: 1, 2: 3, 3: 6, 4: 10 };
 
-  var ROTULO_FONTE = { OPRPG: "Livro básico", SAH: "Sobrevivendo ao Horror" };
-  var NOME_FONTE = { OPRPG: "Ordem Paranormal RPG", SAH: "Sobrevivendo ao Horror" };
-  var SIGLA_FONTE = { OPRPG: "LB", SAH: "SAH" };
+  var ROTULO_FONTE = { OPRPG: "Livro básico", SAH: "Sobrevivendo ao Horror", AS1: "Arquivos Secretos 1" };
+  var NOME_FONTE = { OPRPG: "Ordem Paranormal RPG", SAH: "Sobrevivendo ao Horror", AS1: "Arquivos Secretos 1" };
+  var SIGLA_FONTE = { OPRPG: "LB", SAH: "SAH", AS1: "AS1" };
 
   var ROTULO_ESCOPO = { alvo: "Alvo", area: "Área", efeito: "Efeito" };
 
@@ -144,6 +144,11 @@
     var e = copia(bruto);
     e.elementos = (Array.isArray(e.elemento) ? e.elemento : [e.elemento]).filter(Boolean);
     e.elemento = e.elementos[0] || "";
+    /* Vários elementos ao mesmo tempo (AS1 p. 49) é outra coisa que
+       "um elemento escolhido" (Amaldiçoar Arma): só a entrada que diz
+       `todosOsElementos` pertence a todos de uma vez. */
+    e.todosOsElementos = !!(e.todosOsElementos && e.elementos.length > 1);
+    e.requisitoRitual = e.requisitoRitual || "";
     e.circulo = Math.max(1, Math.min(4, Number(e.circulo) || 1));
     e.custo = custoDoCirculo(e.circulo);
     e.efeitos = Array.isArray(e.efeitos) ? e.efeitos : [];
@@ -152,7 +157,7 @@
     e.escopo = escopoDaEntrada(e);
     e.versoes = normalizarVersoes(e);
     e.nomesDosElementos = e.elementos.map(nomeDoElemento);
-    e.classificacao = rotuloCirculo(e.circulo) + " · " + e.nomesDosElementos.join(", ");
+    e.classificacao = rotuloCirculo(e.circulo) + " · " + e.nomesDosElementos.join(e.todosOsElementos ? " e " : ", ");
     e.chaveBusca = normalizarTexto([e.nome].concat(e.alias).join(" | "));
     return e;
   }
@@ -304,7 +309,7 @@
   function detalhes(e) {
     var p = [];
     function par(r, v) { if (v !== null && v !== undefined && v !== "") p.push([r, String(v)]); }
-    par("Elemento", e.nomesDosElementos.join(", "));
+    par(e.todosOsElementos ? "Elementos" : "Elemento", e.nomesDosElementos.join(e.todosOsElementos ? " e " : ", "));
     par("Círculo", rotuloCirculo(e.circulo));
     par("Custo", e.custo + " PE (forma básica)");
     par("Execução", e.execucao);
@@ -331,6 +336,9 @@
     } else {
       r.push("Exige componentes ritualísticos do elemento, e o Custo do Paranormal: Ocultismo contra DT 20 + o custo em PE; falhando, dano mental igual ao custo, e por 5 ou mais também 1 ponto de Sanidade permanente (OPRPG p. 121).");
     }
+    if (e.todosOsElementos) {
+      r.push("Ritual de vários elementos: pertence a " + e.nomesDosElementos.join(" e ") + " ao mesmo tempo. Aprender segue a regra de sempre, mais duas exigências: os pré-requisitos com todas as entidades e afinidade com pelo menos um dos elementos (Arquivos Secretos 1, p. 49).");
+    }
     if (e.versoes.length > 1) {
       r.push("Só uma forma avançada por conjuração, e o que a linha dela não menciona continua igual (OPRPG p. 121).");
     }
@@ -349,6 +357,13 @@
     });
     if (e.escolha && e.escolha.tipo === "elemento") {
       r.push("O elemento é escolhido ao aprender o ritual e não muda depois.");
+    }
+    if (e.todosOsElementos) {
+      r.push("Aprender: afinidade com " + e.nomesDosElementos.join(" ou ") + " (Arquivos Secretos 1, p. 49).");
+    }
+    if (e.requisitoRitual) {
+      var base = pronto && pronto.porId[e.requisitoRitual];
+      r.push("Aprender: só quem já conjura " + (base ? base.nome : "o ritual de origem") + ".");
     }
     return r;
   }
@@ -494,7 +509,7 @@
     var dados = {
       nome: e.nome,
       circulo: rotuloCirculo(e.circulo),
-      elemento: nomeDoElemento(elemento),
+      elemento: e.todosOsElementos ? e.nomesDosElementos.join(" e ") : nomeDoElemento(elemento),
       execucao: e.execucao || "",
       alcance: e.alcance || "",
       alvo: e.alvo || "",
@@ -504,12 +519,12 @@
       resistencia: e.resistencia || "",
       descricao: descricaoDaInstancia(e, escolhida),
       origemCatalogoId: e.id,
-      ordem: {
+      ordem: Object.assign({
         elemento: elemento,
         circulo: e.circulo,
         custo: e.custo,
         referencia: { fonte: e.fonte, pagina: e.pagina },
-      },
+      }, e.todosOsElementos ? { elementos: e.elementos.slice(), todosOsElementos: true } : {}),
       versoes: e.versoes.map(function (v) {
         var versao = { nome: v.nome, dano: v.dano, danoExtra: v.danoExtra };
         if (!v.basica && v.custo) versao.custo = v.custo;
@@ -559,7 +574,7 @@
      ritual é texto, igual numa ficha universal.
      ================================================================= */
 
-  var FONTES = ["OPRPG", "SAH"];
+  var FONTES = ["OPRPG", "SAH", "AS1"];
 
   function normalizarDados(bruto) {
     if (!bruto || typeof bruto !== "object") return null;
@@ -567,6 +582,19 @@
 
     var elemento = String(bruto.elemento || "");
     if (ELEMENTOS.some(function (e) { return e.chave === elemento; })) saida.elemento = elemento;
+
+    /* Ritual de vários elementos (AS1 p. 49): a lista inteira, e a marca
+       de que ele pertence a todos de uma vez. */
+    if (Array.isArray(bruto.elementos)) {
+      var lista = bruto.elementos.map(String).filter(function (k, i, l) {
+        return ELEMENTOS.some(function (e) { return e.chave === k; }) && l.indexOf(k) === i;
+      });
+      if (lista.length > 1 && bruto.todosOsElementos === true) {
+        saida.elementos = lista;
+        saida.todosOsElementos = true;
+        if (!saida.elemento) saida.elemento = lista[0];
+      }
+    }
 
     var circulo = Math.round(Number(bruto.circulo));
     if (circulo >= 1 && circulo <= 4) saida.circulo = circulo;

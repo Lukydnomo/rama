@@ -111,7 +111,7 @@
      ================================================================= */
 
   function acoesNoTeste(ctx, o, p, r) {
-    var saida = [];
+    var saida = acoesDoArquivo(ctx, o, p, r);
     origensComPoder(o).forEach(function (org) {
       (org.acoesNoTeste || []).forEach(function (ac) {
         if (ac.pericias.indexOf(p.chave) < 0) return;
@@ -216,6 +216,23 @@
         linhas.push(botao("O companheiro morreu", function () { morteDoCompanheiro(ctx, o, e); }));
       }
       return linhas;
+    },
+
+    /* Mácula Ritualística (AS1 p. 43): o ritual, o uso da cena e o preço. */
+    feridoPorRitual: function (ctx, o, org, e, reg) {
+      var el1 = reg && reg.opcoes ? reg.opcoes.elemento : "";
+      var nomeEl = el1 && C().elemento(el1) ? C().elemento(el1).nome : "";
+      var est = E() ? E().estado(o, null) : null;
+      var macula = est && est.rituais ? est.rituais.aprendizados.filter(function (a) { return a.poder === "maculaRitualistica" && !a.substituidoEm; })[0] : null;
+      var usada = e.cena && e.cena === cenaAtual(o);
+      return [
+        el("p.t-mini", { texto: nomeEl
+          ? "Ferido por um ritual de " + nomeEl + ": –1 dado em testes de resistência contra efeitos de " + nomeEl + "."
+          : "Escolha na Progressão o elemento do ritual que feriu o personagem." }),
+        el("p.t-mini", { texto: macula
+          ? "Mácula: " + macula.nome + " · " + (usada ? "já conjurado sem PE nesta cena." : "pode ser conjurado sem PE uma vez nesta cena (em “Usar ritual”).")
+          : (nomeEl ? "Falta escolher o ritual de 1º círculo de " + nomeEl + " (Progressão ou aba Rituais: Mácula Ritualística)." : "") }),
+      ];
     },
 
     astronauta: function (ctx, o, org, e) {
@@ -687,7 +704,10 @@
         if (pl.livres) {
           partes.push(el("p.t-mini", { texto: "Escolha " + pl.livres + ": " + escolhidas.length + " escolhida(s)." }));
           partes.push(el("div.criacao-pericias", {}, C().PERICIAS.map(function (p) {
-            var bloqueada = pl.jaTem[p.chave] || pl.fixas.indexOf(p.chave) >= 0;
+            /* Ferido por Ritual (AS1 p. 43): a escolhida sai de uma lista
+               curta — a não ser que uma fixa repetida libere outra qualquer. */
+            var foraDaLista = !!(nova.periciasOpcoes && !pl.repetidas.length && nova.periciasOpcoes.indexOf(p.chave) < 0);
+            var bloqueada = pl.jaTem[p.chave] || pl.fixas.indexOf(p.chave) >= 0 || foraDaLista;
             var marcada = escolhidas.indexOf(p.chave) >= 0;
             return el("button.criacao-pericia", {
               type: "button", disabled: bloqueada, "aria-pressed": String(marcada), class: marcada ? "criacao-pericia--marcada" : "",
@@ -724,9 +744,201 @@
     return m;
   }
 
+  /* =================================================================
+     PODERES COM CONTROLES — Arquivos Secretos 1 (v2.29)
+     -----------------------------------------------------------------
+     O cartão de um poder ganha botões quando o poder é uma ação que a
+     ficha sabe registrar: gastar o custo, marcar o uso da cena, pôr os
+     pontos temporários e o efeito. O que depende da cena (quem foi
+     atingido, o dano extra) continua com a mesa.
+     ================================================================= */
+
+  function estadoDaFicha(o) { return E() ? E().estado(o, null) : null; }
+
+  function aquisicoesDe(o, chave) {
+    var est = estadoDaFicha(o);
+    return est ? est.adquiridos.filter(function (a) { return a.chave === chave && a.valido !== false; }) : [];
+  }
+
+  function temPoder(o, chave) { return aquisicoesDe(o, chave).length > 0; }
+  function comAfinidade(o, chave) { return aquisicoesDe(o, chave).some(function (a) { return a.afinidade; }); }
+
+  function usadoNaCena(o, chave) {
+    var cena = cenaAtual(o);
+    return (o.temporariosDeCena || []).some(function (x) { return x.chave === chave && x.cena === cena; });
+  }
+
+  /* Pontos temporários da cena: o novo da mesma fonte SUBSTITUI o velho
+     ("não são cumulativos com eles mesmos", AS1 p. 44). O atual sobe só
+     a diferença. */
+  function temporarioDaCena(o, chave, recurso, valor, fonte) {
+    if (!Array.isArray(o.temporariosDeCena)) o.temporariosDeCena = [];
+    var cena = cenaAtual(o);
+    var antigo = o.temporariosDeCena.filter(function (x) { return x.chave === chave && x.recurso === recurso; })[0];
+    var antes = antigo && antigo.cena === cena ? antigo.valor : 0;
+    o.temporariosDeCena = o.temporariosDeCena.filter(function (x) { return !(x.chave === chave && x.recurso === recurso); });
+    o.temporariosDeCena.push({ chave: chave, recurso: recurso, valor: valor, cena: cena, fonte: fonte });
+    if (o.recursos && o.recursos[recurso] !== null && o.recursos[recurso] !== undefined) o.recursos[recurso] += Math.max(0, valor - antes);
+  }
+
+  function efeitoDePoder(ctx, nome, dados) {
+    var o = ordemDe(ctx);
+    if (!EF()) return null;
+    var ag = global.RAMAAuth && global.RAMAAuth.agente ? global.RAMAAuth.agente() : null;
+    var inst = EF().criarInstancia(Object.assign({
+      origem: { tipo: "habilidade", nome: nome },
+      alvoNome: ctx.ficha.nome, cena: cenaAtual(o),
+      aplicadoPor: { id: ag ? ag.id : "", nome: ag ? (ag.nome || ag.usuario || "") : "", papel: "jogador" },
+    }, dados));
+    var av = EF().avaliarAplicacao(o.condicoes, inst);
+    var r = EF().aplicar(o.condicoes, inst, av.ok && av.conflito ? "renovar" : "nova");
+    if (!r.ok) { UI.avisoAtencao(r.motivo); return null; }
+    return r;
+  }
+
+  var CONTROLES_DE_PODER = {
+    saudeSobrenatural: function (ctx, o) {
+      var pv = R().atributo(o, "pre") * 10;
+      var usado = usadoNaCena(o, "saudeSobrenatural");
+      return [botao("Saúde Sobrenatural: " + pv + " PV temporários (3 " + siglaDoGasto(o) + ")", function () {
+        var g = gastar(ctx, 3);
+        if (!g) return;
+        temporarioDaCena(o, "saudeSobrenatural", "pv", pv, "Saúde Sobrenatural");
+        salvar(ctx);
+        UI.aviso("Saúde Sobrenatural: " + pv + " PV temporários até o fim da cena. Gastou 3 " + g.qual + ".");
+      }, { desligado: usado, dica: usado ? "Uma vez por cena." : "Ação de movimento (Arquivos Secretos 1, p. 44)." })];
+    },
+
+    sanguePrazeroso: function (ctx, o) {
+      var machucado = R().machucado(o);
+      var linhas = [el("p.t-mini", { texto: machucado ? "Machucado: resistência a dano 5 valendo." : "A resistência a dano 5 vale quando estiver machucado (metade dos PV ou menos)." })];
+      if (comAfinidade(o, "sanguePrazeroso")) {
+        var usado = usadoNaCena(o, "sanguePrazeroso");
+        linhas.push(botao("Afinidade: +20 PV temporários", function () {
+          temporarioDaCena(o, "sanguePrazeroso", "pv", 20, "Sangue Prazeroso");
+          salvar(ctx);
+          UI.aviso("Sangue Prazeroso: 20 PV temporários, uma vez nesta cena.");
+        }, { desligado: usado || !machucado, dica: usado ? "Uma vez por cena." : (!machucado ? "Só machucado." : "") }));
+      }
+      return linhas;
+    },
+
+    cicatrizesExpostas: function (ctx, o) {
+      var ativo = (o.condicoes.efeitos || []).some(function (x) { return x.modelo === "poder:cicatrizesExpostas" && EF() && EF().ativa(x); });
+      return [botao(ativo ? "Cicatrizes expostas nesta cena" : "Expor as cicatrizes", function () {
+        if (!efeitoDePoder(ctx, "Cicatrizes Expostas", {
+          modelo: "poder:cicatrizesExpostas", nome: "Cicatrizes expostas",
+          descricao: "+1d8 de dano do mesmo tipo; –1 dado em Vontade e em testes que exijam calma (ficar furtivo, traduzir um idioma…). Até o fim da cena (Arquivos Secretos 1, p. 46).",
+          modificadores: [{ alvo: "pericia:vontade", tipo: "dados", valor: -1 }], duracao: { tipo: "cena" },
+        })) return;
+        salvar(ctx);
+        UI.aviso("Cicatrizes expostas até o fim da cena: some +1d8 de dano do mesmo tipo; –1 dado em Vontade já entra na conta.");
+      }, { desligado: ativo, dica: "Ação de movimento — ou quando outro ser as expõe." })];
+    },
+
+    sangueCorrosivo: function (ctx, o) {
+      var ativo = (o.condicoes.efeitos || []).some(function (x) { return x.modelo === "poder:sangueCorrosivo" && EF() && EF().ativa(x); });
+      var dano = comAfinidade(o, "sangueCorrosivo") ? "2d10" : "1d10";
+      return [botao(ativo ? "Sangue corrosivo ativo nesta cena" : "Tornar o sangue corrosivo (1 " + siglaDoGasto(o) + ")", function () {
+        var g = gastar(ctx, 1);
+        if (!g) return;
+        efeitoDePoder(ctx, "Sangue Corrosivo", {
+          modelo: "poder:sangueCorrosivo", nome: "Sangue corrosivo",
+          descricao: "Quem estiver adjacente e causar dano a você sofre " + dano + " de dano de Sangue. Até o fim da cena (Arquivos Secretos 1, p. 47).",
+          modificadores: [], duracao: { tipo: "cena" },
+        });
+        salvar(ctx);
+        UI.aviso("Sangue corrosivo até o fim da cena: " + dano + " de Sangue em quem, adjacente, causar dano a você. Gastou 1 " + g.qual + ".");
+      }, { desligado: ativo, dica: "Ação de movimento." })];
+    },
+  };
+
+  function controlesDePoder(ctx, aq) {
+    var f = aq && CONTROLES_DE_PODER[aq.chave];
+    if (!f || !EF()) return null;
+    var partes = f(ctx, ordemDe(ctx), aq);
+    return partes && partes.length ? el("div.pilha--curta.origem-controles", { class: "pilha" }, partes.filter(Boolean)) : null;
+  }
+
+  /* No resultado de um teste: o que os poderes e o uso novo de Ocultismo
+     oferecem (AS1 p. 43, 45 e 46). Sempre por clique. */
+  function acoesDoArquivo(ctx, o, p, r) {
+    var saida = [];
+    var sigla = siglaDoGasto(o);
+
+    if (p.chave === "vontade" && temPoder(o, "curiosidadeOculta")) {
+      saida.push({
+        rotulo: "Curiosidade Oculta: usar Ocultismo (2 " + sigla + ")",
+        dica: "Troca este teste de Vontade por um de Ocultismo (Arquivos Secretos 1, p. 46).",
+        aoClicar: function () {
+          var g = gastar(ctx, 2);
+          if (!g) return;
+          salvar(ctx);
+          rolar(ctx, "ocultismo", "Ocultismo · Curiosidade Oculta (no lugar de Vontade)");
+        },
+      });
+    }
+
+    if (p.chave === "ocultismo" && o.trilha === "maledictologo" && R().trilho(o).nexEquivalente >= 10 && C().trilha("maledictologo").classe === o.classe) {
+      var usado = false;
+      saida.push({
+        rotulo: "Identificação Macabra: +1d10 (1 " + sigla + ")",
+        dica: "Só para identificar item amaldiçoado ou ritual (Arquivos Secretos 1, p. 45).",
+        aoClicar: function (cartao, botaoUsado) {
+          if (usado) return;
+          var g = gastar(ctx, 1);
+          if (!g) return;
+          usado = true;
+          if (botaoUsado) botaoUsado.disabled = true;
+          salvar(ctx);
+          var extra = D().total ? D().total("1d10") : null;
+          var valor = extra && extra.ok ? extra.total : (1 + Math.floor(Math.random() * 10));
+          global.RAMARolagens.mostrar(Object.assign({}, r, {
+            total: r.total + valor,
+            parcelas: (r.parcelas || []).concat([{ rotulo: "Identificação Macabra (1d10)", valor: valor }]),
+          }), { nome: p.nome + " · Identificação Macabra", notas: ["Mesmo teste, +1d10 (" + valor + "). Gastou 1 " + g.qual + "."] });
+        },
+      });
+    }
+
+    /* Blindar a Mente (novo uso de Ocultismo, AS1 p. 43): Veterano, DT 20,
+       ação completa e 1 PE. Passando, +5 no próximo teste de Vontade até
+       o fim da cena. Num aliado adjacente, a DT é 25 e ele faz Vontade DT
+       20 — falhando, perde 1d4 de Sanidade e fica sem o bônus. */
+    if (p.chave === "ocultismo" && ["veterano", "expert"].indexOf(R().grauDaPericia(o, "ocultismo")) >= 0) {
+      var feito = false;
+      saida.push({
+        rotulo: "Blindar a Mente (1 " + sigla + ")",
+        dica: "Veterano em Ocultismo: ação completa, DT 20 (em você) ou 25 (num aliado adjacente).",
+        aoClicar: function (cartao, botaoUsado) {
+          if (feito) return;
+          var g = gastar(ctx, 1);
+          if (!g) return;
+          feito = true;
+          if (botaoUsado) botaoUsado.disabled = true;
+          var passou = r.total >= 20;
+          if (passou) {
+            efeitoDePoder(ctx, "Blindar a Mente", {
+              modelo: "uso:blindarAMente", nome: "Mente blindada",
+              descricao: "+5 no próximo teste de Vontade, até o fim da cena (Blindar a Mente, Arquivos Secretos 1, p. 43). Encerre depois do teste.",
+              modificadores: [{ alvo: "pericia:vontade", tipo: "bonus", valor: 5 }], duracao: { tipo: "cena" },
+            });
+          }
+          salvar(ctx);
+          UI.aviso(passou
+            ? "Blindar a Mente: " + r.total + " contra DT 20 — +5 no próximo teste de Vontade até o fim da cena (encerre o efeito depois de usar). Num aliado, a DT seria 25, e ele faria Vontade DT 20 (falhando, perde 1d4 de Sanidade e não recebe o bônus)."
+            : "Blindar a Mente: " + r.total + " não alcança a DT 20. Gastou 1 " + g.qual + ".");
+        },
+      });
+    }
+    return saida;
+  }
+
   global.RAMASecaoOrigens = {
     acoesNoTeste: acoesNoTeste,
     controles: controles,
+    controlesDePoder: controlesDePoder,
+    temporarioDaCena: temporarioDaCena,
     trocarOrigem: trocarOrigem,
     origensComPoder: origensComPoder,
   };

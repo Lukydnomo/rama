@@ -38,7 +38,7 @@
   function BIB() { return global.RAMABibliotecaDeRituais; }
   var el = U.el;
 
-  var ROTULO_FONTE = { OPRPG: "Livro básico", SAH: "Sobrevivendo ao Horror" };
+  var ROTULO_FONTE = { OPRPG: "Livro básico", SAH: "Sobrevivendo ao Horror", AS1: "Arquivos Secretos 1" };
 
   function copiar(v) { return v === undefined ? undefined : JSON.parse(JSON.stringify(v)); }
 
@@ -187,6 +187,7 @@
       botaoFiltro("Todos os livros", !f.fonte, function () { f.fonte = ""; sessao.pintar(); }),
       botaoFiltro("Livro básico", f.fonte === "OPRPG", function () { f.fonte = "OPRPG"; sessao.pintar(); }),
       botaoFiltro("Sobrevivendo ao Horror", f.fonte === "SAH", function () { f.fonte = "SAH"; sessao.pintar(); }),
+      botaoFiltro("Arquivos Secretos 1", f.fonte === "AS1", function () { f.fonte = "AS1"; sessao.pintar(); }),
     ]);
 
     var grupoElemento = o.porElemento
@@ -997,6 +998,49 @@
             partes.push(painelDeOpcoes(sessao, [{ chave: "poder", tipo: "poderParanormal", rotulo: "Poder paranormal" }], candidato.opcoes, "raiz", 0));
           }
           break;
+
+        /* Transcender com Itens (regra opcional, AS1 p. 56-57). */
+        case "transcenderItem": {
+          partes.push(el("p.t-mini", { texto: "Arquivos Secretos 1, p. 56-57: numa cena de interlúdio, o personagem se posiciona num símbolo de Transcender empunhando o item amaldiçoado, revive memórias ligadas a ele e responde com sinceridade a uma pergunta da entidade. Depois, recebe um poder paranormal do elemento do item, cumprindo os requisitos dele; o item perde os efeitos e vira mundano. Um poder por intervalo de NEX." }));
+          partes.push(botoesDeEscolha([
+            { valor: "transcender", rotulo: "Transcender com um item" },
+            { valor: "nao", rotulo: "Não neste intervalo" },
+          ], candidato.valor, function (v) {
+            candidato.valor = v;
+            if (v === "nao") candidato.opcoes = {};
+            pintar();
+          }));
+          if (candidato.valor === "transcender") {
+            var invT = sessao.contexto && sessao.contexto.inventario ? (sessao.contexto.inventario.itens || []) : null;
+            var IT = global.RAMAOrdemInventario;
+            var dadosT = function (i) { return IT ? IT.dadosDoItem(i) : (i.ordem || {}); };
+            var amaldicoados = (invT || []).filter(function (i) { var d = dadosT(i); return i && (d.grupo === "amaldicoado" || d.amaldicoado === true); });
+            if (!invT) {
+              partes.push(el("p.t-mini", { texto: "O item vem do inventário. Resolva depois de criar o personagem e adicionar o item." }));
+            } else if (!amaldicoados.length) {
+              partes.push(el("p.t-mini", { texto: "Nenhum item amaldiçoado no inventário. Adicione o item (ou marque o grupo dele como amaldiçoado) e volte aqui." }));
+            } else {
+              partes.push(el("p.t-secao", { texto: "Item amaldiçoado" }));
+              partes.push(botoesDeEscolha(amaldicoados.map(function (i) {
+                var elI = dadosT(i).elemento;
+                return { valor: i.id, rotulo: i.nome + (elI ? " · " + (C.elemento(elI) || { nome: elI }).nome : "") };
+              }), candidato.opcoes.item, function (v) {
+                var it = amaldicoados.filter(function (i) { return i.id === v; })[0];
+                candidato.opcoes.item = v;
+                candidato.opcoes.itemNome = it ? String(it.nome || "").slice(0, 80) : "";
+                var elIt = it ? dadosT(it).elemento : "";
+                if (elIt) candidato.opcoes.itemElemento = elIt;
+                pintar();
+              }));
+              var escolhidoT = amaldicoados.filter(function (i) { return i.id === candidato.opcoes.item; })[0];
+              if (escolhidoT && !dadosT(escolhidoT).elemento) {
+                partes.push(painelDeOpcoes(sessao, [{ chave: "itemElemento", tipo: "elemento", rotulo: "Elemento do item (o item não informa)" }], candidato.opcoes, "raiz", 0));
+              }
+            }
+            partes.push(painelDeOpcoes(sessao, [{ chave: "poder", tipo: "poderParanormal", rotulo: "Poder paranormal (do elemento do item)" }], candidato.opcoes, "raiz", 0));
+          }
+          break;
+        }
 
         default:
           partes.push(el("p.t-mini", { texto: "Esta etapa não tem tela de escolha." }));

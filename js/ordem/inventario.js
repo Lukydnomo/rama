@@ -71,7 +71,7 @@
   var TIPOS_PROTECAO = ["leve", "pesada", "escudo"];
   var ELEMENTOS = ["sangue", "morte", "conhecimento", "energia", "medo", "varia"];
   var MARCADORES = ["acessorio", "utensilio", "vestimenta", "eletrico", "camera", "corpoACorpo", "besta", "balas"];
-  var FONTES = ["OPRPG", "SAH"];
+  var FONTES = ["OPRPG", "SAH", "AS1"];
   var MAX_MODIFICACOES = 12;
   var DADO = /^[1-9]\d{0,2}d([1-9]\d{0,2})$/;
 
@@ -156,6 +156,9 @@
       dados.protecao = { tipo: b.protecao.tipo };
     }
     if (b.amaldicoado === true) dados.amaldicoado = true;
+    /* Tatuagem de maldição (Compreensão de Maldições, AS1 p. 45): o
+       símbolo no corpo que carrega as maldições de um item consumido. */
+    if (b.tatuagem === true) dados.tatuagem = true;
     if (ELEMENTOS.indexOf(b.elemento) >= 0) dados.elemento = b.elemento;
     var marcadores = (Array.isArray(b.marcadores) ? b.marcadores : []).filter(function (m, i, lista) {
       return MARCADORES.indexOf(m) >= 0 && lista.indexOf(m) === i;
@@ -215,6 +218,8 @@
     if (ALCANCES.indexOf(a.alcance) >= 0) saida.alcance = a.alcance;
     var tipoDano = textoCurto(a.tipoDano, 20);
     if (tipoDano) saida.tipoDano = tipoDano;
+    var tipoDanoExtra = textoCurto(a.tipoDanoExtra, 20);
+    if (tipoDanoExtra) saida.tipoDanoExtra = tipoDanoExtra;
     var municao = textoCurto(a.municao, 80);
     if (municao) saida.municao = municao;
     if (ATRIBUTOS_DANO.indexOf(a.atributoDano) >= 0) saida.atributoDano = a.atributoDano;
@@ -266,6 +271,11 @@
     var ref = referenciaValida(m.referencia);
     if (ref) saida.referencia = ref;
     if (m.semAcrescimoDeCategoria === true) saida.semAcrescimoDeCategoria = true;
+    /* Maledictólogo (AS1 p. 45): a maldição reproduzida dura até o fim
+       da missão; a transferida lembra de onde veio. */
+    if (m.temporaria === "missao") saida.temporaria = "missao";
+    var transferida = textoCurto(m.transferidaDe, 80);
+    if (transferida) saida.transferidaDe = transferida;
     if (m.calculo && typeof m.calculo === "object") {
       var calculo = {};
       Object.keys(CAMPOS_DE_CALCULO).forEach(function (k) {

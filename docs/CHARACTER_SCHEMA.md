@@ -692,7 +692,8 @@ Só existe na ficha de Ordem. Guarda **escolhas**, **recursos gastos** e
   } ],
   "registrosDeRitual": [ {        // aquisições de ritual FORA da progressão (v2.18)
     "id": "uuid",
-    "tipo": "campo",              // "campo" (estudo, SAH p.113) ou "mesa" (concessão da mesa)
+    "tipo": "campo",              // "campo" (estudo, SAH p.113), "mesa" (concessão da mesa) ou
+                                  // "maldicao" (Compreensão de Maldições, AS1 p.45 — v2.29)
     "ritualId": "uuid-do-ritual", // o ritual de `rituais.itens`
     "nome": "Tecer Ilusão", "circulo": 1,   // retrato, para ler sem a lista
     "degrau": 6,                  // a etapa em que foi registrado (NEX 30%, ou o nível)
@@ -791,6 +792,36 @@ Ids de vaga (`etapa`):
 | `d<degrau>.ritualClasse` | o ritual daquele avanço de NEX ou de nível |
 | `d<degrau>.saberAmpliado`, `d<degrau>.grimorio` | as concessões da trilha Graduado |
 | `d<degrau>.<chaveDoPoder>` | o ritual que uma trilha concede pelo nome (`d20.conhecendoOMedo`) |
+
+### Arquivos Secretos 1 no bloco `ordem` (v2.29)
+
+Campos novos, todos opcionais — uma ficha antiga abre com eles vazios, e nada é
+convertido:
+
+```jsonc
+"ordem": {
+  "temporariosDeCena": [ {        // pontos que somem com a cena; a mesma fonte substitui
+    "chave": "saudeSobrenatural", "recurso": "pv", "valor": 30,
+    "cena": "id-da-cena", "fonte": "Saúde Sobrenatural"
+  } ],
+  "retencoes": [ {                // Reter Ritual (regra opcional, AS1 p. 58)
+    "id": "uuid", "ritualId": "uuid-do-ritual", "nome": "Amaldiçoar Arma",
+    "versao": "Discente", "pe": 3, "circulo": 1, "recurso": "pe",
+    "negativo": false, "cena": "id-da-cena", "desde": "2026-10-02T10:00:00.000Z"
+  } ],
+  "maldicoesMemorizadas": [ {     // Reproduzir Maldição (AS1 p. 45)
+    "id": "uuid", "catalogoId": "op.maldicao.arma.sanguinaria", "nome": "Sanguinária",
+    "elemento": "sangue", "resumo": "…", "em": "2026-10-02T10:00:00.000Z"
+  } ],
+  "contadores": { "rubra": 2 },   // doses de rubra já usadas (a DT sobe +2 por uso)
+  "estadoDasOrigens": { "feridoPorRitual": { "cena": "id-da-cena" } }   // Mácula usada
+}
+```
+
+Os PE retidos saem do máximo só com a regra ligada; desligada, as retenções ficam
+guardadas sem efeito. Nas maldições de um item, `temporaria: "missao"` marca a
+reproduzida e `transferidaDe` guarda de onde ela veio. As armas podem ter
+`arma.tipoDanoExtra` ("Sangue") ao lado do `danoExtra` da ficha.
 
 ### O vínculo de ritual (v2.17)
 
@@ -1076,7 +1107,8 @@ de ficha universal nunca o ganha, e o `peso` do item nunca é convertido.
   "categoria": 1,      // 0 a 4 (0, I, II, III, IV); null = não informada
   "grupo": "geral",    // arma, municao, protecao, geral, paranormal, amaldicoado
   "capacidade": 0,     // quanto o item AUMENTA a capacidade (Mochila Militar: 2)
-  "emUso": true        // só em proteção, e só quando verdade: é a que soma na Defesa
+  "emUso": true,       // só em proteção, e só quando verdade: é a que soma na Defesa
+  "tatuagem": true     // v2.29: o símbolo de Compreensão de Maldições (AS1 p. 45)
 }
 ```
 
@@ -1159,7 +1191,9 @@ e uma ficha universal nunca ganha este bloco.
   "elemento": "morte",                       // chave: conhecimento, energia, morte, sangue, medo
   "circulo": 2,                              // 1 a 4
   "custo": 3,                                // PE da forma básica; em branco vale o do círculo
-  "referencia": { "fonte": "OPRPG", "pagina": 126 }
+  "referencia": { "fonte": "OPRPG", "pagina": 126 },
+  "elementos": ["sangue", "conhecimento"],   // v2.29: só num ritual de VÁRIOS elementos
+  "todosOsElementos": true                   // (AS1 p. 49) — pertence a todos de uma vez
 }
 ```
 

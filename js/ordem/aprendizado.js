@@ -61,6 +61,16 @@
                       a mesa confirme que a fonte foi achada e o teste de
                       Ocultismo passou
      mesa             a mesa concedeu fora das regras — exceção declarada
+     maldição         Compreensão de Maldições (Maledictólogo NEX 40%,
+                      Arquivos Secretos 1 p. 45): o ritual de um item
+                      amaldiçoado estudado no interlúdio, fora do limite
+     origem           Mácula Ritualística (Ferido por Ritual, AS1 p. 43):
+                      um ritual de 1º círculo do elemento escolhido
+
+   Rituais de VÁRIOS elementos (AS1 p. 49) pedem, para qualquer
+   aquisição que não seja a da mesa, afinidade com pelo menos um dos
+   elementos; a versão expandida de Passagem de Conhecimento pede a
+   versão base já conhecida. Ver requisitosDoRitual().
 
    E um ritual que nenhuma aquisição reivindica é REGISTRO: está na
    ficha para consulta, mas não é conhecido. A regra de cada aquisição
@@ -84,6 +94,7 @@
 
   var OPRPG = "OPRPG";
   var SAH = "SAH";
+  var AS1 = "AS1";
 
   /* Onde um ritual aprendido fica guardado. A diferença é funcional:
      ver GRIMÓRIO, abaixo. */
@@ -107,7 +118,69 @@
     classe: { chave: "classe", nome: "Classe" },
     trilha: { chave: "trilha", nome: "Trilha" },
     poder: { chave: "poder", nome: "Poder" },
+    origem: { chave: "origem", nome: "Origem" },
   };
+
+  /* =================================================================
+     RITUAIS COM EXIGÊNCIA PRÓPRIA PARA SEREM APRENDIDOS
+     -----------------------------------------------------------------
+     Pelo mesmo motivo de RITUAIS_DE_TRILHA (o catálogo de rituais é
+     carregado sob demanda), o que um ritual do catálogo exige além do
+     círculo fica copiado aqui — e o teste "as exigências batem com o
+     catálogo" impede que os dois divirjam. Uma cópia de ritual na ficha
+     não guarda `requisitoRitual`; é por isso que a regra pergunta pelo
+     id de catálogo.
+     ================================================================= */
+
+  var RITUAIS_COM_EXIGENCIA = {
+    "as1.ritual.passagem-de-conhecimento": {
+      elementos: ["sangue", "conhecimento"], todosOsElementos: true, fonte: AS1, pagina: 49,
+    },
+    "as1.ritual.passagem-de-conhecimento-expandido": {
+      elementos: ["sangue", "conhecimento"], todosOsElementos: true, fonte: AS1, pagina: 49,
+      requisitoRitual: "as1.ritual.passagem-de-conhecimento", nomeDoRequisito: "Passagem de Conhecimento", paginaDoRequisito: 50,
+    },
+  };
+
+  function nomeDoElemento(k) {
+    var e = C() && C().elemento ? C().elemento(k) : null;
+    return e ? e.nome : String(k || "");
+  }
+
+  /* O que o ritual exige, de onde quer que o dado tenha vindo: da
+     entrada de catálogo (biblioteca), da cópia da ficha (elementos e
+     todosOsElementos ficam em `ordem`) ou só do id de catálogo. */
+  function exigenciasDoRitual(d) {
+    var base = RITUAIS_COM_EXIGENCIA[d.catalogo] || {};
+    var todos = d.todosOsElementos === true || base.todosOsElementos === true;
+    var elementos = (d.todosOsElementos === true && Array.isArray(d.elementos) && d.elementos.length > 1)
+      ? d.elementos : (base.elementos || []);
+    return {
+      todosOsElementos: todos && elementos.length > 1,
+      elementos: elementos,
+      requisitoRitual: d.requisitoRitual || base.requisitoRitual || "",
+      nomeDoRequisito: d.nomeDoRequisito || base.nomeDoRequisito || "o ritual de origem",
+    };
+  }
+
+  /* `d.afinidade` é o elemento da afinidade JÁ DESENVOLVIDA naquela
+     etapa ("" sem afinidade) e `d.conhecidos` os ids de catálogo dos
+     rituais conhecidos. Quem não sabe responder (uma tela de consulta)
+     não manda o campo, e a exigência não é julgada ali — quem grava
+     sempre manda. */
+  function requisitosDoRitual(d) {
+    var x = exigenciasDoRitual(d || {});
+    if (x.todosOsElementos && typeof d.afinidade === "string" && x.elementos.indexOf(d.afinidade) < 0) {
+      return { ok: false, motivo: "Ritual de vários elementos (" + x.elementos.map(nomeDoElemento).join(" e ") +
+        "): aprender exige afinidade com pelo menos um deles" +
+        (d.afinidade ? ", e a afinidade desta ficha é " + nomeDoElemento(d.afinidade) : ", e esta ficha ainda não tem afinidade") +
+        " (Arquivos Secretos 1, p. 49)." };
+    }
+    if (x.requisitoRitual && Array.isArray(d.conhecidos) && d.conhecidos.indexOf(x.requisitoRitual) < 0) {
+      return { ok: false, motivo: "Só quem já conjura " + x.nomeDoRequisito + " pode aprender este ritual (Arquivos Secretos 1, p. 50)." };
+    }
+    return { ok: true, motivo: "" };
+  }
 
   /* =================================================================
      OS RITUAIS QUE UMA TRILHA CONCEDE PELO NOME
@@ -324,6 +397,26 @@
         nota: "Vem do 4º estágio do Sobrevivente Esotérico e vale mesmo em NEX 0%. Virando ocultista, soma-se aos três rituais iniciais.",
       }));
     }
+    /* Mácula Ritualística (Ferido por Ritual, AS1 p. 43): a entidade
+       marcou o personagem com um ritual de 1º círculo do elemento
+       escolhido na origem. Vem com a origem — vale em NEX 0% e para
+       qualquer classe — e não conta no limite de rituais conhecidos. */
+    if (c.macula) {
+      lista.push(concessao({
+        id: "b.origem.macula",
+        degrau: 0,
+        origem: ORIGENS.origem.chave,
+        poder: "maculaRitualistica",
+        nomePoder: "Mácula Ritualística",
+        fonte: AS1,
+        pagina: 43,
+        quantidade: 1,
+        circulos: [1],
+        elemento: c.macula,
+        rotuloEtapa: "Origem",
+        nota: "Vem da origem Ferido por Ritual. Uma vez por cena, este ritual pode ser conjurado sem gastar PE (formas avançadas e efeitos adicionais ainda custam). Em troca, –1 dado em testes de resistência contra efeitos de " + nomeDoElemento(c.macula) + ".",
+      }));
+    }
     if (!passos) return lista;
 
     concessoesDaClasse(lista, c, passos);
@@ -527,6 +620,7 @@
     if (c.destino === DESTINOS.grimorio.chave) return "Rituais do grimório";
     if (c.poder === "saberAmpliado") return "Saber Ampliado";
     if (c.poder === "escolhidoPeloOutroLado") return "Ritual de ocultista";
+    if (c.poder === "maculaRitualistica") return "Mácula Ritualística";
     return "Rituais — " + c.nomePoder;
   }
 
@@ -552,7 +646,7 @@
     var quantos = quantidade === undefined ? quantidadeDa(c, 0) : quantidade;
     var partes = [
       (c.opcional ? "Pode incluir " : "Escolha ") + quantos + (quantos === 1 ? " ritual" : " rituais") +
-      " de " + textoDosCirculos(c) + ".",
+      " de " + textoDosCirculos(c) + (c.elemento ? " de " + nomeDoElemento(c.elemento) : "") + ".",
     ];
     if (c.destino === DESTINOS.grimorio.chave) partes.push(DESTINOS.grimorio.resumo);
     if (c.contaNoLimite) partes.push("Este conta no limite de rituais conhecidos (Intelecto).");
@@ -589,11 +683,11 @@
     if (c.elemento) {
       var elementos = Array.isArray(d.elementos) && d.elementos.length ? d.elementos : (d.elemento ? [d.elemento] : []);
       if (elementos.indexOf(c.elemento) < 0) {
-        return { ok: false, motivo: "Esta concessão é de " + c.elemento + "; este ritual não é." };
+        return { ok: false, motivo: "Esta concessão é de " + nomeDoElemento(c.elemento) + "; este ritual não é." };
       }
     }
 
-    return { ok: true, motivo: "" };
+    return requisitosDoRitual(d);
   }
 
   /* =================================================================
@@ -605,6 +699,9 @@
        { tipo: "aprenderRitual", maximo } o círculo do poder na etapa
        { tipo: "campo", maximo }          o círculo que a classe lança
                                           no momento do estudo
+       { tipo: "maldicao" }               Compreensão de Maldições: o
+                                          ritual do item, de qualquer
+                                          círculo (AS1 p. 45)
        { tipo: "mesa" }                   exceção declarada: nada limita
        { tipo: "registro" }               não é aquisição
 
@@ -634,8 +731,11 @@
               : "Aprender Ritual alcança até o ") + (r.maximo || 0) + "º círculo aqui; este ritual é de " + circulo + "º.",
           };
         }
-        return { ok: true, motivo: "" };
+        return requisitosDoRitual(d);
       }
+
+      case "maldicao":
+        return requisitosDoRitual(d);
 
       case "mesa":
       case "registro":
@@ -703,6 +803,9 @@
     DESTINOS: DESTINOS,
     ORIGENS: ORIGENS,
     RITUAIS_DE_TRILHA: RITUAIS_DE_TRILHA,
+    RITUAIS_COM_EXIGENCIA: RITUAIS_COM_EXIGENCIA,
+    requisitosDoRitual: requisitosDoRitual,
+    exigenciasDoRitual: exigenciasDoRitual,
     REGRA_LENTO: REGRA_LENTO,
     REGRA_CAMPO: REGRA_CAMPO,
     DEGRAU_SABER_AMPLIADO: DEGRAU_SABER_AMPLIADO,

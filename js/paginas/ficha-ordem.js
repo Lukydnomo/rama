@@ -745,6 +745,7 @@
     if (a.via === "poderClasse") return "Poder de classe";
     if (a.via === "versatilidade") return "Versatilidade";
     if (a.via === "transcenderExposicao") return "Transcender";
+    if (a.via === "transcenderItem") return "Transcender com item";
     if (a.via === "poderOrigem") return "Origem";
     if (a.via === "alteracao") return "Alteração por NEX";
     return "Escolha";
@@ -820,6 +821,9 @@
         aq.nota ? el("p.t-mini", { texto: aq.nota }) : null,
         /* O poder da origem que se usa: os controles dele. */
         aq.origemChave && global.RAMASecaoOrigens ? global.RAMASecaoOrigens.controles(ctx, C.origem(aq.origemChave)) : null,
+        /* Os poderes que são uma ação registrável (Arquivos Secretos 1). */
+        !aq.origemChave && aq.situacao === "ok" && global.RAMASecaoOrigens && global.RAMASecaoOrigens.controlesDePoder
+          ? global.RAMASecaoOrigens.controlesDePoder(ctx, aq) : null,
       ].concat(avisos, [
         aq.referencia ? el("p.criacao-fonte", { texto: aq.referencia }) : null,
       ]);
@@ -3298,7 +3302,7 @@
       el("p.t-mini", { texto: r.efeito }),
       ES.etiquetaAutomacao(r.automacao),
       el("p.criacao-fonte", {
-        texto: (r.fonte === "SAH" ? "Sobrevivendo ao Horror" : "Ordem Paranormal RPG") + ", p. " + r.pagina,
+        texto: global.RAMAOrdemCatalogo.nomeDoLivro(r.fonte) + ", p. " + r.pagina,
       }),
     ];
 

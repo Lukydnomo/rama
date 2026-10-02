@@ -210,6 +210,22 @@
       /* --- temporário: fica até alguém tirar --- */
       temporarios: { pv: 0, pe: 0, san: 0, defesa: 0, capacidade: 0 },
 
+      /* --- Arquivos Secretos 1 (v2.29) ---
+         temporariosDeCena     pontos temporários que somem com a cena
+                               (Saúde Sobrenatural, Sangue Prazeroso,
+                               rubra): um por fonte, o novo substitui o
+                               velho da mesma fonte
+         retencoes             rituais com duração retida (regra opcional
+                               Reter Ritual): os PE retidos saem do máximo
+         maldicoesMemorizadas  as maldições que o Maledictólogo guardou
+                               (Reproduzir Maldição)
+         contadores            usos que a regra conta para sempre (doses
+                               de rubra já usadas) */
+      temporariosDeCena: [],
+      retencoes: [],
+      maldicoesMemorizadas: [],
+      contadores: {},
+
       /* --- regras opcionais ligadas --- */
       opcionais: {},
     };
@@ -529,7 +545,7 @@
         var ganho = qual === "pd" ? (ganhos.pe || 0) : (ganhos[qual] || 0);
         c.soma(tr.titulo + " (" + classe.nome + ")", ganho,
           (qual === "pd" ? "o ganho de PE da transição vale para os PD — " : "") +
-          (tr.fonte === "SAH" ? "Sobrevivendo ao Horror" : "Ordem Paranormal RPG") + ", p. " + tr.pagina);
+          C.nomeDoLivro(tr.fonte) + ", p. " + tr.pagina);
       } else {
         /* Agente de sempre — e o Mundano que virou agente, nos PD: o
            livro não tem PD de Mundano, e a transição dele dá exatamente
@@ -646,6 +662,22 @@
       if (sacrificados.length) {
         c.soma("Cicatrizado · sacrifício permanente", -sacrificados.length,
           sacrificados.length + " × 1 " + recursoDoSacrificio.toUpperCase() + " sacrificado para sempre");
+      }
+    }
+
+    /* Pontos temporários desta cena (Saúde Sobrenatural, Sangue
+       Prazeroso, rubra — AS1 p. 44, 47 e 54). */
+    temporariosDaCena(ficha, qual).forEach(function (x) {
+      c.soma(x.fonte || "Temporário", x.valor, "até o fim da cena");
+    });
+
+    /* Reter Ritual (AS1 p. 58): enquanto retido, o custo sai do máximo
+       — e é mecânica de PE, então vale para os PD sem Sanidade. */
+    if (comoPe) {
+      var retidas = retencoesValendo(ficha);
+      if (retidas.length && peRetidos(ficha)) {
+        c.soma("Rituais retidos", -peRetidos(ficha), retidas.length + " ritual(is) com duração retida — " +
+          retidas.map(function (x) { return x.nome + " " + x.pe; }).join(", ") + " (Arquivos Secretos 1, p. 58)");
       }
     }
 
@@ -1734,6 +1766,20 @@
       contaDe("mental").soma(m.fonte, atributo(ficha, m.efeito.atributo || "int"), m.detalhe);
     });
 
+    /* Sofrimento de Sangue (Transtornado Arrependido, AS1 p. 43): RD
+       mental 2, +1 a cada dois rituais ou poderes paranormais de Sangue. */
+    efeitosDoTipo(ficha, "resistenciaMentalPorSangue", inventario).forEach(function (m) {
+      var n = quantosDeSangue(ficha, inventario);
+      contaDe("mental").soma(m.fonte, (m.efeito.base || 0) + Math.floor(n.total / 2),
+        m.detalhe + " · " + (m.efeito.base || 0) + " + " + Math.floor(n.total / 2) + " (" + n.rituais + " ritual(is) e " + n.poderes + " poder(es) de Sangue)");
+    });
+
+    /* Sangue Prazeroso (AS1 p. 47): RD 5 enquanto machucado. */
+    var efeitosMachucado = efeitosDoTipo(ficha, "resistenciaDanoMachucado", inventario);
+    if (efeitosMachucado.length && machucado(ficha)) {
+      efeitosMachucado.forEach(function (m) { contaDe("geral").soma(m.fonte, m.efeito.valor, m.detalhe + " · machucado"); });
+    }
+
     var testes = conta();
     efeitosDoTipo(ficha, "resistenciaTestes", inventario).forEach(function (m) {
       testes.soma(m.fonte, m.efeito.valor, m.detalhe);
@@ -1800,7 +1846,55 @@
       /* Rituais Eficientes (Graduado, OPRPG p.35) soma +5 na DT de
          resistir a TODOS os rituais do personagem. */
       dtExtra: somaDeDtDeRitual(ficha),
+      /* Ritual Potente e Ritual Intenso (OPRPG p. 34; AS1 p. 44): o
+         atributo entra nas rolagens de dano e de cura dos rituais. */
+      rolagemExtra: somaDeRolagemDeRitual(ficha),
+      /* <Habilidade> Aprimorada (AS1 p. 46): +2 na DT de UM ritual ou
+         habilidade, +5 com duas escolhas para o mesmo. */
+      dtAprimorada: dtAprimoradaPorAlvo(ficha),
     };
+  }
+
+  function somaDeRolagemDeRitual(ficha) {
+    var total = 0;
+    var partes = [];
+    var vistos = {};
+    efeitosDaProgressao(ficha).forEach(function (ef) {
+      if (ef.tipo !== "rolagemDeRitual" || !ef.atributo || vistos[ef.fonte]) return;
+      vistos[ef.fonte] = true;
+      var v = atributo(ficha, ef.atributo);
+      total += v;
+      partes.push({ fonte: ef.fonte, valor: v, detalhe: siglaDe(ef.atributo) });
+    });
+    return { total: total, partes: partes };
+  }
+
+  function chaveDeAlvo(v) {
+    var s = String(v || "").trim().toLowerCase();
+    if (s.normalize) s = s.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+    return s.replace(/\s+/g, " ");
+  }
+
+  function dtAprimoradaPorAlvo(ficha) {
+    var contagem = {};
+    var nomes = {};
+    efeitosDaProgressao(ficha).forEach(function (ef) {
+      if (ef.tipo !== "dtAprimorada" || !ef.alvo) return;
+      var k = chaveDeAlvo(ef.alvo);
+      if (!k) return;
+      contagem[k] = (contagem[k] || 0) + 1;
+      nomes[k] = ef.alvo;
+    });
+    var saida = {};
+    Object.keys(contagem).forEach(function (k) {
+      saida[k] = { alvo: nomes[k], vezes: Math.min(2, contagem[k]), valor: contagem[k] >= 2 ? 5 : 2 };
+    });
+    return saida;
+  }
+
+  function dtAprimoradaDe(ficha, nome) {
+    var mapa = dtAprimoradaPorAlvo(ficha);
+    return mapa[chaveDeAlvo(nome)] || null;
   }
 
   function somaDeDtDeRitual(ficha) {
@@ -2125,6 +2219,11 @@
       });
     });
 
+    ficha.temporariosDeCena = normalizarTemporariosDeCena(b.temporariosDeCena);
+    ficha.retencoes = normalizarRetencoes(b.retencoes);
+    ficha.maldicoesMemorizadas = normalizarMaldicoesMemorizadas(b.maldicoesMemorizadas);
+    ficha.contadores = normalizarContadores(b.contadores);
+
     var temp = (b.temporarios && typeof b.temporarios === "object") ? b.temporarios : {};
     ["pv", "pe", "san", "defesa"].forEach(function (qual) {
       ficha.temporarios[qual] = inteiro(temp[qual], 0);
@@ -2346,6 +2445,145 @@
     }).filter(Boolean).slice(0, 60);
   }
 
+  /* =================================================================
+     ARQUIVOS SECRETOS 1 — o que a ficha guarda (v2.29)
+     ================================================================= */
+
+  var RECURSOS_TEMPORARIOS = ["pv", "pe", "pd"];
+  var CHAVE_DE_FONTE = /^[A-Za-z0-9_]{1,40}$/;
+
+  function normalizarTemporariosDeCena(bruto) {
+    var vistos = {};
+    return (Array.isArray(bruto) ? bruto : []).map(function (x) {
+      if (!x || typeof x !== "object") return null;
+      var chave = String(x.chave || "");
+      if (!CHAVE_DE_FONTE.test(chave) || RECURSOS_TEMPORARIOS.indexOf(x.recurso) < 0) return null;
+      if (vistos[chave + "|" + x.recurso]) return null;
+      vistos[chave + "|" + x.recurso] = true;
+      return {
+        chave: chave,
+        recurso: x.recurso,
+        valor: Math.max(0, Math.min(999, inteiro(x.valor, 0))),
+        cena: ID_SIMPLES.test(String(x.cena || "")) ? String(x.cena) : "",
+        fonte: String(x.fonte || "").slice(0, 80),
+      };
+    }).filter(function (x) { return x && x.valor > 0 && x.cena; }).slice(0, 12);
+  }
+
+  function normalizarRetencoes(bruto) {
+    var vistos = {};
+    return (Array.isArray(bruto) ? bruto : []).map(function (x) {
+      if (!x || typeof x !== "object") return null;
+      var id = String(x.id || "");
+      if (!ID_SIMPLES.test(id) || vistos[id]) return null;
+      vistos[id] = true;
+      var pe = Math.max(0, Math.min(99, inteiro(x.pe, 0)));
+      /* Um ritual retido de graça (Mácula) não prende PE, mas continua
+         retido: o registro vale pelo ritual, não pelo número. */
+      if (!x.nome && !x.ritualId) return null;
+      return {
+        id: id,
+        ritualId: ID_SIMPLES.test(String(x.ritualId || "")) ? String(x.ritualId) : "",
+        nome: String(x.nome || "").slice(0, 120),
+        versao: String(x.versao || "").slice(0, 40),
+        pe: pe,
+        circulo: Math.max(0, Math.min(4, inteiro(x.circulo, 0))),
+        recurso: x.recurso === "pd" ? "pd" : "pe",
+        negativo: x.negativo === true,
+        cena: ID_SIMPLES.test(String(x.cena || "")) ? String(x.cena) : "",
+        desde: carimbo(x.desde),
+      };
+    }).filter(Boolean).slice(0, 30);
+  }
+
+  function normalizarMaldicoesMemorizadas(bruto) {
+    var vistos = {};
+    var ELEMENTOS = ["sangue", "morte", "conhecimento", "energia", "medo"];
+    return (Array.isArray(bruto) ? bruto : []).map(function (x) {
+      if (!x || typeof x !== "object") return null;
+      var id = String(x.id || "");
+      var nome = String(x.nome || "").trim().slice(0, 80);
+      if (!ID_SIMPLES.test(id) || vistos[id] || !nome) return null;
+      vistos[id] = true;
+      var saida = {
+        id: id,
+        catalogoId: /^[a-z0-9.-]{1,80}$/.test(String(x.catalogoId || "")) ? String(x.catalogoId) : "",
+        nome: nome,
+        resumo: String(x.resumo || "").slice(0, 300),
+        em: carimbo(x.em),
+      };
+      if (ELEMENTOS.indexOf(x.elemento) >= 0) saida.elemento = x.elemento;
+      if (x.referencia && typeof x.referencia === "object" && /^[A-Z0-9]{2,6}$/.test(String(x.referencia.fonte || ""))) {
+        saida.referencia = { fonte: String(x.referencia.fonte), pagina: Math.max(0, Math.min(999, inteiro(x.referencia.pagina, 0))) };
+      }
+      return saida;
+    }).filter(Boolean).slice(0, 30);
+  }
+
+  var CONTADORES = ["rubra"];
+
+  function normalizarContadores(bruto) {
+    var b = bruto && typeof bruto === "object" && !Array.isArray(bruto) ? bruto : {};
+    var saida = {};
+    CONTADORES.forEach(function (k) {
+      var n = Math.max(0, Math.min(999, inteiro(b[k], 0)));
+      if (n) saida[k] = n;
+    });
+    return saida;
+  }
+
+  function cenaDe(ficha) {
+    return (ficha && ficha.condicoes && ficha.condicoes.cena && ficha.condicoes.cena.id) || "inicial";
+  }
+
+  /* Os pontos temporários desta cena, por recurso. */
+  function temporariosDaCena(ficha, recurso) {
+    var cena = cenaDe(ficha);
+    return (Array.isArray(ficha && ficha.temporariosDeCena) ? ficha.temporariosDeCena : []).filter(function (x) {
+      return x && x.recurso === recurso && x.cena === cena && x.valor > 0;
+    });
+  }
+
+  /* Reter Ritual (regra opcional, AS1 p. 58-59). Com a regra desligada
+     as retenções ficam guardadas, sem tirar nada do máximo. */
+  function retencoesValendo(ficha) {
+    var OPC = global.RAMAOrdemOpcionais;
+    if (!OPC || !OPC.ligada(ficha, "reterRitual")) return [];
+    return (Array.isArray(ficha && ficha.retencoes) ? ficha.retencoes : []).filter(Boolean);
+  }
+
+  function peRetidos(ficha) {
+    return retencoesValendo(ficha).reduce(function (t, x) { return t + x.pe; }, 0);
+  }
+
+  /* Machucado: metade dos PV ou menos (OPRPG p. 82). */
+  function machucado(ficha) {
+    var maximo = pontosDeVida(ficha).total;
+    var atual = recursoAtual(ficha, "pv", maximo);
+    return maximo > 0 && atual <= Math.floor(maximo / 2);
+  }
+
+  /* Rituais e poderes paranormais de Sangue que a ficha possui
+     (Transtornado Arrependido, AS1 p. 43). Aprender Ritual não conta
+     como poder aqui — o ritual que ele ensina já conta, e contar os dois
+     seria contar o mesmo ritual duas vezes. A segunda escolha de um
+     poder pela afinidade também não é outro poder. */
+  function quantosDeSangue(ficha, inventario) {
+    var est = estadoDe(ficha, inventario);
+    if (!est) return { rituais: 0, poderes: 0, total: 0 };
+    var vistos = {};
+    var rituais = ((est.rituais && est.rituais.aprendizados) || []).filter(function (a) {
+      if (!a || a.substituidoEm || !a.ritualId || vistos[a.ritualId]) return false;
+      if (!Array.isArray(a.elementos) || a.elementos.indexOf("sangue") < 0) return false;
+      vistos[a.ritualId] = true;
+      return true;
+    }).length;
+    var poderes = (est.adquiridos || []).filter(function (a) {
+      return a && a.valido !== false && a.tipo === "paranormal" && a.elemento === "sangue" && !a.afinidade && a.chave !== "aprenderRitual";
+    }).length;
+    return { rituais: rituais, poderes: poderes, total: rituais + poderes };
+  }
+
   /* O estado dos poderes de origem, por origem. Só campos conhecidos,
      cada um no tipo e na faixa certos: é daqui que saem PE, Sanidade e
      números da sorte. O de uma origem que a ficha não tem mais fica
@@ -2355,6 +2593,7 @@
     astronauta: { cena: "id", usos: "int" },
     chefDoOutroLado: { refeicoes: "int", partes: "lista" },
     colegial: { amigoPerdido: "bool" },
+    feridoPorRitual: { cena: "id" },
     inventorParanormal: { ativacoes: "int", enguicado: "bool" },
     jovemMistico: { numeros: "numeros", adicionar: "bool", cena: "id" },
     profetizado: { peTemporarios: "int", cena: "id" },
@@ -2413,6 +2652,13 @@
 
   global.RAMAOrdemRegras = {
     normalizar: normalizar,
+    peRetidos: peRetidos,
+    retencoesValendo: retencoesValendo,
+    temporariosDaCena: temporariosDaCena,
+    quantosDeSangue: quantosDeSangue,
+    machucado: machucado,
+    dtAprimoradaDe: dtAprimoradaDe,
+    cenaDe: cenaDe,
     fichaVazia: fichaVazia,
 
     trilho: trilho,

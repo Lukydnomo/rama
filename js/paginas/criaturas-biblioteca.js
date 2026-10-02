@@ -169,6 +169,42 @@
       return { busca: busca, nos: [grupoNatureza, grupoElementos, el("div.r-busca", {}, [el("span.r-busca__marca", {}, [UI.simbolo("busca")]), busca]), outros] };
     }
 
+    /* Ferramentas do mestre que acompanham o catálogo (AS1 p. 23). */
+    function ferramentas() {
+      if (!OC().gerarTranstornado) return null;
+      return el("div.faixa", {}, [
+        el("button.r-botao.r-botao--mini.r-botao--fantasma", {
+          type: "button", texto: "Gerador de Transtornados",
+          title: "Perfil, traços e aparência de um Transtornado (Arquivos Secretos 1, p. 23)",
+          onclick: function () { gerador(); },
+        }),
+      ]);
+    }
+
+    function gerador() {
+      var D = global.RAMADados;
+      var rolar = function (faces) { var r = D && D.total ? D.total("1d" + faces) : null; return r && r.ok ? r.total : 1 + Math.floor(Math.random() * faces); };
+      var saida = el("div.pilha--curta", { class: "pilha", role: "status", "aria-live": "polite" });
+      function sortear() {
+        var g = OC().gerarTranstornado(rolar);
+        U.trocar(saida, [
+          el("p", { texto: "Perfil: " + g.perfil + " (1d10: " + g.dados.perfil + ")" }),
+          el("p", { texto: "Traços: " + g.tracos.join("; ") + " (2d6: " + g.dados.tracos.join(" e ") + ")" }),
+          el("p", { texto: "Aparência: " + g.aparencia.join("; ") + " (d20: " + g.dados.aparencia.join(" e ") + ")" }),
+          el("p.criacao-fonte", { texto: g.referencia + ". A ficha de jogo vem do catálogo: Assecla, Investido ou Apóstolo do Sangue." }),
+        ]);
+      }
+      sortear();
+      UI.modal({
+        titulo: "Gerador de Transtornados",
+        conteudo: [saida],
+        botoes: [
+          { rotulo: "Fechar", classe: "r-botao--fantasma" },
+          { rotulo: "Sortear de novo", classe: "r-botao--principal", aoClicar: function () { sortear(); } },
+        ],
+      });
+    }
+
     function algumFiltro() {
       return !!(estado.busca || estado.livro || estado.natureza || estado.elementos.length || estado.vdMin || estado.vdMax);
     }
@@ -357,7 +393,7 @@
       indiceAtual = oficial ? estado.catalogo.indice : estado.homebrew;
       var f = filtros(indiceAtual.length, 0, oficial);
       pintarLista();
-      U.trocar(corpo, f.nos.concat([status, lista]));
+      U.trocar(corpo, f.nos.concat([oficial ? ferramentas() : null, status, lista]));
     }
 
     var janela = UI.modal({
