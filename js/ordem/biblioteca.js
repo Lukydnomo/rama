@@ -31,9 +31,13 @@
     { chave: "origens",      rotulo: "Origens" },
     { chave: "gerais",       rotulo: "Poderes gerais" },
     { chave: "paranormais",  rotulo: "Poderes paranormais" },
+    /* v2.31: os poderes de Intenção (AS2 p. 94-95), da MESMA fonte que a
+       seção Intenção da aba Habilidades usa (PODERES_INTENCAO). */
+    { chave: "intencao",     rotulo: "Poderes de Intenção" },
   ];
 
-  var ROTULO_FONTE = { OPRPG: "Livro básico", SAH: "Sobrevivendo ao Horror", AS1: "Arquivos Secretos 1", AS2: "Arquivos Secretos 2" };
+  /* O nome curto de cada livro sai do registro único (C.LIVROS). */
+  var ROTULO_FONTE = C.mapaDosLivros ? C.mapaDosLivros("curto") : { OPRPG: "Livro básico", SAH: "Sobrevivendo ao Horror", AS1: "Arquivos Secretos 1", AS2: "Arquivos Secretos 2" };
 
   function porNome(a, b) { return a.nome.localeCompare(b.nome, "pt-BR"); }
 
@@ -65,6 +69,16 @@
           entradas: P.PODERES_PARANORMAIS.filter(g.filtro).sort(porNome).map(function (p) { return { entrada: p, classe: "" }; }),
         };
       }).filter(function (s) { return s.entradas.length; });
+    }
+
+    if (aba === "intencao") {
+      return [{
+        chave: "intencao",
+        titulo: "Poderes de Intenção",
+        nota: "Arquivos Secretos 2, p. 94-95. Consultar e copiar o texto não concede o poder nem registra contato com a Coroa de Espinhos: " +
+          "o poder com efeito vem da seção Intenção da aba Habilidades, com a regra opcional Poderes de Intenção ligada.",
+        entradas: (P.PODERES_INTENCAO || []).slice().sort(porNome).map(function (p) { return { entrada: p, classe: "" }; }),
+      }];
     }
 
     if (aba === "origens") return secoesDeOrigens();
@@ -174,12 +188,33 @@
       return "Poder paranormal" + (el ? " · " + el.nome : "");
     }
     if (p.tipo === "geral") return "Poder geral";
+    if (p.tipo === "intencao") return "Poder de Intenção";
     if (p.tipo === "classe") {
       if (classe && p.classes.indexOf(classe) >= 0) return "Poder de " + nomeDaClasse(classe).toLowerCase();
       if (p.geral) return "Poder geral";
       return "Poder de " + p.classes.map(nomeDaClasse).join(" e ").toLowerCase();
     }
     return "Ordem Paranormal";
+  }
+
+  /* Gatilho, uso, efeito, duração e limites de um poder de Intenção,
+     lidos do bloco `intencao` da entrada. */
+  function detalhesDeIntencao(p) {
+    var it = p && p.intencao;
+    if (!it) return [];
+    var linhas = ["Gatilho: " + it.gatilho];
+    if (it.uso) linhas.push("Uso: " + it.uso + ".");
+    linhas.push("Efeito: " + (it.efeito === "ativo" ? "fica ativo até ser desligado" + (it.duracao === "cena" ? " ou a cena acabar" : "") : "instantâneo") + ".");
+    if (it.duracao === "cena") linhas.push("Duração: até o fim da cena.");
+    var limites = [];
+    if (it.porCena) limites.push(it.porCena + " vez(es) por cena");
+    if (it.mesmaCena) limites.push("na mesma cena em que o gatilho foi atendido");
+    if (it.tipo === "ferimentos") limites.push(it.ferimentos + " ferimentos de " + it.danoMinimo + "+ de dano para cada uso");
+    limites.push("o gatilho é atendido de novo a cada uso");
+    linhas.push("Limites: " + limites.join("; ") + ".");
+    if (it.rd) linhas.push("Enquanto ativo: RD " + it.rd + (it.perdaPorTurno ? ", e perde " + it.perdaPorTurno + " PV no início de cada turno" : "") + ".");
+    (it.versoesNpc || []).forEach(function (v) { linhas.push("Ficha de NPC — " + v.ficha + ": " + v.texto); });
+    return linhas;
   }
 
   function estagios(p) {
@@ -195,6 +230,7 @@
      conta"), e numa cópia de texto nada entra na conta. */
   function modelo(p, classe) {
     var partes = [p.resumo];
+    if (p.intencao) partes.push(detalhesDeIntencao(p).join("\n"));
     var niveis = estagios(p);
     if (niveis.length) partes.push(niveis.join(" · "));
     if (p.afinidade) partes.push("Afinidade: " + p.afinidade);
@@ -209,14 +245,97 @@
     };
   }
 
-  /* Busca por nome e resumo, sem acento e sem caixa. */
-  function filtrar(lista, termo) {
+  /* =================================================================
+     FILTROS (v2.31)
+     -----------------------------------------------------------------
+     Sobre os DADOS da entrada, nunca sobre o nome: livro (fonte),
+     elemento (o `elemento` da entrada; "intencao" nos poderes de
+     Intenção; sem o campo, "sem" — nada é deduzido), tipo e trilha (a
+     seção da aba de classe). Combinam com a busca e entre si.
+     ================================================================= */
+
+  var NOMES_TIPO = {
+    automatica: "Habilidade de classe", classe: "Poder de classe", geral: "Poder geral", paranormal: "Poder paranormal",
+    trilha: "Habilidade de trilha", sobrevivente: "Habilidade de trilha (sobrevivente)", treinamento: "Treinamento",
+    origem: "Poder de origem", intencao: "Poder de Intenção",
+  };
+
+  function tipoDe(x) {
+    var p = x.entrada;
+    if (p.tipo === "classe" && p.geral && !x.classe) return "geral";
+    return p.tipo || "";
+  }
+
+  function metadados(x, secao) {
+    var p = x.entrada;
+    return {
+      livro: p.fonte || "OPRPG",
+      elemento: p.elemento || "sem",
+      tipo: tipoDe(x),
+      trilha: secao && /^trilha\./.test(secao.chave) ? secao.chave.slice(7) : "",
+    };
+  }
+
+  function nomeDoElemento(k) {
+    if (k === "sem") return "Sem elemento";
+    if (k === "intencao") return "Intenção";
+    var e = C.elemento(k);
+    return e ? e.nome : k;
+  }
+
+  /* As opções que fazem sentido NESTA aba: só os valores presentes. */
+  function opcoesDeFiltro(lista) {
+    var achados = { livro: {}, elemento: {}, tipo: {}, trilha: {} };
+    var titulosDeTrilha = {};
+    (lista || []).forEach(function (s) {
+      s.entradas.forEach(function (x) {
+        var m = metadados(x, s);
+        achados.livro[m.livro] = true;
+        achados.elemento[m.elemento] = true;
+        achados.tipo[m.tipo] = true;
+        if (m.trilha) { achados.trilha[m.trilha] = true; titulosDeTrilha[m.trilha] = s.titulo.replace(/^Trilha · /, ""); }
+        else achados.trilha.sem = true;
+      });
+    });
+    var ordemEl = (C.ELEMENTOS_AFINIDADE || []).concat(["medo", "intencao", "sem"]);
+    return {
+      livro: C.LIVROS.filter(function (l) { return achados.livro[l.sigla]; }).map(function (l) { return { valor: l.sigla, rotulo: l.curto }; }),
+      elemento: ordemEl.filter(function (k, i) { return achados.elemento[k] && ordemEl.indexOf(k) === i; })
+        .map(function (k) { return { valor: k, rotulo: nomeDoElemento(k) }; }),
+      tipo: Object.keys(NOMES_TIPO).filter(function (k) { return achados.tipo[k]; }).map(function (k) { return { valor: k, rotulo: NOMES_TIPO[k] }; }),
+      trilha: Object.keys(achados.trilha).filter(function (k) { return k !== "sem"; }).length
+        ? [{ valor: "sem", rotulo: "Fora das trilhas" }].concat(Object.keys(titulosDeTrilha).map(function (k) { return { valor: k, rotulo: titulosDeTrilha[k] }; }))
+        : [],
+    };
+  }
+
+  /* Um filtro só vale se a opção existe nesta aba: trocar de aba mantém
+     as seleções compatíveis e larga as que não fazem sentido. */
+  function filtrosCompativeis(filtros, opcoes) {
+    var saida = {};
+    ["livro", "elemento", "tipo", "trilha"].forEach(function (k) {
+      var v = filtros && filtros[k];
+      if (v && (opcoes[k] || []).some(function (o) { return o.valor === v; })) saida[k] = v;
+    });
+    return saida;
+  }
+
+  /* Busca por nome e resumo, sem acento e sem caixa, combinada com os
+     filtros. Seções que ficam vazias saem. */
+  function filtrar(lista, termo, filtros) {
     var chave = normalizar(termo);
-    if (!chave) return lista;
+    var f = filtros || {};
     return lista.map(function (s) {
       return Object.assign({}, s, {
         entradas: s.entradas.filter(function (x) {
-          return normalizar(x.entrada.nome + " " + x.entrada.resumo + " " + (x.entrada.afinidade || "") + " " + (x.entrada.origemNome || "")).indexOf(chave) >= 0;
+          var m = metadados(x, s);
+          if (f.livro && m.livro !== f.livro) return false;
+          if (f.elemento && m.elemento !== f.elemento) return false;
+          if (f.tipo && m.tipo !== f.tipo) return false;
+          if (f.trilha && (f.trilha === "sem" ? !!m.trilha : m.trilha !== f.trilha)) return false;
+          if (!chave) return true;
+          return normalizar(x.entrada.nome + " " + x.entrada.resumo + " " + (x.entrada.afinidade || "") + " " + (x.entrada.origemNome || "") +
+            " " + (x.entrada.intencao ? x.entrada.intencao.gatilho : "")).indexOf(chave) >= 0;
         }),
       });
     }).filter(function (s) { return s.entradas.length; });
@@ -240,6 +359,11 @@
     estagios: estagios,
     modelo: modelo,
     filtrar: filtrar,
+    metadados: metadados,
+    opcoesDeFiltro: opcoesDeFiltro,
+    filtrosCompativeis: filtrosCompativeis,
+    detalhesDeIntencao: detalhesDeIntencao,
+    NOMES_TIPO: NOMES_TIPO,
     abaInicial: abaInicial,
   };
 })(typeof window !== "undefined" ? window : globalThis);

@@ -108,21 +108,35 @@
      O PAINEL NO ALTO DA ABA HABILIDADES
      ================================================================= */
 
+  /* Só as seções das regras opcionais LIGADAS nesta ficha (v2.31). Com
+     as três desligadas, nada: nem título, nem resumo, nem espaço. A
+     decisão é a de RAMAOrdemArquivo2.regraLigada — a mesma das contas. */
   function painel(ctx) {
-    if (!A2()) return null;
+    if (!A2() || !A2().regraLigada) return null;
     var o = ordemDe(ctx);
-    var partes = [painelDeIntencao(ctx, o), painelDaForma(ctx, o), painelDoHexatombe(ctx, o)].filter(Boolean);
-    var resumo = [];
-    if (o.intencao && o.intencao.poderes.length) resumo.push(o.intencao.poderes.length + " poder(es) de Intenção");
-    if (A2().formaAtiva(o)) resumo.push("forma suprema ativa");
-    var lanc = A2().lancamentosValendo(o).length;
-    if (lanc) resumo.push(lanc + " lançamento(s) do Hexatombe");
+    var secoes = [];
+    if (A2().regraLigada(o, "intencao")) {
+      var n = o.intencao && o.intencao.poderes.length;
+      secoes.push({ nome: "Intenção", corpo: painelDeIntencao(ctx, o), resumo: n ? n + " poder(es) de Intenção" : "" });
+    }
+    if (A2().regraLigada(o, "forma")) {
+      secoes.push({ nome: "forma suprema", corpo: painelDaForma(ctx, o), resumo: A2().formaAtiva(o) ? "forma suprema ativa" : "" });
+    }
+    if (A2().regraLigada(o, "hexatombe")) {
+      var lanc = A2().lancamentosValendo(o).length;
+      secoes.push({ nome: "Hexatombe", corpo: painelDoHexatombe(ctx, o), resumo: lanc ? lanc + " lançamento(s) do Hexatombe" : "" });
+    }
+    if (!secoes.length) return null;
+    var nomes = secoes.map(function (x) { return x.nome; });
+    var titulo = nomes.length > 1 ? nomes.slice(0, -1).join(", ") + " e " + nomes[nomes.length - 1] : nomes[0];
+    titulo = titulo.charAt(0).toUpperCase() + titulo.slice(1);
+    var resumo = secoes.map(function (x) { return x.resumo; }).filter(Boolean);
     return UI.recolhivel({
-      titulo: "Hexatombe, Intenção e forma suprema",
+      titulo: titulo,
       extra: resumo.join(" · ") || "Arquivos Secretos 2",
       classe: "as2-painel",
-      aberto: !!(resumo.length),
-      conteudo: el("div.pilha--curta", { class: "pilha" }, partes),
+      aberto: !!resumo.length,
+      conteudo: el("div.pilha--curta", { class: "pilha" }, secoes.map(function (x) { return x.corpo; }).filter(Boolean)),
     });
   }
 

@@ -380,7 +380,57 @@
     },
   ];
 
-  /* --- Arquivos Secretos 2 --- */
+  /* --- Arquivos Secretos 2 ---
+     Três chaves separadas (v2.31): Intenção e forma suprema valem sem
+     Hexatombe, e a participação no Hexatombe não liga as outras duas. */
+  REGRAS.push({
+    chave: "poderesDeIntencao",
+    nome: "Poderes de Intenção",
+    resumo: "O contato com a Coroa de Espinhos e os cinco poderes de Intenção, concedidos pela mesa, com gatilho, uso e efeito.",
+    fonte: AS2, pagina: 94,
+    afetaFicha: true,
+    automacao: "parcial",
+    efeito: "A aba Habilidades ganha a seção Intenção: registrar o contato, receber poderes da mesa, contar ferimentos e confirmar " +
+      "gatilhos, usar uma vez por gatilho (e por cena, quando o poder diz) e ligar o efeito. Filho da Dor soma a RD e O Sabor do " +
+      "Silêncio, o dano e a margem, só com a regra ligada.",
+    parametros: [], depende: [], incompativel: [],
+    consequencias: [
+      "Desligar encerra os efeitos de Intenção ativos e tira os modificadores deles; contato, poderes, gatilhos e usos ficam guardados e voltam ao religar — sem efeito ativo nem uso novo.",
+    ],
+  });
+
+  REGRAS.push({
+    chave: "formasSupremas",
+    nome: "Formas Supremas (As Máscaras na Sua Mesa)",
+    resumo: "A forma alternativa aprovada pela mesa: 6 SAN ao ativar e 2 por rodada, +20 PV, +10 PE e +10 na Defesa enquanto dura.",
+    fonte: AS2, pagina: 97,
+    afetaFicha: true,
+    automacao: "parcial",
+    efeito: "A aba Habilidades ganha a seção Forma suprema: configurar, aprovar, ativar (ação de movimento), manter por rodada e " +
+      "desativar. Os benefícios entram nos PV, PE e Defesa só com a regra ligada e a forma ativa.",
+    parametros: [], depende: [], incompativel: [],
+    consequencias: [
+      "Desligar com a forma ativa a encerra sem custo: os +20 PV e +10 PE saem, o que foi gasto continua gasto e religar não a reativa. A configuração e o histórico ficam guardados.",
+    ],
+  });
+
+  REGRAS.push({
+    chave: "participacaoHexatombe",
+    nome: "Participação no Hexatombe",
+    resumo: "O personagem participa do Hexatombe: dia, desertor, fome, sede, castigos e recompensas de intenção entram na ficha como lançamentos.",
+    fonte: AS2, pagina: 4,
+    afetaFicha: true,
+    automacao: "parcial",
+    efeito: "A aba Habilidades ganha a seção Hexatombe, e os lançamentos (do modo Hexatombe da campanha ou feitos aqui) passam a " +
+      "valer: PV e PE máximos, PV pela metade do desertor, testes, dano e RD. Desligada, a ficha não recebe lançamentos novos da " +
+      "campanha — eles ficam pendentes lá, com o motivo.",
+    parametros: [], depende: [], incompativel: [],
+    consequencias: [
+      "Desligar suspende os lançamentos já recebidos (ficam guardados, sem efeito) e faz a campanha deixar os novos pendentes. Religar volta a aplicar os mesmos, sem duplicar nem cobrar de novo.",
+      "Estar numa campanha com o modo Hexatombe ativo não liga esta regra: quem decide é a ficha.",
+    ],
+  });
+
   REGRAS.push({
     chave: "aliadosEmPerigo",
     nome: "Aliados em Perigo",
@@ -497,9 +547,18 @@
     if (problemas.length) return { ok: false, erro: "conflito", problemas: problemas };
 
     if (!ficha.opcionais) ficha.opcionais = {};
+    var antes = !!ficha.opcionais[chave];
     ficha.opcionais[chave] = !!ligar;
 
     var aviso = null;
+
+    /* Arquivos Secretos 2 (v2.31): desligar com efeito ativo encerra só
+       os modificadores daquela regra (js/ordem/arquivo2.js). */
+    var A2 = global.RAMAOrdemArquivo2;
+    if (antes && !ligar && A2 && A2.suspenderRegra) {
+      var susp = A2.suspenderRegra(ficha, chave);
+      if (susp && susp.aviso) aviso = susp.aviso;
+    }
 
     /* A primeira vez que NEX & Experiência é ligada numa ficha que já
        tem NEX, o nível começa no equivalente — 1 nível por 5%. É uma

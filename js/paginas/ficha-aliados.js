@@ -125,7 +125,7 @@
   function A2() { return global.RAMAOrdemArquivo2; }
   function perigoLigado(ctx) {
     var o = ctx.ficha && ctx.ficha.ordem;
-    return !!(o && A2() && global.RAMAOrdemOpcionais && global.RAMAOrdemOpcionais.ligada(o, "aliadosEmPerigo"));
+    return !!(o && A2() && A2().regraLigada(o, "perigo"));
   }
 
   function linhaDePerigo(ctx, a) {
@@ -152,7 +152,7 @@
     if (!a || !permitido(ctx)) return;
     var r = global.RAMADados.total("1d6", { nome: "Aliados em Perigo · " + a.criatura.nome });
     if (!r.ok) return;
-    var res = A2().arriscarAliado(a, A2().cenaDe(ctx.ficha.ordem), r.total, "perigo-" + U.uuid(), "");
+    var res = A2().arriscarAliado(a, A2().cenaDe(ctx.ficha.ordem), r.total, "perigo-" + U.uuid(), "", ctx.ficha.ordem);
     if (!res.ok) { UI.avisoAtencao(res.motivo); return; }
     if (global.RAMARolagens) global.RAMARolagens.mostrar(r, { nome: "Aliados em Perigo · " + a.criatura.nome,
       notas: [res.ferido ? (res.pendente ? "Ímpar: segundo ferimento nesta cena — a morte espera a confirmação da mesa." : "Ímpar: o aliado se feriu.") : "Par: o aliado segue intacto."] });

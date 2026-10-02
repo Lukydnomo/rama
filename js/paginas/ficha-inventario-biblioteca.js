@@ -177,7 +177,7 @@
 
       var lista = el("div.biblioteca-lista.bib-lista", { "aria-live": "off" });
       var status = el("p.t-mini.bib-status", { role: "status" });
-      var abas = el("div.r-abas.biblioteca-abas", { role: "group", "aria-label": "Categoria do catálogo" });
+      var abas = el("div.r-abas.r-abas--rolavel.biblioteca-abas", { role: "group", "aria-label": "Categoria do catálogo" });
       var filtros = el("div.bib-filtros");
 
       function pintarAbas() {
@@ -197,6 +197,9 @@
             },
           });
         }));
+        /* A categoria escolhida fica à vista na faixa (v2.31). */
+        var ativa = abas.querySelector('[aria-pressed="true"]');
+        if (ativa && ativa.scrollIntoView) setTimeout(function () { ativa.scrollIntoView({ block: "nearest", inline: "nearest" }); }, 0);
       }
 
       function trocarAba(chave) {

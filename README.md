@@ -547,6 +547,11 @@ segredo nenhum — ele os lê das Script Properties. Publicá-lo não expõe nad
 
 ### Atualizar o backend
 
+**v2.31.0 — CONSENTIMENTO:** as mecânicas do Hexatombe viram regras opcionais
+da ficha. Troque o `Campanhas.gs` e crie uma nova versão da implantação; publique o
+site. Não precisa de `setupRama()`. Fichas da v2.30.0 mantêm os dados, sem
+efeito até a regra ser ligada na aba Regras.
+
 **v2.30.0 — ESTIGMA:** Arquivos Secretos 2 e o modo Hexatombe. Troque os três
 `.gs`, rode **`setupRama()`** (cria a aba `CAMPANHA_HEXATOMBE`), crie uma **nova
 versão** da implantação e só então publique o site. Nada existente é convertido.

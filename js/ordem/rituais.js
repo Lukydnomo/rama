@@ -276,7 +276,8 @@
   function fontesDoCatalogo(catalogo) {
     var vistas = {};
     (catalogo ? catalogo.rituais : []).forEach(function (e) { vistas[e.fonte] = true; });
-    return Object.keys(vistas);
+    /* Na ordem de FONTES (a do registro de livros). */
+    return FONTES.filter(function (k) { return vistas[k]; }).concat(Object.keys(vistas).filter(function (k) { return FONTES.indexOf(k) < 0; }));
   }
 
   function ordenarPorNome(a, b) { return a.nome.localeCompare(b.nome, "pt-BR"); }

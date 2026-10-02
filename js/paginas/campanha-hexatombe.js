@@ -121,8 +121,14 @@
         var itens = porPersonagem[pid].slice(0, 30);
         var r = await global.RAMAApi.lancarHexatombe(ctx.campanhaId, pid, "hxl-" + U.uuid().replace(/-/g, "").slice(0, 20), estado.dia,
           itens.map(function (x) { return { desfazer: x.desfazer, lancamento: x.lancamento }; }));
-        if (r.ok) itens.forEach(function (x) { H().tirarPendente(estado, pid, x.lancamento.id, x.desfazer); });
-        else UI.avisoAtencao("A ficha de " + nomeDoPersonagem(pid) + " não recebeu os lançamentos agora; eles ficam pendentes.");
+        if (r.ok) {
+          var recusados = (r.dados && r.dados.recusados) || [];
+          itens.forEach(function (x) {
+            if (!x.desfazer && recusados.indexOf(x.lancamento.id) >= 0) H().marcarPendente(estado, pid, x.lancamento.id, r.dados.motivo);
+            else H().tirarPendente(estado, pid, x.lancamento.id, x.desfazer);
+          });
+          if (recusados.length) UI.avisoAtencao("A ficha de " + nomeDoPersonagem(pid) + " não liga a regra Participação no Hexatombe: " + recusados.length + " lançamento(s) ficam pendentes até ela ligar.");
+        } else UI.avisoAtencao("A ficha de " + nomeDoPersonagem(pid) + " não recebeu os lançamentos agora; eles ficam pendentes.");
       }
     }
 
@@ -277,6 +283,10 @@
     function painelDePendentes(e) {
       return UI.painel("Lançamentos pendentes", el("div.pilha--curta", { class: "pilha" }, [
         el("p.t-mini", { texto: e.pendentes.length + " lançamento(s) ainda não chegaram às fichas. Reenviar não duplica: cada um tem id estável." }),
+        el("ul.bib-lista-textos", {}, e.pendentes.slice(-12).map(function (x) {
+          return el("li.t-mini", { texto: nomeDoPersonagem(x.personagemId) + " · " + (x.desfazer ? "desfazer " + x.lancamento.id : (x.lancamento.motivo || x.lancamento.id)) +
+            (x.motivo === "participacao_desligada" ? " — suspenso: a ficha não liga Participação no Hexatombe" : " — aguardando envio") });
+        })),
         botao("Reenviar agora", function () { operar(function () { return { ok: true, avisos: [], lancamentos: [], desfazer: [] }; }); }),
       ]));
     }

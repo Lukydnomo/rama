@@ -862,7 +862,7 @@
   function daBibliotecaDeOrdem(ctx, pastaId, fonte) {
     var B = global.RAMAOrdemBiblioteca;
     var P = global.RAMAOrdemPoderes;
-    var estado = { origem: "oficial", aba: B.abaInicial(fonte.classe), busca: "" };
+    var estado = { origem: "oficial", aba: B.abaInicial(fonte.classe), busca: "", filtros: {}, rolagemAbas: 0, focarAba: false };
     var homebrew = null;
     var janela = el("div.pilha.biblioteca");
     var m;
@@ -879,8 +879,17 @@
         });
       })(ctx.ficha.habilidades.filhos);
       (fonte.nomes || []).forEach(function (n) { mapa[U.chaveDeBusca(n)] = "regras"; });
+      /* Poderes concedidos pelo fluxo de Intenção (v2.31): a cópia de
+         texto não os concede de novo. */
+      var o = ctx.ficha.ordem;
+      ((o && o.intencao && o.intencao.poderes) || []).forEach(function (pi) {
+        var e = P.poder(pi.chave);
+        if (e) mapa[U.chaveDeBusca(e.nome)] = "intencao";
+      });
       return mapa;
     }
+
+    var ROTULO_JA = { regras: "já vem pelas regras", arvore: "já na ficha", intencao: "concedido na Intenção" };
 
     function pintar() {
       U.trocar(janela, [
@@ -909,28 +918,65 @@
       var naFicha = nomesNaFicha();
       var lista = el("div.biblioteca-lista");
       var contagem = el("p.t-mini", { "aria-live": "polite" });
+      var todas = B.secoes(estado.aba);
+      var opcoes = B.opcoesDeFiltro(todas);
+      /* Trocar de aba mantém só as seleções que existem nesta aba. */
+      estado.filtros = B.filtrosCompativeis(estado.filtros, opcoes);
 
-      function pintarLista() {
-        var secoes = B.filtrar(B.secoes(estado.aba), estado.busca);
-        var total = secoes.reduce(function (n, s) { return n + s.entradas.length; }, 0);
-        contagem.textContent = total + " habilidade(s)" + (estado.busca ? " encontrada(s) nesta aba." : ".");
-        U.trocar(lista, secoes.length
-          ? secoes.map(function (s) { return secao(s, naFicha); })
-          : el("p.t-mini", { texto: "Nada corresponde à busca nesta aba." }));
+      function filtrando() {
+        return !!(estado.busca || Object.keys(estado.filtros).some(function (k) { return estado.filtros[k]; }));
       }
 
-      var abas = el("div.r-abas.biblioteca-abas", { role: "group", "aria-label": "Categoria" },
-        B.ABAS.map(function (a) {
+      function limpar() {
+        estado.busca = "";
+        estado.filtros = {};
+        busca.value = "";
+        U.$$("select", seletores).forEach(function (s) { s.value = ""; });
+        pintarLista();
+        busca.focus();
+      }
+
+      function pintarLista() {
+        var rolagem = lista.scrollTop;
+        var secoes = B.filtrar(todas, estado.busca, estado.filtros);
+        var total = secoes.reduce(function (n, s) { return n + s.entradas.length; }, 0);
+        contagem.textContent = total + " habilidade(s)" + (filtrando() ? " com a busca e os filtros nesta aba." : " nesta aba.");
+        botaoLimpar.hidden = !filtrando();
+        U.trocar(lista, secoes.length
+          ? secoes.map(function (s) { return secao(s, naFicha); })
+          : el("div.pilha--curta.biblioteca-vazio", { class: "pilha" }, [
+              el("p.t-mini", { texto: "Nada corresponde à busca e aos filtros nesta aba." }),
+              filtrando() ? el("button.r-botao.r-botao--mini", { type: "button", texto: "Limpar busca e filtros", onclick: limpar }) : null,
+            ]));
+        lista.scrollTop = rolagem;
+      }
+
+      var abas = el("div.r-abas.r-abas--rolavel.biblioteca-abas", { role: "group", "aria-label": "Categoria" },
+        B.ABAS.map(function (a, i) {
           return el("button.r-aba", {
             type: "button",
             "aria-pressed": String(a.chave === estado.aba),
+            "data-aba": a.chave,
             texto: a.rotulo,
-            onclick: function () {
-              estado.aba = a.chave;
-              pintar();
+            onclick: function () { trocarAba(a.chave); },
+            onkeydown: function (ev) {
+              /* Setas e Home/End andam pelas categorias. */
+              var alvo = ev.key === "ArrowRight" ? i + 1 : ev.key === "ArrowLeft" ? i - 1 : ev.key === "Home" ? 0 : ev.key === "End" ? B.ABAS.length - 1 : null;
+              if (alvo === null || alvo < 0 || alvo >= B.ABAS.length) return;
+              ev.preventDefault();
+              trocarAba(B.ABAS[alvo].chave);
             },
           });
         }));
+      abas.addEventListener("scroll", function () { estado.rolagemAbas = abas.scrollLeft; }, { passive: true });
+
+      function trocarAba(chave) {
+        estado.rolagemAbas = abas.scrollLeft;
+        if (estado.aba === chave) return;
+        estado.aba = chave;
+        estado.focarAba = true;
+        pintar();
+      }
 
       var busca = el("input.r-entrada", {
         type: "search", placeholder: estado.aba === "origens" ? "Buscar por poder ou origem" : "Buscar por nome ou efeito", "aria-label": "Buscar habilidade oficial",
@@ -938,15 +984,56 @@
         oninput: function (ev) { estado.busca = ev.target.value; pintarLista(); },
       });
 
+      function seletor(chave, rotulo, lista0, todosRotulo) {
+        if (!lista0 || lista0.length < 2 && !(lista0.length === 1 && estado.filtros[chave])) return null;
+        return el("label.ordenacao", {}, [
+          el("span.ordenacao__rotulo", { texto: rotulo }),
+          el("select.r-selecao", {
+            "aria-label": rotulo,
+            onchange: function (ev) { estado.filtros[chave] = ev.target.value; pintarLista(); },
+          }, [el("option", { value: "", texto: todosRotulo })].concat(lista0.map(function (o) {
+            return el("option", { value: o.valor, texto: o.rotulo, selected: estado.filtros[chave] === o.valor });
+          }))),
+        ]);
+      }
+
+      var seletores = el("div.faixa.biblioteca-filtros", { role: "group", "aria-label": "Filtros" }, [
+        seletor("livro", "Livro", opcoes.livro, "Todos os livros"),
+        seletor("elemento", "Elemento", opcoes.elemento, "Todos os elementos"),
+        seletor("tipo", "Tipo", opcoes.tipo, "Todos os tipos"),
+        seletor("trilha", "Trilha", opcoes.trilha, "Todas"),
+      ].filter(Boolean));
+      var botaoLimpar = el("button.r-botao.r-botao--mini.r-botao--fantasma", { type: "button", texto: "Limpar busca e filtros", onclick: limpar });
+
       pintarLista();
+
+      /* Depois de montar: a faixa volta à posição de antes e a categoria
+         escolhida fica visível (e com o foco, se veio do teclado). */
+      setTimeout(function () {
+        abas.scrollLeft = estado.rolagemAbas;
+        var ativa = abas.querySelector('[aria-pressed="true"]');
+        if (ativa) {
+          /* Pelas caixas na tela: offsetLeft depende de quem é o pai
+             posicionado, e a faixa não é. */
+          var ca = ativa.getBoundingClientRect(), cf = abas.getBoundingClientRect();
+          if (ca.left < cf.left || ca.right > cf.right) {
+            abas.scrollLeft += (ca.left - cf.left) - (cf.width - ca.width) / 2;
+          }
+          estado.rolagemAbas = abas.scrollLeft;
+          if (estado.focarAba) { ativa.focus({ preventScroll: true }); estado.focarAba = false; }
+        }
+      }, 0);
 
       return el("div.pilha", {}, [
         abas,
         el("div.r-busca", {}, [el("span.r-busca__marca", {}, [UI.simbolo("busca")]), busca]),
+        seletores.childNodes.length ? seletores : null,
         el("p.t-mini", {
-          texto: "Trazer daqui copia o texto para a lista de habilidades. Nada entra nas contas por este caminho: poderes com efeito são escolhidos na aba Progressão.",
+          texto: estado.aba === "intencao"
+            ? "Consulta e cópia de texto. Trazer daqui NÃO concede o poder, não registra o contato com a Coroa de Espinhos e não soma nada: o poder com efeito vem da seção Intenção (regra opcional Poderes de Intenção, na aba Regras)."
+            : "Trazer daqui copia o texto para a lista de habilidades. Nada entra nas contas por este caminho: poderes com efeito são escolhidos na aba Progressão.",
         }),
-        contagem,
+        el("div.faixa.faixa--entre", {}, [contagem, botaoLimpar]),
         lista,
       ]);
     }
@@ -974,9 +1061,10 @@
         el("span.escolha-marcas", {}, [
           el("span.etiqueta", { texto: B.origem(p, x.classe) }),
           el("span.etiqueta", { texto: B.ROTULO_FONTE[p.fonte] || p.fonte }),
-          ja ? el("span.etiqueta.etiqueta--calculo", { texto: ja === "regras" ? "já vem pelas regras" : "já na ficha" }) : null,
+          ja ? el("span.etiqueta.etiqueta--calculo", { texto: ROTULO_JA[ja] || "já na ficha" }) : null,
         ]),
         el("span.criacao-opcao__texto.escolha-cartao__resumo", { texto: p.resumo }),
+        p.intencao ? el("span.criacao-opcao__texto", { texto: B.detalhesDeIntencao(p).join(" ") }) : null,
         niveis.length ? el("span.criacao-opcao__texto", { texto: niveis.join(" · ") }) : null,
         p.afinidade ? el("span.criacao-opcao__texto", { texto: "Afinidade: " + p.afinidade }) : null,
         reqs.length ? el("span.criacao-opcao__fonte", { texto: "Pré-requisitos: " + reqs.join("; ") }) : null,
@@ -985,6 +1073,15 @@
     }
 
     async function escolher(x, ja) {
+      if (x.entrada.tipo === "intencao" && !ja) {
+        var okI = await UI.confirmar({
+          titulo: "Trazer " + x.entrada.nome + "?",
+          texto: "Entra uma cópia de texto, para consulta. Ela NÃO concede o poder, NÃO registra o contato com a Coroa de Espinhos e não soma nada nas contas.",
+          detalhe: "O poder com efeito é concedido pela mesa na seção Intenção da aba Habilidades, com a regra opcional Poderes de Intenção ligada.",
+          rotuloConfirmar: "Trazer a cópia",
+        });
+        if (!okI) return;
+      }
       if (x.entrada.tipo === "origem" && !ja) {
         var ok = await UI.confirmar({
           titulo: "Trazer " + x.entrada.nome + "?",
@@ -999,7 +1096,9 @@
           titulo: "Trazer " + x.entrada.nome + " de novo?",
           texto: ja === "regras"
             ? "Ela já está na lista pelas regras da ficha (aba Progressão). A cópia seria só texto, repetido."
-            : "Já existe uma habilidade com esse nome na ficha.",
+            : ja === "intencao"
+              ? "Este poder já foi concedido pela seção Intenção. A cópia seria só texto: não concede de novo nem duplica os efeitos."
+              : "Já existe uma habilidade com esse nome na ficha.",
           rotuloConfirmar: "Trazer mesmo assim",
         });
         if (!certeza) return;

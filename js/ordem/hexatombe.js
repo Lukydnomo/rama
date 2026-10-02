@@ -354,7 +354,9 @@
         var pid = idOk(x.personagemId);
         var l = x.lancamento && typeof x.lancamento === "object" ? x.lancamento : null;
         if (!pid || !l || !idOk(l.id)) return null;
-        return { personagemId: pid, desfazer: x.desfazer === true, lancamento: {
+        /* motivo: por que ainda não chegou (ex.: a ficha não liga a
+           Participação no Hexatombe, v2.31). */
+        return { personagemId: pid, desfazer: x.desfazer === true, motivo: x.motivo === "participacao_desligada" ? x.motivo : "", lancamento: {
           id: idOk(l.id), tipo: texto(l.tipo, 20), valor: inteiro(l.valor, -999, 999, 0), dia: inteiro(l.dia, 0, DIAS, 0),
           motivo: texto(l.motivo, 200), origem: texto(l.origem, 80), atualPv: inteiro(l.atualPv, -999, 0, 0), refazer: l.refazer === true,
         } };
@@ -909,6 +911,12 @@
     if (estado.pendentes.length > MAX_PENDENTES) estado.pendentes = estado.pendentes.slice(-MAX_PENDENTES);
   }
 
+  function marcarPendente(estado, personagemId, id, motivo) {
+    estado.pendentes.forEach(function (x) {
+      if (x.personagemId === personagemId && x.lancamento.id === id && !x.desfazer) x.motivo = motivo === "participacao_desligada" ? motivo : "";
+    });
+  }
+
   function tirarPendente(estado, personagemId, id, desfazer) {
     estado.pendentes = estado.pendentes.filter(function (x) {
       return !(x.personagemId === personagemId && x.lancamento.id === id && !!x.desfazer === !!desfazer);
@@ -1002,6 +1010,7 @@
     anotar: anotar,
     guardarPendentes: guardarPendentes,
     tirarPendente: tirarPendente,
+    marcarPendente: marcarPendente,
     vistaDoJogador: vistaDoJogador,
   };
 })(typeof window !== "undefined" ? window : (typeof globalThis !== "undefined" ? globalThis : this));

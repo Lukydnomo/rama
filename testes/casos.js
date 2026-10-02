@@ -1321,8 +1321,8 @@
           return k;
         };
 
-        t.igual("oito abas: três classes de agente, Mundano, Sobrevivente, origens, gerais e paranormais", OB.ABAS.map(function (a) { return a.chave; }).join(","),
-          "combatente,especialista,ocultista,mundano,sobrevivente,origens,gerais,paranormais");
+        t.igual("nove abas: três classes de agente, Mundano, Sobrevivente, origens, gerais, paranormais e Intenção", OB.ABAS.map(function (a) { return a.chave; }).join(","),
+          "combatente,especialista,ocultista,mundano,sobrevivente,origens,gerais,paranormais,intencao");
         var secOrig = OB.secoes("origens");
         var todasOrig = secOrig.reduce(function (l, s) { return l.concat(s.entradas); }, []);
         t.igual("a aba Origens lista o poder de todas as origens do catálogo", todasOrig.length, OC.ORIGENS.length);
@@ -1432,7 +1432,7 @@
 
       /* v2.20: + contagem de munição (OPRPG p. 174) e controle de
          componentes ritualísticos (da mesa). */
-      t.igual("dezesseis regras opcionais: treze do SAH, duas do Arquivos Secretos 1 e uma do 2", OP.REGRAS.length, 16);
+      t.igual("dezenove regras opcionais: treze do SAH, duas do Arquivos Secretos 1 e quatro do 2", OP.REGRAS.length, 19);
       t.iguais("  as duas do AS1 começam desligadas", ["reterRitual", "transcenderComItens"].map(function (k) { return OP.ligada(R.fichaVazia(), k); }), [false, false]);
       t.ok("as duas novas começam desligadas numa ficha nova",
         !OP.ligada(R2.fichaVazia(), "contagemMunicao") && !OP.ligada(R2.fichaVazia(), "controleComponentes"));
@@ -4585,6 +4585,11 @@
         global.RAMAOrdemItens, global.RAMAOrdemItensDados);
     }
 
+    /* v2.31 — REGRAS OPCIONAIS DO HEXATOMBE E A BIBLIOTECA */
+    if (global.RAMAOrdemArquivo2 && global.RAMAOrdemBiblioteca && RRs) {
+      casosDaV231(t, RRs, global.RAMAOrdemArquivo2, global.RAMAOrdemOpcionais, global.RAMAOrdemBiblioteca, global.RAMAOrdemPoderes);
+    }
+
     /* v2.30 — ARQUIVOS SECRETOS 2 */
     if (global.RAMAOrdemArquivo2 && global.RAMAHexatombe && global.RAMAOrdemPoderes && global.RAMAOrdemOpcionais) {
       casosDaV230(t, global.RAMAOrdemCatalogo, global.RAMAOrdemPoderes, global.RAMAOrdemArquivo2, global.RAMAHexatombe,
@@ -4811,6 +4816,112 @@
      v2.30 — ARQUIVOS SECRETOS 2
      ================================================================= */
 
+  function casosDaV231(t, R, A2, OP, B, P) {
+    function ficha(extra) {
+      var o = R.fichaVazia();
+      Object.keys(extra || {}).forEach(function (k) { o[k] = extra[k]; });
+      return R.normalizar(JSON.parse(JSON.stringify(o)));
+    }
+    var INV = { itens: [] };
+    function rdGeral(o) {
+      var d = R.calcular(o, INV).resistencias.dano.filter(function (x) { return x.tipo === "geral"; })[0];
+      return d ? d.conta.total : 0;
+    }
+    var agora = "2026-10-02T10:00:00.000Z";
+    var comTudo = {
+      classe: "combatente", origem: "academico", nex: 5,
+      recursos: { pv: 10, pe: 2, san: null, pd: null },
+      intencao: { contato: { registrado: true, em: agora }, poderes: [{ id: "int-1", chave: "filhoDaDor", concedidoEm: agora,
+        gatilho: { atendido: false }, ferimentos: [], ativo: { desde: agora, cena: "inicial" }, usos: [{ cena: "inicial", em: agora }] }] },
+      formaSuprema: { configurada: true, aprovada: true, nome: "Forma", ativa: { desde: agora, cena: "inicial", rodadasExtras: 1 }, historico: [] },
+      hexatombe: { dia: 2, lancamentos: [{ id: "hx.sede.p1.d1", tipo: "pvMax", valor: -10, dia: 2, motivo: "Sede" },
+        { id: "hx.desertor.dado.p1", tipo: "dadosTestes", valor: -1, dia: 2, motivo: "Desertor" }] },
+    };
+
+    t.grupo("v2.31 · regras opcionais do Hexatombe");
+    ["poderesDeIntencao", "formasSupremas", "participacaoHexatombe", "aliadosEmPerigo"].forEach(function (k) {
+      var r = OP.regra(k);
+      t.ok(k + ": regra do Arquivos Secretos 2, com página e efeito", !!r && r.fonte === "AS2" && r.pagina > 0 && !!r.efeito);
+    });
+    var nova = ficha({ classe: "combatente" });
+    t.ok("ficha nova: as quatro desligadas", ["intencao", "forma", "hexatombe", "perigo"].every(function (q) { return !A2.regraLigada(nova, q); }));
+    var antiga = ficha(comTudo);
+    t.ok("ficha da v2.30 com dados guardados: continua desligada (dados não são consentimento)",
+      !A2.regraLigada(antiga, "intencao") && !A2.regraLigada(antiga, "forma") && !A2.regraLigada(antiga, "hexatombe") &&
+      A2.dadosGuardados(antiga, "intencao") && A2.dadosGuardados(antiga, "forma") && A2.dadosGuardados(antiga, "hexatombe"));
+    t.iguais("  e os dados ficam intactos", [antiga.intencao.poderes.length, !!antiga.formaSuprema.ativa, antiga.hexatombe.lancamentos.length], [1, true, 2]);
+
+    var base = ficha({ classe: "combatente", origem: "academico", nex: 5 });
+    var cBase = R.calcular(base, INV);
+    var cAnt = R.calcular(antiga, INV);
+    t.iguais("desligadas, nada soma nem tira: PV, PE e Defesa iguais aos da ficha sem nada", [cAnt.pv.total, cAnt.pe.total, cAnt.defesa.total], [cBase.pv.total, cBase.pe.total, cBase.defesa.total]);
+    t.igual("  e a RD da Intenção ativa não vale", rdGeral(antiga), 0);
+    t.ok("  formaAtiva e os efeitos de Intenção respondem desligado", !A2.formaAtiva(antiga) && A2.efeitosDaIntencao(antiga).rd === 0 && A2.lancamentosValendo(antiga).length === 0);
+    t.ok("  as ações recusam com o motivo", !A2.concederIntencao(antiga, "novoCaminho").ok && A2.concederIntencao(antiga, "novoCaminho").desligada &&
+      !A2.usarIntencao(antiga, "int-1").ok && !A2.podeAtivar(antiga, false).ok && !A2.manterForma(antiga, false).ok &&
+      !A2.lancar(antiga, { id: "x", tipo: "nota" }).ok && !A2.registrarContato(antiga, "", "").ok);
+    t.ok("  o requisito do poder de Intenção pede a regra", P.poder("filhoDaDor").requisitos.some(function (r) { return r.tipo === "comRegra" && r.regra === "poderesDeIntencao"; }));
+
+    var so = ficha(Object.assign({}, comTudo, { opcionais: { formasSupremas: true } }));
+    var cSo = R.calcular(so, INV);
+    t.iguais("só Formas Supremas: +20 PV, +10 PE e +10 Defesa; Intenção e Hexatombe continuam fora",
+      [cSo.pv.total - cBase.pv.total, cSo.pe.total - cBase.pe.total, cSo.defesa.total - cBase.defesa.total, rdGeral(so)], [20, 10, 10, 0]);
+    var hx = ficha(Object.assign({}, comTudo, { opcionais: { participacaoHexatombe: true } }));
+    t.igual("só Participação no Hexatombe: o −10 PV máx. vale, sem forma nem Intenção", R.calcular(hx, INV).pv.total - cBase.pv.total, -10);
+    var it = ficha(Object.assign({}, comTudo, { opcionais: { poderesDeIntencao: true } }));
+    t.iguais("só Poderes de Intenção: a RD 25 do Filho da Dor ativo, sem participar do Hexatombe", [rdGeral(it), R.calcular(it, INV).pv.total], [25, cBase.pv.total]);
+
+    t.grupo("v2.31 · desligar com efeito ativo e religar");
+    var tudo = ficha(Object.assign({}, comTudo, { opcionais: { poderesDeIntencao: true, formasSupremas: true, participacaoHexatombe: true } }));
+    tudo.recursos.pv = 40; tudo.recursos.pe = 15;
+    var d1 = OP.definir(tudo, "formasSupremas", false);
+    t.ok("desligar Formas Supremas encerra a forma sem custo, tirando só os benefícios", d1.ok && !tudo.formaSuprema.ativa &&
+      tudo.recursos.pv === 20 && tudo.recursos.pe === 5 && tudo.formaSuprema.historico.some(function (h) { return h.tipo === "suspender" && h.custo === 0; }));
+    OP.definir(tudo, "formasSupremas", true);
+    t.ok("  religar não reativa a forma nem devolve PV", !A2.formaAtiva(tudo) && tudo.recursos.pv === 20 && tudo.formaSuprema.configurada);
+    OP.definir(tudo, "poderesDeIntencao", false);
+    t.ok("desligar a Intenção encerra o efeito ativo; usos e poderes ficam", !tudo.intencao.poderes[0].ativo && tudo.intencao.poderes[0].usos.length === 1);
+    OP.definir(tudo, "poderesDeIntencao", true);
+    t.ok("  religar não reativa o efeito", A2.efeitosDaIntencao(tudo).rd === 0 && !A2.estadoDaIntencao(tudo, tudo.intencao.poderes[0]).ativo);
+    var pvCom = R.calcular(tudo, INV).pv.total;
+    OP.definir(tudo, "participacaoHexatombe", false);
+    var pvSem = R.calcular(tudo, INV).pv.total;
+    OP.definir(tudo, "participacaoHexatombe", true);
+    t.iguais("Hexatombe: desligar suspende os lançamentos e religar devolve os MESMOS (sem duplicar)",
+      [pvSem - pvCom, R.calcular(tudo, INV).pv.total, tudo.hexatombe.lancamentos.length], [10, pvCom, 2]);
+    var volta = R.normalizar(JSON.parse(JSON.stringify(tudo)));
+    t.iguais("salvar e reabrir dá os mesmos valores", [R.calcular(volta, INV).pv.total, R.calcular(volta, INV).defesa.total], [R.calcular(tudo, INV).pv.total, R.calcular(tudo, INV).defesa.total]);
+    t.ok("Aliados em Perigo segue independente", !A2.arriscarAliado({ id: "a" }, "c", 1, "r1", "", tudo).ok && A2.arriscarAliado({ id: "a" }, "c", 1, "r1", "", { opcionais: { aliadosEmPerigo: true } }).ok);
+
+    t.grupo("v2.31 · biblioteca: poderes de Intenção e filtros");
+    var secI = B.secoes("intencao");
+    t.iguais("a aba Poderes de Intenção traz os cinco, da mesma fonte", secI[0].entradas.map(function (x) { return x.entrada.chave; }).sort(),
+      P.PODERES_INTENCAO.map(function (p) { return p.chave; }).sort());
+    var modelo = B.modelo(P.poder("desejoDiabolico"), "");
+    t.ok("a cópia traz gatilho, efeito, limites e requisitos — e é só texto", /Gatilho:/.test(modelo.texto) && /Limites:.*por cena/.test(modelo.texto) &&
+      /Coroa de Espinhos/.test(modelo.texto) && /Arquivos Secretos 2, p\. 94/.test(modelo.texto) && Object.keys(modelo).sort().join() === "nome,origem,texto");
+    t.igual("  origem curta", B.origem(P.poder("filhoDaDor"), ""), "Poder de Intenção");
+    var opPar = B.opcoesDeFiltro(B.secoes("paranormais"));
+    t.ok("filtros dos paranormais: livros e elementos presentes, sem elemento inventado",
+      opPar.livro.some(function (o) { return o.valor === "AS2"; }) && opPar.elemento.some(function (o) { return o.valor === "sangue"; }) &&
+      !opPar.elemento.some(function (o) { return o.valor === "intencao"; }));
+    t.ok("  a Intenção aparece como elemento na aba dela", B.opcoesDeFiltro(secI).elemento.map(function (o) { return o.valor; }).join() === "intencao");
+    var soSangueAs2 = B.filtrar(B.secoes("paranormais"), "", { elemento: "sangue", livro: "AS2" });
+    t.ok("livro + elemento combinam e as seções vazias saem", soSangueAs2.length === 1 &&
+      soSangueAs2[0].entradas.every(function (x) { return x.entrada.elemento === "sangue" && x.entrada.fonte === "AS2"; }) && soSangueAs2[0].entradas.length >= 2);
+    t.igual("  com a busca também", B.filtrar(B.secoes("paranormais"), "engolir", { elemento: "sangue", livro: "AS2" })[0].entradas[0].entrada.chave, "engolirSangue");
+    t.igual("  e sem resultado nenhum, nenhuma seção", B.filtrar(B.secoes("paranormais"), "xyzzy", { elemento: "sangue" }).length, 0);
+    var opComb = B.opcoesDeFiltro(B.secoes("combatente"));
+    var trilha = opComb.trilha.filter(function (o) { return o.valor !== "sem"; })[0];
+    var soTrilha = B.filtrar(B.secoes("combatente"), "", { trilha: trilha.valor });
+    t.ok("filtro de trilha na aba da classe", opComb.trilha.length > 2 && soTrilha.length === 1 && /^trilha\./.test(soTrilha[0].chave));
+    t.ok("  “Fora das trilhas” deixa os poderes e as habilidades de classe", B.filtrar(B.secoes("combatente"), "", { trilha: "sem" }).every(function (s) { return !/^trilha\./.test(s.chave); }));
+    t.iguais("trocar de aba guarda só os filtros que existem nela", B.filtrosCompativeis({ livro: "AS2", trilha: trilha.valor, elemento: "morte" }, B.opcoesDeFiltro(secI)),
+      { livro: "AS2" });
+    var tipos = B.opcoesDeFiltro(B.secoes("ocultista")).tipo.map(function (o) { return o.valor; });
+    t.ok("tipo separa habilidades de classe, poderes e trilhas", tipos.indexOf("automatica") >= 0 && tipos.indexOf("classe") >= 0 && tipos.indexOf("trilha") >= 0);
+  }
+
   function casosDaV230(t, C, P, A2, HX, OP, D, SY) {
     t.grupo("Arquivos Secretos 2 · fonte registrada");
     var as2 = C.LIVROS.filter(function (l) { return l.sigla === "AS2"; })[0];
@@ -4863,7 +4974,7 @@
     t.igual("“o próximo dano” fica guardado e é gasto uma vez", [A2.consumirPendentes(o, "dano").soma, A2.consumirPendentes(o, "dano").soma].join(","), "5,0");
 
     t.grupo("Arquivos Secretos 2 · poderes de Intenção");
-    var oi = A2.normalizar({}, {});
+    var oi = A2.normalizar({ opcionais: { poderesDeIntencao: true } }, {});
     t.ok("sem o contato registrado, nada é concedido", !A2.concederIntencao(oi, "filhoDaDor").ok);
     A2.registrarContato(oi, "Hexatombe", "mesa");
     var conc = A2.concederIntencao(oi, "filhoDaDor");
@@ -4889,7 +5000,7 @@
     t.ok("  e a segunda na mesma cena é recusada", !A2.usarIntencao(oi, dd).ok);
 
     t.grupo("Arquivos Secretos 2 · forma alternativa (As Máscaras na Sua Mesa)");
-    var of = A2.normalizar({}, { formaSuprema: { configurada: true, nome: "Forma" } });
+    var of = A2.normalizar({ opcionais: { formasSupremas: true } }, { formaSuprema: { configurada: true, nome: "Forma" } });
     t.ok("sem aprovação da mesa, não ativa", !A2.podeAtivar(of, false).ok);
     of.formaSuprema.aprovada = true;
     t.ok("Jogando sem Sanidade pede a decisão da mesa sobre o custo", !A2.podeAtivar(of, true).ok);

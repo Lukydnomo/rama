@@ -825,6 +825,12 @@ reproduzida e `transferidaDe` guarda de onde ela veio. As armas podem ter
 
 ### Arquivos Secretos 2 no bloco `ordem` (v2.30)
 
+> **v2.31:** tudo abaixo só vale com a regra opcional correspondente ligada em
+> `ordem.opcionais` (`poderesDeIntencao`, `formasSupremas`,
+> `participacaoHexatombe`, `aliadosEmPerigo`), todas `false` por padrão. Os campos
+> existem em toda ficha e nunca servem de sinal de ativação. No histórico da forma
+> suprema, `tipo: "suspender"` marca o encerramento ao desligar a regra.
+
 Campos novos e opcionais, normalizados em `js/ordem/arquivo2.js` e vazios numa
 ficha antiga. Sem subida de schema e sem conversão.
 

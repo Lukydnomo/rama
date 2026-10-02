@@ -417,7 +417,10 @@
     var elementos = unicos(function (e) { return e.elemento || null; })
       .sort(function (a, b) { return ordemElementos.indexOf(a) - ordemElementos.indexOf(b); })
       .map(function (k) { return { valor: k, rotulo: ELEMENTOS[k] || k }; });
+    /* Na ordem do registro único de livros (v2.31). */
+    var ordemFontes = (global.RAMAOrdemCatalogo && global.RAMAOrdemCatalogo.LIVROS || []).map(function (l) { return l.sigla; });
     var fontes = unicos(function (e) { return e.fonte; })
+      .sort(function (a, b) { return ordemFontes.indexOf(a) - ordemFontes.indexOf(b); })
       .map(function (k) { return { valor: k, rotulo: ROTULO_FONTE[k] || k }; });
     return { tipos: tipos, categorias: categorias, elementos: elementos, fontes: fontes };
   }

@@ -511,7 +511,7 @@
 
       var lista = el("div.biblioteca-lista.bib-lista", { "aria-live": "off" });
       var status = el("p.t-mini.bib-status", { role: "status" });
-      var filtroElemento = el("div.r-abas.biblioteca-abas", { role: "group", "aria-label": "Elemento" });
+      var filtroElemento = el("div.r-abas.r-abas--rolavel.biblioteca-abas", { role: "group", "aria-label": "Elemento" });
       var filtroCirculo = el("div.faixa.bib-chips", { role: "group", "aria-label": "Círculo" });
       var filtroFonte = el("div.bib-filtros");
 

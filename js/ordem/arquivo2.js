@@ -55,6 +55,34 @@
   function lista(v) { return Array.isArray(v) ? v : []; }
   function P() { return global.RAMAOrdemPoderes || null; }
 
+  /* =================================================================
+     AS REGRAS OPCIONAIS (v2.31) — A DECISÃO ÚNICA
+     -----------------------------------------------------------------
+     Intenção, forma suprema e participação no Hexatombe são regras
+     opcionais da ficha (js/ordem/opcionais.js), desligadas por padrão.
+     Tela, contas e ações perguntam AQUI — nunca pela existência dos
+     campos normalizados, que toda ficha tem.
+
+     Desligada, a regra não soma, não tira, não cobra e não oferece
+     ação: os dados ficam guardados, intactos, e voltam a valer quando
+     ela é religada (sem conceder nada de novo).
+     ================================================================= */
+
+  var REGRAS = { intencao: "poderesDeIntencao", forma: "formasSupremas", hexatombe: "participacaoHexatombe", perigo: "aliadosEmPerigo" };
+  var MOTIVOS = {
+    intencao: "A regra opcional Poderes de Intenção está desligada nesta ficha (Arquivos Secretos 2, p. 94).",
+    forma: "A regra opcional Formas Supremas está desligada nesta ficha (Arquivos Secretos 2, p. 97).",
+    hexatombe: "A regra opcional Participação no Hexatombe está desligada nesta ficha (Arquivos Secretos 2, p. 4–24).",
+    perigo: "A regra opcional Aliados em Perigo está desligada nesta ficha (Arquivos Secretos 2, p. 24).",
+  };
+
+  function regraLigada(ordem, qual) {
+    var OP = global.RAMAOrdemOpcionais;
+    var chave = REGRAS[qual] || qual;
+    return !!(OP && ordem && OP.ligada(ordem, chave));
+  }
+  function desligada(qual) { return { ok: false, desligada: true, motivo: MOTIVOS[qual] }; }
+
   function cenaDe(ordem) {
     return (ordem && ordem.condicoes && ordem.condicoes.cena && ordem.condicoes.cena.id) || "inicial";
   }
@@ -277,6 +305,7 @@
      ================================================================= */
 
   function registrarContato(ordem, nota, por) {
+    if (!regraLigada(ordem, "intencao")) return desligada("intencao");
     ordem.intencao = normalizarIntencao(ordem.intencao);
     ordem.intencao.contato = { registrado: true, em: agora(), nota: texto(nota, 300), por: texto(por, 80) };
     return { ok: true };
@@ -285,6 +314,7 @@
   function concederIntencao(ordem, chave, nota) {
     var e = P() ? P().poder(chave) : null;
     if (!e || e.tipo !== "intencao") return { ok: false, motivo: "Esse não é um poder de Intenção." };
+    if (!regraLigada(ordem, "intencao")) return desligada("intencao");
     ordem.intencao = normalizarIntencao(ordem.intencao);
     if (!ordem.intencao.contato.registrado) {
       return { ok: false, motivo: "Poderes de Intenção pedem contato com a Coroa de Espinhos (Arquivos Secretos 2, p. 94). Registre o contato antes." };
@@ -304,6 +334,7 @@
     var p = acharIntencao(ordem, id);
     var e = p && P() ? P().poder(p.chave) : null;
     if (!p || !e || !e.intencao || e.intencao.tipo !== "ferimentos") return { ok: false, motivo: "Este poder não conta ferimentos." };
+    if (!regraLigada(ordem, "intencao")) return desligada("intencao");
     var n = inteiro(dano, 0, 999, 0);
     if (n < (e.intencao.danoMinimo || 0)) {
       return { ok: false, motivo: "Um ferimento só conta com pelo menos " + e.intencao.danoMinimo + " pontos de dano." };
@@ -320,6 +351,7 @@
   function atenderGatilho(ordem, id, por) {
     var p = acharIntencao(ordem, id);
     if (!p) return { ok: false, motivo: "Poder não encontrado." };
+    if (!regraLigada(ordem, "intencao")) return desligada("intencao");
     if (p.gatilho.atendido) return { ok: false, motivo: "O gatilho já está atendido." };
     p.gatilho = { atendido: true, em: agora(), cena: cenaDe(ordem), por: texto(por || "confirmado pela mesa", 80) };
     return { ok: true };
@@ -331,15 +363,18 @@
     var cena = cenaDe(ordem);
     var usosNaCena = p.usos.filter(function (u) { return u.cena === cena; }).length;
     var motivo = "";
-    if (!p.gatilho.atendido) motivo = "O gatilho ainda não foi atendido.";
+    var ligada = regraLigada(ordem, "intencao");
+    if (!ligada) motivo = MOTIVOS.intencao;
+    else if (!p.gatilho.atendido) motivo = "O gatilho ainda não foi atendido.";
     else if (it.mesmaCena && p.gatilho.cena && p.gatilho.cena !== cena) motivo = "O gatilho foi atendido em outra cena; este poder pede a mesma cena.";
     else if (it.porCena && usosNaCena >= it.porCena) motivo = "Já usado nesta cena.";
     if (p.ativo && p.ativo.cena && p.ativo.cena !== cena && it.duracao === "cena") motivo = motivo || "";
     return {
       entrada: e,
-      disponivel: !motivo && !p.ativo,
+      disponivel: ligada && !motivo && !p.ativo,
       motivo: motivo,
-      ativo: !!(p.ativo && (it.duracao !== "cena" || p.ativo.cena === cena)),
+      ligada: ligada,
+      ativo: ligada && !!(p.ativo && (it.duracao !== "cena" || p.ativo.cena === cena)),
       usosNaCena: usosNaCena,
       ferimentos: p.ferimentos.length,
     };
@@ -371,6 +406,7 @@
      da Dor e o dano / a margem de O Sabor do Silêncio (só nesta cena). */
   function efeitosDaIntencao(ordem) {
     var saida = { rd: 0, danoDados: "", margem: 0, perdaPorTurno: 0, fontes: [] };
+    if (!regraLigada(ordem, "intencao")) return saida;
     ((ordem && ordem.intencao && ordem.intencao.poderes) || []).forEach(function (p) {
       var st = estadoDaIntencao(ordem, p);
       if (!st.ativo || !st.entrada) return;
@@ -399,6 +435,7 @@
   var BENEFICIOS = { pv: 20, pe: 10, defesa: 10, custoInicial: 6, custoPorRodada: 2 };
 
   function podeAtivar(ordem, comPd) {
+    if (!regraLigada(ordem, "forma")) return desligada("forma");
     var f = normalizarFormaSuprema(ordem.formaSuprema);
     if (!f.configurada) return { ok: false, motivo: "Configure a forma alternativa primeiro." };
     if (!f.aprovada) return { ok: false, motivo: "A forma alternativa precisa da aprovação da mesa (Arquivos Secretos 2, p. 97)." };
@@ -427,6 +464,7 @@
 
   function manterForma(ordem, comPd) {
     var f = ordem.formaSuprema;
+    if (!regraLigada(ordem, "forma")) return desligada("forma");
     if (!f || !f.ativa) return { ok: false, motivo: "A forma não está ativa." };
     var recurso = comPd ? (f.custoComPd === "pd" ? "pd" : "") : "san";
     f.ativa.rodadasExtras += 1;
@@ -446,7 +484,7 @@
     return { ok: true, pv: pv, pe: pe, morrendo: pv === 0 };
   }
 
-  function formaAtiva(ordem) { return !!(ordem && ordem.formaSuprema && ordem.formaSuprema.ativa); }
+  function formaAtiva(ordem) { return !!(ordem && ordem.formaSuprema && ordem.formaSuprema.ativa) && regraLigada(ordem, "forma"); }
 
   /* =================================================================
      SINTONIZAÇÕES, LITURGIA E PENDENTES
@@ -567,6 +605,7 @@
      ================================================================= */
 
   function lancar(ordem, lanc) {
+    if (!regraLigada(ordem, "hexatombe")) return desligada("hexatombe");
     ordem.hexatombe = normalizarHexatombe(ordem.hexatombe);
     var id = idOk(lanc.id) || ("lan-" + uuid());
     var existente = ordem.hexatombe.lancamentos.filter(function (l) { return l.id === id; })[0];
@@ -588,7 +627,14 @@
     return { ok: true };
   }
 
+  /* Só com a participação ligada. Os guardados (lancamentosGuardados)
+     continuam na ficha, suspensos, e voltam a valer ao religar. */
   function lancamentosValendo(ordem, tipo) {
+    if (!regraLigada(ordem, "hexatombe")) return [];
+    return lancamentosGuardados(ordem, tipo);
+  }
+
+  function lancamentosGuardados(ordem, tipo) {
     return ((ordem && ordem.hexatombe && ordem.hexatombe.lancamentos) || []).filter(function (l) {
       return !l.desfeito && (!tipo || l.tipo === tipo);
     });
@@ -610,8 +656,9 @@
 
   function perigoVazio() { return { cena: "", feridas: 0, morto: false, pendente: false, registros: [] }; }
 
-  function arriscarAliado(aliado, cena, d6, rolagemId, situacao) {
+  function arriscarAliado(aliado, cena, d6, rolagemId, situacao, ordem) {
     if (!aliado) return { ok: false, motivo: "Aliado não encontrado." };
+    if (ordem && !regraLigada(ordem, "perigo")) return desligada("perigo");
     var p = aliado.perigo && typeof aliado.perigo === "object" ? aliado.perigo : perigoVazio();
     if (!Array.isArray(p.registros)) p.registros = [];
     var id = idOk(rolagemId) || ("perigo-" + uuid());
@@ -651,7 +698,65 @@
     return { feridas: mesma ? p.feridas : 0, morto: !!p.morto, pendente: !!p.pendente };
   }
 
+  /* =================================================================
+     DESLIGAR UMA REGRA COM EFEITO ATIVO
+     -----------------------------------------------------------------
+     Chamado por RAMAOrdemOpcionais.definir ao desligar. Só tira os
+     modificadores daquela regra; o que já foi gasto fica gasto, e nada
+     volta a ficar ativo ao religar:
+
+       Intenção        efeitos ativos encerrados (gatilhos, usos e
+                       ferimentos contados ficam)
+       Forma suprema   a forma sai sem custo e sem "morrendo": os +20 PV
+                       e +10 PE guardados como atuais saem junto (os
+                       vazios já acompanham o máximo); fica no histórico
+       Hexatombe       nada a mexer: os lançamentos ficam suspensos
+     ================================================================= */
+
+  function suspenderRegra(ordem, chave) {
+    if (!ordem) return { mudou: false };
+    if (chave === REGRAS.intencao) {
+      var n = 0;
+      ((ordem.intencao && ordem.intencao.poderes) || []).forEach(function (p) {
+        if (p.ativo) { p.ativo = null; n += 1; }
+      });
+      return { mudou: n > 0, aviso: n ? n + " efeito(s) de Intenção ativo(s) encerrado(s). Gatilhos, usos e ferimentos contados ficam guardados." : "" };
+    }
+    if (chave === REGRAS.forma) {
+      var f = ordem.formaSuprema;
+      if (!f || !f.ativa) return { mudou: false };
+      f.ativa = null;
+      if (!Array.isArray(f.historico)) f.historico = [];
+      f.historico.push({ id: "fs-" + uuid(), tipo: "suspender", em: agora(), custo: 0, recurso: "san" });
+      var R = global.RAMAOrdemRegras;
+      var qualPe = R && R.usaDeterminacao && R.usaDeterminacao(ordem) ? "pd" : "pe";
+      if (ordem.recursos && typeof ordem.recursos.pv === "number") ordem.recursos.pv = Math.max(0, ordem.recursos.pv - BENEFICIOS.pv);
+      if (ordem.recursos && typeof ordem.recursos[qualPe] === "number") ordem.recursos[qualPe] = Math.max(0, ordem.recursos[qualPe] - BENEFICIOS.pe);
+      return { mudou: true, aviso: "A forma suprema ativa foi encerrada: os benefícios saíram, o que foi gasto continua gasto, e religar a regra não a reativa." };
+    }
+    if (chave === REGRAS.hexatombe) {
+      var guardados = lancamentosGuardados(ordem).length;
+      return { mudou: false, aviso: guardados ? guardados + " lançamento(s) do Hexatombe ficam guardados, sem efeito, até a regra voltar." : "" };
+    }
+    return { mudou: false };
+  }
+
+  /* Há dados guardados desta regra na ficha? Para avisar (nunca para
+     ligar sozinho). */
+  function dadosGuardados(ordem, qual) {
+    if (!ordem) return false;
+    if (qual === "intencao") return !!(ordem.intencao && (ordem.intencao.contato.registrado || ordem.intencao.poderes.length));
+    if (qual === "forma") return !!(ordem.formaSuprema && (ordem.formaSuprema.configurada || ordem.formaSuprema.historico.length));
+    if (qual === "hexatombe") return !!(ordem.hexatombe && (ordem.hexatombe.lancamentos.length || ordem.hexatombe.dia));
+    return false;
+  }
+
   global.RAMAOrdemArquivo2 = {
+    REGRAS: REGRAS,
+    regraLigada: regraLigada,
+    suspenderRegra: suspenderRegra,
+    dadosGuardados: dadosGuardados,
+    lancamentosGuardados: lancamentosGuardados,
     BENEFICIOS_DA_FORMA: BENEFICIOS,
     TIPOS_DE_LANCAMENTO: TIPOS_DE_LANCAMENTO,
     TIPOS_PENDENTES: TIPOS_PENDENTES,

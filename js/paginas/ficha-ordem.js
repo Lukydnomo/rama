@@ -3170,8 +3170,9 @@
 
         UI.painel("Regras opcionais", el("div.pilha", {}, [
           el("p.t-mini", {
-            texto: "Do Sobrevivendo ao Horror e do Livro de Regras (contagem de munição), mais o controle de componentes, " +
-                   "que é da mesa. Todas começam desligadas, e valem só para esta ficha. O Livro de Regras continua sendo a versão padrão do jogo.",
+            texto: "Do Livro de Regras (contagem de munição e componentes), do Sobrevivendo ao Horror e dos Arquivos Secretos 1 e 2 " +
+                   "(Intenção, formas supremas, participação no Hexatombe e Aliados em Perigo). Todas começam desligadas e valem só para esta ficha; " +
+                   "estar numa campanha com o modo Hexatombe não liga nenhuma. O Livro de Regras continua sendo a versão padrão do jogo.",
           }),
           el("div.pilha--curta", { class: "pilha" }, afetam.map(function (r) {
             return cartaoDeRegra(ctx, o, r);
@@ -3327,6 +3328,14 @@
 
     if (bloqueada) {
       corpo.push(el("p.t-mini.t-erro", { texto: problemas.map(function (p) { return p.texto; }).join(" ") }));
+    }
+
+    /* Arquivos Secretos 2 (v2.31): dados de antes, guardados — avisar,
+       nunca ligar sozinho. */
+    var A2 = global.RAMAOrdemArquivo2;
+    var qualA2 = { poderesDeIntencao: "intencao", formasSupremas: "forma", participacaoHexatombe: "hexatombe" }[r.chave];
+    if (!ligada && qualA2 && A2 && A2.dadosGuardados && A2.dadosGuardados(o, qualA2)) {
+      corpo.push(el("p.t-mini.t-aviso", { texto: "Esta ficha tem dados desta regra guardados. Eles não valem enquanto ela estiver desligada; ligar volta a aplicá-los, sem conceder nada de novo." }));
     }
 
     if (ligada && r.parametros.length) {

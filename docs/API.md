@@ -17,6 +17,9 @@
   desfazer? }`. Id já presente não lança de novo; `desfazer` marca; `refazer` tira a
   marca; `atualPv` negativo desce os PV atuais guardados. Tipos: `pvMax`, `peMax`,
   `pvMetade`, `rd`, `testes`, `dadosTestes`, `dano`, `nota`.
+  **v2.31:** com `ordem.opcionais.participacaoHexatombe` desligada na ficha, nenhum
+  lançamento novo entra: a resposta traz `recusados: [ids]` e
+  `motivo: "participacao_desligada"` (desfazer continua valendo).
 - `ler_campanha` devolve `hexatombe: true|false` (só se o modo está ligado).
 - `sincronizar_campanha` tem a marca nova `hexatombe`.
 - `atualizar_combate`, operação `criatura_instancia`: chave `forma` (id de

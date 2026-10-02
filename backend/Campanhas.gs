@@ -4092,7 +4092,9 @@ function acaoExcluirCombate(corpo, usuario) {
         var pid = idOk(x.personagemId);
         var l = x.lancamento && typeof x.lancamento === "object" ? x.lancamento : null;
         if (!pid || !l || !idOk(l.id)) return null;
-        return { personagemId: pid, desfazer: x.desfazer === true, lancamento: {
+        /* motivo: por que ainda não chegou (ex.: a ficha não liga a
+           Participação no Hexatombe, v2.31). */
+        return { personagemId: pid, desfazer: x.desfazer === true, motivo: x.motivo === "participacao_desligada" ? x.motivo : "", lancamento: {
           id: idOk(l.id), tipo: texto(l.tipo, 20), valor: inteiro(l.valor, -999, 999, 0), dia: inteiro(l.dia, 0, DIAS, 0),
           motivo: texto(l.motivo, 200), origem: texto(l.origem, 80), atualPv: inteiro(l.atualPv, -999, 0, 0), refazer: l.refazer === true,
         } };
@@ -4647,6 +4649,12 @@ function acaoExcluirCombate(corpo, usuario) {
     if (estado.pendentes.length > MAX_PENDENTES) estado.pendentes = estado.pendentes.slice(-MAX_PENDENTES);
   }
 
+  function marcarPendente(estado, personagemId, id, motivo) {
+    estado.pendentes.forEach(function (x) {
+      if (x.personagemId === personagemId && x.lancamento.id === id && !x.desfazer) x.motivo = motivo === "participacao_desligada" ? motivo : "";
+    });
+  }
+
   function tirarPendente(estado, personagemId, id, desfazer) {
     estado.pendentes = estado.pendentes.filter(function (x) {
       return !(x.personagemId === personagemId && x.lancamento.id === id && !!x.desfazer === !!desfazer);
@@ -4740,6 +4748,7 @@ function acaoExcluirCombate(corpo, usuario) {
     anotar: anotar,
     guardarPendentes: guardarPendentes,
     tirarPendente: tirarPendente,
+    marcarPendente: marcarPendente,
     vistaDoJogador: vistaDoJogador,
   };
 })(typeof window !== "undefined" ? window : (typeof globalThis !== "undefined" ? globalThis : this));
@@ -4902,6 +4911,12 @@ function acaoLancarHexatombe(corpo, usuario) {
     var agora = new Date().toISOString();
     var mudou = false;
     var aplicados = [];
+    var recusados = [];
+    /* v2.31: a ficha decide. Sem a regra opcional Participação no
+       Hexatombe ligada, nenhum lançamento novo entra (nem por esta via):
+       eles voltam como recusados e ficam pendentes na campanha. Desfazer
+       continua permitido — só tira efeito. */
+    var participa = !!(o.opcionais && o.opcionais.participacaoHexatombe === true);
 
     for (var i = 0; i < itens.length; i++) {
       var it = itens[i] || {};
@@ -4913,6 +4928,7 @@ function acaoLancarHexatombe(corpo, usuario) {
         aplicados.push(id);
         continue;
       }
+      if (!participa) { recusados.push(id); continue; }
       if (existente) {
         if (existente.desfeito && bruto.refazer === true) { existente.desfeito = ''; mudou = true; }
         aplicados.push(id);
@@ -4931,10 +4947,11 @@ function acaoLancarHexatombe(corpo, usuario) {
       }
     }
     if (o.hexatombe.lancamentos.length > 120) o.hexatombe.lancamentos = o.hexatombe.lancamentos.slice(-120);
-    if (String(o.hexatombe.campanhaId || '') !== String(ctx.campanha.id)) { o.hexatombe.campanhaId = String(ctx.campanha.id); mudou = true; }
-    if (dia && o.hexatombe.dia !== dia) { o.hexatombe.dia = dia; mudou = true; }
+    if (participa && String(o.hexatombe.campanhaId || '') !== String(ctx.campanha.id)) { o.hexatombe.campanhaId = String(ctx.campanha.id); mudou = true; }
+    if (participa && dia && o.hexatombe.dia !== dia) { o.hexatombe.dia = dia; mudou = true; }
+    var extra = recusados.length ? { recusados: recusados, motivo: 'participacao_desligada' } : {};
 
-    if (!mudou) return { ok: true, rev: Number(registro.rev) || 0, dados: { mudou: false, aplicados: aplicados } };
+    if (!mudou) return { ok: true, rev: Number(registro.rev) || 0, dados: Object.assign({ mudou: false, aplicados: aplicados }, extra) };
 
     ficha.atualizadoEm = agora;
     registro.atualizadoEm = agora;
@@ -4942,6 +4959,6 @@ function acaoLancarHexatombe(corpo, usuario) {
     var publicado = publicarFicha(registro, ficha, { operacao: operacao });
     if (!publicado.ok) return publicado;
     avisarMesas([registro.campanhaId], ['personagens']);
-    return { ok: true, rev: registro.rev, dados: { mudou: true, aplicados: aplicados } };
+    return { ok: true, rev: registro.rev, dados: Object.assign({ mudou: true, aplicados: aplicados }, extra) };
   });
 }

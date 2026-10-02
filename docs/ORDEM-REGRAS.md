@@ -1585,6 +1585,46 @@ Todas do **SAH**, capítulo 2, "Novas Regras Opcionais" (p.98-123). Começam
 A chave "Aplicar regras de patente" **não** é uma destas regras: é configuração
 da ficha, e começa ligada.
 
+### Regras opcionais dos Arquivos Secretos (v2.31)
+
+| regra | chave | fonte | o que controla | est. |
+|---|---|---|---|---|
+| Reter Ritual | `reterRitual` | AS1 p. 58–59 | ver a seção do AS1 | **P** |
+| Transcender com Itens | `transcenderComItens` | AS1 p. 56–57 | ver a seção do AS1 | **A** |
+| Poderes de Intenção | `poderesDeIntencao` | AS2 p. 94–95 | contato com a Coroa, concessões, gatilhos, usos, efeitos ativos e os modificadores deles (RD, dano, margem) | **P** |
+| Formas Supremas | `formasSupremas` | AS2 p. 96–97 | configurar, ativar, manter e desativar a forma; os +20 PV, +10 PE e +10 Defesa | **P** |
+| Participação no Hexatombe | `participacaoHexatombe` | AS2 p. 4–24 | dia, desertor, fome, sede, castigos e recompensas na ficha: os lançamentos (PV/PE máximos, PV pela metade, testes, dados, dano, RD) e a seção Hexatombe | **P** |
+| Aliados em Perigo | `aliadosEmPerigo` | AS2 p. 24 | o “Uso arriscado (1d6)” de cada aliado | **A** |
+
+Todas começam desligadas, também numa ficha antiga sem escolha gravada. Valem
+uma independente da outra: Intenção e forma suprema não pedem o Hexatombe, e a
+participação não liga as outras duas.
+
+**A decisão é uma só** (`RAMAOrdemArquivo2.regraLigada`, que lê
+`ordem.opcionais`): a seção da aba Habilidades, as contas de `regras.js`
+(`efeitosDaIntencao`, `formaAtiva`, `lancamentosValendo` — PV, PE, Defesa, RD,
+testes, dano e crítico), as ações (conceder, usar, ativar, manter, lançar,
+arriscar) e o requisito do poder de Intenção (`comRegra`). A existência dos campos
+normalizados, o carregamento do módulo ou estar numa campanha com o modo Hexatombe
+**não** ligam nada.
+
+**Desligar com efeito ativo** (`suspenderRegra`, chamado por `OP.definir`):
+Intenção encerra os efeitos ativos (gatilhos, usos e ferimentos ficam); a forma
+suprema ativa sai sem custo e sem “morrendo”, tirando os +20 PV e +10 PE dos
+atuais guardados, com registro `suspender` no histórico; o Hexatombe só suspende
+os lançamentos. Religar não reativa forma nem efeito, não cobra custo antigo e não
+concede de novo — os mesmos lançamentos voltam a valer, sem duplicar.
+
+**Campanha:** `lancar_hexatombe` recusa lançamentos novos numa ficha sem
+`participacaoHexatombe` (`recusados`, `motivo: "participacao_desligada"`); a aba
+Hexatombe os mantém pendentes com o rótulo “suspenso: a ficha não liga
+Participação no Hexatombe” e os reenvia quando a ficha ligar. Desfazer passa sempre.
+
+**Fichas da v2.30.0:** os dados ficam como estavam (contato, poderes, forma,
+histórico, lançamentos) e **sem efeito** até quem cuida da ficha ligar a regra na
+aba Regras — que avisa quando há dados guardados. Ligar volta a aplicá-los como
+estavam; nada é deduzido dos campos.
+
 ### Na criação guiada
 
 As regras marcadas `progressao: true` em `js/ordem/opcionais.js` — **NEX &

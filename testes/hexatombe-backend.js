@@ -27,8 +27,9 @@ export async function testarHexatombeBackend({ t, preparar, novaConta, comoFn })
   const mesa = M({ acao: "criar_campanha", dados: { nome: "Coroa" } }).dados.id;
   const outraMesa = M({ acao: "criar_campanha", dados: { nome: "Outra" } }).dados.id;
   M({ acao: "salvar_participantes", campanhaId: mesa, membros: [{ userId: ana.id, papel: "jogador" }, { userId: beto.id, papel: "jogador" }] });
-  const ficha = (nome) => ({ nome, tipoFicha: "ordem", schemaVersion: 10, ordem: { classe: "combatente", nex: 5, recursos: { pv: 18, pe: null, san: null, pd: null } } });
-  const pAna = A({ acao: "criar_personagem", dados: ficha("Ana") }).dados.id;
+  const ficha = (nome, participa) => ({ nome, tipoFicha: "ordem", schemaVersion: 10,
+    ordem: { classe: "combatente", nex: 5, opcionais: participa ? { participacaoHexatombe: true } : {}, recursos: { pv: 18, pe: null, san: null, pd: null } } });
+  const pAna = A({ acao: "criar_personagem", dados: ficha("Ana", true) }).dados.id;
   const pBeto = B({ acao: "criar_personagem", dados: ficha("Beto") }).dados.id;
   const pFora = M({ acao: "criar_personagem", dados: ficha("De fora") }).dados.id;
   A({ acao: "vincular_personagem", campanhaId: mesa, personagemId: pAna });
@@ -103,6 +104,10 @@ export async function testarHexatombeBackend({ t, preparar, novaConta, comoFn })
   lanc({ personagemId: pAna, dia: 2, itens: [{ lancamento: { id: "hx.castigo.pv.pa.s1", tipo: "pvMax", valor: -7, atualPv: -7, motivo: "Castigo" } }] });
   t.igual("“perde PV máximos e atuais”: os atuais guardados descem junto", A({ acao: "ler_personagem", personagemId: pAna }).dados.ordem.recursos.pv, 11);
   t.igual("tipo desconhecido é recusado", lanc({ personagemId: pAna, dia: 2, itens: [{ lancamento: { id: "hx.x", tipo: "pv", valor: 5 } }] }).erro, "dados_invalidos");
+  const recusa = lanc({ personagemId: pBeto, dia: 1, itens: [{ lancamento: { id: "hx.sede.pb.d1", tipo: "pvMax", valor: -10 } }] });
+  t.ok("ficha sem Participação no Hexatombe: o lançamento é recusado e volta identificado", recusa.ok && !recusa.dados.mudou &&
+    recusa.dados.recusados[0] === "hx.sede.pb.d1" && recusa.dados.motivo === "participacao_desligada");
+  t.ok("  e nada entra na ficha por esta via", !(B({ acao: "ler_personagem", personagemId: pBeto }).dados.ordem.hexatombe || { lancamentos: [] }).lancamentos.length);
   const opRepetida = "op-repetida-aaaaaaaa";
   M({ acao: "lancar_hexatombe", campanhaId: mesa, operacaoId: opRepetida, personagemId: pAna, dia: 3, itens: [{ lancamento: { id: "hx.intencao.pa.prazer", tipo: "pvMax", valor: 10 } }] });
   const rep = M({ acao: "lancar_hexatombe", campanhaId: mesa, operacaoId: opRepetida, personagemId: pAna, dia: 3, itens: [{ lancamento: { id: "hx.intencao.pa.prazer", tipo: "pvMax", valor: 10 } }] });

@@ -913,7 +913,7 @@
 
   function intencao(chave, nome, pagina, lema, resumo, dados) {
     return entrada({ chave: chave, nome: nome, tipo: "intencao", elemento: "intencao", fonte: AS2, pagina: pagina,
-      resumo: resumo, requisitos: [{ tipo: "coroaDeEspinhos" }], intencao: Object.assign({ lema: lema }, dados),
+      resumo: resumo, requisitos: [{ tipo: "comRegra", regra: "poderesDeIntencao" }, { tipo: "coroaDeEspinhos" }], intencao: Object.assign({ lema: lema }, dados),
       automacao: "parcial" });
   }
 

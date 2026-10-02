@@ -2067,6 +2067,33 @@
   font-weight: 700;
 }
 
+/* Faixa de abas que ROLA de lado (v2.31): uma linha só, barra visível
+   quando sobra conteúdo, abas sem encolher. Só nos componentes que
+   pedem isso — o .r-abas comum segue como era. */
+.r-abas--rolavel {
+  flex-wrap: nowrap;
+  min-width: 0;
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  overscroll-behavior-x: contain;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+  scrollbar-color: var(--cor-traco-media) transparent;
+  padding-bottom: var(--e1);
+  scroll-padding-inline: var(--e2);
+}
+.r-abas--rolavel::-webkit-scrollbar { display: block; height: 6px; }
+.r-abas--rolavel::-webkit-scrollbar-track { background: transparent; }
+.r-abas--rolavel::-webkit-scrollbar-thumb { background: var(--cor-traco-media); }
+.r-abas--rolavel > .r-aba { flex: 0 0 auto; white-space: nowrap; }
+.r-abas--rolavel > .r-aba:focus-visible { outline-offset: -3px; }
+
+/* A janela da biblioteca não cresce de lado por causa da faixa. */
+.biblioteca, .biblioteca > *, .biblioteca .pilha { min-width: 0; }
+.biblioteca-filtros { gap: var(--e2) var(--e3); }
+.biblioteca-filtros .r-selecao { max-width: 100%; }
+
 .biblioteca-abas .r-aba[aria-pressed="true"] {
   color: var(--cor-texto);
   font-weight: 700;

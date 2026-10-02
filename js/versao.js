@@ -70,6 +70,30 @@
 
   var CHANGELOG = [
     {
+      versao: "2.31.0", codinome: "CONSENTIMENTO", data: "02/10/2026",
+      mudancas: {
+        "Adicionado": [
+          "Regras opcionais Poderes de Intenção, Formas Supremas e Participação no Hexatombe (Arquivos Secretos 2), separadas e desligadas por padrão, ao lado de Aliados em Perigo. Intenção e forma suprema valem sem Hexatombe; estar numa campanha com o modo ativo não liga nada na ficha.",
+          "Biblioteca de habilidades: categoria Poderes de Intenção (os cinco, com gatilho, uso, efeito, duração, limites e as divergências das fichas de NPC) e filtros combináveis de livro, elemento, tipo e trilha, com contagem, estado vazio e “Limpar busca e filtros”.",
+        ],
+        "Alterado": [
+          "A aba Habilidades só mostra Intenção, forma suprema e Hexatombe com a regra ligada — cada seção na sua, com título e resumo do que aparece; sem nenhuma, nada aparece.",
+          "Uma decisão só para tela, contas e ações: com a regra desligada, os estados guardados não somam, não tiram, não cobram e não oferecem ação. Desligar com efeito ativo encerra só os modificadores daquela regra; religar não reativa, não cobra de novo e não concede de novo.",
+          "A campanha não lança mais em ficha que não liga a Participação no Hexatombe: o lançamento fica pendente na aba Hexatombe, marcado como suspenso.",
+          "A cópia de texto de um poder de Intenção avisa que não concede o poder nem registra o contato; o selo “concedido na Intenção” marca os que já vieram pelo fluxo próprio.",
+        ],
+        "Corrigido": [
+          "A faixa de categorias das bibliotecas rola de lado com barra visível, mouse, toque e teclado (setas, Home, End), mantém a posição ao redesenhar e mostra a categoria escolhida, sem alargar a janela.",
+          "Livros nos filtros de itens e rituais na ordem do registro de livros.",
+        ],
+        "Técnico": [
+          "Troque o Campanhas.gs (lancar_hexatombe respeita a ficha; responde recusados com o motivo) e crie uma nova versão da implantação. Sem setupRama().",
+          "RAMAOrdemArquivo2.regraLigada, suspenderRegra e dadosGuardados; RAMAOrdemOpcionais.definir chama a suspensão ao desligar. Fichas da v2.30.0 mantêm os dados, sem efeito até a regra ser ligada (a aba Regras avisa que há dados guardados).",
+          "Testes: 47 novos na suíte principal (2580) e 2 no backend (1159), mais os fluxos no navegador (painel oculto e por seção, biblioteca com filtros e rolagem em celular, temas claro e escuro, lançamento suspenso na campanha).",
+        ],
+      },
+    },
+    {
       versao: "2.30.0", codinome: "ESTIGMA", data: "02/10/2026",
       mudancas: {
         "Conteúdo": [

@@ -993,7 +993,7 @@
         var nomeRegra = OP() && OP().regra(r.regra) ? OP().regra(r.regra).nome : r.regra;
         var regraLigada = OP() ? OP().ligada(ordem, r.regra) : false;
         return { ok: regraLigada, texto: "Regra opcional " + nomeRegra + " ligada",
-          falta: "Só com a regra opcional " + nomeRegra + " ligada (Regras opcionais, na aba Geral)" };
+          falta: "Só com a regra opcional " + nomeRegra + " ligada (aba Regras)" };
       }
       /* "Conjurar ritual de Nº círculo [do elemento]" (AS1 p. 44-47): a
          ficha conhece, naquela etapa, um ritual de pelo menos esse
