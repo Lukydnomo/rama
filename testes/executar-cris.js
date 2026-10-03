@@ -55,7 +55,7 @@ const t = {
 const X = globalThis.RAMAImportarCris, F = globalThis.RAMAFicha, R = globalThis.RAMAOrdemRegras, E = globalThis.RAMAOrdemProgressao;
 const V = globalThis.RAMAValidacao, H = globalThis.RAMAHabilidades, IT = globalThis.RAMAOrdemItens, RS = globalThis.RAMAOrdemRituais;
 const deps = {
-  F, R, E, H, ITM: IT, RS, C: globalThis.RAMAOrdemCatalogo, P: globalThis.RAMAOrdemPoderes, U: globalThis.RAMAUtil,
+  F, R, E, H, ITM: IT, RS, C: globalThis.RAMAOrdemCatalogo, P: globalThis.RAMAOrdemPoderes, U: globalThis.RAMAUtil, V: globalThis.RAMAValidacao,
   catalogoItens: await IT.carregar(), catalogoRituais: await RS.carregar(),
 };
 
@@ -293,7 +293,7 @@ t.grupo("Gina · trilha e poderes");
 t.igual("trilha sugerida: Lâmina Paranormal", oG.trilha, "laminaparanormal");
 t.ok("habilidades da Lâmina vêm das regras", ["laminaMaldita", "gladiadorParanormal", "conjuracaoMarcial"].every((k) => oG.importacao.aquisicoes.some((a) => a.chave === k && a.representacao === "regras")));
 const saber = oG.importacao.aquisicoes.find((a) => a.chave === "saberAmpliado");
-t.ok("Saber Ampliado entra sem inferir uma segunda trilha", saber && saber.representacao === "importada" && /fora da trilha/.test(saber.procedencia));
+t.ok("Saber Ampliado entra sem inferir uma segunda trilha (provável Versatilidade)", saber && saber.representacao === "importada" && oG.trilha === "laminaparanormal" && /Versatilidade/.test(saber.procedencia));
 t.ok("Expansão de Conhecimento não abre vaga nem duplica", !estG.pendencias.some((p) => /outraClasse|poderClasse/.test(p.id)) && estG.adquiridos.filter((a) => a.chave === "expansaoDeConhecimento").length === 1);
 t.ok("Golpe Pesado: provável Expansão de Conhecimento", /Expansão de Conhecimento/.test(oG.importacao.aquisicoes.find((a) => a.chave === "golpePesado").procedencia));
 t.ok("Sangue de Ferro: procedência vs. Dedo Decepado na revisão", revisao(rG, "procedencia:ce4d4548-c4bf-4f7b-9523-2ba79a670859") !== undefined);
@@ -427,6 +427,58 @@ t.grupo("Sintéticos · bordas");
   t.ok("descrição em anotações, como texto puro", notas && notas.notas.some((n) => n.titulo === "História" && n.conteudo === "Linha 1\n\nLinha 2"));
   t.ok("a nota de origem guarda o link e não sincroniza", notas.notas[0].conteudo.includes(LINK_S) && /não sincronizam/.test(notas.notas[0].conteudo));
   t.ok("nada do documento bruto do CRIS fica na ficha", !JSON.stringify(r.ficha).includes("\"skills\""));
+}
+
+/* =====================================================================
+   MEKO — ficha do CRIS refeita à mão no R.A.M.A. (v2.34.3)
+   Os valores-alvo saem da ficha manual: o que a importação monta tem de
+   dar a mesma conta, pelos mesmos motivos.
+   ===================================================================== */
+const meko = await ler("meko-retrato.json");
+const rM = converter(meko);
+const fM = rM.ficha, oM = fM.ordem, cM = calcular(fM);
+const aqM = (nome) => oM.importacao.aquisicoes.find((a) => a.nomeOriginal === nome);
+t.grupo("Meko · contra a ficha refeita à mão");
+t.iguais("Especialista T.I., Atirador de Elite, nível 10 · exposição 50%", [oM.classe, oM.origem, oM.trilha, oM.nivel, oM.nex], ["especialista", "ti", "atirador", 10, 50]);
+t.iguais("PV 53, PE 54, SAN 52 (como na manual)", [cM.pv.total, cM.pe.total, cM.san.total], [53, 54, 52]);
+t.ok("  o +4 de PE vem de Coincidências Inexplicáveis (AGI), não de ajuste", !oM.ajustes.some((a) => a.alvo === "pe") && cM.pe.parcelas.some((x) => /Coincid/i.test(x.rotulo) && x.valor === 4));
+t.iguais("Defesa 24, bloqueio 15, esquiva 34, deslocamento 9, limite de PE 10", [cM.defesa.total, cM.bloqueio.total, cM.esquiva.total, cM.deslocamento.total, cM.limitePe.total], [24, 15, 34, 9, 10]);
+t.ok("alterações de exposição reconhecidas (Arrepios na Espinha e Coincidências Inexplicáveis)", aqM("NEX 25% - Arrepios na Espinha").chave === "alteracao25" && aqM("NEX 35% - Coincidências Inexplicáveis").chave === "alteracao35");
+t.iguais("  Coincidências: AGI e Atletismo, inferidos dos números do CRIS", aqM("NEX 35% - Coincidências Inexplicáveis").opcoes, { atributo: "agi", penalidade: "atletismo" });
+t.ok("  Atletismo 0 pela penalidade, sem ajuste avulso", R.bonusDePericia(oM, "atletismo", fM.inventario).total === 0 && !oM.ajustes.some((a) => a.alvo === "pericia:atletismo"));
+t.ok("  Arrepios: a perícia penalizada fica para a revisão (o CRIS não deixa inferir)", (rM.pendencias.find((p) => /Arrepios/.test(p.rotulo)) || {}).valor === "");
+t.igual("  Ocultismo 14 = veterano 10 + Arrepios 2 + 2 do CRIS", R.bonusDePericia(oM, "ocultismo", fM.inventario).total, 14);
+{
+  const chave = rM.pendencias.find((p) => /Arrepios/.test(p.rotulo)).chave;
+  const r2 = converter(meko, { [chave]: "intimidacao" });
+  const conta = R.bonusDePericia(r2.ficha.ordem, "intimidacao", r2.ficha.inventario);
+  t.ok("  escolhendo Intimidação: −5 + Sensitivo 5 + 2, como na manual", conta.total === 2 && conta.parcelas.some((x) => /Arrepios/i.test(x.rotulo) && x.valor === -5) && r2.ficha.ordem.ajustes.some((a) => a.alvo === "pericia:intimidacao" && a.valor === 2));
+}
+t.ok("Combater com Duas Armas e Ataque de Oportunidade: poderes de outra classe", aqM("Combater com Duas Armas").chave === "combaterComDuasArmas" && /Especialista Diletante/.test(aqM("Ataque de Oportunidade").procedencia));
+t.ok("Paramédico: provável Versatilidade", /Versatilidade/.test(aqM("NEX 10% - Paramédico").procedencia));
+t.ok("“Balas Curtas (Explosiva)”: a modificação do nome é aplicada", (arma(fM, "Balas Curtas (Explosiva)").ordem.modificacoes || []).some((m) => m.nome === "Explosiva") && aviso(rM, "mod_do_nome").length === 2);
+t.iguais("Revólver 3d6 19/x3; Fuzil 3d8 19/x3", [efetiva(fM, arma(fM, "Revólver")).dano, efetiva(fM, arma(fM, "Revólver")).margem, efetiva(fM, arma(fM, "Fuzil de Caça")).dano, efetiva(fM, arma(fM, "Fuzil de Caça")).multiplicador], ["3d6", 19, "3d8", 3]);
+t.ok("Capturar Momento do catálogo (Arquivos Secretos 2)", fM.rituais.itens[0].origemCatalogoId === "as2.ritual.capturar-momento");
+t.igual("13 itens, um por linha do CRIS", fM.inventario.itens.length, 13);
+
+t.grupo("Conferência da ficha criada");
+for (const [nome, r] of [["Jeff", rJ], ["Gina", rG], ["Meko", rM]]) {
+  t.ok(nome + ": todos os valores conferidos, na ficha e depois de exportar e importar, sem divergência",
+    r.conferencia.divergente === 0 && r.conferencia.arquivo === true && r.conferencia.total >= 100,
+    JSON.stringify(r.conferencia) + " " + r.comparacao.filter((l) => l.situacao === "divergente").map((l) => l.campo + ": " + l.problema).join("; "));
+}
+t.ok("cada linha tem grupo, situação e valor final", rG.comparacao.every((l) => l.grupo && l.situacao && "final" in l && !("ler" in l)));
+t.ok("grupos cobertos: identidade, atributos, recursos, defesas, perícias, itens, ataques, rituais, poderes e contagens",
+  ["Identidade", "Atributos", "Recursos", "Defesas", "Perícias", "Itens", "Ataques", "Rituais", "Poderes", "Contagens"].every((g) => rG.comparacao.some((l) => l.grupo === g)));
+t.ok("perícia conferida por grau e atributo, além do total", rJ.comparacao.some((l) => l.campo === "Intuição · grau e atributo" && l.final === "Destreinado · PRE"));
+t.ok("ataque conferido por dano, crítico, perícia e teste", ["· dano", "· margem e multiplicador", "· perícia e atributo do dano", "· bônus no teste"].every((suf) => rJ.comparacao.some((l) => l.campo === "Ataque Faca " + suf)));
+{
+  const exagero = converter(sintetico({ bonusDefense: 400 }));
+  const linhaDef = exagero.comparacao.find((l) => l.campo === "Defesa");
+  t.ok("a conferência pega o que não fecha (bônus de Defesa acima do limite do R.A.M.A.)", linhaDef.situacao === "divergente" && aviso(exagero, "conferencia_divergente").length === 1);
+  const mil = converter(sintetico({ className: "Combatente", nex: "5%", attacks: [{ id: "z", name: "Piada", damage: "1d4", criticalRange: 1, criticalMult: 999, skillUsed: "Luta", damageAttribute: "Força", aditionalDamage: [] }] }));
+  t.ok("crítico ×999: fica ×10, com aviso, sem divergência", mil.conferencia.divergente === 0 && aviso(mil, "critico_fora_do_limite").length === 1 &&
+    efetiva(mil.ficha, mil.ficha.inventario.itens.find((i) => /Piada/.test(i.nome))).multiplicador === 10);
 }
 
 t.grupo("Sintéticos · formatos vistos em fichas reais do CRIS (v2.34.1)");

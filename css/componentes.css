@@ -3151,13 +3151,16 @@ html.arrastando * {
 .cris-detalhes[open] > summary { margin-bottom: var(--e2); }
 .cris-tabela__rolagem { overflow-x: auto; max-width: 100%; }
 .cris-tabela__rolagem:focus-visible { outline: 2px solid var(--cor-traco-forte); outline-offset: 2px; }
-.cris-tabela { width: 100%; border-collapse: collapse; font-size: 0.875rem; }
+.cris-tabela { width: 100%; border-collapse: collapse; font-size: 0.8125rem; table-layout: fixed; }
 .cris-tabela th,
 .cris-tabela td { text-align: left; vertical-align: top; padding: var(--e1) var(--e2); border-bottom: 1px solid var(--cor-traco-fraca); }
 .cris-tabela thead th { border-bottom-color: var(--cor-traco-media); white-space: nowrap; }
+.cris-tabela th[scope="row"] { width: 22%; }
 .cris-tabela td:nth-child(2),
 .cris-tabela td:nth-child(3),
-.cris-tabela td:nth-child(4) { white-space: nowrap; }
+.cris-tabela td:nth-child(4) { width: 13%; overflow-wrap: anywhere; }
+.cris-tabela td:nth-child(5) { width: 11%; }
+.cris-tabela td:nth-child(6) { width: 28%; }
 .cris-tabela__igual { color: var(--cor-texto-3); }
 
 /* No celular, cada linha vira um bloco: o campo em cima e os valores com
@@ -3167,5 +3170,23 @@ html.arrastando * {
   .cris-tabela tr { display: block; padding: var(--e2) 0; border-bottom: 1px solid var(--cor-traco-fraca); }
   .cris-tabela th,
   .cris-tabela td { display: block; border: 0; padding: 0 0 var(--e1) 0; white-space: normal !important; }
+  .cris-tabela { table-layout: auto; }
+  .cris-tabela th, .cris-tabela td { width: auto !important; }
   .cris-tabela td::before { content: attr(data-rotulo) ": "; font-weight: 600; }
+}
+
+/* Conferência da importação (v2.34.3): situação de cada valor. As cores
+   vêm dos tokens do tema; o rótulo escrito diz a situação sem depender
+   da cor. */
+.cris-contagem { display: flex; flex-wrap: wrap; gap: var(--e2); list-style: none; margin: 0; padding: 0; }
+.cris-situacao { display: inline-block; padding: 0 var(--e1); border: 1px solid currentColor; font-size: 0.75rem; }
+.cris-situacao--divergente { color: var(--cor-erro); font-weight: 600; }
+.cris-situacao--regra { color: var(--cor-azul); }
+.cris-situacao--ajustado { color: var(--cor-aviso); }
+.cris-situacao--conferir { color: var(--cor-texto-3); }
+.cris-situacao--igual { color: var(--cor-ok); }
+.cris-tabela__grupo th { padding-top: var(--e3); border-bottom: 1px solid var(--cor-traco-media); text-transform: uppercase; letter-spacing: 0.04em; font-size: 0.8125rem; }
+.cris-tabela__divergente th[scope="row"] { color: var(--cor-erro); }
+@media (max-width: 600px) {
+  .cris-tabela__grupo th { display: block; }
 }

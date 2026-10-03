@@ -560,6 +560,8 @@ segredo nenhum — ele os lê das Script Properties. Publicá-lo não expõe nad
 
 ### Atualizar o backend
 
+**v2.34.2 — CONTRAPROVA:** só o site muda; publique o site.
+
 **v2.34.1 — BAGAGEM:** troque o `Cris.gs` e crie uma **nova versão** da
 implantação; publique o site.
 

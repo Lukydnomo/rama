@@ -522,6 +522,27 @@ revisão; o padrão mantém o número do CRIS), Defesa/bloqueio/esquiva
 (`bonusExtra`), deslocamento e limite de PE. Os recursos atuais entram depois
 dos máximos finais, zero incluído — sem descanso e sem completar.
 
+### A conferência (v2.34.2)
+
+Cada valor que o CRIS mostra vira uma linha da conferência, agrupada por
+assunto (identidade, atributos, recursos, defesas, perícias, carga, itens,
+ataques, rituais, poderes, contagens). A linha guarda o valor do CRIS, o que o
+R.A.M.A. calcula com o que foi reconhecido (antes de ajuste) e sabe reler o
+próprio valor numa ficha. No fim da conversão ela é relida três vezes: na
+ficha preparada, na ficha **normalizada** (a que `criar_personagem` grava) e
+depois de **exportar e importar** o arquivo. A situação de cada linha:
+
+| Situação | Quando |
+|---|---|
+| Igual | a ficha criada mostra o mesmo valor do CRIS |
+| Ajustado | igual ao CRIS por um ajuste importado, com motivo |
+| Regra do R.A.M.A. | diferente do CRIS por uma regra automatizada ou por decisão da revisão |
+| Para conferir | valor de conferência, sem ajuste (carga, trilha, poderes) |
+| Divergente | o valor muda no caminho, ou devia bater com o CRIS e não bate |
+
+Divergência vira aviso de revisão (exige marcar "Revisei" antes de criar). A
+suíte `testes/executar-cris.js` exige zero divergência nos casos reais.
+
 ### Diferenças mecânicas conhecidas (CRIS × R.A.M.A.)
 
 | Ponto | CRIS | R.A.M.A. | Na importação |

@@ -70,6 +70,27 @@
 
   var CHANGELOG = [
     {
+      versao: "2.34.2", codinome: "CONTRAPROVA", data: "03/10/2026",
+      mudancas: {
+        "Adicionado": [
+          "Importar do CRIS: conferência completa da ficha que será criada. Cada valor que o CRIS mostra (identidade, atributos, recursos atuais e máximos, defesas, cada perícia com grau, atributo e total, carga, cada item, cada ataque com dano, crítico, perícia e teste, cada ritual, poderes e contagens) é relido na ficha já normalizada e de novo depois de exportar e importar; o que não sai como o esperado aparece como “Divergente”. A tabela agrupa por assunto, conta cada situação e abre só com o que difere.",
+        ],
+        "Melhorado": [
+          "Importar do CRIS reconhece as alterações de exposição do NEX & Experiência (Arrepios na Espinha, Coincidências Inexplicáveis); as opções que mudam contas vão para a revisão, com a sugestão quando os números do CRIS apontam uma só (o atributo somado aos PE, a perícia com −5).",
+          "Procedência mais precisa: “provavelmente Versatilidade” para o primeiro poder de outra trilha da classe e “Especialista Diletante ou Expansão de Conhecimento” para poderes de outra classe.",
+          "Uma modificação escrita só no nome do item (“Balas Curtas (Explosiva)”) é aplicada quando o catálogo a tem e ela cabe no item.",
+        ],
+        "Corrigido": [
+          "Expansão de Conhecimento e Especialista Diletante oferecem também os poderes de classe que o Sobrevivendo ao Horror abre a todos (Combater com Duas Armas e outros).",
+          "Importar do CRIS: um crítico fora do que o R.A.M.A. aceita (×999) fica no limite (×10) com aviso, em vez de virar ×7 sem explicação; o ataque sem item nasce com a margem e o multiplicador do CRIS.",
+          "Importar do CRIS: o aviso de dado subtraído aparecia em ataques sem dado subtraído.",
+        ],
+        "Técnico": [
+          "Só o site muda; o Apps Script não precisa de nova versão. Testes: 25 novos na importação, com o caso Meko (ficha do CRIS refeita à mão no R.A.M.A.) e a conferência sem divergência em 13 fichas reais.",
+        ],
+      },
+    },
+    {
       versao: "2.34.1", codinome: "BAGAGEM", data: "03/10/2026",
       mudancas: {
         "Corrigido": [

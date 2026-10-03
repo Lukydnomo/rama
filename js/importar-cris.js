@@ -300,7 +300,7 @@
     var nomesDePoderes = poderes.map(function (p) { return chaveDeTexto(p.name); });
     var porNome = {};
     P.TODOS.forEach(function (e) {
-      if (["classe", "geral", "paranormal", "trilha", "automatica", "sacrificio", "intencao"].indexOf(e.tipo) < 0) return;
+      if (["classe", "geral", "paranormal", "trilha", "automatica", "sacrificio", "intencao", "alteracao"].indexOf(e.tipo) < 0) return;
       (porNome[chaveDeTexto(e.nome)] = porNome[chaveDeTexto(e.nome)] || []).push(e);
     });
 
@@ -343,7 +343,7 @@
       var at = atributoDeTexto(s.attribute);
       if (at && at !== pe.atributo) o.periciasAjustes[pe.chave] = { atributo: at };
       var b = numeroOuNulo(s.bonus);
-      if (b !== null) periciasCris[pe.chave] = { bonus: b, outros: numeroOuNulo(s.otherBonus), nome: pe.nome };
+      periciasCris[pe.chave] = { bonus: b, outros: numeroOuNulo(s.otherBonus), nome: pe.nome, grau: grau, atributo: at || pe.atributo };
     });
 
     /* ---------- inventário ---------- */
@@ -537,6 +537,20 @@
             : "o R.A.M.A. não aceitaria essa combinação (" + String(r.motivo || "conferência do catálogo").replace(/\.+$/, "") + "); a modificação foi mantida como está no CRIS."));
         }
       });
+      /* "Balas Curtas (Explosiva)": a modificação só está no nome. Entra
+         quando o catálogo a tem com esse nome e ela cabe no item. */
+      var parNome = entrada ? /\(([^)]*)\)\s*$/.exec(String(it.name || "")) : null;
+      if (parNome) {
+        parNome[1].split(",").forEach(function (parte) {
+          var kp = chaveDeTexto(parte);
+          if (!kp) return;
+          var jaTem = (item.ordem.modificacoes || []).some(function (m) { return chaveDeTexto(m.nome) === kp; });
+          var mod = jaTem ? null : catItens.itens.filter(function (e) { return (e.natureza === "modificacao" || e.natureza === "maldicao") && chaveDeTexto(e.nome) === kp && ITM.podeAplicar(e, item).ok; })[0];
+          if (!mod || (mod.escolha && !(mod.escolha.opcional))) return;
+          var r = ITM.aplicar(mod, item, {});
+          if (r.ok) aviso("mod_do_nome", "informacao", "inventory." + i, "“" + it.name + "”: a modificação " + mod.nome + " estava só no nome e foi aplicada.");
+        });
+      }
       if (modsNaoReconhecidos.length) {
         var textoMods = modsNaoReconhecidos.map(function (m) { return "• " + m.name + (m.description ? ": " + textoSeguro(m.description, 400) : ""); }).join("\n");
         item.descricao = ((item.descricao ? item.descricao + "\n\n" : "") + "Modificações do CRIS sem correspondência no catálogo:\n" + textoMods).slice(0, 2000);
@@ -555,6 +569,46 @@
     P.AUTOMATICAS.forEach(function (a) { if (a.classes.indexOf(classe) >= 0) automaticas[a.chave] = a; });
     var pastaHabilidades = null;
     var contagemPorChave = {};
+
+    /* Opções que mudam contas e que o CRIS não guarda (a perícia
+       penalizada de Arrepios na Espinha, o atributo de Coincidências
+       Inexplicáveis…). Vão para a revisão; a sugestão só vem quando os
+       números do CRIS apontam UMA resposta. As opções que o retrato já
+       contém (treinar, atributo) não são perguntadas. */
+    var EFEITOS_DO_RETRATO = { grauPericias: 1, treinar: 1, treinarLista: 1, treinarOuBonus: 1, grauMinimo: 1, atributo: 1 };
+    function opcoesDoPoder(e, p, i) {
+      var saida = {};
+      var algum = false;
+      (e.opcoes || []).forEach(function (op) {
+        if (op.tipo !== "pericia" && op.tipo !== "atributo") return;
+        var efeitos = (e.efeitos || []).filter(function (ef) { return ef.opcao === op.chave && !EFEITOS_DO_RETRATO[ef.tipo]; });
+        if (!efeitos.length) return;
+        var lista, sugestao = "", evidencia = "";
+        if (op.tipo === "pericia") {
+          lista = (op.entre && op.entre.length ? op.entre : C.PERICIAS.map(function (x) { return x.chave; }));
+          var negativo = efeitos.filter(function (ef) { return ef.tipo === "bonusPericia" && ef.valor < 0; })[0];
+          if (negativo) {
+            var marcadas = lista.filter(function (k) { return periciasCris[k] && periciasCris[k].outros !== null && periciasCris[k].outros <= negativo.valor; });
+            if (marcadas.length === 1) { sugestao = marcadas[0]; evidencia = " No CRIS, só " + C.pericia(sugestao).nome + " tem " + negativo.valor + " ou menos em outros bônus."; }
+          }
+        } else {
+          lista = C.ATRIBUTOS.map(function (a) { return a.chave; }).filter(function (k) { return (op.exceto || []).indexOf(k) < 0; });
+          if (efeitos.some(function (ef) { return ef.tipo === "peAtributo"; })) {
+            var obsPe = numeroOuNulo(src.maxPe);
+            var pe = R.calcular(o, ficha.inventario).pe;
+            var falta = obsPe === null || !pe ? null : obsPe - pe.total;
+            var batem = lista.filter(function (k) { return falta !== null && falta > 0 && o.atributos[k] === falta; });
+            if (batem.length === 1) { sugestao = batem[0]; evidencia = " O PE do CRIS tem " + falta + " a mais que o cálculo, e só " + C.ATRIBUTOS.filter(function (a) { return a.chave === sugestao; })[0].nome + " vale " + falta + "."; }
+          }
+        }
+        var rotuloDe = function (k) { return op.tipo === "pericia" ? (C.pericia(k) || {}).nome || k : (C.ATRIBUTOS.filter(function (a) { return a.chave === k; })[0] || {}).nome || k; };
+        var valor = revisao("opcao:" + (p.id || i) + ":" + op.chave, e.nome + " · " + (op.rotulo || op.chave),
+          "O CRIS não guarda esta escolha; sem ela, o efeito que depende dela fica de fora." + evidencia,
+          [{ valor: "", rotulo: "Não informado (sem o efeito)" }].concat(lista.map(function (k) { return { valor: k, rotulo: rotuloDe(k) }; })), sugestao);
+        if (valor) { saida[op.chave] = valor; algum = true; }
+      });
+      return algum ? saida : null;
+    }
 
     poderes.forEach(function (p, i) {
       var k = chaveDeTexto(p.name);
@@ -615,12 +669,26 @@
       }
       var aq = { ref: refAq, chave: e.chave, nome: e.nome, nomeOriginal: p.name, tipo: e.tipo, elemento: e.elemento || "", afinidade: repetida && e.tipo === "paranormal", representacao: "importada", procedencia: "desconhecida" };
       if (opcoesDoNome) aq.opcoes = opcoesDoNome;
-      if (habTrilha[e.chave]) aq.procedencia = "trilha " + trilhaAtual.nome + " (opção não informada)";
-      else if (e.tipo === "classe" && (e.classes || []).indexOf(classe) < 0) {
-        aq.procedencia = nomesDePoderes.indexOf(chaveDeTexto("Expansão de Conhecimento")) >= 0
-          ? "poder de outra classe (provavelmente Expansão de Conhecimento)" : "poder de outra classe (procedência desconhecida)";
+      else {
+        var escolhidas = opcoesDoPoder(e, p, i);
+        if (escolhidas) aq.opcoes = escolhidas;
       }
-      else if (e.tipo === "trilha") aq.procedencia = "habilidade de trilha fora da trilha da ficha (procedência desconhecida)";
+      if (e.tipo === "alteracao") aq.procedencia = "alteração por exposição (NEX & Experiência)";
+      else if (habTrilha[e.chave]) aq.procedencia = "trilha " + trilhaAtual.nome + " (opção não informada)";
+      else if (e.tipo === "classe" && (e.classes || []).indexOf(classe) < 0) {
+        var fontes = [];
+        if (nomesDePoderes.indexOf(chaveDeTexto("Especialista Diletante")) >= 0) fontes.push("Especialista Diletante");
+        if (nomesDePoderes.indexOf(chaveDeTexto("Expansão de Conhecimento")) >= 0) fontes.push("Expansão de Conhecimento");
+        aq.procedencia = fontes.length ? "poder de outra classe (provavelmente " + fontes.join(" ou ") + ")" : "poder de outra classe (procedência desconhecida)";
+      }
+      else if (e.tipo === "trilha") {
+        /* Versatilidade (NEX 50%): o primeiro poder de outra trilha da classe. */
+        var primeira = e.trilha ? P.primeiraDaTrilha(e.trilha) : null;
+        var temVersatilidade = E.vagas(o).some(function (v) { return v.tipo === "versatilidade" && v.degrau <= marco.degrau; });
+        aq.procedencia = primeira && primeira.chave === e.chave && temVersatilidade && C.trilhasDaClasse(classe).some(function (tr) { return tr.chave === e.trilha; })
+          ? "provavelmente Versatilidade (primeiro poder de " + ((C.trilha(e.trilha) || {}).nome || e.trilha) + ")"
+          : "habilidade de trilha fora da trilha da ficha (procedência desconhecida)";
+      }
 
       /* Procedência: um item com o nome do poder (Dedo Decepado (X)). */
       var itemDoPoder = infoItens.filter(function (x) { var par = /\(([^)]*)\)\s*$/.exec(x.cris.name || ""); return par && chaveDeTexto(par[1]) === k; })[0];
@@ -660,7 +728,8 @@
       var semItem = F.criarItem("arma", {
         nome: ("Ataque: " + String(a.name || "sem nome")).slice(0, 80), categoria: "Importado do CRIS",
         descricao: "Ataque do CRIS sem item correspondente no inventário" + (a.itemId ? " (o item ligado não existe ou não é arma)" : "") + ". Não ocupa espaço nem conta na patente.",
-        critico: 20, multiplicador: 2,
+        critico: Math.max(1, Math.min(20, Math.round(numeroOuNulo(a.criticalRange) || 20))),
+        multiplicador: Math.max(1, Math.min(10, Math.round(numeroOuNulo(a.criticalMult) || 2))),
         ordem: { espacos: 0, quantidade: 1, arma: { tipo: /dist|curto|medio|longo/.test(chaveDeTexto(a.range)) ? "distancia" : "corpoACorpo", tipoDano: String(a.damageType || "").slice(0, 20) } },
       });
       semItem.ordem.categoria = null;
@@ -711,6 +780,7 @@
 
       if (item.tipo === "arma") {
         var at = ataques[0] || null;
+        info.ataque = at;
         if (ataques.length > 1) {
           var outros = ataques.slice(1).map(function (a) { return "• " + (a.name || "Ataque") + ": " + (a.damage || "—") + " (" + (a.damageType || "") + "), crítico " + (a.criticalRange || "—") + "/x" + (a.criticalMult || "—") + ", perícia " + (a.skillUsed || "—") + ", atributo " + (a.damageAttribute || "—"); }).join("\n");
           item.descricao = ((item.descricao ? item.descricao + "\n\n" : "") + "Outras configurações de ataque no CRIS (rolar à mão):\n" + outros).slice(0, 2000);
@@ -724,12 +794,12 @@
 
         var expr = analisarExpressao(at ? at.damage : it.damage);
         if (!expr.ok) {
-          aviso("expressao_nao_suportada", "revisao", "attacks", "“" + nomeVisivel + "”: o dano “" + (at ? at.damage : it.damage) + "” não cabe no formato do R.A.M.A.; ficou descrito no item, para rolar à mão.");
+          info.danoIncompleto = true; aviso("expressao_nao_suportada", "revisao", "attacks", "“" + nomeVisivel + "”: o dano “" + (at ? at.damage : it.damage) + "” não cabe no formato do R.A.M.A.; ficou descrito no item, para rolar à mão.");
           item.descricao = ((item.descricao ? item.descricao + "\n\n" : "") + "Dano no CRIS: " + (at ? at.damage : it.damage)).slice(0, 2000);
         } else if (expr.termos.length) {
           var dados = expr.termos.filter(function (t) { return t.tipo === "dados" && !t.negativo; });
           var constObs = expr.termos.filter(function (t) { return t.tipo === "constante"; }).reduce(function (s, t) { return s + t.valor; }, 0);
-          if (expr.termos.some(function (t) { return t.negativo; })) aviso("dado_negativo", "revisao", "attacks", "“" + nomeVisivel + "”: o dano tem dados subtraídos, que o R.A.M.A. não representa; foram ignorados na conta.");
+          if (expr.termos.some(function (t) { return t.negativo; })) { info.danoIncompleto = true; aviso("dado_negativo", "revisao", "attacks", "“" + nomeVisivel + "”: o dano tem dados subtraídos, que o R.A.M.A. não representa; foram ignorados na conta."); }
           var ef = R.armaEfetiva(o, ficha.inventario, item, ficha.pericias);
           var principalRama = /^(\d+)d(\d+)$/.exec(String(ef.dano || ""));
           var principal = dados[0];
@@ -743,7 +813,7 @@
             item.dano = principal.quantidade + "d" + principal.faces;
           } else if (principal) {
             item.dano = principal.quantidade + "d" + principal.faces;
-            aviso("dano_base_diferente", "revisao", "attacks", "“" + nomeVisivel + "”: o dado principal do CRIS (" + principal.quantidade + "d" + principal.faces + ") não é o do catálogo; ficou o observado, com composição desconhecida.");
+            info.danoIncompleto = true; aviso("dano_base_diferente", "revisao", "attacks", "“" + nomeVisivel + "”: o dado principal do CRIS (" + principal.quantidade + "d" + principal.faces + ") não é o do catálogo; ficou o observado, com composição desconhecida.");
           }
           var extras = dados.slice(1);
           var lancinante = (item.ordem.modificacoes || []).some(function (m) { return m.catalogoId === "op.maldicao.arma.lancinante"; });
@@ -760,7 +830,7 @@
           }
           if (faltam.length) {
             item.descricao = ((item.descricao ? item.descricao + "\n\n" : "") + "Dados extras do CRIS sem lugar na arma: " + faltam.map(function (x) { return x.quantidade + "d" + x.faces; }).join(" + ") + " (rolar à mão).").slice(0, 2000);
-            aviso("dano_composto", "revisao", "attacks", "“" + nomeVisivel + "”: o dano tem mais parcelas de dados do que a arma do R.A.M.A. guarda; as que sobraram ficaram descritas no item.");
+            info.danoIncompleto = true; aviso("dano_composto", "revisao", "attacks", "“" + nomeVisivel + "”: o dano tem mais parcelas de dados do que a arma do R.A.M.A. guarda; as que sobraram ficaram descritas no item.");
           }
           var adicionais = at && Array.isArray(at.aditionalDamage) ? at.aditionalDamage.filter(function (x) { return x && x.value; }) : [];
           if (adicionais.length) {
@@ -777,9 +847,9 @@
           if (at && numeroOuNulo(at.attackBonus)) ajustarItem(item, "ataque", numeroOuNulo(at.attackBonus), "bônus de ataque do CRIS");
           ef = R.armaEfetiva(o, ficha.inventario, item, ficha.pericias);
           var margemObs = numeroOuNulo(at ? at.criticalRange : it.criticalRange);
-          if (margemObs !== null && ef.margem) ajustarItem(item, "margem", ef.margem - Math.round(margemObs), "margem de ameaça observada no CRIS");
+          if (margemObs !== null && ef.margem) ajustarItem(item, "margem", ef.margem - Math.max(1, Math.min(20, Math.round(margemObs))), "margem de ameaça observada no CRIS");
           var multObs = numeroOuNulo(at ? at.criticalMult : it.criticalMult);
-          if (multObs !== null) ajustarItem(item, "multiplicador", Math.round(multObs) - ef.multiplicador, "multiplicador observado no CRIS");
+          if (multObs !== null) ajustarItem(item, "multiplicador", Math.max(1, Math.min(10, Math.round(multObs))) - ef.multiplicador, "multiplicador observado no CRIS");
 
           /* As duas rolagens, lado a lado: normal e crítico. */
           ef = R.armaEfetiva(o, ficha.inventario, item, ficha.pericias);
@@ -908,18 +978,26 @@
       ficha.rituais.itens.push(ritual);
     });
 
-    /* ---------- conferência numérica ----------
-       Cada linha: o que o CRIS mostra, o que o R.A.M.A. calcula com o que
-       foi reconhecido, o valor final e o porquê. Ajuste só onde a
-       diferença ficou sem fonte reconhecida (ou a pessoa escolheu manter
-       o número do CRIS). */
+    /* ---------- conferência ----------
+       Cada valor que o CRIS mostra vira uma linha: o que o CRIS mostra, o
+       que o R.A.M.A. calcula com o que foi reconhecido (antes de ajuste),
+       o valor que a ficha terá e o porquê. Ajuste só onde a diferença ficou
+       sem fonte reconhecida (ou a pessoa escolheu manter o número do CRIS).
+
+       Cada linha sabe reler o próprio valor numa ficha qualquer (`ler`). No
+       fim, ela é relida na ficha JÁ NORMALIZADA — a que vai ser criada — e
+       de novo depois de exportar e importar. Valor que muda no caminho, ou
+       que devia bater com o CRIS e não bate, é divergência. */
+    function aviso_contar(codigo, campo) {
+      return avisos.filter(function (a) { return a.codigo === codigo && (!campo || a.campo === campo); }).length;
+    }
     function ajusteDaOrdem(alvo, valor, motivo) {
       if (!valor) return;
       o.ajustes.push({ id: U.uuid(), alvo: alvo, valor: valor, motivo: ("Importação CRIS: " + motivo).slice(0, 120), manual: true });
       ajustesDoc.push({ alvo: alvo, valor: valor, motivo: motivo });
     }
-    function linha(campo, cris, rama, final, motivo, ajuste) {
-      comparacao.push({ campo: campo, cris: cris, rama: rama, final: final, motivo: motivo, ajuste: ajuste || null, igual: cris === final });
+    function linha(l) {
+      comparacao.push(Object.assign({ grupo: "Geral", tipo: "valor", ajuste: null, deveBater: false, motivo: "" }, l));
     }
     function sinal(n) { return (n > 0 ? "+" : "−") + Math.abs(n); }
     function nomesDasParcelas(lista) {
@@ -964,17 +1042,30 @@
        R.A.M.A. automatiza e o CRIS não somava não vira ajuste negativo
        sem a pessoa pedir. */
     var automatizadas = [];
+    var sobrecargaFica = !!(calc().carga && calc().carga.sobrecarregado);
+    function lerPericia(k) { return function (x) { return R.bonusDePericia(x.o, k, x.inv).total; }; }
     Object.keys(periciasCris).forEach(function (k) {
       var pc = periciasCris[k];
-      var conta = R.bonusDePericia(o, k, ficha.inventario);
-      conta = { total: semSobrecarga(conta), parcelas: conta.parcelas.filter(function (x) { return x.rotulo !== "Sobrecarregado"; }) };
-      if (pc.bonus === conta.total) return;
+      linha({ grupo: "Perícias", campo: pc.nome + " · grau e atributo", deveBater: true,
+        cris: (C.grau(pc.grau) || {}).nome + " · " + pc.atributo.toUpperCase(),
+        rama: (C.grau(R.grauDaPericia(o, k)) || {}).nome + " · " + R.atributoDaPericia(o, k).toUpperCase(),
+        motivo: "grau e atributo do teste",
+        ler: function (x) { return (C.grau(R.grauDaPericia(x.o, k)) || {}).nome + " · " + R.atributoDaPericia(x.o, k).toUpperCase(); } });
+      if (pc.bonus === null) return;
+      var bruto = R.bonusDePericia(o, k, ficha.inventario);
+      var penal = bruto.total - semSobrecarga(bruto);
+      var conta = { total: semSobrecarga(bruto), parcelas: bruto.parcelas.filter(function (x) { return x.rotulo !== "Sobrecarregado"; }) };
+      var notaCarga = penal ? "; sobrecarregada pela decisão de carga (" + sinal(penal) + ")" : "";
+      if (pc.bonus === conta.total) {
+        linha({ grupo: "Perícias", campo: pc.nome, cris: pc.bonus, rama: conta.total, motivo: "igual" + notaCarga, deveBater: !penal, ler: lerPericia(k) });
+        return;
+      }
       var efeitos = conta.parcelas.slice(1).filter(function (x) { return x.valor; });
-      var x = { chave: k, nome: pc.nome, cris: pc.bonus, rama: conta.total, efeitos: efeitos };
+      var x = { chave: k, nome: pc.nome, cris: pc.bonus, rama: conta.total, efeitos: efeitos, notaCarga: notaCarga, penal: penal };
       if (efeitos.length && !pc.outros) { automatizadas.push(x); return; }
       ajusteDaOrdem("pericia:" + k, pc.bonus - conta.total, "bônus de " + pc.nome + " observado no CRIS");
-      linha("Perícia " + pc.nome, pc.bonus, conta.total, pc.bonus,
-        (pc.outros ? "outros bônus do CRIS (" + sinal(pc.outros) + ")" : "diferença sem fonte reconhecida") + "; ajuste importado", pc.bonus - conta.total);
+      linha({ grupo: "Perícias", campo: pc.nome, cris: pc.bonus, rama: conta.total, ajuste: pc.bonus - conta.total, deveBater: !penal, ler: lerPericia(k),
+        motivo: (pc.outros ? "total observado no CRIS (com " + sinal(pc.outros) + " em outros bônus)" : "diferença sem fonte reconhecida") + "; ajuste importado" + notaCarga });
     });
     if (automatizadas.length) {
       var segue = revisao("pericias:automaticas", "Perícias com efeito automático", "O R.A.M.A. aplica efeitos que o CRIS não aplicava: " +
@@ -982,8 +1073,9 @@
         [{ valor: "rama", rotulo: "Seguir o R.A.M.A. (o efeito vale)" }, { valor: "cris", rotulo: "Manter os totais do CRIS (ajuste negativo)" }], "rama");
       automatizadas.forEach(function (x) {
         if (segue === "cris") ajusteDaOrdem("pericia:" + x.chave, x.cris - x.rama, "total de " + x.nome + " mantido como no CRIS");
-        linha("Perícia " + x.nome, x.cris, x.rama, segue === "cris" ? x.cris : x.rama,
-          segue === "cris" ? "total do CRIS mantido por decisão" : "o R.A.M.A. aplica " + nomesDasParcelas(x.efeitos) + "; o CRIS não aplicava", segue === "cris" ? x.cris - x.rama : null);
+        linha({ grupo: "Perícias", campo: x.nome, cris: x.cris, rama: x.rama, ajuste: segue === "cris" ? x.cris - x.rama : null,
+          deveBater: segue === "cris" && !x.penal, ler: lerPericia(x.chave),
+          motivo: (segue === "cris" ? "total do CRIS mantido por decisão" : "o R.A.M.A. aplica " + nomesDasParcelas(x.efeitos) + "; o CRIS não aplicava") + x.notaCarga });
       });
     }
 
@@ -996,7 +1088,8 @@
       var obs = numeroOuNulo(src["max" + r[1]]);
       if (obs === null || !c[r[0]]) return;
       var rama = c[r[0]].total;
-      if (obs === rama) { linha(r[2] + " máximo", obs, rama, rama, "igual", null); return; }
+      var lerMax = function (x) { return x.c[r[0]] ? x.c[r[0]].total : null; };
+      if (obs === rama) { linha({ grupo: "Recursos", campo: r[2] + " máximo", cris: obs, rama: rama, motivo: "igual", deveBater: true, ler: lerMax }); return; }
       var motivo = r[0] === "san" && origem === "cultistaarrependido" && obs > rama
         ? "o R.A.M.A. aplica a metade da Sanidade da classe (Traços do Outro Lado); o CRIS não"
         : "máximo observado no CRIS; composição desconhecida";
@@ -1004,7 +1097,8 @@
         [{ valor: "cris", rotulo: "Manter " + obs + " (ajuste importado " + sinal(obs - rama) + ")" }, { valor: "rama", rotulo: "Usar o cálculo do R.A.M.A. (" + rama + ")" }], "cris");
       if (escolha === "cris") ajusteDaOrdem(r[0], obs - rama, motivo);
       else recursosPelaRegra[r[0]] = true;
-      linha(r[2] + " máximo", obs, rama, escolha === "cris" ? obs : rama, motivo, escolha === "cris" ? obs - rama : null);
+      linha({ grupo: "Recursos", campo: r[2] + " máximo", cris: obs, rama: rama, motivo: escolha === "cris" ? motivo : "cálculo do R.A.M.A. por decisão (" + motivo + ")",
+        ajuste: escolha === "cris" ? obs - rama : null, deveBater: escolha === "cris", ler: lerMax });
       c = calc();
     });
     if (!pdLigada && numeroOuNulo(src.maxPd) !== null) observacoes.push("PD no CRIS: " + src.currentPd + "/" + src.maxPd + " (regra desligada; o valor atual fica guardado para quando ela for ligada).");
@@ -1025,8 +1119,8 @@
         : "bônus de Defesa do CRIS sem fonte reconhecida; bônus extra importado";
       o.bonusExtra.defesa = (o.bonusExtra.defesa || 0) + diffDef;
       ajustesDoc.push({ alvo: "bonusExtra.defesa", valor: diffDef, motivo: "Defesa observada no CRIS (proteção " + protDef + ", bônus " + bonusDef + ")" + (sigilo && diffDef === 5 ? "; provável maldição Defesa de " + sigilo.item.nome : "") });
-      linha("Defesa", defObs, defRama, defObs, motivoDef, diffDef);
-    } else linha("Defesa", defObs, defRama, defRama, "igual", null);
+      linha({ grupo: "Defesas", campo: "Defesa", cris: defObs, rama: defRama, motivo: motivoDef, ajuste: diffDef, deveBater: !sobrecargaFica, ler: function (x) { return x.c.defesa.total; } });
+    } else linha({ grupo: "Defesas", campo: "Defesa", cris: defObs, rama: defRama, motivo: "igual", deveBater: !sobrecargaFica, ler: function (x) { return x.c.defesa.total; } });
     [["bloqueio", "block", "Bloqueio"], ["esquiva", "evade", "Esquiva"]].forEach(function (x) {
       var obs = numeroOuNulo(src[x[1]]);
       if (obs === null) return;
@@ -1035,7 +1129,8 @@
         o.bonusExtra[x[0]] = (o.bonusExtra[x[0]] || 0) + (obs - rama);
         ajustesDoc.push({ alvo: "bonusExtra." + x[0], valor: obs - rama, motivo: x[2] + " observado no CRIS" });
       }
-      linha(x[2], obs, rama, obs, obs === rama ? "igual" : "diferença sem fonte reconhecida; bônus extra importado", obs === rama ? null : obs - rama);
+      linha({ grupo: "Defesas", campo: x[2], cris: obs, rama: rama, motivo: obs === rama ? "igual" : "diferença sem fonte reconhecida; bônus extra importado",
+        ajuste: obs === rama ? null : obs - rama, deveBater: !sobrecargaFica, ler: function (y) { return y.c[x[0]].total; } });
     });
 
     c = calc();
@@ -1043,31 +1138,40 @@
     if (desl !== null && c.deslocamento) {
       var deslRama = semSobrecarga(c.deslocamento);
       if (desl !== deslRama) ajusteDaOrdem("deslocamento", desl - deslRama, "deslocamento observado no CRIS");
-      linha("Deslocamento", desl, deslRama, desl, desl === deslRama ? "igual" : "diferença sem fonte reconhecida; ajuste importado", desl === deslRama ? null : desl - deslRama);
+      linha({ grupo: "Defesas", campo: "Deslocamento", cris: desl, rama: deslRama, motivo: desl === deslRama ? "igual" : "diferença sem fonte reconhecida; ajuste importado",
+        ajuste: desl === deslRama ? null : desl - deslRama, deveBater: !sobrecargaFica, ler: function (x) { return x.c.deslocamento.total; } });
     }
     c = calc();
     var limPe = numeroOuNulo(src.peTurn);
     if (limPe !== null && c.limitePe) {
       var limRama = c.limitePe.total;
       if (limPe !== limRama) ajusteDaOrdem("limitePe", limPe - limRama, "limite de PE observado no CRIS");
-      linha("Limite de PE por turno", limPe, limRama, limPe, limPe === limRama ? "igual" : "diferença sem fonte reconhecida; ajuste importado", limPe === limRama ? null : limPe - limRama);
+      linha({ grupo: "Recursos", campo: "Limite de PE por turno", cris: limPe, rama: limRama, motivo: limPe === limRama ? "igual" : "diferença sem fonte reconhecida; ajuste importado",
+        ajuste: limPe === limRama ? null : limPe - limRama, deveBater: true, ler: function (x) { return x.c.limitePe.total; } });
     }
     c = calc();
     var cap = numeroOuNulo(src.maxLoad);
-    if (cap !== null && c.carga) linha("Capacidade de carga", cap, c.carga.limite, c.carga.limite, cap === c.carga.limite ? "igual" : "conferência: no CRIS a mochila pode entrar como espaço negativo; vale a conta do R.A.M.A.", null);
+    if (cap !== null && c.carga) linha({ grupo: "Carga", campo: "Capacidade de carga", tipo: "info", cris: cap, rama: c.carga.limite,
+      motivo: cap === c.carga.limite ? "igual" : "no CRIS a mochila pode entrar como espaço negativo; vale a conta do R.A.M.A.", ler: function (x) { return x.c.carga.limite; } });
     var cargaObs = numeroOuNulo(src.currentLoad);
-    if (cargaObs !== null && c.carga) linha("Carga ocupada", cargaObs, c.carga.ocupado, c.carga.ocupado, cargaObs === c.carga.ocupado ? "igual" : "conferência: vale a soma dos itens no R.A.M.A.", null);
+    if (cargaObs !== null && c.carga) linha({ grupo: "Carga", campo: "Carga ocupada", tipo: "info", cris: cargaObs, rama: c.carga.ocupado,
+      motivo: cargaObs === c.carga.ocupado ? "igual" : "vale a soma dos itens no R.A.M.A.", ler: function (x) { return x.c.carga.ocupado; } });
+    if (cargaObs !== null && capCris !== null && c.carga) linha({ grupo: "Carga", campo: "Sobrecarregada", tipo: "info", cris: cargaObs > capCris ? "sim" : "não", rama: c.carga.sobrecarregado ? "sim" : "não",
+      motivo: "estado da carga na ficha criada", ler: function (x) { return x.c.carga.sobrecarregado ? "sim" : "não"; } });
     var dtObs = numeroOuNulo(src.ritualsDc);
     var dtRama = RS.dtDeResistencia ? RS.dtDeResistencia(o) : null;
     if (dtObs !== null && ficha.rituais.itens.length && dtRama) {
-      linha("DT dos rituais", dtObs, dtRama.total, dtRama.total, dtObs === dtRama.total ? "igual" : "conferência: a DT é calculada pelo R.A.M.A.", null);
+      linha({ grupo: "Rituais", campo: "DT dos rituais", cris: dtObs, rama: dtRama.total, motivo: dtObs === dtRama.total ? "igual" : "a DT é calculada pelo R.A.M.A. (10 + limite de PE + Presença)",
+        ler: function (x) { var dt = RS.dtDeResistencia(x.o); return dt ? dt.total : null; } });
       if (dtObs !== dtRama.total) observacoes.push("DT dos rituais no CRIS: " + dtObs + "; no R.A.M.A.: " + dtRama.total + ".");
     }
     o.prestigio = Math.max(0, Math.round(numeroOuNulo(src.prestigePoints) || 0));
     c = calc();
     if (src.patent && c.patente && c.patente.patente) {
       var mesmaPatente = chaveDeTexto(src.patent) === chaveDeTexto(c.patente.patente.nome);
-      linha("Patente", String(src.patent), c.patente.patente.nome, c.patente.patente.nome, mesmaPatente ? "igual" : "a patente do R.A.M.A. sai dos pontos de prestígio; a do CRIS pode ser manual", null);
+      linha({ grupo: "Identidade", campo: "Patente", tipo: "info", cris: String(src.patent), rama: c.patente.patente.nome,
+        motivo: mesmaPatente ? "igual" : "a patente do R.A.M.A. sai dos pontos de prestígio; a do CRIS pode ser manual",
+        ler: function (x) { var pt = x.c.patente; return pt && pt.patente ? pt.patente.nome : null; } });
       if (!mesmaPatente) observacoes.push("Patente no CRIS: " + src.patent + ".");
     }
 
@@ -1101,6 +1205,174 @@
         v = c[x[0]].total;
       }
       o.recursos[x[0]] = v;
+    });
+
+    /* ---------- conferência: identidade, atributos, recursos atuais,
+       itens, ataques, rituais e contagens ---------- */
+    var calcAgora = calc();
+    linha({ grupo: "Identidade", campo: "Nome", cris: nomeOriginal, rama: ficha.nome, deveBater: nomeOriginal.length <= 80,
+      motivo: nomeOriginal.length > 80 ? "o R.A.M.A. guarda 80 caracteres; o nome inteiro vai nas anotações" : "nome da ficha", ler: function (x) { return x.f.nome; } });
+    linha({ grupo: "Identidade", campo: "Classe", cris: String(src.className || "—"), rama: (C.classe(o.classe) || {}).nome || "—", deveBater: !!classeAchada && classe === classeAchada.chave,
+      motivo: classeAchada ? "classe do catálogo" : "classe escolhida na revisão", ler: function (x) { return (C.classe(x.o.classe) || {}).nome || "—"; } });
+    linha({ grupo: "Identidade", campo: "Origem", cris: String(src.backgroundName || "—"), rama: origem ? C.origem(origem).nome : "—", deveBater: !!origemAchada,
+      motivo: origemAchada ? "origem do catálogo" : (origem ? "origem escolhida na revisão" : "fora do catálogo; o nome fica nas anotações"),
+      ler: function (x) { return x.o.origem ? (C.origem(x.o.origem) || {}).nome : "—"; } });
+    linha({ grupo: "Identidade", campo: "Trilha", tipo: "info", cris: "—", rama: o.trilha ? (C.trilha(o.trilha) || {}).nome : "—",
+      motivo: "o CRIS não guarda a trilha; vale a decisão da revisão", ler: function (x) { return x.o.trilha ? (C.trilha(x.o.trilha) || {}).nome : "—"; } });
+    linha({ grupo: "Identidade", campo: porNivel ? "Progressão (NEX & Experiência)" : "NEX", tipo: porNivel ? "info" : "valor", deveBater: !porNivel && perfil === "agente",
+      cris: String(src.nex), rama: R.trilho(o).rotulo + (porNivel ? " · exposição " + o.nex + "%" : ""),
+      motivo: porNivel ? "o CRIS guarda o progresso como porcentagem; no R.A.M.A. é nível e exposição" : "NEX da ficha",
+      ler: function (x) { return porNivel ? R.trilho(x.o).rotulo + " · exposição " + x.o.nex + "%" : x.o.nex + "%"; } });
+    linha({ grupo: "Identidade", campo: "Jogando sem Sanidade (PD)", deveBater: true, cris: src.isPdOn === true ? "sim" : "não", rama: o.opcionais.semSanidade ? "sim" : "não",
+      motivo: "regra opcional ligada só pelo campo do CRIS", ler: function (x) { return x.o.opcionais && x.o.opcionais.semSanidade ? "sim" : "não"; } });
+    linha({ grupo: "Identidade", campo: "NEX & Experiência", deveBater: true, cris: porNivel ? "sim" : "não", rama: o.opcionais.nexExperiencia ? "sim" : "não",
+      motivo: "regra opcional ligada só pelo campo do CRIS", ler: function (x) { return x.o.opcionais && x.o.opcionais.nexExperiencia ? "sim" : "não"; } });
+    linha({ grupo: "Identidade", campo: "Pontos de prestígio", deveBater: true, cris: Math.max(0, Math.round(numeroOuNulo(src.prestigePoints) || 0)), rama: o.prestigio,
+      motivo: "prestígio da ficha", ler: function (x) { return x.o.prestigio; } });
+
+    [["for", "str", "Força"], ["agi", "dex", "Agilidade"], ["int", "int", "Intelecto"], ["pre", "pre", "Presença"], ["vig", "con", "Vigor"]].forEach(function (a) {
+      var obsA = numeroOuNulo(attrs[a[1]]);
+      if (obsA === null) return;
+      var efetivo = R.atributo(o, a[0]);
+      var foraDoLimite = obsA < 0 || obsA > 5;
+      linha({ grupo: "Atributos", campo: a[2], cris: obsA, rama: efetivo, deveBater: !foraDoLimite && efetivo === o.atributos[a[0]],
+        motivo: foraDoLimite ? "o R.A.M.A. limita o atributo de 0 a 5" : (efetivo !== o.atributos[a[0]] ? "o R.A.M.A. soma efeitos ao valor da ficha (" + o.atributos[a[0]] + ")" : "igual"),
+        ler: function (x) { return R.atributo(x.o, a[0]); } });
+    });
+
+    [["pv", "currentPv", "PV"], ["pe", "currentPe", "PE"], ["san", "currentSan", "SAN"], ["pd", "currentPd", "PD"]].forEach(function (r) {
+      var obsAtual = numeroOuNulo(src[r[1]]);
+      if (obsAtual === null) return;
+      var temp = r[0] !== "pd" && o.temporarios ? (o.temporarios[r[0]] || 0) : 0;
+      var lerAtual = function (x) { var v = x.o.recursos[r[0]]; var t = r[0] !== "pd" && x.o.temporarios ? (x.o.temporarios[r[0]] || 0) : 0; return v === null || v === undefined ? null : v + t; };
+      linha({ grupo: "Recursos", campo: r[2] + " atual" + (temp ? " (com temporários)" : "") + (r[0] === "pd" && !pdLigada ? " (regra desligada, guardado)" : ""),
+        cris: Math.round(obsAtual), rama: o.recursos[r[0]] === null ? null : o.recursos[r[0]] + temp, deveBater: !recursosPelaRegra[r[0]],
+        motivo: recursosPelaRegra[r[0]] ? "cabe no máximo do R.A.M.A., por decisão" : (temp ? "o excedente sobre o máximo entrou como pontos temporários" : "valor atual do CRIS, sem descanso"),
+        ler: lerAtual });
+    });
+
+    var indiceSemItem = {};
+    infoItens.forEach(function (info) { if (info.identificacao === "ataqueSemItem") indiceSemItem[ficha.inventario.itens.indexOf(info.item)] = true; });
+    function itemDe(x, idx) { return x.inv.itens[idx]; }
+    function categoriaDe(x, idx) {
+      var it2 = itemDe(x, idx);
+      if (!it2) return null;
+      var achado = null;
+      Object.keys(x.uso.categorias).forEach(function (n) { x.uso.categorias[n].itens.forEach(function (y) { if (y.id === it2.id) achado = y; }); });
+      x.uso.acimaDeIV.forEach(function (y) { if (y.id === it2.id) achado = y; });
+      return achado ? rotuloRomano(achado.efetiva) : "—";
+    }
+    function espacosDe(x, idx) {
+      var it2 = itemDe(x, idx);
+      var reg = it2 ? x.ocup.itens.filter(function (y) { return y.id === it2.id; })[0] : null;
+      return reg ? reg.unitarioEfetivo : null;
+    }
+    function rolagemDe(x, idx) {
+      var it2 = itemDe(x, idx);
+      var ef = R.armaEfetiva(x.o, x.inv, it2, x.f.pericias);
+      var dadosR = [];
+      var pr = /^(\d+)d(\d+)$/.exec(String(ef.dano || ""));
+      if (pr) dadosR.push({ quantidade: Number(pr[1]), faces: Number(pr[2]) });
+      var ex = analisarExpressao(it2.danoExtra);
+      (ex.ok ? ex.termos.filter(function (t) { return t.tipo === "dados"; }) : []).forEach(function (t) { dadosR.push(t); });
+      return montarExpressao(dadosR, ef.extra ? ef.extra.total : 0);
+    }
+    var ctxConversao = { f: ficha, o: o, inv: ficha.inventario, c: calcAgora, uso: R.usoPorCategoria(o, ficha.inventario), ocup: R.ocupacaoDoInventario(o, ficha.inventario) };
+    infoItens.forEach(function (info) {
+      var idx = ficha.inventario.itens.indexOf(info.item);
+      var it = info.cris;
+      var nomeI = info.item.nome;
+      if (info.identificacao !== "ataqueSemItem") {
+        var catObsI = romanoOuNulo(it.category);
+        var ajCat = (info.item.ordem.ajustesImportados || {}).categoria || 0;
+        var catAgora = categoriaDe(ctxConversao, idx);
+        if (catObsI !== null && catAgora !== "—") {
+          linha({ grupo: "Itens", campo: nomeI + " · categoria", cris: rotuloRomano(catObsI), rama: rotuloRomano(ROMANOS[String(catAgora).toLowerCase()] - ajCat),
+            ajuste: ajCat || null, deveBater: true, motivo: ajCat ? info.item.ordem.ajustesImportados.motivo : (info.entrada ? "base do catálogo com as modificações" : "item personalizado"),
+            ler: function (x) { return categoriaDe(x, idx); } });
+        }
+        var espObsI = numeroOuNulo(it.slots);
+        if (espObsI !== null) {
+          var ajEsp = (info.item.ordem.ajustesImportados || {}).espacos || 0;
+          linha({ grupo: "Itens", campo: nomeI + " · espaços", tipo: espObsI < 0 ? "info" : "valor", cris: espObsI, rama: espObsI < 0 ? espacosDe(ctxConversao, idx) : espacosDe(ctxConversao, idx) - ajEsp,
+            ajuste: ajEsp || null, deveBater: espObsI >= 0,
+            motivo: espObsI < 0 ? "no CRIS a mochila entra como espaço negativo; no R.A.M.A. ela soma capacidade" : (ajEsp ? "espaços observados no CRIS; ajuste importado" : "espaços por unidade"),
+            ler: function (x) { return espacosDe(x, idx); } });
+        }
+        if (info.item.tipo === "armadura") {
+          var defObsI = numeroOuNulo(it.defense);
+          if (defObsI !== null) linha({ grupo: "Itens", campo: nomeI + " · Defesa", cris: defObsI, rama: R.defesaDaProtecao(info.item).total - ((info.item.ordem.ajustesImportados || {}).defesa || 0),
+            ajuste: (info.item.ordem.ajustesImportados || {}).defesa || null, deveBater: true, motivo: "Defesa da proteção",
+            ler: function (x) { return R.defesaDaProtecao(itemDe(x, idx)).total; } });
+          linha({ grupo: "Itens", campo: nomeI + " · em uso", deveBater: true, cris: it.equipped === true ? "sim" : "não", rama: info.item.ordem.emUso ? "sim" : "não",
+            motivo: "proteção vestida conta na Defesa", ler: function (x) { return itemDe(x, idx).ordem.emUso ? "sim" : "não"; } });
+        }
+      }
+      if (info.item.tipo === "arma" && info.ataque && info.rolagens) {
+        var at = info.ataque;
+        var rotA = "Ataque " + (at.name || nomeI);
+        linha({ grupo: "Ataques", campo: rotA + " · dano", cris: info.rolagens.normal, rama: info.rolagens.normal, deveBater: !info.danoIncompleto,
+          motivo: info.danoIncompleto ? "o dano do CRIS não cabe inteiro na arma do R.A.M.A.; o resto está descrito no item" : "dano normal, com o atributo",
+          ler: function (x) { return rolagemDe(x, idx); } });
+        var margemC = numeroOuNulo(at.criticalRange) || 20, multC = numeroOuNulo(at.criticalMult) || 2;
+        var critObs = margemC + "/x" + multC;
+        var critForaDoLimite = margemC < 1 || margemC > 20 || multC < 1 || multC > 10;
+        if (critForaDoLimite) aviso("critico_fora_do_limite", "revisao", "attacks", "“" + (at.name || nomeI) + "”: o crítico do CRIS (" + critObs + ") passa do que o R.A.M.A. aceita (margem de 1 a 20, multiplicador de ×1 a ×10); ficou no limite.");
+        linha({ grupo: "Ataques", campo: rotA + " · margem e multiplicador", cris: critObs, rama: critObs, deveBater: !critForaDoLimite,
+          motivo: critForaDoLimite ? "fora do limite do R.A.M.A. (margem 1 a 20, multiplicador ×1 a ×10)" : "crítico da arma",
+          ler: function (x) { var ef = R.armaEfetiva(x.o, x.inv, itemDe(x, idx), x.f.pericias); return ef.margem + "/x" + ef.multiplicador; } });
+        linha({ grupo: "Ataques", campo: rotA + " · dano no crítico", tipo: "info", cris: info.rolagens.criticoCris, rama: info.rolagens.criticoRama,
+          motivo: info.rolagens.criticoCris === info.rolagens.criticoRama ? "igual" : "o CRIS repete a expressão inteira; o R.A.M.A. multiplica os dados (regra do R.A.M.A.)",
+          ler: function () { return info.rolagens.criticoRama; } });
+        var periciaAt = at.skillUsed ? C.PERICIAS.filter(function (pp) { return chaveDeTexto(pp.nome) === chaveDeTexto(at.skillUsed); })[0] : null;
+        var nomeAtr = { "for": "Força", agi: "Agilidade", "int": "Intelecto", pre: "Presença", vig: "Vigor", melhor: "Força ou Agilidade", nenhum: "Nenhum" };
+        linha({ grupo: "Ataques", campo: rotA + " · perícia e atributo do dano", deveBater: !!periciaAt,
+          cris: (periciaAt ? periciaAt.nome : String(at.skillUsed || "—")) + " · " + (nomeAtr[atributoDeTexto(at.damageAttribute) || (/nenhum/.test(chaveDeTexto(at.damageAttribute)) || !at.damageAttribute ? "nenhum" : "")] || String(at.damageAttribute || "—")),
+          rama: "", motivo: "perícia do teste e atributo somado ao dano",
+          ler: function (x) { var it2 = itemDe(x, idx); var ef = R.armaEfetiva(x.o, x.inv, it2, x.f.pericias); return (ef.periciaNome || "—") + " · " + (nomeAtr[(it2.ordem.arma || {}).atributoDano] || "—"); } });
+        var testeCris = periciaAt && periciasCris[periciaAt.chave] && periciasCris[periciaAt.chave].bonus !== null ? periciasCris[periciaAt.chave].bonus + (numeroOuNulo(at.attackBonus) || 0) : null;
+        var efAgora = R.armaEfetiva(o, ficha.inventario, info.item, ficha.pericias);
+        var dasMods = efAgora.ataque.parcelas.filter(function (pp) { return /modificação da arma|bônus de ataque da arma/.test(pp.origem || ""); });
+        if (testeCris !== null) linha({ grupo: "Ataques", campo: rotA + " · bônus no teste", cris: testeCris, rama: efAgora.ataque.total,
+          motivo: testeCris === efAgora.ataque.total ? "igual" : (dasMods.length ? "o R.A.M.A. soma " + nomesDasParcelas(dasMods) + " ao total da perícia; o CRIS não somava" : "o total da perícia difere (ver Perícias)"),
+          ler: function (x) { return R.armaEfetiva(x.o, x.inv, itemDe(x, idx), x.f.pericias).ataque.total; } });
+      }
+    });
+    var nInvCris = Array.isArray(src.inventory) ? src.inventory.length : 0;
+    var nSemItem = Object.keys(indiceSemItem).length;
+    linha({ grupo: "Contagens", campo: "Itens no inventário", cris: nInvCris, rama: ficha.inventario.itens.length - nSemItem, deveBater: true,
+      motivo: nSemItem ? "sem contar " + nSemItem + " arma(s) de 0 espaço criada(s) para ataques sem item" : "uma entrada por linha do CRIS",
+      ler: function (x) { return x.inv.itens.length - nSemItem; } });
+    linha({ grupo: "Contagens", campo: "Ataques", tipo: "info", cris: Array.isArray(src.attacks) ? src.attacks.length : 0, rama: Object.keys(ataquesPorItem).reduce(function (s2, k2) { return s2 + ataquesPorItem[k2].length; }, 0),
+      motivo: "o primeiro ataque de cada arma a configura; os outros ficam descritos no item", ler: function () { return Object.keys(ataquesPorItem).reduce(function (s2, k2) { return s2 + ataquesPorItem[k2].length; }, 0); } });
+    var poderesForaDaConta = aviso_contar("poder_repetido");
+    linha({ grupo: "Contagens", campo: "Poderes e habilidades", cris: poderes.length, rama: aquisicoes.length, deveBater: !poderesForaDaConta,
+      motivo: poderesForaDaConta ? poderesForaDaConta + " repetido(s) não repetível(is) ficou(aram) de fora" : "um registro por poder do CRIS",
+      ler: function (x) { return x.o.importacao ? x.o.importacao.aquisicoes.length : 0; } });
+    linha({ grupo: "Contagens", campo: "Rituais", cris: Array.isArray(src.rituals) ? src.rituals.length : 0, rama: ficha.rituais.itens.length, deveBater: true,
+      motivo: "um ritual por linha do CRIS", ler: function (x) { return x.f.rituais.itens.length; } });
+
+    var REPRESENTA = { importada: "efeito aplicado", regras: "dado pelas regras", item: "concedido por item", texto: "só texto" };
+    aquisicoes.forEach(function (aq, j) {
+      linha({ grupo: "Poderes", campo: aq.nomeOriginal || aq.nome, tipo: "info", cris: "na ficha", rama: (REPRESENTA[aq.representacao] || aq.representacao) + (aq.chave && aq.nome !== aq.nomeOriginal ? " · " + aq.nome : ""),
+        motivo: "procedência: " + (aq.procedencia || "desconhecida"),
+        ler: function (x) { var a2 = x.o.importacao && x.o.importacao.aquisicoes[j]; return a2 ? (REPRESENTA[a2.representacao] || a2.representacao) + (a2.chave && a2.nome !== a2.nomeOriginal ? " · " + a2.nome : "") : null; } });
+    });
+
+    function rotuloDoRitual(r2) {
+      if (!r2) return null;
+      var circ2 = r2.ordem && r2.ordem.circulo ? r2.ordem.circulo : numeroOuNulo(String(r2.circulo || "").replace(/[^0-9]/g, ""));
+      var el2 = r2.ordem && r2.ordem.elemento ? (RS.nomeDoElemento ? RS.nomeDoElemento(r2.ordem.elemento) : r2.ordem.elemento) : String(r2.elemento || "—");
+      return (circ2 ? circ2 + "º" : "—") + " · " + el2;
+    }
+    (Array.isArray(src.rituals) ? src.rituals : []).forEach(function (r2, j) {
+      var circC = numeroOuNulo(r2.circle);
+      var rit = ficha.rituais.itens[j];
+      var decidido = revisoes.some(function (rv) { return rv.chave === "ritual-elemento:" + (r2.id || j); });
+      linha({ grupo: "Rituais", campo: String(r2.name || "Ritual"), cris: (circC !== null ? circC + "º" : "—") + " · " + String(r2.element || "—"), rama: rotuloDoRitual(rit),
+        deveBater: !decidido && !aviso_contar("ritual_circulo", "rituals." + j) && !aviso_contar("ritual_elemento", "rituals." + j),
+        motivo: rit && rit.origemCatalogoId ? "ritual do catálogo" + (decidido ? "; elemento decidido na revisão" : "") : "ritual personalizado com os campos do CRIS",
+        ler: function (x) { return rotuloDoRitual(x.f.rituais.itens[j]); } });
     });
 
     /* ---------- texto preservado ---------- */
@@ -1158,6 +1430,55 @@
     var normal = F.normalizarFicha(JSON.parse(JSON.stringify(ficha)));
     var cf = R.calcular(normal.ordem, normal.inventario);
 
+    /* ---------- conferência final ----------
+       Cada linha relida: (1) na ficha antes da normalização (o que o
+       importador preparou), (2) na ficha normalizada — a que é criada — e
+       (3) depois de exportar e importar o arquivo, como o botão "Baixar
+       JSON RAMA" faria. */
+    function contextoDe(fx) {
+      return { f: fx, o: fx.ordem, inv: fx.inventario, c: R.calcular(fx.ordem, fx.inventario), uso: R.usoPorCategoria(fx.ordem, fx.inventario), ocup: R.ocupacaoDoInventario(fx.ordem, fx.inventario) };
+    }
+    function lerSeguro(l, x) {
+      try { var v = l.ler ? l.ler(x) : l.rama; return v === undefined ? null : v; }
+      catch (e) { return "erro na leitura (" + String(e && e.message || e).slice(0, 80) + ")"; }
+    }
+    function mesmo(a, b) {
+      if (typeof a === "number" && typeof b === "number") return a === b;
+      return chaveDeTexto(a === null || a === undefined ? "—" : a) === chaveDeTexto(b === null || b === undefined ? "—" : b);
+    }
+    var ctxPreparado = contextoDe(ficha), ctxNormal = contextoDe(normal), ctxArquivo = null;
+    if (d.V && d.V.exportar && d.V.importado) {
+      try {
+        var volta = d.V.importado(JSON.parse(JSON.stringify(d.V.exportar("personagem", normal))));
+        if (volta && volta.ok) ctxArquivo = contextoDe(volta.dados);
+        else aviso("conferencia_arquivo", "revisao", "conferencia", "A ficha convertida não passou na importação de arquivo do R.A.M.A.: " + ((volta && (volta.mensagem || (volta.problemas || []).join("; "))) || "motivo desconhecido") + ".");
+      } catch (e) { aviso("conferencia_arquivo", "revisao", "conferencia", "Não foi possível conferir a ficha exportada e importada de novo."); }
+    }
+    var divergentes = [];
+    comparacao.forEach(function (l) {
+      var preparado = lerSeguro(l, ctxPreparado);
+      var naFicha = lerSeguro(l, ctxNormal);
+      var noArquivo = ctxArquivo ? lerSeguro(l, ctxArquivo) : naFicha;
+      if (l.rama === "" || l.rama === undefined) l.rama = preparado;
+      var problema = "";
+      if (!mesmo(naFicha, preparado)) problema = "a ficha criada mostra " + naFicha + ", e o importador preparou " + preparado;
+      else if (!mesmo(noArquivo, naFicha)) problema = "depois de exportar e importar vira " + noArquivo;
+      else if (l.deveBater && !mesmo(l.cris, naFicha)) problema = "devia ficar " + l.cris + " (como no CRIS) e ficou " + naFicha;
+      l.final = naFicha;
+      l.situacao = problema ? "divergente" : (mesmo(l.cris, naFicha) ? (l.ajuste ? "ajustado" : "igual") : (l.tipo === "info" ? "conferencia" : "regra"));
+      l.igual = l.situacao === "igual";
+      if (problema) { l.problema = problema; divergentes.push(l); }
+      delete l.ler;
+    });
+    if (divergentes.length) {
+      aviso("conferencia_divergente", "revisao", "conferencia", divergentes.length + " valor(es) não saem como o esperado na ficha criada: " +
+        divergentes.slice(0, 6).map(function (l) { return l.campo + " (" + l.problema + ")"; }).join("; ") + (divergentes.length > 6 ? "…" : "") + ".");
+    }
+    var conferencia = { total: comparacao.length, arquivo: !!ctxArquivo };
+    ["igual", "ajustado", "regra", "conferencia", "divergente"].forEach(function (k) {
+      conferencia[k] = comparacao.filter(function (l) { return l.situacao === k; }).length;
+    });
+
     var bloqueado = avisos.some(function (a) { return a.gravidade === "erro"; });
     return {
       ok: !bloqueado,
@@ -1165,6 +1486,7 @@
       avisos: avisos,
       pendencias: revisoes,
       comparacao: comparacao,
+      conferencia: conferencia,
       preservadosComoTexto: preservados,
       bloqueado: bloqueado,
       itens: infoItens.map(function (x) { return { nome: x.item.nome, identificacao: x.identificacao, catalogoId: x.entrada ? x.entrada.id : "", rolagens: x.rolagens || null }; }),

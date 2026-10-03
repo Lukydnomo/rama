@@ -34,7 +34,7 @@
     return {
       F: global.RAMAFicha, R: global.RAMAOrdemRegras, C: global.RAMAOrdemCatalogo, P: global.RAMAOrdemPoderes,
       E: global.RAMAOrdemProgressao, H: global.RAMAHabilidades, ITM: global.RAMAOrdemItens, RS: global.RAMAOrdemRituais,
-      U: U, catalogoItens: catalogoItens, catalogoRituais: catalogoRituais,
+      U: U, V: global.RAMAValidacao, catalogoItens: catalogoItens, catalogoRituais: catalogoRituais,
     };
   }
 
@@ -74,6 +74,7 @@
     var criando = false;
     var criada = null;           // { id, nome } depois do sucesso
     var catalogos = null;
+    var mostrarTudo = false;     // a conferência abre só com o que difere
 
     var entrada = el("input.r-entrada", {
       type: "url", inputmode: "url", autocomplete: "off", spellcheck: "false",
@@ -272,26 +273,66 @@
       ]));
     }
 
+    /* A conferência: cada valor que o CRIS mostra, relido na ficha que
+       será criada e depois de exportar e importar. Abre só com o que
+       difere; "Mostrar tudo" traz também os iguais. */
+    var SITUACOES = {
+      divergente: { rotulo: "Divergente", classe: "cris-situacao--divergente" },
+      regra: { rotulo: "Regra do R.A.M.A.", classe: "cris-situacao--regra" },
+      ajustado: { rotulo: "Ajustado", classe: "cris-situacao--ajustado" },
+      conferencia: { rotulo: "Para conferir", classe: "cris-situacao--conferir" },
+      igual: { rotulo: "Igual", classe: "cris-situacao--igual" },
+    };
+    var ORDEM_SITUACAO = ["divergente", "regra", "ajustado", "conferencia", "igual"];
+    var GRUPOS = ["Identidade", "Atributos", "Recursos", "Defesas", "Perícias", "Carga", "Itens", "Ataques", "Rituais", "Poderes", "Contagens"];
+
     function comparacao(r) {
-      var linhas = r.comparacao.slice().sort(function (a, b) { return (a.igual ? 1 : 0) - (b.igual ? 1 : 0); });
-      var diferentes = linhas.filter(function (l) { return !l.igual || l.ajuste; }).length;
-      var resumoTexto = diferentes ? diferentes + " valor(es) com diferença; os iguais vêm por último." : "Todos os valores conferidos batem.";
-      var tabela = el("table.cris-tabela", {}, [
-        el("caption.so-leitor", { texto: "Comparação entre o CRIS e o R.A.M.A. " + resumoTexto }),
-        el("thead", {}, [el("tr", {}, ["Campo", "CRIS", "R.A.M.A. calcula", "Fica", "Motivo"].map(function (t) { return el("th", { scope: "col", texto: t }); }))]),
-        el("tbody", {}, linhas.map(function (l) {
-          return el("tr", { class: l.igual && !l.ajuste ? "cris-tabela__igual" : "" }, [
+      var cf = r.conferencia || {};
+      var todas = r.comparacao || [];
+      var visiveis = todas.filter(function (l) { return mostrarTudo || l.situacao !== "igual"; });
+      var porGrupo = {};
+      visiveis.forEach(function (l) { (porGrupo[l.grupo] = porGrupo[l.grupo] || []).push(l); });
+      var grupos = GRUPOS.filter(function (g) { return porGrupo[g]; }).concat(Object.keys(porGrupo).filter(function (g) { return GRUPOS.indexOf(g) < 0; }));
+
+      var contagem = el("ul.cris-contagem", { "aria-label": "Resumo da conferência" }, ORDEM_SITUACAO.filter(function (k) { return cf[k]; }).map(function (k) {
+        return el("li", { class: "cris-situacao " + SITUACOES[k].classe, texto: SITUACOES[k].rotulo + ": " + cf[k] });
+      }));
+      var cabecalho = el("p.t-mini", { texto: (cf.total || todas.length) + " valores conferidos na ficha que será criada" +
+        (cf.arquivo ? ", e de novo depois de exportar e importar o arquivo." : ".") +
+        (cf.divergente ? " Há valores que não saem como o esperado: confira as linhas “Divergente”." : " Nenhum valor diverge.") });
+      var alternar = el("button.r-botao.r-botao--mini.r-botao--fantasma", { type: "button", "aria-pressed": mostrarTudo ? "true" : "false",
+        texto: mostrarTudo ? "Mostrar só o que difere" : "Mostrar tudo (" + todas.length + ")",
+        onclick: function () { mostrarTudo = !mostrarTudo; desenhar(); var b = area.querySelector("[data-alternar-conferencia]"); if (b) b.focus(); } });
+      alternar.setAttribute("data-alternar-conferencia", "1");
+
+      var corpo = [];
+      grupos.forEach(function (g) {
+        var linhas = porGrupo[g].slice().sort(function (a, b) { return ORDEM_SITUACAO.indexOf(a.situacao) - ORDEM_SITUACAO.indexOf(b.situacao); });
+        corpo.push(el("tr.cris-tabela__grupo", {}, [el("th", { scope: "colgroup", colspan: "6", texto: g + " (" + linhas.length + ")" })]));
+        linhas.forEach(function (l) {
+          var sit = SITUACOES[l.situacao] || SITUACOES.conferencia;
+          corpo.push(el("tr", { class: l.situacao === "igual" ? "cris-tabela__igual" : (l.situacao === "divergente" ? "cris-tabela__divergente" : "") }, [
             el("th", { scope: "row", texto: l.campo }),
             el("td", { dataset: { rotulo: "CRIS" }, texto: valor(l.cris) }),
-            el("td", { dataset: { rotulo: "R.A.M.A." }, texto: valor(l.rama) }),
-            el("td", { dataset: { rotulo: "Fica" }, texto: valor(l.final) + (l.ajuste ? " (ajuste " + (l.ajuste > 0 ? "+" : "") + l.ajuste + ")" : "") }),
-            el("td", { dataset: { rotulo: "Motivo" }, texto: l.motivo }),
-          ]);
-        })),
+            el("td", { dataset: { rotulo: "R.A.M.A. calcula" }, texto: valor(l.rama) }),
+            el("td", { dataset: { rotulo: "Na ficha criada" }, texto: valor(l.final) + (l.ajuste ? " (ajuste " + (l.ajuste > 0 ? "+" : "") + l.ajuste + ")" : "") }),
+            el("td", { dataset: { rotulo: "Situação" } }, [el("span", { class: "cris-situacao " + sit.classe, texto: sit.rotulo })]),
+            el("td", { dataset: { rotulo: "Motivo" }, texto: l.problema ? l.problema + " — " + l.motivo : l.motivo }),
+          ]));
+        });
+      });
+      if (!corpo.length) corpo.push(el("tr", {}, [el("td", { colspan: "6", texto: "Todos os valores conferidos batem com o CRIS." })]));
+
+      var tabela = el("table.cris-tabela", {}, [
+        el("caption.so-leitor", { texto: "Conferência entre o CRIS e a ficha que será criada no R.A.M.A." }),
+        el("thead", {}, [el("tr", {}, ["Campo", "CRIS", "R.A.M.A. calcula", "Na ficha criada", "Situação", "Motivo"].map(function (t) { return el("th", { scope: "col", texto: t }); }))]),
+        el("tbody", {}, corpo),
       ]);
-      return UI.painel("CRIS × R.A.M.A.", el("div.pilha.pilha--curta", {}, [
-        el("p.t-mini", { texto: resumoTexto }),
-        el("div.cris-tabela__rolagem", { tabindex: "0", role: "region", "aria-label": "Comparação de valores" }, [tabela]),
+      return UI.painel("Conferência CRIS × R.A.M.A.", el("div.pilha.pilha--curta", {}, [
+        cabecalho,
+        contagem,
+        el("div.faixa", {}, [alternar]),
+        el("div.cris-tabela__rolagem", { tabindex: "0", role: "region", "aria-label": "Conferência de valores" }, [tabela]),
       ]));
     }
 

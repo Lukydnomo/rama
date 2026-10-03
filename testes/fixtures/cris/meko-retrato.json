@@ -1,0 +1,1013 @@
+{
+ "adaptador": "cris-firestore-v1",
+ "fonte": {
+  "url": "https://crisordemparanormal.com/agente/qgpT1gRmXzVuC9JYjF4y",
+  "documentId": "qgpT1gRmXzVuC9JYjF4y",
+  "lidoEm": "2026-10-03T19:43:28.723Z",
+  "updateTime": "2026-10-03T19:41:57.589728Z"
+ },
+ "ficha": {
+  "name": "Meko - DE",
+  "player": "",
+  "className": "Especialista",
+  "statsClass": "Especialista",
+  "backgroundName": "T.I.",
+  "nex": "50%",
+  "nexString": "50%",
+  "isNexLevelOn": true,
+  "isPdOn": false,
+  "isSobrevivendoAoHorror": false,
+  "currentPv": 53,
+  "maxPv": 53,
+  "currentPe": 54,
+  "maxPe": 54,
+  "currentSan": 52,
+  "maxSan": 52,
+  "currentPd": 64,
+  "maxPd": 64,
+  "peTurn": "10",
+  "movement": 9,
+  "block": 15,
+  "evade": 34,
+  "bonusDefense": 5,
+  "protectionDefense": 5,
+  "currentProtection": "Proteção Leve",
+  "currentLoad": 9,
+  "maxLoad": 10,
+  "prestigePoints": 0,
+  "patent": "Recruta",
+  "creditsLimit": "Baixo",
+  "ritualsDc": 22,
+  "proficiencies": "Armas simples e proteções leves",
+  "resistances": "",
+  "private": false,
+  "attributes": {
+   "str": 2,
+   "dex": 4,
+   "int": 3,
+   "pre": 2,
+   "con": 1
+  },
+  "description": {
+   "personal": "",
+   "goal": "Conseguir 1 trilhão de >E<nscritos e passar o sr. besta\nFugir com pinguim roubado",
+   "anotation": "",
+   "physical": "",
+   "history": ""
+  },
+  "skills": [
+   {
+    "name": "Acrobacia",
+    "attribute": "AGI",
+    "trainingDegree": "0",
+    "bonus": 0,
+    "otherBonus": 0,
+    "onlyTrained": false,
+    "loadPenalty": true
+   },
+   {
+    "name": "Adestramento",
+    "attribute": "PRE",
+    "trainingDegree": "0",
+    "bonus": 0,
+    "otherBonus": 0,
+    "onlyTrained": true,
+    "loadPenalty": false
+   },
+   {
+    "name": "Artes",
+    "attribute": "PRE",
+    "trainingDegree": "0",
+    "bonus": 0,
+    "otherBonus": 0,
+    "onlyTrained": true,
+    "loadPenalty": false
+   },
+   {
+    "name": "Atletismo",
+    "attribute": "FOR",
+    "trainingDegree": "5",
+    "bonus": 0,
+    "otherBonus": -5,
+    "onlyTrained": false,
+    "loadPenalty": false
+   },
+   {
+    "name": "Atualidades",
+    "attribute": "INT",
+    "trainingDegree": "0",
+    "bonus": 0,
+    "otherBonus": 0,
+    "onlyTrained": false,
+    "loadPenalty": false
+   },
+   {
+    "name": "Ciências",
+    "attribute": "INT",
+    "trainingDegree": "0",
+    "bonus": 0,
+    "otherBonus": 0,
+    "onlyTrained": true,
+    "loadPenalty": false
+   },
+   {
+    "name": "Crime",
+    "attribute": "AGI",
+    "trainingDegree": "5",
+    "bonus": 5,
+    "otherBonus": 0,
+    "onlyTrained": true,
+    "loadPenalty": true
+   },
+   {
+    "name": "Diplomacia",
+    "attribute": "PRE",
+    "trainingDegree": "0",
+    "bonus": 5,
+    "otherBonus": 5,
+    "onlyTrained": false,
+    "loadPenalty": false
+   },
+   {
+    "name": "Enganação",
+    "attribute": "PRE",
+    "trainingDegree": "0",
+    "bonus": 0,
+    "otherBonus": 0,
+    "onlyTrained": false,
+    "loadPenalty": false
+   },
+   {
+    "name": "Fortitude",
+    "attribute": "VIG",
+    "trainingDegree": "10",
+    "bonus": 15,
+    "otherBonus": 5,
+    "onlyTrained": false,
+    "loadPenalty": false
+   },
+   {
+    "name": "Furtividade",
+    "attribute": "AGI",
+    "trainingDegree": "0",
+    "bonus": 0,
+    "otherBonus": 0,
+    "onlyTrained": false,
+    "loadPenalty": true
+   },
+   {
+    "name": "Iniciativa",
+    "attribute": "AGI",
+    "trainingDegree": "0",
+    "bonus": 0,
+    "otherBonus": 0,
+    "onlyTrained": false,
+    "loadPenalty": false
+   },
+   {
+    "name": "Intimidação",
+    "attribute": "PRE",
+    "trainingDegree": "0",
+    "bonus": 2,
+    "otherBonus": 2,
+    "onlyTrained": false,
+    "loadPenalty": false
+   },
+   {
+    "name": "Intuição",
+    "attribute": "PRE",
+    "trainingDegree": "0",
+    "bonus": 5,
+    "otherBonus": 5,
+    "onlyTrained": false,
+    "loadPenalty": false
+   },
+   {
+    "name": "Investigação",
+    "attribute": "INT",
+    "trainingDegree": "5",
+    "bonus": 5,
+    "otherBonus": 0,
+    "onlyTrained": false,
+    "loadPenalty": false
+   },
+   {
+    "name": "Luta",
+    "attribute": "FOR",
+    "trainingDegree": "0",
+    "bonus": 0,
+    "otherBonus": 0,
+    "onlyTrained": false,
+    "loadPenalty": false
+   },
+   {
+    "name": "Medicina",
+    "attribute": "INT",
+    "trainingDegree": "10",
+    "bonus": 10,
+    "otherBonus": 0,
+    "onlyTrained": false,
+    "loadPenalty": false
+   },
+   {
+    "name": "Ocultismo",
+    "attribute": "INT",
+    "trainingDegree": "10",
+    "bonus": 14,
+    "otherBonus": 4,
+    "onlyTrained": true,
+    "loadPenalty": false
+   },
+   {
+    "name": "Percepção",
+    "attribute": "PRE",
+    "trainingDegree": "5",
+    "bonus": 5,
+    "otherBonus": 0,
+    "onlyTrained": false,
+    "loadPenalty": false
+   },
+   {
+    "name": "Pilotagem",
+    "attribute": "AGI",
+    "trainingDegree": "0",
+    "bonus": 0,
+    "otherBonus": 0,
+    "onlyTrained": true,
+    "loadPenalty": false
+   },
+   {
+    "name": "Pontaria",
+    "attribute": "AGI",
+    "trainingDegree": "10",
+    "bonus": 10,
+    "otherBonus": 0,
+    "onlyTrained": false,
+    "loadPenalty": false
+   },
+   {
+    "name": "Profissão",
+    "attribute": "INT",
+    "trainingDegree": "10",
+    "bonus": 10,
+    "otherBonus": 0,
+    "onlyTrained": true,
+    "loadPenalty": false
+   },
+   {
+    "name": "Reflexos",
+    "attribute": "AGI",
+    "trainingDegree": "10",
+    "bonus": 10,
+    "otherBonus": 0,
+    "onlyTrained": false,
+    "loadPenalty": false
+   },
+   {
+    "name": "Religião",
+    "attribute": "PRE",
+    "trainingDegree": "0",
+    "bonus": 0,
+    "otherBonus": 0,
+    "onlyTrained": true,
+    "loadPenalty": false
+   },
+   {
+    "name": "Sobrevivência",
+    "attribute": "INT",
+    "trainingDegree": "0",
+    "bonus": 0,
+    "otherBonus": 0,
+    "onlyTrained": false,
+    "loadPenalty": false
+   },
+   {
+    "name": "Tática",
+    "attribute": "INT",
+    "trainingDegree": "0",
+    "bonus": 0,
+    "otherBonus": 0,
+    "onlyTrained": true,
+    "loadPenalty": false
+   },
+   {
+    "name": "Tecnologia",
+    "attribute": "INT",
+    "trainingDegree": "10",
+    "bonus": 10,
+    "otherBonus": 0,
+    "onlyTrained": true,
+    "loadPenalty": false
+   },
+   {
+    "name": "Vontade",
+    "attribute": "PRE",
+    "trainingDegree": "10",
+    "bonus": 10,
+    "otherBonus": 0,
+    "onlyTrained": false,
+    "loadPenalty": false
+   }
+  ],
+  "powers": [
+   {
+    "id": "a56e0f1f-715e-4bde-b05a-8eac7bb1ee55",
+    "name": "Eclético",
+    "description": "Quando faz um teste de uma perícia, você pode gastar 2 PE para receber os benefícios de ser treinado nesta perícia.",
+    "hasAutomation": false
+   },
+   {
+    "id": "dfc69887-5578-4c66-92e1-74c00d26af12",
+    "name": "Perito",
+    "description": "Escolha duas perícias nas quais você é treinado (exceto Luta e Pontaria). Quando faz um teste de uma dessas perícias, você pode gastar 2 PE para somar +1d6 no resultado do teste. Conforme avança de NEX, você pode gastar +1 PE para aumentar o dado de bônus. Por exemplo, em NEX 55%, pode gastar 4 PE para receber +1d10 no teste.",
+    "hasAutomation": false
+   },
+   {
+    "id": "3107976c-c02a-423d-8b57-dc096af9d9f3",
+    "name": "Motor de Busca",
+    "description": "A critério do Mestre, sempre que tiver acesso a internet, você pode gastar 2 PE para substituir um teste de perícia qualquer por um teste de Tecnologia.",
+    "hasAutomation": false
+   },
+   {
+    "id": "4902787d-7772-4832-9c8f-03033ec42368",
+    "name": "Aprender Ritual",
+    "description": "<p>Através de uma conexão com as memórias de ocultistas do passado e os segredos das entidades, você aprende e pode conjurar um ritual de 1º círculo à sua escolha. Além disso, você pode substituir um ritual que já conhece por outro. A partir de 45% de NEX, quando escolhe este poder, você aprende um ritual de até 2º círculo e, a partir de 75% de NEX, aprende um ritual de até 3º círculo. Você pode escolher esse poder quantas vezes quiser, mas está sujeito ao limite de rituais conhecidos. <em>Este poder conta como um poder do elemento do ritual escolhido.</em></p>",
+    "element": "Varia",
+    "hasAutomation": false
+   },
+   {
+    "id": "b84d9117-0f04-4cda-b6d5-9fa1b18299b3",
+    "name": "NEX 25% - Arrepios na Espinha",
+    "description": "<p>Arrepios na espinha que precedem momentos importantes, déjà vus cada vez mais frequentes, pesadelos cada vez mais vívidos. Você pode fazer testes de Ocultismo mesmo sem ser treinado. Se for, recebe +2 em Ocultismo. Entretanto, sofre –5 em uma perícia à sua escolha entre Diplomacia, Enganação ou Intimidação. Essa penalidade representa uma alteração física ou mental que você desenvolveu devido a sua exposição</p>",
+    "hasAutomation": false
+   },
+   {
+    "id": "0e9f963d-a47e-44da-a834-366fc0ecb053",
+    "name": "Ataque de Oportunidade",
+    "description": "<p>Sempre que um ser sair voluntariamente de um espaço adjacente ao seu, você pode gastar uma reação e 1 PE para fazer um ataque corpo a corpo contra ele.</p>",
+    "hasAutomation": false
+   },
+   {
+    "id": "8f41a6b2-2f1b-40ee-8767-d216617f8945",
+    "name": "NEX 35% - Coincidências Inexplicáveis",
+    "description": "<p>Eventos terríveis e paranormais acontecem com você, como se tivesse sido escolhido pelo Outro Lado por algum motivo misterioso. Coincidências inexplicáveis não são elementos de ficção e sim fatos em sua vida. Escolha um atributo (exceto Presença). Você soma o atributo escolhido em seu total de PE. Entretanto, seu corpo desenvolve resistência aos comandos do seu próprio cérebro, por vezes tremendo ou movendo-se sozinho, e em outras, até recusando-se a se mexer; você sofre –5 em uma perícia à sua escolha entre Atletismo, Fortitude ou Reflexos.</p>",
+    "hasAutomation": false
+   },
+   {
+    "id": "074207fb-f2ac-4f8a-9659-5fe0ceb5e19f",
+    "name": "Combater com Duas Armas",
+    "description": "<p>Se estiver empunhando duas armas (e pelo menos uma for leve) e fizer a ação agredir, você pode fazer dois ataques, um com cada arma. Se fizer isso, sofre –1d20 em todos os testes de ataque até o seu próximo turno. <em>Pré-requisitos:</em> Agi 3, treinado em Luta ou Pontaria.</p>",
+    "hasAutomation": false
+   },
+   {
+    "id": "0806f99e-cf26-460e-9cf4-58fcb054c302",
+    "name": "NEX 10% - Mira de Elite",
+    "description": "<p>Você recebe proficiência com armas de fogo que usam balas longas e soma seu Intelecto em rolagens de dano com essas armas.</p>",
+    "hasAutomation": false
+   },
+   {
+    "id": "63fd2c79-dc1b-45a4-b77f-0642eb069caf",
+    "name": "NEX 40% - Disparo Letal",
+    "description": "<p>Quando faz a ação mirar você pode gastar 1 PE para aumentar em +2 a margem de ameaça do próximo ataque que fizer até o final de seu próximo turno.</p>",
+    "hasAutomation": false
+   },
+   {
+    "id": "64e7eb8c-5ee5-43f5-acc2-bfda7a886380",
+    "name": "NEX 10% - Paramédico",
+    "description": "<p>Você pode usar uma ação padrão e 2 PE para curar 2d10 pontos de vida a de si mesmo ou de um aliado adjacente. Você pode curar +1d10 PV respectivamente em NEX 40%, 65% e 99%, gastando +1 PE por dado adicional de cura.</p>",
+    "hasAutomation": false
+   },
+   {
+    "id": "4a5a6167-894a-42aa-91f2-53635d95add8",
+    "name": "Especialista Diletante",
+    "description": "<p>A vida lhe ensinou que todo tipo de conhecimento pode ser útil. Você aprende um poder que não pertença à sua classe (exceto poderes de trilha ou paranormais), à sua escolha, cujos pré-requisitos possa cumprir. <em>Pré-requisito: NEX 30%.</em></p>",
+    "hasAutomation": false
+   },
+   {
+    "id": "72fbaf19-97e4-4954-ac1f-bdc2115772a4",
+    "name": "Expansão de Conhecimento",
+    "description": "<p>Você se conecta com o Conhecimento do Outro Lado, rompendo os limites de sua compreensão. Você aprende um poder de classe que não pertença à sua classe (caso o poder possua pré-requisitos, você precisa preenchê-los). <em>Pré-requisito:</em> Conhecimento 1.</p><p><span>Afinidade:</span> você aprende um segundo poder de classe que não pertença à sua classe.</p>",
+    "element": "Conhecimento",
+    "hasAutomation": false
+   },
+   {
+    "id": "0654c3d9-ce3f-45ba-8009-f53a4ee0c75f",
+    "name": "Hacker",
+    "description": "<p>Você recebe +5 em testes de Tecnologia para invadir sistemas e diminui o tempo necessário para hackear qualquer sistema para uma ação completa. <em>Pré-requisito:</em> treinado em Tecnologia.</p>",
+    "hasAutomation": false
+   },
+   {
+    "id": "18d74268-40c7-4b94-9377-74a32126c901",
+    "name": "Mochila de Utilidades",
+    "description": "<p>Um item a sua escolha (exceto armas) conta como uma categoria abaixo e ocupa 1 espaço a menos.</p>",
+    "hasAutomation": false
+   },
+   {
+    "id": "e580b6a6-6255-42d8-a0e3-befc027431d1",
+    "name": "Sensitivo",
+    "description": "<p>Você consegue sentir as emoções e intenções de outros personagens, como medo, raiva ou malícia, recebendo +5 em testes de Diplomacia, Intimidação e Intuição.</p><p><span>Afinidade:</span> quando você faz um teste oposto usando uma dessas perícias, o oponente sofre –1d20.</p>",
+    "element": "Conhecimento",
+    "hasAutomation": false
+   }
+  ],
+  "inventory": [
+   {
+    "id": "8edd116c-5819-4d95-aea5-6d2c90acb576",
+    "name": "Cicatrizante",
+    "description": "<p>Um spray contendo um remédio com potente efeito cicatrizante. Você pode gastar uma ação padrão e este item para curar 2d8+2 PV em você ou em um ser adjacente.</p>",
+    "itemType": "misc",
+    "slots": 1,
+    "category": "I",
+    "equipped": false,
+    "mods": []
+   },
+   {
+    "id": "505e81fc-4b20-4eb4-babd-d2153e1fb460",
+    "name": "Balas Curtas (Explosiva)",
+    "description": "<p>Munição básica, usada em pistolas, revólveres e submetralhadoras. Um pacote de balas curtas dura duas cenas.</p>",
+    "itemType": "ammunition",
+    "slots": "1",
+    "category": "I",
+    "equipped": false,
+    "mods": []
+   },
+   {
+    "id": "4983384e-85ff-4cff-84a6-321326156ebb",
+    "name": "Balas Longas (Explosiva)",
+    "description": "<p>Maior e mais potente, esta munição é usada em fuzis e metralhadoras. Um pacote de balas longas dura uma cena.</p>",
+    "itemType": "ammunition",
+    "slots": "1",
+    "category": "II",
+    "equipped": false,
+    "mods": []
+   },
+   {
+    "id": "44cd5407-21c3-4f50-abd7-5338788e4183",
+    "name": "Corda",
+    "description": "<p>Um rolo com 10 metros de corda resistente. Possui diversas utilidades: pode ajudar a descer um buraco ou prédio (+5 em testes de Atletismo nessas situações), amarrar pessoas inconscientes etc.</p>",
+    "itemType": "misc",
+    "slots": 1,
+    "category": "0",
+    "equipped": false,
+    "mods": []
+   },
+   {
+    "id": "e903c27c-444e-4ad2-84e6-8d7913df84b4",
+    "name": "Fuzil de Caça",
+    "description": "<p>Esta arma de fogo é bastante popular entre fazendeiros, caçadores e atiradores esportistas.</p>",
+    "itemType": "weapon",
+    "damage": "3d8",
+    "criticalRange": 19,
+    "criticalMult": 3,
+    "damageType": "Balístico",
+    "range": "Médio",
+    "handling": "Duas Mãos",
+    "proficiencie": "Armas Simples",
+    "type": "Arma de Fogo",
+    "slots": "2",
+    "category": "III",
+    "equipped": true,
+    "mods": [
+     {
+      "id": "5b3695bb-fc72-41e8-ba69-ebbed5bc8af7",
+      "name": "Senciente",
+      "description": "<p>Você pode gastar uma ação de movimento e 2 PE para imbuir a arma com uma fagulha de sua consciência. A arma flutua ao seu lado e, uma vez por rodada, ataca um ser em alcance curto (ou no alcance da arma, o que for maior) a sua escolha, com as mesmas estatísticas que teria se você a estivesse empunhando. Você pode gastar 1 PE no início de cada um de seus turnos para manter esse efeito. Se não o fizer, a arma cai no chão. Você pode usar uma ação de movimento para apanhar a arma no ar caso precise. Soltar a arma para que volte a flutuar para ativar a maldição é uma ação livre.</p>",
+      "modType": "curse",
+      "itemType": "weapon",
+      "element": "Conhecimento",
+      "hasAutomation": false
+     },
+     {
+      "id": "71fec361-1e18-41ed-897b-574a429f2411",
+      "name": "Alongada",
+      "description": "<p>Com um cano mais longo, que aumenta a precisão dos disparos, a arma fornece +2 nos testes de ataque.</p>",
+      "modType": "mod",
+      "itemType": "weapon",
+      "hasAutomation": false
+     }
+    ]
+   },
+   {
+    "id": "16904723-7e3f-4f43-9e52-30a29d34f127",
+    "name": "Granada Incendiária",
+    "description": "<p>Para usar uma granada, você precisa empunhá-la e então gastar uma ação padrão para arremessá-la em um ponto à sua escolha em alcance médio. A granada afeta um raio de 6m a partir do ponto de impacto. O efeito que ela causa varia conforme o tipo de granada.</p><p>Espalha labaredas incandescentes. Seres na área sofrem 6d6 pontos de dano de fogo e ficam em chamas (Reflexos DT Agi reduz o dano à metade e evita a condição em chamas).</p>",
+    "itemType": "misc",
+    "slots": 1,
+    "category": "I",
+    "equipped": false,
+    "mods": []
+   },
+   {
+    "id": "aae9e072-5dce-4697-ae45-85b01f114baf",
+    "name": "Mochila Militar",
+    "description": "<p>Uma mochila leve e de alta qualidade. Ela não usa nenhum espaço e aumenta sua capacidade de carga em 2 espaços.</p>",
+    "itemType": "misc",
+    "slots": "-5",
+    "category": "II",
+    "equipped": false,
+    "mods": [
+     {
+      "id": "c52c326d-dd77-468b-ae49-c63f0cc16534",
+      "name": "Aprimorado",
+      "description": "<p>O bônus em perícia concedido pelo acessório aumenta para +5. Se o item tiver função adicional, esta modificação poderá ser escolhida uma segunda vez para esta função.</p>",
+      "modType": "mod",
+      "itemType": "misc",
+      "hasAutomation": false
+     }
+    ]
+   },
+   {
+    "id": "8274bded-df9f-4d5b-a8ee-6f775d7c71ac",
+    "name": "Proteção Leve",
+    "description": "<p>Jaqueta de couro pesada ou um colete de kevlar. Essa proteção é tipicamente usada por seguranças e policiais.</p>",
+    "itemType": "protection",
+    "slots": 2,
+    "category": "I",
+    "equipped": true,
+    "defense": 5,
+    "mods": []
+   },
+   {
+    "id": "0c2673b5-5f7f-4eb1-bbfb-1d220e81ea7a",
+    "name": "Revólver",
+    "description": "<p>A arma de fogo mais comum, e uma das mais confiáveis.</p>",
+    "itemType": "weapon",
+    "damage": "3d6",
+    "criticalRange": 19,
+    "criticalMult": 3,
+    "damageType": "Balístico",
+    "range": "Curto",
+    "handling": "Leve",
+    "proficiencie": "Armas Simples",
+    "type": "Arma de Fogo",
+    "slots": "1",
+    "category": "II",
+    "equipped": true,
+    "mods": [
+     {
+      "id": "4c046399-7459-4cac-8e9d-266b3610badd",
+      "name": "Calibre Grosso",
+      "description": "<p>A arma é modificada para disparar munição de maior calibre, aumentando seu dano em mais um dado do mesmo tipo. Por exemplo, um revolver de calibre grosso causa 3d6 pontos de dano, enquanto um fuzil de precisão causa 3d10. Armas com esta modificação precisam usar munição específica de calibre grosso. Munição de calibre grosso possui o mesmo custo em categoria de munição normal, mas não pode ser usada em armas normais.</p>",
+      "modType": "mod",
+      "itemType": "weapon",
+      "hasAutomation": false
+     }
+    ]
+   },
+   {
+    "id": "6c54f6ab-67be-494b-a95b-52a59062ab43",
+    "name": "Soqueira",
+    "description": "<p>Esta peça de metal e usada entre os dedos e permite socos mais perigosos — fornece +1 em rolagens de dano desarmado. Uma soqueira pode receber modificações e maldições de armas corpo a corpo e aplica os efeitos delas em seus ataques desarmados.</p>",
+    "itemType": "misc",
+    "slots": 1,
+    "category": "0",
+    "equipped": false,
+    "mods": []
+   },
+   {
+    "id": "d4c71369-54df-48eb-af79-f2956a889702",
+    "name": "Taser",
+    "description": "<p>Um dispositivo de eletrochoque capaz de atordoar ou até incapacitar um alvo. Você pode gastar uma ação padrão para atingir um ser adjacente. O alvo sofre 1d6 pontos de dano de eletricidade e fica atordoado por uma rodada (Fortitude DT Agi evita). A bateria do taser dura dois usos.</p>",
+    "itemType": "misc",
+    "slots": 1,
+    "category": "I",
+    "equipped": false,
+    "mods": []
+   },
+   {
+    "id": "254989db-8172-4805-915e-6dcce7e6214d",
+    "name": "Vestimenta",
+    "description": "<p>Uma peça de vestuário que fornece um bônus em uma perícia específica (exceto Luta ou Pontaria). Por exemplo, um par de botas militares pode fornecer +2 em Atletismo, enquanto um terno ou vestido elegante pode fornecer +2 em Diplomacia. Assim como utensílios, o benefício de cada vestimenta deve ser aprovado pelo mestre. Você pode receber os bônus de no máximo duas vestimentas ao mesmo tempo. Vestir ou despir uma vestimenta é uma ação completa.</p>",
+    "itemType": "misc",
+    "slots": "1",
+    "category": "III",
+    "equipped": false,
+    "mods": [
+     {
+      "id": "16887050-714b-4230-8bfa-47f827319281",
+      "name": "Função Adicional",
+      "description": "<p>O acessório fornece +2 em uma perícia adicional à sua escolha, sujeita à aprovação do mestre.</p>",
+      "modType": "mod",
+      "itemType": "misc",
+      "hasAutomation": false
+     },
+     {
+      "id": "e40b9801-cb43-442a-9ee6-18cb4ad3947c",
+      "name": "Aprimorado",
+      "description": "<p>O bônus em perícia concedido pelo acessório aumenta para +5. Se o item tiver função adicional, esta modificação poderá ser escolhida uma segunda vez para esta função.</p>",
+      "modType": "mod",
+      "itemType": "misc",
+      "hasAutomation": false
+     }
+    ]
+   },
+   {
+    "id": "71ce6042-697f-42b6-b64d-a22598009fd4",
+    "name": "Vestimenta",
+    "description": "<p>Uma peça de vestuário que fornece um bônus em uma perícia específica (exceto Luta ou Pontaria). Por exemplo, um par de botas militares pode fornecer +2 em Atletismo, enquanto um terno ou vestido elegante pode fornecer +2 em Diplomacia. Assim como utensílios, o benefício de cada vestimenta deve ser aprovado pelo mestre. Você pode receber os bônus de no máximo duas vestimentas ao mesmo tempo. Vestir ou despir uma vestimenta é uma ação completa.</p>",
+    "itemType": "misc",
+    "slots": "1",
+    "category": "IV",
+    "equipped": false,
+    "mods": [
+     {
+      "id": "96bfbbd0-de8d-4a6d-9744-6654fe28408d",
+      "name": "Destreza",
+      "description": "<p>Este acessório aprimora sua coordenação e velocidade, fornecendo +1 em Agilidade.</p>",
+      "modType": "curse",
+      "itemType": "misc",
+      "element": "Energia",
+      "hasAutomation": false
+     },
+     {
+      "id": "b2a552b7-d0cb-40da-8e8a-7bebd243da53",
+      "name": "Defesa",
+      "description": "<p>Uma barreira de energia protetora invisível gerada por este acessório fornece +5 de Defesa.</p>",
+      "modType": "curse",
+      "itemType": "misc",
+      "element": "Energia",
+      "hasAutomation": false
+     },
+     {
+      "id": "cf257e44-5bfe-4e67-94fe-2a53272e391c",
+      "name": "Aprimorado",
+      "description": "<p>O bônus em perícia concedido pelo acessório aumenta para +5. Se o item tiver função adicional, esta modificação poderá ser escolhida uma segunda vez para esta função.</p>",
+      "modType": "mod",
+      "itemType": "misc",
+      "hasAutomation": false
+     }
+    ]
+   }
+  ],
+  "attacks": [
+   {
+    "id": "cf16f364-bcab-4b6c-8208-0d43fed8a93c",
+    "itemId": "e903c27c-444e-4ad2-84e6-8d7913df84b4",
+    "name": "Fuzil de Caça",
+    "damage": "3d8",
+    "extraDamage": "0",
+    "criticalRange": 19,
+    "criticalMult": 3,
+    "damageType": "Balístico",
+    "range": "Médio",
+    "skillUsed": "Pontaria",
+    "damageAttribute": "Nenhum",
+    "attackBonus": 0,
+    "aditionalDamage": []
+   },
+   {
+    "id": "67ec34ee-8c31-4b27-a548-30c403f757de",
+    "itemId": "0c2673b5-5f7f-4eb1-bbfb-1d220e81ea7a",
+    "name": "Revólver",
+    "damage": "3d6",
+    "extraDamage": "0",
+    "criticalRange": 19,
+    "criticalMult": 3,
+    "damageType": "Balístico",
+    "range": "Curto",
+    "skillUsed": "Pontaria",
+    "damageAttribute": "Nenhum",
+    "attackBonus": 0,
+    "aditionalDamage": []
+   }
+  ],
+  "rituals": [
+   {
+    "id": "1d7c1efe-0aaa-4abc-8ff9-ff0c230482d6",
+    "name": "Capturar Momento",
+    "description": "<p><span style=\"background-color: rgb(16, 16, 18); color: rgb(255, 255, 255);\">Você marca um local em alcance médio com um símbolo de Morte invisível, que capta imagens e sons em alcance médio dele. Com uma ação padrão, você vê e ouve o que o símbolo capta, mesmo longe. No máximo três símbolos; um quarto apaga um anterior.</span></p><p><strong>Discente (+3 PE):</strong> Acrescenta a opção de, com uma ação padrão, fazer o símbolo explodir: 4d8 de dano de Morte em todos os seres captados por ele naquele momento (Fortitude contra a DT do ritual reduz à metade).</p><p><strong>Verdadeiro (+7 PE):</strong> Como discente, mas a explosão causa 8d8 de dano de Morte. <em style=\"color: rgb(255, 255, 255);\">Requer 3º círculo</em></p>",
+    "circle": "2",
+    "element": "Morte",
+    "execution": "Padrão",
+    "range": "Médio",
+    "target": "1 local (o símbolo capta numa esfera de 18 m de raio)",
+    "area": "",
+    "duration": "permanente até ser dissipado",
+    "save": "veja texto"
+   }
+  ],
+  "itemsLimit": {
+   "I": 2,
+   "II": 0,
+   "III": 0,
+   "IV": 0
+  },
+  "currentItemsLimit": {
+   "I": 5,
+   "II": 3,
+   "III": 2,
+   "IV": 1
+  },
+  "resistencias": {},
+  "imunidades": [],
+  "vulnerabilidades": []
+ },
+ "resumo": {
+  "nome": "Meko - DE",
+  "classe": "Especialista",
+  "origem": "T.I.",
+  "progressao": {
+   "modo": "nivel",
+   "valor": 10
+  },
+  "atributos": {
+   "for": 2,
+   "agi": 4,
+   "int": 3,
+   "pre": 2,
+   "vig": 1
+  },
+  "recursos": {
+   "pv": {
+    "atual": 53,
+    "maximo": 53
+   },
+   "pe": {
+    "atual": 54,
+    "maximo": 54
+   },
+   "san": {
+    "atual": 52,
+    "maximo": 52
+   },
+   "pd": {
+    "atual": 64,
+    "maximo": 64
+   }
+  },
+  "pericias": [
+   {
+    "nome": "Acrobacia",
+    "chaveSugerida": "acrobacia",
+    "atributo": "agi",
+    "grau": "destreinado",
+    "treino": "0",
+    "bonusTotal": 0,
+    "outros": 0
+   },
+   {
+    "nome": "Adestramento",
+    "chaveSugerida": "adestramento",
+    "atributo": "pre",
+    "grau": "destreinado",
+    "treino": "0",
+    "bonusTotal": 0,
+    "outros": 0
+   },
+   {
+    "nome": "Artes",
+    "chaveSugerida": "artes",
+    "atributo": "pre",
+    "grau": "destreinado",
+    "treino": "0",
+    "bonusTotal": 0,
+    "outros": 0
+   },
+   {
+    "nome": "Atletismo",
+    "chaveSugerida": "atletismo",
+    "atributo": "for",
+    "grau": "treinado",
+    "treino": "5",
+    "bonusTotal": 0,
+    "outros": -5
+   },
+   {
+    "nome": "Atualidades",
+    "chaveSugerida": "atualidades",
+    "atributo": "int",
+    "grau": "destreinado",
+    "treino": "0",
+    "bonusTotal": 0,
+    "outros": 0
+   },
+   {
+    "nome": "Ciências",
+    "chaveSugerida": "ciencias",
+    "atributo": "int",
+    "grau": "destreinado",
+    "treino": "0",
+    "bonusTotal": 0,
+    "outros": 0
+   },
+   {
+    "nome": "Crime",
+    "chaveSugerida": "crime",
+    "atributo": "agi",
+    "grau": "treinado",
+    "treino": "5",
+    "bonusTotal": 5,
+    "outros": 0
+   },
+   {
+    "nome": "Diplomacia",
+    "chaveSugerida": "diplomacia",
+    "atributo": "pre",
+    "grau": "destreinado",
+    "treino": "0",
+    "bonusTotal": 5,
+    "outros": 5
+   },
+   {
+    "nome": "Enganação",
+    "chaveSugerida": "enganacao",
+    "atributo": "pre",
+    "grau": "destreinado",
+    "treino": "0",
+    "bonusTotal": 0,
+    "outros": 0
+   },
+   {
+    "nome": "Fortitude",
+    "chaveSugerida": "fortitude",
+    "atributo": "vig",
+    "grau": "veterano",
+    "treino": "10",
+    "bonusTotal": 15,
+    "outros": 5
+   },
+   {
+    "nome": "Furtividade",
+    "chaveSugerida": "furtividade",
+    "atributo": "agi",
+    "grau": "destreinado",
+    "treino": "0",
+    "bonusTotal": 0,
+    "outros": 0
+   },
+   {
+    "nome": "Iniciativa",
+    "chaveSugerida": "iniciativa",
+    "atributo": "agi",
+    "grau": "destreinado",
+    "treino": "0",
+    "bonusTotal": 0,
+    "outros": 0
+   },
+   {
+    "nome": "Intimidação",
+    "chaveSugerida": "intimidacao",
+    "atributo": "pre",
+    "grau": "destreinado",
+    "treino": "0",
+    "bonusTotal": 2,
+    "outros": 2
+   },
+   {
+    "nome": "Intuição",
+    "chaveSugerida": "intuicao",
+    "atributo": "pre",
+    "grau": "destreinado",
+    "treino": "0",
+    "bonusTotal": 5,
+    "outros": 5
+   },
+   {
+    "nome": "Investigação",
+    "chaveSugerida": "investigacao",
+    "atributo": "int",
+    "grau": "treinado",
+    "treino": "5",
+    "bonusTotal": 5,
+    "outros": 0
+   },
+   {
+    "nome": "Luta",
+    "chaveSugerida": "luta",
+    "atributo": "for",
+    "grau": "destreinado",
+    "treino": "0",
+    "bonusTotal": 0,
+    "outros": 0
+   },
+   {
+    "nome": "Medicina",
+    "chaveSugerida": "medicina",
+    "atributo": "int",
+    "grau": "veterano",
+    "treino": "10",
+    "bonusTotal": 10,
+    "outros": 0
+   },
+   {
+    "nome": "Ocultismo",
+    "chaveSugerida": "ocultismo",
+    "atributo": "int",
+    "grau": "veterano",
+    "treino": "10",
+    "bonusTotal": 14,
+    "outros": 4
+   },
+   {
+    "nome": "Percepção",
+    "chaveSugerida": "percepcao",
+    "atributo": "pre",
+    "grau": "treinado",
+    "treino": "5",
+    "bonusTotal": 5,
+    "outros": 0
+   },
+   {
+    "nome": "Pilotagem",
+    "chaveSugerida": "pilotagem",
+    "atributo": "agi",
+    "grau": "destreinado",
+    "treino": "0",
+    "bonusTotal": 0,
+    "outros": 0
+   },
+   {
+    "nome": "Pontaria",
+    "chaveSugerida": "pontaria",
+    "atributo": "agi",
+    "grau": "veterano",
+    "treino": "10",
+    "bonusTotal": 10,
+    "outros": 0
+   },
+   {
+    "nome": "Profissão",
+    "chaveSugerida": "profissao",
+    "atributo": "int",
+    "grau": "veterano",
+    "treino": "10",
+    "bonusTotal": 10,
+    "outros": 0
+   },
+   {
+    "nome": "Reflexos",
+    "chaveSugerida": "reflexos",
+    "atributo": "agi",
+    "grau": "veterano",
+    "treino": "10",
+    "bonusTotal": 10,
+    "outros": 0
+   },
+   {
+    "nome": "Religião",
+    "chaveSugerida": "religiao",
+    "atributo": "pre",
+    "grau": "destreinado",
+    "treino": "0",
+    "bonusTotal": 0,
+    "outros": 0
+   },
+   {
+    "nome": "Sobrevivência",
+    "chaveSugerida": "sobrevivencia",
+    "atributo": "int",
+    "grau": "destreinado",
+    "treino": "0",
+    "bonusTotal": 0,
+    "outros": 0
+   },
+   {
+    "nome": "Tática",
+    "chaveSugerida": "tatica",
+    "atributo": "int",
+    "grau": "destreinado",
+    "treino": "0",
+    "bonusTotal": 0,
+    "outros": 0
+   },
+   {
+    "nome": "Tecnologia",
+    "chaveSugerida": "tecnologia",
+    "atributo": "int",
+    "grau": "veterano",
+    "treino": "10",
+    "bonusTotal": 10,
+    "outros": 0
+   },
+   {
+    "nome": "Vontade",
+    "chaveSugerida": "vontade",
+    "atributo": "pre",
+    "grau": "veterano",
+    "treino": "10",
+    "bonusTotal": 10,
+    "outros": 0
+   }
+  ],
+  "defesa": 24,
+  "bloqueio": 15,
+  "esquiva": 34,
+  "itens": 13,
+  "poderes": 16,
+  "rituais": 1
+ },
+ "avisos": [
+  {
+   "codigo": "foto_origem_desconhecida",
+   "gravidade": "informacao",
+   "campo": "sheetPictureURL",
+   "mensagem": "A foto vem de um endereço fora do armazenamento do CRIS e não será trazida."
+  },
+  {
+   "codigo": "historico_indisponivel",
+   "gravidade": "revisao",
+   "campo": "powers",
+   "mensagem": "A ordem de aquisição dos poderes não está disponível. O estado atual é preservado."
+  }
+ ]
+}
