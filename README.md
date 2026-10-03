@@ -560,6 +560,9 @@ segredo nenhum — ele os lê das Script Properties. Publicá-lo não expõe nad
 
 ### Atualizar o backend
 
+**v2.34.1 — BAGAGEM:** troque o `Cris.gs` e crie uma **nova versão** da
+implantação; publique o site.
+
 **v2.34.0 — TRASLADO:** importação de fichas públicas do CRIS. **Acrescente** o
 arquivo novo `Cris.gs` ao projeto do Apps Script e **troque** o `Codigo.gs` (o
 roteador passa a perguntar por `rotasDoCris()`); crie uma **nova versão** da

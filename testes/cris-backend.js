@@ -76,6 +76,9 @@ export async function testarCrisBackend({ t, preparar, novaConta, comoFn, chamar
   const texto = JSON.stringify(priv);
   t.ok("dono, campanha, administradores e histórico de rolagens não voltam", priv.ok && !/dono-secreto|fulano@exemplo|camp-1|rollHistory|admins/.test(texto));
 
+  responder = () => ({ status: 200, corpo: JSON.stringify(documento(Object.assign({}, jeff, { isNexLevelOn: true, nex: "55%", nexString: "55%" }))) });
+  const nivel = A({ acao: "ler_ficha_cris", url: LINK });
+  t.ok("NEX & Experiência com o progresso em porcentagem (“55%”) é lido", nivel.ok && nivel.dados.resumo.progressao.modo === "nivel" && nivel.dados.resumo.progressao.valor === 11);
   responder = () => ({ status: 200, corpo: JSON.stringify(documento(Object.assign({}, jeff, { private: true }))) });
   t.recusa("ficha privada é recusada", A({ acao: "ler_ficha_cris", url: LINK }), "cris_nao_publica");
   responder = () => ({ status: 200, corpo: JSON.stringify(documento((() => { const x = Object.assign({}, jeff); delete x.private; return x; })())) });

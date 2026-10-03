@@ -70,6 +70,23 @@
 
   var CHANGELOG = [
     {
+      versao: "2.34.1", codinome: "BAGAGEM", data: "03/10/2026",
+      mudancas: {
+        "Corrigido": [
+          "Importar do CRIS: fichas com NEX & Experiência não eram lidas (o CRIS guarda o progresso como “55%”, que é o nível 11).",
+          "Importar do CRIS: a mochila como espaço negativo deixava a ficha sobrecarregada no R.A.M.A., e a importação desfazia as penalidades com ajustes permanentes. Agora a carga é uma decisão da revisão (o padrão mantém o estado do CRIS com um ajuste de capacidade), e a sobrecarga nunca vira ajuste de perícia, Defesa ou deslocamento.",
+          "Importar do CRIS: PV, PE ou SAN atuais acima do máximo viram pontos temporários, em vez de ficar acima do máximo.",
+        ],
+        "Melhorado": [
+          "Importar do CRIS reconhece “Resistir a Sangue” (e os outros elementos), rituais com sufixo (“Hemofagia - Grimório”) e “Componentes Ritualísticos de (elemento)”; a penalidade de proteção pesada entra na decisão das perícias com efeito automático.",
+          "O servidor registra no log de execução o motivo de uma leitura do CRIS que falha, e a tela explica quando falta a autorização de serviço externo do Apps Script.",
+        ],
+        "Técnico": [
+          "Troque o `Cris.gs` e crie uma nova versão da implantação; publique o site. Testes: 10 novos na importação e 1 no servidor; dez fichas públicas do CRIS conferidas por leitura direta.",
+        ],
+      },
+    },
+    {
       versao: "2.34.0", codinome: "TRASLADO", data: "03/10/2026",
       mudancas: {
         "Adicionado": [

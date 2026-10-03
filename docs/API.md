@@ -37,6 +37,8 @@ devolve a mesma ficha).
   campanha e histórico de rolagens ficam de fora. Listas não são cortadas: o
   que passa dos limites (300 itens, poderes, ataques ou rituais; 100 perícias)
   recusa a leitura. A foto só volta se for do armazenamento do CRIS.
+- **NEX & Experiência**: o CRIS guarda o progresso em `nex` como porcentagem;
+  o `resumo.progressao.valor` traz o nível (“55%” → 11, “99%” → 20).
 - **Limite**: 20 consultas a cada 5 minutos por conta (CacheService, pela conta
   da sessão — nunca pela do pedido).
 - **Registro**: nada do corpo da ficha, do link da foto ou da resposta bruta vai

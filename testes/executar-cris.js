@@ -429,6 +429,44 @@ t.grupo("Sintéticos · bordas");
   t.ok("nada do documento bruto do CRIS fica na ficha", !JSON.stringify(r.ficha).includes("\"skills\""));
 }
 
+t.grupo("Sintéticos · formatos vistos em fichas reais do CRIS (v2.34.1)");
+{
+  const n = converter(sintetico({ className: "Ocultista", isNexLevelOn: true, nex: "55%", nexString: "55%" }));
+  t.iguais("NEX & Experiência com o progresso em porcentagem: 55% é nível 11, exposição 55%", [n.ok, n.ficha.ordem.nivel, n.ficha.ordem.nex], [true, 11, 55]);
+  const n99 = converter(sintetico({ className: "Ocultista", isNexLevelOn: true, nex: "99%", nexString: "100%" }));
+  t.iguais("  99% é nível 20; exposição 100% vira 99%", [n99.ok, n99.ficha.ordem.nivel, n99.ficha.ordem.nex], [true, 20, 99]);
+
+  const carga = sintetico({ attributes: { str: 1, dex: 2, int: 3, pre: 1, con: 1 }, currentLoad: 4, maxLoad: 5, block: 0, evade: 0,
+    inventory: [1, 2, 3, 4, 5, 6, 7, 8].map((i) => ({ id: "c" + i, name: "Lanterna Tática", itemType: "misc", slots: "1", category: "0", equipped: false, mods: [] })) });
+  const rc = converter(carga);
+  t.ok("sobrecarga só no R.A.M.A.: decisão “carga”, padrão manter o CRIS", (revisao(rc, "carga") || {}).valor === "cris");
+  t.ok("  com o ajuste, a ficha não fica sobrecarregada", !calcular(rc.ficha).carga.sobrecarregado && rc.ficha.ordem.ajustes.some((a) => a.alvo === "capacidade"));
+  const rr = converter(carga, { carga: "rama" });
+  const cr = calcular(rr.ficha);
+  t.ok("  seguindo o R.A.M.A.: sobrecarregada, e a penalidade não é desfeita por ajuste", cr.carga.sobrecarregado && cr.defesa.total === 10 + 2 - 5 && !rr.ficha.ordem.ajustes.some((a) => /^pericia:/.test(a.alvo) || a.alvo === "deslocamento"));
+
+  const temp = converter(sintetico({ className: "Combatente", nex: "5%", currentPv: 50, maxPv: 0 }), { "maximo:pv": "rama" });
+  t.ok("máximo pela regra e PV atual acima dele: fica no máximo, com observação", temp.ficha.ordem.recursos.pv === calcular(temp.ficha).pv.total);
+  const temp2 = converter(sintetico({ className: "Combatente", nex: "5%" }));
+  const maxPv = calcular(temp2.ficha).pv.total;
+  const temp3 = converter(sintetico({ className: "Combatente", nex: "5%", currentPv: maxPv + 7, maxPv: maxPv }));
+  t.iguais("PV atual acima do máximo no CRIS: o excedente vira PV temporário", [temp3.ficha.ordem.recursos.pv, temp3.ficha.ordem.temporarios.pv], [maxPv, 7]);
+
+  const res = converter(sintetico({ className: "Ocultista", nex: "20%", powers: [{ id: "r1", name: "Resistir a Sangue", description: "" }] }));
+  const aqRes = res.ficha.ordem.importacao.aquisicoes.find((a) => a.nomeOriginal === "Resistir a Sangue");
+  t.ok("“Resistir a Sangue” é Resistir a Elemento com Sangue escolhido", aqRes && aqRes.chave === "resistirAElemento" && aqRes.opcoes.elemento === "sangue");
+
+  const rit = converter(sintetico({ className: "Ocultista", nex: "20%", rituals: [{ id: "x", name: "Perturbação - Grimório", circle: "1", element: "Conhecimento" }] }));
+  t.ok("ritual com sufixo (“Perturbação - Grimório”) é o do catálogo", !!rit.ficha.rituais.itens[0].origemCatalogoId);
+
+  const comp = converter(sintetico({ inventory: [
+    { id: "k1", name: "Componentes Ritualísticos de Sangue", itemType: "misc", slots: "1", category: "0", equipped: false, mods: [] },
+    { id: "k2", name: "Componentes Ritualísticos de Morte, Sangue", itemType: "misc", slots: "2", category: "0", equipped: false, mods: [] },
+  ] }));
+  t.ok("componentes de um elemento: item do catálogo; de vários: uma linha personalizada", comp.ficha.inventario.itens.length === 2 &&
+    comp.ficha.inventario.itens[0].origemCatalogoId === "op.paranormal.componentes" && !comp.ficha.inventario.itens[1].origemCatalogoId);
+}
+
 console.log(`\n${FORTE}${passaram + falharam} verificações${FIM} · ${VERDE}${passaram} ok${FIM} · ${falharam ? VERMELHO : CINZA}${falharam} falhas${FIM}`);
 if (falhas.length) { console.log(`\n${VERMELHO}Falhou:${FIM}`); falhas.forEach((f) => console.log(`  · ${f}`)); }
 Deno.exit(falharam ? 1 : 0);

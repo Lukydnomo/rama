@@ -532,9 +532,13 @@ dos máximos finais, zero incluído — sem descanso e sem completar.
 | Traços do Outro Lado | SAN cheia | metade da SAN da classe | revisão; o padrão mantém o máximo do CRIS (ajuste) |
 | Golpe Pesado | +1 dado na arma | descrito | +1 dado como ajuste da arma, com motivo |
 | Maldição Defesa de acessório | soma na Defesa | descrita | bônus extra de Defesa com motivo |
-| Mochila | espaço negativo | capacidade | conferência, sem ajuste |
+| Mochila e carga | mochila como espaço negativo; sobrecarga sem penalidade | Mochila Militar soma capacidade; sobrecarga tira 5 da Defesa e das perícias de carga e 3 m de deslocamento | decisão “carga”: o padrão mantém o estado do CRIS com um ajuste de capacidade; seguindo o R.A.M.A., a penalidade fica e nunca é desfeita por ajuste |
 | Limites de categoria da patente | não confere | avisa | aviso na revisão; nada é removido |
 | `nexString` | texto livre | — | não manda no NEX; com NEX & Experiência é a exposição |
+| NEX & Experiência | o progresso continua em `nex` como porcentagem (“55%”) | nível | “55%” é o nível 11 (99% é o 20); número puro é lido como nível |
+| Proteção pesada em uso | sem penalidade | −5 nas perícias de carga | entra na decisão das perícias com efeito automático |
+| Atual acima do máximo | permitido | — | o excedente de PV, PE ou SAN vira pontos temporários |
+| Nome com elemento (“Resistir a Sangue”), ritual com sufixo (“– Grimório”), “Componentes Ritualísticos de Sangue” | texto | catálogo com escolha | reconhecidos com a escolha; componentes de vários elementos numa linha só ficam personalizados |
 | `isPdOn` | liga PD | "Jogando sem Sanidade" | só esse campo liga a regra; conteúdo do SaH não liga nada |
 | Bônus escrito no nome do item | texto | — | não vira efeito; o total observado da perícia entra como ajuste |
 

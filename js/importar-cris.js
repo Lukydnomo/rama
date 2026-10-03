@@ -256,14 +256,20 @@
       marco.nex = o.nex;
       if (src.nexString !== undefined && String(src.nexString) !== nexTexto) observacoes.push("nexString do CRIS (" + src.nexString + ") é diferente do NEX atual; vale o NEX atual (" + nexTexto + ").");
     } else {
-      var nivel = numeroOuNulo(src.nex);
-      if (nivel === null) return falhar("cris_formato_incompativel", "O nível da ficha não é um número.");
+      /* O CRIS guarda a progressão em `nex` mesmo com NEX & Experiência:
+         "55%" é o 11º passo, isto é, nível 11 (99% é o 20º). Um número
+         sem % é lido como nível. */
+      var mNiv = /^(\d{1,3})(%?)$/.exec(String(src.nex === undefined || src.nex === null ? "" : src.nex).trim());
+      if (!mNiv) return falhar("cris_formato_incompativel", "O nível da ficha (“" + src.nex + "”) não é um número.");
+      var nivel = mNiv[2] ? (Number(mNiv[1]) >= 99 ? 20 : Math.round(Number(mNiv[1]) / 5)) : Number(mNiv[1]);
+      if (mNiv[2]) observacoes.push("NEX & Experiência: o CRIS guarda a progressão como " + src.nex + "; no R.A.M.A. isso é o nível " + Math.max(1, Math.min(20, nivel)) + ".");
       o.nivel = Math.max(1, Math.min(20, Math.round(nivel)));
       o.nivelDefinido = true;
       marco.modo = "nivel";
       marco.nivel = o.nivel;
-      var exp = /^(\d{1,2})%$/.exec(String(src.nexString || "").trim());
-      var nexExp = exp ? R.nexValido(Number(exp[1])) : null;
+      var exp = /^(\d{1,3})%$/.exec(String(src.nexString || "").trim());
+      var nexExp = exp ? R.nexValido(Math.min(99, Number(exp[1]))) : null;
+      if (exp && Number(exp[1]) > 99) observacoes.push("Exposição no CRIS: " + src.nexString + "; o R.A.M.A. vai até 99%.");
       if (nexExp === null) {
         nexExp = Number(revisao("exposicao", "NEX de exposição", "Com NEX & Experiência, o CRIS informa o nível (" + o.nivel + "), e o NEX de exposição não veio. Nível não é porcentagem: escolha a exposição.",
           [0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70, 75, 80, 85, 90, 95, 99].map(function (n) { return { valor: String(n), rotulo: n + "%" }; }), "5"));
@@ -344,7 +350,21 @@
     ficha.inventario.itens = [];
     var porIdCris = {};
     var infoItens = [];
-    (Array.isArray(src.inventory) ? src.inventory : []).forEach(function (it, i) {
+    /* "Componentes Ritualísticos de Sangue" é o item do catálogo com o
+       elemento escolhido. Uma linha do CRIS com vários elementos continua
+       uma linha só (item personalizado): o inventário guarda o que a ficha
+       tinha, entrada por entrada. */
+    function elementoDosComponentes(it) {
+      var m = /^componentes ritualisticos (?:de|do|da|dos|das) (.+)$/.exec(chaveDeTexto(it && it.name));
+      if (!m) return "";
+      var els = m[1].split(/\s+(?:e\s+)?/).filter(function (x) { return ELEMENTO_POR_TEXTO[x] && x !== "varia"; });
+      return els.length === 1 && m[1] === els[0] ? els[0] : "";
+    }
+    var inventarioCris = (Array.isArray(src.inventory) ? src.inventory : []).map(function (it) {
+      var el = elementoDosComponentes(it);
+      return el ? Object.assign({}, it, { element: el }) : it;
+    });
+    inventarioCris.forEach(function (it, i) {
       var r = montarItem(it, i);
       if (!r) return;
       ficha.inventario.itens.push(r.item);
@@ -372,6 +392,9 @@
     }
 
     function identificar(it) {
+      if (/^componentes ritualisticos /.test(chaveDeTexto(it.name)) && ELEMENTO_POR_TEXTO[chaveDeTexto(it.element)] && catItens.porId["op.paranormal.componentes"]) {
+        return { entrada: catItens.porId["op.paranormal.componentes"], exata: true, parte: "nome", texto: it.name };
+      }
       var cands = candidatosDeNome(it.name);
       for (var c = 0; c < cands.length; c++) {
         var k = chaveDeTexto(cands[c].texto);
@@ -541,6 +564,21 @@
         return;
       }
       var cands = (porNome[k] || []).slice();
+      var opcoesDoNome = null;
+      if (!cands.length) {
+        /* "Resistir a Sangue" é "Resistir a Elemento" com a opção já escolhida. */
+        var mEl = /\b(sangue|morte|conhecimento|energia|medo)\b/.exec(k);
+        if (mEl) {
+          var generico = (porNome[k.replace(mEl[0], "elemento")] || []).filter(function (e) {
+            return (e.opcoes || []).some(function (op) { return op.tipo === "elemento"; });
+          });
+          if (generico.length === 1) {
+            cands = generico;
+            opcoesDoNome = {};
+            generico[0].opcoes.forEach(function (op) { if (op.tipo === "elemento") opcoesDoNome[op.chave] = mEl[1]; });
+          }
+        }
+      }
       var el = ELEMENTO_POR_TEXTO[chaveDeTexto(p.element)];
       if (cands.length > 1 && el) {
         var mesmoEl = cands.filter(function (e) { return e.elemento === el; });
@@ -576,6 +614,7 @@
         return;
       }
       var aq = { ref: refAq, chave: e.chave, nome: e.nome, nomeOriginal: p.name, tipo: e.tipo, elemento: e.elemento || "", afinidade: repetida && e.tipo === "paranormal", representacao: "importada", procedencia: "desconhecida" };
+      if (opcoesDoNome) aq.opcoes = opcoesDoNome;
       if (habTrilha[e.chave]) aq.procedencia = "trilha " + trilhaAtual.nome + " (opção não informada)";
       else if (e.tipo === "classe" && (e.classes || []).indexOf(classe) < 0) {
         aq.procedencia = nomesDePoderes.indexOf(chaveDeTexto("Expansão de Conhecimento")) >= 0
@@ -812,8 +851,12 @@
     /* ---------- rituais ---------- */
     ficha.rituais.itens = [];
     (Array.isArray(src.rituals) ? src.rituals : []).forEach(function (r, i) {
-      var k = chaveDeTexto(r.name);
-      var cands = catRituais.rituais.filter(function (e) { return chaveDeTexto(e.nome) === k; });
+      var cands = [];
+      candidatosDeNome(r.name).some(function (cand) {
+        var kc = chaveDeTexto(cand.texto);
+        cands = kc ? catRituais.rituais.filter(function (e) { return chaveDeTexto(e.nome) === kc; }) : [];
+        return cands.length > 0;
+      });
       var circ = numeroOuNulo(r.circle);
       if (cands.length > 1 && circ !== null) {
         var mesmoCirc = cands.filter(function (e) { return e.circulo === circ; });
@@ -887,6 +930,36 @@
 
     var c = calc();
 
+    /* A penalidade de sobrecarga é estado do momento (escolhido seguir o
+       R.A.M.A. na carga): ela fica fora da comparação, para não virar
+       um ajuste permanente que a desfaça. */
+    function semSobrecarga(conta) {
+      return conta.total - (conta.parcelas || []).filter(function (x) { return x.rotulo === "Sobrecarregado"; })
+        .reduce(function (soma, x) { return soma + x.valor; }, 0);
+    }
+
+    /* Carga primeiro: a sobrecarga mexe na Defesa, no deslocamento e nas
+       perícias de carga. No CRIS a mochila costuma entrar como espaço
+       negativo; no R.A.M.A. a Mochila Militar soma capacidade. Quando o
+       R.A.M.A. vê sobrecarga que a ficha do CRIS não aplicava, a decisão
+       padrão mantém o estado do CRIS com um ajuste de capacidade. */
+    var cargaCris = numeroOuNulo(src.currentLoad), capCris = numeroOuNulo(src.maxLoad);
+    if (c.carga && c.carga.sobrecarregado) {
+      var falta = c.carga.ocupado - c.carga.limite;
+      var folgaCris = cargaCris !== null && capCris !== null ? Math.max(0, capCris - cargaCris) : 0;
+      var ajusteCap = Math.ceil(falta + folgaCris);
+      var crisSobrecarregada = cargaCris !== null && capCris !== null && cargaCris > capCris;
+      var cargaDec = revisao("carga", "Carga", "O R.A.M.A. soma " + c.carga.ocupado + " espaços para uma capacidade de " + c.carga.limite +
+        " (no CRIS: " + (cargaCris === null ? "—" : cargaCris) + " de " + (capCris === null ? "—" : capCris) + (crisSobrecarregada ? ", também acima, sem penalidade aplicada" : "") +
+        "). Sobrecarregada, a ficha perde 5 na Defesa e nas perícias de carga e 3 m de deslocamento.",
+        [{ valor: "cris", rotulo: "Manter como no CRIS: capacidade +" + ajusteCap + " (ajuste importado)" }, { valor: "rama", rotulo: "Seguir o R.A.M.A.: sobrecarregada, com as penalidades" }], "cris");
+      if (cargaDec === "cris") {
+        o.ajustes.push({ id: U.uuid(), alvo: "capacidade", valor: ajusteCap, motivo: "Importação CRIS: capacidade observada (mochila como espaço negativo)", manual: true });
+        ajustesDoc.push({ alvo: "capacidade", valor: ajusteCap, motivo: "carga do CRIS sem sobrecarga" });
+      }
+      c = calc();
+    }
+
     /* perícias: o bônus do CRIS já inclui o treino; um poder que o
        R.A.M.A. automatiza e o CRIS não somava não vira ajuste negativo
        sem a pessoa pedir. */
@@ -894,22 +967,23 @@
     Object.keys(periciasCris).forEach(function (k) {
       var pc = periciasCris[k];
       var conta = R.bonusDePericia(o, k, ficha.inventario);
+      conta = { total: semSobrecarga(conta), parcelas: conta.parcelas.filter(function (x) { return x.rotulo !== "Sobrecarregado"; }) };
       if (pc.bonus === conta.total) return;
       var efeitos = conta.parcelas.slice(1).filter(function (x) { return x.valor; });
       var x = { chave: k, nome: pc.nome, cris: pc.bonus, rama: conta.total, efeitos: efeitos };
-      if (efeitos.length && conta.total > pc.bonus && !pc.outros) { automatizadas.push(x); return; }
+      if (efeitos.length && !pc.outros) { automatizadas.push(x); return; }
       ajusteDaOrdem("pericia:" + k, pc.bonus - conta.total, "bônus de " + pc.nome + " observado no CRIS");
       linha("Perícia " + pc.nome, pc.bonus, conta.total, pc.bonus,
         (pc.outros ? "outros bônus do CRIS (" + sinal(pc.outros) + ")" : "diferença sem fonte reconhecida") + "; ajuste importado", pc.bonus - conta.total);
     });
     if (automatizadas.length) {
-      var segue = revisao("pericias:automaticas", "Perícias com efeito automático", "O R.A.M.A. soma efeitos que o CRIS não somava: " +
+      var segue = revisao("pericias:automaticas", "Perícias com efeito automático", "O R.A.M.A. aplica efeitos que o CRIS não aplicava: " +
         automatizadas.map(function (x) { return x.nome + " " + x.cris + " → " + x.rama + " (" + nomesDasParcelas(x.efeitos) + ")"; }).join("; ") + ".",
         [{ valor: "rama", rotulo: "Seguir o R.A.M.A. (o efeito vale)" }, { valor: "cris", rotulo: "Manter os totais do CRIS (ajuste negativo)" }], "rama");
       automatizadas.forEach(function (x) {
         if (segue === "cris") ajusteDaOrdem("pericia:" + x.chave, x.cris - x.rama, "total de " + x.nome + " mantido como no CRIS");
         linha("Perícia " + x.nome, x.cris, x.rama, segue === "cris" ? x.cris : x.rama,
-          segue === "cris" ? "total do CRIS mantido por decisão" : "o R.A.M.A. soma " + nomesDasParcelas(x.efeitos) + "; o CRIS não somava", segue === "cris" ? x.cris - x.rama : null);
+          segue === "cris" ? "total do CRIS mantido por decisão" : "o R.A.M.A. aplica " + nomesDasParcelas(x.efeitos) + "; o CRIS não aplicava", segue === "cris" ? x.cris - x.rama : null);
       });
     }
 
@@ -940,7 +1014,7 @@
     var bonusDef = numeroOuNulo(src.bonusDefense) || 0;
     var defObs = 10 + o.atributos.agi + protDef + bonusDef;
     c = calc();
-    var defRama = c.defesa.total;
+    var defRama = semSobrecarga(c.defesa);
     if (defObs !== defRama) {
       var diffDef = defObs - defRama;
       /* A maldição Defesa de acessório (+5) é descrita, não automatizada,
@@ -967,7 +1041,7 @@
     c = calc();
     var desl = numeroOuNulo(src.movement);
     if (desl !== null && c.deslocamento) {
-      var deslRama = c.deslocamento.total;
+      var deslRama = semSobrecarga(c.deslocamento);
       if (desl !== deslRama) ajusteDaOrdem("deslocamento", desl - deslRama, "deslocamento observado no CRIS");
       linha("Deslocamento", desl, deslRama, desl, desl === deslRama ? "igual" : "diferença sem fonte reconhecida; ajuste importado", desl === deslRama ? null : desl - deslRama);
     }
@@ -1016,8 +1090,14 @@
       var v = numeroOuNulo(src[x[1]]);
       if (v === null) return;
       v = Math.round(v);
-      if (recursosPelaRegra[x[0]] && c[x[0]] && v > c[x[0]].total) {
-        observacoes.push(x[0].toUpperCase() + " atual no CRIS era " + v + "; ficou " + c[x[0]].total + " para caber no máximo do R.A.M.A.");
+      if (c[x[0]] && v > c[x[0]].total) {
+        var excedente = v - c[x[0]].total;
+        if (x[0] !== "pd" && o.temporarios && !recursosPelaRegra[x[0]]) {
+          o.temporarios[x[0]] = (o.temporarios[x[0]] || 0) + excedente;
+          aviso("acima_do_maximo", "revisao", x[1], x[0].toUpperCase() + " atual no CRIS (" + v + ") passa do máximo (" + c[x[0]].total + "): o excedente (" + excedente + ") entrou como pontos temporários.");
+        } else {
+          observacoes.push(x[0].toUpperCase() + " atual no CRIS era " + v + "; ficou " + c[x[0]].total + " para caber no máximo do R.A.M.A.");
+        }
         v = c[x[0]].total;
       }
       o.recursos[x[0]] = v;

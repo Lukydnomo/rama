@@ -167,7 +167,12 @@ var RamaCrisCore = (function () {
     if (modo === 'nex') {
       if (!/^\d{1,2}%$/.test(String(d.nex))) throw erro('cris_formato_incompativel', 'NEX incompatível.');
       valorNex = Number(String(d.nex).slice(0, -1));
-    } else valorNex = numero(d.nex, 'nex/nivel');
+    } else {
+      /* Com NEX & Experiência o CRIS ainda guarda a progressão como
+         porcentagem ("55%" = nível 11); número puro também vale. */
+      var nv = /^(\d{1,3})%$/.exec(String(d.nex).trim());
+      valorNex = nv ? (Number(nv[1]) >= 99 ? 20 : Math.round(Number(nv[1]) / 5)) : numero(d.nex, 'nex/nivel');
+    }
     var recursos = {};
     ['Pv', 'Pe', 'San', 'Pd'].forEach(function (k) {
       if (d['max' + k] !== undefined && d['current' + k] !== undefined) recursos[k.toLowerCase()] = { atual: numero(d['current' + k], k), maximo: numero(d['max' + k], k) };
