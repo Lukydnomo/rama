@@ -57,6 +57,7 @@
     cris_indisponivel: "O CRIS não respondeu agora. Tente de novo em instantes.",
     cris_resposta_invalida: "O CRIS respondeu algo que não é uma ficha. Tente de novo mais tarde.",
     cris_formato_incompativel: "O formato da ficha no CRIS mudou ou está incompleto. A importação por arquivo continua disponível.",
+    cris_sem_autorizacao: "O servidor do R.A.M.A. ainda não tem permissão para acessar sites externos. Quem administra precisa abrir o Apps Script, executar uma função qualquer (ex.: ping) para autorizar e criar uma nova versão da implantação.",
     cris_limite_excedido: "A ficha passa dos limites de leitura (tamanho, quantidade ou profundidade).",
     acao_desconhecida: "O servidor do R.A.M.A. ainda não tem a leitura do CRIS. Peça para quem administra atualizar o Apps Script (Cris.gs e Codigo.gs).",
     sessao_invalida: "Sua sessão expirou. Entre de novo.",

@@ -230,12 +230,18 @@ function acaoLerFichaCris(corpo, usuario) {
       followRedirects: false,
       muteHttpExceptions: true,
       validateHttpsCertificates: true,
-      timeoutSeconds: CRIS_PRAZO_SEGUNDOS,
     });
   } catch (e) {
+    /* Só a mensagem do erro vai ao log (nunca corpo nem link de foto).
+       Sem autorização de UrlFetchApp a implantação nunca alcança o CRIS:
+       isso precisa de outra resposta que "tente de novo". */
+    var msg = String((e && e.message) || e);
+    console.error('R.A.M.A. ler_ficha_cris: ' + msg.slice(0, 300));
+    if (/permiss|autoriz|authoriz|external_request/i.test(msg)) return { ok: false, erro: 'cris_sem_autorizacao' };
     return { ok: false, erro: 'cris_indisponivel' };
   }
   var status = resposta.getResponseCode();
+  if (status !== 200) console.error('R.A.M.A. ler_ficha_cris: HTTP ' + status);
   if (status !== 200) return { ok: false, erro: RamaCrisCore.codigoHttp(status) };
   var bytes = resposta.getContent();
   if (!bytes || bytes.length > RamaCrisCore.MAX_BYTES) return { ok: false, erro: 'cris_limite_excedido' };
