@@ -885,6 +885,56 @@ publicadas da forma, com `pv`, estatísticas, perícias, habilidades e ações),
 `ordem.pvBase`, `ordem.aliada`, `ordem.ficha` e `instancia.forma`; nos ataques,
 `multiplicaTudo` (o dano extra também multiplica no crítico).
 
+### Arquivos Secretos 3 no bloco `ordem` (v2.33)
+
+Campo novo e opcional, normalizado em `js/ordem/arquivo3.js` (sem o módulo, passa
+como veio). Sem subida de schema e sem conversão; tudo só vale com a regra
+opcional correspondente em `ordem.opcionais` (`poderesDeSacrificio`,
+`trilhaGeral`, `batalhasDeIntencoes`, `jogosDoCirco`, `boasRecordacoes`,
+`regrasDaPaixao`, `veiculosOperacionais`, `animaisTreinados`), todas `false` por
+padrão — salvo o que vem de um poder ou item do AS3.
+
+```jsonc
+"ordem": {
+  "trilha": "performatico",          // trilha geral: fica guardada fora do combatente
+  "arquivo3": {
+    "cronologia": { "missao": 0, "dia": 0, "semana": 0, "sessao": 0 },
+    "sacrificio": { "digno": true, "dignoEm": "…", "dignoPor": "…", "dignoNota": "…",
+                    "estigma": "rancor", "estigmaEm": "…", "estigmaPor": "…",
+                    "fruto": { "tipo": "poder" | "ritual", "chave": "…", "nome": "…" } | null,
+                    "usos": [{ "poder": "odioSuprimido", "cena": "…", "em": "…", "nota": "" }] },
+    "flagelo": { "pvGastos": 0, "interludio": 0, "recuperacoes": 0 },
+    "guardiao": [{ "id": "gua-…", "cena": "…", "em": "…", "resultado": "pendente" | "san" | "semSan" }],
+    "entrada": { "sessao": -1, "pendente": false, "transferida": false, "em": "" },
+    "ensaio": { "interludio": 3, "bonus": 2, "origem": "propria" | "aliado", "nome": "", "cena": "…" } | null,
+    "ritmo": { "cena": "…", "origem": "propria" | "aliado", "nome": "", "bonus": 5, "criticos": ["atk-…"] } | null,
+    "frase": { "cena": "…", "multiplicador": 4 } | null,
+    "ambidestria": { "cena": "…", "em": "…", "semPenalidade": false } | null,
+    "instrumento": { "itemId": "…", "nome": "…", "criadoEm": "…", "quebrados": [{ "nome": "…", "em": "…" }] },
+    "paixoes": [{ "id": "pai-…", "nome": "…", "pv": 5, "pe": 3, "comBonus": true, "origem": "intimidade", "perdida": null }],
+    "recordacoes": { "fotos": [{ "id": "fot-…", "nome": "…", "recurso": "pv", "valor": 3 }], "missaoUsada": -1, "bonusDia": -1, "bonusGasto": false },
+    "batalha": { "contra": "…", "cena": "…", "em": "…" } | null,
+    "circo": [{ "id": "cir-…", "jogo": "dardos" | "soco", "pontos": 700, "detalhe": "…", "quebrou": false }],
+    "veiculos": [{ "id": "vei-…", "modelo": "categoria3", "nome": "…", "pvAtual": 150, "combustivel": 5,
+                   "regalias": [{ "chave": "latariaReforcada", "pericia": "", "tipoDeDano": "" }],
+                   "defeitos": ["tanqueFurado"], "danos": { "pneus": 0, "janelas": false, "farois": false, "tanque": false },
+                   "manobra": { "cena": "…", "dt": 15, "total": 17 } | null, "motorista": "…", "agiMotorista": 3,
+                   "usos": { "arsenal": 0, "missao": 0 }, "notas": "", "registro": [] }],
+    "animais": [{ "id": "ani-…", "nome": "Lupi", "especie": "cão", "modo": "aliado" | "ficha", "perfil": "",
+                  "aliadoId": "", "treinado": true, "treino": "…", "aprovado": false, "aprovadoPor": "" }],
+    "aliados": [{ "aliadoId": "…", "catalogoId": "as3.criatura.caio-aliado", "nome": "Caio", "ativo": true, "pericias": [] }],
+    "itens": { "pacocaDia": -1, "cranioDia": -1, "gaiolaAberta": false,
+               "couracas": [{ "itemId": "…", "semanas": 0, "vontade": "", "fortitude": "", "dt": 0, "semana": -1, "missao": -1 }] }
+  }
+}
+```
+
+Ids estáveis e listas com teto (veículos 8, animais 8, paixões 12, registros
+30–60). Normalizar duas vezes dá o mesmo resultado. Numa criatura: `formas[]
+.somaAtuais` (PV atuais somados ao entrar na forma) e `especial` numa habilidade
+(`rolarDeNovoMelhor`, `rolarDeNovoObrigatorio`, `trocarPorGuardado`); os valores
+guardados de Prever Resultados vivem em `instancia.usos` do aliado.
+
 ### O vínculo de ritual (v2.17)
 
 Uma concessão de ritual guarda, em `opcoes.rituais`, o **vínculo** com rituais que

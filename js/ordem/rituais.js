@@ -58,9 +58,9 @@
      Vem do catálogo de regras quando ele está carregado — uma fonte só. */
   var CUSTO_PADRAO = { 1: 1, 2: 3, 3: 6, 4: 10 };
 
-  var ROTULO_FONTE = { OPRPG: "Livro básico", SAH: "Sobrevivendo ao Horror", AS1: "Arquivos Secretos 1", AS2: "Arquivos Secretos 2" };
-  var NOME_FONTE = { OPRPG: "Ordem Paranormal RPG", SAH: "Sobrevivendo ao Horror", AS1: "Arquivos Secretos 1", AS2: "Arquivos Secretos 2" };
-  var SIGLA_FONTE = { OPRPG: "LB", SAH: "SAH", AS1: "AS1", AS2: "AS2" };
+  var ROTULO_FONTE = { OPRPG: "Livro básico", SAH: "Sobrevivendo ao Horror", AS1: "Arquivos Secretos 1", AS2: "Arquivos Secretos 2", AS3: "Arquivos Secretos 3" };
+  var NOME_FONTE = { OPRPG: "Ordem Paranormal RPG", SAH: "Sobrevivendo ao Horror", AS1: "Arquivos Secretos 1", AS2: "Arquivos Secretos 2", AS3: "Arquivos Secretos 3" };
+  var SIGLA_FONTE = { OPRPG: "LB", SAH: "SAH", AS1: "AS1", AS2: "AS2", AS3: "AS3" };
 
   var ROTULO_ESCOPO = { alvo: "Alvo", area: "Área", efeito: "Efeito" };
 
@@ -616,7 +616,7 @@
      ritual é texto, igual numa ficha universal.
      ================================================================= */
 
-  var FONTES = ["OPRPG", "SAH", "AS1", "AS2"];
+  var FONTES = ["OPRPG", "SAH", "AS1", "AS2", "AS3"];
 
   function normalizarDados(bruto) {
     if (!bruto || typeof bruto !== "object") return null;

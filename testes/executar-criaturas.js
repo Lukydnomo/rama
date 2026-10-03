@@ -58,12 +58,12 @@ function faces(lista) {
 t.grupo("Catálogo · inventário e integridade");
 const conferencia = OC.conferir(DADOS);
 t.igual("nenhum erro de conferência (ids, campos, expressões, variantes)", conferencia.erros.slice(0, 5), []);
-t.igual("contagem por livro bate com o inventário", conferencia.porLivro, { OPRPG: 67, SAH: 32, AS1: 12, AS2: 28, "OPRPG (variantes)": 5 });
+t.igual("contagem por livro bate com o inventário", conferencia.porLivro, { OPRPG: 67, SAH: 32, AS1: 12, AS2: 28, AS3: 36, "OPRPG (variantes)": 5 });
 const porNatureza = {};
 DADOS.criaturas.filter((c) => !c.variante).forEach((c) => { const k = c.livro + ":" + c.natureza; porNatureza[k] = (porNatureza[k] || 0) + 1; });
 t.igual("paranormais, pessoas e animais de cada livro", porNatureza,
   { "OPRPG:paranormal": 49, "OPRPG:humana": 11, "OPRPG:animal": 7, "SAH:paranormal": 13, "SAH:humana": 11, "SAH:animal": 8,
-    "AS1:paranormal": 1, "AS1:humana": 11, "AS2:animal": 2, "AS2:paranormal": 4, "AS2:humana": 22 });
+    "AS1:paranormal": 1, "AS1:humana": 11, "AS2:animal": 2, "AS2:paranormal": 4, "AS2:humana": 22, "AS3:humana": 33, "AS3:animal": 3 });
 const ids = DADOS.criaturas.map((c) => c.id);
 t.ok("ids únicos", new Set(ids).size === ids.length);
 t.ok("O Terminal (aventura do SAH) está no catálogo, com página", DADOS.criaturas.some((c) => c.id === "sah.criatura.o-terminal" && c.pagina === 218));
@@ -256,7 +256,7 @@ t.igual("imagens do catálogo pelo id (retrato 1:1 e corpo inteiro)", C.imagensD
 t.ok("  a cópia no Homebrew usa a do original; criatura sem catálogo não tem", !!C.imagensDoCatalogo(copia) && C.imagensDoCatalogo(antigaNorm) === null);
 const faltando = [];
 for (const c of DADOS.criaturas) {
-  const m = /^(op|sah|as1|as2)\.criatura\.(.+)$/.exec(c.id);
+  const m = /^(op|sah|as1|as2|as3)\.criatura\.(.+)$/.exec(c.id);
   for (const arq of ["retrato.png", "corpo.png"]) {
     /* A pasta pode estar num disco sincronizado (Google Drive), que às
        vezes demora a responder: uma segunda tentativa antes de acusar. */
@@ -369,6 +369,35 @@ t.ok("rituais de círculo “???” não ganham círculo deduzido", labirinto.fo
 const aliadoP = { id: "x", criatura: C.normalizar(kemiA), perigo: { cena: "c1", feridas: 1, morto: false, pendente: true, registros: [{ id: "r1", d6: 3, ferido: true, cena: "c1" }] } };
 const aliadosN = C.normalizarAliados([aliadoP]);
 t.ok("o registro de Aliados em Perigo atravessa a normalização do aliado", aliadosN[0].perigo.pendente === true && aliadosN[0].perigo.registros.length === 1);
+
+t.grupo("Arquivos Secretos 3 · equipes, Hora do Show e aliados");
+const as3 = DADOS.criaturas.filter((c) => c.livro === "AS3");
+t.igual("18 fichas de ameaça, 15 perfis de aliado e 3 animais", [as3.filter((c) => !c.aliada).length, as3.filter((c) => c.aliada && c.natureza === "humana").length, as3.filter((c) => c.natureza === "animal").length], [18, 15, 3]);
+t.igual("três equipes nas fichas", [...new Set(as3.filter((c) => !c.aliada).map((c) => c.categoria))].sort(), ["Couraças", "PSIKOLERA", "Pássaros"]);
+t.ok("Corvo pessoa, Corvo aliado e Corvo animal têm ids diferentes",
+  ["as3.criatura.corvo", "as3.criatura.corvo-aliado", "as3.criatura.corvo-animal"].every((id) => !!OC.criatura(id)) && OC.criatura("as3.criatura.corvo-animal").natureza === "animal");
+const argano = OC.criatura("as3.criatura.argano");
+t.igual("“–2O” é o pior de dois d20, não um número negativo", [argano.ordem.percepcao, argano.ordem.vontade], ["-2d20", "-2d20"]);
+t.ok("o teste –2d20 é válido no motor", D.testeValido("-2d20"));
+const ale = C.iniciarInstancia(OC.criatura("as3.criatura.ale"));
+ale.status[0].atual = 30;
+t.ok("Hora do Show é uma forma da mesma ocorrência", C.definirNaInstancia(ale, "forma", "hora-do-show"));
+t.igual("  +20 PV atuais ao entrar, máximo impresso (90)", [ale.status[0].atual, ale.status[0].maximo], [50, 90]);
+const vAle = C.vistaEfetiva(ale);
+t.ok("  ações mascaradas: +5 no ataque e +2 dados (Cortar com Teclado 1d20+15, 4d6+10)",
+  vAle.acoes.some((a) => (a.ataques || []).some((x) => x.teste === "1d20+15" && /4d6\+10/.test(JSON.stringify(x.dano)))));
+t.ok("  e a Música do Diabo só existe mascarado", vAle.acoes.some((a) => a.nome === "Música do Diabo") && !C.vistaEfetiva(C.iniciarInstancia(OC.criatura("as3.criatura.ale"))).acoes.some((a) => a.nome === "Música do Diabo"));
+C.definirNaInstancia(ale, "forma", "");
+t.igual("  tirar a máscara prende os atuais no máximo da ficha (45)", [ale.status[0].atual, ale.status[0].maximo], [45, 45]);
+const aleA = OC.criatura("as3.criatura.ale-aliado");
+t.igual("os comportamentos de rolagem do aliado ficam marcados (melhor / guardado)", aleA.habilidades.map((h) => h.especial || ""), ["rolarDeNovoMelhor", "trocarPorGuardado"]);
+t.igual("Porrada Rítmica: obrigatório ficar com o novo", OC.criatura("as3.criatura.eloy-aliado").habilidades[1].especial, "rolarDeNovoObrigatorio");
+t.ok("o especial atravessa a normalização (aliado na ficha)", C.criarAliado(aleA, "").criatura.habilidades[0].especial === "rolarDeNovoMelhor");
+const aliA = C.criarAliado(aleA, "");
+C.definirNaInstancia(aliA.criatura, "uso:" + aleA.habilidades[1].id + ".d1", 17);
+t.igual("valor guardado de Prever Resultados vive na ocorrência do aliado", C.normalizar(JSON.parse(JSON.stringify(aliA.criatura))).instancia.usos[aleA.habilidades[1].id + ".d1"], 17);
+const outroA = C.criarAliado(aleA, "");
+t.ok("  e cada ocorrência é independente", !(outroA.criatura.instancia && outroA.criatura.instancia.usos[aleA.habilidades[1].id + ".d1"]));
 
 t.grupo("Desempenho · catálogo leve");
 t.ok("cada ficha cabe com folga numa célula de Homebrew (45 000)", Object.values(cat.porId).every((c) => JSON.stringify(c).length < 20000));

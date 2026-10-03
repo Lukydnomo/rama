@@ -477,6 +477,11 @@
     var versoes = (ritual.versoes && ritual.versoes.length) ? ritual.versoes : [{ nome: "Normal" }];
     var custoPeExtra = 0;
     (c.efeitos ? c.efeitos.contextuais : []).forEach(function (x) { if (x.alvo === "custoPe") custoPeExtra += x.valor; });
+    /* Arquivos Secretos 3: Torvo tira 1 PE dos rituais de Sangue; o Poder
+       do Flagelo paga PE com PV (js/paginas/ficha-arquivo3.js). */
+    var AS3 = global.RAMAFichaArquivo3 || null;
+    var ajuste3 = AS3 ? AS3.ajusteDoRitual(ctx, elemento) : { menosPe: 0, notas: [] };
+    var estado3 = { peComPv: 0 };
 
     var efeito = efeitoConhecido(ritual);
 
@@ -502,7 +507,7 @@
         p: CS().planoDeRitual({
           elemento: elemento, afinidade: afinidade, controle: o.componentes, inventario: inv,
           controleLigado: controle, dispensa: estado.dispensa, entregar: complexa && estado.entregar,
-          catalisadorId: estado.catalisador, custo: custo ? Math.max(0, custo.total - semBase) : 0, acrescimoPe: custoPeExtra,
+          catalisadorId: estado.catalisador, custo: custo ? Math.max(0, custo.total - semBase - ajuste3.menosPe) : 0, acrescimoPe: custoPeExtra,
         }),
       };
     }
@@ -528,11 +533,16 @@
         if (custoPeExtra) detalhes.push((custoPeExtra > 0 ? "+" : "") + custoPeExtra + " de condição (alquebrado)");
         if (pl.semBase) detalhes.push("–" + pl.semBase + " da Mácula Ritualística");
         if (estado.dispensa === "camuflar") detalhes.push("+2 de Camuflar Ocultismo");
+        if (ajuste3.menosPe && pl.custo) detalhes.push("–" + ajuste3.menosPe + " de Torvo");
+        if (estado3.peComPv > total) estado3.peComPv = total;
+        var peDeVerdade = total - estado3.peComPv;
         partes.push(el("label.r-marca", {}, [
           el("input", { type: "checkbox", checked: estado.gastar, onchange: function (ev) { estado.gastar = ev.target.checked; } }),
-          el("span", { texto: "Gastar " + total + " " + recurso.toUpperCase() + " (" + detalhes.join(", ") + ") — " + recurso.toUpperCase() + " " + atual + " → " + (atual - total) }),
+          el("span", { texto: "Gastar " + peDeVerdade + " " + recurso.toUpperCase() + " (" + detalhes.join(", ") + (estado3.peComPv ? "; " + estado3.peComPv + " pagos com PV" : "") + ") — " + recurso.toUpperCase() + " " + atual + " → " + (atual - peDeVerdade) }),
         ]));
-        if (total > atual) partes.push(el("p.t-aviso", { texto: "Não há " + recurso.toUpperCase() + " suficientes para o custo." }));
+        if (peDeVerdade > atual) partes.push(el("p.t-aviso", { texto: "Não há " + recurso.toUpperCase() + " suficientes para o custo." }));
+        if (AS3) partes = partes.concat(AS3.opcoesNoRitual(ctx, estado3, total, pintar));
+        ajuste3.notas.forEach(function (n) { partes.push(el("p.t-mini", { texto: n })); });
       } else {
         partes.push(el("p.t-mini", { texto: "O custo deste ritual não está nos dados dele: registre o gasto à mão, nos recursos." }));
       }
@@ -605,10 +615,16 @@
     function concluir(pl) {
       if (usado) return;
       usado = true;
-      var r = CS().aplicarRitual(o, inv, ritual.nome, pl.p, {
+      var peComPv = estado.gastar && pl.custo ? Math.min(estado3.peComPv, pl.p.custo) : 0;
+      var planoPago = peComPv ? Object.assign({}, pl.p, { custo: pl.p.custo - peComPv }) : pl.p;
+      var r = CS().aplicarRitual(o, inv, ritual.nome, planoPago, {
         gastar: estado.gastar && !!pl.custo, recurso: recurso, atual: atual, elemento: elemento, versao: pl.v.nome,
       }, opId);
       if (!r.ok) { usado = false; UI.avisoAtencao(r.motivo); return; }
+      if (!r.repetido && peComPv && AS3) {
+        var flag = AS3.pagarFlagelo(ctx, peComPv);
+        if (flag) r.partes = (r.partes || []).concat([flag]);
+      }
       var registro = "";
       if (!r.repetido && efeito && estado.emMim && !estado.naAntena) registro = registrarEfeito(ctx, ritual, efeito, pl.v.nome);
       if (!r.repetido) {

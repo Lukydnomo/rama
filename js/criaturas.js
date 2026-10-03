@@ -464,6 +464,10 @@
       var v = U.aparar(e[k], k === "recarga" ? 120 : 60);
       if (v) saida[k] = v;
     });
+    /* AS3 (v2.33): o comportamento que a ficha automatiza num perfil de
+       aliado — rolar de novo (fica o melhor / fica o novo) ou trocar o
+       d20 por um valor guardado. Lista fechada. */
+    if (ESPECIAIS.indexOf(e.especial) >= 0) saida.especial = e.especial;
     /* As habilidades de uma criatura universal continuam sendo as da
        ficha: o que não é mecânica (cor, etiqueta) passa direto. */
     if (!ehAcao && e.origem) saida.origem = U.aparar(e.origem, 60);
@@ -612,6 +616,8 @@
 
   var CAMPOS_DE_TESTE_DA_FORMA = ["percepcao", "iniciativa", "fortitude", "reflexos", "vontade"];
 
+  var ESPECIAIS = ["rolarDeNovoMelhor", "rolarDeNovoObrigatorio", "trocarPorGuardado"];
+
   function normalizarForma(f) {
     if (!f || typeof f !== "object") return null;
     var id = U.aparar(f.id, 60).replace(/[^A-Za-z0-9_.-]/g, "");
@@ -626,6 +632,10 @@
       machucado: valorNumerico(f.machucado),
       defesa: valorNumerico(f.defesa),
       ativacao: U.aparar(f.ativacao, 2000),
+      /* "+20 PV máximos e atuais" (Hora do Show, AS3): ao entrar na forma,
+         os PV atuais sobem isso (até o máximo novo). Sem o campo, a troca
+         só prende os atuais, como no AS2. */
+      somaAtuais: Math.max(0, Math.min(999, U.inteiro(f.somaAtuais, 0))),
       notas: textos(f.notas, 10, 1000),
       pericias: unicos(lista(f.pericias).map(normalizarPericiaOrdem)),
       habilidades: unicos(lista(f.habilidades).map(function (h) { return normalizarEfeito(h, false); })),
@@ -651,7 +661,7 @@
     var maximo = forma ? forma.pv : (c.ordem && c.ordem.pvBase) || vida.maximo;
     if (!(maximo > 0)) return;
     vida.maximo = maximo;
-    vida.atual = Math.max(0, Math.min(vida.atual, maximo));
+    vida.atual = Math.max(0, Math.min(vida.atual + (forma && forma.somaAtuais ? forma.somaAtuais : 0), maximo));
   }
 
   /* ---------------- ocorrência ---------------- */
@@ -853,7 +863,7 @@
 
   function imagensDoCatalogo(alvo) {
     var id = typeof alvo === "string" ? alvo : idDoCatalogo(alvo);
-    var m = /^(op|sah|as1|as2)\.criatura\.([a-z0-9.-]+)$/.exec(String(id || ""));
+    var m = /^(op|sah|as1|as2|as3)\.criatura\.([a-z0-9.-]+)$/.exec(String(id || ""));
     if (!m) return null;
     var base = "assets/criaturas/" + m[1] + "/" + m[2] + "/";
     var url = U.url || function (x) { return x; };

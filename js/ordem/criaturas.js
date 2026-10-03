@@ -35,6 +35,7 @@
     SAH: { nome: "Sobrevivendo ao Horror", sigla: "SAH", rotulo: "Sobrevivendo ao Horror" },
     AS1: { nome: "Arquivos Secretos 1", sigla: "AS1", rotulo: "Arquivos Secretos 1" },
     AS2: { nome: "Arquivos Secretos 2", sigla: "AS2", rotulo: "Arquivos Secretos 2" },
+    AS3: { nome: "Arquivos Secretos 3", sigla: "AS3", rotulo: "Arquivos Secretos 3" },
   };
 
   var NOMES_ELEMENTO = { sangue: "Sangue", morte: "Morte", conhecimento: "Conhecimento", energia: "Energia", medo: "Medo" };
@@ -277,7 +278,7 @@
      expressões válidas, variantes apontando para uma base que existe.
      ================================================================= */
 
-  var FORMATO_ID = /^(op|sah|as1|as2)\.criatura\.[a-z0-9-]+(\.[a-z0-9-]+)?$/;
+  var FORMATO_ID = /^(op|sah|as1|as2|as3)\.criatura\.[a-z0-9-]+(\.[a-z0-9-]+)?$/;
 
   function conferir(dados) {
     var erros = [];

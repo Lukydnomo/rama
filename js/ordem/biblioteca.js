@@ -34,10 +34,13 @@
     /* v2.31: os poderes de Intenção (AS2 p. 94-95), da MESMA fonte que a
        seção Intenção da aba Habilidades usa (PODERES_INTENCAO). */
     { chave: "intencao",     rotulo: "Poderes de Intenção" },
+    /* v2.33: os poderes de Sacrifício (AS3 p. 110-111) — categoria
+       própria, não são poderes de Intenção. */
+    { chave: "sacrificio",   rotulo: "Poderes de Sacrifício" },
   ];
 
   /* O nome curto de cada livro sai do registro único (C.LIVROS). */
-  var ROTULO_FONTE = C.mapaDosLivros ? C.mapaDosLivros("curto") : { OPRPG: "Livro básico", SAH: "Sobrevivendo ao Horror", AS1: "Arquivos Secretos 1", AS2: "Arquivos Secretos 2" };
+  var ROTULO_FONTE = C.mapaDosLivros ? C.mapaDosLivros("curto") : { OPRPG: "Livro básico", SAH: "Sobrevivendo ao Horror", AS1: "Arquivos Secretos 1", AS2: "Arquivos Secretos 2", AS3: "Arquivos Secretos 3" };
 
   function porNome(a, b) { return a.nome.localeCompare(b.nome, "pt-BR"); }
 
@@ -78,6 +81,16 @@
         nota: "Arquivos Secretos 2, p. 94-95. Consultar e copiar o texto não concede o poder nem registra contato com a Coroa de Espinhos: " +
           "o poder com efeito vem da seção Intenção da aba Habilidades, com a regra opcional Poderes de Intenção ligada.",
         entradas: (P.PODERES_INTENCAO || []).slice().sort(porNome).map(function (p) { return { entrada: p, classe: "" }; }),
+      }];
+    }
+
+    if (aba === "sacrificio") {
+      return [{
+        chave: "sacrificio",
+        titulo: "Poderes de Sacrifício",
+        nota: "Arquivos Secretos 3, p. 110-111. Quem é sacrifício do Hexatombe recebe o poder do seu estigma. Consultar e copiar o texto não concede o poder: " +
+          "ele vem do estigma registrado no painel do Arquivos Secretos 3, com a regra opcional Poderes de Sacrifício ligada.",
+        entradas: (P.PODERES_SACRIFICIO || []).slice().sort(porNome).map(function (p) { return { entrada: p, classe: "" }; }),
       }];
     }
 
@@ -189,6 +202,7 @@
     }
     if (p.tipo === "geral") return "Poder geral";
     if (p.tipo === "intencao") return "Poder de Intenção";
+    if (p.tipo === "sacrificio") return "Poder de Sacrifício";
     if (p.tipo === "classe") {
       if (classe && p.classes.indexOf(classe) >= 0) return "Poder de " + nomeDaClasse(classe).toLowerCase();
       if (p.geral) return "Poder geral";
@@ -217,6 +231,18 @@
     return linhas;
   }
 
+  /* Estigma, custo, alcance, DT e ramos de um poder de Sacrifício. */
+  function detalhesDeSacrificio(p) {
+    var s = p && p.sacrificio;
+    if (!s) return [];
+    var linhas = ["Estigma: " + s.estigma.charAt(0).toUpperCase() + s.estigma.slice(1) + " (concedido, sem ocupar vaga)."];
+    var uso = [s.acao ? "ação " + s.acao : "", s.custo ? s.custo + " PE" : "", s.alcance ? "alcance " + s.alcance : "", s.alvo || "", s.duracao ? "duração: " + s.duracao : ""].filter(Boolean);
+    if (uso.length) linhas.push("Uso: " + uso.join(", ") + ".");
+    if (s.resistencia) linhas.push("Resistência: " + s.resistencia + " (DT Pre + 5).");
+    (s.ramos || []).forEach(function (r) { linhas.push(r.rotulo + ": " + r.texto); });
+    return linhas;
+  }
+
   function estagios(p) {
     return (P.ESTAGIOS[p.chave] || []).map(function (s) { return "NEX " + s.nex + "%: " + s.texto; });
   }
@@ -231,6 +257,7 @@
   function modelo(p, classe) {
     var partes = [p.resumo];
     if (p.intencao) partes.push(detalhesDeIntencao(p).join("\n"));
+    if (p.sacrificio) partes.push(detalhesDeSacrificio(p).join("\n"));
     var niveis = estagios(p);
     if (niveis.length) partes.push(niveis.join(" · "));
     if (p.afinidade) partes.push("Afinidade: " + p.afinidade);
@@ -257,7 +284,7 @@
   var NOMES_TIPO = {
     automatica: "Habilidade de classe", classe: "Poder de classe", geral: "Poder geral", paranormal: "Poder paranormal",
     trilha: "Habilidade de trilha", sobrevivente: "Habilidade de trilha (sobrevivente)", treinamento: "Treinamento",
-    origem: "Poder de origem", intencao: "Poder de Intenção",
+    origem: "Poder de origem", intencao: "Poder de Intenção", sacrificio: "Poder de Sacrifício",
   };
 
   function tipoDe(x) {
@@ -363,6 +390,7 @@
     opcoesDeFiltro: opcoesDeFiltro,
     filtrosCompativeis: filtrosCompativeis,
     detalhesDeIntencao: detalhesDeIntencao,
+    detalhesDeSacrificio: detalhesDeSacrificio,
     NOMES_TIPO: NOMES_TIPO,
     abaInicial: abaInicial,
   };

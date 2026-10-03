@@ -886,10 +886,13 @@
         var e = P.poder(pi.chave);
         if (e) mapa[U.chaveDeBusca(e.nome)] = "intencao";
       });
+      /* O poder de Sacrifício concedido pelo estigma (v2.33). */
+      var ps = o && global.RAMAOrdemArquivo3 ? global.RAMAOrdemArquivo3.poderDeSacrificio(o) : null;
+      if (ps) mapa[U.chaveDeBusca(ps.entrada.nome)] = "sacrificio";
       return mapa;
     }
 
-    var ROTULO_JA = { regras: "já vem pelas regras", arvore: "já na ficha", intencao: "concedido na Intenção" };
+    var ROTULO_JA = { regras: "já vem pelas regras", arvore: "já na ficha", intencao: "concedido na Intenção", sacrificio: "concedido pelo estigma" };
 
     function pintar() {
       U.trocar(janela, [
@@ -1031,7 +1034,9 @@
         el("p.t-mini", {
           texto: estado.aba === "intencao"
             ? "Consulta e cópia de texto. Trazer daqui NÃO concede o poder, não registra o contato com a Coroa de Espinhos e não soma nada: o poder com efeito vem da seção Intenção (regra opcional Poderes de Intenção, na aba Regras)."
-            : "Trazer daqui copia o texto para a lista de habilidades. Nada entra nas contas por este caminho: poderes com efeito são escolhidos na aba Progressão.",
+            : estado.aba === "sacrificio"
+              ? "Consulta e cópia de texto. Trazer daqui NÃO concede o poder: ele vem do estigma registrado pela mesa no painel do Arquivos Secretos 3 (regra opcional Poderes de Sacrifício)."
+              : "Trazer daqui copia o texto para a lista de habilidades. Nada entra nas contas por este caminho: poderes com efeito são escolhidos na aba Progressão.",
         }),
         el("div.faixa.faixa--entre", {}, [contagem, botaoLimpar]),
         lista,
@@ -1065,6 +1070,7 @@
         ]),
         el("span.criacao-opcao__texto.escolha-cartao__resumo", { texto: p.resumo }),
         p.intencao ? el("span.criacao-opcao__texto", { texto: B.detalhesDeIntencao(p).join(" ") }) : null,
+        p.sacrificio && B.detalhesDeSacrificio ? el("span.criacao-opcao__texto", { texto: B.detalhesDeSacrificio(p).join(" ") }) : null,
         niveis.length ? el("span.criacao-opcao__texto", { texto: niveis.join(" · ") }) : null,
         p.afinidade ? el("span.criacao-opcao__texto", { texto: "Afinidade: " + p.afinidade }) : null,
         reqs.length ? el("span.criacao-opcao__fonte", { texto: "Pré-requisitos: " + reqs.join("; ") }) : null,
@@ -1073,6 +1079,15 @@
     }
 
     async function escolher(x, ja) {
+      if (x.entrada.tipo === "sacrificio" && !ja) {
+        var okS = await UI.confirmar({
+          titulo: "Trazer " + x.entrada.nome + "?",
+          texto: "Entra uma cópia de texto, para consulta. Ela NÃO concede o poder e não soma nada nas contas.",
+          detalhe: "O poder com efeito vem do estigma registrado pela mesa no painel do Arquivos Secretos 3, com a regra opcional Poderes de Sacrifício ligada.",
+          rotuloConfirmar: "Trazer a cópia",
+        });
+        if (!okS) return;
+      }
       if (x.entrada.tipo === "intencao" && !ja) {
         var okI = await UI.confirmar({
           titulo: "Trazer " + x.entrada.nome + "?",
@@ -1098,6 +1113,8 @@
             ? "Ela já está na lista pelas regras da ficha (aba Progressão). A cópia seria só texto, repetido."
             : ja === "intencao"
               ? "Este poder já foi concedido pela seção Intenção. A cópia seria só texto: não concede de novo nem duplica os efeitos."
+              : ja === "sacrificio"
+                ? "Este poder já vem do estigma da ficha. A cópia seria só texto: não concede de novo nem duplica os efeitos."
               : "Já existe uma habilidade com esse nome na ficha.",
           rotuloConfirmar: "Trazer mesmo assim",
         });

@@ -556,6 +556,18 @@
       });
     });
 
+    /* Os campos que a referência de valores médios (AS3 p. 141) pode
+       preencher: guardados para a prévia atualizar a tela. */
+    var campos = {
+      presenca: UI.campo({ rotulo: "Dano mental", valor: presenca.dano || "", limite: 40, ajuda: "Ex.: 4d8. Vazio = sem Presença.",
+        aoMudar: function (v) { presenca.dano = v.replace(/\s+/g, ""); } }),
+      defesa: campoValor("Defesa", od, "defesa", "numero"),
+      fortitude: campoValor("Fortitude", od, "fortitude", "teste"),
+      reflexos: campoValor("Reflexos", od, "reflexos", "teste"),
+      vontade: campoValor("Vontade", od, "vontade", "teste"),
+      pv: campoInteiro("PV máximo", recursos, "pv", 0, 999999),
+    };
+
     if (!od.enigma) od.enigma = { texto: "", efeito: "", altera: null, rolagens: [] };
     var enigma = od.enigma;
     var altera = enigma.altera || {};
@@ -597,25 +609,26 @@
           el("div.editar-grade__largo", {}, [campoArea("Descrição", c, "descricao", 4000, 3)]),
         ])),
 
+        valoresMedios(c, od, recursos, presenca, campos, o),
+
         UI.painel("Presença Perturbadora", el("div.editar-grade", {}, [
           campoInteiro("DT", presenca, "dt", 0, 99),
-          UI.campo({ rotulo: "Dano mental", valor: presenca.dano || "", limite: 40, ajuda: "Ex.: 4d8. Vazio = sem Presença.",
-            aoMudar: function (v) { presenca.dano = v.replace(/\s+/g, ""); } }),
+          campos.presenca,
           campoTexto("Imunidade", presenca, "imune", 60, { ajuda: "Ex.: NEX 50%+" }),
         ])),
 
         UI.painel("Sentidos e defesas", el("div.editar-grade", {}, [
           campoValor("Percepção", od, "percepcao", "teste"),
           campoValor("Iniciativa", od, "iniciativa", "teste"),
-          campoValor("Defesa", od, "defesa", "numero"),
-          campoValor("Fortitude", od, "fortitude", "teste"),
-          campoValor("Reflexos", od, "reflexos", "teste"),
-          campoValor("Vontade", od, "vontade", "teste"),
+          campos.defesa,
+          campos.fortitude,
+          campos.reflexos,
+          campos.vontade,
           el("div.editar-grade__largo", {}, [campoLinhas("Sentidos", od, "sentidos")]),
         ])),
 
         UI.painel("Vida e esforço", el("div.editar-grade", {}, [
-          campoInteiro("PV máximo", recursos, "pv", 0, 999999),
+          campos.pv,
           campoValor("Machucado", od, "machucado", "numero"),
           campoInteiro("PE (opcional)", recursos, "pe", 0, 9999),
         ])),
@@ -728,6 +741,99 @@
     });
 
     nome.entrada.focus();
+  }
+
+  /* =================================================================
+     VALORES MÉDIOS PARA CRIATURAS (Arquivos Secretos 3, p. 141)
+     -----------------------------------------------------------------
+     Referência, não regra: escolhe-se a linha do VD (sem arredondar —
+     VD fora da tabela mostra as vizinhas), a forte/média/fraca de cada
+     resistência e o que aplicar, vendo antes o que muda. Ataque, dano
+     médio e DT ficam como referência: moram nas ações, e o editor não
+     inventa fórmula. Ameaça da realidade: duas linhas abaixo (p. 140);
+     animal treinado, não (p. 134).
+     ================================================================= */
+
+  function valoresMedios(c, od, recursos, presenca, campos, o) {
+    var A3 = global.RAMAOrdemArquivo3;
+    if (!A3 || !A3.VALORES_MEDIOS) return null;
+    var linhas = A3.VALORES_MEDIOS;
+    var vizinhas = A3.linhasDoVd(od.vd);
+    var inicial = vizinhas.exata || vizinhas.abaixo || linhas[0];
+    var st = {
+      linha: linhas.indexOf(inicial),
+      realidade: !o.animal && (c.natureza === "humana" || c.natureza === "animal"),
+      /* Nenhuma escolhida: quem cria decide qual é forte, média e fraca. */
+      res: { fortitude: "", reflexos: "", vontade: "" },
+      aplicar: { defesa: true, pv: true, fortitude: true, reflexos: true, vontade: true, presenca: c.natureza === "paranormal" },
+    };
+    var corpo = el("div.pilha--curta.valores-medios", { class: "pilha" });
+
+    function linhaUsada() {
+      var l = linhas[st.linha];
+      return st.realidade ? A3.linhaDuasAbaixo(l) : l;
+    }
+
+    function pintar() {
+      var l = linhaUsada();
+      var plano = A3.planoDeValores(l, st.res);
+      var aviso = [];
+      if (typeof od.vd === "number" && !vizinhas.exata) {
+        aviso.push("A tabela não tem VD " + od.vd + (vizinhas.abaixo && vizinhas.acima ? ": fica entre " + vizinhas.abaixo.vd + " e " + vizinhas.acima.vd + ". Escolha a linha." : "."));
+      }
+      if (st.realidade) aviso.push("Ameaça da realidade: valores da linha VD " + l.vd + " (duas abaixo da escolhida, p. 140).");
+      if (plano.aviso) aviso.push(plano.aviso);
+      var atual = {
+        defesa: od.defesa, pv: recursos.pv, fortitude: od.fortitude, reflexos: od.reflexos, vontade: od.vontade, presenca: presenca.dano,
+      };
+      var novo = {
+        defesa: plano.defesa, pv: plano.pv, fortitude: plano.resistencias.fortitude, reflexos: plano.resistencias.reflexos,
+        vontade: plano.resistencias.vontade, presenca: plano.presencaDano,
+      };
+      var rotulos = { defesa: "Defesa", pv: "PV máximo", fortitude: "Fortitude", reflexos: "Reflexos", vontade: "Vontade", presenca: "Presença (dano mental)" };
+      U.trocar(corpo, [
+        el("p.t-mini", { texto: "Ponto de partida, não regra (Arquivos Secretos 3, p. 140-141). Nada muda até você aplicar." }),
+        el("div.editar-grade", {}, [
+          selecao("Linha da tabela", String(st.linha), linhas.map(function (x, i) { return { valor: String(i), rotulo: "VD " + x.vd + " · " + x.patente }; }),
+            function (v) { st.linha = Number(v) || 0; pintar(); }),
+          el("label.r-marca", {}, [
+            el("input", { type: "checkbox", checked: st.realidade, disabled: !!o.animal, onchange: function (ev) { st.realidade = ev.target.checked; pintar(); } }),
+            el("span", { texto: o.animal ? "Animal treinado: sem a redução das ameaças da realidade (p. 134)" : "Ameaça da realidade (duas linhas abaixo)" }),
+          ]),
+        ].concat(["fortitude", "reflexos", "vontade"].map(function (k) {
+          return selecao(rotulos[k], st.res[k], [{ valor: "", rotulo: "Escolher…" }, { valor: "forte", rotulo: "Forte" }, { valor: "media", rotulo: "Média" }, { valor: "fraca", rotulo: "Fraca" }],
+            function (v) { st.res[k] = v; pintar(); });
+        }))),
+        aviso.length ? el("p.t-aviso", { texto: aviso.join(" ") }) : null,
+        el("table.valores-medios__tabela", {}, [
+          el("thead", {}, [el("tr", {}, [el("th", { texto: "Aplicar" }), el("th", { texto: "Campo" }), el("th", { texto: "Agora" }), el("th", { texto: "Tabela" })])]),
+          el("tbody", {}, Object.keys(rotulos).map(function (k) {
+            var igual = String(atual[k] === null || atual[k] === undefined ? "" : atual[k]) === String(novo[k]);
+            return el("tr", { class: igual ? "" : "valores-medios__muda" }, [
+              el("td", {}, [el("input", { type: "checkbox", "aria-label": "Aplicar " + rotulos[k], checked: !!st.aplicar[k], onchange: function (ev) { st.aplicar[k] = ev.target.checked; } })]),
+              el("td", { texto: rotulos[k] }),
+              el("td", { texto: atual[k] === null || atual[k] === undefined || atual[k] === "" ? "—" : String(atual[k]) }),
+              el("td", { texto: novo[k] === undefined || novo[k] === "" ? "escolha forte/média/fraca" : String(novo[k]) }),
+            ]);
+          })),
+        ]),
+        el("p.t-mini", { texto: "Referência (não aplicada): ataque médio " + plano.referencia.ataque + ", dano médio por rodada " + plano.referencia.dano +
+          " (ex.: 26 ≈ 4d8+10), DT de efeitos " + plano.referencia.dt + ". Use-os ao escrever ações e habilidades." }),
+        el("button.r-botao.r-botao--mini", { type: "button", texto: "Aplicar os marcados", onclick: function () {
+          var mudou = [];
+          if (st.aplicar.defesa) { od.defesa = novo.defesa; campos.defesa.entrada.value = String(novo.defesa); mudou.push("Defesa"); }
+          if (st.aplicar.pv) { recursos.pv = novo.pv; campos.pv.entrada.value = String(novo.pv); mudou.push("PV"); }
+          ["fortitude", "reflexos", "vontade"].forEach(function (k) {
+            if (st.aplicar[k] && novo[k]) { od[k] = novo[k]; campos[k].entrada.value = novo[k]; mudou.push(rotulos[k]); }
+          });
+          if (st.aplicar.presenca) { presenca.dano = novo.presenca; campos.presenca.entrada.value = novo.presenca; mudou.push("Presença"); }
+          UI.avisoOk(mudou.length ? "Aplicado: " + mudou.join(", ") + ". Salve a criatura para gravar." : "Nada marcado para aplicar.");
+          pintar();
+        } }),
+      ]);
+    }
+    pintar();
+    return UI.recolhivel({ titulo: "Valores médios para criaturas", extra: "Arquivos Secretos 3, p. 141", conteudo: corpo });
   }
 
   /* O resumo de leitura de uma ficha de Ordem, para cartões. */

@@ -1450,6 +1450,7 @@
       SAH: { nome: "Sobrevivendo ao Horror", curto: "Sobrevivendo ao Horror", edicao: "v1.2" },
       AS1: { nome: "Arquivos Secretos 1", curto: "Arquivos Secretos 1", edicao: "v1.1" },
       AS2: { nome: "Arquivos Secretos 2", curto: "Arquivos Secretos 2", edicao: "v1.0" },
+      AS3: { nome: "Arquivos Secretos 3", curto: "Arquivos Secretos 3", edicao: "v1.0" },
     },
     rituais: RITUAIS,
   };

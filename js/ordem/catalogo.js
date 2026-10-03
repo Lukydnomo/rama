@@ -16,6 +16,7 @@
      SAH    Sobrevivendo ao Horror, v1.2, Jambô, 2024
      AS1    Arquivos Secretos 1, v1.1, Jambô (pacote de conteúdo oficial)
      AS2    Arquivos Secretos 2, v1.0, Jambô (pacote de conteúdo oficial — Hexatombe)
+     AS3    Arquivos Secretos 3, v1.0, Jambô (pacote de conteúdo oficial — mais Hexatombe)
 
    As páginas são as do LIVRO, não as do PDF.
 
@@ -53,6 +54,7 @@
   var SAH = "SAH";
   var AS1 = "AS1";
   var AS2 = "AS2";
+  var AS3 = "AS3";
 
   /* Os livros, num lugar só (v2.29). Quem precisa do nome de um livro
      pergunta aqui — nomeDoLivro(sigla) — em vez de repetir uma conta
@@ -62,6 +64,10 @@
     { sigla: SAH, nome: "Sobrevivendo ao Horror", curto: "Sobrevivendo ao Horror", abreviacao: "SAH", edicao: "v1.2" },
     { sigla: AS1, nome: "Arquivos Secretos 1", curto: "Arquivos Secretos 1", abreviacao: "AS1", edicao: "v1.1" },
     { sigla: AS2, nome: "Arquivos Secretos 2", curto: "Arquivos Secretos 2", abreviacao: "AS2", edicao: "v1.0" },
+    /* v2.33: páginas 107–141 (poderes, itens, aliados, trilha, regras
+       opcionais, veículos, animais e valores médios) e as fichas das
+       equipes (p. 11–105). */
+    { sigla: AS3, nome: "Arquivos Secretos 3", curto: "Arquivos Secretos 3", abreviacao: "AS3", edicao: "v1.0" },
   ];
 
   /* Os mapas que os módulos de catálogo usam (rótulo de filtro, nome por
@@ -594,6 +600,17 @@
       poderes: [poder(10, "Terapia", 29), poder(40, "Palavras-chave", 29),
                 poder(65, "Reprogramação Mental", 29), poder(99, "A Sanidade Está Lá Fora", 29)] },
 
+    /* --- Arquivos Secretos 3, p. 119 ---
+       A primeira trilha "geral": é de combatente, e com a regra opcional
+       Trilha Geral serve às três classes, com o nome da classe. Desligada
+       a regra, a escolha de quem não é combatente fica guardada, sem
+       efeito (trilhaServe). */
+    { chave: "performatico", classe: "combatente", nome: "Combatente Performático", pagina: 119, fonte: AS3, geral: true,
+      nomes: { combatente: "Combatente Performático", especialista: "Especialista Performático", ocultista: "Ocultista Performático" },
+      resumo: "Glamour, ritmo e sinergia com a trupe: a luta vira uma performance violenta, digna de plateia.",
+      poderes: [poder(10, "Ensaio", 119), poder(40, "Frase de Efeito", 119),
+                poder(65, "Mosh Pit", 119), poder(99, "Rítmo Contagiante", 119)] },
+
     /* --- Arquivos Secretos 1, p. 45 --- */
     { chave: "maledictologo", classe: "ocultista", nome: "Maledictólogo", pagina: 45, fonte: AS1,
       resumo: "Estuda as maldições do Outro Lado para usá-las contra ele: identifica, absorve, transfere e reproduz.",
@@ -1123,8 +1140,27 @@
     return (pe ? pe.nome : chavePericia) + (esp ? " (" + esp + ")" : "");
   }
 
-  function trilhasDaClasse(chaveClasse) {
-    return TRILHAS.filter(function (t) { return t.classe === chaveClasse; });
+  /* Uma trilha serve a uma classe quando é dela — ou quando é uma trilha
+     geral (AS3 p. 119) e a regra opcional Trilha Geral está ligada na
+     ficha, para uma classe de agente. */
+  function trilhaServe(tr, chaveClasse, ordem) {
+    if (!tr || !chaveClasse) return false;
+    if (tr.classe === chaveClasse) return true;
+    if (!tr.geral || !ehAgente(chaveClasse)) return false;
+    var OP = global.RAMAOrdemOpcionais;
+    return !!(OP && ordem && OP.ligada(ordem, "trilhaGeral"));
+  }
+
+  /* O nome da trilha para a classe (Especialista Performático…). */
+  function nomeDaTrilha(tr, chaveClasse) {
+    if (!tr) return "";
+    return (tr.nomes && tr.nomes[chaveClasse]) || tr.nome;
+  }
+
+  /* `ordem` (opcional): com ela, as trilhas gerais entram quando a regra
+     Trilha Geral está ligada. */
+  function trilhasDaClasse(chaveClasse, ordem) {
+    return TRILHAS.filter(function (t) { return t.classe === chaveClasse || (ordem && trilhaServe(t, chaveClasse, ordem)); });
   }
 
   function progressaoDaClasse(chaveClasse) {
@@ -1139,7 +1175,7 @@
   }
 
   global.RAMAOrdemCatalogo = {
-    FONTES: { OPRPG: OPRPG, SAH: SAH, AS1: AS1, AS2: AS2 },
+    FONTES: { OPRPG: OPRPG, SAH: SAH, AS1: AS1, AS2: AS2, AS3: AS3 },
     LIVROS: LIVROS,
     mapaDosLivros: mapaDosLivros,
     livro: livro,
@@ -1177,6 +1213,8 @@
     grau: grau,
     elemento: elemento,
     trilhasDaClasse: trilhasDaClasse,
+    trilhaServe: trilhaServe,
+    nomeDaTrilha: nomeDaTrilha,
     progressaoDaClasse: progressaoDaClasse,
     perfilDaClasse: perfilDaClasse,
     efeitosDaOrigem: efeitosDaOrigem,

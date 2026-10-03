@@ -91,9 +91,9 @@
     ],
   };
 
-  var ROTULO_FONTE = { OPRPG: "Livro básico", SAH: "Sobrevivendo ao Horror", AS1: "Arquivos Secretos 1", AS2: "Arquivos Secretos 2" };
-  var NOME_FONTE = { OPRPG: "Ordem Paranormal RPG", SAH: "Sobrevivendo ao Horror", AS1: "Arquivos Secretos 1", AS2: "Arquivos Secretos 2" };
-  var SIGLA_FONTE = { OPRPG: "LB", SAH: "SAH", AS1: "AS1", AS2: "AS2" };
+  var ROTULO_FONTE = { OPRPG: "Livro básico", SAH: "Sobrevivendo ao Horror", AS1: "Arquivos Secretos 1", AS2: "Arquivos Secretos 2", AS3: "Arquivos Secretos 3" };
+  var NOME_FONTE = { OPRPG: "Ordem Paranormal RPG", SAH: "Sobrevivendo ao Horror", AS1: "Arquivos Secretos 1", AS2: "Arquivos Secretos 2", AS3: "Arquivos Secretos 3" };
+  var SIGLA_FONTE = { OPRPG: "LB", SAH: "SAH", AS1: "AS1", AS2: "AS2", AS3: "AS3" };
 
   var PROFICIENCIAS = { simples: "Arma simples", tatica: "Arma tática", pesada: "Arma pesada" };
   var PROFICIENCIAS_PLURAL = { simples: "armas simples", tatica: "armas táticas", pesada: "armas pesadas" };

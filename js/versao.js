@@ -70,6 +70,32 @@
 
   var CHANGELOG = [
     {
+      versao: "2.33.0", codinome: "PICADEIRO", data: "03/10/2026",
+      mudancas: {
+        "Adicionado": [
+          "Arquivos Secretos 3 (v1.0) como fonte oficial, com filtro próprio nas bibliotecas de habilidades, itens e criaturas.",
+          "Nove poderes (p. 108-109): Guardião da Tropa, Vitalidade Sofrida, Flagelo Bem Aproveitado, Recuperação Flagelante, Ambidestria, Entrada Triunfal, Papinho Sedutor, Conhecimento de Direção Precognitiva e Instrumento Elétrico de Combate — com botões, ações no resultado dos testes e a arma do instrumento criada no inventário.",
+          "Poderes de Sacrifício (p. 110-111), categoria própria na biblioteca: concedidos pelo estigma de quem é Digno de Sacrifício, sem ocupar vaga, com custo, DT Pre + 5, os ramos de cada resultado e o gatilho de Fruto da Ambição.",
+          "Trilha Combatente Performático (Ensaio, Frase de Efeito, Mosh Pit, Rítmo Contagiante) e a regra opcional Trilha Geral, que a abre para especialistas e ocultistas.",
+          "Itens: Paçoca, Garra do Harpia, Bloody Mary Batizada, Crânio Dominador, Gaiola do Corvo, Camiseta Psikolera, Dupla Obsessiva (maça e florete) e Armaduras dos Couraças, com os usos no menu do item.",
+          "Fichas das três equipes — PSIKOLERA (com a Hora do Show como forma da mesma ocorrência), Couraças e Pássaros —, 15 perfis de aliado e os aliados animais Serpente, Corvo e Gato.",
+          "Regras opcionais da ficha, todas desligadas: Poderes de Sacrifício, Trilha Geral, Batalhas de Intenções, Jogos do Circo, Boas Recordações, Regras da Paixão, Veículos Operacionais e Animais Treinados, num painel na aba Habilidades com a cronologia da campanha (missão, dia, semana e sessão).",
+          "Veículos operacionais como instâncias dos modelos do livro: Defesa com a Agilidade de quem dirige, regalias, velocidade de manobra, combustível em d6, pontos vitais, dano massivo e reparos.",
+          "Modo Hexatombe da campanha: Trocas de Recursos e Tempo de Construção de Base, regras da mesa desligadas por padrão.",
+          "Valores Médios para Criaturas (p. 141) no editor de criaturas: linha do VD, forte/média/fraca por resistência, ameaça da realidade e prévia antes de aplicar.",
+        ],
+        "Melhorado": [
+          "Aliados do AS3 “acompanhando” somam os bônus fixos na ficha; rolar de novo (fica o melhor ou fica o novo) e trocar o d20 pelo valor guardado aparecem nos resultados, com o uso marcado em cada aliado.",
+          "“Usar ritual” paga PE com PV pelo Poder do Flagelo e desconta 1 PE dos rituais de Sangue com Torvo.",
+          "A aba Proficiências e resistências mostra vulnerabilidades.",
+        ],
+        "Técnico": [
+          "Bloco opcional `ordem.arquivo3`, formas com `somaAtuais`, habilidades de criatura com `especial`, e `regrasAs3`, `obras` e `trocas` no estado do Hexatombe. Sem conversão e sem `setupRama()`: troque o `Campanhas.gs` e crie uma nova versão da implantação.",
+          "Testes: 105 novos na suíte principal, 15 nas criaturas e 1 no servidor, mais a ficha, o painel, a Homebrew e a campanha no navegador, em celular e nos temas claro e escuro.",
+        ],
+      },
+    },
+    {
       versao: "2.32.0", codinome: "PALIMPSESTO", data: "02/10/2026",
       mudancas: {
         "Melhorado": [

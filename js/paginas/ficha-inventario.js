@@ -351,7 +351,8 @@
           ctx.redesenhar();
         } },
     ].concat(modificar, perfilDe(ctx) && global.RAMAMaldicoesDaFicha ? global.RAMAMaldicoesDaFicha.opcoes(ctx, item) : [],
-      perfilDe(ctx) && global.RAMAFichaArquivo2 ? global.RAMAFichaArquivo2.opcoesDoItem(ctx, item) : [], ordem, [
+      perfilDe(ctx) && global.RAMAFichaArquivo2 ? global.RAMAFichaArquivo2.opcoesDoItem(ctx, item) : [],
+      perfilDe(ctx) && global.RAMAFichaArquivo3 ? global.RAMAFichaArquivo3.opcoesDoItem(ctx, item) : [], ordem, [
       { rotulo: "Enviar à biblioteca", aoClicar: function () { paraHomebrew(ctx, item); } },
       "separador",
       { rotulo: "Remover", perigo: true, aoClicar: function () { remover(ctx, item); } },

@@ -43,7 +43,7 @@
    FORMATO DE UMA ENTRADA
    ---------------------------------------------------------------------
 
-     id            estável: <livro>.criatura.<nome> (op, sah, as1, as2).
+     id            estável: <livro>.criatura.<nome> (op, sah, as1, as2, as3).
                    Nunca muda, mesmo que o nome mude. Variantes têm o id
                    da base mais um sufixo (op.criatura.o-anfitriao.liber)
      livro, pagina a referência impressa
@@ -107,6 +107,7 @@
   var SAH = "SAH";
   var AS1 = "AS1";
   var AS2 = "AS2";
+  var AS3 = "AS3";
 
   var SA = "sangue";
   var MO = "morte";
@@ -162,6 +163,60 @@
       notas: ["Perfil “como aliado”: são os benefícios para quem o acompanha, sem estatísticas de combate. A ficha de ameaça é outra entrada."].concat(notas || []),
       habilidades: habilidades,
       acoes: [],
+    };
+  }
+
+  /* Perfil "como aliado" do Arquivos Secretos 3 (p. 116-118). */
+  function aliadoAs3(chave, nome, pagina, paginaDaFicha, descricao, habilidades, tipo, notas) {
+    var t = tipo || "Aliado";
+    return {
+      id: "as3.criatura." + chave + "-aliado", livro: AS3, pagina: pagina, aliada: true,
+      nome: nome + " (" + t.toLowerCase() + ")", natureza: "humana", tipo: t, tamanho: null, categoria: "Aliados",
+      nivel: t + " (OPRPG p. 170)", elementos: [], vd: null,
+      descricao: descricao,
+      ficha: { id: "as3.criatura." + chave, nome: nome, pagina: paginaDaFicha },
+      notas: ["Perfil “como aliado”: são os benefícios para quem o acompanha, sem estatísticas de combate. A ficha de ameaça é outra entrada.",
+        "Na ficha, o painel do Arquivos Secretos 3 liga os bônus fixos deste aliado enquanto ele acompanha o personagem."].concat(notas || []),
+      habilidades: habilidades,
+      acoes: [],
+    };
+  }
+
+  /* Aliado animal especial (AS3 p. 133): sem ficha de ameaça publicada.
+     O id leva "-animal" para não colidir com a pessoa de mesmo nome. */
+  function aliadoAnimal(chave, nome, descricao, habilidades) {
+    return {
+      id: "as3.criatura." + chave + "-animal", livro: AS3, pagina: 133, aliada: true,
+      nome: nome + " (animal)", natureza: "animal", tipo: "Animal", tamanho: null, categoria: "Animais treinados",
+      nivel: "Aliado animal (OPRPG p. 170)", elementos: [], vd: null,
+      descricao: descricao,
+      notas: [
+        "Aliado animal especial: pode substituir as regras de um aliado animal recebido por habilidade (AS3 p. 132).",
+        "Animais não são afetados por Presença Perturbadora. Como ficha de ameaça da realidade, o VD acompanha o NEX do dono (p. 134) — ver Animais Treinados no painel.",
+      ],
+      habilidades: habilidades,
+      acoes: [],
+    };
+  }
+
+  /* Hora do Show (PSIKOLERA, AS3 p. 11-37): a forma mascarada. A Defesa
+     e os PV são os impressos entre parênteses; ao entrar, +20 PV atuais.
+     As ações são as da ficha com as alterações listadas aplicadas. */
+  function musicaDoDiabo() {
+    return acao("livre", "Música do Diabo", "Só de máscara. Começa a tocar a sua parte: todos os membros do PSIKOLERA recebem dano extra do mesmo tipo sempre que causam dano, conforme quantos tocam — 1: +1d4; 2: +1d6; 3: +1d8; 4: +1d10; 5 (todos): +1d12. A ordem é Franco (guitarra), Cindy (baixo), Alê (teclado), Eloy (bateria) e Caio (vocal).",
+      { rolagens: [dano("1 tocando", "1d4"), dano("2 tocando", "1d6"), dano("3 tocando", "1d8"), dano("4 tocando", "1d10"), dano("5 tocando", "1d12")] });
+  }
+  function mascara(testeDaManobra) {
+    return hab("A máscara", "Pode ser arrancada ou destruída. Arrancar: se perder numa manobra de desarmar (teste " + testeDaManobra + ") contra quem tenta tirá-la, perde a Hora do Show. Destruir: se perder numa manobra de quebrar (teste " + testeDaManobra + "), a máscara sofre o dano (RD 10, 5 PV); quebrada, perde a Hora do Show. Perdendo, volte a ocorrência à ficha de partida.",
+      { rolagens: [teste("Resistir à manobra", testeDaManobra)] });
+  }
+  function horaDoShow(pessoa, pagina, defesa, pv, testeDaManobra, habilidades, acoes, notas) {
+    return {
+      id: "hora-do-show", nome: "Hora do Show (mascarado)", pagina: pagina, vd: 80, defesa: defesa, pv: pv, somaAtuais: 20,
+      ativacao: "Hora do Show (ação padrão): " + pessoa + " coloca a máscara — +5 nos testes de ataque, +10 na Defesa, +20 PV máximos e atuais, +5 na DT das habilidades, +2 dados de dano do mesmo tipo e Música do Diabo.",
+      habilidades: habilidades.concat([mascara(testeDaManobra)]),
+      acoes: acoes.concat([musicaDoDiabo()]),
+      notas: ["O livro não imprime a ficha mascarada: as ações são as da ficha com +5 no ataque, +2 dados de dano e +5 na DT aplicados. Testes, perícias e o PV de machucado continuam os da ficha."].concat(notas || []),
     };
   }
 
@@ -3866,6 +3921,594 @@
       hab("Bônus", "Você recebe +1d20 em Intimidação e Ocultismo."),
       hab("Ligado ao Sangue", "Você conjura Armadura de Sangue e Descarnar como se os conhecesse (fora do limite de rituais), respeitando o círculo das formas avançadas. Se já conhece um deles, o custo dele cai em 1 PE."),
     ]),
+
+    /* =================================================================
+       ARQUIVOS SECRETOS 3 — as equipes do Hexatombe
+       -----------------------------------------------------------------
+       PSIKOLERA (p. 4-41), Couraças (p. 42-73) e Pássaros (p. 74-105).
+       Fichas como publicadas: "O" é d20 e "–2O" é o pior de dois d20
+       (atributo 0). A Hora do Show do PSIKOLERA é uma FORMA da mesma
+       ocorrência (+20 PV atuais ao entrar); as ações mascaradas são as
+       da ficha com as alterações que o livro lista, porque ele não
+       imprime a ficha mascarada. Rituais das fichas são habilidades da
+       ameaça — não entram na biblioteca de rituais.
+       ================================================================= */
+
+    /* ---------------- PSIKOLERA ---------------- */
+
+    {
+      id: "as3.criatura.ale", livro: AS3, pagina: 11,
+      nome: "Alê", natureza: "humana", tipo: "Pessoa", tamanho: "Médio", categoria: "PSIKOLERA",
+      elementos: [], vd: 80,
+      descricao: "Tecladista do PSIKOLERA, ocultista silencioso que fundiu música e misticismo numa coisa só.",
+      percepcao: "3d20+10", iniciativa: "3d20+5",
+      defesa: 18, fortitude: "1d20", reflexos: "3d20+5", vontade: "3d20+10",
+      pv: 45, machucado: 22,
+      atributos: [3, 1, 3, 3, 1],
+      pericias: [["Artes", "3d20+10"], ["Ocultismo", "3d20+10"]],
+      deslocamento: [[9, 6]],
+      notas: [
+        "Biografia nas p. 6–10; perfil como aliado na p. 118.",
+        "Hora do Show: o livro imprime Defesa 26 e 90 PV, mas a ficha tem Defesa 18 e 45 PV (+10 e +20 dariam 28 e 65). A forma usa os valores impressos; ajuste na ocorrência se a mesa preferir a conta.",
+      ],
+      habilidades: [hab("Rituais (DT 20)", "Conjura os rituais da ficha sem pagar PE, até 6 PE por conjuração, com a ação apropriada.")],
+      acoes: [
+        agredir([at("Cortar com Teclado", "corpo a corpo", 2, "1d20+10", "2d6+10 corte", { critico: "19" })]),
+        acao("padrao", "Desfazer Sinapses", "Notas dissonantes sobrecarregam ouvidos e mente de um ser em alcance médio: 3d10+10 de dano de Conhecimento e confuso por 1 rodada (Vontade DT 20 reduz à metade e evita a condição).",
+          { rolagens: [dano("Desfazer Sinapses", "3d10+10 Conhecimento")], resistencia: "Vontade DT 20 reduz à metade e evita confuso" }),
+        acao("padrao", "Hora do Show", "Coloca a máscara — use o seletor de forma desta ocorrência."),
+        acao("padrao", "Ritual: Cicatrização (Discente, Morte 1)", "Acelera o tempo nas feridas de 1 ser adjacente: ele recupera 5d8+5 PV, mas envelhece 1 ano.",
+          { rolagens: [soma("PV recuperados", "5d8+5")] }),
+        acao("padrao", "Ritual: Proteção Sigilosa (Conhecimento 2)", "Sigilos numa área de 3 m de raio em alcance de toque, até o fim da cena: Alê e os aliados dentro dela recebem +5 na Defesa, em testes de resistência e em Furtividade."),
+      ],
+      formas: [horaDoShow("Alê", 11, 26, 90, "1d20+10", [
+        hab("Rituais (DT 25)", "Conjura os rituais da ficha sem pagar PE, até 6 PE por conjuração, com a ação apropriada (DT das habilidades +5)."),
+      ], [
+        agredir([at("Cortar com Teclado", "corpo a corpo", 2, "1d20+15", "4d6+10 corte", { critico: "19" })]),
+        acao("padrao", "Desfazer Sinapses", "Como na ficha, com +2 dados e DT 25: 5d10+10 de dano de Conhecimento e confuso por 1 rodada (Vontade DT 25 reduz à metade e evita a condição).",
+          { rolagens: [dano("Desfazer Sinapses", "5d10+10 Conhecimento")], resistencia: "Vontade DT 25 reduz à metade e evita confuso" }),
+        acao("padrao", "Ritual: Cicatrização (Discente, Morte 1)", "Acelera o tempo nas feridas de 1 ser adjacente: ele recupera 5d8+5 PV, mas envelhece 1 ano.",
+          { rolagens: [soma("PV recuperados", "5d8+5")] }),
+        acao("padrao", "Ritual: Proteção Sigilosa (Conhecimento 2)", "Sigilos numa área de 3 m de raio em alcance de toque, até o fim da cena: Alê e os aliados dentro dela recebem +5 na Defesa, em testes de resistência e em Furtividade."),
+      ], ["Proteção Sigilosa e Cicatrização não causam dano: ficam como na ficha. O PV de machucado da forma não é impresso."])],
+    },
+
+    {
+      id: "as3.criatura.caio", livro: AS3, pagina: 17,
+      nome: "Caio", natureza: "humana", tipo: "Pessoa", tamanho: "Médio", categoria: "PSIKOLERA",
+      elementos: [], vd: 80,
+      descricao: "Vocal do PSIKOLERA: a voz é a arma, com uma espada-microfone e um grito que ensurdece.",
+      percepcao: "2d20", iniciativa: "2d20+5",
+      defesa: 17, fortitude: "2d20+10", reflexos: "2d20+5", vontade: "2d20",
+      pv: 60, machucado: 30,
+      atributos: [2, 2, 1, 2, 2],
+      pericias: [["Artes", "2d20+10"], ["Atletismo", "2d20+10"]],
+      deslocamento: [[9, 6]],
+      notas: ["Biografia nas p. 12–16; perfil como aliado na p. 118."],
+      habilidades: [],
+      acoes: [
+        agredir([at("Ataque com Espada", "corpo a corpo", 2, "2d20+10", "2d8+10 corte", { critico: "19" })]),
+        acao("padrao", "Berrão", "Finca a espada no chão e grita no ouvido de um alvo em alcance de toque: 4d8 de dano de impacto, surdo por 1 rodada e larga o que segura para tapar os ouvidos. O alvo pode escolher largar o que segura para tapar os ouvidos: reduz o dano à metade e evita a condição.",
+          { rolagens: [dano("Berrão", "4d8 impacto")] }),
+        acao("padrao", "Corte na Jugular", "Gira a espada-microfone na garganta de um ser adjacente: 2d8+10 de corte e sangrando (Reflexos DT 20 reduz à metade e evita a condição).",
+          { rolagens: [dano("Corte na Jugular", "2d8+10 corte")], resistencia: "Reflexos DT 20 reduz à metade e evita sangrando" }),
+        acao("padrao", "Hora do Show", "Coloca a máscara — use o seletor de forma desta ocorrência."),
+      ],
+      formas: [horaDoShow("Caio", 17, 27, 80, "2d20+10", [], [
+        agredir([at("Ataque com Espada", "corpo a corpo", 2, "2d20+15", "4d8+10 corte", { critico: "19" })]),
+        acao("padrao", "Berrão", "Como na ficha, com +2 dados: 6d8 de impacto, surdo por 1 rodada e larga o que segura. Largar o que segura para tapar os ouvidos reduz à metade e evita a condição.",
+          { rolagens: [dano("Berrão", "6d8 impacto")] }),
+        acao("padrao", "Corte na Jugular", "Como na ficha, com +2 dados e DT 25: 4d8+10 de corte e sangrando (Reflexos DT 25 reduz à metade e evita a condição).",
+          { rolagens: [dano("Corte na Jugular", "4d8+10 corte")], resistencia: "Reflexos DT 25 reduz à metade e evita sangrando" }),
+      ], ["O teste para resistir a destruir a máscara sai impresso como “2d20+10” e o de arrancar como “2O+10”: são o mesmo."])],
+    },
+
+    {
+      id: "as3.criatura.eloy", livro: AS3, pagina: 23,
+      nome: "Eloy", natureza: "humana", tipo: "Pessoa", tamanho: "Médio", categoria: "PSIKOLERA",
+      elementos: [], vd: 80,
+      descricao: "Baterista do PSIKOLERA: braços largos, energia sem fim e pancadas no ritmo da bateria.",
+      percepcao: "1d20", iniciativa: "2d20+5",
+      defesa: 16, fortitude: "3d20+10", reflexos: "2d20+5", vontade: "1d20",
+      pv: 70, machucado: 35,
+      atributos: [1, 3, 1, 1, 3],
+      pericias: [["Artes", "1d20+10"], ["Atletismo", "3d20+10"]],
+      deslocamento: [[9, 6]],
+      notas: ["Biografia nas p. 18–22; perfil como aliado na p. 118."],
+      habilidades: [],
+      acoes: [
+        agredir([at("Pancada", "corpo a corpo", 2, "3d20+10", "4d4+10 impacto", { critico: "19" })]),
+        acao("padrao", "Hora do Show", "Coloca a máscara — use o seletor de forma desta ocorrência."),
+        acao("padrao", "Moeller Method", "Atira-se sobre um ser adjacente e o espanca como uma bateria. Fortitude DT 20: passando, 2d4+5 de impacto; falhando, 4d4+10 de impacto e aturdido, e Eloy continua — novo teste, e assim por diante, até o alvo passar num teste ou falhar três vezes seguidas.",
+          { rolagens: [dano("Passou", "2d4+5 impacto"), dano("Falhou", "4d4+10 impacto")], resistencia: "Fortitude DT 20, repetido" }),
+      ],
+      formas: [horaDoShow("Eloy", 23, 26, 90, "3d20+10", [], [
+        agredir([at("Pancada", "corpo a corpo", 2, "3d20+15", "6d4+10 impacto", { critico: "19" })]),
+        acao("padrao", "Moeller Method", "Como na ficha, com +2 dados e DT 25: passando, 4d4+5 de impacto; falhando, 6d4+10 de impacto e aturdido, e o processo se repete até passar ou falhar três vezes seguidas.",
+          { rolagens: [dano("Passou", "4d4+5 impacto"), dano("Falhou", "6d4+10 impacto")], resistencia: "Fortitude DT 25, repetido" }),
+      ])],
+    },
+
+    {
+      id: "as3.criatura.franco", livro: AS3, pagina: 29,
+      nome: "Franco", natureza: "humana", tipo: "Pessoa", tamanho: "Médio", categoria: "PSIKOLERA",
+      elementos: [], vd: 80,
+      descricao: "Guitarrista do PSIKOLERA, fanático por fogo e explosivos, com uma guitarra lança-chamas.",
+      percepcao: "1d20", iniciativa: "2d20+5",
+      defesa: 16, fortitude: "2d20+5", reflexos: "2d20+10", vontade: "1d20",
+      pv: 55, machucado: 27,
+      atributos: [2, 2, 1, 1, 2],
+      pericias: [["Acrobacia", "2d20+10"], ["Artes", "1d20+10"]],
+      deslocamento: [[9, 6]],
+      notas: ["Biografia nas p. 24–28; perfil como aliado na p. 118.", "O dano de Bater com Guitarra sai impresso como “d10+5”: lido como 1d10+5."],
+      habilidades: [],
+      acoes: [
+        agredir([at("Bater com Guitarra", "corpo a corpo", 2, "2d20+5", "1d10+5 impacto")]),
+        acao("padrao", "Hora do Show", "Coloca a máscara — use o seletor de forma desta ocorrência."),
+        acao("padrao", "Imolar", "Força o lança-chamas ao máximo contra um ser em alcance curto. Role 1d20: 10 ou mais, o alvo sofre 8d6+10 de fogo e fica em chamas (Reflexos DT 20 reduz à metade e evita a condição); 9 ou menos, vaza combustível flamejante sobre o próprio Franco, que sofre 4d6 de fogo e fica em chamas.",
+          { rolagens: [teste("Imolar (1d20: 10+ acerta)", "1d20"), dano("No alvo", "8d6+10 fogo"), dano("Em Franco", "4d6 fogo")], resistencia: "Reflexos DT 20 reduz à metade e evita em chamas" }),
+        acao("padrao", "Incinerar", "Chamas da guitarra num ser em alcance curto: 6d6+5 de fogo e em chamas (Reflexos DT 20 reduz à metade e evita a condição).",
+          { rolagens: [dano("Incinerar", "6d6+5 fogo")], resistencia: "Reflexos DT 20 reduz à metade e evita em chamas" }),
+      ],
+      formas: [horaDoShow("Franco", 29, 26, 75, "2d20+5", [], [
+        agredir([at("Bater com Guitarra", "corpo a corpo", 2, "2d20+10", "3d10+5 impacto")]),
+        acao("padrao", "Imolar", "Como na ficha, com +2 dados e DT 25: 10 ou mais, 10d6+10 de fogo e em chamas (Reflexos DT 25 reduz à metade e evita); 9 ou menos, Franco sofre 4d6 de fogo e fica em chamas.",
+          { rolagens: [teste("Imolar (1d20: 10+ acerta)", "1d20"), dano("No alvo", "10d6+10 fogo"), dano("Em Franco", "4d6 fogo")], resistencia: "Reflexos DT 25 reduz à metade e evita em chamas" }),
+        acao("padrao", "Incinerar", "Como na ficha, com +2 dados e DT 25: 8d6+5 de fogo e em chamas (Reflexos DT 25 reduz à metade e evita).",
+          { rolagens: [dano("Incinerar", "8d6+5 fogo")], resistencia: "Reflexos DT 25 reduz à metade e evita em chamas" }),
+      ], ["O dano que Franco sofre ao falhar em Imolar não é dano que ele causa: fica 4d6."])],
+    },
+
+    {
+      id: "as3.criatura.cindy", livro: AS3, pagina: 37,
+      nome: "Cindy", natureza: "humana", tipo: "Pessoa", tamanho: "Médio", categoria: "PSIKOLERA",
+      elementos: [], vd: 80,
+      descricao: "Baixista do PSIKOLERA, que arma o palco e move as cordas da banda a qualquer custo.",
+      percepcao: "3d20+5", iniciativa: "3d20+10",
+      defesa: 17, fortitude: "1d20", reflexos: "3d20+10", vontade: "3d20+5",
+      pv: 50, machucado: 25,
+      atributos: [3, 1, 2, 3, 1],
+      pericias: [["Artes", "3d20+10"], ["Enganação", "3d20+10"]],
+      deslocamento: [[9, 6]],
+      notas: ["Biografia nas p. 30–36; perfil como aliado na p. 118."],
+      habilidades: [],
+      acoes: [
+        agredir([at("Pancada com Baixo", "corpo a corpo", 2, "1d20+10", "1d6+10 impacto")]),
+        agredir([at("Disparo com Baixo", "médio", 2, "3d20+10", "2d8+10 balístico", { critico: "19/x3" })], { nome: "Agredir (distância)" }),
+        acao("padrao", "Hora do Show", "Coloca a máscara — use o seletor de forma desta ocorrência."),
+        acao("padrao", "Silenciar", "Faz sinal de silêncio para um ser em alcance médio: 2d6 de dano mental e trêmulo por 3 rodadas (Vontade DT 20 reduz à metade e muda a duração para 1 rodada).",
+          { rolagens: [dano("Silenciar", "2d6 mental")], resistencia: "Vontade DT 20 reduz à metade e trêmulo por 1 rodada" }),
+      ],
+      formas: [horaDoShow("Cindy", 37, 27, 70, "1d20+10", [], [
+        agredir([at("Pancada com Baixo", "corpo a corpo", 2, "1d20+15", "3d6+10 impacto")]),
+        agredir([at("Disparo com Baixo", "médio", 2, "3d20+15", "4d8+10 balístico", { critico: "19/x3" })], { nome: "Agredir (distância)" }),
+        acao("padrao", "Silenciar", "Como na ficha, com +2 dados e DT 25: 4d6 de dano mental e trêmulo por 3 rodadas (Vontade DT 25 reduz à metade e muda para 1 rodada).",
+          { rolagens: [dano("Silenciar", "4d6 mental")], resistencia: "Vontade DT 25 reduz à metade e trêmulo por 1 rodada" }),
+      ])],
+    },
+
+    {
+      id: "as3.criatura.caito", livro: AS3, pagina: 41,
+      nome: "Caíto", natureza: "humana", tipo: "Pessoa", tamanho: "Médio", categoria: "PSIKOLERA",
+      elementos: [], vd: 20,
+      descricao: "Rapaz marcado desde o nascimento pela incompetência dos outros, com uma raiva contida pronta para explodir.",
+      percepcao: "1d20+5", iniciativa: "2d20+5",
+      defesa: 17, fortitude: "1d20", reflexos: "2d20+5", vontade: "1d20+5",
+      pv: 20, machucado: 10,
+      atributos: [2, 1, 2, 1, 1],
+      pericias: [["Furtividade", "2d20+5"]],
+      deslocamento: [[9, 6]],
+      notas: [
+        "Biografia nas p. 38–40; a ficha está na seção do PSIKOLERA.",
+        "Ódio Suprimido é o poder de sacrifício do Rancor (p. 111); a ficha traz a versão de NPC, com DT 20 e os danos de Caíto.",
+      ],
+      habilidades: [],
+      acoes: [
+        agredir([at("Disparo de Pistola", "curto", 2, "2d20+5", "1d12+5 balístico", { critico: "18" })]),
+        acao("completa", "Ódio Suprimido", "Explode de raiva, gritando, correndo e saltando sobre quem estiver no caminho. Todo ser em alcance curto faz Fortitude e Reflexos (DT 20 cada). Falhou em Fortitude: chutado e mordido, fica caído e sofre 1d4+6 de impacto. Falhou em Reflexos: atingido por um disparo, sofre 1d12+5 balístico. Depois, Caíto cai chorando e tremendo: exausto até o fim da cena.",
+          { rolagens: [dano("Falhou em Fortitude", "1d4+6 impacto"), dano("Falhou em Reflexos", "1d12+5 balístico")], resistencia: "Fortitude DT 20 e Reflexos DT 20, separados" }),
+      ],
+    },
+
+    /* ---------------- Couraças ---------------- */
+
+    {
+      id: "as3.criatura.ana", livro: AS3, pagina: 47,
+      nome: "Ana", natureza: "humana", tipo: "Pessoa", tamanho: "Médio", categoria: "Couraças",
+      elementos: [], vd: 100,
+      descricao: "Combatente sanguinária e apaixonada, fiel a Escarlata até o fim.",
+      percepcao: "1d20+5", iniciativa: "2d20+5",
+      defesa: 27, fortitude: "3d20+10", reflexos: "2d20+5", vontade: "1d20+5",
+      pv: 90, machucado: 45,
+      resistencias: [[5, "balístico", "impacto", "perfuração"], [10, "Sangue"]],
+      vulnerabilidades: ["Morte"],
+      atributos: [2, 3, 1, 1, 3],
+      pericias: [["Atletismo", "3d20+10"]],
+      deslocamento: [[9, 6]],
+      estados: [{ id: "escarlata-morta", nome: "Escarlata morreu (Fúria Apaixonada)", maximo: 1 }],
+      notas: [
+        "Biografia nas p. 43–46; perfil como aliado na p. 116.",
+        "Hemofagia não imprime a DT da Fortitude; a dos rituais da ficha é 20.",
+      ],
+      habilidades: [
+        hab("Fúria Apaixonada", "Se Escarlata morrer, até o fim do combate (uma vez por cena), ação padrão para três ataques contra quem a matou — dois com a maça e um com a espada —, cada um com +1d10 de dano do mesmo tipo.",
+          { limite: [1, "cena"], requer: ["escarlata-morta", 1], rolagens: [dano("Fúria (+1d10 por ataque)", "1d10")] }),
+        hab("Paixão Servil", "Em alcance curto de Escarlata, +1d6 em todos os testes e rolagens; se Escarlata foi atacada desde a última rodada, +1d10.",
+          { rolagens: [soma("Paixão Servil (+1d6)", "1d6"), soma("Escarlata atacada (+1d10)", "1d10")] }),
+        hab("Rituais (DT 20)", "Conjura os rituais da ficha sem pagar PE, até 6 PE por conjuração, com a ação apropriada."),
+      ],
+      acoes: [
+        agredir([
+          at("Ataque com Maça", "corpo a corpo", 1, "3d20+15", "6d4+10 perfuração", { critico: "x3" }),
+          at("Ataque com Espada", "corpo a corpo", 1, "3d20+15", "4d6+10 corte", { critico: "19" }),
+        ]),
+        acao("padrao", "Ritual: Hemofagia (Sangue 2)", "Arranca o sangue de um ser em alcance de toque pela pele: 6d6 de dano de Sangue (Fortitude reduz à metade) e Ana recupera PV iguais à metade do dano causado.",
+          { rolagens: [dano("Hemofagia", "6d6 Sangue")], resistencia: "Fortitude (DT 20) reduz à metade" }),
+      ],
+    },
+
+    {
+      id: "as3.criatura.argano", livro: AS3, pagina: 51,
+      nome: "Argano", natureza: "humana", tipo: "Pessoa", tamanho: "Médio", categoria: "Couraças",
+      elementos: [], vd: 100,
+      descricao: "Amante leal e obstinado de Escarlata, de força devastadora e tamanho que serve de muralha.",
+      percepcao: "-2d20", iniciativa: "1d20+5",
+      defesa: 26, fortitude: "4d20+10", reflexos: "1d20+5", vontade: "-2d20",
+      pv: 120, machucado: 60,
+      resistencias: [[5, "balístico", "impacto", "perfuração"], [10, "Sangue"]],
+      vulnerabilidades: ["Morte"],
+      atributos: [1, 4, 1, 0, 4],
+      pericias: [["Atletismo", "4d20+10"]],
+      deslocamento: [[9, 6]],
+      estados: [{ id: "maca-erguida", nome: "Maça erguida", maximo: 1 }],
+      notas: [
+        "Biografia nas p. 48–50; perfil como aliado na p. 116.",
+        "Percepção e Vontade saem impressas como “–2O”: com Presença 0, o pior de dois d20 — não é um número negativo.",
+      ],
+      habilidades: [],
+      acoes: [
+        agredir([at("Maça Pesada", "corpo a corpo", 1, "4d20+15", "4d8+20 perfuração", { critico: "x3" })]),
+        acao("reacao", "Guardião", "Uma vez por rodada, em alcance curto de Escarlata, sofre no lugar dela um dano direcionado a ela.", { limite: [1, "rodada"] }),
+        acao("padrao", "Erguer Maça", "Ergue a maça acima da cabeça. Sozinha não faz nada, mas permite usar Golpe Arrasador (marque o estado “Maça erguida”).", { marcador: "Maça erguida" }),
+        acao("padrao", "Golpe Arrasador", "Desce a maça num ser adjacente: 4d12+20 de perfuração (Fortitude DT 21 reduz à metade).",
+          { requer: ["maca-erguida", 1], rolagens: [dano("Golpe Arrasador", "4d12+20 perfuração")], resistencia: "Fortitude DT 21 reduz à metade" }),
+        acao("completa", "Esmagar Ossos", "Move-se e passa por cima de um ser caído ou atordoado em alcance curto, usando o peso da armadura: 4d10+20 de perfuração e fraco por um dia (Reflexos DT 21 reduz à metade e evita a condição).",
+          { rolagens: [dano("Esmagar Ossos", "4d10+20 perfuração")], resistencia: "Reflexos DT 21 reduz à metade e evita fraco" }),
+      ],
+    },
+
+    {
+      id: "as3.criatura.chispa", livro: AS3, pagina: 57,
+      nome: "Chispa", natureza: "humana", tipo: "Pessoa", tamanho: "Médio", categoria: "Couraças",
+      elementos: [], vd: 100,
+      descricao: "Inventor rápido e eficiente, num triciclo motorizado e sempre com uma traquitana inesperada.",
+      percepcao: "1d20+10", iniciativa: "3d20+5",
+      defesa: 26, fortitude: "1d20+5", reflexos: "3d20+10", vontade: "1d20+10",
+      pv: 90, machucado: 45,
+      resistencias: [[5, "balístico", "impacto", "perfuração"], [10, "Sangue"]],
+      vulnerabilidades: ["Morte"],
+      atributos: [3, 1, 4, 1, 1],
+      pericias: [["Pilotagem", "3d20+10"], ["Tecnologia", "4d20+10"]],
+      deslocamento: [[15, 10]],
+      estados: [{ id: "motor-destruido", nome: "Motor destruído", maximo: 1,
+        altera: { deslocamento: [[0, 0]], desativar: ["Acelerar", "Investida com Lança"] } }],
+      notas: ["Biografia nas p. 52–56; perfil como aliado na p. 116."],
+      habilidades: [
+        hab("Motor Frágil", "Atacar o motor na traseira do triciclo sofre –1d20 (alvo pequeno e em movimento). O motor tem Defesa 26, RD 5 e 20 PV; destruído, explode em fumaça: 4d6 de dano em Chispa (metade perfuração, metade fogo), que fica imóvel, desprevenido e perde Acelerar e Investida com Lança (marque o estado). Consertar leva 1d4+1 horas.",
+          { rolagens: [dano("Explosão do motor", ["2d6 perfuração", "2d6 fogo"]), soma("Horas de conserto", "1d4+1")] }),
+      ],
+      acoes: [
+        agredir([at("Tiro de Escopeta", "curto", 1, "3d20+15", "6d6+20 balístico", { critico: "x3" })], { nome: "Agredir (distância)" }),
+        acao("reacao", "Acelerar", "Uma vez por rodada, acelera o triciclo para escapar de um ataque ou efeito: +5 na Defesa e nos testes de resistência contra ele.", { limite: [1, "rodada"] }),
+        acao("padrao", "Granada Flamejante", "Atira um explosivo em alcance curto: seres a até 3 m sofrem 6d6 de fogo e ficam em chamas (Reflexos DT 21 reduz à metade e evita a condição).",
+          { rolagens: [dano("Granada Flamejante", "6d6 fogo")], resistencia: "Reflexos DT 21 reduz à metade e evita em chamas" }),
+        acao("completa", "Investida com Lança", "Acelera contra um ser em alcance médio. Saltar para fora: Reflexos DT 21; falhando, é trespassado (6d8+20 de perfuração). Resistir: faz um ataque contra Chispa (resolvido normalmente) e depois é trespassado; ou outra ação, com um teste de perícia DT 21 — falhando, não consegue e é trespassado.",
+          { rolagens: [dano("Trespassado", "6d8+20 perfuração")], resistencia: "Reflexos DT 21 (saltar) ou perícia DT 21" }),
+      ],
+    },
+
+    {
+      id: "as3.criatura.torvo", livro: AS3, pagina: 63,
+      nome: "Torvo", natureza: "humana", tipo: "Pessoa", tamanho: "Médio", categoria: "Couraças",
+      elementos: [], vd: 20,
+      descricao: "Quase um cadáver animado, levado na coleira como fonte ambulante de componentes ritualísticos.",
+      percepcao: "1d20", iniciativa: "1d20",
+      defesa: 21, fortitude: "2d20+5", reflexos: "1d20", vontade: "1d20+10",
+      pv: 30, machucado: 15,
+      resistencias: [[5, "balístico", "impacto", "perfuração"], [10, "Sangue"]],
+      vulnerabilidades: ["Morte"],
+      atributos: [1, 1, 1, 1, 2],
+      deslocamento: [[0, 0]],
+      notas: ["Biografia nas p. 58–62; perfil como aliado na p. 116."],
+      habilidades: [
+        hab("Fonte de Rituais", "Em alcance curto de Escarlata, ela pode arrancar a vida dele sempre que causar dano com um ritual: o ritual causa +2d6 de dano do mesmo tipo e Torvo perde 2d6 PV.",
+          { rolagens: [dano("No ritual de Escarlata", "2d6"), soma("PV que Torvo perde", "2d6")] }),
+      ],
+      acoes: [
+        agredir([at("Manopla Espinhenta", "corpo a corpo", 1, "1d20+10", "1d6+5 perfuração")]),
+      ],
+    },
+
+    {
+      id: "as3.criatura.escarlata", livro: AS3, pagina: 69,
+      nome: "Escarlata", natureza: "humana", tipo: "Pessoa", tamanho: "Médio", categoria: "Couraças",
+      elementos: [], vd: 120,
+      descricao: "Líder dos Couraças, sedutora e manipuladora, que transforma desejo em dominação.",
+      percepcao: "4d20+10", iniciativa: "3d20+10",
+      defesa: 28, fortitude: "2d20+5", reflexos: "3d20+5", vontade: "4d20+10",
+      pv: 100, machucado: 50,
+      resistencias: [[5, "balístico", "impacto", "perfuração"], [10, "Sangue"]],
+      vulnerabilidades: ["Morte"],
+      atributos: [3, 2, 3, 4, 2],
+      pericias: [["Atletismo", "2d20+5"], ["Enganação", "4d20+10"], ["Ocultismo", "3d20+10"]],
+      deslocamento: [[9, 6]],
+      notas: [
+        "Biografia nas p. 64–68; perfil como aliado na p. 116.",
+        "Descarnar imprime “Fortitude DT 29” para o primeiro teste; os rituais da ficha têm DT 23 (e os testes seguintes de hemorragia, também). Mantido como publicado.",
+      ],
+      habilidades: [
+        hab("Dar o Fora", "Quem se envolveu com Escarlata (Sedução) pode tentar terminar: Vontade DT 23 mais a penalidade de 1d8 ou 2d8 (como em Dominação). Passando, os efeitos de Sedução terminam — perde os PE temporários e não é mais afetado por Dominação. Falhando, não se livra dos sentimentos, fica na bad e sofre 1d6 de dano mental; pode tentar de novo, sofrendo o dano a cada falha.",
+          { rolagens: [dano("Falhou", "1d6 mental"), soma("Penalidade (um pouco a fim)", "1d8"), soma("Penalidade (muito a fim)", "2d8")] }),
+        hab("Rituais (DT 23)", "Conjura os rituais da ficha sem pagar PE, até 7 PE por conjuração, com a ação apropriada."),
+      ],
+      acoes: [
+        agredir([at("Rasgar com Garras", "corpo a corpo", 2, "3d20+15", "4d10+10 corte", { critico: "19" })]),
+        acao("padrao", "Dominação", "Ordena a um ser afetado por Sedução: Vontade DT 23 ou obedece da melhor forma que puder. Ordem de mais de uma rodada: novo teste por rodada, +1 cumulativo por teste já feito; passando, anula. Em todo teste contra esta habilidade, o personagem rola 1d8 (um pouco a fim) ou 2d8 (muito a fim) como penalidade.",
+          { rolagens: [soma("Penalidade (um pouco a fim)", "1d8"), soma("Penalidade (muito a fim)", "2d8")], resistencia: "Vontade DT 23 menos a penalidade" }),
+        acao("padrao", "Ritual: Descarnar (Discente, Sangue 2)", "Toca um ser: 10d8 de dano (metade corte, metade Sangue) e hemorragia (Fortitude DT 29 reduz à metade e evita a hemorragia). Com hemorragia, no início de cada turno, Fortitude DT 23: falhando, 4d8 de Sangue; passando dois seguidos, estanca.",
+          { rolagens: [dano("Descarnar", ["5d8 corte", "5d8 Sangue"]), dano("Hemorragia", "4d8 Sangue")], resistencia: "Fortitude DT 29 (depois DT 23 por turno)" }),
+        acao("padrao", "Ritual: Flagelo de Sangue (Discente, Sangue 2)", "Toca um ser (exceto criaturas de Sangue) e grava uma marca com uma ordem, até o fim da cena. A cada rodada em que desobedecer, 10d6 de Sangue e enjoado pela rodada (Fortitude DT 23 reduz à metade e evita a condição); passando dois turnos seguidos, a marca some.",
+          { rolagens: [dano("Flagelo", "10d6 Sangue")], resistencia: "Fortitude DT 23 reduz à metade e evita enjoado" }),
+        acao("padrao", "Ritual: Hemofagia (Discente, Sangue 2)", "Faz um ataque com garras como parte do ritual. Acertando, além do dano das garras, causa +6d6 de Sangue e recupera PV iguais à metade do dano total.",
+          { ataques: [at("Rasgar com Garras", "corpo a corpo", 1, "3d20+15", ["4d10+10 corte", "6d6 Sangue"], { critico: "19" })] }),
+        acao("padrao", "Sedução", "Flerta com um personagem, que decide como se sente: não ficou a fim (nada); um pouco a fim (+1d8 PE temporários e suscetível a Dominação); muito a fim (+2d8 PE temporários e suscetível). Duram até ele Dar o Fora.",
+          { rolagens: [soma("PE temporários (um pouco)", "1d8"), soma("PE temporários (muito)", "2d8")] }),
+      ],
+    },
+
+    {
+      id: "as3.criatura.miasma", livro: AS3, pagina: 73,
+      nome: "Miasma", natureza: "humana", tipo: "Pessoa", tamanho: "Médio", categoria: "Couraças",
+      elementos: [], vd: 40,
+      descricao: "Servo do prazer e da paixão por Escarlata, que acorrenta os outros na mesma obsessão.",
+      percepcao: "1d20", iniciativa: "2d20+5",
+      defesa: 18, fortitude: "2d20+5", reflexos: "2d20", vontade: "1d20",
+      pv: 30, machucado: 15,
+      atributos: [2, 2, 1, 1, 2],
+      deslocamento: [[9, 6]],
+      notas: [
+        "Biografia nas p. 70–72; a ficha está na seção dos Couraças.",
+        "Despertar Obsessão é o poder de sacrifício da Obsessão (p. 110); a ficha traz a versão de NPC (DT 25, correntada à distância, obsessão por Escarlata).",
+      ],
+      habilidades: [],
+      acoes: [
+        agredir([at("Golpe com Correntes", "corpo a corpo", 1, "2d20+5", "2d8+5 impacto")]),
+        acao("padrao", "Despertar Obsessão", "Encara uma pessoa em alcance curto, que escolhe: desviar o olhar (Miasma aproveita e dá uma correntada, mesmo à distância: 2d8+5 de impacto) ou encarar (Vontade DT 25; falhando, por 1 rodada gasta todas as ações para se aproximar de Escarlata e adorá-la — se não quiser, ataca a si mesma e o efeito termina).",
+          { rolagens: [dano("Desviou o olhar", "2d8+5 impacto")], resistencia: "Vontade DT 25 (se encarar)" }),
+      ],
+    },
+
+    /* ---------------- Pássaros ---------------- */
+
+    {
+      id: "as3.criatura.coruja", livro: AS3, pagina: 81,
+      nome: "Coruja", natureza: "humana", tipo: "Pessoa", tamanho: "Médio", categoria: "Pássaros",
+      elementos: [], vd: 40,
+      descricao: "Esperta e observadora, cozinha para o grupo e compartilha tudo o que sabe.",
+      percepcao: "2d20+10", iniciativa: "3d20+10",
+      defesa: 19, fortitude: "1d20", reflexos: "3d20+10", vontade: "2d20+5",
+      pv: 50, machucado: 25,
+      atributos: [3, 1, 3, 2, 1],
+      pericias: [["Adestramento", "2d20+10"], ["Atualidades", "3d20+10"], ["Ciências", "3d20+10"], ["Furtividade", "3d20+10"], ["Sobrevivência", "3d20+10"]],
+      deslocamento: [[9, 6]],
+      notas: ["Biografia nas p. 76–80; perfil como aliado na p. 117.", "Os rituais saem impressos com “CD20”: lido como DT 20."],
+      habilidades: [
+        hab("Dardos Sedativos", "Um alvo atingido por um dardo fica sedado (inconsciente) até ser acordado ou até o fim da cena (Fortitude DT 20 evita).", { resistencia: "Fortitude DT 20 evita" }),
+        hab("Rituais (DT 20)", "Conjura os rituais da ficha sem pagar PE, até 4 PE por conjuração, com a ação apropriada."),
+        hab("Validação de Hipótese", "Num acerto crítico, recebe +1d20 em testes contra o mesmo alvo.", { marcador: "+1d20 contra o alvo" }),
+      ],
+      acoes: [
+        agredir([at("Tiro de Zarabatana", "curto", 1, "3d20+10", "1d4+1 perfuração", { critico: "19", nota: "mais o sedativo" })], { nome: "Agredir (distância)" }),
+        acao("padrao", "Ritual: Aprimorar Físico (Sangue 2)", "Tonifica 1 ser em alcance de toque: +1 em Agilidade ou Força, à escolha dele, até o fim da cena."),
+        acao("padrao", "Ritual: Aprimorar Mente (Conhecimento 2)", "Alimenta com sigilos a mente de 1 ser em alcance de toque: +1 em Intelecto ou Presença, à escolha dele, até o fim da cena."),
+      ],
+    },
+
+    {
+      id: "as3.criatura.corvo", livro: AS3, pagina: 88,
+      nome: "Corvo", natureza: "humana", tipo: "Pessoa", tamanho: "Médio", categoria: "Pássaros",
+      elementos: [], vd: 40,
+      descricao: "Ocultista didático, fascinado pelo fim inevitável de todas as coisas.",
+      percepcao: "2d20+10", iniciativa: "3d20+10",
+      defesa: 18, fortitude: "1d20+5", reflexos: "2d20+5", vontade: "3d20+10",
+      pv: 60, machucado: 30,
+      atributos: [2, 1, 3, 3, 1],
+      pericias: [["Adestramento", "3d20+10"], ["Atualidades", "3d20+10"], ["Furtividade", "3d20+10"], ["Ocultismo", "3d20+10"], ["Sobrevivência", "3d20+10"]],
+      deslocamento: [[9, 6]],
+      notas: [
+        "Biografia nas p. 82–87; perfil como aliado na p. 117. O animal Corvo (p. 133) é outra entrada.",
+        "Os rituais saem impressos com “CD 20”: lido como DT 20. Definhar imprime DT 15; mantido.",
+      ],
+      habilidades: [
+        hab("Rituais (DT 20)", "Conjura os rituais da ficha sem pagar PE, até 4 PE por conjuração, com a ação apropriada."),
+        hab("Silêncio Fúnebre", "Morto, o corpo recebe 30 PV temporários e vira mau agouro: testes contra aliados do Corvo num raio de 30 m do corpo sofrem –2d20. Dura até o fim da cena ou até os PV temporários acabarem.",
+          { marcador: "Corpo de mau agouro (30 PV temporários)" }),
+      ],
+      acoes: [
+        agredir([at("Pancada", "corpo a corpo", 1, "1d20+5", "1d4+5 impacto")]),
+        acao("livre", "Ritual: Esconder os Olhos (Conhecimento 1)", "Fica invisível por 1 rodada, com o equipamento: camuflagem total e +15 em Furtividade; quem não pode vê-lo fica desprevenido contra os ataques dele. Termina se ele atacar ou usar uma habilidade hostil (ações contra objetos livres e dano indireto não dissipam). Objetos soltos voltam a aparecer; luz transportada nunca fica invisível."),
+        acao("padrao", "Ritual: Cicatrização (Discente, Morte 1)", "Acelera o tempo nas feridas de 1 ser adjacente: ele recupera 5d8+5 PV, mas envelhece 1 ano.",
+          { rolagens: [soma("PV recuperados", "5d8+5")] }),
+        acao("padrao", "Ritual: Definhar (Discente, Morte 1)", "Lufada de cinzas num ser em alcance curto: exausto até o fim da cena (Fortitude DT 15 muda para fatigado).",
+          { resistencia: "Fortitude DT 15 muda para fatigado" }),
+        acao("padrao", "Ritual: Tecer Ilusão (Discente, Conhecimento 1)", "Ilusão em alcance médio, até 8 cubos de 1,5 m, até o fim da cena: visual, sonora, tátil, térmica e/ou olfativa, mas só imagens e sons simples (volume de uma voz por cubo), sem cheiros, texturas, temperaturas nem sons complexos. Seres e objetos a atravessam; é dissipada se Corvo sair do alcance."),
+      ],
+    },
+
+    {
+      id: "as3.criatura.papagaio", livro: AS3, pagina: 92,
+      nome: "Papagaio", natureza: "humana", tipo: "Pessoa", tamanho: "Médio", categoria: "Pássaros",
+      elementos: [], vd: 40,
+      descricao: "Malandro de chá, piada e cachimbo, que se vira em qualquer situação.",
+      percepcao: "3d20+10", iniciativa: "2d20+10",
+      defesa: 21, fortitude: "1d20+5", reflexos: "2d20+5", vontade: "3d20+10",
+      pv: 60, machucado: 30,
+      atributos: [2, 2, 1, 3, 2],
+      pericias: [["Adestramento", "3d20+10"], ["Artes", "3d20+5"], ["Crime", "2d20+10"], ["Diplomacia", "3d20+10"], ["Enganação", "3d20+10"]],
+      deslocamento: [[9, 6]],
+      notas: ["Biografia nas p. 89–91; perfil como aliado na p. 117."],
+      habilidades: [],
+      acoes: [
+        agredir([at("Garrafada", "corpo a corpo", 2, "2d20+10", "1d4+10 impacto")]),
+        acao("padrao", "Cachimbo do Capeta", "Sopra a fumaça do cachimbo num alvo adjacente: asfixiado, e precisa gastar uma ação padrão para recuperar o fôlego (Fortitude DT 20 evita).",
+          { resistencia: "Fortitude DT 20 evita" }),
+        acao("livre", "Desarmar", "Acertando um ataque com a garrafa, tenta desarmar o alvo.", { rolagens: [teste("Desarmar", "2d20+15")] }),
+      ],
+    },
+
+    {
+      id: "as3.criatura.pomba", livro: AS3, pagina: 95,
+      nome: "Pomba", natureza: "humana", tipo: "Pessoa", tamanho: "Médio", categoria: "Pássaros",
+      elementos: [], vd: 40,
+      descricao: "Explorador nato, que desenha cada mapa para ninguém se perder.",
+      percepcao: "2d20+10", iniciativa: "2d20+5",
+      defesa: 20, fortitude: "2d20+5", reflexos: "2d20+5", vontade: "2d20+10",
+      pv: 50, machucado: 25,
+      atributos: [2, 1, 3, 3, 1],
+      pericias: [["Atletismo", "1d20+15"], ["Ciências", "2d20+10"], ["Furtividade", "2d20+5"], ["Intuição", "2d20+10"], ["Investigação", "2d20+10"], ["Percepção", "2d20+10"], ["Pilotagem", "2d20+5"], ["Sobrevivência", "2d20+5"]],
+      deslocamento: [[9, 6]],
+      notas: ["Biografia nas p. 93–94; perfil como aliado na p. 117."],
+      habilidades: [
+        hab("Ensinamentos do Ninho", "Depois de presenciar a morte de um aliado, até o fim da cena, pode usar uma única vez qualquer habilidade que o parceiro falecido conhecia.", { marcador: "Habilidade do parceiro usada" }),
+        hab("Voe para Longe", "Na primeira rodada de um combate, pode se mover até o dobro do deslocamento com uma única ação de movimento."),
+      ],
+      acoes: [
+        agredir([at("Ataque com Canivete", "corpo a corpo", 2, "2d20+10", "1d4+5 corte")]),
+      ],
+    },
+
+    {
+      id: "as3.criatura.harpia", livro: AS3, pagina: 101,
+      nome: "Harpia", natureza: "humana", tipo: "Pessoa", tamanho: "Médio", categoria: "Pássaros",
+      elementos: [], vd: 80,
+      descricao: "Líder atento e convicto dos Pássaros, sempre cuidando dos companheiros, com aves adestradas.",
+      percepcao: "2d20+10", iniciativa: "3d20+10",
+      defesa: 22, fortitude: "3d20+10", reflexos: "3d20+10", vontade: "2d20+5",
+      pv: 100, machucado: 50,
+      atributos: [3, 3, 2, 2, 3],
+      pericias: [["Adestramento", "2d20+10"], ["Atletismo", "3d20+10"], ["Furtividade", "3d20+10"], ["Sobrevivência", "2d20+10"], ["Tática", "2d20+10"]],
+      deslocamento: [[9, 6]],
+      notas: ["Biografia nas p. 96–100; perfil como aliado na p. 117. A arma dele é a Garra do Harpia (p. 112)."],
+      habilidades: [],
+      acoes: [
+        agredir([at("Garra do Harpia", "corpo a corpo", 2, "3d20+10", "2d8+10 corte", { critico: "19" })]),
+        agredir([at("Pistola", "curto", 2, "3d20+10", "1d12+10 balístico", { critico: "18" })], { nome: "Agredir (distância)" }),
+        acao("livre", "Agarrar", "Acertando um ataque com a garra, tenta agarrar o alvo.", { rolagens: [teste("Agarrar", "3d20+15")] }),
+        acao("livre", "Assobio do Harpia", "Uma vez por rodada, as aves avançam sobre um alvo em alcance longo com um efeito: Cegar (3d6 de perfuração e cego por 1 rodada; Reflexos DT 20 reduz à metade e evita), Distrair (pasmo por 1 rodada; Vontade DT 20 evita; um mesmo alvo uma vez por cena) ou Sangrar (5d6 de perfuração e sangrando; Fortitude DT 20 reduz à metade e evita).",
+          { limite: [1, "rodada"], rolagens: [dano("Cegar", "3d6 perfuração"), dano("Sangrar", "5d6 perfuração")], resistencia: "Reflexos, Vontade ou Fortitude DT 20, conforme o efeito" }),
+      ],
+    },
+
+    {
+      id: "as3.criatura.suellen", livro: AS3, pagina: 105,
+      nome: "Suellen", natureza: "humana", tipo: "Pessoa", tamanho: "Médio", categoria: "Pássaros",
+      elementos: [], vd: 20,
+      descricao: "Criança doente, adolescente doente e, por fim, adulta cruel, que morreu pelo que praticou.",
+      percepcao: "2d20+5", iniciativa: "1d20+5",
+      defesa: 15, fortitude: "2d20+5", reflexos: "2d20+5", vontade: "2d20+5",
+      pv: 30, machucado: 15,
+      atributos: [1, 2, 2, 2, 2],
+      pericias: [["Adestramento", "2d20+10"], ["Atualidades", "2d20+10"], ["Enganação", "2d20+10"]],
+      deslocamento: [[9, 6]],
+      notas: [
+        "Biografia nas p. 102–104; a ficha está na seção dos Pássaros.",
+        "A ficha imprime a linha de atributos duas vezes, em ordens diferentes, com os mesmos valores.",
+        "Estimular Hedonismo é o poder de sacrifício do Prazer (p. 111); a ficha traz a versão de NPC, com DT 20.",
+      ],
+      habilidades: [],
+      acoes: [
+        agredir([at("Golpe com Cutelo", "corpo a corpo", 1, "2d20+5", "1d8+5 corte")]),
+        acao("padrao", "Estimular Hedonismo", "Uma pessoa em alcance curto é tomada por uma onda de prazer insana (Vontade DT 20 evita): perde o senso de autopreservação e fica indefesa por 1 rodada.",
+          { resistencia: "Vontade DT 20 evita" }),
+      ],
+    },
+
+    /* Perfis "como aliado" (OPRPG p. 170) do Arquivos Secretos 3: as
+       equipes (p. 116-118) e os animais treinados (p. 133). */
+    aliadoAs3("ana", "Ana", 116, 47, "Combatente sanguinária, habilidosa, apaixonada e fiel.", [
+      hab("Bônus", "Sempre que causa dano com um ataque corpo a corpo, você também causa +1 dado de dano do mesmo tipo."),
+      hab("Dupla Empunhadura", "1 PE: usa Combater com Duas Armas como se tivesse. Se já tiver, não sofre a penalidade de –1d20.", { custo: "1 PE" }),
+    ], "Aliada"),
+    aliadoAs3("argano", "Argano", 116, 51, "Amante leal, obstinado e muito forte, que serve de cobertura.", [
+      hab("Bônus", "Sempre que causa dano, você também causa +1d12 de perfuração.", { rolagens: [dano("Bônus de Argano", "1d12 perfuração")] }),
+      hab("Cobertura Viva", "1 PE: cobertura leve, até você se mover.", { custo: "1 PE", marcador: "Cobertura leve (até se mover)" }),
+    ]),
+    aliadoAs3("chispa", "Chispa", 116, 57, "Inteligente, rápido, eficiente e sempre com uma traquitana útil.", [
+      hab("Bônus", "+9 m de deslocamento."),
+      hab("Traquitana Explosiva", "Uma vez por cena de combate, 1 PE: Chispa te dá uma granada (escolha o tipo, OPRPG p. 64).", { custo: "1 PE", limite: [1, "combate"] }),
+    ]),
+    aliadoAs3("escarlata", "Escarlata", 116, 69, "Seduz e manipula quem acha interessante, mas sempre com algum bônus.", [
+      hab("Bônus", "+5 em todo teste feito para proteger ou beneficiar a Escarlata."),
+      hab("A Dor do Amor", "Perca 1d8+1 PV para agraciá-la: ela retribui com 10 PE temporários.", { rolagens: [soma("PV perdidos", "1d8+1")] }),
+    ], "Aliada"),
+    aliadoAs3("torvo", "Torvo", 116, 63, "Só acompanha quem o mantém na coleira; o sofrimento dele é fonte para o Outro Lado.", [
+      hab("Bônus", "Rituais de Sangue dispensam componentes ritualísticos e custam 1 PE a menos (cumulativo com outras reduções)."),
+      hab("Catalisador Vivo", "Ao conjurar um ritual de Sangue, 1 PE aplica o efeito de um catalisador ritualístico à sua escolha.", { custo: "1 PE" }),
+    ]),
+    aliadoAs3("coruja", "Coruja", 117, 81, "Esperta, observadora e disposta a compartilhar o que sabe.", [
+      hab("Bônus", "Escolha duas perícias de Intelecto: você é considerado treinado nelas."),
+      hab("Olhos Treinados", "Ao atacar, 2 PE ignoram cobertura leve e camuflagem leve.", { custo: "2 PE" }),
+    ], "Aliada"),
+    aliadoAs3("harpia", "Harpia", 117, 101, "Líder atento e convicto, sempre cuidando dos companheiros.", [
+      hab("Bônus", "Você não fica desprevenido contra inimigos que não pode ver e, ao errar um ataque por camuflagem, pode rolar mais uma vez o dado da chance de falha."),
+      hab("Aves de Rapina", "Ao atacar, 2 PE fazem as aves de Harpia deixarem o alvo desprevenido.", { custo: "2 PE" }),
+    ]),
+    aliadoAs3("corvo", "Corvo", 117, 88, "Ocultista didático, fascinado pelo fim inevitável de todas as coisas.", [
+      hab("Bônus", "Uma vez por cena, ao sofrer dano que o deixaria com 0 PV, você fica com 1 PV.", { limite: [1, "cena"] }),
+      hab("Pela Hora da Morte", "Uma vez por rodada, 2 PE: todos os seres que você escolher e estiverem machucados na cena perdem 1d8 PV.",
+        { custo: "2 PE", limite: [1, "rodada"], rolagens: [soma("PV perdidos", "1d8")] }),
+    ], "Aliado", ["É o Corvo dos Pássaros (pessoa). O animal treinado Corvo (p. 133) é o perfil “Corvo (animal)”."]),
+    aliadoAs3("papagaio", "Papagaio", 117, 92, "Malandro que se vira em qualquer situação, faz um bom chá e acalma os ânimos com piadinhas.", [
+      hab("Bônus", "No fim de uma cena de interlúdio, você recupera 1d6 PE.", { rolagens: [soma("PE recuperados", "1d6")] }),
+      hab("Meter o Migué", "Uma vez por cena, num teste de perícia, 2 PE trocam o atributo do teste por outro à sua escolha.", { custo: "2 PE", limite: [1, "cena"] }),
+    ]),
+    aliadoAs3("pomba", "Pomba", 117, 95, "Explorador nato dos caminhos urbanos e da natureza.", [
+      hab("Bônus", "Você é considerado treinado em Crime e Sobrevivência; se já for, recebe +2."),
+      hab("Atalhos em Todo Lugar", "Uma vez por rodada, 2 PE dão uma ação de movimento adicional, só para se deslocar.", { custo: "2 PE", limite: [1, "rodada"] }),
+    ]),
+    aliadoAs3("ale", "Alê", 118, 11, "Grande intuição ou vislumbres proféticos: parece saber tudo o que pode dar errado.", [
+      hab("Bônus", "Uma vez por cena, você pode rolar um teste de novo e escolher o melhor resultado.", { limite: [1, "cena"], especial: "rolarDeNovoMelhor" }),
+      hab("Prever Resultados", "Uma vez por missão, 2 PE: role 2d20 e anote. Até o fim da missão, em qualquer teste seu ou de outro ser (mesmo fora da sua vista), troque o d20 mais alto por um dos valores anotados — ele vale no lugar, mesmo se for menor. Cada valor só se usa uma vez.",
+        { custo: "2 PE", limite: [1, "missão"], especial: "trocarPorGuardado", rolagens: [soma("Valores anotados", "2d20")] }),
+    ]),
+    aliadoAs3("caio", "Caio", 118, 17, "Não se importa de ficar para trás se for para causar um estardalhaço e distrair quem puder.", [
+      hab("Bônus", "+1d20 em testes de Furtividade (Caio chama mais atenção que você)."),
+      hab("Barulheira", "Uma vez por cena, 1 PE: a barulheira faz todo teste de inimigos na cena que não tenha Caio como único alvo sofrer –1d20.", { custo: "1 PE", limite: [1, "cena"], marcador: "Barulheira (–1d20 nos inimigos)" }),
+    ]),
+    aliadoAs3("cindy", "Cindy", 118, 37, "Arma o palco, move as cordas dos seus bonequinhos e garante o sucesso a qualquer custo.", [
+      hab("Bônus", "+5 em Diplomacia, Enganação e Intimidação, exceto contra a Cindy."),
+      hab("Tiro de Aviso", "Ao acertar um ataque, 2 PE: Cindy dispara uma rajada e você causa +2d8 de dano balístico.", { custo: "2 PE", rolagens: [dano("Tiro de Aviso", "2d8 balístico")] }),
+    ], "Aliada"),
+    aliadoAs3("eloy", "Eloy", 118, 23, "Braços largos, energia ilimitada, personalidade cativante — um baterista capaz de esmagar crânios.", [
+      hab("Bônus", "Você recebe resistência a dano 5."),
+      hab("Porrada Rítmica", "Uma vez por rolagem de dano, 1 PE: role de novo todos os resultados 1 ou 2. Os novos valem, mesmo se forem menores.", { custo: "1 PE", especial: "rolarDeNovoObrigatorio" }),
+    ]),
+    aliadoAs3("franco", "Franco", 118, 29, "Fanático por fogo e explosivos, sempre disposto a ver tudo queimar.", [
+      hab("Bônus", "+1d20 em testes para quebrar objetos e +1d6 de dano do mesmo tipo neles.", { rolagens: [dano("Contra objetos (+1d6)", "1d6")] }),
+      hab("Fogo em Geral", "Ao atacar um alvo, 1 PE o deixa em chamas.", { custo: "1 PE" }),
+    ]),
+    aliadoAnimal("serpente", "Serpente", "Réptil Squamata de corpo alongado e escamoso, sem patas nem pálpebras.", [
+      hab("Bônus", "+2 em Enganação e Intimidação."),
+      hab("Peçonhenta", "Ao causar dano num alvo, 1 PE causa também a perda de 1d12 PV por veneno.", { custo: "1 PE", rolagens: [soma("PV perdidos (veneno)", "1d12")] }),
+    ]),
+    aliadoAnimal("corvo", "Corvo", "Ave inteligente e onívora do gênero Corvus, de plumagem geralmente preta e grande porte.", [
+      hab("Bônus", "+2 em Percepção e Sobrevivência."),
+      hab("Ataque os Olhos", "Ao causar dano num alvo, 1 PE o deixa ofuscado por 1 rodada; num acerto crítico, cego por 1 rodada.", { custo: "1 PE" }),
+    ]),
+    aliadoAnimal("gato", "Gato", "Mamífero carnívoro Felidae: agilidade, garras retráteis, caça e independência.", [
+      hab("Bônus", "+2 em Percepção e Reflexos."),
+      hab("Visão Noturna", "Na escuridão (exceto paranormal), 1 PE: o gato fica alerta por você até o fim da cena — como visão na penumbra (OPRPG p. 180).", { custo: "1 PE", marcador: "Visão na penumbra até o fim da cena" }),
+    ]),
   ];
 
   /* ---------------------------------------------------------------------
@@ -3906,6 +4549,7 @@
       SAH: { nome: "Sobrevivendo ao Horror", sigla: "SAH" },
       AS1: { nome: "Arquivos Secretos 1", sigla: "AS1" },
       AS2: { nome: "Arquivos Secretos 2", sigla: "AS2" },
+      AS3: { nome: "Arquivos Secretos 3", sigla: "AS3" },
     },
     criaturas: CRIATURAS,
   };

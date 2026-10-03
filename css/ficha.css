@@ -1498,3 +1498,27 @@ body.pagina-ficha--painel .ficha-topo__nome { font-size: var(--texto-medio); }
   .consumo-item__rotulo .r-selecao { flex: 1 1 auto; max-width: none; }
   .consumo-confirmacao__botoes .r-botao { flex: 1 1 100%; }
 }
+
+/* Arquivos Secretos 3 (v2.33): o painel no alto da aba Habilidades. */
+.as3-secoes > .pilha { padding-top: var(--e2); border-top: var(--borda) solid var(--cor-traco-fraca); }
+.as3-secoes > .pilha:first-child { border-top: 0; padding-top: 0; }
+.as3-secoes .pilha > .r-botao { justify-self: start; align-self: flex-start; }
+.as3-cronologia { margin: 0; font-variant-numeric: tabular-nums; font-weight: 700; }
+.as3-cartao {
+  display: flex; flex-direction: column; gap: var(--e1);
+  padding: var(--e2); border: var(--borda) solid var(--cor-traco-fraca);
+}
+.as3-cartao p { margin: 0; }
+.as3-ramos { margin: 0; padding-left: var(--e4); }
+.as3-ramos li { font-size: var(--texto-mini); }
+.as3-faixa { flex-wrap: wrap; gap: var(--e1); }
+.as3-registro { margin: 0; padding-left: var(--e4); font-size: var(--texto-mini); }
+
+/* Valores médios para criaturas (AS3 p. 141) no editor. */
+.valores-medios__tabela { width: 100%; border-collapse: collapse; font-size: var(--texto-mini); font-variant-numeric: tabular-nums; }
+.valores-medios__tabela th, .valores-medios__tabela td { text-align: left; padding: var(--e1); border-bottom: var(--borda) solid var(--cor-traco-fraca); }
+.valores-medios__muda td:last-child { font-weight: 700; }
+
+@media (max-width: 560px) {
+  .as3-faixa .r-botao { flex: 1 1 100%; }
+}

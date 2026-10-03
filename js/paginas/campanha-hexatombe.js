@@ -163,6 +163,10 @@
         var gente = v.participantes.filter(function (p) { return p.equipeId === e.id; });
         partes.push(UI.painel("Equipe " + e.nome, el("div.pilha--curta", { class: "pilha" }, [
           el("p.t-mini", { texto: "Base: " + (e.base.melhorias.length ? e.base.melhorias.map(function (k) { return H().POR_MELHORIA[k].nome; }).join(", ") : "sem melhorias") + " · descanso " + e.descanso + "." }),
+          (e.obras || []).length ? el("p.t-mini", { texto: "Em obra: " + e.obras.map(function (ob) { return H().POR_MELHORIA[ob.melhoria].nome + " (pronta no dia " + (ob.inicio + ob.dias) + ")"; }).join(", ") + "." }) : null,
+          (v.trocas || []).filter(function (t) { return t.equipeId === e.id; }).length ? el("ul.bib-lista-textos", {}, v.trocas.filter(function (t) { return t.equipeId === e.id; }).map(function (t) {
+            return el("li.t-mini", { texto: "Dia " + t.dia + " · " + (t.tipo === "segredo" ? "Segredo" : "Informação") + (t.sobre ? " sobre " + t.sobre : "") + (t.conteudo ? ": " + t.conteudo : "") });
+          })) : null,
           el("p.t-mini", { texto: "Estoque: " + textoDoEstoque(e.estoque) + "." }),
           el("ul.bib-lista-textos", {}, gente.map(function (p) {
             return el("li.t-mini", { texto: p.nome + chipsDoParticipante(p) + (p.meu ? " · você" : "") });
@@ -215,6 +219,7 @@
       if (e.pendencias.length) partes.push(painelDePendencias(e));
       if (e.pendentes.length) partes.push(painelDePendentes(e));
       partes.push(painelDeEquipes(e));
+      partes.push(painelAs3(e));
       partes.push(painelDeIntencoes(e));
       partes.push(painelDoMapa(e, true));
       partes.push(painelDeEncontros(e));
@@ -306,6 +311,66 @@
       });
     }
 
+    /* Arquivos Secretos 3 (p. 121): Trocas de Recursos e Tempo de
+       Construção de Base, regras de campanha desligadas por padrão. */
+    function painelAs3(e) {
+      var r = e.regrasAs3 || { trocas: false, construcao: false };
+      var partes = [
+        el("p.t-mini", { texto: "Regras opcionais do Arquivos Secretos 3 para o Hexatombe desta campanha. Desligadas, os registros ficam guardados." }),
+        el("label.r-marca", {}, [el("input", { type: "checkbox", checked: r.trocas, onchange: function (ev) {
+          var v = ev.target.checked;
+          operar(function (c) { return H().definirRegrasAs3(c, { trocas: v, construcao: (c.regrasAs3 || {}).construcao }); });
+        } }), el("span", { texto: "Trocas de Recursos: informação (1 recurso) e segredo (3) com um NPC" })]),
+        el("label.r-marca", {}, [el("input", { type: "checkbox", checked: r.construcao, onchange: function (ev) {
+          var v = ev.target.checked;
+          operar(function (c) { return H().definirRegrasAs3(c, { trocas: (c.regrasAs3 || {}).trocas, construcao: v }); });
+        } }), el("span", { texto: "Tempo de Construção de Base: 7 dias para uma pessoa, −1 por pessoa a mais (mínimo 3); as melhorias improvisadas continuam" })]),
+      ];
+      if (r.construcao && e.equipes.length) partes.push(botao("Começar uma obra…", function () { iniciarObra(e); }));
+      if (r.trocas && e.equipes.length) partes.push(botao("Registrar troca…", function () { registrarTroca(e); }));
+      if (e.trocas.length) {
+        partes.push(el("ul.bib-lista-textos", {}, e.trocas.slice(-10).reverse().map(function (t) {
+          var eq = H().equipe(e, t.equipeId);
+          var pg = ["agua", "comida", "sucata"].filter(function (k) { return t.pagamento[k]; }).map(function (k) { return t.pagamento[k] + " " + k; }).join(", ");
+          return el("li.t-mini", { texto: "Dia " + t.dia + " · " + (eq ? eq.nome : "?") + " · " + (t.tipo === "segredo" ? "segredo" : "informação") + (t.sobre ? " sobre " + t.sobre : "") + (t.npc ? " (" + t.npc + ")" : "") + " · pago: " + pg + (t.conteudo ? " — " + t.conteudo : "") });
+        })));
+      }
+      return UI.painel("Arquivos Secretos 3: trocas e obras", el("div.pilha--curta", { class: "pilha" }, partes));
+    }
+
+    function iniciarObra(e) {
+      var eqs = opcoes(e.equipes, function (q) { return q.id; }, function (q) { return q.nome; });
+      var mels = opcoes(H().MELHORIAS.filter(function (m) { return !m.recurso; }), function (m) { return m.chave; }, function (m) { return m.nome + " (" + m.custo + " sucata)"; });
+      formulario("Começar uma obra", [
+        campo("equipe", { rotulo: "Equipe", tipo: "selecao", opcoes: eqs, valor: eqs[0].valor }),
+        campo("melhoria", { rotulo: "Melhoria", tipo: "selecao", opcoes: mels, valor: mels[0].valor }),
+        campo("pessoas", { rotulo: "Pessoas trabalhando", tipo: "numero", valor: 1, ajuda: "7 dias para uma; −1 por pessoa a mais, até 3." }),
+        campo("nota", { rotulo: "Nota", valor: "", limite: 200 }),
+      ], function (v) {
+        return operar(function (c) { return H().iniciarObra(c, v.equipe, v.melhoria, Number(v.pessoas) || 1, v.nota); });
+      }, "Começar");
+    }
+
+    function registrarTroca(e) {
+      var eqs = opcoes(e.equipes, function (q) { return q.id; }, function (q) { return q.nome; });
+      formulario("Troca de recursos", [
+        campo("equipe", { rotulo: "Equipe que paga", tipo: "selecao", opcoes: eqs, valor: eqs[0].valor }),
+        campo("tipo", { rotulo: "O que compra", tipo: "selecao", valor: "informacao", opcoes: [
+          { valor: "informacao", rotulo: "Informação — uma pista pequena (1 recurso)" }, { valor: "segredo", rotulo: "Segredo — uma pista importante (3 recursos)" }] }),
+        campo("agua", { rotulo: "Água", tipo: "numero", valor: 0 }),
+        campo("comida", { rotulo: "Comida", tipo: "numero", valor: 0 }),
+        campo("sucata", { rotulo: "Sucata", tipo: "numero", valor: 1 }),
+        campo("npc", { rotulo: "Com quem (NPC)", valor: "", limite: 60 }),
+        campo("sobre", { rotulo: "Sobre quem ou que equipe", valor: "", limite: 80 }),
+        campo("conteudo", { rotulo: "O que foi revelado (só a equipe e a mesa veem)", tipo: "area", valor: "", limite: 600 }),
+      ], function (v) {
+        return operar(function (c) {
+          return H().registrarTroca(c, { equipeId: v.equipe, tipo: v.tipo, pagamento: { agua: Number(v.agua) || 0, comida: Number(v.comida) || 0, sucata: Number(v.sucata) || 0 },
+            npc: v.npc, sobre: v.sobre, conteudo: v.conteudo });
+        });
+      }, "Registrar");
+    }
+
     function cartaoDeEquipe(e, q) {
       var gente = H().membros(e, q.id);
       var vivos = gente.filter(function (p) { return p.vivo; }).length;
@@ -323,6 +388,21 @@
             }, { perigo: true }),
           ]),
           q.notas ? el("p.t-mini", { texto: "Notas do mestre: " + q.notas }) : null,
+          (q.obras || []).length ? el("div.pilha--curta", { class: "pilha" }, q.obras.map(function (ob) {
+            var pronta = ob.inicio + ob.dias;
+            return el("div.faixa", {}, [
+              el("span.t-mini", { texto: "Obra: " + H().POR_MELHORIA[ob.melhoria].nome + " — " + ob.pessoas + " pessoa(s), " + ob.dias + " dias (pronta no dia " + pronta + ")" + (ob.nota ? " · " + ob.nota : "") }),
+              botao("Concluir", function () {
+                if (e.dia < pronta) {
+                  UI.confirmar({ titulo: "Concluir antes do dia " + pronta + "?", texto: "Pela regra, a obra fica pronta no dia " + pronta + ". Concluir agora é decisão da mesa.", rotuloConfirmar: "Concluir mesmo assim" })
+                    .then(function (sim) { if (sim) operar(function (c) { return H().concluirObra(c, q.id, ob.id, true); }); });
+                  return;
+                }
+                operar(function (c) { return H().concluirObra(c, q.id, ob.id); });
+              }),
+              botao("Abandonar", function () { operar(function (c) { return H().cancelarObra(c, q.id, ob.id); }); }),
+            ]);
+          })) : null,
           el("div.pilha--curta", { class: "pilha" }, gente.map(function (p) { return linhaDoParticipante(e, p); })),
         ])],
       });

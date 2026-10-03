@@ -547,6 +547,11 @@ segredo nenhum — ele os lê das Script Properties. Publicá-lo não expõe nad
 
 ### Atualizar o backend
 
+**v2.33.0 — PICADEIRO:** Arquivos Secretos 3. Troque o `Campanhas.gs` (modo
+Hexatombe com trocas e obras; formas que somam PV atuais) e crie uma **nova versão**
+da implantação; publique o site. Não precisa de `setupRama()` (nenhuma aba ou
+coluna nova). Fichas antigas abrem iguais: tudo do AS3 começa desligado.
+
 **v2.31.0 — CONSENTIMENTO:** as mecânicas do Hexatombe viram regras opcionais
 da ficha. Troque o `Campanhas.gs` e crie uma nova versão da implantação; publique o
 site. Não precisa de `setupRama()`. Fichas da v2.30.0 mantêm os dados, sem

@@ -689,7 +689,7 @@
             return cartaoDeTrilha(c, subT && subT.valor === c.trilha.chave, function () {
               valores[op.chave] = { valor: c.trilha.chave, opcoes: {} };
               sessao.pintar();
-            }, h ? "Primeiro poder: " + h.nome + " — " + h.resumo : "");
+            }, h ? "Primeiro poder: " + h.nome + " — " + h.resumo : "", ordem.classe);
           })),
           primeira && primeira.opcoes.length && prof < 3
             ? el("div.escolha-aninhada", {}, [
@@ -756,8 +756,8 @@
     }
   }
 
-  function cartaoDeTrilha(c, escolhida, aoEscolher, extra) {
-    var tr = c.trilha;
+  function cartaoDeTrilha(c, escolhida, aoEscolher, extra, classe) {
+    var tr = Object.assign({}, c.trilha, { nome: C.nomeDaTrilha(c.trilha, classe || c.trilha.classe) });
     return el("button.criacao-opcao.escolha-cartao", {
       type: "button",
       class: (escolhida ? "criacao-opcao--escolhida " : "") + (c.disponivel ? "" : "escolha-cartao--indisponivel"),
@@ -1202,7 +1202,7 @@
         el("p", { texto: vaga.explicacao }),
         el("div.criacao-lista.escolha-lista", {}, cands.map(function (c) {
           var poderes = P.habilidadesDaTrilha(c.trilha.chave).map(function (h) { return "NEX " + h.nex + "% " + h.nome; }).join(" · ");
-          return cartaoDeTrilha(c, escolhida === c.trilha.chave, function () { escolhida = c.trilha.chave; pintar(); }, poderes);
+          return cartaoDeTrilha(c, escolhida === c.trilha.chave, function () { escolhida = c.trilha.chave; pintar(); }, poderes, ordem.classe);
         })),
       ]);
       var cand = cands.filter(function (c) { return c.trilha.chave === escolhida; })[0];

@@ -50,6 +50,7 @@
   var OPRPG = "OPRPG";
   var AS1 = "AS1";
   var AS2 = "AS2";
+  var AS3 = "AS3";
 
   /* Cada regra:
 
@@ -449,6 +450,67 @@
     ],
   });
 
+  /* --- Arquivos Secretos 3 (v2.33) ---
+     Uma chave por regra, todas desligadas. Trocas de Recursos e Tempo
+     de Construção de Base são da CAMPANHA (modo Hexatombe), não da
+     ficha: ficam na aba Hexatombe. */
+  function regraAs3(chave, nome, pagina, resumo, efeito, consequencias, extra) {
+    REGRAS.push(Object.assign({
+      chave: chave, nome: nome, resumo: resumo, fonte: AS3, pagina: pagina, afetaFicha: true, automacao: "parcial",
+      efeito: efeito, parametros: [], depende: [], incompativel: [], consequencias: consequencias,
+    }, extra || {}));
+  }
+
+  regraAs3("poderesDeSacrificio", "Poderes de Sacrifício", 110,
+    "Quem é Digno de Sacrifício e porta um estigma do Hexatombe recebe o poder de sacrifício do estigma, sem ocupar vaga.",
+    "O painel do Arquivos Secretos 3 (aba Habilidades) ganha a seção Sacrifício: a mesa registra Digno de Sacrifício e o estigma, e o poder " +
+      "correspondente aparece com custo, alcance, DT (Pre + 5), os ramos de cada resultado e o registro de uso. Fruto da Ambição escolhe o " +
+      "poder ou ritual que vira gatilho da forma suprema.",
+    ["Desligar tira o poder de sacrifício da ficha; Digno de Sacrifício, o estigma, o Fruto da Ambição e os usos ficam guardados e voltam ao religar.",
+     "Independe das regras do Arquivos Secretos 2 (Intenção, formas supremas, Hexatombe): ligar esta não liga aquelas."]);
+
+  regraAs3("trilhaGeral", "Trilha Geral", 119,
+    "A trilha Combatente Performático serve às três classes (Especialista Performático, Ocultista Performático).",
+    "Especialistas e ocultistas podem escolher a trilha Performático na progressão, com o nome da classe. Combatentes não mudam nada.",
+    ["Desligar não apaga a trilha escolhida por um especialista ou ocultista: ela fica guardada, marcada na progressão, sem conceder nada até a regra voltar."]);
+
+  regraAs3("batalhasDeIntencoes", "Batalhas de Intenções", 120,
+    "Duelo de intenções entre duas pessoas: +1d10 de dano contra o alvo da batalha e metade de todo dano que não venha dele.",
+    "O painel do Arquivos Secretos 3 registra contra quem é a batalha. Na rolagem de dano, o +1d10 é oferecido (só contra o alvo); " +
+      "a calculadora de dano sofrido do painel divide por dois o que não vem do alvo.",
+    ["Desligar guarda a batalha em curso, sem efeito."]);
+
+  regraAs3("jogosDoCirco", "Jogos do Circo", 122,
+    "Os minigames do Circo dos Irmãos Davo: Acerte os Dardos (três tentativas de Pontaria) e Máquina de Soco.",
+    "O painel ganha os Jogos do Circo: os dardos rolam Pontaria três vezes e pontuam pela DT superada; na máquina, o golpe e o gasto são " +
+      "escolhidos antes de rolar, a pontuação é o dano × 100 e 18 ou mais quebra a máquina. As partidas ficam registradas.",
+    ["Desligar esconde os jogos; as partidas ficam registradas."]);
+
+  regraAs3("boasRecordacoes", "Boas Recordações", 123,
+    "A foto no circo recupera 1d4 PV, PE ou SAN; uma vez por missão, olhar a foto (ação padrão) dá +1d6 num teste até o fim do dia.",
+    "O painel registra a foto (rola e aplica o 1d4 no recurso escolhido) e o uso por missão; o +1d6 aparece no resultado do próximo teste " +
+      "de perícia até o fim do dia da campanha (a cronologia do painel).",
+    ["Desligar guarda as fotos e o uso da missão."]);
+
+  regraAs3("regrasDaPaixao", "Regras da Paixão", 124,
+    "Laços de intimidade: 1d8 PV e PE adicionais, anotados à parte, perdidos se o parceiro morrer; a condição apaixonado.",
+    "O painel registra cada laço: o primeiro com bônus (só um por vez) soma os PV e PE atuais e máximos; os outros são só a condição. " +
+      "“Perdeu o parceiro” tira o bônus para sempre e a condição. Use só com o acordo de toda a mesa.",
+    ["Desligar tira os PV e PE da Paixão das contas; os laços ficam guardados e voltam ao religar."]);
+
+  regraAs3("veiculosOperacionais", "Veículos Operacionais", 125,
+    "Veículos da Ordem (categorias II, III e IV, e a moto dos Gaudérios Abutres) com regalias, combustível, danos e reparos.",
+    "O painel ganha Veículos: cada veículo é uma instância de um modelo do livro (PV, combustível em d6, regalias, defeitos e registro). " +
+      "Defesa com a Agilidade de quem dirige, velocidade de manobra pela DT de Pilotagem, colisão, disparos em movimento, manobras " +
+      "evasivas, dano massivo (1d8) e reparos por faixa de DT.",
+    ["Desligar esconde os veículos; as instâncias ficam guardadas."]);
+
+  regraAs3("animaisTreinados", "Animais Treinados", 132,
+    "Animais como aliados (Serpente, Corvo, Gato) ou como ficha de ameaça da realidade com VD que acompanha o NEX do dono.",
+    "O painel registra cada animal: modo aliado (o perfil vai para a aba Aliados) ou ficha (VD pelo NEX, aprovação do mestre, imune a " +
+      "Presença Perturbadora, sem a redução de duas categorias das ameaças da realidade) e o treino feito numa folga (SaH p. 94).",
+    ["Desligar esconde os animais; os registros e os aliados ficam."]);
+
   var POR_CHAVE = {};
   REGRAS.forEach(function (r) { POR_CHAVE[r.chave] = r; });
 
@@ -558,6 +620,11 @@
     if (antes && !ligar && A2 && A2.suspenderRegra) {
       var susp = A2.suspenderRegra(ficha, chave);
       if (susp && susp.aviso) aviso = susp.aviso;
+    }
+    var A3 = global.RAMAOrdemArquivo3;
+    if (antes && !ligar && A3 && A3.suspenderRegra) {
+      var susp3 = A3.suspenderRegra(ficha, chave);
+      if (susp3 && susp3.aviso) aviso = susp3.aviso;
     }
 
     /* A primeira vez que NEX & Experiência é ligada numa ficha que já

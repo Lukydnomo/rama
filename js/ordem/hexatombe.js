@@ -27,6 +27,13 @@
      pendencias     o que só a mesa decide (a Coroa escolhe um herdeiro)
      registro       o diário do Hexatombe (os últimos 60 lançamentos)
      pendentes      lançamentos de ficha que ainda não chegaram
+     regrasAs3      as regras opcionais de campanha do Arquivos Secretos 3
+                    (v2.33): Trocas de Recursos e Tempo de Construção de
+                    Base — desligadas por padrão
+     obras          melhorias em construção (Tempo de Construção, AS3
+                    p. 121), por equipe
+     trocas         informações e segredos trocados por recursos (AS3
+                    p. 121), com o conteúdo visível só à equipe e à mesa
 
    ---------------------------------------------------------------------
    TRÊS DECISÕES
@@ -236,6 +243,11 @@
       jogadores: b.jogadores === true,
       base: { nome: texto(base.nome, 80), melhorias: chavesValidas(base.melhorias, CHAVES_MELHORIA) },
       estoque: normalizarEstoque(b.estoque),
+      obras: lista(b.obras).map(function (o) {
+        if (!o || typeof o !== "object" || !idOk(o.id) || CHAVES_MELHORIA.indexOf(o.melhoria) < 0) return null;
+        return { id: idOk(o.id), melhoria: o.melhoria, inicio: inteiro(o.inicio, 0, 999, 0), pessoas: inteiro(o.pessoas, 1, 99, 1),
+          dias: inteiro(o.dias, 3, 7, 7), nota: texto(o.nota, 200) };
+      }).filter(Boolean).slice(0, 8),
       producao: producao,
       notas: texto(b.notas, 1000),
     };
@@ -323,6 +335,20 @@
       fase: FASES.indexOf(b.fase) >= 0 ? b.fase : "preparacao",
       faseNota: texto(b.faseNota, 200),
       leituraDeRecursos: b.leituraDeRecursos === "cumulativa" ? "cumulativa" : "coluna",
+      regrasAs3: {
+        trocas: !!(b.regrasAs3 && b.regrasAs3.trocas === true),
+        construcao: !!(b.regrasAs3 && b.regrasAs3.construcao === true),
+      },
+      trocas: lista(b.trocas).map(function (x) {
+        if (!x || typeof x !== "object" || !idOk(x.id) || !porEquipe[x.equipeId]) return null;
+        var pg = x.pagamento && typeof x.pagamento === "object" ? x.pagamento : {};
+        return {
+          id: idOk(x.id), dia: inteiro(x.dia, 0, DIAS, 0), equipeId: x.equipeId, npc: texto(x.npc, 60),
+          tipo: x.tipo === "segredo" ? "segredo" : "informacao",
+          pagamento: { agua: inteiro(pg.agua, 0, 3, 0), comida: inteiro(pg.comida, 0, 3, 0), sucata: inteiro(pg.sucata, 0, 3, 0) },
+          sobre: texto(x.sobre, 80), conteudo: texto(x.conteudo, 600),
+        };
+      }).filter(Boolean).slice(-40),
       fracassou: b.fracassou === true,
       equipes: equipes,
       participantes: participantes,
@@ -737,6 +763,94 @@
     return resultado();
   }
 
+  /* ---------------- Arquivos Secretos 3 (p. 121) ---------------- */
+
+  function definirRegrasAs3(estado, regras) {
+    var r = regras && typeof regras === "object" ? regras : {};
+    estado.regrasAs3 = { trocas: r.trocas === true, construcao: r.construcao === true };
+    registrar(estado, "regras", "Regras do Arquivos Secretos 3: trocas de recursos " + (r.trocas ? "ligadas" : "desligadas") +
+      ", tempo de construção " + (r.construcao ? "ligado" : "desligado") + ".", "mestre");
+    return resultado();
+  }
+
+  /* Tempo de Construção de Base: 7 dias para uma pessoa, −1 por pessoa a
+     mais, mínimo 3. As melhorias improvisadas (tentarMelhoria, AS2 p. 16)
+     continuam valendo ao lado desta regra. A sucata da melhoria sai no
+     começo da obra; a obra só termina quando a mesa conclui. */
+  function diasDeObra(pessoas) { return Math.max(3, 7 - (inteiro(pessoas, 1, 99, 1) - 1)); }
+
+  function iniciarObra(estado, equipeId, chave, pessoas, nota) {
+    if (!estado.regrasAs3 || !estado.regrasAs3.construcao) return falha("A regra Tempo de Construção de Base (Arquivos Secretos 3, p. 121) está desligada.");
+    var e = equipe(estado, equipeId);
+    var m = POR_MELHORIA[chave];
+    if (!e || !m) return falha("Equipe ou melhoria desconhecida.");
+    if (m.recurso) return falha(m.nome + " depende de um recurso específico: instale pela mesa quando o grupo o conseguir.");
+    if (e.base.melhorias.indexOf(chave) >= 0) return falha("A base já tem " + m.nome + ".");
+    if (chave !== "limpeza" && e.base.melhorias.indexOf("limpeza") < 0) return falha("A limpeza da base vem antes de qualquer outra melhoria.");
+    if (lista(e.obras).some(function (o) { return o.melhoria === chave; })) return falha(m.nome + " já está em obra.");
+    if (e.estoque.sucata < m.custo) return falha("Sucata insuficiente: precisa de " + m.custo + ".");
+    var n = inteiro(pessoas, 1, 99, 1);
+    var obra = { id: "ob-" + uuid(), melhoria: chave, inicio: estado.dia, pessoas: n, dias: diasDeObra(n), nota: texto(nota, 200) };
+    e.estoque.sucata -= m.custo;
+    if (!Array.isArray(e.obras)) e.obras = [];
+    e.obras.push(obra);
+    registrar(estado, "base", e.nome + " começou a construir " + m.nome + " com " + n + " pessoa(s): " + obra.dias + " dias (pronta no dia " + (obra.inicio + obra.dias) + ").", e.id);
+    var r = resultado();
+    r.obra = obra;
+    return r;
+  }
+
+  function concluirObra(estado, equipeId, obraId, forcar) {
+    var e = equipe(estado, equipeId);
+    var obra = e ? lista(e.obras).filter(function (o) { return o.id === obraId; })[0] : null;
+    if (!obra) return falha("Obra desconhecida.");
+    var pronta = obra.inicio + obra.dias;
+    if (estado.dia < pronta && !forcar) return falha("A obra fica pronta no dia " + pronta + " (hoje é o dia " + estado.dia + ").");
+    e.obras = e.obras.filter(function (o) { return o.id !== obraId; });
+    if (e.base.melhorias.indexOf(obra.melhoria) < 0) e.base.melhorias.push(obra.melhoria);
+    registrar(estado, "base", e.nome + " terminou " + POR_MELHORIA[obra.melhoria].nome + ".", e.id);
+    return resultado();
+  }
+
+  function cancelarObra(estado, equipeId, obraId) {
+    var e = equipe(estado, equipeId);
+    var obra = e ? lista(e.obras).filter(function (o) { return o.id === obraId; })[0] : null;
+    if (!obra) return falha("Obra desconhecida.");
+    e.obras = e.obras.filter(function (o) { return o.id !== obraId; });
+    registrar(estado, "base", e.nome + " abandonou a obra de " + POR_MELHORIA[obra.melhoria].nome + " (a sucata gasta não volta).", e.id);
+    return resultado();
+  }
+
+  /* Trocas de Recursos: informação (1 recurso) ou segredo (3), pagos em
+     água, comida ou sucata — o NPC pode exigir um só tipo. */
+  var CUSTO_DA_TROCA = { informacao: 1, segredo: 3 };
+
+  function registrarTroca(estado, dados) {
+    if (!estado.regrasAs3 || !estado.regrasAs3.trocas) return falha("A regra Trocas de Recursos (Arquivos Secretos 3, p. 121) está desligada.");
+    var d = dados && typeof dados === "object" ? dados : {};
+    var e = equipe(estado, d.equipeId);
+    if (!e) return falha("Equipe desconhecida.");
+    var tipo = d.tipo === "segredo" ? "segredo" : "informacao";
+    var pg = d.pagamento && typeof d.pagamento === "object" ? d.pagamento : {};
+    var pagamento = { agua: inteiro(pg.agua, 0, 3, 0), comida: inteiro(pg.comida, 0, 3, 0), sucata: inteiro(pg.sucata, 0, 3, 0) };
+    var soma = pagamento.agua + pagamento.comida + pagamento.sucata;
+    if (soma !== CUSTO_DA_TROCA[tipo]) return falha((tipo === "segredo" ? "Um segredo custa 3 recursos" : "Uma informação custa 1 recurso") + "; o pagamento soma " + soma + ".");
+    var so = d.so === "agua" || d.so === "comida" || d.so === "sucata" ? d.so : "";
+    if (so && pagamento[so] !== soma) return falha("O NPC só aceita " + so + ".");
+    if (e.estoque.agua < pagamento.agua || e.estoque.comida < pagamento.comida || e.estoque.sucata < pagamento.sucata) return falha("O estoque da equipe não tem o suficiente.");
+    e.estoque.agua -= pagamento.agua;
+    e.estoque.comida -= pagamento.comida;
+    e.estoque.sucata -= pagamento.sucata;
+    var t = { id: "tr-" + uuid(), dia: estado.dia, equipeId: e.id, npc: texto(d.npc, 60), tipo: tipo, pagamento: pagamento, sobre: texto(d.sobre, 80), conteudo: texto(d.conteudo, 600) };
+    if (!Array.isArray(estado.trocas)) estado.trocas = [];
+    estado.trocas.push(t);
+    estado.trocas = estado.trocas.slice(-40);
+    registrar(estado, "troca", e.nome + " trocou " + soma + " recurso(s) por " + (tipo === "segredo" ? "um segredo" : "uma informação") + (t.sobre ? " sobre " + t.sobre : "") + (t.npc ? " com " + t.npc : "") + ".", e.id);
+    var r = resultado();
+    r.troca = t;
+    return r;
+  }
+
   /* ---------------- exploração (p. 18–19) ---------------- */
 
   function salvarArea(estado, dados) {
@@ -940,7 +1054,7 @@
       ativo: true, nome: e.nome, dia: e.dia, fase: e.fase, faseNota: e.faseNota, fracassou: e.fracassou,
       equipes: e.equipes.map(function (q) {
         if (!minhasEquipes[q.id]) return { id: q.id, nome: q.nome, rival: true };
-        return { id: q.id, nome: q.nome, base: q.base, estoque: q.estoque, descanso: condicaoDeDescanso(e, q.id) };
+        return { id: q.id, nome: q.nome, base: q.base, estoque: q.estoque, obras: q.obras, descanso: condicaoDeDescanso(e, q.id) };
       }),
       participantes: e.participantes.filter(function (p) { return minhasEquipes[p.equipeId]; }).map(function (p) {
         var meu = !!(p.personagemId && meus[p.personagemId]);
@@ -953,6 +1067,9 @@
       areas: e.areas,
       rotas: e.rotas,
       registro: e.registro.filter(function (r) { return r.visivel === "todos" || minhasEquipes[r.visivel]; }),
+      regrasAs3: e.regrasAs3,
+      /* Só as trocas da própria equipe: o conteúdo é dela e da mesa. */
+      trocas: e.trocas.filter(function (t) { return minhasEquipes[t.equipeId]; }),
     };
   }
 
@@ -1012,5 +1129,12 @@
     tirarPendente: tirarPendente,
     marcarPendente: marcarPendente,
     vistaDoJogador: vistaDoJogador,
+    definirRegrasAs3: definirRegrasAs3,
+    diasDeObra: diasDeObra,
+    iniciarObra: iniciarObra,
+    concluirObra: concluirObra,
+    cancelarObra: cancelarObra,
+    CUSTO_DA_TROCA: CUSTO_DA_TROCA,
+    registrarTroca: registrarTroca,
   };
 })(typeof window !== "undefined" ? window : (typeof globalThis !== "undefined" ? globalThis : this));

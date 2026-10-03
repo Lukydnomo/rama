@@ -1,5 +1,13 @@
 # O banco
 
+## Arquivos Secretos 3 — v2.33
+
+Nenhuma aba nova e nenhuma coluna nova: `setupRama()` não é necessário. O estado do
+Hexatombe (`CAMPANHA_HEXATOMBE.dadosJson`) ganha `regrasAs3 { trocas, construcao }`,
+`equipes[].obras` (até 8 por equipe) e `trocas` (até 40), normalizados pela mesma
+cópia de `js/ordem/hexatombe.js` dentro de `Campanhas.gs`. A ficha ganha
+`ordem.arquivo3` dentro do bloco já existente.
+
 ## Hexatombe — v2.30
 
 > **Atualizando para a v2.30:** troque os três `.gs`, rode `setupRama()` (cria a aba

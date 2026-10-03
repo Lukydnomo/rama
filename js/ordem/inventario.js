@@ -67,11 +67,12 @@
   var TIPOS_ARMA = ["corpoACorpo", "arremesso", "disparo", "fogo", "distancia"];
   var EMPUNHADURAS = ["leve", "umaMao", "duasMaos"];
   var ALCANCES = ["curto", "medio", "longo", "extremo"];
-  var ATRIBUTOS_DANO = ["for", "agi", "melhor"];
+  /* "pre": o Instrumento Elétrico de Combate soma Presença no dano (AS3 p. 109). */
+  var ATRIBUTOS_DANO = ["for", "agi", "melhor", "pre"];
   var TIPOS_PROTECAO = ["leve", "pesada", "escudo"];
   var ELEMENTOS = ["sangue", "morte", "conhecimento", "energia", "medo", "varia"];
   var MARCADORES = ["acessorio", "utensilio", "vestimenta", "eletrico", "camera", "corpoACorpo", "besta", "balas"];
-  var FONTES = ["OPRPG", "SAH", "AS1", "AS2"];
+  var FONTES = ["OPRPG", "SAH", "AS1", "AS2", "AS3"];
   var MAX_MODIFICACOES = 12;
   var DADO = /^[1-9]\d{0,2}d([1-9]\d{0,2})$/;
 

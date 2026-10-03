@@ -2046,6 +2046,126 @@ nos aliados, `perigo`. Na criatura: `ordem.formas`, `ordem.pvBase`, `ordem.aliad
 `ordem.ficha` e `instancia.forma`; nos ataques, `multiplicaTudo`. Na campanha: a
 linha de `CAMPANHA_HEXATOMBE`.
 
+## Arquivos Secretos 3 (v2.33)
+
+Fonte `AS3` (Arquivos Secretos 3, v1.0, Jambô), no registro único dos livros
+(`C.LIVROS`) e nas listas próprias de cada módulo (itens, rituais, poderes,
+criaturas, inventário, consumo, imagens e `ler_imagem_do_turno` no
+`Campanhas.gs`). Páginas são as do livro. As regras ficam em
+`js/ordem/arquivo3.js`; a tela, em `js/paginas/ficha-arquivo3.js`.
+
+### Inventário do PDF
+
+| Página | Conteúdo | Tipo | Onde entrou |
+|---|---|---|---|
+| 4–41 | PSIKOLERA: Alê (11), Caio (17), Eloy (23), Franco (29), Cindy (37), Caíto (41) | fichas de ameaça (pessoas) | catálogo de criaturas, categoria PSIKOLERA |
+| 42–73 | Couraças: Ana (47), Argano (51), Chispa (57), Torvo (63), Escarlata (69), Miasma (73) | fichas de ameaça | categoria Couraças |
+| 74–105 | Pássaros: Coruja (81), Corvo (88), Papagaio (92), Pomba (95), Harpia (101), Suellen (105) | fichas de ameaça | categoria Pássaros |
+| 108 | Guardião da Tropa, Vitalidade Sofrida (combatente); Flagelo Bem Aproveitado, Recuperação Flagelante (ocultista); Ambidestria (geral) | poderes | `poderes.js` |
+| 109 | Entrada Triunfal, Papinho Sedutor (gerais); Instrumento Elétrico de Combate (Energia), Conhecimento de Direção Precognitiva (Conhecimento) | poderes | `poderes.js` |
+| 110–111 | Digno de Sacrifício; Arrogância Diabólica, Causar Culpa, Despertar Obsessão, Estimular Hedonismo, Fruto da Ambição, Ódio Suprimido | poderes de Sacrifício (categoria própria) | `PODERES_SACRIFICIO` |
+| 112–115 | Paçoca, Garra do Harpia, Bloody Mary Batizada, Crânio Dominador, Gaiola do Corvo, Camiseta Psikolera, Dupla Obsessiva (maça e florete), Armaduras dos Couraças | itens | `itens-dados.js` (9 entradas) |
+| 116–118 | Ana, Argano, Chispa, Escarlata, Torvo; Coruja, Harpia, Corvo, Papagaio, Pomba; Alê, Caio, Cindy, Eloy, Franco | perfis "como aliado" | `as3.criatura.<nome>-aliado` |
+| 119 | Combatente Performático (Ensaio, Frase de Efeito, Mosh Pit, Rítmo Contagiante); regra Trilha Geral | trilha + regra opcional | `catalogo.js`, `poderes.js`, `trilhaGeral` |
+| 120 | Batalhas de Intenções | regra opcional (ficha) | `batalhasDeIntencoes` |
+| 121 | Trocas de Recursos; Tempo de Construção de Base | regras opcionais (campanha) | modo Hexatombe (`regrasAs3`) |
+| 122–123 | Jogos do Circo (Acerte os Dardos, Máquina de Soco); Boas Recordações | regras opcionais (ficha) | `jogosDoCirco`, `boasRecordacoes` |
+| 124 | Regras da Paixão; condições Apaixonado e Trêmulo | regra opcional + condições | `regrasDaPaixao`; Trêmulo citado em Silenciar (Cindy) |
+| 125–131 | Veículos operacionais (categorias II, III, IV; moto dos Gaudérios Abutres; regalias; combustível; direção; danos; reparos) | regra opcional | `veiculosOperacionais` |
+| 132–134 | Animais treinados: aliado (Serpente, Corvo, Gato) ou ficha de ameaça da realidade | regra opcional + perfis | `animaisTreinados`, `as3.criatura.<nome>-animal` |
+| 138–141 | Mural dos agentes: como fazer a ficha de uma criatura; Valores Médios para Criaturas | orientação de Homebrew + tabela | editor de criaturas (referência) |
+
+Rituais impressos nas fichas (Cicatrização, Proteção Sigilosa, Hemofagia,
+Descarnar, Flagelo de Sangue, Aprimorar Físico/Mente, Esconder os Olhos,
+Definhar, Tecer Ilusão) são AÇÕES da ameaça, com os números dela, e não entram
+na biblioteca de rituais. As histórias (biografias) não entram.
+
+### Automação, item por item
+
+| O quê | Nível | Como |
+|---|---|---|
+| Vitalidade Sofrida | conta | troca a tabela de PV do combatente por 24 + Vig e 6 + Vig, retroativa, uma vez (efeito `tabelaDePv`); com NEX & Experiência, por nível; vindo de Mundano/Sobrevivente, só os degraus de agente usam 6 + Vig |
+| Guardião da Tropa | parcial | botão gasta 2 PE; uso fica pendente até a mesa dizer o resultado; só "não venceu a Defesa / não afetou por completo" dá 1 SAN, uma vez por uso. Segunda aquisição: alcance curto |
+| Flagelo Bem Aproveitado / Poder do Flagelo | conta | "Usar ritual" paga PE com PV (2 PV por PE; 1 com o poder); a ficha guarda os PV do flagelo |
+| Recuperação Flagelante | parcial | recupera só os PV do flagelo, um uso por aquisição (até 3) por interlúdio |
+| Ambidestria | parcial | escolhe duas armas e rola os dois ataques; –1d20 nos ataques até encerrar (próximo turno) ou a cena acabar; com Combater com Duas Armas, sem penalidade e armas de uma mão |
+| Entrada Triunfal | parcial | uma vez por sessão (cronologia); +1d20 guardado para o próximo teste (nunca Furtividade) ou transferido |
+| Papinho Sedutor | parcial | no resultado de teste de Presença, 1 PE dá +5 (só para seduzir); apaixonado é do alvo |
+| Direção Precognitiva | parcial | no resultado de Percepção/Sobrevivência, +5 (+10 com afinidade), só para orientação |
+| Instrumento Elétrico | parcial | cria a arma no inventário (Artes, Presença no dano, 2d8 Energia, 20/x2, cat. II, 2 espaços), proficiência só do dono; quebrar libera um novo instrumento; o que vale para armas é decisão registrada da mesa |
+| Ensaio | conta | margem +1/+2/+3/+4 pelo NEX até o próximo interlúdio; uma vez por cena; quem ensaia junto registra na própria ficha |
+| Frase de Efeito | conta | no crítico próprio, 2 PE e o dano usa o multiplicador novo; para aliado, mostra o multiplicador |
+| Mosh Pit | parcial | no dano corpo a corpo, informa quantos cercam (contando você, como no exemplo) e soma até 5d6 |
+| Rítmo Contagiante | conta | +5 na Defesa na cena; cada crítico próprio +1, contado pelo id da rolagem (recarregar não reconta) |
+| Poderes de Sacrifício | parcial | concedidos pelo estigma (Digno registrado pela mesa); custo, DT Pre + 5, ramos e registro de uso; Ódio Suprimido com Fortitude e Reflexos separados e os danos das armas |
+| Fruto da Ambição | parcial | escolhe poder ou ritual conhecido como gatilho; a forma é a de As Máscaras (AS2 p. 97), pela seção Forma suprema |
+| Itens | conta/parcial | Camiseta (+2d8 Sangue machucado, vestida), Couraças (Defesa +1/semana até +20, RD, vulnerável a Morte, testes 6d6 refeitos por semana/missão), Paçoca (1/dia), Crânio (24 h = próximo dia), Gaiola (Lodo, 3d10 por rodada), Bloody Mary (2d4 mental) |
+| Aliados do AS3 | conta/parcial | "acompanhando" liga os bônus fixos (Caio +1d20 Furtividade, Cindy +5, Eloy RD 5, Chispa +9 m, Pomba e Coruja "considerado treinado", animais +2); Argano e Ana somam no dano; Alê rola de novo (fica o melhor, 1/cena) e guarda 2d20 por missão (troca o d20 mais alto, mesmo menor); Eloy rola de novo os 1–2 (fica o novo); Cindy +2d8 por 2 PE; Torvo –1 PE em rituais de Sangue |
+| Batalha de Intenções | parcial | +1d10 oferecido no dano contra o alvo; calculadora de dano sofrido divide por dois o que não vem dele |
+| Boas Recordações | conta | foto: 1d4 no recurso escolhido; olhar: 1/missão, +1d6 num teste até o fim do dia |
+| Paixão | conta | 1d8 PV e 1d8 PE (rolados separados) num laço por vez; perder o parceiro tira o bônus para sempre |
+| Jogos do Circo | conta | dardos: 3 × Pontaria, pontos pela DT; soco: golpe e gasto antes de rolar, ×100, quebra com 18+ |
+| Veículos | conta/parcial | instâncias de modelo; Defesa com a Agi de quem dirige; manobra pela DT; combustível em d6 (tanque furado: um dado já é 1); galão +2d6; dano massivo → 1d8; pontos vitais; reparos por DT; Arsenal 3/missão |
+| Animais | parcial | VD pelo NEX (sem a redução das ameaças da realidade), aprovação do mestre, treino numa folga; a ficha vira um aliado da ficha pelo editor de criaturas |
+| Valores médios | referência | escolhe a linha (VD fora da tabela mostra as vizinhas), forte/média/fraca por resistência, prévia e "aplicar os marcados"; ataque, dano e DT ficam como referência |
+| Trocas de Recursos / Tempo de Construção | parcial | campanha: troca paga do estoque (1 ou 3 recursos, tipo exigido opcional), conteúdo só para a equipe e a mesa; obra de 7 dias −1 por pessoa (mín. 3), sucata no início, a mesa conclui |
+
+### Cronologia da campanha
+
+"Uma vez por dia", "24 horas", "por sessão", "a cada semana" e "por missão"
+usam `ordem.arquivo3.cronologia` (missão, dia, semana, sessão), marcada à mão no
+painel — nunca o relógio do computador. Nova missão e nova semana também
+avançam o dia.
+
+### Divergências da publicação e leituras adotadas
+
+- **Hora do Show de Alê (p. 11)**: imprime Defesa 26 e 90 PV; a ficha tem 18 e 45
+  (+10/+20 dariam 28 e 65). A forma usa os valores impressos, com nota.
+- **Fichas mascaradas**: o livro não imprime; as ações da forma são as da ficha
+  com +5 no ataque, +2 dados de dano e +5 na DT, como a Hora do Show lista.
+- **"–2O"** (Argano) é o pior de dois d20 (`-2d20`), não um número negativo.
+  "–2O" em Silêncio Fúnebre é penalidade de dois dados, em texto.
+- **"CD20"** (Coruja, Corvo) lido como DT 20. **Descarnar** (Escarlata) imprime
+  DT 29 para o primeiro teste e DT 23 nos rituais; mantido. **Definhar** (Corvo)
+  imprime DT 15; mantido. **Hemofagia** (Ana) sem DT: a dos rituais (20), com nota.
+- **"d10+5"** (Franco) lido como 1d10+5. Suellen imprime os atributos duas vezes,
+  com os mesmos valores.
+- **Caíto, Miasma e Suellen** estão nas seções das equipes; o livro não diz se
+  são membros. Os poderes de sacrifício deles são versões de NPC (DT fixa).
+- **Mosh Pit**: "para cada aliado cercando-o" com o exemplo de +4d6 para quatro
+  seres (você, um aliado flanqueando e dois adjacentes): a ficha conta quem
+  cerca, incluindo você.
+- **Paixão**: "1d8 PV e PE" — rolados separadamente (a penalidade de apaixonado
+  soma os dois). "Perde permanentemente a quantidade recebida": o bônus sai
+  para sempre (atuais e máximos). Papinho Sedutor deixa apaixonado sem PV/PE:
+  penalidade 0, a mesa ajusta.
+- **Tempo de Construção**: o livro não diz se há teste nem quando a sucata sai;
+  a ficha cobra a sucata no início e não pede teste. A obra só termina quando a
+  mesa conclui (o Hexatombe dura 6 dias; obras longas passam disso).
+- **Armaduras dos Couraças**: a –5 de proteção pesada (OPRPG p. 62) continua; o
+  livro só diz que ela não pesa (0 espaços) e dispensa proficiência.
+- **Dupla Obsessiva**: um item (categoria III, 2 espaços) com duas armas; o
+  catálogo tem as duas, com 1 espaço cada e a nota da categoria do par.
+- **Veículos**: "x espaços de carga (ou um total de y)" lido como carga com a
+  lotação e total sem passageiros (20 por ser médio), conferido nos quatro.
+- **Valores médios (p. 141)**: a linha de VD 30 foi conferida pela posição do
+  texto na página (três linhas sob Recruta: 10, 20, 30); não há linha de 40 nem
+  50, e a ficha não arredonda. A DT de efeitos salta de 31 (VD 240) para 37 (VD
+  260) e os PV de 400 (VD 200) para 550 (VD 220): mantidos como impressos.
+- **Animais**: a progressão de VD segue +20 a cada 5% de NEX a partir de 20%,
+  até VD 340 em 95% e 360 em 99%.
+- **Rítmo** é a grafia impressa ("Rítmo Contagiante"); mantida.
+
+### O que a ficha e a campanha guardam de novo
+
+Na ficha, `ordem.arquivo3` (normalizado em `R.normalizar`, vazio numa ficha
+antiga; sem o módulo, passa como veio): cronologia, sacrifício, flagelo,
+guardião, entrada, ensaio, rítmo, frase, ambidestria, instrumento, paixões,
+recordações, batalha, circo, veículos, animais, aliados (acompanhando e
+escolhas) e marcas de itens. `ordem.opcionais` ganha oito chaves. Na criatura:
+`formas[].somaAtuais` e `especial` nas habilidades. Na campanha (estado do
+Hexatombe): `regrasAs3`, `equipes[].obras` e `trocas`.
+
 ## Lacunas e interpretações
 
 Registradas em vez de preenchidas por dedução. Onde o livro deixa uma leitura

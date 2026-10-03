@@ -353,7 +353,7 @@
       });
 
       var trilha = C.trilha(ordem.trilha);
-      if (trilha && trilha.classe === classe.chave) {
+      if (trilha && C.trilhaServe(trilha, classe.chave, ordem)) {
         P.habilidadesDaTrilha(trilha.chave).forEach(function (h) {
           var d = degrauDoNex(h.nex);
           if (d > t.passos || !h.opcoes.length) return;
@@ -544,7 +544,14 @@
      ficha — trocar de classe não mantém o grimório de pé sozinho. */
   function trilhaValida(ordem) {
     var tr = C.trilha(ordem.trilha);
-    return !!(tr && tr.classe === ordem.classe);
+    return !!(tr && C.trilhaServe(tr, ordem.classe, ordem));
+  }
+
+  /* Uma trilha geral (AS3 p. 119) escolhida fora da classe dela, com a
+     regra Trilha Geral desligada: fica guardada, sem efeito. */
+  function trilhaSuspensa(ordem) {
+    var tr = C.trilha(ordem && ordem.trilha);
+    return !!(tr && tr.geral && tr.classe !== ordem.classe && !C.trilhaServe(tr, ordem.classe, ordem));
   }
 
   function concessoesDeRitual(ordem) {
@@ -988,6 +995,16 @@
         if (!k) return { ok: true, texto: "Treinado na perícia escolhida", falta: "" };
         return { ok: (percurso.graus[k] || 0) >= 1, texto: "Treinado na perícia escolhida",
           falta: "Treinado em " + nomeDaPericia(k) };
+      }
+      /* Uma habilidade automática da classe (Ataque Especial, Escolhido
+         pelo Outro Lado — AS3 p. 108): ela não é "adquirida" numa etapa;
+         vem com a classe a partir do NEX dela. */
+      case "habilidadeDeClasse": {
+        var ha = P.poder(r.habilidade);
+        var inicioHa = P.NEX_INICIAL_AUTOMATICA[r.habilidade];
+        var temHa = !!(ha && ordem && ha.classes.indexOf(ordem.classe) >= 0 && (etapa.nex || 0) >= (inicioHa === undefined ? 5 : inicioHa));
+        var nomeHa = ha ? ha.nome : r.habilidade;
+        return { ok: temHa, texto: "Ter " + nomeHa, falta: "Ter " + nomeHa + " (habilidade de classe)" };
       }
       case "comRegra": {
         var nomeRegra = OP() && OP().regra(r.regra) ? OP().regra(r.regra).nome : r.regra;
@@ -1539,7 +1556,7 @@
     var c = contextoDaVaga(ordem, idVaga, contexto);
     var alvo = classe || ordem.classe;
     var lista = [];
-    C.trilhasDaClasse(alvo).forEach(function (tr) {
+    C.trilhasDaClasse(alvo, ordem).forEach(function (tr) {
       P.habilidadesDaTrilha(tr.chave).forEach(function (h) {
         var motivos = c ? motivosDaHabilidadeDeTrilha(h, alvo, c.percurso, c.etapa, ordem) : [];
         lista.push({ habilidade: h, trilha: tr, disponivel: !motivos.length, motivos: motivos });
@@ -1573,7 +1590,7 @@
     var tr = C.trilha(valor.valor);
     if (!tr) return { faltam: [], problemas: ["Trilha desconhecida."], filhos: [] };
     var problemas = [];
-    if (tr.classe !== ordem.classe) problemas.push(tr.nome + " não é uma trilha da sua classe.");
+    if (!C.trilhaServe(tr, ordem.classe, ordem)) problemas.push(tr.nome + " não é uma trilha da sua classe" + (tr.geral ? " (com a regra opcional Trilha Geral ligada, é)." : "."));
     if (tr.chave === ordem.trilha) problemas.push(tr.nome + " já é a sua trilha.");
     (tr.requisitos || []).forEach(function (r) {
       var res = requisito(r, percurso, etapa, {}, ordem);
@@ -2234,7 +2251,8 @@
     }
 
     var trilhaEscolhida = classe ? C.trilha(ordem.trilha) : null;
-    if (trilhaEscolhida && trilhaEscolhida.classe !== ordem.classe) trilhaEscolhida = null;
+    if (trilhaEscolhida && !C.trilhaServe(trilhaEscolhida, ordem.classe, ordem)) trilhaEscolhida = null;
+    var suspensa = classe && trilhaSuspensa(ordem) ? C.trilha(ordem.trilha) : null;
     if (trilhaEscolhida) {
       P.habilidadesDaTrilha(trilhaEscolhida.chave).forEach(function (h) {
         var d = degrauDoNex(h.nex);
@@ -2297,6 +2315,12 @@
       var v = ev.vaga;
 
       if (v.tipo === "trilha") {
+        if (!trilhaEscolhida && suspensa) {
+          trilhaOk = false;
+          motivoTrilha = C.nomeDaTrilha(suspensa, ordem.classe) + " está guardada sem efeito: a regra opcional Trilha Geral (Arquivos Secretos 3, p. 119) está desligada nesta ficha. Religue a regra para ela voltar a valer, ou troque de trilha.";
+          pendencias.push(Object.assign(pendencia(v, "invalida"), { motivos: [motivoTrilha] }));
+          return;
+        }
         if (!trilhaEscolhida) {
           pendencias.push(pendencia(v, "aberta"));
           return;
@@ -3336,7 +3360,7 @@
   function candidatosTrilha(ordem, idVaga, contexto, excluirPropria) {
     var c = contextoDaVaga(ordem, idVaga, contexto);
     var classeAlvo = ordem.classe;
-    return C.trilhasDaClasse(classeAlvo).filter(function (tr) {
+    return C.trilhasDaClasse(classeAlvo, ordem).filter(function (tr) {
       return !excluirPropria || tr.chave !== ordem.trilha;
     }).map(function (tr) {
       var reqs = (tr.requisitos || []).map(function (r) {

@@ -432,6 +432,14 @@
       lista.push({ fonte: ef.fonte, detalhe: ef.detalhe, efeito: ef });
     });
 
+    /* Aliados do Arquivos Secretos 3 acompanhando o personagem: só os
+       bônus fixos (o resto fica nos botões). */
+    if (A3()) {
+      A3().efeitosDeAliados(ficha).forEach(function (ef) {
+        lista.push({ fonte: ef.fonte, detalhe: ef.detalhe, efeito: ef });
+      });
+    }
+
     return lista;
   }
 
@@ -517,6 +525,15 @@
     var porNex = classe[qual + "PorNex"];
     if (!fase.comum && (!inicial || !porNex)) return c;
 
+    /* Vitalidade Sofrida (AS3 p. 108): a tabela de PV muda para 24 + Vig
+       e 6 + Vig, nos níveis que já tem e nos futuros. É uma TROCA da
+       tabela, não um bônus: a conta é refeita com ela, uma vez só. */
+    var tabelaPv = qual === "pv" && !fase.comum ? efeitosDoTipo(ficha, "tabelaDePv")[0] : null;
+    if (tabelaPv) {
+      inicial = Object.assign({}, inicial, { base: tabelaPv.efeito.inicial });
+      porNex = Object.assign({}, porNex, { base: tabelaPv.efeito.porNex });
+    }
+
     /* Pontos de determinação (SAH p.104): "todos os demais efeitos e
        mecânicas relacionados a pontos de esforço se aplicam diretamente a
        pontos de determinação". Então os PD somam, além da tabela da
@@ -563,14 +580,14 @@
            a partir daí. Ver docs/ORDEM-REGRAS.md. */
         var chaveInicial = inicial.atributo ? (atribPe || inicial.atributo) : null;
         var atribInicial = chaveInicial ? atributo(ficha, chaveInicial) : 0;
-        c.soma(classe.nome + ", inicial", inicial.base + atribInicial,
+        c.soma(classe.nome + ", inicial" + (tabelaPv ? " (" + tabelaPv.fonte + ")" : ""), inicial.base + atribInicial,
           (chaveInicial ? "base " + inicial.base + " + " + siglaDe(chaveInicial) + " " + atribInicial : "") +
           (anterior ? " — sem tabela de PD para o " + anterior.nome + ", vale a da classe desde a transição" : ""));
       }
 
       if (passos > 1) {
         var porDegrau = porNex.base + atribPorNex;
-        c.soma((passos - 1) + "× degrau de progressão", porDegrau * (passos - 1),
+        c.soma((passos - 1) + "× degrau de progressão" + (tabelaPv ? " (" + tabelaPv.fonte + ")" : ""), porDegrau * (passos - 1),
           porDegrau + " por degrau até " + t.rotulo);
       }
     }
@@ -700,6 +717,14 @@
       }
     }
 
+    /* Regras da Paixão (AS3 p. 124): o laço íntimo dá 1d8 PV e PE atuais
+       e máximos, anotados à parte; o que soma PE soma PD. */
+    if (A3() && (qual === "pv" || comoPe)) {
+      A3().bonusDaPaixao(ficha, qual === "pv" ? "pv" : "pe").forEach(function (x) {
+        c.soma("Paixão · " + x.nome, x.valor, "Regras da Paixão (Arquivos Secretos 3, p. 124)");
+      });
+    }
+
     /* Reter Ritual (AS1 p. 58): enquanto retido, o custo sai do máximo
        — e é mecânica de PE, então vale para os PD sem Sanidade. */
     if (comoPe) {
@@ -787,7 +812,13 @@
     if (sintP) c.soma(nomeDoAtributoCurto(sintP.atributo), atributo(ficha, sintP.atributo), "no lugar da Agilidade: Sintonização Mental com Proteção (AS2 p. 83)");
     else c.soma("Agilidade", atributo(ficha, "agi"));
     if (formaAtivaDe(ficha)) c.soma("Forma suprema", A2().BENEFICIOS_DA_FORMA.defesa, "enquanto ativa (Arquivos Secretos 2, p. 97)");
+    /* Rítmo Contagiante (AS3 p. 119): +5 até o fim do combate (a cena),
+       +1 por crítico do performático. */
+    var ritmo = A3() ? A3().defesaDoRitmo(ficha) : 0;
+    if (ritmo) c.soma("Rítmo Contagiante", ritmo, "até o fim do combate (Arquivos Secretos 3, p. 119)");
     if (protecao.item) {
+      var couraca = A3() && protecao.item.origemCatalogoId === ID_COURACA ? A3().bonusDaCouraca(ficha, protecao.item.id) : 0;
+      if (couraca) protecao.composicao = { base: protecao.composicao.base, ajustes: protecao.composicao.ajustes.concat([{ fonte: couraca + " semana(s) de uso (AS3 p. 115)", valor: couraca }]) };
       c.soma(protecao.item.nome, protecao.composicao.base, "proteção em uso");
       protecao.composicao.ajustes.forEach(function (x) {
         c.soma(protecao.item.nome + " · " + x.fonte, x.valor, "modificação da proteção em uso");
@@ -1025,9 +1056,14 @@
     return d.protecao && d.protecao.tipo ? d.protecao.tipo : "";
   }
 
-  function defesaDaProtecao(item) {
+  function defesaDaProtecao(item, ficha) {
     var base = inteiro(item && item.defesa, 0);
     var ajustes = ajustesDoItem(item).defesa;
+    /* Armadura dos Couraças (AS3 p. 115): +1 por semana de uso, até +20. */
+    if (ficha && A3() && item && item.origemCatalogoId === ID_COURACA) {
+      var semanas = A3().bonusDaCouraca(ficha, item.id);
+      if (semanas) ajustes = ajustes.concat([{ fonte: semanas + " semana(s) de uso", valor: semanas }]);
+    }
     return { base: base, ajustes: ajustes, total: base + somaDe(ajustes) };
   }
 
@@ -1350,6 +1386,9 @@
     var sintA = A2() ? A2().sintonizacaoValendo(ficha, "arma", item.id) : null;
     if (sintA && pe) { atributoDoTeste = sintA.atributo; agil = false; }
     var quantosDados = atributoDoTeste ? atributo(ficha, atributoDoTeste) + (a.dadosAtaque || 0) : 0;
+    /* Ambidestria (AS3 p. 108): –1d20 nos ataques até o próximo turno. */
+    var ambi = A3() ? A3().dadosDeAmbidestria(ficha) : 0;
+    if (ambi && atributoDoTeste) quantosDados += ambi;
     /* O contexto do ataque: corpo a corpo ou à distância. Um efeito que
        vale só num deles não vira bônus de todo ataque. */
     var contexto = { ataque: a.tipo === "corpoACorpo" ? "corpo" : (a.tipo ? "distancia" : (chave === "luta" ? "corpo" : "distancia")) };
@@ -1384,6 +1423,8 @@
       extra.soma("Força", atributo(ficha, "for"), "OPRPG p.54");
     } else if (atributoDano === "agi") {
       extra.soma("Agilidade", atributo(ficha, "agi"), "atributo no dano da arma");
+    } else if (atributoDano === "pre") {
+      extra.soma("Presença", atributo(ficha, "pre"), "Presença no dano em vez de Força ou Agilidade (Instrumento Elétrico de Combate, AS3 p. 109)");
     }
     /* A arma sintonizada troca o atributo do dano, quando a arma soma um. */
     if (sintA && extra.parcelas.length) {
@@ -1410,6 +1451,9 @@
       faces += somaDe(aj.margem);
       if (acop && acop.aprimoramento === "margem") faces += 1;
       faces += efIntencao.margem || 0;
+      /* Ensaio (Combatente Performático, AS3 p. 119): até o próximo
+         interlúdio. */
+      faces += A3() ? A3().margemDoEnsaio(ficha) : 0;
       margem = Math.max(1, 21 - faces);
     }
     if (acop && acop.aprimoramento === "multiplicador") multiplicadorBase += 1;
@@ -1469,6 +1513,12 @@
     var a = d.arma || {};
     if (!a.proficiencia) return { exigida: "", proficiente: null, texto: "" };
     var exigida = PROFICIENCIA_EXIGIDA[a.proficiencia];
+    /* Instrumento Elétrico de Combate (AS3 p. 109): "arma tática
+       amaldiçoada de Energia que só você recebe proficiência para usar". */
+    var inst = ficha && ficha.arquivo3 && ficha.arquivo3.instrumento;
+    if (inst && inst.itemId && item && item.id === inst.itemId) {
+      return { exigida: exigida, proficiente: true, texto: "Proficiente: o Instrumento Elétrico de Combate é seu (Arquivos Secretos 3, p. 109)." };
+    }
     var lista = proficiencias(ficha);
     if (!lista.length) {
       return { exigida: exigida, proficiente: null, texto: "Sem classe definida, a ficha não sabe as proficiências." };
@@ -1544,6 +1594,14 @@
 
     efeitosDoTipo(ficha, "bonusSeTreinado", inventario).forEach(function (m) {
       if (m.efeito.pericia === chave && g.bonus > 0) c.soma(m.fonte, m.efeito.valor, m.detalhe);
+    });
+
+    /* "Você é considerado treinado" (aliados do AS3, p. 117): destreinado,
+       vale o bônus de treinado; já treinado, o extra do perfil (Pomba: +2). */
+    efeitosDoTipo(ficha, "treinadoPorAliado", inventario).forEach(function (m) {
+      if ((m.efeito.pericias || []).indexOf(chave) < 0) return;
+      if (g.bonus <= 0) c.soma(m.fonte, C.grau("treinado").bonus, "considerado treinado · " + m.detalhe);
+      else if (m.efeito.seJaTreinado) c.soma(m.fonte, m.efeito.seJaTreinado, "já era treinado · " + m.detalhe);
     });
 
     /* Penalidade de carga: só nas perícias marcadas com carga. A
@@ -1861,7 +1919,8 @@
      RESISTÊNCIAS E PROFICIÊNCIAS
      ================================================================= */
 
-  var ROTULOS_DANO = { mental: "Dano mental", paranormal: "Dano paranormal", geral: "Todos os tipos de dano" };
+  var ROTULOS_DANO = { mental: "Dano mental", paranormal: "Dano paranormal", geral: "Todos os tipos de dano",
+    balistico: "Dano balístico", impacto: "Dano de impacto", perfuracao: "Dano de perfuração" };
 
   function resistencias(ficha, inventario) {
     var dano = {};
@@ -1912,6 +1971,16 @@
       if (dv.vestida && dv.rd) contaDe("geral").soma(item.nome, dv.rd, "vestimenta vestida");
     });
 
+    /* Armadura dos Couraças em uso (AS3 p. 115): RD balístico, impacto e
+       perfuração 5, Sangue 10, e vulnerabilidade a Morte. */
+    var vulnerabilidades = [];
+    var emUsoC = protecaoEmUso(inventario);
+    if (emUsoC.item && emUsoC.item.origemCatalogoId === ID_COURACA) {
+      ["balistico", "impacto", "perfuracao"].forEach(function (t) { contaDe(t).soma(emUsoC.item.nome, 5, "proteção em uso (AS3 p. 115)"); });
+      contaDe("sangue").soma(emUsoC.item.nome, 10, "proteção em uso (AS3 p. 115)");
+      vulnerabilidades.push({ tipo: "morte", rotulo: "Morte", fonte: emUsoC.item.nome });
+    }
+
     var testes = conta();
     efeitosDoTipo(ficha, "resistenciaTestes", inventario).forEach(function (m) {
       testes.soma(m.fonte, m.efeito.valor, m.detalhe);
@@ -1926,6 +1995,7 @@
       dano: Object.keys(dano).map(function (k) { return dano[k]; }),
       testes: testes,
       testesParanormal: paranormal,
+      vulnerabilidades: vulnerabilidades,
     };
   }
 
@@ -2269,7 +2339,9 @@
        numa ficha de combatente não é um valor que se conserte; é um
        vínculo quebrado, e ele some. */
     var t = C.trilha(ficha.trilha);
-    if (t && ficha.classe && t.classe !== ficha.classe) ficha.trilha = "";
+    /* Exceção: uma trilha geral (AS3 p. 119) fica — desligar a regra
+       Trilha Geral não apaga a escolha (a progressão a suspende). */
+    if (t && ficha.classe && t.classe !== ficha.classe && !(t.geral && C.ehAgente(ficha.classe))) ficha.trilha = "";
 
     var atribBruto = (b.atributos && typeof b.atributos === "object") ? b.atributos : {};
     C.ATRIBUTOS.forEach(function (a) {
@@ -2356,6 +2428,9 @@
     ficha.maldicoesMemorizadas = normalizarMaldicoesMemorizadas(b.maldicoesMemorizadas);
     ficha.contadores = normalizarContadores(b.contadores);
     if (A2()) A2().normalizar(ficha, b);
+    /* Arquivos Secretos 3 (v2.33). Sem o módulo, passa como veio. */
+    if (A3()) A3().normalizar(ficha, b);
+    else if (b.arquivo3 && typeof b.arquivo3 === "object") ficha.arquivo3 = JSON.parse(JSON.stringify(b.arquivo3));
 
     var temp = (b.temporarios && typeof b.temporarios === "object") ? b.temporarios : {};
     ["pv", "pe", "san", "defesa"].forEach(function (qual) {
@@ -2691,6 +2766,8 @@
 
   /* Machucado: metade dos PV ou menos (OPRPG p. 82). */
   function A2() { return global.RAMAOrdemArquivo2 || null; }
+  function A3() { return global.RAMAOrdemArquivo3 || null; }
+  var ID_COURACA = "as3.amaldicoado.armadura-dos-couracas";
 
   /* Forma suprema ativa (AS2 p. 97). */
   function formaAtivaDe(ficha) { return !!(A2() && A2().formaAtiva(ficha)); }

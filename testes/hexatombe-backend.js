@@ -129,4 +129,10 @@ export async function testarHexatombeBackend({ t, preparar, novaConta, comoFn })
   t.igual("forma que a ficha não tem é recusada", opC("outra").erro, "dados_invalidos");
   const f2 = opC("");
   t.ok("voltar à ficha de partida prende os atuais no máximo dela, sem restaurar", f2.ok && !lido().instancia.forma && lido().status[0].maximo === 100 && lido().status[0].atual === 50);
+  /* AS3 (v2.33): "+20 PV máximos e atuais" — a forma soma os atuais. */
+  snapshot.ordem.formas[0].somaAtuais = 20;
+  const cmb3 = M({ acao: "salvar_combate", campanhaId: mesa, dados: { nome: "Hora do Show", estado: "preparando", visiveis: [], participantes: [{ id: "c1", tipo: "criatura", nome: "Sintético", ordem: 1, snapshot }] } });
+  const f3 = M({ acao: "atualizar_combate", campanhaId: mesa, combateId: cmb3.dados.id, rev: cmb3.rev, opId: op(), ops: [{ tipo: "criatura_instancia", participanteId: "c1", chave: "forma", valor: "forte" }] });
+  const lido3 = M({ acao: "listar_combates", campanhaId: mesa }).dados.find((c) => c.id === cmb3.dados.id).participantes[0].snapshot;
+  t.ok("forma com somaAtuais (Hora do Show, AS3): +20 PV atuais no servidor", f3.ok && lido3.status[0].maximo === 200 && lido3.status[0].atual === 70);
 }

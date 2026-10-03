@@ -90,6 +90,7 @@
   var SAH = "SAH";
   var AS1 = "AS1";
   var AS2 = "AS2";
+  var AS3 = "AS3";
 
   /* ------------------------------------------------------------------
      Atalhos de montagem. Existem só para a lista abaixo caber na tela.
@@ -104,6 +105,8 @@
     elem: function (e, n) { return { tipo: "elemento", elemento: e, quantidade: n }; },
     conj: function (c, e) { return e ? { tipo: "conjurarRitual", circulo: c, elemento: e } : { tipo: "conjurarRitual", circulo: c }; },
     regra: function (k) { return { tipo: "comRegra", regra: k }; },
+    /* Habilidade automática da classe (AS3 p. 108). */
+    daClasse: function (k) { return { tipo: "habilidadeDeClasse", habilidade: k }; },
     atrUm: function (lista, n) { return { tipo: "atributoUm", atributos: lista, minimo: n }; },
     grau: function (p, g) { return { tipo: "grau", pericia: p, grau: g }; },
     grauUma: function (lista, g) { return { tipo: "grauEmUma", pericias: lista, grau: g }; },
@@ -151,6 +154,8 @@
       dependeDe: d.dependeDe || "",
       /* Só nos poderes de Intenção (AS2 p. 94-95). */
       intencao: d.intencao || null,
+      /* Só nos poderes de Sacrifício (AS3 p. 110-111). */
+      sacrificio: d.sacrificio || null,
       opcoes: d.opcoes || [],
       efeitos: d.efeitos || [],
       efeitosAfinidade: d.efeitosAfinidade || [],
@@ -326,6 +331,29 @@
       resumo: "Ao atacar, 2 PE dão +4 no ataque ou no dano. Com o NEX, +1 PE compra mais um +4: NEX 25% (3 PE, dois +4), 55% (4 PE, três), 85% (5 PE, quatro). Cada +4 vai para o ataque ou para o dano, à sua escolha.",
       requisitos: [req.atrUm(["agi", "for"], 2), req.treinUma(["luta", "pontaria"])],
       automacao: "calculo", nota: "O ataque com arma pergunta antes de rolar: quantos +4 e onde cada um vai. O PE sai na hora, o do ataque entra no teste e o do dano fica guardado para a rolagem de dano desse ataque." }),
+
+    /* --- combatente · Arquivos Secretos 3, p. 108 --- */
+    entrada({ chave: "guardiaoDaTropa", nome: "Guardião da Tropa", tipo: "classe", classes: ["combatente"], fonte: AS3, pagina: 108,
+      resumo: "Quando um aliado adjacente é o alvo único de um ataque ou de uma habilidade, reação e 2 PE fazem você sofrer o ataque ou a habilidade no lugar dele. Se o ataque não vencer a sua Defesa, ou a habilidade não o afetar por completo (passou na resistência, por exemplo), você recupera 1 SAN. Adquirido de novo, o alcance muda de adjacente para curto.",
+      requisitos: [req.daClasse("ataqueEspecial"), req.poder("cascaGrossa")],
+      repetivel: true, maximoTotal: 2,
+      automacao: "parcial", nota: "O botão do cartão gasta os 2 PE (alcance adjacente; curto com a segunda aquisição) e deixa o uso pendente: a mesa diz como terminou, e só “não venceu a Defesa / não afetou por completo” devolve 1 SAN, uma vez por uso." }),
+    entrada({ chave: "vitalidadeSofrida", nome: "Vitalidade Sofrida", tipo: "classe", classes: ["combatente"], fonte: AS3, pagina: 108,
+      resumo: "Seus PV iniciais passam a 24 + Vigor e cada novo NEX dá 6 + Vigor, nos níveis que você já tem e nos futuros. Ex.: combatente NEX 15% com Vigor 3 e 37 PV fica com 45 PV e ganha +9 PV a cada novo NEX.",
+      requisitos: [req.daClasse("ataqueEspecial")],
+      efeitos: [{ tipo: "tabelaDePv", inicial: 24, porNex: 6 }],
+      automacao: "calculo", nota: "Troca a tabela de PV do combatente (20 + Vig e 4 + Vig) pela do poder, retroativamente e uma vez só — a conta mostra a tabela nova, sem somar à antiga. Com NEX & Experiência, por nível; o PV de quem chegou a agente vindo de Mundano ou Sobrevivente continua o da fase anterior, e só os degraus de agente usam o 6 + Vig." }),
+
+    /* --- ocultista · Arquivos Secretos 3, p. 108 --- */
+    entrada({ chave: "flageloBemAproveitado", nome: "Flagelo Bem Aproveitado", tipo: "classe", classes: ["ocultista"], fonte: AS3, pagina: 108,
+      resumo: "A taxa de Poder do Flagelo cai para 1 PV por PE pago.",
+      requisitos: [req.daClasse("escolhidoPeloOutroLado"), req.poder("poderDoFlagelo")],
+      automacao: "calculo", nota: "Em “Usar ritual”, pagar com PV (Poder do Flagelo) custa 1 PV por PE em vez de 2." }),
+    entrada({ chave: "recuperacaoFlagelante", nome: "Recuperação Flagelante", tipo: "classe", classes: ["ocultista"], fonte: AS3, pagina: 108,
+      resumo: "Uma vez entre uma cena de interlúdio e outra, você pode recuperar PV gastos com Poder do Flagelo por outros métodos além do descanso. Adquirido de novo, +1 uso, até 3 usos entre interlúdios.",
+      requisitos: [req.daClasse("escolhidoPeloOutroLado"), req.poder("poderDoFlagelo")],
+      repetivel: true, maximoTotal: 3,
+      automacao: "parcial", nota: "A ficha guarda quantos PV o flagelo tirou. O botão do cartão recupera esses PV (até o que o flagelo tirou), contando os usos do interlúdio atual — um por aquisição." }),
 
     /* --- ocultista · Arquivos Secretos 2 --- */
     entrada({ chave: "dominarHabilidadeRitualistica", nome: "Dominar Habilidade Ritualística", tipo: "classe", classes: ["ocultista"], fonte: AS2, pagina: 75,
@@ -656,6 +684,20 @@
       [req.atr("pre", 2), req.trein("percepcao"), req.trein("tatica")], [], "informacao", { fonte: AS2,
         nota: "O livro chama este poder geral de “Sentido Tático”, o mesmo nome do poder de combatente do livro básico (p. 26), que é outro. Marque desprevenido em Condições → Editar imunidades (a ficha recusa aplicar uma condição de que você é imune). A falha em Furtividade é aplicada na cena." }),
 
+    /* --- Arquivos Secretos 3, p. 108-109 --- */
+    geral("ambidestria", "Ambidestria", 108,
+      "Empunhando duas armas (pelo menos uma leve), na ação agredir você pode fazer dois ataques, um com cada arma; se fizer, sofre –1d20 em todos os testes de ataque até o seu próximo turno. Com Combater com Duas Armas, em vez disso, você não sofre a penalidade dele e pode empunhar duas armas de uma mão.",
+      [req.atrUm(["for", "agi"], 2), req.trein("luta")], [], "parcial", { fonte: AS3,
+        nota: "O botão do cartão escolhe as duas armas do inventário e rola os dois ataques; a penalidade de –1d20 entra nos ataques seguintes até você encerrá-la (no início do seu próximo turno) ou a cena acabar. Com Combater com Duas Armas, os dois ataques saem sem penalidade e as armas podem ser de uma mão." }),
+    geral("entradaTriunfal", "Entrada Triunfal", 109,
+      "Uma vez por sessão, ao entrar num ambiente, anuncie sua chegada em voz alta para todos ouvirem: +1d20 no primeiro teste que fizer ali, exceto Furtividade. Como reação, pode transferir o bônus para o primeiro teste de um aliado em alcance longo, no mesmo ambiente.",
+      [req.atr("pre", 2)], [], "parcial", { fonte: AS3,
+        nota: "A “sessão” é a da cronologia da campanha (painel do Arquivos Secretos 3). O bônus fica guardado e aparece no resultado do próximo teste de perícia (nunca Furtividade), ou é transferido a um aliado." }),
+    geral("papinhoSedutor", "Papinho Sedutor", 109,
+      "Num teste de perícia baseado em Presença para seduzir alguém, 1 PE dá +5. Se passar, o alvo fica apaixonado por você — e, enquanto estiver, pode virar um problema na sua vida, a critério do mestre.",
+      [req.atr("pre", 2)], [], "parcial", { fonte: AS3,
+        nota: "Aparece no resultado de um teste de perícia de Presença, por 1 PE, só para seduzir. A condição apaixonado é do alvo: quem registra é ele (ou o mestre)." }),
+
     /* --- Arquivos Secretos 1, p. 46 --- */
     geral("habilidadeAprimorada", "Habilidade Aprimorada", 46,
       "Escolha uma habilidade ou um ritual que tenha DT: a DT para resistir a ele aumenta em +2. Pode ser escolhido de novo para outra habilidade ou ritual, e até duas vezes para a mesma (a DT sobe +5 no total).",
@@ -867,6 +909,16 @@
       "A cura muda para 4d8+4 PV.",
       { automacao: "calculo", nota: "O botão do cartão rola a cura e a perda de Sanidade e as aplica na ficha." }),
 
+    /* --- Arquivos Secretos 3, p. 109 --- */
+    paranormal("conhecimentoDeDirecaoPrecognitiva", "Conhecimento de Direção Precognitiva", "conhecimento", AS3, 109,
+      "Um sexto sentido aponta o caminho: +5 em testes de Percepção ou Sobrevivência para se localizar ou se orientar até um local, mesmo sem nunca tê-lo visto ou sem saber onde fica.",
+      "O bônus aumenta para +10.",
+      { automacao: "parcial", nota: "Aparece no resultado de um teste de Percepção ou Sobrevivência, só para localização e orientação (+5, ou +10 com afinidade). Não vira bônus da perícia." }),
+    paranormal("instrumentoEletricoDeCombate", "Instrumento Elétrico de Combate", "energia", AS3, 109,
+      "Antes da próxima missão ou na próxima cena de interlúdio (o que vier primeiro), escolha um instrumento musical que você saiba tocar e tenha consigo: ele vira, para sempre, uma arma tática amaldiçoada de Energia que só você é proficiente em usar — duas mãos, ataca à distância 1 alvo à sua escolha em alcance curto com ondas sonoras, ataque com Artes (em vez de Luta ou Pontaria), 2d8 de Energia somando Presença (em vez de Força ou Agilidade), crítico 20/x2, categoria II, 2 espaços. Se quebrar, você pode usar o poder de novo num novo instrumento; se você morrer, ela quebra. Habilidades e regras que beneficiam armas, Luta ou Pontaria valem conforme a combinação com o mestre.",
+      "Em vez de 1 alvo, atinge todos os alvos à sua escolha em alcance curto.",
+      { automacao: "parcial", nota: "O botão do cartão cria a arma no inventário (perícia Artes, Presença no dano, ligada ao poder) quando chega o momento. O que vale para armas, Luta ou Pontaria é escolha registrada da mesa: a ficha não soma sozinha." }),
+
     /* --- Arquivos Secretos 1, p. 47 (todos de Sangue) --- */
     paranormal("ferroMaculado", "Ferro Maculado", "sangue", AS1, 47,
       "Ação de movimento e 2 PV amaldiçoam 1 projétil de munição: ele causa +1d6 de dano de Sangue, uma única vez.",
@@ -941,6 +993,63 @@
       { gatilho: "Ouvir o grito de morte de alguém que tentou proteger (aliado morrendo à vista ou ao alcance da voz).", tipo: "confirmacao",
         uso: "reação", efeito: "instantaneo",
         versoesNpc: [{ ficha: "Kemi e Fantasma (p. 57-58)", texto: "A ficha de NPC acrescenta “uma vez por rodada”." }] }),
+  ];
+
+  /* =================================================================
+     PODERES DE SACRIFÍCIO — Arquivos Secretos 3, p. 110-111
+     -----------------------------------------------------------------
+     "Quando um ser se torna um sacrifício do Hexatombe, ele recebe um
+     dos poderes a seguir, correspondente ao seu estigma." Não ocupam
+     vaga de poder e não são escolhidos na progressão: vêm do estigma
+     registrado pela mesa (js/ordem/arquivo3.js), com a regra opcional
+     Poderes de Sacrifício ligada. A DT é Pre + 5 (a DT de Presença da
+     ficha, mais 5).
+
+     `sacrificio`:
+       estigma       o estigma que concede o poder
+       acao, custo, alcance, alvo, duracao, resistencia
+       ramos         [{ rotulo, texto, rolagem? }] — passou/falhou,
+                     desviar/encarar, Fortitude/Reflexos
+     ================================================================= */
+
+  function sacrificio(chave, nome, estigma, nomeEstigma, pagina, resumo, dados) {
+    return entrada({ chave: chave, nome: nome, tipo: "sacrificio", fonte: AS3, pagina: pagina, resumo: resumo,
+      requisitos: [{ tipo: "comRegra", regra: "poderesDeSacrificio" }, { tipo: "declaracao", texto: "Ser o sacrifício do " + nomeEstigma }],
+      sacrificio: Object.assign({ estigma: estigma }, dados), automacao: "parcial",
+      nota: "Concedido pelo estigma (painel do Arquivos Secretos 3), sem ocupar vaga. O botão gasta o custo, mostra a DT e registra o uso; o resultado de cada ramo é da cena." });
+  }
+
+  var PODERES_SACRIFICIO = [
+    sacrificio("arroganciaDiabolica", "Arrogância Diabólica", "orgulho", "Orgulho", 110,
+      "Ação padrão e 3 PE: diga a uma pessoa em alcance médio que ela pode tudo, “basta ter o mindset certo”. Vontade (DT Pre + 5): falhando, no próximo turno ela faz algo extremamente imprudente (atacar alguém mais poderoso, saltar de um lugar alto…) só para provar que pode; passando, ainda fica insegura e sofre 2d6 de dano mental que não pode ser evitado, reduzido nem resistido.",
+      { acao: "padrão", custo: 3, alcance: "médio", alvo: "uma pessoa", resistencia: "Vontade",
+        ramos: [{ rotulo: "Falhou", texto: "Faz uma ação extremamente imprudente no próximo turno, só para provar que “pode”." },
+                { rotulo: "Passou", texto: "Fica insegura: 2d6 de dano mental que não pode ser evitado, reduzido nem resistido.", rolagem: "2d6" }] }),
+    sacrificio("causarCulpa", "Causar Culpa", "culpa", "Culpa", 110,
+      "Ação padrão e 3 PE: uma pessoa em alcance curto é tomada por uma culpa terrível até o fim da cena. Vontade (DT Pre + 5) evita. Falhando, revive as piores coisas que já fez, sente-se merecedora de todo o sofrimento do mundo e fica indefesa; no início de cada turno dela, pode fazer um novo teste para se libertar.",
+      { acao: "padrão", custo: 3, alcance: "curto", alvo: "uma pessoa", duracao: "cena", resistencia: "Vontade evita",
+        ramos: [{ rotulo: "Falhou", texto: "Indefesa até o fim da cena; novo teste de Vontade no início de cada turno dela para se libertar." },
+                { rotulo: "Passou", texto: "Nenhum efeito." }] }),
+    sacrificio("despertarObsessao", "Despertar Obsessão", "obsessao", "Obsessão", 110,
+      "Ação padrão e 3 PE para encarar uma pessoa em alcance curto, que escolhe desviar o olhar ou encarar de volta. Desviando, fica desprevenida contra ataques seus e dos seus aliados por 1 rodada. Encarando, faz Vontade (DT Pre + 5): passando, nada; falhando, por 1 rodada gasta todas as ações para se aproximar e adorar você — ou, se não quiser, tem um impulso incontrolável de se ferir e faz um ataque contra si mesma, e o efeito termina.",
+      { acao: "padrão", custo: 3, alcance: "curto", alvo: "uma pessoa", resistencia: "Vontade (só se encarar)",
+        ramos: [{ rotulo: "Desviou o olhar", texto: "Desprevenida contra ataques seus e dos seus aliados por 1 rodada." },
+                { rotulo: "Encarou e passou", texto: "Nada acontece." },
+                { rotulo: "Encarou e falhou", texto: "Por 1 rodada, todas as ações para se aproximar e adorar você; se não quiser, ataca a si mesma e o efeito termina." }] }),
+    sacrificio("estimularHedonismo", "Estimular Hedonismo", "prazer", "Prazer", 111,
+      "Ação padrão e 3 PE: uma pessoa em alcance curto é tomada por uma onda de prazer insana. Vontade (DT Pre + 5) evita. Falhando, todos os sentidos e alertas do corpo só transmitem prazer e euforia: ela perde o senso de autopreservação e fica indefesa por 1 rodada.",
+      { acao: "padrão", custo: 3, alcance: "curto", alvo: "uma pessoa", duracao: "1 rodada", resistencia: "Vontade evita",
+        ramos: [{ rotulo: "Falhou", texto: "Indefesa por 1 rodada." }, { rotulo: "Passou", texto: "Nenhum efeito." }] }),
+    sacrificio("frutoDaAmbicao", "Fruto da Ambição", "desejo", "Desejo", 111,
+      "Escolha um poder ou ritual que você conheça. Além do efeito normal, usá-lo vira o gatilho de uma forma poderosíssima: funciona como As Máscaras (Arquivos Secretos 2, p. 97), como se, ao usá-lo, você vestisse a sua máscara.",
+      { gatilho: true,
+        ramos: [{ rotulo: "Ao usar o poder ou ritual escolhido", texto: "Pode ativar a forma suprema (As Máscaras, AS2 p. 97), com as regras e custos dela." }] }),
+    sacrificio("odioSuprimido", "Ódio Suprimido", "rancor", "Rancor", 111,
+      "Ação completa e 3 PE: você explode de raiva, gritando, correndo e saltando sobre quem estiver no caminho. Todo ser em alcance curto faz Fortitude e Reflexos, ambos contra DT Pre + 5. Falhou em Fortitude: é espancado, fica caído e sofre seu dano corpo a corpo (desarmado ou da arma empunhada). Falhou em Reflexos: é atingido por algo que você atira e sofre seu dano à distância (com uma arma à distância empunhada ou, pelo menos, pedras de 1d4 de impacto). Depois, você cai no chão chorando e tremendo: exausto até o fim da cena.",
+      { acao: "completa", custo: 3, alcance: "curto", alvo: "todos os seres no alcance", resistencia: "Fortitude e Reflexos, separados",
+        ramos: [{ rotulo: "Falhou em Fortitude", texto: "Caído e sofre o seu dano corpo a corpo.", danoDe: "corpo" },
+                { rotulo: "Falhou em Reflexos", texto: "Sofre o seu dano à distância (ou 1d4 de impacto, com pedras).", danoDe: "distancia" },
+                { rotulo: "Depois da explosão", texto: "Você fica exausto até o fim da cena." }] }),
   ];
 
   /* =================================================================
@@ -1268,6 +1377,20 @@
     trilha("parapsicologo", 99, "aSanidadeEstaLaFora", "A Sanidade Está Lá Fora", SAH, 29,
       "Ação de movimento e 5 PE removem todas as condições de medo ou mentais de alguém adjacente."),
 
+    /* --- Combatente Performático, Arquivos Secretos 3 p. 119 --- */
+    trilha("performatico", 10, "ensaio", "Ensaio", AS3, 119,
+      "Nova ação de interlúdio, ensaiar combate: +1 na margem de ameaça dos seus ataques até o início da próxima cena de interlúdio (+2 em NEX 40%, +3 em 65%, +4 em 99%). Uma vez por cena. Outros personagens podem gastar uma ação de interlúdio para ensaiar com você e recebem o mesmo bônus, pela mesma duração.",
+      { automacao: "calculo", nota: "O botão do cartão registra o ensaio no interlúdio atual; a margem dos ataques soma o bônus até o próximo interlúdio. Quem ensaia junto registra o ensaio na própria ficha (painel do Arquivos Secretos 3)." }),
+    trilha("performatico", 40, "fraseDeEfeito", "Frase de Efeito", AS3, 119,
+      "Quando você ou um aliado em alcance curto acerta um crítico, 2 PE fazem você exclamar a sua frase: o multiplicador desse crítico passa a ser igual à sua Presença; se a Presença for igual ou menor que o multiplicador, ele aumenta em +1.",
+      { automacao: "calculo", nota: "No resultado de um crítico seu, o botão gasta os 2 PE e o dano desse crítico usa o multiplicador novo. Para o crítico de um aliado, o botão do cartão gasta os 2 PE e mostra o multiplicador que ele deve usar." }),
+    trilha("performatico", 65, "moshPit", "Mosh Pit", AS3, 119,
+      "Flanqueando um alvo, você e todos os aliados que o flanqueiam ou estão adjacentes a ele recebem +1d6 nas rolagens de dano contra ele para cada aliado que o cerca (até +5d6). Pelo exemplo do livro, você e um aliado flanqueando e mais dois adjacentes dão +4d6 a todos.",
+      { automacao: "parcial", nota: "No resultado de dano corpo a corpo, informe quantos cercam o alvo (contando você, como no exemplo do livro): entram os d6, até 5. Flanquear é da cena." }),
+    trilha("performatico", 99, "ritmoContagiante", "Rítmo Contagiante", AS3, 119,
+      "No início de uma cena de combate, você e todos os aliados em alcance médio recebem +5 na Defesa até o fim do combate. Cada acerto crítico seu aumenta esse bônus em +1.",
+      { automacao: "calculo", nota: "O botão do cartão começa o efeito na cena atual (+5 na Defesa). Cada crítico seu numa rolagem de ataque soma +1 uma vez — o id da rolagem fica guardado, e recarregar a ficha não conta de novo. Aliados registram o bônus na própria ficha." }),
+
     /* --- Maledictólogo, Arquivos Secretos 1 p. 45 --- */
     trilha("maledictologo", 10, "identificacaoMacabra", "Identificação Macabra", AS1, 45,
       "Num teste para identificar item amaldiçoado ou ritual, 1 PE dá +1d10. Identificar item amaldiçoado como ação completa sofre só –1 dado.",
@@ -1479,7 +1602,7 @@
      ÍNDICES
      ================================================================= */
 
-  var TODOS = [].concat(PODERES_CLASSE, PODERES_GERAIS, PODERES_PARANORMAIS, PODERES_INTENCAO, HABILIDADES_TRILHA, AUTOMATICAS, ALTERACOES_GERAIS,
+  var TODOS = [].concat(PODERES_CLASSE, PODERES_GERAIS, PODERES_PARANORMAIS, PODERES_INTENCAO, PODERES_SACRIFICIO, HABILIDADES_TRILHA, AUTOMATICAS, ALTERACOES_GERAIS,
     HABILIDADES_SOBREVIVENTE, TREINAMENTOS);
 
   var POR_CHAVE = {};
@@ -1538,11 +1661,12 @@
   }
 
   global.RAMAOrdemPoderes = {
-    FONTES: { OPRPG: OPRPG, SAH: SAH, AS1: AS1, AS2: AS2 },
+    FONTES: { OPRPG: OPRPG, SAH: SAH, AS1: AS1, AS2: AS2, AS3: AS3 },
     PODERES_CLASSE: PODERES_CLASSE,
     PODERES_GERAIS: PODERES_GERAIS,
     PODERES_PARANORMAIS: PODERES_PARANORMAIS,
     PODERES_INTENCAO: PODERES_INTENCAO,
+    PODERES_SACRIFICIO: PODERES_SACRIFICIO,
     HABILIDADES_TRILHA: HABILIDADES_TRILHA,
     AUTOMATICAS: AUTOMATICAS,
     ESTAGIOS: ESTAGIOS,

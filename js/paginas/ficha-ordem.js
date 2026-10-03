@@ -374,7 +374,7 @@
       linhas.push(["Estágio", fase.estagio + " de " + C.ESTAGIO_MAXIMO]);
       linhas.push(["Trilha de sobrevivente", ts ? ts.nome : (fase.estagio >= 2 ? "a escolher" : "a partir do 2º estágio")]);
     } else if (!fase.comum) {
-      linhas.push(["Trilha", trilha ? trilha.nome : "—"]);
+      linhas.push(["Trilha", trilha ? C.nomeDaTrilha(trilha, o.classe) : "—"]);
     }
     linhas.push([c.trilho.separado ? "Nível de experiência" : "NEX", c.trilho.rotulo]);
     if (fase.transicao) linhas.push(["Trajetória", textoDaTrajetoria(fase)]);
@@ -825,6 +825,7 @@
         !aq.origemChave && aq.situacao === "ok" && global.RAMASecaoOrigens && global.RAMASecaoOrigens.controlesDePoder
           ? global.RAMASecaoOrigens.controlesDePoder(ctx, aq) : null,
         !aq.origemChave && aq.situacao === "ok" && global.RAMAFichaArquivo2 ? global.RAMAFichaArquivo2.controles(ctx, aq) : null,
+        !aq.origemChave && aq.situacao === "ok" && global.RAMAFichaArquivo3 ? global.RAMAFichaArquivo3.controles(ctx, aq) : null,
       ].concat(avisos, [
         aq.referencia ? el("p.criacao-fonte", { texto: aq.referencia }) : null,
       ]);
@@ -1144,6 +1145,10 @@
       linhas.push(el("dt", { texto: "Contra efeitos paranormais" }));
       linhas.push(el("dd", {}, [valorCalculado("Resistência paranormal", r.testesParanormal)]));
     }
+    (r.vulnerabilidades || []).forEach(function (v) {
+      linhas.push(el("dt", { texto: "Vulnerabilidade a " + v.rotulo }));
+      linhas.push(el("dd", { texto: v.fonte }));
+    });
 
     return UI.painel("Proficiências e resistências", el("div.pilha", {}, [
       el("dl.r-dados", {}, [
@@ -2480,7 +2485,8 @@
       nome: p.nome,
       notas: notasDosDados(dados).concat(restr),
       acoes: [acaoDeEmpenho(ctx, o, p, r)].concat(global.RAMASecaoOrigens ? global.RAMASecaoOrigens.acoesNoTeste(ctx, o, p, r, dado, bonus, atributo) : [],
-        global.RAMAFichaArquivo2 ? global.RAMAFichaArquivo2.acoesNoTeste(ctx, o, p, r, dado, bonus, atributo) : []).filter(Boolean),
+        global.RAMAFichaArquivo2 ? global.RAMAFichaArquivo2.acoesNoTeste(ctx, o, p, r, dado, bonus, atributo) : [],
+        global.RAMAFichaArquivo3 ? global.RAMAFichaArquivo3.acoesNoTeste(ctx, o, p, r, dado, bonus, atributo) : []).filter(Boolean),
     });
   }
 
@@ -2962,7 +2968,7 @@
       itens.push({ ordem: vagaTrilha.ordem, elemento: linhaDeEscolha({
         etapa: vagaTrilha.rotuloEtapa,
         rotulo: "Trilha",
-        descricao: trilha.nome,
+        descricao: C.nomeDaTrilha(trilha, o.classe),
         situacao: est.pendencias.some(function (p) { return p.id === vagaTrilha.id; }) ? "invalida" : "ok",
         motivos: (est.pendencias.filter(function (p) { return p.id === vagaTrilha.id; })[0] || {}).motivos || [],
         acoes: ctx.emEdicao() ? [botaoRevisar("Revisar", function () { resolver(ctx, { id: vagaTrilha.id }); }, false, "Trilha, " + vagaTrilha.rotuloEtapa)] : [],
@@ -3174,8 +3180,9 @@
 
         UI.painel("Regras opcionais", el("div.pilha", {}, [
           el("p.t-mini", {
-            texto: "Do Livro de Regras (contagem de munição e componentes), do Sobrevivendo ao Horror e dos Arquivos Secretos 1 e 2 " +
-                   "(Intenção, formas supremas, participação no Hexatombe e Aliados em Perigo). Todas começam desligadas e valem só para esta ficha; " +
+            texto: "Do Livro de Regras (contagem de munição e componentes), do Sobrevivendo ao Horror e dos Arquivos Secretos 1, 2 e 3 " +
+                   "(Intenção, formas supremas, participação no Hexatombe, Aliados em Perigo, poderes de Sacrifício, Trilha Geral, Batalhas de " +
+                   "Intenções, Jogos do Circo, Boas Recordações, Paixão, veículos e animais treinados). Todas começam desligadas e valem só para esta ficha; " +
                    "estar numa campanha com o modo Hexatombe não liga nenhuma. O Livro de Regras continua sendo a versão padrão do jogo.",
           }),
           el("div.pilha--curta", { class: "pilha" }, afetam.map(function (r) {
@@ -3735,15 +3742,18 @@
       var margemDoAtaque = margemAS2 && ef.margem ? Math.max(1, ef.margem - margemAS2) : ef.margem;
       var critico = D.ehCritico(r.natural, margemDoAtaque);
       var temDano = !!(ef.dano || ef.tabelaD6);
+      /* Arquivos Secretos 3: Rítmo Contagiante conta o crítico; Frase de
+         Efeito oferece o multiplicador do dano deste crítico. */
+      var as3 = global.RAMAFichaArquivo3 ? global.RAMAFichaArquivo3.acoesNoAtaque(ctx, arma, r, critico, ef) : { acoes: [], notas: [] };
 
       global.RAMARolagens.mostrar(r, {
         nome: arma.nome + " · Ataque (" + ef.periciaNome + ")" + (m.modo === "rajada" ? " · rajada" : m.modo === "doisCanos" ? " · dois canos" : ""),
         critico: critico,
-        notas: notas,
-        acao: temDano ? {
+        notas: notas.concat(as3.notas),
+        acoes: [temDano ? {
           rotulo: critico ? "Rolar dano crítico" : "Rolar dano",
           aoClicar: function () { SecaoInventarioOrdem.rolarDano(ctx, arma, critico, false, m.modo, { dano: as2.dano || 0, ignoraRd: as2.ignoraRd || 0 }); },
-        } : null,
+        } : null].concat(as3.acoes).filter(Boolean),
       });
 
       if (ef.proficiencia.proficiente === false) UI.avisoAtencao(ef.proficiencia.texto);
@@ -3772,16 +3782,20 @@
         nota = "Dois canos: dano 6d6.";
       }
 
+      /* Frase de Efeito (AS3 p. 119): o multiplicador guardado no crítico. */
+      var multFrase = global.RAMAFichaArquivo3 ? global.RAMAFichaArquivo3.multiplicadorNoDano(ctx, !!critico) : 0;
       var r = D.dano({
         nome: arma.nome,
         dano: dano,
         danoExtra: ef.danoExtraManual,
         critico: !!critico,
-        multiplicador: ef.multiplicador,
+        multiplicador: multFrase || ef.multiplicador,
         extraMultiplica: ef.extraMultiplica,
       });
       if (!r.ok) { UI.avisoErro("O dano de " + arma.nome + " (" + dano + ") não é válido."); return; }
       var notasAS2 = global.RAMAFichaArquivo2 ? global.RAMAFichaArquivo2.noDano(ctx, arma, r, ef, extras) : [];
+      if (multFrase) notasAS2.push("Frase de Efeito: multiplicador ×" + multFrase + ".");
+      if (global.RAMAFichaArquivo3) notasAS2 = notasAS2.concat(global.RAMAFichaArquivo3.noDano(ctx, arma, r, ef));
 
       /* Atributo e modificações: parcelas próprias, fora da multiplicação
          do crítico, como qualquer bônus numérico (OPRPG p.54). */
@@ -3797,6 +3811,7 @@
           (escolhaD6 ? " · 1d6 = " + escolhaD6 + " → " + dano : ""),
         critico: !!critico,
         notas: (nota ? [nota] : []).concat(notasAS2),
+        acoes: global.RAMAFichaArquivo3 ? global.RAMAFichaArquivo3.acoesNoDano(ctx, arma, r) : [],
       });
     },
 
@@ -4144,7 +4159,10 @@
     aba: function (ctx) {
       var dasRegras = poderesDasRegras(ctx, ordemDe(ctx), calculo(ctx));
       /* Arquivos Secretos 2: Intenção, forma suprema e o Hexatombe. */
-      dasRegras.topo = global.RAMAFichaArquivo2 ? global.RAMAFichaArquivo2.painel(ctx) : null;
+      var topo2 = global.RAMAFichaArquivo2 ? global.RAMAFichaArquivo2.painel(ctx) : null;
+      /* Arquivos Secretos 3: cronologia, sacrifício, regras e itens. */
+      var topo3 = global.RAMAFichaArquivo3 ? global.RAMAFichaArquivo3.painel(ctx) : null;
+      dasRegras.topo = topo2 && topo3 ? U.el("div.pilha--curta", { class: "pilha" }, [topo2, topo3]) : (topo2 || topo3);
       return global.RAMASecaoHabilidades.aba(ctx, dasRegras);
     },
   };

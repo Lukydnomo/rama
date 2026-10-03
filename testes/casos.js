@@ -1079,7 +1079,9 @@
       t.igual("nove trilhas do Sobrevivendo ao Horror",
         OC.TRILHAS.filter(function (tr) { return tr.fonte === "SAH"; }).length, 9);
       t.igual("cinco do livro básico por classe",
-        OC.trilhasDaClasse("combatente").filter(function (tr) { return tr.fonte !== "SAH"; }).length, 5);
+        OC.trilhasDaClasse("combatente").filter(function (tr) { return !tr.fonte; }).length, 5);
+      t.igual("uma do Arquivos Secretos 3: Combatente Performático, trilha geral (v2.33)",
+        OC.TRILHAS.filter(function (tr) { return tr.fonte === "AS3"; }).map(function (tr) { return tr.chave + ":" + tr.classe + ":" + !!tr.geral; }).join(), "performatico:combatente:true");
       t.igual("e três do suplemento por classe",
         OC.trilhasDaClasse("ocultista").filter(function (tr) { return tr.fonte === "SAH"; }).length, 3);
       t.igual("cinco patentes", OC.PATENTES.length, 5);
@@ -1321,8 +1323,8 @@
           return k;
         };
 
-        t.igual("nove abas: três classes de agente, Mundano, Sobrevivente, origens, gerais, paranormais e Intenção", OB.ABAS.map(function (a) { return a.chave; }).join(","),
-          "combatente,especialista,ocultista,mundano,sobrevivente,origens,gerais,paranormais,intencao");
+        t.igual("dez abas: três classes de agente, Mundano, Sobrevivente, origens, gerais, paranormais, Intenção e Sacrifício (v2.33)", OB.ABAS.map(function (a) { return a.chave; }).join(","),
+          "combatente,especialista,ocultista,mundano,sobrevivente,origens,gerais,paranormais,intencao,sacrificio");
         var secOrig = OB.secoes("origens");
         var todasOrig = secOrig.reduce(function (l, s) { return l.concat(s.entradas); }, []);
         t.igual("a aba Origens lista o poder de todas as origens do catálogo", todasOrig.length, OC.ORIGENS.length);
@@ -1432,7 +1434,7 @@
 
       /* v2.20: + contagem de munição (OPRPG p. 174) e controle de
          componentes ritualísticos (da mesa). */
-      t.igual("dezenove regras opcionais: treze do SAH, duas do Arquivos Secretos 1 e quatro do 2", OP.REGRAS.length, 19);
+      t.igual("vinte e sete regras opcionais: treze do SAH, duas do AS1, quatro do AS2 e oito do AS3", OP.REGRAS.length, 27);
       t.iguais("  as duas do AS1 começam desligadas", ["reterRitual", "transcenderComItens"].map(function (k) { return OP.ligada(R.fichaVazia(), k); }), [false, false]);
       t.ok("as duas novas começam desligadas numa ficha nova",
         !OP.ligada(R2.fichaVazia(), "contagemMunicao") && !OP.ligada(R2.fichaVazia(), "controleComponentes"));
@@ -1688,7 +1690,7 @@
       var duplicada = "";
       PO.TODOS.forEach(function (p) { if (chaves[p.chave]) duplicada = p.chave; chaves[p.chave] = true; });
       t.igual("nenhuma chave de poder se repete", duplicada, "");
-      t.ok("todo poder tem fonte e página", PO.TODOS.every(function (p) { return (p.fonte === "OPRPG" || p.fonte === "SAH" || p.fonte === "AS1" || p.fonte === "AS2") && p.pagina > 0; }));
+      t.ok("todo poder tem fonte e página", PO.TODOS.every(function (p) { return ["OPRPG", "SAH", "AS1", "AS2", "AS3"].indexOf(p.fonte) >= 0 && p.pagina > 0; }));
       t.ok("todo poder tem resumo", PO.TODOS.every(function (p) { return p.resumo.length > 10; }));
       t.ok("toda automação é calculo, parcial ou informacao",
         PO.TODOS.every(function (p) { return ["calculo", "parcial", "informacao"].indexOf(p.automacao) >= 0; }));
@@ -1698,7 +1700,7 @@
         PO.PODERES_PARANORMAIS.filter(function (p) { return p.fonte === "SAH"; }).length, 8);
       t.igual("34 poderes gerais do Sobrevivendo ao Horror (Tabela 2.3)", PO.PODERES_GERAIS.filter(function (p) { return p.fonte === "SAH"; }).length, 34);
       t.igual("cinco poderes gerais do Arquivos Secretos 1 (p. 46)", PO.PODERES_GERAIS.filter(function (p) { return p.fonte === "AS1"; }).length, 5);
-      t.igual("quatro habilidades por trilha, nas 25 trilhas", PO.HABILIDADES_TRILHA.length, 100);
+      t.igual("quatro habilidades por trilha, nas 26 trilhas", PO.HABILIDADES_TRILHA.length, 104);
       t.ok("os nomes das habilidades batem com os das trilhas do catálogo",
         CC.TRILHAS.every(function (tr) {
           var h = PO.habilidadesDaTrilha(tr.chave).map(function (x) { return x.nome; });
@@ -2772,7 +2774,7 @@
       /* ---------------------------------------------------------------- */
       t.grupo("Ordem · itens — catálogo completo e estruturado");
 
-      t.igual("268 entradas nos quatro livros", catalogo.itens.length, 268);
+      t.igual("277 entradas nos cinco livros", catalogo.itens.length, 277);
       var contagem = {};
       catalogo.itens.forEach(function (e) {
         var k = e.aba + "/" + e.natureza + "/" + e.fonte;
@@ -2805,12 +2807,13 @@
       var idRepetido = "";
       catalogo.itens.forEach(function (e) { if (idsVistos[e.id]) idRepetido = e.id; idsVistos[e.id] = true; });
       t.igual("nenhum id se repete", idRepetido, "");
-      t.ok("todo id é estável e diz a fonte (op.…, sah.…, as1.… ou as2.…)", catalogo.itens.every(function (e) {
-        return /^(op|sah|as1|as2)\.[a-z0-9.-]+$/.test(e.id) && (e.fonte === "SAH") === (e.id.indexOf("sah.") === 0) &&
-          (e.fonte === "AS1") === (e.id.indexOf("as1.") === 0) && (e.fonte === "AS2") === (e.id.indexOf("as2.") === 0);
+      t.ok("todo id é estável e diz a fonte (op.…, sah.…, as1.…, as2.… ou as3.…)", catalogo.itens.every(function (e) {
+        return /^(op|sah|as1|as2|as3)\.[a-z0-9.-]+$/.test(e.id) && (e.fonte === "SAH") === (e.id.indexOf("sah.") === 0) &&
+          (e.fonte === "AS1") === (e.id.indexOf("as1.") === 0) && (e.fonte === "AS2") === (e.id.indexOf("as2.") === 0) &&
+          (e.fonte === "AS3") === (e.id.indexOf("as3.") === 0);
       }));
       t.ok("toda entrada tem nome, resumo, fonte e página", catalogo.itens.every(function (e) {
-        return e.nome && e.resumo && ["OPRPG", "SAH", "AS1", "AS2"].indexOf(e.fonte) >= 0 && e.pagina > 0;
+        return e.nome && e.resumo && ["OPRPG", "SAH", "AS1", "AS2", "AS3"].indexOf(e.fonte) >= 0 && e.pagina > 0;
       }));
       t.ok("todo item tem tipo de ficha e grupo; modificações e maldições não", catalogo.itens.every(function (e) {
         return e.natureza === "item" ? !!(e.tipoItem && e.grupo) : (e.tipoItem === null && e.grupo === null);
@@ -2841,7 +2844,7 @@
       IT._esquecer();
       var carga = IT.carregar();
       t.ok("carregar() devolve uma promessa e deixa o catálogo pronto", !!carga && typeof carga.then === "function" && !!IT.catalogoPronto());
-      t.igual("  com as mesmas 268 entradas", IT.catalogoPronto().itens.length, 268);
+      t.igual("  com as mesmas 277 entradas", IT.catalogoPronto().itens.length, 277);
 
       /* Conferência pontual contra as tabelas dos livros. */
       var katana = entrada("op.arma.katana");
@@ -4602,6 +4605,12 @@
       casosDaV231(t, RRs, global.RAMAOrdemArquivo2, global.RAMAOrdemOpcionais, global.RAMAOrdemBiblioteca, global.RAMAOrdemPoderes);
     }
 
+    /* v2.33 — ARQUIVOS SECRETOS 3 */
+    if (global.RAMAOrdemArquivo3 && global.RAMAHexatombe && RRs && global.RAMAOrdemBiblioteca) {
+      casosDaV233(t, global.RAMAOrdemCatalogo, RRs, global.RAMAOrdemPoderes, global.RAMAOrdemArquivo3, global.RAMAOrdemOpcionais,
+        global.RAMAHexatombe, global.RAMAOrdemBiblioteca, global.RAMAOrdemItens || null);
+    }
+
     /* v2.30 — ARQUIVOS SECRETOS 2 */
     if (global.RAMAOrdemArquivo2 && global.RAMAHexatombe && global.RAMAOrdemPoderes && global.RAMAOrdemOpcionais) {
       casosDaV230(t, global.RAMAOrdemCatalogo, global.RAMAOrdemPoderes, global.RAMAOrdemArquivo2, global.RAMAHexatombe,
@@ -4827,6 +4836,233 @@
   /* =================================================================
      v2.30 — ARQUIVOS SECRETOS 2
      ================================================================= */
+
+  /* =================================================================
+     v2.33 — ARQUIVOS SECRETOS 3
+     ================================================================= */
+
+  function casosDaV233(t, C, R, P, A3, OP, HX, B, IT) {
+    var INV = { itens: [] };
+    function ficha(extra) {
+      var o = R.fichaVazia();
+      Object.keys(extra || {}).forEach(function (k) { o[k] = extra[k]; });
+      return R.normalizar(JSON.parse(JSON.stringify(o)));
+    }
+    function reg(etapa, tipo, valor, opcoes) {
+      return { id: "r-" + etapa, etapa: etapa, tipo: tipo, valor: valor, opcoes: opcoes || {}, registradoEm: "2026-10-03T10:00:00.000Z" };
+    }
+    function volta(o) { return R.normalizar(JSON.parse(JSON.stringify(o))); }
+
+    t.grupo("v2.33 · Arquivos Secretos 3 · fonte e catálogo");
+    var livro = C.livro("AS3");
+    t.iguais("AS3 no registro único dos livros, edição v1.0", [livro.sigla, livro.nome, livro.edicao], ["AS3", "Arquivos Secretos 3", "v1.0"]);
+    var novos = ["guardiaoDaTropa", "vitalidadeSofrida", "flageloBemAproveitado", "recuperacaoFlagelante", "ambidestria", "entradaTriunfal",
+      "papinhoSedutor", "conhecimentoDeDirecaoPrecognitiva", "instrumentoEletricoDeCombate"];
+    t.ok("nove poderes das p. 108-109, todos AS3 com página", novos.every(function (k) { var p = P.poder(k); return p && p.fonte === "AS3" && p.pagina >= 108 && p.pagina <= 109; }));
+    t.iguais("seis poderes de Sacrifício, categoria própria (não são de Intenção)", P.PODERES_SACRIFICIO.map(function (p) { return p.tipo + ":" + p.sacrificio.estigma; }).sort(),
+      ["sacrificio:culpa", "sacrificio:desejo", "sacrificio:obsessao", "sacrificio:orgulho", "sacrificio:prazer", "sacrificio:rancor"]);
+    t.ok("nenhum poder de Sacrifício está entre os de Intenção", !P.PODERES_INTENCAO.some(function (p) { return p.tipo === "sacrificio"; }));
+    t.iguais("trilha Performático: Ensaio, Frase de Efeito, Mosh Pit e Rítmo Contagiante", P.habilidadesDaTrilha("performatico").map(function (h) { return h.nex + ":" + h.chave; }),
+      ["10:ensaio", "40:fraseDeEfeito", "65:moshPit", "99:ritmoContagiante"]);
+    var as3Regras = OP.REGRAS.filter(function (r) { return r.fonte === "AS3"; }).map(function (r) { return r.chave; });
+    t.iguais("oito regras opcionais do AS3, todas desligadas numa ficha nova", [as3Regras.length, as3Regras.filter(function (k) { return OP.ligada(ficha({}), k); }).length], [8, 0]);
+    var secS = B.secoes("sacrificio");
+    t.iguais("a biblioteca tem a aba Sacrifício com os seis poderes", [secS.length, secS[0].entradas.length], [1, 6]);
+    t.ok("o modelo de cópia traz estigma, custo e ramos", /Estigma: Rancor/.test(B.modelo(P.poder("odioSuprimido"), "").texto) && /Falhou em Reflexos/.test(B.modelo(P.poder("odioSuprimido"), "").texto));
+    t.ok("filtro por livro AS3 combina com a aba gerais", B.filtrar(B.secoes("gerais"), "", { livro: "AS3" }).reduce(function (n, s) { return n + s.entradas.length; }, 0) === 3);
+
+    t.grupo("v2.33 · Vitalidade Sofrida troca a tabela de PV, uma vez");
+    var base = { classe: "combatente", origem: "academico", nex: 15, atributos: { agi: 1, for: 1, int: 1, pre: 1, vig: 3 } };
+    var sem = ficha(base);
+    var com = ficha(Object.assign({}, base, { escolhas: [reg("d3.poderClasse", "poderClasse", "vitalidadeSofrida")] }));
+    t.igual("sem o poder: 20 + 3 e 2 × (4 + 3) = 37", R.calcular(sem, INV).pv.total, 37);
+    t.igual("com o poder (exemplo do livro): 45", R.calcular(com, INV).pv.total, 45);
+    var com20 = ficha(Object.assign({}, base, { nex: 20, escolhas: [reg("d3.poderClasse", "poderClasse", "vitalidadeSofrida")] }));
+    t.igual("e +9 PV no NEX seguinte", R.calcular(com20, INV).pv.total - 45, 9);
+    t.igual("recarregar não soma de novo", R.calcular(volta(com), INV).pv.total, 45);
+
+    t.grupo("v2.33 · Trilha Geral");
+    var esp = ficha({ classe: "especialista", origem: "academico", nex: 10, trilha: "performatico" });
+    t.igual("especialista Performático sem a regra: a escolha fica guardada", esp.trilha, "performatico");
+    t.ok("  mas não serve à classe", !C.trilhaServe(C.trilha("performatico"), "especialista", esp));
+    OP.definir(esp, "trilhaGeral", true);
+    t.ok("com a regra, serve, com o nome da classe", C.trilhaServe(C.trilha("performatico"), "especialista", esp) && C.nomeDaTrilha(C.trilha("performatico"), "especialista") === "Especialista Performático");
+    t.ok("e aparece entre as trilhas do especialista", C.trilhasDaClasse("especialista", esp).some(function (tr) { return tr.chave === "performatico"; }));
+    OP.definir(esp, "trilhaGeral", false);
+    t.igual("desligar não apaga a escolha", volta(esp).trilha, "performatico");
+    t.igual("uma trilha de ocultista numa ficha de combatente continua sumindo", ficha({ classe: "combatente", trilha: "conduite" }).trilha, "");
+
+    t.grupo("v2.33 · Sacrifício");
+    var sac = ficha({ classe: "ocultista", origem: "academico", nex: 20 });
+    t.igual("regra desligada: sem poder de sacrifício", A3.poderDeSacrificio(sac), null);
+    OP.definir(sac, "poderesDeSacrificio", true);
+    t.ok("estigma sem Digno de Sacrifício é recusado", !A3.registrarEstigma(sac, "rancor", "mesa").ok);
+    A3.registrarDigno(sac, true, "mesa", "carregou o Trono");
+    t.ok("Digno e estigma do Rancor: Ódio Suprimido", A3.registrarEstigma(sac, "rancor", "mesa").ok && A3.poderDeSacrificio(sac).entrada.chave === "odioSuprimido");
+    t.igual("o poder não ocupa vaga: a progressão não o lista", R.estado ? (R.estado(sac).adquiridos || []).filter(function (a) { return a.chave === "odioSuprimido"; }).length : 0, 0);
+    OP.definir(sac, "poderesDeSacrificio", false);
+    t.ok("desligar some com o poder e guarda o estigma", A3.poderDeSacrificio(sac) === null && volta(sac).arquivo3.sacrificio.estigma === "rancor");
+    OP.definir(sac, "poderesDeSacrificio", true);
+    t.ok("Fruto da Ambição só no Desejo", !A3.definirFruto(sac, "poder", "x", "X").ok);
+    A3.registrarEstigma(sac, "desejo", "mesa");
+    t.ok("  e guarda o gatilho escolhido", A3.definirFruto(sac, "ritual", "r1", "Decadência").ok && volta(sac).arquivo3.sacrificio.fruto.nome === "Decadência");
+
+    t.grupo("v2.33 · flagelo, guardião, entrada, ensaio e rítmo");
+    var oc = ficha({ classe: "ocultista", nex: 40 });
+    t.iguais("taxa do flagelo: 2 PV por PE, 1 com Flagelo Bem Aproveitado", [A3.taxaDoFlagelo(false), A3.taxaDoFlagelo(true)], [2, 1]);
+    t.igual("pagar 3 PE com o bem aproveitado tira 3 PV", A3.pagarComFlagelo(oc, 3, true).pv, 3);
+    t.ok("sem Recuperação Flagelante, só descanso", !A3.recuperarFlagelo(oc, 2, 0).ok);
+    t.ok("com uma aquisição: um uso entre interlúdios", A3.recuperarFlagelo(oc, 2, 1).ok && !A3.recuperarFlagelo(oc, 1, 1).ok);
+    t.igual("até três usos, mesmo com mais aquisições", A3.usosDeRecuperacao(5), 3);
+    t.igual("recupera só o que o flagelo tirou", A3.dados(oc).flagelo.pvGastos, 1);
+    var gu = A3.usarGuardiao(oc).uso;
+    t.ok("Guardião: 1 SAN só no evento, uma vez por uso", A3.resolverGuardiao(oc, gu.id, true).san === 1 && !A3.resolverGuardiao(oc, gu.id, true).ok);
+    t.ok("Entrada Triunfal: uma vez por sessão", A3.anunciarEntrada(oc).ok && !A3.anunciarEntrada(oc).ok);
+    t.ok("  o bônus não vale em Furtividade", !A3.consumirEntrada(oc, "furtividade").ok && A3.consumirEntrada(oc, "percepcao").ok);
+    A3.avancar(oc, "sessao");
+    t.ok("  nova sessão, novo uso", A3.anunciarEntrada(oc).ok);
+    t.iguais("Ensaio: +1, +2, +3, +4 por NEX", [10, 40, 65, 99].map(A3.bonusDeEnsaio), [1, 2, 3, 4]);
+    var perf = ficha({ classe: "combatente", nex: 40, trilha: "performatico" });
+    t.ok("ensaiar uma vez por cena", A3.ensaiar(perf, 2, "propria").ok && !A3.ensaiar(perf, 2, "propria").ok);
+    t.igual("a margem vale até o próximo interlúdio", A3.margemDoEnsaio(perf), 2);
+    perf.condicoes.interludio = { numero: (perf.condicoes.interludio.numero || 0) + 1, iniciadoEm: "2026-10-03T11:00:00.000Z" };
+    t.igual("  e vence no interlúdio seguinte", A3.margemDoEnsaio(perf), 0);
+    t.iguais("Frase de Efeito: Pre acima do multiplicador vira o multiplicador; senão, +1", [A3.multiplicadorDaFrase(2, 4), A3.multiplicadorDaFrase(3, 3), A3.multiplicadorDaFrase(4, 2)], [4, 4, 5]);
+    A3.iniciarRitmo(perf, "propria", "");
+    A3.criticoNoRitmo(perf, "atk-1");
+    A3.criticoNoRitmo(perf, "atk-1");
+    t.igual("Rítmo Contagiante: cada crítico conta uma vez", A3.defesaDoRitmo(perf), 6);
+    var perfVolta = volta(perf);
+    t.ok("  recarregar não recontará o mesmo crítico", !A3.criticoNoRitmo(perfVolta, "atk-1").ok && A3.defesaDoRitmo(perfVolta) === 6);
+    t.igual("  e entra na Defesa", R.calcular(perfVolta, INV).defesa.total - R.calcular(ficha({ classe: "combatente", nex: 40, trilha: "performatico" }), INV).defesa.total, 6);
+    t.iguais("Mosh Pit: até +5d6", [A3.dadosDoMoshPit(4), A3.dadosDoMoshPit(9)], [4, 5]);
+    A3.usarAmbidestria(perf, false);
+    t.igual("Ambidestria: –1 dado nos ataques até encerrar", A3.dadosDeAmbidestria(perf), -1);
+    A3.usarAmbidestria(perf, true);
+    t.igual("  com Combater com Duas Armas, sem penalidade", A3.dadosDeAmbidestria(perf), 0);
+
+    t.grupo("v2.33 · Paixão, Recordações, Batalha e Circo");
+    var pa = ficha({ classe: "combatente", origem: "academico", nex: 5, atributos: { agi: 1, for: 1, int: 1, pre: 1, vig: 1 } });
+    var pvAntes = R.calcular(pa, INV).pv.total;
+    OP.definir(pa, "regrasDaPaixao", true);
+    var l1 = A3.criarPaixao(pa, "Ana", 5, 3, "intimidade");
+    var l2 = A3.criarPaixao(pa, "Bia", 8, 8, "intimidade");
+    t.iguais("um laço com bônus por vez", [l1.comBonus, l2.comBonus], [true, false]);
+    t.igual("+5 PV máximos do laço", R.calcular(pa, INV).pv.total - pvAntes, 5);
+    t.igual("apaixonado: penalidade = PV + PE recebidos", A3.penalidadeDeApaixonado(l1.paixao), 8);
+    t.ok("perder o parceiro tira o bônus para sempre", A3.perderPaixao(pa, l1.paixao.id).ok && R.calcular(pa, INV).pv.total === pvAntes && !A3.perderPaixao(pa, l1.paixao.id).ok);
+    OP.definir(pa, "regrasDaPaixao", false);
+    t.ok("desligar guarda os laços", volta(pa).arquivo3.paixoes.length === 2);
+    OP.definir(pa, "boasRecordacoes", true);
+    t.ok("olhar a foto pede uma foto", !A3.olharFoto(pa).ok);
+    A3.registrarFoto(pa, "Painel do circo", "san", 3);
+    t.ok("uma vez por missão", A3.olharFoto(pa).ok && !A3.olharFoto(pa).ok);
+    t.ok("+1d6 até o fim do dia", A3.bonusDeRecordacaoPendente(pa));
+    A3.avancar(pa, "dia");
+    t.ok("  no dia seguinte, perdeu", !A3.bonusDeRecordacaoPendente(pa));
+    OP.definir(pa, "batalhasDeIntencoes", true);
+    A3.iniciarBatalha(pa, "Caio");
+    t.iguais("batalha: metade do dano que não vem do alvo", [A3.danoNaBatalha(pa, 15, false), A3.danoNaBatalha(pa, 15, true)], [7, 15]);
+    t.iguais("dardos: 5/10/15/25/50 pela DT superada", [9, 10, 17, 22, 25, 34].map(A3.pontosDoDardo), [0, 5, 10, 15, 25, 50]);
+    t.ok("soco: gasto decidido antes, de 2 em 2, até o limite de PE", !A3.planoDoSoco("", 2, 3).ok && !A3.planoDoSoco("intenso", 3, 4).ok && !A3.planoDoSoco("intenso", 6, 4).ok && A3.planoDoSoco("descuidado", 4, 4).recurso === "pv");
+    t.iguais("soco: dano × 100; 18 ou mais quebra", [A3.resultadoDoSoco(7).pontos, A3.resultadoDoSoco(17).quebrou, A3.resultadoDoSoco(18).quebrou], [700, false, true]);
+
+    t.grupo("v2.33 · Veículos operacionais");
+    t.iguais("modelos do livro: II, III, IV e a moto", A3.MODELOS_VEICULO.map(function (m) { return m.categoria + ":" + m.pv + ":" + m.total; }), ["II:100:100", "III:150:130", "IV:200:160", "III:120:45"]);
+    var v = A3.novoVeiculo("categoria3");
+    v.agiMotorista = 3; v.motorista = "Ana";
+    v.regalias = [{ chave: "latariaReforcada" }, { chave: "latariaReforcada" }];
+    v = A3.normalizarVeiculo(v);
+    var cv = A3.contasDoVeiculo(v);
+    t.iguais("Defesa = 10 + Agi de quem dirige + Lataria ×2; pontos vitais +10", [cv.defesa.total, cv.defesaPontosVitais], [23, 33]);
+    t.igual("a moto já vem com as regalias dela", A3.novoVeiculo("motoGauderios").regalias.map(function (r) { return r.chave; }).join(), "arsenalSecreto,aprimoramentosDeVelocidade");
+    t.ok("combustível: tira os 1", A3.gastarCombustivel(v, [1, 4, 1, 6, 2]).depois === 3);
+    v.defeitos.push("tanqueFurado");
+    t.igual("tanque furado: um dado já é 1 (rola um a menos)", A3.dadosARolar(v), 2);
+    t.igual("  e ele sai da pilha", A3.gastarCombustivel(v, [3, 5]).depois, 2);
+    t.igual("galão: +2d6, até 5", (A3.usarGalao(v), A3.usarGalao(v), v.combustivel), 5);
+    var d = A3.danificarVeiculo(v, 90);
+    t.iguais("dano tira a RD; metade dos PV num ataque é dano massivo", [d.efetivo, d.massivo], [80, true]);
+    t.igual("dano massivo 3 = Pneu Furado (cumulativo)", (A3.registrarDefeito(v, 3), v.danos.pneus), 1);
+    t.iguais("velocidade de manobra pela maior DT", [A3.velocidadeDeManobra(4), A3.velocidadeDeManobra(17).metros, A3.velocidadeDeManobra(40).metros], [null, 21, 30]);
+    var rep = A3.repararVeiculo(v, 25);
+    t.iguais("reparo DT 25: metade dos PV e todas as penalidades", [rep.depois, A3.penalidadesDoVeiculo(v).length], [Math.min(150, d.depois + 75), 0]);
+    t.ok("Arsenal Secreto: três vezes por missão", A3.usarArsenal(A3.novoVeiculo("motoGauderios"), 0).ok);
+
+    t.grupo("v2.33 · Animais treinados e valores médios");
+    t.iguais("VD do animal pelo NEX do dono", [0, 10, 15, 20, 25, 30, 35, 95, 99].map(A3.vdDoAnimal), [10, 10, 20, 40, 60, 80, 100, 340, 360]);
+    var l30 = A3.linhasDoVd(30);
+    t.ok("a linha de VD 30 existe (conferida na diagramação)", !!l30.exata && l30.exata.pv === 70);
+    var l40 = A3.linhasDoVd(40);
+    t.iguais("VD 40 não está na tabela: mostra as vizinhas, sem arredondar", [l40.exata, l40.abaixo.vd, l40.acima.vd], [null, 30, 60]);
+    t.igual("“3O+10” vira 3d20+10; nada inventado", A3.expressaoDoLivro("3O+10"), "3d20+10");
+    t.igual("ameaça da realidade: duas linhas abaixo (VD 100 → 60)", A3.linhaDuasAbaixo(A3.linhasDoVd(100).exata).vd, 60);
+    var pl = A3.planoDeValores(A3.linhasDoVd(80).exata, { fortitude: "forte", reflexos: "media", vontade: "fraca" });
+    t.iguais("forte, média e fraca escolhidas por quem cria", [pl.resistencias.fortitude, pl.resistencias.reflexos, pl.resistencias.vontade, pl.aviso], ["3d20+10", "2d20+5", "2d20", ""]);
+    t.ok("repetir uma categoria avisa", !!A3.planoDeValores(A3.linhasDoVd(80).exata, { fortitude: "forte", reflexos: "forte", vontade: "fraca" }).aviso);
+
+    t.grupo("v2.33 · aliados do AS3 na ficha");
+    var al = ficha({ classe: "especialista", origem: "academico", nex: 10 });
+    var furtAntes = R.dadosDoTeste(al, "furtividade").quantos;
+    t.ok("aliado sem bônus fixo não acompanha pela ficha", !A3.acompanhar(al, "a1", "as3.criatura.ale-aliado", "Alê", true).ok);
+    A3.acompanhar(al, "a2", "as3.criatura.caio-aliado", "Caio", true);
+    t.igual("Caio acompanhando: +1d20 em Furtividade", R.dadosDoTeste(al, "furtividade").quantos - furtAntes, 1);
+    A3.acompanhar(al, "a2", "as3.criatura.caio-aliado", "Caio", false);
+    t.igual("  sem acompanhar, sai", R.dadosDoTeste(al, "furtividade").quantos, furtAntes);
+    t.ok("Coruja pede duas perícias de Intelecto", !A3.acompanhar(al, "a3", "as3.criatura.coruja-aliado", "Coruja", true, ["medicina"]).ok);
+    var medAntes = R.bonusDePericia(al, "medicina", INV).total;
+    A3.acompanhar(al, "a3", "as3.criatura.coruja-aliado", "Coruja", true, ["medicina", "tatica"]);
+    t.igual("  considerado treinado (+5) na escolhida", R.bonusDePericia(al, "medicina", INV).total - medAntes, 5);
+    t.ok("os registros sobrevivem a salvar e reabrir", volta(al).arquivo3.aliados.length === 2);
+    t.ok("podar tira o aliado que saiu da ficha", A3.podarAliados(al, ["a3"]) && al.arquivo3.aliados.length === 1);
+
+    t.grupo("v2.33 · itens e cronologia");
+    t.ok("Paçoca: uma vez por dia da campanha", A3.usarPacoca(al).ok && !A3.usarPacoca(al).ok && (A3.avancar(al, "dia"), A3.usarPacoca(al).ok));
+    t.ok("Crânio: volta no próximo dia", A3.usarCranio(al).ok && !A3.cranioDisponivel(al) && (A3.avancar(al, "dia"), A3.cranioDisponivel(al)));
+    A3.couraca(al, "it1");
+    for (var s = 0; s < 12; s++) A3.semanaDeCouraca(al, "it1");
+    t.igual("Armadura dos Couraças: +1 por semana, até +10 (Defesa 20)", A3.bonusDaCouraca(al, "it1"), 10);
+    A3.registrarTestesDaCouraca(al, "it1", 21, "passou", "falhou");
+    t.ok("testes refeitos na semana ou missão seguinte", !A3.testesDaCouracaVencidos(al, "it1") && (A3.avancar(al, "missao"), A3.testesDaCouracaVencidos(al, "it1")));
+    var arm = { id: "it2", tipo: "armadura", nome: "Armadura", origemCatalogoId: "as3.amaldicoado.armadura-dos-couracas", defesa: 10, ordem: { emUso: true, protecao: { tipo: "pesada" } } };
+    var res = R.calcular(al, { itens: [arm] }).resistencias;
+    t.ok("em uso: RD 5 (balístico, impacto, perfuração), Sangue 10, vulnerável a Morte",
+      res.dano.filter(function (x) { return x.tipo === "sangue"; })[0].conta.total === 10 &&
+      res.dano.filter(function (x) { return x.tipo === "impacto"; })[0].conta.total === 5 && res.vulnerabilidades[0].tipo === "morte");
+    if (IT) {
+      var cat = IT.catalogoPronto();
+      t.ok("nove itens do AS3 no catálogo, com página", cat.itens.filter(function (e) { return e.fonte === "AS3"; }).length === 9);
+      t.ok("Garra do Harpia: tática ágil, duas mãos, 2d8, 19/x2, arremessável", (function (g) { return g.arma.dano === "2d8" && g.arma.margem === 19 && g.arma.agil && g.arma.arremessavel; })(cat.porId["as3.arma.garra-do-harpia"]));
+    }
+
+    t.grupo("v2.33 · Hexatombe: trocas e tempo de construção");
+    var hx = HX.normalizar({ ativo: true, dia: 1, equipes: [{ id: "e1", nome: "Pássaros", base: { melhorias: ["limpeza"] }, estoque: { agua: 2, comida: 1, sucata: 6 } }, { id: "e2", nome: "Couraças" }],
+      participantes: [{ id: "p1", nome: "Coruja", equipeId: "e1", personagemId: "c1" }, { id: "p2", nome: "Ana", equipeId: "e2", personagemId: "c2" }] });
+    t.ok("regras desligadas: recusa obra e troca", !HX.iniciarObra(hx, "e1", "camas", 1).ok && !HX.registrarTroca(hx, { equipeId: "e1" }).ok);
+    HX.definirRegrasAs3(hx, { trocas: true, construcao: true });
+    t.iguais("dias de obra: 7, −1 por pessoa, mínimo 3", [1, 2, 5, 9].map(HX.diasDeObra), [7, 6, 3, 3]);
+    var ob = HX.iniciarObra(hx, "e1", "camas", 3);
+    t.ok("a obra começa e cobra a sucata", ob.ok && ob.obra.dias === 5);
+    t.ok("não termina antes do dia previsto (só se a mesa forçar)", !HX.concluirObra(hx, "e1", ob.obra.id).ok);
+    t.ok("forçada, a melhoria entra na base", HX.concluirObra(hx, "e1", ob.obra.id, true).ok && HX.equipe(hx, "e1").base.melhorias.indexOf("camas") >= 0);
+    t.ok("troca: segredo custa 3", !HX.registrarTroca(hx, { equipeId: "e1", tipo: "segredo", pagamento: { agua: 1 } }).ok);
+    var tr = HX.registrarTroca(hx, { equipeId: "e1", tipo: "segredo", pagamento: { agua: 2, comida: 1 }, sobre: "Ana", conteudo: "tem medo de altura" });
+    t.ok("pago do estoque da equipe", tr.ok && HX.equipe(hx, "e1").estoque.agua === 0);
+    t.ok("o NPC pode exigir um tipo só", !HX.registrarTroca(hx, { equipeId: "e1", tipo: "informacao", pagamento: { sucata: 1 }, so: "agua" }).ok);
+    var vista = HX.vistaDoJogador(HX.normalizar(JSON.parse(JSON.stringify(hx))), ["c2"]);
+    t.igual("o jogador da outra equipe não vê a troca", vista.trocas.length, 0);
+    t.igual("o da equipe vê", HX.vistaDoJogador(hx, ["c1"]).trocas[0].conteudo, "tem medo de altura");
+
+    t.grupo("v2.33 · persistência");
+    var cheia = ficha({ classe: "combatente", nex: 40, trilha: "performatico" });
+    A3.avancar(cheia, "missao");
+    A3.ensaiar(cheia, 2, "propria");
+    cheia.arquivo3.veiculos.push(A3.novoVeiculo("categoria2"));
+    cheia.arquivo3.animais.push(A3.normalizarAnimal({ id: "an1", nome: "Lupi", modo: "ficha", treinado: true }));
+    var uma = volta(cheia), duas = volta(uma);
+    t.iguais("normalizar duas vezes dá o mesmo (idempotente)", uma.arquivo3, duas.arquivo3);
+    t.ok("ficha sem o AS3 ganha o bloco vazio, sem efeito", JSON.stringify(ficha({}).arquivo3.cronologia) === JSON.stringify({ missao: 0, dia: 0, semana: 0, sessao: 0 }));
+  }
 
   function casosDaV231(t, R, A2, OP, B, P) {
     function ficha(extra) {

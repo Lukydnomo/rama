@@ -56,6 +56,7 @@
   var SAH = "SAH";
   var AS1 = "AS1";
   var AS2 = "AS2";
+  var AS3 = "AS3";
 
   var T33 = "Tabela 3.3 (p. 56–57)";
   var T14 = "Tabela 1.4 (p. 38)";
@@ -1832,6 +1833,106 @@
         "Arma simples corpo a corpo, de uma mão e ágil, arremessável em alcance curto: 1d4 de perfuração mais 2d10 de Sangue, crítico 19/x3.",
         "Ao atacar, 2 PE: acertando, você recupera 2d10 PV; o que passar do máximo vira PV temporários.",
       ] },
+
+    /* =================================================================
+       ARQUIVOS SECRETOS 3 — O Mais: Itens (p. 112-115)
+       -----------------------------------------------------------------
+       Equipamentos gerais, a Garra do Harpia, dois itens paranormais e
+       três amaldiçoados. A Dupla Obsessiva é UM item no livro (maça e
+       florete, categoria III, 2 espaços para o par); o catálogo tem as
+       duas armas, cada uma com metade dos espaços, porque cada uma ataca
+       com o seu perfil — a categoria do par é a III (ver notas).
+       ================================================================= */
+
+    { id: "as3.geral.pacoca", nome: "Paçoca", fonte: AS3, pagina: 112, aba: "geral", secao: "operacionais",
+      categoria: "0", espacos: 0.5, consumivel: true,
+      resumo: "Doce de amendoim torrado e moído, açúcar e farinha de mandioca. Dizem que é impossível comer uma só.",
+      efeitos: [
+        "Conta como um prato rápido (OPRPG p. 93).",
+        "Em ocasiões especiais, a critério do mestre, uma vez por dia: quem a come recupera 1d8+1 PV, PE e SAN.",
+      ],
+      notas: ["O “uma vez por dia” segue o dia da campanha (cronologia do painel do Arquivos Secretos 3), não o relógio."] },
+
+    { id: "as3.arma.garra-do-harpia", nome: "Garra do Harpia", fonte: AS3, pagina: 112, aba: "armas", secao: "taticas",
+      categoria: "I", espacos: 2, unico: true,
+      arma: { proficiencia: "tatica", tipo: "corpoACorpo", empunhadura: "duasMaos", dano: "2d8", critico: "19", alcance: "curto", tipoDano: "C", agil: true, arremessavel: true },
+      resumo: "Rastelo transformado em arma estratégica, decorado com penas escuras e badulaques coloridos.",
+      efeitos: [
+        "Arma tática ágil corpo a corpo de duas mãos: 2d8 de corte, crítico 19/x2, arremessável em alcance curto.",
+        "Ao causar dano num alvo, 2 PE dão uma manobra de agarrar contra ele como ação livre.",
+        "Com Combater com Duas Armas (e poderes parecidos), conta como arma de uma mão e leve para os ataques adicionais.",
+        "Item único: só um agente pode escolhê-lo.",
+      ] },
+
+    { id: "as3.geral.bloody-mary-batizada", nome: "Bloody Mary Batizada", fonte: AS3, pagina: 112, aba: "geral", secao: "operacionais",
+      categoria: "II", espacos: 1, consumivel: true,
+      resumo: "Bloody Mary preparado com “carinho” para expurgar todas as mazelas de um corpo.",
+      efeitos: ["Quem bebe se livra de uma condição mental e/ou de medo que o afete, mas sofre 2d4 de dano mental."] },
+
+    { id: "as3.paranormal.cranio-dominador", nome: "Crânio Dominador", fonte: AS3, pagina: 113, aba: "geral", secao: "paranormais",
+      categoria: "III", espacos: 1,
+      resumo: "Crânio podre de quem conheceu a submissão, preso nas correntes que o aprisionavam em vida.",
+      efeitos: [
+        "Empunhando-o, ação padrão e 2 PE invocam correntes em até dois alvos em alcance curto: ficam paralisados (Reflexos DT Pre evita).",
+        "Só se libertam rompendo a corrente: Defesa 10, RD 10, 20 PV.",
+        "Depois, o crânio só volta a ser útil em 24 horas; quando volta, as correntes que ainda existem desaparecem.",
+      ],
+      notas: ["As 24 horas seguem a cronologia da campanha: o crânio volta no próximo dia registrado."] },
+
+    { id: "as3.paranormal.gaiola-do-corvo", nome: "Gaiola do Corvo", fonte: AS3, pagina: 113, aba: "geral", secao: "paranormais",
+      categoria: "IV", espacos: 2,
+      resumo: "Gaiola de ossos com uma nuvem inquieta de cinzas que sussurra os lamentos de quem se foi.",
+      efeitos: [
+        "Empunhando-a, ação padrão para pô-la no chão e abrir a portinhola: o solo num raio de 18 m vira Lodo, terreno difícil.",
+        "No começo de toda rodada, quem estiver no Lodo sofre 3d10 de dano de Morte (Fortitude DT Vig reduz à metade).",
+        "Quem ficar morrendo no Lodo é consumido, vira cinzas e vai para dentro da gaiola para sempre; então ela se fecha e o efeito acaba.",
+        "Fechar a gaiola a qualquer momento é uma ação padrão.",
+      ] },
+
+    { id: "as3.amaldicoado.camiseta-psikolera", nome: "Camiseta Psikolera", elemento: "sangue", fonte: AS3, pagina: 114, aba: "amaldicoados", secao: "especiais",
+      categoria: "II", espacos: 1, vestimenta: true,
+      resumo: "Merch da banda manchada do sangue de vários mosh pits: quanto mais suja, mais você se deleita.",
+      efeitos: ["Vestida, enquanto você estiver machucado, todas as suas rolagens de dano causam +2d8 de dano de Sangue."],
+      notas: ["Marcada como vestida no inventário e com a ficha machucada, o +2d8 de Sangue entra na rolagem de dano das armas."] },
+
+    { id: "as3.amaldicoado.dupla-obsessiva-maca", nome: "Dupla Obsessiva — maça", elemento: "sangue", fonte: AS3, pagina: 114, aba: "amaldicoados", secao: "especiais",
+      categoria: "III", espacos: 1, conjunto: "as3.dupla-obsessiva",
+      arma: { proficiencia: "tatica", tipo: "corpoACorpo", empunhadura: "umaMao", dano: "2d4", danoExtra: "1d6", tipoDanoExtra: "Sangue", extraMultiplica: true, critico: "x3", alcance: "", tipoDano: "P" },
+      resumo: "Metade da Dupla Obsessiva: maça enferrujada, obcecada pelo florete e por proteger quem ama.",
+      efeitos: [
+        "Arma tática corpo a corpo de uma mão: 2d4 de perfuração mais 1d6 de Sangue, multiplicado no crítico, crítico 20/x3.",
+        "Empunhando as duas armas da dupla, uma ação padrão faz dois ataques, um com cada.",
+        "Se um aliado em alcance curto for alvo de um ataque, 2 PE (reação) fazem você virar o alvo; se a fonte estiver em alcance corpo a corpo, mais 2 PE dão um ataque com a maça contra ela.",
+      ],
+      notas: ["O livro dá categoria III e 2 espaços para o par (maça e florete). O catálogo divide os espaços (1 + 1); a categoria do par é a III — a mesa decide se conta uma vez só no limite da patente."] },
+
+    { id: "as3.amaldicoado.dupla-obsessiva-florete", nome: "Dupla Obsessiva — florete", elemento: "sangue", fonte: AS3, pagina: 114, aba: "amaldicoados", secao: "especiais",
+      categoria: "III", espacos: 1, conjunto: "as3.dupla-obsessiva",
+      arma: { proficiencia: "tatica", tipo: "corpoACorpo", empunhadura: "umaMao", dano: "1d6", danoExtra: "2d4", tipoDanoExtra: "Sangue", extraMultiplica: true, critico: "18", alcance: "", tipoDano: "P", agil: true },
+      resumo: "Metade da Dupla Obsessiva: florete enferrujado, obcecado pela maça e por proteger quem ama.",
+      efeitos: [
+        "Arma tática ágil corpo a corpo de uma mão: 1d6 de perfuração mais 2d4 de Sangue, multiplicado no crítico, crítico 18/x2.",
+        "Empunhando as duas armas da dupla, uma ação padrão faz dois ataques, um com cada.",
+        "Se um aliado em alcance curto for alvo de um ataque, 2 PE (reação) fazem você virar o alvo; se a fonte estiver em alcance corpo a corpo, mais 2 PE dão um ataque com a maça contra ela.",
+      ],
+      notas: ["O livro dá categoria III e 2 espaços para o par (maça e florete). O catálogo divide os espaços (1 + 1); a categoria do par é a III — a mesa decide se conta uma vez só no limite da patente."] },
+
+    { id: "as3.amaldicoado.armadura-dos-couracas", nome: "Armadura dos Couraças (Armadura de Guevara)", elemento: "sangue", fonte: AS3, pagina: 115, aba: "amaldicoados", secao: "especiais",
+      categoria: "III", espacos: 0,
+      protecao: { tipo: "pesada", defesa: 10 },
+      resumo: "Proteção pesada amaldiçoada de Sangue, de aparência variada, que se move com vontade própria.",
+      efeitos: [
+        "Defesa +10, e +1 para cada semana de uso, até +20.",
+        "Não pesa (0 espaços) e dispensa proficiência em proteções pesadas.",
+        "Quem a usa recebe RD balístico, impacto e perfuração 5 e Sangue 10, e fica vulnerável a Morte.",
+        "Tocá-la pede Vontade contra uma DT de 6d6: falhando, o desejo força a vesti-la; passando, escolhe. Vestida, Fortitude contra 6d6: falhando, o Sangue pode controlar a pessoa quando quiser; passando, fica imune a esse controle.",
+        "Tirá-la é quase impossível; um jeito é sofrer dano de Morte até 0 PV e ser removido dela.",
+        "Todos os testes com a armadura são refeitos depois de uma semana ou no início de uma nova missão (o que vier primeiro).",
+      ],
+      notas: [
+        "Em uso, a ficha soma a Defesa (com as semanas registradas no menu do item), as RD e a vulnerabilidade. As semanas e os testes seguem a cronologia da campanha.",
+        "O livro não diz se a penalidade de –5 da proteção pesada (OPRPG p. 62) some; a ficha a mantém, por ser proteção pesada. A mesa pode anulá-la com um ajuste.",
+      ] },
   ];
 
   global.RAMAOrdemItensDados = {
@@ -1841,6 +1942,7 @@
       SAH: { nome: "Sobrevivendo ao Horror", curto: "Sobrevivendo ao Horror", edicao: "v1.2" },
       AS1: { nome: "Arquivos Secretos 1", curto: "Arquivos Secretos 1", edicao: "v1.1" },
       AS2: { nome: "Arquivos Secretos 2", curto: "Arquivos Secretos 2", edicao: "v1.0" },
+      AS3: { nome: "Arquivos Secretos 3", curto: "Arquivos Secretos 3", edicao: "v1.0" },
     },
     itens: ITENS,
   };

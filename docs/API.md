@@ -1,5 +1,13 @@
 # A API
 
+## Arquivos Secretos 3 — v2.33
+
+Nenhuma ação nova. `ler_hexatombe` (jogador) passa a trazer `regrasAs3`, as `obras`
+das próprias equipes e só as `trocas` delas (o conteúdo de uma troca nunca chega a
+outra equipe). `salvar_hexatombe` normaliza os campos novos. Na operação de
+combate `criatura_instancia` com `chave: "forma"`, uma forma com `somaAtuais`
+(Hora do Show) soma esses PV aos atuais ao entrar, até o máximo da forma.
+
 ## Hexatombe e Arquivos Secretos 2 — v2.30
 
 - `ler_hexatombe { campanhaId }` — membro da campanha (espectador não). Mestre:
