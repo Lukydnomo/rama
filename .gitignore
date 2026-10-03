@@ -11,9 +11,9 @@ senhas.txt
 
 # Fontes: a PixelMplus tem licença própria e não é redistribuída aqui.
 # Veja assets/fonts/LEIA-ME.md.
-assets/fonts/*.woff2
-assets/fonts/*.ttf
-assets/fonts/*.otf
+# assets/fonts/*.woff2
+# assets/fonts/*.ttf
+# assets/fonts/*.otf
 
 # Sistema
 .DS_Store
