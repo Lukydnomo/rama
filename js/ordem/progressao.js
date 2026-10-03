@@ -1507,7 +1507,9 @@
 
   function ehDeOutraClasse(e, classe) {
     if (!e || e.tipo !== "classe") return false;
-    if (e.geral) return false;
+    /* Os poderes que o Sobrevivendo ao Horror abre a todos (`geral`, como
+       Combater com Duas Armas) continuam sendo de outra classe: também
+       podem vir pela Expansão de Conhecimento (v2.34.2). */
     return e.classes.indexOf(classe) < 0;
   }
 

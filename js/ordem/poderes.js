@@ -773,7 +773,7 @@
       "Aprende um poder de classe que não é da sua classe, cumprindo os requisitos dele.",
       "Aprende um segundo poder de classe de fora da sua classe.",
       { requisitos: [req.elem("conhecimento", 1)],
-        opcoes: [{ chave: "poder", tipo: "poderOutraClasse", semGerais: true, rotulo: "Poder de outra classe" }],
+        opcoes: [{ chave: "poder", tipo: "poderOutraClasse", rotulo: "Poder de outra classe" }],
         automacao: "calculo" }),
     paranormal("percepcaoParanormal", "Percepção Paranormal", "conhecimento", OPRPG, 114,
       "Procurando pistas, pode rolar de novo um dado abaixo de 10, ficando com a segunda rolagem.",
