@@ -212,10 +212,7 @@
         ? global.RAMAHomebrewCriatura.detalhes(registro)
         : registro.tipo === "ritual" ? detalhesDoRitual(registro) : detalhes(registro),
 
-      registro.descricao ? el("p.item__descricao", { texto: registro.descricao }) : null,
-      registro.tipo === "ritual" && registro.descricao === undefined && registro[F.CAMPO_LONGO_RITUAL]
-        ? el("p.item__descricao", { texto: registro[F.CAMPO_LONGO_RITUAL] })
-        : null,
+      registro.tipo !== "ritual" && registro.descricao ? el("p.item__descricao", { texto: registro.descricao }) : null,
 
       el("p.t-mini", { texto: "Registro // " + U.codigoCurto(registro.id) + " · " + U.dataCurta(registro.atualizadoEm) }),
     ]);
@@ -329,6 +326,13 @@
   /* Um ritual da biblioteca: os campos preenchidos e as versões. O
      schema é o mesmo da ficha — não existe ritual de dois formatos. */
   function detalhesDoRitual(r) {
+    /* v2.32: o mesmo desenho do cartão da ficha (conjuração, efeito,
+       formas avançadas e complemento). */
+    var S = global.RAMASecaoRituais;
+    if (S && S.apresentacao) {
+      var rit = F.normalizarRitual(r) || r;
+      return el("div.ritual-corpo", {}, [S.marcasDoRitual(null, rit)].concat(S.apresentacao(rit, {})).filter(Boolean));
+    }
     var linhas = [];
     F.CAMPOS_RITUAL.forEach(function (campo) {
       if (campo === F.CAMPO_LONGO_RITUAL) return;

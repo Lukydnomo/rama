@@ -70,6 +70,27 @@
 
   var CHANGELOG = [
     {
+      versao: "2.32.0", codinome: "PALIMPSESTO", data: "02/10/2026",
+      mudancas: {
+        "Melhorado": [
+          "Cartão de ritual em regiões: círculo e elemento como marcas sob o nome (uma por elemento nos rituais de vários elementos), grade de conjuração com rótulo e valor, o efeito como texto de leitura (parágrafos, quebras e listas, com largura confortável), um bloco por forma avançada (custo adicional e total, requisito, alterações e rolagens) e um complemento à parte com aprendizado, regras, notas e fonte (recolhível quando é longo).",
+          "A faixa do cartão fechado agrupa as rolagens por versão e diz o tipo de cada uma (dano, cura, PV temporários…), ao lado de “Usar ritual”.",
+          "Conhecidos, Grimório e Registros com títulos, contagens e bordas próprias (cheia, dupla e tracejada), sem depender só da cor.",
+          "A consulta da biblioteca e a Homebrew usam a mesma grade e o mesmo desenho do cartão.",
+        ],
+        "Alterado": [
+          "Cópias oficiais novas guardam só o efeito na descrição; as formas avançadas ficam nos blocos das versões e as regras gerais, notas e fonte num campo de complemento, editável. Cópias antigas mantêm o texto inteiro — só some o parágrafo que repete, linha por linha, as formas avançadas geradas pela ficha.",
+        ],
+        "Corrigido": [
+          "Salvar um ritual de vários elementos pelo editor não perde mais a lista de elementos.",
+        ],
+        "Técnico": [
+          "Campo opcional `complemento` no ritual (normalização, editor, Homebrew, importação e exportação). Só o site muda.",
+          "Testes: 4 novos na suíte principal, mais os cartões no navegador (Âncora Temporal, cura, vários elementos, cópia antiga, texto livre com parágrafos), edição, biblioteca e Homebrew, em celular e nos temas claro e escuro.",
+        ],
+      },
+    },
+    {
       versao: "2.31.1", codinome: "SINALIZADOR", data: "02/10/2026",
       mudancas: {
         "Melhorado": [

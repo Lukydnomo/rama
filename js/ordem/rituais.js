@@ -521,7 +521,11 @@
       efeito: e.efeito || "",
       duracao: e.duracao || "",
       resistencia: e.resistencia || "",
-      descricao: descricaoDaInstancia(e, escolhida),
+      /* v2.32: a descrição é só o efeito; as formas avançadas já vão
+         estruturadas em `versoes`, e regras gerais, notas, divergências
+         e fonte vão para `complemento` — uma região à parte no cartão. */
+      descricao: descricaoPrincipal(e, escolhida),
+      complemento: complementoDaInstancia(e),
       origemCatalogoId: e.id,
       ordem: Object.assign({
         elemento: elemento,
@@ -546,8 +550,38 @@
     return { ok: true, dados: dados };
   }
 
-  /* A descrição que vai junto com a cópia: resumo, efeitos, versões,
-     regras e a fonte. Redação própria, dentro do limite do campo. */
+  /* A linha que a descrição das cópias anteriores à v2.32 trazia para
+     cada forma avançada. O cartão a reconhece pelo texto EXATO, montado
+     com os dados do próprio ritual — nunca por palavra solta. */
+  function linhaDeVersaoGerada(nome, adicional, total, requisito, alteracoes) {
+    return "• " + nome + " (+" + adicional + " PE, total " + total + " PE)" +
+      (requisito ? " — requer " + requisito : "") + ": " + (alteracoes || "veja o livro");
+  }
+
+  function descricaoPrincipal(e, escolhida) {
+    var partes = [e.resumo];
+    if (escolhida && escolhida.rotulo && e.escolha) partes.push(e.escolha.rotulo + ": " + escolhida.rotulo + ".");
+    if (e.efeitos.length) partes.push(e.efeitos.map(function (x) { return "• " + x; }).join("\n"));
+    var texto = partes.filter(Boolean).join("\n\n");
+    return texto.slice(0, 8000);
+  }
+
+  function complementoDaInstancia(e) {
+    var partes = [];
+    var regras = regrasGerais(e);
+    if (regras.length) partes.push(regras.map(function (x) { return "• " + x; }).join("\n"));
+    if (e.notas.length) partes.push(e.notas.map(function (x) { return "Nota: " + x; }).join("\n"));
+    if (e.divergencias.length) {
+      partes.push(e.divergencias.map(function (d) {
+        return "Divergência — " + d.trecho + ". Impresso: " + d.publicado + " Adotado: " + d.adotado;
+      }).join("\n"));
+    }
+    partes.push("Fonte: " + referencia(e) + ".");
+    return partes.filter(Boolean).join("\n\n").slice(0, 8000);
+  }
+
+  /* A descrição única das cópias até a v2.31 (resumo, efeitos, versões,
+     regras e fonte). Continua aqui para quem quiser o texto corrido. */
   function descricaoDaInstancia(e, escolhida) {
     var partes = [e.resumo];
     if (escolhida && escolhida.rotulo && e.escolha) partes.push(e.escolha.rotulo + ": " + escolhida.rotulo + ".");
@@ -556,8 +590,7 @@
     var avancadas = e.versoes.filter(function (v) { return !v.basica; });
     if (avancadas.length) {
       partes.push(avancadas.map(function (v) {
-        return "• " + v.nome + " (+" + v.custo + " PE, total " + v.custoTotal + " PE)" +
-          (v.requisito ? " — requer " + v.requisito : "") + ": " + (v.alteracoes || "veja o livro") ;
+        return linhaDeVersaoGerada(v.nome, v.custo, v.custoTotal, v.requisito, v.alteracoes);
       }).join("\n"));
     }
 
@@ -642,6 +675,10 @@
   }
 
   global.RAMAOrdemRituais = {
+    linhaDeVersaoGerada: linhaDeVersaoGerada,
+    descricaoPrincipal: descricaoPrincipal,
+    complementoDaInstancia: complementoDaInstancia,
+    descricaoDaInstancia: descricaoDaInstancia,
     ELEMENTOS: ELEMENTOS,
     CIRCULOS: CIRCULOS,
     ROTULO_FONTE: ROTULO_FONTE,

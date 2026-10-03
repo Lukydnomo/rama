@@ -962,6 +962,10 @@
     if (catalogo) ritual.origemCatalogoId = catalogo;
     var homebrew = U.aparar(bruto.origemHomebrewId, 80);
     if (homebrew) ritual.origemHomebrewId = homebrew;
+    /* v2.32: regras gerais, notas e fonte, à parte da descrição. Só
+       existe quando tem texto: ritual antigo não ganha campo novo. */
+    var complemento = U.aparar(bruto.complemento, 8000);
+    if (complemento) ritual.complemento = complemento;
 
     if (bruto.ordem && typeof bruto.ordem === "object") {
       var dados = global.RAMAOrdemRituais

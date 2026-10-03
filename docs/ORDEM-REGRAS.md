@@ -1527,10 +1527,25 @@ elemento passa de 98.
 
 ### O que a ficha faz com o ritual adicionado
 
+**O cartão (v2.32).** Sob o nome, marcas de círculo e elemento (uma por
+elemento nos rituais de vários elementos). Abaixo do resumo, sempre à vista
+mesmo fechado, a faixa com “Usar ritual” e as rolagens agrupadas por versão
+(dano, cura, PV temporários e outras). Aberto, em regiões: a grade de conjuração
+(execução, alcance, alvo, área, efeito, duração, resistência, custo básico e DT,
+só o que está preenchido, com os rótulos da ficha), o efeito como texto de leitura
+(parágrafos, quebras e listas preservados), um bloco por forma avançada (custo
+adicional e total, requisito, alterações e rolagens — só as que têm conteúdo) e o
+complemento (aprendizado à vista; regras, notas e fonte recolhíveis). As cópias
+anteriores à v2.32 guardam o texto inteiro: só some o parágrafo que é, linha por
+linha, exatamente o que a própria ficha gerava para as formas avançadas daquele
+ritual (montado com os dados dele); nada é cortado por palavra.
+
 | campo do catálogo | onde entra na ficha | est. |
 |---|---|---|
 | círculo, elemento, execução, alcance, alvo/área/efeito, duração, resistência | os campos do ritual, com os rótulos da seção | **A** |
-| resumo, efeitos, formas avançadas, regras e a fonte | a descrição da cópia, em redação própria | **A** |
+| resumo e efeitos | a descrição da cópia (só o efeito, v2.32), em redação própria | **A** |
+| formas avançadas | `versoes` (custo, requisito, alterações, rolagens) — o cartão as mostra em blocos, sem repetir na descrição | **A** |
+| regras gerais, notas, divergências e a fonte | `complemento` (v2.32), uma região à parte, recolhível quando é longa | **A** |
 | custo em PE da forma básica | `ordem.custo` (o do círculo) e a linha "Custo" do cartão | **A** |
 | custo adicional de cada versão | `versoes[].custo`, com o total calculado | **A** |
 | requisito e alterações de cada versão | `versoes[].requisito` e `alteracoes`, mostrados no cartão | **I** |

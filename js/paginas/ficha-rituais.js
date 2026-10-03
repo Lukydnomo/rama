@@ -162,18 +162,18 @@
     });
     var separar = grimorio.length || registros.length;
 
-    if (conhecidos.length && separar) partes.push(el("h3.t-rotulo", { texto: "Conhecidos (" + conhecidos.length + ")" }));
+    if (conhecidos.length && separar) partes.push(tituloDeSecao("Conhecidos", conhecidos.length, "conhecidos"));
     partes = partes.concat(listaAgrupada(ctx, "conhecidos", conhecidos, criterios, modo, apr, arrastar));
 
     if (grimorio.length) {
-      partes.push(el("h3.t-rotulo", { texto: "Grimório (" + grimorio.length + ")" }));
-      partes.push(el("p.t-mini", { texto: RT() ? RT().condicoesDoDestino("grimorio").join(" ") : "" }));
+      partes.push(tituloDeSecao("Grimório", grimorio.length, "grimorio"));
+      partes.push(el("p.rituais-secao__nota", { texto: RT() ? RT().condicoesDoDestino("grimorio").join(" ") : "" }));
       partes = partes.concat(listaAgrupada(ctx, "grimorio", grimorio, criterios, modo, apr, arrastar));
     }
 
     if (registros.length) {
-      partes.push(el("h3.t-rotulo", { texto: "Registros, sem aquisição (" + registros.length + ")" }));
-      partes.push(el("p.t-mini", {
+      partes.push(tituloDeSecao("Registros, sem aquisição", registros.length, "registros"));
+      partes.push(el("p.rituais-secao__nota", {
         texto: "Estão na ficha para consulta e não contam como conhecidos. No modo edição, o menu de cada um oferece " +
                "prendê-lo a uma aquisição aberta, sem criar cópia" +
                (apr.emCampo && apr.ocultista ? ", ou registrar o estudo em campo" : "") +
@@ -191,6 +191,15 @@
 
     raiz = el("div.pilha--curta", { class: "pilha" }, partes);
     return ligarArraste(ctx, raiz, arrastar);
+  }
+
+  /* O título de cada lugar (v2.32): nome, contagem e uma marca de
+     borda própria — a diferença não depende só da cor. */
+  function tituloDeSecao(nome, n, tipo) {
+    return el("h3.rituais-secao.rituais-secao--" + tipo, {}, [
+      el("span.rituais-secao__nome", { texto: nome }),
+      el("span.rituais-secao__conta", { texto: n + (n === 1 ? " ritual" : " rituais") }),
+    ]);
   }
 
   function O() { return global.RAMAOrganizar || null; }
@@ -361,85 +370,8 @@
 
   function cartao(ctx, ritual, modo, apr, lugar) {
     var l = lugar || {};
-    var rotulos = ctx.ficha.rituais.rotulos;
     var vindo = apr ? apr.porRitual[ritual.id] : null;
     var substituido = apr ? apr.substituidos[ritual.id] : null;
-
-    /* Só campo preenchido aparece: uma lista de cinco rótulos com
-       travessão do lado é ruído, não informação. */
-    var linhas = [];
-    F.CAMPOS_RITUAL.forEach(function (campo) {
-      var valor = U.texto(ritual[campo]).trim();
-      if (!valor) return;
-      linhas.push(el("dt", { texto: rotulos[campo] }));
-      linhas.push(el("dd", { texto: valor }));
-    });
-
-    /* Custo em PE: da forma básica e o TOTAL de cada versão avançada.
-       É informação — a ficha não gasta PE por conta própria. */
-    var custos = custosDoRitual(ritual);
-    if (custos) {
-      linhas.push(el("dt", { texto: "Custo" }));
-      linhas.push(el("dd", { texto: custos }));
-    }
-
-    /* A DT deste ritual: a de todos os seus rituais, mais <Habilidade>
-       Aprimorada quando ela foi escolhida para ele (AS1 p. 46). */
-    var dtR = dtDoRitual(ctx, ritual);
-    if (dtR) {
-      linhas.push(el("dt", { texto: "DT" }));
-      linhas.push(el("dd", { texto: dtR }));
-    }
-
-    var retido = retencaoDe(ctx, ritual);
-    if (retido) {
-      linhas.push(el("dt", { texto: "Retido" }));
-      linhas.push(el("dd", { texto: retido.pe + " PE presos no máximo" + (retido.versao ? " (" + retido.versao + ")" : "") + " — ver Rituais retidos, no alto da aba." }));
-    }
-
-    /* O que cada versão avançada muda, e o que ela exige. */
-    (ritual.versoes || []).forEach(function (v) {
-      var partes = [];
-      if (v.requisito) partes.push("requer " + v.requisito);
-      if (v.alteracoes) partes.push(v.alteracoes);
-      if (!partes.length) return;
-      linhas.push(el("dt", { texto: v.nome }));
-      linhas.push(el("dd", { texto: partes.join(" — ") }));
-    });
-
-    /* De onde este ritual veio. Nunca sozinho: registrar um ritual não
-       quita pendência, e prender a uma aquisição é uma ação explícita. */
-    if (apr) {
-      var origem = [el("dt", { texto: "Aprendizado" })];
-      if (vindo) {
-        origem.push(el("dd", {
-          texto: vindo.nomePoder + " · " + vindo.rotuloEtapa +
-                 (vindo.destino === "grimorio" ? " · guardado no grimório" : "") +
-                 (vindo.contaNoLimite ? " · conta no limite por Intelecto" : " · fora do limite de rituais conhecidos") +
-                 (vindo.substitui ? " · entrou no lugar de " + (vindo.substitui.nome || "outro ritual") + " (" + vindo.viaSubstituicao + ")" : "") +
-                 (vindo.legado ? " · vínculo guardado só pelo nome, de uma ficha anterior" : "") +
-                 (vindo.origem === "mesa" ? " · exceção declarada pela mesa" : "") +
-                 (vindo.excecao && vindo.origem !== "mesa" ? " · mantido pela mesa fora da regra desta aquisição" : ""),
-        }));
-        var reg = vindo.registroDeRitual ? registroDeRitual(ctx, vindo.registroDeRitual) : null;
-        if (reg && (reg.fonte || reg.nota)) {
-          origem.push(el("dt", { texto: "Registro" }));
-          origem.push(el("dd", { texto: [nomeDaFonte(reg.fonte), reg.nota].filter(Boolean).join(" — ") }));
-        }
-      } else {
-        origem.push(el("dd", {
-          texto: "Registro, sem aquisição: está na ficha para consulta e não conta como conhecido.",
-        }));
-      }
-      if (substituido) {
-        origem.push(el("dt", { texto: "Substituído" }));
-        origem.push(el("dd", {
-          texto: "Trocado por " + (substituido.porNome || "outro ritual") + " em " + substituido.em +
-                 " (Aprender Ritual, Ordem Paranormal RPG, p. 114). Continua na ficha, sem aquisição.",
-        }));
-      }
-      linhas = origem.concat(linhas);
-    }
 
     var acoesDeAprendizado = [];
     if (apr && !vindo) {
@@ -474,23 +406,216 @@
       ]), { rotulo: "Opções de " + ritual.nome, icone: "tresPontos" }),
     ] : null;
 
-    /* A faixa de danos continua à vista com o ritual fechado — numa
-       sessão essa é a ação mais repetida, e ela não pode custar a
-       abertura do cartão. Quem cuida disso é a `faixa` do recolhível;
-       o comentário de lá explica por que ela não pode simplesmente ser
-       pendurada dentro do <details>. */
+    var avisos = [];
+    var retido = retencaoDe(ctx, ritual);
+    if (retido) {
+      avisos.push(el("p.ritual-aviso", {
+        texto: "Retido: " + retido.pe + " PE presos no máximo" + (retido.versao ? " (" + retido.versao + ")" : "") + " — ver Rituais retidos, no alto da aba.",
+      }));
+    }
+
+    /* A faixa de rolagens e o "Usar ritual" continuam à vista com o
+       ritual fechado — numa sessão essa é a ação mais repetida, e ela
+       não pode custar a abertura do cartão. Quem cuida disso é a `faixa`
+       do recolhível (ver o comentário de lá). */
     return UI.recolhivel({
       titulo: ritual.nome,
-      /* O primeiro campo vira a pista do resumo fechado: numa lista de
-         vinte rituais, "3" ao lado do nome já orienta. */
-      extra: U.texto(ritual[F.CAMPOS_RITUAL[0]]).trim(),
-      conteudo: linhas.length
-        ? [el("dl.r-dados", {}, linhas)]
-        : [el("p.t-mini", { texto: "Sem informações preenchidas." })],
+      subtitulo: marcasDoRitual(ctx, ritual),
+      classe: "ritual-cartao",
+      conteudo: [el("div.ritual-corpo", {}, avisos.concat(apresentacao(ritual, {
+        rotulos: ctx.ficha.rituais.rotulos,
+        dt: dtDoRitual(ctx, ritual),
+        aprendizado: apr ? linhasDeAprendizado(ctx, vindo, substituido) : null,
+      })))],
       acoes: acoes,
       alca: l.arrastar && A() ? A().alca({ id: ritual.id, rotulo: ritual.nome }) : null,
       faixa: faixaDeDanos(ctx, ritual),
     });
+  }
+
+  /* =================================================================
+     A APRESENTAÇÃO DE UM RITUAL (v2.32)
+     -----------------------------------------------------------------
+     Regiões separadas, nesta ordem: dados de conjuração (grade), efeito
+     (texto de leitura), formas avançadas (um bloco por versão) e o
+     complemento (aprendizado, regras gerais, notas e fonte, recolhível
+     quando é longo). Tudo sai dos campos do próprio ritual — nada é
+     consultado no catálogo, e nada que a ficha não tem é inventado.
+
+     Reaproveitada pela consulta da biblioteca e pela Homebrew
+     (RAMASecaoRituais.apresentacao).
+     ================================================================= */
+
+  var CAMPOS_DE_CONJURACAO = ["execucao", "alcance", "alvo", "area", "efeito", "duracao", "resistencia"];
+
+  /* Círculo e elemento(s) como marcas compactas abaixo do nome. Com
+     vários elementos (AS1 p. 49), uma marca por elemento. */
+  function marcasDoRitual(ctx, ritual) {
+    var rotulos = (ctx && ctx.ficha && ctx.ficha.rituais.rotulos) || F.ROTULOS_RITUAL_PADRAO;
+    var marcas = [];
+    var circulo = U.texto(ritual.circulo).trim();
+    if (circulo) marcas.push(el("span.r-etiqueta.ritual-marca", { texto: /[a-zà-ú]/i.test(circulo) ? circulo : rotulos.circulo + " " + circulo }));
+    elementosDoRitual(ritual).forEach(function (x) {
+      marcas.push(el("span.r-etiqueta.ritual-marca" + (x.chave ? ".bib-elemento.bib-elemento--" + x.chave : ""), { texto: x.nome }));
+    });
+    return marcas.length ? el("span.ritual-marcas", {}, marcas) : null;
+  }
+
+  function elementosDoRitual(ritual) {
+    var lista = RT() ? RT().ELEMENTOS : [];
+    var o = ritual.ordem || {};
+    if (o.todosOsElementos && Array.isArray(o.elementos) && o.elementos.length) {
+      return o.elementos.map(function (k) { var e = lista.filter(function (x) { return x.chave === k; })[0]; return { chave: k, nome: e ? e.nome : k }; });
+    }
+    var texto = U.texto(ritual.elemento).trim();
+    if (!texto) return [];
+    /* A chave só quando o texto É o nome do elemento: o que a pessoa
+       escreveu não é adivinhado. */
+    var igual = lista.filter(function (x) { return U.chaveDeBusca(x.nome) === U.chaveDeBusca(texto); })[0];
+    return [{ chave: igual ? igual.chave : "", nome: texto }];
+  }
+
+  function apresentacao(ritual, opcoes) {
+    var o = opcoes || {};
+    var rotulos = o.rotulos || F.ROTULOS_RITUAL_PADRAO;
+    var partes = [];
+
+    /* Dados de conjuração: só o que está preenchido, com o rótulo da
+       ficha (as universais podem ter renomeado). */
+    var dados = [];
+    CAMPOS_DE_CONJURACAO.forEach(function (campo) {
+      var valor = U.texto(ritual[campo]).trim();
+      if (valor) dados.push([rotulos[campo] || F.ROTULOS_RITUAL_PADRAO[campo], valor]);
+    });
+    var base = RT() ? RT().custoDaVersao(ritual, null) : null;
+    if (base) dados.push(["Custo", base.base + " PE"]);
+    if (o.dt) dados.push(["DT", o.dt]);
+    if (dados.length) {
+      partes.push(el("dl.ritual-conjuracao", { "aria-label": "Conjuração" }, dados.map(function (d) {
+        return el("div.ritual-conjuracao__campo", {}, [el("dt", { texto: d[0] }), el("dd", { texto: d[1] })]);
+      })));
+    }
+
+    /* O efeito, como texto de leitura. */
+    var descricao = U.texto(ritual.descricao).trim();
+    if (descricao) {
+      var blocos = blocosDoTexto(descricao, linhasGeradasDasVersoes(ritual));
+      if (blocos.length) partes.push(el("div.ritual-texto.ritual-descricao", {}, blocos));
+    }
+
+    /* As formas avançadas, uma por bloco — só as que têm o que mostrar. */
+    var formas = formasAvancadas(ritual);
+    if (formas.length) partes.push(el("div.ritual-formas", { role: "list", "aria-label": "Formas avançadas" }, formas));
+
+    if (!partes.length) partes.push(el("p.t-mini", { texto: "Sem informações preenchidas." }));
+
+    /* Complemento: aprendizado (sempre à vista) e regras, notas e fonte
+       (recolhível quando é longo). */
+    if (o.aprendizado && o.aprendizado.length) {
+      partes.push(el("dl.ritual-aprendizado", {}, o.aprendizado));
+    }
+    var complemento = U.texto(ritual.complemento).trim();
+    if (complemento) {
+      partes.push(el("details.ritual-complemento", { open: complemento.length <= 280 }, [
+        el("summary.ritual-complemento__topo", { texto: "Regras, notas e fonte" }),
+        el("div.ritual-texto.ritual-texto--mini", {}, blocosDoTexto(complemento, null)),
+      ]));
+    }
+    return partes;
+  }
+
+  /* Parágrafos (linha em branco), quebras de linha e listas ("• " ou
+     "- " no começo de TODAS as linhas do bloco) — o texto inteiro, sem
+     cortar nada. Só some um bloco que é, linha por linha, exatamente o
+     que a própria ficha geraria para as formas avançadas deste ritual
+     (as cópias até a v2.31): isso já aparece nos blocos das formas. */
+  function blocosDoTexto(texto, geradas) {
+    return String(texto).replace(/\r\n?/g, "\n").split(/\n\s*\n/).map(function (bloco) {
+      var linhas = bloco.split("\n").map(function (x) { return x.replace(/\s+$/, ""); }).filter(function (x) { return x.trim(); });
+      if (!linhas.length) return null;
+      if (geradas && linhas.every(function (x) { return geradas[x.trim()]; })) return null;
+      var lista = linhas.every(function (x) { return /^\s*[•\-]\s+/.test(x); });
+      if (lista) return el("ul", {}, linhas.map(function (x) { return el("li", { texto: x.replace(/^\s*[•\-]\s+/, "") }); }));
+      var p = el("p");
+      linhas.forEach(function (x, i) {
+        if (i) p.appendChild(el("br"));
+        p.appendChild(document.createTextNode(x));
+      });
+      return p;
+    }).filter(Boolean);
+  }
+
+  function linhasGeradasDasVersoes(ritual) {
+    if (!RT() || !RT().linhaDeVersaoGerada) return null;
+    var mapa = {};
+    var algum = false;
+    (ritual.versoes || []).slice(1).forEach(function (v) {
+      var c = RT().custoDaVersao(ritual, v);
+      if (!c || !v.custo) return;
+      mapa[RT().linhaDeVersaoGerada(v.nome, c.adicional, c.total, v.requisito, v.alteracoes)] = true;
+      algum = true;
+    });
+    return algum ? mapa : null;
+  }
+
+  var ROTULO_DO_TIPO = { dano: "Dano", cura: "Cura" };
+
+  function rotuloDaRolagem(r) {
+    if (r.tipo === "dano" || r.tipo === "cura") return ROTULO_DO_TIPO[r.tipo];
+    return r.rotulo || "Rolagem";
+  }
+
+  function expressaoDe(r) {
+    return (r.expressao || "") + (r.extra ? (r.expressao ? "+" : "") + r.extra : "");
+  }
+
+  function formasAvancadas(ritual) {
+    return (ritual.versoes || []).slice(1).map(function (v) {
+      var linhas = [];
+      var c = v.custo && RT() ? RT().custoDaVersao(ritual, v) : null;
+      if (c) linhas.push(el("p.ritual-forma__custo", { texto: "+" + c.adicional + " PE · total " + c.total + " PE" }));
+      else if (v.custo) linhas.push(el("p.ritual-forma__custo", { texto: "+" + v.custo + " PE" }));
+      if (v.requisito) linhas.push(el("p.ritual-forma__requisito", { texto: "Requer " + v.requisito }));
+      if (v.alteracoes) linhas.push(el("div.ritual-texto", {}, blocosDoTexto(v.alteracoes, null)));
+      var rolagens = F.rolagensDaVersao(v).filter(function (r) { return expressaoDe(r); });
+      if (rolagens.length) {
+        linhas.push(el("p.ritual-forma__rolagens", {
+          texto: rolagens.map(function (r) { return rotuloDaRolagem(r) + ": " + expressaoDe(r); }).join(" · "),
+        }));
+      }
+      if (!linhas.length) return null;
+      return el("section.ritual-forma", { role: "listitem" }, [el("h4.ritual-forma__nome", { texto: v.nome })].concat(linhas));
+    }).filter(Boolean);
+  }
+
+  function linhasDeAprendizado(ctx, vindo, substituido) {
+    var saida = [el("dt", { texto: "Aprendizado" })];
+    if (vindo) {
+      saida.push(el("dd", {
+        texto: vindo.nomePoder + " · " + vindo.rotuloEtapa +
+               (vindo.destino === "grimorio" ? " · guardado no grimório" : "") +
+               (vindo.contaNoLimite ? " · conta no limite por Intelecto" : " · fora do limite de rituais conhecidos") +
+               (vindo.substitui ? " · entrou no lugar de " + (vindo.substitui.nome || "outro ritual") + " (" + vindo.viaSubstituicao + ")" : "") +
+               (vindo.legado ? " · vínculo guardado só pelo nome, de uma ficha anterior" : "") +
+               (vindo.origem === "mesa" ? " · exceção declarada pela mesa" : "") +
+               (vindo.excecao && vindo.origem !== "mesa" ? " · mantido pela mesa fora da regra desta aquisição" : ""),
+      }));
+      var reg = vindo.registroDeRitual ? registroDeRitual(ctx, vindo.registroDeRitual) : null;
+      if (reg && (reg.fonte || reg.nota)) {
+        saida.push(el("dt", { texto: "Registro" }));
+        saida.push(el("dd", { texto: [nomeDaFonte(reg.fonte), reg.nota].filter(Boolean).join(" — ") }));
+      }
+    } else {
+      saida.push(el("dd", { texto: "Registro, sem aquisição: está na ficha para consulta e não conta como conhecido." }));
+    }
+    if (substituido) {
+      saida.push(el("dt", { texto: "Substituído" }));
+      saida.push(el("dd", {
+        texto: "Trocado por " + (substituido.porNome || "outro ritual") + " em " + substituido.em +
+               " (Aprender Ritual, Ordem Paranormal RPG, p. 114). Continua na ficha, sem aquisição.",
+      }));
+    }
+    return saida;
   }
 
   /* =================================================================
@@ -932,25 +1057,28 @@
     return partes.join(" · ");
   }
 
-  /* A faixa compacta de danos do cartão: nome da versão, expressão e o
-     dado para rolar. Só entram as versões com dano preenchido. */
+  /* A faixa compacta de rolagens do cartão, agrupada por versão (v2.32):
+     o nome da versão e, dentro dela, cada rolagem com o tipo (dano, cura,
+     PV temporários…), a expressão e o dado. Só entram as versões com
+     rolagem preenchida; sem nenhuma, fica só o "Usar ritual". */
   function faixaDeDanos(ctx, ritual) {
     var comRolagem = F.versoesComRolagem(ritual);
     var usar = botaoUsarRitual(ctx, ritual);
     if (!comRolagem.length) return usar ? el("div.ritual-danos", {}, [usar]) : null;
 
-    var linhas = usar ? [usar] : [];
+    var grupos = usar ? [usar] : [];
     comRolagem.forEach(function (v) {
+      var itens = [];
       F.rolagensDaVersao(v).forEach(function (rolagem) {
-        var expressao = (rolagem.expressao || "") + (rolagem.extra ? (rolagem.expressao ? "+" : "") + rolagem.extra : "");
+        var expressao = expressaoDe(rolagem);
         if (!expressao) return;
-        linhas.push(el("div.ritual-dano", { class: rolagem.tipo === "cura" ? "ritual-dano--cura" : "" }, [
-          el("span.ritual-dano__versao", { texto: v.nome + (rolagem.tipo === "dano" ? "" : " · " + rolagem.rotulo) }),
+        itens.push(el("div.ritual-dano", { class: "ritual-dano--" + (rolagem.tipo || "outra") }, [
+          el("span.ritual-dano__tipo", { texto: rotuloDaRolagem(rolagem) }),
           el("div.ritual-dano__linha", {}, [
             el("span.ritual-dano__expressao", { texto: expressao }),
             el("button.r-icone.ritual-dano__rolar", {
               type: "button",
-              "aria-label": "Rolar " + rolagem.rotulo.toLowerCase() + " de " + ritual.nome + ", versão " + v.nome + ", " + expressao,
+              "aria-label": "Rolar " + rotuloDaRolagem(rolagem).toLowerCase() + " de " + ritual.nome + ", versão " + v.nome + ", " + expressao,
               title: "Rolar " + expressao,
               onclick: function (ev) {
                 /* O cartão é um <details>. Sem estas duas linhas, rolar
@@ -963,9 +1091,15 @@
           ]),
         ]));
       });
+      if (itens.length) {
+        grupos.push(el("div.ritual-dano-grupo", { role: "group", "aria-label": "Rolagens da versão " + v.nome }, [
+          el("span.ritual-dano__versao", { texto: v.nome }),
+          el("div.ritual-dano-grupo__itens", {}, itens),
+        ]));
+      }
     });
 
-    return linhas.length ? el("div.ritual-danos", {}, linhas) : null;
+    return grupos.length ? el("div.ritual-danos", {}, grupos) : null;
   }
 
   /* "Usar ritual" (fichas de Ordem): a conjuração com versão, custo e
@@ -1016,6 +1150,12 @@
       });
     });
 
+    /* v2.32: regras gerais, notas e fonte, à parte da descrição. */
+    var complemento = UI.campo({
+      rotulo: "Regras, notas e fonte", valor: atual.complemento || "", tipo: "area", linhas: 4, limite: 8000,
+      ajuda: "Opcional. Aparece numa região à parte do cartão, recolhível quando é longa.",
+    });
+
     var curtos = F.CAMPOS_RITUAL.filter(function (c) { return c !== F.CAMPO_LONGO_RITUAL; });
     var ordem = o.comOrdem ? camposDeOrdem(atual) : null;
     var versoes = editorDeVersoes(atual);
@@ -1025,6 +1165,7 @@
         nome,
         el("div.editar-grade", {}, curtos.map(function (c) { return campos[c]; })),
         campos[F.CAMPO_LONGO_RITUAL],
+        complemento,
         ordem ? el("hr.r-linha") : null,
         ordem ? ordem.elemento : null,
         el("hr.r-linha"),
@@ -1045,6 +1186,7 @@
 
         var dados = { nome: valor, versoes: listaDeVersoes };
         F.CAMPOS_RITUAL.forEach(function (c) { dados[c] = campos[c].entrada.value; });
+        dados.complemento = complemento.entrada.value;
 
         /* O que o editor não mostra continua como estava: o rastro da
            origem e, quando não há bloco de Ordem na tela, o bloco que o
@@ -1104,6 +1246,12 @@
         /* A referência do livro não é editável: ela é o rastro de onde o
            ritual veio, e continua como estava. */
         if (atual.ordem && atual.ordem.referencia) saida.referencia = atual.ordem.referencia;
+        /* Ritual de vários elementos (AS1 p. 49): o editor não mexe na
+           lista — ela continua como estava, em vez de sumir ao salvar. */
+        if (atual.ordem && atual.ordem.todosOsElementos && Array.isArray(atual.ordem.elementos)) {
+          saida.elementos = atual.ordem.elementos.slice();
+          saida.todosOsElementos = true;
+        }
         return Object.keys(saida).length ? saida : null;
       },
     };
@@ -1147,6 +1295,8 @@
                    nem soltá-la do dano que já tinha. */
                 versoes: F.normalizarVersoesRitual(listaDeVersoes),
               });
+              /* Esvaziado no editor, o complemento sai. */
+              if (!U.aparar(dados.complemento)) delete ritual.complemento;
             }
 
             ctx.alterou();
@@ -1602,5 +1752,8 @@
     novoRitual: novoRitual,
     camposDoRitual: camposDoRitual,
     editorDeVersoes: editorDeVersoes,
+    /* v2.32: a mesma apresentação na Homebrew e na biblioteca. */
+    apresentacao: apresentacao,
+    marcasDoRitual: marcasDoRitual,
   };
 })(window);

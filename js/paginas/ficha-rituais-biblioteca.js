@@ -747,12 +747,12 @@
       var teste = aq ? avaliarEntrada(e) : null;
 
       U.trocar(caixa, [
-        el("p.bib-item__resumo", { texto: e.resumo }),
-        el("dl.r-dados.bib-item__pares", {}, RT().detalhes(e).reduce(function (saida, p) {
-          saida.push(el("dt", { texto: p[0] }));
-          saida.push(el("dd", { texto: p[1] }));
-          return saida;
-        }, [])),
+        /* v2.32: a mesma grade de conjuração e o mesmo texto de leitura
+           do cartão da ficha. */
+        el("dl.ritual-conjuracao.bib-item__pares", { "aria-label": "Conjuração" }, RT().detalhes(e).map(function (p) {
+          return el("div.ritual-conjuracao__campo", {}, [el("dt", { texto: p[0] }), el("dd", { texto: p[1] })]);
+        })),
+        el("div.ritual-texto", {}, [el("p.bib-item__resumo", { texto: e.resumo })]),
         e.efeitos.length ? el("h4.t-rotulo", { texto: "Efeitos" }) : null,
         listaDeTextos(e.efeitos),
         blocoDeVersoes(e),

@@ -3452,7 +3452,19 @@
       t.iguais("  e o bloco de Ordem com elemento, círculo, custo e referência",
         [cicaFicha.ordem.elemento, cicaFicha.ordem.circulo, cicaFicha.ordem.custo, cicaFicha.ordem.referencia.fonte, cicaFicha.ordem.referencia.pagina],
         ["morte", 1, 1, "OPRPG", 126]);
-      t.igual("  a descrição resume e cita a fonte", /Fonte: Ordem Paranormal RPG, p\. 126/.test(cicaFicha.descricao), true);
+      t.igual("  a fonte vai no complemento, à parte da descrição (v2.32)", /Fonte: Ordem Paranormal RPG, p\. 126/.test(cicaFicha.complemento) && !/Fonte:/.test(cicaFicha.descricao), true);
+      t.ok("  a descrição não repete as formas avançadas, que vão estruturadas nas versões",
+        !/Discente \(\+/.test(cicaFicha.descricao) && cicaFicha.versoes.some(function (v) { return v.alteracoes; }));
+      var cicaVolta = global.RAMAFicha.normalizarRitual(JSON.parse(JSON.stringify(cicaFicha)));
+      t.ok("  o complemento atravessa a normalização (salvar, importar, exportar)", cicaVolta.complemento === cicaFicha.complemento);
+      t.ok("  ritual escrito à mão não ganha complemento", !("complemento" in global.RAMAFicha.normalizarRitual({ nome: "X", descricao: "texto" })));
+      var antiga = RS.descricaoDaInstancia(catalogoR.rituais.filter(function (x) { return x.nome === "Cicatrização"; })[0], null);
+      var linhasAntigas = cicaFicha.versoes.slice(1).filter(function (v) { return v.custo; }).map(function (v) {
+        var c = RS.custoDaVersao(cicaFicha, v);
+        return RS.linhaDeVersaoGerada(v.nome, c.adicional, c.total, v.requisito, v.alteracoes);
+      });
+      t.ok("  a linha de versão das cópias antigas é reconhecível pelo texto exato, montado com os dados do próprio ritual",
+        linhasAntigas.length && linhasAntigas.every(function (l) { return antiga.indexOf(l) >= 0; }));
       t.ok("  e o campo “Efeito” fica vazio quando o livro não usa essa linha", cicaFicha.efeito === "");
       t.igual("as três versões entram, com id próprio", cicaFicha.versoes.length, 3);
       t.ok("  ids de versão são novos e diferentes entre si",

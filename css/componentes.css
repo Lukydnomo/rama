@@ -2825,6 +2825,128 @@ html.arrastando * {
 .rituais-lista:empty { min-height: var(--e4); }
 
 /* =====================================================================
+   O CARTÃO DE RITUAL (v2.32)
+   ---------------------------------------------------------------------
+   Regiões separadas por espaço e divisores: marcas (círculo e
+   elementos) sob o nome, grade de conjuração, efeito em texto de
+   leitura, formas avançadas em blocos e o complemento recolhível. Mora
+   aqui, e não em ficha.css, porque a Homebrew e a biblioteca usam o
+   mesmo desenho.
+   ===================================================================== */
+
+.ritual-marcas { display: inline-flex; flex-wrap: wrap; gap: var(--e1); margin-top: 2px; }
+.ritual-marca { font-size: var(--texto-mini); text-transform: none; letter-spacing: normal; }
+
+.ritual-corpo {
+  display: flex;
+  flex-direction: column;
+  gap: var(--e4);
+  min-width: 0;
+}
+
+.ritual-aviso {
+  margin: 0;
+  padding: var(--e2) var(--e3);
+  border-left: 3px solid var(--cor-aviso);
+  background: var(--cor-superficie-2);
+  font-size: var(--texto-mini);
+}
+
+.ritual-conjuracao {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(118px, 1fr));
+  gap: var(--e2) var(--e4);
+  margin: 0;
+  padding-bottom: var(--e3);
+  border-bottom: var(--borda) solid var(--cor-traco-fraca);
+}
+.ritual-conjuracao__campo { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.ritual-conjuracao dt {
+  font-family: var(--fonte-mini);
+  font-size: var(--texto-mini);
+  letter-spacing: var(--espaco-letra-titulo);
+  text-transform: uppercase;
+  color: var(--cor-texto-3);
+}
+.ritual-conjuracao dd { margin: 0; color: var(--cor-texto); font-weight: 600; overflow-wrap: anywhere; }
+
+/* O texto de leitura: fonte do corpo, linha folgada, largura de leitura. */
+.ritual-texto {
+  max-width: 72ch;
+  font-size: var(--texto-base);
+  line-height: 1.6;
+  color: var(--cor-texto);
+  overflow-wrap: anywhere;
+}
+.ritual-texto > * { margin: 0; }
+.ritual-texto > * + * { margin-top: var(--e2); }
+.ritual-texto ul { padding-left: 1.2em; }
+.ritual-texto li + li { margin-top: var(--e1); }
+.ritual-texto--mini { font-size: var(--texto-mini); line-height: 1.55; color: var(--cor-texto-2); }
+
+.ritual-formas { display: flex; flex-direction: column; gap: var(--e2); }
+.ritual-forma {
+  padding: var(--e2) var(--e3);
+  border: var(--borda) solid var(--cor-traco-fraca);
+  border-left: 3px solid var(--cor-paranormal);
+  display: flex;
+  flex-direction: column;
+  gap: var(--e1);
+  min-width: 0;
+}
+.ritual-forma__nome { margin: 0; font-size: var(--texto-base); font-weight: 700; letter-spacing: normal; text-transform: none; }
+.ritual-forma__custo,
+.ritual-forma__requisito,
+.ritual-forma__rolagens { margin: 0; font-size: var(--texto-mini); color: var(--cor-texto-2); }
+.ritual-forma__custo { font-weight: 700; color: var(--cor-texto); }
+
+.ritual-aprendizado { margin: 0; font-size: var(--texto-mini); color: var(--cor-texto-2); }
+.ritual-aprendizado dt { font-weight: 700; color: var(--cor-texto-2); }
+.ritual-aprendizado dd { margin: 0 0 var(--e1); }
+
+.ritual-complemento { border-top: var(--borda) solid var(--cor-traco-fraca); padding-top: var(--e2); }
+.ritual-complemento__topo {
+  cursor: pointer;
+  font-family: var(--fonte-mini);
+  font-size: var(--texto-mini);
+  letter-spacing: var(--espaco-letra-titulo);
+  text-transform: uppercase;
+  color: var(--cor-texto-3);
+  min-height: var(--alvo-toque);
+  display: flex;
+  align-items: center;
+}
+.ritual-complemento__topo:focus-visible { outline: 2px solid var(--cor-foco, var(--cor-paranormal)); outline-offset: 2px; }
+.ritual-complemento[open] > .ritual-complemento__topo { margin-bottom: var(--e2); }
+
+/* A faixa de rolagens agrupada por versão. */
+.ritual-dano-grupo { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.ritual-dano-grupo__itens { display: flex; flex-wrap: wrap; gap: var(--e1) var(--e3); }
+.ritual-dano__tipo {
+  font-size: var(--texto-mini);
+  color: var(--cor-texto-3);
+}
+
+/* Os três lugares da aba Rituais: nome, contagem e uma borda própria
+   (cheia, dupla, tracejada), além da cor. */
+.rituais-secao {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--e2);
+  margin: var(--e4) 0 0;
+  padding: var(--e1) 0 var(--e1) var(--e2);
+  font-size: var(--texto-base);
+  letter-spacing: var(--espaco-letra-titulo);
+  text-transform: uppercase;
+  border-left: 4px solid var(--cor-traco-forte);
+}
+.rituais-secao--grimorio { border-left-style: double; border-left-width: 6px; }
+.rituais-secao--registros { border-left-style: dashed; color: var(--cor-texto-2); }
+.rituais-secao__conta { font-family: var(--fonte-mini); font-size: var(--texto-mini); color: var(--cor-texto-3); text-transform: none; letter-spacing: normal; }
+.rituais-secao__nota { margin: 0 0 var(--e2) var(--e2); font-size: var(--texto-mini); color: var(--cor-texto-3); max-width: 80ch; }
+
+/* =====================================================================
    EDITOR DE IMAGEM (v2.27) — js/imagem-editor.js
    O palco mostra a imagem inteira em volta do recorte; fora dele, um véu.
    A miniatura ao lado é o arquivo que vai ser salvo.

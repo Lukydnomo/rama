@@ -458,6 +458,12 @@ descartada. É o que a ordem "de adição" usa (ver `ordem.organizacao`).
 
 ## Rituais
 
+> **v2.32:** um ritual pode ter `complemento` (texto, até 8000) — regras
+> gerais, notas, divergências e fonte, mostrados à parte da descrição. Só existe
+> quando tem texto; o editor o mostra e esvaziá-lo o remove. Cópias oficiais novas
+> guardam o efeito em `descricao`, as formas avançadas em `versoes` e o resto em
+> `complemento`; as antigas ficam como estavam.
+
 ```jsonc
 "rituais": {
   "rotuloSecao": "Rituais",
