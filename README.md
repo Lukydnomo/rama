@@ -143,6 +143,19 @@ modelo oficial imutável, as imagens de cada criatura e a exportação/importaç
 deno run --allow-read testes/executar-criaturas.js
 ```
 
+**Importação do CRIS** — 171 verificações, sem rede e sem gravar: link,
+texto seguro, expressões de dano, os retratos públicos do Jeff e da Gina
+guardados em `testes/fixtures/cris` (valores-alvo, itens, ataques, críticos,
+rituais, procedência, marco, evolução acima dele, exportar e importar sem perder
+vínculos) e casos sintéticos (zeros, campos ausentes, NEX 99%, NEX &
+Experiência, Mundano e Sobrevivente, ataque sem item, dano composto, expressão
+fora do formato, conteúdo personalizado). A leitura no servidor está em
+`testes/cris-backend.js`, dentro de `executar-backend.js`:
+
+```bash
+deno run --allow-read testes/executar-cris.js
+```
+
 Cobrem expressões de dado válidas e inválidas, dado principal, perícia, dano,
 crítico, a ficha padrão, peso do inventário, habilidades e a árvore recursiva,
 rituais, versões de ritual com dano, rótulos compartilhados, categorias,
@@ -546,6 +559,15 @@ próprio `<script src>`, então funciona debaixo de subpasta sem ajuste.
 segredo nenhum — ele os lê das Script Properties. Publicá-lo não expõe nada.
 
 ### Atualizar o backend
+
+**v2.34.0 — TRASLADO:** importação de fichas públicas do CRIS. **Acrescente** o
+arquivo novo `Cris.gs` ao projeto do Apps Script e **troque** o `Codigo.gs` (o
+roteador passa a perguntar por `rotasDoCris()`); crie uma **nova versão** da
+implantação e publique o site. Não precisa de `setupRama()` nem de aba nova. O
+manifesto (`appsscript.json`) já declara `script.external_request`, a permissão
+do `UrlFetchApp`; se o editor pedir autorização ao salvar ou implantar, aceite.
+Sem o `Cris.gs`, o botão "Importar do CRIS" explica que o servidor precisa ser
+atualizado — o resto funciona igual.
 
 **v2.33.0 — PICADEIRO:** Arquivos Secretos 3. Troque o `Campanhas.gs` (modo
 Hexatombe com trocas e obras; formas que somam PV atuais) e crie uma **nova versão**

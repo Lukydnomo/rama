@@ -1,5 +1,61 @@
 # A API
 
+## Importação do CRIS — v2.34
+
+Uma ação nova, em arquivo novo (`backend/Cris.gs`), anunciada ao núcleo por
+`rotasDoCris()` — o mesmo contrato do `Campanhas.gs`: sem o arquivo, a ação
+responde `acao_desconhecida` e a tela do Perfil explica que o servidor precisa
+ser atualizado.
+
+#### `ler_ficha_cris`
+
+```jsonc
+{ acao: "ler_ficha_cris", token: "...", url: "https://crisordemparanormal.com/agente/ID" }
+→ { ok: true, dados: { adaptador: "cris-firestore-v1",
+                       fonte: { url, documentId, lidoEm, updateTime },
+                       ficha: { ...campos permitidos },
+                       resumo: { ... }, avisos: [ { codigo, gravidade, campo, mensagem } ] } }
+```
+
+É **leitura**: não grava nada, não cria personagem e não entra no `lote` nem na
+repetição automática do frontend. A conversão para o formato do R.A.M.A.
+acontece no navegador (`js/importar-cris.js`); a criação é o `criar_personagem`
+de sempre, com `operacaoId` fixo por leitura (repetir depois de uma falha
+devolve a mesma ficha).
+
+- **Link**: só HTTPS, host `crisordemparanormal.com`, rota `/agente/{ID}`, ID
+  `[A-Za-z0-9_-]{1,128}` com as maiúsculas preservadas. Parâmetros e fragmento
+  são descartados. O endereço consultado é um prefixo fixo do documento
+  público mais o ID validado — nunca o texto que veio no pedido.
+- **Pedido ao CRIS**: `GET`, só o cabeçalho `Accept`, sem seguir
+  redirecionamento, com certificado validado e prazo de 20 s. Nenhum token,
+  cookie ou dado do R.A.M.A. vai junto. Nenhuma outra coleção é consultada.
+- **Resposta**: até 2 MiB; o documento precisa ser o do ID pedido e ter
+  `private` igual a `false` (explícito). Volta só a lista branca de campos da
+  ficha (identidade, atributos, recursos, perícias, poderes, inventário,
+  ataques, rituais, descrições, resistências); dono, permissões, vínculos de
+  campanha e histórico de rolagens ficam de fora. Listas não são cortadas: o
+  que passa dos limites (300 itens, poderes, ataques ou rituais; 100 perícias)
+  recusa a leitura. A foto só volta se for do armazenamento do CRIS.
+- **Limite**: 20 consultas a cada 5 minutos por conta (CacheService, pela conta
+  da sessão — nunca pela do pedido).
+- **Registro**: nada do corpo da ficha, do link da foto ou da resposta bruta vai
+  para o log.
+
+Erros próprios (além de `sem_token`/`sessao`):
+
+| Código | Quando |
+|---|---|
+| `cris_url_invalida` | o link não é de uma ficha do CRIS |
+| `cris_nao_encontrada` | o CRIS respondeu 404 |
+| `cris_acesso_negado` | 401 ou 403 |
+| `cris_nao_publica` | a ficha não está marcada como pública |
+| `cris_limite_temporario` | 429 no CRIS, ou o limite por conta do R.A.M.A. |
+| `cris_indisponivel` | 5xx, redirecionamento, falha de rede ou prazo |
+| `cris_resposta_invalida` | a resposta não é JSON |
+| `cris_formato_incompativel` | o documento não tem a forma esperada (ou é de outro ID) |
+| `cris_limite_excedido` | tamanho, profundidade ou quantidade acima do limite |
+
 ## Arquivos Secretos 3 — v2.33
 
 Nenhuma ação nova. `ler_hexatombe` (jogador) passa a trazer `regrasAs3`, as `obras`

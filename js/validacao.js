@@ -595,6 +595,7 @@
          pendentes, como se nunca tivesse aprendido nada. */
       devolverIdsDosEventos(limpo);
       refazerVinculosAliados(limpo);
+      var avisos = devolverReferencias(limpo);
       var ficha = F.normalizarFicha(limpo);
       var v = personagem(ficha);
       if (!v.ok) return { ok: false, erro: "invalido", mensagem: "A ficha tem problemas.", problemas: v.problemas };
@@ -602,7 +603,7 @@
       refazerVinculos(ficha);
       refazerApresentacao(ficha);
       refazerMunicao(ficha);
-      return { ok: true, tipo: "personagem", dados: ficha };
+      return { ok: true, tipo: "personagem", dados: ficha, avisos: avisos };
     }
 
     if (pacote.tipo === "homebrew-criatura") {
@@ -646,7 +647,7 @@
     /* Numa ficha, o vínculo entre concessão e ritual vira posição antes
        de os ids irem embora. Ver "O VÍNCULO DE RITUAL ATRAVESSANDO A
        IMPORTAÇÃO", acima. */
-    var preparado = tipo === "personagem" ? comAliadosPortaveis(comPosicoesDeRitual(dados))
+    var preparado = tipo === "personagem" ? comReferenciasPortaveis(comAliadosPortaveis(comPosicoesDeRitual(dados)))
       : (tipo === "homebrew-criatura" ? criaturaPortavel(U.copiar(dados)) : dados);
     return {
       rama: true,
@@ -719,6 +720,135 @@
         at.periciaId = m && pericias[Number(m[1])] ? pericias[Number(m[1])].id : null;
       });
     });
+  }
+
+  /* =================================================================
+     REFERÊNCIAS ENTRE AS PARTES DA FICHA (v2.34)
+     -----------------------------------------------------------------
+     A exportação apaga todo `id`. Até a 2.33 isso soltava os vínculos
+     da ficha: a perícia da ficha principal voltava ligada ao primeiro
+     atributo (o atributoId apontava para um id que não existia mais), e
+     ataque, arma favorita ou registro que guardava o id de um item
+     perdia o alvo.
+
+     Agora, antes da limpeza, todo VALOR (ou chave de objeto) que é o id
+     de uma parte — atributo, perícia, status, item do inventário,
+     ritual — vira "#ref:<lista>:<posição>". Na importação, cada parte
+     ganha um id novo e a referência volta a ser id. Os mecanismos mais
+     antigos (_pos, #pos:, #arv:, #aliado:) continuam valendo e correm
+     antes; esta é a rede para todo o resto.
+
+     Arquivo de versão anterior (sem as referências): a perícia com o
+     nome de uma perícia padrão volta para o atributo padrão dela; o que
+     não dá para reconstruir vira AVISO na prévia — nunca o primeiro
+     atributo em silêncio.
+     ================================================================= */
+  var PREFIXO_REF = "#ref:";
+  var LISTAS_REF = [
+    ["atributo", function (f) { return f.atributos; }],
+    ["pericia", function (f) { return f.pericias; }],
+    ["status", function (f) { return f.status; }],
+    ["item", function (f) { return f.inventario && f.inventario.itens; }],
+    ["ritual", function (f) { return f.rituais && f.rituais.itens; }],
+  ];
+
+  function listaRef(ficha, par) {
+    var l = ficha && typeof ficha === "object" ? par[1](ficha) : null;
+    return Array.isArray(l) ? l : [];
+  }
+
+  /* Troca valores e chaves pelo que `trocar` devolver (undefined: fica
+     como está; "": a referência some). O campo `id` em si não é tocado. */
+  function trocarReferencias(valor, trocar, profundidade) {
+    if (profundidade > 14 || !valor || typeof valor !== "object") return;
+    if (Array.isArray(valor)) {
+      for (var i = 0; i < valor.length; i++) {
+        if (typeof valor[i] === "string") {
+          var t = trocar(valor[i]);
+          if (t !== undefined) valor[i] = t;
+        } else trocarReferencias(valor[i], trocar, profundidade + 1);
+      }
+      return;
+    }
+    Object.keys(valor).forEach(function (k) {
+      if (k === "id") return;
+      var v = valor[k];
+      if (typeof v === "string") {
+        var t = trocar(v);
+        if (t !== undefined) valor[k] = t;
+      } else trocarReferencias(v, trocar, profundidade + 1);
+      var nk = trocar(k);
+      if (nk === undefined || nk === k) return;
+      if (nk) valor[nk] = valor[k];
+      delete valor[k];
+    });
+  }
+
+  function comReferenciasPortaveis(ficha) {
+    var mapa = Object.create(null);
+    var algum = false;
+    LISTAS_REF.forEach(function (par) {
+      listaRef(ficha, par).forEach(function (x, n) {
+        if (x && typeof x === "object" && typeof x.id === "string" && x.id) { mapa[x.id] = PREFIXO_REF + par[0] + ":" + n; algum = true; }
+      });
+    });
+    if (!algum) return ficha;
+    var copia = JSON.parse(JSON.stringify(ficha));
+    trocarReferencias(copia, function (s) { return mapa[s]; }, 0);
+    return copia;
+  }
+
+  function devolverReferencias(dados) {
+    var avisos = [];
+    var novo = Object.create(null);
+    var porId = Object.create(null);
+    LISTAS_REF.forEach(function (par) {
+      listaRef(dados, par).forEach(function (x, n) {
+        if (!x || typeof x !== "object") return;
+        x.id = U.uuid();
+        novo[PREFIXO_REF + par[0] + ":" + n] = x.id;
+        porId[x.id] = true;
+      });
+    });
+    var perdidas = 0;
+    trocarReferencias(dados, function (s) {
+      if (s.indexOf(PREFIXO_REF) !== 0) return undefined;
+      if (novo[s]) return novo[s];
+      perdidas++;
+      return "";
+    }, 0);
+    if (perdidas) avisos.push(perdidas + " vínculo(s) interno(s) do arquivo apontavam para partes que não vieram nele e foram desfeitos.");
+
+    /* Arquivo antigo: o atributoId é um id que não existe mais. */
+    var atributos = Array.isArray(dados.atributos) ? dados.atributos : [];
+    var porSigla = {};
+    atributos.forEach(function (a) { if (a && a.sigla) porSigla[String(a.sigla).toUpperCase()] = a.id; });
+    var padrao = {};
+    (F.PERICIAS_PADRAO || []).forEach(function (p) { padrao[U.chaveDeBusca ? U.chaveDeBusca(p.nome.replace(/\*$/, "")) : p.nome.toLowerCase()] = p.sigla; });
+    var semAtributo = [];
+    var religadas = 0;
+    (Array.isArray(dados.pericias) ? dados.pericias : []).forEach(function (p) {
+      if (!p || typeof p !== "object" || (typeof p.atributoId === "string" && porId[p.atributoId])) return;
+      var chave = U.chaveDeBusca ? U.chaveDeBusca(String(p.nome || "").replace(/\*$/, "")) : String(p.nome || "").toLowerCase();
+      var sigla = padrao[chave];
+      if (sigla && porSigla[sigla]) { p.atributoId = porSigla[sigla]; religadas++; return; }
+      semAtributo.push(String(p.nome || "?"));
+    });
+    if (religadas) avisos.push("Arquivo de versão anterior: " + religadas + " perícia(s) voltaram para o atributo padrão delas (o arquivo não guardava o vínculo). Se alguma usava outro atributo, ajuste na ficha.");
+    if (semAtributo.length) {
+      var primeiro = atributos[0] && atributos[0].nome ? atributos[0].nome : "o primeiro atributo";
+      avisos.push("Arquivo de versão anterior: " + semAtributo.length + " perícia(s) sem o atributo de origem (" + semAtributo.slice(0, 6).join(", ") + (semAtributo.length > 6 ? "…" : "") + ") ficaram com " + primeiro + ". Confira na ficha.");
+    }
+    var semPericia = [];
+    ((dados.inventario && Array.isArray(dados.inventario.itens)) ? dados.inventario.itens : []).forEach(function (i) {
+      if (!i || typeof i.periciaId !== "string" || !i.periciaId) return;
+      var existe = (Array.isArray(dados.pericias) ? dados.pericias : []).some(function (p) { return p && p.id === i.periciaId; });
+      if (existe) return;
+      semPericia.push(String(i.nome || "?"));
+      i.periciaId = null;
+    });
+    if (semPericia.length) avisos.push("Arquivo de versão anterior: o ataque de " + semPericia.slice(0, 6).join(", ") + (semPericia.length > 6 ? "…" : "") + " perdeu a perícia vinculada. Escolha de novo no modo edição.");
+    return avisos;
   }
 
   global.RAMAValidacao = {

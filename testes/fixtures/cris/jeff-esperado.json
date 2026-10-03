@@ -1,0 +1,96 @@
+{
+  "nome": "Jeff",
+  "classe": "Combatente",
+  "origem": "Vítima",
+  "trilhaSugerida": "aniquilador",
+  "trilhaPrecisaConfirmacao": true,
+  "nex": 40,
+  "nivelSeparado": false,
+  "semSanidade": true,
+  "atributos": {
+    "for": 3,
+    "agi": 2,
+    "int": 1,
+    "pre": 2,
+    "vig": 2
+  },
+  "recursos": {
+    "pv": {
+      "atual": 1,
+      "maximo": 64
+    },
+    "pe": {
+      "atual": 32,
+      "maximo": 32
+    },
+    "san": {
+      "atual": 41,
+      "maximo": 41
+    },
+    "pd": {
+      "atual": 1,
+      "maximo": 43
+    }
+  },
+  "defesa": 17,
+  "bloqueio": 10,
+  "esquiva": 27,
+  "deslocamento": 9,
+  "capacidade": 15,
+  "cargaObservada": 4,
+  "limitePe": 8,
+  "patente": "Recruta",
+  "prestigio": 0,
+  "itens": 3,
+  "rituais": 0,
+  "poderesObservados": 7,
+  "pericias": {
+    "veterano": [
+      "fortitude",
+      "luta",
+      "reflexos"
+    ],
+    "treinado": [
+      "crime",
+      "intimidacao",
+      "vontade"
+    ]
+  },
+  "faca": {
+    "danoCris": "2d4+1d8+2",
+    "atributoDano": "for",
+    "danoNormalRama": "2d4+1d8+5",
+    "danoCriticoCris": "4d4+2d8+7",
+    "danoCriticoRama": "4d4+2d8+5",
+    "margem": 17,
+    "multiplicador": 2,
+    "categoriaObservada": 4,
+    "espacosObservados": 1,
+    "modificacoes": [
+      "Cruel",
+      "Vibrante",
+      "Predadora",
+      "Lancinante",
+      "Sanguinária"
+    ],
+    "armaDuplicada": false,
+    "semConfirmacaoDaFavorita": true
+  },
+  "protecao": {
+    "nome": "Moletom - Proteção Leve",
+    "defesa": 5,
+    "categoriaObservada": 3,
+    "espacosObservados": 2,
+    "emUso": true,
+    "modificacoes": [
+      "Sádica"
+    ]
+  },
+  "dedo": {
+    "nome": "Dedo Decepado (Sangue Fervente)",
+    "categoriaObservada": 2,
+    "espacosObservados": 1,
+    "emUso": false,
+    "naoInferirTranscender": true
+  }
+}

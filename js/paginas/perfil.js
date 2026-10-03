@@ -254,7 +254,7 @@
 
   function importacoes() {
     return el("div.pilha", {}, [
-      el("p", { texto: "Traga uma ficha ou um item vindos de outro arquivo do R.A.M.A. Nada é gravado antes de você conferir a prévia." }),
+      el("p", { texto: "Traga uma ficha ou um item vindos de outro arquivo do R.A.M.A., ou uma ficha pública do CRIS pelo link. Nada é gravado antes de você conferir a prévia." }),
 
       el("div.faixa", {}, [
         el("button.r-botao", {
@@ -262,6 +262,9 @@
         }),
         el("button.r-botao", {
           type: "button", texto: "Importar item", onclick: importarItem,
+        }),
+        el("button.r-botao", {
+          type: "button", texto: "Importar do CRIS", onclick: importarDoCris,
         }),
       ]),
 
@@ -288,6 +291,16 @@
         return true;
       },
     });
+  }
+
+  /* Ficha pública do CRIS por link (v2.34). A janela consulta, converte,
+     mostra a revisão e só cria no clique de "Criar ficha". */
+  function importarDoCris() {
+    if (!global.RAMAImportarCrisTela || !global.RAMAImportarCris) {
+      UI.avisoAtencao("O importador do CRIS não carregou. Recarregue a página.");
+      return;
+    }
+    global.RAMAImportarCrisTela.abrir({});
   }
 
   function importarItem() {

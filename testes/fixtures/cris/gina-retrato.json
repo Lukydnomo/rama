@@ -1,0 +1,1177 @@
+{
+ "adaptador": "cris-firestore-v1",
+ "fonte": {
+  "url": "https://crisordemparanormal.com/agente/nabhIDfZlGgenYnKOLio",
+  "documentId": "nabhIDfZlGgenYnKOLio",
+  "lidoEm": "2026-10-03T16:31:32.662Z",
+  "updateTime": "2026-10-03T16:26:20.136532Z"
+ },
+ "ficha": {
+  "name": "Gina - Rework",
+  "player": "Jogadora de teste",
+  "className": "Ocultista",
+  "statsClass": "Ocultista",
+  "backgroundName": "Cultista Arrependido",
+  "nex": "65%",
+  "nexString": "65%",
+  "isNexLevelOn": false,
+  "isPdOn": false,
+  "isSobrevivendoAoHorror": false,
+  "currentPv": 75,
+  "maxPv": 75,
+  "currentPe": 104,
+  "maxPe": 104,
+  "currentSan": 80,
+  "maxSan": 80,
+  "currentPd": 109,
+  "maxPd": 109,
+  "peTurn": "13",
+  "movement": 9,
+  "block": 10,
+  "evade": 32,
+  "bonusDefense": 5,
+  "protectionDefense": 0,
+  "currentProtection": "",
+  "currentLoad": 9,
+  "maxLoad": 10,
+  "prestigePoints": 0,
+  "patent": "Recruta",
+  "creditsLimit": "Baixo",
+  "ritualsDc": 26,
+  "proficiencies": "Armas simples",
+  "resistances": "",
+  "sheetPictureURL": "https://firebasestorage.googleapis.com/v0/b/cris-ordem-paranormal.appspot.com/o/images%2F28e0cd73-14ed-4cbb-bb95-3f705f492b47?alt=media&token=00000000-0000-0000-0000-000000000000",
+  "private": false,
+  "attributes": {
+   "str": 2,
+   "dex": 2,
+   "int": 4,
+   "pre": 3,
+   "con": 1
+  },
+  "description": {
+   "personal": "",
+   "goal": "",
+   "anotation": "PV: 75\nSAN: 80\nPE: 104",
+   "physical": "",
+   "history": ""
+  },
+  "skills": [
+   {
+    "name": "Acrobacia",
+    "attribute": "AGI",
+    "trainingDegree": "0",
+    "bonus": 0,
+    "otherBonus": 0,
+    "onlyTrained": false,
+    "loadPenalty": true
+   },
+   {
+    "name": "Adestramento",
+    "attribute": "PRE",
+    "trainingDegree": "0",
+    "bonus": 0,
+    "otherBonus": 0,
+    "onlyTrained": true,
+    "loadPenalty": false
+   },
+   {
+    "name": "Artes",
+    "attribute": "PRE",
+    "trainingDegree": "0",
+    "bonus": 0,
+    "otherBonus": 0,
+    "onlyTrained": true,
+    "loadPenalty": false
+   },
+   {
+    "name": "Atletismo",
+    "attribute": "FOR",
+    "trainingDegree": "5",
+    "bonus": 5,
+    "otherBonus": 0,
+    "onlyTrained": false,
+    "loadPenalty": false
+   },
+   {
+    "name": "Atualidades",
+    "attribute": "INT",
+    "trainingDegree": "0",
+    "bonus": 0,
+    "otherBonus": 0,
+    "onlyTrained": false,
+    "loadPenalty": false
+   },
+   {
+    "name": "Ciências",
+    "attribute": "INT",
+    "trainingDegree": "0",
+    "bonus": 0,
+    "otherBonus": 0,
+    "onlyTrained": true,
+    "loadPenalty": false
+   },
+   {
+    "name": "Crime",
+    "attribute": "AGI",
+    "trainingDegree": "0",
+    "bonus": 0,
+    "otherBonus": 0,
+    "onlyTrained": true,
+    "loadPenalty": true
+   },
+   {
+    "name": "Diplomacia",
+    "attribute": "PRE",
+    "trainingDegree": "5",
+    "bonus": 5,
+    "otherBonus": 0,
+    "onlyTrained": false,
+    "loadPenalty": false
+   },
+   {
+    "name": "Enganação",
+    "attribute": "PRE",
+    "trainingDegree": "0",
+    "bonus": 0,
+    "otherBonus": 0,
+    "onlyTrained": false,
+    "loadPenalty": false
+   },
+   {
+    "name": "Fortitude",
+    "attribute": "VIG",
+    "trainingDegree": "10",
+    "bonus": 10,
+    "otherBonus": 0,
+    "onlyTrained": false,
+    "loadPenalty": false
+   },
+   {
+    "name": "Furtividade",
+    "attribute": "AGI",
+    "trainingDegree": "0",
+    "bonus": 0,
+    "otherBonus": 0,
+    "onlyTrained": false,
+    "loadPenalty": true
+   },
+   {
+    "name": "Iniciativa",
+    "attribute": "AGI",
+    "trainingDegree": "0",
+    "bonus": 0,
+    "otherBonus": 0,
+    "onlyTrained": false,
+    "loadPenalty": false
+   },
+   {
+    "name": "Intimidação",
+    "attribute": "PRE",
+    "trainingDegree": "0",
+    "bonus": 0,
+    "otherBonus": 0,
+    "onlyTrained": false,
+    "loadPenalty": false
+   },
+   {
+    "name": "Intuição",
+    "attribute": "PRE",
+    "trainingDegree": "0",
+    "bonus": 0,
+    "otherBonus": 0,
+    "onlyTrained": false,
+    "loadPenalty": false
+   },
+   {
+    "name": "Investigação",
+    "attribute": "INT",
+    "trainingDegree": "0",
+    "bonus": 0,
+    "otherBonus": 0,
+    "onlyTrained": false,
+    "loadPenalty": false
+   },
+   {
+    "name": "Luta",
+    "attribute": "FOR",
+    "trainingDegree": "5",
+    "bonus": 5,
+    "otherBonus": 0,
+    "onlyTrained": false,
+    "loadPenalty": false
+   },
+   {
+    "name": "Medicina",
+    "attribute": "INT",
+    "trainingDegree": "0",
+    "bonus": 0,
+    "otherBonus": 0,
+    "onlyTrained": false,
+    "loadPenalty": false
+   },
+   {
+    "name": "Ocultismo",
+    "attribute": "INT",
+    "trainingDegree": "10",
+    "bonus": 15,
+    "otherBonus": 5,
+    "onlyTrained": true,
+    "loadPenalty": false
+   },
+   {
+    "name": "Percepção",
+    "attribute": "PRE",
+    "trainingDegree": "5",
+    "bonus": 5,
+    "otherBonus": 0,
+    "onlyTrained": false,
+    "loadPenalty": false
+   },
+   {
+    "name": "Pilotagem",
+    "attribute": "AGI",
+    "trainingDegree": "0",
+    "bonus": 0,
+    "otherBonus": 0,
+    "onlyTrained": true,
+    "loadPenalty": false
+   },
+   {
+    "name": "Pontaria",
+    "attribute": "AGI",
+    "trainingDegree": "5",
+    "bonus": 5,
+    "otherBonus": 0,
+    "onlyTrained": false,
+    "loadPenalty": false
+   },
+   {
+    "name": "Profissão",
+    "attribute": "INT",
+    "trainingDegree": "0",
+    "bonus": 0,
+    "otherBonus": 0,
+    "onlyTrained": true,
+    "loadPenalty": false
+   },
+   {
+    "name": "Reflexos",
+    "attribute": "AGI",
+    "trainingDegree": "10",
+    "bonus": 15,
+    "otherBonus": 5,
+    "onlyTrained": false,
+    "loadPenalty": false
+   },
+   {
+    "name": "Religião",
+    "attribute": "PRE",
+    "trainingDegree": "5",
+    "bonus": 5,
+    "otherBonus": 0,
+    "onlyTrained": true,
+    "loadPenalty": false
+   },
+   {
+    "name": "Sobrevivência",
+    "attribute": "INT",
+    "trainingDegree": "0",
+    "bonus": 0,
+    "otherBonus": 0,
+    "onlyTrained": false,
+    "loadPenalty": false
+   },
+   {
+    "name": "Tática",
+    "attribute": "INT",
+    "trainingDegree": "0",
+    "bonus": 0,
+    "otherBonus": 0,
+    "onlyTrained": true,
+    "loadPenalty": false
+   },
+   {
+    "name": "Tecnologia",
+    "attribute": "INT",
+    "trainingDegree": "0",
+    "bonus": 0,
+    "otherBonus": 0,
+    "onlyTrained": true,
+    "loadPenalty": false
+   },
+   {
+    "name": "Vontade",
+    "attribute": "PRE",
+    "trainingDegree": "10",
+    "bonus": 12,
+    "otherBonus": 2,
+    "onlyTrained": false,
+    "loadPenalty": false
+   }
+  ],
+  "powers": [
+   {
+    "id": "0b6c6351-786a-455e-835d-64a79b5822af",
+    "name": "Escolhido pelo Outro Lado",
+    "description": "Você teve uma experiência paranormal e foi marcado pelo Outro Lado, absorvendo o conhecimento e poder necessários para realizar rituais. Você pode lançar rituais de 1º círculo. À medida que aumenta seu NEX, pode lançar rituais de círculos maiores (2º círculo em NEX 25%, 3º círculo em NEX 55% e 4º círculo em NEX 85%). Você começa com três rituais de 1º círculo. Sempre que avança de NEX, aprende um ritual de qualquer círculo que possa lançar. Esses rituais não contam no seu limite de rituais conhecidos.",
+    "hasAutomation": false
+   },
+   {
+    "id": "76c4a5b1-d99a-4352-9af0-1edf4a474418",
+    "name": "Traços do Outro Lado",
+    "description": "Você possui um poder paranormal à sua escolha. Porém, começa o jogo com metade da Sanidade normal para sua classe.",
+    "hasAutomation": false
+   },
+   {
+    "id": "efd8feda-356e-4d7a-a62f-429e7185de3d",
+    "name": "NEX 10% - Lâmina Maldita",
+    "description": "<p>Você aprende o ritual Amaldiçoar Arma. Se já o conhece, pode gastar +1 PE quando o lança para reduzir seu tempo de conjuração para movimento. Além disso, quando conjura esse ritual, você pode usar Ocultismo, em vez de Luta ou Pontaria, para testes de ataque com a arma amaldiçoada.</p>",
+    "hasAutomation": false
+   },
+   {
+    "id": "b74c3ba5-3854-47bf-9c02-9649dcd7dbc3",
+    "name": "NEX 40% - Gladiador Paranormal",
+    "description": "<p>Sempre que acerta um ataque corpo a corpo em um inimigo, você recebe 2 PE temporários. Você pode ganhar um máximo de PE temporários por cena igual ao seu limite de PE. PE temporários desaparecem no final da cena.</p>",
+    "hasAutomation": false
+   },
+   {
+    "id": "4c8ec2c3-4e63-421e-90ce-c4776d0924de",
+    "name": "NEX 65% - Conjuração Marcial",
+    "description": "<p>Uma vez por rodada, quando você lança um ritual com execução de uma ação padrão, pode gastar 2 PE para fazer um ataque corpo a corpo como uma ação livre.</p>",
+    "hasAutomation": false
+   },
+   {
+    "id": "00787083-5618-44bd-a3c7-59c6a3ca109b",
+    "name": "Camuflar Ocultismo",
+    "description": "<p>Você pode gastar uma ação livre para esconder símbolos e sigilos que estejam desenhados ou gravados em objetos ou em sua pele, tornando-os invisíveis para outras pessoas além de você mesmo. Além disso, quando lança um ritual, pode gastar +2 PE para lançá-lo sem usar componentes ritualísticos e sem gesticular (o que permite conjurar um ritual com as mãos presas), usando apenas concentração. Outros seres só perceberão que você lançou um ritual se passarem num teste de Ocultismo (DT 25).</p>",
+    "hasAutomation": false
+   },
+   {
+    "id": "2e4eac6a-a6d5-4126-bc3d-b39776621126",
+    "name": "Improvisar Componentes",
+    "description": "<p>Uma vez por cena, você pode gastar uma ação completa para fazer um teste de Investigação (DT 15). Se passar, encontra objetos que podem servir como componentes ritualísticos de um elemento à sua escolha. O mestre define se é possível usar esse poder na cena atual.</p>",
+    "hasAutomation": false
+   },
+   {
+    "id": "010e3421-eff4-4b5d-b139-c8ce02c9fd18",
+    "name": "Sensitivo",
+    "description": "<p>Você consegue sentir as emoções e intenções de outros personagens, como medo, raiva ou malícia, recebendo +5 em testes de Diplomacia, Intimidação e Intuição.</p><p><span>Afinidade:</span> quando você faz um teste oposto usando uma dessas perícias, o oponente sofre –1d20.</p>",
+    "element": "Conhecimento",
+    "hasAutomation": false
+   },
+   {
+    "id": "18f8c249-26e8-478d-b90a-1dbed19d61dc",
+    "name": "NEX 10% - Saber Ampliado",
+    "description": "<p>Você aprende um ritual de 1º círculo. Toda vez que ganha acesso a um novo círculo, aprende um ritual adicional daquele círculo. Esses rituais não contam no seu limite de rituais.</p>",
+    "hasAutomation": false
+   },
+   {
+    "id": "9213470c-6fb1-471c-bc23-09ac54bc0bdf",
+    "name": "Expansão de Conhecimento",
+    "description": "<p>Você se conecta com o Conhecimento do Outro Lado, rompendo os limites de sua compreensão. Você aprende um poder de classe que não pertença à sua classe (caso o poder possua pré-requisitos, você precisa preenchê-los). <em>Pré-requisito:</em> Conhecimento 1.</p><p><span>Afinidade:</span> você aprende um segundo poder de classe que não pertença à sua classe.</p>",
+    "element": "Conhecimento",
+    "hasAutomation": false
+   },
+   {
+    "id": "3e58e1b3-7ccf-4542-97d7-7f4a2174deb9",
+    "name": "Golpe Pesado",
+    "description": "<p>O dano de suas armas corpo a corpo aumenta em mais um dado do mesmo tipo.</p>",
+    "hasAutomation": false
+   },
+   {
+    "id": "f3f5b28a-2b39-4950-acf0-9ef4cba4e80e",
+    "name": "Mochila de Utilidades",
+    "description": "<p>Um item a sua escolha (exceto armas) conta como uma categoria abaixo e ocupa 1 espaço a menos.</p>",
+    "hasAutomation": false
+   },
+   {
+    "id": "ce4d4548-c4bf-4f7b-9523-2ba79a670859",
+    "name": "Sangue de Ferro",
+    "description": "<p>O seu sangue flui de forma paranormal e agressiva, concedendo vigor não natural. Você recebe +2 pontos de vida por NEX. Quando sobe de NEX, os PV que recebe por este poder aumentam de acordo. Por exemplo, se escolher este poder em NEX 50%, recebe 20 PV. Quando subir para NEX 55%, recebe +2 PV, e assim por diante.</p><p><span>Afinidade:</span> você recebe +5 em Fortitude e se torna imune a venenos e doenças.</p>",
+    "element": "Sangue",
+    "hasAutomation": true,
+    "isAutomationOn": true,
+    "automationId": "sangue-de-ferro"
+   },
+   {
+    "id": "1a983dc0-97a2-4ed7-9772-653a81b6ea94",
+    "name": "Potencial Aprimorado",
+    "description": "<p>A Morte lhe concede potencial latente de momentos roubados de outro lugar. Você recebe +1 ponto de esforço por NEX. Quando sobe de NEX, os PE que recebe por este poder aumentam de acordo. Por exemplo, se escolher este poder em NEX 30%, recebe 6 PE. Quando subir para NEX 35%, recebe +1 PE adicional, e assim por diante.</p><p><span>Afinidade:</span> você recebe +1 PE adicional por NEX (para um total de +2 PE por NEX).</p>",
+    "element": "Morte",
+    "hasAutomation": true,
+    "isAutomationOn": true,
+    "automationId": "potencial-aprimorado"
+   }
+  ],
+  "inventory": [
+   {
+    "id": "ab05adb8-16d2-46a2-b93a-6e858f0e32e1",
+    "name": "Soco (Soqueira)",
+    "description": "<p><span style=\"background-color: rgb(30, 30, 30); color: rgb(255, 255, 255);\">Esta peça de metal e usada entre os dedos e permite socos mais perigosos — fornece +1 em rolagens de dano desarmado. Uma soqueira pode receber modificações e maldições de armas corpo a corpo e aplica os efeitos delas em seus ataques desarmados.</span></p>",
+    "itemType": "weapon",
+    "damage": "2d4+1d8+1",
+    "criticalRange": 20,
+    "criticalMult": 2,
+    "damageType": "Balístico",
+    "range": "-",
+    "handling": "Leve",
+    "proficiencie": "Armas Simples",
+    "type": "Corpo a Corpo",
+    "slots": "1",
+    "category": "IV",
+    "equipped": true,
+    "mods": [
+     {
+      "id": "7884fcfe-3818-4c38-be08-74d77598ac1c",
+      "name": "Vibrante",
+      "description": "<p>A arma vibra constantemente com um fluxo de Energia. Você recebe a habilidade Ataque Extra, da trilha operações especiais, do combatente. Se já a possui, em vez disso o custo para usá-la diminui em –1 PE.</p>",
+      "modType": "curse",
+      "itemType": "weapon",
+      "element": "Energia",
+      "hasAutomation": false
+     },
+     {
+      "id": "d3f17c24-9f6c-4ba0-96d1-ae5732d7ad8c",
+      "name": "Lancinante",
+      "description": "<p>A arma inflige ferimentos terríveis, causando +1d8 de dano de Sangue. Este dado é multiplicado em acertos críticos. Por exemplo, se a arma possuir crítico x3, em um acerto crítico o dano adicional de lancinante vira +3d8.</p>",
+      "modType": "curse",
+      "itemType": "weapon",
+      "element": "Sangue",
+      "hasAutomation": false
+     },
+     {
+      "id": "f6864970-1703-4a19-9115-d374ed00be7f",
+      "name": "Antielemento",
+      "description": "<p>A arma é letal contra criaturas de um elemento. Quando ataca uma criatura desse elemento, você pode gastar 2 PE. Se fizer isso e acertar o ataque, causa +4d8 pontos de dano. Para determinar o elemento aleatoriamente, role 1d4: 1) Conhecimento; 2) Energia; 3) Morte; 4) Sangue.</p>",
+      "modType": "curse",
+      "itemType": "weapon",
+      "element": "Conhecimento",
+      "hasAutomation": false
+     }
+    ]
+   },
+   {
+    "id": "15409da4-77b7-4f46-8b75-667d4118bde2",
+    "name": "Crânio Espiral",
+    "description": "<p><em>Um crânio envelhecido, apodrecido e distorcido em um formato espiral. Lodo escorre de seus olhos vazios, como lágrimas negras.</em> Uma vez por rodada, se estiver empunhando o <em>crânio</em>, você pode gastar uma ação livre para ativá-lo. Quando faz isso, você recebe uma ação padrão adicional na rodada. Sempre que usa o <em>crânio</em>, você deve fazer um teste de Vontade (DT 15 + 5 por uso adicional no mesmo dia). Se falhar, você recebe os benefícios do item, mas envelhece 1d4 anos e não pode mais usá-lo nesse dia.</p>",
+    "itemType": "cursedItem",
+    "slots": 1,
+    "category": "II",
+    "equipped": false,
+    "element": "Morte",
+    "mods": []
+   },
+   {
+    "id": "edbfe083-f992-48af-a0aa-5343bbf2e4e7",
+    "name": "Coração Pulsante",
+    "description": "<p><em>Um coração humano banhado em sangue, pulsando como se ainda estivesse dentro de um corpo.</em> Se estiver empunhando o <em>coração pulsante</em> e sofrer dano, você pode gastar uma reação para espremer o item e reduzir esse dano pela metade. Sempre que usa o coração, você deve fazer um teste de Fortitude (DT 15 + 5 por uso adicional no mesmo dia). Se falhar, o item é destruído. Como o coração continua pulsando incessantemente com Sangue, qualquer compartimento em que estiver deve ser drenado uma vez por dia, caso contrário o Sangue poderá escorrer e danificar outros objetos com os quais entrar em contato.</p>",
+    "itemType": "cursedItem",
+    "slots": 1,
+    "category": "II",
+    "equipped": false,
+    "element": "Sangue",
+    "mods": []
+   },
+   {
+    "id": "6f35b1fe-5252-4641-badb-871e82f217d2",
+    "name": "Componentes Ritualísticos de Sangue, Morte e Conhecimento",
+    "description": "<p>Um conjunto de objetos utilizados em rituais de um elemento entre Sangue, Morte, Conhecimento ou Energia (não existem componentes ritualísticos de Medo). Componentes ritualísticos são necessários para a conjuração de rituais do elemento em questão.</p><p><span>Energia:</span> eletricidade, dispositivos tecnológicos (celulares, computadores etc.), circuitos eletrônicos, fontes de calor e luz, pilhas, baterias, cabos de cobre e prata, pólvora, moedas, dados, ímãs...</p><p><span>Sangue:</span> órgãos, carne, sangue, animais vivos (para sacrifício), navalhas, agulhas, arame farpado, correntes, metal enferrujado, fluídos corporais...</p><p><span>Morte:</span> ossos, dentes, cinzas, fios de cabelo, cristais pretos, relógios, galhos secos, folhas secas, plantas mortas, raízes, areia, poeira, Lodo...</p><p><span>Conhecimento:</span> escrituras, papéis, livros, pergaminhos, pedras preciosas, ouro, cordas, tecido, cristais brancos, vidro, máscaras, instrumentos de escrita (lápis, caneta, tinta, giz etc.)...</p>",
+    "itemType": "misc",
+    "slots": "3",
+    "category": "0",
+    "equipped": false,
+    "mods": []
+   },
+   {
+    "id": "1b6b14ff-9fa5-4471-b919-50c7d860ca83",
+    "name": "Vestimenta (+5 Ocultismo, +1 Força, +2 Vontade)",
+    "description": "<p>Uma peça de vestuário que fornece um bônus em uma perícia específica (exceto Luta ou Pontaria). Por exemplo, um par de botas militares pode fornecer +2 em Atletismo, enquanto um terno ou vestido elegante pode fornecer +2 em Diplomacia. Assim como utensílios, o benefício de cada vestimenta deve ser aprovado pelo mestre. Você pode receber os bônus de no máximo duas vestimentas ao mesmo tempo. Vestir ou despir uma vestimenta é uma ação completa.</p>",
+    "itemType": "misc",
+    "slots": "0",
+    "category": "III",
+    "equipped": false,
+    "mods": [
+     {
+      "id": "d9805e32-02bc-473a-88c9-a1f88a5b6a91",
+      "name": "Função Adicional",
+      "description": "<p>O acessório fornece +2 em uma perícia adicional à sua escolha, sujeita à aprovação do mestre.</p>",
+      "modType": "mod",
+      "itemType": "misc",
+      "hasAutomation": false
+     },
+     {
+      "id": "89c7597f-9404-4aa6-aff5-b6c7da2ad784",
+      "name": "Pujança",
+      "description": "<p>O acessório aumenta sua potência muscular, fornecendo +1 em Força.</p>",
+      "modType": "curse",
+      "itemType": "misc",
+      "element": "Sangue",
+      "hasAutomation": false
+     },
+     {
+      "id": "8bccc2be-487b-4dbe-a633-afcdb6a4cf26",
+      "name": "Aprimorado",
+      "description": "<p>O bônus em perícia concedido pelo acessório aumenta para +5. Se o item tiver função adicional, esta modificação poderá ser escolhida uma segunda vez para esta função.</p>",
+      "modType": "mod",
+      "itemType": "misc",
+      "hasAutomation": false
+     }
+    ]
+   },
+   {
+    "id": "cc5ad73d-804e-481a-8e52-63fa22bed529",
+    "name": "Mochila Militar",
+    "description": "<p>Uma mochila leve e de alta qualidade. Ela não usa nenhum espaço e aumenta sua capacidade de carga em 2 espaços.</p>",
+    "itemType": "misc",
+    "slots": -2,
+    "category": "I",
+    "equipped": false,
+    "mods": []
+   },
+   {
+    "id": "d5c14e83-a16d-4d71-97e2-0e65618ef02f",
+    "name": "Bandoleira",
+    "description": "<p>Um cinto com bolsos e alças. Uma vez por rodada, você pode sacar ou guardar um item em seu inventário como uma ação livre.</p>",
+    "itemType": "misc",
+    "slots": 1,
+    "category": "I",
+    "equipped": false,
+    "mods": []
+   },
+   {
+    "id": "7c7caf11-3aeb-49be-8d68-1a792f09e275",
+    "name": "Dedo Decepado (Sangue de Ferro)",
+    "description": "<p><em>Este item grotesco é um dedo decepado e seco de alguém com alto nível de exposição paranormal.</em> Você recebe um poder paranormal que o dono do dedo possuía. O elemento do poder define o elemento da maldição. Sempre que usar as ações dormir ou relaxar em um interlúdio, role 1d4. Em um resultado 1, você é assombrado por memórias do dono do dedo e não recupera nenhum PV, PE ou sanidade. Além disso, ser visto usando esse item causa uma penalidade de –10 em testes de Diplomacia e pode causar reações severas de NPCs, a critério do mestre. Você precisa vestir o item por uma semana para que seu efeito comece a funcionar.</p>",
+    "itemType": "cursedItem",
+    "slots": 1,
+    "category": "II",
+    "equipped": false,
+    "element": "Sangue",
+    "mods": []
+   },
+   {
+    "id": "f012c017-209e-49f1-9fce-b53b7350713c",
+    "name": "Sigilos de Kian - Utensílio (Reflexão, +5 Defesa)",
+    "description": "<p>Um item comum que tenha uma utilidade específica, como um canivete, uma lupa, um smartphone ou um notebook. Um utensílio concede +2 em um teste de uma perícia a sua escolha (exceto Luta e Pontaria), definida quando o item é adquirido. Por exemplo, um smartphone pode ser usado para acessar a internet e fornecer bônus em Ciências, enquanto um notebook pode ser preparado para invadir sistemas e fornecer bônus em Tecnologia. Você pode inventar itens menos realistas, como um “detector de mentiras portátil” que fornece +2 em Intuição, mas o mestre tem a palavra final se o utensílio é apropriado ou não. Utensílios sempre ocupam 1 espaço e precisam ser empunhados para que o bônus seja aplicado.</p>",
+    "itemType": "misc",
+    "slots": "1",
+    "category": "III",
+    "equipped": false,
+    "mods": [
+     {
+      "id": "de40f21b-14f7-4fdb-b693-9c62cfb34dc6",
+      "name": "Defesa",
+      "description": "<p>Uma barreira de energia protetora invisível gerada por este acessório fornece +5 de Defesa.</p>",
+      "modType": "curse",
+      "itemType": "misc",
+      "element": "Energia",
+      "hasAutomation": false
+     },
+     {
+      "id": "432c5191-7d02-4ba5-b9e1-99f5fa90fad9",
+      "name": "Reflexão",
+      "description": "<p>Quando você é alvo de um ritual, pode gastar PE igual ao custo dele para refleti-lo de volta ao seu conjurador. As características do ritual (efeitos, DT...) se mantêm, mas você toma qualquer decisão exigida por ele.</p>",
+      "modType": "curse",
+      "itemType": "misc",
+      "element": "Conhecimento",
+      "hasAutomation": false
+     }
+    ]
+   },
+   {
+    "id": "8d7300f5-8cf5-410e-bb11-b3b737b5e707",
+    "name": "Vestimenta (+5 Reflexos)",
+    "description": "<p>Uma peça de vestuário que fornece um bônus em uma perícia específica (exceto Luta ou Pontaria). Por exemplo, um par de botas militares pode fornecer +2 em Atletismo, enquanto um terno ou vestido elegante pode fornecer +2 em Diplomacia. Assim como utensílios, o benefício de cada vestimenta deve ser aprovado pelo mestre. Você pode receber os bônus de no máximo duas vestimentas ao mesmo tempo. Vestir ou despir uma vestimenta é uma ação completa.</p>",
+    "itemType": "misc",
+    "slots": "1",
+    "category": "I",
+    "equipped": false,
+    "mods": [
+     {
+      "id": "18a3e8a4-b8c4-4cb2-8d2e-d0bd6503c77f",
+      "name": "Aprimorado",
+      "description": "<p>O bônus em perícia concedido pelo acessório aumenta para +5. Se o item tiver função adicional, esta modificação poderá ser escolhida uma segunda vez para esta função.</p>",
+      "modType": "mod",
+      "itemType": "misc",
+      "hasAutomation": false
+     }
+    ]
+   },
+   {
+    "id": "70840ce2-71df-4a37-8ad4-d5099a8511c5",
+    "name": "Cicatrizante",
+    "description": "<p>Um spray contendo um remédio com potente efeito cicatrizante. Você pode gastar uma ação padrão e este item para curar 2d8+2 PV em você ou em um ser adjacente.</p>",
+    "itemType": "misc",
+    "slots": "1",
+    "category": "I",
+    "equipped": false,
+    "mods": []
+   }
+  ],
+  "attacks": [
+   {
+    "id": "80c870f9-3ddc-46eb-a696-5aa18d367908",
+    "itemId": "ab05adb8-16d2-46a2-b93a-6e858f0e32e1",
+    "name": "Soco (Soqueira)",
+    "damage": "2d4+1d8+1",
+    "extraDamage": "0",
+    "criticalRange": 20,
+    "criticalMult": 2,
+    "damageType": "Impacto",
+    "range": "-",
+    "skillUsed": "Ocultismo",
+    "damageAttribute": "Intelecto",
+    "attackBonus": 0,
+    "aditionalDamage": [
+     {
+      "id": "d5669c53-28ab-46d9-b9a9-d2a4707ec7e2",
+      "value": "4d8",
+      "damageType": "Sangue"
+     },
+     {
+      "id": "da43cda2-7d18-4155-b5e0-4492801b1aec",
+      "value": "2d6",
+      "damageType": "Sangue"
+     }
+    ]
+   }
+  ],
+  "rituals": [
+   {
+    "id": "e967e9b1-1723-468d-8fdb-68c39d310d28",
+    "name": "Perturbação",
+    "description": "<p>Você dá uma ordem que o alvo deve ser capaz de ouvir (mas não precisa entender). Se falhar na resistência, ele deve obedecer à ordem em seu próprio turno da melhor maneira possível. Escolha um dos efeitos.</p><p><strong>Fuja:</strong> O alvo gasta seu turno tentando se afastar de você (usando todas as suas ações).</p><p><strong>Largue:</strong> O alvo solta quaisquer itens que esteja segurando e não pode pegá-los novamente até o início de seu próximo turno. Como esta é uma ação livre, ele ainda pode executar outras ações (exceto pegar aquilo que largou).</p><p><strong>Pare:</strong> O alvo fica pasmo (não pode realizar ações, só reações).</p><p><strong>Sente-se:</strong> Com uma ação livre, o alvo se senta no chão (se estava pendurado ou voando, desce até o chão). Ele pode fazer outras ações, mas não se levantar até o início de seu próximo turno.</p><p><strong>Venha:</strong> O alvo gasta seu turno se aproximando de você (usando todas as suas ações).</p><p><strong>Discente (+2 PE):</strong> muda o alvo para “1 ser” e adiciona o seguinte comando: “Sofra. O alvo é acometido de dor aguda, sofrendo 3d8 de dano de Conhecimento e ficando abalado por uma rodada”.</p><p><strong>Verdadeiro (+5 PE):</strong> muda o alvo para “até 5 seres” ou adiciona o seguinte comando: “Ataque. O alvo deve fazer a ação agredir contra um outro alvo a sua escolha em alcance médio, com todas as suas capacidades”. Requer 3º círculo e afinidade.</p>",
+    "circle": "1",
+    "element": "Conhecimento",
+    "execution": "padrão",
+    "range": "curto",
+    "target": "1 pessoa",
+    "duration": "1 rodada",
+    "save": "Vontade (anula)"
+   },
+   {
+    "id": "baa584d9-3093-47c4-97d4-fa7f2e7df2c5",
+    "name": "Ouvir os Sussurros",
+    "description": "<p>O ritual conecta você com os sussurros, memórias ecoadas pelo Outro Lado, que você pode consultar para receber conhecimento proibido em relação a uma ação que tomará em breve. Ao usar este ritual, faça uma pergunta sobre um evento que você está prestes a fazer (na mesma cena) que possa ser respondida com “sim” ou “não”. O mestre rola 1d6 em segredo; com um resultado de 2 a 6, o ritual funciona e você recebe sua resposta, que pode ser “sim”, “não” ou “sim e não”</p><p>Com um resultado 1, o ritual falha e oferece o resultado “não”. Não há como saber se esse resultado foi dado porque o ritual falhou ou não. Lançar este ritual múltiplas vezes sobre o mesmo assunto gera sempre o primeiro resultado.</p><p>Por exemplo, você está prestes a entrar em um prédio que pode ser o esconderijo de um cultista. Se você perguntar para os sussurros se o cultista está mesmo nesse local, a resposta pode ser “sim” (ele está no prédio), “não” (ele não está no prédio) ou “sim e não” (ele está no prédio, mas usou um ritual para se esconder seu corpo físico em uma dimensão do Outro Lado...). Isso é útil para saber se você deve (ou não) gastar recursos para um possível combate.</p><p><strong>Discente (+2 PE):</strong> muda a execução para 1 minuto. Em vez do normal, você pode consultar os ecos fazendo uma pergunta sobre um evento que poderá acontecer até um dia no futuro. O mestre rola a chance de falha; com um resultado de 2 a 6, você recebe uma resposta, desde uma simples frase até uma profecia ou enigma. Em geral, este uso oferece pistas, indicando um caminho a tomar para descobrir a resposta que se procura. Numa falha você não recebe resposta alguma. Requer 2º círculo.</p><p><strong>Verdadeiro (+5 PE):</strong> muda a execução para 10 minutos e a duração para 5 rodadas. Em vez do normal, você consulta os ecos, podendo fazer uma pergunta por rodada, desde que ela possa ser respondida com “sim”, “não” ou “ninguém sabe”. O mestre rola a chance de falha para cada pergunta. Em caso de falha, a resposta também é “ninguém sabe”. Requer 3º círculo.</p>",
+    "circle": "1",
+    "element": "Conhecimento",
+    "execution": "completa",
+    "range": "pessoal",
+    "target": "você",
+    "duration": "instantânea"
+   },
+   {
+    "id": "d3ec898a-fd13-4395-9aa8-42632ebcb25a",
+    "name": "Terceiro Olho",
+    "description": "<p>Seus olhos se enchem de sigilos e você passa a enxergar auras paranormais em alcance longo. Rituais, itens amaldiçoados e criaturas emitem auras. Você sabe o elemento da aura e seu poder aproximado — rituais de 1º círculo e criaturas de VD até 80 emitem uma aura fraca; rituais de 2º e 3º círculos e criaturas de VD entre 81 e 280 emitem uma aura moderada, e rituais de 4º círculo e criaturas de VD 281 ou maior emitem uma aura poderosa.</p><p>Além disso, você pode gastar uma ação de movimento para descobrir se um ser que possa ver em alcance médio tem poderes paranormais ou se é capaz de conjurar rituais e de quais elementos.</p><p><strong>Discente (+2 PE):</strong> muda a duração para 1 dia.</p><p><strong>Verdadeiro (+5 PE):</strong> também pode enxergar objetos e seres invisíveis, que aparecem como formas translúcidas.</p>",
+    "circle": "1",
+    "element": "Conhecimento",
+    "execution": "padrão",
+    "range": "pessoal",
+    "target": "você",
+    "duration": "cena"
+   },
+   {
+    "id": "3b11c648-e4e3-43a9-9d3b-81751bfe09c7",
+    "name": "Tecer Ilusão",
+    "description": "<p>Este ritual cria uma ilusão visual (uma pessoa, uma parede...) ou sonora (um grito de socorro, um uivo assustador...). O ritual cria apenas imagens ou sons simples, com volume equivalente à voz de uma pessoa para cada cubo de 1,5m no efeito. Não é possível criar cheiros, texturas ou temperaturas, nem sons complexos, como uma música ou diálogo. Seres e objetos atravessam uma ilusão sem sofrer dano, mas o ritual pode, por exemplo, esconder uma armadilha ou emboscada. A ilusão é dissipada se você sair do alcance.</p><p><strong>Discente (+2 PE):</strong> muda o efeito para até 8 cubos de 1,5m e a duração para sustentada. Você pode criar ilusões de imagem e sons combinados, e pode criar sons complexos, odores e sensações térmicas. Também pode criar sensações táteis, como texturas; objetos ainda atravessam a ilusão, mas seres não conseguem atravessá-la sem passar em um teste de Vontade. A cada rodada, você pode usar uma ação livre para mover a imagem ou alterar o som, como aumentar o volume ou fazer com que pareça se afastar ou se aproximar, ainda dentro dos limites do efeito. Você pode, por exemplo, criar a ilusão de um fantasma que anda pela sala, controlando seus movimentos. A ilusão ainda é incapaz de causar ou sofrer dano. Quando você para de sustentar o ritual, a imagem ou som persistem por mais uma rodada antes do ritual se dissipar. Requer 2º círculo.</p><p><strong>Verdadeiro (+ 5 PE):</strong> você cria a ilusão de um perigo mortal. Quando o ritual é conjurado, e no início de cada um de seus turnos, um alvo interagindo com a ilusão deve fazer um teste de Vontade; se falhar, acredita que a ilusão é real e sofre 6d6 pontos de dano de Conhecimento. O alvo racionaliza o efeito sempre que falha no teste (por exemplo, acredita que o mesmo teto pode cair sobre ele várias vezes). Se um alvo passar em dois testes de Vontade seguidos, o efeito é anulado para ele. Requer 3º círculo.</p>",
+    "circle": "1",
+    "element": "Conhecimento",
+    "execution": "padrão",
+    "range": "médio",
+    "duration": "cena",
+    "save": "Vontade desacredita"
+   },
+   {
+    "id": "25f9986d-dce5-4baf-89e9-8aa0201beeb5",
+    "name": "Enfeitiçar",
+    "description": "<p>Este ritual torna o alvo prestativo. Ele não fica sob seu controle, mas percebe suas palavras e ações da maneira mais favorável possível. Você recebe um bônus de +10 em testes de Diplomacia com ele. Um alvo hostil ou que esteja envolvido em combate recebe +5 em seu teste de resistência. Se você ou seus aliados tomarem qualquer ação hostil contra o alvo, o efeito é dissipado e o alvo retorna à atitude que tinha antes (ou piorada, de acordo com o mestre)</p><p><strong>Discente (+2 PE):</strong> em vez do normal, você sugere uma ação para o alvo e ele obedece. A sugestão deve ser feita de modo que pareça aceitável, a critério do mestre. Pedir que o alvo atire em seu companheiro, por exemplo, dissipa o efeito. Já sugerir a um guarda que descanse um pouco, de modo que você e seus aliados passem por ele, é aceitável. Quando o alvo executa a ação, o efeito termina. Você pode determinar uma condição específica para a sugestão: por exemplo, que o policial prenda a próxima pessoa de casaco verde que ele encontrar. Requer 2º círculo.</p><p><strong>Verdadeiro (+5 PE):</strong> afeta todos os alvos dentro do alcance. Requer 3º círculo.</p>",
+    "circle": "1",
+    "element": "Conhecimento",
+    "execution": "padrão",
+    "range": "curto",
+    "target": "1 pessoa",
+    "duration": "cena",
+    "save": "Vontade anula"
+   },
+   {
+    "id": "70595268-e74b-4c79-9629-55ad7e019d2f",
+    "name": "Cinerária",
+    "description": "<p>Você manifesta uma névoa carregada de essência paranormal. Rituais conjurados dentro da névoa têm sua DT aumentada em +5.</p><p><strong>Discente (+2 PE):</strong> além do normal, rituais conjurados dentro da névoa custam –2 PE.</p><p><strong>Verdadeiro (+5 PE):</strong> além do normal, rituais conjurados dentro da névoa causam dano maximizado.</p>",
+    "circle": "1",
+    "element": "Medo",
+    "execution": "padrão",
+    "range": "curto",
+    "area": "nuvem de 6m de raio",
+    "duration": "cena"
+   },
+   {
+    "id": "43838b09-3bce-4364-b184-5c597fdb8547",
+    "name": "Invadir Mente",
+    "description": "<p>Quando conjura este ritual, você gera um dos efeitos a seguir, a sua escolha: <em>rajada mental</em> (usa os primeiros parâmetros do cabeçalho acima) ou <em>ligação telepática</em> (usa os segundos parâmetros).</p><p><em>Rajada Mental:</em> você infecta a mente do alvo com o Conhecimento proibido do Outro Lado, dilacerando o cérebro dele. O alvo sofre 6d6 pontos de dano de Conhecimento e fica atordoado por uma rodada. Se passar no teste de Vontade, sofre metade do dano e não fica atordoado. Um mesmo alvo só pode ficar atordoado por este ritual uma vez por cena.</p><p><em>Ligação Telepática:</em> você cria um elo mental entre duas pessoas (você pode ser uma delas), que podem se comunicar independente da distância pela duração do ritual (1 dia).</p><p><strong>Discente (+3 PE):</strong> se escolhar <em>rajada mental</em>, aumenta o dano para 10d6. Se escolher <em>ligação telepática</em>, em vez do normal, você cria um elo mental que permite que você veja e ouça pelos sentidos do alvo, gastando uma ação de movimento para se concentrar. Um alvo involuntário pode fazer um teste de Vontade para suprimir o ritual por uma hora. Requer 3º círculo.</p><p><strong>Verdadeiro (+ 7 PE):</strong> se escolher <em>rajada mental</em>, aumenta o dano para 10d6 e muda o alvo para todos os \"seres escolhidos\". Se escolher <em>ligação telepática</em>, você pode criar um vínculo mental entre até 5 pessoas. Requer 4º círculo.</p>",
+    "circle": "2",
+    "element": "Conhecimento",
+    "execution": "padrão",
+    "range": "médio ou toque",
+    "target": "1 ser ou 2 pessoas voluntárias",
+    "duration": "instantânea ou 1 dia",
+    "save": "Vontade parcial ou nenhuma"
+   },
+   {
+    "id": "8f6d83d4-06dc-4497-b79d-355194bbf259",
+    "name": "Esconder dos Olhos",
+    "description": "<p>Você fica invisível, incluindo seu equipamento, recebendo camuflagem total e +15 em testes de Furtividade. Como o normal, seres que não possam vê-lo ficam desprevenidos contra seus ataques.</p><p>O efeito termina se você faz um ataque ou usa uma habilidade hostil. Ações contra objetos livres não dissipam Esconder dos Olhos (você pode tocar ou apanhar objetos que não estejam sendo segurados por outros seres). Causar dano indiretamente — por exemplo, preparar explosivos para detonar mais tarde — não é considerado um ataque.</p><p>Objetos soltos voltam a ser visíveis e objetos apanhados por você ficam invisíveis. Uma luz transportada nunca fica invisível (mesmo que sua fonte seja). Qualquer parte de um item carregado que se estenda além de seu alcance corpo a corpo natural se torna visível.</p><p><strong>Discente (+3 PE):</strong> muda a duração para “sustentada”. Em vez do normal, você gera uma esfera de invisibilidade. Você e todos os aliados a até 3m de você se tornam invisíveis, como no efeito normal do ritual (ainda ficam visíveis caso façam uma ação hostil). A esfera se move juntamente com você; qualquer coisa que saia da esfera fica visível. Requer 3º círculo.</p><p><strong>Verdadeiro (+7 PE):</strong> muda a execução para “ação padrão”, o alcance para “toque”, o alvo para “1 ser” e a duração para “sustentada”. O efeito não é dissipado caso o alvo faça um ataque ou ação hostil. Requer 4º círculo e afinidade.</p>",
+    "circle": "2",
+    "element": "Conhecimento",
+    "execution": "livre",
+    "range": "pessoal",
+    "target": "você",
+    "duration": "1 rodada"
+   },
+   {
+    "id": "5d679d67-ffca-49d9-ae03-ddf12c05e7d3",
+    "name": "Aprimorar Mente",
+    "description": "<p>O alvo tem sua mente energizada por fagulhos do Conhecimento. Ele recebe +1 em Intelecto ou Presença, à escolha dele (esse aumento não fornece PE ou perícias treinadas).</p><p><strong>Discente (+3 PE):</strong> muda o bônus para +2. Requer 3º círculo.</p><p><strong>Verdadeiro (+7 PE):</strong> muda o bônus para +3. Requer 4º círculo e afinidade.</p>",
+    "circle": "2",
+    "element": "Conhecimento",
+    "execution": "padrão",
+    "range": "toque",
+    "target": "1 ser",
+    "duration": "cena"
+   },
+   {
+    "id": "74c80700-1fab-4161-95af-5401335a1e5f",
+    "name": "Velocidade Mortal",
+    "description": "<p>Você distorce a passagem do tempo ao redor do alvo, tornando-o extremamente veloz. O alvo pode realizar uma ação de movimento adicional por turno. Esta ação não pode ser usada para conjurar rituais.</p><p><strong>Discente (+3 PE):</strong> em vez de uma ação de movimento, o alvo recebe uma ação padrão adicional por turno.</p><p><strong>Verdadeiro (+7 PE):</strong> muda o alvo para “alvos escolhidos”. Requer 4º círculo e afinidade.</p>",
+    "circle": "2",
+    "element": "Morte",
+    "execution": "padrão",
+    "range": "curto",
+    "target": "1 ser",
+    "duration": "sustentada"
+   },
+   {
+    "id": "1b997ef8-265f-4d79-97ba-450704c6bc73",
+    "name": "Contenção Fantasmagórica",
+    "description": "<p>Três laços de Energia surgem do chão e se enroscam no alvo, deixando-o agarrado. O alvo pode tentar se livrar, gastando uma ação padrão para fazer um teste de Atletismo (DT do ritual). Se passar, destrói um laço, mais um laço adicional para cada 5 pontos pelos quais superou a DT. Os laços também podem ser atacados e destruídos: cada um tem Defesa 10, 10 PV, RD 5 e imunidade a Energia. Se todos os laços forem destruídos, o ritual é dissipado. Por serem feitos de Energia, os laços afetam criaturas incorpóreas.</p><p><strong>Discente (+3 PE):</strong> aumenta o número de laços para 6, e você pode escolher o alvo de cada laço, com um mínimo de dois laços por alvo. Requer 3º círculo.</p><p><strong>Verdadeiro (+5 PE):</strong> como discente, e cada laço destruído libera uma onda de choque que causa 2d6+2 pontos de dano de Energia no alvo agarrado. Requer 3º círculo e afinidade.</p>",
+    "circle": "2",
+    "element": "Energia",
+    "execution": "padrão",
+    "range": "médio",
+    "target": "1 ser",
+    "duration": "cena",
+    "save": "Reflexos anula"
+   },
+   {
+    "id": "29e20fbd-7e24-4c2b-9979-66536f2552a2",
+    "name": "Tela de Ruído",
+    "description": "<p>Este ritual cria uma película de energia que recobre seu corpo e absorve energia cinética. Você recebe 30 PV temporários, mas apenas contra dano balístico, de corte, de impacto ou de perfuração.</p><p>Alternativamente, você pode conjurar este ritual como uma reação quando sofrer dano, recebendo resistência 15 apenas contra esse dano.</p><p><strong>Discente (+3 PE):</strong> aumenta os PV temporário para 60 e a resistência para 30.</p><p><strong>Verdadeiro (+7 PE):</strong> muda o alcance para curto e o alvo para 1 ser ou objeto Enorme ou menor. Em vez do normal, cria uma esfera imóvel e tremeluzente com o tamanho do alvo e centrada nele. Nenhum ser, objeto ou efeito de dano pode passar pela esfera, embora seres possam respirar normalmente dentro dela. O alvo tem direito a um teste de Reflexo para evitar ser aprisionado. Requer 4º círculo.</p>",
+    "circle": "2",
+    "element": "Energia",
+    "execution": "padrão",
+    "range": "pessoal",
+    "target": "você",
+    "duration": "cena"
+   },
+   {
+    "id": "80e5c181-6bdf-4b2e-84cd-600fd55bc18d",
+    "name": "Alterar Memória",
+    "description": "<p>Você invade a mente do alvo e altera ou apaga suas memórias de até uma hora atrás. Se escolher alterar as memórias, você pode mudar detalhes de eventos recentes, como a identidade de alguém encontrado ou o endereço de um lugar visitado, mas não reescrever completamente esses eventos. O alvo recupera suas memórias após 1d4 dias.</p><p><strong>Verdadeiro (+4 PE):</strong> você pode alterar ou apagar memórias de até 24 horas atrás. Requer 4º círculo.</p>",
+    "circle": "3",
+    "element": "Conhecimento",
+    "execution": "padrão",
+    "range": "toque",
+    "target": "1 pessoa",
+    "duration": "instantânea",
+    "save": "Vontade anula"
+   },
+   {
+    "id": "adf055eb-8e0b-4038-b87c-72c863c8638a",
+    "name": "Mergulho Mental",
+    "description": "<p>Você mergulha nos pensamentos do alvo, para descobrir informações sobre ele. Durante o mergulho, você fica desprevenido. No início de cada turno seu que estiver sustentando o efeito e tocando o alvo, ele deve fazer um teste de Vontade. Se falhar, deve responder uma pergunta sua que possa ser respondida com “sim” ou “não”, sendo incapaz de mentir. O que você descobre depende das suas perguntas e do mestre: talvez você não descubra tudo que há para saber, mas ganhe pistas para continuar a investigação.</p><p><strong>Verdadeiro (+4 PE):</strong> muda a execução para 1 dia, o alcance para ilimitado e adiciona como componente ritualístico uma cuba de ouro cheia d’água e uma máscara (acessório de categoria II). Você pode realizar o mergulho mental à distância, submergindo seu rosto mascarado na água enquanto mentaliza o alvo. Para que esse ritual funcione, você precisa ter alguma informação sobre o alvo, como nome completo, e um objeto pessoal ou fotografia. Requer 4º círculo.</p>",
+    "circle": "3",
+    "element": "Conhecimento",
+    "execution": "padrão",
+    "range": "toque",
+    "target": "1 pessoa",
+    "duration": "sustentada",
+    "save": "Vontade parcial"
+   },
+   {
+    "id": "584feed7-ea9a-46dc-bded-984cdc6fbdbc",
+    "name": "Barganha Insana",
+    "description": "<p>Você contata a entidade da Morte e entrega a ela parte de sua própria percepção temporal da Realidade, em troca da restauração plena de sua saúde. Você recupera todos os pontos de vida e pontos de energia, e elimina quaisquer condições negativas que o estejam afetando. Porém, no final da cena, perde 1d4 pontos de Sanidade permanentemente. Além disso, cada vez que conjura este ritual, sua pele adquire uma tonalidade mais acizentada e seu sangue fica mais escuro. Alguns ocultistas temem que múltiplos usos tenham como efeito colateral transforma-lo em um luzídio, embora ninguém saiba exatamente quantas conjurações seriam necessárias para completar essa transformação.</p>",
+    "circle": "3",
+    "element": "Morte",
+    "execution": "completa",
+    "range": "pessoal",
+    "target": "você",
+    "duration": "instantânea"
+   },
+   {
+    "id": "333feae9-08ed-44cb-a87c-0c8410431852",
+    "name": "Armadura de Sangue",
+    "description": "<p>Seu sangue escorre para fora do corpo, cobrindo-o sob a forma de uma carapaça que fornece +5 em Defesa. Esse bônus é cumulativo com outros rituais, mas não com bônus fornecido por equipamento.</p><p><strong>Discente (+5 PE):</strong> muda o efeito para “fornece +10 na Defesa e resistência a balístico, corte, impacto e perfuração 5”. Requer 3º círculo.</p><p><strong>Verdadeiro (+9 PE):</strong> muda o efeito para “fornece +15 na Defesa e resistência a balístico, corte, impacto e perfuração 10”. Requer 4º círculo e afinidade.</p>",
+    "circle": "1",
+    "element": "Sangue",
+    "execution": "padrão",
+    "range": "pessoal",
+    "target": "você",
+    "duration": "cena"
+   },
+   {
+    "id": "104706d8-600e-4da5-9a3a-8f06f9846db7",
+    "name": "Descarnar",
+    "description": "<p>Este ritual cruel faz com que lacerações se manifestem na pele e órgãos do alvo, que sofre 6d8 pontos de dano (metade corte, metade Sangue) e fica com uma hemorragia severa. No início de cada turno dele, o alvo deve fazer um teste de Fortitude. Se falhar, sofre 2d8 pontos de dano de Sangue. Se passar nesse teste dois turnos seguidos, a hemorragia é estancada. Alvos que passem no teste de resistência inicial sofrem metade do dano e não ficam com hemorragia.</p><p><strong>Discente (+3 PE):</strong> muda o dano direto para 10d8 e o dano da hemorragia para 4d8. Requer 3º círculo.</p><p><strong>Verdadeiro (+7 PE):</strong> muda o alvo para você e a duração para sustentada. Enquanto o ritual durar, seus ataques corpo a corpo causam 4d8 pontos de dano de Sangue adicional e deixam o alvo com hemorragia automaticamente (como no efeito básico do ritual). O alvo ainda tem direito a um teste de Fortitude no início de seus turnos. Requer 3º círculo e afinidade.</p>",
+    "circle": "2",
+    "element": "Sangue",
+    "execution": "padrão",
+    "range": "toque",
+    "target": "1 ser",
+    "duration": "instantânea",
+    "save": "Fortitude parcial"
+   },
+   {
+    "id": "1e013bd7-08d2-4a9e-b00b-6a42889db602",
+    "name": "Tentáculos de Lodo",
+    "description": "<p>Uma fenda sombria se abre no chão, de onde surgem tentáculos feitos de lodo da Morte. Ao conjurar o ritual e no início de cada um de seus turnos, você faz um teste da manobra agarrar (usando Ocultismo em vez de Luta) contra cada alvo na área. Se você vencer, o ser é agarrado; se já estava agarrado, é esmagado, sofrendo 4d6 pontos de dano (metade impacto, metade Morte). A área do ritual conta como terreno difícil. Os tentáculos são imunes a dano.</p><p><strong>Verdadeiro (+5 PE):</strong> aumenta o raio da área para 9m e aumenta o dano dos tentáculos para 6d6.</p>",
+    "circle": "3",
+    "element": "Morte",
+    "execution": "padrão",
+    "range": "médio",
+    "area": "círculo com 6m de raio",
+    "duration": "cena"
+   },
+   {
+    "id": "d09bc291-e493-4f51-bb93-b37e4ee90200",
+    "name": "Amaldiçoar Arma",
+    "description": "<p>Quando aprender este ritual, escolha um elemento entre Conhecimento, Energia, Morte e Sangue. Este ritual passa a ser do elemento escolhido. Você imbui a arma ou munições com o elemento, fazendo com que causem +1d6 de dano do tipo do elemento.</p><p><strong>Discente (+2 PE):</strong> muda o bônus de dano para +2d6. Requer 2º círculo.</p><p><strong>Verdadeiro (+5 PE):</strong> muda o bônus de dano para +4d6. Requer 3º círculo e afinidade.</p>",
+    "circle": "1",
+    "element": "Varia",
+    "execution": "padrão",
+    "range": "toque",
+    "target": "1 arma corpo a corpo ou pacote de munição",
+    "duration": "cena"
+   }
+  ],
+  "itemsLimit": {
+   "I": 4,
+   "II": 3,
+   "III": 2,
+   "IV": 1
+  },
+  "currentItemsLimit": {
+   "I": 4,
+   "II": 3,
+   "III": 2,
+   "IV": 1
+  },
+  "resistencias": {},
+  "imunidades": [],
+  "vulnerabilidades": []
+ },
+ "resumo": {
+  "nome": "Gina - Rework",
+  "classe": "Ocultista",
+  "origem": "Cultista Arrependido",
+  "progressao": {
+   "modo": "nex",
+   "valor": 65
+  },
+  "atributos": {
+   "for": 2,
+   "agi": 2,
+   "int": 4,
+   "pre": 3,
+   "vig": 1
+  },
+  "recursos": {
+   "pv": {
+    "atual": 75,
+    "maximo": 75
+   },
+   "pe": {
+    "atual": 104,
+    "maximo": 104
+   },
+   "san": {
+    "atual": 80,
+    "maximo": 80
+   },
+   "pd": {
+    "atual": 109,
+    "maximo": 109
+   }
+  },
+  "pericias": [
+   {
+    "nome": "Acrobacia",
+    "chaveSugerida": "acrobacia",
+    "atributo": "agi",
+    "grau": "destreinado",
+    "treino": "0",
+    "bonusTotal": 0,
+    "outros": 0
+   },
+   {
+    "nome": "Adestramento",
+    "chaveSugerida": "adestramento",
+    "atributo": "pre",
+    "grau": "destreinado",
+    "treino": "0",
+    "bonusTotal": 0,
+    "outros": 0
+   },
+   {
+    "nome": "Artes",
+    "chaveSugerida": "artes",
+    "atributo": "pre",
+    "grau": "destreinado",
+    "treino": "0",
+    "bonusTotal": 0,
+    "outros": 0
+   },
+   {
+    "nome": "Atletismo",
+    "chaveSugerida": "atletismo",
+    "atributo": "for",
+    "grau": "treinado",
+    "treino": "5",
+    "bonusTotal": 5,
+    "outros": 0
+   },
+   {
+    "nome": "Atualidades",
+    "chaveSugerida": "atualidades",
+    "atributo": "int",
+    "grau": "destreinado",
+    "treino": "0",
+    "bonusTotal": 0,
+    "outros": 0
+   },
+   {
+    "nome": "Ciências",
+    "chaveSugerida": "ciencias",
+    "atributo": "int",
+    "grau": "destreinado",
+    "treino": "0",
+    "bonusTotal": 0,
+    "outros": 0
+   },
+   {
+    "nome": "Crime",
+    "chaveSugerida": "crime",
+    "atributo": "agi",
+    "grau": "destreinado",
+    "treino": "0",
+    "bonusTotal": 0,
+    "outros": 0
+   },
+   {
+    "nome": "Diplomacia",
+    "chaveSugerida": "diplomacia",
+    "atributo": "pre",
+    "grau": "treinado",
+    "treino": "5",
+    "bonusTotal": 5,
+    "outros": 0
+   },
+   {
+    "nome": "Enganação",
+    "chaveSugerida": "enganacao",
+    "atributo": "pre",
+    "grau": "destreinado",
+    "treino": "0",
+    "bonusTotal": 0,
+    "outros": 0
+   },
+   {
+    "nome": "Fortitude",
+    "chaveSugerida": "fortitude",
+    "atributo": "vig",
+    "grau": "veterano",
+    "treino": "10",
+    "bonusTotal": 10,
+    "outros": 0
+   },
+   {
+    "nome": "Furtividade",
+    "chaveSugerida": "furtividade",
+    "atributo": "agi",
+    "grau": "destreinado",
+    "treino": "0",
+    "bonusTotal": 0,
+    "outros": 0
+   },
+   {
+    "nome": "Iniciativa",
+    "chaveSugerida": "iniciativa",
+    "atributo": "agi",
+    "grau": "destreinado",
+    "treino": "0",
+    "bonusTotal": 0,
+    "outros": 0
+   },
+   {
+    "nome": "Intimidação",
+    "chaveSugerida": "intimidacao",
+    "atributo": "pre",
+    "grau": "destreinado",
+    "treino": "0",
+    "bonusTotal": 0,
+    "outros": 0
+   },
+   {
+    "nome": "Intuição",
+    "chaveSugerida": "intuicao",
+    "atributo": "pre",
+    "grau": "destreinado",
+    "treino": "0",
+    "bonusTotal": 0,
+    "outros": 0
+   },
+   {
+    "nome": "Investigação",
+    "chaveSugerida": "investigacao",
+    "atributo": "int",
+    "grau": "destreinado",
+    "treino": "0",
+    "bonusTotal": 0,
+    "outros": 0
+   },
+   {
+    "nome": "Luta",
+    "chaveSugerida": "luta",
+    "atributo": "for",
+    "grau": "treinado",
+    "treino": "5",
+    "bonusTotal": 5,
+    "outros": 0
+   },
+   {
+    "nome": "Medicina",
+    "chaveSugerida": "medicina",
+    "atributo": "int",
+    "grau": "destreinado",
+    "treino": "0",
+    "bonusTotal": 0,
+    "outros": 0
+   },
+   {
+    "nome": "Ocultismo",
+    "chaveSugerida": "ocultismo",
+    "atributo": "int",
+    "grau": "veterano",
+    "treino": "10",
+    "bonusTotal": 15,
+    "outros": 5
+   },
+   {
+    "nome": "Percepção",
+    "chaveSugerida": "percepcao",
+    "atributo": "pre",
+    "grau": "treinado",
+    "treino": "5",
+    "bonusTotal": 5,
+    "outros": 0
+   },
+   {
+    "nome": "Pilotagem",
+    "chaveSugerida": "pilotagem",
+    "atributo": "agi",
+    "grau": "destreinado",
+    "treino": "0",
+    "bonusTotal": 0,
+    "outros": 0
+   },
+   {
+    "nome": "Pontaria",
+    "chaveSugerida": "pontaria",
+    "atributo": "agi",
+    "grau": "treinado",
+    "treino": "5",
+    "bonusTotal": 5,
+    "outros": 0
+   },
+   {
+    "nome": "Profissão",
+    "chaveSugerida": "profissao",
+    "atributo": "int",
+    "grau": "destreinado",
+    "treino": "0",
+    "bonusTotal": 0,
+    "outros": 0
+   },
+   {
+    "nome": "Reflexos",
+    "chaveSugerida": "reflexos",
+    "atributo": "agi",
+    "grau": "veterano",
+    "treino": "10",
+    "bonusTotal": 15,
+    "outros": 5
+   },
+   {
+    "nome": "Religião",
+    "chaveSugerida": "religiao",
+    "atributo": "pre",
+    "grau": "treinado",
+    "treino": "5",
+    "bonusTotal": 5,
+    "outros": 0
+   },
+   {
+    "nome": "Sobrevivência",
+    "chaveSugerida": "sobrevivencia",
+    "atributo": "int",
+    "grau": "destreinado",
+    "treino": "0",
+    "bonusTotal": 0,
+    "outros": 0
+   },
+   {
+    "nome": "Tática",
+    "chaveSugerida": "tatica",
+    "atributo": "int",
+    "grau": "destreinado",
+    "treino": "0",
+    "bonusTotal": 0,
+    "outros": 0
+   },
+   {
+    "nome": "Tecnologia",
+    "chaveSugerida": "tecnologia",
+    "atributo": "int",
+    "grau": "destreinado",
+    "treino": "0",
+    "bonusTotal": 0,
+    "outros": 0
+   },
+   {
+    "nome": "Vontade",
+    "chaveSugerida": "vontade",
+    "atributo": "pre",
+    "grau": "veterano",
+    "treino": "10",
+    "bonusTotal": 12,
+    "outros": 2
+   }
+  ],
+  "defesa": 17,
+  "bloqueio": 10,
+  "esquiva": 32,
+  "itens": 11,
+  "poderes": 14,
+  "rituais": 19
+ },
+ "avisos": [
+  {
+   "codigo": "historico_indisponivel",
+   "gravidade": "revisao",
+   "campo": "powers",
+   "mensagem": "A ordem de aquisição dos poderes não está disponível. Preserve o estado atual."
+  }
+ ],
+ "nota": "Retrato da ficha pública 'Gina - Rework' (CRIS), lido em 03/10/2026 pelo adaptador cris-firestore-v1. Jogador e token da foto trocados por valores sintéticos. Mudanças posteriores no CRIS não alteram este caso."
+}

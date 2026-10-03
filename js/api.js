@@ -403,8 +403,20 @@
 
   /* A criação (e a importação, que é uma criação) leva um id de
      operação: repetida porque a resposta não chegou, não vira dois. */
-  function criarPersonagem(dados) {
-    return post({ acao: "criar_personagem", dados: dados, operacaoId: novaOperacao() });
+  /* `operacaoId` (opcional, v2.34): quem precisa repetir a MESMA criação
+     depois de uma resposta perdida (a importação do CRIS) guarda o id e o
+     manda de novo — o servidor devolve o personagem que a primeira criou. */
+  function criarPersonagem(dados, operacaoId) {
+    return post({ acao: "criar_personagem", dados: dados, operacaoId: operacaoId || novaOperacao() });
+  }
+
+  /* Leitura de uma ficha PÚBLICA do CRIS (v2.34), pelo Apps Script. Só o
+     link vai; o servidor valida, lê e devolve o retrato filtrado. É
+     leitura, mas fica fora do lote e da lista de repetição automática:
+     cada ida conta no limite por conta, e quem decide tentar de novo é a
+     pessoa, na tela. */
+  function lerFichaCris(url) {
+    return post({ acao: "ler_ficha_cris", url: String(url || "") });
   }
 
   /* A rev é obrigatória: é ela que impede sobrescrever em silêncio o
@@ -882,6 +894,7 @@
     listarPersonagens: listarPersonagens,
     lerPersonagem: lerPersonagem,
     criarPersonagem: criarPersonagem,
+    lerFichaCris: lerFichaCris,
     salvarPersonagem: salvarPersonagem,
     excluirPersonagem: excluirPersonagem,
     duplicarPersonagem: duplicarPersonagem,

@@ -297,6 +297,14 @@ function rotaDe(acao) {
       var extras = rotasDeCampanha();
       Object.keys(extras).forEach(function (chave) { CACHE_ROTAS[chave] = extras[chave]; });
     }
+
+    /* Cris.gs (v2.34): a leitura de ficha pública do CRIS. Mesmo
+       contrato: sem o arquivo, a ação responde 'acao_desconhecida' e a
+       tela explica que o servidor precisa ser atualizado. */
+    if (typeof rotasDoCris === 'function') {
+      var doCris = rotasDoCris();
+      Object.keys(doCris).forEach(function (chave) { CACHE_ROTAS[chave] = doCris[chave]; });
+    }
   }
   return CACHE_ROTAS[acao] || null;
 }

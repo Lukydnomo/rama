@@ -13,7 +13,7 @@
 
 import { instalarAmbiente, chamar, comoOSheetsGuarda } from "./apps-script-simulado.js";
 
-const ARQUIVOS = ["backend/Dados.gs", "backend/Codigo.gs", "backend/Campanhas.gs"];
+const ARQUIVOS = ["backend/Dados.gs", "backend/Codigo.gs", "backend/Campanhas.gs", "backend/Cris.gs"];
 
 /* O simulador silencia o console para o backend não encher a saída com
    os avisos do setupRama. O relatório dos testes precisa de uma porta
@@ -4824,6 +4824,8 @@ const { testarCriaturasBackend } = await import("./criaturas-backend.js");
 testarCriaturasBackend({ t, preparar, novaConta, comoFn, ambiente });
 const { testarHexatombeBackend } = await import("./hexatombe-backend.js");
 await testarHexatombeBackend({ t, preparar, novaConta, comoFn });
+const { testarCrisBackend } = await import("./cris-backend.js");
+await testarCrisBackend({ t, preparar, novaConta, comoFn, chamar });
 
 
 escrever(`\n${FORTE}${passaram + falharam} verificações${FIM} · ${VERDE}${passaram} ok${FIM} · ${falharam ? VERMELHO : CINZA}${falharam} falhas${FIM}`);

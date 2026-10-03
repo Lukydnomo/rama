@@ -70,6 +70,29 @@
 
   var CHANGELOG = [
     {
+      versao: "2.34.0", codinome: "TRASLADO", data: "03/10/2026",
+      mudancas: {
+        "Adicionado": [
+          "Importar do CRIS, no Perfil: cole o link de uma ficha pública do CRIS e o R.A.M.A. mostra a prévia (identidade, classe, origem, trilha, NEX, atributos, recursos, defesas e o que veio), a comparação CRIS × R.A.M.A. com o motivo de cada diferença e as decisões a revisar. Consultar, revisar e baixar não criam nada; só “Criar ficha” cria, uma vez só.",
+          "A conversão usa as fábricas e os catálogos do R.A.M.A.: itens, modificações, maldições, poderes e rituais reconhecidos entram como do catálogo; o resto entra como item, habilidade ou ritual personalizado, com o texto em texto puro, sem ir para a Homebrew.",
+          "Ficha importada tem um marco: as etapas até ele aparecem como histórico indisponível, sem pedir escolha nem inventar aquisições; acima dele a progressão segue normal; abaixo dele NEX, nível e estágio não descem.",
+          "“Baixar JSON RAMA” gera o arquivo da ficha convertida, que importa pelo botão Importar ficha.",
+        ],
+        "Melhorado": [
+          "A importação de arquivo avisa na prévia os vínculos que um arquivo antigo não deixa reconstruir.",
+          "A aba Progressão mostra o painel da ficha importada (marco, histórico, poderes importados e procedência, críticos); a aba Rituais mostra os rituais importados como conhecidos.",
+        ],
+        "Corrigido": [
+          "Exportar e importar uma ficha não religa mais as perícias da ficha principal à Força: atributo de perícia, perícia de item, arma favorita e outros vínculos atravessam o arquivo.",
+        ],
+        "Técnico": [
+          "Ação `ler_ficha_cris` no arquivo novo `Cris.gs` (só leitura, link validado, GET sem credenciais, lista branca de campos, 20 consultas a cada 5 minutos por conta). Acrescente o `Cris.gs`, troque o `Codigo.gs` e crie uma nova versão da implantação; sem `setupRama()`.",
+          "Schema da ficha 15: `ordem.importacao`, e no item `ordem.ajustesImportados` e `ordem.equipadoNaOrigem`; `atributoDano` aceita Intelecto, Vigor e nenhum. Na exportação, vínculos internos saem como `#ref:`.",
+          "Testes: 171 na nova suíte da importação (Jeff e Gina como casos reais guardados, mais casos sintéticos) e 42 no servidor, mais o fluxo no navegador, em celular e nos temas claro e escuro.",
+        ],
+      },
+    },
+    {
       versao: "2.33.0", codinome: "PICADEIRO", data: "03/10/2026",
       mudancas: {
         "Adicionado": [

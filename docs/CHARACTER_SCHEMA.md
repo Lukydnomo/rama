@@ -5,6 +5,50 @@ padrão e normaliza o que chega de fora. Onde ela é guardada — inteira em
 `fichaJson` (formato antigo) ou em blocos (v2.15) — é assunto do backend, e não muda
 nada aqui: ver [DATABASE.md](DATABASE.md).
 
+## Importação do CRIS — v2.34 / schema 15
+
+Três campos novos, todos opcionais; uma ficha 14 abre igual. O schema sobe para
+15 para uma aba antiga não descartar o marco ao gravar.
+
+**`ordem.importacao`** — o marco de uma ficha importada (`js/ordem/regras.js`,
+`normalizarImportacao`):
+
+```jsonc
+{
+  "versao": 1, "sistema": "cris",
+  "fonte": { "url": "https://crisordemparanormal.com/agente/ID", "documentId": "ID",
+             "lidoEm": "ISO", "updateTime": "ISO", "adaptador": "cris-firestore-v1" },
+  "marco": { "modo": "nex" | "nivel" | "estagio", "nex": 40, "nivel": null, "estagio": null, "degrau": 8 },
+  "estadoAtualComoBase": true,
+  "aquisicoes": [ { "ref": "imp-…", "chave": "golpePesado", "nome": "Golpe Pesado", "nomeOriginal": "Golpe Pesado",
+                    "tipo": "classe", "elemento": "", "afinidade": false,
+                    "representacao": "importada" | "regras" | "item" | "texto", "procedencia": "desconhecida" } ],
+  "rituais": [ "<id de ritual da ficha>" ],
+  "revisoes": [ { "codigo": "", "campo": "", "valor": "", "texto": "" } ],
+  "observacoes": [ "texto" ],
+  "ajustes": [ { "alvo": "", "valor": 0, "motivo": "" } ],
+  "criticos": [ { "item": "", "origem": "", "rama": "" } ]
+}
+```
+
+Não guarda o documento do CRIS. A importação é pontual: nada sincroniza depois.
+O que cada parte faz na progressão está em
+[ORDEM-REGRAS.md](ORDEM-REGRAS.md#ficha-importada-v234).
+
+**`ordem.ajustesImportados`** num item — a diferença que sobrou entre o valor
+observado e o calculado depois da base do catálogo e das modificações
+reconhecidas: `categoria` (−6…6), `espacos` (−20…20), `defesa` (−30…30),
+`ataque` (−30…30), `dano` (−100…100), `dadosDano` (−10…10), `margem` (−19…19),
+`multiplicador` (−5…5) e `motivo` (até 300 caracteres). Entra nas contas como
+parcela com origem ("Importação (diferença observada)"), nunca como base nova:
+tirar uma modificação ou mudar um atributo continua mudando o resultado.
+
+**`ordem.equipadoNaOrigem`** num item — o estado de uso que a origem registrava
+num item que o R.A.M.A. não liga a uma conta (arma empunhada, amaldiçoado
+guardado).
+
+`ordem.arma.atributoDano` aceita também `int`, `vig` e `nenhum`.
+
 ## Módulos e aliados — v2.24 / schema 14
 
 `modulos` guarda booleanos: `atributos`, `status`, `defesa`, `pericias`,
@@ -385,6 +429,17 @@ e `ordem`) sai no arquivo pelo **caminho na árvore** (`#arv:0.2` = terceiro fil
 do primeiro nó) e volta para o id novo ao importar. E os eventos das condições
 saem com o id em `evento`: o `id` seria arrancado no passo 2, e um personagem
 importado "morrendo, 2 de 3" voltaria "0 de 3".
+
+**Vínculos internos (v2.34).** Toda referência a uma parte da ficha — o
+atributo de uma perícia da ficha principal, a perícia de um item, o item da
+arma favorita, o ritual de um marco importado: qualquer valor ou chave igual ao
+id de um atributo, perícia, status, item ou ritual — sai como
+`#ref:<lista>:<posição>` (`#ref:atributo:1`) e volta para o id novo na
+importação. Até a 2.33 o `atributoId` ia com o id antigo, que deixava de
+existir, e a perícia voltava ligada ao primeiro atributo (FOR). Um arquivo
+anterior à 2.34 é reconstruído pelo que dá para saber — a perícia com o nome de
+uma perícia padrão volta para o atributo padrão dela — e o resto aparece como
+aviso na prévia, nunca como o primeiro atributo em silêncio.
 
 **Nenhuma ficha existente é sobrescrita**, nem quando o arquivo traz o mesmo id.
 O servidor repete essa limpeza — o frontend avisa cedo, o servidor é quem

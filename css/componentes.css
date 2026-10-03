@@ -3133,3 +3133,39 @@ html.arrastando * {
    ninguém acha. */
 .bib-criaturas-janela .r-abas,
 .editar-grade .r-abas { flex-wrap: wrap; overflow-x: visible; }
+
+/* =====================================================================
+   IMPORTAR DO CRIS (v2.34)
+   ---------------------------------------------------------------------
+   O link e o botão quebram linha no celular; a tabela de comparação rola
+   dentro da própria caixa, nunca a página.
+   ===================================================================== */
+.cris-link > .r-entrada { flex: 1 1 16rem; min-width: 0; }
+.cris-decisao { padding: var(--e2) 0; border-bottom: 1px solid var(--cor-traco-fraca); }
+.cris-decisao:last-child { border-bottom: 0; }
+.cris-decisao__titulo { font-weight: 600; margin: 0; }
+.cris-check { display: flex; align-items: flex-start; gap: var(--e2); cursor: pointer; }
+.cris-check > input { margin-top: 0.2em; flex: none; }
+.cris-check--forte { font-weight: 600; }
+.cris-detalhes > summary { cursor: pointer; font-weight: 600; }
+.cris-detalhes[open] > summary { margin-bottom: var(--e2); }
+.cris-tabela__rolagem { overflow-x: auto; max-width: 100%; }
+.cris-tabela__rolagem:focus-visible { outline: 2px solid var(--cor-traco-forte); outline-offset: 2px; }
+.cris-tabela { width: 100%; border-collapse: collapse; font-size: 0.875rem; }
+.cris-tabela th,
+.cris-tabela td { text-align: left; vertical-align: top; padding: var(--e1) var(--e2); border-bottom: 1px solid var(--cor-traco-fraca); }
+.cris-tabela thead th { border-bottom-color: var(--cor-traco-media); white-space: nowrap; }
+.cris-tabela td:nth-child(2),
+.cris-tabela td:nth-child(3),
+.cris-tabela td:nth-child(4) { white-space: nowrap; }
+.cris-tabela__igual { color: var(--cor-texto-3); }
+
+/* No celular, cada linha vira um bloco: o campo em cima e os valores com
+   o próprio rótulo — cinco colunas não cabem em 360 px. */
+@media (max-width: 600px) {
+  .cris-tabela thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%); }
+  .cris-tabela tr { display: block; padding: var(--e2) 0; border-bottom: 1px solid var(--cor-traco-fraca); }
+  .cris-tabela th,
+  .cris-tabela td { display: block; border: 0; padding: 0 0 var(--e1) 0; white-space: normal !important; }
+  .cris-tabela td::before { content: attr(data-rotulo) ": "; font-weight: 600; }
+}

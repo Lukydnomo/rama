@@ -590,7 +590,10 @@
 
   function linhasDeAprendizado(ctx, vindo, substituido) {
     var saida = [el("dt", { texto: "Aprendizado" })];
-    if (vindo) {
+    if (vindo && vindo.importado) {
+      /* Ficha importada (v2.34): conhecido, sem a aquisição de origem. */
+      saida.push(el("dd", { texto: vindo.nomePoder + ": conhecido na ficha de origem. A aquisição (etapa, poder, se conta no limite por Intelecto) não veio — histórico indisponível." }));
+    } else if (vindo) {
       saida.push(el("dd", {
         texto: vindo.nomePoder + " · " + vindo.rotuloEtapa +
                (vindo.destino === "grimorio" ? " · guardado no grimório" : "") +

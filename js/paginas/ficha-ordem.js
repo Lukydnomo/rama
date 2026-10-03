@@ -2551,6 +2551,7 @@
       return el("div.pilha--larga", { class: "pilha" }, [
         painelNivel(ctx, o, c),
         painelPendencias(ctx, o, c, est),
+        painelImportacao(ctx, o, c, est),
         painelAprendizado(ctx, o, c, est),
         painelAfinidade(ctx, o, c, est),
         painelEscolhas(ctx, o, c, est),
@@ -2592,7 +2593,9 @@
         rotulo: "Nível de experiência", tipo: "numero", valor: String(o.nivel), limite: 2,
         ajuda: "Manda na progressão: PV, PE, Sanidade e habilidades de classe.",
         aoMudar: function (v) {
-          o.nivel = Math.max(1, Math.min(20, U.inteiro(v, 1)));
+          var nivel = Math.max(1, Math.min(20, U.inteiro(v, 1)));
+          if (recusaAbaixoDoMarco(o, "nivel", nivel)) { ctx.redesenhar(); return; }
+          o.nivel = nivel;
           aoMudarOrdem(ctx);
         },
       }));
@@ -2600,6 +2603,7 @@
         rotulo: "NEX por exposição (%)", tipo: "numero", valor: String(o.nex), limite: 2,
         ajuda: "Mede só a exposição ao Outro Lado. Vale para poderes paranormais e afinidade elemental.",
         aoMudar: function (v) {
+          if (recusaAbaixoDoMarco(o, "nex", R.nexValido(v))) { ctx.redesenhar(); return; }
           o.nex = R.nexValido(v);
           aoMudarOrdem(ctx);
         },
@@ -2608,7 +2612,11 @@
       campos.push(UI.campo({
         rotulo: "NEX (%)", tipo: "selecao", valor: String(o.nex),
         opcoes: opcoesDeNex(),
-        aoMudar: function (v) { o.nex = R.nexValido(v); aoMudarOrdem(ctx); },
+        aoMudar: function (v) {
+          if (recusaAbaixoDoMarco(o, "nex", R.nexValido(v))) { ctx.redesenhar(); return; }
+          o.nex = R.nexValido(v);
+          aoMudarOrdem(ctx);
+        },
       }));
     }
 
@@ -2646,6 +2654,7 @@
         UI.passo({
           valor: fase.estagio, minimo: 1, maximo: C.ESTAGIO_MAXIMO, rotulo: "Estágio do sobrevivente",
           aoMudar: function (v) {
+            if (recusaAbaixoDoMarco(o, "estagio", R.estagioValido(v))) { ctx.redesenhar(); return; }
             o.estagio = R.estagioValido(v);
             aoMudarOrdem(ctx);
           },
@@ -2664,7 +2673,7 @@
       partes.push(el("div.editar-grade", {}, [UI.campo({
         rotulo: "NEX por exposição (%)", tipo: "numero", valor: String(o.nex), limite: 2,
         ajuda: "Com NEX & Experiência, a exposição anda sozinha: contato com o paranormal e rituais aprendidos. O nível continua 0.",
-        aoMudar: function (v) { o.nex = R.nexValido(v); aoMudarOrdem(ctx); },
+        aoMudar: function (v) { if (recusaAbaixoDoMarco(o, "nex", R.nexValido(v))) { ctx.redesenhar(); return; } o.nex = R.nexValido(v); aoMudarOrdem(ctx); },
       })]));
     }
     if (OP.ligada(o, "evolucaoPatentes")) {
@@ -2809,6 +2818,72 @@
       aoMudarRituais: function () { aoMudarOrdem(ctx); },
       aoAdiar: function () { aoMudarOrdem(ctx); },
     });
+  }
+
+  /* =================================================================
+     FICHA IMPORTADA (v2.34)
+     -----------------------------------------------------------------
+     O marco: abaixo dele as etapas não têm histórico (as escolhas foram
+     feitas fora do R.A.M.A.) e não pedem decisão; acima, a progressão
+     segue normal. Baixar NEX, nível ou estágio para baixo do marco é
+     recusado com o motivo — a ficha não teria como recompor as etapas.
+     ================================================================= */
+  function rotuloDoMarco(m) {
+    if (m.modo === "nivel") return "nível " + m.nivel + " (exposição " + m.nex + "%)";
+    if (m.modo === "estagio") return m.estagio + "º estágio";
+    return "NEX " + m.nex + "%";
+  }
+
+  function recusaAbaixoDoMarco(o, campo, valor) {
+    var m = R.minimoDoMarco ? R.minimoDoMarco(o) : null;
+    if (!m) return false;
+    var minimo = campo === "nivel" ? m.nivel : (campo === "estagio" ? m.estagio : m.nex);
+    if (typeof minimo !== "number" || valor >= minimo) return false;
+    var nome = campo === "nivel" ? "o nível" : (campo === "estagio" ? "o estágio" : "o NEX");
+    UI.avisoAtencao("Esta ficha foi importada em " + rotuloDoMarco(m) + ". Abaixo desse marco não há histórico para recompor as etapas, então " +
+      nome + " não desce além de " + (campo === "nex" ? minimo + "%" : minimo) + ". Acima dele a progressão segue normal.");
+    return true;
+  }
+
+  var REPRESENTACAO_IMPORTADA = {
+    importada: "efeito aplicado", regras: "já vem das regras", item: "concedido por item (sem efeito fora dele)", texto: "só texto",
+  };
+
+  function painelImportacao(ctx, o, c, est) {
+    var imp = o.importacao;
+    if (!imp || !imp.marco) return null;
+    var fonte = imp.fonte || {};
+    var quando = fonte.lidoEm ? new Date(fonte.lidoEm) : null;
+    var historico = (est && est.historicoImportado) || [];
+    var deLado = (est && est.importadasDeLado) || [];
+    var partes = [
+      el("p.t-mini", {
+        texto: "Importada " + (imp.sistema === "cris" ? "do CRIS" : "") + (quando && !isNaN(quando) ? " em " + quando.toLocaleDateString("pt-BR") : "") +
+               ", no marco " + rotuloDoMarco(imp.marco) + ". As etapas até o marco foram decididas fora do R.A.M.A.: aparecem como histórico indisponível e não pedem escolha. " +
+               "Acima do marco, a progressão segue normal. A importação é pontual: nada sincroniza com a origem.",
+      }),
+    ];
+    if (historico.length) {
+      partes.push(el("details.cris-detalhes", {}, [
+        el("summary", { texto: "Histórico indisponível (" + historico.length + " etapas)" }),
+        el("ul.pilha.pilha--curta", {}, historico.map(function (h) { return el("li.t-mini", { texto: h.rotuloEtapa + " · " + h.rotulo }); })),
+      ]));
+    }
+    var aq = imp.aquisicoes || [];
+    if (aq.length) {
+      partes.push(el("details.cris-detalhes", {}, [
+        el("summary", { texto: "Poderes e habilidades importados (" + aq.length + ")" }),
+        el("ul.pilha.pilha--curta", {}, aq.map(function (a) {
+          var posto = deLado.some(function (x) { return x.aquisicao && x.aquisicao.ref === a.ref; });
+          return el("li.t-mini", { texto: (a.nome || a.nomeOriginal || "?") + " — " + (posto ? "já vem das regras da ficha" : (REPRESENTACAO_IMPORTADA[a.representacao] || a.representacao)) +
+            (a.procedencia ? " · procedência: " + a.procedencia : "") });
+        })),
+      ]));
+    }
+    if ((imp.criticos || []).length) {
+      partes.push(el("p.t-mini", { texto: "Críticos: " + imp.criticos.map(function (x) { return x.item + " (R.A.M.A. " + x.rama + "; na origem " + x.origem + ")"; }).join("; ") + "." }));
+    }
+    return UI.painel("Ficha importada", el("div.pilha", {}, partes));
   }
 
   /* As escolhas em aberto, cada uma com o botão que abre a escolha certa.

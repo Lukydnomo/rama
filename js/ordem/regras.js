@@ -335,6 +335,114 @@
     return nome + " · " + t.rotulo + exp;
   }
 
+  /* =================================================================
+     MARCO DE ESTADO IMPORTADO (v2.34)
+     -----------------------------------------------------------------
+     Uma ficha importada de fora (o CRIS) chega com o estado ATUAL —
+     atributos, graus, poderes —, sem a história de quando cada coisa
+     veio. `ordem.importacao.marco` diz até onde a progressão é esse
+     retrato: as etapas até ali aparecem como histórico indisponível,
+     sem vaga para receber de novo; acima dele, a evolução é a normal.
+     Ver js/ordem/progressao.js (vagaHistorica) e js/importar-cris.js.
+     ================================================================= */
+
+  var REPRESENTACOES = ["importada", "regras", "item", "texto"];
+  var MODOS_DO_MARCO = ["nex", "nivel", "estagio"];
+
+  function textoLimitado(v, n) { return String(v === undefined || v === null ? "" : v).replace(/[\u0000-\u001F]/g, " ").slice(0, n); }
+  function carimboValido(v) { return typeof v === "string" && !isNaN(new Date(v).getTime()) ? v.slice(0, 40) : ""; }
+  function opcoesSeguras(v, profundidade) {
+    if (profundidade > 4 || v === null || v === undefined) return undefined;
+    if (typeof v === "string") return v.slice(0, 200);
+    if (typeof v === "number") return isFinite(v) ? v : undefined;
+    if (typeof v === "boolean") return v;
+    if (Array.isArray(v)) return v.slice(0, 20).map(function (x) { return opcoesSeguras(x, profundidade + 1); }).filter(function (x) { return x !== undefined; });
+    if (typeof v === "object") {
+      var s = {};
+      Object.keys(v).slice(0, 20).forEach(function (k) {
+        if (!/^[A-Za-z0-9_]{1,40}$/.test(k)) return;
+        var x = opcoesSeguras(v[k], profundidade + 1);
+        if (x !== undefined) s[k] = x;
+      });
+      return s;
+    }
+    return undefined;
+  }
+
+  function normalizarImportacao(b) {
+    if (!b || typeof b !== "object" || b.sistema !== "cris") return null;
+    var f = b.fonte && typeof b.fonte === "object" ? b.fonte : {};
+    var m = b.marco && typeof b.marco === "object" ? b.marco : {};
+    var url = /^https:\/\/crisordemparanormal\.com\/agente\/[A-Za-z0-9_-]{1,128}$/.test(String(f.url || "")) ? String(f.url) : "";
+    var vistos = {};
+    return {
+      versao: 1,
+      sistema: "cris",
+      fonte: {
+        url: url,
+        documentId: /^[A-Za-z0-9_-]{1,128}$/.test(String(f.documentId || "")) ? String(f.documentId) : "",
+        lidoEm: carimboValido(f.lidoEm),
+        updateTime: carimboValido(f.updateTime),
+        adaptador: textoLimitado(f.adaptador, 40),
+      },
+      marco: {
+        modo: MODOS_DO_MARCO.indexOf(m.modo) >= 0 ? m.modo : "nex",
+        nex: Math.max(0, Math.min(99, inteiro(m.nex, 0))),
+        nivel: m.nivel === null || m.nivel === undefined ? null : Math.max(0, Math.min(20, inteiro(m.nivel, 0))),
+        estagio: m.estagio === null || m.estagio === undefined ? null : Math.max(0, Math.min(5, inteiro(m.estagio, 0))),
+        degrau: Math.max(0, Math.min(40, inteiro(m.degrau, 0))),
+      },
+      estadoAtualComoBase: true,
+      aquisicoes: (Array.isArray(b.aquisicoes) ? b.aquisicoes : []).map(function (a) {
+        if (!a || typeof a !== "object") return null;
+        var ref = /^[A-Za-z0-9_.:-]{1,80}$/.test(String(a.ref || "")) ? String(a.ref) : "";
+        if (!ref || vistos[ref]) return null;
+        vistos[ref] = true;
+        var chave = /^[A-Za-z0-9.:_-]{1,80}$/.test(String(a.chave || "")) ? String(a.chave) : "";
+        var saida = {
+          ref: ref, chave: chave,
+          nome: textoLimitado(a.nome, 120),
+          nomeOriginal: textoLimitado(a.nomeOriginal, 160),
+          tipo: textoLimitado(a.tipo, 20),
+          elemento: textoLimitado(a.elemento, 20),
+          afinidade: a.afinidade === true,
+          procedencia: textoLimitado(a.procedencia, 160),
+          representacao: REPRESENTACOES.indexOf(a.representacao) >= 0 ? a.representacao : "texto",
+          nota: textoLimitado(a.nota, 300),
+        };
+        var op = opcoesSeguras(a.opcoes, 0);
+        if (op && typeof op === "object" && !Array.isArray(op) && Object.keys(op).length) saida.opcoes = op;
+        return saida;
+      }).filter(Boolean).slice(0, 300),
+      revisoes: (Array.isArray(b.revisoes) ? b.revisoes : []).map(function (r) {
+        if (!r || typeof r !== "object") return null;
+        return { codigo: textoLimitado(r.codigo, 60), campo: textoLimitado(r.campo, 80), valor: textoLimitado(r.valor, 120), texto: textoLimitado(r.texto, 300) };
+      }).filter(Boolean).slice(0, 120),
+      observacoes: (Array.isArray(b.observacoes) ? b.observacoes : []).map(function (t) { return textoLimitado(t, 300); }).filter(Boolean).slice(0, 120),
+      ajustes: (Array.isArray(b.ajustes) ? b.ajustes : []).map(function (a) {
+        if (!a || typeof a !== "object") return null;
+        return { alvo: textoLimitado(a.alvo, 80), valor: inteiro(a.valor, 0), motivo: textoLimitado(a.motivo, 300) };
+      }).filter(Boolean).slice(0, 200),
+      criticos: (Array.isArray(b.criticos) ? b.criticos : []).map(function (c) {
+        if (!c || typeof c !== "object") return null;
+        return { item: textoLimitado(c.item, 120), origem: textoLimitado(c.origem, 120), rama: textoLimitado(c.rama, 120) };
+      }).filter(Boolean).slice(0, 60),
+      /* Os rituais que vieram na importação, pelo id na ficha: conhecidos
+         sem a aquisição de origem (a exportação os leva como #ref:). */
+      rituais: (Array.isArray(b.rituais) ? b.rituais : []).filter(function (id) {
+        return typeof id === "string" && id.length > 0 && id.length <= 80;
+      }).slice(0, 300),
+    };
+  }
+
+  /* O mínimo que NEX, nível e estágio podem ter numa ficha importada: o
+     marco. Abaixo dele não há história reconstruída. null = sem marco. */
+  function minimoDoMarco(ficha) {
+    var imp = ficha && ficha.importacao;
+    if (!imp || !imp.marco) return null;
+    return { modo: imp.marco.modo, nex: imp.marco.nex, nivel: imp.marco.nivel, estagio: imp.marco.estagio, degrau: imp.marco.degrau };
+  }
+
   function trilho(ficha) {
     var fase = faseDe(ficha || {});
     if (fase.comum) {
@@ -1137,7 +1245,7 @@
     var d = I() ? I().dadosDoItem(item) : ((item && item.ordem) || {});
     var saida = {
       categoria: [], espacos: [], defesa: [], ataque: [], dano: [], dadosDano: [],
-      margem: [], margemDobra: [], alcance: [], alcanceSeDistancia: [],
+      margem: [], margemDobra: [], alcance: [], alcanceSeDistancia: [], multiplicador: [],
       automatica: false, lista: [],
     };
     var maldicoes = 0;
@@ -1157,6 +1265,14 @@
       if (c.margemDobra) saida.margemDobra.push({ fonte: fonte });
       if (c.automatica) saida.automatica = true;
     });
+    /* Ajuste residual de importação (v2.34): uma parcela com origem por
+       dimensão. Tirar uma modificação muda a conta; o ajuste não a refaz. */
+    var imp = d.ajustesImportados;
+    if (imp) {
+      ["categoria", "espacos", "defesa", "ataque", "dano", "dadosDano", "margem", "multiplicador"].forEach(function (k) {
+        if (imp[k]) saida[k].push({ valor: imp[k], fonte: "Importação (diferença observada)", detalhe: imp.motivo || "" });
+      });
+    }
     return saida;
   }
 
@@ -1425,6 +1541,8 @@
       extra.soma("Agilidade", atributo(ficha, "agi"), "atributo no dano da arma");
     } else if (atributoDano === "pre") {
       extra.soma("Presença", atributo(ficha, "pre"), "Presença no dano em vez de Força ou Agilidade (Instrumento Elétrico de Combate, AS3 p. 109)");
+    } else if (atributoDano === "int" || atributoDano === "vig") {
+      extra.soma(nomeDoAtributoCurto(atributoDano), atributo(ficha, atributoDano), "atributo escolhido para o dano da arma");
     }
     /* A arma sintonizada troca o atributo do dano, quando a arma soma um. */
     if (sintA && extra.parcelas.length) {
@@ -1457,6 +1575,7 @@
       margem = Math.max(1, 21 - faces);
     }
     if (acop && acop.aprimoramento === "multiplicador") multiplicadorBase += 1;
+    multiplicadorBase = Math.max(1, multiplicadorBase + somaDe(aj.multiplicador));
 
     var alcance = a.alcance || "";
     var passos = somaDe(aj.alcance) + (a.tipo && a.tipo !== "corpoACorpo" ? somaDe(aj.alcanceSeDistancia) : 0);
@@ -2427,6 +2546,9 @@
     ficha.retencoes = normalizarRetencoes(b.retencoes);
     ficha.maldicoesMemorizadas = normalizarMaldicoesMemorizadas(b.maldicoesMemorizadas);
     ficha.contadores = normalizarContadores(b.contadores);
+    /* Marco de estado importado (v2.34): só existe na ficha importada. */
+    var importacao = normalizarImportacao(b.importacao);
+    if (importacao) ficha.importacao = importacao;
     if (A2()) A2().normalizar(ficha, b);
     /* Arquivos Secretos 3 (v2.33). Sem o módulo, passa como veio. */
     if (A3()) A3().normalizar(ficha, b);
@@ -2878,6 +3000,8 @@
     dtAprimoradaDe: dtAprimoradaDe,
     cenaDe: cenaDe,
     fichaVazia: fichaVazia,
+    normalizarImportacao: normalizarImportacao,
+    minimoDoMarco: minimoDoMarco,
 
     trilho: trilho,
     faseDe: faseDe,

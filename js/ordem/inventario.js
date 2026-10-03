@@ -67,8 +67,19 @@
   var TIPOS_ARMA = ["corpoACorpo", "arremesso", "disparo", "fogo", "distancia"];
   var EMPUNHADURAS = ["leve", "umaMao", "duasMaos"];
   var ALCANCES = ["curto", "medio", "longo", "extremo"];
-  /* "pre": o Instrumento Elétrico de Combate soma Presença no dano (AS3 p. 109). */
-  var ATRIBUTOS_DANO = ["for", "agi", "melhor", "pre"];
+  /* "pre": o Instrumento Elétrico de Combate soma Presença no dano (AS3 p. 109).
+     "int", "vig" e "nenhum" (v2.34): a escolha explícita de uma ficha
+     importada (o CRIS deixa escolher qualquer atributo, ou nenhum). */
+  var ATRIBUTOS_DANO = ["for", "agi", "melhor", "pre", "int", "vig", "nenhum"];
+
+  /* Ajustes residuais de uma importação (v2.34): o que sobrou entre o
+     valor observado na origem e o calculado pelo R.A.M.A. depois da base
+     do catálogo e das modificações reconhecidas. Entram nas contas como
+     parcelas com origem — nunca como base nova. */
+  var AJUSTES_IMPORTADOS = {
+    categoria: [-6, 6], espacos: [-20, 20], defesa: [-30, 30], ataque: [-30, 30],
+    dano: [-100, 100], dadosDano: [-10, 10], margem: [-19, 19], multiplicador: [-5, 5],
+  };
   var TIPOS_PROTECAO = ["leve", "pesada", "escudo"];
   var ELEMENTOS = ["sangue", "morte", "conhecimento", "energia", "medo", "varia"];
   var MARCADORES = ["acessorio", "utensilio", "vestimenta", "eletrico", "camera", "corpoACorpo", "besta", "balas"];
@@ -184,6 +195,20 @@
     if (marcadores.length) dados.marcadores = marcadores;
     var ref = referenciaValida(b.referencia);
     if (ref) dados.referencia = ref;
+    if (b.ajustesImportados && typeof b.ajustesImportados === "object") {
+      var aj = {};
+      Object.keys(AJUSTES_IMPORTADOS).forEach(function (k) {
+        var v = inteiroEntre(b.ajustesImportados[k], AJUSTES_IMPORTADOS[k][0], AJUSTES_IMPORTADOS[k][1]);
+        if (v) aj[k] = v;
+      });
+      if (Object.keys(aj).length) {
+        aj.motivo = textoCurto(b.ajustesImportados.motivo, 300) || "Importação: diferença observada";
+        dados.ajustesImportados = aj;
+      }
+    }
+    /* O estado de uso que a origem registrava num item que o R.A.M.A.
+       não liga a uma conta (arma empunhada, item amaldiçoado guardado). */
+    if (b.equipadoNaOrigem === true || b.equipadoNaOrigem === false) dados.equipadoNaOrigem = b.equipadoNaOrigem;
     var mods = (Array.isArray(b.modificacoes) ? b.modificacoes : []).map(modificacaoValida).filter(Boolean).slice(0, MAX_MODIFICACOES);
     if (mods.length) dados.modificacoes = mods;
     /* Contagem de munição (v2.20, regra opcional): o que está carregado

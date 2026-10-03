@@ -479,6 +479,65 @@ nas outras. É sempre a mesma nota: id, título, conteúdo e datas.
 
 ---
 
+## Ficha importada (v2.34)
+
+Uma ficha que veio do CRIS (Perfil → **Importar do CRIS**) chega com o estado
+atual e sem a história de como chegou lá. O R.A.M.A. não inventa essa história.
+
+### O marco
+
+`ordem.importacao.marco` guarda NEX, nível ou estágio no momento da leitura
+(`modo`: `nex`; `nivel` com NEX & Experiência; `estagio` para Sobrevivente).
+Atributos e graus de perícia gravados são o estado **no marco**.
+
+- **Etapas até o marco** sem registro viram *histórico indisponível*
+  (`historicoImportado` no estado da progressão): não pedem escolha, não somam
+  efeito e não abrem vaga. A trilha e a afinidade ficam fora dessa regra: a
+  trilha é decidida na importação (sugerida pelas habilidades e confirmada pela
+  pessoa) e a afinidade continua pendente quando cabe.
+- **Aquisições importadas** (`representacao: "importada"`) entram no percurso
+  com `via: "importacao"` e os efeitos de conta (PV, PE, Defesa…), **sem** os
+  efeitos que o retrato já contém (treinar perícia, grau, atributo). As que as
+  camadas das regras já dão — automáticas da classe, poder da origem,
+  habilidades da trilha confirmada — ficam de lado (`importadasDeLado`): um
+  benefício nunca conta duas vezes. `"item"` não tem efeito fora do item;
+  `"texto"` é só a habilidade descrita na pasta *Importado do CRIS*.
+- **Rituais importados** (`importacao.rituais`) são conhecidos, com aquisição
+  "histórico indisponível": não ocupam vaga, não reabrem concessões e não
+  contam no limite de Aprender Ritual. As concessões de etapas históricas não
+  aparecem como "0 de 0".
+- **Acima do marco** a progressão segue normal: NEX 45% numa ficha de NEX 40%
+  pede só o que a etapa nova dá.
+- **Abaixo do marco** NEX, nível e estágio não descem: a tela recusa com o
+  motivo. A progressão continua funcionando acima dele.
+- Sem `ordem.importacao`, nada disso existe: fichas antigas não mudam.
+
+### Calcular, comparar, ajustar só o resíduo
+
+Item reconhecido nasce da base do catálogo; as modificações reconhecidas são
+aplicadas pelo catálogo; o motor calcula; só a diferença para o valor observado
+vira `ordem.ajustesImportados`, com motivo. O mesmo vale para a ficha: perícias
+(`ordem.ajustes`, alvo `pericia:<chave>`), máximos de PV/PE/SAN/PD (decisão na
+revisão; o padrão mantém o número do CRIS), Defesa/bloqueio/esquiva
+(`bonusExtra`), deslocamento e limite de PE. Os recursos atuais entram depois
+dos máximos finais, zero incluído — sem descanso e sem completar.
+
+### Diferenças mecânicas conhecidas (CRIS × R.A.M.A.)
+
+| Ponto | CRIS | R.A.M.A. | Na importação |
+|---|---|---|---|
+| Crítico | repete a expressão inteira (constantes inclusive) | multiplica os dados (e o extra marcado) | fica a regra do R.A.M.A.; a fórmula do CRIS vai para `criticos` e para a revisão |
+| Bônus de perícia | `bonus` já inclui o treino | treino + efeitos | o treino não é somado de novo; outros bônus do CRIS viram ajuste |
+| Efeito automatizado (ex.: Sensitivo) | não soma | soma | segue o R.A.M.A.; a revisão permite manter o total do CRIS |
+| Traços do Outro Lado | SAN cheia | metade da SAN da classe | revisão; o padrão mantém o máximo do CRIS (ajuste) |
+| Golpe Pesado | +1 dado na arma | descrito | +1 dado como ajuste da arma, com motivo |
+| Maldição Defesa de acessório | soma na Defesa | descrita | bônus extra de Defesa com motivo |
+| Mochila | espaço negativo | capacidade | conferência, sem ajuste |
+| Limites de categoria da patente | não confere | avisa | aviso na revisão; nada é removido |
+| `nexString` | texto livre | — | não manda no NEX; com NEX & Experiência é a exposição |
+| `isPdOn` | liga PD | "Jogando sem Sanidade" | só esse campo liga a regra; conteúdo do SaH não liga nada |
+| Bônus escrito no nome do item | texto | — | não vira efeito; o total observado da perícia entra como ajuste |
+
 ## Afinidade
 
 | regra | fonte | comportamento | est. |

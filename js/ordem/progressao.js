@@ -831,6 +831,9 @@
          etapa passa, não no fim. */
       quantidades: {},
       ids: {},
+      /* id da vaga → true: etapas abaixo do marco de uma importação, sem
+         histórico (v2.34). */
+      historicas: {},
       /* Aquisições cujos efeitos a mesa desligou numa versão
          personalizada (personalizacao.js). */
       desligadas: desativadasDe(ordem),
@@ -2160,6 +2163,8 @@
       ordem.estadoDasOrigens || null,
       ordem.atributos, ordem.pericias, ordem.escolhas, ordem.afinidade, ordem.opcionais,
       ordem.registrosDeRitual || null, ordem.prestigio,
+      /* O marco de estado importado e as aquisições dele (v2.34). */
+      ordem.importacao ? [ordem.importacao.marco, ordem.importacao.aquisicoes] : null,
       Object.keys(desativadasDe(ordem)).sort(),
       ordem.progressao ? ordem.progressao.length : 0,
       itens ? itens.map(function (i) { return i ? [i.id, i.tipo, i.nome, i.ordem && i.ordem.grupo] : null; }) : null,
@@ -2205,6 +2210,89 @@
     return mapa;
   }
 
+  /* =================================================================
+     O MARCO DE ESTADO IMPORTADO (v2.34)
+     -----------------------------------------------------------------
+     Numa ficha importada, `ordem.atributos` e `ordem.pericias` já são os
+     valores do momento da importação, e `importacao.aquisicoes` traz os
+     poderes que ela tinha. Então:
+
+       · uma etapa de escolha no marco ou abaixo dele, sem registro, é
+         HISTÓRICO INDISPONÍVEL: não vira vaga, não aplica aumento nem
+         concessão de novo. Um registro feito nela (ex.: a arma favorita
+         confirmada na revisão) vale normalmente;
+       · cada poder importado reconhecido entra como aquisição, com os
+         efeitos de conta — menos os que já estão nos valores atuais
+         (treino e atributo) — e conta nos requisitos futuros;
+       · o que a camada oficial já dá (habilidade da classe, da trilha)
+         não entra duas vezes: a oficial vale e a importada fica de lado;
+       · acima do marco, a evolução é a de sempre.
+     ================================================================= */
+
+  var TIPOS_NAO_HISTORICOS = { trilha: true, afinidade: true, trilhaSobrevivente: true };
+  /* Efeitos que já estão no retrato importado (o treino e o atributo
+     que o poder deu): aplicá-los de novo dobraria o valor. */
+  var EFEITOS_DO_RETRATO = { grauPericias: true, treinar: true, treinarLista: true, treinarOuBonus: true, grauMinimo: true, atributo: true };
+
+  function marcoDe(ordem) {
+    var imp = ordem && ordem.importacao;
+    return imp && imp.marco ? imp.marco : null;
+  }
+
+  function vagaHistorica(v, marco) {
+    if (!marco || TIPOS_NAO_HISTORICOS[v.tipo]) return false;
+    if (marco.modo === "estagio") return !!(v.estagio ? v.estagio <= (marco.estagio || 0) : v.degrau <= 1);
+    if (v.nexExposicao) return v.nexExposicao <= (marco.nex || 0);
+    return v.degrau <= (marco.degrau || 0);
+  }
+
+  /* As chaves que a camada oficial já dá nesta ficha. */
+  function providasPelasRegras(ordem, t) {
+    var providas = {};
+    P.AUTOMATICAS.forEach(function (a) { if (a.classes.indexOf(ordem.classe) >= 0) providas[a.chave] = "classe"; });
+    var tr = C.trilha(ordem.trilha);
+    if (tr && C.trilhaServe(tr, ordem.classe, ordem)) {
+      var registradas = {};
+      (ordem.escolhas || []).forEach(function (r) { if (r && r.etapa) registradas[r.etapa] = true; });
+      P.habilidadesDaTrilha(tr.chave).forEach(function (h) {
+        if (h.nex > t.nexEquivalente) return;
+        /* A habilidade com opção (A Favorita) só vem da trilha quando a
+           opção foi registrada; sem ela, a importada continua valendo. */
+        if (h.opcoes.length && !registradas["b." + h.chave]) return;
+        providas[h.chave] = "trilha";
+      });
+    }
+    return providas;
+  }
+
+  function adquirirImportadas(ordem, percurso, efeitos, marco, t) {
+    var imp = ordem.importacao;
+    if (!imp || !Array.isArray(imp.aquisicoes)) return [];
+    var providas = providasPelasRegras(ordem, t);
+    var deLado = [];
+    var etapa = etapaDe(ordem, { id: "importacao", degrau: marco ? marco.degrau : 0, rotuloEtapa: "Estado importado" });
+    imp.aquisicoes.forEach(function (aq) {
+      if (aq.representacao !== "importada") return;
+      var e = P.poder(aq.chave);
+      if (!e) return;
+      if (providas[e.chave]) { deLado.push({ aquisicao: aq, motivo: providas[e.chave] }); return; }
+      var id = "importacao." + aq.ref;
+      var desligada = !!percurso.desligadas[id];
+      percurso.adquiridos.push({
+        id: id, chave: e.chave, nome: e.nome, tipo: e.tipo, elemento: e.elemento || "", opcoes: aq.opcoes || {},
+        afinidade: !!aq.afinidade, valido: true, completo: true, via: "importacao", degrau: etapa.degrau,
+        etapaId: "importacao", rotuloEtapa: etapa.rotulo, entrada: e, motivos: [], importada: true,
+        procedencia: aq.procedencia || "", efeitosDesativados: desligada,
+      });
+      if (desligada) return;
+      (e.efeitos || []).concat(aq.afinidade ? (e.efeitosAfinidade || []) : []).forEach(function (ef) {
+        if (EFEITOS_DO_RETRATO[ef.tipo]) return;
+        aplicarEfeito(percurso, efeitos, ef, aq.opcoes || {}, { nome: e.nome, detalhe: "estado importado" }, etapa);
+      });
+    });
+    return deLado;
+  }
+
   function percorrer(ordem, contexto, pararEm) {
     var t = R().trilho(ordem);
     var exposicao = R().exposicao(ordem);
@@ -2218,6 +2306,10 @@
     var antes = null;
     var legado = legadoDe(ordem);
     var legadoUsado = [];
+    var marco = marcoDe(ordem);
+    var historicos = [];
+    var antesHistorico = false;
+    var importadasDeLado = marco ? adquirirImportadas(ordem, percurso, efeitos, marco, t) : [];
 
     /* Um registro por vaga. Dois para a mesma — a sincronização juntou
        duas decisões de aparelhos diferentes — valem pelo mais recente, e
@@ -2344,6 +2436,15 @@
         return;
       }
 
+      /* Marco importado: a etapa sem registro, no marco ou abaixo dele, é
+         histórico indisponível — nem vaga, nem efeito (v2.34). */
+      if (marco && !porEtapa[v.id] && vagaHistorica(v, marco)) {
+        historicos.push({ id: v.id, tipo: v.tipo, rotulo: v.rotulo, rotuloEtapa: v.rotuloEtapa, degrau: v.degrau, vaga: v });
+        percurso.historicas[v.id] = true;
+        if (pararEm === v.id) antesHistorico = true;
+        return;
+      }
+
       if (v.tipo === "rituais") {
         percurso.quantidades[v.id] = A ? A.quantidadeDa(v.concessao, percurso.atributos.int || 0) : 0;
       }
@@ -2463,9 +2564,16 @@
     });
 
     var af = afinidadeDe(ordem);
+    if (antes && (antesHistorico || !!(marco && pararEm && idsVagas[pararEm] && vagaHistorica(idsVagas[pararEm], marco)))) antes.historicoIndisponivel = true;
 
     return {
       antes: antes,
+      /* A etapa pedida é anterior ao marco importado: o percurso "antes"
+         dela é o retrato da importação, não a história real (v2.34). */
+      antesHistorico: antesHistorico || !!(marco && pararEm && idsVagas[pararEm] && vagaHistorica(idsVagas[pararEm], marco)),
+      marco: marco,
+      historicoImportado: historicos,
+      importadasDeLado: importadasDeLado,
       trilho: t,
       exposicao: exposicao,
       rituais: resumoDeRituais(ordem, contexto, percurso, vs, t, registrosProcessados),
@@ -2522,7 +2630,26 @@
       }
     });
 
-    var concessoes = todasAsVagas.filter(function (v) { return v.tipo === "rituais"; }).map(function (v) {
+    /* Ficha importada (v2.34): os rituais que vieram na importação são
+       conhecidos, sem a aquisição de origem — histórico indisponível. Uma
+       aquisição registrada depois tem precedência. */
+    var imp = ordem.importacao;
+    if (imp && imp.marco && Array.isArray(imp.rituais) && rituaisFicha) {
+      var naFicha = {};
+      rituaisFicha.forEach(function (x) { if (x && x.id) naFicha[x.id] = true; });
+      imp.rituais.forEach(function (id) {
+        if (!naFicha[id] || porRitual[id]) return;
+        porRitual[id] = {
+          importado: true, ritualId: id, origem: "importacao", poder: "",
+          nomePoder: imp.sistema === "cris" ? "Importação do CRIS" : "Importação",
+          rotuloEtapa: "histórico indisponível", destino: "conhecido", contaNoLimite: false,
+        };
+      });
+    }
+
+    /* A concessão de uma etapa histórica não é listada: ela não tem
+       quantidade nem escolhidos, e "0 de 0" mentiria (v2.34). */
+    var concessoes = todasAsVagas.filter(function (v) { return v.tipo === "rituais" && !(percurso.historicas && percurso.historicas[v.id]); }).map(function (v) {
       var c = v.concessao;
       var quantidade = percurso.quantidades[v.id] || 0;
       var escolhidos = ativos(percurso).filter(function (a) { return a.concessao === v.id; });

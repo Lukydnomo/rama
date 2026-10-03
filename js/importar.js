@@ -133,7 +133,12 @@
     }
 
     function mostrarPrevia(r) {
-      U.trocar(previa, UI.painel("Prévia", previaDe(r)));
+      /* Avisos da leitura (v2.34): vínculos de um arquivo antigo que não
+         deu para reconstruir aparecem aqui, antes de importar. */
+      var avisos = (r.avisos || []).length
+        ? el("ul.pilha.pilha--curta", {}, r.avisos.map(function (a) { return el("li.t-mini", { texto: "· " + a }); }))
+        : null;
+      U.trocar(previa, UI.painel("Prévia", el("div.pilha", {}, [previaDe(r), avisos])));
     }
 
     var m = UI.modal({

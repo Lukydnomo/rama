@@ -88,6 +88,13 @@
      Módulos ausentes permanecem ativos; aliados ausentes viram [].
      Perícias existentes, inclusive listas vazias, são preservadas.
 
+     14 → 15: importação do CRIS (v2.34). O bloco `ordem` ganhou
+     `importacao` (fonte, marco, aquisições importadas, revisões e
+     ajustes observados) e o item de inventário, `ordem.ajustesImportados`
+     e `ordem.equipadoNaOrigem`. Sem conversão: uma ficha 14 abre igual,
+     sem marco. Uma aba antiga descartaria o marco ao gravar e a
+     progressão voltaria a pedir as etapas — com o schema maior ela recusa.
+
      Nenhuma das subidas exige migração: normalizarFicha() cria o que
      falta, vazio, e não toca no que existe. Um ritual gravado na 2 abre
      na 3 com a versão Normal em branco; uma ficha de Ordem gravada na 4
@@ -97,7 +104,7 @@
      os campos novos e os descartaria ao gravar — com o schema maior ela
      recusa abrir a ficha e pede para recarregar.
      Ver docs/CHARACTER_SCHEMA.md. */
-  var VERSAO_SCHEMA = 14;
+  var VERSAO_SCHEMA = 15;
 
   var MODULOS = {
     atributos: "Atributos", status: "Status/recursos", defesa: "Defesa",
