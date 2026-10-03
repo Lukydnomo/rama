@@ -1504,7 +1504,8 @@
   bottom: var(--e4);
   z-index: var(--z-flutuante);
   display: flex;
-  flex-direction: column-reverse;
+  flex-direction: column;
+  justify-content: flex-end;
   gap: var(--e2);
   width: min(300px, calc(100vw - var(--e6)));
   max-height: 70vh;
@@ -1524,6 +1525,7 @@
   animation: r-rolar var(--tempo-medio) var(--curva);
 }
 .rolagem--antiga { opacity: 0.55; }
+.rolagem--saindo { opacity: 0; transform: translateY(6px); transition: opacity 200ms var(--curva), transform 200ms var(--curva); }
 .rolagem--critico { border-color: var(--cor-paranormal); }
 .rolagem--dano    { border-color: var(--cor-erro); }
 
@@ -1535,10 +1537,12 @@
 
 .rolagem__topo {
   display: flex;
-  align-items: baseline;
-  justify-content: space-between;
+  align-items: center;
   gap: var(--e2);
 }
+.rolagem__topo .rolagem__nome { flex: 1 1 auto; }
+.rolagem__expressao { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rolagem__fechar { flex: 0 0 auto; margin: calc(-1 * var(--e1)) calc(-1 * var(--e1)) calc(-1 * var(--e1)) 0; }
 
 .rolagem__nome {
   font-weight: 700;

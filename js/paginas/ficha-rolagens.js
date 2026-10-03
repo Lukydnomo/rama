@@ -24,6 +24,31 @@
   var MAX_NA_TELA = 4;
   var historico = [];
 
+  /* Como notificação (v2.31.1): cada resultado fica 5 s no canto. Passar
+     o mouse, tocar, clicar ou focar reinicia a contagem; a mais nova
+     entra embaixo e as antigas sobem. */
+  var DURACAO_MS = 5000;
+
+  function temporizar(cartao, caixa) {
+    var id = null;
+    function sair() {
+      /* O cartão pode ter ido para outro lugar (o painel da criatura
+         repete o resultado dentro dele): aí ele fica. */
+      if (cartao.parentNode !== caixa) return;
+      cartao.classList.add("rolagem--saindo");
+      setTimeout(function () { if (cartao.parentNode === caixa) caixa.removeChild(cartao); }, 220);
+    }
+    function reiniciar() {
+      clearTimeout(id);
+      cartao.classList.remove("rolagem--saindo");
+      id = setTimeout(sair, DURACAO_MS);
+    }
+    ["mouseenter", "mousemove", "mouseleave", "pointerdown", "click", "focusin", "touchstart"].forEach(function (ev) {
+      cartao.addEventListener(ev, reiniciar, { passive: true });
+    });
+    reiniciar();
+  }
+
   function area() { return U.$("#rolagens"); }
 
   /* mostrar(resultado, { tipo, acao: { rotulo, aoClicar } }) */
@@ -34,13 +59,11 @@
 
     var cartao = montar(resultado, o);
 
-    /* As anteriores desbotam em vez de sumir: dá para conferir a
-       rolagem passada quando alguém pergunta "quanto deu mesmo?". */
-    U.$$(".rolagem", caixa).forEach(function (n) { n.classList.add("rolagem--antiga"); });
-
+    /* A mais nova embaixo; as antigas sobem, e a mais velha sai se
+       passar do limite. */
     caixa.appendChild(cartao);
-
     while (caixa.children.length > MAX_NA_TELA) caixa.removeChild(caixa.firstChild);
+    temporizar(cartao, caixa);
 
     historico.unshift({ quando: Date.now(), resultado: resultado });
     if (historico.length > 30) historico.pop();
@@ -69,9 +92,16 @@
         r.tipo === "dano" ? "rolagem--dano" : "",
       ].filter(Boolean).join(" "),
     }, [
+      /* O botão de dispensar mora no cabeçalho, ao lado da expressão:
+         solto por cima do cartão, ele cobria o dado. */
       el("header.rolagem__topo", {}, [
         el("span.rolagem__nome", { texto: o.nome || r.nome || "Rolagem" }),
         el("span.rolagem__expressao", { texto: r.expressao || "" }),
+        el("button.r-icone.rolagem__fechar", {
+          type: "button",
+          "aria-label": "Dispensar resultado",
+          onclick: function () { if (cartao.parentNode) cartao.parentNode.removeChild(cartao); },
+        }, [UI.simbolo("x", 12)]),
       ]),
 
       el("p.rolagem__total", { texto: String(r.total !== undefined ? r.total : r.principal) }),
@@ -102,16 +132,8 @@
             return botao;
           }))
         : null,
-
-      el("button.r-icone.rolagem__acao", {
-        type: "button",
-        "aria-label": "Dispensar resultado",
-        estilo: { position: "absolute", top: "2px", right: "2px" },
-        onclick: function () { if (cartao.parentNode) cartao.parentNode.removeChild(cartao); },
-      }, [UI.simbolo("x", 12)]),
     ]);
 
-    cartao.style.position = "relative";
     return cartao;
   }
 

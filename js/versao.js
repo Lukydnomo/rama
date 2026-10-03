@@ -70,6 +70,17 @@
 
   var CHANGELOG = [
     {
+      versao: "2.31.1", codinome: "SINALIZADOR", data: "02/10/2026",
+      mudancas: {
+        "Melhorado": [
+          "As rolagens do canto viram notificações: a mais nova entra embaixo e as anteriores sobem; cada uma fica 5 segundos na tela, e passar o mouse, tocar, clicar ou focar nela reinicia a contagem.",
+        ],
+        "Corrigido": [
+          "O botão de dispensar a rolagem saiu de cima do dado: agora fica no cabeçalho, ao lado da expressão.",
+        ],
+      },
+    },
+    {
       versao: "2.31.0", codinome: "CONSENTIMENTO", data: "02/10/2026",
       mudancas: {
         "Adicionado": [
