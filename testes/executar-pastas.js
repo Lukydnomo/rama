@@ -103,6 +103,20 @@ t.igual("filtros sem resultado", O.montar(r, PASTAS, { busca: "ninguém com este
 t.igual("com resultado, nenhum estado vazio", O.montar(r, PASTAS, {}).vazio, null);
 t.ok("filtrando é sinalizado", O.montar(r, PASTAS, { busca: " x " }).filtrando && O.montar(r, PASTAS, { sistema: "ordem" }).filtrando && !O.montar(r, PASTAS, {}).filtrando);
 
+t.grupo("Exibição em ícones (v2.35): contagens filtradas e prévia");
+r = base();
+t.ok("sem busca nem sistema, não há contagem filtrada", O.montar(r, PASTAS, {}).filtradas === null);
+const cf = O.montar(r, PASTAS, { sistema: "ordem" }).filtradas;
+t.igual("com o sistema: quantos de cada pasta passam", cf, { todos: 2, semPasta: 1, porPasta: { sabado: 1, morto: 0 } });
+t.igual("  a mesma conta da lista aberta em cada pasta",
+  [O.montar(r, PASTAS, { pasta: "sabado", sistema: "ordem" }).visiveis.length, O.montar(r, PASTAS, { pasta: "sem-pasta", sistema: "ordem" }).visiveis.length],
+  [cf.porPasta.sabado, cf.semPasta]);
+t.igual("busca também conta por pasta", O.montar(r, PASTAS, { busca: "ordem" }).filtradas.porPasta, { sabado: 1, morto: 0 });
+t.igual("as contagens totais não mudam com o filtro", O.montar(r, PASTAS, { sistema: "ordem" }).contagens, O.montar(r, PASTAS, {}).contagens);
+t.igual("prévia: os primeiros e quantos sobram", [ids(O.previa(r, 4).itens), O.previa(r, 4).resto], [["1", "2", "3", "4"], 2]);
+t.igual("prévia de pasta vazia", [O.previa([], 4).itens.length, O.previa([], 4).resto], [0, 0]);
+t.igual("prévia menor que o limite", [O.previa(r.slice(0, 2), 4).itens.length, O.previa(r.slice(0, 2), 4).resto], [2, 0]);
+
 t.grupo("Nada muda de lugar ao filtrar ou agrupar");
 r = base();
 const antes = JSON.stringify(r);

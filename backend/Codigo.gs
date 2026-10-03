@@ -824,8 +824,9 @@ function perfilPublico(usuario) {
     usuario: usuario.usuario,
     nome: usuario.nome || usuario.usuario,
     avatar: imagemDe(perfil, 'avatar'),
-    /* O tema vem com a sessão: a página o aplica sem outra consulta. */
-    preferencias: { tema: temaDaConta(perfil) },
+    /* As preferências de apresentação vêm com a sessão: a página as
+       aplica sem outra consulta. */
+    preferencias: preferenciasDaSessao(perfil),
   };
 }
 
@@ -836,12 +837,20 @@ function perfilPublico(usuario) {
    sem ter sido gravado. `null` apaga a chave (volta ao padrão). */
 var PREFERENCIAS_ACEITAS = {
   tema: ['sistema', 'claro', 'escuro'],
+  /* v2.35: como a página Personagens mostra as pastas. */
+  exibicaoPastas: ['abas', 'icones'],
 };
+var PREFERENCIAS_PADRAO = { tema: 'sistema', exibicaoPastas: 'abas' };
 
-function temaDaConta(perfil) {
+/* Cada preferência aceita, com o valor gravado ou o padrão. */
+function preferenciasDaSessao(perfil) {
   var prefs = lerJson(perfil && perfil.preferenciasJson, {});
-  var tema = prefs && prefs.tema;
-  return PREFERENCIAS_ACEITAS.tema.indexOf(tema) >= 0 ? tema : 'sistema';
+  var saida = {};
+  Object.keys(PREFERENCIAS_ACEITAS).forEach(function (chave) {
+    var v = prefs && prefs[chave];
+    saida[chave] = PREFERENCIAS_ACEITAS[chave].indexOf(v) >= 0 ? v : PREFERENCIAS_PADRAO[chave];
+  });
+  return saida;
 }
 
 /* Valida o pedido. Devolve null quando algo não serve. */

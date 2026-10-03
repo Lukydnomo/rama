@@ -70,6 +70,25 @@
 
   var CHANGELOG = [
     {
+      versao: "2.35.0", codinome: "VITRINE", data: "03/10/2026",
+      mudancas: {
+        "Adicionado": [
+          "Personagens: controle “Exibição” com Abas (como sempre) e Ícones. Em Ícones, as pastas viram uma grade de pastas compactas, como as de aplicativos no celular, com miniaturas de quem está dentro (retrato ou iniciais, “+N” quando há mais), nome e contagem — “2 de 5” com busca ou filtro de sistema.",
+          "Tocar numa pasta a abre num painel por cima, com os personagens dela, o menu de cada um e as ações de renomear e excluir; fecha pelo botão, por Esc ou tocando fora, com uma transição curta (sem ela, com movimento reduzido), e o foco volta ao ícone.",
+          "Quem não está em pasta continua na página, em lista, sob “Sem pasta”. Arrastar pela alça até o ícone de uma pasta move; de dentro do painel aberto também — ele sai da frente durante o gesto —, e soltar em “Sem pasta” retira da pasta.",
+          "Com “Agrupar por sistema” em Ícones, os sistemas da pasta escolhida viram ícones que abrem só os personagens daquele sistema, com Universal (incluindo as fichas antigas), sistemas desconhecidos e os ainda não identificados.",
+        ],
+        "Melhorado": [
+          "A escolha de exibição fica salva na conta, junto do tema e sem mexer nele; pasta aberta, busca, sistema e agrupamento continuam no endereço da página e não mudam ao trocar.",
+          "Janelas só de visualização podem fechar direto pelo fundo, e o arraste avisa quando começa e termina — o que deixa o painel sair da frente dos destinos.",
+        ],
+        "Técnico": [
+          "Preferência `exibicaoPastas` (\"abas\" | \"icones\") em `salvar_perfil` e na sessão; módulo `js/preferencias.js` com cache por conta. Troque o `Codigo.gs` e crie uma nova versão da implantação; sem `setupRama()`. Servidor antigo: a escolha fica no aparelho, com aviso.",
+          "Testes: 8 novos na organização das pastas, 10 no servidor e 24 nas preferências, mais a página no navegador em desktop, celular e temas claro e escuro.",
+        ],
+      },
+    },
+    {
       versao: "2.34.2", codinome: "CONTRAPROVA", data: "03/10/2026",
       mudancas: {
         "Adicionado": [

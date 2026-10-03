@@ -177,7 +177,7 @@ lento a cada entrada.
 |--------------------|-----------------------------------|
 | `userId`           | chave                             |
 | `avatar`           | data URL da miniatura             |
-| `preferenciasJson` | objeto JSON: `{ tema }` (v2.25)   |
+| `preferenciasJson` | objeto JSON: `{ tema, exibicaoPastas }` (v2.25, v2.35) |
 | `atualizadoEm`     | ISO 8601                          |
 
 `preferenciasJson.tema` é a preferência de tema da conta: `"sistema"` (segue o
@@ -185,6 +185,12 @@ aparelho), `"claro"` ou `"escuro"`. Ausente vale `"sistema"`. O servidor grava p
 remendo (`salvar_perfil`): outras chaves que estejam na célula ficam. O navegador
 guarda uma cópia por conta em `rama.tema.<userId>` só para aplicar o tema antes da
 sessão responder; a planilha é a fonte.
+
+`preferenciasJson.exibicaoPastas` (v2.35) é como a página Personagens mostra as
+pastas: `"abas"` (padrão, ausente vale isto) ou `"icones"`. Mesmo remendo e mesma
+cópia por conta no navegador (`rama.pref.<userId>.exibicaoPastas`). É
+apresentação: pasta aberta, busca e filtros continuam no endereço da página, e
+nada da organização (pastas, sistema das fichas) muda com ela.
 
 Separado de `USUARIOS` de propósito: o avatar tem dezenas de milhares de
 caracteres, e a aba de usuários é lida em **todo** login e em **toda**

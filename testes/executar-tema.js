@@ -281,6 +281,105 @@ t.igual("salvar em outra aba troca esta", tela(), "escuro");
 storage.fn({ key: "rama.tema.u9", newValue: "claro" });
 t.igual("  o cache de outra conta não mexe aqui", tela(), "escuro");
 
+/* =====================================================================
+   PREFERÊNCIAS DE APRESENTAÇÃO (v2.35, js/preferencias.js)
+   ===================================================================== */
+
+const codigoPref = await Deno.readTextFile(new URL("../js/preferencias.js", import.meta.url));
+function abrirPaginaPref(conta) {
+  ouvintesGlobais = [];
+  rede.pedidos = [];
+  rede.automatico = null;
+  if (conta) guardado.set("rama.sessao.agente", JSON.stringify({ id: conta, usuario: conta, nome: conta }));
+  else guardado.delete("rama.sessao.agente");
+  (0, eval)(codigoPref);
+  return globalThis.RAMAPreferencias;
+}
+
+t.grupo("Exibição das pastas · padrão e cache por conta");
+guardado.clear();
+let PR = abrirPaginaPref(null);
+t.igual("sem conta: Abas", PR.valor("exibicaoPastas"), "abas");
+PR = abrirPaginaPref("u1");
+t.igual("conta sem preferência registrada: Abas", PR.valor("exibicaoPastas"), "abas");
+guardado.set("rama.pref.u1.exibicaoPastas", "icones");
+PR = abrirPaginaPref("u1");
+t.igual("o cache da conta antecipa a abertura", PR.valor("exibicaoPastas"), "icones");
+guardado.set("rama.pref.u1.exibicaoPastas", "mosaico");
+PR = abrirPaginaPref("u1");
+t.igual("valor desconhecido no cache vira o padrão", PR.valor("exibicaoPastas"), "abas");
+
+t.grupo("Exibição das pastas · a sessão traz a da conta");
+guardado.clear();
+abrirPagina({ conta: "u1" });
+PR = abrirPaginaPref("u1");
+rede.automatico = (c) => c.acao === "sessao"
+  ? { ok: true, agente: { id: "u1", usuario: "u1", nome: "U1", preferencias: { tema: "escuro", exibicaoPastas: "icones" } } }
+  : { ok: true };
+await RAMAAuth.retomar();
+t.igual("retomar a sessão aplica a exibição salva (outro aparelho escolheu Ícones)", PR.valor("exibicaoPastas"), "icones");
+t.igual("  e guarda no cache da conta", guardado.get("rama.pref.u1.exibicaoPastas"), "icones");
+t.igual("  o tema chega junto, sem se misturar", guardado.get("rama.tema.u1"), "escuro");
+PR.sincronizarDaConta("u2", { tema: "claro" });
+t.igual("outra conta, sem a chave (servidor antigo): o cache dela, não o da anterior", PR.valor("exibicaoPastas"), "abas");
+PR.sincronizarDaConta("u1", {});
+t.igual("voltar para a u1 sem a chave: o cache da u1", PR.valor("exibicaoPastas"), "icones");
+PR.esquecerConta();
+t.igual("sair: padrão", PR.valor("exibicaoPastas"), "abas");
+
+t.grupo("Exibição das pastas · salvar na conta");
+guardado.clear();
+PR = abrirPaginaPref("u1");
+PR.sincronizarDaConta("u1", { exibicaoPastas: "abas" });
+PR.salvar("exibicaoPastas", "icones");
+t.igual("a troca é na hora", PR.valor("exibicaoPastas"), "icones");
+await esperar();
+t.ok("manda só a chave mudada (o tema e o resto ficam no servidor)",
+  JSON.stringify(rede.pedidos[0].corpo.dados) === JSON.stringify({ preferencias: { exibicaoPastas: "icones" } }));
+rede.pedidos.shift().resolver({ ok: true, preferencias: { tema: "escuro", exibicaoPastas: "icones" } });
+await esperar();
+t.igual("resposta certa → 'salvo'", PR.estado("exibicaoPastas"), "salvo");
+t.igual("  cache atualizado", guardado.get("rama.pref.u1.exibicaoPastas"), "icones");
+
+PR.salvar("exibicaoPastas", "abas");
+await esperar();
+rede.pedidos.shift().resolver({ ok: false, erro: "sem_conexao" });
+await esperar();
+t.igual("falha → 'erro', e a tela segue com a escolha", [PR.estado("exibicaoPastas"), PR.valor("exibicaoPastas")].join(), "erro,abas");
+t.igual("  o cache volta ao que a conta tem", guardado.get("rama.pref.u1.exibicaoPastas"), "icones");
+
+PR.salvar("exibicaoPastas", "abas");
+await esperar();
+rede.pedidos.shift().resolver({ ok: false, erro: "dados_invalidos" });
+await esperar();
+t.igual("servidor anterior à v2.35 recusa a chave → 'local'", PR.estado("exibicaoPastas"), "local");
+t.igual("  a escolha fica neste aparelho", guardado.get("rama.pref.u1.exibicaoPastas"), "abas");
+
+t.grupo("Exibição das pastas · alternâncias rápidas");
+PR.salvar("exibicaoPastas", "icones");
+PR.salvar("exibicaoPastas", "abas");
+PR.salvar("exibicaoPastas", "icones");
+await esperar();
+t.igual("um pedido por vez", rede.pedidos.length, 1);
+rede.pedidos.shift().resolver({ ok: true, preferencias: { exibicaoPastas: "icones" } });
+await esperar(); await esperar();
+t.igual("a última escolha é a que vale (sem pedido extra quando já bate)", rede.pedidos.length, 0);
+t.igual("  e a tela mostra a última", PR.valor("exibicaoPastas"), "icones");
+PR.salvar("exibicaoPastas", "abas");
+await esperar();
+PR.sincronizarDaConta("u1", { exibicaoPastas: "icones" });
+t.igual("uma leitura da sessão no meio não passa por cima da escolha nova", PR.valor("exibicaoPastas"), "abas");
+rede.pedidos.shift().resolver({ ok: true, preferencias: { exibicaoPastas: "abas" } });
+await esperar();
+
+t.grupo("Exibição das pastas · outra aba");
+PR = abrirPaginaPref("u1");
+const storagePref = ouvintesGlobais.find((o) => o.tipo === "storage");
+storagePref.fn({ key: "rama.pref.u1.exibicaoPastas", newValue: "icones" });
+t.igual("outra aba da mesma conta trocou: esta acompanha", PR.valor("exibicaoPastas"), "icones");
+storagePref.fn({ key: "rama.pref.u9.exibicaoPastas", newValue: "abas" });
+t.igual("  outra conta não mexe aqui", PR.valor("exibicaoPastas"), "icones");
+
 /* ---------- fim ---------- */
 
 console.log(`\n${FORTE}${passaram + falharam} verificações${FIM} · ${VERDE}${passaram} ok${FIM} · ${falharam ? VERMELHO : CINZA}${falharam} falhas${FIM}`);

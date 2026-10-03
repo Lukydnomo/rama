@@ -18,6 +18,10 @@
        podeSoltar(item, destino) → { ok, motivo }
        aoSoltar(item, destino)          muda o modelo e redesenha
        aoTeclado(item, direcao)         ↑/↓ na alça: um passo
+       aoIniciar(item) / aoTerminar()   opcionais (v2.35): o gesto passou
+                                        do limiar / acabou (soltou ou
+                                        cancelou). Uma janela por cima dos
+                                        destinos pode sair da frente.
 
      Marcações no HTML que a aba desenha:
        data-arrastar-item="id"      o que se arrasta (o cartão inteiro)
@@ -249,6 +253,7 @@
       a.fantasmaMotivo,
     ]);
     document.body.appendChild(a.fantasma);
+    if (a.opcoes.aoIniciar) { try { a.opcoes.aoIniciar(a.dados); } catch (e) { /* a prévia segue */ } }
     a.quadro = global.requestAnimationFrame(passoDeRolagem);
     anunciar("Arrastando " + (a.dados.rotulo || "item") + ". Solte no lugar, ou Esc para cancelar.");
   }
@@ -266,6 +271,8 @@
     a.item.classList.remove("arrastar-origem");
     document.documentElement.classList.remove("arrastando");
     try { a.alca.releasePointerCapture(a.ponteiro); } catch (e) { /* já soltou */ }
+
+    if (a.iniciado && a.opcoes.aoTerminar) { try { a.opcoes.aoTerminar(); } catch (e) { /* segue */ } }
 
     /* Um toque sem arraste só põe o foco na alça: dali, as setas movem. */
     if (!a.iniciado) {

@@ -80,6 +80,10 @@
     if (global.RAMATema) {
       global.RAMATema.sincronizarDaConta(agenteAtual.id, dados && dados.preferencias && dados.preferencias.tema);
     }
+    /* As outras preferências de apresentação (v2.35, preferencias.js). */
+    if (global.RAMAPreferencias) {
+      global.RAMAPreferencias.sincronizarDaConta(agenteAtual.id, dados && dados.preferencias);
+    }
   }
 
   function esquecer() {
@@ -89,6 +93,7 @@
     agenteAtual = null;
     /* Sem conta, o tema volta ao do sistema. */
     if (global.RAMATema) global.RAMATema.esquecerConta();
+    if (global.RAMAPreferencias) global.RAMAPreferencias.esquecerConta();
   }
 
   function tocarAtividade() { guardar(CHAVE_ATIVIDADE, String(Date.now())); }

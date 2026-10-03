@@ -30,6 +30,33 @@
    vez. Arrastar sai da alça (⠿), que fica fora do link do cartão; tocar
    na alça, ou "Mover para pasta…" no menu, abre a escolha por lista —
    o caminho do teclado e do celular.
+
+   EXIBIÇÃO: ABAS OU ÍCONES (v2.35)
+   ---------------------------------------------------------------------
+   Preferência da conta (preferencias.js, `exibicaoPastas`), não estado
+   de navegação: pasta aberta, busca, sistema e agrupamento continuam no
+   endereço, e trocar a exibição não mexe neles.
+
+   · Abas: a faixa de pastas e a lista da seleção, como sempre.
+   · Ícones: uma grade de pastas compactas, como as de aplicativos no
+     celular. Tocar num ícone escolhe a pasta e a abre num painel por
+     cima (UI.modal), com os personagens da seleção que passam pela
+     busca e pelo sistema. Quem não está em pasta continua na página, em
+     lista, um embaixo do outro — como os aplicativos soltos da tela do
+     celular —, sob o título "Sem pasta", que também recebe arraste para
+     retirar da pasta. Com "Agrupar por sistema", os grupos da seleção
+     viram ícones (só prévia), e abrem só os daquele sistema.
+
+   As duas usam a MESMA conta (personagens-organizacao.js): a pasta
+   aberta, os filtros, as contagens e os grupos saem de O.montar, e a
+   lista dentro do painel é a mesma função `resultado` das abas. A
+   página não desenha a lista atrás do painel — o personagem existe em
+   um lugar interativo de cada vez.
+
+   Arrastar de dentro do painel: o painel sai da frente enquanto o
+   gesto dura (aoIniciar/aoTerminar de arrastar.js) e os ícones das
+   pastas pessoais recebem o personagem. Grupos de sistema não são
+   destino: o sistema de uma ficha não muda por arraste.
    ===================================================================== */
 
 (function (global) {
@@ -49,10 +76,24 @@
   var ocupados = {};
   var painel = null;
   var arrasteLigado = false;
+  /* A pasta aberta no modo Ícones: { tipo: "pasta"|"sistema", chave,
+     modal, corpo, acoes, resumo, foco } ou null. */
+  var expansao = null;
+  var avisouPreferenciaLocal = false;
+  var MAX_PREVIA = 4;
+  /* A exibição do último desenho, e se a lista já chegou: a sessão pode
+     confirmar a preferência antes da listagem, e redesenhar sem dados
+     mostraria "nenhum personagem" por engano. */
+  var exibicaoDesenhada = null;
+  var carregado = false;
+  /* Sem preferencias.js (página que não o carrega), a escolha vale só
+     nesta tela. */
+  var exibicaoLocal = "abas";
 
   global.RAMAApp.iniciar("personagens", async function () {
     painel = U.$("#painel-personagens");
     lerEstadoDaUrl();
+    ouvirPreferencias();
     await carregar();
 
     /* A Home manda para cá com ?novo=1 quando o arquivo está vazio. */
@@ -89,6 +130,7 @@
     }
 
     registros = r.dados || [];
+    carregado = true;
     var org = r.organizacao;
     organizacao = { suportada: !!org, disponivel: !!(org && org.disponivel) };
     pastas = (org && Array.isArray(org.pastas)) ? org.pastas.slice() : [];
@@ -145,13 +187,16 @@
     if (m.pasta !== estado.pasta) { estado.pasta = m.pasta; }
     gravarEstadoNaUrl();
 
+    var icones = modoIcones();
+    exibicaoDesenhada = exibicao();
     U.trocar(painel, [
       cabecalho(),
-      registros.length || pastas.length ? barraDePastas(m) : null,
+      !icones && (registros.length || pastas.length) ? barraDePastas(m) : null,
+      icones ? gradeDePastas(m) : null,
       avisoDeOrganizacao(),
-      m.pasta !== O.TODOS && m.pasta !== O.SEM_PASTA ? pastaAberta(m) : null,
-      registros.length ? filtros(m) : null,
-      el("div.lista-personagens", { "aria-live": "polite" }, [resultado(m)]),
+      !icones && m.pasta !== O.TODOS && m.pasta !== O.SEM_PASTA ? pastaAberta(m) : null,
+      registros.length || (organizacao.suportada && pastas.length) ? filtros(m) : null,
+      el("div.lista-personagens", { "aria-live": "polite" }, [icones ? resultadoEmIcones(m) : resultado(m)]),
     ]);
 
     if (foco) {
@@ -161,6 +206,7 @@
         if (cursor !== null) { try { novo.setSelectionRange(cursor, cursor); } catch (e) { /* não é texto */ } }
       }
     }
+    atualizarExpansao();
   }
 
   function avisoDeOrganizacao() {
@@ -247,9 +293,9 @@
   }
 
   function filtros(m) {
-    var temSistema = organizacao.suportada;
+    var temSistema = organizacao.suportada && registros.length;
     return el("div.filtros.filtros--personagens", {}, [
-      el("div.r-busca", {}, [
+      !registros.length ? null : el("div.r-busca", {}, [
         el("span.r-busca__marca", {}, [UI.simbolo("busca")]),
         el("input.r-entrada", {
           type: "search",
@@ -279,6 +325,7 @@
         }),
         el("span", { texto: "Agrupar por sistema" }),
       ]) : null,
+      organizacao.suportada ? controleDeExibicao() : null,
     ]);
   }
 
@@ -299,20 +346,25 @@
     desenhar();
   }
 
-  function resultado(m) {
+  /* `verTodos` (opcional): o que "Ver todos os personagens" faz — nas
+     abas, abre a pasta Todos; no painel dos ícones, troca o painel. */
+  function resultado(m, verTodos) {
+    var irParaTodos = verTodos || function () { abrirPasta(O.TODOS); };
     if (m.vazio === "nenhum") return nenhumRegistro();
     if (m.vazio === "pasta") {
       return UI.vazio({
         titulo: "Pasta vazia",
-        texto: "Nenhum personagem nesta pasta ainda. Arraste um personagem até ela ou use “Mover para pasta…” no menu dele.",
-        acao: { rotulo: "Ver todos os personagens", aoClicar: function () { abrirPasta(O.TODOS); } },
+        texto: "Nenhum personagem nesta pasta ainda. " + (modoIcones()
+          ? "Arraste um personagem pela alça (⠿) até o ícone dela, ou use “Mover para pasta…” no menu dele."
+          : "Arraste um personagem até ela ou use “Mover para pasta…” no menu dele."),
+        acao: { rotulo: "Ver todos os personagens", aoClicar: irParaTodos },
       });
     }
     if (m.vazio === "sem-pasta") {
       return UI.vazio({
         titulo: "Todos estão em pastas",
         texto: "Nenhum personagem fora de pasta.",
-        acao: { rotulo: "Ver todos os personagens", aoClicar: function () { abrirPasta(O.TODOS); } },
+        acao: { rotulo: "Ver todos os personagens", aoClicar: irParaTodos },
       });
     }
     if (m.vazio === "filtros") {
@@ -414,8 +466,17 @@
         el("span.t-mini", { texto: "Registro // " + U.codigoCurto(p.id) }),
       ]),
 
-      UI.menu(itensDoMenu, { rotulo: "Opções de " + (p.nome || "personagem"), icone: "tresPontos" }),
+      menuDoRegistro(p, itensDoMenu),
     ]);
+  }
+
+  /* O gatilho do menu ganha âncora de foco: depois de mover ou duplicar,
+     o redesenho devolve o foco ao mesmo lugar (na página e no painel). */
+  function menuDoRegistro(p, itens) {
+    var menu = UI.menu(itens, { rotulo: "Opções de " + (p.nome || "personagem"), icone: "tresPontos" });
+    var gatilho = menu.querySelector("button");
+    if (gatilho) gatilho.dataset.foco = "menu-" + p.id;
+    return menu;
   }
 
   /* A listagem traz a VERSÃO da foto, não a foto (v2.16). A imagem
@@ -438,13 +499,386 @@
   }
 
   /* =================================================================
+     EXIBIÇÃO — ABAS OU ÍCONES (v2.35)
+     ================================================================= */
+
+  function exibicao() {
+    var P = global.RAMAPreferencias;
+    return P ? P.valor("exibicaoPastas") : exibicaoLocal;
+  }
+
+  /* Ícones só fazem sentido com organização: sem ela não há pastas nem
+     grupos para mostrar como ícone. */
+  function modoIcones() { return organizacao.suportada && exibicao() === "icones"; }
+
+  function ouvirPreferencias() {
+    var P = global.RAMAPreferencias;
+    if (!P) return;
+    P.aoMudar(function (info) {
+      if (info.chave !== "exibicaoPastas") return;
+      if (info.estado === "local" && !avisouPreferenciaLocal) {
+        avisouPreferenciaLocal = true;
+        UI.avisoAtencao("A exibição ficou guardada só neste aparelho: o servidor ainda não grava essa preferência. Atualize o Apps Script (Codigo.gs) para ela valer na conta.");
+      } else if (info.estado === "erro") {
+        UI.avisoErro("Não foi possível salvar a exibição na conta. Ela vale nesta tela até recarregar.");
+      }
+      /* Só redesenha quando a exibição mudou de fato (outra aba, a
+         sessão confirmando outro valor): o resto é estado do salvamento. */
+      if (info.valor !== "icones") fecharExpansao(true);
+      if (carregado && painel && info.valor !== exibicaoDesenhada) desenhar();
+    });
+  }
+
+  function controleDeExibicao() {
+    var atual = exibicao();
+    function opcao(valor, rotulo, simbolo) {
+      return el("button.exibicao__opcao", {
+        type: "button",
+        "aria-pressed": String(atual === valor),
+        dataset: { foco: "exibicao-" + valor },
+        onclick: function () { if (exibicao() !== valor) trocarExibicao(valor); },
+      }, [UI.simbolo(simbolo, 14), el("span", { texto: rotulo })]);
+    }
+    return el("div.exibicao", { role: "group", "aria-labelledby": "rotulo-exibicao" }, [
+      el("span.r-rotulo", { id: "rotulo-exibicao", texto: "Exibição" }),
+      el("div.exibicao__opcoes", {}, [opcao("abas", "Abas", "abas"), opcao("icones", "Ícones", "grade")]),
+    ]);
+  }
+
+  /* A troca é imediata: pasta, busca, sistema e agrupamento ficam. */
+  function trocarExibicao(valor) {
+    if (valor !== "icones") fecharExpansao(true);
+    if (global.RAMAPreferencias) global.RAMAPreferencias.salvar("exibicaoPastas", valor);
+    else exibicaoLocal = valor;
+    if (exibicao() !== exibicaoDesenhada) desenhar();
+  }
+
+  function nomeDaSelecao(pastaId) {
+    if (pastaId === O.TODOS) return "Todos os personagens";
+    if (pastaId === O.SEM_PASTA) return "Sem pasta";
+    var p = pastaPorId(pastaId);
+    return p ? p.nome : "pasta";
+  }
+
+  /* Os personagens de uma pasta como a lista os mostraria: a mesma
+     seleção e o mesmo filtro. */
+  function listaDaPasta(pastaId) {
+    return O.filtrar(O.daSelecao(registros, pastaId), { busca: estado.busca, sistema: estado.sistema });
+  }
+
+  function textoDeContagem(n, total, filtrando) {
+    return filtrando ? n + " de " + total : String(total);
+  }
+
+  function rotuloDeContagem(n, total, filtrando) {
+    return filtrando
+      ? n + " de " + total + " personagem(ns) passam pela busca e pelo filtro"
+      : total + " personagem(ns)";
+  }
+
+  /* A grade das pastas pessoais: Todos, Sem pasta, as da conta e Nova
+     pasta. Sem pasta e as pastas da conta são destinos de arraste. */
+  function gradeDePastas(m) {
+    if (!organizacao.disponivel) return null;
+    var c = m.contagens;
+    var f = m.filtradas;
+    function pessoal(id, nome, total, filtrado, alvo, marca) {
+      return iconeDePasta({
+        tipo: "pasta", chave: id, nome: nome, foco: "pasta-" + id,
+        lista: listaDaPasta(id), total: total, filtrado: f ? filtrado : null,
+        selecionada: m.pasta === id, alvo: alvo ? id : null,
+        ocupada: !!ocupados["pasta:" + id], marca: marca,
+        aoAbrir: function (botao) { abrirPastaEmIcone(id, botao); },
+      });
+    }
+    /* "Sem pasta" não vira ícone: quem está fora de pasta fica na lista
+       da página, abaixo da grade. */
+    var icones = [
+      pessoal(O.TODOS, "Todos os personagens", c.todos, f && f.todos, false, "grade"),
+    ].concat(pastas.map(function (p) {
+      return pessoal(p.id, p.nome, c.porPasta[p.id] || 0, f && f.porPasta[p.id], true, "pasta");
+    })).concat([
+      el("button.pasta-icone.pasta-icone--nova", {
+        type: "button", dataset: { foco: "nova-pasta" }, "aria-label": "Nova pasta", title: "Nova pasta",
+        onclick: function () { novaPasta(); },
+      }, [
+        el("span.pasta-icone__caixa", { "aria-hidden": "true" }, [UI.simbolo("mais", 28)]),
+        el("span.pasta-icone__nome", { "aria-hidden": "true", texto: "Nova pasta" }),
+        el("span.pasta-icone__n", { "aria-hidden": "true", texto: " " }),
+      ]),
+    ]);
+    return el("section.pastas-icones", { "aria-label": "Pastas" }, [
+      el("ul.grade-pastas", {}, icones.map(function (i) { return el("li", {}, [i]); })),
+      el("p.t-mini.pastas__dica", {
+        texto: "Toque numa pasta para abrir; quem não está em pasta fica na lista abaixo." + (registros.length
+          ? " Para mover: arraste o personagem pela alça (⠿) até o ícone de uma pasta — ou até “Sem pasta” para retirar —, ou use “Mover para pasta…” no menu dele."
+          : "") + (m.filtrando ? " Com busca ou sistema, a contagem mostra quantos passam de quantos a pasta tem." : ""),
+      }),
+    ]);
+  }
+
+  /* O ícone compartilhado por pastas pessoais e grupos de sistema. */
+  function iconeDePasta(o) {
+    var amostra = O.previa(o.lista, MAX_PREVIA);
+    var minis = amostra.itens.map(miniatura);
+    if (amostra.resto && minis.length === MAX_PREVIA) {
+      minis[MAX_PREVIA - 1] = el("span.pasta-icone__mais", { texto: "+" + (amostra.resto + 1) });
+    }
+    var filtrando = o.filtrado !== null && o.filtrado !== undefined;
+    var n = filtrando ? o.filtrado : o.total;
+    var rotulo = (o.tipo === "sistema" ? "Sistema " : "Pasta ") + o.nome + ", " + rotuloDeContagem(n, o.total, filtrando) +
+      (o.selecionada ? ", pasta escolhida" : "") + (o.ocupada ? ", sendo alterada" : "") + ". Abrir.";
+    var botao = el("button.pasta-icone", {
+      type: "button",
+      title: o.nome,
+      "aria-label": rotulo,
+      "aria-haspopup": "dialog",
+      "aria-current": o.selecionada ? "true" : null,
+      class: [o.tipo === "sistema" ? "pasta-icone--sistema" : "", o.ocupada ? "pasta-icone--ocupada" : "",
+        o.desconhecido ? "pasta-icone--desconhecido" : ""].join(" ").trim(),
+      dataset: Object.assign({ foco: o.foco }, o.tipo === "pasta" ? { pasta: o.chave } : { grupoSistema: o.chave },
+        o.alvo ? { arrastarPasta: o.alvo } : {}),
+    }, [
+      el("span.pasta-icone__caixa", { "aria-hidden": "true" }, minis.length
+        ? [el("span.pasta-icone__minis", { class: "pasta-icone__minis--" + minis.length }, minis)]
+        : [o.marcaTexto ? el("span.pasta-icone__marca-texto", { texto: o.marcaTexto }) : UI.simbolo(o.marca || "pasta", 28)]),
+      el("span.pasta-icone__nome", { "aria-hidden": "true", texto: o.nome }),
+      el("span.pasta-icone__n", { "aria-hidden": "true", texto: textoDeContagem(n, o.total, filtrando) }),
+    ]);
+    botao.addEventListener("click", function () {
+      /* O clique que o navegador manda no fim de um arraste não abre. */
+      if (global.RAMAArrastar && global.RAMAArrastar.arrastando()) return;
+      o.aoAbrir(botao);
+    });
+    return botao;
+  }
+
+  /* A miniatura: a foto que a listagem já indica (versão) ou as
+     iniciais. Nada de ler a ficha para isso. */
+  function miniatura(p) {
+    var caixa = el("span.r-avatar.r-avatar--quadrado.pasta-icone__mini", { texto: U.iniciais(p.nome) });
+    if (p.fotoVersao && global.RAMAImagens) {
+      global.RAMAImagens.aplicar(caixa, { tipo: "foto", id: p.id, versao: p.fotoVersao });
+    }
+    return caixa;
+  }
+
+  /* Abaixo da grade: com o agrupamento, os grupos de sistema da seleção
+     como ícones; e sempre a lista dos que estão fora de pasta. */
+  function resultadoEmIcones(m) {
+    if (m.vazio === "nenhum") return nenhumRegistro();
+    return el("div.icones-resultado", {}, [
+      estado.agrupar ? gruposEmIcones(m) : null,
+      soltos(),
+    ]);
+  }
+
+  function gruposEmIcones(m) {
+    var nomeSel = nomeDaSelecao(m.pasta);
+    var cabecalhoGrupos = el("h2.grupo-sistema__titulo", {}, [
+      el("span", { texto: "Por sistema" }),
+      el("span.t-mini", { texto: (organizacao.disponivel ? "em “" + nomeSel + "”" : "") + (m.filtrando ? (organizacao.disponivel ? ", " : "") + "com a busca e o filtro" : "") }),
+    ]);
+    if (m.vazio) {
+      return el("section.sistemas-icones", { "aria-label": "Sistemas" }, [cabecalhoGrupos,
+        el("p.t-mini.pastas__selecao", { texto: m.vazio === "filtros"
+          ? "Nenhum personagem de “" + nomeSel + "” passa pela busca e pelo filtro."
+          : "“" + nomeSel + "” não tem personagens." })]);
+    }
+    var grupos = O.agrupar(m.visiveis);
+    return el("section.sistemas-icones", { "aria-label": "Sistemas em " + nomeSel }, [
+      cabecalhoGrupos,
+      el("ul.grade-pastas", {}, grupos.map(function (g) {
+        return el("li", {}, [iconeDePasta({
+          tipo: "sistema", chave: g.sistema.id, nome: g.sistema.nome, foco: "sistema-" + g.sistema.id,
+          lista: g.itens, total: g.itens.length, filtrado: null, selecionada: false, alvo: null,
+          desconhecido: !g.sistema.conhecido, marcaTexto: g.sistema.curto,
+          aoAbrir: function (botao) { abrirExpansao({ tipo: "sistema", chave: g.sistema.id }, botao); },
+        })]);
+      })),
+      el("p.t-mini.pastas__dica", { texto: "Os grupos só arrumam a seleção: ninguém muda de pasta nem de sistema por eles." }),
+    ]);
+  }
+
+  /* Os que estão fora de pasta, na página e em lista: a mesma seleção
+     "Sem pasta" das abas, com a busca, o sistema e o agrupamento. O título
+     recebe arraste (retirar da pasta). */
+  function soltos() {
+    var pastasDisp = organizacao.disponivel ? pastas : [];
+    var ms = O.montar(registros, pastasDisp, Object.assign({}, estado, { pasta: O.SEM_PASTA }));
+    var corpo;
+    if (ms.vazio === "sem-pasta") {
+      corpo = el("p.t-mini.pastas__selecao", { texto: "Todos os personagens estão em pastas." });
+    } else {
+      corpo = resultado(ms, function () { abrirPastaEmIcone(O.TODOS, null); });
+    }
+    if (!organizacao.disponivel) return el("section.soltos", { "aria-label": "Personagens" }, [corpo]);
+    return el("section.soltos", { "aria-labelledby": "soltos-titulo" }, [
+      el("h2.soltos__titulo", {
+        id: "soltos-titulo",
+        dataset: { pasta: O.SEM_PASTA, arrastarPasta: O.SEM_PASTA },
+      }, [
+        el("span", { texto: "Sem pasta" }),
+        el("span.t-mini", { texto: rotuloDeContagem(ms.visiveis.length, ms.base.length, ms.filtrando) }),
+        el("span.t-mini.soltos__soltar", { "aria-hidden": "true", texto: "Solte aqui para retirar da pasta" }),
+      ]),
+      corpo,
+    ]);
+  }
+
+  function abrirPastaEmIcone(id, botao) {
+    estado.pasta = id;
+    desenhar();
+    var origem = botao && botao.isConnected ? botao : painel.querySelector('[data-foco="pasta-' + id + '"]');
+    abrirExpansao({ tipo: "pasta", chave: id }, origem);
+  }
+
+  /* O painel por cima: o modal compartilhado (foco preso, Esc, fundo),
+     com fechamento direto pelo fundo e saída curta. Uma pasta aberta de
+     cada vez. */
+  function abrirExpansao(alvo, origem) {
+    fecharExpansao(true);
+    var resumo = el("p.t-mini.pasta-expansao__resumo", { role: "status" });
+    var acoes = el("div.faixa.pasta-expansao__acoes");
+    var corpo = el("div.pasta-expansao__corpo");
+    var focoOrigem = origem && origem.dataset ? origem.dataset.foco : "";
+    var registro = { tipo: alvo.tipo, chave: alvo.chave, resumo: resumo, acoes: acoes, corpo: corpo, foco: focoOrigem, silencioso: false };
+    var m = UI.modal({
+      titulo: " ",
+      classe: "r-modal--pasta",
+      largo: true,
+      conteudo: [resumo, acoes, corpo],
+      botoes: [{ rotulo: "Fechar", classe: "r-botao--fantasma" }],
+      fundoFecha: true,
+      saida: 160,
+      aoFechar: function () {
+        if (expansao === registro) expansao = null;
+        if (registro.silencioso) return;
+        var volta = registro.foco ? painel.querySelector('[data-foco="' + registro.foco + '"]') : null;
+        if (!volta) volta = painel.querySelector('.pasta-icone[aria-current="true"]') || painel.querySelector(".pasta-icone");
+        if (volta) volta.focus();
+      },
+    });
+    registro.modal = m;
+    expansao = registro;
+    /* O último ponto de foco dentro do painel: uma janela empilhada (Mover
+       para pasta, confirmar exclusão) devolve o foco para um elemento que
+       o redesenho pode ter trocado. */
+    m.janela.addEventListener("focusin", function (ev) {
+      var t = ev.target;
+      var ancora = t.closest ? t.closest("[data-foco]") : null;
+      if (!ancora && t.closest && t.closest(".registro")) ancora = t.closest(".registro").querySelector('[data-foco^="menu-"]');
+      if (ancora && ancora.dataset.foco) registro.ultimoFoco = ancora.dataset.foco;
+    });
+    /* A pasta cresce a partir do ícone que a abriu. */
+    if (origem && origem.getBoundingClientRect) {
+      var r = origem.getBoundingClientRect(), j = m.janela.getBoundingClientRect();
+      m.janela.style.transformOrigin = Math.round(r.left + r.width / 2 - j.left) + "px " + Math.round(r.top + r.height / 2 - j.top) + "px";
+    }
+    preencherExpansao();
+    var fechar = m.janela.querySelector('.r-modal__topo button[aria-label="Fechar"]');
+    if (fechar) fechar.focus();
+  }
+
+  function fecharExpansao(silencioso) {
+    if (!expansao) return;
+    var e = expansao;
+    e.silencioso = !!silencioso;
+    expansao = null;
+    e.modal.fechar();
+  }
+
+  /* O conteúdo do painel, sempre a partir do estado atual: mover,
+     duplicar, excluir e renomear redesenham a página e o painel junto. */
+  function preencherExpansao() {
+    var e = expansao;
+    if (!e) return;
+    var pastasDisp = organizacao.disponivel ? pastas : [];
+    var titulo = "", resumo = "", acoes = [], conteudo;
+    if (e.tipo === "pasta") {
+      var mm = O.montar(registros, pastasDisp, Object.assign({}, estado, { pasta: e.chave }));
+      if (mm.pasta !== e.chave) {
+        /* A pasta deixou de existir: o painel fecha e a seleção volta a
+           uma que existe (O.montar já trocou). */
+        e.foco = "pasta-" + estado.pasta;
+        fecharExpansao(false);
+        return;
+      }
+      titulo = nomeDaSelecao(e.chave);
+      resumo = (e.chave === O.TODOS || e.chave === O.SEM_PASTA ? "" : "Pasta · ") + rotuloDeContagem(mm.visiveis.length, mm.base.length, mm.filtrando) +
+        (mm.filtrando ? ". Limpe a busca e o sistema para ver todos." : ".");
+      var p = pastaPorId(e.chave);
+      if (p) {
+        var ocupada = !!ocupados["pasta:" + p.id];
+        acoes = [
+          el("button.r-botao.r-botao--mini", {
+            type: "button", texto: "Renomear", disabled: ocupada, dataset: { foco: "renomear-pasta" },
+            onclick: function () { renomearPasta(p); },
+          }),
+          el("button.r-botao.r-botao--mini.r-botao--perigo", {
+            type: "button", texto: ocupada ? "Excluindo…" : "Excluir pasta", disabled: ocupada, dataset: { foco: "excluir-pasta" },
+            onclick: function () { excluirPasta(p); },
+          }),
+        ];
+      }
+      conteudo = resultado(mm, function () { e.chave = O.TODOS; e.foco = "pasta-" + O.TODOS; estado.pasta = O.TODOS; desenhar(); });
+    } else {
+      var ms = O.montar(registros, pastasDisp, estado);
+      var grupo = O.agrupar(ms.visiveis).filter(function (g) { return g.sistema.id === e.chave; })[0];
+      var sistema = grupo ? grupo.sistema : (e.chave === "?" ? O.sistemaDe({ sistema: null }) : global.RAMASistemas.de(e.chave));
+      var nomeSel = nomeDaSelecao(ms.pasta);
+      titulo = sistema.nome;
+      resumo = "Sistema · " + (grupo ? grupo.itens.length : 0) + " personagem(ns)" + (organizacao.disponivel ? " em “" + nomeSel + "”" : "") +
+        (ms.filtrando ? ", com a busca e o filtro" : "") + (sistema.antigo ? ". Fichas anteriores à identificação de sistema contam como Universal." : ".") +
+        (sistema.pendente ? " O servidor ainda não identificou o sistema destas fichas." : "");
+      conteudo = grupo
+        ? el("div.registros", { dataset: { arrastarLista: "grupo-" + sistema.id } }, grupo.itens.map(linha))
+        : UI.vazio({ titulo: "Ninguém deste sistema aqui", texto: "Nenhum personagem de " + sistema.nome + " na seleção atual com a busca e o filtro." });
+    }
+    var janela = e.modal.janela;
+    var ativo = document.activeElement;
+    var dentro = ativo && janela.contains(ativo);
+    var foco = dentro && ativo.dataset ? ativo.dataset.foco : "";
+    var h = janela.querySelector(".r-modal__topo h2");
+    if (h) h.textContent = titulo;
+    janela.setAttribute("aria-describedby", "pasta-expansao-resumo");
+    e.resumo.id = "pasta-expansao-resumo";
+    e.resumo.textContent = resumo;
+    U.trocar(e.acoes, acoes);
+    e.acoes.hidden = !acoes.length;
+    U.trocar(e.corpo, [conteudo]);
+    /* O foco volta ao mesmo ponto do painel; se ele sumiu (o personagem
+       saiu desta pasta), vai para "Fechar". */
+    var perdido = !ativo || ativo === document.body || (dentro && !ativo.isConnected);
+    if (perdido) {
+      var chave = foco || e.ultimoFoco;
+      var novo = chave ? janela.querySelector('[data-foco="' + chave + '"]') : null;
+      (novo || janela.querySelector('.r-modal__topo button[aria-label="Fechar"]')).focus();
+    }
+  }
+
+  function atualizarExpansao() {
+    if (!expansao) return;
+    if (!modoIcones()) { fecharExpansao(true); return; }
+    preencherExpansao();
+  }
+
+  /* =================================================================
      MOVER — arrastar, a lista e o "Retirar da pasta"
      ================================================================= */
 
   function ligarArraste() {
     if (arrasteLigado || !global.RAMAArrastar || !painel) return;
     arrasteLigado = true;
-    global.RAMAArrastar.ligar(painel, {
+    /* No documento, e não só na página: no modo Ícones o personagem sai
+       do painel aberto (anexado ao body) para um ícone da página. */
+    global.RAMAArrastar.ligar(document.body, {
+      aoIniciar: function () {
+        if (expansao && expansao.modal.janela.parentNode) expansao.modal.janela.parentNode.classList.add("pasta-expansao--arrastando");
+      },
+      aoTerminar: function () {
+        if (expansao && expansao.modal.janela.parentNode) expansao.modal.janela.parentNode.classList.remove("pasta-expansao--arrastando");
+      },
       podeSoltar: function (item, destino) {
         var p = registroPorId(item.id);
         if (!p) return { ok: false, motivo: "Personagem não encontrado." };
@@ -510,7 +944,7 @@
      se continuar à vista. */
   function destacar(pastaId, personagemId) {
     var alvos = [
-      painel.querySelector('.pasta[data-pasta="' + pastaId + '"]'),
+      painel.querySelector('[data-pasta="' + pastaId + '"]'),
       painel.querySelector('[data-personagem="' + personagemId + '"]'),
     ].filter(Boolean);
     alvos.forEach(function (a) { a.classList.add("organizacao-recebeu"); });

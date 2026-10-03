@@ -627,6 +627,10 @@
   }
 }
 
+/* Saída curta de uma janela com `saida` (v2.35): some sem receber clique. */
+.r-fundo--saindo { pointer-events: none; animation: r-sumir 160ms var(--curva) forwards; }
+@keyframes r-sumir { to { opacity: 0; } }
+
 @keyframes r-surgir {
   from {
     opacity: 0;
@@ -640,7 +644,8 @@
 @media (prefers-reduced-motion: reduce) {
 
   .r-modal,
-  .r-fundo {
+  .r-fundo,
+  .r-fundo--saindo {
     animation: none;
   }
 }

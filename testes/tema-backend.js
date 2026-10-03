@@ -60,4 +60,26 @@ export function testarTemaBackend({ t, preparar, novaConta, comoFn, chamar }) {
 
   const s = A({ acao: "sessao" }).agente;
   t.ok("a sessão não devolve hash, sal nem token", s.hashSenha === undefined && s.salt === undefined && s.token === undefined);
+
+  /* v2.35: a exibição das pastas da página Personagens. */
+  t.grupo("Preferência · exibição das pastas (v2.35)");
+  preparar();
+  const cris = novaConta("pref_cris"), davi = novaConta("pref_davi");
+  const C = comoFn(cris), D = comoFn(davi);
+  t.igual("conta sem preferência: a sessão traz 'abas'", C({ acao: "sessao" }).agente.preferencias.exibicaoPastas, "abas");
+  t.igual("  e o login também", chamar(globalThis, { acao: "login", usuario: "pref_cris", senha: "senha-de-teste" }).agente.preferencias.exibicaoPastas, "abas");
+  C({ acao: "salvar_perfil", dados: { preferencias: { tema: "escuro" } } });
+  const gravou = C({ acao: "salvar_perfil", dados: { preferencias: { exibicaoPastas: "icones" } } });
+  t.ok("salvar 'icones' responde com o que ficou gravado", gravou.ok && gravou.preferencias.exibicaoPastas === "icones");
+  t.igual("  o tema salvo antes continua", gravou.preferencias.tema, "escuro");
+  const sessaoC = C({ acao: "sessao" }).agente.preferencias;
+  t.ok("a sessão seguinte traz as duas", sessaoC.exibicaoPastas === "icones" && sessaoC.tema === "escuro");
+  C({ acao: "salvar_perfil", dados: { preferencias: { tema: "claro" } } });
+  t.igual("trocar o tema não mexe na exibição", C({ acao: "sessao" }).agente.preferencias.exibicaoPastas, "icones");
+  t.recusa("valor fora da lista é recusado", C({ acao: "salvar_perfil", dados: { preferencias: { exibicaoPastas: "mosaico" } } }), "dados_invalidos");
+  t.igual("  e nada mudou", C({ acao: "sessao" }).agente.preferencias.exibicaoPastas, "icones");
+  t.igual("a outra conta segue no padrão", D({ acao: "sessao" }).agente.preferencias.exibicaoPastas, "abas");
+  C({ acao: "salvar_perfil", dados: { preferencias: { exibicaoPastas: null } } });
+  const depoisNull = C({ acao: "sessao" }).agente.preferencias;
+  t.ok("null volta ao padrão, sem tocar no tema", depoisNull.exibicaoPastas === "abas" && depoisNull.tema === "claro");
 }

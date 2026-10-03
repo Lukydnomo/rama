@@ -272,6 +272,9 @@
            outra confirmação ao receber um clique fora. */
         if (ev.target !== fundo || o.exigeDecisao || fechada || confirmacaoFora) return;
         if (pilhaDeModais[pilhaDeModais.length - 1].fundo !== fundo) return;
+        /* Janela só de ver (uma pasta aberta, v2.35): nada a perder, o
+           fundo fecha direto. */
+        if (o.fundoFecha) { pedirFechamento(); return; }
         confirmacaoFora = modal({
           titulo: "Fechar janela?",
           exigeDecisao: true,
@@ -339,7 +342,15 @@
          não deixar uma confirmação órfã nem executar aoFechar duas vezes. */
       if (confirmacaoFora) confirmacaoFora.fechar();
       document.removeEventListener("keydown", escapar);
-      if (fundo.parentNode) fundo.parentNode.removeChild(fundo);
+      /* `saida` (ms): uma transição curta de fechamento. A janela já não
+         recebe clique nem foco enquanto some; com movimento reduzido, sai
+         na hora. */
+      var reduzido = false;
+      try { reduzido = !!(global.matchMedia && global.matchMedia("(prefers-reduced-motion: reduce)").matches); } catch (e) { reduzido = false; }
+      if (o.saida > 0 && !reduzido) {
+        fundo.classList.add("r-fundo--saindo");
+        setTimeout(function () { if (fundo.parentNode) fundo.parentNode.removeChild(fundo); }, o.saida);
+      } else if (fundo.parentNode) fundo.parentNode.removeChild(fundo);
       pilhaDeModais = pilhaDeModais.filter(function (m) { return m.fundo !== fundo; });
       if (!pilhaDeModais.length) soltarRolagem();
       if (focoAnterior && focoAnterior.focus) focoAnterior.focus();
@@ -727,6 +738,10 @@
     /* A alça de arrastar: seis pontos com comprimento de verdade, pelo
        mesmo motivo do dado. */
     alca: "M5.25 3.5 h1.5 M9.25 3.5 h1.5 M5.25 8 h1.5 M9.25 8 h1.5 M5.25 12.5 h1.5 M9.25 12.5 h1.5",
+    /* Exibição das pastas (v2.35): abas, grade de ícones e a pasta. */
+    abas: "M2 6 h12 v8 h-12z M2 6 V3 h4 v3 M7 6 V3 h4 v3",
+    grade: "M2 2 h5 v5 h-5z M9 2 h5 v5 h-5z M2 9 h5 v5 h-5z M9 9 h5 v5 h-5z",
+    pasta: "M2 4 h4 l1.5 1.5 H14 v8 H2z",
   };
 
   function simbolo(nome, tamanho) {

@@ -638,3 +638,192 @@ html.arrastando .pasta[data-arrastar-pasta] { border-style: dashed; border-color
   letter-spacing: 0.2em;
   color: var(--cor-texto);
 }
+
+
+/* =====================================================================
+   PASTAS COMO ÍCONES (v2.35)
+   ---------------------------------------------------------------------
+   A grade de pastas compactas da página Personagens e o painel que abre
+   uma delas. O comportamento vem das pastas de aplicativos do celular;
+   cor, tipografia e bordas são as do R.A.M.A. Os cantos arredondados
+   ficam só na caixa do ícone e no painel.
+   ===================================================================== */
+.pasta-icone, .r-modal--pasta { --raio-pasta: 14px; }
+
+.exibicao { display: inline-flex; flex-wrap: wrap; align-items: center; gap: var(--e2); }
+.exibicao__opcoes { display: inline-flex; border: var(--borda) solid var(--cor-traco-fraca); }
+.exibicao__opcao {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--e1);
+  min-height: var(--alvo-toque);
+  padding: var(--e1) var(--e3);
+  background: var(--cor-superficie);
+  border: 0;
+  color: var(--cor-texto-2);
+  font-family: var(--fonte-mini);
+  font-size: var(--texto-mini);
+  letter-spacing: var(--espaco-letra-titulo);
+  text-transform: uppercase;
+  cursor: pointer;
+}
+.exibicao__opcao + .exibicao__opcao { border-left: var(--borda) solid var(--cor-traco-fraca); }
+.exibicao__opcao:hover { color: var(--cor-texto); }
+.exibicao__opcao[aria-pressed="true"] { background: var(--cor-texto); color: var(--cor-fundo); font-weight: 700; }
+
+.pastas-icones, .sistemas-icones { display: flex; flex-direction: column; gap: var(--e2); min-width: 0; }
+.grade-pastas {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(6.75rem, 1fr));
+  gap: var(--e3) var(--e2);
+}
+.grade-pastas > li { display: flex; min-width: 0; }
+
+.pasta-icone {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--e1);
+  width: 100%;
+  min-width: 0;
+  padding: var(--e1);
+  background: none;
+  border: 0;
+  color: var(--cor-texto);
+  text-align: center;
+  cursor: pointer;
+}
+.pasta-icone__caixa {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  max-width: 6rem;
+  aspect-ratio: 1 / 1;
+  padding: 11%;
+  background: var(--cor-superficie-2);
+  border: var(--borda) solid var(--cor-traco-fraca);
+  border-radius: var(--raio-pasta);
+  color: var(--cor-texto-3);
+  transition: border-color var(--tempo-curto) var(--curva), transform var(--tempo-curto) var(--curva);
+}
+.pasta-icone__minis {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-rows: repeat(2, minmax(0, 1fr));
+  gap: 9%;
+  width: 100%;
+  height: 100%;
+}
+.pasta-icone__mini {
+  width: 100%;
+  height: 100%;
+  border-radius: 24%;
+  font-size: 0.6875rem;
+}
+.pasta-icone__mais {
+  display: grid;
+  place-items: center;
+  border: var(--borda) dashed var(--cor-traco-media);
+  border-radius: 24%;
+  color: var(--cor-texto-2);
+  font-size: 0.6875rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.pasta-icone__marca-texto { font-size: 1.5rem; font-weight: 700; letter-spacing: 0; }
+.pasta-icone__nome {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  font-family: var(--fonte-mini);
+  font-size: var(--texto-mini);
+  letter-spacing: var(--espaco-letra-titulo);
+  line-height: 1.3;
+  text-transform: uppercase;
+}
+.pasta-icone__n { min-height: 1.2em; color: var(--cor-texto-3); font-size: var(--texto-mini); font-variant-numeric: tabular-nums; }
+
+.pasta-icone:hover .pasta-icone__caixa { border-color: var(--cor-traco-media); }
+.pasta-icone:focus-visible { outline: none; }
+.pasta-icone:focus-visible .pasta-icone__caixa { outline: 2px solid var(--cor-traco-forte); outline-offset: 3px; }
+.pasta-icone[aria-current="true"] .pasta-icone__caixa {
+  background: var(--cor-superficie);
+  border-color: var(--cor-traco-forte);
+  box-shadow: inset 0 0 0 1px var(--cor-traco-forte);
+}
+.pasta-icone[aria-current="true"] .pasta-icone__nome { font-weight: 700; text-decoration: underline; text-underline-offset: 3px; }
+.pasta-icone--nova { color: var(--cor-texto-3); }
+.pasta-icone--nova .pasta-icone__caixa { background: none; border-style: dashed; }
+.pasta-icone--ocupada .pasta-icone__caixa { border-style: dashed; opacity: 0.7; }
+.pasta-icone--sistema .pasta-icone__caixa { background: var(--cor-fundo); }
+.pasta-icone--desconhecido .pasta-icone__caixa { border-style: dashed; }
+
+/* Durante o arraste, os ícones que recebem personagem se mostram. */
+html.arrastando .pasta-icone[data-arrastar-pasta] .pasta-icone__caixa { border-style: dashed; border-color: var(--cor-paranormal); }
+.pasta-icone.arrastar-alvo-dentro .pasta-icone__caixa { transform: scale(1.06); border-color: var(--cor-paranormal); }
+.pasta-icone.arrastar-alvo-recusado .pasta-icone__caixa { border-color: var(--cor-erro); }
+.pasta-icone.arrastar-alvo-dentro, .pasta-icone.arrastar-alvo-recusado { outline: none; background: none; }
+
+.pastas__selecao { color: var(--cor-texto-3); }
+.icones-resultado { display: flex; flex-direction: column; gap: var(--e5); min-width: 0; }
+.soltos { display: flex; flex-direction: column; gap: var(--e2); min-width: 0; }
+/* O título "Sem pasta" é destino de arraste no modo Ícones. */
+.soltos__titulo {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--e2);
+  margin: 0;
+  padding: var(--e2) 0 var(--e1);
+  border-bottom: var(--borda) solid var(--cor-traco-fraca);
+  font-size: var(--texto-base);
+  letter-spacing: var(--espaco-letra-titulo);
+  text-transform: uppercase;
+  color: var(--cor-texto);
+}
+.soltos__titulo .t-mini { color: var(--cor-texto-3); }
+.soltos__soltar { display: none; }
+html.arrastando .soltos__titulo[data-arrastar-pasta] { padding: var(--e3); border: var(--borda) dashed var(--cor-paranormal); }
+html.arrastando .soltos__titulo[data-arrastar-pasta] .soltos__soltar { display: inline; }
+
+/* O painel da pasta aberta: cresce a partir do ícone (transform-origin
+   vem da página) e encolhe ao fechar. */
+.r-modal--pasta {
+  max-width: 680px;
+  border-radius: var(--raio-pasta);
+  overflow: hidden;
+  animation: pasta-abrir var(--tempo-medio) var(--curva);
+}
+.r-modal--pasta .r-modal__topo h2 { overflow-wrap: anywhere; }
+.pasta-expansao__resumo { margin: 0; color: var(--cor-texto-3); }
+.pasta-expansao__corpo { min-width: 0; }
+.r-fundo--saindo .r-modal--pasta { animation: pasta-fechar 160ms var(--curva) forwards; }
+@keyframes pasta-abrir {
+  from { transform: scale(0.55); opacity: 0; }
+  to { transform: none; opacity: 1; }
+}
+@keyframes pasta-fechar {
+  to { transform: scale(0.7); opacity: 0; }
+}
+
+/* Arrastando de dentro do painel: ele sai da frente para os ícones
+   receberem o personagem, e volta quando o gesto acaba. */
+.r-fundo.pasta-expansao--arrastando { background: transparent; pointer-events: none; }
+.r-fundo.pasta-expansao--arrastando .r-modal { opacity: 0.12; transition: opacity var(--tempo-curto) var(--curva); }
+
+@media (max-width: 640px) {
+  .r-modal--pasta { border-radius: var(--raio-pasta) var(--raio-pasta) 0 0; }
+  .grade-pastas { grid-template-columns: repeat(auto-fill, minmax(5.5rem, 1fr)); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .r-modal--pasta, .r-fundo--saindo .r-modal--pasta { animation: none; }
+  .pasta-icone__caixa { transition: none; }
+  .pasta-icone.arrastar-alvo-dentro .pasta-icone__caixa { transform: none; }
+}

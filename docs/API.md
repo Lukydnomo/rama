@@ -1,5 +1,15 @@
 # A API
 
+## Exibição das pastas — v2.35
+
+Nenhuma ação nova. `salvar_perfil` aceita a preferência
+`exibicaoPastas: "abas" | "icones"` (como a página Personagens mostra as
+pastas), e `login` e `sessao` devolvem `agente.preferencias` com
+`{ tema, exibicaoPastas }` — cada uma com o padrão quando não há valor gravado
+(`"sistema"` e `"abas"`). O pedido continua sendo remendo: salvar a exibição
+não toca no tema. Servidor anterior à v2.35 recusa a chave nova com
+`dados_invalidos`; a página mantém a escolha no aparelho e avisa.
+
 ## Importação do CRIS — v2.34
 
 Uma ação nova, em arquivo novo (`backend/Cris.gs`), anunciada ao núcleo por
@@ -313,7 +323,7 @@ publicação.
 #### `login` — pública
 ```js
 { acao: "login", usuario: "agente", senha: "..." }
-→ { ok: true, token: "...", agente: { id, usuario, nome, avatar, preferencias: { tema } } }
+→ { ok: true, token: "...", agente: { id, usuario, nome, avatar, preferencias: { tema, exibicaoPastas } } }
 → { ok: false, erro: "credenciais", restam: 6 }
 → { ok: false, erro: "bloqueado", minutos: 15 }
 → { ok: false, erro: "instalacao_incompleta" }
@@ -330,7 +340,7 @@ Confere o token e devolve o agente. **É a única resposta que vale**: um token
 presente no `localStorage` não prova nada.
 
 ```js
-→ { ok: true, agente: { id, usuario, nome, avatar, preferencias: { tema } } }
+→ { ok: true, agente: { id, usuario, nome, avatar, preferencias: { tema, exibicaoPastas } } }
 ```
 `tema` (v2.25) é a preferência salva na conta — `"sistema"`, `"claro"` ou
 `"escuro"`; conta sem preferência (ou com a célula ilegível) vem `"sistema"`. Vem
@@ -634,7 +644,8 @@ Só os campos enviados mudam. A conta é sempre a da sessão — um `userId` no 
 **`preferencias` é um remendo, não uma substituição (v2.25).** Vão só as chaves
 que mudaram; o servidor relê `preferenciasJson` dentro da trava, troca essas
 chaves e mantém as outras. `null` apaga a chave (volta ao padrão). Cada chave tem
-lista de valores aceitos — hoje só `tema: "sistema" | "claro" | "escuro"`; chave
+lista de valores aceitos — `tema: "sistema" | "claro" | "escuro"` e (v2.35)
+`exibicaoPastas: "abas" | "icones"`; chave
 desconhecida, valor fora da lista, objeto vazio ou algo que não seja objeto é
 recusado com `dados_invalidos`, sem gravar nada. **Não existe troca de senha por aqui** — senha é
 assunto exclusivo do editor do Apps Script.

@@ -99,6 +99,27 @@
     return { todos: registros.length, semPasta: sem, porPasta: porPasta };
   }
 
+  /* Quantos de cada pasta passam pela busca e pelo sistema (v2.35): a
+     mesma seleção e o mesmo filtro da lista, para os ícones contarem o
+     que a pasta aberta vai mostrar. */
+  function contagensFiltradas(registros, pastas, filtros) {
+    var porPasta = {};
+    (pastas || []).forEach(function (x) { porPasta[x.id] = filtrar(daSelecao(registros, x.id), filtros).length; });
+    return {
+      todos: filtrar(daSelecao(registros, TODOS), filtros).length,
+      semPasta: filtrar(daSelecao(registros, SEM_PASTA), filtros).length,
+      porPasta: porPasta,
+    };
+  }
+
+  /* A prévia de um ícone: os primeiros `n` da lista e quantos sobram. É
+     só amostra — a pasta aberta mostra todos. */
+  function previa(lista, n) {
+    var max = Math.max(0, n || 0);
+    var itens = (lista || []).slice(0, max);
+    return { itens: itens, resto: Math.max(0, (lista || []).length - itens.length) };
+  }
+
   /* Tudo o que a tela precisa de uma vez. `vazio` diz qual estado vazio
      mostrar: "nenhum" (a conta não tem personagem), "pasta" (a pasta
      aberta está vazia), "sem-pasta" (todos estão em pastas), "filtros"
@@ -108,7 +129,9 @@
     var e = estado || {};
     var pasta = selecaoValida(e.pasta || TODOS, pastas);
     var base = daSelecao(registros, pasta);
-    var visiveis = filtrar(base, { busca: e.busca, sistema: e.sistema });
+    var filtros = { busca: e.busca, sistema: e.sistema };
+    var visiveis = filtrar(base, filtros);
+    var filtrando = !!(String(e.busca || "").trim() || e.sistema);
     var vazio = null;
     if (!registros.length) vazio = "nenhum";
     else if (!base.length) vazio = pasta === SEM_PASTA ? "sem-pasta" : (pasta === TODOS ? "nenhum" : "pasta");
@@ -120,7 +143,9 @@
       grupos: e.agrupar ? agrupar(visiveis) : null,
       sistemas: sistemasPresentes(base),
       contagens: contagens(registros, pastas),
-      filtrando: !!(String(e.busca || "").trim() || e.sistema),
+      /* Com busca ou sistema: quantos de cada pasta passam; sem, null. */
+      filtradas: filtrando ? contagensFiltradas(registros, pastas, filtros) : null,
+      filtrando: filtrando,
       vazio: vazio,
     };
   }
@@ -135,6 +160,8 @@
     sistemasPresentes: sistemasPresentes,
     agrupar: agrupar,
     contagens: contagens,
+    contagensFiltradas: contagensFiltradas,
+    previa: previa,
     montar: montar,
   };
 })(typeof window !== "undefined" ? window : globalThis);

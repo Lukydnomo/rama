@@ -560,6 +560,12 @@ segredo nenhum — ele os lê das Script Properties. Publicá-lo não expõe nad
 
 ### Atualizar o backend
 
+**v2.35.0 — VITRINE:** **troque** o `Codigo.gs` (o servidor passa a aceitar e a
+devolver a preferência `exibicaoPastas`) e crie uma **nova versão** da
+implantação; publique o site. Não precisa de `setupRama()` nem de coluna nova:
+a preferência mora em `PERFIS.preferenciasJson`, que já existe. Sem a troca, a
+exibição em Ícones funciona, mas fica guardada só no aparelho, e a página avisa.
+
 **v2.34.2 — CONTRAPROVA:** só o site muda; publique o site.
 
 **v2.34.1 — BAGAGEM:** troque o `Cris.gs` e crie uma **nova versão** da
@@ -860,6 +866,23 @@ alça / use "Mover para pasta…" no menu (teclado e celular). O cartão fica
 "Movendo…" até o servidor confirmar. Excluir a pasta manda os personagens dela
 para "Sem pasta", com confirmação; excluir personagem continua sendo outra ação.
 A pasta aberta, o filtro e o agrupamento ficam no endereço da página.
+
+**Exibição: Abas ou Ícones (v2.35).** O controle "Exibição", ao lado de "Agrupar
+por sistema", troca a apresentação das pastas — e a escolha fica salva na conta
+(vale em outro aparelho), sem mexer no tema, na pasta aberta nem nos filtros.
+**Abas** é a faixa de sempre. **Ícones** mostra as pastas como as de aplicativos
+no celular: uma grade de pastas compactas com miniaturas de quem está dentro
+(retrato ou iniciais, até quatro, "+N" quando há mais), o nome e a contagem
+("2 de 5" quando há busca ou filtro de sistema). Tocar numa pasta a abre num
+painel por cima, com os personagens dela, o menu de cada um e as ações de
+renomear e excluir a pasta; fecha pelo botão, por Esc ou tocando fora, e o foco
+volta ao ícone. Quem não está em pasta continua na página, em lista, sob o
+título "Sem pasta". Para mover, arraste pela alça (⠿) até o ícone de uma pasta
+— de dentro do painel aberto também: ele sai da frente enquanto você arrasta —
+ou até "Sem pasta" para retirar; "Mover para pasta…" continua no menu. Com
+"Agrupar por sistema", os sistemas da pasta escolhida também viram ícones, que
+abrem só os personagens daquele sistema (grupos não recebem arraste nem mudam o
+sistema de ninguém).
 
 **Criaturas.** "+ Criatura" (combate), "Da biblioteca" (aliados) e "Catálogo de
 criaturas" (Homebrew) abrem a mesma biblioteca: a aba **Ordem Paranormal** traz as
