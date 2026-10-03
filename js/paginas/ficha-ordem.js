@@ -1165,7 +1165,16 @@
       var composicao = R.composicaoDoAtributo(o, a.chave);
       var alterado = efetivo !== base;
 
-      return el("div.ordem-atributo", {}, [
+      /* Fora da edição o cartão inteiro rola, como na ficha universal.
+         Não é <button> porque o "conta" é um botão dentro dele. */
+      var rolar = function () { rolarAtributo(ctx, a, expressao, dadosDoTeste); };
+      var cartaoRolavel = !ctx.emEdicao() ? {
+        class: "ordem-atributo--rolar", role: "button", tabindex: "0",
+        "aria-label": "Rolar " + a.nome + ", " + expressao, title: "Rolar " + expressao,
+        onclick: rolar,
+        onkeydown: function (ev) { if (ev.target === ev.currentTarget && (ev.key === "Enter" || ev.key === " ")) { ev.preventDefault(); rolar(); } },
+      } : {};
+      return el("div.ordem-atributo", cartaoRolavel, [
         el("span.ordem-atributo__sigla", { texto: a.sigla }),
         ctx.emEdicao()
           ? UI.passo({
@@ -1175,18 +1184,13 @@
                 aoMudarOrdem(ctx);
               },
             })
-          : el("button.ordem-atributo__valor", {
-              type: "button",
-              "aria-label": "Rolar " + a.nome + ", " + expressao,
-              title: "Rolar " + expressao,
-              texto: String(efetivo),
-              onclick: function () { rolarAtributo(ctx, a, expressao, dadosDoTeste); },
-            }),
+          : el("span.ordem-atributo__valor", { texto: String(efetivo) }),
         el("span.ordem-atributo__dado", { texto: ctx.emEdicao() && alterado ? "efetivo " + efetivo : expressao }),
         alterado
           ? el("button.ordem-atributo__conta", {
               type: "button", texto: "conta", "aria-label": "Como " + a.nome + " foi calculado",
-              onclick: function () { abrirComposicao(a.nome, composicao); },
+              onclick: function (ev) { ev.stopPropagation(); abrirComposicao(a.nome, composicao); },
+              onkeydown: function (ev) { ev.stopPropagation(); },
             })
           : el("span.ordem-atributo__nome", { texto: a.nome }),
       ]);
@@ -1197,7 +1201,7 @@
       el("p.t-mini", {
         texto: ctx.emEdicao()
           ? "Aqui se edita o valor da ficha (criação e ajustes à mão). Aumentos de atributo escolhidos na Progressão somam por cima, e aparecem em “conta”."
-          : "Clique no número para rolar.",
+          : "Clique no atributo para rolar.",
       }),
     ]);
   }

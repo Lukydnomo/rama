@@ -874,6 +874,9 @@ body.pagina-ficha .app-corpo {
   color: var(--cor-texto-3);
 }
 .ordem-atributo__valor {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   min-width: var(--alvo-toque);
   min-height: var(--alvo-toque);
   font-size: 1.6rem;
@@ -884,6 +887,10 @@ body.pagina-ficha .app-corpo {
   cursor: pointer;
 }
 .ordem-atributo__valor:hover { color: var(--cor-paranormal); }
+.ordem-atributo--rolar { cursor: pointer; transition: border-color var(--tempo-seco) var(--curva); }
+.ordem-atributo--rolar:hover { border-color: var(--cor-paranormal); }
+.ordem-atributo--rolar:hover .ordem-atributo__valor { color: var(--cor-paranormal); }
+.ordem-atributo--rolar:focus-visible { outline: 2px solid var(--cor-paranormal); outline-offset: 2px; }
 .ordem-atributo__dado,
 .ordem-atributo__nome {
   font-family: var(--fonte-mini);
