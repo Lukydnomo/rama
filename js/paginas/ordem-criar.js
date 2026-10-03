@@ -468,22 +468,55 @@
        ================================================================= */
 
     var buscaOrigem;
+    /* Uma aba por livro (v2.32.1). Abre no livro da origem escolhida. */
+    var abaOrigem = "";
 
     function etapaOrigem() {
-      buscaOrigem = UI.campo({ rotulo: "Buscar origem", valor: "", limite: 40, dica: "nome da origem ou do poder" });
+      var termoAntes = buscaOrigem ? buscaOrigem.entrada.value : "";
+      buscaOrigem = UI.campo({ rotulo: "Buscar origem", valor: termoAntes, limite: 40, dica: "nome da origem ou do poder" });
+      var livros = C.LIVROS.filter(function (l) {
+        return C.ORIGENS.some(function (org) { return (org.fonte || "OPRPG") === l.sigla; });
+      });
+      if (!abaOrigem) {
+        var escolhida = C.origem(d.origem);
+        abaOrigem = escolhida ? (escolhida.fonte || "OPRPG") : livros[0].sigla;
+      }
+      var abas = el("div.r-abas.r-abas--rolavel.biblioteca-abas", { role: "group", "aria-label": "Livro das origens" });
       var lista = el("div.criacao-lista", {});
+      var dica = el("p.t-mini", { "aria-live": "polite" });
 
-      function pintarLista() {
+      function achadas() {
         var termo = U.chaveDeBusca(buscaOrigem.entrada.value);
-        /* Por livro, e a busca acha pela origem e pelo poder. */
-        var achadas = C.ORIGENS.filter(function (org) {
+        return C.ORIGENS.filter(function (org) {
           return !termo || U.chaveDeBusca(org.nome + " " + org.poder).indexOf(termo) >= 0;
         });
-        U.trocar(lista, C.LIVROS.map(function (l) { return { f: l.sigla, t: l.curto }; }).map(function (livro) {
-          var doLivro = achadas.filter(function (org) { return (org.fonte || "OPRPG") === livro.f; });
-          if (!doLivro.length) return null;
-          return el("div.pilha--curta", { class: "pilha" }, [el("h4.t-secao", { texto: livro.t })].concat(doLivro.map(cartaoDeOrigem)));
-        }).filter(Boolean));
+      }
+
+      function pintarLista() {
+        var todas = achadas();
+        U.trocar(abas, livros.map(function (l, i) {
+          var n = todas.filter(function (org) { return (org.fonte || "OPRPG") === l.sigla; }).length;
+          return el("button.r-aba", {
+            type: "button", "aria-pressed": String(l.sigla === abaOrigem), texto: l.curto + " (" + n + ")",
+            onclick: function () { abaOrigem = l.sigla; pintarLista(); },
+            onkeydown: function (ev) {
+              if (ev.key !== "ArrowRight" && ev.key !== "ArrowLeft") return;
+              ev.preventDefault();
+              abaOrigem = livros[(i + (ev.key === "ArrowRight" ? 1 : -1) + livros.length) % livros.length].sigla;
+              pintarLista();
+              var b = abas.querySelector('[aria-pressed="true"]');
+              if (b) b.focus();
+            },
+          });
+        }));
+        var doLivro = todas.filter(function (org) { return (org.fonte || "OPRPG") === abaOrigem; });
+        var outras = livros.filter(function (l) { return l.sigla !== abaOrigem && todas.some(function (org) { return (org.fonte || "OPRPG") === l.sigla; }); });
+        U.trocar(lista, doLivro.map(cartaoDeOrigem));
+        dica.textContent = !doLivro.length
+          ? (outras.length ? "Nada neste livro. Há resultados em: " + outras.map(function (l) { return l.curto; }).join(", ") + "." : "Nenhuma origem corresponde à busca.")
+          : "";
+        var ativa = abas.querySelector('[aria-pressed="true"]');
+        if (ativa && ativa.scrollIntoView) setTimeout(function () { ativa.scrollIntoView({ block: "nearest", inline: "nearest" }); }, 0);
       }
 
       buscaOrigem.entrada.addEventListener("input", pintarLista);
@@ -492,6 +525,8 @@
       return el("div.pilha", {}, [
         el("p", { texto: "A origem diz o que você fazia antes da Ordem. Ela dá duas perícias treinadas e um poder." }),
         buscaOrigem,
+        abas,
+        dica,
         lista,
         periciasAEscolherDaOrigem(),
         referencia("Ordem Paranormal RPG, p. 16-21"),
