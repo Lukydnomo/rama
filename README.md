@@ -43,7 +43,9 @@ preferências de tela — nunca é tratado como banco.
     rede.js             transporte: POST, prazos, retentativas
     api.js              uma função por ação do servidor
     auth.js             sessão, portão de entrada, guarda de página
-    tema.js             tema claro/escuro: preferência da conta → tema na tela (no <head>)
+    tema-modelo.js      temas personalizáveis: o que muda, validação e o resolvedor único (no <head>)
+    tema.js             tema na tela: prévia → ficha → conta → aparelho (no <head>)
+    tema-editor.js      o editor de temas, o mesmo no Perfil e na ficha
     dados.js            motor de dados — o único Math.random do sistema
     ficha.js            modelo da ficha, padrões e normalização
     validacao.js        validação central, incluindo importação
@@ -334,7 +336,7 @@ guardada e trinta cartões virando duas viagens em vez de trinta. E a medição 
 viagem: o tempo do servidor separado do tempo de rede, e a viagem continuando
 medida quando o servidor não manda números.
 
-**Tema claro e escuro** — 52 verificações:
+**Tema claro e escuro e temas personalizáveis** — 162 verificações:
 
 ```bash
 deno run --allow-read testes/executar-tema.js
@@ -559,6 +561,15 @@ próprio `<script src>`, então funciona debaixo de subpasta sem ajuste.
 segredo nenhum — ele os lê das Script Properties. Publicá-lo não expõe nada.
 
 ### Atualizar o backend
+
+**v2.36.0 — MATIZ:** **troque** o `Codigo.gs` (o servidor passa a aceitar e
+validar os temas da conta e a sanear o tema de cada ficha) e crie uma **nova
+versão** da implantação; publique o site. Não precisa de `setupRama()` nem de
+coluna nova: os temas da conta moram em `PERFIS.preferenciasJson` e o da ficha
+dentro da própria ficha. Sem a troca, o servidor antigo recusa salvar temas
+personalizados da conta (o editor diz que não salvou) e Sistema, Claro e Escuro
+seguem funcionando; o tema das fichas funciona, mas sem a segunda conferência do
+servidor e sem a proteção contra abas antigas.
 
 **v2.35.0 — VITRINE:** **troque** o `Codigo.gs` (o servidor passa a aceitar e a
 devolver a preferência `exibicaoPastas`) e crie uma **nova versão** da
@@ -911,6 +922,28 @@ por exemplo — vale o do aparelho; trocar de conta nunca herda o tema da anteri
 `js/tema.js` roda no `<head>`, antes do CSS, para a página não piscar no tema
 errado. As duas paletas moram em `css/tokens.css`; fotos, capas, criaturas e cores
 escolhidas por quem joga não são invertidas nem reescritas.
+
+**Temas personalizáveis (v2.36).** O lápis ao lado de "Trocar avatar", no
+Perfil ("Personalizar tema do site"), abre o editor do **tema da conta**: Seguir
+o aparelho, os temas prontos Claro e Escuro (com amostras) e os seus temas —
+criar a partir de um pronto ou de outro tema, dar nome, editar, duplicar e
+excluir (excluir o que está em uso pede o substituto). "Sistema" continua à mão
+no Perfil, num clique. O lápis ao lado de Normal/Edição, na ficha ("Personalizar
+tema desta ficha"), abre o mesmo editor para o **tema daquela ficha**: Usar o
+tema da conta (o padrão), Seguir o aparelho, Claro, Escuro, uma cópia de um tema
+da conta ou um tema próprio. A ordem é sempre: tema da ficha → tema da conta →
+aparelho. O editor tem categorias (fundo e superfícies, cabeçalho e seleções,
+texto, botões, campos e foco, barras de recursos, mensagens, elementos e graus,
+sombras e efeitos), opções avançadas recolhidas, seletor de cor com campo de
+texto (o que não é cor é apontado e a cor anterior continua valendo),
+transparência, gradiente linear ou radial com 2 a 8 pontos, restaurar uma
+propriedade ou a categoria, uma prévia com os componentes de verdade e a
+conferência de contraste (cada parte de um gradiente), com sugestões que só
+entram num clique. Tudo é rascunho até Salvar/Aplicar: a página atrás mostra o
+rascunho, a janela do editor fica sempre num tema legível, e Cancelar ou Esc
+devolvem tudo como era. Um tema é dado (cores, transparência, gradientes), nunca
+CSS: `js/tema-modelo.js` valida e é o único que gera as propriedades, e o
+servidor valida de novo.
 
 **Salvamento.** A tela muda na hora; o envio vai atrás, juntando alterações
 seguidas num só POST (400 ms). Só uma gravação voa por vez — o que chegar

@@ -177,7 +177,7 @@ lento a cada entrada.
 |--------------------|-----------------------------------|
 | `userId`           | chave                             |
 | `avatar`           | data URL da miniatura             |
-| `preferenciasJson` | objeto JSON: `{ tema, exibicaoPastas }` (v2.25, v2.35) |
+| `preferenciasJson` | objeto JSON: `{ tema, exibicaoPastas, temaAtivo, temas }` (v2.25, v2.35, v2.36) |
 | `atualizadoEm`     | ISO 8601                          |
 
 `preferenciasJson.tema` é a preferência de tema da conta: `"sistema"` (segue o
@@ -191,6 +191,17 @@ pastas: `"abas"` (padrão, ausente vale isto) ou `"icones"`. Mesmo remendo e mes
 cópia por conta no navegador (`rama.pref.<userId>.exibicaoPastas`). É
 apresentação: pasta aberta, busca e filtros continuam no endereço da página, e
 nada da organização (pastas, sistema das fichas) muda com ela.
+
+`preferenciasJson.temas` (v2.36) é a lista de temas personalizados da conta (no
+máximo 12) e `temaAtivo` o id do que está em uso quando `tema` é
+`"personalizado"`. Cada tema é dado estruturado e versionado (`v: 1`, `nome`,
+`base`, `valores` com cores hexadecimais, transparência e gradientes) — formato
+em [API.md](API.md#temas-personalizáveis--v236). Nenhum CSS é guardado: o
+navegador gera as propriedades a partir dos valores. A célula inteira cabe em
+45 000 caracteres (o servidor recusa o que passar). O navegador guarda, por
+conta, o tema ativo em `rama.tema.personalizado.<userId>` e, por conta e ficha,
+o tema de cada ficha que tem um próprio em `rama.tema.ficha.<userId>.<fichaId>`
+— só para pintar antes da resposta; a planilha (e a ficha) são a fonte.
 
 Separado de `USUARIOS` de propósito: o avatar tem dezenas de milhares de
 caracteres, e a aba de usuários é lida em **todo** login e em **toda**

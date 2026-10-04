@@ -5,6 +5,31 @@ padrão e normaliza o que chega de fora. Onde ela é guardada — inteira em
 `fichaJson` (formato antigo) ou em blocos (v2.15) — é assunto do backend, e não muda
 nada aqui: ver [DATABASE.md](DATABASE.md).
 
+## Tema da ficha — v2.36 / schema 16
+
+Um bloco novo, opcional, **fora** de `ordem` — igual nos dois modelos:
+
+```jsonc
+"aparencia": {
+  "v": 1,
+  "modo": "conta" | "sistema" | "claro" | "escuro" | "personalizado",
+  "tema": { ... }     // só com "personalizado": um tema sem id (ver API.md)
+}
+```
+
+- `"conta"` (o padrão, e o valor de toda ficha sem o campo): a ficha usa o tema
+  da conta **de quem está vendo**.
+- `"sistema"`: segue o aparelho, mesmo que a conta de quem vê esteja em Claro.
+- `"claro"` / `"escuro"`: um tema pronto, fixo.
+- `"personalizado"`: uma CÓPIA independente de um tema — apagar ou editar o tema
+  da conta de onde ela veio não muda a ficha.
+
+`normalizarFicha()` passa o bloco por `RAMATemaModelo.normalizarAparencia()`:
+inválido vira `{ v: 1, modo: "conta" }`, valores inválidos dentro do tema caem
+fora. O servidor repete a mesma limpeza. O schema sobe para 16 sem conversão,
+para uma aba ainda aberta na v2.35 recusar a ficha em vez de descartar o tema ao
+gravar (e o servidor mantém o bloco quando uma versão antiga grava sem ele).
+
 ## Importação do CRIS — v2.34 / schema 15
 
 Três campos novos, todos opcionais; uma ficha 14 abre igual. O schema sobe para
@@ -637,8 +662,12 @@ uma regra de jogo.
 
 ## Migração
 
-`schemaVersion` é `14`. Toda ficha lida passa por `normalizarFicha()`, que aceita
+`schemaVersion` é `16`. Toda ficha lida passa por `normalizarFicha()`, que aceita
 o que faltar e conserta o que dá.
+
+**A v2.36 subiu o schema de 15 para 16 sem converter nada.** A ficha ganhou
+`aparencia` (o tema desta ficha); sem o campo, ela usa o tema da conta de quem a
+vê. A v2.34 subiu de 14 para 15 pelo marco da importação do CRIS.
 
 **A v2.19 subiu o schema de 9 para 10 sem converter nada.** O bloco `ordem`
 ganhou `condicoes`, `recursos.pd` e, em `organizacao`, `rituais.criterios`,

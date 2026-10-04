@@ -128,6 +128,40 @@
    --cor-contorno-cor: rgba(255, 255, 255, 0.16);
 }
 
+/* ---------- papéis (v2.36) ----------
+   O que cada parte da interface usa, com o mesmo valor que tinha antes
+   de ganhar nome próprio — sem tema personalizado, nada muda. Um tema
+   personalizado (js/tema.js) troca estes valores no <html> (ou só no
+   contexto de uma ficha), sempre pelo resolvedor de js/tema-modelo.js.
+
+   --cor-*   a cor SÓLIDA: texto, borda, sombra, color-mix, canvas.
+   --fundo-* o PREENCHIMENTO: só em `background`, porque pode ser um
+             gradiente. Nunca em color, border-color nem color-mix. */
+:root {
+   --cor-cabecalho: var(--cor-fundo);
+   --cor-selecao: var(--cor-texto);
+   --cor-selecao-texto: var(--cor-fundo);
+   --cor-link: var(--cor-texto);
+   --cor-botao: var(--cor-texto);
+   --cor-botao-texto: var(--cor-fundo);
+   --cor-botao-hover: var(--cor-texto-2);
+   --cor-botao-comum: var(--cor-superficie);
+   --cor-campo: var(--cor-fundo);
+   --cor-foco: var(--cor-traco-forte);
+   --cor-elemento-conhecimento: var(--cor-aviso);
+   --cor-elemento-energia: var(--cor-paranormal);
+   --cor-elemento-medo: var(--cor-texto);
+
+   --fundo-pagina: var(--cor-fundo);
+   --fundo-superficie: var(--cor-superficie);
+   --fundo-superficie-2: var(--cor-superficie-2);
+   --fundo-cabecalho: var(--cor-cabecalho);
+   --fundo-selecao: var(--cor-selecao);
+   --fundo-botao: var(--cor-botao);
+   --fundo-botao-hover: var(--cor-botao-hover);
+   --fundo-botao-comum: var(--cor-botao-comum);
+}
+
 :root {
    /* ---------- tipografia ---------- */
    --fonte-corpo: "PixelMplus12", "PixelMplus12 Regular", ui-monospace,

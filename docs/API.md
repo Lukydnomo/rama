@@ -1,5 +1,55 @@
 # A API
 
+## Temas personalizáveis — v2.36
+
+Nenhuma ação nova. `salvar_perfil` aceita, além de `tema` e `exibicaoPastas`:
+
+- `tema: "personalizado"` — a conta usa o tema indicado em `temaAtivo`;
+- `temaAtivo: "<id>"` (`/^[a-z0-9-]{1,40}$/`) — qual dos temas da conta está em uso;
+- `temas: [ tema, … ]` — a lista de temas da conta, no máximo 12, ids únicos.
+
+Cada tema é **dado estruturado** — cores em hexadecimal, transparência, tipo de
+preenchimento e parâmetros de gradiente, nunca CSS:
+
+```jsonc
+{
+  "v": 1,
+  "id": "t-a1b2c3d4e5",            // só nos temas da conta; a cópia numa ficha não tem
+  "nome": "Noite roxa",            // até 40 caracteres, sem < > nem controle
+  "base": "claro" | "escuro",      // o que não foi mudado segue esta paleta
+  "valores": {                     // só o que mudou; chave = propriedade do editor
+    "fundo":      { "tipo": "linear", "angulo": 180, "pontos": [ { "cor": "#08080a", "alfa": 1, "pos": 0 }, { "cor": "#3a1030", "alfa": 1, "pos": 100 } ] },
+    "cabecalho":  { "tipo": "radial", "forma": "elipse" | "circulo", "x": 50, "y": 50, "pontos": [ ... ] },
+    "superficie": { "tipo": "cor", "cor": "#1a0a18", "alfa": 0.9 },
+    "opacidadeBarra": { "tipo": "num", "valor": 0.8 }
+  }
+}
+```
+
+Tipos aceitos por propriedade (as mesmas listas de `js/tema-modelo.js`, conferidas
+por teste): **cor ou gradiente** (`fundo`, `superficie`, `superficie2`,
+`cabecalho`, `selecao`, `botao`, `botaoHover`, `botaoComum`; gradiente de 2 a 8
+pontos), **cor com transparência** (sombras e véus) e **cor sólida opaca** (texto,
+bordas, recursos, estados, elementos). `opacidadeBarra` é número de 0,1 a 1.
+O servidor confere a ESTRUTURA (lista, ids, base) e recusa com `dados_invalidos`;
+dentro de um tema válido, um valor que não serve (cor com `url()`, gradiente em
+cor de texto, propriedade desconhecida) é descartado e a propriedade volta à
+base. As preferências juntas (depois do remendo) passam de 45 000 caracteres →
+`dados_grandes`, sem gravar nada. Excluir da lista o tema ativo sem mandar outro
+`tema` grava `tema: "sistema"` — a conta nunca fica num personalizado que não existe.
+
+`login` e `sessao` devolvem em `agente.preferencias` também `temaAtivo` e
+`temaPersonalizado` (o tema ativo inteiro, ou `null`), para a página pintar sem
+outra viagem; a lista inteira vem só em `ler_perfil`. Cliente antigo que manda só
+`{ tema: "claro" }` não apaga lista nem tema ativo.
+
+**O tema de uma ficha** mora na própria ficha (`aparencia`, schema 16 — ver
+[CHARACTER_SCHEMA.md](CHARACTER_SCHEMA.md)). `criar_personagem` e
+`salvar_personagem` saneiam o bloco com as mesmas regras (inválido →
+`{ v: 1, modo: "conta" }`). Uma gravação sem o campo vinda de uma versão que se
+declara anterior (schema 1 a 15) mantém o bloco gravado; `duplicar_personagem`
+e a exportação levam o bloco junto.
+
 ## Exibição das pastas — v2.35
 
 Nenhuma ação nova. `salvar_perfil` aceita a preferência
@@ -323,7 +373,7 @@ publicação.
 #### `login` — pública
 ```js
 { acao: "login", usuario: "agente", senha: "..." }
-→ { ok: true, token: "...", agente: { id, usuario, nome, avatar, preferencias: { tema, exibicaoPastas } } }
+→ { ok: true, token: "...", agente: { id, usuario, nome, avatar, preferencias: { tema, exibicaoPastas, temaAtivo, temaPersonalizado } } }
 → { ok: false, erro: "credenciais", restam: 6 }
 → { ok: false, erro: "bloqueado", minutos: 15 }
 → { ok: false, erro: "instalacao_incompleta" }
@@ -340,7 +390,7 @@ Confere o token e devolve o agente. **É a única resposta que vale**: um token
 presente no `localStorage` não prova nada.
 
 ```js
-→ { ok: true, agente: { id, usuario, nome, avatar, preferencias: { tema, exibicaoPastas } } }
+→ { ok: true, agente: { id, usuario, nome, avatar, preferencias: { tema, exibicaoPastas, temaAtivo, temaPersonalizado } } }
 ```
 `tema` (v2.25) é a preferência salva na conta — `"sistema"`, `"claro"` ou
 `"escuro"`; conta sem preferência (ou com a célula ilegível) vem `"sistema"`. Vem
@@ -637,6 +687,7 @@ campanha.
 → { ok: true }                                   // sem preferências no pedido
 → { ok: true, preferencias: { tema, ... } }      // com: o objeto como ficou gravado
 → { ok: false, erro: "dados_invalidos" }
+→ { ok: false, erro: "dados_grandes" }           // v2.36: preferências maiores que a célula
 ```
 Só os campos enviados mudam. A conta é sempre a da sessão — um `userId` no corpo
 é ignorado.
@@ -644,8 +695,9 @@ Só os campos enviados mudam. A conta é sempre a da sessão — um `userId` no 
 **`preferencias` é um remendo, não uma substituição (v2.25).** Vão só as chaves
 que mudaram; o servidor relê `preferenciasJson` dentro da trava, troca essas
 chaves e mantém as outras. `null` apaga a chave (volta ao padrão). Cada chave tem
-lista de valores aceitos — `tema: "sistema" | "claro" | "escuro"` e (v2.35)
-`exibicaoPastas: "abas" | "icones"`; chave
+lista de valores aceitos — `tema: "sistema" | "claro" | "escuro" | "personalizado"`
+(o último na v2.36), (v2.35) `exibicaoPastas: "abas" | "icones"` e, com
+validação própria (v2.36), `temaAtivo` e `temas` (ver o topo); chave
 desconhecida, valor fora da lista, objeto vazio ou algo que não seja objeto é
 recusado com `dados_invalidos`, sem gravar nada. **Não existe troca de senha por aqui** — senha é
 assunto exclusivo do editor do Apps Script.

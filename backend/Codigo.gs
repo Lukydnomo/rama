@@ -836,13 +836,25 @@ function perfilPublico(usuario) {
    desconhecida ou valor fora da lista é recusado — nada vira "sucesso"
    sem ter sido gravado. `null` apaga a chave (volta ao padrão). */
 var PREFERENCIAS_ACEITAS = {
-  tema: ['sistema', 'claro', 'escuro'],
+  /* v2.36: "personalizado" = o tema da conta indicado em temaAtivo. */
+  tema: ['sistema', 'claro', 'escuro', 'personalizado'],
   /* v2.35: como a página Personagens mostra as pastas. */
   exibicaoPastas: ['abas', 'icones'],
 };
 var PREFERENCIAS_PADRAO = { tema: 'sistema', exibicaoPastas: 'abas' };
+/* Preferências estruturadas (v2.36): cada uma com a sua validação, que
+   devolve o valor limpo ou null (recusa). */
+var PREFERENCIAS_ESTRUTURADAS = {
+  temaAtivo: function (v) { return idDeTema(v); },
+  temas: function (v) { return normalizarTemasServidor(v); },
+};
+/* O tamanho da célula, conferido depois de juntar ao que já estava
+   gravado (acaoSalvarPerfil): passar dele é "dados_grandes". */
+var MAX_PREFERENCIAS_JSON = 45000;
 
-/* Cada preferência aceita, com o valor gravado ou o padrão. */
+/* Cada preferência aceita, com o valor gravado ou o padrão. A sessão traz
+   só o tema personalizado ATIVO (para a página pintar); a lista inteira
+   vem com ler_perfil. */
 function preferenciasDaSessao(perfil) {
   var prefs = lerJson(perfil && perfil.preferenciasJson, {});
   var saida = {};
@@ -850,21 +862,167 @@ function preferenciasDaSessao(perfil) {
     var v = prefs && prefs[chave];
     saida[chave] = PREFERENCIAS_ACEITAS[chave].indexOf(v) >= 0 ? v : PREFERENCIAS_PADRAO[chave];
   });
+  var ativo = idDeTema(prefs && prefs.temaAtivo);
+  var temas = normalizarTemasServidor(prefs && prefs.temas) || [];
+  saida.temaAtivo = ativo;
+  saida.temaPersonalizado = null;
+  temas.forEach(function (t) { if (t.id === ativo) saida.temaPersonalizado = t; });
   return saida;
 }
 
-/* Valida o pedido. Devolve null quando algo não serve. */
+/* Valida o pedido. Devolve null quando algo não serve, ou o pedido com os
+   valores estruturados já limpos. */
 function validarPreferencias(pedido) {
   if (!pedido || typeof pedido !== 'object' || Array.isArray(pedido)) return null;
   var chaves = Object.keys(pedido);
   if (!chaves.length) return null;
+  var limpo = {};
   for (var i = 0; i < chaves.length; i++) {
-    var aceitos = PREFERENCIAS_ACEITAS[chaves[i]];
-    if (!aceitos) return null;
-    var v = pedido[chaves[i]];
-    if (v !== null && aceitos.indexOf(v) < 0) return null;
+    var chave = chaves[i];
+    var v = pedido[chave];
+    if (PREFERENCIAS_ACEITAS[chave]) {
+      if (v !== null && PREFERENCIAS_ACEITAS[chave].indexOf(v) < 0) return null;
+      limpo[chave] = v;
+    } else if (PREFERENCIAS_ESTRUTURADAS[chave]) {
+      if (v === null) { limpo[chave] = null; continue; }
+      var bom = PREFERENCIAS_ESTRUTURADAS[chave](v);
+      if (bom === null) return null;
+      limpo[chave] = bom;
+    } else {
+      return null;
+    }
   }
-  return pedido;
+  return limpo;
+}
+
+/* =====================================================================
+   TEMAS PERSONALIZÁVEIS (v2.36)
+   ---------------------------------------------------------------------
+   As mesmas regras de js/tema-modelo.js (testes/tema-backend.js confere
+   que as listas não divergem). Um tema é dado: cores em hexadecimal,
+   transparência, tipo de preenchimento e parâmetros de gradiente. Nada de
+   CSS livre, url() ou HTML — o navegador gera o CSS a partir disto.
+
+   Tipo de cada propriedade: g = cor ou gradiente (com transparência),
+   c = cor sólida, a = cor com transparência, n = número entre 0,1 e 1. */
+var TEMA_TOKENS = {
+  fundo: 'g', superficie: 'g', superficie2: 'g', superficie3: 'c',
+  cabecalho: 'g', selecao: 'g', selecaoTexto: 'c',
+  texto: 'c', texto2: 'c', texto3: 'c', link: 'c', textoDica: 'c',
+  botao: 'g', botaoTexto: 'c', botaoHover: 'g', botaoComum: 'g',
+  campo: 'c', tracoMedia: 'c', tracoFraca: 'c', tracoForte: 'c', foco: 'c',
+  vida: 'c', esforco: 'c', sanidade: 'c', azul: 'c', verde: 'c', cinza: 'c', opacidadeBarra: 'n',
+  ok: 'c', aviso: 'c', erro: 'c', paranormal: 'c',
+  grau: 'c', elementoSangue: 'c', elementoMorte: 'c', elementoConhecimento: 'c', elementoEnergia: 'c', elementoMedo: 'c',
+  sombra: 'a', veuModal: 'a', vinheta: 'a', scanline: 'a', veuRecorte: 'a', contornoCor: 'a',
+};
+var TEMA_MAX_PONTOS = 8;
+var TEMA_MAX_TEMAS = 12;
+var TEMA_MODOS_FICHA = ['conta', 'sistema', 'claro', 'escuro', 'personalizado'];
+
+function idDeTema(v) { return typeof v === 'string' && /^[a-z0-9-]{1,40}$/.test(v) ? v : null; }
+function corDeTema(v) {
+  if (typeof v !== 'string') return null;
+  var s = v.trim().toLowerCase();
+  if (/^#[0-9a-f]{3}$/.test(s)) s = '#' + s[1] + s[1] + s[2] + s[2] + s[3] + s[3];
+  return /^#[0-9a-f]{6}$/.test(s) ? s : null;
+}
+function numeroDeTema(v, min, max) {
+  var n = typeof v === 'number' ? v : (typeof v === 'string' && v.trim() !== '' ? Number(v) : NaN);
+  if (!isFinite(n)) return null;
+  return Math.min(max, Math.max(min, n));
+}
+function arredondarTema(n, casas) { var f = Math.pow(10, casas); return Math.round(n * f) / f; }
+
+function valorDeTema(tipo, v) {
+  if (!v || typeof v !== 'object' || Array.isArray(v)) return null;
+  if (tipo === 'n') {
+    if (v.tipo !== 'num') return null;
+    var n = numeroDeTema(v.valor, 0.1, 1);
+    return n === null ? null : { tipo: 'num', valor: arredondarTema(n, 2) };
+  }
+  if (v.tipo === 'cor') {
+    var cor = corDeTema(v.cor);
+    var alfa = v.alfa === undefined ? 1 : numeroDeTema(v.alfa, 0, 1);
+    if (!cor || alfa === null) return null;
+    return { tipo: 'cor', cor: cor, alfa: tipo === 'c' ? 1 : arredondarTema(alfa, 2) };
+  }
+  if ((v.tipo === 'linear' || v.tipo === 'radial') && tipo === 'g') {
+    if (!Array.isArray(v.pontos) || v.pontos.length < 2 || v.pontos.length > TEMA_MAX_PONTOS) return null;
+    var pontos = [];
+    for (var i = 0; i < v.pontos.length; i++) {
+      var p = v.pontos[i];
+      if (!p || typeof p !== 'object') return null;
+      var pc = corDeTema(p.cor), pos = numeroDeTema(p.pos, 0, 100);
+      var pa = p.alfa === undefined ? 1 : numeroDeTema(p.alfa, 0, 1);
+      if (!pc || pos === null || pa === null) return null;
+      pontos.push({ cor: pc, alfa: arredondarTema(pa, 2), pos: arredondarTema(pos, 1) });
+    }
+    pontos.sort(function (a, b) { return a.pos - b.pos; });
+    if (v.tipo === 'linear') {
+      var ang = numeroDeTema(v.angulo === undefined ? 180 : v.angulo, 0, 360);
+      if (ang === null) return null;
+      return { tipo: 'linear', angulo: Math.round(ang), pontos: pontos };
+    }
+    var forma = v.forma === 'circulo' ? 'circulo' : (v.forma === undefined || v.forma === 'elipse' ? 'elipse' : null);
+    var x = numeroDeTema(v.x === undefined ? 50 : v.x, 0, 100), y = numeroDeTema(v.y === undefined ? 50 : v.y, 0, 100);
+    if (!forma || x === null || y === null) return null;
+    return { tipo: 'radial', forma: forma, x: Math.round(x), y: Math.round(y), pontos: pontos };
+  }
+  return null;
+}
+
+/* Um tema; `comId` para os da conta. null quando a estrutura não serve.
+   Valores inválidos de uma propriedade são descartados (ela volta à base). */
+function normalizarTemaServidor(bruto, comId) {
+  if (!bruto || typeof bruto !== 'object' || Array.isArray(bruto)) return null;
+  var base = bruto.base === 'escuro' ? 'escuro' : (bruto.base === undefined || bruto.base === 'claro' ? 'claro' : null);
+  if (!base) return null;
+  var nome = typeof bruto.nome === 'string' ? bruto.nome.replace(/[\u0000-\u001F\u007F<>]/g, '').replace(/\s+/g, ' ').trim().slice(0, 40) : '';
+  var tema = { v: 1, nome: nome || 'Tema personalizado', base: base, valores: {} };
+  if (comId) {
+    var id = idDeTema(bruto.id);
+    if (!id) return null;
+    tema.id = id;
+  }
+  var valores = bruto.valores && typeof bruto.valores === 'object' && !Array.isArray(bruto.valores) ? bruto.valores : {};
+  Object.keys(valores).forEach(function (k) {
+    if (!Object.prototype.hasOwnProperty.call(TEMA_TOKENS, k)) return;
+    var limpo = valorDeTema(TEMA_TOKENS[k], valores[k]);
+    if (limpo) tema.valores[k] = limpo;
+  });
+  return tema;
+}
+
+/* A lista de temas da conta: null quando não é lista, passa do máximo ou
+   tem id repetido ou inválido. */
+function normalizarTemasServidor(lista) {
+  if (!Array.isArray(lista) || lista.length > TEMA_MAX_TEMAS) return null;
+  var vistos = {};
+  var saida = [];
+  for (var i = 0; i < lista.length; i++) {
+    var t = normalizarTemaServidor(lista[i], true);
+    if (!t || vistos[t.id]) return null;
+    vistos[t.id] = true;
+    saida.push(t);
+  }
+  return saida;
+}
+
+/* O bloco de apresentação de uma ficha: inválido vira "usar o tema da
+   conta", nunca CSS livre. Chamado em toda criação e gravação. */
+function normalizarAparenciaServidor(bruto) {
+  var a = bruto && typeof bruto === 'object' && !Array.isArray(bruto) ? bruto : {};
+  var modo = TEMA_MODOS_FICHA.indexOf(a.modo) >= 0 ? a.modo : 'conta';
+  if (modo !== 'personalizado') return { v: 1, modo: modo };
+  var tema = normalizarTemaServidor(a.tema, false);
+  return tema ? { v: 1, modo: 'personalizado', tema: tema } : { v: 1, modo: 'conta' };
+}
+
+function sanearAparencia(ficha) {
+  if (ficha && typeof ficha === 'object' && ficha.aparencia !== undefined) {
+    ficha.aparencia = normalizarAparenciaServidor(ficha.aparencia);
+  }
 }
 
 /* Junta o pedido ao que está gravado — lido de novo, dentro da trava. */
@@ -2287,6 +2445,7 @@ function grandeDemais(ficha) {
 function acaoCriarPersonagem(corpo, usuario) {
   var ficha = corpo.dados;
   if (!ficha || typeof ficha !== 'object' || Array.isArray(ficha)) return { ok: false, erro: 'dados_invalidos' };
+  sanearAparencia(ficha);
   var operacao = idDeOperacao(corpo.operacaoId);
 
   var agora = new Date().toISOString();
@@ -2352,6 +2511,7 @@ function acaoCriarPersonagem(corpo, usuario) {
 function acaoSalvarPersonagem(corpo, usuario) {
   var ficha = corpo.dados;
   if (!ficha || typeof ficha !== 'object' || Array.isArray(ficha)) return { ok: false, erro: 'dados_invalidos' };
+  sanearAparencia(ficha);
   var operacao = idDeOperacao(corpo.operacaoId);
 
   var recusa = grandeDemais(ficha);
@@ -2390,9 +2550,20 @@ function acaoSalvarPersonagem(corpo, usuario) {
        versão do site que não mandava o resumo mantém o que já estava. */
     var resumo = resumoParaGravar(ficha, null);
     var ehOrdem = String(ficha.tipoFicha || '') === 'ordem' && !!ficha.ordem && typeof ficha.ordem === 'object';
+    var anterior = null;
     if (!resumo && ehOrdem) {
-      var anterior = lerFichaDoPersonagem(registro);
+      anterior = lerFichaDoPersonagem(registro);
       if (anterior.ok) resumo = resumoParaGravar(ficha, anterior.ficha);
+    }
+    /* v2.36: uma versão do site anterior aos temas não conhece o bloco
+       `aparencia` e o mandaria embora a cada gravação. Sem o campo, fica
+       o que estava; para voltar ao tema da conta, a versão nova manda
+       { modo: "conta" } explicitamente. A ficha anterior só é lida para
+       quem se identifica como versão antiga (schema 1 a 15). */
+    var schemaPedido = Number(ficha.schemaVersion) || 0;
+    if (ficha.aparencia === undefined && schemaPedido > 0 && schemaPedido < 16) {
+      if (!anterior) anterior = lerFichaDoPersonagem(registro);
+      if (anterior.ok && anterior.ficha && anterior.ficha.aparencia) ficha.aparencia = normalizarAparenciaServidor(anterior.ficha.aparencia);
     }
     ficha.resumoRecursos = resumo || undefined;
     var campanhaAnterior = registro.campanhaId;
@@ -2891,7 +3062,8 @@ function acaoSalvarPerfil(corpo, usuario) {
   }
 
   /* A conta é sempre a da sessão (`usuario`); o corpo não escolhe. */
-  if (dados.preferencias !== undefined && !validarPreferencias(dados.preferencias)) {
+  var preferenciasLimpas = dados.preferencias !== undefined ? validarPreferencias(dados.preferencias) : null;
+  if (dados.preferencias !== undefined && !preferenciasLimpas) {
     return { ok: false, erro: 'dados_invalidos' };
   }
 
@@ -2920,11 +3092,20 @@ function acaoSalvarPerfil(corpo, usuario) {
         perfil = acharPor(ABAS.PERFIS, 'userId', usuario.id);
       }
 
-      if (dados.avatar !== undefined) aplicarImagem(ABAS.PERFIS, perfil, 'avatar', String(dados.avatar || ''));
+      /* As preferências são conferidas antes de qualquer escrita: passar
+         do tamanho recusa o pedido inteiro, sem meia gravação. */
       if (dados.preferencias !== undefined) {
-        preferenciasGravadas = juntarPreferencias(perfil.preferenciasJson, dados.preferencias);
-        perfil.preferenciasJson = JSON.stringify(preferenciasGravadas);
+        preferenciasGravadas = juntarPreferencias(perfil.preferenciasJson, preferenciasLimpas);
+        /* Excluir o tema ativo sem dizer qual fica: a conta volta ao
+           aparelho, nunca a um "personalizado" que não existe. */
+        if (preferenciasGravadas.tema === 'personalizado' && !((preferenciasGravadas.temas || []).some(function (t) { return t && t.id === preferenciasGravadas.temaAtivo; }))) {
+          preferenciasGravadas.tema = 'sistema';
+        }
+        var prefsJson = JSON.stringify(preferenciasGravadas);
+        if (prefsJson.length > MAX_PREFERENCIAS_JSON) return { ok: false, erro: 'dados_grandes' };
+        perfil.preferenciasJson = prefsJson;
       }
+      if (dados.avatar !== undefined) aplicarImagem(ABAS.PERFIS, perfil, 'avatar', String(dados.avatar || ''));
       perfil.atualizadoEm = agora;
 
       atualizarLinha(ABAS.PERFIS, perfil._linha, perfil);

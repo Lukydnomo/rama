@@ -413,6 +413,7 @@
      ================================================================= */
 
   function desenhar() {
+    sincronizarTema();
     var alvo = U.$("#ficha");
     var lista = abasDaFicha();
     var secao = lista.find(function (a) { return a.chave === estado.aba; }) || lista[0];
@@ -467,6 +468,7 @@
         el("div.ficha-topo__ferramentas", {}, [
           indicador,
           modoSeletor(),
+          botaoDeTema(),
           estado.modo === "edicao" && !F.ehDeOrdem(estado.ficha)
             ? el("button.r-botao.r-botao--mini", { type: "button", texto: "Configurar módulos", onclick: configurarModulos }) : null,
           PAINEL
@@ -556,6 +558,83 @@
         onclick: function () { trocarModo("edicao"); },
       }),
     ]);
+  }
+
+  /* =================================================================
+     TEMA DA FICHA (v2.36)
+     -----------------------------------------------------------------
+     O lápis ao lado de Normal/Edição abre o editor no contexto da
+     ficha. O tema vale só nesta ficha; "usar o tema da conta" é o
+     padrão e usa a conta de quem está vendo. Aplicar não redesenha a
+     página (o que estiver sendo digitado fica): troca o bloco
+     `aparencia`, pinta e entra na fila de gravação, e o aviso diz se
+     o servidor guardou, se ficou pendente ou se falhou.
+     ================================================================= */
+
+  var temaPintado = null;
+
+  /* A página diz ao tema qual ficha está aberta, e com que aparência —
+     a cada desenho, mas só repinta quando o bloco mudou (carga,
+     conciliação, versão nova trazida pela sincronização). */
+  function sincronizarTema() {
+    if (!global.RAMATema || !estado.ficha) return;
+    var a = JSON.stringify(estado.ficha.aparencia || null);
+    if (a === temaPintado) return;
+    temaPintado = a;
+    global.RAMATema.definirFicha(estado.personagemId, estado.ficha.aparencia);
+  }
+
+  function botaoDeTema() {
+    if (!global.RAMATemaEditor || !ctx.podeEditar()) return null;
+    var proprio = estado.ficha.aparencia && estado.ficha.aparencia.modo !== "conta";
+    return el("button.r-icone.r-icone--contorno.ficha-topo__tema", {
+      type: "button",
+      "aria-label": "Personalizar tema desta ficha" + (proprio ? " (tema próprio)" : ""),
+      title: "Personalizar tema desta ficha",
+      dataset: { proprio: proprio ? "sim" : "nao" },
+      onclick: abrirTema,
+    }, [UI.simbolo("lapis")]);
+  }
+
+  function abrirTema() {
+    global.RAMATemaEditor.abrir({
+      contexto: "ficha",
+      nomeFicha: estado.ficha.nome,
+      aparencia: estado.ficha.aparencia,
+      podeSalvar: ctx.podeEditar(),
+      aplicar: aplicarTema,
+    });
+  }
+
+  function aplicarTema(aparencia) {
+    if (!estado.salvador) return Promise.resolve({ ok: false });
+    estado.ficha.aparencia = aparencia;
+    ctx.alterou();
+    sincronizarTema();
+    var botao = U.$(".ficha-topo__tema");
+    if (botao) {
+      var proprio = aparencia.modo !== "conta";
+      botao.dataset.proprio = proprio ? "sim" : "nao";
+      botao.setAttribute("aria-label", "Personalizar tema desta ficha" + (proprio ? " (tema próprio)" : ""));
+    }
+    return esperarGravacao();
+  }
+
+  /* Pede a gravação agora e acompanha o salvador: gravou, ficou
+     pendente (sem conexão, conflito a resolver) ou parou com erro. */
+  function esperarGravacao() {
+    var s = estado.salvador;
+    var inicio = Date.now();
+    s.agora();
+    return new Promise(function (resolver) {
+      (function olhar() {
+        if (s.bloqueio()) return resolver({ ok: false, texto: "o servidor recusou a gravação" });
+        if (s.emConflito()) return resolver({ ok: false, pendente: true });
+        if (!s.temPendencia()) return resolver({ ok: true });
+        if (Date.now() - inicio > 20000) return resolver({ ok: false, pendente: true });
+        setTimeout(olhar, 200);
+      })();
+    });
   }
 
   function trocarModo(novo) {

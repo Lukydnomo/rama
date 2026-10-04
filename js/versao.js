@@ -70,6 +70,27 @@
 
   var CHANGELOG = [
     {
+      versao: "2.36.0", codinome: "MATIZ", data: "04/10/2026",
+      mudancas: {
+        "Adicionado": [
+          "Temas personalizáveis. No Perfil, o lápis ao lado de “Trocar avatar” (“Personalizar tema do site”) abre o tema da conta: Seguir o aparelho, os temas prontos Claro e Escuro com amostras e os seus temas — criar a partir de um pronto ou de outro tema, dar nome, editar, duplicar e excluir. Excluir o tema em uso pede o que fica no lugar. “Sistema” continua no Perfil, a um clique.",
+          "Na ficha, o lápis ao lado de Normal/Edição (“Personalizar tema desta ficha”) abre o mesmo editor só para aquela ficha: Usar o tema da conta (o padrão, com a conta de quem vê), Seguir o aparelho, Claro, Escuro, uma cópia de um tema da conta ou um tema próprio. A cópia é independente: apagar o tema da conta não muda a ficha. O tema vale só nela — sair volta ao da conta, e duas fichas em abas diferentes ficam cada uma com o seu.",
+          "Editor por categorias (fundo e superfícies; cabeçalho, abas e seleções; texto; botões; campos, bordas e foco; barras de recursos; mensagens e destaques; elementos e graus; sombras e efeitos), com opções avançadas recolhidas, seletor de cor e campo de texto (#RGB, #RRGGBB, rgb()), transparência e, no fundo, nas superfícies, no cabeçalho, nas seleções e nos botões, gradiente linear ou radial com 2 a 8 pontos (cor, transparência e posição de cada um, ângulo, centro e forma).",
+          "Prévia com os componentes de verdade (cabeçalho, cartão, textos, link, campo, botões em estado normal e desligado, foco, barras de PV/PE/SAN, mensagens, elementos e grau) e conferência de contraste que olha cada parte de um gradiente, com sugestões que só entram num clique.",
+        ],
+        "Melhorado": [
+          "Tudo é rascunho até Salvar ou Aplicar: a página atrás mostra o rascunho ao vivo, a janela do editor fica sempre num tema legível, “Desfazer alterações” volta ao que estava e Cancelar, Esc ou o X descartam e devolvem a página como era. Aplicar na ficha não redesenha nada (o que estiver sendo digitado fica) e diz a verdade: salvo, pendente ou não salvo.",
+          "A ordem é uma só em todo o site: tema da ficha → tema da conta → aparelho. Seguir o aparelho acompanha a troca ao vivo; temas fixos e personalizados não mudam com ela. A cor da barra do navegador e o esquema dos controles nativos acompanham o tema.",
+          "Valores inválidos são apontados sem perder o último bom; um personalizado que deixou de existir cai no aparelho, nunca numa página sem estilo.",
+        ],
+        "Técnico": [
+          "CSS com papéis semânticos: --cor-* é sempre cor sólida (texto, borda, sombra, color-mix) e --fundo-* é o preenchimento, o único que recebe gradiente. js/tema-modelo.js valida e é o único que gera as propriedades; um tema é dado versionado (cores, transparência, gradientes), nunca CSS, url() ou HTML.",
+          "Preferências `tema: \"personalizado\"`, `temaAtivo` e `temas` (até 12) em `salvar_perfil`, validadas no servidor; a sessão traz o tema ativo. Ficha com `aparencia` (schema 16, nas duas fichas), saneada ao criar e salvar e mantida quando uma versão antiga grava sem o campo. Troque o `Codigo.gs` e crie uma nova versão da implantação; sem `setupRama()`.",
+          "Testes: 86 novos no tema (modelo, paletas iguais às do CSS, prioridade, caches por conta e ficha, prévia, salvamento fora de ordem), 34 no servidor e 11 na ficha, mais Perfil e ficha no navegador em desktop e celular.",
+        ],
+      },
+    },
+    {
       versao: "2.35.0", codinome: "VITRINE", data: "03/10/2026",
       mudancas: {
         "Adicionado": [

@@ -78,7 +78,7 @@
     guardar(CHAVE_AGENTE, JSON.stringify(agenteAtual));
     /* O tema salvo na conta chega junto com a sessão (tema.js). */
     if (global.RAMATema) {
-      global.RAMATema.sincronizarDaConta(agenteAtual.id, dados && dados.preferencias && dados.preferencias.tema);
+      global.RAMATema.sincronizarDaConta(agenteAtual.id, dados && dados.preferencias && dados.preferencias.tema, dados && dados.preferencias);
     }
     /* As outras preferências de apresentação (v2.35, preferencias.js). */
     if (global.RAMAPreferencias) {

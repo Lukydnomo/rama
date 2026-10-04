@@ -59,12 +59,17 @@ html {
   font-size: var(--texto-base);
   -webkit-text-size-adjust: 100%;
   scrollbar-color: var(--cor-traco-fraca) var(--cor-fundo);
+  /* a cor sólida do fundo: o que aparece além da página (rolagem elástica) */
+  background: var(--cor-fundo);
 }
 
 body {
   margin: 0;
   min-height: 100vh;
-  background: var(--cor-fundo);
+  /* o preenchimento do fundo, que pode ser gradiente (v2.36): preso à
+     janela, para o gradiente não se repetir a cada tela de rolagem */
+  background: var(--fundo-pagina);
+  background-attachment: fixed;
   color: var(--cor-texto-2);
   font-family: var(--fonte-corpo);
   font-size: var(--texto-base);
@@ -83,7 +88,7 @@ img, svg, video { display: block; max-width: 100%; }
 button, input, select, textarea { font: inherit; letter-spacing: inherit; color: inherit; }
 
 a {
-  color: var(--cor-texto);
+  color: var(--cor-link);
   text-decoration: none;
   border-bottom: var(--borda) solid var(--cor-traco-fraca);
 }
@@ -95,7 +100,7 @@ a:hover { border-bottom-color: var(--cor-traco-forte); }
    quanto sobre uma caixa clara invertida. */
 :focus { outline: none; }
 :focus-visible {
-  outline: 2px solid var(--cor-traco-forte);
+  outline: 2px solid var(--cor-foco);
   outline-offset: 2px;
   box-shadow: 0 0 0 4px var(--cor-fundo);
 }
@@ -177,8 +182,8 @@ a:hover { border-bottom-color: var(--cor-traco-forte); }
   top: -100px;
   z-index: var(--z-aviso);
   padding: var(--e2) var(--e3);
-  background: var(--cor-texto);
-  color: var(--cor-fundo);
+  background: var(--fundo-selecao);
+  color: var(--cor-selecao-texto);
   border: var(--borda) solid var(--cor-traco-forte);
   transition: top var(--tempo-curto) var(--curva);
 }
@@ -228,8 +233,8 @@ html[data-efeitos="off"] .veu { display: none; }
 
 /* ---------- seleção de texto ---------- */
 ::selection {
-  background: var(--cor-texto);
-  color: var(--cor-fundo);
+  background: var(--cor-selecao);
+  color: var(--cor-selecao-texto);
 }
 
 /* ---------- barra de rolagem ---------- */

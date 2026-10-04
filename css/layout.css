@@ -14,7 +14,7 @@
   position: sticky;
   top: 0;
   z-index: var(--z-cabecalho);
-  background: var(--cor-fundo);
+  background: var(--fundo-cabecalho);
   border-bottom: var(--borda) solid var(--cor-traco-fraca);
 }
 
@@ -129,14 +129,14 @@
 .app-nav__link:hover {
   border-color: var(--cor-traco-forte);
   color: var(--cor-texto);
-  background: var(--cor-superficie-2);
+  background: var(--fundo-superficie-2);
 }
 
 /* Seleção é inversão: o item ativo vira o negativo dos outros. É a
    diferença mais forte que existe numa paleta preto e branco. */
 .app-nav__link[aria-current="page"] {
-  background: var(--cor-texto);
-  color: var(--cor-fundo);
+  background: var(--fundo-selecao);
+  color: var(--cor-selecao-texto);
   border-color: var(--cor-traco-forte);
   font-weight: 700;
 }
@@ -289,7 +289,7 @@ body { display: flex; flex-direction: column; }
   flex-direction: column;
   gap: var(--e1);
   padding: var(--e4);
-  background: var(--cor-superficie);
+  background: var(--fundo-superficie);
   border: var(--borda) solid var(--cor-traco-fraca);
   color: inherit;
   transition: border-color var(--tempo-seco) var(--curva);
@@ -422,7 +422,7 @@ body { display: flex; flex-direction: column; }
   max-width: 100%;
   min-height: var(--alvo-toque);
   padding: var(--e1) var(--e3);
-  background: var(--cor-superficie);
+  background: var(--fundo-superficie);
   border: var(--borda) solid var(--cor-traco-fraca);
   color: var(--cor-texto-2);
   font-family: var(--fonte-mini);
@@ -433,9 +433,9 @@ body { display: flex; flex-direction: column; }
 }
 .pasta:hover { border-color: var(--cor-traco-media); color: var(--cor-texto); }
 .pasta[aria-pressed="true"] {
-  background: var(--cor-texto);
+  background: var(--fundo-selecao);
   border-color: var(--cor-traco-forte);
-  color: var(--cor-fundo);
+  color: var(--cor-selecao-texto);
   font-weight: 700;
 }
 .pasta__nome { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; max-width: 32ch; }
@@ -548,9 +548,9 @@ html.arrastando .pasta[data-arrastar-pasta] { border-style: dashed; border-color
 }
 .filtro:hover { border-color: var(--cor-traco-media); color: var(--cor-texto-2); }
 .filtro[aria-pressed="true"] {
-  background: var(--cor-texto);
+  background: var(--fundo-selecao);
   border-color: var(--cor-traco-forte);
-  color: var(--cor-fundo);
+  color: var(--cor-selecao-texto);
   font-weight: 700;
 }
 
@@ -572,7 +572,7 @@ html.arrastando .pasta[data-arrastar-pasta] { border-style: dashed; border-color
   flex-direction: column;
   gap: var(--e5);
   padding: var(--e6) var(--e5);
-  background: var(--cor-superficie);
+  background: var(--fundo-superficie);
   border: var(--borda) solid var(--cor-traco-media);
 }
 
@@ -658,7 +658,7 @@ html.arrastando .pasta[data-arrastar-pasta] { border-style: dashed; border-color
   gap: var(--e1);
   min-height: var(--alvo-toque);
   padding: var(--e1) var(--e3);
-  background: var(--cor-superficie);
+  background: var(--fundo-superficie);
   border: 0;
   color: var(--cor-texto-2);
   font-family: var(--fonte-mini);
@@ -669,7 +669,7 @@ html.arrastando .pasta[data-arrastar-pasta] { border-style: dashed; border-color
 }
 .exibicao__opcao + .exibicao__opcao { border-left: var(--borda) solid var(--cor-traco-fraca); }
 .exibicao__opcao:hover { color: var(--cor-texto); }
-.exibicao__opcao[aria-pressed="true"] { background: var(--cor-texto); color: var(--cor-fundo); font-weight: 700; }
+.exibicao__opcao[aria-pressed="true"] { background: var(--fundo-selecao); color: var(--cor-selecao-texto); font-weight: 700; }
 
 .pastas-icones, .sistemas-icones { display: flex; flex-direction: column; gap: var(--e2); min-width: 0; }
 .grade-pastas {
@@ -703,7 +703,7 @@ html.arrastando .pasta[data-arrastar-pasta] { border-style: dashed; border-color
   max-width: 6rem;
   aspect-ratio: 1 / 1;
   padding: 11%;
-  background: var(--cor-superficie-2);
+  background: var(--fundo-superficie-2);
   border: var(--borda) solid var(--cor-traco-fraca);
   border-radius: var(--raio-pasta);
   color: var(--cor-texto-3);
@@ -753,7 +753,7 @@ html.arrastando .pasta[data-arrastar-pasta] { border-style: dashed; border-color
 .pasta-icone:focus-visible { outline: none; }
 .pasta-icone:focus-visible .pasta-icone__caixa { outline: 2px solid var(--cor-traco-forte); outline-offset: 3px; }
 .pasta-icone[aria-current="true"] .pasta-icone__caixa {
-  background: var(--cor-superficie);
+  background: var(--fundo-superficie);
   border-color: var(--cor-traco-forte);
   box-shadow: inset 0 0 0 1px var(--cor-traco-forte);
 }

@@ -46,7 +46,7 @@
     perfil = r.dados || {};
     /* A leitura do perfil é a mais nova: o tema salvo vale sobre o cache. */
     if (global.RAMATema && perfil.preferencias) {
-      global.RAMATema.sincronizarDaConta(perfil.id, perfil.preferencias.tema);
+      global.RAMATema.sincronizarDaConta(perfil.id, perfil.preferencias.tema, { temaPersonalizado: temaAtivoDe(perfil.preferencias) });
     }
     desenhar();
   });
@@ -86,10 +86,17 @@
       el("div.faixa", {}, [
         avatar,
         el("div.pilha--curta", { class: "pilha" }, [
-          el("button.r-botao.r-botao--fantasma", {
-            type: "button", texto: perfil.avatar ? "Trocar avatar" : "Adicionar avatar",
-            onclick: trocarAvatar,
-          }),
+          el("div.faixa.faixa--curta", {}, [
+            el("button.r-botao.r-botao--fantasma", {
+              type: "button", texto: perfil.avatar ? "Trocar avatar" : "Adicionar avatar",
+              onclick: trocarAvatar,
+            }),
+            /* O tema do site (v2.36): o lápis abre o editor da conta. */
+            el("button.r-icone.r-icone--contorno", {
+              type: "button", "aria-label": "Personalizar tema do site", title: "Personalizar tema do site",
+              onclick: abrirTema,
+            }, [UI.simbolo("lapis")]),
+          ]),
           perfil.avatar ? el("button.r-botao.r-botao--mini.r-botao--fantasma", {
             type: "button", texto: "Remover avatar",
             onclick: function () { gravarAvatar(""); },
@@ -197,22 +204,52 @@
     ]);
   }
 
-  /* Tema (v2.25): Sistema, Claro ou Escuro, salvo na conta. A troca é na
-     hora e não redesenha a página — o que estiver sendo editado fica — e
-     a linha de situação diz se a planilha guardou ou não. */
-  var ROTULOS_TEMA = { sistema: "Sistema", claro: "Claro", escuro: "Escuro" };
+  /* Tema (v2.25, v2.36): "Sistema" fica aqui, à mão — um clique e a
+  conta volta a seguir o aparelho. Claro, Escuro e os temas próprios
+  moram no editor (o lápis ao lado do avatar, ou "Outros temas"). A
+  troca é na hora e não redesenha a página; a linha de situação diz se
+  a planilha guardou ou não. */
   var pararTema = null;
+
+  function temaAtivoDe(prefs) {
+    var p = prefs || {};
+    var lista = global.RAMATemaModelo ? global.RAMATemaModelo.normalizarTemas(p.temas) : [];
+    for (var i = 0; i < lista.length; i++) if (lista[i].id === p.temaAtivo) return lista[i];
+    return null;
+  }
+
+  function nomeDoTema(info) {
+    var T = global.RAMATema;
+    if (info.preferencia === "personalizado" && T.personalizado()) return "“" + T.personalizado().tema.nome + "”";
+    if (info.preferencia === "claro") return "Claro";
+    if (info.preferencia === "escuro") return "Escuro";
+    return "Sistema";
+  }
+
+  function abrirTema() {
+    if (!global.RAMATemaEditor) { UI.avisoAtencao("O editor de temas não carregou. Recarregue a página."); return; }
+    var prefs = Object.assign({}, perfil.preferencias || {});
+    /* O que está na tela agora (um clique em Sistema já salvo) vale. */
+    prefs.tema = global.RAMATema.preferencia();
+    global.RAMATemaEditor.abrir({
+      contexto: "conta",
+      preferencias: prefs,
+      aoSalvar: function (gravadas) { perfil.preferencias = gravadas || perfil.preferencias; },
+    });
+  }
 
   function campoTema() {
     var T = global.RAMATema;
     if (pararTema) { pararTema(); pararTema = null; }
     if (!T) return null;
 
-    var botoes = T.PREFERENCIAS.map(function (p) {
-      return el("button.filtro", {
-        type: "button", texto: ROTULOS_TEMA[p], dataset: { tema: p },
-        onclick: function () { T.salvar(p); },
-      });
+    var sistema = el("button.filtro", {
+      type: "button", texto: "Sistema",
+      onclick: function () { T.salvar("sistema"); },
+    });
+    var outros = el("button.r-botao.r-botao--mini", {
+      type: "button", texto: "Outros temas…", onclick: abrirTema,
+      "aria-label": "Escolher ou personalizar o tema do site",
     });
     var situacao = el("p.r-ajuda", { role: "status", "aria-live": "polite" });
     var tentar = el("button.r-botao.r-botao--mini", {
@@ -221,12 +258,10 @@
     });
 
     function pintar(info) {
-      botoes.forEach(function (b) {
-        b.setAttribute("aria-pressed", String(b.dataset.tema === info.preferencia));
-      });
+      sistema.setAttribute("aria-pressed", String(info.preferencia === "sistema"));
       var base = info.preferencia === "sistema"
         ? "Acompanha o tema do aparelho (agora: " + info.efetivo + ")."
-        : "Sempre " + info.efetivo + ", seja qual for o tema do aparelho.";
+        : "Tema da conta: " + nomeDoTema(info) + " — não muda com o aparelho.";
       var fala = {
         salvando: "Salvando na conta…",
         salvo: "Salvo na conta.",
@@ -242,7 +277,7 @@
 
     return el("div.r-campo", {}, [
       el("span.r-rotulo", { texto: "Tema" }),
-      el("div.filtros__grupo", { role: "group", "aria-label": "Tema" }, botoes),
+      el("div.faixa.faixa--curta", { role: "group", "aria-label": "Tema" }, [sistema, outros]),
       situacao,
       tentar,
     ]);

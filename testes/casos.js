@@ -20,6 +20,29 @@
     var H = global.RAMAHabilidades;
     var Ver = global.RAMAVersion;
 
+    t.grupo("Tema da ficha · schema 16 (v2.36)");
+    var TEMA16 = { nome: "Roxo", base: "escuro", valores: { fundo: { tipo: "radial", forma: "circulo", x: 20, y: 30, pontos: [{ cor: "#08080a", pos: 0 }, { cor: "#3a1030", alfa: 0.8, pos: 100 }] } } };
+    t.igual("o schema subiu para 16", S.VERSAO_SCHEMA, 16);
+    t.iguais("ficha nova usa o tema da conta", S.criarFicha({ nome: "Nova" }).aparencia, { v: 1, modo: "conta" });
+    t.iguais("ficha antiga (sem o campo) também", S.normalizarFicha({ schemaVersion: 15, nome: "Legado" }).aparencia, { v: 1, modo: "conta" });
+    ["ordem", "universal"].forEach(function (tipo) {
+      var f16 = S.criarFicha({ nome: "Com tema", tipoFicha: tipo });
+      f16.aparencia = { v: 1, modo: "personalizado", tema: TEMA16 };
+      var n16 = S.normalizarFicha(JSON.parse(JSON.stringify(f16)));
+      t.ok("ficha " + tipo + ": o tema próprio sobrevive a gravar e reabrir", n16.aparencia.modo === "personalizado" && n16.aparencia.tema.valores.fundo.forma === "circulo" && n16.aparencia.tema.valores.fundo.pontos[1].alfa === 0.8);
+      t.ok("  fora do bloco de Ordem", !n16.ordem || n16.ordem.aparencia === undefined);
+    });
+    t.iguais("bloco inválido volta a usar o tema da conta", S.normalizarFicha({ nome: "X", aparencia: { modo: "personalizado", tema: "body{background:url(x)}" } }).aparencia, { v: 1, modo: "conta" });
+    t.igual("seguir o aparelho é guardado explicitamente", S.normalizarFicha({ nome: "X", aparencia: { modo: "sistema" } }).aparencia.modo, "sistema");
+    var exp16 = S.criarFicha({ nome: "Exportada" });
+    exp16.aparencia = { v: 1, modo: "personalizado", tema: TEMA16 };
+    var imp16 = V.importado(JSON.parse(JSON.stringify(V.exportar("personagem", exp16))));
+    t.ok("exportar e importar leva o tema da ficha", imp16.ok && imp16.dados.aparencia.modo === "personalizado" && imp16.dados.aparencia.tema.valores.fundo.tipo === "radial");
+    var comCss = JSON.parse(JSON.stringify(V.exportar("personagem", exp16)));
+    comCss.dados.aparencia.tema.valores.fundo = { tipo: "cor", cor: "red;background:url(x)" };
+    var imp16b = V.importado(comCss);
+    t.ok("  um arquivo com CSS no lugar da cor não passa o CSS adiante", imp16b.ok && !imp16b.dados.aparencia.tema.valores.fundo);
+
     t.grupo("Módulos e aliados · schema 14");
     var C14 = global.RAMACriaturas, U14 = global.RAMAUtil, Sync14 = global.RAMASync;
     var antiga14 = S.normalizarFicha({ schemaVersion: 13, nome: "Legado", pericias: [] });

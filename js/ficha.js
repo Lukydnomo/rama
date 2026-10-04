@@ -95,6 +95,14 @@
      sem marco. Uma aba antiga descartaria o marco ao gravar e a
      progressão voltaria a pedir as etapas — com o schema maior ela recusa.
 
+     15 → 16: temas personalizáveis (v2.36). A ficha ganhou `aparencia`,
+     o tema desta ficha, igual nos dois modelos e fora do bloco `ordem`:
+     { v: 1, modo: "conta" | "sistema" | "claro" | "escuro" |
+     "personalizado", tema? }. Sem o campo, "conta" — a ficha usa o tema
+     de quem a vê. Uma aba antiga apagaria o tema ao gravar: com o schema
+     maior ela recusa, e o servidor mantém o bloco gravado quando o
+     pedido não traz o campo.
+
      Nenhuma das subidas exige migração: normalizarFicha() cria o que
      falta, vazio, e não toca no que existe. Um ritual gravado na 2 abre
      na 3 com a versão Normal em branco; uma ficha de Ordem gravada na 4
@@ -104,7 +112,7 @@
      os campos novos e os descartaria ao gravar — com o schema maior ela
      recusa abrir a ficha e pede para recarregar.
      Ver docs/CHARACTER_SCHEMA.md. */
-  var VERSAO_SCHEMA = 15;
+  var VERSAO_SCHEMA = 16;
 
   var MODULOS = {
     atributos: "Atributos", status: "Status/recursos", defesa: "Defesa",
@@ -380,7 +388,15 @@
       inventario: { limite: 0, itens: [] },
       anotacoes: { pastas: [], soltas: [] },
       camposCustomizados: [],
+      aparencia: normalizarAparencia(i.aparencia),
     };
+  }
+
+  /* O tema desta ficha (schema 16). As regras moram em js/tema-modelo.js;
+     sem ele (um teste que não o carrega), o bloco volta ao padrão. */
+  function normalizarAparencia(bruto) {
+    var M = global.RAMATemaModelo;
+    return M ? M.normalizarAparencia(bruto) : { v: 1, modo: "conta" };
   }
 
   function rituaisVazios() {
@@ -907,6 +923,7 @@
 
     ficha.modulos = normalizarModulos(b.modulos);
     ficha.aliados = global.RAMACriaturas.normalizarAliados(b.aliados);
+    ficha.aparencia = normalizarAparencia(b.aparencia);
 
     return ficha;
   }

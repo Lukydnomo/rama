@@ -538,6 +538,7 @@
     ignorar: ["atualizadoEm", "schemaVersion"],
     rotulos: {
       aliados: "Aliados", criatura: "Criatura", imagem: "Imagem", modulos: "Módulos",
+      aparencia: "Tema da ficha", valores: "Cores do tema",
       nome: "Nome", classe: "Classe", origem: "Origem", campanhaId: "Campanha",
       valor: "Valor", dado: "Dado", sigla: "Sigla",
       atual: "Atual", maximo: "Máximo",
