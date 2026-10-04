@@ -217,27 +217,74 @@
   function ehMunicao(item) {
     if (!item) return false;
     var d = dados(item);
-    return d.grupo === "municao" || /^(op|sah|as1|as2|as3)\.municao\./.test(item.origemCatalogoId || "");
+    return d.grupo === "municao" || /^(op|sah|as1|as2|as3|as4)\.municao\./.test(item.origemCatalogoId || "");
   }
 
-  function porPacote(item) {
+  /* Chuva de Balas (Arquivos Secretos 4, p. 65): com a contagem de
+     munição, cada pacote de balas tem +10. `ordem` é a ficha de quem
+     carrega a munição; sem ela (uma conta fora de ficha), o pacote é o
+     do livro. */
+  function balasDeArmaDeFogo(item) {
+    var id = String((item && item.origemCatalogoId) || "");
+    return /\.municao\.(balas-curtas|balas-longas|cartuchos)$/.test(id) || (dados(item).marcadores || []).indexOf("balas") >= 0;
+  }
+  function extraDoPacote(item, ordem) {
+    if (!ordem || !item || !balasDeArmaDeFogo(item)) return 0;
+    var A4 = global.RAMAOrdemArquivo4;
+    return A4 && A4.temPoder && A4.temPoder(ordem, "chuvaDeBalas") ? 10 : 0;
+  }
+
+  function porPacote(item, ordem) {
     var d = dados(item);
-    if (d.contagem && d.contagem.porPacote) return d.contagem.porPacote;
-    if (item && POR_PACOTE[item.origemCatalogoId]) return POR_PACOTE[item.origemCatalogoId];
-    return POR_PACOTE_PADRAO;
+    var base = POR_PACOTE_PADRAO;
+    if (d.contagem && d.contagem.porPacote) base = d.contagem.porPacote;
+    else if (item && POR_PACOTE[item.origemCatalogoId]) base = POR_PACOTE[item.origemCatalogoId];
+    return base + extraDoPacote(item, ordem);
   }
 
   /* Quanto há na reserva: pacotes × por pacote − o que já saiu. */
-  function reserva(item) {
+  function reserva(item, ordem) {
     var d = dados(item);
-    var total = (d.quantidade || 1) * porPacote(item) - ((d.contagem && d.contagem.retiradas) || 0);
+    var total = (d.quantidade || 1) * porPacote(item, ordem) - ((d.contagem && d.contagem.retiradas) || 0);
     return Math.max(0, total);
   }
 
-  function pacotesVazios(item) {
+  function pacotesVazios(item, ordem) {
     var d = dados(item);
     var ret = (d.contagem && d.contagem.retiradas) || 0;
-    return Math.min(d.quantidade || 1, Math.floor(ret / porPacote(item)));
+    return Math.min(d.quantidade || 1, Math.floor(ret / porPacote(item, ordem)));
+  }
+
+  /* Chuva de Balas: quantos pacotes INTEIROS dá para sacrificar antes de
+     rolar o dano. Com a contagem, só pacotes cheios (a reserva cobre
+     cada um por completo); sem ela, os pacotes do item. */
+  function pacotesSacrificaveis(item, ordem, comContagem) {
+    if (!item) return 0;
+    var d = dados(item);
+    if (!comContagem) return d.quantidade || 1;
+    return Math.min(d.quantidade || 1, Math.floor(reserva(item, ordem) / porPacote(item, ordem)));
+  }
+
+  /* Sacrifica `n` pacotes por completo. O que já saiu dos pacotes
+     (`retiradas`) fica como estava: a reserva cai exatamente n pacotes
+     cheios, e nada gasto volta. O mesmo id não sacrifica duas vezes.
+     Sem pacote nenhum sobrando, o item sai do inventário. */
+  function sacrificarPacotes(ordem, inventario, item, n, comContagem, opId) {
+    if (jaFeito(ordem, opId)) return { ok: true, repetido: true };
+    var k = inteiro(n, 1, 999, 0);
+    if (!k) return { ok: false, motivo: "Informe quantos pacotes." };
+    var pode = pacotesSacrificaveis(item, ordem, comContagem);
+    if (k > pode) return { ok: false, motivo: "Só há " + pode + " pacote(s) inteiro(s) de " + item.nome + " para sacrificar." };
+    var d = dados(item);
+    var q = d.quantidade || 1;
+    if (k >= q) {
+      inventario.itens = (inventario.itens || []).filter(function (x) { return x !== item; });
+    } else {
+      if (!item.ordem || typeof item.ordem !== "object") item.ordem = {};
+      item.ordem.quantidade = q - k;
+    }
+    registrar(ordem, opId, "ataque", item.nome + ": " + k + " pacote(s) sacrificado(s) — Chuva de Balas (+" + (2 * k) + " dados de dano)");
+    return { ok: true, pacotes: k, dados: 2 * k };
   }
 
   function usaMunicao(arma) {
@@ -297,7 +344,7 @@
 
   /* modo: "unico" | "rajada" | "doisCanos". Devolve o que o ataque vai
      gastar e o saldo depois — sem mexer em nada. */
-  function planoDeAtaque(inventario, arma, modo) {
+  function planoDeAtaque(inventario, arma, modo, ordem) {
     var d = dados(arma);
     var a = d.arma || {};
     var m = modo || "unico";
@@ -319,7 +366,7 @@
         plano.motivo = plano.antes
           ? "Faltam balas carregadas: há " + plano.antes + ", " + (m === "rajada" ? "a rajada gasta " : "o ataque gasta ") + gasto + "."
           : "A arma está descarregada.";
-        plano.acao = achada.item && reserva(achada.item) > 0 ? "recarregar" : (achada.item ? "semMunicao" : "associar");
+        plano.acao = achada.item && reserva(achada.item, ordem) > 0 ? "recarregar" : (achada.item ? "semMunicao" : "associar");
       }
       return plano;
     }
@@ -329,7 +376,7 @@
       plano.acao = "associar";
       return plano;
     }
-    plano.antes = reserva(achada.item);
+    plano.antes = reserva(achada.item, ordem);
     plano.depois = plano.antes - gasto;
     if (plano.depois < 0) {
       plano.ok = false;
@@ -344,7 +391,7 @@
   function aplicarAtaque(ordem, inventario, arma, plano, opId, quando) {
     if (jaFeito(ordem, opId)) return { ok: true, repetido: true };
     if (!plano || !plano.ok) return { ok: false, motivo: (plano && plano.motivo) || "Ataque sem munição." };
-    var novo = planoDeAtaque(inventario, arma, plano.modo);
+    var novo = planoDeAtaque(inventario, arma, plano.modo, ordem);
     if (!novo.ok) return novo;
     if (novo.deOnde === "carregada") {
       contagemDe(arma).carregada = novo.depois;
@@ -357,7 +404,7 @@
     return { ok: true, plano: novo };
   }
 
-  function planoDeRecarga(inventario, arma) {
+  function planoDeRecarga(inventario, arma, ordem) {
     var cap = capacidade(arma);
     if (!cap) return { ok: false, motivo: "Esta arma não tem carregador: ela atira direto da reserva." };
     var achada = municaoDaArma(inventario, arma);
@@ -365,7 +412,7 @@
     var atual = carregada(arma);
     var falta = cap - atual;
     if (falta <= 0) return { ok: false, motivo: "A arma já está carregada (" + atual + " de " + cap + ")." };
-    var tem = reserva(achada.item);
+    var tem = reserva(achada.item, ordem);
     if (!tem) return { ok: false, motivo: "Não há " + achada.item.nome.toLowerCase() + " na reserva.", acao: "semMunicao" };
     var quanto = Math.min(falta, tem);
     return {
@@ -377,7 +424,7 @@
 
   function recarregar(ordem, inventario, arma, opId, quando) {
     if (jaFeito(ordem, opId)) return { ok: true, repetido: true };
-    var p = planoDeRecarga(inventario, arma);
+    var p = planoDeRecarga(inventario, arma, ordem);
     if (!p.ok) return p;
     tirarDaReserva(p.municao, p.quanto);
     contagemDe(arma).carregada = p.carregadaDepois;
@@ -409,7 +456,7 @@
   function ajustarReserva(ordem, item, novoSaldo, opId) {
     var alvo = inteiro(novoSaldo, 0, MAX_RETIRADAS, -1);
     if (alvo < 0) return { ok: false, motivo: "Informe um número inteiro a partir de 0." };
-    var total = (dados(item).quantidade || 1) * porPacote(item);
+    var total = (dados(item).quantidade || 1) * porPacote(item, ordem);
     if (alvo > total) return { ok: false, motivo: "Com " + (dados(item).quantidade || 1) + " pacote(s), cabem no máximo " + total + ". Reponha pacotes antes." };
     contagemDe(item).retiradas = total - alvo;
     registrar(ordem, opId, "ajuste", item.nome + ": reserva ajustada para " + alvo);
@@ -426,15 +473,15 @@
   }
 
   /* Descarta os pacotes que já se esvaziaram. */
-  function descartarVazios(item) {
-    var vazios = pacotesVazios(item);
+  function descartarVazios(item, ordem) {
+    var vazios = pacotesVazios(item, ordem);
     var d = dados(item);
     if (!vazios || vazios >= (d.quantidade || 1)) {
       if (vazios && vazios >= (d.quantidade || 1)) return { ok: false, motivo: "Todos os pacotes estão vazios: tire o item do inventário, se quiser." };
       return { ok: false, motivo: "Nenhum pacote vazio." };
     }
     item.ordem.quantidade = d.quantidade - vazios;
-    contagemDe(item).retiradas = (contagemDe(item).retiradas || 0) - vazios * porPacote(item);
+    contagemDe(item).retiradas = (contagemDe(item).retiradas || 0) - vazios * porPacote(item, ordem);
     return { ok: true, vazios: vazios };
   }
 
@@ -598,6 +645,8 @@
     ajustarReserva: ajustarReserva,
     ajustarCarregada: ajustarCarregada,
     descartarVazios: descartarVazios,
+    pacotesSacrificaveis: pacotesSacrificaveis,
+    sacrificarPacotes: sacrificarPacotes,
 
     itensDeComponentes: itensDeComponentes,
     catalisadores: catalisadores,

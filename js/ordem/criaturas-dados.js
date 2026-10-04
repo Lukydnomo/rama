@@ -30,6 +30,9 @@
             Ameaças do Hexatombe (p. 26–32), os Mascarados com as formas
             da intenção assassina (p. 39–64), os agentes (p. 70–86),
             Juan Davo (p. 91–92) e os perfis "como aliado" (p. 41–93)
+     AS4    Arquivos Secretos 4, v1.0 (Jambô, pacote de conteúdo oficial)
+            A Produção do Anfitrião (p. 55–57) e o Simulacro, com os
+            estágios krypto, vvorm e botnetz (p. 61)
 
    As páginas são as do livro, não as do PDF. Os resumos são redação
    própria: guardam os números, as condições e os testes que o jogo
@@ -43,7 +46,7 @@
    FORMATO DE UMA ENTRADA
    ---------------------------------------------------------------------
 
-     id            estável: <livro>.criatura.<nome> (op, sah, as1, as2, as3).
+     id            estável: <livro>.criatura.<nome> (op, sah, as1, as2, as3, as4).
                    Nunca muda, mesmo que o nome mude. Variantes têm o id
                    da base mais um sufixo (op.criatura.o-anfitriao.liber)
      livro, pagina a referência impressa
@@ -82,6 +85,9 @@
                    acoes, ativacao, notas } — valores publicados, finais
      aliada, ficha perfil "como aliado" (sem PV/PE) e a ficha de ameaça
                    da mesma pessoa
+     procedimentos (AS4) um processo da criatura com participantes,
+                   requisitos e teste estendido (Exorcismo Digital): o
+                   progresso mora na ocorrência, nunca no modelo
 
    VALORES ESPECIAIS: 0 é zero; null (ou ausente) é "não informado";
    "—" é "não se aplica"; qualquer outro texto ("veja texto") é exibido
@@ -108,6 +114,7 @@
   var AS1 = "AS1";
   var AS2 = "AS2";
   var AS3 = "AS3";
+  var AS4 = "AS4";
 
   var SA = "sangue";
   var MO = "morte";
@@ -217,6 +224,99 @@
       habilidades: habilidades.concat([mascara(testeDaManobra)]),
       acoes: acoes.concat([musicaDoDiabo()]),
       notas: ["O livro não imprime a ficha mascarada: as ações são as da ficha com +5 no ataque, +2 dados de dano e +5 na DT aplicados. Testes, perícias e o PV de machucado continuam os da ficha."].concat(notas || []),
+    };
+  }
+
+  /* =================================================================
+     O SIMULACRO (Arquivos Secretos 4, p. 61)
+     -----------------------------------------------------------------
+     Uma criatura em quatro estágios: a ficha de partida é a troyan
+     (VD 32) e as formas são krypto (64), vvorm (128) e botnetz (256),
+     com os valores FINAIS que a "Forma Evolutiva" dá. Trocar de estágio
+     é trocar a forma da ocorrência: os PV máximos mudam, os atuais não
+     sobem (evoluir não cura). O machucado das formas não é impresso: é
+     a metade dos PV, pela regra (OPRPG p. 87).
+     ================================================================= */
+
+  var FORCA_NAO_SE_APLICA = "—";
+
+  function saltar(alcance, quem) {
+    return acao("movimento", "Saltar", "O simulacro " + quem + " se transporta paranormalmente para qualquer aparelho eletrônico em alcance " + alcance + ".");
+  }
+
+  function perturbacao(quem, alvos, danoMental, dt) {
+    return acao("padrao", "Perturbação Digital",
+      "Perturba pessoas de muitas formas (assusta, irrita, atrai para problemas, prejudica as finanças, cria confusão, apavora por cada tela que a pessoa olhar…). O alvo precisa ser uma pessoa olhando para algo enquadrado (aba de internet, post de rede social, tela de eletrônico…). Independentemente da distância, o simulacro " + quem + " perturba " + alvos + ": " + danoMental + " de dano mental (Vontade DT " + dt + " reduz à metade). " +
+      "Quem ficar insano por causa disso: 1 a 50 em 1d100 morre na hora; 51 a 100 é transportado para o Jogo do Anfitrião (deixa de estar insano e fica com 1 de Sanidade). O mestre confirma a consequência — nada é aplicado sozinho.",
+      { rolagens: [dano("Perturbação Digital", danoMental + " mental"), soma("DT de Vontade", dt), soma("Consequência da insanidade (1–50 morte; 51–100 Jogo do Anfitrião)", "1d100")],
+        resistencia: "Vontade DT " + dt + " (rolada) reduz à metade" });
+  }
+
+  var HABILIDADES_DO_SIMULACRO = [
+    hab("Intangibilidade Digital", "Incorpóreo e intangível: só pode ser afetado por efeitos de Conhecimento. A menos que se revele (com Perturbação Digital, por exemplo), perceber que há um simulacro num aparelho eletrônico exige um teste de Ocultismo contra DT 4d10 (rolada, somando os dados).",
+      { rolagens: [soma("DT de Ocultismo para perceber o simulacro", "4d10")] }),
+    hab("Exorcismo Digital", "A outra forma de dar fim ao simulacro (e paz a quem ele foi): uma liturgia feita por pelo menos dois personagens treinados em Ocultismo ou Religião — um encara a tela onde ele está e sobrevive a ele, o outro exorciza. Use o procedimento da ocorrência: teste estendido de Ocultismo (DT 4d10, 3 sucessos)."),
+    hab("Forma Evolutiva", "O simulacro está em constante evolução, a critério do mestre: troyan (esta ficha), krypto, vvorm e botnetz. Use o seletor de estágio desta ocorrência."),
+  ];
+
+  function formaDoSimulacro(id, nome, vd, pv, defesa, teste, tamanho, nivel, alcanceSaltar, alvos, danoMental, dt) {
+    var atributos = [nivel, FORCA_NAO_SE_APLICA, nivel, nivel, nivel];
+    return {
+      id: id, nome: nome, pagina: 61, vd: vd, pv: pv, machucado: Math.floor(pv / 2), defesa: defesa,
+      percepcao: teste, iniciativa: teste, fortitude: teste, reflexos: teste, vontade: teste,
+      tamanho: tamanho, atributos: atributos,
+      ativacao: "Forma Evolutiva (a critério do mestre). VD " + vd + ", PV " + pv + ", Defesa " + defesa + ", todos os testes " + teste + ", tamanho " + tamanho + ". Os PV máximos passam a " + pv + "; os atuais não sobem.",
+      notas: ["Machucado: metade dos PV (" + Math.floor(pv / 2) + "), pela regra — a forma não imprime."].concat(
+        nivel > 1 ? ["Todos os atributos, exceto Força, mudam para " + nivel + "."] : []),
+      pericias: [],
+      habilidades: HABILIDADES_DO_SIMULACRO,
+      acoes: [saltar(alcanceSaltar, nome.toLowerCase()), perturbacao(nome.toLowerCase(), alvos, danoMental, dt)],
+    };
+  }
+
+  function simulacro() {
+    return {
+      id: "as4.criatura.simulacro", livro: AS4, pagina: 61,
+      nome: "Simulacro", natureza: "paranormal", tipo: "Criatura", tamanho: "Minúsculo", categoria: "Simulacros",
+      elementos: [EN, CO], vd: 32,
+      descricao: "Consciências de vítimas do Jogo do Anfitrião aprisionadas em telas: amálgama digital de Energia e Conhecimento, sempre enquadrada por algo (aba, post, tela), à procura de novas vítimas.",
+      presenca: { dt: 15, dano: "2d6", imune: "NEX 30%+" },
+      percepcao: "1d20+5", iniciativa: "1d20+5",
+      defesa: 10, fortitude: "1d20+5", reflexos: "1d20+5", vontade: "1d20+5",
+      pv: 70, machucado: 35,
+      imunidades: ["Dano (exceto Conhecimento)"],
+      vulnerabilidades: ["Conhecimento"],
+      atributos: [1, FORCA_NAO_SE_APLICA, 1, 1, 1],
+      deslocamento: [[0, 0]],
+      forma: { inicial: "Troyan", nota: "troyan (VD 32) — a ficha de partida" },
+      notas: [
+        "Estágios: troyan (esta ficha, VD 32), krypto (VD 64), vvorm (VD 128) e botnetz (VD 256) — seletor de forma da ocorrência. Os VD são os publicados, sem arredondar.",
+        "Força “—”: não se aplica. Deslocamento 0 m: ele não anda — usa Saltar entre aparelhos.",
+        "As DT de Vontade (3d10 a 6d10) e de Ocultismo (4d10) são roladas, somando os dados — não são médias nem testes de d20.",
+        "Descrição nas p. 58–60.",
+      ],
+      habilidades: HABILIDADES_DO_SIMULACRO,
+      acoes: [saltar("curto", "troyan"), perturbacao("troyan", "1 pessoa", "2d6", "3d10")],
+      procedimentos: [{
+        id: "exorcismo-digital", nome: "Exorcismo Digital", pagina: 61,
+        pericia: "Ocultismo", dt: "4d10", sucessos: 3, falhas: 3,
+        participantes: { minimo: 2, treinamento: "Ocultismo ou Religião" },
+        papeis: ["Encarar a tela onde o simulacro está (e sobreviver a ele)", "Exorcizar (faz os testes)"],
+        requisitos: [
+          { id: "aparelhos", texto: "Nenhum aparelho ligado num raio de 9 m da criatura, exceto aquele onde o simulacro está." },
+          { id: "sigilos", texto: "Sigilos de Conhecimento escritos num objeto analógico, também num raio de 9 m do simulacro." },
+        ],
+        primeiroSucesso: "O sucesso no primeiro teste impede o simulacro de Saltar para outro aparelho.",
+        bloqueiaNoPrimeiroSucesso: "Saltar",
+        sucesso: "No fim da liturgia, a criatura fica presa dentro do objeto analógico. Destruir o objeto dá fim a ela (uma etapa à parte).",
+        falhaTotal: "O simulacro escapa para a internet, paranormalmente, e precisa ser encontrado de novo.",
+        nota: "Teste estendido (OPRPG p. 77): três sucessos antes de três falhas. O livro não diz se a DT 4d10 é rolada uma vez ou a cada teste — o procedimento rola a cada teste, e o mestre pode manter a anterior.",
+      }],
+      formas: [
+        formaDoSimulacro("krypto", "Krypto", 64, 100, 20, "1d20+10", "Pequeno", 1, "médio", "até 2 pessoas", "3d6", "4d10"),
+        formaDoSimulacro("vvorm", "Vvorm", 128, 200, 30, "2d20+15", "Médio", 2, "longo", "até 3 pessoas", "4d6", "5d10"),
+        formaDoSimulacro("botnetz", "Botnetz", 256, 500, 40, "3d20+20", "Grande", 3, "extremo", "até 4 pessoas", "6d8", "6d10"),
+      ],
     };
   }
 
@@ -4509,6 +4609,109 @@
       hab("Bônus", "+2 em Percepção e Reflexos."),
       hab("Visão Noturna", "Na escuridão (exceto paranormal), 1 PE: o gato fica alerta por você até o fim da cena — como visão na penumbra (OPRPG p. 180).", { custo: "1 PE", marcador: "Visão na penumbra até o fim da cena" }),
     ]),
+
+    /* =================================================================
+       ARQUIVOS SECRETOS 4 — a Produção do Anfitrião (p. 55–57) e o
+       Simulacro (p. 61)
+       -----------------------------------------------------------------
+       Os rituais impressos nas fichas são AÇÕES da ameaça, com a DT e o
+       limite de PE por conjuração dela — o limite não é uma reserva de
+       PE nem um número de usos. O "O" do livro é o d20.
+       Ficaram FORA, de propósito: os portadores da Relíquia de Energia
+       das matérias narrativas (Amphitruo, Aeneas, Liber, Silenus,
+       Plautus — p. 26–41), os membros de exemplo (p. 49) e as propostas
+       de missão (p. 53–54): o livro não dá estatísticas a nenhum deles.
+       ================================================================= */
+
+    {
+      id: "as4.criatura.assistente-de-producao", livro: AS4, pagina: 55,
+      nome: "Assistente de Produção", natureza: "humana", tipo: "Pessoa", tamanho: "Médio", categoria: "Produção do Anfitrião",
+      elementos: [], vd: 40,
+      descricao: "Hacker, estudioso ou cientista do culto: passa mais tempo pesquisando, catalogando e roteirizando o show do que em campo.",
+      percepcao: "2d20+5", iniciativa: "1d20+5",
+      defesa: 14, fortitude: "1d20+5", reflexos: "1d20+5", vontade: "2d20+5",
+      pv: 20, machucado: 10,
+      atributos: [1, 1, 3, 2, 1],
+      pericias: [["Ciências", "3d20+5"], ["Investigação", "3d20+5"], ["Ocultismo", "3d20+5"], ["Profissão", "3d20+5"], ["Tecnologia", "3d20+5"]],
+      deslocamento: [[9, 6]],
+      notas: ["Ficha genérica de membro da Produção (p. 55). O gerador de produção (p. 48) dá perfil, traços e aparência sem mexer nas estatísticas."],
+      habilidades: [
+        hab("Máscara de Gás", "Máscara com filtro que cobre o rosto inteiro: +10 em testes de Fortitude contra efeitos que dependam de respiração."),
+        hab("Rituais (DT 15)", "Conjura os rituais da ficha sem pagar o custo em PE, até um limite de 3 PE por conjuração, usando a ação apropriada. O limite é por conjuração: não há reserva de PE."),
+      ],
+      acoes: [
+        agredir([at("Pancada", "corpo a corpo", 1, "1d20+5", "1d4+5 impacto")]),
+        agredir([at("Pistola", "curto", 1, "1d20+5", "1d12+5 balístico", { critico: "18" })], { nome: "Agredir (pistola)" }),
+        acao("padrao", "Ritual: Amaldiçoar Tecnologia (Energia 1)", "Imbui 1 acessório ou arma de fogo com Energia, fazendo-o funcionar acima da capacidade até o fim da cena: o item recebe uma modificação à escolha do assistente."),
+        acao("padrao", "Ritual: Coincidência Forçada (Energia 1)", "Manipula os caminhos do caos para que 1 ser em alcance curto tenha mais sorte até o fim da cena: +2 em testes de perícias."),
+        acao("padrao", "Ritual: Eletrocussão (Energia 1)", "Corrente elétrica contra 1 ser ou objeto em alcance curto. Num ser: 3d6 de dano de eletricidade e vulnerável por uma rodada (Fortitude DT 15 reduz o dano à metade e evita a condição). Contra objetos eletrônicos, o dobro do dano, ignorando resistência.",
+          { rolagens: [dano("Eletrocussão", "3d6 eletricidade")], resistencia: "Fortitude DT 15 reduz à metade e evita vulnerável" }),
+      ],
+    },
+
+    {
+      id: "as4.criatura.produtor", livro: AS4, pagina: 56,
+      nome: "Produtor", natureza: "humana", tipo: "Pessoa", tamanho: "Médio", categoria: "Produção do Anfitrião",
+      elementos: [], vd: 80,
+      descricao: "O setor mais comum do culto: inquieto, volátil, sádico e habilidoso em transformar sucata eletrônica em arma.",
+      percepcao: "1d20+5", iniciativa: "2d20+10",
+      defesa: 20, fortitude: "3d20+10", reflexos: "2d20+10", vontade: "1d20+5",
+      pv: 100, machucado: 50,
+      atributos: [2, 2, 2, 1, 3],
+      pericias: [["Atletismo", "2d20+10"], ["Crime", "2d20+10"], ["Ocultismo", "2d20+5"]],
+      deslocamento: [[9, 6]],
+      notas: ["Ficha genérica de membro da Produção (p. 56)."],
+      habilidades: [
+        hab("Martelo Meteoro USB", "Faz de um celular e um cabo USB uma arma destrutiva de Energia: alcance corpo a corpo de 6 m, +2 em manobras de combate, dano de impacto ou de Energia à escolha do produtor."),
+        hab("Máscara de Gás", "Máscara com filtro que cobre o rosto inteiro: +10 em testes de Fortitude contra efeitos que dependam de respiração."),
+        hab("Rituais (DT 20)", "Conjura os rituais da ficha sem pagar o custo em PE, até um limite de 6 PE por conjuração, usando a ação apropriada. O limite é por conjuração: não há reserva de PE."),
+      ],
+      acoes: [
+        agredir([at("Martelo Meteoro USB", "corpo a corpo", 2, "2d20+10", "1d12+10 impacto", { critico: "x3", nota: "O dano é de impacto ou de Energia, à escolha do produtor (1d12+10 Energia)." })]),
+        acao("padrao", "Ritual: Chamas do Caos (Energia 2)", "Manipula o calor e o fogo em alcance curto até o fim da cena, escolhendo um dos efeitos do ritual (OPRPG p. 126). O mais comum é Chamejar: uma arma corpo a corpo causa +1d6 de dano de fogo.",
+          { rolagens: [dano("Chamejar (por golpe)", "1d6 fogo")] }),
+        acao("padrao", "Ritual: Eletrocussão Discente (Energia 1)", "Um raio de 6d6 de dano de Energia em todos os seres e objetos livres numa linha de 30 m (Fortitude DT 20 reduz o dano à metade).",
+          { rolagens: [dano("Eletrocussão Discente", "6d6 Energia")], resistencia: "Fortitude DT 20 reduz à metade" }),
+        acao("padrao", "Ritual: Tela de Ruído Discente (Energia 2)", "Película de Energia que absorve energia cinética até o fim da cena: 60 PV temporários, que só valem contra dano balístico, de corte, de impacto ou de perfuração. Três vezes por cena (contando a forma de reação).",
+          { limite: [3, "cena"] }),
+        acao("reacao", "Ritual: Tela de Ruído Discente (reação)", "Ao sofrer dano: resistência 30 apenas contra esse dano. Não são PV temporários — é redução daquele dano. Gasta um dos três usos por cena da Tela de Ruído (marque na ação acima)."),
+      ],
+    },
+
+    {
+      id: "as4.criatura.diretor", livro: AS4, pagina: 57,
+      nome: "Diretor", natureza: "humana", tipo: "Pessoa", tamanho: "Médio", categoria: "Produção do Anfitrião",
+      elementos: [], vd: 200,
+      descricao: "O chefe de um covil da Produção: o mais poderoso do grupo, que planeja cada ato para agradar o Anfitrião.",
+      percepcao: "4d20+15", iniciativa: "3d20+10",
+      defesa: 28, fortitude: "3d20+15", reflexos: "3d20+10", vontade: "4d20+15",
+      pv: 280, machucado: 140,
+      atributos: [3, 3, 3, 4, 3],
+      pericias: [["Atletismo", "3d20+15"], ["Crime", "3d20+10"], ["Enganação", "4d20+15"], ["Intimidação", "4d20+15"], ["Ocultismo", "3d20+10"], ["Tecnologia", "3d20+10"]],
+      deslocamento: [[9, 6]],
+      notas: [
+        "Ficha genérica de membro da Produção (p. 57).",
+        "Tela de Ruído: os 60 PV temporários (só contra balístico, corte, impacto e perfuração) e a resistência 30 da reação são efeitos diferentes — estão em ações separadas.",
+      ],
+      habilidades: [
+        hab("Máscara de Gás", "Máscara com filtro que cobre o rosto inteiro: +10 em testes de Fortitude contra efeitos que dependam de respiração."),
+        hab("Rituais (DT 29)", "Conjura os rituais da ficha sem pagar o custo em PE, até um limite de 10 PE por conjuração, usando a ação apropriada. O limite é por conjuração: não há reserva de PE."),
+      ],
+      acoes: [
+        agredir([at("Murro Eletrificado", "corpo a corpo", 3, "3d20+20", "4d8+20 eletricidade")]),
+        agredir([at("Carga Eletrificada", "curto", 3, "3d20+20", "4d8+20 eletricidade")], { nome: "Agredir (à distância)" }),
+        acao("padrao", "Ritual: Coincidência Forçada Verdadeiro (Energia 1)", "Aliados à escolha do diretor em alcance curto têm mais sorte até o fim da cena: +5 em testes de perícias."),
+        acao("padrao", "Ritual: Dissonância Acústica (Energia 2)", "Esfera de dissonância sonora de 6 m de raio em alcance médio: enquanto estiverem na área, todos os seres ficam surdos e não podem conjurar rituais."),
+        acao("padrao", "Ritual: Eletrocussão Verdadeiro (Energia 1)", "Relâmpagos de 8d6 de dano de Energia (Fortitude DT 29 reduz à metade): um relâmpago em cada ser à escolha do diretor em alcance curto.",
+          { rolagens: [dano("Eletrocussão Verdadeiro (por ser)", "8d6 Energia")], resistencia: "Fortitude DT 29 reduz à metade" }),
+        acao("padrao", "Ritual: Salto Fantasma (Energia 3)", "Vira Energia pura e reaparece num ponto em alcance médio que já tenha observado de alguma forma (em pessoa, foto, vídeo…), sem precisar perceber nem ter linha de efeito. Depois, não pode agir pelo resto do turno. Não aparece dentro de corpo sólido: sem espaço livre, ressurge na área vazia mais próxima."),
+        acao("padrao", "Ritual: Tela de Ruído Discente (Energia 2)", "Película de Energia que absorve energia cinética até o fim da cena: 60 PV temporários, que só valem contra dano balístico, de corte, de impacto ou de perfuração. Três vezes por cena (contando a forma de reação).",
+          { limite: [3, "cena"] }),
+        acao("reacao", "Ritual: Tela de Ruído Discente (reação)", "Ao sofrer dano: resistência 30 apenas contra esse dano. Não são PV temporários — é redução daquele dano. Gasta um dos três usos por cena da Tela de Ruído (marque na ação acima)."),
+      ],
+    },
+
+    simulacro(),
   ];
 
   /* ---------------------------------------------------------------------
@@ -4550,6 +4753,7 @@
       AS1: { nome: "Arquivos Secretos 1", sigla: "AS1" },
       AS2: { nome: "Arquivos Secretos 2", sigla: "AS2" },
       AS3: { nome: "Arquivos Secretos 3", sigla: "AS3" },
+      AS4: { nome: "Arquivos Secretos 4", sigla: "AS4" },
     },
     criaturas: CRIATURAS,
   };

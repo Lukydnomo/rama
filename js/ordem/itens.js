@@ -78,6 +78,8 @@
         nota: "Água, comida e sucata do Hexatombe e os novos itens de recursos (Arquivos Secretos 2, p. 20-21)." },
       { chave: "modificacoes", titulo: "Modificações para acessórios e itens paranormais",
         nota: "Aplicam-se a um item do inventário. As de acessório somam I à categoria dele." },
+      { chave: "modificacoesGranadas", titulo: "Modificações para granadas",
+        nota: "Aplicam-se a uma granada do inventário e somam I à categoria dela; iguais não se acumulam (Arquivos Secretos 4, p. 71)." },
     ],
     amaldicoados: [
       { chave: "especiais", titulo: "Itens amaldiçoados",
@@ -91,9 +93,27 @@
     ],
   };
 
-  var ROTULO_FONTE = { OPRPG: "Livro básico", SAH: "Sobrevivendo ao Horror", AS1: "Arquivos Secretos 1", AS2: "Arquivos Secretos 2", AS3: "Arquivos Secretos 3" };
-  var NOME_FONTE = { OPRPG: "Ordem Paranormal RPG", SAH: "Sobrevivendo ao Horror", AS1: "Arquivos Secretos 1", AS2: "Arquivos Secretos 2", AS3: "Arquivos Secretos 3" };
-  var SIGLA_FONTE = { OPRPG: "LB", SAH: "SAH", AS1: "AS1", AS2: "AS2", AS3: "AS3" };
+  /* Os livros vêm do registro único (C.LIVROS, v2.29); sem o catálogo
+     carregado (um teste isolado), vale a lista abaixo — que precisa
+     acompanhar o registro: um livro novo entra nos dois. */
+  var LIVROS_PADRAO = [
+    ["OPRPG", "Livro básico", "Ordem Paranormal RPG", "LB"],
+    ["SAH", "Sobrevivendo ao Horror", "Sobrevivendo ao Horror", "SAH"],
+    ["AS1", "Arquivos Secretos 1", "Arquivos Secretos 1", "AS1"],
+    ["AS2", "Arquivos Secretos 2", "Arquivos Secretos 2", "AS2"],
+    ["AS3", "Arquivos Secretos 3", "Arquivos Secretos 3", "AS3"],
+    ["AS4", "Arquivos Secretos 4", "Arquivos Secretos 4", "AS4"],
+  ];
+  function mapaDeLivros(campo, indice) {
+    var Cat = global.RAMAOrdemCatalogo;
+    if (Cat && Cat.mapaDosLivros) return Cat.mapaDosLivros(campo);
+    var m = {};
+    LIVROS_PADRAO.forEach(function (l) { m[l[0]] = l[indice]; });
+    return m;
+  }
+  var ROTULO_FONTE = mapaDeLivros("curto", 1);
+  var NOME_FONTE = mapaDeLivros("nome", 2);
+  var SIGLA_FONTE = mapaDeLivros("abreviacao", 3);
 
   var PROFICIENCIAS = { simples: "Arma simples", tatica: "Arma tática", pesada: "Arma pesada" };
   var PROFICIENCIAS_PLURAL = { simples: "armas simples", tatica: "armas táticas", pesada: "armas pesadas" };
@@ -250,7 +270,7 @@
     automatica: "armas automáticas", besta: "bestas e balestras", balas: "balas curtas e longas",
     protecao: "proteções", leve: "proteções leves", pesada: "proteções pesadas", escudo: "escudos",
     acessorio: "acessórios", utensilio: "utensílios", vestimenta: "vestimentas", eletrico: "objetos elétricos",
-    camera: "câmeras de aura paranormal",
+    camera: "câmeras de aura paranormal", granada: "granadas",
   };
 
   function rotuloAplicaEm(e) {
@@ -474,6 +494,8 @@
       r.push("Contagem de munição (regra opcional, OPRPG p. 174): cada pacote tem munição para " + e.municao.contagem + " ataque(s).");
     }
     if (e.granada) r.push("Granadas: empunhar e ação padrão para arremessar num ponto em alcance médio; afetam um raio de 6 m (OPRPG p. 64).");
+    if (e.granada && e.escolha && e.escolha.tipo === "modeloGranada") r.push("Modelo 40 mm (Arquivos Secretos 4, p. 71): mesma regra, mas só funciona disparada por um lança-granadas — não arremessada.");
+    if (e.lancador) r.push("Lança-granadas: até " + e.lancador.capacidade + " granadas 40 mm carregadas; recarregar uma é uma ação de movimento (Arquivos Secretos 4, p. 71).");
     if (e.catalisador) r.push("Catalisador: precisa ser empunhado, é consumido e só um vale por ritual; não pode ser improvisado, mas pode ser fabricado em campo (SAH p. 44, 94).");
     if (e.acessorio && e.aba === "geral") r.push("Bônus de itens em perícias não se acumulam entre si (OPRPG p. 63).");
     if (e.natureza === "maldicao") {
@@ -643,6 +665,17 @@
     if (escolha.tipo === "circulo") {
       return [1, 2, 3, 4].map(function (n) { return { valor: String(n), rotulo: n + "º círculo" }; });
     }
+    /* Arquivos Secretos 4 (p. 71): o modelo de uma granada — vazio é a
+       arremessável; 40 mm só funciona num lança-granadas. */
+    if (escolha.tipo === "modeloGranada") return [{ valor: "40mm", rotulo: "40mm" }];
+    /* Dupla (AS4 p. 71): o efeito de outra granada, exceto amaldiçoadas.
+       As opções vêm do catálogo carregado (a modificação só é aplicada
+       com a biblioteca aberta). */
+    if (escolha.tipo === "granadaDoCatalogo") {
+      return (pronto ? pronto.itens : []).filter(function (x) {
+        return x.natureza === "item" && x.granada && x.aba !== "amaldicoados";
+      }).map(function (x) { return { valor: x.id, rotulo: x.nome }; }).sort(function (a, b) { return a.rotulo.localeCompare(b.rotulo, "pt-BR"); });
+    }
     return [];
   }
 
@@ -705,7 +738,7 @@
     if (elemento) ordem.elemento = elemento;
 
     var marcadores = [];
-    ["acessorio", "utensilio", "vestimenta", "eletrico", "camera"].forEach(function (k) { if (e[k]) marcadores.push(k); });
+    ["acessorio", "utensilio", "vestimenta", "eletrico", "camera", "granada"].forEach(function (k) { if (e[k]) marcadores.push(k); });
     if (e.modificavelComo) marcadores.push(e.modificavelComo);
     if (e.id === "op.arma.besta" || e.id === "op.arma.balestra") marcadores.push("besta");
     if (e.id === "op.municao.balas-curtas" || e.id === "op.municao.balas-longas") marcadores.push("balas");
@@ -750,6 +783,10 @@
     }
 
     if (e.rd) ordem.rd = e.rd;
+    /* Arquivos Secretos 4 (v2.38): o modelo da granada e o lança-granadas
+       (vazio; as granadas carregadas entram pelo menu do item). */
+    if (e.escolha && e.escolha.tipo === "modeloGranada" && escolhida.valor === "40mm") ordem.modeloGranada = "40mm";
+    if (e.lancador) ordem.lancador = { capacidade: e.lancador.capacidade || 6, carregadas: [] };
     if (e.tipoItem === "armadura") {
       ordem.protecao = { tipo: e.protecao.tipo };
       dados.defesa = e.protecao.defesa;
@@ -801,6 +838,9 @@
     }
     /* A soqueira aceita o que armas corpo a corpo aceitam. */
     if (tags.corpoACorpo) { familias.arma = true; tags.arma = true; }
+    /* Granada adicionada antes da v2.38 não tem o marcador: o id do
+       catálogo diz o que ela é. */
+    if (item && !tags.granada && /(^|\.)granada-/.test(String(item.origemCatalogoId || ""))) { tags.granada = true; conhecido = true; }
     return { tags: tags, familias: familias, conhecido: conhecido, dados: d };
   }
 
@@ -808,7 +848,7 @@
   var FAMILIA_DO_ALVO = {
     arma: "arma", corpoACorpo: "arma", disparo: "arma", fogo: "arma", automatica: "arma", besta: "arma",
     protecao: "armadura", leve: "armadura", pesada: "armadura", escudo: "armadura",
-    balas: "item", acessorio: "item", utensilio: "item", vestimenta: "item", camera: "item", eletrico: "*",
+    balas: "item", acessorio: "item", utensilio: "item", vestimenta: "item", camera: "item", eletrico: "*", granada: "item",
   };
 
   function temModificacao(d, catalogoId) {
@@ -854,6 +894,10 @@
     }
 
     if (e.exigeNaoAutomatica && perfil.tags.automatica) return { ok: false, motivo: item.nome + " já é automática." };
+    /* Dupla (AS4 p. 71): o efeito adicional é diferente do principal. */
+    if (e.escolha && e.escolha.tipo === "granadaDoCatalogo" && escolha && escolha === item.origemCatalogoId) {
+      return { ok: false, motivo: "O efeito adicional da granada Dupla precisa ser diferente do efeito principal." };
+    }
 
     if (e.natureza === "maldicao") {
       var elemento = e.elemento;
@@ -891,6 +935,9 @@
     if (e.escolha && e.escolha.defineElemento) elemento = escolhida.valor;
     if (elemento) registro.elemento = elemento;
     if (escolhida.rotulo) registro.escolha = escolhida.rotulo;
+    /* O id do que foi escolhido, quando é uma entrada do catálogo (Dupla:
+       a outra granada, para o uso rolar o efeito dela). */
+    if (e.escolha && e.escolha.tipo === "granadaDoCatalogo" && escolhida.valor) registro.escolhaId = escolhida.valor;
     if (e.calculo) registro.calculo = copia(e.calculo);
     if (e.semAcrescimoDeCategoria) registro.semAcrescimoDeCategoria = true;
     return { ok: true, registro: registro };

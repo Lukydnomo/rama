@@ -1,5 +1,22 @@
 # O banco
 
+## Arquivos Secretos 4 e Hacking — v2.38
+
+> **Atualizando para a v2.38:** troque `Codigo.gs`, `Campanhas.gs` e `Dados.gs`,
+> rode **`setupRama()`** (cria a aba `CAMPANHA_HACKING`; repetir não muda nada) e
+> crie uma nova versão da implantação. Nada existente é convertido nem apagado.
+
+**CAMPANHA_HACKING** — `campanhaId · ativo · atualizadoEm · rev · opsJson ·
+dadosJson`. Uma linha por campanha, criada na primeira gravação do mestre (sem
+linha, a regra está desligada). `dadosJson` é o estado normalizado pelo módulo
+`RAMAHacking` (cópia fiel de `js/ordem/hacking.js` dentro de `Campanhas.gs`): até
+12 cenas, cada uma com sistema, notas do mestre, PS, rodada, até 6 agentes (treino,
+Intelecto, dados virtuais, tentativas, marcas do turno), acesso aberto, até 10
+backdoors, 6 vírus, 40 imprevistos e 60 entradas de histórico. `opsJson` guarda os
+últimos 50 `opId`. As colunas leves (`ativo`) respondem a `ler_campanha` sem abrir
+o estado. A ficha ganha `ordem.arquivo4` (schema 17) e a ocorrência de criatura,
+`instancia.procedimentos`, dentro dos blocos que já existem.
+
 ## Arquivos Secretos 3 — v2.33
 
 Nenhuma aba nova e nenhuma coluna nova: `setupRama()` não é necessário. O estado do

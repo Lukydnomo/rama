@@ -58,9 +58,27 @@
      Vem do catálogo de regras quando ele está carregado — uma fonte só. */
   var CUSTO_PADRAO = { 1: 1, 2: 3, 3: 6, 4: 10 };
 
-  var ROTULO_FONTE = { OPRPG: "Livro básico", SAH: "Sobrevivendo ao Horror", AS1: "Arquivos Secretos 1", AS2: "Arquivos Secretos 2", AS3: "Arquivos Secretos 3" };
-  var NOME_FONTE = { OPRPG: "Ordem Paranormal RPG", SAH: "Sobrevivendo ao Horror", AS1: "Arquivos Secretos 1", AS2: "Arquivos Secretos 2", AS3: "Arquivos Secretos 3" };
-  var SIGLA_FONTE = { OPRPG: "LB", SAH: "SAH", AS1: "AS1", AS2: "AS2", AS3: "AS3" };
+  /* Os livros vêm do registro único (C.LIVROS, v2.29); sem o catálogo
+     carregado (um teste isolado), vale a lista abaixo — que precisa
+     acompanhar o registro: um livro novo entra nos dois. */
+  var LIVROS_PADRAO = [
+    ["OPRPG", "Livro básico", "Ordem Paranormal RPG", "LB"],
+    ["SAH", "Sobrevivendo ao Horror", "Sobrevivendo ao Horror", "SAH"],
+    ["AS1", "Arquivos Secretos 1", "Arquivos Secretos 1", "AS1"],
+    ["AS2", "Arquivos Secretos 2", "Arquivos Secretos 2", "AS2"],
+    ["AS3", "Arquivos Secretos 3", "Arquivos Secretos 3", "AS3"],
+    ["AS4", "Arquivos Secretos 4", "Arquivos Secretos 4", "AS4"],
+  ];
+  function mapaDeLivros(campo, indice) {
+    var Cat = global.RAMAOrdemCatalogo;
+    if (Cat && Cat.mapaDosLivros) return Cat.mapaDosLivros(campo);
+    var m = {};
+    LIVROS_PADRAO.forEach(function (l) { m[l[0]] = l[indice]; });
+    return m;
+  }
+  var ROTULO_FONTE = mapaDeLivros("curto", 1);
+  var NOME_FONTE = mapaDeLivros("nome", 2);
+  var SIGLA_FONTE = mapaDeLivros("abreviacao", 3);
 
   var ROTULO_ESCOPO = { alvo: "Alvo", area: "Área", efeito: "Efeito" };
 
@@ -616,7 +634,7 @@
      ritual é texto, igual numa ficha universal.
      ================================================================= */
 
-  var FONTES = ["OPRPG", "SAH", "AS1", "AS2", "AS3"];
+  var FONTES = Object.keys(SIGLA_FONTE);
 
   function normalizarDados(bruto) {
     if (!bruto || typeof bruto !== "object") return null;

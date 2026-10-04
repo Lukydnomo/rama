@@ -24,6 +24,10 @@
      AS2    Arquivos Secretos 2, v1.0 (Jambô, pacote de conteúdo oficial)
             Mapa Sanguíneo, Labirinto Mental, Capturar Momento e Rajada
             Caótica (p. 65–67)
+     AS4    Arquivos Secretos 4, v1.0 (Jambô, pacote de conteúdo oficial)
+            Backup (p. 68). Os rituais impressos nas fichas da Produção
+            (Eletrocussão, Coincidência Forçada, Tela de Ruído…) são ações
+            das ameaças, com os números delas, e não entram aqui
 
    As páginas são as do livro, não as do PDF. Os resumos são redação
    própria: guardam os números, as condições e os testes que o jogo
@@ -93,6 +97,7 @@
   var SAH = "SAH";
   var AS1 = "AS1";
   var AS2 = "AS2";
+  var AS4 = "AS4";
 
   var CO = "conhecimento";
   var EN = "energia";
@@ -1439,6 +1444,38 @@
       ]
     },
 
+
+    /* --- Arquivos Secretos 4, p. 68 ---
+       O chamariz é um efeito ligado ao conjurador (js/ordem/arquivo4.js),
+       nunca uma segunda ficha com PE, inventário ou recursos. */
+    {
+      id: "as4.ritual.backup", nome: "Backup", elemento: EN, circulo: 2, fonte: AS4, pagina: 68,
+      execucao: "padrão", alcance: "curto", alvo: "veja texto", duracao: "24 horas",
+      resumo: "Cria, num espaço vazio dentro do alcance, um chamariz de Energia com a sua aparência: ele repete movimentos simples e pode pronunciar uma única frase à sua escolha. A cópia fica conectada a você num raio de 50 km.",
+      efeitos: [
+        "O alcance curto é o de criar o chamariz; a conexão vale num raio de 50 km a partir dele.",
+        "Dentro da área de conexão, a qualquer momento, você pode gastar uma reação para trocar de lugar com o chamariz — e perde 2d4 de Sanidade ao fazer isso.",
+        "O ritual se dissipa se a cópia sofrer qualquer dano ou se você sair da área de conexão.",
+      ],
+      versoes: [
+        { nome: "Normal", rolagens: [{ tipo: "outra", rotulo: "Sanidade perdida ao trocar de lugar", expressao: "2d4" }] },
+        {
+          nome: "Discente", custo: 2, requisito: "2º círculo",
+          alteracoes: "A duração muda para permanente. Com uma ação padrão, você cobre olhos e ouvidos para alternar os sentidos entre o seu corpo e a cópia: passa a ver e ouvir pelos olhos e ouvidos dela até descobrir os seus. Enquanto faz isso, fica cego, surdo e pasmo.",
+          rolagens: [{ tipo: "outra", rotulo: "Sanidade perdida ao trocar de lugar", expressao: "2d4" }]
+        },
+        {
+          nome: "Verdadeiro", custo: 5, requisito: "3º círculo",
+          alteracoes: "Como na versão discente; e, de olhos e ouvidos cobertos, você também pode falar através da cópia e escolher a aparência dela com base em alguém que já tenha visto e saiba descrever. Ao trocar de lugar com a cópia, pode escolher dissipar o ritual: 6d6 de dano de Energia (Reflexos reduz à metade) em todos os seres em alcance curto de onde seu corpo saiu e de onde ele aparece.",
+          rolagens: [{ tipo: "dano", rotulo: "Dano (Energia) ao dissipar, em cada uma das duas áreas", expressao: "6d6" }, { tipo: "outra", rotulo: "Sanidade perdida ao trocar de lugar", expressao: "2d4" }]
+        },
+      ],
+      notas: [
+        "A versão discente imprime “Requer 2º círculo” num ritual que já é de 2º círculo; o requisito está como publicado.",
+        "A resistência (Reflexos reduz à metade) só existe no dano da dissipação da versão verdadeira.",
+      ]
+    },
+
   ];
 
   /* FIM DOS RITUAIS — o próximo lote entra acima desta linha. */
@@ -1451,6 +1488,7 @@
       AS1: { nome: "Arquivos Secretos 1", curto: "Arquivos Secretos 1", edicao: "v1.1" },
       AS2: { nome: "Arquivos Secretos 2", curto: "Arquivos Secretos 2", edicao: "v1.0" },
       AS3: { nome: "Arquivos Secretos 3", curto: "Arquivos Secretos 3", edicao: "v1.0" },
+      AS4: { nome: "Arquivos Secretos 4", curto: "Arquivos Secretos 4", edicao: "v1.0" },
     },
     rituais: RITUAIS,
   };

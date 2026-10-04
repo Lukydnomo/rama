@@ -5,6 +5,39 @@ padrão e normaliza o que chega de fora. Onde ela é guardada — inteira em
 `fichaJson` (formato antigo) ou em blocos (v2.15) — é assunto do backend, e não muda
 nada aqui: ver [DATABASE.md](DATABASE.md).
 
+## Arquivos Secretos 4 — v2.38 / schema 17
+
+O bloco `ordem` ganha `arquivo4` (vazio numa ficha antiga; nada é convertido):
+
+```jsonc
+"arquivo4": {
+  "influencer": { "registros": [ { "id", "tipo": "criatura|ritual", "nome", "catalogoId", "circulo", "cena", "em" } ],
+                  "cena": "", "memorizado": { "registroId", "interludio", "ritual": { /* retrato do ritual */ }, "em" } | null },
+  "cacador": { "pendente": false, "cena": "", "em": "" },
+  "exercicios": { "bonus": 0, "missao": 0, "rolagens": [] },
+  "analises": [ { "id", "cena", "em", "participantes": [ { "nome", "valor", "voce" } ] } ],
+  "profissao": { "missao", "de", "para", "em" },
+  "explorador": { "cena", "membrana", "reduz", "em" } | null,
+  "sinestesia": { "ativa", "pares": [["atletismo","percepcao"],[…]], "dia", "san", "em" },
+  "terrores": { "interludio", "d100", "pesadelo", "san", "escolha": { "tipo", "chave", "nome", "ritual" }, "usado", "em" } | null,
+  "gororoba": { "interludio" }, "ruido": { "cena" }, "olhada": { "cena" },
+  "foco": { "itens": [ "<id do item>" ] },           // até 3
+  "sobrepor": [ { "id", "cena", "dados", "escolhido", "iniciativaAntes", "iniciativaDepois" } ],
+  "granadeiro": { "missoes": [ 1, 2 ] },               // entregas de Meus Bebês
+  "backup": { "ativo", "versao": "normal|discente|verdadeiro", "frase", "aparencia", "dia", "sentidos", "efeitos": [], "historico": [] } | null,
+  "explosoes": [ { "id", "texto", "em" } ],
+  "timers": [ { "id", "nome", "turnos", "restantes", "resolvido", "nota", "em" } ]
+}
+```
+
+No item de inventário (`item.ordem`): `autoral { autor, autorId, apressado, missao }`,
+`foraDoLimite`, `modeloGranada: "40mm"`, `lancador { capacidade, carregadas: [ { id,
+nome, origemCatalogoId, espacos, modificacoes, autoral } ] }` e `quaseNovo { pvExtra,
+interludio }`; uma modificação pode ter `temporaria: "interludio"` e `interludio`.
+Na sincronização, `influencer.registros`, `analises`, `sobrepor`, `explosoes`,
+`timers` e `lancador.carregadas` casam pelo `id`. Uma aba aberta numa versão
+anterior recusa a ficha 17 em vez de descartar esses campos.
+
 ## Tema da ficha — v2.36 / schema 16
 
 Um bloco novo, opcional, **fora** de `ordem` — igual nos dois modelos:

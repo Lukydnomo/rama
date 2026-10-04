@@ -2301,7 +2301,7 @@ t.grupo("Marcas da mesa — sincronização leve");
 
   const marcas = (como) => comoFn(como)({ acao: "sincronizar_campanha", campanhaId: mesa });
   const m0 = marcas(ana);
-  t.ok("a jogadora recebe as marcas da mesa", m0.ok && m0.dados.papel === "jogador" && Object.keys(m0.dados.marcas).length === 7);
+  t.ok("a jogadora recebe as marcas da mesa", m0.ok && m0.dados.papel === "jogador" && Object.keys(m0.dados.marcas).length === 8);
   t.iguais("ler_campanha traz as mesmas marcas como ponto de partida", comoAna({ acao: "ler_campanha", campanhaId: mesa }).dados.marcas, m0.dados.marcas);
 
   const contador = ambiente.contador;
@@ -4824,6 +4824,8 @@ const { testarCriaturasBackend } = await import("./criaturas-backend.js");
 testarCriaturasBackend({ t, preparar, novaConta, comoFn, ambiente });
 const { testarHexatombeBackend } = await import("./hexatombe-backend.js");
 await testarHexatombeBackend({ t, preparar, novaConta, comoFn });
+const { testarHackingBackend } = await import("./hacking-backend.js");
+await testarHackingBackend({ t, preparar, novaConta, comoFn });
 const { testarCrisBackend } = await import("./cris-backend.js");
 await testarCrisBackend({ t, preparar, novaConta, comoFn, chamar });
 

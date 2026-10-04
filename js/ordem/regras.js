@@ -1317,6 +1317,20 @@
 
       var soma = unitario * e.quantidade;
 
+      /* Arquivos Secretos 4 (v2.38). Foco Gravitacional: o equipamento
+         escolhido ocupa 0 espaços enquanto está guardado (uma unidade;
+         empunhado, volta a pesar). Lança-granadas: as granadas carregadas
+         continuam pesando, no próprio lançador. */
+      var d4 = I() ? I().dadosDoItem(item) : {};
+      if (A4() && ficha.arquivo4 && ficha.arquivo4.foco && ficha.arquivo4.foco.itens.indexOf(item.id) >= 0 && !d4.empunhada) {
+        var semPeso = Math.min(unitario, soma);
+        if (semPeso > 0) { soma -= semPeso; notas.push("Foco Gravitacional: guardado, ocupa 0 espaços"); }
+      }
+      if (d4.lancador && d4.lancador.carregadas && d4.lancador.carregadas.length) {
+        var dasGranadas = d4.lancador.carregadas.reduce(function (s, g) { return s + (g.espacos === undefined ? 1 : g.espacos); }, 0);
+        if (dasGranadas) { soma += dasGranadas; notas.push(d4.lancador.carregadas.length + " granada(s) carregada(s): +" + dasGranadas + " espaço(s)"); }
+      }
+
       /* Revólver compacto: treinado em Crime, UMA unidade não ocupa
          espaço (SAH p. 37). */
       var dadosArma = item.tipo === "arma" && I() ? I().dadosDoItem(item).arma : null;
@@ -1786,6 +1800,15 @@
   function atributoDaPericia(ficha, chave) {
     var padrao = atributoPadraoDaPericia(ficha, chave);
     if (!padrao) return "";
+    /* Sinestesia Paranormal (AS4 p. 66): enquanto vale, a perícia usa o
+       atributo da outra do par. O treinamento e os vínculos não mudam;
+       encerrar devolve o de sempre. */
+    if (A4()) {
+      var troca = A4().atributoDaSinestesia(ficha, chave, function (k) {
+        return ajusteDePericia(ficha, k).atributo || atributoPadraoDaPericia(ficha, k);
+      });
+      if (troca) return troca;
+    }
     var escolhido = ajusteDePericia(ficha, chave).atributo;
     return escolhido || padrao;
   }
@@ -1998,9 +2021,13 @@
        trouxerem de volta a IV ou menos. Acima disso ele fica numa lista
        à parte, que a tela mostra como aviso. */
     var acimaDeIV = [];
+    /* Meus Bebês (AS4 p. 69): os explosivos autorais do início da missão
+       não contam no limite de itens (mas pesam na carga). */
+    var foraDoLimite = [];
 
     itensDe(inventario).forEach(function (item) {
       var d = I() ? I().dadosDoItem(item) : { categoria: null, quantidade: 1, grupo: "geral" };
+      if (d.foraDoLimite) { foraDoLimite.push({ id: item.id, nome: item.nome, quantidade: d.quantidade, motivo: "Meus Bebês: explosivo autoral do início da missão" }); return; }
       if (d.categoria === null) { semCategoria.push({ id: item.id, nome: item.nome, quantidade: d.quantidade }); return; }
 
       var lista = (reducoes[item.id] || []).slice();
@@ -2031,7 +2058,7 @@
       cat.excedido = cat.limite !== null && cat.usados > cat.limite;
     });
 
-    return { categorias: categorias, semCategoria: semCategoria, acimaDeIV: acimaDeIV, aplicada: regraDePatente(ficha) };
+    return { categorias: categorias, semCategoria: semCategoria, acimaDeIV: acimaDeIV, foraDoLimite: foraDoLimite, aplicada: regraDePatente(ficha) };
   }
 
   /* =================================================================
@@ -2553,6 +2580,9 @@
     /* Arquivos Secretos 3 (v2.33). Sem o módulo, passa como veio. */
     if (A3()) A3().normalizar(ficha, b);
     else if (b.arquivo3 && typeof b.arquivo3 === "object") ficha.arquivo3 = JSON.parse(JSON.stringify(b.arquivo3));
+    /* Arquivos Secretos 4 (v2.38). Sem o módulo, passa como veio. */
+    if (A4()) A4().normalizar(ficha, b);
+    else if (b.arquivo4 && typeof b.arquivo4 === "object") ficha.arquivo4 = JSON.parse(JSON.stringify(b.arquivo4));
 
     var temp = (b.temporarios && typeof b.temporarios === "object") ? b.temporarios : {};
     ["pv", "pe", "san", "defesa"].forEach(function (qual) {
@@ -2889,6 +2919,7 @@
   /* Machucado: metade dos PV ou menos (OPRPG p. 82). */
   function A2() { return global.RAMAOrdemArquivo2 || null; }
   function A3() { return global.RAMAOrdemArquivo3 || null; }
+  function A4() { return global.RAMAOrdemArquivo4 || null; }
   var ID_COURACA = "as3.amaldicoado.armadura-dos-couracas";
 
   /* Forma suprema ativa (AS2 p. 97). */

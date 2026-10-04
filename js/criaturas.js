@@ -588,6 +588,13 @@
       saida.variante = { de: U.aparar(o.variante.de, 120), rotulo: U.aparar(o.variante.rotulo, 60) };
     }
 
+    /* Arquivos Secretos 4 (v2.38): procedimentos da criatura — um
+       processo com participantes, requisitos e teste estendido
+       (Exorcismo Digital). O modelo diz COMO é; o andamento mora na
+       ocorrência (instancia.procedimentos). */
+    var procs = lista(o.procedimentos).map(normalizarProcedimento).filter(Boolean).slice(0, 4);
+    if (procs.length) saida.procedimentos = procs;
+
     /* Arquivos Secretos 2 (v2.30): as fichas transformadas (Mutilador
        Noturno, Colosso...) são FORMAS da mesma ocorrência, não outra
        criatura. `pvBase` guarda os PV máximos da ficha de partida. */
@@ -615,6 +622,68 @@
   }
 
   var CAMPOS_DE_TESTE_DA_FORMA = ["percepcao", "iniciativa", "fortitude", "reflexos", "vontade"];
+
+  /* ---------------- procedimentos (AS4, v2.38) ---------------- */
+
+  var ESTADOS_DO_PROCEDIMENTO = ["preparando", "andamento", "aprisionado", "destruido", "escapou", "cancelado"];
+  var PAPEIS_DO_PROCEDIMENTO = ["encarar", "executar", "outro"];
+  var MAX_TESTES_DO_PROCEDIMENTO = 20;
+
+  function normalizarProcedimento(p) {
+    if (!p || typeof p !== "object") return null;
+    var id = U.aparar(p.id, 60).replace(/[^A-Za-z0-9_.-]/g, "");
+    var nome = U.aparar(p.nome, 80);
+    if (!id || !nome) return null;
+    var dt = String(p.dt || "").replace(/\s+/g, "");
+    var part = p.participantes && typeof p.participantes === "object" ? p.participantes : {};
+    return {
+      id: id, nome: nome,
+      pagina: p.pagina ? U.inteiro(p.pagina, 0) : null,
+      pericia: U.aparar(p.pericia, 40),
+      dt: D.termos(dt).ok ? D.termos(dt).expressao : (/^\d{1,2}$/.test(dt) ? dt : ""),
+      sucessos: U.limitar(U.inteiro(p.sucessos, 1), 1, 20),
+      falhas: U.limitar(U.inteiro(p.falhas, 3), 1, 20),
+      participantes: { minimo: U.limitar(U.inteiro(part.minimo, 1), 1, 8), treinamento: U.aparar(part.treinamento, 80) },
+      papeis: textos(p.papeis, 4, 160),
+      requisitos: lista(p.requisitos).map(function (r) {
+        if (!r || typeof r !== "object") return null;
+        var rid = U.aparar(r.id, 40).replace(/[^A-Za-z0-9_.-]/g, "");
+        var texto = U.aparar(r.texto, 300);
+        return rid && texto ? { id: rid, texto: texto } : null;
+      }).filter(Boolean).slice(0, 8),
+      primeiroSucesso: U.aparar(p.primeiroSucesso, 300),
+      bloqueiaNoPrimeiroSucesso: U.aparar(p.bloqueiaNoPrimeiroSucesso, 80),
+      sucesso: U.aparar(p.sucesso, 400),
+      falhaTotal: U.aparar(p.falhaTotal, 400),
+      nota: U.aparar(p.nota, 600),
+    };
+  }
+
+  /* O andamento de um procedimento numa ocorrência. Só a forma do dado
+     é conferida aqui; a ordem das etapas é da tela (e do mestre). */
+  function normalizarAndamento(a, modelo) {
+    if (!a || typeof a !== "object") return null;
+    var req = {};
+    lista(modelo && modelo.requisitos).forEach(function (r) { if (a.requisitos && a.requisitos[r.id] === true) req[r.id] = true; });
+    return {
+      estado: ESTADOS_DO_PROCEDIMENTO.indexOf(a.estado) >= 0 ? a.estado : "preparando",
+      participantes: lista(a.participantes).map(function (x) {
+        if (!x || typeof x !== "object") return null;
+        var nome = U.aparar(x.nome, 80);
+        return nome ? { nome: nome, papel: PAPEIS_DO_PROCEDIMENTO.indexOf(x.papel) >= 0 ? x.papel : "outro", treinado: x.treinado === true } : null;
+      }).filter(Boolean).slice(0, 8),
+      requisitos: req,
+      sucessos: U.limitar(U.inteiro(a.sucessos, 0), 0, 20),
+      falhas: U.limitar(U.inteiro(a.falhas, 0), 0, 20),
+      testes: lista(a.testes).map(function (t) {
+        if (!t || typeof t !== "object") return null;
+        var tid = U.aparar(t.id, 60).replace(/[^A-Za-z0-9_.:-]/g, "");
+        if (!tid) return null;
+        return { id: tid, dt: U.limitar(U.inteiro(t.dt, 0), 0, 99), total: U.limitar(U.inteiro(t.total, 0), -99, 999),
+          sucesso: t.sucesso === true, por: U.aparar(t.por, 80) };
+      }).filter(Boolean).slice(-MAX_TESTES_DO_PROCEDIMENTO),
+    };
+  }
 
   var ESPECIAIS = ["rolarDeNovoMelhor", "rolarDeNovoObrigatorio", "trocarPorGuardado"];
 
@@ -644,6 +713,10 @@
     CAMPOS_DE_TESTE_DA_FORMA.forEach(function (k) { if (f[k] !== undefined && f[k] !== null) forma[k] = valorDeTeste(f[k]); });
     if (Array.isArray(f.deslocamento)) forma.deslocamento = normalizarDeslocamento(f.deslocamento);
     if (Array.isArray(f.resistencias)) forma.resistencias = normalizarResistencias(f.resistencias);
+    /* Arquivos Secretos 4 (v2.38): o estágio do Simulacro muda o tamanho
+       e os atributos (exceto Força). Sem os campos, ficam os da ficha. */
+    if (f.tamanho) forma.tamanho = U.aparar(f.tamanho, 30);
+    if (Array.isArray(f.atributos) && f.atributos.length) forma.atributos = normalizarAtributosOrdem(f.atributos);
     return forma;
   }
 
@@ -688,6 +761,15 @@
       if (CHAVE_LIVRE.test(id) && i.marcadores[id] === true) saida.marcadores[id] = true;
     });
     if (typeof i.forma === "string" && i.forma && U.porId(lista(criatura.ordem && criatura.ordem.formas), i.forma)) saida.forma = i.forma;
+    var procs = lista(criatura.ordem && criatura.ordem.procedimentos);
+    if (procs.length && i.procedimentos && typeof i.procedimentos === "object") {
+      var andamentos = {};
+      procs.forEach(function (p) {
+        var a = normalizarAndamento(i.procedimentos[p.id], p);
+        if (a) andamentos[p.id] = a;
+      });
+      if (Object.keys(andamentos).length) saida.procedimentos = andamentos;
+    }
     return saida;
   }
 
@@ -713,6 +795,8 @@
        "forma"          id de uma forma de ordem.formas, ou "" para a
                         ficha de partida (v2.30): troca os PV máximos e
                         prende os atuais, sem restaurar nada
+       "procedimento:<id>"  o andamento de um procedimento (AS4, v2.38),
+                        objeto inteiro, ou null para recomeçar
 
      Devolve false se a chave ou o valor não valem — nada muda. */
   function definirNaInstancia(c, chave, valor) {
@@ -737,6 +821,17 @@
       if ((inst.forma || "") === valor) return true;
       if (valor) inst.forma = valor; else delete inst.forma;
       ajustarVidaDaForma(c, alvo);
+      return true;
+    }
+    var mp = /^procedimento:(.+)$/.exec(chave);
+    if (mp) {
+      var proc = U.porId(lista(c.ordem && c.ordem.procedimentos), mp[1]);
+      if (!proc) return false;
+      if (!inst.procedimentos || typeof inst.procedimentos !== "object") inst.procedimentos = {};
+      if (valor === null) { delete inst.procedimentos[proc.id]; return true; }
+      var andamento = normalizarAndamento(valor, proc);
+      if (!andamento) return false;
+      inst.procedimentos[proc.id] = andamento;
       return true;
     }
     var m = /^(estado|uso|marcador):(.+)$/.exec(chave);
@@ -788,6 +883,8 @@
         if (forma[k] !== undefined && forma[k] !== null) o[k] = U.copiar(forma[k]);
       });
       if (forma.pericias.length) c.pericias = U.copiar(forma.pericias);
+      if (forma.tamanho) o.tamanho = forma.tamanho;
+      if (forma.atributos && forma.atributos.length) c.atributos = U.copiar(forma.atributos);
       c.habilidades = U.copiar(forma.habilidades);
       c.acoes = U.copiar(forma.acoes);
       c.formaAtiva = { id: forma.id, nome: forma.nome, pagina: forma.pagina, ativacao: forma.ativacao, notas: forma.notas.slice() };
@@ -819,6 +916,15 @@
         });
       }
       lista(a.desativar).forEach(function (nome) { desativadas[U.chaveDeBusca(nome)] = x.origem; });
+    });
+
+    /* Procedimento (AS4): o primeiro sucesso do Exorcismo Digital impede
+       Saltar — a ação fica visível, marcada. */
+    lista(o.procedimentos).forEach(function (p) {
+      var and = c.instancia && c.instancia.procedimentos && c.instancia.procedimentos[p.id];
+      if (p.bloqueiaNoPrimeiroSucesso && and && and.sucessos >= 1 && and.estado !== "cancelado") {
+        desativadas[U.chaveDeBusca(p.bloqueiaNoPrimeiroSucesso)] = p.nome + " (primeiro sucesso)";
+      }
     });
 
     function marcar(ef) {
@@ -863,7 +969,7 @@
 
   function imagensDoCatalogo(alvo) {
     var id = typeof alvo === "string" ? alvo : idDoCatalogo(alvo);
-    var m = /^(op|sah|as1|as2|as3)\.criatura\.([a-z0-9.-]+)$/.exec(String(id || ""));
+    var m = /^(op|sah|as1|as2|as3|as4)\.criatura\.([a-z0-9.-]+)$/.exec(String(id || ""));
     if (!m) return null;
     var base = "assets/criaturas/" + m[1] + "/" + m[2] + "/";
     var url = U.url || function (x) { return x; };

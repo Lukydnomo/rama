@@ -22,7 +22,7 @@
 
     t.grupo("Tema da ficha · schema 16 (v2.36)");
     var TEMA16 = { nome: "Roxo", base: "escuro", valores: { fundo: { tipo: "radial", forma: "circulo", x: 20, y: 30, pontos: [{ cor: "#08080a", pos: 0 }, { cor: "#3a1030", alfa: 0.8, pos: 100 }] } } };
-    t.igual("o schema subiu para 16", S.VERSAO_SCHEMA, 16);
+    t.igual("o schema subiu para 17", S.VERSAO_SCHEMA, 17);
     t.iguais("ficha nova usa o tema da conta", S.criarFicha({ nome: "Nova" }).aparencia, { v: 1, modo: "conta" });
     t.iguais("ficha antiga (sem o campo) também", S.normalizarFicha({ schemaVersion: 15, nome: "Legado" }).aparencia, { v: 1, modo: "conta" });
     ["ordem", "universal"].forEach(function (tipo) {
@@ -1091,10 +1091,11 @@
 
       t.igual("cinco atributos", OC.ATRIBUTOS.length, 5);
       t.igual("28 perícias", OC.PERICIAS.length, 28);
-      t.igual("48 origens: 26 do livro básico, 20 do Sobrevivendo ao Horror e 2 do Arquivos Secretos 1",
+      t.igual("50 origens: 26 do livro básico, 20 do Sobrevivendo ao Horror, 2 do Arquivos Secretos 1 e 2 do 4",
         OC.ORIGENS.filter(function (o) { return !o.fonte || o.fonte === "OPRPG"; }).length + "+" +
         OC.ORIGENS.filter(function (o) { return o.fonte === "SAH"; }).length + "+" +
-        OC.ORIGENS.filter(function (o) { return o.fonte === "AS1"; }).length, "26+20+2");
+        OC.ORIGENS.filter(function (o) { return o.fonte === "AS1"; }).length + "+" +
+        OC.ORIGENS.filter(function (o) { return o.fonte === "AS4"; }).length, "26+20+2+2");
       t.igual("três classes de agente, e Mundano e Sobrevivente à parte", OC.classesDeAgente().length + "+" + OC.CLASSES.length, "3+5");
       /* Quinze do livro básico e nove do Sobrevivendo ao Horror, três
          por classe. A fonte distingue as duas. */
@@ -1716,7 +1717,7 @@
       var duplicada = "";
       PO.TODOS.forEach(function (p) { if (chaves[p.chave]) duplicada = p.chave; chaves[p.chave] = true; });
       t.igual("nenhuma chave de poder se repete", duplicada, "");
-      t.ok("todo poder tem fonte e página", PO.TODOS.every(function (p) { return ["OPRPG", "SAH", "AS1", "AS2", "AS3"].indexOf(p.fonte) >= 0 && p.pagina > 0; }));
+      t.ok("todo poder tem fonte e página", PO.TODOS.every(function (p) { return ["OPRPG", "SAH", "AS1", "AS2", "AS3", "AS4"].indexOf(p.fonte) >= 0 && p.pagina > 0; }));
       t.ok("todo poder tem resumo", PO.TODOS.every(function (p) { return p.resumo.length > 10; }));
       t.ok("toda automação é calculo, parcial ou informacao",
         PO.TODOS.every(function (p) { return ["calculo", "parcial", "informacao"].indexOf(p.automacao) >= 0; }));
@@ -1726,7 +1727,7 @@
         PO.PODERES_PARANORMAIS.filter(function (p) { return p.fonte === "SAH"; }).length, 8);
       t.igual("34 poderes gerais do Sobrevivendo ao Horror (Tabela 2.3)", PO.PODERES_GERAIS.filter(function (p) { return p.fonte === "SAH"; }).length, 34);
       t.igual("cinco poderes gerais do Arquivos Secretos 1 (p. 46)", PO.PODERES_GERAIS.filter(function (p) { return p.fonte === "AS1"; }).length, 5);
-      t.igual("quatro habilidades por trilha, nas 26 trilhas", PO.HABILIDADES_TRILHA.length, 104);
+      t.igual("quatro habilidades por trilha, nas 27 trilhas", PO.HABILIDADES_TRILHA.length, 108);
       t.ok("os nomes das habilidades batem com os das trilhas do catálogo",
         CC.TRILHAS.every(function (tr) {
           var h = PO.habilidadesDaTrilha(tr.chave).map(function (x) { return x.nome; });
@@ -2800,7 +2801,7 @@
       /* ---------------------------------------------------------------- */
       t.grupo("Ordem · itens — catálogo completo e estruturado");
 
-      t.igual("277 entradas nos cinco livros", catalogo.itens.length, 277);
+      t.igual("284 entradas nos seis livros", catalogo.itens.length, 284);
       var contagem = {};
       catalogo.itens.forEach(function (e) {
         var k = e.aba + "/" + e.natureza + "/" + e.fonte;
@@ -2827,19 +2828,23 @@
         ["amaldicoados/item/AS1", 3, "itens amaldiçoados do Arquivos Secretos 1 (p. 55)"],
         ["geral/item/AS2", 11, "recursos e itens paranormais do Arquivos Secretos 2"],
         ["amaldicoados/item/AS2", 7, "itens amaldiçoados do Arquivos Secretos 2"],
+        ["armas/item/AS4", 1, "Lançador de granadas (Arquivos Secretos 4)"],
+        ["geral/item/AS4", 2, "granadas de gás lacrimogêneo e de tinta (AS4)"],
+        ["geral/modificacao/AS4", 3, "modificações para granadas (AS4)"],
+        ["amaldicoados/item/AS4", 1, "Granada Ctrl+C Ctrl+V (AS4)"],
       ].forEach(function (c) { t.igual(c[2] + ": " + c[1], contagem[c[0]] || 0, c[1]); });
 
       var idsVistos = {};
       var idRepetido = "";
       catalogo.itens.forEach(function (e) { if (idsVistos[e.id]) idRepetido = e.id; idsVistos[e.id] = true; });
       t.igual("nenhum id se repete", idRepetido, "");
-      t.ok("todo id é estável e diz a fonte (op.…, sah.…, as1.…, as2.… ou as3.…)", catalogo.itens.every(function (e) {
-        return /^(op|sah|as1|as2|as3)\.[a-z0-9.-]+$/.test(e.id) && (e.fonte === "SAH") === (e.id.indexOf("sah.") === 0) &&
+      t.ok("todo id é estável e diz a fonte (op.…, sah.…, as1.…, as2.…, as3.… ou as4.…)", catalogo.itens.every(function (e) {
+        return /^(op|sah|as1|as2|as3|as4)\.[a-z0-9.-]+$/.test(e.id) && (e.fonte === "SAH") === (e.id.indexOf("sah.") === 0) &&
           (e.fonte === "AS1") === (e.id.indexOf("as1.") === 0) && (e.fonte === "AS2") === (e.id.indexOf("as2.") === 0) &&
-          (e.fonte === "AS3") === (e.id.indexOf("as3.") === 0);
+          (e.fonte === "AS3") === (e.id.indexOf("as3.") === 0) && (e.fonte === "AS4") === (e.id.indexOf("as4.") === 0);
       }));
       t.ok("toda entrada tem nome, resumo, fonte e página", catalogo.itens.every(function (e) {
-        return e.nome && e.resumo && ["OPRPG", "SAH", "AS1", "AS2", "AS3"].indexOf(e.fonte) >= 0 && e.pagina > 0;
+        return e.nome && e.resumo && ["OPRPG", "SAH", "AS1", "AS2", "AS3", "AS4"].indexOf(e.fonte) >= 0 && e.pagina > 0;
       }));
       t.ok("todo item tem tipo de ficha e grupo; modificações e maldições não", catalogo.itens.every(function (e) {
         return e.natureza === "item" ? !!(e.tipoItem && e.grupo) : (e.tipoItem === null && e.grupo === null);
@@ -2850,8 +2855,8 @@
       t.ok("  e os dois explicam o porquê (nota ou escolha que define a categoria)", semCategoria.every(function (e) {
         return e.notas.length || (e.escolha && e.escolha.tipo === "circulo");
       }));
-      t.ok("toda arma tem dano (ou a tabela de 1d6 do Arcabuz)", catalogo.itens.every(function (e) {
-        return !e.arma || e.arma.dano || (e.arma.danoPorD6 && e.arma.danoPorD6.length === 6);
+      t.ok("toda arma tem dano (ou a tabela de 1d6 do Arcabuz; o lança-granadas usa o da granada)", catalogo.itens.every(function (e) {
+        return !e.arma || e.arma.dano || (e.arma.danoPorD6 && e.arma.danoPorD6.length === 6) || !!e.lancador;
       }));
       t.ok("toda munição citada por uma arma existe no catálogo", catalogo.itens.every(function (e) {
         return !e.arma || !e.arma.municao || !!catalogo.porId[e.arma.municao];
@@ -2870,7 +2875,7 @@
       IT._esquecer();
       var carga = IT.carregar();
       t.ok("carregar() devolve uma promessa e deixa o catálogo pronto", !!carga && typeof carga.then === "function" && !!IT.catalogoPronto());
-      t.igual("  com as mesmas 277 entradas", IT.catalogoPronto().itens.length, 277);
+      t.igual("  com as mesmas 284 entradas", IT.catalogoPronto().itens.length, 284);
 
       /* Conferência pontual contra as tabelas dos livros. */
       var katana = entrada("op.arma.katana");
@@ -3311,7 +3316,7 @@
       /* ---------------------------------------------------------------- */
       t.grupo("Ordem · rituais — catálogo completo e estruturado");
 
-      t.igual("104 rituais nos quatro livros", catalogoR.rituais.length, 104);
+      t.igual("105 rituais nos cinco livros", catalogoR.rituais.length, 105);
       var porFonte = {};
       var porElemento = {};
       var porCirculo = {};
@@ -3324,23 +3329,25 @@
       t.igual("16 do Sobrevivendo ao Horror", porFonte.SAH, 16);
       t.igual("2 do Arquivos Secretos 1", porFonte.AS1, 2);
       t.igual("4 do Arquivos Secretos 2", porFonte.AS2, 4);
-      t.iguais("por círculo: 30, 31, 22 e 21", [porCirculo[1], porCirculo[2], porCirculo[3], porCirculo[4]], [30, 31, 22, 21]);
+      t.igual("1 do Arquivos Secretos 4 (Backup)", porFonte.AS4, 1);
+      t.iguais("por círculo: 30, 32, 22 e 21", [porCirculo[1], porCirculo[2], porCirculo[3], porCirculo[4]], [30, 32, 22, 21]);
       t.iguais("por elemento (Amaldiçoar Arma conta nos quatro; Passagem de Conhecimento, em Sangue e Conhecimento)",
         [porElemento.conhecimento, porElemento.energia, porElemento.morte, porElemento.sangue, porElemento.medo],
-        [26, 24, 24, 26, 9]);
+        [26, 25, 24, 26, 9]);
 
       var idsR = {};
       var repetidoR = "";
       catalogoR.rituais.forEach(function (e) { if (idsR[e.id]) repetidoR = e.id; idsR[e.id] = true; });
       t.igual("nenhum id se repete", repetidoR, "");
       t.ok("todo id é estável e diz a fonte", catalogoR.rituais.every(function (e) {
-        return /^(op|sah|as1|as2)\.ritual\.[a-z0-9-]+$/.test(e.id) && (e.fonte === "SAH") === (e.id.indexOf("sah.") === 0) &&
-          (e.fonte === "AS1") === (e.id.indexOf("as1.") === 0) && (e.fonte === "AS2") === (e.id.indexOf("as2.") === 0);
+        return /^(op|sah|as1|as2|as4)\.ritual\.[a-z0-9-]+$/.test(e.id) && (e.fonte === "SAH") === (e.id.indexOf("sah.") === 0) &&
+          (e.fonte === "AS1") === (e.id.indexOf("as1.") === 0) && (e.fonte === "AS2") === (e.id.indexOf("as2.") === 0) &&
+          (e.fonte === "AS4") === (e.id.indexOf("as4.") === 0);
       }));
       t.ok("toda entrada tem nome, resumo, elemento, círculo, execução, alcance, fonte e página",
         catalogoR.rituais.every(function (e) {
           return e.nome && e.resumo && e.elementos.length && e.circulo >= 1 && e.circulo <= 4 &&
-            e.execucao && e.alcance && ["OPRPG", "SAH", "AS1", "AS2"].indexOf(e.fonte) >= 0 && e.pagina > 0;
+            e.execucao && e.alcance && ["OPRPG", "SAH", "AS1", "AS2", "AS4"].indexOf(e.fonte) >= 0 && e.pagina > 0;
         }));
       t.ok("onde a duração falta, é porque o livro não informa — e a entrada registra isso",
         catalogoR.rituais.filter(function (e) { return !e.duracao; }).every(function (e) {
@@ -3434,7 +3441,7 @@
       var contagens = RS.contagens(catalogoR, { elemento: "sangue" });
       t.igual("a contagem de círculos respeita o elemento escolhido", contagens.circulos[2], 8);
       t.igual("  e a de elementos ignora o próprio filtro de elemento", contagens.elementos.morte, 24);
-      t.iguais("as quatro fontes aparecem no catálogo", RS.fontesDoCatalogo(catalogoR).sort(), ["AS1", "AS2", "OPRPG", "SAH"]);
+      t.iguais("as cinco fontes aparecem no catálogo", RS.fontesDoCatalogo(catalogoR).sort(), ["AS1", "AS2", "AS4", "OPRPG", "SAH"]);
       var grupos = RS.porCirculo(RS.filtrar(catalogoR, { elemento: "medo" }));
       t.iguais("agrupado por círculo, com o custo de cada um",
         grupos.map(function (g) { return g.circulo + ":" + g.entradas.length + ":" + g.custo; }).join(" "),
@@ -4637,6 +4644,13 @@
         global.RAMAHexatombe, global.RAMAOrdemBiblioteca, global.RAMAOrdemItens || null);
     }
 
+    /* v2.38 — ARQUIVOS SECRETOS 4 */
+    if (global.RAMAOrdemArquivo4 && global.RAMAOrdemArquivo3 && global.RAMAOrdemCondicoes && global.RAMAOrdemConsumo && RRs) {
+      casosDaV238(t, global.RAMAOrdemCatalogo, RRs, global.RAMAOrdemPoderes, global.RAMAOrdemArquivo4, global.RAMAOrdemArquivo3,
+        global.RAMAOrdemCondicoes, global.RAMAOrdemConsumo, global.RAMAOrdemItens || null, global.RAMAOrdemRituais || null,
+        global.RAMAHacking || null, global.RAMAOrdemBiblioteca || null);
+    }
+
     /* v2.30 — ARQUIVOS SECRETOS 2 */
     if (global.RAMAOrdemArquivo2 && global.RAMAHexatombe && global.RAMAOrdemPoderes && global.RAMAOrdemOpcionais) {
       casosDaV230(t, global.RAMAOrdemCatalogo, global.RAMAOrdemPoderes, global.RAMAOrdemArquivo2, global.RAMAHexatombe,
@@ -4862,6 +4876,268 @@
   /* =================================================================
      v2.30 — ARQUIVOS SECRETOS 2
      ================================================================= */
+
+  /* =================================================================
+     v2.38 — ARQUIVOS SECRETOS 4
+     ================================================================= */
+
+  function casosDaV238(t, C, R, P, A4, A3, CD, CS, IT, RT, HK, B) {
+    var INV = { itens: [] };
+    function ficha(extra) {
+      var o = R.fichaVazia();
+      Object.keys(extra || {}).forEach(function (k) { o[k] = extra[k]; });
+      return R.normalizar(JSON.parse(JSON.stringify(o)));
+    }
+    function reg(etapa, tipo, valor, opcoes) {
+      return { id: "r-" + etapa, etapa: etapa, tipo: tipo, valor: valor, opcoes: opcoes || {}, registradoEm: "2026-10-04T10:00:00.000Z" };
+    }
+    function volta(o) { return R.normalizar(JSON.parse(JSON.stringify(o))); }
+    function interludio(o) { CD.novaCena(o.condicoes, null, { interludio: true }); }
+    function cena(o) { CD.novaCena(o.condicoes); }
+
+    t.grupo("v2.38 · Arquivos Secretos 4 · fonte e catálogo");
+    var livro = C.livro("AS4");
+    t.iguais("AS4 no registro único dos livros, edição v1.0", [livro.sigla, livro.nome, livro.edicao], ["AS4", "Arquivos Secretos 4", "v1.0"]);
+    var as4 = P.TODOS.filter(function (p) { return p.fonte === "AS4"; });
+    t.igual("19 poderes do AS4 com página (9 de classe, 3 gerais, 3 de Energia, 4 da trilha)", as4.map(function (p) { return p.tipo; }).sort().join(","),
+      "classe,classe,classe,classe,classe,classe,classe,classe,classe,geral,geral,geral,paranormal,paranormal,paranormal,trilha,trilha,trilha,trilha");
+    t.iguais("Granadeiro Blaster: Meus Bebês, Fogo Amigo, O Calor do Momento, Memória Muscular", P.habilidadesDaTrilha("granadeiro").map(function (h) { return h.nex + ":" + h.chave; }),
+      ["10:meusBebes", "40:fogoAmigo", "65:oCalorDoMomento", "99:memoriaMuscular"]);
+    t.iguais("duas origens: Influencer Paranormal e Caçador de Recompensas", C.ORIGENS.filter(function (o) { return o.fonte === "AS4"; }).map(function (o) { return o.chave + ":" + o.pericias.join("+"); }),
+      ["influencerParanormal:enganacao+tecnologia", "cacadorDeRecompensas:crime+investigacao"]);
+    var tudo = JSON.stringify([C.PERICIAS, P.TODOS, C.ORIGENS]);
+    t.ok("nenhum uso novo de perícia do suplemento (Obter Informações) entrou em perícia, poder ou origem", tudo.indexOf("Obter Informa") < 0);
+    t.ok("os poderes de Energia não ligam nada ao Hexatombe", as4.filter(function (p) { return p.elemento === "energia"; }).every(function (p) { return JSON.stringify(p).indexOf("exatombe") < 0; }));
+    if (B) t.ok("filtro por livro AS4 combina com a aba de poderes gerais", B.filtrar(B.secoes("gerais"), "", { livro: "AS4" }).reduce(function (n, s) { return n + s.entradas.length; }, 0) === 3);
+
+    t.grupo("v2.38 · Combatente Esforçado: PE por degrau de NEX");
+    var base = { classe: "combatente", origem: "academico", nex: 15, atributos: { agi: 1, for: 3, int: 1, pre: 1, vig: 1 } };
+    var sem = ficha(base);
+    var com = ficha(Object.assign({}, base, { escolhas: [reg("d3.poderClasse", "poderClasse", "combatenteEsforcado")] }));
+    t.igual("NEX 15% = 3 degraus: +3 PE", R.calcular(com, INV).pe.total - R.calcular(sem, INV).pe.total, 3);
+    var com20 = ficha(Object.assign({}, base, { nex: 20, escolhas: [reg("d3.poderClasse", "poderClasse", "combatenteEsforcado")] }));
+    t.igual("  e +1 por degrau seguinte (NEX 20%), nunca por ponto percentual", R.calcular(com20, INV).pe.total - R.calcular(com, INV).pe.total,
+      R.calcular(ficha(Object.assign({}, base, { nex: 20 })), INV).pe.total - R.calcular(sem, INV).pe.total + 1);
+    t.igual("  recarregar não soma de novo", R.calcular(volta(com), INV).pe.total, R.calcular(com, INV).pe.total);
+
+    t.grupo("v2.38 · origens");
+    var inf = ficha({ classe: "ocultista", origem: "influencerParanormal", nex: 25 });
+    var r1 = A4.registrarParanormal(inf, { tipo: "criatura", nome: "Simulacro" });
+    t.ok("Registrar o Paranormal: uma vez por cena", r1.ok && !A4.registrarParanormal(inf, { tipo: "ritual", nome: "Backup" }).ok);
+    cena(inf);
+    var rr = A4.registrarParanormal(inf, { tipo: "ritual", nome: "Backup", catalogoId: "as4.ritual.backup", circulo: 2 });
+    t.igual("  a criatura registrada vale para o +5 só contra ela", A4.criaturasRegistradas(inf).map(function (x) { return x.nome; }).join(), "Simulacro");
+    var retrato = { nome: "Backup", circulo: "2º", elemento: "Energia", origemCatalogoId: "as4.ritual.backup", ordem: { elemento: "energia", circulo: 2, custo: 3 }, versoes: [{ nome: "Normal" }] };
+    t.ok("  memorizar só numa cena de interlúdio", !A4.memorizar(inf, rr.registro.id, retrato, 25).ok);
+    interludio(inf);
+    t.ok("  com NEX 25% cabe o 2º círculo", A4.memorizar(inf, rr.registro.id, retrato, 25).ok && A4.memorizadoValendo(inf).ritual.nome === "Backup");
+    t.ok("  com NEX 20%, não", !A4.memorizar(inf, rr.registro.id, Object.assign({}, retrato), 20).ok);
+    t.ok("  não vira ritual aprendido", (inf.rituais || []).length === 0);
+    t.ok("  e acaba no próximo interlúdio", (interludio(inf), A4.memorizadoValendo(inf) === null));
+    var cac = ficha({ classe: "combatente", origem: "cacadorDeRecompensas", nex: 5 });
+    A4.marcarFalhaDoCacador(cac);
+    t.ok("Caçador: a falha guarda +1d20, que não acumula", A4.marcarFalhaDoCacador(cac).jaTinha && A4.bonusDoCacador(cac));
+    t.ok("  usar consome", A4.consumirCacador(cac).ok && !A4.bonusDoCacador(cac));
+    A4.marcarFalhaDoCacador(cac);
+    cena(cac);
+    t.ok("  e acaba no fim da cena", !A4.bonusDoCacador(cac));
+
+    t.grupo("v2.38 · poderes de interlúdio, missão e dia");
+    var mil = ficha({ classe: "combatente", origem: "academico", nex: 15, atributos: { agi: 1, for: 1, int: 1, pre: 1, vig: 2 } });
+    t.ok("exercitar-se é ação de interlúdio", !A4.exercitar(mil, 2).ok);
+    interludio(mil);
+    t.ok("  até o Vigor acumulados (2)", A4.exercitar(mil, 2).ok && A4.exercitar(mil, 2).ok && !A4.exercitar(mil, 2).ok);
+    t.ok("  um bônus por rolagem", A4.usarExercicio(mil, "rol-1").ok && !A4.usarExercicio(mil, "rol-1").ok && A4.bonusDeExercicio(mil) === 1);
+    A3.avancar(mil, "missao");
+    t.igual("  e somem com a missão", A4.bonusDeExercicio(mil), 0);
+    t.ok("Profissão Perigo: uma vez por missão", A4.profissaoDisponivel(mil) && (A4.registrarProfissao(mil, "Faca", "Pé de cabra"), !A4.profissaoDisponivel(mil)) && (A3.avancar(mil, "missao"), A4.profissaoDisponivel(mil)));
+    t.ok("  o novo não passa da categoria nem dos espaços", A4.trocaCabe({ categoria: 1, espacos: 1 }, { categoria: 1, espacos: 1 }).ok &&
+      !A4.trocaCabe({ categoria: 1, espacos: 1 }, { categoria: 2, espacos: 1 }).ok && !A4.trocaCabe({ categoria: 1, espacos: 1 }, { categoria: 0, espacos: 2 }).ok);
+    t.ok("Gororoba: uma vez por interlúdio", (interludio(mil), A4.usarGororoba(mil).ok && !A4.usarGororoba(mil).ok));
+    t.ok("Ruído Branco e Uma Última Olhada: uma vez por cena", A4.usarRuido(mil).ok && !A4.usarRuido(mil).ok && A4.usarOlhada(mil).ok && !A4.usarOlhada(mil).ok &&
+      (cena(mil), A4.usarRuido(mil).ok && A4.usarOlhada(mil).ok));
+
+    t.grupo("v2.38 · Explorador, Sinestesia e Terrores Noturnos");
+    var exp = ficha({ classe: "ocultista", origem: "academico", nex: 20 });
+    var ue = A4.usarExplorador(exp, "danificada");
+    t.ok("Membrana danificada: perde 1 SAN e os rituais custam 1 a menos nesta cena", ue.ok && ue.perdeSan && A4.reducaoDoExplorador(exp) === 1);
+    t.ok("  uma vez por cena; na cena seguinte, o desconto acaba", !A4.usarExplorador(exp, "estavel").ok && (cena(exp), A4.reducaoDoExplorador(exp) === 0));
+    t.ok("  estável: nada", A4.usarExplorador(exp, "estavel").ok && A4.reducaoDoExplorador(exp) === 0);
+    var sin = ficha({ classe: "ocultista", origem: "academico", nex: 20 });
+    var padrao = function (k) { return R.atributoDaPericia(sin, k); };
+    var atlAntes = padrao("atletismo"), perAntes = padrao("percepcao");
+    t.ok("Sinestesia: quatro perícias diferentes", !A4.aceitarSinestesia(sin, [["atletismo", "percepcao"], ["percepcao", "reflexos"]], 3).ok);
+    t.ok("  aceita: Atletismo rola com o atributo de Percepção e vice-versa", A4.aceitarSinestesia(sin, [["atletismo", "percepcao"], ["investigacao", "reflexos"]], 3).ok &&
+      R.atributoDaPericia(sin, "atletismo") === perAntes && R.atributoDaPericia(sin, "percepcao") === atlAntes);
+    t.ok("  o treinamento não muda", R.grauDaPericia(sin, "atletismo") === R.grauDaPericia(ficha({ classe: "ocultista", origem: "academico", nex: 20 }), "atletismo"));
+    A4.encerrarSinestesia(sin);
+    t.ok("  encerrar devolve os atributos", R.atributoDaPericia(sin, "atletismo") === atlAntes);
+    t.ok("  só de novo no dia seguinte", !A4.sinestesiaDisponivel(sin) && (A3.avancar(sin, "dia"), A4.sinestesiaDisponivel(sin)));
+    var ter = ficha({ classe: "ocultista", origem: "academico", nex: 20 });
+    t.ok("Terrores: ao dormir num interlúdio", !A4.rolarTerrores(ter, 10, 2).ok);
+    interludio(ter);
+    t.ok("  51 ou mais: bons sonhos, e uma rolagem por interlúdio", A4.rolarTerrores(ter, 51, 0).ok && !A4.terrorValendo(ter) && !A4.rolarTerrores(ter, 10, 2).ok);
+    interludio(ter);
+    var rt = A4.rolarTerrores(ter, 50, 3);
+    t.ok("  50 ou menos: pesadelo com perda de SAN", rt.ok && rt.pesadelo && A4.dados(ter).terrores.san === 3);
+    t.ok("  o ritual escolhido vale uma vez", A4.escolherTerror(ter, { tipo: "ritual", nome: "Backup", chave: "as4.ritual.backup", ritual: retrato }).ok &&
+      A4.usarTerror(ter).ok && !A4.usarTerror(ter).ok);
+    t.ok("  e não entra nos rituais conhecidos", (ter.rituais || []).length === 0);
+
+    t.grupo("v2.38 · Foco Gravitacional e Sobrepor Imprevisível");
+    var foco = ficha({ classe: "ocultista", origem: "academico", nex: 20 });
+    var faca = { id: "it-faca", tipo: "arma", nome: "Faca", ordem: { espacos: 1, quantidade: 1 } };
+    var inv = { itens: [faca] };
+    var antes = R.calcular(foco, inv).carga.ocupado;
+    A4.definirFoco(foco, ["it-faca"], 1);
+    t.igual("guardado, o equipamento do Foco ocupa 0 espaços", antes - R.calcular(foco, inv).carga.ocupado, 1);
+    faca.ordem.empunhada = true;
+    t.igual("  empunhado, volta a pesar", R.calcular(foco, inv).carga.ocupado, antes);
+    t.ok("  sem afinidade, um; com, até três", !A4.definirFoco(foco, ["a", "b"], 1).ok && A4.definirFoco(foco, ["a", "b", "c"], 3).ok);
+    t.ok("  destruído, sai da lista e pede outro", A4.itensDoFoco(foco, { itens: [] }).length === 0);
+    t.ok("  25%: 1 a 25 no 1d100", A4.focoVoou(25) && !A4.focoVoou(26));
+    t.iguais("Sobrepor: par soma, ímpar subtrai", [A4.deltaDoSobrepor(12), A4.deltaDoSobrepor(7)], [12, -7]);
+
+    t.grupo("v2.38 · Granadeiro Blaster e explosivos");
+    t.iguais("Meus Bebês: 1, 2, 3 e 4 explosivos (NEX 10, 40, 65, 99)", [10, 40, 65, 99].map(A4.explosivosDaMissao), [1, 2, 3, 4]);
+    var gr = ficha({ classe: "especialista", origem: "academico", nex: 40, trilha: "granadeiro" });
+    t.ok("  uma entrega por missão (recarregar não entrega de novo)", A4.marcarEntrega(gr).ok && !A4.marcarEntrega(volta(gr)).ok && !A4.marcarEntrega(gr).ok);
+    t.igual("Memória Muscular dobra os dados, não os números fixos", A4.dobrarDados("4d6+5 fogo"), "8d6+5 fogo");
+    var frag = { forma: "raio", medida: 6, dt: { atributo: "agi" } };
+    t.igual("Fogo Amigo: +6 m no raio", A4.areaDoExplosivo(frag, true).medida, 12);
+    t.igual("  e no comprimento do cone, que continua cone", A4.areaDoExplosivo({ forma: "cone", medida: 6 }, true).forma + A4.areaDoExplosivo({ forma: "cone", medida: 6 }, true).medida, "cone12");
+    t.igual("DT: 10 + limite de PE + AGI", A4.dtDoExplosivo(frag, { passos: 3, atributo: 2 }).dt, 15);
+    t.igual("  Perito em Explosivos soma o Intelecto", A4.dtDoExplosivo(frag, { passos: 3, atributo: 2, perito: true, intelecto: 3 }).dt, 18);
+    t.igual("  e Fogo Amigo com Perito dobra esse Intelecto (não troca bônus de resistência por DT)", A4.dtDoExplosivo(frag, { passos: 3, atributo: 2, perito: true, intelecto: 3, dobrado: true }).dt, 21);
+    t.igual("  DT impressa não muda", A4.dtDoExplosivo({ dt: { fixa: 25 } }, { passos: 3, perito: true, intelecto: 3, dobrado: true }).dt, 25);
+    t.iguais("  exclusões: Intelecto, dobrado com Fogo Amigo", [A4.alvosExcluidos(3, true, false), A4.alvosExcluidos(3, true, true), A4.alvosExcluidos(3, false, false)], [3, 6, 0]);
+    t.ok("O Calor do Momento: 25% no uso", A4.explodiuNaMao(1) && A4.explodiuNaMao(25) && !A4.explodiuNaMao(26));
+
+    t.grupo("v2.38 · granadas, Ctrl+C e temporizadores");
+    t.iguais("Ctrl+C: para no primeiro ímpar", [A4.cadeiaCtrlC([2, 3, 4]).explosoes, A4.cadeiaCtrlC([1]).explosoes], [2, 1]);
+    t.igual("  e na quarta explosão, sem recursão", A4.cadeiaCtrlC([2, 4, 2, 2, 2]).explosoes, 4);
+    var tm = ficha({ classe: "especialista", origem: "academico", nex: 40 });
+    var tmr = A4.criarTimer(tm, "Granada de fragmentação", 2).timer;
+    A4.avancarTimer(tm, tmr.id);
+    t.ok("Programada: conta turnos do jogo, e a explosão espera confirmação", A4.avancarTimer(tm, tmr.id).pronto && !A4.dados(tm).timers[0].resolvido);
+    A4.resolverTimer(tm, tmr.id, "explodiu");
+    t.ok("  resolvida, não explode de novo", A4.dados(volta(tm)).timers[0].resolvido);
+    t.ok("o mesmo uso não é registrado duas vezes", A4.registrarExplosao(tm, "expl-1", "x").ok && A4.registrarExplosao(tm, "expl-1", "x").repetido);
+    if (IT) {
+      var cat = IT.catalogoPronto();
+      t.ok("o lançador guarda 6, e as granadas mundanas oferecem o modelo 40 mm", cat.porId["as4.arma.lancador-de-granadas"].lancador.capacidade === 6 &&
+        cat.porId["as4.geral.granada-de-tinta"].escolha.tipo === "modeloGranada");
+      var gran = IT.paraInventario(cat.porId["as4.geral.granada-de-gas-lacrimogeneo"], { quantidade: 1, catalogo: cat });
+      var dupla = cat.porId["as4.mod.granada.dupla"];
+      var g = { id: "g1", tipo: "item", nome: "Gás", origemCatalogoId: "as4.geral.granada-de-gas-lacrimogeneo", ordem: gran.dados.ordem };
+      t.ok("Dupla não aceita granada amaldiçoada", !IT.aplicar(dupla, g, { escolha: "as4.amaldicoado.granada-ctrl-c-ctrl-v" }).ok);
+      var adesiva = cat.porId["as4.mod.granada.adesiva"];
+      t.ok("  modificações iguais não se acumulam", IT.aplicar(adesiva, g, {}).ok && !IT.aplicar(adesiva, g, {}).ok);
+    }
+
+    t.grupo("v2.38 · Chuva de Balas e munição");
+    var cb = ficha({ classe: "combatente", origem: "academico", nex: 15, atributos: { agi: 2, for: 1, int: 1, pre: 1, vig: 1 },
+      escolhas: [reg("d3.poderClasse", "poderClasse", "chuvaDeBalas")] });
+    var balas = { id: "b1", tipo: "item", nome: "Balas curtas", origemCatalogoId: "op.municao.balas-curtas", ordem: { grupo: "municao", quantidade: 3, contagem: { retiradas: 5 } } };
+    var invB = { itens: [balas] };
+    t.igual("com a contagem, cada pacote de balas tem +10", CS.porPacote(balas, cb) - CS.porPacote(balas, null), 10);
+    t.igual("  sacrificáveis: só pacotes inteiros", CS.pacotesSacrificaveis(balas, cb, true), 2);
+    var sac = CS.sacrificarPacotes(cb, invB, balas, 2, true, "chuva-teste-1");
+    t.ok("sacrificar 2 pacotes: +4 dados, sem devolver o que já saiu", sac.ok && sac.dados === 4 && balas.ordem.quantidade === 1 && balas.ordem.contagem.retiradas === 5);
+    t.ok("  o mesmo opId não sacrifica de novo", CS.sacrificarPacotes(cb, invB, balas, 1, true, "chuva-teste-1").repetido && balas.ordem.quantidade === 1);
+    t.ok("  sem pacotes inteiros, nada a sacrificar", CS.pacotesSacrificaveis(balas, cb, true) === 0);
+
+    t.grupo("v2.38 · Quase Novo e Backup");
+    var qn = ficha({ classe: "especialista", origem: "academico", nex: 20 });
+    interludio(qn);
+    var it = { id: "i1", tipo: "arma", nome: "Pistola", ordem: { modificacoes: [{ id: "m1", nome: "Mira laser", temporaria: "interludio", interludio: A4.interludioDe(qn) }, { id: "m2", nome: "Silenciador" }] } };
+    t.igual("a modificação temporária fica no interlúdio em que foi posta", A4.tirarVencidas(qn, { itens: [it] }).length, 0);
+    interludio(qn);
+    t.iguais("  e sai no próximo; a permanente fica", [A4.tirarVencidas(qn, { itens: [it] }).length, it.ordem.modificacoes.map(function (m) { return m.nome; }).join()], [1, "Silenciador"]);
+    var bk = ficha({ classe: "ocultista", origem: "academico", nex: 40 });
+    t.ok("Backup: um chamariz por vez", A4.conjurarBackup(bk, "discente", "Oi!", "").ok && !A4.conjurarBackup(bk, "normal", "", "").ok);
+    t.ok("  dissipar devolve os efeitos para encerrar", A4.dissiparBackup(bk, "dano na cópia").ok && !A4.backupAtivo(bk));
+    if (RT) {
+      var bkr = RT.catalogoPronto().rituais.filter(function (e) { return e.id === "as4.ritual.backup"; })[0];
+      t.ok("  o ritual guarda o requisito publicado da versão discente (2º círculo)", JSON.stringify(bkr.versoes).indexOf("2º círculo") >= 0);
+    }
+
+    t.grupo("v2.38 · persistência");
+    var cheia = ficha({ classe: "ocultista", origem: "influencerParanormal", nex: 40 });
+    A4.registrarParanormal(cheia, { tipo: "criatura", nome: "Diretor" });
+    A4.conjurarBackup(cheia, "verdadeiro", "frase", "um rosto");
+    A4.criarTimer(cheia, "Gás", 3);
+    A4.definirFoco(cheia, ["it-x"], 1);
+    var v = volta(cheia);
+    t.iguais("exportar e importar devolve registros, chamariz, temporizador e Foco",
+      [A4.dados(v).influencer.registros.length, A4.backupAtivo(v).versao, A4.dados(v).timers[0].restantes, A4.dados(v).foco.itens[0]], [1, "verdadeiro", 3, "it-x"]);
+    var antiga = R.normalizar({ classe: "ocultista", nex: 20 });
+    t.ok("ficha antiga, sem arquivo4, ganha o estado vazio sem perder nada", !!A4.dados(antiga) && A4.dados(antiga).influencer.registros.length === 0);
+    var dItem = { quantidade: 1, autoral: { autor: "Lia", autorId: "p1", apressado: true, missao: 2 }, foraDoLimite: true, modeloGranada: "40mm",
+      lancador: { capacidade: 6, carregadas: [{ id: "g-1", nome: "Gás", espacos: 1, modificacoes: [{ id: "m", catalogoId: "as4.mod.granada.adesiva", nome: "Adesiva" }] }] } };
+    var it2 = { id: "x", tipo: "arma", nome: "Lançador", ordem: dItem };
+    var dn = global.RAMAOrdemInventario ? global.RAMAOrdemInventario.dadosDoItem(JSON.parse(JSON.stringify(it2))) : dItem;
+    t.ok("o item guarda autoria, limite, modelo e as granadas carregadas com as modificações",
+      dn.autoral.autor === "Lia" && dn.autoral.apressado && dn.foraDoLimite && dn.modeloGranada === "40mm" && dn.lancador.carregadas[0].modificacoes[0].nome === "Adesiva");
+    t.ok("Meus Bebês: fora do limite de itens, mas pesa", R.usoPorCategoria ? R.usoPorCategoria(cheia, { itens: [{ id: "e1", tipo: "item", nome: "Granada", ordem: { categoria: 1, foraDoLimite: true } }] }).foraDoLimite.length === 1 : true);
+
+    if (HK) {
+      t.grupo("v2.38 · Hacking (regra opcional)");
+      var e = HK.vazio();
+      t.ok("desligado por padrão", e.ativo === false);
+      HK.ligar(e, true);
+      t.ok("a cena precisa da DT de Hackear, que vira os PS", !HK.criarCena(e, { nome: "Servidor" }).ok && HK.criarCena(e, { nome: "Servidor", dt: 20 }).cena.psMax === 20);
+      var c = e.cenas[0];
+      t.ok("hackear exige ao menos treinamento em Tecnologia", !HK.adicionarParticipante(c, { nome: "Leigo", treino: "destreinado", intelecto: 2 }).ok);
+      var ag = HK.adicionarParticipante(c, { nome: "Ana", treino: "treinado", intelecto: 3 }).participante;
+      var vet = HK.adicionarParticipante(c, { nome: "Beto", treino: "veterano", intelecto: 2 }).participante;
+      t.igual("  dados virtuais = Intelecto", ag.dados, 3);
+      HK.iniciar(c);
+      t.ok("ações só no turno do agente", !HK.procurarBrechas(c, ag.id, 20).ok);
+      HK.iniciarTurno(c, ag.id);
+      t.ok("Procurar Brechas: DT 15, depois 20; sucesso dá +1 dado", HK.procurarBrechas(c, ag.id, 15).sucesso && HK.dtDeBrechas(HK.participante(c, ag.id)) === 20 && HK.participante(c, ag.id).dados === 4);
+      t.ok("  treinado não Cobre Rastros", !HK.podeAcao(ag, "cobrirRastros") && HK.podeAcao(vet, "cobrirRastros") && !HK.podeAcao(vet, "plantarVirus"));
+      var q = HK.quebrarCodigos(c, ag.id, [1, 6, 1]);
+      t.ok("Quebrar Códigos: a soma vira dano nos PS, e os 1 contam", q.ok && q.soma === 8 && c.psAtual === 12 && HK.participante(c, ag.id).uns === 2);
+      t.ok("  até duas ações por turno", !HK.quebrarCodigos(c, ag.id, [3]).ok);
+      HK.encerrarTurno(c, ag.id);
+      HK.iniciarTurno(c, vet.id);
+      t.ok("Cobrir Rastros: DT = PS máximos", HK.cobrirRastros(c, vet.id, 19).ok && !HK.participante(c, vet.id).cobrir && (HK.encerrarTurno(c, vet.id), true));
+      var prop = HK.proporImprevistos(c);
+      t.iguais("fim da rodada: 2×1 sugere Código mal escrito; nenhum 1, nada", prop.map(function (x) { return x.tipo; }), ["codigoMalEscrito", ""]);
+      t.ok("  o mestre confirma e aplica", HK.fimDaRodada(c, prop.map(function (x) { return { participante: x.participante, tipo: x.tipo }; }), []).ok && c.rodada === 2);
+      HK.iniciarTurno(c, ag.id);
+      t.igual("  Código mal escrito: −1 dado no começo do turno", HK.participante(c, ag.id).dados, 0);
+      HK.encerrarTurno(c, ag.id);
+      t.ok("Rastro detectado exige a rolagem de 2d6", !HK.fimDaRodada(c, [{ participante: ag.id, tipo: "rastroDetectado" }], []).ok);
+      HK.fimDaRodada(c, [{ participante: ag.id, tipo: "rastroDetectado", manual: true }], [5]);
+      t.igual("  e o sistema recupera os PS (sem passar do máximo)", c.psAtual, 17);
+      HK.fimDaRodada(c, [{ participante: ag.id, tipo: "invasaoDetectada", manual: true }], []);
+      t.igual("Invasão detectada: os PS voltam ao máximo", c.psAtual, 20);
+      HK.iniciarTurno(c, vet.id);
+      HK.cobrirRastros(c, vet.id, 20);
+      var q2 = HK.quebrarCodigos(c, vet.id, [1, 6], [4]);
+      t.ok("Cobrir Rastros: os 1 rolam de novo e fica o segundo", q2.ok && q2.soma === 10 && q2.uns === 0);
+      HK.encerrarTurno(c, vet.id);
+      HK.fimDaRodada(c, [], []);
+      c.psAtual = 3;
+      HK.participante(c, vet.id).dados = 1;
+      HK.iniciarTurno(c, vet.id);
+      t.ok("zerar os PS libera o acesso por uma cena", HK.quebrarCodigos(c, vet.id, [5]).invadiu && c.estado === "invadido" && !!c.acesso);
+      t.ok("  e o acesso termina com a cena", HK.encerrarAcesso(c).ok && !c.acesso && c.estado === "encerrada");
+      HK.recomecar(c);
+      t.ok("hackear de novo: o processo inteiro", c.psAtual === 20 && HK.participante(c, ag.id).dados === 3 && c.estado === "preparando");
+      HK.iniciar(c);
+      HK.iniciarTurno(c, vet.id);
+      var bd = HK.programarBackdoor(c, vet.id, 2, "notebook").backdoor;
+      t.ok("Backdoor: cada d6 descartado é um acesso, sem hackear", bd.usos === 2 && HK.usarBackdoor(c, bd.id).ok && c.acesso.origem === "backdoor");
+      var ex = HK.normalizar(JSON.parse(JSON.stringify(e)));
+      t.ok("o estado volta inteiro numa sessão seguinte", ex.cenas[0].backdoors[0].usados === 1 && ex.cenas[0].historico.length > 5 && ex.cenas[0].rodada >= 1);
+      var vista = HK.vistaDoJogador(Object.assign({}, e, { cenas: [Object.assign({}, c, { notas: "segredo" })] }), []);
+      t.igual("o jogador sem personagem na cena não a vê", vista.cenas.length, 0);
+      t.ok("nada aqui é uso geral de Tecnologia", JSON.stringify(C.pericia("tecnologia")).indexOf("Brechas") < 0);
+    }
+  }
 
   /* =================================================================
      v2.33 — ARQUIVOS SECRETOS 3
@@ -5945,7 +6221,7 @@
       R.resistencias(fbExp, INV).dano.some(function (d) { return d.tipo === "geral"; }) && R.dadosDoTeste(fbExp, "diplomacia").quantos === R.dadosDoTeste(baseFb, "diplomacia").quantos - 1);
     if (B) {
       var todas = B.secoes("origens").reduce(function (l, s) { return l.concat(s.entradas); }, []);
-      t.ok("a aba Origens da biblioteca tem as 48, numa seção por livro", todas.length === 48 && B.secoes("origens").length === 3);
+      t.ok("a aba Origens da biblioteca tem as 50, numa seção por livro", todas.length === 50 && B.secoes("origens").length === 4);
       t.ok("  busca pelo poder e pela origem", B.filtrar(B.secoes("origens"), "luta ou fuga").some(function (s) { return s.entradas.length; }) &&
         B.filtrar(B.secoes("origens"), "profetizado").some(function (s) { return s.entradas.length; }));
       var copia = B.modelo(todas.filter(function (x) { return x.entrada.nome === "Conexões"; })[0].entrada, "");

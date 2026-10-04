@@ -91,6 +91,7 @@
   var AS1 = "AS1";
   var AS2 = "AS2";
   var AS3 = "AS3";
+  var AS4 = "AS4";
 
   /* ------------------------------------------------------------------
      Atalhos de montagem. Existem só para a lista abaixo caber na tela.
@@ -533,6 +534,50 @@
       requisitos: [req.atr("int", 2), req.conj(1), req.regra("reterRitual")],
       automacao: "parcial",
       nota: "Os rituais retidos ganham, na aba Rituais, o botão “Mudar para cena” (reação; 1 PE quando é para não perder o foco)." }),
+
+    /* --- Arquivos Secretos 4, p. 65-66 ---
+       As contas e os botões moram em js/ordem/arquivo4.js e
+       js/paginas/ficha-arquivo4.js. */
+    entrada({ chave: "chuvaDeBalas", nome: "Chuva de Balas", tipo: "classe", classes: ["combatente"], fonte: AS4, pagina: 65,
+      resumo: "Os pacotes de munição do seu inventário duram o dobro de cenas. Num ataque com arma de fogo, antes de rolar o dano, pode sacrificar por completo um ou mais pacotes de munição: +2 dados do mesmo tipo de dano por pacote. Com a regra opcional de contagem de munição, cada pacote tem +10 balas.",
+      automacao: "calculo",
+      nota: "No ataque com arma de fogo, antes do dano, a ficha pergunta quantos pacotes sacrificar (os pacotes inteiros da munição da arma, conferidos antes de rolar). Os pacotes saem do inventário com o registro do uso — recarregar a ficha não devolve nada. Com a contagem de munição, a capacidade de cada pacote sobe +10. A duração dobrada (sem a contagem) é mostrada na munição." }),
+    entrada({ chave: "combatenteEsforcado", nome: "Combatente Esforçado", tipo: "classe", classes: ["combatente"], fonte: AS4, pagina: 65,
+      resumo: "+1 PE para cada NEX.",
+      requisitos: [req.atrUm(["for", "vig"], 3)],
+      efeitos: [{ tipo: "pePorDegrau", valor: 1, trilho: "exposicao" }],
+      automacao: "calculo",
+      nota: "Como Potencial Aprimorado: +1 PE por degrau de NEX (5%), retroativo e acompanhando o NEX daqui para a frente. Com NEX & Experiência, por nível — nunca por ponto percentual." }),
+    entrada({ chave: "treinamentoMilitarizado", nome: "Treinamento Militarizado", tipo: "classe", classes: ["combatente"], fonte: AS4, pagina: 65,
+      resumo: "O bônus de exercitar-se numa cena de interlúdio muda para +1d8 e também pode ser gasto em rolagens de dano; só um bônus por rolagem.",
+      automacao: "parcial",
+      nota: "O cartão registra os exercícios (ação de interlúdio, até o Vigor acumulados, até o fim da missão — OPRPG p. 93). Cada bônus de +1d8 é oferecido no resultado de um teste de Agilidade, Força ou Vigor e na rolagem de dano; usar um gasta um, e uma rolagem nunca recebe dois." }),
+
+    entrada({ chave: "analiseConturbada", nome: "Análise Conturbada", tipo: "classe", classes: ["especialista"], fonte: AS4, pagina: 65,
+      resumo: "Numa cena de investigação, ação padrão para expor suas teorias obscuras em voz alta. Os agentes voluntários presentes (você incluído) que aceitarem rolam 1d6: recebem o resultado em bônus em testes de Intelecto e Presença até o fim da cena e perdem o mesmo valor em Sanidade.",
+      automacao: "parcial",
+      nota: "O cartão pergunta quem aceita (você e os nomes dos outros agentes) e rola 1d6 para cada um: o mesmo resultado é o bônus e a perda de Sanidade daquela pessoa. Na sua ficha, o bônus entra como efeito de cena (testes de Intelecto e de Presença) e a Sanidade sai na hora; os outros registram o resultado na própria ficha." }),
+    entrada({ chave: "profissaoPerigo", nome: "Profissão Perigo", tipo: "classe", classes: ["especialista"], fonte: AS4, pagina: 65,
+      resumo: "Ação completa e 4 PE para desmontar um item do seu inventário e construir no lugar um novo item operacional à sua escolha, que não ultrapasse a categoria nem os espaços do sacrificado. Uma vez por missão.",
+      automacao: "parcial",
+      nota: "O cartão escolhe o item a desmontar e o novo item da biblioteca (só os que cabem na categoria e nos espaços) e pede confirmação: os 4 PE, a saída do item e a entrada do novo acontecem juntos, numa gravação só. A missão é a da cronologia da campanha." }),
+    entrada({ chave: "quaseNovo", nome: "Quase Novo", tipo: "classe", classes: ["especialista"], fonte: AS4, pagina: 65,
+      resumo: "Ao fazer uma ação de manutenção (Fabricação em Campo, SaH p. 94) numa cena de interlúdio, o item reparado recebe +10 PV adicionais. Com a mesma ação, pode adicionar ao item uma nova modificação temporária de uma categoria que você possa acessar, até o início da próxima cena de interlúdio.",
+      automacao: "parcial",
+      nota: "O cartão marca o item reparado (+10 PV adicionais, anotados no item) e aplica uma modificação temporária, que sai sozinha no próximo interlúdio. As modificações permanentes e o item do catálogo não mudam." }),
+
+    entrada({ chave: "exploradorDaNevoa", nome: "Explorador da Névoa", tipo: "classe", classes: ["ocultista"], fonte: AS4, pagina: 66,
+      resumo: "Uma vez por cena, 2 PE para distinguir o estado da Membrana do ambiente (estável, danificada, arruinada…). Se estiver danificada ou pior, você perde 1 SAN, mas o custo de conjuração de todos os seus rituais cai 1 PE.",
+      automacao: "calculo",
+      nota: "O cartão gasta os 2 PE e pergunta o estado que o mestre informou. Danificada ou pior: tira 1 SAN e “Usar ritual” cobra 1 PE a menos até o fim da cena (o livro não dá duração; a ficha usa a cena, a mesma do “uma vez por cena”)." }),
+    entrada({ chave: "sinestesiaParanormal", nome: "Sinestesia Paranormal", tipo: "classe", classes: ["ocultista"], fonte: AS4, pagina: 66,
+      resumo: "Entrando numa cena com a Membrana danificada ou pior, você pode resistir (nada acontece) ou aceitar a sinestesia: perde 1d6 SAN e escolhe dois pares de perícias para trocar os atributos entre elas (Atletismo passa a usar Presença e Percepção, Força, por exemplo). Não vale em perícia que exige treinamento e você não tem. Termina ao sair da área afetada; só pode ser aceita de novo no dia seguinte.",
+      automacao: "calculo",
+      nota: "O cartão rola a perda de Sanidade e pede os dois pares; enquanto valer, cada perícia do par rola com o atributo da outra (o treinamento e os vínculos ficam como estão). “Encerrar” devolve os atributos de sempre. O dia é o da cronologia da campanha." }),
+    entrada({ chave: "terroresNoturnos", nome: "Terrores Noturnos", tipo: "classe", classes: ["ocultista"], fonte: AS4, pagina: 66,
+      resumo: "Ao dormir numa cena de interlúdio, role 1d100. 51 ou mais: bons sonhos. 50 ou menos: pesadelos paranormais — o descanso vira precário e você perde 1d4 SAN, mas escolhe um poder paranormal ou ritual cujos pré-requisitos cumpra e pode usá-lo (ou conjurá-lo) uma única vez até o início da próxima cena de interlúdio.",
+      automacao: "parcial",
+      nota: "O cartão rola o 1d100 (um por interlúdio) e, nos pesadelos, a perda de Sanidade; o poder ou ritual escolhido fica guardado como um uso único até o próximo interlúdio — não vira poder adquirido nem ritual aprendido. O descanso precário é da cena (anotado)." }),
   ];
 
   /* =================================================================
@@ -721,6 +766,20 @@
     geral("especialistaEsoterico", "Especialista Esotérico", 46,
       "Ao conjurar um ritual, combina os efeitos de até três catalisadores ritualísticos diferentes ao mesmo tempo.",
       [req.atr("int", 3), req.conj(2), req.poder("dominioEsoterico")], [], "informacao", { fonte: AS1 }),
+
+    /* --- Arquivos Secretos 4, p. 66-67 --- */
+    geral("gororoba", "Gororoba", 66,
+      "Numa cena de interlúdio, você pode alimentar-se uma vez sem gastar uma ação e sem precisar ter acesso a uma refeição: improvisa com os restos que encontra.",
+      [], [], "parcial", { fonte: AS4,
+        nota: "O cartão marca o uso no interlúdio atual (um por interlúdio). O que a refeição dá é o da ação alimentar-se (OPRPG p. 93), aplicado pela mesa." }),
+    geral("ruidoBranco", "Ruído Branco", 66,
+      "Num ambiente movimentado ou com muitas conversas paralelas, +1d6 em testes de Investigação e Percepção. A critério do mestre, 1 PE uma vez por cena para ouvir, entre as vozes, uma conversa com uma informação útil para a missão.",
+      [], [], "parcial", { fonte: AS4,
+        nota: "O +1d6 é oferecido no resultado de Investigação ou Percepção, para quem confirmar que o ambiente é movimentado. A informação é do mestre: o botão só gasta o PE (uma vez por cena) e deixa o pedido anotado." }),
+    geral("umaUltimaOlhada", "Uma Última Olhada", 67,
+      "Na última rodada de uma cena de investigação, 2 PE uma vez por cena: o número de rodadas disponíveis aumenta em +1.",
+      [], [], "parcial", { fonte: AS4,
+        nota: "O botão do cartão gasta os 2 PE e registra a rodada extra da cena (uma vez por cena); a contagem das rodadas da investigação é da mesa." }),
   ];
 
   /* =================================================================
@@ -938,6 +997,23 @@
       "Machucado, também recebe 20 PV temporários, uma vez por cena.",
       { requisitos: [req.elem("sangue", 1)], efeitos: [{ tipo: "resistenciaDanoMachucado", valor: 5 }], automacao: "parcial",
         nota: "A resistência a dano entra na conta enquanto os PV atuais estiverem na metade ou abaixo. Os 20 PV temporários da afinidade vêm pelo botão do cartão, uma vez por cena." }),
+
+    /* --- Arquivos Secretos 4, p. 67 (todos de Energia) --- */
+    paranormal("focoGravitacional", "Foco Gravitacional", "energia", AS4, 67,
+      "Escolha um equipamento: guardado com você, ele ocupa 0 espaços; mas toda vez que é empunhado, tem 25% de chance (1 a 25 em 1d100) de sair voando e parar num espaço em alcance curto à escolha do mestre. Destruído ou consumido, escolha outro equipamento.",
+      "A quantidade de equipamentos aumenta para três.",
+      { automacao: "calculo",
+        nota: "O cartão escolhe o item (três com afinidade). A redução vale só na carga DESTA ficha e só enquanto o item está guardado — o item do catálogo não muda. “Empunhar” rola o 1d100. Se o item sair do inventário, o cartão pede outro." }),
+    paranormal("sobreporImprevisivel", "Sobrepor Imprevisível", "energia", AS4, 67,
+      "Uma vez por rodada, só no início dela, 2 PE para rolar 1d20: par, some à sua iniciativa; ímpar, subtraia. Sua posição na ordem de iniciativa muda conforme o novo resultado.",
+      "Pode rolar 2d20 e escolher qual dos dois usar.",
+      { automacao: "parcial",
+        nota: "O botão do cartão gasta os 2 PE, rola o d20 (dois com afinidade, você escolhe) e mostra a iniciativa nova. No combate da campanha, o mestre reposiciona: mudar a ordem não dá um turno de novo a quem já agiu nesta rodada nem refaz o que foi feito." }),
+    paranormal("tracoDeInconsistencia", "Traço de Inconsistência", "energia", AS4, 67,
+      "Como reação, 2 PE para esconder sua identidade em imagens digitais capturadas por câmeras de segurança ou fotográficas, no momento em que é fotografado ou filmado.",
+      "Sua presença não pode ser capturada por imagens digitais, permanentemente; e sua voz sai distorcida em gravações.",
+      { automacao: "parcial",
+        nota: "O botão do cartão gasta os 2 PE (sem afinidade). É um efeito da história: a ficha não mexe em foto, avatar nem arquivo nenhum." }),
   ];
 
   /* =================================================================
@@ -1406,6 +1482,24 @@
     trilha("maledictologo", 99, "maldicaoSuprema", "Maldição Suprema", AS1, 45,
       "Em Reproduzir Maldição, o item conta como três categorias a menos: um item IV conta como I, e recebe maldições até voltar à IV.",
       { automacao: "calculo", dependeDe: "reproduzirMaldicao", nota: "O limite de categoria de Reproduzir Maldição já desconta as três categorias." }),
+
+    /* --- Granadeiro Blaster, Arquivos Secretos 4 p. 69 --- */
+    trilha("granadeiro", 10, "meusBebes", "Meus Bebês", AS4, 69,
+      "Treinado em Profissão (químico) — se já for treinado, +5 nela. Começa cada missão com 1 explosivo autoral, que não conta no seu limite de itens; o número sobe +1 em NEX 40%, 65% e 99%. Explosivos autorais são os fabricados por você; produza mais com Fabricação em Campo (SaH p. 94).",
+      { efeitos: [{ tipo: "treinarOuBonus", pericia: "profissao", bonus: 5 }], automacao: "parcial",
+        nota: "O treinamento (ou o +5) entra na conta; a especialidade “químico” é da mesa. O cartão entrega os explosivos da missão uma vez por missão (a da cronologia): recarregar a ficha não entrega de novo. Cada um sai marcado com o autor e fora do limite de itens — mas ocupa os espaços dele." }),
+    trilha("granadeiro", 40, "fogoAmigo", "Fogo Amigo", AS4, 69,
+      "Recebe o poder Perito em Explosivos (OPRPG p. 30). Se já o tiver, ou o adquirir de novo (só uma vez), dobra o valor somado para resistir aos seus explosivos e a quantidade de alvos que pode excluir dos efeitos. Além disso, a medida da área dos seus explosivos aumenta em +6 m (uma granada passa a um raio de 12 m; uma mina antipessoal, a um cone de 12 m).",
+      { automacao: "calculo", dependeDe: "meusBebes",
+        nota: "Com Fogo Amigo, a ficha conta Perito em Explosivos como seu. Com Perito em Explosivos também adquirido na progressão, o Intelecto entra duas vezes na DT dos seus explosivos e o número de alvos excluídos dobra — o livro fala em “valor adicionado para resistir”, e o que Perito adiciona é o Intelecto na DT (OPRPG p. 30). Os +6 m vão no raio, no comprimento do cone ou na medida principal da área." }),
+    trilha("granadeiro", 65, "oCalorDoMomento", "O Calor do Momento", AS4, 69,
+      "Ação completa e 4 PE para fabricar às pressas um explosivo autoral, com todos os bônus de um autoral normal — mas com 25% de chance (1 a 25 em 1d100) de explodir na sua mão quando tentar usá-lo, mesmo num lança-granadas.",
+      { automacao: "parcial",
+        nota: "O botão do cartão cobra os 4 PE e cria o explosivo marcado “às pressas”. A chance de 25% é rolada quando ele é usado (arremesso, detonação ou disparo no lançador), uma vez por uso — nunca na fabricação." }),
+    trilha("granadeiro", 99, "memoriaMuscular", "Memória Muscular", AS4, 69,
+      "Seus explosivos autorais podem ser empunhados por qualquer pessoa como ação livre, e você pode gastar 4 PE para usar um explosivo autoral como ação de movimento (mesmo num lança-granadas). Além disso, seus explosivos autorais causam o dobro dos dados de dano.",
+      { automacao: "calculo",
+        nota: "Os dados de dano dobram no uso de um explosivo autoral seu; números fixos não dobram. O uso como ação de movimento cobra 4 PE." }),
   ];
 
   /* =================================================================
@@ -1661,7 +1755,7 @@
   }
 
   global.RAMAOrdemPoderes = {
-    FONTES: { OPRPG: OPRPG, SAH: SAH, AS1: AS1, AS2: AS2, AS3: AS3 },
+    FONTES: { OPRPG: OPRPG, SAH: SAH, AS1: AS1, AS2: AS2, AS3: AS3, AS4: AS4 },
     PODERES_CLASSE: PODERES_CLASSE,
     PODERES_GERAIS: PODERES_GERAIS,
     PODERES_PARANORMAIS: PODERES_PARANORMAIS,

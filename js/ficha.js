@@ -103,6 +103,15 @@
      maior ela recusa, e o servidor mantém o bloco gravado quando o
      pedido não traz o campo.
 
+     16 → 17: Arquivos Secretos 4 (v2.38). O bloco `ordem` ganhou
+     `arquivo4` (registros do Influencer, ritual memorizado, exercícios,
+     terrores, Foco Gravitacional, chamariz do Backup, explosões e
+     granadas programadas) e o item de inventário, `ordem.autoral`,
+     `ordem.foraDoLimite`, `ordem.modeloGranada`, `ordem.lancador` (as
+     granadas carregadas, com modificações) e `ordem.quaseNovo`. Sem
+     conversão: uma ficha 16 abre com o estado vazio. Uma aba antiga
+     descartaria tudo isso ao gravar — com o schema maior ela recusa.
+
      Nenhuma das subidas exige migração: normalizarFicha() cria o que
      falta, vazio, e não toca no que existe. Um ritual gravado na 2 abre
      na 3 com a versão Normal em branco; uma ficha de Ordem gravada na 4
@@ -112,7 +121,7 @@
      os campos novos e os descartaria ao gravar — com o schema maior ela
      recusa abrir a ficha e pede para recarregar.
      Ver docs/CHARACTER_SCHEMA.md. */
-  var VERSAO_SCHEMA = 16;
+  var VERSAO_SCHEMA = 17;
 
   var MODULOS = {
     atributos: "Atributos", status: "Status/recursos", defesa: "Defesa",

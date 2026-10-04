@@ -562,6 +562,15 @@ segredo nenhum — ele os lê das Script Properties. Publicá-lo não expõe nad
 
 ### Atualizar o backend
 
+**v2.38.0 — SIMULACRO:** Arquivos Secretos 4. **Troque** `Codigo.gs`,
+`Campanhas.gs` e `Dados.gs`, rode **`setupRama()`** (cria a aba
+`CAMPANHA_HACKING`; repetir é seguro e não apaga nada), crie uma **nova versão**
+da implantação e só então publique o site. Nada existente é convertido: fichas
+antigas abrem com o estado do AS4 vazio e passam ao schema 17 na primeira
+gravação. Sem o `setupRama()`, só a regra de Hacking recusa gravar
+(`instalacao_incompleta`); o resto funciona. Abas abertas na versão anterior
+recusam fichas 17 e pedem para recarregar.
+
 **v2.37.0 — PALETA:** **troque** o `Codigo.gs` (o servidor deixa as cores de
 Ordem Paranormal só no tema das fichas de Ordem) e crie uma **nova versão** da
 implantação; publique o site. Sem `setupRama()`. Exportar e importar temas é só

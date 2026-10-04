@@ -160,4 +160,15 @@ export function testarCriaturasBackend({ t, preparar, novaConta, comoFn, ambient
   t.ok("a pública pode ser copiada, nunca editada por outra conta",
     Ot({ acao: "salvar_homebrew", dados: Object.assign({}, lida, { nome: "Tentativa" }) }).dados.id !== salvoHb.dados.id &&
     Dn({ acao: "ler_homebrew", homebrewId: salvoHb.dados.id }).dados.nome === ficha.nome);
+
+  t.grupo("Criaturas · procedimento da ocorrência (AS4, v2.38)");
+  const def = globalThis.definirNaInstanciaDaCriatura;
+  const simul = { ordem: { procedimentos: [{ id: "exorcismo-digital", requisitos: [{ id: "aparelhos" }, { id: "sigilos" }] }] }, instancia: {} };
+  t.ok("o servidor aceita o andamento de um procedimento da ficha", def(simul, "procedimento:exorcismo-digital",
+    { estado: "andamento", sucessos: 1, falhas: 9, participantes: [{ nome: "Ana", papel: "executar", treinado: true }], requisitos: { aparelhos: true, inventado: true } }));
+  const andamento = simul.instancia.procedimentos["exorcismo-digital"];
+  t.ok("  com a mesma régua do site (requisito desconhecido cai, números presos)", andamento.sucessos === 1 && andamento.falhas === 9 && !andamento.requisitos.inventado && andamento.requisitos.aparelhos);
+  t.ok("  estado desconhecido vira preparando", def(simul, "procedimento:exorcismo-digital", { estado: "explodido" }) && simul.instancia.procedimentos["exorcismo-digital"].estado === "preparando");
+  t.ok("  procedimento que a ficha não tem é recusado", !def(simul, "procedimento:outro", { estado: "andamento" }));
+  t.ok("  null recomeça", def(simul, "procedimento:exorcismo-digital", null) && !simul.instancia.procedimentos["exorcismo-digital"]);
 }

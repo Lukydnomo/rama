@@ -53,6 +53,7 @@
     "ler_capa_campanha",
     "sincronizar_campanha",
     "ler_hexatombe",
+    "ler_hacking",
 
     "salvar_foto",
     "salvar_perfil",
@@ -72,6 +73,8 @@
 
     /* O mesmo para o Hexatombe (v2.30): o estado leva rev e opId. */
     "salvar_hexatombe",
+    /* E para o Hacking (v2.38). */
+    "salvar_hacking",
 
     /* registrar_rolagem repete com segurança porque carrega um id
        próprio: o servidor reconhece a segunda chegada e não cria a
@@ -156,6 +159,7 @@
     atualizar_resumo_personagem: true,
     atualizar_combate: true,
     salvar_hexatombe: true,
+    salvar_hacking: true,
   };
 
   var LEITURAS = {};
@@ -706,6 +710,14 @@
     return post({ acao: "salvar_hexatombe", campanhaId: campanhaId, rev: rev, opId: opId, estado: estado });
   }
 
+  /* Regra opcional de Hacking (v2.38, AS4): o mesmo esquema do Hexatombe. */
+  function lerHacking(campanhaId, opcoes) {
+    return post({ acao: "ler_hacking", campanhaId: campanhaId }, opcoes);
+  }
+  function salvarHacking(campanhaId, rev, opId, estado) {
+    return post({ acao: "salvar_hacking", campanhaId: campanhaId, rev: rev, opId: opId, estado: estado });
+  }
+
   function lancarHexatombe(campanhaId, personagemId, operacaoId, dia, itens) {
     return post({ acao: "lancar_hexatombe", campanhaId: campanhaId, personagemId: personagemId, operacaoId: operacaoId, dia: dia, itens: itens });
   }
@@ -957,6 +969,8 @@
     lerHexatombe: lerHexatombe,
     salvarHexatombe: salvarHexatombe,
     lancarHexatombe: lancarHexatombe,
+    lerHacking: lerHacking,
+    salvarHacking: salvarHacking,
     lerImagemDoTurno: lerImagemDoTurno,
     excluirCombate: excluirCombate,
 

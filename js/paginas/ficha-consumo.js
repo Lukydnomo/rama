@@ -124,7 +124,7 @@
 
   function recarregar(ctx, arma) {
     var o = ordemDe(ctx);
-    var plano = CS().planoDeRecarga(inventario(ctx), arma);
+    var plano = CS().planoDeRecarga(inventario(ctx), arma, ordemDe(ctx));
     if (!plano.ok) { UI.avisoAtencao(plano.motivo); return; }
     var r = CS().recarregar(o, inventario(ctx), arma, novoOpId("recarga"));
     if (!r.ok) { UI.avisoAtencao(r.motivo); return; }
@@ -135,13 +135,13 @@
 
   function linhaDeMunicao(ctx, o, m) {
     var d = global.RAMAOrdemInventario.dadosDoItem(m);
-    var reserva = CS().reserva(m);
-    var vazios = CS().pacotesVazios(m);
+    var reserva = CS().reserva(m, ordemDe(ctx));
+    var vazios = CS().pacotesVazios(m, ordemDe(ctx));
     return el("div.consumo-item", { dataset: { municaoId: m.id } }, [
       el("div.consumo-item__topo", {}, [
         el("span.consumo-item__nome", { texto: m.nome }),
         el("span.consumo-item__saldo", { texto: reserva + " na reserva" }),
-        el("span.t-mini", { texto: (d.quantidade || 1) + " pacote(s) de " + CS().porPacote(m) + (vazios ? " · " + vazios + " vazio(s)" : "") }),
+        el("span.t-mini", { texto: (d.quantidade || 1) + " pacote(s) de " + CS().porPacote(m, ordemDe(ctx)) + (vazios ? " · " + vazios + " vazio(s)" : "") }),
       ]),
       el("div.faixa.consumo-item__botoes", {}, [
         el("button.r-botao.r-botao--mini", {
@@ -178,7 +178,7 @@
         vazios && vazios < (d.quantidade || 1) ? el("button.r-botao.r-botao--mini.r-botao--fantasma", {
           type: "button", texto: "Descartar vazios",
           onclick: function () {
-            var r = CS().descartarVazios(m);
+            var r = CS().descartarVazios(m, ordemDe(ctx));
             if (!r.ok) { UI.avisoAtencao(r.motivo); return; }
             feito(ctx, "repor-" + m.id);
           },
@@ -224,7 +224,7 @@
     var janela = null;
 
     function pintar() {
-      var plano = CS().planoDeAtaque(inv, arma, escolhido);
+      var plano = CS().planoDeAtaque(inv, arma, escolhido, ordemDe(ctx));
       var linhas = [];
       if (plano.municao) linhas.push(el("p", { texto: "Munição: " + plano.municao.nome + (plano.sugerida ? " (pelo nome da arma)" : "") }));
       if (plano.ok) {
@@ -481,6 +481,8 @@
        do Flagelo paga PE com PV (js/paginas/ficha-arquivo3.js). */
     var AS3 = global.RAMAFichaArquivo3 || null;
     var ajuste3 = AS3 ? AS3.ajusteDoRitual(ctx, elemento) : { menosPe: 0, notas: [] };
+    /* Arquivos Secretos 4: Explorador da Névoa tira 1 PE nesta cena. */
+    var ajuste4 = global.RAMAFichaArquivo4 ? global.RAMAFichaArquivo4.ajusteDoRitual(ctx, elemento) : { menosPe: 0, notas: [] };
     var estado3 = { peComPv: 0 };
 
     var efeito = efeitoConhecido(ritual);
@@ -507,7 +509,7 @@
         p: CS().planoDeRitual({
           elemento: elemento, afinidade: afinidade, controle: o.componentes, inventario: inv,
           controleLigado: controle, dispensa: estado.dispensa, entregar: complexa && estado.entregar,
-          catalisadorId: estado.catalisador, custo: custo ? Math.max(0, custo.total - semBase - ajuste3.menosPe) : 0, acrescimoPe: custoPeExtra,
+          catalisadorId: estado.catalisador, custo: custo ? Math.max(0, custo.total - semBase - ajuste3.menosPe - ajuste4.menosPe) : 0, acrescimoPe: custoPeExtra,
         }),
       };
     }
@@ -534,6 +536,7 @@
         if (pl.semBase) detalhes.push("–" + pl.semBase + " da Mácula Ritualística");
         if (estado.dispensa === "camuflar") detalhes.push("+2 de Camuflar Ocultismo");
         if (ajuste3.menosPe && pl.custo) detalhes.push("–" + ajuste3.menosPe + " de Torvo");
+        if (ajuste4.menosPe && pl.custo) detalhes.push("–" + ajuste4.menosPe + " do Explorador da Névoa");
         if (estado3.peComPv > total) estado3.peComPv = total;
         var peDeVerdade = total - estado3.peComPv;
         partes.push(el("label.r-marca", {}, [
@@ -542,7 +545,7 @@
         ]));
         if (peDeVerdade > atual) partes.push(el("p.t-aviso", { texto: "Não há " + recurso.toUpperCase() + " suficientes para o custo." }));
         if (AS3) partes = partes.concat(AS3.opcoesNoRitual(ctx, estado3, total, pintar));
-        ajuste3.notas.forEach(function (n) { partes.push(el("p.t-mini", { texto: n })); });
+        ajuste3.notas.concat(ajuste4.notas).forEach(function (n) { partes.push(el("p.t-mini", { texto: n })); });
       } else {
         partes.push(el("p.t-mini", { texto: "O custo deste ritual não está nos dados dele: registre o gasto à mão, nos recursos." }));
       }

@@ -58,12 +58,12 @@ function faces(lista) {
 t.grupo("Catálogo · inventário e integridade");
 const conferencia = OC.conferir(DADOS);
 t.igual("nenhum erro de conferência (ids, campos, expressões, variantes)", conferencia.erros.slice(0, 5), []);
-t.igual("contagem por livro bate com o inventário", conferencia.porLivro, { OPRPG: 67, SAH: 32, AS1: 12, AS2: 28, AS3: 36, "OPRPG (variantes)": 5 });
+t.igual("contagem por livro bate com o inventário", conferencia.porLivro, { OPRPG: 67, SAH: 32, AS1: 12, AS2: 28, AS3: 36, AS4: 4, "OPRPG (variantes)": 5 });
 const porNatureza = {};
 DADOS.criaturas.filter((c) => !c.variante).forEach((c) => { const k = c.livro + ":" + c.natureza; porNatureza[k] = (porNatureza[k] || 0) + 1; });
 t.igual("paranormais, pessoas e animais de cada livro", porNatureza,
   { "OPRPG:paranormal": 49, "OPRPG:humana": 11, "OPRPG:animal": 7, "SAH:paranormal": 13, "SAH:humana": 11, "SAH:animal": 8,
-    "AS1:paranormal": 1, "AS1:humana": 11, "AS2:animal": 2, "AS2:paranormal": 4, "AS2:humana": 22, "AS3:humana": 33, "AS3:animal": 3 });
+    "AS1:paranormal": 1, "AS1:humana": 11, "AS2:animal": 2, "AS2:paranormal": 4, "AS2:humana": 22, "AS3:humana": 33, "AS3:animal": 3, "AS4:humana": 3, "AS4:paranormal": 1 });
 const ids = DADOS.criaturas.map((c) => c.id);
 t.ok("ids únicos", new Set(ids).size === ids.length);
 t.ok("O Terminal (aventura do SAH) está no catálogo, com página", DADOS.criaturas.some((c) => c.id === "sah.criatura.o-terminal" && c.pagina === 218));
@@ -256,7 +256,7 @@ t.igual("imagens do catálogo pelo id (retrato 1:1 e corpo inteiro)", C.imagensD
 t.ok("  a cópia no Homebrew usa a do original; criatura sem catálogo não tem", !!C.imagensDoCatalogo(copia) && C.imagensDoCatalogo(antigaNorm) === null);
 const faltando = [];
 for (const c of DADOS.criaturas) {
-  const m = /^(op|sah|as1|as2|as3)\.criatura\.(.+)$/.exec(c.id);
+  const m = /^(op|sah|as1|as2|as3|as4)\.criatura\.(.+)$/.exec(c.id);
   for (const arq of ["retrato.png", "corpo.png"]) {
     /* A pasta pode estar num disco sincronizado (Google Drive), que às
        vezes demora a responder: uma segunda tentativa antes de acusar. */
@@ -398,6 +398,52 @@ C.definirNaInstancia(aliA.criatura, "uso:" + aleA.habilidades[1].id + ".d1", 17)
 t.igual("valor guardado de Prever Resultados vive na ocorrência do aliado", C.normalizar(JSON.parse(JSON.stringify(aliA.criatura))).instancia.usos[aleA.habilidades[1].id + ".d1"], 17);
 const outroA = C.criarAliado(aleA, "");
 t.ok("  e cada ocorrência é independente", !(outroA.criatura.instancia && outroA.criatura.instancia.usos[aleA.habilidades[1].id + ".d1"]));
+
+t.grupo("Arquivos Secretos 4 · ameaças e os estágios do Simulacro");
+t.igual("três ameaças com ficha completa e um Simulacro", Object.keys(cat.porId).filter((i) => /^as4\./.test(i)),
+  ["as4.criatura.assistente-de-producao", "as4.criatura.produtor", "as4.criatura.diretor", "as4.criatura.simulacro"]);
+const diretor = OC.criatura("as4.criatura.diretor");
+t.ok("Diretor: VD 200, 280 PV, vários ataques e rituais com DT (não uma reserva de PE)",
+  diretor.ordem.vd === 200 && diretor.status[0].maximo === 280 && diretor.acoes.filter((a) => /^Agredir/.test(a.nome)).length === 2 &&
+  diretor.habilidades.some((h) => h.nome === "Rituais (DT 29)") && !diretor.status.some((x) => x.id === "pe"));
+const sim = C.iniciarInstancia(OC.criatura("as4.criatura.simulacro"));
+t.igual("Simulacro: estágios com os VD publicados, sem arredondar", sim.ordem.formas.map((f) => f.vd), [64, 128, 256]);
+t.igual("  Força “—” e deslocamento 0 são valores válidos", [sim.atributos.find((a) => a.id === "for").naoAplica, sim.ordem.deslocamento[0].metros], [true, 0]);
+sim.status[0].atual = 40;
+C.definirNaInstancia(sim, "estado:x", 1);
+t.ok("trocar de estágio vale só nesta ocorrência", C.definirNaInstancia(sim, "forma", "vvorm"));
+const vs = C.vistaEfetiva(sim);
+t.ok("  vvorm: VD 128, Médio, atributos 2 (Força continua “—”)", vs.ordem.vd === 128 && vs.ordem.tamanho === "Médio" &&
+  vs.atributos.filter((a) => a.id !== "for").every((a) => a.valor === 2) && vs.atributos.find((a) => a.id === "for").naoAplica);
+t.igual("  PV máximos do estágio, sem cura silenciosa", [sim.status[0].atual, sim.status[0].maximo], [40, 200]);
+const outro = C.iniciarInstancia(OC.criatura("as4.criatura.simulacro"));
+t.ok("  outra ocorrência continua troyan", !outro.instancia.forma && C.vistaEfetiva(outro).ordem.vd === 32);
+t.ok("Exorcismo Digital: procedimento com participantes, requisitos e teste estendido",
+  sim.ordem.procedimentos[0].participantes.minimo === 2 && sim.ordem.procedimentos[0].requisitos.length === 2 && sim.ordem.procedimentos[0].dt === "4d10");
+t.ok("  andamento normalizado (requisito desconhecido cai)", C.definirNaInstancia(sim, "procedimento:exorcismo-digital",
+  { estado: "andamento", sucessos: 0, participantes: [{ nome: "Ana", papel: "executar", treinado: true }, { nome: "Beto", papel: "encarar", treinado: true }], requisitos: { aparelhos: true, sigilos: true, falso: true } }) &&
+  !sim.instancia.procedimentos["exorcismo-digital"].requisitos.falso);
+t.ok("  antes do primeiro sucesso, Saltar está livre", !C.vistaEfetiva(sim).acoes.find((a) => a.nome === "Saltar").desativada);
+C.definirNaInstancia(sim, "procedimento:exorcismo-digital", Object.assign({}, sim.instancia.procedimentos["exorcismo-digital"], { sucessos: 1 }));
+t.ok("  o primeiro sucesso impede Saltar", !!C.vistaEfetiva(sim).acoes.find((a) => a.nome === "Saltar").desativada);
+C.definirNaInstancia(sim, "procedimento:exorcismo-digital", Object.assign({}, sim.instancia.procedimentos["exorcismo-digital"], { sucessos: 3, estado: "aprisionado" }));
+t.igual("  aprisionado e destruído são estados diferentes", sim.instancia.procedimentos["exorcismo-digital"].estado, "aprisionado");
+t.ok("  procedimento inexistente é recusado", !C.definirNaInstancia(sim, "procedimento:outro", { estado: "andamento" }));
+const sj = C.normalizar(JSON.parse(JSON.stringify(sim)));
+t.ok("  estágio, condições e o exorcismo voltam ao recarregar", sj.instancia.forma === "vvorm" && sj.instancia.procedimentos["exorcismo-digital"].sucessos === 3);
+t.ok("  recomeçar apaga só o andamento", C.definirNaInstancia(sim, "procedimento:exorcismo-digital", null) && !sim.instancia.procedimentos["exorcismo-digital"]);
+
+t.grupo("Arquivos Secretos 4 · Gerador de Produção e Inquérito Paranormal");
+const fila = [7, 2, 2, 20, 20];
+const gp = OC.gerarProducao(() => fila.shift());
+t.igual("1d10 = 7: Enigmáticos (o nome da p. 47; o cabeçalho da tabela vem cifrado)", gp.perfil, "Enigmáticos");
+t.igual("  dois d6 independentes, sem somar (2 e 2 = o mesmo traço, como saiu)", gp.tracos, ["Comunicam-se por enigmas", "Comunicam-se por enigmas"]);
+t.igual("  dois d20 de aparência", gp.dados.aparencia, [20, 20]);
+t.ok("  e nenhuma ficha é criada (só texto)", !gp.status && !gp.ordem);
+const inq = OC.inquerito("as1.criatura.apostolo-do-sangue");
+t.ok("Inquérito: três ajudas para o Apóstolo do Sangue, com página", inq && inq.ajudas.length === 3 && inq.ajudas.every((x) => x.pagina === 76));
+t.ok("  e o modelo do catálogo continua o mesmo", JSON.stringify(OC.criatura("as1.criatura.apostolo-do-sangue")).indexOf("Inquérito") < 0);
+t.ok("  criatura sem ajuda publicada não ganha nada", OC.inquerito("op.criatura.zumbi-de-sangue") === null);
 
 t.grupo("Desempenho · catálogo leve");
 t.ok("cada ficha cabe com folga numa célula de Homebrew (45 000)", Object.values(cat.porId).every((c) => JSON.stringify(c).length < 20000));

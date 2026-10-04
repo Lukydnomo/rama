@@ -2250,6 +2250,137 @@ escolhas) e marcas de itens. `ordem.opcionais` ganha oito chaves. Na criatura:
 `formas[].somaAtuais` e `especial` nas habilidades. Na campanha (estado do
 Hexatombe): `regrasAs3`, `equipes[].obras` e `trocas`.
 
+## Arquivos Secretos 4 (v2.38)
+
+Fonte `AS4` (Arquivos Secretos 4, v1.0), no registro único dos livros
+(`C.LIVROS`) e nas listas próprias de cada módulo (itens, rituais, poderes,
+criaturas, imagens e `ler_imagem_do_turno` no `Campanhas.gs`). Páginas são as do
+livro. As regras da ficha ficam em `js/ordem/arquivo4.js`; a tela, em
+`js/paginas/ficha-arquivo4.js`. A regra opcional de Hacking é da campanha:
+`js/ordem/hacking.js` (copiado dentro do `Campanhas.gs`) e
+`js/paginas/campanha-hacking.js`.
+
+### Inventário do PDF
+
+| Página | Conteúdo | Tipo | Onde entrou |
+|---|---|---|---|
+| 2–5 | créditos, sumário | — | não entra |
+| 5–23 | “Créditos.EXE”: missão solo em salas numeradas | missão solo (narrativa) | só referência; não vira ficha nem regra |
+| 23–41 | O Anfitrião: aparições históricas (Roma, Silenius, Plautus…) | narrativa | só referência; nenhuma ficha inventada |
+| 42–47 | A Produção: o culto, membros e os cinco perfis (Sistemáticos, Enigmáticos, Desordeiros, Frenéticos, Teatrais) | narrativa | referência; os perfis alimentam o gerador |
+| 48 | Gerador de Produção do Anfitrião (1d10 perfil, dois d6 traços, dois d20 aparência) | tabela | biblioteca de criaturas, “Gerador de Produção do Anfitrião” |
+| 49 | Exemplos de membros (Carlos, Mônica, Antônio, Mariana, Hilário) | narrativa | não viram ficha (sem estatística publicada) |
+| 50–54 | práticas, rituais do culto, estrutura, missões com a Produção | narrativa / ganchos de aventura | só referência |
+| 55 | Assistente de Produção (VD 40) | ficha de ameaça (pessoa) | `as4.criatura.assistente-de-producao` |
+| 56 | Produtor (VD 80) | ficha de ameaça | `as4.criatura.produtor` |
+| 57 | Diretor (VD 200) | ficha de ameaça | `as4.criatura.diretor` |
+| 58–61 | Simulacro (Energia/Conhecimento) e a forma evolutiva troyan → krypto → vvorm → botnetz; Exorcismo Digital | criatura com estágios + procedimento | `as4.criatura.simulacro`, `formas` e `procedimentos` |
+| 62–63 | créditos, “Sobre a matéria” | — | não entra |
+| 64 | Influencer Paranormal, Caçador de Recompensas | origens | `catalogo.js` |
+| 65 | Chuva de Balas, Combatente Esforçado, Treinamento Militarizado (combatente); Análise Conturbada, Profissão Perigo, Quase Novo (especialista) | poderes de classe | `poderes.js` |
+| 66 | Explorador da Névoa, Sinestesia Paranormal, Terrores Noturnos (ocultista); Gororoba, Ruído Branco (gerais) | poderes | `poderes.js` |
+| 67 | Uma Última Olhada (geral); Foco Gravitacional, Sobrepor Imprevisível, Traço de Inconsistência (Energia) | poderes | `poderes.js` |
+| 68 | Backup (Energia, 2º círculo; discente e verdadeiro) | ritual | `as4.ritual.backup` |
+| 69 | Granadeiro Blaster (Meus Bebês, Fogo Amigo, O Calor do Momento, Memória Muscular) | trilha de especialista | `catalogo.js`, `poderes.js` |
+| 70 | Granada Ctrl+C Ctrl+V (amaldiçoada), granadas de gás lacrimogêneo e de tinta | itens | `itens-dados.js` |
+| 71 | Lançador de granadas; modificações Adesiva, Dupla, Programada; o modelo 40 mm | item + modificações | `itens-dados.js` |
+| 72–73 | Hacking: cena, PS, dados virtuais, cinco ações, Imprevistos Digitais | regra opcional (campanha) | aba Hacking da campanha |
+| 74–75 | mural de cosplays e artes | — | não entra |
+| 76–78 | Inquérito Mensal: ajudas contra o Apóstolo do Sangue e o nidere; a lógica das ajudas | consulta / preparo de cena | painel da criatura, “Inquérito Paranormal” |
+
+**Fora do escopo, por pedido:** os usos novos de perícias que o suplemento
+apresenta (como “Obter Informações”) **não** entram em descrição de perícia,
+menu, ação, biblioteca ou automação. As ações próprias do Hacking são outra
+coisa: existem só dentro de uma cena de hacking.
+
+### Automação, item por item
+
+| O quê | Nível | Como |
+|---|---|---|
+| Influencer Paranormal | parcial | “Registrar o Paranormal” (ação padrão, 2 PE, uma vez por cena) guarda criatura ou ritual da cena. +5 no resultado de Vontade, escolhendo a criatura registrada. Numa cena de interlúdio, memoriza um ritual registrado até o círculo do NEX (1º 5%, 2º 25%, 3º 55%, 4º 85%): fica no painel do AS4, abre “Usar ritual” e vale até o próximo interlúdio — não vira ritual aprendido |
+| Caçador de Recompensas | parcial | +2 no resultado de Fortitude/Reflexos/Vontade (contra condição mental ou de medo, quem confirma). A falha marcada guarda +1d20 para o próximo teste, que não acumula e acaba no fim da cena |
+| Chuva de Balas | conta | +10 por pacote de balas com a contagem de munição. No dano de arma de fogo, ANTES de rolar, pergunta quantos pacotes inteiros sacrificar (+2 dados cada); saem do inventário com `opId` — repetir não sacrifica de novo e recalcular não devolve munição |
+| Combatente Esforçado | conta | +1 PE por degrau de NEX (com NEX & Experiência, por nível), retroativo |
+| Treinamento Militarizado | parcial | exercitar-se no interlúdio (até o Vigor, até o fim da missão); +1d8 em teste de AGI/FOR/VIG ou no dano, um por rolagem (id da rolagem) |
+| Análise Conturbada | parcial | escolhe quem aceita; 1d6 de cada um = bônus em Intelecto e Presença na cena e a mesma perda de SAN; na própria ficha vira efeito de cena e a SAN sai |
+| Profissão Perigo | parcial | uma vez por missão; só itens que cabem na categoria e nos espaços; 4 PE, saída e entrada numa gravação só, com confirmação |
+| Quase Novo | parcial | no interlúdio: +10 PV adicionais anotados no item e uma modificação temporária que sai sozinha no próximo interlúdio; permanentes e catálogo intactos |
+| Explorador da Névoa | conta | 2 PE, uma vez por cena; o mestre informa a Membrana; danificada ou pior: −1 SAN e “Usar ritual” cobra 1 PE a menos na cena |
+| Sinestesia Paranormal | conta | aceitar rola 1d6 de SAN e troca o atributo de dois pares de perícias (treino e vínculos ficam); encerrar devolve; de novo só no dia seguinte da cronologia |
+| Terrores Noturnos | parcial | 1d100 por interlúdio; ≤ 50: −1d4 SAN, descanso precário (mesa) e um poder paranormal ou ritual de uso único até o próximo interlúdio |
+| Gororoba · Ruído Branco · Uma Última Olhada | parcial | limites por interlúdio/cena; +1d6 no resultado de Investigação/Percepção; a informação e as rodadas são do mestre |
+| Foco Gravitacional | conta | relação com o item (não muda o catálogo): guardado, uma unidade com 0 espaços; empunhar rola 25%; item destruído pede outro; até 3 com afinidade |
+| Sobrepor Imprevisível | parcial | 2 PE, d20 (2d20 com afinidade, escolha); par soma, ímpar subtrai; o mestre reposiciona — ninguém age duas vezes |
+| Traço de Inconsistência | parcial | gasta o PE; efeito da história — nenhuma foto, avatar ou arquivo é alterado |
+| Meus Bebês | parcial | 1/2/3/4 explosivos autorais no início da missão (uma entrega por missão da cronologia; recarregar não entrega de novo), com autor e fora do limite de itens, ocupando espaço |
+| Fogo Amigo | conta | conta como Perito em Explosivos (Intelecto na DT, exclui alvos); com Perito também adquirido, o Intelecto entra duas vezes e as exclusões dobram; área +6 m (raio, cone ou esfera, cada um como é) |
+| O Calor do Momento | parcial | 4 PE, explosivo autoral “às pressas”; 25% de explodir na mão rolado no USO (inclusive no lançador), nunca na fabricação |
+| Memória Muscular | conta | dobro dos DADOS de dano dos explosivos autorais (fixos não); empunhar como ação livre; uso como ação de movimento por 4 PE só para o autor |
+| Granadas e explosivos | conta | “Usar explosivo”: DT 10 + limite de PE + atributo (+ Perito), área, resistência, efeito; gasta a unidade antes de rolar; nada é aplicado a ninguém sem a mesa escolher |
+| Ctrl+C Ctrl+V | conta | d4 depois de cada explosão: par gera outra (dano próprio) até a quarta ou o primeiro ímpar; as cópias não são itens |
+| Adesiva · Dupla · Programada | conta | Adesiva: contra um ser, ataque; acertando, falha automática na resistência. Dupla: o efeito de outra granada (nunca amaldiçoada). Programada: temporizador em turnos do jogo, explosão só quando a mesa confirma. +I na categoria; iguais não se acumulam |
+| Lançador de granadas | conta | 6 granadas 40 mm, recarga de uma por ação de movimento, cada uma com as próprias modificações e autoria; contra um ser, ataque contra a Defesa e o alvo atingido sem teste de resistência; contra um ponto, sem ataque e todos na área testam; consome a granada escolhida; o modelo arremessável não entra |
+| Backup | parcial | o cartão do ritual registra o chamariz (frase, aparência), troca de lugar (2d4 SAN), sentidos na cópia (cego, surdo e pasmo em Condições), dissipação com 6d6 na versão verdadeira; o chamariz é efeito ligado a quem conjurou, não uma segunda ficha |
+| Ameaças da Produção | ficha | ataques, críticos e danos alternativos; rituais com DT e limite por conjuração, sem reserva de PE |
+| Simulacro | ficha + ocorrência | estágios com VD 32/64/128/256, tamanho e atributos (Força “—”), deslocamento 0, DT roladas (4d10); trocar de estágio mexe só na ocorrência, troca os PV máximos e nunca cura |
+| Exorcismo Digital | ocorrência | participantes (mínimo 2 treinados), requisitos marcados pelo mestre, teste estendido (3 sucessos antes de 3 falhas) com DT 4d10 rolada; o primeiro sucesso desativa Saltar; aprisionado e destruído são etapas diferentes |
+| Gerador de Produção | consulta | 1d10, dois d6 e dois d20 independentes, sem somar; só texto |
+| Inquérito Paranormal | consulta | as ajudas da p. 76–77 no painel da criatura; o mestre registra a que valer na ocorrência; o catálogo não muda |
+| Hacking | regra opcional | ver abaixo |
+
+### Hacking (p. 72–73)
+
+Desligado por padrão em toda campanha; o mestre liga na aba Hacking, e só então
+os jogadores veem a aba. Não tem ligação com o Hexatombe nem com a perícia
+Tecnologia fora da cena. Cena = sistema-alvo + DT de Hackear (vira os PS). Cada
+agente entra com o treino em Tecnologia e o Intelecto (= dados virtuais, d6).
+Turno: até duas ações, conforme o treino — Procurar Brechas e Quebrar Códigos
+(treinado), Cobrir Rastros e Programar Backdoor (veterano), Plantar Vírus
+(expert). Os testes de Tecnologia são rolados na ficha e o total entra na tela;
+os d6 virtuais são rolados na aba. PS zerados: acesso aos arquivos durante uma
+cena; numa cena posterior, o processo inteiro de novo (backdoors e vírus
+continuam no sistema). Fim da rodada: a tela sugere o imprevisto de cada agente
+pelos 1 do último turno dele e o mestre confirma ou troca antes de aplicar
+(Rastro detectado rola 2d6). A cena continua de uma sessão para outra.
+**Nada aqui acessa dispositivo, rede ou arquivo de verdade.**
+
+### Interpretações (o que o livro não diz)
+
+- **Perfil 7–8 do gerador**: o cabeçalho vem cifrado na arte; o nome,
+  Enigmáticos, é o da p. 47 (e Mariana, “enigmática”, na p. 49).
+- **Gerador**: resultados repetidos ficam como saíram.
+- **Fogo Amigo**: “valor adicionado” lido como o Intelecto de Perito em
+  Explosivos na DT (OPRPG p. 30); nenhum bônus de resistência vira DT.
+- **Granada de tinta**: a resistência evita vulnerável; o −2d20 em Furtividade é
+  redução de dados, aplicada pela mesa. A duração da nuvem de gás não é dada e
+  não é inventada.
+- **Lançador**: onde a granada cai num erro é do mestre. Granadas mundanas
+  oferecem o modelo 40 mm (as regras do livro básico valem para elas).
+- **Explorador da Névoa**: sem duração no livro; o desconto vale na cena.
+- **Backup discente**: o requisito publicado (2º círculo) foi mantido.
+- **Simulacro**: machucado = metade dos PV do estágio; os PV atuais ficam ao
+  trocar de estágio (o mestre ajusta), nunca curados em silêncio.
+- **Exorcismo Digital**: a DT 4d10 é rolada a cada teste; o mestre pode manter
+  a anterior.
+- **Hacking**: 1→Dor nos pulsos … 4→Invasão detectada pela ordem impressa; com
+  zero resultados 1, nada é sugerido; com Cobrir Rastros, contam os 1 que
+  sobraram; “perde o progresso” = PS de volta ao máximo, dados mantidos; a DT de
+  Procurar Brechas sobe por agente. A aba mostra essas leituras como
+  interpretações, não como regra.
+
+### O que a ficha e a campanha guardam de novo
+
+Na ficha (schema 17), `ordem.arquivo4` (normalizado em `R.normalizar`, vazio numa
+ficha antiga): registros do Influencer e ritual memorizado (retrato), bônus do
+Caçador, exercícios, análises, Profissão Perigo, Explorador, Sinestesia,
+Terrores, usos por cena/interlúdio, Foco Gravitacional, Sobrepor, entregas do
+Granadeiro, chamariz do Backup, explosões e temporizadores. No item:
+`ordem.autoral`, `ordem.foraDoLimite`, `ordem.modeloGranada`, `ordem.lancador`
+(granadas carregadas com modificações e autoria) e `ordem.quaseNovo`; a
+modificação temporária leva `temporaria: "interludio"`. Na criatura:
+`procedimentos` no modelo e `instancia.procedimentos` na ocorrência; formas com
+`tamanho` e `atributos`. Na campanha: a aba `CAMPANHA_HACKING`.
+
 ## Lacunas e interpretações
 
 Registradas em vez de preenchidas por dedução. Onde o livro deixa uma leitura

@@ -194,7 +194,8 @@
     var o = ordemDe(ctx);
     if (!org || !org.controles) return null;
     var f = CONTROLES[org.chave];
-    if (!f) return null;
+    /* As origens do Arquivos Secretos 4 moram em js/paginas/ficha-arquivo4.js. */
+    if (!f) return global.RAMAFichaArquivo4 ? global.RAMAFichaArquivo4.controlesDeOrigem(ctx, org) : null;
     var partes = f(ctx, o, org, estado(o, org.chave), registroDaOrigem(o, org));
     return partes && partes.length ? el("div.pilha--curta.origem-controles", { class: "pilha" }, partes.filter(Boolean)) : null;
   }

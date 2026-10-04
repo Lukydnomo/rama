@@ -70,6 +70,8 @@
     /* Arquivos Secretos 2 (v2.30): o mestre sempre vê; o jogador só com
        o modo ativo (ler_campanha devolve `hexatombe`). */
     { chave: "hexatombe",   rotulo: "Hexatombe",   secao: "RAMACampanhaHexatombe", soComModo: "hexatombe" },
+    /* Arquivos Secretos 4 (v2.38): a regra opcional de Hacking, igual. */
+    { chave: "hacking",     rotulo: "Hacking",     secao: "RAMACampanhaHacking", soComModo: "hacking" },
     { chave: "notas",       rotulo: "Notas",       secao: "RAMACampanhaNotas", soMestre: true },
     { chave: "config",      rotulo: "Configurações", secao: "RAMACampanhaConfig", soMestre: true },
   ];
@@ -300,6 +302,7 @@
       }
       var papelAntes = estado.papel;
       var hexatombeAntes = !!(estado.campanha && estado.campanha.hexatombe);
+      var hackingAntes = !!(estado.campanha && estado.campanha.hacking);
       aplicarCampanha(r);
 
       if (estado.papel === "espectador") {
@@ -322,7 +325,7 @@
       pintarTopo();
       /* O modo Hexatombe ligou ou desligou: a aba aparece ou some para o
          jogador. */
-      if (!estado.mestre && hexatombeAntes !== !!estado.campanha.hexatombe) desenhar();
+      if (!estado.mestre && (hexatombeAntes !== !!estado.campanha.hexatombe || hackingAntes !== !!estado.campanha.hacking)) desenhar();
       else notificar("campanha");
       if (tem("membros")) notificar("membros");
     }
@@ -338,6 +341,7 @@
     if (tem("documentos")) notificar("documentos");
     if (tem("rolagens")) notificar("rolagens");
     if (tem("hexatombe")) notificar("hexatombe");
+    if (tem("hacking")) notificar("hacking");
   }
 
   async function buscarPersonagensEmSegundoPlano() {
@@ -411,7 +415,7 @@
   }
 
   /* As abas que desenham fichas da mesa. As outras não pagam por ela. */
-  var PRECISAM_DA_MESA = { personagens: true, combate: true, notas: true, hexatombe: true };
+  var PRECISAM_DA_MESA = { personagens: true, combate: true, notas: true, hexatombe: true, hacking: true };
 
   function desenhar() {
     if (estado.semAcesso) return;

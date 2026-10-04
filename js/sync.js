@@ -518,6 +518,15 @@
       "ordem.retencoes": "id",
       "ordem.maldicoesMemorizadas": "id",
       "ordem.temporariosDeCena": "chave",
+      /* Arquivos Secretos 4 (v2.38): registros, explosões, granadas
+         programadas e carregadas casam pelo id — dois aparelhos não
+         brigam pela lista inteira, e a mesma granada não some nem dobra. */
+      "ordem.arquivo4.influencer.registros": "id",
+      "ordem.arquivo4.analises": "id",
+      "ordem.arquivo4.sobrepor": "id",
+      "ordem.arquivo4.explosoes": "id",
+      "ordem.arquivo4.timers": "id",
+      "inventario.itens.ordem.lancador.carregadas": "id",
     },
     /* Contadores de gasto: a diferença de cada lado se soma. */
     somaveis: [

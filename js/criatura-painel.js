@@ -404,6 +404,9 @@
 
       if (od.forma) partes.push(el("p.t-mini", { texto: "Forma inicial: " + (od.forma.nota || od.forma.inicial) }));
       if (od.formas && od.formas.length) partes.push(blocoDeFormas(v));
+      if (od.procedimentos && od.procedimentos.length) partes.push(blocoDeProcedimentos(v));
+      var inq = blocoDoInquerito(v);
+      if (inq) partes.push(inq);
 
       if (instancia && o.aoInstancia) {
         var nota = el("textarea.r-area", { rows: 2, maxlength: 1000, "aria-label": "Condições e anotações desta ocorrência" });
@@ -415,12 +418,43 @@
       return UI.painel(instancia ? "Esta ocorrência" : "Recursos", el("div.pilha--curta", { class: "pilha" }, partes));
     }
 
+    /* Inquérito Paranormal (AS4 p. 76–78): ajudas que a investigação pode
+       render contra esta ameaça. Consulta; numa ocorrência, o mestre
+       registra a que valer — nunca muda o modelo do catálogo. */
+    function blocoDoInquerito(v) {
+      var ref = OC() && OC().inquerito ? OC().inquerito((v.origem && (v.origem.catalogoId || v.origem.copiadoDe)) || "") : null;
+      if (!ref) return null;
+      var pode = instancia && !!o.aoInstancia;
+      var itens = ref.ajudas.map(function (a) {
+        return el("li.pilha--curta", { class: "pilha" }, [
+          el("p.t-mini", { texto: a.titulo + " (p. " + a.pagina + "): " + a.efeito }),
+          pode ? el("button.r-botao.r-botao--mini", { type: "button", texto: "Registrar nesta ocorrência", onclick: function () {
+            var atualNota = (v.instancia && v.instancia.nota) || "";
+            var linhaNova = "[Inquérito] " + a.titulo + ": " + a.efeito;
+            if (atualNota.indexOf(linhaNova) >= 0) { UI.aviso("Já registrado nesta ocorrência."); return; }
+            aplicar("nota", (atualNota ? atualNota + "\n" : "") + linhaNova);
+          } }) : null,
+        ]);
+      });
+      return UI.recolhivel({
+        titulo: "Inquérito Paranormal",
+        extra: ref.referencia,
+        conteudo: [el("div.pilha--curta", { class: "pilha" }, [
+          el("p.t-mini", { texto: "Sugestões situacionais, não errata: o catálogo não muda. Uma ajuda vale só na ocorrência em que o mestre a registrar." + (pode ? " Os jogadores não precisam saber dela de cara." : "") }),
+          el("ul.pilha--curta", { class: "pilha" }, itens),
+          el("p.t-mini", { texto: ref.geral }),
+        ])],
+      });
+    }
+
     /* Arquivos Secretos 2: a ficha transformada é a mesma ocorrência.
        A troca pede confirmação, porque mexe nos PV máximos. */
     function blocoDeFormas(v) {
       var od = v.ordem;
       var ativa = (v.instancia && v.instancia.forma) || "";
-      var opcoes = [{ id: "", nome: "Ficha de partida", pv: od.pvBase }].concat(od.formas.map(function (f) {
+      /* AS4: o estágio inicial tem nome (Simulacro: troyan). */
+      var inicial = od.forma && od.forma.inicial && !/\./.test(od.forma.inicial) ? od.forma.inicial + " (ficha de partida)" : "Ficha de partida";
+      var opcoes = [{ id: "", nome: inicial, pv: od.pvBase }].concat(od.formas.map(function (f) {
         return { id: f.id, nome: f.nome, pv: f.pv, pagina: f.pagina, ativacao: f.ativacao };
       }));
       function rotulo(x) { return x.nome + (x.pv ? " (" + x.pv + " PV)" : ""); }
@@ -447,6 +481,133 @@
         if (f.ativacao) partes.push(el("p.t-mini", { texto: f.nome + (f.pagina ? " (p. " + f.pagina + ")" : "") + ": " + f.ativacao }));
       });
       return el("div.pilha--curta", { class: "pilha" }, partes);
+    }
+
+    /* Arquivos Secretos 4: um procedimento da ficha (Exorcismo Digital).
+       Participantes, requisitos e o teste estendido ficam NESTA
+       ocorrência; cada passo é um clique do mestre. Aprisionar e
+       destruir são etapas diferentes, e nada termina sozinho. */
+    var NOMES_DO_ESTADO = { preparando: "preparando", andamento: "em andamento", aprisionado: "aprisionado no objeto analógico",
+      destruido: "destruído", escapou: "escapou para a internet", cancelado: "interrompido" };
+    var NOMES_DO_PAPEL = { encarar: "encara a tela", executar: "exorciza", outro: "apoio" };
+
+    function andamentoDe(v, p) {
+      var a = v.instancia && v.instancia.procedimentos && v.instancia.procedimentos[p.id];
+      return a ? U.copiar(a) : { estado: "preparando", participantes: [], requisitos: {}, sucessos: 0, falhas: 0, testes: [] };
+    }
+
+    function blocoDeProcedimentos(v) {
+      return el("div.pilha--curta", { class: "pilha" }, v.ordem.procedimentos.map(function (p) { return blocoDoProcedimento(v, p); }));
+    }
+
+    function blocoDoProcedimento(v, p) {
+      var a = andamentoDe(v, p);
+      var pode = instancia && !!o.aoInstancia;
+      var partes = [
+        el("p.t-forte", { texto: p.nome + (p.pagina ? " (p. " + p.pagina + ")" : "") + " · " + NOMES_DO_ESTADO[a.estado] }),
+        el("p.t-mini", { texto: "Teste estendido de " + p.pericia + " contra DT " + p.dt + ": " + p.sucessos + " sucessos antes de " + p.falhas + " falhas. Pelo menos " +
+          p.participantes.minimo + " participante(s)" + (p.participantes.treinamento ? " treinado(s) em " + p.participantes.treinamento : "") + "." }),
+      ];
+      if (p.papeis.length) partes.push(el("p.t-mini", { texto: "Papéis: " + p.papeis.join(" · ") + "." }));
+      if (p.nota) partes.push(el("p.t-mini", { texto: p.nota }));
+
+      function gravar(novo) { aplicar("procedimento:" + p.id, novo); }
+
+      /* participantes */
+      partes.push(el("ul.pilha--curta", { class: "pilha", "aria-label": "Participantes de " + p.nome }, a.participantes.length ? a.participantes.map(function (x, i) {
+        return el("li.faixa", {}, [
+          el("span.t-mini", { texto: x.nome + " — " + NOMES_DO_PAPEL[x.papel] + (x.treinado ? " · treinado" : " · sem treino") }),
+          pode && a.estado === "preparando" ? el("button.r-botao.r-botao--mini.r-botao--fantasma", { type: "button", texto: "Tirar", onclick: function () {
+            a.participantes.splice(i, 1); gravar(a);
+          } }) : null,
+        ]);
+      }) : [el("li.t-mini", { texto: "Nenhum participante registrado." })]));
+      if (pode && a.estado === "preparando" && a.participantes.length < 8) {
+        var nomeP = el("input.r-entrada", { type: "text", maxlength: 80, "aria-label": "Nome do participante", placeholder: "Nome do personagem" });
+        var papelP = el("select.r-selecao", { "aria-label": "Papel do participante" }, Object.keys(NOMES_DO_PAPEL).map(function (k) { return el("option", { value: k, texto: NOMES_DO_PAPEL[k] }); }));
+        var treinoP = el("input", { type: "checkbox" });
+        partes.push(el("div.faixa", {}, [nomeP, papelP, el("label.r-marca", {}, [treinoP, el("span.t-mini", { texto: "treinado" })]),
+          el("button.r-botao.r-botao--mini", { type: "button", texto: "Adicionar", onclick: function () {
+            var n = String(nomeP.value || "").trim();
+            if (!n) { UI.avisoAtencao("Diga o nome do participante."); return; }
+            a.participantes.push({ nome: n, papel: papelP.value, treinado: treinoP.checked });
+            gravar(a);
+          } })]));
+      }
+
+      /* requisitos */
+      if (p.requisitos.length) {
+        partes.push(el("div.pilha--curta", { class: "pilha" }, p.requisitos.map(function (r) {
+          var marcado = !!a.requisitos[r.id];
+          return pode && a.estado === "preparando"
+            ? el("label.r-marca", {}, [el("input", { type: "checkbox", checked: marcado, onchange: function (ev) {
+                if (ev.target.checked) a.requisitos[r.id] = true; else delete a.requisitos[r.id];
+                gravar(a);
+              } }), el("span.t-mini", { texto: r.texto })])
+            : el("p.t-mini", { texto: (marcado ? "✓ " : "○ ") + r.texto });
+        })));
+      }
+
+      if (a.sucessos || a.falhas || a.testes.length) {
+        partes.push(el("p.t-mini", { texto: "Sucessos " + a.sucessos + " de " + p.sucessos + " · falhas " + a.falhas + " de " + p.falhas + "." }));
+        var desde = Math.max(0, a.testes.length - 6);
+        partes.push(el("ul.pilha--curta", { class: "pilha", "aria-label": "Testes de " + p.nome }, a.testes.slice(desde).map(function (t, i) {
+          return el("li.t-mini", { texto: "Teste " + (desde + i + 1) + (t.por ? " (" + t.por + ")" : "") + ": " + t.total + " contra DT " + t.dt + " — " + (t.sucesso ? "sucesso" : "falha") });
+        })));
+      }
+      if (a.estado === "andamento" && a.sucessos >= 1 && p.primeiroSucesso) partes.push(el("p.t-mini.t-aviso", { texto: p.primeiroSucesso }));
+      if (a.estado === "aprisionado" && p.sucesso) partes.push(el("p.t-mini.t-aviso", { texto: p.sucesso }));
+      if (a.estado === "escapou" && p.falhaTotal) partes.push(el("p.t-mini.t-aviso", { texto: p.falhaTotal }));
+      if (a.estado === "destruido") partes.push(el("p.t-mini.t-aviso", { texto: "O objeto analógico foi destruído: fim da criatura. Os PV e o resto da ocorrência ficam como o mestre deixar." }));
+
+      if (!pode) return el("div.pilha--curta.criatura-procedimento", { class: "pilha" }, partes);
+
+      var botoes = [];
+      if (a.estado === "preparando") {
+        botoes.push(el("button.r-botao.r-botao--mini.r-botao--principal", { type: "button", texto: "Começar", onclick: function () {
+          var treinados = a.participantes.filter(function (x) { return x.treinado; }).length;
+          var faltam = p.requisitos.filter(function (r) { return !a.requisitos[r.id]; });
+          if (treinados < p.participantes.minimo) { UI.avisoAtencao("São precisos pelo menos " + p.participantes.minimo + " participantes treinados" + (p.participantes.treinamento ? " em " + p.participantes.treinamento : "") + "."); return; }
+          if (faltam.length) { UI.avisoAtencao("Falta cumprir: " + faltam.map(function (r) { return r.texto; }).join(" ")); return; }
+          a.estado = "andamento"; gravar(a);
+        } }));
+      }
+      if (a.estado === "andamento") {
+        var totalT = el("input.r-entrada", { type: "number", inputmode: "numeric", min: -99, max: 999, "aria-label": "Resultado do teste de " + p.pericia, placeholder: "resultado" });
+        var porT = el("select.r-selecao", { "aria-label": "Quem testou" }, [el("option", { value: "", texto: "quem testou" })].concat(a.participantes.map(function (x) { return el("option", { value: x.nome, texto: x.nome }); })));
+        botoes.push(el("span.t-mini", { texto: "Teste de " + p.pericia + ":" }), porT, totalT);
+        botoes.push(el("button.r-botao.r-botao--mini.r-botao--principal", { type: "button", texto: "Rolar a DT (" + p.dt + ") e registrar", onclick: function () {
+          var total = Math.round(Number(totalT.value));
+          if (totalT.value === "" || !isFinite(total)) { UI.avisoAtencao("Informe o resultado do teste de " + p.pericia + " (rolado na ficha de quem exorciza)."); return; }
+          var r = /^\d+$/.test(p.dt) ? { ok: true, total: Number(p.dt) } : D().total(p.dt, { nome: p.nome + " · DT" });
+          if (!r || !r.ok) { UI.avisoErro("A DT do procedimento não é válida."); return; }
+          var sucesso = total >= r.total;
+          var primeiro = sucesso && a.sucessos === 0;
+          a.testes.push({ id: "t" + Date.now().toString(36), dt: r.total, total: total, sucesso: sucesso, por: porT.value });
+          if (sucesso) a.sucessos += 1; else a.falhas += 1;
+          if (a.sucessos >= p.sucessos) a.estado = "aprisionado";
+          else if (a.falhas >= p.falhas) a.estado = "escapou";
+          if (r.rolagens || r.parcelas) rolar(p.nome + " · DT", r, { notas: [total + " contra " + r.total + ": " + (sucesso ? "sucesso" : "falha") + "."].concat(primeiro && p.primeiroSucesso ? [p.primeiroSucesso] : []) });
+          gravar(a);
+        } }));
+      }
+      if (a.estado === "aprisionado") {
+        botoes.push(el("button.r-botao.r-botao--mini.r-botao--perigo", { type: "button", texto: "Destruir o objeto analógico", onclick: function () {
+          UI.confirmar({ titulo: "Destruir o objeto", texto: "O simulacro está preso no objeto analógico. Destruí-lo dá fim a ele.", rotuloConfirmar: "Destruir", perigo: true })
+            .then(function (sim) { if (sim) { a.estado = "destruido"; gravar(a); } });
+        } }));
+      }
+      if (a.estado === "preparando" || a.estado === "andamento") {
+        botoes.push(el("button.r-botao.r-botao--mini.r-botao--fantasma", { type: "button", texto: "Interromper", onclick: function () { a.estado = "cancelado"; gravar(a); } }));
+      }
+      if (a.estado !== "preparando" || a.participantes.length || Object.keys(a.requisitos).length) {
+        botoes.push(el("button.r-botao.r-botao--mini.r-botao--fantasma", { type: "button", texto: "Recomeçar", onclick: function () {
+          UI.confirmar({ titulo: "Recomeçar " + p.nome, texto: "Apaga participantes, requisitos e testes desta ocorrência.", rotuloConfirmar: "Recomeçar" })
+            .then(function (sim) { if (sim) aplicar("procedimento:" + p.id, null); });
+        } }));
+      }
+      partes.push(el("div.faixa", {}, botoes));
+      return el("div.pilha--curta.criatura-procedimento", { class: "pilha" }, partes);
     }
 
     /* Perfil "como aliado": benefícios, sem PV, PE nem ficha de combate. */

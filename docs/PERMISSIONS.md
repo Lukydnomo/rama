@@ -364,6 +364,18 @@ por `doPost` como uma requisição de verdade. Entre elas:
   rodam no editor do Apps Script. Conhecer o id de um personagem ou de uma geração
   não abre nada: tudo passa pela conferência de acesso do personagem
 
+## Hacking — v2.38
+
+| ação | mestre | jogador da campanha | espectador / de fora |
+|---|---|---|---|
+| ver o estado inteiro (`ler_hacking`) | sim | não — recebe a vista dele | não |
+| ver uma cena de hacking | todas | só as que têm personagem dele, sem notas do mestre e sem PS ocultos | não |
+| ligar/desligar a regra, gravar (`salvar_hacking`) | sim | não (`sem_permissao`) | não (`nao_encontrado`) |
+| mexer no procedimento de uma criatura (`criatura_instancia`, `procedimento:<id>`) | sim | não | não |
+
+O filtro é do servidor. As ações de hacking são registros da história: nenhuma
+acessa dispositivo, rede ou arquivo real, nem as credenciais de ninguém.
+
 ## Hexatombe — v2.30
 
 | ação | mestre | jogador da campanha | espectador / de fora |

@@ -303,6 +303,19 @@ var ABAS = {
     leves: 5,
     pesadas: ['dadosJson'],
   },
+  CAMPANHA_HACKING: {
+    /* A regra opcional de Hacking da campanha (v2.38, Arquivos Secretos
+       4): uma linha por campanha, com as cenas de hacking normalizadas
+       (sistema, PS, agentes e dados virtuais, backdoors, vírus,
+       imprevistos, histórico). Só o mestre grava; o jogador recebe a
+       vista filtrada (Campanhas.gs, "HACKING"). `ops` guarda os últimos
+       lotes aplicados, para a repetição não contar duas vezes. */
+    nome: 'CAMPANHA_HACKING',
+    colunas: ['campanhaId', 'ativo', 'atualizadoEm', 'rev', 'opsJson', 'dadosJson'],
+    chave: 'campanhaId',
+    leves: 4,
+    pesadas: ['dadosJson'],
+  },
   CAMPANHA_CAPAS: {
     /* A capa (banner) da campanha. Fora do dadosJson pelo mesmo motivo
        da foto de personagem: é o campo mais pesado e o que menos muda.

@@ -407,6 +407,9 @@
     ] : null;
 
     var avisos = [];
+    /* Backup (AS4): o registro do chamariz, no cartão do ritual. */
+    var as4 = global.RAMAFichaArquivo4 && F.ehDeOrdem(ctx.ficha) ? global.RAMAFichaArquivo4.controlesDoRitual(ctx, ritual) : null;
+    if (as4) avisos.push(as4);
     var retido = retencaoDe(ctx, ritual);
     if (retido) {
       avisos.push(el("p.ritual-aviso", {

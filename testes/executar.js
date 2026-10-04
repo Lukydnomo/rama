@@ -36,6 +36,8 @@ const ARQUIVOS = [
   "js/ordem/maldicoes.js",
   "js/ordem/arquivo2.js",
   "js/ordem/arquivo3.js",
+  "js/ordem/arquivo4.js",
+  "js/ordem/hacking.js",
   "js/ordem/hexatombe.js",
   "js/criaturas.js",
   "js/tema-modelo.js",

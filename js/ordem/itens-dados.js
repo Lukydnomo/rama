@@ -23,6 +23,9 @@
      AS2    Arquivos Secretos 2, v1.0 (Jambô, pacote de conteúdo oficial)
             Recursos do Hexatombe (p. 20–21), Catalisador Sofisticado e
             Horrorizado (p. 75) e os itens amaldiçoados das fichas
+     AS4    Arquivos Secretos 4, v1.0 (Jambô, pacote de conteúdo oficial)
+            Granadas, Lançador de Granadas e modificações para granadas
+            (p. 70–71)
 
    As páginas são as do livro, não as do PDF. Os resumos são redação
    própria: guardam os números e as condições que o jogo precisa, e não
@@ -44,6 +47,11 @@
      efeitos     o que a regra faz, em frases curtas
      notas       divergências entre tabela e texto, ou entre os livros
      escolha     o que a pessoa decide ao adicionar ("de (elemento)")
+     explosivo   (v2.38) o que o uso do explosivo rola: { forma: "raio" |
+                 "cone" | "esfera", medida (m), partes ["8d6 perfuração"],
+                 dt: { atributo } ou { fixa }, resistencia (texto),
+                 efeito (texto) }. É a ficha que monta a DT (10 + limite
+                 de PE + atributo, mais Perito em Explosivos)
 
    Categoria de NAVEGAÇÃO (a aba) e categoria de EQUIPAMENTO (0 a IV)
    são coisas diferentes e moram em campos diferentes.
@@ -56,6 +64,7 @@
   var SAH = "SAH";
   var AS1 = "AS1";
   var AS2 = "AS2";
+  var AS4 = "AS4";
   var AS3 = "AS3";
 
   var T33 = "Tabela 3.3 (p. 56–57)";
@@ -582,27 +591,32 @@
 
     /* --- Explosivos --- */
     { id: "op.geral.granada-de-atordoamento", nome: "Granada de atordoamento", alias: ["Flash-bang"], fonte: OP, pagina: 64, tabela: "Tabela 3.8 (p. 63)", aba: "geral", secao: "explosivos",
-      categoria: "0", espacos: 1, consumivel: true, granada: true,
+      categoria: "0", espacos: 1, consumivel: true, granada: true, escolha: { tipo: "modeloGranada", rotulo: "Modelo 40mm, só para o lança-granadas (vazio: arremessável)", opcional: true }, 
+      explosivo: { forma: "raio", medida: 6, partes: [], dt: { atributo: "agi" }, resistencia: "Fortitude reduz para ofuscado e surdo por 1 rodada", efeito: "Atordoado por 1 rodada." },
       resumo: "Estouro barulhento e luminoso.",
       efeitos: ["Seres num raio de 6 m ficam atordoados por 1 rodada (Fortitude DT Agi reduz para ofuscado e surdo por 1 rodada)."] },
 
     { id: "op.geral.granada-de-fragmentacao", nome: "Granada de fragmentação", fonte: OP, pagina: 64, tabela: "Tabela 3.8 (p. 63)", aba: "geral", secao: "explosivos",
-      categoria: "I", espacos: 1, consumivel: true, granada: true,
+      categoria: "I", espacos: 1, consumivel: true, granada: true, escolha: { tipo: "modeloGranada", rotulo: "Modelo 40mm, só para o lança-granadas (vazio: arremessável)", opcional: true }, 
+      explosivo: { forma: "raio", medida: 6, partes: ["8d6 perfuração"], dt: { atributo: "agi" }, resistencia: "Reflexos reduz à metade" },
       resumo: "Espalha fragmentos perfurantes.",
       efeitos: ["Seres num raio de 6 m sofrem 8d6 de perfuração (Reflexos DT Agi reduz à metade)."] },
 
     { id: "op.geral.granada-de-fumaca", nome: "Granada de fumaça", fonte: OP, pagina: 64, tabela: "Tabela 3.8 (p. 63)", aba: "geral", secao: "explosivos",
-      categoria: "0", espacos: 1, consumivel: true, granada: true,
+      categoria: "0", espacos: 1, consumivel: true, granada: true, escolha: { tipo: "modeloGranada", rotulo: "Modelo 40mm, só para o lança-granadas (vazio: arremessável)", opcional: true }, 
+      explosivo: { forma: "raio", medida: 6, partes: [], dt: null, resistencia: "", efeito: "Cegos e sob camuflagem total; a fumaça dura 2 rodadas." },
       resumo: "Fumaça espessa e escura.",
       efeitos: ["Seres num raio de 6 m ficam cegos e sob camuflagem total.", "A fumaça dura 2 rodadas."] },
 
     { id: "op.geral.granada-incendiaria", nome: "Granada incendiária", fonte: OP, pagina: 64, tabela: "Tabela 3.8 (p. 63)", aba: "geral", secao: "explosivos",
-      categoria: "I", espacos: 1, consumivel: true, granada: true,
+      categoria: "I", espacos: 1, consumivel: true, granada: true, escolha: { tipo: "modeloGranada", rotulo: "Modelo 40mm, só para o lança-granadas (vazio: arremessável)", opcional: true }, 
+      explosivo: { forma: "raio", medida: 6, partes: ["6d6 fogo"], dt: { atributo: "agi" }, resistencia: "Reflexos reduz à metade e evita em chamas", efeito: "Em chamas." },
       resumo: "Espalha labaredas incandescentes.",
       efeitos: ["Seres num raio de 6 m sofrem 6d6 de fogo e ficam em chamas (Reflexos DT Agi reduz o dano à metade e evita em chamas)."] },
 
     { id: "op.geral.mina-antipessoal", nome: "Mina antipessoal", fonte: OP, pagina: 64, tabela: "Tabela 3.8 (p. 63)", aba: "geral", secao: "explosivos",
       categoria: "I", espacos: 1, consumivel: true,
+      explosivo: { forma: "cone", medida: 6, partes: ["12d6 perfuração"], dt: { atributo: "int" }, resistencia: "Reflexos reduz à metade" },
       resumo: "Mina detonada por controle remoto que dispara centenas de bolas de aço.",
       efeitos: [
         "Detonar: ação padrão, estando até alcance longo dela.",
@@ -845,11 +859,13 @@
     /* --- Explosivos · SAH p. 40 --- */
     { id: "sah.geral.dinamite", nome: "Dinamite", fonte: SAH, pagina: 41, tabela: "Tabela 1.5 (p. 40)", aba: "geral", secao: "explosivos",
       categoria: "I", espacos: 1, consumivel: true,
+      explosivo: { forma: "raio", medida: 6, partes: ["4d6 impacto", "4d6 fogo"], dt: { atributo: "agi" }, resistencia: "Reflexos reduz à metade e evita em chamas", efeito: "Em chamas." },
       resumo: "Bastão de 20 cm à base de nitroglicerina, com pavio.",
       efeitos: ["Com a mesma ação padrão, acende o pavio e arremessa a um ponto em alcance médio.", "Raio de 6 m: 4d6 de impacto e 4d6 de fogo, e em chamas (Reflexos DT Agi reduz à metade e evita em chamas)."] },
 
     { id: "sah.geral.explosivo-plastico", nome: "Explosivo plástico", fonte: SAH, pagina: 41, tabela: "Tabela 1.5 (p. 40)", aba: "geral", secao: "explosivos",
       categoria: "I", espacos: 1, consumivel: true,
+      explosivo: { forma: "raio", medida: 3, partes: ["16d6 impacto"], dt: { atributo: "int" }, resistencia: "Reflexos reduz à metade" },
       resumo: "Massa adesiva com pinos de ignição e detonador remoto.",
       efeitos: [
         "Duas rodadas para preparar os pinos e grudar numa superfície.",
@@ -860,6 +876,7 @@
 
     { id: "sah.geral.galao-vermelho", nome: "Galão vermelho", fonte: SAH, pagina: 41, tabela: "Tabela 1.5 (p. 40)", aba: "geral", secao: "explosivos",
       categoria: "0", espacos: 2, consumivel: true,
+      explosivo: { forma: "esfera", medida: 6, partes: ["12d6 fogo"], dt: { fixa: 25 }, resistencia: "Reflexos reduz à metade e evita em chamas", efeito: "Em chamas; a área fica em chamas (1d6 de fogo por rodada) até ser apagada ou a cena acabar." },
       resumo: "Galão de substância inflamável, comum em ambientes industriais.",
       efeitos: [
         "Ao sofrer dano de fogo ou balístico, explode numa esfera de 6 m: 12d6 de fogo e em chamas (Reflexos DT 25 reduz à metade e evita em chamas).",
@@ -867,7 +884,8 @@
       ] },
 
     { id: "sah.geral.granada-de-gas-sonifero", nome: "Granada de gás sonífero", fonte: SAH, pagina: 41, tabela: "Tabela 1.5 (p. 40)", aba: "geral", secao: "explosivos",
-      categoria: "I", espacos: 1, consumivel: true, granada: true,
+      categoria: "I", espacos: 1, consumivel: true, granada: true, escolha: { tipo: "modeloGranada", rotulo: "Modelo 40mm, só para o lança-granadas (vazio: arremessável)", opcional: true }, 
+      explosivo: { forma: "raio", medida: 6, partes: [], dt: { atributo: "agi" }, resistencia: "Fortitude reduz para fatigado por 1d4 rodadas", efeito: "Fumaça por 2 rodadas: inconsciente e caído (ou, em atividade física intensa, exausto por 1 rodada e depois fatigado)." },
       resumo: "Libera uma fumaça branca que faz dormir.",
       efeitos: [
         "Fumaça num raio de 6 m, por 2 rodadas.",
@@ -875,7 +893,8 @@
       ] },
 
     { id: "sah.geral.granada-de-pem", nome: "Granada de PEM", fonte: SAH, pagina: 41, tabela: "Tabela 1.5 (p. 40)", aba: "geral", secao: "explosivos",
-      categoria: "I", espacos: 1, consumivel: true, granada: true,
+      categoria: "I", espacos: 1, consumivel: true, granada: true, escolha: { tipo: "modeloGranada", rotulo: "Modelo 40mm, só para o lança-granadas (vazio: arremessável)", opcional: true }, 
+      explosivo: { forma: "raio", medida: 18, partes: ["6d6 impacto"], dt: { atributo: "agi" }, resistencia: "Fortitude reduz à metade e evita a condição", efeito: "Desativa equipamentos elétricos até o fim da cena. O dano e a paralisia (1 rodada) são só em criaturas de Energia, uma vez por cena." },
       resumo: "Emite um pulso eletromagnético poderoso.",
       efeitos: [
         "Desativa equipamentos elétricos num raio de 18 m até o fim da cena.",
@@ -1933,6 +1952,85 @@
         "Em uso, a ficha soma a Defesa (com as semanas registradas no menu do item), as RD e a vulnerabilidade. As semanas e os testes seguem a cronologia da campanha.",
         "O livro não diz se a penalidade de –5 da proteção pesada (OPRPG p. 62) some; a ficha a mantém, por ser proteção pesada. A mesa pode anulá-la com um ajuste.",
       ] },
+
+    /* =================================================================
+       ARQUIVOS SECRETOS 4 — p. 70–71
+       -----------------------------------------------------------------
+       Três granadas, o lança-granadas e as três modificações para
+       granadas. As cópias que a Ctrl+C Ctrl+V gera ao explodir NÃO são
+       itens: são explosões registradas no uso (js/ordem/arquivo4.js).
+       ================================================================= */
+
+    { id: "as4.amaldicoado.granada-ctrl-c-ctrl-v", nome: "Granada Ctrl+C Ctrl+V", elemento: "energia", fonte: AS4, pagina: 70, aba: "amaldicoados",
+      categoria: "II", espacos: 1, consumivel: true, granada: true, ctrlC: true,
+      explosivo: { forma: "raio", medida: 6, partes: ["8d6 Energia"], dt: { atributo: "agi" }, resistencia: "Reflexos reduz à metade" },
+      resumo: "Granada de fragmentação transparente, envolta por fios de cobre, que tremeluz e parece ameaçar explodir a cada segundo.",
+      efeitos: [
+        "Empunhe e gaste uma ação padrão para arremessá-la num ponto em alcance médio: raio de 6 m a partir do impacto, 8d6 de dano de Energia (Reflexos DT Agi reduz à metade).",
+        "Ao explodir, role 1d4: par, a explosão gera uma segunda granada idêntica, que explode em outro espaço à sua escolha dentro da área da granada original. Repete até a quarta explosão ou até o d4 dar ímpar (o que vier primeiro).",
+      ],
+      notas: ["As granadas geradas não são itens do inventário: cada uma é uma explosão, com o seu dano e o seu d4, registrada no uso."] },
+
+    { id: "as4.geral.granada-de-gas-lacrimogeneo", nome: "Granada de gás lacrimogêneo", fonte: AS4, pagina: 70, aba: "geral", secao: "explosivos",
+      categoria: "I", espacos: 1, consumivel: true, granada: true, escolha: { tipo: "modeloGranada", rotulo: "Modelo 40mm, só para o lança-granadas (vazio: arremessável)", opcional: true }, 
+      explosivo: { forma: "raio", medida: 6, partes: ["4d6 químico"], dt: { atributo: "agi" }, resistencia: "Fortitude reduz o dano à metade e evita enjoado",
+        efeito: "Enjoados e com dificuldade de respirar (OPRPG p. 293). Depois de deixarem a área, continuam com dificuldade de respirar por 1d4 rodadas e enjoados até o fim da cena." },
+      resumo: "Libera uma nuvem química que provoca ardência, irritação e sufocamento.",
+      efeitos: [
+        "Seres num raio de 6 m do impacto sofrem 4d6 de dano químico, ficam enjoados e com dificuldade de respirar (OPRPG p. 293).",
+        "Depois de deixarem a área, continuam com dificuldade de respirar por 1d4 rodadas e enjoados até o fim da cena.",
+        "Fortitude (DT Agi) reduz o dano à metade e evita enjoado — a dificuldade de respirar não é evitada pelo teste.",
+      ],
+      notas: ["O livro não diz quanto tempo a nuvem dura: a ficha não inventa duração para ela."] },
+
+    { id: "as4.geral.granada-de-tinta", nome: "Granada de tinta", fonte: AS4, pagina: 70, aba: "geral", secao: "explosivos",
+      categoria: "0", espacos: 1, consumivel: true, granada: true, escolha: { tipo: "modeloGranada", rotulo: "Modelo 40mm, só para o lança-granadas (vazio: arremessável)", opcional: true }, 
+      explosivo: { forma: "raio", medida: 6, partes: [], dt: { atributo: "agi" }, resistencia: "Reflexos evita a condição vulnerável",
+        efeito: "Vulneráveis e −2 dados (−2d20) em Furtividade até o fim da cena." },
+      resumo: "Granada caseira que espalha tintas coloridas e fosforescentes pelo ambiente, marcando os alvos e os tornando mais visíveis.",
+      efeitos: [
+        "Seres num raio de 6 m do impacto ficam vulneráveis e sofrem −2 dados (o “–2d20” do livro) em Furtividade até o fim da cena.",
+        "Reflexos (DT Agi) evita a condição.",
+      ],
+      notas: ["“–2d20” é perda de dois dados no teste, não uma penalidade numérica de −2.",
+        "O livro diz que Reflexos “evita condição” (no singular): a ficha lê que o teste evita vulnerável; a perda de dados em Furtividade fica para a mesa decidir."] },
+
+    { id: "as4.arma.lancador-de-granadas", nome: "Lançador de granadas", fonte: AS4, pagina: 71, aba: "armas",
+      categoria: "II", espacos: 2, lancador: { capacidade: 6 },
+      arma: { proficiencia: "pesada", tipo: "distancia", empunhadura: "duasMaos", dano: "", alcance: "longo", semMunicao: true },
+      resumo: "Arma de fogo pesada de duas mãos, de alcance longo, projetada para lançar granadas de 40 mm a longas distâncias.",
+      efeitos: [
+        "Comporta até 6 granadas de modelo 40 mm; recarregar uma granada gasta uma ação de movimento.",
+        "Granadas 40 mm funcionam com as regras do livro básico (p. 63-64), mas não funcionam arremessadas — só disparadas. O lançador não dispara granadas arremessáveis.",
+        "Contra um ser: teste de ataque à distância contra a Defesa. O dano é o da granada, no alvo atingido e em todos os seres no raio dela; os outros seres (não o alvo atingido) fazem o teste de resistência da granada.",
+        "Contra um ponto em alcance longo: sem teste de ataque e sem chance de errar, mas sem atingir ninguém diretamente — todos na área fazem o teste de resistência.",
+      ],
+      notas: ["O lançador não tem dano próprio: o dano é o da granada carregada."] },
+
+    { id: "as4.mod.granada.adesiva", nome: "Adesiva", natureza: "modificacao", fonte: AS4, pagina: 71, aba: "geral", secao: "modificacoesGranadas",
+      aplicaEm: ["granada"],
+      resumo: "A granada gruda no alvo.",
+      efeitos: [
+        "Contra um ser, é preciso um teste de ataque à distância contra a Defesa dele. Errando, ela gruda no espaço onde o ser está; acertando, gruda no ser — que falha automaticamente em qualquer teste de resistência contra a granada.",
+        "Se o efeito não for instantâneo, a granada se move com o alvo até ele gastar uma ação padrão para removê-la.",
+      ] },
+
+    { id: "as4.mod.granada.dupla", nome: "Dupla", natureza: "modificacao", fonte: AS4, pagina: 71, aba: "geral", secao: "modificacoesGranadas",
+      aplicaEm: ["granada"],
+      escolha: { tipo: "granadaDoCatalogo", rotulo: "Efeito adicional (outra granada, não amaldiçoada)" },
+      resumo: "A granada tem um efeito adicional.",
+      efeitos: [
+        "Ao aplicar, escolha o efeito de outra granada (exceto itens amaldiçoados): ele se ativa junto com o efeito principal.",
+        "O efeito adicional deve ser diferente do efeito principal.",
+      ] },
+
+    { id: "as4.mod.granada.programada", nome: "Programada", natureza: "modificacao", fonte: AS4, pagina: 71, aba: "geral", secao: "modificacoesGranadas",
+      aplicaEm: ["granada"],
+      resumo: "A granada tem um temporizador programado.",
+      efeitos: [
+        "Depois de arremessá-la ou de posicioná-la onde quiser, defina em quantos turnos ela explodirá.",
+      ],
+      notas: ["O temporizador conta turnos do jogo, marcados na ficha — nunca o relógio do computador."] },
   ];
 
   global.RAMAOrdemItensDados = {
@@ -1943,6 +2041,7 @@
       AS1: { nome: "Arquivos Secretos 1", curto: "Arquivos Secretos 1", edicao: "v1.1" },
       AS2: { nome: "Arquivos Secretos 2", curto: "Arquivos Secretos 2", edicao: "v1.0" },
       AS3: { nome: "Arquivos Secretos 3", curto: "Arquivos Secretos 3", edicao: "v1.0" },
+      AS4: { nome: "Arquivos Secretos 4", curto: "Arquivos Secretos 4", edicao: "v1.0" },
     },
     itens: ITENS,
   };

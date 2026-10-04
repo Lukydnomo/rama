@@ -17,6 +17,8 @@
      AS1    Arquivos Secretos 1, v1.1, Jambô (pacote de conteúdo oficial)
      AS2    Arquivos Secretos 2, v1.0, Jambô (pacote de conteúdo oficial — Hexatombe)
      AS3    Arquivos Secretos 3, v1.0, Jambô (pacote de conteúdo oficial — mais Hexatombe)
+     AS4    Arquivos Secretos 4, v1.0, Jambô (pacote de conteúdo oficial — a
+            Produção do Anfitrião, Energia e a regra opcional de Hacking)
 
    As páginas são as do LIVRO, não as do PDF.
 
@@ -55,6 +57,7 @@
   var AS1 = "AS1";
   var AS2 = "AS2";
   var AS3 = "AS3";
+  var AS4 = "AS4";
 
   /* Os livros, num lugar só (v2.29). Quem precisa do nome de um livro
      pergunta aqui — nomeDoLivro(sigla) — em vez de repetir uma conta
@@ -68,6 +71,10 @@
        opcionais, veículos, animais e valores médios) e as fichas das
        equipes (p. 11–105). */
     { sigla: AS3, nome: "Arquivos Secretos 3", curto: "Arquivos Secretos 3", abreviacao: "AS3", edicao: "v1.0" },
+    /* v2.38: páginas 63–73 (origens, poderes, ritual, trilha, itens e a
+       regra opcional de Hacking), as fichas da Produção (p. 55–57), o
+       Simulacro (p. 61), o gerador (p. 48) e o Inquérito (p. 76–78). */
+    { sigla: AS4, nome: "Arquivos Secretos 4", curto: "Arquivos Secretos 4", abreviacao: "AS4", edicao: "v1.0" },
   ];
 
   /* Os mapas que os módulos de catálogo usam (rótulo de filtro, nome por
@@ -611,6 +618,14 @@
       poderes: [poder(10, "Ensaio", 119), poder(40, "Frase de Efeito", 119),
                 poder(65, "Mosh Pit", 119), poder(99, "Rítmo Contagiante", 119)] },
 
+    /* --- Arquivos Secretos 4, p. 69 ---
+       Especialista dos explosivos autorais. Os poderes estão em
+       poderes.js; as contas e os botões, em js/ordem/arquivo4.js. */
+    { chave: "granadeiro", classe: "especialista", nome: "Granadeiro Blaster", pagina: 69, fonte: AS4,
+      resumo: "Nerd dos explosivos: fabrica os próprios, chega à missão com eles na mochila e os torna maiores, mais rápidos e mais destrutivos.",
+      poderes: [poder(10, "Meus Bebês", 69), poder(40, "Fogo Amigo", 69),
+                poder(65, "O Calor do Momento", 69), poder(99, "Memória Muscular", 69)] },
+
     /* --- Arquivos Secretos 1, p. 45 --- */
     { chave: "maledictologo", classe: "ocultista", nome: "Maledictólogo", pagina: 45, fonte: AS1,
       resumo: "Estuda as maldições do Outro Lado para usá-las contra ele: identifica, absorve, transfere e reproduz.",
@@ -975,6 +990,26 @@
       resumo: "Resistência a dano mental 2, +1 para cada dois rituais de Sangue ou poderes paranormais de Sangue que você possua. Os pesadelos tornam sua condição de descanso sempre uma categoria pior (luxuosa vira confortável, confortável vira normal, normal vira precária).",
       efeitos: [{ tipo: "resistenciaMentalPorSangue", base: 2 }],
       nota: "A resistência mental entra na conta e sobe sozinha com os rituais de Sangue conhecidos e os poderes paranormais de Sangue. A piora do descanso é aplicada pela mesa no interlúdio." },
+
+    /* -----------------------------------------------------------------
+       ARQUIVOS SECRETOS 4 v1.0, p. 64
+       -----------------------------------------------------------------
+       O quadro “Atualização · novo uso para a perícia Tecnologia”
+       (Obter Informações), na mesma página, fica FORA de propósito: os
+       novos usos de perícia do suplemento não entram no R.A.M.A.
+       ----------------------------------------------------------------- */
+
+    { chave: "influencerParanormal", nome: "Influencer Paranormal", fonte: AS4, pagina: 64,
+      pericias: ["enganacao", "tecnologia"],
+      poder: "Registrar o Paranormal", automacao: "parcial", controles: true,
+      resumo: "Uma vez por cena, ação padrão e 2 PE para registrar (foto, vídeo…) uma criatura paranormal ou um ritual conjurado na mesma cena. +5 em testes contra a presença perturbadora das criaturas registradas. Numa ação de interlúdio, memoriza um único ritual registrado e pode conjurá-lo como se o conhecesse até a próxima cena de interlúdio, se tiver o NEX do círculo (1º a partir de 5%, 2º de 25%, 3º de 55%, 4º de 85%).",
+      nota: "O cartão registra (uma vez por cena, 2 PE) e lista o que foi registrado. O +5 vale só contra a presença perturbadora de uma criatura registrada: ele aparece no teste de Vontade, escolhendo a criatura. O ritual memorizado (numa cena de interlúdio, até o círculo do seu NEX) fica no painel do Arquivos Secretos 4, na aba Habilidades, e abre “Usar ritual” até o próximo interlúdio — não vira ritual aprendido e não conta no limite." },
+
+    { chave: "cacadorDeRecompensas", nome: "Caçador de Recompensas", fonte: AS4, pagina: 64,
+      pericias: ["crime", "investigacao"],
+      poder: "Quem Não Arrisca, Não Petisca", automacao: "parcial", controles: true,
+      resumo: "+2 em testes para resistir a condições mentais e de medo. Falhando num desses testes, recebe +1d20 no próximo teste que fizer; o bônus termina no fim da cena e não acumula com ele mesmo.",
+      nota: "O +2 aparece no resultado do teste de resistência, para quem confirmar que é contra condição mental ou de medo. A falha é marcada no mesmo resultado; o +1d20 fica guardado e é oferecido no próximo teste, até o fim da cena." },
   ];
 
   /* =================================================================
@@ -1175,7 +1210,7 @@
   }
 
   global.RAMAOrdemCatalogo = {
-    FONTES: { OPRPG: OPRPG, SAH: SAH, AS1: AS1, AS2: AS2, AS3: AS3 },
+    FONTES: { OPRPG: OPRPG, SAH: SAH, AS1: AS1, AS2: AS2, AS3: AS3, AS4: AS4 },
     LIVROS: LIVROS,
     mapaDosLivros: mapaDosLivros,
     livro: livro,

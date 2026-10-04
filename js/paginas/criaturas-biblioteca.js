@@ -169,34 +169,43 @@
       return { busca: busca, nos: [grupoNatureza, grupoElementos, el("div.r-busca", {}, [el("span.r-busca__marca", {}, [UI.simbolo("busca")]), busca]), outros] };
     }
 
-    /* Ferramentas do mestre que acompanham o catálogo (AS1 p. 23). */
+    /* Ferramentas do mestre que acompanham o catálogo (AS1 p. 23; AS4
+       p. 48). Só narrativa: nenhuma cria ficha. */
     function ferramentas() {
       if (!OC().gerarTranstornado) return null;
       return el("div.faixa", {}, [
         el("button.r-botao.r-botao--mini.r-botao--fantasma", {
           type: "button", texto: "Gerador de Transtornados",
           title: "Perfil, traços e aparência de um Transtornado (Arquivos Secretos 1, p. 23)",
-          onclick: function () { gerador(); },
+          onclick: function () { gerador("transtornado"); },
         }),
+        OC().gerarProducao ? el("button.r-botao.r-botao--mini.r-botao--fantasma", {
+          type: "button", texto: "Gerador de Produção do Anfitrião",
+          title: "Perfil, traços e aparência de um membro da Produção (Arquivos Secretos 4, p. 48)",
+          onclick: function () { gerador("producao"); },
+        }) : null,
       ]);
     }
 
-    function gerador() {
+    function gerador(qual) {
       var D = global.RAMADados;
+      var producao = qual === "producao";
       var rolar = function (faces) { var r = D && D.total ? D.total("1d" + faces) : null; return r && r.ok ? r.total : 1 + Math.floor(Math.random() * faces); };
       var saida = el("div.pilha--curta", { class: "pilha", role: "status", "aria-live": "polite" });
       function sortear() {
-        var g = OC().gerarTranstornado(rolar);
+        var g = producao ? OC().gerarProducao(rolar) : OC().gerarTranstornado(rolar);
         U.trocar(saida, [
           el("p", { texto: "Perfil: " + g.perfil + " (1d10: " + g.dados.perfil + ")" }),
-          el("p", { texto: "Traços: " + g.tracos.join("; ") + " (2d6: " + g.dados.tracos.join(" e ") + ")" }),
+          el("p", { texto: "Traços: " + g.tracos.join("; ") + " (" + (producao ? "dois d6, sem somar" : "2d6") + ": " + g.dados.tracos.join(" e ") + ")" }),
           el("p", { texto: "Aparência: " + g.aparencia.join("; ") + " (d20: " + g.dados.aparencia.join(" e ") + ")" }),
-          el("p.criacao-fonte", { texto: g.referencia + ". A ficha de jogo vem do catálogo: Assecla, Investido ou Apóstolo do Sangue." }),
+          el("p.criacao-fonte", { texto: g.referencia + (producao
+            ? ". Só narrativa: a ficha de jogo vem do catálogo (Assistente de Produção, Produtor ou Diretor), sem mudança nas estatísticas."
+            : ". A ficha de jogo vem do catálogo: Assecla, Investido ou Apóstolo do Sangue.") }),
         ]);
       }
       sortear();
       UI.modal({
-        titulo: "Gerador de Transtornados",
+        titulo: producao ? "Gerador de Produção do Anfitrião" : "Gerador de Transtornados",
         conteudo: [saida],
         botoes: [
           { rotulo: "Fechar", classe: "r-botao--fantasma" },

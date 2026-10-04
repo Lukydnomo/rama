@@ -82,8 +82,12 @@
   };
   var TIPOS_PROTECAO = ["leve", "pesada", "escudo"];
   var ELEMENTOS = ["sangue", "morte", "conhecimento", "energia", "medo", "varia"];
-  var MARCADORES = ["acessorio", "utensilio", "vestimenta", "eletrico", "camera", "corpoACorpo", "besta", "balas"];
-  var FONTES = ["OPRPG", "SAH", "AS1", "AS2", "AS3"];
+  var MARCADORES = ["acessorio", "utensilio", "vestimenta", "eletrico", "camera", "corpoACorpo", "besta", "balas", "granada"];
+  /* As fontes aceitas numa referência de item: as do registro único dos
+     livros (C.LIVROS); sem o catálogo, a lista fixa — com o livro novo. */
+  var FONTES = (global.RAMAOrdemCatalogo && global.RAMAOrdemCatalogo.LIVROS
+    ? global.RAMAOrdemCatalogo.LIVROS.map(function (l) { return l.sigla; })
+    : ["OPRPG", "SAH", "AS1", "AS2", "AS3", "AS4"]);
   var MAX_MODIFICACOES = 12;
   var DADO = /^[1-9]\d{0,2}d([1-9]\d{0,2})$/;
 
@@ -211,6 +215,12 @@
     if (b.equipadoNaOrigem === true || b.equipadoNaOrigem === false) dados.equipadoNaOrigem = b.equipadoNaOrigem;
     var mods = (Array.isArray(b.modificacoes) ? b.modificacoes : []).map(modificacaoValida).filter(Boolean).slice(0, MAX_MODIFICACOES);
     if (mods.length) dados.modificacoes = mods;
+    /* Arquivos Secretos 4 (v2.38). Cada campo só existe quando vale. */
+    var A4 = global.RAMAOrdemArquivo4;
+    if (A4 && A4.normalizarDadosDoItem) A4.normalizarDadosDoItem(dados, b, tipo);
+    else ["modeloGranada", "autoral", "foraDoLimite", "lancador", "quaseNovo", "focoGravitacional"].forEach(function (k) {
+      if (b[k] !== undefined && b[k] !== null && b[k] !== false) dados[k] = JSON.parse(JSON.stringify(b[k]));
+    });
     /* Contagem de munição (v2.20, regra opcional): o que está carregado
        numa arma e o que já saiu dos pacotes de uma munição. Sem o módulo
        (uma página que não conta munição), passa como veio. */
@@ -314,6 +324,14 @@
     if (ELEMENTOS.indexOf(m.elemento) >= 0) saida.elemento = m.elemento;
     var escolha = textoCurto(m.escolha, 60);
     if (escolha) saida.escolha = escolha;
+    var escolhaId = textoCurto(m.escolhaId, 80);
+    if (escolhaId && /^[a-z0-9]+\.[A-Za-z0-9_.-]+$/.test(escolhaId)) saida.escolhaId = escolhaId;
+    /* Quase Novo (AS4 p. 65): a modificação dura até o início do próximo
+       interlúdio — o número do interlúdio em que foi posta. */
+    if (m.temporaria === "interludio") {
+      saida.temporaria = "interludio";
+      saida.interludio = inteiroEntre(m.interludio, 0, 99999);
+    }
     var ref = referenciaValida(m.referencia);
     if (ref) saida.referencia = ref;
     if (m.semAcrescimoDeCategoria === true) saida.semAcrescimoDeCategoria = true;

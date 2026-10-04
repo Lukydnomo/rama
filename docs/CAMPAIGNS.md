@@ -834,6 +834,27 @@ conferida de novo na hora de entregá-la.
 O servidor recusa acima do limite de célula com `dados_grandes` em vez de
 truncar. **Conteúdo truncado em silêncio é pior do que uma recusa.**
 
+## Hacking (v2.38)
+
+Regra opcional do Arquivos Secretos 4 (p. 72–73), desligada em toda campanha até o
+mestre ligar na aba **Hacking**. O mestre sempre vê a aba; o jogador, só com a
+regra ligada (`ler_campanha` devolve `hacking`). Não tem ligação com o Hexatombe.
+
+- **Mestre:** cria cenas (sistema-alvo e DT de Hackear = PS; notas só dele; PS
+  visíveis ou não), põe agentes (personagem da campanha opcional, treino em
+  Tecnologia, Intelecto = dados virtuais), começa, abre e fecha turnos, registra
+  as ações (até duas por turno, pelo treino), fecha a rodada confirmando os
+  imprevistos, encerra o acesso quando a cena de jogo acaba, usa backdoors,
+  avisa vírus (1d4), anota, edita e apaga. Cada passo é uma gravação com `rev` e
+  `opId` (repetir não aplica duas vezes; outra janela antes dá conflito e a tela
+  recarrega).
+- **Jogador:** vê só as cenas em que um personagem dele participa, com
+  histórico, dados virtuais e imprevistos — sem as notas do mestre e sem os PS se
+  o mestre não os mostrar. Não grava nada.
+- A cena continua de uma sessão para outra; o acesso vale uma cena e um novo
+  processo começa do zero (backdoors e vírus ficam).
+- Tudo é acontecimento do RPG: nada acessa dispositivo, rede ou arquivo real.
+
 ## Hexatombe (v2.30)
 
 Aba **Hexatombe**: o mestre ativa o modo e conduz os seis dias — fase do dia,

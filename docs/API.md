@@ -1,5 +1,30 @@
 # A API
 
+## Arquivos Secretos 4 e Hacking — v2.38
+
+- `ler_hacking { campanhaId }` — membro da campanha (espectador não). Mestre:
+  `{ mestre: true, rev, estado }`. Jogador: `{ mestre: false, rev, vista }`, a
+  vista montada no servidor (`RAMAHacking.vistaDoJogador`): a regra ligada e só
+  as cenas em que um personagem dele participa, sem as notas do mestre e com os
+  PS `null` quando o mestre não os mostra. Desligada: `{ ativo: false, cenas: [] }`.
+- `salvar_hacking { campanhaId, rev, opId, estado }` — só o mestre. `opId`
+  (`/^[A-Za-z0-9_-]{8,80}$/`) já aplicado devolve `repetida: true` sem gravar;
+  `rev` diferente da atual devolve `conflito` com o estado atual. O estado é
+  normalizado pela cópia de `js/ordem/hacking.js` (até 12 cenas, 6 agentes por
+  cena, ≤ 2 ações por turno, PS ≤ máximo, treino conhecido); vínculo com
+  personagem de fora da campanha é desfeito. Acima de 45.000 caracteres, o
+  histórico cede antes de recusar (`dados_grandes`). Sem a aba:
+  `instalacao_incompleta`. Marca a parte `hacking` da mesa (e `campanha` quando
+  liga ou desliga).
+- `ler_campanha` devolve `hacking: true|false`; `sincronizar_campanha` tem a
+  marca nova `hacking`.
+- Operação de combate `criatura_instancia` aceita a chave
+  `procedimento:<id>` (o andamento do Exorcismo Digital: estado, participantes,
+  requisitos marcados, sucessos, falhas e testes; `null` recomeça), conferida no
+  servidor com a mesma régua de `js/criaturas.js`.
+- Ficha: schema 17 (`ordem.arquivo4` e os campos novos do item). Nenhuma ação
+  nova para a ficha.
+
 ## Temas personalizáveis — v2.36
 
 Nenhuma ação nova. `salvar_perfil` aceita, além de `tema` e `exibicaoPastas`:

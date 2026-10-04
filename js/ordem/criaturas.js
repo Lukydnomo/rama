@@ -36,6 +36,7 @@
     AS1: { nome: "Arquivos Secretos 1", sigla: "AS1", rotulo: "Arquivos Secretos 1" },
     AS2: { nome: "Arquivos Secretos 2", sigla: "AS2", rotulo: "Arquivos Secretos 2" },
     AS3: { nome: "Arquivos Secretos 3", sigla: "AS3", rotulo: "Arquivos Secretos 3" },
+    AS4: { nome: "Arquivos Secretos 4", sigla: "AS4", rotulo: "Arquivos Secretos 4" },
   };
 
   var NOMES_ELEMENTO = { sangue: "Sangue", morte: "Morte", conhecimento: "Conhecimento", energia: "Energia", medo: "Medo" };
@@ -79,6 +80,8 @@
   function formasDe(e) {
     return (e.formas || []).map(function (f) {
       return Object.assign(copia(f), {
+        /* AS4: o estágio pode trocar os atributos ([AGI, FOR, INT, PRE, VIG]). */
+        atributos: Array.isArray(f.atributos) ? SIGLAS.map(function (s, i) { return { sigla: s, valor: f.atributos[i] }; }) : undefined,
         pericias: (f.pericias || []).map(function (p, i) { return { id: f.id + ".p" + i, nome: p[0], expressao: p[1] }; }),
         habilidades: efeitosComIds(f.habilidades, f.id + ".", false),
         acoes: efeitosComIds(f.acoes, f.id + ".", true),
@@ -128,6 +131,7 @@
         enigma: e.enigma ? Object.assign(copia(e.enigma), { rolagens: comIds(e.enigma.rolagens, "enigma") }) : null,
         variante: e.variante || null,
         formas: e.formas ? formasDe(e) : undefined,
+        procedimentos: e.procedimentos ? copia(e.procedimentos) : undefined,
         pvBase: e.formas ? e.pv : undefined,
         aliada: e.aliada === true ? true : undefined,
         ficha: e.ficha || undefined,
@@ -278,7 +282,7 @@
      expressões válidas, variantes apontando para uma base que existe.
      ================================================================= */
 
-  var FORMATO_ID = /^(op|sah|as1|as2|as3)\.criatura\.[a-z0-9-]+(\.[a-z0-9-]+)?$/;
+  var FORMATO_ID = /^(op|sah|as1|as2|as3|as4)\.criatura\.[a-z0-9-]+(\.[a-z0-9-]+)?$/;
 
   function conferir(dados) {
     var erros = [];
@@ -380,10 +384,98 @@
     };
   }
 
+  /* =================================================================
+     GERADOR DE PRODUÇÃO DO ANFITRIÃO — Arquivos Secretos 4, p. 48
+     -----------------------------------------------------------------
+     O mesmo formato: 1d10 decide o perfil, dois d6 INDEPENDENTES os
+     dois traços (cada um na coluna do perfil, sem somar) e dois d20
+     independentes as duas características de aparência. Só narrativa:
+     não cria ficha nem mexe em estatística — a ficha de jogo é a do
+     catálogo (Assistente de Produção, Produtor, Diretor).
+
+     O cabeçalho 7–8 da tabela vem cifrado na arte; o nome do perfil,
+     Enigmáticos, é o da seção "Membros Típicos" (p. 47, e Mariana, a
+     enigmática, na p. 49). Resultados repetidos: o livro não diz o que
+     fazer — ficam como saíram.
+     ================================================================= */
+
+  var GERADOR_DE_PRODUCAO = {
+    fonte: "AS4", pagina: 48,
+    perfis: [
+      { ate: 2, nome: "Sistemáticos", tracos: ["Arrogante, fala sem parar", "Pensa muito antes de fazer", "Tem boa memória, focado em catalogar",
+        "Se preocupa mais com seus objetos de pesquisa", "Se preocupa em ser perfeito", "Ridiculamente cético"] },
+      { ate: 4, nome: "Desordeiros", tracos: ["Agitado, é sempre o primeiro", "Pode se explodir", "Não sente culpa por nada",
+        "Espalha mentiras", "O primeiro a deixar o grupo pra trás", "Gosta de manusear fogo"] },
+      { ate: 6, nome: "Frenéticos", tracos: ["Medroso, é facilmente assustado", "Se move de forma irregular", "Repete movimentos e palavras",
+        "Perde facilmente o foco", "Não consegue ficar parado", "Grita do nada"] },
+      { ate: 8, nome: "Enigmáticos", tracos: ["Ambíguo", "Comunicam-se por enigmas", "Usa aparatos tecnológicos",
+        "É o primeiro a perceber algo de errado", "Sabe usar qualquer tecnologia", "Conserta qualquer aparelho"] },
+      { ate: 10, nome: "Teatrais", tracos: ["Melodramático", "Extremamente emocionado", "Se comunica com frases famosas",
+        "Veste-se de forma extravagante", "Anuncia o que vai fazer antes de fazer", "Gosta de atos performáticos e catastróficos"] },
+    ],
+    aparencia: [
+      "Tatuagens brilhantes que mudam constantemente", "Mechas do cabelo mudam de cor conforme o humor", "Implante ocular de visão noturna",
+      "Pele modificada que anula detecção de radiação de calor", "Descargas elétricas flutuam e protegem o corpo", "Fala robótica e distorcida",
+      "Aura neon colorida e brilhante", "Drone tático acoplado no corpo", "Veias são fios elétricos que saem da pele", "Cabelos eletrificados e tostados",
+      "Sua sombra não para de se mover", "Seus reflexos em superfícies são inconsistentes", "Objetos perto flutuam levemente",
+      "Deixa rastros triplicados ao se movimentar", "Piercings geram pequenas descargas elétricas", "Circuitos eletrônicos espalhados pelo corpo",
+      "Hologramas de onomatopeias surgem ao redor", "Corpo plasmático, mostrando ossos cheios de circuitos",
+      "Pequenos aparelhos eletrônicos usados como acessórios", "Spikes metálicas e estilosas saindo do corpo",
+    ],
+  };
+
+  function gerarProducao(rolar) {
+    var r = typeof rolar === "function" ? rolar : function (faces) { return 1 + Math.floor(Math.random() * faces); };
+    var g = GERADOR_DE_PRODUCAO;
+    var d10 = r(10);
+    var perfil = g.perfis.filter(function (p) { return d10 <= p.ate; })[0] || g.perfis[g.perfis.length - 1];
+    var d6a = r(6), d6b = r(6), d20a = r(20), d20b = r(20);
+    return {
+      dados: { perfil: d10, tracos: [d6a, d6b], aparencia: [d20a, d20b] },
+      perfil: perfil.nome,
+      tracos: [perfil.tracos[d6a - 1], perfil.tracos[d6b - 1]],
+      aparencia: [g.aparencia[d20a - 1], g.aparencia[d20b - 1]],
+      referencia: "Arquivos Secretos 4, p. 48",
+    };
+  }
+
+  /* =================================================================
+     INQUÉRITO PARANORMAL — Arquivos Secretos 4, p. 76–78
+     -----------------------------------------------------------------
+     Consulta e preparo de cena: o que a investigação pode render contra
+     uma ameaça do catálogo, sem refazer a ficha. NÃO é errata: o modelo
+     do catálogo não muda. Cada ajuda só vale numa ocorrência quando o
+     mestre a registra nela, à mão (e o livro pede que os jogadores não
+     saibam dos efeitos de cara).
+     ================================================================= */
+
+  var INQUERITO = {
+    pagina: 76,
+    geral: "Ajudas resolvidas com números brutos (−10 em testes, rolagens de dano e/ou Defesa), condições severas (desprevenido, debilitado, esmorecido, lento, indefeso, cego…) e/ou remoção de RD ou imunidades. Itens e rituais de uso único ou de situação muito específica resolvem o caso sem virar trunfo pela série toda (p. 78).",
+    porCriatura: {
+      "as1.criatura.apostolo-do-sangue": [
+        { id: "filha", pagina: 76, titulo: "Lembrar da filha", efeito: "Entra em conflito e abre a guarda: atordoado por 1 rodada e −10 em testes e na Defesa até o fim do combate." },
+        { id: "tomo", pagina: 76, titulo: "Tomo amaldiçoado de Morte", efeito: "Usado uma vez contra ele (ser de Sangue): perde metade dos pontos de vida; o tomo se desfaz em Lodo." },
+        { id: "lodo", pagina: 76, titulo: "Armadilha de Lodo de Morte", efeito: "Ao sair do Lodo, não consegue usar rituais de Sangue até o fim do combate." },
+      ],
+      "op.criatura.nidere": [
+        { id: "arma", pagina: 77, titulo: "Arma amaldiçoada de Energia do templo", efeito: "Na presença da arma, o nidere fica debilitado, esmorecido, lento e desprevenido; ela também destrói a engenhoca (o Enigma de Medo continua a ser resolvido)." },
+      ],
+    },
+  };
+
+  function inquerito(catalogoId) {
+    var l = INQUERITO.porCriatura[String(catalogoId || "")];
+    return l ? { geral: INQUERITO.geral, ajudas: l, referencia: "Arquivos Secretos 4, p. " + INQUERITO.pagina + "–78" } : null;
+  }
+
   global.RAMAOrdemCriaturas = {
     FONTES: FONTES,
     GERADOR_DE_TRANSTORNADOS: GERADOR_DE_TRANSTORNADOS,
     gerarTranstornado: gerarTranstornado,
+    GERADOR_DE_PRODUCAO: GERADOR_DE_PRODUCAO,
+    gerarProducao: gerarProducao,
+    inquerito: inquerito,
     carregar: carregar,
     catalogoPronto: catalogoPronto,
     criatura: criatura,

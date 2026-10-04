@@ -70,6 +70,25 @@
 
   var CHANGELOG = [
     {
+      versao: "2.38.0", codinome: "SIMULACRO", data: "04/10/2026",
+      mudancas: {
+        "Adicionado": [
+          "Arquivos Secretos 4 nas bibliotecas, com página e filtro de livro combinável: origens Influencer Paranormal e Caçador de Recompensas; 19 poderes (9 de classe, 3 gerais e 3 de Energia, mais a trilha Granadeiro Blaster); o ritual Backup (normal, discente e verdadeiro); granadas de gás lacrimogêneo, de tinta e Ctrl+C Ctrl+V, o lançador de granadas e as modificações Adesiva, Dupla e Programada.",
+          "Ameaças da Produção com ficha completa — Assistente de Produção (VD 40), Produtor (VD 80) e Diretor (VD 200) — e o Simulacro, com os estágios troyan, krypto, vvorm e botnetz (VD 32, 64, 128 e 256) na mesma ocorrência e o Exorcismo Digital como procedimento: participantes, requisitos, teste estendido com DT 4d10 rolada; o primeiro sucesso desativa Saltar, e aprisionar e destruir são etapas separadas.",
+          "Na ficha, o painel do Arquivos Secretos 4 (aba Habilidades) e os controles de cada poder: Registrar o Paranormal e o ritual memorizado até o próximo interlúdio; o +1d20 do Caçador; exercícios com +1d8 também no dano; Análise Conturbada com os voluntários; Profissão Perigo numa troca só; Quase Novo com modificação que sai sozinha no interlúdio seguinte; Explorador da Névoa com o desconto no “Usar ritual”; Sinestesia com os atributos trocados enquanto vale; Terrores Noturnos com o uso único; Foco Gravitacional (0 espaços guardado, 25% ao empunhar); Sobrepor Imprevisível; e o chamariz do Backup com troca de lugar, sentidos na cópia e dissipação.",
+          "Explosivos: “Usar explosivo” com DT, área, resistência e efeito; explosivos autorais do Granadeiro (entregues uma vez por missão, fora do limite de itens, com o autor), Fogo Amigo, a chance de 25% do Calor do Momento no uso, Memória Muscular dobrando os dados; a cadeia do Ctrl+C; granadas programadas com temporizador em turnos do jogo; e o lança-granadas com 6 granadas 40 mm, cada uma com as próprias modificações, contra um ser (ataque) ou um ponto (sem ataque).",
+          "Chuva de Balas: +10 por pacote de balas com a contagem de munição e, antes do dano de uma arma de fogo, quantos pacotes inteiros sacrificar (+2 dados cada), sem devolver munição ao recarregar a ficha.",
+          "Regra opcional de Hacking, desligada por padrão, na aba Hacking da campanha: cenas com sistema-alvo e PS, agentes com dados virtuais, as cinco ações pelo treino em Tecnologia (até duas por turno), Imprevistos Digitais confirmados pelo mestre no fim da rodada, acesso por uma cena, backdoors e vírus; a cena continua entre sessões, e o jogador vê só as cenas do próprio personagem. Tudo é acontecimento do RPG — nenhum dispositivo, rede ou arquivo de verdade.",
+          "Na biblioteca de criaturas, o Gerador de Produção do Anfitrião (perfil, dois traços e duas características, só narrativa) e, no painel da criatura, o Inquérito Paranormal: as ajudas contra o Apóstolo do Sangue e o nidere, registradas pelo mestre só na ocorrência em que valerem.",
+        ],
+        "Técnico": [
+          "js/ordem/arquivo4.js e js/paginas/ficha-arquivo4.js; js/ordem/hacking.js, copiado dentro do Campanhas.gs (um teste confere a cópia) e js/paginas/campanha-hacking.js. Ficha no schema 17 (`ordem.arquivo4` e campos do item: autoria, limite, modelo 40 mm, granadas carregadas, Quase Novo), com as listas novas casando pelo id na sincronização. Ocorrência de criatura com `procedimento:<id>`, conferido no servidor. Ações `ler_hacking` e `salvar_hacking` (só o mestre grava, com `rev` e `opId`) e a aba `CAMPANHA_HACKING`: troque `Codigo.gs`, `Campanhas.gs` e `Dados.gs`, rode `setupRama()` e crie uma nova versão da implantação.",
+          "Fora do escopo por pedido: os usos novos de perícias do suplemento (como “Obter Informações”) não entram em perícia, menu, ação, biblioteca nem automação. As leituras do que o livro não diz estão em docs/ORDEM-REGRAS.md e, no Hacking, na própria aba.",
+          "Testes: 104 novos na ficha e nas regras (poderes, origens, explosivos, munição, persistência e Hacking), 23 nas criaturas (estágios, procedimento, gerador e Inquérito) e 27 no servidor (Hacking de ponta a ponta e o procedimento); verificado no navegador simulado em desktop e celular.",
+        ],
+      },
+    },
+    {
       versao: "2.37.0", codinome: "PALETA", data: "04/10/2026",
       mudancas: {
         "Adicionado": [

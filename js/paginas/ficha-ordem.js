@@ -826,6 +826,7 @@
           ? global.RAMASecaoOrigens.controlesDePoder(ctx, aq) : null,
         !aq.origemChave && aq.situacao === "ok" && global.RAMAFichaArquivo2 ? global.RAMAFichaArquivo2.controles(ctx, aq) : null,
         !aq.origemChave && aq.situacao === "ok" && global.RAMAFichaArquivo3 ? global.RAMAFichaArquivo3.controles(ctx, aq) : null,
+        !aq.origemChave && aq.situacao === "ok" && global.RAMAFichaArquivo4 ? global.RAMAFichaArquivo4.controles(ctx, aq) : null,
       ].concat(avisos, [
         aq.referencia ? el("p.criacao-fonte", { texto: aq.referencia }) : null,
       ]);
@@ -1419,8 +1420,16 @@
           });
           if (!certo) return;
           var fim = null;
-          mudarCondicao(ctx, function () { fim = CD().novaCena(cond, null, { interludio: true }); return fim; }, "condicoes-novo-interludio");
+          var vencidas = [];
+          mudarCondicao(ctx, function () {
+            fim = CD().novaCena(cond, null, { interludio: true });
+            /* Quase Novo (AS4): as modificações temporárias saem aqui, na
+               mesma gravação do interlúdio. */
+            if (fim && fim.mudou !== false && global.RAMAFichaArquivo4) vencidas = global.RAMAFichaArquivo4.aoNovoInterludio(ctx);
+            return fim;
+          }, "condicoes-novo-interludio");
           if (fim && fim.encerradas && fim.encerradas.length) UI.aviso("Terminaram com a cena: " + fim.encerradas.join(", ") + ".");
+          if (vencidas.length) UI.aviso("Quase Novo: terminaram as modificações temporárias — " + vencidas.join("; ") + ".", { duracao: 8000 });
         },
       }),
       el("label.r-marca.condicoes__combate", {}, [
@@ -1975,6 +1984,9 @@
       uso.semCategoria.length
         ? el("p.t-mini.t-aviso", { texto: "Sem categoria informada (não contam em nenhum limite): " + uso.semCategoria.map(function (i) { return i.nome; }).join(", ") + "." })
         : null,
+      uso.foraDoLimite && uso.foraDoLimite.length
+        ? el("p.t-mini", { texto: "Fora do limite de itens (Meus Bebês, AS4 p. 69; continuam ocupando espaço): " + uso.foraDoLimite.map(function (i) { return i.nome; }).join(", ") + "." })
+        : null,
       uso.acimaDeIV && uso.acimaDeIV.length
         ? el("p.t-mini.t-erro", {
             texto: "Acima de IV (não podem ser requisitados sem habilidades que reduzam a categoria, OPRPG p.53): " +
@@ -2486,7 +2498,8 @@
       notas: notasDosDados(dados).concat(restr),
       acoes: [acaoDeEmpenho(ctx, o, p, r)].concat(global.RAMASecaoOrigens ? global.RAMASecaoOrigens.acoesNoTeste(ctx, o, p, r, dado, bonus, atributo) : [],
         global.RAMAFichaArquivo2 ? global.RAMAFichaArquivo2.acoesNoTeste(ctx, o, p, r, dado, bonus, atributo) : [],
-        global.RAMAFichaArquivo3 ? global.RAMAFichaArquivo3.acoesNoTeste(ctx, o, p, r, dado, bonus, atributo) : []).filter(Boolean),
+        global.RAMAFichaArquivo3 ? global.RAMAFichaArquivo3.acoesNoTeste(ctx, o, p, r, dado, bonus, atributo) : [],
+        global.RAMAFichaArquivo4 ? global.RAMAFichaArquivo4.acoesNoTeste(ctx, o, p, r, dado, bonus, atributo) : []).filter(Boolean),
     });
   }
 
@@ -3755,6 +3768,9 @@
         UI.avisoAtencao(arma.nome + " está acoplada: o par ataca pela outra arma (Acoplável, Arquivos Secretos 2, p. 71).");
         return;
       }
+      /* Lança-granadas (AS4): contra um ponto nem há teste de ataque — a
+         escolha vem antes da perícia. */
+      if (global.RAMAFichaArquivo4 && global.RAMAFichaArquivo4.interceptaAtaque(ctx, arma)) return;
       var ef = R.armaEfetiva(ordemDe(ctx), ctx.ficha.inventario, arma, ctx.ficha.pericias);
       if (!ef.pericia) { UI.avisoErro(ef.avisos[0] || "Escolha a perícia de ataque no modo edição."); return; }
       var CS = global.RAMAOrdemConsumo;
@@ -3770,6 +3786,8 @@
        contagem de munição (OPRPG p. 59 e 174). Dois canos: −1 dado no
        ataque e dano 6d6 (SAH, Espingarda de Cano Duplo). */
     rolarAtaque: function (ctx, arma, modo) {
+      /* Lança-granadas (AS4): o ataque é o da granada carregada. */
+      if (global.RAMAFichaArquivo4 && global.RAMAFichaArquivo4.interceptaAtaque(ctx, arma)) return;
       var ef = R.armaEfetiva(ordemDe(ctx), ctx.ficha.inventario, arma, ctx.ficha.pericias);
       var m = modo || {};
       var notas = [];
@@ -3835,6 +3853,15 @@
     },
 
     rolarDano: function (ctx, arma, critico, alternativo, modo, extras) {
+      /* Chuva de Balas (AS4): os pacotes sacrificados entram ANTES da
+         rolagem; a pergunta vem uma vez só (extras.as4 marca a resposta). */
+      if (global.RAMAFichaArquivo4 && !(extras && extras.as4)) {
+        global.RAMAFichaArquivo4.antesDoDano(ctx, arma, function (maisDados, notasAs4) {
+          SecaoInventarioOrdem.rolarDano(ctx, arma, critico, alternativo, modo, Object.assign({}, extras || {}, { as4: { dados: maisDados, notas: notasAs4 } }));
+        });
+        return;
+      }
+      var as4 = (extras && extras.as4) || { dados: 0, notas: [] };
       var ef = R.armaEfetiva(ordemDe(ctx), ctx.ficha.inventario, arma, ctx.ficha.pericias);
       var dano = alternativo && ef.alternativo ? ef.alternativo.dano : ef.dano;
       var escolhaD6 = 0;
@@ -3856,6 +3883,7 @@
         dano = "6d6";
         nota = "Dois canos: dano 6d6.";
       }
+      if (as4.dados) dano = R.aumentarDados(dano, as4.dados);
 
       /* Frase de Efeito (AS3 p. 119): o multiplicador guardado no crítico. */
       var multFrase = global.RAMAFichaArquivo3 ? global.RAMAFichaArquivo3.multiplicadorNoDano(ctx, !!critico) : 0;
@@ -3871,6 +3899,7 @@
       var notasAS2 = global.RAMAFichaArquivo2 ? global.RAMAFichaArquivo2.noDano(ctx, arma, r, ef, extras) : [];
       if (multFrase) notasAS2.push("Frase de Efeito: multiplicador ×" + multFrase + ".");
       if (global.RAMAFichaArquivo3) notasAS2 = notasAS2.concat(global.RAMAFichaArquivo3.noDano(ctx, arma, r, ef));
+      notasAS2 = notasAS2.concat(as4.notas || []);
 
       /* Atributo e modificações: parcelas próprias, fora da multiplicação
          do crítico, como qualquer bônus numérico (OPRPG p.54). */
@@ -3886,7 +3915,8 @@
           (escolhaD6 ? " · 1d6 = " + escolhaD6 + " → " + dano : ""),
         critico: !!critico,
         notas: (nota ? [nota] : []).concat(notasAS2),
-        acoes: global.RAMAFichaArquivo3 ? global.RAMAFichaArquivo3.acoesNoDano(ctx, arma, r) : [],
+        acoes: (global.RAMAFichaArquivo3 ? global.RAMAFichaArquivo3.acoesNoDano(ctx, arma, r) : [])
+          .concat(global.RAMAFichaArquivo4 ? global.RAMAFichaArquivo4.acoesNoDano(ctx, arma, r) : []),
       });
     },
 
@@ -4237,7 +4267,10 @@
       var topo2 = global.RAMAFichaArquivo2 ? global.RAMAFichaArquivo2.painel(ctx) : null;
       /* Arquivos Secretos 3: cronologia, sacrifício, regras e itens. */
       var topo3 = global.RAMAFichaArquivo3 ? global.RAMAFichaArquivo3.painel(ctx) : null;
-      dasRegras.topo = topo2 && topo3 ? U.el("div.pilha--curta", { class: "pilha" }, [topo2, topo3]) : (topo2 || topo3);
+      /* Arquivos Secretos 4: missão, rituais guardados, chamariz, timers. */
+      var topo4 = global.RAMAFichaArquivo4 ? global.RAMAFichaArquivo4.painel(ctx) : null;
+      var topos = [topo2, topo3, topo4].filter(Boolean);
+      dasRegras.topo = topos.length > 1 ? U.el("div.pilha--curta", { class: "pilha" }, topos) : (topos[0] || null);
       return global.RAMASecaoHabilidades.aba(ctx, dasRegras);
     },
   };
