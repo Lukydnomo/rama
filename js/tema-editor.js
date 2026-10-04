@@ -22,6 +22,14 @@
    As cores entram por seletor ou digitadas; o que não é cor válida é
    apontado e o último valor bom continua valendo. Os valores são DADOS
    (js/tema-modelo.js); o CSS sai do resolvedor, nunca do que se digita.
+
+   Exportar e importar (.json): um tema vai e volta como arquivo do
+   R.A.M.A. (RAMATemaModelo.exportarTema/importarTema). Importar entra no
+   RASCUNHO, como um tema novo — nada é salvo antes de Salvar/Aplicar.
+
+   O tema da conta só tem o que é do site inteiro. O que é de um sistema
+   (os elementos e graus de Ordem) só aparece no tema de uma ficha desse
+   sistema (`o.sistema`), em categoria própria.
    ===================================================================== */
 
 (function (global) {
@@ -82,6 +90,8 @@
      o.nomeFicha    (ficha) o nome, para o título
      o.aparencia    (ficha) o bloco atual da ficha
      o.podeSalvar   (ficha) false: só ver
+     o.sistema      (ficha) "ordem" | "universal": libera as propriedades
+                    daquele sistema; no tema da conta, só as gerais
      o.aplicar      (ficha) function(aparencia) → Promise<{ ok, pendente, erro }>
      o.aoSalvar     (conta) function(preferencias gravadas)
      ================================================================= */
@@ -92,6 +102,7 @@
     o = o || {};
     var ehFicha = o.contexto === "ficha";
     var podeSalvar = ehFicha ? o.podeSalvar !== false : true;
+    var sistema = ehFicha ? (o.sistema === "ordem" ? "ordem" : "universal") : "geral";
 
     /* ---- o rascunho ---- */
     var prefs = o.preferencias || {};
@@ -100,7 +111,7 @@
     var fichaTema = null;        // ficha: o tema próprio (cópia, sem id)
     var sel;
     if (ehFicha) {
-      var ap = M().normalizarAparencia(o.aparencia);
+      var ap = M().normalizarAparencia(o.aparencia, sistema);
       fichaTema = ap.tema ? clonar(ap.tema) : null;
       sel = { modo: ap.modo, id: null };
     } else {
@@ -150,7 +161,7 @@
     var areaEscolhas = el("div.tema-escolhas");
     var areaEditor = el("section.tema-personalizar", { "aria-label": "Personalizar o tema" });
     var caixa = el("div.tema-previa", { "aria-hidden": "true", inert: "" });
-    montarPrevia(caixa);
+    montarPrevia(caixa, sistema);
     var areaContraste = el("div.tema-contraste", { role: "status", "aria-live": "polite" });
     var erroSalvar = el("p.r-ajuda.t-erro", { role: "alert", hidden: true });
 
@@ -252,7 +263,7 @@
 
     function pintarEmUso() {
       if (ehFicha) {
-        var a = M().normalizarAparencia(o.aparencia);
+        var a = M().normalizarAparencia(o.aparencia, sistema);
         emUso.textContent = a.modo === "conta"
           ? "Em uso agora: herdado da sua conta — " + nomeDaConta() + "."
           : "Em uso agora: tema próprio desta ficha — " + (a.modo === "personalizado" ? a.tema.nome : NOMES[a.modo]) + ".";
@@ -298,6 +309,142 @@
       });
     }
     function cheio() { return !ehFicha && temas.length >= M().MAX_TEMAS; }
+    /* Exportar não muda nada: vale também para quem só pode ver. */
+    function botaoArquivo(texto, rotulo, aoClicar) {
+      return el("button.r-botao.r-botao--mini.r-botao--fantasma", { type: "button", texto: texto, "aria-label": rotulo, title: rotulo, onclick: aoClicar });
+    }
+    function botaoImportar() {
+      return el("div.faixa.faixa--curta", {}, [
+        el("button.r-botao.r-botao--mini", {
+          type: "button", texto: "Importar tema (.json)", disabled: !podeSalvar || cheio(),
+          "aria-label": ehFicha ? "Importar um tema de arquivo para esta ficha" : "Importar um tema de arquivo para a sua conta",
+          onclick: importarArquivo,
+        }),
+      ]);
+    }
+
+    /* =================================================================
+       ARQUIVO (.json)
+       ================================================================= */
+
+    /* O que está no editor agora — mesmo o que ainda não foi salvo. */
+    function exportarArquivo(tema) {
+      var texto = JSON.stringify(M().exportarTema(tema, sistema), null, 2);
+      var area = el("textarea.r-area", { rows: 10, readonly: true, "aria-label": "Tema em JSON" });
+      area.value = texto;
+      UI.modal({
+        titulo: "Exportar tema",
+        largo: true,
+        conteudo: [
+          el("p", { texto: "“" + tema.nome + "” como está no editor agora, mesmo o que ainda não foi salvo. O arquivo pode ser importado no tema do site ou no de uma ficha, nesta ou em outra conta." }),
+          area,
+          sistema === "ordem"
+            ? el("p.t-mini", { texto: "As cores de Ordem Paranormal vão junto, mas só valem quando o tema for importado numa ficha de Ordem." })
+            : null,
+        ],
+        botoes: [
+          { rotulo: "Baixar arquivo", classe: "r-botao--principal", aoClicar: function () { baixar(texto, tema.nome); } },
+          { rotulo: "Copiar", aoClicar: function () {
+            return Promise.resolve().then(function () { return global.navigator.clipboard.writeText(texto); })
+              .then(function () { UI.avisoOk("Copiado."); }, function () {
+                area.select();
+                UI.avisoAtencao("Não foi possível copiar sozinho — o texto está selecionado, use Ctrl+C.");
+              });
+          } },
+          { rotulo: "Fechar", classe: "r-botao--fantasma" },
+        ],
+      });
+    }
+
+    function baixar(texto, nome) {
+      var base = String(nome || "tema").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 40) || "tema";
+      try {
+        var url = URL.createObjectURL(new Blob([texto], { type: "application/json" }));
+        var a = document.createElement("a");
+        a.href = url;
+        a.download = "tema-" + base + ".json";
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        setTimeout(function () { URL.revokeObjectURL(url); }, 10000);
+        UI.avisoOk("Arquivo gerado: " + a.download);
+      } catch (e) {
+        UI.avisoAtencao("Não foi possível gerar o arquivo neste navegador — copie o texto da caixa.");
+      }
+    }
+
+    /* Colar ou escolher um arquivo; a prévia diz o que entra e o que fica
+       de fora antes de importar. Importar cria um tema NOVO no rascunho. */
+    function importarArquivo() {
+      if (!podeSalvar || cheio()) return;
+      var lido = null;
+      var area = el("textarea.r-area", { rows: 8, placeholder: "Cole aqui o conteúdo do arquivo .json do tema", "aria-label": "Conteúdo do arquivo do tema" });
+      var previa = el("div.pilha.pilha--curta", { role: "status", "aria-live": "polite" });
+      var janela = null;
+
+      function conferir() {
+        lido = null;
+        var botao = janela && janela.janela.querySelector(".r-modal__rodape .r-botao--principal");
+        if (botao) botao.disabled = true;
+        if (!area.value.trim()) { U.limpar(previa); return; }
+        var r = M().importarTema(area.value, sistema);
+        if (!r.ok) {
+          U.trocar(previa, r.problemas.map(function (p) { return el("p.t-erro", { texto: p }); }));
+          return;
+        }
+        lido = r.tema;
+        if (botao) botao.disabled = false;
+        U.trocar(previa, [
+          el("div.faixa", {}, [amostras(r.tema), el("strong", { texto: r.tema.nome }), el("span.t-mini", { texto: "base " + M().NOMES_BASE[r.tema.base].toLowerCase() + " · " + Object.keys(r.tema.valores).length + " mudanças" })]),
+        ].concat(r.avisos.map(function (a) { return el("p.t-mini", { texto: a }); })));
+      }
+      area.addEventListener("input", conferir);
+
+      function escolher() {
+        var entrada = document.createElement("input");
+        entrada.type = "file";
+        entrada.accept = ".json,application/json,text/plain";
+        entrada.style.display = "none";
+        entrada.addEventListener("change", function () {
+          var arquivo = entrada.files && entrada.files[0];
+          document.body.removeChild(entrada);
+          if (!arquivo) return;
+          if (arquivo.size > 200 * 1024) {
+            U.trocar(previa, el("p.t-erro", { texto: "O arquivo passa de 200 KB: isso não parece um tema do R.A.M.A." }));
+            return;
+          }
+          var leitor = new FileReader();
+          leitor.onload = function () { area.value = String(leitor.result || ""); conferir(); };
+          leitor.onerror = function () { U.trocar(previa, el("p.t-erro", { texto: "Não foi possível ler o arquivo." })); };
+          leitor.readAsText(arquivo);
+        });
+        document.body.appendChild(entrada);
+        entrada.click();
+      }
+
+      janela = UI.modal({
+        titulo: ehFicha ? "Importar tema para esta ficha" : "Importar tema",
+        largo: true,
+        conteudo: [
+          el("p", { texto: "Escolha um arquivo .json de tema exportado pelo R.A.M.A., ou cole o conteúdo. O tema entra como novo no editor e só é salvo quando você " + (ehFicha ? "aplicar à ficha." : "salvar o tema.") }),
+          el("div.faixa", {}, [el("button.r-botao.r-botao--fantasma", { type: "button", texto: "Escolher arquivo .json", onclick: escolher })]),
+          area,
+          previa,
+        ],
+        botoes: [
+          { rotulo: "Cancelar", classe: "r-botao--fantasma" },
+          { rotulo: "Importar", classe: "r-botao--principal", aoClicar: function (fechar) {
+            if (!lido) return;
+            var tema = lido;
+            fechar();
+            criarDe(tema, tema.nome);
+          } },
+        ],
+      });
+      var botao = janela.janela.querySelector(".r-modal__rodape .r-botao--principal");
+      if (botao) botao.disabled = true;
+    }
 
     function desenharEscolhas() {
       var blocos = [];
@@ -320,19 +467,23 @@
         var proprio = fichaTema
           ? [opcao({ modo: "personalizado" }, fichaTema.nome, "Tema próprio desta ficha (cópia independente).", fichaTema, [
               botaoMini("Duplicar", "Começar outro tema a partir deste", function () { criarDe(fichaTema, fichaTema.nome + " (cópia)"); }),
+              botaoArquivo("Exportar", "Exportar " + fichaTema.nome + " como arquivo .json", function () { exportarArquivo(fichaTema); }),
             ])]
-          : [el("p.r-ajuda", { texto: "Esta ficha ainda não tem um tema próprio. Use “Personalizar” num tema pronto ou copie um tema da sua conta." })];
+          : [el("p.r-ajuda", { texto: "Esta ficha ainda não tem um tema próprio. Use “Personalizar” num tema pronto, copie um tema da sua conta ou importe um arquivo." })];
+        proprio.push(botaoImportar());
         blocos.push(el("fieldset.tema-grupo", {}, [el("legend.t-rotulo", { texto: "Tema próprio desta ficha" })].concat(proprio)));
         blocos.push(blocoDaConta());
       } else {
         var seus = temas.map(function (t) {
           return opcao({ modo: "personalizado", id: t.id }, t.nome, "Baseado no " + M().NOMES_BASE[t.base].toLowerCase() + ".", t, [
             botaoMini("Duplicar", "Duplicar " + t.nome, function () { criarDe(t, t.nome + " (cópia)"); }, cheio()),
+            botaoArquivo("Exportar", "Exportar " + t.nome + " como arquivo .json", function () { exportarArquivo(t); }),
             botaoMini("Excluir", "Excluir " + t.nome, function () { excluir(t); }),
           ]);
         });
-        if (!seus.length) seus = [el("p.r-ajuda", { texto: "Nenhum tema seu ainda. Use “Personalizar” num tema pronto para começar." })];
-        if (cheio()) seus.push(el("p.r-ajuda", { texto: "Limite de " + M().MAX_TEMAS + " temas por conta: exclua um para criar outro." }));
+        if (!seus.length) seus = [el("p.r-ajuda", { texto: "Nenhum tema seu ainda. Use “Personalizar” num tema pronto ou importe um arquivo para começar." })];
+        if (cheio()) seus.push(el("p.r-ajuda", { texto: "Limite de " + M().MAX_TEMAS + " temas por conta: exclua um para criar ou importar outro." }));
+        seus.push(botaoImportar());
         blocos.push(el("fieldset.tema-grupo", {}, [el("legend.t-rotulo", { texto: "Seus temas" })].concat(seus)));
       }
       U.trocar(areaEscolhas, blocos);
@@ -380,13 +531,13 @@
           });
           if (!ok || !aberto) return;
         }
-        var copia = M().novoTema(origem, nome);
+        var copia = M().novoTema(origem, nome, sistema);
         delete copia.id;
         fichaTema = copia;
         sel = { modo: "personalizado", id: null };
       } else {
         if (cheio()) return;
-        var novo = M().novoTema(origem, nome);
+        var novo = M().novoTema(origem, nome, sistema);
         temas.push(novo);
         sel = { modo: "personalizado", id: novo.id };
       }
@@ -484,7 +635,7 @@
         onchange: function () { tema.base = base.value === "escuro" ? "escuro" : "claro"; desenharEditor(); atualizar(); },
       }, ["claro", "escuro"].map(function (b) { return el("option", { value: b, texto: M().NOMES_BASE[b], selected: tema.base === b }); }));
 
-      var categorias = M().CATEGORIAS.map(function (cat) { return categoria(tema, cat); });
+      var categorias = M().categoriasDe(sistema).map(function (cat) { return categoria(tema, cat); });
 
       U.trocar(areaEditor, [
         el("h3.t-secao.tema-personalizar__titulo", { tabindex: "-1", texto: "Personalizar “" + tema.nome + "”" }),
@@ -500,7 +651,7 @@
     }
 
     function categoria(tema, cat) {
-      var tokens = M().TOKENS.filter(function (t) { return t.cat === cat.chave; });
+      var tokens = M().tokensDe(sistema).filter(function (t) { return t.cat === cat.chave; });
       var simples = tokens.filter(function (t) { return !t.avancado; });
       var avancados = tokens.filter(function (t) { return t.avancado; });
       var proprios = tokens.filter(function (t) { return tema.valores[t.chave]; }).length;
@@ -544,8 +695,7 @@
 
       function pintarAmostra() {
         var r = M().valoresResolvidos(tema)[token.chave];
-        if (token.num) amostra.style.setProperty("opacity", String(r.num));
-        amostra.style.setProperty("background", token.num ? "var(--cor-vida)" : r.preenchimento);
+        amostra.style.setProperty("background", r.preenchimento);
       }
       function refazer() {
         var antiga = linhas[token.chave];
@@ -564,23 +714,7 @@
 
       var controles;
       var tipoAtual = (proprio || res.valor).tipo;
-      if (token.num) {
-        var saida = el("output.t-mini", { texto: Math.round(res.num * 100) + "%" });
-        controles = el("div.tema-prop__controles", {}, [
-          el("input.tema-prop__faixa", {
-            id: idPrincipal, type: "range", min: token.num[0], max: token.num[1], step: token.num[2], value: res.num, disabled: !podeSalvar,
-            oninput: function (ev) {
-              var v = proprioOuNovo();
-              v.tipo = "num";
-              v.valor = Number(ev.target.value);
-              saida.textContent = Math.round(v.valor * 100) + "%";
-              marcarProprio();
-              mudou();
-            },
-          }),
-          saida,
-        ]);
-      } else if (tipoAtual === "linear" || tipoAtual === "radial") {
+      if (tipoAtual === "linear" || tipoAtual === "radial") {
         controles = editorDeGradiente(proprio || res.valor, idPrincipal, function () { marcarProprio(); mudou(); }, refazer, proprioOuNovo);
       } else {
         controles = editorDeCor(proprio || res.valor, token.alfa, idPrincipal, token.rotulo, erro, function (cor, alfa) {
@@ -644,7 +778,7 @@
     }
 
     function atualizarContagem(caixaCat, chaveCat, tema) {
-      var n = M().TOKENS.filter(function (t) { return t.cat === chaveCat && tema.valores[t.chave]; }).length;
+      var n = M().tokensDe(sistema).filter(function (t) { return t.cat === chaveCat && tema.valores[t.chave]; }).length;
       var extra = caixaCat.querySelector(".recolhivel__extra");
       if (extra) extra.textContent = n ? n + (n === 1 ? " mudança" : " mudanças") : "";
     }
@@ -887,8 +1021,8 @@
     function aplicarFicha(fechar) {
       if (salvando || !o.aplicar) return null;
       var aparencia = sel.modo === "personalizado" && fichaTema
-        ? M().normalizarAparencia({ v: 1, modo: "personalizado", tema: fichaTema })
-        : M().normalizarAparencia({ v: 1, modo: sel.modo === "personalizado" ? "conta" : sel.modo });
+        ? M().normalizarAparencia({ v: 1, modo: "personalizado", tema: fichaTema }, sistema)
+        : M().normalizarAparencia({ v: 1, modo: sel.modo === "personalizado" ? "conta" : sel.modo }, sistema);
       salvando = true;
       erroSalvar.hidden = true;
       return Promise.resolve().then(function () { return o.aplicar(aparencia); }).then(function (r) {
@@ -908,18 +1042,10 @@
     return aberto;
   }
 
-  /* A caixa de prévia: um pedaço de cada coisa que o tema pinta. Só para
-     ver (inert): nada aqui recebe clique ou foco. */
-  function montarPrevia(caixa) {
-    function barra(nome, cor, pct) {
-      var b = el("div.tema-previa__barra");
-      b.style.setProperty("--previa-cor", "var(" + cor + ")");
-      var p = el("span.tema-previa__barra-cheia");
-      p.style.setProperty("width", pct + "%");
-      b.appendChild(p);
-      b.appendChild(el("span.tema-previa__barra-texto", { texto: nome + " " + pct + "/100" }));
-      return b;
-    }
+  /* A caixa de prévia: um pedaço de cada coisa que o tema pinta — só o
+     que é do site inteiro; numa ficha de Ordem, também as marcas dela.
+     Só para ver (inert): nada aqui recebe clique ou foco. */
+  function montarPrevia(caixa, sistema) {
     function marca(nome, cor) {
       var s = el("span.tema-previa__elemento", { texto: nome });
       s.style.setProperty("border-left-color", "var(" + cor + ")");
@@ -934,9 +1060,9 @@
         ]),
       ]),
       el("div.tema-previa__cartao", {}, [
-        el("strong.tema-previa__titulo", { texto: "Agente de exemplo" }),
-        el("p.tema-previa__corpo", { texto: "Texto do corpo da ficha." }),
-        el("p.tema-previa__apoio", { texto: "Texto de apoio · Registro 0000" }),
+        el("strong.tema-previa__titulo", { texto: "Título de exemplo" }),
+        el("p.tema-previa__corpo", { texto: "Texto do corpo." }),
+        el("p.tema-previa__apoio", { texto: "Texto de apoio · 04/10/2026" }),
         el("input.r-entrada", { type: "text", tabindex: "-1", placeholder: "Dica em campo vazio" }),
         el("div.tema-previa__botoes", {}, [
           el("button.r-botao.r-botao--principal", { type: "button", tabindex: "-1", texto: "Principal" }),
@@ -944,21 +1070,18 @@
           el("button.r-botao", { type: "button", tabindex: "-1", disabled: true, texto: "Desligado" }),
           el("span.tema-previa__foco", { texto: "Foco" }),
         ]),
-        barra("PV", "--cor-vida", 70),
-        barra("PE", "--cor-esforco", 45),
-        barra("SAN", "--cor-sanidade", 90),
         el("div.tema-previa__estados", {}, [
           el("span.tema-previa__estado", { dataset: { tipo: "ok" }, texto: "Salvo" }),
           el("span.tema-previa__estado", { dataset: { tipo: "aviso" }, texto: "Aviso" }),
           el("span.tema-previa__estado", { dataset: { tipo: "erro" }, texto: "Erro" }),
-          el("span.tema-previa__estado", { dataset: { tipo: "paranormal" }, texto: "Paranormal" }),
+          el("span.tema-previa__estado", { dataset: { tipo: "destaque" }, texto: "Destaque" }),
         ]),
-        el("div.tema-previa__elementos", {}, [
+        sistema === "ordem" ? el("div.tema-previa__elementos", {}, [
           marca("Sangue", "--cor-elemento-sangue"), marca("Morte", "--cor-elemento-morte"),
           marca("Conhecimento", "--cor-elemento-conhecimento"), marca("Energia", "--cor-elemento-energia"),
           marca("Medo", "--cor-elemento-medo"),
           el("span.tema-previa__grau", { texto: "Treinado" }),
-        ]),
+        ]) : null,
       ]),
       el("div.tema-previa__secundaria", { texto: "Área secundária" }),
     ]);

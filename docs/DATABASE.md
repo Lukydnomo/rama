@@ -193,7 +193,7 @@ apresentação: pasta aberta, busca e filtros continuam no endereço da página,
 nada da organização (pastas, sistema das fichas) muda com ela.
 
 `preferenciasJson.temas` (v2.36) é a lista de temas personalizados da conta (no
-máximo 12) e `temaAtivo` o id do que está em uso quando `tema` é
+máximo 12, só com propriedades gerais — nada de um sistema, v2.37) e `temaAtivo` o id do que está em uso quando `tema` é
 `"personalizado"`. Cada tema é dado estruturado e versionado (`v: 1`, `nome`,
 `base`, `valores` com cores hexadecimais, transparência e gradientes) — formato
 em [API.md](API.md#temas-personalizáveis--v236). Nenhum CSS é guardado: o

@@ -34,6 +34,9 @@
     });
     t.iguais("bloco inválido volta a usar o tema da conta", S.normalizarFicha({ nome: "X", aparencia: { modo: "personalizado", tema: "body{background:url(x)}" } }).aparencia, { v: 1, modo: "conta" });
     t.igual("seguir o aparelho é guardado explicitamente", S.normalizarFicha({ nome: "X", aparencia: { modo: "sistema" } }).aparencia.modo, "sistema");
+    var comElementos16 = { modo: "personalizado", tema: { base: "claro", valores: { fundo: { tipo: "cor", cor: "#eeeeee" }, elementoMedo: { tipo: "cor", cor: "#000000" } } } };
+    t.ok("ficha de Ordem guarda as cores de Ordem do tema", !!S.normalizarFicha({ nome: "O", tipoFicha: "ordem", aparencia: comElementos16 }).aparencia.tema.valores.elementoMedo);
+    t.ok("  a universal descarta (são de outro sistema)", !S.normalizarFicha({ nome: "U", aparencia: comElementos16 }).aparencia.tema.valores.elementoMedo);
     var exp16 = S.criarFicha({ nome: "Exportada" });
     exp16.aparencia = { v: 1, modo: "personalizado", tema: TEMA16 };
     var imp16 = V.importado(JSON.parse(JSON.stringify(V.exportar("personagem", exp16))));

@@ -3203,6 +3203,12 @@ html.arrastando * {
    Tudo aqui usa os papéis de css/tokens.css — nenhuma cor fixa.
    ===================================================================== */
 
+/* Um contexto com tema próprio (js/tema.js, aplicarEm: a janela do
+   editor, as janelas por cima dela) declara de novo a cor do texto. Sem
+   isto, o texto herdaria a cor JÁ CALCULADA no <body>, que é a do
+   rascunho, e não a do tema legível da janela. */
+[data-tema-contexto] { color: var(--cor-texto-2); }
+
 .r-icone--contorno { border-color: var(--cor-traco-fraca); }
 .r-icone--contorno:hover { border-color: var(--cor-traco-media); }
 .ficha-topo__tema[data-proprio="sim"] { color: var(--cor-texto); border-color: var(--cor-traco-forte); }
@@ -3310,15 +3316,12 @@ html.arrastando * {
 .tema-previa__botoes { display: flex; gap: var(--e1); flex-wrap: wrap; align-items: center; }
 .tema-previa__botoes .r-botao { min-height: calc(var(--alvo-toque) - 10px); padding: var(--e1) var(--e2); }
 .tema-previa__foco { padding: 0 var(--e2); outline: 2px solid var(--cor-foco); outline-offset: 2px; color: var(--cor-texto-2); }
-.tema-previa__barra { position: relative; height: 22px; background: var(--cor-fundo); border: var(--borda) solid var(--previa-cor); overflow: hidden; }
-.tema-previa__barra-cheia { position: absolute; inset: 0 auto 0 0; background: var(--previa-cor); opacity: var(--opacidade-barra); }
-.tema-previa__barra-texto { position: relative; padding: 0 var(--e2); font-family: var(--fonte-mini); font-size: var(--texto-mini); color: var(--cor-texto); line-height: 20px; }
 .tema-previa__estados, .tema-previa__elementos { display: flex; gap: var(--e1); flex-wrap: wrap; align-items: center; }
 .tema-previa__estado { padding: 0 var(--e2); border: var(--borda) solid currentColor; font-family: var(--fonte-mini); font-size: var(--texto-mini); }
 .tema-previa__estado[data-tipo="ok"] { color: var(--cor-ok); }
 .tema-previa__estado[data-tipo="aviso"] { color: var(--cor-aviso); }
 .tema-previa__estado[data-tipo="erro"] { color: var(--cor-erro); }
-.tema-previa__estado[data-tipo="paranormal"] { color: var(--cor-paranormal); }
+.tema-previa__estado[data-tipo="destaque"] { color: var(--cor-paranormal); }
 .tema-previa__elemento { padding: 0 var(--e2); border-left: 4px solid var(--cor-traco-media); color: var(--cor-texto-2); font-family: var(--fonte-mini); font-size: var(--texto-mini); }
 .tema-previa__grau { color: var(--cor-grau); font-family: var(--fonte-mini); font-size: var(--texto-mini); }
 .tema-previa__secundaria { padding: var(--e2); background: var(--fundo-superficie-2); color: var(--cor-texto-2); }
@@ -3335,6 +3338,6 @@ html.arrastando * {
   .r-modal.tema-editor__janela .r-modal__rodape { display: grid; grid-template-columns: 1fr 1fr; gap: var(--e2); }
   .r-modal.tema-editor__janela .r-modal__rodape .r-botao { width: 100%; }
   .r-modal.tema-editor__janela .r-modal__rodape .r-botao--principal { grid-column: 1 / -1; order: -1; }
-  /* A prévia compacta: o essencial de cada papel, sem repetir barras. */
-  .tema-previa__barra + .tema-previa__barra, .tema-previa__elementos, .tema-previa__secundaria { display: none; }
+  /* A prévia compacta: o essencial de cada papel. */
+  .tema-previa__secundaria { display: none; }
 }

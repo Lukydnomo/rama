@@ -602,6 +602,9 @@
       nomeFicha: estado.ficha.nome,
       aparencia: estado.ficha.aparencia,
       podeSalvar: ctx.podeEditar(),
+      /* As cores de um sistema (elementos e graus de Ordem) só existem no
+         tema de uma ficha dele. */
+      sistema: F.ehDeOrdem(estado.ficha) ? "ordem" : "universal",
       aplicar: aplicarTema,
     });
   }

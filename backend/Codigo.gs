@@ -904,17 +904,24 @@ function validarPreferencias(pedido) {
    CSS livre, url() ou HTML — o navegador gera o CSS a partir disto.
 
    Tipo de cada propriedade: g = cor ou gradiente (com transparência),
-   c = cor sólida, a = cor com transparência, n = número entre 0,1 e 1. */
+   c = cor sólida, a = cor com transparência.
+
+   O tema da CONTA só aceita as propriedades gerais (v2.37). As de um
+   sistema (TEMA_TOKENS_SISTEMA) só ficam no tema de uma ficha daquele
+   sistema; em qualquer outro lugar, caem fora. */
 var TEMA_TOKENS = {
   fundo: 'g', superficie: 'g', superficie2: 'g', superficie3: 'c',
   cabecalho: 'g', selecao: 'g', selecaoTexto: 'c',
   texto: 'c', texto2: 'c', texto3: 'c', link: 'c', textoDica: 'c',
   botao: 'g', botaoTexto: 'c', botaoHover: 'g', botaoComum: 'g',
   campo: 'c', tracoMedia: 'c', tracoFraca: 'c', tracoForte: 'c', foco: 'c',
-  vida: 'c', esforco: 'c', sanidade: 'c', azul: 'c', verde: 'c', cinza: 'c', opacidadeBarra: 'n',
   ok: 'c', aviso: 'c', erro: 'c', paranormal: 'c',
-  grau: 'c', elementoSangue: 'c', elementoMorte: 'c', elementoConhecimento: 'c', elementoEnergia: 'c', elementoMedo: 'c',
   sombra: 'a', veuModal: 'a', vinheta: 'a', scanline: 'a', veuRecorte: 'a', contornoCor: 'a',
+  grau: 'c', elementoSangue: 'c', elementoMorte: 'c', elementoConhecimento: 'c', elementoEnergia: 'c', elementoMedo: 'c',
+};
+var TEMA_TOKENS_SISTEMA = {
+  grau: 'ordem', elementoSangue: 'ordem', elementoMorte: 'ordem',
+  elementoConhecimento: 'ordem', elementoEnergia: 'ordem', elementoMedo: 'ordem',
 };
 var TEMA_MAX_PONTOS = 8;
 var TEMA_MAX_TEMAS = 12;
@@ -936,11 +943,6 @@ function arredondarTema(n, casas) { var f = Math.pow(10, casas); return Math.rou
 
 function valorDeTema(tipo, v) {
   if (!v || typeof v !== 'object' || Array.isArray(v)) return null;
-  if (tipo === 'n') {
-    if (v.tipo !== 'num') return null;
-    var n = numeroDeTema(v.valor, 0.1, 1);
-    return n === null ? null : { tipo: 'num', valor: arredondarTema(n, 2) };
-  }
   if (v.tipo === 'cor') {
     var cor = corDeTema(v.cor);
     var alfa = v.alfa === undefined ? 1 : numeroDeTema(v.alfa, 0, 1);
@@ -972,9 +974,10 @@ function valorDeTema(tipo, v) {
   return null;
 }
 
-/* Um tema; `comId` para os da conta. null quando a estrutura não serve.
-   Valores inválidos de uma propriedade são descartados (ela volta à base). */
-function normalizarTemaServidor(bruto, comId) {
+/* Um tema; `comId` para os da conta. `sistema`: 'geral' (conta), 'ordem'
+   ou 'universal' (o da ficha). null quando a estrutura não serve. Valores
+   inválidos — ou de outro sistema — são descartados (voltam à base). */
+function normalizarTemaServidor(bruto, comId, sistema) {
   if (!bruto || typeof bruto !== 'object' || Array.isArray(bruto)) return null;
   var base = bruto.base === 'escuro' ? 'escuro' : (bruto.base === undefined || bruto.base === 'claro' ? 'claro' : null);
   if (!base) return null;
@@ -988,6 +991,7 @@ function normalizarTemaServidor(bruto, comId) {
   var valores = bruto.valores && typeof bruto.valores === 'object' && !Array.isArray(bruto.valores) ? bruto.valores : {};
   Object.keys(valores).forEach(function (k) {
     if (!Object.prototype.hasOwnProperty.call(TEMA_TOKENS, k)) return;
+    if (TEMA_TOKENS_SISTEMA[k] && TEMA_TOKENS_SISTEMA[k] !== sistema) return;
     var limpo = valorDeTema(TEMA_TOKENS[k], valores[k]);
     if (limpo) tema.valores[k] = limpo;
   });
@@ -1001,7 +1005,7 @@ function normalizarTemasServidor(lista) {
   var vistos = {};
   var saida = [];
   for (var i = 0; i < lista.length; i++) {
-    var t = normalizarTemaServidor(lista[i], true);
+    var t = normalizarTemaServidor(lista[i], true, 'geral');
     if (!t || vistos[t.id]) return null;
     vistos[t.id] = true;
     saida.push(t);
@@ -1011,17 +1015,21 @@ function normalizarTemasServidor(lista) {
 
 /* O bloco de apresentação de uma ficha: inválido vira "usar o tema da
    conta", nunca CSS livre. Chamado em toda criação e gravação. */
-function normalizarAparenciaServidor(bruto) {
+function sistemaDaFicha(ficha) {
+  return ficha && String(ficha.tipoFicha || '') === 'ordem' ? 'ordem' : 'universal';
+}
+
+function normalizarAparenciaServidor(bruto, sistema) {
   var a = bruto && typeof bruto === 'object' && !Array.isArray(bruto) ? bruto : {};
   var modo = TEMA_MODOS_FICHA.indexOf(a.modo) >= 0 ? a.modo : 'conta';
   if (modo !== 'personalizado') return { v: 1, modo: modo };
-  var tema = normalizarTemaServidor(a.tema, false);
+  var tema = normalizarTemaServidor(a.tema, false, sistema);
   return tema ? { v: 1, modo: 'personalizado', tema: tema } : { v: 1, modo: 'conta' };
 }
 
 function sanearAparencia(ficha) {
   if (ficha && typeof ficha === 'object' && ficha.aparencia !== undefined) {
-    ficha.aparencia = normalizarAparenciaServidor(ficha.aparencia);
+    ficha.aparencia = normalizarAparenciaServidor(ficha.aparencia, sistemaDaFicha(ficha));
   }
 }
 
@@ -2563,7 +2571,7 @@ function acaoSalvarPersonagem(corpo, usuario) {
     var schemaPedido = Number(ficha.schemaVersion) || 0;
     if (ficha.aparencia === undefined && schemaPedido > 0 && schemaPedido < 16) {
       if (!anterior) anterior = lerFichaDoPersonagem(registro);
-      if (anterior.ok && anterior.ficha && anterior.ficha.aparencia) ficha.aparencia = normalizarAparenciaServidor(anterior.ficha.aparencia);
+      if (anterior.ok && anterior.ficha && anterior.ficha.aparencia) ficha.aparencia = normalizarAparenciaServidor(anterior.ficha.aparencia, sistemaDaFicha(ficha));
     }
     ficha.resumoRecursos = resumo || undefined;
     var campanhaAnterior = registro.campanhaId;

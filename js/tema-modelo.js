@@ -19,6 +19,16 @@
      color-mix) e o preenchimento (--fundo-*, que só vai para
      `background`). Um gradiente nunca cai numa variável lida como cor:
      para ela vai a média das cores do gradiente.
+
+   GERAL × SISTEMA (v2.37)
+   - O tema da CONTA é do site inteiro: só propriedades que existem em
+     qualquer página e em qualquer sistema (fundo, texto, botões, campos,
+     mensagens, destaque, efeitos). Nada de Ordem Paranormal nele.
+   - O que é de um sistema (os elementos e os graus de Ordem) só existe
+     no tema de uma FICHA daquele sistema, marcado com `sistema`. Fora
+     dela, segue a paleta de base. As cores que só aparecem na mesa da
+     campanha (barras de PV, PE, SAN e dos status universais) não são
+     personalizáveis: seguem a base, como antes.
    ===================================================================== */
 
 (function (global) {
@@ -33,18 +43,17 @@
      cor:      a variável da cor sólida (sempre)
      fundo:    a variável de preenchimento (só quem aceita gradiente)
      alfa:     aceita transparência na cor sólida
-     num:      [min, max, passo] — um número (opacidade das barras)
-     avancado: fica nas opções avançadas da categoria */
+     avancado: fica nas opções avançadas da categoria
+     sistema:  só no tema de uma ficha deste sistema ("ordem") */
   var CATEGORIAS = [
     { chave: "fundos", rotulo: "Fundo e superfícies", ajuda: "O fundo da página e as caixas em que o conteúdo mora." },
     { chave: "navegacao", rotulo: "Cabeçalho, abas e seleções", ajuda: "O topo do site e o que fica marcado: aba, filtro ou item escolhido." },
     { chave: "texto", rotulo: "Texto", ajuda: "Títulos, corpo, textos de apoio, links e dicas de campos vazios." },
     { chave: "botoes", rotulo: "Botões", ajuda: "O botão da ação principal e os botões comuns." },
     { chave: "campos", rotulo: "Campos, bordas e foco", ajuda: "Campos de texto, contornos, divisórias e o anel que mostra onde está o teclado." },
-    { chave: "recursos", rotulo: "Barras de recursos", ajuda: "As barras de PV, PE, Sanidade e dos status da mesa. O nome de cada recurso continua escrito." },
-    { chave: "estados", rotulo: "Mensagens e destaques", ajuda: "Sucesso, aviso, erro e o destaque paranormal." },
-    { chave: "elementos", rotulo: "Elementos e graus", ajuda: "As marcas dos elementos do Outro Lado e dos graus de treinamento." },
+    { chave: "estados", rotulo: "Mensagens e destaque", ajuda: "Sucesso, aviso e erro, e a cor de destaque: item ativo, interruptor ligado, alvo de arraste." },
     { chave: "efeitos", rotulo: "Sombras e efeitos", ajuda: "Sombras, o véu atrás das janelas e o efeito de tela antiga." },
+    { chave: "ordem", sistema: "ordem", rotulo: "Ordem Paranormal: elementos e graus", ajuda: "Só nesta ficha de Ordem: as marcas dos elementos do Outro Lado (rituais, itens) e a cor dos graus de treinamento das perícias." },
   ];
 
   var TOKENS = [
@@ -74,25 +83,11 @@
     { chave: "tracoForte", rotulo: "Borda do que está ativo", cat: "campos", cor: "--cor-traco-forte" },
     { chave: "foco", rotulo: "Anel de foco do teclado", cat: "campos", cor: "--cor-foco" },
 
-    { chave: "vida", rotulo: "Pontos de Vida", cat: "recursos", cor: "--cor-vida" },
-    { chave: "esforco", rotulo: "Pontos de Esforço", cat: "recursos", cor: "--cor-esforco" },
-    { chave: "sanidade", rotulo: "Sanidade", cat: "recursos", cor: "--cor-sanidade" },
-    { chave: "azul", rotulo: "Status universal azul", cat: "recursos", cor: "--cor-azul", avancado: true },
-    { chave: "verde", rotulo: "Status universal verde", cat: "recursos", cor: "--cor-verde", avancado: true },
-    { chave: "cinza", rotulo: "Status universal cinza", cat: "recursos", cor: "--cor-cinza", avancado: true },
-    { chave: "opacidadeBarra", rotulo: "Força do preenchimento das barras", cat: "recursos", num: [0.1, 1, 0.05], cssNum: "--opacidade-barra" },
-
     { chave: "ok", rotulo: "Sucesso", cat: "estados", cor: "--cor-ok" },
     { chave: "aviso", rotulo: "Aviso", cat: "estados", cor: "--cor-aviso" },
     { chave: "erro", rotulo: "Erro e perigo", cat: "estados", cor: "--cor-erro" },
-    { chave: "paranormal", rotulo: "Destaque paranormal", cat: "estados", cor: "--cor-paranormal" },
-
-    { chave: "grau", rotulo: "Graus de treinamento", cat: "elementos", cor: "--cor-grau" },
-    { chave: "elementoSangue", rotulo: "Sangue", cat: "elementos", cor: "--cor-elemento-sangue" },
-    { chave: "elementoMorte", rotulo: "Morte", cat: "elementos", cor: "--cor-elemento-morte" },
-    { chave: "elementoConhecimento", rotulo: "Conhecimento", cat: "elementos", cor: "--cor-elemento-conhecimento" },
-    { chave: "elementoEnergia", rotulo: "Energia", cat: "elementos", cor: "--cor-elemento-energia" },
-    { chave: "elementoMedo", rotulo: "Medo", cat: "elementos", cor: "--cor-elemento-medo" },
+    /* A cor de ênfase do site inteiro (a variável guarda o nome antigo). */
+    { chave: "paranormal", rotulo: "Destaque", cat: "estados", cor: "--cor-paranormal" },
 
     { chave: "sombra", rotulo: "Sombras", cat: "efeitos", cor: "--cor-sombra", alfa: true },
     { chave: "veuModal", rotulo: "Véu atrás das janelas", cat: "efeitos", cor: "--cor-veu-modal", alfa: true },
@@ -100,6 +95,13 @@
     { chave: "scanline", rotulo: "Linhas da tela antiga", cat: "efeitos", cor: "--cor-scanline", alfa: true, avancado: true },
     { chave: "veuRecorte", rotulo: "Fora do recorte (editor de imagem)", cat: "efeitos", cor: "--cor-veu-recorte", alfa: true, avancado: true },
     { chave: "contornoCor", rotulo: "Contorno de amostras de cor", cat: "efeitos", cor: "--cor-contorno-cor", alfa: true, avancado: true },
+
+    { chave: "grau", rotulo: "Graus de treinamento", cat: "ordem", sistema: "ordem", cor: "--cor-grau" },
+    { chave: "elementoSangue", rotulo: "Sangue", cat: "ordem", sistema: "ordem", cor: "--cor-elemento-sangue" },
+    { chave: "elementoMorte", rotulo: "Morte", cat: "ordem", sistema: "ordem", cor: "--cor-elemento-morte" },
+    { chave: "elementoConhecimento", rotulo: "Conhecimento", cat: "ordem", sistema: "ordem", cor: "--cor-elemento-conhecimento" },
+    { chave: "elementoEnergia", rotulo: "Energia", cat: "ordem", sistema: "ordem", cor: "--cor-elemento-energia" },
+    { chave: "elementoMedo", rotulo: "Medo", cat: "ordem", sistema: "ordem", cor: "--cor-elemento-medo" },
   ];
   var POR_CHAVE = {};
   TOKENS.forEach(function (t) {
@@ -109,6 +111,21 @@
     if (t.gradiente) t.alfa = true;
     POR_CHAVE[t.chave] = t;
   });
+
+  /* Que propriedades valem num contexto: "geral" (o tema da conta),
+     "ordem" ou "universal" (o tema de uma ficha desse sistema). Sem
+     contexto, todas — para resolver o que já foi conferido antes. */
+  var TODOS = "*";
+  function aceita(tok, sistema) {
+    if (!tok.sistema || sistema === undefined || sistema === TODOS) return true;
+    return tok.sistema === sistema;
+  }
+  function tokensDe(sistema) { return TOKENS.filter(function (t) { return aceita(t, sistema); }); }
+  function categoriasDe(sistema) {
+    return CATEGORIAS.filter(function (c) {
+      return (!c.sistema || c.sistema === sistema) && TOKENS.some(function (t) { return t.cat === c.chave && aceita(t, sistema); });
+    });
+  }
 
   /* ---- As paletas de base: os mesmos valores de css/tokens.css ----
      (testes/executar-tema.js confere que não divergem). `ref` aponta para
@@ -129,8 +146,6 @@
       texto: c("#111114"), texto2: c("#33333A"), texto3: c("#5C5C64"), textoDica: c("#7A7A82"),
       tracoForte: c("#111114"), tracoMedia: c("#6E6E76"), tracoFraca: c("#BCBCB5"),
       ok: c("#2E7A3C"), aviso: c("#8A6500"), erro: c("#B3362B"), paranormal: c("#5A469E"), grau: c("#4B3A9A"),
-      vida: c("#A8362D"), esforco: c("#A85A10"), sanidade: c("#5A469E"), azul: c("#2F5F94"), verde: c("#3F7A3B"), cinza: c("#5E5E66"),
-      opacidadeBarra: { num: 0.45 },
       elementoSangue: c("#A33838"), elementoMorte: c("#6E6E6E"),
       scanline: c("#000000", 0.03), vinheta: c("#000000", 0.1), veuModal: c("#18181C", 0.5),
       veuRecorte: c("#F4F4F1", 0.74), sombra: c("#141418", 0.25), contornoCor: c("#000000", 0.22),
@@ -140,8 +155,6 @@
       texto: c("#FFFFFF"), texto2: c("#DEDEDE"), texto3: c("#A0A0A0"), textoDica: c("#4A4A4A"),
       tracoForte: c("#FFFFFF"), tracoMedia: c("#AAAAAA"), tracoFraca: c("#4A4A4A"),
       ok: c("#6FB07A"), aviso: c("#C9A227"), erro: c("#C6564B"), paranormal: c("#7E6BB5"), grau: c("#9F91DD"),
-      vida: c("#B8433A"), esforco: c("#C9772A"), sanidade: c("#7E6BB5"), azul: c("#3B6EA3"), verde: c("#4F8A4B"), cinza: c("#6B6B73"),
-      opacidadeBarra: { num: 0.8 },
       elementoSangue: c("#B64A4A"), elementoMorte: c("#8C8C8C"),
       scanline: c("#FFFFFF", 0.022), vinheta: c("#000000", 0.45), veuModal: c("#08080A", 0.86),
       veuRecorte: c("#08080A", 0.68), sombra: c("#000000"), contornoCor: c("#FFFFFF", 0.16),
@@ -181,11 +194,6 @@
      Devolve o valor limpo ou null (não entra). */
   function normalizarValor(token, v) {
     if (!token || !v || typeof v !== "object" || Array.isArray(v)) return null;
-    if (token.num) {
-      if (v.tipo !== "num") return null;
-      var n = numeroEntre(v.valor, token.num[0], token.num[1]);
-      return n === null ? null : { tipo: "num", valor: arred(n, 2) };
-    }
     if (v.tipo === "cor") {
       var cor = corValida(v.cor);
       if (!cor) return null;
@@ -223,8 +231,10 @@
   function idValido(v) { return typeof v === "string" && /^[a-z0-9-]{1,40}$/.test(v) ? v : null; }
 
   /* Um tema inteiro. `comId`: os temas da conta têm id; a cópia que vai
-     para uma ficha não precisa. Devolve null quando não dá para salvar. */
-  function normalizarTema(bruto, comId) {
+     para uma ficha não precisa. `sistema`: "geral" (conta), "ordem" ou
+     "universal" (ficha) — propriedades de outro sistema ficam de fora.
+     Devolve null quando não dá para salvar. */
+  function normalizarTema(bruto, comId, sistema) {
     if (!bruto || typeof bruto !== "object" || Array.isArray(bruto)) return null;
     var base = bruto.base === "escuro" ? "escuro" : (bruto.base === undefined || bruto.base === "claro" ? "claro" : null);
     if (!base) return null;
@@ -236,20 +246,21 @@
     }
     var valores = bruto.valores && typeof bruto.valores === "object" && !Array.isArray(bruto.valores) ? bruto.valores : {};
     Object.keys(valores).forEach(function (k) {
-      if (!Object.prototype.hasOwnProperty.call(POR_CHAVE, k)) return;
+      if (!Object.prototype.hasOwnProperty.call(POR_CHAVE, k) || !aceita(POR_CHAVE[k], sistema)) return;
       var limpo = normalizarValor(POR_CHAVE[k], valores[k]);
       if (limpo) tema.valores[k] = limpo;
     });
     return tema;
   }
 
-  /* A lista de temas da conta: ids únicos, no máximo MAX_TEMAS. */
+  /* A lista de temas da conta: ids únicos, no máximo MAX_TEMAS, só com
+     propriedades gerais. */
   function normalizarTemas(lista) {
     var vistos = {};
     var saida = [];
     (Array.isArray(lista) ? lista : []).forEach(function (t) {
       if (saida.length >= MAX_TEMAS) return;
-      var limpo = normalizarTema(t, true);
+      var limpo = normalizarTema(t, true, "geral");
       if (!limpo || vistos[limpo.id]) return;
       vistos[limpo.id] = true;
       saida.push(limpo);
@@ -260,13 +271,14 @@
   var MODOS_FICHA = ["conta", "sistema", "claro", "escuro", "personalizado"];
 
   /* O bloco de apresentação de uma ficha (compartilhado por Ordem e
-     Universal). Sem bloco, ou bloco inválido: herda o tema da conta. */
-  function normalizarAparencia(bruto) {
+     Universal). Sem bloco, ou bloco inválido: herda o tema da conta.
+     `sistema` é o da ficha ("ordem" | "universal"). */
+  function normalizarAparencia(bruto, sistema) {
     var a = bruto && typeof bruto === "object" && !Array.isArray(bruto) ? bruto : {};
     var modo = MODOS_FICHA.indexOf(a.modo) >= 0 ? a.modo : "conta";
     var saida = { v: VERSAO, modo: modo };
     if (modo === "personalizado") {
-      var tema = normalizarTema(a.tema, false);
+      var tema = normalizarTema(a.tema, false, sistema);
       if (!tema) return { v: VERSAO, modo: "conta" };
       saida.tema = tema;
     }
@@ -324,10 +336,7 @@
       var token = POR_CHAVE[chave];
       var v = proprios[chave];
       var r;
-      if (token.num) {
-        var n = v && v.tipo === "num" ? v.valor : base[chave].num;
-        r = { num: n, valor: { tipo: "num", valor: n }, herdado: !v };
-      } else if (v && v.tipo === "cor") {
+      if (v && v.tipo === "cor") {
         r = { solida: { cor: v.cor, alfa: v.alfa }, valor: v, preenchimento: cssCor(v.cor, v.alfa), herdado: false };
       } else if (v && (v.tipo === "linear" || v.tipo === "radial")) {
         r = { solida: mediaDoGradiente(v.pontos), valor: v, preenchimento: cssGradiente(v), herdado: false };
@@ -363,12 +372,11 @@
      num contexto fechado (o painel da ficha, a prévia do editor), ela não
      depende de nenhuma variável herdada de fora. */
   function resolver(tema) {
-    var t = normalizarTema(tema, false) || { v: VERSAO, base: "claro", valores: {}, nome: "" };
+    var t = normalizarTema(tema, false, TODOS) || { v: VERSAO, base: "claro", valores: {}, nome: "" };
     var res = valoresResolvidos(t);
     var vars = {};
     TOKENS.forEach(function (tok) {
       var r = res[tok.chave];
-      if (tok.num) { vars[tok.cssNum] = String(r.num); return; }
       vars[tok.cor] = cssCor(r.solida.cor, r.solida.alfa);
       if (tok.fundo) vars[tok.fundo] = r.preenchimento;
     });
@@ -441,7 +449,7 @@
   }
 
   function avaliarContraste(tema) {
-    var t = normalizarTema(tema, false) || { base: "claro", valores: {} };
+    var t = normalizarTema(tema, false, TODOS) || { base: "claro", valores: {} };
     var res = valoresResolvidos(t);
     var branco = t.base === "escuro" ? "#000000" : "#ffffff";
     function solidaSobre(chave) {
@@ -474,10 +482,11 @@
     return "t-" + s;
   }
 
-  /* Um tema novo a partir de uma base (claro, escuro ou outro tema). */
-  function novoTema(origem, nome) {
+  /* Um tema novo a partir de uma base (claro, escuro ou outro tema), para
+     um contexto (`sistema`, como em normalizarTema). */
+  function novoTema(origem, nome, sistema) {
     var o = origem && typeof origem === "object" ? origem : { base: origem === "escuro" ? "escuro" : "claro", valores: {} };
-    var copia = normalizarTema(JSON.parse(JSON.stringify({ base: o.base, valores: o.valores || {}, nome: nome || o.nome })), false);
+    var copia = normalizarTema(JSON.parse(JSON.stringify({ base: o.base, valores: o.valores || {}, nome: nome || o.nome })), false, sistema);
     copia.nome = nomeValido(nome, o.nome ? o.nome + " (cópia)" : "Tema " + NOMES_BASE[copia.base].toLowerCase() + " personalizado");
     copia.id = novoId();
     return copia;
@@ -496,6 +505,74 @@
     return { cor: rgbParaHex({ r: nums[0], g: nums[1], b: nums[2] }), alfa: m[4] === undefined ? 1 : Number(m[4]) };
   }
 
+  /* =================================================================
+     ARQUIVO DE TEMA (.json)
+     -----------------------------------------------------------------
+     Um tema viaja como pacote do R.A.M.A., no mesmo molde dos outros
+     arquivos de exportação: { rama: true, tipo: "tema", versaoTema,
+     geradoEm, sistema, dados: { nome, base, valores } }. Sem id: quem
+     importa recebe um tema novo, da própria conta ou ficha. Na entrada,
+     passa pela MESMA normalização de tudo o mais — nada do arquivo vira
+     CSS, e o que não serve fica de fora com aviso.
+     ================================================================= */
+
+  var MAX_ARQUIVO = 200 * 1024;
+  var NOMES_SISTEMA = { ordem: "Ordem Paranormal", universal: "ficha universal" };
+
+  function exportarTema(tema, sistema) {
+    var t = normalizarTema(tema, false, sistema) || { base: "claro", valores: {}, nome: "Tema" };
+    return {
+      rama: true,
+      tipo: "tema",
+      versaoTema: VERSAO,
+      geradoEm: new Date().toISOString(),
+      sistema: sistema === "ordem" || sistema === "universal" ? sistema : "geral",
+      dados: { nome: t.nome, base: t.base, valores: t.valores },
+    };
+  }
+
+  /* Texto ou objeto → { ok, tema, avisos } ou { ok: false, problemas }.
+     `sistema` é para onde vai: "geral" (conta), "ordem", "universal". */
+  function importarTema(entrada, sistema) {
+    function ruim(texto) { return { ok: false, problemas: [texto] }; }
+    var pacote = entrada;
+    if (typeof entrada === "string") {
+      if (entrada.length > MAX_ARQUIVO) return ruim("O arquivo passa de 200 KB: isso não parece um tema do R.A.M.A.");
+      var bruto = entrada.trim();
+      if (!bruto) return ruim("Nada para importar.");
+      try { pacote = JSON.parse(bruto); } catch (e) { return ruim("O conteúdo não é um JSON válido. Confira se copiou o arquivo inteiro."); }
+    }
+    if (!pacote || typeof pacote !== "object" || Array.isArray(pacote)) return ruim("O arquivo não contém um objeto JSON.");
+    if (pacote.rama !== true) return ruim("Este arquivo não foi gerado pelo R.A.M.A.");
+    if (pacote.tipo !== "tema") return ruim("Este arquivo não é um tema (é do tipo “" + String(pacote.tipo || "(vazio)").slice(0, 40) + "”).");
+    var versao = Number(pacote.versaoTema);
+    if (!(versao >= 1)) return ruim("O arquivo não informa a versão do tema.");
+    if (versao > VERSAO) return ruim("O tema foi gerado por uma versão mais nova do R.A.M.A. Atualize a página e tente de novo.");
+    var dados = pacote.dados;
+    if (!dados || typeof dados !== "object" || Array.isArray(dados)) return ruim("O arquivo não traz o tema.");
+    var tema = normalizarTema(dados, false, sistema);
+    if (!tema) return ruim("O tema não pôde ser lido: a base precisa ser “claro” ou “escuro”.");
+
+    var avisos = [];
+    var valores = dados.valores && typeof dados.valores === "object" && !Array.isArray(dados.valores) ? dados.valores : {};
+    var deSistema = {}, invalidos = 0, desconhecidos = 0;
+    Object.keys(valores).forEach(function (k) {
+      var tok = Object.prototype.hasOwnProperty.call(POR_CHAVE, k) ? POR_CHAVE[k] : null;
+      if (!tok) { desconhecidos++; return; }
+      if (!aceita(tok, sistema)) { deSistema[tok.sistema] = (deSistema[tok.sistema] || 0) + 1; return; }
+      if (!tema.valores[k]) invalidos++;
+    });
+    Object.keys(deSistema).forEach(function (s) {
+      var n = deSistema[s];
+      avisos.push(n + (n === 1 ? " cor é" : " cores são") + " de " + (NOMES_SISTEMA[s] || s) + " e só " + (n === 1 ? "vale" : "valem") +
+        " no tema de uma ficha desse sistema: " + (n === 1 ? "ficou" : "ficaram") + " de fora.");
+    });
+    if (invalidos) avisos.push(invalidos + (invalidos === 1 ? " valor inválido ficou" : " valores inválidos ficaram") + " de fora e " + (invalidos === 1 ? "volta" : "voltam") + " à base.");
+    if (desconhecidos) avisos.push(desconhecidos + (desconhecidos === 1 ? " propriedade desconhecida foi ignorada." : " propriedades desconhecidas foram ignoradas."));
+    if (typeof dados.nome === "string" && dados.nome.trim() && nomeValido(dados.nome, "") !== dados.nome.trim()) avisos.push("O nome foi ajustado (até " + MAX_NOME + " caracteres, sem < >).");
+    return { ok: true, tema: tema, avisos: avisos };
+  }
+
   global.RAMATemaModelo = {
     VERSAO: VERSAO,
     MAX_PONTOS: MAX_PONTOS,
@@ -507,6 +584,8 @@
     NOMES_BASE: NOMES_BASE,
     MODOS_FICHA: MODOS_FICHA,
     token: function (chave) { return POR_CHAVE[chave] || null; },
+    tokensDe: tokensDe,
+    categoriasDe: categoriasDe,
     corValida: corValida,
     lerCorDigitada: lerCorDigitada,
     normalizarValor: normalizarValor,
@@ -522,5 +601,7 @@
     avaliarContraste: avaliarContraste,
     novoTema: novoTema,
     novoId: novoId,
+    exportarTema: exportarTema,
+    importarTema: importarTema,
   };
 })(typeof window !== "undefined" ? window : globalThis);

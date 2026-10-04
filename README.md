@@ -336,7 +336,7 @@ guardada e trinta cartões virando duas viagens em vez de trinta. E a medição 
 viagem: o tempo do servidor separado do tempo de rede, e a viagem continuando
 medida quando o servidor não manda números.
 
-**Tema claro e escuro e temas personalizáveis** — 162 verificações:
+**Tema claro e escuro e temas personalizáveis** — 187 verificações:
 
 ```bash
 deno run --allow-read testes/executar-tema.js
@@ -561,6 +561,12 @@ próprio `<script src>`, então funciona debaixo de subpasta sem ajuste.
 segredo nenhum — ele os lê das Script Properties. Publicá-lo não expõe nada.
 
 ### Atualizar o backend
+
+**v2.37.0 — PALETA:** **troque** o `Codigo.gs` (o servidor deixa as cores de
+Ordem Paranormal só no tema das fichas de Ordem) e crie uma **nova versão** da
+implantação; publique o site. Sem `setupRama()`. Exportar e importar temas é só
+do site. Quem ainda não implantou a v2.36.0 faz as duas de uma vez: basta o
+`Codigo.gs` desta versão.
 
 **v2.36.0 — MATIZ:** **troque** o `Codigo.gs` (o servidor passa a aceitar e
 validar os temas da conta e a sanear o tema de cada ficha) e crie uma **nova
@@ -933,8 +939,9 @@ tema desta ficha"), abre o mesmo editor para o **tema daquela ficha**: Usar o
 tema da conta (o padrão), Seguir o aparelho, Claro, Escuro, uma cópia de um tema
 da conta ou um tema próprio. A ordem é sempre: tema da ficha → tema da conta →
 aparelho. O editor tem categorias (fundo e superfícies, cabeçalho e seleções,
-texto, botões, campos e foco, barras de recursos, mensagens, elementos e graus,
-sombras e efeitos), opções avançadas recolhidas, seletor de cor com campo de
+texto, botões, campos e foco, mensagens e destaque, sombras e efeitos) — todas
+do site inteiro, sem nada de um sistema. Só no tema de uma ficha de Ordem aparece
+a categoria a mais "Ordem Paranormal: elementos e graus". Há ainda opções avançadas recolhidas, seletor de cor com campo de
 texto (o que não é cor é apontado e a cor anterior continua valendo),
 transparência, gradiente linear ou radial com 2 a 8 pontos, restaurar uma
 propriedade ou a categoria, uma prévia com os componentes de verdade e a
@@ -943,7 +950,11 @@ entram num clique. Tudo é rascunho até Salvar/Aplicar: a página atrás mostra
 rascunho, a janela do editor fica sempre num tema legível, e Cancelar ou Esc
 devolvem tudo como era. Um tema é dado (cores, transparência, gradientes), nunca
 CSS: `js/tema-modelo.js` valida e é o único que gera as propriedades, e o
-servidor valida de novo.
+servidor valida de novo. Cada tema pode ser **exportado** como arquivo `.json`
+(baixar ou copiar) e **importado** no tema do site ou no de uma ficha, nesta ou em
+outra conta: a prévia mostra o tema e avisa o que ficou de fora (valores
+inválidos, cores de um sistema que não é o do destino), e ele entra como tema
+novo no rascunho do editor.
 
 **Salvamento.** A tela muda na hora; o envio vai atrás, juntando alterações
 seguidas num só POST (400 ms). Só uma gravação voa por vez — o que chegar

@@ -70,6 +70,23 @@
 
   var CHANGELOG = [
     {
+      versao: "2.37.0", codinome: "PALETA", data: "04/10/2026",
+      mudancas: {
+        "Adicionado": [
+          "Exportar e importar temas em JSON. Cada tema seu (no tema do site) e o tema próprio de uma ficha têm “Exportar”, que mostra o arquivo para baixar ou copiar — como está no editor naquele momento. “Importar tema (.json)” aceita o arquivo ou o texto colado, mostra o tema com amostras antes de entrar e avisa o que ficou de fora; o tema importado entra como novo no rascunho e só é gravado ao salvar ou aplicar.",
+        ],
+        "Corrigido": [
+          "O tema do site deixou de ter campos de Ordem Paranormal: saíram as barras de PV, PE e Sanidade, os status universais, os elementos e os graus de treinamento, e “Destaque paranormal” virou “Destaque”. Ficam só categorias do site inteiro — fundo e superfícies, cabeçalho e seleções, texto, botões, campos e foco, mensagens e destaque, sombras e efeitos —, e a prévia mostra só componentes gerais.",
+          "Os elementos e os graus de Ordem passam a ser personalizáveis só no tema de uma ficha de Ordem, em categoria própria e com a prévia deles; numa ficha universal não aparecem. As barras da mesa da campanha seguem a paleta do tema, como antes.",
+          "Janelas por cima do editor (importar, exportar, confirmações) com texto que herdava a cor do rascunho; agora usam todas o tema legível do editor.",
+        ],
+        "Técnico": [
+          "Propriedades com `sistema` em js/tema-modelo.js (`tokensDe`, `categoriasDe`); a lista de temas da conta e o tema de uma ficha universal descartam as de Ordem, no navegador e no servidor (`TEMA_TOKENS_SISTEMA`). Pacote `{ rama, tipo: \"tema\", versaoTema, sistema, dados }` com `exportarTema`/`importarTema`. Troque o `Codigo.gs` e crie uma nova versão da implantação; sem `setupRama()`.",
+          "Testes: 25 novos no tema (nenhum rótulo geral fala de um sistema, cores de Ordem por contexto, arquivo de tema com CSS, versão nova, tamanho e ida e volta), 4 no servidor e 2 na ficha.",
+        ],
+      },
+    },
+    {
       versao: "2.36.0", codinome: "MATIZ", data: "04/10/2026",
       mudancas: {
         "Adicionado": [

@@ -26,7 +26,8 @@ Um bloco novo, opcional, **fora** de `ordem` — igual nos dois modelos:
 
 `normalizarFicha()` passa o bloco por `RAMATemaModelo.normalizarAparencia()`:
 inválido vira `{ v: 1, modo: "conta" }`, valores inválidos dentro do tema caem
-fora. O servidor repete a mesma limpeza. O schema sobe para 16 sem conversão,
+fora. As cores de Ordem Paranormal (elementos e graus) só ficam no tema de uma
+ficha de Ordem (v2.37); numa universal, caem fora como as inválidas. O servidor repete a mesma limpeza. O schema sobe para 16 sem conversão,
 para uma aba ainda aberta na v2.35 recusar a ficha em vez de descartar o tema ao
 gravar (e o servidor mantém o bloco quando uma versão antiga grava sem ele).
 

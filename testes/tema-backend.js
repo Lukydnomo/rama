@@ -102,10 +102,12 @@ function testarTemasPersonalizaveis({ t, preparar, novaConta, comoFn }) {
   /* As listas do servidor e do navegador são as mesmas, com o mesmo tipo. */
   (0, eval)(Deno.readTextFileSync(new URL("../js/tema-modelo.js", import.meta.url)));
   const MT = globalThis.RAMATemaModelo;
-  const tipoNoNavegador = (tok) => tok.num ? "n" : tok.gradiente ? "g" : tok.alfa ? "a" : "c";
+  const tipoNoNavegador = (tok) => tok.gradiente ? "g" : tok.alfa ? "a" : "c";
   const divergem = MT.TOKENS.filter((tok) => TEMA_TOKENS[tok.chave] !== tipoNoNavegador(tok)).map((tok) => tok.chave)
     .concat(Object.keys(TEMA_TOKENS).filter((k) => !MT.token(k)));
   t.ok("as propriedades aceitas pelo servidor são as do editor, com o mesmo tipo", divergem.length === 0, divergem.join(", "));
+  const sistemaDiverge = MT.TOKENS.filter((tok) => (TEMA_TOKENS_SISTEMA[tok.chave] || null) !== (tok.sistema || null)).map((tok) => tok.chave);
+  t.ok("  e as mesmas propriedades de sistema (as de Ordem)", sistemaDiverge.length === 0, sistemaDiverge.join(", "));
   t.igual("  o mesmo máximo de pontos de gradiente", TEMA_MAX_PONTOS, MT.MAX_PONTOS);
   t.igual("  e de temas por conta", TEMA_MAX_TEMAS, MT.MAX_TEMAS);
 
@@ -135,6 +137,10 @@ function testarTemasPersonalizaveis({ t, preparar, novaConta, comoFn }) {
   t.ok("cor com url(), gradiente em texto e propriedade inventada ficam de fora", sujo.ok && Object.keys(azulGravado.valores).join() === "link");
   t.ok("  o texto não guarda transparência", azulGravado.valores.link.alfa === 1 && azulGravado.valores.link.cor === "#112233");
   t.ok("  o nome perde < e >", !/[<>]/.test(azulGravado.nome));
+  const comOrdem = E({ acao: "salvar_perfil", dados: { preferencias: { temas: [Object.assign({}, AZUL, { valores: {
+    superficie: { tipo: "cor", cor: "#ddeeff" }, elementoSangue: { tipo: "cor", cor: "#ff0000" }, grau: { tipo: "cor", cor: "#00ff00" },
+  } })] } } });
+  t.ok("o tema da conta é do site inteiro: as cores de Ordem ficam de fora", comOrdem.ok && Object.keys(comOrdem.preferencias.temas[0].valores).join() === "superficie");
   t.recusa("id fora do formato é recusado", E({ acao: "salvar_perfil", dados: { preferencias: { temas: [Object.assign({}, AZUL, { id: "../x" })] } } }), "dados_invalidos");
   t.recusa("id repetido é recusado", E({ acao: "salvar_perfil", dados: { preferencias: { temas: [AZUL, AZUL] } } }), "dados_invalidos");
   t.recusa("base desconhecida é recusada", E({ acao: "salvar_perfil", dados: { preferencias: { temas: [Object.assign({}, AZUL, { base: "neon" })] } } }), "dados_invalidos");
@@ -144,7 +150,7 @@ function testarTemasPersonalizaveis({ t, preparar, novaConta, comoFn }) {
   t.recusa("tema ativo fora do formato é recusado", E({ acao: "salvar_perfil", dados: { preferencias: { temaAtivo: "<x>" } } }), "dados_invalidos");
   const pontos = Array.from({ length: 8 }, (_, i) => ({ cor: "#abcdef", alfa: 0.55, pos: i * 12.5 }));
   const gordo = (i) => ({ id: "t-gordo" + i, nome: "Tema bem comprido de teste " + i, base: "claro", valores: Object.fromEntries(MT.TOKENS.map((tok) =>
-    [tok.chave, tok.num ? { tipo: "num", valor: 0.5 } : tok.gradiente ? { tipo: "radial", forma: "circulo", x: 33, y: 66, pontos } : { tipo: "cor", cor: "#abcdef", alfa: 0.5 }])) });
+    [tok.chave, tok.gradiente ? { tipo: "radial", forma: "circulo", x: 33, y: 66, pontos } : { tipo: "cor", cor: "#abcdef", alfa: 0.5 }])) });
   const grande = E({ acao: "salvar_perfil", dados: { preferencias: { temas: Array.from({ length: 12 }, (_, i) => gordo(i)) } } });
   t.recusa("passar do tamanho da célula recusa o pedido inteiro", grande, "dados_grandes");
   t.igual("  e nada mudou", E({ acao: "ler_perfil" }).dados.preferencias.temas[0].id, AZUL.id);
@@ -168,6 +174,12 @@ function testarTemasPersonalizaveis({ t, preparar, novaConta, comoFn }) {
   let lida = E({ acao: "ler_personagem", personagemId: criada.dados.id });
   t.ok("  saneado: o valor inválido fica de fora, o resto fica", lida.dados.aparencia.modo === "personalizado" && !lida.dados.aparencia.tema.valores.botao && lida.dados.aparencia.tema.valores.fundo.tipo === "linear");
   t.igual("  a cópia na ficha não guarda id de tema da conta", lida.dados.aparencia.tema.id, undefined);
+  const comElementos = { v: 1, modo: "personalizado", tema: { nome: "Elementos", base: "escuro", valores: { fundo: { tipo: "cor", cor: "#101010" }, elementoSangue: { tipo: "cor", cor: "#ff0000" } } } };
+  const deOrdem = E({ acao: "criar_personagem", dados: fichaBase({ tipoFicha: "ordem", aparencia: comElementos }) });
+  t.ok("a ficha de Ordem guarda as cores de Ordem do tema dela", !!E({ acao: "ler_personagem", personagemId: deOrdem.dados.id }).dados.aparencia.tema.valores.elementoSangue);
+  const universal = E({ acao: "criar_personagem", dados: fichaBase({ aparencia: comElementos }) });
+  const vu = E({ acao: "ler_personagem", personagemId: universal.dados.id }).dados.aparencia.tema.valores;
+  t.ok("  a universal não (e mantém o resto)", !vu.elementoSangue && !!vu.fundo);
   const lixo = E({ acao: "criar_personagem", dados: fichaBase({ aparencia: "<style>body{}</style>" }) });
   t.igual("aparência que não é bloco vira 'usar o tema da conta'", E({ acao: "ler_personagem", personagemId: lixo.dados.id }).dados.aparencia.modo, "conta");
 

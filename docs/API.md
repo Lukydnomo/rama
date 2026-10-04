@@ -20,8 +20,7 @@ preenchimento e parâmetros de gradiente, nunca CSS:
   "valores": {                     // só o que mudou; chave = propriedade do editor
     "fundo":      { "tipo": "linear", "angulo": 180, "pontos": [ { "cor": "#08080a", "alfa": 1, "pos": 0 }, { "cor": "#3a1030", "alfa": 1, "pos": 100 } ] },
     "cabecalho":  { "tipo": "radial", "forma": "elipse" | "circulo", "x": 50, "y": 50, "pontos": [ ... ] },
-    "superficie": { "tipo": "cor", "cor": "#1a0a18", "alfa": 0.9 },
-    "opacidadeBarra": { "tipo": "num", "valor": 0.8 }
+    "superficie": { "tipo": "cor", "cor": "#1a0a18", "alfa": 0.9 }
   }
 }
 ```
@@ -30,7 +29,13 @@ Tipos aceitos por propriedade (as mesmas listas de `js/tema-modelo.js`, conferid
 por teste): **cor ou gradiente** (`fundo`, `superficie`, `superficie2`,
 `cabecalho`, `selecao`, `botao`, `botaoHover`, `botaoComum`; gradiente de 2 a 8
 pontos), **cor com transparência** (sombras e véus) e **cor sólida opaca** (texto,
-bordas, recursos, estados, elementos). `opacidadeBarra` é número de 0,1 a 1.
+bordas, mensagens, destaque). **O tema da conta é do site inteiro (v2.37):** só
+aceita essas propriedades gerais. As de um sistema — os elementos e os graus de
+Ordem Paranormal (`grau`, `elementoSangue`, `elementoMorte`,
+`elementoConhecimento`, `elementoEnergia`, `elementoMedo`) — só ficam no tema
+de uma ficha de Ordem; na lista da conta e numa ficha universal, caem fora. As
+cores das barras da mesa (PV, PE, SAN, status universais) não são
+personalizáveis.
 O servidor confere a ESTRUTURA (lista, ids, base) e recusa com `dados_invalidos`;
 dentro de um tema válido, um valor que não serve (cor com `url()`, gradiente em
 cor de texto, propriedade desconhecida) é descartado e a propriedade volta à
@@ -49,6 +54,23 @@ outra viagem; a lista inteira vem só em `ler_perfil`. Cliente antigo que manda 
 `{ v: 1, modo: "conta" }`). Uma gravação sem o campo vinda de uma versão que se
 declara anterior (schema 1 a 15) mantém o bloco gravado; `duplicar_personagem`
 e a exportação levam o bloco junto.
+
+### Arquivo de tema (.json) — v2.37
+
+Exportar e importar acontecem só no navegador (nenhuma ação nova). O arquivo é
+um pacote do R.A.M.A., sem id — quem importa recebe um tema novo:
+
+```jsonc
+{ "rama": true, "tipo": "tema", "versaoTema": 1, "geradoEm": "ISO",
+  "sistema": "geral" | "ordem" | "universal",   // de onde saiu (informativo)
+  "dados": { "nome": "…", "base": "claro" | "escuro", "valores": { … } } }
+```
+
+Na importação (`RAMATemaModelo.importarTema`), o arquivo passa pela mesma
+normalização de tudo o mais, para o contexto de destino: até 200 KB, `rama`,
+`tipo: "tema"` e versão conferidos; CSS, `url()`, propriedades desconhecidas e
+cores de outro sistema ficam de fora, e a prévia diz o que ficou. O tema entra no
+rascunho do editor e só é gravado em Salvar (conta) ou Aplicar (ficha).
 
 ## Exibição das pastas — v2.35
 

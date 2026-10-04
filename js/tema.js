@@ -91,7 +91,7 @@
   function personalizadoDoCache(conta) {
     if (!conta || !M()) return null;
     var bruto = lerJsonLocal(PREFIXO_PERSONALIZADO + conta);
-    var tema = bruto ? M().normalizarTema(bruto.tema, true) : null;
+    var tema = bruto ? M().normalizarTema(bruto.tema, true, "geral") : null;
     return tema ? { id: tema.id, tema: tema } : null;
   }
 
@@ -233,7 +233,7 @@
       if (!emVoo && desejada === null) preferencia = tema;
     }
     if (conta && prefs && Object.prototype.hasOwnProperty.call(prefs, "temaPersonalizado") && M() && !emVoo && desejada === null) {
-      var t = prefs.temaPersonalizado ? M().normalizarTema(prefs.temaPersonalizado, true) : null;
+      var t = prefs.temaPersonalizado ? M().normalizarTema(prefs.temaPersonalizado, true, "geral") : null;
       personalizado = t ? { id: t.id, tema: t } : null;
       if (t) gravarLocal(PREFIXO_PERSONALIZADO + conta, JSON.stringify({ id: t.id, tema: t }));
       else apagarLocal(PREFIXO_PERSONALIZADO + conta);

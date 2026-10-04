@@ -409,14 +409,13 @@ t.grupo("Modelo · paletas iguais às de css/tokens.css");
     MT.TOKENS.forEach((tok) => {
       const p = MT.PALETAS[base][tok.chave];
       if (p.ref) return;
-      if (tok.num) { if (Number(ler(b, tok.cssNum)) !== p.num) divergentes.push(base + ":" + tok.chave); return; }
       const noCss = ler(b, tok.cor);
       if (noCss && noCss.replace(/\s/g, "") !== paraCss(p)) divergentes.push(base + ":" + tok.chave + " " + noCss + " ≠ " + paraCss(p));
     });
   }
   t.ok("toda propriedade com valor próprio confere com o CSS", divergentes.length === 0, divergentes.join(", "));
   const papeis = bloco("/* ---------- papéis (v2.36)");
-  const faltam = MT.TOKENS.filter((tok) => !tok.num && !new RegExp(tok.cor.replace(/-/g, "\\-") + ":").test(css)).map((tok) => tok.cor);
+  const faltam = MT.TOKENS.filter((tok) => !new RegExp(tok.cor.replace(/-/g, "\\-") + ":").test(css)).map((tok) => tok.cor);
   t.ok("toda variável do modelo existe em tokens.css", faltam.length === 0, faltam.join(", "));
   t.ok("os papéis novos seguem a paleta (nenhuma cor fixa)", !/#[0-9a-f]{3,6}/i.test(papeis.split("*/").slice(1).join("")));
 }
@@ -440,7 +439,6 @@ t.grupo("Modelo · validação: só dados, nunca CSS");
   const rad = MT.normalizarValor(tok("cabecalho"), { tipo: "radial", forma: "circulo", x: 10, y: 90, pontos: [{ cor: "#fff", pos: 0 }, { cor: "#000", pos: 100 }] });
   t.ok("radial guarda forma e centro", rad.forma === "circulo" && rad.x === 10 && rad.y === 90);
   t.igual("forma desconhecida é recusada", MT.normalizarValor(tok("fundo"), { tipo: "radial", forma: "estrela", pontos: [{ cor: "#fff", pos: 0 }, { cor: "#000", pos: 100 }] }), null);
-  t.igual("número fora da faixa é limitado", MT.normalizarValor(tok("opacidadeBarra"), { tipo: "num", valor: 7 }).valor, 1);
   const tema = MT.normalizarTema({ nome: "  <script>x</script>  ", base: "escuro", valores: { fundo: { tipo: "cor", cor: "#101010" }, inventada: { tipo: "cor", cor: "#fff" }, texto: { tipo: "cor", cor: "nada" } } }, false);
   t.ok("nome sem < > nem controle", !/[<>]/.test(tema.nome));
   t.ok("propriedade inventada e valor inválido ficam de fora; o válido fica", Object.keys(tema.valores).join() === "fundo");
@@ -456,12 +454,67 @@ t.grupo("Modelo · validação: só dados, nunca CSS");
   t.igual("digitar lixo não", MT.lerCorDigitada("rgb(300,0,0)"), null);
 }
 
+t.grupo("Modelo · o tema da conta é do site inteiro, não de um sistema (v2.37)");
+{
+  const gerais = MT.tokensDe("geral");
+  const ORDEM = /ordem|paranormal|sangue|morte|conhecimento|energia|medo|elemento|grau|pv\b|pe\b|san\b|vida|esfor|sanidade|nex|ritual|agente/i;
+  t.ok("nenhuma propriedade geral fala de um sistema", gerais.every((tok) => !ORDEM.test(tok.rotulo)), gerais.filter((tok) => ORDEM.test(tok.rotulo)).map((tok) => tok.rotulo).join(", "));
+  const catGerais = MT.categoriasDe("geral");
+  t.ok("nenhuma categoria geral fala de um sistema", catGerais.every((c) => !ORDEM.test(c.rotulo + " " + c.ajuda)), catGerais.filter((c) => ORDEM.test(c.rotulo + " " + c.ajuda)).map((c) => c.rotulo).join(", "));
+  t.ok("o tema da conta não tem categoria de Ordem", !catGerais.some((c) => c.sistema));
+  t.ok("a ficha de Ordem ganha a categoria dela", MT.categoriasDe("ordem").some((c) => c.sistema === "ordem") && MT.tokensDe("ordem").some((tok) => tok.chave === "elementoSangue"));
+  t.ok("a ficha universal não tem nada de Ordem", !MT.categoriasDe("universal").some((c) => c.sistema) && !MT.tokensDe("universal").some((tok) => tok.sistema));
+  const comOrdem = { id: "t-misto00001", base: "escuro", valores: { fundo: { tipo: "cor", cor: "#101010" }, elementoSangue: { tipo: "cor", cor: "#ff0000" }, grau: { tipo: "cor", cor: "#00ff00" } } };
+  t.igual("um tema da conta perde as cores de Ordem", Object.keys(MT.normalizarTemas([comOrdem])[0].valores).join(), "fundo");
+  t.igual("  a ficha de Ordem as mantém", Object.keys(MT.normalizarAparencia({ modo: "personalizado", tema: comOrdem }, "ordem").tema.valores).sort().join(), "elementoSangue,fundo,grau");
+  t.igual("  a ficha universal não", Object.keys(MT.normalizarAparencia({ modo: "personalizado", tema: comOrdem }, "universal").tema.valores).join(), "fundo");
+  const daConta = MT.resolver(MT.normalizarTemas([comOrdem])[0]);
+  t.igual("sem a cor própria, Ordem segue a base do tema (escuro)", daConta.vars["--cor-elemento-sangue"], "#b64a4a");
+  const daFicha = MT.resolver(MT.normalizarAparencia({ modo: "personalizado", tema: comOrdem }, "ordem").tema);
+  t.igual("  e na ficha de Ordem usa a escolhida", daFicha.vars["--cor-elemento-sangue"], "#ff0000");
+  t.ok("as barras da mesa (PV, PE, SAN, status universais) não são personalizáveis", ["vida", "esforco", "sanidade", "azul", "verde", "cinza", "opacidadeBarra"].every((k) => !MT.token(k)));
+}
+
+t.grupo("Modelo · exportar e importar tema (.json)");
+{
+  const original = { id: "t-meu0000001", nome: "Roxo da mesa", base: "escuro", valores: {
+    fundo: { tipo: "radial", forma: "circulo", x: 30, y: 70, pontos: [{ cor: "#08080a", pos: 0 }, { cor: "#3a1030", alfa: 0.8, pos: 100 }] },
+    texto: { tipo: "cor", cor: "#f0e0ff" },
+  } };
+  const pacote = MT.exportarTema(original, "geral");
+  t.ok("o arquivo é um pacote do R.A.M.A. do tipo tema", pacote.rama === true && pacote.tipo === "tema" && pacote.versaoTema === 1 && pacote.sistema === "geral");
+  t.igual("  sem o id da conta", pacote.dados.id, undefined);
+  const volta = MT.importarTema(JSON.stringify(pacote), "geral");
+  t.ok("exportar e importar devolve o mesmo tema", volta.ok && JSON.stringify(volta.tema.valores) === JSON.stringify(MT.normalizarTema(original, false, "geral").valores) && volta.tema.nome === "Roxo da mesa" && volta.avisos.length === 0);
+  t.igual("  o tema importado não traz id (vira um tema novo)", volta.tema.id, undefined);
+  t.ok("JSON inválido é recusado com explicação", !MT.importarTema("{ quebrado", "geral").ok);
+  t.ok("arquivo que não é do R.A.M.A. é recusado", !MT.importarTema(JSON.stringify({ tipo: "tema", versaoTema: 1, dados: original }), "geral").ok);
+  t.ok("ficha exportada não entra como tema", /não é um tema/.test(MT.importarTema(JSON.stringify({ rama: true, tipo: "personagem", versaoFormato: 1, dados: {} }), "geral").problemas[0]));
+  t.ok("versão mais nova é recusada", !MT.importarTema(Object.assign({}, pacote, { versaoTema: 99 }), "geral").ok);
+  t.ok("arquivo grande demais é recusado antes de ler", !MT.importarTema(" ".repeat(210 * 1024), "geral").ok);
+  const sujo = MT.importarTema({ rama: true, tipo: "tema", versaoTema: 1, dados: { nome: "<b>Mau</b>", base: "claro", valores: {
+    fundo: { tipo: "cor", cor: "url(javascript:alert(1))" },
+    superficie: { tipo: "cor", cor: "#ffffff;background:red" },
+    link: { tipo: "cor", cor: "#123456" },
+    estilo: "body{display:none}",
+    elementoSangue: { tipo: "cor", cor: "#ff0000" },
+  } } }, "geral");
+  t.ok("CSS, url() e propriedades inventadas não entram; o válido entra", sujo.ok && Object.keys(sujo.tema.valores).join() === "link" && !/[<>]/.test(sujo.tema.nome));
+  t.ok("  e a prévia avisa o que ficou de fora (inválidos, desconhecida, cor de Ordem, nome)", sujo.avisos.length === 4 && sujo.avisos.some((a) => /Ordem Paranormal/.test(a)));
+  const deOrdem = { nome: "Elementos", base: "escuro", valores: { elementoSangue: { tipo: "cor", cor: "#ff0000" }, fundo: { tipo: "cor", cor: "#101010" } } };
+  const pacoteOrdem = MT.exportarTema(deOrdem, "ordem");
+  t.ok("o tema de uma ficha de Ordem exporta as cores de Ordem", pacoteOrdem.sistema === "ordem" && !!pacoteOrdem.dados.valores.elementoSangue);
+  t.ok("  importado numa ficha de Ordem, elas ficam", !!MT.importarTema(pacoteOrdem, "ordem").tema.valores.elementoSangue);
+  t.ok("  no tema da conta, ficam de fora com aviso", (() => { const r = MT.importarTema(pacoteOrdem, "geral"); return r.ok && !r.tema.valores.elementoSangue && !!r.tema.valores.fundo && r.avisos.length === 1; })());
+  t.ok("  numa ficha universal, também", !MT.importarTema(pacoteOrdem, "universal").tema.valores.elementoSangue);
+}
+
 t.grupo("Modelo · o resolvedor");
 {
   const vazio = MT.resolver({ base: "claro", valores: {} });
   t.igual("sem mudança, o fundo é o do claro", vazio.vars["--cor-fundo"], "#f4f4f1");
   t.igual("  e o botão principal é a cor do texto (como antes)", vazio.vars["--fundo-botao"], "#111114");
-  t.ok("  todas as variáveis saem (contexto fechado)", MT.TOKENS.every((tok) => tok.num ? tok.cssNum in vazio.vars : tok.cor in vazio.vars && (!tok.fundo || tok.fundo in vazio.vars)));
+  t.ok("  todas as variáveis saem (contexto fechado)", MT.TOKENS.every((tok) => tok.cor in vazio.vars && (!tok.fundo || tok.fundo in vazio.vars)));
   const g = { tipo: "linear", angulo: 90, pontos: [{ cor: "#000000", pos: 0 }, { cor: "#ffffff", pos: 100 }] };
   const r = MT.resolver({ base: "claro", valores: { fundo: g, botao: { tipo: "radial", forma: "elipse", x: 50, y: 50, pontos: g.pontos } } });
   t.ok("o gradiente vai para o preenchimento", r.vars["--fundo-pagina"].startsWith("linear-gradient(90deg"));

@@ -388,15 +388,16 @@
       inventario: { limite: 0, itens: [] },
       anotacoes: { pastas: [], soltas: [] },
       camposCustomizados: [],
-      aparencia: normalizarAparencia(i.aparencia),
+      aparencia: normalizarAparencia(i.aparencia, tipoDeFicha(i.tipoFicha)),
     };
   }
 
   /* O tema desta ficha (schema 16). As regras moram em js/tema-modelo.js;
-     sem ele (um teste que não o carrega), o bloco volta ao padrão. */
-  function normalizarAparencia(bruto) {
+     sem ele (um teste que não o carrega), o bloco volta ao padrão. As
+     cores de um sistema só ficam na ficha daquele sistema. */
+  function normalizarAparencia(bruto, tipo) {
     var M = global.RAMATemaModelo;
-    return M ? M.normalizarAparencia(bruto) : { v: 1, modo: "conta" };
+    return M ? M.normalizarAparencia(bruto, tipo === "ordem" ? "ordem" : "universal") : { v: 1, modo: "conta" };
   }
 
   function rituaisVazios() {
@@ -923,7 +924,7 @@
 
     ficha.modulos = normalizarModulos(b.modulos);
     ficha.aliados = global.RAMACriaturas.normalizarAliados(b.aliados);
-    ficha.aparencia = normalizarAparencia(b.aparencia);
+    ficha.aparencia = normalizarAparencia(b.aparencia, ficha.tipoFicha);
 
     return ficha;
   }
