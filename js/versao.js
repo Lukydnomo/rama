@@ -70,6 +70,20 @@
 
   var CHANGELOG = [
     {
+      versao: "2.39.0", codinome: "ESCANINHO", data: "04/10/2026",
+      mudancas: {
+        "Melhorado": [
+          "Aba Regras da ficha de Ordem em gavetas que abrem e fecham pela etiqueta: Configurações da ficha, Regras opcionais e Regras de mesa, cada uma com “N regras · M ligadas” à vista mesmo fechada.",
+          "Cada regra virou um cartão compacto, lado a lado em grade como os itens do inventário: fechado, o nome, o resumo e a chave, que liga e desliga sem abrir o cartão; aberto, o efeito, a automação, a fonte, os avisos e os parâmetros. Fechado, o cartão ainda avisa quando a regra não pode ser ligada ou tem dados guardados.",
+          "“Configuração da ficha” passou a se chamar “Configurações da ficha” e reúne, além da patente, NEX & Experiência e Jogando sem Sanidade.",
+          "Ligar uma regra não fecha mais a gaveta nem o cartão em que você estava; no modo edição, com a patente desligada, o cartão da patente já abre nos limites por categoria. No celular, os cartões ficam em uma coluna.",
+        ],
+        "Técnico": [
+          "Só o site muda: nenhuma troca de .gs, nova implantação ou `setupRama()`. Gaveta = `details.r-painel.r-gaveta` com a etiqueta no `summary`; cartões em `.ordem-regras` (grade igual à de `.itens`) com o `recolhivel` de sempre e a chave nas ações do cabeçalho.",
+        ],
+      },
+    },
+    {
       versao: "2.38.0", codinome: "SIMULACRO", data: "04/10/2026",
       mudancas: {
         "Adicionado": [

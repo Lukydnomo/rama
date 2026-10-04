@@ -1791,6 +1791,53 @@
   min-width: 0;
 }
 
+/* ---------- gavetas da aba Regras ----------
+   O painel de sempre, com a etiqueta no traço de cima, só que abre e
+   fecha. A etiqueta e a linha de resumo são o <summary>: teclado,
+   leitor de tela e Enter/Espaço vêm do navegador. */
+.r-gaveta {
+  padding-top: var(--e4);
+}
+.r-gaveta > .r-gaveta__topo {
+  display: flex;
+  align-items: center;
+  min-height: var(--alvo-toque);
+  list-style: none;
+  cursor: pointer;
+  user-select: none;
+}
+.r-gaveta > .r-gaveta__topo::-webkit-details-marker { display: none; }
+.r-gaveta__titulo { cursor: pointer; }
+.r-gaveta__seta {
+  display: inline-block;
+  width: 10px;
+  color: var(--cor-texto-3);
+  transition: transform var(--tempo-curto) var(--curva);
+}
+.r-gaveta__seta::before { content: "\25B8"; }
+.r-gaveta[open] > .r-gaveta__topo .r-gaveta__seta { transform: rotate(90deg); }
+@media (prefers-reduced-motion: reduce) {
+  .r-gaveta__seta { transition: none; }
+}
+.r-gaveta__resumo {
+  font-family: var(--fonte-mini);
+  font-size: var(--texto-mini);
+  color: var(--cor-texto-3);
+}
+.r-gaveta > .r-gaveta__topo:hover .r-gaveta__resumo,
+.r-gaveta > .r-gaveta__topo:hover .r-gaveta__seta { color: var(--cor-texto); }
+.r-gaveta__corpo { margin-top: var(--e2); }
+
+/* Os cartões de regra em grade, como os itens do inventário. */
+.ordem-regras {
+  display: grid;
+  gap: var(--e2);
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  align-items: start;
+}
+.ordem-regras > .recolhivel + .recolhivel { margin-top: 0; }
+.ordem-regra-cartao--ligada { border-color: var(--cor-paranormal); }
+
 /* O interruptor é forma além de cor: a bola muda de lado, e continua
    legível para quem não distingue cores. */
 .r-interruptor {

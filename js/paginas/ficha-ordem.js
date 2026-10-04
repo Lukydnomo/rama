@@ -3256,44 +3256,97 @@
      REGRAS
      ================================================================= */
 
+  /* As regras que dizem COMO esta ficha conta (patente, nível, Sanidade)
+     ficam juntas em "Configurações da ficha"; as outras opcionais e as de
+     mesa, cada grupo na sua gaveta. */
+  var REGRAS_DA_CONFIGURACAO = ["nexExperiencia", "semSanidade"];
+
+  /* O que está aberto na aba Regras. Ligar uma chave redesenha a aba
+     inteira: sem esta memória, cada clique fecharia a gaveta e o cartão
+     em que a pessoa estava. Vive só nesta página, como o filtro do
+     inventário. */
+  var abertasNasRegras = { gavetas: {}, cartoes: {} };
+
   var SecaoRegras = {
     aba: function (ctx) {
       var o = ordemDe(ctx);
 
-      var afetam = OP.REGRAS.filter(function (r) { return r.afetaFicha; });
+      var daConfiguracao = REGRAS_DA_CONFIGURACAO.map(function (k) { return OP.regra(k); }).filter(Boolean);
+      var afetam = OP.REGRAS.filter(function (r) { return r.afetaFicha && REGRAS_DA_CONFIGURACAO.indexOf(r.chave) < 0; });
       var naoAfetam = OP.REGRAS.filter(function (r) { return !r.afetaFicha; });
+      var ligadas = function (lista) { return lista.filter(function (r) { return OP.ligada(o, r.chave); }).length; };
 
       return el("div.pilha--larga", { class: "pilha" }, [
-        painelConfiguracao(ctx, o),
+        gavetaDeRegras("configuracao", "Configurações da ficha",
+          "Como esta ficha conta patente, nível e Sanidade.",
+          [cartaoDePatente(ctx, o)].concat(daConfiguracao.map(function (r) { return cartaoDeRegra(ctx, o, r); })),
+          (R.regraDePatente(o) ? 1 : 0) + ligadas(daConfiguracao)),
 
-        UI.painel("Regras opcionais", el("div.pilha", {}, [
-          el("p.t-mini", {
-            texto: "Do Livro de Regras (contagem de munição e componentes), do Sobrevivendo ao Horror e dos Arquivos Secretos 1, 2 e 3 " +
-                   "(Intenção, formas supremas, participação no Hexatombe, Aliados em Perigo, poderes de Sacrifício, Trilha Geral, Batalhas de " +
-                   "Intenções, Jogos do Circo, Boas Recordações, Paixão, veículos e animais treinados). Todas começam desligadas e valem só para esta ficha; " +
-                   "estar numa campanha com o modo Hexatombe não liga nenhuma. O Livro de Regras continua sendo a versão padrão do jogo.",
-          }),
-          el("div.pilha--curta", { class: "pilha" }, afetam.map(function (r) {
-            return cartaoDeRegra(ctx, o, r);
-          })),
-        ])),
+        gavetaDeRegras("opcionais", "Regras opcionais",
+          "Do Livro de Regras (contagem de munição e componentes), do Sobrevivendo ao Horror e dos Arquivos Secretos 1, 2 e 3 " +
+          "(Intenção, formas supremas, participação no Hexatombe, Aliados em Perigo, poderes de Sacrifício, Trilha Geral, Batalhas de " +
+          "Intenções, Jogos do Circo, Boas Recordações, Paixão, veículos e animais treinados). Todas começam desligadas e valem só para esta ficha; " +
+          "estar numa campanha com o modo Hexatombe não liga nenhuma. O Livro de Regras continua sendo a versão padrão do jogo.",
+          afetam.map(function (r) { return cartaoDeRegra(ctx, o, r); }), ligadas(afetam)),
 
-        UI.painel("Regras de mesa", el("div.pilha", {}, [
-          el("p.t-mini", {
-            texto: "Estas não mudam campo nem conta da ficha. Ligá-las serve para a mesa " +
-                   "registrar que as usa.",
-          }),
-          el("div.pilha--curta", { class: "pilha" }, naoAfetam.map(function (r) {
-            return cartaoDeRegra(ctx, o, r);
-          })),
-        ])),
+        gavetaDeRegras("mesa", "Regras de mesa",
+          "Estas não mudam campo nem conta da ficha. Ligá-las serve para a mesa registrar que as usa.",
+          naoAfetam.map(function (r) { return cartaoDeRegra(ctx, o, r); }), ligadas(naoAfetam)),
       ]);
     },
   };
 
+  /* Uma gaveta: o painel de sempre, com o título na etiqueta do traço de
+     cima, que abre e fecha. Fechada, fica só o resumo (quantas regras e
+     quantas ligadas). Por dentro, os cartões em grade, como os itens do
+     inventário. */
+  function gavetaDeRegras(chave, titulo, descricao, cartoes, ligadas) {
+    var aberta = abertasNasRegras.gavetas[chave] !== false;
+    var caixa = el("details.r-painel.r-gaveta", { open: aberta, dataset: { gaveta: chave } }, [
+      el("summary.r-gaveta__topo", {}, [
+        el("span.r-painel__titulo.r-gaveta__titulo", {}, [
+          el("span.r-gaveta__seta", { "aria-hidden": "true" }),
+          el("span", { texto: titulo }),
+        ]),
+        el("span.r-gaveta__resumo", {
+          texto: cartoes.length + (cartoes.length === 1 ? " regra" : " regras") + " · " +
+                 ligadas + (ligadas === 1 ? " ligada" : " ligadas"),
+        }),
+      ]),
+      el("div.pilha--curta.r-gaveta__corpo", { class: "pilha" }, [
+        descricao ? el("p.t-mini", { texto: descricao }) : null,
+        el("div.ordem-regras", {}, cartoes),
+      ]),
+    ]);
+    caixa.addEventListener("toggle", function () { abertasNasRegras.gavetas[chave] = caixa.open; });
+    return caixa;
+  }
+
+  /* O cartão compacto de uma regra: fechado, nome, resumo e a chave;
+     aberto, o resto. A chave fica fora do clique que abre o cartão. */
+  function cartaoCompacto(id, titulo, linhas, chave, corpo, ligada, abertoPorPadrao) {
+    var memoria = abertasNasRegras.cartoes[id];
+    return UI.recolhivel({
+      titulo: titulo,
+      subtitulo: linhas.filter(Boolean),
+      acoes: [chave],
+      classe: "ordem-regra-cartao" + (ligada ? " ordem-regra-cartao--ligada" : ""),
+      aberto: memoria === undefined ? !!abertoPorPadrao : memoria,
+      aoAlternar: function (aberto) { abertasNasRegras.cartoes[id] = aberto; },
+      conteudo: corpo.filter(Boolean),
+    });
+  }
+
+  function textoDosLimites(limites) {
+    return [0, 1, 2, 3, 4].map(function (n) {
+      var l = limites[n].limite;
+      return C.CATEGORIAS_ITEM[n].rotulo + ": " + (l === null ? "sem limite" : l);
+    }).join(" · ");
+  }
+
   /* A chave "Aplicar regras de patente" e, com ela desligada, os
      limites manuais por categoria. */
-  function painelConfiguracao(ctx, o) {
+  function cartaoDePatente(ctx, o) {
     var aplicada = R.regraDePatente(o);
     var pat = R.patente(o);
 
@@ -3345,13 +3398,13 @@
       }
     }
 
-    return UI.painel("Configuração da ficha", el("div.ordem-regra" + (aplicada ? ".ordem-regra--ligada" : ""), {}, [
-      el("div.ordem-regra__topo", {}, [
-        el("span.ordem-regra__nome", { texto: "Aplicar regras de patente" }),
-        chave,
-      ]),
-      el("div.pilha--curta", { class: "pilha" }, corpo),
-    ]));
+    var resumo = aplicada
+      ? pat.patente.nome + " (" + pat.prestigio + " PP) · crédito " + pat.credito + (pat.creditoElevado ? " (elevado)" : "")
+      : "Desligada: itens por categoria definidos pela mesa — " + textoDosLimites(pat.limites);
+    /* No modo edição, com a regra desligada, os limites se editam aqui:
+       o cartão já vem aberto. */
+    return cartaoCompacto("patente", "Aplicar regras de patente", [el("span.t-mini", { texto: resumo })], chave, corpo, aplicada,
+      !aplicada && ctx.emEdicao());
   }
 
   function controleDeLimite(ctx, o, n, atual) {
@@ -3417,7 +3470,6 @@
     }, [el("span.r-interruptor__bola", { "aria-hidden": "true" })]);
 
     var corpo = [
-      el("p.t-mini", { texto: r.resumo }),
       el("p.t-mini", { texto: r.efeito }),
       ES.etiquetaAutomacao(r.automacao),
       el("p.criacao-fonte", {
@@ -3433,7 +3485,8 @@
        nunca ligar sozinho. */
     var A2 = global.RAMAOrdemArquivo2;
     var qualA2 = { poderesDeIntencao: "intencao", formasSupremas: "forma", participacaoHexatombe: "hexatombe" }[r.chave];
-    if (!ligada && qualA2 && A2 && A2.dadosGuardados && A2.dadosGuardados(o, qualA2)) {
+    var guardados = !ligada && qualA2 && A2 && A2.dadosGuardados && A2.dadosGuardados(o, qualA2);
+    if (guardados) {
       corpo.push(el("p.t-mini.t-aviso", { texto: "Esta ficha tem dados desta regra guardados. Eles não valem enquanto ela estiver desligada; ligar volta a aplicá-los, sem conceder nada de novo." }));
     }
 
@@ -3454,13 +3507,13 @@
       })));
     }
 
-    return el("div.ordem-regra", { class: ligada ? "ordem-regra--ligada" : "" }, [
-      el("div.ordem-regra__topo", {}, [
-        el("span.ordem-regra__nome", { texto: r.nome }),
-        chave,
-      ]),
-      el("div.pilha--curta", { class: "pilha" }, corpo),
-    ]);
+    /* Fechado, o cartão ainda diz o que importa: o resumo, por que não
+       dá para ligar e se há dados guardados. */
+    return cartaoCompacto("regra:" + r.chave, r.nome, [
+      el("span.t-mini", { texto: r.resumo }),
+      bloqueada ? el("span.t-mini.t-erro", { texto: "Não dá para ligar agora — abra para ver por quê." }) : null,
+      guardados ? el("span.t-mini.t-aviso", { texto: "Há dados desta regra guardados." }) : null,
+    ], chave, corpo, ligada, false);
   }
 
   async function alternarRegra(ctx, o, r, ligar) {

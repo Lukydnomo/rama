@@ -562,6 +562,9 @@ segredo nenhum — ele os lê das Script Properties. Publicá-lo não expõe nad
 
 ### Atualizar o backend
 
+**v2.39.0 — ESCANINHO:** só o site (aba Regras em gavetas). Publique o site; não
+precisa trocar `.gs`, criar versão da implantação nem rodar `setupRama()`.
+
 **v2.38.0 — SIMULACRO:** Arquivos Secretos 4. **Troque** `Codigo.gs`,
 `Campanhas.gs` e `Dados.gs`, rode **`setupRama()`** (cria a aba
 `CAMPANHA_HACKING`; repetir é seguro e não apaga nada), crie uma **nova versão**

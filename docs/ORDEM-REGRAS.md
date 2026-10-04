@@ -603,8 +603,18 @@ suíte `testes/executar-cris.js` exige zero divergência nos casos reais.
 
 ### A chave "Aplicar regras de patente"
 
-Fica na aba Regras, em "Configuração da ficha". **Ligada é o padrão**, e é o
-comportamento de toda ficha gravada antes desta chave existir.
+Fica na aba Regras, na gaveta "Configurações da ficha" (com NEX & Experiência e
+Jogando sem Sanidade). **Ligada é o padrão**, e é o comportamento de toda ficha
+gravada antes desta chave existir.
+
+A aba Regras (v2.39) tem três gavetas que abrem e fecham pela etiqueta —
+Configurações da ficha, Regras opcionais e Regras de mesa — com o resumo
+"N regras · M ligadas" à vista mesmo fechadas. Dentro, cada regra é um cartão
+compacto em grade, como os itens do inventário: fechado, mostra o nome, o resumo
+e a chave (que liga sem abrir o cartão); aberto, o efeito, a automação, a fonte,
+os avisos e os parâmetros. O que está aberto fica aberto quando uma chave
+redesenha a aba (memória da página). No modo edição, com a patente desligada, o
+cartão da patente já vem aberto nos limites por categoria.
 
 | com a chave ligada | com a chave desligada |
 |---|---|
