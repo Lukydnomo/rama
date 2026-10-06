@@ -70,6 +70,17 @@
 
   var CHANGELOG = [
     {
+      versao: "2.40.1", codinome: "FRISO", data: "06/10/2026",
+      mudancas: {
+        "Corrigido": [
+          "Fundo dos temas de dados em linhas baixas (o histórico da campanha): quando a imagem, escalada pela altura, fica mais estreita que a linha, ela agora se repete nas laterais até preencher, em vez de deixar faixas de cor sólida dos lados. A repetição é só na horizontal — topo e base continuam alinhados, nada é cortado em cima ou embaixo e a imagem não deforma. Nas notificações, em que a imagem costuma ser mais larga que o cartão, nada muda.",
+        ],
+        "Técnico": [
+          "`background-repeat: repeat-x` no fundo do tema (o véu continua sem repetir), em js/aparencia-rolagem.js. O comentário do contrato mudou em js/temas-dados.js e na cópia do Codigo.gs, sem efeito no servidor: atualizar o Codigo.gs é opcional, basta publicar o site. Kit (assets/dados/modelo/LEIA-ME.md) atualizado.",
+        ],
+      },
+    },
+    {
       versao: "2.40.0", codinome: "SILHUETA", data: "06/10/2026",
       mudancas: {
         "Adicionado": [

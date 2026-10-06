@@ -4439,8 +4439,10 @@ function listarCodigos() {
        fundo        uma imagem inteira, de proporção livre
        ajusteFundo  { modo: "zoom-pela-altura", alinhamentoHorizontal }
                     a imagem é escalada pela ALTURA do cartão
-                    (background-size: auto 100%), sem repetir e sem
-                    cortar topo ou base; 0 = esquerda, 0.5 = centro
+                    (background-size: auto 100%), sem cortar topo ou
+                    base; mais estreita que o elemento, ela se repete
+                    nas laterais (só na horizontal) até preencher;
+                    0 = esquerda, 0.5 = centro
        cores        legibilidade do cartão (hexadecimais)
        veu          { cor, alfa } opcional: uma película sobre o fundo
 

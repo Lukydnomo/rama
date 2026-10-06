@@ -32,12 +32,14 @@ mesma tela quadrada: não vazam da caixa do ícone e não cobrem números nem bo
 
 Uma imagem inteira e contínua. Fator de escala = altura do cartão ÷ altura da
 imagem: o topo da imagem fica no topo do cartão e a base na base; a largura segue
-o mesmo fator. É `background-size: auto 100%`, sem repetir, com o alinhamento
-horizontal do manifesto (`alinhamentoHorizontal`: 0 = esquerda, 0.5 = centro, 1 =
-direita). Mais larga que o cartão, o excedente lateral some; mais estreita, a
-cor `superficie` do tema aparece nas laterais. Nunca corta topo ou base, nunca
-deforma, e a imagem não decide a altura do cartão — quando o cartão cresce
-(parcelas, notas, botões), o zoom acompanha.
+o mesmo fator. É `background-size: auto 100%` com `background-repeat: repeat-x`,
+a partir do alinhamento horizontal do manifesto (`alinhamentoHorizontal`: 0 =
+esquerda, 0.5 = centro, 1 = direita). Mais larga que o elemento, o excedente
+lateral some; mais estreita (a linha baixa do histórico, por exemplo), a imagem
+se repete nas laterais até preencher — só na horizontal. Nunca corta topo ou
+base, nunca deforma, e a imagem não decide a altura do cartão — quando o cartão
+cresce (parcelas, notas, botões), o zoom acompanha. Fundos cujas bordas esquerda
+e direita combinam ficam sem emenda visível quando se repetem.
 
 `veu` (opcional) é uma película de cor sobre o fundo, para o texto continuar
 legível.

@@ -23,10 +23,12 @@
    ---------------------------------------------------------------------
    Uma imagem inteira, escalada para a altura do elemento (topo com
    topo, base com base), na proporção dela: background-size: auto 100%.
-   Sem repetir e sem cortar em cima ou embaixo. Mais larga que o cartão,
-   o excedente lateral some; mais estreita, a superfície do tema aparece
-   nas laterais. Quando a altura do cartão muda, o zoom acompanha — é o
-   próprio CSS que recalcula.
+   Nunca corta em cima ou embaixo, nunca deforma. Mais larga que o
+   elemento, o excedente lateral some; mais estreita (a linha baixa do
+   histórico, por exemplo), ela se repete nas laterais até preencher —
+   repeat-x, a partir da posição do manifesto, nunca na vertical.
+   Quando a altura muda, o zoom acompanha — é o próprio CSS que
+   recalcula.
    ===================================================================== */
 
 (function (global) {
@@ -170,7 +172,12 @@
         elemento.style.backgroundImage = camadas.join(", ");
         elemento.style.backgroundSize = tamanhos.join(", ");
         elemento.style.backgroundPosition = posicoes.join(", ");
-        elemento.style.backgroundRepeat = "no-repeat";
+        /* Repetir só na horizontal: com a imagem mais larga que o
+           elemento, nada muda; mais estreita, as cópias completam as
+           laterais. O véu cobre tudo, sem repetir. */
+        var repeticoes = camadas.map(function () { return "repeat-x"; });
+        if (n.veu && n.veu.alfa > 0) repeticoes[0] = "no-repeat";
+        elemento.style.backgroundRepeat = repeticoes.join(", ");
       }
       return;
     }

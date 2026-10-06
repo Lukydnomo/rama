@@ -565,6 +565,10 @@ segredo nenhum — ele os lê das Script Properties. Publicá-lo não expõe nad
 
 ### Atualizar o backend
 
+**v2.40.1 — FRISO:** só o site (o fundo dos temas de dados se repete nas laterais
+quando falta largura). Publique o site; trocar o `Codigo.gs` é opcional — mudou só
+um comentário na cópia do catálogo.
+
 **v2.40.0 — SILHUETA:** temas de dados. **Troque** `Codigo.gs`, `Campanhas.gs` e
 `Dados.gs`, rode **`setupRama()`** (cria `DESBLOQUEIOS`, `CODIGOS_RESGATE` e
 `RESGATES`; repetir é seguro), crie uma **nova versão** da implantação e só então
