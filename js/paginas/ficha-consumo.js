@@ -486,11 +486,12 @@
     var estado3 = { peComPv: 0 };
 
     var efeito = efeitoConhecido(ritual);
+    var barganha = ehBarganha(ritual);
 
     /* Arquivos Secretos 1 (v2.29): o que muda o uso deste ritual. */
     var as1 = extrasDoArquivo(o, c, ritual, inv);
     var estado = { versao: 0, gastar: true, dispensa: "", entregar: false, catalisador: "", emMim: false,
-      macula: false, reter: false, negativo: false, placas: !!as1.placas, sofisticado: "", naAntena: false };
+      macula: false, reter: false, negativo: false, placas: !!as1.placas, sofisticado: "", naAntena: false, barganhaExtras: {} };
     var opId = novoOpId("ritual");
     var usado = false;
     var corpo = el("div.pilha--curta.consumo-confirmacao", { class: "pilha" });
@@ -596,6 +597,7 @@
         partes.push(el("p.t-mini", { texto: "Ritual de Medo: cada conjuração custa Sanidade permanente e dano mental (OPRPG p. 119). Isso não é descontado aqui — registre na ficha." }));
       }
       partes = partes.concat(opcoesDoArquivo(as1, estado, pl, pintar));
+      if (barganha) partes.push(blocoDaBarganha(o, c, recurso, estado));
       if (efeito) {
         partes.push(el("label.r-marca", {}, [
           el("input", { type: "checkbox", checked: estado.emMim, dataset: { foco: "usar-ritual-em-mim" }, onchange: function (ev) { estado.emMim = ev.target.checked; } }),
@@ -633,6 +635,12 @@
       if (!r.repetido) {
         var extras = aplicarDoArquivo(ctx, o, c, ritual, as1, estado, pl, recurso);
         if (extras) registro = (registro ? registro + " " : "") + extras;
+      }
+      /* Barganha Insana: a restauração vem DEPOIS do custo — os PE voltam
+         ao máximo, e o custo não é descontado de novo. N'A Antena, o
+         ritual fica contido e não faz efeito agora. */
+      if (!r.repetido && barganha && !estado.naAntena) {
+        registro = (registro ? registro + " " : "") + aplicarBarganha(ctx, o, c, recurso, estado, opId);
       }
       janela.fechar();
       if (!r.repetido) ctx.alterou();
@@ -796,6 +804,147 @@
     return notas.join(" ");
   }
 
+  /* =================================================================
+     BARGANHA INSANA (v2.41)
+     -----------------------------------------------------------------
+     No "Usar ritual", DEPOIS de pagar o custo: os PV e os PE (os PD,
+     com Jogando sem Sanidade) voltam ao máximo efetivo — os máximos não
+     mudam e nada temporário entra — e terminam as condições negativas.
+     O resto da ficha fica: efeitos que não são condição (um ritual a
+     favor, um poder) não saem; um efeito sem classificação que
+     atrapalha aparece para a pessoa marcar, se for uma condição
+     negativa. A perda de 1d4 de Sanidade permanente fica pendente para o
+     fim da cena (js/ordem/regras.js, "BARGANHA INSANA").
+     ================================================================= */
+
+  var CONDICOES_RASTREADAS = [
+    { chave: "morrendo", nome: "Morrendo" }, { chave: "enlouquecendo", nome: "Enlouquecendo" },
+    { chave: "inconsciente", nome: "Inconsciente" }, { chave: "perturbado", nome: "Perturbado" },
+  ];
+
+  function ehBarganha(ritual) {
+    return !!(ritual && R().ID_BARGANHA && ritual.origemCatalogoId === R().ID_BARGANHA);
+  }
+
+  /* O que a Barganha encerra: as condições do livro (as rastreadas e as
+     aplicações de condição) sozinhas; efeitos sem classificação com algum
+     modificador negativo, só se a pessoa marcar. */
+  function condicoesDaBarganha(o) {
+    var cond = o.condicoes || {};
+    var auto = [];
+    var duvidosos = [];
+    CONDICOES_RASTREADAS.forEach(function (x) {
+      if (cond[x.chave] && cond[x.chave].ativa) auto.push({ rastreada: x.chave, nome: x.nome });
+    });
+    (cond.efeitos || []).forEach(function (inst) {
+      if (!EF() || !EF().ativa(inst)) return;
+      if (inst.tipo === "condicao" || /^cond:/.test(inst.modelo || "")) { auto.push({ instancia: inst.id, nome: inst.nome }); return; }
+      var negativo = (inst.modificadores || []).some(function (m) { return Number(m.valor) < 0; });
+      if (negativo) duvidosos.push({ instancia: inst.id, nome: inst.nome + (inst.origem && inst.origem.nome ? " (" + inst.origem.nome + ")" : "") });
+    });
+    return { auto: auto, duvidosos: duvidosos };
+  }
+
+  function blocoDaBarganha(o, c, recurso, estado) {
+    var lista = condicoesDaBarganha(o);
+    var partes = [
+      el("p.t-mini", { texto: "Barganha Insana: depois de pagar o custo, os PV (" + c.atual.pv + "/" + c.pv.total + ") e os " + recurso.toUpperCase() + " voltam ao máximo efetivo e terminam as condições negativas. Os máximos não mudam e a Sanidade não é recuperada." }),
+      el("p.t-mini", { texto: lista.auto.length ? "Condições que terminam: " + lista.auto.map(function (x) { return x.nome; }).join(", ") + "." : "Nenhuma condição negativa ativa agora." }),
+    ];
+    if (lista.duvidosos.length) {
+      partes.push(el("p.t-mini", { texto: "Estes efeitos atrapalham, mas não estão classificados como condição. Marque só os que forem condições negativas:" }));
+      lista.duvidosos.forEach(function (x) {
+        partes.push(el("label.r-marca", {}, [
+          el("input", { type: "checkbox", checked: !!estado.barganhaExtras[x.instancia], onchange: function (ev) { estado.barganhaExtras[x.instancia] = ev.target.checked; } }),
+          el("span", { texto: x.nome }),
+        ]));
+      });
+    }
+    partes.push(el("p.t-aviso", { texto: c.determinacao
+      ? "Jogando sem Sanidade: a perda de 1d4 de Sanidade permanente não se aplica (SAH p. 104) — fica registrada a conjuração."
+      : "No fim da cena: perde 1d4 de Sanidade permanente. A perda fica pendente agora e é rolada quando a cena terminar." }));
+    return el("div.pilha--curta.consumo-barganha", { class: "pilha" }, partes);
+  }
+
+  function aplicarBarganha(ctx, o, c, recurso, estado, opId) {
+    if (!o.recursos) o.recursos = { pv: null, pe: null, san: null, pd: null };
+    /* null é "cheio": acompanha o máximo efetivo, sem número fixo. */
+    o.recursos.pv = null;
+    o.recursos[recurso] = null;
+    var cond = o.condicoes || {};
+    var lista = condicoesDaBarganha(o);
+    var encerradas = [];
+    lista.auto.concat(lista.duvidosos.filter(function (x) { return estado.barganhaExtras[x.instancia]; })).forEach(function (x) {
+      if (x.rastreada) {
+        var rr = global.RAMAOrdemCondicoes ? global.RAMAOrdemCondicoes.encerrar(cond, x.rastreada) : null;
+        if (rr && rr.mudou) encerradas.push(x.nome);
+      } else if (EF()) {
+        var re = EF().encerrar(cond, x.instancia, "manual", "Barganha Insana");
+        if (re && re.mudou) encerradas.push(x.nome);
+      }
+    });
+    var cena = R().cenaDe ? R().cenaDe(o) : "inicial";
+    var reg = R().registrarBarganha(o, opId, cena, !!c.determinacao);
+    return "Barganha Insana: PV e " + recurso.toUpperCase() + " no máximo" +
+      (encerradas.length ? "; terminaram " + encerradas.join(", ") : "") + "." +
+      (reg.ignorada ? " Sem Sanidade, nenhuma perda." : " 1d4 de Sanidade permanente pendente para o fim da cena.");
+  }
+
+  /* O fim da cena da Barganha: uma rolagem de 1d4 por conjuração
+     pendente, mostrada pelo mostrador de sempre e aplicada no máximo da
+     Sanidade. O 1d4 fica guardado assim que sai: se a gravação falhar,
+     ninguém rola de novo. `soAsVencidas`: só as de cenas que já
+     terminaram (o aviso que aparece ao mudar de cena). */
+  function resolverBarganha(ctx, opcoes) {
+    var op = opcoes || {};
+    var o = ordemDe(ctx);
+    if (!R().barganhaInsana) return;
+    var cena = R().cenaDe ? R().cenaDe(o) : "inicial";
+    var b = R().barganhaInsana(o);
+    var lista = b.pendentes.filter(function (p) { return !op.soAsVencidas || p.cena !== cena; });
+    if (!lista.length) { if (!op.silencioso) UI.aviso("Nenhuma perda da Barganha Insana pendente."); return; }
+    if (ctx.podeEditar && !ctx.podeEditar()) return;
+    var c = R().calcular(o, inventario(ctx));
+    UI.modal({
+      titulo: "Barganha Insana — fim da cena",
+      conteudo: [el("div.pilha--curta", { class: "pilha" }, [
+        el("p", { texto: lista.length === 1
+          ? "Uma conjuração pendente: perde 1d4 de Sanidade permanentemente."
+          : lista.length + " conjurações pendentes: 1d4 de Sanidade permanente por conjuração." }),
+        c.determinacao ? el("p.t-mini", { texto: "Jogando sem Sanidade: a perda não se aplica (SAH p. 104); as conjurações ficam registradas sem perda." }) : null,
+        lista.some(function (p) { return p.d4; }) ? el("p.t-mini", { texto: "Já rolado e guardado: " + lista.filter(function (p) { return p.d4; }).map(function (p) { return p.d4; }).join(", ") + " (não rola de novo)." }) : null,
+        el("p.t-mini", { texto: "A perda tira do máximo da Sanidade; a atual acompanha se ficar acima dele." }),
+      ])],
+      botoes: [
+        { rotulo: "Depois", classe: "r-botao--fantasma" },
+        { rotulo: c.determinacao ? "Registrar" : "Rolar e aplicar", classe: "r-botao--principal", aoClicar: function (fechar) {
+          var total = 0;
+          lista.forEach(function (p) {
+            if (c.determinacao) { R().ignorarBarganha(o, p.id); return; }
+            var antes = p.d4;
+            var dado = global.RAMADados && global.RAMADados.total ? global.RAMADados.total("1d4", { nome: "Barganha Insana" }) : null;
+            var s = R().sortearBarganha(o, p.id, dado && dado.ok ? dado.total : 1 + Math.floor(Math.random() * 4));
+            if (!s.ok) return;
+            var resultado = { tipo: "soma", nome: "Barganha Insana", expressao: "1d4", rolagens: [s.d4], total: s.d4,
+              parcelas: [{ rotulo: "Sanidade permanente", valor: -s.d4 }] };
+            var nota = { nome: "Barganha Insana · Sanidade permanente", notas: ["Fim da cena: −" + s.d4 + " de Sanidade máxima, para sempre."] };
+            if (global.RAMARolagens) {
+              /* Já rolado antes (gravação que falhou): só mostra de novo. */
+              if (antes) global.RAMARolagens.exibir(resultado, nota, null);
+              else global.RAMARolagens.mostrar(resultado, nota);
+            }
+            var r = R().resolverBarganha(o, p.id);
+            if (r.ok && !r.repetida) total += r.perda;
+          });
+          fechar();
+          ctx.alterou();
+          ctx.redesenhar();
+          UI.aviso(c.determinacao ? "Barganha Insana registrada, sem perda (Jogando sem Sanidade)." : "Barganha Insana: −" + total + " de Sanidade permanente.", { duracao: 7000 });
+        } },
+      ],
+    });
+  }
+
   function efeitoConhecido(ritual) {
     if (!EF()) return null;
     var id = ritual.origemCatalogoId || "";
@@ -833,6 +982,7 @@
     painelComponentes: painelComponentes,
     confirmarAtaque: confirmarAtaque,
     usarRitual: usarRitual,
+    resolverBarganha: resolverBarganha,
     elementoDoRitual: elementoDoRitual,
   };
 })(window);

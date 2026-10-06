@@ -1405,6 +1405,7 @@
           var fim = null;
           mudarCondicao(ctx, function () { fim = CD().novaCena(cond); return fim; }, "condicoes-nova-cena");
           if (fim && fim.encerradas && fim.encerradas.length) UI.aviso("Terminaram com a cena: " + fim.encerradas.join(", ") + ".");
+          resolverBarganhaDaCena(ctx);
         },
       }),
       /* Cena de interlúdio (v2.30): o que dura "até o início da próxima
@@ -1430,6 +1431,7 @@
           }, "condicoes-novo-interludio");
           if (fim && fim.encerradas && fim.encerradas.length) UI.aviso("Terminaram com a cena: " + fim.encerradas.join(", ") + ".");
           if (vencidas.length) UI.aviso("Quase Novo: terminaram as modificações temporárias — " + vencidas.join("; ") + ".", { duracao: 8000 });
+          resolverBarganhaDaCena(ctx);
         },
       }),
       el("label.r-marca.condicoes__combate", {}, [
@@ -1443,7 +1445,35 @@
         }),
         el("span.t-mini", { texto: "Contar pelos turnos do combate da campanha (os inícios de turno deste personagem, e a duração dos efeitos)" }),
       ]),
+      linhaDaBarganha(ctx),
     ]);
+  }
+
+  /* Barganha Insana (v2.41): as perdas de Sanidade permanente esperando
+     o fim da cena. Ficam aqui, e não no cartão do ritual: tirar o ritual
+     da ficha não apaga o que já foi conjurado. */
+  function linhaDaBarganha(ctx) {
+    var o = ordemDe(ctx);
+    var b = o.barganhaInsana;
+    var pendentes = b && Array.isArray(b.pendentes) ? b.pendentes : [];
+    if (!pendentes.length) return null;
+    var cena = R.cenaDe(o);
+    var daCena = pendentes.filter(function (p) { return p.cena === cena; }).length;
+    return el("div.faixa.condicoes__barganha", {}, [
+      el("span.t-mini.t-aviso", { texto: "Barganha Insana: " + pendentes.length + " perda(s) de 1d4 de Sanidade permanente pendente(s)" +
+        (daCena === pendentes.length ? " para o fim desta cena." : (daCena ? " (" + daCena + " desta cena)." : " de cena(s) que já terminaram.")) }),
+      ctx.podeEditar && ctx.podeEditar() ? el("button.r-botao.r-botao--mini", {
+        type: "button", texto: "A cena terminou: resolver",
+        onclick: function () { if (global.RAMASecaoConsumo) global.RAMASecaoConsumo.resolverBarganha(ctx, {}); },
+      }) : null,
+    ]);
+  }
+
+  /* Mudou de cena: o que a Barganha deixou na cena anterior vence agora. */
+  function resolverBarganhaDaCena(ctx) {
+    if (global.RAMASecaoConsumo && global.RAMASecaoConsumo.resolverBarganha) {
+      global.RAMASecaoConsumo.resolverBarganha(ctx, { soAsVencidas: true, silencioso: true });
+    }
   }
 
   function marcadores(contagem, limite) {

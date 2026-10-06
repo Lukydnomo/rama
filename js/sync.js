@@ -527,6 +527,9 @@
       "ordem.arquivo4.explosoes": "id",
       "ordem.arquivo4.timers": "id",
       "inventario.itens.ordem.lancador.carregadas": "id",
+      /* Barganha Insana (v2.41): cada conjuração casa pelo id. */
+      "ordem.barganhaInsana.pendentes": "id",
+      "ordem.barganhaInsana.resolvidas": "id",
     },
     /* Contadores de gasto: a diferença de cada lado se soma. */
     somaveis: [

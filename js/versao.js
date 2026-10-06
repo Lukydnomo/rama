@@ -70,6 +70,20 @@
 
   var CHANGELOG = [
     {
+      versao: "2.41.0", codinome: "PENHOR", data: "06/10/2026",
+      mudancas: {
+        "Adicionado": [
+          "Ritual Barganha Insana (Morte, 3º círculo, 6 PE; completa, pessoal, você, instantânea), na biblioteca, na busca, nos filtros de Morte, 3º círculo e livro básico, e no aprendizado pelos mesmos caminhos dos outros rituais. Entra no livro básico sem página: ele não está em nenhum PDF disponível, e a ficha mostra “página não informada”.",
+          "Usar o ritual, depois de pagar o custo, devolve os PV e os PE (PD com Jogando sem Sanidade) ao máximo efetivo e encerra as condições negativas — as do livro e morrendo, enlouquecendo, inconsciente e perturbado. Outros efeitos ficam; um efeito sem classificação que atrapalha aparece para você marcar. A Sanidade não é recuperada e nada temporário entra.",
+          "A perda de 1d4 de Sanidade permanente fica pendente para o fim da cena, uma por conjuração. Ao trocar de cena, a ficha pede para rolar e aplicar; o painel de Condições mostra as pendências e tem “A cena terminou: resolver”. Cada perda tira do máximo da Sanidade, com a origem na conta, e a atual acompanha se ficar acima dele.",
+        ],
+        "Técnico": [
+          "`ordem.barganhaInsana` (pendentes e resolvidas, por id), fora da lista de rituais: tirar o ritual não apaga nada. O 1d4 fica guardado na pendência assim que sai — recarregar, sincronizar ou repetir não sorteia de novo nem perde duas vezes. Com Jogando sem Sanidade, a conjuração é registrada sem perda (SAH p. 104). Ficha no schema 19; exportar e importar levam as pendências. Só o site muda.",
+          "Testes: 31 novos (catálogo, filtros, aprendizado, custo, perda permanente, retentativas, Sem Sanidade e persistência); a importação do CRIS agora reconhece Barganha Insana no catálogo. Verificado no navegador: biblioteca, uso com morrendo e Abalado ativos, duas conjurações na mesma cena e a resolução no fim da cena.",
+        ],
+      },
+    },
+    {
       versao: "2.40.1", codinome: "FRISO", data: "06/10/2026",
       mudancas: {
         "Corrigido": [

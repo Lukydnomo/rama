@@ -786,6 +786,13 @@
     if (qual === "san") {
       var chef = estadoDaOrigem(ficha, "chefDoOutroLado");
       if (chef && chef.refeicoes) c.soma("Fome do Outro Lado · refeições", -chef.refeicoes, "–1 de Sanidade permanente por refeição (SAH p. 8)");
+      /* Barganha Insana (v2.41): cada conjuração resolvida tira o seu 1d4
+         do máximo, para sempre. */
+      var barganha = perdaDaBarganha(ficha);
+      if (barganha.total) {
+        c.soma("Barganha Insana · Sanidade permanente", -barganha.total,
+          barganha.quantas + " conjuração(ões), 1d4 = " + barganha.dados.join(", "));
+      }
     }
 
     /* Sacrifícios permanentes (Cicatrizado, SAH p. 31): cada um tira 1
@@ -2305,6 +2312,133 @@
     return Math.min(n, maximo);
   }
 
+  /* =================================================================
+     BARGANHA INSANA (v2.41)
+     -----------------------------------------------------------------
+     O ritual restaura na hora (PV e PE ao máximo, condições negativas
+     encerradas — quem aplica é a tela, no "Usar ritual") e cobra no fim
+     da cena: 1d4 de Sanidade PERMANENTE por conjuração. O que mora aqui
+     é o registro dessa cobrança, em `ficha.barganhaInsana`, fora da
+     lista de rituais — tirar o ritual da ficha não apaga o que já foi
+     conjurado:
+
+       pendentes   [{ id, cena, em, d4? }]   uma por conjuração; `d4` fica
+                   guardado assim que sai, e recarregar ou repetir não
+                   sorteia de novo
+       resolvidas  [{ id, cena, em, d4, resolvidaEm }] ou, com Jogando
+                   sem Sanidade, [{ …, ignorada: true }] (SAH p. 104:
+                   referências a Sanidade são ignoradas; nada é
+                   convertido em outro recurso)
+
+     A perda entra no MÁXIMO da Sanidade, como Fome do Outro Lado: é uma
+     parcela da conta, recalculada sempre, e a atual é aparada pelo
+     mecanismo de sempre (aparar). Conjurações = pendentes + resolvidas,
+     só para consulta: a transformação em Luzídio é decisão do mestre.
+     ================================================================= */
+
+  var ID_BARGANHA = "op.ritual.barganha-insana";
+  var MAX_BARGANHA = 500;
+
+  function idDeBarganha(v) { return String(v || "").replace(/[^A-Za-z0-9_:-]/g, "").slice(0, 80); }
+
+  function normalizarBarganha(bruto) {
+    var b = bruto && typeof bruto === "object" ? bruto : {};
+    var vistos = {};
+    function registro(r, resolvida) {
+      if (!r || typeof r !== "object") return null;
+      var id = idDeBarganha(r.id);
+      if (!id || vistos[id]) return null;
+      var d4 = Math.round(Number(r.d4));
+      var saida = { id: id, cena: String(r.cena || "").slice(0, 80), em: String(r.em || "").slice(0, 40) };
+      if (d4 >= 1 && d4 <= 4) saida.d4 = d4;
+      if (resolvida) {
+        if (r.ignorada === true) saida.ignorada = true;
+        else if (!saida.d4) return null;
+        saida.resolvidaEm = String(r.resolvidaEm || "").slice(0, 40);
+      }
+      vistos[id] = true;
+      return saida;
+    }
+    /* As resolvidas primeiro: um id que aparece nas duas listas (duas
+       abas que se cruzaram) conta como resolvido, uma vez. */
+    var resolvidas = (Array.isArray(b.resolvidas) ? b.resolvidas : []).map(function (r) { return registro(r, true); }).filter(Boolean);
+    var pendentes = (Array.isArray(b.pendentes) ? b.pendentes : []).map(function (r) { return registro(r, false); }).filter(Boolean);
+    return { pendentes: pendentes.slice(-MAX_BARGANHA), resolvidas: resolvidas.slice(-MAX_BARGANHA) };
+  }
+
+  function barganhaInsana(ficha) {
+    if (!ficha) return { pendentes: [], resolvidas: [] };
+    if (!ficha.barganhaInsana || typeof ficha.barganhaInsana !== "object") ficha.barganhaInsana = { pendentes: [], resolvidas: [] };
+    var b = ficha.barganhaInsana;
+    if (!Array.isArray(b.pendentes)) b.pendentes = [];
+    if (!Array.isArray(b.resolvidas)) b.resolvidas = [];
+    return b;
+  }
+
+  /* Uma conjuração confirmada. O id é o da operação do "Usar ritual":
+     o mesmo id de novo não registra outra. */
+  function registrarBarganha(ficha, id, cena, semSanidade) {
+    var b = barganhaInsana(ficha);
+    var rid = idDeBarganha(id);
+    if (!rid) return { ok: false, motivo: "Conjuração sem identificação." };
+    if (b.pendentes.concat(b.resolvidas).some(function (r) { return r.id === rid; })) return { ok: true, repetida: true };
+    var agora = new Date().toISOString();
+    var r = { id: rid, cena: String(cena || "inicial"), em: agora };
+    if (semSanidade) { r.ignorada = true; r.resolvidaEm = agora; b.resolvidas.push(r); }
+    else b.pendentes.push(r);
+    return { ok: true, ignorada: !!semSanidade };
+  }
+
+  /* O 1d4 de uma pendente, guardado assim que sai. Já sorteado, devolve
+     o mesmo: nada é rolado duas vezes. */
+  function sortearBarganha(ficha, id, d4) {
+    var p = barganhaInsana(ficha).pendentes.filter(function (r) { return r.id === id; })[0];
+    if (!p) return { ok: false, motivo: "Essa perda não está mais pendente." };
+    if (p.d4) return { ok: true, d4: p.d4, jaSorteado: true };
+    var v = Math.round(Number(d4));
+    if (!(v >= 1 && v <= 4)) return { ok: false, motivo: "O resultado de 1d4 vai de 1 a 4." };
+    p.d4 = v;
+    return { ok: true, d4: v, jaSorteado: false };
+  }
+
+  /* Aplica a perda de uma pendente já sorteada: ela passa a contar no
+     máximo da Sanidade. Repetir não aplica de novo. */
+  function resolverBarganha(ficha, id) {
+    var b = barganhaInsana(ficha);
+    if (b.resolvidas.some(function (r) { return r.id === id; })) return { ok: true, repetida: true };
+    var p = b.pendentes.filter(function (r) { return r.id === id; })[0];
+    if (!p) return { ok: false, motivo: "Essa perda não está pendente." };
+    if (!p.d4) return { ok: false, motivo: "Role o 1d4 antes." };
+    b.pendentes = b.pendentes.filter(function (r) { return r.id !== id; });
+    b.resolvidas.push({ id: p.id, cena: p.cena, em: p.em, d4: p.d4, resolvidaEm: new Date().toISOString() });
+    if (b.resolvidas.length > MAX_BARGANHA) b.resolvidas = b.resolvidas.slice(-MAX_BARGANHA);
+    aparar(ficha, maximosDosRecursos(ficha));
+    return { ok: true, perda: p.d4 };
+  }
+
+  /* Jogando sem Sanidade (SAH p. 104): a pendente vira registro sem
+     perda — nada é convertido em outro recurso. */
+  function ignorarBarganha(ficha, id) {
+    var b = barganhaInsana(ficha);
+    var p = b.pendentes.filter(function (r) { return r.id === id; })[0];
+    if (!p) return { ok: true, repetida: true };
+    b.pendentes = b.pendentes.filter(function (r) { return r.id !== id; });
+    b.resolvidas.push({ id: p.id, cena: p.cena, em: p.em, ignorada: true, resolvidaEm: new Date().toISOString() });
+    return { ok: true };
+  }
+
+  /* Total perdido para sempre, e de que conjurações. */
+  function perdaDaBarganha(ficha) {
+    var b = ficha && ficha.barganhaInsana;
+    var lista = b && Array.isArray(b.resolvidas) ? b.resolvidas.filter(function (r) { return !r.ignorada && r.d4 >= 1; }) : [];
+    return { total: lista.reduce(function (s, r) { return s + r.d4; }, 0), quantas: lista.length, dados: lista.map(function (r) { return r.d4; }) };
+  }
+
+  function conjuracoesDaBarganha(ficha) {
+    var b = ficha && ficha.barganhaInsana;
+    return b ? (b.pendentes || []).length + (b.resolvidas || []).length : 0;
+  }
+
   function aparar(ficha, maximos) {
     if (!ficha.recursos) ficha.recursos = { pv: null, pe: null, san: null, pd: null };
     ["pv", "pe", "san", "pd"].forEach(function (qual) {
@@ -2583,6 +2717,8 @@
     /* Arquivos Secretos 4 (v2.38). Sem o módulo, passa como veio. */
     if (A4()) A4().normalizar(ficha, b);
     else if (b.arquivo4 && typeof b.arquivo4 === "object") ficha.arquivo4 = JSON.parse(JSON.stringify(b.arquivo4));
+    /* Barganha Insana (v2.41): as conjurações e as perdas pendentes. */
+    if (b.barganhaInsana && typeof b.barganhaInsana === "object") ficha.barganhaInsana = normalizarBarganha(b.barganhaInsana);
 
     var temp = (b.temporarios && typeof b.temporarios === "object") ? b.temporarios : {};
     ["pv", "pe", "san", "defesa"].forEach(function (qual) {
@@ -3106,6 +3242,15 @@
     criarAjuste: criarAjuste,
     recursoAtual: recursoAtual,
     aparar: aparar,
+    ID_BARGANHA: ID_BARGANHA,
+    normalizarBarganha: normalizarBarganha,
+    barganhaInsana: barganhaInsana,
+    registrarBarganha: registrarBarganha,
+    sortearBarganha: sortearBarganha,
+    resolverBarganha: resolverBarganha,
+    ignorarBarganha: ignorarBarganha,
+    perdaDaBarganha: perdaDaBarganha,
+    conjuracoesDaBarganha: conjuracoesDaBarganha,
 
     calcular: calcular,
     resumoDeRecursos: resumoDeRecursos,

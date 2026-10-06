@@ -118,6 +118,11 @@
      ao gravar: com o schema maior ela recusa, e o servidor mantém a
      escolha gravada quando um pedido de versão anterior chega sem ela.
 
+     18 → 19: Barganha Insana (v2.41). O bloco `ordem` ganhou
+     `barganhaInsana` (as conjurações e as perdas de Sanidade permanente
+     pendentes e resolvidas). Uma aba antiga o descartaria ao gravar — e
+     junto iria uma perda permanente: com o schema maior ela recusa.
+
      Nenhuma das subidas exige migração: normalizarFicha() cria o que
      falta, vazio, e não toca no que existe. Um ritual gravado na 2 abre
      na 3 com a versão Normal em branco; uma ficha de Ordem gravada na 4
@@ -127,7 +132,7 @@
      os campos novos e os descartaria ao gravar — com o schema maior ela
      recusa abrir a ficha e pede para recarregar.
      Ver docs/CHARACTER_SCHEMA.md. */
-  var VERSAO_SCHEMA = 18;
+  var VERSAO_SCHEMA = 19;
 
   var MODULOS = {
     atributos: "Atributos", status: "Status/recursos", defesa: "Defesa",

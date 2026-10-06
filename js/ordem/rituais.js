@@ -344,7 +344,7 @@
   }
 
   function referencia(e) {
-    return (NOME_FONTE[e.fonte] || e.fonte) + ", p. " + e.pagina;
+    return (NOME_FONTE[e.fonte] || e.fonte) + (e.pagina > 0 ? ", p. " + e.pagina : " (página não informada)");
   }
 
   /* Regras que acompanham o tipo de ritual — escritas uma vez aqui, e
@@ -667,6 +667,9 @@
       var pagina = Math.round(Number(bruto.referencia.pagina));
       if (FONTES.indexOf(fonte) >= 0 && pagina > 0 && pagina < 2000) {
         saida.referencia = { fonte: fonte, pagina: pagina };
+      } else if (FONTES.indexOf(fonte) >= 0) {
+        /* Fonte confirmada, página não (Barganha Insana, v2.41). */
+        saida.referencia = { fonte: fonte };
       }
     }
 

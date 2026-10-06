@@ -331,7 +331,7 @@ const pert = fG.rituais.itens.find((x) => x.nome === "Perturbação");
 t.ok("ritual do catálogo com versões, custo e descrição", pert.origemCatalogoId && pert.versoes.length >= 3 && pert.ordem.custo === 1 && pert.descricao.length > 20);
 t.ok("círculos e elementos variados", new Set(fG.rituais.itens.map((x) => x.circulo)).size >= 3 && new Set(fG.rituais.itens.map((x) => x.elemento)).size >= 5);
 const barganha = fG.rituais.itens.find((x) => x.nome === "Barganha Insana");
-t.ok("ritual fora do catálogo: personalizado, texto puro", barganha && !barganha.origemCatalogoId && barganha.circulo === "3º círculo" && !/[<>]/.test(barganha.descricao));
+t.ok("Barganha Insana (no catálogo desde a v2.41) casa com a entrada do livro básico, sem HTML", barganha && barganha.origemCatalogoId === "op.ritual.barganha-insana" && barganha.ordem.circulo === 3 && !/[<>]/.test(barganha.descricao));
 t.ok("rituais importados são conhecidos (histórico indisponível), sem regranjear concessões", Object.values(estG.rituais.porRitual).filter((x) => x.importado).length === 19 && estG.rituais.concessoes.length === 0 && estG.rituais.semAquisicao.length === 0);
 {
   const f = JSON.parse(JSON.stringify(fG));

@@ -5,6 +5,23 @@ padrão e normaliza o que chega de fora. Onde ela é guardada — inteira em
 `fichaJson` (formato antigo) ou em blocos (v2.15) — é assunto do backend, e não muda
 nada aqui: ver [DATABASE.md](DATABASE.md).
 
+## Barganha Insana — v2.41 / schema 19
+
+O bloco `ordem` ganha `barganhaInsana`, fora da lista de rituais:
+
+```jsonc
+"barganhaInsana": {
+  "pendentes":  [ { "id": "ritual-…", "cena": "cena-…", "em": "…", "d4": 3 } ],   // d4 só depois de rolado
+  "resolvidas": [ { "id": "ritual-…", "cena": "…", "em": "…", "d4": 3, "resolvidaEm": "…" },
+                  { "id": "…", "cena": "…", "em": "…", "ignorada": true, "resolvidaEm": "…" } ]  // Jogando sem Sanidade
+}
+```
+
+Cada `d4` resolvido (não ignorado) sai do máximo da Sanidade. Ids únicos entre as
+duas listas (um id nas duas conta como resolvido); até 500 em cada. Na
+sincronização, as listas casam pelo `id`; na exportação, o `id` atravessa como
+`chave`. Uma aba aberta numa versão anterior recusa a ficha 19.
+
 ## Tema dos dados — v2.40 / schema 18
 
 `aparencia` ganha `dados`, o tema de dados do personagem — independente das cores:

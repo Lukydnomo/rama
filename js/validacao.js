@@ -595,6 +595,7 @@
          pendentes, como se nunca tivesse aprendido nada. */
       devolverIdsDosEventos(limpo);
       devolverTemaDeDados(limpo);
+      devolverBarganha(limpo);
       refazerVinculosAliados(limpo);
       var avisos = devolverReferencias(limpo);
       var ficha = F.normalizarFicha(limpo);
@@ -661,12 +662,33 @@
     else delete dados.aparencia.dados;
   }
 
+  /* Barganha Insana (v2.41): cada conjuração é identificada pelo id —
+     é ele que impede a mesma perda de contar duas vezes. Atravessa como
+     `chave` e volta a ser id: uma perda pendente (com o 1d4 já rolado)
+     ou resolvida continua sendo a mesma. */
+  function comBarganhaPortavel(ficha) {
+    var b = ficha && ficha.ordem && ficha.ordem.barganhaInsana;
+    if (!b || typeof b !== "object") return ficha;
+    var copia = JSON.parse(JSON.stringify(ficha));
+    ["pendentes", "resolvidas"].forEach(function (k) {
+      (copia.ordem.barganhaInsana[k] || []).forEach(function (r) { if (r && r.id) r.chave = String(r.id); });
+    });
+    return copia;
+  }
+  function devolverBarganha(dados) {
+    var b = dados && dados.ordem && dados.ordem.barganhaInsana;
+    if (!b || typeof b !== "object") return;
+    ["pendentes", "resolvidas"].forEach(function (k) {
+      (Array.isArray(b[k]) ? b[k] : []).forEach(function (r) { if (r && r.chave && !r.id) { r.id = String(r.chave); delete r.chave; } });
+    });
+  }
+
   /* Monta o pacote de saída. A contraparte de importado(). */
   function exportar(tipo, dados) {
     /* Numa ficha, o vínculo entre concessão e ritual vira posição antes
        de os ids irem embora. Ver "O VÍNCULO DE RITUAL ATRAVESSANDO A
        IMPORTAÇÃO", acima. */
-    var preparado = tipo === "personagem" ? comTemaDeDadosPortavel(comReferenciasPortaveis(comAliadosPortaveis(comPosicoesDeRitual(dados))))
+    var preparado = tipo === "personagem" ? comBarganhaPortavel(comTemaDeDadosPortavel(comReferenciasPortaveis(comAliadosPortaveis(comPosicoesDeRitual(dados)))))
       : (tipo === "homebrew-criatura" ? criaturaPortavel(U.copiar(dados)) : dados);
     return {
       rama: true,

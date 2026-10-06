@@ -683,7 +683,7 @@
       var marcas = el("span.bib-item__marcas", {}, e.elementos.map(function (chaveEl) {
         return el("span.r-etiqueta.bib-elemento.bib-elemento--" + chaveEl, { texto: RT().nomeDoElemento(chaveEl) });
       }).concat([
-        el("span.r-etiqueta.bib-fonte", { texto: RT().SIGLA_FONTE[e.fonte] + " p. " + e.pagina, title: RT().referencia(e) }),
+        el("span.r-etiqueta.bib-fonte", { texto: RT().SIGLA_FONTE[e.fonte] + (e.pagina > 0 ? " p. " + e.pagina : ""), title: RT().referencia(e) }),
         naFicha,
       ]));
 

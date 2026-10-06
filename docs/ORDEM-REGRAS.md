@@ -1614,10 +1614,32 @@ de nível 3 com exposição 50% alcança o 2º círculo; na oportunidade de expo
 | Sangue | 8 / 6 / 5 / 4 | 19 | 4 | Amaldiçoar Arma, Aprimorar Físico, Arma Atroz, Armadura de Sangue, Capturar o Coração, Corpo Adaptado, Descarnar, Distorcer Aparência, Esfolar*, Ferver Sangue, Flagelo de Sangue, Forma Monstruosa, Fortalecimento Sensorial, Hemofagia, Invólucro de Carne, Martírio de Sangue*, Odor da Caçada*, Purgatório, Sede de Adrenalina*, Transfusão Vital, Vomitar Pestes, Vínculo de Sangue, Ódio Incontrolável |
 | Medo | 1 / 2 / 1 / 5 | 9 | 0 | Canalizar o Medo, Cinerária, Conhecendo o Medo, Dissipar Ritual, Lâmina do Medo, Medo Tangível, Presença do Medo, Proteção contra Rituais, Rejeitar Névoa |
 
-Total: **98 rituais** — 82 do livro básico (toda a Lista de Rituais, p. 122–143) e
+Total: **98 rituais** nesta tabela (Barganha Insana, v2.41, entra à parte, sem página) — 82 do livro básico (toda a Lista de Rituais, p. 122–143) e
 16 do Sobrevivendo ao Horror (Novos Rituais, p. 48–56). Os marcados com `*` são do
 SAH. Amaldiçoar Arma conta em quatro elementos, e é por isso que a soma por
 elemento passa de 98.
+
+### Barganha Insana (v2.41)
+
+Morte, 3º círculo (6 PE pelo círculo), execução completa, alcance pessoal, alvo
+você, duração instantânea; só a forma básica. Entra no **livro básico por decisão
+da mesa, sem página**: o ritual não está em nenhum PDF disponível, e a ficha mostra
+"página não informada" em vez de inventar uma (`op.ritual.barganha-insana`).
+
+| o quê | como |
+|---|---|
+| biblioteca, busca e filtros (Morte, 3º círculo, livro básico) | como os outros; adicionar ou aprender não conjura nada |
+| restauração | no "Usar ritual", depois de pagar o custo: PV e PE (PD com Jogando sem Sanidade) voltam ao máximo efetivo — `null`, "cheio" —, sem mexer nos máximos, sem temporários e sem Sanidade. O custo não é descontado de novo. N'A Antena, o ritual fica contido e não restaura |
+| condições negativas | terminam as condições do livro (as aplicações `cond:*`) e as rastreadas (morrendo, enlouquecendo, inconsciente, perturbado), pelos mecanismos delas. Efeitos que não são condição ficam; um efeito sem classificação com modificador negativo aparece para a pessoa marcar |
+| perda no fim da cena | uma pendência por conjuração em `ordem.barganhaInsana.pendentes` (id da operação, cena), sem limite por cena. Ao trocar de cena (Nova cena ou Novo interlúdio), a janela "fim da cena" rola 1d4 por pendência pelo mostrador de sempre e aplica; o painel de Condições também tem "A cena terminou: resolver" |
+| Sanidade permanente | cada perda resolvida é uma parcela do **máximo** da Sanidade ("Barganha Insana · Sanidade permanente"), recalculada sempre, como Fome do Outro Lado; a atual é aparada pelo `aparar` de sempre |
+| retentativa | o 1d4 fica guardado na pendência assim que sai; recarregar, sincronizar ou repetir não sorteia de novo, e resolver de novo não perde de novo |
+| Jogando sem Sanidade | a conjuração fica registrada sem perda (SAH p. 104); nada é convertido em outro recurso |
+| narrativa | pele acinzentada, sangue escuro e a possível transformação em Luzídio ficam no texto; a ficha só conta as conjurações (pendentes + resolvidas) — quantas levam à transformação é decisão do mestre |
+
+Tirar o ritual da ficha não apaga as pendências nem as perdas: elas moram fora da
+lista de rituais. Exportar e importar levam as duas listas (o id atravessa como
+`chave`).
 
 ### O que a ficha faz com o ritual adicionado
 

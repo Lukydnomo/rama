@@ -565,6 +565,10 @@ segredo nenhum — ele os lê das Script Properties. Publicá-lo não expõe nad
 
 ### Atualizar o backend
 
+**v2.41.0 — PENHOR:** só o site (o ritual Barganha Insana). Publique o site; não
+precisa trocar `.gs`, criar versão da implantação nem rodar `setupRama()`. Abas
+abertas na versão anterior recusam fichas 19 e pedem para recarregar.
+
 **v2.40.1 — FRISO:** só o site (o fundo dos temas de dados se repete nas laterais
 quando falta largura). Publique o site; trocar o `Codigo.gs` é opcional — mudou só
 um comentário na cópia do catálogo.

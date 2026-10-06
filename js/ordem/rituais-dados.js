@@ -29,6 +29,10 @@
             (Eletrocussão, Coincidência Forçada, Tela de Ruído…) são ações
             das ameaças, com os números delas, e não entram aqui
 
+   Barganha Insana (v2.41) entra no livro básico por decisão da mesa,
+   SEM página: o ritual não está em nenhum PDF disponível, e a entrada
+   não inventa uma. A tela mostra "página não informada".
+
    As páginas são as do livro, não as do PDF. Os resumos são redação
    própria: guardam os números, as condições e os testes que o jogo
    precisa, e não reproduzem o texto dos livros.
@@ -200,6 +204,18 @@
       ]
     },
 
+    {
+      id: "op.ritual.barganha-insana", nome: "Barganha Insana", elemento: MO, circulo: 3, fonte: OP, pagina: null,
+      execucao: "completa", alcance: "pessoal", alvo: "você", duracao: "instantânea",
+      resumo: "Você contata a entidade da Morte e entrega a ela parte da sua percepção temporal da Realidade em troca da restauração plena da sua saúde: recupera todos os seus PV e PE e elimina as condições negativas que o afetam. No fim da cena, perde 1d4 pontos de Sanidade permanentemente.",
+      efeitos: [
+        "Restauração imediata: os PV e os PE atuais voltam ao máximo efetivo (os máximos não mudam) e terminam as condições negativas que o afetam. Não recupera Sanidade.",
+        "No fim da cena: perde 1d4 pontos de Sanidade permanentemente — uma perda por conjuração.",
+        "A cada conjuração, a pele fica mais acinzentada e o sangue mais escuro.",
+        "Ocultistas temem que muitas conjurações o transformem num Luzídio, mas ninguém sabe quantas seriam necessárias: é decisão do mestre.",
+      ],
+      notas: ["Entrada do livro básico por decisão da mesa: o ritual não foi localizado nos PDFs disponíveis, e a página não é informada."],
+    },
     {
       id: "op.ritual.canalizar-o-medo", nome: "Canalizar o Medo", elemento: ME, circulo: 4, fonte: OP, pagina: 125,
       execucao: "padrão", alcance: "toque", alvo: "1 pessoa", duracao: "permanente até ser descarregada",

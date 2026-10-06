@@ -22,7 +22,7 @@
 
     t.grupo("Tema da ficha · schema 16 (v2.36)");
     var TEMA16 = { nome: "Roxo", base: "escuro", valores: { fundo: { tipo: "radial", forma: "circulo", x: 20, y: 30, pontos: [{ cor: "#08080a", pos: 0 }, { cor: "#3a1030", alfa: 0.8, pos: 100 }] } } };
-    t.igual("o schema subiu para 18", S.VERSAO_SCHEMA, 18);
+    t.igual("o schema subiu para 19", S.VERSAO_SCHEMA, 19);
     t.iguais("ficha nova usa o tema da conta", S.criarFicha({ nome: "Nova" }).aparencia, { v: 1, modo: "conta" });
     t.iguais("ficha antiga (sem o campo) também", S.normalizarFicha({ schemaVersion: 15, nome: "Legado" }).aparencia, { v: 1, modo: "conta" });
     ["ordem", "universal"].forEach(function (tipo) {
@@ -3316,7 +3316,7 @@
       /* ---------------------------------------------------------------- */
       t.grupo("Ordem · rituais — catálogo completo e estruturado");
 
-      t.igual("105 rituais nos cinco livros", catalogoR.rituais.length, 105);
+      t.igual("106 rituais nos cinco livros", catalogoR.rituais.length, 106);
       var porFonte = {};
       var porElemento = {};
       var porCirculo = {};
@@ -3325,15 +3325,15 @@
         porCirculo[e.circulo] = (porCirculo[e.circulo] || 0) + 1;
         e.elementos.forEach(function (el) { porElemento[el] = (porElemento[el] || 0) + 1; });
       });
-      t.igual("82 do livro básico", porFonte.OPRPG, 82);
+      t.igual("83 do livro básico (com Barganha Insana)", porFonte.OPRPG, 83);
       t.igual("16 do Sobrevivendo ao Horror", porFonte.SAH, 16);
       t.igual("2 do Arquivos Secretos 1", porFonte.AS1, 2);
       t.igual("4 do Arquivos Secretos 2", porFonte.AS2, 4);
       t.igual("1 do Arquivos Secretos 4 (Backup)", porFonte.AS4, 1);
-      t.iguais("por círculo: 30, 32, 22 e 21", [porCirculo[1], porCirculo[2], porCirculo[3], porCirculo[4]], [30, 32, 22, 21]);
+      t.iguais("por círculo: 30, 32, 23 e 21", [porCirculo[1], porCirculo[2], porCirculo[3], porCirculo[4]], [30, 32, 23, 21]);
       t.iguais("por elemento (Amaldiçoar Arma conta nos quatro; Passagem de Conhecimento, em Sangue e Conhecimento)",
         [porElemento.conhecimento, porElemento.energia, porElemento.morte, porElemento.sangue, porElemento.medo],
-        [26, 25, 24, 26, 9]);
+        [26, 25, 25, 26, 9]);
 
       var idsR = {};
       var repetidoR = "";
@@ -3344,10 +3344,11 @@
           (e.fonte === "AS1") === (e.id.indexOf("as1.") === 0) && (e.fonte === "AS2") === (e.id.indexOf("as2.") === 0) &&
           (e.fonte === "AS4") === (e.id.indexOf("as4.") === 0);
       }));
-      t.ok("toda entrada tem nome, resumo, elemento, círculo, execução, alcance, fonte e página",
+      t.ok("toda entrada tem nome, resumo, elemento, círculo, execução, alcance, fonte e página (sem página só com a nota dizendo por quê)",
         catalogoR.rituais.every(function (e) {
           return e.nome && e.resumo && e.elementos.length && e.circulo >= 1 && e.circulo <= 4 &&
-            e.execucao && e.alcance && ["OPRPG", "SAH", "AS1", "AS2", "AS4"].indexOf(e.fonte) >= 0 && e.pagina > 0;
+            e.execucao && e.alcance && ["OPRPG", "SAH", "AS1", "AS2", "AS4"].indexOf(e.fonte) >= 0 &&
+            (e.pagina > 0 || e.notas.some(function (n) { return /página não é informada/.test(n); }));
         }));
       t.ok("onde a duração falta, é porque o livro não informa — e a entrada registra isso",
         catalogoR.rituais.filter(function (e) { return !e.duracao; }).every(function (e) {
@@ -3440,7 +3441,7 @@
         "Fim Inevitável");
       var contagens = RS.contagens(catalogoR, { elemento: "sangue" });
       t.igual("a contagem de círculos respeita o elemento escolhido", contagens.circulos[2], 8);
-      t.igual("  e a de elementos ignora o próprio filtro de elemento", contagens.elementos.morte, 24);
+      t.igual("  e a de elementos ignora o próprio filtro de elemento", contagens.elementos.morte, 25);
       t.iguais("as cinco fontes aparecem no catálogo", RS.fontesDoCatalogo(catalogoR).sort(), ["AS1", "AS2", "AS4", "OPRPG", "SAH"]);
       var grupos = RS.porCirculo(RS.filtrar(catalogoR, { elemento: "medo" }));
       t.iguais("agrupado por círculo, com o custo de cada um",
@@ -3457,9 +3458,9 @@
       t.ok("o resumo compacto de TODOS os rituais não tem valor vazio",
         catalogoR.rituais.every(function (e) { return semVazioR(RS.resumoCompacto(e)); }));
       t.ok("os detalhes de TODOS não têm valor vazio", catalogoR.rituais.every(function (e) { return semVazioR(RS.detalhes(e)); }));
-      t.ok("  e todos dizem o custo e a fonte com página", catalogoR.rituais.every(function (e) {
+      t.ok("  e todos dizem o custo e a fonte com página (ou que ela não foi informada)", catalogoR.rituais.every(function (e) {
         var rotulos = RS.detalhes(e).map(function (p) { return p[0]; });
-        return rotulos.indexOf("Custo") >= 0 && RS.detalhes(e).some(function (p) { return p[0] === "Fonte" && /p\. \d+/.test(p[1]); });
+        return rotulos.indexOf("Custo") >= 0 && RS.detalhes(e).some(function (p) { return p[0] === "Fonte" && /p\. \d+|página não informada/.test(p[1]); });
       }));
       t.ok("o resumo compacto não repete o círculo e o elemento (já estão na classificação)",
         RS.resumoCompacto(cica).every(function (p) { return p[0] !== "Círculo" && p[0] !== "Elemento"; }));
@@ -4644,6 +4645,11 @@
         global.RAMAHexatombe, global.RAMAOrdemBiblioteca, global.RAMAOrdemItens || null);
     }
 
+    /* v2.41 — BARGANHA INSANA */
+    if (RRs && global.RAMAOrdemRituais && global.RAMAOrdemRituaisDados && global.RAMAOrdemAprendizado && global.RAMAFicha && global.RAMAValidacao) {
+      casosDaV241(t, RRs, global.RAMAOrdemRituais, global.RAMAOrdemAprendizado, global.RAMAFicha, global.RAMAValidacao);
+    }
+
     /* v2.40 — TEMAS DE DADOS */
     if (global.RAMATemasDados && global.RAMATemaModelo && global.RAMAFicha && global.RAMAValidacao) {
       casosDaV240(t, global.RAMATemasDados, global.RAMATemaModelo, global.RAMAFicha, global.RAMAValidacao);
@@ -4883,6 +4889,74 @@
      ================================================================= */
 
   /* =================================================================
+     v2.41 — BARGANHA INSANA
+     ================================================================= */
+
+  function casosDaV241(t, R, RS, AP, F, V) {
+    var ID = "op.ritual.barganha-insana";
+    t.grupo("v2.41 · Barganha Insana no catálogo");
+    var cat = RS.normalizarCatalogo(global.RAMAOrdemRituaisDados);
+    var e = cat.porId[ID];
+    t.ok("uma entrada só, com id estável", !!e && cat.rituais.filter(function (x) { return x.nome === "Barganha Insana"; }).length === 1);
+    t.iguais("Morte, 3º círculo, completa, pessoal, você, instantânea",
+      [e.elemento, e.circulo, e.execucao, e.alcance, e.alvo, e.duracao], ["morte", 3, "completa", "pessoal", "você", "instantânea"]);
+    t.igual("custo pelo círculo: 6 PE", e.custo, 6);
+    t.ok("só a forma básica: sem discente, verdadeiro, resistência ou requisito", e.versoes.length === 1 && !e.resistencia && !e.requisitoRitual);
+    t.ok("livro básico, sem página inventada", e.fonte === "OPRPG" && !(e.pagina > 0) && /página não informada/.test(RS.referencia(e)));
+    t.ok("o texto separa restauração, fim da cena e mudança narrativa, sem falar em recuperar Sanidade",
+      /PV e os PE/.test(e.efeitos[0]) && /Não recupera Sanidade/.test(e.efeitos[0]) && /fim da cena/.test(e.efeitos[1]) &&
+      /acinzentada/.test(e.efeitos[2]) && /Luzídio/.test(e.efeitos[3]));
+    t.ok("busca por nome", RS.filtrar(cat, { busca: "barganha" }).some(function (x) { return x.id === ID; }));
+    t.ok("filtros de Morte, 3º círculo e livro básico, combinados", RS.filtrar(cat, { elemento: "morte", circulo: 3, fonte: "OPRPG" }).some(function (x) { return x.id === ID; }));
+    t.ok("aprendizado: entra numa concessão de 3º círculo", AP.elegibilidade({ circulos: [1, 2, 3] }, { circulo: 3, elemento: "morte" }).ok &&
+      !AP.elegibilidade({ circulos: [1, 2] }, { circulo: 3, elemento: "morte" }).ok);
+    var copia = RS.paraFicha(e, {});
+    t.ok("a cópia da ficha é do ritual, com a fonte e sem página", copia.ok && copia.dados.origemCatalogoId === ID && copia.dados.ordem.circulo === 3);
+    t.ok("o catálogo não muda quando a cópia muda", (copia.dados.nome = "Outro", cat.porId[ID].nome === "Barganha Insana"));
+
+    t.grupo("v2.41 · a perda permanente no fim da cena");
+    var o = R.normalizar({ classe: "ocultista", nex: 50, atributos: { agi: 1, for: 1, int: 2, pre: 3, vig: 1 } });
+    var semNada = R.sanidade(o).total;
+    t.igual("aprender ou ter o ritual não registra nada", R.conjuracoesDaBarganha(o), 0);
+    R.registrarBarganha(o, "ritual-op-1", "cena-a", false);
+    R.registrarBarganha(o, "ritual-op-2", "cena-a", false);
+    t.igual("duas conjurações na mesma cena: duas perdas pendentes, sem limite por cena", R.barganhaInsana(o).pendentes.length, 2);
+    t.ok("o mesmo id de novo (clique repetido) não registra outra", R.registrarBarganha(o, "ritual-op-1", "cena-a", false).repetida && R.barganhaInsana(o).pendentes.length === 2);
+    t.igual("pendente não mexe no máximo", R.sanidade(o).total, semNada);
+    t.ok("resolver sem rolar é recusado", !R.resolverBarganha(o, "ritual-op-1").ok);
+    t.igual("o 1d4 fica guardado", R.sortearBarganha(o, "ritual-op-1", 3).d4, 3);
+    t.ok("  e não sorteia de novo (recarga, retentativa)", R.sortearBarganha(o, "ritual-op-1", 1).jaSorteado && R.barganhaInsana(o).pendentes[0].d4 === 3);
+    var recarregada = R.normalizar(JSON.parse(JSON.stringify(o)));
+    t.igual("  nem depois de recarregar a ficha", recarregada.barganhaInsana.pendentes.filter(function (p) { return p.id === "ritual-op-1"; })[0].d4, 3);
+    o.recursos.san = semNada;
+    t.igual("resolvida: −3 no MÁXIMO da Sanidade", (R.resolverBarganha(o, "ritual-op-1"), R.sanidade(o).total), semNada - 3);
+    t.igual("  e a atual, que estava no máximo antigo, é aparada", o.recursos.san, semNada - 3);
+    t.ok("resolver de novo não perde de novo", R.resolverBarganha(o, "ritual-op-1").repetida && R.sanidade(o).total === semNada - 3);
+    R.sortearBarganha(o, "ritual-op-2", 4);
+    R.resolverBarganha(o, "ritual-op-2");
+    t.igual("cada conjuração tem a sua perda", R.sanidade(o).total, semNada - 7);
+    t.ok("a perda está na conta, com a origem", R.sanidade(o).parcelas.some(function (p) { return /Barganha Insana/.test(p.rotulo) && p.valor === -7; }));
+    var depois = R.normalizar(JSON.parse(JSON.stringify(o)));
+    t.igual("a redução sobrevive ao recálculo e à recarga", R.sanidade(depois).total, semNada - 7);
+    t.igual("conjurações registradas, para consulta", R.conjuracoesDaBarganha(depois), 2);
+    var pd = R.normalizar({ classe: "ocultista", nex: 50, opcionais: { semSanidade: true } });
+    t.ok("Jogando sem Sanidade: a conjuração fica registrada, sem perda (SAH p. 104)", R.registrarBarganha(pd, "ritual-op-9", "cena-a", true).ignorada &&
+      R.barganhaInsana(pd).pendentes.length === 0 && R.perdaDaBarganha(pd).total === 0 && R.conjuracoesDaBarganha(pd) === 1);
+    var duas = R.normalizarBarganha({ pendentes: [{ id: "x1", cena: "c", d4: 2 }], resolvidas: [{ id: "x1", cena: "c", d4: 2 }, { id: "x2", cena: "c" }] });
+    t.ok("um id nas duas listas conta uma vez; resolvida sem dado é descartada", duas.pendentes.length === 0 && duas.resolvidas.length === 1);
+
+    t.grupo("v2.41 · persistência");
+    var ficha = F.normalizarFicha(F.criarFicha({ nome: "Ana", tipoFicha: "ordem" }));
+    ficha.ordem.barganhaInsana = { pendentes: [{ id: "ritual-op-5", cena: "c1", em: "2026-10-06T10:00:00.000Z", d4: 2 }], resolvidas: [{ id: "ritual-op-4", cena: "c0", em: "2026-10-06T09:00:00.000Z", d4: 1, resolvidaEm: "2026-10-06T09:30:00.000Z" }] };
+    ficha.rituais.itens = [];
+    var volta = V.importado(JSON.parse(JSON.stringify(V.exportar("personagem", ficha))));
+    t.ok("exportar e importar leva pendentes (com o dado já rolado) e resolvidas", volta.ok &&
+      volta.dados.ordem.barganhaInsana.pendentes[0].d4 === 2 && volta.dados.ordem.barganhaInsana.resolvidas.length === 1);
+    t.ok("  mesmo sem o ritual na lista de conhecidos", volta.dados.rituais.itens.length === 0);
+    t.igual("o schema subiu para 19", F.normalizarFicha(ficha).schemaVersion, 19);
+  }
+
+  /* =================================================================
      v2.40 — TEMAS DE DADOS
      ================================================================= */
 
@@ -4920,7 +4994,7 @@
     t.iguais("  um tema de dados que este navegador não conhece também fica (a tela usa a reserva)", MT.normalizarAparencia({ dados: { id: "tema-do-futuro" } }).dados, { id: "tema-do-futuro" });
     var ficha = F.normalizarFicha(F.criarFicha({ nome: "Lia", tipoFicha: "universal", aparencia: { v: 1, modo: "conta", dados: { id: "sigilo-violeta" } } }));
     t.iguais("a ficha normalizada mantém a escolha", ficha.aparencia.dados, { id: "sigilo-violeta" });
-    t.igual("o schema subiu para 18", ficha.schemaVersion, 18);
+    t.igual("o schema da ficha é o atual (19)", ficha.schemaVersion, 19);
     var pacote = V.exportar("personagem", ficha);
     t.ok("exportar leva a escolha sem `id` (atravessa como `tema`)", pacote.dados.aparencia.dados.tema === "sigilo-violeta" && JSON.stringify(pacote).indexOf('"id"') < 0);
     var volta = V.importado(JSON.parse(JSON.stringify(pacote)));
