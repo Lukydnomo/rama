@@ -108,6 +108,33 @@ var ABAS = {
     pesadas: ['avatar', 'avatarCont'],
     somenteTexto: ['avatarCont'],
   },
+  DESBLOQUEIOS: {
+    /* As recompensas de cada conta (v2.40) — hoje, temas de dados. Uma
+       linha por conta e recompensa. SÓ o resgate de código, no servidor,
+       escreve aqui: salvar perfil, preferências ou ficha nunca concede
+       nada, e nada aqui vem do navegador. */
+    nome: 'DESBLOQUEIOS',
+    colunas: ['id', 'userId', 'tipo', 'recompensaId', 'origemCodigoId', 'concedidoEm'],
+    chave: 'id',
+  },
+  CODIGOS_RESGATE: {
+    /* Configuração PRIVADA do desenvolvedor (v2.40). O código não fica
+       em texto: fica o SHA-256 dele com o RAMA_PEPPER, mais um rótulo
+       para reconhecê-lo ("NE…26 (8)") e as recompensas. Cadastrar,
+       desativar e listar pelo editor do Apps Script: cadastrarCodigo,
+       desativarCodigo, reativarCodigo, listarCodigos. */
+    nome: 'CODIGOS_RESGATE',
+    colunas: ['id', 'codigoHash', 'rotulo', 'recompensasJson', 'ativo', 'criadoEm', 'atualizadoEm', 'nota'],
+    chave: 'id',
+  },
+  RESGATES: {
+    /* Cada resgate feito (v2.40): um código, uma vez por conta. O
+       `operacaoId` é o do pedido — a repetição do MESMO pedido, depois de
+       uma falha de rede, reconhece a concessão já feita. */
+    nome: 'RESGATES',
+    colunas: ['id', 'userId', 'codigoId', 'operacaoId', 'criadoEm', 'recompensasJson'],
+    chave: 'id',
+  },
   PERSONAGENS: {
     /* `armazenamento` entrou na v2.15 e é o MANIFESTO da ficha em blocos
        (ver "Conteúdo em blocos", abaixo). Vazio quer dizer formato

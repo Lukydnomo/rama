@@ -1,0 +1,38 @@
+{
+  "id": "exemplo-modelo",
+  "nome": "Modelo técnico — exemplo",
+  "descricao": "Exemplo do contrato: base, facetas e uma camada de detalhes recortadas pela máscara, e o fundo por zoom pela altura.",
+  "versoes": [
+    {
+      "versao": 1,
+      "previa": "assets/dados/temas/exemplo-modelo/v1/previa.png",
+      "dado": {
+        "mascara": "assets/dados/mascaras/d20-v1.svg",
+        "base": "assets/dados/temas/exemplo-modelo/v1/base.png",
+        "camadas": [
+          { "imagem": "assets/dados/temas/exemplo-modelo/v1/facetas.png", "opacidade": 1, "recortar": true },
+          { "imagem": "assets/dados/temas/exemplo-modelo/v1/detalhes.png", "opacidade": 1, "recortar": true }
+        ]
+      },
+      "notificacao": {
+        "fundo": "assets/dados/temas/exemplo-modelo/v1/fundo.png",
+        "ajusteFundo": { "modo": "zoom-pela-altura", "alinhamentoHorizontal": 0.5 },
+        "cores": {
+          "superficie": "#121216",
+          "texto": "#ffffff",
+          "texto2": "#d4d4dd",
+          "texto3": "#b4b4c0",
+          "tracoForte": "#e8e0f5",
+          "tracoMedia": "#8240c6",
+          "tracoFraca": "#4c3a66",
+          "selecao": "#d4d4dd",
+          "selecaoTexto": "#121216",
+          "paranormal": "#b98cf0",
+          "erro": "#e0675c",
+          "aviso": "#e2c15a"
+        },
+        "veu": { "cor": "#121216", "alfa": 0.25 }
+      }
+    }
+  ]
+}

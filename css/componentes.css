@@ -1610,6 +1610,78 @@
 .rolagem__notas { margin-top: var(--e1); }
 .rolagem__nota { margin: 0; font-size: var(--texto-mini); color: var(--cor-aviso); }
 
+/* ---------- o dado ao lado do resultado (v2.40) ----------
+   A grade reserva a largura do ícone dos DOIS lados: o total e os
+   dados continuam no centro do cartão, como antes. */
+.rolagem__resultado {
+  --dado-icone: calc(46px * var(--escala));
+  display: grid;
+  grid-template-columns: var(--dado-icone) minmax(0, 1fr) var(--dado-icone);
+  align-items: center;
+  gap: var(--e2);
+}
+.rolagem__numeros {
+  grid-column: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--e2);
+  min-width: 0;
+}
+.rolagem__resultado > .dado-icone { grid-column: 1; }
+.rolagem__autor {
+  margin: calc(-1 * var(--e1)) 0 0;
+  font-family: var(--fonte-mini);
+  font-size: var(--texto-mini);
+  color: var(--cor-texto-3);
+  overflow-wrap: anywhere;
+}
+
+/* O ícone: a mesma tela quadrada para base, camadas e máscara. As
+   camadas ocupam a caixa inteira, sem ajuste ao conteúdo — é isso que
+   mantém os detalhes no lugar. Nada sai da caixa. */
+.dado-icone {
+  position: relative;
+  display: inline-block;
+  flex: 0 0 auto;
+  width: var(--dado-icone, 46px);
+  aspect-ratio: 1;
+  overflow: hidden;
+  line-height: 0;
+}
+.dado-icone--cartao { width: var(--dado-icone, calc(46px * var(--escala))); }
+.dado-icone--linha { width: calc(30px * var(--escala)); }
+.dado-icone--previa { width: calc(72px * var(--escala)); }
+.dado-icone__padrao,
+.dado-icone__arte,
+.dado-icone__recorte,
+.dado-icone__camada {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+.dado-icone__camada { object-fit: fill; user-select: none; -webkit-user-drag: none; }
+.dado-icone__face {
+  fill: color-mix(in srgb, var(--cor-texto-3) 45%, var(--cor-superficie-2));
+}
+.dado-icone__aresta {
+  fill: none;
+  stroke: color-mix(in srgb, var(--cor-texto-2) 70%, transparent);
+  stroke-width: 22;
+  stroke-linejoin: round;
+}
+.dado-icone--carregando .dado-icone__padrao { opacity: 0.55; }
+
+/* O fundo do tema, por zoom pela altura: o JS põe a imagem e o
+   background-size: auto 100% no próprio cartão. Aqui, só o que
+   garante a leitura por cima dele. */
+.rolagem.com-tema-dados { border-color: var(--cor-traco-media); }
+.rolagem.com-tema-dados.rolagem--critico { border-color: var(--cor-paranormal); }
+.rolagem.com-tema-dados.rolagem--dano { border-color: var(--cor-erro); }
+.rolagem.com-tema-dados .rolagem__total,
+.rolagem.com-tema-dados .rolagem__nome { text-shadow: 0 1px 2px color-mix(in srgb, var(--cor-superficie-2) 80%, transparent); }
+
 /* =====================================================================
    JANELA "ADICIONAR CONDIÇÃO" (v2.20) — ficha e combate
    ===================================================================== */
@@ -3372,6 +3444,21 @@ html.arrastando * {
 .tema-previa__elemento { padding: 0 var(--e2); border-left: 4px solid var(--cor-traco-media); color: var(--cor-texto-2); font-family: var(--fonte-mini); font-size: var(--texto-mini); }
 .tema-previa__grau { color: var(--cor-grau); font-family: var(--fonte-mini); font-size: var(--texto-mini); }
 .tema-previa__secundaria { padding: var(--e2); background: var(--fundo-superficie-2); color: var(--cor-texto-2); }
+
+/* A notificação de exemplo do tema dos dados (v2.40): dentro da caixa
+   de prévia, que recebe o rascunho — o dado padrão segue as cores dele;
+   um tema de dados leva as próprias. Só para ver: nada é rolado. */
+.tema-previa__dados { display: flex; flex-direction: column; gap: var(--e1); padding: var(--e2); }
+.tema-previa__rotulo-dados { margin: 0; font-family: var(--fonte-mini); font-size: var(--texto-mini); color: var(--cor-texto-3); }
+.tema-previa__dados .rolagem { animation: none; box-shadow: none; }
+.tema-opcao__escolha > .dado-icone { flex: 0 0 auto; }
+
+/* Recompensas do Perfil (v2.40). */
+.recompensas-lista { display: grid; gap: var(--e2); grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); margin: 0; padding: 0; list-style: none; }
+.recompensas-item { display: flex; align-items: center; gap: var(--e2); padding: var(--e2); border: var(--borda) solid var(--cor-traco-fraca); background: var(--fundo-superficie); min-width: 0; }
+.recompensas-item__textos { display: flex; flex-direction: column; gap: 2px; min-width: 0; overflow-wrap: anywhere; }
+.recompensa-previa { display: flex; flex-wrap: wrap; align-items: center; gap: var(--e3); }
+.recompensa-previa .rolagem { flex: 1 1 240px; max-width: 320px; animation: none; box-shadow: none; }
 .tema-previa .r-entrada { pointer-events: none; }
 
 @media (max-width: 760px) {

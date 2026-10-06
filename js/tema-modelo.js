@@ -273,15 +273,22 @@
   /* O bloco de apresentação de uma ficha (compartilhado por Ordem e
      Universal). Sem bloco, ou bloco inválido: herda o tema da conta.
      `sistema` é o da ficha ("ordem" | "universal"). */
+  /* `dados` (v2.40) é o tema de dados do personagem: { id }. É outra
+     escolha, independente das cores — normalizar as cores nunca a apaga,
+     e um id fora do catálogo deste navegador também não (a tela usa a
+     reserva e diz isso). */
+  var ID_DADOS = /^[a-z0-9][a-z0-9-]{0,39}$/;
   function normalizarAparencia(bruto, sistema) {
     var a = bruto && typeof bruto === "object" && !Array.isArray(bruto) ? bruto : {};
     var modo = MODOS_FICHA.indexOf(a.modo) >= 0 ? a.modo : "conta";
     var saida = { v: VERSAO, modo: modo };
     if (modo === "personalizado") {
       var tema = normalizarTema(a.tema, false, sistema);
-      if (!tema) return { v: VERSAO, modo: "conta" };
-      saida.tema = tema;
+      if (tema) saida.tema = tema;
+      else saida.modo = "conta";
     }
+    var d = a.dados && typeof a.dados === "object" && !Array.isArray(a.dados) ? a.dados : null;
+    if (d && ID_DADOS.test(String(d.id || ""))) saida.dados = { id: String(d.id) };
     return saida;
   }
 

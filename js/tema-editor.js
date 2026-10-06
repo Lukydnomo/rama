@@ -93,6 +93,8 @@
      o.sistema      (ficha) "ordem" | "universal": libera as propriedades
                     daquele sistema; no tema da conta, só as gerais
      o.aplicar      (ficha) function(aparencia) → Promise<{ ok, pendente, erro }>
+     o.podeEscolherDados (ficha) a conta dona: só ela troca o tema dos
+                    dados (v2.40); para as outras, a escolha aparece e fica
      o.aoSalvar     (conta) function(preferencias gravadas)
      ================================================================= */
 
@@ -110,10 +112,15 @@
     var temasDaConta = null;     // ficha: os temas da conta, para copiar (carregados ao abrir)
     var fichaTema = null;        // ficha: o tema próprio (cópia, sem id)
     var sel;
+    var selDados = null;         // ficha: o tema dos dados ({ id } ou null = padrão)
+    var desbloqueados = null;    // ficha: os temas de dados da conta (null = consultando, false = falhou)
+    var podeEscolherDados = ehFicha && o.podeEscolherDados !== false;
+    var previaDados = null;
     if (ehFicha) {
       var ap = M().normalizarAparencia(o.aparencia, sistema);
       fichaTema = ap.tema ? clonar(ap.tema) : null;
       sel = { modo: ap.modo, id: null };
+      selDados = ap.dados ? { id: ap.dados.id } : null;
     } else {
       var modo = T().PREFERENCIAS_CONTA.indexOf(prefs.tema) >= 0 ? prefs.tema : T().preferencia();
       sel = { modo: modo, id: modo === "personalizado" ? prefs.temaAtivo || null : null };
@@ -124,7 +131,7 @@
     var abertas = {};            // categorias abertas no editor
     var linhas = {};             // chave → elemento da linha
 
-    function foto() { return JSON.stringify({ sel: sel, temas: temas, fichaTema: fichaTema }); }
+    function foto() { return JSON.stringify({ sel: sel, temas: temas, fichaTema: fichaTema, selDados: selDados }); }
     function alterado() { return foto() !== inicial; }
 
     function temaSelecionado() {
@@ -162,6 +169,10 @@
     var areaEditor = el("section.tema-personalizar", { "aria-label": "Personalizar o tema" });
     var caixa = el("div.tema-previa", { "aria-hidden": "true", inert: "" });
     montarPrevia(caixa, sistema);
+    if (ehFicha) {
+      previaDados = el("div.tema-previa__dados");
+      caixa.appendChild(previaDados);
+    }
     var areaContraste = el("div.tema-contraste", { role: "status", "aria-live": "polite" });
     var erroSalvar = el("p.r-ajuda.t-erro", { role: "alert", hidden: true });
 
@@ -241,7 +252,7 @@
     desenharEscolhas();
     desenharEditor();
     atualizar();
-    if (ehFicha) carregarTemasDaConta();
+    if (ehFicha) { carregarTemasDaConta(); carregarDesbloqueios(); pintarPreviaDosDados(); }
 
     /* ---- prévia ao vivo, um quadro por vez ---- */
     var agendado = false;
@@ -473,6 +484,7 @@
         proprio.push(botaoImportar());
         blocos.push(el("fieldset.tema-grupo", {}, [el("legend.t-rotulo", { texto: "Tema próprio desta ficha" })].concat(proprio)));
         blocos.push(blocoDaConta());
+        blocos.push(blocoDosDados());
       } else {
         var seus = temas.map(function (t) {
           return opcao({ modo: "personalizado", id: t.id }, t.nome, "Baseado no " + M().NOMES_BASE[t.base].toLowerCase() + ".", t, [
@@ -487,6 +499,99 @@
         blocos.push(el("fieldset.tema-grupo", {}, [el("legend.t-rotulo", { texto: "Seus temas" })].concat(seus)));
       }
       U.trocar(areaEscolhas, blocos);
+    }
+
+    /* =================================================================
+       TEMA DOS DADOS (v2.40) — só no editor da ficha
+       -----------------------------------------------------------------
+       O dado e o fundo das notificações de rolagem deste personagem. O
+       padrão acompanha o tema da ficha (o rascunho, aqui na prévia); os
+       outros são os temas desbloqueados pela CONTA, prontos — sem cor,
+       imagem ou ajuste para mudar. Escolher só muda o rascunho: vale ao
+       aplicar, como o resto. A prévia não rola nada e não entra no
+       histórico.
+       ================================================================= */
+
+    function TD() { return global.RAMATemasDados || null; }
+    function AR() { return global.RAMAAparenciaRolagem || null; }
+    function aparenciaDoTema(id) {
+      var a = id && TD() ? TD().atual(id) : null;
+      return a ? { v: 1, tema: a } : null;
+    }
+
+    var EXEMPLO_ROLAGEM = { tipo: "pericia", expressao: "3d20+5", rolagens: [20, 13, 12], natural: 20, total: 25,
+      parcelas: [{ rotulo: "Dado (AGI)", valor: 20 }, { rotulo: "Treinado", valor: 5 }] };
+
+    function pintarPreviaDosDados() {
+      if (!previaDados) return;
+      var cartao = global.RAMARolagens && global.RAMARolagens.cartao
+        ? global.RAMARolagens.cartao(EXEMPLO_ROLAGEM, { nome: "Acrobacia" }, selDados ? aparenciaDoTema(selDados.id) : null)
+        : null;
+      U.trocar(previaDados, cartao ? [el("p.tema-previa__rotulo-dados", { texto: "Notificação de rolagem" }), cartao] : []);
+    }
+
+    function blocoDosDados() {
+      var itens = [];
+      var grupo = grupoNome + "-dados";
+      var conhecido = function (id) { return !!(TD() && TD().tema(id)); };
+      function opcaoDado(id, nome, descricao) {
+        var marcada = (selDados ? selDados.id : null) === id;
+        var entrada = el("input", {
+          type: "radio", name: grupo, checked: marcada, disabled: !podeSalvar || !podeEscolherDados,
+          onchange: function () {
+            if (!entrada.checked) return;
+            selDados = id ? { id: id } : null;
+            desenharEscolhas();
+            pintarPreviaDosDados();
+            atualizar();
+            var nova = areaEscolhas.querySelector('input[name="' + grupo + '"]:checked');
+            if (nova) nova.focus();
+          },
+        });
+        return el("div.tema-opcao", { class: marcada ? "tema-opcao--marcada" : "" }, [
+          el("label.tema-opcao__escolha", {}, [
+            entrada,
+            AR() ? AR().icone(aparenciaDoTema(id), "linha") : null,
+            el("span.tema-opcao__textos", {}, [
+              el("span.tema-opcao__nome", { texto: nome }),
+              descricao ? el("span.tema-opcao__descricao", { texto: descricao }) : null,
+            ]),
+          ]),
+        ]);
+      }
+
+      itens.push(opcaoDado(null, "Padrão", "Acompanha o tema desta ficha, inclusive o herdado da conta e o do aparelho. Sempre disponível."));
+      var ids = desbloqueados === null || desbloqueados === false ? [] : desbloqueados.map(function (d) { return d.id; });
+      ids.forEach(function (id) {
+        var t = TD() ? TD().tema(id) : null;
+        if (t) itens.push(opcaoDado(id, t.nome, t.descricao));
+      });
+      /* A escolha gravada que esta tela não pode oferecer (outra conta
+         abrindo, ou um tema que este navegador não conhece) continua
+         marcada: não some sem ninguém pedir. */
+      if (selDados && ids.indexOf(selDados.id) < 0) {
+        itens.push(opcaoDado(selDados.id, conhecido(selDados.id) ? TD().tema(selDados.id).nome : selDados.id,
+          conhecido(selDados.id) ? "Escolhido nesta ficha. Só a conta dona dele pode trocar por outro." : "Este tema não está disponível neste navegador agora: as rolagens usam o dado padrão até ele voltar."));
+      }
+      if (desbloqueados === null) itens.push(el("p.r-ajuda", { texto: "Consultando os temas de dados da sua conta…" }));
+      else if (desbloqueados === false) itens.push(el("p.r-ajuda", { texto: "Não foi possível consultar os temas de dados da sua conta agora. O padrão continua disponível." }));
+      else if (!ids.length) itens.push(el("p.r-ajuda", { texto: "Nenhum tema de dados desbloqueado. Códigos se resgatam no Perfil, em “Resgatar código”." }));
+      if (!podeEscolherDados) itens.push(el("p.r-ajuda", { texto: "Só a conta dona desta ficha escolhe o tema dos dados." }));
+      return el("fieldset.tema-grupo", {}, [el("legend.t-rotulo", { texto: "Tema dos dados" })].concat(itens));
+    }
+
+    function carregarDesbloqueios() {
+      var api = global.RAMAApi;
+      if (!api || !api.listarDesbloqueios || !podeEscolherDados) { desbloqueados = podeEscolherDados ? false : []; desenharEscolhas(); return; }
+      Promise.resolve().then(function () { return api.listarDesbloqueios({ segundoPlano: true }); }).then(function (r) {
+        if (!aberto) return;
+        desbloqueados = r && r.ok ? (((r.dados || {}).temasDados) || []) : false;
+        desenharEscolhas();
+      }, function () {
+        if (!aberto) return;
+        desbloqueados = false;
+        desenharEscolhas();
+      });
     }
 
     /* Ficha: os temas da conta entram como cópia. */
@@ -980,7 +1085,8 @@
 
     function desfazer() {
       var f = JSON.parse(inicial);
-      sel = f.sel; temas = f.temas; fichaTema = f.fichaTema;
+      sel = f.sel; temas = f.temas; fichaTema = f.fichaTema; selDados = f.selDados || null;
+      if (ehFicha) pintarPreviaDosDados();
       erroSalvar.hidden = true;
       desenharEscolhas();
       desenharEditor();
@@ -1021,8 +1127,8 @@
     function aplicarFicha(fechar) {
       if (salvando || !o.aplicar) return null;
       var aparencia = sel.modo === "personalizado" && fichaTema
-        ? M().normalizarAparencia({ v: 1, modo: "personalizado", tema: fichaTema }, sistema)
-        : M().normalizarAparencia({ v: 1, modo: sel.modo === "personalizado" ? "conta" : sel.modo }, sistema);
+        ? M().normalizarAparencia({ v: 1, modo: "personalizado", tema: fichaTema, dados: selDados }, sistema)
+        : M().normalizarAparencia({ v: 1, modo: sel.modo === "personalizado" ? "conta" : sel.modo, dados: selDados }, sistema);
       salvando = true;
       erroSalvar.hidden = true;
       return Promise.resolve().then(function () { return o.aplicar(aparencia); }).then(function (r) {

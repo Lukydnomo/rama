@@ -22,7 +22,7 @@
 
     t.grupo("Tema da ficha · schema 16 (v2.36)");
     var TEMA16 = { nome: "Roxo", base: "escuro", valores: { fundo: { tipo: "radial", forma: "circulo", x: 20, y: 30, pontos: [{ cor: "#08080a", pos: 0 }, { cor: "#3a1030", alfa: 0.8, pos: 100 }] } } };
-    t.igual("o schema subiu para 17", S.VERSAO_SCHEMA, 17);
+    t.igual("o schema subiu para 18", S.VERSAO_SCHEMA, 18);
     t.iguais("ficha nova usa o tema da conta", S.criarFicha({ nome: "Nova" }).aparencia, { v: 1, modo: "conta" });
     t.iguais("ficha antiga (sem o campo) também", S.normalizarFicha({ schemaVersion: 15, nome: "Legado" }).aparencia, { v: 1, modo: "conta" });
     ["ordem", "universal"].forEach(function (tipo) {
@@ -4644,6 +4644,11 @@
         global.RAMAHexatombe, global.RAMAOrdemBiblioteca, global.RAMAOrdemItens || null);
     }
 
+    /* v2.40 — TEMAS DE DADOS */
+    if (global.RAMATemasDados && global.RAMATemaModelo && global.RAMAFicha && global.RAMAValidacao) {
+      casosDaV240(t, global.RAMATemasDados, global.RAMATemaModelo, global.RAMAFicha, global.RAMAValidacao);
+    }
+
     /* v2.38 — ARQUIVOS SECRETOS 4 */
     if (global.RAMAOrdemArquivo4 && global.RAMAOrdemArquivo3 && global.RAMAOrdemCondicoes && global.RAMAOrdemConsumo && RRs) {
       casosDaV238(t, global.RAMAOrdemCatalogo, RRs, global.RAMAOrdemPoderes, global.RAMAOrdemArquivo4, global.RAMAOrdemArquivo3,
@@ -4876,6 +4881,62 @@
   /* =================================================================
      v2.30 — ARQUIVOS SECRETOS 2
      ================================================================= */
+
+  /* =================================================================
+     v2.40 — TEMAS DE DADOS
+     ================================================================= */
+
+  function casosDaV240(t, TD, MT, F, V) {
+    t.grupo("v2.40 · catálogo de temas de dados");
+    t.iguais("o catálogo se confere sem problema", TD.PROBLEMAS, []);
+    t.ok("dois temas de exemplo, cada um com versão, prévia, base, máscara, camadas, fundo e cores",
+      TD.lista().length >= 2 && TD.lista().every(function (tema) {
+        return tema.versoes.every(function (v) {
+          return v.previa && v.dado.base && v.dado.mascara && v.notificacao.fundo && v.notificacao.cores.superficie && v.notificacao.cores.texto &&
+            v.notificacao.ajusteFundo.modo === "zoom-pela-altura" && v.notificacao.ajusteFundo.alinhamentoHorizontal >= 0 && v.notificacao.ajusteFundo.alinhamentoHorizontal <= 1;
+        });
+      }));
+    t.ok("todo caminho mora em assets/dados/ (nenhuma URL, nenhum ..)", JSON.stringify(TD.lista()).match(/"(previa|base|mascara|imagem|fundo)":"([^"]+)"/g).every(function (m) { return /"assets\/dados\//.test(m) && m.indexOf("..") < 0 && m.indexOf("//") < 0; }));
+    t.ok("o Sigilo Violeta tem uma camada fora do recorte (faíscas) e duas recortadas", (function (v) {
+      return v.dado.camadas.filter(function (c) { return c.recortar; }).length === 2 && v.dado.camadas.filter(function (c) { return !c.recortar; }).length === 1;
+    })(TD.versao("sigilo-violeta", 1)));
+    var problemas = [];
+    t.ok("um tema com caminho externo é recusado na conferência", TD.normalizarTema({ id: "ruim", versoes: [{ versao: 1, dado: { base: "https://x/a.png", mascara: "assets/dados/m.svg" }, notificacao: { cores: { superficie: "#000", texto: "#fff" } } }] }, problemas) === null && problemas.length > 0);
+    t.ok("  e com CSS no lugar de cor", TD.normalizarTema({ id: "ruim2", versoes: [{ versao: 1, dado: { base: "assets/dados/a.png", mascara: "assets/dados/m.svg" }, notificacao: { cores: { superficie: "url(x)", texto: "#fff" } } }] }, []) === null);
+    t.iguais("atual = a última versão", TD.atual("sigilo-violeta"), { id: "sigilo-violeta", versao: 1 });
+
+    t.grupo("v2.40 · o código de resgate");
+    t.iguais("espaços, hífens e minúsculas não importam", [TD.normalizarCodigo(" neon-2026 "), TD.normalizarCodigo("Neon_2026"), TD.normalizarCodigo("NEON.2026")], ["NEON2026", "NEON2026", "NEON2026"]);
+    t.iguais("letras de largura total viram as comuns (NFKC)", TD.normalizarCodigo("ｎｅｏｎ２０２６"), "NEON2026");
+    t.iguais("curto demais, longo demais ou com símbolo: inválido", [TD.normalizarCodigo("ab1"), TD.normalizarCodigo("A".repeat(41)), TD.normalizarCodigo("neon!2026")], ["", "", ""]);
+
+    t.grupo("v2.40 · a escolha do personagem");
+    t.iguais("id válido fica", TD.normalizarSelecao({ id: "sigilo-violeta" }), { id: "sigilo-violeta" });
+    t.ok("id com caminho, maiúscula ou vazio sai", TD.normalizarSelecao({ id: "../x" }) === null && TD.normalizarSelecao({ id: "Sigilo" }) === null && TD.normalizarSelecao({}) === null);
+    var comDados = MT.normalizarAparencia({ v: 1, modo: "escuro", dados: { id: "sigilo-violeta" } }, "universal");
+    t.iguais("a aparência guarda o tema dos dados junto das cores", comDados, { v: 1, modo: "escuro", dados: { id: "sigilo-violeta" } });
+    t.iguais("  trocar só as cores não apaga os dados", MT.normalizarAparencia(Object.assign({}, comDados, { modo: "claro" }), "universal").dados, { id: "sigilo-violeta" });
+    t.iguais("  um tema de cores inválido volta à conta, e os dados ficam", MT.normalizarAparencia({ modo: "personalizado", tema: null, dados: { id: "modelo-tecnico" } }, "ordem"), { v: 1, modo: "conta", dados: { id: "modelo-tecnico" } });
+    t.iguais("  um tema de dados que este navegador não conhece também fica (a tela usa a reserva)", MT.normalizarAparencia({ dados: { id: "tema-do-futuro" } }).dados, { id: "tema-do-futuro" });
+    var ficha = F.normalizarFicha(F.criarFicha({ nome: "Lia", tipoFicha: "universal", aparencia: { v: 1, modo: "conta", dados: { id: "sigilo-violeta" } } }));
+    t.iguais("a ficha normalizada mantém a escolha", ficha.aparencia.dados, { id: "sigilo-violeta" });
+    t.igual("o schema subiu para 18", ficha.schemaVersion, 18);
+    var pacote = V.exportar("personagem", ficha);
+    t.ok("exportar leva a escolha sem `id` (atravessa como `tema`)", pacote.dados.aparencia.dados.tema === "sigilo-violeta" && JSON.stringify(pacote).indexOf('"id"') < 0);
+    var volta = V.importado(JSON.parse(JSON.stringify(pacote)));
+    t.iguais("importar devolve a escolha (o servidor confere se a conta tem o tema)", volta.ok && volta.dados.aparencia.dados, { id: "sigilo-violeta" });
+    var semEscolha = V.importado(V.exportar("personagem", F.normalizarFicha(F.criarFicha({ nome: "Bia", tipoFicha: "universal" }))));
+    t.ok("sem escolha, nada aparece", semEscolha.ok && !semEscolha.dados.aparencia.dados);
+
+    t.grupo("v2.40 · a aparência de uma rolagem");
+    var boa = TD.normalizarAparenciaDaRolagem({ v: 1, tema: { id: "sigilo-violeta", versao: 1 }, padrao: { superficie: "#18181B", texto: "#fff" } });
+    t.iguais("tema por id e versão; cores em hexadecimal minúsculo de seis dígitos", boa, { v: 1, tema: { id: "sigilo-violeta", versao: 1 }, padrao: { superficie: "#18181b", texto: "#ffffff" } });
+    t.iguais("versão desconhecida, URL, CSS e chaves estranhas saem",
+      TD.normalizarAparenciaDaRolagem({ tema: { id: "sigilo-violeta", versao: 7, url: "http://x" }, padrao: { superficie: "url(x)", texto: "red", fundo: "#000", erro: "#c6564b" }, html: "<b>" }),
+      { v: 1, padrao: { erro: "#c6564b" } });
+    t.ok("nada que preste: null (rolagem antiga ou adulterada usa o tema da página)", TD.normalizarAparenciaDaRolagem("x") === null && TD.normalizarAparenciaDaRolagem({ tema: { id: "nao-existe", versao: 1 } }) === null);
+    t.ok("a aparência guardada é pequena", JSON.stringify(TD.normalizarAparenciaDaRolagem({ tema: { id: "sigilo-violeta", versao: 1 }, padrao: { superficie: "#111111", texto: "#111111", texto2: "#111111", texto3: "#111111", tracoForte: "#111111", tracoMedia: "#111111", tracoFraca: "#111111", selecao: "#111111", selecaoTexto: "#111111", paranormal: "#111111", erro: "#111111", aviso: "#111111" } })).length < 400);
+  }
 
   /* =================================================================
      v2.38 — ARQUIVOS SECRETOS 4

@@ -47,6 +47,11 @@
   /* Envios que ainda não confirmaram. Cada um guarda o resultado
      PRONTO; nenhum guarda "como rolar de novo". */
   var fila = [];
+
+  /* As rolagens que nasceram NESTA página (v2.40). Quando a campanha
+     traz a confirmação do servidor, quem rolou já viu o próprio cartão:
+     não recebe uma segunda cópia. */
+  var daqui = {};
   var enviando = false;
   var tentativas = 0;
 
@@ -85,7 +90,12 @@
         critico: !!o.critico,
       },
     };
+    /* A aparência do momento (tema de dados ou cores do padrão) vai com o
+       resultado: os outros veem o dado de quem rolou, e uma troca de tema
+       depois não muda o passado. O servidor confere de novo. */
+    if (o.aparencia) rolagem.dados.aparencia = o.aparencia;
 
+    daqui[rolagem.id] = true;
     fila.push(rolagem);
     escoar();
 
@@ -149,6 +159,7 @@
     configurar: configurar,
     emCampanha: emCampanha,
     registrar: registrar,
+    foiDaqui: function (id) { return !!daqui[id]; },
     pendentes: function () { return fila.length; },
     contexto: function () { return { campanhaId: contexto.campanhaId, personagemId: contexto.personagemId }; },
   };

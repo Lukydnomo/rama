@@ -4826,6 +4826,8 @@ const { testarHexatombeBackend } = await import("./hexatombe-backend.js");
 await testarHexatombeBackend({ t, preparar, novaConta, comoFn });
 const { testarHackingBackend } = await import("./hacking-backend.js");
 await testarHackingBackend({ t, preparar, novaConta, comoFn });
+const { testarDadosBackend } = await import("./dados-backend.js");
+await testarDadosBackend({ t, preparar, novaConta, comoFn });
 const { testarCrisBackend } = await import("./cris-backend.js");
 await testarCrisBackend({ t, preparar, novaConta, comoFn, chamar });
 

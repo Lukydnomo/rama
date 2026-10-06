@@ -209,6 +209,16 @@
       });
     }
 
+    /* O tema de dados do personagem (v2.40): cada rolagem desta ficha
+       leva a escolha DESTE momento. Lido na hora, para valer o que
+       acabou de ser aplicado no editor. */
+    if (global.RAMAAparenciaRolagem) {
+      global.RAMAAparenciaRolagem.fonte(function () {
+        var d = estado.ficha && estado.ficha.aparencia && estado.ficha.aparencia.dados;
+        return d && d.id ? d.id : null;
+      });
+    }
+
     /* Quem abriu como mestre precisa saber: a ficha é de outra pessoa. */
     estado.comoMestre = !!rFicha.mestre && !rFicha.dono;
     estado.dono = !!rFicha.dono;
@@ -602,6 +612,9 @@
       nomeFicha: estado.ficha.nome,
       aparencia: estado.ficha.aparencia,
       podeSalvar: ctx.podeEditar(),
+      /* O tema dos dados (v2.40) vem da coleção da conta DONA: só ela o
+         troca. Para o mestre, a escolha aparece e fica como está. */
+      podeEscolherDados: ctx.podeEditar() && !!estado.dono,
       /* As cores de um sistema (elementos e graus de Ordem) só existem no
          tema de uma ficha dele. */
       sistema: F.ehDeOrdem(estado.ficha) ? "ordem" : "universal",

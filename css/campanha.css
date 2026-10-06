@@ -375,6 +375,22 @@ button.mesa-recurso__valor { cursor: text; }
   font-variant-numeric: tabular-nums;
 }
 
+/* O dado de quem rolou (v2.40), à esquerda da linha; o resto fica como
+   era. Com tema, o fundo dele vem por zoom pela altura da linha. */
+.rolagem-linha--com-dado {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  column-gap: var(--e3);
+}
+.rolagem-linha__corpo {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.rolagem-linha.com-tema-dados { border-color: var(--cor-traco-media); }
+
 .rolagem-livre__saida { text-align: center; }
 .rolagem-livre__total {
   font-weight: 700;

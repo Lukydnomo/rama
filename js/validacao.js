@@ -594,6 +594,7 @@
          importado abriria com os rituais na ficha e todas as concessões
          pendentes, como se nunca tivesse aprendido nada. */
       devolverIdsDosEventos(limpo);
+      devolverTemaDeDados(limpo);
       refazerVinculosAliados(limpo);
       var avisos = devolverReferencias(limpo);
       var ficha = F.normalizarFicha(limpo);
@@ -642,12 +643,30 @@
     return { ok: true, tipo: "homebrew-item", dados: reg };
   }
 
+  /* O tema de dados da ficha (v2.40) é `aparencia.dados.id`, e a limpeza
+     apaga todo `id`. Ele atravessa como `aparencia.dados.tema` e volta a
+     ser id na importação. Atravessar não concede nada: o servidor só
+     mantém a escolha se a conta que importa tiver o tema desbloqueado. */
+  function comTemaDeDadosPortavel(ficha) {
+    var d = ficha && ficha.aparencia && ficha.aparencia.dados;
+    if (!d || typeof d !== "object" || !d.id) return ficha;
+    var copia = JSON.parse(JSON.stringify(ficha));
+    copia.aparencia.dados = { tema: String(d.id) };
+    return copia;
+  }
+  function devolverTemaDeDados(dados) {
+    var d = dados && dados.aparencia && dados.aparencia.dados;
+    if (!d || typeof d !== "object") return;
+    if (d.tema && /^[a-z0-9][a-z0-9-]{0,39}$/.test(String(d.tema))) dados.aparencia.dados = { id: String(d.tema) };
+    else delete dados.aparencia.dados;
+  }
+
   /* Monta o pacote de saída. A contraparte de importado(). */
   function exportar(tipo, dados) {
     /* Numa ficha, o vínculo entre concessão e ritual vira posição antes
        de os ids irem embora. Ver "O VÍNCULO DE RITUAL ATRAVESSANDO A
        IMPORTAÇÃO", acima. */
-    var preparado = tipo === "personagem" ? comReferenciasPortaveis(comAliadosPortaveis(comPosicoesDeRitual(dados)))
+    var preparado = tipo === "personagem" ? comTemaDeDadosPortavel(comReferenciasPortaveis(comAliadosPortaveis(comPosicoesDeRitual(dados))))
       : (tipo === "homebrew-criatura" ? criaturaPortavel(U.copiar(dados)) : dados);
     return {
       rama: true,

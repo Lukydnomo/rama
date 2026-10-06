@@ -306,6 +306,9 @@ function acaoLerCampanha(corpo, usuario) {
   resposta.hexatombe = hexatombeAtivo(c.id);
   /* A regra opcional de Hacking (v2.38, AS4): o mesmo esquema. */
   resposta.hacking = hackingAtivo(c.id);
+  /* A hora do servidor (v2.40): o navegador só notifica rolagens criadas
+     depois dela — as antigas ficam no histórico, sem cartão. */
+  resposta.agora = new Date().toISOString();
 
   /* Se há capa, de que tamanho e de quando — só as colunas leves. A
      imagem vem por ler_capa_campanha, que confere o acesso de novo. */
@@ -1370,12 +1373,24 @@ function acaoRegistrarRolagem(corpo, usuario) {
      (ou dela como mestre). Registrar em nome de um personagem alheio
      colocaria no histórico uma rolagem que ninguém fez. */
   var personagemId = String(corpo.personagemId || '');
+  var donoDaEscolha = usuario.id;
   if (personagemId) {
     var acesso = personagemAcessivel(personagemId, usuario);
     if (!acesso.ok) return { ok: false, erro: 'nao_encontrado' };
     if (String(acesso.personagem.campanhaId) !== String(ctx.campanha.id)) {
       return { ok: false, erro: 'sem_permissao' };
     }
+    donoDaEscolha = acesso.personagem.ownerId;
+  }
+
+  /* A aparência (v2.40) é cosmética e nunca recusa a rolagem: o que não
+     confere sai. Tema só por id e versão do catálogo, e só se a conta
+     dona da escolha (a do personagem, ou quem rolou) o tem; cores só as
+     conhecidas, em hexadecimal. Nada de caminho, URL ou CSS. */
+  if (dados.aparencia !== undefined) {
+    var aparencia = conferirAparenciaDaRolagem(dados.aparencia, donoDaEscolha);
+    if (aparencia) dados.aparencia = aparencia;
+    else delete dados.aparencia;
   }
 
   /* A visibilidade NÃO vem do cliente. Rolagem de jogador é sempre
@@ -1655,6 +1670,12 @@ function acaoListarRolagens(corpo, usuario) {
         /* A linha já veio inteira da leitura da página: o resultado
            não custa uma segunda viagem. */
         var d = lerJson(r.dadosJson, {});
+        /* Lida com a mesma régua da gravação: o que sai daqui nunca
+           carrega um caminho ou uma cor fora do contrato. */
+        if (d.aparencia !== undefined) {
+          var ap = RAMATemasDados.normalizarAparenciaDaRolagem(d.aparencia);
+          if (ap) d.aparencia = ap; else delete d.aparencia;
+        }
         return {
           id: r.id,
           autorUserId: r.autorUserId,

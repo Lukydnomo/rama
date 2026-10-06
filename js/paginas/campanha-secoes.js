@@ -148,22 +148,35 @@
     },
   };
 
+  /* A linha mostra a rolagem como ela foi feita (v2.40): o dado e as
+     cores de quem rolou, guardados com o resultado. Uma troca de tema
+     depois não muda o passado; rolagem antiga, sem aparência, fica com o
+     tema da página. Só apresentação: nada aqui grava ou reenvia. */
   function linhaDeRolagem(r) {
     var res = r.resultado || {};
     var faces = (res.rolagens || []).join(", ");
+    var AR = global.RAMAAparenciaRolagem || null;
+    var aparencia = res.aparencia || null;
 
-    return el("div.rolagem-linha", { class: r.oculta ? "rolagem-linha--oculta" : "" }, [
-      el("div.rolagem-linha__topo", {}, [
-        el("span.t-forte", { texto: r.nome || "Rolagem" }),
-        el("span.rolagem-linha__total", { texto: String(res.total !== null && res.total !== undefined ? res.total : "—") }),
+    var linha = el("div.rolagem-linha", { class: [r.oculta ? "rolagem-linha--oculta" : "", AR ? "rolagem-linha--com-dado" : ""].filter(Boolean).join(" ") }, [
+      AR ? AR.icone(aparencia, "linha") : null,
+      el("div.rolagem-linha__corpo", {}, [
+        el("div.rolagem-linha__topo", {}, [
+          el("span.t-forte", { texto: r.nome || "Rolagem" }),
+          el("span.rolagem-linha__total", { texto: String(res.total !== null && res.total !== undefined ? res.total : "—") }),
+        ]),
+        el("p.t-mini", {
+          texto: [r.autor, res.expressao, faces ? "[" + faces + "]" : "", U.horaCurta(r.criadoEm)]
+            .filter(Boolean).join(" · "),
+        }),
+        r.oculta ? el("span.r-etiqueta.r-etiqueta--para", { texto: "Oculta" }) : null,
       ]),
-      el("p.t-mini", {
-        texto: [r.autor, res.expressao, faces ? "[" + faces + "]" : "", U.horaCurta(r.criadoEm)]
-          .filter(Boolean).join(" · "),
-      }),
-      r.oculta ? el("span.r-etiqueta.r-etiqueta--para", { texto: "Oculta" }) : null,
     ]);
+    if (AR && aparencia) AR.aplicar(linha, aparencia);
+    return linha;
   }
+
+  global.RAMACampanhaLinhaDeRolagem = linhaDeRolagem;
 
   /* A rolagem livre usa EXATAMENTE o mesmo motor da ficha. Não existe
      um segundo interpretador de expressão no sistema. */

@@ -62,6 +62,7 @@
       }),
 
       UI.painel("Identidade", identidade()),
+      UI.painel("Recompensas", recompensas()),
       UI.painel("Exibição", exibicao()),
       UI.painel("Importar", importacoes()),
       UI.painel("Sessão", sessao()),
@@ -316,6 +317,11 @@
       aoConfirmar: async function (ficha) {
         var r = await global.RAMAApi.criarPersonagem(ficha);
         if (!r.ok) { UI.avisoDeFalha(r, "importação de ficha"); return false; }
+        /* O desbloqueio é da conta: um tema de dados que esta conta não
+           tem fica de fora, e a ficha usa o dado padrão. */
+        if ((r.avisos || []).indexOf("tema_dados_indisponivel") >= 0) {
+          UI.avisoAtencao("O tema de dados desta ficha não está desbloqueado nesta conta: ela usa o dado padrão. As cores do tema da ficha continuam.", { duracao: 9000 });
+        }
 
         UI.avisoOk(ficha.nome + " foi importado.", {
           acao: {
@@ -325,6 +331,158 @@
         });
         return true;
       },
+    });
+  }
+
+  /* =================================================================
+     RECOMPENSAS (v2.40) — temas de dados desbloqueados por código
+     -----------------------------------------------------------------
+     A coleção é da CONTA e vem do servidor: só o resgate concede. Aqui
+     se resgata e se vê o que já está desbloqueado; quem escolhe o tema
+     de cada personagem é o editor de tema da ficha.
+     ================================================================= */
+
+  var colecao = { lista: null, erro: false, carregando: false };
+
+  function TD() { return global.RAMATemasDados || null; }
+  function AR() { return global.RAMAAparenciaRolagem || null; }
+
+  function carregarColecao() {
+    if (colecao.carregando) return;
+    colecao.carregando = true;
+    global.RAMAApi.listarDesbloqueios({ segundoPlano: true }).then(function (r) {
+      colecao.carregando = false;
+      colecao.erro = !(r && r.ok);
+      colecao.lista = r && r.ok ? ((r.dados || {}).temasDados || []) : null;
+      pintarColecao();
+    }, function () { colecao.carregando = false; colecao.erro = true; pintarColecao(); });
+  }
+
+  var areaColecao = null;
+  function pintarColecao() {
+    if (!areaColecao) return;
+    var corpo;
+    if (colecao.lista === null) {
+      corpo = [el("p.t-mini", { texto: colecao.erro ? "Não foi possível consultar a sua coleção agora." : "Consultando a sua coleção…" })];
+    } else if (!colecao.lista.length) {
+      corpo = [el("p.t-mini", { texto: "Nenhum tema de dados desbloqueado ainda. O dado padrão acompanha o tema de cada ficha e está sempre disponível." })];
+    } else {
+      corpo = [el("ul.recompensas-lista", {}, colecao.lista.map(function (d) {
+        var t = TD() ? TD().tema(d.id) : null;
+        var ap = t ? { v: 1, tema: TD().atual(d.id) } : null;
+        return el("li.recompensas-item", {}, [
+          AR() ? AR().icone(ap, "linha") : null,
+          el("span.recompensas-item__textos", {}, [
+            el("span.t-forte", { texto: t ? t.nome : d.id }),
+            el("span.t-mini", { texto: t ? t.descricao : "Tema que este site ainda não conhece — continua na sua conta." }),
+          ]),
+        ]);
+      }))];
+    }
+    U.trocar(areaColecao, corpo);
+  }
+
+  function recompensas() {
+    areaColecao = el("div.pilha--curta", { class: "pilha", "aria-live": "polite" });
+    pintarColecao();
+    if (colecao.lista === null && !colecao.carregando) carregarColecao();
+    return el("div.pilha", {}, [
+      el("p.t-mini", { texto: "Temas de dados mudam o dado e o fundo das notificações de rolagem. Um tema desbloqueado vale para todas as fichas desta conta; cada personagem escolhe o seu no editor de tema da ficha." }),
+      el("div.faixa", {}, [
+        el("button.r-botao", { type: "button", texto: "Resgatar código", onclick: resgatar }),
+      ]),
+      el("h3.t-rotulo", { texto: "Temas de dados desbloqueados" }),
+      areaColecao,
+    ]);
+  }
+
+  /* Um exemplo de notificação para a prévia (nada é rolado). */
+  var EXEMPLO = { tipo: "pericia", expressao: "3d20+5", rolagens: [20, 13, 12], natural: 20, total: 25,
+    parcelas: [{ rotulo: "Dado (AGI)", valor: 20 }, { rotulo: "Treinado", valor: 5 }] };
+
+  function previaDaRecompensa(id) {
+    var t = TD() ? TD().tema(id) : null;
+    var ap = t ? { v: 1, tema: TD().atual(id) } : null;
+    var cartao = global.RAMARolagens && global.RAMARolagens.cartao
+      ? global.RAMARolagens.cartao(EXEMPLO, { nome: "Acrobacia" }, ap) : null;
+    return el("div.recompensa-previa", { "aria-hidden": "true", inert: "" }, [
+      AR() ? AR().icone(ap, "previa") : null,
+      cartao,
+    ]);
+  }
+
+  function resgatar() {
+    var campo = UI.campo({ rotulo: "Código", limite: 60, autocomplete: "off",
+      ajuda: "Espaços, hífens e maiúsculas não importam." });
+    campo.entrada.setAttribute("spellcheck", "false");
+    campo.entrada.setAttribute("autocapitalize", "characters");
+    var saida = el("div.pilha--curta", { class: "pilha", role: "status", "aria-live": "polite" });
+    var erro = el("p.r-ajuda.t-erro", { role: "alert", hidden: true });
+    /* A mesma intenção leva a mesma operação: tentar de novo depois de
+       uma falha de rede reconhece a concessão já feita no servidor. */
+    var intencao = { codigo: "", operacao: "" };
+    var concluido = false;
+
+    function mostrarErro(texto) { erro.textContent = texto; erro.hidden = false; }
+
+    function confirmar() {
+      if (concluido) return null;
+      var bruto = campo.entrada.value;
+      var normal = TD() ? TD().normalizarCodigo(bruto) : String(bruto || "").trim();
+      erro.hidden = true;
+      U.limpar(saida);
+      if (!normal) { campo.marcarErro("Use de 4 a 40 letras e números."); campo.entrada.focus(); return null; }
+      campo.marcarErro("");
+      if (intencao.codigo !== normal) intencao = { codigo: normal, operacao: global.RAMAApi.novaOperacao() };
+      return global.RAMAApi.resgatarCodigo(normal, intencao.operacao).then(function (r) {
+        if (r && r.ok) {
+          concluido = true;
+          var rec = ((r.dados || {}).recompensas || []);
+          colecao.lista = (r.dados || {}).desbloqueios || colecao.lista;
+          pintarColecao();
+          U.trocar(saida, [
+            el("p.t-forte", { texto: rec.length === 1 ? "Desbloqueado: " + rec[0].nome + "." : "Desbloqueados: " + rec.map(function (x) { return x.nome; }).join(", ") + "." }),
+            rec.some(function (x) { return !x.novo; }) ? el("p.t-mini", { texto: "O que você já tinha continua igual — a coleção não duplica." }) : null,
+          ].concat(rec.slice(0, 2).map(function (x) { return previaDaRecompensa(x.id); }), [
+            el("p.t-mini", { texto: "Para usar, abra uma ficha, toque no lápis de “Personalizar tema desta ficha” e escolha em “Tema dos dados”." }),
+          ]));
+          var botao = m.janela.querySelector(".r-modal__rodape .r-botao--principal");
+          if (botao) botao.hidden = true;
+          return;
+        }
+        var codigo = r && r.erro;
+        if (codigo === "ja_resgatado") {
+          var ja = ((r.dados || {}).recompensas || []);
+          mostrarErro("Este código já foi usado nesta conta" + (ja.length ? " — " + ja.map(function (x) { return x.nome; }).join(", ") + " já está na sua coleção." : "."));
+          return;
+        }
+        if (codigo === "codigo_invalido") { mostrarErro("Código não reconhecido. Confira e tente de novo."); return; }
+        if (codigo === "codigo_desativado") { mostrarErro("Este código não aceita mais resgates."); return; }
+        if (codigo === "muitas_tentativas") { mostrarErro("Muitas tentativas erradas. Espere alguns minutos antes de tentar de novo."); return; }
+        var f = global.RAMAApi.frase ? global.RAMAApi.frase(r || {}) : null;
+        mostrarErro((f ? f.titulo + " — " + f.texto : "Não foi possível falar com o servidor.") + " Tentar de novo usa o mesmo pedido: nada é concedido duas vezes.");
+      }, function () {
+        mostrarErro("Falha de conexão. Tentar de novo usa o mesmo pedido: nada é concedido duas vezes.");
+      });
+    }
+
+    campo.entrada.addEventListener("keydown", function (ev) {
+      if (ev.key !== "Enter") return;
+      ev.preventDefault();
+      var botao = m.janela.querySelector(".r-modal__rodape .r-botao--principal");
+      if (botao && !botao.hidden && botao.getAttribute("aria-busy") !== "true") botao.click();
+    });
+
+    var m = UI.modal({
+      titulo: "Resgatar código",
+      conteudo: [el("div.pilha--curta", { class: "pilha" }, [
+        el("p.t-mini", { texto: "Códigos liberam temas de dados para a sua conta. Cada código vale uma vez por conta." }),
+        campo, erro, saida,
+      ])],
+      botoes: [
+        { rotulo: "Fechar", classe: "r-botao--fantasma" },
+        { rotulo: "Resgatar", rotuloOcupado: "Resgatando…", classe: "r-botao--principal", aoClicar: function () { return confirmar(); } },
+      ],
     });
   }
 

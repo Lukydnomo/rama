@@ -352,6 +352,9 @@ function rotasDoNucleo() {
 
   ler_perfil:            { publica: false, fn: acaoLerPerfil },
   salvar_perfil:         { publica: false, fn: acaoSalvarPerfil },
+  /* Temas de dados (v2.40): o resgate é a ÚNICA porta que concede. */
+  resgatar_codigo:       { publica: false, fn: acaoResgatarCodigo },
+  listar_desbloqueios:   { publica: false, fn: acaoListarDesbloqueios },
 
   /* As ações de campanha ficam em Campanhas.gs e entram pelo rotaDe(). */
   };
@@ -1022,9 +1025,17 @@ function sistemaDaFicha(ficha) {
 function normalizarAparenciaServidor(bruto, sistema) {
   var a = bruto && typeof bruto === 'object' && !Array.isArray(bruto) ? bruto : {};
   var modo = TEMA_MODOS_FICHA.indexOf(a.modo) >= 0 ? a.modo : 'conta';
-  if (modo !== 'personalizado') return { v: 1, modo: modo };
-  var tema = normalizarTemaServidor(a.tema, false, sistema);
-  return tema ? { v: 1, modo: 'personalizado', tema: tema } : { v: 1, modo: 'conta' };
+  var saida = { v: 1, modo: modo };
+  if (modo === 'personalizado') {
+    var tema = normalizarTemaServidor(a.tema, false, sistema);
+    if (tema) saida.tema = tema;
+    else saida.modo = 'conta';
+  }
+  /* O tema de dados (v2.40) é outra escolha: só a forma aqui. Quem pode
+     equipá-lo é conferido em conferirTemaDosDados, com a conta dona. */
+  var dados = RAMATemasDados.normalizarSelecao(a.dados);
+  if (dados) saida.dados = dados;
+  return saida;
 }
 
 function sanearAparencia(ficha) {
@@ -2482,6 +2493,10 @@ function acaoCriarPersonagem(corpo, usuario) {
     var campanhaId = campanhaValida(ficha.campanhaId, usuario);
     ficha.campanhaId = campanhaId || null;
 
+    /* Importar ou copiar uma ficha não leva o desbloqueio junto: o tema
+       de dados só fica se ESTA conta o tem (v2.40). */
+    var avisoDosDados = conferirTemaDosDados(ficha, usuario.id);
+
     var registro = {
       id: id,
       ownerId: usuario.id,
@@ -2500,7 +2515,9 @@ function acaoCriarPersonagem(corpo, usuario) {
     lembrarOperacao(usuario, operacao, id);
     indiceSemFalhar(registro, ficha, '');
     avisarMesas([campanhaId], ['personagens']);
-    return { ok: true, rev: 1, dados: { id: id } };
+    var criado = { ok: true, rev: 1, dados: { id: id } };
+    if (avisoDosDados) criado.avisos = [avisoDosDados];
+    return criado;
   });
 }
 
@@ -2569,9 +2586,19 @@ function acaoSalvarPersonagem(corpo, usuario) {
        { modo: "conta" } explicitamente. A ficha anterior só é lida para
        quem se identifica como versão antiga (schema 1 a 15). */
     var schemaPedido = Number(ficha.schemaVersion) || 0;
+    /* O tema de dados (v2.40) só fica se a conta DONA da ficha o tem — e
+       mexer em outro campo (o mestre, por exemplo) não tira uma escolha
+       legítima, porque a conferência é com o dono, não com quem grava. */
+    var avisoDosDados = conferirTemaDosDados(ficha, registro.ownerId);
     if (ficha.aparencia === undefined && schemaPedido > 0 && schemaPedido < 16) {
       if (!anterior) anterior = lerFichaDoPersonagem(registro);
       if (anterior.ok && anterior.ficha && anterior.ficha.aparencia) ficha.aparencia = normalizarAparenciaServidor(anterior.ficha.aparencia, sistemaDaFicha(ficha));
+    } else if (ficha.aparencia && !ficha.aparencia.dados && schemaPedido > 0 && schemaPedido < 18) {
+      /* Uma aba de versão anterior não conhece `aparencia.dados` e a
+         mandaria embora: fica a escolha gravada. */
+      if (!anterior) anterior = lerFichaDoPersonagem(registro);
+      var dadosGravados = anterior.ok && anterior.ficha && anterior.ficha.aparencia ? RAMATemasDados.normalizarSelecao(anterior.ficha.aparencia.dados) : null;
+      if (dadosGravados) ficha.aparencia.dados = dadosGravados;
     }
     ficha.resumoRecursos = resumo || undefined;
     var campanhaAnterior = registro.campanhaId;
@@ -2604,7 +2631,9 @@ function acaoSalvarPersonagem(corpo, usuario) {
 
     avisarMesas([campanhaAnterior, registro.campanhaId], ['personagens', 'combates']);
 
-    return { ok: true, rev: registro.rev };
+    var salvo = { ok: true, rev: registro.rev };
+    if (avisoDosDados) salvo.avisos = [avisoDosDados];
+    return salvo;
   });
 }
 
@@ -4082,3 +4111,594 @@ function realTrocarSenha() {
     'novaSenha'
   )
 }
+
+/* =====================================================================
+   TEMAS DE DADOS E CÓDIGOS DE RESGATE (v2.40)
+   ---------------------------------------------------------------------
+   A conta POSSUI temas de dados; o personagem ESCOLHE um; o
+   desenvolvedor CRIA os temas (js/temas-dados.js, copiado no fim deste
+   arquivo) e os códigos (aqui, pelo editor do Apps Script).
+
+     resgatar_codigo { codigo, operacaoId }
+         a única porta que concede. A conta é a da sessão; o navegador
+         não manda lista de nada. Um código vale uma vez por conta (e
+         para quantas contas o desenvolvedor quiser); dois códigos que
+         dão o mesmo tema não duplicam a coleção. A MESMA operação
+         chegando de novo (a resposta se perdeu) devolve a concessão que
+         ela já fez. Dentro da trava: dois pedidos ao mesmo tempo não
+         concedem duas vezes.
+     listar_desbloqueios
+         os temas desta conta.
+
+   O CÓDIGO
+   ---------------------------------------------------------------------
+   Normalizado como em RAMATemasDados.normalizarCodigo (NFKC, sem
+   espaços/hífens/pontos/sublinhados, maiúsculas, A–Z e 0–9, 4 a 40) e
+   guardado só como SHA-256(RAMA_PEPPER + "|codigo-resgate|" + código).
+   A planilha não tem o código em texto; o rótulo ("NE…26 (8)") é só para
+   o desenvolvedor reconhecer qual é qual.
+
+   O FREIO
+   ---------------------------------------------------------------------
+   Código errado ou desativado conta uma falha da conta no CacheService
+   (como o freio do login). Com 10 em 15 minutos, o resgate responde
+   `muitas_tentativas` até a janela passar. Um resgate certo zera a
+   conta.
+
+   ADMINISTRAÇÃO (rode no editor do Apps Script, nunca pelo site)
+   ---------------------------------------------------------------------
+     cadastrarCodigo('NEON-2026', ['sigilo-violeta'], 'live de outubro')
+     desativarCodigo('NEON-2026')   novos resgates param; quem já
+                                    resgatou continua com o tema
+     reativarCodigo('NEON-2026')
+     listarCodigos()                rótulos, recompensas, estado e
+                                    quantos resgates — sem o código
+   ===================================================================== */
+
+var MAX_FALHAS_RESGATE = 10;
+var MINUTOS_FREIO_RESGATE = 15;
+var SEGUNDOS_CACHE_DESBLOQUEIOS = 21600;
+
+function chaveDosDesbloqueios(userId) { return 'rama.desbloqueios.' + userId; }
+function chaveDoFreioDeResgate(userId) { return 'rama.resgate.falhas.' + userId; }
+
+/* Lidos da planilha, sem cache: [{ id, concedidoEm }]. */
+function desbloqueiosLidos(userId) {
+  var uid = String(userId || '');
+  return lerTudo(ABAS.DESBLOQUEIOS).filter(function (r) {
+    return String(r.userId) === uid && String(r.tipo) === 'temaDados';
+  }).map(function (r) {
+    return { id: String(r.recompensaId), concedidoEm: String(r.concedidoEm || '') };
+  });
+}
+
+/* Os temas de dados de uma conta, pelo cache quando ele ajuda. Sem a aba
+   (setupRama desta versão ainda não rodou), nenhum. */
+function desbloqueiosDe(userId) {
+  var uid = String(userId || '');
+  if (!uid) return [];
+  var guardado = cacheLer(chaveDosDesbloqueios(uid));
+  if (guardado) {
+    var lista = lerJson(guardado, null);
+    if (Array.isArray(lista)) return lista;
+  }
+  var lidos;
+  try { lidos = desbloqueiosLidos(uid); } catch (erro) { return []; }
+  cacheGravar(chaveDosDesbloqueios(uid), JSON.stringify(lidos), SEGUNDOS_CACHE_DESBLOQUEIOS);
+  return lidos;
+}
+
+function temTemaDeDados(userId, temaId) {
+  var id = String(temaId || '');
+  return !!id && desbloqueiosDe(userId).some(function (d) { return d.id === id; });
+}
+
+/* A escolha de tema de dados que a ficha traz: só fica se a conta DONA
+   a tem. Um tema que saiu do catálogo mas foi desbloqueado continua (a
+   tela usa a reserva); um que a conta não tem sai, com aviso. */
+function conferirTemaDosDados(ficha, donoId) {
+  var ap = ficha && ficha.aparencia;
+  var sel = ap && typeof ap === 'object' ? RAMATemasDados.normalizarSelecao(ap.dados) : null;
+  if (!sel) { if (ap && typeof ap === 'object') delete ap.dados; return null; }
+  if (temTemaDeDados(donoId, sel.id)) { ap.dados = sel; return null; }
+  delete ap.dados;
+  return 'tema_dados_indisponivel';
+}
+
+/* A aparência que uma rolagem traz: a forma pelo catálogo e o tema só se
+   a conta dona da escolha o tem (o dono do personagem, ou quem rolou). */
+function conferirAparenciaDaRolagem(bruta, donoId) {
+  var ap = RAMATemasDados.normalizarAparenciaDaRolagem(bruta);
+  if (!ap) return null;
+  if (ap.tema && !temTemaDeDados(donoId, ap.tema.id)) delete ap.tema;
+  return ap.tema || ap.padrao ? ap : null;
+}
+
+function hashDoCodigo(codigoNormalizado) {
+  var pepper = propriedade('RAMA_PEPPER', '');
+  if (!pepper) throw new Error('RAMA_PEPPER não definido. Rode gerarPepper() uma vez.');
+  return sha256Hex(pepper + '|codigo-resgate|' + codigoNormalizado);
+}
+
+function rotuloDoCodigo(normal) {
+  return normal.slice(0, 2) + '…' + normal.slice(-2) + ' (' + normal.length + ')';
+}
+
+/* As recompensas de um código que o catálogo deste servidor conhece. */
+function recompensasDoCodigo(registro) {
+  var lista = lerJson(registro && registro.recompensasJson, []);
+  if (!Array.isArray(lista)) return [];
+  var vistas = {};
+  return lista.map(String).filter(function (id) {
+    if (vistas[id] || !RAMATemasDados.tema(id)) return false;
+    vistas[id] = true;
+    return true;
+  });
+}
+
+function descreverRecompensas(ids, possuidas) {
+  return ids.map(function (id) {
+    var t = RAMATemasDados.tema(id);
+    return { tipo: 'temaDados', id: id, nome: t ? t.nome : id, novo: !!(possuidas && possuidas[id]) };
+  });
+}
+
+function freioDoResgate(userId) {
+  var n = Number(cacheLer(chaveDoFreioDeResgate(userId))) || 0;
+  return n >= MAX_FALHAS_RESGATE ? { ok: false, erro: 'muitas_tentativas', minutos: MINUTOS_FREIO_RESGATE } : null;
+}
+function anotarFalhaDeResgate(userId) {
+  var chave = chaveDoFreioDeResgate(userId);
+  var n = (Number(cacheLer(chave)) || 0) + 1;
+  cacheGravar(chave, String(n), MINUTOS_FREIO_RESGATE * 60);
+}
+
+function acaoResgatarCodigo(corpo, usuario) {
+  var operacao = String(corpo.operacaoId || '');
+  if (!/^[A-Za-z0-9_-]{8,80}$/.test(operacao)) return { ok: false, erro: 'dados_invalidos' };
+
+  var freio = freioDoResgate(usuario.id);
+  if (freio) return freio;
+
+  var codigo = RAMATemasDados.normalizarCodigo(corpo.codigo);
+  if (!codigo) {
+    anotarFalhaDeResgate(usuario.id);
+    return { ok: false, erro: 'codigo_invalido' };
+  }
+  try {
+    aba(ABAS.CODIGOS_RESGATE); aba(ABAS.RESGATES); aba(ABAS.DESBLOQUEIOS);
+  } catch (erro) {
+    return { ok: false, erro: 'instalacao_incompleta', detalhe: 'CODIGOS_RESGATE' };
+  }
+  var hash;
+  try { hash = hashDoCodigo(codigo); } catch (erro) { return { ok: false, erro: 'instalacao_incompleta', detalhe: 'RAMA_PEPPER' }; }
+
+  return comTrava(function () {
+    var registro = acharPor(ABAS.CODIGOS_RESGATE, 'codigoHash', hash);
+    if (!registro) {
+      anotarFalhaDeResgate(usuario.id);
+      return { ok: false, erro: 'codigo_invalido' };
+    }
+
+    var uid = String(usuario.id);
+    var feito = lerTudo(ABAS.RESGATES).filter(function (r) {
+      return String(r.userId) === uid && String(r.codigoId) === String(registro.id);
+    })[0];
+    if (feito) {
+      var concedidas = lerJson(feito.recompensasJson, []);
+      /* A MESMA operação de novo: a resposta da primeira se perdeu. */
+      if (String(feito.operacaoId) === operacao) {
+        return { ok: true, repetida: true, dados: { recompensas: Array.isArray(concedidas) ? concedidas : [], desbloqueios: desbloqueiosLidos(uid) } };
+      }
+      return { ok: false, erro: 'ja_resgatado', dados: { recompensas: Array.isArray(concedidas) ? concedidas : [] } };
+    }
+
+    var ativo = registro.ativo === true || String(registro.ativo) === 'true';
+    var recompensas = recompensasDoCodigo(registro);
+    if (!ativo || !recompensas.length) {
+      anotarFalhaDeResgate(usuario.id);
+      return { ok: false, erro: 'codigo_desativado' };
+    }
+
+    /* Lidos de novo DENTRO da trava: o cache pode estar um passo atrás de
+       um resgate que acabou de terminar. */
+    var possuidas = {};
+    desbloqueiosLidos(uid).forEach(function (d) { possuidas[d.id] = true; });
+    var agora = new Date().toISOString();
+    var novas = {};
+    recompensas.forEach(function (id) {
+      if (possuidas[id]) return;
+      inserir(ABAS.DESBLOQUEIOS, { id: novoId(), userId: uid, tipo: 'temaDados', recompensaId: id, origemCodigoId: registro.id, concedidoEm: agora });
+      novas[id] = true;
+      possuidas[id] = true;
+    });
+    var descricao = descreverRecompensas(recompensas, novas);
+    inserir(ABAS.RESGATES, { id: novoId(), userId: uid, codigoId: registro.id, operacaoId: operacao, criadoEm: agora, recompensasJson: JSON.stringify(descricao) });
+
+    cacheApagar(chaveDosDesbloqueios(uid));
+    cacheApagar(chaveDoFreioDeResgate(uid));
+    return { ok: true, dados: { recompensas: descricao, desbloqueios: desbloqueiosLidos(uid) } };
+  });
+}
+
+function acaoListarDesbloqueios(corpo, usuario) {
+  return { ok: true, dados: { temasDados: desbloqueiosDe(usuario.id) } };
+}
+
+/* ---------------------------------------------------------------------
+   ADMINISTRAÇÃO DOS CÓDIGOS — editor do Apps Script
+   ---------------------------------------------------------------------
+   Não estão no roteamento: o site não alcança nenhuma destas funções. */
+
+function codigoDoAdministrador(codigo) {
+  var normal = RAMATemasDados.normalizarCodigo(codigo);
+  if (!normal) throw new Error('Código inválido: use de 4 a 40 letras e números (espaços, hífens, pontos e sublinhados são ignorados; maiúsculas e minúsculas, iguais).');
+  try { aba(ABAS.CODIGOS_RESGATE); } catch (erro) { throw new Error('Falta a aba CODIGOS_RESGATE: rode setupRama() primeiro.'); }
+  return normal;
+}
+
+function cadastrarCodigo(codigo, temas, nota) {
+  reiniciarExecucao();
+  var normal = codigoDoAdministrador(codigo);
+  var lista = [].concat(temas || []).map(String).filter(Boolean);
+  var desconhecidos = lista.filter(function (id) { return !RAMATemasDados.tema(id); });
+  if (!lista.length) throw new Error('Diga ao menos um tema: cadastrarCodigo("CODIGO", ["id-do-tema"]).');
+  if (desconhecidos.length) throw new Error('Temas fora do catálogo (js/temas-dados.js): ' + desconhecidos.join(', '));
+  var hash = hashDoCodigo(normal);
+  var msg = comTrava(function () {
+    var agora = new Date().toISOString();
+    var existente = acharPor(ABAS.CODIGOS_RESGATE, 'codigoHash', hash);
+    if (existente) {
+      existente.recompensasJson = JSON.stringify(lista);
+      existente.ativo = true;
+      existente.atualizadoEm = agora;
+      if (nota !== undefined) existente.nota = String(nota || '').slice(0, 200);
+      atualizarLinha(ABAS.CODIGOS_RESGATE, existente._linha, existente);
+      return 'Código ' + existente.rotulo + ' atualizado e ativo: ' + lista.join(', ') + '.';
+    }
+    var rotulo = rotuloDoCodigo(normal);
+    inserir(ABAS.CODIGOS_RESGATE, { id: novoId(), codigoHash: hash, rotulo: rotulo, recompensasJson: JSON.stringify(lista),
+      ativo: true, criadoEm: agora, atualizadoEm: agora, nota: String(nota || '').slice(0, 200) });
+    return 'Código ' + rotulo + ' cadastrado: ' + lista.join(', ') + '.';
+  });
+  console.log(msg);
+  return msg;
+}
+
+function mudarCodigo(codigo, ativo) {
+  reiniciarExecucao();
+  var hash = hashDoCodigo(codigoDoAdministrador(codigo));
+  var msg = comTrava(function () {
+    var existente = acharPor(ABAS.CODIGOS_RESGATE, 'codigoHash', hash);
+    if (!existente) return 'Código não encontrado.';
+    existente.ativo = !!ativo;
+    existente.atualizadoEm = new Date().toISOString();
+    atualizarLinha(ABAS.CODIGOS_RESGATE, existente._linha, existente);
+    return 'Código ' + existente.rotulo + (ativo ? ' reativado.' : ' desativado. Quem já resgatou continua com as recompensas.');
+  });
+  console.log(msg);
+  return msg;
+}
+function desativarCodigo(codigo) { return mudarCodigo(codigo, false); }
+function reativarCodigo(codigo) { return mudarCodigo(codigo, true); }
+
+function listarCodigos() {
+  reiniciarExecucao();
+  var resgates = {};
+  try { lerTudo(ABAS.RESGATES).forEach(function (r) { resgates[r.codigoId] = (resgates[r.codigoId] || 0) + 1; }); } catch (erro) { /* sem aba */ }
+  var linhas = lerTudo(ABAS.CODIGOS_RESGATE).map(function (c) {
+    var ativo = c.ativo === true || String(c.ativo) === 'true';
+    return c.rotulo + ' · ' + (ativo ? 'ativo' : 'desativado') + ' · ' + lerJson(c.recompensasJson, []).join(', ') +
+      ' · ' + (resgates[c.id] || 0) + ' resgate(s)' + (c.nota ? ' · ' + c.nota : '');
+  });
+  console.log(linhas.join('\n') || 'Nenhum código cadastrado.');
+  return linhas;
+}
+
+/* >>> js/temas-dados.js */
+/* =====================================================================
+   R.A.M.A. — temas de dados (v2.40)
+   =====================================================================
+   O catálogo dos temas de dados e as regras puras que valem igual no
+   navegador e no Apps Script (este arquivo é copiado dentro do
+   backend/Codigo.gs, entre os marcadores >>> e <<<; um teste confere).
+
+   Três responsabilidades, que não se misturam:
+
+     a conta         POSSUI os temas desbloqueados (aba DESBLOQUEIOS,
+                     escrita só pelo resgate de código no servidor)
+     o personagem    ESCOLHE qual usar nas próprias rolagens
+                     (ficha.aparencia.dados = { id })
+     o desenvolvedor CRIA os temas — aqui, com os assets em
+                     assets/dados/ — e os códigos, na configuração
+                     privada do backend (cadastrarCodigo no Apps Script)
+
+   Nenhum código de resgate mora aqui: este arquivo é público.
+
+   ---------------------------------------------------------------------
+   O CONTRATO DE UM TEMA
+   ---------------------------------------------------------------------
+
+     id        estável, minúsculas e hífen; nunca muda
+     nome, descricao
+     versoes   cada versão é imutável: uma rolagem antiga guarda id e
+               versão e continua sendo desenhada como era. Arte nova =
+               versão nova, numa pasta nova (…/v2/)
+
+   Cada versão:
+
+     previa       a imagem pronta para listas (já recortada)
+     dado
+       mascara    a silhueta: alfa vale, cor não (assets/dados/mascaras/)
+       base       a arte de baixo, quadrada (1:1)
+       camadas    em ordem; { imagem, opacidade (0–1), recortar }
+                  recortar: true  → no grupo da base, sob a máscara
+                  recortar: false → por cima, fora do recorte, mas presa
+                                    à mesma tela quadrada (não vaza)
+     notificacao
+       fundo        uma imagem inteira, de proporção livre
+       ajusteFundo  { modo: "zoom-pela-altura", alinhamentoHorizontal }
+                    a imagem é escalada pela ALTURA do cartão
+                    (background-size: auto 100%), sem repetir e sem
+                    cortar topo ou base; 0 = esquerda, 0.5 = centro
+       cores        legibilidade do cartão (hexadecimais)
+       veu          { cor, alfa } opcional: uma película sobre o fundo
+
+   Todas as imagens do dado usam a MESMA tela quadrada e a mesma origem
+   (o modelo usa 1024 × 1024). Caminhos só dentro de assets/dados/.
+   ===================================================================== */
+
+(function (global) {
+  "use strict";
+
+  var VERSAO_CONTRATO = 1;
+  var ID = /^[a-z0-9][a-z0-9-]{0,39}$/;
+  var CAMINHO = /^assets\/dados\/[a-z0-9][a-z0-9/_.-]{0,200}\.(png|webp|svg|jpg|jpeg|avif)$/;
+  var MAX_CAMADAS = 8;
+  var MODOS_DE_FUNDO = ["zoom-pela-altura"];
+
+  /* As cores que o cartão usa, na ordem em que a tela as lê. São estas, e
+     só estas, que uma rolagem com o dado padrão leva para os outros. */
+  var CORES = ["superficie", "texto", "texto2", "texto3", "tracoForte", "tracoMedia", "tracoFraca",
+    "selecao", "selecaoTexto", "paranormal", "erro", "aviso"];
+
+  /* =================================================================
+     O CATÁLOGO
+     ================================================================= */
+
+  var BRUTO = [
+    {
+      id: "modelo-tecnico",
+      nome: "Modelo técnico",
+      descricao: "O exemplo do kit: base cinza, facetas claras e o fundo com as linhas de topo e base.",
+      versoes: [{
+        versao: 1,
+        previa: "assets/dados/temas/modelo-tecnico/v1/previa.png",
+        dado: {
+          mascara: "assets/dados/mascaras/d20-v1.svg",
+          base: "assets/dados/temas/modelo-tecnico/v1/base.png",
+          camadas: [
+            { imagem: "assets/dados/temas/modelo-tecnico/v1/facetas.png", opacidade: 1, recortar: true },
+          ],
+        },
+        notificacao: {
+          fundo: "assets/dados/temas/modelo-tecnico/v1/fundo.png",
+          ajusteFundo: { modo: "zoom-pela-altura", alinhamentoHorizontal: 0.5 },
+          cores: {
+            superficie: "#121216", texto: "#ffffff", texto2: "#d4d4dd", texto3: "#b4b4c0",
+            tracoForte: "#e8e0f5", tracoMedia: "#8240c6", tracoFraca: "#4c3a66",
+            selecao: "#d4d4dd", selecaoTexto: "#121216",
+            paranormal: "#b98cf0", erro: "#e0675c", aviso: "#e2c15a",
+          },
+          veu: { cor: "#121216", alfa: 0.25 },
+        },
+      }],
+    },
+    {
+      id: "sigilo-violeta",
+      nome: "Sigilo Violeta",
+      descricao: "Violeta com um sigilo gravado no dado, faíscas em volta e linhas de néon no fundo.",
+      versoes: [{
+        versao: 1,
+        previa: "assets/dados/temas/sigilo-violeta/v1/previa.png",
+        dado: {
+          mascara: "assets/dados/mascaras/d20-v1.svg",
+          base: "assets/dados/temas/sigilo-violeta/v1/base.png",
+          camadas: [
+            { imagem: "assets/dados/temas/sigilo-violeta/v1/facetas.png", opacidade: 0.8, recortar: true },
+            { imagem: "assets/dados/temas/sigilo-violeta/v1/sigilo.png", opacidade: 1, recortar: true },
+            { imagem: "assets/dados/temas/sigilo-violeta/v1/faiscas.png", opacidade: 1, recortar: false },
+          ],
+        },
+        notificacao: {
+          fundo: "assets/dados/temas/sigilo-violeta/v1/fundo.png",
+          ajusteFundo: { modo: "zoom-pela-altura", alinhamentoHorizontal: 0.5 },
+          cores: {
+            superficie: "#1a0f2a", texto: "#ffffff", texto2: "#e6dcf5", texto3: "#c3b4dc",
+            tracoForte: "#f0e6ff", tracoMedia: "#a066f0", tracoFraca: "#5a3c82",
+            selecao: "#e6dcf5", selecaoTexto: "#1a0f2a",
+            paranormal: "#c89bff", erro: "#ff7a6e", aviso: "#f0cf6a",
+          },
+          veu: { cor: "#140a20", alfa: 0.3 },
+        },
+      }],
+    },
+  ];
+
+  /* =================================================================
+     CONFERÊNCIA
+     ================================================================= */
+
+  function obj(v) { return v && typeof v === "object" && !Array.isArray(v) ? v : null; }
+  function texto(v, n) { return String(v === undefined || v === null ? "" : v).replace(/[\u0000-\u001F<>]/g, "").trim().slice(0, n || 80); }
+
+  /* "#abc" ou "#aabbcc", em minúsculas e com seis dígitos. */
+  function cor(v) {
+    var s = String(v || "").trim().toLowerCase();
+    if (/^#[0-9a-f]{3}$/.test(s)) return "#" + s[1] + s[1] + s[2] + s[2] + s[3] + s[3];
+    return /^#[0-9a-f]{6}$/.test(s) ? s : "";
+  }
+  function fracao(v, padrao) {
+    var n = Number(v);
+    return isFinite(n) ? Math.max(0, Math.min(1, Math.round(n * 1000) / 1000)) : padrao;
+  }
+  function caminho(v) {
+    var s = String(v || "");
+    return CAMINHO.test(s) && s.indexOf("..") < 0 && s.indexOf("//") < 0 ? s : "";
+  }
+
+  function normalizarCores(bruto) {
+    var b = obj(bruto) || {};
+    var saida = {};
+    CORES.forEach(function (k) { var c = cor(b[k]); if (c) saida[k] = c; });
+    return saida;
+  }
+
+  /* Uma versão como o desenvolvedor a escreveu → a versão conferida, ou
+     null com o motivo em `problemas`. */
+  function normalizarVersao(v, problemas, rotulo) {
+    var b = obj(v);
+    if (!b) { problemas.push(rotulo + ": versão inválida"); return null; }
+    var n = Math.round(Number(b.versao));
+    if (!(n >= 1 && n <= 999)) { problemas.push(rotulo + ": número de versão inválido"); return null; }
+    var dado = obj(b.dado) || {};
+    var base = caminho(dado.base);
+    var mascara = caminho(dado.mascara);
+    if (!base || !mascara) { problemas.push(rotulo + " v" + n + ": base e máscara precisam de caminho em assets/dados/"); return null; }
+    var camadas = (Array.isArray(dado.camadas) ? dado.camadas : []).map(function (c, i) {
+      var cc = obj(c) || {};
+      var img = caminho(cc.imagem);
+      if (!img) { problemas.push(rotulo + " v" + n + ": camada " + (i + 1) + " sem caminho válido"); return null; }
+      return { imagem: img, opacidade: fracao(cc.opacidade, 1), recortar: cc.recortar !== false };
+    }).filter(Boolean);
+    if (camadas.length > MAX_CAMADAS) { problemas.push(rotulo + " v" + n + ": mais de " + MAX_CAMADAS + " camadas"); return null; }
+    var notif = obj(b.notificacao) || {};
+    var ajuste = obj(notif.ajusteFundo) || {};
+    var modo = MODOS_DE_FUNDO.indexOf(ajuste.modo) >= 0 ? ajuste.modo : "zoom-pela-altura";
+    var cores = normalizarCores(notif.cores);
+    if (!cores.superficie || !cores.texto) { problemas.push(rotulo + " v" + n + ": as cores precisam ao menos de superficie e texto"); return null; }
+    var veu = obj(notif.veu);
+    return {
+      versao: n,
+      previa: caminho(b.previa),
+      dado: { base: base, mascara: mascara, camadas: camadas },
+      notificacao: {
+        fundo: caminho(notif.fundo),
+        ajusteFundo: { modo: modo, alinhamentoHorizontal: fracao(ajuste.alinhamentoHorizontal, 0.5) },
+        cores: cores,
+        veu: veu && cor(veu.cor) ? { cor: cor(veu.cor), alfa: fracao(veu.alfa, 0) } : null,
+      },
+    };
+  }
+
+  function normalizarTema(t, problemas) {
+    var b = obj(t);
+    var lista = problemas || [];
+    if (!b || !ID.test(String(b.id || ""))) { lista.push("tema sem id válido"); return null; }
+    var versoes = (Array.isArray(b.versoes) ? b.versoes : []).map(function (v) { return normalizarVersao(v, lista, b.id); }).filter(Boolean);
+    var vistas = {};
+    versoes = versoes.filter(function (v) { if (vistas[v.versao]) { lista.push(b.id + ": versão " + v.versao + " repetida"); return false; } vistas[v.versao] = true; return true; });
+    if (!versoes.length) { lista.push(b.id + ": nenhuma versão válida"); return null; }
+    versoes.sort(function (x, y) { return x.versao - y.versao; });
+    return { id: b.id, nome: texto(b.nome, 60) || b.id, descricao: texto(b.descricao, 240), versoes: versoes };
+  }
+
+  var PROBLEMAS = [];
+  var CATALOGO = [];
+  var POR_ID = {};
+  BRUTO.forEach(function (t) {
+    var n = normalizarTema(t, PROBLEMAS);
+    if (!n || POR_ID[n.id]) return;
+    POR_ID[n.id] = n;
+    CATALOGO.push(n);
+  });
+
+  /* =================================================================
+     CONSULTAS
+     ================================================================= */
+
+  function tema(id) { return POR_ID[String(id || "")] || null; }
+  function versaoDe(id, n) {
+    var t = tema(id);
+    if (!t) return null;
+    var alvo = Math.round(Number(n));
+    for (var i = 0; i < t.versoes.length; i++) if (t.versoes[i].versao === alvo) return t.versoes[i];
+    return null;
+  }
+  function atual(id) {
+    var t = tema(id);
+    return t ? { id: t.id, versao: t.versoes[t.versoes.length - 1].versao } : null;
+  }
+  function conhecido(id, n) { return !!versaoDe(id, n); }
+  function lista() { return CATALOGO.slice(); }
+
+  /* =================================================================
+     A ESCOLHA DO PERSONAGEM — ficha.aparencia.dados
+     -----------------------------------------------------------------
+     Só a forma do id: um tema que saiu do catálogo (ou que ainda não
+     chegou a este navegador) NÃO apaga a escolha gravada — a tela usa a
+     reserva e diz isso.
+     ================================================================= */
+
+  function normalizarSelecao(bruto) {
+    var b = obj(bruto);
+    var id = b ? String(b.id || "") : "";
+    return ID.test(id) ? { id: id } : null;
+  }
+
+  /* =================================================================
+     O CÓDIGO DE RESGATE
+     -----------------------------------------------------------------
+     Antes de comparar: forma de compatibilidade Unicode (NFKC), sem
+     espaços, hífens, pontos ou sublinhados, e em maiúsculas. Assim
+     "neon-2026", " NEON 2026 " e "Neon_2026" são o mesmo código.
+     Sobra só A–Z e 0–9, de 4 a 40 caracteres; fora disso, inválido.
+     ================================================================= */
+
+  function normalizarCodigo(bruto) {
+    var s = String(bruto === undefined || bruto === null ? "" : bruto);
+    if (s.length > 200) return "";
+    if (typeof s.normalize === "function") s = s.normalize("NFKC");
+    s = s.replace(/[\s\-_.]+/g, "").toUpperCase();
+    return /^[A-Z0-9]{4,40}$/.test(s) ? s : "";
+  }
+
+  /* =================================================================
+     A APARÊNCIA DE UMA ROLAGEM — guardada com o resultado
+     -----------------------------------------------------------------
+       { v: 1, tema: { id, versao }, padrao: { cores… } }
+
+     `tema` só com id e versão do catálogo (nunca caminho, CSS ou URL);
+     `padrao` só com as cores conhecidas, em hexadecimal. O servidor
+     confere ainda se a conta dona da escolha tem o tema desbloqueado.
+     ================================================================= */
+
+  function normalizarAparenciaDaRolagem(bruto) {
+    var b = obj(bruto);
+    if (!b) return null;
+    var saida = { v: VERSAO_CONTRATO };
+    var t = obj(b.tema);
+    if (t && conhecido(t.id, t.versao)) saida.tema = { id: String(t.id), versao: Math.round(Number(t.versao)) };
+    var p = normalizarCores(b.padrao);
+    if (Object.keys(p).length) saida.padrao = p;
+    return saida.tema || saida.padrao ? saida : null;
+  }
+
+  global.RAMATemasDados = {
+    VERSAO_CONTRATO: VERSAO_CONTRATO,
+    CORES: CORES,
+    MAX_CAMADAS: MAX_CAMADAS,
+    PROBLEMAS: PROBLEMAS,
+    lista: lista,
+    tema: tema,
+    versao: versaoDe,
+    atual: atual,
+    conhecido: conhecido,
+    normalizarTema: normalizarTema,
+    normalizarSelecao: normalizarSelecao,
+    normalizarCodigo: normalizarCodigo,
+    normalizarAparenciaDaRolagem: normalizarAparenciaDaRolagem,
+    cor: cor,
+  };
+})(typeof window !== "undefined" ? window : (typeof globalThis !== "undefined" ? globalThis : this));
+/* <<< js/temas-dados.js */

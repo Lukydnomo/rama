@@ -112,6 +112,12 @@
      conversão: uma ficha 16 abre com o estado vazio. Uma aba antiga
      descartaria tudo isso ao gravar — com o schema maior ela recusa.
 
+     17 → 18: temas de dados (v2.40). `aparencia` ganhou `dados: { id }`,
+     o tema de dados que o personagem usa nas rolagens — independente das
+     cores. Uma aba antiga normalizaria `aparencia` sem ele e o apagaria
+     ao gravar: com o schema maior ela recusa, e o servidor mantém a
+     escolha gravada quando um pedido de versão anterior chega sem ela.
+
      Nenhuma das subidas exige migração: normalizarFicha() cria o que
      falta, vazio, e não toca no que existe. Um ritual gravado na 2 abre
      na 3 com a versão Normal em branco; uma ficha de Ordem gravada na 4
@@ -121,7 +127,7 @@
      os campos novos e os descartaria ao gravar — com o schema maior ela
      recusa abrir a ficha e pede para recarregar.
      Ver docs/CHARACTER_SCHEMA.md. */
-  var VERSAO_SCHEMA = 17;
+  var VERSAO_SCHEMA = 18;
 
   var MODULOS = {
     atributos: "Atributos", status: "Status/recursos", defesa: "Defesa",
@@ -406,7 +412,13 @@
      cores de um sistema só ficam na ficha daquele sistema. */
   function normalizarAparencia(bruto, tipo) {
     var M = global.RAMATemaModelo;
-    return M ? M.normalizarAparencia(bruto, tipo === "ordem" ? "ordem" : "universal") : { v: 1, modo: "conta" };
+    if (M) return M.normalizarAparencia(bruto, tipo === "ordem" ? "ordem" : "universal");
+    /* Sem o modelo de temas, as cores voltam ao padrão — mas o tema de
+       dados (v2.40) é outra escolha e fica. */
+    var saida = { v: 1, modo: "conta" };
+    var d = bruto && bruto.dados;
+    if (d && typeof d === "object" && /^[a-z0-9][a-z0-9-]{0,39}$/.test(String(d.id || ""))) saida.dados = { id: String(d.id) };
+    return saida;
   }
 
   function rituaisVazios() {

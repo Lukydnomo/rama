@@ -135,6 +135,7 @@
 
     montarContexto();
     configurarHistorico();
+    iniciarRecebidas(r.dados.agora);
     desenhar();
     iniciarSincronia(r.dados.marcas, r.dados.papel);
   }
@@ -265,6 +266,88 @@
   }
 
   /* =================================================================
+     ROLAGENS RECEBIDAS (v2.40)
+     -----------------------------------------------------------------
+     A rolagem de outro jogador aparece no canto desta página, com o
+     dado e o fundo do personagem que rolou — em qualquer aba da
+     campanha. Vem pela sincronização que já existe: quando a marca das
+     rolagens muda, uma busca curta (as 10 mais novas) e só.
+
+       · só o que nasceu DEPOIS que a página abriu (hora do servidor,
+         de ler_campanha): a primeira carga e o "Carregar mais" do
+         histórico não disparam nada;
+       · uma vez por id, mesmo que a busca se repita;
+       · as próprias rolagens não voltam (quem rolou já viu o cartão,
+         nesta ou noutra aba);
+       · rolagem oculta do mestre nem chega ao navegador do jogador —
+         o servidor filtra antes.
+
+     Mostrar uma rolagem recebida NUNCA a registra de novo: é
+     RAMARolagens.exibir, não mostrar.
+     ================================================================= */
+
+  var recebidas = { desde: "", vistas: {}, buscando: false, deNovo: false };
+
+  function iniciarRecebidas(agoraDoServidor) {
+    recebidas.desde = typeof agoraDoServidor === "string" && agoraDoServidor ? agoraDoServidor : new Date().toISOString();
+    recebidas.vistas = {};
+  }
+
+  function meuId() {
+    var a = global.RAMAAuth && global.RAMAAuth.agente();
+    return a ? String(a.id) : "";
+  }
+
+  function nomeDoPersonagem(id) {
+    var p = (estado.personagens || []).filter(function (x) { return x.id === id; })[0];
+    return p ? p.nome : "";
+  }
+
+  async function receberRolagens() {
+    if (!global.RAMARolagens || !global.RAMARolagens.exibir || estado.papel === "espectador") return;
+    if (recebidas.buscando) { recebidas.deNovo = true; return; }
+    recebidas.buscando = true;
+    try {
+      var r = await global.RAMAApi.listarRolagens(estado.campanhaId, { pulo: 0, limite: 10 }, { segundoPlano: true });
+      if (!r || !r.ok || !r.dados) return;
+      var eu = meuId();
+      var novas = (r.dados.rolagens || []).filter(function (l) {
+        if (!l || !l.id || recebidas.vistas[l.id]) return false;
+        recebidas.vistas[l.id] = true;
+        if (String(l.criadoEm || "") <= recebidas.desde) return false;
+        if (eu && String(l.autorUserId || "") === eu) return false;
+        if (global.RAMAHistorico && global.RAMAHistorico.foiDaqui && global.RAMAHistorico.foiDaqui(l.id)) return false;
+        return true;
+      });
+      /* Da mais velha para a mais nova: a mais nova fica embaixo, como
+         as locais. */
+      novas.reverse().slice(-4).forEach(mostrarRecebida);
+    } catch (e) {
+      /* Notificação é cortesia: falhou, o histórico continua certo. */
+    } finally {
+      recebidas.buscando = false;
+      if (recebidas.deNovo) { recebidas.deNovo = false; receberRolagens(); }
+    }
+  }
+
+  function mostrarRecebida(l) {
+    var res = l.resultado || {};
+    var quem = [nomeDoPersonagem(l.personagemId), l.autor].filter(Boolean);
+    global.RAMARolagens.exibir({
+      tipo: l.tipo,
+      expressao: res.expressao || "",
+      rolagens: res.rolagens || [],
+      natural: res.natural !== null ? res.natural : undefined,
+      total: res.total,
+      parcelas: res.parcelas || [],
+    }, {
+      nome: l.nome || "Rolagem",
+      critico: !!res.critico,
+      autor: quem.length ? quem.join(" · ") : "",
+    }, res.aparencia || null);
+  }
+
+  /* =================================================================
      SINCRONIZAÇÃO
      ================================================================= */
 
@@ -339,7 +422,7 @@
 
     if (tem("combates")) notificar("combates");
     if (tem("documentos")) notificar("documentos");
-    if (tem("rolagens")) notificar("rolagens");
+    if (tem("rolagens")) { notificar("rolagens"); receberRolagens(); }
     if (tem("hexatombe")) notificar("hexatombe");
     if (tem("hacking")) notificar("hacking");
   }

@@ -5,6 +5,24 @@ padrão e normaliza o que chega de fora. Onde ela é guardada — inteira em
 `fichaJson` (formato antigo) ou em blocos (v2.15) — é assunto do backend, e não muda
 nada aqui: ver [DATABASE.md](DATABASE.md).
 
+## Tema dos dados — v2.40 / schema 18
+
+`aparencia` ganha `dados`, o tema de dados do personagem — independente das cores:
+
+```jsonc
+"aparencia": { "v": 1, "modo": "conta", "dados": { "id": "sigilo-violeta" } }
+```
+
+Sem `dados`, o dado padrão, que acompanha o tema efetivo da ficha. Só a forma do
+id é conferida no navegador (`/^[a-z0-9][a-z0-9-]{0,39}$/`): um tema que não está no
+catálogo deste navegador não apaga a escolha (a tela usa a reserva). O servidor
+mantém a escolha só se a conta dona tem o tema. Trocar as cores não apaga `dados`,
+e trocar `dados` não apaga as cores. Na exportação, `dados.id` atravessa como
+`dados.tema` (a limpeza apaga todo `id`) e volta na importação; importar para uma
+conta sem o tema deixa a ficha no padrão, com aviso. Duplicar na mesma conta leva
+a escolha. Uma aba aberta numa versão anterior recusa a ficha 18; uma gravação de
+schema < 18 sem `dados` mantém o gravado.
+
 ## Arquivos Secretos 4 — v2.38 / schema 17
 
 O bloco `ordem` ganha `arquivo4` (vazio numa ficha antiga; nada é convertido):

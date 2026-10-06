@@ -1,5 +1,30 @@
 # O banco
 
+## Temas de dados — v2.40
+
+> **Atualizando para a v2.40:** troque `Codigo.gs`, `Campanhas.gs` e `Dados.gs`, rode
+> **`setupRama()`** (cria `DESBLOQUEIOS`, `CODIGOS_RESGATE` e `RESGATES`; repetir é
+> seguro) e crie uma nova versão da implantação. Nada existente é convertido.
+
+**DESBLOQUEIOS** — `id · userId · tipo · recompensaId · origemCodigoId ·
+concedidoEm`. Uma linha por conta e recompensa (`tipo: "temaDados"`). Só o resgate
+escreve aqui. Lida pelo cache (`rama.desbloqueios.<userId>`, 6 h), apagado a cada
+concessão.
+
+**CODIGOS_RESGATE** — `id · codigoHash · rotulo · recompensasJson · ativo ·
+criadoEm · atualizadoEm · nota`. Configuração privada: o código fica só como
+SHA-256(`RAMA_PEPPER` + "|codigo-resgate|" + código normalizado); `rotulo` é uma
+pista ("NE…26 (8)"). Mantida pelas funções do editor `cadastrarCodigo`,
+`desativarCodigo`, `reativarCodigo` e `listarCodigos` (fora do roteamento).
+
+**RESGATES** — `id · userId · codigoId · operacaoId · criadoEm · recompensasJson`.
+Um código, uma vez por conta; o `operacaoId` reconhece a repetição do mesmo
+pedido.
+
+A ficha guarda a escolha em `aparencia.dados = { id }` (schema 18) e a rolagem, a
+aparência do momento dentro do `dadosJson` de `CAMPANHA_ROLAGENS` — sem coluna
+nova. O freio de resgate fica no CacheService (`rama.resgate.falhas.<userId>`).
+
 ## Arquivos Secretos 4 e Hacking — v2.38
 
 > **Atualizando para a v2.38:** troque `Codigo.gs`, `Campanhas.gs` e `Dados.gs`,

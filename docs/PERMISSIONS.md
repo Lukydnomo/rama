@@ -364,6 +364,20 @@ por `doPost` como uma requisição de verdade. Entre elas:
   rodam no editor do Apps Script. Conhecer o id de um personagem ou de uma geração
   não abre nada: tudo passa pela conferência de acesso do personagem
 
+## Temas de dados — v2.40
+
+| ação | a própria conta | outra conta |
+|---|---|---|
+| resgatar um código (`resgatar_codigo`) | sim, para si mesma | não (a conta é a da sessão) |
+| ver a coleção (`listar_desbloqueios`) | sim | não |
+| equipar um tema numa ficha | só a conta dona da ficha, e só com tema desbloqueado | não — o mestre edita a ficha, mas a escolha fica |
+| ver o dado de quem rolou | sim | sim (participantes da campanha), sem receber o tema |
+| cadastrar ou desativar códigos | só o desenvolvedor, no editor do Apps Script | — |
+
+`salvar_perfil`, salvar ficha e importar nunca concedem. Metadados de uma rolagem
+não equipam tema bloqueado nem trazem imagem externa: o tema é conferido com o
+desbloqueio da conta dona, e as imagens vêm só do catálogo do site.
+
 ## Hacking — v2.38
 
 | ação | mestre | jogador da campanha | espectador / de fora |

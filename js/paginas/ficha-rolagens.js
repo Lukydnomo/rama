@@ -12,6 +12,21 @@
 
    Ver os dados descartados importa. Em 2d20 dá para conferir na hora
    que o 15 ganhou do 6 — e em -2d20, que o 6 ganhou do 15.
+
+   ---------------------------------------------------------------------
+   MOSTRAR, EXIBIR E O CARTÃO (v2.40)
+   ---------------------------------------------------------------------
+     mostrar(resultado, opcoes)   uma rolagem que ACONTECEU AQUI: aparece
+                                  e vira linha no histórico da campanha,
+                                  com a aparência deste momento
+     exibir(resultado, opcoes, ap) uma rolagem que já existe (a de outro
+                                  jogador, recebida): só aparece. Nunca
+                                  grava, nunca reenvia
+     cartao(resultado, opcoes, ap) só o cartão, para uma prévia: não entra
+                                  no canto, nem no histórico
+
+   A aparência (tema de dados ou as cores do dado padrão) pinta só o
+   próprio cartão — js/aparencia-rolagem.js.
    ===================================================================== */
 
 (function (global) {
@@ -50,20 +65,17 @@
   }
 
   function area() { return U.$("#rolagens"); }
+  function AR() { return global.RAMAAparenciaRolagem || null; }
 
   /* mostrar(resultado, { tipo, acao: { rotulo, aoClicar } }) */
   function mostrar(resultado, opcoes) {
     var o = opcoes || {};
-    var caixa = area();
-    if (!caixa) return;
+    if (!area()) return;
 
-    var cartao = montar(resultado, o);
-
-    /* A mais nova embaixo; as antigas sobem, e a mais velha sai se
-       passar do limite. */
-    caixa.appendChild(cartao);
-    while (caixa.children.length > MAX_NA_TELA) caixa.removeChild(caixa.firstChild);
-    temporizar(cartao, caixa);
+    /* A aparência é a DESTE momento: trocar o tema do personagem depois
+       não muda esta rolagem, nem aqui nem no histórico. */
+    var aparencia = o.aparencia !== undefined ? o.aparencia : (AR() ? AR().capturar() : null);
+    var cartao = exibir(resultado, o, aparencia);
 
     historico.unshift({ quando: Date.now(), resultado: resultado });
     if (historico.length > 30) historico.pop();
@@ -77,13 +89,30 @@
         tipo: resultado.tipo || o.tipo,
         nome: o.nome || resultado.nome,
         critico: !!o.critico,
+        aparencia: aparencia,
       });
     }
 
     return cartao;
   }
 
-  function montar(r, o) {
+  /* Só apresentação: a rolagem já existe (de outro jogador, do
+     histórico). Mesmo empilhamento, duração e fechamento das locais. */
+  function exibir(resultado, opcoes, aparencia) {
+    var caixa = area();
+    if (!caixa || !resultado) return null;
+
+    var cartao = montar(resultado, opcoes || {}, aparencia || null);
+
+    /* A mais nova embaixo; as antigas sobem, e a mais velha sai se
+       passar do limite. */
+    caixa.appendChild(cartao);
+    while (caixa.children.length > MAX_NA_TELA) caixa.removeChild(caixa.firstChild);
+    temporizar(cartao, caixa);
+    return cartao;
+  }
+
+  function montar(r, o, aparencia) {
     var critico = !!o.critico;
 
     var cartao = el("article.rolagem", {
@@ -104,9 +133,18 @@
         }, [UI.simbolo("x", 12)]),
       ]),
 
-      el("p.rolagem__total", { texto: String(r.total !== undefined ? r.total : r.principal) }),
+      /* De quem é a rolagem, quando ela veio de outra pessoa. */
+      o.autor ? el("p.rolagem__autor", { texto: o.autor }) : null,
 
-      faces(r),
+      /* O dado ao lado do resultado (v2.40). A grade reserva o espaço
+         dele dos dois lados, para o total continuar no centro. */
+      el("div.rolagem__resultado", {}, [
+        AR() ? AR().icone(aparencia, "cartao") : null,
+        el("div.rolagem__numeros", {}, [
+          el("p.rolagem__total", { texto: String(r.total !== undefined ? r.total : r.principal) }),
+          faces(r),
+        ]),
+      ]),
 
       critico ? el("p.rolagem__marca", { texto: "Crítico" }) : null,
 
@@ -134,6 +172,7 @@
         : null,
     ]);
 
+    if (aparencia && AR()) AR().aplicar(cartao, aparencia);
     return cartao;
   }
 
@@ -172,6 +211,8 @@
 
   global.RAMARolagens = {
     mostrar: mostrar,
+    exibir: exibir,
+    cartao: function (resultado, opcoes, aparencia) { return montar(resultado || {}, opcoes || {}, aparencia || null); },
     limpar: limpar,
     historico: function () { return historico.slice(); },
   };

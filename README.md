@@ -29,6 +29,7 @@ preferências de tela — nunca é tratado como banco.
   ficha/                a ficha (?id=...)
   testes/               casos de teste, no navegador e no terminal
   assets/criaturas/     retrato 1:1 e corpo inteiro de cada criatura do catálogo (trocáveis)
+  assets/dados/         temas de dados: máscara, arte de cada tema e versão, e o kit de modelo
 
   css/
     tokens.css          cor (paleta clara e escura), espaço, traço, tempo — os valores literais
@@ -86,6 +87,8 @@ preferências de tela — nunca é tratado como banco.
       criaturas-dados.js o catálogo de criaturas dos dois livros (sob demanda)
       criaturas.js      carga, conversão, busca, filtros e conferência do catálogo de criaturas
     historico.js        rolagem → histórico da campanha, num funil só
+    temas-dados.js      catálogo dos temas de dados e regras puras (copiado no Codigo.gs)
+    aparencia-rolagem.js o dado e o fundo de cada rolagem: captura, ícone e aplicação no cartão
     paginas/            um arquivo por tela
 
   backend/
@@ -561,6 +564,15 @@ próprio `<script src>`, então funciona debaixo de subpasta sem ajuste.
 segredo nenhum — ele os lê das Script Properties. Publicá-lo não expõe nada.
 
 ### Atualizar o backend
+
+**v2.40.0 — SILHUETA:** temas de dados. **Troque** `Codigo.gs`, `Campanhas.gs` e
+`Dados.gs`, rode **`setupRama()`** (cria `DESBLOQUEIOS`, `CODIGOS_RESGATE` e
+`RESGATES`; repetir é seguro), crie uma **nova versão** da implantação e só então
+publique o site (com a pasta `assets/dados/`). Os códigos são cadastrados pelo
+editor: `cadastrarCodigo('MEU-CODIGO', ['sigilo-violeta'])`; `desativarCodigo` para
+encerrar sem tirar o que já foi concedido. Criar um tema novo, exportar os assets e
+registrar no catálogo: `assets/dados/modelo/LEIA-ME.md`. Sem o `setupRama()`, o
+resgate responde `instalacao_incompleta` e o resto funciona com o dado padrão.
 
 **v2.39.0 — ESCANINHO:** só o site (aba Regras em gavetas). Publique o site; não
 precisa trocar `.gs`, criar versão da implantação nem rodar `setupRama()`.

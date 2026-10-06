@@ -834,6 +834,22 @@ conferida de novo na hora de entregá-la.
 O servidor recusa acima do limite de célula com `dados_grandes` em vez de
 truncar. **Conteúdo truncado em silêncio é pior do que uma recusa.**
 
+## Rolagens recebidas e temas de dados (v2.40)
+
+Na página da campanha, a rolagem de outro jogador aparece no canto, com o dado,
+as cores e o fundo do **personagem que rolou** — em qualquer aba interna. Vem pela
+sincronização que já existe: quando a marca `rolagens` muda, uma busca curta
+(as 10 mais novas) e só.
+
+- Só o que foi criado depois que a página abriu (hora do servidor, `agora` de
+  `ler_campanha`): a primeira carga e o "Carregar mais" não notificam nada.
+- Uma vez por id; as próprias rolagens (da conta, nesta ou noutra aba) não voltam.
+- Rolagem oculta do mestre não chega ao jogador — o servidor filtra antes.
+- Mostrar uma rolagem recebida é `RAMARolagens.exibir`: nunca grava nem reenvia.
+- O histórico mostra cada linha com a aparência guardada no momento da rolagem;
+  trocar o tema depois não muda o passado. Ver o dado de outro jogador não
+  concede o tema.
+
 ## Hacking (v2.38)
 
 Regra opcional do Arquivos Secretos 4 (p. 72–73), desligada em toda campanha até o

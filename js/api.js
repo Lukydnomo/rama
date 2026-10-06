@@ -39,6 +39,7 @@
     "listar_campanhas",
     "ler_campanha",
     "ler_perfil",
+    "listar_desbloqueios",
 
     "listar_usuarios",
     "listar_personagens_campanha",
@@ -116,6 +117,9 @@
     /* Criar uma pasta (v2.26): a segunda chegada do mesmo id devolve a
        pasta que a primeira criou. */
     criar_pasta: true,
+    /* Resgatar um código (v2.40): a mesma operação chegando de novo
+       devolve a concessão que a primeira fez — nunca concede duas vezes. */
+    resgatar_codigo: true,
   };
 
   function podeRepetirPedido(dados) {
@@ -552,6 +556,14 @@
 
   function salvarPerfil(dados) { return post({ acao: "salvar_perfil", dados: dados }); }
 
+  /* Temas de dados (v2.40). `operacaoId` é o da intenção: quem tenta de
+     novo depois de uma falha manda o MESMO, e o servidor reconhece a
+     concessão já feita. */
+  function resgatarCodigo(codigo, operacaoId) {
+    return post({ acao: "resgatar_codigo", codigo: String(codigo || ""), operacaoId: operacaoId || novaOperacao() });
+  }
+  function listarDesbloqueios(opcoes) { return post({ acao: "listar_desbloqueios" }, opcoes); }
+
   /* =================================================================
      HOMEBREW — LEITURA AVULSA E IMAGENS
      ================================================================= */
@@ -827,6 +839,22 @@
       texto: "A planilha não confirmou esta versão. A versão anterior continua guardada e intacta, e o que você fez continua " +
              "neste aparelho — a gravação é repetida sozinha.",
     },
+    codigo_invalido: {
+      titulo: "CÓDIGO NÃO RECONHECIDO",
+      texto: "Confira o código: espaços, hífens e maiúsculas não importam.",
+    },
+    codigo_desativado: {
+      titulo: "CÓDIGO ENCERRADO",
+      texto: "Este código não aceita novos resgates. Quem já resgatou continua com a recompensa.",
+    },
+    ja_resgatado: {
+      titulo: "CÓDIGO JÁ USADO NESTA CONTA",
+      texto: "Cada código vale uma vez por conta. A recompensa já está na sua coleção.",
+    },
+    muitas_tentativas: {
+      titulo: "TENTATIVAS DEMAIS",
+      texto: "Muitos códigos errados em pouco tempo. Espere alguns minutos e tente de novo.",
+    },
     dados_grandes: {
       titulo: "CONTEÚDO GRANDE DEMAIS PARA UM CAMPO",
       texto: "Este conteúdo passou do tamanho que um campo da planilha aceita (imagem, nota, item ou combate). Nada foi " +
@@ -935,6 +963,8 @@
     salvarCapaCampanha: salvarCapaCampanha,
 
     lerPerfil: lerPerfil,
+    resgatarCodigo: resgatarCodigo,
+    listarDesbloqueios: listarDesbloqueios,
     salvarPerfil: salvarPerfil,
 
     lerHomebrew: lerHomebrew,

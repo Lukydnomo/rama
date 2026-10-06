@@ -70,6 +70,28 @@
 
   var CHANGELOG = [
     {
+      versao: "2.40.0", codinome: "SILHUETA", data: "06/10/2026",
+      mudancas: {
+        "Adicionado": [
+          "Temas de dados: o dado e o fundo das notificações de rolagem de cada personagem. A conta desbloqueia por código; cada ficha escolhe o seu no editor de tema da ficha, em “Tema dos dados”, com prévia do dado e da notificação. Um tema desbloqueado vale para todas as fichas da conta, ao mesmo tempo e sem gastar nada.",
+          "No Perfil, o painel Recompensas com “Resgatar código” (código, confirmação, andamento, a recompensa com prévia e mensagens para código errado, encerrado, já usado e falha de conexão) e a coleção de temas de dados da conta.",
+          "O dado padrão, sempre disponível, acompanha o tema efetivo da ficha — o próprio, o herdado da conta ou o do aparelho —, sem propriedade separada para mexer. Os temas desbloqueados têm imagem, camadas, fundo e cores próprios, que as cores da ficha não alteram.",
+          "Na campanha, a rolagem de outro jogador aparece no canto, em qualquer aba, com o dado e o fundo do personagem que rolou; o histórico mostra cada rolagem com a aparência do momento em que foi feita. Ver o dado de outra pessoa não dá o tema a ninguém.",
+          "Dois temas de exemplo (Modelo técnico e Sigilo Violeta) e o kit de modelo em assets/dados/modelo/, com o passo a passo para criar, exportar, registrar e liberar um tema.",
+        ],
+        "Melhorado": [
+          "O dado entra ao lado do resultado na notificação, com o espaço reservado dos dois lados para o total continuar no centro; nome, expressão, dados, crítico, parcelas, notas e botões ficam onde estavam. Empilhamento, duração e fechamento das notificações não mudam.",
+          "O fundo de um tema é uma imagem só, escalada pela altura do cartão (topo com topo, base com base), sem repetir, cortar em cima ou embaixo, nem deformar; o excedente lateral some e, se faltar largura, a superfície do tema completa as laterais.",
+          "Asset que não carrega cai num dado de reserva, sem deslocar nada; a rolagem continua legível.",
+        ],
+        "Técnico": [
+          "js/temas-dados.js (catálogo versionado e regras puras, copiado no Codigo.gs e conferido por teste) e js/aparencia-rolagem.js (captura, ícone com máscara alfa e camadas na mesma tela, aplicação no cartão). RAMARolagens.exibir separa mostrar uma rolagem recebida de registrar uma nova; a aparência vai com o resultado e é validada no servidor (id e versão do catálogo, desbloqueio da conta dona, cores em hexadecimal, sem CSS, HTML ou URL).",
+          "Ficha no schema 18 (`aparencia.dados`), preservada ao trocar cores, sincronizar, duplicar, exportar e importar; importar para uma conta sem o tema volta ao padrão com aviso, e uma gravação de versão anterior não apaga a escolha. Ações `resgatar_codigo` e `listar_desbloqueios`; abas DESBLOQUEIOS, CODIGOS_RESGATE e RESGATES; código guardado só como hash com o RAMA_PEPPER; freio de 10 tentativas por 15 minutos por conta; cadastrarCodigo, desativarCodigo, reativarCodigo e listarCodigos no editor. Troque os três .gs, rode setupRama() e crie uma nova versão da implantação.",
+          "Testes: 35 no servidor (resgate válido, inválido, repetido, desativado, mesma operação, dois códigos com o mesmo tema, freio, coleção em outro aparelho, escolha na ficha pelo dono, pelo mestre, por importação e por cliente antigo, e a aparência das rolagens), 25 na ficha e no catálogo, 25 nos assets; verificado no navegador simulado em celular e desktop.",
+        ],
+      },
+    },
+    {
       versao: "2.39.0", codinome: "ESCANINHO", data: "04/10/2026",
       mudancas: {
         "Melhorado": [

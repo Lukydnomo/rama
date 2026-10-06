@@ -1,5 +1,38 @@
 # A API
 
+## Temas de dados — v2.40
+
+- `resgatar_codigo { codigo, operacaoId }` — a conta é a da sessão. `codigo` é
+  normalizado no servidor (NFKC; sem espaços, hífens, pontos e sublinhados;
+  maiúsculas; sobram A–Z e 0–9, de 4 a 40). `operacaoId`
+  (`/^[A-Za-z0-9_-]{8,80}$/`) identifica a intenção: a MESMA operação chegando de
+  novo depois de uma falha de rede devolve `{ ok: true, repetida: true, dados }` com
+  a concessão já feita. Sucesso: `{ ok: true, dados: { recompensas: [{ tipo:
+  "temaDados", id, nome, novo }], desbloqueios: [{ id, concedidoEm }] } }` — `novo`
+  é falso para um tema que a conta já tinha (a coleção não duplica). Erros:
+  `codigo_invalido`, `codigo_desativado`, `ja_resgatado` (com `dados.recompensas`),
+  `muitas_tentativas` (10 códigos errados ou desativados em 15 minutos, por conta),
+  `instalacao_incompleta` (abas ou `RAMA_PEPPER`). Tudo dentro da trava: pedidos
+  simultâneos não concedem duas vezes. Repetível pelo navegador com o mesmo
+  `operacaoId`.
+- `listar_desbloqueios` — `{ temasDados: [{ id, concedidoEm }] }` da conta da
+  sessão. Nenhuma outra ação concede: `salvar_perfil` não conhece desbloqueios, e
+  salvar ou importar uma ficha não muda a coleção.
+- `criar_personagem` / `salvar_personagem` — `aparencia.dados = { id }` só fica se a
+  conta DONA da ficha tem o tema; senão sai e a resposta traz
+  `avisos: ["tema_dados_indisponivel"]`. Gravar outro campo (o mestre, por
+  exemplo) não tira uma escolha legítima. Um pedido de schema < 18 sem
+  `aparencia.dados` mantém o que está gravado.
+- `registrar_rolagem` — `dados.aparencia` (opcional) é conferida com a régua de
+  `js/temas-dados.js`: `{ v: 1, tema?: { id, versao }, padrao?: { superficie,
+  texto, texto2, texto3, tracoForte, tracoMedia, tracoFraca, selecao, selecaoTexto,
+  paranormal, erro, aviso } }`. Tema só com id e versão do catálogo e só se a
+  conta dona do personagem (ou quem rolou, sem personagem) o tem; cores só em
+  `#rrggbb`. O que não confere sai — nunca recusa a rolagem. `listar_rolagens`
+  devolve a aparência dentro de `resultado`, normalizada de novo na leitura.
+- `ler_campanha` devolve `agora` (hora do servidor): o navegador só notifica
+  rolagens recebidas depois dela.
+
 ## Arquivos Secretos 4 e Hacking — v2.38
 
 - `ler_hacking { campanhaId }` — membro da campanha (espectador não). Mestre:
