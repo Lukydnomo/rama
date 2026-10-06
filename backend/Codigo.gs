@@ -4639,6 +4639,51 @@ function listarCodigos() {
       }],
     },
     {
+      id: "trans",
+      nome: "Transgênero",
+      descricao: "Just me.",
+      versoes: [{
+        versao: 1,
+        previa: "assets/dados/temas/trans/v1/previa.png",
+        dado: {
+          mascara: "assets/dados/mascaras/d20-v1.svg",
+          base: "assets/dados/temas/trans/v1/base.png",
+          camadas: [],
+        },
+        notificacao: {
+          fundo: "assets/dados/temas/trans/v1/fundo.png",
+          ajusteFundo: {
+            modo: "zoom-pela-altura",
+            alinhamentoHorizontal: 0.5
+          },
+
+          cores: {
+            superficie: "#151820",
+
+            texto: "#FFFFFF",
+            texto2: "#E8EDF2",
+            texto3: "#BCC6CF",
+
+            tracoForte: "#5BC7F1",
+            tracoMedia: "#F3A6B8",
+            tracoFraca: "#5F6A78",
+
+            selecao: "#AEE3F7",
+            selecaoTexto: "#172027",
+
+            paranormal: "#C7A7F2",
+            erro: "#EE6B78",
+            aviso: "#E6C468"
+          },
+
+          veu: {
+            cor: "#10151B",
+            alfa: 0.50
+          },
+        },
+      }],
+    },
+    {
       id: "sigilo-violeta",
       nome: "Sigilo Violeta",
       descricao: "Violeta com um sigilo gravado no dado, faíscas em volta e linhas de néon no fundo.",
