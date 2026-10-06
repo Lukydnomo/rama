@@ -99,6 +99,50 @@
       }],
     },
     {
+      id: "mandinha-linda",
+      nome: "Meu Amorzinho",
+      descricao: "Amor da minha vida.",
+      versoes: [{
+        versao: 1,
+        previa: "assets/dados/temas/mandinha-linda/v1/previa.png",
+        dado: {
+          mascara: "assets/dados/mascaras/d20-v1.svg",
+          base: "assets/dados/temas/mandinha-linda/v1/base.png",
+          camadas: [],
+        },
+        notificacao: {
+          fundo: "assets/dados/temas/mandinha-linda/v1/fundo.png",
+          ajusteFundo: {
+            modo: "zoom-pela-altura",
+            alinhamentoHorizontal: 0.5
+          },
+          cores: {
+            superficie: "#17151A",
+
+            texto: "#FFF8F2",
+            texto2: "#E7D8CF",
+            texto3: "#C7B4AA",
+
+            tracoForte: "#F3D3C1",
+            tracoMedia: "#C98F77",
+            tracoFraca: "#6D504A",
+
+            selecao: "#F0C5AF",
+            selecaoTexto: "#241A18",
+
+            paranormal: "#D7A6E8",
+            erro: "#E46F72",
+            aviso: "#E7C16F"
+          },
+
+          veu: {
+            cor: "#100E12",
+            alfa: 0.38
+          },
+        },
+      }],
+    },
+    {
       id: "sigilo-violeta",
       nome: "Sigilo Violeta",
       descricao: "Violeta com um sigilo gravado no dado, faíscas em volta e linhas de néon no fundo.",
