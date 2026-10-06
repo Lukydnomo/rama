@@ -4365,6 +4365,14 @@ function cadastrarCodigo(codigo, temas, nota) {
   return msg;
 }
 
+function cadastrarCodigoReal(codigo, temas, nota) {
+  cadastrarCodigo(
+  'doihaveahusbandorwifetoday?', 
+  ['gender-fluid'],
+  'Eu sou o que eu quiser.'
+  )
+}
+
 function mudarCodigo(codigo, ativo) {
   reiniciarExecucao();
   var hash = hashDoCodigo(codigoDoAdministrador(codigo));
@@ -4536,6 +4544,96 @@ function listarCodigos() {
           veu: {
             cor: "#100E12",
             alfa: 0.38
+          },
+        },
+      }],
+    },
+    {
+      id: "gender-fluid",
+      nome: "Gênero Fluido",
+      descricao: "Eu sou o que eu quiser.",
+      versoes: [{
+        versao: 1,
+        previa: "assets/dados/temas/gender-fluid/v1/previa.png",
+        dado: {
+          mascara: "assets/dados/mascaras/d20-v1.svg",
+          base: "assets/dados/temas/gender-fluid/v1/base.png",
+          camadas: [],
+        },
+        notificacao: {
+          fundo: "assets/dados/temas/gender-fluid/v1/fundo.png",
+          ajusteFundo: {
+            modo: "zoom-pela-altura",
+            alinhamentoHorizontal: 0.5
+          },
+
+          cores: {
+            superficie: "#111116",
+
+            texto: "#FFFFFF",
+            texto2: "#E6E6F2",
+            texto3: "#BCBCD0",
+
+            tracoForte: "#FF70A6",
+            tracoMedia: "#C719D4",
+            tracoFraca: "#434CC2",
+
+            selecao: "#FF70A6",
+            selecaoTexto: "#111116",
+
+            paranormal: "#D94AE8",
+            erro: "#FF667E",
+            aviso: "#F2C96D"
+          },
+
+          veu: {
+            cor: "#09090D",
+            alfa: 0.46
+          },
+        },
+      }],
+    },
+    {
+      id: "non-binary",
+      nome: "Não-Binário",
+      descricao: "Eu sou algo.",
+      versoes: [{
+        versao: 1,
+        previa: "assets/dados/temas/non-binary/v1/previa.png",
+        dado: {
+          mascara: "assets/dados/mascaras/d20-v1.svg",
+          base: "assets/dados/temas/non-binary/v1/base.png",
+          camadas: [],
+        },
+        notificacao: {
+          fundo: "assets/dados/temas/non-binary/v1/fundo.png",
+          ajusteFundo: {
+            modo: "zoom-pela-altura",
+            alinhamentoHorizontal: 0.5
+          },
+
+          cores: {
+            superficie: "#121214",
+
+            texto: "#FFFFFF",
+            texto2: "#E7E7EC",
+            texto3: "#B9B9C2",
+
+            tracoForte: "#FFF430",
+            tracoMedia: "#9C59D1",
+            tracoFraca: "#57505D",
+
+            selecao: "#FFF430",
+            selecaoTexto: "#171719",
+
+            paranormal: "#C982F0",
+            erro: "#EF676D",
+            aviso: "#F2B84B"
+          },
+
+          veu: {
+            cor: "#0B0B0D",
+            alfa: 0.48
           },
         },
       }],
