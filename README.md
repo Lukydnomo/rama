@@ -565,6 +565,10 @@ segredo nenhum — ele os lê das Script Properties. Publicá-lo não expõe nad
 
 ### Atualizar o backend
 
+**v2.43.0 — ÁBACO:** só o site (fórmulas nas perícias da ficha universal).
+Publique o site; nada de `.gs` nem `setupRama()`. Abas abertas na versão anterior
+recusam fichas 21 e pedem para recarregar.
+
 **v2.42.0 — FILEIRA:** só o site (a ordem das perícias da ficha universal).
 Publique o site; nada de `.gs` nem `setupRama()`. Abas abertas na versão anterior
 recusam fichas 20 e pedem para recarregar.

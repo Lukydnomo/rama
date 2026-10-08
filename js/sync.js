@@ -555,6 +555,7 @@
       valor: "Valor", dado: "Dado", sigla: "Sigla",
       atual: "Atual", maximo: "Máximo",
       bonus: "Bônus", bonusTemporario: "Bônus temporário", atributoId: "Atributo vinculado",
+      formula: "Fórmula dos dados", contagem: "Como os dados contam",
       dt: "DT", esquiva: "Esquiva", bloqueio: "Bloqueio", resistencia: "Resistência",
       peso: "Peso", limite: "Limite de peso", dano: "Dano", danoExtra: "Dano extra",
       critico: "Crítico", multiplicador: "Multiplicador", defesa: "Defesa",

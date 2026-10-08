@@ -130,6 +130,13 @@
      reordenaria a lista em cima do que foi arrastado. Com o schema maior
      ela recusa.
 
+     20 → 21: fórmulas nas perícias da universal (v2.43). A perícia
+     ganhou `formula` (os dados numa conta: "(@FOR/2+1)d6 + @INT") e
+     `contagem` (maior, menor ou soma), e o `atributoId` pode ser null —
+     perícia sem atributo, que rola só pela fórmula. Uma aba antiga
+     descartaria a fórmula e religaria a perícia ao primeiro atributo.
+     Sem conversão: uma ficha 20 abre igual, sem fórmula.
+
      Nenhuma das subidas exige migração: normalizarFicha() cria o que
      falta, vazio, e não toca no que existe. Um ritual gravado na 2 abre
      na 3 com a versão Normal em branco; uma ficha de Ordem gravada na 4
@@ -139,7 +146,7 @@
      os campos novos e os descartaria ao gravar — com o schema maior ela
      recusa abrir a ficha e pede para recarregar.
      Ver docs/CHARACTER_SCHEMA.md. */
-  var VERSAO_SCHEMA = 20;
+  var VERSAO_SCHEMA = 21;
 
   var MODULOS = {
     atributos: "Atributos", status: "Status/recursos", defesa: "Defesa",
@@ -382,6 +389,8 @@
       bonus: 0,
       bonusTemporario: 0,
       dadosExtras: [],
+      formula: "",
+      contagem: "soma",
     };
     if (base.permitidos) {
       pericia.atributosPermitidos = base.permitidos.map(function (s) { return porSigla[s]; });
@@ -1112,8 +1121,11 @@
     var permitidos = lista(p.atributosPermitidos)
       .filter(function (id) { return idsAtributo.indexOf(id) >= 0; });
 
+    /* v2.43: `null` explícito é "sem atributo" — a perícia rola pela
+       fórmula. Só o id que sumiu (ou que nunca veio) é religado. */
+    var semAtributo = p.atributoId === null;
     var atributoId = idsAtributo.indexOf(p.atributoId) >= 0 ? p.atributoId : null;
-    if (!atributoId) atributoId = permitidos[0] || padrao;
+    if (!atributoId && !semAtributo) atributoId = permitidos[0] || padrao;
 
     return {
       id: p.id || U.uuid(),
@@ -1124,6 +1136,10 @@
       bonus: U.inteiro(p.bonus, 0),
       bonusTemporario: U.inteiro(p.bonusTemporario, 0),
       dadosExtras: lista(p.dadosExtras).map(normalizarDadoExtra).filter(Boolean),
+      /* Guardada como foi escrita (até o limite), mesmo com erro: quem
+         digitou conserta, a ficha não apaga. A rolagem é que recusa. */
+      formula: U.aparar(p.formula, D.MAX_FORMULA || 200),
+      contagem: D.contagemValida ? D.contagemValida(p.contagem === undefined ? "soma" : p.contagem) : "soma",
     };
   }
 
@@ -1197,6 +1213,76 @@
      dados extras não entram — eles não são um número até rolarem. */
   function bonusDaPericia(pericia) {
     return U.inteiro(pericia.bonus, 0) + U.inteiro(pericia.bonusTemporario, 0);
+  }
+
+  /* O valor de "@FOR" numa fórmula: a sigla do atributo (sem diferença
+     de maiúsculas) ou, se não houver, o nome dele. */
+  function valorDeReferencia(ficha, nome) {
+    var alvo = U.chaveDeBusca(nome);
+    var lista = (ficha && ficha.atributos) || [];
+    var achado = lista.filter(function (a) { return U.chaveDeBusca(a.sigla) === alvo; })[0] ||
+      lista.filter(function (a) { return U.chaveDeBusca(a.nome) === alvo; })[0];
+    return achado ? U.inteiro(achado.valor, 0) : undefined;
+  }
+
+  function temFormula(pericia) { return !!(pericia && U.aparar(pericia.formula)); }
+
+  /* A rolagem da perícia (v2.43): pela fórmula, se houver; senão pelo
+     dado do atributo vinculado, como sempre. Devolve o resultado do motor
+     de dados ou { ok: false, mensagem }. */
+  function rolarPericia(ficha, pericia) {
+    var atributo = atributoDaPericia(ficha, pericia);
+    if (temFormula(pericia)) {
+      return D.formula({
+        nome: pericia.nome,
+        sigla: atributo ? atributo.sigla : "",
+        formula: pericia.formula,
+        contagem: pericia.contagem,
+        valorDe: function (n) { return valorDeReferencia(ficha, n); },
+        bonus: U.inteiro(pericia.bonus, 0),
+        bonusTemporario: U.inteiro(pericia.bonusTemporario, 0),
+        modificadores: pericia.dadosExtras || [],
+      });
+    }
+    if (!atributo) {
+      return { ok: false, erro: "sem_atributo", mensagem: pericia.nome + " não tem atributo nem fórmula. Escolha um dos dois no modo edição." };
+    }
+    var r = D.dependente(pedidoDeRolagem(ficha, pericia));
+    if (!r.ok) r.mensagem = "O dado de " + atributo.nome + " (" + atributo.dado + ") não é válido.";
+    return r;
+  }
+
+  /* O que a perícia rola, com os números de agora: "3d6 + 2", "2d20 (FOR)". */
+  function previaDaPericia(ficha, pericia) {
+    var atributo = atributoDaPericia(ficha, pericia);
+    if (temFormula(pericia)) {
+      var p = D.previaDaFormula(pericia.formula, function (n) { return valorDeReferencia(ficha, n); });
+      return p.ok ? { ok: true, texto: p.texto } : { ok: false, texto: "fórmula com erro", mensagem: p.mensagem };
+    }
+    if (!atributo) return { ok: false, texto: "sem dado", mensagem: "Sem atributo e sem fórmula." };
+    return { ok: true, texto: atributo.dado };
+  }
+
+  /* Renomear a sigla ou o nome de um atributo leva junto as fórmulas
+     que o citam. Devolve quantas perícias mudaram. */
+  function renomearReferencia(ficha, antiga, nova) {
+    var mudou = 0;
+    ((ficha && ficha.pericias) || []).forEach(function (p) {
+      if (!temFormula(p)) return;
+      var f = D.trocarReferencia(p.formula, antiga, nova);
+      if (f !== p.formula) { p.formula = f; mudou++; }
+    });
+    return mudou;
+  }
+
+  /* As perícias cuja fórmula cita um atributo (pela sigla ou pelo nome). */
+  function formulasQueUsam(ficha, atributo) {
+    var chaves = [U.chaveDeBusca(atributo.sigla), U.chaveDeBusca(atributo.nome)];
+    return ((ficha && ficha.pericias) || []).filter(function (p) {
+      if (!temFormula(p)) return false;
+      var l = D.lerFormula(p.formula);
+      return l.ok && l.referencias.some(function (r) { return chaves.indexOf(U.chaveDeBusca(r)) >= 0; });
+    });
   }
 
   /* Prepara o pedido que o motor de dados espera para uma perícia. É
@@ -1277,6 +1363,12 @@
     acharNota: acharNota,
     atributoDaPericia: atributoDaPericia,
     bonusDaPericia: bonusDaPericia,
+    valorDeReferencia: valorDeReferencia,
+    temFormula: temFormula,
+    rolarPericia: rolarPericia,
+    previaDaPericia: previaDaPericia,
+    renomearReferencia: renomearReferencia,
+    formulasQueUsam: formulasQueUsam,
     pedidoDeRolagem: pedidoDeRolagem,
     resumoDeStatus: resumoDeStatus,
     rotuloDoTipo: rotuloDoTipo,

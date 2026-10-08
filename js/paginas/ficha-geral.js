@@ -232,11 +232,23 @@
       el("div.atributo__edicao", {}, [
         UI.campo({
           rotulo: "Nome", valor: a.nome, limite: 40,
-          aoMudar: function (v) { a.nome = U.aparar(v, 40) || a.nome; ctx.alterou(); ctx.redesenhar(); },
+          aoMudar: function (v) {
+            var antigo = a.nome;
+            a.nome = U.aparar(v, 40) || a.nome;
+            /* As fórmulas que citam o atributo pelo nome acompanham (v2.43). */
+            if (antigo !== a.nome) F.renomearReferencia(ctx.ficha, antigo, a.nome);
+            ctx.alterou(); ctx.redesenhar();
+          },
         }),
         UI.campo({
           rotulo: "Sigla", valor: a.sigla, limite: 6,
-          aoMudar: function (v) { a.sigla = (U.aparar(v, 6) || a.sigla).toUpperCase(); ctx.alterou(); ctx.redesenhar(); },
+          aoMudar: function (v) {
+            var antiga = a.sigla;
+            a.sigla = (U.aparar(v, 6) || a.sigla).toUpperCase();
+            /* "@FOR" nas fórmulas vira a sigla nova (v2.43). */
+            if (antiga !== a.sigla) F.renomearReferencia(ctx.ficha, antiga, a.sigla);
+            ctx.alterou(); ctx.redesenhar();
+          },
         }),
         UI.campo({
           rotulo: "Valor", tipo: "numero", valor: a.valor,
@@ -278,7 +290,10 @@
   async function removerAtributo(ctx, a) {
     /* Uma perícia sem atributo rola no vazio. Melhor dizer quantas
        serão afetadas antes, do que consertar 28 vínculos depois. */
-    var dependentes = ctx.ficha.pericias.filter(function (p) { return p.atributoId === a.id; });
+    /* Com fórmula, o vínculo é só rótulo: a perícia fica sem atributo e
+       continua rolando. Sem fórmula, vai para o primeiro da lista. */
+    var dependentes = ctx.ficha.pericias.filter(function (p) { return p.atributoId === a.id && !F.temFormula(p); });
+    var citam = F.formulasQueUsam(ctx.ficha, a);
 
     if (ctx.ficha.atributos.length <= 1) {
       UI.avisoErro("A ficha precisa de pelo menos um atributo.");
@@ -287,9 +302,14 @@
 
     var certeza = await UI.confirmar({
       titulo: "Remover " + a.nome + "?",
-      texto: dependentes.length
-        ? dependentes.length + " perícia(s) usam este atributo e passarão a usar o primeiro da lista."
-        : "O atributo será removido da ficha.",
+      texto: [
+        dependentes.length
+          ? dependentes.length + " perícia(s) usam este atributo e passarão a usar o primeiro da lista."
+          : "O atributo será removido da ficha.",
+        citam.length
+          ? citam.length + " fórmula(s) citam @" + a.sigla + " (" + citam.slice(0, 4).map(function (p) { return p.nome; }).join(", ") + (citam.length > 4 ? "…" : "") + ") e vão parar de rolar até serem corrigidas."
+          : "",
+      ].filter(Boolean).join(" "),
       detalhe: "Esta ação não pode ser desfeita.",
       rotuloConfirmar: "Remover",
       perigo: true,
@@ -301,7 +321,7 @@
     var primeiro = ctx.ficha.atributos[0].id;
 
     ctx.ficha.pericias.forEach(function (p) {
-      if (p.atributoId === a.id) p.atributoId = primeiro;
+      if (p.atributoId === a.id) p.atributoId = F.temFormula(p) ? null : primeiro;
       if (p.atributosPermitidos) {
         p.atributosPermitidos = p.atributosPermitidos.filter(function (id) { return id !== a.id; });
         if (p.atributosPermitidos.length < 2) delete p.atributosPermitidos;

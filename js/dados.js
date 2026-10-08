@@ -551,6 +551,407 @@
   }
 
   /* =================================================================
+     FÓRMULAS (v2.43) — os dados da perícia universal
+     -----------------------------------------------------------------
+     Cada sistema conta os dados do seu jeito: o atributo como
+     quantidade ("@FOR d6"), metade dele mais alguma coisa
+     ("(@FOR/2 + 1)d6 + @INT"), um teto, um mínimo. A fórmula é uma
+     conta pequena, lida aqui e só aqui — nada de eval:
+
+       números        3   2.5
+       atributos      @FOR (sigla ou nome de uma palavra), @{Nome Longo}
+       dados          2d6   d20   (@FOR)d6   @FOR d6   (@FOR/2+1)d(4+2)
+       contas         + − * / e parênteses
+       funções        piso() teto() arred() abs() min(a, b…) max(a, b…)
+
+     Dado liga mais forte que * e /: "2*1d6" dobra um d6. A quantidade
+     e as faces são contas sem dado, arredondadas para baixo na hora de
+     rolar; o total também é arredondado para baixo no fim (use teto()
+     para arredondar para cima). Uma quantidade 0 não rola nada.
+
+     Como os dados contam (`contagem`):
+       maior   o PRIMEIRO dado da fórmula é o conjunto de onde sai um
+               dado só, o maior — como 2d20 de atributo; os outros dados
+               somam. O dado eleito é o natural, que decide crítico.
+       menor   o mesmo, valendo o menor
+       soma    todos os dados somam; não há natural
+     ================================================================= */
+
+  var MAX_FORMULA = 200;
+  var MAX_NOS_FORMULA = 200;
+  var MAX_DADOS_FORMULA = 12;
+  var CONTAGENS = ["maior", "menor", "soma"];
+  var LETRA_DE_REF = /[A-Za-z0-9_\u00C0-\u00D6\u00D8-\u00F6\u00F8-\u00FF]/;
+  var LETRA_DE_PALAVRA = /[A-Za-z_\u00C0-\u00D6\u00D8-\u00F6\u00F8-\u00FF]/;
+
+  function arredondar(x) { return Math.round(x); }
+  var FUNCOES_DE_FORMULA = {
+    piso: { fn: Math.floor, min: 1, max: 1 }, floor: { fn: Math.floor, min: 1, max: 1 },
+    teto: { fn: Math.ceil, min: 1, max: 1 }, ceil: { fn: Math.ceil, min: 1, max: 1 },
+    arred: { fn: arredondar, min: 1, max: 1 }, arredondar: { fn: arredondar, min: 1, max: 1 }, round: { fn: arredondar, min: 1, max: 1 },
+    abs: { fn: Math.abs, min: 1, max: 1 },
+    min: { fn: Math.min, min: 1, max: 12 },
+    max: { fn: Math.max, min: 1, max: 12 },
+  };
+
+  function erroDeFormula(mensagem) { return { ok: false, erro: "formula", mensagem: mensagem }; }
+
+  function tokensDaFormula(s) {
+    var lista = [];
+    var i = 0;
+    while (i < s.length) {
+      var c = s[i];
+      if (/\s/.test(c)) { i++; continue; }
+      if (/[0-9.]/.test(c)) {
+        var m = /^(\d+(\.\d+)?|\.\d+)/.exec(s.slice(i));
+        if (!m) return erroDeFormula("Número mal escrito perto de “" + s.slice(i, i + 6) + "”.");
+        lista.push({ t: "num", v: parseFloat(m[0]) });
+        i += m[0].length;
+        continue;
+      }
+      if (c === "@") {
+        if (s[i + 1] === "{") {
+          var fim = s.indexOf("}", i + 2);
+          if (fim < 0) return erroDeFormula("Falta fechar a chave de @{…}.");
+          var longo = s.slice(i + 2, fim).trim();
+          if (!longo) return erroDeFormula("@{ } vazio: escreva o nome do atributo dentro das chaves.");
+          lista.push({ t: "ref", v: longo });
+          i = fim + 1;
+          continue;
+        }
+        var j = i + 1;
+        while (j < s.length && LETRA_DE_REF.test(s[j])) {
+          /* "@FORd20": o d seguido de número ou parêntese já é o dado. */
+          if (j > i + 1 && /[dD]/.test(s[j]) && /[0-9(@]/.test(s[j + 1] || "")) break;
+          j++;
+        }
+        if (j === i + 1) return erroDeFormula("Depois de @ vem a sigla ou o nome de um atributo (por exemplo, @FOR).");
+        lista.push({ t: "ref", v: s.slice(i + 1, j) });
+        i = j;
+        continue;
+      }
+      if (LETRA_DE_PALAVRA.test(c)) {
+        var k = i;
+        while (k < s.length && LETRA_DE_PALAVRA.test(s[k])) k++;
+        var palavra = s.slice(i, k);
+        if (/^[dD]$/.test(palavra)) lista.push({ t: "d" });
+        else lista.push({ t: "id", v: palavra.toLowerCase() });
+        i = k;
+        continue;
+      }
+      var op = { "\u2212": "-", "\u00D7": "*", "\u00F7": "/", ";": "," }[c] || c;
+      if ("+-*/(),".indexOf(op) >= 0) { lista.push({ t: op }); i++; continue; }
+      return erroDeFormula("“" + c + "” não faz parte de uma fórmula.");
+    }
+    return { ok: true, lista: lista };
+  }
+
+  function lerFormula(texto) {
+    var s = String(texto === undefined || texto === null ? "" : texto).trim();
+    if (!s) return erroDeFormula("A fórmula está vazia.");
+    if (s.length > MAX_FORMULA) return erroDeFormula("A fórmula passa de " + MAX_FORMULA + " caracteres.");
+    var tk = tokensDaFormula(s);
+    if (!tk.ok) return tk;
+    var t = tk.lista;
+    var p = 0;
+    var nos = 0;
+    var dados = 0;
+    var referencias = [];
+    var falha = null;
+
+    function no(x) {
+      nos++;
+      if (nos > MAX_NOS_FORMULA && !falha) falha = "A fórmula é grande demais.";
+      return x;
+    }
+    function ve(tipo) { return t[p] && t[p].t === tipo; }
+    function come(tipo) { if (ve(tipo)) { p++; return true; } return false; }
+    function exige(tipo, mensagem) { if (!come(tipo) && !falha) falha = mensagem; }
+    function temDado(x) {
+      if (!x) return false;
+      if (x.k === "dado") return true;
+      return [x.a, x.b, x.q, x.f].some(temDado) || (x.args || []).some(temDado);
+    }
+
+    function soma() {
+      var a = produto();
+      while (!falha && (ve("+") || ve("-"))) {
+        var op = t[p++].t;
+        a = no({ k: "op", op: op, a: a, b: produto() });
+      }
+      return a;
+    }
+    function produto() {
+      var a = unario();
+      while (!falha && (ve("*") || ve("/"))) {
+        var op = t[p++].t;
+        a = no({ k: "op", op: op, a: a, b: unario() });
+      }
+      return a;
+    }
+    function unario() {
+      if (come("-")) return no({ k: "neg", a: unario() });
+      if (come("+")) return unario();
+      return dado();
+    }
+    function dado() {
+      var q = null;
+      if (!ve("d")) {
+        q = primario();
+        if (!ve("d")) return q;
+      }
+      p++;
+      var f = primario();
+      if (falha) return null;
+      if (temDado(q) || temDado(f)) { falha = "A quantidade e as faces de um dado não podem ter outro dado."; return null; }
+      dados++;
+      if (dados > MAX_DADOS_FORMULA && !falha) falha = "Dados demais numa fórmula só (até " + MAX_DADOS_FORMULA + ").";
+      return no({ k: "dado", q: q || no({ k: "num", v: 1 }), f: f });
+    }
+    function primario() {
+      if (falha) return null;
+      var x = t[p];
+      if (!x) { falha = "A fórmula terminou no meio de uma conta."; return null; }
+      if (x.t === "num") { p++; return no({ k: "num", v: x.v }); }
+      if (x.t === "ref") {
+        p++;
+        if (referencias.indexOf(x.v) < 0) referencias.push(x.v);
+        return no({ k: "ref", nome: x.v });
+      }
+      if (x.t === "(") {
+        p++;
+        var dentro = soma();
+        exige(")", "Falta fechar um parêntese.");
+        return dentro;
+      }
+      if (x.t === "id") {
+        p++;
+        var fn = FUNCOES_DE_FORMULA[x.v];
+        if (!fn) { falha = "“" + x.v + "” não é uma função conhecida (piso, teto, arred, abs, min, max)."; return null; }
+        exige("(", x.v + " precisa de parênteses: " + x.v + "(…).");
+        var args = [];
+        if (!ve(")")) {
+          args.push(soma());
+          while (!falha && come(",")) args.push(soma());
+        }
+        exige(")", "Falta fechar o parêntese de " + x.v + "(…).");
+        if (!falha && (args.length < fn.min || args.length > fn.max)) {
+          falha = x.v + "() recebe " + (fn.min === fn.max ? fn.min + " valor" : "de " + fn.min + " a " + fn.max + " valores") + ".";
+        }
+        return no({ k: "fn", nome: x.v, args: args });
+      }
+      if (x.t === "d") { falha = "Um dado precisa das faces: 1d20, 2d6…"; return null; }
+      falha = "“" + (x.v !== undefined ? x.v : x.t) + "” está fora do lugar.";
+      return null;
+    }
+
+    var arvore = soma();
+    if (!falha && p < t.length) falha = "“" + (t[p].v !== undefined ? t[p].v : t[p].t) + "” está fora do lugar.";
+    if (falha) return erroDeFormula(falha);
+    return { ok: true, arvore: arvore, referencias: referencias, dados: dados, texto: s };
+  }
+
+  /* Uma conta sem dado (quantidade, faces, os números da fórmula). */
+  function contaDaFormula(x, valorDe) {
+    switch (x.k) {
+      case "num": return x.v;
+      case "ref": {
+        var v = valorDe ? valorDe(x.nome) : undefined;
+        if (typeof v !== "number" || !Number.isFinite(v)) throw new Error("@" + x.nome + " não é um atributo desta ficha.");
+        return v;
+      }
+      case "neg": return -contaDaFormula(x.a, valorDe);
+      case "fn": return FUNCOES_DE_FORMULA[x.nome].fn.apply(null, x.args.map(function (a) { return contaDaFormula(a, valorDe); }));
+      case "op": {
+        var a = contaDaFormula(x.a, valorDe);
+        var b = contaDaFormula(x.b, valorDe);
+        if (x.op === "+") return a + b;
+        if (x.op === "-") return a - b;
+        if (x.op === "*") return a * b;
+        if (b === 0) throw new Error("Divisão por zero na fórmula.");
+        return a / b;
+      }
+    }
+    throw new Error("Fórmula inválida.");
+  }
+
+  /* Arredondar para baixo sem cair no 0,1 + 0,2 do ponto flutuante. */
+  function pisoSeguro(v) { return Math.floor(v + 1e-9); }
+
+  function textoDeNumero(v) {
+    var r = Math.round(v * 100) / 100;
+    return String(r).replace(".", ",");
+  }
+
+  function quantidadeEFaces(x, valorDe) {
+    var q = pisoSeguro(contaDaFormula(x.q, valorDe));
+    var f = pisoSeguro(contaDaFormula(x.f, valorDe));
+    if (q < 0) throw new Error("A quantidade de dados ficou negativa (" + q + ").");
+    if (q > MAX_QUANTIDADE) throw new Error("A quantidade de dados passou de " + MAX_QUANTIDADE + " (" + q + ").");
+    if (f < 1) throw new Error("Um dado precisa de pelo menos 1 face (deu " + f + ").");
+    if (f > MAX_FACES) throw new Error("Um dado passa de " + MAX_FACES + " faces (" + f + ").");
+    return { q: q, f: f };
+  }
+
+  /* Precedência para escrever a conta de volta com o mínimo de
+     parênteses. */
+  function nivel(x) { return x.k === "op" ? (x.op === "+" || x.op === "-" ? 1 : 2) : 3; }
+
+  /* A fórmula escrita com os números de agora: os pedaços sem dado viram
+     o número, cada dado vira "3d6" — e, depois de rolado, "3d6 (4, 2, 6)". */
+  function escreverFormula(x, valorDe, rolados) {
+    if (!temDadoNo(x)) return textoDeNumero(contaDaFormula(x, valorDe));
+    if (x.k === "dado") {
+      var r = rolados ? rolados.shift() : null;
+      var qf = quantidadeEFaces(x, valorDe);
+      var base = qf.q + "d" + qf.f;
+      if (!r) return base;
+      return base + " (" + (r.rolagens.length ? r.rolagens.join(", ") : "nenhum") + (r.eleito !== undefined ? " → " + r.eleito : "") + ")";
+    }
+    if (x.k === "neg") return "−" + embrulhar(x.a, 3, valorDe, rolados);
+    if (x.k === "fn") return x.nome + "(" + x.args.map(function (a) { return escreverFormula(a, valorDe, rolados); }).join(", ") + ")";
+    var n = nivel(x);
+    var a = embrulhar(x.a, n, valorDe, rolados);
+    var b = embrulhar(x.b, n + (x.op === "-" || x.op === "/" ? 1 : 0), valorDe, rolados);
+    return a + " " + (x.op === "-" ? "−" : (x.op === "*" ? "×" : x.op)) + " " + b;
+  }
+  function embrulhar(x, minimo, valorDe, rolados) {
+    var s = escreverFormula(x, valorDe, rolados);
+    return temDadoNo(x) && nivel(x) < minimo ? "(" + s + ")" : s;
+  }
+  function temDadoNo(x) {
+    if (!x) return false;
+    if (x.k === "dado") return true;
+    return temDadoNo(x.a) || temDadoNo(x.b) || (x.args || []).some(temDadoNo);
+  }
+
+  /* A prévia, sem rolar: "(@FOR/2+1)d6 + @INT" com FOR 4 e INT 2 → "3d6 + 2". */
+  function previaDaFormula(texto, valorDe) {
+    var l = lerFormula(texto);
+    if (!l.ok) return l;
+    try {
+      return { ok: true, texto: escreverFormula(l.arvore, valorDe, null), dados: l.dados, referencias: l.referencias };
+    } catch (e) {
+      return erroDeFormula(e.message);
+    }
+  }
+
+  function contagemValida(c) { return CONTAGENS.indexOf(c) >= 0 ? c : "maior"; }
+
+  /* pedido = { nome, sigla, formula, contagem, valorDe(nome) → número,
+                bonus, bonusTemporario, modificadores } */
+  function formula(pedido) {
+    var p = pedido || {};
+    var contagem = contagemValida(p.contagem);
+    var falhou = function (mensagem) {
+      return {
+        ok: false, erro: "formula", mensagem: mensagem, tipo: contagem === "soma" ? "soma" : "dependente",
+        nome: p.nome || "", expressao: String(p.formula || ""), rolagens: [], parcelas: [], total: 0,
+      };
+    };
+    var l = lerFormula(p.formula);
+    if (!l.ok) return falhou(l.mensagem);
+    if (!l.dados) return falhou("A fórmula precisa ter pelo menos um dado (por exemplo, 1d20).");
+
+    var rolados = [];
+    var natural;
+    function valorDoNo(x) {
+      if (!temDadoNo(x)) return contaDaFormula(x, p.valorDe);
+      if (x.k === "dado") {
+        var qf = quantidadeEFaces(x, p.valorDe);
+        var rolagens = [];
+        for (var i = 0; i < qf.q; i++) rolagens.push(sorteio(qf.f));
+        var r = { rolagens: rolagens };
+        var v;
+        if (contagem !== "soma" && !rolados.length) {
+          v = rolagens.length ? (contagem === "menor" ? Math.min.apply(null, rolagens) : Math.max.apply(null, rolagens)) : 0;
+          natural = v;
+          if (rolagens.length > 1) r.eleito = v;
+        } else {
+          v = rolagens.reduce(function (s, n) { return s + n; }, 0);
+        }
+        rolados.push(r);
+        return v;
+      }
+      if (x.k === "neg") return -valorDoNo(x.a);
+      if (x.k === "fn") return FUNCOES_DE_FORMULA[x.nome].fn.apply(null, x.args.map(valorDoNo));
+      var a = valorDoNo(x.a);
+      var b = valorDoNo(x.b);
+      if (x.op === "+") return a + b;
+      if (x.op === "-") return a - b;
+      if (x.op === "*") return a * b;
+      if (b === 0) throw new Error("Divisão por zero na fórmula.");
+      return a / b;
+    }
+
+    var base;
+    var detalhe;
+    try {
+      base = pisoSeguro(valorDoNo(l.arvore));
+      detalhe = escreverFormula(l.arvore, p.valorDe, rolados.slice());
+    } catch (e) {
+      return falhou(e.message);
+    }
+
+    var parcelas = [{ rotulo: "Fórmula", valor: base, detalhe: detalhe }];
+    var r = {
+      ok: true,
+      erro: null,
+      tipo: contagem === "soma" ? "soma" : "dependente",
+      nome: p.nome || "",
+      sigla: p.sigla || "",
+      expressao: l.texto,
+      selecao: contagem === "soma" ? null : contagem,
+      rolagens: rolados.reduce(function (s, x) { return s.concat(x.rolagens); }, []),
+      formula: l.texto,
+      contagem: contagem,
+      parcelas: parcelas,
+      total: base,
+    };
+    if (contagem !== "soma") r.natural = natural || 0;
+    acrescentarBonusEExtras(r, p);
+    return r;
+  }
+
+  /* Bônus fixo, temporário e dados extras: o mesmo caminho da rolagem
+     dependente, para a fórmula e o atributo somarem igual. */
+  function acrescentarBonusEExtras(r, p) {
+    var bonus = inteiroSeguro(p.bonus);
+    if (bonus) { r.total += bonus; r.parcelas.push({ rotulo: "Bônus", valor: bonus }); }
+    var temporario = inteiroSeguro(p.bonusTemporario);
+    if (temporario) { r.total += temporario; r.parcelas.push({ rotulo: "Temporário", valor: temporario }); }
+    r.bonus = bonus;
+    r.bonusTemporario = temporario;
+    r.extras = [];
+    (p.modificadores || []).forEach(function (mod) {
+      if (!mod || !mod.dado) return;
+      var s = somar(mod.dado);
+      if (!s.ok) return;
+      var sinal = mod.operacao === "-" ? -1 : 1;
+      var valor = sinal * s.total;
+      r.total += valor;
+      r.extras.push({ id: mod.id || null, operacao: sinal < 0 ? "-" : "+", expressao: s.expressao, rolagens: s.rolagens, total: s.total, valor: valor });
+      r.parcelas.push({ rotulo: (sinal < 0 ? "−" : "+") + s.expressao, valor: valor, detalhe: s.rolagens.join(" + ") });
+    });
+    return r;
+  }
+
+  /* Troca uma referência por outra nas fórmulas (renomear a sigla ou o
+     nome de um atributo): "@FOR", "@{FOR}" e "@FORd20" acompanham. */
+  function trocarReferencia(texto, antiga, nova) {
+    var s = String(texto || "");
+    var a = String(antiga || "").trim();
+    var n = String(nova || "").trim();
+    if (!s || !a || !n || a === n) return s;
+    var escapada = a.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    var simples = /^[A-Za-z0-9_\u00C0-\u00D6\u00D8-\u00F6\u00F8-\u00FF]+$/.test(n);
+    var novaRef = simples ? "@" + n : "@{" + n + "}";
+    return s
+      .replace(new RegExp("@\\{\\s*" + escapada + "\\s*\\}", "gi"), "@{" + n + "}")
+      .replace(new RegExp("@" + escapada + "(?=$|[^A-Za-z0-9_\\u00C0-\\u00D6\\u00D8-\\u00F6\\u00F8-\\u00FF]|[dD][0-9(@])", "gi"), novaRef);
+  }
+
+  /* =================================================================
      AUXILIARES
      ================================================================= */
 
@@ -587,6 +988,13 @@
     danoValido: danoValido,
     danoComposto: danoComposto,
     total: total,
+    CONTAGENS: CONTAGENS,
+    MAX_FORMULA: MAX_FORMULA,
+    lerFormula: lerFormula,
+    previaDaFormula: previaDaFormula,
+    formula: formula,
+    contagemValida: contagemValida,
+    trocarReferencia: trocarReferencia,
     usarSorteio: usarSorteio,
     restaurarSorteio: restaurarSorteio,
     MAX_QUANTIDADE: MAX_QUANTIDADE,

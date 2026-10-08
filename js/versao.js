@@ -70,6 +70,21 @@
 
   var CHANGELOG = [
     {
+      versao: "2.43.0", codinome: "ÁBACO", data: "07/10/2026",
+      mudancas: {
+        "Adicionado": [
+          "Na ficha universal, a perícia pode ter uma fórmula para os dados, no lugar do dado do atributo: @FOR d6 usa o valor de FOR como quantidade; (@FOR/2 + 1)d6 + @INT usa metade dele mais um, e soma INT. Vale @SIGLA ou @{Nome do atributo}, + − × ÷, parênteses e piso, teto, arred, abs, min e max.",
+          "O atributo vinculado ficou opcional: “Nenhum (só a fórmula)”. Com fórmula, você escolhe como os dados contam — somar todos, ou valer o maior (ou o menor) do primeiro grupo, que é o que decide crítico.",
+          "Enquanto você digita, a ficha mostra a conta com os valores de agora (“3d6 + 2”) ou o erro, sem apagar o que foi escrito. No modo normal, o botão da perícia mostra o que ela rola; a rolagem mostra cada dado e a conta inteira. O ataque da arma usa a fórmula da perícia também.",
+          "Renomear a sigla ou o nome de um atributo atualiza as fórmulas que o citam. Remover um atributo avisa quantas fórmulas o usam.",
+        ],
+        "Técnico": [
+          "Motor de fórmulas em js/dados.js, sem eval: leitura com mensagens de erro, prévia, rolagem com a mesma soma de bônus, temporário e dados extras da rolagem do atributo. Limites: 200 caracteres, 12 dados, 100 por grupo, 1000 faces. A perícia ganhou `formula` e `contagem`, e `atributoId` aceita null. Ficha no schema 21. Só o site muda.",
+          "Testes: 29 novos (leitura, prévia, erros, limites, soma, maior, menor, arredondamento, quantidade zero, dados extras, normalização, rolagem pela ficha, renomear atributo, validação, exportar e importar, sincronização). Verificado no navegador com uma ficha universal: perícia sem atributo, prévia e erro ao vivo, rolagem, salvar e recarregar, renomear a sigla.",
+        ],
+      },
+    },
+    {
       versao: "2.42.0", codinome: "FILEIRA", data: "07/10/2026",
       mudancas: {
         "Adicionado": [

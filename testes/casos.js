@@ -22,7 +22,7 @@
 
     t.grupo("Tema da ficha · schema 16 (v2.36)");
     var TEMA16 = { nome: "Roxo", base: "escuro", valores: { fundo: { tipo: "radial", forma: "circulo", x: 20, y: 30, pontos: [{ cor: "#08080a", pos: 0 }, { cor: "#3a1030", alfa: 0.8, pos: 100 }] } } };
-    t.igual("o schema subiu para 20", S.VERSAO_SCHEMA, 20);
+    t.igual("o schema subiu para 21", S.VERSAO_SCHEMA, 21);
     t.iguais("ficha nova usa o tema da conta", S.criarFicha({ nome: "Nova" }).aparencia, { v: 1, modo: "conta" });
     t.iguais("ficha antiga (sem o campo) também", S.normalizarFicha({ schemaVersion: 15, nome: "Legado" }).aparencia, { v: 1, modo: "conta" });
     ["ordem", "universal"].forEach(function (tipo) {
@@ -4645,6 +4645,11 @@
         global.RAMAHexatombe, global.RAMAOrdemBiblioteca, global.RAMAOrdemItens || null);
     }
 
+    /* v2.43 — FÓRMULAS NAS PERÍCIAS DA UNIVERSAL */
+    if (global.RAMADados && global.RAMAFicha && global.RAMAValidacao && global.RAMASync) {
+      casosDaV243(t, global.RAMADados, global.RAMAFicha, global.RAMAValidacao, global.RAMASync);
+    }
+
     /* v2.42 — ORDEM DAS PERÍCIAS DA UNIVERSAL */
     if (global.RAMAFicha && global.RAMAValidacao && global.RAMASync) casosDaV242(t, global.RAMAFicha, global.RAMAValidacao, global.RAMASync);
 
@@ -4892,6 +4897,100 @@
      ================================================================= */
 
   /* =================================================================
+     v2.43 — FÓRMULAS NAS PERÍCIAS DA UNIVERSAL
+     ================================================================= */
+
+  function casosDaV243(t, D, F, V, S) {
+    /* Sorteio combinado: devolve a sequência, depois as faces. */
+    function comDados(seq, fn) {
+      var i = 0;
+      D.usarSorteio(function (faces) { var v = i < seq.length ? seq[i] : faces; i++; return Math.min(v, faces); });
+      try { return fn(); } finally { D.restaurarSorteio(); }
+    }
+    var vals = { FOR: 4, INT: 2, AGI: 3, "Força Bruta": 5 };
+    var valorDe = function (n) {
+      var k = Object.keys(vals).filter(function (x) { return x.toLowerCase() === String(n).toLowerCase(); })[0];
+      return k ? vals[k] : undefined;
+    };
+
+    t.grupo("v2.43 · leitura das fórmulas");
+    t.iguais("prévias com os valores de agora", [
+      "(@FOR/2 + 1)d6 + @INT", "@FOR d20", "@FORd20", "d20+3", "@{Força Bruta}d4", "teto(@INT/3)d8 + 1d4 - 2", "max(1, @FOR - 5)d10", "piso(@AGI/2)d6",
+    ].map(function (f) { return D.previaDaFormula(f, valorDe).texto; }), [
+      "3d6 + 2", "4d20", "4d20", "1d20 + 3", "5d4", "1d8 + 1d4 − 2", "1d10", "1d6",
+    ]);
+    t.ok("sigla sem diferença de maiúsculas", D.previaDaFormula("@for d6", valorDe).texto === "4d6");
+    var erros = ["", "2d", "(1d4)d6", "1d20 + @XYZ", "1d20 +* 2", "raiz(4)d6", "min()d6", "1d20)", "(1d20", "@ d6", "1d20 & 2", "@FOR/0 + 1d6"];
+    var mensagens = erros.map(function (f) { return D.previaDaFormula(f, valorDe); });
+    t.ok("fórmulas erradas são recusadas, cada uma com o motivo", mensagens.every(function (r) { return !r.ok && typeof r.mensagem === "string" && r.mensagem.length > 5; }),
+      JSON.stringify(mensagens.map(function (r) { return r.ok; })));
+    t.ok("  inclusive a referência a um atributo que não existe", /@XYZ não é um atributo/.test(mensagens[3].mensagem));
+    t.ok("nada de eval: texto de código não passa", !D.lerFormula("alert(1)").ok && !D.lerFormula("constructor").ok);
+    t.ok("limites: até 12 dados, 100 por grupo, 1000 faces", !D.lerFormula(new Array(14).join("1d6+") + "1d6").ok &&
+      !D.formula({ formula: "101d6" }).ok && !D.formula({ formula: "1d1001" }).ok && !D.formula({ formula: "(@FOR-9)d6", valorDe: valorDe }).ok);
+    t.ok("sem dado não é rolagem", !D.formula({ formula: "@FOR + 2", valorDe: valorDe }).ok);
+
+    t.grupo("v2.43 · rolar pela fórmula");
+    var soma = comDados([3, 5, 6, 2], function () { return D.formula({ formula: "(@FOR/2 + 1)d6 + @INT", contagem: "soma", valorDe: valorDe }); });
+    t.iguais("soma: todos os dados contam (3+5+6, +2)", [soma.ok, soma.total, soma.rolagens, soma.tipo, soma.natural], [true, 16, [3, 5, 6], "soma", undefined]);
+    t.igual("  e o detalhe mostra a conta", soma.parcelas[0].detalhe, "3d6 (3, 5, 6) + 2");
+    var maior = comDados([4, 17, 9, 3, 2], function () { return D.formula({ formula: "@FOR d20 + 1d4", contagem: "maior", valorDe: valorDe, bonus: 2, bonusTemporario: -1 }); });
+    t.iguais("maior: o primeiro grupo elege um dado (17), o 1d4 soma (2), e o bônus entra", [maior.total, maior.natural, maior.rolagens], [17 + 2 + 2 - 1, 17, [4, 17, 9, 3, 2]]);
+    var menor = comDados([4, 17], function () { return D.formula({ formula: "2d20", contagem: "menor" }); });
+    t.iguais("menor: vale o pior", [menor.total, menor.natural], [4, 4]);
+    var metade = comDados([6, 6, 6], function () { return D.formula({ formula: "3d6/2", contagem: "soma" }); });
+    t.igual("divisão arredonda para baixo no fim (18/2… e 9/2)", metade.total, 9);
+    var impar = comDados([5], function () { return D.formula({ formula: "1d6/2", contagem: "soma" }); });
+    t.igual("  5/2 = 2", impar.total, 2);
+    var zero = comDados([], function () { return D.formula({ formula: "(@INT - 2)d6 + 1d4", contagem: "soma", valorDe: valorDe }); });
+    t.iguais("quantidade 0 não rola nada e o resto segue", [zero.ok, zero.rolagens.length], [true, 1]);
+    var extras = comDados([10, 4], function () { return D.formula({ formula: "1d20", contagem: "maior", modificadores: [{ operacao: "-", dado: "1d6" }] }); });
+    t.igual("dados extras somam por cima, como na rolagem do atributo", extras.total, 6);
+
+    t.grupo("v2.43 · a perícia da ficha universal");
+    var f = F.criarFicha({ nome: "Fórmulas", tipoFicha: "universal" });
+    var forca = f.atributos.filter(function (a) { return a.sigla === "FOR"; })[0];
+    forca.valor = 4;
+    f.pericias = [
+      { id: "p-pool", nome: "Briga", atributoId: null, formula: "@FOR d6", contagem: "soma", bonus: 1, bonusTemporario: 0, dadosExtras: [] },
+      { id: "p-velha", nome: "Luta", atributoId: forca.id, bonus: 2, bonusTemporario: 0, dadosExtras: [] },
+      { id: "p-sumiu", nome: "Mira", atributoId: "atributo-que-nao-existe", bonus: 0, bonusTemporario: 0, dadosExtras: [] },
+    ];
+    var n = F.normalizarFicha(JSON.parse(JSON.stringify(f)));
+    var briga = n.pericias[0], luta = n.pericias[1], mira = n.pericias[2];
+    t.iguais("sem atributo de propósito fica sem atributo; a fórmula e a contagem ficam", [briga.atributoId, briga.formula, briga.contagem], [null, "@FOR d6", "soma"]);
+    t.iguais("perícia antiga: sem fórmula, contagem padrão, atributo de antes", [luta.formula, luta.contagem, luta.atributoId], ["", "soma", forca.id]);
+    t.ok("o id que sumiu continua sendo religado (o de sempre)", typeof mira.atributoId === "string" && mira.atributoId !== "atributo-que-nao-existe");
+    var rb = comDados([1, 2, 3, 4], function () { return F.rolarPericia(n, briga); });
+    t.iguais("rola pela fórmula: FOR 4 → 4d6, mais o bônus", [rb.ok, rb.total, rb.rolagens.length], [true, 11, 4]);
+    var rl = comDados([12], function () { return F.rolarPericia(n, luta); });
+    t.iguais("sem fórmula: o dado do atributo, como antes", [rl.ok, rl.tipo, rl.total], [true, "dependente", 14]);
+    t.ok("sem atributo e sem fórmula: não rola, e diz por quê", !F.rolarPericia(n, { nome: "Nada", atributoId: null, formula: "" }).ok);
+    t.igual("prévia na lista", F.previaDaPericia(n, briga).texto, "4d6");
+    var forcaN = n.atributos.filter(function (a) { return a.id === forca.id; })[0];
+    forcaN.sigla = "STR";
+    F.renomearReferencia(n, "FOR", "STR");
+    t.igual("renomear a sigla leva a fórmula junto", briga.formula, "@STR d6");
+    t.igual("  e a fórmula continua achando o atributo", F.previaDaPericia(n, briga).texto, "4d6");
+    t.igual("as fórmulas que citam um atributo", F.formulasQueUsam(n, forcaN).length, 1);
+    t.ok("validação: atributo ou fórmula", !V.pericia({ nome: "X", atributoId: null, formula: "" }).ok &&
+      V.pericia({ nome: "X", atributoId: null, formula: "2d6" }).ok && !V.pericia({ nome: "X", atributoId: null, formula: "2d" }).ok);
+
+    var volta = V.importado(JSON.parse(JSON.stringify(V.exportar("personagem", n))));
+    var b2 = volta.ok ? volta.dados.pericias.filter(function (p) { return p.nome === "Briga"; })[0] : null;
+    t.ok("exportar e importar: a perícia sem atributo continua sem, com a fórmula", !!b2 && b2.atributoId === null && b2.formula === "@STR d6" &&
+      !volta.avisos.some(function (a) { return /Briga/.test(a); }));
+    var base = JSON.parse(JSON.stringify(n));
+    var local = JSON.parse(JSON.stringify(n));
+    local.pericias[0].formula = "@STR d8";
+    var remoto = JSON.parse(JSON.stringify(n));
+    remoto.pericias[0].bonus = 5;
+    var m = S.mesclar(base, local, remoto, S.ESQUEMA_FICHA);
+    t.ok("sincronizar: a fórmula daqui e o bônus de lá", m.estado.pericias[0].formula === "@STR d8" && m.estado.pericias[0].bonus === 5 && !m.conflitos.length);
+    t.igual("o schema subiu para 21", n.schemaVersion, 21);
+  }
+
+  /* =================================================================
      v2.42 — ORDEM DAS PERÍCIAS DA UNIVERSAL
      ================================================================= */
 
@@ -4925,7 +5024,7 @@
     var m = S.mesclar(base, local, remoto, S.ESQUEMA_FICHA);
     t.ok("sincronizar: o modo daqui e o bônus de lá, sem conflito",
       m.estado.organizacao.pericias.modo === "maior" && m.estado.pericias[1].bonus === 4 && !m.conflitos.length);
-    t.igual("o schema subiu para 20", n.schemaVersion, 20);
+    t.igual("o schema da ficha é o atual (21)", n.schemaVersion, 21);
   }
 
   /* =================================================================
@@ -4993,7 +5092,7 @@
     t.ok("exportar e importar leva pendentes (com o dado já rolado) e resolvidas", volta.ok &&
       volta.dados.ordem.barganhaInsana.pendentes[0].d4 === 2 && volta.dados.ordem.barganhaInsana.resolvidas.length === 1);
     t.ok("  mesmo sem o ritual na lista de conhecidos", volta.dados.rituais.itens.length === 0);
-    t.igual("o schema da ficha é o atual (20)", F.normalizarFicha(ficha).schemaVersion, 20);
+    t.igual("o schema da ficha é o atual (21)", F.normalizarFicha(ficha).schemaVersion, 21);
   }
 
   /* =================================================================
@@ -5034,7 +5133,7 @@
     t.iguais("  um tema de dados que este navegador não conhece também fica (a tela usa a reserva)", MT.normalizarAparencia({ dados: { id: "tema-do-futuro" } }).dados, { id: "tema-do-futuro" });
     var ficha = F.normalizarFicha(F.criarFicha({ nome: "Lia", tipoFicha: "universal", aparencia: { v: 1, modo: "conta", dados: { id: "sigilo-violeta" } } }));
     t.iguais("a ficha normalizada mantém a escolha", ficha.aparencia.dados, { id: "sigilo-violeta" });
-    t.igual("o schema da ficha é o atual (20)", ficha.schemaVersion, 20);
+    t.igual("o schema da ficha é o atual (21)", ficha.schemaVersion, 21);
     var pacote = V.exportar("personagem", ficha);
     t.ok("exportar leva a escolha sem `id` (atravessa como `tema`)", pacote.dados.aparencia.dados.tema === "sigilo-violeta" && JSON.stringify(pacote).indexOf('"id"') < 0);
     var volta = V.importado(JSON.parse(JSON.stringify(pacote)));

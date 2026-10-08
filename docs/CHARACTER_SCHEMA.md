@@ -5,6 +5,36 @@ padrão e normaliza o que chega de fora. Onde ela é guardada — inteira em
 `fichaJson` (formato antigo) ou em blocos (v2.15) — é assunto do backend, e não muda
 nada aqui: ver [DATABASE.md](DATABASE.md).
 
+## Fórmulas nas perícias da universal — v2.43 / schema 21
+
+A perícia ganhou `formula` e `contagem`, e `atributoId` pode ser `null`:
+
+```jsonc
+{
+  "atributoId": null,                       // null = sem atributo, rola só pela fórmula
+  "formula": "(@FOR/2 + 1)d6 + @INT",       // "" = o dado do atributo, como antes
+  "contagem": "soma"                        // soma | maior | menor
+}
+```
+
+A fórmula é lida por `js/dados.js` (`lerFormula`, `previaDaFormula`, `formula`),
+sem `eval`: números, `@SIGLA` ou `@{Nome do atributo}` (o **valor** do atributo),
+dados `NdF` em que quantidade e faces podem ser contas (`@FOR d6`, `(@FOR/2+1)d6`,
+`d20`), `+ − * /`, parênteses e `piso teto arred abs min max`. Dado liga mais forte
+que `*` e `/`; quantidade, faces e o total arredondam para baixo. Até 12 dados por
+fórmula, 100 por grupo e 1000 faces; a quantidade e as faces não podem ter dado.
+
+`contagem`: `soma` (todos os dados somam, sem natural), `maior`/`menor` (o primeiro
+grupo da fórmula elege um dado, que é o natural e decide crítico; os outros
+somam). Bônus, temporário e dados extras somam por cima nos dois caminhos.
+
+`null` explícito fica `null`; um id que não existe (ou ausente) continua sendo
+religado ao primeiro atributo. A fórmula é guardada como foi escrita, mesmo com
+erro — quem recusa é a rolagem, com o motivo. Renomear a sigla ou o nome de um
+atributo reescreve as fórmulas que o citam; remover um atributo deixa sem atributo
+as perícias com fórmula e avisa quantas fórmulas o citavam. Na importação, `null`
+não é tratado como vínculo perdido.
+
 ## Ordem das perícias da universal — v2.42 / schema 20
 
 A ficha ganhou `organizacao`, fora do bloco `ordem` (a ficha de Ordem guarda a
@@ -321,7 +351,9 @@ que um digitado à mão.
   "bonusTemporario": 0,
   "dadosExtras": [
     { "id": "uuid", "operacao": "+", "dado": "1d6" }
-  ]
+  ],
+  "formula": "",            // v2.43: os dados numa conta; ver acima
+  "contagem": "soma"
 }
 ```
 

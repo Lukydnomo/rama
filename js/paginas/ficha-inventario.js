@@ -399,14 +399,9 @@
       return;
     }
 
-    var atributo = F.atributoDaPericia(ctx.ficha, pericia);
-    if (!atributo) {
-      UI.avisoErro(pericia.nome + " não tem atributo vinculado.");
-      return;
-    }
-
-    var r = D.dependente(F.pedidoDeRolagem(ctx.ficha, pericia));
-    if (!r.ok) { UI.avisoErro("O dado de " + atributo.nome + " não é válido."); return; }
+    /* A perícia rola como na aba dela: pela fórmula, se houver (v2.43). */
+    var r = F.rolarPericia(ctx.ficha, pericia);
+    if (!r.ok) { UI.avisoErro(F.temFormula(pericia) ? pericia.nome + ": " + r.mensagem : r.mensagem); return; }
 
     /* O crítico olha o natural principal, não o total. Um bônus de +5
        não pode transformar um 13 em crítico. */

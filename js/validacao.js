@@ -122,7 +122,13 @@
   function pericia(p) {
     var problemas = [];
     if (!U.aparar(p && p.nome)) problemas.push("A perícia precisa de um nome.");
-    if (!p || !p.atributoId) problemas.push("Escolha o atributo vinculado.");
+    var formula = p && typeof p.formula === "string" ? p.formula.trim() : "";
+    if (!p || (!p.atributoId && !formula)) problemas.push("Escolha o atributo vinculado ou escreva uma fórmula.");
+    if (formula && global.RAMADados && global.RAMADados.lerFormula) {
+      var lida = global.RAMADados.lerFormula(formula);
+      if (!lida.ok) problemas.push("Fórmula: " + lida.mensagem);
+      else if (!lida.dados) problemas.push("Fórmula: precisa ter pelo menos um dado (por exemplo, 1d20).");
+    }
 
     var b = bonus(p && p.bonus);
     if (!b.ok) problemas.push(b.mensagem);
@@ -870,6 +876,8 @@
     var religadas = 0;
     (Array.isArray(dados.pericias) ? dados.pericias : []).forEach(function (p) {
       if (!p || typeof p !== "object" || (typeof p.atributoId === "string" && porId[p.atributoId])) return;
+      /* v2.43: sem atributo de propósito (a perícia rola pela fórmula). */
+      if (p.atributoId === null) return;
       var chave = U.chaveDeBusca ? U.chaveDeBusca(String(p.nome || "").replace(/\*$/, "")) : String(p.nome || "").toLowerCase();
       var sigla = padrao[chave];
       if (sigla && porSigla[sigla]) { p.atributoId = porSigla[sigla]; religadas++; return; }
