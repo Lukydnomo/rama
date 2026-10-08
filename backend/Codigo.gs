@@ -4684,6 +4684,58 @@ function listarCodigos() {
       }],
     },
     {
+      "id": "slowpoke",
+      "nome": "Slowpoke",
+      "descricao": "Sem pressa. Um D20 em rosa e creme, com a tranquilidade do Slowpoke.",
+      "versoes": [
+        {
+          "versao": 1,
+          "previa": "assets/dados/temas/slowpoke/v1/previa.png",
+          "dado": {
+            "mascara": "assets/dados/mascaras/d20-v1.svg",
+            "base": "assets/dados/temas/slowpoke/v1/base.png",
+            "camadas": [
+              {
+                "imagem": "assets/dados/temas/slowpoke/v1/facetas.png",
+                "opacidade": 1,
+                "recortar": true
+              },
+              {
+                "imagem": "assets/dados/temas/slowpoke/v1/detalhes.png",
+                "opacidade": 1,
+                "recortar": true
+              }
+            ]
+          },
+          "notificacao": {
+            "fundo": "assets/dados/temas/slowpoke/v1/fundo.png",
+            "ajusteFundo": {
+              "modo": "zoom-pela-altura",
+              "alinhamentoHorizontal": 0.5
+            },
+            "cores": {
+              "superficie": "#302532",
+              "texto": "#fff5ed",
+              "texto2": "#f3dce7",
+              "texto3": "#cbb5c7",
+              "tracoForte": "#f6cddd",
+              "tracoMedia": "#d990b1",
+              "tracoFraca": "#76556e",
+              "selecao": "#f1b1cb",
+              "selecaoTexto": "#302532",
+              "paranormal": "#e9a8d5",
+              "erro": "#f18c92",
+              "aviso": "#f1d495"
+            },
+            "veu": {
+              "cor": "#261d2a",
+              "alfa": 0.18
+            }
+          }
+        }
+      ]
+    },
+    {
       id: "sigilo-violeta",
       nome: "Sigilo Violeta",
       descricao: "Violeta com um sigilo gravado no dado, faíscas em volta e linhas de néon no fundo.",
