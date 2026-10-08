@@ -280,7 +280,7 @@
     {
       "id": "slowpoke",
       "nome": "Slowpoke",
-      "descricao": "Sem pressa. Um D20 em rosa e creme, com a tranquilidade do Slowpoke.",
+      "descricao": "~~Sloooooowpooooke...",
       "versoes": [
         {
           "versao": 1,
