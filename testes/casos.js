@@ -22,7 +22,7 @@
 
     t.grupo("Tema da ficha · schema 16 (v2.36)");
     var TEMA16 = { nome: "Roxo", base: "escuro", valores: { fundo: { tipo: "radial", forma: "circulo", x: 20, y: 30, pontos: [{ cor: "#08080a", pos: 0 }, { cor: "#3a1030", alfa: 0.8, pos: 100 }] } } };
-    t.igual("o schema subiu para 19", S.VERSAO_SCHEMA, 19);
+    t.igual("o schema subiu para 20", S.VERSAO_SCHEMA, 20);
     t.iguais("ficha nova usa o tema da conta", S.criarFicha({ nome: "Nova" }).aparencia, { v: 1, modo: "conta" });
     t.iguais("ficha antiga (sem o campo) também", S.normalizarFicha({ schemaVersion: 15, nome: "Legado" }).aparencia, { v: 1, modo: "conta" });
     ["ordem", "universal"].forEach(function (tipo) {
@@ -4645,6 +4645,9 @@
         global.RAMAHexatombe, global.RAMAOrdemBiblioteca, global.RAMAOrdemItens || null);
     }
 
+    /* v2.42 — ORDEM DAS PERÍCIAS DA UNIVERSAL */
+    if (global.RAMAFicha && global.RAMAValidacao && global.RAMASync) casosDaV242(t, global.RAMAFicha, global.RAMAValidacao, global.RAMASync);
+
     /* v2.41 — BARGANHA INSANA */
     if (RRs && global.RAMAOrdemRituais && global.RAMAOrdemRituaisDados && global.RAMAOrdemAprendizado && global.RAMAFicha && global.RAMAValidacao) {
       casosDaV241(t, RRs, global.RAMAOrdemRituais, global.RAMAOrdemAprendizado, global.RAMAFicha, global.RAMAValidacao);
@@ -4889,6 +4892,43 @@
      ================================================================= */
 
   /* =================================================================
+     v2.42 — ORDEM DAS PERÍCIAS DA UNIVERSAL
+     ================================================================= */
+
+  function casosDaV242(t, F, V, S) {
+    t.grupo("v2.42 · ordem das perícias da ficha universal");
+    t.iguais("ficha nova: alfabética", F.criarFicha({ nome: "U", tipoFicha: "universal" }).organizacao, { pericias: { modo: "az" } });
+    t.iguais("ficha antiga, sem o campo: alfabética (o comportamento de antes)", F.normalizarFicha({ schemaVersion: 19, nome: "Velha" }).organizacao, { pericias: { modo: "az" } });
+    t.iguais("os quatro modos da ficha de Ordem", F.MODOS_DE_PERICIA, ["az", "maior", "menor", "personalizada"]);
+    t.igual("modo desconhecido volta para alfabética", F.normalizarOrganizacao({ pericias: { modo: "za" } }).pericias.modo, "az");
+    t.iguais("a marca de lista arrumada fica, e só como true", [
+      F.normalizarOrganizacao({ pericias: { modo: "personalizada", arrumada: true } }).pericias,
+      F.normalizarOrganizacao({ pericias: { modo: "maior", arrumada: "sim" } }).pericias,
+    ], [{ modo: "personalizada", arrumada: true }, { modo: "maior" }]);
+    var f = F.criarFicha({ nome: "Ordenada", tipoFicha: "universal" });
+    var atr = f.atributos[0].id;
+    f.pericias = ["Zoologia", "Briga", "Mira"].map(function (nome) {
+      return { id: "p-" + nome.toLowerCase(), natureza: "dependente", nome: nome, atributoId: atr, bonus: 0, bonusTemporario: 0, dadosExtras: [] };
+    });
+    f.organizacao = { pericias: { modo: "personalizada", arrumada: true } };
+    var n = F.normalizarFicha(JSON.parse(JSON.stringify(f)));
+    t.iguais("gravar e reabrir: o modo e a ordem personalizada (a da lista) ficam", [n.organizacao.pericias.modo, n.pericias.map(function (p) { return p.nome; })],
+      ["personalizada", ["Zoologia", "Briga", "Mira"]]);
+    var volta = V.importado(JSON.parse(JSON.stringify(V.exportar("personagem", n))));
+    t.ok("exportar e importar levam o modo e a ordem", volta.ok && volta.dados.organizacao.pericias.modo === "personalizada" &&
+      volta.dados.pericias.map(function (p) { return p.nome; }).join() === "Zoologia,Briga,Mira");
+    var base = JSON.parse(JSON.stringify(n));
+    var local = JSON.parse(JSON.stringify(n));
+    local.organizacao.pericias.modo = "maior";
+    var remoto = JSON.parse(JSON.stringify(n));
+    remoto.pericias[1].bonus = 4;
+    var m = S.mesclar(base, local, remoto, S.ESQUEMA_FICHA);
+    t.ok("sincronizar: o modo daqui e o bônus de lá, sem conflito",
+      m.estado.organizacao.pericias.modo === "maior" && m.estado.pericias[1].bonus === 4 && !m.conflitos.length);
+    t.igual("o schema subiu para 20", n.schemaVersion, 20);
+  }
+
+  /* =================================================================
      v2.41 — BARGANHA INSANA
      ================================================================= */
 
@@ -4953,7 +4993,7 @@
     t.ok("exportar e importar leva pendentes (com o dado já rolado) e resolvidas", volta.ok &&
       volta.dados.ordem.barganhaInsana.pendentes[0].d4 === 2 && volta.dados.ordem.barganhaInsana.resolvidas.length === 1);
     t.ok("  mesmo sem o ritual na lista de conhecidos", volta.dados.rituais.itens.length === 0);
-    t.igual("o schema subiu para 19", F.normalizarFicha(ficha).schemaVersion, 19);
+    t.igual("o schema da ficha é o atual (20)", F.normalizarFicha(ficha).schemaVersion, 20);
   }
 
   /* =================================================================
@@ -4994,7 +5034,7 @@
     t.iguais("  um tema de dados que este navegador não conhece também fica (a tela usa a reserva)", MT.normalizarAparencia({ dados: { id: "tema-do-futuro" } }).dados, { id: "tema-do-futuro" });
     var ficha = F.normalizarFicha(F.criarFicha({ nome: "Lia", tipoFicha: "universal", aparencia: { v: 1, modo: "conta", dados: { id: "sigilo-violeta" } } }));
     t.iguais("a ficha normalizada mantém a escolha", ficha.aparencia.dados, { id: "sigilo-violeta" });
-    t.igual("o schema da ficha é o atual (19)", ficha.schemaVersion, 19);
+    t.igual("o schema da ficha é o atual (20)", ficha.schemaVersion, 20);
     var pacote = V.exportar("personagem", ficha);
     t.ok("exportar leva a escolha sem `id` (atravessa como `tema`)", pacote.dados.aparencia.dados.tema === "sigilo-violeta" && JSON.stringify(pacote).indexOf('"id"') < 0);
     var volta = V.importado(JSON.parse(JSON.stringify(pacote)));

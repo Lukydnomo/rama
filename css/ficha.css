@@ -387,6 +387,9 @@
 @media (max-width: 620px) {
   .pericia-edicao__linha { grid-template-columns: 1fr 1fr; }
 }
+/* a alça da ordem personalizada (v2.42), acima do formulário */
+.pericia-edicao__mover { display: flex; align-items: center; gap: var(--e2); min-width: 0; }
+.pericia-edicao__mover .t-mini { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
 
 .dados-extras { display: flex; flex-wrap: wrap; gap: var(--e1); align-items: center; }
 

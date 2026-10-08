@@ -917,6 +917,9 @@
     f.habilidades = arv;
     f.rituais.itens = [F.criarRitual({ nome: "Primeiro feitiço" }), F.criarRitual({ nome: "Segundo feitiço" })];
     f.inventario.itens = [F.criarItem("item", { nome: "Corda" }), F.criarItem("arma", { nome: "Bastão" })];
+    f.pericias = [["Mira", 2], ["Briga", 5], ["Zoologia", -1], ["Conversa", 2]].map(function (x) {
+      return { id: "pu-" + x[0].toLowerCase(), natureza: "dependente", nome: x[0], atributoId: f.atributos[0].id, bonus: x[1], bonusTemporario: 0, dadosExtras: [] };
+    });
     estado.ficha = F.normalizarFicha(JSON.parse(JSON.stringify(f)));
     try {
       abrir("habilidades", "edicao");
@@ -935,9 +938,31 @@
       t.ok("o inventário da universal continua com as armas primeiro, sem alça",
         !palco.querySelector("[data-arrastar-alca]") && nomesDaListaPlana().join(",") === "Bastão,Corda");
 
+      /* v2.42: a mesma escolha de ordem da ficha de Ordem. */
       abrir("pericias", "edicao");
-      t.ok("as perícias da universal não ganham a ordem da ficha de Ordem",
-        !palco.querySelector('[data-foco="ordem-pericias"]') && !palco.querySelector("[data-arrastar-alca]"));
+      var sel = function () { return palco.querySelector('[data-foco="ordem-pericias-universal"]'); };
+      var nomesU = function () { return nomesDaLista("pericias"); };
+      var guardada = function () { return estado.ficha.pericias.map(function (p) { return p.nome; }); };
+      t.ok("perícias da universal: seletor de ordem, alfabética, sem alça",
+        !!sel() && sel().value === "az" && nomesU().join() === "Briga,Conversa,Mira,Zoologia" && !palco.querySelector("[data-arrastar-alca]"));
+      escolher(sel(), "maior");
+      t.igual("  maior bônus primeiro (empate pelo nome)", nomesU().join(), "Briga,Conversa,Mira,Zoologia");
+      escolher(sel(), "menor");
+      t.igual("  menor bônus primeiro", nomesU().join(), "Zoologia,Conversa,Mira,Briga");
+      t.igual("  ordens automáticas não mexem na lista guardada", guardada().join(), "Mira,Briga,Zoologia,Conversa");
+      clicar(botaoCom("Usar ordem personalizada"));
+      t.ok("  a primeira personalizada parte da ordem da tela", estado.ficha.organizacao.pericias.modo === "personalizada" &&
+        nomesU().join() === "Zoologia,Conversa,Mira,Briga" && guardada().join() === "Zoologia,Conversa,Mira,Briga");
+      var bonusAntes = JSON.stringify(estado.ficha.pericias.map(function (p) { return [p.id, p.bonus, p.atributoId]; }).sort());
+      await arrastar(alcaDe(item("Briga")), item("Zoologia"), "antes");
+      t.igual("  arrastar Briga para o topo", guardada().join(), "Briga,Zoologia,Conversa,Mira");
+      t.ok("  e nada da perícia muda além do lugar", JSON.stringify(estado.ficha.pericias.map(function (p) { return [p.id, p.bonus, p.atributoId]; }).sort()) === bonusAntes);
+      escolher(sel(), "az");
+      escolher(sel(), "personalizada");
+      t.igual("  trocar para alfabética e voltar mantém a personalizada", nomesU().join(), "Briga,Zoologia,Conversa,Mira");
+      abrir("pericias", "normal");
+      t.ok("  no modo normal: a mesma ordem, sem alça", !palco.querySelector("[data-arrastar-alca]") &&
+        U.$$(".pericia__nome > span:first-child", palco).map(function (x) { return x.textContent; }).join() === "Briga,Zoologia,Conversa,Mira");
 
       abrir("habilidades", "normal");
       t.ok("fora do modo edição, sem alça", !palco.querySelector("[data-arrastar-alca]"));

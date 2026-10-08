@@ -50,20 +50,147 @@
       });
     }
 
+    var ordenadas = ordenar(ctx);
+    var barra = barraDeOrdem(ctx);
+
     if (ctx.emEdicao()) {
-      return el("div.pilha--curta", { class: "pilha" }, pericias.map(function (p) {
-        return emEdicao(ctx, p);
+      var arrastar = modoDe(ctx) === "personalizada" && !!global.RAMAArrastar && !!global.RAMAOrganizar;
+      var lista = el("div.pilha--curta", { class: "pilha", dataset: { arrastarLista: "pericias" } }, ordenadas.map(function (p) {
+        var cartao = emEdicao(ctx, p, arrastar);
+        cartao.dataset.arrastarItem = p.id;
+        cartao.dataset.arrastarRotulo = p.nome;
+        return cartao;
       }));
+      if (arrastar) ligarArraste(ctx, lista, ordenadas.map(function (p) { return p.id; }));
+      return el("div.pilha--curta", { class: "pilha" }, [barra, lista]);
     }
 
-    /* Em ordem alfabética no modo normal: procurar "Percepção" numa
-       lista de 28 é a operação mais frequente da aba, e ordem
-       alfabética é a única em que se procura sem pensar. */
-    var ordenadas = pericias.slice().sort(function (a, b) {
-      return U.chaveDeBusca(a.nome).localeCompare(U.chaveDeBusca(b.nome), "pt-BR");
-    });
+    return el("div.pilha--curta", { class: "pilha" }, [
+      barra,
+      el("div.pericias", {}, ordenadas.map(function (p) { return normal(ctx, p); })),
+    ]);
+  }
 
-    return el("div.pericias", {}, ordenadas.map(function (p) { return normal(ctx, p); }));
+  /* =================================================================
+     ORDEM (v2.42) — a mesma escolha da ficha de Ordem
+     -----------------------------------------------------------------
+     Alfabética (o padrão: procurar "Percepção" é a operação mais
+     frequente da aba), pelo bônus — o mesmo número que o botão mostra,
+     bônus fixo + temporário, sem os dados extras — ou personalizada. A
+     personalizada é a ordem da própria lista `pericias`: arrastar mexe
+     só nela, e trocar de modo não a perde. Empate desempata pelo nome.
+     ================================================================= */
+
+  var ROTULOS_DE_ORDEM = {
+    az: "Alfabética",
+    maior: "Maior bônus primeiro",
+    menor: "Menor bônus primeiro",
+    personalizada: "Personalizada",
+  };
+
+  function organizacao(ctx) {
+    if (!ctx.ficha.organizacao || typeof ctx.ficha.organizacao !== "object") ctx.ficha.organizacao = F.normalizarOrganizacao(null);
+    if (!ctx.ficha.organizacao.pericias) ctx.ficha.organizacao.pericias = F.normalizarOrganizacao(null).pericias;
+    return ctx.ficha.organizacao.pericias;
+  }
+
+  function modoDe(ctx) {
+    var m = organizacao(ctx).modo;
+    return F.MODOS_DE_PERICIA.indexOf(m) >= 0 ? m : "az";
+  }
+
+  function ordenar(ctx) {
+    var modo = modoDe(ctx);
+    var pericias = ctx.ficha.pericias || [];
+    if (modo === "personalizada") return pericias.slice();
+    var nome = function (a, b) {
+      return U.compararNomes(a.nome, b.nome) || (a.id < b.id ? -1 : (a.id > b.id ? 1 : 0));
+    };
+    if (modo === "maior" || modo === "menor") {
+      var sinal = modo === "maior" ? -1 : 1;
+      return pericias.slice().sort(function (a, b) {
+        return (sinal * (F.bonusDaPericia(a) - F.bonusDaPericia(b))) || nome(a, b);
+      });
+    }
+    return pericias.slice().sort(nome);
+  }
+
+  function definirModo(ctx, modo) {
+    var org = organizacao(ctx);
+    if (org.modo === modo || F.MODOS_DE_PERICIA.indexOf(modo) < 0) return;
+    org.modo = modo;
+    ctx.alterou();
+    ctx.redesenhar();
+    var s = document.querySelector('[data-foco="ordem-pericias-universal"]');
+    if (s) s.focus();
+  }
+
+  /* A primeira vez na personalizada começa da ordem que está na tela,
+     para nada pular. Uma personalizada já arrumada nunca é tocada: ela
+     só existe enquanto alguém arrastou. */
+  function usarPersonalizada(ctx) {
+    var org = organizacao(ctx);
+    if (!org.arrumada) {
+      ctx.ficha.pericias = ordenar(ctx);
+      org.arrumada = true;
+    }
+    definirModo(ctx, "personalizada");
+  }
+
+  function barraDeOrdem(ctx) {
+    var modo = modoDe(ctx);
+    var id = "ordem-pericias-" + U.uuid().slice(0, 6);
+    return el("div.pilha--curta", { class: "pilha" }, [
+      el("div.ordenacao-barra", {}, [
+        el("span.ordenacao", {}, [
+          el("label.ordenacao__rotulo", { for: id, texto: "Ordenar" }),
+          el("select.r-selecao.ordenacao__selecao", {
+            id: id,
+            dataset: { foco: "ordem-pericias-universal" },
+            onchange: function (ev) {
+              if (ev.target.value === "personalizada") usarPersonalizada(ctx);
+              else definirModo(ctx, ev.target.value);
+            },
+          }, F.MODOS_DE_PERICIA.map(function (m) {
+            return el("option", { value: m, selected: m === modo, texto: ROTULOS_DE_ORDEM[m] });
+          })),
+        ]),
+      ]),
+      ctx.emEdicao()
+        ? (modo === "personalizada"
+            ? el("span.t-mini", { texto: "Arraste pela alça para mudar esta ordem — ou, com o foco na alça, use ↑ e ↓." })
+            : el("div.ordenacao-arrastar", {}, [
+                el("span.t-mini", { texto: "Esta ordem é automática. Para arrastar, use a ordem personalizada — a guardada continua como estava." }),
+                el("button.r-botao.r-botao--mini", {
+                  type: "button", texto: "Usar ordem personalizada",
+                  onclick: function () { usarPersonalizada(ctx); },
+                }),
+              ]))
+        : null,
+    ]);
+  }
+
+  /* Arrastar muda só a posição na lista `pericias`: nome, bônus,
+     atributo e dados extras não são tocados. */
+  function ligarArraste(ctx, lista, ids) {
+    var O = global.RAMAOrganizar;
+    function aplicar(mudou) {
+      if (!mudou) return false;
+      organizacao(ctx).arrumada = true;
+      ctx.alterou();
+      ctx.redesenhar();
+      return true;
+    }
+    global.RAMAArrastar.ligar(lista, {
+      podeSoltar: function () { return { ok: true }; },
+      aoSoltar: function (item, destino) { aplicar(O.reposicionar(ctx.ficha.pericias, item.id, destino.indice, ids)); },
+      aoTeclado: function (item, direcao) {
+        if (!aplicar(O.passo(ctx.ficha.pericias, item.id, direcao, ids))) {
+          return { ok: false, motivo: direcao < 0 ? "Já é a primeira." : "Já é a última." };
+        }
+        return { ok: true };
+      },
+    });
   }
 
   /* =================================================================
@@ -118,12 +245,18 @@
      MODO EDIÇÃO
      ================================================================= */
 
-  function emEdicao(ctx, p) {
+  function emEdicao(ctx, p, arrastar) {
     var permitidos = p.atributosPermitidos && p.atributosPermitidos.length > 1
       ? ctx.ficha.atributos.filter(function (a) { return p.atributosPermitidos.indexOf(a.id) >= 0; })
       : ctx.ficha.atributos;
 
     return el("div.pericia-edicao", {}, [
+      arrastar
+        ? el("div.pericia-edicao__mover", {}, [
+            global.RAMAArrastar.alca({ id: p.id, rotulo: p.nome }),
+            el("span.t-mini", { texto: p.nome }),
+          ])
+        : null,
       el("div.pericia-edicao__linha", {}, [
         UI.campo({
           rotulo: "Perícia", valor: p.nome, limite: 60,

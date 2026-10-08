@@ -70,6 +70,22 @@
 
   var CHANGELOG = [
     {
+      versao: "2.42.0", codinome: "FILEIRA", data: "07/10/2026",
+      mudancas: {
+        "Adicionado": [
+          "Na ficha universal, as perícias ganharam o mesmo “Ordenar” da ficha de Ordem: alfabética, maior bônus primeiro, menor bônus primeiro ou personalizada. A escolha fica guardada na ficha e vale no modo normal e no de edição.",
+          "Na ordem personalizada, no modo edição, cada perícia tem uma alça para arrastar — ou, com o foco nela, ↑ e ↓. A primeira vez parte da ordem que estava na tela, e trocar para outra ordem e voltar não perde o que foi arrumado.",
+        ],
+        "Corrigido": [
+          "A ordem alfabética das perícias da universal agora entende números: “Perícia 2” vem antes de “Perícia 10”.",
+        ],
+        "Técnico": [
+          "`organizacao.pericias` ({ modo, arrumada }) na ficha; a ordem personalizada é a própria lista `pericias`, e o bônus comparado é o fixo + temporário que o botão mostra. Ficha no schema 20 (uma aba antiga perderia a marca e reordenaria por cima do arraste). Só o site muda.",
+          "Testes: 9 novos no modelo (padrão, normalização, gravar e reabrir, exportar e importar, sincronização) e 9 na tela de arrastar, no lugar do que garantia que a universal não tinha ordem. Verificado no navegador com uma ficha universal: ordens, alça pelo teclado, salvar e recarregar.",
+        ],
+      },
+    },
+    {
       versao: "2.41.0", codinome: "PENHOR", data: "06/10/2026",
       mudancas: {
         "Adicionado": [

@@ -5,6 +5,24 @@ padrão e normaliza o que chega de fora. Onde ela é guardada — inteira em
 `fichaJson` (formato antigo) ou em blocos (v2.15) — é assunto do backend, e não muda
 nada aqui: ver [DATABASE.md](DATABASE.md).
 
+## Ordem das perícias da universal — v2.42 / schema 20
+
+A ficha ganhou `organizacao`, fora do bloco `ordem` (a ficha de Ordem guarda a
+dela em `ordem.organizacao`):
+
+```jsonc
+"organizacao": {
+  "pericias": { "modo": "az" | "maior" | "menor" | "personalizada", "arrumada": true }  // arrumada: opcional
+}
+```
+
+Os modos são os da ficha de Ordem: alfabética (o padrão, e o que uma ficha
+anterior abre), maior ou menor bônus primeiro (bônus fixo + temporário, sem os
+dados extras; empate pelo nome) e personalizada. A ordem personalizada é a própria
+ordem de `pericias`; `arrumada` marca que a lista já foi posta na ordem da tela
+uma vez, e a partir daí escolher a personalizada não a reordena. Modo
+desconhecido volta para `az`. Uma aba anterior recusa a ficha 20.
+
 ## Barganha Insana — v2.41 / schema 19
 
 O bloco `ordem` ganha `barganhaInsana`, fora da lista de rituais:

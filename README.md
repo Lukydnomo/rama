@@ -565,6 +565,10 @@ segredo nenhum — ele os lê das Script Properties. Publicá-lo não expõe nad
 
 ### Atualizar o backend
 
+**v2.42.0 — FILEIRA:** só o site (a ordem das perícias da ficha universal).
+Publique o site; nada de `.gs` nem `setupRama()`. Abas abertas na versão anterior
+recusam fichas 20 e pedem para recarregar.
+
 **v2.41.0 — PENHOR:** só o site (o ritual Barganha Insana). Publique o site; não
 precisa trocar `.gs`, criar versão da implantação nem rodar `setupRama()`. Abas
 abertas na versão anterior recusam fichas 19 e pedem para recarregar.

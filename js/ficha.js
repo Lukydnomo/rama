@@ -123,6 +123,13 @@
      pendentes e resolvidas). Uma aba antiga o descartaria ao gravar — e
      junto iria uma perda permanente: com o schema maior ela recusa.
 
+     19 → 20: ordem das perícias da universal (v2.42). A ficha ganhou
+     `organizacao.pericias` ({ modo, arrumada }). A ordem personalizada é
+     a própria lista `pericias`; uma aba antiga descartaria o modo e a
+     marca de lista já arrumada — e a próxima escolha da personalizada
+     reordenaria a lista em cima do que foi arrastado. Com o schema maior
+     ela recusa.
+
      Nenhuma das subidas exige migração: normalizarFicha() cria o que
      falta, vazio, e não toca no que existe. Um ritual gravado na 2 abre
      na 3 com a versão Normal em branco; uma ficha de Ordem gravada na 4
@@ -132,7 +139,7 @@
      os campos novos e os descartaria ao gravar — com o schema maior ela
      recusa abrir a ficha e pede para recarregar.
      Ver docs/CHARACTER_SCHEMA.md. */
-  var VERSAO_SCHEMA = 19;
+  var VERSAO_SCHEMA = 20;
 
   var MODULOS = {
     atributos: "Atributos", status: "Status/recursos", defesa: "Defesa",
@@ -144,6 +151,22 @@
     var m = {};
     Object.keys(MODULOS).forEach(function (chave) { m[chave] = !bruto || bruto[chave] !== false; });
     return m;
+  }
+
+  /* A ordem das perícias da ficha universal (v2.42), como a de Ordem:
+     alfabética, pelo bônus (maior ou menor primeiro) ou personalizada.
+     A personalizada é a própria ordem da lista `pericias`; aqui fica só
+     o modo. É apresentação: nenhuma regra muda. */
+  var MODOS_DE_PERICIA = ["az", "maior", "menor", "personalizada"];
+
+  function normalizarOrganizacao(bruto) {
+    var b = bruto && typeof bruto === "object" ? bruto : {};
+    var per = b.pericias && typeof b.pericias === "object" ? b.pericias : {};
+    /* `arrumada`: a lista já foi posta em ordem personalizada uma vez —
+       a partir daí, escolher a personalizada não a reordena mais. */
+    var saida = { modo: MODOS_DE_PERICIA.indexOf(per.modo) >= 0 ? per.modo : "az" };
+    if (per.arrumada === true) saida.arrumada = true;
+    return { pericias: saida };
   }
 
   function moduloAtivo(ficha, chave) {
@@ -394,6 +417,7 @@
       pericias: tipoDeFicha(i.tipoFicha) === "ordem"
         ? PERICIAS_PADRAO.map(function (p) { return criarPericia(p, porSigla); }) : [],
       modulos: normalizarModulos(i.modulos),
+      organizacao: normalizarOrganizacao(null),
       aliados: [],
 
       habilidades: global.RAMAHabilidades.arvoreVazia(),
@@ -907,6 +931,7 @@
     ficha.pericias = lista(b.pericias).map(function (p) {
       return normalizarPericia(p, idsAtributo, primeiroAtributo);
     }).filter(Boolean);
+    ficha.organizacao = normalizarOrganizacao(b.organizacao);
 
     /* ---- inventário ---- */
     var inv = (b.inventario && typeof b.inventario === "object") ? b.inventario : {};
@@ -1200,6 +1225,8 @@
   global.RAMAFicha = {
     MODULOS: MODULOS,
     normalizarModulos: normalizarModulos,
+    MODOS_DE_PERICIA: MODOS_DE_PERICIA,
+    normalizarOrganizacao: normalizarOrganizacao,
     moduloAtivo: moduloAtivo,
     VERSAO_SCHEMA: VERSAO_SCHEMA,
     TIPOS_FICHA: TIPOS_FICHA,
