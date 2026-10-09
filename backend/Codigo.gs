@@ -328,6 +328,15 @@ function rotasDoNucleo() {
   excluir_personagem:    { publica: false, fn: acaoExcluirPersonagem },
   duplicar_personagem:   { publica: false, fn: acaoDuplicarPersonagem },
 
+  /* Compartilhamento de fichas (v2.44): gerenciar é do dono; a lista
+     recebida e a pergunta de acesso são de quem recebeu; copiar, de
+     quem alcança a ficha com essa capacidade. */
+  listar_compartilhamentos:      { publica: false, fn: acaoListarCompartilhamentos },
+  salvar_compartilhamentos:      { publica: false, fn: acaoSalvarCompartilhamentos },
+  listar_compartilhados_comigo:  { publica: false, fn: acaoListarCompartilhadosComigo },
+  acesso_personagem:             { publica: false, fn: acaoAcessoPersonagem },
+  copiar_personagem:             { publica: false, fn: acaoCopiarPersonagem },
+
   /* A organização pessoal da página Personagens (v2.26). Só o dono:
      ser mestre de uma mesa dá acesso à ficha, não às pastas da conta. */
   criar_pasta:           { publica: false, fn: acaoCriarPasta },
@@ -406,6 +415,9 @@ function acoesDeLote() {
     resumo: true,
     listar_personagens: true,
     ler_personagem: true,
+    acesso_personagem: true,
+    listar_compartilhamentos: true,
+    listar_compartilhados_comigo: true,
     ler_foto: true,
     ler_fotos: true,
     ler_avatares: true,
@@ -1291,47 +1303,183 @@ function daCampanhaLeves(definicao, campanhaId) {
 /* =====================================================================
    ACESSO A PERSONAGEM
    ---------------------------------------------------------------------
-   O ponto onde a v1 e a v2 se separam. Duas portas, e só duas:
+   Três portas, e só três (v2.44):
 
      1. é seu;
      2. é de um jogador, está vinculado a uma campanha, e quem pede é o
-        mestre DAQUELA campanha.
+        mestre DAQUELA campanha;
+     3. o dono compartilhou a ficha com você, como Editor ou Leitor —
+        uma linha em PERSONAGENS_ACESSOS, escrita só pelo dono.
 
    A segunda porta confere o vínculo no BANCO. Não basta o pedido vir
    com um campanhaId: se o personagem não estiver realmente naquela
    campanha, ou quem pede não for realmente mestre dela, a porta não
    abre. É por isso que o campanhaId do corpo da requisição não entra
    nesta função — ela lê o do próprio personagem.
+
+   CAPACIDADES. Cada porta dá um conjunto, e o acesso efetivo é a soma:
+
+                     ler  editar  copiar  gerenciar
+     dono             ✓     ✓       ✓        ✓
+     mestre           ✓     ✓       ·        ·
+     editor           ✓     ✓       ✓        ·
+     leitor           ✓     ·       ✓        ·
+
+   Tirar um compartilhamento não tira o que vale por outra porta: o
+   mestre da campanha continua mestre. Ninguém além do dono apaga a
+   ficha, troca a campanha dela, mexe nas pastas dele ou compartilha.
+
+   O PADRÃO É EDITAR. personagemAcessivel() sem opção exige a capacidade
+   de editar — era o que as duas portas antigas davam, e é o que toda
+   gravação pede. Quem só lê diz { leitura: true }; o leitor nunca passa
+   por um caminho de gravação por esquecimento de alguém.
    ===================================================================== */
 
+var PAPEL_EDITOR = 'editor';
+var PAPEL_LEITOR = 'leitor';
+var PAPEIS_DE_COMPARTILHAMENTO = [PAPEL_EDITOR, PAPEL_LEITOR];
+var MAX_COMPARTILHAMENTOS = 50;
+
+function papelDeCompartilhamento(valor) {
+  var p = String(valor || '');
+  return PAPEIS_DE_COMPARTILHAMENTO.indexOf(p) >= 0 ? p : '';
+}
+
+/* A aba existe? Sem setupRama desta versão, o compartilhamento não
+   existe — e as portas antigas continuam funcionando como sempre. */
+function compartilhamentoPronto() {
+  var e = exec();
+  if (e.compartilhamentoPronto !== undefined) return e.compartilhamentoPronto;
+  try { aba(ABAS.PERSONAGENS_ACESSOS); e.compartilhamentoPronto = true; } catch (erro) { e.compartilhamentoPronto = false; }
+  return e.compartilhamentoPronto;
+}
+
+/* As linhas de acesso, por personagem — lidas uma vez por execução
+   (o Dados.gs guarda a varredura) e indexadas aqui. */
+function indiceDeAcessos() {
+  if (!compartilhamentoPronto()) return { porPersonagem: {}, porConta: {} };
+  var linhas = lerTudo(ABAS.PERSONAGENS_ACESSOS);
+  var e = exec();
+  if (e.indiceAcessos && e.indiceAcessos.fonte === linhas) return e.indiceAcessos;
+  var porPersonagem = {};
+  var porConta = {};
+  linhas.forEach(function (l) {
+    if (!papelDeCompartilhamento(l.papel)) return;
+    var p = String(l.personagemId);
+    var u = String(l.userId);
+    (porPersonagem[p] = porPersonagem[p] || []).push(l);
+    (porConta[u] = porConta[u] || []).push(l);
+  });
+  e.indiceAcessos = { fonte: linhas, porPersonagem: porPersonagem, porConta: porConta };
+  return e.indiceAcessos;
+}
+
+function acessosDoPersonagem(personagemId) {
+  return (indiceDeAcessos().porPersonagem[String(personagemId)] || []).slice();
+}
+
+/* O papel desta conta nesta ficha, pelo compartilhamento direto. Duas
+   linhas para o mesmo par (não deveria haver) valem pela mais forte. */
+function papelCompartilhado(personagemId, userId) {
+  var papel = '';
+  acessosDoPersonagem(personagemId).forEach(function (l) {
+    if (String(l.userId) !== String(userId)) return;
+    if (l.papel === PAPEL_EDITOR) papel = PAPEL_EDITOR;
+    else if (!papel) papel = PAPEL_LEITOR;
+  });
+  return papel;
+}
+
+/* O acesso efetivo, com as capacidades e o caminho de cada uma. Nada
+   aqui vem do pedido: personagem, campanha e compartilhamento são lidos
+   do banco, na hora. */
+function acessoAoPersonagem(personagem, usuario) {
+  var a = {
+    dono: false, mestre: false, papel: '', campanha: null,
+    capacidades: { ler: false, editar: false, copiar: false, gerenciar: false, dono: false },
+  };
+  if (!personagem || !usuario) return a;
+
+  if (meu(personagem, usuario)) {
+    a.dono = true;
+    a.capacidades = { ler: true, editar: true, copiar: true, gerenciar: true, dono: true };
+    return a;
+  }
+
+  if (personagem.campanhaId) {
+    var campanha = campanhaLeve(personagem.campanhaId);
+    if (campanha && papelNaCampanha(campanha, usuario) === PAPEL_MESTRE) {
+      a.mestre = true;
+      a.campanha = campanha;
+      a.capacidades.ler = true;
+      a.capacidades.editar = true;
+    }
+  }
+
+  var papel = papelCompartilhado(personagem.id, usuario.id);
+  if (papel) {
+    a.papel = papel;
+    a.capacidades.ler = true;
+    a.capacidades.copiar = true;
+    if (papel === PAPEL_EDITOR) a.capacidades.editar = true;
+  }
+  return a;
+}
+
+/* opcoes:
+     leitura              basta ler (ler_personagem, foto, acesso)
+     copiar               exige a capacidade de copiar
+     exigeDono            só o dono (apagar, duplicar, compartilhar)
+     semCompartilhamento  só as portas antigas — dono ou mestre. Para o
+                          que fala EM NOME do personagem numa campanha
+                          (rolagens, ajustes e efeitos da mesa): receber
+                          a ficha não põe ninguém na mesa.
+   Sem opção: exige editar. */
 function personagemAcessivel(personagemId, usuario, opcoes) {
   var o = opcoes || {};
   var personagem = acharPor(ABAS.PERSONAGENS, 'id', personagemId);
   if (!personagem) return { ok: false, erro: 'nao_encontrado' };
 
-  if (meu(personagem, usuario)) {
-    return { ok: true, personagem: personagem, dono: true, mestre: false };
+  var a = acessoAoPersonagem(personagem, usuario);
+
+  /* Sem nenhuma porta, o registro não existe para quem pede. */
+  if (!a.capacidades.ler) return { ok: false, erro: 'nao_encontrado' };
+
+  var resposta = {
+    ok: true, personagem: personagem, dono: a.dono, mestre: a.mestre,
+    compartilhamento: a.papel || null, capacidades: a.capacidades,
+  };
+  if (a.campanha) resposta.campanha = a.campanha;
+
+  /* Ser mestre ou ter a ficha compartilhada não é ser dono. Apagar,
+     duplicar e compartilhar continuam sendo do dono, e só dele. */
+  if (o.exigeDono) return a.dono ? resposta : { ok: false, erro: 'sem_permissao' };
+
+  if (o.semCompartilhamento) {
+    return (a.dono || a.mestre) ? resposta : { ok: false, erro: 'nao_encontrado' };
   }
 
-  /* Não é seu. Só resta o caminho do mestre — e ele exige que o
-     personagem esteja mesmo numa campanha. */
-  if (!personagem.campanhaId) return { ok: false, erro: 'nao_encontrado' };
+  if (o.leitura) return resposta;
+  if (o.copiar) return a.capacidades.copiar ? resposta : { ok: false, erro: 'sem_permissao' };
+  return a.capacidades.editar ? resposta : { ok: false, erro: 'sem_permissao' };
+}
 
-  /* Para decidir o papel bastam id, dono e visibilidade — todas
-     colunas leves. O dadosJson da campanha não entra nesta decisão e
-     não precisa ser lido para tomá-la. */
-  var campanha = campanhaLeve(personagem.campanhaId);
-  if (!campanha) return { ok: false, erro: 'nao_encontrado' };
-
-  if (papelNaCampanha(campanha, usuario) !== PAPEL_MESTRE) {
-    return { ok: false, erro: 'nao_encontrado' };
-  }
-
-  /* Ser mestre não é ser dono. Apagar e transferir continuam sendo do
-     dono, e só dele. */
-  if (o.exigeDono) return { ok: false, erro: 'sem_permissao' };
-
-  return { ok: true, personagem: personagem, dono: false, mestre: true, campanha: campanha };
+/* O que a tela recebe sobre o acesso: quem é o dono, por qual porta
+   quem pede entrou, e o que pode fazer. Rótulo e orientação — a
+   decisão é tomada de novo em cada gravação. */
+function descricaoDoAcesso(acesso) {
+  var p = acesso.personagem;
+  var contas = contasDoSistema();
+  var dono = contas[String(p.ownerId)] || {};
+  var saida = {
+    papel: acesso.dono ? 'dono' : (acesso.compartilhamento || (acesso.mestre ? 'mestre' : '')),
+    compartilhada: !!acesso.compartilhamento,
+    mestre: !!acesso.mestre,
+    dono: { id: String(p.ownerId), nome: String(dono.nome || dono.usuario || ''), usuario: String(dono.usuario || '') },
+  };
+  /* Só o dono fica sabendo quantos receberam a ficha: é ele quem gerencia. */
+  if (acesso.dono) saida.compartilhamentos = acessosDoPersonagem(p.id).length;
+  return saida;
 }
 
 /* A campanha sem o dadosJson. É o bastante para decidir papel, que é
@@ -1491,11 +1639,14 @@ function acaoLerFotos(corpo, usuario) {
   ids.forEach(function (id) { pedidos[String(id)] = true; });
 
   var alcance = campanhasDoUsuario(usuario);
+  /* v2.44: a foto de uma ficha compartilhada com esta conta. */
+  var recebidas = {};
+  (indiceDeAcessos().porConta[String(usuario.id)] || []).forEach(function (l) { recebidas[String(l.personagemId)] = true; });
 
   var permitidos = {};
   lerLeves(ABAS.PERSONAGENS).forEach(function (p) {
     if (!pedidos[String(p.id)]) return;
-    if (meu(p, usuario)) { permitidos[String(p.id)] = true; return; }
+    if (meu(p, usuario) || recebidas[String(p.id)]) { permitidos[String(p.id)] = true; return; }
 
     var daMesa = alcance[String(p.campanhaId || '')];
     if (daMesa && daMesa.papel !== PAPEL_ESPECTADOR) permitidos[String(p.id)] = true;
@@ -2371,7 +2522,9 @@ function comVinculoDaColuna(ficha, registro) {
 }
 
 function acaoLerPersonagem(corpo, usuario) {
-  var acesso = personagemAcessivel(corpo.personagemId, usuario);
+  /* Ler basta para abrir — o Leitor recebe a ficha. Gravar é outra
+     conferência, feita de novo em cada gravação. */
+  var acesso = personagemAcessivel(corpo.personagemId, usuario, { leitura: true });
   if (!acesso.ok) return acesso;
 
   /* Falhou em montar: erro, com o motivo — nunca uma ficha vazia. */
@@ -2387,6 +2540,10 @@ function acaoLerPersonagem(corpo, usuario) {
        permissão já foi tomada aqui; isto é só o rótulo. */
     dono: acesso.dono,
     mestre: acesso.mestre,
+    /* v2.44: o que esta conta pode fazer, e por qual porta entrou. A tela
+       se orienta por aqui; o servidor confere de novo a cada gravação. */
+    capacidades: acesso.capacidades,
+    acesso: descricaoDoAcesso(acesso),
     dados: comVinculoDaColuna(lido.ficha, lido.registro),
   };
 }
@@ -2664,6 +2821,12 @@ function acaoExcluirPersonagem(corpo, usuario) {
       if (ind) apagarLinha(ABAS.PERSONAGENS_ORGANIZACAO, ind._linha);
     }
 
+    /* Os compartilhamentos da ficha acabam com ela (v2.44): a ficha some
+       da lista de quem a recebeu. Cópias já feitas são de outras contas e
+       não são tocadas. */
+    var acessos = acessosDoPersonagem(registro.id);
+    if (acessos.length) apagarLinhas(ABAS.PERSONAGENS_ACESSOS, acessos.map(function (l) { return l._linha; }));
+
     avisarMesas([registro.campanhaId], ['personagens', 'combates']);
 
     return { ok: true };
@@ -2682,35 +2845,6 @@ function acaoDuplicarPersonagem(corpo, usuario) {
     if (!acesso.ok) return acesso;
     var registro = acesso.personagem;
 
-    /* Duplicar o que não se conseguiu ler seria criar uma cópia vazia
-       com cara de cópia. */
-    var lido = lerFichaDoPersonagem(registro);
-    if (!lido.ok) return lido;
-
-    var ficha = comVinculoDaColuna(lido.ficha, registro);
-    var agora = new Date().toISOString();
-    var id = novoId();
-
-    ficha.nome = String(ficha.nome || registro.nome || 'Sem nome') + ' (cópia)';
-    ficha.criadoEm = agora;
-    ficha.atualizadoEm = agora;
-
-    var novo = {
-      id: id,
-      ownerId: usuario.id,
-      nome: ficha.nome.slice(0, 120),
-      campanhaId: registro.campanhaId || '',
-      classe: registro.classe || '',
-      origem: registro.origem || '',
-      criadoEm: agora,
-      atualizadoEm: agora,
-      rev: 1,
-    };
-
-    var publicado = publicarFicha(novo, ficha, { inserir: true, operacao: operacao });
-    if (!publicado.ok) return publicado;
-    lembrarOperacao(usuario, operacao, id);
-
     /* A cópia fica na mesma pasta da original e com o mesmo sistema —
        nenhuma pasta nova. */
     var pastaDaOriginal = '';
@@ -2720,20 +2854,74 @@ function acaoDuplicarPersonagem(corpo, usuario) {
         pastaDaOriginal = String(indOriginal.pastaId);
       }
     }
-    indiceSemFalhar(novo, ficha, pastaDaOriginal);
+    return criarCopiaDoPersonagem(registro, usuario, { operacao: operacao, manterCampanha: true, pastaId: pastaDaOriginal });
+  });
+}
 
-    var foto = acharPor(ABAS.PERSONAGENS_FOTOS, 'personagemId', corpo.personagemId);
-    if (foto && String(foto.ownerId) === String(usuario.id) && foto.imagem) {
+/* A cópia de um personagem, para a conta de quem pede. Chamada DENTRO da
+   trava, depois da conferência de acesso. Duplicar (o dono, na própria
+   biblioteca) mantém a campanha e a pasta; copiar uma ficha recebida
+   (v2.44) não leva campanha, confere o tema de dados contra a coleção
+   de quem copia e leva a foto da original, seja de quem for.
+     o.operacao          id da operação, para a repetição
+     o.manterCampanha    a cópia fica na campanha da original
+     o.pastaId           pasta desta conta (já conferida) ou ''
+     o.conferirTema      o tema de dados só fica se esta conta o tem
+     o.fotoDeQualquerDono  copia a foto mesmo que a linha seja de outra conta */
+function criarCopiaDoPersonagem(registro, usuario, o) {
+  /* Copiar o que não se conseguiu ler seria criar uma cópia vazia com
+     cara de cópia. */
+  var lido = lerFichaDoPersonagem(registro);
+  if (!lido.ok) return lido;
+
+  var ficha = comVinculoDaColuna(lido.ficha, registro);
+  var agora = new Date().toISOString();
+  var id = novoId();
+  var campanhaId = o.manterCampanha ? (registro.campanhaId || '') : '';
+
+  ficha.nome = String(ficha.nome || registro.nome || 'Sem nome') + ' (cópia)';
+  ficha.criadoEm = agora;
+  ficha.atualizadoEm = agora;
+  ficha.campanhaId = campanhaId || null;
+  ficha.ownerId = undefined;
+  ficha.id = undefined;
+
+  var avisoDosDados = o.conferirTema ? conferirTemaDosDados(ficha, usuario.id) : null;
+
+  var novo = {
+    id: id,
+    ownerId: usuario.id,
+    nome: ficha.nome.slice(0, 120),
+    campanhaId: campanhaId,
+    classe: registro.classe || '',
+    origem: registro.origem || '',
+    criadoEm: agora,
+    atualizadoEm: agora,
+    rev: 1,
+  };
+
+  var publicado = publicarFicha(novo, ficha, { inserir: true, operacao: o.operacao });
+  if (!publicado.ok) return publicado;
+  lembrarOperacao(usuario, o.operacao, id);
+
+  indiceSemFalhar(novo, ficha, o.pastaId || '');
+
+  var foto = acharPor(ABAS.PERSONAGENS_FOTOS, 'personagemId', registro.id);
+  if (foto && (o.fotoDeQualquerDono || String(foto.ownerId) === String(usuario.id))) {
+    var imagem = imagemDe(foto, 'imagem');
+    if (imagem) {
       var copiaFoto = { personagemId: id, ownerId: usuario.id, atualizadoEm: agora };
-      if (aplicarImagem(ABAS.PERSONAGENS_FOTOS, copiaFoto, 'imagem', imagemDe(foto, 'imagem'))) {
+      if (aplicarImagem(ABAS.PERSONAGENS_FOTOS, copiaFoto, 'imagem', imagem)) {
         inserir(ABAS.PERSONAGENS_FOTOS, copiaFoto);
       }
     }
+  }
 
-    avisarMesas([registro.campanhaId], ['personagens']);
+  if (campanhaId) avisarMesas([campanhaId], ['personagens']);
 
-    return { ok: true, dados: { id: id } };
-  });
+  var saida = { ok: true, dados: { id: id } };
+  if (avisoDosDados) saida.avisos = [avisoDosDados];
+  return saida;
 }
 
 /* Uma campanha só entra na ficha se existir E for desta conta. Sem
@@ -2753,11 +2941,259 @@ function campanhaValida(campanhaId, usuario) {
 }
 
 /* =====================================================================
+   COMPARTILHAMENTO DE FICHAS (v2.44)
+   ---------------------------------------------------------------------
+   O dono dá a outra conta acesso à ficha ORIGINAL, como Editor (altera a
+   mesma ficha, pelo mesmo salvamento, revisão e conciliação de sempre)
+   ou Leitor (consulta). Os dois podem copiar a ficha para a própria
+   biblioteca — uma cópia independente, sem campanha e sem acessos.
+
+   O QUE NÃO MUDA
+     · ownerId. Compartilhar não transfere nada;
+     · a campanha. Receber a ficha não põe ninguém na mesa, não abre
+       documentos, notas, combates nem histórico, e não deixa registrar
+       rolagem em nome do personagem;
+     · as pastas do dono. Quem recebe vê a ficha numa lista própria
+       ("Compartilhados comigo"), sem as pastas de quem compartilhou;
+     · o tema de dados: segue a coleção da conta DONA. Editar não dá
+       recompensa, e copiar confere a coleção de quem copiou.
+
+   A CONFIGURAÇÃO TEM VERSÃO
+     A lista de acessos de uma ficha tem uma versão — o resumo dos pares
+     conta:papel. Quem salva manda a versão que leu; se outra janela
+     mudou a lista nesse meio-tempo, a gravação é recusada com a lista
+     atual, em vez de uma janela apagar o que a outra fez. Mudar acesso
+     não toca na ficha nem na revisão dela: nada que estava sendo editado
+     se perde ou entra em conflito por isso.
+   ===================================================================== */
+
+/* O resumo da lista de acessos — a "versão" que vai e volta. */
+function versaoDosAcessos(linhas) {
+  var pares = (linhas || []).map(function (l) { return String(l.userId) + ':' + String(l.papel); }).sort();
+  return 'a' + sha256Hex(pares.join('|')).slice(0, 16);
+}
+
+/* O mestre da campanha da ficha continua alcançando-a por lá, com ou
+   sem compartilhamento. A tela do dono precisa saber disso para não
+   prometer que tirar o acesso tranca a ficha. */
+function mestresDaFicha(registro) {
+  var saida = {};
+  if (!registro || !registro.campanhaId) return saida;
+  var campanha = campanhaLeve(registro.campanhaId);
+  if (!campanha) return saida;
+  saida[String(campanha.ownerId)] = true;
+  membrosDaCampanha(campanha.id).forEach(function (m) {
+    if (String(m.papel) === PAPEL_MESTRE) saida[String(m.userId)] = true;
+  });
+  return saida;
+}
+
+function acessosParaCliente(registro, linhas) {
+  var contas = contasDoSistema();
+  var mestres = mestresDaFicha(registro);
+  var perfis = versoesDeAvatar(linhas.map(function (l) { return l.userId; }));
+  return linhas
+    .map(function (l) {
+      var c = contas[String(l.userId)] || {};
+      return {
+        userId: String(l.userId),
+        nome: String(c.nome || c.usuario || ''),
+        usuario: String(c.usuario || ''),
+        ativo: !!c.ativo,
+        avatarVersao: perfis[String(l.userId)] || '',
+        papel: String(l.papel),
+        criadoEm: l.criadoEm || '',
+        /* Continua alcançando a ficha como mestre da campanha dela. */
+        viaMestre: !!mestres[String(l.userId)],
+      };
+    })
+    .sort(function (a, b) { return String(a.nome).localeCompare(String(b.nome), 'pt-BR', { sensitivity: 'base' }); });
+}
+
+function acaoListarCompartilhamentos(corpo, usuario) {
+  if (!compartilhamentoPronto()) return { ok: false, erro: 'instalacao_incompleta' };
+  var acesso = personagemAcessivel(corpo.personagemId, usuario, { exigeDono: true });
+  if (!acesso.ok) return acesso;
+  var linhas = acessosDoPersonagem(acesso.personagem.id);
+  return {
+    ok: true,
+    dados: {
+      personagemId: String(acesso.personagem.id),
+      versao: versaoDosAcessos(linhas),
+      acessos: acessosParaCliente(acesso.personagem, linhas),
+      /* Os ids de quem é mestre da campanha da ficha: a tela avisa que
+         esse acesso continua por lá. */
+      mestres: Object.keys(mestresDaFicha(acesso.personagem)).filter(function (id) { return id !== String(usuario.id); }),
+    },
+  };
+}
+
+/* Substitui a lista inteira de acessos de UMA ficha. Só o dono. Cada
+   destinatário é conferido: conta que existe e está ativa, nunca o
+   próprio dono, nunca duas vezes, papel conhecido. */
+function acaoSalvarCompartilhamentos(corpo, usuario) {
+  if (!compartilhamentoPronto()) return { ok: false, erro: 'instalacao_incompleta' };
+  var pedidos = Array.isArray(corpo.acessos) ? corpo.acessos : null;
+  if (!pedidos || pedidos.length > MAX_COMPARTILHAMENTOS) return { ok: false, erro: 'dados_invalidos' };
+  var versaoLida = String(corpo.versao || '');
+  if (!versaoLida) return { ok: false, erro: 'dados_invalidos' };
+
+  return comTrava(function () {
+    var acesso = personagemAcessivel(corpo.personagemId, usuario, { exigeDono: true });
+    if (!acesso.ok) return acesso;
+    var registro = acesso.personagem;
+    var contas = contasDoSistema();
+
+    var desejado = {};
+    for (var i = 0; i < pedidos.length; i++) {
+      var p = pedidos[i];
+      var uid = p && typeof p.userId === 'string' ? p.userId : '';
+      var papel = papelDeCompartilhamento(p && p.papel);
+      if (!uid || !papel) return { ok: false, erro: 'dados_invalidos' };
+      if (uid === String(registro.ownerId)) return { ok: false, erro: 'dados_invalidos', motivo: 'dono' };
+      if (desejado[uid]) return { ok: false, erro: 'dados_invalidos', motivo: 'repetido' };
+      var conta = contas[uid];
+      if (!conta || !conta.ativo) return { ok: false, erro: 'dados_invalidos', motivo: 'conta' };
+      desejado[uid] = papel;
+    }
+
+    var atuais = acessosDoPersonagem(registro.id);
+    if (versaoDosAcessos(atuais) !== versaoLida) {
+      return {
+        ok: false, erro: 'conflito',
+        dados: { versao: versaoDosAcessos(atuais), acessos: acessosParaCliente(registro, atuais) },
+      };
+    }
+
+    var agora = new Date().toISOString();
+    var porConta = {};
+    var apagar = [];
+    atuais.forEach(function (l) {
+      var u = String(l.userId);
+      /* Linha repetida para a mesma conta (não deveria existir): sai. */
+      if (porConta[u] || !desejado[u]) { apagar.push(l._linha); return; }
+      porConta[u] = l;
+    });
+
+    Object.keys(desejado).forEach(function (u) {
+      var l = porConta[u];
+      if (!l) {
+        inserir(ABAS.PERSONAGENS_ACESSOS, {
+          id: novoId(), personagemId: registro.id, ownerId: registro.ownerId, userId: u,
+          papel: desejado[u], criadoEm: agora, atualizadoEm: agora,
+        });
+      } else if (String(l.papel) !== desejado[u]) {
+        l.papel = desejado[u];
+        l.atualizadoEm = agora;
+        atualizarCampos(ABAS.PERSONAGENS_ACESSOS, l, ['papel', 'atualizadoEm']);
+      }
+    });
+    if (apagar.length) apagarLinhas(ABAS.PERSONAGENS_ACESSOS, apagar);
+
+    var finais = acessosDoPersonagem(registro.id);
+    return {
+      ok: true,
+      dados: { versao: versaoDosAcessos(finais), acessos: acessosParaCliente(registro, finais) },
+    };
+  });
+}
+
+/* As fichas que outras contas compartilharam com quem pede. Só o
+   cabeçalho de cada uma — nome, sistema, versão da foto, dono e papel —
+   e nunca a ficha, a pasta do dono ou a campanha. */
+function acaoListarCompartilhadosComigo(corpo, usuario) {
+  if (!compartilhamentoPronto()) return { ok: true, dados: [], disponivel: false };
+  var minhas = indiceDeAcessos().porConta[String(usuario.id)] || [];
+  var papelPorId = {};
+  minhas.forEach(function (l) {
+    var id = String(l.personagemId);
+    if (papelPorId[id] === PAPEL_EDITOR) return;
+    papelPorId[id] = String(l.papel);
+  });
+  if (!Object.keys(papelPorId).length) return { ok: true, dados: [], disponivel: true };
+
+  var registros = lerLeves(ABAS.PERSONAGENS).filter(function (p) {
+    return papelPorId[String(p.id)] && !meu(p, usuario);
+  });
+
+  var fotos = {};
+  var linhasDeFoto = lerLeves(ABAS.PERSONAGENS_FOTOS).filter(function (f) { return papelPorId[String(f.personagemId)]; });
+  var datas = lerCelulas(ABAS.PERSONAGENS_FOTOS, linhasDeFoto, 'atualizadoEm');
+  linhasDeFoto.forEach(function (f) { fotos[String(f.personagemId)] = String(datas[f._linha] || ''); });
+
+  var sistemas = {};
+  if (organizacaoPronta()) {
+    lerLeves(ABAS.PERSONAGENS_ORGANIZACAO).forEach(function (l) {
+      if (papelPorId[String(l.personagemId)]) sistemas[String(l.personagemId)] = String(l.sistema || '');
+    });
+  }
+
+  var contas = contasDoSistema();
+  var lista = registros.map(function (p) {
+    var dono = contas[String(p.ownerId)] || {};
+    var id = String(p.id);
+    return {
+      id: id,
+      nome: p.nome,
+      classe: p.classe || '',
+      origem: p.origem || '',
+      criadoEm: p.criadoEm,
+      atualizadoEm: p.atualizadoEm,
+      rev: Number(p.rev) || 0,
+      fotoVersao: fotos[id] || '',
+      sistema: sistemas[id] === undefined ? null : sistemas[id],
+      papel: papelPorId[id],
+      dono: { id: String(p.ownerId), nome: String(dono.nome || dono.usuario || ''), usuario: String(dono.usuario || '') },
+    };
+  }).sort(function (a, b) { return String(b.atualizadoEm).localeCompare(String(a.atualizadoEm)); });
+
+  return { ok: true, dados: lista, disponivel: true };
+}
+
+/* A pergunta leve da ficha aberta: a revisão e o que quem pede pode
+   fazer agora. É por ela que a tela percebe uma versão nova gravada por
+   outra pessoa e um acesso que mudou (rebaixado, retirado). Só colunas
+   leves. */
+function acaoAcessoPersonagem(corpo, usuario) {
+  var acesso = personagemAcessivel(corpo.personagemId, usuario, { leitura: true });
+  if (!acesso.ok) return acesso;
+  return {
+    ok: true,
+    rev: Number(acesso.personagem.rev) || 0,
+    dados: { capacidades: acesso.capacidades, acesso: descricaoDoAcesso(acesso) },
+  };
+}
+
+/* Copiar uma ficha que a conta alcança para a própria biblioteca. A
+   original é lida AQUI, da planilha — o pedido traz só o id. A cópia é
+   nova em tudo: id, dono (quem pediu), datas, revisão; sem campanha, sem
+   acessos e numa pasta desta conta (ou em nenhuma). */
+function acaoCopiarPersonagem(corpo, usuario) {
+  var operacao = idDeOperacao(corpo.operacaoId);
+  var pastaPedida = corpo.pastaId === undefined || corpo.pastaId === null ? '' : String(corpo.pastaId);
+  if (pastaPedida && !idValido(pastaPedida)) return { ok: false, erro: 'dados_invalidos' };
+
+  return comTrava(function () {
+    /* A mesma cópia chegando de novo: devolve a que ela fez. */
+    var repetido = personagemDaOperacao(usuario, operacao);
+    if (repetido) return { ok: true, dados: { id: repetido.id }, repetida: true };
+
+    var acesso = personagemAcessivel(corpo.personagemId, usuario, { copiar: true });
+    if (!acesso.ok) return acesso;
+
+    var pasta = pastaPedida && organizacaoPronta() && minhaPasta(pastaPedida, usuario) ? pastaPedida : '';
+    return criarCopiaDoPersonagem(acesso.personagem, usuario, {
+      operacao: operacao, manterCampanha: false, pastaId: pasta, conferirTema: true, fotoDeQualquerDono: true,
+    });
+  });
+}
+
+/* =====================================================================
    FOTOS
    ===================================================================== */
 
 function acaoLerFoto(corpo, usuario) {
-  var acesso = personagemAcessivel(corpo.personagemId, usuario);
+  var acesso = personagemAcessivel(corpo.personagemId, usuario, { leitura: true });
   if (!acesso.ok) return acesso;
 
   /* A permissão já foi decidida pelo acesso ao personagem. Conferir o

@@ -78,6 +78,12 @@
     ficha_grande_demais: true,
     ficha_ilegivel: true,
     dados_grandes: true,
+    /* Sem permissão (v2.44): o acesso de Editor foi rebaixado ou retirado,
+       ou a ficha foi excluída. Insistir não devolve o acesso — e mandar o
+       rascunho para a original depois de revogado é justamente o que não
+       pode acontecer. Tudo continua pendente na tela. */
+    sem_permissao: true,
+    nao_encontrado: true,
   };
 
   function novaOperacao() {

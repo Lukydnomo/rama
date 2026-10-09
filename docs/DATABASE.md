@@ -1,5 +1,25 @@
 # O banco
 
+## PERSONAGENS_ACESSOS — v2.44
+
+> **Atualizando para a v2.44:** troque `Codigo.gs`, `Campanhas.gs` e `Dados.gs`, rode
+> `setupRama()` (cria a aba; repetir não muda nada) e crie uma versão nova da implantação.
+> Nenhuma ficha é migrada.
+
+| coluna | |
+|---|---|
+| `id` | do servidor |
+| `personagemId` | a ficha compartilhada |
+| `ownerId` | o dono da ficha quando a linha foi criada (diagnóstico; a permissão vale pelo dono atual) |
+| `userId` | a conta que recebeu — sempre pelo ID |
+| `papel` | `editor` ou `leitor` (qualquer outro valor é ignorado) |
+| `criadoEm`, `atualizadoEm` | |
+
+Uma linha por par ficha–conta (`salvar_compartilhamentos` desfaz uma repetição). Fora
+da ficha e fora de `PERSONAGENS`: salvar o conteúdo nunca toca aqui, exportar e importar
+não levam nada daqui, e a cópia não herda. Excluir a ficha apaga as linhas dela. A
+"versão" da lista é o resumo dos pares conta:papel (não há coluna para isso). Tudo leve.
+
 ## Temas de dados — v2.40
 
 > **Atualizando para a v2.40:** troque `Codigo.gs`, `Campanhas.gs` e `Dados.gs`, rode

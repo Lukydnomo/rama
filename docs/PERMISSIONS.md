@@ -2,6 +2,55 @@
 
 Quem alcança o quê, e onde isso é decidido.
 
+## Compartilhamento de fichas — v2.44
+
+O dono dá a outra conta acesso à ficha **original**, como **Editor** ou **Leitor**.
+É a terceira porta de `personagemAcessivel()` (`backend/Codigo.gs`), e a única
+gravada fora da ficha: uma linha por ficha e conta em `PERSONAGENS_ACESSOS`, que só
+`salvar_compartilhamentos` — do dono, conferido pela sessão — escreve.
+
+| Ação | Dono | Editor | Leitor | Mestre da campanha |
+|---|---|---|---|---|
+| Consultar a original | ✓ | ✓ | ✓ | ✓ |
+| Editar a original (conteúdo, foto, recursos) | ✓ | ✓ | · | ✓ |
+| Copiar para a própria biblioteca | ✓ | ✓ | ✓ | · |
+| Gerenciar o compartilhamento | ✓ | · | · | · |
+| Excluir, duplicar, mover nas pastas, mudar a campanha | ✓ | · | · | · (campanha: só o dono) |
+| Registrar rolagem, ajustar ou aplicar efeito pela mesa | ✓ | · | · | ✓ |
+| Transferir propriedade | não existe fluxo | · | · | · |
+
+- **O acesso efetivo é a soma das portas.** `acessoAoPersonagem()` devolve as
+  capacidades (`ler`, `editar`, `copiar`, `gerenciar`, `dono`); tirar o
+  compartilhamento de quem é mestre da campanha da ficha não tira o acesso de
+  mestre — a janela do dono avisa isso.
+- **O padrão é editar.** `personagemAcessivel()` sem opção exige `editar`; as leituras
+  pedem `{ leitura: true }`, a cópia `{ copiar: true }`, o que é só do dono
+  `{ exigeDono: true }` e o que fala em nome do personagem numa campanha
+  `{ semCompartilhamento: true }` (dono ou mestre). O Leitor nunca passa por um
+  caminho de gravação por esquecimento: ele recebe `sem_permissao`.
+- **Revalidado em cada gravação**, dentro da trava. Uma permissão lida ao abrir a
+  página não autoriza nada depois: o Editor rebaixado recebe `sem_permissao` na
+  gravação seguinte, e quem perdeu o acesso, `nao_encontrado`.
+- **Nada muda de dono.** `ownerId` fica; a foto continua da conta dona; a campanha da
+  ficha só muda pela mão do dono (o Editor grava conteúdo, e a coluna fica).
+- **A campanha não se abre.** Receber a ficha não põe ninguém na mesa, não libera
+  documentos, notas, combates ou histórico, e não deixa registrar rolagem em nome
+  do personagem (`registrar_rolagem`, `ajustar_personagem` e `efeito_personagem`
+  pedem dono ou mestre).
+- **Tema de dados:** a coleção que vale é a da conta **dona** (como para o mestre).
+  Editar não concede recompensa; a cópia confere a coleção de quem copiou e volta
+  ao dado padrão, com aviso, se a conta não tiver o tema.
+- **A cópia** (`copiar_personagem`) lê a original no servidor — o pedido traz só o
+  id —, é da conta que pediu, sem campanha, sem acessos e sem pasta (ou numa pasta
+  da conta de destino). Duplicar a própria ficha continua igual: só o dono, na
+  mesma campanha e pasta.
+- **No navegador**, o Leitor abre a ficha sem salvador (nada grava), sem o modo
+  Edição e com os campos só de leitura; qualquer controle que mude a ficha fora do
+  modo Edição é desfeito com aviso. A página pergunta periodicamente
+  (`acesso_personagem`) a revisão e o acesso: traz a versão nova, trava o salvador
+  do Editor rebaixado (o rascunho fica na tela, sem ir para a original) e para tudo
+  quando o acesso acaba.
+
 ## Criaturas — v2.28
 
 - O catálogo oficial é público (arquivo do site) e somente leitura: ninguém o
@@ -78,13 +127,15 @@ Três coisas, e são deliberadas:
 
 ## Acesso a personagem
 
-Duas portas, e só duas:
+Três portas (a terceira desde a v2.44 — ver no topo):
 
 ```
 1. é seu                                    → acesso total
 2. é de um jogador, está vinculado a uma
    campanha, e quem pede é mestre DAQUELA
    campanha                                 → ler e editar a ficha
+3. o dono compartilhou com você             → Editor: ler, editar, copiar
+                                              Leitor: ler, copiar
 ```
 
 A segunda porta confere o vínculo **no banco**. Não basta o pedido trazer um

@@ -399,6 +399,16 @@ body { display: flex; flex-direction: column; }
   color: var(--cor-texto-3);
 }
 .registro__estado { color: var(--cor-aviso); }
+
+/* ---------- Personagens: Compartilhados comigo (v2.44) ----------
+   As duas listas da página são abas (tablist), acima das pastas. O papel
+   recebido aparece ESCRITO (Editor / Leitor), não só por cor; o botão de
+   copiar fica por cima do link do cartão, como o menu. */
+.abas-contexto { margin-bottom: var(--e1); }
+.abas-contexto__n { color: var(--cor-texto-3); font-variant-numeric: tabular-nums; }
+.registro .registro__acao { position: relative; z-index: 2; white-space: nowrap; text-align: center; }
+.etiqueta--papel-editor { border-color: var(--cor-traco-forte); color: var(--cor-texto); }
+.etiqueta--papel-leitor { border-style: dashed; color: var(--cor-texto-2); }
 .registro--movendo { border-style: dashed; }
 
 @media (max-width: 560px) {

@@ -35,6 +35,10 @@
     "listar_personagens",
     "ler_personagem",
     "ler_foto",
+    /* Compartilhamento (v2.44): as três leituras. */
+    "acesso_personagem",
+    "listar_compartilhamentos",
+    "listar_compartilhados_comigo",
     "listar_homebrew",
     "listar_campanhas",
     "ler_campanha",
@@ -107,6 +111,9 @@
   var REPETIVEIS_COM_CHAVE = {
     criar_personagem: true,
     duplicar_personagem: true,
+    /* Copiar uma ficha recebida (v2.44): a segunda chegada do mesmo id
+       devolve a cópia que a primeira fez. */
+    copiar_personagem: true,
     /* Aplicar ou encerrar um efeito pelo combate (v2.20): o id de
        operação e o id da aplicação fazem a segunda chegada não aplicar
        nada de novo. */
@@ -462,6 +469,40 @@
 
   function duplicarPersonagem(id) {
     return post({ acao: "duplicar_personagem", personagemId: id, operacaoId: novaOperacao() });
+  }
+
+  /* =================================================================
+     COMPARTILHAMENTO DE FICHAS (v2.44)
+     -----------------------------------------------------------------
+     O dono lê e salva a lista de acessos de uma ficha (com a versão que
+     leu, para duas janelas não se sobrescreverem); quem recebeu lista as
+     fichas compartilhadas com ele, pergunta o próprio acesso (a vigia da
+     ficha aberta) e copia para a própria biblioteca.
+     ================================================================= */
+
+  function listarCompartilhamentos(personagemId) {
+    return post({ acao: "listar_compartilhamentos", personagemId: personagemId });
+  }
+
+  /* acessos: [{ userId, papel: "editor" | "leitor" }] — a lista inteira. */
+  function salvarCompartilhamentos(personagemId, versao, acessos) {
+    return post({ acao: "salvar_compartilhamentos", personagemId: personagemId, versao: versao, acessos: acessos });
+  }
+
+  function listarCompartilhadosComigo(opcoes) {
+    return post({ acao: "listar_compartilhados_comigo" }, opcoes);
+  }
+
+  /* A pergunta leve da ficha aberta: revisão e capacidades atuais. */
+  function acessoPersonagem(personagemId) {
+    return post({ acao: "acesso_personagem", personagemId: personagemId }, { segundoPlano: true });
+  }
+
+  /* `operacaoId`: o mesmo numa nova tentativa, para não virar duas cópias. */
+  function copiarPersonagem(personagemId, operacaoId, pastaId) {
+    var corpo = { acao: "copiar_personagem", personagemId: personagemId, operacaoId: operacaoId || novaOperacao() };
+    if (pastaId) corpo.pastaId = pastaId;
+    return post(corpo);
   }
 
   /* A foto anda fora da ficha, e por um motivo prático: ela é o campo
@@ -938,6 +979,11 @@
     salvarPersonagem: salvarPersonagem,
     excluirPersonagem: excluirPersonagem,
     duplicarPersonagem: duplicarPersonagem,
+    listarCompartilhamentos: listarCompartilhamentos,
+    salvarCompartilhamentos: salvarCompartilhamentos,
+    listarCompartilhadosComigo: listarCompartilhadosComigo,
+    acessoPersonagem: acessoPersonagem,
+    copiarPersonagem: copiarPersonagem,
     criarPasta: criarPasta,
     renomearPasta: renomearPasta,
     excluirPasta: excluirPasta,

@@ -1197,6 +1197,46 @@ t.grupo("Ficha em blocos — o que repetir não resolve para de repetir, sem per
   salvador.parar();
 }
 
+t.grupo("Compartilhamento (v2.44) — acesso retirado com a ficha aberta");
+
+{
+  for (const erro of ["sem_permissao", "nao_encontrado"]) {
+    const estado = { ficha: { nome: "Compartilhada" } };
+    const servidor = servidorDeFicha(estado.ficha, 3);
+    const { salvador, erros } = salvadorDeTeste(servidor, estado);
+    servidor.responderComErro = { ok: false, erro };
+    estado.ficha = { nome: "Rascunho do editor" };
+    salvador.alterou();
+    await salvador.agora();
+    await new Promise((r) => setTimeout(r, 1800));
+    t.igual(erro + ": o salvador não insiste sozinho", servidor.pedidos.length, 1);
+    t.ok("  avisa quem chamou, uma vez", erros.length === 1 && erros[0].erro === erro);
+    t.ok("  e o rascunho continua pendente na tela — não some", salvador.temPendencia() && estado.ficha.nome === "Rascunho do editor");
+    salvador.travar();
+    estado.ficha = { nome: "Mais uma tecla" };
+    salvador.alterou();
+    await new Promise((r) => setTimeout(r, 600));
+    t.igual("  travado (Editor rebaixado), nada mais sobe", servidor.pedidos.length, 1);
+    salvador.parar();
+  }
+}
+
+t.grupo("Compartilhamento (v2.44) — pedidos");
+
+{
+  t.ok("as leituras do compartilhamento podem ser repetidas", ["acesso_personagem", "listar_compartilhamentos", "listar_compartilhados_comigo"].every((a) => RAMAApi.podeRepetir(a)));
+  t.ok("copiar com id de operação pode ser repetido (a mesma cópia)", RAMAApi.podeRepetirPedido({ acao: "copiar_personagem", operacaoId: "op-1234567890" }));
+  t.ok("  sem o id, não", !RAMAApi.podeRepetirPedido({ acao: "copiar_personagem" }));
+  t.ok("salvar a lista de acessos não é repetido pelo transporte (a versão decide)", !RAMAApi.podeRepetirPedido({ acao: "salvar_compartilhamentos", versao: "a1" }));
+  comSessaoGuardada();
+  let ultimo = null;
+  rede.responder = (corpo) => { ultimo = corpo; return { ok: true, dados: { id: "copia" } }; };
+  await RAMAApi.copiarPersonagem("pers-original-1");
+  t.ok("a cópia sai com o id da original e um operacaoId — nunca com a ficha", !!ultimo && ultimo.personagemId === "pers-original-1" && /^op-/.test(ultimo.operacaoId) && ultimo.dados === undefined);
+  await RAMAApi.salvarCompartilhamentos("pers-original-1", "a123", [{ userId: "u1", papel: "editor" }]);
+  t.ok("a lista de acessos vai com a versão lida e os ids das contas", ultimo.acao === "salvar_compartilhamentos" && ultimo.versao === "a123" && ultimo.acessos[0].userId === "u1");
+}
+
 t.grupo("Ficha em blocos — o painel do mestre repete o mesmo ajuste antes do clique seguinte");
 
 {

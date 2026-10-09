@@ -642,6 +642,63 @@ body.pagina-ficha .app-corpo {
 }
 
 /* =====================================================================
+   FICHA COMPARTILHADA (v2.44)
+   ---------------------------------------------------------------------
+   Quem é o dono e com que acesso a ficha está aberta. Mesma faixa do
+   aviso de mestre, no traço neutro forte: não é atenção, é contexto. O
+   Leitor vê a faixa tracejada e o rótulo "Somente leitura" no lugar do
+   seletor de modo; os campos ficam só de leitura (readonly/disabled).
+   ===================================================================== */
+
+.ficha__aviso-acesso {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--e2);
+  padding: var(--e2) var(--e3);
+  border: var(--borda) solid var(--cor-traco-forte);
+  color: var(--cor-texto-2);
+  font-size: var(--texto-mini);
+}
+.ficha__aviso-acesso strong { color: var(--cor-texto); }
+.ficha__aviso-acesso--leitura { border-style: dashed; }
+.ficha__aviso-acesso--perdido { border-color: var(--cor-erro); color: var(--cor-erro); }
+.ficha-topo__leitura { align-self: center; white-space: nowrap; }
+.ficha--leitura input[readonly],
+.ficha--leitura textarea[readonly] { cursor: default; }
+
+/* ---------- a janela de compartilhar ---------- */
+.compartilhar { min-height: 8rem; }
+.compartilhar__secao { display: flex; flex-direction: column; gap: var(--e2); }
+.compartilhar__resultados,
+.compartilhar__acessos { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--e1); }
+.compartilhar__resultados { max-height: 14rem; overflow-y: auto; border: var(--borda) solid var(--cor-traco-fraca); padding: var(--e1) var(--e2); }
+.compartilhar__conta { display: flex; align-items: center; gap: var(--e2); min-height: var(--alvo-toque); }
+.compartilhar__quem { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0 var(--e1); min-width: 0; }
+.compartilhar__nota { flex-basis: 100%; color: var(--cor-paranormal); }
+.compartilhar__acesso {
+  display: grid;
+  grid-template-columns: auto 1fr auto auto;
+  align-items: center;
+  gap: var(--e2);
+  padding: var(--e2);
+  border: var(--borda) solid var(--cor-traco-fraca);
+}
+.compartilhar__papel { width: auto; min-width: 7.5rem; }
+.compartilhar__como { display: inline-flex; align-items: center; gap: var(--e2); }
+.compartilhar__adicionar { align-items: center; flex-wrap: wrap; }
+.compartilhar__recado { margin: 0; padding: var(--e2) var(--e3); border: var(--borda) solid var(--cor-traco-media); font-size: var(--texto-mini); }
+.compartilhar__recado--erro { border-color: var(--cor-erro); color: var(--cor-erro); }
+.compartilhar__recado--atencao { border-color: var(--cor-aviso); color: var(--cor-aviso); }
+.compartilhar__pendente { color: var(--cor-aviso); }
+@media (max-width: 560px) {
+  .compartilhar__acesso { grid-template-columns: auto 1fr; }
+  .compartilhar__acesso .compartilhar__papel,
+  .compartilhar__acesso .r-botao { grid-column: 2; justify-self: start; }
+}
+
+/* =====================================================================
    ITENS RECOLHÍVEIS
    ===================================================================== */
 

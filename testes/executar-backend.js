@@ -4830,6 +4830,8 @@ const { testarDadosBackend } = await import("./dados-backend.js");
 await testarDadosBackend({ t, preparar, novaConta, comoFn });
 const { testarCrisBackend } = await import("./cris-backend.js");
 await testarCrisBackend({ t, preparar, novaConta, comoFn, chamar });
+const { testarCompartilhamentoBackend } = await import("./compartilhamento-backend.js");
+testarCompartilhamentoBackend({ t, preparar, novaConta, comoFn });
 
 
 escrever(`\n${FORTE}${passaram + falharam} verificações${FIM} · ${VERDE}${passaram} ok${FIM} · ${falharam ? VERMELHO : CINZA}${falharam} falhas${FIM}`);

@@ -1,5 +1,41 @@
 # A API
 
+## Compartilhamento de fichas — v2.44
+
+Todas exigem sessão. Capacidades conferidas no servidor em cada chamada.
+
+- `ler_personagem` (leitura) passa a responder também `capacidades`
+  `{ ler, editar, copiar, gerenciar, dono }` e `acesso`
+  `{ papel: "dono"|"mestre"|"editor"|"leitor", compartilhada, mestre, dono: { id, nome, usuario },
+  compartilhamentos? }` — `compartilhamentos` (quantos receberam) só para o dono. `dono` e
+  `mestre` continuam como antes. O Leitor recebe a ficha; gravar é outra conferência.
+- `acesso_personagem { personagemId }` — leitura leve (lote): `{ rev, dados: { capacidades,
+  acesso } }`, ou `nao_encontrado` quando o acesso acabou ou a ficha foi excluída. É a vigia
+  da ficha aberta.
+- `listar_compartilhamentos { personagemId }` — só o dono (`sem_permissao` para quem
+  alcança a ficha por outra porta, `nao_encontrado` para quem não alcança).
+  `{ versao, acessos: [{ userId, nome, usuario, ativo, avatarVersao, papel, criadoEm,
+  viaMestre }], mestres: [userId] }`.
+- `salvar_compartilhamentos { personagemId, versao, acessos: [{ userId, papel }] }` — só o
+  dono; substitui a lista inteira. Recusa (`dados_invalidos`, com `motivo` `dono`,
+  `repetido` ou `conta`) o próprio dono, a mesma conta duas vezes, conta inexistente ou
+  inativa e papel fora de `editor`/`leitor`; até 50 contas. Versão diferente da atual →
+  `conflito` com `dados: { versao, acessos }` atuais. Não toca na ficha nem na revisão dela.
+  Fora do lote e da repetição automática.
+- `listar_compartilhados_comigo` — leitura (lote): as fichas que outras contas
+  compartilharam com a sessão, uma vez cada: `{ id, nome, classe, origem, criadoEm,
+  atualizadoEm, rev, fotoVersao, sistema, papel, dono: { id, nome, usuario } }`. Sem
+  ficha, sem pasta do dono e sem campanha. `disponivel: false` antes do `setupRama()`.
+- `copiar_personagem { personagemId, operacaoId, pastaId? }` — quem tem a capacidade
+  `copiar`. Cria a cópia na conta da sessão a partir da original lida no servidor (qualquer
+  `dados` no pedido é ignorado): id e revisão novos, sem campanha, sem acessos, na
+  `pastaId` só se for desta conta. Repetível com o mesmo `operacaoId` (devolve a mesma
+  cópia, `repetida: true`). `avisos` quando o tema de dados não é desta conta.
+- `ler_fotos` inclui as fichas compartilhadas com a sessão. `salvar_personagem`,
+  `salvar_foto` e `atualizar_resumo_personagem` exigem `editar` (Leitor → `sem_permissao`);
+  `registrar_rolagem`, `ajustar_personagem` e `efeito_personagem` exigem dono ou mestre.
+  `excluir_personagem` apaga também os compartilhamentos da ficha.
+
 ## Temas de dados — v2.40
 
 - `resgatar_codigo { codigo, operacaoId }` — a conta é a da sessão. `codigo` é

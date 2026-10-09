@@ -73,6 +73,8 @@
      disponivel: as abas existem na planilha (setupRama rodou). */
   var organizacao = { suportada: false, disponivel: false };
   var estado = { pasta: O.TODOS, busca: "", sistema: "", agrupar: false };
+  /* v2.44: qual lista está aberta — "meus" ou "recebidos". */
+  var contexto = "meus";
   var ocupados = {};
   var painel = null;
   var arrasteLigado = false;
@@ -94,7 +96,8 @@
     painel = U.$("#painel-personagens");
     lerEstadoDaUrl();
     ouvirPreferencias();
-    await carregar();
+    if (contexto === "recebidos") await carregarRecebidos();
+    else await carregar();
 
     /* A Home manda para cá com ?novo=1 quando o arquivo está vazio. */
     if (U.parametro("novo")) abrirEscolhaDeTipo();
@@ -106,6 +109,7 @@
     estado.pasta = U.parametro("pasta") || O.TODOS;
     estado.sistema = U.parametro("sistema") || "";
     estado.agrupar = U.parametro("agrupar") === "1";
+    contexto = U.parametro("lista") === "recebidos" ? "recebidos" : "meus";
   }
 
   function gravarEstadoNaUrl() {
@@ -115,17 +119,19 @@
       if (estado.pasta && estado.pasta !== O.TODOS) p.set("pasta", estado.pasta); else p.delete("pasta");
       if (estado.sistema) p.set("sistema", estado.sistema); else p.delete("sistema");
       if (estado.agrupar) p.set("agrupar", "1"); else p.delete("agrupar");
+      if (contexto === "recebidos") p.set("lista", "recebidos"); else p.delete("lista");
       var q = p.toString();
       global.history.replaceState(null, "", location.pathname + (q ? "?" + q : "") + location.hash);
     } catch (e) { /* sem histórico: só não lembra */ }
   }
 
   async function carregar() {
-    U.trocar(painel, [cabecalho(), UI.carregando("Consultando arquivo")]);
+    U.trocar(painel, [cabecalho(), abasDeContexto(), UI.carregando("Consultando arquivo")]);
 
     var r = await global.RAMAApi.listarPersonagens();
+    if (contexto !== "meus") return;
     if (!r.ok) {
-      U.trocar(painel, [cabecalho(), UI.erroDeTela(r, carregar)]);
+      U.trocar(painel, [cabecalho(), abasDeContexto(), UI.erroDeTela(r, carregar)]);
       return;
     }
 
@@ -162,7 +168,9 @@
   function cabecalho() {
     return global.RAMAApp.titulo({
       titulo: "Personagens",
-      trilha: ["Arquivo // " + registros.length + " registro(s)"],
+      trilha: [contexto === "recebidos"
+        ? "Compartilhados // " + (recebidos.estado === "pronto" ? recebidos.lista.length + " ficha(s)" : "…")
+        : "Arquivo // " + registros.length + " registro(s)"],
       acoes: [
         el("button.r-botao.r-botao--principal", {
           type: "button", texto: "+ Adicionar personagem", onclick: abrirEscolhaDeTipo,
@@ -176,6 +184,7 @@
      ================================================================= */
 
   function desenhar() {
+    if (contexto === "recebidos") { desenharRecebidos(); return; }
     /* O foco volta ao mesmo controle depois de redesenhar: digitar na
        busca, trocar o sistema ou abrir uma pasta não perde o lugar. */
     var ativo = document.activeElement;
@@ -191,12 +200,13 @@
     exibicaoDesenhada = exibicao();
     U.trocar(painel, [
       cabecalho(),
+      abasDeContexto(),
       !icones && (registros.length || pastas.length) ? barraDePastas(m) : null,
       icones ? gradeDePastas(m) : null,
       avisoDeOrganizacao(),
       !icones && m.pasta !== O.TODOS && m.pasta !== O.SEM_PASTA ? pastaAberta(m) : null,
       registros.length || (organizacao.suportada && pastas.length) ? filtros(m) : null,
-      el("div.lista-personagens", { "aria-live": "polite" }, [icones ? resultadoEmIcones(m) : resultado(m)]),
+      el("div.lista-personagens", { id: "lista-personagens", role: "tabpanel", "aria-labelledby": "contexto-meus", "aria-live": "polite" }, [icones ? resultadoEmIcones(m) : resultado(m)]),
     ]);
 
     if (foco) {
@@ -1297,6 +1307,302 @@
 
   /* A cópia fica na mesma pasta e no mesmo sistema da original — quem
      cuida disso é o servidor. Uma duplicação de cada vez por ficha. */
+
+  /* =================================================================
+     COMPARTILHADOS COMIGO (v2.44)
+     -----------------------------------------------------------------
+     A segunda lista da página: as fichas que OUTRAS contas compartilharam
+     com esta, como Editor ou Leitor. É outro contexto, não outra pasta —
+     fica no endereço como `lista=recebidos`, separado de `pasta`, e tem a
+     própria busca e os próprios filtros: trocar de aba e voltar devolve
+     cada lista como estava.
+
+     Cada cartão abre a ficha ORIGINAL (o mesmo id) e oferece "Copiar para
+     minha biblioteca". As pastas do dono não aparecem aqui: a organização
+     dele é dele. Vem do resumo leve do servidor
+     (listar_compartilhados_comigo), sem abrir ficha nenhuma.
+
+     A lista se renova ao voltar para a aba e quando a página volta a ficar
+     visível — uma concessão, uma troca de papel, uma revogação ou a
+     exclusão da original aparecem sem recarregar.
+     ================================================================= */
+
+  var CONTEXTOS = [
+    { chave: "meus", rotulo: "Meus personagens" },
+    { chave: "recebidos", rotulo: "Compartilhados comigo" },
+  ];
+  var RENOVAR_MS = 15000;
+  var recebidos = {
+    estado: "nada",        // nada | carregando | pronto | erro
+    lista: [],
+    erro: null,
+    disponivel: true,
+    carregadoEm: 0,
+    busca: "",
+    sistema: "",
+    papel: "",
+    copiando: {},          // personagemId → true
+    operacoes: {},         // personagemId → id da operação de cópia em curso
+  };
+  var meusDesatualizados = false;
+
+  function abasDeContexto() {
+    return el("div.r-abas.abas-contexto", { role: "tablist", "aria-label": "Listas de personagens" }, CONTEXTOS.map(function (c) {
+      var ativa = contexto === c.chave;
+      var n = c.chave === "recebidos" && recebidos.estado === "pronto" ? recebidos.lista.length : null;
+      return el("button.r-aba", {
+        type: "button",
+        role: "tab",
+        id: "contexto-" + c.chave,
+        "aria-selected": String(ativa),
+        "aria-controls": "lista-personagens",
+        tabindex: ativa ? "0" : "-1",
+        dataset: { foco: "contexto-" + c.chave },
+        onclick: function () { trocarContexto(c.chave); },
+        onkeydown: function (ev) {
+          if (ev.key !== "ArrowRight" && ev.key !== "ArrowLeft") return;
+          ev.preventDefault();
+          trocarContexto(contexto === "meus" ? "recebidos" : "meus");
+        },
+      }, [el("span", { texto: c.rotulo }), n !== null ? el("span.abas-contexto__n", { texto: " (" + n + ")" }) : null]);
+    }));
+  }
+
+  function trocarContexto(chave) {
+    if (chave === contexto) return;
+    contexto = chave;
+    fecharExpansao(true);
+    gravarEstadoNaUrl();
+    if (chave === "recebidos") {
+      if (recebidos.estado === "nada" || recebidos.estado === "erro" || Date.now() - recebidos.carregadoEm > RENOVAR_MS) carregarRecebidos();
+      else desenhar();
+    } else if (!carregado || meusDesatualizados) {
+      meusDesatualizados = false;
+      carregar();
+    } else {
+      desenhar();
+    }
+    var aba = painel.querySelector('[data-foco="contexto-' + chave + '"]');
+    if (aba) aba.focus();
+  }
+
+  async function carregarRecebidos(opcoes) {
+    var o = opcoes || {};
+    if (recebidos.estado === "carregando") return;
+    /* Renovar em segundo plano mantém a lista na tela até a resposta. */
+    var silencioso = o.silencioso && recebidos.estado === "pronto";
+    if (!silencioso) { recebidos.estado = "carregando"; if (contexto === "recebidos") desenhar(); }
+    var r = await global.RAMAApi.listarCompartilhadosComigo(silencioso ? { segundoPlano: true } : undefined);
+    if (!r.ok) {
+      if (silencioso) return;
+      recebidos.estado = "erro";
+      recebidos.erro = r;
+      if (contexto === "recebidos") desenhar();
+      return;
+    }
+    recebidos.lista = r.dados || [];
+    recebidos.disponivel = r.disponivel !== false;
+    recebidos.estado = "pronto";
+    recebidos.carregadoEm = Date.now();
+    if (contexto === "recebidos") desenhar();
+  }
+
+  document.addEventListener("visibilitychange", function () {
+    if (document.visibilityState !== "visible" || contexto !== "recebidos") return;
+    if (recebidos.estado === "pronto" && Date.now() - recebidos.carregadoEm > RENOVAR_MS) carregarRecebidos({ silencioso: true });
+  });
+
+  function filtrarRecebidos() {
+    var porSistema = O.filtrar(recebidos.lista, { busca: "", sistema: recebidos.sistema });
+    var chave = U.chaveDeBusca(recebidos.busca || "");
+    return porSistema.filter(function (p) {
+      if (recebidos.papel && p.papel !== recebidos.papel) return false;
+      if (!chave) return true;
+      var dono = p.dono || {};
+      return U.chaveDeBusca([p.nome, p.classe, p.origem, dono.nome, dono.usuario].join(" ")).indexOf(chave) >= 0;
+    });
+  }
+
+  function desenharRecebidos() {
+    var ativo = document.activeElement;
+    var foco = ativo && painel.contains(ativo) && ativo.dataset ? ativo.dataset.foco : "";
+    var cursor = null;
+    try { cursor = foco && ativo.selectionStart !== undefined ? ativo.selectionStart : null; } catch (e) { cursor = null; }
+
+    U.trocar(painel, [
+      cabecalho(),
+      abasDeContexto(),
+      el("div.lista-personagens", { id: "lista-personagens", role: "tabpanel", "aria-labelledby": "contexto-recebidos", "aria-live": "polite" }, [conteudoRecebidos()]),
+    ]);
+
+    if (foco) {
+      var novo = painel.querySelector('[data-foco="' + foco + '"]');
+      if (novo) {
+        novo.focus();
+        if (cursor !== null) { try { novo.setSelectionRange(cursor, cursor); } catch (e) { /* não é texto */ } }
+      }
+    }
+  }
+
+  function conteudoRecebidos() {
+    if (recebidos.estado === "nada" || recebidos.estado === "carregando") return UI.carregando("Consultando fichas compartilhadas");
+    if (recebidos.estado === "erro") {
+      if (recebidos.erro && recebidos.erro.erro === "acao_desconhecida") {
+        return UI.vazio({
+          titulo: "Compartilhamento indisponível",
+          texto: "O servidor (Apps Script) ainda não foi atualizado para a v2.44. Suas fichas continuam em “Meus personagens”.",
+        });
+      }
+      return UI.erroDeTela(recebidos.erro, function () { carregarRecebidos(); });
+    }
+    if (!recebidos.disponivel) {
+      return UI.vazio({
+        titulo: "Compartilhamento ainda não preparado",
+        texto: "Falta preparar a planilha (setupRama no Apps Script) para o compartilhamento de fichas.",
+      });
+    }
+    if (!recebidos.lista.length) {
+      return UI.vazio({
+        titulo: "Nada compartilhado com você",
+        texto: "Quando alguém compartilhar uma ficha com a sua conta — como Editor ou Leitor —, ela aparece aqui.",
+      });
+    }
+
+    var visiveis = filtrarRecebidos();
+    return el("div.pilha--curta", { class: "pilha" }, [
+      filtrosRecebidos(),
+      visiveis.length
+        ? el("div.registros", {}, visiveis.map(linhaRecebida))
+        : UI.vazio({
+            titulo: "Nada encontrado",
+            texto: "Nenhuma ficha compartilhada corresponde aos filtros.",
+            acao: { rotulo: "Limpar filtros", aoClicar: function () { recebidos.busca = ""; recebidos.sistema = ""; recebidos.papel = ""; desenhar(); } },
+          }),
+    ]);
+  }
+
+  function filtrosRecebidos() {
+    var sistemas = O.sistemasPresentes(recebidos.lista).filter(function (o) { return o.n > 0 || o.sistema.id === recebidos.sistema; });
+    return el("div.filtros.filtros--personagens", {}, [
+      el("div.r-busca", {}, [
+        el("span.r-busca__marca", {}, [UI.simbolo("busca")]),
+        el("input.r-entrada", {
+          type: "search",
+          value: recebidos.busca,
+          placeholder: "Buscar por nome, dono, classe ou origem",
+          "aria-label": "Buscar ficha compartilhada",
+          dataset: { foco: "busca-recebidos" },
+          oninput: function (ev) { recebidos.busca = ev.target.value; desenhar(); },
+        }),
+      ]),
+      el("label.filtro-sistema", {}, [
+        el("span.r-rotulo", { texto: "Sistema" }),
+        el("select.r-selecao", {
+          "aria-label": "Filtrar fichas compartilhadas por sistema",
+          dataset: { foco: "sistema-recebidos" },
+          onchange: function (ev) { recebidos.sistema = ev.target.value; desenhar(); },
+        }, [el("option", { value: "", texto: "Todos", selected: !recebidos.sistema })].concat(sistemas.map(function (o) {
+          return el("option", { value: o.sistema.id, texto: o.sistema.nome + " (" + o.n + ")", selected: recebidos.sistema === o.sistema.id });
+        }))),
+      ]),
+      el("label.filtro-sistema", {}, [
+        el("span.r-rotulo", { texto: "Acesso" }),
+        el("select.r-selecao", {
+          "aria-label": "Filtrar por acesso",
+          dataset: { foco: "papel-recebidos" },
+          onchange: function (ev) { recebidos.papel = ev.target.value; desenhar(); },
+        }, [
+          el("option", { value: "", texto: "Todos", selected: !recebidos.papel }),
+          el("option", { value: "editor", texto: "Editor", selected: recebidos.papel === "editor" }),
+          el("option", { value: "leitor", texto: "Leitor", selected: recebidos.papel === "leitor" }),
+        ]),
+      ]),
+    ]);
+  }
+
+  function linhaRecebida(p) {
+    var url = U.url("ficha/?id=" + encodeURIComponent(p.id));
+    var dono = p.dono || {};
+    var nomeDono = dono.nome || dono.usuario || "outra conta";
+    var sistema = O.sistemaDe(p);
+    var copiando = !!recebidos.copiando[p.id];
+    var editor = p.papel === "editor";
+    var partes = ["de " + nomeDono + (dono.usuario ? " (@" + dono.usuario + ")" : "")];
+    if (p.classe) partes.push(p.classe);
+    if (p.origem) partes.push(p.origem);
+
+    return el("div.r-cartao.registro.registro--recebido", {
+      estilo: { position: "relative" },
+      "aria-busy": copiando ? "true" : null,
+      dataset: { personagem: p.id },
+    }, [
+      el("a.registro__link", { href: url, "aria-label": "Abrir a ficha original de " + (p.nome || "personagem") + ", de " + nomeDono + " — acesso de " + (editor ? "Editor" : "Leitor") }),
+      avatar(p),
+      el("div.registro__corpo", {}, [
+        el("span.registro__nome", { texto: p.nome || "Sem nome" }),
+        el("span.registro__sub", { texto: partes.join(" · ") }),
+        el("span.registro__marcas", {}, [
+          el("span.etiqueta.etiqueta--sistema", {
+            class: sistema.conhecido ? "" : "etiqueta--desconhecida",
+            title: sistema.nome, texto: sistema.curto,
+          }),
+          el("span.etiqueta.etiqueta--papel", {
+            class: editor ? "etiqueta--papel-editor" : "etiqueta--papel-leitor",
+            title: editor ? "Você pode alterar a ficha original" : "Você pode consultar e copiar",
+            texto: editor ? "Editor" : "Leitor",
+          }),
+        ]),
+      ]),
+      el("button.r-botao.r-botao--mini.registro__data.registro__acao", {
+        type: "button",
+        disabled: copiando,
+        dataset: { foco: "copiar-" + p.id },
+        "aria-label": "Copiar " + (p.nome || "a ficha") + " para minha biblioteca",
+        texto: copiando ? "Copiando…" : "Copiar para minha biblioteca",
+        onclick: function () { copiarRecebida(p); },
+      }),
+      menuDoRegistro(p, [
+        { rotulo: "Abrir a original", aoClicar: function () { location.href = url; } },
+        { rotulo: "Copiar para minha biblioteca", aoClicar: function () { copiarRecebida(p); } },
+      ]),
+    ]);
+  }
+
+  /* Uma cópia por intenção: a nova tentativa depois de uma falha de rede
+     manda o MESMO id, e o servidor devolve a cópia que já fez. */
+  async function copiarRecebida(p) {
+    if (recebidos.copiando[p.id]) return;
+    recebidos.copiando[p.id] = true;
+    if (!recebidos.operacoes[p.id]) recebidos.operacoes[p.id] = global.RAMAApi.novaOperacao();
+    desenhar();
+    var r;
+    try {
+      r = await global.RAMAApi.copiarPersonagem(p.id, recebidos.operacoes[p.id]);
+    } finally {
+      delete recebidos.copiando[p.id];
+    }
+    if (!r || !r.ok) {
+      var deRede = !r || r.erro === "sem_conexao" || r.erro === "prazo" || r.erro === "servidor_falhou";
+      if (!deRede) delete recebidos.operacoes[p.id];
+      desenhar();
+      if (r && r.erro === "nao_encontrado") {
+        UI.avisoAtencao("Esta ficha não está mais compartilhada com você — ou foi excluída. Atualizando a lista.");
+        carregarRecebidos({ silencioso: true });
+        return;
+      }
+      UI.avisoDeFalha(r || {}, "cópia", { tentarDeNovo: function () { copiarRecebida(p); } });
+      return;
+    }
+    delete recebidos.operacoes[p.id];
+    meusDesatualizados = true;
+    desenhar();
+    (r.avisos || []).forEach(function (t) { UI.avisoAtencao(t); });
+    UI.aviso("Cópia de " + (p.nome || "a ficha") + " criada em “Meus personagens”. Ela é independente da original.", {
+      tipo: "ok", duracao: 12000,
+      acao: { rotulo: "Abrir a cópia", aoClicar: function () { location.href = U.url("ficha/?id=" + encodeURIComponent(r.dados.id)); } },
+    });
+  }
+
   async function duplicar(p) {
     if (ocupados["dup:" + p.id]) return;
     ocupados["dup:" + p.id] = true;

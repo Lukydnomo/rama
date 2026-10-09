@@ -5,6 +5,14 @@ padrão e normaliza o que chega de fora. Onde ela é guardada — inteira em
 `fichaJson` (formato antigo) ou em blocos (v2.15) — é assunto do backend, e não muda
 nada aqui: ver [DATABASE.md](DATABASE.md).
 
+## Compartilhamento — v2.44 (schema continua 21)
+
+O formato da ficha **não muda**: quem tem acesso a uma ficha mora em
+`PERSONAGENS_ACESSOS`, fora dela (ver [DATABASE.md](DATABASE.md)). Exportar, importar,
+duplicar ou copiar nunca leva concessões de acesso nem troca o dono — o arquivo
+exportado já não carrega `id` nem `ownerId`. Fichas sem registros de compartilhamento
+continuam com as permissões de antes.
+
 ## Fórmulas nas perícias da universal — v2.43 / schema 21
 
 A perícia ganhou `formula` e `contagem`, e `atributoId` pode ser `null`:

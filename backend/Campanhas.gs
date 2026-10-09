@@ -1284,7 +1284,9 @@ function acaoAjustarPersonagem(corpo, usuario) {
   }
 
   return comTrava(function () {
-    var acesso = personagemAcessivel(corpo.personagemId, usuario);
+    /* Ação da mesa: só dono ou mestre (v2.44). Compartilhar a ficha não
+       põe ninguém na campanha dela. */
+    var acesso = personagemAcessivel(corpo.personagemId, usuario, { semCompartilhamento: true });
     if (!acesso.ok) return acesso;
 
     var registro = acesso.personagem;
@@ -1375,7 +1377,9 @@ function acaoRegistrarRolagem(corpo, usuario) {
   var personagemId = String(corpo.personagemId || '');
   var donoDaEscolha = usuario.id;
   if (personagemId) {
-    var acesso = personagemAcessivel(personagemId, usuario);
+    /* Só as portas da mesa (dono ou mestre): ter a ficha compartilhada
+       não deixa falar em nome do personagem na campanha (v2.44). */
+    var acesso = personagemAcessivel(personagemId, usuario, { semCompartilhamento: true });
     if (!acesso.ok) return { ok: false, erro: 'nao_encontrado' };
     if (String(acesso.personagem.campanhaId) !== String(ctx.campanha.id)) {
       return { ok: false, erro: 'sem_permissao' };
@@ -2850,7 +2854,9 @@ function acaoEfeitoPersonagem(corpo, usuario) {
   var operacao = idDeOperacao(corpo.operacaoId);
 
   return comTrava(function () {
-    var acesso = personagemAcessivel(corpo.personagemId, usuario);
+    /* Ação da mesa: só dono ou mestre (v2.44). Compartilhar a ficha não
+       põe ninguém na campanha dela. */
+    var acesso = personagemAcessivel(corpo.personagemId, usuario, { semCompartilhamento: true });
     if (!acesso.ok) return acesso;
     var registro = acesso.personagem;
     if (corpo.campanhaId && String(registro.campanhaId || '') !== String(corpo.campanhaId)) {

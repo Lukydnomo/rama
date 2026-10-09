@@ -209,6 +209,18 @@ var ABAS = {
     colunas: ['personagemId', 'ownerId', 'sistema', 'pastaId', 'atualizadoEm'],
     chave: 'personagemId',
   },
+  PERSONAGENS_ACESSOS: {
+    /* O compartilhamento direto de fichas (v2.44): uma linha por ficha e
+       conta destinatária, com o papel ("editor" ou "leitor"). Fora da
+       ficha e fora da linha de PERSONAGENS: salvar o conteúdo nunca toca
+       aqui, exportar não leva, e só `salvar_compartilhamentos` — do DONO,
+       conferido pela sessão — escreve. `ownerId` é o dono da ficha no
+       momento da concessão, para a faxina e o diagnóstico; a permissão
+       vale pelo dono ATUAL do personagem. Tudo leve. */
+    nome: 'PERSONAGENS_ACESSOS',
+    colunas: ['id', 'personagemId', 'ownerId', 'userId', 'papel', 'criadoEm', 'atualizadoEm'],
+    chave: 'id',
+  },
   HOMEBREW: {
     /* `visibilidade` entrou na v2. Registro antigo fica com a célula
        vazia, e vazio é lido como 'privado' — nenhuma biblioteca que já

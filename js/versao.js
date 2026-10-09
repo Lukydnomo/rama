@@ -70,6 +70,22 @@
 
   var CHANGELOG = [
     {
+      versao: "2.44.0", codinome: "CHAVEIRO", data: "08/10/2026",
+      mudancas: {
+        "Adicionado": [
+          "Compartilhar fichas com outras contas, pelo menu de três pontos da ficha (“Compartilhar…”): busca por nome ou usuário, várias pessoas de uma vez, Editor ou Leitor para cada uma, troca de papel e remoção. A janela trabalha num rascunho — Cancelar não muda nada, e Salvar confirma no servidor.",
+          "Editor altera a ficha ORIGINAL, pelo mesmo salvamento, revisão e conciliação do dono. Leitor abre a ficha só para consulta: sem modo Edição, campos só de leitura, e qualquer controle que mexeria na ficha é desfeito com aviso. Os dois podem “Copiar para minha biblioteca”.",
+          "Aba “Compartilhados comigo” na página de personagens, com nome, retrato, sistema, dono e papel de cada ficha recebida, busca e filtros por sistema e acesso, abrir a original e copiar. A busca e os filtros de cada aba ficam como estavam ao trocar de aba.",
+          "A ficha aberta mostra de quem ela é e com que acesso está aberta, e percebe mudanças: traz a versão gravada por outra pessoa, para de gravar se o acesso de Editor virar Leitor (o que não subiu fica na tela, sem ir para a original) e avisa quando o acesso acaba.",
+        ],
+        "Técnico": [
+          "Nova aba PERSONAGENS_ACESSOS (setupRama). A resolução de acesso virou capacidades (ler, editar, copiar, gerenciar, dono), somando as portas: dono, mestre da campanha e compartilhamento. personagemAcessivel() exige editar por padrão; leituras pedem leitura; rolagem, ajuste e efeito da mesa continuam só de dono ou mestre. Ações novas: listar_compartilhamentos, salvar_compartilhamentos (com versão da lista), listar_compartilhados_comigo, acesso_personagem e copiar_personagem (com id de operação). Excluir a ficha encerra os compartilhamentos.",
+          "Copiar lê a original no servidor; a cópia é da conta que pediu, sem campanha, sem acessos, com o retrato, e o tema de dados conferido contra a coleção de quem copiou. Duplicar a própria ficha continua igual. O salvador para de insistir em sem_permissao e nao_encontrado, sem descartar o que está pendente.",
+          "Testes: 100 novos no backend (papéis, recusas por chamada direta, conflito de versão, Editor e dono na mesma ficha, rebaixar, remover, cópia e retentativa, mestre e campanha, tema de dados, exclusão) e 14 no frontend. Verificado no navegador com o servidor simulado: compartilhar e cancelar, a aba recebida e os filtros, o Leitor sem nenhuma gravação, a atualização vinda do Editor, a revogação e o rebaixamento com alteração pendente, a cópia e o celular.",
+        ],
+      },
+    },
+    {
       versao: "2.43.0", codinome: "ÁBACO", data: "07/10/2026",
       mudancas: {
         "Adicionado": [

@@ -565,6 +565,13 @@ segredo nenhum — ele os lê das Script Properties. Publicá-lo não expõe nad
 
 ### Atualizar o backend
 
+**v2.44.0 — CHAVEIRO:** compartilhamento de fichas. Troque `Codigo.gs`,
+`Campanhas.gs` e `Dados.gs` no Apps Script, rode `setupRama()` uma vez (cria a aba
+`PERSONAGENS_ACESSOS`; rodar de novo não muda nada), crie uma versão nova da
+implantação e publique o site. Nenhuma ficha é migrada. Com o site novo e o
+servidor antigo, a aba “Compartilhados comigo” diz que o servidor precisa ser
+atualizado e o resto funciona como antes.
+
 **v2.43.0 — ÁBACO:** só o site (fórmulas nas perícias da ficha universal).
 Publique o site; nada de `.gs` nem `setupRama()`. Abas abertas na versão anterior
 recusam fichas 21 e pedem para recarregar.

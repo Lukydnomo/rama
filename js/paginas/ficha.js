@@ -115,6 +115,14 @@
     raiz: null,
     comoMestre: false,
     dono: true,
+    /* v2.44: o que esta conta pode fazer com a ficha, como o servidor
+       disse ao entregá-la; e por qual porta entrou. */
+    capacidades: { ler: true, editar: true, copiar: true, gerenciar: true, dono: true },
+    acesso: null,
+    /* Sem salvador (leitor), a revisão e a ficha que vieram do servidor. */
+    revLeitura: 0,
+    baseLeitura: null,
+    revogado: false,
   };
 
   var ctx = null;
@@ -195,14 +203,26 @@
     estado.ficha = F.normalizarFicha(rFicha.dados);
     estado.foto = (rFoto.ok && rFoto.dados && rFoto.dados.imagem) || "";
     estado.campanhas = (rCampanhas.ok && rCampanhas.dados) || [];
+    estado.capacidades = capacidadesDe(rFicha);
+    estado.acesso = rFicha.acesso || null;
 
     montarContexto();
-    montarSalvador(U.inteiro(rFicha.rev, 0));
+    /* Leitor: nenhum salvador — nada nesta página consegue gravar. */
+    if (estado.capacidades.editar) {
+      montarSalvador(U.inteiro(rFicha.rev, 0));
+    } else {
+      estado.revLeitura = U.inteiro(rFicha.rev, 0);
+      estado.baseLeitura = U.copiar(estado.ficha);
+      estado.indicador = UI.indicador(null);
+    }
 
     /* O histórico se liga aqui, uma vez. Daqui em diante toda rolagem
        que passar por RAMARolagens.mostrar() sobe para a campanha
-       sozinha — nenhuma seção da ficha precisa saber disso. */
-    if (global.RAMAHistorico) {
+       sozinha — nenhuma seção da ficha precisa saber disso. Só para quem
+       fala pelo personagem na mesa — o dono ou o mestre (v2.44): quem
+       recebeu a ficha compartilhada rola aqui, mas não no histórico. */
+    var naMesa = estado.capacidades.dono || !!rFicha.mestre;
+    if (global.RAMAHistorico && naMesa) {
       global.RAMAHistorico.configurar({
         campanhaId: estado.ficha.campanhaId || null,
         personagemId: estado.personagemId,
@@ -224,13 +244,14 @@
     estado.dono = !!rFicha.dono;
 
     desenhar();
+    ligarVigia();
 
     /* Uma única vez por abertura: se o personagem de Ordem chegou a NEX
        50% sem afinidade e ninguém adiou a decisão, a escolha abre.
        Redesenhar ou salvar nunca chama isto de novo. No painel do
        combate, não: o mestre abriu para consultar, não para decidir a
-       progressão do jogador. */
-    if (!PAINEL && abasDaFicha() === ABAS_ORDEM && global.RAMASecaoOrdemProgressao && global.RAMASecaoOrdemProgressao.verificarAfinidade) {
+       progressão do jogador. Nem para quem só lê (v2.44). */
+    if (!PAINEL && !somenteLeitura() && abasDaFicha() === ABAS_ORDEM && global.RAMASecaoOrdemProgressao && global.RAMASecaoOrdemProgressao.verificarAfinidade) {
       global.RAMASecaoOrdemProgressao.verificarAfinidade(ctx);
     }
   }, {
@@ -262,18 +283,22 @@
       get personagemId() { return estado.personagemId; },
 
       emEdicao: function () { return estado.modo === "edicao"; },
-      /* Quem abriu a ficha pode alterá-la? O servidor só entrega a ficha a
-         quem pode editar (dono ou mestre da campanha) e confere de novo a
-         cada gravação; esta pergunta existe para os controles que ficam
-         fora do modo edição (bônus extra de Defesa, Bloqueio e Esquiva)
-         mostrarem só o valor quando um dia houver acesso de leitura. */
-      podeEditar: function () { return !!estado.ficha; },
+      /* Quem abriu a ficha pode alterá-la? (v2.44) Vem das capacidades que
+         o servidor devolveu — dono, mestre e Editor podem; o Leitor não, e
+         nem quem perdeu o acesso com a ficha aberta. O servidor confere de
+         novo a cada gravação. */
+      podeEditar: function () { return !!estado.ficha && !somenteLeitura(); },
+      /* As capacidades e o acesso, para quem precisar do rótulo. */
+      capacidades: function () { return Object.assign({}, estado.capacidades); },
       /* Rótulo, não permissão: o servidor já decidiu quem é dono. Serve
          para esconder o que só o dono muda — a campanha da ficha. */
       ehDono: function () { return estado.dono; },
-      revisao: function () { return estado.salvador ? estado.salvador.revisao() : 0; },
+      revisao: function () { return revisaoAtual(); },
 
       alterou: function () {
+        /* Leitor (ou acesso perdido): nada sobe, e a tela volta ao que
+           veio do servidor (v2.44). */
+        if (somenteLeitura()) { desfazerNaLeitura(); return; }
         estado.ficha.atualizadoEm = U.agoraISO();
         if (estado.salvador) estado.salvador.alterou();
       },
@@ -326,8 +351,19 @@
 
       /* Um erro que tentar de novo sozinho não resolve (a ficha passou do
          limite total, ou a versão guardada não se monta). Nada do que está
-         na tela se perde; o aviso diz o motivo e oferece a cópia. */
-      aoErroPermanente: avisarErroPermanente,
+         na tela se perde; o aviso diz o motivo e oferece a cópia. Sem
+         permissão (v2.44): a vigia confere o acesso na hora. */
+      aoErroPermanente: function (r) {
+        if (r && (r.erro === "sem_permissao" || r.erro === "nao_encontrado")) {
+          if (!vigia.ativa) {
+            vigia.ativa = true;
+            document.addEventListener("visibilitychange", aoMudarVisibilidade);
+          }
+          consultarAcesso(true);
+          return;
+        }
+        avisarErroPermanente(r);
+      },
 
       aplicar: function (conciliada) {
         estado.ficha = F.normalizarFicha(conciliada);
@@ -392,19 +428,23 @@
      desta ficha esperando para subir nem um campo sendo editado. Nunca
      por cima de trabalho local. */
   async function recarregarSeLivre() {
-    if (!estado.salvador || !estado.ficha) return { ok: false, motivo: "carregando" };
-    if (estado.salvador.temPendencia() || estado.salvador.emConflito()) return { ok: false, motivo: "pendente" };
+    if (!estado.ficha || estado.revogado) return { ok: false, motivo: "carregando" };
+    var s = estado.salvador;
+    function ocupado() { return !!(s && (s.temPendencia() || s.emConflito())); }
+    if (ocupado()) return { ok: false, motivo: "pendente" };
     if (editandoAlgo()) return { ok: false, motivo: "editando" };
 
     var r = await global.RAMAApi.post({ acao: "ler_personagem", personagemId: estado.personagemId }, { segundoPlano: true });
     if (!r.ok) return r;
-    if (U.inteiro(r.rev, 0) <= estado.salvador.revisao()) return { ok: true, mudou: false };
+    if (U.inteiro(r.rev, 0) <= revisaoAtual()) return { ok: true, mudou: false };
     if (U.inteiro(r.dados && r.dados.schemaVersion, 0) > F.VERSAO_SCHEMA) return { ok: false, motivo: "versao" };
-    if (estado.salvador.temPendencia() || estado.salvador.emConflito() || editandoAlgo()) return { ok: false, motivo: "pendente" };
+    if (ocupado() || editandoAlgo()) return { ok: false, motivo: "pendente" };
 
     var rolagem = global.scrollY;
     estado.ficha = F.normalizarFicha(r.dados);
-    estado.salvador.definirBase(estado.ficha, U.inteiro(r.rev, 0));
+    if (r.acesso) estado.acesso = r.acesso;
+    if (s && !somenteLeitura()) s.definirBase(estado.ficha, U.inteiro(r.rev, 0));
+    else { estado.revLeitura = U.inteiro(r.rev, 0); estado.baseLeitura = U.copiar(estado.ficha); }
     desenhar();
     global.scrollTo(0, rolagem);
     return { ok: true, mudou: true };
@@ -431,9 +471,11 @@
        numa universal). A que aparece passa a ser a marcada. */
     estado.aba = secao.chave;
 
-    estado.raiz = el("div.ficha", { dataset: { modo: estado.modo } }, [
+    if (somenteLeitura()) estado.modo = "normal";
+    estado.raiz = el("div.ficha", { dataset: { modo: estado.modo }, class: somenteLeitura() ? "ficha--leitura" : "" }, [
       cabecalho(),
-      estado.comoMestre ? avisoDeMestre() : null,
+      avisoDeAcesso(),
+      estado.comoMestre && !somenteLeitura() ? avisoDeMestre() : null,
       estado.modo === "edicao" ? avisoDeEdicao() : null,
       blocoSuperiorDaFicha(),
       abas(),
@@ -442,6 +484,7 @@
     ]);
 
     U.trocar(alvo, estado.raiz);
+    aplicarLeitura(estado.raiz);
     manterNaTela();
   }
 
@@ -491,8 +534,13 @@
             : null,
           UI.menu([
             { rotulo: "Exportar ficha", aoClicar: exportar },
+          ].concat(estado.salvador && !somenteLeitura() ? [
             { rotulo: "Salvar agora", aoClicar: function () { estado.salvador.agora(); } },
-          ].concat(PAINEL ? [] : [
+          ] : []).concat(!PAINEL && estado.capacidades.gerenciar && !estado.revogado ? [
+            { rotulo: "Compartilhar…", aoClicar: function () { abrirCompartilhamento(); } },
+          ] : []).concat(!PAINEL && estado.capacidades.copiar && !estado.capacidades.dono && !estado.revogado ? [
+            { rotulo: "Copiar para minha biblioteca", aoClicar: copiarParaBiblioteca },
+          ] : []).concat(PAINEL ? [] : [
             "separador",
             { rotulo: "Ver personagens", aoClicar: function () { location.href = U.url("personagens/"); } },
           ]), { rotulo: "Opções da ficha", icone: "tresPontos" }),
@@ -554,6 +602,10 @@
      ================================================================= */
 
   function modoSeletor() {
+    /* Quem só lê não tem modo Edição para escolher (v2.44). */
+    if (somenteLeitura()) {
+      return el("span.etiqueta.ficha-topo__leitura", { texto: "Somente leitura", title: "Esta ficha está aberta só para consulta" });
+    }
     return el("div.modo", { role: "group", "aria-label": "Modo da ficha" }, [
       el("button.modo__opcao", {
         type: "button",
@@ -655,6 +707,7 @@
 
   function trocarModo(novo) {
     if (estado.modo === novo) return;
+    if (novo === "edicao" && somenteLeitura()) return;
     estado.modo = novo;
     desenhar();
     UI.aviso(novo === "edicao"
@@ -751,6 +804,265 @@
 
   function guardarAba(chave) {
     try { localStorage.setItem(CHAVE_ABA, chave); } catch (e) { /* preferência é dispensável */ }
+  }
+
+
+  /* =================================================================
+     ACESSO E COMPARTILHAMENTO (v2.44)
+     -----------------------------------------------------------------
+     O servidor diz, ao entregar a ficha, o que esta conta pode fazer
+     (`capacidades`) e por qual porta entrou (`acesso`: dono, mestre,
+     editor ou leitor). A tela se orienta por isso; quem decide é o
+     servidor, de novo, a cada gravação.
+
+     LEITOR. Não há salvador: nada desta página grava. Os campos ficam
+     só de leitura e o modo Edição não aparece; e, como rede para
+     qualquer controle que mude a ficha fora do modo Edição, ctx.alterou()
+     DESFAZ — a ficha volta ao que veio do servidor e um aviso explica.
+     Nenhuma rolagem sobe para a campanha em nome do personagem.
+
+     A VIGIA. Com a ficha compartilhada (ou aberta por quem não é dono),
+     a página pergunta de tempos em tempos — e ao voltar a ficar visível
+     — a revisão e o acesso atuais (acesso_personagem, só colunas leves):
+       · revisão nova e nada pendente aqui: traz a versão nova;
+       · Editor rebaixado a Leitor: o salvador para; o que não subiu fica
+         na tela (e pode ser exportado), mas não vai para a original;
+       · acesso retirado ou ficha excluída: a vigia para, nada grava, e a
+         tela diz o que houve.
+     ================================================================= */
+
+  var VIGIA_MS = 25000;
+  var vigia = { timer: null, ativa: false, consultando: false };
+
+  /* Servidor anterior à v2.44 não manda capacidades: valem as duas
+     portas de sempre (dono ou mestre), que podiam editar. */
+  function capacidadesDe(r) {
+    if (r && r.capacidades && typeof r.capacidades === "object") {
+      var c = r.capacidades;
+      return { ler: !!c.ler, editar: !!c.editar, copiar: !!c.copiar, gerenciar: !!c.gerenciar, dono: !!c.dono };
+    }
+    var dono = !!(r && r.dono);
+    return { ler: true, editar: true, copiar: dono, gerenciar: false, dono: dono };
+  }
+
+  function somenteLeitura() { return !estado.capacidades.editar || estado.revogado; }
+
+  var ROTULO_DO_PAPEL = { editor: "Editor", leitor: "Leitor", mestre: "Mestre da campanha", dono: "Dono" };
+
+  /* A faixa que diz de quem é a ficha e com que acesso ela está aberta. */
+  function avisoDeAcesso() {
+    if (estado.revogado) {
+      return el("div.ficha__aviso-acesso.ficha__aviso-acesso--perdido", { role: "status" }, [
+        el("span", { texto: "Você não tem mais acesso a esta ficha. O que está na tela não é salvo — exporte se precisar guardar." }),
+      ]);
+    }
+    var a = estado.acesso;
+    if (!a || !a.compartilhada || estado.capacidades.dono) return null;
+    var dono = a.dono && (a.dono.nome || a.dono.usuario) ? (a.dono.nome || a.dono.usuario) + (a.dono.usuario ? " (@" + a.dono.usuario + ")" : "") : "outra conta";
+    var leitura = !estado.capacidades.editar;
+    return el("div.ficha__aviso-acesso", { role: "status", class: leitura ? "ficha__aviso-acesso--leitura" : "" }, [
+      el("span", {}, [
+        el("span", { texto: "Ficha compartilhada por " }),
+        el("strong", { texto: dono }),
+        el("span", { texto: " · seu acesso: " }),
+        el("strong", { texto: estado.capacidades.editar ? (a.papel === "editor" ? "Editor" : ROTULO_DO_PAPEL[a.papel] || "Editor") : "Leitor" }),
+        el("span", { texto: leitura
+          ? " — consulta. Para mexer, copie para a sua biblioteca."
+          : " — você altera a ficha original, e o dono vê o que mudar." }),
+      ]),
+      estado.capacidades.copiar
+        ? el("button.r-botao.r-botao--mini", { type: "button", texto: "Copiar para minha biblioteca", onclick: copiarParaBiblioteca })
+        : null,
+    ]);
+  }
+
+  /* Leitor: os campos que aparecem fora do modo Edição ficam só de
+     leitura — o texto continua selecionável e copiável. */
+  function aplicarLeitura(raiz) {
+    if (!somenteLeitura() || !raiz) return;
+    U.$$("input, textarea, select", raiz).forEach(function (c) {
+      if (c.closest && c.closest(".r-abas")) return;
+      var tipo = String(c.type || "").toLowerCase();
+      if (c.tagName === "SELECT" || tipo === "checkbox" || tipo === "radio" || tipo === "range" || tipo === "file" || tipo === "color") c.disabled = true;
+      else if (tipo !== "search") c.readOnly = true;
+      c.setAttribute("aria-readonly", "true");
+    });
+    U.$$("[contenteditable]", raiz).forEach(function (c) { c.setAttribute("contenteditable", "false"); });
+  }
+
+  /* A rede do leitor: qualquer mudança feita na tela volta atrás. */
+  var avisoDeLeituraEm = 0;
+  function desfazerNaLeitura() {
+    estado.ficha = F.normalizarFicha(U.copiar(estado.baseLeitura));
+    setTimeout(function () { desenhar(); }, 0);
+    if (Date.now() - avisoDeLeituraEm > 4000) {
+      avisoDeLeituraEm = Date.now();
+      UI.avisoAtencao(estado.revogado
+        ? "Sem acesso a esta ficha: nada foi alterado."
+        : "Esta ficha está aberta só para leitura — nada foi alterado. Copie para a sua biblioteca para editar.");
+    }
+  }
+
+  /* ---------- a vigia ---------- */
+
+  function precisaDeVigia() {
+    if (PAINEL || estado.revogado) return false;
+    var a = estado.acesso;
+    return !estado.capacidades.dono || !!(a && a.compartilhamentos > 0);
+  }
+
+  function ligarVigia() {
+    if (vigia.ativa || !precisaDeVigia()) return;
+    vigia.ativa = true;
+    agendarVigia();
+    document.addEventListener("visibilitychange", aoMudarVisibilidade);
+  }
+
+  function pararVigia() {
+    vigia.ativa = false;
+    clearTimeout(vigia.timer);
+    document.removeEventListener("visibilitychange", aoMudarVisibilidade);
+  }
+
+  function agendarVigia(ms) {
+    clearTimeout(vigia.timer);
+    if (!vigia.ativa) return;
+    vigia.timer = setTimeout(consultarAcesso, ms === undefined ? VIGIA_MS : ms);
+  }
+
+  function aoMudarVisibilidade() {
+    if (document.visibilityState === "visible") agendarVigia(300);
+  }
+
+  /* `forcar`: pergunta mesmo com a página escondida (uma gravação acabou
+     de ser recusada por permissão). */
+  async function consultarAcesso(forcar) {
+    if (!vigia.ativa || vigia.consultando) return;
+    if (document.visibilityState === "hidden" && forcar !== true) return;
+    vigia.consultando = true;
+    var r;
+    try {
+      r = await global.RAMAApi.acessoPersonagem(estado.personagemId);
+    } finally {
+      vigia.consultando = false;
+    }
+    if (!vigia.ativa) return;
+
+    if (!r || !r.ok) {
+      if (r && (r.erro === "nao_encontrado" || r.erro === "sem_permissao")) { perderAcesso(); return; }
+      /* Servidor antigo (ação desconhecida): a vigia não existe lá. */
+      if (r && r.erro === "acao_desconhecida") { pararVigia(); return; }
+      agendarVigia(VIGIA_MS * 2);
+      return;
+    }
+
+    var novas = capacidadesDe(r.dados);
+    var antes = estado.capacidades;
+    if (r.dados && r.dados.acesso) estado.acesso = r.dados.acesso;
+
+    if (antes.editar && !novas.editar) {
+      rebaixar(novas);
+    } else if (!antes.editar && novas.editar) {
+      estado.capacidades = novas;
+      UI.aviso("Seu acesso a esta ficha agora é de Editor. Recarregue a página para editar.", {
+        tipo: "atencao", duracao: 600000, acao: { rotulo: "Recarregar", aoClicar: function () { location.reload(); } },
+      });
+      desenhar();
+    } else {
+      var mudouAlgo = JSON.stringify(antes) !== JSON.stringify(novas);
+      estado.capacidades = novas;
+      if (mudouAlgo) desenhar();
+    }
+
+    if (U.inteiro(r.rev, 0) > revisaoAtual()) await recarregarSeLivre();
+    agendarVigia();
+  }
+
+  function revisaoAtual() { return estado.salvador ? estado.salvador.revisao() : estado.revLeitura; }
+
+  /* Editor que virou Leitor: nada mais sobe. O que estava pendente fica
+     na tela — sem ir para a original e sem sumir. */
+  function rebaixar(novas) {
+    var pendente = !!(estado.salvador && (estado.salvador.temPendencia() || estado.salvador.emConflito()));
+    if (estado.salvador) {
+      estado.revLeitura = estado.salvador.revisao();
+      estado.salvador.travar();
+    }
+    estado.capacidades = novas;
+    estado.baseLeitura = U.copiar(estado.ficha);
+    estado.modo = "normal";
+    desenhar();
+    UI.aviso(pendente
+      ? "Seu acesso mudou para Leitor. As alterações que ainda não tinham subido ficaram só nesta tela e não vão para a ficha original — exporte se quiser guardá-las."
+      : "Seu acesso a esta ficha mudou para Leitor: ela agora está aberta só para consulta.", {
+      tipo: "atencao", duracao: 600000, acao: { rotulo: "Exportar ficha", aoClicar: exportar },
+    });
+  }
+
+  function perderAcesso() {
+    if (estado.revogado) return;
+    pararVigia();
+    var pendente = !!(estado.salvador && (estado.salvador.temPendencia() || estado.salvador.emConflito()));
+    if (estado.salvador) estado.salvador.travar();
+    estado.revogado = true;
+    estado.baseLeitura = U.copiar(estado.ficha);
+    estado.modo = "normal";
+    desenhar();
+    UI.aviso("Você não tem mais acesso a esta ficha (o compartilhamento foi retirado ou ela foi excluída)." +
+      (pendente ? " O que não tinha subido ficou só nesta tela — exporte se quiser guardar." : ""), {
+      tipo: "erro", duracao: 600000, acao: { rotulo: "Exportar ficha", aoClicar: exportar },
+    });
+  }
+
+  /* ---------- gerenciar (só o dono) ---------- */
+
+  function abrirCompartilhamento() {
+    if (!global.RAMACompartilhar || !estado.capacidades.gerenciar) return;
+    global.RAMACompartilhar.abrir({
+      personagemId: estado.personagemId,
+      nome: estado.ficha.nome,
+      focoAoFechar: function () { return U.$('.ficha-topo [aria-label="Opções da ficha"]'); },
+      aoSalvar: function (dados) {
+        if (!estado.acesso) estado.acesso = {};
+        estado.acesso.compartilhamentos = (dados && dados.acessos ? dados.acessos.length : 0);
+        /* Com alguém editando junto, a página passa a perguntar pela
+           versão nova; sem ninguém, para. */
+        if (precisaDeVigia()) ligarVigia(); else pararVigia();
+      },
+    });
+  }
+
+  /* ---------- copiar para a própria biblioteca ---------- */
+
+  /* Um id por intenção: tentar de novo depois de uma falha de rede manda
+     o MESMO, e o servidor devolve a cópia que já tinha feito — nunca
+     duas. Uma recusa de verdade descarta o id. */
+  var copiaEmCurso = false;
+  var operacaoDaCopia = null;
+  async function copiarParaBiblioteca() {
+    if (copiaEmCurso) return;
+    copiaEmCurso = true;
+    if (!operacaoDaCopia) operacaoDaCopia = global.RAMAApi.novaOperacao();
+    var fim = UI.aviso("Copiando " + (estado.ficha.nome || "a ficha") + " para a sua biblioteca…", { duracao: 30000 });
+    var r;
+    try {
+      r = await global.RAMAApi.copiarPersonagem(estado.personagemId, operacaoDaCopia);
+    } finally {
+      fim();
+      copiaEmCurso = false;
+    }
+    if (!r || !r.ok) {
+      var deRede = !r || r.erro === "sem_conexao" || r.erro === "prazo" || r.erro === "servidor_falhou";
+      if (!deRede) operacaoDaCopia = null;
+      UI.avisoDeFalha(r || {}, "cópia", { tentarDeNovo: copiarParaBiblioteca });
+      return;
+    }
+    operacaoDaCopia = null;
+    (r.avisos || []).forEach(function (t) { UI.avisoAtencao(t); });
+    UI.aviso("Cópia criada na sua biblioteca. Ela é independente: mudar uma não muda a outra.", {
+      tipo: "ok", duracao: 12000,
+      acao: { rotulo: "Abrir a cópia", aoClicar: function () { location.href = U.url("ficha/?id=" + encodeURIComponent(r.dados.id)); } },
+    });
   }
 
   /* =================================================================
