@@ -70,6 +70,34 @@
 
   var CHANGELOG = [
     {
+      versao: "2.49.0",
+      codinome: "ANVERSO",
+      data: "27/10/2026",
+      mudancas: {
+        "Adicionado": [
+          "Modern20, a nova identidade visual do R.A.M.A.: uma ferramenta de mesa sóbria e confortável para sessões longas, com letra de leitura, números grandes e comparáveis, cantos leves, superfícies bem separadas e sombra só no que flutua. É o estilo padrão de quem ainda não escolheu.",
+          "Estilo da interface no editor de temas do Perfil (o lápis ao lado do avatar, ou “Outros temas…” / “Trocar estilo…”): Legacy ou Modern20, cada um com uma miniatura e o selo “Selecionado”. Escolher mostra a prévia na página inteira; Salvar grava na conta, Cancelar volta ao estilo de antes.",
+          "A escolha é da conta: vale em todas as páginas, em qualquer aparelho, e já abre no estilo certo. Cada pessoa vê o próprio estilo — inclusive nas fichas compartilhadas, nas campanhas e na ficha embutida no combate.",
+        ],
+        "Alterado": [
+          "O visual de antes continua inteiro como Legacy: fonte pixel, caixa-alta, traço fino e efeito de tela antiga, exatamente como na v2.48.4.",
+          "Estilo e cores são coisas separadas: Claro, Escuro, Sistema, os temas personalizados e o tema próprio de cada ficha valem nos dois estilos, e trocar de estilo não regrava nem converte tema nenhum. Os temas de dados seguem à parte.",
+          "Trocar de estilo com a página aberta não perde nada: janelas e menus abertos continuam abertos, o que foi digitado fica, a ficha, a aba, os filtros e a rolagem continuam onde estavam. Nada é salvo na ficha e nenhuma ação de campanha é disparada.",
+        ],
+        "Visual": [
+          "Modern20 em todas as telas: cabeçalho numa barra só (seções na mesma linha da marca; no celular, no menu ☰), abas sublinhadas, filtros segmentados, painéis com título no cabeçalho, janelas com canto e sombra (folha que sobe de baixo no celular), avisos e notificações de rolagem em cartão, estados vazio e de carregamento mais leves.",
+          "Na ficha: atributos e números com algarismos de largura fixa; PV, PE, SAN e PD com a cor de cada recurso no traço de cima e o nome escrito; valores calculados com cara de resultado, campos editáveis com cara de campo; perícias de Ordem como tabela de leitura rápida. A aba Regras mantém categorias, busca e filtro.",
+          "Na mesa e no combate: recursos com ponto colorido e barra, a vez marcada pela cor de destaque, traço grosso e o texto “Vez de…”, condições e pendências mais legíveis.",
+        ],
+        "Técnico": [
+          "`js/interface.js` (no `<head>`, depois de `tema.js`) põe `data-interface` no `<html>` antes da primeira pintura, com cache por conta em `rama.interface.<id>`; `auth.js` sincroniza com a sessão. Salvar é otimista e honesto: um pedido por vez, só a última escolha vale, falha volta ao estilo da conta; servidor anterior à v2.49 deixa a escolha só no aparelho (estado `local`).",
+          "As folhas do Legacy não mudaram. O Modern20 mora em `css/modern20/`, uma folha par de cada uma, carregada logo depois dela e presa a `:where(:root[data-interface=\"modern20\"])` — sem `!important` e sem regra solta (testes/executar-tema.js confere). Os tons `--m20-*` são misturas dos papéis do tema, recalculadas em cada contexto com tema próprio. Única adição de estrutura: `data-recurso` no recurso da ficha de Ordem.",
+          "Backend: `Codigo.gs` aceita, devolve e valida `preferencias.estiloInterface` (`legacy` | `modern20`, padrão `modern20`). Sem coluna nova e sem `setupRama()`. Inventário de telas, arquitetura e verificação em docs/INTERFACE.md.",
+          "Testes: 3328 regras, 249 frontend, 233 tema (46 novos: preferência e isolamento das folhas), 1509 backend (11 novos), e as demais suítes. O Legacy foi comparado com a v2.48.4 servida lado a lado: estilos calculados idênticos, elemento a elemento, nas 10 abas da ficha de Ordem, nas 8 da universal, em Personagens e nas abas da campanha.",
+        ],
+      },
+    },
+    {
       versao: "2.48.4",
       codinome: "LISTRA",
       data: "27/10/2026",

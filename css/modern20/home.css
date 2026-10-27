@@ -1,0 +1,128 @@
+/* =====================================================================
+   R.A.M.A. — Modern20 · Home
+   ---------------------------------------------------------------------
+   A apresentação no Modern20: título de tamanho contido, texto de
+   leitura, miniaturas como cartões de verdade (canto e sombra leves no
+   lugar do deslocamento de pixel) e a cor paranormal só onde ela aponta.
+   ===================================================================== */
+
+:where(:root[data-interface="modern20"]) {
+
+  /* ---------- abertura ---------- */
+
+  & .home-abertura {
+    gap: var(--e4);
+    padding: var(--e7) 0 var(--e6);
+    border-bottom-color: var(--m20-borda);
+  }
+  & .home-abertura__titulo {
+    max-width: 20ch;
+    font-size: clamp(calc(28px * var(--escala)), 4vw, calc(40px * var(--escala)));
+    font-weight: 750;
+    line-height: 1.12;
+    letter-spacing: -0.025em;
+    text-transform: none;
+  }
+  & .home-abertura__texto {
+    max-width: 60ch;
+    font-size: calc(17px * var(--escala));
+    line-height: 1.6;
+  }
+
+  /* ---------- seções ---------- */
+
+  & .home-secao {
+    gap: var(--e7);
+    padding: var(--e7) 0;
+    border-bottom-color: var(--m20-borda);
+  }
+  & .home-secao__marca {
+    font-family: var(--fonte-mono);
+    font-size: var(--texto-mini);
+    letter-spacing: 0;
+    color: var(--cor-paranormal);
+  }
+  & .home-secao__marca::before { color: inherit; opacity: 0.6; }
+  & .home-secao__titulo {
+    font-size: calc(24px * var(--escala));
+    font-weight: 700;
+    line-height: 1.2;
+    letter-spacing: -0.015em;
+    text-transform: none;
+  }
+  & .home-destaque { text-decoration-thickness: 2px; text-underline-offset: 5px; }
+  & .home-secao__paragrafo { line-height: 1.65; max-width: 62ch; }
+  & .home-lista { gap: 6px; }
+  & .home-lista li { color: var(--cor-texto-2); }
+  & .home-lista li::before { top: 0.55em; width: 7px; height: 7px; border-radius: 50%; }
+
+  @media (max-width: 760px) {
+    & .home-abertura { padding: var(--e6) 0 var(--e5); }
+    & .home-secao { gap: var(--e5); padding: var(--e6) 0; }
+  }
+
+  /* ---------- miniaturas ---------- */
+
+  & .home-mock {
+    border-color: var(--m20-borda);
+    border-radius: var(--m20-raio-janela);
+    overflow: hidden;
+    box-shadow: var(--m20-sombra-2);
+  }
+  & .home-mock__topo { border-bottom-color: var(--m20-borda); }
+  & .home-mock__pontos span { width: 8px; height: 8px; border-radius: 50%; }
+  & .home-mock__avatar {
+    border-color: var(--m20-borda);
+    border-radius: 50%;
+    font-weight: 650;
+  }
+  & .home-mock__atributo {
+    border-color: var(--m20-borda);
+    border-radius: var(--m20-raio-controle);
+  }
+  & .home-mock__numero,
+  & .home-mock__total { font-weight: 750; letter-spacing: -0.015em; font-feature-settings: "tnum"; }
+  & .home-mock__rolagem,
+  & .home-mock__pendencia { border-radius: var(--m20-raio-controle); background: var(--fundo-superficie-2); }
+  & .home-mock__dados { font-family: var(--fonte-mono); font-size: var(--texto-mini); }
+  & .home-mock__botao {
+    border-radius: var(--m20-raio-controle);
+    font-size: var(--texto-mini);
+    font-weight: 600;
+    letter-spacing: 0;
+    text-transform: none;
+  }
+  & .home-mock__parcela { border-bottom-color: var(--m20-borda); font-feature-settings: "tnum"; }
+  & .home-mock__item {
+    border-color: var(--m20-borda);
+    border-radius: var(--m20-raio-controle);
+  }
+  & .home-mock__item--vez { border-color: var(--cor-paranormal); background: var(--m20-destaque-suave); }
+  & .home-mock__luz { border-radius: 50%; }
+  & .home-mock__aparelho {
+    border-color: var(--m20-borda);
+    border-radius: var(--m20-raio-controle);
+  }
+
+  /* ---------- como começar ---------- */
+
+  & .home-passos { padding: var(--e7) 0; }
+  & .home-passo__numero {
+    padding: 0 var(--e4);
+    border-color: var(--m20-borda);
+    border-radius: var(--m20-raio-cartao) 0 0 var(--m20-raio-cartao);
+    background: var(--m20-destaque-suave);
+    font-weight: 750;
+    font-feature-settings: "tnum";
+  }
+  & .home-passo__link {
+    border-color: var(--m20-borda);
+    border-radius: 0 var(--m20-raio-cartao) var(--m20-raio-cartao) 0;
+    text-decoration: none;
+    transition: border-color var(--tempo-seco) var(--curva), box-shadow var(--tempo-seco) var(--curva);
+  }
+  & .home-passo__link:hover,
+  & .home-passo__link:focus-visible { box-shadow: var(--m20-sombra-2); }
+
+  & .home-aviso { border-top-color: var(--m20-borda); }
+}

@@ -1,0 +1,334 @@
+/* =====================================================================
+   R.A.M.A. — Modern20 · esqueleto
+   ---------------------------------------------------------------------
+   Cabeçalho, navegação, corpo da página, rodapé e as listas de registro,
+   pastas e filtros — as mesmas classes de css/layout.css.
+
+   O CABEÇALHO VIRA UMA BARRA SÓ
+   No Legacy, a marca e o agente ficam numa linha e a navegação noutra.
+   Aqui, no desktop, é uma barra: marca, seções, espaço, agente e menu. A
+   faixa de dentro (.app-topo__faixa) passa a `display: contents` e os
+   filhos dela, junto da <nav>, viram itens da mesma linha — sem mexer no
+   HTML que js/app.js monta. No celular a lista de seções volta a ser o
+   painel que o botão de menu abre, embaixo da barra.
+   ===================================================================== */
+
+:where(:root[data-interface="modern20"]) {
+
+  /* =================================================================
+     CABEÇALHO
+     ================================================================= */
+
+  & .app-topo {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    column-gap: var(--e3);
+    min-height: 60px;
+    padding: var(--e2) max(var(--e4), calc((100% - var(--largura-max)) / 2 + var(--e4)));
+    border-bottom: 1px solid var(--m20-borda);
+  }
+  & .app-topo__faixa { display: contents; }
+
+  & .app-nav__alternar { order: 0; }
+  & .marca { order: 1; margin-right: var(--e3); }
+  & .app-nav { order: 2; flex: 0 1 auto; min-width: 0; border: 0; }
+  & .app-topo__espaco { order: 3; }
+  & .agente { order: 4; }
+  & .app-topo__faixa > .r-menu { order: 5; }
+
+  & .marca__simbolo { width: 26px; height: 26px; }
+  & .marca__nome {
+    font-size: calc(15px * var(--escala));
+    font-weight: 750;
+    letter-spacing: 0.08em;
+  }
+  & .marca__extenso {
+    font-size: var(--m20-texto-sobre);
+    font-weight: 500;
+    letter-spacing: 0.01em;
+    text-transform: none;
+  }
+  & .marca__texto { gap: 1px; }
+
+  /* Seções: o item ativo leva o fundo da seleção, em tom suave, e o peso
+     da letra — além de aria-current. */
+  & .app-nav__lista {
+    gap: 2px;
+    max-width: none;
+    margin: 0;
+    padding: 0;
+  }
+  & .app-nav__link {
+    min-height: var(--m20-controle);
+    padding: 0 var(--e3);
+    border: 0;
+    border-radius: var(--m20-raio-controle);
+    background: transparent;
+    color: var(--cor-texto-2);
+    font-size: var(--texto-base);
+    font-weight: 550;
+    letter-spacing: 0;
+    text-transform: none;
+    text-decoration: none;
+  }
+  & .app-nav__link:hover {
+    background: var(--m20-realce);
+    color: var(--cor-texto);
+  }
+  & .app-nav__link[aria-current="page"] {
+    background: var(--m20-selecao-suave);
+    color: var(--cor-texto);
+    font-weight: 650;
+    box-shadow: inset 0 -2px 0 var(--cor-selecao);
+  }
+
+  & .agente {
+    gap: var(--e2);
+    min-height: var(--m20-controle);
+    padding: 3px var(--e3) 3px 3px;
+    border: 0;
+    border-radius: 999px;
+    color: var(--cor-texto);
+    transition: background var(--tempo-seco) var(--curva);
+  }
+  & .agente:hover { background: var(--m20-realce); }
+  & .agente__nome {
+    font-size: var(--m20-texto-apoio);
+    font-weight: 550;
+    letter-spacing: 0;
+    text-transform: none;
+  }
+
+  /* Pouca largura: o nome por extenso sai antes da navegação apertar. */
+  @media (max-width: 1180px) {
+    & .marca__extenso { display: none; }
+  }
+
+  @media (max-width: 760px) {
+    & .app-topo { min-height: 56px; column-gap: var(--e2); padding: var(--e2) var(--e3); }
+    & .marca { margin-right: 0; }
+    & .app-nav { order: 10; flex: 1 1 100%; }
+    & .app-nav__lista {
+      flex-direction: column;
+      gap: 2px;
+      padding: var(--e2) 0 var(--e3);
+      border-top: 1px solid var(--m20-borda);
+      margin-top: var(--e2);
+    }
+    & .app-nav__link { width: 100%; min-height: var(--alvo-toque); justify-content: flex-start; }
+    & .agente { padding: 0; }
+  }
+
+  /* =================================================================
+     CORPO DA PÁGINA
+     ================================================================= */
+
+  & .app-corpo {
+    padding: var(--e6) var(--e4) var(--e8);
+    gap: var(--e5);
+  }
+
+  & .pagina-topo { gap: var(--e3) var(--e4); align-items: flex-end; }
+  & .pagina-topo__texto { gap: 6px; }
+  & .pagina-topo__acoes { gap: var(--e2); }
+
+  /* A linha de registro é código de arquivo: a monoespaçada, sem gritar. */
+  & .trilha {
+    gap: 2px var(--e2);
+    font-family: var(--fonte-mono);
+    font-size: var(--texto-mini);
+    letter-spacing: 0;
+    text-transform: none;
+  }
+  & .trilha__sep { color: var(--cor-texto-3); opacity: 0.6; }
+
+  /* =================================================================
+     RODAPÉ
+     ================================================================= */
+
+  & .app-rodape { border-top-color: var(--m20-borda); }
+  & .app-rodape__faixa {
+    padding: var(--e4);
+    font-size: var(--texto-mini);
+    letter-spacing: 0;
+    text-transform: none;
+  }
+  & .app-rodape .versao { font-family: var(--fonte-mono); }
+  & .app-rodape .versao:hover { text-decoration: underline; text-underline-offset: 3px; }
+
+  /* =================================================================
+     GRADES E RESUMO
+     ================================================================= */
+
+  & .resumo__item {
+    padding: var(--e4);
+    border-color: var(--m20-borda);
+    border-radius: var(--m20-raio-cartao);
+    transition: border-color var(--tempo-seco) var(--curva), box-shadow var(--tempo-seco) var(--curva);
+  }
+  & .resumo__item:hover { border-color: var(--cor-traco-media); box-shadow: var(--m20-sombra-1); }
+  & .resumo__valor { font-weight: 750; letter-spacing: -0.015em; font-feature-settings: "tnum"; }
+
+  /* =================================================================
+     LISTAS DE REGISTRO (personagens, campanhas, homebrew)
+     ================================================================= */
+
+  & .registros { gap: var(--e2); }
+  & .registro { gap: var(--e3); padding: var(--e3) var(--e4); }
+  & .registro > .r-avatar { width: 44px; height: 44px; border-radius: var(--m20-raio-cartao); }
+  & .registro__corpo { gap: 3px; }
+  & .registro__nome {
+    font-size: calc(15px * var(--escala));
+    font-weight: 650;
+    letter-spacing: -0.005em;
+  }
+  & .registro__sub {
+    font-size: var(--texto-mini);
+    letter-spacing: 0;
+    text-transform: none;
+  }
+  & .registro__data {
+    font-size: var(--texto-mini);
+    font-feature-settings: "tnum";
+  }
+  & .registro__data,
+  & .registro__sub { color: var(--cor-texto-3); }
+  & .registro__link:focus-visible { outline-offset: -2px; border-radius: var(--m20-raio-cartao); }
+
+  & .registro__pasta,
+  & .registro__estado {
+    font-size: var(--texto-mini);
+    letter-spacing: 0;
+    text-transform: none;
+  }
+
+  /* ---------- pastas (exibição em abas) ---------- */
+
+  & .pastas__lista { gap: 6px; }
+  & .pasta {
+    min-height: var(--m20-controle);
+    padding: 0 var(--e3);
+    border-radius: var(--m20-raio-controle);
+    font-size: var(--m20-texto-apoio);
+    font-weight: 550;
+    letter-spacing: 0;
+    text-transform: none;
+  }
+  & .pasta:hover { background: var(--fundo-superficie-2); }
+  & .pasta[aria-pressed="true"] {
+    background: var(--fundo-selecao);
+    border-color: var(--cor-selecao);
+    color: var(--cor-selecao-texto);
+    font-weight: 650;
+  }
+  & .pasta__n { font-feature-settings: "tnum"; opacity: 0.8; }
+
+  & .pasta-aberta { border-bottom-color: var(--m20-borda); }
+
+  & .grupo-sistema__titulo,
+  & .soltos__titulo {
+    font-size: var(--texto-medio);
+    font-weight: 650;
+    letter-spacing: -0.005em;
+    text-transform: none;
+    border-bottom-color: var(--m20-borda);
+  }
+
+  & .pasta-opcao {
+    border-radius: var(--m20-raio-controle);
+    transition: border-color var(--tempo-seco) var(--curva), background var(--tempo-seco) var(--curva);
+  }
+  & .pasta-opcao:hover:not(:disabled) { background: var(--m20-realce); }
+
+  /* =================================================================
+     BARRA DE FILTRO — controles segmentados
+     ================================================================= */
+
+  & .filtros { gap: var(--e2); }
+  & .filtros__grupo { gap: 4px; }
+  & .filtro {
+    min-height: calc(var(--m20-controle) - 4px);
+    padding: 0 var(--e3);
+    border-radius: var(--m20-raio-controle);
+    background: var(--fundo-superficie);
+    color: var(--cor-texto-2);
+    font-size: var(--m20-texto-apoio);
+    font-weight: 550;
+    letter-spacing: 0;
+    text-transform: none;
+    transition: background var(--tempo-seco) var(--curva), border-color var(--tempo-seco) var(--curva),
+      color var(--tempo-seco) var(--curva);
+  }
+  & .filtro:hover { color: var(--cor-texto); background: var(--fundo-superficie-2); }
+  & .filtro[aria-pressed="true"] {
+    background: var(--fundo-selecao);
+    border-color: var(--cor-selecao);
+    color: var(--cor-selecao-texto);
+    font-weight: 650;
+  }
+
+  /* =================================================================
+     TELA DE ENTRADA
+     ================================================================= */
+
+  & .portao__caixa {
+    gap: var(--e5);
+    padding: var(--e6) var(--e5) var(--e5);
+    border-color: var(--m20-borda);
+    border-radius: 18px;
+    box-shadow: var(--m20-sombra-3);
+  }
+  & .portao__marca svg { width: 48px; height: 48px; }
+  & .portao__nome { font-size: var(--texto-grande); font-weight: 750; letter-spacing: 0.12em; }
+  & .portao__extenso {
+    font-size: var(--m20-texto-apoio);
+    letter-spacing: 0;
+    text-transform: none;
+  }
+  & .senha__olho { height: var(--m20-controle); }
+
+  & .abertura__nome { font-weight: 750; letter-spacing: 0.12em; }
+
+  /* =================================================================
+     PASTAS COMO ÍCONES
+     ================================================================= */
+
+  & .exibicao__opcoes {
+    border-radius: var(--m20-raio-controle);
+    overflow: hidden;
+  }
+  & .exibicao__opcao {
+    min-height: calc(var(--m20-controle) - 4px);
+    font-size: var(--m20-texto-apoio);
+    font-weight: 550;
+    letter-spacing: 0;
+    text-transform: none;
+  }
+  & .exibicao__opcao[aria-pressed="true"] { font-weight: 650; }
+
+  & .pasta-icone__nome {
+    font-size: var(--texto-mini);
+    font-weight: 550;
+    letter-spacing: 0;
+    text-transform: none;
+  }
+  & .pasta-icone__caixa { box-shadow: var(--m20-sombra-1); }
+
+  /* =================================================================
+     HISTÓRICO DE VERSÕES
+     ================================================================= */
+
+  & .versao-secao__rotulo {
+    font-size: var(--m20-texto-sobre);
+    letter-spacing: var(--m20-espaco-sobre);
+  }
+  & .versao-lista { line-height: 1.6; }
+  & .versao-codigo {
+    padding: 0 5px;
+    border-color: var(--m20-borda);
+    border-radius: 4px;
+    font-family: var(--fonte-mono);
+    font-size: 0.9em;
+  }
+}

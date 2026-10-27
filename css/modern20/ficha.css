@@ -1,0 +1,445 @@
+/* =====================================================================
+   R.A.M.A. — Modern20 · a ficha
+   ---------------------------------------------------------------------
+   A ficha para a sessão: identificação e ações no topo, números grandes e
+   comparáveis (algarismos de largura fixa), recursos com a cor de cada um
+   E o nome escrito, campos editáveis com cara de campo e valores
+   calculados com cara de resultado. Vale para a ficha universal e a de
+   Ordem, e para a ficha embutida no painel do combate.
+
+   As distinções da ficha continuam as do Legacy: o modo edição contorna a
+   ficha na cor de aviso, o grau de treinamento sobe pelo peso da letra, a
+   pasta de habilidades é tracejada, o ajuste manual tem traço lateral.
+   ===================================================================== */
+
+:where(:root[data-interface="modern20"]) {
+
+  /* =================================================================
+     CABEÇALHO DA FICHA
+     ================================================================= */
+
+  & .ficha-topo {
+    border-bottom-color: var(--m20-borda);
+    box-shadow: 0 1px 0 color-mix(in srgb, var(--cor-sombra) 6%, transparent);
+  }
+  & .ficha-topo__faixa { gap: var(--e3); padding: var(--e3) var(--e4); }
+  & .ficha-topo__identidade { gap: 2px; }
+  & .ficha-topo__nome {
+    font-size: calc(18px * var(--escala));
+    font-weight: 700;
+    letter-spacing: -0.01em;
+  }
+  & .ficha-topo__meta {
+    font-size: var(--texto-mini);
+    letter-spacing: 0;
+    text-transform: none;
+  }
+  & .ficha-topo__ferramentas { gap: var(--e2); }
+
+  /* Normal / Edição: controle segmentado. Edição ligada fica na cor de
+     aviso, como no Legacy — editar sem perceber é o erro caro. */
+  & .modo {
+    padding: 2px;
+    gap: 2px;
+    border-color: var(--m20-borda);
+    border-radius: calc(var(--m20-raio-controle) + 2px);
+    background: var(--m20-realce);
+  }
+  & .modo__opcao {
+    min-height: calc(var(--m20-controle) - 6px);
+    padding: 0 var(--e3);
+    border-radius: var(--m20-raio-controle);
+    font-size: var(--m20-texto-apoio);
+    font-weight: 550;
+    letter-spacing: 0;
+    text-transform: none;
+    color: var(--cor-texto-2);
+  }
+  & .modo__opcao:hover { color: var(--cor-texto); }
+  & .modo__opcao[aria-pressed="true"] {
+    background: var(--fundo-superficie);
+    color: var(--cor-texto);
+    font-weight: 650;
+    box-shadow: var(--m20-sombra-1);
+  }
+  & .modo__opcao--edicao[aria-pressed="true"] {
+    background: var(--cor-aviso);
+    color: var(--cor-fundo);
+  }
+
+  & .ficha__aviso-edicao,
+  & .ficha__aviso-mestre,
+  & .ficha__aviso-acesso {
+    border-radius: var(--m20-raio-cartao);
+    font-size: var(--m20-texto-apoio);
+    font-weight: 500;
+    letter-spacing: 0;
+    text-transform: none;
+    line-height: 1.45;
+  }
+  & .ficha__aviso-edicao { background: var(--m20-aviso-suave); }
+  & .ficha__aviso-mestre { background: var(--m20-destaque-suave); }
+  & .ficha__aviso-acesso { background: var(--fundo-superficie); }
+
+  /* =================================================================
+     BLOCO SUPERIOR — foto, atributos, status, defesa
+     ================================================================= */
+
+  & .ficha-geral { gap: var(--e4); }
+
+  & .ficha-foto {
+    border-color: var(--m20-borda);
+    border-radius: var(--m20-raio-janela);
+  }
+  & .ficha-foto__trocar {
+    min-height: var(--m20-controle);
+    border-top: 0;
+    background: color-mix(in srgb, var(--cor-fundo) 78%, transparent);
+    font-size: var(--texto-mini);
+    font-weight: 600;
+    letter-spacing: 0;
+    text-transform: none;
+  }
+  & .ficha-foto__trocar:hover { background: color-mix(in srgb, var(--cor-fundo) 92%, transparent); color: var(--cor-texto); }
+
+  /* Atributos: o número é a coisa mais legível da ficha. */
+  & .atributo__caixa {
+    gap: 4px;
+    min-height: 92px;
+    border-color: transparent;
+    background: var(--fundo-superficie-2);
+    border-radius: var(--m20-raio-cartao);
+    transition: background var(--tempo-seco) var(--curva), border-color var(--tempo-seco) var(--curva),
+      box-shadow var(--tempo-seco) var(--curva);
+  }
+  & .atributo__caixa:hover {
+    background: var(--fundo-superficie-2);
+    border-color: var(--cor-traco-media);
+    box-shadow: var(--m20-sombra-2);
+  }
+  & .atributo__caixa:active { background: var(--fundo-superficie-2); color: var(--cor-texto); box-shadow: none; }
+  & .atributo__caixa[disabled]:hover { background: var(--fundo-superficie-2); border-color: transparent; box-shadow: none; }
+  & .atributo__sigla {
+    font-size: var(--m20-texto-sobre);
+    letter-spacing: var(--m20-espaco-sobre);
+  }
+  & .atributo__caixa:active .atributo__sigla,
+  & .atributo__caixa:active .atributo__dado { color: var(--cor-texto-3); }
+  & .atributo__valor {
+    font-size: calc(32px * var(--escala));
+    font-weight: 750;
+    letter-spacing: -0.02em;
+    font-feature-settings: "tnum";
+  }
+  & .atributo__dado { font-family: var(--fonte-mono); }
+
+  & .status {
+    gap: var(--e2);
+    padding: var(--e3) var(--e4) var(--e4);
+    border-color: transparent;
+    border-radius: var(--m20-raio-cartao);
+    background: var(--fundo-superficie-2);
+  }
+  & .status__nome {
+    font-size: var(--m20-texto-apoio);
+    font-weight: 650;
+    letter-spacing: 0;
+    text-transform: none;
+    color: var(--cor-texto);
+  }
+  & .status__maximo { font-size: var(--texto-mini); font-feature-settings: "tnum"; }
+  & .status__barra {
+    height: 6px;
+    border: 0;
+    border-radius: 999px;
+    background: var(--m20-realce-forte);
+  }
+  & .status__preenche { border-radius: 999px; }
+
+  & .defesa__item {
+    padding: var(--e3) var(--e2);
+    border-color: transparent;
+    border-radius: var(--m20-raio-cartao);
+    background: var(--fundo-superficie-2);
+  }
+  & .defesa__valor { font-weight: 750; letter-spacing: -0.015em; font-feature-settings: "tnum"; }
+
+  /* =================================================================
+     PERÍCIAS (ficha universal)
+     ================================================================= */
+
+  & .pericias { gap: 6px; }
+  & .pericia {
+    padding: var(--e2) var(--e3);
+    border-radius: var(--m20-raio-controle);
+    transition: background var(--tempo-seco) var(--curva), border-color var(--tempo-seco) var(--curva);
+  }
+  & .pericia:hover { background: var(--fundo-superficie-2); }
+  & .pericia:active { background: var(--m20-realce-forte); color: var(--cor-texto-2); }
+  & .pericia:active .pericia__attr { color: var(--cor-texto-3); }
+  & .pericia:active .pericia__bonus { color: var(--cor-texto); }
+  & .pericia__nome { color: var(--cor-texto); }
+  & .pericia__bonus { font-weight: 700; font-feature-settings: "tnum"; }
+
+  & .pericia-edicao { border-radius: var(--m20-raio-cartao); }
+  & .dado-extra { border-radius: 5px; font-feature-settings: "tnum"; }
+
+  /* =================================================================
+     INVENTÁRIO E ANOTAÇÕES
+     ================================================================= */
+
+  & .inventario__peso { border-radius: var(--m20-raio-cartao); }
+  & .inventario__peso-valor { font-weight: 750; font-feature-settings: "tnum"; }
+
+  & .arvore { gap: 2px; }
+  & .arvore__pasta > summary {
+    border-radius: var(--m20-raio-controle);
+    font-size: var(--m20-texto-apoio);
+    font-weight: 650;
+    letter-spacing: 0;
+    text-transform: none;
+  }
+  & .arvore__pasta > summary:hover { background: var(--m20-realce); }
+  & .arvore__nota {
+    border-left: 0;
+    border-radius: var(--m20-raio-controle);
+    color: var(--cor-texto-2);
+    transition: background var(--tempo-seco) var(--curva), color var(--tempo-seco) var(--curva);
+  }
+  & .arvore__nota:hover { background: var(--m20-realce); color: var(--cor-texto); }
+  & .arvore__nota[aria-current="true"] {
+    background: var(--m20-selecao-suave);
+    color: var(--cor-texto);
+    font-weight: 600;
+    box-shadow: inset 2px 0 0 var(--cor-selecao);
+  }
+  & .nota-editor__corpo { line-height: 1.65; }
+
+  /* =================================================================
+     A PÁGINA DA FICHA
+     ================================================================= */
+
+  & .ficha { gap: var(--e5); padding-top: var(--e3); }
+
+  @media (max-width: 560px) {
+    & .ficha-topo__faixa { padding: var(--e2) var(--e3); }
+    & .r-painel { padding: var(--e3) var(--e3) var(--e4); }
+    & .atributo__caixa { min-height: 80px; }
+    & .atributo__valor { font-size: calc(28px * var(--escala)); }
+  }
+
+  /* =================================================================
+     HABILIDADES, COMPARTILHAR, ITENS, RITUAIS
+     ================================================================= */
+
+  & .habilidade__texto { line-height: 1.6; max-width: 78ch; }
+
+  & .compartilhar__resultados,
+  & .compartilhar__acesso { border-radius: var(--m20-raio-controle); }
+  & .compartilhar__recado { border-radius: var(--m20-raio-controle); }
+
+  & .item__acoes--fora { border-top-color: var(--m20-borda); }
+  & .ritual-danos { border-top-color: var(--m20-borda); }
+  & .ritual-dano__versao {
+    font-size: var(--texto-mini);
+    font-weight: 550;
+    letter-spacing: 0;
+    text-transform: none;
+  }
+  & .ritual-dano__expressao { font-family: var(--fonte-mono); font-weight: 650; }
+  & .versao-bloco { border-radius: var(--m20-raio-controle); }
+
+  /* =================================================================
+     FICHA DE ORDEM PARANORMAL
+     -----------------------------------------------------------------
+     O calculado é um resultado, não um campo: fundo de área secundária,
+     sem moldura de campo, o "=" na cor de destaque. O campo digitável
+     continua com borda e fundo de campo.
+     ================================================================= */
+
+  & .calculado {
+    padding: var(--e2) var(--e3);
+    border-color: transparent;
+    border-radius: var(--m20-raio-controle);
+    background: var(--fundo-superficie-2);
+    transition: border-color var(--tempo-seco) var(--curva), background var(--tempo-seco) var(--curva);
+  }
+  & .calculado:hover { border-color: var(--cor-traco-media); background: var(--fundo-superficie-2); }
+  & .calculado__rotulo {
+    font-size: var(--m20-texto-apoio);
+    font-weight: 500;
+    letter-spacing: 0;
+    text-transform: none;
+  }
+  & .calculado__valor {
+    font-size: calc(18px * var(--escala));
+    font-weight: 750;
+    letter-spacing: -0.01em;
+    font-feature-settings: "tnum";
+  }
+  & .calculado__marca { font-family: var(--fonte-mono); font-weight: 700; }
+
+  & .composicao__linha { border-bottom-color: var(--m20-borda); }
+  & .composicao__valor { font-feature-settings: "tnum"; }
+  & .composicao-extra { border-top-color: var(--m20-borda); }
+  & .composicao-extra > label {
+    font-size: var(--m20-texto-apoio);
+    font-weight: 550;
+    letter-spacing: 0;
+    text-transform: none;
+    color: var(--cor-texto-2);
+  }
+  & .composicao__total { letter-spacing: 0; text-transform: none; font-feature-settings: "tnum"; }
+
+  /* ---------- atributos ----------
+     Dentro do painel, as peças da ficha são poços (fundo de área
+     secundária, sem moldura própria) — e não cartões dentro do cartão. O
+     traço volta como resposta ao ponteiro e ao estado. */
+
+  & .ordem-atributos { gap: var(--e2); }
+  & .ordem-atributo {
+    padding: var(--e3) var(--e2);
+    border-color: transparent;
+    background: var(--fundo-superficie-2);
+    border-radius: var(--m20-raio-cartao);
+    transition: border-color var(--tempo-seco) var(--curva), box-shadow var(--tempo-seco) var(--curva);
+  }
+  & .ordem-atributo--rolar:hover { box-shadow: var(--m20-sombra-2); }
+  & .ordem-atributo__sigla {
+    font-size: var(--m20-texto-sobre);
+    font-weight: 650;
+    letter-spacing: var(--m20-espaco-sobre);
+  }
+  & .ordem-atributo__valor {
+    font-size: calc(30px * var(--escala));
+    font-weight: 750;
+    letter-spacing: -0.02em;
+    font-feature-settings: "tnum";
+    border-radius: var(--m20-raio-controle);
+  }
+  & .ordem-atributo__dado { font-family: var(--fonte-mono); }
+  & .ordem-atributo__conta { border-radius: 5px; }
+
+  /* ---------- recursos: a cor de cada um no traço de cima ---------- */
+
+  & .ordem-recursos,
+  & .ordem-derivados { gap: var(--e3); }
+  & .ordem-recurso {
+    --m20-cor-recurso: var(--cor-traco-media);
+    gap: var(--e2);
+    padding: var(--e3);
+    border-color: transparent;
+    border-top: 3px solid var(--m20-cor-recurso);
+    border-radius: var(--m20-raio-cartao);
+    background: var(--fundo-superficie-2);
+  }
+  & .ordem-recurso .calculado { background: var(--fundo-superficie); }
+  & .ordem-recurso[data-recurso="pv"] { --m20-cor-recurso: var(--cor-vida); }
+  & .ordem-recurso[data-recurso="pe"] { --m20-cor-recurso: var(--cor-esforco); }
+  & .ordem-recurso[data-recurso="san"] { --m20-cor-recurso: var(--cor-sanidade); }
+  & .ordem-recurso[data-recurso="pd"] { --m20-cor-recurso: var(--cor-azul); }
+  & .ordem-recurso__nome {
+    font-size: var(--m20-texto-apoio);
+    font-weight: 650;
+    letter-spacing: 0;
+    text-transform: none;
+    color: var(--cor-texto);
+  }
+  & .ordem-recurso .r-passo__valor { font-size: calc(20px * var(--escala)); font-weight: 750; }
+  & .ordem-carga { border-top-color: var(--m20-borda); }
+  & .recurso-acoes { gap: 4px; }
+
+  /* ---------- perícias: uma tabela de leitura rápida ---------- */
+
+  & .ordem-pericia {
+    padding: var(--e1) var(--e2);
+    border-bottom-color: var(--m20-borda);
+    transition: background var(--tempo-seco) var(--curva);
+  }
+  & .ordem-pericias__corpo > .ordem-pericia:hover { background: var(--m20-realce); }
+  & .ordem-pericia--cabecalho {
+    font-size: var(--m20-texto-sobre);
+    font-weight: 650;
+    letter-spacing: var(--m20-espaco-sobre);
+    border-bottom-color: var(--cor-traco-media);
+  }
+  & .ordem-pericia__nome { color: var(--cor-texto); }
+  & .ordem-pericia--destreinada .ordem-pericia__nome { color: var(--cor-texto-3); }
+  & .ordem-pericia__treino,
+  & .ordem-pericia__extra { font-feature-settings: "tnum"; }
+  & .ordem-pericia__bonus {
+    min-height: var(--m20-controle);
+    border-radius: var(--m20-raio-controle);
+    font-weight: 750;
+    font-feature-settings: "tnum";
+    transition: border-color var(--tempo-seco) var(--curva), background var(--tempo-seco) var(--curva);
+  }
+  & .ordem-pericia__bonus:hover { background: var(--m20-destaque-suave); }
+
+  @media (max-width: 760px) {
+    & .ordem-pericia { border-radius: var(--m20-raio-controle); }
+    & .ordem-pericia__celula[data-rotulo]::before {
+      font-size: var(--m20-texto-sobre);
+      font-weight: 600;
+      letter-spacing: var(--m20-espaco-sobre);
+    }
+  }
+
+  /* ---------- progressão ---------- */
+
+  & .ordem-degrau { border-radius: 0 var(--m20-raio-controle) var(--m20-raio-controle) 0; }
+  & .ordem-degrau__nex { font-family: var(--fonte-mono); }
+  & .ordem-escolha { border-radius: 0 var(--m20-raio-controle) var(--m20-raio-controle) 0; }
+  & .ordem-aviso-pendencias { border-radius: var(--m20-raio-cartao); background: var(--m20-destaque-suave); }
+  & .ordem-personalizacao-aviso { border-radius: 0 var(--m20-raio-controle) var(--m20-raio-controle) 0; }
+  & .ordem-personalizacao-automacao { border-radius: var(--m20-raio-controle); }
+  & .ordem-excluida { border-top-color: var(--m20-borda); }
+
+  & button.ordem-equacao__valor { border-radius: var(--m20-raio-controle); }
+  & .ordem-equacao__valor { font-weight: 750; font-feature-settings: "tnum"; }
+
+  & .ordem-categoria { border-radius: var(--m20-raio-controle); }
+  & .ordem-categoria__rotulo {
+    font-size: var(--texto-mini);
+    font-weight: 550;
+    letter-spacing: 0;
+    text-transform: none;
+  }
+  & .ordem-categoria__valor { font-feature-settings: "tnum"; }
+
+  /* =================================================================
+     CONDIÇÕES, EFEITOS E CONSUMO
+     ================================================================= */
+
+  & .condicao,
+  & .efeito,
+  & .consumo-item,
+  & .as3-cartao { border-radius: var(--m20-raio-controle); }
+  & .condicao__nome,
+  & .efeito__nome,
+  & .consumo-item__nome {
+    font-size: var(--m20-texto-apoio);
+    font-weight: 650;
+    letter-spacing: 0;
+    text-transform: none;
+    color: var(--cor-texto);
+  }
+  & .condicao__marca { border-radius: 3px; }
+  & .condicao__numero,
+  & .consumo-item__saldo,
+  & .consumo-confirmacao__gasto { font-feature-settings: "tnum"; }
+  & .efeitos-chip { border-radius: 5px; }
+  & .as3-secoes > .pilha { border-top-color: var(--m20-borda); }
+
+  & .valores-medios__tabela th,
+  & .valores-medios__tabela td { border-bottom-color: var(--m20-borda); }
+  & .valores-medios__tabela th { font-weight: 650; color: var(--cor-texto); }
+
+  /* =================================================================
+     A FICHA NO PAINEL DO COMBATE
+     ================================================================= */
+
+  & body.pagina-ficha--painel .app-corpo { padding-top: 0; }
+
+  & .aliado-imagem { border-radius: var(--m20-raio-cartao); }
+}

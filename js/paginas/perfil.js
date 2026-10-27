@@ -48,6 +48,10 @@
     if (global.RAMATema && perfil.preferencias) {
       global.RAMATema.sincronizarDaConta(perfil.id, perfil.preferencias.tema, { temaPersonalizado: temaAtivoDe(perfil.preferencias) });
     }
+    /* E o estilo da interface (v2.49): chave ausente deixa o cache valer. */
+    if (global.RAMAInterface && perfil.preferencias) {
+      global.RAMAInterface.sincronizarDaConta(perfil.id, perfil.preferencias);
+    }
     desenhar();
   });
 
@@ -169,7 +173,8 @@
 
      A escala existe porque a família PixelMplus foi desenhada em grade
      de 12 pixels. Ela fica nítida em 12 e em 24, e um pouco macia no
-     meio do caminho — quem precisa de letra maior escolhe a troca.
+     meio do caminho — quem precisa de letra maior escolhe a troca. No
+     Modern20 (v2.49) a escala vale do mesmo jeito, sobre a letra dele.
      ================================================================= */
 
   function exibicao() {
@@ -177,6 +182,7 @@
 
     return el("div.pilha", {}, [
       campoTema(),
+      campoEstilo(),
 
       el("div.r-campo", {}, [
         el("span.r-rotulo", { texto: "Tamanho da interface" }),
@@ -190,7 +196,7 @@
             });
           })
         ),
-        el("p.r-ajuda", { texto: "A fonte pixel é mais nítida em 100%. Acima disso ela cresce e fica levemente macia." }),
+        el("p.r-ajuda", { texto: "Aumenta letras e controles da interface inteira. No estilo Legacy, a fonte pixel é mais nítida em 100%; acima disso ela cresce e fica levemente macia." }),
       ]),
 
       el("label.r-marca", {}, [
@@ -198,10 +204,10 @@
           type: "checkbox", checked: prefs.efeitos,
           onchange: function (ev) { global.RAMAApp.definirEfeitos(ev.target.checked); },
         }),
-        el("span", { texto: "Efeito de tela antiga (linhas e vinheta)" }),
+        el("span", { texto: "Efeito de tela antiga (linhas e vinheta) — aparece no estilo Legacy" }),
       ]),
 
-      el("p.t-mini", { texto: "O tema fica salvo na sua conta e vale em qualquer aparelho. Tamanho e efeito de tela valem só neste aparelho." }),
+      el("p.t-mini", { texto: "O tema e o estilo da interface ficam salvos na sua conta e valem em qualquer aparelho. Tamanho e efeito de tela valem só neste aparelho." }),
     ]);
   }
 
@@ -281,6 +287,43 @@
       el("div.faixa.faixa--curta", { role: "group", "aria-label": "Tema" }, [sistema, outros]),
       situacao,
       tentar,
+    ]);
+  }
+
+  /* Estilo da interface (v2.49): Legacy ou Modern20. A escolha mora no
+     editor de temas, numa seção própria (o lápis ao lado do avatar, ou
+     "Outros temas…"); aqui fica o que está em uso e se a conta guardou. */
+  var pararEstilo = null;
+
+  function campoEstilo() {
+    var I = global.RAMAInterface;
+    if (pararEstilo) { pararEstilo(); pararEstilo = null; }
+    if (!I) return null;
+
+    var situacao = el("p.r-ajuda", { role: "status", "aria-live": "polite" });
+    var trocar = el("button.r-botao.r-botao--mini", {
+      type: "button", texto: "Trocar estilo…", onclick: abrirTema,
+      "aria-label": "Trocar o estilo da interface no editor de temas",
+    });
+
+    function pintar(info) {
+      var fala = {
+        salvando: " Salvando na conta…",
+        salvo: " Salvo na conta.",
+        local: " Vale neste aparelho: o servidor ainda não guarda o estilo (falta atualizar o Apps Script).",
+        erro: " Não foi possível salvar na conta: a conta continua no estilo anterior.",
+      }[info.estado] || "";
+      situacao.textContent = "Em uso: " + I.NOMES[info.preferencia] + "." + fala;
+      situacao.classList.toggle("t-erro", info.estado === "erro");
+    }
+
+    pararEstilo = I.aoMudar(pintar);
+    pintar({ preferencia: I.preferencia(), estado: I.estado() });
+
+    return el("div.r-campo", {}, [
+      el("span.r-rotulo", { texto: "Estilo da interface" }),
+      el("div.faixa.faixa--curta", {}, [trocar]),
+      situacao,
     ]);
   }
 

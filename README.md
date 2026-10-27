@@ -37,6 +37,10 @@ preferências de tela — nunca é tratado como banco.
     componentes.css     botão, campo, painel, cartão, modal, aviso…
     layout.css          cabeçalho, navegação, listas, rodapé
     ficha.css           só o que é exclusivo da ficha
+    (estas folhas SÃO o estilo Legacy: a aparência da v2.48.4, intocada)
+    interface.css       o seletor de estilo do editor de temas (vale nos dois estilos)
+    modern20/           o estilo Modern20 (v2.49): uma folha par de cada uma acima,
+                        carregada logo depois dela e presa a data-interface="modern20"
 
   js/
     config.js           ÚNICO arquivo a editar ao publicar
@@ -46,6 +50,7 @@ preferências de tela — nunca é tratado como banco.
     auth.js             sessão, portão de entrada, guarda de página
     tema-modelo.js      temas personalizáveis: o que muda, validação e o resolvedor único (no <head>)
     tema.js             tema na tela: prévia → ficha → conta → aparelho (no <head>)
+    interface.js        estilo da interface (Legacy ou Modern20) da conta, no <head>
     tema-editor.js      o editor de temas, o mesmo no Perfil e na ficha
     dados.js            motor de dados — o único Math.random do sistema
     ficha.js            modelo da ficha, padrões e normalização
@@ -106,6 +111,7 @@ preferências de tela — nunca é tratado como banco.
     CAMPAIGNS.md        campanhas, combate, histórico e criaturas
     PERFORMANCE.md      o que custa caro, o que foi feito e como medir
     ORDEM-REGRAS.md     matriz de regras de Ordem: fonte, página e lacunas
+    INTERFACE.md        Legacy e Modern20: arquitetura, inventário de telas e como verificar
 ```
 
 ---
@@ -586,6 +592,14 @@ próprio `<script src>`, então funciona debaixo de subpasta sem ajuste.
 segredo nenhum — ele os lê das Script Properties. Publicá-lo não expõe nada.
 
 ### Atualizar o backend
+
+**v2.49.0 — ANVERSO:** a identidade visual Modern20, com o Legacy à escolha no
+Perfil. **Troque** o `Codigo.gs` (ele passa a aceitar e devolver a preferência
+`estiloInterface`), crie uma **nova versão** da implantação e publique o site
+inteiro — inclusive a pasta nova `css/modern20/`, `css/interface.css` e
+`js/interface.js`. Sem `setupRama()`, sem coluna nova e sem migração. Com o site
+novo e o `Codigo.gs` antigo, tudo funciona: a escolha de estilo fica só no
+aparelho, e o Perfil avisa que falta atualizar o Apps Script.
 
 **v2.48.4 — LISTRA:** só o site (histórico de versões mais legível).
 Publique o site; nada de `.gs`, versão da implantação nem `setupRama()`.

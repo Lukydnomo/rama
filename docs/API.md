@@ -138,6 +138,19 @@ Todas exigem sessão. Capacidades conferidas no servidor em cada chamada.
 - Ficha: schema 17 (`ordem.arquivo4` e os campos novos do item). Nenhuma ação
   nova para a ficha.
 
+## Estilo da interface — v2.49
+
+Nenhuma ação nova. `salvar_perfil` aceita a preferência
+`estiloInterface: "legacy" | "modern20"` — a linguagem visual do site (letra,
+forma, organização), independente do tema de cores. `login`, `sessao` e
+`ler_perfil` a devolvem em `preferencias`; na sessão, sem valor gravado, vale
+`"modern20"`. É remendo como as outras: salvar o estilo não toca em `tema`,
+`temaAtivo`, `temas` nem `exibicaoPastas`. Valor fora da lista é recusado com
+`dados_invalidos`, sem gravar nada; `null` apaga a chave (volta ao padrão).
+Servidor anterior à v2.49 recusa a chave nova com `dados_invalidos`: a página
+mantém a escolha neste aparelho (estado `local`) e o Perfil avisa que falta
+atualizar o Apps Script. Ver docs/INTERFACE.md.
+
 ## Temas personalizáveis — v2.36
 
 Nenhuma ação nova. `salvar_perfil` aceita, além de `tema` e `exibicaoPastas`:
@@ -533,7 +546,7 @@ publicação.
 #### `login` — pública
 ```js
 { acao: "login", usuario: "agente", senha: "..." }
-→ { ok: true, token: "...", agente: { id, usuario, nome, avatar, preferencias: { tema, exibicaoPastas, temaAtivo, temaPersonalizado } } }
+→ { ok: true, token: "...", agente: { id, usuario, nome, avatar, preferencias: { tema, exibicaoPastas, estiloInterface, temaAtivo, temaPersonalizado } } }
 → { ok: false, erro: "credenciais", restam: 6 }
 → { ok: false, erro: "bloqueado", minutos: 15 }
 → { ok: false, erro: "instalacao_incompleta" }
@@ -550,7 +563,7 @@ Confere o token e devolve o agente. **É a única resposta que vale**: um token
 presente no `localStorage` não prova nada.
 
 ```js
-→ { ok: true, agente: { id, usuario, nome, avatar, preferencias: { tema, exibicaoPastas, temaAtivo, temaPersonalizado } } }
+→ { ok: true, agente: { id, usuario, nome, avatar, preferencias: { tema, exibicaoPastas, estiloInterface, temaAtivo, temaPersonalizado } } }
 ```
 `tema` (v2.25) é a preferência salva na conta — `"sistema"`, `"claro"` ou
 `"escuro"`; conta sem preferência (ou com a célula ilegível) vem `"sistema"`. Vem
@@ -856,7 +869,8 @@ Só os campos enviados mudam. A conta é sempre a da sessão — um `userId` no 
 que mudaram; o servidor relê `preferenciasJson` dentro da trava, troca essas
 chaves e mantém as outras. `null` apaga a chave (volta ao padrão). Cada chave tem
 lista de valores aceitos — `tema: "sistema" | "claro" | "escuro" | "personalizado"`
-(o último na v2.36), (v2.35) `exibicaoPastas: "abas" | "icones"` e, com
+(o último na v2.36), (v2.35) `exibicaoPastas: "abas" | "icones"`, (v2.49)
+`estiloInterface: "legacy" | "modern20"` e, com
 validação própria (v2.36), `temaAtivo` e `temas` (ver o topo); chave
 desconhecida, valor fora da lista, objeto vazio ou algo que não seja objeto é
 recusado com `dados_invalidos`, sem gravar nada. **Não existe troca de senha por aqui** — senha é

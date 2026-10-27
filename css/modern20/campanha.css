@@ -1,0 +1,222 @@
+/* =====================================================================
+   R.A.M.A. — Modern20 · campanha
+   ---------------------------------------------------------------------
+   A mesa: quem joga, com que personagem, quanto sobrou de cada recurso,
+   que condição está valendo e de quem é a vez. As cores de recurso são as
+   do tema (--cor-vida, --cor-esforco…), sempre com o nome escrito; a vez
+   no combate é marcada pela cor de destaque, pelo traço mais grosso e
+   pelo texto "Vez de…" — nunca só pela cor.
+   ===================================================================== */
+
+:where(:root[data-interface="modern20"]) {
+
+  /* ---------- participantes ---------- */
+
+  & .membro {
+    padding: var(--e2) var(--e3);
+    border-radius: var(--m20-raio-cartao);
+  }
+  & .membro p { color: var(--cor-texto); font-weight: 550; }
+
+  & .mesa-adicionar__item { border-radius: var(--m20-raio-cartao); }
+  & .mesa-adicionar__nome { font-weight: 600; }
+
+  /* =================================================================
+     PAINEL DA MESA (aba Personagens)
+     ================================================================= */
+
+  & .mesa-grade { gap: var(--e3); }
+  & .mesa-cartao {
+    gap: var(--e3);
+    padding: var(--e4);
+    border-color: var(--m20-borda);
+    border-radius: var(--m20-raio-janela);
+    box-shadow: var(--m20-sombra-1);
+    transition: border-color var(--tempo-seco) var(--curva), box-shadow var(--tempo-seco) var(--curva);
+  }
+  & .mesa-cartao:hover,
+  & .mesa-cartao:focus-within { border-color: var(--cor-traco-media); box-shadow: var(--m20-sombra-2); }
+
+  & .mesa-cartao__foto { border-radius: var(--m20-raio-cartao); }
+  & .mesa-cartao__nome {
+    font-size: calc(15px * var(--escala));
+    font-weight: 700;
+    letter-spacing: -0.005em;
+  }
+  & .mesa-cartao__linha { font-size: var(--texto-mini); }
+
+  & .mesa-atributo dt {
+    font-size: var(--m20-texto-sobre);
+    font-weight: 600;
+    letter-spacing: var(--m20-espaco-sobre);
+  }
+  & .mesa-atributo dd { font-size: var(--texto-medio); font-weight: 750; font-feature-settings: "tnum"; }
+
+  /* Recursos: ponto na cor do recurso + nome escrito; barra arredondada. */
+  & .mesa-recurso__nome {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: var(--texto-mini);
+    font-weight: 650;
+    letter-spacing: 0;
+    text-transform: none;
+    color: var(--cor-texto-2);
+  }
+  & .mesa-recurso__nome::before {
+    content: "";
+    flex: 0 0 auto;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--cor-recurso);
+  }
+  & .mesa-recurso__passo {
+    min-width: var(--alvo-toque);
+    border-radius: var(--m20-raio-controle);
+    font-size: var(--texto-medio);
+    transition: background var(--tempo-seco) var(--curva), border-color var(--tempo-seco) var(--curva);
+  }
+  & .mesa-recurso__passo:hover:not(:disabled) { background: var(--m20-realce-forte); }
+  & .mesa-recurso__barra {
+    border-radius: var(--m20-raio-controle);
+    overflow: hidden;
+  }
+  & .mesa-recurso__medidor { border-radius: calc(var(--m20-raio-controle) - 1px); }
+  & .mesa-recurso__valor {
+    font-size: var(--texto-medio);
+    font-weight: 750;
+    font-feature-settings: "tnum";
+  }
+  & .mesa-recurso__entrada { border-radius: var(--m20-raio-controle); font-feature-settings: "tnum"; }
+
+  & .mesa-estatisticas { border-top-color: var(--m20-borda); }
+  & .mesa-estatistica dt {
+    font-size: var(--m20-texto-sobre);
+    font-weight: 600;
+    letter-spacing: var(--m20-espaco-sobre);
+  }
+  & .mesa-estatistica dd { font-feature-settings: "tnum"; }
+
+  /* ---------- condições no cartão e no combate ---------- */
+
+  & .mesa-condicao,
+  & .combate-condicao {
+    border-radius: 5px;
+    font-weight: 550;
+  }
+  & .mesa-condicao__nome,
+  & .combate-condicao {
+    letter-spacing: 0;
+    text-transform: none;
+  }
+  & .mesa-condicao--ativa,
+  & .combate-condicao--ativa { background: var(--m20-aviso-suave); }
+
+  /* =================================================================
+     HISTÓRICO DE ROLAGENS — personagem, ação, total, detalhes
+     ================================================================= */
+
+  & .rolagem-linha {
+    padding: var(--e2) var(--e3);
+    border-color: var(--m20-borda);
+    border-radius: var(--m20-raio-cartao);
+  }
+  & .rolagem-linha--oculta { border-left-color: var(--cor-paranormal); }
+  & .rolagem-linha__total {
+    font-size: calc(20px * var(--escala));
+    font-weight: 750;
+    letter-spacing: -0.01em;
+    font-feature-settings: "tnum";
+  }
+  & .rolagem-livre__total { font-weight: 750; font-feature-settings: "tnum"; }
+
+  /* =================================================================
+     CAPA DA CAMPANHA
+     ================================================================= */
+
+  & .campanha-capa {
+    border-color: var(--m20-borda);
+    border-radius: var(--m20-raio-janela);
+    overflow: hidden;
+  }
+  & .campanha-capa__nome {
+    font-size: calc(26px * var(--escala));
+    font-weight: 750;
+    letter-spacing: -0.015em;
+    text-transform: none;
+  }
+  & .campanha-capa__trilha { font-family: var(--fonte-mono); font-size: var(--texto-mini); }
+  & .campanha-capa__acoes .r-botao { box-shadow: var(--m20-sombra-1); }
+  /* Sem capa, a faixa 3:1 vazia ocupava meia tela: aqui ela mede o
+     convite, não a imagem que ainda não existe. */
+  & .campanha-capa__vazio { aspect-ratio: auto; min-height: 180px; }
+
+  & .mesa-ocultacao__aviso { border-radius: 0 var(--m20-raio-controle) var(--m20-raio-controle) 0; }
+
+  /* =================================================================
+     COMBATE
+     ================================================================= */
+
+  & .combate { gap: var(--e4); }
+
+  & .combate__painel {
+    border-color: var(--m20-borda);
+    border-radius: var(--m20-raio-janela);
+    overflow: hidden;
+    box-shadow: var(--m20-sombra-1);
+  }
+  & .combate-turno-imagem__foto,
+  & .combate-turno-imagem__vazia { border-radius: var(--m20-raio-cartao); }
+  & .combate-turno-imagem__vez {
+    font-size: var(--m20-texto-sobre);
+    font-weight: 600;
+    letter-spacing: var(--m20-espaco-sobre);
+  }
+  & .combate-turno-imagem__nome { font-size: var(--texto-medio); }
+
+  & .combate-turno {
+    padding: var(--e3) var(--e4);
+    border-color: var(--m20-borda);
+    border-radius: var(--m20-raio-cartao);
+    box-shadow: var(--m20-sombra-1);
+  }
+  & .combate-turno__rodada {
+    font-size: var(--texto-medio);
+    font-weight: 700;
+    letter-spacing: -0.005em;
+    text-transform: none;
+  }
+  & .combate-turno__vez { font-size: var(--m20-texto-apoio); }
+
+  & .combate-pendencias { border-radius: var(--m20-raio-cartao); font-size: var(--m20-texto-apoio); }
+
+  & .combate-participantes { gap: 6px; }
+  & .combate-linha {
+    padding: var(--e1) var(--e3) var(--e1) var(--e2);
+    border-radius: var(--m20-raio-cartao);
+  }
+  & .combate-linha--vez {
+    border-color: var(--cor-paranormal);
+    border-left-width: 6px;
+    background: var(--m20-destaque-suave);
+  }
+  & .combate-linha--selecionada { outline-offset: -3px; }
+  & .combate-linha__marca { color: var(--cor-paranormal); font-weight: 700; }
+  & .combate-linha__posicao { font-family: var(--fonte-mono); }
+  & .combate-linha__iniciativa-valor {
+    font-size: var(--texto-medio);
+    font-weight: 750;
+    font-feature-settings: "tnum";
+  }
+  & .combate-linha__nome { font-weight: 600; }
+  & .combate-recurso { font-feature-settings: "tnum"; }
+
+  & .combate-conflito { border-radius: var(--m20-raio-controle); }
+
+  /* ---------- Hexatombe e Hacking ---------- */
+
+  & .hx-participante,
+  & .hk-agente { border-bottom-color: var(--m20-borda); }
+  & .hk-barra { accent-color: var(--cor-paranormal); }
+}

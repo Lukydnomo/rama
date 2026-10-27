@@ -260,7 +260,7 @@ lento a cada entrada.
 |--------------------|-----------------------------------|
 | `userId`           | chave                             |
 | `avatar`           | data URL da miniatura             |
-| `preferenciasJson` | objeto JSON: `{ tema, exibicaoPastas, temaAtivo, temas }` (v2.25, v2.35, v2.36) |
+| `preferenciasJson` | objeto JSON: `{ tema, exibicaoPastas, temaAtivo, temas, estiloInterface }` (v2.25, v2.35, v2.36, v2.49) |
 | `atualizadoEm`     | ISO 8601                          |
 
 `preferenciasJson.tema` é a preferência de tema da conta: `"sistema"` (segue o
@@ -274,6 +274,14 @@ pastas: `"abas"` (padrão, ausente vale isto) ou `"icones"`. Mesmo remendo e mes
 cópia por conta no navegador (`rama.pref.<userId>.exibicaoPastas`). É
 apresentação: pasta aberta, busca e filtros continuam no endereço da página, e
 nada da organização (pastas, sistema das fichas) muda com ela.
+
+`preferenciasJson.estiloInterface` (v2.49) é o estilo da interface da conta:
+`"modern20"` (padrão; ausente vale isto) ou `"legacy"` (a aparência da v2.48.4).
+É linguagem visual, não cor — o tema continua em `tema`/`temas`. Mesmo remendo,
+e uma cópia por conta no navegador (`rama.interface.<userId>`), lida no `<head>`
+de cada página para pintar o estilo certo antes da primeira pintura. Cada pessoa
+vê o próprio estilo, inclusive nas fichas e campanhas de outras contas. Sem
+coluna nova e sem `setupRama()`.
 
 `preferenciasJson.temas` (v2.36) é a lista de temas personalizados da conta (no
 máximo 12, só com propriedades gerais — nada de um sistema, v2.37) e `temaAtivo` o id do que está em uso quando `tema` é

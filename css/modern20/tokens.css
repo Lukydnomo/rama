@@ -1,0 +1,94 @@
+/* =====================================================================
+   R.A.M.A. — Modern20 · tokens
+   ---------------------------------------------------------------------
+   A identidade Modern20 (v2.49) é uma CAMADA sobre o Legacy: as folhas de
+   css/*.css continuam intocadas, e tudo aqui vale só com
+   data-interface="modern20" no <html> (js/interface.js). Fora disso,
+   nenhuma regra destas pastas se aplica — é o que mantém o Legacy igual
+   ao da v2.48.4.
+
+   CORES NÃO MORAM AQUI. Claro, Escuro e os temas personalizados (tokens.css
+   e js/tema.js) continuam definindo os papéis --cor-* e --fundo-*; o
+   Modern20 só decide FORMA: letra, medida, canto, sombra. Os tons
+   derivados (--m20-*) são misturas dos papéis do tema, calculadas de novo
+   em cada contexto que tem tema próprio ([data-tema-contexto]) — por isso
+   o bloco que os declara repete o seletor do contexto.
+
+   --fundo-* é PREENCHIMENTO (pode ser gradiente): só em `background`.
+   Nas misturas (color-mix) entram apenas as cores sólidas --cor-*.
+   ===================================================================== */
+
+:root[data-interface="modern20"] {
+  /* ---------- tipografia ----------
+     Uma família só para ler e operar: a sem serifa do sistema, feita para
+     telas e completa em português. A monoespaçada fica para o que é
+     código: registro, expressão de dado, versão. */
+  --fonte-corpo: "Inter", "Segoe UI Variable Text", "Segoe UI", system-ui, -apple-system,
+    BlinkMacSystemFont, "Roboto", "Helvetica Neue", "Noto Sans", Arial, sans-serif;
+  --fonte-mini: var(--fonte-corpo);
+  --fonte-mono: ui-monospace, "Cascadia Mono", "SF Mono", "JetBrains Mono", Menlo, Consolas,
+    "Liberation Mono", monospace;
+
+  /* A escala do Perfil (--escala) continua valendo: tudo multiplica por ela. */
+  --texto-mini: calc(12px * var(--escala));
+  --texto-base: calc(14px * var(--escala));
+  --texto-medio: calc(16px * var(--escala));
+  --texto-grande: calc(22px * var(--escala));
+  --texto-numero: calc(28px * var(--escala));
+  --m20-texto-apoio: calc(13px * var(--escala));
+  --m20-texto-titulo: calc(26px * var(--escala));
+  --m20-texto-sobre: calc(11px * var(--escala));
+
+  --altura-linha: 1.5;
+  --espaco-letra: 0;
+  --espaco-letra-titulo: 0;
+  --m20-espaco-sobre: 0.06em;
+
+  /* ---------- forma ----------
+     Três raios, sempre os mesmos: controle (botão, campo, etiqueta),
+     cartão (painel, item, linha de lista) e janela. */
+  --raio: 8px;
+  --raio-suave: 6px;
+  --m20-raio-controle: 6px;
+  --m20-raio-cartao: 10px;
+  --m20-raio-janela: 14px;
+  --m20-controle: 36px;
+  --m20-controle-mini: 28px;
+
+  --curva: cubic-bezier(0.2, 0, 0, 1);
+
+  /* Toque: o controle volta ao alvo de dedo inteiro. */
+  @media (pointer: coarse) {
+    --m20-controle: var(--alvo-toque);
+    --m20-controle-mini: 32px;
+  }
+}
+
+/* Os tons derivados: no <html> e em todo contexto com tema próprio (a
+   janela do editor, a caixa de prévia), para a mistura sair das cores
+   DAQUELE contexto e não das herdadas já calculadas. */
+:root[data-interface="modern20"] {
+  &,
+  & [data-tema-contexto] {
+    /* traços */
+    --m20-borda: color-mix(in srgb, var(--cor-traco-fraca) 78%, transparent);
+    --m20-borda-controle: var(--cor-traco-fraca);
+    /* realces de superfície: passar o ponteiro, área secundária */
+    --m20-realce: color-mix(in srgb, var(--cor-texto) 5%, transparent);
+    --m20-realce-forte: color-mix(in srgb, var(--cor-texto) 10%, transparent);
+    /* seleção e destaque suaves (aba, item marcado) */
+    --m20-selecao-suave: color-mix(in srgb, var(--cor-selecao) 12%, transparent);
+    --m20-destaque-suave: color-mix(in srgb, var(--cor-paranormal) 13%, transparent);
+    --m20-ok-suave: color-mix(in srgb, var(--cor-ok) 12%, transparent);
+    --m20-aviso-suave: color-mix(in srgb, var(--cor-aviso) 13%, transparent);
+    --m20-erro-suave: color-mix(in srgb, var(--cor-erro) 12%, transparent);
+    /* o anel do teclado em campos */
+    --m20-anel: color-mix(in srgb, var(--cor-foco) 30%, transparent);
+    /* sombras: com moderação, só no que flutua */
+    --m20-sombra-1: 0 1px 2px color-mix(in srgb, var(--cor-sombra) 22%, transparent);
+    --m20-sombra-2: 0 10px 28px -8px color-mix(in srgb, var(--cor-sombra) 55%, transparent),
+      0 2px 6px color-mix(in srgb, var(--cor-sombra) 18%, transparent);
+    --m20-sombra-3: 0 28px 70px -16px color-mix(in srgb, var(--cor-sombra) 75%, transparent),
+      0 4px 12px color-mix(in srgb, var(--cor-sombra) 20%, transparent);
+  }
+}

@@ -1,0 +1,142 @@
+/* =====================================================================
+   R.A.M.A. — o seletor de estilo da interface (v2.49)
+   ---------------------------------------------------------------------
+   A seção "Estilo da interface" do editor de temas da conta: duas opções,
+   Legacy e Modern20, cada uma com uma miniatura que desenha O PRÓPRIO
+   estilo, seja qual for o que está na tela. Por isso esta folha vale nos
+   dois estilos e as miniaturas declaram letra, medida e canto por conta
+   própria — só as cores vêm do tema (os mesmos papéis do resto do site).
+
+   Só classes .estilo-*: nada aqui toca um componente que já existia.
+   ===================================================================== */
+
+.estilo-opcoes {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
+  gap: var(--e3);
+}
+
+.estilo-opcao {
+  display: flex;
+  flex-direction: column;
+  gap: var(--e2);
+  min-width: 0;
+  padding: var(--e2);
+  background: var(--fundo-superficie);
+  border: var(--borda) solid var(--cor-traco-fraca);
+  cursor: pointer;
+}
+.estilo-opcao:hover { border-color: var(--cor-traco-media); }
+.estilo-opcao--marcada {
+  border-color: var(--cor-traco-forte);
+  box-shadow: inset 0 0 0 1px var(--cor-traco-forte);
+}
+.estilo-opcao:focus-within { outline: 2px solid var(--cor-foco); outline-offset: 2px; }
+.estilo-opcao__linha { display: flex; align-items: flex-start; gap: var(--e2); }
+.estilo-opcao__linha input {
+  flex: 0 0 auto;
+  width: 18px;
+  height: 18px;
+  margin: 2px 0 0;
+  accent-color: var(--cor-texto);
+}
+.estilo-opcao__linha input:focus-visible { outline: none; }
+.estilo-opcao__textos { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.estilo-opcao__nome {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--e2);
+  color: var(--cor-texto);
+  font-weight: 700;
+}
+/* "Selecionado" escrito, além da borda: a escolha não depende de cor. */
+.estilo-opcao__selo {
+  padding: 0 var(--e2);
+  background: var(--fundo-selecao);
+  color: var(--cor-selecao-texto);
+  font-size: var(--texto-mini);
+  font-weight: 700;
+}
+.estilo-opcao__descricao { color: var(--cor-texto-3); font-size: var(--texto-mini); line-height: 1.45; }
+
+/* ---------- as miniaturas ---------- */
+
+.estilo-previa {
+  display: flex;
+  flex-direction: column;
+  height: 126px;
+  overflow: hidden;
+  background: var(--fundo-pagina);
+  color: var(--cor-texto-2);
+  border: 1px solid var(--cor-traco-fraca);
+  pointer-events: none;
+  user-select: none;
+  line-height: 1.3;
+  letter-spacing: 0;
+}
+.estilo-previa__topo { display: flex; align-items: center; justify-content: space-between; gap: 6px; background: var(--fundo-cabecalho); }
+.estilo-previa__marca { color: var(--cor-texto); font-weight: 700; white-space: nowrap; }
+.estilo-previa__corpo { display: flex; flex: 1 1 auto; flex-direction: column; gap: 6px; min-height: 0; }
+.estilo-previa__corpo > * { flex: 0 0 auto; }
+.estilo-previa__nome { color: var(--cor-texto); font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.estilo-previa__numeros { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 5px; }
+.estilo-previa__numero { display: flex; flex-direction: column; align-items: center; padding: 3px 0; background: var(--fundo-superficie); }
+.estilo-previa__valor { color: var(--cor-texto); font-weight: 700; font-variant-numeric: tabular-nums; }
+.estilo-previa__sigla { color: var(--cor-texto-3); }
+.estilo-previa__botao { align-self: flex-start; background: var(--fundo-botao); color: var(--cor-botao-texto); font-weight: 700; white-space: nowrap; }
+
+/* Legacy: a letra pixel, caixa-alta espaçada, traço fino sem canto, a
+   seleção invertida e as linhas da tela antiga. */
+.estilo-previa--legacy {
+  border-radius: 0;
+  font-family: "PixelMplus12", "PixelMplus12 Regular", ui-monospace, "Cascadia Mono", monospace;
+  font-size: 10px;
+  -webkit-font-smoothing: none;
+  background-image: repeating-linear-gradient(to bottom, var(--cor-scanline) 0 1px, transparent 1px 3px);
+}
+.estilo-previa--legacy .estilo-previa__topo { padding: 5px 7px; border-bottom: 1px solid var(--cor-traco-fraca); letter-spacing: 0.14em; }
+.estilo-previa--legacy .estilo-previa__aba { padding: 1px 6px; background: var(--fundo-selecao); color: var(--cor-selecao-texto); letter-spacing: 0.12em; }
+.estilo-previa--legacy .estilo-previa__corpo { padding: 7px; }
+.estilo-previa--legacy .estilo-previa__nome { letter-spacing: 0.12em; }
+.estilo-previa--legacy .estilo-previa__numero { border: 1px solid var(--cor-traco-media); }
+.estilo-previa--legacy .estilo-previa__valor { font-size: 13px; }
+.estilo-previa--legacy .estilo-previa__sigla { font-size: 8px; letter-spacing: 0.12em; }
+.estilo-previa--legacy .estilo-previa__botao { padding: 2px 7px; border: 1px solid var(--cor-traco-forte); letter-spacing: 0.12em; }
+
+/* Modern20: a sem serifa do sistema, caixa normal, cantos leves, o
+   recurso com a cor dele e o botão arredondado. */
+.estilo-previa--modern20 {
+  border-radius: 10px;
+  font-family: "Inter", "Segoe UI Variable Text", "Segoe UI", system-ui, -apple-system, "Roboto", "Helvetica Neue", Arial, sans-serif;
+  font-size: 11px;
+  -webkit-font-smoothing: antialiased;
+}
+.estilo-previa--modern20 .estilo-previa__topo { padding: 6px 9px; border-bottom: 1px solid var(--cor-traco-fraca); }
+.estilo-previa--modern20 .estilo-previa__marca { letter-spacing: 0.06em; }
+.estilo-previa--modern20 .estilo-previa__aba {
+  padding: 1px 7px;
+  border-radius: 5px;
+  background: color-mix(in srgb, var(--cor-selecao) 12%, transparent);
+  color: var(--cor-texto);
+  font-weight: 600;
+}
+.estilo-previa--modern20 .estilo-previa__corpo { padding: 8px 9px; }
+.estilo-previa--modern20 .estilo-previa__nome { font-size: 12px; font-weight: 650; }
+.estilo-previa--modern20 .estilo-previa__numero {
+  border: 1px solid var(--cor-traco-fraca);
+  border-top: 3px solid var(--cor-traco-media);
+  border-radius: 6px;
+}
+.estilo-previa--modern20 .estilo-previa__numero[data-recurso="pv"] { border-top-color: var(--cor-vida); }
+.estilo-previa--modern20 .estilo-previa__numero[data-recurso="pe"] { border-top-color: var(--cor-esforco); }
+.estilo-previa--modern20 .estilo-previa__numero[data-recurso="san"] { border-top-color: var(--cor-sanidade); }
+.estilo-previa--modern20 .estilo-previa__valor { font-size: 14px; }
+.estilo-previa--modern20 .estilo-previa__sigla { font-size: 9px; font-weight: 600; }
+.estilo-previa--modern20 .estilo-previa__botao { padding: 3px 9px; border-radius: 6px; font-weight: 600; }
+
+/* ---------- troca de estilo com janelas abertas ----------
+   O que já estava na tela quando o estilo trocou (js/interface.js marca
+   com .interface-entrou) não repete a animação de entrada: a janela
+   aberta continua aberta, sem "abrir de novo". A saída continua. */
+:root .interface-entrou:not(.r-fundo--saindo):not(.rolagem--saindo) { animation: none; }

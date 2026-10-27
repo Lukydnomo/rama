@@ -84,6 +84,10 @@
     if (global.RAMAPreferencias) {
       global.RAMAPreferencias.sincronizarDaConta(agenteAtual.id, dados && dados.preferencias);
     }
+    /* O estilo da interface (v2.49, interface.js): Legacy ou Modern20. */
+    if (global.RAMAInterface) {
+      global.RAMAInterface.sincronizarDaConta(agenteAtual.id, dados && dados.preferencias);
+    }
   }
 
   function esquecer() {
@@ -94,6 +98,7 @@
     /* Sem conta, o tema volta ao do sistema. */
     if (global.RAMATema) global.RAMATema.esquecerConta();
     if (global.RAMAPreferencias) global.RAMAPreferencias.esquecerConta();
+    if (global.RAMAInterface) global.RAMAInterface.esquecerConta();
   }
 
   function tocarAtividade() { guardar(CHAVE_ATIVIDADE, String(Date.now())); }

@@ -30,6 +30,14 @@
    O tema da conta só tem o que é do site inteiro. O que é de um sistema
    (os elementos e graus de Ordem) só aparece no tema de uma ficha desse
    sistema (`o.sistema`), em categoria própria.
+
+   ESTILO DA INTERFACE (v2.49, só no editor da conta): Legacy ou Modern20
+   (js/interface.js). É a linguagem visual, não as cores — fica numa seção
+   própria, no alto, e não substitui Claro/Escuro. Entra no rascunho como o
+   resto: escolher mostra a prévia (RAMAInterface.definirPrevia), Cancelar
+   devolve o estilo confirmado, Salvar grava a preferência da conta. O tema
+   da ficha não tem estilo: cada pessoa vê a ficha no estilo da própria
+   conta.
    ===================================================================== */
 
 (function (global) {
@@ -44,6 +52,10 @@
   function clonar(o) { return o == null ? o : JSON.parse(JSON.stringify(o)); }
 
   var NOMES = { sistema: "Seguir o aparelho", claro: "Claro", escuro: "Escuro", conta: "Usar o tema da conta" };
+  var DESCRICOES_ESTILO = {
+    modern20: "A identidade atual: leitura confortável, cantos leves e números em destaque.",
+    legacy: "O visual clássico do R.A.M.A.: fonte pixel, caixa-alta e efeito de tela antiga.",
+  };
   var aberto = null;
 
   /* ---- pequenas peças ---- */
@@ -126,12 +138,20 @@
       sel = { modo: modo, id: modo === "personalizado" ? prefs.temaAtivo || null : null };
       if (modo === "personalizado" && !temas.some(function (t) { return t.id === sel.id; })) sel = { modo: "sistema", id: null };
     }
+    /* O estilo da interface (v2.49): só no editor da conta. */
+    var I = ehFicha ? null : (global.RAMAInterface || null);
+    var estilo = I ? I.preferencia() : null;
+    var grupoEstilo = uid("estilo");
     var inicial = foto();
+    var inicialTema = fotoDoTema();
     var salvando = false;
     var abertas = {};            // categorias abertas no editor
     var linhas = {};             // chave → elemento da linha
 
-    function foto() { return JSON.stringify({ sel: sel, temas: temas, fichaTema: fichaTema, selDados: selDados }); }
+    function foto() { return JSON.stringify({ sel: sel, temas: temas, fichaTema: fichaTema, selDados: selDados, estilo: estilo }); }
+    /* Só a parte que vai em RAMATema.salvarConta: trocar apenas o estilo
+       não regrava tema nem lista. */
+    function fotoDoTema() { return JSON.stringify({ sel: sel, temas: temas }); }
     function alterado() { return foto() !== inicial; }
 
     function temaSelecionado() {
@@ -221,6 +241,7 @@
       aoFechar: function (resultado) {
         if (vigia) vigia.disconnect();
         T().definirPrevia(null);
+        if (I) I.definirPrevia(null);
         desfazerCaixa();
         desfazerJanela();
         aberto = null;
@@ -265,6 +286,7 @@
         if (!aberto) return;
         var e = escolhaDoRascunho();
         T().definirPrevia(e);
+        if (I) I.definirPrevia(estilo !== I.preferencia() ? estilo : null);
         desfazerCaixa();
         desfazerCaixa = T().aplicarEm(caixa, e);
         desenharContraste();
@@ -279,7 +301,7 @@
           ? "Em uso agora: herdado da sua conta — " + nomeDaConta() + "."
           : "Em uso agora: tema próprio desta ficha — " + (a.modo === "personalizado" ? a.tema.nome : NOMES[a.modo]) + ".";
       } else {
-        emUso.textContent = "Em uso agora: " + nomeDaConta() + ".";
+        emUso.textContent = "Em uso agora: " + nomeDaConta() + (I ? ", no estilo " + I.NOMES[I.preferencia()] : "") + ".";
       }
     }
 
@@ -457,9 +479,50 @@
       if (botao) botao.disabled = true;
     }
 
+    /* O estilo da interface: duas opções com uma miniatura de cada, no
+       alto do editor da conta. A miniatura desenha o estilo dela, seja
+       qual for o que está na tela (css/interface.css). */
+    function blocoDoEstilo() {
+      var opcoes = I.ESTILOS.slice().reverse().map(function (v) {
+        var marcada = estilo === v;
+        var entrada = el("input", {
+          type: "radio", name: grupoEstilo, value: v, checked: marcada,
+          "aria-describedby": grupoEstilo + "-" + v,
+          onchange: function () {
+            if (!entrada.checked) return;
+            estilo = v;
+            desenharEscolhas();
+            atualizar();
+            var nova = areaEscolhas.querySelector('input[name="' + grupoEstilo + '"]:checked');
+            if (nova) nova.focus();
+          },
+        });
+        return el("label.estilo-opcao", { class: marcada ? "estilo-opcao--marcada" : "" }, [
+          previaDoEstilo(v),
+          el("span.estilo-opcao__linha", {}, [
+            entrada,
+            el("span.estilo-opcao__textos", {}, [
+              el("span.estilo-opcao__nome", {}, [
+                el("span", { texto: I.NOMES[v] }),
+                marcada ? el("span.estilo-opcao__selo", { texto: "Selecionado" }) : null,
+              ]),
+              el("span.estilo-opcao__descricao", { id: grupoEstilo + "-" + v, texto: DESCRICOES_ESTILO[v] }),
+            ]),
+          ]),
+        ]);
+      });
+      return el("fieldset.tema-grupo.estilo-grupo", {}, [
+        el("legend.t-rotulo", { texto: "Estilo da interface" }),
+        el("p.r-ajuda", { texto: "A linguagem visual do site: letras, formas e organização. As cores continuam vindo do tema escolhido abaixo — Claro, Escuro, do aparelho ou um seu." }),
+        el("div.estilo-opcoes", {}, opcoes),
+      ]);
+    }
+
     function desenharEscolhas() {
       var blocos = [];
       var lista = [];
+
+      if (I) blocos.push(blocoDoEstilo());
 
       if (ehFicha) {
         var conta = escolhaDaConta();
@@ -1086,6 +1149,7 @@
     function desfazer() {
       var f = JSON.parse(inicial);
       sel = f.sel; temas = f.temas; fichaTema = f.fichaTema; selDados = f.selDados || null;
+      if (I) estilo = f.estilo || I.preferencia();
       if (ehFicha) pintarPreviaDosDados();
       erroSalvar.hidden = true;
       desenharEscolhas();
@@ -1108,19 +1172,43 @@
         ativo = sel.id;
         if (!lista.some(function (t) { return t.id === ativo; })) { modo = "sistema"; ativo = null; }
       }
+      /* O estilo vai depois do tema, num pedido próprio (js/interface.js):
+         só o que mudou é gravado, e cada parte diz se deu certo. */
+      var estiloMudou = !!I && estilo !== I.confirmado();
+      var temaMudou = fotoDoTema() !== inicialTema || !estiloMudou;
       salvando = true;
       erroSalvar.hidden = true;
-      return T().salvarConta({ tema: modo, temaAtivo: ativo, temas: lista }).then(function (r) {
-        salvando = false;
+      function frase(r) {
+        var f = global.RAMAApi && global.RAMAApi.frase ? global.RAMAApi.frase(r || {}) : null;
+        return f ? ": " + f.titulo + " — " + f.texto : ".";
+      }
+      var passoTema = temaMudou
+        ? T().salvarConta({ tema: modo, temaAtivo: ativo, temas: lista })
+        : Promise.resolve({ ok: true, preferencias: null });
+      return passoTema.then(function (r) {
         if (!r || !r.ok) {
-          var f = global.RAMAApi && global.RAMAApi.frase ? global.RAMAApi.frase(r || {}) : null;
-          mostrarErro("O tema não foi salvo" + (f ? ": " + f.titulo + " — " + f.texto : ".") + " A conta continua com o tema anterior; o rascunho segue aberto.");
+          salvando = false;
+          mostrarErro("O tema não foi salvo" + frase(r) + " A conta continua com o tema anterior; o rascunho segue aberto.");
           return;
         }
-        inicial = foto();
-        fechar({ ok: true, preferencias: r.preferencias });
-        UI.avisoOk("Tema salvo na conta.");
-        if (o.aoSalvar) o.aoSalvar(r.preferencias);
+        if (temaMudou) inicialTema = fotoDoTema();
+        var passoEstilo = estiloMudou ? I.salvar(estilo) : Promise.resolve({ ok: true, estado: null });
+        return passoEstilo.then(function (re) {
+          salvando = false;
+          if (!re || !re.ok) {
+            mostrarErro("O estilo da interface não foi salvo" + frase(re) + " A conta continua no " + I.NOMES[I.confirmado()] +
+              (temaMudou ? "; o tema foi salvo." : ".") + " O rascunho segue aberto.");
+            return;
+          }
+          inicial = foto();
+          fechar({ ok: true, preferencias: r.preferencias });
+          if (re.estado === "local") {
+            UI.avisoAtencao((temaMudou ? "Tema salvo na conta. " : "") + "O estilo " + I.NOMES[estilo] + " vale neste aparelho: o servidor ainda não guarda essa escolha (falta atualizar o Apps Script).", { duracao: 9000 });
+          } else {
+            UI.avisoOk(temaMudou && estiloMudou ? "Tema e estilo salvos na conta." : estiloMudou ? "Estilo salvo na conta." : "Tema salvo na conta.");
+          }
+          if (o.aoSalvar && r.preferencias) o.aoSalvar(r.preferencias);
+        });
       });
     }
 
@@ -1146,6 +1234,28 @@
     }
 
     return aberto;
+  }
+
+  /* A miniatura de um estilo da interface (v2.49): o topo, um nome, três
+     números e um botão, cada um no jeito daquele estilo. Só para ver. */
+  function previaDoEstilo(v) {
+    var legado = v === "legacy";
+    return el("span.estilo-previa.estilo-previa--" + v, { "aria-hidden": "true" }, [
+      el("span.estilo-previa__topo", {}, [
+        el("span.estilo-previa__marca", { texto: "R.A.M.A." }),
+        el("span.estilo-previa__aba", { texto: legado ? "FICHA" : "Ficha" }),
+      ]),
+      el("span.estilo-previa__corpo", {}, [
+        el("span.estilo-previa__nome", { texto: legado ? "AGENTE ROSA" : "Agente Rosa" }),
+        el("span.estilo-previa__numeros", {}, [["PV", "24"], ["PE", "8"], ["SAN", "15"]].map(function (n) {
+          return el("span.estilo-previa__numero", { dataset: { recurso: n[0].toLowerCase() } }, [
+            el("span.estilo-previa__valor", { texto: n[1] }),
+            el("span.estilo-previa__sigla", { texto: n[0] }),
+          ]);
+        })),
+        el("span.estilo-previa__botao", { texto: legado ? "ROLAR" : "Rolar teste" }),
+      ]),
+    ]);
   }
 
   /* A caixa de prévia: um pedaço de cada coisa que o tema pinta — só o

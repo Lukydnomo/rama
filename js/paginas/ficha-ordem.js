@@ -1256,7 +1256,8 @@
 
     return el("div.pilha", {}, [
       el("div.ordem-recursos", {}, itens.map(function (item) {
-        return el("div.ordem-recurso", {}, [
+        /* data-recurso (v2.49): a cor do recurso no Modern20; o Legacy não lê. */
+        return el("div.ordem-recurso", { dataset: { recurso: item.chave } }, [
           el("div.ordem-recurso__topo", {}, [
             el("span.ordem-recurso__nome", { texto: item.nome }),
             valorCalculado("Máximo de " + item.nome.toLowerCase(), item.conta),

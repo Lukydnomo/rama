@@ -1,0 +1,1090 @@
+/* =====================================================================
+   R.A.M.A. — Modern20 · componentes
+   ---------------------------------------------------------------------
+   O vocabulário de css/componentes.css na linguagem Modern20: as MESMAS
+   classes, com outra forma. Nenhum componente muda de estrutura nem de
+   comportamento; quem monta a tela (js/ui.js e as páginas) não sabe em
+   que estilo está.
+
+   Princípios:
+   - superfícies separadas por traço discreto e um canto leve; sombra só
+     no que flutua (menu, janela, aviso, rolagem);
+   - caixa-alta só no sobretítulo pequeno; botão, aba, nome e etiqueta em
+     caixa normal;
+   - estado nunca só por cor: o texto, a forma (traço lateral, tracejado,
+     marca) e o peso continuam os do Legacy;
+   - a seleção usa os papéis do tema (--fundo-selecao, --cor-selecao):
+     um tema personalizado continua mandando nela.
+   ===================================================================== */
+
+:where(:root[data-interface="modern20"]) {
+
+  /* =================================================================
+     BOTÃO
+     ================================================================= */
+
+  & .r-botao {
+    min-height: var(--m20-controle);
+    padding: 0 var(--e4);
+    gap: var(--e2);
+    border: 1px solid var(--m20-borda-controle);
+    border-radius: var(--m20-raio-controle);
+    background: var(--fundo-botao-comum);
+    color: var(--cor-texto);
+    font-size: var(--m20-texto-apoio);
+    font-weight: 550;
+    line-height: 1.2;
+    letter-spacing: 0;
+    text-transform: none;
+    box-shadow: var(--m20-sombra-1);
+    transition: background var(--tempo-seco) var(--curva), border-color var(--tempo-seco) var(--curva),
+      color var(--tempo-seco) var(--curva), box-shadow var(--tempo-seco) var(--curva);
+  }
+  & .r-botao:hover:not(:disabled) {
+    background: var(--fundo-superficie-2);
+    border-color: var(--cor-traco-media);
+    color: var(--cor-texto);
+  }
+  & .r-botao:active:not(:disabled) {
+    background: var(--fundo-superficie-2);
+    color: var(--cor-texto);
+    box-shadow: none;
+  }
+  & .r-botao:disabled { opacity: 0.5; box-shadow: none; }
+
+  & .r-botao--principal {
+    background: var(--fundo-botao);
+    color: var(--cor-botao-texto);
+    border-color: transparent;
+    font-weight: 600;
+  }
+  & .r-botao--principal:hover:not(:disabled) {
+    background: var(--fundo-botao-hover);
+    color: var(--cor-botao-texto);
+    border-color: transparent;
+  }
+  & .r-botao--principal:active:not(:disabled) {
+    background: var(--fundo-botao);
+    color: var(--cor-botao-texto);
+  }
+
+  /* Destrutivo: vermelho escrito desde o repouso, cheio só sob o ponteiro. */
+  & .r-botao--perigo {
+    background: transparent;
+    color: var(--cor-erro);
+    border-color: color-mix(in srgb, var(--cor-erro) 45%, transparent);
+    box-shadow: none;
+  }
+  & .r-botao--perigo:hover:not(:disabled) {
+    background: var(--cor-erro);
+    border-color: var(--cor-erro);
+    color: var(--cor-fundo);
+  }
+
+  /* Secundário: só o contorno, sem fundo nem sombra — continua com cara
+     de botão, mas cede o peso ao principal. */
+  & .r-botao--fantasma {
+    background: transparent;
+    border-color: var(--m20-borda);
+    color: var(--cor-texto-2);
+    box-shadow: none;
+  }
+  & .r-botao--fantasma:hover:not(:disabled) {
+    background: var(--m20-realce);
+    border-color: var(--cor-traco-fraca);
+    color: var(--cor-texto);
+  }
+  & .r-botao--fantasma.r-botao--perigo { color: var(--cor-erro); }
+  & .r-botao--fantasma.r-botao--perigo:hover:not(:disabled) { background: var(--m20-erro-suave); color: var(--cor-erro); }
+
+  /* Numa coluna (.pilha), o botão mede o próprio texto — esticado de
+     ponta a ponta ele parecia uma faixa, não uma ação. No celular volta a
+     ocupar a largura, que é alvo de dedo. */
+  @media (min-width: 641px) {
+    & .pilha > .r-botao:not(.r-botao--bloco) { align-self: flex-start; }
+  }
+
+  & .r-botao--mini {
+    min-height: var(--m20-controle-mini);
+    padding: 0 var(--e3);
+    font-size: var(--texto-mini);
+    font-weight: 550;
+  }
+
+  /* Ícone: alvo cheio, desenho de 18px, fundo só sob o ponteiro. */
+  & .r-icone {
+    width: var(--m20-controle);
+    height: var(--m20-controle);
+    border-radius: var(--m20-raio-controle);
+    color: var(--cor-texto-2);
+    transition: background var(--tempo-seco) var(--curva), color var(--tempo-seco) var(--curva),
+      border-color var(--tempo-seco) var(--curva);
+  }
+  & .r-icone:hover { background: var(--m20-realce); color: var(--cor-texto); border-color: transparent; }
+  & .r-icone svg { width: 18px; height: 18px; }
+  & .r-icone--contorno { border-color: var(--m20-borda-controle); }
+  & .r-icone--contorno:hover { border-color: var(--cor-traco-media); }
+
+  /* =================================================================
+     CAMPOS
+     ================================================================= */
+
+  & .r-campo { gap: 6px; }
+
+  & .r-campo > label,
+  & .r-rotulo {
+    font-size: var(--m20-texto-apoio);
+    font-weight: 550;
+    letter-spacing: 0;
+    line-height: 1.35;
+    color: var(--cor-texto-2);
+    text-transform: none;
+  }
+
+  & .r-entrada,
+  & .r-area,
+  & .r-selecao {
+    min-height: var(--m20-controle);
+    padding: 7px var(--e3);
+    border: 1px solid var(--m20-borda-controle);
+    border-radius: var(--m20-raio-controle);
+    background-color: var(--cor-campo);
+    font-size: var(--texto-base);
+    line-height: 1.4;
+    box-shadow: inset 0 1px 1px color-mix(in srgb, var(--cor-sombra) 8%, transparent);
+    transition: border-color var(--tempo-seco) var(--curva), box-shadow var(--tempo-seco) var(--curva);
+  }
+  & .r-entrada:hover,
+  & .r-area:hover,
+  & .r-selecao:hover { border-color: var(--cor-traco-media); }
+  & .r-entrada:focus,
+  & .r-area:focus,
+  & .r-selecao:focus {
+    border-color: var(--cor-foco);
+    box-shadow: 0 0 0 3px var(--m20-anel);
+  }
+  & .r-entrada:focus-visible,
+  & .r-area:focus-visible,
+  & .r-selecao:focus-visible { outline: none; }
+
+  & .r-entrada:disabled,
+  & .r-area:disabled,
+  & .r-selecao:disabled {
+    background-color: var(--cor-superficie-2);
+    border-style: solid;
+    border-color: var(--m20-borda);
+    box-shadow: none;
+  }
+  & .r-entrada[readonly],
+  & .r-area[readonly] { background-color: var(--cor-superficie-2); box-shadow: none; }
+
+  & .r-area { min-height: calc(var(--m20-controle) * 2.6); line-height: 1.55; }
+
+  & .r-selecao {
+    padding-right: var(--e6);
+    background-position: calc(100% - 17px) 52%, calc(100% - 12px) 52%;
+  }
+
+  & .r-entrada--numero { font-weight: 650; font-feature-settings: "tnum"; }
+  & .r-entrada--erro,
+  & .r-area--erro { border-color: var(--cor-erro); box-shadow: 0 0 0 3px var(--m20-erro-suave); }
+
+  & .r-ajuda {
+    font-size: var(--texto-mini);
+    line-height: 1.45;
+  }
+
+  /* Caixa de marcar: quadrado de canto leve com o visto desenhado. */
+  & .r-marca { gap: var(--e2); }
+  & .r-marca input {
+    width: 18px;
+    height: 18px;
+    border: 1.5px solid var(--cor-traco-media);
+    border-radius: 5px;
+    background: var(--cor-campo);
+    transition: background var(--tempo-seco) var(--curva), border-color var(--tempo-seco) var(--curva);
+  }
+  & .r-marca input:checked { background: var(--fundo-selecao); border-color: var(--cor-selecao); }
+  & .r-marca input:checked::after {
+    width: 5px;
+    height: 9px;
+    margin-top: -2px;
+    background: none;
+    border: solid var(--cor-selecao-texto);
+    border-width: 0 2px 2px 0;
+    transform: rotate(45deg);
+  }
+
+  /* =================================================================
+     PAINEL — a seção que organiza a tela
+     -----------------------------------------------------------------
+     O título sai do traço de cima (a etiqueta de pasta é do Legacy) e
+     vira o cabeçalho da seção, com as ações na mesma linha. A grade de
+     duas colunas faz isso sem mudar a estrutura do painel.
+     ================================================================= */
+
+  & .r-painel {
+    border-color: var(--m20-borda);
+    border-radius: var(--m20-raio-cartao);
+    background: var(--fundo-superficie);
+    padding: var(--e4) var(--e5) var(--e5);
+    box-shadow: var(--m20-sombra-1);
+  }
+  & .r-painel:not(details) {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    column-gap: var(--e3);
+    row-gap: var(--e3);
+    align-content: start;
+  }
+  & .r-painel:not(details) > * { grid-column: 1 / -1; min-width: 0; }
+  & .r-painel:not(details) > .r-painel__titulo { grid-column: 1; grid-row: 1; align-self: center; }
+  & .r-painel:not(details) > .r-painel__acoes { grid-column: 2; grid-row: 1; align-self: center; }
+
+  & .r-painel__titulo {
+    position: static;
+    transform: none;
+    padding: 0;
+    margin: 0;
+    background: none;
+    font-family: var(--fonte-corpo);
+    font-size: var(--texto-medio);
+    font-weight: 650;
+    line-height: 1.3;
+    letter-spacing: -0.005em;
+    color: var(--cor-texto);
+    text-transform: none;
+  }
+  & .r-painel__acoes {
+    position: static;
+    transform: none;
+    padding: 0;
+    background: none;
+    justify-self: end;
+  }
+
+  & .r-painel--plano { background: transparent; box-shadow: none; }
+  & .r-painel--solto { border: 0; padding: 0; background: none; box-shadow: none; }
+
+  /* =================================================================
+     CARTÃO — item de lista clicável
+     ================================================================= */
+
+  & .r-cartao {
+    border-color: var(--m20-borda);
+    border-radius: var(--m20-raio-cartao);
+    padding: var(--e3) var(--e4);
+    transition: border-color var(--tempo-seco) var(--curva), background var(--tempo-seco) var(--curva),
+      box-shadow var(--tempo-seco) var(--curva);
+  }
+  & .r-cartao:hover {
+    border-color: var(--cor-traco-media);
+    background: var(--fundo-superficie);
+    box-shadow: var(--m20-sombra-2);
+  }
+  & .r-cartao::before { display: none; }
+  & .r-cartao:focus-within { border-color: var(--cor-traco-media); }
+
+  /* =================================================================
+     ABAS — navegação dentro da página: sublinhado
+     ================================================================= */
+
+  & .r-abas {
+    gap: var(--e1);
+    border-bottom: 1px solid var(--m20-borda);
+  }
+  & .r-aba {
+    min-height: var(--alvo-toque);
+    padding: var(--e2) var(--e3);
+    /* A borda esquerda fica como está: é nela que mora o traço de
+       elemento (.bib-elemento) dos filtros da Homebrew. */
+    border-top-width: 0;
+    border-right-width: 0;
+    border-bottom: 2px solid transparent;
+    border-radius: var(--m20-raio-controle) var(--m20-raio-controle) 0 0;
+    color: var(--cor-texto-3);
+    font-size: var(--texto-base);
+    font-weight: 550;
+    letter-spacing: 0;
+    text-transform: none;
+    transition: color var(--tempo-seco) var(--curva), background var(--tempo-seco) var(--curva),
+      border-color var(--tempo-seco) var(--curva);
+  }
+  & .r-aba:hover { color: var(--cor-texto); background: var(--m20-realce); }
+  & .r-aba[aria-selected="true"],
+  & .biblioteca-abas .r-aba[aria-pressed="true"] {
+    color: var(--cor-texto);
+    font-weight: 650;
+    background: transparent;
+    border-color: transparent;
+    border-bottom-color: var(--cor-selecao);
+  }
+  & .r-aba.bib-elemento { border-left-width: 3px; }
+  & .r-abas--rolavel { padding-bottom: 0; }
+  & .r-abas--rolavel::-webkit-scrollbar { height: 4px; }
+  & .r-abas--rolavel::-webkit-scrollbar-thumb { border-radius: 999px; border: 0; }
+
+  /* =================================================================
+     ESTADO DE SINCRONIZAÇÃO — texto e ponto, com fundo do próprio tom
+     ================================================================= */
+
+  & .r-estado {
+    gap: 6px;
+    padding: 3px var(--e3) 3px var(--e2);
+    border-radius: var(--m20-raio-controle);
+    font-size: var(--texto-mini);
+    font-weight: 550;
+    letter-spacing: 0;
+    text-transform: none;
+    background: var(--fundo-superficie);
+    border-color: var(--m20-borda);
+  }
+  & .r-estado::before { width: 8px; height: 8px; border-radius: 50%; }
+  & .r-estado[data-estado="salvo"] { background: var(--m20-ok-suave); }
+  & .r-estado[data-estado="pendente"],
+  & .r-estado[data-estado="offline"] { background: var(--m20-aviso-suave); }
+  & .r-estado[data-estado="erro"],
+  & .r-estado[data-estado="conflito"],
+  & .r-estado[data-estado="expirado"] { background: var(--m20-erro-suave); }
+  & .r-estado[data-estado="salvando"]::before { animation: m20-pulsar 1.1s ease-in-out infinite; }
+
+  /* =================================================================
+     MENU SUSPENSO
+     ================================================================= */
+
+  & .r-menu__lista {
+    min-width: 200px;
+    padding: var(--e1);
+    border-color: var(--m20-borda);
+    border-radius: var(--m20-raio-cartao);
+    background: var(--fundo-superficie);
+    box-shadow: var(--m20-sombra-2);
+  }
+  & .r-menu__item {
+    min-height: var(--m20-controle);
+    padding: var(--e2) var(--e3);
+    border-radius: var(--m20-raio-controle);
+    color: var(--cor-texto);
+    font-size: var(--texto-base);
+    text-transform: none;
+    letter-spacing: 0;
+  }
+  & .r-menu__item:hover { background: var(--m20-realce); color: var(--cor-texto); }
+  & .r-menu__item--perigo { color: var(--cor-erro); }
+  & .r-menu__item--perigo:hover { background: var(--m20-erro-suave); color: var(--cor-erro); }
+  & .r-menu__separador { margin: var(--e1) var(--e2); background: var(--m20-borda); }
+
+  /* =================================================================
+     JANELA MODAL — e, no celular, a folha que sobe de baixo
+     ================================================================= */
+
+  & .r-fundo {
+    padding: var(--e5);
+    animation: m20-surgir var(--tempo-curto) var(--curva);
+  }
+  & .r-modal {
+    max-height: calc(100vh - var(--e7));
+    max-height: calc(100dvh - var(--e7));
+    border-color: var(--m20-borda);
+    border-radius: var(--m20-raio-janela);
+    background: var(--fundo-superficie);
+    box-shadow: var(--m20-sombra-3);
+    overflow: hidden;
+    animation: m20-janela var(--tempo-medio) var(--curva);
+  }
+  & .r-modal__topo {
+    padding: var(--e3) var(--e3) var(--e3) var(--e5);
+    border-bottom: 1px solid var(--m20-borda);
+  }
+  & .r-modal__topo .t-secao { font-size: calc(17px * var(--escala)); overflow-wrap: anywhere; }
+  & .r-modal__corpo { padding: var(--e5); gap: var(--e4); }
+  & .r-modal__rodape {
+    padding: var(--e3) var(--e5);
+    border-top: 1px solid var(--m20-borda);
+    background: var(--m20-realce);
+    flex-wrap: wrap;
+  }
+
+  @media (max-width: 640px) {
+    & .r-fundo { padding: 0; }
+    & .r-modal {
+      max-height: 94vh;
+      max-height: 94dvh;
+      border-radius: var(--m20-raio-janela) var(--m20-raio-janela) 0 0;
+      border-bottom: 0;
+      animation-name: m20-folha;
+    }
+    & .r-modal__corpo { padding: var(--e4); }
+    & .r-modal__rodape { padding: var(--e3) var(--e4) calc(var(--e3) + env(safe-area-inset-bottom, 0px)); }
+    & .r-modal__rodape .r-botao { min-height: var(--alvo-toque); }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    & .r-modal, & .r-fundo { animation: none; }
+  }
+
+  /* =================================================================
+     AVISO PASSAGEIRO
+     ================================================================= */
+
+  & .r-aviso {
+    padding: var(--e3) var(--e3) var(--e3) var(--e4);
+    border-color: var(--m20-borda);
+    border-left-width: 4px;
+    border-radius: var(--m20-raio-cartao);
+    background: var(--fundo-superficie);
+    box-shadow: var(--m20-sombra-2);
+    align-items: center;
+  }
+  & .r-aviso--ok { border-left-color: var(--cor-ok); }
+  & .r-aviso--erro { border-left-color: var(--cor-erro); }
+  & .r-aviso--atencao { border-left-color: var(--cor-aviso); }
+  & .r-aviso__texto { color: var(--cor-texto); line-height: 1.45; }
+
+  /* =================================================================
+     ESTADO VAZIO E CARREGAMENTO
+     ================================================================= */
+
+  & .r-vazio {
+    gap: var(--e3);
+    padding: var(--e7) var(--e5);
+    border-radius: var(--m20-raio-cartao);
+    background: var(--m20-realce);
+  }
+  & .r-vazio__marca { color: var(--cor-texto-3); opacity: 0.55; }
+  & .r-vazio__titulo {
+    font-size: var(--texto-medio);
+    font-weight: 650;
+    letter-spacing: 0;
+    color: var(--cor-texto);
+    text-transform: none;
+  }
+  & .r-vazio__texto { line-height: 1.55; }
+
+  & .r-carregando { gap: var(--e3); }
+  & .r-carregando__rotulo { font-weight: 550; color: var(--cor-texto-2); }
+  & .r-carregando__rotulo::after { display: none; }
+  & .r-barra {
+    height: 4px;
+    padding: 0;
+    border: 0;
+    border-radius: 999px;
+    background: var(--m20-realce-forte);
+  }
+  & .r-barra__preenche {
+    width: 35%;
+    border-radius: 999px;
+    background: var(--cor-texto-2);
+    animation: m20-varrer 1.3s var(--curva) infinite;
+  }
+
+  /* =================================================================
+     ETIQUETA
+     ================================================================= */
+
+  & .r-etiqueta {
+    padding: 1px 7px;
+    border-radius: 5px;
+    font-size: var(--texto-mini);
+    font-weight: 550;
+    letter-spacing: 0;
+    line-height: 1.5;
+    text-transform: none;
+    color: var(--cor-texto-2);
+  }
+  & .r-etiqueta--aviso { background: var(--m20-aviso-suave); }
+  & .r-etiqueta--para { background: var(--m20-destaque-suave); }
+
+  /* =================================================================
+     AVATAR — a foto mantém as cores; o círculo ganha só um contorno leve
+     ================================================================= */
+
+  & .r-avatar {
+    border-color: var(--m20-borda);
+    font-weight: 650;
+    letter-spacing: 0.02em;
+  }
+  & .r-avatar--quadrado { border-radius: var(--m20-raio-controle); }
+  /* O avatar pequeno acompanha a escala: com letra maior, as iniciais
+     continuam cabendo no círculo. */
+  & .r-avatar--p {
+    width: calc(28px * var(--escala));
+    height: calc(28px * var(--escala));
+    font-size: calc(10.5px * var(--escala));
+  }
+
+  /* =================================================================
+     SEPARADORES E PARES RÓTULO/VALOR
+     ================================================================= */
+
+  & .r-linha { background: var(--m20-borda); }
+  & .r-dados { gap: 6px var(--e4); }
+  & .r-dados dt {
+    font-size: var(--m20-texto-apoio);
+    font-weight: 500;
+    letter-spacing: 0;
+    text-transform: none;
+  }
+  & .r-dados dd { color: var(--cor-texto); }
+
+  /* =================================================================
+     CONTROLE DE NÚMERO  [-] valor [+]
+     ================================================================= */
+
+  & .r-passo {
+    grid-template-columns: var(--m20-controle) 1fr var(--m20-controle);
+    border: 1px solid var(--m20-borda-controle);
+    border-radius: var(--m20-raio-controle);
+    overflow: hidden;
+    background: var(--cor-campo);
+  }
+  & .r-passo:focus-within { border-color: var(--cor-foco); box-shadow: 0 0 0 3px var(--m20-anel); }
+  & .r-passo__botao {
+    min-height: var(--m20-controle);
+    background: transparent;
+    color: var(--cor-texto-2);
+    font-size: var(--texto-medio);
+    font-weight: 600;
+  }
+  & .r-passo__botao:hover { background: var(--m20-realce-forte); color: var(--cor-texto); }
+  & .r-passo__botao:disabled { background: transparent; }
+  & .r-passo__valor {
+    background: transparent;
+    border-left-color: var(--m20-borda);
+    border-right-color: var(--m20-borda);
+    font-size: var(--texto-medio);
+    font-weight: 650;
+    font-feature-settings: "tnum";
+  }
+
+  /* =================================================================
+     BUSCA
+     ================================================================= */
+
+  & .r-busca .r-entrada { padding-left: calc(var(--e3) + 22px); }
+  & .r-busca__marca { left: var(--e3); color: var(--cor-texto-3); }
+
+  /* =================================================================
+     CARTÃO DE ITEM E LINHAS DE FORMULÁRIO
+     ================================================================= */
+
+  & .item {
+    padding: var(--e3) var(--e4);
+    border-radius: var(--m20-raio-cartao);
+  }
+  & .item__nome { font-weight: 650; }
+  & .item__descricao { line-height: 1.6; max-width: 75ch; }
+  & .linha-editavel { border-radius: var(--m20-raio-controle); }
+
+  /* =================================================================
+     RECOLHÍVEL
+     -----------------------------------------------------------------
+     Sem overflow escondido: um menu aberto dentro do cabeçalho precisa
+     passar da borda do cartão. Por isso o fundo do cabeçalho acompanha o
+     canto por conta própria.
+     ================================================================= */
+
+  & .recolhivel { border-radius: var(--m20-raio-cartao); }
+  & .recolhivel + .recolhivel { margin-top: var(--e2); }
+  & .recolhivel__topo {
+    gap: var(--e2);
+    padding: var(--e2) var(--e3);
+    border-radius: calc(var(--m20-raio-cartao) - 1px);
+    transition: background var(--tempo-seco) var(--curva);
+  }
+  & .recolhivel[open] > .recolhivel__topo { border-radius: calc(var(--m20-raio-cartao) - 1px) calc(var(--m20-raio-cartao) - 1px) 0 0; }
+  & .recolhivel__topo:hover { background: var(--m20-realce); }
+  & .recolhivel__seta {
+    display: inline-grid;
+    place-items: center;
+    width: 14px;
+    height: 14px;
+    color: var(--cor-texto-3);
+  }
+  & .recolhivel__seta::before {
+    content: "";
+    width: 6px;
+    height: 6px;
+    border-right: 1.5px solid currentColor;
+    border-bottom: 1.5px solid currentColor;
+    transform: translateX(-1px) rotate(-45deg);
+  }
+  & .recolhivel__titulo {
+    font-weight: 650;
+    color: var(--cor-texto);
+  }
+  & .recolhivel__cabeca .recolhivel__titulo { font-size: calc(var(--texto-base) * 1.07); }
+  & .recolhivel__extra {
+    font-size: var(--texto-mini);
+    font-feature-settings: "tnum";
+  }
+  & .recolhivel__corpo {
+    padding: var(--e3) var(--e4) var(--e4);
+    border-top-color: var(--m20-borda);
+  }
+  & .recolhivel-faixa { border-radius: var(--m20-raio-cartao); }
+  & .recolhivel-faixa > .recolhivel { border: 0; border-radius: inherit; }
+
+  /* ---------- ordem das listas, etiqueta colorida, dados do item ---------- */
+
+  & .ordenacao__rotulo {
+    font-size: var(--m20-texto-apoio);
+    letter-spacing: 0;
+    text-transform: none;
+  }
+
+  /* A cor da etiqueta é a que a pessoa escolheu: só a forma muda. */
+  & .etiqueta-cor {
+    padding: 1px 8px;
+    border-radius: 5px;
+    font-weight: 600;
+    letter-spacing: 0;
+    text-transform: none;
+  }
+  & .campo-etiqueta__seletor { border-radius: var(--m20-raio-controle); border-color: var(--m20-borda-controle); }
+
+  & .item-dados { gap: 2px var(--e4); }
+  & .item-dados__valor { font-weight: 650; font-feature-settings: "tnum"; }
+  & .item-dados__tipo { letter-spacing: 0; text-transform: none; }
+
+  & .cor { border-radius: var(--m20-raio-controle); }
+  & .cor[aria-pressed="true"] { outline-offset: -5px; }
+
+  /* =================================================================
+     TIPO DE FICHA (criação)
+     ================================================================= */
+
+  & .tipo-ficha {
+    gap: var(--e2);
+    padding: var(--e4);
+    border-radius: var(--m20-raio-cartao);
+    transition: border-color var(--tempo-seco) var(--curva), box-shadow var(--tempo-seco) var(--curva);
+  }
+  & .tipo-ficha:hover,
+  & .tipo-ficha:focus-visible {
+    border-color: var(--cor-traco-media);
+    background: var(--fundo-superficie);
+    box-shadow: var(--m20-sombra-2);
+  }
+  & .tipo-ficha__nome {
+    font-size: var(--texto-medio);
+    font-weight: 650;
+    letter-spacing: 0;
+    text-transform: none;
+  }
+  & .tipo-ficha__resumo { line-height: 1.5; }
+  & .tipo-ficha__lista { padding-left: var(--e4); list-style: disc; gap: 3px; }
+
+  /* =================================================================
+     RESULTADO DE ROLAGEM
+     -----------------------------------------------------------------
+     Personagem, ação, total e detalhes, nessa ordem de peso. O fundo de
+     um tema de dados chega pelo estilo do próprio cartão (JS), e o
+     enquadramento dele não muda: aqui só a cor de base, nunca a imagem.
+     ================================================================= */
+
+  & .rolagens { gap: var(--e2); width: min(320px, calc(100vw - var(--e6))); }
+
+  & .rolagem {
+    gap: var(--e2);
+    padding: var(--e3) var(--e3) var(--e3) var(--e4);
+    border-color: var(--m20-borda);
+    border-radius: var(--m20-raio-janela);
+    background-color: var(--cor-superficie);
+    box-shadow: var(--m20-sombra-2);
+    animation: m20-rolar var(--tempo-medio) var(--curva);
+  }
+  & .rolagem--critico { border-color: var(--cor-paranormal); box-shadow: var(--m20-sombra-2), inset 0 0 0 1px var(--cor-paranormal); }
+  & .rolagem--dano { border-color: var(--cor-erro); }
+  & .rolagem__nome {
+    font-size: var(--texto-base);
+    font-weight: 650;
+    letter-spacing: 0;
+    text-transform: none;
+  }
+  & .rolagem__expressao,
+  & .rolagem__parcelas {
+    font-family: var(--fonte-mono);
+    font-size: var(--texto-mini);
+  }
+  & .rolagem__total {
+    font-size: calc(42px * var(--escala));
+    font-weight: 750;
+    letter-spacing: -0.02em;
+    font-feature-settings: "tnum";
+  }
+  & .rolagem__autor { font-size: var(--texto-mini); font-weight: 550; color: var(--cor-texto-2); }
+  & .rolagem__parcelas { border-top-color: var(--m20-borda); }
+  & .rolagem__marca {
+    font-size: var(--texto-mini);
+    letter-spacing: var(--m20-espaco-sobre);
+  }
+
+  & .face {
+    min-width: 28px;
+    padding: 2px 6px;
+    border-radius: 5px;
+    font-family: var(--fonte-mono);
+    font-size: var(--texto-mini);
+  }
+
+  & .rolagem.com-tema-dados { border-color: color-mix(in srgb, var(--cor-traco-media) 70%, transparent); }
+
+  @media (prefers-reduced-motion: reduce) {
+    & .rolagem { animation: none; }
+  }
+
+  /* =================================================================
+     JANELA "ADICIONAR CONDIÇÃO"
+     ================================================================= */
+
+  & .efeitos-item {
+    padding: var(--e3);
+    border-radius: var(--m20-raio-cartao);
+  }
+  & .efeitos-item__nome { font-weight: 650; color: var(--cor-texto); }
+
+  /* =================================================================
+     ORDEM PARANORMAL — PEÇAS DA FICHA E DA CRIAÇÃO
+     ================================================================= */
+
+  & .ordem-pendencia,
+  & .bib-aquisicao,
+  & .rituais-aprendizado,
+  & .bib-resumo {
+    border-radius: var(--m20-raio-controle);
+    background: var(--fundo-superficie-2);
+  }
+  & .ordem-pendencia__nex { font-family: var(--fonte-mono); }
+
+  & .ordem-regra {
+    padding: var(--e3) var(--e4);
+    border-radius: var(--m20-raio-cartao);
+  }
+  & .ordem-regra__nome { font-weight: 650; letter-spacing: 0; color: var(--cor-texto); }
+
+  /* Gavetas da aba Regras: categorias que abrem e fecham. */
+  & .r-gaveta { padding: 0; }
+  & .r-gaveta > .r-gaveta__topo {
+    flex-wrap: wrap;
+    gap: var(--e1) var(--e3);
+    padding: var(--e3) var(--e4);
+    border-radius: calc(var(--m20-raio-cartao) - 1px);
+    transition: background var(--tempo-seco) var(--curva);
+  }
+  & .r-gaveta > .r-gaveta__topo:hover { background: var(--m20-realce); }
+  & .r-gaveta__titulo { display: inline-flex; align-items: center; gap: var(--e2); }
+  & .r-gaveta__seta {
+    display: inline-grid;
+    place-items: center;
+    width: 14px;
+    height: 14px;
+  }
+  & .r-gaveta__seta::before {
+    content: "";
+    width: 6px;
+    height: 6px;
+    border-right: 1.5px solid currentColor;
+    border-bottom: 1.5px solid currentColor;
+    transform: translateX(-1px) rotate(-45deg);
+  }
+  & .r-gaveta__resumo { font-feature-settings: "tnum"; }
+  & .r-gaveta__corpo { margin: 0; padding: 0 var(--e4) var(--e4); }
+  & .ordem-regras-aba { gap: var(--e3); }
+
+  & .ordem-regra-cartao--ligada { border-color: var(--cor-paranormal); box-shadow: inset 3px 0 0 var(--cor-paranormal); }
+
+  /* O interruptor: trilho e bola, a bola corre para o lado. Ligado ganha
+     a cor de destaque E muda de lado — forma além de cor. */
+  & .r-interruptor {
+    width: 40px;
+    height: 22px;
+    padding: 2px;
+    border: 0;
+    border-radius: 999px;
+    background: var(--cor-traco-fraca);
+    justify-content: flex-start;
+    transition: background var(--tempo-curto) var(--curva);
+  }
+  & .r-interruptor--ligado { background: var(--cor-paranormal); justify-content: flex-start; }
+  & .r-interruptor__bola {
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: var(--cor-superficie);
+    box-shadow: 0 1px 2px color-mix(in srgb, var(--cor-sombra) 40%, transparent);
+    transition: transform var(--tempo-curto) var(--curva);
+  }
+  & .r-interruptor--ligado .r-interruptor__bola { background: var(--cor-superficie); transform: translateX(18px); }
+  & .r-interruptor:focus-visible { outline-offset: 3px; }
+
+  /* =================================================================
+     ORDEM PARANORMAL — CRIAÇÃO GUIADA
+     ================================================================= */
+
+  & .criacao-trilha {
+    gap: var(--e1);
+    letter-spacing: 0;
+    text-transform: none;
+  }
+  & .criacao-trilha__passo {
+    padding: 3px var(--e2);
+    border-radius: var(--m20-raio-controle);
+    font-weight: 500;
+  }
+  & .criacao-trilha__passo--atual {
+    border-color: transparent;
+    background: var(--m20-selecao-suave);
+    font-weight: 650;
+  }
+  & .criacao-atributo__sigla { letter-spacing: var(--m20-espaco-sobre); }
+
+  & .criacao-opcao,
+  & .criacao-pericia {
+    border-radius: var(--m20-raio-controle);
+    transition: border-color var(--tempo-seco) var(--curva), background var(--tempo-seco) var(--curva);
+  }
+  & .criacao-opcao { padding: var(--e2) var(--e3); }
+  & .criacao-opcao:hover,
+  & .criacao-pericia:hover:not(:disabled) { border-color: var(--cor-traco-media); background: var(--fundo-superficie); }
+  & .criacao-opcao--escolhida,
+  & .criacao-pericia--marcada { border-color: var(--cor-paranormal); background: var(--m20-destaque-suave); }
+  & .criacao-opcao__nome { font-weight: 650; }
+  & .criacao-lista,
+  & .criacao-pericias { border-radius: var(--m20-raio-controle); }
+
+  & .etiqueta {
+    padding: 1px 6px;
+    border-radius: 5px;
+    font-weight: 550;
+    letter-spacing: 0;
+    text-transform: none;
+  }
+
+  /* =================================================================
+     BIBLIOTECA (habilidades, itens, rituais, criaturas)
+     ================================================================= */
+
+  & .biblioteca-origens {
+    border-color: var(--m20-borda-controle);
+    border-radius: var(--m20-raio-controle);
+    overflow: hidden;
+  }
+  & .biblioteca-origem {
+    min-height: var(--m20-controle);
+    padding: 0 var(--e4);
+    font-size: var(--m20-texto-apoio);
+    font-weight: 550;
+    letter-spacing: 0;
+    text-transform: none;
+  }
+  & .biblioteca-origem + .biblioteca-origem { border-left-color: var(--m20-borda-controle); }
+  & .biblioteca-origem:hover { background: var(--m20-realce); }
+  & .biblioteca-origem[aria-pressed="true"] { font-weight: 650; }
+
+  & .bib-item { border-radius: var(--m20-raio-controle); }
+  & .bib-item__abrir { border-radius: calc(var(--m20-raio-controle) - 1px); }
+  & .bib-item__abrir:hover { background: var(--m20-realce); }
+  & .bib-item__nome { font-weight: 650; }
+  & .bib-item__dados { font-feature-settings: "tnum"; }
+  & .bib-item__detalhes { border-top-color: var(--m20-borda); }
+  & .bib-item__estado { font-weight: 600; letter-spacing: 0; text-transform: none; }
+  & .bib-item--escolhido { background: var(--m20-destaque-suave); }
+  & .bib-versao,
+  & .bib-estudo,
+  & .bib-resumo__erro,
+  & .escolha-aninhada { border-radius: var(--m20-raio-controle); }
+
+  & .escolha-cartao[aria-pressed="true"] { background: var(--m20-destaque-suave); border-color: var(--cor-paranormal); }
+  & .escolha-atributo__valor { font-feature-settings: "tnum"; }
+  & .escolha-status { border-top-color: var(--m20-borda); }
+
+  /* =================================================================
+     ESPERANDO A PLANILHA
+     ================================================================= */
+
+  & .r-botao--ocupado::after {
+    left: var(--e2);
+    right: var(--e2);
+    bottom: 3px;
+    border-radius: 999px;
+  }
+  & .r-atividade {
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--cor-paranormal), transparent) no-repeat;
+    background-size: 40% 100%;
+    animation: m20-atividade 1.1s ease-in-out infinite;
+  }
+  & .r-sincronia {
+    gap: 6px;
+    padding: 3px var(--e2);
+    border-color: var(--m20-borda);
+    border-radius: var(--m20-raio-controle);
+    box-shadow: var(--m20-sombra-1);
+  }
+  & .r-sincronia__ponto { border-radius: 50%; animation: m20-pulsar 1.1s ease-in-out infinite; }
+
+  @media (prefers-reduced-motion: reduce) {
+    & .r-atividade,
+    & .r-sincronia__ponto,
+    & .r-estado[data-estado="salvando"]::before,
+    & .r-barra__preenche { animation: none; }
+    & .r-barra__preenche { width: 100%; }
+    & .r-interruptor, & .r-interruptor__bola { transition: none; }
+  }
+
+  /* =================================================================
+     ARRASTAR E SOLTAR
+     ================================================================= */
+
+  & .arrastar-alca { border-radius: var(--m20-raio-controle); }
+  & .arrastar-alca:hover { background: var(--m20-realce); border-color: transparent; }
+  & .arrastar-fantasma {
+    padding: var(--e2) var(--e3);
+    border-radius: var(--m20-raio-controle);
+    background: var(--cor-superficie);
+    font-size: var(--m20-texto-apoio);
+    font-weight: 600;
+    letter-spacing: 0;
+    text-transform: none;
+    box-shadow: var(--m20-sombra-2);
+  }
+  & .arrastar-linha { border-radius: 2px; }
+  & .arrastar-alvo-dentro { border-radius: var(--m20-raio-controle); }
+
+  /* =================================================================
+     RITUAIS
+     ================================================================= */
+
+  & .rituais-grupo {
+    font-size: var(--m20-texto-apoio);
+    font-weight: 650;
+    letter-spacing: 0;
+    text-transform: none;
+    border-bottom-color: var(--m20-borda);
+  }
+  & .ritual-aviso,
+  & .ritual-forma { border-radius: var(--m20-raio-controle); }
+  & .ritual-conjuracao { border-bottom-color: var(--m20-borda); }
+  & .ritual-conjuracao dt { letter-spacing: 0; text-transform: none; font-weight: 500; }
+  & .ritual-texto { line-height: 1.65; }
+  & .ritual-complemento { border-top-color: var(--m20-borda); }
+  & .ritual-complemento__topo {
+    font-size: var(--m20-texto-apoio);
+    font-weight: 600;
+    letter-spacing: 0;
+    text-transform: none;
+    color: var(--cor-texto-2);
+  }
+  & .rituais-secao {
+    padding: var(--e1) 0 var(--e1) var(--e3);
+    font-size: var(--texto-medio);
+    font-weight: 650;
+    letter-spacing: -0.005em;
+    text-transform: none;
+    color: var(--cor-texto);
+  }
+
+  /* =================================================================
+     EDITOR DE IMAGEM
+     ================================================================= */
+
+  & .editor-imagem__palco,
+  & .editor-imagem__gif-moldura { border-color: var(--m20-borda); border-radius: var(--m20-raio-cartao); }
+  & .editor-imagem__miniatura { border-color: var(--m20-borda); border-radius: var(--m20-raio-controle); }
+  & .editor-imagem__miniatura--circulo,
+  & .editor-imagem__gif-moldura--circulo { border-radius: 50%; }
+  & .editor-imagem__controle label {
+    font-size: var(--m20-texto-apoio);
+    font-weight: 550;
+    letter-spacing: 0;
+    text-transform: none;
+    color: var(--cor-texto-2);
+  }
+  & .editor-imagem__faixa { accent-color: var(--cor-paranormal); }
+  & .editor-imagem__valor { font-family: var(--fonte-mono); }
+
+  /* =================================================================
+     FICHA DE CRIATURA
+     ================================================================= */
+
+  & .criatura-retrato { border-color: var(--m20-borda); border-radius: var(--m20-raio-cartao); overflow: hidden; }
+  & .bib-criatura__retrato { border-color: var(--m20-borda); border-radius: var(--m20-raio-controle); }
+  & .criatura-faixa { border-top-color: var(--m20-borda); }
+
+  /* =================================================================
+     IMPORTAR DO CRIS
+     ================================================================= */
+
+  & .cris-tabela__rolagem { border-radius: var(--m20-raio-controle); }
+  & .cris-tabela th,
+  & .cris-tabela td { border-bottom-color: var(--m20-borda); }
+  & .cris-tabela__grupo th { text-transform: none; letter-spacing: 0; font-weight: 650; color: var(--cor-texto); }
+  & .cris-situacao { padding: 0 6px; border-radius: 5px; }
+
+  /* =================================================================
+     EDITOR DE TEMAS
+     ================================================================= */
+
+  & .tema-opcao {
+    padding: var(--e2) var(--e3);
+    border-color: var(--m20-borda);
+    border-radius: var(--m20-raio-cartao);
+  }
+  & .tema-opcao--marcada { border-color: var(--cor-traco-forte); box-shadow: inset 0 0 0 1px var(--cor-traco-forte); }
+  & .tema-opcao__nome { font-weight: 600; }
+  & .tema-amostras { border-radius: 5px; overflow: hidden; }
+  & .tema-prop { border-bottom-style: solid; border-bottom-color: var(--m20-borda); }
+  & .tema-prop__amostra { border-radius: 5px; }
+  & .tema-cor__visual { border-radius: var(--m20-raio-controle); }
+  & .tema-cor__texto.r-entrada { font-family: var(--fonte-mono); }
+  & .tema-grad__barra { border-radius: var(--m20-raio-controle); }
+  & .tema-grad__ponto { border-color: var(--m20-borda); border-radius: var(--m20-raio-controle); }
+  & .tema-prop__faixa { accent-color: var(--cor-paranormal); }
+
+  /* A caixa de prévia mostra o estilo em uso: aqui, o do Modern20. */
+  & .tema-previa {
+    border-color: var(--m20-borda);
+    border-radius: var(--m20-raio-cartao);
+    overflow: hidden;
+    box-shadow: var(--m20-sombra-2);
+  }
+  & .tema-previa__topo { border-radius: var(--m20-raio-controle); }
+  & .tema-previa__aba { border-radius: 5px; }
+  & .tema-previa__cartao { border-color: var(--m20-borda); border-radius: var(--m20-raio-controle); }
+  & .tema-previa__titulo { font-weight: 650; }
+  & .tema-previa__estado { border-radius: 5px; }
+  & .tema-previa__elemento { border-radius: 0 5px 5px 0; }
+  & .tema-previa__secundaria { border-radius: var(--m20-raio-controle); }
+
+  & .recompensas-item { border-color: var(--m20-borda); border-radius: var(--m20-raio-cartao); }
+
+  /* O seletor de estilo (css/interface.css), na forma do Modern20. */
+  & .estilo-opcao { border-radius: var(--m20-raio-cartao); }
+  & .estilo-opcao__selo { border-radius: 5px; }
+}
+
+/* ---------- movimento ---------- */
+
+@keyframes m20-surgir { from { opacity: 0; } to { opacity: 1; } }
+@keyframes m20-janela {
+  from { opacity: 0; transform: translateY(8px) scale(0.985); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes m20-folha {
+  from { transform: translateY(24px); opacity: 0.6; }
+  to { transform: none; opacity: 1; }
+}
+@keyframes m20-rolar {
+  from { opacity: 0; transform: translateY(10px) scale(0.98); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes m20-pulsar { 50% { opacity: 0.25; } }
+@keyframes m20-varrer {
+  from { transform: translateX(-110%); }
+  to { transform: translateX(300%); }
+}
+@keyframes m20-atividade {
+  from { background-position: -40% 0; }
+  to { background-position: 140% 0; }
+}

@@ -83,6 +83,30 @@ export function testarTemaBackend({ t, preparar, novaConta, comoFn, chamar }) {
   const depoisNull = C({ acao: "sessao" }).agente.preferencias;
   t.ok("null volta ao padrão, sem tocar no tema", depoisNull.exibicaoPastas === "abas" && depoisNull.tema === "claro");
 
+  /* v2.49: o estilo da interface (Legacy ou Modern20). */
+  t.grupo("Preferência · estilo da interface (v2.49)");
+  preparar();
+  const eva = novaConta("pref_eva"), fabio = novaConta("pref_fabio");
+  const EV = comoFn(eva), FB = comoFn(fabio);
+  t.igual("conta sem escolha: a sessão traz 'modern20'", EV({ acao: "sessao" }).agente.preferencias.estiloInterface, "modern20");
+  t.igual("  e o login também", chamar(globalThis, { acao: "login", usuario: "pref_eva", senha: "senha-de-teste" }).agente.preferencias.estiloInterface, "modern20");
+  EV({ acao: "salvar_perfil", dados: { preferencias: { tema: "escuro", exibicaoPastas: "icones" } } });
+  const legado = EV({ acao: "salvar_perfil", dados: { preferencias: { estiloInterface: "legacy" } } });
+  t.ok("salvar 'legacy' responde com o que ficou gravado", legado.ok && legado.preferencias.estiloInterface === "legacy");
+  t.ok("  tema e exibição das pastas continuam", legado.preferencias.tema === "escuro" && legado.preferencias.exibicaoPastas === "icones");
+  t.igual("a sessão seguinte traz 'legacy'", EV({ acao: "sessao" }).agente.preferencias.estiloInterface, "legacy");
+  EV({ acao: "salvar_perfil", dados: { preferencias: { tema: "claro" } } });
+  const depoisTema = EV({ acao: "sessao" }).agente.preferencias;
+  t.ok("trocar o tema não mexe no estilo", depoisTema.estiloInterface === "legacy" && depoisTema.tema === "claro");
+  t.recusa("valor fora da lista é recusado", EV({ acao: "salvar_perfil", dados: { preferencias: { estiloInterface: "retro" } } }), "dados_invalidos");
+  t.igual("  e nada mudou", EV({ acao: "sessao" }).agente.preferencias.estiloInterface, "legacy");
+  t.igual("a outra conta segue no padrão", FB({ acao: "sessao" }).agente.preferencias.estiloInterface, "modern20");
+  const lido = EV({ acao: "ler_perfil" });
+  t.igual("ler_perfil devolve o estilo gravado", lido.dados.preferencias.estiloInterface, "legacy");
+  EV({ acao: "salvar_perfil", dados: { preferencias: { estiloInterface: null } } });
+  const semEstilo = EV({ acao: "sessao" }).agente.preferencias;
+  t.ok("null volta ao padrão, sem tocar no tema", semEstilo.estiloInterface === "modern20" && semEstilo.tema === "claro");
+
   testarTemasPersonalizaveis({ t, preparar, novaConta, comoFn });
 }
 

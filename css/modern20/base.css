@@ -1,0 +1,109 @@
+/* =====================================================================
+   R.A.M.A. — Modern20 · base
+   ---------------------------------------------------------------------
+   Letra suavizada, tipografia de leitura, foco e rolagem. Sem véu de
+   CRT: a tela antiga é do Legacy (o efeito continua lá, ligado ou não no
+   Perfil).
+   ===================================================================== */
+
+:where(:root[data-interface="modern20"]) {
+  & body {
+    color: var(--cor-texto-2);
+    letter-spacing: 0;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    font-smooth: auto;
+    text-rendering: optimizeLegibility;
+    font-feature-settings: "cv11", "ss01";
+  }
+
+  & .veu { display: none; }
+
+  /* ---------- tipografia ----------
+     Título de página, título de seção, rótulo de sobretítulo (o único em
+     caixa-alta, pequeno e espaçado), texto de apoio e número. */
+  & .t-titulo {
+    font-size: var(--m20-texto-titulo);
+    font-weight: 700;
+    line-height: 1.2;
+    letter-spacing: -0.015em;
+    text-transform: none;
+  }
+
+  & .t-secao {
+    font-size: var(--texto-medio);
+    font-weight: 650;
+    line-height: 1.3;
+    letter-spacing: -0.005em;
+    text-transform: none;
+  }
+
+  & .t-rotulo {
+    font-size: var(--m20-texto-sobre);
+    font-weight: 600;
+    letter-spacing: var(--m20-espaco-sobre);
+    line-height: 1.4;
+  }
+
+  & .t-rotulo-forte { font-weight: 700; }
+
+  & .t-mini {
+    font-size: var(--texto-mini);
+    line-height: 1.45;
+  }
+
+  & .t-numero {
+    letter-spacing: -0.01em;
+    font-feature-settings: "tnum";
+  }
+
+  /* A marca de ramificação continua: é identidade, e é discreta. */
+  & .t-no::after { color: var(--cor-texto-3); opacity: 0.6; }
+
+  & a {
+    border-bottom: 0;
+    text-decoration: underline;
+    text-decoration-color: color-mix(in srgb, var(--cor-link) 35%, transparent);
+    text-decoration-thickness: 1px;
+    text-underline-offset: 3px;
+    transition: text-decoration-color var(--tempo-seco) var(--curva);
+  }
+  & a:hover { text-decoration-color: currentColor; }
+  /* Âncoras que são componente (marca, cartão inteiro, botão) não levam
+     sublinhado: o desenho delas já diz que são clicáveis. */
+  & .marca,
+  & .registro__link,
+  & a.r-cartao,
+  & a.r-botao,
+  & .pular-para { text-decoration: none; }
+
+  & code, & kbd, & samp { font-family: var(--fonte-mono); font-size: 0.92em; }
+
+  /* ---------- foco ----------
+     O anel continua sendo o papel --cor-foco do tema, sem a sombra do
+     Legacy; o contorno acompanha o canto de cada controle. */
+  & :focus-visible {
+    outline: 2px solid var(--cor-foco);
+    outline-offset: 2px;
+    box-shadow: none;
+  }
+
+  & .pular-para {
+    border-radius: var(--m20-raio-controle);
+    border-color: transparent;
+    box-shadow: var(--m20-sombra-2);
+    font-weight: 600;
+  }
+
+  /* ---------- rolagem ---------- */
+  & { scrollbar-color: color-mix(in srgb, var(--cor-texto) 25%, transparent) transparent; }
+  & ::-webkit-scrollbar { width: 12px; height: 12px; }
+  & ::-webkit-scrollbar-track { background: transparent; }
+  & ::-webkit-scrollbar-thumb {
+    background: color-mix(in srgb, var(--cor-texto) 22%, transparent);
+    border: 3px solid transparent;
+    border-radius: 999px;
+    background-clip: content-box;
+  }
+  & ::-webkit-scrollbar-thumb:hover { background-color: color-mix(in srgb, var(--cor-texto) 38%, transparent); }
+}
