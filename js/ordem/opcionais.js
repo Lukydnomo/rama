@@ -552,6 +552,74 @@
   var POR_CHAVE = {};
   REGRAS.forEach(function (r) { POR_CHAVE[r.chave] = r; });
 
+  /* =================================================================
+     CATEGORIAS DA ABA REGRAS (v2.48.3)
+     -----------------------------------------------------------------
+     O registro ÚNICO de onde cada regra aparece na aba Regras da ficha.
+     É só apresentação: a categoria não muda requisito, não liga nada e
+     não é gravada. "patente" é o cartão de patente (ordem.patente), que
+     não é uma regra deste catálogo mas mora na mesma aba.
+
+     Cada regra aparece numa categoria só. Uma regra nova sem categoria
+     vai para "Outras regras" — nunca some da tela.
+
+     A natureza continua à vista no cartão: configuração da ficha (como
+     ela conta patente, nível e Sanidade), regra que muda as contas, ou
+     regra de mesa (não muda campo nem conta).
+     ================================================================= */
+
+  var CATEGORIAS = [
+    { chave: "personagem", nome: "Personagem e progressão",
+      regras: ["patente", "nexExperiencia", "semSanidade", "evolucaoPatentes"] },
+    { chave: "rituais", nome: "Rituais e paranormal",
+      regras: ["limitesCompreensao", "aprendizadoEmCampo", "conjuracaoComplexa", "controleComponentes", "reterRitual",
+        "transcenderComItens", "rituaisDesconhecidos", "desastresParanormais"] },
+    { chave: "combate", nome: "Combate e sobrevivência",
+      regras: ["ferimentosDebilitantes", "contagemMunicao", "combateNarrativo"] },
+    { chave: "poderes", nome: "Poderes e trilhas",
+      regras: ["poderesDeIntencao", "formasSupremas", "poderesDeSacrificio", "trilhaGeral", "poderesDeTransmissao"] },
+    { chave: "aliados", nome: "Aliados e vínculos",
+      regras: ["aliadosEmPerigo", "beneficiosDeAliados", "boasRecordacoes", "regrasDaPaixao"] },
+    { chave: "exploracao", nome: "Exploração e transporte",
+      regras: ["semMapa", "veiculosOperacionais", "animaisTreinados"] },
+    { chave: "hexatombe", nome: "Hexatombe e desafios",
+      regras: ["participacaoHexatombe", "batalhasDeIntencoes", "jogosDoCirco"] },
+  ];
+  var OUTRAS = { chave: "outras", nome: "Outras regras", regras: [] };
+  var CATEGORIA_PADRAO = "personagem";
+  var DA_CONFIGURACAO = ["patente", "nexExperiencia", "semSanidade"];
+
+  var CATEGORIA_DA_REGRA = {};
+  CATEGORIAS.forEach(function (c) { c.regras.forEach(function (k) { if (!CATEGORIA_DA_REGRA[k]) CATEGORIA_DA_REGRA[k] = c; }); });
+
+  function categoriaDe(chave) { return CATEGORIA_DA_REGRA[chave] || OUTRAS; }
+
+  /* "configuracao", "calculo" (muda campo ou conta) ou "mesa". */
+  function natureza(chave) {
+    if (DA_CONFIGURACAO.indexOf(chave) >= 0) return "configuracao";
+    var r = POR_CHAVE[chave];
+    return r && !r.afetaFicha ? "mesa" : "calculo";
+  }
+
+  /* As chaves na ordem da tela: categoria por categoria, na ordem do
+     registro; "Outras regras" por último e só se tiver alguma. */
+  function categorizar(chaves) {
+    var porCategoria = {};
+    (chaves || []).forEach(function (k) {
+      var c = categoriaDe(k);
+      (porCategoria[c.chave] = porCategoria[c.chave] || []).push(k);
+    });
+    return CATEGORIAS.concat([OUTRAS]).map(function (c) {
+      var lista = porCategoria[c.chave] || [];
+      var ordem = c.regras;
+      lista.sort(function (a, b) {
+        var ia = ordem.indexOf(a), ib = ordem.indexOf(b);
+        return (ia < 0 ? 999 : ia) - (ib < 0 ? 999 : ib);
+      });
+      return { chave: c.chave, nome: c.nome, regras: lista };
+    }).filter(function (g) { return g.regras.length; });
+  }
+
   function regra(chave) { return POR_CHAVE[chave] || null; }
 
   function ligada(ficha, chave) {
@@ -715,6 +783,12 @@
     REGRAS: REGRAS,
     regra: regra,
     ligada: ligada,
+    CATEGORIAS: CATEGORIAS,
+    OUTRAS: OUTRAS,
+    CATEGORIA_PADRAO: CATEGORIA_PADRAO,
+    categoriaDe: categoriaDe,
+    natureza: natureza,
+    categorizar: categorizar,
     ligadas: ligadas,
     deProgressao: deProgressao,
     conflitos: conflitos,

@@ -3312,85 +3312,221 @@
      REGRAS
      ================================================================= */
 
-  /* As regras que dizem COMO esta ficha conta (patente, nível, Sanidade)
-     ficam juntas em "Configurações da ficha"; as outras opcionais e as de
-     mesa, cada grupo na sua gaveta. */
-  var REGRAS_DA_CONFIGURACAO = ["nexExperiencia", "semSanidade"];
+  /* As regras em categorias temáticas (v2.48.3), do registro único de
+     js/ordem/opcionais.js (OP.CATEGORIAS): cada uma numa gaveta, com
+     busca e filtro de estado no alto. A categoria é só apresentação.
 
-  /* O que está aberto na aba Regras. Ligar uma chave redesenha a aba
-     inteira: sem esta memória, cada clique fecharia a gaveta e o cartão
-     em que a pessoa estava. Vive só nesta página, como o filtro do
-     inventário. */
-  var abertasNasRegras = { gavetas: {}, cartoes: {} };
+     O que está aberto, a busca e o filtro são estado de TELA, por
+     ficha: não sobem, não marcam a ficha como alterada e sobrevivem aos
+     redesenhos (ligar uma chave redesenha a aba). Busca e filtro não
+     redesenham nada: escondem e mostram cartões que já estão na tela. */
+  var telaDasRegras = {};
+
+  function telaDe(ctx) {
+    var id = (ctx && ctx.personagemId) || "local";
+    if (!telaDasRegras[id]) telaDasRegras[id] = { gavetas: {}, temporarias: {}, cartoes: {}, busca: "", filtro: "todas" };
+    return telaDasRegras[id];
+  }
+
+  var FILTROS_DE_ESTADO = [
+    { chave: "todas", rotulo: "Todas" },
+    { chave: "ligadas", rotulo: "Ligadas" },
+    { chave: "desligadas", rotulo: "Desligadas" },
+  ];
+  var NATUREZAS = {
+    configuracao: "configuração da ficha",
+    calculo: "muda a ficha",
+    mesa: "regra de mesa: não muda contas",
+  };
+
+  function plural(n, um, varios) { return n + " " + (n === 1 ? um : varios); }
 
   var SecaoRegras = {
     aba: function (ctx) {
       var o = ordemDe(ctx);
+      var tela = telaDe(ctx);
 
-      var daConfiguracao = REGRAS_DA_CONFIGURACAO.map(function (k) { return OP.regra(k); }).filter(Boolean);
-      var afetam = OP.REGRAS.filter(function (r) { return r.afetaFicha && REGRAS_DA_CONFIGURACAO.indexOf(r.chave) < 0; });
-      var naoAfetam = OP.REGRAS.filter(function (r) { return !r.afetaFicha; });
-      var ligadas = function (lista) { return lista.filter(function (r) { return OP.ligada(o, r.chave); }).length; };
+      /* Cada cartão com o que a busca e o filtro precisam saber dele. */
+      var cartoes = {};
+      cartoes.patente = cartaoDePatente(ctx, o);
+      OP.REGRAS.forEach(function (r) { cartoes[r.chave] = cartaoDeRegra(ctx, o, r); });
 
-      return el("div.pilha--larga", { class: "pilha" }, [
-        gavetaDeRegras("configuracao", "Configurações da ficha",
-          "Como esta ficha conta patente, nível e Sanidade.",
-          [cartaoDePatente(ctx, o)].concat(daConfiguracao.map(function (r) { return cartaoDeRegra(ctx, o, r); })),
-          (R.regraDePatente(o) ? 1 : 0) + ligadas(daConfiguracao)),
+      var grupos = OP.categorizar(Object.keys(cartoes)).map(function (g) {
+        return gavetaDeCategoria(tela, g, g.regras.map(function (k) { return cartoes[k]; }));
+      });
 
-        gavetaDeRegras("opcionais", "Regras opcionais",
-          "Do Livro de Regras (contagem de munição e componentes), do Sobrevivendo ao Horror e dos Arquivos Secretos 1, 2 e 3 " +
-          "(Intenção, formas supremas, participação no Hexatombe, Aliados em Perigo, poderes de Sacrifício, Trilha Geral, Batalhas de " +
-          "Intenções, Jogos do Circo, Boas Recordações, Paixão, veículos e animais treinados). Todas começam desligadas e valem só para esta ficha; " +
-          "estar numa campanha com o modo Hexatombe não liga nenhuma. O Livro de Regras continua sendo a versão padrão do jogo.",
-          afetam.map(function (r) { return cartaoDeRegra(ctx, o, r); }), ligadas(afetam)),
-
-        gavetaDeRegras("mesa", "Regras de mesa",
-          "Estas não mudam campo nem conta da ficha. Ligá-las serve para a mesa registrar que as usa.",
-          naoAfetam.map(function (r) { return cartaoDeRegra(ctx, o, r); }), ligadas(naoAfetam)),
+      var busca = el("input.r-entrada", {
+        type: "search", value: tela.busca, placeholder: "Buscar regra…", "aria-label": "Buscar regra por nome, resumo ou fonte",
+        dataset: { foco: "regras-busca" },
+        oninput: function (ev) { tela.busca = ev.target.value; aplicar(); },
+        onkeydown: function (ev) {
+          if (ev.key === "Escape" && tela.busca) { ev.preventDefault(); ev.target.value = ""; tela.busca = ""; aplicar(); }
+        },
+      });
+      var botoesDeFiltro = FILTROS_DE_ESTADO.map(function (f) {
+        return el("button.filtro", {
+          type: "button", texto: f.rotulo, "aria-pressed": String(tela.filtro === f.chave),
+          dataset: { foco: "regras-filtro-" + f.chave },
+          onclick: function () {
+            tela.filtro = f.chave;
+            botoesDeFiltro.forEach(function (b, i) { b.setAttribute("aria-pressed", String(FILTROS_DE_ESTADO[i].chave === f.chave)); });
+            aplicar();
+          },
+        });
+      });
+      var contagem = el("p.t-mini", { role: "status", "aria-live": "polite" });
+      var vazio = el("div.pilha--curta.ordem-regras__vazio", { class: "pilha", hidden: true }, [
+        el("p.t-mini", { texto: "Nenhuma regra corresponde à busca e ao filtro." }),
+        el("div.faixa", {}, [el("button.r-botao.r-botao--mini", {
+          type: "button", texto: "Limpar busca e filtro", dataset: { foco: "regras-limpar" },
+          onclick: function () { limparFiltros(true); },
+        })]),
       ]);
+
+      function filtrando() { return !!U.chaveDeBusca(tela.busca).trim() || tela.filtro !== "todas"; }
+
+      function limparFiltros(focar) {
+        tela.busca = "";
+        tela.filtro = "todas";
+        busca.value = "";
+        botoesDeFiltro.forEach(function (b, i) { b.setAttribute("aria-pressed", String(i === 0)); });
+        aplicar();
+        if (focar) busca.focus();
+      }
+
+      /* Esconde e mostra, conta, e abre as categorias com resultado só
+         enquanto há filtro — sem tocar na escolha guardada. */
+      function aplicar() {
+        var termo = U.chaveDeBusca(tela.busca).trim();
+        var ativo = filtrando();
+        if (!ativo) tela.temporarias = {};
+        var exibidas = 0;
+        grupos.forEach(function (g) {
+          var n = 0;
+          g.cartoes.forEach(function (c) {
+            var passa = (!termo || c.texto.indexOf(termo) >= 0) &&
+              (tela.filtro === "todas" || (tela.filtro === "ligadas") === c.ligada);
+            c.elemento.hidden = !passa;
+            if (passa) n++;
+          });
+          exibidas += n;
+          g.caixa.hidden = ativo && n === 0;
+          g.exibidas.textContent = ativo ? " · " + plural(n, "exibida", "exibidas") : "";
+          var aberta = ativo
+            ? (g.chave in tela.temporarias ? tela.temporarias[g.chave] : true)
+            : gavetaAberta(tela, g.chave);
+          if (g.caixa.open !== aberta) g.caixa.open = aberta;
+        });
+        vazio.hidden = !(ativo && exibidas === 0);
+        contagem.textContent = ativo
+          ? plural(exibidas, "regra exibida", "regras exibidas") + " com a busca e o filtro."
+          : "";
+      }
+
+      function todas(abrir) {
+        grupos.forEach(function (g) {
+          tela.gavetas[g.chave] = abrir;
+          if (filtrando()) tela.temporarias[g.chave] = abrir;
+        });
+        aplicar();
+      }
+
+      grupos.forEach(function (g) { g.aoAlternar = function (aberta) {
+        if (filtrando()) tela.temporarias[g.chave] = aberta;
+        else tela.gavetas[g.chave] = aberta;
+      }; });
+
+      aplicar();
+
+      return el("div.pilha--larga.ordem-regras-aba", { class: "pilha" }, [
+        el("div.pilha--curta", { class: "pilha" }, [
+          el("div.filtros", {}, [
+            el("div.r-busca", {}, [el("span.r-busca__marca", {}, [UI.simbolo("busca")]), busca]),
+            el("div.filtros__grupo", { role: "group", "aria-label": "Filtrar regras pelo estado" }, botoesDeFiltro),
+          ]),
+          el("div.faixa.faixa--entre", {}, [
+            el("p.t-mini", { texto: "Cada regra vale só para esta ficha e começa desligada; nenhuma liga mecânica da campanha. Abra um cartão para ver efeito, fonte e consequências." }),
+            el("div.faixa", {}, [
+              el("button.r-botao.r-botao--mini.r-botao--fantasma", { type: "button", texto: "Expandir categorias", onclick: function () { todas(true); } }),
+              el("button.r-botao.r-botao--mini.r-botao--fantasma", { type: "button", texto: "Recolher categorias", onclick: function () { todas(false); } }),
+            ]),
+          ]),
+          contagem,
+        ]),
+        vazio,
+      ].concat(grupos.map(function (g) { return g.caixa; })));
     },
   };
 
-  /* Uma gaveta: o painel de sempre, com o título na etiqueta do traço de
-     cima, que abre e fecha. Fechada, fica só o resumo (quantas regras e
-     quantas ligadas). Por dentro, os cartões em grade, como os itens do
-     inventário. */
-  function gavetaDeRegras(chave, titulo, descricao, cartoes, ligadas) {
-    var aberta = abertasNasRegras.gavetas[chave] !== false;
-    var caixa = el("details.r-painel.r-gaveta", { open: aberta, dataset: { gaveta: chave } }, [
-      el("summary.r-gaveta__topo", {}, [
-        el("span.r-painel__titulo.r-gaveta__titulo", {}, [
-          el("span.r-gaveta__seta", { "aria-hidden": "true" }),
-          el("span", { texto: titulo }),
-        ]),
-        el("span.r-gaveta__resumo", {
-          texto: cartoes.length + (cartoes.length === 1 ? " regra" : " regras") + " · " +
-                 ligadas + (ligadas === 1 ? " ligada" : " ligadas"),
-        }),
+  function gavetaAberta(tela, chave) {
+    return chave in tela.gavetas ? tela.gavetas[chave] : chave === OP.CATEGORIA_PADRAO;
+  }
+
+  /* Uma categoria: a gaveta de sempre (o painel com a etiqueta no traço
+     de cima, que abre e fecha), com o total e quantas estão ligadas. A
+     escolha de abrir é guardada pelo CLIQUE no resumo (mouse, Enter ou
+     Espaço) — abrir pelo código, durante uma busca, não conta. */
+  function gavetaDeCategoria(tela, g, cartoes) {
+    var ligadas = cartoes.filter(function (c) { return c.ligada; }).length;
+    var exibidas = el("span.r-gaveta__exibidas");
+    var resumo = el("summary.r-gaveta__topo", {}, [
+      el("span.r-painel__titulo.r-gaveta__titulo", {}, [
+        el("span.r-gaveta__seta", { "aria-hidden": "true" }),
+        el("span", { texto: g.nome }),
       ]),
-      el("div.pilha--curta.r-gaveta__corpo", { class: "pilha" }, [
-        descricao ? el("p.t-mini", { texto: descricao }) : null,
-        el("div.ordem-regras", {}, cartoes),
+      el("span.r-gaveta__resumo", {}, [
+        el("span", { texto: plural(cartoes.length, "regra", "regras") + " · " + plural(ligadas, "ligada", "ligadas") }),
+        exibidas,
       ]),
     ]);
-    caixa.addEventListener("toggle", function () { abertasNasRegras.gavetas[chave] = caixa.open; });
-    return caixa;
+    var caixa = el("details.r-painel.r-gaveta", { dataset: { gaveta: g.chave } }, [
+      resumo,
+      el("div.r-gaveta__corpo", {}, [el("div.ordem-regras", {}, cartoes.map(function (c) { return c.elemento; }))]),
+    ]);
+    var grupo = { chave: g.chave, caixa: caixa, cartoes: cartoes, exibidas: exibidas, aoAlternar: null };
+    resumo.addEventListener("click", function () {
+      var aberta = !caixa.open;
+      if (grupo.aoAlternar) grupo.aoAlternar(aberta);
+    });
+    return grupo;
   }
 
   /* O cartão compacto de uma regra: fechado, nome, resumo e a chave;
-     aberto, o resto. A chave fica fora do clique que abre o cartão. */
-  function cartaoCompacto(id, titulo, linhas, chave, corpo, ligada, abertoPorPadrao) {
-    var memoria = abertasNasRegras.cartoes[id];
-    return UI.recolhivel({
+     aberto, o resto. A chave fica fora do clique que abre o cartão.
+     Devolve o elemento e o que a busca e o filtro leem. */
+  function cartaoCompacto(ctx, id, titulo, linhas, chave, corpo, ligada, abertoPorPadrao, procura) {
+    var tela = telaDe(ctx);
+    var memoria = tela.cartoes[id];
+    var elemento = UI.recolhivel({
       titulo: titulo,
       subtitulo: linhas.filter(Boolean),
       acoes: [chave],
       classe: "ordem-regra-cartao" + (ligada ? " ordem-regra-cartao--ligada" : ""),
       aberto: memoria === undefined ? !!abertoPorPadrao : memoria,
-      aoAlternar: function (aberto) { abertasNasRegras.cartoes[id] = aberto; },
+      aoAlternar: function (aberto) { tela.cartoes[id] = aberto; },
       conteudo: corpo.filter(Boolean),
     });
+    elemento.dataset.regra = id;
+    return { elemento: elemento, ligada: !!ligada, texto: U.chaveDeBusca([titulo].concat(procura || []).join(" ")) };
+  }
+
+  /* Fonte e natureza, discretas, na linha de baixo do cartão fechado. */
+  function linhaDeOrigem(chave, fonte) {
+    return el("span.t-mini.ordem-regra-cartao__origem", { texto: fonte + " · " + NATUREZAS[OP.natureza(chave)] });
+  }
+
+  /* Depois de ligar ou desligar: o foco volta à chave (data-foco) ou, se
+     o filtro tirou o cartão da tela, ao filtro em uso. */
+  function focoDepoisDeAlternar(ctx, id) {
+    setTimeout(function () {
+      var alvo = document.querySelector('[data-foco="regra:' + id + '"]');
+      if (alvo && !alvo.closest("[hidden]")) {
+        if (document.activeElement !== alvo) { try { alvo.focus({ preventScroll: true }); } catch (e) { alvo.focus(); } }
+        return;
+      }
+      var f = document.querySelector('[data-foco="regras-filtro-' + telaDe(ctx).filtro + '"]') || document.querySelector('[data-foco="regras-busca"]');
+      if (f) { try { f.focus({ preventScroll: true }); } catch (e) { f.focus(); } }
+    }, 0);
   }
 
   function textoDosLimites(limites) {
@@ -3412,6 +3548,7 @@
       "aria-checked": String(aplicada),
       "aria-label": (aplicada ? "Desligar" : "Ligar") + " as regras de patente",
       class: aplicada ? "r-interruptor--ligado" : "",
+      dataset: { foco: "regra:patente" },
       onclick: function () { alternarPatente(ctx, o, !aplicada); },
     }, [el("span.r-interruptor__bola", { "aria-hidden": "true" })]);
 
@@ -3459,8 +3596,9 @@
       : "Desligada: itens por categoria definidos pela mesa — " + textoDosLimites(pat.limites);
     /* No modo edição, com a regra desligada, os limites se editam aqui:
        o cartão já vem aberto. */
-    return cartaoCompacto("patente", "Aplicar regras de patente", [el("span.t-mini", { texto: resumo })], chave, corpo, aplicada,
-      !aplicada && ctx.emEdicao());
+    var fonte = global.RAMAOrdemCatalogo.nomeDoLivro("OPRPG") + ", p. 51-53";
+    return cartaoCompacto(ctx, "patente", "Aplicar regras de patente", [el("span.t-mini", { texto: resumo }), linhaDeOrigem("patente", fonte)],
+      chave, corpo, aplicada, !aplicada && ctx.emEdicao(), [resumo, "patente prestígio crédito limite de itens", fonte, "OPRPG"]);
   }
 
   function controleDeLimite(ctx, o, n, atual) {
@@ -3508,6 +3646,7 @@
     var r = R.definirRegraDePatente(o, aplicar);
     if (r.aviso) UI.aviso(r.aviso);
     aoMudarOrdem(ctx);
+    focoDepoisDeAlternar(ctx, "patente");
   }
 
   function cartaoDeRegra(ctx, o, r) {
@@ -3522,6 +3661,7 @@
       "aria-label": (ligada ? "Desligar" : "Ligar") + " " + r.nome,
       disabled: bloqueada,
       class: ligada ? "r-interruptor--ligado" : "",
+      dataset: { foco: "regra:" + r.chave },
       onclick: function () { alternarRegra(ctx, o, r, !ligada); },
     }, [el("span.r-interruptor__bola", { "aria-hidden": "true" })]);
 
@@ -3568,11 +3708,13 @@
 
     /* Fechado, o cartão ainda diz o que importa: o resumo, por que não
        dá para ligar e se há dados guardados. */
-    return cartaoCompacto("regra:" + r.chave, r.nome, [
+    var fonte = global.RAMAOrdemCatalogo.nomeDoLivro(r.fonte) + ", p. " + r.pagina;
+    return cartaoCompacto(ctx, "regra:" + r.chave, r.nome, [
       el("span.t-mini", { texto: r.resumo }),
       bloqueada ? el("span.t-mini.t-erro", { texto: "Não dá para ligar agora — abra para ver por quê." }) : null,
       guardados ? el("span.t-mini.t-aviso", { texto: "Há dados desta regra guardados." }) : null,
-    ], chave, corpo, ligada, false);
+      linhaDeOrigem(r.chave, fonte),
+    ], chave, corpo, ligada, false, [r.resumo, fonte, r.fonte]);
   }
 
   async function alternarRegra(ctx, o, r, ligar) {
@@ -3598,6 +3740,7 @@
 
     if (resultado.aviso) UI.aviso(resultado.aviso);
     aoMudarOrdem(ctx);
+    focoDepoisDeAlternar(ctx, r.chave);
   }
 
   /* =================================================================

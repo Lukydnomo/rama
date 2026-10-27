@@ -70,6 +70,21 @@
 
   var CHANGELOG = [
     {
+      versao: "2.48.3", codinome: "PRATELEIRA", data: "27/10/2026",
+      mudancas: {
+        "Alterado": [
+          "A aba Regras das fichas de Ordem foi reorganizada em sete categorias temáticas — Personagem e progressão; Rituais e paranormal; Combate e sobrevivência; Poderes e trilhas; Aliados e vínculos; Exploração e transporte; Hexatombe e desafios — no lugar das três gavetas (Configurações da ficha, Regras opcionais, Regras de mesa). Cada categoria abre e fecha e mostra quantas regras tem e quantas estão ligadas; na primeira vez só Personagem e progressão vem aberta, e depois vale o que você abriu. “Expandir categorias” e “Recolher categorias” mexem em todas de uma vez.",
+          "Cada cartão mostra, discretamente, a fonte e se a regra é configuração da ficha, muda a ficha ou é regra de mesa. A explicação longa no alto virou uma orientação curta.",
+        ],
+        "Adicionado": [
+          "Busca “Buscar regra…” (nome, resumo e fonte, sem diferença de acento) e filtro Todas / Ligadas / Desligadas. Com filtro, só aparecem as categorias com resultado, abertas enquanto você procura, com a contagem do que está exibido; sem resultado, um botão limpa tudo. Limpar a busca devolve as categorias como estavam.",
+        ],
+        "Técnico": [
+          "Registro único `OP.CATEGORIAS` em js/ordem/opcionais.js (`categoriaDe`, `natureza`, `categorizar`; regra sem categoria vai para “Outras regras”). Busca, filtro e aberturas são estado de tela por ficha: escondem e mostram cartões sem redesenhar, sem marcar a ficha como alterada e sem salvamento. Ligar uma chave mantém busca, filtro, categorias, cartões abertos, rolagem e foco (`data-foco` na chave; com o cartão fora do filtro, o foco vai para o filtro). Nenhuma regra, chave gravada ou efeito mudou; só o site muda. Testes: 3307 regras (novos: cada regra numa categoria só, ordem, “Outras regras”, natureza) e as demais suítes passando; verificado no navegador com o backend simulado: categorias e contagens, busca com e sem acento, filtro, estado vazio, restauração das aberturas, ligar e desligar (inclusive em “Ligadas”), foco e rolagem, ausência de requisições ao só organizar, ficha em leitura, desktop e celular.",
+        ],
+      },
+    },
+    {
       versao: "2.48.2", codinome: "DISJUNTOR", data: "27/10/2026",
       mudancas: {
         "Alterado": [

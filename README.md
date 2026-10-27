@@ -587,6 +587,9 @@ segredo nenhum — ele os lê das Script Properties. Publicá-lo não expõe nad
 
 ### Atualizar o backend
 
+**v2.48.3 — PRATELEIRA:** só o site (aba Regras em categorias, com busca e filtro).
+Publique o site; nada de `.gs`, versão da implantação nem `setupRama()`.
+
 **v2.48.2 — DISJUNTOR:** Transmissão e benefícios de aliados viram regras
 opcionais da ficha. **Troque** o `Campanhas.gs` (a Sincronia confere a regra nas
 duas fichas), crie uma **nova versão** da implantação e publique o site. Sem

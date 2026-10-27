@@ -1900,15 +1900,23 @@
 .r-gaveta > .r-gaveta__topo:hover .r-gaveta__seta { color: var(--cor-texto); }
 .r-gaveta__corpo { margin-top: var(--e2); }
 
-/* Os cartões de regra em grade, como os itens do inventário. */
+/* Os cartões de regra em grade, como os itens do inventário. O min()
+   deixa uma coluna só quando a gaveta é mais estreita que um cartão
+   (celular), sem rolagem de lado. */
 .ordem-regras {
   display: grid;
   gap: var(--e2);
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr));
   align-items: start;
 }
 .ordem-regras > .recolhivel + .recolhivel { margin-top: 0; }
 .ordem-regra-cartao--ligada { border-color: var(--cor-paranormal); }
+/* Fonte e natureza da regra (v2.48.3): discretas, abaixo do resumo. */
+.ordem-regra-cartao__origem { color: var(--cor-texto-3); }
+/* As categorias da aba Regras ficam uma embaixo da outra, com o
+   respiro da etiqueta no traço de cima. */
+.ordem-regras-aba > .r-gaveta { margin: 0; }
+.ordem-regras-aba .filtros { flex-wrap: wrap; }
 
 /* O interruptor é forma além de cor: a bola muda de lado, e continua
    legível para quem não distingue cores. */

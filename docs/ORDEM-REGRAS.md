@@ -612,18 +612,55 @@ suíte `testes/executar-cris.js` exige zero divergência nos casos reais.
 
 ### A chave "Aplicar regras de patente"
 
-Fica na aba Regras, na gaveta "Configurações da ficha" (com NEX & Experiência e
-Jogando sem Sanidade). **Ligada é o padrão**, e é o comportamento de toda ficha
-gravada antes desta chave existir.
+Fica na aba Regras, na categoria "Personagem e progressão" (com NEX &
+Experiência, Jogando sem Sanidade e Evolução por Patentes). **Ligada é o
+padrão**, e é o comportamento de toda ficha gravada antes desta chave existir.
 
-A aba Regras (v2.39) tem três gavetas que abrem e fecham pela etiqueta —
-Configurações da ficha, Regras opcionais e Regras de mesa — com o resumo
-"N regras · M ligadas" à vista mesmo fechadas. Dentro, cada regra é um cartão
-compacto em grade, como os itens do inventário: fechado, mostra o nome, o resumo
-e a chave (que liga sem abrir o cartão); aberto, o efeito, a automação, a fonte,
-os avisos e os parâmetros. O que está aberto fica aberto quando uma chave
-redesenha a aba (memória da página). No modo edição, com a patente desligada, o
-cartão da patente já vem aberto nos limites por categoria.
+### A aba Regras em categorias (v2.48.3)
+
+Desde a v2.48.3 a aba não tem mais as três gavetas (Configurações da ficha,
+Regras opcionais, Regras de mesa) da v2.39: as regras ficam em **categorias
+temáticas**, do registro único `OP.CATEGORIAS` (`js/ordem/opcionais.js`):
+
+| Categoria | Regras |
+|---|---|
+| Personagem e progressão | Aplicar regras de patente; NEX & Experiência; Jogando sem Sanidade; Evolução por Patentes |
+| Rituais e paranormal | Limite de rituais por aprendizado lento; Limite de rituais por aprendizado em campo; Conjuração Complexa; Controle de componentes ritualísticos; Reter Ritual; Transcender com Itens; Conjurando Rituais Desconhecidos; Desastres Paranormais |
+| Combate e sobrevivência | Ferimentos Debilitantes; Contagem de munição; Combate Narrativo |
+| Poderes e trilhas | Poderes de Intenção; Formas Supremas; Poderes de Sacrifício; Trilha Geral; Poderes de Transmissão |
+| Aliados e vínculos | Aliados em Perigo; Benefícios recebidos de aliados; Boas Recordações; Regras da Paixão |
+| Exploração e transporte | Jogando sem Mapa; Veículos Operacionais; Animais Treinados |
+| Hexatombe e desafios | Participação no Hexatombe; Batalhas de Intenções; Jogos do Circo |
+
+- **Só apresentação.** A categoria não é gravada, não muda requisito e não liga
+  nada — nem as mecânicas da campanha (Hexatombe, Hacking, Perigos). Cada regra
+  aparece uma vez; uma regra nova sem categoria vai para **Outras regras**.
+- **Natureza à vista.** A linha de baixo do cartão fechado diz a fonte e se a
+  regra é *configuração da ficha*, *muda a ficha* ou *regra de mesa: não muda
+  contas* (`OP.natureza`) — a distinção das antigas gavetas.
+- **Gavetas.** Cada categoria mostra "N regras · M ligadas" mesmo fechada. Na
+  primeira abertura só Personagem e progressão vem aberta; depois vale o que a
+  pessoa abriu ou fechou (várias ao mesmo tempo), e "Expandir categorias" /
+  "Recolher categorias" mexem só nas categorias, nunca nos cartões.
+- **Busca e filtro.** "Buscar regra…" procura no nome, no resumo e na fonte, sem
+  diferença de acento e caixa; "Todas / Ligadas / Desligadas" combina com ela.
+  Com filtro, só aparecem as categorias com resultado, abertas temporariamente,
+  com "· K exibidas" no resumo e a contagem total abaixo da busca; sem resultado,
+  um aviso com "Limpar busca e filtro". Limpar volta a abertura escolhida antes
+  (abrir pelo filtro não é guardado). Esc limpa a busca.
+- **Estado de tela, por ficha.** Busca, filtro e o que está aberto não sobem,
+  não marcam a ficha como alterada e não redesenham a ficha: os cartões só são
+  escondidos e mostrados. Ligar uma chave redesenha a aba (região de conteúdo)
+  mantendo busca, filtro, categorias, cartões abertos, rolagem e o foco na chave;
+  se o filtro tirar o cartão da tela (desligar em "Ligadas"), o foco vai para o
+  filtro em uso.
+
+Dentro de cada categoria, cada regra é o cartão compacto de sempre, em grade
+(uma coluna no celular): fechado, nome, resumo, fonte/natureza e a chave (que
+liga sem abrir o cartão); aberto, o efeito, a automação, a fonte, os avisos
+(incompatibilidade, dados guardados) e os parâmetros. Ligar e desligar seguem as
+mesmas confirmações. No modo edição, com a patente desligada, o cartão da
+patente já vem aberto nos limites por categoria.
 
 | com a chave ligada | com a chave desligada |
 |---|---|
