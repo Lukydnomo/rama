@@ -258,13 +258,22 @@
         ]));
       });
 
-      return global.RAMAUI.recolhivel({
+      var cartao = global.RAMAUI.recolhivel({
         titulo: "v" + r.versao + " — " + r.codinome,
-        extra: r.data,
+        /* Patch se diz manutenção; marco e destaque ganham um selo. */
+        extra: (V.tipo && V.tipo(r) === "patch" ? "manutenção · " : "") + r.data,
         /* A mais recente abre; as anteriores ficam recolhidas. */
         aberto: i === 0,
         conteudo: secoes.length ? secoes : [el("p.t-mini", { texto: "Sem mudanças registradas." })],
       });
+      var selo = V.destaque ? V.destaque(r) : null;
+      var tituloDoCartao = selo && cartao.querySelector(".recolhivel__titulo");
+      if (tituloDoCartao) {
+        tituloDoCartao.parentNode.insertBefore(el("span.versao-selo.versao-selo--" + selo, {
+          texto: selo === "marco" ? "Marco" : "Destaque",
+        }), tituloDoCartao.nextSibling);
+      }
+      return cartao;
     });
 
     global.RAMAUI.modal({
@@ -274,7 +283,7 @@
         novidade
           ? el("p", { texto: "Agora na " + V.rotulo + ". O que mudou está logo abaixo; as versões anteriores ficam recolhidas. O histórico continua no número da versão, no rodapé." })
           : null,
-        el("p.t-mini", { texto: "A versão que aparece no rodapé é sempre a do topo desta lista." }),
+        el("p.t-mini", { texto: "A versão que aparece no rodapé é sempre a do topo desta lista. Marco: uma virada do R.A.M.A. (X.0.0). Destaque: uma expansão importante. Manutenção: correções e refinos (X.Y.Z)." }),
         el("div.pilha--curta", { class: "pilha" }, registros),
       ],
       botoes: [{ rotulo: "Fechar", classe: "r-botao--principal" }],

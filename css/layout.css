@@ -840,6 +840,22 @@ html.arrastando .soltos__titulo[data-arrastar-pasta] .soltos__soltar { display: 
 
 /* Histórico de versões: uma etiqueta por categoria, com a cor da natureza
    da mudança, e itens em lista de verdade, com respiro entre eles. */
+/* O selo do lançamento (v2.49.2): Marco na major, Destaque na minor
+   marcada. Escrito, não só cor; patch e minor comum não têm selo. */
+.versao-selo {
+  flex: 0 0 auto;
+  padding: 0 6px;
+  border: 1px solid var(--cor-traco-forte);
+  font-family: var(--fonte-mini);
+  font-size: var(--texto-mini);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  white-space: nowrap;
+}
+.versao-selo--marco { background: var(--fundo-selecao); color: var(--cor-selecao-texto); border-color: transparent; }
+.versao-selo--destaque { color: var(--cor-paranormal); border-color: var(--cor-paranormal); }
+
 .versao-secao {
   --cor-categoria: var(--cor-texto-2);
   border-left: 2px solid var(--cor-categoria);

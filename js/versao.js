@@ -39,19 +39,67 @@
    personalizado.
 
    ---------------------------------------------------------------------
-   A REGRA, PARA TODA ENTREGA FUTURA
+   A POLÍTICA DE VERSÃO (desde a v2.49.2) — ESTE É O ÚNICO LUGAR DELA
    ---------------------------------------------------------------------
+   O README só resume e aponta para cá. Vale para os próximos registros;
+   os já publicados ficam com o número que receberam.
 
-     PATCH  X.Y.(Z+1)  correções, ajustes visuais, textos, refinos
-     MINOR  X.(Y+1).0  funcionalidades, telas, sistemas novos
-     MAJOR  (X+1).0.0  reformulação estrutural, nova fase do projeto
+     MAJOR  (X+1).0.0  um MARCO do R.A.M.A.: uma transformação da
+                       plataforma ou da experiência de quem usa. Por
+                       exemplo: um sistema de RPG completo, com fichas e
+                       regras próprias; a experiência central reformulada
+                       de verdade; uma expansão que muda bastante o que dá
+                       para fazer aqui; uma mudança de arquitetura com
+                       impacto real nas funções ou na compatibilidade; uma
+                       geração nova do produto, com evolução concreta.
+                       Não precisa quebrar nada para ser major — e muita
+                       coisa nova de uma vez não basta para ser.
+     MINOR  X.(Y+1).0  funcionalidades, módulos, expansões e melhorias
+                       importantes que não são uma geração nova: suplemento
+                       e conteúdo oficial, biblioteca, ferramenta, expansão
+                       de um sistema que existe, personalização, interface
+                       e usabilidade bem melhores, recurso novo de
+                       campanha, combate ou ficha. Uma minor pode ser
+                       grande.
+     PATCH  X.Y.(Z+1)  manutenção: correção, ajuste visual, desempenho,
+                       compatibilidade, refino do que existe, pequena
+                       melhoria de uso, texto e organização. Uma correção
+                       complexa continua patch se não traz função nova nem
+                       muda algo significativo para quem usa.
+
+   COMO DECIDIR, nesta ordem de peso:
+     1. o impacto que a pessoa que usa percebe;
+     2. a importância da mudança na evolução do produto;
+     3. a abrangência — quantas partes do R.A.M.A. ela toca;
+     4. se abre capacidades ou possibilidades novas;
+     5. se exige migração relevante ou quebra compatibilidade.
+   NÃO decidem: quantidade de arquivos, linhas, funções ou tempo de
+   trabalho. Não existe cota (nenhum "a cada N minors vem uma major"), e
+   ninguém precisa forçar uma justificativa: na dúvida entre dois níveis,
+   fica o de baixo. O conjunto entregue é classificado pela mudança mais
+   relevante que contém.
 
    Ao subir MINOR, Z volta a 0. Ao subir MAJOR, Y e Z voltam a 0.
    Nunca carregue os números de baixo (v1.4.7 → v1.5.0, jamais v1.5.7).
+   Nada de quarto número, letra ou sufixo.
+
+   O DESTAQUE (opcional, independente do número)
+     `destaque: true` num registro MINOR marca uma expansão importante,
+     sem promovê-la a major. É o único nível extra: não existe grau de
+     importância. Major já é marco por definição e patch é manutenção,
+     então nenhum dos dois leva o campo (os testes recusam). Registro
+     sem o campo é minor comum — todos os anteriores à v2.49.2 são assim
+     e não são reclassificados. O histórico mostra "Marco" nas majors,
+     "Destaque" nas minors marcadas e "manutenção" nas patches; tipo(),
+     destaque() e comparar(), no fim deste arquivo, derivam isso do
+     número, sem outro campo.
+
+   A versão pública NÃO move schemaVersion, versaoFormato nem o formato
+   de armazenamento, e vice-versa (ver o quadro acima): uma major não
+   obriga mudar dado nenhum, e um schema novo não obriga major.
 
    UMA ENTREGA = UM REGISTRO NOVO NO TOPO. Não se cria uma versão por
-   microalteração, e o conjunto é classificado pela mudança mais
-   relevante que ele contém.
+   microalteração.
 
    O codinome é uma palavra, em maiúsculas, sem número e sem espaço, e
    não se repete. Os temas são os do R.A.M.A.: arquivo, registro,
@@ -1630,9 +1678,40 @@
   /* A versão atual é o primeiro registro. Não existe outra definição. */
   var atual = CHANGELOG[0];
 
+  /* ---- a classe de cada registro, derivada do número ---- */
+  function partes(v) { return String(v).split(".").map(Number); }
+
+  /* < 0 se a vem antes de b; segmento a segmento, nunca como texto
+     (2.10.0 vem depois de 2.9.0). */
+  function comparar(a, b) {
+    var x = partes(a), y = partes(b);
+    for (var i = 0; i < 3; i++) if (x[i] !== y[i]) return x[i] - y[i];
+    return 0;
+  }
+
+  /* "major" (X.0.0), "minor" (X.Y.0) ou "patch" (X.Y.Z): com os números
+     de baixo zerando a cada subida, o próprio número diz a classe. */
+  function tipo(registro) {
+    var p = partes(registro.versao);
+    if (p[1] === 0 && p[2] === 0) return "major";
+    return p[2] === 0 ? "minor" : "patch";
+  }
+
+  /* "marco" para toda major, "destaque" para a minor marcada, null para
+     o resto. O campo só vale numa minor; fora dela é ignorado aqui (e
+     recusado pelos testes). */
+  function destaque(registro) {
+    var t = tipo(registro);
+    if (t === "major") return "marco";
+    return t === "minor" && registro.destaque === true ? "destaque" : null;
+  }
+
   global.RAMAVersion = {
     changelog: CHANGELOG,
     categorias: CATEGORIAS,
+    tipo: tipo,
+    destaque: destaque,
+    comparar: comparar,
     atual: atual,
     rotulo: "v" + atual.versao + " — " + atual.codinome,
     numero: atual.versao,

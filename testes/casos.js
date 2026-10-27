@@ -4844,16 +4844,49 @@
       var versoes = Ver.changelog.map(function (r) { return r.versao; });
       t.igual("nenhuma versão se repete", new Set(versoes).size, versoes.length);
 
-      function ordem(v) {
-        var p = v.split(".").map(Number);
-        return p[0] * 1000000 + p[1] * 1000 + p[2];
-      }
-
       var decrescente = true;
       for (var i = 1; i < Ver.changelog.length; i++) {
-        if (ordem(Ver.changelog[i - 1].versao) <= ordem(Ver.changelog[i].versao)) decrescente = false;
+        if (Ver.comparar(Ver.changelog[i - 1].versao, Ver.changelog[i].versao) <= 0) decrescente = false;
       }
       t.ok("da mais recente para a mais antiga", decrescente);
+
+      t.grupo("Versionamento — comparar, segmento a segmento");
+
+      t.ok("2.10.0 vem depois de 2.9.0 (não é comparação de texto)", Ver.comparar("2.10.0", "2.9.0") > 0);
+      t.ok("3.0.0 vem depois de 2.49.2", Ver.comparar("3.0.0", "2.49.2") > 0);
+      t.ok("2.49.10 vem depois de 2.49.9", Ver.comparar("2.49.10", "2.49.9") > 0);
+      t.igual("iguais dão 0", Ver.comparar("2.49.2", "2.49.2"), 0);
+      t.ok("ordenar com comparar devolve a ordem do histórico",
+        Ver.changelog.map(function (r) { return r.versao; }).slice().sort(Ver.comparar).reverse().join() ===
+        Ver.changelog.map(function (r) { return r.versao; }).join());
+
+      t.grupo("Versionamento — classe e destaque (v2.49.2)");
+
+      t.igual("X.0.0 é major", Ver.tipo({ versao: "3.0.0" }), "major");
+      t.igual("X.Y.0 é minor", Ver.tipo({ versao: "2.50.0" }), "minor");
+      t.igual("X.Y.Z é patch", Ver.tipo({ versao: "2.49.2" }), "patch");
+      t.igual("major é marco, com ou sem o campo", Ver.destaque({ versao: "3.0.0" }), "marco");
+      t.igual("minor marcada é destaque", Ver.destaque({ versao: "2.50.0", destaque: true }), "destaque");
+      t.igual("minor sem o campo não tem selo (todo registro antigo)", Ver.destaque({ versao: "2.48.0" }), null);
+      t.igual("só true conta (\"sim\" não)", Ver.destaque({ versao: "2.50.0", destaque: "sim" }), null);
+      t.igual("patch nunca tem selo", Ver.destaque({ versao: "2.49.3", destaque: true }), null);
+      t.igual("1.0.0, o primeiro registro, é marco", Ver.destaque(Ver.changelog[Ver.changelog.length - 1]), "marco");
+
+      Ver.changelog.forEach(function (r) {
+        if (!("destaque" in r)) return;
+        t.ok("v" + r.versao + ": destaque é true", r.destaque === true);
+        t.igual("  e só numa minor", Ver.tipo(r), "minor");
+      });
+      var semCampoNovo = Ver.changelog.filter(function (r) {
+        return Ver.comparar(r.versao, "2.49.2") <= 0;
+      }).every(function (r) { return !("destaque" in r); });
+      t.ok("os registros até a v2.49.2 ficam como foram publicados (sem destaque)", semCampoNovo);
+      var chavesConhecidas = ["versao", "codinome", "data", "mudancas", "destaque"];
+      var estranhas = [];
+      Ver.changelog.forEach(function (r) {
+        Object.keys(r).forEach(function (k) { if (chavesConhecidas.indexOf(k) < 0) estranhas.push(r.versao + ":" + k); });
+      });
+      t.ok("nenhum registro tem campo além de versão, codinome, data, mudanças e destaque", estranhas.length === 0, estranhas.join(", "));
 
       t.grupo("Versionamento — os números de baixo zeram");
 

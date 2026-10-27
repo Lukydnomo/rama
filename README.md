@@ -1286,14 +1286,19 @@ Três números diferentes, que não se misturam:
 
 | | Onde | O que é |
 |---|---|---|
-| versão do aplicativo | `js/versao.js` | o que a pessoa vê: v2.0.0 |
+| versão do aplicativo | `js/versao.js` | o que a pessoa vê: v2.49.2 |
 | `schemaVersion` | `js/ficha.js` | o formato da FICHA |
 | `versaoFormato` | `js/config.js` | o formato dos arquivos de importação |
 
-A cada entrega: um registro novo no topo, com codinome inédito e a data real.
-PATCH para correções, MINOR para funcionalidades, MAJOR para mudança de fase —
-e os números de baixo zeram ao subir. As regras completas estão comentadas no
-próprio `js/versao.js`.
+A cada entrega: um registro novo no topo, com codinome inédito e a data real, e
+os números de baixo zeram ao subir. Em resumo (desde a v2.49.2): **MAJOR** é um
+marco do R.A.M.A. — uma transformação da plataforma ou da experiência, quebrando
+compatibilidade ou não; **MINOR** é funcionalidade, módulo ou expansão, mesmo
+grande; **PATCH** é manutenção e refino. Uma minor importante pode levar o
+campo opcional `destaque: true`, que só muda o selo no histórico, nunca o
+número. A política inteira — critérios, o que não conta, o destaque — mora só no
+comentário de `js/versao.js`; a versão pública não se mistura com
+`schemaVersion` nem com `versaoFormato`.
 
 ---
 

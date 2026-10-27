@@ -324,6 +324,12 @@
     letter-spacing: var(--m20-espaco-sobre);
   }
   & .versao-lista { line-height: 1.6; }
+  & .versao-selo {
+    border-radius: 999px;
+    font-size: var(--m20-texto-sobre);
+    letter-spacing: var(--m20-espaco-sobre);
+  }
+  & .versao-selo--destaque { background: var(--m20-destaque-suave); }
   & .versao-codigo {
     padding: 0 5px;
     border-color: var(--m20-borda);
