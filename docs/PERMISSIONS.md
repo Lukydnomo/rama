@@ -14,7 +14,8 @@ Quem alcança o quê, e onde isso é decidido.
 - O perigo **nunca** aplica dano ou perda numa ficha: cada um aplica no próprio
   recurso, com confirmação.
 - Sincronia: as duas fichas precisam ter marcado uma à outra na sincronia da
-  cena; sair da sincronia revoga na hora. Ficha compartilhada (Editor) não dá
+  cena e estar com a regra opcional Poderes de Transmissão ligada (v2.48.2);
+  sair da sincronia ou desligar a regra revoga na hora. Ficha compartilhada (Editor) não dá
   essa porta. O servidor confere campanha, recurso e `opId`; SAN nunca.
 - A confirmação do Sino de Transmissão e o veredito do Ufólogo são marcas da
   ficha feitas pelo mestre na tela (na campanha) — pesam só na progressão e no

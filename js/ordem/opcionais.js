@@ -51,6 +51,7 @@
   var AS1 = "AS1";
   var AS2 = "AS2";
   var AS3 = "AS3";
+  var AS5 = "AS5";
 
   /* Cada regra:
 
@@ -510,6 +511,43 @@
     "O painel registra cada animal: modo aliado (o perfil vai para a aba Aliados) ou ficha (VD pelo NEX, aprovação do mestre, imune a " +
       "Presença Perturbadora, sem a redução de duas categorias das ameaças da realidade) e o treino feito numa folga (SaH p. 94).",
     ["Desligar esconde os animais; os registros e os aliados ficam."]);
+
+  /* --- Arquivos Secretos 5 (v2.48.2) ---
+     Duas chaves, desligadas por padrão. Os poderes do AS5 continuam no
+     catálogo; o que fica opcional é o que mexe com o Sino e com o que
+     vem de outra ficha. */
+  REGRAS.push({
+    chave: "poderesDeTransmissao",
+    nome: "Poderes de Transmissão",
+    resumo: "A conexão com o Sino de Transmissão e os cinco poderes paranormais de Transmissão (Conhecimento + Energia), que só funcionam em dupla.",
+    fonte: AS5, pagina: 62,
+    afetaFicha: true,
+    automacao: "parcial",
+    efeito: "O painel do Arquivos Secretos 5 (aba Habilidades) ganha a seção Sino de Transmissão: registrar a conexão e a confirmação do " +
+      "mestre. Os poderes de Transmissão passam a poder ser escolhidos (Transcender) e a funcionar: portadores, Conexão Comunicativa, " +
+      "Sincronia Conectiva e os empréstimos de perícia, poder e ritual.",
+    parametros: [], depende: [], incompativel: [],
+    consequencias: [
+      "Desligar suspende os poderes de Transmissão: empréstimos, conexão e sincronia deixam de valer e o servidor recusa operações da Sincronia. O Sino, os portadores e o histórico ficam guardados e voltam ao religar.",
+      "Independe das mecânicas da campanha (Hexatombe, Hacking, Perigos): ligar esta não liga aquelas.",
+    ],
+  });
+
+  REGRAS.push({
+    chave: "beneficiosDeAliados",
+    nome: "Benefícios recebidos de aliados",
+    resumo: "Registrar na ficha o que outro personagem dá a este: Aura de Confiança, Parede de Carne, Direção Defensiva, Gaiola de Proteção e Dead Man Switch.",
+    fonte: AS5, pagina: 55,
+    afetaFicha: true,
+    automacao: "parcial",
+    efeito: "O painel do Arquivos Secretos 5 ganha a seção Recebido de aliados. Cada benefício registrado (com o nome de quem deu e até " +
+      "quando vale) entra na conta: +5 em Iniciativa, +5 ou +2 na Defesa, +2 em testes de resistência, o grau de treino do Dead Man Switch.",
+    parametros: [], depende: [], incompativel: [],
+    consequencias: [
+      "Desligar tira esses bônus das contas; os registros ficam guardados e voltam ao religar, se ainda estiverem no prazo.",
+      "Quem TEM o poder continua usando-o na própria ficha: esta regra é só sobre receber o benefício de outro.",
+    ],
+  });
 
   var POR_CHAVE = {};
   REGRAS.forEach(function (r) { POR_CHAVE[r.chave] = r; });

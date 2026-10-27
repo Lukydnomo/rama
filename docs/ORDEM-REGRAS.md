@@ -1735,6 +1735,8 @@ da ficha, e começa ligada.
 | Formas Supremas | `formasSupremas` | AS2 p. 96–97 | configurar, ativar, manter e desativar a forma; os +20 PV, +10 PE e +10 Defesa | **P** |
 | Participação no Hexatombe | `participacaoHexatombe` | AS2 p. 4–24 | dia, desertor, fome, sede, castigos e recompensas na ficha: os lançamentos (PV/PE máximos, PV pela metade, testes, dados, dano, RD) e a seção Hexatombe | **P** |
 | Aliados em Perigo | `aliadosEmPerigo` | AS2 p. 24 | o “Uso arriscado (1d6)” de cada aliado | **A** |
+| Poderes de Transmissão | `poderesDeTransmissao` | AS5 p. 62–63 | a seção Sino de Transmissão; escolher (Transcender) e usar os poderes de Transmissão: portadores, conexão, sincronia (também conferida no servidor) e empréstimos | **P** |
+| Benefícios recebidos de aliados | `beneficiosDeAliados` | AS5 p. 55–56, 59 | a seção Recebido de aliados e os bônus registrados (Aura, Parede, Direção Defensiva, Gaiola, grau do Dead Man Switch) | **P** |
 
 Todas começam desligadas, também numa ficha antiga sem escolha gravada. Valem
 uma independente da outra: Intenção e forma suprema não pedem o Hexatombe, e a
@@ -2510,6 +2512,16 @@ pela própria pessoa (“Recebido de aliados”).
 | Transmissão nas criaturas | consulta | filtro e etiqueta “Transmissão” na biblioteca; a ficha guarda `manifestacao` com os elementos reais (Conhecimento e Energia) |
 | Gerador da Varminho | consulta | 1d10, dois d6 e dois d20 independentes, sem somar; só texto |
 | Perigos complexos | regra de cena | ver abaixo |
+
+**Regras opcionais da ficha (v2.48.2).** Duas partes do AS5 só valem com a regra
+ligada na aba Regras, desligadas por padrão: **Poderes de Transmissão**
+(`poderesDeTransmissao` — a seção Sino de Transmissão, o requisito de Transcender e
+o funcionamento dos cinco poderes; a Sincronia é recusada pelo servidor se
+qualquer das duas fichas estiver com ela desligada) e **Benefícios recebidos de
+aliados** (`beneficiosDeAliados` — a seção Recebido de aliados e os bônus dela).
+Desligar não apaga nada: Sino, portadores e registros ficam guardados (a aba
+Regras avisa) e voltam ao religar. Quem tem Aura, Parede ou Dead Man Switch
+continua usando o próprio poder; a regra é só sobre receber.
 
 Mecânicas desligadas por padrão (Hexatombe, Hacking) continuam desligadas: nada
 do AS5 depende delas ou as liga.

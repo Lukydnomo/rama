@@ -261,6 +261,7 @@
   /* --- recebido de aliados --- */
 
   function secaoRecebidos(ctx, o) {
+    if (!A5().regraLigada(o, "aliados")) return null;
     var vale = A5().recebidosValendo(o);
     var corpo = [linha("Benefícios que outro personagem dá a este (Aura de Confiança, Parede de Carne, Direção Defensiva, Gaiola de Proteção, Dead Man Switch). Quem tem o poder não recebe o próprio benefício: registre aqui só o que veio de outro.")];
     vale.forEach(function (r) {
@@ -320,6 +321,7 @@
     return A5().PODERES_DE_TRANSMISSAO.some(function (k) { return tem(o, k); });
   }
   function secaoTransmissao(ctx, o) {
+    if (!A5().regraLigada(o, "transmissao")) return null;
     var sino = A5().sino(o);
     if (!temTransmissao(o) && !sino.registrado) {
       return UI.recolhivel({ titulo: "Sino de Transmissão", conteudo: bloco([
@@ -854,6 +856,7 @@
   /* --- poderes de Transmissão --- */
 
   function controlesDeTransmissao(ctx, o, chave) {
+    if (!A5().regraLigada(o, "transmissao")) return [linha(A5().MOTIVOS.transmissao + " Os dados ficam guardados.", "t-aviso")];
     var port = A5().portadores(o, chave);
     var funciona = A5().funciona(o, chave);
     var l = [

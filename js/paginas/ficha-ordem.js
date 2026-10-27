@@ -3542,6 +3542,9 @@
     var A2 = global.RAMAOrdemArquivo2;
     var qualA2 = { poderesDeIntencao: "intencao", formasSupremas: "forma", participacaoHexatombe: "hexatombe" }[r.chave];
     var guardados = !ligada && qualA2 && A2 && A2.dadosGuardados && A2.dadosGuardados(o, qualA2);
+    var qualA5 = { poderesDeTransmissao: "transmissao", beneficiosDeAliados: "aliados" }[r.chave];
+    var A5 = global.RAMAOrdemArquivo5;
+    if (!ligada && qualA5 && A5 && A5.dadosGuardados(o, qualA5)) guardados = true;
     if (guardados) {
       corpo.push(el("p.t-mini.t-aviso", { texto: "Esta ficha tem dados desta regra guardados. Eles não valem enquanto ela estiver desligada; ligar volta a aplicá-los, sem conceder nada de novo." }));
     }

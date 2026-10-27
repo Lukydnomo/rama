@@ -70,6 +70,18 @@
 
   var CHANGELOG = [
     {
+      versao: "2.48.2", codinome: "DISJUNTOR", data: "27/10/2026",
+      mudancas: {
+        "Alterado": [
+          "As mecânicas do Arquivos Secretos 5 que apareciam em toda ficha de Ordem agora são regras opcionais, desligadas por padrão, na aba Regras: “Poderes de Transmissão” (a seção Sino de Transmissão e os cinco poderes de Transmissão) e “Benefícios recebidos de aliados” (a seção Recebido de aliados). Desligadas, as seções somem, os poderes de Transmissão não podem ser escolhidos nem funcionam e os bônus recebidos saem das contas.",
+          "Desligar não apaga nada: o Sino, os portadores, a sincronia e os benefícios registrados ficam guardados — a aba Regras avisa — e voltam ao religar. Quem tem Aura de Confiança, Parede de Carne ou Dead Man Switch continua usando o próprio poder.",
+        ],
+        "Técnico": [
+          "Chaves `poderesDeTransmissao` e `beneficiosDeAliados` em js/ordem/opcionais.js; `regraLigada`, `dadosGuardados` e `MOTIVOS` em js/ordem/arquivo5.js; os poderes de Transmissão pedem `comRegra`. O servidor (sincronia_operar) recusa com `sem_sincronia`/`regra_desligada` se qualquer das duas fichas estiver com a regra desligada — atualizar Campanhas.gs e criar uma versão nova da implantação; sem `setupRama()`. Fichas criadas na v2.48.0 com esses dados precisam ligar as regras para voltar a usá-los. Testes: 3290 regras e 1498 backend (também com o serviço avançado), as demais suítes passando; verificado no navegador com o backend simulado (desligado por padrão, ligar, recarregar, desligar).",
+        ],
+      },
+    },
+    {
       versao: "2.48.1", codinome: "AMÁLGAMA", data: "27/10/2026",
       mudancas: {
         "Alterado": [

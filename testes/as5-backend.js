@@ -28,7 +28,7 @@ export async function testarAs5Backend({ t, preparar, novaConta, comoFn }) {
   const outra = M({ acao: "criar_campanha", dados: { nome: "Outra" } }).dados.id;
   M({ acao: "salvar_participantes", campanhaId: mesa, membros: [{ userId: ana.id, papel: "jogador" }, { userId: beto.id, papel: "jogador" }] });
   const ficha = (nome, extra) => Object.assign({ nome, tipoFicha: "ordem", schemaVersion: 23,
-    ordem: { classe: "ocultista", nex: 30, recursos: { pv: 20, pe: null, san: null, pd: null } },
+    ordem: { classe: "ocultista", nex: 30, recursos: { pv: 20, pe: null, san: null, pd: null }, opcionais: { poderesDeTransmissao: true } },
     resumoRecursos: { pv: 30, pe: 14, san: 24, pd: null } }, extra || {});
   const pAna = A({ acao: "criar_personagem", dados: ficha("Ana") }).dados.id;
   const pBeto = B({ acao: "criar_personagem", dados: ficha("Beto") }).dados.id;
@@ -86,6 +86,13 @@ export async function testarAs5Backend({ t, preparar, novaConta, comoFn }) {
   gravar(A, pAna, (f) => { f.ordem.arquivo5 = { transmissao: { sincronia: comSincronia("a", [{ nome: "Beto", personagemId: pBeto }]) } }; });
   t.igual("só a Ana marcou o Beto: ainda recusado (falta o consentimento do Beto)", operar(A).erro, "sem_sincronia");
   gravar(B, pBeto, (f) => { f.ordem.arquivo5 = { transmissao: { sincronia: comSincronia("b", [{ nome: "Ana", personagemId: pAna }]) } }; });
+
+  t.grupo("AS5 · Sincronia Conectiva: só com a regra opcional ligada nas duas fichas (v2.48.2)");
+  gravar(B, pBeto, (f) => { f.ordem.opcionais.poderesDeTransmissao = false; });
+  const semRegra = operar(A);
+  t.ok("o Beto desligou Poderes de Transmissão: recusado, sem cobrar", semRegra.erro === "sem_sincronia" && semRegra.detalhe === "regra_desligada" &&
+    B({ acao: "ler_personagem", personagemId: pBeto }).dados.ordem.recursos.pe === null);
+  gravar(B, pBeto, (f) => { f.ordem.opcionais.poderesDeTransmissao = true; });
 
   t.grupo("AS5 · Sincronia Conectiva: gastar PE de outro");
   const op1 = op();

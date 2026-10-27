@@ -89,6 +89,26 @@
     return est ? est.adquiridos.filter(function (a) { return a.chave === chave && a.valido !== false; }) : [];
   }
   function temPoder(ordem, chave) { return aquisicoes(ordem, chave).length > 0; }
+
+  /* Regras opcionais da ficha (js/ordem/opcionais.js, v2.48.2):
+     desligadas, a Transmissão e o que veio de aliados não valem — os
+     dados ficam guardados e voltam ao religar. */
+  var REGRAS = { transmissao: "poderesDeTransmissao", aliados: "beneficiosDeAliados" };
+  var MOTIVOS = {
+    transmissao: "A regra opcional Poderes de Transmissão está desligada nesta ficha (aba Regras).",
+    aliados: "A regra opcional Benefícios recebidos de aliados está desligada nesta ficha (aba Regras).",
+  };
+  function regraLigada(ordem, qual) {
+    var OP = global.RAMAOrdemOpcionais;
+    return !!(OP && ordem && OP.ligada(ordem, REGRAS[qual] || qual));
+  }
+  function dadosGuardados(ordem, qual) {
+    var a = ordem && ordem.arquivo5;
+    if (!a) return false;
+    if (qual === "transmissao") return a.transmissao.sino.registrado || Object.keys(a.transmissao.portadores).length > 0 || !!a.transmissao.sincronia;
+    if (qual === "aliados") return a.recebidos.length > 0;
+    return false;
+  }
   function comAfinidade(ordem, chave) { return aquisicoes(ordem, chave).some(function (a) { return a.afinidade; }); }
   function temOrigem(ordem, chave) { return !!(ordem && ordem.origem === chave); }
 
@@ -572,6 +592,7 @@
      ================================================================= */
 
   function adicionarRecebido(ordem, tipo, de, extra) {
+    if (!regraLigada(ordem, "aliados")) return { ok: false, desligada: true, motivo: MOTIVOS.aliados };
     if (!RECEBIVEIS[tipo]) return { ok: false, motivo: "Benefício desconhecido." };
     var nome = texto(de, 80).trim();
     if (!nome) return { ok: false, motivo: "Diga de quem veio." };
@@ -599,7 +620,7 @@
     return true;
   }
   function recebidosValendo(ordem) {
-    if (!ordem || !ordem.arquivo5) return [];
+    if (!ordem || !ordem.arquivo5 || !regraLigada(ordem, "aliados")) return [];
     return ordem.arquivo5.recebidos.filter(function (r) { return recebidoValendo(ordem, r); });
   }
   /* O grau recebido numa perícia (Dead Man Switch): o maior valendo. */
@@ -871,6 +892,7 @@
     return t ? t.sino : normalizarSino({});
   }
   function registrarSino(ordem, nota) {
+    if (!regraLigada(ordem, "transmissao")) return { ok: false, desligada: true, motivo: MOTIVOS.transmissao };
     var t = transmissaoDe(ordem);
     t.sino = normalizarSino({ registrado: true, registradoEm: agora(), nota: nota });
     return { ok: true };
@@ -878,6 +900,7 @@
   /* A confirmação é da mesa: o mestre, na campanha; sem campanha, quem
      joga registra a decisão da mesa. */
   function confirmarSino(ordem, por) {
+    if (!regraLigada(ordem, "transmissao")) return { ok: false, desligada: true, motivo: MOTIVOS.transmissao };
     var t = transmissaoDe(ordem);
     if (!t.sino.registrado) return { ok: false, motivo: "Registre a conexão com o Sino antes." };
     t.sino.confirmado = true;
@@ -904,7 +927,7 @@
     if (l.length) t.portadores[chave] = l; else delete t.portadores[chave];
     return { ok: true, portadores: l };
   }
-  function funciona(ordem, chave) { return temPoder(ordem, chave) && portadores(ordem, chave).length >= 1; }
+  function funciona(ordem, chave) { return regraLigada(ordem, "transmissao") && temPoder(ordem, chave) && portadores(ordem, chave).length >= 1; }
 
   function marcarConexao(ordem, presentes) {
     transmissaoDe(ordem).conexao = { cena: cenaDe(ordem), presentes: nomes(presentes, 12) };
@@ -913,14 +936,14 @@
   /* +2 por portador no raio, exceto você. */
   function bonusDaConexao(ordem) {
     var c = ordem && ordem.arquivo5 && ordem.arquivo5.transmissao.conexao;
-    if (!c || c.cena !== cenaDe(ordem) || !temPoder(ordem, "conexaoComunicativa")) return 0;
+    if (!c || c.cena !== cenaDe(ordem) || !temPoder(ordem, "conexaoComunicativa") || !regraLigada(ordem, "transmissao")) return 0;
     return 2 * c.presentes.length;
   }
 
   /* Sincronia Conectiva (cada participante entra pela própria ficha). */
   function sincroniaValendo(ordem) {
     var s = ordem && ordem.arquivo5 && ordem.arquivo5.transmissao.sincronia;
-    return s && s.cena === cenaDe(ordem) ? s : null;
+    return s && s.cena === cenaDe(ordem) && regraLigada(ordem, "transmissao") ? s : null;
   }
   function entrarNaSincronia(ordem, id, participantes) {
     if (!funciona(ordem, "sincroniaConectiva")) return { ok: false, motivo: "Sincronia Conectiva só funciona com outro ser que também tenha o poder." };
@@ -970,7 +993,7 @@
   function emprestimo(ordem, tipo) {
     var t = ordem && ordem.arquivo5 && ordem.arquivo5.transmissao;
     var e = t ? t[tipo] : null;
-    return e && e.cena === cenaDe(ordem) ? e : null;
+    return e && e.cena === cenaDe(ordem) && regraLigada(ordem, "transmissao") ? e : null;
   }
   function periciaEmprestada(ordem, pericia) {
     var e = emprestimo(ordem, "pericia");
@@ -1173,6 +1196,9 @@
 
     temPoder: temPoder,
     comAfinidade: comAfinidade,
+    regraLigada: regraLigada,
+    dadosGuardados: dadosGuardados,
+    MOTIVOS: MOTIVOS,
     cenaDe: cenaDe,
     emInterludio: emInterludio,
     interludioDe: interludioDe,

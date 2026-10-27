@@ -34,6 +34,9 @@
   - Cada ficha guarda a operação em `sincronia.operacoes` com o `opId`: repetir
     devolve `repetida: true` sem cobrar de novo. Grava pelo mesmo caminho das
     fichas (revisão, blocos, mesa `personagens`).
+  - As duas fichas precisam da regra opcional `poderesDeTransmissao` ligada
+    (`ordem.opcionais`, v2.48.2); senão `sem_sincronia` com
+    `detalhe: "regra_desligada"`, sem cobrar nada.
   - Erros: `dados_invalidos` (tipo, valor fora de 1–999, opId, mesmo
     personagem), `nao_encontrado`, `sem_permissao`, `sem_sincronia`,
     `sem_recursos`.

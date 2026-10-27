@@ -874,7 +874,7 @@
      o livro não dá linha de afinidade a nenhum deles. */
   function transmissao(chave, nome, pagina, resumo, extra) {
     var e = paranormal(chave, nome, "transmissao", AS5, pagina, resumo, "", Object.assign({
-      requisitos: [{ tipo: "sinoDeTransmissao" }], automacao: "parcial",
+      requisitos: [{ tipo: "comRegra", regra: "poderesDeTransmissao" }, { tipo: "sinoDeTransmissao" }], automacao: "parcial",
     }, extra || {}));
     e.transmissao = true;
     return e;

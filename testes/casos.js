@@ -1461,7 +1461,7 @@
 
       /* v2.20: + contagem de munição (OPRPG p. 174) e controle de
          componentes ritualísticos (da mesa). */
-      t.igual("vinte e sete regras opcionais: treze do SAH, duas do AS1, quatro do AS2 e oito do AS3", OP.REGRAS.length, 27);
+      t.igual("vinte e nove regras opcionais: treze do SAH, duas do AS1, quatro do AS2, oito do AS3 e duas do AS5", OP.REGRAS.length, 29);
       t.iguais("  as duas do AS1 começam desligadas", ["reterRitual", "transcenderComItens"].map(function (k) { return OP.ligada(R.fichaVazia(), k); }), [false, false]);
       t.ok("as duas novas começam desligadas numa ficha nova",
         !OP.ligada(R2.fichaVazia(), "contagemMunicao") && !OP.ligada(R2.fichaVazia(), "controleComponentes"));
@@ -5190,8 +5190,11 @@
 
   function casosDaV248(t, C, R, P, A5, A3, CD, EF, EP, AP, IT, PG, B) {
     var INV = { itens: [] };
+    /* As duas regras opcionais do AS5 (v2.48.2) ligadas, salvo quando o
+       teste diz outra coisa — o desligado tem o grupo dele. */
     function ficha(extra) {
       var o = R.fichaVazia();
+      o.opcionais = Object.assign({}, o.opcionais, { poderesDeTransmissao: true, beneficiosDeAliados: true });
       Object.keys(extra || {}).forEach(function (k) { o[k] = extra[k]; });
       return R.normalizar(JSON.parse(JSON.stringify(o)));
     }
@@ -5220,7 +5223,8 @@
     var tudo = JSON.stringify([C.PERICIAS, P.TODOS, C.ORIGENS]);
     t.ok("Rastrear Trilha Digital (novo uso de Tecnologia, p. 54) NÃO entrou", tudo.indexOf("Rastrear Trilha") < 0);
     var tr = as5.filter(function (p) { return p.transmissao; });
-    t.ok("Transmissão: elemento próprio, pré-requisito do Sino, sem afinidade", tr.every(function (p) { return p.elemento === "transmissao" && !p.afinidade && p.requisitos[0].tipo === "sinoDeTransmissao"; }));
+    t.ok("Transmissão: elemento próprio, pré-requisitos regra opcional + Sino, sem afinidade", tr.every(function (p) {
+      return p.elemento === "transmissao" && !p.afinidade && p.requisitos[0].tipo === "comRegra" && p.requisitos[0].regra === "poderesDeTransmissao" && p.requisitos[1].tipo === "sinoDeTransmissao"; }));
     t.ok("  nada nos poderes de Transmissão liga ao Hexatombe ou ao Hacking", JSON.stringify(tr).toLowerCase().indexOf("exatombe") < 0 && JSON.stringify(tr).toLowerCase().indexOf("hacking") < 0);
     t.iguais("Transmissão é manifestação de Conhecimento E Energia (p. 46)", C.manifestacao("transmissao").elementos, ["conhecimento", "energia"]);
     t.ok("  e não virou elemento de afinidade", C.ELEMENTOS_AFINIDADE.indexOf("transmissao") < 0);
@@ -5239,6 +5243,25 @@
       t.igual("  filtro por livro AS5 na aba de gerais", B.filtrar(B.secoes("gerais"), "", { livro: "AS5" }).reduce(function (n, s) { return n + s.entradas.length; }, 0), 3);
     }
     if (A3) t.igual("nove regalias novas para veículos (p. 59)", A3.REGALIAS.filter(function (r) { return r.fonte === "AS5"; }).length, 9);
+
+    t.grupo("v2.48.2 · Transmissão e benefícios de aliados são regras opcionais da ficha");
+    var OPc = global.RAMAOrdemOpcionais;
+    var nova = R.normalizar(R.fichaVazia());
+    t.ok("as duas existem, do AS5, e começam desligadas", !!OPc.regra("poderesDeTransmissao") && OPc.regra("beneficiosDeAliados").fonte === "AS5" &&
+      !OPc.ligada(nova, "poderesDeTransmissao") && !OPc.ligada(nova, "beneficiosDeAliados"));
+    var desl = ficha({ classe: "ocultista", origem: "academico", nex: 99, atributos: { agi: 1, for: 1, int: 3, pre: 2, vig: 1 }, nome: "Vera", opcionais: {} });
+    t.igual("desligada: registrar o Sino é recusado", A5.registrarSino(desl, "").desligada, true);
+    t.igual("desligada: registrar um benefício recebido é recusado", A5.adicionarRecebido(desl, "aura", "Bruno").desligada, true);
+    var guard = ficha({ classe: "combatente", origem: "academico", nex: 50 });
+    A5.adicionarRecebido(guard, "parede", "Bruno");
+    var defComRegra = R.calcular(guard, INV).defesa.total;
+    guard.opcionais.beneficiosDeAliados = false;
+    t.ok("desligar tira o +5 da Parede de Carne e guarda o registro", R.calcular(guard, INV).defesa.total === defComRegra - 5 &&
+      guard.arquivo5.recebidos.length === 1 && A5.dadosGuardados(guard, "aliados"));
+    guard.opcionais.beneficiosDeAliados = true;
+    t.igual("  religar volta o mesmo bônus, sem duplicar", R.calcular(guard, INV).defesa.total, defComRegra);
+    var semRegra = ficha({ classe: "ocultista", origem: "academico", nex: 99, atributos: { agi: 1, for: 1, int: 3, pre: 2, vig: 1 }, opcionais: {} });
+    t.ok("desligada: Transcender para um poder de Transmissão é recusado", !avaliar(semRegra, "d3.poderClasse", "transcender", { poder: { valor: "conexaoComunicativa", opcoes: {} } }).valido);
 
     t.grupo("v2.48 · o Sino de Transmissão e os poderes que só funcionam em dupla");
     var oc = ficha({ classe: "ocultista", origem: "academico", nex: 99, atributos: { agi: 1, for: 1, int: 3, pre: 2, vig: 1 }, nome: "Vera" });

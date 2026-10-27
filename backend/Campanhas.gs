@@ -6750,6 +6750,10 @@ function acaoSincroniaOperar(corpo, usuario) {
     var fAlvo = comVinculoDaColuna(lidoAlvo.ficha, regAlvo);
     if (String(fAutor.tipoFicha || '') !== 'ordem' || String(fAlvo.tipoFicha || '') !== 'ordem') return { ok: false, erro: 'dados_invalidos' };
 
+    /* A regra opcional Poderes de Transmissão (v2.48.2) ligada nas duas. */
+    var comRegra = function (f) { return !!(f.ordem && f.ordem.opcionais && f.ordem.opcionais.poderesDeTransmissao === true); };
+    if (!comRegra(fAutor) || !comRegra(fAlvo)) return { ok: false, erro: 'sem_sincronia', detalhe: 'regra_desligada' };
+
     var sAutor = sincroniaDaFicha(fAutor);
     var sAlvo = sincroniaDaFicha(fAlvo);
     /* As duas fichas precisam ter marcado uma à outra. */
