@@ -70,6 +70,17 @@
 
   var CHANGELOG = [
     {
+      versao: "2.45.0", codinome: "BALUARTE", data: "26/10/2026",
+      mudancas: {
+        "Adicionado": [
+          "Na ficha universal, o painel Defesa ganhou “+ Campo” no modo edição: crie campos com nome e valor próprios (Armadura, CA, Reflexo…), renomeie e remova. DT, Esquiva, Bloqueio e Resistência também podem sair da tela — o valor fica guardado e volta pelo mesmo “+ Campo”.",
+        ],
+        "Técnico": [
+          "`defesa.campos` ([{ id, nome, valor }], até 30) e `defesa.ocultos` (chaves dos quatro de sempre). Sincronização casa os campos pelo id. Ficha no schema 22. Só o site muda. Testes: 7 novos (normalização, ficha antiga, exportar e importar, sincronização); verificado no navegador: criar, remover com confirmação, esconder e restaurar, salvar e recarregar.",
+        ],
+      },
+    },
+    {
       versao: "2.44.0", codinome: "CHAVEIRO", data: "08/10/2026",
       mudancas: {
         "Adicionado": [

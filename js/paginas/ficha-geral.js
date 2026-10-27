@@ -45,7 +45,11 @@
             type: "button", texto: "+ Status", onclick: function () { novoStatus(ctx); },
           }),
         ] : null }) : null,
-        F.moduloAtivo(ctx.ficha, "defesa") ? UI.painel("Defesa", defesa(ctx)) : null,
+        F.moduloAtivo(ctx.ficha, "defesa") ? UI.painel("Defesa", defesa(ctx), { acoes: ctx.emEdicao() ? [
+          el("button.r-botao.r-botao--mini", {
+            type: "button", texto: "+ Campo", onclick: function () { novoCampoDeDefesa(ctx); },
+          }),
+        ] : null }) : null,
       ]) : null,
     ]);
   }
@@ -444,28 +448,70 @@
     { chave: "resistencia", rotulo: "Resistência" },
   ];
 
+  /* v2.45: os quatro de sempre podem sair da tela (o valor fica guardado
+     e volta pelo "+ Campo"), e a ficha pode ter campos próprios — nome e
+     número, criados e removidos no modo edição. */
+  function camposVisiveisDeDefesa(ctx) {
+    var d = ctx.ficha.defesa;
+    if (!Array.isArray(d.campos)) d.campos = [];
+    if (!Array.isArray(d.ocultos)) d.ocultos = [];
+    var padrao = CAMPOS_DEFESA.filter(function (c) { return d.ocultos.indexOf(c.chave) < 0; }).map(function (c) {
+      return {
+        rotulo: c.rotulo, chave: c.chave,
+        ler: function () { return d[c.chave]; },
+        gravar: function (v) { d[c.chave] = v; },
+        remover: function () { d.ocultos.push(c.chave); },
+      };
+    });
+    var proprios = d.campos.map(function (c) {
+      return {
+        rotulo: c.nome, id: c.id, proprio: true,
+        ler: function () { return c.valor; },
+        gravar: function (v) { c.valor = v; },
+        renomear: function (n) { c.nome = n; },
+        remover: function () { d.campos = d.campos.filter(function (x) { return x.id !== c.id; }); },
+      };
+    });
+    return padrao.concat(proprios);
+  }
+
   function defesa(ctx) {
     var armaduras = F.defesaDeArmaduras(ctx.ficha.inventario);
+    var campos = camposVisiveisDeDefesa(ctx);
 
     return el("div.pilha--curta", { class: "pilha" }, [
-      el("div.defesa", {}, CAMPOS_DEFESA.map(function (c) {
+      campos.length ? el("div.defesa", {}, campos.map(function (c) {
         if (!ctx.emEdicao()) {
           return el("div.defesa__item", {}, [
             el("span.t-rotulo", { texto: c.rotulo }),
-            el("span.defesa__valor", { texto: String(ctx.ficha.defesa[c.chave]) }),
+            el("span.defesa__valor", { texto: String(c.ler()) }),
           ]);
         }
-        return el("div.defesa__item", {}, [
+        return el("div.defesa__item.defesa__item--edicao", {}, [
+          c.proprio ? UI.campo({
+            rotulo: "Nome", valor: c.rotulo, limite: 40,
+            aoMudar: function (v, entrada) {
+              var n = U.aparar(v, 40);
+              if (!n) { entrada.value = c.rotulo; UI.avisoErro("O campo precisa de um nome."); return; }
+              c.renomear(n); ctx.alterou();
+            },
+          }) : null,
           UI.campo({
-            rotulo: c.rotulo, tipo: "numero", valor: ctx.ficha.defesa[c.chave],
+            rotulo: c.proprio ? "Valor" : c.rotulo, tipo: "numero", valor: c.ler(),
             aoMudar: function (v, entrada) {
               var r = V.inteiroEntre(v, -999, 999, c.rotulo);
-              if (!r.ok) { entrada.value = String(ctx.ficha.defesa[c.chave]); UI.avisoErro(r.mensagem); return; }
-              ctx.ficha.defesa[c.chave] = r.valor; ctx.alterou();
+              if (!r.ok) { entrada.value = String(c.ler()); UI.avisoErro(r.mensagem); return; }
+              c.gravar(r.valor); ctx.alterou();
             },
           }),
+          el("button.r-icone", {
+            type: "button", "aria-label": "Remover " + c.rotulo,
+            onclick: function () { removerCampoDeDefesa(ctx, c); },
+          }, [UI.simbolo("lixeira")]),
         ]);
-      })),
+      })) : el("p.t-mini", {
+        texto: ctx.emEdicao() ? "Nenhum campo de defesa. Use “+ Campo” para criar um." : "Nenhum campo de defesa nesta ficha.",
+      }),
 
       /* As armaduras somam um número, mas ele não entra na defesa
          sozinho: quem decide como a armadura conta é a mesa. Fica como
@@ -475,6 +521,74 @@
                "Some onde a sua mesa usa — o R.A.M.A. não calcula isso sozinho.",
       }) : null,
     ]);
+  }
+
+  /* Os de sempre só saem da tela (o valor fica, e volta pelo "+ Campo");
+     um campo criado na ficha é apagado de verdade, e por isso pergunta. */
+  async function removerCampoDeDefesa(ctx, c) {
+    if (c.proprio) {
+      var certeza = await UI.confirmar({
+        titulo: "Remover " + c.rotulo + "?",
+        texto: "O campo e o valor dele saem desta ficha.",
+        rotuloConfirmar: "Remover",
+        perigo: true,
+      });
+      if (!certeza) return;
+    }
+    c.remover();
+    ctx.alterou();
+    ctx.redesenhar();
+    if (!c.proprio) UI.aviso(c.rotulo + " saiu da defesa. O valor ficou guardado — “+ Campo” traz de volta.");
+  }
+
+  function novoCampoDeDefesa(ctx) {
+    var d = ctx.ficha.defesa;
+    if (!Array.isArray(d.campos)) d.campos = [];
+    if (!Array.isArray(d.ocultos)) d.ocultos = [];
+    var nome = UI.campo({ rotulo: "Nome do campo", limite: 40, dica: "ex.: Armadura, Reflexo, CA" });
+    var valor = UI.campo({ rotulo: "Valor", tipo: "numero", valor: 0 });
+    var ocultos = CAMPOS_DEFESA.filter(function (c) { return d.ocultos.indexOf(c.chave) >= 0; });
+
+    UI.modal({
+      titulo: "Novo campo de defesa",
+      conteudo: [
+        nome,
+        valor,
+        ocultos.length ? el("div.pilha--curta", { class: "pilha" }, [
+          el("span.r-rotulo", { texto: "Ou volte a mostrar" }),
+          el("div.faixa", {}, ocultos.map(function (c) {
+            return el("button.r-botao.r-botao--mini", {
+              type: "button", texto: c.rotulo + " (" + d[c.chave] + ")",
+              onclick: function () {
+                d.ocultos = d.ocultos.filter(function (k) { return k !== c.chave; });
+                ctx.alterou();
+                var aberta = document.querySelector(".r-modal [aria-label='Fechar']");
+                if (aberta) aberta.click();
+                ctx.redesenhar();
+              },
+            });
+          })),
+        ]) : null,
+      ],
+      botoes: [
+        { rotulo: "Cancelar", classe: "r-botao--fantasma" },
+        {
+          rotulo: "Criar",
+          classe: "r-botao--principal",
+          aoClicar: function (fechar) {
+            var n = U.aparar(nome.entrada.value, 40);
+            if (!n) { nome.marcarErro("Dê um nome ao campo."); return; }
+            if (d.campos.length >= 30) { nome.marcarErro("A defesa aceita até 30 campos próprios."); return; }
+            var r = V.inteiroEntre(valor.entrada.value || "0", -999, 999, "O valor");
+            if (!r.ok) { valor.marcarErro(r.mensagem); return; }
+            d.campos.push({ id: U.uuid(), nome: n, valor: r.valor });
+            ctx.alterou();
+            fechar();
+            ctx.redesenhar();
+          },
+        },
+      ],
+    });
   }
 
   /* =================================================================

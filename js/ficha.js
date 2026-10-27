@@ -137,6 +137,11 @@
      descartaria a fórmula e religaria a perícia ao primeiro atributo.
      Sem conversão: uma ficha 20 abre igual, sem fórmula.
 
+     21 → 22: campos da Defesa na universal (v2.45). `defesa` ganhou
+     `campos` ([{ id, nome, valor }], os criados pela pessoa) e `ocultos`
+     (as chaves dos quatro de sempre que foram removidos da tela — o
+     valor fica guardado). Uma aba antiga descartaria os campos novos.
+
      Nenhuma das subidas exige migração: normalizarFicha() cria o que
      falta, vazio, e não toca no que existe. Um ritual gravado na 2 abre
      na 3 com a versão Normal em branco; uma ficha de Ordem gravada na 4
@@ -146,7 +151,7 @@
      os campos novos e os descartaria ao gravar — com o schema maior ela
      recusa abrir a ficha e pede para recarregar.
      Ver docs/CHARACTER_SCHEMA.md. */
-  var VERSAO_SCHEMA = 21;
+  var VERSAO_SCHEMA = 22;
 
   var MODULOS = {
     atributos: "Atributos", status: "Status/recursos", defesa: "Defesa",
@@ -422,7 +427,7 @@
 
       atributos: atributos,
       status: STATUS_PADRAO.map(criarStatus),
-      defesa: Object.assign({}, DEFESA_PADRAO),
+      defesa: Object.assign({}, DEFESA_PADRAO, { campos: [], ocultos: [] }),
       pericias: tipoDeFicha(i.tipoFicha) === "ordem"
         ? PERICIAS_PADRAO.map(function (p) { return criarPericia(p, porSigla); }) : [],
       modulos: normalizarModulos(i.modulos),
@@ -931,6 +936,11 @@
       esquiva: U.inteiro(defesa.esquiva, 0),
       bloqueio: U.inteiro(defesa.bloqueio, 0),
       resistencia: U.inteiro(defesa.resistencia, 0),
+      /* v2.45: os campos criados na ficha e os de sempre que saíram da tela. */
+      campos: lista(defesa.campos).map(normalizarCampoDeDefesa).filter(Boolean).slice(0, 30),
+      ocultos: lista(defesa.ocultos).filter(function (k, i, todos) {
+        return Object.prototype.hasOwnProperty.call(DEFESA_PADRAO, k) && todos.indexOf(k) === i;
+      }),
     };
 
     /* ---- perícias ----
@@ -1141,6 +1151,13 @@
       formula: U.aparar(p.formula, D.MAX_FORMULA || 200),
       contagem: D.contagemValida ? D.contagemValida(p.contagem === undefined ? "soma" : p.contagem) : "soma",
     };
+  }
+
+  function normalizarCampoDeDefesa(c) {
+    if (!c || typeof c !== "object") return null;
+    var nome = U.aparar(c.nome, 40);
+    if (!nome) return null;
+    return { id: c.id || U.uuid(), nome: nome, valor: Math.max(-999, Math.min(999, U.inteiro(c.valor, 0))) };
   }
 
   function normalizarDadoExtra(m) {

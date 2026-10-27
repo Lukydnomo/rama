@@ -5,6 +5,20 @@ padrão e normaliza o que chega de fora. Onde ela é guardada — inteira em
 `fichaJson` (formato antigo) ou em blocos (v2.15) — é assunto do backend, e não muda
 nada aqui: ver [DATABASE.md](DATABASE.md).
 
+## Campos da Defesa na universal — v2.45 / schema 22
+
+```jsonc
+"defesa": {
+  "dt": 12, "esquiva": 3, "bloqueio": 1, "resistencia": 0,   // os de sempre
+  "campos": [ { "id": "uuid", "nome": "Armadura", "valor": 4 } ],  // criados na ficha (até 30, -999 a 999)
+  "ocultos": [ "bloqueio" ]                                  // de sempre removidos da tela; o valor fica
+}
+```
+
+Campo sem nome é descartado; `ocultos` só aceita `dt`, `esquiva`, `bloqueio` e
+`resistencia`, sem repetir. Ficha anterior abre com `campos` e `ocultos` vazios. A
+sincronização casa `defesa.campos` pelo `id`. Uma aba anterior recusa a ficha 22.
+
 ## Compartilhamento — v2.44 (schema continua 21)
 
 O formato da ficha **não muda**: quem tem acesso a uma ficha mora em

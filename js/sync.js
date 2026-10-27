@@ -470,6 +470,7 @@
       "status": "id",
       "pericias": "id",
       "pericias.dadosExtras": "id",
+      "defesa.campos": "id",
       "inventario.itens": "id",
       "anotacoes.pastas": "id",
       "anotacoes.pastas.notas": "id",

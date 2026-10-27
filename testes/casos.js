@@ -22,7 +22,7 @@
 
     t.grupo("Tema da ficha · schema 16 (v2.36)");
     var TEMA16 = { nome: "Roxo", base: "escuro", valores: { fundo: { tipo: "radial", forma: "circulo", x: 20, y: 30, pontos: [{ cor: "#08080a", pos: 0 }, { cor: "#3a1030", alfa: 0.8, pos: 100 }] } } };
-    t.igual("o schema subiu para 21", S.VERSAO_SCHEMA, 21);
+    t.igual("o schema subiu para 22", S.VERSAO_SCHEMA, 22);
     t.iguais("ficha nova usa o tema da conta", S.criarFicha({ nome: "Nova" }).aparencia, { v: 1, modo: "conta" });
     t.iguais("ficha antiga (sem o campo) também", S.normalizarFicha({ schemaVersion: 15, nome: "Legado" }).aparencia, { v: 1, modo: "conta" });
     ["ordem", "universal"].forEach(function (tipo) {
@@ -4645,6 +4645,31 @@
         global.RAMAHexatombe, global.RAMAOrdemBiblioteca, global.RAMAOrdemItens || null);
     }
 
+    /* v2.45 — CAMPOS DA DEFESA */
+    if (global.RAMAFicha && global.RAMAValidacao && global.RAMASync) {
+      (function (F, V, S) {
+        t.grupo("v2.45 · campos da Defesa na universal");
+        var nova = F.normalizarFicha(F.criarFicha({ nome: "D", tipoFicha: "universal" }));
+        t.iguais("ficha nova: os quatro de sempre, sem campos próprios", [nova.defesa.dt, nova.defesa.campos, nova.defesa.ocultos], [0, [], []]);
+        t.iguais("ficha antiga, sem os campos: abre igual", F.normalizarFicha({ schemaVersion: 21, nome: "Velha", defesa: { dt: 12 } }).defesa,
+          { dt: 12, esquiva: 0, bloqueio: 0, resistencia: 0, campos: [], ocultos: [] });
+        var bruta = { nome: "D", tipoFicha: "universal", defesa: { dt: 15, esquiva: 2, ocultos: ["bloqueio", "bloqueio", "inventado"],
+          campos: [{ id: "cd-1", nome: "  Armadura ", valor: 4 }, { id: "cd-2", nome: "", valor: 1 }, { id: "cd-3", nome: "CA", valor: 5000 }] } };
+        var n = F.normalizarFicha(bruta);
+        t.iguais("campos próprios: nome aparado, sem nome sai, valor no limite", n.defesa.campos, [{ id: "cd-1", nome: "Armadura", valor: 4 }, { id: "cd-3", nome: "CA", valor: 999 }]);
+        t.iguais("ocultos: só os quatro de sempre, sem repetir", n.defesa.ocultos, ["bloqueio"]);
+        t.igual("  e o valor de um oculto fica guardado", F.normalizarFicha(Object.assign({}, bruta, { defesa: Object.assign({}, bruta.defesa, { bloqueio: 3 }) })).defesa.bloqueio, 3);
+        var volta = V.importado(JSON.parse(JSON.stringify(V.exportar("personagem", n))));
+        t.ok("exportar e importar levam os campos e os ocultos", volta.ok && volta.dados.defesa.campos.length === 2 &&
+          volta.dados.defesa.campos[0].nome === "Armadura" && volta.dados.defesa.ocultos[0] === "bloqueio");
+        var base = JSON.parse(JSON.stringify(n)), local = JSON.parse(JSON.stringify(n)), remoto = JSON.parse(JSON.stringify(n));
+        local.defesa.campos.push({ id: "cd-9", nome: "Reflexo", valor: 1 });
+        remoto.defesa.campos[0].valor = 6;
+        var m = S.mesclar(base, local, remoto, S.ESQUEMA_FICHA);
+        t.ok("sincronizar: o campo criado aqui e o valor mudado lá", m.estado.defesa.campos.length === 3 && m.estado.defesa.campos[0].valor === 6 && !m.conflitos.length);
+      })(global.RAMAFicha, global.RAMAValidacao, global.RAMASync);
+    }
+
     /* v2.43 — FÓRMULAS NAS PERÍCIAS DA UNIVERSAL */
     if (global.RAMADados && global.RAMAFicha && global.RAMAValidacao && global.RAMASync) {
       casosDaV243(t, global.RAMADados, global.RAMAFicha, global.RAMAValidacao, global.RAMASync);
@@ -4987,7 +5012,7 @@
     remoto.pericias[0].bonus = 5;
     var m = S.mesclar(base, local, remoto, S.ESQUEMA_FICHA);
     t.ok("sincronizar: a fórmula daqui e o bônus de lá", m.estado.pericias[0].formula === "@STR d8" && m.estado.pericias[0].bonus === 5 && !m.conflitos.length);
-    t.igual("o schema subiu para 21", n.schemaVersion, 21);
+    t.igual("o schema da ficha é o atual (22)", n.schemaVersion, 22);
   }
 
   /* =================================================================
@@ -5024,7 +5049,7 @@
     var m = S.mesclar(base, local, remoto, S.ESQUEMA_FICHA);
     t.ok("sincronizar: o modo daqui e o bônus de lá, sem conflito",
       m.estado.organizacao.pericias.modo === "maior" && m.estado.pericias[1].bonus === 4 && !m.conflitos.length);
-    t.igual("o schema da ficha é o atual (21)", n.schemaVersion, 21);
+    t.igual("o schema da ficha é o atual (22)", n.schemaVersion, 22);
   }
 
   /* =================================================================
@@ -5092,7 +5117,7 @@
     t.ok("exportar e importar leva pendentes (com o dado já rolado) e resolvidas", volta.ok &&
       volta.dados.ordem.barganhaInsana.pendentes[0].d4 === 2 && volta.dados.ordem.barganhaInsana.resolvidas.length === 1);
     t.ok("  mesmo sem o ritual na lista de conhecidos", volta.dados.rituais.itens.length === 0);
-    t.igual("o schema da ficha é o atual (21)", F.normalizarFicha(ficha).schemaVersion, 21);
+    t.igual("o schema da ficha é o atual (22)", F.normalizarFicha(ficha).schemaVersion, 22);
   }
 
   /* =================================================================
@@ -5133,7 +5158,7 @@
     t.iguais("  um tema de dados que este navegador não conhece também fica (a tela usa a reserva)", MT.normalizarAparencia({ dados: { id: "tema-do-futuro" } }).dados, { id: "tema-do-futuro" });
     var ficha = F.normalizarFicha(F.criarFicha({ nome: "Lia", tipoFicha: "universal", aparencia: { v: 1, modo: "conta", dados: { id: "sigilo-violeta" } } }));
     t.iguais("a ficha normalizada mantém a escolha", ficha.aparencia.dados, { id: "sigilo-violeta" });
-    t.igual("o schema da ficha é o atual (21)", ficha.schemaVersion, 21);
+    t.igual("o schema da ficha é o atual (22)", ficha.schemaVersion, 22);
     var pacote = V.exportar("personagem", ficha);
     t.ok("exportar leva a escolha sem `id` (atravessa como `tema`)", pacote.dados.aparencia.dados.tema === "sigilo-violeta" && JSON.stringify(pacote).indexOf('"id"') < 0);
     var volta = V.importado(JSON.parse(JSON.stringify(pacote)));

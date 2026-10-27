@@ -565,6 +565,10 @@ segredo nenhum — ele os lê das Script Properties. Publicá-lo não expõe nad
 
 ### Atualizar o backend
 
+**v2.45.0 — BALUARTE:** só o site (campos da Defesa na ficha universal). Nada de
+`.gs` nem `setupRama()`. Abas abertas na versão anterior recusam fichas 22 e pedem
+para recarregar.
+
 **v2.44.0 — CHAVEIRO:** compartilhamento de fichas. Troque `Codigo.gs`,
 `Campanhas.gs` e `Dados.gs` no Apps Script, rode `setupRama()` uma vez (cria a aba
 `PERSONAGENS_ACESSOS`; rodar de novo não muda nada), crie uma versão nova da
