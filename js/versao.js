@@ -127,10 +127,15 @@
         ],
         "Alterado": [
           "O Legacy volta a ser o estilo padrão de quem ainda não escolheu. O Modern20 continua à escolha no editor de temas do Perfil, e quem já salvou uma escolha fica com ela. No editor, o Legacy agora vem primeiro.",
+          "Nova política de versão, a partir dos próximos lançamentos: MAJOR passa a marcar um marco do R.A.M.A. — uma transformação da plataforma ou da experiência, quebrando compatibilidade ou não —, MINOR continua sendo funcionalidade, módulo ou expansão, mesmo grande, e PATCH, manutenção e refino. As versões já publicadas ficam com o número que receberam.",
+        ],
+        "Visual": [
+          "O histórico de versões mostra a natureza de cada lançamento: o selo “Marco” nas majors, “Destaque” nas minors que trazem uma expansão importante e “manutenção” ao lado da data nas patches. Uma linha no topo explica os três.",
         ],
         "Técnico": [
           "`RAMAInterface.PADRAO` e `PREFERENCIAS_PADRAO.estiloInterface` (Codigo.gs) passam a `legacy` — atualizar o Codigo.gs e criar uma versão nova da implantação; sem `setupRama()`. O aviso de versão guarda a última vista em `rama.versao.vista` (por aparelho), abre pela casca em `RAMAApp.iniciar` e não aparece na ficha embutida no combate nem sem armazenamento local.",
-          "Testes: 252 tema (8 novos), 1509 backend, com os casos de padrão invertidos para o Legacy.",
+          "Versionamento: a política inteira (critérios, o que não conta, o destaque) mora só no comentário de js/versao.js; o README resume. Campo opcional `destaque: true`, aceito só numa minor; `RAMAVersion.tipo`, `destaque` e `comparar` derivam a classe do número, sem campo novo nos registros antigos. A versão pública continua sem mover `schemaVersion`, `versaoFormato` ou o formato de armazenamento.",
+          "Testes: 252 tema (8 novos), 3362 regras (26 novos de versionamento: comparação número a número, classe, destaque e registros antigos intactos), 1509 backend, com os casos de padrão invertidos para o Legacy.",
         ],
       },
     },
