@@ -70,6 +70,21 @@
 
   var CHANGELOG = [
     {
+      versao: "2.49.1",
+      codinome: "RECATO",
+      data: "27/10/2026",
+      mudancas: {
+        "Alterado": [
+          "A aparência mora num lugar só: o lápis ao lado do avatar, no Perfil, abre o editor com tema, estilo da interface e efeito de tela antiga. Exibição deixou de repetir “Sistema”, “Outros temas…” e “Trocar estilo…” e ficou só com o tamanho da interface.",
+          "O efeito de tela antiga virou um interruptor logo abaixo da opção Legacy no editor. Ele segue o editor: mostra na hora, “Salvar tema” guarda e “Cancelar” desfaz. A miniatura do Legacy perde as linhas quando o efeito está desligado.",
+        ],
+        "Técnico": [
+          "O efeito continua sendo deste aparelho (`rama.pref.efeitos`): mudar só ele não faz pedido nenhum ao servidor. `RAMAApp.previaEfeitos` mostra sem gravar; o atalho “Ligar/Desligar efeitos” do menu da conta continua. Só o site muda, sem nova implantação do Apps Script.",
+          "Testes: 244 tema (11 novos).",
+        ],
+      },
+    },
+    {
       versao: "2.49.0",
       codinome: "ANVERSO",
       data: "27/10/2026",

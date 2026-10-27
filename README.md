@@ -593,6 +593,10 @@ segredo nenhum — ele os lê das Script Properties. Publicá-lo não expõe nad
 
 ### Atualizar o backend
 
+**v2.49.1 — RECATO:** só o site. Publique `js/app.js`, `js/tema-editor.js`,
+`js/paginas/perfil.js`, `css/interface.css` e `js/versao.js`. Sem mudança no
+Apps Script.
+
 **v2.49.0 — ANVERSO:** a identidade visual Modern20, com o Legacy à escolha no
 Perfil. **Troque** o `Codigo.gs` (ele passa a aceitar e devolver a preferência
 `estiloInterface`), crie uma **nova versão** da implantação e publique o site
@@ -1044,22 +1048,21 @@ alvo nenhum, nenhuma condição é aplicada a outro ser e nenhum bloqueio ou esq
 é rolado sozinho. O jogador vê a lista e a ordem do combate — nunca a ficha.
 
 **Tema.** O padrão segue o tema do aparelho (`prefers-color-scheme`) e acompanha a
-troca com o site aberto; aparelho que não informa fica no claro. Em **Perfil →
-Exibição → Tema** dá para escolher Sistema, Claro ou Escuro: a tela troca na hora,
-sem recarregar nem perder o que estiver sendo editado, e a escolha vai para a
-conta (vale em qualquer aparelho). A linha embaixo diz "Salvando…", "Salvo na
-conta" ou que não foi possível salvar, com "Tentar de novo". Sem conta — no login,
+troca com o site aberto; aparelho que não informa fica no claro. No **Perfil**,
+pelo lápis ao lado do avatar, dá para escolher Seguir o aparelho, Claro ou Escuro:
+a tela troca na hora, sem recarregar nem perder o que estiver sendo editado, e a
+escolha vai para a conta (vale em qualquer aparelho). Se a conta não guardar, o
+editor diz e o rascunho continua aberto. Sem conta — no login,
 por exemplo — vale o do aparelho; trocar de conta nunca herda o tema da anterior.
 `js/tema.js` roda no `<head>`, antes do CSS, para a página não piscar no tema
 errado. As duas paletas moram em `css/tokens.css`; fotos, capas, criaturas e cores
 escolhidas por quem joga não são invertidas nem reescritas.
 
 **Temas personalizáveis (v2.36).** O lápis ao lado de "Trocar avatar", no
-Perfil ("Personalizar tema do site"), abre o editor do **tema da conta**: Seguir
+Perfil ("Tema e estilo do site"), abre o editor do **tema da conta**: Seguir
 o aparelho, os temas prontos Claro e Escuro (com amostras) e os seus temas —
 criar a partir de um pronto ou de outro tema, dar nome, editar, duplicar e
-excluir (excluir o que está em uso pede o substituto). "Sistema" continua à mão
-no Perfil, num clique. O lápis ao lado de Normal/Edição, na ficha ("Personalizar
+excluir (excluir o que está em uso pede o substituto). O lápis ao lado de Normal/Edição, na ficha ("Personalizar
 tema desta ficha"), abre o mesmo editor para o **tema daquela ficha**: Usar o
 tema da conta (o padrão), Seguir o aparelho, Claro, Escuro, uma cópia de um tema
 da conta ou um tema próprio. A ordem é sempre: tema da ficha → tema da conta →

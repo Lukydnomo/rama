@@ -16,9 +16,17 @@ dos dados (temas de dados) é outra configuração, separada.
 
 ## Como trocar
 
-Perfil → lápis ao lado do avatar (ou **Outros temas…** / **Trocar estilo…** em
-Exibição) → seção **Estilo da interface**, no alto do editor. Cada opção tem uma
-miniatura que desenha o próprio estilo e o selo "Selecionado".
+Perfil → lápis ao lado do avatar ("Tema e estilo do site") → seção **Estilo da
+interface**, no alto do editor. É o único lugar: a aparência inteira (tema,
+estilo e efeito) mora no editor, sem botão repetido em Exibição (v2.49.1). Cada
+opção tem uma miniatura que desenha o próprio estilo e o selo "Selecionado".
+
+Debaixo do Legacy fica o interruptor **Efeito de tela antiga** (linhas e
+vinheta). É deste aparelho, não da conta (`rama.pref.efeitos`), e só aparece no
+Legacy; a miniatura do Legacy acompanha. Ele segue o editor como o resto: mostra
+na hora, **Salvar tema** guarda, **Cancelar** desfaz. Mudar só o efeito não faz
+pedido nenhum ao servidor. O atalho "Ligar/Desligar efeitos" do menu da conta
+continua.
 
 Escolher mostra a **prévia** na página inteira, com o editor aberto. **Salvar
 tema** grava a preferência na conta; **Cancelar**, Esc ou o X devolvem o estilo
@@ -140,6 +148,6 @@ das folhas. Cada linha diz onde o Modern20 a trata.
 - O Modern20 usa as fontes do sistema (Inter, se instalada; senão Segoe UI,
   San Francisco, Roboto…). Nenhuma fonte é baixada: a letra muda um pouco de um
   aparelho para outro.
-- O efeito de tela antiga (Perfil → Exibição) só aparece no Legacy.
+- O efeito de tela antiga (no editor, debaixo do Legacy) só aparece no Legacy.
 - A ficha embutida no combate (iframe) acompanha a troca feita em outra aba pelo
   evento `storage`; a prévia do editor vale só na página do Perfil.

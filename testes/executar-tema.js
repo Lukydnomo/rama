@@ -878,6 +878,36 @@ t.grupo("Estilo da interface · as páginas e o isolamento das folhas");
   t.ok("o Modern20 não usa !important", importantes.length === 0, importantes.join(", "));
 }
 
+t.grupo("Aparência num lugar só (v2.49.1): o editor, não Exibição");
+{
+  const perfil = await Deno.readTextFile(new URL("../js/paginas/perfil.js", import.meta.url));
+  const editor = await Deno.readTextFile(new URL("../js/tema-editor.js", import.meta.url));
+  const app = await Deno.readTextFile(new URL("../js/app.js", import.meta.url));
+  const css = await Deno.readTextFile(new URL("../css/interface.css", import.meta.url));
+  t.ok("Exibição não repete o lápis: sem \"Outros temas…\" nem \"Trocar estilo…\"", !/Outros temas…|Trocar estilo…/.test(perfil));
+  t.ok("  nem a caixa do efeito de tela antiga", !/definirEfeitos|Efeito de tela antiga/.test(perfil));
+  t.ok("  o lápis continua abrindo o editor da conta", /onclick: abrirTema/.test(perfil) && /contexto: "conta"/.test(perfil));
+  t.ok("o efeito é um interruptor (role=switch) na célula do Legacy", /function chaveDoEfeito\(\)/.test(editor) && /role: "switch"/.test(editor.slice(editor.indexOf("function chaveDoEfeito"))) && /v === "legacy" \? chaveDoEfeito\(\)/.test(editor));
+  t.ok("  entra na foto do rascunho (Desfazer e \"Fechar janela?\" o veem)", /estilo: estilo, efeitos: efeitos/.test(editor));
+  t.ok("  fechar sem salvar devolve o que o aparelho guarda", /if \(A\) A\.previaEfeitos\(null\)/.test(editor));
+  t.ok("  Salvar grava neste aparelho, sem pedido ao servidor só por ele", /if \(efeitosMudou\) A\.definirEfeitos\(efeitos\)/.test(editor) && /\(!estiloMudou && !efeitosMudou\)/.test(editor));
+  t.ok("app.js expõe a prévia do efeito, que não grava", /previaEfeitos: previaEfeitos/.test(app) && !/gravarPref/.test(app.slice(app.indexOf("function previaEfeitos"), app.indexOf("function definirEscala"))));
+  t.ok("a miniatura do Legacy perde as linhas com o efeito desligado", /\.estilo-previa--legacy\.estilo-previa--sem-efeito \{ background-image: none; \}/.test(css));
+}
+
+{
+  /* A prévia do efeito, executada: mostra sem gravar e null volta ao guardado. */
+  const fonte = await Deno.readTextFile(new URL("../js/app.js", import.meta.url));
+  const corpo = fonte.slice(fonte.indexOf("function previaEfeitos"), fonte.indexOf("function definirEscala"));
+  const html = { dataset: { efeitos: "on" } };
+  let aplicadas = 0;
+  const previa = new Function("document", "aplicarPreferencias", corpo + "; return previaEfeitos;")({ documentElement: html }, () => { aplicadas++; html.dataset.efeitos = "on"; });
+  previa(false);
+  t.igual("previaEfeitos(false) desliga só na tela", html.dataset.efeitos, "off");
+  previa(null);
+  t.ok("  previaEfeitos(null) volta ao que o aparelho guarda", html.dataset.efeitos === "on" && aplicadas === 1);
+}
+
 /* ---------- fim ---------- */
 
 console.log(`\n${FORTE}${passaram + falharam} verificações${FIM} · ${VERDE}${passaram} ok${FIM} · ${falharam ? VERMELHO : CINZA}${falharam} falhas${FIM}`);

@@ -142,13 +142,17 @@
     var I = ehFicha ? null : (global.RAMAInterface || null);
     var estilo = I ? I.preferencia() : null;
     var grupoEstilo = uid("estilo");
+    /* O efeito de tela antiga (v2.49.1) mora debaixo do Legacy: é deste
+       aparelho, não da conta, e só aparece nesse estilo. */
+    var A = I && global.RAMAApp && global.RAMAApp.previaEfeitos ? global.RAMAApp : null;
+    var efeitos = A ? A.preferencias().efeitos : null;
     var inicial = foto();
     var inicialTema = fotoDoTema();
     var salvando = false;
     var abertas = {};            // categorias abertas no editor
     var linhas = {};             // chave → elemento da linha
 
-    function foto() { return JSON.stringify({ sel: sel, temas: temas, fichaTema: fichaTema, selDados: selDados, estilo: estilo }); }
+    function foto() { return JSON.stringify({ sel: sel, temas: temas, fichaTema: fichaTema, selDados: selDados, estilo: estilo, efeitos: efeitos }); }
     /* Só a parte que vai em RAMATema.salvarConta: trocar apenas o estilo
        não regrava tema nem lista. */
     function fotoDoTema() { return JSON.stringify({ sel: sel, temas: temas }); }
@@ -242,6 +246,7 @@
         if (vigia) vigia.disconnect();
         T().definirPrevia(null);
         if (I) I.definirPrevia(null);
+        if (A) A.previaEfeitos(null);
         desfazerCaixa();
         desfazerJanela();
         aberto = null;
@@ -287,6 +292,7 @@
         var e = escolhaDoRascunho();
         T().definirPrevia(e);
         if (I) I.definirPrevia(estilo !== I.preferencia() ? estilo : null);
+        if (A) A.previaEfeitos(efeitos !== A.preferencias().efeitos ? efeitos : null);
         desfazerCaixa();
         desfazerCaixa = T().aplicarEm(caixa, e);
         desenharContraste();
@@ -497,8 +503,8 @@
             if (nova) nova.focus();
           },
         });
-        return el("label.estilo-opcao", { class: marcada ? "estilo-opcao--marcada" : "" }, [
-          previaDoEstilo(v),
+        var opcao = el("label.estilo-opcao", { class: marcada ? "estilo-opcao--marcada" : "" }, [
+          previaDoEstilo(v, v === "legacy" && A && !efeitos),
           el("span.estilo-opcao__linha", {}, [
             entrada,
             el("span.estilo-opcao__textos", {}, [
@@ -510,11 +516,41 @@
             ]),
           ]),
         ]);
+        return el("div.estilo-celula", {}, [opcao, v === "legacy" ? chaveDoEfeito() : null]);
       });
       return el("fieldset.tema-grupo.estilo-grupo", {}, [
         el("legend.t-rotulo", { texto: "Estilo da interface" }),
         el("p.r-ajuda", { texto: "A linguagem visual do site: letras, formas e organização. As cores continuam vindo do tema escolhido abaixo — Claro, Escuro, do aparelho ou um seu." }),
         el("div.estilo-opcoes", {}, opcoes),
+      ]);
+    }
+
+    /* O interruptor do efeito, logo abaixo da opção Legacy. Vale como o
+       resto do editor: mostra na hora, Salvar guarda, Cancelar desfaz. */
+    function chaveDoEfeito() {
+      if (!A) return null;
+      var id = grupoEstilo + "-efeito";
+      var chave = el("button.r-interruptor", {
+        type: "button", role: "switch", id: id,
+        "aria-checked": String(efeitos),
+        class: efeitos ? "r-interruptor--ligado" : "",
+        "aria-labelledby": id + "-nome",
+        "aria-describedby": id + "-ajuda",
+        onclick: function () {
+          efeitos = !efeitos;
+          desenharEscolhas();
+          atualizar();
+          var nova = document.getElementById(id);
+          if (nova) nova.focus();
+        },
+      }, [el("span.r-interruptor__bola", { "aria-hidden": "true" })]);
+      return el("div.estilo-efeito", {}, [
+        el("label.estilo-efeito__chave", { for: id }, [chave, el("span", { id: id + "-nome", texto: "Efeito de tela antiga" })]),
+        el("p.r-ajuda", {
+          id: id + "-ajuda",
+          texto: "Linhas e vinheta por cima da tela, só no estilo Legacy. Vale neste aparelho" +
+            (estilo === "legacy" ? "." : " — aparece quando você usar o Legacy."),
+        }),
       ]);
     }
 
@@ -1150,6 +1186,7 @@
       var f = JSON.parse(inicial);
       sel = f.sel; temas = f.temas; fichaTema = f.fichaTema; selDados = f.selDados || null;
       if (I) estilo = f.estilo || I.preferencia();
+      if (A) efeitos = f.efeitos;
       if (ehFicha) pintarPreviaDosDados();
       erroSalvar.hidden = true;
       desenharEscolhas();
@@ -1175,7 +1212,10 @@
       /* O estilo vai depois do tema, num pedido próprio (js/interface.js):
          só o que mudou é gravado, e cada parte diz se deu certo. */
       var estiloMudou = !!I && estilo !== I.confirmado();
-      var temaMudou = fotoDoTema() !== inicialTema || !estiloMudou;
+      /* O efeito é deste aparelho: não vai ao servidor, é guardado aqui
+         quando o resto deu certo. */
+      var efeitosMudou = !!A && efeitos !== A.preferencias().efeitos;
+      var temaMudou = fotoDoTema() !== inicialTema || (!estiloMudou && !efeitosMudou);
       salvando = true;
       erroSalvar.hidden = true;
       function frase(r) {
@@ -1200,12 +1240,16 @@
               (temaMudou ? "; o tema foi salvo." : ".") + " O rascunho segue aberto.");
             return;
           }
+          if (efeitosMudou) A.definirEfeitos(efeitos);
+          var efeitoTexto = efeitosMudou ? " Efeito de tela antiga " + (efeitos ? "ligado" : "desligado") + " neste aparelho." : "";
           inicial = foto();
           fechar({ ok: true, preferencias: r.preferencias });
           if (re.estado === "local") {
-            UI.avisoAtencao((temaMudou ? "Tema salvo na conta. " : "") + "O estilo " + I.NOMES[estilo] + " vale neste aparelho: o servidor ainda não guarda essa escolha (falta atualizar o Apps Script).", { duracao: 9000 });
+            UI.avisoAtencao((temaMudou ? "Tema salvo na conta. " : "") + "O estilo " + I.NOMES[estilo] + " vale neste aparelho: o servidor ainda não guarda essa escolha (falta atualizar o Apps Script)." + efeitoTexto, { duracao: 9000 });
+          } else if (temaMudou || estiloMudou) {
+            UI.avisoOk((temaMudou && estiloMudou ? "Tema e estilo salvos na conta." : estiloMudou ? "Estilo salvo na conta." : "Tema salvo na conta.") + efeitoTexto);
           } else {
-            UI.avisoOk(temaMudou && estiloMudou ? "Tema e estilo salvos na conta." : estiloMudou ? "Estilo salvo na conta." : "Tema salvo na conta.");
+            UI.avisoOk(efeitoTexto.trim());
           }
           if (o.aoSalvar && r.preferencias) o.aoSalvar(r.preferencias);
         });
@@ -1238,9 +1282,9 @@
 
   /* A miniatura de um estilo da interface (v2.49): o topo, um nome, três
      números e um botão, cada um no jeito daquele estilo. Só para ver. */
-  function previaDoEstilo(v) {
+  function previaDoEstilo(v, semEfeito) {
     var legado = v === "legacy";
-    return el("span.estilo-previa.estilo-previa--" + v, { "aria-hidden": "true" }, [
+    return el("span.estilo-previa.estilo-previa--" + v, { "aria-hidden": "true", class: semEfeito ? "estilo-previa--sem-efeito" : "" }, [
       el("span.estilo-previa__topo", {}, [
         el("span.estilo-previa__marca", { texto: "R.A.M.A." }),
         el("span.estilo-previa__aba", { texto: legado ? "FICHA" : "Ficha" }),

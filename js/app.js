@@ -67,6 +67,13 @@
     aplicarPreferencias();
   }
 
+  /* A prévia do efeito de tela antiga (v2.49.1), no editor de temas: só
+     a tela, sem gravar; null volta ao que este aparelho guarda. */
+  function previaEfeitos(ligado) {
+    if (ligado === null || ligado === undefined) { aplicarPreferencias(); return; }
+    document.documentElement.dataset.efeitos = ligado ? "on" : "off";
+  }
+
   function definirEscala(valor) {
     gravarPref(CHAVE_ESCALA, String(valor));
     aplicarPreferencias();
@@ -364,6 +371,7 @@
     preferencias: preferencias,
     abrirChangelog: abrirChangelog,
     definirEfeitos: definirEfeitos,
+    previaEfeitos: previaEfeitos,
     definirEscala: definirEscala,
     aplicarPreferencias: aplicarPreferencias,
   };

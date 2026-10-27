@@ -60,6 +60,20 @@
 }
 .estilo-opcao__descricao { color: var(--cor-texto-3); font-size: var(--texto-mini); line-height: 1.45; }
 
+/* Cada opção numa célula: o Legacy leva embaixo o interruptor do efeito
+   de tela antiga (v2.49.1). */
+.estilo-celula { display: flex; flex-direction: column; gap: var(--e2); min-width: 0; }
+.estilo-efeito { display: flex; flex-direction: column; gap: 2px; padding: 0 var(--e2); }
+.estilo-efeito .r-ajuda { margin: 0; }
+.estilo-efeito__chave {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--e2);
+  min-height: var(--alvo-toque);
+  color: var(--cor-texto);
+  cursor: pointer;
+}
+
 /* ---------- as miniaturas ---------- */
 
 .estilo-previa {
@@ -95,6 +109,7 @@
   -webkit-font-smoothing: none;
   background-image: repeating-linear-gradient(to bottom, var(--cor-scanline) 0 1px, transparent 1px 3px);
 }
+.estilo-previa--legacy.estilo-previa--sem-efeito { background-image: none; }
 .estilo-previa--legacy .estilo-previa__topo { padding: 5px 7px; border-bottom: 1px solid var(--cor-traco-fraca); letter-spacing: 0.14em; }
 .estilo-previa--legacy .estilo-previa__aba { padding: 1px 6px; background: var(--fundo-selecao); color: var(--cor-selecao-texto); letter-spacing: 0.12em; }
 .estilo-previa--legacy .estilo-previa__corpo { padding: 7px; }

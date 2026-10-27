@@ -96,9 +96,10 @@
               type: "button", texto: perfil.avatar ? "Trocar avatar" : "Adicionar avatar",
               onclick: trocarAvatar,
             }),
-            /* O tema do site (v2.36): o lápis abre o editor da conta. */
+            /* O tema do site (v2.36): o lápis abre o editor da conta — tema,
+               estilo da interface e efeito de tela antiga moram lá (v2.49.1). */
             el("button.r-icone.r-icone--contorno", {
-              type: "button", "aria-label": "Personalizar tema do site", title: "Personalizar tema do site",
+              type: "button", "aria-label": "Tema e estilo do site", title: "Tema e estilo do site",
               onclick: abrirTema,
             }, [UI.simbolo("lapis")]),
           ]),
@@ -169,7 +170,9 @@
      EXIBIÇÃO
      -----------------------------------------------------------------
      Preferências deste aparelho, e não da conta: o celular pode querer
-     letra maior sem o computador mudar junto.
+     letra maior sem o computador mudar junto. Tema, estilo da interface
+     e efeito de tela antiga ficam no editor (o lápis ao lado do avatar):
+     um lugar só para a aparência, sem botão repetido aqui (v2.49.1).
 
      A escala existe porque a família PixelMplus foi desenhada em grade
      de 12 pixels. Ela fica nítida em 12 e em 24, e um pouco macia no
@@ -181,9 +184,6 @@
     var prefs = global.RAMAApp.preferencias();
 
     return el("div.pilha", {}, [
-      campoTema(),
-      campoEstilo(),
-
       el("div.r-campo", {}, [
         el("span.r-rotulo", { texto: "Tamanho da interface" }),
         el("div.filtros__grupo", { role: "group", "aria-label": "Tamanho da interface" },
@@ -199,25 +199,11 @@
         el("p.r-ajuda", { texto: "Aumenta letras e controles da interface inteira. No estilo Legacy, a fonte pixel é mais nítida em 100%; acima disso ela cresce e fica levemente macia." }),
       ]),
 
-      el("label.r-marca", {}, [
-        el("input", {
-          type: "checkbox", checked: prefs.efeitos,
-          onchange: function (ev) { global.RAMAApp.definirEfeitos(ev.target.checked); },
-        }),
-        el("span", { texto: "Efeito de tela antiga (linhas e vinheta) — aparece no estilo Legacy" }),
-      ]),
-
-      el("p.t-mini", { texto: "O tema e o estilo da interface ficam salvos na sua conta e valem em qualquer aparelho. Tamanho e efeito de tela valem só neste aparelho." }),
+      el("p.t-mini", { texto: "O tamanho vale só neste aparelho. Tema, estilo da interface e efeito de tela antiga ficam no lápis ao lado do avatar." }),
     ]);
   }
 
-  /* Tema (v2.25, v2.36): "Sistema" fica aqui, à mão — um clique e a
-  conta volta a seguir o aparelho. Claro, Escuro e os temas próprios
-  moram no editor (o lápis ao lado do avatar, ou "Outros temas"). A
-  troca é na hora e não redesenha a página; a linha de situação diz se
-  a planilha guardou ou não. */
-  var pararTema = null;
-
+  /* O tema da conta guardado nas preferências (v2.36). */
   function temaAtivoDe(prefs) {
     var p = prefs || {};
     var lista = global.RAMATemaModelo ? global.RAMATemaModelo.normalizarTemas(p.temas) : [];
@@ -225,106 +211,16 @@
     return null;
   }
 
-  function nomeDoTema(info) {
-    var T = global.RAMATema;
-    if (info.preferencia === "personalizado" && T.personalizado()) return "“" + T.personalizado().tema.nome + "”";
-    if (info.preferencia === "claro") return "Claro";
-    if (info.preferencia === "escuro") return "Escuro";
-    return "Sistema";
-  }
-
   function abrirTema() {
     if (!global.RAMATemaEditor) { UI.avisoAtencao("O editor de temas não carregou. Recarregue a página."); return; }
     var prefs = Object.assign({}, perfil.preferencias || {});
-    /* O que está na tela agora (um clique em Sistema já salvo) vale. */
+    /* O que está na tela agora vale. */
     prefs.tema = global.RAMATema.preferencia();
     global.RAMATemaEditor.abrir({
       contexto: "conta",
       preferencias: prefs,
       aoSalvar: function (gravadas) { perfil.preferencias = gravadas || perfil.preferencias; },
     });
-  }
-
-  function campoTema() {
-    var T = global.RAMATema;
-    if (pararTema) { pararTema(); pararTema = null; }
-    if (!T) return null;
-
-    var sistema = el("button.filtro", {
-      type: "button", texto: "Sistema",
-      onclick: function () { T.salvar("sistema"); },
-    });
-    var outros = el("button.r-botao.r-botao--mini", {
-      type: "button", texto: "Outros temas…", onclick: abrirTema,
-      "aria-label": "Escolher ou personalizar o tema do site",
-    });
-    var situacao = el("p.r-ajuda", { role: "status", "aria-live": "polite" });
-    var tentar = el("button.r-botao.r-botao--mini", {
-      type: "button", texto: "Tentar de novo", hidden: true,
-      onclick: function () { T.tentarDeNovo(); },
-    });
-
-    function pintar(info) {
-      sistema.setAttribute("aria-pressed", String(info.preferencia === "sistema"));
-      var base = info.preferencia === "sistema"
-        ? "Acompanha o tema do aparelho (agora: " + info.efetivo + ")."
-        : "Tema da conta: " + nomeDoTema(info) + " — não muda com o aparelho.";
-      var fala = {
-        salvando: "Salvando na conta…",
-        salvo: "Salvo na conta.",
-        erro: "Não foi possível salvar na conta: o tema vale nesta página até recarregar.",
-      }[info.estado] || "";
-      situacao.textContent = base + (fala ? " " + fala : "");
-      situacao.classList.toggle("t-erro", info.estado === "erro");
-      tentar.hidden = info.estado !== "erro";
-    }
-
-    pararTema = T.aoMudar(pintar);
-    pintar({ preferencia: T.preferencia(), efetivo: T.efetivo(), estado: T.estado() });
-
-    return el("div.r-campo", {}, [
-      el("span.r-rotulo", { texto: "Tema" }),
-      el("div.faixa.faixa--curta", { role: "group", "aria-label": "Tema" }, [sistema, outros]),
-      situacao,
-      tentar,
-    ]);
-  }
-
-  /* Estilo da interface (v2.49): Legacy ou Modern20. A escolha mora no
-     editor de temas, numa seção própria (o lápis ao lado do avatar, ou
-     "Outros temas…"); aqui fica o que está em uso e se a conta guardou. */
-  var pararEstilo = null;
-
-  function campoEstilo() {
-    var I = global.RAMAInterface;
-    if (pararEstilo) { pararEstilo(); pararEstilo = null; }
-    if (!I) return null;
-
-    var situacao = el("p.r-ajuda", { role: "status", "aria-live": "polite" });
-    var trocar = el("button.r-botao.r-botao--mini", {
-      type: "button", texto: "Trocar estilo…", onclick: abrirTema,
-      "aria-label": "Trocar o estilo da interface no editor de temas",
-    });
-
-    function pintar(info) {
-      var fala = {
-        salvando: " Salvando na conta…",
-        salvo: " Salvo na conta.",
-        local: " Vale neste aparelho: o servidor ainda não guarda o estilo (falta atualizar o Apps Script).",
-        erro: " Não foi possível salvar na conta: a conta continua no estilo anterior.",
-      }[info.estado] || "";
-      situacao.textContent = "Em uso: " + I.NOMES[info.preferencia] + "." + fala;
-      situacao.classList.toggle("t-erro", info.estado === "erro");
-    }
-
-    pararEstilo = I.aoMudar(pintar);
-    pintar({ preferencia: I.preferencia(), estado: I.estado() });
-
-    return el("div.r-campo", {}, [
-      el("span.r-rotulo", { texto: "Estilo da interface" }),
-      el("div.faixa.faixa--curta", {}, [trocar]),
-      situacao,
-    ]);
   }
 
   /* =================================================================
