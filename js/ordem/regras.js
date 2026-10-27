@@ -525,6 +525,18 @@
      ================================================================= */
 
   function modificadores(ficha, inventario) {
+    if (CICLO && ficha) {
+      var marcaM = marcaDoCalculo(ficha, inventario);
+      var jaM = lembrado(CICLO.modificadores, ficha, marcaM);
+      if (jaM) return jaM.valor;
+      var montada = montarModificadores(ficha, inventario);
+      lembrar(CICLO.modificadores, ficha, marcaM, montada);
+      return montada;
+    }
+    return montarModificadores(ficha, inventario);
+  }
+
+  function montarModificadores(ficha, inventario) {
     var lista = [];
 
     var origem = C.origem(ficha.origem);
@@ -549,6 +561,85 @@
     }
 
     return lista;
+  }
+
+  /* =================================================================
+     CICLO DE CÁLCULO (v2.46)
+     -----------------------------------------------------------------
+     ciclo(fn) roda fn com a memória do ciclo aberta: dentro dela, o
+     estado da progressão (RAMAOrdemProgressao), a lista de modificadores
+     permanentes e o resultado de calcular() são feitos UMA vez para a
+     mesma ficha e o mesmo inventário, e reaproveitados nas outras
+     perguntas do mesmo desenho. Ciclos aninhados se juntam ao de fora.
+
+     A reutilização confere identidade e uma marca de números e
+     referências (nada é serializado). Ela vale só enquanto o ciclo dura:
+     a tela abre um ciclo por desenho, depois da mudança da pessoa, e o
+     fecha ao terminar — então um valor nunca é o de antes de uma mudança
+     local, salva ou não. Quem chama calcular() fora de um ciclo recebe o
+     cálculo de sempre.
+     ================================================================= */
+
+  var CICLO = null;
+
+  function ciclo(fn) {
+    var abriu = !CICLO;
+    if (abriu) CICLO = { calculos: typeof Map !== "undefined" ? new Map() : null, modificadores: typeof Map !== "undefined" ? new Map() : null };
+    var Ep = E();
+    if (Ep && Ep.abrirCiclo) Ep.abrirCiclo();
+    var med = global.RAMAMedicao;
+    try {
+      return fn();
+    } finally {
+      var fim = Ep && Ep.fecharCiclo ? Ep.fecharCiclo() : null;
+      if (abriu) {
+        CICLO = null;
+        if (med && fim) {
+          med.contar("progressao.reaproveitada", fim.reaproveitados);
+          med.contar("progressao.calculada", fim.calculados);
+        }
+      }
+    }
+  }
+
+  function emCiclo() { return !!CICLO; }
+
+  /* A marca do que calcular() lê além da progressão: os recursos atuais,
+     as condições aplicadas, as regras opcionais e o que muda a carga. */
+  function marcaDoCalculo(ficha, inventario) {
+    var r = ficha.recursos || {};
+    var cond = ficha.condicoes || {};
+    var itens = inventario && Array.isArray(inventario.itens) ? inventario.itens : null;
+    return [
+      inventario, itens, itens ? itens.length : -1,
+      r.pv, r.pe, r.san, r.pd, ficha.recursos,
+      ficha.condicoes, Array.isArray(cond.efeitos) ? cond.efeitos.length : -1,
+      ficha.opcionais, ficha.atributos, ficha.nex, ficha.nivel, ficha.classe, ficha.origem,
+      ficha.bonusExtra, ficha.ajustes, ficha.periciasAjustes, ficha.sacrificios,
+      Array.isArray(ficha.sacrificios) ? ficha.sacrificios.length : -1,
+      ficha.barganhaInsana, ficha.estadoDasOrigens,
+    ];
+  }
+
+  function mesmaMarca(a, b) {
+    if (!a || !b || a.length !== b.length) return false;
+    for (var i = 0; i < a.length; i++) if (a[i] !== b[i]) return false;
+    return true;
+  }
+
+  function lembrado(mapa, ficha, marca) {
+    if (!mapa) return null;
+    var lista = mapa.get(ficha);
+    if (!lista) return null;
+    for (var i = 0; i < lista.length; i++) if (mesmaMarca(lista[i].marca, marca)) return lista[i];
+    return null;
+  }
+
+  function lembrar(mapa, ficha, marca, valor) {
+    if (!mapa) return;
+    var lista = mapa.get(ficha) || [];
+    lista.push({ marca: marca, valor: valor });
+    mapa.set(ficha, lista);
   }
 
   function efeitosDoTipo(ficha, tipo, inventario) {
@@ -2468,6 +2559,21 @@
      ================================================================= */
 
   function calcular(ficha, inventario) {
+    var med = global.RAMAMedicao;
+    if (CICLO && ficha) {
+      var marca = marcaDoCalculo(ficha, inventario);
+      var ja = lembrado(CICLO.calculos, ficha, marca);
+      if (ja) { if (med) med.contar("calcular.reaproveitado"); return ja.valor; }
+      var feito = calcularDoZero(ficha, inventario);
+      lembrar(CICLO.calculos, ficha, marca, feito);
+      if (med) med.contar("calcular.feito");
+      return feito;
+    }
+    if (med) med.contar("calcular.feito");
+    return calcularDoZero(ficha, inventario);
+  }
+
+  function calcularDoZero(ficha, inventario) {
     var pv = pontosDeVida(ficha);
     var pe = pontosDeEsforco(ficha);
     var san = sanidade(ficha);
@@ -3242,6 +3348,8 @@
     criarAjuste: criarAjuste,
     recursoAtual: recursoAtual,
     aparar: aparar,
+    ciclo: ciclo,
+    emCiclo: emCiclo,
     ID_BARGANHA: ID_BARGANHA,
     normalizarBarganha: normalizarBarganha,
     barganhaInsana: barganhaInsana,

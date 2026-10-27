@@ -357,6 +357,8 @@
 
     estado.sincronia = global.RAMASincronia.criar({
       consultar: function () { return global.RAMAApi.sincronizarCampanha(estado.campanhaId); },
+      /* A mesma pergunta, dividida entre as abas deste navegador (v2.46). */
+      chave: "sinc:" + estado.campanhaId,
       marcas: marcas,
       papel: papel,
       intervalo: function () {

@@ -1316,7 +1316,7 @@
     if (!o.recursos) o.recursos = { pv: null, pe: null, san: null, pd: null };
     o.recursos[item.chave] = r.valor;
     ctx.alterou();
-    ctx.redesenhar();
+    atualizarEstadoDeJogo(ctx);
     var foco = document.querySelector('[data-foco="acao-' + item.chave + "-" + acao + '"]');
     if (foco) foco.focus();
     if (r.mensagens.length) UI.avisoAtencao(r.mensagens.join(" "), { duracao: 9000 });
@@ -1374,7 +1374,7 @@
       return;
     }
     ctx.alterou();
-    ctx.redesenhar();
+    atualizarEstadoDeJogo(ctx);
     if (foco) {
       var alvo = document.querySelector('[data-foco="' + foco + '"]');
       if (alvo) alvo.focus();
@@ -4365,11 +4365,19 @@
   /* Uma mudança nas escolhas muda os máximos. Os recursos gastos são
      aparados para baixo quando o máximo cai — e NUNCA repostos quando
      ele sobe. */
+  /* v2.46: uma mudança no bloco de Ordem refaz o bloco superior e a
+     seção aberta (os dois leem o mesmo cálculo, feito uma vez no ciclo);
+     cabeçalho, avisos e a tira de abas ficam. */
   function aoMudarOrdem(ctx) {
     var o = ordemDe(ctx);
     R.aparar(o, R.maximosDosRecursos(o));
     ctx.alterou();
-    ctx.redesenhar();
+    atualizarEstadoDeJogo(ctx);
+  }
+
+  function atualizarEstadoDeJogo(ctx) {
+    if (ctx.atualizar) { ctx.atualizar(); if (ctx.atualizarTitulo) ctx.atualizarTitulo(); }
+    else ctx.redesenhar();
   }
 
   function siglaDe(chave) {

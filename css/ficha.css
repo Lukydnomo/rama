@@ -553,6 +553,11 @@ body.pagina-ficha .app-corpo {
   padding: var(--e2) 0 0;
 }
 
+/* As regiões que se redesenham sozinhas (v2.46) não são caixas: os filhos
+   continuam sendo itens da coluna da ficha, com o mesmo espaçamento, e uma
+   região vazia (sem avisos) não abre um vão a mais. */
+.ficha__regiao { display: contents; }
+
 /* =====================================================================
    A FICHA NO CELULAR
    ---------------------------------------------------------------------

@@ -264,6 +264,12 @@ function numerosDaRequisicao(acao, ms, tamanho) {
     fichas: m.fichas,
     blocos: m.blocos,
     resumos: m.resumosUsados + '/' + (m.resumosUsados + m.resumosRefeitos),
+    /* v2.46: leituras em lote (serviço avançado do Sheets) feitas, abas
+       trazidas por elas, e se o lote falhou e a requisição voltou ao
+       caminho padrão. Sem o serviço habilitado, tudo zero. */
+    lotes: m.lotesSheets || 0,
+    preCarregadas: m.preCarregadas || 0,
+    loteFalhou: m.loteFalhou || 0,
     resposta: tamanho,
   };
 }
@@ -405,6 +411,100 @@ function rotasDoNucleo() {
    linha de código que o recusaria sozinho.
    ===================================================================== */
 
+
+/* =====================================================================
+   AS ABAS DE CADA AÇÃO (v2.46)
+   ---------------------------------------------------------------------
+   O que cada ação vai varrer, para a pré-carga em lote (Dados.gs) trazer
+   numa viagem só. É uma DICA: sem o serviço avançado do Sheets nada
+   acontece, e uma aba que a ação não usou só custou células, nunca uma
+   decisão — a conferência de permissão continua lendo pelas mesmas
+   funções, que respondem da memória quando a aba já veio.
+
+   Gravações chamam a pré-carga DENTRO da trava (ela esvazia a memória ao
+   ser obtida): o que se decide lá dentro é sempre o de agora.
+   ===================================================================== */
+
+function abasDoAcessoAPersonagem() {
+  return [
+    { definicao: ABAS.PERSONAGENS },
+    { definicao: ABAS.CAMPANHAS },
+    { definicao: ABAS.CAMPANHA_MEMBROS },
+    { definicao: ABAS.PERSONAGENS_ACESSOS },
+  ];
+}
+
+function abasDaAcao(acao) {
+  switch (acao) {
+    case 'sessao':
+    case 'ler_perfil':
+      return [{ definicao: ABAS.PERFIS }];
+    case 'ler_personagem':
+    case 'acesso_personagem':
+      return abasDoAcessoAPersonagem();
+    case 'ler_foto':
+      return abasDoAcessoAPersonagem().concat([{ definicao: ABAS.PERSONAGENS_FOTOS }]);
+    case 'listar_personagens':
+      return [
+        { definicao: ABAS.CAMPANHAS }, { definicao: ABAS.CAMPANHA_MEMBROS },
+        { definicao: ABAS.PERSONAGENS }, { definicao: ABAS.PERSONAGENS_FOTOS, extras: ['atualizadoEm'] },
+        { definicao: ABAS.PASTAS }, { definicao: ABAS.PERSONAGENS_ORGANIZACAO },
+      ];
+    case 'listar_compartilhados_comigo':
+      return [
+        { definicao: ABAS.PERSONAGENS_ACESSOS }, { definicao: ABAS.PERSONAGENS },
+        { definicao: ABAS.PERSONAGENS_FOTOS, extras: ['atualizadoEm'] }, { definicao: ABAS.PERSONAGENS_ORGANIZACAO },
+      ];
+    case 'listar_campanhas':
+      return [{ definicao: ABAS.CAMPANHAS }, { definicao: ABAS.CAMPANHA_MEMBROS }, { definicao: ABAS.CAMPANHA_CAPAS }];
+    case 'ler_campanha':
+      return [
+        { definicao: ABAS.CAMPANHAS }, { definicao: ABAS.CAMPANHA_MEMBROS }, { definicao: ABAS.CAMPANHA_CAPAS },
+        { definicao: ABAS.CAMPANHA_HEXATOMBE }, { definicao: ABAS.CAMPANHA_HACKING },
+        { definicao: ABAS.PERFIS, extras: ['atualizadoEm'] },
+      ];
+    case 'ler_fotos':
+      return [
+        { definicao: ABAS.CAMPANHAS }, { definicao: ABAS.CAMPANHA_MEMBROS }, { definicao: ABAS.PERSONAGENS_ACESSOS },
+        { definicao: ABAS.PERSONAGENS }, { definicao: ABAS.PERSONAGENS_FOTOS, extras: ['atualizadoEm'] },
+      ];
+    case 'listar_personagens_campanha':
+      return [
+        { definicao: ABAS.CAMPANHAS }, { definicao: ABAS.CAMPANHA_MEMBROS },
+        { definicao: ABAS.PERSONAGENS }, { definicao: ABAS.PERSONAGENS_FOTOS, extras: ['atualizadoEm'] },
+      ];
+    case 'resumo':
+      return [{ definicao: ABAS.PERSONAGENS }, { definicao: ABAS.CAMPANHAS }, { definicao: ABAS.CAMPANHA_MEMBROS }];
+    default:
+      return [];
+  }
+}
+
+/* A união das abas de várias ações, sem repetir — o lote pede tudo de
+   uma vez antes da primeira sub-ação. */
+function preCarregarAcoes(acoes) {
+  if (typeof preCarregar !== 'function') return 0;
+  var vistas = {};
+  var lista = [];
+  (acoes || []).forEach(function (acao) {
+    abasDaAcao(acao).forEach(function (item) {
+      var chave = item.definicao.nome + (item.tudo ? '#tudo' : '') + (item.extras ? '+' + item.extras.join(',') : '');
+      if (vistas[chave]) return;
+      vistas[chave] = true;
+      lista.push(item);
+    });
+  });
+  return lista.length ? preCarregar(lista) : 0;
+}
+
+/* A aba existe? Se a varredura dela já veio no lote, existe — sem abrir
+   a aba só para perguntar. */
+function abaJaLida(definicao) {
+  var e = exec();
+  var prefixo = definicao.nome + '#';
+  return Object.keys(e.varreduras).some(function (k) { return k.indexOf(prefixo) === 0; });
+}
+
 var LOTE_MAXIMO = 8;
 
 /* Fechada de propósito, e só com leitura. Uma ação nova não entra aqui
@@ -446,6 +546,11 @@ function acaoLote(corpo, usuario) {
   if (pedidos.length > LOTE_MAXIMO) return { ok: false, erro: 'dados_invalidos' };
 
   var permitidas = acoesDeLote();
+
+  /* As abas de todas as sub-ações numa viagem só (v2.46), quando houver o
+     serviço avançado. Cada sub-ação continua conferindo o próprio acesso. */
+  preCarregarAcoes(pedidos.map(function (p) { return String((p && p.acao) || ''); })
+    .filter(function (a) { return permitidas[a]; }));
 
   var respostas = pedidos.map(function (pedido) {
     var acao = String((pedido && pedido.acao) || '');
@@ -672,6 +777,9 @@ function validarSessao(token) {
     return { ok: true, usuario: guardado.usuario, sessao: null, doCache: true };
   }
 
+  /* Sem a sessão no cache: as duas abas numa viagem, se houver o serviço
+     avançado (v2.46). A decisão é a mesma, lida das mesmas colunas. */
+  if (typeof preCarregar === 'function') preCarregar([{ definicao: ABAS.SESSOES }, { definicao: ABAS.USUARIOS }]);
   var sessao = acharPor(ABAS.SESSOES, 'tokenHash', hash);
   if (!sessao) return { ok: false, erro: 'sessao' };
 
@@ -1350,6 +1458,7 @@ function papelDeCompartilhamento(valor) {
 function compartilhamentoPronto() {
   var e = exec();
   if (e.compartilhamentoPronto !== undefined) return e.compartilhamentoPronto;
+  if (abaJaLida(ABAS.PERSONAGENS_ACESSOS)) { e.compartilhamentoPronto = true; return true; }
   try { aba(ABAS.PERSONAGENS_ACESSOS); e.compartilhamentoPronto = true; } catch (erro) { e.compartilhamentoPronto = false; }
   return e.compartilhamentoPronto;
 }
@@ -1378,9 +1487,41 @@ function acessosDoPersonagem(personagemId) {
   return (indiceDeAcessos().porPersonagem[String(personagemId)] || []).slice();
 }
 
+/* QUANTOS ACESSOS UMA FICHA TEM, NO CACHE (v2.46)
+   A maioria das fichas não é compartilhada, e mesmo assim toda
+   conferência de acesso de quem não é dono — e a abertura da ficha pelo
+   dono, que mostra quantos receberam — varria PERSONAGENS_ACESSOS. A
+   contagem por ficha fica no cache; "0" pula a varredura.
+
+   Só pode errar para o lado de negar: `salvar_compartilhamentos` grava a
+   contagem nova na mesma requisição, e uma contagem VELHA maior que zero
+   só faz varrer (a varredura decide). Uma contagem velha "0" depois de
+   uma concessão — se o cache recusasse a gravação — negaria o acesso até
+   expirar, e nunca o contrário. */
+var SEGUNDOS_CONTAGEM_ACESSOS = 21600;
+function chaveDaContagemDeAcessos(personagemId) { return 'rama.acessos.n.' + epoca() + '.' + personagemId; }
+
+function contagemDeAcessos(personagemId) {
+  var guardada = cacheLer(chaveDaContagemDeAcessos(personagemId));
+  if (guardada !== null && guardada !== undefined && guardada !== '' && /^\d+$/.test(String(guardada))) {
+    anotar('acessosDoCache', 1);
+    return Number(guardada);
+  }
+  var n = acessosDoPersonagem(personagemId).length;
+  cacheGravar(chaveDaContagemDeAcessos(personagemId), String(n), SEGUNDOS_CONTAGEM_ACESSOS);
+  return n;
+}
+
+function lembrarContagemDeAcessos(personagemId, n) {
+  cacheGravar(chaveDaContagemDeAcessos(personagemId), String(n), SEGUNDOS_CONTAGEM_ACESSOS);
+}
+
 /* O papel desta conta nesta ficha, pelo compartilhamento direto. Duas
    linhas para o mesmo par (não deveria haver) valem pela mais forte. */
 function papelCompartilhado(personagemId, userId) {
+  /* Sem a aba (setupRama ainda não rodou), a contagem é 0 — e a época,
+     que o setupRama avança, faz essa contagem ser esquecida depois. */
+  if (contagemDeAcessos(personagemId) === 0) return '';
   var papel = '';
   acessosDoPersonagem(personagemId).forEach(function (l) {
     if (String(l.userId) !== String(userId)) return;
@@ -1437,7 +1578,12 @@ function acessoAoPersonagem(personagem, usuario) {
    Sem opção: exige editar. */
 function personagemAcessivel(personagemId, usuario, opcoes) {
   var o = opcoes || {};
-  var personagem = acharPor(ABAS.PERSONAGENS, 'id', personagemId);
+  /* As abas que a decisão pode tocar, numa viagem (v2.46) — se houver
+     o serviço avançado; senão, nada muda. */
+  preCarregar(abasDoAcessoAPersonagem());
+  /* `leve` (v2.46): para quem só pergunta — o registro volta sem as
+     colunas pesadas e NÃO pode ser gravado (o Dados.gs recusa). */
+  var personagem = o.leve ? linhaLeve(ABAS.PERSONAGENS, 'id', personagemId) : acharPor(ABAS.PERSONAGENS, 'id', personagemId);
   if (!personagem) return { ok: false, erro: 'nao_encontrado' };
 
   var a = acessoAoPersonagem(personagem, usuario);
@@ -1478,7 +1624,7 @@ function descricaoDoAcesso(acesso) {
     dono: { id: String(p.ownerId), nome: String(dono.nome || dono.usuario || ''), usuario: String(dono.usuario || '') },
   };
   /* Só o dono fica sabendo quantos receberam a ficha: é ele quem gerencia. */
-  if (acesso.dono) saida.compartilhamentos = acessosDoPersonagem(p.id).length;
+  if (acesso.dono) saida.compartilhamentos = contagemDeAcessos(p.id);
   return saida;
 }
 
@@ -1632,6 +1778,7 @@ function esquecerContas() {
 var MAX_IMAGENS_POR_PEDIDO = 40;
 
 function acaoLerFotos(corpo, usuario) {
+  preCarregarAcoes(['ler_fotos']);
   var ids = Array.isArray(corpo.personagemIds) ? corpo.personagemIds : [];
   if (!ids.length || ids.length > MAX_IMAGENS_POR_PEDIDO) return { ok: false, erro: 'dados_invalidos' };
 
@@ -1720,6 +1867,7 @@ function versoesDeAvatar(ids) {
    ===================================================================== */
 
 function acaoListarPersonagens(corpo, usuario) {
+  preCarregarAcoes(['listar_personagens']);
   /* A lista pessoal continua sendo só do dono: o mestre chega às
      fichas dos jogadores pela tela da campanha, não misturadas às
      dele. O que mudou é a resolução do NOME da campanha, que agora
@@ -1815,6 +1963,7 @@ function sistemaDaFicha(ficha) {
 }
 
 function organizacaoPronta() {
+  if (abaJaLida(ABAS.PASTAS) && abaJaLida(ABAS.PERSONAGENS_ORGANIZACAO)) return true;
   try {
     aba(ABAS.PASTAS);
     aba(ABAS.PERSONAGENS_ORGANIZACAO);
@@ -1903,17 +2052,29 @@ function indiceSemFalhar(registro, ficha, pastaId) {
    CRIA: uma linha que já existe não é tocada, então salvar a ficha nunca
    desfaz uma mudança de pasta. Chamada DENTRO da trava. Sem as abas
    (setupRama ainda não rodou), não faz nada. */
+/* A marca "esta ficha já tem linha no índice" (v2.46). Toda gravação
+   chamava garantirIndice, e ele varria a aba do índice inteira só para
+   descobrir que a linha estava lá — quatro viagens por salvamento. A
+   marca é um atalho: sem ela (cache vazio, expirado), a varredura volta;
+   com ela errada (alguém apagou a linha na mão), a listagem da conta
+   recria a linha, como sempre fez. Nunca decide permissão. */
+var SEGUNDOS_MARCA_INDICE = 21600;
+function chaveDaMarcaDeIndice(personagemId) { return 'rama.indice.' + personagemId; }
+
 function garantirIndice(registro, ficha, pastaId) {
+  if (cacheLer(chaveDaMarcaDeIndice(registro.id)) === '1') { anotar('indiceMarcado', 1); return; }
   if (!organizacaoPronta()) return;
   var existente = linhaLeve(ABAS.PERSONAGENS_ORGANIZACAO, 'personagemId', registro.id);
-  if (existente) return;
-  inserir(ABAS.PERSONAGENS_ORGANIZACAO, {
-    personagemId: registro.id,
-    ownerId: registro.ownerId,
-    sistema: sistemaDaFicha(ficha),
-    pastaId: pastaId || '',
-    atualizadoEm: new Date().toISOString(),
-  });
+  if (!existente) {
+    inserir(ABAS.PERSONAGENS_ORGANIZACAO, {
+      personagemId: registro.id,
+      ownerId: registro.ownerId,
+      sistema: sistemaDaFicha(ficha),
+      pastaId: pastaId || '',
+      atualizadoEm: new Date().toISOString(),
+    });
+  }
+  cacheGravar(chaveDaMarcaDeIndice(registro.id), '1', SEGUNDOS_MARCA_INDICE);
 }
 
 /* Nome de pasta: texto, aparado, espaços juntados, sem caractere de
@@ -2769,7 +2930,13 @@ function acaoSalvarPersonagem(corpo, usuario) {
        E a campanha que ficou valendo é a que vai para dentro do
        fichaJson: coluna e ficha precisam dizer a mesma coisa, senão a
        ficha abre numa campanha e a listagem mostra outra. */
-    if (acesso.dono) registro.campanhaId = campanhaValida(ficha.campanhaId, usuario);
+    /* v2.46: só quando ela MUDA. A campanha gravada na coluna é válida
+       por construção — vincular confere, e sair da mesa ou excluir a
+       campanha a limpa (Campanhas.gs) —, então conferir de novo a cada
+       gravação lia três abas para chegar à mesma resposta. */
+    if (acesso.dono && String(ficha.campanhaId || '') !== String(registro.campanhaId || '')) {
+      registro.campanhaId = campanhaValida(ficha.campanhaId, usuario);
+    }
     ficha.campanhaId = registro.campanhaId || null;
     registro.classe = String(ficha.classe || '').slice(0, 80);
     registro.origem = String(ficha.origem || '').slice(0, 80);
@@ -2826,6 +2993,8 @@ function acaoExcluirPersonagem(corpo, usuario) {
        não são tocadas. */
     var acessos = acessosDoPersonagem(registro.id);
     if (acessos.length) apagarLinhas(ABAS.PERSONAGENS_ACESSOS, acessos.map(function (l) { return l._linha; }));
+    lembrarContagemDeAcessos(registro.id, 0);
+    cacheApagar(chaveDaMarcaDeIndice(registro.id));
 
     avisarMesas([registro.campanhaId], ['personagens', 'combates']);
 
@@ -3091,6 +3260,7 @@ function acaoSalvarCompartilhamentos(corpo, usuario) {
     if (apagar.length) apagarLinhas(ABAS.PERSONAGENS_ACESSOS, apagar);
 
     var finais = acessosDoPersonagem(registro.id);
+    lembrarContagemDeAcessos(registro.id, finais.length);
     return {
       ok: true,
       dados: { versao: versaoDosAcessos(finais), acessos: acessosParaCliente(registro, finais) },
@@ -3102,6 +3272,7 @@ function acaoSalvarCompartilhamentos(corpo, usuario) {
    cabeçalho de cada uma — nome, sistema, versão da foto, dono e papel —
    e nunca a ficha, a pasta do dono ou a campanha. */
 function acaoListarCompartilhadosComigo(corpo, usuario) {
+  preCarregarAcoes(['listar_compartilhados_comigo']);
   if (!compartilhamentoPronto()) return { ok: true, dados: [], disponivel: false };
   var minhas = indiceDeAcessos().porConta[String(usuario.id)] || [];
   var papelPorId = {};
@@ -3155,7 +3326,9 @@ function acaoListarCompartilhadosComigo(corpo, usuario) {
    outra pessoa e um acesso que mudou (rebaixado, retirado). Só colunas
    leves. */
 function acaoAcessoPersonagem(corpo, usuario) {
-  var acesso = personagemAcessivel(corpo.personagemId, usuario, { leitura: true });
+  /* Só as colunas leves (v2.46): a pergunta não lê a ficha, então não
+     precisa da linha inteira. */
+  var acesso = personagemAcessivel(corpo.personagemId, usuario, { leitura: true, leve: true });
   if (!acesso.ok) return acesso;
   return {
     ok: true,
@@ -3596,6 +3769,7 @@ function acaoSalvarPerfil(corpo, usuario) {
    ===================================================================== */
 
 function acaoResumo(corpo, usuario) {
+  preCarregarAcoes(['resumo']);
   /* Contagens e seis nomes recentes. Nada aqui olha para dentro de uma
      ficha ou de um item, então nada aqui precisa lê-los. */
   var personagens = lerLeves(ABAS.PERSONAGENS).filter(function (p) { return meu(p, usuario); });

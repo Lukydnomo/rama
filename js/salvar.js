@@ -36,6 +36,26 @@
    aplicar de novo ou de acusar um conflito com a própria gravação. O
    que mudou na tela nesse meio-tempo sobe no pedido seguinte.
 
+   AGRUPAR SEM ADIAR PARA SEMPRE (v2.46)
+   ---------------------------------------------------------------------
+   A espera junta alterações seguidas numa gravação só — a ficha inteira
+   vai de uma vez, então três toques no PV viram um envio com o valor
+   final, e dois gastos registrados viram um envio com os DOIS registros
+   (nada se funde: o que se junta é o momento de enviar). Medido com
+   sequências reproduzíveis (testes/medir-salvamento.js), 800 ms juntou
+   bem mais do que 400 sem atraso que se perceba ao fechar uma janela ou
+   mudar de aba (que mandam na hora). E a espera tem um PRAZO MÁXIMO:
+   digitar sem parar não adia o envio indefinidamente — passado o prazo
+   desde a primeira alteração pendente, ela sobe.
+
+   Antes de enviar, o que vai é comparado com o que o servidor já
+   confirmou, sem `atualizadoEm` (muda a cada toque e o servidor regrava):
+   igual, não há o que gravar — volta a "Salvo" sem viagem. A mesma
+   serialização serve de cópia do que vai, no lugar de outra cópia.
+
+   O que pede confirmação na hora (Salvar agora, sair da página, trocar
+   de aba, aplicar um tema) continua chamando agora(), que não espera.
+
    O QUE REPETIR NÃO RESOLVE
    ---------------------------------------------------------------------
    Ficha acima do limite total, versão guardada que não se monta: tentar
@@ -86,6 +106,15 @@
     nao_encontrado: true,
   };
 
+  /* O texto comparável de uma ficha: a serialização sem os campos que
+     não são conteúdo (`atualizadoEm`). Serve de cópia também. */
+  function textoComparavel(estado, ignorar) {
+    if (!ignorar || !ignorar.length || !estado || typeof estado !== "object") return JSON.stringify(estado);
+    var raso = Object.assign({}, estado);
+    ignorar.forEach(function (k) { delete raso[k]; });
+    return JSON.stringify(raso);
+  }
+
   function novaOperacao() {
     return global.RAMAApi && global.RAMAApi.novaOperacao
       ? global.RAMAApi.novaOperacao()
@@ -106,10 +135,23 @@
      }) */
   function criar(opcoes) {
     var o = opcoes || {};
-    var espera = (global.RAMA_CONFIG && global.RAMA_CONFIG.DEBOUNCE_MS) || 400;
+    var cfg = global.RAMA_CONFIG || {};
+    var espera = o.espera || cfg.DEBOUNCE_MS || 800;
+    /* O prazo máximo desde a primeira alteração pendente (v2.46). */
+    var esperaMaxima = o.esperaMaxima || cfg.DEBOUNCE_MAXIMO_MS || 4000;
+    /* Campos que não contam como mudança de conteúdo. */
+    var ignorar = o.ignorarNaComparacao || [];
+    var med = function () { return global.RAMAMedicao || null; };
 
     var rev = 0;
     var base = null;          // o último estado que o servidor confirmou
+    /* O texto comparável do que o servidor TEM (v2.46). Na conciliação a
+       base vira o estado mesclado — que o servidor ainda não tem —, então
+       este texto é guardado à parte. */
+    var textoConfirmado = null;
+    /* Quando a primeira alteração ainda pendente aconteceu: é dela que o
+       prazo máximo conta. */
+    var pendenteDesde = 0;
     var pendente = false;
     var emVoo = false;
     var travado = false;
@@ -128,7 +170,18 @@
 
     function definirBase(estado, novaRev) {
       base = U.copiar(estado);
+      textoConfirmado = textoComparavel(estado, ignorar);
       rev = U.inteiro(novaRev, 0);
+    }
+
+    function agoraMs() { return Date.now(); }
+
+    /* A espera desta vez: a de sempre, mas nunca além do prazo máximo
+       contado da primeira alteração pendente. */
+    function esperaDaVez() {
+      if (!pendenteDesde) return espera;
+      var restante = pendenteDesde + esperaMaxima - agoraMs();
+      return Math.max(0, Math.min(espera, restante));
     }
 
     function revisaoAtual() { return rev; }
@@ -147,6 +200,7 @@
       }
 
       pendente = true;
+      if (!pendenteDesde) pendenteDesde = agoraMs();
       if (emVoo || repeticao) novidades = true;
 
       /* Depois de um erro que repetir não resolve, cada tecla não vira
@@ -154,8 +208,10 @@
       if (bloqueio) { estadoVira("erro"); return; }
 
       estadoVira(tentativa ? "offline" : "pendente");
+      /* Com uma gravação voando, o envio seguinte sai quando ela voltar. */
+      if (emVoo) return;
       clearTimeout(timer);
-      timer = setTimeout(enviar, espera);
+      timer = setTimeout(enviar, esperaDaVez());
     }
 
     /* Sobe agora, sem esperar o debounce. Para sair da página ou trocar
@@ -177,13 +233,31 @@
       var envio = repeticao;
       repeticao = null;
       if (!envio) {
-        envio = { dados: U.copiar(o.instantaneo()), rev: rev, operacaoId: novaOperacao() };
+        var atual = o.instantaneo();
+        var texto = textoComparavel(atual, ignorar);
+        /* Nada de conteúdo mudou desde o que o servidor tem: não há o que
+           gravar (v2.46). */
+        if (texto === textoConfirmado) {
+          pendente = false;
+          pendenteDesde = 0;
+          novidades = false;
+          if (med()) med().contar("salvamento.poupado");
+          if (o.indicador) o.indicador.salvoAgora();
+          return;
+        }
+        var copia = JSON.parse(texto);
+        if (ignorar.length && atual && typeof atual === "object") {
+          ignorar.forEach(function (k) { if (atual[k] !== undefined) copia[k] = atual[k]; });
+        }
+        envio = { dados: copia, texto: texto, rev: rev, operacaoId: novaOperacao() };
         novidades = false;
       }
 
       emVoo = true;
       pendente = false;
+      pendenteDesde = 0;
       estadoVira("salvando");
+      if (med()) med().contar("salvamento.enviado");
 
       var r;
       try {
@@ -198,15 +272,17 @@
       if (r && r.ok) {
         rev = U.inteiro(r.rev, envio.rev + 1);
         base = envio.dados;
+        textoConfirmado = envio.texto !== undefined ? envio.texto : textoComparavel(envio.dados, ignorar);
         tentativa = 0;
         conciliacoes = 0;
-        if (novidades) pendente = true;
+        if (novidades) { pendente = true; if (!pendenteDesde) pendenteDesde = agoraMs(); }
         novidades = false;
 
         document.dispatchEvent(new CustomEvent("rama:atividade"));
 
-        /* "Salvo" só vale se nada entrou na fila enquanto isto voava. */
-        if (pendente) { estadoVira("pendente"); clearTimeout(timer); timer = setTimeout(enviar, 0); }
+        /* "Salvo" só vale se nada entrou na fila enquanto isto voava. O que
+           entrou espera a sua vez — com o prazo máximo valendo. */
+        if (pendente) { estadoVira("pendente"); clearTimeout(timer); timer = setTimeout(enviar, esperaDaVez()); }
         else if (o.indicador) o.indicador.salvoAgora();
 
         if (o.aoSalvar) o.aoSalvar(rev, envio.dados);
@@ -226,6 +302,7 @@
          mostra o motivo e a saída. */
       if (r && ERROS_QUE_PARAM[r.erro]) {
         pendente = true;
+        if (!pendenteDesde) pendenteDesde = agoraMs();
         bloqueio = r;
         tentativa = 0;
         clearTimeout(timer);
@@ -239,6 +316,7 @@
          crescente. Nada se perde. */
       repeticao = envio;
       pendente = true;
+      if (!pendenteDesde) pendenteDesde = agoraMs();
       tentativa++;
 
       var semRede = r && (r.erro === "sem_conexao" || r.erro === "prazo");
@@ -275,6 +353,9 @@
         return;
       }
 
+      /* O que o servidor tem agora é o estado dele (v2.46): o envio da
+         conciliação é comparado com isto. */
+      textoConfirmado = textoComparavel(servidor, ignorar);
       var m = global.RAMASync.mesclar(base || instantaneo, instantaneo, servidor, o.esquema);
 
       console.info("[R.A.M.A. · sync] " + m.conflitos.length + " campo(s) em disputa, " +
@@ -330,6 +411,7 @@
       /* Sobe o resultado da conciliação, fora da pilha do envio atual. */
       conflitoAberto = false;
       pendente = true;
+      if (!pendenteDesde) pendenteDesde = agoraMs();
       estadoVira("salvando");
       clearTimeout(timer);
       timer = setTimeout(enviar, 0);

@@ -501,6 +501,14 @@ function exec() {
          a cada gravação na aba —, então dentro da trava ela é a de agora,
          e acrescentar linhas não precisa perguntar de novo. */
       ultimas: {},
+      /* Linhas completas já lidas nesta execução (v2.46), por aba e
+         número. Duas ações do mesmo lote que abrem a mesma ficha leem a
+         linha uma vez. Esquecidas junto com as varreduras: ao obter a
+         trava e a cada gravação na aba. */
+      linhas: {},
+      /* Colunas inteiras trazidas pela pré-carga em lote (v2.46), por aba
+         e coluna: { linha: valor }. Esquecidas como as varreduras. */
+      colunas: {},
       /* Sobe a cada trava obtida. Um registro lido na geração 2 não pode
          ser gravado com um número de linha colhido na geração 1. */
       geracao: 0,
@@ -516,6 +524,8 @@ function esquecerVarreduras() {
   var e = exec();
   e.varreduras = {};
   e.ultimas = {};
+  e.linhas = {};
+  e.colunas = {};
   e.geracao++;
 }
 
@@ -637,6 +647,347 @@ function grade(folha) {
   return folha.getMaxRows();
 }
 
+
+
+/* =====================================================================
+   LEITURAS EM LOTE — O SERVIÇO AVANÇADO DO SHEETS (opcional, v2.46)
+   ---------------------------------------------------------------------
+   `getRange().getValues()` lê UMA faixa retangular por viagem, e achar o
+   tamanho da aba custa outra (`getLastRow`), além de abrir a aba
+   (`getSheetByName`). Varrer quatro abas pequenas para decidir um acesso
+   eram doze viagens.
+
+   `Sheets.Spreadsheets.Values.batchGet` lê VÁRIAS faixas numa viagem só,
+   de abas diferentes, e aceita faixa aberta no fim ("'ABA'!A2:I"): a
+   resposta vem até a última linha com conteúdo, sem `getLastRow`. Ele é
+   do serviço avançado "Google Sheets API", que precisa ser ligado no
+   editor do Apps Script (Serviços → Google Sheets API → Adicionar, com o
+   identificador `Sheets`). Ver docs/PERFORMANCE.md.
+
+   O CAMINHO DE SEMPRE CONTINUA SENDO O PADRÃO
+     · sem o serviço habilitado, nada aqui é usado: `Sheets` não existe e
+       toda leitura segue por getValues, como antes;
+     · `RAMA_SHEETS_API = 0` em Script Properties desliga o atalho mesmo
+       com o serviço habilitado;
+     · se a chamada falhar — cota, erro interno, API desabilitada no
+       projeto, autorização —, o erro vai para o log (console.error quando
+       é configuração, console.warn quando é passageiro) e a execução
+       inteira volta ao caminho de sempre. A leitura nunca fica sem
+       resposta por causa do atalho.
+
+   O QUE É DIFERENTE NA RESPOSTA, E COMO FICA IGUAL
+     · células vazias no fim de cada linha e linhas vazias no fim da
+       faixa NÃO vêm: aqui elas voltam como '' até o tamanho pedido;
+     · `UNFORMATTED_VALUE`: números, zero e booleanos chegam como número e
+       booleano — o mesmo que getValues entrega;
+     · data é o único tipo que getValues entrega como objeto Date. O
+       R.A.M.A. grava datas como texto ISO ou milissegundos, mas uma
+       célula que a planilha tenha transformado em data chegaria aqui como
+       texto formatado. As colunas de data (nome terminado em "Em", e
+       `ultimaAtividade`) são conferidas: valor que não seja ISO, número ou
+       vazio faz ESTA leitura voltar ao caminho de sempre;
+     · a ordem e a quantidade de faixas da resposta são conferidas com o
+       pedido; qualquer divergência volta ao caminho de sempre.
+   ===================================================================== */
+
+var PROPRIEDADE_SERVICO_SHEETS = 'RAMA_SHEETS_API';
+
+function servicoAvancado() {
+  var e = exec();
+  if (e.servico !== undefined) return e.servico;
+  var s = null;
+  try {
+    if (typeof Sheets !== 'undefined' && Sheets && Sheets.Spreadsheets && Sheets.Spreadsheets.Values &&
+        typeof Sheets.Spreadsheets.Values.batchGet === 'function' &&
+        String(propriedade(PROPRIEDADE_SERVICO_SHEETS, '1')) !== '0') {
+      s = Sheets;
+    }
+  } catch (erro) {
+    s = null;
+  }
+  e.servico = s;
+  return s;
+}
+
+function idDaPlanilha() {
+  var e = exec();
+  if (!e.idDaPlanilha) {
+    e.idDaPlanilha = propriedade('RAMA_PLANILHA_ID', '') || planilha().getId();
+  }
+  return e.idDaPlanilha;
+}
+
+function letraDaColuna(n) {
+  var s = '';
+  var x = n;
+  while (x > 0) {
+    var r = (x - 1) % 26;
+    s = String.fromCharCode(65 + r) + s;
+    x = Math.floor((x - 1) / 26);
+  }
+  return s;
+}
+
+/* nl ausente: faixa aberta, até a última linha com conteúdo. Sem coluna
+   (coluna 0): a linha inteira, "'ABA'!1:1" — o cabeçalho, de qualquer
+   largura. */
+function faixaA1(nome, linha, coluna, nl, nc) {
+  if (!coluna) return "'" + String(nome).replace(/'/g, "''") + "'!" + linha + ':' + linha;
+  return "'" + String(nome).replace(/'/g, "''") + "'!" +
+    letraDaColuna(coluna) + linha + ':' + letraDaColuna(coluna + nc - 1) + (nl ? String(linha + nl - 1) : '');
+}
+
+/* A falha do atalho é registrada uma vez por execução, com a natureza
+   dela: configuração (o serviço existe mas a API não está liberada para
+   o projeto, ou falta autorização) ou passageira. */
+function registrarFalhaDoServico(erro) {
+  var texto = String(erro && erro.message ? erro.message : erro);
+  var configuracao = /has not been used|is disabled|not enabled|PERMISSION_DENIED|insufficient|authoriz|autoriz|Requested entity was not found/i.test(texto);
+  anotar('loteFalhou', 1);
+  if (configuracao) {
+    console.error('R.A.M.A.: o serviço avançado do Sheets não respondeu por configuração ou autorização — seguindo pelo caminho padrão. ' +
+      'Confira docs/PERFORMANCE.md ("Leituras em lote"). Detalhe: ' + texto);
+  } else {
+    console.warn('R.A.M.A.: leitura em lote falhou agora — seguindo pelo caminho padrão nesta requisição. Detalhe: ' + texto);
+  }
+}
+
+var REGEX_DATA_ISO = /^\d{4}-\d{2}-\d{2}(T[\d:.]+(Z|[+-]\d{2}:?\d{2})?)?$/;
+
+function colunaDeData(nome) {
+  return /Em$/.test(nome) || nome === 'ultimaAtividade';
+}
+
+/* Lê as faixas pedidas numa viagem. pedidos: [{ nome, linha, coluna,
+   nl (ausente = aberta), nc, definicao?, colunasDeData? }]. Devolve um
+   array paralelo de matrizes completadas com '', ou null quando o atalho
+   não está disponível, falhou ou devolveu algo que não confere — e aí
+   quem chamou segue pelo caminho de sempre. */
+function lerFaixasEmLote(pedidos) {
+  if (!pedidos || !pedidos.length) return [];
+  var S = servicoAvancado();
+  var e = exec();
+  if (!S || e.servicoFalhou) return null;
+
+  var faixas = pedidos.map(function (p) { return faixaA1(p.nome, p.linha, p.coluna, p.nl, p.nc); });
+  var resposta;
+  try {
+    anotarChamada();
+    anotar('leituras', 1);
+    anotar('lotesSheets', 1);
+    resposta = S.Spreadsheets.Values.batchGet(idDaPlanilha(), {
+      ranges: faixas,
+      majorDimension: 'ROWS',
+      valueRenderOption: 'UNFORMATTED_VALUE',
+      dateTimeRenderOption: 'FORMATTED_STRING',
+    });
+  } catch (erro) {
+    e.servicoFalhou = true;
+    registrarFalhaDoServico(erro);
+    return null;
+  }
+
+  var recebidas = (resposta && resposta.valueRanges) || [];
+  if (recebidas.length !== pedidos.length) {
+    e.servicoFalhou = true;
+    registrarFalhaDoServico(new Error('o lote devolveu ' + recebidas.length + ' faixas para ' + pedidos.length + ' pedidas'));
+    return null;
+  }
+
+  var celulas = 0;
+  var saida = [];
+  for (var i = 0; i < pedidos.length; i++) {
+    var p = pedidos[i];
+    var vr = recebidas[i] || {};
+    /* A faixa devolvida tem de ser da aba pedida: a API devolve na mesma
+       ordem, e isto confere que não houve troca. */
+    var nomeDevolvido = String(vr.range || '').replace(/!.*$/, '').replace(/^'|'$/g, '').replace(/''/g, "'");
+    if (vr.range !== undefined && nomeDevolvido !== String(p.nome)) {
+      e.servicoFalhou = true;
+      registrarFalhaDoServico(new Error('faixa trocada no lote: pedida ' + p.nome + ', veio ' + nomeDevolvido));
+      return null;
+    }
+    var valores = Array.isArray(vr.values) ? vr.values : [];
+    var nl = p.nl ? p.nl : valores.length;
+    /* Linha inteira: a largura é a que veio (pelo menos a pedida). */
+    var nc = p.coluna ? p.nc : Math.max(p.nc || 0, valores[0] ? valores[0].length : 0);
+    var matriz = [];
+    for (var l = 0; l < nl; l++) {
+      var crua = valores[l] || [];
+      var linha = [];
+      for (var c = 0; c < nc; c++) {
+        var v = crua[c];
+        linha.push(v === undefined || v === null ? '' : v);
+      }
+      matriz.push(linha);
+    }
+    celulas += nl * nc;
+
+    /* Datas: só texto ISO, número ou vazio passam. */
+    if (p.colunasDeData && p.colunasDeData.length) {
+      for (var d = 0; d < p.colunasDeData.length; d++) {
+        var col = p.colunasDeData[d];
+        for (var r = 0; r < matriz.length; r++) {
+          var x = matriz[r][col];
+          if (x === '' || typeof x === 'number' || (typeof x === 'string' && REGEX_DATA_ISO.test(x))) continue;
+          anotar('loteDataDivergente', 1);
+          saida.push(null);
+          matriz = null;
+          break;
+        }
+        if (!matriz) break;
+      }
+      if (!matriz) continue;
+    }
+    saida.push(matriz);
+  }
+  medidor().celulas += celulas;
+  return saida;
+}
+
+/* As colunas de data dentro de um recorte [menor..maior] da aba. */
+function colunasDeDataNoRecorte(definicao, cab, menor, maior) {
+  var saida = [];
+  definicao.colunas.forEach(function (nome, i) {
+    if (!colunaDeData(nome)) return;
+    var p = cab.posicoes[i];
+    if (p >= menor && p <= maior) saida.push(p - menor);
+  });
+  return saida;
+}
+
+/* PRÉ-CARGA DE VARREDURAS
+   As abas que uma ação vai varrer, lidas numa viagem e guardadas onde a
+   varredura de sempre procuraria (e.varreduras). Depois disso lerLeves e
+   lerTudo respondem da memória, com registros IGUAIS aos que a varredura
+   montaria — mesmas colunas, mesmo número de linha, mesma gramática.
+
+   lista: [{ definicao, tudo?, extras?: ['coluna', …] }]
+     tudo     a varredura completa (lerTudo) em vez da leve
+     extras   colunas fora das leves lidas inteiras na mesma viagem e
+              servidas depois por lerCelulas (a data da foto, por exemplo)
+
+   Só entram abas cujo cabeçalho já está conhecido (na memória ou no
+   cache): uma aba nova ou ausente segue pelo caminho de sempre. NÃO grava
+   `e.ultimas` — a faixa aberta termina na última linha com conteúdo NAS
+   COLUNAS PEDIDAS, e quem acrescenta linhas precisa da última da aba. */
+function preCarregar(lista) {
+  if (!servicoAvancado() || exec().servicoFalhou) return 0;
+  var e = exec();
+  var pedidos = [];
+  var destinos = [];
+
+  /* Cabeçalhos que ainda não se sabe (cache vazio ou expirado): todos numa
+     viagem antes, para a pré-carga não pular essas abas. */
+  var semCabecalho = (lista || []).filter(function (item) { return !cabecalhoConhecido(item.definicao); });
+  if (semCabecalho.length) {
+    var vistos = {};
+    semCabecalho = semCabecalho.filter(function (item) {
+      if (vistos[item.definicao.nome]) return false;
+      vistos[item.definicao.nome] = true;
+      return true;
+    });
+    var linhas = lerFaixasEmLote(semCabecalho.map(function (item) {
+      return { nome: item.definicao.nome, linha: 1, coluna: 0, nl: 1, nc: item.definicao.colunas.length };
+    }));
+    if (!linhas) return 0;
+    semCabecalho.forEach(function (item, i) {
+      if (!linhas[i]) return;
+      e.cabecalhos[item.definicao.nome] = montarCabecalho(item.definicao, linhas[i][0]);
+    });
+    guardarCabecalhos();
+    anotar('cabecalhosEmLote', semCabecalho.length);
+  }
+
+  (lista || []).forEach(function (item) {
+    var definicao = item.definicao;
+    var n = quantasLeves(definicao);
+    var completa = item.tudo || n >= definicao.colunas.length;
+    var rotulo = completa ? 'tudo' : 'leves';
+    var chave = definicao.nome + '#' + rotulo;
+    var cab = cabecalhoConhecido(definicao);
+    if (!cab) return;
+
+    if (!e.varreduras[chave]) {
+      var quantas = completa ? definicao.colunas.length : n;
+      var posicoes = cab.posicoes.slice(0, quantas);
+      var menor = 0, maior = 0;
+      posicoes.forEach(function (p) {
+        if (!p) return;
+        if (!menor || p < menor) menor = p;
+        if (p > maior) maior = p;
+      });
+      if (menor) {
+        pedidos.push({ nome: definicao.nome, linha: 2, coluna: menor, nc: maior - menor + 1,
+          colunasDeData: colunasDeDataNoRecorte(definicao, cab, menor, maior) });
+        destinos.push({ tipo: 'varredura', definicao: definicao, cab: cab, chave: chave, quantas: quantas, menor: menor, leve: !completa });
+      }
+    }
+
+    (item.extras || []).forEach(function (coluna) {
+      var chaveColuna = definicao.nome + '#' + coluna;
+      if (e.colunas[chaveColuna]) return;
+      var p = cab.mapa[coluna];
+      if (!p) return;
+      pedidos.push({ nome: definicao.nome, linha: 2, coluna: p, nc: 1, colunasDeData: colunaDeData(coluna) ? [0] : [] });
+      destinos.push({ tipo: 'coluna', chave: chaveColuna });
+    });
+  });
+
+  if (!pedidos.length) return 0;
+  var respostas = lerFaixasEmLote(pedidos);
+  if (!respostas) return 0;
+
+  var guardadas = 0;
+  destinos.forEach(function (d, i) {
+    var valores = respostas[i];
+    if (!valores) return; /* esta faixa não conferiu: fica para o caminho de sempre */
+    if (d.tipo === 'coluna') {
+      var porLinha = {};
+      valores.forEach(function (l, k) { porLinha[k + 2] = l[0]; });
+      e.colunas[d.chave] = porLinha;
+      guardadas++;
+      return;
+    }
+    var colunas = d.definicao.colunas.slice(0, d.quantas);
+    e.varreduras[d.chave] = valores.map(function (crua, k) {
+      var daLinha = posicoesParaLinha(d.definicao, d.cab, crua, d.menor);
+      var registro = montarRegistro(d.definicao, colunas, daLinha.slice(0, d.quantas), d.menor, crua, k + 2, d.leve);
+      if (daLinha !== d.cab.posicoes) registro._ordemDeclarada = true;
+      return registro;
+    });
+    guardadas++;
+  });
+  anotar('preCarregadas', guardadas);
+  return guardadas;
+}
+
+/* Uma faixa só (v2.46). Com o serviço avançado e a aba ainda não aberta
+   nesta execução, vai pelo lote: uma viagem em vez de duas (abrir a aba
+   e ler). Com a aba já aberta, ou sem o serviço, é o getValues de
+   sempre — o tipo dos valores é exatamente o mesmo. */
+function lerFaixaUnica(definicao, linha, coluna, nl, nc) {
+  var e = exec();
+  if (servicoAvancado() && !e.servicoFalhou && !e.folhas[definicao.nome]) {
+    var cab = cabecalhoConhecido(definicao);
+    var datas = cab ? colunasDeDataNoRecorte(definicao, cab, coluna, coluna + nc - 1) : [];
+    var r = lerFaixasEmLote([{ nome: definicao.nome, linha: linha, coluna: coluna, nl: nl, nc: nc, colunasDeData: datas }]);
+    if (r && r[0]) return r[0];
+  }
+  return lerFaixa(aba(definicao), linha, coluna, nl, nc);
+}
+
+/* O cabeçalho, se já se sabe — sem ler a planilha para descobrir. */
+function cabecalhoConhecido(definicao) {
+  var e = exec();
+  if (e.cabecalhos[definicao.nome]) return e.cabecalhos[definicao.nome];
+  var doCache = cabecalhosDoCache();
+  if (doCache && doCache[definicao.nome]) {
+    e.cabecalhos[definicao.nome] = doCache[definicao.nome];
+    return doCache[definicao.nome];
+  }
+  return null;
+}
 
 /* =====================================================================
    PROPRIEDADES
@@ -817,6 +1168,19 @@ function cabecalho(definicao) {
   var largura = Math.max(folha.getLastColumn(), definicao.colunas.length);
   var linha = lerFaixa(folha, 1, 1, 1, largura)[0];
 
+  guardado = montarCabecalho(definicao, linha);
+  e.cabecalhos[definicao.nome] = guardado;
+  guardarCabecalhos();
+  return guardado;
+}
+
+/* O cabeçalho a partir da linha 1 já lida — pelo getValues de sempre ou
+   pela pré-carga em lote (v2.46). Uma conta só para os dois caminhos. */
+function montarCabecalho(definicao, linhaLida) {
+  var linha = (linhaLida || []).slice();
+  while (linha.length < definicao.colunas.length) linha.push('');
+  var guardado;
+
   var mapa = {};
   for (var i = 0; i < linha.length; i++) {
     var nome = String(linha[i]).trim();
@@ -891,8 +1255,6 @@ function cabecalho(definicao) {
     alinhado: posicoes.every(function (p, i) { return p === i + 1; }),
   };
 
-  e.cabecalhos[definicao.nome] = guardado;
-  guardarCabecalhos();
   return guardado;
 }
 
@@ -1075,16 +1437,32 @@ function lerLeves(definicao) {
   return varrer(definicao, n, 'leves');
 }
 
-/* Uma linha, completa. */
+/* Uma linha, completa.
+
+   Lida uma vez por execução (v2.46): a segunda pergunta pela mesma linha
+   — `ler_personagem` e `ler_foto` no mesmo lote, por exemplo — recebe
+   uma CÓPIA do que já veio, sem outra viagem. A memória cai junto com as
+   varreduras (trava obtida, gravação na aba), então o que se lê dentro da
+   trava é sempre o de agora. Cópia porque quem recebe o registro o altera
+   antes de gravar; os campos são valores simples, e a cópia rasa basta. */
 function lerLinha(definicao, numeroDaLinha) {
   if (!numeroDaLinha || numeroDaLinha < 2) return null;
 
+  var e = exec();
+  var chave = definicao.nome + '#' + numeroDaLinha;
+  var guardada = e.linhas[chave];
+  if (guardada && guardada._geracao === e.geracao) {
+    anotar('linhasReaproveitadas', 1);
+    return Object.assign({}, guardada);
+  }
+
   var cab = cabecalho(definicao);
-  var crua = lerFaixa(aba(definicao), numeroDaLinha, 1, 1, cab.largura)[0];
+  var crua = lerFaixaUnica(definicao, numeroDaLinha, 1, 1, cab.largura)[0];
 
   var daLinha = posicoesParaLinha(definicao, cab, crua, 1);
   var registro = montarRegistro(definicao, definicao.colunas, daLinha, 1, crua, numeroDaLinha, false);
   if (daLinha !== cab.posicoes) registro._ordemDeclarada = true;
+  e.linhas[chave] = Object.assign({}, registro);
   return registro;
 }
 
@@ -1189,6 +1567,23 @@ function lerCelulas(definicao, alvos, coluna) {
   var saida = {};
   if (!alvos || !alvos.length) return saida;
 
+  /* A coluna inteira já veio na pré-carga em lote (v2.46): responde da
+     memória. Só vale para linhas na gramática de agora (uma linha de
+     ordem declarada lê outra posição, e segue pelo caminho de sempre). */
+  var pronta = exec().colunas[definicao.nome + '#' + coluna];
+  if (pronta) {
+    var restantes = [];
+    alvos.forEach(function (alvo) {
+      var numero = typeof alvo === 'number' ? alvo : alvo._linha;
+      if (!numero) return;
+      if (typeof alvo === 'object' && alvo._ordemDeclarada) { restantes.push(alvo); return; }
+      saida[numero] = pronta[numero] === undefined ? '' : pronta[numero];
+    });
+    anotar('celulasDaPreCarga', alvos.length - restantes.length);
+    if (!restantes.length) return saida;
+    alvos = restantes;
+  }
+
   var cab = cabecalho(definicao);
   var indice = definicao.colunas.indexOf(coluna);
   var padrao = cab.mapa[coluna] || 0;
@@ -1242,6 +1637,16 @@ function lerBloco(definicao, linhas, posicao, saida, pesada) {
     return;
   }
 
+  /* Linhas espalhadas (v2.46): com o serviço avançado, todas numa viagem
+     só, sem arrastar as do meio. Sem ele, uma leitura por linha. */
+  var emLote = lerFaixasEmLote(ordenadas.map(function (l) {
+    return { nome: definicao.nome, linha: l, coluna: posicao, nl: 1, nc: 1 };
+  }));
+  if (emLote && emLote.every(function (m) { return !!m; })) {
+    ordenadas.forEach(function (l, i) { saida[l] = emLote[i][0][0]; });
+    return;
+  }
+
   ordenadas.forEach(function (l) {
     saida[l] = lerFaixa(folha, l, posicao, 1, 1)[0][0];
   });
@@ -1268,22 +1673,47 @@ function lerLinhas(definicao, numeros) {
   unicos.sort(function (a, b) { return a - b; });
 
   var cab = cabecalho(definicao);
-  var folha = aba(definicao);
   var porLinha = {};
 
+  /* As faixas: linhas próximas viram uma só (a mesma conta de sempre). */
+  var faixas = [];
+  var a = 0;
+  while (a < unicos.length) {
+    var ini = unicos[a];
+    var ult = ini;
+    var b = a + 1;
+    while (b < unicos.length && unicos[b] - ult - 1 <= PESO_DA_CHAMADA) { ult = unicos[b]; b++; }
+    faixas.push({ inicio: ini, fim: ult, de: a, ate: b });
+    a = b;
+  }
+
+  /* Mais de uma faixa e o serviço avançado ligado (v2.46): todas numa
+     viagem. Uma faixa que não confira (ou o lote inteiro) segue pelo
+     caminho de sempre. */
+  var emLote = faixas.length > 1 ? lerFaixasEmLote(faixas.map(function (f) {
+    return { nome: definicao.nome, linha: f.inicio, coluna: 1, nl: f.fim - f.inicio + 1, nc: cab.largura,
+      colunasDeData: colunasDeDataNoRecorte(definicao, cab, 1, cab.largura) };
+  })) : null;
+
+  var folha = null;
   var i = 0;
+  var f = 0;
   while (i < unicos.length) {
     var inicio = unicos[i];
     var fim = inicio;
     var j = i + 1;
     while (j < unicos.length && unicos[j] - fim - 1 <= PESO_DA_CHAMADA) { fim = unicos[j]; j++; }
 
-    var valores = [];
-    try {
-      valores = lerFaixa(folha, inicio, 1, fim - inicio + 1, cab.largura);
-    } catch (erro) {
-      valores = [];
+    var valores = emLote && emLote[f] ? emLote[f] : null;
+    if (!valores) {
+      try {
+        valores = folha ? lerFaixa(folha, inicio, 1, fim - inicio + 1, cab.largura)
+                        : lerFaixaUnica(definicao, inicio, 1, fim - inicio + 1, cab.largura);
+      } catch (erro) {
+        valores = [];
+      }
     }
+    f++;
 
     for (var k = i; k < j; k++) {
       var l = unicos[k];
@@ -1461,6 +1891,12 @@ function invalidar(definicao) {
   var prefixo = definicao.nome + '#';
   Object.keys(e.varreduras).forEach(function (k) {
     if (k.indexOf(prefixo) === 0) delete e.varreduras[k];
+  });
+  Object.keys(e.linhas).forEach(function (k) {
+    if (k.indexOf(prefixo) === 0) delete e.linhas[k];
+  });
+  Object.keys(e.colunas).forEach(function (k) {
+    if (k.indexOf(prefixo) === 0) delete e.colunas[k];
   });
 }
 

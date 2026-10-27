@@ -79,8 +79,21 @@
        aoMudar(partes, dados) → Promise   partes que mudaram (inclui
                          "papel" se o papel de quem pergunta mudou)
        aoPerderAcesso(resposta)           a campanha sumiu para esta conta
+       chave            (v2.46) a chave da pergunta para dividir entre as
+                        abas deste navegador (js/coordenacao.js). Sem ela,
+                        ou sem o coordenador, cada aba pergunta sozinha
        relogio, aleatorio
-     }) */
+     })
+
+   ENTRE ABAS (v2.46). Com `chave`, a pergunta passa pelo coordenador: se
+   outra aba trouxe a resposta há menos de 90% do intervalo, ela é usada;
+   se outra está perguntando agora, espera-se a resposta dela. E a
+   resposta que outra aba traz chega aqui na hora, e é tratada como se
+   fosse desta — mesma comparação de marcas, mesmo aoMudar —, e o relógio
+   desta aba recomeça a partir dela. Na prática, uma aba pergunta por vez;
+   se ela some, as outras voltam a perguntar quando a espera vence. A
+   pausa com a página escondida e a espera crescente depois de falhas
+   continuam como eram (as falhas não são divididas). */
   function criar(opcoes) {
     var o = opcoes || {};
     var relogio = o.relogio || relogioPadrao();
@@ -91,6 +104,11 @@
     var perguntando = false;
     var parado = true;
     var ultimaResposta = 0;
+    var C = o.chave && global.RAMACoordenacao ? global.RAMACoordenacao : null;
+    var consultarDividido = C ? C.compartilhada(o.chave, o.consultar, {
+      aceitar: function (r) { return !!(r && (r.ok || r.erro === "nao_encontrado" || r.erro === "sem_permissao")); },
+    }) : null;
+    var deixarDeOuvir = null;
 
     function intervalo() {
       return o.intervalo ? o.intervalo() : INTERVALO_ATIVO;
@@ -113,13 +131,17 @@
       perguntando = true;
       var r;
       try {
-        r = await o.consultar();
+        r = consultarDividido ? await consultarDividido(Math.round(intervalo() * 0.9)) : await o.consultar();
       } catch (e) {
         r = { ok: false, erro: "sem_conexao" };
       }
       perguntando = false;
       if (parado) return;
+      await processar(r);
+    }
 
+    /* A resposta — desta aba ou de outra (v2.46). */
+    async function processar(r) {
       if (r && r.ok && r.dados) {
         falhas = 0;
         ultimaResposta = Date.now();
@@ -163,9 +185,20 @@
       }
     }
 
+    /* A resposta que outra aba trouxe: tratada como desta, se esta aba
+       está à vista e não está no meio da própria pergunta. Escondida, ela
+       fica guardada no coordenador e é usada ao voltar. */
+    function aoReceberDeOutraAba(r) {
+      if (parado || perguntando || !visivel()) return;
+      relogio.limpar(timer);
+      timer = null;
+      processar(r);
+    }
+
     function iniciar() {
       if (!parado) return;
       parado = false;
+      if (C && !deixarDeOuvir) deixarDeOuvir = C.ouvir(o.chave, aoReceberDeOutraAba);
       if (typeof document !== "undefined" && document.addEventListener) {
         document.addEventListener("visibilitychange", aoMudarVisibilidade);
       }
@@ -176,6 +209,7 @@
       parado = true;
       relogio.limpar(timer);
       timer = null;
+      if (deixarDeOuvir) { deixarDeOuvir(); deixarDeOuvir = null; }
       if (typeof document !== "undefined" && document.removeEventListener) {
         document.removeEventListener("visibilitychange", aoMudarVisibilidade);
       }

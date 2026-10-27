@@ -225,6 +225,8 @@ function acaoSincronizarCampanha(corpo, usuario) {
    ===================================================================== */
 
 function acaoListarCampanhas(corpo, usuario) {
+  /* v2.46: as abas numa viagem, se houver o serviço avançado. */
+  preCarregarAcoes(['listar_campanhas']);
   /* A descrição mora no dadosJson, e a lista mostra a descrição — mas
      só das campanhas que esta conta alcança. Numa planilha com trinta
      campanhas em que ela participa de três, o conteúdo lido é o de
@@ -279,6 +281,7 @@ function acaoListarCampanhas(corpo, usuario) {
 }
 
 function acaoLerCampanha(corpo, usuario) {
+  preCarregarAcoes(['ler_campanha']);
   var ctx = contextoDaCampanha(corpo.campanhaId, usuario);
   if (!ctx.ok) return ctx;
 
@@ -636,6 +639,7 @@ function acaoSalvarParticipantes(corpo, usuario) {
    entram na resposta — não há barra, número ou percentual para esconder
    com CSS, porque eles não chegam. */
 function acaoListarPersonagensCampanha(corpo, usuario) {
+  preCarregarAcoes(['listar_personagens_campanha']);
   var ctx = contextoDaCampanha(corpo.campanhaId, usuario);
   if (!ctx.ok) return ctx;
 

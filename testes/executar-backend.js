@@ -68,10 +68,17 @@ const t = {
 
 /* ---------- montagem do cenário ---------- */
 
+/* `--servico-avancado` (v2.46): a suíte inteira roda com o serviço
+   avançado do Sheets ligado no simulador — as leituras em lote
+   (Sheets.Spreadsheets.Values.batchGet) no lugar de getValues. As mesmas
+   verificações têm de passar nos dois caminhos. */
+const COM_SERVICO = Deno.args.includes("--servico-avancado");
+
 function preparar() {
   ambiente.limpar();
   setupRama();
   gerarPepper();
+  if (COM_SERVICO) ambiente.servicoAvancado.ligar();
 }
 
 function novaConta(usuario) {
@@ -4832,6 +4839,8 @@ const { testarCrisBackend } = await import("./cris-backend.js");
 await testarCrisBackend({ t, preparar, novaConta, comoFn, chamar });
 const { testarCompartilhamentoBackend } = await import("./compartilhamento-backend.js");
 testarCompartilhamentoBackend({ t, preparar, novaConta, comoFn });
+const { testarLoteBackend } = await import("./lote-backend.js");
+testarLoteBackend({ t, preparar, novaConta, comoFn, ambiente });
 
 
 escrever(`\n${FORTE}${passaram + falharam} verificações${FIM} · ${VERDE}${passaram} ok${FIM} · ${falharam ? VERMELHO : CINZA}${falharam} falhas${FIM}`);

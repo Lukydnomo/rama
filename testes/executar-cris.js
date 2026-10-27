@@ -519,6 +519,53 @@ t.grupo("Sintéticos · formatos vistos em fichas reais do CRIS (v2.34.1)");
     comp.ficha.inventario.itens[0].origemCatalogoId === "op.paranormal.componentes" && !comp.ficha.inventario.itens[1].origemCatalogoId);
 }
 
+/* =====================================================================
+   CICLO DE CÁLCULO (v2.46): dentro do ciclo, os mesmos números e as
+   mesmas explicações; uma mudança no meio do ciclo não é escondida.
+   ===================================================================== */
+t.grupo("Ciclo de cálculo · mesmo resultado, com e sem o ciclo");
+{
+  const tudo = (f) => {
+    const o = f.ordem, inv = f.inventario;
+    const C = globalThis.RAMAOrdemCatalogo;
+    return JSON.stringify({
+      c: R.calcular(o, inv),
+      at: ["agi", "for", "int", "pre", "vig"].map((k) => [R.atributo(o, k), R.dadoDeAtributo(o, k), R.composicaoDoAtributo(o, k)]),
+      pe: C.PERICIAS.map((p) => [R.bonusDePericia(o, p.chave, inv), R.dadoDePericia(o, p.chave), R.grauDaPericia(o, p.chave), R.atributoDaPericia(o, p.chave)]),
+      ar: inv.itens.filter((i) => i.tipo === "arma").map((i) => R.armaEfetiva(o, inv, i, f.pericias)),
+      es: E.estado(o, { inventario: inv, rituais: f.rituais.itens }),
+      re: R.resumoDeRecursos(o), ocup: R.ocupacaoDoInventario(o, inv), uso: R.usoPorCategoria(o, inv),
+    });
+  };
+  [["Jeff", fJ], ["Gina", rG.ficha]].forEach(([nome, f]) => {
+    const fora = tudo(f);
+    const dentro = R.ciclo(() => tudo(f));
+    const dentroDuasVezes = R.ciclo(() => { tudo(f); return tudo(f); });
+    t.ok(nome + ": dentro do ciclo, os mesmos valores e composições", fora === dentro && dentro === dentroDuasVezes);
+  });
+
+  const f = JSON.parse(JSON.stringify(fJ));
+  const o = f.ordem, inv = f.inventario;
+  const mudancas = R.ciclo(() => {
+    const antes = R.calcular(o, inv);
+    o.recursos = Object.assign({}, o.recursos, { pv: 3 });
+    const depoisPv = R.calcular(o, inv);
+    o.escolhas = o.escolhas.slice();
+    const est2 = E.estado(o, { inventario: inv });
+    inv.itens = inv.itens.slice(0, 1);
+    const depoisItem = R.calcular(o, inv);
+    return { depois: depoisPv.atual.pv, mesmoObjeto: antes === depoisPv, itens: depoisItem !== depoisPv, est2: !!est2 };
+  });
+  t.ok("recurso trocado no meio do ciclo: refeito, não reaproveitado", mudancas.depois === 3 && !mudancas.mesmoObjeto);
+  t.ok("lista trocada no meio do ciclo: o estado e o cálculo são refeitos", mudancas.est2 && mudancas.itens);
+  t.ok("fora do ciclo, nada fica guardado", !R.emCiclo() && !E.emCiclo());
+  let lancou = false;
+  try { R.ciclo(() => { throw new Error("x"); }); } catch (e) { lancou = true; }
+  t.ok("um erro dentro do ciclo fecha o ciclo", lancou && !R.emCiclo() && !E.emCiclo());
+  const aninhado = R.ciclo(() => R.ciclo(() => R.emCiclo()) && R.emCiclo());
+  t.ok("ciclos aninhados se juntam ao de fora", aninhado === true && !R.emCiclo());
+}
+
 console.log(`\n${FORTE}${passaram + falharam} verificações${FIM} · ${VERDE}${passaram} ok${FIM} · ${falharam ? VERMELHO : CINZA}${falharam} falhas${FIM}`);
 if (falhas.length) { console.log(`\n${VERMELHO}Falhou:${FIM}`); falhas.forEach((f) => console.log(`  · ${f}`)); }
 Deno.exit(falharam ? 1 : 0);

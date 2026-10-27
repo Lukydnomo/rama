@@ -83,6 +83,9 @@ export function novoContador() {
     insertRows: 0,
     getSheetByName: 0,
     abrirPlanilha: 0,
+    /* Sheets.Spreadsheets.Values.batchGet (v2.46): uma viagem, várias
+       faixas. Só existe com o serviço avançado ligado no ambiente. */
+    batchGet: 0,
     cacheGet: 0,
     cachePut: 0,
     propriedadesGet: 0,
@@ -94,7 +97,7 @@ export function novoContador() {
     get chamadasSheets() {
       return this.getValues + this.setValues + this.appendRow +
              this.deleteRow + this.getLastRow + this.getMaxRows +
-             this.insertRows + this.getSheetByName + this.abrirPlanilha;
+             this.insertRows + this.getSheetByName + this.abrirPlanilha + this.batchGet;
     },
 
     zerar() {
@@ -159,11 +162,11 @@ class Folha {
   }
 
   getName() { return this.nome; }
-  getLastRow() { this.c.getLastRow++; return this.linhas.length; }
+  getLastRow() { this.c.getLastRow++; this.amb.anotar(this.nome, "getLastRow"); return this.linhas.length; }
   getLastColumn() {
     return this.linhas.reduce((max, l) => Math.max(max, l.length), 0);
   }
-  getMaxRows() { this.c.getMaxRows++; return this.tamanhoDaGrade(); }
+  getMaxRows() { this.c.getMaxRows++; this.amb.anotar(this.nome, "getMaxRows"); return this.tamanhoDaGrade(); }
   tamanhoDaGrade() { return Math.max(this.maxLinhas, this.linhas.length); }
   setFrozenRows(n) { this.congeladas = n; return this; }
   getFrozenRows() { return this.congeladas; }
@@ -279,9 +282,11 @@ class Planilha {
     this.amb = ambiente;
   }
   getName() { return this.nome; }
+  getId() { return "planilha-simulada"; }
   getSheets() { return this.folhas.slice(); }
   getSheetByName(nome) {
     this.c.getSheetByName++;
+    this.amb.anotar(nome, "getSheetByName");
     return this.folhas.find((f) => f.nome === nome) || null;
   }
   insertSheet(nome) {
@@ -306,7 +311,21 @@ export function instalarAmbiente(global) {
      sai da lista. */
   const ganchos = [];
   const amb = {
+    /* O rastro (v2.46): com `rastro` ligado, cada chamada ao Sheets fica
+       anotada — aba, método e faixa —, para a medição mostrar DE ONDE vêm
+       as viagens, e não só quantas são. Desligado, não guarda nada. */
+    rastro: null,
+    anotar(aba, metodo, detalhes) {
+      if (amb.rastro) amb.rastro.push(Object.assign({ aba, metodo }, detalhes || {}));
+    },
     interceptar(aba, metodo, detalhes) {
+      amb.anotar(aba, metodo, detalhes);
+      amb.ganchar(aba, metodo, detalhes);
+    },
+    /* Só os ganchos, sem anotar no rastro: o batchGet simulado dispara os
+       ganchos de "getValues" de cada faixa que lê, para os testes de
+       falha e de concorrência valerem nos dois caminhos de leitura. */
+    ganchar(aba, metodo, detalhes) {
       for (let i = 0; i < ganchos.length; i++) {
         const g = ganchos[i];
         if (g.aba && g.aba !== aba) continue;
@@ -427,6 +446,86 @@ export function instalarAmbiente(global) {
     }),
   };
 
+  const controleDoServico = {
+    ligado: false, chamadas: 0, faixas: 0, falhar: 0, mensagem: "",
+    ligar() { this.ligado = true; global.Sheets = servicoSheets; },
+    desligar() { this.ligado = false; delete global.Sheets; },
+  };
+
+  function colunaParaNumero(letras) {
+    let n = 0;
+    for (const ch of letras) n = n * 26 + (ch.charCodeAt(0) - 64);
+    return n;
+  }
+
+  /* "'NOME DA ABA'!B5:D9", "NOME!B5:D9" ou aberta, "'NOME'!B2:D" (até a
+     última linha com conteúdo) → faixa numérica. */
+  function lerA1(a1) {
+    /* A linha inteira: "'ABA'!1:1". */
+    const inteira = /^(?:'((?:[^']|'')+)'|([^!]+))!(\d+):(\d+)$/.exec(String(a1));
+    if (inteira) {
+      const nomeL = inteira[1] !== undefined ? inteira[1].replace(/''/g, "'") : inteira[2];
+      const folhaL = planilha.folhas.find((x) => x.nome === nomeL);
+      const largura = folhaL ? folhaL.getLastColumn() : 1;
+      return { nome: nomeL, linha: Number(inteira[3]), coluna: 1, nl: Number(inteira[4]) - Number(inteira[3]) + 1, nc: Math.max(1, largura) };
+    }
+    const m = /^(?:'((?:[^']|'')+)'|([^!]+))!([A-Z]+)(\d+)(?::([A-Z]+)(\d*))?$/.exec(String(a1));
+    if (!m) throw new Error("Unable to parse range: " + a1);
+    const nome = (m[1] !== undefined ? m[1].replace(/''/g, "'") : m[2]);
+    const c1 = colunaParaNumero(m[3]), l1 = Number(m[4]);
+    const c2 = m[5] ? colunaParaNumero(m[5]) : c1;
+    const aberta = !!m[5] && m[6] === "";
+    const l2 = aberta ? null : (m[6] ? Number(m[6]) : l1);
+    return { nome, linha: l1, coluna: c1, nl: aberta ? null : l2 - l1 + 1, nc: c2 - c1 + 1 };
+  }
+
+  const servicoSheets = {
+    Spreadsheets: {
+      Values: {
+        batchGet(idDaPlanilha, opcoes) {
+          const o = opcoes || {};
+          contador.batchGet++;
+          controleDoServico.chamadas++;
+          amb.anotar("*", "batchGet", { faixas: (o.ranges || []).length });
+          if (controleDoServico.falhar > 0) {
+            controleDoServico.falhar--;
+            throw new Error(controleDoServico.mensagem || "API call to sheets.spreadsheets.values.batchGet failed with error: Internal error encountered.");
+          }
+          if (idDaPlanilha !== planilha.getId()) throw new Error("Requested entity was not found.");
+          const formatado = o.valueRenderOption !== "UNFORMATTED_VALUE";
+          const valueRanges = (o.ranges || []).map((a1) => {
+            controleDoServico.faixas++;
+            const f = lerA1(a1);
+            const folha = planilha.folhas.find((x) => x.nome === f.nome);
+            if (!folha) throw new Error("Unable to parse range: " + a1);
+            if (f.nl === null) f.nl = Math.max(0, folha.linhas.length - f.linha + 1);
+            amb.ganchar(f.nome, "getValues", { linha: f.linha, coluna: f.coluna, nl: f.nl, nc: f.nc, lote: true });
+            contador.celulasLidas += f.nl * f.nc;
+            const linhas = [];
+            for (let i = 0; i < f.nl; i++) {
+              const origem = folha.linhas[f.linha - 1 + i] || [];
+              const alvo = [];
+              for (let j = 0; j < f.nc; j++) {
+                const v = origem[f.coluna - 1 + j];
+                contador.bytesLidos += v === undefined ? 0 : String(v).length;
+                alvo.push(v === undefined || v === null ? "" : (formatado ? String(v) : v));
+              }
+              /* A API corta as células vazias do fim de cada linha… */
+              while (alvo.length && alvo[alvo.length - 1] === "") alvo.pop();
+              linhas.push(alvo);
+            }
+            /* …e as linhas vazias do fim da faixa. */
+            while (linhas.length && !linhas[linhas.length - 1].length) linhas.pop();
+            const saida = { range: a1, majorDimension: "ROWS" };
+            if (linhas.length) saida.values = linhas;
+            return saida;
+          });
+          return { spreadsheetId: idDaPlanilha, valueRanges };
+        },
+      },
+    },
+  };
+
   const bytesDe = (v) => (typeof v === "string" ? Buffer.from(v, "utf8") : Buffer.from(v));
 
   global.Utilities = {
@@ -499,6 +598,20 @@ export function instalarAmbiente(global) {
       ganchos.push({ aba: o.aba, metodo: o.metodo, vez: o.vez || 1, filtro: o.filtro, acao: fn });
     },
 
+    /* O serviço avançado do Sheets (v2.46). Desligado por padrão — é o
+       que acontece numa implantação que não o habilitou, e o backend tem
+       de funcionar igual. Ligado, `Sheets.Spreadsheets.Values.batchGet`
+       responde como a API de verdade: linhas e células vazias no FIM de
+       cada faixa são omitidas (e uma faixa toda vazia vem sem `values`),
+       números e booleanos chegam como tais com UNFORMATTED_VALUE.
+       `falhar` derruba as próximas N chamadas com a mensagem dada. */
+    servicoAvancado: controleDoServico,
+
+    /* O rastro: liga, roda o que quiser, e `tirarRastro()` devolve as
+       chamadas anotadas (e desliga). */
+    ligarRastro() { amb.rastro = []; },
+    tirarRastro() { const r = amb.rastro || []; amb.rastro = null; return r; },
+
     ganchosPendentes: () => ganchos.length,
     removerGanchos: () => { ganchos.length = 0; },
 
@@ -520,6 +633,11 @@ export function instalarAmbiente(global) {
       controleDaTrava.presa = false;
       controleDoFlush.vezes = 0;
       controleDoFlush.falhar = 0;
+      controleDoServico.desligar();
+      controleDoServico.chamadas = 0;
+      controleDoServico.faixas = 0;
+      controleDoServico.falhar = 0;
+      controleDoServico.mensagem = "";
     },
   };
 }

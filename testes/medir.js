@@ -5,6 +5,12 @@
        deno run --allow-read --allow-write testes/medir.js --json depois.json
        deno run --allow-read testes/medir.js --comparar antes.json
        deno run --allow-read testes/medir.js --backend caminho/da/versao/antiga
+       deno run --allow-read testes/medir.js --servico-avancado
+
+   `--backend` aceita uma pasta relativa à raiz do projeto ou um caminho
+   absoluto. `--servico-avancado` (v2.46) liga, no simulador, o serviço
+   avançado do Sheets (batchGet): as leituras em lote. Sem a opção, é o
+   caminho padrão de uma implantação que não o habilitou.
 
    Monta uma mesa de tamanho realista — 20 contas, fichas com foto,
    campanhas de tamanhos diferentes, histórico de rolagens — e conta o
@@ -54,10 +60,13 @@ const ARQUIVOS = ["Dados.gs", "Codigo.gs", "Campanhas.gs"];
 
 const ambiente = instalarAmbiente(globalThis);
 
+const ABSOLUTA = /^([A-Za-z]:[\\/]|\/)/.test(PASTA);
 for (const arquivo of ARQUIVOS) {
   let codigo;
   try {
-    codigo = await Deno.readTextFile(new URL("../" + PASTA + "/" + arquivo, import.meta.url));
+    codigo = await Deno.readTextFile(ABSOLUTA
+      ? new URL("file:///" + PASTA.replace(/\\/g, "/").replace(/^\//, "") + "/" + arquivo)
+      : new URL("../" + PASTA + "/" + arquivo, import.meta.url));
   } catch (e) {
     escrever(`  (sem ${PASTA}/${arquivo})`);
     continue;
@@ -224,6 +233,9 @@ function montarMesa() {
    ===================================================================== */
 
 const resultados = [];
+/* `--rastro "trecho do rótulo"` (v2.46): lista cada chamada ao Sheets dos
+   cenários cujo rótulo contém o trecho — aba, método e faixa. */
+const RASTRO = argumento("--rastro", "");
 
 function medir(rotulo, conta, corpo, opcoes) {
   const o = opcoes || {};
@@ -232,8 +244,15 @@ function medir(rotulo, conta, corpo, opcoes) {
   if (o.cacheVazio) ambiente.cache.clear();
 
   ambiente.contador.zerar();
+  const rastrear = RASTRO && rotulo.indexOf(RASTRO) >= 0 && ambiente.ligarRastro;
+  if (rastrear) ambiente.ligarRastro();
   const r = chamarMedindo(globalThis, Object.assign({ token: conta.token }, corpo));
   const c = ambiente.contador.instantaneo();
+  if (rastrear) {
+    escrever("## " + rotulo);
+    ambiente.tirarRastro().forEach((x) => escrever("   " + x.metodo + "(" + x.aba +
+      (x.linha ? " L" + x.linha + "x" + x.nl + " C" + x.coluna + "x" + x.nc : "") + (x.faixas ? " " + x.faixas + " faixas" : "") + ")"));
+  }
 
   resultados.push({
     rotulo,
@@ -255,6 +274,23 @@ const mesa = montarMesa();
 const mestre = mesa.mestre;
 const jogador = mesa.contas[3];
 const forasteiro = mesa.contas[19];
+
+/* Compartilhamento (v2.44): a segunda ficha do jogador, com uma conta
+   como Editor e outra como Leitor. Numa versão sem compartilhamento os
+   cenários que dependem disso aparecem como recusados. */
+const editor = mesa.contas[4];
+const leitor = mesa.contas[5];
+const fichaCompartilhada = jogador.personagens[1];
+{
+  const l = mesa.como(jogador)({ acao: "listar_compartilhamentos", personagemId: fichaCompartilhada });
+  if (l && l.ok) {
+    mesa.como(jogador)({ acao: "salvar_compartilhamentos", personagemId: fichaCompartilhada, versao: l.dados.versao,
+      acessos: [{ userId: editor.id, papel: "editor" }, { userId: leitor.id, papel: "leitor" }] });
+  }
+}
+
+const COM_SERVICO = Deno.args.includes("--servico-avancado");
+if (COM_SERVICO) ambiente.servicoAvancado.ligar();
 
 escrever("Medindo…\n");
 
@@ -309,6 +345,21 @@ function decimaPagina() {
 }
 
 medir("listar_rolagens — página 10", mestre, decimaPagina());
+
+/* --------- fichas compartilhadas (v2.44) --------- */
+
+medir("ler_personagem (Editor, ficha compartilhada)", editor, { acao: "ler_personagem", personagemId: fichaCompartilhada });
+medir("acesso_personagem (Leitor, a vigia da ficha)", leitor, { acao: "acesso_personagem", personagemId: fichaCompartilhada });
+medir("listar_compartilhados_comigo (Leitor)", leitor, { acao: "listar_compartilhados_comigo" });
+medir("LOTE: abrir ficha compartilhada (Editor)", editor, {
+  acao: "lote",
+  pedidos: [
+    { acao: "sessao" },
+    { acao: "ler_personagem", personagemId: fichaCompartilhada },
+    { acao: "ler_foto", personagemId: fichaCompartilhada },
+    { acao: "listar_campanhas" },
+  ],
+});
 medir("listar_usuarios (editor de participantes)", mestre, { acao: "listar_usuarios" });
 medir("listar_documentos", mestre, { acao: "listar_documentos", campanhaId: mesa.campanhas[0] });
 medir("listar_combates", mestre, { acao: "listar_combates", campanhaId: mesa.campanhas[0] });

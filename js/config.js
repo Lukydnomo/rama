@@ -29,7 +29,11 @@ window.RAMA_CONFIG = {
 
    /* Espera entre alteração e envio. Junta digitação seguida num só POST
       sem a pessoa sentir atraso. */
-   DEBOUNCE_MS: 400,
+   /* Espera para juntar alterações seguidas numa gravação, e o prazo
+      máximo desde a primeira alteração pendente (v2.46: 400 → 800 ms,
+      com prazo de 4 s — ver docs/PERFORMANCE.md, "O salvamento"). */
+   DEBOUNCE_MS: 800,
+   DEBOUNCE_MAXIMO_MS: 4000,
 
    /* Dias sem uso até esta máquina descartar a sessão por conta própria.
       O servidor conta o mesmo prazo e tem a palavra final — isto aqui só

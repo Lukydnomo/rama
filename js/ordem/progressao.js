@@ -2180,8 +2180,94 @@
     ]);
   }
 
+  /* =================================================================
+     CICLO DE CÁLCULO (v2.46)
+     -----------------------------------------------------------------
+     Um desenho da ficha pede o estado da progressão centenas de vezes —
+     cada atributo, cada perícia, cada modificador —, e cada pedido
+     montava a assinatura acima com JSON.stringify de metade da ficha só
+     para descobrir que nada tinha mudado desde a pergunta anterior.
+
+     Dentro de um CICLO (aberto pela tela em volta de um desenho, por
+     ciclo() do motor de regras), a ficha não muda: o desenho só lê. Então
+     o estado já calculado é reaproveitado pela identidade da ficha e uma
+     marca BARATA — referências e números, nada serializado. A marca
+     confere de novo o que um desenho poderia, por descuido, trocar (uma
+     lista substituída, um item a mais); quem mexe na ficha de verdade é a
+     ação da pessoa, que acontece fora do ciclo, e o próximo desenho abre
+     um ciclo novo, vazio.
+
+     Fora do ciclo, nada muda: a assinatura de sempre decide. Não há
+     invalidação para lembrar — o ciclo acaba e a memória vai junto.
+     ================================================================= */
+
+  var CICLO = null;
+
+  function abrirCiclo() {
+    if (CICLO) { CICLO.nivel++; return; }
+    CICLO = { nivel: 1, estados: typeof Map !== "undefined" ? new Map() : null, reaproveitados: 0, calculados: 0 };
+  }
+
+  function fecharCiclo() {
+    if (!CICLO) return null;
+    CICLO.nivel--;
+    if (CICLO.nivel > 0) return null;
+    var fim = { reaproveitados: CICLO.reaproveitados, calculados: CICLO.calculados };
+    CICLO = null;
+    return fim;
+  }
+
+  function emCiclo() { return !!CICLO; }
+
+  function marcaDoCiclo(ordem, contexto) {
+    var itens = itensDoContexto(contexto);
+    var rituais = rituaisDoContexto(contexto);
+    return [
+      itens, itens ? itens.length : -1, rituais, rituais ? rituais.length : -1,
+      ordem.classe, ordem.origem, ordem.trilha, ordem.nex, ordem.nivel, ordem.estagio,
+      ordem.atributos, ordem.pericias, ordem.escolhas, Array.isArray(ordem.escolhas) ? ordem.escolhas.length : -1,
+      ordem.opcionais, ordem.afinidade, ordem.estadoDasOrigens, ordem.trajetoria,
+      ordem.registrosDeRitual, Array.isArray(ordem.registrosDeRitual) ? ordem.registrosDeRitual.length : -1,
+      ordem.prestigio, ordem.importacao, ordem.personalizacoes, ordem.excluidas,
+      Array.isArray(ordem.progressao) ? ordem.progressao.length : -1,
+    ];
+  }
+
+  function mesmaMarca(a, b) {
+    if (!a || !b || a.length !== b.length) return false;
+    for (var i = 0; i < a.length; i++) if (a[i] !== b[i]) return false;
+    return true;
+  }
+
+  function doCiclo(ordem, contexto) {
+    if (!CICLO || !CICLO.estados) return null;
+    var lista = CICLO.estados.get(ordem);
+    if (!lista) return null;
+    var marca = marcaDoCiclo(ordem, contexto);
+    for (var i = 0; i < lista.length; i++) {
+      if (mesmaMarca(lista[i].marca, marca)) { CICLO.reaproveitados++; return lista[i]; }
+    }
+    return null;
+  }
+
+  function guardarNoCiclo(ordem, contexto, estado) {
+    if (!CICLO || !CICLO.estados) return;
+    var lista = CICLO.estados.get(ordem) || [];
+    lista.push({ marca: marcaDoCiclo(ordem, contexto), estado: estado });
+    CICLO.estados.set(ordem, lista);
+    CICLO.calculados++;
+  }
+
   function estado(ordem, contexto) {
     if (!ordem) return null;
+    var noCiclo = doCiclo(ordem, contexto);
+    if (noCiclo) return noCiclo.estado;
+    var e = estadoPelaAssinatura(ordem, contexto);
+    guardarNoCiclo(ordem, contexto, e);
+    return e;
+  }
+
+  function estadoPelaAssinatura(ordem, contexto) {
     var chave = assinatura(ordem, contexto);
     var lista = CACHE ? (CACHE.get(ordem) || []) : [];
     for (var i = 0; i < lista.length; i++) {
@@ -3812,6 +3898,9 @@
 
     vagas: vagas,
     estado: estado,
+    abrirCiclo: abrirCiclo,
+    fecharCiclo: fecharCiclo,
+    emCiclo: emCiclo,
     estadoAntes: estadoAntes,
 
     normalizarEscolhas: normalizarEscolhas,

@@ -1,5 +1,290 @@
 # Desempenho
 
+## v2.46 — menos trabalho na tela, no salvamento, entre abas e no Sheets
+
+Cinco frentes, cada uma medida antes e depois **no mesmo cenário**. A referência
+"antes" é a v2.45.0 (commit `ede1b1a`), guardada com `git archive` e servida ou
+carregada lado a lado com a atual. Três tipos de número aparecem abaixo, e eles não
+se misturam:
+
+- **contagem do simulador** (`testes/medir.js`, `testes/executar-coordenacao.js`,
+  `testes/medir-salvamento.js`): viagens ao Sheets, células, envios, perguntas.
+  Propriedade do código, não do ambiente — o simulador não tem latência;
+- **navegador local** (`testes/medir-interface.js` contra `testes/servidor-local.js`):
+  redesenhos, nós de DOM inseridos e milissegundos de JavaScript nesta máquina, com o
+  backend simulado. Tempos variam entre máquinas e execuções;
+- **implantação**: nenhum número desta seção veio de uma implantação real do Apps
+  Script. O roteiro para medir lá está em "Validar numa implantação", abaixo.
+
+Menos viagens num simulador não são, por si, a mesma porcentagem de tempo a menos no
+Google.
+
+### 1. Atualizar só o que mudou (js/paginas/ficha.js)
+
+A ficha passou a ser desenhada em cinco **regiões** — topo, avisos, bloco superior,
+tira de abas e seção aberta —, cada uma num invólucro `display: contents` (a caixa
+visual é a mesma). `desenhar()` monta as cinco e continua sendo o caminho das mudanças
+estruturais (modo, tipo, permissões, versão nova do servidor, módulos). `atualizar()`
+troca só as regiões pedidas:
+
+| mudança | regiões refeitas |
+|---|---|
+| trocar de seção | abas + seção |
+| recurso, condição, efeito, cena, ação de recurso (estado de jogo) | bloco + seção — a seção é poupada quando não depende disso (Anotações) |
+| `ctx.redesenhar()` das seções | bloco + abas + seção (o rótulo de Rituais e os módulos mudam a tira) |
+| nome, campanha | `atualizarTitulo()`, no lugar |
+
+O bloco superior é a menor unidade que se refaz: atributos podem depender de condições
+(dados de teste), e granular mais exigiria uma segunda implementação das regras para
+saber o que mudou. Foco, seleção, texto ainda não confirmado e recolhíveis abertos são
+lembrados e devolvidos — no desenho completo também (antes, um redesenho fechava o que
+estava aberto). Campos sem `data-foco` são achados pela posição (região, tipo, rótulo e
+ordem entre os iguais), porque `UI.campo` gera um `id` novo a cada desenho.
+
+Ficha de Ordem do Jeff (retrato do CRIS + 5 itens, 8 rituais, condições ativas),
+dona, aba na frente, 3 repetições, mesma máquina, v2.45 → v2.46:
+
+| cenário | redesenhos completos | nós inseridos | ms (JS) | gravações |
+|---|---|---|---|---|
+| ajuste manual + e − no PV | 0 → 0 | 402 → 402 | 10,5 → 13,1 | 1 → 0 |
+| Dano e Cura no PV | 6 → 0 | 1593 → 1359 | 45 → 34 | 1 → 1 |
+| Nova cena (com a confirmação) | 3 → 0 | 780 → 663 | 10,5 → 9,9 | 1 → 1 |
+| Dano e Cura com Perícias aberta | 9 → 0 | 7026 → 6141 | 133 → 113 | 1 → 1 |
+| Dano e Cura com Anotações aberta | 9 → 0 | 2679 → 1398 | 59 → 42 | 1 → 1 |
+| trocar 3 abas | 9 → 0 | 5628 → 3675 | 95 → 56 | 0 → 0 |
+
+Conferido no navegador: depois de várias atualizações parciais, o texto da ficha é
+idêntico ao de um desenho completo do mesmo estado (cinco abas); recolhíveis abertos
+continuam abertos (na v2.45 fechavam); a rolagem fica; o campo em edição mantém foco,
+seleção e texto não confirmado; o modo Leitor sai só de leitura nas regiões trocadas;
+página inteira e painel da campanha (`?painel=1`).
+
+### 2. Um cálculo por ciclo (js/ordem/regras.js, js/ordem/progressao.js)
+
+O estado da progressão tinha um cache por **assinatura** — um `JSON.stringify` de
+metade da ficha a cada pergunta. Um desenho perguntava centenas de vezes (cada
+atributo, cada perícia, cada modificador). Agora `RAMAOrdemRegras.ciclo(fn)` abre um
+ciclo de cálculo em volta de cada desenho: dentro dele, o estado da progressão, a lista
+de modificadores e `calcular()` são feitos uma vez para a mesma ficha e reaproveitados
+pela **identidade** e por uma marca de referências e números (nada serializado). O
+ciclo acaba com o desenho — então nunca há valor de antes de uma mudança local, salva
+ou não, e não há invalidação para lembrar. Fora de um ciclo, nada muda.
+
+| medida (Deno, carga de um desenho com a aba Perícias) | sem ciclo | com ciclo |
+|---|---|---|
+| tempo | ~3,5 ms | ~0,8 ms |
+| `JSON.stringify` | 624 | 4 |
+
+No navegador, o mesmo desenho reaproveita a progressão centenas de vezes por
+atualização (`RAMAMedicao`: `progressao.reaproveitada`). `testes/executar-cris.js`
+confere, nas fichas reais do Jeff e da Gina, que valores e composições são idênticos
+dentro e fora do ciclo, e que uma lista ou um recurso trocado no meio do ciclo é
+recalculado.
+
+### 3. O salvamento (js/salvar.js, js/config.js)
+
+| o quê | antes | agora |
+|---|---|---|
+| espera para juntar alterações | 400 ms | 800 ms (`DEBOUNCE_MS`) |
+| prazo máximo desde a 1ª alteração pendente | nenhum (digitar sem parar adiava para sempre) | 4 s (`DEBOUNCE_MAXIMO_MS`) |
+| alteração durante uma gravação | subia imediatamente depois dela | espera a vez, com o mesmo prazo |
+| conteúdo igual ao que o servidor tem (só `atualizadoEm` mudou) | gravava | não grava; volta a "Salvo" |
+| cópia do que vai | `structuredClone` | a mesma serialização da comparação |
+
+`testes/medir-salvamento.js` roda o salvar.js de verdade (e o da v2.45) com relógio
+virtual, servidor de 900 ms e sequências fixas:
+
+| sequência | v2.45 | 800 ms + 4 s (v2.46) | latência média → máxima (v2.46) |
+|---|---|---|---|
+| digitar uma anotação, com pausas (98 teclas) | 22 envios | 9 | 1,5 s → 4,0 s |
+| texto contínuo, 12 s sem parar | 1 (12,3 s pendente) | 3 | 2,1 s → 4,0 s |
+| 8 cliques no recurso, a cada 600 ms | 6 | 2 | 2,1 s → 4,0 s |
+| 8 cliques rápidos, a cada 250 ms | 1 | 1 | 1,7 s → 2,6 s |
+| 6 campos, a cada 2–3 s | 6 | 6 | 0,8 s → 0,8 s |
+| marcar e desmarcar | 1 | 0 | — |
+| **total** | **37** | **21** | |
+
+1000 ms juntaria um pouco mais (19), com cada campo isolado esperando 1 s; 800 ms foi o
+equilíbrio. "Salvar agora", fechar a aba, esconder a página e aplicar um tema continuam
+chamando `agora()`, sem espera. A ficha inteira vai a cada envio, então juntar nunca
+funde ações: dois gastos registrados viram um envio com os dois registros. Revisão,
+conciliação, repetição com o mesmo id de operação, indicadores e o aviso de saída com
+pendência não mudaram (`testes/executar-frontend.js`).
+
+### 4. Entre abas do mesmo navegador (js/coordenacao.js)
+
+`BroadcastChannel` divide o resultado de **leituras equivalentes** — a pergunta da
+sincronização da campanha (`sinc:<campanha>`) e a vigia da ficha compartilhada
+(`acesso:<personagem>`):
+
+- antes de perguntar, a aba usa a resposta de outra se ela for mais nova que 90% do
+  próprio intervalo;
+- se outra aba anunciou que está perguntando, espera a resposta dela (até 6 s);
+- senão, anuncia, pergunta e espalha — e as outras recebem na hora, como se fosse a
+  própria resposta (mesma comparação de marcas, mesmo `aoMudar`).
+
+Não há líder a eleger: quem chega primeiro pergunta; se essa aba fecha, suspende, perde
+a rede ou falha (falha avisa as outras), a espera vence e cada aba volta a perguntar.
+Toda mensagem leva a conta; resposta de outra conta é ignorada, e trocar de sessão (o
+token no `localStorage`) apaga o que estava guardado. Uma resposta que voava quando a
+conta trocou não é espalhada; uma resposta de uma pergunta mais velha não passa por cima
+da mais nova. Nenhuma credencial vai pelo canal, e nenhuma gravação é coordenada. A
+pausa com a página escondida e a espera crescente depois de falhas continuam iguais.
+Sem `BroadcastChannel`, cada aba pergunta sozinha.
+
+| medida | sem coordenação | com |
+|---|---|---|
+| simulador, 3 abas, intervalo de 150 ms, 1,5 s | 23–24 perguntas | 12–13 |
+| navegador local, 2 cópias ativas da campanha (iframes), 60 s, aba Personagens | 14 (v2.45) | 8 |
+| navegador local, 2 cópias ativas da ficha compartilhada (Editora), 60 s | ~4,8 esperadas | 3 |
+
+No navegador, uma rolagem registrada pelo mestre apareceu nas **duas** cópias no mesmo
+instante (6,9 s) a partir de uma única pergunta, cada uma buscou e exibiu, e nenhuma a
+registrou de novo. Observação: o navegador embutido do app congela os timers de uma aba
+de fundo depois de ~25 s (embora ela se declare visível) — por isso a medição usa duas
+cópias na mesma aba.
+
+### 5. Leituras do Google Sheets (backend/Dados.gs, Codigo.gs, Campanhas.gs)
+
+**Cortes que valem sempre** (sem configuração nenhuma):
+
+- linha completa lida uma vez por execução — `ler_personagem` e `ler_foto` no mesmo
+  lote leem a linha da ficha uma vez;
+- o salvamento do dono só confere a campanha quando ela **muda** (vincular confere, e
+  sair da mesa ou excluir a campanha já limpa o vínculo);
+- a linha do índice de pastas não é procurada a cada gravação: uma marca no cache diz
+  que ela existe (sem a marca, a varredura volta; com a marca errada, a listagem recria
+  a linha, como sempre);
+- a quantidade de compartilhamentos de cada ficha fica no cache: "0" pula a varredura
+  de `PERSONAGENS_ACESSOS`. Ela só pode errar para o lado de negar — conceder grava a
+  contagem nova na mesma requisição, e uma contagem velha maior só faz varrer;
+- a pergunta de acesso (`acesso_personagem`) lê só as colunas leves.
+
+**O caminho opcional com o serviço avançado** (`Sheets.Spreadsheets.Values.batchGet`):
+várias faixas, de abas diferentes, numa viagem, com faixa aberta no fim (sem
+`getLastRow`). Cada ação diz quais abas vai varrer (`abasDaAcao` em Codigo.gs) e elas
+vêm juntas; o lote une as de todas as sub-ações; cabeçalhos que o cache não tem vêm
+numa primeira viagem para todas as abas; leituras espalhadas (`lerCelulas`,
+`lerLinhas`) viram uma viagem; gravações pré-carregam dentro da trava (que esvazia a
+memória ao ser obtida). Ver "Leituras em lote" abaixo para ligar.
+
+Conferido nos dois caminhos: **a suíte inteira do backend passa com o serviço desligado
+e ligado** (`executar-backend.js` e `executar-backend.js --servico-avancado`, 1467
+verificações cada), e `testes/lote-backend.js` confere registro a registro (células
+vazias no fim, zero e falso, colunas extras, linhas espalhadas, conteúdo grande,
+cabeçalhos montados pelo lote) e as voltas ao caminho padrão (erro passageiro, API
+desabilitada, faixas a menos ou trocadas, data que não é ISO, `RAMA_SHEETS_API = 0`).
+
+Viagens ao Sheets, `testes/medir.js`, mesma mesa (20 contas, 61 fichas, 1 500 rolagens,
+uma ficha compartilhada), respostas com o MESMO tamanho nas três colunas:
+
+| operação | v2.45 | v2.46 padrão | v2.46 com lote |
+|---|---|---|---|
+| resumo (tela inicial) | 13 | 13 | 5 |
+| listar_personagens | 19 | 19 | 2 |
+| ler_personagem (ficha pequena) | 10 | 10 | 4 |
+| ler_personagem (Editor, ficha compartilhada) | 19 | 19 | 8 |
+| acesso_personagem (a vigia) | 14 | 13 | 3 |
+| listar_compartilhados_comigo | 17 | 17 | 5 |
+| listar_campanhas | 10 | 10 | 4 |
+| ler_campanha (mestre) | 18 | 18 | 3 |
+| listar_personagens_campanha — 8 fichas | 13 | 13 | 5 |
+| listar_personagens_campanha — cache vazio | 24 | 24 | 8 |
+| salvar_personagem (ficha pequena) | 22 | 11 | 10 |
+| salvar_personagem (ficha de 300 KB) | 15 | 11 | 10 |
+| ajustar_personagem (botão do mestre) | 17 | 14 | 10 |
+| ler_fotos (8 cartões) | 16 | 16 | 5 |
+| LOTE abrir ficha | 28 | 24 | 8 |
+| LOTE abrir ficha compartilhada | 31 | 30 | 9 |
+| LOTE abrir campanha | 30 | 29 | 7 |
+| recusa a ficha alheia | 20 | 17 | 4 |
+| **soma dos 33 cenários** | **470** | **442** | **218** |
+
+Os dados que atravessam entre o Sheets e o script praticamente não mudam (2 233 KB →
+2 214 KB → 2 244 KB): o lote pode trazer uma aba que a ação acabou não usando — custa
+células, nunca uma decisão.
+
+**O que não mudou de propósito:** a trava continua obtida antes das conferências de
+revisão, autorização e integridade dos blocos, e o manifesto continua sendo publicado
+do mesmo jeito; a pré-carga entra DEPOIS de obter a trava, então o tempo segurando a
+trava cai porque há menos viagens, não porque alguma verificação saiu dela.
+
+### Leituras em lote — como ligar (opcional)
+
+1. No editor do Apps Script: **Serviços** (o "+" ao lado de "Serviços") → **Google
+   Sheets API** → versão **v4** → identificador **`Sheets`** → **Adicionar**. Isso
+   acrescenta ao `appsscript.json`:
+   ```json
+   "dependencies": { "enabledAdvancedServices": [
+     { "userSymbol": "Sheets", "serviceId": "sheets", "version": "v4" } ] }
+   ```
+   O `backend/appsscript.json` do repositório fica com `"dependencies": {}` de
+   propósito — o serviço é opcional. Colar aquele arquivo por cima do manifesto
+   depois de ligar o serviço o desliga (e tudo continua funcionando).
+2. Crie uma versão nova da implantação (Implantar → Gerenciar implantações → editar →
+   Nova versão). O manifesto já declara o escopo `spreadsheets`, que é o que o
+   `batchGet` usa; se o Google ainda assim pedir autorização, autorize com a conta
+   que publica.
+3. Para desligar sem tirar o serviço: Script Properties → `RAMA_SHEETS_API` = `0`.
+
+**Desligado ou ausente:** `Sheets` não existe no script e toda leitura segue por
+`getValues`, como na v2.45 (com os cortes que valem sempre). **Falhando:** o erro vai
+para o log — `console.error` quando é configuração ou autorização (API não liberada no
+projeto, permissão), `console.warn` quando é passageiro — e a requisição inteira volta
+ao caminho padrão. **Cota:** a API do Sheets tem limite de leituras por minuto, por
+projeto e por usuário — e o app da Web roda como quem publica, então todas as
+requisições da mesa contam para a mesma conta. Uma mesa muito movimentada pode
+estourar esse limite; aí o lote falha com aviso (`loteFalhou: 1`) e a requisição
+segue pelo `getValues`, mais lenta, mas certa. Se isso aparecer com frequência no
+log, `RAMA_SHEETS_API` = `0`. Datas: o R.A.M.A. grava datas como texto ISO ou milissegundos; uma
+célula que a planilha tenha transformado em data faz aquela faixa voltar ao
+`getValues` (que devolve um objeto Date), para o resultado ser o mesmo.
+
+### Validar numa implantação
+
+Numa implantação **de teste** (nunca na que a mesa usa):
+
+1. Atualize os três `.gs` e crie uma versão nova da implantação.
+2. No editor, rode `ligarDiagnostico()`.
+3. Abra a página Personagens e uma ficha. Em **Execuções**, cada requisição tem uma
+   linha `R.A.M.A. perf {…}`. Sem o serviço avançado: `lotes: 0`. Com ele: `lotes ≥ 1`,
+   `preCarregadas` com as abas trazidas e `sheets` menor para `listar_personagens`,
+   `ler_personagem` e o `lote` da abertura da ficha. `loteFalhou: 1` quer dizer que o
+   lote falhou e a requisição voltou ao caminho padrão — o motivo está no log logo acima.
+4. Compare o `ms` de três aberturas seguidas com e sem o serviço (Script Properties
+   `RAMA_SHEETS_API` = `0` desliga sem mexer na implantação). Descarte a primeira de
+   cada série (arranque do contêiner).
+5. No navegador, `RAMARede.medicoes()` separa o tempo do servidor do da rede, e
+   `RAMAMedicao.ver()` mostra redesenhos, cálculos reaproveitados, envios poupados e
+   perguntas divididas entre abas.
+6. Rode `desligarDiagnostico()` ao terminar.
+
+### As ferramentas
+
+```bash
+deno run --allow-read testes/medir.js [--servico-avancado] [--backend pasta] [--rastro "rótulo"] [--json saida.json] [--comparar antes.json]
+deno run --allow-read testes/medir-salvamento.js [--anterior caminho/do/salvar.js]
+deno run --allow-read testes/executar-coordenacao.js
+deno run --allow-read --allow-env testes/executar-backend.js [--servico-avancado]
+deno run --allow-read --allow-net --allow-env testes/servidor-local.js [--porta 8124] [--backend pasta] [--site pasta]
+```
+
+`testes/servidor-local.js` serve o site com o backend no simulador, contas e fichas
+sintéticas (a de Ordem vem do retrato do Jeff, por `testes/medicao-fichas.js`) e os
+contadores do backend em `/__backend`. Na página da ficha:
+
+```js
+const m = await import("/testes/medir-interface.js");
+await m.medirFicha({ repeticoes: 3 });
+```
+
+---
+
+## Histórico — medições das versões anteriores
+
+As seções abaixo são das versões em que foram feitas e ficam como registro. Os números
+delas não foram refeitos.
+
 ## Criaturas — v2.28
 
 - O catálogo de criaturas (~210 KB) não vem com nenhuma página: carrega na primeira
@@ -220,6 +505,11 @@ conteúdo. A camada recusa, e há teste para isso.
 | papel para as marcas | `CacheService`, chave = época + campanha + conta + marcas de `membros` e `campanha` | 5 min | mudar membros, visibilidade ou nome troca a chave; `setupRama()` avança a época |
 | diretório de contas (v2.16) | `CacheService`, chave = época; guarda id → usuário, nome e ativo — nada além | 5 min | a época (senha, conta desativada, participantes); trocar o próprio nome apaga a entrada na hora |
 | imagens já baixadas (v2.16) | `localStorage` do navegador, chave = tipo + id + **versão** | enquanto couber, com descarte do mais velho | a versão muda quando a imagem muda; espaço cheio ou modo privado só fazem pedir de novo |
+| linhas e colunas lidas (v2.46) | memória da execução | a requisição | a trava as esvazia ao ser obtida; gravar na aba as esquece |
+| linha do índice existe (v2.46) | `CacheService`, chave = id do personagem | 6 h | excluir o personagem apaga; sem a marca, a varredura volta |
+| quantos compartilhamentos (v2.46) | `CacheService`, chave = época + id do personagem | 6 h | salvar compartilhamentos e excluir gravam a contagem nova na mesma requisição; só erra para o lado de negar |
+| ciclo de cálculo (v2.46) | memória do navegador, um desenho | o desenho | acaba com o desenho |
+| respostas entre abas (v2.46) | memória de cada aba, por chave e conta | a validade que cada aba pede | trocar de sessão apaga; resposta de outra conta é ignorada |
 
 Três limites que valem sem exceção:
 
@@ -424,6 +714,9 @@ R.A.M.A. perf {"acao":"listar_personagens_campanha","ms":812,"sessaoMs":34,
 | `fichas` | fichas remontadas — o número que o painel da mesa existe para manter em zero |
 | `blocos` | blocos de ficha lidos |
 | `resumos` | projeções aproveitadas / total |
+| `lotes` | (v2.46) leituras em lote pelo serviço avançado — cada uma conta também como uma viagem em `sheets` |
+| `preCarregadas` | (v2.46) abas trazidas inteiras pelos lotes |
+| `loteFalhou` | (v2.46) 1 quando o lote falhou e a requisição voltou ao `getValues`; o motivo está no log |
 | `resposta` | caracteres da resposta |
 
 Três coisas que ela não faz, de propósito: **não grava nada na planilha** (uma
@@ -600,12 +893,10 @@ Em ordem de esforço:
 2. **Reduzir `LADO_FOTO` em `js/config.js`.** Fotos menores são a maior
    economia disponível sem mexer em código.
 
-3. **Ligar o serviço avançado do Sheets.** A API `Sheets.Spreadsheets.
-   Values.batchGet` lê várias faixas numa chamada só, o que resolveria
-   o dilema do `lerCelulas()`. É gratuito, mas exige habilitar o serviço
-   no editor e passa a ser um passo a mais na instalação. Não foi
-   adotado por isso; a decisão está registrada aqui para ser revista com
-   dados.
+3. **Ligar o serviço avançado do Sheets.** Desde a v2.46 o backend usa
+   `Sheets.Spreadsheets.Values.batchGet` quando o serviço está habilitado —
+   ver "Leituras em lote — como ligar", no topo. Sem ele, tudo funciona pelo
+   caminho padrão.
 
 4. **Aumentar `TEMPO_LIMITE_MS`.** Não deixa nada mais rápido; só evita
    que o navegador desista de uma resposta que ia chegar.

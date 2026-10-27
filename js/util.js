@@ -515,4 +515,33 @@
     url: url,
     parametro: parametro,
   };
+
+  /* =================================================================
+     MEDIÇÃO LOCAL (v2.46)
+     -----------------------------------------------------------------
+     Contadores e tempos da interface — redesenhos completos e parciais,
+     cálculos reaproveitados, gravações enviadas e poupadas, consultas
+     compartilhadas entre abas. Somas de inteiros numa memória que morre
+     com a página: nada sai do navegador, nada é gravado, e nenhuma
+     decisão depende disto. Serve para medir antes e depois:
+
+       RAMAMedicao.ver()     { contagens: {...}, tempos: { nome: {n, totalMs, maxMs} } }
+       RAMAMedicao.zerar()
+     ================================================================= */
+  var contagens = {};
+  var tempos = {};
+  var relogio = (global.performance && global.performance.now) ? function () { return global.performance.now(); } : function () { return Date.now(); };
+
+  global.RAMAMedicao = {
+    agora: relogio,
+    contar: function (nome, n) { contagens[nome] = (contagens[nome] || 0) + (n === undefined ? 1 : n); },
+    tempo: function (nome, ms) {
+      var t = tempos[nome] || (tempos[nome] = { n: 0, totalMs: 0, maxMs: 0 });
+      t.n++;
+      t.totalMs = Math.round((t.totalMs + ms) * 100) / 100;
+      if (ms > t.maxMs) t.maxMs = Math.round(ms * 100) / 100;
+    },
+    ver: function () { return { contagens: JSON.parse(JSON.stringify(contagens)), tempos: JSON.parse(JSON.stringify(tempos)) }; },
+    zerar: function () { contagens = {}; tempos = {}; },
+  };
 })(window);

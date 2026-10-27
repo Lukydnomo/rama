@@ -58,7 +58,7 @@
     { chave: "rituais",      secao: "RAMASecaoRituais",
       rotulo: function () { return global.RAMASecaoRituais.rotulo(ctx); } },
     { chave: "inventario",   rotulo: "Inventário",  secao: "RAMASecaoInventario" },
-    { chave: "anotacoes",    rotulo: "Anotações",   secao: "RAMASecaoAnotacoes" },
+    { chave: "anotacoes",    rotulo: "Anotações",   secao: "RAMASecaoAnotacoes", independente: true },
     { chave: "aliados",      rotulo: "Aliados",     secao: "RAMASecaoAliados" },
   ];
 
@@ -70,7 +70,7 @@
     { chave: "rituais",      secao: "RAMASecaoRituais",
       rotulo: function () { return global.RAMASecaoRituais.rotulo(ctx); } },
     { chave: "inventario",   rotulo: "Inventário",  secao: "RAMASecaoInventario" },
-    { chave: "anotacoes",    rotulo: "Anotações",   secao: "RAMASecaoAnotacoes" },
+    { chave: "anotacoes",    rotulo: "Anotações",   secao: "RAMASecaoAnotacoes", independente: true },
     { chave: "regras",       rotulo: "Regras",      secao: "RAMASecaoOrdemRegras" },
     { chave: "aliados",      rotulo: "Aliados",     secao: "RAMASecaoAliados" },
   ];
@@ -303,7 +303,14 @@
         if (estado.salvador) estado.salvador.alterou();
       },
 
-      redesenhar: desenhar,
+      /* v2.46: as seções pedem o bloco, a tira e a seção; cabeçalho e
+         avisos ficam (o que muda neles tem caminho próprio: nome e
+         campanha por atualizarTitulo, modo e permissões pelo desenho
+         completo). */
+      redesenhar: function () { atualizar(["bloco", "abas", "conteudo"]); atualizarTitulo(); },
+      /* Mudança de ESTADO DE JOGO — recurso, condição, efeito, cena: o
+         bloco e a seção, se ela depender disso. */
+      atualizar: function (regioesPedidas, opcoes) { atualizar(regioesPedidas || ["bloco", "conteudo"], opcoes || { estadoDeJogo: true }); },
       atualizarTitulo: atualizarTitulo,
 
       definirFoto: function (imagem) {
@@ -342,6 +349,9 @@
     estado.salvador = global.RAMASalvador.criar({
       indicador: estado.indicador,
       esquema: global.RAMASync.ESQUEMA_FICHA,
+      /* `atualizadoEm` muda a cada toque e o servidor regrava: não conta
+         como conteúdo novo (v2.46). */
+      ignorarNaComparacao: ["atualizadoEm"],
 
       instantaneo: function () { return estado.ficha; },
 
@@ -456,36 +466,253 @@
     temPendencia: function () { return !!(estado.salvador && (estado.salvador.temPendencia() || estado.salvador.emConflito())); },
     salvarAgora: function () { return estado.salvador ? estado.salvador.agora() : Promise.resolve(); },
     recarregarSeLivre: recarregarSeLivre,
+    /* v2.46: o desenho completo e a troca de regiões, para quem embute a
+       ficha e para os testes de preservação (foco, texto em edição,
+       recolhíveis). Não gravam nada. */
+    redesenharTudo: function () { if (estado.ficha) desenhar(); },
+    atualizarRegioes: function (lista) { if (estado.ficha) atualizar(lista); },
   };
 
   /* =================================================================
      DESENHO
+     -----------------------------------------------------------------
+     REGIÕES (v2.46). A ficha é desenhada em cinco regiões, cada uma
+     num invólucro `display: contents` (a caixa visual é a mesma de
+     antes — os filhos continuam sendo itens do mesmo flex da ficha):
+
+       topo       nome, meta, indicador de gravação, modo, tema, menu
+       avisos     acesso compartilhado, mestre, modo edição
+       bloco      o que fica sempre à vista: foto, atributos, recursos,
+                  condições, defesa
+       abas       a tira de seções
+       conteudo   a seção aberta
+
+     desenhar() monta as cinco — é o caminho das mudanças estruturais
+     (modo, tipo, permissões, versão nova vinda do servidor, módulos).
+     atualizar(regiões) troca só as pedidas, no lugar, e o que não foi
+     pedido continua o MESMO nó do DOM: cabeçalho, botões e o que estava
+     sendo digitado ali não são reconstruídos.
+
+     O MAPA DE DEPENDÊNCIAS, do lado de quem muda:
+
+       trocar de seção                     abas + conteudo
+       recurso, condição, efeito, cena,    bloco + conteudo (a seção é
+       ação de recurso, bônus extra        poupada quando não depende do
+       (mudanças de ESTADO DE JOGO)        estado de jogo: Anotações)
+       ctx.redesenhar() das seções         bloco + abas + conteudo (o
+                                           rótulo de Rituais e os módulos
+                                           mudam a tira de abas)
+       nome, campanha                      atualizarTitulo(), no lugar
+
+     Cada atualização roda dentro de UM ciclo de cálculo do motor de
+     Ordem (RAMAOrdemRegras.ciclo): a mesma ficha é calculada uma vez
+     para o bloco e para a seção — e o ciclo acaba com o desenho, então
+     nada fica guardado para a próxima mudança.
+
+     Foco, seleção e cursor do campo em que a pessoa estava, o que ela
+     já tinha digitado e ainda não confirmou, e quais recolhíveis
+     estavam abertos são lembrados antes e devolvidos depois — no
+     desenho completo também.
      ================================================================= */
 
-  function desenhar() {
-    sincronizarTema();
-    var alvo = U.$("#ficha");
+  var ORDEM_DAS_REGIOES = ["topo", "avisos", "bloco", "abas", "conteudo"];
+  var regioes = null;
+
+  function medicao() { return global.RAMAMedicao || null; }
+
+  function emCiclo(fn) {
+    var R = global.RAMAOrdemRegras;
+    return R && R.ciclo && estado.ficha && F.ehDeOrdem(estado.ficha) ? R.ciclo(fn) : fn();
+  }
+
+  function secaoAtual() {
     var lista = abasDaFicha();
     var secao = lista.find(function (a) { return a.chave === estado.aba; }) || lista[0];
     /* A aba guardada pode não existir neste tipo de ficha (Progressão
        numa universal). A que aparece passa a ser a marcada. */
     estado.aba = secao.chave;
+    return secao;
+  }
+
+  function conteudoDaRegiao(nome, secao) {
+    switch (nome) {
+      case "topo": return [cabecalho()];
+      case "avisos": return [
+        avisoDeAcesso(),
+        estado.comoMestre && !somenteLeitura() ? avisoDeMestre() : null,
+        estado.modo === "edicao" ? avisoDeEdicao() : null,
+      ];
+      case "bloco": return [blocoSuperiorDaFicha()];
+      case "abas": return [abas()];
+      case "conteudo": return [el("div", { id: "aba-conteudo", role: "tabpanel", "aria-labelledby": "aba-" + secao.chave },
+        [global[secao.secao].aba(ctx)])];
+    }
+    return [];
+  }
+
+  function regiao(nome, secao) {
+    return el("div.ficha__regiao", { dataset: { regiao: nome } }, conteudoDaRegiao(nome, secao));
+  }
+
+  function desenhar() {
+    var m = medicao();
+    var inicio = m ? m.agora() : 0;
+    sincronizarTema();
+    var alvo = U.$("#ficha");
+    var memoria = lembrarTela(estado.raiz);
 
     if (somenteLeitura()) estado.modo = "normal";
-    estado.raiz = el("div.ficha", { dataset: { modo: estado.modo }, class: somenteLeitura() ? "ficha--leitura" : "" }, [
-      cabecalho(),
-      avisoDeAcesso(),
-      estado.comoMestre && !somenteLeitura() ? avisoDeMestre() : null,
-      estado.modo === "edicao" ? avisoDeEdicao() : null,
-      blocoSuperiorDaFicha(),
-      abas(),
-      el("div", { id: "aba-conteudo", role: "tabpanel", "aria-labelledby": "aba-" + secao.chave },
-        [global[secao.secao].aba(ctx)]),
-    ]);
+    emCiclo(function () {
+      var secao = secaoAtual();
+      regioes = {};
+      estado.raiz = el("div.ficha", { dataset: { modo: estado.modo }, class: somenteLeitura() ? "ficha--leitura" : "" },
+        ORDEM_DAS_REGIOES.map(function (n) { return (regioes[n] = regiao(n, secao)); }));
+    });
 
     U.trocar(alvo, estado.raiz);
     aplicarLeitura(estado.raiz);
+    devolverTela(memoria);
     manterNaTela();
+    if (m) { m.contar("ficha.desenho.completo"); m.tempo("ficha.desenho.completo", m.agora() - inicio); }
+  }
+
+  /* Troca só as regiões pedidas. Sem a ficha desenhada (ou com ela fora
+     da página), faz o desenho completo. `opcoes.estadoDeJogo`: a mudança
+     foi de recurso/condição — a seção aberta só é refeita se depender
+     disso. */
+  function atualizar(pedidas, opcoes) {
+    var o = opcoes || {};
+    if (!estado.raiz || !regioes || !estado.raiz.isConnected) { desenhar(); return; }
+    var m = medicao();
+    var inicio = m ? m.agora() : 0;
+    var lista = (pedidas && pedidas.length ? pedidas : ["bloco", "conteudo"]).filter(function (n) { return !!regioes[n]; });
+    sincronizarTema();
+    var memoria = lembrarTela(estado.raiz);
+    var feitas = [];
+
+    emCiclo(function () {
+      var secao = secaoAtual();
+      lista.forEach(function (n) {
+        if (n === "conteudo" && o.estadoDeJogo && secao.independente) return;
+        var novo = regiao(n, secao);
+        regioes[n].replaceWith(novo);
+        regioes[n] = novo;
+        aplicarLeitura(novo);
+        feitas.push(n);
+      });
+    });
+
+    devolverTela(memoria);
+    manterNaTela();
+    if (m) {
+      m.contar("ficha.desenho.parcial");
+      feitas.forEach(function (n) { m.contar("ficha.regiao." + n); });
+      m.tempo("ficha.desenho.parcial", m.agora() - inicio);
+    }
+  }
+
+  /* ---------- o que a pessoa estava fazendo na tela ---------- */
+
+  /* O campo em foco (pelo data-foco ou pelo id), a seleção e o texto
+     ainda não confirmado; e o estado aberto/fechado de cada recolhível,
+     pela seção em que está e pelo texto do resumo. */
+  function lembrarTela(raiz) {
+    if (!raiz) return null;
+    var memoria = { foco: null, detalhes: {} };
+    var ativo = document.activeElement;
+    if (ativo && ativo !== document.body && raiz.contains(ativo)) {
+      /* id gerado a cada desenho (UI.campo: "c-" + 8 hex) não serve de
+         chave: aí vale a posição — região, tipo, rótulo e a ordem entre
+         os iguais. */
+      var idEstavel = ativo.id && !/^c-[0-9a-f]{8}$/.test(ativo.id);
+      var seletor = ativo.dataset && ativo.dataset.foco ? '[data-foco="' + cssEscapar(ativo.dataset.foco) + '"]'
+        : (idEstavel ? "#" + cssEscapar(ativo.id) : null);
+      var posicao = seletor ? null : posicaoDoCampo(ativo);
+      if (seletor || posicao) {
+        var f = { seletor: seletor, posicao: posicao, sel: null, valor: null };
+        try {
+          if (typeof ativo.selectionStart === "number") f.sel = [ativo.selectionStart, ativo.selectionEnd, ativo.selectionDirection];
+        } catch (e) { f.sel = null; }
+        /* Texto digitado e ainda não confirmado (o campo grava no change). */
+        if ((ativo.tagName === "INPUT" || ativo.tagName === "TEXTAREA") && ativo.value !== ativo.defaultValue) f.valor = ativo.value;
+        memoria.foco = f;
+      }
+    }
+    U.$$("details", raiz).forEach(function (d) {
+      var chave = chaveDoDetalhe(d);
+      if (chave) memoria.detalhes[chave] = d.open;
+    });
+    return memoria;
+  }
+
+  function devolverTela(memoria) {
+    if (!memoria || !estado.raiz) return;
+    U.$$("details", estado.raiz).forEach(function (d) {
+      var chave = chaveDoDetalhe(d);
+      if (chave && memoria.detalhes[chave] !== undefined && d.open !== memoria.detalhes[chave]) d.open = memoria.detalhes[chave];
+    });
+    var f = memoria.foco;
+    if (!f) return;
+    var alvo = f.seletor ? estado.raiz.querySelector(f.seletor) : campoNaPosicao(f.posicao);
+    if (!alvo) return;
+    if (f.valor !== null && "value" in alvo && !alvo.readOnly && !alvo.disabled) alvo.value = f.valor;
+    if (alvo !== document.activeElement) {
+      try { alvo.focus({ preventScroll: true }); } catch (e) { alvo.focus(); }
+    }
+    if (f.sel) { try { alvo.setSelectionRange(f.sel[0], f.sel[1], f.sel[2]); } catch (e) { /* campo sem seleção */ } }
+  }
+
+  /* A seção (região e aba) mais o texto do resumo e a ordem entre os de
+     mesmo texto: dois itens "Faca" na mesma lista não se confundem. */
+  function chaveDoDetalhe(d) {
+    var resumo = d.querySelector("summary");
+    if (!resumo) return null;
+    var reg = d.closest("[data-regiao]");
+    var base = (reg ? reg.dataset.regiao : "") + "|" + (reg && reg.dataset.regiao === "conteudo" ? estado.aba : "") + "|" +
+      String(resumo.textContent || "").replace(/\s+/g, " ").trim().slice(0, 120);
+    var irmaos = 0;
+    var anterior = d.previousElementSibling;
+    while (anterior) {
+      if (anterior.tagName === "DETAILS") {
+        var r2 = anterior.querySelector("summary");
+        if (r2 && String(r2.textContent || "").replace(/\s+/g, " ").trim().slice(0, 120) === base.split("|")[2]) irmaos++;
+      }
+      anterior = anterior.previousElementSibling;
+    }
+    return base + "|" + irmaos;
+  }
+
+  function rotuloDoCampo(n) {
+    var rotulo = (n.labels && n.labels[0] && n.labels[0].textContent) || n.getAttribute("aria-label") || n.getAttribute("placeholder") || n.name || "";
+    return String(rotulo).replace(/\s+/g, " ").trim().slice(0, 80);
+  }
+
+  function parecidos(regiaoNo, n) {
+    var tipo = n.tagName + "|" + (n.type || "") + "|" + rotuloDoCampo(n);
+    return U.$$(n.tagName.toLowerCase(), regiaoNo).filter(function (x) {
+      return x.tagName + "|" + (x.type || "") + "|" + rotuloDoCampo(x) === tipo;
+    });
+  }
+
+  function posicaoDoCampo(n) {
+    if (!/^(INPUT|TEXTAREA|SELECT|BUTTON)$/.test(n.tagName)) return null;
+    var reg = n.closest("[data-regiao]");
+    if (!reg) return null;
+    var lista = parecidos(reg, n);
+    var i = lista.indexOf(n);
+    return i < 0 ? null : { regiao: reg.dataset.regiao, aba: estado.aba, tag: n.tagName, tipo: n.type || "", rotulo: rotuloDoCampo(n), indice: i };
+  }
+
+  function campoNaPosicao(p) {
+    if (!p || !regioes || !regioes[p.regiao] || (p.regiao === "conteudo" && p.aba !== estado.aba)) return null;
+    var candidatos = U.$$(p.tag.toLowerCase(), regioes[p.regiao]).filter(function (x) {
+      return (x.type || "") === p.tipo && rotuloDoCampo(x) === p.rotulo;
+    });
+    return candidatos[p.indice] || null;
+  }
+
+  function cssEscapar(v) {
+    return global.CSS && global.CSS.escape ? global.CSS.escape(String(v)) : String(v).replace(/["\\]/g, "\\$&");
   }
 
   /* Trocar o conteúdo inteiro pode deixar a página mais curta do que a
@@ -759,7 +986,8 @@
   function trocarAba(chave) {
     estado.aba = chave;
     guardarAba(chave);
-    desenhar();
+    /* Trocar de seção não muda a ficha: só a tira e a seção (v2.46). */
+    atualizar(["abas", "conteudo"]);
 
     /* Se a pessoa já estava lendo abaixo da tira de abas, a aba nova
        precisa começar visível. Se ela estava olhando os atributos, lá
@@ -911,17 +1139,41 @@
     return !estado.capacidades.dono || !!(a && a.compartilhamentos > 0);
   }
 
+  /* ENTRE ABAS (v2.46): a mesma pergunta, com a mesma conta, é dividida
+     com as outras abas deste navegador (js/coordenacao.js) — a resposta
+     de uma vale para as outras, e chega a elas na hora. */
+  function chaveDaVigia() { return "acesso:" + estado.personagemId; }
+
+  function perguntaDividida() {
+    var C = global.RAMACoordenacao;
+    if (!C) return null;
+    if (!vigia.dividida) {
+      vigia.dividida = C.compartilhada(chaveDaVigia(), function () {
+        return global.RAMAApi.acessoPersonagem(estado.personagemId);
+      }, { aceitar: function (r) { return !!(r && (r.ok || r.erro === "nao_encontrado" || r.erro === "sem_permissao")); } });
+    }
+    return vigia.dividida;
+  }
+
   function ligarVigia() {
     if (vigia.ativa || !precisaDeVigia()) return;
     vigia.ativa = true;
     agendarVigia();
     document.addEventListener("visibilitychange", aoMudarVisibilidade);
+    if (global.RAMACoordenacao && !vigia.deixarDeOuvir) {
+      vigia.deixarDeOuvir = global.RAMACoordenacao.ouvir(chaveDaVigia(), function (r) {
+        if (!vigia.ativa || vigia.consultando || document.visibilityState === "hidden") return;
+        clearTimeout(vigia.timer);
+        processarAcesso(r);
+      });
+    }
   }
 
   function pararVigia() {
     vigia.ativa = false;
     clearTimeout(vigia.timer);
     document.removeEventListener("visibilitychange", aoMudarVisibilidade);
+    if (vigia.deixarDeOuvir) { vigia.deixarDeOuvir(); vigia.deixarDeOuvir = null; }
   }
 
   function agendarVigia(ms) {
@@ -942,12 +1194,20 @@
     vigia.consultando = true;
     var r;
     try {
-      r = await global.RAMAApi.acessoPersonagem(estado.personagemId);
+      /* Forçada (uma gravação acabou de ser recusada): pergunta de novo,
+         sem reaproveitar resposta de outra aba. */
+      var dividida = forcar === true ? null : perguntaDividida();
+      r = dividida ? await dividida(Math.round(VIGIA_MS * 0.9)) : await global.RAMAApi.acessoPersonagem(estado.personagemId);
     } finally {
       vigia.consultando = false;
     }
     if (!vigia.ativa) return;
+    await processarAcesso(r);
+  }
 
+  /* A resposta da pergunta de acesso — desta aba ou de outra. */
+  async function processarAcesso(r) {
+    if (!vigia.ativa) return;
     if (!r || !r.ok) {
       if (r && (r.erro === "nao_encontrado" || r.erro === "sem_permissao")) { perderAcesso(); return; }
       /* Servidor antigo (ação desconhecida): a vigia não existe lá. */

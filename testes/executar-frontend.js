@@ -1122,7 +1122,9 @@ t.grupo("Ficha em blocos — a resposta se perdeu: o salvador repete o MESMO ped
 {
   const estado = { ficha: { nome: "Grande", anotacao: "a".repeat(120000) } };
   const servidor = servidorDeFicha(estado.ficha, 4);
-  const { salvador, estados } = salvadorDeTeste(servidor, estado);
+  /* v2.46: o que entra durante um envio espera a sua vez (a espera
+     curta aqui só deixa o teste rápido). */
+  const { salvador, estados } = salvadorDeTeste(servidor, estado, { espera: 5, esperaMaxima: 40 });
 
   estado.ficha = Object.assign({}, estado.ficha, { nome: "Grande editada" });
   servidor.perderResposta = 1;
@@ -1135,7 +1137,7 @@ t.grupo("Ficha em blocos — a resposta se perdeu: o salvador repete o MESMO ped
   estado.ficha = Object.assign({}, estado.ficha, { nome: "Grande editada de novo" });
   salvador.alterou();
   await salvador.agora();
-  await new Promise((r) => setTimeout(r, 30));
+  await new Promise((r) => setTimeout(r, 60));
   await esvaziar();
 
   const [primeiro, repetido, seguinte] = servidor.pedidos;
@@ -1219,6 +1221,81 @@ t.grupo("Compartilhamento (v2.44) — acesso retirado com a ficha aberta");
     t.igual("  travado (Editor rebaixado), nada mais sobe", servidor.pedidos.length, 1);
     salvador.parar();
   }
+}
+
+t.grupo("Salvamento (v2.46) — agrupar sem adiar para sempre, e não gravar o que não mudou");
+
+{
+  /* Digitar sem parar: o prazo máximo faz a alteração subir. */
+  const estado = { ficha: { nome: "Contínua", texto: "" } };
+  const servidor = servidorDeFicha(estado.ficha, 1);
+  const { salvador } = salvadorDeTeste(servidor, estado, { espera: 60, esperaMaxima: 200, ignorarNaComparacao: ["atualizadoEm"] });
+  const inicio = Date.now();
+  while (Date.now() - inicio < 520) {
+    estado.ficha = Object.assign({}, estado.ficha, { texto: estado.ficha.texto + "x" });
+    salvador.alterou();
+    await new Promise((r) => setTimeout(r, 25));
+  }
+  t.ok("teclas a cada 25 ms por meio segundo, espera de 60 ms e prazo de 200 ms: sobe ANTES de parar (" + servidor.pedidos.length + " envios)",
+    servidor.pedidos.length >= 2);
+  await new Promise((r) => setTimeout(r, 150));
+  await esvaziar();
+  t.ok("  e, ao parar, o último estado sobe", servidor.pedidos.length >= 3 && servidor.ficha.texto === estado.ficha.texto && !salvador.temPendencia());
+  salvador.parar();
+}
+
+{
+  /* Só `atualizadoEm` mudou: nada a gravar. */
+  const estado = { ficha: { nome: "Igual", pv: 3, atualizadoEm: "a" } };
+  const servidor = servidorDeFicha(estado.ficha, 2);
+  const estados = [];
+  const { salvador } = salvadorDeTeste(servidor, estado, { espera: 5, ignorarNaComparacao: ["atualizadoEm"],
+    indicador: { definir: (n) => estados.push(n), salvoAgora: () => estados.push("salvo"), parar() {} } });
+  estado.ficha = Object.assign({}, estado.ficha, { pv: 4, atualizadoEm: "b" });
+  salvador.alterou();
+  estado.ficha = Object.assign({}, estado.ficha, { pv: 3, atualizadoEm: "c" });
+  salvador.alterou();
+  await new Promise((r) => setTimeout(r, 40));
+  await esvaziar();
+  t.igual("mudar e desfazer (só a data mudou): nenhuma gravação", servidor.pedidos.length, 0);
+  t.ok("  e a tela volta a dizer 'Salvo', sem pendência", estados[estados.length - 1] === "salvo" && !salvador.temPendencia());
+  estado.ficha = Object.assign({}, estado.ficha, { pv: 9, atualizadoEm: "d" });
+  salvador.alterou();
+  await new Promise((r) => setTimeout(r, 40));
+  await esvaziar();
+  t.ok("uma mudança de verdade sobe, com a data junto", servidor.pedidos.length === 1 && servidor.ficha.pv === 9 && servidor.ficha.atualizadoEm === "d");
+  salvador.parar();
+}
+
+{
+  /* Conciliação: o estado mesclado precisa subir mesmo sendo igual à
+     tela — o servidor ainda não o tem. */
+  if (!globalThis.RAMASync) (0, eval)(await Deno.readTextFile(new URL("../js/sync.js", import.meta.url)));
+  const estado = { ficha: { nome: "Concilia", a: 1, b: 1 } };
+  const servidor = servidorDeFicha(estado.ficha, 1);
+  const { salvador } = salvadorDeTeste(servidor, estado, { espera: 5, esperaMaxima: 50, ignorarNaComparacao: ["atualizadoEm"] });
+  servidor.ficha = { nome: "Concilia", a: 1, b: 2 };
+  servidor.rev = 2;
+  estado.ficha = { nome: "Concilia", a: 5, b: 1 };
+  salvador.alterou();
+  await new Promise((r) => setTimeout(r, 60));
+  await esvaziar();
+  await new Promise((r) => setTimeout(r, 30));
+  await esvaziar();
+  t.ok("conflito conciliado sozinho: o resultado (a daqui, b de lá) sobe", servidor.ficha.a === 5 && servidor.ficha.b === 2 && !salvador.temPendencia());
+  salvador.parar();
+}
+
+{
+  /* "Salvar agora" não espera. */
+  const estado = { ficha: { nome: "Agora", n: 0 } };
+  const servidor = servidorDeFicha(estado.ficha, 1);
+  const { salvador } = salvadorDeTeste(servidor, estado, { espera: 5000, esperaMaxima: 9000 });
+  estado.ficha = { nome: "Agora", n: 1 };
+  salvador.alterou();
+  await salvador.agora();
+  t.ok("Salvar agora envia na hora, mesmo com espera longa", servidor.pedidos.length === 1 && servidor.ficha.n === 1);
+  salvador.parar();
 }
 
 t.grupo("Compartilhamento (v2.44) — pedidos");

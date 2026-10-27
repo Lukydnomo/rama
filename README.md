@@ -51,7 +51,8 @@ preferências de tela — nunca é tratado como banco.
     ficha.js            modelo da ficha, padrões e normalização
     validacao.js        validação central, incluindo importação
     sync.js             conciliação de três vias e tela de conflito
-    salvar.js           debounce, fila, backoff, revisão
+    salvar.js           debounce com prazo máximo, fila, backoff, revisão
+    coordenacao.js      leituras equivalentes divididas entre abas do mesmo navegador
     imagem.js           decodificação (com orientação EXIF), recorte, redução e codificação
     imagem-editor.js    o editor de recorte e enquadramento, o mesmo para todo envio de imagem
     importar.js         janela de importação com prévia
@@ -242,10 +243,16 @@ avisam sem bloquear, adicionar que não resolve pendência de progressão, a mig
 do texto de "Efeito" para "Descrição" numa ficha antiga e a ficha atravessando
 salvar, exportar e importar.
 
-**Permissões, concorrência e armazenamento do backend** — 1075 verificações:
+**Permissões, concorrência e armazenamento do backend** — 1467 verificações, que
+rodam também com o serviço avançado do Sheets simulado (as leituras em lote da
+v2.46 têm de dar o mesmo resultado que o caminho padrão):
 
 ```bash
 deno run --allow-read testes/executar-backend.js
+```
+
+```bash
+deno run --allow-read testes/executar-backend.js --servico-avancado
 ```
 
 Carregam os três arquivos do Apps Script num simulador da plataforma
@@ -435,11 +442,26 @@ navegador. Todas as do terminal foram pegas; das do gesto, cinco — a sexta é
 equivalente: tirar a guarda de clique da alça não muda nada, porque a alça é um
 botão, e um botão dentro do resumo de um cartão não o abre.
 
+**Coordenação entre abas** — 19 verificações (respostas divididas entre abas da
+mesma conta, nunca entre contas; aba que fecha ou falha no meio; troca de sessão;
+gravação nenhuma coordenada):
+
+```bash
+deno run --allow-read testes/executar-coordenacao.js
+```
+
 **Custo das operações** — não é teste, é medição:
 
 ```bash
 deno run --allow-read testes/medir.js
 ```
+
+```bash
+deno run --allow-read testes/medir-salvamento.js
+```
+
+`testes/servidor-local.js` serve o site com o backend simulado e contas sintéticas,
+para medir a interface no navegador (`testes/medir-interface.js`).
 
 Ver [docs/PERFORMANCE.md](docs/PERFORMANCE.md) para o que esses números podem e
 não podem dizer.
@@ -564,6 +586,16 @@ próprio `<script src>`, então funciona debaixo de subpasta sem ajuste.
 segredo nenhum — ele os lê das Script Properties. Publicá-lo não expõe nada.
 
 ### Atualizar o backend
+
+**v2.46.0 — ENXUTO:** desempenho. Troque `Dados.gs`, `Codigo.gs` e `Campanhas.gs`
+no Apps Script, crie uma versão nova da implantação e publique o site. Não há aba,
+coluna nem formato novo: `setupRama()` não é necessário, e nenhuma ficha é migrada.
+Opcional — leituras em lote: no editor, **Serviços** → **Google Sheets API** (v4,
+identificador `Sheets`) → **Adicionar**, e crie a versão da implantação depois
+disso (o Google pode pedir autorização de novo). Sem o serviço, tudo funciona pelo
+caminho de sempre; com ele ligado, a Script Property `RAMA_SHEETS_API` = `0`
+desliga sem mexer na implantação. Ver [docs/PERFORMANCE.md](docs/PERFORMANCE.md),
+"Leituras em lote — como ligar" e "Validar numa implantação".
 
 **v2.45.0 — BALUARTE:** só o site (campos da Defesa na ficha universal). Nada de
 `.gs` nem `setupRama()`. Abas abertas na versão anterior recusam fichas 22 e pedem

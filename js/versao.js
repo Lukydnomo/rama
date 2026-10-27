@@ -70,6 +70,23 @@
 
   var CHANGELOG = [
     {
+      versao: "2.46.0", codinome: "ENXUTO", data: "26/10/2026",
+      mudancas: {
+        "Performance": [
+          "A ficha não se redesenha mais inteira a cada clique. Ela é montada em cinco partes (topo, avisos, bloco de atributos e recursos, abas e seção aberta) e uma mudança troca só as que dependem dela: Dano, Cura, Nova cena, condições e trocar de aba deixaram de refazer o cabeçalho e o resto da página. Com a aba Perícias aberta, Dano e Cura passaram de 133 ms para 113 ms de trabalho no navegador; trocar três abas, de 95 ms para 56 ms (medido nesta máquina, com uma ficha de Ordem completa). Foco, seleção, texto ainda não confirmado, rolagem e recolhíveis abertos ficam como estavam — antes, um redesenho fechava o que estava aberto.",
+          "As regras de Ordem calculam uma vez por desenho. A progressão, os modificadores e o resultado da ficha eram refeitos — e a ficha serializada — centenas de vezes por desenho; agora são reaproveitados dentro dele (624 → 4 serializações num desenho da aba Perícias). Os valores e as explicações são os mesmos.",
+          "O salvamento automático junta mais e nunca adia para sempre: espera 800 ms (antes 400) e manda em até 4 s desde a primeira alteração pendente, mesmo digitando sem parar (antes, um texto contínuo ficava só na tela até a pessoa parar). Uma alteração que volta ao que o servidor já tem não grava. Em sequências reproduzíveis de edição, 37 gravações viraram 21. “Salvar agora”, fechar a aba e mudar de aba continuam mandando na hora.",
+          "Abas do mesmo navegador dividem as consultas. Duas abas com a mesma campanha aberta faziam cada uma a sua pergunta de sincronização; agora uma pergunta e as outras recebem a resposta na hora (14 → 8 perguntas por minuto com duas cópias da mesa). O mesmo vale para a conferência de acesso de uma ficha compartilhada. Só leituras são divididas, nunca gravações, e só entre abas da mesma conta; nenhuma credencial passa entre as abas.",
+          "O backend lê menos a planilha: a linha da ficha é lida uma vez por requisição, o salvamento só confere a campanha quando ela muda, e a ficha sem compartilhamentos não varre a aba de acessos. Com o serviço avançado do Google Sheets ligado (opcional, ver docs/PERFORMANCE.md), as leituras de várias abas vêm numa viagem só: no simulador, listar personagens caiu de 19 para 2 viagens, abrir uma campanha de 30 para 7, e a soma dos 33 cenários de 470 para 218. Sem o serviço, tudo funciona pelo caminho de sempre (470 → 442).",
+        ],
+        "Técnico": [
+          "Ficha em regiões (`atualizar(regioes)` em js/paginas/ficha.js) com `.ficha__regiao { display: contents }`; ciclo de cálculo (`RAMAOrdemRegras.ciclo`, `RAMAOrdemProgressao.abrirCiclo`) reaproveitado por identidade e marca, sem serialização e sem cache entre desenhos; js/coordenacao.js (`RAMACoordenacao`, BroadcastChannel `rama.coordenacao.v1`, chave + conta, espera de 6 s, sem eleição de líder) usado por js/sincronia.js e pela vigia da ficha; `DEBOUNCE_MS` 800 e `DEBOUNCE_MAXIMO_MS` 4000; `RAMAMedicao` (js/util.js) com contadores locais.",
+          "Backend: `lerFaixasEmLote` e `preCarregar` em Dados.gs com `Sheets.Spreadsheets.Values.batchGet` quando o serviço existe (faixas abertas, células vazias completadas, conferência de quantidade, ordem e aba, guarda de datas, erro de configuração em `console.error` e passageiro em `console.warn`, volta ao `getValues` pelo resto da execução; `RAMA_SHEETS_API = 0` desliga); `abasDaAcao` em Codigo.gs; marca do índice e contagem de compartilhamentos no CacheService (só erra para o lado de negar). Diagnóstico ganha `lotes`, `preCarregadas` e `loteFalhou`. Sem coluna, aba ou formato novo: atualizar Dados.gs, Codigo.gs e Campanhas.gs e criar uma versão nova da implantação; `setupRama()` não é necessário.",
+          "Testes: suíte do backend inteira nos dois caminhos (1467 verificações com e sem o serviço avançado); testes/lote-backend.js (equivalência registro a registro e as voltas ao caminho padrão); testes/executar-coordenacao.js (19); salvamento e ciclo de cálculo em executar-frontend.js e executar-cris.js. Ferramentas novas: testes/servidor-local.js, testes/medir-interface.js, testes/medir-salvamento.js e opções `--servico-avancado`, `--backend` e `--rastro` em testes/medir.js. Os números acima são do simulador e do navegador local — nenhum veio de uma implantação real.",
+        ],
+      },
+    },
+    {
       versao: "2.45.0", codinome: "BALUARTE", data: "26/10/2026",
       mudancas: {
         "Adicionado": [
