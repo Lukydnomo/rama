@@ -1169,10 +1169,16 @@
      mesmo tempo". Não é um quinto elemento de afinidade: é uma
      MANIFESTAÇÃO, que guarda os dois elementos de verdade. Os poderes
      paranormais de Transmissão (p. 62) usam o nome para se agrupar; o
-     livro não dá a eles afinidade, dano ou opressão próprios. */
+     livro não dá a eles afinidade, dano ou opressão próprios.
+     Intenção (v2.48.1) é a outra união impossível: Sangue e
+     Conhecimento, a manifestação da Coroa de Espinhos. Os poderes
+     paranormais de Intenção (AS2 p. 94-95) se agrupam por ela; a regra
+     de concessão deles continua a do AS2 (contato com a Coroa, mesa). */
   var MANIFESTACOES = [
     { chave: "transmissao", nome: "Transmissão", elementos: ["conhecimento", "energia"], fonte: AS5, pagina: 46,
       resumo: "A união de Conhecimento e Energia nascida dos Sinos de Tenebris. Criaturas de Transmissão pertencem aos dois elementos ao mesmo tempo." },
+    { chave: "intencao", nome: "Intenção", elementos: ["sangue", "conhecimento"], fonte: AS2, pagina: 94,
+      resumo: "A união de Sangue e Conhecimento, ligada à Coroa de Espinhos. Os poderes de Intenção só valem depois do gatilho de cada um." },
   ];
   var POR_MANIFESTACAO = {};
   MANIFESTACOES.forEach(function (m) { POR_MANIFESTACAO[m.chave] = m; });

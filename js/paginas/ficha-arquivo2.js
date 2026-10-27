@@ -146,7 +146,7 @@
     var int = o.intencao || { contato: {}, poderes: [] };
     var linhas = [el("h4.t-secao", { texto: "Intenção" })];
     if (!int.contato.registrado) {
-      linhas.push(el("p.t-mini", { texto: "Poderes de Intenção pedem contato com a Coroa de Espinhos (Arquivos Secretos 2, p. 94). Registre o contato quando a história o der." }));
+      linhas.push(el("p.t-mini", { texto: "Poderes paranormais de Intenção (Sangue + Conhecimento) pedem contato com a Coroa de Espinhos (Arquivos Secretos 2, p. 94). Registre o contato quando a história o der." }));
       linhas.push(botao("Registrar contato com a Coroa de Espinhos", function () {
         UI.pedirTexto({ titulo: "Contato com a Coroa de Espinhos", rotulo: "Como foi (nota)", valor: "", limite: 300 }).then(function (t) {
           if (t === null || t === undefined) return;

@@ -1032,9 +1032,7 @@
         el("div.r-busca", {}, [el("span.r-busca__marca", {}, [UI.simbolo("busca")]), busca]),
         seletores.childNodes.length ? seletores : null,
         el("p.t-mini", {
-          texto: estado.aba === "intencao"
-            ? "Consulta e cópia de texto. Trazer daqui NÃO concede o poder, não registra o contato com a Coroa de Espinhos e não soma nada: o poder com efeito vem da seção Intenção (regra opcional Poderes de Intenção, na aba Regras)."
-            : estado.aba === "sacrificio"
+          texto: estado.aba === "sacrificio"
               ? "Consulta e cópia de texto. Trazer daqui NÃO concede o poder: ele vem do estigma registrado pela mesa no painel do Arquivos Secretos 3 (regra opcional Poderes de Sacrifício)."
               : "Trazer daqui copia o texto para a lista de habilidades. Nada entra nas contas por este caminho: poderes com efeito são escolhidos na aba Progressão.",
         }),

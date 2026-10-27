@@ -30,14 +30,20 @@
     { chave: "sobrevivente", rotulo: "Sobrevivente" },
     { chave: "origens",      rotulo: "Origens" },
     { chave: "gerais",       rotulo: "Poderes gerais" },
+    /* Os poderes paranormais por elemento e, depois, pelas manifestações
+       — as uniões impossíveis de elementos: Transmissão (AS5) e, desde a
+       v2.48.1, Intenção (AS2 p. 94-95), que tinha aba própria. */
     { chave: "paranormais",  rotulo: "Poderes paranormais" },
-    /* v2.31: os poderes de Intenção (AS2 p. 94-95), da MESMA fonte que a
-       seção Intenção da aba Habilidades usa (PODERES_INTENCAO). */
-    { chave: "intencao",     rotulo: "Poderes de Intenção" },
     /* v2.33: os poderes de Sacrifício (AS3 p. 110-111) — categoria
        própria, não são poderes de Intenção. */
     { chave: "sacrificio",   rotulo: "Poderes de Sacrifício" },
   ];
+
+  var NOTA_DA_MANIFESTACAO = {
+    transmissao: "Arquivos Secretos 5, p. 62–63. Pré-requisito: a conexão com o Sino de Transmissão, confirmada pela mesa. Só funcionam quando dois ou mais seres têm o mesmo poder. Sem afinidade.",
+    intencao: "Arquivos Secretos 2, p. 94-95. Pedem contato com a Coroa de Espinhos e só valem depois do gatilho. Não vêm de Transcender nem de afinidade: " +
+      "a mesa concede na seção Intenção da aba Habilidades, com a regra opcional Poderes de Intenção ligada. Consultar e copiar o texto não concede o poder.",
+  };
 
   /* O nome curto de cada livro sai do registro único (C.LIVROS). */
   var ROTULO_FONTE = C.mapaDosLivros ? C.mapaDosLivros("curto") : { OPRPG: "Livro básico", SAH: "Sobrevivendo ao Horror", AS1: "Arquivos Secretos 1", AS2: "Arquivos Secretos 2", AS3: "Arquivos Secretos 3", AS4: "Arquivos Secretos 4", AS5: "Arquivos Secretos 5" };
@@ -64,30 +70,23 @@
       var grupos = C.ELEMENTOS_AFINIDADE.map(function (k) {
         return { chave: k, titulo: (C.elemento(k) || {}).nome || k, filtro: function (p) { return p.elemento === k; } };
       }).concat((C.MANIFESTACOES || []).map(function (m) {
-        /* Transmissão (AS5 p. 62): poderes paranormais que pedem a conexão
-           com o Sino e só funcionam com outro ser que tenha o mesmo poder. */
-        return { chave: m.chave, titulo: m.nome, filtro: function (p) { return p.elemento === m.chave; },
-          nota: "Arquivos Secretos 5, p. 62–63. Pré-requisito: a conexão com o Sino de Transmissão, confirmada pela mesa. Só funcionam quando dois ou mais seres têm o mesmo poder. Sem afinidade." };
+        /* Uma manifestação junta dois elementos de verdade; a seção diz
+           quais e como o poder é obtido. */
+        return { chave: m.chave, titulo: m.nome + " (" + m.elementos.map(function (k) { return (C.elemento(k) || {}).nome || k; }).join(" + ") + ")",
+          filtro: function (p) { return p.elemento === m.chave; }, nota: NOTA_DA_MANIFESTACAO[m.chave] || "" };
       })).concat([{ chave: "sem", titulo: "Sem elemento fixo", filtro: function (p) { return !p.elemento; } }]);
 
+      /* Os de Intenção ficam na lista própria (PODERES_INTENCAO): não
+         entram em Transcender nem na afinidade — só aparecem aqui. */
+      var paranormais = P.PODERES_PARANORMAIS.concat(P.PODERES_INTENCAO || []);
       return grupos.map(function (g) {
         return {
           chave: g.chave,
           titulo: g.titulo,
           nota: g.nota || "",
-          entradas: P.PODERES_PARANORMAIS.filter(g.filtro).sort(porNome).map(function (p) { return { entrada: p, classe: "" }; }),
+          entradas: paranormais.filter(g.filtro).sort(porNome).map(function (p) { return { entrada: p, classe: "" }; }),
         };
       }).filter(function (s) { return s.entradas.length; });
-    }
-
-    if (aba === "intencao") {
-      return [{
-        chave: "intencao",
-        titulo: "Poderes de Intenção",
-        nota: "Arquivos Secretos 2, p. 94-95. Consultar e copiar o texto não concede o poder nem registra contato com a Coroa de Espinhos: " +
-          "o poder com efeito vem da seção Intenção da aba Habilidades, com a regra opcional Poderes de Intenção ligada.",
-        entradas: (P.PODERES_INTENCAO || []).slice().sort(porNome).map(function (p) { return { entrada: p, classe: "" }; }),
-      }];
     }
 
     if (aba === "sacrificio") {
@@ -202,12 +201,11 @@
       var t = C.trilha(p.trilha);
       return (t ? t.nome : "Trilha") + " · NEX " + p.nex + "%";
     }
-    if (p.tipo === "paranormal") {
+    if (p.tipo === "paranormal" || p.tipo === "intencao") {
       var el = p.elemento ? C.elemento(p.elemento) : null;
       return "Poder paranormal" + (el ? " · " + el.nome : "");
     }
     if (p.tipo === "geral") return "Poder geral";
-    if (p.tipo === "intencao") return "Poder de Intenção";
     if (p.tipo === "sacrificio") return "Poder de Sacrifício";
     if (p.tipo === "classe") {
       if (classe && p.classes.indexOf(classe) >= 0) return "Poder de " + nomeDaClasse(classe).toLowerCase();
@@ -282,20 +280,22 @@
      FILTROS (v2.31)
      -----------------------------------------------------------------
      Sobre os DADOS da entrada, nunca sobre o nome: livro (fonte),
-     elemento (o `elemento` da entrada; "intencao" nos poderes de
-     Intenção; sem o campo, "sem" — nada é deduzido), tipo e trilha (a
+     elemento (o `elemento` da entrada: um elemento ou uma manifestação,
+     "transmissao" ou "intencao"; sem o campo, "sem" — nada é deduzido),
+     tipo (Intenção conta como poder paranormal) e trilha (a
      seção da aba de classe). Combinam com a busca e entre si.
      ================================================================= */
 
   var NOMES_TIPO = {
     automatica: "Habilidade de classe", classe: "Poder de classe", geral: "Poder geral", paranormal: "Poder paranormal",
     trilha: "Habilidade de trilha", sobrevivente: "Habilidade de trilha (sobrevivente)", treinamento: "Treinamento",
-    origem: "Poder de origem", intencao: "Poder de Intenção", sacrificio: "Poder de Sacrifício",
+    origem: "Poder de origem", sacrificio: "Poder de Sacrifício",
   };
 
   function tipoDe(x) {
     var p = x.entrada;
     if (p.tipo === "classe" && p.geral && !x.classe) return "geral";
+    if (p.tipo === "intencao") return "paranormal";
     return p.tipo || "";
   }
 
@@ -311,7 +311,6 @@
 
   function nomeDoElemento(k) {
     if (k === "sem") return "Sem elemento";
-    if (k === "intencao") return "Intenção";
     var e = C.elemento(k);
     return e ? e.nome : k;
   }

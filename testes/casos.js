@@ -1350,8 +1350,8 @@
           return k;
         };
 
-        t.igual("dez abas: três classes de agente, Mundano, Sobrevivente, origens, gerais, paranormais, Intenção e Sacrifício (v2.33)", OB.ABAS.map(function (a) { return a.chave; }).join(","),
-          "combatente,especialista,ocultista,mundano,sobrevivente,origens,gerais,paranormais,intencao,sacrificio");
+        t.igual("nove abas: três classes de agente, Mundano, Sobrevivente, origens, gerais, paranormais (com Intenção, v2.48.1) e Sacrifício", OB.ABAS.map(function (a) { return a.chave; }).join(","),
+          "combatente,especialista,ocultista,mundano,sobrevivente,origens,gerais,paranormais,sacrificio");
         var secOrig = OB.secoes("origens");
         var todasOrig = secOrig.reduce(function (l, s) { return l.concat(s.entradas); }, []);
         t.igual("a aba Origens lista o poder de todas as origens do catálogo", todasOrig.length, OC.ORIGENS.length);
@@ -1382,7 +1382,7 @@
         t.igual("cada trilha do combatente vira uma seção",
           combatente.filter(function (s) { return s.chave.indexOf("trilha.") === 0; }).length,
           global.RAMAOrdemCatalogo.trilhasDaClasse("combatente").length);
-        t.igual("paranormais separados por elemento", soma(OB.secoes("paranormais")), OPod.PODERES_PARANORMAIS.length);
+        t.igual("paranormais separados por elemento e manifestação (os de Intenção juntos)", soma(OB.secoes("paranormais")), OPod.PODERES_PARANORMAIS.length + OPod.PODERES_INTENCAO.length);
         var gerais = chavesDe(OB.secoes("gerais"));
         t.ok("gerais incluem os poderes de classe que o SAH tornou gerais",
           OPod.PODERES_CLASSE.filter(function (p) { return p.geral; }).every(function (p) { return gerais[p.chave]; }));
@@ -5224,6 +5224,11 @@
     t.ok("  nada nos poderes de Transmissão liga ao Hexatombe ou ao Hacking", JSON.stringify(tr).toLowerCase().indexOf("exatombe") < 0 && JSON.stringify(tr).toLowerCase().indexOf("hacking") < 0);
     t.iguais("Transmissão é manifestação de Conhecimento E Energia (p. 46)", C.manifestacao("transmissao").elementos, ["conhecimento", "energia"]);
     t.ok("  e não virou elemento de afinidade", C.ELEMENTOS_AFINIDADE.indexOf("transmissao") < 0);
+    t.iguais("Intenção é manifestação de Sangue E Conhecimento (v2.48.1)", C.manifestacao("intencao").elementos, ["sangue", "conhecimento"]);
+    t.ok("  também fora da afinidade, e os poderes dela fora de Transcender", C.ELEMENTOS_AFINIDADE.indexOf("intencao") < 0 &&
+      !P.PODERES_PARANORMAIS.some(function (p) { return p.elemento === "intencao"; }));
+    t.ok("  Transcender para um poder de Intenção é recusado", !avaliar(ficha({ classe: "ocultista", origem: "academico", nex: 99, atributos: { agi: 1, for: 1, int: 3, pre: 2, vig: 1 } }),
+      "d3.poderClasse", "transcender", { poder: { valor: "filhoDaDor", opcoes: {} } }).valido);
     t.igual("Parede de Carne: Vig 3 OU For 3", JSON.stringify(P.poder("paredeDeCarne").requisitos), JSON.stringify([{ tipo: "atributoUm", atributos: ["vig", "for"], minimo: 3 }]));
     t.ok("Apaixonado (Agi 2) e Direção Defensiva: treinar ou +2 em Pilotagem", P.poder("apaixonadoPorVeiculos").requisitos[0].minimo === 2 &&
       P.poder("apaixonadoPorVeiculos").efeitos[0].pericia === "pilotagem" && P.poder("direcaoDefensiva").efeitos[0].pericia === "pilotagem");
@@ -6115,18 +6120,23 @@
     t.ok("Aliados em Perigo segue independente", !A2.arriscarAliado({ id: "a" }, "c", 1, "r1", "", tudo).ok && A2.arriscarAliado({ id: "a" }, "c", 1, "r1", "", { opcionais: { aliadosEmPerigo: true } }).ok);
 
     t.grupo("v2.31 · biblioteca: poderes de Intenção e filtros");
-    var secI = B.secoes("intencao");
-    t.iguais("a aba Poderes de Intenção traz os cinco, da mesma fonte", secI[0].entradas.map(function (x) { return x.entrada.chave; }).sort(),
+    var secI = B.secoes("paranormais").filter(function (s) { return s.chave === "intencao"; });
+    t.iguais("os poderes de Intenção estão nos paranormais, numa seção própria, da mesma fonte (v2.48.1)", secI[0].entradas.map(function (x) { return x.entrada.chave; }).sort(),
       P.PODERES_INTENCAO.map(function (p) { return p.chave; }).sort());
+    t.igual("  a seção diz os dois elementos da manifestação", secI[0].titulo, "Intenção (Sangue + Conhecimento)");
+    t.ok("  e a regra de concessão (Coroa de Espinhos, mesa)", /Coroa de Espinhos/.test(secI[0].nota) && /Transcender/.test(secI[0].nota));
+    t.igual("  a aba antiga não existe mais", B.secoes("intencao").length, 0);
     var modelo = B.modelo(P.poder("desejoDiabolico"), "");
     t.ok("a cópia traz gatilho, efeito, limites e requisitos — e é só texto", /Gatilho:/.test(modelo.texto) && /Limites:.*por cena/.test(modelo.texto) &&
       /Coroa de Espinhos/.test(modelo.texto) && /Arquivos Secretos 2, p\. 94/.test(modelo.texto) && Object.keys(modelo).sort().join() === "nome,origem,texto");
-    t.igual("  origem curta", B.origem(P.poder("filhoDaDor"), ""), "Poder de Intenção");
+    t.igual("  origem curta", B.origem(P.poder("filhoDaDor"), ""), "Poder paranormal · Intenção");
     var opPar = B.opcoesDeFiltro(B.secoes("paranormais"));
-    t.ok("filtros dos paranormais: livros e elementos presentes, sem elemento inventado",
+    t.ok("filtros dos paranormais: livros, elementos e as duas manifestações",
       opPar.livro.some(function (o) { return o.valor === "AS2"; }) && opPar.elemento.some(function (o) { return o.valor === "sangue"; }) &&
-      !opPar.elemento.some(function (o) { return o.valor === "intencao"; }));
-    t.ok("  a Intenção aparece como elemento na aba dela", B.opcoesDeFiltro(secI).elemento.map(function (o) { return o.valor; }).join() === "intencao");
+      opPar.elemento.some(function (o) { return o.valor === "intencao" && o.rotulo === "Intenção"; }) && opPar.elemento.some(function (o) { return o.valor === "transmissao"; }));
+    t.ok("  Intenção conta como poder paranormal no filtro de tipo", opPar.tipo.map(function (o) { return o.valor; }).join() === "paranormal");
+    t.iguais("  filtrar por Intenção traz só os cinco", B.filtrar(B.secoes("paranormais"), "", { elemento: "intencao" }).map(function (s) { return s.chave; }), ["intencao"]);
+    t.ok("  a Intenção aparece como elemento na seção dela", B.opcoesDeFiltro(secI).elemento.map(function (o) { return o.valor; }).join() === "intencao");
     var soSangueAs2 = B.filtrar(B.secoes("paranormais"), "", { elemento: "sangue", livro: "AS2" });
     t.ok("livro + elemento combinam e as seções vazias saem", soSangueAs2.length === 1 &&
       soSangueAs2[0].entradas.every(function (x) { return x.entrada.elemento === "sangue" && x.entrada.fonte === "AS2"; }) && soSangueAs2[0].entradas.length >= 2);

@@ -333,7 +333,7 @@ No modo edição da ficha de Ordem, o botão **Da biblioteca** abre duas origens
 outras contas publicaram). Na ficha universal a janela continua só com a
 Homebrew.
 
-Nos livros há oito abas, e a da classe da ficha abre primeiro:
+Nos livros há nove abas, e a da classe da ficha abre primeiro:
 
 | aba | o que mostra |
 |---|---|
@@ -341,7 +341,16 @@ Nos livros há oito abas, e a da classe da ficha abre primeiro:
 | Origens | o poder de cada origem do catálogo (as 26 do livro básico e as 20 do SAH, em duas seções), com a origem ao lado; a busca acha pelo nome do poder e pelo da origem. Trazer um deles copia o texto e **não** troca a origem nem concede o benefício — a janela pede confirmação dizendo isso |
 | Combatente, Especialista, Ocultista | habilidades de classe (com os estágios por NEX), poderes da classe e uma seção por trilha, livro básico e SAH |
 | Poderes gerais | os poderes gerais do SAH e os quatro poderes de classe que o SAH tornou gerais |
-| Poderes paranormais | um grupo por elemento, mais os sem elemento fixo |
+| Poderes paranormais | um grupo por elemento; depois as manifestações — uniões impossíveis de elementos —, cada uma com os dois elementos no título: **Transmissão (Conhecimento + Energia)** e **Intenção (Sangue + Conhecimento)**; por fim, os sem elemento fixo. Desde a v2.48.1 os poderes de Intenção ficam aqui (antes tinham aba própria); o cartão diz “Poder paranormal · Intenção”, o filtro de elemento tem Transmissão e Intenção, e o de tipo conta os dois como poder paranormal |
+| Poderes de Sacrifício | os do AS3 (p. 110–111), concedidos pelo estigma |
+
+As manifestações estão em `C.MANIFESTACOES` (`js/ordem/catalogo.js`), com os
+elementos de verdade. **A forma de obter cada poder não muda:** os de Transmissão
+são escolhidos em Transcender, com o Sino confirmado; os de Intenção continuam
+concedidos pela mesa na seção Intenção da aba Habilidades (contato com a Coroa de
+Espinhos, regra opcional Poderes de Intenção) — ficam numa lista própria
+(`PODERES_INTENCAO`) e por isso não aparecem em Transcender nem têm afinidade.
+Trazer um deles da biblioteca segue sendo só uma cópia de texto, com confirmação.
 
 Cada cartão traz origem, livro, resumo, afinidade, pré-requisitos e página; a
 busca ignora acento e caixa. Uma habilidade que já está na ficha ganha a marca
@@ -2553,7 +2562,8 @@ onde a leitura pesa.
   Caligrafia fica gravada no selo. **Decifrar à Distância** é de quem USA, vale
   para qualquer selo e não entra na autoria. Prioridade: Supremo (sem teste) >
   Caligrafia (10+custo) > regra base (20+custo).
-- **Transmissão**: tratada como manifestação (Conhecimento + Energia), não
+- **Transmissão e Intenção**: manifestações — Transmissão (Conhecimento +
+  Energia) e, desde a v2.48.1, Intenção (Sangue + Conhecimento) —, não
   elemento de afinidade. A confirmação do Sino é do mestre na tela da ficha;
   numa ficha sem campanha, quem confirma é a mesa (dono). O servidor não confere
   essa marca — ela pesa só na progressão.

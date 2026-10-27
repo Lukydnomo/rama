@@ -70,6 +70,18 @@
 
   var CHANGELOG = [
     {
+      versao: "2.48.1", codinome: "AMÁLGAMA", data: "27/10/2026",
+      mudancas: {
+        "Alterado": [
+          "Os poderes de Intenção agora ficam em “Poderes paranormais” na biblioteca de habilidades, ao lado dos de Transmissão — a aba própria deles saiu. As duas manifestações aparecem depois dos elementos, com os elementos que unem no título: Transmissão (Conhecimento + Energia) e Intenção (Sangue + Conhecimento). O cartão diz “Poder paranormal · Intenção”, e os filtros de elemento e de tipo tratam os dois como poderes paranormais.",
+          "A forma de obter cada um não mudou: Transmissão continua em Transcender, com o Sino confirmado; Intenção continua concedida pela mesa na seção Intenção da aba Habilidades (contato com a Coroa de Espinhos), sem Transcender nem afinidade.",
+        ],
+        "Técnico": [
+          "Intenção entrou em `C.MANIFESTACOES` (elementos Sangue e Conhecimento); a aba `paranormais` da biblioteca junta `PODERES_PARANORMAIS` e `PODERES_INTENCAO` por manifestação, e a lista de Intenção continua separada para não entrar em Transcender. Só o site muda. Testes: 3276 regras (novos: manifestação, Transcender recusado para Intenção, seção e filtros) e as demais suítes passando; verificado no navegador com o backend simulado.",
+        ],
+      },
+    },
+    {
       versao: "2.48.0", codinome: "SINTONIA", data: "27/10/2026",
       mudancas: {
         "Adicionado": [

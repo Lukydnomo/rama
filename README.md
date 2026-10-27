@@ -587,6 +587,9 @@ segredo nenhum — ele os lê das Script Properties. Publicá-lo não expõe nad
 
 ### Atualizar o backend
 
+**v2.48.1 — AMÁLGAMA:** só o site (poderes de Intenção e Transmissão juntos em
+Poderes paranormais). Nada de `.gs`, versão da implantação nem `setupRama()`.
+
 **v2.48.0 — SINTONIA:** Arquivos Secretos 5. **Troque** `Dados.gs`, `Codigo.gs` e
 `Campanhas.gs`, rode **`setupRama()`** uma vez (cria a aba `CAMPANHA_PERIGOS`;
 repetir é seguro e não apaga nada), crie uma **nova versão** da implantação e só
