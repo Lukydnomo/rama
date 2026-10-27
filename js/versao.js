@@ -70,6 +70,20 @@
 
   var CHANGELOG = [
     {
+      versao: "2.48.4",
+      codinome: "LISTRA",
+      data: "27/10/2026",
+      mudancas: {
+        "Visual": [
+          "O histórico de versões ficou mais fácil de ler: cada categoria tem uma etiqueta com cor própria (verde para Adicionado, azul para Alterado, amarelo para Corrigido, vermelho para Removido, cinza para Técnico), uma faixa lateral e a quantidade de itens; as mudanças viram uma lista com marcadores e espaço entre elas, numa largura confortável de leitura.",
+          "Nomes de código entre crases aparecem destacados, como `OP.CATEGORIAS`, em vez de mostrar as crases.",
+        ],
+        "Técnico": [
+          "`abrirChangelog` (js/app.js) monta o texto com nós de texto e `code`, sem innerHTML; estilos novos em css/layout.css, só com variáveis de tema. Só o site muda.",
+        ],
+      },
+    },
+    {
       versao: "2.48.3", codinome: "PRATELEIRA", data: "27/10/2026",
       mudancas: {
         "Alterado": [

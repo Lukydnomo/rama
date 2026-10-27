@@ -837,3 +837,45 @@ html.arrastando .soltos__titulo[data-arrastar-pasta] .soltos__soltar { display: 
   .pasta-icone__caixa { transition: none; }
   .pasta-icone.arrastar-alvo-dentro .pasta-icone__caixa { transform: none; }
 }
+
+/* Histórico de versões: uma etiqueta por categoria, com a cor da natureza
+   da mudança, e itens em lista de verdade, com respiro entre eles. */
+.versao-secao {
+  --cor-categoria: var(--cor-texto-2);
+  border-left: 2px solid var(--cor-categoria);
+  padding: 2px 0 2px 12px;
+  margin-top: 12px;
+}
+.versao-secao:first-child { margin-top: 4px; }
+.versao-secao[data-categoria="Adicionado"] { --cor-categoria: var(--cor-ok); }
+.versao-secao[data-categoria="Alterado"],
+.versao-secao[data-categoria="Melhorado"] { --cor-categoria: var(--cor-link); }
+.versao-secao[data-categoria="Corrigido"] { --cor-categoria: var(--cor-aviso); }
+.versao-secao[data-categoria="Removido"] { --cor-categoria: var(--cor-erro); }
+.versao-secao[data-categoria="Técnico"] { --cor-categoria: var(--cor-texto-3); }
+.versao-secao__rotulo {
+  margin: 0 0 6px;
+  font-family: var(--fonte-mini);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  color: var(--cor-categoria);
+}
+.versao-lista {
+  margin: 0;
+  padding-left: 18px;
+  list-style: square;
+  display: grid;
+  gap: 8px;
+  line-height: 1.55;
+  max-width: 78ch;
+}
+.versao-lista > li::marker { color: var(--cor-categoria); }
+.versao-secao[data-categoria="Técnico"] .versao-lista { color: var(--cor-texto-2); }
+.versao-codigo {
+  padding: 0 4px;
+  border: 1px solid var(--cor-traco-fraca);
+  background: var(--cor-superficie-2);
+  color: var(--cor-texto);
+  white-space: nowrap;
+}

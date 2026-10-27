@@ -219,6 +219,14 @@
     });
   }
 
+  /* Trecho entre crases vira `code`; o resto continua texto puro (nada de
+     innerHTML: o changelog é texto, não marcação). */
+  function textoDoChangelog(texto) {
+    return String(texto).split("`").map(function (parte, i) {
+      return i % 2 ? el("code.versao-codigo", { texto: parte }) : document.createTextNode(parte);
+    });
+  }
+
   function abrirChangelog() {
     var V = global.RAMAVersion;
     if (!V) return;
@@ -232,10 +240,10 @@
         var itens = (r.mudancas && r.mudancas[categoria]) || [];
         if (!itens.length) return;
 
-        secoes.push(el("div.versao-secao", {}, [
-          el("p.t-rotulo.t-rotulo-forte", { texto: categoria }),
+        secoes.push(el("div.versao-secao", { dataset: { categoria: categoria } }, [
+          el("p.versao-secao__rotulo", { texto: categoria + " · " + itens.length }),
           el("ul.versao-lista", {}, itens.map(function (texto) {
-            return el("li", { texto: texto });
+            return el("li", {}, textoDoChangelog(texto));
           })),
         ]));
       });

@@ -587,6 +587,9 @@ segredo nenhum — ele os lê das Script Properties. Publicá-lo não expõe nad
 
 ### Atualizar o backend
 
+**v2.48.4 — LISTRA:** só o site (histórico de versões mais legível).
+Publique o site; nada de `.gs`, versão da implantação nem `setupRama()`.
+
 **v2.48.3 — PRATELEIRA:** só o site (aba Regras em categorias, com busca e filtro).
 Publique o site; nada de `.gs`, versão da implantação nem `setupRama()`.
 
