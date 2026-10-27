@@ -40,7 +40,7 @@
   ];
 
   /* O nome curto de cada livro sai do registro único (C.LIVROS). */
-  var ROTULO_FONTE = C.mapaDosLivros ? C.mapaDosLivros("curto") : { OPRPG: "Livro básico", SAH: "Sobrevivendo ao Horror", AS1: "Arquivos Secretos 1", AS2: "Arquivos Secretos 2", AS3: "Arquivos Secretos 3", AS4: "Arquivos Secretos 4" };
+  var ROTULO_FONTE = C.mapaDosLivros ? C.mapaDosLivros("curto") : { OPRPG: "Livro básico", SAH: "Sobrevivendo ao Horror", AS1: "Arquivos Secretos 1", AS2: "Arquivos Secretos 2", AS3: "Arquivos Secretos 3", AS4: "Arquivos Secretos 4", AS5: "Arquivos Secretos 5" };
 
   function porNome(a, b) { return a.nome.localeCompare(b.nome, "pt-BR"); }
 
@@ -63,12 +63,18 @@
     if (aba === "paranormais") {
       var grupos = C.ELEMENTOS_AFINIDADE.map(function (k) {
         return { chave: k, titulo: (C.elemento(k) || {}).nome || k, filtro: function (p) { return p.elemento === k; } };
-      }).concat([{ chave: "sem", titulo: "Sem elemento fixo", filtro: function (p) { return !p.elemento; } }]);
+      }).concat((C.MANIFESTACOES || []).map(function (m) {
+        /* Transmissão (AS5 p. 62): poderes paranormais que pedem a conexão
+           com o Sino e só funcionam com outro ser que tenha o mesmo poder. */
+        return { chave: m.chave, titulo: m.nome, filtro: function (p) { return p.elemento === m.chave; },
+          nota: "Arquivos Secretos 5, p. 62–63. Pré-requisito: a conexão com o Sino de Transmissão, confirmada pela mesa. Só funcionam quando dois ou mais seres têm o mesmo poder. Sem afinidade." };
+      })).concat([{ chave: "sem", titulo: "Sem elemento fixo", filtro: function (p) { return !p.elemento; } }]);
 
       return grupos.map(function (g) {
         return {
           chave: g.chave,
           titulo: g.titulo,
+          nota: g.nota || "",
           entradas: P.PODERES_PARANORMAIS.filter(g.filtro).sort(porNome).map(function (p) { return { entrada: p, classe: "" }; }),
         };
       }).filter(function (s) { return s.entradas.length; });
@@ -324,7 +330,7 @@
         else achados.trilha.sem = true;
       });
     });
-    var ordemEl = (C.ELEMENTOS_AFINIDADE || []).concat(["medo", "intencao", "sem"]);
+    var ordemEl = (C.ELEMENTOS_AFINIDADE || []).concat(["medo", "transmissao", "intencao", "sem"]);
     return {
       livro: C.LIVROS.filter(function (l) { return achados.livro[l.sigla]; }).map(function (l) { return { valor: l.sigla, rotulo: l.curto }; }),
       elemento: ordemEl.filter(function (k, i) { return achados.elemento[k] && ordemEl.indexOf(k) === i; })

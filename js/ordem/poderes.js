@@ -15,6 +15,7 @@
 
      OPRPG  Ordem Paranormal RPG — Livro de Regras, v1.1
      SAH    Sobrevivendo ao Horror, v1.2
+     AS1–AS5  Arquivos Secretos 1 a 5 (pacotes de conteúdo oficial)
 
    Páginas do LIVRO, não do PDF. Os resumos são próprios e curtos, para
    lembrar do que se trata na hora do jogo. O texto integral está nos
@@ -74,6 +75,11 @@
      grau            { pericia, grau }       grau mínimo numa perícia
                                              (2 = veterano, 3 = expert)
      grauEmUma       { pericias, grau }      o grau em pelo menos uma
+     sinoDeTransmissao {}                    a conexão com o Sino de
+                                             Transmissão registrada na
+                                             ficha e confirmada pela mesa
+                                             (poderes de Transmissão, AS5
+                                             p. 62)
      coroaDeEspinhos {}                      o contato com a Coroa de
                                              Espinhos registrado na ficha
                                              (poderes de Intenção, AS2 p. 94)
@@ -92,6 +98,7 @@
   var AS2 = "AS2";
   var AS3 = "AS3";
   var AS4 = "AS4";
+  var AS5 = "AS5";
 
   /* ------------------------------------------------------------------
      Atalhos de montagem. Existem só para a lista abaixo caber na tela.
@@ -578,6 +585,52 @@
       resumo: "Ao dormir numa cena de interlúdio, role 1d100. 51 ou mais: bons sonhos. 50 ou menos: pesadelos paranormais — o descanso vira precário e você perde 1d4 SAN, mas escolhe um poder paranormal ou ritual cujos pré-requisitos cumpra e pode usá-lo (ou conjurá-lo) uma única vez até o início da próxima cena de interlúdio.",
       automacao: "parcial",
       nota: "O cartão rola o 1d100 (um por interlúdio) e, nos pesadelos, a perda de Sanidade; o poder ou ritual escolhido fica guardado como um uso único até o próximo interlúdio — não vira poder adquirido nem ritual aprendido. O descanso precário é da cena (anotado)." }),
+
+    /* --- Arquivos Secretos 5, p. 55-56 ---
+       As contas e os botões moram em js/ordem/arquivo5.js e
+       js/paginas/ficha-arquivo5.js. Os benefícios que vão para ALIADOS
+       (Aura de Confiança, Parede de Carne) nunca entram na ficha de
+       quem tem o poder: cada aliado registra o que recebeu na própria
+       ficha, com o nome de quem deu. */
+    entrada({ chave: "auraDeConfianca", nome: "Aura de Confiança", tipo: "classe", classes: ["combatente"], fonte: AS5, pagina: 55,
+      resumo: "Entrar em combate com você do lado é inspirador: todos os seus aliados num raio de 18 m a partir de você recebem +5 em testes de Iniciativa e em testes contra presença perturbadora. Você não recebe esses bônus — só os aliados.",
+      automacao: "parcial",
+      nota: "O cartão marca, entre os participantes da mesa (ou nomes digitados), quem está a até 18 m. Cada aliado liga o bônus na própria ficha (painel do Arquivos Secretos 5, “Recebido de aliados”): o +5 entra na Iniciativa e é oferecido no teste de Vontade contra presença perturbadora. A ficha de quem tem o poder nunca recebe o +5." }),
+    entrada({ chave: "folegoDeEmergencia", nome: "Fôlego de Emergência", tipo: "classe", classes: ["combatente"], fonte: AS5, pagina: 55,
+      resumo: "Uma vez por cena, ação de movimento para se recompor em meio ao conflito: recupera 1d8+Vig PV ou PE, à sua escolha. Só pode ser usado se houver alguma ameaça presente.",
+      automacao: "calculo",
+      nota: "O botão do cartão pede a confirmação de que há ameaça presente e a escolha (PV ou PE), rola 1d8 + Vigor e aplica até o máximo. Uma vez por cena; recarregar a ficha não rola de novo." }),
+    entrada({ chave: "paredeDeCarne", nome: "Parede de Carne", tipo: "classe", classes: ["combatente"], fonte: AS5, pagina: 55,
+      resumo: "Seu corpo robusto fornece cobertura leve (+5 na Defesa) a aliados em espaços adjacentes ao seu. Você não recebe o benefício.",
+      requisitos: [req.atrUm(["vig", "for"], 3)],
+      automacao: "parcial",
+      nota: "Pré-requisito: Vigor 3 ou Força 3. O cartão marca os aliados adjacentes; cada um liga a cobertura leve na própria ficha (“Recebido de aliados”), enquanto continuar adjacente. A Defesa de quem tem o poder não muda." }),
+
+    entrada({ chave: "adeptoDoEscuro", nome: "Adepto do Escuro", tipo: "classe", classes: ["especialista"], fonte: AS5, pagina: 55,
+      resumo: "Você ignora camuflagem leve e total causada por escuridão. Além disso, +2 em testes de Investigação feitos em ambientes de penumbra (pouca luz: iluminado só por lanternas, velas ou ao pôr do sol, por exemplo).",
+      automacao: "parcial",
+      nota: "São dois efeitos diferentes: ignorar a camuflagem vale só para a que vem da escuridão (outras camuflagens ficam); o +2 é oferecido no resultado de um teste de Investigação, para quem confirmar que o ambiente é de penumbra." }),
+    entrada({ chave: "saudosistaHiTech", nome: "Saudosista Hi-Tech", tipo: "classe", classes: ["especialista"], fonte: AS5, pagina: 55,
+      resumo: "+5 em testes de Tecnologia para lidar com aparelhos eletrônicos anteriores aos anos 2000. Além disso, consegue fazer bizarrices tecnológicas e gambiarras para que eles funcionem com os aparelhos digitais do novo milênio.",
+      automacao: "parcial",
+      nota: "O +5 é oferecido no resultado de um teste de Tecnologia, para quem confirmar que o aparelho é anterior aos anos 2000. As adaptações entre aparelhos antigos e novos são possibilidades narrativas, a critério da mesa — a ficha não dá teste nem valor a elas." }),
+    entrada({ chave: "treinadoNasTelas", nome: "Treinado nas Telas", tipo: "classe", classes: ["especialista"], fonte: AS5, pagina: 55,
+      resumo: "Olhos treinados nos videogames: quando faz um teste de Iniciativa ou de Reflexos, pode gastar 2 PE para usar Intelecto em vez de Agilidade nesse teste.",
+      automacao: "calculo",
+      nota: "A escolha vem ANTES de rolar: o cartão arma o próximo teste de Iniciativa ou Reflexos com Intelecto. Ao rolar, os 2 PE são cobrados e o teste usa o Intelecto no lugar da Agilidade — treinamento, bônus e efeitos continuam os mesmos. Vale para aquele teste só." }),
+
+    entrada({ chave: "catalogoDeCriaturasAmbulante", nome: "Catálogo de Criaturas Ambulante", tipo: "classe", classes: ["ocultista"], fonte: AS5, pagina: 56,
+      resumo: "+5 em testes de Ocultismo para identificar criaturas paranormais, e pode fazer isso sem vê-las pessoalmente, analisando somente algum vestígio deixado no ambiente.",
+      automacao: "parcial",
+      nota: "O +5 é oferecido no resultado de um teste de Ocultismo, para quem confirmar que é para identificar uma criatura — vista ou pelos vestígios." }),
+    entrada({ chave: "meditacaoOcultista", nome: "Meditação Ocultista", tipo: "classe", classes: ["ocultista"], fonte: AS5, pagina: 56,
+      resumo: "Nova ação de interlúdio, Meditação: recupera PE conforme seu limite de PE e a condição de meditação, uma vez por interlúdio. Normal: o dobro do limite de PE (NEX 35%, limite 7: 14 PE). Precária: metade disso. Confortável: recuperação triplicada. Luxuosa: quadruplicada.",
+      automacao: "calculo",
+      nota: "O botão do cartão (só numa cena de interlúdio, uma vez por interlúdio) pergunta a condição e mostra a conta. O multiplicador da condição SUBSTITUI o dobro do normal — precária 1×, normal 2×, confortável 3× e luxuosa 4× o limite de PE —, nunca se soma a ele (ver docs/ORDEM-REGRAS.md, “Arquivos Secretos 5”). Com PD, recupera PD." }),
+    entrada({ chave: "ruidoDeComunicacao", nome: "Ruído de Comunicação", tipo: "classe", classes: ["ocultista"], fonte: AS5, pagina: 56,
+      resumo: "Nem tudo é o que parece: ao presenciar um alvo em alcance curto receber um efeito (bônus ou penalidade) em dados rolados — dados adicionais em testes de perícia, em rolagens de dano, ou uma condição como frustrado —, gaste uma reação e 4 PE para transformar o bônus em penalidade ou vice-versa. A transformação dura até o fim da cena.",
+      automacao: "parcial",
+      nota: "O cartão cobra os 4 PE e registra o alvo e o efeito. Na ficha do alvo, só um efeito que mexe em DADOS rolados pode ser invertido (um bônus numérico fixo não é dado e não entra); a inversão guarda de onde veio, vale até o fim da cena e não se repete sobre o mesmo efeito." }),
   ];
 
   /* =================================================================
@@ -780,6 +833,20 @@
       "Na última rodada de uma cena de investigação, 2 PE uma vez por cena: o número de rodadas disponíveis aumenta em +1.",
       [], [], "parcial", { fonte: AS4,
         nota: "O botão do cartão gasta os 2 PE e registra a rodada extra da cena (uma vez por cena); a contagem das rodadas da investigação é da mesa." }),
+
+    /* --- Arquivos Secretos 5, p. 56 --- */
+    geral("apaixonadoPorVeiculos", "Apaixonado por Veículos", 56,
+      "Treinado em Pilotagem, ou +2 se já for. Além disso, qualquer teste para garantir a segurança especificamente do veículo, a critério do mestre, recebe +1 dado. Com a regra Veículos Operacionais (AS3 p. 125), você pode adicionar 1 regalia ao seu veículo, e ela não conta no limite de regalias dele.",
+      [req.atr("agi", 2)], [ef.treinarOuBonus("pilotagem")], "parcial", { fonte: AS5,
+        nota: "O treinamento (ou o +2) entra na conta. O +1 dado é oferecido no resultado de um teste, para quem confirmar que é pela segurança do veículo. A regalia extra aparece no veículo do painel do Arquivos Secretos 3, só com Veículos Operacionais ligada." }),
+    geral("desafiarOEgo", "Desafiar o Ego", 56,
+      "Uma vez por rodada, ao presenciar um ataque feito por um aliado, como reação gaste 1 PE e grite incentivo ou provocação a ele. Se o ataque acertar, o aliado causa dano extra igual à sua Presença; se errar, você recupera o PE gasto.",
+      [req.atr("pre", 2)], [], "parcial", { fonte: AS5,
+        nota: "O cartão cobra o 1 PE e guarda o desafio ligado ao ataque observado (o aliado). Depois, um resultado só: acertou — o dano extra é a sua Presença, para o aliado somar; errou — o PE volta, uma única vez. Uma vez por rodada (a rodada da ficha)." }),
+    geral("direcaoDefensiva", "Direção Defensiva", 56,
+      "Motorista precavido: treinado em Pilotagem, ou +2 se já for. Se você estiver dirigindo, todos os seres dentro do veículo, incluindo você, recebem +2 na Defesa e em testes de resistência. Com a regra Veículos Operacionais (AS3 p. 125), seu veículo também recebe +2 na Defesa.",
+      [], [ef.treinarOuBonus("pilotagem")], "parcial", { fonte: AS5,
+        nota: "O treinamento (ou o +2) entra na conta. Marcando “dirigindo” no cartão, o +2 na Defesa e nos testes de resistência entra na sua ficha; os passageiros ligam o mesmo +2 na ficha deles (“Recebido de aliados”). A Defesa do veículo (+2) aparece no veículo, só com Veículos Operacionais ligada." }),
   ];
 
   /* =================================================================
@@ -800,6 +867,17 @@
       chave: chave, nome: nome, tipo: "paranormal", elemento: elemento, fonte: fonte, pagina: pagina,
       resumo: resumo, afinidade: afinidade,
     }, extra || {}));
+  }
+
+  /* Poder paranormal de Transmissão (AS5 p. 62): mesma lógica dos outros
+     poderes, com a conexão com o Sino como pré-requisito. Sem afinidade:
+     o livro não dá linha de afinidade a nenhum deles. */
+  function transmissao(chave, nome, pagina, resumo, extra) {
+    var e = paranormal(chave, nome, "transmissao", AS5, pagina, resumo, "", Object.assign({
+      requisitos: [{ tipo: "sinoDeTransmissao" }], automacao: "parcial",
+    }, extra || {}));
+    e.transmissao = true;
+    return e;
   }
 
   var PODERES_PARANORMAIS = [
@@ -1014,6 +1092,47 @@
       "Sua presença não pode ser capturada por imagens digitais, permanentemente; e sua voz sai distorcida em gravações.",
       { automacao: "parcial",
         nota: "O botão do cartão gasta os 2 PE (sem afinidade). É um efeito da história: a ficha não mexe em foto, avatar nem arquivo nenhum." }),
+
+    /* --- Arquivos Secretos 5, p. 57 --- */
+    paranormal("acidoCorrosivo", "Ácido Corrosivo", "energia", AS5, 57,
+      "1 PE para expelir um ácido grosso e corrosivo pelas mãos. Até o fim da cena: +2 nos testes de ataque desarmado e +5 nas rolagens de dano desarmado, e o dano desarmado vira químico. Usando uma arma corpo a corpo, pode escolher afetá-la (+2 no ataque, +5 no dano e dano químico com ela); se ela não for um item amaldiçoado, é destruída pelo ácido no fim da cena.",
+      "Os bônus mudam para +4 em testes de ataque e +10 nas rolagens de dano.",
+      { automacao: "calculo",
+        nota: "O botão do cartão cobra o 1 PE e pergunta o alvo: ataques desarmados ou uma arma corpo a corpo do inventário. Até o fim da cena, o ataque e o dano dela recebem os bônus e o tipo muda para químico — sem mexer no item. No fim da cena, uma arma que não é amaldiçoada fica marcada para destruição e só sai do inventário com a confirmação (o modelo da biblioteca não muda)." }),
+    paranormal("deadManSwitch", "Dead Man Switch", "conhecimento", AS5, 57,
+      "Quando perto da morte, seu conhecimento é transmitido como um sinal para quem você confia. Quando estiver machucado, escolha um alvo em alcance médio e uma perícia em que você seja treinado: o alvo recebe o mesmo nível de treinamento que você nela. O efeito termina quando você se recuperar acima da metade dos PV totais ou quando morrer.",
+      "Até três alvos e uma perícia adicional. E, se você morrer depois de usar o poder, os últimos alvos afetados mantêm as perícias transmitidas até o fim da missão.",
+      { automacao: "parcial",
+        nota: "O cartão só liga machucado (metade dos PV ou menos), com os alvos e a perícia (duas com afinidade). Vai o GRAU de treinamento — nunca atributo nem o valor da perícia. Cada alvo registra o grau recebido na própria ficha; o efeito acaba quando você passa da metade dos PV (o cartão avisa) ou morre — com afinidade, morrer mantém até o fim da missão." }),
+    paranormal("paralinguisticaAmpliada", "Paralinguística Ampliada", "conhecimento", AS5, 57,
+      "+5 em testes para tentar compreender “linguagens” do Outro Lado (como os Sigilos de Conhecimento). Além disso, aprende o ritual Compreensão Paranormal; se já o conhecia, em vez disso o custo para conjurá-lo diminui em −1 PE.",
+      "O bônus muda para +10 e você está sempre sob efeito de Compreensão Paranormal em sua forma discente.",
+      { automacao: "parcial",
+        nota: "O +5 (+10) é oferecido no resultado de um teste para compreender uma linguagem do Outro Lado. O ritual vem como concessão pelo nome (aba Rituais, fora do limite); se a ficha já o conhecia, nada é duplicado e “Usar ritual” cobra 1 PE a menos — uma vez, sem somar de novo. Com afinidade, a forma discente fica contínua: sem conjurar e sem custo." }),
+
+    /* --- Poderes de Transmissão, Arquivos Secretos 5, p. 62-63 ---
+       "Além da necessidade de se conectar com o Sino de Transmissão como
+       pré-requisito para ser recebido, um poder de Transmissão só funciona
+       quando dois ou mais seres têm o mesmo poder." A conexão é registrada
+       na ficha e confirmada pela mesa (o mestre, na campanha). Transmissão
+       não é elemento de afinidade: estes poderes não têm linha de
+       afinidade, nem dano, nem opressão próprios. Nada aqui depende do
+       Hexatombe ou do Hacking. */
+    transmissao("conexaoComunicativa", "Conexão Comunicativa", 62,
+      "Comunicação telepática com qualquer outro ser que tenha este poder num raio de 90 m — como se estivessem na mesma chamada de rádio — e detecção da localização de seres com este poder no mesmo raio. +2 em testes de resistência contra efeitos negativos vindos da comunicação de Alheios para cada ser com este poder dentro do raio (exceto você).",
+      { nota: "O cartão marca quem está no raio de 90 m (outros portadores, nunca você). O +2 por portador é oferecido no resultado de um teste de resistência contra a comunicação de um Alheio. A conversa telepática é narrativa: não há chat nem áudio." }),
+    transmissao("sincroniaConectiva", "Sincronia Conectiva", 62,
+      "Se você e outros seres têm este poder, todos podem gastar uma reação e 3 PE para ficarem sincronizados até o fim da cena: na Iniciativa, cada um fica com o próprio valor ou com o de outro sincronizado que fez o mesmo teste; sabem os itens que os outros carregam e o que cada um vai fazer antes de fazer; podem gastar PE de outros sincronizados nas próprias habilidades; e podem sofrer a perda ou o dano que outro sofreria (não vale para efeitos que afetam SAN, como dano mental).",
+      { nota: "Cada participante entra pela própria ficha (reação e 3 PE). Gastar PE de outro e assumir o dano dele são operações do servidor: ele confere que os dois estão na mesma sincronia, na mesma campanha, que há PE e a identificação da operação — uma repetição não cobra duas vezes. Trocar de iniciativa não dá turno a mais: quem já agiu na rodada não age de novo." }),
+    transmissao("transmissaoDePericia", "Transmissão de Perícia", 63,
+      "Uma vez por cena, ação de movimento e 2 PE para se conectar às perícias de um único outro ser em alcance curto que tenha este mesmo poder. Escolha uma perícia dele: até o fim da cena, você testa essa perícia com os valores dele, em vez dos seus. Bônus temporários dele na perícia (de um ritual que dura a cena, por exemplo) não vêm — só os valores permanentes.",
+      { nota: "O cartão guarda os valores PERMANENTES do outro ser nessa perícia (atributo, grau e bônus fixos) e, até o fim da cena, o teste dela usa esses valores. A sua perícia não muda; no fim da cena, volta a ser a sua." }),
+    transmissao("transmissaoDePoder", "Transmissão de Poder", 63,
+      "Uma vez por cena, ação de movimento e 3 PE para se conectar aos poderes de um único outro ser em alcance curto que tenha este mesmo poder. Escolha um poder dele cujos pré-requisitos você atenda: você pode usá-lo como se o tivesse na ficha até o fim da cena.",
+      { nota: "O poder emprestado fica marcado com a origem e some no fim da cena; custo, alcance, limite e duração são os dele. Os pré-requisitos são conferidos na sua ficha. Um poder de Transmissão não pode ser emprestado por este (não há corrente de empréstimos) nem algo que você já tem." }),
+    transmissao("transmissaoDeRitual", "Transmissão de Ritual", 63,
+      "Uma vez por cena, ação de movimento e 3 PE para se conectar aos rituais de um único outro ser em alcance curto que tenha este mesmo poder. Escolha um ritual dele cujos pré-requisitos para conjurar você atenda: você pode usá-lo como se o tivesse na ficha até o fim da cena.",
+      { nota: "O ritual emprestado abre “Usar ritual” até o fim da cena, pagando o custo normal — não vira ritual aprendido, não conta no limite e não fica na aba Rituais. O círculo tem de caber no seu NEX." }),
   ];
 
   /* =================================================================
@@ -1500,6 +1619,26 @@
       "Seus explosivos autorais podem ser empunhados por qualquer pessoa como ação livre, e você pode gastar 4 PE para usar um explosivo autoral como ação de movimento (mesmo num lança-granadas). Além disso, seus explosivos autorais causam o dobro dos dados de dano.",
       { automacao: "calculo",
         nota: "Os dados de dano dobram no uso de um explosivo autoral seu; números fixos não dobram. O uso como ação de movimento cobra 4 PE." }),
+
+    /* --- Criptologista do Oculto, Arquivos Secretos 5 p. 58 ---
+       Os selos feitos por quem tem a trilha guardam a AUTORIA: quem usa
+       um selo recebe os benefícios do autor, não os próprios. */
+    trilha("criptologista", 10, "metodoIntuitivo", "Método Intuitivo", AS5, 58,
+      "Recebe o poder Criar Selo (OPRPG p. 33). Se o receber novamente, dobra a quantidade máxima de selos criados ao mesmo tempo. Cria 2 selos com uma ação de interlúdio, em vez de 1; o número de selos por ação sobe +1 para cada outra habilidade desta trilha que adquirir.",
+      { automacao: "calculo",
+        nota: "Com Método Intuitivo, a ficha conta Criar Selo como seu; com Criar Selo também adquirido como poder de classe, o máximo de selos ao mesmo tempo (a Presença) dobra. São três números diferentes: o máximo ao mesmo tempo, quantos por ação de interlúdio (2, +1 por outra habilidade da trilha) e o custo de cada selo (o do ritual, em PE)." }),
+    trilha("criptologista", 40, "caligrafiaEficiente", "Caligrafia Eficiente", AS5, 58,
+      "Selos feitos por você são mais fáceis de usar: o teste para usar o selo de um ritual que o usuário não conhece muda para Ocultismo (DT 10 + custo em PE do ritual). Além disso, +5 em testes para identificar rituais.",
+      { automacao: "calculo", dependeDe: "metodoIntuitivo",
+        nota: "A DT reduzida fica gravada no selo (autoria) e vale para quem o usar sem conhecer o ritual. O +5 para identificar rituais é oferecido no resultado de Ocultismo." }),
+    trilha("criptologista", 65, "decifrarADistancia", "Decifrar à Distância", AS5, 58,
+      "Ao usar um Selo Paranormal, você não precisa empunhá-lo nem lê-lo em voz alta: basta poder lê-lo, mesmo que só mentalmente, com o selo em alcance curto de você. Além disso, +5 em testes para compreender “linguagens” do Outro Lado, como Sigilos ou Sinais.",
+      { automacao: "parcial",
+        nota: "Vale para QUALQUER selo usado por você (não é benefício de autoria). Ainda é preciso conseguir lê-lo, e o selo tem de estar em alcance curto. O +5 é oferecido no resultado de um teste para compreender uma linguagem do Outro Lado." }),
+    trilha("criptologista", 99, "seloSupremo", "Selo Supremo", AS5, 58,
+      "Selos feitos por você dispensam testes de Ocultismo para serem usados. Além disso, os rituais dos seus selos: se pedem teste de resistência, a DT aumenta em +5; se causam dano, a rolagem aumenta em +3 dados do mesmo tipo; se usados em forma avançada (discente ou verdadeira), o usuário não paga o custo adicional em PE da forma avançada.",
+      { automacao: "calculo", dependeDe: "metodoIntuitivo",
+        nota: "Fica gravado no selo (autoria). Dispensa o teste de USO do selo — não o teste do Custo do Paranormal, que continua. O +5 na DT e os +3 dados valem uma vez por uso, mesmo que quem usa também tenha a trilha: os benefícios são do autor e não se somam a si mesmos." }),
   ];
 
   /* =================================================================
@@ -1755,7 +1894,7 @@
   }
 
   global.RAMAOrdemPoderes = {
-    FONTES: { OPRPG: OPRPG, SAH: SAH, AS1: AS1, AS2: AS2, AS3: AS3, AS4: AS4 },
+    FONTES: { OPRPG: OPRPG, SAH: SAH, AS1: AS1, AS2: AS2, AS3: AS3, AS4: AS4, AS5: AS5 },
     PODERES_CLASSE: PODERES_CLASSE,
     PODERES_GERAIS: PODERES_GERAIS,
     PODERES_PARANORMAIS: PODERES_PARANORMAIS,

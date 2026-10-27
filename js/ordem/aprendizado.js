@@ -95,6 +95,7 @@
   var OPRPG = "OPRPG";
   var SAH = "SAH";
   var AS1 = "AS1";
+  var AS5 = "AS5";
 
   /* Onde um ritual aprendido fica guardado. A diferença é funcional:
      ver GRIMÓRIO, abaixo. */
@@ -423,6 +424,29 @@
     concessoesDaTrilha(lista, c, passos);
     concessoesAutomaticas(lista, c, passos);
     concessoesDominadas(lista, c, passos);
+
+    /* Paralinguística Ampliada (AS5 p. 57): "você aprende o ritual
+       Compreensão Paranormal. Se já o conhecer, em vez disso, o custo
+       para conjurá-lo diminui em −1 PE". Concessão pelo nome, OPCIONAL:
+       quem já conhecia o ritual deixa a vaga vazia (nada é duplicado) e
+       o −1 PE vale em "Usar ritual" (js/ordem/arquivo5.js). */
+    if (c.paralinguistica && c.paralinguistica <= passos) {
+      lista.push(concessao({
+        id: "d" + c.paralinguistica + ".paralinguisticaAmpliada",
+        degrau: c.paralinguistica,
+        origem: ORIGENS.poder.chave,
+        poder: "paralinguisticaAmpliada",
+        nomePoder: "Paralinguística Ampliada",
+        fonte: AS5,
+        pagina: 57,
+        quantidade: 1,
+        circulos: [1],
+        elemento: "conhecimento",
+        fixo: ritual("op.ritual.compreensao-paranormal", "Compreensão Paranormal", 1, "conhecimento"),
+        opcional: true,
+        nota: "Se o personagem já conhecia Compreensão Paranormal, deixe esta vaga vazia: o poder não dá outra cópia, e o custo para conjurá-lo cai −1 PE.",
+      }));
+    }
 
     return lista.sort(function (a, b) {
       return (a.degrau - b.degrau) || (a.origem === b.origem ? 0 : (a.origem === "classe" ? -1 : 1));

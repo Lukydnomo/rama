@@ -217,7 +217,7 @@
   function ehMunicao(item) {
     if (!item) return false;
     var d = dados(item);
-    return d.grupo === "municao" || /^(op|sah|as1|as2|as3|as4)\.municao\./.test(item.origemCatalogoId || "");
+    return d.grupo === "municao" || /^(op|sah|as1|as2|as3|as4|as5)\.municao\./.test(item.origemCatalogoId || "");
   }
 
   /* Chuva de Balas (Arquivos Secretos 4, p. 65): com a contagem de

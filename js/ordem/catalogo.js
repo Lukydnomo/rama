@@ -19,6 +19,8 @@
      AS3    Arquivos Secretos 3, v1.0, Jambô (pacote de conteúdo oficial — mais Hexatombe)
      AS4    Arquivos Secretos 4, v1.0, Jambô (pacote de conteúdo oficial — a
             Produção do Anfitrião, Energia e a regra opcional de Hacking)
+     AS5    Arquivos Secretos 5, v1.0, Jambô (pacote de conteúdo oficial — os
+            Alheios, a TV Varminho e a Transmissão)
 
    As páginas são as do LIVRO, não as do PDF.
 
@@ -58,6 +60,7 @@
   var AS2 = "AS2";
   var AS3 = "AS3";
   var AS4 = "AS4";
+  var AS5 = "AS5";
 
   /* Os livros, num lugar só (v2.29). Quem precisa do nome de um livro
      pergunta aqui — nomeDoLivro(sigla) — em vez de repetir uma conta
@@ -75,6 +78,10 @@
        regra opcional de Hacking), as fichas da Produção (p. 55–57), o
        Simulacro (p. 61), o gerador (p. 48) e o Inquérito (p. 76–78). */
     { sigla: AS4, nome: "Arquivos Secretos 4", curto: "Arquivos Secretos 4", abreviacao: "AS4", edicao: "v1.0" },
+    /* v2.48: páginas 54–63 (origens, poderes, trilha, regalias, itens e
+       poderes de Transmissão), os Alheios (p. 35–51), o gerador e a TV
+       Varminho (p. 20–33) e os perigos complexos (p. 66–69). */
+    { sigla: AS5, nome: "Arquivos Secretos 5", curto: "Arquivos Secretos 5", abreviacao: "AS5", edicao: "v1.0" },
   ];
 
   /* Os mapas que os módulos de catálogo usam (rótulo de filtro, nome por
@@ -621,6 +628,14 @@
     /* --- Arquivos Secretos 4, p. 69 ---
        Especialista dos explosivos autorais. Os poderes estão em
        poderes.js; as contas e os botões, em js/ordem/arquivo4.js. */
+    /* --- Arquivos Secretos 5, p. 58 ---
+       Ocultista das linguagens do Outro Lado e dos selos. Os poderes
+       estão em poderes.js; as contas dos selos, em js/ordem/arquivo5.js. */
+    { chave: "criptologista", classe: "ocultista", nome: "Criptologista do Oculto", pagina: 58, fonte: AS5,
+      resumo: "Estuda as linguagens usadas para se comunicar com o Outro Lado e ensina aos aliados a aprimorar as súplicas: fabrica selos mais fáceis de usar e mais potentes.",
+      poderes: [poder(10, "Método Intuitivo", 58), poder(40, "Caligrafia Eficiente", 58),
+                poder(65, "Decifrar à Distância", 58), poder(99, "Selo Supremo", 58)] },
+
     { chave: "granadeiro", classe: "especialista", nome: "Granadeiro Blaster", pagina: 69, fonte: AS4,
       resumo: "Nerd dos explosivos: fabrica os próprios, chega à missão com eles na mochila e os torna maiores, mais rápidos e mais destrutivos.",
       poderes: [poder(10, "Meus Bebês", 69), poder(40, "Fogo Amigo", 69),
@@ -1010,6 +1025,26 @@
       poder: "Quem Não Arrisca, Não Petisca", automacao: "parcial", controles: true,
       resumo: "+2 em testes para resistir a condições mentais e de medo. Falhando num desses testes, recebe +1d20 no próximo teste que fizer; o bônus termina no fim da cena e não acumula com ele mesmo.",
       nota: "O +2 aparece no resultado do teste de resistência, para quem confirmar que é contra condição mental ou de medo. A falha é marcada no mesmo resultado; o +1d20 fica guardado e é oferecido no próximo teste, até o fim da cena." },
+
+    /* -----------------------------------------------------------------
+       ARQUIVOS SECRETOS 5 v1.0, p. 54
+       -----------------------------------------------------------------
+       O quadro “Novo uso para a perícia Tecnologia” (Rastrear Trilha
+       Digital), na mesma página, fica FORA de propósito: os novos usos
+       gerais de perícia dos suplementos não entram no R.A.M.A.
+       ----------------------------------------------------------------- */
+
+    { chave: "ufologo", nome: "Ufólogo", fonte: AS5, pagina: 54,
+      pericias: ["ciencias", "ocultismo"],
+      poder: "Minha Teoria Absurda", automacao: "parcial", controles: true,
+      resumo: "Uma vez por missão em que há algo a ser investigado, você gasta 10 minutos para apresentar ao grupo sua tese sobre as prováveis respostas, antes de terem todas elas. Se, ao fim da missão, a tese se provar correta, você recebe +3 PE máximos e atuais.",
+      nota: "O cartão registra a teoria da missão (uma por missão, a da cronologia da campanha). Quem diz se ela estava correta é o mestre, ao fim da missão: confirmada, entram +3 PE máximos (que ficam) e +3 PE atuais, uma única vez — recarregar ou salvar não concede de novo." },
+
+    { chave: "funcionarioDeBeiraDeEstrada", nome: "Funcionário de Beira de Estrada", fonte: AS5, pagina: 54,
+      pericias: ["fortitude", "intuicao"],
+      poder: "Turno Invertido", automacao: "parcial", controles: true,
+      resumo: "Uma vez por missão, numa cena de interlúdio, você recebe os benefícios da ação dormir sem precisar realizá-la. Além disso, +2 em testes contra qualquer efeito que tente te deixar inconsciente.",
+      nota: "O cartão marca o uso da missão num interlúdio: os benefícios de dormir são aplicados pela mesa e nenhuma ação de interlúdio é gasta. O +2 aparece no resultado de um teste de resistência, para quem confirmar que o efeito tenta deixar inconsciente." },
   ];
 
   /* =================================================================
@@ -1128,7 +1163,22 @@
   function origem(chave) { return POR_CHAVE.origens[chave] || null; }
   function trilha(chave) { return POR_CHAVE.trilhas[chave] || null; }
   function grau(chave) { return POR_CHAVE.graus[chave] || POR_CHAVE.graus.destreinado; }
-  function elemento(chave) { return POR_CHAVE.elementos[chave] || null; }
+  /* Transmissão (AS5 p. 46): a conexão dos Sinos de Tenebris une
+     Conhecimento e Energia numa manifestação única — "as criaturas de
+     Transmissão, em termos de jogo, pertencem a esses dois elementos ao
+     mesmo tempo". Não é um quinto elemento de afinidade: é uma
+     MANIFESTAÇÃO, que guarda os dois elementos de verdade. Os poderes
+     paranormais de Transmissão (p. 62) usam o nome para se agrupar; o
+     livro não dá a eles afinidade, dano ou opressão próprios. */
+  var MANIFESTACOES = [
+    { chave: "transmissao", nome: "Transmissão", elementos: ["conhecimento", "energia"], fonte: AS5, pagina: 46,
+      resumo: "A união de Conhecimento e Energia nascida dos Sinos de Tenebris. Criaturas de Transmissão pertencem aos dois elementos ao mesmo tempo." },
+  ];
+  var POR_MANIFESTACAO = {};
+  MANIFESTACOES.forEach(function (m) { POR_MANIFESTACAO[m.chave] = m; });
+
+  function elemento(chave) { return POR_CHAVE.elementos[chave] || POR_MANIFESTACAO[chave] || null; }
+  function manifestacao(chave) { return POR_MANIFESTACAO[chave] || null; }
 
   /* "agente", "mundano" ou "sobrevivente". Sem classe, "". */
   function perfilDaClasse(chave) {
@@ -1210,7 +1260,7 @@
   }
 
   global.RAMAOrdemCatalogo = {
-    FONTES: { OPRPG: OPRPG, SAH: SAH, AS1: AS1, AS2: AS2, AS3: AS3, AS4: AS4 },
+    FONTES: { OPRPG: OPRPG, SAH: SAH, AS1: AS1, AS2: AS2, AS3: AS3, AS4: AS4, AS5: AS5 },
     LIVROS: LIVROS,
     mapaDosLivros: mapaDosLivros,
     livro: livro,
@@ -1235,6 +1285,7 @@
     CATEGORIAS_ITEM: CATEGORIAS_ITEM,
     ELEMENTOS: ELEMENTOS,
     ELEMENTOS_AFINIDADE: ELEMENTOS_AFINIDADE,
+    MANIFESTACOES: MANIFESTACOES,
     OPRESSAO: OPRESSAO,
     CUSTO_RITUAL: CUSTO_RITUAL,
     EXECUCOES: EXECUCOES,
@@ -1247,6 +1298,7 @@
     trilha: trilha,
     grau: grau,
     elemento: elemento,
+    manifestacao: manifestacao,
     trilhasDaClasse: trilhasDaClasse,
     trilhaServe: trilhaServe,
     nomeDaTrilha: nomeDaTrilha,

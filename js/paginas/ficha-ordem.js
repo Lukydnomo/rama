@@ -827,6 +827,7 @@
         !aq.origemChave && aq.situacao === "ok" && global.RAMAFichaArquivo2 ? global.RAMAFichaArquivo2.controles(ctx, aq) : null,
         !aq.origemChave && aq.situacao === "ok" && global.RAMAFichaArquivo3 ? global.RAMAFichaArquivo3.controles(ctx, aq) : null,
         !aq.origemChave && aq.situacao === "ok" && global.RAMAFichaArquivo4 ? global.RAMAFichaArquivo4.controles(ctx, aq) : null,
+        !aq.origemChave && aq.situacao === "ok" && global.RAMAFichaArquivo5 ? global.RAMAFichaArquivo5.controles(ctx, aq) : null,
       ].concat(avisos, [
         aq.referencia ? el("p.criacao-fonte", { texto: aq.referencia }) : null,
       ]);
@@ -1403,8 +1404,17 @@
           });
           if (!certo) return;
           var fim = null;
-          mudarCondicao(ctx, function () { fim = CD().novaCena(cond); return fim; }, "condicoes-nova-cena");
+          var avisos5 = [];
+          mudarCondicao(ctx, function () {
+            var cenaAntes = cond.cena && cond.cena.id;
+            fim = CD().novaCena(cond);
+            /* Arquivos Secretos 5: o que acaba com a cena (o ácido na arma
+               deixa a destruição pendente), na mesma gravação. */
+            if (fim && fim.mudou !== false && global.RAMAFichaArquivo5) avisos5 = global.RAMAFichaArquivo5.aoTrocarDeCena(ctx, cenaAntes);
+            return fim;
+          }, "condicoes-nova-cena");
           if (fim && fim.encerradas && fim.encerradas.length) UI.aviso("Terminaram com a cena: " + fim.encerradas.join(", ") + ".");
+          avisos5.forEach(function (a) { UI.aviso(a, { duracao: 9000 }); });
           resolverBarganhaDaCena(ctx);
         },
       }),
@@ -1422,8 +1432,11 @@
           if (!certo) return;
           var fim = null;
           var vencidas = [];
+          var avisos5 = [];
           mudarCondicao(ctx, function () {
+            var cenaAntes = cond.cena && cond.cena.id;
             fim = CD().novaCena(cond, null, { interludio: true });
+            if (fim && fim.mudou !== false && global.RAMAFichaArquivo5) avisos5 = global.RAMAFichaArquivo5.aoTrocarDeCena(ctx, cenaAntes);
             /* Quase Novo (AS4): as modificações temporárias saem aqui, na
                mesma gravação do interlúdio. */
             if (fim && fim.mudou !== false && global.RAMAFichaArquivo4) vencidas = global.RAMAFichaArquivo4.aoNovoInterludio(ctx);
@@ -1431,6 +1444,7 @@
           }, "condicoes-novo-interludio");
           if (fim && fim.encerradas && fim.encerradas.length) UI.aviso("Terminaram com a cena: " + fim.encerradas.join(", ") + ".");
           if (vencidas.length) UI.aviso("Quase Novo: terminaram as modificações temporárias — " + vencidas.join("; ") + ".", { duracao: 8000 });
+          avisos5.forEach(function (a) { UI.aviso(a, { duracao: 9000 }); });
           resolverBarganhaDaCena(ctx);
         },
       }),
@@ -1733,6 +1747,7 @@
         el("span.efeito__nome", { texto: inst.nome }),
         el("span.r-etiqueta", { texto: inst.tipo === "condicao" ? "condição" : "efeito" }),
         inst.personalizado ? el("span.r-etiqueta", { texto: "ajustada", title: "Diferente do modelo da biblioteca, que continua igual." }) : null,
+        global.RAMAFichaArquivo5 ? global.RAMAFichaArquivo5.etiquetaDoEfeito(ctx, o, inst) : null,
         turnos ? marcadores(inst.eventos.length, inst.duracao.turnos) : null,
       ]),
       el("p.t-mini", { texto: [origem, por].filter(Boolean).join(" — ") }),
@@ -1750,6 +1765,8 @@
           onclick: function () { editarAplicacao(ctx, o, inst); },
         }),
         botaoDeEfeito("Encerrar", function () { return EF().encerrar(cond, inst.id, "manual", quemAplica(ctx).nome); }, ctx, "efeitos-adicionar"),
+        /* Ruído de Comunicação (AS5): inverter um efeito sobre dados. */
+        global.RAMAFichaArquivo5 ? global.RAMAFichaArquivo5.botaoDoEfeito(ctx, o, inst) : null,
       ]),
     ]);
   }
@@ -2508,6 +2525,14 @@
   /* A rolagem de perícia usa o motor central — o mesmo `dependente` da
      ficha universal — e o mesmo mostrador, que sobe para o histórico. */
   function rolarPericia(ctx, o, p, dado, bonus, atributo) {
+    /* Arquivos Secretos 5 (v2.48): o que muda o teste ANTES de rolar —
+       Treinado nas Telas armado (Intelecto no lugar da Agilidade, 2 PE) e
+       Transmissão de Perícia (os valores permanentes do outro ser). */
+    var notas5 = [];
+    if (global.RAMAFichaArquivo5) {
+      var antes5 = global.RAMAFichaArquivo5.antesDoTeste(ctx, o, p, dado, bonus, atributo);
+      if (antes5) { dado = antes5.dado; bonus = antes5.bonus; atributo = antes5.atributo; notas5 = antes5.notas || []; }
+    }
     var r = D.dependente({
       expressao: dado,
       sigla: siglaDe(atributo),
@@ -2525,11 +2550,12 @@
     var restr = restricoesDaPericia(ctx, p.chave);
     global.RAMARolagens.mostrar(Object.assign(r, { tipo: "pericia", nome: p.nome }), {
       nome: p.nome,
-      notas: notasDosDados(dados).concat(restr),
+      notas: notasDosDados(dados).concat(restr, notas5),
       acoes: [acaoDeEmpenho(ctx, o, p, r)].concat(global.RAMASecaoOrigens ? global.RAMASecaoOrigens.acoesNoTeste(ctx, o, p, r, dado, bonus, atributo) : [],
         global.RAMAFichaArquivo2 ? global.RAMAFichaArquivo2.acoesNoTeste(ctx, o, p, r, dado, bonus, atributo) : [],
         global.RAMAFichaArquivo3 ? global.RAMAFichaArquivo3.acoesNoTeste(ctx, o, p, r, dado, bonus, atributo) : [],
-        global.RAMAFichaArquivo4 ? global.RAMAFichaArquivo4.acoesNoTeste(ctx, o, p, r, dado, bonus, atributo) : []).filter(Boolean),
+        global.RAMAFichaArquivo4 ? global.RAMAFichaArquivo4.acoesNoTeste(ctx, o, p, r, dado, bonus, atributo) : [],
+        global.RAMAFichaArquivo5 ? global.RAMAFichaArquivo5.acoesNoTeste(ctx, o, p, r, dado, bonus, atributo) : []).filter(Boolean),
     });
   }
 
@@ -3983,6 +4009,8 @@
       if (multFrase) notasAS2.push("Frase de Efeito: multiplicador ×" + multFrase + ".");
       if (global.RAMAFichaArquivo3) notasAS2 = notasAS2.concat(global.RAMAFichaArquivo3.noDano(ctx, arma, r, ef));
       notasAS2 = notasAS2.concat(as4.notas || []);
+      /* Ácido Corrosivo (AS5): os bônus já estão na conta; o tipo vira químico. */
+      if (ef.acido) notasAS2.push(ef.acido);
 
       /* Atributo e modificações: parcelas próprias, fora da multiplicação
          do crítico, como qualquer bônus numérico (OPRPG p.54). */
@@ -4352,7 +4380,10 @@
       var topo3 = global.RAMAFichaArquivo3 ? global.RAMAFichaArquivo3.painel(ctx) : null;
       /* Arquivos Secretos 4: missão, rituais guardados, chamariz, timers. */
       var topo4 = global.RAMAFichaArquivo4 ? global.RAMAFichaArquivo4.painel(ctx) : null;
-      var topos = [topo2, topo3, topo4].filter(Boolean);
+      /* Arquivos Secretos 5: rodada, o que foi recebido de aliados,
+         Transmissão, selos e o que está valendo na cena. */
+      var topo5 = global.RAMAFichaArquivo5 ? global.RAMAFichaArquivo5.painel(ctx) : null;
+      var topos = [topo2, topo3, topo4, topo5].filter(Boolean);
       dasRegras.topo = topos.length > 1 ? U.el("div.pilha--curta", { class: "pilha" }, topos) : (topos[0] || null);
       return global.RAMASecaoHabilidades.aba(ctx, dasRegras);
     },

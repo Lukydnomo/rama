@@ -460,7 +460,7 @@ function abasDaAcao(acao) {
     case 'ler_campanha':
       return [
         { definicao: ABAS.CAMPANHAS }, { definicao: ABAS.CAMPANHA_MEMBROS }, { definicao: ABAS.CAMPANHA_CAPAS },
-        { definicao: ABAS.CAMPANHA_HEXATOMBE }, { definicao: ABAS.CAMPANHA_HACKING },
+        { definicao: ABAS.CAMPANHA_HEXATOMBE }, { definicao: ABAS.CAMPANHA_HACKING }, { definicao: ABAS.CAMPANHA_PERIGOS },
         { definicao: ABAS.PERFIS, extras: ['atualizadoEm'] },
       ];
     case 'ler_fotos':

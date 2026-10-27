@@ -22,7 +22,7 @@
 
     t.grupo("Tema da ficha · schema 16 (v2.36)");
     var TEMA16 = { nome: "Roxo", base: "escuro", valores: { fundo: { tipo: "radial", forma: "circulo", x: 20, y: 30, pontos: [{ cor: "#08080a", pos: 0 }, { cor: "#3a1030", alfa: 0.8, pos: 100 }] } } };
-    t.igual("o schema subiu para 22", S.VERSAO_SCHEMA, 22);
+    t.igual("o schema subiu para 23", S.VERSAO_SCHEMA, 23);
     t.iguais("ficha nova usa o tema da conta", S.criarFicha({ nome: "Nova" }).aparencia, { v: 1, modo: "conta" });
     t.iguais("ficha antiga (sem o campo) também", S.normalizarFicha({ schemaVersion: 15, nome: "Legado" }).aparencia, { v: 1, modo: "conta" });
     ["ordem", "universal"].forEach(function (tipo) {
@@ -1717,7 +1717,7 @@
       var duplicada = "";
       PO.TODOS.forEach(function (p) { if (chaves[p.chave]) duplicada = p.chave; chaves[p.chave] = true; });
       t.igual("nenhuma chave de poder se repete", duplicada, "");
-      t.ok("todo poder tem fonte e página", PO.TODOS.every(function (p) { return ["OPRPG", "SAH", "AS1", "AS2", "AS3", "AS4"].indexOf(p.fonte) >= 0 && p.pagina > 0; }));
+      t.ok("todo poder tem fonte e página", PO.TODOS.every(function (p) { return ["OPRPG", "SAH", "AS1", "AS2", "AS3", "AS4", "AS5"].indexOf(p.fonte) >= 0 && p.pagina > 0; }));
       t.ok("todo poder tem resumo", PO.TODOS.every(function (p) { return p.resumo.length > 10; }));
       t.ok("toda automação é calculo, parcial ou informacao",
         PO.TODOS.every(function (p) { return ["calculo", "parcial", "informacao"].indexOf(p.automacao) >= 0; }));
@@ -1727,7 +1727,7 @@
         PO.PODERES_PARANORMAIS.filter(function (p) { return p.fonte === "SAH"; }).length, 8);
       t.igual("34 poderes gerais do Sobrevivendo ao Horror (Tabela 2.3)", PO.PODERES_GERAIS.filter(function (p) { return p.fonte === "SAH"; }).length, 34);
       t.igual("cinco poderes gerais do Arquivos Secretos 1 (p. 46)", PO.PODERES_GERAIS.filter(function (p) { return p.fonte === "AS1"; }).length, 5);
-      t.igual("quatro habilidades por trilha, nas 27 trilhas", PO.HABILIDADES_TRILHA.length, 108);
+      t.igual("quatro habilidades por trilha, nas 28 trilhas", PO.HABILIDADES_TRILHA.length, 112);
       t.ok("os nomes das habilidades batem com os das trilhas do catálogo",
         CC.TRILHAS.every(function (tr) {
           var h = PO.habilidadesDaTrilha(tr.chave).map(function (x) { return x.nome; });
@@ -2801,7 +2801,7 @@
       /* ---------------------------------------------------------------- */
       t.grupo("Ordem · itens — catálogo completo e estruturado");
 
-      t.igual("284 entradas nos seis livros", catalogo.itens.length, 284);
+      t.igual("290 entradas nos sete livros", catalogo.itens.length, 290);
       var contagem = {};
       catalogo.itens.forEach(function (e) {
         var k = e.aba + "/" + e.natureza + "/" + e.fonte;
@@ -2838,13 +2838,14 @@
       var idRepetido = "";
       catalogo.itens.forEach(function (e) { if (idsVistos[e.id]) idRepetido = e.id; idsVistos[e.id] = true; });
       t.igual("nenhum id se repete", idRepetido, "");
-      t.ok("todo id é estável e diz a fonte (op.…, sah.…, as1.…, as2.…, as3.… ou as4.…)", catalogo.itens.every(function (e) {
-        return /^(op|sah|as1|as2|as3|as4)\.[a-z0-9.-]+$/.test(e.id) && (e.fonte === "SAH") === (e.id.indexOf("sah.") === 0) &&
+      t.ok("todo id é estável e diz a fonte (op.…, sah.…, as1.… … as5.…)", catalogo.itens.every(function (e) {
+        return /^(op|sah|as1|as2|as3|as4|as5)\.[a-z0-9.-]+$/.test(e.id) && (e.fonte === "SAH") === (e.id.indexOf("sah.") === 0) &&
           (e.fonte === "AS1") === (e.id.indexOf("as1.") === 0) && (e.fonte === "AS2") === (e.id.indexOf("as2.") === 0) &&
-          (e.fonte === "AS3") === (e.id.indexOf("as3.") === 0) && (e.fonte === "AS4") === (e.id.indexOf("as4.") === 0);
+          (e.fonte === "AS3") === (e.id.indexOf("as3.") === 0) && (e.fonte === "AS4") === (e.id.indexOf("as4.") === 0) &&
+          (e.fonte === "AS5") === (e.id.indexOf("as5.") === 0);
       }));
       t.ok("toda entrada tem nome, resumo, fonte e página", catalogo.itens.every(function (e) {
-        return e.nome && e.resumo && ["OPRPG", "SAH", "AS1", "AS2", "AS3", "AS4"].indexOf(e.fonte) >= 0 && e.pagina > 0;
+        return e.nome && e.resumo && ["OPRPG", "SAH", "AS1", "AS2", "AS3", "AS4", "AS5"].indexOf(e.fonte) >= 0 && e.pagina > 0;
       }));
       t.ok("todo item tem tipo de ficha e grupo; modificações e maldições não", catalogo.itens.every(function (e) {
         return e.natureza === "item" ? !!(e.tipoItem && e.grupo) : (e.tipoItem === null && e.grupo === null);
@@ -2875,7 +2876,7 @@
       IT._esquecer();
       var carga = IT.carregar();
       t.ok("carregar() devolve uma promessa e deixa o catálogo pronto", !!carga && typeof carga.then === "function" && !!IT.catalogoPronto());
-      t.igual("  com as mesmas 284 entradas", IT.catalogoPronto().itens.length, 284);
+      t.igual("  com as mesmas 290 entradas", IT.catalogoPronto().itens.length, 290);
 
       /* Conferência pontual contra as tabelas dos livros. */
       var katana = entrada("op.arma.katana");
@@ -4688,6 +4689,13 @@
       casosDaV240(t, global.RAMATemasDados, global.RAMATemaModelo, global.RAMAFicha, global.RAMAValidacao);
     }
 
+    /* v2.48 — ARQUIVOS SECRETOS 5 */
+    if (global.RAMAOrdemArquivo5 && global.RAMAOrdemArquivo3 && global.RAMAOrdemCondicoes && global.RAMAOrdemEfeitos && RRs) {
+      casosDaV248(t, global.RAMAOrdemCatalogo, RRs, global.RAMAOrdemPoderes, global.RAMAOrdemArquivo5, global.RAMAOrdemArquivo3,
+        global.RAMAOrdemCondicoes, global.RAMAOrdemEfeitos, global.RAMAOrdemProgressao, global.RAMAOrdemAprendizado,
+        global.RAMAOrdemItens || null, global.RAMAPerigos || null, global.RAMAOrdemBiblioteca || null);
+    }
+
     /* v2.38 — ARQUIVOS SECRETOS 4 */
     if (global.RAMAOrdemArquivo4 && global.RAMAOrdemArquivo3 && global.RAMAOrdemCondicoes && global.RAMAOrdemConsumo && RRs) {
       casosDaV238(t, global.RAMAOrdemCatalogo, RRs, global.RAMAOrdemPoderes, global.RAMAOrdemArquivo4, global.RAMAOrdemArquivo3,
@@ -5012,7 +5020,7 @@
     remoto.pericias[0].bonus = 5;
     var m = S.mesclar(base, local, remoto, S.ESQUEMA_FICHA);
     t.ok("sincronizar: a fórmula daqui e o bônus de lá", m.estado.pericias[0].formula === "@STR d8" && m.estado.pericias[0].bonus === 5 && !m.conflitos.length);
-    t.igual("o schema da ficha é o atual (22)", n.schemaVersion, 22);
+    t.igual("o schema da ficha é o atual (23)", n.schemaVersion, 23);
   }
 
   /* =================================================================
@@ -5049,7 +5057,7 @@
     var m = S.mesclar(base, local, remoto, S.ESQUEMA_FICHA);
     t.ok("sincronizar: o modo daqui e o bônus de lá, sem conflito",
       m.estado.organizacao.pericias.modo === "maior" && m.estado.pericias[1].bonus === 4 && !m.conflitos.length);
-    t.igual("o schema da ficha é o atual (22)", n.schemaVersion, 22);
+    t.igual("o schema da ficha é o atual (23)", n.schemaVersion, 23);
   }
 
   /* =================================================================
@@ -5117,7 +5125,7 @@
     t.ok("exportar e importar leva pendentes (com o dado já rolado) e resolvidas", volta.ok &&
       volta.dados.ordem.barganhaInsana.pendentes[0].d4 === 2 && volta.dados.ordem.barganhaInsana.resolvidas.length === 1);
     t.ok("  mesmo sem o ritual na lista de conhecidos", volta.dados.rituais.itens.length === 0);
-    t.igual("o schema da ficha é o atual (22)", F.normalizarFicha(ficha).schemaVersion, 22);
+    t.igual("o schema da ficha é o atual (23)", F.normalizarFicha(ficha).schemaVersion, 23);
   }
 
   /* =================================================================
@@ -5158,7 +5166,7 @@
     t.iguais("  um tema de dados que este navegador não conhece também fica (a tela usa a reserva)", MT.normalizarAparencia({ dados: { id: "tema-do-futuro" } }).dados, { id: "tema-do-futuro" });
     var ficha = F.normalizarFicha(F.criarFicha({ nome: "Lia", tipoFicha: "universal", aparencia: { v: 1, modo: "conta", dados: { id: "sigilo-violeta" } } }));
     t.iguais("a ficha normalizada mantém a escolha", ficha.aparencia.dados, { id: "sigilo-violeta" });
-    t.igual("o schema da ficha é o atual (22)", ficha.schemaVersion, 22);
+    t.igual("o schema da ficha é o atual (23)", ficha.schemaVersion, 23);
     var pacote = V.exportar("personagem", ficha);
     t.ok("exportar leva a escolha sem `id` (atravessa como `tema`)", pacote.dados.aparencia.dados.tema === "sigilo-violeta" && JSON.stringify(pacote).indexOf('"id"') < 0);
     var volta = V.importado(JSON.parse(JSON.stringify(pacote)));
@@ -5174,6 +5182,370 @@
       { v: 1, padrao: { erro: "#c6564b" } });
     t.ok("nada que preste: null (rolagem antiga ou adulterada usa o tema da página)", TD.normalizarAparenciaDaRolagem("x") === null && TD.normalizarAparenciaDaRolagem({ tema: { id: "nao-existe", versao: 1 } }) === null);
     t.ok("a aparência guardada é pequena", JSON.stringify(TD.normalizarAparenciaDaRolagem({ tema: { id: "sigilo-violeta", versao: 1 }, padrao: { superficie: "#111111", texto: "#111111", texto2: "#111111", texto3: "#111111", tracoForte: "#111111", tracoMedia: "#111111", tracoFraca: "#111111", selecao: "#111111", selecaoTexto: "#111111", paranormal: "#111111", erro: "#111111", aviso: "#111111" } })).length < 400);
+  }
+
+  /* =================================================================
+     v2.48 — ARQUIVOS SECRETOS 5
+     ================================================================= */
+
+  function casosDaV248(t, C, R, P, A5, A3, CD, EF, EP, AP, IT, PG, B) {
+    var INV = { itens: [] };
+    function ficha(extra) {
+      var o = R.fichaVazia();
+      Object.keys(extra || {}).forEach(function (k) { o[k] = extra[k]; });
+      return R.normalizar(JSON.parse(JSON.stringify(o)));
+    }
+    function reg(etapa, tipo, valor, opcoes) {
+      return { id: "r-" + etapa, etapa: etapa, tipo: tipo, valor: valor, opcoes: opcoes || {}, registradoEm: "2026-10-27T10:00:00.000Z" };
+    }
+    function volta(o) { return R.normalizar(JSON.parse(JSON.stringify(o))); }
+    function interludio(o) { CD.novaCena(o.condicoes, null, { interludio: true }); }
+    function cena(o) { var antes = o.condicoes.cena.id; CD.novaCena(o.condicoes); A5.aoTrocarDeCena(o, antes); }
+    function vaga(o, id) { return EP.vagas(o).filter(function (v) { return v.id === id; })[0]; }
+    function avaliar(o, id, valor, opcoes) { return EP.simular(o, vaga(o, id), { valor: valor, opcoes: opcoes || {} }, null).avaliacao; }
+    function comPoder(base, chave, etapa) { return ficha(Object.assign({}, base, { nex: Math.max(15, base.nex || 0), escolhas: [reg(etapa || "d3.poderClasse", "poderClasse", chave)] })); }
+
+    t.grupo("v2.48 · Arquivos Secretos 5 · fonte, catálogo e o que ficou de fora");
+    var livro = C.livro("AS5");
+    t.iguais("AS5 no registro único dos livros, edição v1.0", [livro.sigla, livro.nome, livro.edicao], ["AS5", "Arquivos Secretos 5", "v1.0"]);
+    var as5 = P.TODOS.filter(function (p) { return p.fonte === "AS5"; });
+    t.igual("24 poderes com página (9 de classe, 3 gerais, 3 paranormais, 5 de Transmissão, 4 da trilha)",
+      as5.map(function (p) { return p.tipo + (p.transmissao ? "/t" : ""); }).sort().join(","),
+      "classe,classe,classe,classe,classe,classe,classe,classe,classe,geral,geral,geral,paranormal,paranormal,paranormal,paranormal/t,paranormal/t,paranormal/t,paranormal/t,paranormal/t,trilha,trilha,trilha,trilha");
+    t.ok("  todos com página", as5.every(function (p) { return p.pagina >= 54 && p.pagina <= 63; }));
+    t.iguais("Criptologista do Oculto: Método Intuitivo, Caligrafia Eficiente, Decifrar à Distância, Selo Supremo", P.habilidadesDaTrilha("criptologista").map(function (h) { return h.nex + ":" + h.chave; }),
+      ["10:metodoIntuitivo", "40:caligrafiaEficiente", "65:decifrarADistancia", "99:seloSupremo"]);
+    t.iguais("duas origens: Ufólogo e Funcionário de Beira de Estrada", C.ORIGENS.filter(function (o) { return o.fonte === "AS5"; }).map(function (o) { return o.chave + ":" + o.pericias.join("+"); }),
+      ["ufologo:ciencias+ocultismo", "funcionarioDeBeiraDeEstrada:fortitude+intuicao"]);
+    var tudo = JSON.stringify([C.PERICIAS, P.TODOS, C.ORIGENS]);
+    t.ok("Rastrear Trilha Digital (novo uso de Tecnologia, p. 54) NÃO entrou", tudo.indexOf("Rastrear Trilha") < 0);
+    var tr = as5.filter(function (p) { return p.transmissao; });
+    t.ok("Transmissão: elemento próprio, pré-requisito do Sino, sem afinidade", tr.every(function (p) { return p.elemento === "transmissao" && !p.afinidade && p.requisitos[0].tipo === "sinoDeTransmissao"; }));
+    t.ok("  nada nos poderes de Transmissão liga ao Hexatombe ou ao Hacking", JSON.stringify(tr).toLowerCase().indexOf("exatombe") < 0 && JSON.stringify(tr).toLowerCase().indexOf("hacking") < 0);
+    t.iguais("Transmissão é manifestação de Conhecimento E Energia (p. 46)", C.manifestacao("transmissao").elementos, ["conhecimento", "energia"]);
+    t.ok("  e não virou elemento de afinidade", C.ELEMENTOS_AFINIDADE.indexOf("transmissao") < 0);
+    t.igual("Parede de Carne: Vig 3 OU For 3", JSON.stringify(P.poder("paredeDeCarne").requisitos), JSON.stringify([{ tipo: "atributoUm", atributos: ["vig", "for"], minimo: 3 }]));
+    t.ok("Apaixonado (Agi 2) e Direção Defensiva: treinar ou +2 em Pilotagem", P.poder("apaixonadoPorVeiculos").requisitos[0].minimo === 2 &&
+      P.poder("apaixonadoPorVeiculos").efeitos[0].pericia === "pilotagem" && P.poder("direcaoDefensiva").efeitos[0].pericia === "pilotagem");
+    t.ok("Desafiar o Ego: Pre 2", P.poder("desafiarOEgo").requisitos[0].atributo === "pre" && P.poder("desafiarOEgo").requisitos[0].minimo === 2);
+    if (B) {
+      var secoes = B.secoes("paranormais");
+      t.ok("a biblioteca separa os poderes de Transmissão numa seção própria", secoes.some(function (s) { return s.chave === "transmissao" && s.entradas.length === 5; }));
+      t.igual("  filtro por livro AS5 na aba de gerais", B.filtrar(B.secoes("gerais"), "", { livro: "AS5" }).reduce(function (n, s) { return n + s.entradas.length; }, 0), 3);
+    }
+    if (A3) t.igual("nove regalias novas para veículos (p. 59)", A3.REGALIAS.filter(function (r) { return r.fonte === "AS5"; }).length, 9);
+
+    t.grupo("v2.48 · o Sino de Transmissão e os poderes que só funcionam em dupla");
+    var oc = ficha({ classe: "ocultista", origem: "academico", nex: 99, atributos: { agi: 1, for: 1, int: 3, pre: 2, vig: 1 }, nome: "Vera" });
+    t.ok("sem o Sino: Transcender para Conexão Comunicativa é recusado", !avaliar(oc, "d3.poderClasse", "transcender", { poder: { valor: "conexaoComunicativa", opcoes: {} } }).valido);
+    A5.registrarSino(oc, "tocou o Sino na torre");
+    t.ok("  registrado sem a confirmação da mesa: ainda recusado", !avaliar(oc, "d3.poderClasse", "transcender", { poder: { valor: "conexaoComunicativa", opcoes: {} } }).valido);
+    A5.confirmarSino(oc, "mestre");
+    t.ok("  confirmado pelo mestre: aceito", avaliar(oc, "d3.poderClasse", "transcender", { poder: { valor: "conexaoComunicativa", opcoes: {} } }).valido);
+    t.ok("  e a confirmação sobrevive a gravar e reabrir", A5.sino(volta(oc)).confirmado && A5.sino(volta(oc)).confirmadoPor === "mestre");
+    var com = ficha(Object.assign({}, oc, { escolhas: [reg("d3.poderClasse", "poderClasse", "transcender", { poder: { valor: "transmissaoDePericia", opcoes: {} } })] }));
+    t.ok("com o poder e nenhum outro portador: não funciona", A5.temPoder(com, "transmissaoDePericia") && !A5.funciona(com, "transmissaoDePericia"));
+    A5.definirPortadores(com, "transmissaoDePericia", ["Vera", "Bruno"], "Vera");
+    t.iguais("  o próprio personagem não conta como outro portador", A5.portadores(com, "transmissaoDePericia"), ["Bruno"]);
+    t.ok("  com o Bruno: funciona", A5.funciona(com, "transmissaoDePericia"));
+    var emp = A5.usarEmprestimo(com, "pericia", { de: "Bruno", pericia: "tecnologia", atributo: "int", dados: 3, grau: "veterano", bonus: 10 });
+    t.ok("Transmissão de Perícia: uma por cena, com os valores permanentes", emp.ok && !A5.usarEmprestimo(com, "pericia", { de: "Bruno", pericia: "crime", dados: 1, grau: "treinado", bonus: 5 }).ok &&
+      A5.periciaEmprestada(com, "tecnologia").bonus === 10);
+    t.ok("  a perícia própria não muda", R.grauDaPericia(com, "tecnologia") === R.grauDaPericia(oc, "tecnologia"));
+    cena(com);
+    t.ok("  e o empréstimo some no fim da cena", A5.periciaEmprestada(com, "tecnologia") === null);
+    A5.definirPortadores(com, "transmissaoDePoder", ["Bruno"], "Vera");
+    var comPoder2 = ficha(Object.assign({}, com, { escolhas: com.escolhas.concat([reg("d6.poderClasse", "poderClasse", "transcender", { poder: { valor: "transmissaoDePoder", opcoes: {} } })]) }));
+    A5.definirPortadores(comPoder2, "transmissaoDePoder", ["Bruno"], "Vera");
+    t.ok("Transmissão de Poder: outro poder de Transmissão não pode ser emprestado (sem corrente)", !A5.usarEmprestimo(comPoder2, "poder", { de: "Bruno", chave: "transmissaoDeRitual" }).ok);
+    var defAntes = R.calcular(comPoder2, INV).defesa.total;
+    t.ok("  Reflexos Defensivos emprestado: +2 na Defesa só nesta cena", A5.usarEmprestimo(comPoder2, "poder", { de: "Bruno", chave: "reflexosDefensivos" }).ok &&
+      R.calcular(comPoder2, INV).defesa.total === defAntes + 2);
+    cena(comPoder2);
+    t.igual("  no fim da cena, a concessão temporária sai (e só ela)", R.calcular(comPoder2, INV).defesa.total, defAntes);
+
+    t.grupo("v2.48 · Ufólogo: a teoria, o mestre e os +3 PE uma vez");
+    var uf = ficha({ classe: "especialista", origem: "ufologo", nex: 15, atributos: { agi: 1, for: 1, int: 2, pre: 2, vig: 1 } });
+    var peBase = R.calcular(uf, INV).pe.total;
+    var teo = A5.registrarTeoria(uf, "É tudo uma transmissão de TV.");
+    t.ok("uma teoria por missão", teo.ok && !A5.registrarTeoria(uf, "outra").ok);
+    var res = A5.resolverTeoria(uf, teo.teoria.id, true, "mestre");
+    t.ok("correta: concede +3 (máximos pela conta)", res.ok && res.concede === 3 && R.calcular(uf, INV).pe.total === peBase + 3);
+    t.ok("  confirmar de novo não concede outra vez", !A5.resolverTeoria(uf, teo.teoria.id, true, "mestre").ok);
+    t.igual("  recarregar não soma de novo", R.calcular(volta(uf), INV).pe.total, peBase + 3);
+    A3.avancar(uf, "missao");
+    var t2 = A5.registrarTeoria(uf, "segunda");
+    A5.resolverTeoria(uf, t2.teoria.id, false, "mestre");
+    t.igual("nova missão: nova teoria; incorreta não dá nada e os ganhos anteriores ficam", R.calcular(uf, INV).pe.total, peBase + 3);
+    t.ok("outra origem não registra teoria", !A5.registrarTeoria(ficha({ classe: "especialista", origem: "academico", nex: 5 }), "x").ok);
+
+    t.grupo("v2.48 · Funcionário de Beira de Estrada: Turno Invertido");
+    var fu = ficha({ classe: "combatente", origem: "funcionarioDeBeiraDeEstrada", nex: 5 });
+    t.ok("só durante um interlúdio", !A5.usarTurnoInvertido(fu).ok);
+    interludio(fu);
+    var nInt = A5.interludioDe(fu);
+    t.ok("uma vez por missão", A5.usarTurnoInvertido(fu).ok && !A5.usarTurnoInvertido(fu).ok);
+    t.igual("  e não gasta ação de interlúdio (o interlúdio continua o mesmo)", A5.interludioDe(fu), nInt);
+    A3.avancar(fu, "missao");
+    t.ok("  na missão seguinte, de novo", A5.usarTurnoInvertido(fu).ok);
+
+    t.grupo("v2.48 · Fôlego, Meditação, Desafiar o Ego, Treinado nas Telas");
+    var cb = comPoder({ classe: "combatente", origem: "academico", nex: 10, atributos: { agi: 1, for: 1, int: 1, pre: 2, vig: 3 } }, "folegoDeEmergencia");
+    t.ok("Fôlego: uma vez por cena", A5.registrarFolego(cb, "pv", 7, "1d8+3 = 7").ok && !A5.registrarFolego(cb, "pv", 5, "x").ok && (cena(cb), A5.registrarFolego(cb, "pe", 4, "x").ok));
+    t.iguais("Meditação: o multiplicador substitui o dobro (limite 7)", A5.CONDICOES_DE_MEDITACAO.map(function (c) { return A5.planoDeMeditacao(7, c.chave).total; }), [7, 14, 21, 28]);
+    var med = comPoder({ classe: "ocultista", origem: "academico", nex: 35 }, "meditacaoOcultista");
+    t.ok("  só no interlúdio, uma vez por interlúdio", !A5.registrarMeditacao(med, A5.planoDeMeditacao(7, "normal"), 14).ok &&
+      (interludio(med), A5.registrarMeditacao(med, A5.planoDeMeditacao(7, "normal"), 14).ok) && !A5.registrarMeditacao(med, A5.planoDeMeditacao(7, "luxuosa"), 28).ok);
+    var de = comPoder({ classe: "combatente", origem: "academico", nex: 10, atributos: { agi: 1, for: 1, int: 1, pre: 2, vig: 1 } }, "desafiarOEgo");
+    var d1 = A5.registrarDesafio(de, "Bruno", "faca");
+    t.ok("Desafiar o Ego: uma vez por rodada", d1.ok && !A5.registrarDesafio(de, "Carla", "tiro").ok);
+    var dr = A5.resolverDesafio(de, d1.desafio.id, true, 2);
+    t.ok("  acertou: dano extra igual à Presença", dr.ok && dr.desafio.danoExtra === 2 && dr.devolver === 0);
+    t.ok("  resolver de novo é recusado", !A5.resolverDesafio(de, d1.desafio.id, false).ok);
+    A5.proximaRodada(de);
+    var d2 = A5.registrarDesafio(de, "Carla", "tiro");
+    var er = A5.resolverDesafio(de, d2.desafio.id, false);
+    t.ok("  próxima rodada: de novo; errou devolve o PE uma vez", d2.ok && er.devolver === 1 && !A5.resolverDesafio(de, d2.desafio.id, false).ok);
+    var te = comPoder({ classe: "especialista", origem: "academico", nex: 10, atributos: { agi: 1, for: 1, int: 3, pre: 1, vig: 1 } }, "treinadoNasTelas");
+    t.ok("Treinado nas Telas: armado antes do teste", A5.armarTelas(te, true).ok && A5.telasArmado(te));
+    t.ok("  e com Intelecto o teste tem os dados do Intelecto (3), os outros modificadores iguais", R.dadoDePericia(te, "iniciativa", { atributo: "int" }) === "3d20" && R.dadoDePericia(te, "iniciativa") === "1d20");
+
+    t.grupo("v2.48 · Ruído de Comunicação: só dados, uma vez, até o fim da cena");
+    var rc = ficha({ classe: "ocultista", origem: "academico", nex: 10, atributos: { agi: 1, for: 1, int: 1, pre: 3, vig: 1 } });
+    var fr = EF.criarInstancia({ modelo: "cond:frustrado", duracao: { tipo: "cena" } });
+    EF.aplicar(rc.condicoes, fr);
+    var fixo = EF.criarInstancia({ nome: "Bônus fixo", modificadores: [{ alvo: "pericias", tipo: "bonus", valor: 5 }], duracao: { tipo: "cena" } });
+    EF.aplicar(rc.condicoes, fixo);
+    var dadosAntes = R.dadosDoTeste(rc, "diplomacia").quantos;
+    var bonusAntes = R.bonusDePericia(rc, "diplomacia", INV).total;
+    t.ok("bônus numérico fixo não é invertível", !A5.inverterEfeito(rc, rc.condicoes.efeitos[1].id, "Lia").ok);
+    t.ok("frustrado (−1 dado) é", A5.inverterEfeito(rc, rc.condicoes.efeitos[0].id, "Lia").ok);
+    t.igual("  e vira +1 dado (de 2 para 4 dados de Presença 3)", R.dadosDoTeste(rc, "diplomacia").quantos, dadosAntes + 2);
+    t.igual("  o bônus fixo continua o mesmo", R.bonusDePericia(rc, "diplomacia", INV).total, bonusAntes);
+    t.ok("  inverter de novo na mesma cena é recusado (não desfaz por acidente)", !A5.inverterEfeito(rc, rc.condicoes.efeitos[0].id, "Lia").ok);
+    t.ok("  a origem da inversão fica no efeito e sobrevive a reabrir", volta(rc).condicoes.efeitos[0].invertido.por === "Lia");
+    rc.condicoes.efeitos[0].duracao = { tipo: "ateRemover" };
+    cena(rc);
+    t.igual("  numa cena nova, a inversão não vale mais", R.dadosDoTeste(rc, "diplomacia").quantos, dadosAntes);
+
+    t.grupo("v2.48 · benefícios para aliados (nunca para quem tem o poder)");
+    var au = comPoder({ classe: "combatente", origem: "academico", nex: 10, nome: "Ana" }, "auraDeConfianca");
+    var iniAu = R.bonusDePericia(au, "iniciativa", INV).total;
+    A5.marcarAliados(au, "aura", ["Bruno"]);
+    t.igual("Aura de Confiança: marcar aliados não dá o +5 a quem tem o poder", R.bonusDePericia(au, "iniciativa", INV).total, iniAu);
+    var al = ficha({ classe: "especialista", origem: "academico", nex: 10, nome: "Bruno" });
+    var iniAl = R.bonusDePericia(al, "iniciativa", INV).total, defAl = R.calcular(al, INV).defesa.total;
+    t.ok("o aliado registra a aura recebida: +5 na Iniciativa", A5.adicionarRecebido(al, "aura", "Ana").ok && R.bonusDePericia(al, "iniciativa", INV).total === iniAl + 5);
+    t.ok("  a mesma aura duas vezes não acumula", !A5.adicionarRecebido(al, "aura", "Ana").ok);
+    A5.adicionarRecebido(al, "parede", "Caio");
+    A5.adicionarRecebido(al, "direcao", "Duda");
+    t.igual("Parede de Carne (+5) e Direção Defensiva de passageiro (+2) na Defesa", R.calcular(al, INV).defesa.total, defAl + 7);
+    cena(al);
+    t.igual("  tudo isso acaba com a cena", R.calcular(al, INV).defesa.total, defAl);
+    var dd = comPoder({ classe: "especialista", origem: "academico", nex: 10 }, "direcaoDefensiva");
+    var defDd = R.calcular(dd, INV).defesa.total;
+    A5.dirigir(dd, true);
+    t.igual("Direção Defensiva: quem dirige também recebe +2", R.calcular(dd, INV).defesa.total, defDd + 2);
+
+    t.grupo("v2.48 · Dead Man Switch: só o grau, só machucado");
+    var dm = ficha(Object.assign({ classe: "ocultista", origem: "academico", nex: 20, pericias: { ocultismo: "treinado", vontade: "treinado" } }, { escolhas: [reg("d3.poderClasse", "poderClasse", "transcender", { poder: { valor: "deadManSwitch", opcoes: {} } })] }));
+    var grauDe = function (k) { return R.grauDaPericia(dm, k); };
+    var treinada = C.PERICIAS.filter(function (p) { return grauDe(p.chave) !== "destreinado"; })[0].chave;
+    t.ok("não machucado: recusado", !A5.ativarDeadMan(dm, ["Bruno"], [treinada], grauDe, false).ok);
+    var destreinada = C.PERICIAS.filter(function (p) { return grauDe(p.chave) === "destreinado"; })[0].chave;
+    t.ok("perícia destreinada: recusada", !A5.ativarDeadMan(dm, ["Bruno"], [destreinada], grauDe, true).ok);
+    t.ok("sem afinidade: um alvo e uma perícia", !A5.ativarDeadMan(dm, ["Bruno", "Carla"], [treinada], grauDe, true).ok && A5.ativarDeadMan(dm, ["Bruno"], [treinada], grauDe, true).ok);
+    t.ok("  vale enquanto machucado; recuperado, termina", A5.deadManValendo(dm, true) && !A5.deadManValendo(dm, false));
+    var alvo = ficha({ classe: "combatente", origem: "academico", nex: 5, atributos: { agi: 1, for: 1, int: 1, pre: 1, vig: 1 } });
+    var antesAlvo = R.bonusDePericia(alvo, "ocultismo", INV).total;
+    A5.adicionarRecebido(alvo, "deadMan", "Vera", { pericia: "ocultismo", grau: "veterano" });
+    t.igual("no alvo: o grau recebido (veterano, +10) — o atributo dele não muda", R.grauDaPericia(alvo, "ocultismo"), "veterano");
+    t.igual("  e o bônus sobe só a diferença do grau", R.bonusDePericia(alvo, "ocultismo", INV).total - antesAlvo, C.grau("veterano").bonus - C.grau(R.grauDaPericia(ficha({ classe: "combatente", origem: "academico", nex: 5 }), "ocultismo")).bonus);
+    A5.removerRecebido(alvo, A5.recebidosValendo(alvo)[0].id);
+    t.igual("  tirado, volta ao próprio", R.bonusDePericia(alvo, "ocultismo", INV).total, antesAlvo);
+
+    t.grupo("v2.48 · Ácido Corrosivo: arma escolhida, fim da cena, nada permanente");
+    var ac = ficha(Object.assign({ classe: "combatente", origem: "academico", nex: 20, atributos: { agi: 1, for: 2, int: 1, pre: 1, vig: 1 } },
+      { escolhas: [reg("d3.poderClasse", "poderClasse", "transcender", { poder: { valor: "acidoCorrosivo", opcoes: {} } })] }));
+    var faca = { id: "it-faca-1234", tipo: "arma", nome: "Faca", dano: "1d4", critico: 19, multiplicador: 2, ordem: { pericia: "luta", arma: { tipo: "corpoACorpo", atributoDano: "for", tipoDano: "Corte" } } };
+    var pau = { id: "it-pau-12345", tipo: "arma", nome: "Taco", dano: "1d6", critico: 20, multiplicador: 2, ordem: { pericia: "luta", arma: { tipo: "corpoACorpo", atributoDano: "for", tipoDano: "Impacto" } } };
+    var inv2 = { itens: [faca, pau] };
+    var semAc = R.armaEfetiva(ac, inv2, faca);
+    t.ok("ativado na faca", A5.ativarAcido(ac, "arma", faca, false).ok && !A5.ativarAcido(ac, "desarmado").ok);
+    var comAc = R.armaEfetiva(ac, inv2, faca);
+    t.ok("  +2 no ataque, +5 no dano e tipo químico — só na faca", comAc.ataque.total === semAc.ataque.total + 2 && comAc.extra.total === semAc.extra.total + 5 && comAc.tipoDano === "Químico" &&
+      R.armaEfetiva(ac, inv2, pau).tipoDano === "Impacto");
+    t.ok("  o item não muda", faca.ordem.arma.tipoDano === "Corte" && !faca.ordem.acido);
+    cena(ac);
+    t.ok("fim da cena: a faca não amaldiçoada fica esperando a destruição, ainda no inventário", A5.dados(ac).destruir.length === 1 && inv2.itens.length === 2 &&
+      R.armaEfetiva(ac, inv2, faca).tipoDano === "Corte");
+    var amald = ficha(Object.assign({}, ac, { arquivo5: undefined }));
+    A5.ativarAcido(amald, "arma", pau, true);
+    cena(amald);
+    t.igual("  arma amaldiçoada: nenhuma destruição", A5.dados(amald).destruir.length, 0);
+
+    t.grupo("v2.48 · selos: máximo, por ação, custo e autoria");
+    var cs = ficha(Object.assign({ classe: "ocultista", origem: "academico", nex: 99, trilha: "criptologista", atributos: { agi: 1, for: 1, int: 2, pre: 3, vig: 1 } }));
+    t.ok("Método Intuitivo dá Criar Selo", A5.temCriarSelo(cs));
+    t.igual("  selos por ação: 2 +1 por outra habilidade da trilha (três aqui)", A5.selosPorAcao(cs), 5);
+    t.igual("  o máximo ao mesmo tempo é a Presença (sem Criar Selo duplo)", A5.maximoDeSelos(cs, 3), 3);
+    var cs2 = ficha(Object.assign({}, cs, { escolhas: [reg("d3.poderClasse", "poderClasse", "criarSelo")] }));
+    t.igual("  com Criar Selo também como poder de classe: o dobro", A5.maximoDeSelos(cs2, 3), 6);
+    t.ok("fabricar é ação de interlúdio", !A5.planoDeFabricacao(cs, INV, 3, [{ ritual: "Decadência", custo: 1 }]).ok);
+    interludio(cs);
+    var pf = A5.planoDeFabricacao(cs, INV, 3, [{ ritual: "Decadência", custo: 1 }, { ritual: "Decadência", custo: 1 }, { ritual: "Eletrocussão", custo: 1 }]);
+    t.ok("  três selos de 1 PE: custo 3, dentro do máximo", pf.ok && pf.custo === 3 && pf.quantidade === 3);
+    t.ok("  quatro passam do máximo (3)", !A5.planoDeFabricacao(cs, INV, 3, [{ ritual: "a", custo: 1 }, { ritual: "b", custo: 1 }, { ritual: "c", custo: 1 }, { ritual: "d", custo: 1 }]).ok);
+    t.ok("  a fabricação com o mesmo id não conta duas vezes", A5.registrarFabricacao(cs, "fab-abc12345", pf).ok && A5.registrarFabricacao(cs, "fab-abc12345", pf).repetida);
+    var seloCsSupremo = { ritual: "Decadência", custo: 1, circulo: 1, autor: { nome: "Cris" }, autoria: { caligrafia: true, supremo: true }, fabricacao: "fab-abc12345" };
+    var usuario = ficha({ classe: "combatente", origem: "academico", nex: 10 });
+    var planoSup = A5.planoDeUso(usuario, seloCsSupremo, false);
+    t.ok("Selo Supremo do autor: sem teste de uso, DT +5, +3 dados, avançada sem o adicional", planoSup.teste === null && planoSup.dtMais === 5 && planoSup.dadosDeDanoMais === 3 && planoSup.semCustoAvancado);
+    t.ok("  mas o Custo do Paranormal continua", /Custo do Paranormal/.test(planoSup.custoDoParanormal));
+    var planoCal = A5.planoDeUso(usuario, { ritual: "Decadência", custo: 1, autoria: { caligrafia: true } }, false);
+    t.igual("Caligrafia Eficiente do autor: Ocultismo DT 10 + custo para quem não conhece", planoCal.teste.dt, 11);
+    t.igual("selo comum, quem não conhece: DT 20 + custo (OPRPG p. 151)", A5.planoDeUso(usuario, { ritual: "Decadência", custo: 1 }, false).teste.dt, 21);
+    var planoAutor = A5.planoDeUso(cs, seloCsSupremo, true);
+    t.ok("o autor usando o próprio selo não ganha os benefícios duas vezes", planoAutor.dtMais === 5 && planoAutor.dadosDeDanoMais === 3);
+    t.ok("Decifrar à Distância é de quem USA (não precisa empunhar nem ler em voz alta)", planoAutor.decifrar && !planoAutor.empunhar && planoSup.empunhar);
+    t.ok("o uso de um selo com o mesmo id da operação não consome duas vezes", A5.registrarUsoDeSelo(usuario, "ritual-x1234567", "it1", "Decadência").ok && A5.registrarUsoDeSelo(usuario, "ritual-x1234567", "it1", "Decadência").repetido);
+
+    t.grupo("v2.48 · itens: benefício só em uso");
+    var it = ficha({ classe: "especialista", origem: "academico", nex: 10 });
+    var tenis = { id: "it-tenis-1234", tipo: "item", nome: "Tênis Lépidos", origemCatalogoId: "as5.amaldicoado.tenis-lepidos", ordem: { quantidade: 1 } };
+    var invT = { itens: [tenis] };
+    var atl = R.bonusDePericia(it, "atletismo", invT).total;
+    t.igual("Tênis Lépidos na mochila: nada", R.bonusDePericia(it, "atletismo", invT).total, R.bonusDePericia(it, "atletismo", INV).total);
+    tenis.ordem.vestida = true;
+    t.igual("  vestidos: +12 em Atletismo (o valor publicado)", R.bonusDePericia(it, "atletismo", invT).total, atl + 12);
+    var joias = { id: "it-joias-1234", tipo: "item", nome: "Joias da Mente", origemCatalogoId: "as5.amaldicoado.joias-da-mente", ordem: { quantidade: 1, vestida: true, pecas: { piercing: true, brinco: false } } };
+    var dip = R.bonusDePericia(it, "diplomacia", INV).total;
+    t.igual("Joias da Mente com uma peça só: nada", R.bonusDePericia(it, "diplomacia", { itens: [joias] }).total, dip);
+    joias.ordem.pecas.brinco = true;
+    t.igual("  com as duas: +2 em Diplomacia", R.bonusDePericia(it, "diplomacia", { itens: [joias] }).total, dip + 2);
+    var faixas = { id: "it-faixas-123", tipo: "item", nome: "Faixas", origemCatalogoId: "as5.amaldicoado.faixas-da-videncia", ordem: { quantidade: 1, vestida: true } };
+    t.igual("Faixas da Vidência: nenhum +5 geral na Defesa", R.calcular(it, { itens: [faixas] }).defesa.total, R.calcular(it, INV).defesa.total);
+    if (IT && IT.catalogoPronto && IT.catalogoPronto()) {
+      var cat = IT.catalogoPronto();
+      var skate = IT.paraInventario(cat.porId["as5.amaldicoado.skate-caotico"], { quantidade: 1, catalogo: cat });
+      t.ok("Skate Caótico entra como proteção (escudo, Defesa 5) — é assim para modificações e maldições", skate.ok && skate.tipo === "armadura" && skate.dados.ordem.protecao.tipo === "escudo" && skate.dados.defesa === 5);
+      var jo = IT.paraInventario(cat.porId["as5.amaldicoado.joias-da-mente"], { quantidade: 1, catalogo: cat });
+      t.ok("Joias da Mente chegam com as duas peças, como uma vestimenta só", jo.ok && jo.dados.ordem.pecas.piercing && jo.dados.ordem.pecas.brinco && jo.dados.ordem.marcadores.indexOf("vestimenta") >= 0);
+    }
+
+    t.grupo("v2.48 · regalias de veículo (AS3 + AS5)");
+    if (A3) {
+      var vei = A3.novoVeiculo("categoria3");
+      t.igual("tanque padrão: 5 dados", A3.combustivelMaximo(vei), 5);
+      vei.regalias.push({ chave: "conversaoDeCombustivel" });
+      vei = A3.normalizarVeiculo(vei);
+      t.ok("Conversão de Combustível: 10 dados — instalar NÃO enche o tanque", A3.combustivelMaximo(vei) === 10 && vei.combustivel === 5);
+      A3.reabastecer(vei);
+      t.igual("  reabastecer vai a 10", vei.combustivel, 10);
+      vei.regalias.push({ chave: "inducaoForcada" });
+      vei = A3.normalizarVeiculo(vei);
+      A3.definirManobra(vei, "c1", 35);
+      t.ok("Indução Forçada: DT 35+ dá 36 m (24q), a tabela nova", A3.contasDoVeiculo(vei).deslocamento.metros === 36 && A3.contasDoVeiculo(vei).deslocamento.quadrados === 24);
+      var cat3 = A3.novoVeiculo("categoria3");
+      cat3.regalias = [{ chave: "latariaReforcada" }, { chave: "oxidoNitroso" }, { chave: "vedacaoHermetica", extra: true, por: "Ana" }, { chave: "gaiolaDeProtecao", extra: true, por: "Ana" }];
+      cat3 = A3.normalizarVeiculo(cat3);
+      t.ok("Apaixonado por Veículos: UMA regalia fora do limite por pessoa", A3.contasDoVeiculo(cat3).extras === 1 && A3.contasDoVeiculo(cat3).noLimite === 2);
+      t.ok("  Vedação Hermética: imunidade a eletricidade", A3.contasDoVeiculo(cat3).imunidades.join().indexOf("eletricidade") >= 0);
+      A3.definirManobra(cat3, "c1", 20);
+      t.igual("Óxido Nitroso: o dobro do deslocamento na rodada", A3.contasDoVeiculo(cat3, { nitro: true }).deslocamento.metros, 2 * A3.contasDoVeiculo(cat3).deslocamento.metros);
+      cat3.direcaoDefensiva = true;
+      t.igual("Direção Defensiva de quem dirige: +2 na Defesa do veículo", A3.contasDoVeiculo(cat3).defesa.total, A3.contasDoVeiculo(A3.normalizarVeiculo(Object.assign({}, cat3, { direcaoDefensiva: false }))).defesa.total + 2);
+      var dono = ficha({ classe: "especialista", origem: "academico", nex: 10 });
+      t.ok("nitro: uma vez por cena, valendo só na rodada em que foi usado", A5.usarNitro(dono, cat3.id).ok && !A5.usarNitro(dono, cat3.id).ok && A5.nitroAtivo(dono, cat3.id) &&
+        (A5.proximaRodada(dono), !A5.nitroAtivo(dono, cat3.id)));
+    }
+
+    t.grupo("v2.48 · Paralinguística Ampliada e a concessão de Compreensão Paranormal");
+    var pl = ficha(Object.assign({ classe: "ocultista", origem: "academico", nex: 20 }, { escolhas: [reg("d3.poderClasse", "poderClasse", "transcender", { poder: { valor: "paralinguisticaAmpliada", opcoes: {} } })] }));
+    var lista = AP.concessoes({ classe: "ocultista", passos: 4, paralinguistica: 3 });
+    t.ok("a concessão pelo nome (opcional), fora do limite", lista.some(function (c) { return c.poder === "paralinguisticaAmpliada" && c.fixo && c.fixo.nome === "Compreensão Paranormal" && c.opcional && !c.contaNoLimite; }));
+    var compr = { id: "rit-cp-1", nome: "Compreensão Paranormal", origemCatalogoId: "op.ritual.compreensao-paranormal" };
+    t.igual("conhecida por outra via: −1 PE", A5.reducaoDaParalinguistica(pl, compr), 1);
+    t.igual("outro ritual: nada", A5.reducaoDaParalinguistica(pl, { id: "r2", nome: "Decadência" }), 0);
+
+    t.grupo("v2.48 · a ficha de Ordem com o AS5 atravessa gravar e reabrir");
+    var tudo5 = ficha({ classe: "ocultista", origem: "ufologo", nex: 30 });
+    A5.registrarTeoria(tudo5, "teoria");
+    A5.adicionarRecebido(tudo5, "deadMan", "Vera", { pericia: "ocultismo", grau: "expert", ate: "missao" });
+    A5.registrarSino(tudo5, "nota");
+    A5.marcarAliados(tudo5, "aura", ["X"]);
+    var v5 = volta(tudo5);
+    t.ok("teoria, recebido, sino e aliados sobrevivem", v5.arquivo5.teorias.length === 1 && v5.arquivo5.recebidos.length === 1 && A5.sino(v5).registrado && A5.aliadosNaCena(v5, "aura").length === 1);
+    t.ok("uma ficha antiga (sem arquivo5) abre com o estado vazio", JSON.stringify(R.normalizar({ classe: "combatente", nex: 5 }).arquivo5.teorias) === "[]");
+
+    if (PG) {
+      t.grupo("v2.48 · perigos complexos: modelos e instâncias");
+      t.iguais("cinco modelos com VD e página", PG.MODELOS.map(function (m) { return m.chave + ":" + m.vd + ":" + m.pagina; }),
+        ["explosao:80:66", "fuga:40:67", "navio:120:68", "predio:180:68", "chuva:300:69"]);
+      var est = PG.normalizar({});
+      PG.ligar(est, true);
+      t.ok("a duração sorteada é obrigatória (rolada pela tela) e fica gravada", !PG.criar(est, "fuga", "", {}).ok && PG.criar(est, "fuga", "", { duracao: 9 }).perigo.rodadasTotal === 9);
+      var ex = PG.criar(est, "explosao", "", {}).perigo;
+      var a = PG.adicionarParticipante(ex, "Ana").participante, b = PG.adicionarParticipante(ex, "Beto").participante;
+      t.ok("ação antes da primeira rodada é recusada", !PG.registrarAcao(ex, a.id, "correr", { passou: true }).ok);
+      PG.novaRodada(ex);
+      t.ok("Explosão: correr por 10+ conta dois; uma ação por rodada", PG.registrarAcao(ex, a.id, "correr", { passou: true, porDez: true }).ok && PG.participante(ex, a.id).sucessos === 2 &&
+        !PG.registrarAcao(ex, a.id, "correr", { passou: true }).ok);
+      t.ok("  carregar outro: só aliado próximo (até um sucesso de diferença)", !PG.registrarAcao(ex, b.id, "carregarOutro", { passou: true, aliadoId: a.id }).ok);
+      PG.novaRodada(ex);
+      PG.registrarAcao(ex, b.id, "desarmar", { passou: true }); PG.novaRodada(ex);
+      PG.registrarAcao(ex, b.id, "desarmar", { passou: true }); PG.novaRodada(ex);
+      PG.registrarAcao(ex, b.id, "desarmar", { passou: true });
+      t.ok("  três sucessos de desarme acabam o perigo", !!ex.encerrado && ex.encerrado.motivo === "desarmado");
+      var ex2 = PG.criar(est, "explosao", "", {}).perigo;
+      var c1 = PG.adicionarParticipante(ex2, "Caio").participante, d2b = PG.adicionarParticipante(ex2, "Duda").participante, e3 = PG.adicionarParticipante(ex2, "Eva").participante;
+      for (var r5 = 0; r5 < 5; r5++) {
+        PG.novaRodada(ex2);
+        PG.registrarAcao(ex2, c1.id, "correr", { passou: true });
+        if (r5 < 3) PG.registrarAcao(ex2, d2b.id, "correr", { passou: true });
+      }
+      t.ok("  só cinco rodadas", !PG.novaRodada(ex2).ok);
+      PG.encerrar(ex2, "fim");
+      t.iguais("  zonas pelo número de sucessos (5+ ileso; 3–4 onda; 2 ou menos explosão)", [c1.id, d2b.id, e3.id].map(function (id) { return PG.participante(ex2, id).zona; }), ["ileso", "onda", "explosao"]);
+      t.ok("  o efeito final é rolável, dano e não perda", PG.efeitoFinal(ex2, e3.id).length === 2 && PG.efeitoFinal(ex2, e3.id).every(function (x) { return x.natureza === "dano"; }));
+      var nv = PG.criar(est, "navio", "", { duracao: 8 }).perigo;
+      var n1 = PG.adicionarParticipante(nv, "Ana").participante;
+      t.ok("Navio: a DT da rodada pede o d6, uma vez para todos", !PG.novaRodada(nv).ok && PG.novaRodada(nv, 4).ok && nv.dtRodada === 24);
+      var plano = PG.planoDoEfeito(nv, n1.id);
+      t.ok("  o plano do efeito usa a DT da rodada", plano.partes.some(function (x) { return x.dt === 24; }));
+      PG.registrarAcao(nv, n1.id, "protegerSe", {});
+      t.ok("  protegido: DT 20 sem o d6", PG.planoDoEfeito(nv, n1.id).partes.some(function (x) { return x.dt === 20; }));
+      var fg = PG.criar(est, "fuga", "", { duracao: 6 }).perigo;
+      var f1 = PG.adicionarParticipante(fg, "Ana").participante;
+      PG.novaRodada(fg);
+      t.ok("Fuga: a perda de PV é PERDA (não dano)", PG.planoDoEfeito(fg, f1.id).partes[0].natureza === "perda");
+      PG.registrarEfeito(fg, f1.id, [{ natureza: "perda", recurso: "PV", valor: 9 }]);
+      t.igual("  e fica acumulada (só cura depois do perigo)", PG.participante(fg, f1.id).perdaAcumulada, 9);
+      var pd = PG.criar(est, "predio", "", { duracao: 7, elemento: 2 }).perigo;
+      var p1 = PG.adicionarParticipante(pd, "Ana").participante;
+      PG.novaRodada(pd);
+      t.ok("Prédio: elemento pelo 1d4 (2 = Morte), 360 PV", pd.elemento === "morte" && pd.pvHorda === 360);
+      PG.registrarAcao(pd, p1.id, "exterminar", { passou: true, dano: 40, area: true });
+      t.igual("  dano de área +50% (40 → 60)", pd.pvHorda, 300);
+      PG.novaRodada(pd);
+      PG.registrarAcao(pd, p1.id, "exterminar", { passou: true, dano: 40, doElemento: true });
+      t.igual("  imune ao próprio elemento", pd.pvHorda, 300);
+      var fuga2 = PG.transicaoParaFuga(est, pd, 7);
+      t.ok("  sem tempo: vira Fuga de Horda com os mesmos participantes", fuga2.ok && fuga2.perigo.modelo === "fuga" && fuga2.perigo.participantes.length === 1 && !!pd.encerrado);
+      var ch = PG.criar(est, "chuva", "", {}, "pequena").perigo;
+      var h1 = PG.adicionarParticipante(ch, "Ana").participante, h2 = PG.adicionarParticipante(ch, "Beto").participante;
+      PG.novaRodada(ch);
+      PG.registrarAcao(ch, h1.id, "avancar", { passou: true, pericia: "Pilotagem" });
+      t.ok("Chuva: cada perícia que não Fortitude vale uma vez", !PG.registrarAcao(ch, h2.id, "avancar", { passou: true, pericia: "pilotagem" }).ok && PG.registrarAcao(ch, h2.id, "avancar", { passou: false, pericia: "Fortitude" }).ok);
+      t.ok("  a falha sobe as DT para 39 na rodada seguinte", (PG.novaRodada(ch), PG.planoDoEfeito(ch, h1.id).partes.every(function (x) { return x.dt === 39; })));
+      ch.falhasDoGrupo = 3;
+      PG.encerrar(ch, "fim");
+      t.ok("  três falhas: dano e perda finais irredutíveis", PG.efeitoFinal(ch, h1.id).length === 3 && PG.efeitoFinal(ch, h1.id).every(function (x) { return x.irredutivel; }) &&
+        PG.efeitoFinal(ch, h1.id).some(function (x) { return x.natureza === "perda" && x.recurso === "PE"; }));
+      t.ok("solução da mesa fica registrada como solução, não como ação", PG.solucaoAlternativa(fg, f1.id, "usou o caminhão", 1).ok && fg.registro.some(function (r) { return r.tipo === "solucao"; }));
+      var vista = PG.vistaDoJogador(est, ["pers-da-ana-1"]);
+      t.igual("a vista do jogador sem personagem nos perigos: nada", vista.perigos.length, 0);
+    }
   }
 
   /* =================================================================
@@ -6520,7 +6892,7 @@
       R.resistencias(fbExp, INV).dano.some(function (d) { return d.tipo === "geral"; }) && R.dadosDoTeste(fbExp, "diplomacia").quantos === R.dadosDoTeste(baseFb, "diplomacia").quantos - 1);
     if (B) {
       var todas = B.secoes("origens").reduce(function (l, s) { return l.concat(s.entradas); }, []);
-      t.ok("a aba Origens da biblioteca tem as 50, numa seção por livro", todas.length === 50 && B.secoes("origens").length === 4);
+      t.ok("a aba Origens da biblioteca tem as 52, numa seção por livro", todas.length === 52 && B.secoes("origens").length === 5);
       t.ok("  busca pelo poder e pela origem", B.filtrar(B.secoes("origens"), "luta ou fuga").some(function (s) { return s.entradas.length; }) &&
         B.filtrar(B.secoes("origens"), "profetizado").some(function (s) { return s.entradas.length; }));
       var copia = B.modelo(todas.filter(function (x) { return x.entrada.nome === "Conexões"; })[0].entrada, "");

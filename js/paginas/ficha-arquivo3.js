@@ -722,21 +722,28 @@
     return bloco(partes);
   }
 
+  function A5() { return global.RAMAOrdemArquivo5 || null; }
+
   function cartaoDeVeiculo(ctx, o, v) {
-    var c = A3().contasDoVeiculo(v);
+    /* Óxido Nitroso (AS5 p. 59): o dobro do deslocamento na rodada da ficha
+       em que foi usado. */
+    var nitro = !!(A5() && A5().nitroAtivo(o, v.id));
+    var c = A3().contasDoVeiculo(v, { nitro: nitro });
     var m = c.modelo;
     var pen = A3().penalidadesDoVeiculo(v);
     var partes = [
       el("strong", { texto: v.nome === m.nome ? m.nome : v.nome + " · " + m.nome }),
       linha("Categoria " + m.categoria + " · " + m.tamanho + " · Defesa " + c.defesa.total + " (" + c.defesa.parcelas.map(function (p) { return p.rotulo + " " + p.valor; }).join(", ") + ") · pontos vitais " + c.defesaPontosVitais +
         " · RD " + c.rd.total + " · PV " + v.pvAtual + "/" + c.pvMaximo + (c.danificado ? " (danificado: deslocamento à metade, sem cobertura)" : "")),
-      linha("Leva " + m.seres + " seres médios e " + m.carga + " espaços (" + m.total + " sem passageiros) · combustível " + v.combustivel + "d6" +
-        (c.deslocamento ? " · manobra DT " + c.deslocamento.dt + ": " + c.deslocamento.metros + " m (" + c.deslocamento.quadrados + "q)" : " · sem velocidade de manobra nesta cena") +
+      linha("Leva " + m.seres + " seres médios e " + m.carga + " espaços (" + m.total + " sem passageiros) · combustível " + v.combustivel + "/" + c.combustivelMaximo + "d6" +
+        (c.deslocamento ? " · manobra DT " + c.deslocamento.dt + ": " + c.deslocamento.metros + " m (" + c.deslocamento.quadrados + "q)" + (c.deslocamento.inducao ? " (Indução Forçada)" : "") + (c.deslocamento.nitro ? " — óxido nitroso: dobro nesta rodada" : "") : " · sem velocidade de manobra nesta cena") +
         (c.pilotagem ? " · +" + c.pilotagem + " em Pilotagem" : "") + (c.dadosPilotagem ? " · " + c.dadosPilotagem + "d20 em Pilotagem (pneus)" : "")),
-      linha("Regalias (" + v.regalias.length + "/" + m.regalias + "): " + (v.regalias.length ? v.regalias.map(function (r) {
+      linha("Regalias (" + c.noLimite + "/" + m.regalias + (c.extras ? " + " + c.extras + " fora do limite" : "") + "): " + (v.regalias.length ? v.regalias.map(function (r) {
         var d = A3().POR_REGALIA[r.chave];
-        return d.nome + (r.pericia ? " (" + r.pericia + ")" : "") + (r.tipoDeDano ? " (" + r.tipoDeDano + ")" : "");
+        return d.nome + (r.pericia ? " (" + r.pericia + ")" : "") + (r.tipoDeDano ? " (" + r.tipoDeDano + ")" : "") + (d.fonte === "AS5" ? " [AS5]" : "") + (r.extra ? " — extra de " + r.por + " (Apaixonado por Veículos)" : "");
       }).join(", ") : "nenhuma")),
+      c.imunidades.length ? linha("Imunidade a dano: " + c.imunidades.join(", ") + ". Não sofre curtos.") : null,
+      c.ocupantes.notas.length ? linha(c.ocupantes.notas.join(" ") + " Cada ocupante liga o benefício na própria ficha (painel do Arquivos Secretos 5, “Recebido de aliados”).") : null,
       pen.length ? linha("Penalidades: " + pen.map(function (p) { return p.nome; }).join(", ") + ".") : null,
       linha("Em combate: dirigir é ação completa (ou movimento com Pilotagem DT 20; falhar por 5+ causa acidente); colidir pede Reflexos contra a sua Pilotagem — 1d6 de impacto por 1,5 m (o veículo sofre metade); disparar de dentro sofre –1d20 (mirar para fora anula, sem cobertura); manobra evasiva (treinado, 1/rodada, reação) soma o bônus de Pilotagem na Defesa."),
     ];
@@ -780,7 +787,21 @@
         });
       }],
       ["Regalias…", function () { editarRegalias(ctx, o, v); }],
+      [v.direcaoDefensiva ? "Sem Direção Defensiva" : "Quem dirige tem Direção Defensiva", function () {
+        /* AS5 p. 56: com Veículos Operacionais, +2 na Defesa do veículo
+           enquanto dirige alguém com o poder. */
+        v.direcaoDefensiva = !v.direcaoDefensiva;
+        salvar(ctx);
+      }],
     ];
+    if (A5() && A3().temRegalia(v, "oxidoNitroso")) {
+      acoes.push([nitro ? "Óxido nitroso: ativo nesta rodada" : "Óxido nitroso (ação livre, 1×/cena)", function () {
+        var r = A5().usarNitro(o, v.id);
+        if (!r.ok) { UI.avisoAtencao(r.motivo); return; }
+        salvar(ctx);
+        UI.avisoOk("Óxido nitroso: o deslocamento do veículo dobra por esta rodada (rodada " + A5().rodada(o) + " da ficha).");
+      }]);
+    }
     if (v.regalias.some(function (r) { return r.chave === "arsenalSecreto"; })) {
       acoes.push(["Arsenal Secreto (" + (v.usos.missao === A3().dados(o).cronologia.missao ? v.usos.arsenal : 0) + "/3)", function () {
         var r = A3().usarArsenal(v, A3().dados(o).cronologia.missao);
@@ -837,15 +858,29 @@
     var m = A3().contasDoVeiculo(v).modelo;
     var escolhidas = v.regalias.map(function (r) { return Object.assign({}, r); });
     var corpo = el("div.pilha--curta", { class: "pilha" });
+    /* Apaixonado por Veículos (AS5 p. 56): quem tem o poder põe 1 regalia
+       que não conta no limite do veículo. */
+    var nomeProprio = String(ctx.ficha.nome || "Personagem").slice(0, 80);
+    var podeExtra = !!(A5() && A5().temPoder(o, "apaixonadoPorVeiculos"));
+    var modoExtra = false;
+    function noLimite() { return escolhidas.filter(function (r) { return !r.extra; }).length; }
+    function temExtraProprio() { return escolhidas.some(function (r) { return r.extra && String(r.por).toLowerCase() === nomeProprio.toLowerCase(); }); }
     function pintar() {
-      U.trocar(corpo, [linha("Até " + m.regalias + " regalia(s). Lataria Reforçada pode ser escolhida duas vezes.")].concat(A3().REGALIAS.map(function (d) {
+      U.trocar(corpo, [linha("Até " + m.regalias + " regalia(s) no limite (" + noLimite() + " escolhida[s]). Lataria Reforçada pode ser escolhida duas vezes. [AS5] marca as regalias do Arquivos Secretos 5 (p. 59)."),
+        podeExtra ? el("label.r-marca", {}, [
+          el("input", { type: "checkbox", checked: modoExtra, disabled: temExtraProprio(), onchange: function (ev) { modoExtra = ev.target.checked; } }),
+          el("span", { texto: temExtraProprio() ? "A regalia extra de " + nomeProprio + " (Apaixonado por Veículos) já está no veículo." : "A próxima regalia é a extra de " + nomeProprio + " (Apaixonado por Veículos): não conta no limite." }),
+        ]) : null,
+      ].concat(A3().REGALIAS.map(function (d) {
         var n = escolhidas.filter(function (r) { return r.chave === d.chave; }).length;
         return el("div.faixa", {}, [
-          el("span", { texto: d.nome + (n ? " ×" + n : "") + " — " + d.resumo }),
+          el("span", { texto: d.nome + (d.fonte === "AS5" ? " [AS5]" : "") + (n ? " ×" + n : "") + " — " + d.resumo }),
           botao("+", function () {
-            if (escolhidas.length >= m.regalias) { UI.avisoAtencao("O veículo já tem " + m.regalias + " regalia(s)."); return; }
+            var comoExtra = modoExtra && podeExtra && !temExtraProprio();
+            if (!comoExtra && noLimite() >= m.regalias) { UI.avisoAtencao("O veículo já tem " + m.regalias + " regalia(s) no limite."); return; }
             if (n >= (d.maximo || 1)) return;
             var nova = { chave: d.chave, pericia: "", tipoDeDano: "" };
+            if (comoExtra) { nova.extra = true; nova.por = nomeProprio; modoExtra = false; }
             if (d.pericia) {
               UI.pedirTexto({ titulo: d.nome, rotulo: "Perícia (exceto Luta, Pilotagem e Pontaria)", valor: "", limite: 40 }).then(function (t) {
                 if (!t || /luta|pilotagem|pontaria/i.test(t)) { UI.avisoAtencao("Escolha uma perícia que não seja Luta, Pilotagem nem Pontaria."); return; }

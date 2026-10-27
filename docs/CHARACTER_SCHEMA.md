@@ -5,6 +5,67 @@ padrão e normaliza o que chega de fora. Onde ela é guardada — inteira em
 `fichaJson` (formato antigo) ou em blocos (v2.15) — é assunto do backend, e não muda
 nada aqui: ver [DATABASE.md](DATABASE.md).
 
+## Arquivos Secretos 5 — v2.48 / schema 23
+
+O bloco `ordem` ganha `arquivo5` (vazio numa ficha antiga; nada é convertido).
+Tempo é o do jogo (cena, rodada, interlúdio da ficha; missão da cronologia):
+
+```jsonc
+"arquivo5": {
+  "teorias": [ { "id", "missao", "texto", "em", "resultado": "|correta|incorreta", "por": "mestre|mesa", "resolvidaEm", "concedido" } ],
+  "turnos": [ { "id", "missao", "interludio", "em" } ],          // Turno Invertido
+  "folego": [ { "id", "cena", "recurso": "pv|pe|pd", "rolagem", "valor", "em" } ],
+  "meditacoes": [ { "id", "interludio", "condicao", "limite", "recuperado", "em" } ],
+  "ruidos": [ { "id", "cena", "alvo", "efeito", "de": "bonus|penalidade", "em" } ],
+  "desafios": [ { "id", "cena", "rodada", "aliado", "ataque", "resultado": "pendente|acerto|erro", "danoExtra", "devolvido", "em" } ],
+  "rodada": { "cena", "numero" } | null,                          // a rodada da ficha
+  "acido": { "cena", "alvo": "desarmado|arma", "itemId", "itemNome", "amaldicoado", "afinidade", "em" } | null,
+  "destruir": [ { "itemId", "itemNome", "cena", "motivo", "em" } ],  // esperando confirmação
+  "deadMan": { "id", "cena", "alvos": [], "pericias": [], "graus": { "<perícia>": "treinado|veterano|expert" },
+               "afinidade", "encerrado": { "em", "motivo" } | null, "morreu", "missao" } | null,
+  "recebidos": [ { "id", "tipo": "aura|parede|direcao|gaiola|deadMan", "de", "ate": "cena|missao|remover", "cena", "missao", "pericia"?, "grau"? } ],
+  "aliados": { "aura"|"parede"|"conexao": { "cena", "nomes": [] } },
+  "telas": { "armado": true, "cena", "em" } | null,
+  "dirigindo": { "cena", "veiculo" } | null,
+  "larva": { "efeitoId", "cena", "hostilNaRodada" } | null,
+  "nitro": [ { "veiculoId", "cena", "rodada" } ],
+  "transmissao": {
+    "sino": { "registrado", "registradoEm", "nota", "confirmado", "confirmadoPor": "mestre|mesa", "confirmadoEm" },
+    "portadores": { "<poder de Transmissão>": [ "nome", … ] },     // outros portadores, nunca a própria ficha
+    "conexao": { "cena", "presentes": [] } | null,
+    "sincronia": { "id", "cena", "entrouEm", "participantes": [ { "nome", "personagemId" } ],
+                   "iniciativa": { "propria", "usada", "de", "rodadaUsada" } | null, "intencao",
+                   "operacoes": [ { "opId", "tipo": "pe|redirecionar", "papel": "autor|alvo", "outro", "valor", "recurso", "natureza": "dano|perda", "em" } ] } | null,
+    "pericia": { "cena", "de", "pericia", "atributo", "dados", "grau", "bonus", "em" } | null,
+    "poder": { "cena", "de", "chave", "em" } | null,
+    "ritual": { "cena", "de", "ritual": { /* retrato */ }, "em" } | null,
+    "usos": { "pericia": "<cena>", "poder": "<cena>", "ritual": "<cena>" }
+  },
+  "selos": { "fabricacoes": [ { "id", "interludio", "quantidade", "custo", "em" } ],
+             "usos": [ { "opId", "itemId", "ritual", "em" } ] }      // um selo por opId
+}
+```
+
+- **Efeito** (`ordem.condicoes.efeitos[]`): `invertido { por, cena, em }` (Ruído de
+  Comunicação). Só vale na cena gravada e só vira o sinal de modificadores
+  `dados`; fora dela a instância volta ao normal sem migração.
+- **Item** (`item.ordem`): `selo { ritual, ritualId, circulo, elemento, custo,
+  versao, autor { nome, personagemId }, autoria { caligrafia, supremo },
+  fabricacao, criadoEm }` (a autoria vai junto com o selo), `pecas { piercing,
+  brinco }` (Joias da Mente; nasce das `pecasPadrao` do catálogo) e `modoSkate:
+  "transporte|escudo|arma"`.
+- **Veículo** (AS3): `regalias[]` aceita `extra: true` e `por` (Apaixonado por
+  Veículos: uma por pessoa, fora do limite) e o veículo guarda
+  `direcaoDefensiva`. O tanque máximo passa a sair das regalias (até 10).
+- **Criatura**: `ordem.manifestacao: "transmissao"` só com os dois elementos reais
+  (Conhecimento e Energia).
+
+Na sincronização, `teorias`, `turnos`, `folego`, `meditacoes`, `ruidos`,
+`desafios`, `recebidos` e `selos.fabricacoes` casam pelo `id`; `destruir` pelo
+`itemId`; `nitro` pelo `veiculoId`; `selos.usos` e `sincronia.operacoes` pelo
+`opId`. Uma aba aberta numa versão anterior recusa a ficha 23 em vez de descartar
+esses campos.
+
 ## Campos da Defesa na universal — v2.45 / schema 22
 
 ```jsonc

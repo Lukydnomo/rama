@@ -58,12 +58,13 @@ function faces(lista) {
 t.grupo("Catálogo · inventário e integridade");
 const conferencia = OC.conferir(DADOS);
 t.igual("nenhum erro de conferência (ids, campos, expressões, variantes)", conferencia.erros.slice(0, 5), []);
-t.igual("contagem por livro bate com o inventário", conferencia.porLivro, { OPRPG: 67, SAH: 32, AS1: 12, AS2: 28, AS3: 36, AS4: 4, "OPRPG (variantes)": 5 });
+t.igual("contagem por livro bate com o inventário", conferencia.porLivro, { OPRPG: 67, SAH: 32, AS1: 12, AS2: 28, AS3: 36, AS4: 4, AS5: 10, "AS5 (variantes)": 4, "OPRPG (variantes)": 5 });
 const porNatureza = {};
 DADOS.criaturas.filter((c) => !c.variante).forEach((c) => { const k = c.livro + ":" + c.natureza; porNatureza[k] = (porNatureza[k] || 0) + 1; });
 t.igual("paranormais, pessoas e animais de cada livro", porNatureza,
   { "OPRPG:paranormal": 49, "OPRPG:humana": 11, "OPRPG:animal": 7, "SAH:paranormal": 13, "SAH:humana": 11, "SAH:animal": 8,
-    "AS1:paranormal": 1, "AS1:humana": 11, "AS2:animal": 2, "AS2:paranormal": 4, "AS2:humana": 22, "AS3:humana": 33, "AS3:animal": 3, "AS4:humana": 3, "AS4:paranormal": 1 });
+    "AS1:paranormal": 1, "AS1:humana": 11, "AS2:animal": 2, "AS2:paranormal": 4, "AS2:humana": 22, "AS3:humana": 33, "AS3:animal": 3, "AS4:humana": 3, "AS4:paranormal": 1,
+    "AS5:humana": 1, "AS5:paranormal": 9 });
 const ids = DADOS.criaturas.map((c) => c.id);
 t.ok("ids únicos", new Set(ids).size === ids.length);
 t.ok("O Terminal (aventura do SAH) está no catálogo, com página", DADOS.criaturas.some((c) => c.id === "sah.criatura.o-terminal" && c.pagina === 218));
@@ -256,7 +257,7 @@ t.igual("imagens do catálogo pelo id (retrato 1:1 e corpo inteiro)", C.imagensD
 t.ok("  a cópia no Homebrew usa a do original; criatura sem catálogo não tem", !!C.imagensDoCatalogo(copia) && C.imagensDoCatalogo(antigaNorm) === null);
 const faltando = [];
 for (const c of DADOS.criaturas) {
-  const m = /^(op|sah|as1|as2|as3|as4)\.criatura\.(.+)$/.exec(c.id);
+  const m = /^(op|sah|as1|as2|as3|as4|as5)\.criatura\.(.+)$/.exec(c.id);
   for (const arq of ["retrato.png", "corpo.png"]) {
     /* A pasta pode estar num disco sincronizado (Google Drive), que às
        vezes demora a responder: uma segunda tentativa antes de acusar. */
@@ -269,6 +270,92 @@ for (const c of DADOS.criaturas) {
   }
 }
 t.igual("toda criatura tem as duas imagens (provisórias) no site", faltando, []);
+
+/* =====================================================================
+   ARQUIVOS SECRETOS 5 — os Alheios (v2.48)
+   ===================================================================== */
+
+t.grupo("AS5 · as dez fichas-base, variações e formas");
+{
+  const as5 = DADOS.criaturas.filter((c) => c.livro === "AS5");
+  const base = as5.filter((c) => !c.variante);
+  const vd = {};
+  base.forEach((c) => { vd[c.nome] = c.vd; });
+  t.igual("as dez fichas-base com o VD publicado", vd, {
+    "Hospedeiro Parasitado": 20, "Hospedeiro Aflorado": 60, "Interflorado": 40, "Fummu": 100,
+    "Doppelganger Civil": 20, "Doppelganger Combatente": 60, "Doppelganger Cultista": 160,
+    "Bilu": 42, "Rastropoda": 140, "Memoflígico": 200,
+  });
+  t.igual("quatro variações do hospedeiro, apontando para a base", as5.filter((c) => c.variante).map((c) => c.variante.de + ":" + c.nome.split(" — ")[1]).sort(),
+    ["as5.criatura.hospedeiro-parasitado:Acólito", "as5.criatura.hospedeiro-parasitado:Faz-Tudo", "as5.criatura.hospedeiro-parasitado:Guerrilheiro", "as5.criatura.hospedeiro-parasitado:Socorrista"]);
+  const hosp = OC.criatura("as5.criatura.hospedeiro-parasitado");
+  t.ok("o hospedeiro parasitado é PESSOA, sem elementos e sem Transmissão", hosp.natureza === "humana" && hosp.ordem.elementos.length === 0 && !hosp.ordem.manifestacao);
+  const transm = base.filter((c) => c.manifestacao === "transmissao");
+  t.igual("nove criaturas de Transmissão", transm.length, 9);
+  t.ok("  cada uma guarda Conhecimento E Energia de verdade", transm.every((c) => c.elementos.indexOf("conhecimento") >= 0 && c.elementos.indexOf("energia") >= 0));
+  const indice = OC.filtrar(Object.values(DADOS.criaturas).map((e) => ({ id: e.id, chave: e.nome.toLowerCase(), livro: e.livro, natureza: e.natureza, elementos: e.elementos || [], manifestacao: e.manifestacao || "", vd: e.vd })), { elementos: ["transmissao"] });
+  t.igual("o filtro Transmissão acha só as nove (nenhuma do AS4, que é Energia + Conhecimento sem a manifestação)", indice.length, 9);
+  t.igual("  combinado com livro e VD", OC.filtrar(Object.values(DADOS.criaturas).map((e) => ({ id: e.id, chave: e.nome.toLowerCase(), livro: e.livro, natureza: e.natureza, elementos: e.elementos || [], manifestacao: e.manifestacao || "", vd: e.vd })),
+    { elementos: ["transmissao"], livro: "AS5", vdMin: 100, vdMax: 160 }).map((x) => x.id).sort(),
+    ["as5.criatura.doppelganger-cultista", "as5.criatura.fummu", "as5.criatura.rastropoda"]);
+  const etiqueta = OC.criatura("as5.criatura.fummu");
+  t.ok("a manifestação não substitui os elementos no modelo", etiqueta.ordem.elementos.join(",") === "conhecimento,energia" && etiqueta.ordem.manifestacao === "transmissao");
+
+  const civil = OC.criatura("as5.criatura.doppelganger-civil");
+  const forma = civil.ordem.formas[0];
+  t.ok("forma monstruosa do civil: +10 PV, +2 Defesa, testes +5, VD igual", forma.pv === 24 && forma.defesa === 16 && forma.vontade === "2d20+10" && forma.iniciativa === "1d20+5" && forma.vd === 20 && forma.somaAtuais === 10);
+  const pancada = forma.acoes.filter((a) => a.ataques && a.ataques.length)[0].ataques[0];
+  t.ok("  ataques +5 no teste e +5 no dano (uma vez, no primeiro termo)", pancada.teste === "1d20+10" && pancada.dano[0] === "1d4+7 impacto");
+  const cult = OC.criatura("as5.criatura.doppelganger-cultista").ordem.formas[0];
+  t.ok("  cultista: DT dos rituais +2 na forma (23 → 25)", cult.habilidades.some((h) => /DT 25/.test(h.nome)) && cult.acoes.some((a) => /DT 25/.test(a.resistencia || "")));
+  /* A forma é escolhida na ocorrência: escolher de novo não soma. */
+  const viva = C.iniciarInstancia(JSON.parse(JSON.stringify(OC.criatura("as5.criatura.doppelganger-civil"))));
+  const antes = viva.status[0].atual;
+  C.definirNaInstancia(viva, "forma", "monstruosa");
+  const pv1 = viva.status[0].atual;
+  C.definirNaInstancia(viva, "forma", "monstruosa");
+  C.definirNaInstancia(viva, "forma", "monstruosa");
+  t.igual("forma monstruosa: +10 PV máximos e atuais, uma vez — repetir não acumula", [antes, pv1, viva.status[0].atual, viva.status[0].maximo], [14, 24, 24, 24]);
+  C.definirNaInstancia(viva, "forma", "");
+  t.igual("  voltar à forma de partida devolve o máximo (os atuais ficam presos nele)", [viva.status[0].atual, viva.status[0].maximo], [14, 14]);
+
+  const inter = OC.criatura("as5.criatura.interflorado");
+  const guincho = inter.acoes.filter((a) => a.nome === "Guincho Gutural")[0];
+  t.ok("Guincho Gutural: UM dano de 5d10, dividido no texto (sem duplicar a expressão por tipo)", guincho.rolagens.filter((r) => r.tipo === "dano").length === 1 && guincho.rolagens[0].partes.join() === "5d10" && /metade Conhecimento, metade Energia/.test(guincho.texto));
+  t.ok("Incubar: limite 2d4 e 1d6 de SAN máxima por ovo; contador de ovos na ocorrência", inter.acoes.some((a) => a.nome === "Incubar" && a.rolagens.some((r) => r.expressao === "2d4") && a.rolagens.some((r) => r.expressao === "1d6")) && inter.ordem.estados.some((e) => e.id === "ovos"));
+  t.ok("trêmulo: o nome como impresso, com a nota da página que não existe", inter.ordem.notas.some((n) => /p\. 124/.test(n)));
+  const fummu = OC.criatura("as5.criatura.fummu");
+  const explosao = fummu.acoes.filter((a) => a.nome === "Acionar Explosão")[0];
+  t.ok("Fummu: DT de Reflexos 4d10 rolada e o dano pelo tamanho do objeto (2d6 … 6d6 no Médio)", explosao.rolagens.some((r) => r.tipo === "soma" && r.expressao === "4d10") && explosao.rolagens.some((r) => /Médio/.test(r.rotulo) && r.partes[0] === "6d6 fogo"));
+  const bilu = DADOS.criaturas.filter((c) => c.id === "as5.criatura.bilu")[0];
+  t.ok("Bilu: VD 42, sem ficha de forma furiosa", bilu.vd === 42 && !bilu.formas);
+  const memo = DADOS.criaturas.filter((c) => c.id === "as5.criatura.memofligico")[0];
+  t.ok("Memoflígico: Força não se aplica e círculo com dois contadores (invisibilidade ≠ incorporeidade)", memo.atributos[1] === "—" && memo.estados.length === 2 && memo.habilidades.some((h) => /metade ou mais/.test(h.texto)));
+  const rastro = DADOS.criaturas.filter((c) => c.id === "as5.criatura.rastropoda")[0];
+  t.ok("Rastropoda: contato e rastro como habilidades separadas; Fumocinese é PERDA de SAN", rastro.habilidades.some((h) => h.nome === "Ácidos Ferventes") && rastro.acoes.some((a) => a.nome === "Rastro Pestilento") && rastro.acoes.some((a) => a.nome === "Fumocinese" && /PERDEM/.test(a.texto)));
+  const camuflagens = ["as5.criatura.fummu", "as5.criatura.rastropoda", "as5.criatura.memofligico"].map((id) => DADOS.criaturas.filter((c) => c.id === id)[0].habilidades.filter((h) => /Camuflagem Alheia/.test(h.nome))[0].texto);
+  t.ok("as três Camuflagens Alheias guardam a diferença de cada uma", /gás ou fumaça/.test(camuflagens[0]) && /aparelhos digitais/.test(camuflagens[1]) && /ação livre/.test(camuflagens[2]) && new Set(camuflagens).size === 3);
+  const g = DADOS.criaturas.filter((c) => c.id === "as5.criatura.hospedeiro-parasitado.guerrilheiro")[0];
+  t.ok("Guerrilheiro: PV 20, ataques da variação no lugar do da base", g.pv === 20 && g.acoes.length === 2 && g.acoes[0].ataques[0].teste === "2d20+10");
+  const ac = DADOS.criaturas.filter((c) => c.id === "as5.criatura.hospedeiro-parasitado.acolito")[0];
+  t.ok("Acólito: a escolha dos rituais fica como escolha (nada inventado)", ac.habilidades.some((h) => /Conjurador \(escolha\)/.test(h.nome)));
+}
+
+t.grupo("AS5 · gerador de funcionários da TV Varminho");
+{
+  if (OC.gerarVarminho) {
+    const faces = [10, 3, 5, 1, 20];
+    const g = OC.gerarVarminho(function (n) { return faces.shift(); });
+    t.igual("1d10 = 10: Apresentadores; dois d6 independentes; dois d20 independentes", [g.perfil, g.tracos, g.aparencia, g.dados.tracos, g.dados.aparencia],
+      ["Apresentadores", ["Paródia de personagem de desenho", "Paródia de um mascote"], ["Pele que parece não encaixar direito", "Cifose protuberante"], [3, 5], [1, 20]]);
+    const g2 = OC.gerarVarminho(function (n) { return 1; });
+    t.ok("  1d10 = 1: Associados comportamentais, sem estatística nenhuma", g2.perfil === "Associados comportamentais" && !g2.pv && !g2.atributos);
+    t.ok("referências da torre (andares, papéis, programas, ganchos) para preparo", OC.VARMINHO && OC.VARMINHO.andares.length >= 4 && OC.VARMINHO.papeis.length >= 5 && OC.VARMINHO.programas.length >= 4 && OC.VARMINHO.ganchos.length >= 4);
+  } else {
+    t.ok("gerador da TV Varminho carregado", false);
+  }
+}
+
 
 t.grupo("Arquivo · exportar e importar não perdem a ficha de Ordem");
 const V = globalThis.RAMAValidacao;

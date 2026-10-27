@@ -103,6 +103,7 @@
     ["AS2", "Arquivos Secretos 2", "Arquivos Secretos 2", "AS2"],
     ["AS3", "Arquivos Secretos 3", "Arquivos Secretos 3", "AS3"],
     ["AS4", "Arquivos Secretos 4", "Arquivos Secretos 4", "AS4"],
+    ["AS5", "Arquivos Secretos 5", "Arquivos Secretos 5", "AS5"],
   ];
   function mapaDeLivros(campo, indice) {
     var Cat = global.RAMAOrdemCatalogo;
@@ -791,6 +792,8 @@
       ordem.protecao = { tipo: e.protecao.tipo };
       dados.defesa = e.protecao.defesa;
     }
+    /* Joias da Mente (AS5 p. 60): as duas peças chegam juntas. */
+    if (e.pecasPadrao) ordem.pecas = JSON.parse(JSON.stringify(e.pecasPadrao));
 
     return { ok: true, tipo: e.tipoItem, dados: dados };
   }

@@ -454,6 +454,7 @@
       return true;
     }).slice(-MAX_EVENTOS);
     var enc = (bruto.encerrado && typeof bruto.encerrado === "object") ? bruto.encerrado : null;
+    var inv = (bruto.invertido && typeof bruto.invertido === "object" && idValido(bruto.invertido.cena)) ? bruto.invertido : null;
     var inclui = (Array.isArray(bruto.inclui) ? bruto.inclui : []).map(String).filter(function (k) { return !!PORCHAVE[k]; }).slice(0, 6);
     return {
       id: id,
@@ -481,6 +482,10 @@
         motivo: ["manual", "cena", "duracao", "repeticao"].indexOf(enc.motivo) >= 0 ? enc.motivo : "manual",
         por: texto(enc.por, 80),
       } : null,
+      /* Ruído de Comunicação (AS5 p. 56): bônus em dados vira penalidade e
+         vice-versa, até o fim da cena em que foi invertido. Só existe
+         quando vale. */
+      invertido: inv ? { por: texto(inv.por, 80), cena: idValido(inv.cena), em: carimbo(inv.em) } : undefined,
     };
   }
 
@@ -888,6 +893,17 @@
   }
 
   /* Todos os modificadores em vigor, cada um com a fonte. */
+  /* Ruído de Comunicação (AS5 p. 56): na cena em que foi invertida, a
+     aplicação tem os modificadores de DADOS com o sinal trocado. Bônus
+     numérico fixo não é dado: fica como está. */
+  function cenaAtual(cond) { return cond && cond.cena && cond.cena.id ? cond.cena.id : "inicial"; }
+  function modDaInstancia(inst, m, cond) {
+    if (inst.invertido && inst.invertido.cena === cenaAtual(cond) && m.tipo === "dados" && m.valor) {
+      return { mod: Object.assign({}, m, { valor: -m.valor }), invertido: inst.invertido };
+    }
+    return { mod: m, invertido: null };
+  }
+
   function modificadoresAtivos(cond, extra) {
     var saida = [];
     condicoesEfetivas(cond, extra).forEach(function (e) {
@@ -898,8 +914,9 @@
         /* A aplicação direta manda — ela pode ter sido ajustada. Várias
            aplicações da mesma condição: vale a mais severa (abaixo). */
         e.instancias.forEach(function (inst) {
-          inst.modificadores.forEach(function (m) {
-            saida.push({ mod: m, fonte: { nome: inst.nome + (inst.personalizado ? " (ajustada)" : ""), categoria: "condicao", identidade: "cond:" + e.chave, instanciaId: inst.id } });
+          inst.modificadores.forEach(function (m0) {
+            var x = modDaInstancia(inst, m0, cond);
+            saida.push({ mod: x.mod, fonte: { nome: inst.nome + (inst.personalizado ? " (ajustada)" : "") + (x.invertido ? " (invertido por " + x.invertido.por + ")" : ""), categoria: "condicao", identidade: "cond:" + e.chave, instanciaId: inst.id } });
           });
         });
         return;
@@ -911,8 +928,9 @@
     });
     (cond && cond.efeitos || []).forEach(function (inst) {
       if (inst.tipo === "condicao" || !ativa(inst)) return;
-      inst.modificadores.forEach(function (m) {
-        saida.push({ mod: m, fonte: { nome: inst.nome + (inst.versao && inst.versao !== "Normal" ? " · " + inst.versao : "") + (inst.personalizado ? " (ajustado)" : ""), categoria: categoriaDe(inst), identidade: identidadeDe(inst), instanciaId: inst.id } });
+      inst.modificadores.forEach(function (m0) {
+        var x = modDaInstancia(inst, m0, cond);
+        saida.push({ mod: x.mod, fonte: { nome: inst.nome + (inst.versao && inst.versao !== "Normal" ? " · " + inst.versao : "") + (inst.personalizado ? " (ajustado)" : "") + (x.invertido ? " (invertido por " + x.invertido.por + ")" : ""), categoria: categoriaDe(inst), identidade: identidadeDe(inst), instanciaId: inst.id } });
       });
     });
     return saida;

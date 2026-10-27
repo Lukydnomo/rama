@@ -2308,7 +2308,7 @@ t.grupo("Marcas da mesa — sincronização leve");
 
   const marcas = (como) => comoFn(como)({ acao: "sincronizar_campanha", campanhaId: mesa });
   const m0 = marcas(ana);
-  t.ok("a jogadora recebe as marcas da mesa", m0.ok && m0.dados.papel === "jogador" && Object.keys(m0.dados.marcas).length === 8);
+  t.ok("a jogadora recebe as marcas da mesa", m0.ok && m0.dados.papel === "jogador" && Object.keys(m0.dados.marcas).length === 9);
   t.iguais("ler_campanha traz as mesmas marcas como ponto de partida", comoAna({ acao: "ler_campanha", campanhaId: mesa }).dados.marcas, m0.dados.marcas);
 
   const contador = ambiente.contador;
@@ -4839,6 +4839,8 @@ const { testarCrisBackend } = await import("./cris-backend.js");
 await testarCrisBackend({ t, preparar, novaConta, comoFn, chamar });
 const { testarCompartilhamentoBackend } = await import("./compartilhamento-backend.js");
 testarCompartilhamentoBackend({ t, preparar, novaConta, comoFn });
+const { testarAs5Backend } = await import("./as5-backend.js");
+await testarAs5Backend({ t, preparar, novaConta, comoFn });
 const { testarLoteBackend } = await import("./lote-backend.js");
 testarLoteBackend({ t, preparar, novaConta, comoFn, ambiente });
 

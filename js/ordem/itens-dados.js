@@ -65,6 +65,7 @@
   var AS1 = "AS1";
   var AS2 = "AS2";
   var AS4 = "AS4";
+  var AS5 = "AS5";
   var AS3 = "AS3";
 
   var T33 = "Tabela 3.3 (p. 56–57)";
@@ -2031,6 +2032,77 @@
         "Depois de arremessá-la ou de posicioná-la onde quiser, defina em quantos turnos ela explodirá.",
       ],
       notas: ["O temporizador conta turnos do jogo, marcados na ficha — nunca o relógio do computador."] },
+
+    /* =================================================================
+       ARQUIVOS SECRETOS 5 — p. 60–61
+       -----------------------------------------------------------------
+       Um utensílio e cinco itens amaldiçoados. O que entra na conta da
+       ficha só vale EM USO: a câmera empunhada, as vestimentas vestidas
+       (as Joias, com as duas peças), o skate no modo escolhido — nunca
+       só por estar na mochila (js/ordem/arquivo5.js).
+       ================================================================= */
+
+    { id: "as5.geral.camera-filmadora", nome: "Câmera filmadora", fonte: AS5, pagina: 60, aba: "geral", secao: "acessorios",
+      categoria: "0", espacos: 1, utensilio: true, eletrico: true, camera: true,
+      resumo: "Filmadora antiga que capta o que os olhos deixam passar.",
+      efeitos: [
+        "Utensílio: +2 em testes de Investigação e Percepção.",
+        "Pode ser usada como lanterna (ilumina um cone de 9 m) ou na visão noturna de fósforo verde (funciona como Visão no Escuro, OPRPG p. 180).",
+      ],
+      notas: ["Marcada como empunhada no inventário, o +2 entra em Investigação e Percepção. A lanterna e a visão noturna são o modo de uso, a cargo da mesa."] },
+
+    { id: "as5.amaldicoado.faixas-da-videncia", nome: "Faixas da Vidência", elemento: "morte", fonte: AS5, pagina: 60, aba: "amaldicoados", secao: "especiais",
+      categoria: "III", espacos: 1, vestimenta: true,
+      resumo: "Faixa de tecido preto com pequenas espirais gravadas nas bordas, que distorce a percepção do tempo ao redor de quem a veste.",
+      efeitos: [
+        "Vestimenta: +5 na Defesa e em testes de resistência contra ataques e habilidades com ORIGEM em alcance curto de você.",
+        "–5 na Defesa e em testes de resistência contra ataques e habilidades com origem além de 9 m de você.",
+        "+2 em Intimidação.",
+      ],
+      notas: ["Vestida, o +2 em Intimidação entra na conta. A Defesa e a resistência dependem de onde está a origem de cada ataque: a ficha mostra as duas Defesas e oferece o ajuste no teste de resistência — nunca um +5 geral."] },
+
+    { id: "as5.amaldicoado.joias-da-mente", nome: "Joias da Mente", elemento: "conhecimento", fonte: AS5, pagina: 60, aba: "amaldicoados", secao: "especiais",
+      categoria: "III", espacos: 1, vestimenta: true, pecasPadrao: { piercing: true, brinco: true },
+      resumo: "Um piercing e um brinco dourados com Sigilos de Conhecimento em toda a extensão.",
+      efeitos: [
+        "Vestimenta: +2 em Diplomacia e resistência mental 10.",
+        "Só funciona se o usuário estiver vestindo as duas peças (piercing e brinco), que contam como uma única vestimenta.",
+      ],
+      notas: ["As duas peças são um item só (uma vestimenta). Vestido e com as duas peças marcadas, o +2 em Diplomacia e a resistência mental 10 entram na conta; faltando uma peça, nada vale."] },
+
+    { id: "as5.amaldicoado.larva-da-furia", nome: "Larva da Fúria", elemento: "sangue", fonte: AS5, pagina: 61, aba: "amaldicoados", secao: "especiais",
+      categoria: "II", espacos: 1, consumivel: true,
+      resumo: "Larva de Sangue gosmenta, de 15 cm de comprimento e dentes longos.",
+      efeitos: [
+        "Item operacional maldito: ingeri-la é uma ação de movimento. O item é consumido e você é tomado por ódio até o fim da cena.",
+        "+4 em testes de ataque e rolagens de dano corpo a corpo, mas não pode fazer nenhuma ação que exija calma e concentração (como usar Furtividade ou conjurar rituais).",
+        "A fúria termina se, ao fim da rodada, você não tiver atacado nem sido alvo de um efeito hostil (ataque, habilidade etc.).",
+      ],
+      notas: ["“Ingerir” no menu do item consome uma unidade e aplica a fúria como efeito da cena (+4 no ataque e no dano corpo a corpo, com a restrição). No fim de cada rodada da ficha, a pergunta: atacou ou foi alvo? Se não, a fúria termina."] },
+
+    { id: "as5.amaldicoado.skate-caotico", nome: "Skate Caótico", elemento: "energia", fonte: AS5, pagina: 61, aba: "amaldicoados", secao: "especiais",
+      categoria: "II", espacos: 2,
+      protecao: { tipo: "escudo", defesa: 5 },
+      resumo: "Skate com sigilos e raios verdes na parte de baixo.",
+      efeitos: [
+        "Transporte: quem sabe andar num desses (treinado em Acrobacia, Atletismo ou Pilotagem) o usa nos pés e recebe +3 m de deslocamento.",
+        "Arma improvisada (OPRPG p. 57), corpo a corpo, de duas mãos: dano 1d12 de impacto, crítico x2.",
+        "Escudo com uma “consciência caótica” dentro: +5 na Defesa de quem o usa.",
+        "Para modificações e maldições, considere-o apenas como uma proteção.",
+      ],
+      notas: [
+        "No inventário ele é uma proteção (escudo, Defesa 5): é por isso que modificações e maldições o tratam como proteção. O modo de uso (transporte, arma ou escudo) é escolhido no menu do item; só um por vez.",
+        "Como escudo, a Defesa entra pela regra do escudo em uso. Como arma, o ataque é o de uma arma improvisada com os números do livro. Nos pés, +3 m de deslocamento só para quem é treinado em Acrobacia, Atletismo ou Pilotagem.",
+      ] },
+
+    { id: "as5.amaldicoado.tenis-lepidos", nome: "Tênis Lépidos", elemento: "energia", fonte: AS5, pagina: 61, aba: "amaldicoados", secao: "especiais",
+      categoria: "III", espacos: 1, vestimenta: true,
+      resumo: "Par de tênis de skate com partes queimadas e cabos neon passando ao redor.",
+      efeitos: [
+        "Vestimenta: +12 em testes de Atletismo e +3 m de deslocamento.",
+        "2 PE para se mover de forma sobrenatural: até o fim do turno, ignora terreno difícil, recebe deslocamento de escalada igual ao terrestre e fica imune a dano por queda de até 9 m.",
+      ],
+      notas: ["O +12 é o publicado (AS5 p. 61) — não é erro de digitação a corrigir. Vestidos, o +12 em Atletismo e os +3 m entram na conta; o movimento sobrenatural é o botão do item (2 PE, até o fim do turno)."] },
   ];
 
   global.RAMAOrdemItensDados = {
@@ -2042,6 +2114,7 @@
       AS2: { nome: "Arquivos Secretos 2", curto: "Arquivos Secretos 2", edicao: "v1.0" },
       AS3: { nome: "Arquivos Secretos 3", curto: "Arquivos Secretos 3", edicao: "v1.0" },
       AS4: { nome: "Arquivos Secretos 4", curto: "Arquivos Secretos 4", edicao: "v1.0" },
+      AS5: { nome: "Arquivos Secretos 5", curto: "Arquivos Secretos 5", edicao: "v1.0" },
     },
     itens: ITENS,
   };

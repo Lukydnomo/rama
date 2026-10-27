@@ -2385,6 +2385,8 @@
 .bib-elemento--conhecimento { border-left-color: var(--cor-elemento-conhecimento); }
 .bib-elemento--energia { border-left-color: var(--cor-elemento-energia); }
 .bib-elemento--medo { border-left-color: var(--cor-elemento-medo); }
+/* Transmissão (AS5): Conhecimento e Energia ao mesmo tempo — as duas cores. */
+.bib-elemento--transmissao { border-left-color: var(--cor-elemento-conhecimento); border-right: 3px solid var(--cor-elemento-energia); }
 .bib-elemento--varia { border-left-style: dashed; }
 
 .bib-item__detalhes {

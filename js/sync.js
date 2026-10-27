@@ -528,6 +528,21 @@
       "ordem.arquivo4.explosoes": "id",
       "ordem.arquivo4.timers": "id",
       "inventario.itens.ordem.lancador.carregadas": "id",
+      /* Arquivos Secretos 5 (v2.48): os registros casam pelo id (ou pelo
+         id da operação) — a mesma teoria, o mesmo uso de selo ou a mesma
+         operação de sincronia nunca entram duas vezes, nem somem. */
+      "ordem.arquivo5.teorias": "id",
+      "ordem.arquivo5.turnos": "id",
+      "ordem.arquivo5.folego": "id",
+      "ordem.arquivo5.meditacoes": "id",
+      "ordem.arquivo5.ruidos": "id",
+      "ordem.arquivo5.desafios": "id",
+      "ordem.arquivo5.recebidos": "id",
+      "ordem.arquivo5.destruir": "itemId",
+      "ordem.arquivo5.nitro": "veiculoId",
+      "ordem.arquivo5.selos.fabricacoes": "id",
+      "ordem.arquivo5.selos.usos": "opId",
+      "ordem.arquivo5.transmissao.sincronia.operacoes": "opId",
       /* Barganha Insana (v2.41): cada conjuração casa pelo id. */
       "ordem.barganhaInsana.pendentes": "id",
       "ordem.barganhaInsana.resolvidas": "id",

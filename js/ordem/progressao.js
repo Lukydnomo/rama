@@ -537,7 +537,27 @@
       elementoMaldicao: elementoDaMaldicao(ordem),
       macula: elementoDaMacula(ordem),
       dominadas: dominadasDe(ordem),
+      /* Paralinguística Ampliada (AS5 p. 57): o degrau em que o poder foi
+         escolhido — ele concede Compreensão Paranormal pelo nome. */
+      paralinguistica: degrauDoPoder(ordem, "paralinguisticaAmpliada"),
     };
+  }
+
+  /* O primeiro degrau em que um poder foi escolhido, lido direto das
+     escolhas (sem montar o estado — quem pergunta é a própria montagem). */
+  function degrauDoPoder(ordem, chave) {
+    var achado = 0;
+    (ordem.escolhas || []).forEach(function (r) {
+      var m = /^d(\d+)\./.exec(String(r && r.etapa || ""));
+      if (!m) return;
+      var degrau = Number(m[1]);
+      (function andar(v, prof) {
+        if (!v || typeof v !== "object" || prof > 6) return;
+        if (v.valor === chave && (!achado || degrau < achado)) achado = degrau;
+        Object.keys(v).forEach(function (k) { if (v[k] && typeof v[k] === "object") andar(v[k], prof + 1); });
+      })({ valor: r.valor, opcoes: r.opcoes }, 0);
+    });
+    return achado;
   }
 
   /* A trilha só concede o que concede quando é uma trilha DA CLASSE da
@@ -1047,6 +1067,15 @@
         var txtGU = GRAUS_POR_NUMERO[r.grau] + " em " + r.pericias.map(nomeDaPericia).join(" ou ");
         var umG = r.pericias.some(function (k) { return (percurso.graus[k] || 0) >= r.grau; });
         return { ok: umG, texto: txtGU, falta: txtGU };
+      }
+      /* Poderes de Transmissão (AS5 p. 62): a conexão com o Sino de
+         Transmissão registrada na ficha E confirmada pela mesa (o mestre,
+         na campanha). Registrar sozinho não basta. */
+      case "sinoDeTransmissao": {
+        var sino = global.RAMAOrdemArquivo5 && ordem ? global.RAMAOrdemArquivo5.sino(ordem) : null;
+        var ligado = !!(sino && sino.registrado && sino.confirmado);
+        return { ok: ligado, texto: "Conexão com o Sino de Transmissão",
+          falta: sino && sino.registrado ? "Conexão com o Sino de Transmissão — falta a confirmação da mesa (aba Habilidades)" : "Conexão com o Sino de Transmissão (registre na aba Habilidades; a mesa confirma)" };
       }
       /* Poderes de Intenção (AS2 p. 94): o contato com a Coroa de
          Espinhos precisa estar registrado na ficha. */

@@ -463,7 +463,13 @@
     return achado || "";
   }
 
-  function usarRitual(ctx, ritual) {
+  /* opcoes.selo (AS5, v2.48): o uso de um Selo Paranormal — { plano (de
+     RAMAOrdemArquivo5.planoDeUso), itemId }. O ritual sai do selo: sem o
+     PE do círculo (OPRPG p. 151), sem componentes, e o selo é consumido
+     uma vez só, junto com a confirmação. */
+  function usarRitual(ctx, ritual, opcoes) {
+    var op5 = opcoes || {};
+    var selo = op5.selo || null;
     var o = ordemDe(ctx);
     var inv = inventario(ctx);
     var c = R().calcular(o, inv);
@@ -475,6 +481,10 @@
     var afinidade = afinidadeDe(o);
     var elemento = elementoDoRitual(ritual);
     var versoes = (ritual.versoes && ritual.versoes.length) ? ritual.versoes : [{ nome: "Normal" }];
+    /* Selo de um ritual que o usuário não conhece: só a versão normal
+       (as avançadas pedem conhecer o ritual — OPRPG p. 151 —, salvo Selo
+       Supremo do autor). */
+    if (selo && !selo.plano.podeAvancado) versoes = versoes.slice(0, 1);
     var custoPeExtra = 0;
     (c.efeitos ? c.efeitos.contextuais : []).forEach(function (x) { if (x.alvo === "custoPe") custoPeExtra += x.valor; });
     /* Arquivos Secretos 3: Torvo tira 1 PE dos rituais de Sangue; o Poder
@@ -483,6 +493,10 @@
     var ajuste3 = AS3 ? AS3.ajusteDoRitual(ctx, elemento) : { menosPe: 0, notas: [] };
     /* Arquivos Secretos 4: Explorador da Névoa tira 1 PE nesta cena. */
     var ajuste4 = global.RAMAFichaArquivo4 ? global.RAMAFichaArquivo4.ajusteDoRitual(ctx, elemento) : { menosPe: 0, notas: [] };
+    /* Arquivos Secretos 5: Paralinguística Ampliada tira 1 PE de
+       Compreensão Paranormal já conhecida (uma vez, nunca somado). */
+    var ajuste5 = global.RAMAFichaArquivo5 ? global.RAMAFichaArquivo5.ajusteDoRitual(ctx, elemento, ritual) : { menosPe: 0, notas: [] };
+    if (selo) ajuste5 = { menosPe: 0, notas: [] };
     var estado3 = { peComPv: 0 };
 
     var efeito = efeitoConhecido(ritual);
@@ -490,12 +504,12 @@
 
     /* Arquivos Secretos 1 (v2.29): o que muda o uso deste ritual. */
     var as1 = extrasDoArquivo(o, c, ritual, inv);
-    var estado = { versao: 0, gastar: true, dispensa: "", entregar: false, catalisador: "", emMim: false,
+    var estado = { versao: 0, gastar: true, dispensa: selo ? "selo" : "", entregar: false, catalisador: "", emMim: false,
       macula: false, reter: false, negativo: false, placas: !!as1.placas, sofisticado: "", naAntena: false, barganhaExtras: {} };
     var opId = novoOpId("ritual");
     var usado = false;
     var corpo = el("div.pilha--curta.consumo-confirmacao", { class: "pilha" });
-    var janela = UI.modal({ titulo: "Usar " + ritual.nome, conteudo: [corpo] });
+    var janela = UI.modal({ titulo: (selo ? "Usar selo — " : "Usar ") + ritual.nome, conteudo: [corpo] });
 
     function plano() {
       var v = versoes[estado.versao];
@@ -503,6 +517,9 @@
       /* Mácula Ritualística: sem o PE do círculo; a forma avançada ainda
          custa o que acrescenta (AS1 p. 43). */
       var semBase = estado.macula && custo ? custo.base : 0;
+      /* Selo: o círculo já foi pago na fabricação; com Selo Supremo do
+         autor, nem o adicional da forma avançada. */
+      if (selo && custo) semBase = selo.plano.semCustoAvancado ? custo.total : custo.base;
       return {
         v: v,
         custo: custo,
@@ -510,7 +527,7 @@
         p: CS().planoDeRitual({
           elemento: elemento, afinidade: afinidade, controle: o.componentes, inventario: inv,
           controleLigado: controle, dispensa: estado.dispensa, entregar: complexa && estado.entregar,
-          catalisadorId: estado.catalisador, custo: custo ? Math.max(0, custo.total - semBase - ajuste3.menosPe - ajuste4.menosPe) : 0, acrescimoPe: custoPeExtra,
+          catalisadorId: estado.catalisador, custo: custo ? Math.max(0, custo.total - semBase - ajuste3.menosPe - ajuste4.menosPe - ajuste5.menosPe) : 0, acrescimoPe: custoPeExtra,
         }),
       };
     }
@@ -534,10 +551,12 @@
         var detalhes = [pl.custo.base + " do círculo"];
         if (pl.custo.adicional) detalhes.push("+" + pl.custo.adicional + " da versão");
         if (custoPeExtra) detalhes.push((custoPeExtra > 0 ? "+" : "") + custoPeExtra + " de condição (alquebrado)");
-        if (pl.semBase) detalhes.push("–" + pl.semBase + " da Mácula Ritualística");
+        if (pl.semBase && !selo) detalhes.push("–" + pl.semBase + " da Mácula Ritualística");
         if (estado.dispensa === "camuflar") detalhes.push("+2 de Camuflar Ocultismo");
         if (ajuste3.menosPe && pl.custo) detalhes.push("–" + ajuste3.menosPe + " de Torvo");
         if (ajuste4.menosPe && pl.custo) detalhes.push("–" + ajuste4.menosPe + " do Explorador da Névoa");
+        if (ajuste5.menosPe && pl.custo) detalhes.push("–" + ajuste5.menosPe + " da Paralinguística Ampliada");
+        if (selo && pl.semBase) detalhes.push("–" + pl.semBase + (selo.plano.semCustoAvancado ? " (Selo Supremo: sem o círculo nem o adicional)" : " do selo (o círculo foi pago na fabricação)"));
         if (estado3.peComPv > total) estado3.peComPv = total;
         var peDeVerdade = total - estado3.peComPv;
         partes.push(el("label.r-marca", {}, [
@@ -546,7 +565,7 @@
         ]));
         if (peDeVerdade > atual) partes.push(el("p.t-aviso", { texto: "Não há " + recurso.toUpperCase() + " suficientes para o custo." }));
         if (AS3) partes = partes.concat(AS3.opcoesNoRitual(ctx, estado3, total, pintar));
-        ajuste3.notas.concat(ajuste4.notas).forEach(function (n) { partes.push(el("p.t-mini", { texto: n })); });
+        ajuste3.notas.concat(ajuste4.notas, ajuste5.notas).forEach(function (n) { partes.push(el("p.t-mini", { texto: n })); });
       } else {
         partes.push(el("p.t-mini", { texto: "O custo deste ritual não está nos dados dele: registre o gasto à mão, nos recursos." }));
       }
@@ -596,6 +615,7 @@
       if (elemento === "medo") {
         partes.push(el("p.t-mini", { texto: "Ritual de Medo: cada conjuração custa Sanidade permanente e dano mental (OPRPG p. 119). Isso não é descontado aqui — registre na ficha." }));
       }
+      if (selo && global.RAMAFichaArquivo5) partes = partes.concat(global.RAMAFichaArquivo5.linhasDoSelo(ctx, selo.plano));
       partes = partes.concat(opcoesDoArquivo(as1, estado, pl, pintar));
       if (barganha) partes.push(blocoDaBarganha(o, c, recurso, estado));
       if (efeito) {
@@ -622,10 +642,16 @@
       usado = true;
       var peComPv = estado.gastar && pl.custo ? Math.min(estado3.peComPv, pl.p.custo) : 0;
       var planoPago = peComPv ? Object.assign({}, pl.p, { custo: pl.p.custo - peComPv }) : pl.p;
+      if (selo && global.RAMAFichaArquivo5 && !global.RAMAFichaArquivo5.seloDisponivel(ctx, selo.itemId, opId)) {
+        usado = false; UI.avisoAtencao("O selo não está mais no inventário."); return;
+      }
       var r = CS().aplicarRitual(o, inv, ritual.nome, planoPago, {
         gastar: estado.gastar && !!pl.custo, recurso: recurso, atual: atual, elemento: elemento, versao: pl.v.nome,
       }, opId);
       if (!r.ok) { usado = false; UI.avisoAtencao(r.motivo); return; }
+      /* O selo é consumido pela MESMA operação do uso: um clique repetido
+         (ou uma resposta perdida) não gasta dois selos. */
+      if (selo && global.RAMAFichaArquivo5) global.RAMAFichaArquivo5.consumirSelo(ctx, selo.itemId, opId, ritual.nome);
       if (!r.repetido && peComPv && AS3) {
         var flag = AS3.pagarFlagelo(ctx, peComPv);
         if (flag) r.partes = (r.partes || []).concat([flag]);

@@ -33,6 +33,10 @@
      AS4    Arquivos Secretos 4, v1.0 (Jambô, pacote de conteúdo oficial)
             A Produção do Anfitrião (p. 55–57) e o Simulacro, com os
             estágios krypto, vvorm e botnetz (p. 61)
+     AS5    Arquivos Secretos 5, v1.0 (Jambô, pacote de conteúdo oficial)
+            Os Alheios (p. 35–51): hospedeiro parasitado e variações,
+            hospedeiro aflorado, interflorado, Fummu, os três doppelgangers
+            com a forma monstruosa, Bilu, rastropoda e memoflígico
 
    As páginas são as do livro, não as do PDF. Os resumos são redação
    própria: guardam os números, as condições e os testes que o jogo
@@ -46,7 +50,7 @@
    FORMATO DE UMA ENTRADA
    ---------------------------------------------------------------------
 
-     id            estável: <livro>.criatura.<nome> (op, sah, as1, as2, as3, as4).
+     id            estável: <livro>.criatura.<nome> (op, sah, as1, as2, as3, as4, as5).
                    Nunca muda, mesmo que o nome mude. Variantes têm o id
                    da base mais um sufixo (op.criatura.o-anfitriao.liber)
      livro, pagina a referência impressa
@@ -57,6 +61,10 @@
                    Animal, Animal (enxame))
      tamanho       como impresso; null quando a ficha não diz
      elementos     a lista de elementos, na ordem do cabeçalho
+     manifestacao  (AS5) "transmissao": criatura de Transmissão, que
+                   pertence a Conhecimento E Energia (p. 46) — os dois
+                   continuam em `elementos`; a manifestação só permite
+                   achar e filtrar
      vd            número; null quando a ficha traz nível em vez de VD
      nivel         "Nível 3 · NEX 10%" nas fichas de NPC de missão
      presenca      { dt, dano, imune } — dano mental, sem o "mental"
@@ -115,6 +123,7 @@
   var AS2 = "AS2";
   var AS3 = "AS3";
   var AS4 = "AS4";
+  var AS5 = "AS5";
 
   var SA = "sangue";
   var MO = "morte";
@@ -318,6 +327,154 @@
         formaDoSimulacro("botnetz", "Botnetz", 256, 500, 40, "3d20+20", "Grande", 3, "extremo", "até 4 pessoas", "6d8", "6d10"),
       ],
     };
+  }
+
+
+  /* =================================================================
+     OS ALHEIOS (Arquivos Secretos 5, p. 35–51)
+     -----------------------------------------------------------------
+     Montadores das fichas que se repetem: o hospedeiro e as variações
+     (p. 36–37), o Guincho Gutural (um dano só, metade Conhecimento e
+     metade Energia — a expressão não é duplicada por tipo) e os
+     doppelgangers com a forma monstruosa (p. 42).
+     ================================================================= */
+
+  function guinchoGutural(quem) {
+    return acao("padrao", "Guincho Gutural", quem + " emite um som estridente: 5d10 de dano — metade Conhecimento, metade Energia — em todos os seres num raio de 9 m a partir dele. Hospedeiros e Alheios são imunes. Cada alvo atingido escolhe, como reação: tapar os ouvidos (larga tudo o que estiver segurando, sofre metade do dano e fica surdo por 1 rodada) ou não tapar (sofre o dano inteiro e fica surdo por 1d4+1 rodadas).",
+      { rolagens: [dano("Guincho Gutural (o total: metade Conhecimento, metade Energia)", "5d10"), soma("Rodadas surdo (não tapou os ouvidos)", "1d4+1")],
+        resistencia: "Reação: tapar os ouvidos (metade, surdo 1 rodada) ou não tapar (inteiro, surdo 1d4+1 rodadas)" });
+  }
+
+  var ID_HOSPEDEIRO = "as5.criatura.hospedeiro-parasitado";
+
+  function hospedeiroParasitado() {
+    return {
+      id: ID_HOSPEDEIRO, livro: AS5, pagina: 36,
+      nome: "Hospedeiro Parasitado", natureza: "humana", tipo: "Pessoa", tamanho: "Médio", categoria: "Alheios",
+      elementos: [], vd: 20,
+      descricao: "Uma pessoa parasitada por um interflorado alojado no cérebro e no sistema nervoso. Ainda é humana, mas controlada — e a cada dia mais casca, para infiltração e reprodução.",
+      percepcao: "1d20+5", iniciativa: "1d20+5",
+      defesa: 15, fortitude: "1d20+5", reflexos: "1d20+5", vontade: "1d20+5",
+      pv: 10, machucado: 5,
+      atributos: [1, 1, 1, 1, 1],
+      deslocamento: [[9, 6]],
+      notas: [
+        "PESSOA (p. 36): não é criatura de Transmissão — o interflorado dentro dela é. Sem elementos, sem presença perturbadora.",
+        "Variações (p. 37): Acólito, Faz-Tudo, Guerrilheiro e Socorrista são entradas próprias deste catálogo, com as escolhas descritas em cada uma.",
+      ],
+      habilidades: [
+        hab("Parasitado", "Infectado por um interflorado. Sinais: o sangue vira um plasma verde ácido; tem dificuldade de reconhecer cores; às vezes pisca um olho de cada vez. Para expulsar o Alheio sem sofrer: um choque térmico forte (aquecer e depois mergulhar em água gelada) — a criatura se lança para fora como um reflexo (Interflorado). O hospedeiro não pode se sentir ameaçado, nervoso, ansioso ou consciente do que há no corpo: se o parasita perceber o perigo, ele aflora (Hospedeiro Aflorado), matando o hospedeiro."),
+      ],
+      acoes: [
+        agredir([at("Pancada", "corpo a corpo", 1, "1d20+5", "1d4+5 impacto")]),
+      ],
+    };
+  }
+
+  /* Uma variação aplica as modificações da p. 37 na ficha do hospedeiro:
+     o que o livro dá em número substitui; o que é ESCOLHA fica escrito
+     como escolha — nada é somado por conta própria. */
+  function variacaoDeHospedeiro(chave, rotulo, m) {
+    var e = hospedeiroParasitado();
+    e.id = ID_HOSPEDEIRO + "." + chave;
+    e.nome = "Hospedeiro Parasitado — " + rotulo;
+    e.pagina = 37;
+    e.variante = { de: ID_HOSPEDEIRO, rotulo: "Variação de hospedeiro (p. 37)" };
+    if (m.descricao) e.descricao = m.descricao + " " + e.descricao;
+    ["atributos", "pv", "machucado", "percepcao", "iniciativa", "fortitude", "reflexos", "vontade"].forEach(function (k) {
+      if (m[k] !== undefined) e[k] = m[k];
+    });
+    if (m.pericias) e.pericias = m.pericias;
+    if (m.habilidades) e.habilidades = e.habilidades.concat(m.habilidades);
+    if (m.acoes) e.acoes = m.acoes;
+    if (m.acoesExtra) e.acoes = e.acoes.concat(m.acoesExtra);
+    e.notas = ["Variação " + rotulo + " (p. 37): os números da variação substituem os da ficha base; Fortitude, Reflexos, Iniciativa, Percepção e Vontade são testes da ficha, não perícias."].concat(m.notas || []);
+    return e;
+  }
+
+  /* +n num teste "XdY+Z" e no primeiro termo de um dano "XdY+Z tipo". */
+  function testeMais(expr, n) {
+    var m = /^(\d+)d20([+-]\d+)?$/.exec(String(expr || ""));
+    if (!m) return expr;
+    var b = Number(m[2] || 0) + n;
+    return m[1] + "d20" + (b ? (b > 0 ? "+" : "") + b : "");
+  }
+  function danoMais(t, n) {
+    var m = /^(\d+d\d+)([+-]\d+)?(\s.*)?$/.exec(String(t || ""));
+    if (!m) return t;
+    var b = Number(m[2] || 0) + n;
+    return m[1] + (b ? (b > 0 ? "+" : "") + b : "") + (m[3] || "");
+  }
+  function dtMais(t, n) {
+    return String(t || "").replace(/DT (\d+)/g, function (_, v) { return "DT " + (Number(v) + n); });
+  }
+
+  /* Doppelganger Monstruoso (p. 42): +10 PV máximos e atuais, +2 na
+     Defesa, +5 em testes, +5 em rolagens de dano e +2 na DT de ações e
+     habilidades — já aplicados nos números da forma. Trocar de forma é
+     escolher a forma da ocorrência: a mesma forma de novo não soma nada,
+     e o VD continua o publicado. */
+  function formaMonstruosa(e) {
+    var copia = JSON.parse(JSON.stringify(e));
+    var forma = {
+      id: "monstruosa", nome: "Forma monstruosa", pagina: 42, vd: e.vd,
+      pv: e.pv + 10, machucado: Math.floor((e.pv + 10) / 2), defesa: e.defesa + 2, somaAtuais: 10,
+      percepcao: testeMais(e.percepcao, 5), iniciativa: testeMais(e.iniciativa, 5),
+      fortitude: testeMais(e.fortitude, 5), reflexos: testeMais(e.reflexos, 5), vontade: testeMais(e.vontade, 5),
+      ativacao: "Assumir Forma Monstruosa (ação de movimento, quando se sente ameaçado): +10 PV máximos e atuais, +2 na Defesa, +5 em testes, +5 em rolagens de dano e +2 na DT de ações e habilidades. Os números desta forma já os incluem; voltar a ela não soma de novo.",
+      notas: [
+        "Valores da forma calculados a partir da ficha publicada (p. 42): nada é somado de novo a cada troca. O VD não muda.",
+        "A DT da presença perturbadora é um campo próprio da ficha e não é alterado pela forma: o livro fala em “DT de ações e habilidades”.",
+      ],
+      pericias: (copia.pericias || []).map(function (p) { return [p[0], testeMais(p[1], 5)]; }),
+      habilidades: (copia.habilidades || []).map(function (h) { h.nome = dtMais(h.nome, 2); h.texto = dtMais(h.texto, 2); return h; }),
+      acoes: (copia.acoes || []).map(function (a) {
+        a.nome = dtMais(a.nome, 2);
+        if (a.texto) a.texto = dtMais(a.texto, 2);
+        if (a.resistencia) a.resistencia = dtMais(a.resistencia, 2);
+        if (a.ataques) a.ataques = a.ataques.map(function (t) {
+          t.teste = testeMais(t.teste, 5);
+          t.dano = t.dano.map(function (d, i) { return i === 0 ? danoMais(d, 5) : d; });
+          return t;
+        });
+        if (a.rolagens) a.rolagens = a.rolagens.map(function (r) {
+          if (r.tipo === "teste") r.expressao = testeMais(r.expressao, 5);
+          if (r.tipo === "dano") r.partes = r.partes.map(function (d, i) { return i === 0 ? danoMais(d, 5) : d; });
+          return r;
+        });
+        return a;
+      }),
+    };
+    return forma;
+  }
+
+  function doppelganger(d) {
+    var e = {
+      id: d.id, livro: AS5, pagina: d.pagina,
+      nome: d.nome, natureza: "paranormal", tipo: "Criatura", tamanho: "Médio", categoria: "Alheios",
+      elementos: [CO, EN], manifestacao: "transmissao", vd: d.vd,
+      descricao: d.descricao + " Copia a fisionomia de uma pessoa morta, com acesso às memórias dela, mas com falhas notáveis: movimentos travados, fala robótica, olhos pequenos de esclera preta, fendas pelo corpo.",
+      presenca: d.presenca,
+      percepcao: d.percepcao, iniciativa: d.iniciativa, sentidos: ["visão no escuro"],
+      defesa: d.defesa, fortitude: d.fortitude, reflexos: d.reflexos, vontade: d.vontade,
+      pv: d.pv, machucado: d.machucado,
+      resistencias: d.resistencias,
+      vulnerabilidades: ["Sangue"],
+      atributos: d.atributos,
+      pericias: d.pericias,
+      deslocamento: [[9, 6]],
+      notas: ["Transmissão (p. 46): pertence a Conhecimento e Energia ao mesmo tempo.",
+        "Forma monstruosa: o seletor de forma da ocorrência (valores já com os bônus da p. 42)."].concat(d.notasExtra || []),
+      habilidades: d.habilidades.concat([
+        hab("Disfarce Alheio", "Se esforça para se passar por um cidadão comum — ou, no máximo, uma pessoa esquisita. Num teste de Enganação, sempre rola duas vezes e fica com o melhor resultado."),
+        hab("Somos Todos Um", "Sabe onde está outro doppelganger e sempre age em prol de um único objetivo, sem se importar em se sacrificar."),
+      ]),
+      acoes: d.acoes.concat([
+        acao("movimento", "Assumir Forma Monstruosa", "Quando se sente ameaçado, revela a natureza monstruosa: +10 PV máximos e atuais, +2 na Defesa, +5 em testes, +5 em rolagens de dano e +2 na DT de ações e habilidades. Use o seletor de forma da ocorrência — a mesma forma de novo não soma nada."),
+      ]),
+    };
+    e.formas = [formaMonstruosa(e)];
+    return e;
   }
 
   var CRIATURAS = [
@@ -4712,6 +4869,328 @@
     },
 
     simulacro(),
+
+    /* =================================================================
+       ARQUIVOS SECRETOS 5 — os Alheios (p. 35–51)
+       -----------------------------------------------------------------
+       "As criaturas de Transmissão, em termos de jogo, pertencem a esses
+       dois elementos ao mesmo tempo" (p. 46): elementos [Conhecimento,
+       Energia] DE VERDADE, mais a manifestação "transmissao" para achar e
+       filtrar. O hospedeiro parasitado é uma PESSOA (p. 36): não é
+       criatura de Transmissão — o interflorado dentro dele é.
+       Os números são os publicados; nada é somado de novo. O "O" do livro
+       é o d20. Os rituais impressos nas fichas são AÇÕES da ameaça, com a
+       DT e o limite de PE por conjuração dela, e citam o ritual do livro
+       básico — não são rituais novos do AS5.
+       Ficaram FORA, de propósito: o Estrangeiro, Diego Granteros e os
+       funcionários de exemplo da TV Varminho (p. 21–25), que o livro não
+       dá em números; a ficha de "forma furiosa" do Bilu, que o texto
+       menciona (p. 47) mas não imprime.
+       ================================================================= */
+
+    hospedeiroParasitado(),
+    variacaoDeHospedeiro("acolito", "Acólito", {
+      atributos: [1, 1, 2, 2, 1],
+      percepcao: "2d20+5", vontade: "2d20+5",
+      pericias: [["Ocultismo", "2d20+5"], ["Religião", "2d20+5"]],
+      descricao: "NPC envolvido com o paranormal, com conhecimento suficiente para conjurar rituais.",
+      habilidades: [hab("Conjurador (escolha)", "Escolha dois rituais de 1º círculo de UM elemento. O hospedeiro conjura esses rituais sem pagar o custo em PE, até um limite de 3 PE por conjuração, usando a ação apropriada para cada ritual. DT para resistir: 15. O limite é por conjuração: não há reserva de PE.",
+        { escolha: true })],
+      notas: ["Escolha da variação: os dois rituais (1º círculo, mesmo elemento) vêm do catálogo do livro básico — anote na ocorrência ou numa cópia do Homebrew."],
+    }),
+    variacaoDeHospedeiro("faz-tudo", "Faz-Tudo", {
+      descricao: "NPC trabalhador, esforçado, que se dedica a perícias específicas.",
+      habilidades: [
+        hab("Atributos (escolha)", "Aumente 2 atributos em +1.", { escolha: true }),
+        hab("Perícias (escolha)", "Escolha 4 perícias para o hospedeiro receber +5 (exceto Luta e Pontaria).", { escolha: true }),
+        hab("Esforçado (escolha)", "Escolha 1 perícia (exceto Luta e Pontaria): sempre que o hospedeiro fizer um teste dela, rola duas vezes e fica com o melhor resultado.", { escolha: true }),
+      ],
+      notas: ["Escolhas da variação (dois atributos, quatro perícias e a perícia do Esforçado): anote na ocorrência ou numa cópia do Homebrew. A ficha não soma nada sozinha — os números publicados do hospedeiro ficam como estão até a escolha."],
+    }),
+    variacaoDeHospedeiro("guerrilheiro", "Guerrilheiro", {
+      atributos: [2, 2, 1, 1, 2],
+      pv: 20, machucado: 10,
+      iniciativa: "2d20+5", fortitude: "2d20+5", reflexos: "2d20+5",
+      pericias: [["Atletismo", "2d20+5"]],
+      descricao: "NPC soldado, policial ou outro indivíduo treinado para o combate armado.",
+      acoes: [
+        agredir([at("Pancada", "corpo a corpo", 1, "2d20+10", "1d4+10 impacto")]),
+        agredir([at("Pistola", "curto", 1, "2d20+10", "1d12+10 balístico", { critico: "18" })], { nome: "Agredir (pistola)" }),
+      ],
+      notas: ["A Pancada e a Pistola desta variação substituem o ataque da ficha base."],
+    }),
+    variacaoDeHospedeiro("socorrista", "Socorrista", {
+      atributos: [1, 1, 2, 2, 1],
+      percepcao: "2d20+5", vontade: "2d20+5",
+      pericias: [["Medicina", "2d20+5"]],
+      descricao: "NPC médico, enfermeiro ou outro indivíduo treinado em primeiros socorros e no uso de remédios.",
+      acoesExtra: [acao("padrao", "Primeiros Socorros", "Uma vez por cena, o hospedeiro recupera 1d8+1 PV de si mesmo ou de um aliado adjacente.",
+        { limite: [1, "cena"], rolagens: [soma("PV recuperados", "1d8+1")] })],
+    }),
+
+    {
+      id: "as5.criatura.hospedeiro-aflorado", livro: AS5, pagina: 38,
+      nome: "Hospedeiro Aflorado", natureza: "paranormal", tipo: "Criatura", tamanho: "Médio", categoria: "Alheios",
+      elementos: [CO, EN], manifestacao: "transmissao", vd: 60,
+      descricao: "O interflorado em perigo “aflora”: toma o corpo do hospedeiro, matando-o, e se expõe grotescamente a partir do pescoço.",
+      presenca: { dt: 19, dano: "3d6", imune: "NEX 35%" },
+      percepcao: "2d20", iniciativa: "2d20+5", sentidos: ["percepção às cegas", "visão no escuro"],
+      defesa: 25, fortitude: "3d20+10", reflexos: "2d20+5", vontade: "2d20",
+      pv: 100, machucado: 50,
+      resistencias: [[5, "balístico", "corte", "impacto", "perfuração"], [10, "Conhecimento", "Energia", "químico"]],
+      vulnerabilidades: ["Fogo", "Frio", "Sangue"],
+      atributos: [2, 2, 1, 2, 3],
+      deslocamento: [[9, 6]],
+      notas: ["Transmissão (p. 46): pertence a Conhecimento e Energia ao mesmo tempo.", "Sai do Hospedeiro Parasitado quando o interflorado se sente ameaçado: o hospedeiro morre."],
+      habilidades: [
+        hab("Aflorado", "Esta pessoa está morta: é um cadáver hospedeiro de um interflorado no estado mais agressivo. Matá-la é matar o interflorado, e vice-versa."),
+      ],
+      acoes: [
+        agredir([at("Pancada", "corpo a corpo", 2, "2d20+10", ["1d6+5 impacto", "2d6 químico"])]),
+        acao("movimento", "Disparada Errante", "Corrida descontrolada: percorre o dobro do deslocamento, mas faz um teste de Acrobacia (DT 20). Falhando, ao terminar o movimento fica caído.",
+          { rolagens: [teste("Acrobacia (DT 20)", "2d20+5")] }),
+        guinchoGutural("O hospedeiro aflorado"),
+      ],
+    },
+
+    {
+      id: "as5.criatura.interflorado", livro: AS5, pagina: 39,
+      nome: "Interflorado", natureza: "paranormal", tipo: "Criatura", tamanho: "Pequeno", categoria: "Alheios",
+      elementos: [CO, EN], manifestacao: "transmissao", vd: 40,
+      descricao: "Alheio da categoria Parasita: verde-musgo, com duas “mãos” de dedos longos e uma cauda forte. Faz-se de morto e salta no pescoço da próxima vítima.",
+      presenca: { dt: 15, dano: "2d8", imune: "NEX 30%" },
+      percepcao: "1d20+5", iniciativa: "2d20+5", sentidos: ["visão no escuro"],
+      defesa: 19, fortitude: "1d20", reflexos: "2d20+5", vontade: "1d20+5",
+      pv: 70, machucado: 35,
+      resistencias: [[5, "balístico", "corte", "impacto", "perfuração"], [10, "Conhecimento", "Energia", "químico"]],
+      vulnerabilidades: ["Fogo", "Frio", "Sangue"],
+      atributos: [2, 2, 1, 1, 1],
+      pericias: [["Acrobacia", "2d20+5"], ["Atletismo", "2d20+5"], ["Furtividade", "2d20+10"]],
+      deslocamento: [[9, 6]],
+      estados: [{ id: "ovos", nome: "Ovos incubados no hospedeiro", maximo: 8, inicial: 0 }],
+      notas: [
+        "Transmissão (p. 46): pertence a Conhecimento e Energia ao mesmo tempo.",
+        "Contorcer Perturbador cita a condição “trêmulo (AS #05, p. 124)” — o pacote não tem página 124 nem define trêmulo. A ficha registra o nome como impresso e não inventa efeito para ele (ver docs/ORDEM-REGRAS.md).",
+        "Ovos: o limite por hospedeiro é 2d4 (rolado uma vez). Cada ovo tira 1d6 de SAN MÁXIMA da vítima, para sempre — perda, não dano, aplicada só com a confirmação de quem controla a ficha da vítima.",
+        "Expulsão sem sofrer: choque térmico forte no hospedeiro (aquecê-lo e depois água gelada), sem que ele se sinta ameaçado — senão o interflorado aflora (Hospedeiro Aflorado).",
+      ],
+      acoes: [
+        acao("movimento", "Contorcer Perturbador", "Percorre o deslocamento contorcendo o corpo e se lança, membros debatendo, na direção de uma pessoa ou animal: 2d8 de dano mental e o alvo fica apavorado e trêmulo até o fim da cena (Vontade DT 15 reduz o dano à metade e evita apavorado e trêmulo, mas o alvo fica abalado até o fim da cena). Quem passa no teste fica imune a esta habilidade por 1 dia.",
+          { rolagens: [dano("Contorcer Perturbador", "2d8 mental")], resistencia: "Vontade DT 15 reduz à metade; evita apavorado e trêmulo (fica abalado)" }),
+        guinchoGutural("O interflorado"),
+        acao("completa", "Incubar", "Depois de ocupar um hospedeiro por 1 dia, uma vez por dia, incuba 1 ovo de interflorado. Limite por hospedeiro: 2d4 ovos. Para cada ovo, a vítima perde 1d6 de SAN máxima permanentemente. Atingido o limite, ou com a SAN da vítima em 0 (o que vier primeiro), todos os ovos eclodem em novos interflorados, explodindo e matando o hospedeiro de dentro para fora. A critério do mestre, pela dramaticidade da cena, ovos já incubados podem eclodir antes.",
+          { limite: [1, "dia"], rolagens: [soma("Limite de ovos deste hospedeiro", "2d4"), soma("SAN máxima perdida (por ovo)", "1d6")] }),
+        acao("completa", "Investida Sufocante", "Percorre o dobro do deslocamento até uma pessoa ou animal e salta para parasitá-lo: agarra a cabeça e enrola a cauda no pescoço (manobra de agarrar, teste oposto). Vencendo, o alvo fica agarrado, cego, surdo e asfixiado; ele pode gastar uma ação padrão para tentar de novo e remover a criatura. Se a vítima ficar inconsciente, o interflorado invade o corpo e ela vira um hospedeiro parasitado. As condições saem se o alvo se livrar do agarrão ou se for parasitado. Também parasita, sem acordar, pessoas ou animais já inconscientes.",
+          { rolagens: [teste("Agarrar (teste oposto)", "2d20+10")] }),
+      ],
+    },
+
+    {
+      id: "as5.criatura.fummu", livro: AS5, pagina: 41,
+      nome: "Fummu", natureza: "paranormal", tipo: "Criatura", tamanho: "Médio", categoria: "Alheios",
+      elementos: [CO, EN], manifestacao: "transmissao", vd: 100,
+      descricao: "Camuflado extremamente inteligente: marca um alvo por vez, estuda-o e controla objetos inflamáveis com a mente. Só se torna visível num ambiente cheio de fumaça ou gás.",
+      presenca: { dt: 21, dano: "4d6", imune: "NEX 45%" },
+      percepcao: "2d20+5", iniciativa: "3d20+10", sentidos: ["visão no escuro"],
+      defesa: 25, fortitude: "2d20", reflexos: "3d20+10", vontade: "2d20+5",
+      pv: 200, machucado: 100,
+      imunidades: ["Fogo"],
+      resistencias: [[10, "balístico", "corte", "impacto", "perfuração"], [20, "Conhecimento", "Energia", "químico"]],
+      vulnerabilidades: ["Sangue"],
+      atributos: [3, 2, 2, 2, 2],
+      pericias: [["Atletismo", "2d20+10"], ["Furtividade", "3d20+10"]],
+      deslocamento: [[9, 6]],
+      notas: [
+        "Transmissão (p. 46): pertence a Conhecimento e Energia ao mesmo tempo.",
+        "Descrição na p. 40: sinais da presença (impressões com padrões de sigilo, plantas ressecadas, cheiro de queimado ou enxofre) e a única forma de vê-lo (fumaça ou gás).",
+      ],
+      habilidades: [
+        hab("Camuflagem Alheia (Fummu)", "Invisível: camuflagem total, +15 em Furtividade contra ouvir, e quem não pode vê-lo fica desprevenido contra os ataques dele. +2d20 em ataques contra alvos que não estejam cegos (alvos cegos, em vez disso, sofrem −5 na Defesa). Num ambiente cheio de gás ou fumaça, perde a invisibilidade, mas recebe camuflagem leve."),
+        hab("Chamas Ferventes", "Qualquer ser agarrando o fummu sofre 2d10 de dano de fogo, uma vez por rodada.", { rolagens: [dano("Chamas Ferventes", "2d10 fogo")] }),
+        hab("Estudo de Terráqueos", "Passando uma semana observando um terráqueo, aprende algo novo, a critério do mestre: treinamento numa perícia nova, uma habilidade nova ou o uso de algum equipamento terráqueo."),
+      ],
+      acoes: [
+        agredir([at("Toque Ácido", "corpo a corpo", 2, "3d20+15", "2d10+10 químico")]),
+        acao("movimento", "Cintilação Estelar", "Uma vez por rodada, se não estiver sendo agarrado, se teletransporta para um espaço desocupado num raio de 9 m.", { limite: [1, "rodada"] }),
+        acao("padrao", "Acionar Explosão", "Causa a combustão de um objeto inflamável em alcance médio. Se o objeto já tem regras de explosão (uma granada, por exemplo), valem as dele. Se não tem: um objeto Minúsculo causa 2d6 de dano de fogo e a condição em chamas em seres e objetos num raio de 3 m a partir dele (Reflexos contra uma DT de 4d10, rolada, reduz à metade e evita a condição). +2d6 de dano e +1,5 m de raio por categoria de tamanho acima de Minúsculo.",
+          { rolagens: [soma("DT de Reflexos (4d10, rolada)", "4d10"),
+            dano("Objeto Minúsculo (raio 3 m)", "2d6 fogo"), dano("Objeto Pequeno (raio 4,5 m)", "4d6 fogo"), dano("Objeto Médio (raio 6 m)", "6d6 fogo"),
+            dano("Objeto Grande (raio 7,5 m)", "8d6 fogo"), dano("Objeto Enorme (raio 9 m)", "10d6 fogo"), dano("Objeto Colossal (raio 10,5 m)", "12d6 fogo")],
+            resistencia: "Reflexos contra DT 4d10 (somada) reduz à metade e evita em chamas" }),
+        acao("padrao", "Chama Viridente", "Projeta fogo contra 1 ser em alcance médio: 4d10+20 de dano de fogo e o alvo fica em chamas (Reflexos DT 21 reduz o dano à metade e evita a condição).",
+          { rolagens: [dano("Chama Viridente", "4d10+20 fogo")], resistencia: "Reflexos DT 21 reduz à metade e evita em chamas" }),
+      ],
+    },
+
+    doppelganger({
+      id: "as5.criatura.doppelganger-civil", pagina: 42, nome: "Doppelganger Civil", vd: 20,
+      descricao: "Alheio que copia a fisionomia de uma pessoa morta, simulando um civil com pouca experiência.",
+      presenca: { dt: 15, dano: "1d6", imune: "NEX 20%" },
+      percepcao: "2d20+5", iniciativa: "1d20", defesa: 14, fortitude: "1d20", reflexos: "1d20", vontade: "2d20+5",
+      pv: 14, machucado: 7,
+      resistencias: [[5, "balístico", "corte", "impacto", "perfuração"], [10, "Conhecimento", "Energia"]],
+      atributos: [1, 1, 3, 2, 1],
+      pericias: [["Atualidades", "3d20+5"], ["Ciências", "3d20+5"], ["Crime", "1d20+5"], ["Enganação", "2d20+5"], ["Furtividade", "1d20+5"], ["Pilotagem", "1d20+5"],
+        ["Profissão", "3d20+5"], ["Religião", "2d20+5"], ["Sobrevivência", "3d20+5"], ["Tecnologia", "3d20+5"]],
+      habilidades: [],
+      acoes: [
+        agredir([at("Pancada", "corpo a corpo", 1, "1d20+5", "1d4+2 impacto")]),
+        agredir([at("Pistola de Plasma", "curto", 1, "1d20+5", "2d6+2 Energia", { critico: "18" })], { nome: "Agredir (pistola de plasma)" }),
+      ],
+    }),
+    doppelganger({
+      id: "as5.criatura.doppelganger-combatente", pagina: 43, nome: "Doppelganger Combatente", vd: 60,
+      descricao: "Doppelganger simulando um combatente com experiência em batalha.",
+      presenca: { dt: 20, dano: "3d6", imune: "NEX 35%" },
+      percepcao: "2d20+5", iniciativa: "2d20+5", defesa: 19, fortitude: "1d20+5", reflexos: "2d20+5", vontade: "2d20+5",
+      pv: 70, machucado: 35,
+      resistencias: [[10, "balístico", "corte", "impacto", "perfuração"], [20, "Conhecimento", "Energia"]],
+      atributos: [2, 2, 3, 2, 1],
+      pericias: [["Atletismo", "2d20+5"], ["Ciências", "3d20+5"], ["Crime", "2d20+5"], ["Enganação", "2d20+5"], ["Furtividade", "2d20+5"], ["Pilotagem", "2d20+5"],
+        ["Religião", "2d20+5"], ["Sobrevivência", "3d20+5"], ["Tecnologia", "3d20+5"]],
+      habilidades: [hab("Close Quarter Combat", "Domina um estilo de luta militar para espaços fechados: +1d20 em testes de ataque em alcance corpo a corpo (inclusive com armas de ataque à distância), +1d20 em manobras, e mira, recarrega, saca e guarda itens como ação livre. Os bônus já estão nos números da ficha.")],
+      acoes: [
+        agredir([at("Pancada", "corpo a corpo", 2, "2d20+10", "1d10+5 impacto")]),
+        agredir([at("Pistola de Plasma", "curto", 2, "2d20+10", "2d6+5 Energia", { critico: "18" })], { nome: "Agredir (pistola de plasma)" }),
+        acao("reacao", "Proteger", "Uma vez por rodada, torna-se o alvo de um dano ou de qualquer outro efeito negativo que afetaria um aliado adjacente.", { limite: [1, "rodada"] }),
+        acao("livre", "Especialista em Manobras", "Uma vez por rodada, ao acertar um ataque desarmado, tenta agarrar, derrubar ou desarmar o oponente como ação livre.",
+          { limite: [1, "rodada"], rolagens: [teste("Manobra", "2d20+12")] }),
+      ],
+    }),
+    doppelganger({
+      id: "as5.criatura.doppelganger-cultista", pagina: 44, nome: "Doppelganger Cultista", vd: 160,
+      descricao: "Doppelganger simulando um cultista com experiência em se conectar com o Outro Lado.",
+      presenca: { dt: 25, dano: "4d8", imune: "NEX 55%" },
+      percepcao: "4d20+10", iniciativa: "3d20+10", defesa: 28, fortitude: "2d20+5", reflexos: "3d20+10", vontade: "4d20+10",
+      pv: 240, machucado: 120,
+      resistencias: [[10, "balístico", "corte", "impacto", "perfuração"], [20, "Conhecimento", "Energia"]],
+      atributos: [3, 2, 3, 4, 2],
+      pericias: [["Artes", "4d20+10"], ["Ciências", "3d20+10"], ["Crime", "3d20+10"], ["Diplomacia", "4d20+10"], ["Enganação", "4d20+10"], ["Furtividade", "3d20+10"],
+        ["Intimidação", "4d20+10"], ["Ocultismo", "3d20+10"], ["Pilotagem", "3d20+10"], ["Religião", "4d20+10"], ["Sobrevivência", "3d20+10"], ["Tecnologia", "3d20+10"]],
+      dtRituais: 23,
+      habilidades: [hab("Rituais (DT 23)", "Conjura os rituais da ficha sem pagar o custo em PE, até um limite de 6 PE por conjuração, usando a ação apropriada. O limite é por conjuração: não há reserva de PE. Os rituais da ficha não são fixos (quadro “Rituais fixos?”, p. 46): o mestre pode trocá-los.")],
+      acoes: [
+        agredir([at("Pancada", "corpo a corpo", 2, "2d20+10", "1d4+5 impacto")]),
+        agredir([at("Pistola de Plasma", "curto", 2, "3d20+10", "2d6+10 Energia", { critico: "18" })], { nome: "Agredir (pistola de plasma)" }),
+        acao("padrao", "Ritual: Enfeitiçar (Conhecimento 1)", "Ritual Enfeitiçar (OPRPG p. 131). Torna 1 pessoa em alcance curto prestativa pela cena (Vontade anula): não fica sob controle, mas vê as palavras e ações do doppelganger da forma mais favorável; +10 em Diplomacia com ela. Hostil ou em combate: +5 no teste de resistência. Ação hostil do doppelganger ou de aliados dissipa o efeito. Discente: em vez disso, sugere uma ação aceitável a 1 pessoa em alcance curto e ela obedece (Vontade anula); executada a ação, o efeito termina.",
+          { resistencia: "Vontade DT 23 anula" }),
+        acao("padrao", "Ritual: Invadir Mente Discente (Conhecimento 2)", "Ritual Invadir Mente (OPRPG p. 134), forma discente, com um destes efeitos. Rajada Mental: 1 ser em alcance de toque sofre 10d6 de dano de Conhecimento e fica atordoado por uma rodada (Vontade parcial: metade e não fica atordoado); o mesmo alvo só fica atordoado por este ritual uma vez por cena. Ligação Telepática: elo mental que deixa o doppelganger gastar uma ação de movimento para ver e ouvir pelos sentidos de 1 ser tocado, por 1 dia, a qualquer distância (alvo involuntário: Vontade anula suprime por uma hora).",
+          { rolagens: [dano("Rajada Mental", "10d6 Conhecimento")], resistencia: "Vontade DT 23 parcial" }),
+        acao("padrao", "Ritual: Perturbação Discente (Conhecimento 1)", "Ritual Perturbação (OPRPG p. 137), forma discente. Uma ordem de 1 rodada para 1 pessoa em alcance curto que possa ouvir (Vontade anula): Fuja, Largue, Pare (pasmo), Sente-se, Venha, ou Sofra — 3d8 de dano de Conhecimento e abalado por uma rodada.",
+          { rolagens: [dano("Sofra", "3d8 Conhecimento")], resistencia: "Vontade DT 23 anula" }),
+        acao("padrao", "Ritual: Tela de Ruído Discente (Energia)", "Ritual Tela de Ruído (OPRPG p. 141), forma discente: película de Energia que absorve energia cinética até o fim da cena — 60 PV temporários, que só valem contra dano balístico, de corte, de impacto ou de perfuração. Três vezes por cena (contando a forma de reação).",
+          { limite: [3, "cena"] }),
+        acao("reacao", "Ritual: Tela de Ruído Discente (reação)", "Ao sofrer dano: resistência 30 apenas contra esse dano. Não são PV temporários — é redução daquele dano. Gasta um dos três usos por cena da Tela de Ruído (marque na ação acima)."),
+      ],
+      notasExtra: ["A p. 45 imprime “Tela de Ruído Discente ENERGIA 1”; o ritual é de 2º círculo no livro básico (p. 141) e o AS4 (p. 56) imprimiu 2. A ficha não fixa o círculo na ação (ver docs/ORDEM-REGRAS.md)."],
+    }),
+
+    {
+      id: "as5.criatura.bilu", livro: AS5, pagina: 47,
+      nome: "Bilu", natureza: "paranormal", tipo: "Criatura", tamanho: "Médio", categoria: "Alheios",
+      elementos: [CO, EN], manifestacao: "transmissao", vd: 42,
+      descricao: "Alheio fora das categorias conhecidas: humanoide cinza-esverdeado de olhos verdes brilhantes e crânio rachado. Carismático e amistoso, conversa sobre as grandes perguntas — e foge quando perde o interesse ou ouve um rádio ligado.",
+      presenca: { dt: 15, dano: "1d4", imune: "NEX 30%" },
+      percepcao: "3d20+10", iniciativa: "3d20+10", sentidos: ["visão no escuro"],
+      defesa: 12, fortitude: "1d20", reflexos: "3d20+10", vontade: "3d20+10",
+      pv: 42, machucado: 21,
+      resistencias: [[5, "balístico", "corte", "impacto", "perfuração"], [10, "Conhecimento", "Energia", "químico"]],
+      vulnerabilidades: ["Sangue"],
+      atributos: [3, 2, 3, 4, 2],
+      pericias: [["Artes", "3d20+10"], ["Ciências", "3d20+10"], ["Furtividade", "3d20+10"], ["Ocultismo", "3d20+10"], ["Religião", "3d20+10"], ["Tecnologia", "3d20+10"]],
+      deslocamento: [[9, 6]],
+      notas: [
+        "Transmissão (p. 46): pertence a Conhecimento e Energia ao mesmo tempo.",
+        "Não hostil (p. 47): Fala Enigmática causa dano sem que ele seja hostil; Embaralhamento Mental só vem quando ele se sente ameaçado.",
+        "O texto da p. 47 menciona uma “versão furiosa”, mas o livro não imprime ficha para ela: o catálogo não inventa uma. A VD é a publicada (42), sem arredondar.",
+      ],
+      acoes: [
+        acao("reacao", "Até Breve", "Se ficar machucado, Bilu se teletransporta para um espaço extradimensional. O mestre decide quando ele aparece de novo."),
+        acao("reacao", "Embaralhamento Mental", "Ameaçado por uma pessoa (sendo atacado, por exemplo), fica furioso e revida com uma onda neural: 4d10 de dano mental e o alvo fica esmorecido até o fim da cena (Vontade DT 20 reduz à metade e muda para frustrado).",
+          { rolagens: [dano("Embaralhamento Mental", "4d10 mental")], resistencia: "Vontade DT 20 reduz à metade e muda para frustrado" }),
+        acao("movimento", "Comer Cimento", "Come um pouco de cimento adjacente e recupera 10 pontos de vida."),
+        acao("movimento", "Salto para a Frente", "Salta para um espaço desocupado a até 12 m. Se ele se revela pela primeira vez a uma pessoa assim, ela se assusta: 4d4 de dano mental e fica abalada até o fim da cena (Vontade DT 15 reduz à metade e evita a condição).",
+          { rolagens: [dano("Susto", "4d4 mental")], resistencia: "Vontade DT 15 reduz à metade e evita abalado" }),
+        acao("padrao", "Fala Enigmática", "Fala algo que parece não fazer o menor sentido para 1 pessoa em alcance curto: 3d6 de dano mental e frustrado até o fim da cena (Vontade DT 15 reduz à metade e evita a condição).",
+          { rolagens: [dano("Fala Enigmática", "3d6 mental")], resistencia: "Vontade DT 15 reduz à metade e evita frustrado" }),
+        acao("padrao", "Luz Própria", "Liga ou desliga todos os aparelhos eletrônicos num raio de 9 m. Também pode emitir luz verde de si mesmo na mesma área."),
+      ],
+    },
+
+    {
+      id: "as5.criatura.rastropoda", livro: AS5, pagina: 49,
+      nome: "Rastropoda", natureza: "paranormal", tipo: "Criatura", tamanho: "Médio", categoria: "Alheios",
+      elementos: [CO, EN], manifestacao: "transmissao", vd: 140,
+      descricao: "O Alheio por trás das abduções sem volta: agarra as vítimas com os braços longos, absorve-as por inteiro e ejeta um jato plasmático. Camuflado, parece lento como uma lesma — até perceber que está sendo filmado.",
+      presenca: { dt: 24, dano: "4d8", imune: "NEX 50%" },
+      percepcao: "3d20+10", iniciativa: "2d20+5", sentidos: ["visão no escuro"],
+      defesa: 31, fortitude: "4d20+10", reflexos: "2d20+5", vontade: "3d20+10",
+      pv: 200, machucado: 100,
+      resistencias: [[10, "balístico", "corte", "impacto", "perfuração"], [20, "Conhecimento", "Energia", "fogo", "químico"]],
+      vulnerabilidades: ["Sangue"],
+      atributos: [2, 2, 1, 3, 4],
+      deslocamento: [[12, 8]],
+      notas: [
+        "Transmissão (p. 46): pertence a Conhecimento e Energia ao mesmo tempo.",
+        "Danos por contato (agarrar ou ser agarrado) e pelo rastro são habilidades diferentes, cada uma uma vez por rodada. Fumocinese faz PERDER Sanidade (não é dano).",
+      ],
+      habilidades: [
+        hab("Ácidos Ferventes", "Qualquer ser agarrando o rastropoda sofre 2d10 de dano químico, uma vez por rodada.", { rolagens: [dano("Ácidos Ferventes", "2d10 químico")] }),
+        hab("Camuflagem Alheia (rastropoda)", "Invisível: camuflagem total, +15 em Furtividade contra ouvir, e quem não pode vê-lo fica desprevenido contra os ataques dele. +2d20 em ataques contra alvos que não estejam cegos (alvos cegos, em vez disso, sofrem −5 na Defesa). Mas fica visível através de aparelhos digitais que capturam imagens; flagrado por um, faz de tudo para destruir e corromper os dados."),
+        hab("Imune a Gases", "Não sofre efeitos negativos de nenhum tipo de fumaça, gás ou similar."),
+      ],
+      acoes: [
+        agredir([at("Toque Ácido", "corpo a corpo", 2, "2d20+15", "5d8+15 químico")]),
+        agredir([at("Gosma Plasmática", "curto", 2, "2d20+15", "4d10+15 Energia")], { nome: "Agredir (gosma plasmática)" }),
+        acao("livre", "Agarrão Corrosivo", "Uma vez por rodada, ao acertar um Toque Ácido, tenta agarrar como ação livre. Um ser agarrado pelo rastropoda sofre 2d10 de dano químico, uma vez por rodada.",
+          { limite: [1, "rodada"], rolagens: [teste("Agarrar", "2d20+17"), dano("Agarrado (1×/rodada)", "2d10 químico")] }),
+        acao("livre", "Rastro Pestilento", "Uma vez por rodada, ao fazer uma ação de movimento, deixa um rastro corrosivo e fedorento que dura 1 rodada. Quem tiver contato com o rastro sofre 2d10 de dano químico (Reflexos DT 24 reduz à metade), uma vez por rodada.",
+          { limite: [1, "rodada"], rolagens: [dano("Rastro Pestilento", "2d10 químico")], resistencia: "Reflexos DT 24 reduz à metade" }),
+        acao("movimento", "Rastro Deslizante", "Expele uma gosma plasmática e desliza sobre ela: move o dobro do deslocamento, só em linha reta."),
+        acao("padrao", "Fumocinese", "Absorve todo o gás e fumaça de uma área de até 9 m de raio a partir dele e, em seguida, libera um gás alucinógeno na mesma área: os seres nela PERDEM 4d8 de Sanidade e ficam confusos (Fortitude DT 24 reduz a perda à metade e evita a condição).",
+          { rolagens: [soma("Sanidade perdida", "4d8")], resistencia: "Fortitude DT 24 reduz à metade e evita confuso" }),
+        acao("padrao", "Telecinese de Plasma", "Efeito telecinético contra um ser Médio ou menor, ou um objeto de até 10 espaços, em alcance médio: agora e uma vez a cada rodada seguinte, move o alvo até 6 m por rodada em qualquer direção dentro do alcance. Um ser anula o efeito sobre si (ou sobre um objeto que possua) com Vontade DT 24. Manter custa uma ação padrão por rodada.",
+          { resistencia: "Vontade DT 24 anula" }),
+      ],
+    },
+
+    {
+      id: "as5.criatura.memofligico", livro: AS5, pagina: 51,
+      nome: "Memoflígico", natureza: "paranormal", tipo: "Criatura", tamanho: "Médio", categoria: "Alheios",
+      elementos: [CO, EN], manifestacao: "transmissao", vd: 200,
+      descricao: "Psicônico que não entende emoções — ou não se importa: lê memórias, cria ilusões de mortos culpando a vítima e a atrai até o aparelho eletrônico mais próximo. Só mostra a forma verdadeira a sós com o alvo.",
+      presenca: { dt: 29, dano: "6d6", imune: "NEX 65%" },
+      percepcao: "4d20+15", iniciativa: "3d20+15", sentidos: ["percepção às cegas", "visão no escuro"],
+      defesa: 38, fortitude: "2d20+10", reflexos: "3d20+15", vontade: "4d20+15",
+      pv: 400, machucado: 200,
+      resistencias: [[10, "balístico", "corte", "impacto", "perfuração"], [20, "Conhecimento", "Energia"]],
+      vulnerabilidades: ["Sangue"],
+      atributos: [3, FORCA_NAO_SE_APLICA, 3, 4, 2],
+      deslocamento: [[9, 6]],
+      estados: [
+        { id: "dispositivos", nome: "Dispositivos no círculo (raio 10 m)", maximo: 99, inicial: 0 },
+        { id: "parados", nome: "Dispositivos que pararam", maximo: 99, inicial: 0 },
+      ],
+      notas: [
+        "Transmissão (p. 46): pertence a Conhecimento e Energia ao mesmo tempo.",
+        "Força “—”: incorpóreo, não tem Força e usa a Agilidade nos ataques.",
+        "Círculo de Transmissão: com o círculo de aparelhos funcionando, perde invisibilidade e incorporeidade. 1 ou mais parando: volta a ficar invisível. Metade ou mais parando: volta a ficar incorpóreo. Os dois contadores da ocorrência acompanham o círculo; a mesa decide o efeito a cada mudança.",
+        "Incorporeidade Alheia repete a frase “pode ficar visível, se quiser, gastando uma ação livre” da Camuflagem Alheia; a ficha lê as duas como a mesma escolha de ficar visível — não como sair da incorporeidade (ver docs/ORDEM-REGRAS.md).",
+        "Quebrar TODOS os aparelhos deixa o Alheio se transferir para outro local e escapar (p. 50).",
+      ],
+      habilidades: [
+        hab("Camuflagem Alheia (memoflígico)", "Invisível: camuflagem total, +15 em Furtividade contra ouvir, e quem não pode vê-lo fica desprevenido contra os ataques dele. +2d20 em ataques contra alvos que não estejam cegos (alvos cegos, em vez disso, sofrem −5 na Defesa). Pode ficar visível, se quiser, gastando uma ação livre."),
+        hab("Círculo de Transmissão", "Aprisionado num círculo de dispositivos eletrônicos funcionando, com raio de 10 m, perde a invisibilidade e a incorporeidade. Se 1 ou mais dispositivos pararem, recupera a invisibilidade. Se metade ou mais pararem, recupera a incorporeidade."),
+        hab("Incorporeidade Alheia", "Incorpóreo: não tem corpo físico. Só pode ser afetado por itens amaldiçoados, rituais ou outras ameaças incorpóreas. Atravessa objetos sólidos, mas não os manipula. Sem valor de Força: usa a Agilidade para calcular os ataques."),
+      ],
+      acoes: [
+        agredir([at("Toque Psicônico", "corpo a corpo", 2, "3d20+25", "6d6 mental")]),
+        agredir([at("Raio Psicônico", "curto", 2, "3d20+25", "6d6 mental")], { nome: "Agredir (raio psicônico)" }),
+        acao("movimento", "Teletransporte Psicônico", "Enquanto continuar incorpóreo e invisível, se teletransporta para qualquer espaço desocupado a até 18 m."),
+        acao("padrao", "Manipulação Psicônica", "Afeta 1 pessoa em alcance médio com uma onda psicônica, escolhendo um efeito (Vontade DT 29). Abater a mente: 6d6 mental e alquebrado até o fim da cena (passar: metade e 1 rodada). Afetar os sentidos: 6d6 mental e cego e surdo até o fim da cena (passar: metade, e o alvo escolhe ficar só surdo ou só cego). Causar pesadelo: 6d6 mental e apavorado até o fim da cena (passar: metade e abalado). Confundir sinapses: 6d6 mental e confuso até o fim da cena (passar: metade e 1 rodada). Comunicação alheia: 1d6 mental e o alvo pode responder à comunicação, só por aparelhos eletrônicos, de forma ilusória no cérebro (passar: evita o dano). Destruir ânimos: 6d6 mental e esmorecido até o fim da cena (passar: metade e frustrado). Fazer alianças: 6d6 mental e pasmo até o fim da cena (passar: metade e fascinado). Ler pensamentos: 6d6 mental e −5 em Vontade contra os outros efeitos de Manipulação Psicônica (passar: metade e evita a penalidade).",
+          { rolagens: [dano("Manipulação Psicônica", "6d6 mental"), dano("Comunicação alheia", "1d6 mental")], resistencia: "Vontade DT 29 (varia por efeito)" }),
+      ],
+    },
   ];
 
   /* ---------------------------------------------------------------------
@@ -4754,6 +5233,7 @@
       AS2: { nome: "Arquivos Secretos 2", sigla: "AS2" },
       AS3: { nome: "Arquivos Secretos 3", sigla: "AS3" },
       AS4: { nome: "Arquivos Secretos 4", sigla: "AS4" },
+      AS5: { nome: "Arquivos Secretos 5", sigla: "AS5" },
     },
     criaturas: CRIATURAS,
   };

@@ -560,6 +560,14 @@
       });
     }
 
+    /* Arquivos Secretos 5 (v2.48): teorias confirmadas do Ufólogo, o que
+       outra ficha deu a esta (Aura, Parede, Direção, Gaiola), Direção
+       Defensiva de quem dirige, o poder emprestado da cena e os itens EM
+       USO (empunhados ou vestidos — nunca só na mochila). */
+    if (A5()) {
+      A5().efeitos(ficha, inventario).forEach(function (m) { lista.push(m); });
+    }
+
     return lista;
   }
 
@@ -617,7 +625,7 @@
       ficha.opcionais, ficha.atributos, ficha.nex, ficha.nivel, ficha.classe, ficha.origem,
       ficha.bonusExtra, ficha.ajustes, ficha.periciasAjustes, ficha.sacrificios,
       Array.isArray(ficha.sacrificios) ? ficha.sacrificios.length : -1,
-      ficha.barganhaInsana, ficha.estadoDasOrigens,
+      ficha.barganhaInsana, ficha.estadoDasOrigens, ficha.arquivo5,
     ];
   }
 
@@ -1625,6 +1633,11 @@
 
     var ataque = pe ? bonusDePericia(ficha, chave, inventario, contexto) : conta();
     if (a.bonusAtaque) ataque.soma(item.nome || "Arma", a.bonusAtaque, "bônus de ataque da arma");
+    /* Ácido Corrosivo (AS5 p. 57): só no ataque desarmado ou na arma
+       escolhida; o item não muda — o ajuste sai daqui e some no fim da
+       cena. */
+    var acido = A5() ? A5().acidoNaArma(ficha, item, !!a.desarmado) : null;
+    if (acido) ataque.soma("Ácido Corrosivo", acido.ataque, acido.afinidade ? "afinidade (AS5 p. 57)" : "até o fim da cena (AS5 p. 57)");
     aj.ataque.forEach(function (x) { ataque.soma(x.fonte, x.valor, "modificação da arma"); });
 
     var maisDados = somaDe(aj.dadosDano);
@@ -1668,6 +1681,7 @@
       A2().lancamentosValendo(ficha, "dano").forEach(function (l) { extra.soma(l.origem || "Hexatombe", l.valor, l.motivo || ""); });
     }
     aj.dano.forEach(function (x) { extra.soma(x.fonte, x.valor, "modificação da arma"); });
+    if (acido) extra.soma("Ácido Corrosivo", acido.dano, "dano químico até o fim da cena (AS5 p. 57)");
     var efDano = efeitosDaFicha(ficha);
     if (efDano) somarEfeitos(extra, EF().bonusEm(efDano.cond, efDano.extra, ["dano", "dano:" + contexto.ataque]));
 
@@ -1726,6 +1740,9 @@
       proficiencia: proficienciaDaArma(ficha, item),
       modificacoes: aj.lista,
       avisos: avisos,
+      /* Ácido Corrosivo: o tipo do dano muda para químico na cena. */
+      tipoDano: acido ? acido.tipoDano : (a.tipoDano || ""),
+      acido: acido ? acido.nota : "",
     };
   }
 
@@ -1789,13 +1806,21 @@
   /* O grau que vale: o da ficha, subido pelas escolhas de progressão. */
   function grauDaPericia(ficha, chave) {
     var est = estadoDe(ficha);
-    if (est && est.graus && est.graus[chave]) return est.graus[chave];
-    return grauBaseDaPericia(ficha, chave);
+    var proprio = (est && est.graus && est.graus[chave]) ? est.graus[chave] : grauBaseDaPericia(ficha, chave);
+    /* Dead Man Switch recebido (AS5 p. 57): o MESMO grau de quem
+       transmitiu, enquanto valer — vale o maior dos dois, e a perícia
+       própria não muda. */
+    var recebido = A5() ? A5().grauRecebido(ficha, chave) : null;
+    if (recebido && C.grau(recebido.grau).bonus > C.grau(proprio).bonus) return recebido.grau;
+    return proprio;
   }
 
   function fontesDoGrau(ficha, chave) {
     var est = estadoDe(ficha);
-    return est && est.fontesGrau ? (est.fontesGrau[chave] || []) : [];
+    var fontes = est && est.fontesGrau ? (est.fontesGrau[chave] || []) : [];
+    var recebido = A5() ? A5().grauRecebido(ficha, chave) : null;
+    if (recebido && grauDaPericia(ficha, chave) === recebido.grau) fontes = fontes.concat([{ fonte: recebido.fonte, detalhe: recebido.detalhe }]);
+    return fontes;
   }
 
   /* `teste`: o contexto do teste — { ataque: "corpo" | "distancia" } num
@@ -2823,6 +2848,9 @@
     /* Arquivos Secretos 4 (v2.38). Sem o módulo, passa como veio. */
     if (A4()) A4().normalizar(ficha, b);
     else if (b.arquivo4 && typeof b.arquivo4 === "object") ficha.arquivo4 = JSON.parse(JSON.stringify(b.arquivo4));
+    /* Arquivos Secretos 5 (v2.48). Sem o módulo, passa como veio. */
+    if (A5()) A5().normalizar(ficha, b);
+    else if (b.arquivo5 && typeof b.arquivo5 === "object") ficha.arquivo5 = JSON.parse(JSON.stringify(b.arquivo5));
     /* Barganha Insana (v2.41): as conjurações e as perdas pendentes. */
     if (b.barganhaInsana && typeof b.barganhaInsana === "object") ficha.barganhaInsana = normalizarBarganha(b.barganhaInsana);
 
@@ -3162,6 +3190,7 @@
   function A2() { return global.RAMAOrdemArquivo2 || null; }
   function A3() { return global.RAMAOrdemArquivo3 || null; }
   function A4() { return global.RAMAOrdemArquivo4 || null; }
+  function A5() { return global.RAMAOrdemArquivo5 || null; }
   var ID_COURACA = "as3.amaldicoado.armadura-dos-couracas";
 
   /* Forma suprema ativa (AS2 p. 97). */

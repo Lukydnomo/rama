@@ -1,5 +1,26 @@
 # O banco
 
+## Arquivos Secretos 5 e perigos complexos — v2.48
+
+> **Atualizando para a v2.48:** troque `Codigo.gs`, `Campanhas.gs` e `Dados.gs`,
+> rode **`setupRama()`** (cria a aba `CAMPANHA_PERIGOS`; repetir não muda nada) e
+> crie uma nova versão da implantação. Nada existente é convertido nem apagado.
+
+**CAMPANHA_PERIGOS** — `campanhaId · ativo · atualizadoEm · rev · opsJson ·
+dadosJson`. Uma linha por campanha, criada na primeira gravação do mestre (sem
+linha, a mecânica está desligada). `dadosJson` é o estado normalizado pelo módulo
+`RAMAPerigos` (cópia fiel de `js/ordem/perigos.js` dentro de `Campanhas.gs`): até
+20 instâncias, cada uma com o modelo, a duração e o elemento sorteados, rodada,
+DT da rodada, PV da horda, área, sucessos e falhas do grupo, até 12 participantes
+(personagem da campanha opcional, sucessos, estado, zona, ações da rodada) e até
+80 linhas de registro (com a natureza — dano ou perda — e a marca de
+irredutível). `opsJson` guarda os últimos 50 `opId`. A coluna leve `ativo`
+responde a `ler_campanha` sem abrir o estado.
+
+A Sincronia Conectiva não tem aba: as operações ficam em
+`ordem.arquivo5.transmissao.sincronia.operacoes` das duas fichas, dentro dos
+blocos que já existem. A ficha ganha `ordem.arquivo5` (schema 23).
+
 ## PERSONAGENS_ACESSOS — v2.44
 
 > **Atualizando para a v2.44:** troque `Codigo.gs`, `Campanhas.gs` e `Dados.gs`, rode

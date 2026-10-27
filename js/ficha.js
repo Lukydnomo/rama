@@ -142,6 +142,17 @@
      (as chaves dos quatro de sempre que foram removidos da tela — o
      valor fica guardado). Uma aba antiga descartaria os campos novos.
 
+     22 → 23: Arquivos Secretos 5 (v2.48). O bloco `ordem` ganhou
+     `arquivo5` (teorias do Ufólogo, Turno Invertido, Fôlego, Meditação,
+     Ruído, Desafiar o Ego, rodada, Ácido Corrosivo, Dead Man Switch, o
+     que foi recebido de aliados, Transmissão — Sino, portadores,
+     sincronia e empréstimos —, selos fabricados e usados, óxido
+     nitroso e Larva da Fúria); a aplicação de efeito, `invertido`
+     (Ruído de Comunicação); o item, `ordem.selo` (ritual, versão e
+     autoria), `ordem.pecas` (Joias da Mente) e `ordem.modoSkate`; e o
+     veículo do AS3, as regalias do AS5 e `extra` (Apaixonado por
+     Veículos). Sem conversão: uma ficha 22 abre com o estado vazio.
+
      Nenhuma das subidas exige migração: normalizarFicha() cria o que
      falta, vazio, e não toca no que existe. Um ritual gravado na 2 abre
      na 3 com a versão Normal em branco; uma ficha de Ordem gravada na 4
@@ -151,7 +162,7 @@
      os campos novos e os descartaria ao gravar — com o schema maior ela
      recusa abrir a ficha e pede para recarregar.
      Ver docs/CHARACTER_SCHEMA.md. */
-  var VERSAO_SCHEMA = 22;
+  var VERSAO_SCHEMA = 23;
 
   var MODULOS = {
     atributos: "Atributos", status: "Status/recursos", defesa: "Defesa",

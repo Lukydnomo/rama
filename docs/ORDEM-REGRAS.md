@@ -2413,6 +2413,170 @@ modificação temporária leva `temporaria: "interludio"`. Na criatura:
 `procedimentos` no modelo e `instancia.procedimentos` na ocorrência; formas com
 `tamanho` e `atributos`. Na campanha: a aba `CAMPANHA_HACKING`.
 
+## Arquivos Secretos 5 (v2.48)
+
+Fonte `AS5` (Arquivos Secretos 5, v1.0), no registro único dos livros
+(`C.LIVROS`) e nas listas próprias de cada módulo (itens, rituais, poderes,
+criaturas, imagens, consumo e `Campanhas.gs`). Páginas são as do livro. As
+regras da ficha ficam em `js/ordem/arquivo5.js`; a tela, em
+`js/paginas/ficha-arquivo5.js`. Os perigos complexos são da campanha:
+`js/ordem/perigos.js` (copiado dentro do `Campanhas.gs`) e
+`js/paginas/campanha-perigos.js`. As regalias novas entram no módulo de veículos
+do AS3 (`js/ordem/arquivo3.js`).
+
+### Inventário do PDF
+
+| Página | Conteúdo | Tipo | Onde entrou |
+|---|---|---|---|
+| 2–19 | créditos, sumário, missão e narrativa de abertura | narrativa | não entra |
+| 20–33 | A TV Varminho: emissora, Sino de Tenebris, equipe, funcionamento, cápsulas | narrativa / preparo | biblioteca de criaturas, “Funcionários da TV Varminho” (referências) |
+| 23 | Gerador de funcionários da TV Varminho (1d10 perfil, dois d6 traços, dois d20 características) | tabela | biblioteca de criaturas, gerador (só texto) |
+| 21–25, 53–54 | funcionários de exemplo, o Estrangeiro e personagens de missão | narrativa | **não viram ficha** (o livro não dá estatísticas) |
+| 36–37 | Hospedeiro Parasitado e as variações Acólito, Faz-Tudo, Guerrilheiro, Socorrista | ficha de ameaça + variações | `as5.criatura.hospedeiro-parasitado` e quatro variantes |
+| 38 | Hospedeiro Aflorado | ficha de ameaça | `as5.criatura.hospedeiro-aflorado` |
+| 39–40 | Interflorado (ovos, Contorcer Perturbador) | ficha de ameaça | `as5.criatura.interflorado` (estados `ovos`) |
+| 41 | Fummu (Acionar Explosão) | ficha de ameaça | `as5.criatura.fummu` |
+| 42–45 | Doppelgangers Civil, Combatente, Cultista e a forma monstruosa | fichas + forma | três fichas com `formas` (monstruosa) |
+| 46 | Transmissão: a conexão dos Sinos de Tenebris | manifestação paranormal | `C.MANIFESTACOES` (Conhecimento + Energia) |
+| 47–48 | Bilu (VD 42) | ficha de ameaça (Transmissão) | `as5.criatura.bilu` |
+| 49–50 | Rastrópoda | ficha de ameaça (Transmissão) | `as5.criatura.rastropoda` |
+| 51–52 | Memoflígico (dispositivos, parados) | ficha de ameaça (Transmissão) | `as5.criatura.memofligico` |
+| 54 | Ufólogo, Funcionário de Beira de Estrada; Rastrear Trilha Digital | origens; uso de perícia | `catalogo.js`; o uso de perícia **fica fora** |
+| 55–56 | Aura de Confiança, Fôlego de Emergência, Parede de Carne (combatente); Adepto do Escuro, Saudosista Hi-Tech, Treinado nas Telas (especialista); Catálogo de Criaturas Ambulante, Meditação Ocultista, Ruído de Comunicação (ocultista) | poderes de classe | `poderes.js` |
+| 56 | Apaixonado por Veículos, Desafiar o Ego, Direção Defensiva | poderes gerais | `poderes.js` |
+| 57 | Ácido Corrosivo (Energia), Dead Man Switch, Paralinguística Ampliada (Conhecimento) | poderes paranormais | `poderes.js` |
+| 58 | Criptologista do Oculto (Método Intuitivo, Caligrafia Eficiente, Decifrar à Distância, Selo Supremo) | trilha de ocultista | `catalogo.js`, `poderes.js` |
+| 59 | nove regalias de veículo | regalias (Veículos Operacionais, AS3) | `arquivo3.js` |
+| 60–61 | Câmera filmadora; Faixas da Vidência, Joias da Mente, Larva da Fúria, Skate Caótico, Tênis Lépidos | itens | `itens-dados.js` |
+| 62–63 | Conexão Comunicativa, Sincronia Conectiva, Transmissão de Perícia/Poder/Ritual | poderes de Transmissão | `poderes.js` |
+| 66–69 | perigos complexos: Explosão em Contagem Regressiva, Fuga de Horda, Navio Naufragando, Prédio Ocupado, Chuva de Sangue | regra de cena (campanha) | aba Perigos da campanha |
+
+**Fora do escopo, por pedido:** “Rastrear Trilha Digital” (p. 54) não entra em
+descrição de perícia, menu, ação, biblioteca nem automação. Nenhum uso geral novo
+de perícia foi criado. As ações dos perigos complexos pertencem ao perigo — só
+existem dentro dele.
+
+### Consulta × aplicação
+
+O que é **consulta** só aparece (biblioteca, cartão, nota): o gerador da
+Varminho, as referências da emissora, as habilidades das ameaças, os textos das
+regalias de “ambiente” (snorkel, lastro, run-flat, multicombustível) e o que
+cada poder diz que a mesa decide. O que é **aplicação** entra na conta da ficha
+ou grava estado, sempre por clique de quem tem a ficha, com o tempo do jogo
+(cena, rodada, interlúdio, missão) e com identificação de operação onde gasta
+recurso. Nada é aplicado em outra ficha sem passar pelo servidor (Sincronia) ou
+pela própria pessoa (“Recebido de aliados”).
+
+### Automação, item por item
+
+| O quê | Nível | Como |
+|---|---|---|
+| Ufólogo | parcial | registra a teoria da missão (uma por missão da cronologia); o mestre dá o veredito no fim; confirmada, +3 PE máximos e +3 atuais uma única vez (recarregar ou salvar não concede de novo) |
+| Funcionário de Beira de Estrada | parcial | Turno Invertido marca o uso da missão num interlúdio (benefícios de dormir pela mesa, sem gastar ação); +2 oferecido no resultado contra efeito que deixa inconsciente |
+| Aura de Confiança · Parede de Carne | parcial | quem tem marca os aliados da cena; cada aliado liga o bônus na própria ficha (“Recebido de aliados”, com o nome de quem deu); quem tem o poder não recebe |
+| Fôlego de Emergência | conta | uma vez por cena, com ameaça presente: rola 1d8+Vig e recupera PV ou PE à escolha |
+| Adepto do Escuro · Saudosista Hi-Tech · Catálogo de Criaturas Ambulante | parcial | o bônus é oferecido no resultado do teste, para quem confirmar a situação; a camuflagem por escuridão é da mesa |
+| Treinado nas Telas | conta | 2 PE antes de um teste de Iniciativa ou Reflexos: o teste usa Intelecto no lugar de Agilidade |
+| Meditação Ocultista | conta | uma vez por interlúdio; recupera o limite de PE × 2 (normal), × 1 (precária), × 3 (confortável), × 4 (luxuosa) |
+| Ruído de Comunicação | parcial | reação e 4 PE num efeito com modificador de **dados** na ficha: o sinal inverte até o fim da cena (`invertido` na instância); efeitos sem dados não são invertíveis |
+| Apaixonado por Veículos · Direção Defensiva | conta | treinar ou +2 em Pilotagem; +1 dado oferecido pela segurança do veículo; regalia extra / +2 na Defesa do veículo só com Veículos Operacionais; Direção Defensiva “dirigindo” liga o +2 na própria ficha e os passageiros recebem |
+| Desafiar o Ego | parcial | uma vez por rodada, reação e 1 PE; acertou: o dano extra é a Presença (o aliado soma); errou: o PE volta uma única vez |
+| Ácido Corrosivo | conta | 1 PE: desarmado ou uma arma corpo a corpo recebe +2 ataque / +5 dano (+4 / +10 com afinidade) e dano químico até o fim da cena; a arma não amaldiçoada fica marcada para destruição no fim da cena e só sai com confirmação |
+| Dead Man Switch | parcial | só machucado; transmite o GRAU de treino (nunca atributo nem valor); o alvo registra na própria ficha; acaba ao passar da metade dos PV; com afinidade e morte, até o fim da missão |
+| Paralinguística Ampliada | conta | +5 (+10) oferecido; Compreensão Paranormal concedida pelo nome, fora do limite; se já conhecia, “Usar ritual” cobra 1 PE a menos, uma vez |
+| Poderes de Transmissão | parcial | requisito “Sino de Transmissão” registrado na ficha e **confirmado pelo mestre**; só funcionam com ao menos outro portador marcado; não são elemento de afinidade |
+| Conexão Comunicativa | parcial | marca os portadores no raio; +2 por portador oferecido contra comunicação de Alheio; a telepatia é narrativa |
+| Sincronia Conectiva | servidor | cada um entra pela própria ficha (reação e 3 PE); gastar PE de outro e assumir dano/perda de PV são `sincronia_operar` (consentimento dos dois lados, mesma campanha, PE disponível, `opId`; SAN nunca) |
+| Transmissão de Perícia/Poder/Ritual | parcial | uma vez por cena, guarda os valores permanentes da perícia, o poder (com pré-requisitos conferidos) ou o ritual (círculo cabendo no NEX) até o fim da cena; nada vira aprendido; sem corrente de empréstimos |
+| Criptologista do Oculto | conta | Criar Selo pela trilha; máximo ao mesmo tempo = Presença (dobrado com Criar Selo de novo); selos por ação = 2 + outras habilidades da trilha; cada selo guarda autoria (autor, Caligrafia, Supremo) |
+| Usar selo | conta | “Usar ritual” com selo: dispensa a base de PE do ritual; quem não conhece o ritual testa Ocultismo DT 20+custo (Caligrafia do autor: 10+custo; Supremo: sem teste de uso); forma avançada só conhecendo o ritual ou com Supremo; Supremo: +5 na DT, +3 dados de dano e forma avançada sem custo adicional; consome uma unidade por `opId` |
+| Regalias (9) | conta / texto | tanque de 10 (Conversão), +5 Defesa e metade do dano de capotamento aos ocupantes (Gaiola), tabela de velocidade da Indução, nitro uma vez por cena (dobro por 1 rodada), imunidade a eletricidade (Vedação); as demais são texto |
+| Câmera filmadora | conta | empunhada: +2 em Investigação e Percepção |
+| Faixas da Vidência | parcial | vestidas: +2 Intimidação; a Defesa/resistência por origem do ataque aparece como opção, nunca +5 geral |
+| Joias da Mente | conta | um item com duas peças; vestido e com as duas marcadas: +2 Diplomacia e resistência mental 10 |
+| Larva da Fúria | conta | “Ingerir” consome uma unidade e aplica a fúria (+4 ataque e dano corpo a corpo); no fim de cada rodada da ficha pergunta se atacou ou foi alvo |
+| Skate Caótico | conta | modos de uso (transporte, escudo, arma improvisada); escudo = proteção 5 |
+| Tênis Lépidos | conta | vestidos: +12 Atletismo (o publicado) e +3 m; movimento sobrenatural por 2 PE |
+| Ameaças | ficha | ataques, DT, rituais e habilidades como impressos; variações do hospedeiro com números próprios; formas monstruosas dos doppelgangers; estados (ovos, dispositivos, parados) na ocorrência |
+| Transmissão nas criaturas | consulta | filtro e etiqueta “Transmissão” na biblioteca; a ficha guarda `manifestacao` com os elementos reais (Conhecimento e Energia) |
+| Gerador da Varminho | consulta | 1d10, dois d6 e dois d20 independentes, sem somar; só texto |
+| Perigos complexos | regra de cena | ver abaixo |
+
+Mecânicas desligadas por padrão (Hexatombe, Hacking) continuam desligadas: nada
+do AS5 depende delas ou as liga.
+
+### Perigos complexos (p. 66–69)
+
+Mecânica opcional da campanha, desligada por padrão, ligada pelo mestre em
+Configurações → Mecânicas opcionais. Os cinco exemplos são **modelos** imutáveis;
+a campanha cria **instâncias** independentes (até 20, 12 participantes cada) que
+continuam de uma sessão para outra. Duração, elemento da horda e a DT da rodada do
+navio são rolados por clique e gravados (recarregar nunca rola de novo). Cada
+personagem faz UMA ação por rodada; ações com “nenhum teste” não pedem total.
+
+| Perigo | VD | Duração | Regra própria |
+|---|---|---|---|
+| Explosão em Contagem Regressiva | 80 | 5 rodadas | sucessos acumulados decidem a zona: ≤ 2 explosão (8d4 fogo + 8d4 impacto + soterrado), 3–4 onda (8d4 impacto), 5+ ileso |
+| Fuga de Horda | 40 | 1d10+4 | perda de 2d8 PV por turno (só curável depois); 5 sucessos escapam |
+| Navio Naufragando | 120 | 1d6+6 | Reflexos DT 20+1d6, uma rolagem por rodada para todos; falha por 10+ prende |
+| Prédio Ocupado | 180 | 1d10+5 | elemento 1d4; 5d10 do elemento por turno; horda com 360 PV, imunidades e +50% de área |
+| Chuva de Sangue | 300 | até os sucessos ou 3 falhas | área pequena/média/grande = 3/5/7 sucessos; cada perícia uma vez (Fortitude repete); falha sobe as DT para 39 por uma rodada |
+
+O registro separa **dano** (reduzível por resistência/RD) de **perda** de recurso
+(Fuga: “perde 2d8 PV”) e marca o que o livro declara irredutível. **Nada é
+aplicado numa ficha**: o mestre e cada jogador aplicam com a própria confirmação.
+
+### Ambiguidades e leituras adotadas
+
+Estas são **leituras do R.A.M.A.**, não erratas oficiais. A tela mostra a nota
+onde a leitura pesa.
+
+- **“Trêmulo (AS #05, p. 124)”** (Interflorado, Contorcer Perturbador): o
+  pacote não tem página 124 nem define trêmulo. O nome fica como impresso; nenhum
+  efeito é inventado (a mesa decide).
+- **Soterrado na Fuga de Horda**: o efeito descreve soterrados (imóveis, 1d6 de
+  impacto, Atletismo DT 15), mas nenhuma ação da Fuga diz como alguém fica
+  soterrado. O estado existe para o mestre marcar; a tela nunca o aplica sozinha.
+- **Camuflagem / Incorporeidade Alheias** (memoflígico): a Incorporeidade repete
+  a frase “pode ficar visível, se quiser, gastando uma ação livre”. Lida como a
+  mesma escolha de ficar visível — não como sair da incorporeidade.
+- **Tela de Ruído Discente “ENERGIA 1”** (Doppelganger Cultista, p. 45): o
+  ritual é de 2º círculo no livro básico (p. 141). A ação não fixa círculo.
+- **Bilu “versão furiosa”**: citada no texto, sem ficha. Não foi inventada; VD 42
+  como impresso.
+- **Meditação Ocultista**: as condições multiplicam a recuperação e não se somam
+  (luxuosa = × 4, não × 2 × 4).
+- **Selo falho no teste de uso**: o livro não diz que se perde; a ficha não
+  consome o selo na falha.
+- **Benefícios do selo**: são do AUTOR e valem uma vez por uso (o +5 na DT e os
+  +3 dados do Selo Supremo não se somam se quem usa também tem a trilha); a DT de
+  Caligrafia fica gravada no selo. **Decifrar à Distância** é de quem USA, vale
+  para qualquer selo e não entra na autoria. Prioridade: Supremo (sem teste) >
+  Caligrafia (10+custo) > regra base (20+custo).
+- **Transmissão**: tratada como manifestação (Conhecimento + Energia), não
+  elemento de afinidade. A confirmação do Sino é do mestre na tela da ficha;
+  numa ficha sem campanha, quem confirma é a mesa (dono). O servidor não confere
+  essa marca — ela pesa só na progressão.
+- **Ruído de Comunicação**: inverte só modificadores de dados (bônus ↔
+  penalidade); condições sem dados aparecem como texto.
+- **Dead Man Switch**: transmite o grau de treino; o valor final de cada alvo
+  continua o da ficha dele.
+- **Skate Caótico**: o modo escudo vira proteção (5) no inventário; o ataque com
+  ele segue a regra de arma improvisada.
+- **Faixas da Vidência**: Defesa e resistência dependem da origem do ataque; a
+  ficha mostra as duas Defesas em vez de um bônus geral.
+- **Larva da Fúria**: “atacou ou foi alvo” é pergunta da tela no fim da rodada
+  da ficha, não cálculo automático.
+
+### O que a ficha e a campanha guardam de novo
+
+Na ficha (schema 23), `ordem.arquivo5` (normalizado em `R.normalizar`, vazio numa
+ficha antiga) e o campo `invertido` numa instância de efeito. No item:
+`ordem.selo` (autoria e ritual), `ordem.pecas` (Joias da Mente) e
+`ordem.modoSkate`. No veículo (AS3): `regalias[].extra/por` e
+`direcaoDefensiva`. Na criatura: `manifestacao`. Na campanha: a aba
+`CAMPANHA_PERIGOS`. Ver [CHARACTER_SCHEMA.md](CHARACTER_SCHEMA.md).
+
 ## Lacunas e interpretações
 
 Registradas em vez de preenchidas por dedução. Onde o livro deixa uma leitura

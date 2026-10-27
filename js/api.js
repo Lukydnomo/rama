@@ -770,6 +770,20 @@
   function salvarHacking(campanhaId, rev, opId, estado) {
     return post({ acao: "salvar_hacking", campanhaId: campanhaId, rev: rev, opId: opId, estado: estado });
   }
+  /* Perigos complexos (v2.48, AS5): o mesmo esquema do Hacking. */
+  function lerPerigos(campanhaId, opcoes) {
+    return post({ acao: "ler_perigos", campanhaId: campanhaId }, opcoes);
+  }
+  function salvarPerigos(campanhaId, rev, opId, estado) {
+    return post({ acao: "salvar_perigos", campanhaId: campanhaId, rev: rev, opId: opId, estado: estado });
+  }
+  /* Sincronia Conectiva (v2.48, AS5): gastar PE de outro sincronizado ou
+     assumir o dano dele — o servidor confere a sincronia dos dois lados. */
+  function sincroniaOperar(pedido) {
+    var p = pedido || {};
+    return post({ acao: "sincronia_operar", campanhaId: p.campanhaId, personagemId: p.personagemId, alvoId: p.alvoId,
+      tipo: p.tipo, valor: p.valor, recurso: p.recurso, natureza: p.natureza, opId: p.opId });
+  }
 
   function lancarHexatombe(campanhaId, personagemId, operacaoId, dia, itens) {
     return post({ acao: "lancar_hexatombe", campanhaId: campanhaId, personagemId: personagemId, operacaoId: operacaoId, dia: dia, itens: itens });
@@ -856,6 +870,15 @@
     dados_invalidos: {
       titulo: "DADOS RECUSADOS",
       texto: "O servidor não aceitou o conteúdo enviado. Confira os campos e tente de novo.",
+    },
+    /* v2.48 — Sincronia Conectiva (AS5). */
+    sem_sincronia: {
+      titulo: "SEM SINCRONIA",
+      texto: "As duas fichas precisam estar sincronizadas uma com a outra nesta cena — cada uma entra pela própria ficha, marcando a outra.",
+    },
+    sem_recursos: {
+      titulo: "PE INSUFICIENTES",
+      texto: "O outro sincronizado não tem esses PE agora.",
     },
     ocupado: {
       titulo: "ARQUIVO OCUPADO",
@@ -1047,6 +1070,9 @@
     lancarHexatombe: lancarHexatombe,
     lerHacking: lerHacking,
     salvarHacking: salvarHacking,
+    lerPerigos: lerPerigos,
+    salvarPerigos: salvarPerigos,
+    sincroniaOperar: sincroniaOperar,
     lerImagemDoTurno: lerImagemDoTurno,
     excluirCombate: excluirCombate,
 

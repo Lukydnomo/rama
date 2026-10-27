@@ -1,5 +1,46 @@
 # A API
 
+## Arquivos Secretos 5, perigos complexos e Sincronia — v2.48
+
+- `ler_perigos { campanhaId }` — membro da campanha (espectador:
+  `sem_permissao`; de fora: `nao_encontrado`). Mestre: `{ mestre: true, rev,
+  estado }`. Jogador: `{ mestre: false, rev, vista }`, montada no servidor
+  (`RAMAPerigos.vistaDoJogador`): só os perigos em que um personagem dele
+  participa, com objetivo, efeito, rodada, duração sorteada, DT da rodada,
+  sucessos e estado de cada participante (o dele marcado `meu`) e as últimas 20
+  linhas do registro que são dele ou da rodada. Sem linha gravada: `{ ativo: false,
+  perigos: [] }`, `rev: 0`.
+- `salvar_perigos { campanhaId, rev, opId, estado }` — só o mestre
+  (`sem_permissao`). `opId` (`/^[A-Za-z0-9_-]{8,80}$/`) já aplicado devolve
+  `repetida: true` sem gravar; `rev` diferente devolve `conflito` com o estado
+  atual. O estado é normalizado pela cópia de `js/ordem/perigos.js` (modelo
+  desconhecido sai; até 20 perigos, 12 participantes, 80 linhas de registro);
+  vínculo com personagem de fora da campanha é desfeito. Sem a aba:
+  `instalacao_incompleta`; grande demais: `dados_grandes`. Marca a parte
+  `perigos` da mesa (e `campanha` quando liga ou desliga).
+- `ler_campanha` devolve `perigos: true|false`; `sincronizar_campanha` tem a
+  marca nova `perigos`.
+- `sincronia_operar { campanhaId, personagemId, alvoId, tipo, valor, opId,
+  recurso?, natureza? }` — Sincronia Conectiva. `personagemId` é a ficha de quem
+  age: o pedido precisa vir do dono ou do mestre dela (compartilhamento não
+  conta). As duas fichas são de Ordem, da mesma campanha, e **as duas** marcaram
+  uma à outra em `ordem.arquivo5.transmissao.sincronia.participantes`
+  (`personagemId`); senão `sem_sincronia`.
+  - `tipo: "pe"`: gasta `valor` PE **do alvo** (o atual; sem atual, o máximo do
+    resumo). Faltando: `sem_recursos` com `disponivel`.
+  - `tipo: "redirecionar"`, `recurso: "pv"|"pe"`, `natureza: "dano"|"perda"`: quem
+    age sofre o valor no lugar do alvo; o alvo só recebe o registro. SAN é sempre
+    `dados_invalidos`.
+  - Cada ficha guarda a operação em `sincronia.operacoes` com o `opId`: repetir
+    devolve `repetida: true` sem cobrar de novo. Grava pelo mesmo caminho das
+    fichas (revisão, blocos, mesa `personagens`).
+  - Erros: `dados_invalidos` (tipo, valor fora de 1–999, opId, mesmo
+    personagem), `nao_encontrado`, `sem_permissao`, `sem_sincronia`,
+    `sem_recursos`.
+- Ficha: schema 23 (`ordem.arquivo5`, `invertido` no efeito, `selo`/`pecas`/
+  `modoSkate` no item, regalia `extra`). Nenhuma outra ação nova; o resto do AS5
+  vive na própria ficha.
+
 ## Compartilhamento de fichas — v2.44
 
 Todas exigem sessão. Capacidades conferidas no servidor em cada chamada.

@@ -37,6 +37,7 @@
     AS2: { nome: "Arquivos Secretos 2", sigla: "AS2", rotulo: "Arquivos Secretos 2" },
     AS3: { nome: "Arquivos Secretos 3", sigla: "AS3", rotulo: "Arquivos Secretos 3" },
     AS4: { nome: "Arquivos Secretos 4", sigla: "AS4", rotulo: "Arquivos Secretos 4" },
+    AS5: { nome: "Arquivos Secretos 5", sigla: "AS5", rotulo: "Arquivos Secretos 5" },
   };
 
   var NOMES_ELEMENTO = { sangue: "Sangue", morte: "Morte", conhecimento: "Conhecimento", energia: "Energia", medo: "Medo" };
@@ -118,7 +119,7 @@
         });
       }),
       ordem: {
-        vd: e.vd, nivel: e.nivel || "", elementos: e.elementos || [], tipo: e.tipo, tamanho: e.tamanho,
+        vd: e.vd, nivel: e.nivel || "", elementos: e.elementos || [], manifestacao: e.manifestacao || "", tipo: e.tipo, tamanho: e.tamanho,
         presenca: e.presenca || null,
         percepcao: e.percepcao, iniciativa: e.iniciativa, sentidos: e.sentidos || [],
         defesa: e.defesa, fortitude: e.fortitude, reflexos: e.reflexos, vontade: e.vontade,
@@ -152,6 +153,7 @@
       vd: c.ordem.vd,
       nivel: c.ordem.nivel,
       elementos: c.ordem.elementos.slice(),
+      manifestacao: c.ordem.manifestacao || "",
       tamanho: c.ordem.tamanho || "",
       tipo: c.ordem.tipo,
       categoria: c.categoria || "",
@@ -263,7 +265,9 @@
       if (f.livro && x.livro !== f.livro) return false;
       if (f.natureza && x.natureza !== f.natureza) return false;
       if (elementos.length) {
-        var tem = function (e) { return (x.elementos || []).indexOf(e) >= 0; };
+        /* "transmissao" é manifestação (AS5 p. 46), não elemento: acha as
+           criaturas de Transmissão, que guardam Conhecimento e Energia. */
+        var tem = function (e) { return e === "transmissao" ? x.manifestacao === "transmissao" : (x.elementos || []).indexOf(e) >= 0; };
         if (todos ? !elementos.every(tem) : !elementos.some(tem)) return false;
       }
       if (min !== null || max !== null) {
@@ -282,7 +286,7 @@
      expressões válidas, variantes apontando para uma base que existe.
      ================================================================= */
 
-  var FORMATO_ID = /^(op|sah|as1|as2|as3|as4)\.criatura\.[a-z0-9-]+(\.[a-z0-9-]+)?$/;
+  var FORMATO_ID = /^(op|sah|as1|as2|as3|as4|as5)\.criatura\.[a-z0-9-]+(\.[a-z0-9-]+)?$/;
 
   function conferir(dados) {
     var erros = [];
@@ -324,7 +328,7 @@
      APRESENTAÇÃO
      ================================================================= */
 
-  function nomeDoElemento(e) { return NOMES_ELEMENTO[e] || String(e || ""); }
+  function nomeDoElemento(e) { return e === "transmissao" ? "Transmissão" : (NOMES_ELEMENTO[e] || String(e || "")); }
   function nomeDaNatureza(n) { return NOMES_NATUREZA[n] || String(n || ""); }
 
   function referencia(livro, pagina) {
@@ -439,6 +443,102 @@
     };
   }
 
+
+  /* =================================================================
+     GERADOR DE FUNCIONÁRIOS DA TV VARMINHO — Arquivos Secretos 5, p. 23
+     -----------------------------------------------------------------
+     1d10 decide o perfil; dois d6 INDEPENDENTES, os dois traços (cada um
+     na coluna do perfil, sem somar); dois d20 independentes, as duas
+     características. Só narrativa: nenhum poder, nenhuma estatística,
+     nenhuma ficha. Os Alheios jogáveis estão no catálogo (doppelgangers,
+     hospedeiros…); o Estrangeiro e os funcionários de exemplo não têm
+     números no livro, e o R.A.M.A. não inventa. Resultados repetidos: o
+     livro não diz o que fazer — ficam como saíram.
+     ================================================================= */
+
+  var GERADOR_DA_VARMINHO = {
+    fonte: "AS5", pagina: 23,
+    perfis: [
+      { ate: 2, nome: "Associados comportamentais", nota: "Ainda em conexão: decida com a mesa uma forma de os jogadores conseguirem salvá-lo (p. 23).",
+        tracos: ["Simula medo", "Simula paixão", "Simula obsessão", "Simula remorso", "Simula nostalgia", "Simula raiva"] },
+      { ate: 4, nome: "Engravatados", tracos: ["Finge querer subir na “hierarquia”", "Ajusta a gravata constantemente", "Esquece obstáculos físicos",
+        "Fica imóvel quando não observado", "Ameaça desconhecidos", "Sempre encarando"] },
+      { ate: 6, nome: "Câmeras", tracos: ["Gesticula como se estivesse filmando", "Coloca a câmera na cara das pessoas", "Não fala português",
+        "Completamente inexpressivo", "Tem a reação oposta à que deveria ter", "Se distrai fácil"] },
+      { ate: 8, nome: "Equipe editorial", tracos: ["Tem um bordão", "Faz pegadinhas com os outros da equipe", "Tenta muito ser engraçado",
+        "Faz expressões faciais fora de contexto", "Mente pros outros do escritório, mas eles sabem", "Fofoqueiro"] },
+      { ate: 10, nome: "Apresentadores", tracos: ["Paródia de um ator", "Paródia de um apresentador de televisão", "Paródia de personagem de desenho",
+        "Paródia de um cantor", "Paródia de um mascote", "Paródia de um comercial"] },
+    ],
+    caracteristicas: [
+      "Pele que parece não encaixar direito", "Olhos redondos que parecem ser de plástico", "Cabelo desgrenhado ou parecendo flutuar",
+      "Roupas que se misturam com a pele", "Pele com uma textura enrugada", "Um segundo par de pupilas",
+      "Óculos de armação verde e lentes escuras ovaladas", "Fumaça verde saindo do corpo", "Pele acinzentada ou esverdeada", "Dedos alongados",
+      "Braços alongados", "Pernas alongadas", "Voz muito fina", "Boca substituída por riscos horizontais", "Odor de enxofre ou queimado",
+      "Nariz e orelhas minúsculas ou inexistentes", "Carrega diversas câmeras de vídeo e fotografia", "Sempre sorri", "Crânio alongado",
+      "Cifose protuberante",
+    ],
+  };
+
+  function gerarVarminho(rolar) {
+    var r = typeof rolar === "function" ? rolar : function (faces) { return 1 + Math.floor(Math.random() * faces); };
+    var g = GERADOR_DA_VARMINHO;
+    var d10 = r(10);
+    var perfil = g.perfis.filter(function (p) { return d10 <= p.ate; })[0] || g.perfis[g.perfis.length - 1];
+    var d6a = r(6), d6b = r(6), d20a = r(20), d20b = r(20);
+    return {
+      dados: { perfil: d10, tracos: [d6a, d6b], aparencia: [d20a, d20b] },
+      perfil: perfil.nome,
+      nota: perfil.nota || "",
+      tracos: [perfil.tracos[d6a - 1], perfil.tracos[d6b - 1]],
+      aparencia: [g.caracteristicas[d20a - 1], g.caracteristicas[d20b - 1]],
+      referencia: "Arquivos Secretos 5, p. 23",
+    };
+  }
+
+  /* A TV Varminho como referência de preparo (p. 20–33), em resumo
+     próprio: a torre, os papéis, os programas, o ciclo e os ganchos.
+     Consulta — nada aqui vira ficha, número ou regra. */
+  var VARMINHO = {
+    pagina: 20,
+    resumo: "Emissora de fachada da cidade de Varminho (MG), reaberta com programação tomada pela Transmissão. No sexto andar da torre está um dos seis Sinos de Tenebris — o que permite a Transmissão existir na Realidade.",
+    andares: [
+      { nome: "Primeiros andares (1º ao 3º)", pagina: 26, texto: "Escritório da equipe editorial, estúdios e sets. Tudo parece comum, mas é imitação imperfeita: privadas viradas para o lado errado, relógios só com os símbolos da Transmissão." },
+      { nome: "Laboratórios (4º)", pagina: 26, texto: "Pesquisa com tecnologia incompreensível, corredores mal iluminados, tubos com líquido verde viscoso para conectar os Associados; doppelgangers sem função ficam parados encarando o vazio." },
+      { nome: "Os Becos (5º)", pagina: 26, texto: "Um escritório corporativo abandonado e interminável, reescrito pela Transmissão: lâmpadas piscando, carpete mofado, paredes que se atravessam e uma sala de casulos biomecânicos ligados a terminais." },
+      { nome: "O sexto andar", pagina: 27, texto: "Um único corredor tomado por cabos verdes vivos; no fim, a sala do Sino de Tenebris, cercado por seis cápsulas — uma vazia, quatro ocupadas quando a Ordem chegou, uma nunca usada." },
+    ],
+    papeis: [
+      { nome: "Associados comportamentais", texto: "Ainda em processo de conexão nas máquinas; sentimentos fortes resistem. Os únicos que podem voltar a uma vida normal." },
+      { nome: "Engravatados", texto: "Os mais comuns: uma espécie de guarda, altos, de terno, chapéu e óculos escuros. Combate tático." },
+      { nome: "Câmeras", texto: "Atrás das câmeras e em todo papel de bastidor (recepção, faxina, estoque) — nunca do jeito certo. Faz-tudo, filmagem e edição." },
+      { nome: "Equipe editorial", texto: "Roteiros dos programas e revisão do entendimento dos Sinais de quem chega à torre; olham para câmeras inexistentes depois de algo estranho." },
+      { nome: "Apresentadores", texto: "Os rostos da emissora, em geral mais poderosos: apresentam o Sinal aos telespectadores." },
+      { nome: "O Estrangeiro", texto: "O primeiro a se conectar com a Transmissão; tudo se originou dele. Personagem narrativo — o livro não lhe dá ficha." },
+    ],
+    programas: [
+      { nome: "Atividade Física", texto: "Futebol escolar que vira mistura de todos os esportes, com narradores robóticos que nunca respiram." },
+      { nome: "Comunicação", texto: "O telejornal de William Bonantos, que sorri ao noticiar desaparecimentos; o quadro “Quem Ainda Está Assistindo?” lê nomes de moradores." },
+      { nome: "Emissão Você", texto: "Culinária com Joana Traga e o pinguim empalhado Ruivo Zezé, que muda de posição entre cortes." },
+      { nome: "Baseball abcdefghjklmpqrtuvwxyz", texto: "Desenho violento e desconfortável do guerreiro Raposinha, defendendo bolas de baseball de ameaças do espaço." },
+    ],
+    funcionamento: "A equipe editorial escreve os roteiros com os Sinais; os apresentadores gravam; os câmeras inserem Sinais na edição. A vítima que chega é testada e posta numa cápsula, onde um terminal descreve, na linguagem da Transmissão, um momento ou desejo dela: quem traduzir e interpretar corretamente uma dessas mensagens faz a vítima sentir de novo a emoção — e a conexão falha. Imagens da vítima nos programas atraem quem a ama (p. 29).",
+    ganchos: [
+      { nome: "Sobreviventes dos Becos", pagina: 31, texto: "Pessoas comuns acordam em casulos nos Becos, sem memórias inteiras: salvar os outros, fugir da torre ou subir até o topo." },
+      { nome: "Show do Sinalzão", pagina: 31, texto: "Desaparecidos de Minas Gerais foram vistos por último num programa de perguntas na linguagem da Transmissão; errar acaba o programa." },
+      { nome: "Monstros do Esgoto", pagina: 32, texto: "Passos metálicos e gosma verde ácida nos esgotos urbanos; algo cresce sob a cidade." },
+      { nome: "Caçador", pagina: 32, texto: "Um acampamento na Amazônia dissolvido por ácido verde; fitas VHS mostram uma criatura inteligente que estudava as vítimas." },
+    ],
+    exemplos: [
+      { nome: "Ravi, o Covarde", papel: "Associado comportamental", pagina: 24 },
+      { nome: "Pedro, o Ex-Militar", papel: "Engravatado", pagina: 24 },
+      { nome: "Aline, a Faxineira", papel: "Câmera", pagina: 25 },
+      { nome: "Estácio Hudpai, no Fim da Carreira", papel: "Equipe editorial", pagina: 25 },
+      { nome: "Adam Sanolly, o Ator", papel: "Apresentador", pagina: 25 },
+    ],
+    notaExemplos: "Funcionários de exemplo, só narrativos: o livro não dá estatísticas a nenhum deles (p. 24–25).",
+  };
+
   /* =================================================================
      INQUÉRITO PARANORMAL — Arquivos Secretos 4, p. 76–78
      -----------------------------------------------------------------
@@ -475,6 +575,9 @@
     gerarTranstornado: gerarTranstornado,
     GERADOR_DE_PRODUCAO: GERADOR_DE_PRODUCAO,
     gerarProducao: gerarProducao,
+    GERADOR_DA_VARMINHO: GERADOR_DA_VARMINHO,
+    gerarVarminho: gerarVarminho,
+    VARMINHO: VARMINHO,
     inquerito: inquerito,
     carregar: carregar,
     catalogoPronto: catalogoPronto,

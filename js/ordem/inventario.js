@@ -87,7 +87,7 @@
      livros (C.LIVROS); sem o catálogo, a lista fixa — com o livro novo. */
   var FONTES = (global.RAMAOrdemCatalogo && global.RAMAOrdemCatalogo.LIVROS
     ? global.RAMAOrdemCatalogo.LIVROS.map(function (l) { return l.sigla; })
-    : ["OPRPG", "SAH", "AS1", "AS2", "AS3", "AS4"]);
+    : ["OPRPG", "SAH", "AS1", "AS2", "AS3", "AS4", "AS5"]);
   var MAX_MODIFICACOES = 12;
   var DADO = /^[1-9]\d{0,2}d([1-9]\d{0,2})$/;
 
@@ -219,6 +219,13 @@
     var A4 = global.RAMAOrdemArquivo4;
     if (A4 && A4.normalizarDadosDoItem) A4.normalizarDadosDoItem(dados, b, tipo);
     else ["modeloGranada", "autoral", "foraDoLimite", "lancador", "quaseNovo", "focoGravitacional"].forEach(function (k) {
+      if (b[k] !== undefined && b[k] !== null && b[k] !== false) dados[k] = JSON.parse(JSON.stringify(b[k]));
+    });
+    /* Arquivos Secretos 5 (v2.48): o selo (ritual, versão e autoria), as
+       duas peças das Joias da Mente e o modo do Skate Caótico. */
+    var A5 = global.RAMAOrdemArquivo5;
+    if (A5 && A5.normalizarDadosDoItem) A5.normalizarDadosDoItem(dados, b, tipo);
+    else ["selo", "pecas", "modoSkate"].forEach(function (k) {
       if (b[k] !== undefined && b[k] !== null && b[k] !== false) dados[k] = JSON.parse(JSON.stringify(b[k]));
     });
     /* Contagem de munição (v2.20, regra opcional): o que está carregado

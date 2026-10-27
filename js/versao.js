@@ -70,6 +70,25 @@
 
   var CHANGELOG = [
     {
+      versao: "2.48.0", codinome: "SINTONIA", data: "27/10/2026",
+      mudancas: {
+        "Adicionado": [
+          "Arquivos Secretos 5 (v1.0) inteiro no sistema, com fonte e página em tudo: as origens Ufólogo e Funcionário de Beira de Estrada; nove poderes de classe, três gerais e três paranormais (Ácido Corrosivo, Dead Man Switch, Paralinguística Ampliada); a trilha Criptologista do Oculto; nove regalias de veículo; seis itens; dez ameaças com as quatro variações do Hospedeiro Parasitado e a forma monstruosa dos Doppelgangers; e o gerador de funcionários da TV Varminho na biblioteca de criaturas.",
+          "Transmissão como manifestação paranormal (Conhecimento + Energia): filtro e etiqueta na biblioteca de criaturas e cinco poderes de Transmissão. Eles pedem a conexão com o Sino de Transmissão, registrada na ficha e confirmada pelo mestre, e só funcionam com outro portador marcado. Na Sincronia Conectiva, gastar PE de um aliado ou assumir o dano dele passa pelo servidor, que confere o consentimento das duas fichas, a campanha e o recurso — e nunca cobra duas vezes a mesma operação. SAN fica de fora, como no livro.",
+          "Selos do Criptologista: fabricar no interlúdio (2 por ação, mais com a trilha), máximo pela Presença, autoria gravada no selo e “Usar ritual” com o selo — teste de uso com a DT certa (Caligrafia Eficiente, Selo Supremo), sem a base de PE e consumindo exatamente uma unidade.",
+          "Perigos complexos como terceira mecânica opcional da campanha (Configurações → Mecânicas opcionais): Explosão em Contagem Regressiva, Fuga de Horda, Navio Naufragando, Prédio Ocupado e Chuva de Sangue. O mestre cria instâncias que continuam entre sessões, com rodadas, uma ação por personagem, sucessos, falhas e um registro que separa dano de perda de recurso; o jogador vê só os perigos em que está. Ligar os perigos não liga Hexatombe nem Hacking.",
+        ],
+        "Alterado": [
+          "Veículos (Veículos Operacionais): tanque até 10 dados com a Conversão de Combustível, tabela de velocidade da Indução Forçada, nitro uma vez por cena, imunidade a eletricidade da Vedação Hermética, +5 na Defesa dos ocupantes com a Gaiola, regalia extra do Apaixonado por Veículos e o +2 na Defesa da Direção Defensiva.",
+          "Efeitos com bônus ou penalidade em dados podem ser invertidos pelo Ruído de Comunicação até o fim da cena; itens do AS5 só dão benefícios quando empunhados, vestidos ou usados — nunca só por estarem na mochila.",
+        ],
+        "Técnico": [
+          "Ficha no schema 23 (`ordem.arquivo5`, `invertido` no efeito, `selo`/`pecas`/`modoSkate` no item, regalia `extra`); uma aba anterior recusa a ficha em vez de descartar os campos. Módulos novos: js/ordem/arquivo5.js, js/ordem/perigos.js (copiado em Campanhas.gs), js/paginas/ficha-arquivo5.js e js/paginas/campanha-perigos.js. Backend: ações ler_perigos, salvar_perigos e sincronia_operar; aba CAMPANHA_PERIGOS — atualizar Dados.gs, Codigo.gs e Campanhas.gs, rodar setupRama() uma vez e criar uma versão nova da implantação. Retratos das ameaças do AS5 são provisórios (assets/criaturas/as5). “Rastrear Trilha Digital” ficou fora, por pedido; as leituras de trechos ambíguos estão em docs/ORDEM-REGRAS.md como interpretações, não erratas.",
+          "Testes: 3260 regras, 1497 backend (também com o serviço avançado; 30 novas em testes/as5-backend.js), 188 criaturas, 213 CRIS, 249 frontend, 187 tema, 55 dados, 43 pastas, 40 editor de imagem, 19 coordenação — todas passando. Verificado no navegador com o backend simulado (não numa implantação real): teoria do Ufólogo, Meditação, uso de selo com clique duplo, perigo do Navio de ponta a ponta, vista do jogador, filtro de Transmissão, gerador da Varminho e a tela no celular.",
+        ],
+      },
+    },
+    {
       versao: "2.47.0", codinome: "COMUTADOR", data: "27/10/2026",
       mudancas: {
         "Alterado": [

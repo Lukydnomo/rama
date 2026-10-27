@@ -355,6 +355,19 @@ var ABAS = {
     leves: 4,
     pesadas: ['dadosJson'],
   },
+  CAMPANHA_PERIGOS: {
+    /* Os perigos complexos da campanha (v2.48, Arquivos Secretos 5,
+       p. 66–69): mecânica opcional, uma linha por campanha, com as
+       instâncias (rodada, participantes, sucessos, falhas, registro). Só
+       o mestre grava; o jogador recebe só os perigos em que um personagem
+       dele está (Campanhas.gs, "PERIGOS COMPLEXOS"). `ops` guarda os
+       últimos lotes aplicados, para a repetição não contar duas vezes. */
+    nome: 'CAMPANHA_PERIGOS',
+    colunas: ['campanhaId', 'ativo', 'atualizadoEm', 'rev', 'opsJson', 'dadosJson'],
+    chave: 'campanhaId',
+    leves: 4,
+    pesadas: ['dadosJson'],
+  },
   CAMPANHA_CAPAS: {
     /* A capa (banner) da campanha. Fora do dadosJson pelo mesmo motivo
        da foto de personagem: é o campo mais pesado e o que menos muda.

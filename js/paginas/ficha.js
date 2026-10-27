@@ -293,6 +293,10 @@
       /* Rótulo, não permissão: o servidor já decidiu quem é dono. Serve
          para esconder o que só o dono muda — a campanha da ficha. */
       ehDono: function () { return estado.dono; },
+      /* O mestre da campanha abriu a ficha de outro agente (v2.48): é ele
+         quem confirma decisões da mesa (a teoria do Ufólogo, o Sino). Só
+         rótulo — o servidor decide quem grava. */
+      comoMestre: function () { return !!estado.comoMestre; },
       revisao: function () { return revisaoAtual(); },
 
       alterou: function () {

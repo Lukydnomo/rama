@@ -227,17 +227,44 @@
     { chave: "paraChoquesLetais", nome: "Para-choques Letais", resumo: "Atropelar causa +2d6 por 1,5 m percorrido (em vez de 1d6) e a DT para desviar aumenta em +5. Ao aplicar, pode trocar impacto por corte ou perfuração.", tipoDeDano: true },
     { chave: "quadroDeInvestigacao", nome: "Quadro de Investigação", resumo: "+5 nos testes para revisar o caso durante um interlúdio." },
     { chave: "tracaoNasQuatroRodas", nome: "Tração nas Quatro Rodas", resumo: "Ignora a penalidade de deslocamento por terreno difícil." },
+
+    /* Arquivos Secretos 5, p. 59 — nove regalias novas para a mesma regra
+       opcional. O que o livro só descreve (pneus que seguem rodando,
+       snorkel, lastro) fica como texto: nenhum teste ou valor inventado.
+       Instalar uma regalia nunca reabastece, conserta nem dá recurso. */
+    { chave: "conversaoDeCombustivel", nome: "Conversão de Combustível para Alto Rendimento", fonte: "AS5", pagina: 59,
+      resumo: "Motores elétricos auxiliares e um motor de maior rendimento: o tanque passa a ter 10 dados de combustível (instalar não enche o tanque).", combustivelMaximo: 10 },
+    { chave: "gaiolaDeProtecao", nome: "Gaiola de Proteção", fonte: "AS5", pagina: 59,
+      resumo: "Estrutura tubular de aço cromo-molibdênio: os ocupantes do veículo recebem +5 na Defesa e sofrem metade do dano causado por capotamento ou amassado na lataria.", ocupantes: { defesa: 5 } },
+    { chave: "inducaoForcada", nome: "Indução Forçada", fonte: "AS5", pagina: 59,
+      resumo: "Compressores forçam mais ar no motor: a velocidade de manobra pela DT de Pilotagem passa a ser DT 5: 18 m (12q); DT 10: 21 m (14q); DT 15: 24 m (16q); DT 20: 27 m (18q); DT 25: 30 m (20q); DT 30: 33 m (22q); DT 35+: 36 m (24q).", inducao: true },
+    { chave: "pneusRunFlat", nome: "Pneus Run-Flat ou com Gel Selante", fonte: "AS5", pagina: 59,
+      resumo: "Paredes reforçadas ou câmaras auto-selantes: o veículo continua rodando mesmo com os pneus perfurados." },
+    { chave: "oxidoNitroso", nome: "Sistema de Óxido Nitroso", fonte: "AS5", pagina: 59,
+      resumo: "Oxigênio puro e combustível extra na câmara de combustão: como ação livre, uma vez por cena, dobra o deslocamento do veículo por 1 rodada.", nitro: true },
+    { chave: "multicombustivel", nome: "Sistema Multicombustível Avançado", fonte: "AS5", pagina: 59,
+      resumo: "O motor roda com combustíveis alternativos de fácil acesso (biodiesel caseiro, etanol de alta pureza, metano sintetizado): +1 dado em testes para encontrar combustível que o motor aceite." },
+    { chave: "snorkelSelado", nome: "Sistema de Snorkel Selado", fonte: "AS5", pagina: 59,
+      resumo: "Extensões verticais para a entrada de ar e a saída do escapamento: com a ponta do snorkel acima da superfície, o motor continua funcionando e o veículo pode ficar quase todo submerso sem ser prejudicado pela água." },
+    { chave: "tanquesDeLastro", nome: "Tanques de Lastro Hidrodinâmicos", fonte: "AS5", pagina: 59,
+      resumo: "Tanques inundáveis dão peso ao carro para rodar firme no leito do rio ou do mar, e ar comprimido os esvazia para o veículo emergir." },
+    { chave: "vedacaoHermetica", nome: "Vedação Hermética", fonte: "AS5", pagina: 59,
+      resumo: "Componentes elétricos revestidos com resina e caixas pressurizadas: o veículo recebe imunidade a dano de eletricidade e não sofre curtos.", imunidade: "eletricidade" },
   ];
+  /* Indução Forçada (AS5 p. 59): a tabela de velocidade que substitui a do
+     AS3 enquanto a regalia está instalada. */
+  var FAIXAS_INDUCAO = [[35, 36, 24], [30, 33, 22], [25, 30, 20], [20, 27, 18], [15, 24, 16], [10, 21, 14], [5, 18, 12]];
   var POR_REGALIA = {};
   REGALIAS.forEach(function (r) { POR_REGALIA[r.chave] = r; });
 
   /* Velocidade de manobra (p. 127): a maior DT superada no teste de
      Pilotagem do começo da cena. */
   var FAIXAS_MANOBRA = [[30, 30, 20], [25, 27, 18], [20, 24, 16], [15, 21, 14], [10, 18, 12], [5, 15, 10]];
-  function velocidadeDeManobra(total) {
+  function velocidadeDeManobra(total, inducao) {
     var t = Number(total) || 0;
-    for (var i = 0; i < FAIXAS_MANOBRA.length; i++) {
-      if (t >= FAIXAS_MANOBRA[i][0]) return { dt: FAIXAS_MANOBRA[i][0], metros: FAIXAS_MANOBRA[i][1], quadrados: FAIXAS_MANOBRA[i][2] };
+    var faixas = inducao ? FAIXAS_INDUCAO : FAIXAS_MANOBRA;
+    for (var i = 0; i < faixas.length; i++) {
+      if (t >= faixas[i][0]) return { dt: faixas[i][0], metros: faixas[i][1], quadrados: faixas[i][2] };
     }
     return null;
   }
@@ -278,6 +305,15 @@
   }
 
   var COMBUSTIVEL_MAXIMO = 5;
+  /* O maior tanque possível (Conversão de Combustível, AS5 p. 59). */
+  var COMBUSTIVEL_TETO = 10;
+
+  function temRegalia(v, chave) { return !!(v && v.regalias.some(function (r) { return r.chave === chave; })); }
+  function combustivelMaximo(v) {
+    var maior = COMBUSTIVEL_MAXIMO;
+    (v && v.regalias || []).forEach(function (r) { var d = POR_REGALIA[r.chave]; if (d && d.combustivelMaximo > maior) maior = d.combustivelMaximo; });
+    return maior;
+  }
 
   /* Danos pontuais (p. 130): pneus, janelas, faróis, tanque. */
   var DANOS_PONTUAIS = ["pneus", "janelas", "farois", "tanque"];
@@ -289,12 +325,23 @@
     if (!id || !modelo) return null;
     var m = POR_MODELO[modelo];
     var regalias = [];
+    var extras = {};
     lista(x.regalias).forEach(function (r) {
       var rr = obj(r);
       if (!POR_REGALIA[rr.chave]) return;
       var mesma = regalias.filter(function (q) { return q.chave === rr.chave; }).length;
       if (mesma >= (POR_REGALIA[rr.chave].maximo || 1)) return;
-      regalias.push({ chave: rr.chave, pericia: texto(rr.pericia, 40), tipoDeDano: ["impacto", "corte", "perfuração"].indexOf(rr.tipoDeDano) >= 0 ? rr.tipoDeDano : "" });
+      var nova = { chave: rr.chave, pericia: texto(rr.pericia, 40), tipoDeDano: ["impacto", "corte", "perfuração"].indexOf(rr.tipoDeDano) >= 0 ? rr.tipoDeDano : "" };
+      /* Apaixonado por Veículos (AS5 p. 56): uma regalia que não conta no
+         limite do veículo — uma por pessoa que tem o poder. */
+      if (rr.extra === true) {
+        var por = texto(rr.por, 80).trim();
+        if (!por || extras[por.toLowerCase()]) return;
+        extras[por.toLowerCase()] = true;
+        nova.extra = true;
+        nova.por = por;
+      }
+      regalias.push(nova);
     });
     var danos = obj(x.danos);
     var usos = obj(x.usos);
@@ -302,8 +349,11 @@
       id: id, modelo: modelo,
       nome: texto(x.nome, 80) || m.nome,
       pvAtual: inteiro(x.pvAtual, 0, 9999, m.pv),
-      combustivel: inteiro(x.combustivel, 0, COMBUSTIVEL_MAXIMO, COMBUSTIVEL_MAXIMO),
+      combustivel: inteiro(x.combustivel, 0, combustivelMaximo({ regalias: regalias }), COMBUSTIVEL_MAXIMO),
       regalias: regalias,
+      /* Direção Defensiva de quem dirige (AS5 p. 56): +2 na Defesa do
+         veículo, com Veículos Operacionais. */
+      direcaoDefensiva: x.direcaoDefensiva === true,
       defeitos: lista(x.defeitos).filter(function (d) { return !!POR_DEFEITO[d]; }).slice(0, 16),
       danos: { pneus: inteiro(danos.pneus, 0, 8, 0), janelas: danos.janelas === true, farois: danos.farois === true, tanque: danos.tanque === true },
       manobra: x.manobra && typeof x.manobra === "object" ? { cena: idOk(x.manobra.cena), dt: inteiro(x.manobra.dt, 0, 30, 0), total: inteiro(x.manobra.total, -99, 999, 0) } : null,
@@ -323,11 +373,13 @@
 
   /* As contas do veículo, com origem. A Defesa soma a Agilidade de QUEM
      ESTÁ DIRIGINDO (informada na instância). */
-  function contasDoVeiculo(v) {
+  function contasDoVeiculo(v, extra) {
     var m = modeloDe(v);
     if (!m) return null;
+    var x = extra || {};
     var defesa = [{ rotulo: "Base (categoria " + m.categoria + ")", valor: m.defesaBase }];
     if (v.motorista || v.agiMotorista) defesa.push({ rotulo: "Agilidade de " + (v.motorista || "quem dirige"), valor: v.agiMotorista });
+    if (v.direcaoDefensiva) defesa.push({ rotulo: "Direção Defensiva de quem dirige (AS5 p. 56)", valor: 2 });
     var rd = [{ rotulo: "Base", valor: m.rd }];
     var pilotagem = 0;
     v.regalias.forEach(function (r) {
@@ -340,12 +392,25 @@
     var def = soma(defesa);
     var danificado = v.pvAtual <= Math.floor(m.pv / 2);
     var penalidadePilotagem = v.danos.pneus + (v.defeitos.indexOf("pneuFurado") >= 0 ? 1 : 0);
-    var desloc = v.manobra ? velocidadeDeManobra(v.manobra.total) : null;
+    var inducao = temRegalia(v, "inducaoForcada");
+    var desloc = v.manobra ? velocidadeDeManobra(v.manobra.total, inducao) : null;
     var metros = desloc ? desloc.metros : 0;
     if (metros) {
       metros = Math.max(0, metros - 3 * penalidadePilotagem);
       if (danificado) metros = Math.floor(metros / 2);
+      /* Óxido Nitroso (AS5 p. 59): o dobro, por 1 rodada. */
+      if (x.nitro && temRegalia(v, "oxidoNitroso")) metros *= 2;
     }
+    var imunidades = [];
+    var ocupantes = { defesa: 0, notas: [] };
+    v.regalias.forEach(function (r) {
+      var d = POR_REGALIA[r.chave];
+      if (d.imunidade) imunidades.push(d.imunidade + " (" + d.nome + ")");
+      if (d.ocupantes) {
+        ocupantes.defesa += d.ocupantes.defesa || 0;
+        ocupantes.notas.push(d.nome + ": +" + d.ocupantes.defesa + " na Defesa dos ocupantes e metade do dano de capotamento ou amassado (AS5 p. 59).");
+      }
+    });
     return {
       modelo: m,
       defesa: { total: def, parcelas: defesa },
@@ -355,8 +420,15 @@
       danificado: danificado,
       pilotagem: pilotagem,
       dadosPilotagem: -penalidadePilotagem,
-      deslocamento: desloc ? { dt: desloc.dt, metros: metros, quadrados: Math.floor(metros / 1.5) } : null,
+      deslocamento: desloc ? { dt: desloc.dt, metros: metros, quadrados: Math.floor(metros / 1.5), inducao: inducao, nitro: !!(x.nitro && temRegalia(v, "oxidoNitroso")) } : null,
       vagas: Math.max(0, m.regalias - (m.regaliasFixas ? 0 : 0)),
+      /* As regalias que contam no limite e as extras (Apaixonado por
+         Veículos, AS5 p. 56). */
+      noLimite: v.regalias.filter(function (r) { return !r.extra; }).length,
+      extras: v.regalias.filter(function (r) { return r.extra; }).length,
+      combustivelMaximo: combustivelMaximo(v),
+      imunidades: imunidades,
+      ocupantes: ocupantes,
     };
   }
 
@@ -394,14 +466,16 @@
   }
   function reabastecer(v) {
     var antes = v.combustivel;
-    v.combustivel = COMBUSTIVEL_MAXIMO;
-    registrarNoVeiculo(v, "combustivel", "Reabastecido: " + antes + "d6 → " + COMBUSTIVEL_MAXIMO + "d6.");
+    var maximo = combustivelMaximo(v);
+    v.combustivel = maximo;
+    registrarNoVeiculo(v, "combustivel", "Reabastecido: " + antes + "d6 → " + maximo + "d6.");
     return { ok: true, antes: antes, depois: v.combustivel };
   }
-  /* Galão (SaH p. 41): +2d6 na pilha, até o máximo de 5. */
+  /* Galão (SaH p. 41): +2d6 na pilha, até o máximo do tanque (5; 10 com a
+     Conversão de Combustível, AS5 p. 59). */
   function usarGalao(v) {
     var antes = v.combustivel;
-    v.combustivel = Math.min(COMBUSTIVEL_MAXIMO, antes + 2);
+    v.combustivel = Math.min(combustivelMaximo(v), antes + 2);
     registrarNoVeiculo(v, "combustivel", "Galão: " + antes + "d6 → " + v.combustivel + "d6.");
     return { ok: true, antes: antes, depois: v.combustivel };
   }
@@ -457,7 +531,7 @@
     return { ok: true, plano: plano, antes: antes, depois: v.pvAtual, tiradas: tirar };
   }
   function definirManobra(v, cena, total) {
-    var vel = velocidadeDeManobra(total);
+    var vel = velocidadeDeManobra(total, temRegalia(v, "inducaoForcada"));
     v.manobra = { cena: idOk(cena), dt: vel ? vel.dt : 0, total: inteiro(total, -99, 999, 0) };
     registrarNoVeiculo(v, "manobra", "Velocidade de manobra: Pilotagem " + total + (vel ? " → DT " + vel.dt + ", " + vel.metros + " m" : " → abaixo de DT 5") + ".");
     return vel;
@@ -1347,6 +1421,9 @@
     normalizarVeiculo: normalizarVeiculo,
     novoVeiculo: novoVeiculo,
     contasDoVeiculo: contasDoVeiculo,
+    combustivelMaximo: combustivelMaximo,
+    temRegalia: temRegalia,
+    FAIXAS_INDUCAO: FAIXAS_INDUCAO,
     dadosARolar: dadosARolar,
     gastarCombustivel: gastarCombustivel,
     reabastecer: reabastecer,

@@ -2,6 +2,24 @@
 
 Quem alcança o quê, e onde isso é decidido.
 
+## Perigos complexos e Sincronia Conectiva — v2.48
+
+| ação | mestre | jogador da campanha | espectador / de fora |
+|---|---|---|---|
+| ver o estado inteiro (`ler_perigos`) | sim | não — recebe a vista dele | não |
+| ver um perigo | todos | só os que têm personagem dele, sem as linhas de registro de outros | não |
+| ligar/desligar, criar, rolar, registrar ações e efeitos (`salvar_perigos`) | sim | não (`sem_permissao`) | não |
+| gastar PE de outro / assumir dano dele (`sincronia_operar`) | pelas fichas dele | pela própria ficha, só com o consentimento gravado na ficha do outro | não |
+
+- O perigo **nunca** aplica dano ou perda numa ficha: cada um aplica no próprio
+  recurso, com confirmação.
+- Sincronia: as duas fichas precisam ter marcado uma à outra na sincronia da
+  cena; sair da sincronia revoga na hora. Ficha compartilhada (Editor) não dá
+  essa porta. O servidor confere campanha, recurso e `opId`; SAN nunca.
+- A confirmação do Sino de Transmissão e o veredito do Ufólogo são marcas da
+  ficha feitas pelo mestre na tela (na campanha) — pesam só na progressão e no
+  próprio PE da ficha, não abrem nenhuma outra ficha.
+
 ## Compartilhamento de fichas — v2.44
 
 O dono dá a outra conta acesso à ficha **original**, como **Editor** ou **Leitor**.

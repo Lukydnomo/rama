@@ -529,6 +529,10 @@
       tipo: U.aparar(o.tipo, 40) || "Criatura",
       tamanho: o.tamanho ? U.aparar(o.tamanho, 30) : null,
       presenca: null,
+      /* Transmissão (AS5 p. 46): manifestação de Conhecimento E Energia.
+         Só vale com os dois elementos na ficha — a etiqueta sozinha não
+         muda nada. */
+      manifestacao: o.manifestacao === "transmissao" && lista(o.elementos).indexOf("conhecimento") >= 0 && lista(o.elementos).indexOf("energia") >= 0 ? "transmissao" : "",
       percepcao: valorDeTeste(o.percepcao),
       iniciativa: valorDeTeste(o.iniciativa),
       sentidos: textos(o.sentidos, 12, 80),
@@ -969,7 +973,7 @@
 
   function imagensDoCatalogo(alvo) {
     var id = typeof alvo === "string" ? alvo : idDoCatalogo(alvo);
-    var m = /^(op|sah|as1|as2|as3|as4)\.criatura\.([a-z0-9.-]+)$/.exec(String(id || ""));
+    var m = /^(op|sah|as1|as2|as3|as4|as5)\.criatura\.([a-z0-9.-]+)$/.exec(String(id || ""));
     if (!m) return null;
     var base = "assets/criaturas/" + m[1] + "/" + m[2] + "/";
     var url = U.url || function (x) { return x; };
@@ -990,6 +994,7 @@
       r.vd = c.ordem.vd;
       r.nivel = c.ordem.nivel || "";
       r.elementos = c.ordem.elementos.slice();
+      if (c.ordem.manifestacao) r.manifestacao = c.ordem.manifestacao;
       r.tamanho = c.ordem.tamanho || "";
       r.tipo = c.ordem.tipo;
       if (c.origem && c.origem.livro) { r.livro = c.origem.livro; r.pagina = c.origem.pagina || null; }

@@ -587,6 +587,16 @@ segredo nenhum — ele os lê das Script Properties. Publicá-lo não expõe nad
 
 ### Atualizar o backend
 
+**v2.48.0 — SINTONIA:** Arquivos Secretos 5. **Troque** `Dados.gs`, `Codigo.gs` e
+`Campanhas.gs`, rode **`setupRama()`** uma vez (cria a aba `CAMPANHA_PERIGOS`;
+repetir é seguro e não apaga nada), crie uma **nova versão** da implantação e só
+então publique o site. Nada existente é convertido: fichas antigas abrem com o
+estado do AS5 vazio e passam ao schema 23 na primeira gravação. Sem o
+`setupRama()`, só os perigos complexos recusam gravar (`instalacao_incompleta`);
+sem a versão nova da implantação, a Sincronia Conectiva não acha
+`sincronia_operar`. Abas abertas na versão anterior recusam fichas 23 e pedem para
+recarregar.
+
 **v2.47.0 — COMUTADOR:** só o site (Hexatombe e Hacking opcionais por campanha,
 em Configurações → Mecânicas opcionais). Nada de `.gs`, versão da implantação nem
 `setupRama()`.

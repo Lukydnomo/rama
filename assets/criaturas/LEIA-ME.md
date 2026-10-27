@@ -22,6 +22,8 @@ as1.criatura.apostolo-do-sangue     → assets/criaturas/as1/apostolo-do-sangue/
 `op` é o livro básico (Ordem Paranormal RPG); `sah`, Sobrevivendo ao Horror;
 `as1`, Arquivos Secretos 1; `as2`, Arquivos Secretos 2; `as3`, Arquivos Secretos 3;
 `as4`, Arquivos Secretos 4 (os estágios do Simulacro não têm pasta: são a mesma criatura)
+`as5`, Arquivos Secretos 5 (as variações do hospedeiro têm pasta própria; a forma monstruosa
+dos doppelgangers, não)
 (os perfis "como aliado" têm pasta própria, com `-aliado` no fim, e os animais
 treinados do AS3, com `-animal`; as formas transformadas e a Hora do Show, não —
 são a mesma criatura).

@@ -29,8 +29,10 @@
   function OC() { return global.RAMAOrdemCriaturas; }
   function C() { return global.RAMACriaturas; }
 
-  var ELEMENTOS = ["sangue", "morte", "conhecimento", "energia", "medo"];
-  var NOMES_ELEMENTO = { sangue: "Sangue", morte: "Morte", conhecimento: "Conhecimento", energia: "Energia", medo: "Medo" };
+  /* "transmissao" é a manifestação do AS5 (p. 46): filtra as criaturas de
+     Transmissão, que continuam com Conhecimento e Energia nos elementos. */
+  var ELEMENTOS = ["sangue", "morte", "conhecimento", "energia", "medo", "transmissao"];
+  var NOMES_ELEMENTO = { sangue: "Sangue", morte: "Morte", conhecimento: "Conhecimento", energia: "Energia", medo: "Medo", transmissao: "Transmissão" };
   var NATUREZAS = [{ v: "", r: "Todas" }, { v: "paranormal", r: "Paranormais" }, { v: "humana", r: "Pessoas" }, { v: "animal", r: "Animais" }];
 
   var lembrado = { aba: "oficial" };
@@ -103,7 +105,7 @@
         id: h.id, nome: h.nome, meu: !!h.meu, visibilidade: h.visibilidade,
         chave: U.chaveDeBusca(h.nome + " " + (r.categoria || "")),
         sistema: r.sistema, natureza: r.natureza || "", vd: typeof r.vd === "number" ? r.vd : null, nivel: r.nivel || "",
-        elementos: r.elementos || [], tamanho: r.tamanho || "", tipo: r.tipo || "", pv: r.pv, livro: "",
+        elementos: r.elementos || [], manifestacao: r.manifestacao || "", tamanho: r.tamanho || "", tipo: r.tipo || "", pv: r.pv, livro: "",
         categoria: r.categoria || "",
       };
     }
@@ -184,10 +186,16 @@
           title: "Perfil, traços e aparência de um membro da Produção (Arquivos Secretos 4, p. 48)",
           onclick: function () { gerador("producao"); },
         }) : null,
+        OC().gerarVarminho ? el("button.r-botao.r-botao--mini.r-botao--fantasma", {
+          type: "button", texto: "Funcionários da TV Varminho",
+          title: "Perfil, traços e características de um funcionário da TV Varminho, e a torre como referência (Arquivos Secretos 5, p. 20–33)",
+          onclick: function () { gerador("varminho"); },
+        }) : null,
       ]);
     }
 
     function gerador(qual) {
+      if (qual === "varminho") { geradorVarminho(); return; }
       var D = global.RAMADados;
       var producao = qual === "producao";
       var rolar = function (faces) { var r = D && D.total ? D.total("1d" + faces) : null; return r && r.ok ? r.total : 1 + Math.floor(Math.random() * faces); };
@@ -207,6 +215,50 @@
       UI.modal({
         titulo: producao ? "Gerador de Produção do Anfitrião" : "Gerador de Transtornados",
         conteudo: [saida],
+        botoes: [
+          { rotulo: "Fechar", classe: "r-botao--fantasma" },
+          { rotulo: "Sortear de novo", classe: "r-botao--principal", aoClicar: function () { sortear(); } },
+        ],
+      });
+    }
+
+    /* TV Varminho (AS5 p. 20–33): o gerador e a torre como referência de
+       preparo. Os dados são independentes e nunca somados. */
+    function geradorVarminho() {
+      var D = global.RAMADados;
+      var rolar = function (faces) { var r = D && D.total ? D.total("1d" + faces) : null; return r && r.ok ? r.total : 1 + Math.floor(Math.random() * faces); };
+      var V = OC().VARMINHO;
+      var saida = el("div.pilha--curta", { class: "pilha", role: "status", "aria-live": "polite" });
+      function sortear() {
+        var g = OC().gerarVarminho(rolar);
+        U.trocar(saida, [
+          el("p", { texto: "Perfil: " + g.perfil + " (1d10: " + g.dados.perfil + ")" }),
+          el("p", { texto: "Traços: " + g.tracos.join("; ") + " (dois d6, sem somar: " + g.dados.tracos.join(" e ") + ")" }),
+          el("p", { texto: "Características: " + g.aparencia.join("; ") + " (dois d20, sem somar: " + g.dados.aparencia.join(" e ") + ")" }),
+          g.nota ? el("p.t-mini", { texto: g.nota }) : null,
+          el("p.criacao-fonte", { texto: g.referencia + ". Só narrativa: nenhum poder, nenhuma estatística. Para jogar com números, use as fichas do catálogo (doppelgangers, hospedeiros)." }),
+        ]);
+      }
+      sortear();
+      function lista(titulo, itens) {
+        return UI.recolhivel({ titulo: titulo, conteudo: [el("ul.pilha--curta", { class: "pilha" }, itens.map(function (x) {
+          return el("li.t-mini", {}, [el("strong", { texto: x.nome }), document.createTextNode((x.papel ? " (" + x.papel + ")" : "") + (x.texto ? " — " + x.texto : "") + (x.pagina ? " (p. " + x.pagina + ")" : ""))]);
+        }))] });
+      }
+      var referencia = V ? el("div.pilha--curta", { class: "pilha" }, [
+        el("h4.t-secao", { texto: "A TV Varminho, para preparar a missão" }),
+        el("p.t-mini", { texto: V.resumo }),
+        lista("A torre", V.andares),
+        lista("Os funcionários", V.papeis),
+        lista("Os programas", V.programas),
+        UI.recolhivel({ titulo: "Como a torre funciona", conteudo: [el("p.t-mini", { texto: V.funcionamento })] }),
+        lista("Ganchos de missão", V.ganchos),
+        lista("Funcionários de exemplo", V.exemplos),
+        el("p.t-mini", { texto: V.notaExemplos }),
+      ]) : null;
+      UI.modal({
+        titulo: "Funcionários da TV Varminho",
+        conteudo: [saida, referencia],
         botoes: [
           { rotulo: "Fechar", classe: "r-botao--fantasma" },
           { rotulo: "Sortear de novo", classe: "r-botao--principal", aoClicar: function () { sortear(); } },
@@ -297,9 +349,11 @@
         ]),
       ]);
 
-      var marcas = el("span.bib-item__marcas", {}, (x.elementos || []).map(function (e) {
+      var marcas = el("span.bib-item__marcas", {}, (x.manifestacao === "transmissao"
+        ? [el("span.r-etiqueta.bib-elemento.bib-elemento--transmissao", { texto: "Transmissão", title: "Conhecimento e Energia ao mesmo tempo (Arquivos Secretos 5, p. 46)" })]
+        : []).concat((x.elementos || []).map(function (e) {
         return el("span.r-etiqueta.bib-elemento.bib-elemento--" + e, { texto: NOMES_ELEMENTO[e] });
-      }).concat([
+      })).concat([
         x.livro ? el("span.r-etiqueta.bib-fonte", { texto: OC().referencia(x.livro, x.pagina), title: OC().FONTES[x.livro].nome }) : null,
         estado.aba === "homebrew" ? el("span.r-etiqueta", { texto: x.meu ? (x.visibilidade === "publico" ? "Sua · pública" : "Sua") : "Pública" }) : null,
       ]));

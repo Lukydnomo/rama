@@ -36,6 +36,7 @@ não são renderizadas desabilitadas, simplesmente não entram na lista.
 | Combate | membros | só os combates liberados para você: ordem, rodada e turno; ficha do participante selecionado (só o mestre) |
 | Hexatombe | membros, **só com a mecânica ligada** | o modo de campanha do Arquivos Secretos 2 — ver [Hexatombe](#hexatombe-v230) |
 | Hacking | membros, **só com a mecânica ligada** | a regra opcional do Arquivos Secretos 4 — ver [Hacking](#hacking-v238) |
+| Perigos | membros, **só com a mecânica ligada** | os perigos complexos do Arquivos Secretos 5 — ver [Perigos complexos](#perigos-complexos-v248) |
 | Notas | **mestre** | anotações privadas, gerais ou por personagem |
 | Configurações | **mestre** | nome, visibilidade, rolagens ocultas, mecânicas opcionais, participantes |
 
@@ -43,10 +44,10 @@ O espectador de campanha pública não tem abas: vê o nome, a capa e a descriç
 
 ### Mecânicas opcionais (v2.47)
 
-Hexatombe e Hacking são **opcionais por campanha**: desligadas, as abas não existem
-para ninguém — nem para o mestre. Quem liga e desliga é o mestre, em
-**Configurações → Mecânicas opcionais**. Campanha nova começa com as duas
-desligadas.
+Hexatombe, Hacking e (v2.48) Perigos complexos são **opcionais por campanha**:
+desligadas, as abas não existem para ninguém — nem para o mestre. Quem liga e
+desliga é o mestre, em **Configurações → Mecânicas opcionais**. Campanha nova
+começa com as três desligadas.
 
 - O interruptor é o `ativo` que cada mecânica já guardava na própria aba do banco
   (`CAMPANHA_HEXATOMBE`, `CAMPANHA_HACKING`), gravado por `salvar_hexatombe` e
@@ -873,6 +874,26 @@ sincronização que já existe: quando a marca `rolagens` muda, uma busca curta
 - O histórico mostra cada linha com a aparência guardada no momento da rolagem;
   trocar o tema depois não muda o passado. Ver o dado de outro jogador não
   concede o tema.
+
+## Perigos complexos (v2.48)
+
+Regra de cena do Arquivos Secretos 5 (p. 66–69), a terceira mecânica opcional:
+desligada em toda campanha até o mestre ligar em **Configurações → Mecânicas
+opcionais**. Ligar os perigos não liga Hexatombe nem Hacking (cada uma tem o
+próprio `ativo`).
+
+- **Mestre:** cria instâncias dos cinco modelos (Explosão, Fuga, Navio, Prédio,
+  Chuva de Sangue), rola a duração/elemento/área uma vez, põe participantes
+  (personagem da campanha opcional), abre a rodada (no Navio, rola a DT 20+1d6
+  da rodada), registra a ação de cada um (uma por rodada; o total do teste é
+  rolado na ficha), soluções alternativas, os efeitos do início do turno (dano ×
+  perda, irredutível marcado) e encerra (zonas da Explosão, sucessos/falhas da
+  Chuva). Cada passo é uma gravação com `rev` e `opId`.
+- **Jogador:** vê só os perigos em que um personagem dele está, com o objetivo, o
+  efeito, a rodada e os próprios sucessos. Não grava nada.
+- As instâncias continuam de uma sessão para outra; recarregar não rola de novo.
+- Nada é aplicado numa ficha: o registro diz o que rolar e de que natureza, e
+  cada um aplica.
 
 ## Hacking (v2.38)
 
