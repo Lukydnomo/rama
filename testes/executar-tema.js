@@ -673,132 +673,132 @@ function abrirPaginaInterface(conta) {
 t.grupo("Estilo da interface · padrão e cache por conta");
 guardado.clear();
 let EI = abrirPaginaInterface(null);
-t.igual("sem conta: Modern20", estiloNaTela(), "modern20");
+t.igual("sem conta: Legacy", estiloNaTela(), "legacy");
 EI = abrirPaginaInterface("u1");
-t.igual("conta sem escolha: Modern20 já na primeira pintura", estiloNaTela(), "modern20");
-guardado.set("rama.interface.u1", "legacy");
+t.igual("conta sem escolha: Legacy já na primeira pintura", estiloNaTela(), "legacy");
+guardado.set("rama.interface.u1", "modern20");
 EI = abrirPaginaInterface("u1");
-t.igual("o cache da conta antecipa a abertura (Legacy antes de a sessão responder)", estiloNaTela(), "legacy");
+t.igual("o cache da conta antecipa a abertura (Modern20 antes de a sessão responder)", estiloNaTela(), "modern20");
 EI = abrirPaginaInterface("u2");
-t.igual("outra conta no mesmo aparelho não herda o Legacy da u1", estiloNaTela(), "modern20");
+t.igual("outra conta no mesmo aparelho não herda o Modern20 da u1", estiloNaTela(), "legacy");
 guardado.set("rama.interface.u1", "retro");
 EI = abrirPaginaInterface("u1");
-t.igual("valor desconhecido no cache vira Modern20", estiloNaTela(), "modern20");
+t.igual("valor desconhecido no cache vira Legacy", estiloNaTela(), "legacy");
 
 t.grupo("Estilo da interface · a sessão traz o da conta");
 guardado.clear();
 EI = abrirPaginaInterface("u1");
 rede.automatico = (c) => c.acao === "sessao"
-  ? { ok: true, agente: { id: "u1", usuario: "u1", nome: "U1", preferencias: { tema: "escuro", exibicaoPastas: "icones", estiloInterface: "legacy" } } }
+  ? { ok: true, agente: { id: "u1", usuario: "u1", nome: "U1", preferencias: { tema: "escuro", exibicaoPastas: "icones", estiloInterface: "modern20" } } }
   : { ok: true };
 await RAMAAuth.retomar();
-t.igual("retomar a sessão aplica o estilo salvo (outro aparelho escolheu Legacy)", estiloNaTela(), "legacy");
-t.igual("  e guarda no cache da conta", guardado.get("rama.interface.u1"), "legacy");
+t.igual("retomar a sessão aplica o estilo salvo (outro aparelho escolheu Modern20)", estiloNaTela(), "modern20");
+t.igual("  e guarda no cache da conta", guardado.get("rama.interface.u1"), "modern20");
 t.ok("  o tema chega junto, sem se misturar", guardado.get("rama.tema.u1") === "escuro" && tela() === "escuro");
 EI.sincronizarDaConta("u2", { tema: "claro" });
-t.igual("outra conta, sem a chave (servidor antigo): o cache dela, não o da anterior", estiloNaTela(), "modern20");
+t.igual("outra conta, sem a chave (servidor antigo): o cache dela, não o da anterior", estiloNaTela(), "legacy");
 EI.sincronizarDaConta("u1", {});
-t.igual("voltar para a u1 sem a chave: o cache da u1", estiloNaTela(), "legacy");
+t.igual("voltar para a u1 sem a chave: o cache da u1", estiloNaTela(), "modern20");
 EI.sincronizarDaConta("u1", { estiloInterface: "retro" });
-t.igual("valor desconhecido vindo da sessão é ignorado", estiloNaTela(), "legacy");
+t.igual("valor desconhecido vindo da sessão é ignorado", estiloNaTela(), "modern20");
 await RAMAAuth.sair();
-t.igual("sair: Modern20", estiloNaTela(), "modern20");
-t.igual("  sem apagar o cache da conta", guardado.get("rama.interface.u1"), "legacy");
+t.igual("sair: Legacy", estiloNaTela(), "legacy");
+t.igual("  sem apagar o cache da conta", guardado.get("rama.interface.u1"), "modern20");
 
 t.grupo("Estilo da interface · salvar na conta");
 guardado.clear();
 EI = abrirPaginaInterface("u1");
-EI.sincronizarDaConta("u1", { estiloInterface: "modern20" });
-let pEstilo = EI.salvar("legacy");
-t.igual("a troca é na hora", estiloNaTela(), "legacy");
+EI.sincronizarDaConta("u1", { estiloInterface: "legacy" });
+let pEstilo = EI.salvar("modern20");
+t.igual("a troca é na hora", estiloNaTela(), "modern20");
 await esperar();
 t.ok("manda só a chave do estilo (tema e temas ficam no servidor)",
-  JSON.stringify(rede.pedidos[0].corpo.dados) === JSON.stringify({ preferencias: { estiloInterface: "legacy" } }));
+  JSON.stringify(rede.pedidos[0].corpo.dados) === JSON.stringify({ preferencias: { estiloInterface: "modern20" } }));
 t.igual("  enquanto isso: 'salvando'", EI.estado(), "salvando");
-rede.pedidos.shift().resolver({ ok: true, preferencias: { tema: "sistema", estiloInterface: "legacy" } });
+rede.pedidos.shift().resolver({ ok: true, preferencias: { tema: "sistema", estiloInterface: "modern20" } });
 let rEstilo = await pEstilo;
 t.ok("resposta certa → 'salvo'", rEstilo.ok && rEstilo.estado === "salvo" && EI.estado() === "salvo");
-t.igual("  cache atualizado", guardado.get("rama.interface.u1"), "legacy");
+t.igual("  cache atualizado", guardado.get("rama.interface.u1"), "modern20");
 
-pEstilo = EI.salvar("modern20");
+pEstilo = EI.salvar("legacy");
 await esperar();
 rede.pedidos.shift().resolver({ ok: false, erro: "sem_conexao" });
 rEstilo = await pEstilo;
 t.ok("falha → 'erro', nunca 'salvo'", !rEstilo.ok && EI.estado() === "erro");
-t.ok("  a tela e o cache voltam ao que a conta tem", estiloNaTela() === "legacy" && guardado.get("rama.interface.u1") === "legacy");
+t.ok("  a tela e o cache voltam ao que a conta tem", estiloNaTela() === "modern20" && guardado.get("rama.interface.u1") === "modern20");
 
-pEstilo = EI.salvar("modern20");
+pEstilo = EI.salvar("legacy");
 await esperar();
 rede.pedidos.shift().resolver({ ok: true, preferencias: { tema: "sistema" } });
 rEstilo = await pEstilo;
-t.ok("resposta 'ok' sem o estilo gravado também não é sucesso", !rEstilo.ok && estiloNaTela() === "legacy");
+t.ok("resposta 'ok' sem o estilo gravado também não é sucesso", !rEstilo.ok && estiloNaTela() === "modern20");
 
-pEstilo = EI.salvar("modern20");
+pEstilo = EI.salvar("legacy");
 await esperar();
 rede.pedidos.shift().resolver({ ok: false, erro: "dados_invalidos" });
 rEstilo = await pEstilo;
 t.ok("servidor anterior à v2.49 recusa a chave → 'local', e a escolha fica neste aparelho",
-  rEstilo.ok && rEstilo.estado === "local" && estiloNaTela() === "modern20" && guardado.get("rama.interface.u1") === "modern20");
+  rEstilo.ok && rEstilo.estado === "local" && estiloNaTela() === "legacy" && guardado.get("rama.interface.u1") === "legacy");
 
 t.grupo("Estilo da interface · escolhas rápidas");
 guardado.clear();
 EI = abrirPaginaInterface("u1");
-EI.sincronizarDaConta("u1", { estiloInterface: "modern20" });
-const pA = EI.salvar("legacy");
-const pB = EI.salvar("modern20");
-const pC = EI.salvar("legacy");
+EI.sincronizarDaConta("u1", { estiloInterface: "legacy" });
+const pA = EI.salvar("modern20");
+const pB = EI.salvar("legacy");
+const pC = EI.salvar("modern20");
 await esperar();
 t.igual("um pedido por vez", rede.pedidos.length, 1);
-t.igual("  a tela já mostra a última escolha", estiloNaTela(), "legacy");
-rede.pedidos.shift().resolver({ ok: true, preferencias: { estiloInterface: "legacy" } });
+t.igual("  a tela já mostra a última escolha", estiloNaTela(), "modern20");
+rede.pedidos.shift().resolver({ ok: true, preferencias: { estiloInterface: "modern20" } });
 const [rA, rB, rC] = await Promise.all([pA, pB, pC]);
 t.igual("a última escolha é a que vale (sem pedido extra quando já bate)", rede.pedidos.length, 0);
-t.ok("  as três esperas recebem o mesmo fim", rA.ok && rB.ok && rC.ok && EI.preferencia() === "legacy");
-pEstilo = EI.salvar("modern20");
-await esperar();
-EI.sincronizarDaConta("u1", { estiloInterface: "legacy" });
-t.igual("uma leitura da sessão no meio não passa por cima da escolha nova", estiloNaTela(), "modern20");
+t.ok("  as três esperas recebem o mesmo fim", rA.ok && rB.ok && rC.ok && EI.preferencia() === "modern20");
 pEstilo = EI.salvar("legacy");
-rede.pedidos.shift().resolver({ ok: true, preferencias: { estiloInterface: "modern20" } });
-await esperar(); await esperar();
-t.igual("resposta antiga (modern20) chega depois da escolha nova: vai outro pedido com a nova", rede.pedidos.length, 1);
-t.igual("  e a tela não volta para a antiga", estiloNaTela(), "legacy");
+await esperar();
+EI.sincronizarDaConta("u1", { estiloInterface: "modern20" });
+t.igual("uma leitura da sessão no meio não passa por cima da escolha nova", estiloNaTela(), "legacy");
+pEstilo = EI.salvar("modern20");
 rede.pedidos.shift().resolver({ ok: true, preferencias: { estiloInterface: "legacy" } });
+await esperar(); await esperar();
+t.igual("resposta antiga (legacy) chega depois da escolha nova: vai outro pedido com a nova", rede.pedidos.length, 1);
+t.igual("  e a tela não volta para a antiga", estiloNaTela(), "modern20");
+rede.pedidos.shift().resolver({ ok: true, preferencias: { estiloInterface: "modern20" } });
 rEstilo = await pEstilo;
-t.ok("  no fim: 'salvo' com a nova", rEstilo.ok && EI.confirmado() === "legacy" && guardado.get("rama.interface.u1") === "legacy");
+t.ok("  no fim: 'salvo' com a nova", rEstilo.ok && EI.confirmado() === "modern20" && guardado.get("rama.interface.u1") === "modern20");
 
 t.grupo("Estilo da interface · prévia do editor");
 guardado.clear();
 EI = abrirPaginaInterface("u1");
-EI.sincronizarDaConta("u1", { estiloInterface: "modern20" });
-EI.definirPrevia("legacy");
-t.ok("a prévia muda a tela, não a preferência", estiloNaTela() === "legacy" && EI.preferencia() === "modern20");
+EI.sincronizarDaConta("u1", { estiloInterface: "legacy" });
+EI.definirPrevia("modern20");
+t.ok("a prévia muda a tela, não a preferência", estiloNaTela() === "modern20" && EI.preferencia() === "legacy");
 t.igual("  e não manda nada ao servidor", rede.pedidos.length, 0);
-t.igual("  nem grava no cache", guardado.get("rama.interface.u1"), "modern20");
+t.igual("  nem grava no cache", guardado.get("rama.interface.u1"), "legacy");
 EI.definirPrevia(null);
-t.igual("cancelar: volta ao confirmado", estiloNaTela(), "modern20");
+t.igual("cancelar: volta ao confirmado", estiloNaTela(), "legacy");
 EI.definirPrevia("retro");
-t.igual("prévia desconhecida é ignorada", estiloNaTela(), "modern20");
+t.igual("prévia desconhecida é ignorada", estiloNaTela(), "legacy");
 
 t.grupo("Estilo da interface · troca de conta com salvamento a caminho");
 guardado.clear();
 EI = abrirPaginaInterface("u1");
-EI.sincronizarDaConta("u1", { estiloInterface: "modern20" });
-pEstilo = EI.salvar("legacy");
+EI.sincronizarDaConta("u1", { estiloInterface: "legacy" });
+pEstilo = EI.salvar("modern20");
 await esperar();
-EI.sincronizarDaConta("u2", { estiloInterface: "modern20" });
-rede.pedidos.shift().resolver({ ok: true, preferencias: { estiloInterface: "legacy" } });
+EI.sincronizarDaConta("u2", { estiloInterface: "legacy" });
+rede.pedidos.shift().resolver({ ok: true, preferencias: { estiloInterface: "modern20" } });
 rEstilo = await pEstilo;
-t.ok("a resposta da u1 não pinta a tela da u2", estiloNaTela() === "modern20" && EI.conta() === "u2");
-t.igual("  mas fica no cache da u1", guardado.get("rama.interface.u1"), "legacy");
+t.ok("a resposta da u1 não pinta a tela da u2", estiloNaTela() === "legacy" && EI.conta() === "u2");
+t.igual("  mas fica no cache da u1", guardado.get("rama.interface.u1"), "modern20");
 
 t.grupo("Estilo da interface · outra aba");
 EI = abrirPaginaInterface("u1");
 const storageEI = ouvintesGlobais.filter((o) => o.tipo === "storage").pop();
-storageEI.fn({ key: "rama.interface.u1", newValue: "modern20" });
-t.igual("outra aba da mesma conta trocou: esta acompanha", estiloNaTela(), "modern20");
-storageEI.fn({ key: "rama.interface.u9", newValue: "legacy" });
-t.igual("  outra conta não mexe aqui", estiloNaTela(), "modern20");
+storageEI.fn({ key: "rama.interface.u1", newValue: "legacy" });
+t.igual("outra aba da mesma conta trocou: esta acompanha", estiloNaTela(), "legacy");
+storageEI.fn({ key: "rama.interface.u9", newValue: "modern20" });
+t.igual("  outra conta não mexe aqui", estiloNaTela(), "legacy");
 t.ok("trocar o estilo não mexe no tema da conta", tela() === "claro" && !guardado.has("rama.tema.u1"));
 
 t.grupo("Estilo da interface · as páginas e o isolamento das folhas");
@@ -906,6 +906,40 @@ t.grupo("Aparência num lugar só (v2.49.1): o editor, não Exibição");
   t.igual("previaEfeitos(false) desliga só na tela", html.dataset.efeitos, "off");
   previa(null);
   t.ok("  previaEfeitos(null) volta ao que o aparelho guarda", html.dataset.efeitos === "on" && aplicadas === 1);
+}
+
+t.grupo("Depois de uma atualização, o histórico primeiro (v2.49.2)");
+{
+  const fonte = await Deno.readTextFile(new URL("../js/app.js", import.meta.url));
+  const corpo = fonte.slice(fonte.indexOf("function novidadesDaVersao"), fonte.indexOf("/* =================================================================\n     CABEÇALHO DE PÁGINA"));
+  function aparelho(guardada, quebrado) {
+    const mapa = new Map(guardada ? [["rama.versao.vista", guardada]] : []);
+    const ls = {
+      getItem: (k) => { if (quebrado) throw new Error("bloqueado"); return mapa.has(k) ? mapa.get(k) : null; },
+      setItem: (k, v) => { if (quebrado) throw new Error("bloqueado"); mapa.set(k, v); },
+    };
+    const abertos = [];
+    const fn = new Function("global", "localStorage", "CHAVE_VERSAO_VISTA", "abrirChangelog", corpo + "; return novidadesDaVersao;")(
+      { RAMAVersion: { numero: "9.9.9" } }, ls, "rama.versao.vista", (o) => abertos.push(o));
+    return { fn, mapa, abertos };
+  }
+  let a = aparelho("9.9.8");
+  a.fn();
+  t.ok("versão nova neste aparelho: abre o histórico como novidade", a.abertos.length === 1 && a.abertos[0].novidade === true);
+  t.igual("  e marca como visto", a.mapa.get("rama.versao.vista"), "9.9.9");
+  a.fn();
+  t.igual("  a próxima página não abre de novo", a.abertos.length, 1);
+  a = aparelho(null);
+  a.fn();
+  t.igual("aparelho sem registro (primeira visita ou primeira versão com o aviso): abre", a.abertos.length, 1);
+  a = aparelho("9.9.9");
+  a.fn();
+  t.igual("versão já vista: não abre", a.abertos.length, 0);
+  a = aparelho(null, true);
+  a.fn();
+  t.igual("sem armazenamento: não abre (senão abriria em toda página)", a.abertos.length, 0);
+  t.ok("só com a casca: a ficha embutida no combate não avisa", /if \(!o\.semCasca\) novidadesDaVersao\(\);/.test(fonte));
+  t.ok("o número no rodapé abre o histórico comum, não o aviso", /onclick: function \(\) \{ abrirChangelog\(\); \}/.test(fonte));
 }
 
 /* ---------- fim ---------- */

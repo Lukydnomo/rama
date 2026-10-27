@@ -70,6 +70,23 @@
 
   var CHANGELOG = [
     {
+      versao: "2.49.2",
+      codinome: "ARAUTO",
+      data: "27/10/2026",
+      mudancas: {
+        "Adicionado": [
+          "Depois de uma atualização, a primeira página que você abre mostra o histórico de versões, com a versão nova aberta e as anteriores recolhidas. Aparece uma vez por versão em cada aparelho; depois, o histórico continua no número da versão, no rodapé.",
+        ],
+        "Alterado": [
+          "O Legacy volta a ser o estilo padrão de quem ainda não escolheu. O Modern20 continua à escolha no editor de temas do Perfil, e quem já salvou uma escolha fica com ela. No editor, o Legacy agora vem primeiro.",
+        ],
+        "Técnico": [
+          "`RAMAInterface.PADRAO` e `PREFERENCIAS_PADRAO.estiloInterface` (Codigo.gs) passam a `legacy` — atualizar o Codigo.gs e criar uma versão nova da implantação; sem `setupRama()`. O aviso de versão guarda a última vista em `rama.versao.vista` (por aparelho), abre pela casca em `RAMAApp.iniciar` e não aparece na ficha embutida no combate nem sem armazenamento local.",
+          "Testes: 252 tema (8 novos), 1509 backend, com os casos de padrão invertidos para o Legacy.",
+        ],
+      },
+    },
+    {
       versao: "2.49.1",
       codinome: "RECATO",
       data: "27/10/2026",

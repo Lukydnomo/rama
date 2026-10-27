@@ -593,6 +593,13 @@ segredo nenhum — ele os lê das Script Properties. Publicá-lo não expõe nad
 
 ### Atualizar o backend
 
+**v2.49.2 — ARAUTO:** o Legacy volta a ser o estilo padrão, e a primeira página
+aberta depois de uma atualização mostra o histórico de versões. **Troque** o
+`Codigo.gs` (o padrão do estilo mora nele: com o antigo, a sessão de quem nunca
+escolheu continua dizendo Modern20), crie uma **nova versão** da implantação e
+publique `js/app.js`, `js/interface.js`, `js/tema-editor.js` e `js/versao.js`.
+Sem `setupRama()` e sem migração; quem já gravou uma escolha fica com ela.
+
 **v2.49.1 — RECATO:** só o site. Publique `js/app.js`, `js/tema-editor.js`,
 `js/paginas/perfil.js`, `css/interface.css` e `js/versao.js`. Sem mudança no
 Apps Script.

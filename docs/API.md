@@ -144,7 +144,7 @@ Nenhuma ação nova. `salvar_perfil` aceita a preferência
 `estiloInterface: "legacy" | "modern20"` — a linguagem visual do site (letra,
 forma, organização), independente do tema de cores. `login`, `sessao` e
 `ler_perfil` a devolvem em `preferencias`; na sessão, sem valor gravado, vale
-`"modern20"`. É remendo como as outras: salvar o estilo não toca em `tema`,
+`"legacy"` (desde a v2.49.2; antes, `"modern20"`). É remendo como as outras: salvar o estilo não toca em `tema`,
 `temaAtivo`, `temas` nem `exibicaoPastas`. Valor fora da lista é recusado com
 `dados_invalidos`, sem gravar nada; `null` apaga a chave (volta ao padrão).
 Servidor anterior à v2.49 recusa a chave nova com `dados_invalidos`: a página

@@ -33,6 +33,8 @@
 
   var CHAVE_EFEITOS = "rama.pref.efeitos";
   var CHAVE_ESCALA = "rama.pref.escala";
+  /* A última versão cujo histórico este aparelho já mostrou (v2.49.2). */
+  var CHAVE_VERSAO_VISTA = "rama.versao.vista";
 
   /* =================================================================
      PREFERÊNCIAS DE EXIBIÇÃO
@@ -222,7 +224,7 @@
       type: "button",
       title: "Ver o histórico de versões",
       texto: "R.A.M.A. · " + V.rotulo,
-      onclick: abrirChangelog,
+      onclick: function () { abrirChangelog(); },
     });
   }
 
@@ -234,9 +236,10 @@
     });
   }
 
-  function abrirChangelog() {
+  function abrirChangelog(opcoes) {
     var V = global.RAMAVersion;
     if (!V) return;
+    var novidade = !!(opcoes && opcoes.novidade);
 
     var registros = V.changelog.map(function (r, i) {
       var secoes = [];
@@ -265,14 +268,31 @@
     });
 
     global.RAMAUI.modal({
-      titulo: "Histórico de versões",
+      titulo: novidade ? "O R.A.M.A. foi atualizado" : "Histórico de versões",
       largo: true,
       conteudo: [
+        novidade
+          ? el("p", { texto: "Agora na " + V.rotulo + ". O que mudou está logo abaixo; as versões anteriores ficam recolhidas. O histórico continua no número da versão, no rodapé." })
+          : null,
         el("p.t-mini", { texto: "A versão que aparece no rodapé é sempre a do topo desta lista." }),
         el("div.pilha--curta", { class: "pilha" }, registros),
       ],
       botoes: [{ rotulo: "Fechar", classe: "r-botao--principal" }],
     });
+  }
+
+  /* A primeira página aberta depois de uma atualização começa pelo
+     histórico (v2.49.2). Uma vez por versão e por aparelho: abrir já
+     conta como visto. Sem armazenamento, não abre — senão abriria em
+     toda página. */
+  function novidadesDaVersao() {
+    var V = global.RAMAVersion;
+    if (!V) return;
+    try {
+      if (localStorage.getItem(CHAVE_VERSAO_VISTA) === V.numero) return;
+      localStorage.setItem(CHAVE_VERSAO_VISTA, V.numero);
+    } catch (e) { return; }
+    abrirChangelog({ novidade: true });
   }
 
   /* =================================================================
@@ -347,6 +367,9 @@
         var casca = o.semCasca
           ? { cabecalho: null, conteudo: U.$("#conteudo") }
           : montar({ secao: secao, agente: agente });
+        /* Na ficha embutida no combate (semCasca), não: quem avisa é a
+           página de fora. */
+        if (!o.semCasca) novidadesDaVersao();
         try {
           await aoPronto(agente, casca, respostas || []);
         } catch (e) {

@@ -964,10 +964,10 @@ var PREFERENCIAS_ACEITAS = {
   /* v2.35: como a página Personagens mostra as pastas. */
   exibicaoPastas: ['abas', 'icones'],
   /* v2.49: o estilo da interface (a linguagem visual, não as cores). Sem
-     escolha gravada, vale o Modern20. */
+     escolha gravada, vale o Legacy (v2.49.2). */
   estiloInterface: ['legacy', 'modern20'],
 };
-var PREFERENCIAS_PADRAO = { tema: 'sistema', exibicaoPastas: 'abas', estiloInterface: 'modern20' };
+var PREFERENCIAS_PADRAO = { tema: 'sistema', exibicaoPastas: 'abas', estiloInterface: 'legacy' };
 /* Preferências estruturadas (v2.36): cada uma com a sua validação, que
    devolve o valor limpo ou null (recusa). */
 var PREFERENCIAS_ESTRUTURADAS = {

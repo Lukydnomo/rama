@@ -276,7 +276,7 @@ apresentação: pasta aberta, busca e filtros continuam no endereço da página,
 nada da organização (pastas, sistema das fichas) muda com ela.
 
 `preferenciasJson.estiloInterface` (v2.49) é o estilo da interface da conta:
-`"modern20"` (padrão; ausente vale isto) ou `"legacy"` (a aparência da v2.48.4).
+`"legacy"` (a aparência da v2.48.4; padrão desde a v2.49.2, ausente vale isto) ou `"modern20"`.
 É linguagem visual, não cor — o tema continua em `tema`/`temas`. Mesmo remendo,
 e uma cópia por conta no navegador (`rama.interface.<userId>`), lida no `<head>`
 de cada página para pintar o estilo certo antes da primeira pintura. Cada pessoa

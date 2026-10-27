@@ -2,12 +2,13 @@
 
 O R.A.M.A. tem dois estilos de interface, à escolha de cada conta:
 
-- **Modern20** — a identidade atual e o padrão de quem ainda não escolheu.
+- **Modern20** — a identidade nova, à escolha no Perfil.
   Ferramenta de mesa: letra de leitura (a sem serifa do sistema), números com
   algarismos de largura fixa, cantos leves, superfícies separadas por traço
   discreto, sombra só no que flutua, cor com função (recurso, estado, destaque).
 - **Legacy** — a aparência da v2.48.4, exatamente: fonte pixel, caixa-alta,
-  traço fino, seleção invertida e o véu de tela antiga.
+  traço fino, seleção invertida e o véu de tela antiga. É o padrão de quem
+  ainda não escolheu (desde a v2.49.2; na v2.49.0 e na v2.49.1 era o Modern20).
 
 O estilo é **linguagem visual**, não cor. Claro, Escuro, Sistema, os temas
 personalizados da conta e o tema próprio de uma ficha continuam definindo as
@@ -37,14 +38,14 @@ nem lista de temas.
 
 | Onde | O quê |
 |---|---|
-| Planilha | `PERFIS.preferenciasJson.estiloInterface`: `"legacy"` ou `"modern20"`; ausente vale `"modern20"` |
+| Planilha | `PERFIS.preferenciasJson.estiloInterface`: `"legacy"` ou `"modern20"`; ausente vale `"legacy"` |
 | Sessão | `login`, `sessao` e `ler_perfil` devolvem `preferencias.estiloInterface` |
 | Navegador | `rama.interface.<userId>`: cópia **por conta**, só para pintar antes da sessão responder |
 
 - `js/interface.js` roda no `<head>` de toda página, logo depois de `tema.js`
   e antes das folhas: lê a conta guardada e o cache dela e põe
   `data-interface` no `<html>` antes da primeira pintura. Sem conta, sem cache
-  ou com valor desconhecido, vale Modern20.
+  ou com valor desconhecido, vale Legacy.
 - `auth.js` sincroniza a cada login e retomada; sair volta ao padrão sem apagar
   o cache da conta. Trocar de conta nunca herda o estilo da anterior.
 - Cada pessoa vê o **próprio** estilo: abrir a ficha ou a campanha de outra

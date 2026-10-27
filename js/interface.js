@@ -21,7 +21,7 @@
    - a CONTA manda: o valor chega com a sessão
      (agente.preferencias.estiloInterface) e fica num cache local POR
      CONTA (rama.interface.<id>), que só antecipa a próxima abertura. Sem
-     conta, ou com valor desconhecido, vale o padrão: Modern20. Trocar de
+     conta, ou com valor desconhecido, vale o padrão: Legacy (v2.49.2). Trocar de
      conta nunca herda o estilo da anterior;
    - cada pessoa vê o PRÓPRIO estilo: abrir a ficha ou a campanha de outra
      conta não troca nada aqui;
@@ -44,7 +44,7 @@
   "use strict";
 
   var ESTILOS = ["legacy", "modern20"];
-  var PADRAO = "modern20";
+  var PADRAO = "legacy";
   var NOMES = { legacy: "Legacy", modern20: "Modern20" };
   var CHAVE_AGENTE = "rama.sessao.agente";
   var PREFIXO = "rama.interface.";

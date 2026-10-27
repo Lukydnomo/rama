@@ -53,7 +53,7 @@
 
   var NOMES = { sistema: "Seguir o aparelho", claro: "Claro", escuro: "Escuro", conta: "Usar o tema da conta" };
   var DESCRICOES_ESTILO = {
-    modern20: "A identidade atual: leitura confortável, cantos leves e números em destaque.",
+    modern20: "A identidade nova: leitura confortável, cantos leves e números em destaque.",
     legacy: "O visual clássico do R.A.M.A.: fonte pixel, caixa-alta e efeito de tela antiga.",
   };
   var aberto = null;
@@ -489,7 +489,7 @@
        alto do editor da conta. A miniatura desenha o estilo dela, seja
        qual for o que está na tela (css/interface.css). */
     function blocoDoEstilo() {
-      var opcoes = I.ESTILOS.slice().reverse().map(function (v) {
+      var opcoes = I.ESTILOS.map(function (v) {
         var marcada = estilo === v;
         var entrada = el("input", {
           type: "radio", name: grupoEstilo, value: v, checked: marcada,
