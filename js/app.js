@@ -142,13 +142,16 @@
     var estreito = global.matchMedia && global.matchMedia("(max-width: 760px)").matches;
     lista.hidden = !!estreito;
 
+    /* Feedback mora aqui: o menu do agente existe em toda página, no
+       desktop e no celular, e não cobre nada da tela até ser aberto. */
     var menuAgente = global.RAMAUI.menu([
-      { rotulo: "Perfil", aoClicar: function () { location.href = U.url("perfil/"); } },
-      { rotulo: preferencias().efeitos ? "Desligar efeitos" : "Ligar efeitos",
+      { rotulo: "Perfil", icone: "perfil", aoClicar: function () { location.href = U.url("perfil/"); } },
+      { rotulo: preferencias().efeitos ? "Desligar efeitos" : "Ligar efeitos", icone: "tela",
         aoClicar: function () { definirEfeitos(!preferencias().efeitos); location.reload(); } },
+      global.RAMAFeedback ? { rotulo: "Feedback", icone: "balao", aoClicar: function () { global.RAMAFeedback.abrir(); } } : null,
       "separador",
-      { rotulo: "Sair", perigo: true, aoClicar: confirmarSaida },
-    ], { rotulo: "Opções do agente", icone: "tresPontos" });
+      { rotulo: "Sair", icone: "sair", perigo: true, aoClicar: confirmarSaida },
+    ].filter(Boolean), { rotulo: "Opções do agente", icone: "tresPontos" });
 
     var cabecalho = el("header.app-topo", {}, [
       el("div.app-topo__faixa", {}, [

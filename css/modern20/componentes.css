@@ -1062,6 +1062,18 @@
   /* O seletor de estilo (css/interface.css), na forma do Modern20. */
   & .estilo-opcao { border-radius: var(--m20-raio-cartao); }
   & .estilo-opcao__selo { border-radius: 5px; }
+
+  /* A janela de feedback (js/feedback.js). */
+  & .feedback-tipo { border-radius: var(--m20-raio-cartao); border-color: var(--m20-borda); }
+  & .feedback-tipo:hover { background: var(--m20-realce); }
+  & .feedback-tipo--marcado { background: var(--m20-selecao-suave); border-color: var(--cor-selecao); box-shadow: inset 0 0 0 1px var(--cor-selecao); }
+  & .feedback-tipo--marcado .feedback-tipo__icone { color: var(--cor-selecao); }
+  & .feedback-tipo__nome { font-weight: 600; }
+  & .feedback-bug { border-left-color: var(--m20-borda); }
+  & .feedback-falha { border: 0; border-radius: var(--m20-raio-cartao); background: var(--m20-erro-suave); box-shadow: inset 3px 0 0 var(--cor-erro); }
+  & .feedback-falha__titulo { text-transform: none; letter-spacing: 0; font-size: var(--texto-base); }
+  & .feedback-sucesso { border: 0; border-radius: var(--m20-raio-cartao); background: var(--m20-ok-suave); box-shadow: inset 3px 0 0 var(--cor-ok); }
+  & .r-menu__item svg { flex: 0 0 auto; opacity: 0.8; }
 }
 
 /* ---------- movimento ---------- */

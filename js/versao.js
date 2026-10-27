@@ -118,6 +118,29 @@
 
   var CHANGELOG = [
     {
+      versao: "2.50.0",
+      codinome: "OUVIDORIA",
+      data: "27/10/2026",
+      mudancas: {
+        "Adicionado": [
+          "Feedback: no menu do agente (os três pontos ao lado do seu nome, em toda página), envie uma sugestão de melhoria, relate um bug ou deixe outra opinião sem sair do site. A mensagem chega a um canal da equipe do R.A.M.A. no Discord.",
+          "No relato de bug aparecem, opcionais, os passos para reproduzir, o comportamento esperado e o observado. A versão do site e a página de onde você escreveu (por exemplo, “Ficha — Inventário”) vão junto; a data e a hora também.",
+          "Você escolhe se o seu nome aparece na mensagem. Sem marcar, ela chega como Anônimo — e nada da sua ficha, das suas campanhas ou da sua conta vai junto.",
+        ],
+        "Melhorado": [
+          "Escolher um item num menu devolve o foco ao botão do menu: quem usa o teclado continua de onde estava quando a janela aberta por ele fecha.",
+        ],
+        "Visual": [
+          "Os itens do menu do agente ganharam ícones (Perfil, efeitos, Feedback e Sair), no Legacy e no Modern20.",
+        ],
+        "Técnico": [
+          "Ação nova `enviar_feedback`, em arquivo novo (`backend/Feedback.gs`), anunciada ao núcleo por `rotasDoFeedback()`. O endereço do webhook mora só na propriedade do script `RAMA_FEEDBACK_WEBHOOK`; o navegador nunca fala com o Discord. Sem a propriedade, a ação responde `feedback_indisponivel`.",
+          "O servidor confere tudo de novo: sessão, categoria, tamanhos (texto grande é recusado, nunca cortado), menções desarmadas (`allowed_mentions` vazio) e só responde sucesso quando o Discord confirma a mensagem (`?wait=true`). Freio por conta (um a cada 30 s, 8 por hora) e do canal (60 por hora) no CacheService, com a trava só pelo instante de contar; envio que falha não conta, e o mesmo id de operação não posta duas vezes. Nada é gravado na planilha.",
+          "Testes: 108 novos no backend (1617), com o Discord simulado; 89 em `testes/executar-feedback.js` (validação, pedido, página de origem, um envio por vez, mensagens, limites iguais aos do servidor, costura com o site).",
+        ],
+      },
+    },
+    {
       versao: "2.49.2",
       codinome: "ARAUTO",
       data: "27/10/2026",

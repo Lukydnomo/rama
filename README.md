@@ -63,6 +63,7 @@ preferências de tela — nunca é tratado como banco.
     importar.js         janela de importação com prévia
     ui.js               avisos, janelas, menus, indicadores, recolhível
     app.js              casca: cabeçalho, navegação, preferências, changelog
+    feedback.js         a janela de Feedback do menu do agente (envio pelo servidor)
     versao.js           FONTE ÚNICA da versão e do changelog
     habilidades.js      modelo e árvore recursiva de habilidades
     organizar.js        o que muda de lugar ao reorganizar uma lista (filtro, pastas, grupos)
@@ -101,6 +102,8 @@ preferências de tela — nunca é tratado como banco.
     Dados.gs            esquema das abas e acesso ao Sheets
     Codigo.gs           núcleo: sessão, personagens, homebrew, perfil
     Campanhas.gs        campanhas, rolagens, documentos, notas, combates
+    Cris.gs             leitura de ficha pública do CRIS (opcional)
+    Feedback.gs         feedback entregue num canal do Discord (opcional)
     appsscript.json     manifesto do projeto
 
   docs/
@@ -319,6 +322,18 @@ cena, e outro combate na mesma cena continuando a conta; as condições alheias
 seguindo "Esconder status dos jogadores" nos cartões e no combate, sem eventos; e
 o PD no resumo, no painel e no ajuste rápido. As regras de contagem do servidor e
 as do navegador rodam os mesmos 300 casos sorteados e dão o mesmo resultado.
+
+**Feedback** — 89 verificações, sem navegador e sem rede: validação, o pedido
+que vai ao servidor, a página de origem (sem id nem nome de personagem), um
+envio por vez com o mesmo id de operação ao repetir, as mensagens de erro, os
+limites iguais aos de `backend/Feedback.gs` e a costura com o menu, as páginas e
+as folhas de estilo. O lado do servidor (Discord simulado: payload, menções,
+tamanhos, respostas 200/204/429/4xx/5xx, rede, freio, repetição) está em
+`testes/feedback-backend.js`, dentro de `executar-backend.js`:
+
+```bash
+deno run --allow-read testes/executar-feedback.js
+```
 
 **Transporte do frontend e carga das páginas** — 228 verificações:
 
@@ -577,6 +592,44 @@ de planilha ou qualquer segredo — este arquivo é público.
 Abra o site, entre, vá em **Perfil → Testar conexão**. Ele mostra o tempo de
 resposta e o nome da planilha.
 
+### 7. Feedback pelo Discord (opcional)
+
+O item **Feedback** do menu do agente entrega cada mensagem num canal do
+Discord, por um webhook. O endereço do webhook é um segredo — quem o tem publica
+no canal — e por isso mora **só** nas propriedades do script: nunca no
+`config.js`, no HTML, numa resposta da API ou no log.
+
+1. **Criar o webhook.** No Discord: Configurações do servidor (ou do canal) →
+   **Integrações → Webhooks → Novo webhook**. Escolha o canal que vai receber o
+   feedback (de preferência um canal só da equipe) e clique em **Copiar URL do
+   webhook**. Ela tem a forma `https://discord.com/api/webhooks/{id}/{token}`.
+2. **Instalar o arquivo.** No Apps Script, crie um arquivo chamado
+   **`Feedback`** (botão `+` ao lado de Arquivos) e cole `backend/Feedback.gs`.
+   Confira se o `Codigo.gs` é o desta versão (é ele que anuncia a ação) e se o
+   manifesto tem o escopo `script.external_request` (o `appsscript.json` do
+   projeto já tem).
+3. **Guardar o endereço.** Configurações do projeto → **Propriedades do script**
+   → adicione a chave **`RAMA_FEEDBACK_WEBHOOK`** com a URL copiada, sem espaços.
+   Valor que não tem o formato de um webhook do Discord é ignorado (a ação
+   responde como não configurada).
+4. **Publicar.** Implantar → Gerenciar implantações → editar → **Nova versão**.
+   Na primeira vez, o Google pede para autorizar "conectar a um serviço
+   externo" — é o `UrlFetchApp` falando com o Discord.
+5. **Testar.** No site, menu do agente → **Feedback**, escolha "Outro
+   feedback", escreva um assunto e uma descrição e envie. O site só mostra
+   "Feedback enviado" depois de o Discord confirmar a mensagem; ela deve aparecer
+   no canal com o tipo, "Anônimo" (ou o seu nome, se marcou), a versão e a
+   página.
+
+Sem a propriedade, a janela continua lá, e o envio responde "Feedback
+indisponível" sem mostrar detalhe nenhum. Para trocar ou desligar, edite ou apague
+a propriedade — não é preciso nova implantação para isso. Se o webhook for
+apagado no Discord, o envio também passa a responder "indisponível", e o log de
+execuções do Apps Script registra o código HTTP (nunca o endereço nem o texto).
+
+Limites, no servidor: um envio a cada 30 segundos e 8 por hora por conta, 60 por
+hora no total; envio que falha não conta. Ficam no topo de `backend/Feedback.gs`.
+
 ---
 
 ## Publicar no GitHub Pages
@@ -592,6 +645,16 @@ próprio `<script src>`, então funciona debaixo de subpasta sem ajuste.
 segredo nenhum — ele os lê das Script Properties. Publicá-lo não expõe nada.
 
 ### Atualizar o backend
+
+**v2.50.0 — OUVIDORIA:** o Feedback do menu do agente. **Crie** o arquivo
+`Feedback` no Apps Script com `backend/Feedback.gs`, **troque** o `Codigo.gs`
+(ele anuncia a ação nova), adicione a propriedade **`RAMA_FEEDBACK_WEBHOOK`** com
+a URL do webhook do Discord e crie uma **nova versão** da implantação (o passo a
+passo está em "7. Feedback pelo Discord"). Publique o site — inclusive o arquivo
+novo `js/feedback.js` e os sete `index.html`, que passam a carregá-lo. Sem
+`setupRama()`, sem aba nova e sem migração. Com o site novo e o Apps Script
+antigo, a janela abre e o envio explica que o servidor precisa ser atualizado;
+sem a propriedade, que o feedback não está configurado.
 
 **v2.49.2 — ARAUTO:** o Legacy volta a ser o estilo padrão, e a primeira página
 aberta depois de uma atualização mostra o histórico de versões. **Troque** o
@@ -1286,7 +1349,7 @@ Três números diferentes, que não se misturam:
 
 | | Onde | O que é |
 |---|---|---|
-| versão do aplicativo | `js/versao.js` | o que a pessoa vê: v2.49.2 |
+| versão do aplicativo | `js/versao.js` | o que a pessoa vê: v2.50.0 |
 | `schemaVersion` | `js/ficha.js` | o formato da FICHA |
 | `versaoFormato` | `js/config.js` | o formato dos arquivos de importação |
 

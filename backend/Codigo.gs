@@ -311,6 +311,13 @@ function rotaDe(acao) {
       var doCris = rotasDoCris();
       Object.keys(doCris).forEach(function (chave) { CACHE_ROTAS[chave] = doCris[chave]; });
     }
+
+    /* Feedback.gs: o envio de feedback ao Discord. Mesmo contrato do
+       Cris.gs — sem o arquivo, 'acao_desconhecida'. */
+    if (typeof rotasDoFeedback === 'function') {
+      var doFeedback = rotasDoFeedback();
+      Object.keys(doFeedback).forEach(function (chave) { CACHE_ROTAS[chave] = doFeedback[chave]; });
+    }
   }
   return CACHE_ROTAS[acao] || null;
 }

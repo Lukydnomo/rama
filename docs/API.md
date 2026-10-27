@@ -1,5 +1,54 @@
 # A API
 
+## Feedback — v2.50
+
+Uma ação nova, em arquivo novo (`backend/Feedback.gs`), anunciada ao núcleo por
+`rotasDoFeedback()` — o mesmo contrato do `Cris.gs`: sem o arquivo, a ação
+responde `acao_desconhecida`.
+
+#### `enviar_feedback`
+
+```jsonc
+{ acao: "enviar_feedback", token: "...", operacaoId: "op-…",
+  dados: { categoria: "sugestao" | "bug" | "outro",
+           assunto: "…",            // 3 a 120 caracteres, uma linha
+           descricao: "…",          // 10 a 3000
+           passos: "…", esperado: "…", observado: "…",   // só num bug, opcionais (1000, 500, 500)
+           versao: "2.50.0",        // fora do formato X.Y.Z vira "não informada"
+           pagina: "Ficha — Inventário",                   // rótulo da interface, até 80
+           identificar: false } }    // só true mostra o nome do agente
+→ { ok: true }
+```
+
+- **Sessão obrigatória** (no `doPost`, como toda ação não pública). A conta é
+  usada para o freio e, só com `identificar: true`, para o nome; o id, o login e
+  o token nunca vão ao Discord.
+- **Validação no servidor**: só as chaves acima são lidas; o resto do pedido é
+  ignorado. Texto fora do limite é **recusado** (`feedback_invalido`, com
+  `campo`, `motivo` e `limite`/`minimo`), nunca cortado. Controle e caracteres
+  invisíveis de direção saem; quebras de linha ficam.
+- **Mensagem**: um embed com cabeçalho fixo, título = assunto, descrição =
+  descrição, campos Tipo, Usuário (nome ou "Anônimo"), Versão, Página e, num bug,
+  só os extras preenchidos; rodapé com data e hora de Brasília; cor por
+  categoria. `username` fixo e `allowed_mentions: { parse: [] }`; `@everyone`,
+  `@here` e menções de pessoa, cargo e canal ganham um espaço invisível. Os
+  limites somados cabem no embed do Discord (6000); se a formatação passar de
+  algum teto, o envio é recusado com `motivo: "formatado"`.
+- **Entrega**: `POST` em JSON para o webhook com `?wait=true`, sem seguir
+  redirecionamento. Sucesso só com 200 + mensagem criada (ou 204). 429 →
+  `feedback_ocupado` com `segundos`; 401/403/404 → `feedback_indisponivel`;
+  outro código, resposta ilegível ou falha de rede → `feedback_falhou`.
+- **Freio**: por conta, um envio a cada 30 s e 8 por hora; no canal, 60 por
+  hora → `feedback_limite` com `segundos` (e `geral: true` no do canal). Um envio
+  da mesma conta em andamento → `feedback_em_andamento`. CacheService, com a trava
+  do script só para contar (sem ela → `ocupado`, nada enviado). Envio que falha
+  não conta.
+- **Repetição**: `operacaoId` (`op-…`) entregue fica lembrado por 6 h, por
+  conta; a mesma operação de novo responde `{ ok: true }` sem repostar. O site
+  não repete sozinho — só a pessoa, em "Tentar novamente", com o mesmo id
+  enquanto o texto não mudar.
+- Não entra no `lote`. Não grava nada na planilha.
+
 ## Arquivos Secretos 5, perigos complexos e Sincronia — v2.48
 
 - `ler_perigos { campanhaId }` — membro da campanha (espectador:
@@ -457,6 +506,12 @@ página de erro quando estoura), o `rede.js` reconhece pelo que é e converte em
 | `conflito`         | a revisão mudou; vem com `rev` e `dados`             |
 | `ocupado`          | a trava não foi obtida em 25 s                       |
 | `sem_permissao`    | você alcança a campanha, mas não esta ação nela      |
+| `feedback_invalido` | um campo do feedback foi recusado; vem com `campo` e `motivo` (`vazio`, `curto`, `longo`, `tipo`, `categoria`, `formatado`) |
+| `feedback_limite`  | freio do feedback; vem com `segundos` (e `geral: true` no limite do canal) |
+| `feedback_em_andamento` | outro envio de feedback da mesma conta ainda não terminou |
+| `feedback_ocupado` | o Discord pediu para esperar (429); vem com `segundos` |
+| `feedback_falhou`  | o Discord não confirmou a entrega (código inesperado, resposta ilegível, rede) |
+| `feedback_indisponivel` | webhook não configurado, inválido, apagado ou sem autorização de `UrlFetchApp` |
 | `instalacao_incompleta` | falta um dos três `.gs`, o cabeçalho de uma aba ficou ilegível, ou o `setupRama()` desta versão não rodou (a aba `PERSONAGENS_BLOCOS` não existe) |
 
 > **`nao_encontrado` também cobre "existe, mas é de outra conta".** Distinguir os

@@ -115,7 +115,8 @@ das folhas. Cada linha diz onde o Modern20 a trata.
 |---|---|---|
 | Entrada e sessão | portão (usuário, senha com olho), tela cheia de carregamento | layout.css |
 | Home | abertura, seções com miniaturas, "como começar", aviso | home.css |
-| Casca | cabeçalho, marca, navegação (desktop e celular), agente, menu da conta, rodapé, versão, histórico de versões | layout.css |
+| Casca | cabeçalho, marca, navegação (desktop e celular), agente, menu da conta (com ícones; Feedback desde a v2.50), rodapé, versão, histórico de versões | layout.css |
+| Feedback (v2.50) | janela do menu da conta: três tipos em cartões (uma coluna no celular), campos com contador, detalhes do bug, nome opcional, faixa de falha com "Tentar novamente", confirmação de sucesso | componentes.css |
 | Personagens | título e trilha, abas Meus/Compartilhados, pastas em abas e em ícones, painel da pasta, filtros, busca, sistema, agrupar, lista de registros, alça de arrastar, estados (pasta, compartilhado, papel) | layout.css, componentes.css |
 | Criação de ficha | tipo de ficha, criação guiada de Ordem (trilha de passos, atributos, opções, perícias), revisão | componentes.css |
 | Ficha (todas) | topo fixo, modo Normal/Edição, estado do salvamento, avisos (edição, mestre, acesso, leitura), foto, abas | ficha.css |
@@ -139,6 +140,9 @@ das folhas. Cada linha diz onde o Modern20 a trata.
   nenhum `!important`).
 - `testes/tema-backend.js` (dentro de `executar-backend.js`) — o servidor
   aceita, devolve e recusa `estiloInterface`.
+- `deno run --allow-read testes/executar-feedback.js` — a janela de Feedback
+  tem estilo no Legacy sem regra de Modern20, o ajuste do Modern20 fica no escopo
+  dele e as cores vêm só dos papéis do tema (claro, escuro e personalizados).
 - **Regressão do Legacy:** a v2.48.4 servida lado a lado
   (`testes/servidor-local.js --site <pasta da v2.48.4>`) e, em cada página, a
   comparação dos estilos calculados de todos os elementos (55 propriedades e os

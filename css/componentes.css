@@ -3485,3 +3485,145 @@ html.arrastando * {
   /* A prévia compacta: o essencial de cada papel. */
   .tema-previa__secundaria { display: none; }
 }
+
+/* =====================================================================
+   FEEDBACK (js/feedback.js)
+   ---------------------------------------------------------------------
+   A janela do menu do agente. Só as classes de sempre (campo, ajuda,
+   marca, botão) e o mínimo próprio: os três tipos, o contador e as
+   faixas de falha e de sucesso. Cores só pelos papéis do tema.
+   ===================================================================== */
+
+.feedback,
+.feedback-formulario {
+  display: flex;
+  flex-direction: column;
+  gap: var(--e4);
+  min-width: 0;
+}
+
+.feedback-formulario,
+.feedback-tipos,
+.feedback-bug {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
+
+.feedback-tipos legend,
+.feedback-bug legend { padding: 0; margin-bottom: var(--e2); }
+
+.feedback-tipos__grade {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--e2);
+}
+
+.feedback-tipo {
+  position: relative;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: start;
+  gap: var(--e2);
+  min-height: var(--alvo-toque);
+  padding: var(--e2) var(--e3);
+  background: var(--fundo-superficie);
+  border: var(--borda) solid var(--cor-traco-fraca);
+  cursor: pointer;
+}
+.feedback-tipo:hover { border-color: var(--cor-traco-media); }
+.feedback-tipo--marcado {
+  border-color: var(--cor-traco-forte);
+  box-shadow: inset 0 0 0 1px var(--cor-traco-forte);
+}
+/* O anel só para o teclado: com o ponteiro, o cartão em foco (o primeiro,
+   quando a janela abre) não pode parecer um segundo marcado. */
+.feedback-tipo:has(input:focus-visible) { outline: 2px solid var(--cor-foco); outline-offset: 2px; }
+/* O rádio continua sendo o controle (teclado: setas), só fica invisível:
+   o cartão inteiro é a marca. */
+.feedback-tipo input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+.feedback-tipo__icone { display: inline-flex; padding-top: 1px; color: var(--cor-texto-2); }
+.feedback-tipo--marcado .feedback-tipo__icone { color: var(--cor-texto); }
+.feedback-tipo__textos { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.feedback-tipo__nome { color: var(--cor-texto); font-weight: 700; }
+.feedback-tipo__descricao { color: var(--cor-texto-3); font-size: var(--texto-mini); line-height: 1.45; }
+.feedback-tipos--erro .feedback-tipo { border-color: var(--cor-erro); }
+.feedback-tipos .r-ajuda--erro { margin-top: var(--e1); }
+
+.feedback-bug {
+  display: flex;
+  flex-direction: column;
+  gap: var(--e3);
+  padding-left: var(--e3);
+  border-left: var(--borda) solid var(--cor-traco-fraca);
+}
+.feedback-bug[hidden] { display: none; }
+
+.feedback-campo__topo {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--e2);
+}
+
+.feedback-contador {
+  flex: 0 0 auto;
+  font-family: var(--fonte-mini);
+  font-size: var(--texto-mini);
+  font-variant-numeric: tabular-nums;
+  color: var(--cor-texto-3);
+}
+.feedback-contador--perto { color: var(--cor-aviso); }
+.feedback-contador--passou { color: var(--cor-erro); font-weight: 700; }
+
+.feedback-identidade { display: flex; flex-direction: column; gap: 0; }
+.feedback-identidade .r-marca { align-items: flex-start; padding-top: var(--e2); min-height: 0; }
+.feedback-identidade .r-marca input { margin-top: 3px; }
+
+.feedback-contexto { color: var(--cor-texto-3); }
+
+.feedback-falha {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--e2);
+  padding: var(--e3);
+  border: var(--borda) solid var(--cor-erro);
+  border-left-width: 4px;
+}
+.feedback-falha[hidden] { display: none; }
+.feedback-falha__titulo {
+  margin: 0;
+  color: var(--cor-erro);
+  font-family: var(--fonte-mini);
+  font-size: var(--texto-mini);
+  font-weight: 700;
+  letter-spacing: var(--espaco-letra-titulo);
+  text-transform: uppercase;
+}
+.feedback-falha__texto { margin: 0; }
+
+.feedback-sucesso {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--e3);
+  padding: var(--e3);
+  border: var(--borda) solid var(--cor-ok);
+  border-left-width: 4px;
+}
+.feedback-sucesso p { margin: 0; }
+.feedback-sucesso .t-secao { margin-bottom: var(--e1); }
+.feedback-sucesso__marca { display: inline-flex; color: var(--cor-ok); }
+
+@media (max-width: 640px) {
+  .feedback-tipos__grade { grid-template-columns: minmax(0, 1fr); }
+}

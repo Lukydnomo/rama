@@ -13,7 +13,7 @@
 
 import { instalarAmbiente, chamar, comoOSheetsGuarda } from "./apps-script-simulado.js";
 
-const ARQUIVOS = ["backend/Dados.gs", "backend/Codigo.gs", "backend/Campanhas.gs", "backend/Cris.gs"];
+const ARQUIVOS = ["backend/Dados.gs", "backend/Codigo.gs", "backend/Campanhas.gs", "backend/Cris.gs", "backend/Feedback.gs"];
 
 /* O simulador silencia o console para o backend não encher a saída com
    os avisos do setupRama. O relatório dos testes precisa de uma porta
@@ -4837,6 +4837,8 @@ const { testarDadosBackend } = await import("./dados-backend.js");
 await testarDadosBackend({ t, preparar, novaConta, comoFn });
 const { testarCrisBackend } = await import("./cris-backend.js");
 await testarCrisBackend({ t, preparar, novaConta, comoFn, chamar });
+const { testarFeedbackBackend } = await import("./feedback-backend.js");
+await testarFeedbackBackend({ t, preparar, novaConta, comoFn, chamar, ambiente });
 const { testarCompartilhamentoBackend } = await import("./compartilhamento-backend.js");
 testarCompartilhamentoBackend({ t, preparar, novaConta, comoFn });
 const { testarAs5Backend } = await import("./as5-backend.js");

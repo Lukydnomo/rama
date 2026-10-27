@@ -26,6 +26,10 @@
      /__backend                 contadores do backend (chamadas ao Sheets,
                                 células, leituras) desde a partida
      /__backend/zerar           zera esses contadores
+     /__feedback?modo=…         o Discord SIMULADO do feedback: ok, 429,
+                                500, 404, rede ou sem-webhook (padrão:
+                                sem-webhook, como uma implantação nova);
+                                devolve as mensagens que ele "recebeu"
 
    Não é a implantação: a planilha é um array em memória, sem latência.
    Serve para conferir comportamento e CONTAR o que acontece — nunca
@@ -51,13 +55,27 @@ const urlDaPasta = (p) => absoluto(p) ? new URL("file:///" + p.replace(/\\/g, "/
 const fichas = await fichasParaMedir();
 
 const ambiente = instalarAmbiente(globalThis);
-for (const arq of ["Dados.gs", "Codigo.gs", "Campanhas.gs", "Cris.gs"]) {
+for (const arq of ["Dados.gs", "Codigo.gs", "Campanhas.gs", "Cris.gs", "Feedback.gs"]) {
   try {
     (0, eval)(await Deno.readTextFile(new URL(arq, urlDaPasta(PASTA_BACKEND))));
   } catch (e) {
-    if (arq !== "Cris.gs") throw e;
+    if (arq !== "Cris.gs" && arq !== "Feedback.gs") throw e;
   }
 }
+
+/* O Discord do feedback, SIMULADO: nada sai desta máquina. O endereço
+   abaixo só tem o formato de um webhook; não existe. */
+const WEBHOOK_SIMULADO = "https://discord.com/api/webhooks/000000000000000000/simulado-local-nao-existe-0000";
+const discord = { modo: "sem-webhook", recebidas: [] };
+globalThis.UrlFetchApp = {
+  fetch(endereco, opcoes) {
+    if (discord.modo === "rede") throw new Error("Address unavailable: " + endereco);
+    const status = { ok: 200, "429": 429, "500": 500, "404": 404 }[discord.modo] || 200;
+    if (status === 200) discord.recebidas.push({ corpo: JSON.parse(opcoes.payload) });
+    const corpo = status === 200 ? JSON.stringify({ id: String(discord.recebidas.length) }) : status === 429 ? JSON.stringify({ retry_after: 3.2 }) : "{}";
+    return { getResponseCode: () => status, getContentText: () => corpo, getHeaders: () => ({}) };
+  },
+};
 ambiente.propriedades.set("RAMA_ITERACOES", "50");
 setupRama();
 gerarPepper();
@@ -119,6 +137,17 @@ Deno.serve({ port: PORTA, onListen: () => console.log("R.A.M.A. local em http://
   if (url.pathname === "/__backend/zerar") {
     Object.assign(somaBackend, { requisicoes: 0, porAcao: {}, chamadas: 0, leituras: 0, escritas: 0, celulas: 0 });
     return json({ ok: true });
+  }
+  if (url.pathname === "/__feedback") {
+    const modo = url.searchParams.get("modo");
+    if (modo) {
+      discord.modo = modo;
+      if (modo === "sem-webhook") ambiente.propriedades.delete("RAMA_FEEDBACK_WEBHOOK");
+      else ambiente.propriedades.set("RAMA_FEEDBACK_WEBHOOK", WEBHOOK_SIMULADO);
+    }
+    /* &zerar=1 devolve o freio do feedback a zero, para o roteiro de teste. */
+    if (url.searchParams.get("zerar")) for (const k of [...ambiente.cache.keys()]) if (k.startsWith("rama.feedback.")) ambiente.cache.delete(k);
+    return json({ modo: discord.modo, recebidas: discord.recebidas });
   }
   if (url.pathname === "/__como" && req.method === "POST") {
     const quem = url.searchParams.get("conta") || "editora";

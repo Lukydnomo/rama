@@ -550,6 +550,17 @@ export function instalarAmbiente(global) {
     },
 
     getUuid: () => randomUUID(),
+
+    /* O bastante do formato do Java para o que o backend usa (dd, MM,
+       yyyy, HH, mm e texto entre aspas simples), no fuso pedido. */
+    formatDate(data, fuso, padrao) {
+      const p = Object.fromEntries(new Intl.DateTimeFormat("en-GB", {
+        timeZone: fuso, year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hourCycle: "h23",
+      }).formatToParts(data).map((x) => [x.type, x.value]));
+      const troca = { dd: p.day, MM: p.month, yyyy: p.year, HH: p.hour, mm: p.minute };
+      return String(padrao).split(/('[^']*')/).map((parte) =>
+        parte.startsWith("'") ? parte.slice(1, -1) : parte.replace(/yyyy|dd|MM|HH|mm/g, (k) => troca[k])).join("");
+    },
   };
 
   global.ContentService = {

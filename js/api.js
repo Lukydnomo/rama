@@ -600,6 +600,13 @@
   /* Temas de dados (v2.40). `operacaoId` é o da intenção: quem tenta de
      novo depois de uma falha manda o MESMO, e o servidor reconhece a
      concessão já feita. */
+  /* Feedback (backend/Feedback.gs). Uma tentativa só — repetir quem
+     decide é a pessoa, com o MESMO id de operação: o servidor reconhece
+     a segunda chegada de um envio já entregue e não posta de novo. */
+  function enviarFeedback(dados, operacaoId) {
+    return post({ acao: "enviar_feedback", dados: dados, operacaoId: operacaoId });
+  }
+
   function resgatarCodigo(codigo, operacaoId) {
     return post({ acao: "resgatar_codigo", codigo: String(codigo || ""), operacaoId: operacaoId || novaOperacao() });
   }
@@ -937,6 +944,31 @@
       titulo: "LIMITE DE PASTAS",
       texto: "Esta conta já tem 100 pastas. Exclua uma que não use mais antes de criar outra.",
     },
+    /* Feedback. Nenhuma frase mostra endereço nem detalhe do Discord. */
+    feedback_invalido: {
+      titulo: "FEEDBACK RECUSADO",
+      texto: "O servidor não aceitou um dos campos. Confira o que está destacado.",
+    },
+    feedback_limite: {
+      titulo: "MUITOS ENVIOS EM POUCO TEMPO",
+      texto: "Espere um pouco antes de mandar outro feedback.",
+    },
+    feedback_em_andamento: {
+      titulo: "ENVIO EM ANDAMENTO",
+      texto: "Um envio seu ainda está sendo concluído. Espere alguns segundos e tente de novo.",
+    },
+    feedback_ocupado: {
+      titulo: "CANAL OCUPADO",
+      texto: "O canal de feedback está recebendo muitas mensagens agora. Espere alguns segundos e tente de novo.",
+    },
+    feedback_falhou: {
+      titulo: "O FEEDBACK NÃO FOI ENTREGUE",
+      texto: "O servidor não conseguiu confirmar a entrega. Tente de novo em instantes.",
+    },
+    feedback_indisponivel: {
+      titulo: "FEEDBACK INDISPONÍVEL",
+      texto: "O envio de feedback não está configurado neste servidor agora. Avise quem administra o R.A.M.A.",
+    },
     acao_desconhecida: {
       titulo: "OPERAÇÃO NÃO RECONHECIDA",
       texto: "Esta versão do site pediu algo que o servidor não conhece. Atualize a implantação do Apps Script.",
@@ -1033,6 +1065,7 @@
 
     lerPerfil: lerPerfil,
     resgatarCodigo: resgatarCodigo,
+    enviarFeedback: enviarFeedback,
     listarDesbloqueios: listarDesbloqueios,
     salvarPerfil: salvarPerfil,
 

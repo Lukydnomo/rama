@@ -470,7 +470,7 @@
   /* =================================================================
      MENU DE CONTEXTO
      -----------------------------------------------------------------
-     itens = [ { rotulo, aoClicar, perigo }, "separador" ]
+     itens = [ { rotulo, aoClicar, perigo, icone }, "separador" ]
      ================================================================= */
 
   var menuAberto = null;
@@ -490,14 +490,19 @@
           type: "button",
           role: "menuitem",
           class: item.perigo ? "r-menu__item--perigo" : "",
-          texto: item.rotulo,
+          texto: item.icone ? null : item.rotulo,
           onclick: function (ev) {
             ev.stopPropagation();
             ev.preventDefault();
+            /* O foco volta ao botão do menu antes da ação: uma janela
+               aberta daqui devolve o foco a ele ao fechar, e não a um
+               item que já sumiu (teclado perdido no topo da página). */
+            var focoNoMenu = lista.contains(document.activeElement);
             fechar();
+            if (focoNoMenu) gatilho.focus();
             if (item.aoClicar) item.aoClicar();
           },
-        }),
+        }, item.icone ? [simbolo(item.icone), el("span", { texto: item.rotulo })] : null),
       ]));
     });
 
@@ -744,6 +749,14 @@
     pasta: "M2 4 h4 l1.5 1.5 H14 v8 H2z",
     /* Personalizar o tema (v2.36). */
     lapis: "M10.5 2.5 l3 3 L5.5 13.5 H2.5 v-3z M9 4 l3 3",
+    /* Menu do agente e feedback. */
+    perfil: "M8 2.5 a2.75 2.75 0 1 0 0.01 0 M3 14 c0-3 2.2-5 5-5 s5 2 5 5",
+    tela: "M2 3 h12 v10 h-12z M4 6 h8 M4 8.5 h8 M4 11 h8",
+    sair: "M9 2 H3 v12 h6 M7 8 h7 M11 5 l3 3 -3 3",
+    balao: "M2 3 h12 v8 h-7 l-3 3 v-3 h-2z M5 6 h6 M5 8.5 h4",
+    lampada: "M8 2 a4 4 0 0 0 -2.5 7.1 V11 h5 V9.1 A4 4 0 0 0 8 2z M6 13.5 h4",
+    inseto: "M5 6.5 h6 v4.5 a3 3 0 0 1 -6 0z M6 6.5 a2 2 0 0 1 4 0 M8 6.5 v7 M2 9 h3 M11 9 h3 M2.5 13 l2.5 -1.5 M13.5 13 l-2.5 -1.5 M3 4.5 l2 1.5 M13 4.5 l-2 1.5",
+    certo: "M2.5 8.5 L6 12 L13.5 4",
   };
 
   function simbolo(nome, tamanho) {

@@ -2,6 +2,17 @@
 
 Quem alcança o quê, e onde isso é decidido.
 
+## Feedback — v2.50
+
+| ação | quem está numa sessão | sem sessão |
+|---|---|---|
+| enviar feedback (`enviar_feedback`) | sim, dentro do freio da conta e do canal | não (`sem_token`) |
+| ver ou trocar o webhook | ninguém pelo site — só a propriedade `RAMA_FEEDBACK_WEBHOOK`, no editor do Apps Script | — |
+
+A identidade vem da sessão, nunca do pedido. O nome do agente só vai à mensagem
+com `identificar: true`; id, login e token nunca vão. A ação não lê ficha,
+campanha nem perfil, e não grava na planilha.
+
 ## Perigos complexos e Sincronia Conectiva — v2.48
 
 | ação | mestre | jogador da campanha | espectador / de fora |
