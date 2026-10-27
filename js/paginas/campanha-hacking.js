@@ -147,7 +147,12 @@
       return el("label.r-marca", {}, [
         el("input", { type: "checkbox", checked: e.ativo, onchange: function (ev) {
           var sim = ev.target.checked;
-          operar("", function (copia) { return H().ligar(copia, sim); }).then(function (ok) { if (!ok) ev.target.checked = !sim; });
+          operar("", function (copia) { return H().ligar(copia, sim); }).then(function (ok) {
+            if (!ok) { ev.target.checked = !sim; return; }
+            /* Desligada, a aba some para todos (v2.47). */
+            if (!sim) UI.aviso("Hacking desligado: a aba saiu da campanha. Nada foi apagado — para ligar de novo, Configurações → Mecânicas opcionais.", { duracao: 9000 });
+            if (ctx.definirMecanica) ctx.definirMecanica("hacking", sim);
+          });
         } }),
         el("span", { texto: "Usar a regra de Hacking nesta campanha" }),
       ]);
@@ -413,5 +418,23 @@
     return alvo;
   }
 
-  global.RAMACampanhaHacking = { aba: aba };
+  /* Ligar ou desligar a regra de fora da aba — Configurações → Mecânicas
+     opcionais (v2.47). Lê, aplica a mesma regra e grava pelo caminho de
+     sempre; um conflito relê e tenta mais uma vez. Só o mestre grava: o
+     servidor confere. */
+  async function definirAtivo(campanhaId, ativo) {
+    for (var tentativa = 0; tentativa < 2; tentativa++) {
+      var r = await global.RAMAApi.lerHacking(campanhaId);
+      if (!r.ok) return r;
+      if (!r.dados || !r.dados.mestre) return { ok: false, erro: "sem_permissao" };
+      var estado = H().normalizar(r.dados.estado);
+      if (!!estado.ativo === !!ativo) return { ok: true };
+      H().ligar(estado, ativo);
+      var g = await global.RAMAApi.salvarHacking(campanhaId, U.inteiro(r.rev, 0), "hk-" + U.uuid().replace(/-/g, "").slice(0, 20), estado);
+      if (g.ok || g.erro !== "conflito") return g;
+    }
+    return g;
+  }
+
+  global.RAMACampanhaHacking = { aba: aba, definirAtivo: definirAtivo };
 })(window);

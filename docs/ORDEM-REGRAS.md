@@ -2362,8 +2362,8 @@ coisa: existem só dentro de uma cena de hacking.
 
 ### Hacking (p. 72–73)
 
-Desligado por padrão em toda campanha; o mestre liga na aba Hacking, e só então
-os jogadores veem a aba. Não tem ligação com o Hexatombe nem com a perícia
+Desligado por padrão em toda campanha; o mestre liga em Configurações → Mecânicas
+opcionais (v2.47), e só então a aba existe — para ele e para os jogadores. Não tem ligação com o Hexatombe nem com a perícia
 Tecnologia fora da cena. Cena = sistema-alvo + DT de Hackear (vira os PS). Cada
 agente entra com o treino em Tecnologia e o Intelecto (= dados virtuais, d6).
 Turno: até duas ações, conforme o treino — Procurar Brechas e Quebrar Códigos

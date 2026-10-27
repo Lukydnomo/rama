@@ -257,9 +257,14 @@
         el("div.faixa", {}, [
           botao(e.ativo ? "Desativar o modo" : "Ativar o Hexatombe", function () {
             UI.confirmar({ titulo: e.ativo ? "Desativar o Hexatombe?" : "Ativar o Hexatombe?",
-              texto: e.ativo ? "Nada é apagado; os jogadores deixam de ver a aba." : "Os jogadores da campanha passam a ver a aba Hexatombe, só com o que é deles.",
+              texto: e.ativo ? "Nada é apagado, mas a aba some desta campanha para todos — inclusive para você. Para ligar de novo: Configurações → Mecânicas opcionais." : "Os jogadores da campanha passam a ver a aba Hexatombe, só com o que é deles.",
               rotuloConfirmar: e.ativo ? "Desativar" : "Ativar" })
-              .then(function (sim) { if (sim) operar(function (c) { return H().ligar(c, !c.ativo); }); });
+              .then(function (sim) {
+                if (!sim) return;
+                operar(function (c) { return H().ligar(c, !c.ativo); }, function () {
+                  if (ctx.definirMecanica) ctx.definirMecanica("hexatombe", memoria.estado.ativo);
+                });
+              });
           }),
           e.ativo ? el("label.ordenacao", {}, [
             el("span.ordenacao__rotulo", { texto: "Tabela de recursos" }),
@@ -702,5 +707,23 @@
     return alvo;
   }
 
-  global.RAMACampanhaHexatombe = { aba: aba };
+  /* Ligar ou desligar o modo de fora da aba — Configurações → Mecânicas
+     opcionais (v2.47). Lê o estado, aplica a mesma regra (que registra no
+     diário) e grava pelo caminho de sempre; um conflito relê e tenta mais
+     uma vez. Só o mestre grava: o servidor confere. */
+  async function definirAtivo(campanhaId, ativo) {
+    for (var tentativa = 0; tentativa < 2; tentativa++) {
+      var r = await global.RAMAApi.lerHexatombe(campanhaId);
+      if (!r.ok) return r;
+      if (!r.dados || !r.dados.mestre) return { ok: false, erro: "sem_permissao" };
+      var estado = H().normalizar(r.dados.estado);
+      if (!!estado.ativo === !!ativo) return { ok: true };
+      H().ligar(estado, ativo);
+      var g = await global.RAMAApi.salvarHexatombe(campanhaId, U.inteiro(r.rev, 0), "hx-" + U.uuid().replace(/-/g, "").slice(0, 20), estado);
+      if (g.ok || g.erro !== "conflito") return g;
+    }
+    return g;
+  }
+
+  global.RAMACampanhaHexatombe = { aba: aba, definirAtivo: definirAtivo };
 })(window);

@@ -34,10 +34,34 @@ não são renderizadas desabilitadas, simplesmente não entram na lista.
 | Rolagens | membros | histórico paginado; rolagem livre só para o mestre |
 | Documentos | membros | só os documentos liberados para você |
 | Combate | membros | só os combates liberados para você: ordem, rodada e turno; ficha do participante selecionado (só o mestre) |
+| Hexatombe | membros, **só com a mecânica ligada** | o modo de campanha do Arquivos Secretos 2 — ver [Hexatombe](#hexatombe-v230) |
+| Hacking | membros, **só com a mecânica ligada** | a regra opcional do Arquivos Secretos 4 — ver [Hacking](#hacking-v238) |
 | Notas | **mestre** | anotações privadas, gerais ou por personagem |
-| Configurações | **mestre** | nome, visibilidade, participantes, rolagens ocultas |
+| Configurações | **mestre** | nome, visibilidade, rolagens ocultas, mecânicas opcionais, participantes |
 
 O espectador de campanha pública não tem abas: vê o nome, a capa e a descrição.
+
+### Mecânicas opcionais (v2.47)
+
+Hexatombe e Hacking são **opcionais por campanha**: desligadas, as abas não existem
+para ninguém — nem para o mestre. Quem liga e desliga é o mestre, em
+**Configurações → Mecânicas opcionais**. Campanha nova começa com as duas
+desligadas.
+
+- O interruptor é o `ativo` que cada mecânica já guardava na própria aba do banco
+  (`CAMPANHA_HEXATOMBE`, `CAMPANHA_HACKING`), gravado por `salvar_hexatombe` e
+  `salvar_hacking` — que conferem que é o mestre. Não há coluna nem ação nova.
+  Antes da v2.47 o mestre via as duas abas sempre e o `ativo` só decidia o que os
+  jogadores viam; agora decide para todos.
+- **Desligar não apaga nada.** Ligar de novo volta ao estado em que estava (dia,
+  equipes, cenas, diário). Desligar o Hexatombe também fica no diário dele.
+- A mudança chega às outras janelas pela atualização automática (a gravação marca
+  a parte `campanha` da mesa). Quem estava na aba que sumiu vai para a Visão geral;
+  quem estava em outra aba só vê a tira de abas mudar — um formulário pela metade
+  fica como está.
+- **As fichas não mudam.** Cada ficha continua escolhendo se liga a regra dela
+  (Participação no Hexatombe e as outras de `js/ordem/opcionais.js`); ligar a
+  mecânica na campanha não liga nada nas fichas, e desligá-la não desliga.
 
 A campanha aberta **se atualiza sozinha** — ver
 [Atualização automática](#atualização-automática). O antigo bloco "Panorama" (as
@@ -853,8 +877,10 @@ sincronização que já existe: quando a marca `rolagens` muda, uma busca curta
 ## Hacking (v2.38)
 
 Regra opcional do Arquivos Secretos 4 (p. 72–73), desligada em toda campanha até o
-mestre ligar na aba **Hacking**. O mestre sempre vê a aba; o jogador, só com a
-regra ligada (`ler_campanha` devolve `hacking`). Não tem ligação com o Hexatombe.
+mestre ligar em **Configurações → Mecânicas opcionais**. Desde a v2.47 a aba só
+existe com a regra ligada, para todos (`ler_campanha` devolve `hacking`); desmarcar
+"Usar a regra de Hacking" dentro da aba também desliga. Não tem ligação com o
+Hexatombe.
 
 - **Mestre:** cria cenas (sistema-alvo e DT de Hackear = PS; notas só dele; PS
   visíveis ou não), põe agentes (personagem da campanha opcional, treino em
@@ -873,11 +899,12 @@ regra ligada (`ler_campanha` devolve `hacking`). Não tem ligação com o Hexato
 
 ## Hexatombe (v2.30)
 
-Aba **Hexatombe**: o mestre ativa o modo e conduz os seis dias — fase do dia,
+Aba **Hexatombe** — só com a mecânica ligada em **Configurações → Mecânicas
+opcionais** (v2.47; antes o mestre via a aba sempre). O mestre conduz os seis dias — fase do dia,
 equipes e participantes (com a ficha vinculada que recebe os lançamentos),
 sacrifícios, estigmas e herdeiros, desertores, base e melhorias, estoques e
 produção, consumo de água e comida, mapa (áreas e caminhos), teste de jornada,
 procura de recursos, encontros, intenções e a Lua de Sangue. Nada se resolve
-sozinho ao avançar o dia. Os jogadores só veem a aba com o modo ativo e só o que
+sozinho ao avançar o dia. Com o modo ativo, os jogadores veem só o que
 é deles (ver PERMISSIONS.md). As regras estão em docs/ORDEM-REGRAS.md
 ("Arquivos Secretos 2").

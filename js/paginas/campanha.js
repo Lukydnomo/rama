@@ -67,10 +67,11 @@
     { chave: "rolagens",    rotulo: "Rolagens",    secao: "RAMACampanhaRolagens" },
     { chave: "documentos",  rotulo: "Documentos",  secao: "RAMACampanhaDocumentos" },
     { chave: "combate",     rotulo: "Combate",     secao: "RAMACampanhaCombate" },
-    /* Arquivos Secretos 2 (v2.30): o mestre sempre vê; o jogador só com
-       o modo ativo (ler_campanha devolve `hexatombe`). */
+    /* Mecânicas opcionais (v2.47): a aba só existe com a mecânica ligada
+       em Configurações — para o mestre também. ler_campanha devolve
+       `hexatombe` e `hacking`. Arquivos Secretos 2 (v2.30): */
     { chave: "hexatombe",   rotulo: "Hexatombe",   secao: "RAMACampanhaHexatombe", soComModo: "hexatombe" },
-    /* Arquivos Secretos 4 (v2.38): a regra opcional de Hacking, igual. */
+    /* Arquivos Secretos 4 (v2.38): a regra opcional de Hacking. */
     { chave: "hacking",     rotulo: "Hacking",     secao: "RAMACampanhaHacking", soComModo: "hacking" },
     { chave: "notas",       rotulo: "Notas",       secao: "RAMACampanhaNotas", soMestre: true },
     { chave: "config",      rotulo: "Configurações", secao: "RAMACampanhaConfig", soMestre: true },
@@ -197,6 +198,13 @@
          abriu, que é o contrário de recarregar. */
       recarregar: function () { return carregar(); },
       redesenhar: desenhar,
+      /* Uma mecânica opcional ligou ou desligou (v2.47): a tira de abas
+         muda; a tela só é refeita se a aba aberta deixou de existir. */
+      definirMecanica: function (chave, ativo) {
+        if (!estado.campanha) return;
+        estado.campanha[chave] = !!ativo;
+        aoMudarMecanicas();
+      },
 
       atualizarPersonagens: async function () {
         var rp = await global.RAMAApi.listarPersonagensCampanha(estado.campanhaId);
@@ -408,10 +416,10 @@
       }
 
       pintarTopo();
-      /* O modo Hexatombe ligou ou desligou: a aba aparece ou some para o
-         jogador. */
-      if (!estado.mestre && (hexatombeAntes !== !!estado.campanha.hexatombe || hackingAntes !== !!estado.campanha.hacking)) desenhar();
-      else notificar("campanha");
+      /* Uma mecânica opcional ligou ou desligou em outro lugar: a aba
+         aparece ou some, para todos. */
+      var redesenhou = (hexatombeAntes !== !!estado.campanha.hexatombe || hackingAntes !== !!estado.campanha.hacking) && aoMudarMecanicas();
+      if (!redesenhou) notificar("campanha");
       if (tem("membros")) notificar("membros");
     }
 
@@ -469,9 +477,42 @@
   function abasVisiveis() {
     return ABAS.filter(function (a) {
       if (a.soMestre && !estado.mestre) return false;
-      if (a.soComModo && !estado.mestre && !(estado.campanha && estado.campanha[a.soComModo])) return false;
+      if (a.soComModo && !(estado.campanha && estado.campanha[a.soComModo])) return false;
       return !!global[a.secao];
     });
+  }
+
+  /* Devolve true quando precisou refazer a tela (a aba aberta sumiu). */
+  function aoMudarMecanicas() {
+    var aberta = abasVisiveis().some(function (a) { return a.chave === estado.aba; });
+    if (!aberta) { desenhar(); return true; }
+    pintarAbas();
+    return false;
+  }
+
+  function tiraDeAbas(visiveis) {
+    return el("div.r-abas", { id: "campanha-abas", role: "tablist", "aria-label": "Seções da campanha" },
+      visiveis.map(function (a) {
+        var ativa = a.chave === estado.aba;
+        return el("button.r-aba", {
+          type: "button",
+          id: "aba-c-" + a.chave,
+          role: "tab",
+          "aria-selected": String(ativa),
+          tabindex: ativa ? "0" : "-1",
+          texto: a.rotulo,
+          onclick: function () { trocarAba(a.chave); },
+          onkeydown: function (ev) { navegar(ev, visiveis); },
+        });
+      })
+    );
+  }
+
+  /* Só a tira de abas: o que está aberto embaixo (um formulário pela
+     metade, inclusive) fica como está. */
+  function pintarAbas() {
+    var velha = U.$("#campanha-abas");
+    if (velha) velha.replaceWith(tiraDeAbas(abasVisiveis()));
   }
 
   function topo() {
@@ -524,21 +565,7 @@
     U.trocar(alvo, [
       el("div", { id: "campanha-topo" }, topo()),
 
-      el("div.r-abas", { role: "tablist", "aria-label": "Seções da campanha" },
-        visiveis.map(function (a) {
-          var ativa = a.chave === estado.aba;
-          return el("button.r-aba", {
-            type: "button",
-            id: "aba-c-" + a.chave,
-            role: "tab",
-            "aria-selected": String(ativa),
-            tabindex: ativa ? "0" : "-1",
-            texto: a.rotulo,
-            onclick: function () { trocarAba(a.chave); },
-            onkeydown: function (ev) { navegar(ev, visiveis); },
-          });
-        })
-      ),
+      tiraDeAbas(visiveis),
 
       el("div", { role: "tabpanel", "aria-labelledby": "aba-c-" + secao.chave },
         [global[secao.secao].aba(ctx)]),
@@ -840,7 +867,11 @@
       /* Mudança feita em outro lugar enquanto este formulário está
          aberto: avisa em vez de apagar o que a pessoa digitou. */
       var avisoExterno = el("p.t-mini.t-aviso", { hidden: true, role: "status" });
+      /* O que este formulário mostrou: ligar uma mecânica (aqui mesmo ou em
+         outra janela) também marca a campanha, e isso não é motivo de aviso. */
+      var vistos = camposDoFormulario(ctx.campanha);
       ctx.aoAtualizar("campanha", function () {
+        if (camposDoFormulario(ctx.campanha) === vistos) return;
         avisoExterno.hidden = false;
         avisoExterno.textContent = "A campanha foi alterada em outro lugar. Ao salvar, o que está neste formulário substitui nome, descrição e visibilidade.";
       });
@@ -870,6 +901,8 @@
           }),
         ])),
 
+        UI.painel("Mecânicas opcionais", mecanicasOpcionais(ctx)),
+
         UI.painel("Participantes", participantes(ctx)),
 
         UI.painel("Zona de risco", el("div.pilha--curta", { class: "pilha" }, [
@@ -882,6 +915,97 @@
       ]);
     },
   };
+
+  function camposDoFormulario(c) {
+    return JSON.stringify([c.nome, c.descricao, c.visibilidade, !!c.rolagensMestreOcultas]);
+  }
+
+  /* =================================================================
+     MECÂNICAS OPCIONAIS (v2.47)
+     -----------------------------------------------------------------
+     As mecânicas de suplemento que uma campanha pode usar. Cada uma
+     guarda o próprio estado (CAMPANHA_HEXATOMBE, CAMPANHA_HACKING), e o
+     "ativo" dele decide se a aba existe — para o mestre também, e a
+     campanha que não usa não carrega abas à toa. Desligar não apaga
+     nada: ligar de novo volta ao que estava. Quem liga e desliga é o
+     módulo de cada aba (`definirAtivo`), pelo mesmo caminho de gravação
+     dela; o servidor confere que é o mestre.
+
+     Nas fichas, nada muda: cada ficha continua escolhendo se liga a
+     regra dela (Participação no Hexatombe, por exemplo).
+     ================================================================= */
+
+  var MECANICAS = [
+    { chave: "hexatombe", nome: "Hexatombe", fonte: "Arquivos Secretos 2", modulo: "RAMACampanhaHexatombe",
+      texto: "O ritual de seis dias: equipes, sacrifícios, base, consumo, encontros e a Lua de Sangue. Ligada, a aba Hexatombe aparece para você e para os jogadores (cada um vê só o que é dele)." },
+    { chave: "hacking", nome: "Hacking", fonte: "Arquivos Secretos 4", modulo: "RAMACampanhaHacking",
+      texto: "Cenas de hacking com turnos, pontos de segurança e dados virtuais. Ligada, a aba Hacking aparece para você e para os jogadores." },
+  ];
+
+  function mecanicasOpcionais(ctx) {
+    var marcas = {};
+    var linhas = MECANICAS.filter(function (m) {
+      return global[m.modulo] && global[m.modulo].definirAtivo;
+    }).map(function (m) {
+      var entrada = el("input", {
+        type: "checkbox",
+        checked: !!ctx.campanha[m.chave],
+        onchange: function () { alternarMecanica(ctx, m, entrada); },
+      });
+      marcas[m.chave] = entrada;
+      return el("div.pilha--curta", { class: "pilha" }, [
+        el("label.r-marca", {}, [
+          entrada,
+          el("span", {}, [
+            el("span.t-forte", { texto: m.nome }),
+            el("span.t-mini", { texto: " · " + m.fonte }),
+          ]),
+        ]),
+        el("p.r-ajuda", { texto: m.texto }),
+      ]);
+    });
+
+    /* Ligada ou desligada em outra janela: a marca acompanha. */
+    ctx.aoAtualizar("campanha", function () {
+      Object.keys(marcas).forEach(function (k) {
+        if (!marcas[k].disabled) marcas[k].checked = !!ctx.campanha[k];
+      });
+    });
+
+    return el("div.pilha", {}, [
+      el("p.t-mini", { texto: "Regras de suplemento que esta campanha usa. Desligada, a aba da mecânica some para todos — nada é apagado, e ligar de novo volta ao que estava." }),
+    ].concat(linhas));
+  }
+
+  async function alternarMecanica(ctx, m, entrada) {
+    var ligar = entrada.checked;
+    if (!ligar) {
+      var certeza = await UI.confirmar({
+        titulo: "Desligar " + m.nome + "?",
+        texto: "A aba " + m.nome + " some desta campanha para todos.",
+        detalhe: "Nada é apagado: ao ligar de novo, tudo volta como estava.",
+        rotuloConfirmar: "Desligar",
+      });
+      if (!certeza) { entrada.checked = true; return; }
+    }
+
+    entrada.disabled = true;
+    var r;
+    try {
+      r = await global[m.modulo].definirAtivo(ctx.campanhaId, ligar);
+    } finally {
+      entrada.disabled = false;
+    }
+    if (!r || !r.ok) {
+      entrada.checked = !ligar;
+      UI.avisoDeFalha(r, (ligar ? "ligar " : "desligar ") + m.nome, {
+        tentarDeNovo: function () { entrada.checked = ligar; alternarMecanica(ctx, m, entrada); },
+      });
+      return;
+    }
+    ctx.definirMecanica(m.chave, ligar);
+    UI.avisoOk(m.nome + (ligar ? " ligado nesta campanha." : " desligado nesta campanha."));
+  }
 
   async function salvarConfig(ctx, botao, nome, descricao, visibilidade, ocultas) {
     var r = await UI.ocupar(botao, function () {

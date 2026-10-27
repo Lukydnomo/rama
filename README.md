@@ -587,6 +587,10 @@ segredo nenhum — ele os lê das Script Properties. Publicá-lo não expõe nad
 
 ### Atualizar o backend
 
+**v2.47.0 — COMUTADOR:** só o site (Hexatombe e Hacking opcionais por campanha,
+em Configurações → Mecânicas opcionais). Nada de `.gs`, versão da implantação nem
+`setupRama()`.
+
 **v2.46.0 — ENXUTO:** desempenho. Troque `Dados.gs`, `Codigo.gs` e `Campanhas.gs`
 no Apps Script, crie uma versão nova da implantação e publique o site. Não há aba,
 coluna nem formato novo: `setupRama()` não é necessário, e nenhuma ficha é migrada.

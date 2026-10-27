@@ -70,6 +70,20 @@
 
   var CHANGELOG = [
     {
+      versao: "2.47.0", codinome: "COMUTADOR", data: "27/10/2026",
+      mudancas: {
+        "Alterado": [
+          "Hexatombe e Hacking passaram a ser mecânicas opcionais de cada campanha: desligadas, as abas não aparecem para ninguém — nem para o mestre, que antes as via em toda campanha. Campanhas novas começam com as duas desligadas; as que já usavam continuam com elas.",
+        ],
+        "Adicionado": [
+          "Configurações da campanha ganhou o painel “Mecânicas opcionais”, onde o mestre liga e desliga o Hexatombe (Arquivos Secretos 2) e o Hacking (Arquivos Secretos 4). Desligar não apaga nada: ao ligar de novo, dia, equipes, cenas e diário voltam como estavam. A mudança chega sozinha às janelas abertas dos jogadores; quem estava na aba que sumiu vai para a Visão geral, e quem estava em outra aba não perde o que estava fazendo.",
+        ],
+        "Técnico": [
+          "Só o site muda: o interruptor é o `ativo` que cada mecânica já guardava (CAMPANHA_HEXATOMBE, CAMPANHA_HACKING), gravado por salvar_hexatombe e salvar_hacking, que conferem que é o mestre. `definirAtivo` nos módulos das duas abas; `ctx.definirMecanica` troca só a tira de abas. As regras das fichas (Participação no Hexatombe e as outras) continuam escolhidas por ficha. Verificado no navegador com o backend simulado: padrão desligado, ligar e desligar pelas Configurações e pela aba, cancelar a confirmação, dados preservados, propagação para a jogadora e recusa a quem não é mestre.",
+        ],
+      },
+    },
+    {
       versao: "2.46.0", codinome: "ENXUTO", data: "26/10/2026",
       mudancas: {
         "Performance": [
