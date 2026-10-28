@@ -153,6 +153,14 @@
      veículo do AS3, as regalias do AS5 e `extra` (Apaixonado por
      Veículos). Sem conversão: uma ficha 22 abre com o estado vazio.
 
+     23 → 24: Oblívio (v3.0). A ficha aceita `tipoFicha: "oblivio"` e o
+     bloco `oblivio` (js/oblivio/regras.js): papel, atributos, regiões do
+     corpo com Estresse, Coragem, mazelas, Fora de Ação e Fardos,
+     inventário próprio, usos e o registro de operações. Sem conversão:
+     nenhuma ficha antiga muda. Uma aba antiga trataria a ficha de
+     Oblívio como universal e apagaria o bloco ao gravar — com o schema
+     maior ela recusa.
+
      Nenhuma das subidas exige migração: normalizarFicha() cria o que
      falta, vazio, e não toca no que existe. Um ritual gravado na 2 abre
      na 3 com a versão Normal em branco; uma ficha de Ordem gravada na 4
@@ -162,7 +170,7 @@
      os campos novos e os descartaria ao gravar — com o schema maior ela
      recusa abrir a ficha e pede para recarregar.
      Ver docs/CHARACTER_SCHEMA.md. */
-  var VERSAO_SCHEMA = 23;
+  var VERSAO_SCHEMA = 24;
 
   var MODULOS = {
     atributos: "Atributos", status: "Status/recursos", defesa: "Defesa",
@@ -353,7 +361,7 @@
      escolhido na criação não apaga nada depois, porque ele nunca
      muda sozinho. */
 
-  var TIPOS_FICHA = ["universal", "ordem"];
+  var TIPOS_FICHA = ["universal", "ordem", "oblivio"];
   var TIPO_FICHA_PADRAO = "universal";
 
   /* Qualquer coisa que não seja um tipo conhecido vira universal.
@@ -368,6 +376,19 @@
 
   function ehDeOrdem(ficha) {
     return !!ficha && tipoDeFicha(ficha.tipoFicha) === "ordem";
+  }
+
+  /* Oblívio (v3.0): sistema próprio, com o bloco `oblivio`. Nunca é
+     tratado como universal — nem quando o motor não está carregado. */
+  function ehDeOblivio(ficha) {
+    return !!ficha && tipoDeFicha(ficha.tipoFicha) === "oblivio";
+  }
+
+  /* O bloco de Oblívio: o motor normaliza; sem ele (uma página que não
+     o carrega), o bloco é guardado como veio — nunca descartado. */
+  function blocoOblivio(bruto) {
+    if (global.RAMAOblivio) return global.RAMAOblivio.normalizar(bruto);
+    return bruto && typeof bruto === "object" ? JSON.parse(JSON.stringify(bruto)) : {};
   }
 
   /* =================================================================
@@ -454,6 +475,11 @@
         ? global.RAMAOrdemRegras.fichaVazia()
         : undefined,
 
+      /* Só a ficha de Oblívio carrega este bloco (v3.0). */
+      oblivio: tipoDeFicha(i.tipoFicha) === "oblivio"
+        ? (i.oblivio ? blocoOblivio(i.oblivio) : (global.RAMAOblivio ? global.RAMAOblivio.fichaVazia() : {}))
+        : undefined,
+
       inventario: { limite: 0, itens: [] },
       anotacoes: { pastas: [], soltas: [] },
       camposCustomizados: [],
@@ -466,7 +492,7 @@
      cores de um sistema só ficam na ficha daquele sistema. */
   function normalizarAparencia(bruto, tipo) {
     var M = global.RAMATemaModelo;
-    if (M) return M.normalizarAparencia(bruto, tipo === "ordem" ? "ordem" : "universal");
+    if (M) return M.normalizarAparencia(bruto, tipo === "ordem" || tipo === "oblivio" ? tipo : "universal");
     /* Sem o modelo de temas, as cores voltam ao padrão — mas o tema de
        dados (v2.40) é outra escolha e fica. */
     var saida = { v: 1, modo: "conta" };
@@ -987,6 +1013,10 @@
       ficha.ordem = global.RAMAOrdemRegras.normalizar(b.ordem);
     }
 
+    /* ---- Oblívio (schema 24) ----
+       Mesma regra: montado na ficha de Oblívio, preservado se existir. */
+    if (ficha.tipoFicha === "oblivio" || b.oblivio) ficha.oblivio = blocoOblivio(b.oblivio);
+
     /* ---- campos personalizados ---- */
     ficha.camposCustomizados = lista(b.camposCustomizados).map(normalizarCampo).filter(Boolean);
 
@@ -1347,6 +1377,7 @@
     TIPO_FICHA_PADRAO: TIPO_FICHA_PADRAO,
     tipoDeFicha: tipoDeFicha,
     ehDeOrdem: ehDeOrdem,
+    ehDeOblivio: ehDeOblivio,
     NATUREZA: NATUREZA,
     TIPOS_ITEM: TIPOS_ITEM,
     DADO_PADRAO: DADO_PADRAO,

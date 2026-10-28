@@ -151,6 +151,9 @@
    --cor-elemento-conhecimento: var(--cor-aviso);
    --cor-elemento-energia: var(--cor-paranormal);
    --cor-elemento-medo: var(--cor-texto);
+   /* Oblívio (v3.0): o Estresse no corpo e a Coragem. */
+   --cor-estresse: var(--cor-erro);
+   --cor-coragem: var(--cor-aviso);
 
    --fundo-pagina: var(--cor-fundo);
    --fundo-superficie: var(--cor-superficie);

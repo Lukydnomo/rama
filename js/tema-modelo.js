@@ -54,6 +54,7 @@
     { chave: "estados", rotulo: "Mensagens e destaque", ajuda: "Sucesso, aviso e erro, e a cor de destaque: item ativo, interruptor ligado, alvo de arraste." },
     { chave: "efeitos", rotulo: "Sombras e efeitos", ajuda: "Sombras, o véu atrás das janelas e o efeito de tela antiga." },
     { chave: "ordem", sistema: "ordem", rotulo: "Ordem Paranormal: elementos e graus", ajuda: "Só nesta ficha de Ordem: as marcas dos elementos do Outro Lado (rituais, itens) e a cor dos graus de treinamento das perícias." },
+    { chave: "oblivio", sistema: "oblivio", rotulo: "Oblívio: Estresse e Coragem", ajuda: "Só nesta ficha de Oblívio: a cor do Estresse no corpo e a da Coragem." },
   ];
 
   var TOKENS = [
@@ -102,6 +103,9 @@
     { chave: "elementoConhecimento", rotulo: "Conhecimento", cat: "ordem", sistema: "ordem", cor: "--cor-elemento-conhecimento" },
     { chave: "elementoEnergia", rotulo: "Energia", cat: "ordem", sistema: "ordem", cor: "--cor-elemento-energia" },
     { chave: "elementoMedo", rotulo: "Medo", cat: "ordem", sistema: "ordem", cor: "--cor-elemento-medo" },
+
+    { chave: "estresse", rotulo: "Estresse", cat: "oblivio", sistema: "oblivio", cor: "--cor-estresse" },
+    { chave: "coragem", rotulo: "Coragem", cat: "oblivio", sistema: "oblivio", cor: "--cor-coragem" },
   ];
   var POR_CHAVE = {};
   TOKENS.forEach(function (t) {
@@ -138,6 +142,8 @@
     botao: r("texto"), botaoTexto: r("fundo"), botaoHover: r("texto2"), botaoComum: r("superficie"),
     campo: r("fundo"), foco: r("tracoForte"),
     elementoConhecimento: r("aviso"), elementoEnergia: r("paranormal"), elementoMedo: r("texto"),
+    /* Oblívio (v3.0): no CSS, var(--cor-erro) e var(--cor-aviso). */
+    estresse: r("erro"), coragem: r("aviso"),
   };
   function paleta(valores) { return Object.assign({}, REFS, valores); }
   var PALETAS = {

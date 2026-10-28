@@ -118,7 +118,8 @@ das folhas. Cada linha diz onde o Modern20 a trata.
 | Casca | cabeçalho, marca, navegação (desktop e celular), agente, menu da conta (com ícones; Feedback desde a v2.50), rodapé, versão, histórico de versões | layout.css |
 | Feedback (v2.50) | janela do menu da conta: três tipos em cartões (uma coluna no celular), campos com contador, detalhes do bug, nome opcional, faixa de falha com "Tentar novamente", confirmação de sucesso | componentes.css |
 | Personagens | título e trilha, abas Meus/Compartilhados, pastas em abas e em ícones, painel da pasta, filtros, busca, sistema, agrupar, lista de registros, alça de arrastar, estados (pasta, compartilhado, papel) | layout.css, componentes.css |
-| Criação de ficha | tipo de ficha, criação guiada de Ordem (trilha de passos, atributos, opções, perícias), revisão | componentes.css |
+| Criação de ficha | tipo de ficha (cartões com a capa do sistema, v3.0), criação guiada de Ordem (trilha de passos, atributos, opções, perícias), revisão | componentes.css |
+| Oblívio (v3.0) | capa do sistema (`js/capa-sistema.js`: volume com lombada, três tamanhos, lombada desenhada sem capa), criação guiada em 8 etapas (Papéis em cartões, atributos, especializações, corpo, catálogo de equipamentos, Motivação, revisão), bloco da Persona (fixos, mutáveis, Coragem, pendências, faixa "Na mesa"), diagrama do corpo (figura `aria-hidden` + lista de botões com tudo em texto), Conhecimentos, ataque com resolução pendente e dados por resultado, inventário, habilidades, Mazelas, aba Oblívio da campanha (Ordem de Ação, fileiras, Farol, Ameaças, mapa do Buraco) | oblivio.css |
 | Ficha (todas) | topo fixo, modo Normal/Edição, estado do salvamento, avisos (edição, mestre, acesso, leitura), foto, abas | ficha.css |
 | Ficha universal | atributos, status com barra, defesa, perícias, edição de perícia, inventário, anotações (árvore e editor), habilidades (árvore e pastas) | ficha.css, componentes.css |
 | Ficha de Ordem | atributos, recursos (PV, PE, SAN, PD com cor), calculados e composição, perícias em tabela (desktop e celular), progressão, pendências e escolhas, poderes, condições e efeitos, consumo, carga, aba Regras (categorias, busca, filtro, interruptor), Arquivos Secretos 2–5, aliados | ficha.css, componentes.css |
@@ -143,6 +144,10 @@ das folhas. Cada linha diz onde o Modern20 a trata.
 - `deno run --allow-read testes/executar-feedback.js` — a janela de Feedback
   tem estilo no Legacy sem regra de Modern20, o ajuste do Modern20 fica no escopo
   dele e as cores vêm só dos papéis do tema (claro, escuro e personalizados).
+- **Oblívio (v3.0):** `css/oblivio.css` (Legacy) e `css/modern20/oblivio.css`,
+  revisados no navegador nos dois estilos e a 375 px (sem rolagem horizontal).
+  Estado nunca só por cor: região esgotada riscada, prótese tracejada, ausente
+  pontilhada, resultado do dado escrito e com traço lateral próprio.
 - **Regressão do Legacy:** a v2.48.4 servida lado a lado
   (`testes/servidor-local.js --site <pasta da v2.48.4>`) e, em cada página, a
   comparação dos estilos calculados de todos os elementos (55 propriedades e os

@@ -2,6 +2,27 @@
 
 Quem alcança o quê, e onde isso é decidido.
 
+## Oblívio — v3.0
+
+| ação | Testemunha (mestre) | jogador da campanha | espectador / de fora |
+|---|---|---|---|
+| ver a mesa inteira (`ler_oblivio`) | sim | não — recebe a vista dos jogadores | não |
+| gravar a mesa: cenas, fileiras, Farol, encontro, Buraco (`salvar_oblivio`) | sim | não (`sem_permissao`) | não |
+| avançar o tempo nas fichas (`momentos`) / aplicar Estresse (`estresse`) | sim | não | não |
+| usar habilidade ou ação com alvo em outra Persona (`habilidade`, `acao`) | por qualquer Persona da campanha | só pela Persona que ele pode editar | não |
+| atacar uma Ameaça da mesa (`ataqueAmeaca`) | idem | idem | não |
+| escolher onde recebe um acerto registrado (`receberAtaque`) | idem | só da própria Persona; o valor é o da mesa | não |
+
+- Uma habilidade num aliado **não** dá acesso de edição à ficha dele: o
+  servidor carrega as duas fichas, aplica só o efeito da regra e grava. Quem
+  usa precisa poder editar a Persona que age (`personagemAcessivel`, porta
+  padrão); o alvo só precisa ser ficha de Oblívio da mesma campanha.
+- O jogador nunca recebe a ficha das Ameaças, cartas não reveladas do Buraco,
+  armadilhas armadas nem o registro privado da Testemunha.
+- `ler_oblivio` dá a todo membro o id e o nome das Personas de Oblívio da
+  campanha (o que o painel já mostra) e, para uma Persona na fileira, o bônus
+  de Escudo Humano — fonte e valor, nunca a ficha de quem protege.
+
 ## Feedback — v2.50
 
 | ação | quem está numa sessão | sem sessão |

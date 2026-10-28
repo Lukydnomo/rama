@@ -1495,6 +1495,98 @@
   gap: 2px;
 }
 
+/* v3.0: a capa do sistema ao lado do nome (componente capa-sistema). */
+.tipo-ficha__cabeca {
+  display: flex;
+  align-items: center;
+  gap: var(--e3);
+  min-width: 0;
+}
+.tipo-ficha__titulos { display: flex; flex-direction: column; gap: var(--e1); min-width: 0; }
+
+/* =====================================================================
+   CAPA DE SISTEMA (v3.0, js/capa-sistema.js)
+   ---------------------------------------------------------------------
+   Um pequeno volume: a capa na proporção 2:3, uma lombada estreita à
+   esquerda, a borda das páginas à direita (um desnível de 2px) e a
+   sombra curta de um objeto sobre a mesa. Sem capa, a lombada desenhada
+   com o nome. No Legacy, traço reto e sombra seca, como o resto do
+   arquivo.
+   ===================================================================== */
+
+.capa-sistema {
+  --capa-largura: calc(56px * var(--escala));
+  position: relative;
+  flex: 0 0 auto;
+  display: inline-block;
+  width: var(--capa-largura);
+  aspect-ratio: 2 / 3;
+  margin-right: 3px;
+  background: #0b0b0b;
+  border: var(--borda) solid var(--cor-traco-forte);
+  box-shadow: 2px 2px 0 var(--cor-traco-fraca), 3px 3px 0 var(--cor-traco-forte);
+  overflow: hidden;
+}
+.capa-sistema--p { --capa-largura: calc(32px * var(--escala)); }
+.capa-sistema--g { --capa-largura: calc(88px * var(--escala)); }
+/* a lombada: uma faixa de luz e sombra na borda costurada */
+.capa-sistema::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 12%;
+  background: linear-gradient(90deg, rgba(255, 255, 255, .16), rgba(0, 0, 0, .35) 70%, transparent);
+  pointer-events: none;
+  z-index: 1;
+}
+.capa-sistema__imagem {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.capa-sistema--sem-capa {
+  background: var(--fundo-superficie-2);
+}
+.capa-sistema__lombada {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  padding: 3px 3px 3px 15%;
+  color: var(--cor-texto);
+  text-align: center;
+}
+.capa-sistema__inicial {
+  font-family: var(--fonte-titulo, inherit);
+  font-size: calc(var(--capa-largura) * .42);
+  line-height: 1;
+  font-weight: 700;
+}
+.capa-sistema__titulo {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: var(--fonte-mini);
+  font-size: max(9px, calc(var(--capa-largura) * .15));
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  color: var(--cor-texto-2);
+}
+.capa-sistema--p .capa-sistema__titulo { display: none; }
+/* No cartão selecionável, o volume acompanha o estado do cartão. */
+.tipo-ficha:hover .capa-sistema,
+.tipo-ficha:focus-visible .capa-sistema { box-shadow: 2px 2px 0 var(--cor-traco-media), 4px 4px 0 var(--cor-traco-forte); }
+@media (prefers-reduced-motion: no-preference) {
+  .tipo-ficha .capa-sistema { transition: transform var(--tempo-seco) var(--curva), box-shadow var(--tempo-seco) var(--curva); }
+  .tipo-ficha:hover .capa-sistema,
+  .tipo-ficha:focus-visible .capa-sistema { transform: translate(-1px, -1px); }
+}
+
 /* =====================================================================
    RESULTADO DE ROLAGEM
    ---------------------------------------------------------------------

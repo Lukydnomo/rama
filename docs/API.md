@@ -49,6 +49,49 @@ responde `acao_desconhecida`.
   enquanto o texto não mudar.
 - Não entra no `lote`. Não grava nada na planilha.
 
+## Oblívio — v3.0
+
+- `ler_oblivio { campanhaId, personagemId? }` — membro da campanha (espectador:
+  `sem_permissao`; de fora: `nao_encontrado`). Mestre (a Testemunha):
+  `{ mestre: true, rev, estado }`. Jogador: `{ mestre: false, rev, vista }`
+  (`RAMAOblivioMesa.vistaDosJogadores`: Ameaças só com nome, Grau, estado, casas,
+  "% ferida" e número de regiões; cartas do Buraco só reveladas; registro sem o
+  privado; sem `operacoes`). Sempre: `personas: [{ id, nome }]` — as fichas de
+  Oblívio da campanha, pela projeção guardada. Com `personagemId` na fileira:
+  `grupo: { bonus: [{ fonte, valor }] }` (Escudo Humano, calculado com as fichas à
+  frente; nada da ficha delas volta).
+- `salvar_oblivio { campanhaId, rev, opId, estado }` — só o mestre. `opId`
+  repetido → `repetida: true`; `rev` diferente → `conflito` com o estado atual.
+  Normalizado pela cópia de `js/oblivio/mesa.js`; Personas de fora da campanha
+  saem da fileira e do Farol. `estado.ativo` liga/desliga a aba (coluna leve
+  `ativo`; marca `oblivio` e, ao mudar, `campanha`). Sem a aba:
+  `instalacao_incompleta`; grande demais: `dados_grandes` (o registro cede antes).
+- `oblivio_operar { campanhaId, opId, operacao }` — operações que tocam fichas.
+  `operacao.tipo`:
+  - `momentos` (mestre): `{ momentos: [{ tipo: fimDoTurno|fimDaRodada|inicioDaCena|
+    iniciarMissao|concluirMissao|inicioDoTurno, persona?, rodada?, missao?, mortos? }] }`
+    — aplicados em todas as fichas de Oblívio da campanha (as outras ficam de fora).
+  - `estresse` (mestre): `{ persona, valor, regiao?, item? }`.
+  - `habilidade` / `acao` (quem pode editar a Persona `quem`, ou o mestre):
+    `{ quem, chave, alvos: [ids], param }` — `RAMAOblivioHabilidades.usar`/`agir`
+    no servidor; alvos só da mesma campanha e de Oblívio. Recusa da regra →
+    `dados_invalidos` com `motivo`.
+  - `ataqueAmeaca` (idem): `{ quem, alvo, sucessos, semRegioes?, dano?, corpoACorpo?,
+    mirar?, classe?, corrompido? }` — desgasta a Proteção da instância, aplica o dano
+    se acertar, Toque Corrosivo em quem acertou, Sede de Sangue ao eliminar.
+  - `receberAtaque` (idem): `{ quem, pendente, regiao, item? }` — resolve um acerto
+    de Ameaça que a mesa registrou em `encontro.ataquesPendentes`; o valor é o da
+    mesa (o pedido não informa dano); Proteção Maximizada/Elevada reduzem;
+    Armadura de Espinhos vai ao registro.
+
+  Resposta: `{ rev, dados: { eventos, acerto, gravadas, efeitoNoAlvo } }`. A
+  repetição do mesmo `opId` não aplica de novo (pela mesa ou por qualquer ficha
+  tocada). Fichas alteradas sobem a revisão e marcam `personagens`.
+- `ler_campanha` devolve `oblivio: true|false`; `sincronizar_campanha` tem a
+  parte `oblivio`.
+- Nas listagens, uma ficha de Oblívio sai com `sistema`/`tipoFicha: "oblivio"` e,
+  no painel da mesa, `oblivio` (só o Papel com "Esconder status dos jogadores").
+
 ## Arquivos Secretos 5, perigos complexos e Sincronia — v2.48
 
 - `ler_perigos { campanhaId }` — membro da campanha (espectador:

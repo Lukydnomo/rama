@@ -675,6 +675,16 @@
   & .tipo-ficha__resumo { line-height: 1.5; }
   & .tipo-ficha__lista { padding-left: var(--e4); list-style: disc; gap: 3px; }
 
+  /* A capa de sistema (v3.0): o mesmo volume, com canto e sombra suaves. */
+  & .capa-sistema {
+    border: 1px solid color-mix(in srgb, var(--cor-texto) 18%, transparent);
+    border-radius: 3px 6px 6px 3px;
+    box-shadow: 1px 0 0 color-mix(in srgb, var(--cor-texto) 10%, transparent), var(--m20-sombra-1), 0 6px 14px -8px color-mix(in srgb, var(--cor-sombra) 70%, transparent);
+  }
+  & .capa-sistema--sem-capa { background: var(--m20-realce-forte); }
+  & .tipo-ficha:hover .capa-sistema,
+  & .tipo-ficha:focus-visible .capa-sistema { box-shadow: 1px 0 0 color-mix(in srgb, var(--cor-texto) 10%, transparent), var(--m20-sombra-2); }
+
   /* =================================================================
      RESULTADO DE ROLAGEM
      -----------------------------------------------------------------

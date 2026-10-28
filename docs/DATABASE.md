@@ -1,5 +1,25 @@
 # O banco
 
+## Oblívio — v3.0
+
+> **Atualizando para a v3.0:** crie o arquivo `Oblivio` com `backend/Oblivio.gs`,
+> troque `Dados.gs`, `Codigo.gs` e `Campanhas.gs`, rode **`setupRama()`** (cria a
+> aba `CAMPANHA_OBLIVIO`; repetir não muda nada) e crie uma nova versão da
+> implantação. Nada existente é convertido nem apagado.
+
+**CAMPANHA_OBLIVIO** — `campanhaId · ativo · atualizadoEm · rev · opsJson ·
+dadosJson`. Uma linha por campanha, criada na primeira gravação da Testemunha.
+`dadosJson` é a mesa normalizada por `RAMAOblivioMesa` (cópia fiel de
+`js/oblivio/mesa.js` em `Oblivio.gs`): partida, Missão e missões concluídas, cena
+(tipo, rodada, turno, Ordem de Ação, Tensão), fileiras, Farol, encontro (instâncias
+de Ameaça, Proteção por alvo, analisados, ataques pendentes), Buraco e até 200
+linhas de registro. `opsJson` guarda os últimos 80 `opId`. A coluna leve `ativo`
+responde a `ler_campanha` sem abrir o estado.
+
+As fichas de Oblívio continuam em `PERSONAGENS` (o bloco `oblivio` dentro da
+ficha; ver [CHARACTER_SCHEMA.md](CHARACTER_SCHEMA.md)); a projeção (`resumo`)
+ganha `tipo: "oblivio"`.
+
 ## Arquivos Secretos 5 e perigos complexos — v2.48
 
 > **Atualizando para a v2.48:** troque `Codigo.gs`, `Campanhas.gs` e `Dados.gs`,

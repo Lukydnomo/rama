@@ -126,7 +126,7 @@ var SEGUNDOS_IDEMPOTENCIA = 1800;
    parada não cair nesse passo de reserva à toa.
    ===================================================================== */
 
-var PARTES_DA_MESA = ['campanha', 'membros', 'personagens', 'combates', 'documentos', 'rolagens', 'hexatombe', 'hacking', 'perigos'];
+var PARTES_DA_MESA = ['campanha', 'membros', 'personagens', 'combates', 'documentos', 'rolagens', 'hexatombe', 'hacking', 'perigos', 'oblivio'];
 var SEGUNDOS_MARCA = 21600;
 var MS_RENOVAR_MARCAS = 4 * 60 * 60 * 1000;
 var SEGUNDOS_PAPEL_EM_CACHE = 300;
@@ -314,6 +314,8 @@ function acaoLerCampanha(corpo, usuario) {
   resposta.hacking = hackingAtivo(c.id);
   /* Perigos complexos (v2.48, AS5): mecânica opcional, o mesmo esquema. */
   resposta.perigos = perigosAtivo(c.id);
+  /* A mesa de Oblívio (v3.0): ligada em Configurações, o mesmo esquema. */
+  resposta.oblivio = typeof oblivioAtivo === 'function' ? oblivioAtivo(c.id) : false;
   /* A hora do servidor (v2.40): o navegador só notifica rolagens criadas
      depois dela — as antigas ficam no histórico, sem cartão. */
   resposta.agora = new Date().toISOString();
@@ -710,11 +712,12 @@ function acaoListarPersonagensCampanha(corpo, usuario) {
       var detalhado = ctx.mestre || souDono;
       var recursosVisiveis = detalhado || !ocultarStatus;
       var ehOrdem = projecaoDeOrdem(proj);
+      var ehOblivio = !!proj && proj.tipo === 'oblivio';
 
       var saida = {
         id: p.id,
         nome: p.nome,
-        tipoFicha: ehOrdem ? 'ordem' : 'universal',
+        tipoFicha: ehOblivio ? 'oblivio' : ehOrdem ? 'ordem' : 'universal',
         classe: p.classe || '',
         origem: p.origem || '',
         ownerId: p.ownerId,
@@ -757,6 +760,12 @@ function acaoListarPersonagensCampanha(corpo, usuario) {
             saida.condicoes = resumoPublicoDeCondicoes(proj.ordem);
           }
         }
+      } else if (ehOblivio) {
+        /* Oblívio (v3.0): o papel é identificação; Estresse por região,
+           Coragem, mazelas e estado são os "recursos" da Persona e seguem
+           a mesma regra de "Esconder status dos jogadores". */
+        saida.oblivio = { papel: proj.oblivio.papel || '' };
+        if (recursosVisiveis) saida.oblivio = proj.oblivio;
       } else {
         /* O painel precisa de status e atributos para os controles
            rápidos, mas não da ficha inteira: perícias, inventário e
@@ -860,6 +869,30 @@ function versoesDeFoto(registros) {
   return saida;
 }
 
+/* O que o painel da mesa mostra de uma Persona de Oblívio (v3.0). Somas
+   e leituras do bloco — nenhuma regra recalculada aqui: Proteção,
+   Velocidade e Dano vêm do resumo que a ficha calculou (resumoOblivio),
+   conferidos como números; sem ele, ficam de fora. */
+function oblivioParaPainel(b, resumo) {
+  function n(v, max) { var x = Math.floor(Number(v)); return isFinite(x) ? Math.max(0, Math.min(max || 999, x)) : 0; }
+  var regioes = (b.corpo && Array.isArray(b.corpo.regioes) ? b.corpo.regioes : []).filter(function (r) { return r && typeof r.chave === 'string'; })
+    .slice(0, 5).map(function (r) { return { chave: String(r.chave).slice(0, 10), estado: ['organica', 'protese', 'ausente'].indexOf(r.estado) >= 0 ? r.estado : 'organica', estresse: n(r.estresse), limite: n(r.limite) }; });
+  var saida = {
+    papel: typeof b.papel === 'string' ? b.papel.slice(0, 20) : '',
+    regioes: regioes,
+    estresse: regioes.reduce(function (s, r) { return s + r.estresse; }, 0),
+    limite: regioes.reduce(function (s, r) { return s + r.limite; }, 0),
+    coragem: n(b.coragem),
+    mazelas: (Array.isArray(b.mazelas) ? b.mazelas : []).map(function (m) { return m && typeof m.chave === 'string' ? m.chave.slice(0, 30) : ''; }).filter(Boolean).slice(0, 20),
+    estado: b.morte ? 'morta' : (b.foraDeAcao && b.foraDeAcao.ativo ? 'foraDeAcao' : 'ativa'),
+  };
+  if (resumo && typeof resumo === 'object') {
+    ['protecao', 'velocidade', 'dano', 'folego'].forEach(function (k) { if (resumo[k] !== undefined) saida[k] = n(resumo[k]); });
+    if (resumo.foraDeAcao !== undefined) saida.foraDeAcao = n(resumo.foraDeAcao, 3);
+  }
+  return saida;
+}
+
 function ehFichaDeOrdem(ficha) {
   return !!ficha && String(ficha.tipoFicha || '') === 'ordem' && !!ficha.ordem && typeof ficha.ordem === 'object';
 }
@@ -935,6 +968,12 @@ function projecaoDaFicha(ficha) {
     p.ordem = ordemParaPainel(ficha.ordem);
     p.itens = itensParaPainel(ficha.inventario);
     p.resumoRecursos = normalizarResumoRecursos(ficha.resumoRecursos);
+    return p;
+  }
+
+  if (String(ficha.tipoFicha || '') === 'oblivio' && ficha.oblivio && typeof ficha.oblivio === 'object') {
+    p.tipo = 'oblivio';
+    p.oblivio = oblivioParaPainel(ficha.oblivio, ficha.resumoOblivio);
     return p;
   }
 

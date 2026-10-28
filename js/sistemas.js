@@ -24,9 +24,15 @@
 (function (global) {
   "use strict";
 
+  /* `capa`: o caminho (a partir da raiz do site) de uma miniatura da capa
+     do livro do sistema, usada pelo componente de capa (js/capa-sistema.js).
+     Sem capa, o componente desenha uma lombada com o nome — nunca uma
+     capa inventada. */
   var SISTEMAS = [
-    { id: "ordem", nome: "Ordem Paranormal", curto: "Ordem" },
-    { id: "universal", nome: "Universal", curto: "Universal" },
+    { id: "ordem", nome: "Ordem Paranormal", curto: "Ordem", resumo: "A ficha do sistema, com as regras dos livros." },
+    { id: "oblivio", nome: "Oblívio", curto: "Oblívio", resumo: "Personas, Buracos e a Escuridão — o sistema completo do livro.",
+      capa: "assets/sistemas/oblivio-capa.webp", capaAlt: "Capa de Oblívio RPG: a marca Oblívio, em branco, sobre fundo escuro" },
+    { id: "universal", nome: "Universal", curto: "Universal", resumo: "O modelo flexível do R.A.M.A., para qualquer sistema." },
   ];
 
   /* A ficha sem identificação: a compatibilidade atual (js/ficha.js). */

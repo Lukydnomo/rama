@@ -5,6 +5,51 @@ padrão e normaliza o que chega de fora. Onde ela é guardada — inteira em
 `fichaJson` (formato antigo) ou em blocos (v2.15) — é assunto do backend, e não muda
 nada aqui: ver [DATABASE.md](DATABASE.md).
 
+## Oblívio — v3.0 / schema 24
+
+Um terceiro tipo: `tipoFicha: "oblivio"`, com o bloco `oblivio` normalizado por
+`RAMAOblivio.normalizar` (`js/oblivio/regras.js`). Ficha antiga não é convertida:
+universal e Ordem continuam como estão e passam ao schema 24 na primeira
+gravação sem mudar de tipo. O tipo não muda depois de criado. Sem o motor
+carregado na página, o bloco cru é preservado como veio (nunca vira universal).
+
+```jsonc
+"tipoFicha": "oblivio",
+"oblivio": {
+  "v": 1, "papel": "age|cuida|protege|resolve|sabe",
+  "atributos": { "carne", "forca", "fuga", "determinacao", "mente" },   // 0–10
+  "maximos": { … }, "perdas": { "determinacao" },
+  "escolhas": { "dano": "carne|fuga", "inventario": "carne|forca", "menosRegioes": "|proteses|aprimorar|irAlem", "protecaoContra": "carne|fuga" },
+  "especializacoes": [ { "id", "conhecimento", "origem": "papel|mente|habilidade|mesa", "ref" } ],
+  "motivacao": { "chave", "texto", "abandonada" },
+  "corpo": { "regioes": [ { "chave": "torso|bracoE|bracoD|pernaE|pernaD", "estado": "organica|protese|ausente",
+                            "limite", "estresse", "falhasExtremas", "curaTemporaria" } ] },
+  "limiteAjustes": [ { "id", "valor", "origem", "ref", "nota" } ],
+  "coragem": 0, "coragemIniciada": true,            // SALDO: recalcular não devolve gasto
+  "habilidades": [ { "id", "chave", "origem", "ref", "param" } ],
+  "mazelas": [ { "id", "chave", "param", "origem" } ],
+  "foraDeAcao": { "ativo", "retorno", "historico": [ { "id", "vez", "missao", "fardo", "quando", "contaComo" } ] },
+  "morte": { "causa", "quando" } | null,
+  "fardos": [ { "id", "chave", "param" } ],
+  "inventario": { "itens": [ { "id", "chave", "nome", "estado": "carregado|guardado|derrubado|arremessado|destruido",
+                               "regiao", "qtd", "usos", "estresse", "ataques", "modificacoes": [ { "chave", "param" } ],
+                               "fabricado", "corrompido", "prontidao" } ], "moedas" },
+  "usos": [ … ], "efeitos": [ … ], "reservas": { … },
+  "missao": { "id", "concluidas", "aplicadas": [] },
+  "descansos": …, "escolhasPendentes": [ { "id", "tipo", "texto", … } ],
+  "contexto": { "cena", "tipoDeCena", "rodada", "partida", "n" },   // o tempo da ficha avulsa
+  "ajustes": { "bonusEspecializacao": 2|3, "zona": "d20|d6|2d6", "testeDeFuga", "desgasteParcial", "errante" },
+  "operacoes": [ "op-…" ]                             // ids já aplicados (até 300)
+}
+```
+
+Junto de cada gravação vai `resumoOblivio` (Papel, Estresse por região, Coragem,
+Mazelas, estado, Proteção, Velocidade, Dano, Fôlego, Fora de Ação na Missão),
+calculado no navegador como o `resumoRecursos` de Ordem; o servidor confere a
+forma ao montar o painel da mesa. Exportar e importar levam o bloco inteiro; a
+importação troca todos os ids (como em toda ficha) e a Missão em andamento não
+viaja. Regras, páginas e interpretações: [OBLIVIO.md](OBLIVIO.md).
+
 ## Arquivos Secretos 5 — v2.48 / schema 23
 
 O bloco `ordem` ganha `arquivo5` (vazio numa ficha antiga; nada é convertido).

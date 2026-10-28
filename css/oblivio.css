@@ -1,0 +1,474 @@
+/* =====================================================================
+   R.A.M.A. — Oblívio (v3.0) · Legacy
+   ---------------------------------------------------------------------
+   A Persona na ficha, a criação guiada, o corpo em cinco regiões, o
+   ataque com dados presos às regiões e a mesa da Testemunha. Lê só os
+   tokens (css/tokens.css): --cor-estresse e --cor-coragem são do tema,
+   editáveis no editor de tema de uma ficha de Oblívio.
+
+   Estado nunca só por cor: esgotada, prótese, ausente, vez, resultado
+   do dado — cada um tem texto e forma (tracejado, risco, traço lateral).
+   A versão Modern20 está em css/modern20/oblivio.css.
+   ===================================================================== */
+
+/* ---------- utilidades da seção ---------- */
+
+.oblivio-aba { min-width: 0; }
+
+.oblivio-lista {
+  margin: 0;
+  padding-left: var(--e4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--e1);
+  font-size: var(--texto-mini);
+  color: var(--cor-texto-2);
+}
+
+/* =================================================================
+   BLOCO SUPERIOR
+   ================================================================= */
+
+.oblivio-bloco {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: var(--e3);
+  align-items: start;
+}
+
+.oblivio-bloco__identidade {
+  display: flex;
+  gap: var(--e3);
+  align-items: flex-start;
+  min-width: 0;
+}
+
+.oblivio-bloco__textos { display: flex; flex-direction: column; gap: var(--e1); min-width: 0; }
+
+.oblivio-bloco__papel {
+  margin: 0;
+  color: var(--cor-texto-2);
+  letter-spacing: var(--espaco-letra-titulo);
+  text-transform: uppercase;
+  font-size: var(--texto-mini);
+}
+
+.oblivio-bloco__estado { margin: 0; display: flex; flex-wrap: wrap; gap: var(--e1); align-items: center; }
+
+.oblivio-bloco[data-estado="foraDeAcao"] .oblivio-bloco__identidade,
+.oblivio-bloco[data-estado="morta"] .oblivio-bloco__identidade {
+  border-left: 3px solid var(--cor-estresse);
+  padding-left: var(--e2);
+}
+
+.oblivio-bloco__atributos,
+.oblivio-bloco__mutaveis {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--e1);
+  justify-content: flex-end;
+}
+
+.oblivio-bloco__mutaveis { grid-column: 1 / -1; justify-content: flex-start; }
+
+.oblivio-fixo,
+.oblivio-mut {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: calc(48px * var(--escala));
+  padding: var(--e1) var(--e2);
+  border: var(--borda) solid var(--cor-traco-fraca);
+  background: var(--fundo-superficie);
+}
+
+.oblivio-fixo__sigla,
+.oblivio-mut__nome { font-size: var(--texto-mini); color: var(--cor-texto-3); text-transform: uppercase; letter-spacing: var(--espaco-letra-titulo); }
+
+.oblivio-fixo__valor,
+.oblivio-mut__valor { font-size: var(--texto-medio); font-weight: 700; font-variant-numeric: tabular-nums; }
+
+.oblivio-mut { flex-direction: row; gap: var(--e2); align-items: baseline; }
+.oblivio-mut--coragem { border-color: var(--cor-coragem); }
+.oblivio-mut--coragem .oblivio-mut__valor { color: var(--cor-coragem); }
+
+.oblivio-pendencias {
+  grid-column: 1 / -1;
+  margin: 0;
+  padding: var(--e2) var(--e2) var(--e2) var(--e5);
+  border-left: 3px solid var(--cor-aviso);
+  background: var(--fundo-superficie-2);
+  font-size: var(--texto-mini);
+}
+
+/* A faixa "Na mesa": a ficha jogando no tempo da campanha. */
+.oblivio-mesa-faixa {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--e2);
+  align-items: center;
+  margin: 0;
+  padding: var(--e2);
+  border-left: 3px solid var(--cor-paranormal);
+  background: var(--fundo-superficie-2);
+  font-size: var(--texto-mini);
+}
+.oblivio-mesa-faixa__pendentes { flex-basis: 100%; display: flex; flex-direction: column; gap: var(--e1); }
+
+/* =================================================================
+   CORPO
+   ================================================================= */
+
+.oblivio-corpo {
+  display: grid;
+  grid-template-columns: calc(132px * var(--escala)) minmax(0, 1fr);
+  gap: var(--e4);
+  align-items: start;
+}
+
+.oblivio-corpo__figura { width: 100%; height: auto; display: block; }
+
+.oblivio-corpo__forma {
+  fill: color-mix(in srgb, var(--cor-estresse) var(--cheio, 0%), var(--fundo-superficie-2));
+  stroke: var(--cor-traco-media);
+  stroke-width: 1;
+}
+.oblivio-corpo__forma--protese { stroke-dasharray: 3 2; stroke: var(--cor-texto-2); }
+.oblivio-corpo__forma--ausente { fill: none; stroke: var(--cor-traco-fraca); stroke-dasharray: 1 3; }
+.oblivio-corpo__forma--esgotada { stroke: var(--cor-estresse); stroke-width: 2; }
+.oblivio-corpo__forma--arriscada { stroke: var(--cor-texto); stroke-width: 2.5; }
+
+.oblivio-corpo__numero { font-size: 7px; fill: var(--cor-texto); font-family: var(--fonte-mini); }
+.oblivio-corpo__dado { font-size: 8px; font-weight: 700; fill: var(--cor-paranormal); font-family: var(--fonte-mini); }
+
+.oblivio-corpo__lista {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--e1);
+}
+
+.oblivio-corpo__regiao {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--e1) var(--e2);
+  align-items: center;
+  width: 100%;
+  padding: var(--e1) var(--e2);
+  border: var(--borda) solid var(--cor-traco-fraca);
+  background: var(--fundo-superficie);
+  color: var(--cor-texto);
+  text-align: left;
+  font: inherit;
+}
+button.oblivio-corpo__regiao { cursor: pointer; }
+button.oblivio-corpo__regiao:hover:not(:disabled),
+button.oblivio-corpo__regiao:focus-visible { border-color: var(--cor-traco-forte); background: var(--fundo-superficie-2); }
+button.oblivio-corpo__regiao[aria-pressed="true"] { border-color: var(--cor-texto); box-shadow: inset 3px 0 0 var(--cor-paranormal); }
+button.oblivio-corpo__regiao:disabled { cursor: not-allowed; opacity: 0.6; }
+
+.oblivio-corpo__item--ausente .oblivio-corpo__regiao { border-style: dotted; color: var(--cor-texto-3); }
+.oblivio-corpo__item--protese .oblivio-corpo__regiao { border-style: dashed; }
+.oblivio-corpo__item--esgotada .oblivio-corpo__nome { text-decoration: line-through; text-decoration-color: var(--cor-estresse); }
+
+.oblivio-corpo__nome { font-weight: 700; flex: 0 0 8em; }
+.oblivio-corpo__valor { display: flex; align-items: center; gap: var(--e2); font-variant-numeric: tabular-nums; min-width: 0; flex: 1 1 8em; }
+.oblivio-corpo__item { max-width: 12em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.oblivio-corpo__barra {
+  flex: 1;
+  height: calc(8px * var(--escala));
+  border: var(--borda) solid var(--cor-traco-media);
+  background: var(--fundo-superficie-2);
+  min-width: calc(40px * var(--escala));
+}
+.oblivio-corpo__enchimento { display: block; height: 100%; background: var(--cor-estresse); }
+
+.oblivio-corpo--compacto { grid-template-columns: calc(88px * var(--escala)) minmax(0, 1fr); gap: var(--e2); }
+
+/* =================================================================
+   COMPOSIÇÃO, ESPECIALIZAÇÕES, MOTIVAÇÃO
+   ================================================================= */
+
+.oblivio-composicao,
+.oblivio-mutaveis {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  gap: var(--e1) var(--e3);
+  margin: 0;
+}
+.oblivio-composicao dt,
+.oblivio-mutaveis dt { font-weight: 700; }
+.oblivio-composicao dd,
+.oblivio-mutaveis dd { margin: 0; color: var(--cor-texto-2); font-size: var(--texto-mini); }
+
+.oblivio-distribuir,
+.oblivio-menos { display: flex; flex-direction: column; gap: var(--e2); margin-top: var(--e3); }
+
+/* =================================================================
+   TESTES E ATAQUE
+   ================================================================= */
+
+.oblivio-conhecimentos {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(calc(190px * var(--escala)), 1fr));
+  gap: var(--e2);
+}
+
+.oblivio-conhecimento { display: flex; flex-direction: column; gap: var(--e1); }
+
+.oblivio-conhecimento__rolar {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: var(--e2);
+  padding: var(--e2);
+  border: var(--borda) solid var(--cor-traco-media);
+  background: var(--fundo-botao-comum);
+  color: var(--cor-texto);
+  font: inherit;
+  cursor: pointer;
+}
+.oblivio-conhecimento__rolar:hover:not(:disabled),
+.oblivio-conhecimento__rolar:focus-visible { border-color: var(--cor-traco-forte); background: var(--fundo-botao-hover); }
+.oblivio-conhecimento__rolar:disabled { cursor: not-allowed; opacity: 0.6; }
+.oblivio-conhecimento__nome { font-weight: 700; }
+.oblivio-conhecimento__bonus { font-variant-numeric: tabular-nums; color: var(--cor-texto-3); }
+.oblivio-conhecimento--esp .oblivio-conhecimento__rolar { box-shadow: inset 3px 0 0 var(--cor-grau); }
+.oblivio-conhecimento--esp .oblivio-conhecimento__bonus { color: var(--cor-grau); font-weight: 700; }
+
+.oblivio-ataque { display: flex; flex-direction: column; gap: var(--e3); }
+
+/* Um dado: o resultado tem nome escrito; a cor e o traço só reforçam. */
+.oblivio-dados { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--e1); }
+.oblivio-dado {
+  display: grid;
+  grid-template-columns: minmax(80px, 10em) auto minmax(0, 1fr) auto;
+  gap: var(--e2);
+  align-items: center;
+  padding: var(--e1) var(--e2);
+  border: var(--borda) solid var(--cor-traco-fraca);
+  border-left-width: 4px;
+  background: var(--fundo-superficie);
+}
+.oblivio-dado__regiao { font-weight: 700; }
+.oblivio-dado__face { font-variant-numeric: tabular-nums; }
+.oblivio-dado--fe, .oblivio-resultado--fe { border-left-color: var(--cor-erro); }
+.oblivio-dado--fr, .oblivio-resultado--fr { border-left-color: var(--cor-traco-media); border-left-style: dashed; }
+.oblivio-dado--sr, .oblivio-resultado--sr { border-left-color: var(--cor-ok); }
+.oblivio-dado--se, .oblivio-resultado--se { border-left-color: var(--cor-paranormal); border-left-style: double; border-left-width: 6px; }
+
+.oblivio-resultado { margin: 0; padding: var(--e2); border: var(--borda) solid var(--cor-traco-fraca); border-left-width: 4px; }
+
+/* =================================================================
+   HABILIDADES, INVENTÁRIO, MAZELAS
+   ================================================================= */
+
+.oblivio-habs,
+.oblivio-itens,
+.oblivio-mazelas { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--e2); }
+
+.oblivio-hab,
+.oblivio-item,
+.oblivio-mazela {
+  display: flex;
+  flex-direction: column;
+  gap: var(--e1);
+  padding: var(--e2);
+  border: var(--borda) solid var(--cor-traco-fraca);
+  background: var(--fundo-superficie);
+}
+.oblivio-hab[data-tipo="principal"] { border-left: 3px solid var(--cor-grau); }
+.oblivio-hab--copia { border-style: dashed; }
+
+.oblivio-hab__topo,
+.oblivio-item__topo { display: flex; flex-wrap: wrap; gap: var(--e2); align-items: baseline; }
+.oblivio-hab__nome,
+.oblivio-item__nome,
+.oblivio-mazela__nome { font-weight: 700; }
+.oblivio-hab__resumo { margin: 0; color: var(--cor-texto-2); font-size: var(--texto-mini); }
+
+.oblivio-item[data-estado="destruido"] { opacity: 0.65; }
+.oblivio-item[data-estado="destruido"] .oblivio-item__nome { text-decoration: line-through; }
+.oblivio-item__regiao { max-width: 12em; }
+
+.oblivio-mazela { border-left: 3px solid var(--cor-estresse); }
+
+/* =================================================================
+   CRIAÇÃO GUIADA
+   ================================================================= */
+
+.oblivio-criar-janela { width: min(960px, 100%); }
+.oblivio-criar__topo { display: flex; gap: var(--e3); align-items: center; margin-bottom: var(--e3); }
+
+.oblivio-criar__trilha {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--e1);
+  min-width: 0;
+}
+
+.oblivio-criar__passo {
+  display: flex;
+  align-items: center;
+  gap: var(--e1);
+  padding: var(--e1) var(--e2);
+  border: var(--borda) solid var(--cor-traco-fraca);
+  background: var(--fundo-superficie);
+  color: var(--cor-texto-2);
+  font: inherit;
+  font-size: var(--texto-mini);
+  cursor: pointer;
+}
+.oblivio-criar__passo[aria-current="step"] { border-color: var(--cor-traco-forte); color: var(--cor-texto); font-weight: 700; }
+.oblivio-criar__passo--feito { border-style: solid; color: var(--cor-ok); }
+.oblivio-criar__passo--pendente { border-style: dashed; border-color: var(--cor-aviso); color: var(--cor-aviso); }
+.oblivio-criar__n { font-variant-numeric: tabular-nums; font-weight: 700; }
+
+.oblivio-criar { display: flex; flex-direction: column; gap: var(--e3); }
+.oblivio-criar__etapa { display: flex; flex-direction: column; gap: var(--e3); }
+
+.oblivio-criar__contador { margin: 0; font-weight: 700; color: var(--cor-ok); }
+.oblivio-criar__contador--falta { color: var(--cor-aviso); }
+.oblivio-criar__ok { margin: 0; color: var(--cor-ok); font-size: var(--texto-mini); }
+.oblivio-criar__pendencias { margin: 0; padding: var(--e2) var(--e2) var(--e2) var(--e5); border-left: 3px solid var(--cor-aviso); background: var(--fundo-superficie-2); font-size: var(--texto-mini); }
+
+.oblivio-papeis {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(calc(220px * var(--escala)), 1fr));
+  gap: var(--e2);
+}
+
+.oblivio-papel {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: var(--e1);
+  padding: var(--e3);
+  border: var(--borda) solid var(--cor-traco-fraca);
+  border-top: 4px solid var(--cor-papel, var(--cor-traco-media));
+  background: var(--fundo-superficie);
+  cursor: pointer;
+}
+.oblivio-papel input { position: absolute; top: var(--e2); right: var(--e2); }
+.oblivio-papel:hover,
+.oblivio-papel:focus-within { border-color: var(--cor-traco-forte); border-top-color: var(--cor-papel, var(--cor-traco-forte)); }
+.oblivio-papel--marcado { background: var(--fundo-superficie-2); box-shadow: inset 0 0 0 1px var(--cor-traco-forte); }
+.oblivio-papel__nome { font-weight: 700; padding-right: var(--e5); }
+.oblivio-papel__resumo { color: var(--cor-texto-2); }
+.oblivio-papel__dado { font-size: var(--texto-mini); color: var(--cor-texto-3); }
+
+.oblivio-criar__atributos { display: flex; flex-direction: column; gap: var(--e2); }
+.oblivio-criar__atributo { display: grid; grid-template-columns: minmax(90px, 10em) auto minmax(0, 1fr); gap: var(--e3); align-items: center; }
+.oblivio-criar__atr-nome { font-weight: 700; }
+
+.oblivio-criar__checks { display: flex; flex-wrap: wrap; gap: var(--e2) var(--e4); }
+
+.oblivio-criar__corpo { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: var(--e4); align-items: start; }
+.oblivio-criar__regioes { display: flex; flex-direction: column; gap: var(--e2); }
+.oblivio-criar__regiao { display: grid; grid-template-columns: minmax(80px, 9em) auto; gap: var(--e2); align-items: center; }
+.oblivio-criar__reg-nome { font-weight: 700; }
+
+.oblivio-criar__catalogo { display: flex; flex-direction: column; gap: var(--e2); }
+.oblivio-criar__grupo > summary { cursor: pointer; font-weight: 700; padding: var(--e1) 0; }
+.oblivio-catalogo { list-style: none; margin: var(--e2) 0 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(calc(240px * var(--escala)), 1fr)); gap: var(--e2); }
+.oblivio-catalogo__item { display: flex; flex-direction: column; gap: var(--e1); padding: var(--e2); border: var(--borda) solid var(--cor-traco-fraca); background: var(--fundo-superficie); }
+.oblivio-catalogo__item > .r-botao { align-self: flex-start; }
+.oblivio-catalogo__nome { font-weight: 700; }
+.oblivio-catalogo__resumo { color: var(--cor-texto-2); }
+
+.oblivio-criar__levados { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--e1); }
+.oblivio-criar__levado { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 14em) auto; gap: var(--e2); align-items: end; }
+
+/* =================================================================
+   MESA DA TESTEMUNHA
+   ================================================================= */
+
+.oblivio-ordem,
+.oblivio-fileira {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--e2);
+}
+
+.oblivio-ordem__item,
+.oblivio-fileira__casa {
+  display: flex;
+  flex-direction: column;
+  gap: var(--e1);
+  min-width: calc(120px * var(--escala));
+  padding: var(--e2);
+  border: var(--borda) solid var(--cor-traco-fraca);
+  background: var(--fundo-superficie);
+}
+.oblivio-ordem__item--vez { border-color: var(--cor-traco-forte); box-shadow: inset 0 3px 0 var(--cor-paranormal); font-weight: 700; }
+.oblivio-ordem__item--adiado { border-style: dashed; }
+
+.oblivio-ameacas { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--e2); }
+.oblivio-ameaca { display: flex; flex-direction: column; gap: var(--e1); padding: var(--e2); border: var(--borda) solid var(--cor-traco-fraca); border-left: 3px solid var(--cor-estresse); background: var(--fundo-superficie); }
+.oblivio-ameaca[data-estado="derrotada"],
+.oblivio-ameaca[data-estado="destruida"] { border-left-style: dashed; opacity: 0.8; }
+.oblivio-ameaca__topo { display: flex; flex-wrap: wrap; gap: var(--e2); align-items: baseline; justify-content: space-between; }
+.oblivio-ameaca__nome { font-weight: 700; }
+
+.oblivio-mapa { display: flex; flex-direction: column; gap: var(--e3); }
+.oblivio-mapa__cartas { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(calc(130px * var(--escala)), 1fr)); gap: var(--e2); }
+
+.oblivio-carta {
+  display: flex;
+  flex-direction: column;
+  gap: var(--e1);
+  padding: var(--e2);
+  border: var(--borda) solid var(--cor-traco-fraca);
+  background: var(--fundo-superficie);
+}
+.oblivio-carta__tipo { font-weight: 700; }
+.oblivio-carta--atual { border-color: var(--cor-traco-forte); box-shadow: inset 0 0 0 1px var(--cor-traco-forte); }
+.oblivio-carta[data-tipo="encontro"],
+.oblivio-carta[data-tipo="armadilha"] { border-left: 3px solid var(--cor-estresse); }
+.oblivio-carta[data-tipo="tesouro"],
+.oblivio-carta[data-tipo="segredo"] { border-left: 3px solid var(--cor-coragem); }
+.oblivio-carta[data-tipo="saida"],
+.oblivio-carta[data-tipo="entrada"] { border-left: 3px solid var(--cor-ok); }
+
+.oblivio-eventos { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--e1); }
+.oblivio-evento { display: flex; flex-wrap: wrap; gap: var(--e2); align-items: center; justify-content: space-between; padding: var(--e1) 0; border-top: var(--borda) dotted var(--cor-traco-fraca); }
+.oblivio-evento[data-estado="resolvido"] { color: var(--cor-texto-3); }
+
+.oblivio-alvos { border: 0; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--e1); }
+
+/* =================================================================
+   CELULAR
+   ================================================================= */
+
+@media (max-width: 640px) {
+  .oblivio-bloco { grid-template-columns: minmax(0, 1fr); }
+  .oblivio-bloco__atributos { justify-content: flex-start; }
+  .oblivio-corpo { grid-template-columns: minmax(0, 1fr); }
+  .oblivio-corpo__figura { max-width: calc(140px * var(--escala)); margin: 0 auto; }
+  .oblivio-corpo__nome { flex-basis: 100%; }
+  .oblivio-dado { grid-template-columns: minmax(0, 1fr) auto; }
+  .oblivio-dado > .faixa { grid-column: 1 / -1; }
+  .oblivio-criar__corpo { grid-template-columns: minmax(0, 1fr); }
+  .oblivio-criar__atributo { grid-template-columns: minmax(0, 1fr) auto; }
+  .oblivio-criar__atributo > .t-mini { grid-column: 1 / -1; }
+  .oblivio-criar__levado { grid-template-columns: minmax(0, 1fr) auto; }
+  .oblivio-criar__levado > .r-campo { grid-column: 1 / -1; grid-row: 2; }
+  .oblivio-ordem__item, .oblivio-fileira__casa { flex: 1 1 100%; }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .oblivio-corpo__enchimento { transition: width var(--tempo-seco) var(--curva); }
+}

@@ -118,6 +118,36 @@
 
   var CHANGELOG = [
     {
+      versao: "3.0.0",
+      codinome: "FAROL",
+      data: "28/10/2026",
+      mudancas: {
+        "Adicionado": [
+          "Oblívio, um sistema completo dentro do R.A.M.A.: em Personagens → Adicionar, escolha Oblívio (agora cada sistema aparece com a capa do livro ao lado do nome). A ficha é de Oblívio do começo ao fim — nunca vira Universal — e as fichas que você já tem não mudam.",
+          "Criação guiada em 8 etapas: Persona, Papel (os cinco, com a Habilidade Principal), 10 pontos de Atributo, Conhecimentos Especializados (3 do Papel e mais metade da Mente), o limite de Estresse distribuído nas cinco regiões do corpo (com sugestão), equipamento inicial com espaços e requisitos, Motivação (escolhida ou rolada) e revisão com o que ainda falta.",
+          "O corpo da Persona: Torso, braços e pernas, cada um com o seu Estresse, numa figura e numa lista. Região esgotada não pode ser arriscada; o Torso esgotado deixa Fora de Ação; próteses, Aprimorar o Corpo e Ir Além (Sobrecarga) para quem joga com menos regiões.",
+          "Testes de Conhecimento em 1D20 com a Zona de Acerto do livro (Reduzida, Normal, Aumentada), especialização, ajuda, Utensílio, Plano de Contingência e disputa. Coragem com os cinco usos (Aumentar Atributo, Aumentar Extremo, Comprar Sucesso, Recuperar Estresse, Reduzir Extremo), recompensas e perda — e recalcular a ficha nunca devolve o que foi gasto.",
+          "Ataque com os dados presos às regiões ANTES de rolar: cada clique numa região é um dado (até 5). Depois de rolar, o ataque fica pendente enquanto há escolha — comprar sucesso, aumentar o Extremo, Dar uma Mãozinha, Empunhadura, Corte Relâmpago — e só “Concluir” põe o Estresse das falhas em cada região e calcula o dano. A Proteção do alvo tem a completa e a restante, com o desgaste somando entre atacantes; Mirar mira uma região.",
+          "Todas as habilidades dos cinco Papéis e as Gerais, com limites por rodada, cena, Descanso, Partida e Missão. Inventário com o catálogo do livro, espaços, carregar por região, Duráveis que absorvem Estresse, recarga, as 15 modificações e Fabricar (teste de Saber, Recursos e Kit de Reparos). Mazelas, Fora de Ação (a terceira vez na Missão mata), Fardos, Descanso com Fogueira e Ração, Missão e progressão.",
+          "A mesa da Testemunha: na campanha, ligue Oblívio em Configurações → Mecânicas opcionais. A aba Oblívio conduz Missão, Partida, cenas (Combate, Descanso, Interação, Tensão) com a Ordem de Ação, turnos e rodadas, as fileiras (a posição é o alcance), o Farol e a Escuridão, os encontros com as 18 Ameaças (ataques, dano, derrota, retornos e os comportamentos de cada uma) e a exploração de Buracos, com todas as tabelas do livro.",
+          "Jogando numa campanha, a ficha anda no tempo da mesa: fim de turno, de rodada e de cena chegam sozinhos; o ataque escolhe a Ameaça do encontro; uma habilidade num aliado é aplicada pela mesa, sem abrir a ficha dele para você; e quando uma Ameaça acerta, você escolhe na ficha a região (e o Durável) que recebe.",
+        ],
+        "Melhorado": [
+          "Os cartões da mesa mostram, numa Persona de Oblívio, o Papel, o Estresse por região, Coragem, Mazelas, Fora de Ação na Missão, Proteção, Velocidade, Dano e Fôlego, com “Esconder status dos jogadores” valendo como sempre.",
+        ],
+        "Visual": [
+          "Capa de sistema: um pequeno volume de livro ao lado do nome do sistema, na escolha do tipo de ficha, no topo da ficha de Oblívio e na criação guiada — no Legacy e no Modern20. Sistema sem capa ganha uma lombada com o nome, nunca uma capa inventada.",
+          "Telas de Oblívio no Legacy e no Modern20, também no celular. Estresse e Coragem têm cor própria no editor de temas de uma ficha de Oblívio.",
+        ],
+        "Técnico": [
+          "Ficha no schema 24 (`tipoFicha: \"oblivio\"`, bloco `oblivio`); uma aba anterior recusa a ficha em vez de descartar o bloco. Nada é convertido. Motor puro em js/oblivio/ (catálogo, Ameaças, Buraco, regras, combate, mesa, habilidades), copiado fielmente em backend/Oblivio.gs (gerado por testes/gerar-oblivio-gs.js). Cada ação tem id de operação e não se aplica duas vezes.",
+          "Backend: arquivo novo backend/Oblivio.gs com ler_oblivio, salvar_oblivio e oblivio_operar; aba CAMPANHA_OBLIVIO. O servidor confere quem age e onde: a Testemunha grava a mesa e avança o tempo; um jogador age só pela Persona que pode editar, e os alvos têm de ser fichas de Oblívio da mesma campanha; os jogadores recebem só a vista deles. Atualizar Dados.gs, Codigo.gs e Campanhas.gs, criar o Oblivio.gs, rodar setupRama() uma vez e criar uma versão nova da implantação.",
+          "Regras com página impressa e do PDF, divergências do livro registradas como interpretações (não erratas) — várias viram ajuste da mesa — e as lacunas do PDF: docs/OBLIVIO.md.",
+          "Testes: 494 do motor em testes/executar-oblivio.js; 1667 backend (também com o serviço avançado; testes/oblivio-backend.js); 3398 regras (7 novos: a ficha de Oblívio no modelo, gravação e importação), 252 tema, 249 frontend, 213 CRIS, 188 criaturas, 89 feedback, 55 dados, 43 pastas, 40 editor de imagem, 19 coordenação — todas passando. Verificado no navegador com o backend simulado (não numa implantação real).",
+        ],
+      },
+    },
+    {
       versao: "2.50.0",
       codinome: "OUVIDORIA",
       data: "27/10/2026",

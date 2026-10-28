@@ -30,6 +30,7 @@ preferências de tela — nunca é tratado como banco.
   testes/               casos de teste, no navegador e no terminal
   assets/criaturas/     retrato 1:1 e corpo inteiro de cada criatura do catálogo (trocáveis)
   assets/dados/         temas de dados: máscara, arte de cada tema e versão, e o kit de modelo
+  assets/sistemas/      capa de cada sistema (miniatura otimizada; nunca o PDF)
 
   css/
     tokens.css          cor (paleta clara e escura), espaço, traço, tempo — os valores literais
@@ -37,6 +38,7 @@ preferências de tela — nunca é tratado como banco.
     componentes.css     botão, campo, painel, cartão, modal, aviso…
     layout.css          cabeçalho, navegação, listas, rodapé
     ficha.css           só o que é exclusivo da ficha
+    oblivio.css         Oblívio: criação, corpo, ataque, mesa da Testemunha (v3.0)
     (estas folhas SÃO o estilo Legacy: a aparência da v2.48.4, intocada)
     interface.css       o seletor de estilo do editor de temas (vale nos dois estilos)
     modern20/           o estilo Modern20 (v2.49): uma folha par de cada uma acima,
@@ -67,7 +69,8 @@ preferências de tela — nunca é tratado como banco.
     versao.js           FONTE ÚNICA da versão e do changelog
     habilidades.js      modelo e árvore recursiva de habilidades
     organizar.js        o que muda de lugar ao reorganizar uma lista (filtro, pastas, grupos)
-    sistemas.js         o registro dos sistemas de RPG (Ordem Paranormal, Universal…)
+    sistemas.js         o registro dos sistemas de RPG (Ordem Paranormal, Oblívio, Universal…)
+    capa-sistema.js     a capa do sistema (volume de livro) ao lado do nome — qualquer sistema
     personagens-organizacao.js  pasta aberta, busca, sistema e agrupamento da página Personagens
     arrastar.js         o gesto de arrastar e soltar, o mesmo nas cinco abas
     criaturas.js        o modelo de criatura: universal e Ordem, sistema x origem, ocorrências
@@ -93,6 +96,16 @@ preferências de tela — nunca é tratado como banco.
       condicoes.js      morrendo, enlouquecendo e contadores da mesa, por início de turno
       criaturas-dados.js o catálogo de criaturas dos dois livros (sob demanda)
       criaturas.js      carga, conversão, busca, filtros e conferência do catálogo de criaturas
+    oblivio/            as regras de Oblívio (v3.0): motor puro, copiado em backend/Oblivio.gs
+      catalogo.js       Papéis, Habilidades, Conhecimentos, equipamentos, Mazelas, Fardos…
+      ameacas-dados.js  as 18 Ameaças, com efeitos estruturados
+      buraco-dados.js   as tabelas do Buraco, cada linha em eventos
+      regras.js         a Persona: cálculo, criação, Estresse, Coragem, momentos
+      combate.js        testes, ataque com resolução pendente, Proteção, dano
+      ameacas.js        instâncias de Ameaça e comportamentos
+      mesa.js           a mesa da Testemunha: Missão, cenas, fileiras, Farol, encontro
+      buraco.js         construção e exploração de Buracos
+      habilidades.js    habilidades com ativação e ações específicas
     historico.js        rolagem → histórico da campanha, num funil só
     temas-dados.js      catálogo dos temas de dados e regras puras (copiado no Codigo.gs)
     aparencia-rolagem.js o dado e o fundo de cada rolagem: captura, ícone e aplicação no cartão
@@ -104,6 +117,7 @@ preferências de tela — nunca é tratado como banco.
     Campanhas.gs        campanhas, rolagens, documentos, notas, combates
     Cris.gs             leitura de ficha pública do CRIS (opcional)
     Feedback.gs         feedback entregue num canal do Discord (opcional)
+    Oblivio.gs          a mesa de Oblívio e as operações entre fichas (cópia do motor; v3.0)
     appsscript.json     manifesto do projeto
 
   docs/
@@ -115,6 +129,7 @@ preferências de tela — nunca é tratado como banco.
     PERFORMANCE.md      o que custa caro, o que foi feito e como medir
     ORDEM-REGRAS.md     matriz de regras de Ordem: fonte, página e lacunas
     INTERFACE.md        Legacy e Modern20: arquitetura, inventário de telas e como verificar
+    OBLIVIO.md          Oblívio: matriz de cobertura, interpretações e lacunas do livro
 ```
 
 ---
@@ -335,6 +350,26 @@ tamanhos, respostas 200/204/429/4xx/5xx, rede, freio, repetição) está em
 deno run --allow-read testes/executar-feedback.js
 ```
 
+**Oblívio** — 494 verificações do motor, sem navegador e sem rede: catálogo e
+páginas, criação (pontos, especializações, distribuição do corpo, equipamento),
+Mutáveis, Estresse (transbordo, Ferida, Durável), Coragem (os cinco usos, saldo,
+Coragem Cega, perda e Pavor), Mazelas e os meios de remoção, Fora de Ação e
+Fardos, inventário, modificações e fabricação, testes e disputa, ataque com
+resolução pendente, Proteção completa e restante, dano, as Ameaças e seus
+comportamentos, a mesa (cenas, turnos, fileiras, Farol e Escuridão), o Buraco e
+todas as habilidades e ações. O lado do servidor (cópia fiel do motor no `.gs`,
+permissões, vista dos jogadores, operações entre fichas, repetição) está em
+`testes/oblivio-backend.js`, dentro de `executar-backend.js`. Mudou algo em
+`js/oblivio/`? Gere de novo a cópia do servidor antes de testar:
+
+```bash
+deno run --allow-read --allow-write testes/gerar-oblivio-gs.js
+```
+
+```bash
+deno run --allow-read testes/executar-oblivio.js
+```
+
 **Transporte do frontend e carga das páginas** — 228 verificações:
 
 ```bash
@@ -512,6 +547,11 @@ São **três arquivos**, e os três precisam existir:
    Arquivos) e cole `backend/Campanhas.gs` nele;
 3. crie um arquivo chamado **`Dados`** e cole `backend/Dados.gs` nele.
 
+Para jogar **Oblívio** numa campanha (a mesa da Testemunha), crie também
+**`Oblivio`** com `backend/Oblivio.gs`. Sem ele, as fichas de Oblívio funcionam
+avulsas, e ligar Oblívio em Configurações da campanha avisa que o servidor ainda
+não conhece a ação.
+
 > O Apps Script lê todos os `.gs` no mesmo escopo e iça as declarações de
 > função entre arquivos, então a ordem em que eles aparecem não importa.
 > São três por manutenção — separar arquivos não deixa nada mais rápido.
@@ -645,6 +685,23 @@ próprio `<script src>`, então funciona debaixo de subpasta sem ajuste.
 segredo nenhum — ele os lê das Script Properties. Publicá-lo não expõe nada.
 
 ### Atualizar o backend
+
+**v3.0.0 — FAROL:** Oblívio como sistema completo. **Crie** o arquivo `Oblivio`
+no Apps Script com `backend/Oblivio.gs`, **troque** `Dados.gs`, `Codigo.gs` e
+`Campanhas.gs`, rode **`setupRama()`** uma vez (cria a aba `CAMPANHA_OBLIVIO`;
+repetir é seguro e não apaga nada) e crie uma **nova versão** da implantação; só
+então publique o site — inclusive as pastas novas `js/oblivio/` e
+`assets/sistemas/`, os arquivos novos `js/capa-sistema.js`,
+`js/paginas/oblivio-criar.js`, `js/paginas/oblivio-corpo.js`,
+`js/paginas/ficha-oblivio.js`, `js/paginas/ficha-oblivio-jogo.js`,
+`js/paginas/ficha-oblivio-mesa.js`, `js/paginas/campanha-oblivio.js`,
+`css/oblivio.css` e `css/modern20/oblivio.css`, e `personagens/`, `ficha/` e
+`campanha/index.html`, que passam a carregá-los. Nada existente é convertido:
+fichas universais e de Ordem continuam como estão e passam ao schema 24 na
+primeira gravação; abas abertas na versão anterior recusam fichas 24 e pedem para
+recarregar. Sem o `setupRama()`, só a mesa de Oblívio recusa gravar
+(`instalacao_incompleta`); sem o `Oblivio.gs` ou sem a versão nova da
+implantação, a aba Oblívio da campanha não acha `ler_oblivio`.
 
 **v2.50.0 — OUVIDORIA:** o Feedback do menu do agente. **Crie** o arquivo
 `Feedback` no Apps Script com `backend/Feedback.gs`, **troque** o `Codigo.gs`
@@ -1178,6 +1235,13 @@ console não abre o registro de outra conta.
 
 ## Limitações conhecidas
 
+- **Oblívio: o que fica com a Testemunha.** As disputas específicas das Ameaças
+  (Salto de Mola, Engolfar, Mão Leve…) aparecem com o texto e são conduzidas com
+  as ferramentas de teste; a queda de atributo da Drenagem, o resultado de uma
+  disputa contra uma Ameaça e as decisões que o livro deixa à mesa também. Uma
+  ficha numa campanha joga no tempo da mesa; avulsa, no tempo dos botões da aba
+  Estado. As lacunas do PDF (Ameaças de Jogo, Partida Solo, Equipamento
+  Corrompido…) não foram inventadas. Ver `docs/OBLIVIO.md`.
 - **Criaturas: o que fica com o mestre.** O R.A.M.A. não aplica dano, cura,
   condições nem resistências a outro ser, não decide alvos nem áreas e não zera
   usos por cena sozinho (há o contador e o botão). No crítico de um dano em
@@ -1349,7 +1413,7 @@ Três números diferentes, que não se misturam:
 
 | | Onde | O que é |
 |---|---|---|
-| versão do aplicativo | `js/versao.js` | o que a pessoa vê: v2.50.0 |
+| versão do aplicativo | `js/versao.js` | o que a pessoa vê: v3.0.0 |
 | `schemaVersion` | `js/ficha.js` | o formato da FICHA |
 | `versaoFormato` | `js/config.js` | o formato dos arquivos de importação |
 

@@ -59,6 +59,7 @@
     "sincronizar_campanha",
     "ler_hexatombe",
     "ler_hacking",
+    "ler_oblivio",
 
     "salvar_foto",
     "salvar_perfil",
@@ -80,6 +81,11 @@
     "salvar_hexatombe",
     /* E para o Hacking (v2.38). */
     "salvar_hacking",
+    /* E para a mesa de Oblívio (v3.0): o estado leva rev e opId; cada
+       operação leva opId, e o servidor reconhece a segunda chegada pela
+       mesa e pelas fichas que ela tocou. */
+    "salvar_oblivio",
+    "oblivio_operar",
 
     /* registrar_rolagem repete com segurança porque carrega um id
        próprio: o servidor reconhece a segunda chegada e não cria a
@@ -171,6 +177,8 @@
     atualizar_combate: true,
     salvar_hexatombe: true,
     salvar_hacking: true,
+    salvar_oblivio: true,
+    oblivio_operar: true,
   };
 
   var LEITURAS = {};
@@ -784,6 +792,20 @@
   function salvarPerigos(campanhaId, rev, opId, estado) {
     return post({ acao: "salvar_perigos", campanhaId: campanhaId, rev: rev, opId: opId, estado: estado });
   }
+  /* Oblívio (v3.0): a mesa da Testemunha — o mesmo esquema do Hacking
+     para o estado; e as operações que tocam fichas (habilidade num
+     aliado, ataque a uma Ameaça, momentos de tempo), aplicadas e
+     conferidas pelo servidor. Quem não é a Testemunha recebe só a vista
+     dos jogadores. */
+  function lerOblivio(campanhaId, personagemId, opcoes) {
+    return post({ acao: "ler_oblivio", campanhaId: campanhaId, personagemId: personagemId || undefined }, opcoes);
+  }
+  function salvarOblivio(campanhaId, rev, opId, estado) {
+    return post({ acao: "salvar_oblivio", campanhaId: campanhaId, rev: rev, opId: opId, estado: estado });
+  }
+  function oblivioOperar(campanhaId, opId, operacao) {
+    return post({ acao: "oblivio_operar", campanhaId: campanhaId, opId: opId, operacao: operacao });
+  }
   /* Sincronia Conectiva (v2.48, AS5): gastar PE de outro sincronizado ou
      assumir o dano dele — o servidor confere a sincronia dos dois lados. */
   function sincroniaOperar(pedido) {
@@ -1105,6 +1127,9 @@
     salvarHacking: salvarHacking,
     lerPerigos: lerPerigos,
     salvarPerigos: salvarPerigos,
+    lerOblivio: lerOblivio,
+    salvarOblivio: salvarOblivio,
+    oblivioOperar: oblivioOperar,
     sincroniaOperar: sincroniaOperar,
     lerImagemDoTurno: lerImagemDoTurno,
     excluirCombate: excluirCombate,

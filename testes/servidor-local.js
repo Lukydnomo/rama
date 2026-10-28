@@ -55,11 +55,11 @@ const urlDaPasta = (p) => absoluto(p) ? new URL("file:///" + p.replace(/\\/g, "/
 const fichas = await fichasParaMedir();
 
 const ambiente = instalarAmbiente(globalThis);
-for (const arq of ["Dados.gs", "Codigo.gs", "Campanhas.gs", "Cris.gs", "Feedback.gs"]) {
+for (const arq of ["Dados.gs", "Codigo.gs", "Campanhas.gs", "Cris.gs", "Feedback.gs", "Oblivio.gs"]) {
   try {
     (0, eval)(await Deno.readTextFile(new URL(arq, urlDaPasta(PASTA_BACKEND))));
   } catch (e) {
-    if (arq !== "Cris.gs" && arq !== "Feedback.gs") throw e;
+    if (arq !== "Cris.gs" && arq !== "Feedback.gs" && arq !== "Oblivio.gs") throw e;
   }
 }
 

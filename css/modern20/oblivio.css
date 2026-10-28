@@ -1,0 +1,88 @@
+/* =====================================================================
+   R.A.M.A. — Oblívio (v3.0) · Modern20
+   ---------------------------------------------------------------------
+   As MESMAS classes de css/oblivio.css na linguagem Modern20: canto
+   leve, traço discreto, sombra só no que flutua. Estado continua com
+   texto e forma — o tracejado da prótese, o risco da esgotada, o traço
+   lateral do resultado.
+   ===================================================================== */
+
+:where(:root[data-interface="modern20"]) {
+
+  & .oblivio-fixo,
+  & .oblivio-mut,
+  & .oblivio-corpo__regiao,
+  & .oblivio-conhecimento__rolar,
+  & .oblivio-dado,
+  & .oblivio-resultado,
+  & .oblivio-hab,
+  & .oblivio-item,
+  & .oblivio-mazela,
+  & .oblivio-papel,
+  & .oblivio-catalogo__item,
+  & .oblivio-ordem__item,
+  & .oblivio-fileira__casa,
+  & .oblivio-ameaca,
+  & .oblivio-carta {
+    border-color: var(--m20-borda);
+    border-radius: var(--m20-raio-controle);
+  }
+
+  & .oblivio-fixo,
+  & .oblivio-mut { padding: var(--e2) var(--e3); }
+
+  & .oblivio-fixo__sigla,
+  & .oblivio-mut__nome,
+  & .oblivio-bloco__papel { letter-spacing: 0.04em; }
+
+  & .oblivio-fixo__valor,
+  & .oblivio-mut__valor { font-weight: 650; }
+
+  & .oblivio-pendencias,
+  & .oblivio-mesa-faixa,
+  & .oblivio-criar__pendencias {
+    border-radius: var(--m20-raio-controle);
+    background: var(--m20-destaque-suave);
+  }
+  & .oblivio-pendencias,
+  & .oblivio-criar__pendencias { background: var(--m20-aviso-suave); }
+
+  & .oblivio-corpo__barra {
+    border: 0;
+    border-radius: 999px;
+    overflow: hidden;
+    background: var(--fundo-superficie-2);
+  }
+
+  & button.oblivio-corpo__regiao,
+  & .oblivio-conhecimento__rolar {
+    min-height: var(--m20-controle);
+    box-shadow: var(--m20-sombra-1);
+    transition: background var(--tempo-seco) var(--curva), border-color var(--tempo-seco) var(--curva);
+  }
+  & button.oblivio-corpo__regiao:focus-visible,
+  & .oblivio-conhecimento__rolar:focus-visible { outline: 2px solid var(--m20-anel); outline-offset: 2px; }
+
+  & .oblivio-corpo__forma { stroke: var(--m20-borda-controle); }
+
+  & .oblivio-papel {
+    border-top-width: 1px;
+    box-shadow: inset 0 3px 0 var(--cor-papel, var(--m20-borda));
+    border-radius: var(--m20-raio-cartao);
+  }
+  & .oblivio-papel--marcado { background: var(--m20-selecao-suave); box-shadow: inset 0 3px 0 var(--cor-papel, var(--m20-borda)), 0 0 0 2px var(--m20-anel); }
+
+  & .oblivio-criar__passo {
+    border-radius: 999px;
+    border-color: var(--m20-borda);
+    padding: var(--e1) var(--e3);
+  }
+  & .oblivio-criar__passo[aria-current="step"] { background: var(--m20-selecao-suave); border-color: var(--m20-borda-controle); }
+
+  & .oblivio-ordem__item--vez { background: var(--m20-selecao-suave); }
+  & .oblivio-carta--atual { background: var(--m20-selecao-suave); box-shadow: 0 0 0 2px var(--m20-anel); }
+
+  & .oblivio-catalogo__item,
+  & .oblivio-ameaca,
+  & .oblivio-carta { border-radius: var(--m20-raio-cartao); }
+}

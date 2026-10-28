@@ -75,6 +75,9 @@
     { chave: "hacking",     rotulo: "Hacking",     secao: "RAMACampanhaHacking", soComModo: "hacking" },
     /* Arquivos Secretos 5 (v2.48): os perigos complexos, também opcionais. */
     { chave: "perigos",     rotulo: "Perigos",     secao: "RAMACampanhaPerigos", soComModo: "perigos" },
+    /* Oblívio (v3.0): a mesa da Testemunha — Missão, cenas, Farol,
+       encontros com Ameaças e Buracos. Ligada em Configurações. */
+    { chave: "oblivio",     rotulo: "Oblívio",     secao: "RAMACampanhaOblivio", soComModo: "oblivio" },
     { chave: "notas",       rotulo: "Notas",       secao: "RAMACampanhaNotas", soMestre: true },
     { chave: "config",      rotulo: "Configurações", secao: "RAMACampanhaConfig", soMestre: true },
   ];
@@ -399,6 +402,7 @@
       var hexatombeAntes = !!(estado.campanha && estado.campanha.hexatombe);
       var hackingAntes = !!(estado.campanha && estado.campanha.hacking);
       var perigosAntes = !!(estado.campanha && estado.campanha.perigos);
+      var oblivioAntes = !!(estado.campanha && estado.campanha.oblivio);
       aplicarCampanha(r);
 
       if (estado.papel === "espectador") {
@@ -422,7 +426,7 @@
       /* Uma mecânica opcional ligou ou desligou em outro lugar: a aba
          aparece ou some, para todos. */
       var redesenhou = (hexatombeAntes !== !!estado.campanha.hexatombe || hackingAntes !== !!estado.campanha.hacking ||
-        perigosAntes !== !!estado.campanha.perigos) && aoMudarMecanicas();
+        perigosAntes !== !!estado.campanha.perigos || oblivioAntes !== !!estado.campanha.oblivio) && aoMudarMecanicas();
       if (!redesenhou) notificar("campanha");
       if (tem("membros")) notificar("membros");
     }
@@ -440,6 +444,7 @@
     if (tem("hexatombe")) notificar("hexatombe");
     if (tem("hacking")) notificar("hacking");
     if (tem("perigos")) notificar("perigos");
+    if (tem("oblivio")) notificar("oblivio");
   }
 
   async function buscarPersonagensEmSegundoPlano() {
@@ -546,7 +551,7 @@
   }
 
   /* As abas que desenham fichas da mesa. As outras não pagam por ela. */
-  var PRECISAM_DA_MESA = { personagens: true, combate: true, notas: true, hexatombe: true, hacking: true, perigos: true };
+  var PRECISAM_DA_MESA = { personagens: true, combate: true, notas: true, hexatombe: true, hacking: true, perigos: true, oblivio: true };
 
   function desenhar() {
     if (estado.semAcesso) return;
@@ -947,6 +952,8 @@
       texto: "Cenas de hacking com turnos, pontos de segurança e dados virtuais. Ligada, a aba Hacking aparece para você e para os jogadores." },
     { chave: "perigos", nome: "Perigos complexos", fonte: "Arquivos Secretos 5", modulo: "RAMACampanhaPerigos",
       texto: "Cenas de ação que não são combate — explosão, fuga de horda, naufrágio, prédio tomado, chuva de Sangue — com rodadas, sucessos e falhas guardados entre sessões. Ligada, a aba Perigos aparece para você e para os jogadores (cada um vê os perigos em que está)." },
+    { chave: "oblivio", nome: "Oblívio", fonte: "mesa da Testemunha · Oblívio RPG", modulo: "RAMACampanhaOblivio",
+      texto: "A mesa da Testemunha para Personas de Oblívio: Missão, cenas e Ordem de Ação, fileiras e alcance, Farol, encontros com as 18 Ameaças e a exploração de Buracos. Ligada, a aba Oblívio aparece para você e para os jogadores (eles veem só o que a mesa mostra)." },
   ];
 
   function mecanicasOpcionais(ctx) {

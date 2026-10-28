@@ -116,7 +116,7 @@
     o = o || {};
     var ehFicha = o.contexto === "ficha";
     var podeSalvar = ehFicha ? o.podeSalvar !== false : true;
-    var sistema = ehFicha ? (o.sistema === "ordem" ? "ordem" : "universal") : "geral";
+    var sistema = ehFicha ? (o.sistema === "ordem" || o.sistema === "oblivio" ? o.sistema : "universal") : "geral";
 
     /* ---- o rascunho ---- */
     var prefs = o.preferencias || {};

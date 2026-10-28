@@ -312,6 +312,12 @@ function rotaDe(acao) {
       Object.keys(doCris).forEach(function (chave) { CACHE_ROTAS[chave] = doCris[chave]; });
     }
 
+    /* Oblivio.gs (v3.0): a mesa de Oblívio. Mesmo contrato. */
+    if (typeof rotasDoOblivio === 'function') {
+      var doOblivio = rotasDoOblivio();
+      Object.keys(doOblivio).forEach(function (chave) { CACHE_ROTAS[chave] = doOblivio[chave]; });
+    }
+
     /* Feedback.gs: o envio de feedback ao Discord. Mesmo contrato do
        Cris.gs — sem o arquivo, 'acao_desconhecida'. */
     if (typeof rotasDoFeedback === 'function') {
@@ -1051,10 +1057,12 @@ var TEMA_TOKENS = {
   ok: 'c', aviso: 'c', erro: 'c', paranormal: 'c',
   sombra: 'a', veuModal: 'a', vinheta: 'a', scanline: 'a', veuRecorte: 'a', contornoCor: 'a',
   grau: 'c', elementoSangue: 'c', elementoMorte: 'c', elementoConhecimento: 'c', elementoEnergia: 'c', elementoMedo: 'c',
+  estresse: 'c', coragem: 'c',
 };
 var TEMA_TOKENS_SISTEMA = {
   grau: 'ordem', elementoSangue: 'ordem', elementoMorte: 'ordem',
   elementoConhecimento: 'ordem', elementoEnergia: 'ordem', elementoMedo: 'ordem',
+  estresse: 'oblivio', coragem: 'oblivio',
 };
 var TEMA_MAX_PONTOS = 8;
 var TEMA_MAX_TEMAS = 12;

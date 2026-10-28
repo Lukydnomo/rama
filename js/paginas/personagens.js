@@ -1135,13 +1135,22 @@
      em js/ficha.js. Por isso a tela diz isso aqui, antes, e não depois
      de já ser tarde. */
   function abrirEscolhaDeTipo() {
+    /* v3.0: cada cartão leva a capa do livro do sistema ao lado do nome
+       (js/capa-sistema.js) — decorativa: o nome já está escrito. */
     function cartao(o) {
+      var capa = o.sistema && global.RAMACapaSistema ? global.RAMACapaSistema.elemento(o.sistema, { tamanho: "m" }) : null;
       return el("button.tipo-ficha", {
         type: "button",
+        dataset: { sistema: o.sistema || "" },
         onclick: function () { if (o.aoEscolher) o.aoEscolher(); },
       }, [
-        el("span.tipo-ficha__nome", { texto: o.nome }),
-        el("span.tipo-ficha__resumo", { texto: o.resumo }),
+        el("span.tipo-ficha__cabeca", {}, [
+          capa,
+          el("span.tipo-ficha__titulos", {}, [
+            el("span.tipo-ficha__nome", { texto: o.nome }),
+            el("span.tipo-ficha__resumo", { texto: o.resumo }),
+          ]),
+        ]),
         el("ul.tipo-ficha__lista", {}, o.pontos.map(function (t) {
           return el("li", { texto: t });
         })),
@@ -1154,6 +1163,7 @@
       conteudo: [
         el("div.tipos-ficha", {}, [
           cartao({
+            sistema: "ordem",
             nome: "Ordem Paranormal",
             resumo: "A ficha do sistema, com as regras dos livros.",
             pontos: [
@@ -1165,6 +1175,19 @@
             aoEscolher: function () { m.fechar(); abrirCriacaoOrdem(); },
           }),
           cartao({
+            sistema: "oblivio",
+            nome: "Oblívio",
+            resumo: "Personas, Buracos e a Escuridão — as regras do livro.",
+            pontos: [
+              "Criação guiada em 8 passos: Papel, atributos, corpo, equipamento",
+              "Corpo em cinco regiões com Estresse, Coragem e Mazelas",
+              "Ataques com dados presos às regiões e Proteção do alvo",
+              "Mesa da Testemunha: cenas, Farol, Ameaças e Buracos",
+            ],
+            aoEscolher: function () { m.fechar(); abrirCriacaoOblivio(); },
+          }),
+          cartao({
+            sistema: "universal",
             nome: "Universal",
             resumo: "O modelo flexível do R.A.M.A., para qualquer sistema.",
             pontos: [
@@ -1178,7 +1201,7 @@
         ]),
         el("p.t-mini", {
           texto: "A escolha fica gravada na ficha e não muda depois. Não existe conversão " +
-                 "automática entre os dois modelos: ela teria de adivinhar o que vira o quê, " +
+                 "automática entre os modelos: ela teria de adivinhar o que vira o quê, " +
                  "e adivinhar aqui é perder dado em silêncio.",
         }),
       ],
@@ -1199,6 +1222,18 @@
     var r = await global.RAMAApi.listarCampanhas();
     if (r.ok) campanhas = r.dados || [];
     global.RAMAOrdemCriar.abrir({ campanhas: campanhas });
+  }
+
+  /* A criação guiada de Oblívio (v3.0), do mesmo jeito. */
+  async function abrirCriacaoOblivio() {
+    if (!global.RAMAOblivioCriar || !global.RAMAOblivio) {
+      UI.avisoErro("A criação de Oblívio não está disponível nesta página.");
+      return;
+    }
+    var campanhas = [];
+    var r = await global.RAMAApi.listarCampanhas();
+    if (r.ok) campanhas = r.dados || [];
+    global.RAMAOblivioCriar.abrir({ campanhas: campanhas });
   }
 
   /* =================================================================

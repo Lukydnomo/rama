@@ -875,6 +875,38 @@ sincronização que já existe: quando a marca `rolagens` muda, uma busca curta
   trocar o tema depois não muda o passado. Ver o dado de outro jogador não
   concede o tema.
 
+## Oblívio — a mesa da Testemunha (v3.0)
+
+Ligada em **Configurações → Mecânicas opcionais → Oblívio**. A aba aparece para
+todos; o estado mora em `CAMPANHA_OBLIVIO` (uma linha por campanha). Regras e
+páginas: [OBLIVIO.md](OBLIVIO.md).
+
+- **Testemunha (mestre):** abre e conclui a Missão (a progressão chega às fichas
+  vivas), começa uma nova Partida, registra morte na Missão; abre cenas
+  (Combate, Descanso, Interação, Tensão com rodadas, meta e motivo) com a Ordem
+  de Ação pela Velocidade de quem está na fileira e das Ameaças ativas; passa o
+  turno (fim do turno, fim da rodada e início do turno seguem para as fichas),
+  Adiar, trocar na Tensão, somar sucessos; arruma as fileiras (posição = alcance);
+  define e cuida do Farol (acender, abastecer, derrubar, pegar, Escuridão); põe
+  Ameaças no encontro, ataca as Personas com elas (o acerto fica pendente até a
+  Persona escolher a região na ficha — ou a Testemunha aplica), aplica dano,
+  derrota, impede retornos, usa os comportamentos especiais (União dos Golfos,
+  Apropriação, invocações, Mutação, Quimera) e rola recompensas; constrói e
+  explora Buracos (cartas por andar, eventos com "Preparar" e "Resolvido",
+  saída) e ajusta as leituras da mesa.
+- **Jogador:** vê a vista dos jogadores — Missão, cena, Ordem de Ação, fileiras,
+  Farol, as Ameaças por nome, Grau e "% ferida", as cartas reveladas do Buraco e
+  o registro público — e os acertos esperando a Persona dele, com o atalho para
+  a ficha. Joga pela ficha: lá a faixa "Na mesa" mostra o tempo da campanha,
+  o alvo do ataque vem do encontro e as habilidades com alvo em outra Persona
+  vão pelo servidor.
+- **Painel da mesa:** o cartão de uma Persona mostra o Papel, o Estresse por
+  região, Coragem, Mazelas, Fora de Ação na Missão, Proteção, Velocidade, Dano e
+  Fôlego — só leitura (Estresse muda pelas regras), com "Esconder status dos
+  jogadores" valendo como para os recursos de Ordem.
+- Cada ação é uma operação com `rev` e `opId`; um conflito relê a mesa e pede
+  para refazer.
+
 ## Perigos complexos (v2.48)
 
 Regra de cena do Arquivos Secretos 5 (p. 66–69), a terceira mecânica opcional:

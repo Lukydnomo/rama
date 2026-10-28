@@ -368,6 +368,19 @@ var ABAS = {
     leves: 4,
     pesadas: ['dadosJson'],
   },
+  CAMPANHA_OBLIVIO: {
+    /* A mesa de Oblívio (v3.0): missão, cenas, Ordem de Ação, fileiras,
+       Farol, encontro e Buraco — uma linha por campanha. Só a Testemunha
+       (mestre) grava o estado inteiro; operações de jogo validadas
+       passam por oblivio_operar (Oblivio.gs). `opsJson` guarda os
+       últimos ids aplicados. `ativo`: a mesa ligada em Configurações
+       (a aba Oblívio aparece para todos), lido sem abrir o estado. */
+    nome: 'CAMPANHA_OBLIVIO',
+    colunas: ['campanhaId', 'ativo', 'atualizadoEm', 'rev', 'opsJson', 'dadosJson'],
+    chave: 'campanhaId',
+    leves: 4,
+    pesadas: ['dadosJson'],
+  },
   CAMPANHA_CAPAS: {
     /* A capa (banner) da campanha. Fora do dadosJson pelo mesmo motivo
        da foto de personagem: é o campo mais pesado e o que menos muda.

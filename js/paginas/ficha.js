@@ -75,21 +75,43 @@
     { chave: "aliados",      rotulo: "Aliados",     secao: "RAMASecaoAliados" },
   ];
 
+  /* Oblívio (v3.0): a Persona inteira vem das regras do livro — corpo,
+     Coragem, testes, ataque, inventário com modificações, Mazelas e
+     Fardos. "geral" é a Persona, para a aba guardada cair nela. */
+  var ABAS_OBLIVIO = [
+    { chave: "geral",        rotulo: "Persona",     secao: "RAMASecaoOblivio" },
+    { chave: "testes",       rotulo: "Testes",      secao: "RAMASecaoOblivioTestes" },
+    { chave: "habilidades",  rotulo: "Habilidades", secao: "RAMASecaoOblivioHabilidades" },
+    { chave: "inventario",   rotulo: "Inventário",  secao: "RAMASecaoOblivioInventario" },
+    { chave: "estado",       rotulo: "Estado",      secao: "RAMASecaoOblivioEstado" },
+    { chave: "anotacoes",    rotulo: "Anotações",   secao: "RAMASecaoAnotacoes", independente: true },
+  ];
+
   /* Lida do TIPO gravado, nunca deduzida do conteúdo. E com uma rede:
      se os módulos de Ordem não estiverem carregados, a ficha abre no
-     modelo universal em vez de abrir quebrada. */
+     modelo universal em vez de abrir quebrada. Uma ficha de Oblívio
+     NUNCA cai no universal: sem os módulos, as abas dizem isso. */
   /* O bloco que fica sempre à vista, acima das abas. Ele também depende
      do tipo: numa ficha de Ordem, os atributos e os recursos são os
      calculados pelas regras, não os campos livres do modelo universal. */
   function blocoSuperiorDaFicha() {
-    var secao = abasDaFicha() === ABAS_ORDEM
+    var abas = abasDaFicha();
+    if (abas === ABAS_OBLIVIO) {
+      return global.RAMASecaoOblivio ? global.RAMASecaoOblivio.blocoSuperior(ctx) : semMotorDeOblivio();
+    }
+    var secao = abas === ABAS_ORDEM
       ? global.RAMASecaoOrdemGeral
       : global.RAMASecaoGeral;
     return secao.blocoSuperior(ctx);
   }
 
+  function semMotorDeOblivio() {
+    return el("p.r-aviso", { texto: "Os módulos de Oblívio não carregaram nesta página. Nada foi alterado na ficha: recarregue para tentar de novo." });
+  }
+
   function abasDaFicha() {
     if (!estado.ficha) return ABAS_UNIVERSAL;
+    if (F.ehDeOblivio(estado.ficha)) return ABAS_OBLIVIO;
     if (!F.ehDeOrdem(estado.ficha)) return ABAS_UNIVERSAL.filter(function (a) {
       return a.chave === "geral" || F.moduloAtivo(estado.ficha, a.chave);
     });
@@ -408,6 +430,16 @@
      de Ordem, para a mesa ver sem receber a ficha. Uma CÓPIA: o estado
      da tela e a base do salvador não ganham o campo. */
   function comResumo(dados) {
+    /* Oblívio (v3.0): o mesmo para a Persona — Estresse por região,
+       Coragem, Mazelas, Proteção, Velocidade e Dano (resumoOblivio). */
+    if (dados && dados.tipoFicha === "oblivio" && dados.oblivio && global.RAMAOblivio) {
+      try {
+        return Object.assign({}, dados, { resumoOblivio: global.RAMAOblivio.resumoParaMesa(global.RAMAOblivio.normalizar(U.copiar(dados.oblivio))) });
+      } catch (e) {
+        console.warn("[R.A.M.A. · ficha] resumo de Oblívio não calculado", e);
+        return dados;
+      }
+    }
     var R = global.RAMAOrdemRegras;
     if (!dados || dados.tipoFicha !== "ordem" || !dados.ordem || !R || !R.resumoDeRecursos) return dados;
     try {
@@ -549,7 +581,7 @@
       case "bloco": return [blocoSuperiorDaFicha()];
       case "abas": return [abas()];
       case "conteudo": return [el("div", { id: "aba-conteudo", role: "tabpanel", "aria-labelledby": "aba-" + secao.chave },
-        [global[secao.secao].aba(ctx)])];
+        [global[secao.secao] ? global[secao.secao].aba(ctx) : semMotorDeOblivio()])];
     }
     return [];
   }
@@ -753,7 +785,7 @@
           indicador,
           modoSeletor(),
           botaoDeTema(),
-          estado.modo === "edicao" && !F.ehDeOrdem(estado.ficha)
+          estado.modo === "edicao" && !F.ehDeOrdem(estado.ficha) && !F.ehDeOblivio(estado.ficha)
             ? el("button.r-botao.r-botao--mini", { type: "button", texto: "Configurar módulos", onclick: configurarModulos }) : null,
           PAINEL
             ? el("a.r-botao.r-botao--mini.r-botao--fantasma", {
@@ -785,13 +817,16 @@
     var campanha = ctx.nomeDaCampanha();
     if (campanha) partes.push(campanha);
     if (estado.ficha.classe) partes.push(estado.ficha.classe);
+    var papel = F.ehDeOblivio(estado.ficha) && estado.ficha.oblivio && global.RAMAOblivioCatalogo
+      ? global.RAMAOblivioCatalogo.papel[estado.ficha.oblivio.papel] : null;
+    if (papel) partes.push(papel.nome);
     if (estado.ficha.origem) partes.push(estado.ficha.origem);
     partes.push("Registro // " + U.codigoCurto(estado.personagemId));
     return partes.join(" · ");
   }
 
   function configurarModulos() {
-    if (!ctx.emEdicao() || F.ehDeOrdem(ctx.ficha)) return;
+    if (!ctx.emEdicao() || F.ehDeOrdem(ctx.ficha) || F.ehDeOblivio(ctx.ficha)) return;
     var escolhas = F.normalizarModulos(ctx.ficha.modulos);
     UI.modal({
       titulo: "Configurar módulos",
@@ -900,7 +935,7 @@
       podeEscolherDados: ctx.podeEditar() && !!estado.dono,
       /* As cores de um sistema (elementos e graus de Ordem) só existem no
          tema de uma ficha dele. */
-      sistema: F.ehDeOrdem(estado.ficha) ? "ordem" : "universal",
+      sistema: F.ehDeOrdem(estado.ficha) ? "ordem" : F.ehDeOblivio(estado.ficha) ? "oblivio" : "universal",
       aplicar: aplicarTema,
     });
   }
@@ -1030,7 +1065,7 @@
       /* A aba é lida antes de a ficha chegar, quando ainda não se sabe o
          tipo dela: vale qualquer aba conhecida. Se ela não existir no
          tipo da ficha, o desenho cai na primeira. */
-      return ABAS_UNIVERSAL.concat(ABAS_ORDEM).some(function (a) { return a.chave === v; }) ? v : "geral";
+      return ABAS_UNIVERSAL.concat(ABAS_ORDEM, ABAS_OBLIVIO).some(function (a) { return a.chave === v; }) ? v : "geral";
     } catch (e) { return "geral"; }
   }
 

@@ -125,7 +125,7 @@
       resumoCalculado: null,
       resumoDesatualizado: false,
       rev: U.inteiro(p.rev, 0),
-      tipo: p.tipoFicha === "ordem" ? "ordem" : "universal",
+      tipo: p.tipoFicha === "ordem" ? "ordem" : p.tipoFicha === "oblivio" ? "oblivio" : "universal",
       linhas: [],
       progressao: "",
       atributos: [],
@@ -133,7 +133,40 @@
       estatisticas: [],
       condicoes: [],
     };
+    if (base.tipo === "oblivio") return resumirOblivio(p, base);
     return base.tipo === "ordem" ? resumirOrdem(p, base) : resumirUniversal(p, base);
+  }
+
+  /* Oblívio (v3.0): o Papel identifica; Estresse por região, Coragem,
+     Mazelas e o estado vêm do resumo que o servidor validou (e seguem
+     "Esconder status dos jogadores"). Só leitura: Estresse muda pelas
+     regras — na ficha ou na mesa da Testemunha —, nunca por um campo
+     solto no cartão. */
+  function resumirOblivio(p, base) {
+    var CO = global.RAMAOblivioCatalogo;
+    var b = p.oblivio && typeof p.oblivio === "object" ? p.oblivio : {};
+    var papel = CO && CO.papel[b.papel];
+    base.linhas.push("Oblívio" + (papel ? " · " + papel.nome : ""));
+    if (!Array.isArray(b.regioes)) return base;
+    base.progressao = b.regioes.map(function (r) {
+      var nome = CO && CO.regiao[r.chave] ? CO.regiao[r.chave].nome : r.chave;
+      return nome + " " + (r.estado === "ausente" ? "ausente" : r.estresse + "/" + r.limite + (r.estado === "protese" ? " (prótese)" : ""));
+    }).join(" · ");
+    var estado = { foraDeAcao: "Fora de Ação", morta: "Morta" }[b.estado];
+    var conds = estado ? [{ chave: "estado", nome: estado, ativa: true }] : [];
+    (Array.isArray(b.mazelas) ? b.mazelas : []).forEach(function (k) {
+      conds.push({ chave: k, nome: CO && CO.mazela[k] ? CO.mazela[k].nome : k, ativa: true });
+    });
+    base.condicoes = condicoesDoCartao(conds);
+    base.estatisticas = [
+      { chave: "estresse", rotulo: "Estresse", valor: U.inteiro(b.estresse, 0) + "/" + U.inteiro(b.limite, 0) },
+      { chave: "coragem", rotulo: "Coragem", valor: String(U.inteiro(b.coragem, 0)) },
+    ];
+    [["protecao", "Proteção"], ["velocidade", "Velocidade"], ["dano", "Dano"], ["folego", "Fôlego"]].forEach(function (x) {
+      if (b[x[0]] !== undefined) base.estatisticas.push({ chave: x[0], rotulo: x[1], valor: String(U.inteiro(b[x[0]], 0)) });
+    });
+    if (b.foraDeAcao !== undefined) base.estatisticas.push({ chave: "foraDeAcao", rotulo: "Fora de Ação", valor: U.inteiro(b.foraDeAcao, 0) + "/3" });
+    return base;
   }
 
   function resumirOrdem(p, base) {

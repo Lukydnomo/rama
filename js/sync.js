@@ -486,6 +486,21 @@
          dois aparelhos resolvendo etapas diferentes não brigam pela
          lista inteira. */
       "ordem.escolhas": "id",
+      /* Oblívio (v3.0): o que é lista de registros casa pelo id; os
+         saldos (Estresse por região, Coragem) são valores — dois
+         aparelhos mexendo no MESMO saldo é conflito de verdade, e a tela
+         de conflito pergunta. As regiões casam pela chave. */
+      "oblivio.especializacoes": "id",
+      "oblivio.corpo.regioes": "chave",
+      "oblivio.limiteAjustes": "id",
+      "oblivio.habilidades": "id",
+      "oblivio.mazelas": "id",
+      "oblivio.fardos": "id",
+      "oblivio.inventario.itens": "id",
+      "oblivio.inventario.itens.modificacoes": "id",
+      "oblivio.efeitos": "id",
+      "oblivio.escolhasPendentes": "id",
+      "oblivio.foraDeAcao.historico": "id",
       /* Estudo em campo e concessão da mesa (v2.18): cada registro casa
          pelo id, como as escolhas. */
       "ordem.registrosDeRitual": "id",

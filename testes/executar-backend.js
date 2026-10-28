@@ -13,7 +13,7 @@
 
 import { instalarAmbiente, chamar, comoOSheetsGuarda } from "./apps-script-simulado.js";
 
-const ARQUIVOS = ["backend/Dados.gs", "backend/Codigo.gs", "backend/Campanhas.gs", "backend/Cris.gs", "backend/Feedback.gs"];
+const ARQUIVOS = ["backend/Dados.gs", "backend/Codigo.gs", "backend/Campanhas.gs", "backend/Cris.gs", "backend/Feedback.gs", "backend/Oblivio.gs"];
 
 /* O simulador silencia o console para o backend não encher a saída com
    os avisos do setupRama. O relatório dos testes precisa de uma porta
@@ -2308,7 +2308,7 @@ t.grupo("Marcas da mesa — sincronização leve");
 
   const marcas = (como) => comoFn(como)({ acao: "sincronizar_campanha", campanhaId: mesa });
   const m0 = marcas(ana);
-  t.ok("a jogadora recebe as marcas da mesa", m0.ok && m0.dados.papel === "jogador" && Object.keys(m0.dados.marcas).length === 9);
+  t.ok("a jogadora recebe as marcas da mesa", m0.ok && m0.dados.papel === "jogador" && Object.keys(m0.dados.marcas).length === 10); // + oblivio (v3.0)
   t.iguais("ler_campanha traz as mesmas marcas como ponto de partida", comoAna({ acao: "ler_campanha", campanhaId: mesa }).dados.marcas, m0.dados.marcas);
 
   const contador = ambiente.contador;
@@ -4837,6 +4837,8 @@ const { testarDadosBackend } = await import("./dados-backend.js");
 await testarDadosBackend({ t, preparar, novaConta, comoFn });
 const { testarCrisBackend } = await import("./cris-backend.js");
 await testarCrisBackend({ t, preparar, novaConta, comoFn, chamar });
+const { testarOblivioBackend } = await import("./oblivio-backend.js");
+await testarOblivioBackend({ t, preparar, novaConta, comoFn, chamar });
 const { testarFeedbackBackend } = await import("./feedback-backend.js");
 await testarFeedbackBackend({ t, preparar, novaConta, comoFn, chamar, ambiente });
 const { testarCompartilhamentoBackend } = await import("./compartilhamento-backend.js");
