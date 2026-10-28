@@ -62,6 +62,7 @@
     {
       id: "ordem", nome: "Ordem Paranormal", curto: "Ordem",
       resumo: "A ficha do sistema, com as regras dos livros.",
+      capa: "assets/sistemas/ordem-capa.webp", capaAlt: "Capa de Ordem Paranormal: um livro de couro escuro com o símbolo dos cinco elementos em dourado",
       ficha: {
         bloco: "ordem", motor: "RAMAOrdemRegras", periciasPadrao: true,
         resumo: { campo: "resumoRecursos", calcular: "resumoDeRecursos" },
