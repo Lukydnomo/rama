@@ -6,7 +6,7 @@
    repetição e conflito) e as operações da Sincronia Conectiva
    (sincronia_operar: consentimento dos dois lados, campanha, recursos,
    SAN fora, repetição sem cobrar duas vezes, compartilhamento não dá
-   porta). Também confere que o módulo de perigos dentro de Campanhas.gs
+   porta). Também confere que o módulo de perigos dentro de Ordem.gs
    é a cópia fiel de js/ordem/perigos.js. Dados sintéticos. Chamado por
    executar-backend.js.
    ===================================================================== */
@@ -14,18 +14,18 @@
 export async function testarAs5Backend({ t, preparar, novaConta, comoFn }) {
   t.grupo("AS5 · o módulo de perigos do servidor é o mesmo do site");
   const js = (await Deno.readTextFile(new URL("../js/ordem/perigos.js", import.meta.url))).replace(/\r\n/g, "\n");
-  const gs = (await Deno.readTextFile(new URL("../backend/Campanhas.gs", import.meta.url))).replace(/\r\n/g, "\n");
+  const gs = (await Deno.readTextFile(new URL("../backend/Ordem.gs", import.meta.url))).replace(/\r\n/g, "\n");
   const ini = gs.indexOf("/* >>> js/ordem/perigos.js */\n") + "/* >>> js/ordem/perigos.js */\n".length;
   const fim = gs.indexOf("/* <<< js/ordem/perigos.js */");
-  t.ok("a cópia em Campanhas.gs é idêntica (byte a byte)", ini > 40 && fim > ini && gs.slice(ini, fim) === js);
+  t.ok("a cópia em Ordem.gs é idêntica (byte a byte)", ini > 40 && fim > ini && gs.slice(ini, fim) === js);
   t.ok("e o servidor carregou RAMAPerigos", !!globalThis.RAMAPerigos && typeof globalThis.RAMAPerigos.vistaDoJogador === "function");
 
   t.grupo("AS5 · perigos complexos: desligados por padrão e permissões");
   preparar();
   const mestra = novaConta("pg_mestra"), ana = novaConta("pg_ana"), beto = novaConta("pg_beto"), intrusa = novaConta("pg_intrusa");
   const M = comoFn(mestra), A = comoFn(ana), B = comoFn(beto), I = comoFn(intrusa);
-  const mesa = M({ acao: "criar_campanha", dados: { nome: "Varminho" } }).dados.id;
-  const outra = M({ acao: "criar_campanha", dados: { nome: "Outra" } }).dados.id;
+  const mesa = M({ acao: "criar_campanha", dados: { sistema: "ordem", nome: "Varminho" } }).dados.id;
+  const outra = M({ acao: "criar_campanha", dados: { sistema: "ordem", nome: "Outra" } }).dados.id;
   M({ acao: "salvar_participantes", campanhaId: mesa, membros: [{ userId: ana.id, papel: "jogador" }, { userId: beto.id, papel: "jogador" }] });
   const ficha = (nome, extra) => Object.assign({ nome, tipoFicha: "ordem", schemaVersion: 23,
     ordem: { classe: "ocultista", nex: 30, recursos: { pv: 20, pe: null, san: null, pd: null }, opcionais: { poderesDeTransmissao: true } },

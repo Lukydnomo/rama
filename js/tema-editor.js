@@ -102,7 +102,7 @@
      o.nomeFicha    (ficha) o nome, para o título
      o.aparencia    (ficha) o bloco atual da ficha
      o.podeSalvar   (ficha) false: só ver
-     o.sistema      (ficha) "ordem" | "universal": libera as propriedades
+     o.sistema      (ficha) o id do sistema da ficha: libera as propriedades
                     daquele sistema; no tema da conta, só as gerais
      o.aplicar      (ficha) function(aparencia) → Promise<{ ok, pendente, erro }>
      o.podeEscolherDados (ficha) a conta dona: só ela troca o tema dos
@@ -116,7 +116,9 @@
     o = o || {};
     var ehFicha = o.contexto === "ficha";
     var podeSalvar = ehFicha ? o.podeSalvar !== false : true;
-    var sistema = ehFicha ? (o.sistema === "ordem" || o.sistema === "oblivio" ? o.sistema : "universal") : "geral";
+    /* O sistema da ficha, como o registro o identifica: as cores de um
+       sistema só aparecem no tema de uma ficha dele. */
+    var sistema = ehFicha ? (o.sistema || "universal") : "geral";
 
     /* ---- o rascunho ---- */
     var prefs = o.preferencias || {};

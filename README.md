@@ -69,7 +69,7 @@ preferências de tela — nunca é tratado como banco.
     versao.js           FONTE ÚNICA da versão e do changelog
     habilidades.js      modelo e árvore recursiva de habilidades
     organizar.js        o que muda de lugar ao reorganizar uma lista (filtro, pastas, grupos)
-    sistemas.js         o registro dos sistemas de RPG (Ordem Paranormal, Oblívio, Universal…)
+    sistemas.js         o registro central dos sistemas de RPG e das capacidades de cada um (v4.0)
     capa-sistema.js     a capa do sistema (volume de livro) ao lado do nome — qualquer sistema
     personagens-organizacao.js  pasta aberta, busca, sistema e agrupamento da página Personagens
     arrastar.js         o gesto de arrastar e soltar, o mesmo nas cinco abas
@@ -80,7 +80,9 @@ preferências de tela — nunca é tratado como banco.
     sincronia.js        atualização automática da campanha: marcas, ritmo, espera
     combate-turnos.js   ordem, turno e rodada do combate (as mesmas regras do servidor)
     combate-fila.js     fila de alterações de um combate: lote, repetição, conflito
-    ordem/              as regras de Ordem Paranormal, em camada própria
+    ordem/              o módulo de Ordem Paranormal: as regras, em camada própria…
+      telas/            …e as telas que só Ordem tem (ficha, criação, escolhas,
+                        Arquivos Secretos, Hexatombe, Hacking, Perigos, condições)
       catalogo.js       origens, classes, trilhas, perícias e patentes
       poderes.js        poderes de classe, gerais, paranormais e de trilha
       progressao.js     vagas de escolha, requisitos, pendências e efeitos
@@ -96,7 +98,8 @@ preferências de tela — nunca é tratado como banco.
       condicoes.js      morrendo, enlouquecendo e contadores da mesa, por início de turno
       criaturas-dados.js o catálogo de criaturas dos dois livros (sob demanda)
       criaturas.js      carga, conversão, busca, filtros e conferência do catálogo de criaturas
-    oblivio/            as regras de Oblívio (v3.0): motor puro, copiado em backend/Oblivio.gs
+    oblivio/            o módulo de Oblívio (v3.0): motor puro, copiado em backend/Oblivio.gs…
+      telas/            …e as telas: criação, corpo, Persona, testes, ataque, mesa da Testemunha
       catalogo.js       Papéis, Habilidades, Conhecimentos, equipamentos, Mazelas, Fardos…
       ameacas-dados.js  as 18 Ameaças, com efeitos estruturados
       buraco-dados.js   as tabelas do Buraco, cada linha em eventos
@@ -109,15 +112,18 @@ preferências de tela — nunca é tratado como banco.
     historico.js        rolagem → histórico da campanha, num funil só
     temas-dados.js      catálogo dos temas de dados e regras puras (copiado no Codigo.gs)
     aparencia-rolagem.js o dado e o fundo de cada rolagem: captura, ícone e aplicação no cartão
-    paginas/            um arquivo por tela
+    paginas/            as telas da plataforma e as seções de ficha que todo sistema usa
 
   backend/
-    Dados.gs            esquema das abas e acesso ao Sheets
-    Codigo.gs           núcleo: sessão, personagens, homebrew, perfil
-    Campanhas.gs        campanhas, rolagens, documentos, notas, combates
+    Dados.gs            núcleo: esquema das abas e acesso ao Sheets
+    Codigo.gs           núcleo: sessão, permissões, personagens, compartilhamento, homebrew, perfil
+    Campanhas.gs        núcleo: campanhas, sistema da campanha, rolagens, documentos, notas, combate
+    Sistemas.gs         núcleo: o registro dos sistemas, a compatibilidade e as portas (v4.0)
+    Ordem.gs            sistema Ordem Paranormal: recursos, condições, Hexatombe, Hacking, Perigos…
+    Oblivio.gs          sistema Oblívio: a mesa da Testemunha e as operações entre fichas (cópia do motor)
+    Universal.gs        sistema Universal: atributos e status livres no painel da mesa
     Cris.gs             leitura de ficha pública do CRIS (opcional)
     Feedback.gs         feedback entregue num canal do Discord (opcional)
-    Oblivio.gs          a mesa de Oblívio e as operações entre fichas (cópia do motor; v3.0)
     appsscript.json     manifesto do projeto
 
   docs/
@@ -130,6 +136,7 @@ preferências de tela — nunca é tratado como banco.
     ORDEM-REGRAS.md     matriz de regras de Ordem: fonte, página e lacunas
     INTERFACE.md        Legacy e Modern20: arquitetura, inventário de telas e como verificar
     OBLIVIO.md          Oblívio: matriz de cobertura, interpretações e lacunas do livro
+    SISTEMAS.md         a plataforma e os sistemas: núcleo × módulos, registro, como entra um sistema
 ```
 
 ---
@@ -162,6 +169,16 @@ no terminal:
 ```bash
 deno run --allow-read testes/executar.js
 ```
+
+**A plataforma e os sistemas (v4.0)** — o registro do site
+(`testes/executar-pastas.js`, com as capacidades de cada sistema e as regras de
+compatibilidade) e o do servidor (`testes/sistemas-backend.js`, dentro de
+`executar-backend.js`): os dois registros dizem o mesmo, campanha nova sem
+sistema é recusada, a campanha antiga segue a regra explícita, trocar o sistema
+suspende as ferramentas do anterior sem apagar nada e devolve tudo na volta, a
+ficha de outro sistema não é convertida nem desvinculada, o cartão da mesa é do
+sistema da ficha (um desconhecido nunca vira Universal) e um arquivo de sistema
+ausente não derruba o núcleo.
 
 **Criaturas** — 88 verificações: o catálogo contra o inventário dos livros (ids
 únicos, campos obrigatórios, expressões válidas, contagem por livro e natureza),
@@ -540,21 +557,27 @@ Não precisa criar aba nenhuma à mão — o passo 3 faz isso.
 
 Em <https://script.google.com>, crie um projeto novo.
 
-São **três arquivos**, e os três precisam existir:
+O R.A.M.A. é a plataforma, e cada sistema de RPG é um módulo dela (v4.0). Os
+arquivos são de dois tipos.
+
+**O núcleo — quatro arquivos, e os quatro precisam existir:**
 
 1. cole `backend/Codigo.gs` no editor, substituindo o `Codigo.gs` padrão;
 2. crie um arquivo chamado **`Campanhas`** (o botão `+` ao lado de
    Arquivos) e cole `backend/Campanhas.gs` nele;
-3. crie um arquivo chamado **`Dados`** e cole `backend/Dados.gs` nele.
+3. crie um arquivo chamado **`Dados`** e cole `backend/Dados.gs` nele;
+4. crie um arquivo chamado **`Sistemas`** e cole `backend/Sistemas.gs` nele.
 
-Para jogar **Oblívio** numa campanha (a mesa da Testemunha), crie também
-**`Oblivio`** com `backend/Oblivio.gs`. Sem ele, as fichas de Oblívio funcionam
-avulsas, e ligar Oblívio em Configurações da campanha avisa que o servidor ainda
-não conhece a ação.
+**Os sistemas — um arquivo por sistema:** **`Ordem`** (`backend/Ordem.gs`),
+**`Oblivio`** (`backend/Oblivio.gs`) e **`Universal`** (`backend/Universal.gs`).
+Instale os três. Sem o arquivo de um sistema, as fichas dele abrem e gravam
+normalmente, mas as ferramentas de mesa dele (o Hexatombe de Ordem, a mesa da
+Testemunha de Oblívio…) respondem que o servidor não conhece a ação, e o cartão
+do painel mostra só a identificação. `conferirInstalacao()` diz qual falta.
 
 > O Apps Script lê todos os `.gs` no mesmo escopo e iça as declarações de
 > função entre arquivos, então a ordem em que eles aparecem não importa.
-> São três por manutenção — separar arquivos não deixa nada mais rápido.
+> São vários por manutenção — separar arquivos não deixa nada mais rápido.
 >
 > Faltando o `Dados.gs`, o sistema não tem como ler nada, e toda ação
 > responde `instalacao_incompleta` em vez de uma pilha de execução.
@@ -686,15 +709,33 @@ segredo nenhum — ele os lê das Script Properties. Publicá-lo não expõe nad
 
 ### Atualizar o backend
 
+**v4.0.0 — ALICERCE:** a plataforma separada dos sistemas. **Crie** três
+arquivos no Apps Script — `Sistemas` (`backend/Sistemas.gs`), `Ordem`
+(`backend/Ordem.gs`) e `Universal` (`backend/Universal.gs`) —, **troque**
+`Codigo.gs`, `Campanhas.gs` e `Oblivio.gs` e crie uma **nova versão** da
+implantação; só então publique o site, inclusive as pastas novas
+`js/ordem/telas/` e `js/oblivio/telas/` (as telas de Ordem e de Oblívio saíram de
+`js/paginas/`) e todas as páginas `index.html`, que passam a carregar
+`js/sistemas.js` logo depois de `js/util.js`. **Não precisa de `setupRama()`**:
+nenhuma aba ou coluna nova — o sistema da campanha fica no `dadosJson` dela. O
+`Dados.gs` não muda. Nada é convertido: fichas e campanhas existentes continuam
+como estão. Uma campanha anterior à v4.0 não diz o sistema e segue a regra de
+compatibilidade (Ordem Paranormal; Oblívio se a mesa da v3.0 estava ligada nela);
+o sistema fica escrito quando o mestre salvar as configurações dela. **Faltando o
+`Sistemas.gs`**, gravar fichas e abrir campanhas responde erro —
+`conferirInstalacao()` avisa. Sem a versão nova da implantação, o site novo não
+consegue criar campanhas (o servidor velho não guarda o sistema) e a troca de
+sistema avisa que o backend precisa ser atualizado.
+
 **v3.0.0 — FAROL:** Oblívio como sistema completo. **Crie** o arquivo `Oblivio`
 no Apps Script com `backend/Oblivio.gs`, **troque** `Dados.gs`, `Codigo.gs` e
 `Campanhas.gs`, rode **`setupRama()`** uma vez (cria a aba `CAMPANHA_OBLIVIO`;
 repetir é seguro e não apaga nada) e crie uma **nova versão** da implantação; só
 então publique o site — inclusive as pastas novas `js/oblivio/` e
 `assets/sistemas/`, os arquivos novos `js/capa-sistema.js`,
-`js/paginas/oblivio-criar.js`, `js/paginas/oblivio-corpo.js`,
-`js/paginas/ficha-oblivio.js`, `js/paginas/ficha-oblivio-jogo.js`,
-`js/paginas/ficha-oblivio-mesa.js`, `js/paginas/campanha-oblivio.js`,
+`js/oblivio/telas/oblivio-criar.js`, `js/oblivio/telas/oblivio-corpo.js`,
+`js/oblivio/telas/ficha-oblivio.js`, `js/oblivio/telas/ficha-oblivio-jogo.js`,
+`js/oblivio/telas/ficha-oblivio-mesa.js`, `js/oblivio/telas/campanha-oblivio.js`,
 `css/oblivio.css` e `css/modern20/oblivio.css`, e `personagens/`, `ficha/` e
 `campanha/index.html`, que passam a carregá-los. Nada existente é convertido:
 fichas universais e de Ordem continuam como estão e passam ao schema 24 na
@@ -1235,6 +1276,16 @@ console não abre o registro de outra conta.
 
 ## Limitações conhecidas
 
+- **Sistemas: o que a v4.0 não faz.** Trocar o sistema de uma campanha não
+  converte fichas: uma ficha de outro sistema continua vinculada, com o cartão do
+  sistema dela, mas sem as ferramentas de mesa da campanha. Uma ficha de um
+  sistema que esta versão não conhece abre só para leitura. Os estilos de cada
+  sistema ainda moram nas folhas comuns (`css/ficha.css`, `css/campanha.css`),
+  com exceção de `css/oblivio.css`; a seção Rituais e as bibliotecas de itens e
+  rituais são compartilhadas e acrescentam o que é de Ordem quando a ficha é de
+  Ordem. Um sistema novo (por exemplo, Brutal) entra pelo registro e por um
+  arquivo próprio no servidor e no site — ver `docs/SISTEMAS.md`; esta versão não
+  traz nenhum sistema além de Ordem, Oblívio e Universal.
 - **Oblívio: o que fica com a Testemunha.** As disputas específicas das Ameaças
   (Salto de Mola, Engolfar, Mão Leve…) aparecem com o texto e são conduzidas com
   as ferramentas de teste; a queda de atributo da Drenagem, o resultado de uma
@@ -1413,7 +1464,7 @@ Três números diferentes, que não se misturam:
 
 | | Onde | O que é |
 |---|---|---|
-| versão do aplicativo | `js/versao.js` | o que a pessoa vê: v3.0.0 |
+| versão do aplicativo | `js/versao.js` | o que a pessoa vê: v4.0.0 |
 | `schemaVersion` | `js/ficha.js` | o formato da FICHA |
 | `versaoFormato` | `js/config.js` | o formato dos arquivos de importação |
 

@@ -55,11 +55,14 @@ const urlDaPasta = (p) => absoluto(p) ? new URL("file:///" + p.replace(/\\/g, "/
 const fichas = await fichasParaMedir();
 
 const ambiente = instalarAmbiente(globalThis);
-for (const arq of ["Dados.gs", "Codigo.gs", "Campanhas.gs", "Cris.gs", "Feedback.gs", "Oblivio.gs"]) {
+/* O núcleo é obrigatório; os arquivos de sistema e os opcionais, não —
+   um backend de versão anterior (para comparar) não os tem. */
+const NUCLEO = ["Dados.gs", "Codigo.gs", "Campanhas.gs"];
+for (const arq of NUCLEO.concat(["Sistemas.gs", "Ordem.gs", "Universal.gs", "Oblivio.gs", "Cris.gs", "Feedback.gs"])) {
   try {
     (0, eval)(await Deno.readTextFile(new URL(arq, urlDaPasta(PASTA_BACKEND))));
   } catch (e) {
-    if (arq !== "Cris.gs" && arq !== "Feedback.gs" && arq !== "Oblivio.gs") throw e;
+    if (NUCLEO.includes(arq)) throw e;
   }
 }
 
@@ -90,7 +93,7 @@ const como = (c) => (corpo) => chamar(globalThis, Object.assign({ token: contas[
 
 const ordem = como("dona")({ acao: "criar_personagem", dados: fichas.ordem }).dados.id;
 const universal = como("dona")({ acao: "criar_personagem", dados: fichas.universal }).dados.id;
-const campanha = como("mestre")({ acao: "criar_campanha", dados: { nome: "Mesa de medição", visibilidade: "privado" } }).dados.id;
+const campanha = como("mestre")({ acao: "criar_campanha", dados: { sistema: "ordem", nome: "Mesa de medição", visibilidade: "privado" } }).dados.id;
 como("mestre")({ acao: "salvar_participantes", campanhaId: campanha, membros: [
   { userId: contas.dona.id, papel: "jogador" }, { userId: contas.editora.id, papel: "jogador" },
 ] });

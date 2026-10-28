@@ -12,7 +12,7 @@
      RAMASecaoOblivioHabilidades
      RAMASecaoOblivioEstado     mazelas, Fora de Ação, Fardos, Missão,
                                 o tempo de jogo da ficha avulsa
-   Testes, ataque e inventário: js/paginas/ficha-oblivio-jogo.js.
+   Testes, ataque e inventário: js/oblivio/telas/ficha-oblivio-jogo.js.
 
    FICHA AVULSA X CAMPANHA
      Fora de campanha, o tempo (turno, rodada, cena, Descanso) anda pelos

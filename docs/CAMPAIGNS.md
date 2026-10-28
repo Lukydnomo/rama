@@ -38,11 +38,42 @@ não são renderizadas desabilitadas, simplesmente não entram na lista.
 | Hacking | membros, **só com a mecânica ligada** | a regra opcional do Arquivos Secretos 4 — ver [Hacking](#hacking-v238) |
 | Perigos | membros, **só com a mecânica ligada** | os perigos complexos do Arquivos Secretos 5 — ver [Perigos complexos](#perigos-complexos-v248) |
 | Notas | **mestre** | anotações privadas, gerais ou por personagem |
-| Configurações | **mestre** | nome, visibilidade, rolagens ocultas, mecânicas opcionais, participantes |
+| Configurações | **mestre** | sistema da campanha, nome, visibilidade, rolagens ocultas, mecânicas opcionais do sistema, participantes |
 
 O espectador de campanha pública não tem abas: vê o nome, a capa e a descrição.
 
+### O sistema da campanha (v4.0)
+
+Toda campanha tem um sistema de RPG — Ordem Paranormal, Oblívio ou Universal —,
+escolhido na criação (com a capa de cada um) e mostrado na lista, no topo da
+campanha e no seletor de campanha da ficha. O sistema decide as abas de
+sistema e o que o servidor aceita; o resto (Visão geral, Personagens, Rolagens,
+Documentos, Notas, Configurações) é da plataforma e existe em todas.
+
+| | Ordem Paranormal | Oblívio | Universal |
+|---|---|---|---|
+| quem conduz | Mestre | Testemunha | Mestre |
+| Combate (rastreador do núcleo) | sim, com condições e efeitos contados por turno | não (a mesa conduz as cenas) | sim, sem automação nas fichas |
+| ferramentas próprias | Sincronia Conectiva | mesa da Testemunha | — |
+| mecânicas opcionais | Hexatombe, Hacking, Perigos complexos | — | — |
+
+- **Trocar o sistema** é do mestre, em **Configurações → Sistema da campanha**.
+  Antes de confirmar, a tela lista o que fica suspenso, o que passa a valer, o
+  que volta guardado de quando a campanha era daquele sistema e quantas fichas
+  vinculadas são de outro sistema.
+- A troca **não converte fichas, não desvincula ninguém e não apaga nada**. As
+  ferramentas do sistema anterior ficam suspensas — o servidor as recusa com
+  `outro_sistema` — e voltam como estavam se a campanha voltar a ele.
+- Uma ficha de outro sistema numa campanha continua com o cartão do sistema
+  dela, mas sem as ferramentas de mesa da campanha.
+- **Campanha antiga** (anterior à v4.0, sem o campo): Ordem Paranormal, ou
+  Oblívio se a mesa da v3.0 estava ligada nela. A tela de Configurações avisa, e
+  salvar as configurações grava o sistema. Ver [SISTEMAS.md](SISTEMAS.md).
+
 ### Mecânicas opcionais (v2.47)
+
+Desde a v4.0 elas são do sistema da campanha: as três abaixo são de Ordem e só
+aparecem numa campanha de Ordem.
 
 Hexatombe, Hacking e (v2.48) Perigos complexos são **opcionais por campanha**:
 desligadas, as abas não existem para ninguém — nem para o mestre. Quem liga e
@@ -877,9 +908,10 @@ sincronização que já existe: quando a marca `rolagens` muda, uma busca curta
 
 ## Oblívio — a mesa da Testemunha (v3.0)
 
-Ligada em **Configurações → Mecânicas opcionais → Oblívio**. A aba aparece para
-todos; o estado mora em `CAMPANHA_OBLIVIO` (uma linha por campanha). Regras e
-páginas: [OBLIVIO.md](OBLIVIO.md).
+A ferramenta de toda campanha de Oblívio (v4.0: na v3.0 ela se ligava em
+Configurações; agora é o sistema da campanha que decide). A aba **Mesa da
+Testemunha** aparece para todos; o estado mora em `CAMPANHA_OBLIVIO` (uma linha
+por campanha). Regras e páginas: [OBLIVIO.md](OBLIVIO.md).
 
 - **Testemunha (mestre):** abre e conclui a Missão (a progressão chega às fichas
   vivas), começa uma nova Partida, registra morte na Missão; abre cenas

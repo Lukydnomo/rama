@@ -5182,11 +5182,57 @@ function roladorDoServidor(faces) {
   return (n % f) + 1;
 }
 
-/* A mesa ligada (a aba aparece para todos)? Pela coluna leve. */
-function oblivioAtivo(campanhaId) {
+/* Os ganchos que o núcleo chama (ver Sistemas.gs, v4.0). A mesa da
+   Testemunha não se liga mais numa chave: ela é a ferramenta de toda
+   campanha de Oblívio, e só dela (exigirFerramenta). */
+function sistemaOblivio() {
+  return {
+    id: 'oblivio',
+    rotas: rotasDoOblivio,
+    fichaDoSistema: function (ficha) { return !!ficha && !!ficha.oblivio && typeof ficha.oblivio === 'object'; },
+    projecao: function (ficha) { return { oblivio: oblivioParaPainel(ficha.oblivio, ficha.resumoOblivio) }; },
+    projecaoDoSistema: function (proj) { return !!proj && !!proj.oblivio && typeof proj.oblivio === 'object'; },
+    painel: painelDeOblivio,
+    estadoDasMecanicas: { oblivio: oblivioTemMesa },
+  };
+}
+
+/* O que o painel da mesa mostra de uma Persona de Oblívio (v3.0). Somas
+   e leituras do bloco — nenhuma regra recalculada aqui: Proteção,
+   Velocidade e Dano vêm do resumo que a ficha calculou (resumoOblivio),
+   conferidos como números; sem ele, ficam de fora. */
+function oblivioParaPainel(b, resumo) {
+  function n(v, max) { var x = Math.floor(Number(v)); return isFinite(x) ? Math.max(0, Math.min(max || 999, x)) : 0; }
+  var regioes = (b.corpo && Array.isArray(b.corpo.regioes) ? b.corpo.regioes : []).filter(function (r) { return r && typeof r.chave === 'string'; })
+    .slice(0, 5).map(function (r) { return { chave: String(r.chave).slice(0, 10), estado: ['organica', 'protese', 'ausente'].indexOf(r.estado) >= 0 ? r.estado : 'organica', estresse: n(r.estresse), limite: n(r.limite) }; });
+  var saida = {
+    papel: typeof b.papel === 'string' ? b.papel.slice(0, 20) : '',
+    regioes: regioes,
+    estresse: regioes.reduce(function (s, r) { return s + r.estresse; }, 0),
+    limite: regioes.reduce(function (s, r) { return s + r.limite; }, 0),
+    coragem: n(b.coragem),
+    mazelas: (Array.isArray(b.mazelas) ? b.mazelas : []).map(function (m) { return m && typeof m.chave === 'string' ? m.chave.slice(0, 30) : ''; }).filter(Boolean).slice(0, 20),
+    estado: b.morte ? 'morta' : (b.foraDeAcao && b.foraDeAcao.ativo ? 'foraDeAcao' : 'ativa'),
+  };
+  if (resumo && typeof resumo === 'object') {
+    ['protecao', 'velocidade', 'dano', 'folego'].forEach(function (k) { if (resumo[k] !== undefined) saida[k] = n(resumo[k]); });
+    if (resumo.foraDeAcao !== undefined) saida.foraDeAcao = n(resumo.foraDeAcao, 3);
+  }
+  return saida;
+}
+
+/* O cartão de uma Persona no painel da mesa: o Papel é identificação;
+   Estresse por região, Coragem, Mazelas e estado são os "recursos" dela
+   e seguem a regra de "Esconder status dos jogadores". */
+function painelDeOblivio(proj, o) {
+  return { oblivio: o.recursosVisiveis ? proj.oblivio : { papel: proj.oblivio.papel || '' } };
+}
+
+/* A campanha tem uma mesa gravada? Pela coluna leve: é o que diz, numa
+   campanha que trocou de sistema, que a mesa está guardada. */
+function oblivioTemMesa(campanhaId) {
   try {
-    var leve = lerLeves(ABAS.CAMPANHA_OBLIVIO).filter(function (r) { return String(r.campanhaId) === String(campanhaId); })[0];
-    return !!leve && (leve.ativo === true || String(leve.ativo) === 'true');
+    return lerLeves(ABAS.CAMPANHA_OBLIVIO).some(function (r) { return String(r.campanhaId) === String(campanhaId); });
   } catch (erro) {
     return false;
   }
@@ -5237,6 +5283,8 @@ function grupoDaPersona(campanhaId, estado, personagemId) {
 function acaoLerOblivio(corpo, usuario) {
   var ctx = contextoDaCampanha(corpo.campanhaId, usuario);
   if (!ctx.ok) return ctx;
+  var foraDoSistema = exigirFerramenta(ctx, 'oblivio');
+  if (foraDoSistema) return foraDoSistema;
   if (ctx.papel === PAPEL_ESPECTADOR) return { ok: false, erro: 'sem_permissao' };
   var registro = registroDoOblivio(ctx.campanha.id);
   var dados = oblivioParaCliente(ctx, registro);
@@ -5255,15 +5303,18 @@ function gravarOblivio(ctx, registro, estado, revAtual, feitas) {
     json = JSON.stringify(estado);
   }
   if (json.length > MAX_CELULA) return { ok: false, erro: 'dados_grandes' };
+  /* `ativo` era a chave da v3.0 ("ligar Oblívio"); desde a v4.0 o que
+     decide é o sistema da campanha, e a coluna só é lida pela regra de
+     compatibilidade das campanhas antigas (Sistemas.gs). Gravar a mesa
+     a deixa como está. */
   var novo = {
-    campanhaId: String(ctx.campanha.id), ativo: estado.ativo === true, atualizadoEm: new Date().toISOString(),
+    campanhaId: String(ctx.campanha.id), ativo: !!registro && (registro.ativo === true || String(registro.ativo) === 'true'),
+    atualizadoEm: new Date().toISOString(),
     rev: revAtual + 1, opsJson: JSON.stringify(feitas.slice(-MAX_OPS_OBLIVIO)), dadosJson: json,
   };
-  var ativoAntes = !!registro && (registro.ativo === true || String(registro.ativo) === 'true');
   if (registro) atualizarLinha(ABAS.CAMPANHA_OBLIVIO, registro._linha, Object.assign({}, registro, novo));
   else inserir(ABAS.CAMPANHA_OBLIVIO, novo);
-  /* Ligar ou desligar muda as abas de todos: a campanha também é avisada. */
-  marcarMesa(ctx.campanha.id, ativoAntes !== novo.ativo ? ['oblivio', 'campanha'] : ['oblivio']);
+  marcarMesa(ctx.campanha.id, ['oblivio']);
   return { ok: true, rev: revAtual + 1 };
 }
 
@@ -5276,6 +5327,8 @@ function acaoSalvarOblivio(corpo, usuario) {
   return comTrava(function () {
     var ctx = exigirMestre(corpo.campanhaId, usuario);
     if (!ctx.ok) return ctx;
+    var foraDoSistema = exigirFerramenta(ctx, 'oblivio');
+    if (foraDoSistema) return foraDoSistema;
     try { aba(ABAS.CAMPANHA_OBLIVIO); }
     catch (erro) { return { ok: false, erro: 'instalacao_incompleta', detalhe: 'CAMPANHA_OBLIVIO' }; }
     var registro = registroDoOblivio(ctx.campanha.id);
@@ -5349,6 +5402,8 @@ function acaoOblivioOperar(corpo, usuario) {
   return comTrava(function () {
     var ctx = contextoDaCampanha(corpo.campanhaId, usuario);
     if (!ctx.ok) return ctx;
+    var foraDoSistema = exigirFerramenta(ctx, 'oblivio');
+    if (foraDoSistema) return foraDoSistema;
     if (ctx.papel === PAPEL_ESPECTADOR) return { ok: false, erro: 'sem_permissao' };
     if (OPERACOES_DA_TESTEMUNHA.indexOf(tipo) >= 0 && !ctx.mestre) return { ok: false, erro: 'sem_permissao' };
     try { aba(ABAS.CAMPANHA_OBLIVIO); }
@@ -5484,7 +5539,7 @@ function acaoOblivioOperar(corpo, usuario) {
   });
 }
 
-/* O Codigo.gs pergunta por esta função ao montar as rotas (rotaDe). */
+/* As ações de Oblívio, entregues ao núcleo por sistemaOblivio().rotas. */
 function rotasDoOblivio() {
   return {
     ler_oblivio: { publica: false, fn: acaoLerOblivio },

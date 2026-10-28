@@ -2,6 +2,20 @@
 
 Quem alcança o quê, e onde isso é decidido.
 
+## O sistema da campanha — v4.0
+
+| ação | mestre | jogador | espectador / de fora |
+|---|---|---|---|
+| escolher o sistema ao criar (`criar_campanha`) | quem cria | — | — |
+| trocar o sistema (`salvar_campanha { sistema }`) | sim | não (`sem_permissao`) | não (`nao_encontrado`) |
+
+- O sistema não é permissão: ele decide que ferramentas a campanha tem. Uma
+  ferramenta de outro sistema responde `outro_sistema` a TODOS — mestre
+  incluído —, depois das conferências de sempre (membro, mestre). O estado dela
+  não é lido nem gravado.
+- Trocar o sistema não muda o acesso de ninguém a ficha nenhuma: a ficha
+  continua do dono, com o mesmo compartilhamento e o mesmo vínculo.
+
 ## Oblívio — v3.0
 
 | ação | Testemunha (mestre) | jogador da campanha | espectador / de fora |

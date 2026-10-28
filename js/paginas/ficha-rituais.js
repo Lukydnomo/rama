@@ -1109,7 +1109,7 @@
   }
 
   /* "Usar ritual" (fichas de Ordem): a conjuração com versão, custo e
-     componentes revistos antes de confirmar (js/paginas/ficha-consumo.js).
+     componentes revistos antes de confirmar (js/ordem/telas/ficha-consumo.js).
      Rolar o dano pela faixa continua não gastando nada — o gasto é do
      uso, não da rolagem. Vale também para ritual sem rolagem nenhuma. */
   function botaoUsarRitual(ctx, ritual) {

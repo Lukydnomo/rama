@@ -353,7 +353,7 @@ t.grupo("Páginas que calculam ficha de Ordem carregam o motor inteiro");
   };
 
   /* Quem desenha número calculado de Ordem. */
-  const CALCULA = ["js/campanha-painel.js", "js/paginas/ficha-ordem.js", "js/paginas/ordem-criar.js"];
+  const CALCULA = ["js/campanha-painel.js", "js/ordem/telas/ficha-ordem.js", "js/ordem/telas/ordem-criar.js"];
 
   for (const pagina of PAGINAS) {
     const s = await scriptsDe(pagina);
@@ -388,7 +388,7 @@ t.grupo("Páginas que calculam ficha de Ordem carregam o motor inteiro");
      Inventário Otimizado (Técnico, por Versatilidade) que soma o
      Intelecto à capacidade — sem ele, a carga passa do limite e a
      sobrecarga derruba Defesa, perícias e deslocamento. */
-  const CADEIA = /^js\/(dados|habilidades|ficha|campanha-painel)\.js$|^js\/ordem\//;
+  const CADEIA = /^js\/(sistemas|dados|habilidades|ficha|campanha-painel)\.js$|^js\/ordem\//;
   const avaliar = async (pagina) => {
     for (const nome of Object.keys(globalThis)) if (/^RAMAOrdem/.test(nome)) delete globalThis[nome];
     for (const arquivo of (await scriptsDe(pagina)).filter((a) => CADEIA.test(a))) {

@@ -4,7 +4,7 @@
    A trilha Maledictólogo (Arquivos Secretos 1, p. 45) mexe nas
    maldições de itens como COISAS: transfere de um item para outro (ou
    para uma tatuagem), memoriza e reproduz. Este arquivo é a regra disso,
-   sem tela e sem rede — js/paginas/ficha-maldicoes.js desenha e grava.
+   sem tela e sem rede — js/ordem/telas/ficha-maldicoes.js desenha e grava.
 
    Uma maldição aplicada é o retrato em `item.ordem.modificacoes` com
    `natureza: "maldicao"` (js/ordem/itens.js). Transferir MOVE o retrato

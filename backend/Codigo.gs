@@ -312,10 +312,12 @@ function rotaDe(acao) {
       Object.keys(doCris).forEach(function (chave) { CACHE_ROTAS[chave] = doCris[chave]; });
     }
 
-    /* Oblivio.gs (v3.0): a mesa de Oblívio. Mesmo contrato. */
-    if (typeof rotasDoOblivio === 'function') {
-      var doOblivio = rotasDoOblivio();
-      Object.keys(doOblivio).forEach(function (chave) { CACHE_ROTAS[chave] = doOblivio[chave]; });
+    /* Os sistemas de RPG (v4.0): cada arquivo de sistema (Ordem.gs,
+       Oblivio.gs, Universal.gs) entrega as ações dele pelo registro em
+       Sistemas.gs. Mesmo contrato: sem o arquivo, 'acao_desconhecida'. */
+    if (typeof rotasDosSistemas === 'function') {
+      var dosSistemas = rotasDosSistemas();
+      Object.keys(dosSistemas).forEach(function (chave) { CACHE_ROTAS[chave] = dosSistemas[chave]; });
     }
 
     /* Feedback.gs: o envio de feedback ao Discord. Mesmo contrato do
@@ -1115,8 +1117,8 @@ function valorDeTema(tipo, v) {
   return null;
 }
 
-/* Um tema; `comId` para os da conta. `sistema`: 'geral' (conta), 'ordem'
-   ou 'universal' (o da ficha). null quando a estrutura não serve. Valores
+/* Um tema; `comId` para os da conta. `sistema`: 'geral' (conta) ou o
+   sistema da ficha (sistemaEfetivoDaFicha, Sistemas.gs). null quando a estrutura não serve. Valores
    inválidos — ou de outro sistema — são descartados (voltam à base). */
 function normalizarTemaServidor(bruto, comId, sistema) {
   if (!bruto || typeof bruto !== 'object' || Array.isArray(bruto)) return null;
@@ -1156,10 +1158,6 @@ function normalizarTemasServidor(lista) {
 
 /* O bloco de apresentação de uma ficha: inválido vira "usar o tema da
    conta", nunca CSS livre. Chamado em toda criação e gravação. */
-function sistemaDaFicha(ficha) {
-  return ficha && String(ficha.tipoFicha || '') === 'ordem' ? 'ordem' : 'universal';
-}
-
 function normalizarAparenciaServidor(bruto, sistema) {
   var a = bruto && typeof bruto === 'object' && !Array.isArray(bruto) ? bruto : {};
   var modo = TEMA_MODOS_FICHA.indexOf(a.modo) >= 0 ? a.modo : 'conta';
@@ -1178,7 +1176,7 @@ function normalizarAparenciaServidor(bruto, sistema) {
 
 function sanearAparencia(ficha) {
   if (ficha && typeof ficha === 'object' && ficha.aparencia !== undefined) {
-    ficha.aparencia = normalizarAparenciaServidor(ficha.aparencia, sistemaDaFicha(ficha));
+    ficha.aparencia = normalizarAparenciaServidor(ficha.aparencia, sistemaEfetivoDaFicha(ficha));
   }
 }
 
@@ -1970,16 +1968,6 @@ var LIMITE_PASTAS = 100;
 var LIMITE_NOME_PASTA = 60;
 var LIMITE_SISTEMAS_LIDOS = 25;
 
-/* O sistema de uma ficha, como ela diz. Ficha antiga, sem tipoFicha,
-   fica vazia — o site a trata pelo modelo universal, a compatibilidade
-   de sempre. Um valor que nenhuma versão conhece fica como veio (só
-   aparado): não some da lista nem é trocado por outro. */
-function sistemaDaFicha(ficha) {
-  var t = ficha && ficha.tipoFicha;
-  if (t === undefined || t === null) return '';
-  return String(t).trim().toLowerCase().slice(0, 40);
-}
-
 function organizacaoPronta() {
   if (abaJaLida(ABAS.PASTAS) && abaJaLida(ABAS.PERSONAGENS_ORGANIZACAO)) return true;
   try {
@@ -2728,51 +2716,39 @@ function acaoLerPersonagem(corpo, usuario) {
 }
 
 /* =====================================================================
-   RESUMO DE RECURSOS E MESAS AVISADAS
+   O RESUMO DO SISTEMA E AS MESAS AVISADAS
    ---------------------------------------------------------------------
-   `resumoRecursos` é o máximo de PV, PE e Sanidade de uma ficha de Ordem,
-   calculado pelo navegador de quem pode editar a ficha — ver o bloco
-   "Resumo de recursos" em Campanhas.gs. Aqui ele só é validado: números
-   inteiros num intervalo sensato, Sanidade podendo ser nula ("Jogando sem
-   Sanidade"). Qualquer outra forma é descartada.
+   Um sistema pode guardar, dentro da ficha, números que o navegador
+   calcula e a mesa lê sem abrir a ficha (Ordem: `resumoRecursos`, o
+   máximo de PV/PE/SAN/PD). O módulo diz o campo e como validá-lo
+   (`resumo`, ver Sistemas.gs). Gravação que não trouxe resumo — de uma
+   versão do site que não o calculava — mantém o que já estava, em vez de
+   apagar o que a mesa estava vendo.
    ===================================================================== */
 
-var LIMITE_RESUMO_RECURSO = 99999;
-
-function normalizarResumoRecursos(bruto) {
-  if (!bruto || typeof bruto !== 'object') return null;
-
-  function numero(v, aceitaNulo) {
-    if (v === null || v === undefined) return aceitaNulo ? null : undefined;
-    if (typeof v !== 'number' || !isFinite(v)) return undefined;
-    var n = Math.round(v);
-    if (n < -999 || n > LIMITE_RESUMO_RECURSO) return undefined;
-    return n;
-  }
-
-  /* `pd` (v2.19): pontos de determinação, com "Jogando sem Sanidade"
-     (SAH p.104). Com ele, PE e SAN vêm nulos — os dois viraram PD. Sem
-     ele, `pd` é nulo, e um resumo de uma versão anterior do site (que
-     não manda `pd`) continua valendo. */
-  var pv = numero(bruto.pv, false);
-  var pd = numero(bruto.pd, true);
-  var pe = numero(bruto.pe, pd !== null && pd !== undefined);
-  var san = numero(bruto.san, true);
-  if (pv === undefined || pe === undefined || san === undefined || pd === undefined) return null;
-
-  return { versao: 1, pv: pv, pe: pe, san: san, pd: pd };
+function resumoDoSistema(ficha) {
+  var modulo = moduloDaFicha(ficha);
+  return modulo && modulo.resumo ? modulo.resumo : null;
 }
 
-/* O resumo que vai gravado com a ficha. Ficha que não é de Ordem não tem
-   resumo. Gravação que não trouxe resumo — de uma versão do site que não
-   o calculava — mantém o que já estava, em vez de apagar o que a mesa
-   estava vendo. */
-function resumoParaGravar(ficha, fichaAnterior) {
-  var ehOrdem = String(ficha.tipoFicha || '') === 'ordem' && !!ficha.ordem && typeof ficha.ordem === 'object';
-  if (!ehOrdem) return null;
-  return normalizarResumoRecursos(ficha.resumoRecursos) ||
-    (fichaAnterior ? normalizarResumoRecursos(fichaAnterior.resumoRecursos) : null);
+/* Valida o resumo da ficha (ou, sem ele, o da ficha anterior) e o deixa
+   no lugar. Devolve true quando há um resumo válido. Ficha cujo sistema
+   não guarda resumo não é tocada. */
+function aplicarResumoDoSistema(ficha, fichaAnterior) {
+  var r = resumoDoSistema(ficha);
+  /* O resumo de OUTRO sistema não fica: a mesa leria números que a
+     ficha não sustenta. */
+  SISTEMAS_DO_RAMA.forEach(function (s) {
+    var m = moduloDoSistema(s.id);
+    if (m && m.resumo && (!r || m.resumo.campo !== r.campo)) ficha[m.resumo.campo] = undefined;
+  });
+  if (!r) return false;
+  var valido = r.normalizar(ficha[r.campo]) ||
+    (fichaAnterior ? r.normalizar(fichaAnterior[r.campo]) : null);
+  ficha[r.campo] = valido || undefined;
+  return !!valido;
 }
+
 
 /* Quem estiver com a campanha aberta precisa saber que um personagem
    dela mudou. As marcas são de Campanhas.gs; sem ele instalado, não há
@@ -2813,7 +2789,7 @@ function acaoCriarPersonagem(corpo, usuario) {
   ficha.id = undefined;
   ficha.criadoEm = agora;
   ficha.atualizadoEm = agora;
-  ficha.resumoRecursos = resumoParaGravar(ficha, null) || undefined;
+  aplicarResumoDoSistema(ficha, null);
 
   var recusa = grandeDemais(ficha);
   if (recusa) return recusa;
@@ -2909,12 +2885,10 @@ function acaoSalvarPersonagem(corpo, usuario) {
 
     /* A ficha anterior só é lida quando é preciso: uma gravação de uma
        versão do site que não mandava o resumo mantém o que já estava. */
-    var resumo = resumoParaGravar(ficha, null);
-    var ehOrdem = String(ficha.tipoFicha || '') === 'ordem' && !!ficha.ordem && typeof ficha.ordem === 'object';
     var anterior = null;
-    if (!resumo && ehOrdem) {
+    if (!aplicarResumoDoSistema(ficha, null) && resumoDoSistema(ficha)) {
       anterior = lerFichaDoPersonagem(registro);
-      if (anterior.ok) resumo = resumoParaGravar(ficha, anterior.ficha);
+      if (anterior.ok) aplicarResumoDoSistema(ficha, anterior.ficha);
     }
     /* v2.36: uma versão do site anterior aos temas não conhece o bloco
        `aparencia` e o mandaria embora a cada gravação. Sem o campo, fica
@@ -2928,7 +2902,7 @@ function acaoSalvarPersonagem(corpo, usuario) {
     var avisoDosDados = conferirTemaDosDados(ficha, registro.ownerId);
     if (ficha.aparencia === undefined && schemaPedido > 0 && schemaPedido < 16) {
       if (!anterior) anterior = lerFichaDoPersonagem(registro);
-      if (anterior.ok && anterior.ficha && anterior.ficha.aparencia) ficha.aparencia = normalizarAparenciaServidor(anterior.ficha.aparencia, sistemaDaFicha(ficha));
+      if (anterior.ok && anterior.ficha && anterior.ficha.aparencia) ficha.aparencia = normalizarAparenciaServidor(anterior.ficha.aparencia, sistemaEfetivoDaFicha(ficha));
     } else if (ficha.aparencia && !ficha.aparencia.dados && schemaPedido > 0 && schemaPedido < 18) {
       /* Uma aba de versão anterior não conhece `aparencia.dados` e a
          mandaria embora: fica a escolha gravada. */
@@ -2936,7 +2910,6 @@ function acaoSalvarPersonagem(corpo, usuario) {
       var dadosGravados = anterior.ok && anterior.ficha && anterior.ficha.aparencia ? RAMATemasDados.normalizarSelecao(anterior.ficha.aparencia.dados) : null;
       if (dadosGravados) ficha.aparencia.dados = dadosGravados;
     }
-    ficha.resumoRecursos = resumo || undefined;
     var campanhaAnterior = registro.campanhaId;
 
     registro.nome = String(ficha.nome || 'Sem nome').slice(0, 120);
@@ -4192,6 +4165,19 @@ function conferirInstalacao() {
 
   if (typeof rotasDeCampanha !== 'function') {
     problemas.push('Campanhas.gs não está no projeto — as ações de campanha vão responder erro.');
+  }
+  /* v4.0: o registro dos sistemas é núcleo — sem ele, nem ficha nem
+     campanha sabem de que sistema são. Os arquivos de sistema são um
+     por sistema: sem um deles, as fichas daquele sistema abrem e gravam,
+     mas as ferramentas dele não existem. */
+  if (typeof SISTEMAS_DO_RAMA === 'undefined' || typeof moduloDoSistema !== 'function') {
+    problemas.push('Sistemas.gs não está no projeto — gravar fichas e abrir campanhas vai responder erro.');
+  } else {
+    SISTEMAS_DO_RAMA.forEach(function (s) {
+      if (!moduloDoSistema(s.id)) {
+        avisos.push(s.arquivo + ' não está no projeto — as fichas de ' + s.nome + ' abrem e gravam, mas as ferramentas de mesa de ' + s.nome + ' respondem acao_desconhecida.');
+      }
+    });
   }
 
   try {

@@ -900,6 +900,12 @@
       titulo: "DADOS RECUSADOS",
       texto: "O servidor não aceitou o conteúdo enviado. Confira os campos e tente de novo.",
     },
+    /* v4.0 — uma ferramenta de um sistema numa campanha de outro (a
+       campanha trocou de sistema enquanto a tela estava aberta). */
+    outro_sistema: {
+      titulo: "FERRAMENTA DE OUTRO SISTEMA",
+      texto: "Esta ferramenta não é do sistema que a campanha usa agora. Nada foi apagado: ela fica guardada e volta se a campanha voltar ao sistema dela. Recarregue a página.",
+    },
     /* v2.48 — Sincronia Conectiva (AS5). */
     sem_sincronia: {
       titulo: "SEM SINCRONIA",
@@ -915,8 +921,8 @@
     },
     instalacao_incompleta: {
       titulo: "SERVIDOR INCOMPLETO",
-      texto: "Falta uma parte da instalação no Apps Script: um dos arquivos (Dados.gs, Codigo.gs, Campanhas.gs) ou uma aba da planilha. " +
-             "Quem administra o R.A.M.A. confere os três arquivos e roda setupRama() no editor. O que você fez continua aqui.",
+      texto: "Falta uma parte da instalação no Apps Script: um dos arquivos (Dados.gs, Codigo.gs, Campanhas.gs, Sistemas.gs e o do sistema de RPG) ou uma aba da planilha. " +
+             "Quem administra o R.A.M.A. confere os arquivos e roda setupRama() no editor. O que você fez continua aqui.",
     },
     /* v2.15 — a ficha em blocos. Nenhuma destas frases sugere apagar
        habilidades, rituais ou anotações: o problema nunca é o que a

@@ -119,6 +119,7 @@ das folhas. Cada linha diz onde o Modern20 a trata.
 | Feedback (v2.50) | janela do menu da conta: três tipos em cartões (uma coluna no celular), campos com contador, detalhes do bug, nome opcional, faixa de falha com "Tentar novamente", confirmação de sucesso | componentes.css |
 | Personagens | título e trilha, abas Meus/Compartilhados, pastas em abas e em ícones, painel da pasta, filtros, busca, sistema, agrupar, lista de registros, alça de arrastar, estados (pasta, compartilhado, papel) | layout.css, componentes.css |
 | Criação de ficha | tipo de ficha (cartões com a capa do sistema, v3.0), criação guiada de Ordem (trilha de passos, atributos, opções, perícias), revisão | componentes.css |
+| Sistema da campanha (v4.0) | escolha do sistema na criação da campanha (rádios com a capa e o que a mesa oferece, `.escolha-sistema`), painel "Sistema da campanha" em Configurações (o atual com a capa, a troca e a janela de impactos, `.sistema-atual`, `.impacto-troca`), sistema na lista de campanhas, no topo da campanha e no seletor de campanha da ficha | componentes.css |
 | Oblívio (v3.0) | capa do sistema (`js/capa-sistema.js`: volume com lombada, três tamanhos, lombada desenhada sem capa), criação guiada em 8 etapas (Papéis em cartões, atributos, especializações, corpo, catálogo de equipamentos, Motivação, revisão), bloco da Persona (fixos, mutáveis, Coragem, pendências, faixa "Na mesa"), diagrama do corpo (figura `aria-hidden` + lista de botões com tudo em texto), Conhecimentos, ataque com resolução pendente e dados por resultado, inventário, habilidades, Mazelas, aba Oblívio da campanha (Ordem de Ação, fileiras, Farol, Ameaças, mapa do Buraco) | oblivio.css |
 | Ficha (todas) | topo fixo, modo Normal/Edição, estado do salvamento, avisos (edição, mestre, acesso, leitura), foto, abas | ficha.css |
 | Ficha universal | atributos, status com barra, defesa, perícias, edição de perícia, inventário, anotações (árvore e editor), habilidades (árvore e pastas) | ficha.css, componentes.css |
@@ -144,6 +145,9 @@ das folhas. Cada linha diz onde o Modern20 a trata.
 - `deno run --allow-read testes/executar-feedback.js` — a janela de Feedback
   tem estilo no Legacy sem regra de Modern20, o ajuste do Modern20 fica no escopo
   dele e as cores vêm só dos papéis do tema (claro, escuro e personalizados).
+- **Sistema da campanha (v4.0):** criação e troca revisadas no navegador no
+  Legacy e no Modern20, e a 375 px sem rolagem horizontal. A opção marcada se diz
+  pelo rádio e pelo traço do cartão, nunca só pela cor.
 - **Oblívio (v3.0):** `css/oblivio.css` (Legacy) e `css/modern20/oblivio.css`,
   revisados no navegador nos dois estilos e a 375 px (sem rolagem horizontal).
   Estado nunca só por cor: região esgotada riscada, prótese tracejada, ausente

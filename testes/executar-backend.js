@@ -13,7 +13,7 @@
 
 import { instalarAmbiente, chamar, comoOSheetsGuarda } from "./apps-script-simulado.js";
 
-const ARQUIVOS = ["backend/Dados.gs", "backend/Codigo.gs", "backend/Campanhas.gs", "backend/Cris.gs", "backend/Feedback.gs", "backend/Oblivio.gs"];
+const ARQUIVOS = ["backend/Dados.gs", "backend/Codigo.gs", "backend/Campanhas.gs", "backend/Sistemas.gs", "backend/Ordem.gs", "backend/Universal.gs", "backend/Cris.gs", "backend/Feedback.gs", "backend/Oblivio.gs"];
 
 /* O simulador silencia o console para o backend não encher a saída com
    os avisos do setupRama. O relatório dos testes precisa de uma porta
@@ -372,12 +372,12 @@ t.grupo("Campanhas — pública e privada");
 
 const privada = comoAna({
   acao: "criar_campanha",
-  dados: { nome: "Singularidade", visibilidade: "privado" },
+  dados: { sistema: "ordem", nome: "Singularidade", visibilidade: "privado" },
 }).dados.id;
 
 const publica = comoAna({
   acao: "criar_campanha",
-  dados: { nome: "Aberta", visibilidade: "publico" },
+  dados: { sistema: "ordem", nome: "Aberta", visibilidade: "publico" },
 }).dados.id;
 
 t.ok("o criador é reconhecido como mestre",
@@ -1113,7 +1113,7 @@ const mesa = (() => {
   const comoMestre = comoFn(mestre);
   const comoJogador = comoFn(jogador);
 
-  const campanha = comoMestre({ acao: "criar_campanha", dados: { nome: "A Mesa" } }).dados.id;
+  const campanha = comoMestre({ acao: "criar_campanha", dados: { sistema: "ordem", nome: "A Mesa" } }).dados.id;
   comoMestre({ acao: "salvar_participantes", campanhaId: campanha,
     membros: [{ userId: jogador.id, papel: "jogador" }] });
 
@@ -1463,7 +1463,7 @@ t.grupo("Mudança de permissão");
   const comoMestra = comoFn(mestra);
   const comoLia = comoFn(lia);
 
-  const campanha = comoMestra({ acao: "criar_campanha", dados: { nome: "Enquanto durar" } }).dados.id;
+  const campanha = comoMestra({ acao: "criar_campanha", dados: { sistema: "ordem", nome: "Enquanto durar" } }).dados.id;
   comoMestra({ acao: "salvar_participantes", campanhaId: campanha,
     membros: [{ userId: lia.id, papel: "jogador" }] });
 
@@ -1917,8 +1917,8 @@ t.grupo("Painel da campanha — fichas de Ordem e permissões");
   const comoColega = comoFn(colega);
   const comoEstranha = comoFn(estranha);
 
-  const campanha = comoMestra({ acao: "criar_campanha", dados: { nome: "Painel" } }).dados.id;
-  const outra = comoMestra({ acao: "criar_campanha", dados: { nome: "Outra mesa" } }).dados.id;
+  const campanha = comoMestra({ acao: "criar_campanha", dados: { sistema: "ordem", nome: "Painel" } }).dados.id;
+  const outra = comoMestra({ acao: "criar_campanha", dados: { sistema: "ordem", nome: "Outra mesa" } }).dados.id;
   comoMestra({ acao: "salvar_participantes", campanhaId: campanha,
     membros: [{ userId: dona.id, papel: "jogador" }, { userId: colega.id, papel: "jogador" }] });
   comoMestra({ acao: "salvar_participantes", campanhaId: outra,
@@ -2034,10 +2034,10 @@ t.grupo("Campanha da ficha — só o dono troca, e coluna e ficha concordam");
   const comoDona = comoFn(dona);
   const comoOutra = comoFn(outraMestra);
 
-  const mesaA = comoMestra({ acao: "criar_campanha", dados: { nome: "Mesa A" } }).dados.id;
-  const mesaB = comoMestra({ acao: "criar_campanha", dados: { nome: "Mesa B (sem a dona)" } }).dados.id;
-  const mesaC = comoMestra({ acao: "criar_campanha", dados: { nome: "Mesa C" } }).dados.id;
-  const vitrine = comoOutra({ acao: "criar_campanha", dados: { nome: "Vitrine", visibilidade: "publico" } }).dados.id;
+  const mesaA = comoMestra({ acao: "criar_campanha", dados: { sistema: "ordem", nome: "Mesa A" } }).dados.id;
+  const mesaB = comoMestra({ acao: "criar_campanha", dados: { sistema: "ordem", nome: "Mesa B (sem a dona)" } }).dados.id;
+  const mesaC = comoMestra({ acao: "criar_campanha", dados: { sistema: "ordem", nome: "Mesa C" } }).dados.id;
+  const vitrine = comoOutra({ acao: "criar_campanha", dados: { sistema: "ordem", nome: "Vitrine", visibilidade: "publico" } }).dados.id;
   comoMestra({ acao: "salvar_participantes", campanhaId: mesaA, membros: [{ userId: dona.id, papel: "jogador" }] });
   comoMestra({ acao: "salvar_participantes", campanhaId: mesaC, membros: [{ userId: dona.id, papel: "jogador" }] });
 
@@ -2111,8 +2111,8 @@ t.grupo("Capa da campanha — quem grava, quem lê");
   const comoJogadora = comoFn(jogadora);
   const comoEstranha = comoFn(estranha);
 
-  const privada = comoMestra({ acao: "criar_campanha", dados: { nome: "Privada" } }).dados.id;
-  const publica = comoMestra({ acao: "criar_campanha", dados: { nome: "Pública", visibilidade: "publico" } }).dados.id;
+  const privada = comoMestra({ acao: "criar_campanha", dados: { sistema: "ordem", nome: "Privada" } }).dados.id;
+  const publica = comoMestra({ acao: "criar_campanha", dados: { sistema: "ordem", nome: "Pública", visibilidade: "publico" } }).dados.id;
   comoMestra({ acao: "salvar_participantes", campanhaId: privada, membros: [{ userId: jogadora.id, papel: "jogador" }] });
 
   t.iguais("campanha sem capa: ler_campanha diz que não existe", comoMestra({ acao: "ler_campanha", campanhaId: privada }).dados.capa, { existe: false });
@@ -2168,7 +2168,7 @@ t.grupo("Cartões da mesa — o jogador vê os recursos, edita só os seus, e a 
   const comoAna = comoFn(ana);
   const comoBeto = comoFn(beto);
 
-  const mesa = comoMestra({ acao: "criar_campanha", dados: { nome: "Mesa" } }).dados.id;
+  const mesa = comoMestra({ acao: "criar_campanha", dados: { sistema: "ordem", nome: "Mesa" } }).dados.id;
   comoMestra({ acao: "salvar_participantes", campanhaId: mesa,
     membros: [{ userId: ana.id, papel: "jogador" }, { userId: beto.id, papel: "jogador" }] });
 
@@ -2300,8 +2300,8 @@ t.grupo("Marcas da mesa — sincronização leve");
   const comoMestra = comoFn(mestra);
   const comoAna = comoFn(ana);
 
-  const mesa = comoMestra({ acao: "criar_campanha", dados: { nome: "Mesa" } }).dados.id;
-  const publica = comoMestra({ acao: "criar_campanha", dados: { nome: "Aberta", visibilidade: "publico" } }).dados.id;
+  const mesa = comoMestra({ acao: "criar_campanha", dados: { sistema: "ordem", nome: "Mesa" } }).dados.id;
+  const publica = comoMestra({ acao: "criar_campanha", dados: { sistema: "ordem", nome: "Aberta", visibilidade: "publico" } }).dados.id;
   comoMestra({ acao: "salvar_participantes", campanhaId: mesa, membros: [{ userId: ana.id, papel: "jogador" }] });
   const p = comoAna({ acao: "criar_personagem", dados: fichaDeTeste("Ana") }).dados.id;
   comoAna({ acao: "vincular_personagem", campanhaId: mesa, personagemId: p });
@@ -2376,7 +2376,7 @@ t.grupo("Combate — operações em lote, turnos e rodadas, repetição segura")
   const comoMestra = comoFn(mestra);
   const comoAna = comoFn(ana);
 
-  const mesa = comoMestra({ acao: "criar_campanha", dados: { nome: "Mesa" } }).dados.id;
+  const mesa = comoMestra({ acao: "criar_campanha", dados: { sistema: "ordem", nome: "Mesa" } }).dados.id;
   comoMestra({ acao: "salvar_participantes", campanhaId: mesa, membros: [{ userId: ana.id, papel: "jogador" }] });
   const pAna = comoAna({ acao: "criar_personagem", dados: fichaDeTeste("Ana") }).dados.id;
   comoAna({ acao: "vincular_personagem", campanhaId: mesa, personagemId: pAna });
@@ -3218,7 +3218,7 @@ t.grupo("Blocos — mesa: ajuste rápido do mestre, vínculo, cartões e combate
   const comoJogadora = comoFn(jogadora);
   const comoOutro = comoFn(outro);
 
-  const mesa = comoMestra({ acao: "criar_campanha", dados: { nome: "Mesa grande" } }).dados.id;
+  const mesa = comoMestra({ acao: "criar_campanha", dados: { sistema: "ordem", nome: "Mesa grande" } }).dados.id;
   comoMestra({ acao: "salvar_participantes", campanhaId: mesa, membros: [
     { userId: jogadora.id, papel: "jogador" }, { userId: outro.id, papel: "jogador" }] });
 
@@ -3513,7 +3513,7 @@ t.grupo("Projeção — cartões sem abrir ficha");
   const comoMestra = comoFn(mestra);
   const comoJogadora = comoFn(jogadora);
 
-  const mesa = comoMestra({ acao: "criar_campanha", dados: { nome: "Projeção" } }).dados.id;
+  const mesa = comoMestra({ acao: "criar_campanha", dados: { sistema: "ordem", nome: "Projeção" } }).dados.id;
   comoMestra({ acao: "salvar_participantes", campanhaId: mesa, membros: [{ userId: jogadora.id, papel: "jogador" }] });
 
   const fichaDeOrdem = {
@@ -3752,7 +3752,7 @@ t.grupo("Imagens sob demanda — quem pode ver o quê");
   const comoOutro = comoFn(outro);
   const comoForasteiro = comoFn(forasteiro);
 
-  const mesa = comoMestre({ acao: "criar_campanha", dados: { nome: "Fotos" } }).dados.id;
+  const mesa = comoMestre({ acao: "criar_campanha", dados: { sistema: "ordem", nome: "Fotos" } }).dados.id;
   comoMestre({ acao: "salvar_participantes", campanhaId: mesa, membros: [
     { userId: jogador.id, papel: "jogador" }, { userId: outro.id, papel: "jogador" },
   ] });
@@ -3857,7 +3857,7 @@ t.grupo("Projeção — quando ela NÃO pode ser usada");
   preparar();
   const nara = novaConta("nara");
   const comoNara = comoFn(nara);
-  const mesa = comoNara({ acao: "criar_campanha", dados: { nome: "Velharia" } }).dados.id;
+  const mesa = comoNara({ acao: "criar_campanha", dados: { sistema: "ordem", nome: "Velharia" } }).dados.id;
 
   const id = comoNara({ acao: "criar_personagem", dados: {
     nome: "Cobaia", tipoFicha: "universal",
@@ -4016,8 +4016,8 @@ t.grupo("Histórico — o cursor aguenta linha deslocada e id fora de ordem");
   const quim = novaConta("quim");
   const comoQuim = comoFn(quim);
 
-  const outra = comoQuim({ acao: "criar_campanha", dados: { nome: "Outra mesa" } }).dados.id;
-  const minha = comoQuim({ acao: "criar_campanha", dados: { nome: "Minha mesa" } }).dados.id;
+  const outra = comoQuim({ acao: "criar_campanha", dados: { sistema: "ordem", nome: "Outra mesa" } }).dados.id;
+  const minha = comoQuim({ acao: "criar_campanha", dados: { sistema: "ordem", nome: "Minha mesa" } }).dados.id;
 
   /* O histórico da outra mesa vem ANTES na planilha: limpá-lo puxa as
      linhas desta para cima. */
@@ -4043,7 +4043,7 @@ t.grupo("Histórico — o cursor aguenta linha deslocada e id fora de ordem");
 
   /* Ids que NÃO estão na mesma ordem das linhas: a página é ordenada
      pela mesma chave que o cursor compara, senão some rolagem. */
-  const nova = comoQuim({ acao: "criar_campanha", dados: { nome: "Fora de ordem" } }).dados.id;
+  const nova = comoQuim({ acao: "criar_campanha", dados: { sistema: "ordem", nome: "Fora de ordem" } }).dados.id;
   /* Ids de oito caracteres (o mínimo que o servidor aceita) em ordem
      que NÃO acompanha a das linhas. */
   const ordemDeEntrada = ["zz-00001", "aa-00002", "mm-00003", "bb-00004", "yy-00005", "cc-00006"];
@@ -4161,7 +4161,7 @@ await (async () => {
   const comoLia = comoFn(lia);
   const comoBeto = comoFn(beto);
 
-  const mesa = comoMestra({ acao: "criar_campanha", dados: { nome: "Porão" } }).dados.id;
+  const mesa = comoMestra({ acao: "criar_campanha", dados: { sistema: "ordem", nome: "Porão" } }).dados.id;
   comoMestra({ acao: "salvar_participantes", campanhaId: mesa,
     membros: [{ userId: lia.id, papel: "jogador" }, { userId: beto.id, papel: "jogador" }] });
 
@@ -4504,7 +4504,7 @@ t.grupo("Pontos de determinação — resumo, painel e ajuste rápido");
   const comoDuda = comoFn(duda);
   const comoEli = comoFn(eli);
 
-  const mesa = comoMestra({ acao: "criar_campanha", dados: { nome: "Sem Sanidade" } }).dados.id;
+  const mesa = comoMestra({ acao: "criar_campanha", dados: { sistema: "ordem", nome: "Sem Sanidade" } }).dados.id;
   comoMestra({ acao: "salvar_participantes", campanhaId: mesa,
     membros: [{ userId: duda.id, papel: "jogador" }, { userId: eli.id, papel: "jogador" }] });
 
@@ -4677,7 +4677,7 @@ await (async () => {
   const comoBeto = comoFn(beto);
   const comoIntrusa = comoFn(intrusa);
 
-  const mesa = comoMestra({ acao: "criar_campanha", dados: { nome: "Arquivo" } }).dados.id;
+  const mesa = comoMestra({ acao: "criar_campanha", dados: { sistema: "ordem", nome: "Arquivo" } }).dados.id;
   comoMestra({ acao: "salvar_participantes", campanhaId: mesa,
     membros: [{ userId: lia.id, papel: "jogador" }, { userId: beto.id, papel: "jogador" }] });
   const ficha = (nome) => ({ nome, tipoFicha: "ordem", schemaVersion: 11,
@@ -4706,7 +4706,7 @@ await (async () => {
   t.ok("a jogadora NÃO aplica no personagem de outro jogador, mesmo trocando o id",
     !alheio.ok && alheio.erro === "nao_encontrado" && !efeitosDe(pBeto).some((x) => x.modelo === "cond:cego"));
   t.ok("  nem quem está fora da campanha", !aplicar(comoIntrusa, pLia, efeito("cond:cego")).ok);
-  const outraMesa = comoMestra({ acao: "criar_campanha", dados: { nome: "Outra" } }).dados.id;
+  const outraMesa = comoMestra({ acao: "criar_campanha", dados: { sistema: "ordem", nome: "Outra" } }).dados.id;
   const trocada = comoMestra({ acao: "efeito_personagem", campanhaId: outraMesa, personagemId: pBeto, operacaoId: op(), op: "aplicar", efeito: efeito("cond:cego") });
   t.ok("  nem por uma campanha que não é a do personagem", !trocada.ok && trocada.erro === "nao_encontrado");
 
@@ -4770,7 +4770,7 @@ await (() => {
   const comoMestra = comoFn(mestra);
   const comoLia = comoFn(lia);
   const comoBeto = comoFn(beto);
-  const mesa = comoMestra({ acao: "criar_campanha", dados: { nome: "Casa" } }).dados.id;
+  const mesa = comoMestra({ acao: "criar_campanha", dados: { sistema: "ordem", nome: "Casa" } }).dados.id;
   comoMestra({ acao: "salvar_participantes", campanhaId: mesa,
     membros: [{ userId: lia.id, papel: "jogador" }, { userId: beto.id, papel: "jogador" }] });
 
@@ -4839,6 +4839,11 @@ const { testarCrisBackend } = await import("./cris-backend.js");
 await testarCrisBackend({ t, preparar, novaConta, comoFn, chamar });
 const { testarOblivioBackend } = await import("./oblivio-backend.js");
 await testarOblivioBackend({ t, preparar, novaConta, comoFn, chamar });
+/* A plataforma e os sistemas (v4.0): o registro do site entra para o
+   teste conferir que os dois lados dizem o mesmo. */
+(0, eval)(await Deno.readTextFile(new URL("../js/sistemas.js", import.meta.url)));
+const { testarSistemasBackend } = await import("./sistemas-backend.js");
+await testarSistemasBackend({ t, preparar, novaConta, comoFn });
 const { testarFeedbackBackend } = await import("./feedback-backend.js");
 await testarFeedbackBackend({ t, preparar, novaConta, comoFn, chamar, ambiente });
 const { testarCompartilhamentoBackend } = await import("./compartilhamento-backend.js");

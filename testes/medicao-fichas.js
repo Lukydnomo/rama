@@ -19,7 +19,7 @@
 const RAIZ = new URL("../", import.meta.url);
 
 const ARQUIVOS = [
-  "js/config.js", "js/util.js", "js/dados.js", "js/habilidades.js",
+  "js/config.js", "js/util.js", "js/sistemas.js", "js/dados.js", "js/habilidades.js",
   "js/ordem/catalogo.js", "js/ordem/poderes.js", "js/ordem/opcionais.js", "js/ordem/efeitos.js",
   "js/ordem/condicoes.js", "js/ordem/consumo.js", "js/ordem/inventario.js", "js/ordem/personalizacao.js",
   "js/ordem/aprendizado.js", "js/ordem/progressao.js", "js/ordem/biblioteca.js", "js/ordem/regras.js",

@@ -33,7 +33,7 @@ export async function testarOblivioBackend({ t, preparar, novaConta, comoFn, cha
   preparar();
   const mestre = novaConta("obl_mestre"), joana = novaConta("obl_joana"), paulo = novaConta("obl_paulo"), fora = novaConta("obl_fora");
   const M = comoFn(mestre), J = comoFn(joana), P = comoFn(paulo), F = comoFn(fora);
-  const camp = M({ acao: "criar_campanha", dados: { nome: "Vila Abandonada", visibilidade: "privado" } }).dados.id;
+  const camp = M({ acao: "criar_campanha", dados: { sistema: "oblivio", nome: "Vila Abandonada", visibilidade: "privado" } }).dados.id;
   M({ acao: "salvar_participantes", campanhaId: camp, membros: [{ userId: joana.id, papel: "jogador" }, { userId: paulo.id, papel: "jogador" }] });
   const cuida = ficha("Irmã Clara", "cuida", { carne: 2, forca: 0, fuga: 0, determinacao: 0, mente: 8 });
   const age = ficha("Arthur", "age", { carne: 0, forca: 2, fuga: 6, determinacao: 2, mente: 0 });
@@ -126,12 +126,10 @@ export async function testarOblivioBackend({ t, preparar, novaConta, comoFn, cha
   t.ok("  só fonte e valor: nada da ficha de Bruno", Object.keys(lg2.dados.grupo.bonus[0]).sort().join() === "fonte,valor");
   t.ok("  vista do jogador sem operações nem registro privado", lg2.dados.vista.operacoes === undefined);
 
-  t.grupo("Oblívio · ligar a mesa na campanha");
-  t.ok("desligada por padrão: ler_campanha diz oblivio false", M({ acao: "ler_campanha", campanhaId: camp }).dados.oblivio === false);
-  const lm = M({ acao: "ler_oblivio", campanhaId: camp });
-  M({ acao: "salvar_oblivio", campanhaId: camp, rev: lm.rev, opId: "op-obl-liga", estado: Object.assign({}, lm.dados.estado, { ativo: true }) });
-  t.ok("ligada: a jogadora vê oblivio true em ler_campanha", J({ acao: "ler_campanha", campanhaId: camp }).dados.oblivio === true);
-  t.ok("  e a vista diz ativo", J({ acao: "ler_oblivio", campanhaId: camp }).dados.vista.ativo === true);
+  t.grupo("Oblívio · a mesa é do sistema da campanha (v4.0)");
+  t.ok("campanha de Oblívio: ler_campanha diz sistema oblivio", M({ acao: "ler_campanha", campanhaId: camp }).dados.sistema === "oblivio");
+  t.ok("  e a mesa da Testemunha está lá, sem chave para ligar", J({ acao: "ler_campanha", campanhaId: camp }).dados.oblivio === true);
+  t.ok("  sem as ferramentas de Ordem", M({ acao: "ler_campanha", campanhaId: camp }).dados.hexatombe === undefined);
 
   t.grupo("Oblívio · acerto de Ameaça: quem recebe escolhe a região");
   const lr = M({ acao: "ler_oblivio", campanhaId: camp });

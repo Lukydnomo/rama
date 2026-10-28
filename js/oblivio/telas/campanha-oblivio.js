@@ -1,8 +1,8 @@
 /* =====================================================================
    R.A.M.A. — aba Oblívio da campanha: a mesa da Testemunha (v3.0)
    ---------------------------------------------------------------------
-   Ligada em Configurações → Mecânicas opcionais. A Testemunha (mestre)
-   conduz; os jogadores veem a VISTA DOS JOGADORES — sem a ficha das
+   A ferramenta de toda campanha de Oblívio (v4.0: o sistema da campanha
+   decide; não há mais chave para ligar). A Testemunha (mestre) conduz; os jogadores veem a VISTA DOS JOGADORES — sem a ficha das
    Ameaças, sem as cartas não reveladas do Buraco, sem o registro
    privado.
 
@@ -163,7 +163,7 @@
        ================================================================= */
 
     function vistaDoJogador(v) {
-      if (!v || !v.ativo) return [UI.vazio({ titulo: "Mesa de Oblívio desligada", texto: "A Testemunha ainda não ligou a mesa nesta campanha." })];
+      if (!v) return [UI.vazio({ titulo: "Mesa da Testemunha", texto: "A mesa ainda não chegou. Recarregue a página." })];
       var minhas = personas().filter(function (p) { return p.souDono; }).map(function (p) { return p.id; });
       var pend = v.encontro.ataquesPendentes.filter(function (p) { return minhas.indexOf(p.persona) >= 0; });
       return [
@@ -200,7 +200,6 @@
        ================================================================= */
 
     function vistaDaTestemunha(e) {
-      if (!e.ativo) return [UI.vazio({ titulo: "Mesa desligada", texto: "Ligue a Mesa de Oblívio em Configurações → Mecânicas opcionais." })];
       return [
         UI.painel("Missão e Partida", [missao(e)]),
         UI.painel("Cena", [resumoDaCena(e), controlesDaCena(e), ordemDeAcao(e, true)]),
@@ -774,22 +773,5 @@
     return alvo;
   }
 
-  /* Ligar ou desligar (Configurações → Mecânicas opcionais): o mesmo
-     caminho de gravação; um conflito relê e tenta de novo. */
-  async function definirAtivo(campanhaId, ativo) {
-    var g = null;
-    for (var tentativa = 0; tentativa < 2; tentativa++) {
-      var r = await global.RAMAApi.lerOblivio(campanhaId, "");
-      if (!r.ok) return r;
-      if (!r.dados || !r.dados.mestre) return { ok: false, erro: "sem_permissao" };
-      var estado = global.RAMAOblivioMesa.normalizar(r.dados.estado);
-      if (!!estado.ativo === !!ativo) return { ok: true };
-      estado.ativo = !!ativo;
-      g = await global.RAMAApi.salvarOblivio(campanhaId, U.inteiro(r.rev, 0), opId(), estado);
-      if (g.ok || g.erro !== "conflito") return g;
-    }
-    return g;
-  }
-
-  global.RAMACampanhaOblivio = { aba: aba, definirAtivo: definirAtivo };
+  global.RAMACampanhaOblivio = { aba: aba };
 })(window);

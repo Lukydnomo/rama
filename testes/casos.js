@@ -1086,8 +1086,12 @@
       t.igual("atributos com nome de Ordem NÃO tornam a ficha de Ordem",
         disfarcada.tipoFicha, "universal");
 
-      t.igual("tipo desconhecido cai para universal",
-        S.tipoDeFicha("sistema-inventado"), "universal");
+      /* v4.0: um sistema que esta versão não conhece fica como veio —
+         nunca vira universal (seria converter a ficha em silêncio). */
+      t.igual("sistema desconhecido é preservado, não vira universal",
+        S.tipoDeFicha("sistema-inventado"), "sistema-inventado");
+      t.ok("  e é marcado como não reconhecido", !S.sistemaConhecido({ tipoFicha: "sistema-inventado" }));
+      t.igual("o que nem é identificador cai na regra das fichas antigas", S.tipoDeFicha("<b>x</b>"), "universal");
       t.igual("tipo vazio cai para universal", S.tipoDeFicha(""), "universal");
       t.ok("ehDeOrdem reconhece a de Ordem", S.ehDeOrdem(deOrdem));
       t.ok("  e não a universal", !S.ehDeOrdem(universal));
@@ -1096,6 +1100,25 @@
       var voltou = S.normalizarFicha(JSON.parse(JSON.stringify(deOrdem)));
       t.igual("o tipo sobrevive ao salvar e recarregar", voltou.tipoFicha, "ordem");
       t.ok("  e o bloco de Ordem também", !!voltou.ordem);
+
+      /* v4.0: numa página sem o motor de Ordem, o bloco fica como veio
+         (antes, ele sumia na normalização). Nenhum sistema depende de
+         estar carregado para não perder dado. */
+      var motorDeOrdem = global.RAMAOrdemRegras;
+      global.RAMAOrdemRegras = undefined;
+      var semMotor;
+      try {
+        semMotor = S.normalizarFicha({ tipoFicha: "ordem", nome: "Sem motor", ordem: { classe: "ocultista", nex: 40, escolhas: [{ id: "x" }] } });
+      } finally {
+        global.RAMAOrdemRegras = motorDeOrdem;
+      }
+      t.ok("sem o motor de Ordem, o bloco de Ordem é preservado", !!semMotor.ordem && semMotor.ordem.classe === "ocultista" && semMotor.ordem.escolhas[0].id === "x");
+      t.igual("  e a ficha continua de Ordem", semMotor.tipoFicha, "ordem");
+      t.ok("ficha nova de Ordem nasce com o bloco e as perícias padrão (registro)", !!S.criarFicha({ tipoFicha: "ordem" }).ordem && S.criarFicha({ tipoFicha: "ordem" }).pericias.length > 0);
+      t.ok("ficha nova Universal nasce sem bloco de sistema", S.criarFicha({ tipoFicha: "universal" }).ordem === undefined && S.criarFicha({ tipoFicha: "universal" }).oblivio === undefined);
+      t.ok("módulos configuráveis só no modelo que os declara",
+        S.moduloAtivo({ tipoFicha: "ordem", modulos: { pericias: false } }, "pericias") === true &&
+        S.moduloAtivo({ tipoFicha: "universal", modulos: { pericias: false } }, "pericias") === false);
     }
 
     /* =================================================================
@@ -8091,6 +8114,15 @@
     /* ---------------------------------------------------------------- */
     var PM = global.RAMAPainelMesa;
     if (PM) {
+      t.grupo("Painel da mesa · o cartão é do sistema da ficha (v4.0)");
+      var desconhecido = PM.resumir({ id: "f", nome: "Do futuro", tipoFicha: "brutal", detalhado: true, atributos: [{ id: "a", nome: "Raiva", valor: 9 }], status: [{ id: "s", nome: "Vida", atual: 1, maximo: 2 }] });
+      t.ok("ficha de sistema desconhecido: só a identificação, nunca o cartão Universal",
+        desconhecido.tipo === "brutal" && desconhecido.atributos.length === 0 && desconhecido.recursos.length === 0 && /não reconhecido/.test(desconhecido.linhas.join(" ")));
+      var semTipo = PM.resumir({ id: "g", nome: "Ilegível", tipoFicha: "", fichaIlegivel: true });
+      t.ok("ficha ilegível: sem tipo suposto", semTipo.tipo === "" && semTipo.ilegivel);
+      var livre = PM.resumir({ id: "h", nome: "Livre", tipoFicha: "universal", detalhado: true, atributos: [{ id: "a", nome: "Força", sigla: "FOR", valor: 2 }], status: [{ id: "s", nome: "Vida", atual: 3, maximo: 5 }] });
+      t.ok("ficha Universal: os atributos e status dela", livre.atributos.length === 1 && livre.recursos.length === 1);
+
       t.grupo("Painel da mesa · condições com a mesma visibilidade do status");
 
       var cartao = PM.resumir({

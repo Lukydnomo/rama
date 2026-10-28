@@ -675,6 +675,18 @@
   & .tipo-ficha__resumo { line-height: 1.5; }
   & .tipo-ficha__lista { padding-left: var(--e4); list-style: disc; gap: 3px; }
 
+  /* A escolha do sistema da campanha (v4.0). */
+  & .escolha-sistema__opcao {
+    padding: var(--e3);
+    border-radius: var(--m20-raio-cartao);
+    transition: border-color var(--tempo-seco) var(--curva), box-shadow var(--tempo-seco) var(--curva);
+  }
+  & .escolha-sistema__opcao:hover { border-color: var(--cor-traco-media); background: var(--fundo-superficie); box-shadow: var(--m20-sombra-1); }
+  & .escolha-sistema__opcao:has(input:checked) { border-color: var(--cor-foco); box-shadow: inset 0 0 0 1px var(--cor-foco); background: var(--fundo-superficie); }
+  & .escolha-sistema__nome,
+  & .sistema-atual__nome { font-weight: 650; letter-spacing: 0; text-transform: none; }
+  & .escolha-sistema__resumo { line-height: 1.5; }
+
   /* A capa de sistema (v3.0): o mesmo volume, com canto e sombra suaves. */
   & .capa-sistema {
     border: 1px solid color-mix(in srgb, var(--cor-texto) 18%, transparent);

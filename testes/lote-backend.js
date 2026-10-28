@@ -34,7 +34,7 @@ export function testarLoteBackend({ t, preparar, novaConta, comoFn, ambiente }) 
   A({ acao: "criar_personagem", dados: ficha("Segunda") });
   const grande = A({ acao: "criar_personagem", dados: ficha("Grande", { anotacoes: { pastas: [], soltas: [{ id: "n1", titulo: "T", conteudo: "x".repeat(120000) }] } }) }).dados.id;
   A({ acao: "salvar_foto", personagemId: p1, imagem: "data:image/png;base64," + "Q".repeat(40000) });
-  const mesa = A({ acao: "criar_campanha", dados: { nome: "Mesa do lote" } }).dados.id;
+  const mesa = A({ acao: "criar_campanha", dados: { sistema: "ordem", nome: "Mesa do lote" } }).dados.id;
   A({ acao: "salvar_participantes", campanhaId: mesa, membros: [{ userId: beto.id, papel: "jogador" }] });
   A({ acao: "vincular_personagem", campanhaId: mesa, personagemId: p1 });
   /* Uma linha com células vazias no FIM (a API não as devolve) e valores

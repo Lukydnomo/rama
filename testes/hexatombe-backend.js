@@ -5,7 +5,7 @@
    pelo doPost: quem grava, o que o jogador recebe (só a própria equipe,
    nada de notas do mestre, rival só com o nome), repetição e conflito,
    vínculo só com personagem da campanha e lançamentos na ficha com id
-   estável. Também confere que o módulo dentro de Campanhas.gs é a cópia
+   estável. Também confere que o módulo dentro de Ordem.gs é a cópia
    fiel de js/ordem/hexatombe.js, e a troca de forma de uma criatura
    (Arquivos Secretos 2) pela operação de combate. Dados sintéticos.
    Chamado por executar-backend.js.
@@ -14,18 +14,18 @@
 export async function testarHexatombeBackend({ t, preparar, novaConta, comoFn }) {
   t.grupo("Hexatombe · o módulo do servidor é o mesmo do site");
   const js = (await Deno.readTextFile(new URL("../js/ordem/hexatombe.js", import.meta.url))).replace(/\r\n/g, "\n");
-  const gs = (await Deno.readTextFile(new URL("../backend/Campanhas.gs", import.meta.url))).replace(/\r\n/g, "\n");
+  const gs = (await Deno.readTextFile(new URL("../backend/Ordem.gs", import.meta.url))).replace(/\r\n/g, "\n");
   const ini = gs.indexOf("/* >>> js/ordem/hexatombe.js */\n") + "/* >>> js/ordem/hexatombe.js */\n".length;
   const fim = gs.indexOf("/* <<< js/ordem/hexatombe.js */");
-  t.ok("a cópia em Campanhas.gs é idêntica (byte a byte)", ini > 40 && fim > ini && gs.slice(ini, fim) === js);
+  t.ok("a cópia em Ordem.gs é idêntica (byte a byte)", ini > 40 && fim > ini && gs.slice(ini, fim) === js);
   t.ok("e o servidor carregou RAMAHexatombe", !!globalThis.RAMAHexatombe && typeof globalThis.RAMAHexatombe.vistaDoJogador === "function");
 
   t.grupo("Hexatombe · permissões");
   preparar();
   const mestra = novaConta("hx_mestra"), ana = novaConta("hx_ana"), beto = novaConta("hx_beto"), intrusa = novaConta("hx_intrusa");
   const M = comoFn(mestra), A = comoFn(ana), B = comoFn(beto), I = comoFn(intrusa);
-  const mesa = M({ acao: "criar_campanha", dados: { nome: "Coroa" } }).dados.id;
-  const outraMesa = M({ acao: "criar_campanha", dados: { nome: "Outra" } }).dados.id;
+  const mesa = M({ acao: "criar_campanha", dados: { sistema: "ordem", nome: "Coroa" } }).dados.id;
+  const outraMesa = M({ acao: "criar_campanha", dados: { sistema: "ordem", nome: "Outra" } }).dados.id;
   M({ acao: "salvar_participantes", campanhaId: mesa, membros: [{ userId: ana.id, papel: "jogador" }, { userId: beto.id, papel: "jogador" }] });
   const ficha = (nome, participa) => ({ nome, tipoFicha: "ordem", schemaVersion: 10,
     ordem: { classe: "combatente", nex: 5, opcionais: participa ? { participacaoHexatombe: true } : {}, recursos: { pv: 18, pe: null, san: null, pd: null } } });

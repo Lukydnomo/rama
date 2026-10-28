@@ -152,7 +152,7 @@ export function testarCompartilhamentoBackend({ t, preparar, novaConta, comoFn }
   t.igual("  e a pasta de outra conta é ignorada (fica sem pasta)", D({ acao: "listar_personagens" }).dados.find((p) => p.id === pastaAlheia.dados.id).pastaId, null);
 
   t.grupo("Compartilhamento · campanha e mestre");
-  const mesa = E({ acao: "criar_campanha", dados: { nome: "Mesa da Eva", visibilidade: "privado" } }).dados.id;
+  const mesa = E({ acao: "criar_campanha", dados: { sistema: "ordem", nome: "Mesa da Eva", visibilidade: "privado" } }).dados.id;
   E({ acao: "salvar_participantes", campanhaId: mesa, membros: [{ userId: ana.id, papel: "jogador" }, { userId: carla.id, papel: "jogador" }] });
   t.ok("a dona vincula a ficha à mesa", A({ acao: "vincular_personagem", campanhaId: mesa, personagemId: pAna }).ok);
   t.ok("a mestra lê e edita pela campanha", E({ acao: "ler_personagem", personagemId: pAna }).capacidades.editar === true);

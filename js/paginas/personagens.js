@@ -1161,44 +1161,19 @@
       titulo: "Que tipo de ficha?",
       largo: true,
       conteudo: [
-        el("div.tipos-ficha", {}, [
-          cartao({
-            sistema: "ordem",
-            nome: "Ordem Paranormal",
-            resumo: "A ficha do sistema, com as regras dos livros.",
-            pontos: [
-              "Criação guiada passo a passo",
-              "PV, PE, Sanidade, Defesa e carga calculados",
-              "Catálogo de origens, classes e trilhas com página do livro",
-              "Regras opcionais do Sobrevivendo ao Horror",
-            ],
-            aoEscolher: function () { m.fechar(); abrirCriacaoOrdem(); },
-          }),
-          cartao({
-            sistema: "oblivio",
-            nome: "Oblívio",
-            resumo: "Personas, Buracos e a Escuridão — as regras do livro.",
-            pontos: [
-              "Criação guiada em 8 passos: Papel, atributos, corpo, equipamento",
-              "Corpo em cinco regiões com Estresse, Coragem e Mazelas",
-              "Ataques com dados presos às regiões e Proteção do alvo",
-              "Mesa da Testemunha: cenas, Farol, Ameaças e Buracos",
-            ],
-            aoEscolher: function () { m.fechar(); abrirCriacaoOblivio(); },
-          }),
-          cartao({
-            sistema: "universal",
-            nome: "Universal",
-            resumo: "O modelo flexível do R.A.M.A., para qualquer sistema.",
-            pontos: [
-              "Atributos, perícias e status que você define",
-              "Seções e rótulos com o nome da sua mesa",
-              "Nenhuma regra imposta",
-              "É o que toda ficha criada até hoje usa",
-            ],
-            aoEscolher: function () { m.fechar(); abrirCriacao(); },
-          }),
-        ]),
+        /* Os sistemas do registro (js/sistemas.js), na ordem dele: cada
+           um com a criação que tiver nesta página (CRIACOES). */
+        el("div.tipos-ficha", {}, global.RAMASistemas.lista().filter(function (s) {
+          return !!CRIACOES[s.id];
+        }).map(function (s) {
+          return cartao({
+            sistema: s.id,
+            nome: s.nome,
+            resumo: s.resumo,
+            pontos: s.ficha.pontos || [],
+            aoEscolher: function () { m.fechar(); CRIACOES[s.id](); },
+          });
+        })),
         el("p.t-mini", {
           texto: "A escolha fica gravada na ficha e não muda depois. Não existe conversão " +
                  "automática entre os modelos: ela teria de adivinhar o que vira o quê, " +
@@ -1210,6 +1185,14 @@
 
     return m;
   }
+
+  /* A criação de cada sistema, pelo id do registro. Um sistema novo
+     entra com a dele aqui. */
+  var CRIACOES = {
+    ordem: function () { return abrirCriacaoOrdem(); },
+    oblivio: function () { return abrirCriacaoOblivio(); },
+    universal: function () { return abrirCriacao(); },
+  };
 
   /* Abre a criação guiada de Ordem, se o módulo dela estiver carregado.
      Sem ele, a tela diz o que falta em vez de não fazer nada. */

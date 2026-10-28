@@ -14,7 +14,7 @@ export function testarGifBackend({ t, preparar, novaConta, comoFn }) {
   t.ok("GIF de criatura é aceito", D({ acao: "salvar_imagem_criatura", criaturaId: criatura, imagem: gif }).ok);
   t.igual("criatura mantém bytes", D({ acao: "ler_imagem_criatura", criaturaId: criatura }).dados.imagem, gif);
   t.recusa("imagem animada privada continua protegida", X({ acao: "ler_imagem_criatura", criaturaId: criatura }));
-  const mesa = D({ acao: "criar_campanha", dados: { nome: "Animação" } }).dados.id;
+  const mesa = D({ acao: "criar_campanha", dados: { sistema: "ordem", nome: "Animação" } }).dados.id;
   t.ok("capa GIF é aceita", D({ acao: "salvar_capa_campanha", campanhaId: mesa, imagem: gif, largura: 32, altura: 16 }).ok);
   t.igual("capa reabre sem alterar bytes", D({ acao: "ler_capa_campanha", campanhaId: mesa }).dados.imagem, gif);
   t.recusa("terceiro não troca capa GIF", X({ acao: "salvar_capa_campanha", campanhaId: mesa, imagem: gif, largura: 32, altura: 16 }));

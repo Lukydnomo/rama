@@ -1517,7 +1517,7 @@ body.pagina-ficha--painel .ficha-topo__nome { font-size: var(--texto-medio); }
    MUNIÇÃO, COMPONENTES E "USAR RITUAL" (regras opcionais de consumo)
    ---------------------------------------------------------------------
    Os painéis da aba Geral e a confirmação compacta do ataque e do uso
-   de ritual (js/paginas/ficha-consumo.js).
+   de ritual (js/ordem/telas/ficha-consumo.js).
    ===================================================================== */
 
 .consumo > p { margin: 0; }

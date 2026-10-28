@@ -544,7 +544,7 @@
 
     /* --- Arquivos Secretos 4, p. 65-66 ---
        As contas e os botões moram em js/ordem/arquivo4.js e
-       js/paginas/ficha-arquivo4.js. */
+       js/ordem/telas/ficha-arquivo4.js. */
     entrada({ chave: "chuvaDeBalas", nome: "Chuva de Balas", tipo: "classe", classes: ["combatente"], fonte: AS4, pagina: 65,
       resumo: "Os pacotes de munição do seu inventário duram o dobro de cenas. Num ataque com arma de fogo, antes de rolar o dano, pode sacrificar por completo um ou mais pacotes de munição: +2 dados do mesmo tipo de dano por pacote. Com a regra opcional de contagem de munição, cada pacote tem +10 balas.",
       automacao: "calculo",
@@ -588,7 +588,7 @@
 
     /* --- Arquivos Secretos 5, p. 55-56 ---
        As contas e os botões moram em js/ordem/arquivo5.js e
-       js/paginas/ficha-arquivo5.js. Os benefícios que vão para ALIADOS
+       js/ordem/telas/ficha-arquivo5.js. Os benefícios que vão para ALIADOS
        (Aura de Confiança, Parede de Carne) nunca entram na ficha de
        quem tem o poder: cada aliado registra o que recebeu na própria
        ficha, com o nome de quem deu. */

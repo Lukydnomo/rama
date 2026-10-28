@@ -1,5 +1,21 @@
 # O banco
 
+## O sistema da campanha — v4.0
+
+Nenhuma aba ou coluna nova: o sistema mora no `dadosJson` da linha de
+**CAMPANHAS**, junto da descrição — `sistema` (`ordem`, `oblivio`,
+`universal`) e, depois de uma troca, `sistemaDesde` (quando). `listar_campanhas`
+e `ler_campanha` já liam esse JSON; nenhuma leitura nova.
+
+Campanha sem `sistema` (anterior à v4.0) não é reescrita por ler: o sistema sai
+da regra de compatibilidade (`Sistemas.gs`) e só fica escrito na próxima
+gravação das configurações. A coluna `CAMPANHA_OBLIVIO.ativo` (a chave da v3.0)
+continua onde está, lida só por essa regra; gravar a mesa não a muda mais.
+
+Trocar o sistema não apaga linha nenhuma: `CAMPANHA_HEXATOMBE`,
+`CAMPANHA_HACKING`, `CAMPANHA_PERIGOS`, `CAMPANHA_OBLIVIO` e os combates ficam
+como estão, e voltam a responder quando a campanha voltar ao sistema dono deles.
+
 ## Oblívio — v3.0
 
 > **Atualizando para a v3.0:** crie o arquivo `Oblivio` com `backend/Oblivio.gs`,

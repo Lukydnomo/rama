@@ -158,13 +158,21 @@
       });
     }
 
+    /* O sistema de cada campanha vai ao lado do nome (v4.0): uma ficha
+       pode entrar numa campanha de outro sistema — ela não muda nada —,
+       mas é bom saber antes que as ferramentas daquela mesa são de outro
+       jogo. */
+    var S = global.RAMASistemas;
+    var meuSistema = S ? global.RAMAFicha.sistemaDe(ctx.ficha).id : "";
     var opcoes = [{ valor: "", rotulo: "Sem campanha" }];
     var achouAtual = !atual;
     ctx.campanhas.forEach(function (c) {
       var joga = c.papel === "mestre" || c.papel === "jogador";
       if (!joga && c.id !== atual) return;
       if (c.id === atual) achouAtual = true;
-      opcoes.push({ valor: c.id, rotulo: c.nome });
+      var sis = S ? S.daCampanha(c) : null;
+      var rotulo = sis ? c.nome + " · " + sis.sistema.curto + (sis.id !== meuSistema ? " (outro sistema)" : "") : c.nome;
+      opcoes.push({ valor: c.id, rotulo: rotulo });
     });
     /* Uma campanha que não está mais na lista (a pessoa saiu dela) não
        some do seletor: mostrar "Sem campanha" ali seria dizer uma coisa
@@ -176,7 +184,7 @@
       tipo: "selecao",
       valor: atual,
       opcoes: opcoes,
-      ajuda: "Aparecem as campanhas em que você é mestre ou jogador. Também dá para adicionar pela aba Personagens da campanha.",
+      ajuda: "Aparecem as campanhas em que você é mestre ou jogador, com o sistema de cada uma. Numa campanha de outro sistema a ficha não muda, mas as ferramentas daquela mesa não valem para ela. Também dá para adicionar pela aba Personagens da campanha.",
       aoMudar: function (v) {
         if (ctx.definirCampanha) ctx.definirCampanha(v);
         else { ctx.ficha.campanhaId = v || null; ctx.alterou(); ctx.atualizarTitulo(); }

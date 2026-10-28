@@ -4,7 +4,7 @@ export function testarAliadosBackend({ t, preparar, novaConta, comoFn }) {
   preparar();
   const dona = novaConta("aliados_dona"), mestre = novaConta("aliados_mestre"), fora = novaConta("aliados_fora");
   const D = comoFn(dona), M = comoFn(mestre), X = comoFn(fora);
-  const mesa = M({ acao: "criar_campanha", dados: { nome: "Mesa dos aliados" } }).dados.id;
+  const mesa = M({ acao: "criar_campanha", dados: { sistema: "ordem", nome: "Mesa dos aliados" } }).dados.id;
   M({ acao: "salvar_participantes", campanhaId: mesa, membros: [{ userId: dona.id, papel: "jogador" }] });
   const modelo = { tipo: "criatura", nome: "Corvo", visibilidade: "publico", descricao: "Companheiro",
     status: [{ id: "vida", nome: "Vida", atual: 8, maximo: 12 }],

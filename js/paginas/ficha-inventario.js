@@ -298,7 +298,7 @@
          Defesa efetivos, com o que as modificações somam. */
       linhas = linhas.concat(perfil.detalhes(ctx, item, efetivos));
       /* Arquivos Secretos 1: item que virou mundano, tatuagem, maldição
-         reproduzida (js/paginas/ficha-maldicoes.js). */
+         reproduzida (js/ordem/telas/ficha-maldicoes.js). */
       if (global.RAMAMaldicoesDaFicha) linhas = linhas.concat(global.RAMAMaldicoesDaFicha.observacoes(ctx, item));
       if (global.RAMAFichaArquivo2) linhas = linhas.concat(global.RAMAFichaArquivo2.observacoesDoItem(ctx, item));
       if (global.RAMAFichaArquivo4) linhas = linhas.concat(global.RAMAFichaArquivo4.observacoesDoItem(ctx, item));

@@ -200,8 +200,11 @@
     return { pericias: saida };
   }
 
+  /* Ligar e desligar abas é do modelo que o declara (o Universal, em
+     js/sistemas.js); nos outros, toda aba do sistema está sempre lá. */
   function moduloAtivo(ficha, chave) {
-    return ehDeOrdem(ficha) || !ficha.modulos || ficha.modulos[chave] !== false;
+    if (!sistemaDe(ficha).ficha.modulosConfiguraveis) return true;
+    return !ficha.modulos || ficha.modulos[chave] !== false;
   }
 
   var NATUREZA = { INFORMACAO: "informacao", ROLAVEL: "rolavel", DEPENDENTE: "dependente" };
@@ -339,13 +342,18 @@
      Deduzir o sistema pelo conteúdo seria adivinhar a intenção de
      quem joga a partir de um nome que ele escolheu por outro motivo.
 
-     FICHA ANTIGA É UNIVERSAL
+     FICHA ANTIGA É UNIVERSAL — E SÓ A ANTIGA
      -----------------------------------------------------------------
-     Toda ficha gravada antes desta versão não tem o campo, e a
-     normalização a trata como universal. É o comportamento correto e
-     não é um chute: universal é o único modelo que existia, e é o
-     modelo que não impõe nada. Uma ficha antiga continua abrindo, com
-     os mesmos dados e o mesmo funcionamento.
+     Toda ficha gravada antes do campo não o tem, e a normalização a
+     trata como universal. É a regra de compatibilidade das fichas
+     (SISTEMA_DAS_FICHAS_ANTIGAS, em js/sistemas.js), não um padrão:
+     universal era o único modelo que existia. Uma ficha antiga continua
+     abrindo, com os mesmos dados e o mesmo funcionamento.
+
+     Um sistema que esta versão não conhece (v4.0) NÃO vira universal:
+     o identificador fica como veio, a ficha abre para leitura e a tela
+     diz que o sistema não é reconhecido. Trocar o tipo de uma ficha por
+     não saber o que ela é seria convertê-la em silêncio.
 
      NÃO EXISTE CONVERSÃO AUTOMÁTICA
      -----------------------------------------------------------------
@@ -361,34 +369,65 @@
      escolhido na criação não apaga nada depois, porque ele nunca
      muda sozinho. */
 
-  var TIPOS_FICHA = ["universal", "ordem", "oblivio"];
-  var TIPO_FICHA_PADRAO = "universal";
+  /* Os tipos vêm do registro central (js/sistemas.js), carregado antes
+     deste arquivo em toda página. */
+  function S() {
+    if (!global.RAMASistemas) throw new Error("R.A.M.A.: js/sistemas.js precisa carregar antes de js/ficha.js.");
+    return global.RAMASistemas;
+  }
+  var TIPOS_FICHA = S().idsDeFicha();
+  var TIPO_FICHA_PADRAO = S().SISTEMA_DAS_FICHAS_ANTIGAS;
+  var ID_DE_SISTEMA = /^[a-z0-9][a-z0-9-]{0,39}$/;
 
-  /* Qualquer coisa que não seja um tipo conhecido vira universal.
-     Errar para o lado do modelo que não impõe regra nenhuma é o único
-     erro seguro aqui: um arquivo adulterado que dissesse "ordem" faria
-     a ficha ser desenhada com cálculos que os dados dela não
-     sustentam. */
+  /* Vazio: a regra das fichas antigas. Conhecido: ele. Um identificador
+     de sistema que esta versão não conhece fica como veio — nunca vira
+     outro sistema. Só o que nem identificador é (um arquivo adulterado)
+     cai na regra das antigas: não há sistema nenhum ali para preservar. */
   function tipoDeFicha(valor) {
     var t = U.texto(valor).trim().toLowerCase();
-    return TIPOS_FICHA.indexOf(t) >= 0 ? t : TIPO_FICHA_PADRAO;
+    if (!t) return TIPO_FICHA_PADRAO;
+    if (S().conhecido(t)) return t;
+    return ID_DE_SISTEMA.test(t) ? t : TIPO_FICHA_PADRAO;
   }
 
-  function ehDeOrdem(ficha) {
-    return !!ficha && tipoDeFicha(ficha.tipoFicha) === "ordem";
+  function sistemaDe(ficha) {
+    return S().de(tipoDeFicha(ficha && ficha.tipoFicha));
   }
+
+  function ehDoSistema(ficha, id) {
+    return !!ficha && tipoDeFicha(ficha.tipoFicha) === id;
+  }
+
+  function ehDeOrdem(ficha) { return ehDoSistema(ficha, "ordem"); }
 
   /* Oblívio (v3.0): sistema próprio, com o bloco `oblivio`. Nunca é
      tratado como universal — nem quando o motor não está carregado. */
-  function ehDeOblivio(ficha) {
-    return !!ficha && tipoDeFicha(ficha.tipoFicha) === "oblivio";
+  function ehDeOblivio(ficha) { return ehDoSistema(ficha, "oblivio"); }
+
+  function sistemaConhecido(ficha) {
+    return S().conhecido(tipoDeFicha(ficha && ficha.tipoFicha));
   }
 
-  /* O bloco de Oblívio: o motor normaliza; sem ele (uma página que não
-     o carrega), o bloco é guardado como veio — nunca descartado. */
-  function blocoOblivio(bruto) {
-    if (global.RAMAOblivio) return global.RAMAOblivio.normalizar(bruto);
+  /* O bloco de regras de um sistema (`ficha.ordem`, `ficha.oblivio`): o
+     motor do sistema normaliza; sem ele (uma página que não o carrega),
+     o bloco é guardado como veio — nunca descartado. */
+  function copiaDoBloco(bruto) {
     return bruto && typeof bruto === "object" ? JSON.parse(JSON.stringify(bruto)) : {};
+  }
+
+  function normalizarBloco(sistema, bruto) {
+    var motor = sistema.ficha.motor && global[sistema.ficha.motor];
+    return motor && motor.normalizar ? motor.normalizar(bruto) : copiaDoBloco(bruto);
+  }
+
+  function blocoVazio(sistema) {
+    var motor = sistema.ficha.motor && global[sistema.ficha.motor];
+    return motor && motor.fichaVazia ? motor.fichaVazia() : {};
+  }
+
+  /* Os sistemas que têm bloco próprio na ficha. */
+  function sistemasComBloco() {
+    return S().lista().filter(function (s) { return !!s.ficha.bloco; });
   }
 
   /* =================================================================
@@ -438,16 +477,18 @@
   function criarFicha(inicial) {
     var i = inicial || {};
     var agora = U.agoraISO();
+    var tipo = tipoDeFicha(i.tipoFicha);
+    var sistema = S().de(tipo);
 
     var atributos = ATRIBUTOS_PADRAO.map(criarAtributo);
 
     var porSigla = {};
     atributos.forEach(function (a) { porSigla[a.sigla] = a.id; });
 
-    return {
+    var ficha = {
       schemaVersion: VERSAO_SCHEMA,
       /* Explícito desde o nascimento da ficha. */
-      tipoFicha: tipoDeFicha(i.tipoFicha),
+      tipoFicha: tipo,
 
       nome: U.aparar(i.nome, 80) || "Novo personagem",
       campanhaId: i.campanhaId || null,
@@ -460,7 +501,7 @@
       atributos: atributos,
       status: STATUS_PADRAO.map(criarStatus),
       defesa: Object.assign({}, DEFESA_PADRAO, { campos: [], ocultos: [] }),
-      pericias: tipoDeFicha(i.tipoFicha) === "ordem"
+      pericias: sistema.ficha.periciasPadrao
         ? PERICIAS_PADRAO.map(function (p) { return criarPericia(p, porSigla); }) : [],
       modulos: normalizarModulos(i.modulos),
       organizacao: normalizarOrganizacao(null),
@@ -469,22 +510,21 @@
       habilidades: global.RAMAHabilidades.arvoreVazia(),
       rituais: rituaisVazios(),
 
-      /* Só a ficha de Ordem carrega este bloco. Numa universal ele não
-         existe, e nada do sistema o procura. */
-      ordem: tipoDeFicha(i.tipoFicha) === "ordem" && global.RAMAOrdemRegras
-        ? global.RAMAOrdemRegras.fichaVazia()
-        : undefined,
-
-      /* Só a ficha de Oblívio carrega este bloco (v3.0). */
-      oblivio: tipoDeFicha(i.tipoFicha) === "oblivio"
-        ? (i.oblivio ? blocoOblivio(i.oblivio) : (global.RAMAOblivio ? global.RAMAOblivio.fichaVazia() : {}))
-        : undefined,
-
       inventario: { limite: 0, itens: [] },
       anotacoes: { pastas: [], soltas: [] },
       camposCustomizados: [],
-      aparencia: normalizarAparencia(i.aparencia, tipoDeFicha(i.tipoFicha)),
+      aparencia: normalizarAparencia(i.aparencia, tipo),
     };
+
+    /* O bloco de regras só existe na ficha do sistema que o declara
+       (js/sistemas.js): numa Universal não há bloco nenhum, e nada de
+       outro sistema o procura. Um bloco que veio pronto (a criação guiada
+       de Oblívio) é normalizado, não trocado pelo vazio. */
+    if (sistema.ficha.bloco) {
+      var b = sistema.ficha.bloco;
+      ficha[b] = i[b] ? normalizarBloco(sistema, i[b]) : blocoVazio(sistema);
+    }
+    return ficha;
   }
 
   /* O tema desta ficha (schema 16). As regras moram em js/tema-modelo.js;
@@ -492,7 +532,7 @@
      cores de um sistema só ficam na ficha daquele sistema. */
   function normalizarAparencia(bruto, tipo) {
     var M = global.RAMATemaModelo;
-    if (M) return M.normalizarAparencia(bruto, tipo === "ordem" || tipo === "oblivio" ? tipo : "universal");
+    if (M) return M.normalizarAparencia(bruto, tipo);
     /* Sem o modelo de temas, as cores voltam ao padrão — mas o tema de
        dados (v2.40) é outra escolha e fica. */
     var saida = { v: 1, modo: "conta" };
@@ -1003,19 +1043,17 @@
       soltas: lista(an.soltas).map(normalizarNota).filter(Boolean),
     };
 
-    /* ---- Ordem Paranormal ----
-       O bloco só é montado quando a ficha É de Ordem. Mas ele é
+    /* ---- os blocos dos sistemas (Ordem, Oblívio…) ----
+       Cada bloco é montado quando a ficha É daquele sistema. Mas ele é
        PRESERVADO sempre que existir no que veio: uma ficha universal
        que um dia foi de Ordem não perde as escolhas por causa de uma
        leitura — perder dado em silêncio é o contrário do que esta
-       função existe para fazer. */
-    if (global.RAMAOrdemRegras && (ficha.tipoFicha === "ordem" || b.ordem)) {
-      ficha.ordem = global.RAMAOrdemRegras.normalizar(b.ordem);
-    }
-
-    /* ---- Oblívio (schema 24) ----
-       Mesma regra: montado na ficha de Oblívio, preservado se existir. */
-    if (ficha.tipoFicha === "oblivio" || b.oblivio) ficha.oblivio = blocoOblivio(b.oblivio);
+       função existe para fazer. E numa página sem o motor do sistema, o
+       bloco fica como veio, em vez de sumir. */
+    sistemasComBloco().forEach(function (sistema) {
+      var chave = sistema.ficha.bloco;
+      if (ficha.tipoFicha === sistema.id || b[chave]) ficha[chave] = normalizarBloco(sistema, b[chave]);
+    });
 
     /* ---- campos personalizados ---- */
     ficha.camposCustomizados = lista(b.camposCustomizados).map(normalizarCampo).filter(Boolean);
@@ -1376,6 +1414,9 @@
     TIPOS_FICHA: TIPOS_FICHA,
     TIPO_FICHA_PADRAO: TIPO_FICHA_PADRAO,
     tipoDeFicha: tipoDeFicha,
+    sistemaDe: sistemaDe,
+    sistemaConhecido: sistemaConhecido,
+    ehDoSistema: ehDoSistema,
     ehDeOrdem: ehDeOrdem,
     ehDeOblivio: ehDeOblivio,
     NATUREZA: NATUREZA,

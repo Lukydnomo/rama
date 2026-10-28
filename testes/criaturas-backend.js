@@ -34,7 +34,7 @@ export function testarCriaturasBackend({ t, preparar, novaConta, comoFn, ambient
   preparar();
   const mestra = novaConta("cria_mestra"), lia = novaConta("cria_lia"), intrusa = novaConta("cria_intrusa");
   const M = comoFn(mestra), L = comoFn(lia), I = comoFn(intrusa);
-  const mesa = M({ acao: "criar_campanha", dados: { nome: "Bestiário" } }).dados.id;
+  const mesa = M({ acao: "criar_campanha", dados: { sistema: "ordem", nome: "Bestiário" } }).dados.id;
   M({ acao: "salvar_participantes", campanhaId: mesa, membros: [{ userId: lia.id, papel: "jogador" }] });
 
   const participantes = [1, 2, 3, 4, 5].map((n) => ({ id: "cr-" + n, tipo: "criatura", origemId: "op.criatura.teste-sintetico", nome: "Sintética #" + n, ordem: n, snapshot: criaturaSintetica(n) }));
@@ -128,7 +128,7 @@ export function testarCriaturasBackend({ t, preparar, novaConta, comoFn, ambient
   preparar();
   const m2 = novaConta("cria_mestra2");
   const M2 = comoFn(m2);
-  const mesa2 = M2({ acao: "criar_campanha", dados: { nome: "Antiga" } }).dados.id;
+  const mesa2 = M2({ acao: "criar_campanha", dados: { sistema: "ordem", nome: "Antiga" } }).dados.id;
   const pequeno = M2({ acao: "salvar_combate", campanhaId: mesa2, dados: { nome: "Pequeno", estado: "preparando", visiveis: [], participantes: [
     { id: "c1", tipo: "criatura", nome: "Existido", ordem: 1, snapshot: { nome: "Existido", status: [{ id: "v", nome: "Vida", atual: 5, maximo: 30 }] } },
   ] } });

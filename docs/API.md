@@ -1,5 +1,43 @@
 # A API
 
+## A plataforma e os sistemas — v4.0
+
+Ver [SISTEMAS.md](SISTEMAS.md). As ações de um sistema vêm do arquivo dele
+(`Ordem.gs`, `Oblivio.gs`) pelo registro em `Sistemas.gs`; sem o arquivo, elas
+respondem `acao_desconhecida`.
+
+- `criar_campanha { dados: { nome, sistema, descricao?, visibilidade? } }` —
+  `sistema` é obrigatório e precisa ser um do registro (`ordem`, `oblivio`,
+  `universal`; maiúsculas não importam). Sem ele, ou desconhecido:
+  `dados_invalidos` com `campo: "sistema"`. Resposta: `{ id, sistema }`.
+- `salvar_campanha { campanhaId, rev, dados: { sistema? … } }` — só o mestre.
+  `sistema` troca o sistema da campanha: desconhecido → `dados_invalidos`. Não
+  converte fichas, não desvincula ninguém e não apaga nada; ao trocar, marca
+  `campanha`, `personagens` e `combates`. Toda gravação de uma campanha antiga
+  (sem `sistema`) escreve o sistema da regra de compatibilidade. A resposta traz
+  `dados.sistema` — um servidor anterior à v4.0 não o traz, e o site avisa que
+  nada mudou.
+- `ler_campanha` devolve `sistema`, `sistemaHerdado` (o sistema veio da regra
+  das campanhas antigas), cada ferramenta e mecânica do sistema atual pela chave
+  (ferramenta: `true`; mecânica opcional: ligada ou não — `combate`,
+  `condicoes`, `sincronia`, `hexatombe`, `hacking`, `perigos` em Ordem;
+  `oblivio` em Oblívio; `combate` em Universal) e `guardadas`: as ferramentas de
+  outro sistema com estado gravado (suspensas, intactas). As chaves de outro
+  sistema não vêm.
+- `listar_campanhas` devolve `sistema` em cada campanha.
+- **`outro_sistema`** (erro novo): uma ferramenta de um sistema numa campanha de
+  outro — `ler_/salvar_hexatombe`, `lancar_hexatombe`, `ler_/salvar_hacking`,
+  `ler_/salvar_perigos`, `sincronia_operar` (fora de Ordem), `ler_/salvar_oblivio`,
+  `oblivio_operar` (fora de Oblívio), `salvar_combate` e `atualizar_combate` (em
+  Oblívio). Vem com `sistema` (o da campanha) e `ferramenta`. `listar_combates`
+  continua respondendo: os combates de antes ficam legíveis.
+- `listar_personagens_campanha`: `tipoFicha` é o sistema que a projeção guardou
+  (vazio numa ficha ilegível — nenhum sistema suposto); o resto do cartão é do
+  módulo do sistema da ficha. Um sistema desconhecido, ou sem o arquivo, sai só
+  com a identificação.
+- `ajustar_personagem`: `status` e `atributo` são do núcleo; `recurso` é de
+  Ordem e só vale numa ficha de Ordem com o bloco.
+
 ## Feedback — v2.50
 
 Uma ação nova, em arquivo novo (`backend/Feedback.gs`), anunciada ao núcleo por
@@ -63,8 +101,10 @@ responde `acao_desconhecida`.
 - `salvar_oblivio { campanhaId, rev, opId, estado }` — só o mestre. `opId`
   repetido → `repetida: true`; `rev` diferente → `conflito` com o estado atual.
   Normalizado pela cópia de `js/oblivio/mesa.js`; Personas de fora da campanha
-  saem da fileira e do Farol. `estado.ativo` liga/desliga a aba (coluna leve
-  `ativo`; marca `oblivio` e, ao mudar, `campanha`). Sem a aba:
+  saem da fileira e do Farol. Desde a v4.0 a mesa é do sistema da campanha:
+  `estado.ativo` não liga nem desliga nada, e a coluna `ativo` só é lida pela
+  regra das campanhas antigas. Fora de uma campanha de Oblívio: `outro_sistema`.
+  Sem a aba:
   `instalacao_incompleta`; grande demais: `dados_grandes` (o registro cede antes).
 - `oblivio_operar { campanhaId, opId, operacao }` — operações que tocam fichas.
   `operacao.tipo`:
@@ -87,7 +127,7 @@ responde `acao_desconhecida`.
   Resposta: `{ rev, dados: { eventos, acerto, gravadas, efeitoNoAlvo } }`. A
   repetição do mesmo `opId` não aplica de novo (pela mesa ou por qualquer ficha
   tocada). Fichas alteradas sobem a revisão e marcam `personagens`.
-- `ler_campanha` devolve `oblivio: true|false`; `sincronizar_campanha` tem a
+- `ler_campanha` devolve `oblivio: true` numa campanha de Oblívio (v4.0); `sincronizar_campanha` tem a
   parte `oblivio`.
 - Nas listagens, uma ficha de Oblívio sai com `sistema`/`tipoFicha: "oblivio"` e,
   no painel da mesa, `oblivio` (só o Papel com "Esconder status dos jogadores").

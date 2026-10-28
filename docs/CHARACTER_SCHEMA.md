@@ -5,6 +5,22 @@ padrão e normaliza o que chega de fora. Onde ela é guardada — inteira em
 `fichaJson` (formato antigo) ou em blocos (v2.15) — é assunto do backend, e não muda
 nada aqui: ver [DATABASE.md](DATABASE.md).
 
+## O sistema da ficha — v4.0 (schema 24, sem mudança de forma)
+
+`tipoFicha` é lido pelo registro central (`js/sistemas.js`):
+
+- vazio → a regra das fichas antigas (Universal);
+- conhecido (`ordem`, `oblivio`, `universal`) → ele;
+- um identificador que esta versão não conhece → **fica como veio**, nunca vira
+  Universal. A ficha abre só para leitura e nada é gravado por cima dela;
+- o que nem identificador é (um arquivo adulterado) → a regra das antigas.
+
+O bloco de regras de cada sistema (`ordem`, `oblivio`) é normalizado pelo motor
+do sistema e **preservado como veio** quando o motor não está na página (antes
+da v4.0, o bloco de Ordem sumia numa página sem `js/ordem/regras.js`). Um bloco
+de outro sistema que exista na ficha também fica. As perícias padrão e os
+módulos configuráveis são capacidades do sistema no registro.
+
 ## Oblívio — v3.0 / schema 24
 
 Um terceiro tipo: `tipoFicha: "oblivio"`, com o bloco `oblivio` normalizado por

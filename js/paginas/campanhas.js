@@ -90,10 +90,14 @@
     /* Papel e visibilidade ficam à vista na lista: saber de cara se
        você é o mestre de uma mesa ou só um jogador nela evita abrir a
        campanha errada. */
+    /* O sistema da campanha (v4.0), pelo registro: quem conduz tem o nome
+       que o sistema dá (Mestre, Testemunha). */
+    var doSistema = global.RAMASistemas.daCampanha(c).sistema;
     var etiquetas = [
+      el("span.r-etiqueta", { texto: doSistema.curto }),
       el("span.r-etiqueta", {
         class: c.mestre ? "r-etiqueta--forte" : "",
-        texto: c.papel === "mestre" ? "Mestre" : (c.papel === "jogador" ? "Jogador" : "Pública"),
+        texto: c.papel === "mestre" ? doSistema.campanha.mestre : (c.papel === "jogador" ? "Jogador" : "Pública"),
       }),
       c.visibilidade === "publico"
         ? el("span.r-etiqueta", { texto: "Pública" })
@@ -150,6 +154,9 @@
     });
 
     var visibilidade = criando ? "privado" : campanha.visibilidade;
+    /* O sistema é escolhido na criação, nunca suposto (v4.0). Trocar
+       depois é em Configurações da campanha, com os impactos explicados. */
+    var escolha = criando ? escolhaDeSistema() : null;
 
     var seletor = el("div.filtros__grupo", { role: "group", "aria-label": "Visibilidade" },
       [{ v: "privado", r: "Privada" }, { v: "publico", r: "Pública" }].map(function (op) {
@@ -169,8 +176,10 @@
 
     UI.modal({
       titulo: criando ? "Nova campanha" : "Editar campanha",
+      largo: criando,
       conteudo: el("div.pilha", {}, [
         nome,
+        escolha ? escolha.elemento : null,
         descricao,
         el("div.r-campo", {}, [
           el("span.r-rotulo", { texto: "Visibilidade" }),
@@ -188,12 +197,14 @@
           aoClicar: async function (fechar) {
             var valor = nome.entrada.value.trim();
             if (!valor) { nome.marcarErro("Informe um nome."); nome.entrada.focus(); return; }
+            if (escolha && !escolha.valor()) { escolha.marcarErro(); return; }
 
             var dados = {
               nome: valor,
               descricao: descricao.entrada.value.trim(),
               visibilidade: visibilidade,
             };
+            if (escolha) dados.sistema = escolha.valor();
 
             var r = criando
               ? await global.RAMAApi.criarCampanha(dados)
@@ -218,6 +229,43 @@
     });
 
     nome.entrada.focus();
+  }
+
+  /* O grupo de escolha do sistema: um rádio por sistema do registro,
+     com a capa e o que a campanha dele oferece. Nenhum vem marcado. */
+  function escolhaDeSistema() {
+    var erro = el("p.r-ajuda.r-ajuda--erro", { hidden: true, role: "alert", texto: "Escolha o sistema da campanha." });
+    var opcoes = global.RAMASistemas.lista().map(function (s) {
+      return el("label.escolha-sistema__opcao", { dataset: { sistema: s.id } }, [
+        el("input.escolha-sistema__radio", {
+          type: "radio", name: "sistema-da-campanha", value: s.id,
+          onchange: function () { erro.hidden = true; },
+        }),
+        global.RAMACapaSistema ? global.RAMACapaSistema.elemento(s, { tamanho: "p" }) : null,
+        el("span.escolha-sistema__textos", {}, [
+          el("span.escolha-sistema__nome", { texto: s.nome }),
+          el("span.escolha-sistema__resumo", { texto: s.campanha.descricao }),
+        ]),
+      ]);
+    });
+    var grupo = el("fieldset.r-campo.escolha-sistema", {}, [
+      el("legend.r-rotulo", { texto: "Sistema de RPG" }),
+      el("div.escolha-sistema__opcoes", {}, opcoes),
+      el("p.r-ajuda", { texto: "Decide as ferramentas e as regras da mesa. Dá para trocar depois, em Configurações: nada é apagado nem convertido." }),
+      erro,
+    ]);
+    return {
+      elemento: grupo,
+      valor: function () {
+        var marcado = grupo.querySelector("input:checked");
+        return marcado ? marcado.value : "";
+      },
+      marcarErro: function () {
+        erro.hidden = false;
+        var primeiro = grupo.querySelector("input");
+        if (primeiro) primeiro.focus();
+      },
+    };
   }
 
   /* =================================================================

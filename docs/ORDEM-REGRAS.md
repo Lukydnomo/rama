@@ -50,7 +50,7 @@ leitura que o R.A.M.A. adotou escrita por extenso.
 | `js/arrastar.js` | o gesto de arrastar e soltar, igual nas cinco abas: alça, prévia, destino, recusa com motivo, cancelamento, rolagem perto da borda e teclado |
 | `js/ordem/biblioteca.js` | o catálogo de poderes arrumado para consulta na janela "Da biblioteca" |
 | `js/ordem/personalizacao.js` | versões personalizadas e exclusão de habilidades oficiais, por aquisição |
-| `js/paginas/ordem-escolhas.js` | as janelas de escolha, iguais na criação e na ficha |
+| `js/ordem/telas/ordem-escolhas.js` | as janelas de escolha, iguais na criação e na ficha |
 
 O catálogo de poderes só é carregado nas páginas que calculam a ficha de Ordem
 (a ficha e a lista de personagens, onde fica a criação). É um arquivo estático,
@@ -2216,7 +2216,7 @@ Fonte `AS3` (Arquivos Secretos 3, v1.0, Jambô), no registro único dos livros
 (`C.LIVROS`) e nas listas próprias de cada módulo (itens, rituais, poderes,
 criaturas, inventário, consumo, imagens e `ler_imagem_do_turno` no
 `Campanhas.gs`). Páginas são as do livro. As regras ficam em
-`js/ordem/arquivo3.js`; a tela, em `js/paginas/ficha-arquivo3.js`.
+`js/ordem/arquivo3.js`; a tela, em `js/ordem/telas/ficha-arquivo3.js`.
 
 ### Inventário do PDF
 
@@ -2336,9 +2336,9 @@ Fonte `AS4` (Arquivos Secretos 4, v1.0), no registro único dos livros
 (`C.LIVROS`) e nas listas próprias de cada módulo (itens, rituais, poderes,
 criaturas, imagens e `ler_imagem_do_turno` no `Campanhas.gs`). Páginas são as do
 livro. As regras da ficha ficam em `js/ordem/arquivo4.js`; a tela, em
-`js/paginas/ficha-arquivo4.js`. A regra opcional de Hacking é da campanha:
+`js/ordem/telas/ficha-arquivo4.js`. A regra opcional de Hacking é da campanha:
 `js/ordem/hacking.js` (copiado dentro do `Campanhas.gs`) e
-`js/paginas/campanha-hacking.js`.
+`js/ordem/telas/campanha-hacking.js`.
 
 ### Inventário do PDF
 
@@ -2467,9 +2467,9 @@ Fonte `AS5` (Arquivos Secretos 5, v1.0), no registro único dos livros
 (`C.LIVROS`) e nas listas próprias de cada módulo (itens, rituais, poderes,
 criaturas, imagens, consumo e `Campanhas.gs`). Páginas são as do livro. As
 regras da ficha ficam em `js/ordem/arquivo5.js`; a tela, em
-`js/paginas/ficha-arquivo5.js`. Os perigos complexos são da campanha:
+`js/ordem/telas/ficha-arquivo5.js`. Os perigos complexos são da campanha:
 `js/ordem/perigos.js` (copiado dentro do `Campanhas.gs`) e
-`js/paginas/campanha-perigos.js`. As regalias novas entram no módulo de veículos
+`js/ordem/telas/campanha-perigos.js`. As regalias novas entram no módulo de veículos
 do AS3 (`js/ordem/arquivo3.js`).
 
 ### Inventário do PDF

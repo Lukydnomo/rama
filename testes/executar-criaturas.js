@@ -16,7 +16,7 @@ globalThis.document = { currentScript: null, createElement: () => ({ style: {}, 
 globalThis.navigator = globalThis.navigator || { onLine: true };
 globalThis.location = globalThis.location || { search: "" };
 
-for (const caminho of ["js/config.js", "js/util.js", "js/dados.js", "js/habilidades.js",
+for (const caminho of ["js/config.js", "js/util.js", "js/sistemas.js", "js/dados.js", "js/habilidades.js",
   "js/ordem/catalogo.js", "js/ordem/poderes.js", "js/ordem/opcionais.js", "js/ordem/efeitos.js", "js/ordem/condicoes.js",
   "js/ordem/consumo.js", "js/ordem/inventario.js", "js/ordem/personalizacao.js", "js/ordem/aprendizado.js",
   "js/ordem/progressao.js", "js/ordem/biblioteca.js", "js/ordem/regras.js",

@@ -5,25 +5,25 @@
    por padrão, só o mestre grava, o jogador recebe só as cenas em que um
    personagem dele está (sem as notas do mestre, PS só quando mostrados),
    repetição e conflito, vínculo só com personagem da campanha. Também
-   confere que o módulo dentro de Campanhas.gs é a cópia fiel de
+   confere que o módulo dentro de Ordem.gs é a cópia fiel de
    js/ordem/hacking.js. Dados sintéticos. Chamado por executar-backend.js.
    ===================================================================== */
 
 export async function testarHackingBackend({ t, preparar, novaConta, comoFn }) {
   t.grupo("Hacking · o módulo do servidor é o mesmo do site");
   const js = (await Deno.readTextFile(new URL("../js/ordem/hacking.js", import.meta.url))).replace(/\r\n/g, "\n");
-  const gs = (await Deno.readTextFile(new URL("../backend/Campanhas.gs", import.meta.url))).replace(/\r\n/g, "\n");
+  const gs = (await Deno.readTextFile(new URL("../backend/Ordem.gs", import.meta.url))).replace(/\r\n/g, "\n");
   const ini = gs.indexOf("/* >>> js/ordem/hacking.js */\n") + "/* >>> js/ordem/hacking.js */\n".length;
   const fim = gs.indexOf("/* <<< js/ordem/hacking.js */");
-  t.ok("a cópia em Campanhas.gs é idêntica (byte a byte)", ini > 40 && fim > ini && gs.slice(ini, fim) === js);
+  t.ok("a cópia em Ordem.gs é idêntica (byte a byte)", ini > 40 && fim > ini && gs.slice(ini, fim) === js);
   t.ok("e o servidor carregou RAMAHacking", !!globalThis.RAMAHacking && typeof globalThis.RAMAHacking.vistaDoJogador === "function");
 
   t.grupo("Hacking · desligado por padrão e permissões");
   preparar();
   const mestra = novaConta("hk_mestra"), ana = novaConta("hk_ana"), beto = novaConta("hk_beto"), intrusa = novaConta("hk_intrusa");
   const M = comoFn(mestra), A = comoFn(ana), B = comoFn(beto), I = comoFn(intrusa);
-  const mesa = M({ acao: "criar_campanha", dados: { nome: "Rede" } }).dados.id;
-  const outraMesa = M({ acao: "criar_campanha", dados: { nome: "Outra" } }).dados.id;
+  const mesa = M({ acao: "criar_campanha", dados: { sistema: "ordem", nome: "Rede" } }).dados.id;
+  const outraMesa = M({ acao: "criar_campanha", dados: { sistema: "ordem", nome: "Outra" } }).dados.id;
   M({ acao: "salvar_participantes", campanhaId: mesa, membros: [{ userId: ana.id, papel: "jogador" }, { userId: beto.id, papel: "jogador" }] });
   const ficha = (nome) => ({ nome, tipoFicha: "ordem", schemaVersion: 10, ordem: { classe: "especialista", nex: 5, recursos: { pv: 16, pe: null, san: null, pd: null } } });
   const pAna = A({ acao: "criar_personagem", dados: ficha("Ana") }).dados.id;

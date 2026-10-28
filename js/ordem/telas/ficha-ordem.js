@@ -4016,7 +4016,7 @@
     },
 
     /* Com "Contagem de munição" ligada, a arma que usa munição passa
-       antes pela confirmação compacta (js/paginas/ficha-consumo.js): o
+       antes pela confirmação compacta (js/ordem/telas/ficha-consumo.js): o
        gasto pertence ao ATAQUE, acertando ou errando. O dano rolado
        depois não gasta de novo. */
     atacar: function (ctx, arma) {

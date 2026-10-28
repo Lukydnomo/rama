@@ -118,6 +118,34 @@
 
   var CHANGELOG = [
     {
+      versao: "4.0.0",
+      codinome: "ALICERCE",
+      data: "28/10/2026",
+      mudancas: {
+        "Adicionado": [
+          "Toda campanha tem um sistema de RPG — Ordem Paranormal, Oblívio ou Universal —, escolhido ao criar, com a capa de cada um. O sistema decide as ferramentas da mesa: Ordem tem o Combate com condições e efeitos por turno, a Sincronia e as mecânicas dos Arquivos Secretos; Oblívio tem a mesa da Testemunha; Universal tem o Combate sem regra imposta.",
+          "Trocar o sistema de uma campanha, em Configurações → Sistema da campanha. Antes de confirmar, a tela mostra o que fica suspenso, o que passa a valer, o que volta guardado e quantas fichas vinculadas são de outro sistema. Nada é convertido, desvinculado ou apagado: voltar ao sistema anterior devolve tudo como estava (o Hexatombe, a mesa da Testemunha, os combates).",
+        ],
+        "Melhorado": [
+          "O R.A.M.A. virou a plataforma, e cada sistema um módulo dela, do mesmo nível: Ordem deixa de ser o jeito padrão de a mesa funcionar e Oblívio deixa de ser uma chave ligada por cima. A mesa da Testemunha é a ferramenta de toda campanha de Oblívio, sem nada para ligar.",
+          "O sistema aparece na lista de campanhas, no topo da campanha (com o nome de quem conduz: Mestre ou Testemunha) e no seletor de campanha da ficha, que avisa quando a campanha é de outro sistema.",
+          "Uma ficha de um sistema que esta versão não conhece não vira mais Universal: abre só para leitura, com o aviso, e nada é gravado por cima dela. Numa página sem as regras de Ordem, o bloco de Ordem da ficha passa a ser preservado, em vez de sumir.",
+          "Os cartões do painel da mesa e a lista do combate são feitos pelo sistema de cada ficha; uma ficha de sistema desconhecido mostra só a identificação, sem números inventados.",
+        ],
+        "Visual": [
+          "Escolha do sistema com rádios e a capa de cada sistema, e o painel do sistema da campanha, no Legacy e no Modern20, também no celular.",
+        ],
+        "Técnico": [
+          "Registro central dos sistemas e das capacidades de cada um, nos dois lados: js/sistemas.js (abas e bloco da ficha, motor, resumo para a mesa, ferramentas e mecânicas de campanha) e backend/Sistemas.gs (o mesmo registro, as regras de compatibilidade e as portas). Os dois dizem o mesmo — um teste confere.",
+          "Servidor separado em núcleo (Dados.gs, Codigo.gs, Campanhas.gs, Sistemas.gs) e um arquivo por sistema: Ordem.gs (resumo de recursos, ajuste de PV/PE/SAN/PD, condições e efeitos por turno, Hexatombe, Hacking, Perigos e Sincronia, que saíram de Codigo.gs e Campanhas.gs), Oblivio.gs e Universal.gs. Uma ferramenta de outro sistema responde outro_sistema; um arquivo de sistema ausente não derruba o núcleo. A função sistemaDaFicha, que estava duplicada em Codigo.gs, ficou uma só.",
+          "Site no mesmo critério: as telas de Ordem foram para js/ordem/telas/ e as de Oblívio para js/oblivio/telas/; js/paginas/ ficou com as telas da plataforma e as seções de ficha comuns. Modelo da ficha, página da ficha, criação, painel da mesa e campanha perguntam ao registro em vez de testar \"ordem\" ou \"universal\".",
+          "Regras de compatibilidade explícitas, só para registros antigos: ficha sem tipoFicha é Universal; campanha sem sistema é Ordem Paranormal, ou Oblívio se a mesa da v3.0 estava ligada nela — e o sistema fica escrito ao salvar as configurações. Campanha nova sem sistema é recusada. O sistema mora no dadosJson da campanha: nenhuma aba ou coluna nova, nenhum setupRama().",
+          "Atualizar o backend: criar Sistemas.gs, Ordem.gs e Universal.gs; trocar Codigo.gs, Campanhas.gs e Oblivio.gs; nova versão da implantação; depois o site (pastas js/ordem/telas/ e js/oblivio/telas/ e todas as páginas). Documentação: docs/SISTEMAS.md.",
+          "Testes: 1719 backend (também com o serviço avançado; testes/sistemas-backend.js novo), 3422 regras, 57 registro e pastas, 494 Oblívio, 252 tema, 249 frontend, 213 CRIS, 188 criaturas, 89 feedback, 55 dados, 40 editor de imagem, 19 coordenação — todas passando. Verificado no navegador com o backend simulado (não numa implantação real).",
+        ],
+      },
+    },
+    {
       versao: "3.0.0",
       codinome: "FAROL",
       data: "28/10/2026",

@@ -1505,6 +1505,60 @@
 .tipo-ficha__titulos { display: flex; flex-direction: column; gap: var(--e1); min-width: 0; }
 
 /* =====================================================================
+   ESCOLHA DO SISTEMA DA CAMPANHA (v4.0)
+   ---------------------------------------------------------------------
+   Um rádio por sistema, com a capa e o que a mesa dele oferece. Na
+   criação da campanha e na troca, em Configurações. O rádio é de
+   verdade (teclado e leitor de tela), e a opção marcada se diz também
+   pelo traço, nunca só pela cor.
+   ===================================================================== */
+
+.escolha-sistema {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
+.escolha-sistema__opcoes {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
+  gap: var(--e2);
+}
+.escolha-sistema__opcao {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--e2);
+  padding: var(--e2) var(--e3);
+  background: var(--fundo-superficie);
+  border: var(--borda) solid var(--cor-traco-fraca);
+  color: var(--cor-texto);
+  cursor: pointer;
+  min-width: 0;
+}
+.escolha-sistema__opcao:hover { border-color: var(--cor-traco-forte); background: var(--fundo-superficie-2); }
+.escolha-sistema__opcao:has(input:checked) {
+  border-color: var(--cor-traco-forte);
+  box-shadow: inset 0 0 0 1px var(--cor-traco-forte);
+  background: var(--fundo-superficie-2);
+}
+.escolha-sistema__opcao:has(input:focus-visible) { outline: 2px solid var(--cor-foco); outline-offset: 2px; }
+.escolha-sistema__radio { margin: 4px 0 0; flex: 0 0 auto; accent-color: var(--cor-traco-forte); }
+.escolha-sistema__textos { display: flex; flex-direction: column; gap: var(--e1); min-width: 0; }
+.escolha-sistema__nome {
+  font-weight: 700;
+  letter-spacing: var(--espaco-letra-titulo);
+  text-transform: uppercase;
+}
+.escolha-sistema__resumo { font-size: var(--texto-mini); color: var(--cor-texto-2); }
+.escolha-sistema__opcao--atual .escolha-sistema__nome::after { content: " · atual"; font-weight: 400; text-transform: none; color: var(--cor-texto-3); }
+
+/* O sistema da campanha em Configurações: a capa, o nome e o que vale. */
+.sistema-atual { display: flex; align-items: center; gap: var(--e3); min-width: 0; }
+.sistema-atual__textos { display: flex; flex-direction: column; gap: var(--e1); min-width: 0; }
+.sistema-atual__nome { font-weight: 700; letter-spacing: var(--espaco-letra-titulo); text-transform: uppercase; }
+.impacto-troca { margin: 0; padding-left: var(--e4); display: flex; flex-direction: column; gap: var(--e2); list-style: square; }
+
+/* =====================================================================
    CAPA DE SISTEMA (v3.0, js/capa-sistema.js)
    ---------------------------------------------------------------------
    Um pequeno volume: a capa na proporção 2:3, uma lombada estreita à

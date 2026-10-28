@@ -36,17 +36,18 @@ js/oblivio/                 o motor (puro: sem DOM; roda no navegador, no Deno e
                             encontro, vista dos jogadores
   buraco.js                 construção, exploração, eventos, saída
   habilidades.js            as habilidades com ativação e as ações específicas
-js/paginas/
+js/oblivio/telas/           (v4.0: as telas moram com o módulo, fora de js/paginas/)
   oblivio-criar.js          a criação guiada (8 etapas)
   oblivio-corpo.js          o diagrama do corpo (figura + lista acessível)
   ficha-oblivio.js          bloco superior, abas Persona, Habilidades e Estado; operar()
   ficha-oblivio-jogo.js     abas Testes e Inventário; ataque; fabricação; descanso
   ficha-oblivio-mesa.js     a ficha numa campanha: tempo da mesa, alvos, operações no servidor
-  campanha-oblivio.js       a aba Oblívio da campanha (Testemunha e jogadores)
+  campanha-oblivio.js       a aba Mesa da Testemunha da campanha (Testemunha e jogadores)
 js/capa-sistema.js          o componente de capa (volume de livro) de qualquer sistema
 assets/sistemas/            oblivio-capa.webp (320×480) e oblivio-capa-pequena.webp (160×240)
 backend/Oblivio.gs          cópia FIEL do motor (gerada) + ler_oblivio, salvar_oblivio,
-                            oblivio_operar
+                            oblivio_operar + sistemaOblivio(), os ganchos do registro
+                            (Sistemas.gs, v4.0): projeção e cartão do painel
 css/oblivio.css             Legacy; css/modern20/oblivio.css — Modern20
 ```
 
@@ -55,13 +56,24 @@ css/oblivio.css             Legacy; css/modern20/oblivio.css — Modern20
 `deno run --allow-read --allow-write testes/gerar-oblivio-gs.js` — a suíte do
 backend confere que as cópias são idênticas.
 
+### Oblívio como sistema da plataforma (v4.0)
+
+Oblívio é um módulo do R.A.M.A., do mesmo nível de Ordem e Universal (ver
+[SISTEMAS.md](SISTEMAS.md)). A mesa da Testemunha não se liga mais numa chave:
+ela é a ferramenta de toda campanha cujo sistema é Oblívio, e o servidor a
+recusa (`outro_sistema`) em campanha de outro sistema. O campo `ativo` do estado
+da mesa e a coluna `CAMPANHA_OBLIVIO.ativo` ficaram como estavam — o motor não
+mudou —, e a coluna só é lida pela regra das campanhas antigas: uma campanha da
+v3.0 com a mesa ligada é de Oblívio. Uma Persona numa campanha de outro sistema
+joga avulsa (a ficha não encontra mesa).
+
 ### Tempo e idempotência
 
 O tempo só anda por **momentos**: `fimDoTurno`, `fimDaRodada`, `inicioDaCena`,
 `descansar`, `concluirMissao` (e `inicioDoTurno` para Última Esperança). Toda
 mutação passa por `aplicarOperacao(bloco, opId, fn)`: o id fica guardado (até
 300) e a segunda chegada não aplica de novo. Numa ficha avulsa, os botões da aba
-Estado são os momentos; numa campanha com a mesa ligada, quem anda é a
+Estado são os momentos; numa campanha de Oblívio, quem anda é a
 Testemunha e o servidor aplica os momentos em todas as fichas de Oblívio da
 campanha.
 
@@ -500,7 +512,8 @@ o que segue pendente).
   permissões de `salvar_oblivio`/`oblivio_operar`, habilidade em aliado sem
   acesso à ficha dele, ataque a Ameaça com desgaste entre atacantes,
   momentos, repetição por opId, aliados e Escudo Humano no servidor, a mesa
-  ligada em `ler_campanha` e o acerto recebido pela região escolhida.
+  como ferramenta do sistema da campanha em `ler_campanha` (v4.0) e o acerto
+  recebido pela região escolhida.
 - As demais suítes do projeto, sem regressão (ver o README).
 - Revisão no navegador (servidor local `testes/servidor-local.js`, contas de
   teste): escolha de sistema com as capas; criação guiada nas 8 etapas até a

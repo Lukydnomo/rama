@@ -36,91 +36,55 @@
 
   var PAINEL = U.parametro("painel") === "1";
 
-  /* A ordem é a do projeto: Habilidades logo depois de Perícias, e a
-     seção de rituais em seguida.
+  /* As abas são do SISTEMA da ficha, declaradas no registro central
+     (js/sistemas.js): cada sistema diz quais seções a ficha dele mostra,
+     em que ordem, e qual desenha o bloco fixo acima delas. Esta página
+     não sabe que sistemas existem — pergunta ao registro.
 
-     O rótulo de rituais é uma FUNÇÃO porque o nome dela é configurável
-     — quem trocar "Rituais" por "Magias" vê a aba mudar junto, sem que
-     nada da estrutura interna se mexa. */
-  /* As abas dependem do TIPO da ficha.
+     Seções comuns (Habilidades, Rituais, Inventário, Anotações, Aliados)
+     são as MESMAS em todo sistema que as usa: um ritual é um ritual, e
+     duplicar a seção só para mudar o cabeçalho seria manter dois
+     códigos iguais.
 
-     A universal tem as de sempre. A de Ordem troca Geral e Perícias
-     por versões que calculam pelas regras, e acrescenta Progressão e
-     Regras opcionais. Habilidades, Rituais, Inventário e Anotações são
-     as MESMAS nos dois: um ritual é um ritual, e duplicar a seção só
-     para mudar o cabeçalho seria manter dois códigos iguais. Na de
-     Ordem, Habilidades recebe na mesma lista o que as regras entregam,
-     e Inventário abre com carga e capacidade. */
-  var ABAS_UNIVERSAL = [
-    { chave: "geral",        rotulo: "Geral",       secao: "RAMASecaoGeral" },
-    { chave: "pericias",     rotulo: "Perícias",    secao: "RAMASecaoPericias" },
-    { chave: "habilidades",  rotulo: "Habilidades", secao: "RAMASecaoHabilidades" },
-    { chave: "rituais",      secao: "RAMASecaoRituais",
-      rotulo: function () { return global.RAMASecaoRituais.rotulo(ctx); } },
-    { chave: "inventario",   rotulo: "Inventário",  secao: "RAMASecaoInventario" },
-    { chave: "anotacoes",    rotulo: "Anotações",   secao: "RAMASecaoAnotacoes", independente: true },
-    { chave: "aliados",      rotulo: "Aliados",     secao: "RAMASecaoAliados" },
-  ];
+     O rótulo de rituais vem da seção (`rotuloDaSecao`) porque o nome
+     dela é configurável — quem trocar "Rituais" por "Magias" vê a aba
+     mudar junto, sem que nada da estrutura interna se mexa.
 
-  var ABAS_ORDEM = [
-    { chave: "geral",        rotulo: "Geral",       secao: "RAMASecaoOrdemGeral" },
-    { chave: "pericias",     rotulo: "Perícias",    secao: "RAMASecaoOrdemPericias" },
-    { chave: "progressao",   rotulo: "Progressão",  secao: "RAMASecaoOrdemProgressao" },
-    { chave: "habilidades",  rotulo: "Habilidades", secao: "RAMASecaoOrdemHabilidades" },
-    { chave: "rituais",      secao: "RAMASecaoRituais",
-      rotulo: function () { return global.RAMASecaoRituais.rotulo(ctx); } },
-    { chave: "inventario",   rotulo: "Inventário",  secao: "RAMASecaoInventario" },
-    { chave: "anotacoes",    rotulo: "Anotações",   secao: "RAMASecaoAnotacoes", independente: true },
-    { chave: "regras",       rotulo: "Regras",      secao: "RAMASecaoOrdemRegras" },
-    { chave: "aliados",      rotulo: "Aliados",     secao: "RAMASecaoAliados" },
-  ];
-
-  /* Oblívio (v3.0): a Persona inteira vem das regras do livro — corpo,
-     Coragem, testes, ataque, inventário com modificações, Mazelas e
-     Fardos. "geral" é a Persona, para a aba guardada cair nela. */
-  var ABAS_OBLIVIO = [
-    { chave: "geral",        rotulo: "Persona",     secao: "RAMASecaoOblivio" },
-    { chave: "testes",       rotulo: "Testes",      secao: "RAMASecaoOblivioTestes" },
-    { chave: "habilidades",  rotulo: "Habilidades", secao: "RAMASecaoOblivioHabilidades" },
-    { chave: "inventario",   rotulo: "Inventário",  secao: "RAMASecaoOblivioInventario" },
-    { chave: "estado",       rotulo: "Estado",      secao: "RAMASecaoOblivioEstado" },
-    { chave: "anotacoes",    rotulo: "Anotações",   secao: "RAMASecaoAnotacoes", independente: true },
-  ];
-
-  /* Lida do TIPO gravado, nunca deduzida do conteúdo. E com uma rede:
-     se os módulos de Ordem não estiverem carregados, a ficha abre no
-     modelo universal em vez de abrir quebrada. Uma ficha de Oblívio
-     NUNCA cai no universal: sem os módulos, as abas dizem isso. */
-  /* O bloco que fica sempre à vista, acima das abas. Ele também depende
-     do tipo: numa ficha de Ordem, os atributos e os recursos são os
-     calculados pelas regras, não os campos livres do modelo universal. */
-  function blocoSuperiorDaFicha() {
-    var abas = abasDaFicha();
-    if (abas === ABAS_OBLIVIO) {
-      return global.RAMASecaoOblivio ? global.RAMASecaoOblivio.blocoSuperior(ctx) : semMotorDeOblivio();
-    }
-    var secao = abas === ABAS_ORDEM
-      ? global.RAMASecaoOrdemGeral
-      : global.RAMASecaoGeral;
-    return secao.blocoSuperior(ctx);
+     Lida do TIPO gravado, nunca deduzida do conteúdo. E sem rede para
+     outro sistema: se os módulos do sistema da ficha não carregaram, as
+     abas dizem isso em vez de desenhar a ficha como se fosse de outro
+     sistema. Um sistema que esta versão não conhece abre só para
+     leitura, com o aviso — nada é gravado por cima dele. */
+  function sistemaDaFicha() {
+    return F.sistemaDe(estado.ficha);
   }
 
-  function semMotorDeOblivio() {
-    return el("p.r-aviso", { texto: "Os módulos de Oblívio não carregaram nesta página. Nada foi alterado na ficha: recarregue para tentar de novo." });
+  function blocoSuperiorDaFicha() {
+    var sistema = sistemaDaFicha();
+    if (!sistema.conhecido) return semSistemaConhecido(sistema);
+    var secao = global[sistema.ficha.blocoSuperior];
+    return secao && secao.blocoSuperior ? secao.blocoSuperior(ctx) : semMotorDoSistema(sistema);
+  }
+
+  function semMotorDoSistema(sistema) {
+    return el("p.r-aviso", { texto: "Os módulos de " + sistema.nome + " não carregaram nesta página. Nada foi alterado na ficha: recarregue para tentar de novo." });
+  }
+
+  function semSistemaConhecido(sistema) {
+    return el("p.r-aviso", { role: "status", texto: "Esta ficha é de um sistema que esta versão do R.A.M.A. não reconhece (" + sistema.id + "). Ela abre só para leitura e nada é gravado por cima dela: atualize a página ou o site para editá-la." });
   }
 
   function abasDaFicha() {
-    if (!estado.ficha) return ABAS_UNIVERSAL;
-    if (F.ehDeOblivio(estado.ficha)) return ABAS_OBLIVIO;
-    if (!F.ehDeOrdem(estado.ficha)) return ABAS_UNIVERSAL.filter(function (a) {
-      return a.chave === "geral" || F.moduloAtivo(estado.ficha, a.chave);
+    var sistema = sistemaDaFicha();
+    if (!sistema.conhecido) return [{ chave: "geral", rotulo: "Ficha", secao: "" }];
+    return sistema.ficha.abas.filter(function (a) {
+      return a.chave === "geral" || !estado.ficha || F.moduloAtivo(estado.ficha, a.chave);
     });
-    if (!global.RAMASecaoOrdemGeral) return ABAS_UNIVERSAL;
-    return ABAS_ORDEM;
   }
 
   function rotuloDaAba(a) {
-    return typeof a.rotulo === "function" ? a.rotulo() : a.rotulo;
+    var secao = a.rotuloDaSecao && global[a.secao];
+    return secao && secao.rotulo ? secao.rotulo(ctx) : a.rotulo;
   }
 
   var CHAVE_ABA = "rama.ficha.aba";
@@ -273,7 +237,7 @@
        Redesenhar ou salvar nunca chama isto de novo. No painel do
        combate, não: o mestre abriu para consultar, não para decidir a
        progressão do jogador. Nem para quem só lê (v2.44). */
-    if (!PAINEL && !somenteLeitura() && abasDaFicha() === ABAS_ORDEM && global.RAMASecaoOrdemProgressao && global.RAMASecaoOrdemProgressao.verificarAfinidade) {
+    if (!PAINEL && !somenteLeitura() && F.ehDeOrdem(estado.ficha) && global.RAMASecaoOrdemProgressao && global.RAMASecaoOrdemProgressao.verificarAfinidade) {
       global.RAMASecaoOrdemProgressao.verificarAfinidade(ctx);
     }
   }, {
@@ -429,23 +393,24 @@
   /* O máximo de PV, PE e Sanidade vai junto de toda gravação de ficha
      de Ordem, para a mesa ver sem receber a ficha. Uma CÓPIA: o estado
      da tela e a base do salvador não ganham o campo. */
+  /* O resumo que a mesa lê sem abrir a ficha (Ordem: resumoRecursos,
+     o máximo de PV/PE/SAN/PD; Oblívio: resumoOblivio, Estresse por
+     região, Coragem, Proteção…), calculado pelo motor do sistema da
+     ficha antes de gravar — o sistema diz o campo e a função
+     (ficha.resumo, em js/sistemas.js). */
   function comResumo(dados) {
-    /* Oblívio (v3.0): o mesmo para a Persona — Estresse por região,
-       Coragem, Mazelas, Proteção, Velocidade e Dano (resumoOblivio). */
-    if (dados && dados.tipoFicha === "oblivio" && dados.oblivio && global.RAMAOblivio) {
-      try {
-        return Object.assign({}, dados, { resumoOblivio: global.RAMAOblivio.resumoParaMesa(global.RAMAOblivio.normalizar(U.copiar(dados.oblivio))) });
-      } catch (e) {
-        console.warn("[R.A.M.A. · ficha] resumo de Oblívio não calculado", e);
-        return dados;
-      }
-    }
-    var R = global.RAMAOrdemRegras;
-    if (!dados || dados.tipoFicha !== "ordem" || !dados.ordem || !R || !R.resumoDeRecursos) return dados;
+    var sistema = F.sistemaDe(dados);
+    var r = sistema.ficha.resumo;
+    var bloco = sistema.ficha.bloco;
+    var motor = sistema.ficha.motor && global[sistema.ficha.motor];
+    if (!dados || !r || !bloco || !dados[bloco] || !motor || !motor[r.calcular]) return dados;
     try {
-      return Object.assign({}, dados, { resumoRecursos: R.resumoDeRecursos(dados.ordem) });
+      var entrada = r.normalizarAntes ? motor.normalizar(U.copiar(dados[bloco])) : dados[bloco];
+      var extra = {};
+      extra[r.campo] = motor[r.calcular](entrada);
+      return Object.assign({}, dados, extra);
     } catch (e) {
-      console.warn("[R.A.M.A. · ficha] resumo de recursos não calculado", e);
+      console.warn("[R.A.M.A. · ficha] resumo de " + sistema.nome + " não calculado", e);
       return dados;
     }
   }
@@ -581,7 +546,8 @@
       case "bloco": return [blocoSuperiorDaFicha()];
       case "abas": return [abas()];
       case "conteudo": return [el("div", { id: "aba-conteudo", role: "tabpanel", "aria-labelledby": "aba-" + secao.chave },
-        [global[secao.secao] ? global[secao.secao].aba(ctx) : semMotorDeOblivio()])];
+        [!sistemaDaFicha().conhecido ? semSistemaConhecido(sistemaDaFicha())
+          : global[secao.secao] ? global[secao.secao].aba(ctx) : semMotorDoSistema(sistemaDaFicha())])];
     }
     return [];
   }
@@ -785,7 +751,7 @@
           indicador,
           modoSeletor(),
           botaoDeTema(),
-          estado.modo === "edicao" && !F.ehDeOrdem(estado.ficha) && !F.ehDeOblivio(estado.ficha)
+          estado.modo === "edicao" && sistemaDaFicha().ficha.modulosConfiguraveis
             ? el("button.r-botao.r-botao--mini", { type: "button", texto: "Configurar módulos", onclick: configurarModulos }) : null,
           PAINEL
             ? el("a.r-botao.r-botao--mini.r-botao--fantasma", {
@@ -826,7 +792,7 @@
   }
 
   function configurarModulos() {
-    if (!ctx.emEdicao() || F.ehDeOrdem(ctx.ficha) || F.ehDeOblivio(ctx.ficha)) return;
+    if (!ctx.emEdicao() || !F.sistemaDe(ctx.ficha).ficha.modulosConfiguraveis) return;
     var escolhas = F.normalizarModulos(ctx.ficha.modulos);
     UI.modal({
       titulo: "Configurar módulos",
@@ -935,7 +901,7 @@
       podeEscolherDados: ctx.podeEditar() && !!estado.dono,
       /* As cores de um sistema (elementos e graus de Ordem) só existem no
          tema de uma ficha dele. */
-      sistema: F.ehDeOrdem(estado.ficha) ? "ordem" : F.ehDeOblivio(estado.ficha) ? "oblivio" : "universal",
+      sistema: sistemaDaFicha().id,
       aplicar: aplicarTema,
     });
   }
@@ -1065,7 +1031,9 @@
       /* A aba é lida antes de a ficha chegar, quando ainda não se sabe o
          tipo dela: vale qualquer aba conhecida. Se ela não existir no
          tipo da ficha, o desenho cai na primeira. */
-      return ABAS_UNIVERSAL.concat(ABAS_ORDEM, ABAS_OBLIVIO).some(function (a) { return a.chave === v; }) ? v : "geral";
+      return global.RAMASistemas.lista().some(function (sis) {
+        return sis.ficha.abas.some(function (a) { return a.chave === v; });
+      }) ? v : "geral";
     } catch (e) { return "geral"; }
   }
 
@@ -1112,7 +1080,9 @@
     return { ler: true, editar: true, copiar: dono, gerenciar: false, dono: dono };
   }
 
-  function somenteLeitura() { return !estado.capacidades.editar || estado.revogado; }
+  /* Um sistema que esta versão não conhece também é só leitura: gravar
+     a ficha descartaria o que ela tem e esta versão não entende. */
+  function somenteLeitura() { return !estado.capacidades.editar || estado.revogado || (!!estado.ficha && !F.sistemaConhecido(estado.ficha)); }
 
   var ROTULO_DO_PAPEL = { editor: "Editor", leitor: "Leitor", mestre: "Mestre da campanha", dono: "Dono" };
 

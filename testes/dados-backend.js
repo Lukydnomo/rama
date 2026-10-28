@@ -70,7 +70,7 @@ export async function testarDadosBackend({ t, preparar, novaConta, comoFn }) {
   t.ok("o freio é por conta: a outra segue normal", A({ acao: "resgatar_codigo", codigo: "NADA0000", operacaoId: op() }).erro === "codigo_invalido");
 
   t.grupo("Temas de dados · a escolha na ficha");
-  const mesa = M({ acao: "criar_campanha", dados: { nome: "Dados" } }).dados.id;
+  const mesa = M({ acao: "criar_campanha", dados: { sistema: "ordem", nome: "Dados" } }).dados.id;
   M({ acao: "salvar_participantes", campanhaId: mesa, membros: [{ userId: ana.id, papel: "jogador" }, { userId: beto.id, papel: "jogador" }] });
   const ficha = (nome, dados) => ({ nome, tipoFicha: "universal", schemaVersion: 18, atributos: [], status: [], campanhaId: mesa,
     aparencia: Object.assign({ v: 1, modo: "conta" }, dados ? { dados } : {}) });

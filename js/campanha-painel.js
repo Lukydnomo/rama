@@ -12,7 +12,9 @@
    RAMAOrdemRegras.calcular — o mesmo cálculo que a ficha completa faz,
    com os mesmos dados (o servidor manda o bloco `ordem` e os itens que
    entram na conta). Numa universal, os status e atributos são os que a
-   própria ficha configurou.
+   própria ficha configurou. Numa de Oblívio, o que o servidor validou
+   do resumo da Persona. Cada sistema tem o seu resumidor (RESUMIDORES,
+   pelo id do registro em js/sistemas.js); nenhum é o padrão dos outros.
 
    O que a listagem não trouxe não vira zero: estatística ausente não
    aparece.
@@ -32,7 +34,7 @@
   var U = global.RAMAUtil;
 
   /* Os mesmos limites de edição da ficha completa: Ordem em
-     js/paginas/ficha-ordem.js (−99 até o máximo calculado), universal em
+     js/ordem/telas/ficha-ordem.js (−99 até o máximo calculado), universal em
      js/paginas/ficha-geral.js (−9999 até o máximo, ou sem teto quando o
      máximo é 0). */
   var PISO_ORDEM = -99;
@@ -125,7 +127,10 @@
       resumoCalculado: null,
       resumoDesatualizado: false,
       rev: U.inteiro(p.rev, 0),
-      tipo: p.tipoFicha === "ordem" ? "ordem" : p.tipoFicha === "oblivio" ? "oblivio" : "universal",
+      /* O sistema da ficha, pelo registro (js/sistemas.js). Sem tipo
+         (a ficha ilegível), não se supõe um. */
+      tipo: p.tipoFicha ? global.RAMASistemas.de(p.tipoFicha).id : "",
+      sistema: p.tipoFicha ? global.RAMASistemas.de(p.tipoFicha) : null,
       linhas: [],
       progressao: "",
       atributos: [],
@@ -133,9 +138,22 @@
       estatisticas: [],
       condicoes: [],
     };
-    if (base.tipo === "oblivio") return resumirOblivio(p, base);
-    return base.tipo === "ordem" ? resumirOrdem(p, base) : resumirUniversal(p, base);
+    /* Cada sistema monta o resto do cartão. Ilegível, ou de um sistema
+       sem resumidor (um que esta versão não conhece), fica a
+       identificação — nenhum número inventado, nunca o cartão de outro
+       sistema. */
+    var resumidor = !base.ilegivel && RESUMIDORES[base.tipo];
+    if (!resumidor) {
+      if (base.sistema && !base.sistema.conhecido) base.linhas.push(base.sistema.nome);
+      return base;
+    }
+    return resumidor(p, base);
   }
+
+  /* O resumidor de cada sistema, pelo id do registro. Um sistema novo
+     acrescenta o dele com registrar(). */
+  var RESUMIDORES = {};
+  function registrar(id, fn) { RESUMIDORES[id] = fn; }
 
   /* Oblívio (v3.0): o Papel identifica; Estresse por região, Coragem,
      Mazelas e o estado vêm do resumo que o servidor validou (e seguem
@@ -358,7 +376,12 @@
     return normal(agora) === normal(base);
   }
 
+  registrar("ordem", resumirOrdem);
+  registrar("oblivio", resumirOblivio);
+  registrar("universal", resumirUniversal);
+
   global.RAMAPainelMesa = {
+    registrar: registrar,
     PISO_ORDEM: PISO_ORDEM,
     PISO_UNIVERSAL: PISO_UNIVERSAL,
     resumir: resumir,

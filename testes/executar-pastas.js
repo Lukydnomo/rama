@@ -46,6 +46,32 @@ t.ok("  e com nome que diz que não é reconhecido", /não reconhecido/.test(fut
 t.igual("a lista traz os conhecidos na ordem de exibição", S.lista().map((s) => s.id), ["ordem", "oblivio", "universal"]);
 t.igual("os desconhecidos vêm depois", [S.de("zeta"), S.de("universal"), S.de("alfa"), S.de("ordem")].sort(S.comparar).map((s) => s.id), ["ordem", "universal", "alfa", "zeta"]);
 
+t.grupo("Registro de sistemas — capacidades (v4.0)");
+t.ok("cada sistema conhecido declara as abas da ficha e o bloco fixo",
+  S.lista().every((s) => s.ficha.abas.length > 0 && !!s.ficha.blocoSuperior && s.ficha.abas[0].chave === "geral"));
+t.ok("cada sistema conhecido declara as ferramentas e mecânicas de campanha",
+  S.lista().every((s) => Array.isArray(s.campanha.ferramentas) && Array.isArray(s.campanha.mecanicas) && !!s.campanha.mestre));
+t.igual("o combate do núcleo vale em Ordem e Universal, não em Oblívio",
+  ["ordem", "universal", "oblivio"].map((id) => S.temFerramenta(id, "combate")), [true, true, false]);
+t.igual("a mesa da Testemunha é de Oblívio", [S.temFerramenta("oblivio", "oblivio"), S.donoDaFerramenta("oblivio")], [true, "oblivio"]);
+t.igual("as mecânicas dos Arquivos Secretos são de Ordem", ["hexatombe", "hacking", "perigos"].map(S.donoDaFerramenta), ["ordem", "ordem", "ordem"]);
+t.ok("nenhuma mecânica tem dois donos", (() => {
+  const vistas = {};
+  return S.lista().every((s) => s.campanha.mecanicas.concat(s.campanha.ferramentas.map((c) => ({ chave: c }))).every((m) => {
+    if (vistas[m.chave] && vistas[m.chave] !== s.id && m.chave !== "combate") return false;
+    vistas[m.chave] = s.id;
+    return true;
+  }));
+})());
+t.igual("sistema desconhecido: nenhuma ferramenta, nenhuma aba", [S.de("brutal").campanha.ferramentas.length, S.de("brutal").ficha.abas.length, S.temFerramenta("brutal", "combate")], [0, 0, false]);
+t.igual("campanha que diz o sistema: ele, sem herança", S.daCampanha({ sistema: "Universal" }).id + "/" + S.daCampanha({ sistema: "universal" }).herdado, "universal/false");
+t.igual("campanha antiga (servidor sem o campo): Ordem, herdado", [S.daCampanha({}).id, S.daCampanha({}).herdado], ["ordem", true]);
+t.igual("campanha antiga com a mesa de Oblívio da v3.0: Oblívio, herdado", [S.daCampanha({ oblivio: true }).id, S.daCampanha({ oblivio: true }).herdado], ["oblivio", true]);
+t.igual("o servidor manda a herança: ela é respeitada", S.daCampanha({ sistema: "ordem", sistemaHerdado: true }).herdado, true);
+t.igual("campanha de um sistema desconhecido não cai na regra antiga", S.daCampanha({ sistema: "brutal" }).id, "brutal");
+t.ok("os nomes das ferramentas servem para explicar uma troca", S.nomeDaFerramenta("hexatombe") === "Hexatombe" && S.nomeDaFerramenta("oblivio") === "mesa da Testemunha");
+t.igual("os tipos de ficha são os do registro", S.idsDeFicha(), ["ordem", "oblivio", "universal"]);
+
 /* ---------- dados sintéticos ---------- */
 
 const PASTAS = [{ id: "sabado", nome: "Campanha de sábado" }, { id: "morto", nome: "Arquivo morto" }];

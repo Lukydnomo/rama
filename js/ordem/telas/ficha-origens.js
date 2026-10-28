@@ -194,9 +194,9 @@
     var o = ordemDe(ctx);
     if (!org || !org.controles) return null;
     var f = CONTROLES[org.chave];
-    /* As origens do Arquivos Secretos 4 moram em js/paginas/ficha-arquivo4.js. */
+    /* As origens do Arquivos Secretos 4 moram em js/ordem/telas/ficha-arquivo4.js. */
     if (!f) {
-      /* As origens do AS4 e do AS5 moram em js/paginas/ficha-arquivo4.js e
+      /* As origens do AS4 e do AS5 moram em js/ordem/telas/ficha-arquivo4.js e
          ficha-arquivo5.js. */
       var de4 = global.RAMAFichaArquivo4 ? global.RAMAFichaArquivo4.controlesDeOrigem(ctx, org) : null;
       if (de4) return de4;

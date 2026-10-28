@@ -488,7 +488,7 @@
     var custoPeExtra = 0;
     (c.efeitos ? c.efeitos.contextuais : []).forEach(function (x) { if (x.alvo === "custoPe") custoPeExtra += x.valor; });
     /* Arquivos Secretos 3: Torvo tira 1 PE dos rituais de Sangue; o Poder
-       do Flagelo paga PE com PV (js/paginas/ficha-arquivo3.js). */
+       do Flagelo paga PE com PV (js/ordem/telas/ficha-arquivo3.js). */
     var AS3 = global.RAMAFichaArquivo3 || null;
     var ajuste3 = AS3 ? AS3.ajusteDoRitual(ctx, elemento) : { menosPe: 0, notas: [] };
     /* Arquivos Secretos 4: Explorador da Névoa tira 1 PE nesta cena. */

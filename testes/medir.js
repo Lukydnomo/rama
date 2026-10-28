@@ -56,7 +56,7 @@ function argumento(nome, padrao) {
 }
 
 const PASTA = argumento("--backend", "backend");
-const ARQUIVOS = ["Dados.gs", "Codigo.gs", "Campanhas.gs"];
+const ARQUIVOS = ["Dados.gs", "Codigo.gs", "Campanhas.gs", "Sistemas.gs", "Ordem.gs", "Universal.gs"];
 
 const ambiente = instalarAmbiente(globalThis);
 
@@ -166,7 +166,7 @@ function montarMesa() {
   const mestre = contas[0];
   const campanhas = [];
   for (let i = 0; i < 3; i++) {
-    const r = como(mestre)({ acao: "criar_campanha", dados: { nome: "Mesa " + i } });
+    const r = como(mestre)({ acao: "criar_campanha", dados: { sistema: "ordem", nome: "Mesa " + i } });
     campanhas.push(r.dados.id);
   }
 

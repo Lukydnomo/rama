@@ -91,7 +91,7 @@ export function testarPastasBackend({ t, preparar, novaConta, comoFn, ambiente }
   t.igual("  sem criar pasta", l.organizacao.pastas.length, 2);
 
   /* Mestre de mesa não reorganiza pastas do jogador */
-  const mesa = A({ acao: "criar_campanha", dados: { nome: "Mesa das pastas" } }).dados.id;
+  const mesa = A({ acao: "criar_campanha", dados: { sistema: "ordem", nome: "Mesa das pastas" } }).dados.id;
   A({ acao: "salvar_participantes", campanhaId: mesa, membros: [{ userId: beto.id, papel: "jogador" }] });
   B({ acao: "vincular_personagem", campanhaId: mesa, personagemId: pBeto });
   t.recusa("a mestra não move a ficha do jogador para a pasta dela", A({ acao: "mover_personagem", personagemId: pBeto, pastaId: pasta }), "nao_encontrado");

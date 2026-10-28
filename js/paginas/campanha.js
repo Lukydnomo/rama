@@ -66,18 +66,20 @@
     { chave: "personagens", rotulo: "Personagens", secao: "RAMACampanhaPersonagens" },
     { chave: "rolagens",    rotulo: "Rolagens",    secao: "RAMACampanhaRolagens" },
     { chave: "documentos",  rotulo: "Documentos",  secao: "RAMACampanhaDocumentos" },
-    { chave: "combate",     rotulo: "Combate",     secao: "RAMACampanhaCombate" },
-    /* Mecânicas opcionais (v2.47): a aba só existe com a mecânica ligada
-       em Configurações — para o mestre também. ler_campanha devolve
-       `hexatombe` e `hacking`. Arquivos Secretos 2 (v2.30): */
-    { chave: "hexatombe",   rotulo: "Hexatombe",   secao: "RAMACampanhaHexatombe", soComModo: "hexatombe" },
-    /* Arquivos Secretos 4 (v2.38): a regra opcional de Hacking. */
-    { chave: "hacking",     rotulo: "Hacking",     secao: "RAMACampanhaHacking", soComModo: "hacking" },
-    /* Arquivos Secretos 5 (v2.48): os perigos complexos, também opcionais. */
-    { chave: "perigos",     rotulo: "Perigos",     secao: "RAMACampanhaPerigos", soComModo: "perigos" },
+    /* As abas de SISTEMA (v4.0): cada uma é uma ferramenta ou uma
+       mecânica do registro (js/sistemas.js), e só aparece numa campanha
+       do sistema dono dela. `ferramenta`: o sistema a usa sempre (o
+       Combate do núcleo, em Ordem e Universal; a mesa da Testemunha, em
+       Oblívio). `mecanica`: opcional, ligada em Configurações — para o
+       mestre também. ler_campanha devolve cada uma pela chave. */
+    { chave: "combate",     rotulo: "Combate",     secao: "RAMACampanhaCombate", ferramenta: "combate" },
+    /* Ordem · Arquivos Secretos 2 (v2.30), 4 (v2.38) e 5 (v2.48). */
+    { chave: "hexatombe",   rotulo: "Hexatombe",   secao: "RAMACampanhaHexatombe", mecanica: "hexatombe" },
+    { chave: "hacking",     rotulo: "Hacking",     secao: "RAMACampanhaHacking", mecanica: "hacking" },
+    { chave: "perigos",     rotulo: "Perigos",     secao: "RAMACampanhaPerigos", mecanica: "perigos" },
     /* Oblívio (v3.0): a mesa da Testemunha — Missão, cenas, Farol,
-       encontros com Ameaças e Buracos. Ligada em Configurações. */
-    { chave: "oblivio",     rotulo: "Oblívio",     secao: "RAMACampanhaOblivio", soComModo: "oblivio" },
+       encontros com Ameaças e Buracos. */
+    { chave: "oblivio",     rotulo: "Mesa da Testemunha", secao: "RAMACampanhaOblivio", ferramenta: "oblivio" },
     { chave: "notas",       rotulo: "Notas",       secao: "RAMACampanhaNotas", soMestre: true },
     { chave: "config",      rotulo: "Configurações", secao: "RAMACampanhaConfig", soMestre: true },
   ];
@@ -184,6 +186,8 @@
       get rev() { return estado.rev; },
 
       ehMestre: function () { return estado.mestre; },
+      /* O sistema da campanha (v4.0): { id, herdado, sistema }. */
+      sistema: function () { return sistemaAtual(); },
       papel: function () { return estado.papel; },
       eu: function () {
         var agente = global.RAMAAuth && global.RAMAAuth.agente();
@@ -399,10 +403,7 @@
         return;
       }
       var papelAntes = estado.papel;
-      var hexatombeAntes = !!(estado.campanha && estado.campanha.hexatombe);
-      var hackingAntes = !!(estado.campanha && estado.campanha.hacking);
-      var perigosAntes = !!(estado.campanha && estado.campanha.perigos);
-      var oblivioAntes = !!(estado.campanha && estado.campanha.oblivio);
+      var abasAntes = assinaturaDasAbas();
       aplicarCampanha(r);
 
       if (estado.papel === "espectador") {
@@ -423,10 +424,9 @@
       }
 
       pintarTopo();
-      /* Uma mecânica opcional ligou ou desligou em outro lugar: a aba
-         aparece ou some, para todos. */
-      var redesenhou = (hexatombeAntes !== !!estado.campanha.hexatombe || hackingAntes !== !!estado.campanha.hacking ||
-        perigosAntes !== !!estado.campanha.perigos || oblivioAntes !== !!estado.campanha.oblivio) && aoMudarMecanicas();
+      /* Uma mecânica opcional ligou ou desligou, ou o sistema da campanha
+         mudou, em outro lugar: as abas aparecem ou somem, para todos. */
+      var redesenhou = abasAntes !== assinaturaDasAbas() && aoMudarMecanicas();
       if (!redesenhou) notificar("campanha");
       if (tem("membros")) notificar("membros");
     }
@@ -484,12 +484,25 @@
      DESENHO
      ================================================================= */
 
+  /* O sistema da campanha, pelo registro: o que o servidor disse, ou a
+     regra das campanhas antigas com um servidor anterior à v4.0. */
+  function sistemaAtual() {
+    return global.RAMASistemas.daCampanha(estado.campanha);
+  }
+
   function abasVisiveis() {
+    var S = global.RAMASistemas;
+    var sistema = sistemaAtual().id;
     return ABAS.filter(function (a) {
       if (a.soMestre && !estado.mestre) return false;
-      if (a.soComModo && !(estado.campanha && estado.campanha[a.soComModo])) return false;
+      if (a.ferramenta && !S.temFerramenta(sistema, a.ferramenta)) return false;
+      if (a.mecanica && !(S.donoDaFerramenta(a.mecanica) === sistema && estado.campanha && estado.campanha[a.mecanica])) return false;
       return !!global[a.secao];
     });
+  }
+
+  function assinaturaDasAbas() {
+    return estado.campanha ? abasVisiveis().map(function (a) { return a.chave; }).join(",") : "";
   }
 
   /* Devolve true quando precisou refazer a tela (a aba aberta sumiu). */
@@ -530,7 +543,8 @@
       global.RAMAApp.titulo({
         titulo: estado.campanha.nome,
         trilha: [
-          estado.mestre ? "Mestre" : "Jogador",
+          sistemaAtual().sistema.nome,
+          estado.mestre ? sistemaAtual().sistema.campanha.mestre : "Jogador",
           estado.campanha.visibilidade === "publico" ? "Pública" : "Privada",
           "Linha // " + U.codigoCurto(estado.campanhaId),
         ],
@@ -887,6 +901,8 @@
       });
 
       return el("div.pilha--larga", { class: "pilha" }, [
+        UI.painel("Sistema da campanha", sistemaDaCampanha(ctx)),
+
         UI.painel("Campanha", el("div.pilha", {}, [
           nome,
           descricao,
@@ -945,20 +961,20 @@
      regra dela (Participação no Hexatombe, por exemplo).
      ================================================================= */
 
-  var MECANICAS = [
-    { chave: "hexatombe", nome: "Hexatombe", fonte: "Arquivos Secretos 2", modulo: "RAMACampanhaHexatombe",
-      texto: "O ritual de seis dias: equipes, sacrifícios, base, consumo, encontros e a Lua de Sangue. Ligada, a aba Hexatombe aparece para você e para os jogadores (cada um vê só o que é dele)." },
-    { chave: "hacking", nome: "Hacking", fonte: "Arquivos Secretos 4", modulo: "RAMACampanhaHacking",
-      texto: "Cenas de hacking com turnos, pontos de segurança e dados virtuais. Ligada, a aba Hacking aparece para você e para os jogadores." },
-    { chave: "perigos", nome: "Perigos complexos", fonte: "Arquivos Secretos 5", modulo: "RAMACampanhaPerigos",
-      texto: "Cenas de ação que não são combate — explosão, fuga de horda, naufrágio, prédio tomado, chuva de Sangue — com rodadas, sucessos e falhas guardados entre sessões. Ligada, a aba Perigos aparece para você e para os jogadores (cada um vê os perigos em que está)." },
-    { chave: "oblivio", nome: "Oblívio", fonte: "mesa da Testemunha · Oblívio RPG", modulo: "RAMACampanhaOblivio",
-      texto: "A mesa da Testemunha para Personas de Oblívio: Missão, cenas e Ordem de Ação, fileiras e alcance, Farol, encontros com as 18 Ameaças e a exploração de Buracos. Ligada, a aba Oblívio aparece para você e para os jogadores (eles veem só o que a mesa mostra)." },
-  ];
+  /* As mecânicas opcionais são do SISTEMA da campanha (v4.0), declaradas
+     no registro (js/sistemas.js): numa campanha de Ordem, as dos
+     Arquivos Secretos; num sistema sem nenhuma, o painel diz isso. O
+     módulo da aba de cada uma é RAMACampanha + o nome da chave. */
+  function moduloDaMecanica(chave) {
+    return "RAMACampanha" + chave.charAt(0).toUpperCase() + chave.slice(1);
+  }
 
   function mecanicasOpcionais(ctx) {
     var marcas = {};
-    var linhas = MECANICAS.filter(function (m) {
+    var sistema = ctx.sistema().sistema;
+    var linhas = global.RAMASistemas.mecanicas(sistema.id).map(function (m) {
+      return Object.assign({ modulo: moduloDaMecanica(m.chave) }, m);
+    }).filter(function (m) {
       return global[m.modulo] && global[m.modulo].definirAtivo;
     }).map(function (m) {
       var entrada = el("input", {
@@ -986,9 +1002,157 @@
       });
     });
 
+    if (!linhas.length) {
+      return el("p.t-mini", { texto: sistema.nome + " não tem mecânicas opcionais de campanha nesta versão. As ferramentas do sistema já estão nas abas da campanha." });
+    }
     return el("div.pilha", {}, [
-      el("p.t-mini", { texto: "Regras de suplemento que esta campanha usa. Desligada, a aba da mecânica some para todos — nada é apagado, e ligar de novo volta ao que estava." }),
+      el("p.t-mini", { texto: "Regras de suplemento de " + sistema.nome + " que esta campanha usa. Desligada, a aba da mecânica some para todos — nada é apagado, e ligar de novo volta ao que estava." }),
     ].concat(linhas));
+  }
+
+  /* =================================================================
+     O SISTEMA DA CAMPANHA (v4.0)
+     -----------------------------------------------------------------
+     Escolhido na criação; trocado aqui, pelo mestre. A troca não
+     converte ficha nenhuma, não desvincula ninguém e não apaga nada:
+     as ferramentas e mecânicas do sistema anterior ficam SUSPENSAS
+     (o servidor as recusa, com o estado guardado) e voltam como
+     estavam se a campanha voltar a ele. Antes de confirmar, a tela
+     diz o que sai, o que entra, o que volta e o que acontece com as
+     fichas vinculadas.
+     ================================================================= */
+
+  function sistemaDaCampanha(ctx) {
+    var S = global.RAMASistemas;
+    var atual = ctx.sistema();
+    var capa = global.RAMACapaSistema ? global.RAMACapaSistema.elemento(atual.sistema, { tamanho: "m" }) : null;
+    var outros = S.lista().filter(function (s) { return s.id !== atual.id; });
+
+    var cabeca = el("div.sistema-atual", {}, [
+      capa,
+      el("div.sistema-atual__textos", {}, [
+        el("span.sistema-atual__nome", { texto: atual.sistema.nome }),
+        el("span.t-mini", { texto: atual.sistema.campanha.descricao || "" }),
+        atual.herdado
+          ? el("span.t-mini", { texto: "Esta campanha é anterior à escolha de sistema: ela continua como sempre funcionou. Salvar as configurações grava o sistema." })
+          : null,
+      ]),
+    ]);
+
+    var escolhido = "";
+    var trocar = el("button.r-botao", {
+      type: "button", texto: "Trocar de sistema…", disabled: true,
+      onclick: function (ev) { confirmarTroca(ctx, S.de(escolhido), ev.currentTarget); },
+    });
+    var opcoes = outros.map(function (s) {
+      return el("label.escolha-sistema__opcao", { dataset: { sistema: s.id } }, [
+        el("input.escolha-sistema__radio", {
+          type: "radio", name: "trocar-sistema", value: s.id,
+          onchange: function () { escolhido = s.id; trocar.disabled = false; },
+        }),
+        global.RAMACapaSistema ? global.RAMACapaSistema.elemento(s, { tamanho: "p" }) : null,
+        el("span.escolha-sistema__textos", {}, [
+          el("span.escolha-sistema__nome", { texto: s.nome }),
+          el("span.escolha-sistema__resumo", { texto: s.campanha.descricao || "" }),
+        ]),
+      ]);
+    });
+
+    return el("div.pilha", {}, [
+      cabeca,
+      el("fieldset.r-campo.escolha-sistema", {}, [
+        el("legend.r-rotulo", { texto: "Trocar para" }),
+        el("div.escolha-sistema__opcoes", {}, opcoes),
+        el("p.r-ajuda", { texto: "Nada é apagado nem convertido: o que é do sistema de agora fica guardado e volta se a campanha voltar a ele. Antes de trocar, você vê o que muda." }),
+      ]),
+      trocar,
+    ]);
+  }
+
+  /* O que muda, em frases curtas, para quem vai decidir. */
+  function impactosDaTroca(campanha, atual, novo, personagens) {
+    var S = global.RAMASistemas;
+    var nome = S.nomeDaFerramenta;
+    var itens = [];
+
+    var ligadas = atual.campanha.mecanicas.filter(function (m) { return campanha[m.chave]; }).map(function (m) { return m.chave; });
+    var saem = atual.campanha.ferramentas.concat(ligadas).filter(function (k) { return !S.temFerramenta(novo.id, k); });
+    if (saem.length) {
+      itens.push("Ficam suspensas: " + saem.map(nome).join(", ") + ". As abas somem para todos, e o que estava gravado fica guardado — volta como estava se a campanha voltar a " + atual.nome + ".");
+    }
+    var entram = novo.campanha.ferramentas.filter(function (k) { return !S.temFerramenta(atual.id, k); });
+    if (entram.length) itens.push("Passam a valer: " + entram.map(nome).join(", ") + ".");
+    var voltam = (campanha.guardadas || []).filter(function (k) { return S.donoDaFerramenta(k) === novo.id; });
+    if (voltam.length) itens.push("Voltam como estavam, guardadas de quando a campanha era de " + novo.nome + ": " + voltam.map(nome).join(", ") + ".");
+    var opcionais = novo.campanha.mecanicas.filter(function (m) { return voltam.indexOf(m.chave) < 0; });
+    if (opcionais.length) itens.push("Mecânicas opcionais de " + novo.nome + " ficam desligadas até você ligar: " + opcionais.map(function (m) { return m.nome; }).join(", ") + ".");
+    if (atual.campanha.mestre !== novo.campanha.mestre) itens.push("Quem conduz a mesa passa a ser chamado de " + novo.campanha.mestre + ".");
+
+    if (Array.isArray(personagens)) {
+      var deOutro = personagens.filter(function (p) { return p.tipoFicha && S.de(p.tipoFicha).id !== novo.id; });
+      if (deOutro.length) {
+        var porSistema = {};
+        deOutro.forEach(function (p) { var n = S.de(p.tipoFicha).nome; porSistema[n] = (porSistema[n] || 0) + 1; });
+        var uma = deOutro.length === 1;
+        itens.push(deOutro.length + (uma ? " ficha vinculada não é" : " fichas vinculadas não são") + " de " + novo.nome + " (" +
+          Object.keys(porSistema).map(function (n) { return porSistema[n] + " de " + n; }).join(", ") + "): " +
+          (uma ? "continua vinculada e exatamente como está" : "continuam vinculadas e exatamente como estão") +
+          " — nenhuma ficha é convertida —, mas sem as ferramentas de mesa do sistema " + (uma ? "dela." : "delas."));
+      } else {
+        itens.push("As fichas vinculadas não mudam: nenhuma é convertida nem desvinculada.");
+      }
+    } else {
+      itens.push("As fichas vinculadas não mudam: nenhuma é convertida nem desvinculada.");
+    }
+    return itens;
+  }
+
+  async function confirmarTroca(ctx, novo, botao) {
+    var atual = ctx.sistema().sistema;
+    botao.disabled = true;
+    var rp = await ctx.buscarPersonagens({ segundoPlano: true });
+    botao.disabled = false;
+    var itens = impactosDaTroca(ctx.campanha, atual, novo, rp && rp.ok ? rp.dados : null);
+
+    var certeza = await new Promise(function (resolver) {
+      var decidido = false;
+      UI.modal({
+        titulo: "Trocar " + atual.nome + " por " + novo.nome + "?",
+        conteudo: [
+          el("p", { texto: "O que muda nesta campanha:" }),
+          el("ul.impacto-troca", {}, itens.map(function (t) { return el("li", { texto: t }); })),
+          el("p.t-mini", { texto: "Dá para voltar depois: trocar de novo para " + atual.nome + " devolve o que ficou guardado." }),
+        ],
+        botoes: [
+          { rotulo: "Cancelar", classe: "r-botao--fantasma", aoClicar: function (fechar) { decidido = true; fechar(); resolver(false); } },
+          { rotulo: "Trocar para " + novo.nome, classe: "r-botao--principal", aoClicar: function (fechar) { decidido = true; fechar(); resolver(true); } },
+        ],
+        aoFechar: function () { if (!decidido) resolver(false); },
+      });
+    });
+    if (!certeza) return;
+
+    var r = await UI.ocupar(botao, function () {
+      return global.RAMAApi.salvarCampanha(ctx.campanhaId, ctx.rev, { sistema: novo.id });
+    }, { rotulo: "Trocando…" });
+    if (!r || r.ignorado) return;
+    if (!r.ok) {
+      if (r.erro === "conflito") {
+        UI.avisoAtencao("A campanha foi alterada em outro lugar desde que esta tela abriu. Recarregando para você conferir antes de trocar.");
+        await ctx.recarregar();
+        return;
+      }
+      UI.avisoDeFalha(r, "troca de sistema", { tentarDeNovo: function () { confirmarTroca(ctx, novo, botao); } });
+      return;
+    }
+    /* Um servidor anterior à v4.0 aceita o pedido sem conhecer o campo:
+       a resposta não traz o sistema, e nada mudou de verdade. */
+    if (!r.dados || r.dados.sistema !== novo.id) {
+      UI.avisoErro("O servidor desta instalação ainda não sabe trocar o sistema da campanha. Nada mudou: o backend precisa ser atualizado para a v4.0.");
+      return;
+    }
+    UI.avisoOk("A campanha agora usa " + novo.nome + ".");
+    await ctx.recarregar();
   }
 
   async function alternarMecanica(ctx, m, entrada) {

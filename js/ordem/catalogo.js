@@ -832,7 +832,7 @@
          substituicoes    usar uma perícia no lugar de outra, numa
                           situação: oferecido no resultado da outra
          controles        o cartão da origem ganha botões próprios
-                          (js/paginas/ficha-origens.js)
+                          (js/ordem/telas/ficha-origens.js)
        ----------------------------------------------------------------- */
 
     { chave: "amigoDosAnimais", nome: "Amigo dos Animais", fonte: SAH, pagina: 7, comunidade: "Gabriela “Louie” · Arsenal Paranormal",

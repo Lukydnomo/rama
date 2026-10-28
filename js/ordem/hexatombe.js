@@ -3,7 +3,7 @@
    =====================================================================
    As regras de "Jogando o Hexatombe" (Arquivos Secretos 2, p. 4–24)
    como um ESTADO de campanha e um punhado de operações puras sobre ele.
-   Quem desenha é js/paginas/campanha-hexatombe.js; quem guarda e filtra
+   Quem desenha é js/ordem/telas/campanha-hexatombe.js; quem guarda e filtra
    para cada pessoa é o Apps Script (Campanhas.gs, "HEXATOMBE"), que
    normaliza com a mesma régua deste arquivo e nunca entrega ao jogador
    o que é do mestre ou de outra equipe.
