@@ -338,7 +338,7 @@
           "versao": 1,
           "previa": "assets/dados/temas/elemento-sangue/v1/previa.png",
           "dado": {
-            "mascara": "assets/dados/temas/elemento-sangue/v1/mascara.png",
+            "mascara": "assets/dados/mascaras/d20-v1.svg",
             "base": "assets/dados/temas/elemento-sangue/v1/base.png",
             "camadas": []
           },
