@@ -421,6 +421,53 @@
       ]
     },
     {
+      "id": "elemento-morte",
+      "nome": "Morte",
+      "descricao": "Tudo tem um começo e um fim, e o Tempo leva todas as coisas. Nada que é levado pela Morte pode voltar ao que era antes.",
+      "versoes": [
+        {
+          "versao": 1,
+          "previa": "assets/dados/temas/elemento-morte/v1/previa.png",
+          "dado": {
+            "mascara": "assets/dados/mascaras/d20-v1.svg",
+            "base": "assets/dados/temas/elemento-morte/v1/base.png",
+            "camadas": []
+          },
+          "notificacao": {
+            "fundo": "assets/dados/temas/elemento-morte/v1/fundo.png",
+            "ajusteFundo": {
+              "modo": "zoom-pela-altura",
+              "alinhamentoHorizontal": 0.5
+            },
+
+            "cores": {
+              "superficie": "#0C0D0F",
+
+              "texto": "#F4F4F2",
+              "texto2": "#D2D3D0",
+              "texto3": "#9C9E9B",
+
+              "tracoForte": "#D8DAD7",
+              "tracoMedia": "#858986",
+              "tracoFraca": "#444745",
+
+              "selecao": "#C9CCC8",
+              "selecaoTexto": "#111311",
+
+              "paranormal": "#B8C0BA",
+              "erro": "#C96A6A",
+              "aviso": "#C2A66B"
+            },
+
+            "veu": {
+              "cor": "#050606",
+              "alfa": 0.20
+            }
+          }
+        }
+      ]
+    },
+    {
       id: "sigilo-violeta",
       nome: "Sigilo Violeta",
       descricao: "Violeta com um sigilo gravado no dado, faíscas em volta e linhas de néon no fundo.",
