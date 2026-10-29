@@ -330,6 +330,50 @@
       ]
     },
     {
+      "id": "sangue",
+      "nome": "Sangue",
+      "descricao": "Tudo começa pelo Sangue. O Sangue é o fluxo que banha a eternidade do Outro Lado.",
+      "versoes": [
+        {
+          "versao": 1,
+          "previa": "assets/dados/temas/sangue/v1/previa.png",
+          "dado": {
+            "base": "assets/dados/temas/sangue/v1/base.png",
+            "camadas": []
+          },
+          "notificacao": {
+            "fundo": "assets/dados/temas/sangue/v1/fundo.png",
+            "ajusteFundo": {
+              "modo": "zoom-pela-altura",
+              "alinhamentoHorizontal": 0.5
+            },
+            "cores": {
+              "superficie": "#170A0A",
+
+              "texto": "#FFF6F2",
+              "texto2": "#E8D0CB",
+              "texto3": "#BE9A96",
+
+              "tracoForte": "#FF3737",
+              "tracoMedia": "#C81212",
+              "tracoFraca": "#662222",
+
+              "selecao": "#E91B1B",
+              "selecaoTexto": "#FFF8F5",
+
+              "paranormal": "#FF4B35",
+              "erro": "#FF6464",
+              "aviso": "#DCA253"
+            },
+            "veu": {
+              "cor": "#080202",
+              "alfa": 0.30
+            }
+          }
+        }
+      ]
+    },
+    {
       id: "sigilo-violeta",
       nome: "Sigilo Violeta",
       descricao: "Violeta com um sigilo gravado no dado, faíscas em volta e linhas de néon no fundo.",
