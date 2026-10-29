@@ -118,6 +118,35 @@
 
   var CHANGELOG = [
     {
+      versao: "5.0.0",
+      codinome: "LINHAGEM",
+      data: "29/10/2026",
+      mudancas: {
+        "Adicionado": [
+          "Vampiro: A Máscara, 5ª edição (V5), um sistema completo dentro do R.A.M.A.: em Personagens → Adicionar, escolha Vampiro (com a capa do livro). A ficha é de Vampiro do começo ao fim, e as fichas que você já tem não mudam. Só o livro básico da V5 — nada de Pontos de Sangue, Virtudes ou regras de edições antigas.",
+          "Criação guiada em 12 etapas, com volta livre a qualquer uma: conceito, clã (os sete, Caitiff ou Sangue-Ralo, com a Perdição), Senhor e o Mar do Tempo (Criança da Noite, Neófito, Ancilla) com a geração, Atributos 4/3/3/3/2/2/2/2/1, uma das três distribuições de Habilidades com as especializações gratuitas, Disciplinas com um poder por ponto (amálgamas e pré-requisitos conferidos), tipo de Predador, Vantagens, Defeitos e Fichas de Conhecimento, Convicções e Pilares, Ambição e Desejo, a XP inicial nível a nível e a revisão. Vitalidade e Força de Vontade calculadas na hora.",
+          "Dados de Fome: cada nível de Fome troca um dado comum por um dado de Fome, que aparece em losango, com símbolo e com o texto para leitor de tela — também no histórico da campanha (\"de Fome: …\"). Pares de 10, vitória crítica, crítico bestial e falha bestial (a consequência é escolhida pela mesa, nunca sorteada), vencer a um custo e a rolagem que fica aberta até concluir: rerrolar até 3 dados comuns com Força de Vontade, uma vez, e julgar a Dificuldade que veio depois.",
+          "Fome, Checagens de Sangue, Surto, Rubor de Vida, cura de Superficial e Agravado, a tabela de Potência do Sangue e a geração; alimentação com o plano antes de confirmar (matar uma vítima é sempre uma escolha confirmada), caçada pelo Predador e pelo território, Ressonância e as 26 Discrasias, Laços de Sangue, carniçais e Diablerie.",
+          "Humanidade com Máculas, Remorso, Degeneração, Convicções e Pilares; frenesi de fúria, fome e terror (resistir ou Curtir a Onda) e as Compulsões; Torpor, estaca, sol, fogo e Morte Final (a ficha fica para consulta).",
+          "Disciplinas com todos os poderes do livro básico, custos cobrados antes e efeitos com duração; Rituais de Feitiçaria de Sangue; Alquimia Sangue-Ralo com os três métodos, a destilação e as doses prontas. As 25 Fichas de Conhecimento, nível a nível, com as exclusivas de clã.",
+          "Experiência nível a nível, com o custo de cada passo, a Ressonância e o Sangue provado quando a regra pede; cada número da ficha mostra de onde vem (criação, clã, Predador, experiência, ajuste) e recalcular nunca cura nem devolve um custo.",
+          "Campanhas de Vampiro, conduzidas pelo Narrador, com a aba Crônica: história, sessão, noite, cena e turno chegando às fichas na hora certa (a sessão não é uma noite; a noite traz a Checagem do despertar; o fim da sessão, Ambição, XP e Remorso), XP, Máculas, dano e Diablerie nas fichas, Princípios da Crônica, coterie e Domínio, PNs e antagonistas do livro, o Mapa de Relacionamentos, conflitos, testes estendidos, Memoriam, favores e o registro. Os jogadores veem só o que o Narrador mostra.",
+        ],
+        "Melhorado": [
+          "Os cartões da mesa mostram, numa ficha de Vampiro, o clã, a geração, Vitalidade, Força de Vontade, Fome, Humanidade com as Máculas e a Potência, com \"Esconder status dos jogadores\" valendo como sempre. Convicções, Pilares e Laços nunca aparecem ali.",
+        ],
+        "Visual": [
+          "Telas de Vampiro no Legacy e no Modern20, também no celular: pontos ●○, trilhas com \"/\" e \"X\", Fome em losangos, Máculas tracejadas. As cores vêm do tema (a Fome usa a cor do Sangue), e o vermelho fica reservado à Fome.",
+        ],
+        "Técnico": [
+          "Ficha no schema 25 (`tipoFicha: \"vampiro\"`, bloco `vampiro`), sem conversão: uma aba anterior recusa a ficha em vez de descartar o bloco. Motor puro em js/vampiro/ (catálogo, Disciplinas, antagonistas, dados, regras, poderes, crônica), copiado fielmente em backend/Vampiro.gs (testes/gerar-vampiro-gs.js). Cada ação tem id de operação e não se aplica duas vezes.",
+          "Backend: arquivo novo backend/Vampiro.gs com ler_vampiro, salvar_vampiro e vampiro_operar; aba CAMPANHA_VAMPIRO. O Narrador recebe a crônica; os jogadores, a vista calculada no servidor (sem PNs ocultos, notas ou relações privadas). Beber de outro vampiro e Direto da Fonte pedem permissão nas duas fichas, e uma ação contra outro personagem nunca abre a ficha dele.",
+          "Atualizar o backend: criar o Vampiro.gs; trocar Sistemas.gs, Dados.gs e Campanhas.gs; rodar setupRama() uma vez; nova versão da implantação; depois o site (js/vampiro/, css/vampiro.css, as capas e as páginas). Regras, páginas impressa e do PDF, interpretações e lacunas: docs/VAMPIRO.md.",
+          "Testes: 257 do motor (testes/executar-vampiro.js); 1757 backend (também com o serviço avançado; testes/vampiro-backend.js); 3436 regras, 494 Oblívio, 252 tema, 249 frontend, 213 CRIS, 188 criaturas, 89 feedback, 73 dados, 57 pastas, 40 editor de imagem, 19 coordenação — todas passando. Verificado no navegador com o backend simulado (não numa implantação real).",
+        ],
+      },
+    },
+    {
       versao: "4.0.0",
       codinome: "ALICERCE",
       data: "28/10/2026",

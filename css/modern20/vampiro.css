@@ -1,0 +1,47 @@
+/* =====================================================================
+   R.A.M.A. — Vampiro: A Máscara (v5.0) · Modern20
+   ---------------------------------------------------------------------
+   As MESMAS classes de css/vampiro.css na linguagem Modern20: canto
+   leve, traço discreto, sombra só no que flutua. Estado continua com
+   texto e forma — "/" e "X" nas trilhas, o losango do dado de Fome.
+   ===================================================================== */
+
+:where(:root[data-interface="modern20"]) {
+
+  & .vamp-poder,
+  & .vamp-vantagem,
+  & .vamp-crenca,
+  & .vamp-pn,
+  & .vamp-cartao,
+  & .vamp-criar__passo,
+  & .vamp-pendencias {
+    border-color: var(--m20-borda);
+    border-radius: var(--m20-raio-controle);
+  }
+
+  & .vamp-cartao--marcado {
+    border-color: var(--cor-texto);
+    background: var(--m20-selecao-suave);
+  }
+
+  & .vamp-criar__passo[aria-current="step"] { background: var(--m20-destaque-suave); }
+
+  & .vamp-caixa {
+    border-radius: 3px;
+    border-color: var(--m20-borda-controle);
+  }
+
+  & .vamp-dado {
+    border-radius: var(--m20-raio-controle);
+    border-color: var(--m20-borda-controle);
+    box-shadow: var(--m20-sombra-1);
+  }
+  & .vamp-dado--sucesso { border-color: var(--cor-texto); }
+  & .vamp-dado--fome { border-radius: 0; box-shadow: none; border-color: var(--vamp-fome); }
+
+  & .vamp-linha { border-bottom-color: var(--m20-borda); }
+
+  & .vamp-pendencias { background: var(--m20-aviso-suave); border-style: solid; }
+
+  & .vamp-poder[data-ativo="1"] { box-shadow: inset 3px 0 0 var(--cor-ok); border-left-width: 1px; }
+}

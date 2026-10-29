@@ -1,0 +1,357 @@
+/* =====================================================================
+   R.A.M.A. — Vampiro: A Máscara (v5.0) · Legacy
+   ---------------------------------------------------------------------
+   A ficha, a criação guiada, a janela da rolagem e a crônica. Lê só os
+   tokens do tema (css/tokens.css), sem cor nova presa: a Fome usa
+   --cor-elemento-sangue, a Vitalidade --cor-vida, a Força de Vontade
+   --cor-sanidade — todas editáveis no editor de tema. O resto é neutro:
+   o vermelho fica reservado para a Fome e os dados de Fome.
+
+   Estado nunca só por cor:
+     Superficial "/"  ·  Agravado "X"  ·  Mácula "/" tracejada
+     dado de Fome: forma de losango e símbolo (◆ ☠ ✶), além da cor
+     Debilitado, Torpor, frenesi: texto no bloco superior
+   A versão Modern20 está em css/modern20/vampiro.css.
+   ===================================================================== */
+
+:root {
+  --vamp-fome: var(--cor-elemento-sangue, var(--cor-erro));
+  --vamp-vida: var(--cor-vida, var(--cor-texto));
+  --vamp-fdv: var(--cor-sanidade, var(--cor-texto));
+}
+
+.vamp-aba { min-width: 0; }
+
+.vamp-lista {
+  margin: 0;
+  padding-left: var(--e4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--e1);
+}
+
+.vamp-dl {
+  display: grid;
+  grid-template-columns: minmax(8rem, max-content) minmax(0, 1fr);
+  gap: var(--e1) var(--e3);
+  margin: 0;
+}
+.vamp-dl dt { color: var(--cor-texto-2); font-size: var(--texto-mini); }
+.vamp-dl dd { margin: 0; min-width: 0; overflow-wrap: anywhere; }
+
+/* ---------- pontos ---------- */
+
+.vamp-pontos { display: inline-flex; gap: 3px; align-items: center; flex-wrap: wrap; }
+
+.vamp-ponto {
+  width: 0.85rem;
+  height: 0.85rem;
+  border: 1.5px solid var(--cor-traco-forte);
+  border-radius: 50%;
+  background: transparent;
+  padding: 0;
+  flex: none;
+}
+.vamp-ponto--cheio { background: var(--cor-texto); border-color: var(--cor-texto); }
+
+.vamp-pontos--editavel .vamp-ponto { cursor: pointer; width: 1.1rem; height: 1.1rem; }
+.vamp-pontos--editavel .vamp-ponto:hover { border-color: var(--cor-foco); }
+.vamp-pontos--editavel .vamp-ponto:focus-visible { outline: 2px solid var(--cor-foco); outline-offset: 2px; }
+.vamp-pontos--editavel .vamp-ponto:disabled { opacity: 0.4; cursor: not-allowed; }
+
+/* ---------- trilhas ---------- */
+
+.vamp-trilha { display: inline-flex; gap: 3px; flex-wrap: wrap; align-items: center; }
+
+.vamp-caixa {
+  width: 1.1rem;
+  height: 1.1rem;
+  border: 1.5px solid var(--cor-traco-forte);
+  display: inline-grid;
+  place-items: center;
+  font-size: 0.8rem;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--cor-texto);
+  background: var(--fundo-superficie);
+  flex: none;
+}
+.vamp-caixa--superficial { background: var(--fundo-superficie-2); }
+.vamp-caixa--agravado { background: var(--cor-texto); color: var(--fundo-superficie); border-color: var(--cor-texto); }
+.vamp-caixa--humanidade { background: var(--cor-texto); border-color: var(--cor-texto); }
+.vamp-caixa--macula { border-style: dashed; color: var(--cor-texto-2); }
+
+.vamp-trilha[data-debilitado="1"] { outline: 2px dashed var(--cor-aviso); outline-offset: 2px; }
+
+/* ---------- Fome ---------- */
+
+.vamp-fome { display: inline-flex; gap: 4px; align-items: center; }
+.vamp-fome__nivel {
+  width: 0.9rem;
+  height: 0.9rem;
+  transform: rotate(45deg);
+  border: 1.5px solid var(--vamp-fome);
+  background: transparent;
+  flex: none;
+}
+.vamp-fome__nivel--cheio { background: var(--vamp-fome); }
+
+/* =================================================================
+   BLOCO SUPERIOR
+   ================================================================= */
+
+.vamp-bloco {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, auto);
+  gap: var(--e3);
+  align-items: start;
+}
+.vamp-bloco__identidade { display: flex; gap: var(--e3); align-items: flex-start; min-width: 0; }
+.vamp-bloco__textos { display: flex; flex-direction: column; gap: var(--e1); min-width: 0; }
+.vamp-bloco__linha {
+  margin: 0;
+  color: var(--cor-texto-2);
+  letter-spacing: var(--espaco-letra-titulo);
+  text-transform: uppercase;
+  font-size: var(--texto-mini);
+}
+.vamp-bloco__estado { margin: 0; display: flex; flex-wrap: wrap; gap: var(--e1); }
+.vamp-bloco__trilhas {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  gap: var(--e1) var(--e2);
+  align-items: center;
+  margin: 0;
+}
+.vamp-bloco__trilhas dt { font-size: var(--texto-mini); color: var(--cor-texto-2); white-space: nowrap; }
+.vamp-bloco__trilhas dd { margin: 0; min-width: 0; }
+.vamp-bloco__acoes { grid-column: 1 / -1; align-items: center; }
+
+.vamp-bloco[data-frenesi="1"] .vamp-bloco__identidade,
+.vamp-bloco[data-estado="torpor"] .vamp-bloco__identidade,
+.vamp-bloco[data-estado="morteFinal"] .vamp-bloco__identidade {
+  border-left: 3px solid var(--vamp-fome);
+  padding-left: var(--e2);
+}
+
+.vamp-pendencias {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--e2);
+  align-items: center;
+  padding: var(--e2);
+  border: 1px dashed var(--cor-aviso);
+}
+.vamp-pendencias p { margin: 0; }
+
+/* =================================================================
+   ATRIBUTOS E HABILIDADES
+   ================================================================= */
+
+.vamp-grade {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--e3);
+}
+.vamp-coluna { display: flex; flex-direction: column; gap: var(--e1); min-width: 0; }
+
+.vamp-linha {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--e1) var(--e2);
+  padding: 2px 0;
+  border-bottom: 1px solid var(--cor-traco-fraca);
+}
+.vamp-linha--zero .vamp-linha__nome { color: var(--cor-texto-2); }
+.vamp-linha__nome { min-width: 0; text-align: left; }
+.vamp-linha__esp { flex-basis: 100%; font-size: var(--texto-mini); color: var(--cor-texto-2); font-style: italic; }
+
+button.vamp-linha__nome { background: none; border: 0; padding: 0; font: inherit; color: inherit; cursor: pointer; text-decoration: underline dotted; text-underline-offset: 3px; }
+button.vamp-linha__nome:hover { color: var(--cor-link); }
+button.vamp-linha__nome:focus-visible { outline: 2px solid var(--cor-foco); outline-offset: 2px; }
+
+/* =================================================================
+   DISCIPLINAS, VANTAGENS, CRENÇAS
+   ================================================================= */
+
+.vamp-poderes, .vamp-vantagens, .vamp-crencas, .vamp-pns {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--e2);
+}
+.vamp-poder, .vamp-vantagem, .vamp-crenca, .vamp-pn {
+  border: var(--borda) solid var(--cor-traco-media);
+  padding: var(--e2);
+  display: flex;
+  flex-direction: column;
+  gap: var(--e1);
+  min-width: 0;
+}
+.vamp-poder[data-ativo="1"] { border-left: 3px solid var(--cor-ok); }
+.vamp-vantagem[data-tipo="defeito"] { border-style: dashed; }
+.vamp-pn[data-visivel=""] { border-style: dashed; }
+.vamp-poder__topo { display: flex; flex-wrap: wrap; gap: var(--e1) var(--e2); align-items: center; }
+.vamp-poder__nome, .vamp-vantagem__nome { font-weight: 700; }
+.vamp-poder__efeito, .vamp-crenca__texto { margin: 0; }
+
+/* =================================================================
+   ROLAGEM
+   ================================================================= */
+
+.vamp-previa { margin: 0; font-size: var(--texto-mini); color: var(--cor-texto-2); }
+.vamp-previa--erro { color: var(--cor-aviso); }
+
+.vamp-resultado { display: flex; flex-direction: column; gap: var(--e2); }
+.vamp-resultado__parada { margin: 0; font-size: var(--texto-mini); color: var(--cor-texto-2); }
+.vamp-resultado__total { margin: 0; font-size: var(--texto-medio); font-weight: 700; }
+
+.vamp-dados { display: flex; flex-wrap: wrap; gap: var(--e1); }
+
+.vamp-dado {
+  position: relative;
+  width: 2.6rem;
+  height: 2.6rem;
+  display: inline-grid;
+  place-items: center;
+  border: 2px solid var(--cor-traco-forte);
+  border-radius: 6px;
+  background: var(--fundo-superficie);
+  color: var(--cor-texto);
+  font: inherit;
+  font-weight: 700;
+  padding: 0;
+}
+button.vamp-dado { cursor: pointer; }
+button.vamp-dado:focus-visible { outline: 3px solid var(--cor-foco); outline-offset: 2px; }
+.vamp-dado--sucesso { border-color: var(--cor-texto); border-width: 3px; }
+.vamp-dado--dez { box-shadow: inset 0 0 0 2px var(--cor-texto); }
+.vamp-dado--rerrolado { border-style: dashed; }
+.vamp-dado--marcado { outline: 3px solid var(--cor-foco); outline-offset: 2px; }
+
+/* O dado de Fome: losango e símbolo, e a cor do sangue. */
+.vamp-dado--fome {
+  border-color: var(--vamp-fome);
+  clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%);
+  border-radius: 0;
+  background: color-mix(in srgb, var(--vamp-fome) 18%, var(--fundo-superficie));
+  width: 3rem;
+  height: 3rem;
+}
+.vamp-dado--fome.vamp-dado--bestial,
+.vamp-dado--fome.vamp-dado--dez { background: var(--vamp-fome); color: var(--fundo-superficie); }
+.vamp-dado__face { line-height: 1; }
+.vamp-dado__simbolo { position: absolute; top: 2px; right: 4px; font-size: 0.65rem; line-height: 1; }
+/* No losango, o símbolo vai embaixo do número (sem cobrir a face). */
+.vamp-dado--fome { grid-auto-flow: row; align-content: center; gap: 1px; }
+.vamp-dado--fome .vamp-dado__simbolo { position: static; font-size: 0.55rem; }
+
+.vamp-legenda { margin: 0; }
+
+/* As faces de Fome no cartão de rolagem e no histórico (genérico). */
+.face--fome {
+  border-color: var(--vamp-fome) !important;
+  border-style: double !important;
+  border-width: 3px !important;
+  color: var(--vamp-fome);
+}
+
+/* =================================================================
+   CRIAÇÃO
+   ================================================================= */
+
+.vamp-criar-janela .r-modal__corpo { display: flex; flex-direction: column; gap: var(--e3); }
+.vamp-criar__topo { display: flex; gap: var(--e3); align-items: flex-start; min-width: 0; }
+.vamp-criar__trilha {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--e1);
+  min-width: 0;
+}
+.vamp-criar__passo {
+  display: inline-flex;
+  gap: var(--e1);
+  align-items: center;
+  padding: 2px var(--e2);
+  border: 1px solid var(--cor-traco-media);
+  background: var(--fundo-superficie);
+  color: var(--cor-texto);
+  font: inherit;
+  font-size: var(--texto-mini);
+  cursor: pointer;
+}
+.vamp-criar__passo[aria-current="step"] { border-color: var(--cor-texto); font-weight: 700; }
+.vamp-criar__passo--feito { border-style: solid; }
+.vamp-criar__passo--feito .vamp-criar__n::after { content: " ✓"; }
+.vamp-criar__passo--pendente { border-style: dashed; border-color: var(--cor-aviso); }
+.vamp-criar__passo:focus-visible { outline: 2px solid var(--cor-foco); outline-offset: 2px; }
+.vamp-criar__n { font-weight: 700; }
+
+.vamp-criar__etapa { display: flex; flex-direction: column; gap: var(--e2); min-width: 0; }
+.vamp-criar__contador { margin: 0; font-weight: 700; }
+.vamp-criar__pendencias { margin: 0; padding-left: var(--e4); color: var(--cor-aviso); font-size: var(--texto-mini); }
+.vamp-criar__ok { margin: 0; color: var(--cor-ok); font-size: var(--texto-mini); }
+.vamp-criar__checks { display: flex; flex-direction: column; gap: var(--e1); }
+
+.vamp-cartoes {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 15rem), 1fr));
+  gap: var(--e2);
+}
+.vamp-cartao {
+  display: flex;
+  flex-direction: column;
+  gap: var(--e1);
+  padding: var(--e2);
+  border: var(--borda) solid var(--cor-traco-media);
+  cursor: pointer;
+  min-width: 0;
+}
+.vamp-cartao input { position: absolute; opacity: 0; pointer-events: none; }
+.vamp-cartao:focus-within { outline: 2px solid var(--cor-foco); outline-offset: 2px; }
+.vamp-cartao--marcado { border-color: var(--cor-texto); border-width: 2px; }
+.vamp-cartao--marcado .vamp-cartao__nome::before { content: "● "; }
+.vamp-cartao__nome { font-weight: 700; }
+.vamp-cartao__dado { font-size: var(--texto-mini); color: var(--cor-texto-2); }
+
+/* =================================================================
+   CRÔNICA
+   ================================================================= */
+
+.vamp-cronica { min-width: 0; }
+.vamp-mapa { margin: 0; padding-left: var(--e3); display: flex; flex-direction: column; gap: var(--e2); }
+.vamp-mapa ul { margin: var(--e1) 0 0; padding-left: var(--e4); display: flex; flex-direction: column; gap: var(--e1); }
+.vamp-mapa li { overflow-wrap: anywhere; }
+.vamp-registro { margin: 0; padding-left: var(--e4); font-size: var(--texto-mini); color: var(--cor-texto-2); display: flex; flex-direction: column; gap: 2px; }
+.vamp-cronica-acao { border-top: 1px solid var(--cor-traco-fraca); padding-top: var(--e2); }
+
+/* =================================================================
+   CELULAR
+   ================================================================= */
+
+@media (max-width: 720px) {
+  .vamp-bloco { grid-template-columns: minmax(0, 1fr); }
+  .vamp-grade { grid-template-columns: minmax(0, 1fr); }
+  .vamp-dl { grid-template-columns: minmax(0, 1fr); }
+  .vamp-dl dt { margin-top: var(--e1); }
+  .vamp-criar__topo { flex-direction: column; }
+  .vamp-dado { width: 2.9rem; height: 2.9rem; }
+  .vamp-dado--fome { width: 3.3rem; height: 3.3rem; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .vamp-dado, .vamp-caixa, .vamp-ponto { transition: none; }
+}
+
+@media (forced-colors: active) {
+  .vamp-ponto--cheio, .vamp-caixa--agravado, .vamp-caixa--humanidade, .vamp-fome__nivel--cheio { background: CanvasText; }
+  .vamp-dado--fome { clip-path: none; border-style: double; }
+}

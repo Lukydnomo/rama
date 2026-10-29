@@ -1191,6 +1191,7 @@
   var CRIACOES = {
     ordem: function () { return abrirCriacaoOrdem(); },
     oblivio: function () { return abrirCriacaoOblivio(); },
+    vampiro: function () { return abrirCriacaoVampiro(); },
     universal: function () { return abrirCriacao(); },
   };
 
@@ -1217,6 +1218,18 @@
     var r = await global.RAMAApi.listarCampanhas();
     if (r.ok) campanhas = r.dados || [];
     global.RAMAOblivioCriar.abrir({ campanhas: campanhas });
+  }
+
+  /* A criação guiada de Vampiro (v5.0), em doze etapas. */
+  async function abrirCriacaoVampiro() {
+    if (!global.RAMAVampiroCriar || !global.RAMAVampiro) {
+      UI.avisoErro("A criação de Vampiro não está disponível nesta página.");
+      return;
+    }
+    var campanhas = [];
+    var r = await global.RAMAApi.listarCampanhas();
+    if (r.ok) campanhas = r.dados || [];
+    global.RAMAVampiroCriar.abrir({ campanhas: campanhas });
   }
 
   /* =================================================================

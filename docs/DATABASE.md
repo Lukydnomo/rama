@@ -1,9 +1,30 @@
 # O banco
 
+## Vampiro — v5.0
+
+> **Atualizando para a v5.0:** crie o arquivo `Vampiro` com `backend/Vampiro.gs`,
+> troque `Sistemas.gs`, `Dados.gs` e `Campanhas.gs`, rode **`setupRama()`** uma
+> vez (cria a aba `CAMPANHA_VAMPIRO`; repetir não muda nada) e crie uma nova
+> versão da implantação.
+
+**CAMPANHA_VAMPIRO** — `campanhaId · atualizadoEm · rev · opsJson · dadosJson`
+(leves: as três primeiras; pesada: `dadosJson`). `dadosJson` é a crônica
+normalizada por `RAMAVampiroCronica` (cópia fiel de `js/vampiro/cronica.js` em
+`Vampiro.gs`): época, sessão e noite, história, cena (tipo, modo, turno),
+Princípios, coterie (tipo, membros, Domínio, Antecedentes e Defeitos), PNs
+(modelo copiado, visível ou não, notas públicas e privadas), grupos,
+relações (o Mapa de Relacionamentos, por id), conflitos, testes estendidos,
+Memoriam, favores e o registro (até 300 linhas; cede primeiro quando a célula
+enche). `opsJson` guarda os últimos 80 `opId` aplicados.
+
+As fichas de Vampiro continuam em `PERSONAGENS` (o bloco `vampiro` dentro da
+ficha); a projeção do painel ganha `tipo: "vampiro"` e o bloco `vampiro`
+calculado no servidor.
+
 ## O sistema da campanha — v4.0
 
 Nenhuma aba ou coluna nova: o sistema mora no `dadosJson` da linha de
-**CAMPANHAS**, junto da descrição — `sistema` (`ordem`, `oblivio`,
+**CAMPANHAS**, junto da descrição — `sistema` (`ordem`, `oblivio`, `vampiro`,
 `universal`) e, depois de uma troca, `sistemaDesde` (quando). `listar_campanhas`
 e `ler_campanha` já liam esse JSON; nenhuma leitura nova.
 

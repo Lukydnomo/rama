@@ -154,7 +154,9 @@
      tema da página. Só apresentação: nada aqui grava ou reenvia. */
   function linhaDeRolagem(r) {
     var res = r.resultado || {};
-    var faces = (res.rolagens || []).join(", ");
+    var faces = global.RAMARolagens && global.RAMARolagens.textoDasFaces && Array.isArray(res.marcas)
+      ? global.RAMARolagens.textoDasFaces(res.rolagens || [], res.marcas)
+      : (res.rolagens || []).join(", ");
     var AR = global.RAMAAparenciaRolagem || null;
     var aparencia = res.aparencia || null;
 

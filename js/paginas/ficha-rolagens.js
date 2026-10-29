@@ -177,19 +177,32 @@
   }
 
   /* As faces sorteadas. No dano todas contam, então nenhuma é
-     destacada; na rolagem dependente só uma vale, e ela fica invertida. */
+     destacada; na rolagem dependente só uma vale, e ela fica invertida.
+     `marcas` (v5.0): uma por face — "fome" é o dado de Fome de Vampiro,
+     com forma e texto próprios (nunca só a cor). */
   function faces(r) {
     var lista = r.rolagens || [];
     if (!lista.length) return null;
 
     var temPrincipal = r.tipo !== "dano" && r.natural !== undefined;
     var marcou = false;
+    var marcas = Array.isArray(r.marcas) ? r.marcas : [];
 
-    return el("div.rolagem__dados", { "aria-hidden": "true" }, lista.map(function (valor) {
+    var dados = el("div.rolagem__dados", { "aria-hidden": "true" }, lista.map(function (valor, i) {
       var principal = temPrincipal && !marcou && valor === r.natural;
       if (principal) marcou = true;
-      return el("span.face", { class: principal ? "face--principal" : "", texto: String(valor) });
+      var marca = marcas[i] === "fome" ? "face--fome" : "";
+      return el("span.face", { class: [principal ? "face--principal" : "", marca].filter(Boolean).join(" "), texto: String(valor), title: marca ? "Dado de Fome" : null });
     }));
+    if (!marcas.some(function (m) { return m === "fome"; })) return dados;
+    return el("div", {}, [dados, el("span.so-leitor", { texto: textoDasFaces(lista, marcas) })]);
+  }
+
+  /* "7, 3; de Fome: 10, 1" — o mesmo texto no cartão e no histórico. */
+  function textoDasFaces(lista, marcas) {
+    var comuns = [], fome = [];
+    lista.forEach(function (v, i) { (marcas && marcas[i] === "fome" ? fome : comuns).push(v); });
+    return comuns.join(", ") + (fome.length ? (comuns.length ? "; " : "") + "de Fome: " + fome.join(", ") : "");
   }
 
   function parcelas(r) {
@@ -214,6 +227,7 @@
     exibir: exibir,
     cartao: function (resultado, opcoes, aparencia) { return montar(resultado || {}, opcoes || {}, aparencia || null); },
     limpar: limpar,
+    textoDasFaces: textoDasFaces,
     historico: function () { return historico.slice(); },
   };
 })(window);

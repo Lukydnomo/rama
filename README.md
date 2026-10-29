@@ -39,6 +39,7 @@ preferências de tela — nunca é tratado como banco.
     layout.css          cabeçalho, navegação, listas, rodapé
     ficha.css           só o que é exclusivo da ficha
     oblivio.css         Oblívio: criação, corpo, ataque, mesa da Testemunha (v3.0)
+    vampiro.css         Vampiro: criação, ficha, rolagem com Fome, Crônica (v5.0)
     (estas folhas SÃO o estilo Legacy: a aparência da v2.48.4, intocada)
     interface.css       o seletor de estilo do editor de temas (vale nos dois estilos)
     modern20/           o estilo Modern20 (v2.49): uma folha par de cada uma acima,
@@ -109,6 +110,15 @@ preferências de tela — nunca é tratado como banco.
       mesa.js           a mesa da Testemunha: Missão, cenas, fileiras, Farol, encontro
       buraco.js         construção e exploração de Buracos
       habilidades.js    habilidades com ativação e ações específicas
+    vampiro/            o módulo de Vampiro: A Máscara V5 (v5.0): motor puro, copiado em backend/Vampiro.gs…
+      telas/            …e as telas: criação em 12 etapas, ficha, Disciplinas, a Crônica do Narrador
+      catalogo.js       Atributos, Habilidades, clãs, Predadores, Vantagens, Fichas de Conhecimento…
+      disciplinas-dados.js as Disciplinas, todos os poderes do básico, rituais e Alquimia
+      antagonistas-dados.js mortais, animais, vampiros e criaturas
+      dados.js          dados de Fome, críticos e bestiais, Força de Vontade, Checagens, conflito
+      regras.js         a ficha em camadas e as regras: Fome, Humanidade, frenesi, Torpor, XP…
+      poderes.js        usar poderes, rituais e alquimia
+      cronica.js        a crônica do Narrador e a vista dos jogadores
     historico.js        rolagem → histórico da campanha, num funil só
     temas-dados.js      catálogo dos temas de dados e regras puras (copiado no Codigo.gs)
     aparencia-rolagem.js o dado e o fundo de cada rolagem: captura, ícone e aplicação no cartão
@@ -121,6 +131,7 @@ preferências de tela — nunca é tratado como banco.
     Sistemas.gs         núcleo: o registro dos sistemas, a compatibilidade e as portas (v4.0)
     Ordem.gs            sistema Ordem Paranormal: recursos, condições, Hexatombe, Hacking, Perigos…
     Oblivio.gs          sistema Oblívio: a mesa da Testemunha e as operações entre fichas (cópia do motor)
+    Vampiro.gs          sistema Vampiro: a crônica do Narrador e as operações entre fichas (cópia do motor)
     Universal.gs        sistema Universal: atributos e status livres no painel da mesa
     Cris.gs             leitura de ficha pública do CRIS (opcional)
     Feedback.gs         feedback entregue num canal do Discord (opcional)
@@ -136,6 +147,7 @@ preferências de tela — nunca é tratado como banco.
     ORDEM-REGRAS.md     matriz de regras de Ordem: fonte, página e lacunas
     INTERFACE.md        Legacy e Modern20: arquitetura, inventário de telas e como verificar
     OBLIVIO.md          Oblívio: matriz de cobertura, interpretações e lacunas do livro
+    VAMPIRO.md          Vampiro V5: matriz de cobertura, interpretações e lacunas do livro
     SISTEMAS.md         a plataforma e os sistemas: núcleo × módulos, registro, como entra um sistema
 ```
 
@@ -385,6 +397,25 @@ deno run --allow-read --allow-write testes/gerar-oblivio-gs.js
 
 ```bash
 deno run --allow-read testes/executar-oblivio.js
+```
+
+**Vampiro: A Máscara** — 257 verificações do motor, sem navegador e sem rede,
+com os dados combinados (uma fila de faces: o motor nunca sorteia sozinho):
+criação nas 12 etapas e as restrições, camadas sem duplicar, dados de Fome,
+críticos e falhas bestiais, Força de Vontade, Checagens, dano e cura, frenesi,
+Compulsões, Humanidade, Máculas, Remorso, Pilares, Torpor, estaca, sol, fogo,
+Ressonância, alimentação, Laços, Diablerie, XP nível a nível, Fichas de
+Conhecimento, poderes, rituais, alquimia, a crônica e a vista dos jogadores. O
+lado do servidor está em `testes/vampiro-backend.js`, dentro de
+`executar-backend.js`. Mudou algo em `js/vampiro/`? Gere de novo a cópia do
+servidor antes de testar:
+
+```bash
+deno run --allow-read --allow-write testes/gerar-vampiro-gs.js
+```
+
+```bash
+deno run --allow-read testes/executar-vampiro.js
 ```
 
 **Transporte do frontend e carga das páginas** — 228 verificações:
@@ -708,6 +739,23 @@ próprio `<script src>`, então funciona debaixo de subpasta sem ajuste.
 segredo nenhum — ele os lê das Script Properties. Publicá-lo não expõe nada.
 
 ### Atualizar o backend
+
+**v5.0.0 — LINHAGEM:** Vampiro: A Máscara (V5) como sistema completo. **Crie**
+o arquivo `Vampiro` no Apps Script com `backend/Vampiro.gs`, **troque**
+`Sistemas.gs` (o registro ganha `vampiro`), `Dados.gs` (a aba nova) e
+`Campanhas.gs` (a parte `vampiro` da sincronia), rode **`setupRama()`** uma vez
+(cria a aba `CAMPANHA_VAMPIRO`; repetir é seguro e não apaga nada) e crie uma
+**nova versão** da implantação; só então publique o site — inclusive as pastas
+novas `js/vampiro/` e `js/vampiro/telas/`, `css/vampiro.css`,
+`css/modern20/vampiro.css`, as capas `assets/sistemas/vampiro-capa.webp` e
+`vampiro-capa-pequena.webp`, e `ficha/`, `personagens/` e `campanha/index.html`,
+que passam a carregá-los. O `Codigo.gs` não muda por causa do Vampiro. Nada
+existente é convertido: as fichas passam ao schema 25 na primeira gravação, sem
+mudar de forma; abas abertas na versão anterior recusam fichas 25 e pedem para
+recarregar. Sem o `setupRama()`, só a crônica recusa gravar
+(`instalacao_incompleta`); sem o `Vampiro.gs` ou sem a versão nova da
+implantação, a aba Crônica não acha `ler_vampiro` e uma campanha não pode ser
+criada como Vampiro (o servidor velho não conhece o sistema).
 
 **v4.0.0 — ALICERCE:** a plataforma separada dos sistemas. **Crie** três
 arquivos no Apps Script — `Sistemas` (`backend/Sistemas.gs`), `Ordem`
@@ -1464,7 +1512,7 @@ Três números diferentes, que não se misturam:
 
 | | Onde | O que é |
 |---|---|---|
-| versão do aplicativo | `js/versao.js` | o que a pessoa vê: v4.0.0 |
+| versão do aplicativo | `js/versao.js` | o que a pessoa vê: v5.0.0 |
 | `schemaVersion` | `js/ficha.js` | o formato da FICHA |
 | `versaoFormato` | `js/config.js` | o formato dos arquivos de importação |
 

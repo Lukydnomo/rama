@@ -123,7 +123,7 @@ var SEGUNDOS_IDEMPOTENCIA = 1800;
    parada não cair nesse passo de reserva à toa.
    ===================================================================== */
 
-var PARTES_DA_MESA = ['campanha', 'membros', 'personagens', 'combates', 'documentos', 'rolagens', 'hexatombe', 'hacking', 'perigos', 'oblivio'];
+var PARTES_DA_MESA = ['campanha', 'membros', 'personagens', 'combates', 'documentos', 'rolagens', 'hexatombe', 'hacking', 'perigos', 'oblivio', 'vampiro'];
 var SEGUNDOS_MARCA = 21600;
 var MS_RENOVAR_MARCAS = 4 * 60 * 60 * 1000;
 var SEGUNDOS_PAPEL_EM_CACHE = 300;

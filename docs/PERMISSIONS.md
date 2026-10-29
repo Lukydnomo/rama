@@ -2,6 +2,26 @@
 
 Quem alcança o quê, e onde isso é decidido.
 
+## Vampiro — v5.0
+
+| ação | Narrador | jogador | espectador / de fora |
+|---|---|---|---|
+| ver a crônica inteira (`ler_vampiro`) | sim | não — recebe a vista dos jogadores | não |
+| gravar a crônica (`salvar_vampiro`) | sim | não (`sem_permissao`) | não |
+| momentos nas fichas, XP, Máculas, dano, Pilar, Diablerie (`vampiro_operar`) | sim | não (`sem_permissao`) | não |
+| beber de outro vampiro, Direto da Fonte | sim | só se puder editar as duas fichas | não |
+
+- A vista dos jogadores é calculada no servidor: o que o Narrador esconde não é
+  enviado, não fica só "escondido na tela". Uma relação visível com um PN oculto
+  também não vai (não revela que ele existe).
+- Uma ação contra outro personagem (beber dele, Direto da Fonte, Diablerie) não
+  dá acesso à ficha dele: o servidor aplica o efeito e devolve só os eventos.
+- Convicções, Pilares, Laços e notas não entram no resumo do painel; trilhas,
+  Fome e Humanidade seguem "Esconder status dos jogadores".
+- A própria ficha continua de quem a edita (dono e Editor), como nos outros
+  sistemas; a XP e as Máculas numa crônica são oferecidas na tela só ao
+  Narrador (ver as limitações em [VAMPIRO.md](VAMPIRO.md)).
+
 ## O sistema da campanha — v4.0
 
 | ação | mestre | jogador | espectador / de fora |

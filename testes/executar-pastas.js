@@ -43,7 +43,7 @@ t.igual("ficha antiga (vazio) segue a compatibilidade: universal, marcada como a
 const futuro = S.de("Tormenta20");
 t.igual("identificador desconhecido fica com o próprio id", [futuro.id, futuro.conhecido], ["tormenta20", false]);
 t.ok("  e com nome que diz que não é reconhecido", /não reconhecido/.test(futuro.nome) && futuro.nome.indexOf("tormenta20") >= 0);
-t.igual("a lista traz os conhecidos na ordem de exibição", S.lista().map((s) => s.id), ["ordem", "oblivio", "universal"]);
+t.igual("a lista traz os conhecidos na ordem de exibição", S.lista().map((s) => s.id), ["ordem", "oblivio", "vampiro", "universal"]);
 t.igual("os desconhecidos vêm depois", [S.de("zeta"), S.de("universal"), S.de("alfa"), S.de("ordem")].sort(S.comparar).map((s) => s.id), ["ordem", "universal", "alfa", "zeta"]);
 
 t.grupo("Registro de sistemas — capacidades (v4.0)");
@@ -70,7 +70,7 @@ t.igual("campanha antiga com a mesa de Oblívio da v3.0: Oblívio, herdado", [S.
 t.igual("o servidor manda a herança: ela é respeitada", S.daCampanha({ sistema: "ordem", sistemaHerdado: true }).herdado, true);
 t.igual("campanha de um sistema desconhecido não cai na regra antiga", S.daCampanha({ sistema: "brutal" }).id, "brutal");
 t.ok("os nomes das ferramentas servem para explicar uma troca", S.nomeDaFerramenta("hexatombe") === "Hexatombe" && S.nomeDaFerramenta("oblivio") === "mesa da Testemunha");
-t.igual("os tipos de ficha são os do registro", S.idsDeFicha(), ["ordem", "oblivio", "universal"]);
+t.igual("os tipos de ficha são os do registro", S.idsDeFicha(), ["ordem", "oblivio", "vampiro", "universal"]);
 
 /* ---------- dados sintéticos ---------- */
 
@@ -118,8 +118,8 @@ t.igual("o pendente é diferente da ficha antiga", [O.sistemaDe({ sistema: null 
 
 t.grupo("Sistemas oferecidos no filtro");
 const ofertas = O.montar(r, PASTAS, { pasta: "sabado" }).sistemas;
-t.igual("os conhecidos sempre, com a contagem da seleção", ofertas.map((o) => [o.sistema.id, o.n]), [["ordem", 1], ["oblivio", 0], ["universal", 1]]);
-t.igual("os desconhecidos presentes entram", O.montar(r, PASTAS, { pasta: "todos" }).sistemas.map((o) => o.sistema.id), ["ordem", "oblivio", "universal", "tormenta20", "?"]);
+t.igual("os conhecidos sempre, com a contagem da seleção", ofertas.map((o) => [o.sistema.id, o.n]), [["ordem", 1], ["oblivio", 0], ["vampiro", 0], ["universal", 1]]);
+t.igual("os desconhecidos presentes entram", O.montar(r, PASTAS, { pasta: "todos" }).sistemas.map((o) => o.sistema.id), ["ordem", "oblivio", "vampiro", "universal", "tormenta20", "?"]);
 
 t.grupo("Estados vazios");
 t.igual("sem nenhum personagem", O.montar([], PASTAS, {}).vazio, "nenhum");

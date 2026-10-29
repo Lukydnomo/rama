@@ -18,6 +18,8 @@
                    Hexatombe, Hacking, perigos complexos e Sincronia.
      Oblivio.gs    Oblívio: a mesa da Testemunha e as operações entre
                    Personas.
+     Vampiro.gs    Vampiro: A Máscara (V5): a crônica do Narrador e as
+                   operações entre personagens (cópia do motor; v4.1).
      Universal.gs  o modelo flexível do R.A.M.A.: atributos e status
                    livres no painel da mesa.
 
@@ -48,6 +50,8 @@ var SISTEMAS_DO_RAMA = [
     ferramentas: ['combate', 'condicoes', 'sincronia'], mecanicas: ['hexatombe', 'hacking', 'perigos'] },
   { id: 'oblivio', nome: 'Oblívio', arquivo: 'Oblivio.gs',
     ferramentas: ['oblivio'], mecanicas: [] },
+  { id: 'vampiro', nome: 'Vampiro: A Máscara', arquivo: 'Vampiro.gs',
+    ferramentas: ['cronica'], mecanicas: [] },
   { id: 'universal', nome: 'Universal', arquivo: 'Universal.gs',
     ferramentas: ['combate'], mecanicas: [] },
 ];
@@ -59,6 +63,7 @@ var SISTEMAS_DO_RAMA = [
 var MODULOS_DE_SISTEMA = {
   ordem: function () { return typeof sistemaOrdem === 'function' ? sistemaOrdem() : null; },
   oblivio: function () { return typeof sistemaOblivio === 'function' ? sistemaOblivio() : null; },
+  vampiro: function () { return typeof sistemaVampiro === 'function' ? sistemaVampiro() : null; },
   universal: function () { return typeof sistemaUniversal === 'function' ? sistemaUniversal() : null; },
 };
 

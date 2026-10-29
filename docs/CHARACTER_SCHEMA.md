@@ -5,12 +5,57 @@ padrão e normaliza o que chega de fora. Onde ela é guardada — inteira em
 `fichaJson` (formato antigo) ou em blocos (v2.15) — é assunto do backend, e não muda
 nada aqui: ver [DATABASE.md](DATABASE.md).
 
+## Vampiro: A Máscara — v5.0 / schema 25
+
+Um quarto tipo: `tipoFicha: "vampiro"`, com o bloco `vampiro` normalizado por
+`RAMAVampiro.normalizar` (`js/vampiro/regras.js`). O schema sobe para **25 sem
+conversão** — só para uma aba aberta na versão anterior recusar a ficha em vez
+de descartar o bloco ao gravar. Fichas de Ordem, Oblívio e Universais não mudam
+e passam ao 25 na primeira gravação. Detalhes e regras: [VAMPIRO.md](VAMPIRO.md).
+
+```
+"tipoFicha": "vampiro",
+"vampiro": {
+  "v": 1, "natureza": "vampiro" | "carnical" | "mortal",
+  "conceito", "cla", "senhor", "geracao", "idade", "predador", "ambicao", "desejo",
+  "perdicaoParametro",                 // Malkaviano: categoria; Ventrue: presa
+  "atributos": { forca, destreza, … },  // BASE da criação
+  "habilidades": { … }, "disciplinas": { … },
+  "especializacoes": [{ id, habilidade, nome, origem }],
+  "poderes": [{ id, chave, origem }], "rituais": [ … ], "formulas": [ … ], "metodoAlquimia",
+  "vantagens": [{ id, chave, pontos, nota, origem }],
+  "fichas": [{ id, ficha, nivel, origem }],        // Fichas de Conhecimento, nível a nível
+  "sangueRalo": { qualidades: [], defeitos: [] },
+  "convicoes": [{ id, texto }], "pilares": [{ id, nome, convicaoId, estado }],
+  "humanidadeBase", "maculas", "potenciaBase", "fome", "fracaoDeFome",
+  "vitalidade": { superficial, agravado }, "forcaDeVontade": { superficial, agravado },
+  "ressonancia": { tipo, temperamento, discrasia, fonte } | null,
+  "estado": { torpor, estacado, morteFinal, frenesi, compulsao, degeneracao, wassail, … },
+  "efeitos": [{ id, chave, nome, origem, duracao, dados }], "lacos": [ … ], "formulasProntas": [ … ],
+  "compras": [{ id, tipo, alvo, de, para, custo, credito, noite }],   // XP nível a nível
+  "ajustes": [{ id, tipo, alvo, valor, origem, motivo }],
+  "xp": { recebido, historico: [ … ], creditos },
+  "criacao": { concluida, distribuicao, predador: { especializacao, disciplina, poder, escolhas }, … },
+  "equipamento": [ … ], "notas",
+  "tempo": { sessao, noite, cena, turno }, "marcas": { sessao, noite, cena },
+  "historicoDeEventos": [ … ], "operacoes": [ opIds ]
+}
+```
+
+- **Camadas**: o valor de um Atributo, Habilidade, Disciplina, da Humanidade e
+  da Potência é base + concessões (clã, idade, Predador — calculadas, nunca
+  gravadas) + compras + ajustes. **Saldos** (dano, Fome, Máculas, estados,
+  efeitos) são guardados e nunca recalculados.
+- Junto de cada gravação vai `resumoVampiro` (clã, natureza, geração, trilhas,
+  Fome, Humanidade, Máculas, Potência, estado, Ressonância, XP) — recalculado no
+  servidor com o motor. Convicções, Pilares, Laços e notas nunca entram nele.
+
 ## O sistema da ficha — v4.0 (schema 24, sem mudança de forma)
 
 `tipoFicha` é lido pelo registro central (`js/sistemas.js`):
 
 - vazio → a regra das fichas antigas (Universal);
-- conhecido (`ordem`, `oblivio`, `universal`) → ele;
+- conhecido (`ordem`, `oblivio`, `vampiro`, `universal`) → ele;
 - um identificador que esta versão não conhece → **fica como veio**, nunca vira
   Universal. A ficha abre só para leitura e nada é gravado por cima dela;
 - o que nem identificador é (um arquivo adulterado) → a regra das antigas.

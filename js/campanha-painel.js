@@ -187,6 +187,34 @@
     return base;
   }
 
+  /* Vampiro (v5.0): clã e natureza identificam; trilhas, Fome,
+     Humanidade e Potência vêm do resumo calculado no SERVIDOR com o
+     motor (e seguem "Esconder status dos jogadores"). Convicções,
+     Pilares e Laços nunca entram no resumo. */
+  function resumirVampiro(p, base) {
+    var CV = global.RAMAVampiroCatalogo;
+    var b = p.vampiro && typeof p.vampiro === "object" ? p.vampiro : {};
+    var cla = CV && CV.CLAS[b.cla];
+    var natureza = { carnical: "Carniçal", mortal: "Mortal" }[b.natureza];
+    base.linhas.push("Vampiro" + (natureza ? " · " + natureza : "") + (cla ? " · " + cla.nome : "") + (b.geracao && b.natureza === "vampiro" && b.cla !== "sangueRalo" ? " · " + b.geracao + "ª ger." : ""));
+    if (!b.vitalidade) return base;
+    var conds = [];
+    var estado = { torpor: "Torpor", morteFinal: "Morte Final", estacado: "Estacado", besta: "Wassail", incapacitado: "Incapacitado", morte: "Morto" }[b.estado];
+    if (estado) conds.push({ chave: "estado", nome: estado, ativa: true });
+    if (b.frenesi) conds.push({ chave: "frenesi", nome: "Frenesi", ativa: true });
+    if (b.compulsao) conds.push({ chave: "compulsao", nome: "Compulsão", ativa: true });
+    base.condicoes = condicoesDoCartao(conds);
+    function trilha(t) { var x = t || {}; return (U.inteiro(x.max, 0) - Math.min(U.inteiro(x.max, 0), U.inteiro(x.superficial, 0) + U.inteiro(x.agravado, 0))) + "/" + U.inteiro(x.max, 0) + (x.agravado ? " (" + x.agravado + " Agr.)" : ""); }
+    base.estatisticas = [
+      { chave: "vitalidade", rotulo: "Vitalidade", valor: trilha(b.vitalidade) },
+      { chave: "fdv", rotulo: "Força de Vontade", valor: trilha(b.forcaDeVontade) },
+    ];
+    if (b.natureza === "vampiro") base.estatisticas.push({ chave: "fome", rotulo: "Fome", valor: String(U.inteiro(b.fome, 0)) });
+    base.estatisticas.push({ chave: "humanidade", rotulo: "Humanidade", valor: U.inteiro(b.humanidade, 0) + (b.maculas ? " (" + b.maculas + " Mác.)" : "") });
+    if (b.natureza === "vampiro") base.estatisticas.push({ chave: "potencia", rotulo: "Potência", valor: String(U.inteiro(b.potencia, 0)) });
+    return base;
+  }
+
   function resumirOrdem(p, base) {
     var bruto = p.ordem && typeof p.ordem === "object" ? p.ordem : {};
     if (!R()) return base;
@@ -378,6 +406,7 @@
 
   registrar("ordem", resumirOrdem);
   registrar("oblivio", resumirOblivio);
+  registrar("vampiro", resumirVampiro);
   registrar("universal", resumirUniversal);
 
   global.RAMAPainelMesa = {

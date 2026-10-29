@@ -11,8 +11,8 @@ funciona o sistema de uma campanha e como entra um sistema novo.
 | | Núcleo (plataforma) | Módulo de sistema |
 |---|---|---|
 | **O quê** | sessão, contas, permissões, compartilhamento, armazenamento em blocos, pastas, Homebrew, temas, a estrutura da campanha (participantes, sistema da campanha, personagens vinculados, rolagens, documentos, notas, capa, marcas) e o rastreador de combate (ordem, turno, rodada) | o bloco de regras da ficha, os cálculos, o que o painel da mesa mostra, o resumo que a mesa lê, as ferramentas e mecânicas de mesa do sistema |
-| **Servidor** | `Dados.gs`, `Codigo.gs`, `Campanhas.gs`, `Sistemas.gs` | `Ordem.gs`, `Oblivio.gs`, `Universal.gs` |
-| **Site** | `js/*.js`, `js/paginas/` (telas da plataforma e seções de ficha comuns: Geral, Perícias, Habilidades, Rituais, Inventário, Anotações, Aliados) | `js/ordem/` e `js/ordem/telas/`, `js/oblivio/` e `js/oblivio/telas/`; o modelo Universal usa as seções comuns |
+| **Servidor** | `Dados.gs`, `Codigo.gs`, `Campanhas.gs`, `Sistemas.gs` | `Ordem.gs`, `Oblivio.gs`, `Vampiro.gs`, `Universal.gs` |
+| **Site** | `js/*.js`, `js/paginas/` (telas da plataforma e seções de ficha comuns: Geral, Perícias, Habilidades, Rituais, Inventário, Anotações, Aliados) | `js/ordem/` e `js/ordem/telas/`, `js/oblivio/` e `js/oblivio/telas/`, `js/vampiro/` e `js/vampiro/telas/`; o modelo Universal usa as seções comuns |
 
 Seções comuns (Habilidades, Rituais, Inventário, Anotações, Aliados) são as
 mesmas em todo sistema que as usa — duplicá-las só para mudar o cabeçalho seria
@@ -43,17 +43,17 @@ Dois registros, um em cada lado, que dizem a mesma coisa
 
 ### Os ganchos do servidor
 
-| Gancho | Quem chama | Ordem | Oblívio | Universal |
-|---|---|---|---|---|
-| `rotas()` | `rotaDe()` (Codigo.gs) | efeito, resumo, Hexatombe, Hacking, Perigos, Sincronia | `ler_oblivio`, `salvar_oblivio`, `oblivio_operar` | — |
-| `fichaDoSistema(ficha)` | `moduloDaFicha` | tem o bloco `ordem` | tem o bloco `oblivio` | — |
-| `projecao(ficha)` | a projeção do painel | bloco do painel, itens, resumo | a Persona do painel | atributos e status |
-| `painel(proj, o)` | `listar_personagens_campanha` | o cartão de Ordem | o da Persona | atributos e status |
-| `recursosNoCombate(proj)` | a lista do combate | PV/PE/SAN/PD e condições | — | status |
-| `turnosNasFichas(...)` | `atualizar_combate` | condições e efeitos por turno | — | — |
-| `resumo` | criar/salvar personagem | `resumoRecursos` | — | — |
-| `ajustes` | `ajustar_personagem` | o alvo `recurso` | — | — |
-| `estadoDasMecanicas` | `ler_campanha` | Hexatombe, Hacking, Perigos | a mesa gravada | — |
+| Gancho | Quem chama | Ordem | Oblívio | Vampiro | Universal |
+|---|---|---|---|---|---|
+| `rotas()` | `rotaDe()` (Codigo.gs) | efeito, resumo, Hexatombe, Hacking, Perigos, Sincronia | `ler_oblivio`, `salvar_oblivio`, `oblivio_operar` | `ler_vampiro`, `salvar_vampiro`, `vampiro_operar` | — |
+| `fichaDoSistema(ficha)` | `moduloDaFicha` | tem o bloco `ordem` | tem o bloco `oblivio` | tem o bloco `vampiro` | — |
+| `projecao(ficha)` | a projeção do painel | bloco do painel, itens, resumo | a Persona do painel | `resumoParaMesa`, calculado com o motor | atributos e status |
+| `painel(proj, o)` | `listar_personagens_campanha` | o cartão de Ordem | o da Persona | trilhas, Fome, Humanidade, Potência (ou só clã e natureza) | atributos e status |
+| `recursosNoCombate(proj)` | a lista do combate | PV/PE/SAN/PD e condições | — | — | status |
+| `turnosNasFichas(...)` | `atualizar_combate` | condições e efeitos por turno | — | — | — |
+| `resumo` | criar/salvar personagem | `resumoRecursos` | — | — | — |
+| `ajustes` | `ajustar_personagem` | o alvo `recurso` | — | — | — |
+| `estadoDasMecanicas` | `ler_campanha` | Hexatombe, Hacking, Perigos | a mesa gravada | a crônica gravada | — |
 
 Status e atributo, no ajuste rápido, são do núcleo: todo modelo de ficha tem
 essas listas.

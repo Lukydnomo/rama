@@ -1,5 +1,41 @@
 # A API
 
+## Vampiro: A Máscara — v5.0
+
+Rotas de `Vampiro.gs`; só respondem numa campanha de Vampiro (as outras
+recebem `outro_sistema`). Ver [VAMPIRO.md](VAMPIRO.md).
+
+- `ler_vampiro { campanhaId }` — membro da campanha (espectador:
+  `sem_permissao`). O Narrador recebe `{ mestre: true, rev, estado }`, a crônica
+  inteira; o jogador, `{ mestre: false, rev, vista }` —
+  `RAMAVampiroCronica.vistaDosJogadores`, calculada no servidor: sem PNs ocultos,
+  sem notas privadas, sem relações privadas ou que toquem um PN oculto, sem o
+  registro privado. Os dois recebem `personagens: [{ id, nome }]` (as fichas de
+  Vampiro da campanha, pela projeção).
+- `salvar_vampiro { campanhaId, rev, opId, estado }` — só o Narrador. `opId`
+  repetido devolve `repetida: true`; `rev` diferente, `conflito` com a crônica
+  atual. A coterie só aceita personagens desta campanha. Sem a aba:
+  `instalacao_incompleta` (`CAMPANHA_VAMPIRO`).
+- `vampiro_operar { campanhaId, opId, operacao }` — o que toca fichas, aplicado
+  pela cópia do motor e gravado ficha a ficha com o `opId` em cada uma
+  (repetir não aplica de novo):
+  - do Narrador: `momentos` (`inicioDaSessao`, `fimDaSessao` com
+    `ambicao: { id: bool }` e `xp`, `novaNoite`, `novaCena`, `fimDaCena`,
+    `fimDoTurno`, `checagem` de um personagem) em todas as fichas de Vampiro da
+    campanha, com o dado do servidor; `xp { personagens, valor, motivo }`;
+    `maculas { persona, valor, motivo, convicao? }`; `dano { persona, trilha,
+    tipoDeDano, valor, fonte, naoDividir? }`; `pilar { persona, pilar, evento }`;
+    `diablerie { quem, vitima }`;
+  - de quem joga: `alimentarDeVampiro { quem, doador, fome }` e
+    `diretoDaFonte { quem, doador, disciplina }` — quem pede precisa poder editar
+    as DUAS fichas (ou ser o Narrador). A outra ficha só recebe o efeito da
+    regra; nada dela volta além dos eventos.
+- `ler_campanha` traz a ferramenta `cronica` numa campanha de Vampiro e, depois
+  de uma troca de sistema, entre as `guardadas` (se houver crônica gravada);
+  `sincronizar_campanha` tem a parte `vampiro`.
+- Rolagem (`registrar_rolagem`): o resultado pode levar `marcas` — uma por
+  face, `"fome"` nos dados de Fome; o histórico mostra "de Fome: …".
+
 ## A plataforma e os sistemas — v4.0
 
 Ver [SISTEMAS.md](SISTEMAS.md). As ações de um sistema vêm do arquivo dele

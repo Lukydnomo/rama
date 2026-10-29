@@ -60,6 +60,7 @@
     "ler_hexatombe",
     "ler_hacking",
     "ler_oblivio",
+    "ler_vampiro",
 
     "salvar_foto",
     "salvar_perfil",
@@ -86,6 +87,9 @@
        mesa e pelas fichas que ela tocou. */
     "salvar_oblivio",
     "oblivio_operar",
+    /* E para a crônica de Vampiro (v5.0): o mesmo esquema. */
+    "salvar_vampiro",
+    "vampiro_operar",
 
     /* registrar_rolagem repete com segurança porque carrega um id
        próprio: o servidor reconhece a segunda chegada e não cria a
@@ -179,6 +183,8 @@
     salvar_hacking: true,
     salvar_oblivio: true,
     oblivio_operar: true,
+    salvar_vampiro: true,
+    vampiro_operar: true,
   };
 
   var LEITURAS = {};
@@ -806,6 +812,19 @@
   function oblivioOperar(campanhaId, opId, operacao) {
     return post({ acao: "oblivio_operar", campanhaId: campanhaId, opId: opId, operacao: operacao });
   }
+  /* Vampiro (v5.0): a crônica do Narrador — o mesmo esquema do
+     Oblívio. Quem não é o Narrador recebe só a vista dos jogadores; as
+     operações que tocam fichas (momentos, XP, Máculas, alimentar-se de
+     outro vampiro) são aplicadas e conferidas pelo servidor. */
+  function lerVampiro(campanhaId, opcoes) {
+    return post({ acao: "ler_vampiro", campanhaId: campanhaId }, opcoes);
+  }
+  function salvarVampiro(campanhaId, rev, opId, estado) {
+    return post({ acao: "salvar_vampiro", campanhaId: campanhaId, rev: rev, opId: opId, estado: estado });
+  }
+  function vampiroOperar(campanhaId, opId, operacao) {
+    return post({ acao: "vampiro_operar", campanhaId: campanhaId, opId: opId, operacao: operacao });
+  }
   /* Sincronia Conectiva (v2.48, AS5): gastar PE de outro sincronizado ou
      assumir o dano dele — o servidor confere a sincronia dos dois lados. */
   function sincroniaOperar(pedido) {
@@ -1136,6 +1155,9 @@
     lerOblivio: lerOblivio,
     salvarOblivio: salvarOblivio,
     oblivioOperar: oblivioOperar,
+    lerVampiro: lerVampiro,
+    salvarVampiro: salvarVampiro,
+    vampiroOperar: vampiroOperar,
     sincroniaOperar: sincroniaOperar,
     lerImagemDoTurno: lerImagemDoTurno,
     excluirCombate: excluirCombate,

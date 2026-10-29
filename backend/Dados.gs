@@ -381,6 +381,19 @@ var ABAS = {
     leves: 4,
     pesadas: ['dadosJson'],
   },
+  CAMPANHA_VAMPIRO: {
+    /* A crônica de Vampiro: A Máscara (v4.1): sessões, noites, cenas,
+       Princípios, coterie e Domínio, PNs, Mapa de Relacionamentos,
+       conflitos, testes estendidos, Memoriam, Prestação e o registro —
+       uma linha por campanha. Só o Narrador (mestre) grava o estado;
+       os jogadores recebem a vista (Vampiro.gs). Trocar o sistema da
+       campanha não apaga a linha: ela volta quando Vampiro voltar. */
+    nome: 'CAMPANHA_VAMPIRO',
+    colunas: ['campanhaId', 'atualizadoEm', 'rev', 'opsJson', 'dadosJson'],
+    chave: 'campanhaId',
+    leves: 3,
+    pesadas: ['dadosJson'],
+  },
   CAMPANHA_CAPAS: {
     /* A capa (banner) da campanha. Fora do dadosJson pelo mesmo motivo
        da foto de personagem: é o campo mais pesado e o que menos muda.

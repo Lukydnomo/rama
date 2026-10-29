@@ -161,6 +161,14 @@
      Oblívio como universal e apagaria o bloco ao gravar — com o schema
      maior ela recusa.
 
+     24 → 25: Vampiro: A Máscara, V5 (v4.1). A ficha aceita
+     `tipoFicha: "vampiro"` e o bloco `vampiro` (js/vampiro/regras.js):
+     escolhas da criação, compras de XP e ajustes em camadas, Fome,
+     Humanidade e Máculas, trilhas com dano Superficial e Agravado,
+     estados, efeitos, Laços e o registro de operações. Sem conversão. A
+     v4.0 já preserva um sistema que não conhece (só leitura); o schema
+     maior faz as abas ainda mais antigas recusarem em vez de gravar.
+
      Nenhuma das subidas exige migração: normalizarFicha() cria o que
      falta, vazio, e não toca no que existe. Um ritual gravado na 2 abre
      na 3 com a versão Normal em branco; uma ficha de Ordem gravada na 4
@@ -170,7 +178,7 @@
      os campos novos e os descartaria ao gravar — com o schema maior ela
      recusa abrir a ficha e pede para recarregar.
      Ver docs/CHARACTER_SCHEMA.md. */
-  var VERSAO_SCHEMA = 24;
+  var VERSAO_SCHEMA = 25;
 
   var MODULOS = {
     atributos: "Atributos", status: "Status/recursos", defesa: "Defesa",

@@ -13,7 +13,7 @@
 
 import { instalarAmbiente, chamar, comoOSheetsGuarda } from "./apps-script-simulado.js";
 
-const ARQUIVOS = ["backend/Dados.gs", "backend/Codigo.gs", "backend/Campanhas.gs", "backend/Sistemas.gs", "backend/Ordem.gs", "backend/Universal.gs", "backend/Cris.gs", "backend/Feedback.gs", "backend/Oblivio.gs"];
+const ARQUIVOS = ["backend/Dados.gs", "backend/Codigo.gs", "backend/Campanhas.gs", "backend/Sistemas.gs", "backend/Ordem.gs", "backend/Universal.gs", "backend/Cris.gs", "backend/Feedback.gs", "backend/Oblivio.gs", "backend/Vampiro.gs"];
 
 /* O simulador silencia o console para o backend não encher a saída com
    os avisos do setupRama. O relatório dos testes precisa de uma porta
@@ -2308,7 +2308,7 @@ t.grupo("Marcas da mesa — sincronização leve");
 
   const marcas = (como) => comoFn(como)({ acao: "sincronizar_campanha", campanhaId: mesa });
   const m0 = marcas(ana);
-  t.ok("a jogadora recebe as marcas da mesa", m0.ok && m0.dados.papel === "jogador" && Object.keys(m0.dados.marcas).length === 10); // + oblivio (v3.0)
+  t.ok("a jogadora recebe as marcas da mesa", m0.ok && m0.dados.papel === "jogador" && Object.keys(m0.dados.marcas).length === 11); // + oblivio (v3.0), vampiro (v4.1)
   t.iguais("ler_campanha traz as mesmas marcas como ponto de partida", comoAna({ acao: "ler_campanha", campanhaId: mesa }).dados.marcas, m0.dados.marcas);
 
   const contador = ambiente.contador;
@@ -4844,6 +4844,8 @@ await testarOblivioBackend({ t, preparar, novaConta, comoFn, chamar });
 (0, eval)(await Deno.readTextFile(new URL("../js/sistemas.js", import.meta.url)));
 const { testarSistemasBackend } = await import("./sistemas-backend.js");
 await testarSistemasBackend({ t, preparar, novaConta, comoFn });
+const { testarVampiroBackend } = await import("./vampiro-backend.js");
+await testarVampiroBackend({ t, preparar, novaConta, comoFn });
 const { testarFeedbackBackend } = await import("./feedback-backend.js");
 await testarFeedbackBackend({ t, preparar, novaConta, comoFn, chamar, ambiente });
 const { testarCompartilhamentoBackend } = await import("./compartilhamento-backend.js");

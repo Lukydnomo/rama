@@ -131,6 +131,38 @@
       },
     },
     {
+      id: "vampiro", nome: "Vampiro: A Máscara", curto: "Vampiro", edicao: "V5",
+      resumo: "5ª edição (V5): Fome, Humanidade, Disciplinas e a crônica inteira.",
+      capa: "assets/sistemas/vampiro-capa.webp", capaAlt: "Capa de Vampiro: A Máscara, 5ª edição: o título em branco sobre um rosto em tons de magenta e vermelho",
+      ficha: {
+        bloco: "vampiro", motor: "RAMAVampiro",
+        resumo: { campo: "resumoVampiro", calcular: "resumoParaMesa", normalizarAntes: true },
+        pontos: [
+          "Criação guiada em 12 etapas, com clã, Predador e o Mar do Tempo",
+          "Dados de Fome, críticos e falhas bestiais, Força de Vontade com escolha",
+          "Fome, Humanidade, Máculas, Remorso, frenesi e Compulsões",
+          "Disciplinas, Rituais e Alquimia Sangue-Ralo com custos e efeitos",
+        ],
+        blocoSuperior: "RAMASecaoVampiro",
+        abas: [
+          { chave: "geral",        rotulo: "Personagem",  secao: "RAMASecaoVampiro" },
+          { chave: "disciplinas",  rotulo: "Disciplinas", secao: "RAMASecaoVampiroDisciplinas" },
+          { chave: "sangue",       rotulo: "Sangue",      secao: "RAMASecaoVampiroSangue" },
+          { chave: "humanidade",   rotulo: "Humanidade",  secao: "RAMASecaoVampiroHumanidade" },
+          { chave: "vantagens",    rotulo: "Vantagens",   secao: "RAMASecaoVampiroVantagens" },
+          { chave: "experiencia",  rotulo: "Experiência", secao: "RAMASecaoVampiroExperiencia" },
+          { chave: "inventario",   rotulo: "Equipamento", secao: "RAMASecaoVampiroEquipamento" },
+          { chave: "anotacoes",    rotulo: "Anotações",   secao: "RAMASecaoAnotacoes", independente: true },
+        ],
+      },
+      campanha: {
+        mestre: "Narrador",
+        descricao: "A crônica do Narrador: sessões, noites e cenas, Princípios, coterie e Domínio, Mapa de Relacionamentos, conflitos, caçadas e PNs.",
+        ferramentas: ["cronica"],
+        mecanicas: [],
+      },
+    },
+    {
       id: "universal", nome: "Universal", curto: "Universal",
       resumo: "O modelo flexível do R.A.M.A., para qualquer sistema.",
       ficha: {
@@ -264,6 +296,7 @@
   var NOMES_DE_FERRAMENTA = {
     combate: "Combate", condicoes: "condições e efeitos por turno", sincronia: "Sincronia Conectiva",
     oblivio: "mesa da Testemunha",
+    cronica: "crônica do Narrador",
   };
   function nomeDaFerramenta(chave) {
     if (NOMES_DE_FERRAMENTA[chave]) return NOMES_DE_FERRAMENTA[chave];

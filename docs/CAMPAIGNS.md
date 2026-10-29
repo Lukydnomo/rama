@@ -44,18 +44,29 @@ O espectador de campanha pública não tem abas: vê o nome, a capa e a descriç
 
 ### O sistema da campanha (v4.0)
 
-Toda campanha tem um sistema de RPG — Ordem Paranormal, Oblívio ou Universal —,
+Toda campanha tem um sistema de RPG — Ordem Paranormal, Oblívio, Vampiro: A Máscara ou Universal —,
 escolhido na criação (com a capa de cada um) e mostrado na lista, no topo da
 campanha e no seletor de campanha da ficha. O sistema decide as abas de
 sistema e o que o servidor aceita; o resto (Visão geral, Personagens, Rolagens,
 Documentos, Notas, Configurações) é da plataforma e existe em todas.
 
-| | Ordem Paranormal | Oblívio | Universal |
-|---|---|---|---|
-| quem conduz | Mestre | Testemunha | Mestre |
-| Combate (rastreador do núcleo) | sim, com condições e efeitos contados por turno | não (a mesa conduz as cenas) | sim, sem automação nas fichas |
-| ferramentas próprias | Sincronia Conectiva | mesa da Testemunha | — |
-| mecânicas opcionais | Hexatombe, Hacking, Perigos complexos | — | — |
+| | Ordem Paranormal | Oblívio | Vampiro (v5.0) | Universal |
+|---|---|---|---|---|
+| quem conduz | Mestre | Testemunha | Narrador | Mestre |
+| Combate (rastreador do núcleo) | sim, com condições e efeitos contados por turno | não (a mesa conduz as cenas) | não (conflitos na crônica) | sim, sem automação nas fichas |
+| ferramentas próprias | Sincronia Conectiva | mesa da Testemunha | Crônica | — |
+| mecânicas opcionais | Hexatombe, Hacking, Perigos complexos | — | — | — |
+
+**A Crônica (Vampiro, v5.0).** A aba do Narrador: época, história, sessão,
+noite, cena (destaque, abstraída, interlúdio; modo de jogo) e turno — cada passo
+gera os momentos certos nas fichas de Vampiro da campanha, aplicados pelo
+servidor (a sessão não é uma noite; a noite traz a Checagem do despertar; o fim
+da sessão, Ambição, XP e Remorso). Também: XP, Máculas, dano, Checagem pedida e
+Diablerie nas fichas; Princípios da Crônica; coterie e Domínio com a parada;
+PNs e antagonistas a partir dos modelos do livro (copiados), visíveis ou
+ocultos; o Mapa de Relacionamentos; conflitos; testes estendidos; Memoriam;
+favores; e o registro, com notas privadas. Os jogadores veem a vista deles,
+calculada no servidor. Ver [VAMPIRO.md](VAMPIRO.md).
 
 - **Trocar o sistema** é do mestre, em **Configurações → Sistema da campanha**.
   Antes de confirmar, a tela lista o que fica suspenso, o que passa a valer, o

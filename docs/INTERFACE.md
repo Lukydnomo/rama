@@ -121,6 +121,7 @@ das folhas. Cada linha diz onde o Modern20 a trata.
 | Criação de ficha | tipo de ficha (cartões com a capa do sistema, v3.0), criação guiada de Ordem (trilha de passos, atributos, opções, perícias), revisão | componentes.css |
 | Sistema da campanha (v4.0) | escolha do sistema na criação da campanha (rádios com a capa e o que a mesa oferece, `.escolha-sistema`), painel "Sistema da campanha" em Configurações (o atual com a capa, a troca e a janela de impactos, `.sistema-atual`, `.impacto-troca`), sistema na lista de campanhas, no topo da campanha e no seletor de campanha da ficha | componentes.css |
 | Oblívio (v3.0) | capa do sistema (`js/capa-sistema.js`: volume com lombada, três tamanhos, lombada desenhada sem capa), criação guiada em 8 etapas (Papéis em cartões, atributos, especializações, corpo, catálogo de equipamentos, Motivação, revisão), bloco da Persona (fixos, mutáveis, Coragem, pendências, faixa "Na mesa"), diagrama do corpo (figura `aria-hidden` + lista de botões com tudo em texto), Conhecimentos, ataque com resolução pendente e dados por resultado, inventário, habilidades, Mazelas, aba Oblívio da campanha (Ordem de Ação, fileiras, Farol, Ameaças, mapa do Buraco) | oblivio.css |
+| Vampiro (v5.0) | criação guiada em 12 etapas (trilha de passos com ✓ e "pendente", cartões de clã, idade e Predador, pontos ●○ clicáveis, contadores ao vivo, pendências por etapa), bloco superior (trilhas de Vitalidade e Força de Vontade com "/" e "X", Fome em losangos, Humanidade com Máculas tracejadas, Potência), atributos e Habilidades com composição, janela da rolagem pendente (dado de Fome em losango com símbolo ◆ ☠ ✶ e rótulo de leitor; seleção de até 3 dados para rerrolar), Disciplinas e poderes em cartões, Sangue, Humanidade, Vantagens, Experiência, Equipamento, aba Crônica da campanha (tempo, fichas, coterie e Domínio, PNs, Mapa de Relacionamentos em lista, conflitos, testes estendidos, Memoriam, favores, registro) | vampiro.css |
 | Ficha (todas) | topo fixo, modo Normal/Edição, estado do salvamento, avisos (edição, mestre, acesso, leitura), foto, abas | ficha.css |
 | Ficha universal | atributos, status com barra, defesa, perícias, edição de perícia, inventário, anotações (árvore e editor), habilidades (árvore e pastas) | ficha.css, componentes.css |
 | Ficha de Ordem | atributos, recursos (PV, PE, SAN, PD com cor), calculados e composição, perícias em tabela (desktop e celular), progressão, pendências e escolhas, poderes, condições e efeitos, consumo, carga, aba Regras (categorias, busca, filtro, interruptor), Arquivos Secretos 2–5, aliados | ficha.css, componentes.css |
@@ -152,6 +153,13 @@ das folhas. Cada linha diz onde o Modern20 a trata.
   revisados no navegador nos dois estilos e a 375 px (sem rolagem horizontal).
   Estado nunca só por cor: região esgotada riscada, prótese tracejada, ausente
   pontilhada, resultado do dado escrito e com traço lateral próprio.
+- **Vampiro (v5.0):** `css/vampiro.css` (Legacy) e `css/modern20/vampiro.css`,
+  revisados no navegador nos dois estilos e a 375 px (sem rolagem horizontal na
+  ficha e na crônica). As cores vêm só dos tokens do tema (`--cor-elemento-sangue`
+  na Fome, `--cor-vida`, `--cor-sanidade`); o vermelho fica reservado à Fome.
+  Estado nunca só por cor: "/" Superficial, "X" Agravado, Mácula tracejada, dado
+  de Fome em losango com símbolo e texto ("dado de Fome: 10, crítico de Fome"),
+  `forced-colors` respeitado.
 - **Regressão do Legacy:** a v2.48.4 servida lado a lado
   (`testes/servidor-local.js --site <pasta da v2.48.4>`) e, em cada página, a
   comparação dos estilos calculados de todos os elementos (55 propriedades e os

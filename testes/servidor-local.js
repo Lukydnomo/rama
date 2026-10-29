@@ -58,7 +58,7 @@ const ambiente = instalarAmbiente(globalThis);
 /* O núcleo é obrigatório; os arquivos de sistema e os opcionais, não —
    um backend de versão anterior (para comparar) não os tem. */
 const NUCLEO = ["Dados.gs", "Codigo.gs", "Campanhas.gs"];
-for (const arq of NUCLEO.concat(["Sistemas.gs", "Ordem.gs", "Universal.gs", "Oblivio.gs", "Cris.gs", "Feedback.gs"])) {
+for (const arq of NUCLEO.concat(["Sistemas.gs", "Ordem.gs", "Universal.gs", "Oblivio.gs", "Vampiro.gs", "Cris.gs", "Feedback.gs"])) {
   try {
     (0, eval)(await Deno.readTextFile(new URL(arq, urlDaPasta(PASTA_BACKEND))));
   } catch (e) {

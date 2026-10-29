@@ -80,6 +80,8 @@
     /* Oblívio (v3.0): a mesa da Testemunha — Missão, cenas, Farol,
        encontros com Ameaças e Buracos. */
     { chave: "oblivio",     rotulo: "Mesa da Testemunha", secao: "RAMACampanhaOblivio", ferramenta: "oblivio" },
+    /* Vampiro: A Máscara (v4.1): a crônica do Narrador. */
+    { chave: "cronica",     rotulo: "Crônica",     secao: "RAMACampanhaVampiro", ferramenta: "cronica" },
     { chave: "notas",       rotulo: "Notas",       secao: "RAMACampanhaNotas", soMestre: true },
     { chave: "config",      rotulo: "Configurações", secao: "RAMACampanhaConfig", soMestre: true },
   ];
@@ -354,6 +356,7 @@
       tipo: l.tipo,
       expressao: res.expressao || "",
       rolagens: res.rolagens || [],
+      marcas: Array.isArray(res.marcas) ? res.marcas : undefined,
       natural: res.natural !== null ? res.natural : undefined,
       total: res.total,
       parcelas: res.parcelas || [],
@@ -445,6 +448,7 @@
     if (tem("hacking")) notificar("hacking");
     if (tem("perigos")) notificar("perigos");
     if (tem("oblivio")) notificar("oblivio");
+    if (tem("vampiro")) notificar("cronica");
   }
 
   async function buscarPersonagensEmSegundoPlano() {
@@ -565,7 +569,7 @@
   }
 
   /* As abas que desenham fichas da mesa. As outras não pagam por ela. */
-  var PRECISAM_DA_MESA = { personagens: true, combate: true, notas: true, hexatombe: true, hacking: true, perigos: true, oblivio: true };
+  var PRECISAM_DA_MESA = { personagens: true, combate: true, notas: true, hexatombe: true, hacking: true, perigos: true, oblivio: true, cronica: true };
 
   function desenhar() {
     if (estado.semAcesso) return;
