@@ -375,6 +375,52 @@
       ]
     },
     {
+      "id": "elemento-energia",
+      "nome": "Energia",
+      "descricao": "O Caos é inevitável.",
+      "versoes": [
+        {
+          "versao": 1,
+          "previa": "assets/dados/temas/elemento-energia/v1/previa.png",
+          "dado": {
+            "mascara": "assets/dados/mascaras/d20-v1.svg",
+            "base": "assets/dados/temas/elemento-energia/v1/base.png",
+            "camadas": []
+          },
+          "notificacao": {
+            "fundo": "assets/dados/temas/elemento-energia/v1/fundo.png",
+            "ajusteFundo": {
+              "modo": "zoom-pela-altura",
+              "alinhamentoHorizontal": 0.5
+            },
+            "cores": {
+              "superficie": "#090812",
+
+              "texto": "#FFF9FF",
+              "texto2": "#DDD9F2",
+              "texto3": "#AAA4C4",
+
+              "tracoForte": "#FF00E6",
+              "tracoMedia": "#3D5BFF",
+              "tracoFraca": "#353052",
+
+              "selecao": "#FFD900",
+              "selecaoTexto": "#111008",
+
+              "paranormal": "#00E7FF",
+              "erro": "#FF4778",
+              "aviso": "#FFD900"
+            },
+
+            "veu": {
+              "cor": "#05040A",
+              "alfa": 0.34
+            }
+          }
+        }
+      ]
+    },
+    {
       id: "sigilo-violeta",
       nome: "Sigilo Violeta",
       descricao: "Violeta com um sigilo gravado no dado, faíscas em volta e linhas de néon no fundo.",
