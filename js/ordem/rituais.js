@@ -69,6 +69,7 @@
     ["AS3", "Arquivos Secretos 3", "Arquivos Secretos 3", "AS3"],
     ["AS4", "Arquivos Secretos 4", "Arquivos Secretos 4", "AS4"],
     ["AS5", "Arquivos Secretos 5", "Arquivos Secretos 5", "AS5"],
+    ["EXTRA", "Extra", "Extra", "EX"],
   ];
   function mapaDeLivros(campo, indice) {
     var Cat = global.RAMAOrdemCatalogo;
@@ -345,7 +346,35 @@
   }
 
   function referencia(e) {
+    /* Extra (v5.1): conteúdo oficial avulso — sem livro nem página. */
+    if (e.fonte === "EXTRA") return (NOME_FONTE.EXTRA || "Extra") + (e.material ? " · " + e.material : "");
     return (NOME_FONTE[e.fonte] || e.fonte) + (e.pagina > 0 ? ", p. " + e.pagina : " (página não informada)");
+  }
+
+  /* Rituais do catálogo cuja fonte foi corrigida depois de copiados para
+     fichas. A cópia guarda a fonte de quando foi trazida; aqui ela passa
+     a mostrar a certa, sem trocar id, mecânica nem vínculos — o mesmo
+     ritual, não outro. Barganha Insana veio de um marca-página (v5.1). */
+  var FONTES_CORRIGIDAS = {
+    "op.ritual.barganha-insana": {
+      fonte: "EXTRA", material: "Marca-página",
+      textos: [
+        ["Fonte: Ordem Paranormal RPG (página não informada).", "Fonte: Extra · Marca-página."],
+        ["Nota: Entrada do livro básico por decisão da mesa: o ritual não foi localizado nos PDFs disponíveis, e a página não é informada.",
+          "Nota: Conteúdo oficial avulso (Extra): o ritual veio de um marca-página, não de um livro — por isso não há página."],
+      ],
+    },
+  };
+
+  function corrigirFonteDoCatalogo(ritual) {
+    var c = ritual && FONTES_CORRIGIDAS[ritual.origemCatalogoId];
+    if (!c) return ritual;
+    if (ritual.ordem && ritual.ordem.referencia) ritual.ordem.referencia = { fonte: c.fonte, material: c.material };
+    ["complemento", "descricao"].forEach(function (campo) {
+      if (typeof ritual[campo] !== "string") return;
+      c.textos.forEach(function (par) { ritual[campo] = ritual[campo].split(par[0]).join(par[1]); });
+    });
+    return ritual;
   }
 
   /* Regras que acompanham o tipo de ritual — escritas uma vez aqui, e
@@ -550,7 +579,7 @@
         elemento: elemento,
         circulo: e.circulo,
         custo: e.custo,
-        referencia: { fonte: e.fonte, pagina: e.pagina },
+        referencia: e.material ? { fonte: e.fonte, material: e.material } : { fonte: e.fonte, pagina: e.pagina },
       }, e.todosOsElementos ? { elementos: e.elementos.slice(), todosOsElementos: true } : {}),
       versoes: e.versoes.map(function (v) {
         var versao = { nome: v.nome, dano: v.dano, danoExtra: v.danoExtra };
@@ -669,8 +698,10 @@
       if (FONTES.indexOf(fonte) >= 0 && pagina > 0 && pagina < 2000) {
         saida.referencia = { fonte: fonte, pagina: pagina };
       } else if (FONTES.indexOf(fonte) >= 0) {
-        /* Fonte confirmada, página não (Barganha Insana, v2.41). */
+        /* Fonte sem página: conteúdo Extra (v5.1), com o material dele. */
         saida.referencia = { fonte: fonte };
+        var material = String(bruto.referencia.material || "").trim().slice(0, 80);
+        if (material) saida.referencia.material = material;
       }
     }
 
@@ -724,6 +755,7 @@
     requisitos: requisitos,
     naFicha: naFicha,
     referencia: referencia,
+    corrigirFonteDoCatalogo: corrigirFonteDoCatalogo,
     rotuloCirculo: rotuloCirculo,
     nomeDoElemento: nomeDoElemento,
     custoDoCirculo: custoDoCirculo,

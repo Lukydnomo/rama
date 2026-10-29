@@ -1889,6 +1889,8 @@
   function referencia(p, classe) {
     if (!p) return "";
     var C = global.RAMAOrdemCatalogo;
+    /* Extra (v5.1): sem página — o material de onde veio. */
+    if (C && C.ehAvulsa && C.ehAvulsa(p.fonte)) return C.referencia(p);
     var livro = C && C.nomeDoLivro ? C.nomeDoLivro(p.fonte) : (p.fonte === SAH ? "Sobrevivendo ao Horror" : "Ordem Paranormal RPG");
     return livro + ", p. " + paginaPara(p, classe);
   }

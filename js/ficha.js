@@ -1155,6 +1155,11 @@
         : JSON.parse(JSON.stringify(bruto.ordem));
       if (dados) ritual.ordem = dados;
     }
+    /* v5.1: a fonte corrigida de um ritual do catálogo (Barganha Insana:
+       Extra, marca-página) — o mesmo ritual, só a fonte exibida. */
+    if (global.RAMAOrdemRituais && global.RAMAOrdemRituais.corrigirFonteDoCatalogo) {
+      global.RAMAOrdemRituais.corrigirFonteDoCatalogo(ritual);
+    }
   }
 
   /* v2.13 → v2.14: o texto longo do ritual saiu de `efeito` para

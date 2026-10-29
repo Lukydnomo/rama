@@ -29,9 +29,12 @@
             (Eletrocussão, Coincidência Forçada, Tela de Ruído…) são ações
             das ameaças, com os números delas, e não entram aqui
 
-   Barganha Insana (v2.41) entra no livro básico por decisão da mesa,
-   SEM página: o ritual não está em nenhum PDF disponível, e a entrada
-   não inventa uma. A tela mostra "página não informada".
+     EXTRA  conteúdo oficial avulso, fora dos livros (v5.1)
+            Barganha Insana — veio de um marca-página. Sem livro e sem
+            página: o material fica em `material`. Até a v5.0 ele estava
+            no livro básico, "sem página informada"; o id não mudou, e as
+            fichas que já o têm passam a mostrar a fonte certa
+            (RAMAOrdemRituais.corrigirFonteDoCatalogo).
 
    As páginas são as do livro, não as do PDF. Os resumos são redação
    própria: guardam os números, as condições e os testes que o jogo
@@ -102,6 +105,7 @@
   var AS1 = "AS1";
   var AS2 = "AS2";
   var AS4 = "AS4";
+  var EX = "EXTRA";
 
   var CO = "conhecimento";
   var EN = "energia";
@@ -205,7 +209,7 @@
     },
 
     {
-      id: "op.ritual.barganha-insana", nome: "Barganha Insana", elemento: MO, circulo: 3, fonte: OP, pagina: null,
+      id: "op.ritual.barganha-insana", nome: "Barganha Insana", elemento: MO, circulo: 3, fonte: EX, material: "Marca-página", pagina: null,
       execucao: "completa", alcance: "pessoal", alvo: "você", duracao: "instantânea",
       resumo: "Você contata a entidade da Morte e entrega a ela parte da sua percepção temporal da Realidade em troca da restauração plena da sua saúde: recupera todos os seus PV e PE e elimina as condições negativas que o afetam. No fim da cena, perde 1d4 pontos de Sanidade permanentemente.",
       efeitos: [
@@ -214,7 +218,7 @@
         "A cada conjuração, a pele fica mais acinzentada e o sangue mais escuro.",
         "Ocultistas temem que muitas conjurações o transformem num Luzídio, mas ninguém sabe quantas seriam necessárias: é decisão do mestre.",
       ],
-      notas: ["Entrada do livro básico por decisão da mesa: o ritual não foi localizado nos PDFs disponíveis, e a página não é informada."],
+      notas: ["Conteúdo oficial avulso (Extra): o ritual veio de um marca-página, não de um livro — por isso não há página."],
     },
     {
       id: "op.ritual.canalizar-o-medo", nome: "Canalizar o Medo", elemento: ME, circulo: 4, fonte: OP, pagina: 125,

@@ -1181,8 +1181,8 @@
           return o.pericias.length + (o.periciasAEscolher || 0) === 2;
         }).length, OC.ORIGENS.length);
 
-      t.ok("toda origem tem página do livro",
-        OC.ORIGENS.every(function (o) { return o.pagina > 0; }));
+      t.ok("toda origem de livro tem página; a Extra (v5.1) tem o material, sem página inventada",
+        OC.ORIGENS.every(function (o) { return o.fonte === "EXTRA" ? (!o.pagina && !!o.material) : o.pagina > 0; }));
       t.ok("toda trilha tem quatro poderes",
         OC.TRILHAS.every(function (tr) { return tr.poderes.length === 4; }));
       t.ok("nos NEX 10, 40, 65 e 99",
@@ -1397,7 +1397,8 @@
         var todasOrig = secOrig.reduce(function (l, s) { return l.concat(s.entradas); }, []);
         t.igual("a aba Origens lista o poder de todas as origens do catálogo", todasOrig.length, OC.ORIGENS.length);
         t.ok("  cada uma com nome do poder, origem, descrição e fonte", todasOrig.every(function (x) {
-          return x.entrada.nome && x.entrada.origemNome && x.entrada.resumo && /p\. \d+/.test(global.RAMAOrdemPoderes.referencia(x.entrada));
+          return x.entrada.nome && x.entrada.origemNome && x.entrada.resumo &&
+            (x.entrada.fonte === "EXTRA" ? /^Extra · .+/.test(global.RAMAOrdemPoderes.referencia(x.entrada)) : /p\. \d+/.test(global.RAMAOrdemPoderes.referencia(x.entrada)));
         }));
         t.igual("  a busca acha pelo nome do poder", OB.filtrar(secOrig, "saber e poder").reduce(function (n, s) { return n + s.entradas.length; }, 0), 1);
         t.ok("  e pelo nome da origem", OB.filtrar(secOrig, "academico").some(function (s) { return s.entradas.some(function (x) { return x.entrada.nome === "Saber é Poder"; }); }));
@@ -3385,7 +3386,8 @@
         porCirculo[e.circulo] = (porCirculo[e.circulo] || 0) + 1;
         e.elementos.forEach(function (el) { porElemento[el] = (porElemento[el] || 0) + 1; });
       });
-      t.igual("83 do livro básico (com Barganha Insana)", porFonte.OPRPG, 83);
+      t.igual("82 do livro básico", porFonte.OPRPG, 82);
+      t.igual("1 Extra (Barganha Insana, marca-página — v5.1)", porFonte.EXTRA, 1);
       t.igual("16 do Sobrevivendo ao Horror", porFonte.SAH, 16);
       t.igual("2 do Arquivos Secretos 1", porFonte.AS1, 2);
       t.igual("4 do Arquivos Secretos 2", porFonte.AS2, 4);
@@ -3407,8 +3409,8 @@
       t.ok("toda entrada tem nome, resumo, elemento, círculo, execução, alcance, fonte e página (sem página só com a nota dizendo por quê)",
         catalogoR.rituais.every(function (e) {
           return e.nome && e.resumo && e.elementos.length && e.circulo >= 1 && e.circulo <= 4 &&
-            e.execucao && e.alcance && ["OPRPG", "SAH", "AS1", "AS2", "AS4"].indexOf(e.fonte) >= 0 &&
-            (e.pagina > 0 || e.notas.some(function (n) { return /página não é informada/.test(n); }));
+            e.execucao && e.alcance && ["OPRPG", "SAH", "AS1", "AS2", "AS4", "EXTRA"].indexOf(e.fonte) >= 0 &&
+            (e.fonte === "EXTRA" ? !(e.pagina > 0) && !!e.material : e.pagina > 0 || e.notas.some(function (n) { return /página não é informada/.test(n); }));
         }));
       t.ok("onde a duração falta, é porque o livro não informa — e a entrada registra isso",
         catalogoR.rituais.filter(function (e) { return !e.duracao; }).every(function (e) {
@@ -3502,7 +3504,10 @@
       var contagens = RS.contagens(catalogoR, { elemento: "sangue" });
       t.igual("a contagem de círculos respeita o elemento escolhido", contagens.circulos[2], 8);
       t.igual("  e a de elementos ignora o próprio filtro de elemento", contagens.elementos.morte, 25);
-      t.iguais("as cinco fontes aparecem no catálogo", RS.fontesDoCatalogo(catalogoR).sort(), ["AS1", "AS2", "AS4", "OPRPG", "SAH"]);
+      t.iguais("as seis fontes aparecem no catálogo (com a Extra, v5.1)", RS.fontesDoCatalogo(catalogoR).sort(), ["AS1", "AS2", "AS4", "EXTRA", "OPRPG", "SAH"]);
+      t.ok("  a Extra vem depois dos livros, na ordem do registro", RS.fontesDoCatalogo(catalogoR).indexOf("EXTRA") === RS.fontesDoCatalogo(catalogoR).length - 1);
+      t.iguais("o filtro Extra traz só a Barganha Insana", nomesR(RS.filtrar(catalogoR, { fonte: "EXTRA" })), ["Barganha Insana"]);
+      t.igual("  e a contagem do filtro conta 1", RS.contagens(catalogoR, {}).fontes.EXTRA, 1);
       var grupos = RS.porCirculo(RS.filtrar(catalogoR, { elemento: "medo" }));
       t.iguais("agrupado por círculo, com o custo de cada um",
         grupos.map(function (g) { return g.circulo + ":" + g.entradas.length + ":" + g.custo; }).join(" "),
@@ -3520,7 +3525,7 @@
       t.ok("os detalhes de TODOS não têm valor vazio", catalogoR.rituais.every(function (e) { return semVazioR(RS.detalhes(e)); }));
       t.ok("  e todos dizem o custo e a fonte com página (ou que ela não foi informada)", catalogoR.rituais.every(function (e) {
         var rotulos = RS.detalhes(e).map(function (p) { return p[0]; });
-        return rotulos.indexOf("Custo") >= 0 && RS.detalhes(e).some(function (p) { return p[0] === "Fonte" && /p\. \d+|página não informada/.test(p[1]); });
+        return rotulos.indexOf("Custo") >= 0 && RS.detalhes(e).some(function (p) { return p[0] === "Fonte" && /p\. \d+|página não informada|^Extra · /.test(p[1]); });
       }));
       t.ok("o resumo compacto não repete o círculo e o elemento (já estão na classificação)",
         RS.resumoCompacto(cica).every(function (p) { return p[0] !== "Círculo" && p[0] !== "Elemento"; }));
@@ -4738,6 +4743,11 @@
     /* v2.42 — ORDEM DAS PERÍCIAS DA UNIVERSAL */
     if (global.RAMAFicha && global.RAMAValidacao && global.RAMASync) casosDaV242(t, global.RAMAFicha, global.RAMAValidacao, global.RAMASync);
 
+    /* v5.1 — REVOLTADO E A FONTE EXTRA */
+    if (RRs && global.RAMAOrdemRituais && global.RAMAOrdemRituaisDados && global.RAMAOrdemProgressao && global.RAMAFicha) {
+      casosDaV51(t, global.RAMAOrdemCatalogo, RRs, global.RAMAOrdemProgressao, global.RAMAOrdemRituais, global.RAMAFicha, global.RAMAOrdemBiblioteca || null);
+    }
+
     /* v2.41 — BARGANHA INSANA */
     if (RRs && global.RAMAOrdemRituais && global.RAMAOrdemRituaisDados && global.RAMAOrdemAprendizado && global.RAMAFicha && global.RAMAValidacao) {
       casosDaV241(t, RRs, global.RAMAOrdemRituais, global.RAMAOrdemAprendizado, global.RAMAFicha, global.RAMAValidacao);
@@ -5156,6 +5166,83 @@
      v2.41 — BARGANHA INSANA
      ================================================================= */
 
+  function casosDaV51(t, C, R, E, RS, F, B) {
+    var INV = { itens: [] };
+    function ficha(extra) {
+      return R.normalizar(JSON.parse(JSON.stringify(Object.assign({
+        classe: "combatente", nex: 5, origem: "revoltado", atributos: { agi: 2, for: 1, int: 1, pre: 2, vig: 2 },
+      }, extra || {}))));
+    }
+
+    t.grupo("v5.1 · a fonte Extra");
+    var ex = C.livro("EXTRA");
+    t.ok("Extra no registro único das fontes: oficial, avulsa, sem edição nem página", ex.sigla === "EXTRA" && ex.curto === "Extra" && ex.avulsa === true && C.ehAvulsa("EXTRA") && !C.ehAvulsa("OPRPG"));
+    t.ok("  a última da lista, depois dos livros", C.LIVROS[C.LIVROS.length - 1].sigla === "EXTRA");
+    t.igual("  a referência é o material, sem livro nem página inventados", C.referencia(C.origem("revoltado")), "Extra · Marca-página de HQ");
+    t.ok("  Extra não é Homebrew: nenhuma entrada Extra tem marca de homebrew", C.ORIGENS.filter(function (o) { return o.fonte === "EXTRA"; }).every(function (o) { return !o.homebrew && !o.origemHomebrewId; }));
+    t.ok("  um livro continua com página", C.referencia(C.origem("academico")) === "Ordem Paranormal RPG, p. 16");
+
+    t.grupo("v5.1 · Revoltado: perícias e criação");
+    var org = C.origem("revoltado");
+    t.ok("origem Revoltado, poder Antes só…, fonte Extra", org && org.nome === "Revoltado" && org.poder === "Antes só…" && org.fonte === "EXTRA" && org.material === "Marca-página de HQ");
+    t.iguais("perícias treinadas: Furtividade e Vontade", org.pericias, ["furtividade", "vontade"]);
+    var rv = ficha();
+    t.ok("  as duas existem no catálogo de perícias (a criação treina pela lista, como nas demais origens)", org.pericias.every(function (k) { return !!C.pericia(k); }) && !org.periciasAEscolher);
+    var criada = ficha({ pericias: { furtividade: "treinado", vontade: "treinado" } });
+    t.ok("  treinadas como a criação grava", R.grauDaPericia(criada, "furtividade") === "treinado" && R.grauDaPericia(criada, "vontade") === "treinado");
+    var base = ficha({ origem: "academico" });
+    t.ok("  e só elas (uma origem de livro não as dá)", R.grauDaPericia(base, "furtividade") !== "treinado");
+
+    t.grupo("v5.1 · Antes só…: os três bônus, só sem aliados em alcance curto");
+    var semMarca = ficha();
+    t.igual("sem a marca, nada: Defesa igual à de outra origem", R.defesa(semMarca, INV).total, R.defesa(base, INV).total);
+    t.igual("  limite de PE igual", R.limiteDeEsforco(semMarca).total, R.limiteDeEsforco(base).total);
+    var bAtl = R.bonusDePericia(semMarca, "atletismo", INV, false).total;
+    var so = ficha({ estadoDasOrigens: { revoltado: { semAliados: true } } });
+    t.igual("marcado: +1 na Defesa", R.defesa(so, INV).total, R.defesa(semMarca, INV).total + 1);
+    t.igual("  +1 em teste de perícia (qualquer uma)", R.bonusDePericia(so, "atletismo", INV, false).total, bAtl + 1);
+    t.igual("  inclusive as da origem", R.bonusDePericia(so, "vontade", INV, false).total, R.bonusDePericia(semMarca, "vontade", INV, false).total + 1);
+    t.igual("  +1 no limite de PE por turno", R.limiteDeEsforco(so).total, R.limiteDeEsforco(semMarca).total + 1);
+    t.igual("  e o máximo de PE NÃO muda", R.pontosDeEsforco(so).total, R.pontosDeEsforco(semMarca).total);
+    t.ok("  cada bônus com parcela própria, dizendo a condição", R.defesa(so, INV).parcelas.some(function (p) { return p.rotulo === "Antes só…" && /sem aliados em alcance curto/.test(p.origem || ""); }) &&
+      R.limiteDeEsforco(so).parcelas.some(function (p) { return p.rotulo === "Antes só…"; }));
+    var volta = R.normalizar(JSON.parse(JSON.stringify(so)));
+    t.ok("  recarregar mantém a marca", volta.estadoDasOrigens.revoltado.semAliados === true && R.defesa(volta, INV).total === R.defesa(so, INV).total);
+    so.estadoDasOrigens.revoltado.semAliados = false;
+    t.ok("desmarcado (um aliado chegou): os três saem", R.defesa(so, INV).total === R.defesa(semMarca, INV).total &&
+      R.bonusDePericia(so, "atletismo", INV, false).total === bAtl && R.limiteDeEsforco(so).total === R.limiteDeEsforco(semMarca).total);
+    var outra = ficha({ origem: "academico", estadoDasOrigens: { revoltado: { semAliados: true } } });
+    t.igual("  a marca guardada de uma origem que a ficha não tem não dá nada", R.defesa(outra, INV).total, R.defesa(base, INV).total);
+    var fb = R.normalizar({ classe: "especialista", nex: 15, origem: "academico", atributos: { agi: 1, for: 1, int: 2, pre: 2, vig: 2 },
+      escolhas: [{ id: "f1", etapa: "d3.poderClasse", tipo: "poderClasse", valor: "flashback", opcoes: { origem: "revoltado" }, registradoEm: "2026-10-29T12:00:00.000Z" }] });
+    var fbSo = R.normalizar(Object.assign(JSON.parse(JSON.stringify(fb)), { estadoDasOrigens: { revoltado: { semAliados: true } } }));
+    t.ok("Flashback em Revoltado: o poder vale com a marca, sem as perícias", R.defesa(fbSo, INV).total === R.defesa(fb, INV).total + 1 &&
+      R.limiteDeEsforco(fbSo).total === R.limiteDeEsforco(fb).total + 1);
+
+    if (B) {
+      t.grupo("v5.1 · bibliotecas e filtros com Extra");
+      var secExtra = B.secoes("origens").filter(function (s) { return s.chave === "origens.EXTRA"; })[0];
+      t.ok("a biblioteca de poderes tem a seção \"Origens · Extra\" com Antes só…", !!secExtra && secExtra.entradas.length === 1 && secExtra.entradas[0].entrada.nome === "Antes só…");
+      t.igual("  a referência da cópia diz Extra e o material", global.RAMAOrdemPoderes.referencia(secExtra.entradas[0].entrada), "Extra · Marca-página de HQ");
+    }
+
+    t.grupo("v5.1 · Barganha Insana: Extra, sem trocar o ritual das fichas");
+    var cat = RS.normalizarCatalogo(global.RAMAOrdemRituaisDados);
+    var bi = cat.porId["op.ritual.barganha-insana"];
+    t.ok("mesmo id, mesma mecânica (Morte, 3º círculo, 6 PE), fonte Extra", bi.elemento === "morte" && bi.circulo === 3 && bi.custo === 6 && bi.fonte === "EXTRA");
+    var antiga = F.normalizarRitual({ id: "rit-velho", nome: "Barganha Insana", origemCatalogoId: "op.ritual.barganha-insana",
+      complemento: "• regra\n\nNota: Entrada do livro básico por decisão da mesa: o ritual não foi localizado nos PDFs disponíveis, e a página não é informada.\n\nFonte: Ordem Paranormal RPG (página não informada).",
+      ordem: { elemento: "morte", circulo: 3, custo: 6, referencia: { fonte: "OPRPG" } } });
+    t.ok("ficha antiga: o mesmo ritual (id e vínculo) passa a mostrar Extra · Marca-página",
+      antiga.id === "rit-velho" && antiga.origemCatalogoId === "op.ritual.barganha-insana" && antiga.ordem.referencia.fonte === "EXTRA" &&
+      antiga.ordem.referencia.material === "Marca-página" && /Fonte: Extra · Marca-página\./.test(antiga.complemento) && !/Ordem Paranormal RPG|livro básico/.test(antiga.complemento));
+    t.ok("  e a mecânica fica como estava", antiga.ordem.circulo === 3 && antiga.ordem.custo === 6 && antiga.ordem.elemento === "morte");
+    var deNovo = F.normalizarRitual(JSON.parse(JSON.stringify(antiga)));
+    t.igual("  normalizar de novo não muda nada", JSON.stringify(deNovo), JSON.stringify(antiga));
+    var outroR = F.normalizarRitual({ id: "x", nome: "Luz", origemCatalogoId: "op.ritual.luz", ordem: { circulo: 1, referencia: { fonte: "OPRPG", pagina: 130 } } });
+    t.ok("  outro ritual do livro básico continua do livro", outroR.ordem.referencia.fonte === "OPRPG" && outroR.ordem.referencia.pagina === 130);
+  }
+
   function casosDaV241(t, R, RS, AP, F, V) {
     var ID = "op.ritual.barganha-insana";
     t.grupo("v2.41 · Barganha Insana no catálogo");
@@ -5166,12 +5253,13 @@
       [e.elemento, e.circulo, e.execucao, e.alcance, e.alvo, e.duracao], ["morte", 3, "completa", "pessoal", "você", "instantânea"]);
     t.igual("custo pelo círculo: 6 PE", e.custo, 6);
     t.ok("só a forma básica: sem discente, verdadeiro, resistência ou requisito", e.versoes.length === 1 && !e.resistencia && !e.requisitoRitual);
-    t.ok("livro básico, sem página inventada", e.fonte === "OPRPG" && !(e.pagina > 0) && /página não informada/.test(RS.referencia(e)));
+    t.ok("v5.1: fonte Extra, de um marca-página — sem livro nem página inventados", e.fonte === "EXTRA" && !(e.pagina > 0) && e.material === "Marca-página" && RS.referencia(e) === "Extra · Marca-página");
     t.ok("o texto separa restauração, fim da cena e mudança narrativa, sem falar em recuperar Sanidade",
       /PV e os PE/.test(e.efeitos[0]) && /Não recupera Sanidade/.test(e.efeitos[0]) && /fim da cena/.test(e.efeitos[1]) &&
       /acinzentada/.test(e.efeitos[2]) && /Luzídio/.test(e.efeitos[3]));
     t.ok("busca por nome", RS.filtrar(cat, { busca: "barganha" }).some(function (x) { return x.id === ID; }));
-    t.ok("filtros de Morte, 3º círculo e livro básico, combinados", RS.filtrar(cat, { elemento: "morte", circulo: 3, fonte: "OPRPG" }).some(function (x) { return x.id === ID; }));
+    t.ok("filtros de Morte, 3º círculo e Extra, combinados", RS.filtrar(cat, { elemento: "morte", circulo: 3, fonte: "EXTRA" }).some(function (x) { return x.id === ID; }) &&
+      !RS.filtrar(cat, { fonte: "OPRPG" }).some(function (x) { return x.id === ID; }));
     t.ok("aprendizado: entra numa concessão de 3º círculo", AP.elegibilidade({ circulos: [1, 2, 3] }, { circulo: 3, elemento: "morte" }).ok &&
       !AP.elegibilidade({ circulos: [1, 2] }, { circulo: 3, elemento: "morte" }).ok);
     var copia = RS.paraFicha(e, {});
@@ -7017,7 +7105,8 @@
       R.resistencias(fbExp, INV).dano.some(function (d) { return d.tipo === "geral"; }) && R.dadosDoTeste(fbExp, "diplomacia").quantos === R.dadosDoTeste(baseFb, "diplomacia").quantos - 1);
     if (B) {
       var todas = B.secoes("origens").reduce(function (l, s) { return l.concat(s.entradas); }, []);
-      t.ok("a aba Origens da biblioteca tem as 52, numa seção por livro", todas.length === 52 && B.secoes("origens").length === 5);
+      t.ok("a aba Origens da biblioteca tem as 53, numa seção por fonte (com Extra, v5.1)", todas.length === 53 && B.secoes("origens").length === 6 &&
+        B.secoes("origens")[5].titulo === "Origens · Extra");
       t.ok("  busca pelo poder e pela origem", B.filtrar(B.secoes("origens"), "luta ou fuga").some(function (s) { return s.entradas.length; }) &&
         B.filtrar(B.secoes("origens"), "profetizado").some(function (s) { return s.entradas.length; }));
       var copia = B.modelo(todas.filter(function (x) { return x.entrada.nome === "Conexões"; })[0].entrada, "");

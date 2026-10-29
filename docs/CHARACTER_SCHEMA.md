@@ -242,6 +242,16 @@ ordem de `pericias`; `arrumada` marca que a lista já foi posta na ordem da tela
 uma vez, e a partir daí escolher a personalizada não a reordena. Modo
 desconhecido volta para `az`. Uma aba anterior recusa a ficha 20.
 
+## Fonte Extra e Revoltado — v5.1 (schema 25, sem mudança de forma)
+
+- `ordem.estadoDasOrigens.revoltado = { semAliados: bool }` — a marca "Sem aliados
+  em alcance curto" do poder Antes só…. Campo novo dentro de uma coleção aberta;
+  fichas antigas abrem iguais.
+- A referência de um ritual Extra é `{ fonte: "EXTRA", material }`, sem página. Um
+  ritual Barganha Insana copiado antes da v5.1 (`referencia: { fonte: "OPRPG" }`)
+  passa a ser lido como Extra ao normalizar a ficha — mesmo id, mesmo
+  `origemCatalogoId`, mesma mecânica.
+
 ## Barganha Insana — v2.41 / schema 19
 
 O bloco `ordem` ganha `barganhaInsana`, fora da lista de rituais:

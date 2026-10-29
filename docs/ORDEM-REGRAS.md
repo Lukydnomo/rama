@@ -239,6 +239,29 @@ e em NEX 35% dá 7 (OPRPG p.115); Sangue de Ferro em NEX 50% dá 20 PV (OPRPG
 p.116); Técnico com Força 1 e Intelecto 3 carrega 20 espaços (OPRPG p.31); Morte 2
 exige dois poderes de Morte antes (OPRPG p.114).
 
+### Fonte Extra e a origem Revoltado (v5.1)
+
+**Extra** é a fonte do conteúdo **oficial avulso**, publicado fora dos livros
+(marca-páginas e materiais promocionais). Mora no registro único das fontes
+(`C.LIVROS`, sigla `EXTRA`, abreviação "EX", `avulsa: true`), então vale em todas
+as etiquetas, bibliotecas, filtros e validações como qualquer fonte oficial. Não
+é Homebrew (que é da conta de quem cria) e não é livro: a entrada não tem página,
+e o material de onde veio fica em `material` ("Marca-página de HQ"). A referência
+é "Extra · <material>" (`C.referencia`); nada de livro ou página inventados.
+
+**Revoltado** (Extra, marca-página de HQ): perícias treinadas **Furtividade** e
+**Vontade**, concedidas pela criação e pela troca de origem como as das demais.
+Poder **Antes só…**: +1 na Defesa, +1 em testes de perícia e +1 no **limite de PE
+por turno** (não no máximo de PE) enquanto estiver sem nenhum aliado em alcance
+curto.
+
+| o quê | como |
+|---|---|
+| condição | a ficha não sabe onde os aliados estão: o cartão da origem (aba Habilidades) tem a marca **"Sem aliados em alcance curto"** (`estadoDasOrigens.revoltado.semAliados`), com o estado escrito ao lado — ativo ou inativo |
+| os três bônus | efeitos da origem com `seEstado: "semAliados"`: entram na conta só com a marca e saem quando ela é desmarcada. Cada um vira parcela própria ("Antes só…", "Origem: Revoltado · sem aliados em alcance curto") na Defesa, em todo teste de perícia (`bonusPericia` com `todas`) e no limite de PE por turno (`limitePe`) |
+| Flashback | o poder recebido por Flashback usa a mesma marca, no cartão dele; as perícias da origem não vêm |
+| outra origem | a marca guardada de uma origem que a ficha não tem não dá nada |
+
 ### Origens do Sobrevivendo ao Horror (v2.23)
 
 As 20 origens do SAH (p. 7-13, Tabela 1.1) estão no mesmo catálogo das 26 do
@@ -1660,7 +1683,7 @@ de nível 3 com exposição 50% alcança o 2º círculo; na oportunidade de expo
 | Sangue | 8 / 6 / 5 / 4 | 19 | 4 | Amaldiçoar Arma, Aprimorar Físico, Arma Atroz, Armadura de Sangue, Capturar o Coração, Corpo Adaptado, Descarnar, Distorcer Aparência, Esfolar*, Ferver Sangue, Flagelo de Sangue, Forma Monstruosa, Fortalecimento Sensorial, Hemofagia, Invólucro de Carne, Martírio de Sangue*, Odor da Caçada*, Purgatório, Sede de Adrenalina*, Transfusão Vital, Vomitar Pestes, Vínculo de Sangue, Ódio Incontrolável |
 | Medo | 1 / 2 / 1 / 5 | 9 | 0 | Canalizar o Medo, Cinerária, Conhecendo o Medo, Dissipar Ritual, Lâmina do Medo, Medo Tangível, Presença do Medo, Proteção contra Rituais, Rejeitar Névoa |
 
-Total: **98 rituais** nesta tabela (Barganha Insana, v2.41, entra à parte, sem página) — 82 do livro básico (toda a Lista de Rituais, p. 122–143) e
+Total: **98 rituais** nesta tabela (Barganha Insana entra à parte: fonte Extra, de um marca-página — v5.1) — 82 do livro básico (toda a Lista de Rituais, p. 122–143) e
 16 do Sobrevivendo ao Horror (Novos Rituais, p. 48–56). Os marcados com `*` são do
 SAH. Amaldiçoar Arma conta em quatro elementos, e é por isso que a soma por
 elemento passa de 98.
@@ -1668,13 +1691,18 @@ elemento passa de 98.
 ### Barganha Insana (v2.41)
 
 Morte, 3º círculo (6 PE pelo círculo), execução completa, alcance pessoal, alvo
-você, duração instantânea; só a forma básica. Entra no **livro básico por decisão
-da mesa, sem página**: o ritual não está em nenhum PDF disponível, e a ficha mostra
-"página não informada" em vez de inventar uma (`op.ritual.barganha-insana`).
+você, duração instantânea; só a forma básica. **Fonte Extra (v5.1)**: o ritual veio
+de um **marca-página**, não de um livro — sem livro e sem página inventados; a
+referência é "Extra · Marca-página". Da v2.41 à v5.0 ele estava classificado como
+livro básico "sem página informada", o que estava errado. O id
+(`op.ritual.barganha-insana`), a mecânica e os vínculos não mudaram: uma ficha que
+já tem o ritual continua com o MESMO ritual e passa a mostrar a fonte certa
+(`RAMAOrdemRituais.corrigirFonteDoCatalogo`, ao ler a ficha — troca só a referência
+e a linha "Fonte:" do complemento).
 
 | o quê | como |
 |---|---|
-| biblioteca, busca e filtros (Morte, 3º círculo, livro básico) | como os outros; adicionar ou aprender não conjura nada |
+| biblioteca, busca e filtros (Morte, 3º círculo, Extra) | como os outros; adicionar ou aprender não conjura nada |
 | restauração | no "Usar ritual", depois de pagar o custo: PV e PE (PD com Jogando sem Sanidade) voltam ao máximo efetivo — `null`, "cheio" —, sem mexer nos máximos, sem temporários e sem Sanidade. O custo não é descontado de novo. N'A Antena, o ritual fica contido e não restaura |
 | condições negativas | terminam as condições do livro (as aplicações `cond:*`) e as rastreadas (morrendo, enlouquecendo, inconsciente, perturbado), pelos mecanismos delas. Efeitos que não são condição ficam; um efeito sem classificação com modificador negativo aparece para a pessoa marcar |
 | perda no fim da cena | uma pendência por conjuração em `ordem.barganhaInsana.pendentes` (id da operação, cena), sem limite por cena. Ao trocar de cena (Nova cena ou Novo interlúdio), a janela "fim da cena" rola 1d4 por pendência pelo mostrador de sempre e aplica; o painel de Condições também tem "A cena terminou: resolver" |

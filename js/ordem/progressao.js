@@ -1901,7 +1901,7 @@
            depende de uma escolha dela não vêm pelo Flashback. */
         if (!origemDesligada) {
           C.efeitosDaOrigem(org).forEach(function (ef) {
-            efeitos.push(Object.assign({}, ef, { tipo: ef.tipo, fonte: org.poder, detalhe: "Flashback: " + org.nome }));
+            efeitos.push(Object.assign({}, ef, { tipo: ef.tipo, fonte: org.poder, detalhe: "Flashback: " + org.nome, origemDoEstado: org.chave }));
           });
         }
       }

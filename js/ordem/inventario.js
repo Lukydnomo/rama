@@ -87,7 +87,7 @@
      livros (C.LIVROS); sem o catálogo, a lista fixa — com o livro novo. */
   var FONTES = (global.RAMAOrdemCatalogo && global.RAMAOrdemCatalogo.LIVROS
     ? global.RAMAOrdemCatalogo.LIVROS.map(function (l) { return l.sigla; })
-    : ["OPRPG", "SAH", "AS1", "AS2", "AS3", "AS4", "AS5"]);
+    : ["OPRPG", "SAH", "AS1", "AS2", "AS3", "AS4", "AS5", "EXTRA"]);
   var MAX_MODIFICACOES = 12;
   var DADO = /^[1-9]\d{0,2}d([1-9]\d{0,2})$/;
 

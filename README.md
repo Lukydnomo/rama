@@ -740,6 +740,11 @@ segredo nenhum — ele os lê das Script Properties. Publicá-lo não expõe nad
 
 ### Atualizar o backend
 
+**v5.1.0 — MARCADOR:** só o site (a origem Revoltado, a fonte Extra e a fonte
+corrigida de Barganha Insana). Publique o site; não precisa trocar `.gs`, criar
+versão da implantação nem rodar `setupRama()`. Nada é convertido: uma ficha com
+Barganha Insana continua com o mesmo ritual e passa a mostrar a fonte Extra.
+
 **v5.0.0 — LINHAGEM:** Vampiro: A Máscara (V5) como sistema completo. **Crie**
 o arquivo `Vampiro` no Apps Script com `backend/Vampiro.gs`, **troque**
 `Sistemas.gs` (o registro ganha `vampiro`), `Dados.gs` (a aba nova) e
@@ -1512,7 +1517,7 @@ Três números diferentes, que não se misturam:
 
 | | Onde | O que é |
 |---|---|---|
-| versão do aplicativo | `js/versao.js` | o que a pessoa vê: v5.0.0 |
+| versão do aplicativo | `js/versao.js` | o que a pessoa vê: v5.1.0 |
 | `schemaVersion` | `js/ficha.js` | o formato da FICHA |
 | `versaoFormato` | `js/config.js` | o formato dos arquivos de importação |
 

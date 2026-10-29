@@ -104,6 +104,7 @@
     ["AS3", "Arquivos Secretos 3", "Arquivos Secretos 3", "AS3"],
     ["AS4", "Arquivos Secretos 4", "Arquivos Secretos 4", "AS4"],
     ["AS5", "Arquivos Secretos 5", "Arquivos Secretos 5", "AS5"],
+    ["EXTRA", "Extra", "Extra", "EX"],
   ];
   function mapaDeLivros(campo, indice) {
     var Cat = global.RAMAOrdemCatalogo;

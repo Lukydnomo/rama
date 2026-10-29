@@ -541,15 +541,19 @@
 
     var origem = C.origem(ficha.origem);
     C.efeitosDaOrigem(origem).forEach(function (ef) {
+      /* Efeito condicional (Antes só…, Revoltado, v5.1): só vale enquanto
+         o estado da origem disser — e sai da conta quando deixa de dizer. */
+      if (ef.seEstado && !estadoLigado(ficha, origem.chave, ef.seEstado)) return;
       lista.push({
         fonte: origem.poder,
-        detalhe: "Origem: " + origem.nome,
+        detalhe: "Origem: " + origem.nome + (ef.condicao ? " · " + ef.condicao : ""),
         efeito: ef,
       });
     });
 
     efeitosDaProgressao(ficha, inventario).forEach(function (ef) {
-      lista.push({ fonte: ef.fonte, detalhe: ef.detalhe, efeito: ef });
+      if (ef.seEstado && !estadoLigado(ficha, ef.origemDoEstado, ef.seEstado)) return;
+      lista.push({ fonte: ef.fonte, detalhe: ef.detalhe + (ef.seEstado && ef.condicao ? " · " + ef.condicao : ""), efeito: ef });
     });
 
     /* Aliados do Arquivos Secretos 3 acompanhando o personagem: só os
@@ -973,6 +977,14 @@
      LIMITE DE PE POR TURNO — OPRPG p.23, Tabela 1.2
      ================================================================= */
 
+  /* Efeitos no LIMITE de gasto por turno (Antes só…, v5.1) — nunca no
+     máximo de PE. */
+  function somarLimiteDePe(c, ficha) {
+    efeitosDoTipo(ficha, "limitePe").forEach(function (m) {
+      c.soma(m.fonte, m.efeito.valor, m.detalhe + " — limite de PE por turno");
+    });
+  }
+
   function limiteDeEsforco(ficha) {
     var c = conta();
     var t = trilho(ficha);
@@ -988,6 +1000,7 @@
         ? "sempre 1, em qualquer estágio (SAH p. 31)"
         : "NEX 0%: o livro não traz limite; vale o custo do Empenho");
       c.excecao = "Pelo menos uma habilidade pode ser usada no custo mínimo por turno, mesmo acima do limite.";
+      somarLimiteDePe(c, ficha);
       somarAjustes(c, ficha, "limitePe");
       c.piso(1);
       return c;
@@ -998,6 +1011,7 @@
     efeitosDoTipo(ficha, "dedicacao").forEach(function (m) {
       c.soma(m.fonte, 1, m.detalhe + " — limite de PE por turno +1");
     });
+    somarLimiteDePe(c, ficha);
 
     somarAjustes(c, ficha, "limitePe");
     c.piso(1);
@@ -1839,7 +1853,8 @@
     c.soma(g.nome, g.bonus, origemGrau);
 
     efeitosDoTipo(ficha, "bonusPericia", inventario).forEach(function (m) {
-      if ((m.efeito.pericias || []).indexOf(chave) >= 0) c.soma(m.fonte, m.efeito.valor, m.detalhe);
+      /* `todas` (v5.1): todo teste de perícia. */
+      if (m.efeito.todas || (m.efeito.pericias || []).indexOf(chave) >= 0) c.soma(m.fonte, m.efeito.valor, m.detalhe);
     });
 
     efeitosDoTipo(ficha, "bonusPericiaAtributo", inventario).forEach(function (m) {
@@ -3236,6 +3251,7 @@
     inventorParanormal: { ativacoes: "int", enguicado: "bool" },
     jovemMistico: { numeros: "numeros", adicionar: "bool", cena: "id" },
     profetizado: { peTemporarios: "int", cena: "id" },
+    revoltado: { semAliados: "bool" },
   };
 
   function normalizarEstadoDasOrigens(bruto) {
@@ -3261,6 +3277,13 @@
       saida[org] = n;
     });
     return saida;
+  }
+
+  /* Um campo do estado de uma origem, ligado ou não. Ao contrário de
+     estadoDaOrigem, vale também para o poder recebido por Flashback. */
+  function estadoLigado(ficha, chave, campo) {
+    var e = ficha && ficha.estadoDasOrigens && ficha.estadoDasOrigens[chave];
+    return !!(e && e[campo] === true);
   }
 
   function estadoDaOrigem(ficha, chave) {

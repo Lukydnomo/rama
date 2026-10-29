@@ -207,6 +207,26 @@
   }
 
   var CONTROLES = {
+    /* Antes só… (Revoltado, Extra, v5.1): a ficha não sabe onde os
+       aliados estão — quem joga marca. Os três bônus entram e saem da
+       conta com este controle. */
+    revoltado: function (ctx, o, org, e) {
+      var ativo = e.semAliados === true;
+      return [
+        el("label.r-marca.origem-revoltado", {}, [
+          el("input", { type: "checkbox", checked: ativo, dataset: { foco: "origem:revoltado" }, onchange: function (ev) {
+            e.semAliados = ev.currentTarget.checked;
+            salvar(ctx);
+            UI.aviso(e.semAliados ? "Antes só… ativo: +1 na Defesa, nos testes de perícia e no limite de PE por turno." : "Antes só… desligado: os três bônus saíram da conta.");
+          } }),
+          el("span", { texto: "Sem aliados em alcance curto" }),
+        ]),
+        el("p.t-mini" + (ativo ? ".t-ok" : ""), { role: "status", texto: ativo
+          ? "Ativo: +1 na Defesa, +1 em testes de perícia e +1 no limite de PE por turno (o total de PE não muda)."
+          : "Inativo: há aliado em alcance curto. Marque quando ficar sem nenhum." }),
+      ];
+    },
+
     amigoDosAnimais: function (ctx, o, org, e, reg) {
       var op = reg ? reg.opcoes || {} : {};
       var nex = R().trilho(o).nexEquivalente;

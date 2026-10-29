@@ -118,6 +118,25 @@
 
   var CHANGELOG = [
     {
+      versao: "5.1.0",
+      codinome: "MARCADOR",
+      data: "29/10/2026",
+      mudancas: {
+        "Adicionado": [
+          "Ordem Paranormal: a origem Revoltado, de um marca-página de HQ, na criação, na troca de origem, na Progressão e na biblioteca. Perícias treinadas Furtividade e Vontade. Poder Antes só…: +1 na Defesa, em testes de perícia e no limite de PE por turno enquanto você estiver sem nenhum aliado em alcance curto.",
+          "Como a ficha não sabe onde os aliados estão, o cartão da origem tem a marca \"Sem aliados em alcance curto\", dizendo quando o benefício está ativo. Marcada, os três bônus entram na conta, cada um com a sua parcela; desmarcada, saem. O bônus é no limite de gasto por turno — o total de PE não muda.",
+          "A fonte Extra, para conteúdo oficial avulso que não saiu em livro (marca-páginas e materiais promocionais). Ela aparece nas etiquetas, nas bibliotecas e nos filtros como as fontes dos livros, sem se confundir com Homebrew, e mostra o material de onde veio em vez de uma página.",
+        ],
+        "Corrigido": [
+          "Barganha Insana estava classificado como Livro de Regras, \"página não informada\". Ele veio de um marca-página: agora a fonte é Extra · Marca-página. O ritual é o mesmo — id, mecânica e vínculos —, e as fichas que já o têm passam a mostrar a fonte certa sem ganhar outro ritual.",
+        ],
+        "Técnico": [
+          "Fonte EXTRA no registro único (C.LIVROS, `avulsa`), com o campo `material` e a referência sem página (C.referencia). Efeitos de origem condicionais (`seEstado`, também no poder recebido por Flashback), `bonusPericia` com `todas` e o efeito `limitePe`. Só o site: nenhum `.gs`, nenhuma versão da implantação, nenhum setupRama(). Documentação: docs/ORDEM-REGRAS.md e docs/CHARACTER_SCHEMA.md.",
+          "Testes: 3480 regras (Revoltado, os três bônus e a desmarcação, Flashback, Extra nos filtros e na biblioteca, Barganha Insana numa ficha antiga), 1757 backend, 257 Vampiro, 249 frontend, 252 tema, 57 pastas e as demais — todas passando.",
+        ],
+      },
+    },
+    {
       versao: "5.0.0",
       codinome: "LINHAGEM",
       data: "29/10/2026",

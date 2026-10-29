@@ -21,6 +21,11 @@
             Produção do Anfitrião, Energia e a regra opcional de Hacking)
      AS5    Arquivos Secretos 5, v1.0, Jambô (pacote de conteúdo oficial — os
             Alheios, a TV Varminho e a Transmissão)
+     EXTRA  Extra (v5.1): conteúdo OFICIAL avulso, que não saiu em livro —
+            marca-páginas e outros materiais promocionais. Não é Homebrew
+            (que é da conta de quem criou) e não é um livro: a entrada não
+            tem página, e o material de onde veio fica em `material`
+            ("Marca-página de HQ"). Nada de livro ou página inventados.
 
    As páginas são as do LIVRO, não as do PDF.
 
@@ -61,6 +66,7 @@
   var AS3 = "AS3";
   var AS4 = "AS4";
   var AS5 = "AS5";
+  var EXTRA = "EXTRA";
 
   /* Os livros, num lugar só (v2.29). Quem precisa do nome de um livro
      pergunta aqui — nomeDoLivro(sigla) — em vez de repetir uma conta
@@ -82,6 +88,12 @@
        poderes de Transmissão), os Alheios (p. 35–51), o gerador e a TV
        Varminho (p. 20–33) e os perigos complexos (p. 66–69). */
     { sigla: AS5, nome: "Arquivos Secretos 5", curto: "Arquivos Secretos 5", abreviacao: "AS5", edicao: "v1.0" },
+    /* v5.1: a fonte das publicações oficiais avulsas. Fica na mesma lista
+       para valer nas etiquetas, nas bibliotecas, nos filtros e nas
+       validações como qualquer fonte oficial; `avulsa` diz que não há
+       página, e cada entrada leva o material em `material`. */
+    { sigla: EXTRA, nome: "Extra", curto: "Extra", abreviacao: "EX", edicao: "", avulsa: true,
+      descricao: "Conteúdo oficial avulso, publicado fora dos livros (marca-páginas e materiais promocionais)." },
   ];
 
   /* Os mapas que os módulos de catálogo usam (rótulo de filtro, nome por
@@ -98,6 +110,7 @@
   }
 
   function nomeDoLivro(sigla) { return livro(sigla || OPRPG).nome; }
+  function ehAvulsa(sigla) { return !!(LIVROS.filter(function (l) { return l.sigla === sigla; })[0] || {}).avulsa; }
   function curtoDoLivro(sigla) { return livro(sigla || OPRPG).curto; }
 
   /* =================================================================
@@ -1045,6 +1058,27 @@
       poder: "Turno Invertido", automacao: "parcial", controles: true,
       resumo: "Uma vez por missão, numa cena de interlúdio, você recebe os benefícios da ação dormir sem precisar realizá-la. Além disso, +2 em testes contra qualquer efeito que tente te deixar inconsciente.",
       nota: "O cartão marca o uso da missão num interlúdio: os benefícios de dormir são aplicados pela mesa e nenhuma ação de interlúdio é gasta. O +2 aparece no resultado de um teste de resistência, para quem confirmar que o efeito tenta deixar inconsciente." },
+
+    /* -----------------------------------------------------------------
+       EXTRA (v5.1) — conteúdo oficial avulso, sem livro nem página
+       -----------------------------------------------------------------
+       Revoltado veio de um marca-página de HQ. `seEstado`: o efeito só
+       entra na conta enquanto o estado da origem disser (aqui, o cartão
+       "Sem aliados em alcance curto", js/ordem/telas/ficha-origens.js),
+       porque a ficha não sabe onde os aliados estão. O bônus de PE é no
+       LIMITE de gasto por turno, nunca no máximo de PE.
+       ----------------------------------------------------------------- */
+
+    { chave: "revoltado", nome: "Revoltado", fonte: EXTRA, material: "Marca-página de HQ",
+      pericias: ["furtividade", "vontade"],
+      poder: "Antes só…", automacao: "calculo", controles: true,
+      resumo: "Você recebe +1 na Defesa, em testes de perícias e no seu limite de PE por turno se estiver sem nenhum aliado em alcance curto.",
+      efeitos: [
+        { tipo: "defesa", valor: 1, seEstado: "semAliados", condicao: "sem aliados em alcance curto" },
+        { tipo: "bonusPericia", todas: true, valor: 1, seEstado: "semAliados", condicao: "sem aliados em alcance curto" },
+        { tipo: "limitePe", valor: 1, seEstado: "semAliados", condicao: "sem aliados em alcance curto" },
+      ],
+      nota: "Os três bônus entram na conta enquanto o cartão da origem marcar \"Sem aliados em alcance curto\" — a ficha não sabe onde os aliados estão. Desmarque quando um aliado chegar a alcance curto. O +1 é no limite de PE por turno, não no total de PE." },
   ];
 
   /* =================================================================
@@ -1261,13 +1295,17 @@
   /* A referência de livro e página, como texto, para aparecer ao lado
      de cada entrada do catálogo. */
   function referencia(entrada) {
-    if (!entrada || !entrada.pagina) return "";
+    if (!entrada) return "";
+    /* Extra (v5.1): sem livro e sem página — o material, quando houver. */
+    if (ehAvulsa(entrada.fonte)) return nomeDoLivro(entrada.fonte) + (entrada.material ? " · " + entrada.material : "");
+    if (!entrada.pagina) return "";
     return nomeDoLivro(entrada.fonte) + ", p. " + entrada.pagina;
   }
 
   global.RAMAOrdemCatalogo = {
-    FONTES: { OPRPG: OPRPG, SAH: SAH, AS1: AS1, AS2: AS2, AS3: AS3, AS4: AS4, AS5: AS5 },
+    FONTES: { OPRPG: OPRPG, SAH: SAH, AS1: AS1, AS2: AS2, AS3: AS3, AS4: AS4, AS5: AS5, EXTRA: EXTRA },
     LIVROS: LIVROS,
+    ehAvulsa: ehAvulsa,
     mapaDosLivros: mapaDosLivros,
     livro: livro,
     nomeDoLivro: nomeDoLivro,

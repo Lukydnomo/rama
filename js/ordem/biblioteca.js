@@ -46,7 +46,7 @@
   };
 
   /* O nome curto de cada livro sai do registro único (C.LIVROS). */
-  var ROTULO_FONTE = C.mapaDosLivros ? C.mapaDosLivros("curto") : { OPRPG: "Livro básico", SAH: "Sobrevivendo ao Horror", AS1: "Arquivos Secretos 1", AS2: "Arquivos Secretos 2", AS3: "Arquivos Secretos 3", AS4: "Arquivos Secretos 4", AS5: "Arquivos Secretos 5" };
+  var ROTULO_FONTE = C.mapaDosLivros ? C.mapaDosLivros("curto") : { OPRPG: "Livro básico", SAH: "Sobrevivendo ao Horror", AS1: "Arquivos Secretos 1", AS2: "Arquivos Secretos 2", AS3: "Arquivos Secretos 3", AS4: "Arquivos Secretos 4", AS5: "Arquivos Secretos 5", EXTRA: "Extra" };
 
   function porNome(a, b) { return a.nome.localeCompare(b.nome, "pt-BR"); }
 
@@ -139,6 +139,7 @@
       chave: "origem." + org.chave, nome: org.poder, tipo: "origem", origemNome: org.nome,
       classes: [], requisitos: [], opcoes: [], efeitos: [], resumo: org.resumo || "",
       fonte: org.fonte || "OPRPG", pagina: org.pagina || 0, automacao: org.automacao || "informacao",
+      material: org.material || "",
     };
   }
 
