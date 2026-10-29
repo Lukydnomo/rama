@@ -336,14 +336,14 @@
       "versoes": [
         {
           "versao": 1,
-          "previa": "assets/dados/temas/sangue/v1/previa.png",
+          "previa": "assets/dados/temas/elemento-sangue/v1/previa.png",
           "dado": {
             "mascara": "assets/dados/temas/elemento-sangue/v1/mascara.png",
-            "base": "assets/dados/temas/sangue/v1/base.png",
+            "base": "assets/dados/temas/elemento-sangue/v1/base.png",
             "camadas": []
           },
           "notificacao": {
-            "fundo": "assets/dados/temas/sangue/v1/fundo.png",
+            "fundo": "assets/dados/temas/elemento-sangue/v1/fundo.png",
             "ajusteFundo": {
               "modo": "zoom-pela-altura",
               "alinhamentoHorizontal": 0.5
