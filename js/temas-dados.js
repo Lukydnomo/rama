@@ -330,7 +330,7 @@
       ]
     },
     {
-      "id": "sangue",
+      "id": "elemento-sangue",
       "nome": "Sangue",
       "descricao": "Tudo começa pelo Sangue. O Sangue é o fluxo que banha a eternidade do Outro Lado.",
       "versoes": [
@@ -338,6 +338,7 @@
           "versao": 1,
           "previa": "assets/dados/temas/sangue/v1/previa.png",
           "dado": {
+            "mascara": "assets/dados/temas/elemento-sangue/v1/mascara.png",
             "base": "assets/dados/temas/sangue/v1/base.png",
             "camadas": []
           },
