@@ -417,10 +417,11 @@
       }));
     }
 
-    /* A faixa de rolagens e o "Usar ritual" continuam à vista com o
-       ritual fechado — numa sessão essa é a ação mais repetida, e ela
-       não pode custar a abertura do cartão. Quem cuida disso é a `faixa`
-       do recolhível (ver o comentário de lá). */
+    /* v5.2: as rolagens moram no cabeçalho, à direita do nome — à vista
+       com o ritual aberto ou fechado (rolar não gasta nada). O "Usar
+       ritual" é a conjuração de verdade: fica dentro do conteúdo aberto,
+       e some com os detalhes ao recolher. */
+    var usar = botaoUsarRitual(ctx, ritual);
     return UI.recolhivel({
       titulo: ritual.nome,
       subtitulo: marcasDoRitual(ctx, ritual),
@@ -429,10 +430,10 @@
         rotulos: ctx.ficha.rituais.rotulos,
         dt: dtDoRitual(ctx, ritual),
         aprendizado: apr ? linhasDeAprendizado(ctx, vindo, substituido) : null,
-      })))],
+      }))), usar ? el("div.ritual-uso", {}, [usar]) : null],
       acoes: acoes,
       alca: l.arrastar && A() ? A().alca({ id: ritual.id, rotulo: ritual.nome }) : null,
-      faixa: faixaDeDanos(ctx, ritual),
+      topo: faixaDeDanos(ctx, ritual),
     });
   }
 
@@ -1063,16 +1064,16 @@
     return partes.join(" · ");
   }
 
-  /* A faixa compacta de rolagens do cartão, agrupada por versão (v2.32):
-     o nome da versão e, dentro dela, cada rolagem com o tipo (dano, cura,
-     PV temporários…), a expressão e o dado. Só entram as versões com
-     rolagem preenchida; sem nenhuma, fica só o "Usar ritual". */
+  /* As rolagens do cartão, agrupadas por versão (v2.32): o nome da
+     versão e, dentro dela, cada rolagem com o tipo (dano, cura, PV
+     temporários…), a expressão e o dado. Só entram as versões com
+     rolagem preenchida — personalizadas inclusive; sem nenhuma, nada
+     (v5.2: no cabeçalho, sem o "Usar ritual", que está no corpo). */
   function faixaDeDanos(ctx, ritual) {
     var comRolagem = F.versoesComRolagem(ritual);
-    var usar = botaoUsarRitual(ctx, ritual);
-    if (!comRolagem.length) return usar ? el("div.ritual-danos", {}, [usar]) : null;
+    if (!comRolagem.length) return null;
 
-    var grupos = usar ? [usar] : [];
+    var grupos = [];
     comRolagem.forEach(function (v) {
       var itens = [];
       F.rolagensDaVersao(v).forEach(function (rolagem) {
@@ -1110,8 +1111,9 @@
 
   /* "Usar ritual" (fichas de Ordem): a conjuração com versão, custo e
      componentes revistos antes de confirmar (js/ordem/telas/ficha-consumo.js).
-     Rolar o dano pela faixa continua não gastando nada — o gasto é do
-     uso, não da rolagem. Vale também para ritual sem rolagem nenhuma. */
+     Rolar pelos dados do cabeçalho continua não gastando nada — o gasto
+     é do uso, não da rolagem. Vale também para ritual sem rolagem. Mora
+     no conteúdo aberto do cartão (v5.2). */
   function botaoUsarRitual(ctx, ritual) {
     if (!F.ehDeOrdem(ctx.ficha) || !global.RAMASecaoConsumo) return null;
     return el("button.r-botao.r-botao--mini.ritual-usar", {

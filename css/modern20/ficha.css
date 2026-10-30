@@ -240,6 +240,7 @@
 
   & .item__acoes--fora { border-top-color: var(--m20-borda); }
   & .ritual-danos { border-top-color: var(--m20-borda); }
+  & .ritual-uso { border-top-color: var(--m20-borda); }
   & .ritual-dano__versao {
     font-size: var(--texto-mini);
     font-weight: 550;

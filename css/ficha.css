@@ -733,13 +733,11 @@ body.pagina-ficha .app-corpo {
 /* =====================================================================
    DANO DOS RITUAIS
    ---------------------------------------------------------------------
-   Uma faixa compacta pendurada abaixo do resumo do ritual, no mesmo
-   lugar em que ficam os botões de uma arma. Ela mostra só as versões
-   com dano preenchido: nome em cima, expressão e dado embaixo.
-
-   Fica fora do corpo recolhível de propósito. Durante uma sessão o
-   dano é a ação mais repetida de um ritual, e abrir o cartão para
-   alcançá-la seria um clique a mais em toda conjuração.
+   Os grupos de rolagem por versão: nome em cima, tipo, expressão e
+   dado embaixo. Desde a v5.2 moram no cabeçalho do cartão, à direita
+   do nome (`topo` do recolhível), à vista com o ritual aberto ou
+   fechado: durante uma sessão a rolagem é a ação mais repetida, e
+   abrir o cartão para alcançá-la seria um clique a mais.
    ===================================================================== */
 
 .ritual-danos {
@@ -1561,6 +1559,22 @@ body.pagina-ficha--painel .ficha-topo__nome { font-size: var(--texto-medio); }
 .consumo-confirmacao .filtros__grupo { flex-wrap: wrap; }
 
 .ritual-usar { align-self: center; }
+
+/* v5.2: as rolagens no cabeçalho do cartão (sem a faixa de baixo) e o
+   "Usar ritual" no fim do conteúdo aberto. */
+.recolhivel__topo-extra .ritual-danos {
+  padding: 0;
+  border-top: 0;
+  justify-content: flex-end;
+  gap: var(--e1) var(--e3);
+}
+
+.ritual-uso {
+  display: flex;
+  justify-content: flex-start;
+  padding: var(--e2) var(--e3) var(--e3);
+  border-top: var(--borda) solid var(--cor-traco-fraca);
+}
 
 @media (max-width: 560px) {
   .consumo-item__rotulo { width: 100%; }

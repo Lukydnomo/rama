@@ -118,6 +118,23 @@
 
   var CHANGELOG = [
     {
+      versao: "5.1.1",
+      codinome: "CABEÇALHO",
+      data: "29/10/2026",
+      mudancas: {
+        "Melhorado": [
+          "Cartões de rituais: as rolagens de cada versão (Normal, Discente, Verdadeiro e as personalizadas, com o tipo, a fórmula e o dado) ficam no cabeçalho, na linha do nome, à direita — à vista com o ritual aberto ou fechado. Rolar continua sem gastar PE nem componentes, e clicar no dado não abre nem fecha o cartão.",
+          "\"Usar ritual\" aparece só com o ritual aberto, no fim do conteúdo, e some junto com os detalhes ao recolher. A conjuração segue o mesmo fluxo de antes.",
+        ],
+        "Visual": [
+          "A faixa de baixo dos cartões de ritual saiu: nada de controles repetidos nem espaço vazio. Em tela estreita, as rolagens descem para uma linha própria dentro do cabeçalho, sem cobrir o nome, cortar fórmulas ou criar rolagem lateral — no Legacy e no Modern20, também com temas personalizados.",
+        ],
+        "Técnico": [
+          "UI.recolhivel ganhou a opção `topo` (controles no cabeçalho que não alternam o cartão); a `faixa` dos demais componentes não mudou. Só o site. Testes: 3490 regras, 249 frontend e 252 tema, todos passando.",
+        ],
+      },
+    },
+    {
       versao: "5.1.0",
       codinome: "MARCADOR",
       data: "29/10/2026",

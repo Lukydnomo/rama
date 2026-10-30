@@ -902,7 +902,7 @@
      aria-expanded vai junto porque nem todo leitor de tela antigo lê o
      estado nativo do <details>.
 
-     recolhivel({ titulo, extra, conteudo, aberto, acoes })
+     recolhivel({ titulo, extra, conteudo, aberto, acoes, topo })
      ================================================================= */
 
   function recolhivel(opcoes) {
@@ -913,7 +913,7 @@
     /* Com `subtitulo`, o título ganha uma segunda linha logo abaixo (os
        dados de um item, por exemplo). Sem ele, título e `extra` dividem
        uma linha só — e num cartão estreito o extra comia o título. */
-    var resumo = el("summary.recolhivel__topo", { class: o.subtitulo ? "recolhivel__topo--empilhado" : "" }, [
+    var resumo = el("summary.recolhivel__topo", { class: [o.subtitulo ? "recolhivel__topo--empilhado" : "", o.topo ? "recolhivel__topo--com-extra" : ""].filter(Boolean).join(" ") }, [
       seta,
       o.subtitulo
         ? el("span.recolhivel__cabeca", {}, [
@@ -928,6 +928,14 @@
       resumo,
       el("div.recolhivel__corpo", {}, o.conteudo),
     ]);
+
+    /* `topo` (v5.2): controles que ficam no cabeçalho, à direita do nome,
+       com o cartão aberto ou fechado — as rolagens de um ritual. O
+       clique neles não abre nem fecha o cartão; em tela estreita, a área
+       desce para uma linha própria dentro do cabeçalho. */
+    if (o.topo) resumo.appendChild(el("span.recolhivel__topo-extra", {
+      onclick: function (ev) { ev.preventDefault(); ev.stopPropagation(); },
+    }, [o.topo]));
 
     /* As ações ficam FORA do <summary>: um botão dentro dele seria
        ativado junto com a abertura, e "Excluir" não pode disparar

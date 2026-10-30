@@ -1225,6 +1225,26 @@
   gap: var(--e1);
 }
 
+/* Com controles no cabeçalho (v5.2): o nome tem uma largura mínima e,
+   quando não cabe tudo, os controles descem para uma linha própria,
+   alinhados à direita — sem cobrir o nome nem empurrar a página. */
+.recolhivel__topo--com-extra {
+  flex-wrap: wrap;
+  row-gap: var(--e2);
+}
+
+.recolhivel__topo--com-extra .recolhivel__cabeca {
+  flex: 1 1 14rem;
+}
+
+.recolhivel__topo-extra {
+  flex: 0 1 auto;
+  min-width: 0;
+  max-width: 100%;
+  margin-left: auto;
+  cursor: default;
+}
+
 .recolhivel__cabeca .recolhivel__titulo {
   flex: none;
   white-space: normal;
