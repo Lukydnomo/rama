@@ -2690,11 +2690,17 @@
       }));
     }
 
-    campos.push(UI.campo({
-      rotulo: "Pontos de prestígio", tipo: "numero", valor: String(o.prestigio), limite: 4,
-      ajuda: c.patente.aplicada ? "A patente vem daqui. Perder PP rebaixa." : "Guardado. A regra de patente está desligada.",
-      aoMudar: function (v) { o.prestigio = Math.max(0, U.inteiro(v, 0)); aoMudarOrdem(ctx); },
-    }));
+    /* Pontos de prestígio só com "Aplicar regras de patente" ligada
+       (v5.2.1). Desligada, o campo some inteiro — o valor continua em
+       `o.prestigio` e volta como estava ao religar (aba Regras). Não é a
+       regra opcional "Evolução por Patentes". */
+    if (R.regraDePatente(o)) {
+      campos.push(UI.campo({
+        rotulo: "Pontos de prestígio", tipo: "numero", valor: String(o.prestigio), limite: 4,
+        ajuda: "A patente vem daqui. Perder PP rebaixa.",
+        aoMudar: function (v) { o.prestigio = Math.max(0, U.inteiro(v, 0)); aoMudarOrdem(ctx); },
+      }));
+    }
 
     return UI.painel(separado ? "Nível e exposição" : "Exposição paranormal", el("div.pilha", {}, [
       separado

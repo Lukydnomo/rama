@@ -118,6 +118,20 @@
 
   var CHANGELOG = [
     {
+      versao: "5.2.1",
+      codinome: "PRESTIGIO",
+      data: "29/10/2026",
+      mudancas: {
+        "Corrigido": [
+          "Ordem Paranormal: com \"Aplicar regras de patente\" desligada, a aba Progressão não mostra mais o campo de Pontos de prestígio nem o aviso \"Guardado. A regra de patente está desligada\". O NEX (ou o nível e o NEX, com NEX & Experiência) ocupa a largura toda, sem espaço vazio.",
+          "Os Pontos de prestígio continuam guardados: ao religar a regra na aba Regras, o campo volta com o valor de antes. A regra opcional \"Evolução por Patentes\" não mudou.",
+        ],
+        "Técnico": [
+          "O campo depende de RAMAOrdemRegras.regraDePatente, a mesma condição do resto da patente. Só o site. Conferido no navegador: desligar, recarregar, NEX & Experiência, religar com o valor guardado, no Legacy e no Modern20, nas densidades Confortável e Compacta.",
+        ],
+      },
+    },
+    {
       versao: "5.2.0",
       codinome: "ADENSAR",
       data: "29/10/2026",
