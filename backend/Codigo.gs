@@ -5017,6 +5017,11 @@ function listarCodigos() {
   return linhas;
 }
 
+function testarCatalogo() {
+  console.log("Problemas:", RAMATemasDados.PROBLEMAS);
+  console.log("Sangue:", RAMATemasDados.tema("elemento-sangue"));
+}
+
 /* >>> js/temas-dados.js */
 /* =====================================================================
    R.A.M.A. — temas de dados (v2.40)
@@ -5343,6 +5348,191 @@ function listarCodigos() {
             },
             "veu": {
               "cor": "#261d2a",
+              "alfa": 0.18
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "elemento-sangue",
+      "nome": "Sangue",
+      "descricao": "Tudo começa pelo Sangue. O Sangue é o fluxo que banha a eternidade do Outro Lado.",
+      "versoes": [
+        {
+          "versao": 1,
+          "previa": "assets/dados/temas/elemento-sangue/v1/previa.png",
+          "dado": {
+            "mascara": "assets/dados/mascaras/d20-v1.svg",
+            "base": "assets/dados/temas/elemento-sangue/v1/base.png",
+            "camadas": []
+          },
+          "notificacao": {
+            "fundo": "assets/dados/temas/elemento-sangue/v1/fundo.png",
+            "ajusteFundo": {
+              "modo": "zoom-pela-altura",
+              "alinhamentoHorizontal": 0.5
+            },
+            "cores": {
+              "superficie": "#170A0A",
+
+              "texto": "#FFF6F2",
+              "texto2": "#E8D0CB",
+              "texto3": "#BE9A96",
+
+              "tracoForte": "#FF3737",
+              "tracoMedia": "#C81212",
+              "tracoFraca": "#662222",
+
+              "selecao": "#E91B1B",
+              "selecaoTexto": "#FFF8F5",
+
+              "paranormal": "#FF4B35",
+              "erro": "#FF6464",
+              "aviso": "#DCA253"
+            },
+            "veu": {
+              "cor": "#080202",
+              "alfa": 0.30
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "elemento-energia",
+      "nome": "Energia",
+      "descricao": "O Caos é inevitável.",
+      "versoes": [
+        {
+          "versao": 1,
+          "previa": "assets/dados/temas/elemento-energia/v1/previa.png",
+          "dado": {
+            "mascara": "assets/dados/mascaras/d20-v1.svg",
+            "base": "assets/dados/temas/elemento-energia/v1/base.png",
+            "camadas": []
+          },
+          "notificacao": {
+            "fundo": "assets/dados/temas/elemento-energia/v1/fundo.png",
+            "ajusteFundo": {
+              "modo": "zoom-pela-altura",
+              "alinhamentoHorizontal": 0.5
+            },
+            "cores": {
+              "superficie": "#090812",
+
+              "texto": "#FFF9FF",
+              "texto2": "#DDD9F2",
+              "texto3": "#AAA4C4",
+
+              "tracoForte": "#FF00E6",
+              "tracoMedia": "#3D5BFF",
+              "tracoFraca": "#353052",
+
+              "selecao": "#FFD900",
+              "selecaoTexto": "#111008",
+
+              "paranormal": "#00E7FF",
+              "erro": "#FF4778",
+              "aviso": "#FFD900"
+            },
+
+            "veu": {
+              "cor": "#05040A",
+              "alfa": 0.34
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "elemento-morte",
+      "nome": "Morte",
+      "descricao": "Tudo tem um começo e um fim, e o Tempo leva todas as coisas. Nada que é levado pela Morte pode voltar ao que era antes.",
+      "versoes": [
+        {
+          "versao": 1,
+          "previa": "assets/dados/temas/elemento-morte/v1/previa.png",
+          "dado": {
+            "mascara": "assets/dados/mascaras/d20-v1.svg",
+            "base": "assets/dados/temas/elemento-morte/v1/base.png",
+            "camadas": []
+          },
+          "notificacao": {
+            "fundo": "assets/dados/temas/elemento-morte/v1/fundo.png",
+            "ajusteFundo": {
+              "modo": "zoom-pela-altura",
+              "alinhamentoHorizontal": 0.5
+            },
+
+            "cores": {
+              "superficie": "#0C0D0F",
+
+              "texto": "#F4F4F2",
+              "texto2": "#D2D3D0",
+              "texto3": "#9C9E9B",
+
+              "tracoForte": "#D8DAD7",
+              "tracoMedia": "#858986",
+              "tracoFraca": "#444745",
+
+              "selecao": "#C9CCC8",
+              "selecaoTexto": "#111311",
+
+              "paranormal": "#B8C0BA",
+              "erro": "#C96A6A",
+              "aviso": "#C2A66B"
+            },
+
+            "veu": {
+              "cor": "#050606",
+              "alfa": 0.20
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "elemento-conhecimento",
+      "nome": "Conhecimento",
+      "descricao": "Saber tudo é perder tudo.",
+      "versoes": [
+        {
+          "versao": 1,
+          "previa": "assets/dados/temas/elemento-conhecimento/v1/previa.png",
+          "dado": {
+            "mascara": "assets/dados/mascaras/d20-v1.svg",
+            "base": "assets/dados/temas/elemento-conhecimento/v1/base.png",
+            "camadas": []
+          },
+          "notificacao": {
+            "fundo": "assets/dados/temas/elemento-conhecimento/v1/fundo.png",
+            "ajusteFundo": {
+              "modo": "zoom-pela-altura",
+              "alinhamentoHorizontal": 0.5
+            },
+
+            "cores": {
+              "superficie": "#120F08",
+
+              "texto": "#FFF8DF",
+              "texto2": "#E9D9A8",
+              "texto3": "#B9A56F",
+
+              "tracoForte": "#FFD84A",
+              "tracoMedia": "#D79A1E",
+              "tracoFraca": "#6E5424",
+
+              "selecao": "#F5C842",
+              "selecaoTexto": "#181207",
+
+              "paranormal": "#FFE779",
+              "erro": "#DF6B58",
+              "aviso": "#F1B938"
+            },
+
+            "veu": {
+              "cor": "#090702",
               "alfa": 0.18
             }
           }

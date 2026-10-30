@@ -468,6 +468,53 @@
       ]
     },
     {
+      "id": "elemento-conhecimento",
+      "nome": "Conhecimento",
+      "descricao": "Saber tudo é perder tudo.",
+      "versoes": [
+        {
+          "versao": 1,
+          "previa": "assets/dados/temas/elemento-conhecimento/v1/previa.png",
+          "dado": {
+            "mascara": "assets/dados/mascaras/d20-v1.svg",
+            "base": "assets/dados/temas/elemento-conhecimento/v1/base.png",
+            "camadas": []
+          },
+          "notificacao": {
+            "fundo": "assets/dados/temas/elemento-conhecimento/v1/fundo.png",
+            "ajusteFundo": {
+              "modo": "zoom-pela-altura",
+              "alinhamentoHorizontal": 0.5
+            },
+
+            "cores": {
+              "superficie": "#120F08",
+
+              "texto": "#FFF8DF",
+              "texto2": "#E9D9A8",
+              "texto3": "#B9A56F",
+
+              "tracoForte": "#FFD84A",
+              "tracoMedia": "#D79A1E",
+              "tracoFraca": "#6E5424",
+
+              "selecao": "#F5C842",
+              "selecaoTexto": "#181207",
+
+              "paranormal": "#FFE779",
+              "erro": "#DF6B58",
+              "aviso": "#F1B938"
+            },
+
+            "veu": {
+              "cor": "#090702",
+              "alfa": 0.18
+            }
+          }
+        }
+      ]
+    },
+    {
       id: "sigilo-violeta",
       nome: "Sigilo Violeta",
       descricao: "Violeta com um sigilo gravado no dado, faíscas em volta e linhas de néon no fundo.",
