@@ -1,0 +1,30 @@
+/* =====================================================================
+   R.A.M.A. — densidade compacta (v5.2) · Modern20
+   ---------------------------------------------------------------------
+   O que o Modern20 tem de próprio: o título do painel não fica sobre a
+   borda (mora numa grade dentro dele), a janela tem folga maior e os
+   cartões têm canto e sombra. A base das reduções é a mesma de
+   css/densidade.css; aqui só o que o Modern20 desenha diferente. A
+   especificidade (estilo + densidade na raiz) passa a da folha comum.
+   ===================================================================== */
+
+:root[data-interface="modern20"] {
+
+  &[data-densidade="compacta"] .r-painel:not(.r-painel--solto) {
+    padding: var(--e3);
+  }
+
+  &[data-densidade="compacta"] .r-painel:not(details) {
+    row-gap: var(--e2);
+  }
+
+  /* O título mora dentro do painel: nada de folga extra entre eles. */
+  &[data-densidade="compacta"] .pilha > .r-painel + .r-painel {
+    margin-top: 0;
+  }
+
+  &[data-densidade="compacta"] .r-modal__corpo {
+    padding: var(--e3);
+    gap: var(--e3);
+  }
+}

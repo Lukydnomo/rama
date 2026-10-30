@@ -118,6 +118,24 @@
 
   var CHANGELOG = [
     {
+      versao: "5.2.0",
+      codinome: "ADENSAR",
+      data: "29/10/2026",
+      mudancas: {
+        "Adicionado": [
+          "Densidade da interface, em Perfil → Exibição → Densidade: Confortável (a apresentação de sempre, o padrão) ou Compacta, que aproxima painéis, listas e seções para caber mais informação na tela — perícias, inventário, habilidades, rituais, bibliotecas, janelas e a mesa da campanha, em todos os sistemas.",
+          "A escolha vale só neste aparelho, como o tamanho da interface: não vai para a conta nem para as fichas. É aplicada antes de a página aparecer e muda na hora, sem recarregar: o que você estava digitando, os filtros, as abas, as seções abertas e o foco continuam onde estavam.",
+        ],
+        "Visual": [
+          "A Compacta não diminui as letras nem esconde nada: só o espaço entre as coisas. Textos longos mantêm a entrelinha. No celular e em telas de toque os botões continuam do tamanho de sempre; com mouse, ficam um pouco mais baixos. Funciona no Legacy e no Modern20, com qualquer tema e com a interface ampliada.",
+        ],
+        "Técnico": [
+          "js/densidade.js no <head> de todas as páginas (atributo data-densidade, chave local rama.pref.densidade, outra aba acompanha) e css/densidade.css por último, com a par css/modern20/densidade.css. As regras ficam todas presas a :root[data-densidade=\"compacta\"]; os tokens de espaço não mudam, e o alvo de toque só diminui com ponteiro fino. Novo testes/medir-densidade.js, para conferir no navegador. Só o site.",
+          "Testes: 268 tema (densidade: padrão, escolha guardada, troca sem servidor, outra aba, páginas e folha), 3501 regras, 249 frontend e as demais — todas passando. Conferido no navegador com fichas e campanhas de Ordem, Oblívio e Vampiro, nos dois estilos, no celular e a 150%: de 9% a 20% menos altura por aba, sem cortes, sobreposições ou rolagem lateral.",
+        ],
+      },
+    },
+    {
       versao: "5.1.1",
       codinome: "CABEÇALHO",
       data: "29/10/2026",

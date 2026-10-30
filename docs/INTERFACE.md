@@ -106,6 +106,43 @@ numa janela que rola, a posição dele; depois corrige as duas rolagens. Janelas
 avisos e notificações abertos recebem `.interface-entrou` e não repetem a
 animação de entrada.
 
+## Densidade — Confortável ou Compacta (v5.2)
+
+Uma preferência à parte do estilo, das cores e do tamanho: **Perfil → Exibição →
+Densidade**. Confortável é a apresentação de sempre e o padrão de quem nunca
+escolheu; Compacta aproxima painéis, listas e seções para caber mais informação.
+
+| | Estilo (Legacy/Modern20) | Densidade |
+|---|---|---|
+| o que muda | a linguagem visual | o espaço entre as coisas |
+| onde mora | na conta (cache por conta) | só neste aparelho (`rama.pref.densidade`) |
+| atributo | `data-interface` | `data-densidade` |
+| quem aplica | `js/interface.js`, no `<head>` | `js/densidade.js`, no `<head>`, logo depois |
+| folhas | `css/modern20/*.css` | `css/densidade.css` + `css/modern20/densidade.css`, por último |
+
+- **Antes da primeira pintura**: o atributo entra no `<html>` antes das folhas,
+  em todas as páginas; nada abre numa densidade e salta para a outra.
+- **Trocar é só o atributo**: nenhum pedido ao servidor, nenhuma gravação de
+  ficha, nada redesenhado. Campos preenchidos, alterações não salvas, filtros,
+  abas, seções abertas e o foco ficam; o lugar na página é devolvido como na
+  troca de estilo (`RAMAInterface.guardarLugar` / `voltarAoLugar`). Outra aba do
+  mesmo navegador acompanha.
+- **O que compacta**: margens internas de painéis, cartões, recolhíveis e
+  janelas; distância entre seções (`.pilha`, `.grade`, corpo da página); altura
+  das linhas (perícias, tabela de perícias de Ordem, registros da lista,
+  rolagens, combate); cabeçalhos, abas, filtros, botões e campos; e os
+  componentes de cada sistema (Ordem, Oblívio, Vampiro, mesa da campanha).
+- **O que não muda**: letra (nada de `zoom`, `transform` ou fonte menor), a
+  entrelinha dos textos longos, os tokens de espaço `--e1…--e8` e nenhuma função
+  some ou passa a pedir um clique a mais.
+- **Alvo de toque**: `--alvo-toque` cai de 40 para 32 px **só com ponteiro fino**
+  (`@media (pointer: fine)`); no celular e em telas de toque continua 40.
+- **Modern20**: a mesma base, mais o que ele desenha diferente (título do painel
+  dentro da grade, folga maior das janelas) em `css/modern20/densidade.css`.
+- **Conferência no navegador**: `testes/medir-densidade.js` percorre as abas da
+  página aberta nas duas densidades e nos dois estilos e devolve a altura de cada
+  aba, elementos que passam da largura e margens indevidas em grades.
+
 ## Inventário de telas e componentes
 
 Levantado antes do redesenho, a partir das páginas (`js/paginas/*`) e das seções
@@ -160,6 +197,14 @@ das folhas. Cada linha diz onde o Modern20 a trata.
   Estado nunca só por cor: "/" Superficial, "X" Agravado, Mácula tracejada, dado
   de Fome em losango com símbolo e texto ("dado de Fome: 10, crítico de Fome"),
   `forced-colors` respeitado.
+- **Densidade (v5.2):** `testes/executar-tema.js` confere o padrão, a escolha
+  guardada já na abertura, valor desconhecido, troca sem pedido ao servidor, a
+  outra aba, o carregamento no `<head>` e por último em toda página, e que a
+  folha não usa zoom, transform, fonte nem tokens de espaço. No navegador
+  (`testes/medir-densidade.js`): fichas de Ordem, Oblívio e Vampiro e as
+  campanhas dos três, nos dois estilos — de 9% a 20% menos altura por aba na
+  Compacta, sem transbordo nem margem indevida —, também a 375 px (toque: alvo
+  de 40 px) e com escala 150%.
 - **Regressão do Legacy:** a v2.48.4 servida lado a lado
   (`testes/servidor-local.js --site <pasta da v2.48.4>`) e, em cada página, a
   comparação dos estilos calculados de todos os elementos (55 propriedades e os

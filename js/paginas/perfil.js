@@ -199,7 +199,33 @@
         el("p.r-ajuda", { texto: "Aumenta letras e controles da interface inteira. No estilo Legacy, a fonte pixel é mais nítida em 100%; acima disso ela cresce e fica levemente macia." }),
       ]),
 
-      el("p.t-mini", { texto: "O tamanho vale só neste aparelho. Tema, estilo da interface e efeito de tela antiga ficam no lápis ao lado do avatar." }),
+      densidade(),
+
+      el("p.t-mini", { texto: "Tamanho e densidade valem só neste aparelho. Tema, estilo da interface e efeito de tela antiga ficam no lápis ao lado do avatar." }),
+    ]);
+  }
+
+  /* Densidade (v5.2): quanto espaço sobra entre as coisas. Neste
+     aparelho, aplicada na hora, sem redesenhar a página — só os botões
+     deste grupo trocam de marcação, e o foco fica no botão clicado. */
+  function densidade() {
+    var D = global.RAMADensidade;
+    if (!D) return null;
+    var botoes = D.DENSIDADES.map(function (k) {
+      return el("button.filtro", {
+        type: "button",
+        "aria-pressed": String(D.atual() === k),
+        texto: D.NOMES[k],
+        onclick: function () {
+          D.definir(k);
+          botoes.forEach(function (b, i) { b.setAttribute("aria-pressed", String(D.DENSIDADES[i] === D.atual())); });
+        },
+      });
+    });
+    return el("div.r-campo", {}, [
+      el("span.r-rotulo", { texto: "Densidade" }),
+      el("div.filtros__grupo", { role: "group", "aria-label": "Densidade da interface" }, botoes),
+      el("p.r-ajuda", { texto: "Confortável é a apresentação de sempre. Compacta aproxima painéis, listas e seções para caber mais informação na tela, sem diminuir as letras nem esconder nada; no celular, os botões continuam fáceis de tocar." }),
     ]);
   }
 

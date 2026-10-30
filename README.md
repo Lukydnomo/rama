@@ -42,6 +42,7 @@ preferências de tela — nunca é tratado como banco.
     vampiro.css         Vampiro: criação, ficha, rolagem com Fome, Crônica (v5.0)
     (estas folhas SÃO o estilo Legacy: a aparência da v2.48.4, intocada)
     interface.css       o seletor de estilo do editor de temas (vale nos dois estilos)
+    densidade.css       a densidade compacta, centralizada (a par Modern20 em modern20/)
     modern20/           o estilo Modern20 (v2.49): uma folha par de cada uma acima,
                         carregada logo depois dela e presa a data-interface="modern20"
 
@@ -54,6 +55,7 @@ preferências de tela — nunca é tratado como banco.
     tema-modelo.js      temas personalizáveis: o que muda, validação e o resolvedor único (no <head>)
     tema.js             tema na tela: prévia → ficha → conta → aparelho (no <head>)
     interface.js        estilo da interface (Legacy ou Modern20) da conta, no <head>
+    densidade.js        densidade (Confortável ou Compacta) deste aparelho, no <head> (v5.2)
     tema-editor.js      o editor de temas, o mesmo no Perfil e na ficha
     dados.js            motor de dados — o único Math.random do sistema
     ficha.js            modelo da ficha, padrões e normalização
@@ -739,6 +741,11 @@ próprio `<script src>`, então funciona debaixo de subpasta sem ajuste.
 segredo nenhum — ele os lê das Script Properties. Publicá-lo não expõe nada.
 
 ### Atualizar o backend
+
+**v5.2.0 — ADENSAR:** só o site (a densidade da interface). Publique o site —
+inclusive `js/densidade.js`, `css/densidade.css`, `css/modern20/densidade.css` e
+as sete páginas `index.html`, que passam a carregá-los. Nada de `.gs`, versão da
+implantação ou `setupRama()`: a densidade fica só no navegador.
 
 **v5.1.0 — MARCADOR:** só o site (a origem Revoltado, a fonte Extra e a fonte
 corrigida de Barganha Insana). Publique o site; não precisa trocar `.gs`, criar
@@ -1517,7 +1524,7 @@ Três números diferentes, que não se misturam:
 
 | | Onde | O que é |
 |---|---|---|
-| versão do aplicativo | `js/versao.js` | o que a pessoa vê: v5.1.1 |
+| versão do aplicativo | `js/versao.js` | o que a pessoa vê: v5.2.0 |
 | `schemaVersion` | `js/ficha.js` | o formato da FICHA |
 | `versaoFormato` | `js/config.js` | o formato dos arquivos de importação |
 

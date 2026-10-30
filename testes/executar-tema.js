@@ -801,6 +801,68 @@ storageEI.fn({ key: "rama.interface.u9", newValue: "modern20" });
 t.igual("  outra conta não mexe aqui", estiloNaTela(), "legacy");
 t.ok("trocar o estilo não mexe no tema da conta", tela() === "claro" && !guardado.has("rama.tema.u1"));
 
+/* =====================================================================
+   DENSIDADE (v5.2, js/densidade.js): Confortável ou Compacta
+   ===================================================================== */
+
+const codigoDensidade = await Deno.readTextFile(new URL("../js/densidade.js", import.meta.url));
+const densidadeNaTela = () => document.documentElement.getAttribute("data-densidade");
+function abrirPaginaDensidade(conta) {
+  abrirPaginaInterface(conta);
+  (0, eval)(codigoDensidade);
+  return globalThis.RAMADensidade;
+}
+
+t.grupo("Densidade · preferência deste aparelho, antes da primeira pintura");
+guardado.clear();
+let DS = abrirPaginaDensidade(null);
+t.igual("sem escolha: Confortável (a apresentação de sempre)", densidadeNaTela(), "confortavel");
+guardado.set("rama.pref.densidade", "compacta");
+DS = abrirPaginaDensidade("u1");
+t.igual("a escolha guardada vale já ao abrir a página", densidadeNaTela(), "compacta");
+DS = abrirPaginaDensidade("u2");
+t.igual("  e é do aparelho, não da conta: outra conta no mesmo navegador vê igual", densidadeNaTela(), "compacta");
+guardado.set("rama.pref.densidade", "minuscula");
+DS = abrirPaginaDensidade(null);
+t.igual("valor desconhecido vira Confortável", densidadeNaTela(), "confortavel");
+guardado.clear();
+DS = abrirPaginaDensidade("u1");
+rede.pedidos = [];
+DS.definir("compacta");
+t.ok("trocar é na hora e grava neste aparelho", densidadeNaTela() === "compacta" && guardado.get("rama.pref.densidade") === "compacta");
+t.igual("  sem nenhum pedido ao servidor", rede.pedidos.length, 0);
+t.ok("  sem mexer no estilo nem no tema", document.documentElement.getAttribute("data-interface") === "legacy" && !guardado.has("rama.interface.u1") && !guardado.has("rama.tema.u1"));
+DS.definir("confortavel");
+t.igual("e volta (reversível)", densidadeNaTela(), "confortavel");
+const storageDS = ouvintesGlobais.filter((o) => o.tipo === "storage").pop();
+storageDS.fn({ key: "rama.pref.densidade", newValue: "compacta" });
+t.igual("outra aba deste navegador trocou: esta acompanha", densidadeNaTela(), "compacta");
+storageDS.fn({ key: "rama.interface.u1", newValue: "modern20" });
+t.igual("  outra chave não mexe na densidade", densidadeNaTela(), "compacta");
+
+t.grupo("Densidade · as páginas e a folha");
+{
+  const PAGINAS = ["index.html", "personagens/index.html", "campanhas/index.html", "campanha/index.html", "ficha/index.html", "homebrew/index.html", "perfil/index.html"];
+  const ruins = [], semFolha = [];
+  for (const p of PAGINAS) {
+    const html = await Deno.readTextFile(new URL("../" + p, import.meta.url));
+    const iInterface = html.indexOf("js/interface.js"), iDens = html.indexOf("js/densidade.js"), iCss = html.indexOf('rel="stylesheet"');
+    if (!(iDens > iInterface && iDens < iCss)) ruins.push(p);
+    const folhas = [...html.matchAll(/href="(?:\.\.\/)?css\/((?:modern20\/)?[a-z0-9]+)\.css"/g)].map((m) => m[1]);
+    if (folhas.slice(-2).join(",") !== "densidade,modern20/densidade") semFolha.push(p);
+  }
+  t.ok("toda página aplica a densidade no <head>, depois do estilo e antes das folhas", ruins.length === 0, ruins.join(", "));
+  t.ok("  e carrega a folha da densidade por último (com a par do Modern20)", semFolha.length === 0, semFolha.join(", "));
+  const css = (await Deno.readTextFile(new URL("../css/densidade.css", import.meta.url))).replace(/\/\*[\s\S]*?\*\//g, "");
+  t.ok("a compactação não usa zoom, transform nem fonte menor", !/\bzoom\s*:|transform\s*:|font-size\s*:|--texto-[a-z]+\s*:/.test(css));
+  t.ok("  nem muda os tokens de espaço (--e1…--e8)", !/--e\d\s*:/.test(css));
+  t.ok("  e o alvo de toque só diminui com ponteiro fino", /@media \(pointer: fine\)\s*\{\s*:root\[data-densidade="compacta"\] \{ --alvo-toque: 32px; \}/.test(css) &&
+    (css.match(/--alvo-toque\s*:/g) || []).length === 1);
+  const seletores = css.split("}").map((b) => b.split("{")[0].trim()).filter((s) => s && !/^@media/.test(s));
+  t.ok("  toda regra presa a :root[data-densidade=\"compacta\"] (Confortável fica intocado)",
+    seletores.every((s) => s.split(",").every((x) => x.trim().indexOf(':root[data-densidade="compacta"]') === 0)), seletores.filter((s) => s.indexOf(':root[data-densidade="compacta"]') !== 0).slice(0, 3).join(" | "));
+}
+
 t.grupo("Estilo da interface · as páginas e o isolamento das folhas");
 {
   const PAGINAS = ["index.html", "personagens/index.html", "campanhas/index.html", "campanha/index.html", "ficha/index.html", "homebrew/index.html", "perfil/index.html"];

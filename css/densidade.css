@@ -1,0 +1,181 @@
+/* =====================================================================
+   R.A.M.A. — densidade compacta (v5.2) · Legacy e base comum
+   ---------------------------------------------------------------------
+   Uma preferência deste aparelho (Perfil → Exibição → Densidade), posta
+   no <html> por js/densidade.js antes da primeira pintura:
+       data-densidade="confortavel"  a apresentação de sempre (nada aqui)
+       data-densidade="compacta"     as regras abaixo
+
+   O QUE MUDA: espaço, não letra. Margens internas de painéis e cartões,
+   a distância entre seções e componentes, a altura das linhas de listas
+   e tabelas, cabeçalhos, filtros e ações secundárias. Nada de zoom,
+   transform ou fonte menor; nenhuma função escondida; textos longos
+   abertos mantêm a entrelinha.
+
+   O ALVO DE TOQUE. --alvo-toque é a altura mínima de botões, abas,
+   ícones e cabeçalhos de cartão. No compacto ele diminui SÓ com ponteiro
+   fino (mouse); no celular e em telas de toque continua o de sempre —
+   compacta-se o espaço em volta, nunca o tamanho do dedo.
+
+   OS TOKENS DE ESPAÇO (--e1…--e8) NÃO MUDAM: eles também separam coisas
+   que não podem colar (ícone e texto, grupos de botões). As reduções são
+   regras pontuais, todas aqui, presas a :root[data-densidade="compacta"]
+   — mais específicas que as dos componentes e que as do Modern20 (que
+   usam :where). O ajuste próprio do Modern20 está em
+   css/modern20/densidade.css. Esta folha vem por último em cada página.
+   ===================================================================== */
+
+/* ---------- o alvo de toque, só com mouse ---------- */
+
+@media (pointer: fine) {
+  :root[data-densidade="compacta"] { --alvo-toque: 32px; }
+}
+
+/* ---------- página e estrutura ---------- */
+
+:root[data-densidade="compacta"] .app-corpo { padding: var(--e4) var(--e4) var(--e7); gap: var(--e4); }
+:root[data-densidade="compacta"] body.pagina-ficha .app-corpo { gap: var(--e3); }
+:root[data-densidade="compacta"] .app-topo__faixa { padding: var(--e2) var(--e4); }
+:root[data-densidade="compacta"] .app-nav__link { padding: var(--e1) var(--e4); }
+:root[data-densidade="compacta"] .app-rodape__faixa { padding: var(--e3) var(--e4); }
+:root[data-densidade="compacta"] .pagina-topo { gap: var(--e3); }
+
+:root[data-densidade="compacta"] .pilha { gap: var(--e2); }
+:root[data-densidade="compacta"] .pilha--curta { gap: var(--e1); }
+:root[data-densidade="compacta"] .pilha--larga { gap: var(--e4); }
+:root[data-densidade="compacta"] .grade { gap: var(--e3); }
+:root[data-densidade="compacta"] .grade--folga { gap: var(--e4); }
+:root[data-densidade="compacta"] .grupos-sistema,
+:root[data-densidade="compacta"] .icones-resultado { gap: var(--e4); }
+
+/* ---------- painéis, cartões e recolhíveis ---------- */
+
+/* O título do painel Legacy fica SOBRE a borda: o topo guarda o espaço
+   dele; os lados e o fundo encolhem. */
+:root[data-densidade="compacta"] .r-painel:not(.r-painel--solto) { padding: var(--e4) var(--e3) var(--e3); }
+/* Entre painéis empilhados, o título do de baixo ainda precisa caber. */
+:root[data-densidade="compacta"] .pilha > .r-painel + .r-painel { margin-top: var(--e1); }
+
+:root[data-densidade="compacta"] .recolhivel + .recolhivel,
+:root[data-densidade="compacta"] .recolhivel-faixa + .recolhivel-faixa,
+:root[data-densidade="compacta"] .recolhivel-faixa + .recolhivel,
+:root[data-densidade="compacta"] .recolhivel + .recolhivel-faixa { margin-top: var(--e1); }
+/* Numa grade (itens, regras), o espaço é o gap dela: nada de margem a mais. */
+:root[data-densidade="compacta"] .itens > .recolhivel,
+:root[data-densidade="compacta"] .itens > .recolhivel-faixa,
+:root[data-densidade="compacta"] .ordem-regras > .recolhivel { margin-top: 0; }
+:root[data-densidade="compacta"] .item { padding: var(--e2); }
+:root[data-densidade="compacta"] .recolhivel__topo { padding: var(--e1) var(--e3); }
+:root[data-densidade="compacta"] .recolhivel__topo--empilhado { padding-top: var(--e2); padding-bottom: var(--e2); }
+:root[data-densidade="compacta"] .recolhivel__cabeca { gap: 2px; }
+:root[data-densidade="compacta"] .recolhivel__corpo { padding: var(--e2) var(--e3); }
+:root[data-densidade="compacta"] .item__acoes--fora { padding: var(--e1) var(--e3) var(--e2); }
+
+/* ---------- janelas ---------- */
+
+:root[data-densidade="compacta"] .r-modal__topo { padding: var(--e2) var(--e3); }
+:root[data-densidade="compacta"] .r-modal__corpo { padding: var(--e3); gap: var(--e3); }
+:root[data-densidade="compacta"] .r-modal__rodape { padding: var(--e2) var(--e3); }
+
+/* ---------- controles: abas, filtros, botões, campos ---------- */
+
+:root[data-densidade="compacta"] .r-aba { padding: var(--e1) var(--e3); }
+:root[data-densidade="compacta"] .filtros { gap: var(--e1) var(--e2); }
+:root[data-densidade="compacta"] .filtro { padding: 2px var(--e2); }
+:root[data-densidade="compacta"] .r-botao { padding: var(--e1) var(--e3); }
+:root[data-densidade="compacta"] .r-botao--mini { padding: 2px var(--e2); }
+:root[data-densidade="compacta"] .r-campo { gap: 2px; }
+:root[data-densidade="compacta"] .editar-grade { gap: var(--e2); }
+:root[data-densidade="compacta"] .r-entrada,
+:root[data-densidade="compacta"] .r-selecao { padding: var(--e1) var(--e2); }
+:root[data-densidade="compacta"] .pasta,
+:root[data-densidade="compacta"] .pasta-opcao,
+:root[data-densidade="compacta"] .exibicao__opcao { padding: 2px var(--e2); }
+
+/* ---------- listas da plataforma ---------- */
+
+:root[data-densidade="compacta"] .registro { gap: var(--e2); padding: var(--e2); }
+:root[data-densidade="compacta"] .resumo { gap: var(--e2); }
+:root[data-densidade="compacta"] .resumo__item { padding: var(--e3); }
+
+/* ---------- ficha (todos os sistemas) ---------- */
+
+:root[data-densidade="compacta"] .ficha { gap: var(--e3); }
+:root[data-densidade="compacta"] .ficha-topo__faixa { padding: var(--e2) var(--e3); gap: var(--e2); }
+:root[data-densidade="compacta"] .ficha-geral { gap: var(--e3); }
+:root[data-densidade="compacta"] .ficha-identidade { gap: var(--e2); }
+:root[data-densidade="compacta"] .ficha__aviso-edicao,
+:root[data-densidade="compacta"] .ficha__aviso-mestre,
+:root[data-densidade="compacta"] .ficha__aviso-acesso { padding: var(--e1) var(--e3); }
+
+:root[data-densidade="compacta"] .atributos,
+:root[data-densidade="compacta"] .status-lista,
+:root[data-densidade="compacta"] .defesa { gap: var(--e2); }
+:root[data-densidade="compacta"] .atributo__caixa,
+:root[data-densidade="compacta"] .defesa__item { padding: var(--e2) var(--e1); }
+:root[data-densidade="compacta"] .status { padding: var(--e2); }
+
+/* Perícias: a linha da lista (universal e a tabela de Ordem) e o editor
+   dela. A altura da linha é a do botão do total e do dado. */
+:root[data-densidade="compacta"] .ordem-pericia { padding: 1px var(--e2); }
+:root[data-densidade="compacta"] .pericia { padding: var(--e1) var(--e3); }
+:root[data-densidade="compacta"] .pericia-edicao { padding: var(--e2); }
+
+:root[data-densidade="compacta"] .inventario__peso { padding: var(--e2); }
+:root[data-densidade="compacta"] .anotacoes { gap: var(--e3); }
+:root[data-densidade="compacta"] .calculado { padding: var(--e1) var(--e2); }
+:root[data-densidade="compacta"] .aliados-grade,
+:root[data-densidade="compacta"] .aliados-grade .r-painel { gap: var(--e2); }
+:root[data-densidade="compacta"] .ordem-aviso-pendencias,
+:root[data-densidade="compacta"] .ordem-personalizacao-aviso { padding: var(--e1) var(--e3); }
+:root[data-densidade="compacta"] .ordem-personalizacao-automacao { padding: var(--e2); }
+
+/* Rituais: o cabeçalho com as rolagens e o "Usar ritual". */
+:root[data-densidade="compacta"] .ritual-uso { padding: var(--e1) var(--e3) var(--e2); }
+:root[data-densidade="compacta"] .ritual-danos { gap: var(--e1) var(--e3); }
+:root[data-densidade="compacta"] .ritual-dano__rolar { min-width: var(--alvo-toque); min-height: var(--alvo-toque); }
+
+/* ---------- campanha ---------- */
+
+:root[data-densidade="compacta"] .mesa-barra,
+:root[data-densidade="compacta"] .mesa-grade { gap: var(--e2); }
+:root[data-densidade="compacta"] .mesa-cartao { gap: var(--e2); padding: var(--e2); }
+:root[data-densidade="compacta"] .mesa-cartao__topo { gap: var(--e2); }
+:root[data-densidade="compacta"] .mesa-adicionar__item { padding: var(--e1) var(--e2); gap: var(--e2); }
+:root[data-densidade="compacta"] .rolagem-linha { padding: var(--e1) var(--e2); }
+:root[data-densidade="compacta"] .campanha-capa__legenda { padding: var(--e4) var(--e3) var(--e2); }
+:root[data-densidade="compacta"] .mesa-ocultacao__aviso { padding: var(--e1) var(--e3); }
+:root[data-densidade="compacta"] .combate { gap: var(--e3); }
+:root[data-densidade="compacta"] .combate__painel.combate__painel--turno { padding: var(--e2); }
+:root[data-densidade="compacta"] .combate-turno,
+:root[data-densidade="compacta"] .combate-pendencias,
+:root[data-densidade="compacta"] .combate-conflito { padding: var(--e1) var(--e2); }
+
+/* ---------- Oblívio ---------- */
+
+:root[data-densidade="compacta"] .oblivio-bloco,
+:root[data-densidade="compacta"] .oblivio-bloco__identidade { gap: var(--e2); }
+:root[data-densidade="compacta"] .oblivio-corpo { gap: var(--e3); }
+:root[data-densidade="compacta"] .oblivio-papel { padding: var(--e2); }
+:root[data-densidade="compacta"] .oblivio-criar,
+:root[data-densidade="compacta"] .oblivio-criar__etapa,
+:root[data-densidade="compacta"] .oblivio-ataque,
+:root[data-densidade="compacta"] .oblivio-mapa { gap: var(--e2); }
+
+/* ---------- Vampiro ---------- */
+
+:root[data-densidade="compacta"] .vamp-bloco,
+:root[data-densidade="compacta"] .vamp-bloco__identidade,
+:root[data-densidade="compacta"] .vamp-grade { gap: var(--e2); }
+:root[data-densidade="compacta"] .vamp-linha { padding: 1px 0; }
+:root[data-densidade="compacta"] .vamp-poder,
+:root[data-densidade="compacta"] .vamp-vantagem,
+:root[data-densidade="compacta"] .vamp-crenca,
+:root[data-densidade="compacta"] .vamp-pn,
+:root[data-densidade="compacta"] .vamp-cartao { padding: var(--e1) var(--e2); }
+:root[data-densidade="compacta"] .vamp-poderes,
+:root[data-densidade="compacta"] .vamp-vantagens,
+:root[data-densidade="compacta"] .vamp-crencas,
+:root[data-densidade="compacta"] .vamp-pns { gap: var(--e1); }
+:root[data-densidade="compacta"] .vamp-criar-janela .r-modal__corpo,
+:root[data-densidade="compacta"] .vamp-criar__etapa { gap: var(--e2); }

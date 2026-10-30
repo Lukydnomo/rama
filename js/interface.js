@@ -320,5 +320,9 @@
     salvar: salvar,
     definirPrevia: definirPrevia,
     aoMudar: aoMudar,
+    /* Guardar e devolver o lugar da pessoa numa troca de medidas: a
+       densidade (js/densidade.js, v5.2) usa o mesmo cuidado. */
+    guardarLugar: guardarLugar,
+    voltarAoLugar: voltarAoLugar,
   };
 })(typeof window !== "undefined" ? window : globalThis);
