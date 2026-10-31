@@ -298,6 +298,24 @@ button.vamp-dado:focus-visible { outline: 3px solid var(--cor-foco); outline-off
 .vamp-criar__etapa { display: flex; flex-direction: column; gap: var(--e2); min-width: 0; }
 .vamp-criar__contador { margin: 0; font-weight: 700; }
 .vamp-criar__pendencias { margin: 0; padding-left: var(--e4); color: var(--cor-aviso); font-size: var(--texto-mini); }
+.vamp-criar__pendencias { display: flex; flex-direction: column; gap: var(--e1); }
+.vamp-criar__pendencias button {
+  background: none;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  padding: 0;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  text-transform: none;
+  letter-spacing: normal;
+  text-decoration: underline dotted;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+.vamp-criar__pendencias button:hover { color: var(--cor-texto); }
+.vamp-criar__pendencias button:focus-visible { outline: 2px solid var(--cor-foco); outline-offset: 2px; }
 .vamp-criar__ok { margin: 0; color: var(--cor-ok); font-size: var(--texto-mini); }
 .vamp-criar__checks { display: flex; flex-direction: column; gap: var(--e1); }
 
