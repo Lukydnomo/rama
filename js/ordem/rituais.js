@@ -69,6 +69,7 @@
     ["AS3", "Arquivos Secretos 3", "Arquivos Secretos 3", "AS3"],
     ["AS4", "Arquivos Secretos 4", "Arquivos Secretos 4", "AS4"],
     ["AS5", "Arquivos Secretos 5", "Arquivos Secretos 5", "AS5"],
+    ["AS6", "Arquivos Secretos 6", "Arquivos Secretos 6", "AS6"],
     ["EXTRA", "Extra", "Extra", "EX"],
   ];
   function mapaDeLivros(campo, indice) {

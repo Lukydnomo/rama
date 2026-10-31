@@ -21,6 +21,9 @@
             Produção do Anfitrião, Energia e a regra opcional de Hacking)
      AS5    Arquivos Secretos 5, v1.0, Jambô (pacote de conteúdo oficial — os
             Alheios, a TV Varminho e a Transmissão)
+     AS6    Arquivos Secretos 6, v1.0, Jambô (pacote de conteúdo oficial — as
+            Indústrias Panacea; a regra opcional Evolução Modular, p. 80–81,
+            é conteúdo de fã publicado no pacote: não oficial, não canônica)
      EXTRA  Extra (v5.1): conteúdo OFICIAL avulso, que não saiu em livro —
             marca-páginas e outros materiais promocionais. Não é Homebrew
             (que é da conta de quem criou) e não é um livro: a entrada não
@@ -66,6 +69,7 @@
   var AS3 = "AS3";
   var AS4 = "AS4";
   var AS5 = "AS5";
+  var AS6 = "AS6";
   var EXTRA = "EXTRA";
 
   /* Os livros, num lugar só (v2.29). Quem precisa do nome de um livro
@@ -88,6 +92,11 @@
        poderes de Transmissão), os Alheios (p. 35–51), o gerador e a TV
        Varminho (p. 20–33) e os perigos complexos (p. 66–69). */
     { sigla: AS5, nome: "Arquivos Secretos 5", curto: "Arquivos Secretos 5", abreviacao: "AS5", edicao: "v1.0" },
+    /* v5.3: páginas 66–76 (origens, poderes, ritual, itens, maldições e
+       modificações para medicamentos, doenças e venenos), as fichas dos
+       personagens (p. 28, 33, 37, 41) e das ameaças da Panacea
+       (p. 56–63) e a regra opcional Evolução Modular (p. 80–81). */
+    { sigla: AS6, nome: "Arquivos Secretos 6", curto: "Arquivos Secretos 6", abreviacao: "AS6", edicao: "v1.0" },
     /* v5.1: a fonte das publicações oficiais avulsas. Fica na mesma lista
        para valer nas etiquetas, nas bibliotecas, nos filtros e nas
        validações como qualquer fonte oficial; `avulsa` diz que não há
@@ -1060,6 +1069,37 @@
       nota: "O cartão marca o uso da missão num interlúdio: os benefícios de dormir são aplicados pela mesa e nenhuma ação de interlúdio é gasta. O +2 aparece no resultado de um teste de resistência, para quem confirmar que o efeito tenta deixar inconsciente." },
 
     /* -----------------------------------------------------------------
+       ARQUIVOS SECRETOS 6 v1.0, p. 66
+       -----------------------------------------------------------------
+       Os custos e os benefícios valem só para aquele teste (ou aquela
+       cena): trocar a perícia não muda o treinamento de nenhuma das
+       duas, e o +5 não vira bônus da perícia. Os botões e o estado
+       moram em js/ordem/arquivo6.js e js/ordem/telas/ficha-arquivo6.js.
+       ----------------------------------------------------------------- */
+
+    { chave: "cientistaExPanacea", nome: "Cientista Ex-Panacea", fonte: AS6, pagina: 66,
+      pericias: ["atualidades", "ciencias"],
+      poder: "Existe uma Explicação", automacao: "parcial",
+      resumo: "Quando faz um teste de Ocultismo, você pode gastar 2 PE para usar Ciências no lugar dessa perícia.",
+      substituicoes: [{ de: "ocultismo", para: "ciencias", custo: 2, rotulo: "Existe uma Explicação: usar Ciências", condicao: "" }],
+      nota: "No resultado de um teste de Ocultismo, o botão cobra os 2 PE e rola Ciências no lugar — vale para aquele teste só, com o grau e os bônus de Ciências. O treinamento de Ocultismo e o de Ciências não mudam." },
+
+    { chave: "segurancaExPanacea", nome: "Segurança Ex-Panacea", fonte: AS6, pagina: 66,
+      pericias: ["luta", "pontaria"],
+      poder: "Técnicas de Contenção", automacao: "parcial",
+      resumo: "Quando faz uma manobra de combate, você pode gastar 2 PE para receber +5 no teste de manobra.",
+      acoesNoTeste: [{ id: "contencao", rotulo: "Técnicas de Contenção", pericias: ["luta"], custo: 2, tipo: "bonus", valor: 5,
+        condicao: "Só no teste de uma manobra de combate (agarrar, derrubar, desarmar, empurrar, quebrar…)." }],
+      nota: "O +5 aparece no resultado de um teste de Luta, para quem confirmar que é uma manobra de combate, e vale só para ele." },
+
+    { chave: "cobaiaSobrevivente", nome: "Cobaia Sobrevivente", fonte: AS6, pagina: 66,
+      pericias: ["fortitude", "vontade"],
+      poder: "Forças para Enfrentar", automacao: "parcial", controles: true,
+      resumo: "Descreva ao mestre a parte mais traumática da sua história como cobaia. Numa cena com algo relacionado a esse trauma, a critério do mestre, você fica abalado. Quando isso acontecer, pode gastar 2 PE para receber, até o fim da cena, imunidade a efeitos de medo — inclusive ao abalado desta habilidade.",
+      escolhas: [{ chave: "trauma", tipo: "texto", rotulo: "O trauma (a parte mais traumática da sua história como cobaia)", limite: 200 }],
+      nota: "Quem decide que a cena tem algo ligado ao trauma é o mestre: o cartão registra a ocorrência e põe o abalado em Condições, com a origem. Os 2 PE dão imunidade a efeitos de medo até o fim da cena — o abalado da ocorrência sai, e a ficha recusa outra condição de medo até a cena acabar. Nada é aplicado sem o clique." },
+
+    /* -----------------------------------------------------------------
        EXTRA (v5.1) — conteúdo oficial avulso, sem livro nem página
        -----------------------------------------------------------------
        Revoltado veio de um marca-página de HQ. `seEstado`: o efeito só
@@ -1303,7 +1343,7 @@
   }
 
   global.RAMAOrdemCatalogo = {
-    FONTES: { OPRPG: OPRPG, SAH: SAH, AS1: AS1, AS2: AS2, AS3: AS3, AS4: AS4, AS5: AS5, EXTRA: EXTRA },
+    FONTES: { OPRPG: OPRPG, SAH: SAH, AS1: AS1, AS2: AS2, AS3: AS3, AS4: AS4, AS5: AS5, AS6: AS6, EXTRA: EXTRA },
     LIVROS: LIVROS,
     ehAvulsa: ehAvulsa,
     mapaDosLivros: mapaDosLivros,

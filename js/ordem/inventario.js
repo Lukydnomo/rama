@@ -82,12 +82,12 @@
   };
   var TIPOS_PROTECAO = ["leve", "pesada", "escudo"];
   var ELEMENTOS = ["sangue", "morte", "conhecimento", "energia", "medo", "varia"];
-  var MARCADORES = ["acessorio", "utensilio", "vestimenta", "eletrico", "camera", "corpoACorpo", "besta", "balas", "granada"];
+  var MARCADORES = ["acessorio", "utensilio", "vestimenta", "eletrico", "camera", "corpoACorpo", "besta", "balas", "granada", "medicamento"];
   /* As fontes aceitas numa referência de item: as do registro único dos
      livros (C.LIVROS); sem o catálogo, a lista fixa — com o livro novo. */
   var FONTES = (global.RAMAOrdemCatalogo && global.RAMAOrdemCatalogo.LIVROS
     ? global.RAMAOrdemCatalogo.LIVROS.map(function (l) { return l.sigla; })
-    : ["OPRPG", "SAH", "AS1", "AS2", "AS3", "AS4", "AS5", "EXTRA"]);
+    : ["OPRPG", "SAH", "AS1", "AS2", "AS3", "AS4", "AS5", "AS6", "EXTRA"]);
   var MAX_MODIFICACOES = 12;
   var DADO = /^[1-9]\d{0,2}d([1-9]\d{0,2})$/;
 
@@ -228,6 +228,13 @@
     else ["selo", "pecas", "modoSkate"].forEach(function (k) {
       if (b[k] !== undefined && b[k] !== null && b[k] !== false) dados[k] = JSON.parse(JSON.stringify(b[k]));
     });
+    /* Arquivos Secretos 6 (v5.3): a arma envelhecida pelo Escudo Espiral
+       Temporal (1: −1 dado no ataque; 2: quebrada) e os usos do kit de
+       medicina pelo Farmacêutico de Campo (no 3º, o kit sai). */
+    var velha = inteiroEntre(b.envelhecida, 0, 2);
+    if (velha) dados.envelhecida = velha;
+    var usosKit = inteiroEntre(b.usosFarmaceutico, 0, 3);
+    if (usosKit) dados.usosFarmaceutico = usosKit;
     /* Contagem de munição (v2.20, regra opcional): o que está carregado
        numa arma e o que já saiu dos pacotes de uma munição. Sem o módulo
        (uma página que não conta munição), passa como veio. */

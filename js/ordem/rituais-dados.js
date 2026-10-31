@@ -24,6 +24,7 @@
      AS2    Arquivos Secretos 2, v1.0 (Jambô, pacote de conteúdo oficial)
             Mapa Sanguíneo, Labirinto Mental, Capturar Momento e Rajada
             Caótica (p. 65–67)
+     AS6    Arquivos Secretos 6, v1.0 (Jambô): Hesitação Forçada (p. 72)
      AS4    Arquivos Secretos 4, v1.0 (Jambô, pacote de conteúdo oficial)
             Backup (p. 68). Os rituais impressos nas fichas da Produção
             (Eletrocussão, Coincidência Forçada, Tela de Ruído…) são ações
@@ -105,6 +106,7 @@
   var AS1 = "AS1";
   var AS2 = "AS2";
   var AS4 = "AS4";
+  var AS6 = "AS6";
   var EX = "EXTRA";
 
   var CO = "conhecimento";
@@ -1496,6 +1498,33 @@
       ]
     },
 
+
+    /* --- Arquivos Secretos 6, p. 72 ---
+       Dois elementos, como impresso (Sangue e Conhecimento). As três
+       formas são efeitos diferentes: a Verdadeira NÃO repete a regra da
+       Normal (o alvo rola de novo o MENOR dado, e a resistência anula).
+       O acompanhamento no alvo (teste no início do turno, sucessos
+       seguidos, a rolagem de novo) mora em js/ordem/arquivo6.js. */
+    {
+      id: "as6.ritual.hesitacao-forcada", nome: "Hesitação Forçada", elemento: [SA, CO], todosOsElementos: true, circulo: 1, fonte: AS6, pagina: 72,
+      execucao: "padrão", alcance: "curto", alvo: "1 pessoa", duracao: "sustentada", resistencia: "Vontade parcial",
+      resumo: "Você expande ao extremo as dúvidas e inseguranças que já existiam no subconsciente do alvo. Enquanto o ritual estiver ativo, ele faz um teste de Vontade no início de cada um dos seus turnos: falhando, rola de novo o maior dado de qualquer teste feito até o fim desse turno, ficando com o novo resultado. Passando no teste duas vezes seguidas, o efeito termina.",
+      versoes: [
+        {
+          nome: "Discente", custo: 2, requisito: "2º círculo",
+          alteracoes: "Muda o alvo para 1 ser. Além do normal, um alvo que não tenha resistido ao ritual não pode fazer ações hostis contra o conjurador. Em criaturas, o ritual não desperta inseguranças (elas não as têm): reescreve os movimentos delas pelo Conhecimento, com efeitos parecidos.",
+        },
+        {
+          nome: "Verdadeiro", custo: 5, requisito: "3º círculo e afinidade",
+          alteracoes: "Muda a resistência para Vontade anula, e o efeito muda: o ritual fortalece as convicções do alvo até o absurdo. Enquanto durar, o alvo rola de novo o MENOR dado de qualquer teste, mantendo o novo resultado; e sempre que um aliado adjacente a ele sofrer um ataque, ele deve gastar uma reação para se pôr no caminho e virar o novo alvo do ataque. Um alvo involuntário ainda pode resistir com um teste de Vontade no início dos seus turnos.",
+        },
+      ],
+      notas: [
+        "O cabeçalho imprime os dois elementos (Sangue e Conhecimento); a ficha de Laila (p. 37) mostra a forma discente como Conhecimento 1 — o ritual da biblioteca segue a página do ritual.",
+        "Na Verdadeira, o livro diz que o involuntário “ainda pode resistir” no início dos turnos e não fala em dois sucessos: a ficha lê como um teste por turno que, passando, encerra o efeito (Vontade anula).",
+      ]
+    },
+
   ];
 
   /* FIM DOS RITUAIS — o próximo lote entra acima desta linha. */
@@ -1509,6 +1538,8 @@
       AS2: { nome: "Arquivos Secretos 2", curto: "Arquivos Secretos 2", edicao: "v1.0" },
       AS3: { nome: "Arquivos Secretos 3", curto: "Arquivos Secretos 3", edicao: "v1.0" },
       AS4: { nome: "Arquivos Secretos 4", curto: "Arquivos Secretos 4", edicao: "v1.0" },
+      AS5: { nome: "Arquivos Secretos 5", curto: "Arquivos Secretos 5", edicao: "v1.0" },
+      AS6: { nome: "Arquivos Secretos 6", curto: "Arquivos Secretos 6", edicao: "v1.0" },
     },
     rituais: RITUAIS,
   };

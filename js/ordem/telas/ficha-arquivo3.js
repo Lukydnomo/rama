@@ -112,7 +112,11 @@
     return o.catalogoId || o.copiadoDe || "";
   }
   function aliadosAs3(ctx) {
-    return (ctx.ficha.aliados || []).filter(function (a) { return /^as3\.criatura\./.test(catalogoDoAliado(a)); });
+    /* Também os perfis do AS6 com bônus fixo (Alice e Laila, v5.3). */
+    return (ctx.ficha.aliados || []).filter(function (a) {
+      var cat = catalogoDoAliado(a);
+      return /^as3\.criatura\./.test(cat) || !!(A3() && A3().EFEITOS_DE_ALIADO[cat]);
+    });
   }
   /* Habilidades com comportamento especial (rolar de novo, valor
      guardado), de qualquer aliado — inclusive uma cópia de Homebrew. */
@@ -400,7 +404,7 @@
   /* ---------- aliados do AS3 ---------- */
 
   function secaoAliados(ctx, o, aliados) {
-    var partes = [titulo("Aliados do Arquivos Secretos 3"),
+    var partes = [titulo("Aliados com bônus fixo (Arquivos Secretos 3 e 6)"),
       linha("Ligue “acompanhando” enquanto o aliado estiver com o personagem: os bônus fixos entram nas contas. Os de custo e os condicionais aparecem nos resultados das rolagens.")];
     aliados.forEach(function (a) {
       var cat = catalogoDoAliado(a);

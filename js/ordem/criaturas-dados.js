@@ -37,6 +37,12 @@
             Os Alheios (p. 35–51): hospedeiro parasitado e variações,
             hospedeiro aflorado, interflorado, Fummu, os três doppelgangers
             com a forma monstruosa, Bilu, rastropoda e memoflígico
+     AS6    Arquivos Secretos 6, v1.0 (Jambô, pacote de conteúdo oficial)
+            As Indústrias Panacea: Alice Cruzes (p. 28), Ketan Arjuna
+            (p. 33), Laila Verdante (p. 37), Dr. Neruda (p. 41), cientista,
+            manda-chuva e segurança (p. 56–59), hikikomori, marca-passo e
+            Estímulo (p. 60–62), experimento Ssabáka (p. 63) e os quatro
+            perfis "como aliado" (p. 28, 33, 37, 41)
 
    As páginas são as do livro, não as do PDF. Os resumos são redação
    própria: guardam os números, as condições e os testes que o jogo
@@ -124,6 +130,7 @@
   var AS3 = "AS3";
   var AS4 = "AS4";
   var AS5 = "AS5";
+  var AS6 = "AS6";
 
   var SA = "sangue";
   var MO = "morte";
@@ -233,6 +240,21 @@
       habilidades: habilidades.concat([mascara(testeDaManobra)]),
       acoes: acoes.concat([musicaDoDiabo()]),
       notas: ["O livro não imprime a ficha mascarada: as ações são as da ficha com +5 no ataque, +2 dados de dano e +5 na DT aplicados. Testes, perícias e o PV de machucado continuam os da ficha."].concat(notas || []),
+    };
+  }
+
+  /* Perfil "como aliado" do Arquivos Secretos 6 (p. 28, 33, 37, 41). */
+  function aliadoAs6(chave, nome, pagina, descricao, habilidades, notas) {
+    return {
+      id: "as6.criatura." + chave + "-aliado", livro: AS6, pagina: pagina, aliada: true,
+      nome: nome + " (aliado)", natureza: "humana", tipo: "Aliado", tamanho: null, categoria: "Aliados",
+      nivel: "Aliado (OPRPG p. 170)", elementos: [], vd: null,
+      descricao: descricao,
+      ficha: { id: "as6.criatura." + chave, nome: nome, pagina: pagina },
+      notas: ["Perfil “como aliado”: são os benefícios para quem o acompanha, sem estatísticas de combate. A ficha de ameaça é outra entrada.",
+        "A Panacea dificilmente se aliaria aos agentes: o pacote sugere a aliança só em circunstâncias extremas (p. 28)."].concat(notas || []),
+      habilidades: habilidades,
+      acoes: [],
     };
   }
 
@@ -5191,6 +5213,379 @@
           { rolagens: [dano("Manipulação Psicônica", "6d6 mental"), dano("Comunicação alheia", "1d6 mental")], resistencia: "Vontade DT 29 (varia por efeito)" }),
       ],
     },
+
+    /* =================================================================
+       ARQUIVOS SECRETOS 6 — as Indústrias Panacea
+       -----------------------------------------------------------------
+       As fichas de Alice, Ketan, Laila e Neruda estão no meio da
+       narrativa (p. 28, 33, 37, 41); as ameaças, nas p. 56–63. Os
+       personagens só narrativos do pacote NÃO têm ficha inventada.
+       Eletricidade (Ketan, hikikomori) e Energia são danos diferentes e
+       ficam como impressos.
+       ================================================================= */
+
+    {
+      id: "as6.criatura.alice-cruzes", livro: AS6, pagina: 28,
+      nome: "Alice Cruzes", natureza: "humana", tipo: "Pessoa", tamanho: "Médio", categoria: "Indústrias Panacea", vd: 40,
+      elementos: [],
+      descricao: "Diretora de instalações da Panacea: estrategista que nunca se expõe ao perigo à toa e anda sempre com dois seguranças.",
+      percepcao: "2d20+5", iniciativa: "2d20",
+      defesa: 18, fortitude: "1d20", reflexos: "2d20+5", vontade: "2d20+10",
+      pv: 30, machucado: 15,
+      atributos: [2, 1, 4, 2, 1],
+      pericias: [["Diplomacia", "2d20+10"], ["Enganação", "2d20+10"], ["Intimidação", "2d20+5"], ["Intuição", "2d20+5"], ["Medicina", "4d20+5"], ["Tática", "4d20+10"]],
+      deslocamento: [[9, 6]],
+      notas: ["Os dois seguranças que a acompanham são seguranças da Panacea (p. 58) — os alvos de Recursos Humanos."],
+      habilidades: [
+        hab("Diretora", "Alice nunca se expõe desnecessariamente ao perigo: está sempre acompanhada por dois seguranças da Panacea."),
+      ],
+      acoes: [
+        agredir([at("Pistola", "curto", 1, "2d20+5", "1d12+5 balístico", { critico: "18" })]),
+        acao("reacao", "Reencontro", "Ao chegar a 0 PV, ativa o dispositivo explosivo que carrega: 8d6 de dano de perfuração em todos os seres num raio de 6 m (Reflexos DT 15 reduz à metade).",
+          { rolagens: [dano("Explosão", "8d6 perfuração")], resistencia: "Reflexos DT 15 reduz à metade" }),
+        acao("movimento", "Coordenar Equipe", "Instruções rápidas a um aliado em alcance curto: se, no turno dele, o aliado acatar as ordens e elas resultarem num teste, ele recebe +5 nesse teste."),
+        acao("padrao", "Recursos Humanos", "Escolhe um segurança aliado em alcance longo: o dispositivo implantado no corpo dele explode, matando-o na hora e causando 6d6 de dano de perfuração em todos os seres num raio de 6 m (Reflexos DT 15 reduz à metade).",
+          { rolagens: [dano("Explosão do segurança", "6d6 perfuração")], resistencia: "Reflexos DT 15 reduz à metade" }),
+      ],
+    },
+
+    {
+      id: "as6.criatura.ketan-arjuna", livro: AS6, pagina: 33,
+      nome: "Ketan Arjuna", natureza: "humana", tipo: "Pessoa", tamanho: "Médio", categoria: "Indústrias Panacea", vd: 100,
+      elementos: [],
+      descricao: "Chefe de segurança da Panacea e representante da sede Durgā, apto a qualquer combate, com uma prótese robótica integrada ao estilo de luta.",
+      percepcao: "2d20+5", iniciativa: "4d20+10",
+      defesa: 20, fortitude: "1d20+5", reflexos: "4d20+10", vontade: "2d20+5",
+      pv: 90, machucado: 45,
+      atributos: [4, 3, 2, 2, 1],
+      pericias: [["Atletismo", "3d20+10"], ["Intimidação", "2d20+10"], ["Tática", "2d20+10"], ["Tecnologia", "2d20+10"]],
+      deslocamento: [[9, 6]],
+      estados: [{ id: "protese", nome: "PV da prótese (Defesa 25, RD 5)", maximo: 45, inicial: 45 }],
+      notas: [
+        "A prótese é um alvo à parte (Defesa 25, RD 5, 45 PV): o contador da ocorrência acompanha os PV dela. Em 0, Ketan perde a ação padrão adicional e as ações Punho de Aço, Reparo na Hora, Atirar e Fatiar e Defesa Improvisada (marcadas como dependentes da prótese).",
+        "Os danos impressos já somam o dado extra de Armado e Preparado.",
+        "Eletricidade (Punho de Aço, Defesa Improvisada) é o tipo impresso — não é dano de Energia.",
+      ],
+      habilidades: [
+        hab("Armado e Preparado", "Tem uma ação padrão adicional por rodada (só com a prótese funcionando). Ao atacar com uma arma, causa +1 dado de dano do mesmo tipo.", { requer: ["protese", 1] }),
+        hab("Prótese Robótica", "Prótese tecnológica da Panacea, com recursos ofensivos e defensivos. Pode ser alvo de ataques separadamente (Defesa 25, RD 5, 45 PV). Destruída, Ketan perde a ação padrão adicional e as ações Punho de Aço, Reparo na Hora, Atirar e Fatiar e Defesa Improvisada."),
+      ],
+      acoes: [
+        agredir([at("Revólver", "curto", 1, "4d20+10", "3d6+10 balístico", { critico: "x3" })]),
+        agredir([at("Machadinha", "corpo a corpo", 1, "3d20+10", "2d6+10 corte", { critico: "x3" })], { nome: "Agredir (machadinha)" }),
+        agredir([at("Punhalada", "corpo a corpo", 1, "3d20+10", "2d4+10 perfuração", { critico: "x3" })], { nome: "Agredir (punhalada)" }),
+        agredir([at("Punho de Aço", "corpo a corpo", 1, "3d20+10", ["2d10+10 impacto", "2d4 eletricidade"], { critico: "18" })], { nome: "Agredir (Punho de Aço)", requer: ["protese", 1] }),
+        acao("reacao", "Atirar e Fatiar", "Ao acertar um ataque corpo a corpo num alvo já atingido por um dos seus ataques à distância nesta rodada, o ataque corpo a corpo causa +1 dado de dano do mesmo tipo.", { requer: ["protese", 1] }),
+        acao("reacao", "Coice", "Ao atacar com o Punho de Aço, a prótese sofre metade do dano que Ketan causar."),
+        acao("reacao", "Defesa Improvisada", "Uma vez por rodada, atingido por um ataque, interpõe a prótese: ela sofre todo o dano no lugar dele. Se a prótese for destruída por esse ataque, Ketan sofre 2d10 de dano de eletricidade.",
+          { limite: [1, "rodada"], requer: ["protese", 1], rolagens: [dano("Prótese destruída", "2d10 eletricidade")] }),
+        acao("padrao", "Reparo na Hora", "Com ferramentas improvisadas, recupera 10 PV da prótese.", { requer: ["protese", 1] }),
+      ],
+    },
+
+    {
+      id: "as6.criatura.laila-verdante", livro: AS6, pagina: 37,
+      nome: "Laila Verdante", natureza: "humana", tipo: "Pessoa", tamanho: "Médio", categoria: "Indústrias Panacea", vd: 80,
+      elementos: [],
+      descricao: "Parapsicóloga sênior: entra e entende a mente dos outros pela psicologia, por agulhas sedativas e por rituais de Conhecimento.",
+      percepcao: "4d20+10", iniciativa: "2d20+5",
+      defesa: 19, fortitude: "1d20", reflexos: "2d20+5", vontade: "4d20+10",
+      pv: 70, machucado: 35,
+      atributos: [2, 1, 3, 4, 1],
+      pericias: [["Enganação", "4d20+10"], ["Furtividade", "2d20+10"], ["Intuição", "4d20+10"], ["Ocultismo", "3d20+10"], ["Tecnologia", "3d20+10"]],
+      deslocamento: [[9, 6]],
+      notas: [
+        "Rituais (DT 22): conjura os rituais da ficha sem pagar PE, até 6 PE por conjuração, com a ação de cada um. Os números são os da ficha dela — os rituais da biblioteca não mudam.",
+        "A ficha imprime Hesitação Forçada Discente como “Conhecimento 1”; o ritual (p. 72) é de Sangue e Conhecimento, e a forma discente pede 2º círculo. Fica como impresso na ação dela.",
+      ],
+      habilidades: [
+        hab("Arruinar Mentes", "Seres que estejam sofrendo uma ou mais condições mentais são considerados vulneráveis ao dano de Conhecimento causado pelos rituais de Laila."),
+        hab("Rituais (DT 22)", "Conjura os rituais a seguir sem gastar PE, até um limite de 6 PE por conjuração, usando a ação apropriada."),
+      ],
+      acoes: [
+        agredir([at("Arremesso de Agulha", "curto", 2, "2d20+10", "1d4+5 perfuração")]),
+        acao("reacao", "Sedar", "Seres atingidos pelo arremesso de agulha ficam esmorecidos até o fim da cena (Fortitude DT 22 muda para frustrado).",
+          { resistencia: "Fortitude DT 22 muda para frustrado" }),
+        acao("padrao", "Ritual: Aurora da Verdade (Conhecimento 2)", "Até o fim da cena, um raio de 3 m em que nenhum ser obtém camuflagem nem fica invisível; nenhum ser dentro da área pode mentir (Vontade anula esse efeito).",
+          { resistencia: "Vontade anula (mentir)" }),
+        acao("padrao", "Ritual: Enfeitiçar Discente (Conhecimento 1)", "Sugere uma ação aceitável a uma pessoa em alcance curto, que deve realizá-la (Vontade anula). Em combate, sugestões plausíveis: atacar a conjuradora por último, ou só se não houver outra opção.",
+          { resistencia: "Vontade DT 22 anula" }),
+        acao("padrao", "Ritual: Invadir Mente (Conhecimento 2)", "Contamina a mente de um ser em alcance médio: 6d6 de dano de Conhecimento e atordoado (Vontade reduz à metade e evita a condição). Um mesmo alvo só fica atordoado por este ritual uma vez por cena.",
+          { rolagens: [dano("Invadir Mente", "6d6 Conhecimento")], resistencia: "Vontade DT 22 reduz à metade e evita atordoado" }),
+        acao("padrao", "Ritual: Hesitação Forçada Discente (Conhecimento 1)", "Um ser em alcance curto faz um teste de Vontade no início de cada turno dele. Falhando, fica incapaz de qualquer ação hostil contra Laila e rola de novo o maior dado de qualquer teste, aceitando o novo valor. O efeito só se dissipa quando o alvo passa no teste duas vezes seguidas, ou no fim da cena — o que vier primeiro.",
+          { resistencia: "Vontade DT 22 (no início de cada turno)" }),
+      ],
+    },
+
+    {
+      id: "as6.criatura.dr-neruda", livro: AS6, pagina: 41,
+      nome: "Dr. Neruda", natureza: "humana", tipo: "Pessoa", tamanho: "Médio", categoria: "Indústrias Panacea", vd: 20,
+      elementos: [],
+      descricao: "Carlos Augusto Neruda, pesquisador paranormal da Panacea que sabe muito bem o que faz — e adora: venenos feitos para maximizar o sofrimento.",
+      percepcao: "2d20+5", iniciativa: "2d20+5",
+      defesa: 14, fortitude: "1d20", reflexos: "2d20+5", vontade: "2d20+5",
+      pv: 15, machucado: 7,
+      atributos: [2, 0, 3, 2, 1],
+      pericias: [["Ciências", "3d20+10"], ["Intuição", "2d20+5"], ["Medicina", "3d20+10"], ["Tecnologia", "3d20+10"]],
+      deslocamento: [[9, 6]],
+      notas: ["Sempre carrega o antídoto do próprio veneno: pode ser convencido a entregá-lo por negociação ou outras ações."],
+      habilidades: [
+        hab("Veneno Sádico", "Em seres machucados, o veneno dele causa 1d4 de dano mental, tamanha a dor. Esse dano ignora RD.",
+          { rolagens: [dano("Dor do veneno", "1d4 mental")] }),
+      ],
+      acoes: [
+        agredir([at("Seringa", "corpo a corpo", 1, "2d20+5", "1d4+5 perfuração")]),
+        acao("reacao", "Veneno na Seringa", "Ao acertar um ser com a seringa, injeta uma substância tóxica: a vítima perde 2d4 PV, uma vez por rodada, por 3 rodadas (Fortitude DT 15 muda para 1 rodada). É perda de PV, não dano.",
+          { rolagens: [soma("PV perdidos (por rodada)", "2d4")], resistencia: "Fortitude DT 15 muda para 1 rodada" }),
+        acao("padrao", "Dose Experimental", "Arremessa um frasco instável em alcance curto: todos os seres num raio de 6 m ficam enjoados por 1 rodada e fracos até o fim da cena (Fortitude DT 15 evita). Um mesmo alvo só fica enjoado por esta habilidade uma vez por cena.",
+          { resistencia: "Fortitude DT 15 evita" }),
+      ],
+    },
+
+    {
+      id: "as6.criatura.cientista-da-panacea", livro: AS6, pagina: 56,
+      nome: "Cientista da Panacea", natureza: "humana", tipo: "Pessoa", tamanho: "Médio", categoria: "Indústrias Panacea", vd: 40,
+      elementos: [],
+      descricao: "Pessoa de habilidades únicas e inteligência notável, corrompida pela prática de experimentos antiéticos.",
+      percepcao: "1d20+5", iniciativa: "2d20+5",
+      defesa: 16, fortitude: "1d20+5", reflexos: "2d20+5", vontade: "1d20+5",
+      pv: 20, machucado: 10,
+      resistencias: [[10, "químico", "perfuração"]],
+      atributos: [2, 1, 4, 1, 1],
+      pericias: [["Ciências", "4d20+10"], ["Investigação", "4d20+5"], ["Medicina", "4d20+5"], ["Sobrevivência", "4d20+5"], ["Tecnologia", "4d20+5"]],
+      deslocamento: [[9, 6]],
+      notas: [
+        "Seringas com Venenos manda escolher um veneno do livro básico (p. 293) ou “desta edição (p. 77)”: os venenos do pacote estão na p. 76 — a p. 77 não tem conteúdo. A escolha é do mestre.",
+        "A resistência química e de perfuração 10 é do Traje de Proteção.",
+      ],
+      habilidades: [
+        hab("Seringas com Venenos", "Escolha um veneno (OPRPG p. 293, ou um dos venenos do Arquivos Secretos 6, p. 76). Acertando um ataque de injetar, envenena o alvo com ele."),
+        hab("Submissão", "No mesmo ambiente que um manda-chuva da Panacea, os testes do cientista recebem +5. Termina se o manda-chuva sair de cena.", { marcador: "Manda-chuva na cena (+5 nos testes)" }),
+        hab("Traje de Proteção", "Traje hazmat de alta qualidade, feito para resistir a perfurações: +10 em testes de resistência contra efeitos ambientais e infecções, e resistência a dano químico e de perfuração 10."),
+      ],
+      acoes: [
+        agredir([at("Pancada", "corpo a corpo", 1, "1d20+5", "1d4+5 impacto")]),
+        acao("padrao", "Injetar", "Ataque corpo a corpo (teste 1d20+5) que não causa dano: acertando, envenena o alvo com o veneno escolhido.",
+          { rolagens: [teste("Ataque (injetar)", "1d20+5")] }),
+      ],
+    },
+
+    {
+      id: "as6.criatura.manda-chuva-da-panacea", livro: AS6, pagina: 57,
+      nome: "Manda-chuva da Panacea", natureza: "humana", tipo: "Pessoa", tamanho: "Médio", categoria: "Indústrias Panacea", vd: 120,
+      elementos: [],
+      descricao: "Executivo ou gerente fiel às Indústrias Panacea, disposto a sacrificar todos os subalternos pela empresa.",
+      percepcao: "3d20+10", iniciativa: "2d20",
+      defesa: 23, fortitude: "2d20+5", reflexos: "2d20", vontade: "3d20+10",
+      pv: 120, machucado: 60,
+      atributos: [2, 1, 3, 3, 3],
+      pericias: [["Atualidades", "3d20+5"], ["Diplomacia", "3d20+10"], ["Enganação", "3d20+10"], ["Intimidação", "3d20+10"], ["Intuição", "3d20+10"], ["Ocultismo", "3d20+5"]],
+      deslocamento: [[9, 6]],
+      estados: [{ id: "reforcos", nome: "Seguranças chamados (Chamar Reforços)", maximo: 5, inicial: 0 }],
+      notas: [
+        "Sou Mais Importante desvia para um subalterno o efeito negativo que o atingiria: o subalterno precisa estar na cena e em alcance médio, e a mesa escolhe qual.",
+        "Chamar Reforços rola 1d4+1 seguranças da Panacea (p. 58): o contador guarda quantos chegaram; eles agem logo depois do manda-chuva na iniciativa.",
+      ],
+      habilidades: [
+        hab("Negociador", "Num teste de perícia baseado em Presença, pode rolar de novo e ficar com o melhor resultado.", { especial: "rolarDeNovoMelhor" }),
+        hab("Objeto de Pesquisa", "Guarda consigo um item amaldiçoado determinado pelo mestre, e sabe usá-lo."),
+      ],
+      acoes: [
+        agredir([at("Pancada", "corpo a corpo", 1, "1d20+10", "1d6+5 impacto")]),
+        agredir([at("Pistola", "curto", 2, "2d20+10", "2d12+10 balístico", { critico: "18" })], { nome: "Agredir (pistola)" }),
+        acao("reacao", "Sou Mais Importante", "Uma vez por rodada, alvo de um efeito negativo, com um subalterno na cena e em alcance médio: destina o efeito ao funcionário — jogando-se atrás dele, mandando protegê-lo ou algo parecido.",
+          { limite: [1, "rodada"] }),
+        acao("padrao", "Chamar Reforços", "Uma vez por cena, chama reforços das proximidades: 1d4+1 seguranças da Panacea entram na cena e agem logo depois do manda-chuva na ordem de iniciativa.",
+          { limite: [1, "cena"], rolagens: [soma("Seguranças que chegam", "1d4+1")] }),
+      ],
+    },
+
+    {
+      id: "as6.criatura.seguranca-da-panacea", livro: AS6, pagina: 58,
+      nome: "Segurança da Panacea", natureza: "humana", tipo: "Pessoa", tamanho: "Médio", categoria: "Indústrias Panacea", vd: 48,
+      elementos: [],
+      descricao: "Paramilitar muito bem pago, encarregado da força bruta contra criaturas fora de contenção e visitas indesejadas.",
+      percepcao: "2d20", iniciativa: "3d20+10",
+      defesa: 21, fortitude: "2d20+5", reflexos: "3d20+5", vontade: "2d20+5",
+      pv: 80, machucado: 40,
+      resistencias: [[5, "dano"]],
+      atributos: [3, 3, 1, 2, 2],
+      pericias: [["Atletismo", "3d20+10"], ["Intimidação", "2d20+5"]],
+      deslocamento: [[9, 6]],
+      notas: [
+        "A ficha começa na página 58 e as granadas e a Rajada continuam na 59.",
+        "Munição não letal: até receber a ordem de atirar para matar, os disparos são de borracha ou dardos tranquilizantes — o efeito não letal é da mesa.",
+        "A RD 5 e a máscara de gás (+10 em Fortitude contra efeitos que dependam de respiração) são do Traje de Campo.",
+      ],
+      habilidades: [
+        hab("Bem Pago", "No mesmo ambiente que um manda-chuva da Panacea, os testes do segurança recebem +5. Termina se o manda-chuva sair de cena.", { marcador: "Manda-chuva na cena (+5 nos testes)" }),
+        hab("Munição Não Letal", "Equipado com munição letal e não letal. A menos que receba a ordem de atirar para matar, sempre usa a não letal (balas de borracha ou dardos tranquilizantes).", { marcador: "Ordem de atirar para matar" }),
+        hab("Ossos do Ofício", "+5 em testes de resistência contra efeitos paranormais (rituais, poderes paranormais e afins)."),
+        hab("Traje de Campo", "Feito contra ameaças paranormais: RD 5 e máscara de gás que dá +10 em testes de Fortitude contra efeitos que dependam de respiração."),
+      ],
+      acoes: [
+        agredir([at("Pancada", "corpo a corpo", 2, "3d20+10", "2d6+10 impacto")]),
+        agredir([at("Pistola", "curto", 2, "3d20+10", "1d12+10 balístico", { critico: "18" })], { nome: "Agredir (pistola)" }),
+        agredir([at("Submetralhadora", "curto", 2, "3d20+10", "3d6+10 balístico", { critico: "19/x3" })], { nome: "Agredir (submetralhadora)" }),
+        acao("padrao", "Rajadas", "Faz dois ataques com a submetralhadora: cada um sofre −1 dado no teste (2d20+10), mas causa 1 dado de dano adicional do mesmo tipo (4d6+10).",
+          { ataques: [at("Rajada", "curto", 2, "2d20+10", "4d6+10 balístico", { critico: "19/x3" })] }),
+        acao("livre", "Agarrar", "Se acertar um ataque de pancada, pode tentar agarrar o alvo (teste 3d20+10).", { rolagens: [teste("Agarrar", "3d20+10")] }),
+        acao("movimento", "Derrubar", "Agarrando um alvo, pode tentar derrubá-lo (teste 3d20+10). Conseguindo ou não, continua agarrando.", { rolagens: [teste("Derrubar", "3d20+10")] }),
+        acao("movimento", "Imobilizar", "Agarrando um alvo caído, faz uma manobra (teste 3d20+10) para imobilizá-lo: imobilizado, o alvo fica paralisado até ser solto do agarrão. Conseguindo ou não, continua agarrando. Manter o alvo imobilizado deixa o segurança indefeso, mas ele pode soltar o alvo como reação para se livrar disso.",
+          { rolagens: [teste("Imobilizar", "3d20+10")] }),
+        acao("padrao", "Atordoamento", "Uma vez por cena, arremessa uma granada flashbang em alcance curto: seres num raio de 6 m do ponto de impacto ficam atordoados por 1 rodada (Fortitude DT 20 reduz para ofuscado e surdo por 1 rodada).",
+          { limite: [1, "cena"], resistencia: "Fortitude DT 20 reduz para ofuscado e surdo" }),
+        acao("padrao", "Fragmentação", "Uma vez por cena, arremessa uma granada de fragmentação em alcance curto: 8d6 de dano de perfuração em seres num raio de 6 m do ponto de impacto (Reflexos DT 20 reduz à metade).",
+          { limite: [1, "cena"], rolagens: [dano("Fragmentação", "8d6 perfuração")], resistencia: "Reflexos DT 20 reduz à metade" }),
+        acao("padrao", "Gás Lacrimogêneo", "Uma vez por cena, arremessa uma granada de gás lacrimogêneo em alcance curto: seres num raio de 6 m sofrem 4d6 de dano químico e ficam enjoados e asfixiados (OPRPG p. 293). Fora da área, continuam asfixiados por 1d4 rodadas e enjoados até o fim da cena (Fortitude DT 20 reduz o dano à metade e evita enjoado).",
+          { limite: [1, "cena"], rolagens: [dano("Gás lacrimogêneo", "4d6 químico"), soma("Rodadas asfixiado fora da área", "1d4")], resistencia: "Fortitude DT 20 reduz à metade e evita enjoado" }),
+        acao("padrao", "Incendiária", "Uma vez por cena, arremessa uma granada incendiária em alcance curto: 6d6 de dano de fogo em seres num raio de 6 m, que ficam em chamas (Reflexos DT 20 reduz à metade e evita em chamas).",
+          { limite: [1, "cena"], rolagens: [dano("Incendiária", "6d6 fogo")], resistencia: "Reflexos DT 20 reduz à metade e evita em chamas" }),
+      ],
+    },
+
+    {
+      id: "as6.criatura.hikikomori", livro: AS6, pagina: 60,
+      nome: "Hikikomori", natureza: "paranormal", tipo: "Criatura", tamanho: "Médio", categoria: "Infecticídio", vd: 20,
+      elementos: [EN],
+      descricao: "Humanoide nascido do contato do vírus infecticídio com um humano solitário: o corpo se contorce para dentro, escondido atrás de periféricos e enrolado em fios, como um casulo de tecnologia. Solitário e extremamente agressivo.",
+      presenca: { dt: 14, dano: "2d6", imune: "NEX 25%" },
+      percepcao: "1d20", iniciativa: "2d20+5",
+      defesa: 16, fortitude: "1d20", reflexos: "2d20+5", vontade: "1d20",
+      pv: 35, machucado: 17,
+      resistencias: [[5, "Energia"]],
+      vulnerabilidades: ["Conhecimento"],
+      atributos: [2, 1, 1, 1, 1],
+      deslocamento: [[9, 6]],
+      notas: [
+        "Casulo Voltáico vale só enquanto NÃO estiver machucado (PV acima de 17): cura acelerada 5 e a onda de 2d4 de Energia em quem o ataca corpo a corpo. Machucado, perde a habilidade.",
+        "Os ataques causam eletricidade (como impresso), e a onda do casulo, Energia: são danos diferentes.",
+        "Infecção: infecticídio (OPRPG p. 292). Quem passa no teste fica imune à doença até o fim da cena.",
+      ],
+      habilidades: [
+        hab("Casulo Voltáico", "Enquanto não estiver machucado, drena a energia dos eletrônicos que o cobrem: cura acelerada 5. Além disso, sempre que for alvo de um ataque corpo a corpo, projeta uma onda elétrica no atacante: 2d4 de dano de Energia. Machucado, perde esta habilidade.",
+          { rolagens: [dano("Onda elétrica", "2d4 Energia"), soma("Cura acelerada", "5")], marcador: "Machucado (perdeu o casulo)" }),
+      ],
+      acoes: [
+        agredir([at("Disparo Infectado", "curto", 1, "2d20+5", "2d12 eletricidade")]),
+        agredir([at("Esbarrão Infectado", "corpo a corpo", 1, "2d20+5", "2d12 eletricidade")], { nome: "Agredir (esbarrão)" }),
+        acao("livre", "Infecção", "Um ser que sofra dano do disparo ou do esbarrão é infectado pelo vírus do infecticídio (Fortitude DT 14 evita; OPRPG p. 292). Quem passa no teste fica imune a essa doença até o fim da cena.",
+          { resistencia: "Fortitude DT 14 evita" }),
+        acao("livre", "Ricochete", "Ao acertar um ataque de esbarrão, pode fazer uma ação de movimento para se deslocar."),
+      ],
+    },
+
+    {
+      id: "as6.criatura.marca-passo", livro: AS6, pagina: 61,
+      nome: "Marca-passo", natureza: "paranormal", tipo: "Criatura", tamanho: "Médio", categoria: "Infecticídio", vd: 80,
+      elementos: [EN],
+      descricao: "União do infecticídio com pessoas que já tinham implantes ou biohacking (chips, placas de metal, marca-passos): o vírus deforma a tecnologia e a expele pela carne.",
+      presenca: { dt: 20, dano: "3d8", imune: "NEX 40%" },
+      percepcao: "2d20", iniciativa: "3d20+10",
+      defesa: 23, fortitude: "2d20+5", reflexos: "3d20+10", vontade: "2d20",
+      pv: 140, machucado: 70,
+      resistencias: [[10, "balístico", "corte", "perfuração"], [20, "Energia"]],
+      vulnerabilidades: ["Conhecimento"],
+      atributos: [3, 3, 1, 2, 2],
+      deslocamento: [[9, 6]],
+      notas: [
+        "Trilha Digital: quem carrega qualquer aparelho eletrônico (celular, lanterna, relógio digital, escuta…) ou equipamento amaldiçoado de Energia é percebido automaticamente (não fica desprevenido contra ele) e fica vulnerável contra a criatura até se livrar de todos esses objetos — quem decide o que cada um carrega é a mesa.",
+        "Infecção de Equipamento: 51 ou mais no 1d100, um equipamento do ser vira item amaldiçoado de Energia (o mestre escolhe item e maldição); 50 ou menos, um equipamento fica infectado pelo infecticídio e contamina quem o tocar (Fortitude DT 20 evita; OPRPG p. 292).",
+      ],
+      habilidades: [
+        hab("Trilha Digital", "Capta vibrações elétricas e de Energia em alcance extremo. Qualquer agente que carregue um aparelho eletrônico ou equipamento amaldiçoado de Energia é percebido automaticamente (não consegue pegá-lo desprevenido) e fica vulnerável contra a criatura até se livrar de todos esses objetos."),
+      ],
+      acoes: [
+        agredir([at("Golpe Infectado", "corpo a corpo", 2, "3d20+10", "2d12+5 impacto")]),
+        acao("reacao", "Frenesi Eletrônico", "Quando um ser em alcance curto usa um poder ou ritual de Energia, um equipamento eletrônico ou um item amaldiçoado de Energia, a criatura surta e se move até ficar adjacente a ele; no fim do movimento, explode: 4d6+5 de dano de Energia em todos os seres num raio de 6 m (Reflexos DT 20 reduz à metade).",
+          { rolagens: [dano("Explosão", "4d6+5 Energia")], resistencia: "Reflexos DT 20 reduz à metade" }),
+        acao("livre", "Infecção de Equipamento", "Um ser que sofra dano do golpe rola 1d100. 51 ou mais: um equipamento que ele carrega vira um item amaldiçoado de Energia (o mestre escolhe o item e a maldição). 50 ou menos: um equipamento (escolhido pelo mestre) é infectado pelo infecticídio, e quem tocar o item pode se contaminar (Fortitude DT 20 evita; OPRPG p. 292). Quem passa no teste fica imune a essa doença até o fim da cena.",
+          { rolagens: [soma("Infecção de Equipamento (1d100: 51+ amaldiçoado; 50− infectado)", "1d100")], resistencia: "Fortitude DT 20 evita (ao tocar o item infectado)" }),
+      ],
+    },
+
+    {
+      id: "as6.criatura.estimulo", livro: AS6, pagina: 62,
+      nome: "Estímulo", natureza: "paranormal", tipo: "Criatura", tamanho: "Grande", categoria: "Infecticídio", vd: 320,
+      elementos: [EN],
+      descricao: "Manifestação espectral do infecticídio que ganhou autoconsciência fora de um hospedeiro: se fragmenta por sinais digitais e analógicos (bluetooth, wifi, rádio, televisão) e percorre grandes distâncias. Forma poligonal errática que nunca chega a ser esfera.",
+      presenca: { dt: null, dano: "9d6", imune: "NEX 95%" },
+      percepcao: "5d20+20", iniciativa: "5d20+20",
+      defesa: 50, fortitude: "4d20+15", reflexos: "5d20+25", vontade: "5d20+20",
+      pv: 800, machucado: 400,
+      imunidades: ["Dano (exceto Conhecimento)", "Todas as condições"],
+      vulnerabilidades: ["Conhecimento"],
+      atributos: [5, 0, 5, 5, 4],
+      deslocamento: [[12, 8]],
+      notas: [
+        "A DT da presença perturbadora e as de Rodar Simulação e Imergir são impressas como “8d10”: são ROLAGENS — role a DT a cada vez (botões “DT (8d10)”).",
+        "Rodar Simulação troca o maior atributo do ser pelo menor só nos TESTES, até o fim da cena: PV, PE, Defesa e o resto da ficha não mudam.",
+        "Quem morre infectado por Imergir vira o princípio de uma horda de infecticídio (OPRPG p. 267).",
+      ],
+      habilidades: [
+        hab("Presença perturbadora (DT 8d10)", "A DT é rolada: 8d10. Dano mental 9d6; NEX 95% é imune.", { rolagens: [soma("DT da presença perturbadora", "8d10"), dano("Dano mental", "9d6 mental")] }),
+        hab("Cogito Ergo Sum", "Um ser que falhe num teste contra a presença perturbadora do Estímulo é infectado automaticamente pelo infecticídio (OPRPG p. 292). Qualquer ser que tocar no Estímulo também é infectado automaticamente."),
+      ],
+      acoes: [
+        acao("movimento", "Sequestrar Sinal", "Teletransporta-se para qualquer espaço em alcance médio, desde que fique adjacente a um aparelho eletrônico."),
+        acao("padrao", "Glitch", "Desaparece e reaparece, distorcendo a percepção de realidade de todos os seres num raio de 9 m: eles fazem de novo o teste contra a presença perturbadora.",
+          { rolagens: [soma("DT da presença perturbadora", "8d10")] }),
+        acao("padrao", "Rodar Simulação", "Distorce a natureza física de um ser em alcance curto até o fim da cena: o maior atributo dele troca de lugar com o menor (Vontade DT 8d10 evita). A troca afeta apenas testes.",
+          { rolagens: [soma("DT (Vontade)", "8d10")], resistencia: "Vontade DT 8d10 (rolada) evita" }),
+        acao("completa", "Imergir", "Aprofunda a infecção num ser em alcance curto sob efeito do infecticídio: a doença avança 1 estágio automaticamente e ele sofre 10d12 de dano de Energia (Fortitude DT 8d10 reduz o dano à metade e evita o avanço). Morrendo infectado, vira o princípio de uma horda de infecticídio (OPRPG p. 267).",
+          { rolagens: [dano("Imergir", "10d12 Energia"), soma("DT (Fortitude)", "8d10")], resistencia: "Fortitude DT 8d10 (rolada) reduz à metade e evita o avanço" }),
+        acao("completa", "Sequestro de Atenção", "Projeta uma imagem hipnotizante para todos os seres infectados num raio de 30 m: quem falhar num teste de Vontade (DT 35) gasta todas as ações do próximo turno para se mover até a criatura e tocá-la.",
+          { resistencia: "Vontade DT 35" }),
+      ],
+    },
+
+    {
+      id: "as6.criatura.experimento-ssabaka", livro: AS6, pagina: 63,
+      nome: "Experimento Ssabáka", natureza: "paranormal", tipo: "Criatura", tamanho: "Médio", categoria: "Experimentos da Panacea", vd: 180,
+      elementos: [MO, SA],
+      descricao: "Experimento russo com ossadas amaldiçoadas da Sibéria Ocidental que foi parar nas mãos da Panacea: criatura descarnada, ossos protuberantes, membros irregulares, força sobrenatural e cabeçorra dentada.",
+      presenca: { dt: 28, dano: "6d6", imune: "NEX 60%" },
+      percepcao: "2d20+10", iniciativa: "3d20+15",
+      defesa: 36, fortitude: "4d20+15", reflexos: "3d20+15", vontade: "2d20+10",
+      pv: 360, machucado: 180,
+      resistencias: [[10, "balístico", "impacto", "perfuração"], [20, "Sangue"]],
+      vulnerabilidades: ["Energia"],
+      atributos: [3, 3, 0, 2, 4],
+      deslocamento: [[12, 8]],
+      notas: [
+        "Sofrimento Duradouro: a vítima recupera 3d8+3 PV ATUAIS e perde 1d8+1 PV MÁXIMOS para sempre — duas mudanças diferentes, feitas na ficha da vítima por quem a controla.",
+        "Ficha por Thales “Bif” Cunha e Miguel Souza (p. 63).",
+      ],
+      habilidades: [
+        hab("Fugitivo do Tempo", "Imune a qualquer efeito negativo ligado ao tempo, natural ou paranormal — envelhecimento por idade, Decadência, Paradoxo e afins."),
+      ],
+      acoes: [
+        agredir([at("Mordida", "corpo a corpo", 1, "3d20+20", "4d12+20 perfuração"), at("Garras", "corpo a corpo", 2, "3d20+20", "4d12+10 corte")]),
+        acao("livre", "Mastigar", "Acertando a mordida num alvo Grande ou menor, pode pressionar os dentes para agarrá-lo (teste 3d20+20): agarrado, o alvo se move junto com a criatura no turno dela até se libertar. Só mastiga um por vez, e solta quem estiver preso se fizer outro ataque de mordida.",
+          { rolagens: [teste("Agarrar (mastigar)", "3d20+20")] }),
+        acao("movimento", "Sofrimento Duradouro", "Despeja Lodo de Morte num alvo agarrado, apodrecendo e cicatrizando os ferimentos: o alvo recupera 3d8+3 PV atuais, mas perde 1d8+1 PV máximos permanentemente.",
+          { rolagens: [soma("PV atuais recuperados", "3d8+3"), soma("PV máximos perdidos (permanente)", "1d8+1")] }),
+        acao("completa", "Giro de Cauda", "Gira a cauda: todos os seres adjacentes sofrem 4d10+10 de dano de impacto e ficam caídos (Reflexos DT 28 reduz à metade e evita a condição).",
+          { rolagens: [dano("Giro de Cauda", "4d10+10 impacto")], resistencia: "Reflexos DT 28 reduz à metade e evita caído" }),
+      ],
+    },
+
+    aliadoAs6("alice-cruzes", "Alice Cruzes", 28, "Diretora de instalações, mestra estrategista que analisa cenários complexos em segundos e coordena os aliados com precisão cirúrgica.", [
+      hab("Bônus", "Você recebe +1d20 em Diplomacia e Tática."),
+      hab("Ainda é Útil", "Uma vez por cena, morrendo, você pode gastar 3 PE para ser estabilizado.", { custo: "3 PE", limite: [1, "cena"] }),
+    ], ["Com o perfil na aba Aliados, o painel do Arquivos Secretos 3 liga o +1d20 em Diplomacia e Tática enquanto Alice acompanha."]),
+    aliadoAs6("ketan-arjuna", "Ketan Arjuna", 33, "Chefe de Segurança da Panacea, apto a qualquer combate, corpo a corpo ou à distância.", [
+      hab("Bônus", "Sempre que causar dano, você causa +2d4 de dano extra de um tipo à sua escolha (balístico, corte, impacto ou perfuração).", { rolagens: [dano("Dano extra de Ketan", "2d4")] }),
+      hab("Fornecimento Secreto", "Uma vez por missão, como ação de interlúdio, 3 PE para receber uma arma não amaldiçoada de até categoria II e, se precisar, munição dela para duas cenas.", { custo: "3 PE", limite: [1, "missão"] }),
+    ]),
+    aliadoAs6("laila-verdante", "Laila Verdante", 37, "Conhecedora da psique humana e de como o paranormal a afeta.", [
+      hab("Bônus", "Você recebe resistência a dano mental 2."),
+      hab("Ajuda Especializada", "Uma vez por dia, 3 PE para fazer um teste de Vontade usando o Ocultismo de Laila (4d20+10) no lugar da sua perícia.", { custo: "3 PE", limite: [1, "dia"], rolagens: [teste("Vontade com o Ocultismo de Laila", "4d20+10")] }),
+    ], ["Com o perfil na aba Aliados, o painel do Arquivos Secretos 3 liga a resistência a dano mental 2 enquanto Laila acompanha."]),
+    aliadoAs6("dr-neruda", "Dr. Neruda", 41, "Um entre vários pesquisadores da Panacea — mas, diferente da maioria, sabe muito bem o que faz lá, e adora o trabalho.", [
+      hab("Bônus", "Sempre que você causar dano com um ataque, o alvo também perde 1d4 PV.", { rolagens: [soma("PV perdidos pelo alvo", "1d4")] }),
+      hab("Imunologista", "Como ação de interlúdio, 3 PE para reduzir em 1 o estágio de uma doença que esteja afetando você.", { custo: "3 PE" }),
+    ], ["Na ficha, a redução de estágio é feita no painel do Arquivos Secretos 6 (Doenças e venenos), com o registro de quem reduziu."]),
   ];
 
   /* ---------------------------------------------------------------------
@@ -5234,6 +5629,7 @@
       AS3: { nome: "Arquivos Secretos 3", sigla: "AS3" },
       AS4: { nome: "Arquivos Secretos 4", sigla: "AS4" },
       AS5: { nome: "Arquivos Secretos 5", sigla: "AS5" },
+      AS6: { nome: "Arquivos Secretos 6", sigla: "AS6" },
     },
     criaturas: CRIATURAS,
   };

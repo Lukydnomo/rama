@@ -2217,7 +2217,7 @@ function acaoLerImagemDoTurno(corpo, usuario) {
   if (p.tipo === 'criatura' && !imagem) {
     var origem = p.snapshot && p.snapshot.origem && typeof p.snapshot.origem === 'object' ? p.snapshot.origem : {};
     var candidato = String(origem.catalogoId || origem.copiadoDe || p.origemId || '');
-    if (/^(op|sah|as1|as2|as3|as4|as5)\.criatura\.[a-z0-9.-]+$/.test(candidato)) retratoCatalogo = candidato;
+    if (/^(op|sah|as1|as2|as3|as4|as5|as6)\.criatura\.[a-z0-9.-]+$/.test(candidato)) retratoCatalogo = candidato;
   }
   var nomeAtual = p.tipo === 'personagem' ? personagensDaMesaPorId(ctx)[p.personagemId] : null;
   var dadosDoTurno = { participanteId: p.id, tipo: p.tipo, nome: nomeAtual || p.nome || '', imagem: String(imagem) };

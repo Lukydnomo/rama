@@ -498,6 +498,8 @@
     var ajuste5 = global.RAMAFichaArquivo5 ? global.RAMAFichaArquivo5.ajusteDoRitual(ctx, elemento, ritual) : { menosPe: 0, notas: [] };
     if (selo) ajuste5 = { menosPe: 0, notas: [] };
     var estado3 = { peComPv: 0 };
+    /* Arquivos Secretos 6: Grão-Mestre em Elemento soma +1 PE por um efeito. */
+    var estado6 = { ligado: false, maisPe: 0, elemento: "", alvo: "aliado" };
 
     var efeito = efeitoConhecido(ritual);
     var barganha = ehBarganha(ritual);
@@ -527,7 +529,7 @@
         p: CS().planoDeRitual({
           elemento: elemento, afinidade: afinidade, controle: o.componentes, inventario: inv,
           controleLigado: controle, dispensa: estado.dispensa, entregar: complexa && estado.entregar,
-          catalisadorId: estado.catalisador, custo: custo ? Math.max(0, custo.total - semBase - ajuste3.menosPe - ajuste4.menosPe - ajuste5.menosPe) : 0, acrescimoPe: custoPeExtra,
+          catalisadorId: estado.catalisador, custo: custo ? Math.max(0, custo.total - semBase - ajuste3.menosPe - ajuste4.menosPe - ajuste5.menosPe) + (estado6.maisPe || 0) : 0, acrescimoPe: custoPeExtra,
         }),
       };
     }
@@ -556,6 +558,7 @@
         if (ajuste3.menosPe && pl.custo) detalhes.push("–" + ajuste3.menosPe + " de Torvo");
         if (ajuste4.menosPe && pl.custo) detalhes.push("–" + ajuste4.menosPe + " do Explorador da Névoa");
         if (ajuste5.menosPe && pl.custo) detalhes.push("–" + ajuste5.menosPe + " da Paralinguística Ampliada");
+        if (estado6.maisPe && pl.custo) detalhes.push("+" + estado6.maisPe + " do Grão-Mestre em Elemento");
         if (selo && pl.semBase) detalhes.push("–" + pl.semBase + (selo.plano.semCustoAvancado ? " (Selo Supremo: sem o círculo nem o adicional)" : " do selo (o círculo foi pago na fabricação)"));
         if (estado3.peComPv > total) estado3.peComPv = total;
         var peDeVerdade = total - estado3.peComPv;
@@ -616,6 +619,7 @@
         partes.push(el("p.t-mini", { texto: "Ritual de Medo: cada conjuração custa Sanidade permanente e dano mental (OPRPG p. 119). Isso não é descontado aqui — registre na ficha." }));
       }
       if (selo && global.RAMAFichaArquivo5) partes = partes.concat(global.RAMAFichaArquivo5.linhasDoSelo(ctx, selo.plano));
+      if (global.RAMAFichaArquivo6 && pl.custo) partes = partes.concat(global.RAMAFichaArquivo6.opcoesNoRitual(ctx, estado6, ritual, pintar));
       partes = partes.concat(opcoesDoArquivo(as1, estado, pl, pintar));
       if (barganha) partes.push(blocoDaBarganha(o, c, recurso, estado));
       if (efeito) {
@@ -661,6 +665,10 @@
       if (!r.repetido) {
         var extras = aplicarDoArquivo(ctx, o, c, ritual, as1, estado, pl, recurso);
         if (extras) registro = (registro ? registro + " " : "") + extras;
+      }
+      if (!r.repetido && global.RAMAFichaArquivo6 && estado6.ligado) {
+        var gm = global.RAMAFichaArquivo6.aplicarNoRitual(ctx, estado6, ritual);
+        if (gm) registro = (registro ? registro + " " : "") + gm;
       }
       /* Barganha Insana: a restauração vem DEPOIS do custo — os PE voltam
          ao máximo, e o custo não é descontado de novo. N'A Antena, o

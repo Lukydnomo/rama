@@ -362,6 +362,12 @@
     "op.ritual.forma-monstruosa": { pagina: 133, versoes: {
       Normal: [mod("ataques:corpo", "bonus", 5), mod("dano:corpo", "bonus", 5)],
     } },
+    /* Hesitação Forçada (AS6 p. 72): nenhum número fixo — o que muda é
+       a rolagem de novo de um dado, oferecida no resultado do teste e
+       acompanhada pelo painel do Arquivos Secretos 6. Fica aqui para a
+       aplicação levar o modelo e a versão. */
+    "as6.ritual.hesitacao-forcada": { pagina: 72, versoes: { Normal: [], Discente: [], Verdadeiro: [] },
+      nota: "Acompanhe no painel do Arquivos Secretos 6 (aba Habilidades): o teste de Vontade no início de cada turno e a rolagem de novo do dado." },
   };
 
   function ritualComEfeito(id) { return RITUAIS[id] || null; }

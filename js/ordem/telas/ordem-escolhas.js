@@ -901,10 +901,12 @@
           break;
 
         case "versatilidade":
-          partes.push(botoesDeEscolha([
+          /* Evolução Modular (AS6 p. 80): só o primeiro poder de outra trilha. */
+          partes.push(botoesDeEscolha((vaga.modular ? [] : [
             { valor: "poderClasse", rotulo: vaga.soTranscender ? "Transcender, no lugar do poder de ocultista" : "Um poder de classe" },
+          ]).concat([
             { valor: "trilha", rotulo: "O primeiro poder de outra trilha" },
-          ], candidato.valor, function (v) {
+          ]), candidato.valor, function (v) {
             if (candidato.valor === v) return;
             candidato.valor = v;
             candidato.opcoes = {};

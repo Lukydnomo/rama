@@ -52,6 +52,7 @@
   var AS2 = "AS2";
   var AS3 = "AS3";
   var AS5 = "AS5";
+  var AS6 = "AS6";
 
   /* Cada regra:
 
@@ -71,6 +72,8 @@
        depende         chaves de outras regras exigidas
        incompativel    chaves de regras que não convivem com esta
        consequencias   o que avisar antes de ligar numa ficha preenchida
+       fa              (AS6) conteúdo de fã publicado num pacote oficial:
+                       { autor, aviso } — a tela diz que não é oficial
   */
   var REGRAS = [
     {
@@ -549,6 +552,28 @@
     ],
   });
 
+  /* --- Arquivos Secretos 6 (v5.3) ---
+     Evolução Modular (p. 80-81): conteúdo de FÃ que o pacote publica —
+     "não oficial e não canônica". Desligada por padrão. As vagas e a
+     associação das escolhas moram em js/ordem/progressao.js; a
+     classificação dos poderes, em js/ordem/poderes.js (grupoModular). */
+  REGRAS.push({
+    chave: "evolucaoModular",
+    nome: "Evolução Modular",
+    resumo: "Um poder de classe por NEX a partir de 10%: de utilidade em 10% e nos NEX pares seguintes, de combate em 15% e nos ímpares seguintes.",
+    fonte: AS6, pagina: 80,
+    fa: { autor: "Jonas “DemonRider”", aviso: "Conteúdo de fã publicado no Arquivos Secretos 6: regra não oficial e não canônica." },
+    afetaFicha: true,
+    automacao: "calculo",
+    efeito: "Substitui as habilidades “Poder” da classe (Poder de Combatente, de Especialista, de Ocultista): em NEX 10%, 20%, 30%… até 99% vem um poder de UTILIDADE; em NEX 15%, 25%, 35%… até 95%, um poder de COMBATE — 55% tem cinco de cada. Em qualquer dessas vagas, dá para escolher um poder geral (SaH p. 33). A Versatilidade muda: em NEX 50%, o primeiro poder de uma trilha da sua classe que não a sua (sem a opção do poder de classe). Classe, requisitos e repetição continuam valendo.",
+    parametros: [], depende: [], incompativel: [],
+    consequencias: [
+      "As vagas “Poder de classe” somem e entram as de combate e de utilidade. As escolhas já feitas NÃO se perdem nem viram outra coisa sozinhas: ficam guardadas, e o painel da regra (aba Regras) oferece associá-las às vagas novas que couberem — uma a uma ou todas as sugeridas.",
+      "Nenhum poder é escolhido ou concedido sozinho. Desligar suspende as escolhas das vagas modulares (ficam guardadas) e as escolhas normais voltam a valer.",
+      "Com NEX & Experiência, as vagas seguem o NÍVEL (cada nível é um degrau de 5%). Sem a progressão comum (Mundano, Sobrevivente) a regra não abre vaga nenhuma.",
+    ],
+  });
+
   var POR_CHAVE = {};
   REGRAS.forEach(function (r) { POR_CHAVE[r.chave] = r; });
 
@@ -577,7 +602,7 @@
     { chave: "combate", nome: "Combate e sobrevivência",
       regras: ["ferimentosDebilitantes", "contagemMunicao", "combateNarrativo"] },
     { chave: "poderes", nome: "Poderes e trilhas",
-      regras: ["poderesDeIntencao", "formasSupremas", "poderesDeSacrificio", "trilhaGeral", "poderesDeTransmissao"] },
+      regras: ["evolucaoModular", "poderesDeIntencao", "formasSupremas", "poderesDeSacrificio", "trilhaGeral", "poderesDeTransmissao"] },
     { chave: "aliados", nome: "Aliados e vínculos",
       regras: ["aliadosEmPerigo", "beneficiosDeAliados", "boasRecordacoes", "regrasDaPaixao"] },
     { chave: "exploracao", nome: "Exploração e transporte",

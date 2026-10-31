@@ -24,7 +24,7 @@ const ARQUIVOS = [
   "js/ordem/condicoes.js", "js/ordem/consumo.js", "js/ordem/inventario.js", "js/ordem/personalizacao.js",
   "js/ordem/aprendizado.js", "js/ordem/progressao.js", "js/ordem/biblioteca.js", "js/ordem/regras.js",
   "js/ordem/itens-dados.js", "js/ordem/itens.js", "js/ordem/rituais-dados.js", "js/ordem/rituais.js",
-  "js/ordem/maldicoes.js", "js/ordem/arquivo2.js", "js/ordem/arquivo3.js", "js/ordem/arquivo4.js", "js/ordem/arquivo5.js", "js/criaturas.js",
+  "js/ordem/maldicoes.js", "js/ordem/arquivo2.js", "js/ordem/arquivo3.js", "js/ordem/arquivo4.js", "js/ordem/arquivo5.js", "js/ordem/arquivo6.js", "js/criaturas.js",
   "js/ficha.js", "js/validacao.js", "js/importar-cris.js",
 ];
 

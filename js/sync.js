@@ -558,6 +558,23 @@
       "ordem.arquivo5.selos.fabricacoes": "id",
       "ordem.arquivo5.selos.usos": "opId",
       "ordem.arquivo5.transmissao.sincronia.operacoes": "opId",
+      /* Arquivos Secretos 6 (v5.3): o mesmo — e a marca consumida do
+         Salto de Dados entra em `consumidas` dos dois lados, para nunca
+         voltar de uma cópia antiga. */
+      "ordem.arquivo6.forcas.ocorrencias": "id",
+      "ordem.arquivo6.resgates": "id",
+      "ordem.arquivo6.salvacao": "id",
+      "ordem.arquivo6.escudo": "id",
+      "ordem.arquivo6.grilhoes": "id",
+      "ordem.arquivo6.salto.consumidas": "id",
+      "ordem.arquivo6.salto.operacoes": "opId",
+      "ordem.arquivo6.fabricacoes": "id",
+      "ordem.arquivo6.usos": "opId",
+      "ordem.arquivo6.afeccoes": "id",
+      "ordem.arquivo6.afeccoes.historico": "id",
+      "ordem.arquivo6.recebidos": "id",
+      "ordem.arquivo6.hesitacao": "efeitoId",
+      "ordem.arquivo6.rebotes": "id",
       /* Barganha Insana (v2.41): cada conjuração casa pelo id. */
       "ordem.barganhaInsana.pendentes": "id",
       "ordem.barganhaInsana.resolvidas": "id",

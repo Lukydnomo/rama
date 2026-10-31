@@ -572,6 +572,12 @@
       A5().efeitos(ficha, inventario).forEach(function (m) { lista.push(m); });
     }
 
+    /* Arquivos Secretos 6 (v5.3): Especialista em Proteção Leve, só com
+       uma proteção LEVE em uso. */
+    if (A6()) {
+      A6().efeitos(ficha, inventario).forEach(function (m) { lista.push(m); });
+    }
+
     return lista;
   }
 
@@ -629,7 +635,7 @@
       ficha.opcionais, ficha.atributos, ficha.nex, ficha.nivel, ficha.classe, ficha.origem,
       ficha.bonusExtra, ficha.ajustes, ficha.periciasAjustes, ficha.sacrificios,
       Array.isArray(ficha.sacrificios) ? ficha.sacrificios.length : -1,
-      ficha.barganhaInsana, ficha.estadoDasOrigens, ficha.arquivo5,
+      ficha.barganhaInsana, ficha.estadoDasOrigens, ficha.arquivo5, ficha.arquivo6,
     ];
   }
 
@@ -1639,6 +1645,9 @@
     /* Ambidestria (AS3 p. 108): –1d20 nos ataques até o próximo turno. */
     var ambi = A3() ? A3().dadosDeAmbidestria(ficha) : 0;
     if (ambi && atributoDoTeste) quantosDados += ambi;
+    /* Arma envelhecida pelo Escudo Espiral Temporal (AS6 p. 71): −1 dado. */
+    var velha = A6() ? A6().dadosDeEnvelhecimento(item) : 0;
+    if (velha && atributoDoTeste) quantosDados += velha;
     /* O contexto do ataque: corpo a corpo ou à distância. Um efeito que
        vale só num deles não vira bônus de todo ataque. */
     var contexto = { ataque: a.tipo === "corpoACorpo" ? "corpo" : (a.tipo ? "distancia" : (chave === "luta" ? "corpo" : "distancia")) };
@@ -2866,6 +2875,9 @@
     /* Arquivos Secretos 5 (v2.48). Sem o módulo, passa como veio. */
     if (A5()) A5().normalizar(ficha, b);
     else if (b.arquivo5 && typeof b.arquivo5 === "object") ficha.arquivo5 = JSON.parse(JSON.stringify(b.arquivo5));
+    /* Arquivos Secretos 6 (v5.3). Sem o módulo, passa como veio. */
+    if (A6()) A6().normalizar(ficha, b);
+    else if (b.arquivo6 && typeof b.arquivo6 === "object") ficha.arquivo6 = JSON.parse(JSON.stringify(b.arquivo6));
     /* Barganha Insana (v2.41): as conjurações e as perdas pendentes. */
     if (b.barganhaInsana && typeof b.barganhaInsana === "object") ficha.barganhaInsana = normalizarBarganha(b.barganhaInsana);
 
@@ -3206,6 +3218,7 @@
   function A3() { return global.RAMAOrdemArquivo3 || null; }
   function A4() { return global.RAMAOrdemArquivo4 || null; }
   function A5() { return global.RAMAOrdemArquivo5 || null; }
+  function A6() { return global.RAMAOrdemArquivo6 || null; }
   var ID_COURACA = "as3.amaldicoado.armadura-dos-couracas";
 
   /* Forma suprema ativa (AS2 p. 97). */

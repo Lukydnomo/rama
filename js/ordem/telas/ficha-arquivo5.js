@@ -1477,5 +1477,8 @@
     opcoesDoItem: opcoesDoItem,
     observacoesDoItem: observacoesDoItem,
     usarSelo: usarSelo,
+    /* A rodada da ficha também serve ao AS6 (Escudo, Médico da Salvação):
+       o painel do AS6 só a mostra quando este não mostra. */
+    precisaDeRodada: precisaDeRodada,
   };
 })(window);

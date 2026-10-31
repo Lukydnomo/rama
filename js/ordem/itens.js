@@ -80,6 +80,8 @@
         nota: "Aplicam-se a um item do inventário. As de acessório somam I à categoria dele." },
       { chave: "modificacoesGranadas", titulo: "Modificações para granadas",
         nota: "Aplicam-se a uma granada do inventário e somam I à categoria dela; iguais não se acumulam (Arquivos Secretos 4, p. 71)." },
+      { chave: "modificacoesMedicamentos", titulo: "Modificações para medicamentos",
+        nota: "Aplicam-se a um medicamento do inventário (o cicatrizante conta como medicamento) e somam I à categoria dele; iguais não se acumulam (Arquivos Secretos 6, p. 74)." },
     ],
     amaldicoados: [
       { chave: "especiais", titulo: "Itens amaldiçoados",
@@ -90,6 +92,8 @@
         nota: "Aplicam-se a uma proteção do inventário. A primeira maldição soma II à categoria; as seguintes, I." },
       { chave: "maldicoesAcessorios", titulo: "Maldições para acessórios",
         nota: "Só em utensílios e vestimentas. A primeira maldição soma II à categoria; as seguintes, I." },
+      { chave: "maldicoesMedicamentos", titulo: "Maldições para medicamentos",
+        nota: "Aplicam-se a um medicamento do inventário (o cicatrizante conta como medicamento), pela regra padrão de maldições: a primeira soma II à categoria; as seguintes, I (Arquivos Secretos 6, p. 74)." },
     ],
   };
 
@@ -104,6 +108,7 @@
     ["AS3", "Arquivos Secretos 3", "Arquivos Secretos 3", "AS3"],
     ["AS4", "Arquivos Secretos 4", "Arquivos Secretos 4", "AS4"],
     ["AS5", "Arquivos Secretos 5", "Arquivos Secretos 5", "AS5"],
+    ["AS6", "Arquivos Secretos 6", "Arquivos Secretos 6", "AS6"],
     ["EXTRA", "Extra", "Extra", "EX"],
   ];
   function mapaDeLivros(campo, indice) {
@@ -135,6 +140,7 @@
     amaldicoado: "Item amaldiçoado", arma: "Arma amaldiçoada",
     modificacao: "Modificação",
     maldicaoArma: "Maldição para arma", maldicaoProtecao: "Maldição para proteção", maldicaoAcessorio: "Maldição para acessório",
+    maldicaoMedicamento: "Maldição para medicamento",
   };
 
   /* O preço de cada elemento (OPRPG p. 145), para os itens amaldiçoados. */
@@ -237,6 +243,7 @@
     if (e.natureza === "maldicao") {
       if (e.secao === "maldicoesArmas") return "maldicaoArma";
       if (e.secao === "maldicoesProtecoes") return "maldicaoProtecao";
+      if (e.secao === "maldicoesMedicamentos") return "maldicaoMedicamento";
       return "maldicaoAcessorio";
     }
     if (e.aba === "armas") return e.arma.tipo;
@@ -272,7 +279,7 @@
     automatica: "armas automáticas", besta: "bestas e balestras", balas: "balas curtas e longas",
     protecao: "proteções", leve: "proteções leves", pesada: "proteções pesadas", escudo: "escudos",
     acessorio: "acessórios", utensilio: "utensílios", vestimenta: "vestimentas", eletrico: "objetos elétricos",
-    camera: "câmeras de aura paranormal", granada: "granadas",
+    camera: "câmeras de aura paranormal", granada: "granadas", medicamento: "medicamentos (e cicatrizantes)",
   };
 
   function rotuloAplicaEm(e) {
@@ -678,6 +685,18 @@
         return x.natureza === "item" && x.granada && x.aba !== "amaldicoados";
       }).map(function (x) { return { valor: x.id, rotulo: x.nome }; }).sort(function (a, b) { return a.rotulo.localeCompare(b.rotulo, "pt-BR"); });
     }
+    /* Emulsificante Químico (AS6 p. 74): o efeito de outro medicamento
+       do catálogo, não amaldiçoado. A categoria e o "diferente do
+       principal" são conferidos em podeAplicar, que conhece o item. */
+    if (escolha.tipo === "medicamentoDoCatalogo") {
+      return (pronto ? pronto.itens : []).filter(function (x) {
+        return x.natureza === "item" && x.aba !== "amaldicoados" && (x.medicamento || ehMedicamentoDoCatalogo(x.id));
+      }).map(function (x) { return { valor: x.id, rotulo: x.nome }; }).sort(function (a, b) { return a.rotulo.localeCompare(b.rotulo, "pt-BR"); });
+    }
+    /* Uma lista fixa, escrita na própria entrada (Potencializador Químico). */
+    if (escolha.tipo === "opcoes") {
+      return (escolha.valores || []).map(function (v) { return { valor: v.valor, rotulo: v.rotulo }; });
+    }
     return [];
   }
 
@@ -741,6 +760,7 @@
 
     var marcadores = [];
     ["acessorio", "utensilio", "vestimenta", "eletrico", "camera", "granada"].forEach(function (k) { if (e[k]) marcadores.push(k); });
+    if (e.medicamento || ehMedicamentoDoCatalogo(e.id)) marcadores.push("medicamento");
     if (e.modificavelComo) marcadores.push(e.modificavelComo);
     if (e.id === "op.arma.besta" || e.id === "op.arma.balestra") marcadores.push("besta");
     if (e.id === "op.municao.balas-curtas" || e.id === "op.municao.balas-longas") marcadores.push("balas");
@@ -845,6 +865,10 @@
     /* Granada adicionada antes da v2.38 não tem o marcador: o id do
        catálogo diz o que ela é. */
     if (item && !tags.granada && /(^|\.)granada-/.test(String(item.origemCatalogoId || ""))) { tags.granada = true; conhecido = true; }
+    /* Medicamento (AS6 p. 74): os do SaH, o cicatrizante ("e similares")
+       e o Aplicador de Adrenalina — também os adicionados antes do
+       marcador existir. */
+    if (item && !tags.medicamento && ehMedicamentoDoCatalogo(item.origemCatalogoId)) { tags.medicamento = true; conhecido = true; }
     return { tags: tags, familias: familias, conhecido: conhecido, dados: d };
   }
 
@@ -853,13 +877,36 @@
     arma: "arma", corpoACorpo: "arma", disparo: "arma", fogo: "arma", automatica: "arma", besta: "arma",
     protecao: "armadura", leve: "armadura", pesada: "armadura", escudo: "armadura",
     balas: "item", acessorio: "item", utensilio: "item", vestimenta: "item", camera: "item", eletrico: "*", granada: "item",
+    medicamento: "item",
   };
+
+  function ehMedicamentoDoCatalogo(id) {
+    return /^sah\.medicamento\./.test(String(id || "")) || id === "op.geral.cicatrizante" || id === "as6.geral.aplicador-de-adrenalina";
+  }
 
   function temModificacao(d, catalogoId) {
     return (d.modificacoes || []).some(function (m) { return m.catalogoId === catalogoId; });
   }
 
   var OPRESSAO = { sangue: "conhecimento", conhecimento: "energia", energia: "morte", morte: "sangue" };
+
+  var NUMERO_DA_CATEGORIA = { "0": 0, "I": 1, "II": 2, "III": 3, "IV": 4, "1": 1, "2": 2, "3": 3, "4": 4 };
+
+  /* O que cada medicamento tem para o Potencializador Químico melhorar
+     (AS6 p. 74), pelo efeito do catálogo. Um medicamento fora da lista
+     (Homebrew, por exemplo) aceita qualquer escolha, e a mesa confere. */
+  var MELHORIAS_DO_MEDICAMENTO = {
+    "op.geral.cicatrizante": ["cura"],
+    "sah.medicamento.antibiotico": ["bonus"],
+    "sah.medicamento.antidoto": ["bonus"],
+    "sah.medicamento.antiemetico": ["bonus"],
+    "sah.medicamento.antihistaminico": ["bonus"],
+    "sah.medicamento.anti-inflamatorio": ["pvTemporarios"],
+    "sah.medicamento.antitermico": ["usos"],
+    "sah.medicamento.broncodilatador": ["bonus"],
+    "sah.medicamento.coagulante": ["bonus"],
+    "as6.geral.aplicador-de-adrenalina": ["bonus", "pvTemporarios"],
+  };
 
   /* Pode aplicar `e` (modificação/maldição) no item? { ok, motivo, aviso } */
   function podeAplicar(e, item, escolha) {
@@ -902,6 +949,23 @@
     if (e.escolha && e.escolha.tipo === "granadaDoCatalogo" && escolha && escolha === item.origemCatalogoId) {
       return { ok: false, motivo: "O efeito adicional da granada Dupla precisa ser diferente do efeito principal." };
     }
+    /* Emulsificante Químico (AS6 p. 74): outro medicamento, diferente do
+       principal e de categoria igual ou menor que a deste (antes desta
+       modificação). */
+    if (e.escolha && e.escolha.tipo === "medicamentoDoCatalogo" && escolha) {
+      if (escolha === item.origemCatalogoId) return { ok: false, motivo: "O efeito adicional do Emulsificante Químico precisa ser diferente do efeito principal." };
+      var outro = pronto && pronto.porId ? pronto.porId[escolha] : null;
+      var catItem = NUMERO_DA_CATEGORIA[String(d.categoria === undefined || d.categoria === null ? "" : d.categoria)];
+      var catOutro = outro ? NUMERO_DA_CATEGORIA[String(outro.categoria === undefined || outro.categoria === null ? "" : outro.categoria)] : undefined;
+      if (outro && catItem !== undefined && catOutro !== undefined && catOutro > catItem) {
+        return { ok: false, motivo: outro.nome + " é de categoria maior que a deste medicamento: o Emulsificante só copia o efeito de um medicamento de categoria igual ou menor." };
+      }
+    }
+    /* Potencializador Químico: a melhoria precisa existir no medicamento. */
+    if (e.id === "as6.mod.medicamento.potencializador-quimico" && escolha) {
+      var cabe = MELHORIAS_DO_MEDICAMENTO[item.origemCatalogoId];
+      if (cabe && cabe.indexOf(escolha) < 0) return { ok: false, motivo: "Esta melhoria não existe em " + item.nome + ": escolha uma que o medicamento tenha (bônus em testes, PV temporários, PV recuperados ou uso por cena)." };
+    }
 
     if (e.natureza === "maldicao") {
       var elemento = e.elemento;
@@ -942,6 +1006,8 @@
     /* O id do que foi escolhido, quando é uma entrada do catálogo (Dupla:
        a outra granada, para o uso rolar o efeito dela). */
     if (e.escolha && e.escolha.tipo === "granadaDoCatalogo" && escolhida.valor) registro.escolhaId = escolhida.valor;
+    if (e.escolha && e.escolha.tipo === "medicamentoDoCatalogo" && escolhida.valor) registro.escolhaId = escolhida.valor;
+    if (e.escolha && e.escolha.tipo === "opcoes" && escolhida.valor) registro.escolhaId = escolhida.valor;
     if (e.calculo) registro.calculo = copia(e.calculo);
     if (e.semAcrescimoDeCategoria) registro.semAcrescimoDeCategoria = true;
     return { ok: true, registro: registro };

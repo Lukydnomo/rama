@@ -448,6 +448,58 @@
     return copia;
   }
 
+  /* =================================================================
+     ARQUIVOS SECRETOS 6 (v5.3) ATRAVESSANDO A EXPORTAÇÃO
+     -----------------------------------------------------------------
+     Os registros do bloco `arquivo6` (afecções, marca do Salto de Dados,
+     usos, ocorrências…) casam pelo id — e a exportação apaga todo `id`.
+     Eles atravessam como `ref6` e voltam a ser id na importação. A
+     associação da Evolução Modular (`associadoDe`, o id de outra
+     escolha) atravessa pela POSIÇÃO da escolha de origem, porque as
+     escolhas ganham ids novos ao importar.
+     ================================================================= */
+
+  function trocarChave(valor, de, para, profundidade) {
+    if ((profundidade || 0) > 8 || !valor || typeof valor !== "object") return;
+    if (Array.isArray(valor)) { valor.forEach(function (v) { trocarChave(v, de, para, (profundidade || 0) + 1); }); return; }
+    if (typeof valor[de] === "string") { valor[para] = valor[de]; delete valor[de]; }
+    Object.keys(valor).forEach(function (k) { trocarChave(valor[k], de, para, (profundidade || 0) + 1); });
+  }
+
+  function comArquivo6Portavel(ficha) {
+    var o = ficha && ficha.ordem;
+    var temA6 = o && o.arquivo6 && typeof o.arquivo6 === "object";
+    var temAssoc = o && Array.isArray(o.escolhas) && o.escolhas.some(function (r) { return r && r.associadoDe; });
+    if (!temA6 && !temAssoc) return ficha;
+    var copia = JSON.parse(JSON.stringify(ficha));
+    if (temA6) trocarChave(copia.ordem.arquivo6, "id", "ref6", 0);
+    if (temAssoc) {
+      var pos = {};
+      copia.ordem.escolhas.forEach(function (r, i) { if (r && r.id) pos[r.id] = i; });
+      copia.ordem.escolhas.forEach(function (r) {
+        if (!r || !r.associadoDe) return;
+        if (pos[r.associadoDe] !== undefined) r.associadoDe = PREFIXO_POSICAO + pos[r.associadoDe];
+        else delete r.associadoDe;
+      });
+    }
+    return copia;
+  }
+
+  function devolverArquivo6(dados) {
+    var o = dados && dados.ordem;
+    if (!o) return;
+    if (o.arquivo6 && typeof o.arquivo6 === "object") trocarChave(o.arquivo6, "ref6", "id", 0);
+    if (Array.isArray(o.escolhas) && o.escolhas.some(function (r) { return r && typeof r.associadoDe === "string"; })) {
+      o.escolhas.forEach(function (r) { if (r && typeof r === "object" && !r.id) r.id = U.uuid(); });
+      o.escolhas.forEach(function (r) {
+        if (!r || typeof r.associadoDe !== "string") return;
+        var m = r.associadoDe.indexOf(PREFIXO_POSICAO) === 0 ? o.escolhas[parseInt(r.associadoDe.slice(PREFIXO_POSICAO.length), 10)] : null;
+        if (m && m.id && m !== r) r.associadoDe = m.id;
+        else delete r.associadoDe;
+      });
+    }
+  }
+
   /* Antes de normalizar o que veio do arquivo: `evento`, `efeito`,
      `registro` e `extra` voltam a ser `id`. */
   function devolverIdsDosEventos(dados) {
@@ -600,6 +652,7 @@
          importado abriria com os rituais na ficha e todas as concessões
          pendentes, como se nunca tivesse aprendido nada. */
       devolverIdsDosEventos(limpo);
+      devolverArquivo6(limpo);
       devolverTemaDeDados(limpo);
       devolverBarganha(limpo);
       refazerVinculosAliados(limpo);
@@ -694,7 +747,7 @@
     /* Numa ficha, o vínculo entre concessão e ritual vira posição antes
        de os ids irem embora. Ver "O VÍNCULO DE RITUAL ATRAVESSANDO A
        IMPORTAÇÃO", acima. */
-    var preparado = tipo === "personagem" ? comBarganhaPortavel(comTemaDeDadosPortavel(comReferenciasPortaveis(comAliadosPortaveis(comPosicoesDeRitual(dados)))))
+    var preparado = tipo === "personagem" ? comArquivo6Portavel(comBarganhaPortavel(comTemaDeDadosPortavel(comReferenciasPortaveis(comAliadosPortaveis(comPosicoesDeRitual(dados))))))
       : (tipo === "homebrew-criatura" ? criaturaPortavel(U.copiar(dados)) : dados);
     return {
       rama: true,

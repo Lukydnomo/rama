@@ -26,6 +26,9 @@
      AS4    Arquivos Secretos 4, v1.0 (Jambô, pacote de conteúdo oficial)
             Granadas, Lançador de Granadas e modificações para granadas
             (p. 70–71)
+     AS6    Arquivos Secretos 6, v1.0 (Jambô, pacote de conteúdo oficial)
+            Anel Invertido, Aplicador de Adrenalina e Lança-nitrogênio
+            (p. 73); maldições e modificações para medicamentos (p. 74)
 
    As páginas são as do livro, não as do PDF. Os resumos são redação
    própria: guardam os números e as condições que o jogo precisa, e não
@@ -66,6 +69,7 @@
   var AS2 = "AS2";
   var AS4 = "AS4";
   var AS5 = "AS5";
+  var AS6 = "AS6";
   var AS3 = "AS3";
 
   var T33 = "Tabela 3.3 (p. 56–57)";
@@ -2103,6 +2107,86 @@
         "2 PE para se mover de forma sobrenatural: até o fim do turno, ignora terreno difícil, recebe deslocamento de escalada igual ao terrestre e fica imune a dano por queda de até 9 m.",
       ],
       notas: ["O +12 é o publicado (AS5 p. 61) — não é erro de digitação a corrigir. Vestidos, o +12 em Atletismo e os +3 m entram na conta; o movimento sobrenatural é o botão do item (2 PE, até o fim do turno)."] },
+
+    /* =================================================================
+       ARQUIVOS SECRETOS 6 — p. 73–74
+       -----------------------------------------------------------------
+       Três itens, e as maldições e modificações PARA MEDICAMENTOS — o
+       cicatrizante e o Aplicador de Adrenalina contam como medicamento
+       (marcador `medicamento`). A modificação é da INSTÂNCIA do item na
+       ficha: o catálogo não muda. Uma modificação igual não se acumula
+       (a regra geral de podeAplicar), e o efeito copiado pelo
+       Emulsificante é o do medicamento do catálogo — sem as modificações
+       dele, para nada se combinar recursivamente.
+       ================================================================= */
+
+    { id: "as6.amaldicoado.anel-invertido", nome: "Anel Invertido", elemento: "morte", fonte: AS6, pagina: 73, aba: "amaldicoados", secao: "especiais",
+      categoria: "II", espacos: 0.5, vestimenta: true,
+      resumo: "Anel de aparência sinistra que parece querer se prender ao dedo — e torná-lo mais forte para observá-lo sofrer por mais tempo.",
+      efeitos: ["Usando o anel, ao sofrer dano causado por um nidere: reação e 2 PE para receber RD 4d10 contra esse dano."],
+      notas: ["Vestido, o menu do item oferece a reação: cobra os 2 PE e rola a RD 4d10 para descontar daquele dano — só contra dano de nidere, a mesa confirma."] },
+
+    { id: "as6.geral.aplicador-de-adrenalina", nome: "Aplicador de Adrenalina", fonte: AS6, pagina: 73, aba: "geral", secao: "operacionais", medicamento: true,
+      categoria: "I", espacos: 1, consumivel: true,
+      resumo: "Caneta aplicadora pronta para injetar uma alta carga de epinefrina.",
+      efeitos: [
+        "Ação padrão e o item: injeta em você ou num ser adjacente — 2d8+2 PV temporários, +3 m de deslocamento e +2 em testes baseados em Força, Agilidade e Vigor até o fim da cena.",
+        "Quando o efeito acaba, rebote: o ser fica fatigado por uma cena.",
+        "Conta como um medicamento (SaH p. 43).",
+      ],
+      notas: ["“Aplicar” no menu do item consome uma unidade. Em você, os PV temporários, o deslocamento e o +2 entram em Condições até o fim da cena; com a cena acabando, a ficha oferece o rebote (fatigado na cena seguinte). Num ser adjacente, ele registra o efeito na própria ficha."] },
+
+    { id: "as6.arma.lanca-nitrogenio", nome: "Lança-nitrogênio", fonte: AS6, pagina: 73, aba: "armas",
+      categoria: "III", espacos: 2,
+      arma: { proficiencia: "pesada", tipo: "distancia", empunhadura: "duasMaos", dano: "6d6", critico: "x2", alcance: "curto", tipoDano: "Frio", municao: "op.municao.combustivel" },
+      resumo: "Equipamento das Indústrias Panacea que esguicha nitrogênio líquido, reduzindo drasticamente a temperatura do alvo e congelando-o.",
+      efeitos: [
+        "Arma de fogo pesada, de duas mãos, alcance curto: 6d6 de dano de frio, crítico 20/x2.",
+        "Atinge todos os seres numa linha de 1,5 m de largura até alcance curto, e não vai além. Um só teste de ataque, comparado com a Defesa de cada ser na área.",
+        "Seres atingidos ficam enredados pelo congelamento até gastarem uma ação padrão para quebrar o gelo com as mãos (Fortitude DT Agi muda para lento).",
+        "Usa combustível (OPRPG p. 59) como munição, como o lança-chamas — mas o líquido é nitrogênio, não algo inflamável.",
+      ],
+      notas: ["Como o lança-chamas do livro básico, o tipo de ataque no catálogo é “à distância” (arma de fogo pesada no texto). A DT do congelamento é 10 + limite de PE + Agilidade de quem ataca; a condição é de cada alvo."] },
+
+    /* --- Maldições para medicamentos (Morte) · p. 74 --- */
+    { id: "as6.maldicao.medicamento.aceleracao-espiral", nome: "Aceleração Espiral", natureza: "maldicao", elemento: "morte", fonte: AS6, pagina: 74, aba: "amaldicoados", secao: "maldicoesMedicamentos",
+      aplicaEm: ["medicamento"],
+      resumo: "O medicamento acelera o tempo de quem o usa.",
+      efeitos: [
+        "Além do efeito normal, você pode gastar 3 PE para fazer uma única ação padrão adicional, que não pode conjurar rituais. O efeito termina ao fazer essa ação ou no fim da cena.",
+        "Quem usa um item com esta maldição faz um teste de Fortitude (DT 20): falhando, um órgão envelhece mais do que devia (perde 2d8 PV).",
+      ] },
+    { id: "as6.maldicao.medicamento.esforco-espiral", nome: "Esforço Espiral", natureza: "maldicao", elemento: "morte", fonte: AS6, pagina: 74, aba: "amaldicoados", secao: "maldicoesMedicamentos",
+      aplicaEm: ["medicamento"],
+      resumo: "O medicamento devolve esforço, cobrando em tempo.",
+      efeitos: [
+        "Além do efeito normal, você também recupera 1d8+1 PE.",
+        "Quem usa um item com esta maldição faz um teste de Fortitude (DT 20): falhando, envelhece 1 ano e fica frustrado até o fim da cena.",
+      ] },
+
+    /* --- Modificações para medicamentos · p. 74 --- */
+    { id: "as6.mod.medicamento.emulsificante-quimico", nome: "Emulsificante Químico", natureza: "modificacao", fonte: AS6, pagina: 74, aba: "geral", secao: "modificacoesMedicamentos",
+      aplicaEm: ["medicamento"],
+      escolha: { tipo: "medicamentoDoCatalogo", rotulo: "Efeito adicional (outro medicamento, de categoria igual ou menor, não amaldiçoado)" },
+      resumo: "Substância que mistura de forma estável ingredientes que não se misturam: o medicamento tem um efeito adicional.",
+      efeitos: [
+        "Ao aplicar, escolha o efeito de outro medicamento de categoria igual ou menor que a deste (exceto itens amaldiçoados): ele se ativa junto com o efeito principal.",
+        "O efeito adicional deve ser diferente do efeito principal.",
+      ],
+      notas: ["A categoria comparada é a do medicamento antes desta modificação. O efeito adicional é o do medicamento do catálogo, sem as modificações dele."] },
+    { id: "as6.mod.medicamento.potencializador-quimico", nome: "Potencializador Químico", natureza: "modificacao", fonte: AS6, pagina: 74, aba: "geral", secao: "modificacoesMedicamentos",
+      aplicaEm: ["medicamento"],
+      escolha: { tipo: "opcoes", rotulo: "Melhoria", valores: [
+        { valor: "bonus", rotulo: "+5 no bônus em testes" },
+        { valor: "pvTemporarios", rotulo: "+2d8 PV temporários" },
+        { valor: "cura", rotulo: "+2d8 PV recuperados" },
+        { valor: "usos", rotulo: "duas vezes por cena (em vez de uma)" },
+      ] },
+      resumo: "Substância administrada junto com o medicamento para aumentar a eficácia dele.",
+      efeitos: [
+        "Escolha uma: o bônus em testes que o medicamento dá aumenta em +5; os PV temporários, em +2d8; os PV recuperados, em +2d8; ou, se ele só funciona uma vez por cena, passa a funcionar duas.",
+      ],
+      notas: ["A escolha precisa caber no medicamento (um antibiótico não tem PV para aumentar): a ficha confere ao aplicar."] },
   ];
 
   global.RAMAOrdemItensDados = {
@@ -2115,6 +2199,7 @@
       AS3: { nome: "Arquivos Secretos 3", curto: "Arquivos Secretos 3", edicao: "v1.0" },
       AS4: { nome: "Arquivos Secretos 4", curto: "Arquivos Secretos 4", edicao: "v1.0" },
       AS5: { nome: "Arquivos Secretos 5", curto: "Arquivos Secretos 5", edicao: "v1.0" },
+      AS6: { nome: "Arquivos Secretos 6", curto: "Arquivos Secretos 6", edicao: "v1.0" },
     },
     itens: ITENS,
   };

@@ -15,7 +15,7 @@
 
      OPRPG  Ordem Paranormal RPG — Livro de Regras, v1.1
      SAH    Sobrevivendo ao Horror, v1.2
-     AS1–AS5  Arquivos Secretos 1 a 5 (pacotes de conteúdo oficial)
+     AS1–AS6  Arquivos Secretos 1 a 6 (pacotes de conteúdo oficial)
 
    Páginas do LIVRO, não do PDF. Os resumos são próprios e curtos, para
    lembrar do que se trata na hora do jogo. O texto integral está nos
@@ -99,6 +99,7 @@
   var AS3 = "AS3";
   var AS4 = "AS4";
   var AS5 = "AS5";
+  var AS6 = "AS6";
 
   /* ------------------------------------------------------------------
      Atalhos de montagem. Existem só para a lista abaixo caber na tela.
@@ -631,6 +632,54 @@
       resumo: "Nem tudo é o que parece: ao presenciar um alvo em alcance curto receber um efeito (bônus ou penalidade) em dados rolados — dados adicionais em testes de perícia, em rolagens de dano, ou uma condição como frustrado —, gaste uma reação e 4 PE para transformar o bônus em penalidade ou vice-versa. A transformação dura até o fim da cena.",
       automacao: "parcial",
       nota: "O cartão cobra os 4 PE e registra o alvo e o efeito. Na ficha do alvo, só um efeito que mexe em DADOS rolados pode ser invertido (um bônus numérico fixo não é dado e não entra); a inversão guarda de onde veio, vale até o fim da cena e não se repete sobre o mesmo efeito." }),
+
+    /* --- Arquivos Secretos 6, p. 67-69 ---
+       As contas e os botões moram em js/ordem/arquivo6.js e
+       js/ordem/telas/ficha-arquivo6.js. Os poderes do especialista
+       mexem nas habilidades do Médico de Campo (Paramédico, Equipe de
+       Trauma, Resgate): o cartão delas ganha o que muda, sem duplicar a
+       habilidade. */
+    entrada({ chave: "analiseCombativa", nome: "Análise Combativa", tipo: "classe", classes: ["combatente"], fonte: AS6, pagina: 67,
+      resumo: "Num teste de qualquer perícia envolvendo investigar ações violentas (as marcas de ataque de uma criatura, como um combate aconteceu, a arma que matou alguém), gaste 2 PE para usar Luta ou Pontaria, a critério do mestre, no lugar da perícia recomendada. Só vale com a perícia treinada (sem Pontaria, nada de analisar um ferimento a bala).",
+      requisitos: [req.treinUma(["luta", "pontaria"])], automacao: "parcial",
+      nota: "No resultado de um teste, o botão cobra os 2 PE e rola Luta ou Pontaria no lugar — só a que você for treinado, e só depois de confirmar que é para investigar uma ação violenta (a mesa decide). Vale para aquele teste; nenhum treinamento muda." }),
+    entrada({ chave: "especialistaEmProtecaoLeve", nome: "Especialista em Proteção Leve", tipo: "classe", classes: ["combatente"], fonte: AS6, pagina: 67,
+      resumo: "Se estiver usando uma proteção leve, você recebe +2 na Defesa e em Reflexos.",
+      automacao: "calculo",
+      nota: "Os +2 entram na Defesa e em Reflexos enquanto a proteção em uso no inventário for leve — escudo e proteção pesada não contam; guardada na mochila, também não." }),
+
+    entrada({ chave: "doutorEmEmergencias", nome: "Doutor em Emergências", tipo: "classe", classes: ["especialista"], fonte: AS6, pagina: 68,
+      resumo: "Cicatrizantes e medicamentos que recuperam PV ou dão PV temporários, aplicados por você, rendem +1d8 PV (um cicatrizante cura 3d8+2; um anti-inflamatório dá 2d8+2 PV temporários). +5 em Medicina para aplicar tratamento (OPRPG p. 46); se passar, o paciente recebe +10 no próximo teste de Fortitude contra a doença ou o veneno, em vez de +5.",
+      requisitos: [req.poder("especialistaEmEmergencias")], automacao: "parcial",
+      nota: "Pré-requisito: Especialista em Emergências (SaH p. 33). Em “Aplicar” de um cicatrizante ou medicamento do inventário, o +1d8 entra na rolagem. O +5 é oferecido no resultado de um teste de Medicina para aplicar tratamento; passando, o +10 fica guardado na afecção do paciente (nesta ficha) ou é anotado para ele." }),
+    entrada({ chave: "farmaceuticoDeCampo", nome: "Farmacêutico de Campo", tipo: "classe", classes: ["especialista"], fonte: AS6, pagina: 68,
+      resumo: "Numa cena de interlúdio, escolha um cicatrizante (OPRPG p. 65) ou medicamento (SaH p. 43) e gaste uma ação de interlúdio, um uso de um kit de medicina e 2 PE, mais 2 PE por categoria do item: você cria o item. O mesmo kit de medicina usado 3 vezes por esta habilidade é consumido.",
+      requisitos: [req.trein("medicina"), req.trein("profissao"), { tipo: "declaracao", texto: "Profissão: químico ou similar (a mesa confere)" }],
+      automacao: "calculo",
+      nota: "O botão do cartão (só numa cena de interlúdio) escolhe o item da biblioteca e o kit de medicina do inventário, mostra o custo (2 + 2 × categoria) e cria o item numa gravação só. O kit guarda quantos usos já foram feitos por esta habilidade e sai do inventário no 3º. A fabricação tem um id: repetir o clique ou recarregar não cria outro." }),
+    entrada({ chave: "medicoDaSalvacao", nome: "Médico da Salvação", tipo: "classe", classes: ["especialista"], fonte: AS6, pagina: 68,
+      resumo: "Os dados de Paramédico aumentam de d10 para d12. Além disso, ao usar Paramédico, você pode gastar 3 PE, uma vez por rodada, para usá-lo como ação de movimento em vez de ação padrão.",
+      requisitos: [req.poder("paramedico")], automacao: "calculo",
+      nota: "O cartão de Paramédico passa a rolar d12 e oferece a versão como ação de movimento (+3 PE), uma vez por rodada da ficha." }),
+    entrada({ chave: "resgatarDaMorte", nome: "Resgatar da Morte", tipo: "classe", classes: ["especialista"], fonte: AS6, pagina: 68,
+      resumo: "Num teste de primeiros socorros (OPRPG p. 46), gaste 2 PE para obter sucesso automático. Só uma vez por cena no mesmo ser.",
+      requisitos: [req.poder("paramedico"), req.poder("equipeDeTrauma"), req.poder("resgate")], automacao: "calculo",
+      nota: "No resultado de um teste de Medicina, o botão pergunta quem é o ser socorrido, cobra os 2 PE e marca o sucesso automático. O mesmo ser só uma vez por cena (a cena da ficha)." }),
+    entrada({ chave: "veteranoDaEquipeDeTrauma", nome: "Veterano da Equipe de Trauma", tipo: "classe", classes: ["especialista"], fonte: AS6, pagina: 68,
+      resumo: "Ao usar Equipe de Trauma, você remove até três condições negativas (exceto morrendo), em vez de apenas uma.",
+      requisitos: [req.poder("paramedico"), req.poder("equipeDeTrauma")], automacao: "calculo",
+      nota: "O cartão de Equipe de Trauma passa a aceitar até três condições (nunca morrendo)." }),
+
+    entrada({ chave: "dominadorDeElemento", nome: "Dominador de Elemento", tipo: "classe", classes: ["ocultista"], fonte: AS6, pagina: 69,
+      resumo: "Escolha um elemento. Ao conjurar um ritual que causa dano e é do elemento oprimido pelo escolhido, você pode mudar o tipo de dano do ritual para o do elemento escolhido (com Conhecimento, a Eletrocussão pode causar dano de Conhecimento).",
+      requisitos: [{ tipo: "poderElemento", poder: "especialistaEmElemento" }, req.nex(30)],
+      opcoes: [{ chave: "elemento", tipo: "elemento", rotulo: "Elemento" }], automacao: "parcial",
+      nota: "Na rolagem de dano de um ritual do elemento oprimido, a ficha oferece mudar o tipo — o ritual do catálogo e o da aba Rituais não mudam. Opressão: Conhecimento oprime Energia, Energia oprime Morte, Morte oprime Sangue e Sangue oprime Conhecimento (OPRPG p. 118)." }),
+    entrada({ chave: "graoMestreEmElemento", nome: "Grão-Mestre em Elemento", tipo: "classe", classes: ["ocultista"], fonte: AS6, pagina: 69,
+      resumo: "Escolha um elemento. Ao conjurar um ritual dele, gaste +1 PE para um efeito: Sangue (aliado +2d4 de dano de Sangue nas rolagens de dano; inimigo debilitado por 1 rodada), Morte (aliado 2d8+2 PV temporários; inimigo lento por 1 rodada), Conhecimento (aliado +2 em testes de perícia; inimigo esmorecido por 1 rodada) ou Energia (aliado +6 m em todos os deslocamentos; inimigo desprevenido por 1 rodada). Afeta só 1 alvo e dura até o fim da cena (salvo indicação), mesmo que o ritual afete vários ou dure outra coisa. As condições ignoram imunidades.",
+      requisitos: [{ tipo: "poderElemento", poder: "mestreEmElemento" }, req.nex(60)],
+      opcoes: [{ chave: "elemento", tipo: "elemento", rotulo: "Elemento" }], automacao: "parcial",
+      nota: "Em “Usar ritual” de um ritual do elemento escolhido, a opção soma +1 PE ao custo e pergunta o alvo: em você, o efeito entra em Condições com a origem; num aliado, ele registra o efeito recebido na própria ficha (painel do Arquivos Secretos 6); num inimigo, a condição é da mesa — e ignora imunidades." }),
   ];
 
   /* =================================================================
@@ -847,6 +896,20 @@
       "Motorista precavido: treinado em Pilotagem, ou +2 se já for. Se você estiver dirigindo, todos os seres dentro do veículo, incluindo você, recebem +2 na Defesa e em testes de resistência. Com a regra Veículos Operacionais (AS3 p. 125), seu veículo também recebe +2 na Defesa.",
       [], [ef.treinarOuBonus("pilotagem")], "parcial", { fonte: AS5,
         nota: "O treinamento (ou o +2) entra na conta. Marcando “dirigindo” no cartão, o +2 na Defesa e nos testes de resistência entra na sua ficha; os passageiros ligam o mesmo +2 na ficha deles (“Recebido de aliados”). A Defesa do veículo (+2) aparece no veículo, só com Veículos Operacionais ligada." }),
+
+    /* --- Arquivos Secretos 6, p. 70 --- */
+    geral("adaptacaoClimatica", "Adaptação Climática", 70,
+      "+2 em Fortitude, e você não sofre dano por clima muito quente, muito frio, calor extremo ou frio extremo.",
+      [req.atr("vig", 2)], [ef.pericia(["fortitude"], 2)], "parcial", { fonte: AS6,
+        nota: "O +2 em Fortitude entra na conta. A imunidade é só ao dano do CLIMA (muito quente, muito frio, calor e frio extremos) — não é imunidade a dano de fogo ou de frio de outras fontes." }),
+    geral("especialistaEmArmasImprovisadas", "Especialista em Armas Improvisadas", 70,
+      "Sem penalidade em testes de ataque por usar arma improvisada, e as rolagens de dano com armas improvisadas recebem +1 dado do mesmo tipo (uma cadeira de 1d6 de impacto passa a 2d6).",
+      [req.atrUm(["for", "agi"], 2), req.trein("luta")], [], "parcial", { fonte: AS6,
+        nota: "Vale para o que for arma improvisada (OPRPG p. 57). O inventário não marca quais itens são armas improvisadas: o dado extra e a ausência de penalidade são aplicados na rolagem, pela mesa." }),
+    geral("muitoSorrateiro", "Muito Sorrateiro", 70,
+      "+3 em Furtividade. Quando uma cena de furtividade começa, role 1d4 e subtraia da sua visibilidade inicial (de 0, com 2 no d4, você começa em –2).",
+      [req.poder("sorrateiro")], [ef.pericia(["furtividade"], 3)], "parcial", { fonte: AS6,
+        nota: "Pré-requisito: Sorrateiro (SaH p. 36). O +3 entra na conta. O botão do cartão rola o 1d4 no início da cena furtiva; a visibilidade pode ficar negativa e é acompanhada pela mesa." }),
   ];
 
   /* =================================================================
@@ -1109,6 +1172,23 @@
       "O bônus muda para +10 e você está sempre sob efeito de Compreensão Paranormal em sua forma discente.",
       { automacao: "parcial",
         nota: "O +5 (+10) é oferecido no resultado de um teste para compreender uma linguagem do Outro Lado. O ritual vem como concessão pelo nome (aba Rituais, fora do limite); se a ficha já o conhecia, nada é duplicado e “Usar ritual” cobra 1 PE a menos — uma vez, sem somar de novo. Com afinidade, a forma discente fica contínua: sem conjurar e sem custo." }),
+
+    /* --- Arquivos Secretos 6, p. 71 --- */
+    paranormal("escudoEspiralTemporal", "Escudo Espiral Temporal", "morte", AS6, 71,
+      "Uma vez por rodada, reação e 2 PE para afetar uma arma ou munição que vai te causar dano. Munição: RD 20 contra esse dano e o projétil vira cinzas. Arma corpo a corpo: RD 10 contra esse dano e a arma envelhece (−1 dado em testes de ataque; envelhecendo de novo, fica quebrada). A RD não funciona contra dano de Energia.",
+      "Pode usar mais de uma vez por rodada.",
+      { requisitos: [req.elem("morte", 1)], automacao: "parcial",
+        nota: "O botão do cartão cobra os 2 PE e pergunta munição ou arma corpo a corpo: a RD (20 ou 10) aparece para descontar do dano — nunca contra dano de Energia. Uma vez por rodada da ficha (sem limite com afinidade). Uma arma de ficha envelhece pelo menu do item (−1 dado no ataque; a segunda vez a marca quebrada)." }),
+    paranormal("grilhoesDeLodo", "Grilhões de Lodo", "morte", AS6, 71,
+      "2 PE criam uma área de grilhões de Lodo com 9 m de raio a partir de você, até o fim da cena. Todos os seres na área (exceto você e criaturas de Morte) sofrem 3d6 de dano de Morte e ficam lentos (Fortitude DT do seu atributo mais alto reduz o dano à metade e evita a condição por 1 rodada).",
+      "O dano muda para 6d6 e a condição, para enredado.",
+      { automacao: "parcial",
+        nota: "O botão do cartão cobra os 2 PE, registra a área até o fim da cena e rola o dano com a DT (10 + limite de PE + o atributo mais alto). O livro não diz se o dano se repete enquanto a área durar: a ficha rola uma vez ao criar e oferece “Resolver de novo” para a mesa usar quando decidir (ver docs/ORDEM-REGRAS.md)." }),
+    paranormal("saltoDeDados", "Salto de Dados", "energia", AS6, 71,
+      "2 PE para marcar um símbolo no próprio corpo, que dura 1 dia ou até ser consumido. A qualquer momento, reação e 3 PE para consumir a marca e voltar o estado físico e mental (PV, PE, condições, efeitos, estatísticas da ficha) ao momento da marca. Você perde a memória do que viveu desde então e fica frustrado até o fim da cena.",
+      "A marca dura 1 ano ou até ser consumida.",
+      { requisitos: [req.elem("energia", 2)], automacao: "calculo",
+        nota: "Marcar cobra os 2 PE e, depois, guarda o retrato do estado atual (já sem os 2 PE). Voltar cobra os 3 PE e então devolve PV, PE/PD, Sanidade, PV temporários, condições e efeitos ao retrato — e aplica frustrado até o fim da cena. Identidade, progressão, inventário, rituais, permissões e histórico não voltam. A marca é consumida uma vez só, mesmo com outra aba aberta ou um reenvio (id da operação)." }),
 
     /* --- Poderes de Transmissão, Arquivos Secretos 5, p. 62-63 ---
        "Além da necessidade de se conectar com o Sino de Transmissão como
@@ -1843,6 +1923,99 @@
 
   function poder(chave) { return POR_CHAVE[chave] || null; }
 
+  /* =================================================================
+     EVOLUÇÃO MODULAR — combate ou utilidade (AS6 p. 80)
+     -----------------------------------------------------------------
+     A regra opcional divide os poderes de CLASSE em dois grupos, e
+     continua deixando escolher um poder geral (SaH p. 33) em qualquer
+     vaga. Combate: proficiência em itens de dano ou de defesa, teste de
+     ataque ou de resistência, Defesa, rolagem de dano, DT de habilidades
+     e rituais, ignorar penalidade situacional em cena de ação, mais
+     ataques ou execução menor de ação de combate. Utilidade: o resto.
+
+     A classificação é ÚNICA, aqui — inclusive dos suplementos. `AMBIGUOS`
+     lista os que a régua do livro não decide sozinha, com a leitura
+     adotada; a mesa pode reclassificar um deles na ficha (painel da
+     regra, aba Regras). Um poder de classe que o SaH tornou geral
+     (`geral`) conta como geral: entra nas duas vagas. ================ */
+
+  var GRUPO_MODULAR = {};
+  [
+    /* combatente */
+    "armamentoPesado", "ataqueDeOportunidade", "combateDefensivo", "golpeDemolidor", "golpePesado", "protecaoPesada",
+    "reflexosDefensivos", "segurarOGatilho", "sentidoTatico", "tanqueDeGuerra", "tiroDeCobertura",
+    "predadorPerfeito", "golpesDeArena", "marteladas", "guardiaoDaTropa", "vitalidadeSofrida", "apegoAngustiado",
+    "paranoiaDefensiva", "chuvaDeBalas", "combatenteEsforcado", "treinamentoMilitarizado",
+    "auraDeConfianca", "folegoDeEmergencia", "paredeDeCarne", "especialistaEmProtecaoLeve",
+    /* especialista */
+    "balisticaAvancada", "movimentoTatico", "ninjaUrbano", "peritoEmExplosivos", "assassinatoFurtivo", "especialistaEmMatar",
+    "adeptoDoEscuro", "treinadoNasTelas", "medicoDaSalvacao",
+    /* ocultista */
+    "especialistaEmElemento", "fluxoDePoder", "ritualPotente", "liturgiaDeFortalecimento", "nosOlhosDoMonstro",
+    "sincroniaParanormal", "tracadoConjuratorio", "ritualIntenso", "saudeSobrenatural", "reterRitualDeCombate",
+    "ruidoDeComunicacao", "dominadorDeElemento", "graoMestreEmElemento",
+  ].forEach(function (k) { GRUPO_MODULAR[k] = "combate"; });
+  [
+    "incansavel", "prestezaAtletica", "transcender", "treinamentoEmPericia",
+    "caminhoParaForca", "cienteDasCicatrizes", "correriaDesesperada", "engolirOChoro", "instintoDeFuga", "mochileiro",
+    "sacrificarOsJoelhos", "semTempoIrmao", "valentao", "analiseCombativa",
+    "conhecimentoAplicado", "hacker", "maosRapidas", "mochilaDeUtilidades", "naTrilhaCerta", "nerd", "pensamentoAgil",
+    "primeiraImpressao", "acolherOTerror", "contatosOportunos", "disfarceSutil", "esconderijoDesesperado",
+    "especialistaDiletante", "flashback", "leituraFria", "maosFirmes", "planoDeFuga", "remoerMemorias", "resistirAPressao",
+    "analiseConturbada", "profissaoPerigo", "quaseNovo", "saudosistaHiTech",
+    "doutorEmEmergencias", "farmaceuticoDeCampo", "resgatarDaMorte", "veteranoDaEquipeDeTrauma",
+    "camuflarOcultismo", "criarSelo", "envoltoEmMisterio", "ferramentasParanormais", "guiadoPeloParanormal",
+    "identificacaoParanormal", "improvisarComponentes", "intuicaoParanormal", "mestreEmElemento", "ritualPredileto",
+    "tatuagemRitualistica", "flageloBemAproveitado", "recuperacaoFlagelante", "dominarHabilidadeRitualistica",
+    "deixeOsSussurrosGuiarem", "dominioEsoterico", "estalosMacabros", "minhaDorMeImpulsiona", "olharSinistro",
+    "sentidoPremonitorio", "acostumadoAMaldicao", "exploradorDaNevoa", "sinestesiaParanormal", "terroresNoturnos",
+    "catalogoDeCriaturasAmbulante", "meditacaoOcultista",
+  ].forEach(function (k) { GRUPO_MODULAR[k] = "utilidade"; });
+
+  /* A leitura adotada nos casos que a régua não decide. */
+  var AMBIGUOS = {
+    transcender: "Rende um poder paranormal, que pode ser de qualquer tipo; o poder de classe em si não é de combate.",
+    vitalidadeSofrida: "PV não está na lista do livro, mas aguentar a adversidade é o que ele mede: combate.",
+    apegoAngustiado: "Continuar consciente morrendo é aguentar a cena de ação: combate.",
+    combatenteEsforcado: "PE servem a tudo; os do combatente movem sobretudo habilidades de combate.",
+    treinamentoMilitarizado: "O bônus vale em testes de Agi/For/Vig e em rolagens de dano: combate.",
+    correriaDesesperada: "Deslocamento e perseguição, fora do combate: utilidade.",
+    adeptoDoEscuro: "Ignorar a camuflagem da escuridão é ignorar penalidade situacional em ação; o +2 em Investigação é utilidade. Ficou em combate.",
+    treinadoNasTelas: "Iniciativa e Reflexos (teste de resistência): combate.",
+    especialistaDiletante: "Depende do poder aprendido; o poder em si é de utilidade.",
+    medicoDaSalvacao: "Paramédico como ação de movimento reduz a execução de uma ação de combate.",
+    resgatarDaMorte: "Primeiros socorros: utilidade, mesmo em combate.",
+    veteranoDaEquipeDeTrauma: "Remover condições: utilidade.",
+    doutorEmEmergencias: "Cura com medicamento e tratamento: utilidade.",
+    fluxoDePoder: "Sustentar dois rituais com uma ação reduz a execução: combate.",
+    mestreEmElemento: "Reduz custo, não DT nem dano: utilidade.",
+    ritualPredileto: "Reduz custo: utilidade.",
+    tatuagemRitualistica: "Reduz custo: utilidade.",
+    flageloBemAproveitado: "Muda o preço do Poder do Flagelo: utilidade.",
+    dominarHabilidadeRitualistica: "Depende da habilidade aprendida; o poder em si é de utilidade.",
+    dominioEsoterico: "Combina catalisadores: utilidade.",
+    estalosMacabros: "Fintar é de combate, distrair não; ficou em utilidade.",
+    nosOlhosDoMonstro: "+5 em testes contra a criatura, inclusive de resistência: combate.",
+    sincroniaParanormal: "Dados de bônus distribuídos rodada a rodada: combate.",
+    saudeSobrenatural: "PV temporários para a cena de ação: combate.",
+    ruidoDeComunicacao: "Inverte bônus e penalidades em dados, sobretudo em ação: combate.",
+    dominadorDeElemento: "Muda o tipo de dano dos rituais: combate.",
+    graoMestreEmElemento: "Condições em inimigos e bônus em aliados durante a ação: combate.",
+  };
+
+  /* O grupo de um poder na Evolução Modular: "combate", "utilidade" ou
+     "geral" (entra em qualquer vaga). `ajustes` é o que a mesa
+     reclassificou na ficha ({ chave: grupo }), só para os ambíguos. */
+  function grupoModular(p, ajustes) {
+    var e = typeof p === "string" ? poder(p) : p;
+    if (!e) return "";
+    if (e.tipo === "geral" || e.geral) return "geral";
+    if (e.tipo !== "classe") return "";
+    var a = ajustes && ajustes[e.chave];
+    if (AMBIGUOS[e.chave] && (a === "combate" || a === "utilidade")) return a;
+    return GRUPO_MODULAR[e.chave] || "utilidade";
+  }
+
   /* O que um personagem desta classe pode escolher numa vaga de poder
      de classe: os da classe e, do Sobrevivendo ao Horror, os gerais —
      inclusive os quatro poderes de classe que o suplemento transformou
@@ -1896,7 +2069,7 @@
   }
 
   global.RAMAOrdemPoderes = {
-    FONTES: { OPRPG: OPRPG, SAH: SAH, AS1: AS1, AS2: AS2, AS3: AS3, AS4: AS4, AS5: AS5 },
+    FONTES: { OPRPG: OPRPG, SAH: SAH, AS1: AS1, AS2: AS2, AS3: AS3, AS4: AS4, AS5: AS5, AS6: AS6 },
     PODERES_CLASSE: PODERES_CLASSE,
     PODERES_GERAIS: PODERES_GERAIS,
     PODERES_PARANORMAIS: PODERES_PARANORMAIS,
@@ -1913,6 +2086,9 @@
     TODOS: TODOS,
 
     poder: poder,
+    GRUPO_MODULAR: GRUPO_MODULAR,
+    AMBIGUOS_MODULARES: AMBIGUOS,
+    grupoModular: grupoModular,
     poderesDeClasse: poderesDeClasse,
     pertenceAClasse: pertenceAClasse,
     habilidadesDaTrilha: habilidadesDaTrilha,

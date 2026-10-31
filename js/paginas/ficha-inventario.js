@@ -303,6 +303,7 @@
       if (global.RAMAFichaArquivo2) linhas = linhas.concat(global.RAMAFichaArquivo2.observacoesDoItem(ctx, item));
       if (global.RAMAFichaArquivo4) linhas = linhas.concat(global.RAMAFichaArquivo4.observacoesDoItem(ctx, item));
       if (global.RAMAFichaArquivo5) linhas = linhas.concat(global.RAMAFichaArquivo5.observacoesDoItem(ctx, item));
+      if (global.RAMAFichaArquivo6) linhas = linhas.concat(global.RAMAFichaArquivo6.observacoesDoItem(ctx, item));
     } else {
       if (item.tipo === "mochila") linhas.push(["Reduz", formatarPeso(item.reducaoPeso) + " de peso"]);
       else linhas.push(["Peso", formatarPeso(item.peso)]);
@@ -356,7 +357,8 @@
       perfilDe(ctx) && global.RAMAFichaArquivo2 ? global.RAMAFichaArquivo2.opcoesDoItem(ctx, item) : [],
       perfilDe(ctx) && global.RAMAFichaArquivo3 ? global.RAMAFichaArquivo3.opcoesDoItem(ctx, item) : [],
       perfilDe(ctx) && global.RAMAFichaArquivo4 ? global.RAMAFichaArquivo4.opcoesDoItem(ctx, item) : [],
-      perfilDe(ctx) && global.RAMAFichaArquivo5 ? global.RAMAFichaArquivo5.opcoesDoItem(ctx, item) : [], ordem, [
+      perfilDe(ctx) && global.RAMAFichaArquivo5 ? global.RAMAFichaArquivo5.opcoesDoItem(ctx, item) : [],
+      perfilDe(ctx) && global.RAMAFichaArquivo6 ? global.RAMAFichaArquivo6.opcoesDoItem(ctx, item) : [], ordem, [
       { rotulo: "Enviar à biblioteca", aoClicar: function () { paraHomebrew(ctx, item); } },
       "separador",
       { rotulo: "Remover", perigo: true, aoClicar: function () { remover(ctx, item); } },

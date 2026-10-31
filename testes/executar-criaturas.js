@@ -58,13 +58,13 @@ function faces(lista) {
 t.grupo("Catálogo · inventário e integridade");
 const conferencia = OC.conferir(DADOS);
 t.igual("nenhum erro de conferência (ids, campos, expressões, variantes)", conferencia.erros.slice(0, 5), []);
-t.igual("contagem por livro bate com o inventário", conferencia.porLivro, { OPRPG: 67, SAH: 32, AS1: 12, AS2: 28, AS3: 36, AS4: 4, AS5: 10, "AS5 (variantes)": 4, "OPRPG (variantes)": 5 });
+t.igual("contagem por livro bate com o inventário", conferencia.porLivro, { OPRPG: 67, SAH: 32, AS1: 12, AS2: 28, AS3: 36, AS4: 4, AS5: 10, "AS5 (variantes)": 4, AS6: 15, "OPRPG (variantes)": 5 });
 const porNatureza = {};
 DADOS.criaturas.filter((c) => !c.variante).forEach((c) => { const k = c.livro + ":" + c.natureza; porNatureza[k] = (porNatureza[k] || 0) + 1; });
 t.igual("paranormais, pessoas e animais de cada livro", porNatureza,
   { "OPRPG:paranormal": 49, "OPRPG:humana": 11, "OPRPG:animal": 7, "SAH:paranormal": 13, "SAH:humana": 11, "SAH:animal": 8,
     "AS1:paranormal": 1, "AS1:humana": 11, "AS2:animal": 2, "AS2:paranormal": 4, "AS2:humana": 22, "AS3:humana": 33, "AS3:animal": 3, "AS4:humana": 3, "AS4:paranormal": 1,
-    "AS5:humana": 1, "AS5:paranormal": 9 });
+    "AS5:humana": 1, "AS5:paranormal": 9, "AS6:humana": 11, "AS6:paranormal": 4 });
 const ids = DADOS.criaturas.map((c) => c.id);
 t.ok("ids únicos", new Set(ids).size === ids.length);
 t.ok("O Terminal (aventura do SAH) está no catálogo, com página", DADOS.criaturas.some((c) => c.id === "sah.criatura.o-terminal" && c.pagina === 218));
@@ -257,7 +257,7 @@ t.igual("imagens do catálogo pelo id (retrato 1:1 e corpo inteiro)", C.imagensD
 t.ok("  a cópia no Homebrew usa a do original; criatura sem catálogo não tem", !!C.imagensDoCatalogo(copia) && C.imagensDoCatalogo(antigaNorm) === null);
 const faltando = [];
 for (const c of DADOS.criaturas) {
-  const m = /^(op|sah|as1|as2|as3|as4|as5)\.criatura\.(.+)$/.exec(c.id);
+  const m = /^(op|sah|as1|as2|as3|as4|as5|as6)\.criatura\.(.+)$/.exec(c.id);
   for (const arq of ["retrato.png", "corpo.png"]) {
     /* A pasta pode estar num disco sincronizado (Google Drive), que às
        vezes demora a responder: uma segunda tentativa antes de acusar. */

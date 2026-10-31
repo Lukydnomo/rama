@@ -2937,3 +2937,39 @@ aberta, a adotada está escrita — e é a que os testes travam.
 51. **Castigo do desertor.** O castigo vale para quem já era desertor quando o
     sino toca; a equipe que perde o sacrifício naquela noite deserta depois dele e
     só é castigada a partir do sacrifício seguinte.
+
+
+## Arquivos Secretos 6, v1.0 (v5.3)
+
+Fonte `AS6`, com páginas (não é Extra). Estado em `js/ordem/arquivo6.js`; tela em
+`js/ordem/telas/ficha-arquivo6.js`; testes em `testes/executar-as6.js`.
+
+### Cobertura
+
+| Conteúdo | Página | Automação | Teste |
+|---|---|---|---|
+| Cientista Ex-Panacea, Segurança Ex-Panacea, Cobaia Sobrevivente | 66 | troca de perícia com custo; +5 por 2 PE na manobra; trauma → abalado e imunidade a medo na cena | executar-as6 |
+| Análise Combativa, Especialista em Proteção Leve | 67 | troca no resultado; +2 Defesa/Reflexos com proteção leve em uso | executar-as6 |
+| Doutor em Emergências, Farmacêutico de Campo, Médico da Salvação, Resgatar da Morte, Veterano da Equipe de Trauma | 68 | cartões de Paramédico/Equipe de Trauma, aplicar medicamento, fabricação com kit, resgate por ser/cena | executar-as6 + navegador |
+| Dominador de Elemento, Grão-Mestre em Elemento | 69 | nota na rolagem de dano; +1 PE e efeito em Usar ritual | executar-as6 + navegador |
+| Adaptação Climática, Especialista em Armas Improvisadas, Muito Sorrateiro | 70 | +2 Fortitude; texto; +3 Furtividade e 1d4 | executar-as6 |
+| Escudo Espiral Temporal, Grilhões de Lodo, Salto de Dados | 71 | RD por rodada, arma envelhecida; área e DT; retrato e volta com id de operação | executar-as6 + navegador |
+| Hesitação Forçada | 72 | ritual (Sangue e Conhecimento), efeito estruturado, teste no início do turno e rolagem de novo | executar-as6 + navegador |
+| Anel Invertido, Aplicador de Adrenalina, Lança-nitrogênio | 73 | itens; aplicar; RD 4d10 | executar-as6 |
+| Maldições e modificações para medicamentos | 74 | marcador `medicamento`; Emulsificante e Potencializador conferidos | executar-as6 + navegador |
+| Doenças | 75 | estágios com efeitos e histórico | executar-as6 + navegador |
+| Venenos | 76 | falhou/resistiu; Ricina por rodada; Toxina | executar-as6 |
+| Fichas (28, 33, 37, 41, 56–63) e aliados | — | catálogo de criaturas; Alice e Laila com bônus fixo | executar-criaturas, executar-as6 |
+| Evolução Modular | 80–81 | regra opcional de fã; vagas e associação | executar-as6 + navegador |
+
+### Leituras e erratas
+
+- **Grilhões de Lodo**: o livro não diz se o dano se repete enquanto a área dura. A ficha rola ao criar e oferece "Resolver de novo" — decisão da mesa. A DT "atributo mais alto" é lida como 10 + limite de PE + o maior atributo.
+- **Salto de Dados**: marcar cobra 2 PE e depois tira o retrato; voltar cobra 3 PE e devolve PV, PE/PD, SAN, temporários, efeitos, imunidades e rastreadores (ligado/desligado) — inclusive os PE. Não volta identidade, progressão, inventário, rituais, histórico nem a marca. "1 dia" segue a cronologia do AS3 (vence quando o dia passa de marca + 1; afinidade, + 365).
+- **Hesitação Forçada Verdadeira**: um teste por turno do involuntário; passando, encerra (Vontade anula). Laila imprime a forma discente como "Conhecimento 1".
+- **Crise Hipertensiva**: cita "trêmulo (AS #03, p. 124)"; a condição fica como texto. **Crise Hipocondríaca** não tem teste nem DT no livro. Estágio IV "morre": a ficha avisa, não mata.
+- **Cientista da Panacea** remete a venenos "desta edição (p. 77)"; eles estão na p. 76.
+- **Toxina Cardiotóxica resistida**: metade dos PV atuais (perda, não dano).
+- **Infecção Cerebral III**: Intelecto 0 aplicado como dados a menos nos testes de Intelecto (o atributo não muda).
+- **Grão-Mestre (aliado: você)**: aceito como alvo próprio quando o ritual o tem como alvo.
+- **Evolução Modular**: utilidade nos degraus pares (10%, 20%… 99%), combate nos ímpares a partir de 15%; ambíguos listados em `AMBIGUOS_MODULARES` (js/ordem/poderes.js), reclassificáveis na ficha. Com NEX & Experiência, por nível; Mundano/Sobrevivente sem vagas. A redução de proporção sugerida pelo autor fica com a mesa.

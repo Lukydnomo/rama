@@ -742,6 +742,11 @@ segredo nenhum — ele os lê das Script Properties. Publicá-lo não expõe nad
 
 ### Atualizar o backend
 
+**v5.3.0 — PANACEA:** publique o site (inclusive `js/ordem/arquivo6.js`,
+`js/ordem/telas/ficha-arquivo6.js` e `assets/criaturas/as6/`) e atualize
+`backend/Campanhas.gs` (aceita o id `as6.criatura.*` no retrato do combate),
+criando uma versão nova da implantação. Sem `setupRama()`.
+
 **v5.2.0 — ADENSAR:** só o site (a densidade da interface). Publique o site —
 inclusive `js/densidade.js`, `css/densidade.css`, `css/modern20/densidade.css` e
 as sete páginas `index.html`, que passam a carregá-los. Nada de `.gs`, versão da
@@ -1524,7 +1529,7 @@ Três números diferentes, que não se misturam:
 
 | | Onde | O que é |
 |---|---|---|
-| versão do aplicativo | `js/versao.js` | o que a pessoa vê: v5.2.1 |
+| versão do aplicativo | `js/versao.js` | o que a pessoa vê: v5.3.0 |
 | `schemaVersion` | `js/ficha.js` | o formato da FICHA |
 | `versaoFormato` | `js/config.js` | o formato dos arquivos de importação |
 

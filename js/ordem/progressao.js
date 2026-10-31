@@ -139,6 +139,10 @@
       rotulo: "Versatilidade", verbo: "Resolver",
       explicacao: "Escolha entre um poder de classe e o primeiro poder de outra trilha da sua classe.",
     },
+    /* Evolução Modular (AS6 p. 80): as vagas modulares são vagas de
+       poder de classe (o tipo é o mesmo, para a escolha, a avaliação e a
+       tela), com `grupoModular` e ids próprios — d<degrau>.poderCombate e
+       d<degrau>.poderUtilidade —, que nunca colidem com d<degrau>.poderClasse. */
     perito: {
       rotulo: "Perito", verbo: "Escolher perícias",
       explicacao: "Escolha duas perícias treinadas (exceto Luta e Pontaria) para usar com Perito.",
@@ -308,6 +312,64 @@
   var TRILHA_SO_TRANSCENDE = "possuido";
   var NEX_DA_TROCA = 10;
   var VAGAS_DA_TROCA = { poderClasse: true, versatilidade: true };
+
+  /* -----------------------------------------------------------------
+     EVOLUÇÃO MODULAR (Arquivos Secretos 6, p. 80-81 — conteúdo de fã)
+
+     Utilidade em NEX 10% e a cada NEX "par" seguinte (20%, 30%… 90% e
+     99%, os degraus pares); combate em 15% e a cada "ímpar" seguinte
+     (25%… 95%, os degraus ímpares a partir do 3). Em NEX 55% (degrau 11):
+     cinco de cada; em 99% (degrau 20): dez de utilidade e nove de
+     combate — o que o próprio livro conta para o nível 20.
+
+     Só para quem tem a progressão comum de agente (a tabela da classe);
+     Mundano e Sobrevivente não ganham vaga. Com NEX & Experiência, os
+     degraus são os níveis. Ligar não move nada: as escolhas normais
+     ficam guardadas até a pessoa associá-las (associarModular).
+     ----------------------------------------------------------------- */
+
+  var GRUPOS_MODULARES = { combate: "poderCombate", utilidade: "poderUtilidade" };
+  var ROTULO_MODULAR = { combate: "Poder de combate", utilidade: "Poder de utilidade" };
+
+  function modularLigada(ordem) {
+    if (!ordem || !(OP() && OP().ligada(ordem, "evolucaoModular"))) return false;
+    var classe = C.classe(ordem.classe);
+    return !!(classe && C.progressaoDaClasse(classe.chave).length);
+  }
+
+  function grupoDoDegrau(d) {
+    if (d >= 2 && d % 2 === 0) return "utilidade";
+    if (d >= 3 && d % 2 === 1) return "combate";
+    return "";
+  }
+
+  function ajustesModulares(ordem) {
+    var a6 = ordem && ordem.arquivo6;
+    return (a6 && a6.modular && a6.modular.grupos) || {};
+  }
+
+  function vagasModulares(ordem, t) {
+    var lista = [];
+    for (var d = 2; d <= Math.min(20, t.passos); d++) {
+      var g = grupoDoDegrau(d);
+      if (!g) continue;
+      var extra = {
+        degrau: d,
+        ordem: d * 100 + POSICAO.poderClasse,
+        rotuloEtapa: rotuloDoDegrau(d, t.separado),
+        grupoModular: g,
+        rotulo: ROTULO_MODULAR[g] + " (Evolução Modular)",
+        explicacao: "Evolução Modular (AS6 p. 80, regra de fã): escolha um poder de " + g + " da sua classe — ou um poder geral (SaH p. 33).",
+      };
+      if (trocaPorTranscender(ordem, "poderClasse", d)) {
+        extra.soTranscender = true;
+        extra.rotulo = ROTULO_MODULAR[g] + " → Transcender";
+        extra.explicacao = MOTIVO_TROCA + " Escolha o poder paranormal que vem com ele.";
+      }
+      lista.push(vaga("d" + d + "." + GRUPOS_MODULARES[g], "poderClasse", extra));
+    }
+    return lista;
+  }
   var MOTIVO_TROCA = "Poder Não Desejado (Sobrevivendo ao Horror, p. 28): todo novo poder de ocultista vira Transcender.";
 
   function soTranscende(ordem) {
@@ -329,16 +391,26 @@
     var exposicao = R().exposicao(ordem);
     var classe = C.classe(ordem.classe);
 
+    var modular = modularLigada(ordem);
+
     if (classe) {
       C.progressaoDaClasse(classe.chave).forEach(function (etapa) {
         var d = degrauDoNex(etapa.nex);
         if (d > t.passos) return;
         (etapa.escolhas || []).forEach(function (tipo) {
+          /* Evolução Modular: as vagas "Poder" saem (entram as modulares,
+             abaixo); a Versatilidade muda de texto e de opções. */
+          if (modular && tipo === "poderClasse") return;
           var extra = {
             degrau: d,
             ordem: d * 100 + (POSICAO[tipo] || 60),
             rotuloEtapa: rotuloDoDegrau(d, t.separado),
           };
+          if (modular && tipo === "versatilidade") {
+            extra.modular = true;
+            extra.rotulo = "Versatilidade (Evolução Modular)";
+            extra.explicacao = "Evolução Modular (AS6 p. 80): em NEX 50%, você recebe o primeiro poder de uma trilha da sua classe que não a sua — a opção do poder de classe sai.";
+          }
           if (trocaPorTranscender(ordem, tipo, d)) {
             extra.soTranscender = true;
             if (tipo === "poderClasse") {
@@ -351,6 +423,7 @@
           lista.push(vaga("d" + d + "." + tipo, tipo, extra));
         });
       });
+      if (modular) vagasModulares(ordem, t).forEach(function (v) { lista.push(v); });
 
       var trilha = C.trilha(ordem.trilha);
       if (trilha && C.trilhaServe(trilha, classe.chave, ordem)) {
@@ -647,6 +720,8 @@
       nome: String(bruto.nome || "").slice(0, 160),
       ignorarRequisitos: bruto.ignorarRequisitos === true,
       registradoEm: typeof bruto.registradoEm === "string" ? bruto.registradoEm.slice(0, 40) : "",
+      /* Evolução Modular (AS6): a escolha normal de onde esta veio. */
+      associadoDe: typeof bruto.associadoDe === "string" && /^[A-Za-z0-9_-]{1,60}$/.test(bruto.associadoDe) ? bruto.associadoDe : undefined,
     };
   }
 
@@ -1709,6 +1784,8 @@
         var e = P.poder(r.valor);
         if (!e || (e.tipo !== "classe" && e.tipo !== "geral")) { saida.problemas.push("Poder desconhecido: " + (r.nome || r.valor) + "."); break; }
         if (!P.pertenceAClasse(e, ordem.classe)) { saida.problemas.push(e.nome + " não é um poder da sua classe."); break; }
+        var mg = motivoDoGrupo(e, v, ordem);
+        if (mg) saida.problemas.push(mg);
         if (v.soTranscender && e.chave !== "transcender") {
           saida.problemas.push(MOTIVO_TROCA + " " + e.nome + " não entra no lugar dele.");
         }
@@ -1718,6 +1795,10 @@
       }
 
       case "versatilidade": {
+        if (r.valor === "poderClasse" && v.modular) {
+          saida.problemas.push("Com a Evolução Modular, a Versatilidade dá só o primeiro poder de uma trilha da sua classe que não a sua (AS6 p. 80). O poder de classe escolhido aqui fica guardado e volta a valer se a regra for desligada.");
+          break;
+        }
         if (r.valor === "poderClasse") {
           var val = o.poder || {};
           if (!val.valor) { saida.faltam.push("Poder de classe"); break; }
@@ -3501,6 +3582,12 @@
         "opcional mudou. Os rituais continuam na aba Rituais, agora sem concessão, e o vínculo volta " +
         "sozinho se a concessão voltar.";
     }
+    if (/^d\d+\.(poderCombate|poderUtilidade)$/.test(r.etapa) && !modularLigada(ordem)) {
+      return "Esta escolha é de uma vaga da Evolução Modular, que está desligada (aba Regras). Ela fica guardada e volta a valer ao religar.";
+    }
+    if (/^d\d+\.poderClasse$/.test(r.etapa) && modularLigada(ordem)) {
+      return "Com a Evolução Modular ligada, a vaga “Poder de classe” não existe: a escolha fica guardada. Associe-a a uma vaga de combate ou de utilidade no cartão da regra (aba Regras).";
+    }
     var m = /^d(\d+)\./.exec(r.etapa);
     if (m) {
       var d = parseInt(m[1], 10);
@@ -3576,8 +3663,80 @@
     return oferta.map(function (e) {
       var cand = candidato(e, c.percurso, c.etapa, ordem);
       cand.viaGeral = e.tipo === "geral" || (e.classes.indexOf(ordem.classe) < 0 && !!e.geral);
+      /* Evolução Modular: o poder do outro grupo fica à vista, com o motivo. */
+      var mg = motivoDoGrupo(e, c.vaga, ordem);
+      if (mg) { cand.disponivel = false; cand.motivos = cand.motivos.concat([mg]); }
+      if (c.vaga.grupoModular) cand.grupoModular = P.grupoModular(e, ajustesModulares(ordem));
       return cand;
     });
+  }
+
+  /* O poder cabe no grupo da vaga modular? Poder geral cabe em qualquer. */
+  function motivoDoGrupo(e, v, ordem) {
+    if (!v || !v.grupoModular || !P.grupoModular) return "";
+    var g = P.grupoModular(e, ajustesModulares(ordem));
+    if (!g || g === "geral" || g === v.grupoModular) return "";
+    return e.nome + " é um poder de " + g + "; esta vaga da Evolução Modular é de " + v.grupoModular + " (AS6 p. 80).";
+  }
+
+  /* =================================================================
+     EVOLUÇÃO MODULAR — associar as escolhas que já existiam
+     -----------------------------------------------------------------
+     Ligar a regra deixa as escolhas de "Poder de classe" (d<n>.poderClasse)
+     guardadas, fora da progressão. `associacoesModulares` diz, para
+     cada uma, a vaga modular sugerida (a do mesmo degrau, se o grupo
+     couber e ela estiver livre; senão a primeira livre do grupo dali
+     para a frente; senão a livre mais próxima antes). `associarModular` faz uma CÓPIA da escolha na vaga
+     modular, com `associadoDe` apontando o registro de origem: o
+     original continua guardado e volta a valer se a regra for
+     desligada — nada é concedido duas vezes, porque uma vaga só existe
+     com a regra ligada e a outra só com ela desligada.
+     ================================================================= */
+
+  function associacoesModulares(ordem) {
+    if (!modularLigada(ordem)) return [];
+    var vs = vagas(ordem).filter(function (v) { return v.grupoModular; });
+    var ocupadas = {};
+    (ordem.escolhas || []).forEach(function (r) { ocupadas[r.etapa] = true; });
+    var jaAssociadas = {};
+    (ordem.escolhas || []).forEach(function (r) { if (r.associadoDe) jaAssociadas[r.associadoDe] = true; });
+    var reservadas = {};
+    return (ordem.escolhas || []).filter(function (r) {
+      return /^d\d+\.poderClasse$/.test(r.etapa) && r.valor && !jaAssociadas[r.id];
+    }).map(function (r) {
+      var e = P.poder(r.valor);
+      var g = e ? P.grupoModular(e, ajustesModulares(ordem)) : "";
+      var d = parseInt(r.etapa.slice(1), 10);
+      var cabe = function (v) { return !ocupadas[v.id] && !reservadas[v.id] && (g === "geral" || !g || v.grupoModular === g); };
+      var mesma = vs.filter(function (v) { return v.degrau === d && cabe(v); })[0];
+      var depois = vs.filter(function (v) { return v.degrau >= d && cabe(v); })[0];
+      /* Sem vaga do grupo dali para a frente (NEX 75%: a próxima de
+         utilidade seria 80%), a livre mais próxima antes — os requisitos
+         são conferidos lá, como em qualquer escolha. */
+      var antes = vs.filter(function (v) { return v.degrau < d && cabe(v); }).slice(-1)[0];
+      var sugerida = mesma || depois || antes || null;
+      if (sugerida) reservadas[sugerida.id] = true;
+      return { registro: r, poder: e, grupo: g, sugerida: sugerida, livres: vs.filter(function (v) { return !ocupadas[v.id] && (g === "geral" || !g || v.grupoModular === g); }) };
+    });
+  }
+
+  function associarModular(ordem, registroId, idVaga) {
+    if (!modularLigada(ordem)) return { ok: false, motivo: "A Evolução Modular está desligada nesta ficha." };
+    var r = (ordem.escolhas || []).filter(function (x) { return x.id === registroId; })[0];
+    if (!r || !/^d\d+\.poderClasse$/.test(r.etapa)) return { ok: false, motivo: "Escolha de poder de classe não encontrada." };
+    var v = vagas(ordem).filter(function (x) { return x.id === idVaga && x.grupoModular; })[0];
+    if (!v) return { ok: false, motivo: "Essa vaga da Evolução Modular não existe nesta ficha." };
+    if ((ordem.escolhas || []).some(function (x) { return x.etapa === idVaga; })) return { ok: false, motivo: "Essa vaga já tem uma escolha." };
+    if ((ordem.escolhas || []).some(function (x) { return x.associadoDe === r.id; })) return { ok: false, motivo: "Esta escolha já foi associada a uma vaga modular." };
+    var e = P.poder(r.valor);
+    var mg = e ? motivoDoGrupo(e, v, ordem) : "";
+    if (mg) return { ok: false, motivo: mg };
+    var copia = normalizarRegistro({
+      id: uuid(), etapa: v.id, tipo: "poderClasse", valor: r.valor, opcoes: JSON.parse(JSON.stringify(r.opcoes || {})),
+      nome: r.nome, ignorarRequisitos: false, registradoEm: agora(), associadoDe: r.id,
+    });
+    ordem.escolhas.push(copia);
+    return { ok: true, registro: copia, vaga: v };
   }
 
   function candidatosParanormais(ordem, idVaga, contexto) {
@@ -3953,6 +4112,10 @@
     removerRitual: removerRitual,
 
     candidatosPoderClasse: candidatosPoderClasse,
+    modularLigada: modularLigada,
+    grupoDoDegrau: grupoDoDegrau,
+    associacoesModulares: associacoesModulares,
+    associarModular: associarModular,
     candidatosParanormais: candidatosParanormais,
     candidatosOutraClasse: candidatosOutraClasse,
     candidatosTrilha: candidatosTrilha,

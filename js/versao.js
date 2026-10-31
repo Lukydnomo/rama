@@ -118,6 +118,24 @@
 
   var CHANGELOG = [
     {
+      versao: "5.3.0",
+      codinome: "PANACEA",
+      data: "30/10/2026",
+      mudancas: {
+        "Conteúdo": [
+          "Ordem Paranormal: Arquivos Secretos 6, v1.0, como fonte própria (AS6, com páginas — não é Extra). Origens Cientista Ex-Panacea, Segurança Ex-Panacea e Cobaia Sobrevivente; nove poderes de classe, três gerais e três paranormais (Escudo Espiral Temporal, Grilhões de Lodo, Salto de Dados); o ritual Hesitação Forçada (três formas); Anel Invertido, Aplicador de Adrenalina, Lança-nitrogênio; maldições e modificações para medicamentos; cinco doenças e cinco venenos; as fichas de Alice Cruzes, Ketan Arjuna, Laila Verdante, Dr. Neruda, cientista, manda-chuva e segurança da Panacea, hikikomori, marca-passo, Estímulo e experimento Ssabáka, e quatro perfis como aliado.",
+          "Regra opcional Evolução Modular (AS6 p. 80–81), marcada como conteúdo de fã, não oficial: vagas de combate e de utilidade, Versatilidade modular, classificação central dos poderes de classe (os ambíguos documentados e reclassificáveis pela mesa) e associação das escolhas já feitas, sem perder nem duplicar ao ligar e desligar.",
+        ],
+        "Adicionado": [
+          "Painel do Arquivos Secretos 6 (aba Habilidades): marca do Salto de Dados, área dos Grilhões, Hesitação Forçada sobre a ficha, o recebido de Grão-Mestre e o rebote do Aplicador. Em Condições, doenças e venenos com estágios, efeitos com origem e histórico.",
+          "Botões nos cartões: Paramédico (d12 e como movimento), Equipe de Trauma (até três condições), Farmacêutico de Campo, Escudo, Grilhões, Salto de Dados; no resultado dos testes, Análise Combativa, Doutor em Emergências, Resgatar da Morte, tratamento guardado e a rolagem de novo da Hesitação; em Usar ritual, Grão-Mestre em Elemento (+1 PE); na rolagem de dano, Dominador de Elemento; no inventário, Aplicar medicamento.",
+        ],
+        "Técnico": [
+          "Ficha no schema 26 (`ordem.arquivo6`, `associadoDe` na escolha, `envelhecida` e `usosFarmaceutico` no item). Módulos novos js/ordem/arquivo6.js e js/ordem/telas/ficha-arquivo6.js; testes/executar-as6.js. Backend: só o padrão de id das criaturas em Campanhas.gs (retrato das fichas do AS6) — atualizar o arquivo e criar uma versão nova da implantação; sem setupRama().",
+        ],
+      },
+    },
+    {
       versao: "5.2.1",
       codinome: "PRESTIGIO",
       data: "29/10/2026",

@@ -742,6 +742,9 @@
       if (a.entrada && a.entrada.tipo === "treinamento") return "Transição";
       return "Trilha";
     }
+    /* Evolução Modular (AS6): a vaga diz o grupo — e que é da regra. */
+    if (a.via === "poderClasse" && /\.poderCombate$/.test(a.etapaId || "")) return "Poder de combate (modular)";
+    if (a.via === "poderClasse" && /\.poderUtilidade$/.test(a.etapaId || "")) return "Poder de utilidade (modular)";
     if (a.via === "poderClasse") return "Poder de classe";
     if (a.via === "versatilidade") return "Versatilidade";
     if (a.via === "transcenderExposicao") return "Transcender";
@@ -828,6 +831,7 @@
         !aq.origemChave && aq.situacao === "ok" && global.RAMAFichaArquivo3 ? global.RAMAFichaArquivo3.controles(ctx, aq) : null,
         !aq.origemChave && aq.situacao === "ok" && global.RAMAFichaArquivo4 ? global.RAMAFichaArquivo4.controles(ctx, aq) : null,
         !aq.origemChave && aq.situacao === "ok" && global.RAMAFichaArquivo5 ? global.RAMAFichaArquivo5.controles(ctx, aq) : null,
+        !aq.origemChave && aq.situacao === "ok" && global.RAMAFichaArquivo6 ? global.RAMAFichaArquivo6.controles(ctx, aq) : null,
       ].concat(avisos, [
         aq.referencia ? el("p.criacao-fonte", { texto: aq.referencia }) : null,
       ]);
@@ -1412,6 +1416,8 @@
             /* Arquivos Secretos 5: o que acaba com a cena (o ácido na arma
                deixa a destruição pendente), na mesma gravação. */
             if (fim && fim.mudou !== false && global.RAMAFichaArquivo5) avisos5 = global.RAMAFichaArquivo5.aoTrocarDeCena(ctx, cenaAntes);
+            /* Arquivos Secretos 6: a imunidade a medo da cena sai; o rebote. */
+            if (fim && fim.mudou !== false && global.RAMAFichaArquivo6) avisos5 = avisos5.concat(global.RAMAFichaArquivo6.aoTrocarDeCena(ctx, cenaAntes));
             return fim;
           }, "condicoes-nova-cena");
           if (fim && fim.encerradas && fim.encerradas.length) UI.aviso("Terminaram com a cena: " + fim.encerradas.join(", ") + ".");
@@ -1438,6 +1444,7 @@
             var cenaAntes = cond.cena && cond.cena.id;
             fim = CD().novaCena(cond, null, { interludio: true });
             if (fim && fim.mudou !== false && global.RAMAFichaArquivo5) avisos5 = global.RAMAFichaArquivo5.aoTrocarDeCena(ctx, cenaAntes);
+            if (fim && fim.mudou !== false && global.RAMAFichaArquivo6) avisos5 = avisos5.concat(global.RAMAFichaArquivo6.aoTrocarDeCena(ctx, cenaAntes));
             /* Quase Novo (AS4): as modificações temporárias saem aqui, na
                mesma gravação do interlúdio. */
             if (fim && fim.mudou !== false && global.RAMAFichaArquivo4) vencidas = global.RAMAFichaArquivo4.aoNovoInterludio(ctx);
@@ -1670,12 +1677,16 @@
     var partes = [
       el("div.condicoes__efeitos-topo", {}, [
         el("p.t-rotulo", { texto: "Condições e efeitos" }),
-        el("button.r-botao.r-botao--mini.r-botao--principal", {
-          type: "button", texto: "+ Adicionar condição", dataset: { foco: "efeitos-adicionar" },
-          onclick: function () { adicionarCondicao(ctx, o); },
-        }),
+        el("div.faixa", {}, [
+          el("button.r-botao.r-botao--mini.r-botao--principal", {
+            type: "button", texto: "+ Adicionar condição", dataset: { foco: "efeitos-adicionar" },
+            onclick: function () { adicionarCondicao(ctx, o); },
+          }),
+        ].concat(global.RAMAFichaArquivo6 ? global.RAMAFichaArquivo6.botoesDeCondicoes(ctx) : [])),
       ]),
-    ];
+      /* Arquivos Secretos 6: doenças e venenos, só quando há algum. */
+      global.RAMAFichaArquivo6 ? global.RAMAFichaArquivo6.condicoes(ctx) : null,
+    ].filter(Boolean);
 
     if (resumo.automaticas.length) {
       partes.push(el("ul.efeitos-automaticas", { "aria-label": "Condições automáticas" }, resumo.automaticas.map(function (a) {
@@ -2556,7 +2567,8 @@
         global.RAMAFichaArquivo2 ? global.RAMAFichaArquivo2.acoesNoTeste(ctx, o, p, r, dado, bonus, atributo) : [],
         global.RAMAFichaArquivo3 ? global.RAMAFichaArquivo3.acoesNoTeste(ctx, o, p, r, dado, bonus, atributo) : [],
         global.RAMAFichaArquivo4 ? global.RAMAFichaArquivo4.acoesNoTeste(ctx, o, p, r, dado, bonus, atributo) : [],
-        global.RAMAFichaArquivo5 ? global.RAMAFichaArquivo5.acoesNoTeste(ctx, o, p, r, dado, bonus, atributo) : []).filter(Boolean),
+        global.RAMAFichaArquivo5 ? global.RAMAFichaArquivo5.acoesNoTeste(ctx, o, p, r, dado, bonus, atributo) : [],
+        global.RAMAFichaArquivo6 ? global.RAMAFichaArquivo6.acoesNoTeste(ctx, o, p, r, dado, bonus, atributo) : []).filter(Boolean),
     });
   }
 
@@ -3676,8 +3688,11 @@
       el("p.t-mini", { texto: r.efeito }),
       ES.etiquetaAutomacao(r.automacao),
       el("p.criacao-fonte", {
-        texto: global.RAMAOrdemCatalogo.nomeDoLivro(r.fonte) + ", p. " + r.pagina,
+        texto: global.RAMAOrdemCatalogo.nomeDoLivro(r.fonte) + ", p. " + r.pagina + (r.fa ? " · conteúdo de fã (" + r.fa.autor + "), não oficial" : ""),
       }),
+      /* Arquivos Secretos 6: Evolução Modular — associar as escolhas e
+         reclassificar os ambíguos. */
+      global.RAMAFichaArquivo6 ? global.RAMAFichaArquivo6.corpoDaRegra(ctx, o, r) : null,
     ];
 
     if (bloqueada) {
@@ -3718,6 +3733,7 @@
     var fonte = global.RAMAOrdemCatalogo.nomeDoLivro(r.fonte) + ", p. " + r.pagina;
     return cartaoCompacto(ctx, "regra:" + r.chave, r.nome, [
       el("span.t-mini", { texto: r.resumo }),
+      r.fa ? el("span.t-mini.t-aviso", { texto: "Conteúdo de fã: não oficial e não canônico (" + r.fa.autor + ")." }) : null,
       bloqueada ? el("span.t-mini.t-erro", { texto: "Não dá para ligar agora — abra para ver por quê." }) : null,
       guardados ? el("span.t-mini.t-aviso", { texto: "Há dados desta regra guardados." }) : null,
       linhaDeOrigem(r.chave, fonte),
@@ -4536,7 +4552,10 @@
       /* Arquivos Secretos 5: rodada, o que foi recebido de aliados,
          Transmissão, selos e o que está valendo na cena. */
       var topo5 = global.RAMAFichaArquivo5 ? global.RAMAFichaArquivo5.painel(ctx) : null;
-      var topos = [topo2, topo3, topo4, topo5].filter(Boolean);
+      /* Arquivos Secretos 6: Salto de Dados, Grilhões, Hesitação Forçada,
+         o recebido de Grão-Mestre e o rebote do Aplicador. */
+      var topo6 = global.RAMAFichaArquivo6 ? global.RAMAFichaArquivo6.painel(ctx) : null;
+      var topos = [topo2, topo3, topo4, topo5, topo6].filter(Boolean);
       dasRegras.topo = topos.length > 1 ? U.el("div.pilha--curta", { class: "pilha" }, topos) : (topos[0] || null);
       return global.RAMASecaoHabilidades.aba(ctx, dasRegras);
     },

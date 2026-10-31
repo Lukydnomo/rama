@@ -859,8 +859,11 @@
       return;
     }
 
+    /* Arquivos Secretos 6: Dominador de Elemento pode mudar o tipo do dano. */
+    var notas6 = rolagem.tipo === "dano" && global.RAMAFichaArquivo6 ? global.RAMAFichaArquivo6.notasDoDano(ctx, ritual) : [];
     global.RAMARolagens.mostrar(r, {
       nome: rolagem.rotulo + " — " + ritual.nome + " · " + versao.nome,
+      notas: notas6,
     });
   }
 

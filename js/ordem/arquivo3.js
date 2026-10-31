@@ -1249,6 +1249,10 @@
     "as3.criatura.serpente-animal": { efeitos: [{ tipo: "bonusPericia", pericias: ["enganacao", "intimidacao"], valor: 2 }], texto: "+2 em Enganação e Intimidação" },
     "as3.criatura.corvo-animal": { efeitos: [{ tipo: "bonusPericia", pericias: ["percepcao", "sobrevivencia"], valor: 2 }], texto: "+2 em Percepção e Sobrevivência" },
     "as3.criatura.gato-animal": { efeitos: [{ tipo: "bonusPericia", pericias: ["percepcao", "reflexos"], valor: 2 }], texto: "+2 em Percepção e Reflexos" },
+    /* Arquivos Secretos 6 (v5.3): os bônus fixos dos perfis "como aliado"
+       da Panacea; os de custo ou de dano ficam no texto do perfil. */
+    "as6.criatura.alice-cruzes-aliado": { efeitos: [{ tipo: "dadosPericia", pericias: ["diplomacia", "tatica"], valor: 1 }], texto: "+1d20 em Diplomacia e Tática", fonte: "Arquivos Secretos 6, p. 28" },
+    "as6.criatura.laila-verdante-aliado": { efeitos: [{ tipo: "resistenciaMental", valor: 2 }], texto: "resistência a dano mental 2", fonte: "Arquivos Secretos 6, p. 37" },
   };
 
   function normalizarRegistroDeAliado(b) {
@@ -1273,7 +1277,7 @@
       var d = EFEITOS_DE_ALIADO[r.catalogoId];
       if (!d) return;
       var fonte = "Aliado: " + (r.nome || r.catalogoId);
-      (d.efeitos || []).forEach(function (ef) { saida.push(Object.assign({}, ef, { fonte: fonte, detalhe: "Arquivos Secretos 3, p. 116-118" })); });
+      (d.efeitos || []).forEach(function (ef) { saida.push(Object.assign({}, ef, { fonte: fonte, detalhe: d.fonte || "Arquivos Secretos 3, p. 116-118" })); });
       if (d.escolha && r.pericias.length) {
         saida.push({ tipo: "treinadoPorAliado", pericias: r.pericias.slice(), seJaTreinado: 0, fonte: fonte, detalhe: "perícias escolhidas (AS3 p. 117)" });
       }

@@ -46,7 +46,7 @@
   };
 
   /* O nome curto de cada livro sai do registro único (C.LIVROS). */
-  var ROTULO_FONTE = C.mapaDosLivros ? C.mapaDosLivros("curto") : { OPRPG: "Livro básico", SAH: "Sobrevivendo ao Horror", AS1: "Arquivos Secretos 1", AS2: "Arquivos Secretos 2", AS3: "Arquivos Secretos 3", AS4: "Arquivos Secretos 4", AS5: "Arquivos Secretos 5", EXTRA: "Extra" };
+  var ROTULO_FONTE = C.mapaDosLivros ? C.mapaDosLivros("curto") : { OPRPG: "Livro básico", SAH: "Sobrevivendo ao Horror", AS1: "Arquivos Secretos 1", AS2: "Arquivos Secretos 2", AS3: "Arquivos Secretos 3", AS4: "Arquivos Secretos 4", AS5: "Arquivos Secretos 5", AS6: "Arquivos Secretos 6", EXTRA: "Extra" };
 
   function porNome(a, b) { return a.nome.localeCompare(b.nome, "pt-BR"); }
 

@@ -119,14 +119,24 @@
       });
       (org.substituicoes || []).forEach(function (sub) {
         if (sub.de !== p.chave) return;
+        /* Com custo (Existe uma Explicação, AS6 p. 66): cobra antes de
+           rolar a outra perícia; o treinamento das duas não muda. */
+        var sigla = siglaDoGasto(o);
         saida.push({
-          rotulo: sub.rotulo,
+          rotulo: sub.rotulo + (sub.custo ? " (" + sub.custo + " " + sigla + ")" : ""),
           dica: sub.condicao || "",
           aoClicar: function () {
             var nomePara = C().nomeComEspecialidade(org, sub.para);
-            var ir = function () { rolar(ctx, sub.para, nomePara + " · " + org.poder); };
-            if (!sub.condicao) { ir(); return; }
-            UI.confirmar({ titulo: sub.rotulo, texto: sub.condicao + " Rolar " + nomePara + " no lugar?", rotuloConfirmar: "Rolar" })
+            var ir = function () {
+              if (sub.custo) {
+                var g = gastar(ctx, sub.custo);
+                if (!g) return;
+                salvar(ctx);
+              }
+              rolar(ctx, sub.para, nomePara + " · " + org.poder);
+            };
+            if (!sub.condicao && !sub.custo) { ir(); return; }
+            UI.confirmar({ titulo: sub.rotulo, texto: (sub.condicao ? sub.condicao + " " : "") + (sub.custo ? "Gastar " + sub.custo + " " + sigla + " e rolar " : "Rolar ") + nomePara + " no lugar de " + p.nome + "?", rotuloConfirmar: "Rolar" })
               .then(function (ok) { if (ok) ir(); });
           },
         });
@@ -200,7 +210,9 @@
          ficha-arquivo5.js. */
       var de4 = global.RAMAFichaArquivo4 ? global.RAMAFichaArquivo4.controlesDeOrigem(ctx, org) : null;
       if (de4) return de4;
-      return global.RAMAFichaArquivo5 ? global.RAMAFichaArquivo5.controlesDeOrigem(ctx, org) : null;
+      var de5 = global.RAMAFichaArquivo5 ? global.RAMAFichaArquivo5.controlesDeOrigem(ctx, org) : null;
+      if (de5) return de5;
+      return global.RAMAFichaArquivo6 ? global.RAMAFichaArquivo6.controlesDeOrigem(ctx, org) : null;
     }
     var partes = f(ctx, o, org, estado(o, org.chave), registroDaOrigem(o, org));
     return partes && partes.length ? el("div.pilha--curta.origem-controles", { class: "pilha" }, partes.filter(Boolean)) : null;
