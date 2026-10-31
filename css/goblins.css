@@ -267,8 +267,23 @@ button.gob-dado:disabled { cursor: default; }
   font-size: var(--texto-mini);
 }
 .gob-etapas li { color: var(--cor-texto-2); }
-.gob-etapa--atual { color: var(--cor-texto); font-weight: 700; }
-.gob-etapa--atual button { font-weight: 700; }
+.gob-etapas button {
+  background: none;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
+  box-shadow: none;
+  padding: var(--e1) 0;
+  font: inherit;
+  color: inherit;
+  text-transform: none;
+  letter-spacing: normal;
+  cursor: pointer;
+}
+.gob-etapas button:hover { color: var(--cor-texto); }
+.gob-etapas button:focus-visible { outline: 2px solid var(--cor-foco); outline-offset: 2px; }
+.gob-etapa--atual { color: var(--cor-texto); }
+.gob-etapa--atual button { font-weight: 700; border-bottom-color: var(--cor-texto); }
 .gob-etapa--feita button::after { content: " ✓"; }
 
 /* =================================================================
