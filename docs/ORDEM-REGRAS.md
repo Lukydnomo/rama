@@ -2977,8 +2977,11 @@ Fonte `AS6`, com páginas (não é Extra). Estado em `js/ordem/arquivo6.js`; tel
 
 ## Suplementos habilitáveis (v6.1)
 
-Os sete suplementos (SAH, AS1–AS6) são habilitados por ficha e por campanha
-(`js/suplementos.js`). O que a seleção alcança, sempre pelas **novas escolhas**:
+Os oito suplementos (SAH, AS1–AS6 e os Extras — fonte `EXTRA`, desde a v6.2)
+são habilitados por ficha e por campanha (`js/suplementos.js`). Os Extras
+deixaram de ser "sempre ligados": uma ficha com só o livro básico não oferece
+mais o Revoltado nem Barganha Insana para escolhas novas (os que já estão em
+uso continuam). O que a seleção alcança, sempre pelas **novas escolhas**:
 
 | Onde | Como |
 |---|---|

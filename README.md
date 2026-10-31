@@ -781,6 +781,11 @@ segredo nenhum — ele os lê das Script Properties. Publicá-lo não expõe nad
 
 ### Atualizar o backend
 
+**v6.2.0 — APENDICE:** os Extras de Ordem viram suplemento habilitável.
+**Troque** `Sistemas.gs` (o cadastro) e crie uma versão nova da implantação;
+publique o site — inclusive `js/suplementos.js` e
+`assets/sistemas/ordem-extra-capa*.webp`. Sem `setupRama()`.
+
 **v6.1.0 — ESTANTE:** suplementos habilitáveis. **Troque** `Sistemas.gs` (o
 cadastro dos suplementos e a trava das ferramentas), `Campanhas.gs` (a escolha
 da campanha) e `Ordem.gs` (Hexatombe, Hacking, Perigos e Sincronia conferem o
@@ -1594,7 +1599,7 @@ Três números diferentes, que não se misturam:
 
 | | Onde | O que é |
 |---|---|---|
-| versão do aplicativo | `js/versao.js` | o que a pessoa vê: v6.1.0 |
+| versão do aplicativo | `js/versao.js` | o que a pessoa vê: v6.2.0 |
 | `schemaVersion` | `js/ficha.js` | o formato da FICHA |
 | `versaoFormato` | `js/config.js` | o formato dos arquivos de importação |
 

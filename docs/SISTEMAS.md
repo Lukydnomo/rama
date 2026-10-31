@@ -50,7 +50,7 @@ confere).
 
 - **Cadastro**: `{ id, sistema, fontes, nome, curto, descricao, capa, capaAlt }`.
   `fontes` são as siglas que os catálogos do sistema já usam (Ordem: `SAH`,
-  `AS1`–`AS6`). `FERRAMENTAS` liga ferramentas/mecânicas de mesa a um
+  `AS1`–`AS6` e, desde a v6.2, `EXTRA` — os Extras). `FERRAMENTAS` liga ferramentas/mecânicas de mesa a um
   suplemento (Ordem: Hexatombe → AS2, Hacking → AS4, Perigos e Sincronia → AS5).
 - **Ficha**: `ficha.suplementos` — ausente = todos (fichas anteriores);
   lista vazia = só o livro básico.
@@ -60,8 +60,8 @@ confere).
   `ler_campanha` e `listar_campanhas`.
 - **Contexto**: cada página chama `definirContexto({ sistema, ficha, campanha })`;
   `fonteLiberada(sistema, fonte)` responde para NOVAS escolhas (ficha ∩
-  campanha). Fonte sem suplemento (livro básico, EXTRA, Homebrew, sem fonte)
-  vale sempre.
+  campanha). Fonte sem suplemento (livro básico, Homebrew, sem fonte) vale
+  sempre.
 - **Componente**: `painel({ sistema, selecao, aoMudar, campanha, emUso, somenteLeitura })`
   e a janela `abrir(...)` — a escolha do tipo de ficha, "Opções da ficha →
   Suplementos" e Configurações da campanha usam o mesmo.

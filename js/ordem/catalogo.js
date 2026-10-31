@@ -124,7 +124,8 @@
 
   /* Suplementos (v6.1): a fonte vale para NOVAS escolhas no contexto da
      tela (a ficha ∩ a campanha — js/suplementos.js)? O livro básico,
-     EXTRA, Homebrew e o que não tem fonte valem sempre. Nada aqui tira o
+     Homebrew e o que não tem fonte valem sempre; EXTRA é suplemento
+     (v6.2). Nada aqui tira o
      que a ficha já tem: é só para listas de escolha. */
   function fonteDe(x) {
     if (!x) return "";

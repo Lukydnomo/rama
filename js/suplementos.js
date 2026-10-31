@@ -18,8 +18,8 @@
                     apaga a escolha do outro). Ausente = todos.
 
    O que vale numa tela é a interseção: ficha ∩ campanha. Fonte que
-   nenhum suplemento traz (o livro básico, EXTRA, Homebrew, conteúdo sem
-   fonte) está sempre liberada — nada é atribuído a um suplemento por
+   nenhum suplemento traz (o livro básico, Homebrew, conteúdo sem fonte)
+   está sempre liberada. Os Extras (EXTRA) são um suplemento desde a v6.2 — nada é atribuído a um suplemento por
    aproximação.
 
    Disponibilidade, não posse: um suplemento desligado só sai das NOVAS
@@ -60,6 +60,12 @@
     { id: "ordem.as6", sistema: "ordem", fontes: ["AS6"], nome: "Arquivos Secretos 6: Panacea", curto: "AS6",
       descricao: "Conteúdos das Indústrias Panacea, com novas opções, medicamentos, doenças e venenos.",
       capa: "assets/sistemas/ordem-as6-capa.webp", capaAlt: "Capa de Arquivos Secretos 6: três pessoas diante de um tanque de líquido verde num laboratório" },
+    /* v6.2: o conteúdo oficial avulso (fonte EXTRA: marca-páginas e
+       materiais promocionais) também é complemento — habilitável como os
+       outros, não sempre ligado como o livro básico. */
+    { id: "ordem.extra", sistema: "ordem", fontes: ["EXTRA"], nome: "Extras", curto: "Extras",
+      descricao: "Conteúdo oficial avulso, publicado fora dos livros: marca-páginas e materiais promocionais.",
+      capa: "assets/sistemas/ordem-extra-capa.webp", capaAlt: "Capa de Ordem Paranormal: Extras — uma pasta vermelha manchada de sangue com documentos e fotografias, com o título em letras claras" },
   ];
 
   /* As ferramentas e mecânicas de campanha que pertencem a um

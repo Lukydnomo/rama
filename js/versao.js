@@ -118,6 +118,22 @@
 
   var CHANGELOG = [
     {
+      versao: "6.2.0",
+      codinome: "APENDICE",
+      data: "31/10/2026",
+      mudancas: {
+        "Adicionado": [
+          "Os Extras de Ordem Paranormal (conteúdo oficial avulso: marca-páginas e materiais promocionais) são um suplemento, com capa própria, ao lado de Sobrevivendo ao Horror e dos Arquivos Secretos. Começam ligados na ficha nova e entram em “Ligar todos” e “Só o livro básico”.",
+        ],
+        "Melhorado": [
+          "Fichas e campanhas sem escolha de suplementos continuam com tudo ligado, Extras incluídos. O que uma ficha já usa dos Extras (o Revoltado, Barganha Insana) continua valendo mesmo desligado.",
+        ],
+        "Técnico": [
+          "Suplemento ordem.extra (fonte EXTRA) em js/suplementos.js e backend/Sistemas.gs. Precisa do site e do Apps Script novo (sem setupRama).",
+        ],
+      },
+    },
+    {
       versao: "6.1.0",
       codinome: "ESTANTE",
       data: "31/10/2026",

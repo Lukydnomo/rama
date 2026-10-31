@@ -49,14 +49,14 @@ const PU = globalThis.RAMAOrdemPericiasUsos, F = globalThis.RAMAFicha, FU = glob
 t.grupo("Cadastro");
 {
   const l = S.doSistema("ordem");
-  t.iguais("os sete de Ordem, na ordem", l.map((s) => s.fontes[0]), ["SAH", "AS1", "AS2", "AS3", "AS4", "AS5", "AS6"]);
+  t.iguais("os oito de Ordem, na ordem (Extras por último)", l.map((s) => s.fontes[0]), ["SAH", "AS1", "AS2", "AS3", "AS4", "AS5", "AS6", "EXTRA"]);
   t.igual("AS3 é Hexatombe — Parte II", S.daFonte("ordem", "AS3").nome, "Arquivos Secretos 3: Hexatombe — Parte II");
-  t.ok("ids estáveis", l.every((s) => /^ordem\.(sah|as[1-6])$/.test(s.id)));
-  t.ok("nome, descrição e capa em todos", l.every((s) => s.nome && s.descricao && /^assets\/sistemas\/ordem-(sah|as\d)-capa\.webp$/.test(s.capa)));
+  t.ok("ids estáveis", l.every((s) => /^ordem\.(sah|as[1-6]|extra)$/.test(s.id)));
+  t.ok("nome, descrição e capa em todos", l.every((s) => s.nome && s.descricao && /^assets\/sistemas\/ordem-(sah|as\d|extra)-capa\.webp$/.test(s.capa)));
   let capas = true;
   for (const s of l) { for (const c of [s.capa, s.capa.replace(".webp", "-pequena.webp")]) { try { await Deno.stat(new URL("../" + c, import.meta.url)); } catch { capas = false; } } }
   t.ok("as capas (e as pequenas) existem como assets locais", capas);
-  t.ok("o livro básico e EXTRA não são suplemento", !S.daFonte("ordem", "OPRPG") && !S.daFonte("ordem", "EXTRA"));
+  t.ok("o livro básico não é suplemento; os Extras são", !S.daFonte("ordem", "OPRPG") && S.daFonte("ordem", "EXTRA").id === "ordem.extra");
   t.ok("sistemas sem suplemento: fluxo direto", !S.temSuplementos("goblins") && !S.temSuplementos("vampiro") && S.temSuplementos("ordem"));
   t.ok("toda fonte de suplemento existe no registro de livros", l.every((s) => s.fontes.every((f) => C.LIVROS.some((x) => x.sigla === f))));
   t.igual("Hexatombe é ferramenta do AS2 (habilitar não liga)", S.daFerramenta("ordem", "hexatombe").id, "ordem.as2");
@@ -67,7 +67,7 @@ t.grupo("Seleção: ausente × vazia");
   t.igual("ausente: null (todos)", S.normalizarSelecao("ordem", undefined), null);
   t.iguais("vazia: só o livro básico", S.normalizarSelecao("ordem", []), []);
   t.iguais("ids desconhecidos e repetidos saem", S.normalizarSelecao("ordem", ["ordem.as2", "x", "ordem.as2", 3]), ["ordem.as2"]);
-  t.igual("ausente = os sete ativos", S.ativos("ordem", null).length, 7);
+  t.igual("ausente = os oito ativos", S.ativos("ordem", null).length, 8);
   t.iguais("mapa da campanha por sistema", S.daCampanha({ ordem: ["ordem.sah"], goblins: [] }, "ordem"), ["ordem.sah"]);
   t.igual("campanha sem a chave: todos", S.daCampanha({ goblins: [] }, "ordem"), null);
 }
@@ -78,7 +78,8 @@ t.grupo("Contexto: ficha ∩ campanha");
   t.ok("sem seleção: tudo liberado (fichas antigas)", ["SAH", "AS1", "AS6"].every((f) => S.fonteLiberada("ordem", f)));
   S.definirContexto({ sistema: "ordem", ficha: [] });
   t.ok("só o livro básico: suplementos fora", !S.fonteLiberada("ordem", "SAH") && !S.fonteLiberada("ordem", "AS6"));
-  t.ok("…mas livro básico, EXTRA, Homebrew e sem fonte continuam", ["OPRPG", "EXTRA", "HOMEBREW", ""].every((f) => S.fonteLiberada("ordem", f)));
+  t.ok("…mas livro básico, Homebrew e sem fonte continuam", ["OPRPG", "HOMEBREW", ""].every((f) => S.fonteLiberada("ordem", f)));
+  t.ok("…e os Extras saem junto (são suplemento)", !S.fonteLiberada("ordem", "EXTRA"));
   S.definirContexto({ sistema: "ordem", ficha: ["ordem.sah", "ordem.as1"], campanha: ["ordem.sah", "ordem.as2"] });
   t.ok("interseção: SAH sim, AS1 não (mesa), AS2 não (ficha)", S.fonteLiberada("ordem", "SAH") && !S.fonteLiberada("ordem", "AS1") && !S.fonteLiberada("ordem", "AS2"));
   t.ok("o motivo diz quem barrou", /campanha/.test(S.motivo("ordem", "AS1")) && /ficha/.test(S.motivo("ordem", "AS2")));
@@ -94,16 +95,19 @@ t.grupo("Catálogos de Ordem");
   if (catR) {
     const so = RI.filtrar(catR, {});
     const todos = RI.filtrar(catR, { incluirDesligados: true });
-    t.ok("rituais: só os do livro básico (e EXTRA) para novas escolhas", so.every((r) => r.fonte === "OPRPG" || r.fonte === "EXTRA") && todos.length > so.length);
+    t.ok("rituais: só os do livro básico para novas escolhas (nem EXTRA)", so.every((r) => r.fonte === "OPRPG") && todos.length > so.length);
   } else t.ok("rituais: catálogo carregável", false, "RI.carregar ausente");
   const catI = IT.carregar ? await IT.carregar() : null;
   if (catI) {
     const so = IT.filtrar(catI, {});
-    t.ok("itens: nada de SAH/AS* nas novas escolhas", so.every((i) => i.fonte === "OPRPG" || i.fonte === "EXTRA") && IT.filtrar(catI, { incluirDesligados: true }).length > so.length);
-    t.ok("itens: o filtro de livro não oferece fonte desligada", IT.opcoesDeFiltro ? IT.opcoesDeFiltro(catI).fontes.every((f) => f.valor === "OPRPG" || f.valor === "EXTRA") : true);
+    t.ok("itens: nada de SAH/AS*/EXTRA nas novas escolhas", so.every((i) => i.fonte === "OPRPG") && IT.filtrar(catI, { incluirDesligados: true }).length > so.length);
+    t.ok("itens: o filtro de livro não oferece fonte desligada", IT.opcoesDeFiltro ? IT.opcoesDeFiltro(catI).fontes.every((f) => f.valor === "OPRPG") : true);
   } else t.ok("itens: catálogo carregável", false, "IT.carregar ausente");
   const secs = B.filtrar(B.secoes("origens"), "", {});
-  t.ok("biblioteca de habilidades: origens só do livro básico (e EXTRA)", secs.every((s) => s.entradas.every((x) => ["OPRPG", "EXTRA"].indexOf(x.entrada.fonte || "OPRPG") >= 0)) && secs.length > 0);
+  t.ok("biblioteca de habilidades: origens só do livro básico (o Revoltado, de EXTRA, sai)", secs.every((s) => s.entradas.every((x) => (x.entrada.fonte || "OPRPG") === "OPRPG")) && secs.length > 0);
+  S.definirContexto({ sistema: "ordem", ficha: ["ordem.extra"] });
+  t.ok("só os Extras ligados: o Revoltado volta, SAH não", B.filtrar(B.secoes("origens"), "", {}).some((s) => s.entradas.some((x) => x.entrada.fonte === "EXTRA")) && !C.fonteLiberada("SAH"));
+  S.definirContexto({ sistema: "ordem", ficha: [] });
   const u = PU.consulta("investigacao");
   t.ok("usos de perícia: os de SAH saem, com o aviso", (u.desligados || []).indexOf("SAH") >= 0 && (u.especificos || []).every((e) => e.fonte !== "SAH"));
   t.ok("…e voltam com incluirDesligados", (PU.consulta("investigacao", { incluirDesligados: true }).especificos || []).some((e) => e.fonte === "SAH"));
