@@ -8,14 +8,129 @@
    Carregado só pela Home. Nada aqui é reaproveitado por outra tela.
    ===================================================================== */
 
-/* ---------- abertura ---------- */
+/* ---------- abertura (v6.2: texto e o leque de livros) ---------- */
 
 .home-abertura {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr);
+  gap: var(--e6);
+  align-items: center;
+  padding: var(--e6) 0 var(--e6);
+  border-bottom: var(--borda) solid var(--cor-traco-fraca);
+  overflow: hidden;
+  isolation: isolate;
+}
+/* Uma grade de arquivo bem leve atrás de tudo: só textura. */
+.home-abertura::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background-image:
+    linear-gradient(var(--cor-traco-fraca) 1px, transparent 1px),
+    linear-gradient(90deg, var(--cor-traco-fraca) 1px, transparent 1px);
+  background-size: 32px 32px;
+  opacity: .35;
+  mask-image: radial-gradient(ellipse at 75% 50%, #000 0%, transparent 70%);
+  -webkit-mask-image: radial-gradient(ellipse at 75% 50%, #000 0%, transparent 70%);
+  pointer-events: none;
+}
+.home-abertura__texto-grupo { display: flex; flex-direction: column; gap: var(--e4); min-width: 0; }
+.home-abertura__sigla {
+  margin: 0;
+  font-family: var(--fonte-mini);
+  font-size: var(--texto-mini);
+  letter-spacing: var(--espaco-letra-titulo);
+  text-transform: uppercase;
+  color: var(--cor-paranormal);
+}
+
+.home-abertura__numeros {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--e2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.home-numero {
+  display: flex;
+  align-items: baseline;
+  gap: var(--e2);
+  padding: var(--e2) var(--e3);
+  border: var(--borda) solid var(--cor-traco-fraca);
+  background: var(--fundo-superficie);
+}
+.home-numero__valor { font-weight: 700; font-size: var(--texto-grande); line-height: 1; color: var(--cor-texto); font-variant-numeric: tabular-nums; }
+.home-numero__rotulo { font-size: var(--texto-mini); color: var(--cor-texto-2); }
+
+/* O leque: os livros dos sistemas abertos como cartas, o do meio na
+   frente. Decorativo; com movimento reduzido, fica parado. */
+.home-leque {
+  position: relative;
+  min-height: calc(220px * var(--escala));
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+.home-leque__livro {
+  --meio: calc((var(--n) - 1) / 2);
+  --d: calc(var(--i) - var(--meio));
+  position: absolute;
+  transform: translateX(calc(var(--d) * 46px)) rotate(calc(var(--d) * 7deg)) translateY(calc(var(--d) * var(--d) * 4px));
+  transform-origin: 50% 120%;
+  z-index: calc(10 - var(--d) * var(--d));
+}
+.home-leque .capa-sistema { --capa-largura: calc(104px * var(--escala)); box-shadow: 4px 4px 0 var(--cor-traco-fraca), 6px 8px 18px -6px rgba(0, 0, 0, .55); }
+@media (prefers-reduced-motion: no-preference) {
+  .home-leque__livro { transition: transform var(--tempo-medio) var(--curva); }
+  .home-abertura:hover .home-leque__livro { transform: translateX(calc(var(--d) * 56px)) rotate(calc(var(--d) * 9deg)) translateY(calc(var(--d) * var(--d) * 5px - 6px)); }
+}
+
+/* ---------- estante de sistemas ---------- */
+
+.home-estante {
   display: flex;
   flex-direction: column;
   gap: var(--e4);
-  padding: var(--e6) 0 var(--e5);
+  padding: var(--e6) 0;
   border-bottom: var(--borda) solid var(--cor-traco-fraca);
+}
+.home-estante__cabeca { display: flex; flex-direction: column; gap: var(--e2); max-width: 64ch; }
+.home-estante__lista {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr));
+  gap: var(--e3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.home-sistema {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  gap: var(--e3);
+  align-items: start;
+  padding: var(--e3);
+  background: var(--fundo-superficie);
+  border: var(--borda) solid var(--cor-traco-fraca);
+  min-width: 0;
+}
+.home-sistema .capa-sistema { --capa-largura: calc(64px * var(--escala)); }
+.home-sistema__textos { display: flex; flex-direction: column; gap: var(--e2); min-width: 0; }
+.home-sistema__nome { margin: 0; font-weight: 700; font-size: var(--texto-medio); letter-spacing: var(--espaco-letra-titulo); text-transform: uppercase; overflow-wrap: anywhere; }
+.home-sistema__resumo { margin: 0; color: var(--cor-texto-2); line-height: var(--altura-linha); }
+.home-lista--mini li { font-size: var(--texto-mini); }
+.home-sistema__suplementos { margin: 0; display: flex; flex-direction: column; gap: var(--e1); }
+.home-sistema__volumes { display: flex; padding-left: 6px; }
+.home-sistema__volumes img {
+  width: 22px;
+  height: auto;
+  aspect-ratio: 1210 / 1623;
+  object-fit: cover;
+  margin-left: -6px;
+  border: 1px solid var(--cor-traco-forte);
+  box-shadow: 1px 1px 0 var(--cor-traco-fraca);
 }
 
 .home-abertura__titulo {
@@ -117,6 +232,10 @@
 .home-secao__ilustracao { min-width: 0; }
 
 @media (max-width: 760px) {
+  .home-abertura { grid-template-columns: minmax(0, 1fr); gap: var(--e4); }
+  .home-leque { min-height: calc(150px * var(--escala)); order: -1; }
+  .home-leque .capa-sistema { --capa-largura: calc(66px * var(--escala)); }
+  .home-leque__livro { transform: translateX(calc(var(--d) * 30px)) rotate(calc(var(--d) * 6deg)) translateY(calc(var(--d) * var(--d) * 3px)); }
   .home-secao { grid-template-columns: minmax(0, 1fr); gap: var(--e4); }
   .home-secao--invertida .home-secao__texto,
   .home-secao--invertida .home-secao__ilustracao { order: 0; }

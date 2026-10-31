@@ -781,6 +781,9 @@ segredo nenhum — ele os lê das Script Properties. Publicá-lo não expõe nad
 
 ### Atualizar o backend
 
+**v6.3.0 — VITRAL:** só o site (a Home renovada). Publique o site — inclusive
+`index.html`, `js/paginas/home.js` e `css/home.css`. Nada de `.gs`.
+
 **v6.2.0 — APENDICE:** os Extras de Ordem viram suplemento habilitável.
 **Troque** `Sistemas.gs` (o cadastro) e crie uma versão nova da implantação;
 publique o site — inclusive `js/suplementos.js` e
@@ -1599,7 +1602,7 @@ Três números diferentes, que não se misturam:
 
 | | Onde | O que é |
 |---|---|---|
-| versão do aplicativo | `js/versao.js` | o que a pessoa vê: v6.2.0 |
+| versão do aplicativo | `js/versao.js` | o que a pessoa vê: v6.3.0 |
 | `schemaVersion` | `js/ficha.js` | o formato da FICHA |
 | `versaoFormato` | `js/config.js` | o formato dos arquivos de importação |
 

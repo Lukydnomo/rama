@@ -20,7 +20,9 @@
    que a miniatura mostra.
 
    Nada aqui consulta o servidor. A sessão é conferida pela casca, como
-   em toda página; o resto é conteúdo fixo.
+   em toda página; o resto é conteúdo fixo — menos a ESTANTE (v6.2), que
+   lê o registro de sistemas (js/sistemas.js) e os suplementos
+   (js/suplementos.js): um sistema novo aparece aqui sem mexer na Home.
    ===================================================================== */
 
 (function (global) {
@@ -34,47 +36,47 @@
 
     U.trocar(painel, [
       abertura(agente),
+      estante(),
       secao({
-        marca: "01",
+        marca: "02",
         titulo: "Fichas que fazem a conta",
         destaque: "Fichas",
         texto: [
-          "Tudo o que o personagem é, num lugar só: atributos, perícias, recursos, habilidades, rituais, inventário e anotações.",
-          "Um clique rola o atributo, a perícia, o ataque ou o dano. O resultado aparece com cada parcela aberta, e a matemática fica com o sistema.",
-          "Existem dois modelos. A ficha Universal é livre para qualquer sistema. A ficha de Ordem Paranormal segue as regras dos livros.",
+          "Tudo o que o personagem é, num lugar só: atributos, recursos, habilidades, rituais ou magias, equipamento e anotações.",
+          "Cada sistema rola do jeito dele — d20 com o maior dado em Ordem, dados de Fome em Vampiro, seis que explodem em Malditos Goblins. O resultado aparece com cada parcela aberta, e a matemática fica com o R.A.M.A.",
+          "A criação guiada segue a ordem do livro, e cada número da ficha abre a conta que o produziu. Na Universal, nada é imposto: você monta a ficha da sua mesa.",
         ],
         lista: [
-          "Modo normal para jogar e modo edição para mudar a estrutura",
-          "Rituais com versões de dano, como Normal, Discente e Verdadeiro",
-          "Exportar e importar a ficha em arquivo",
+          "Modo normal para jogar e modo edição para corrigir, sempre com registro",
+          "O que é de cada regra mostra o livro e a página",
+          "Exportar, importar, duplicar e compartilhar a ficha",
         ],
         acao: { rotulo: "Criar personagem", href: "personagens/?novo=1" },
         ilustracao: ilustracaoFicha(),
       }),
       secao({
-        marca: "02",
-        titulo: "Ordem Paranormal pelas regras",
-        destaque: "Ordem Paranormal",
+        marca: "03",
+        titulo: "As regras do livro, sem decorar o livro",
+        destaque: "regras",
         lado: "invertido",
         texto: [
-          "A criação guiada segue a ordem do livro: conceito, atributos, origem, classe e perícias. Dá para começar em NEX 5% ou já adiantado.",
-          "PV, PE, Sanidade, Defesa e carga são calculados, e cada número abre a conta que o produziu.",
-          "Cada etapa da progressão vira uma escolha com botão. A tela mostra só as opções que cabem e explica por que as outras não cabem.",
+          "A progressão vira escolhas com botão: a tela mostra o que cabe e explica por que o resto não cabe — requisito, uso do dia, suplemento desligado.",
+          "Suplementos são habilitáveis: em Ordem Paranormal, ligue só os livros que a sua mesa usa. O que a ficha já tem continua valendo, e regra opcional só liga quando alguém liga.",
         ],
         lista: [
-          "Poderes de classe, gerais, paranormais e de trilha, com livro e página",
-          "Afinidade, patente e ajustes da mesa registrados na ficha",
-          "Regras opcionais do Sobrevivendo ao Horror, uma chave para cada",
+          "Poderes, técnicas e Disciplinas com custo, duração e efeito",
+          "Efeitos que acabam no marco certo: turno, cena, batalha, dia",
+          "Regras opcionais, uma chave para cada",
         ],
         ilustracao: ilustracaoOrdem(),
       }),
       secao({
-        marca: "03",
+        marca: "04",
         titulo: "Campanhas para a mesa inteira",
         destaque: "Campanhas",
         texto: [
-          "Crie a campanha, convide os jogadores e vincule os personagens. Cada rolagem feita numa ficha vinculada entra no histórico da campanha.",
-          "O mestre acompanha a ficha de todo mundo, ajusta vida e esforço sem abrir cada uma e conduz o combate com a ordem de iniciativa.",
+          "Crie a campanha, escolha o sistema, convide os jogadores e vincule os personagens. Cada rolagem feita numa ficha vinculada entra no histórico da mesa.",
+          "Cada sistema traz a sua ferramenta de mestre: o combate de Ordem e da Universal, a mesa da Testemunha em Oblívio, a crônica do Narrador em Vampiro, o Covil em Malditos Goblins.",
         ],
         lista: [
           "Documentos e imagens liberados para quem o mestre escolher",
@@ -85,7 +87,7 @@
         ilustracao: ilustracaoCampanha(),
       }),
       secao({
-        marca: "04",
+        marca: "05",
         titulo: "Homebrew guardado para sempre",
         destaque: "Homebrew",
         lado: "invertido",
@@ -101,7 +103,7 @@
         ilustracao: ilustracaoHomebrew(),
       }),
       secao({
-        marca: "05",
+        marca: "06",
         titulo: "Salvo sozinho, e só seu",
         destaque: "Salvo",
         texto: [
@@ -119,22 +121,86 @@
      ABERTURA
      ================================================================= */
 
+  function sistemasComCapa() {
+    var S = global.RAMASistemas;
+    return S ? S.lista().filter(function (s) { return !!s.capa; }) : [];
+  }
+
+  /* A abertura: o que o R.A.M.A. é, com os livros dos sistemas em leque
+     ao lado (decorativos — a estante logo abaixo diz o nome de cada um). */
   function abertura(agente) {
+    var nome = agente && agente.nome ? agente.nome : "Agente";
+    var sistemas = global.RAMASistemas ? global.RAMASistemas.lista() : [];
+    var capas = sistemasComCapa();
+    var SUP = global.RAMASuplementos;
+    var nSup = SUP ? SUP.SUPLEMENTOS.length : 0;
     return el("section.home-abertura", { "aria-labelledby": "home-titulo" }, [
-      el("p.trilha", {}, [
-        el("span.t-no", { texto: "Nó" }),
-        el("span", { texto: " ativo · " + (agente && agente.nome ? agente.nome : "Agente") }),
+      el("div.home-abertura__texto-grupo", {}, [
+        el("p.trilha", {}, [
+          el("span.t-no", { texto: "Nó" }),
+          el("span", { texto: " ativo · " + nome }),
+        ]),
+        el("p.home-abertura__sigla", { texto: "Rede de Arquivamento Multiversal de Agentes" }),
+        /* O nome por extenso também está no cabeçalho de toda página. Aqui
+           o título diz o que o sistema é. */
+        el("h1.home-abertura__titulo", { id: "home-titulo" }, tituloComDestaque("O arquivo da sua mesa de RPG", "arquivo")),
+        el("p.home-abertura__texto", {
+          texto: "Fichas que rolam os dados e fazem as contas pelas regras de cada livro, campanhas com a ferramenta certa para quem conduz, e tudo o que a sua mesa inventa — guardado para a próxima sessão.",
+        }),
+        el("ul.home-abertura__numeros", { "aria-label": "O R.A.M.A. em números" }, [
+          numero(String(sistemas.length), sistemas.length === 1 ? "sistema" : "sistemas"),
+          nSup ? numero(String(nSup), "suplementos habilitáveis") : null,
+          numero("1", "arquivo para a mesa inteira"),
+        ]),
+        el("div.faixa", {}, [
+          el("a.r-botao.r-botao--principal", { href: U.url("personagens/?novo=1"), texto: "+ Criar personagem" }),
+          el("a.r-botao", { href: U.url("personagens/"), texto: "Ver meus personagens" }),
+        ]),
       ]),
-      /* O nome por extenso já está no cabeçalho de toda página. Aqui o
-         título diz o que o sistema é. */
-      el("h1.home-abertura__titulo", { id: "home-titulo" }, tituloComDestaque("O arquivo da sua mesa de RPG", "arquivo")),
-      el("p.home-abertura__texto", {
-        texto: "Personagens, campanhas e tudo o que a sua mesa inventa, num lugar só. Fichas digitais que rolam os dados, fazem as contas e ficam guardadas para a próxima sessão.",
-      }),
-      el("div.faixa", {}, [
-        el("a.r-botao.r-botao--principal", { href: U.url("personagens/?novo=1"), texto: "+ Criar personagem" }),
-        el("a.r-botao", { href: U.url("personagens/"), texto: "Ver meus personagens" }),
+      capas.length ? el("div.home-leque", { "aria-hidden": "true", style: "--n:" + capas.length }, capas.map(function (s, i) {
+        return el("span.home-leque__livro", { style: "--i:" + i }, [
+          global.RAMACapaSistema ? global.RAMACapaSistema.elemento(s.id, { tamanho: "g" }) : null,
+        ]);
+      })) : null,
+    ]);
+  }
+
+  function numero(valor, rotulo) {
+    return el("li.home-numero", {}, [el("span.home-numero__valor", { texto: valor }), el("span.home-numero__rotulo", { texto: rotulo })]);
+  }
+
+  /* =================================================================
+     ESTANTE: os sistemas do registro, com capa e o que cada um traz
+     ================================================================= */
+
+  function estante() {
+    var S = global.RAMASistemas;
+    var SUP = global.RAMASuplementos;
+    if (!S) return null;
+    var lista = S.lista();
+    return el("section.home-estante", { "aria-labelledby": "home-secao-01" }, [
+      el("div.home-estante__cabeca", {}, [
+        el("span.home-secao__marca", { "aria-hidden": "true", texto: "01" }),
+        el("h2.home-secao__titulo", { id: "home-secao-01" }, tituloComDestaque("Uma estante de sistemas", "estante")),
+        el("p.home-secao__paragrafo", { texto: "Cada sistema é um módulo completo: a ficha dele, o dado dele, a criação dele e a ferramenta de mesa dele. A escolha fica gravada na ficha e na campanha." }),
       ]),
+      el("ul.home-estante__lista", {}, lista.map(function (s) {
+        var sups = SUP ? SUP.doSistema(s.id) : [];
+        return el("li.home-sistema", { dataset: { sistema: s.id } }, [
+          global.RAMACapaSistema ? global.RAMACapaSistema.elemento(s.id, { tamanho: "m" }) : null,
+          el("div.home-sistema__textos", {}, [
+            el("h3.home-sistema__nome", { texto: s.nome + (s.edicao ? " · " + s.edicao : "") }),
+            el("p.home-sistema__resumo", { texto: s.resumo }),
+            (s.ficha.pontos || []).length ? el("ul.home-lista.home-lista--mini", {}, s.ficha.pontos.slice(0, 3).map(function (p) { return el("li", { texto: p }); })) : null,
+            sups.length ? el("p.home-sistema__suplementos", {}, [
+              el("span.home-sistema__volumes", { "aria-hidden": "true" }, sups.slice(0, 8).map(function (x) {
+                return el("img", { src: U.url(x.capa.replace(/\.webp$/, "-pequena.webp")), alt: "", loading: "lazy", decoding: "async", width: 160, height: 215 });
+              })),
+              el("span.t-mini", { texto: sups.length + " suplementos habilitáveis: " + sups.map(function (x) { return x.curto; }).join(", ") }),
+            ]) : null,
+          ]),
+        ]);
+      })),
     ]);
   }
 
@@ -333,8 +399,8 @@
 
   function comoComecar() {
     var passos = [
-      ["Crie um personagem", "Escolha entre a ficha Universal e a de Ordem Paranormal.", "personagens/?novo=1"],
-      ["Monte a campanha", "Convide os jogadores e vincule os personagens da mesa.", "campanhas/"],
+      ["Crie um personagem", "Escolha o sistema (e, em Ordem, os suplementos) e siga a criação guiada.", "personagens/?novo=1"],
+      ["Monte a campanha", "Escolha o sistema da mesa, convide os jogadores e vincule os personagens.", "campanhas/"],
       ["Ajuste o seu perfil", "Avatar, escala do texto e importação de fichas em arquivo.", "perfil/"],
     ];
 
@@ -357,12 +423,12 @@
      ================================================================= */
 
   function aviso() {
-    return el("section.home-aviso", { "aria-label": "Sobre o conteúdo de Ordem Paranormal" }, [
+    return el("section.home-aviso", { "aria-label": "Sobre os sistemas e o conteúdo dos livros" }, [
       el("p.t-mini", {
-        texto: "Ordem Paranormal RPG é um produto da Jambô Editora e de seus criadores. O R.A.M.A. é um projeto independente de fã, sem vínculo oficial com a editora.",
+        texto: "Os sistemas da estante e as capas dos livros pertencem a seus autores e editoras — Ordem Paranormal RPG, por exemplo, é um produto da Jambô Editora e de seus criadores. O R.A.M.A. é um projeto independente de fã, sem vínculo oficial com nenhuma editora.",
       }),
       el("p.t-mini", {
-        texto: "Os resumos de regras servem para consulta durante o jogo e não substituem os livros. Para jogar, tenha o Livro de Regras e os suplementos.",
+        texto: "Os resumos de regras servem para consulta durante o jogo e não substituem os livros. Para jogar, tenha os livros de regras e os suplementos.",
       }),
     ]);
   }

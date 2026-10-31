@@ -215,3 +215,10 @@
 :root[data-densidade="compacta"] .tipos-ficha__suplementos { gap: var(--e1); }
 :root[data-densidade="compacta"] .suplemento { padding: var(--e1) var(--e2); gap: 2px var(--e2); }
 :root[data-densidade="compacta"] .tipos-ficha__suplementos { padding: var(--e2); }
+
+/* ---------- Home ---------- */
+
+:root[data-densidade="compacta"] .home-abertura,
+:root[data-densidade="compacta"] .home-estante { padding-top: var(--e5); padding-bottom: var(--e5); gap: var(--e3); }
+:root[data-densidade="compacta"] .home-sistema { padding: var(--e2); gap: var(--e2); }
+:root[data-densidade="compacta"] .home-estante__lista { gap: var(--e2); }

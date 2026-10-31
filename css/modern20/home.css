@@ -28,6 +28,24 @@
     font-size: calc(17px * var(--escala));
     line-height: 1.6;
   }
+  & .home-abertura::before { opacity: .5; background-size: 28px 28px; }
+  & .home-abertura__sigla { font-family: var(--fonte-mono); letter-spacing: .04em; }
+  & .home-numero { border-color: var(--m20-borda); border-radius: var(--m20-raio-cartao); box-shadow: var(--m20-sombra-1); }
+  & .home-numero__valor { font-weight: 750; letter-spacing: -0.02em; }
+  & .home-leque .capa-sistema { box-shadow: var(--m20-sombra-2), 0 14px 24px -12px color-mix(in srgb, var(--cor-sombra) 80%, transparent); }
+
+  /* ---------- estante ---------- */
+
+  & .home-estante { gap: var(--e5); padding: var(--e7) 0; border-bottom-color: var(--m20-borda); }
+  & .home-sistema {
+    border-color: var(--m20-borda);
+    border-radius: var(--m20-raio-cartao);
+    box-shadow: var(--m20-sombra-1);
+    transition: box-shadow var(--tempo-seco) var(--curva), border-color var(--tempo-seco) var(--curva);
+  }
+  & .home-sistema:hover { border-color: var(--cor-traco-media); box-shadow: var(--m20-sombra-2); }
+  & .home-sistema__nome { font-weight: 650; letter-spacing: -0.01em; text-transform: none; }
+  & .home-sistema__volumes img { border-radius: 2px 3px 3px 2px; border-color: color-mix(in srgb, var(--cor-texto) 18%, transparent); }
 
   /* ---------- seções ---------- */
 

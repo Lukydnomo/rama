@@ -118,6 +118,21 @@
 
   var CHANGELOG = [
     {
+      versao: "6.3.0",
+      codinome: "VITRAL",
+      data: "31/10/2026",
+      mudancas: {
+        "Melhorado": [
+          "Home renovada: a abertura apresenta o R.A.M.A. com os livros dos sistemas em leque, os números do arquivo (sistemas e suplementos) e os atalhos para começar.",
+          "Nova seção “Uma estante de sistemas”: cada sistema com capa, resumo, o que a ficha faz e, em Ordem Paranormal, os suplementos habilitáveis. Um sistema novo aparece ali sozinho.",
+          "Os textos da Home falam dos cinco sistemas, das ferramentas de mesa de cada um e dos suplementos — não mais em “dois modelos de ficha”.",
+        ],
+        "Técnico": [
+          "Só o site: js/paginas/home.js, css/home.css, css/modern20/home.css, css/densidade.css e index.html (que passa a carregar js/capa-sistema.js e js/suplementos.js).",
+        ],
+      },
+    },
+    {
       versao: "6.2.0",
       codinome: "APENDICE",
       data: "31/10/2026",
