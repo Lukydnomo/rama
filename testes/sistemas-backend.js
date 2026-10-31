@@ -149,4 +149,50 @@ export async function testarSistemasBackend({ t, preparar, novaConta, comoFn }) 
     G.CACHE_ROTAS = null;
   }
   t.ok("com o arquivo de volta, tudo volta", M({ acao: "ler_hexatombe", campanhaId: ordem }).ok);
+
+  t.grupo("Suplementos · o cadastro do servidor é o mesmo do site");
+  const SUP = G.RAMASuplementos;
+  t.ok("os mesmos suplementos de Ordem, com as mesmas fontes",
+    JSON.stringify(SUP.doSistema("ordem").map((s) => [s.id, s.fontes])) === JSON.stringify(G.SUPLEMENTOS_DO_RAMA.ordem.map((s) => [s.id, s.fontes])));
+  t.ok("e as mesmas ferramentas de suplemento",
+    G.SUPLEMENTOS_DO_RAMA.ordem.every((s) => s.ferramentas.every((f) => SUP.daFerramenta("ordem", f).id === s.id)) &&
+    Object.keys(SUP.FERRAMENTAS.ordem).every((f) => G.suplementoDaFerramenta("ordem", f).id === SUP.FERRAMENTAS.ordem[f]));
+
+  t.grupo("Suplementos · a campanha guarda por sistema");
+  const camp = M({ acao: "criar_campanha", dados: { nome: "Mesa sup", sistema: "ordem" } }).dados.id;
+  M({ acao: "salvar_participantes", campanhaId: camp, membros: [{ userId: ana.id, papel: "jogador" }] });
+  const l0 = M({ acao: "ler_campanha", campanhaId: camp });
+  t.ok("campanha nova: sem escolha (todos permitidos)", l0.ok && JSON.stringify(l0.dados.suplementos) === "{}");
+  t.recusa("jogadora não muda os suplementos da mesa", A({ acao: "salvar_campanha", campanhaId: camp, rev: l0.rev, dados: { suplementos: { sistema: "ordem", ids: [] } } }), "sem_permissao");
+  t.recusa("sistema sem suplementos: recusado", M({ acao: "salvar_campanha", campanhaId: camp, rev: l0.rev, dados: { suplementos: { sistema: "goblins", ids: [] } } }), "dados_invalidos");
+  const s1 = M({ acao: "salvar_campanha", campanhaId: camp, rev: l0.rev, dados: { suplementos: { sistema: "ordem", ids: ["ordem.sah", "ordem.zzz"] } } });
+  t.ok("o mestre grava (ids desconhecidos saem)", s1.ok && JSON.stringify(s1.dados.suplementos) === JSON.stringify({ ordem: ["ordem.sah"] }));
+  t.ok("todo membro lê o que a mesa permite", JSON.stringify(A({ acao: "ler_campanha", campanhaId: camp }).dados.suplementos) === JSON.stringify({ ordem: ["ordem.sah"] }));
+  t.ok("a lista de campanhas também traz", A({ acao: "listar_campanhas" }).dados.find((c) => c.id === camp).suplementos.ordem[0] === "ordem.sah");
+  const r2 = M({ acao: "ler_campanha", campanhaId: camp }).rev;
+  M({ acao: "salvar_campanha", campanhaId: camp, rev: r2, dados: { sistema: "universal" } });
+  const r3 = M({ acao: "ler_campanha", campanhaId: camp });
+  t.ok("trocar o sistema guarda a escolha do outro", JSON.stringify(r3.dados.suplementos) === JSON.stringify({ ordem: ["ordem.sah"] }));
+  M({ acao: "salvar_campanha", campanhaId: camp, rev: r3.rev, dados: { sistema: "ordem" } });
+  const r4 = M({ acao: "ler_campanha", campanhaId: camp }).rev;
+  const vazio = M({ acao: "salvar_campanha", campanhaId: camp, rev: r4, dados: { suplementos: { sistema: "ordem", ids: [] } } });
+  t.ok("lista vazia fica vazia (só o livro básico), não vira 'todos'", vazio.ok && Array.isArray(vazio.dados.suplementos.ordem) && vazio.dados.suplementos.ordem.length === 0);
+
+  t.grupo("Suplementos · ferramentas da mesa: habilitar não liga, desligar trava");
+  const eh = G.RAMAHexatombe.vazio();
+  G.RAMAHexatombe.ligar(eh, true);
+  t.recusa("AS2 desligado: o Hexatombe não inicia", M({ acao: "salvar_hexatombe", campanhaId: camp, rev: 0, opId: "sup-hex-0000001", estado: eh }), "suplemento_desligado");
+  const r5 = M({ acao: "ler_campanha", campanhaId: camp });
+  t.ok("e a mecânica continua desligada", r5.dados.hexatombe === false);
+  M({ acao: "salvar_campanha", campanhaId: camp, rev: r5.rev, dados: { suplementos: { sistema: "ordem", ids: ["ordem.as2"] } } });
+  t.ok("AS2 ligado: a mecânica fica disponível, ainda desligada", M({ acao: "ler_campanha", campanhaId: camp }).dados.hexatombe === false);
+  t.ok("e o mestre pode iniciar", M({ acao: "salvar_hexatombe", campanhaId: camp, rev: 0, opId: "sup-hex-0000002", estado: eh }).ok);
+  const r6 = M({ acao: "ler_campanha", campanhaId: camp }).rev;
+  M({ acao: "salvar_campanha", campanhaId: camp, rev: r6, dados: { suplementos: { sistema: "ordem", ids: [] } } });
+  t.ok("desligado depois: o estado continua legível", M({ acao: "ler_hexatombe", campanhaId: camp }).ok);
+  t.recusa("mas novas operações não", M({ acao: "salvar_hexatombe", campanhaId: camp, rev: 1, opId: "sup-hex-0000003", estado: eh }), "suplemento_desligado");
+  const desligar = JSON.parse(JSON.stringify(M({ acao: "ler_hexatombe", campanhaId: camp }).dados.estado || eh));
+  desligar.ativo = false;
+  t.ok("desligar a mecânica continua permitido", M({ acao: "salvar_hexatombe", campanhaId: camp, rev: 1, opId: "sup-hex-0000004", estado: desligar }).ok);
+  t.ok("campanha antiga (sem o campo): ferramentas como antes", M({ acao: "ler_hexatombe", campanhaId: ordem }).ok);
 }

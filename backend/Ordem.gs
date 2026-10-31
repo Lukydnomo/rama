@@ -2083,6 +2083,8 @@ function acaoSalvarHexatombe(corpo, usuario) {
     if (!ctx.ok) return ctx;
     var foraDoSistema = exigirFerramenta(ctx, 'hexatombe');
     if (foraDoSistema) return foraDoSistema;
+    var semSuplemento = exigirSuplemento(ctx, 'hexatombe', corpo);
+    if (semSuplemento) return semSuplemento;
     try {
       aba(ABAS.CAMPANHA_HEXATOMBE);
     } catch (erro) {
@@ -2166,6 +2168,8 @@ function acaoLancarHexatombe(corpo, usuario) {
     if (!ctx.ok) return ctx;
     var foraDoSistema = exigirFerramenta(ctx, 'hexatombe');
     if (foraDoSistema) return foraDoSistema;
+    var semSuplemento = exigirSuplemento(ctx, 'hexatombe', corpo);
+    if (semSuplemento) return semSuplemento;
     var registro = acharPor(ABAS.PERSONAGENS, 'id', corpo.personagemId);
     if (!registro || String(registro.campanhaId || '') !== String(ctx.campanha.id)) return { ok: false, erro: 'nao_encontrado' };
     if (operacaoJaAplicada(registro, operacao)) return { ok: true, repetida: true, rev: Number(registro.rev) || 0 };
@@ -2926,6 +2930,8 @@ function acaoSalvarHacking(corpo, usuario) {
     if (!ctx.ok) return ctx;
     var foraDoSistema = exigirFerramenta(ctx, 'hacking');
     if (foraDoSistema) return foraDoSistema;
+    var semSuplemento = exigirSuplemento(ctx, 'hacking', corpo);
+    if (semSuplemento) return semSuplemento;
     try {
       aba(ABAS.CAMPANHA_HACKING);
     } catch (erro) {
@@ -3656,6 +3662,8 @@ function acaoSalvarPerigos(corpo, usuario) {
     if (!ctx.ok) return ctx;
     var foraDoSistema = exigirFerramenta(ctx, 'perigos');
     if (foraDoSistema) return foraDoSistema;
+    var semSuplemento = exigirSuplemento(ctx, 'perigos', corpo);
+    if (semSuplemento) return semSuplemento;
     try {
       aba(ABAS.CAMPANHA_PERIGOS);
     } catch (erro) {
@@ -3796,6 +3804,8 @@ function acaoSincroniaOperar(corpo, usuario) {
     if (!ctx.ok) return ctx;
     var foraDoSistema = exigirFerramenta(ctx, 'sincronia');
     if (foraDoSistema) return foraDoSistema;
+    var semSuplemento = exigirSuplemento(ctx, 'sincronia', corpo);
+    if (semSuplemento) return semSuplemento;
     if (ctx.papel === PAPEL_ESPECTADOR) return { ok: false, erro: 'sem_permissao' };
 
     var acesso = personagemAcessivel(autorId, usuario, { semCompartilhamento: true });

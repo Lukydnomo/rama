@@ -206,3 +206,12 @@
 :root[data-densidade="compacta"] .gob-dado { width: 2.2rem; height: 2.2rem; }
 :root[data-densidade="compacta"] .gob-criar,
 :root[data-densidade="compacta"] .gob-criar__etapa { gap: var(--e2); }
+
+/* ---------- Suplementos ---------- */
+
+:root[data-densidade="compacta"] .suplementos__corpo { gap: var(--e3); }
+:root[data-densidade="compacta"] .suplementos__volumes,
+:root[data-densidade="compacta"] .suplementos__lista,
+:root[data-densidade="compacta"] .tipos-ficha__suplementos { gap: var(--e1); }
+:root[data-densidade="compacta"] .suplemento { padding: var(--e1) var(--e2); gap: 2px var(--e2); }
+:root[data-densidade="compacta"] .tipos-ficha__suplementos { padding: var(--e2); }

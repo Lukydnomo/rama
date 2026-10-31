@@ -247,8 +247,15 @@
      BUSCA E FILTROS
      ================================================================= */
 
-  /* filtros: { busca, elemento, circulo, fonte } — cada um vazio quer
-     dizer "todos", e eles se combinam. */
+  /* Suplemento desligado (v6.1, js/suplementos.js): fora das NOVAS
+     escolhas. O que a ficha já tem não passa por aqui. */
+  function liberada(fonte) {
+    var Cat = global.RAMAOrdemCatalogo;
+    return !Cat || !Cat.fonteLiberada || Cat.fonteLiberada(fonte);
+  }
+
+  /* filtros: { busca, elemento, circulo, fonte, incluirDesligados } —
+     cada um vazio quer dizer "todos", e eles se combinam. */
   function filtrar(catalogo, filtros) {
     var f = filtros || {};
     var termo = normalizarTexto(f.busca);
@@ -258,6 +265,7 @@
       if (f.elemento && e.elementos.indexOf(f.elemento) < 0) return false;
       if (circulo && e.circulo !== circulo) return false;
       if (f.fonte && e.fonte !== f.fonte) return false;
+      if (!f.incluirDesligados && !liberada(e.fonte)) return false;
       return true;
     });
   }
@@ -296,7 +304,7 @@
      só aparece quando há mais de uma. */
   function fontesDoCatalogo(catalogo) {
     var vistas = {};
-    (catalogo ? catalogo.rituais : []).forEach(function (e) { vistas[e.fonte] = true; });
+    (catalogo ? catalogo.rituais : []).forEach(function (e) { if (liberada(e.fonte)) vistas[e.fonte] = true; });
     /* Na ordem de FONTES (a do registro de livros). */
     return FONTES.filter(function (k) { return vistas[k]; }).concat(Object.keys(vistas).filter(function (k) { return FONTES.indexOf(k) < 0; }));
   }

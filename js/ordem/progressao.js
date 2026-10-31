@@ -1668,6 +1668,7 @@
     C.trilhasDaClasse(alvo, ordem).forEach(function (tr) {
       P.habilidadesDaTrilha(tr.chave).forEach(function (h) {
         var motivos = c ? motivosDaHabilidadeDeTrilha(h, alvo, c.percurso, c.etapa, ordem) : [];
+        if (C.fonteLiberada && !C.fonteLiberada(h.fonte ? h : tr)) motivos = motivos.concat([C.motivoDaFonte(h.fonte ? h : tr)]);
         lista.push({ habilidade: h, trilha: tr, disponivel: !motivos.length, motivos: motivos });
       });
     });
@@ -3638,6 +3639,8 @@
     var repOk = rep.ok || !!e.repeticaoPorOpcao;
     var motivos = reqs.filter(function (r) { return !r.ok; }).map(function (r) { return "Requisito: " + r.falta + "."; });
     if (!repOk) motivos.push(rep.texto);
+    /* Suplemento desligado: fica à vista, mas não entra como escolha nova. */
+    if (C.fonteLiberada && !C.fonteLiberada(e)) motivos.push(C.motivoDaFonte(e));
     return {
       entrada: e,
       requisitos: reqs,
@@ -3770,6 +3773,7 @@
         return c ? requisito(r, c.percurso, c.etapa, {}, ordem) : { ok: true, texto: "", falta: "" };
       });
       var motivos = reqs.filter(function (r) { return !r.ok; }).map(function (r) { return "Requisito: " + r.falta + "."; });
+      if (C.fonteLiberada && !C.fonteLiberada(tr)) motivos.push(C.motivoDaFonte(tr));
       return { trilha: tr, requisitos: reqs, disponivel: !motivos.length, motivos: motivos, primeira: P.primeiraDaTrilha(tr.chave) };
     });
   }

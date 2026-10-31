@@ -332,7 +332,7 @@
     });
     var ordemEl = (C.ELEMENTOS_AFINIDADE || []).concat(["medo", "transmissao", "intencao", "sem"]);
     return {
-      livro: C.LIVROS.filter(function (l) { return achados.livro[l.sigla]; }).map(function (l) { return { valor: l.sigla, rotulo: l.curto }; }),
+      livro: C.LIVROS.filter(function (l) { return achados.livro[l.sigla] && (!C.fonteLiberada || C.fonteLiberada(l.sigla)); }).map(function (l) { return { valor: l.sigla, rotulo: l.curto }; }),
       elemento: ordemEl.filter(function (k, i) { return achados.elemento[k] && ordemEl.indexOf(k) === i; })
         .map(function (k) { return { valor: k, rotulo: nomeDoElemento(k) }; }),
       tipo: Object.keys(NOMES_TIPO).filter(function (k) { return achados.tipo[k]; }).map(function (k) { return { valor: k, rotulo: NOMES_TIPO[k] }; }),
@@ -362,6 +362,8 @@
       return Object.assign({}, s, {
         entradas: s.entradas.filter(function (x) {
           var m = metadados(x, s);
+          /* Suplemento desligado (v6.1): fora das novas escolhas. */
+          if (!f.incluirDesligados && C.fonteLiberada && !C.fonteLiberada(m.livro)) return false;
           if (f.livro && m.livro !== f.livro) return false;
           if (f.elemento && m.elemento !== f.elemento) return false;
           if (f.tipo && m.tipo !== f.tipo) return false;

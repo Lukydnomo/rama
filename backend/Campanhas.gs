@@ -262,6 +262,8 @@ function acaoListarCampanhas(corpo, usuario) {
       rev: Number(c.rev) || 0,
       capaVersao: versaoDaCapa[String(c.id)] || '',
       sistema: sistemaDaCampanha(c, dados).id,
+      /* Suplementos permitidos pela mesa, por sistema (v6.1). */
+      suplementos: normalizarMapaDeSuplementos(dados.suplementos),
     };
   });
 
@@ -305,6 +307,10 @@ function acaoLerCampanha(corpo, usuario) {
      do mestre estão ocultas, senão o histórico parece quebrado. */
   resposta.rolagensMestreOcultas = !!dados.rolagensMestreOcultas;
   resposta.ocultarStatusJogadores = !!dados.ocultarStatusJogadores;
+  /* Suplementos (v6.1): o que a mesa permite, por sistema. Ausente =
+     todos; lista vazia = só o livro básico. Todo membro recebe — define
+     o que vale nas escolhas feitas na campanha. */
+  resposta.suplementos = normalizarMapaDeSuplementos(dados.suplementos);
 
   /* O sistema da campanha (v4.0) decide que ferramentas e mecânicas ela
      tem. `sistemaHerdado`: veio da regra de compatibilidade (campanha
@@ -494,6 +500,18 @@ function acaoSalvarCampanha(corpo, usuario) {
     if (trocouSistema) guardado.sistemaDesde = new Date().toISOString();
 
     if (dados.descricao !== undefined) guardado.descricao = String(dados.descricao).slice(0, 4000);
+    /* Suplementos (v6.1): { sistema, ids } muda só o sistema pedido; os
+       outros ficam (trocar o sistema da campanha não apaga nada). `ids`
+       null volta ao padrão (todos). Só o mestre chega aqui. */
+    if (dados.suplementos !== undefined) {
+      var ps = dados.suplementos && typeof dados.suplementos === 'object' ? dados.suplementos : null;
+      var sisSup = ps ? idDeSistema(ps.sistema) : '';
+      if (!ps || !SUPLEMENTOS_DO_RAMA[sisSup] || (ps.ids !== null && !Array.isArray(ps.ids))) return { ok: false, erro: 'dados_invalidos', campo: 'suplementos' };
+      var mapaSup = normalizarMapaDeSuplementos(guardado.suplementos);
+      if (ps.ids === null) delete mapaSup[sisSup];
+      else mapaSup[sisSup] = normalizarSelecaoDeSuplementos(sisSup, ps.ids);
+      guardado.suplementos = mapaSup;
+    }
     if (dados.rolagensMestreOcultas !== undefined) {
       guardado.rolagensMestreOcultas = !!dados.rolagensMestreOcultas;
     }
@@ -532,6 +550,7 @@ function acaoSalvarCampanha(corpo, usuario) {
       dados: {
         ocultarStatusJogadores: !!guardado.ocultarStatusJogadores,
         sistema: sistemaDaCampanha(registro, guardado).id,
+        suplementos: normalizarMapaDeSuplementos(guardado.suplementos),
       },
     };
   });

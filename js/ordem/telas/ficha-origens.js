@@ -707,6 +707,9 @@
     function pintar() {
       var termo = U.chaveDeBusca(busca);
       var lista = C().ORIGENS.filter(function (org) {
+        /* Suplemento desligado (v6.1): não entra como origem nova; a
+           atual continua na lista. */
+        if (C().fonteLiberada && !C().fonteLiberada(org) && org !== nova && org.chave !== ctx.ficha.ordem.origem) return false;
         return !termo || U.chaveDeBusca(org.nome + " " + org.poder).indexOf(termo) >= 0;
       });
       var pl = plano();

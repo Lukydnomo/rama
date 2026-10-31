@@ -83,6 +83,9 @@
       partes.push(el("ul.pericia-consulta__usos", { "aria-label": "Usos de " + p.nome }, dados.usos.map(linhaDoUso)));
     }
     partes.push(el("p.pericia-consulta__fonte", { texto: "Descrição: " + PU().referencia("OPRPG", dados.pagina) + ". Regras gerais de perícias: p. " + PU().REGRAS_GERAIS.pagina + "." }));
+    if (dados.desligados && dados.desligados.length) {
+      partes.push(el("p.t-mini.pericia-consulta__nota", { texto: "Usos de " + dados.desligados.map(function (f) { return C().nomeDoLivro(f); }).join(", ") + " não aparecem: o suplemento está desligado para esta ficha ou campanha (Opções da ficha → Suplementos)." }));
+    }
     var esp = dados.especificos || [];
     if (esp.length) {
       partes.push(el("h3.t-secao.pericia-consulta__subtitulo", { texto: "Usos em regras específicas" }));

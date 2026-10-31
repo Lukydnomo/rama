@@ -1524,6 +1524,149 @@
 }
 .tipo-ficha__titulos { display: flex; flex-direction: column; gap: var(--e1); min-width: 0; }
 
+/* O cartão escolhido (com os suplementos abertos logo depois). */
+.tipo-ficha--escolhido { border-color: var(--cor-traco-forte); box-shadow: inset 0 0 0 1px var(--cor-traco-forte); background: var(--fundo-superficie-2); }
+.tipo-ficha__suplementos { font-family: var(--fonte-mini); font-size: var(--texto-mini); color: var(--cor-texto-2); }
+.tipo-ficha__suplementos::before { content: "▸ "; }
+.tipo-ficha[aria-expanded="true"] .tipo-ficha__suplementos::before { content: "▾ "; }
+.tipos-ficha__suplementos {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--e2);
+  padding: var(--e3);
+  border: var(--borda) solid var(--cor-traco-forte);
+  background: var(--fundo-superficie);
+  min-width: 0;
+}
+.tipos-ficha__suplementos > .t-secao { margin: 0; }
+.tipos-ficha__continuar { justify-content: flex-end; }
+
+/* =====================================================================
+   SUPLEMENTOS (v6.1, js/suplementos.js)
+   ---------------------------------------------------------------------
+   O livro principal à esquerda, como referência; os suplementos em
+   volumes menores, cada um com capa, nome, descrição e um switch. Ao
+   abrir, os volumes saem de trás do livro (--de-x/--de-y: o caminho de
+   volta até ele) e se acomodam. Estado nunca só por cor: o switch diz
+   "Ligado/Desligado", e o volume desligado fica esmaecido e tracejado.
+   ===================================================================== */
+
+.suplementos { min-width: 0; }
+.suplementos__corpo {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  gap: var(--e4);
+  align-items: start;
+}
+.suplementos__principal {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--e1);
+}
+.suplementos__principal .capa-sistema { --capa-largura: calc(96px * var(--escala)); }
+.suplementos__basico { text-align: center; max-width: 9rem; color: var(--cor-texto-2); }
+.suplementos__lista { display: flex; flex-direction: column; gap: var(--e2); min-width: 0; }
+.suplementos__volumes {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 250px), 1fr));
+  gap: var(--e2);
+}
+.suplemento {
+  position: relative;
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  grid-template-areas: "capa textos" "capa chave";
+  gap: var(--e1) var(--e2);
+  align-items: start;
+  padding: var(--e2);
+  border: var(--borda) dashed var(--cor-traco-media);
+  background: var(--fundo-superficie);
+  min-width: 0;
+}
+.suplemento--clicavel { cursor: pointer; }
+.suplemento--ligado { border-style: solid; border-color: var(--cor-traco-forte); background: var(--fundo-superficie-2); }
+.suplemento:not(.suplemento--ligado) .suplemento__capa { filter: grayscale(.85); opacity: .55; }
+.suplemento__capa { grid-area: capa; --capa-largura: calc(46px * var(--escala)); aspect-ratio: 1210 / 1623; }
+.suplemento__textos { grid-area: textos; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.suplemento__nome { font-weight: 700; overflow-wrap: anywhere; }
+.suplemento__descricao { font-size: var(--texto-mini); color: var(--cor-texto-2); overflow-wrap: anywhere; }
+.suplemento__nota { font-size: var(--texto-mini); color: var(--cor-aviso); overflow-wrap: anywhere; }
+
+/* O switch: forma além de cor (a bola muda de lado) e o texto. */
+.suplemento__switch {
+  grid-area: chave;
+  justify-self: start;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--e1);
+  padding: 2px;
+  background: none;
+  border: 0;
+  color: var(--cor-texto);
+  font: inherit;
+  font-size: var(--texto-mini);
+  cursor: pointer;
+  min-height: 32px;
+  text-transform: none;
+  letter-spacing: normal;
+  box-shadow: none;
+}
+.suplemento__switch:focus-visible { outline: 2px solid var(--cor-foco); outline-offset: 2px; }
+.suplemento__switch:disabled { cursor: default; opacity: .7; }
+.suplemento__trilho {
+  width: 40px;
+  height: 22px;
+  padding: 2px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  background: var(--fundo-superficie-2);
+  border: var(--borda) solid var(--cor-traco-media);
+}
+.suplemento__botao { width: 14px; height: 14px; background: var(--cor-traco-media); }
+.suplemento__switch[aria-checked="true"] .suplemento__trilho { justify-content: flex-end; border-color: var(--cor-paranormal); }
+.suplemento__switch[aria-checked="true"] .suplemento__botao { background: var(--cor-paranormal); }
+.suplementos__atalhos { gap: var(--e1); }
+.suplementos__resumo { margin: 0; }
+
+/* A saída de trás do livro. */
+@media (prefers-reduced-motion: no-preference) {
+  .suplementos--guardados .suplemento {
+    transform: translate(var(--de-x, 0), var(--de-y, 0)) scale(.4);
+    opacity: 0;
+    transition: none;
+  }
+  .suplementos--abrindo .suplemento {
+    transition: transform 520ms var(--curva) calc(var(--i, 0) * 55ms), opacity 280ms var(--curva) calc(var(--i, 0) * 55ms);
+  }
+  .suplemento__trilho, .suplemento__botao { transition: background var(--tempo-curto) var(--curva), border-color var(--tempo-curto) var(--curva); }
+}
+
+/* O que a ficha usa de um suplemento desligado. */
+.suplementos-em-uso { padding: var(--e2); border-left: 3px solid var(--cor-aviso); background: var(--fundo-superficie-2); }
+.suplementos-em-uso p { margin: 0 0 var(--e1); }
+.suplementos-em-uso__lista { margin: 0; padding-left: var(--e4); display: flex; flex-direction: column; gap: 2px; }
+.criacao-suplementos { align-items: center; }
+
+@media (max-width: 640px) {
+  .suplementos__corpo { grid-template-columns: minmax(0, 1fr); }
+  .suplementos__principal { flex-direction: row; justify-content: flex-start; }
+  .suplementos__principal .capa-sistema { --capa-largura: calc(56px * var(--escala)); }
+  .suplementos__basico { text-align: left; max-width: none; }
+  .tipos-ficha__continuar { flex-direction: column-reverse; align-items: stretch; }
+}
+
+@media (forced-colors: active) {
+  .suplemento__switch[aria-checked="true"] .suplemento__botao { background: CanvasText; }
+}
+
 /* =====================================================================
    ESCOLHA DO SISTEMA DA CAMPANHA (v4.0)
    ---------------------------------------------------------------------

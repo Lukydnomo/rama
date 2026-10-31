@@ -189,6 +189,12 @@
      ficha como de um sistema desconhecido (só leitura); o schema maior
      faz as ainda mais antigas recusarem em vez de gravar.
 
+     27 → 28: Suplementos (v6.1). A ficha ganhou `suplementos`: a lista
+     dos suplementos ligados (js/suplementos.js). AUSENTE = ficha anterior,
+     com todos ligados como antes; lista VAZIA = só o livro básico. Sem
+     conversão: a ficha antiga continua sem o campo. Uma aba antiga
+     descartaria a escolha ao gravar — com o schema maior ela recusa.
+
      Nenhuma das subidas exige migração: normalizarFicha() cria o que
      falta, vazio, e não toca no que existe. Um ritual gravado na 2 abre
      na 3 com a versão Normal em branco; uma ficha de Ordem gravada na 4
@@ -198,7 +204,7 @@
      os campos novos e os descartaria ao gravar — com o schema maior ela
      recusa abrir a ficha e pede para recarregar.
      Ver docs/CHARACTER_SCHEMA.md. */
-  var VERSAO_SCHEMA = 27;
+  var VERSAO_SCHEMA = 28;
 
   var MODULOS = {
     atributos: "Atributos", status: "Status/recursos", defesa: "Defesa",
@@ -543,6 +549,8 @@
       camposCustomizados: [],
       aparencia: normalizarAparencia(i.aparencia, tipo),
     };
+    var sup = normalizarSuplementos(i.suplementos, tipo);
+    if (sup) ficha.suplementos = sup;
 
     /* O bloco de regras só existe na ficha do sistema que o declara
        (js/sistemas.js): numa Universal não há bloco nenhum, e nada de
@@ -1102,8 +1110,21 @@
     ficha.modulos = normalizarModulos(b.modulos);
     ficha.aliados = global.RAMACriaturas.normalizarAliados(b.aliados);
     ficha.aparencia = normalizarAparencia(b.aparencia, ficha.tipoFicha);
+    /* Ausente fica ausente (todos ligados); vazio fica vazio. */
+    var sup = normalizarSuplementos(b.suplementos, ficha.tipoFicha);
+    if (sup) ficha.suplementos = sup;
 
     return ficha;
+  }
+
+  /* A seleção de suplementos da ficha (v6.1): null quando ausente. Com o
+     cadastro carregado, só ids conhecidos do sistema; sem ele, guarda os
+     textos como vieram (nunca descarta em silêncio). */
+  function normalizarSuplementos(bruto, tipo) {
+    if (!Array.isArray(bruto)) return null;
+    var SUP = global.RAMASuplementos;
+    if (SUP) return SUP.normalizarSelecao(tipo, bruto);
+    return bruto.filter(function (v, i, t) { return typeof v === "string" && v.length <= 60 && t.indexOf(v) === i; }).slice(0, 40);
   }
 
   function normalizarRituais(bruto, opcoes) {

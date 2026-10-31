@@ -41,6 +41,37 @@ Dois registros, um em cada lado, que dizem a mesma coisa
   `sistema<Nome>()` no arquivo dele (`MODULOS_DE_SISTEMA`), pedida só quando
   usada — o Apps Script não garante a ordem dos arquivos.
 
+### Suplementos (v6.1)
+
+Conteúdo adicional de um sistema, habilitável por ficha e por campanha.
+Tudo em `js/suplementos.js` (`RAMASuplementos`), espelhado em
+`backend/Sistemas.gs` (`SUPLEMENTOS_DO_RAMA`; `testes/sistemas-backend.js`
+confere).
+
+- **Cadastro**: `{ id, sistema, fontes, nome, curto, descricao, capa, capaAlt }`.
+  `fontes` são as siglas que os catálogos do sistema já usam (Ordem: `SAH`,
+  `AS1`–`AS6`). `FERRAMENTAS` liga ferramentas/mecânicas de mesa a um
+  suplemento (Ordem: Hexatombe → AS2, Hacking → AS4, Perigos e Sincronia → AS5).
+- **Ficha**: `ficha.suplementos` — ausente = todos (fichas anteriores);
+  lista vazia = só o livro básico.
+- **Campanha**: `dados.suplementos[sistema]` — o que a mesa permite, por
+  sistema (trocar o sistema não apaga). Salvo por `salvar_campanha` com
+  `{ suplementos: { sistema, ids } }` (só o mestre); devolvido por
+  `ler_campanha` e `listar_campanhas`.
+- **Contexto**: cada página chama `definirContexto({ sistema, ficha, campanha })`;
+  `fonteLiberada(sistema, fonte)` responde para NOVAS escolhas (ficha ∩
+  campanha). Fonte sem suplemento (livro básico, EXTRA, Homebrew, sem fonte)
+  vale sempre.
+- **Componente**: `painel({ sistema, selecao, aoMudar, campanha, emUso, somenteLeitura })`
+  e a janela `abrir(...)` — a escolha do tipo de ficha, "Opções da ficha →
+  Suplementos" e Configurações da campanha usam o mesmo.
+- **Servidor**: `exigirSuplemento(ctx, ferramenta, corpo)` recusa iniciar e
+  operar uma ferramenta de suplemento desligado na campanha
+  (`suplemento_desligado`); ler e desligar a mecânica continuam permitidos.
+
+Um sistema novo com suplementos: entradas no cadastro (os dois lados) e, nos
+catálogos dele, a pergunta `fonteLiberada` nas listas de escolha.
+
 ### Os ganchos do servidor
 
 | Gancho | Quem chama | Ordem | Oblívio | Vampiro | Goblins | Universal |

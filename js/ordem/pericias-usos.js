@@ -372,7 +372,21 @@
     return nome + (pagina ? ", p. " + pagina : "");
   }
 
-  function consulta(chave) { return PERICIAS_USOS[chave] || null; }
+  /* Suplementos (v6.1): os usos de um suplemento desligado no contexto
+     da tela saem da consulta; `desligados` diz quantos e de onde, para a
+     janela avisar. { incluirDesligados: true } devolve tudo. */
+  function consulta(chave, opcoes) {
+    var d = PERICIAS_USOS[chave];
+    if (!d) return null;
+    var C = global.RAMAOrdemCatalogo;
+    if ((opcoes && opcoes.incluirDesligados) || !C || !C.fonteLiberada) return d;
+    var fora = [];
+    function vale(u) { var ok = C.fonteLiberada(u.fonte || "OPRPG"); if (!ok && fora.indexOf(u.fonte) < 0) fora.push(u.fonte); return ok; }
+    var usos = d.usos.filter(vale);
+    var esp = (d.especificos || []).filter(vale);
+    if (!fora.length) return d;
+    return Object.assign({}, d, { usos: usos, especificos: esp, desligados: fora });
+  }
 
   global.RAMAOrdemPericiasUsos = {
     PERICIAS_USOS: PERICIAS_USOS,

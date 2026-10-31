@@ -407,6 +407,7 @@
       el("dl.r-dados", {}, linhas.reduce(function (saida, par) {
         return saida.concat([el("dt", { texto: par[0] }), el("dd", { texto: par[1] })]);
       }, [])),
+      avisoDeSuplementos(ctx),
       editarCampanha ? global.RAMASecaoGeral.campoCampanha(ctx) : null,
       /* Trocar a origem (v2.23): no modo edição, com as perícias mostradas
          antes de confirmar. O poder mora na aba Habilidades (v2.22). */
@@ -417,6 +418,21 @@
           })])
         : null,
     ]));
+  }
+
+  /* Suplementos (v6.1): o que a ficha usa de um suplemento desligado
+     continua valendo — o aviso diz o quê e por quê, sem tirar nada. */
+  function avisoDeSuplementos(ctx) {
+    var FU = global.RAMAOrdemFontesEmUso;
+    if (!FU) return null;
+    var l = FU.desligadosEmUso(ctx.ficha);
+    if (!l.length) return null;
+    return el("div.suplementos-em-uso", { role: "note" }, [
+      el("p.t-mini", { texto: "Em uso, de suplemento desligado para novas escolhas (continua valendo):" }),
+      el("ul.suplementos-em-uso__lista", {}, l.map(function (x) {
+        return el("li.t-mini", {}, [el("strong", { texto: x.nome + ": " }), el("span", { texto: x.itens.join("; ") })]);
+      })),
+    ]);
   }
 
   /* =================================================================

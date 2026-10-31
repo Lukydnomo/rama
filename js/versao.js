@@ -118,6 +118,25 @@
 
   var CHANGELOG = [
     {
+      versao: "6.1.0",
+      codinome: "ESTANTE",
+      data: "31/10/2026",
+      mudancas: {
+        "Adicionado": [
+          "Suplementos habilitáveis. Ao escolher Ordem Paranormal numa ficha nova, os sete suplementos saem de trás do livro básico, cada um com capa, descrição e um switch: Sobrevivendo ao Horror e os Arquivos Secretos 1 a 6 (o 3 é Hexatombe — Parte II). Todos começam ligados; “Só o livro básico” desliga todos.",
+          "A seleção vale para as novas escolhas da ficha: origens, classes, trilhas, poderes, rituais, itens, modificações, maldições, criaturas, usos de perícia e regras opcionais. Muda depois em Opções da ficha → Suplementos.",
+          "Na campanha, o mestre escolhe os suplementos permitidos (Configurações → Suplementos), guardados por sistema. Nas fichas da campanha vale o que as duas permitem; Hexatombe, Hacking, Perigos e Sincronia não iniciam com o suplemento deles desligado.",
+        ],
+        "Melhorado": [
+          "Nada some: o que a ficha já usa de um suplemento desligado continua valendo e aparece na Identidade, com a fonte. Ligar um suplemento não liga nenhuma regra opcional nem mecânica de mesa.",
+          "Capas dos suplementos recortadas sem margem branca.",
+        ],
+        "Técnico": [
+          "Módulo js/suplementos.js (cadastro, seleção, contexto e o componente), espelhado em backend/Sistemas.gs. Ficha no schema 28 com `suplementos` (ausente = todos; vazio = só o livro básico). Erro novo suplemento_desligado. Precisa do site e do Apps Script novo (sem setupRama).",
+        ],
+      },
+    },
+    {
       versao: "6.0.0",
       codinome: "ESTOPIM",
       data: "31/10/2026",

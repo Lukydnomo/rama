@@ -158,6 +158,11 @@
     estado.papel = r.dados.papel;
     estado.mestre = !!r.dados.mestre;
     estado.membros = r.dados.membros || [];
+    /* Suplementos (v6.1): na página da campanha vale o que a mesa permite
+       (a criatura do combate, a biblioteca, as ferramentas). */
+    var SUP = global.RAMASuplementos;
+    var sis = r.dados.sistema || "";
+    if (SUP) SUP.definirContexto({ sistema: sis, campanha: SUP.daCampanha(r.dados.suplementos, sis) === null ? undefined : SUP.daCampanha(r.dados.suplementos, sis) });
   }
 
   /* A capa guardada na memória, se a resposta for da versão que a campanha
@@ -910,6 +915,8 @@
       return el("div.pilha--larga", { class: "pilha" }, [
         UI.painel("Sistema da campanha", sistemaDaCampanha(ctx)),
 
+        painelDeSuplementos(ctx),
+
         UI.painel("Campanha", el("div.pilha", {}, [
           nome,
           descricao,
@@ -949,6 +956,46 @@
     },
   };
 
+  /* =================================================================
+     SUPLEMENTOS DA CAMPANHA (v6.1)
+     -----------------------------------------------------------------
+     O que a mesa permite nas escolhas feitas nela, guardado POR
+     SISTEMA: trocar o sistema da campanha não apaga a escolha do outro.
+     Não regrava ficha nenhuma (cada ficha tem a sua seleção); o que vale
+     numa ficha da campanha é a interseção. Ligar um suplemento não liga
+     mecânica nenhuma; desligar impede iniciar e operar as dele.
+     ================================================================= */
+
+  function painelDeSuplementos(ctx) {
+    var SUP = global.RAMASuplementos;
+    var sistema = ctx.sistema().sistema;
+    if (!SUP || !SUP.temSuplementos(sistema.id)) return null;
+    var atual = SUP.daCampanha(ctx.campanha.suplementos, sistema.id);
+    var rascunho = SUP.ativos(sistema.id, atual);
+    var p = SUP.painel({ sistema: sistema.id, selecao: rascunho, aoMudar: function (s) { rascunho = s; } });
+    return UI.painel("Suplementos", el("div.pilha", {}, [
+      el("p.t-mini", { texto: "Os suplementos que valem nas escolhas feitas nesta campanha — origens, poderes, rituais, itens, criaturas, usos de perícia e as ferramentas da mesa. Cada ficha continua com a própria seleção: na campanha, vale o que as duas permitem. O que já está em uso continua valendo." + (atual === null ? " Hoje: todos permitidos (o padrão)." : "") }),
+      p,
+      el("div.faixa", {}, [
+        el("button.r-botao.r-botao--principal", { type: "button", texto: "Salvar suplementos", onclick: function (ev) { salvarSuplementos(ctx, ev.currentTarget, sistema.id, rascunho); } }),
+      ]),
+    ]));
+  }
+
+  async function salvarSuplementos(ctx, botao, sistema, ids) {
+    var r = await UI.ocupar(botao, function () {
+      return global.RAMAApi.salvarCampanha(ctx.campanhaId, ctx.rev, { suplementos: { sistema: sistema, ids: ids } });
+    }, { rotulo: "Salvando…" });
+    if (!r || r.ignorado) return;
+    if (!r.ok) {
+      if (r.erro === "conflito") { UI.avisoAtencao("A campanha foi alterada em outro lugar. Recarregando para você conferir."); await ctx.recarregar(); return; }
+      UI.avisoDeFalha(r, "gravação dos suplementos");
+      return;
+    }
+    UI.avisoOk("Suplementos da campanha atualizados. As fichas continuam com as próprias escolhas.");
+    await ctx.recarregar();
+  }
+
   function camposDoFormulario(c) {
     return JSON.stringify([c.nome, c.descricao, c.visibilidade, !!c.rolagensMestreOcultas]);
   }
@@ -984,13 +1031,20 @@
     }).filter(function (m) {
       return global[m.modulo] && global[m.modulo].definirAtivo;
     }).map(function (m) {
+      /* Suplemento desligado na campanha: não se liga (desligar continua
+         permitido — e o que estava registrado fica guardado). */
+      var SUP = global.RAMASuplementos;
+      var dono = SUP ? SUP.daFerramenta(sistema.id, m.chave) : null;
+      var travada = !!dono && !SUP.ferramentaLiberada(sistema.id, m.chave, SUP.daCampanha(ctx.campanha.suplementos, sistema.id));
       var entrada = el("input", {
         type: "checkbox",
         checked: !!ctx.campanha[m.chave],
+        disabled: travada && !ctx.campanha[m.chave],
         onchange: function () { alternarMecanica(ctx, m, entrada); },
       });
       marcas[m.chave] = entrada;
       return el("div.pilha--curta", { class: "pilha" }, [
+        travada ? el("p.t-mini.t-aviso", { texto: dono.nome + " está desligado nesta campanha: " + (ctx.campanha[m.chave] ? "dá para consultar e desligar, mas não operar." : "ligue o suplemento acima para usar esta mecânica.") }) : null,
         el("label.r-marca", {}, [
           entrada,
           el("span", {}, [

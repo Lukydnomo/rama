@@ -122,6 +122,24 @@
   function ehAvulsa(sigla) { return !!(LIVROS.filter(function (l) { return l.sigla === sigla; })[0] || {}).avulsa; }
   function curtoDoLivro(sigla) { return livro(sigla || OPRPG).curto; }
 
+  /* Suplementos (v6.1): a fonte vale para NOVAS escolhas no contexto da
+     tela (a ficha ∩ a campanha — js/suplementos.js)? O livro básico,
+     EXTRA, Homebrew e o que não tem fonte valem sempre. Nada aqui tira o
+     que a ficha já tem: é só para listas de escolha. */
+  function fonteDe(x) {
+    if (!x) return "";
+    if (typeof x === "string") return x.toUpperCase();
+    return String(x.fonte || x.livro || "").toUpperCase();
+  }
+  function fonteLiberada(x) {
+    var S = global.RAMASuplementos;
+    return !S || S.fonteLiberada("ordem", fonteDe(x) || OPRPG);
+  }
+  function motivoDaFonte(x) {
+    var S = global.RAMASuplementos;
+    return S ? S.motivo("ordem", fonteDe(x) || OPRPG) : "";
+  }
+
   /* =================================================================
      ATRIBUTOS — OPRPG p.14-15
      ================================================================= */
@@ -1345,6 +1363,7 @@
   global.RAMAOrdemCatalogo = {
     FONTES: { OPRPG: OPRPG, SAH: SAH, AS1: AS1, AS2: AS2, AS3: AS3, AS4: AS4, AS5: AS5, AS6: AS6, EXTRA: EXTRA },
     LIVROS: LIVROS,
+    fonteDe: fonteDe, fonteLiberada: fonteLiberada, motivoDaFonte: motivoDaFonte,
     ehAvulsa: ehAvulsa,
     mapaDosLivros: mapaDosLivros,
     livro: livro,

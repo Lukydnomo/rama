@@ -253,6 +253,13 @@
      há faixa de VD escolhida.
      ================================================================= */
 
+  /* Suplemento desligado (v6.1, js/suplementos.js): fora das NOVAS
+     escolhas. O que a ficha já tem não passa por aqui. */
+  function liberada(fonte) {
+    var Cat = global.RAMAOrdemCatalogo;
+    return !Cat || !Cat.fonteLiberada || Cat.fonteLiberada(fonte);
+  }
+
   function filtrar(indice, filtros) {
     var f = filtros || {};
     var termo = busca(f.busca);
@@ -264,6 +271,7 @@
     return (indice || []).filter(function (x) {
       if (termo && x.chave.indexOf(termo) < 0) return false;
       if (f.livro && x.livro !== f.livro) return false;
+      if (!f.incluirDesligados && !liberada(x.livro)) return false;
       if (f.natureza && x.natureza !== f.natureza) return false;
       if (elementos.length) {
         /* "transmissao" é manifestação (AS5 p. 46), não elemento: acha as

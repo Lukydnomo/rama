@@ -328,6 +328,7 @@
           });
         }
         ctx.alterou();
+        aplicarSuplementos();
         atualizarTitulo();
       },
     };
@@ -556,9 +557,47 @@
     return el("div.ficha__regiao", { dataset: { regiao: nome } }, conteudoDaRegiao(nome, secao));
   }
 
+  /* Suplementos (v6.1): o que vale para as NOVAS escolhas desta ficha —
+     a seleção dela ∩ o que a campanha dela permite. Os catálogos
+     perguntam a RAMASuplementos; nada que a ficha já tem é tocado. */
+  function campanhaDaFicha() { return estado.ficha && estado.ficha.campanhaId ? U.porId(estado.campanhas, estado.ficha.campanhaId) : null; }
+  function aplicarSuplementos() {
+    var SUP = global.RAMASuplementos;
+    if (!SUP || !estado.ficha) return;
+    var tipo = F.sistemaDe(estado.ficha).id;
+    var camp = campanhaDaFicha();
+    SUP.definirContexto({ sistema: tipo, ficha: estado.ficha.suplementos === undefined ? undefined : estado.ficha.suplementos, campanha: camp ? SUP.daCampanha(camp.suplementos, tipo) : undefined });
+  }
+
+  function abrirSuplementos() {
+    var SUP = global.RAMASuplementos;
+    var tipo = F.sistemaDe(estado.ficha).id;
+    var camp = campanhaDaFicha();
+    var daMesa = camp ? SUP.daCampanha(camp.suplementos, tipo) : null;
+    SUP.abrir({
+      sistema: tipo,
+      selecao: estado.ficha.suplementos === undefined ? null : estado.ficha.suplementos,
+      campanha: daMesa,
+      emUso: tipo === "ordem" && global.RAMAOrdemFontesEmUso ? global.RAMAOrdemFontesEmUso.porSuplemento(estado.ficha) : null,
+      somenteLeitura: somenteLeitura(),
+      titulo: "Suplementos de " + estado.ficha.nome,
+      texto: somenteLeitura() ? "Só quem pode editar a ficha muda os suplementos." : "Escolha os suplementos que valem para as novas escolhas desta ficha." + (camp ? " Na campanha " + camp.nome + ", vale também o que a mesa permite." : ""),
+      aoSalvar: function (sel) {
+        if (somenteLeitura()) return false;
+        estado.ficha.suplementos = sel;
+        ctx.alterou();
+        aplicarSuplementos();
+        ctx.redesenhar();
+        UI.aviso("Suplementos atualizados. O que a ficha já tinha continua como estava.");
+        return true;
+      },
+    });
+  }
+
   function desenhar() {
     var m = medicao();
     var inicio = m ? m.agora() : 0;
+    aplicarSuplementos();
     sincronizarTema();
     var alvo = U.$("#ficha");
     var memoria = lembrarTela(estado.raiz);
@@ -763,7 +802,9 @@
             : null,
           UI.menu([
             { rotulo: "Exportar ficha", aoClicar: exportar },
-          ].concat(estado.salvador && !somenteLeitura() ? [
+          ].concat(global.RAMASuplementos && global.RAMASuplementos.temSuplementos(sistemaDaFicha().id) ? [
+            { rotulo: "Suplementos…", aoClicar: abrirSuplementos },
+          ] : []).concat(estado.salvador && !somenteLeitura() ? [
             { rotulo: "Salvar agora", aoClicar: function () { estado.salvador.agora(); } },
           ] : []).concat(!PAINEL && estado.capacidades.gerenciar && !estado.revogado ? [
             { rotulo: "Compartilhar…", aoClicar: function () { abrirCompartilhamento(); } },

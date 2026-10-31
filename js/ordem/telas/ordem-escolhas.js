@@ -185,7 +185,7 @@
 
     var grupoFonte = el("div.filtros__grupo", { role: "group", "aria-label": "Livro" }, [
       botaoFiltro("Todos os livros", !f.fonte, function () { f.fonte = ""; sessao.pintar(); }),
-    ].concat(C.LIVROS.map(function (l) {
+    ].concat(C.LIVROS.filter(function (l) { return !C.fonteLiberada || C.fonteLiberada(l.sigla) || f.fonte === l.sigla; }).map(function (l) {
       return botaoFiltro(l.curto, f.fonte === l.sigla, function () { f.fonte = l.sigla; sessao.pintar(); });
     })));
 
@@ -643,7 +643,7 @@
         var campoO = UI.campo({
           rotulo: op.rotulo, tipo: "selecao", valor: atual || "",
           opcoes: [{ valor: "", rotulo: "Escolha uma origem" }].concat(C.ORIGENS.filter(function (x) {
-            return x.chave !== ordem.origem;
+            return x.chave !== ordem.origem && (x.chave === atual || !C.fonteLiberada || C.fonteLiberada(x));
           }).map(function (x) { return { valor: x.chave, rotulo: x.nome + " — " + x.poder }; })),
           aoMudar: function (v) { valores[op.chave] = v; sessao.pintar(); },
         });

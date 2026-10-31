@@ -943,6 +943,11 @@
       titulo: "FERRAMENTA DE OUTRO SISTEMA",
       texto: "Esta ferramenta não é do sistema que a campanha usa agora. Nada foi apagado: ela fica guardada e volta se a campanha voltar ao sistema dela. Recarregue a página.",
     },
+    /* v6.1 — a ferramenta é de um suplemento que a campanha desligou. */
+    suplemento_desligado: {
+      titulo: "SUPLEMENTO DESLIGADO",
+      texto: "Esta ferramenta é de um suplemento que a campanha não permite agora. O que já foi registrado continua guardado e pode ser consultado; o mestre liga o suplemento em Configurações → Suplementos.",
+    },
     /* v2.48 — Sincronia Conectiva (AS5). */
     sem_sincronia: {
       titulo: "SEM SINCRONIA",

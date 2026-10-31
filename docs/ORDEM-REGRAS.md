@@ -2975,6 +2975,38 @@ Fonte `AS6`, com páginas (não é Extra). Estado em `js/ordem/arquivo6.js`; tel
 - **Evolução Modular**: utilidade nos degraus pares (10%, 20%… 99%), combate nos ímpares a partir de 15%; ambíguos listados em `AMBIGUOS_MODULARES` (js/ordem/poderes.js), reclassificáveis na ficha. Com NEX & Experiência, por nível; Mundano/Sobrevivente sem vagas. A redução de proporção sugerida pelo autor fica com a mesa.
 
 
+## Suplementos habilitáveis (v6.1)
+
+Os sete suplementos (SAH, AS1–AS6) são habilitados por ficha e por campanha
+(`js/suplementos.js`). O que a seleção alcança, sempre pelas **novas escolhas**:
+
+| Onde | Como |
+|---|---|
+| Criação guiada | perfil Sobrevivente (SAH), origens por livro, revisão (progressão) |
+| Progressão (`progressao.js`) | poderes, trilhas e habilidades de trilha de fonte desligada ficam à vista, indisponíveis, com o motivo |
+| Biblioteca de habilidades (`biblioteca.js`) | entradas e filtro de livro |
+| Rituais, itens (modificações e maldições), criaturas e aliados | `filtrar` dos catálogos (`incluirDesligados` traz tudo) |
+| Trocar origem, escolha de origem em poderes | só fontes liberadas (a atual fica) |
+| Usos de perícia (`pericias-usos.js`) | usos e "usos em regras específicas" de fonte desligada saem, com aviso na janela |
+| Regras opcionais (`opcionais.js`) | não ligam com o suplemento desligado; ligar o suplemento não liga a regra |
+| Campanha | Hexatombe (AS2), Hacking (AS4), Perigos e Sincronia (AS5): não iniciam nem operam; o estado continua legível |
+
+O que a ficha já tem (origem, poderes, regras, rituais e itens de catálogo)
+continua valendo; `js/ordem/fontes-em-uso.js` levanta o que está em uso por
+fonte e a ficha avisa na Identidade. A fonte vem dos metadados (`fonte` /
+`livro` do catálogo; ritual e item pelo `origemCatalogoId`). Nos catálogos de
+classes, trilhas e origens, a ausência de `fonte` já significava livro básico
+(convenção anterior, `fonte || "OPRPG"`), e continua assim.
+
+**Lacunas registradas:** itens, habilidades e rituais escritos à mão (sem
+`origemCatalogoId`) e criaturas personalizadas não têm fonte e não são
+atribuídos a suplemento; as seções dos Arquivos Secretos na ficha
+(`ficha-arquivo*.js`) continuam mostrando o que já está registrado e não foram
+travadas uma a uma — o que elas concedem passa pelas regras opcionais e pela
+progressão, que já respeitam a seleção. Não houve dependência entre
+suplementos que exigisse cadastro (as dependências de AS3 sobre o Hexatombe do
+AS2 são de regra, declaradas em `opcionais.js` e explicadas no conflito).
+
 ## Usos das perícias — consulta (v5.4)
 
 Clicar no **nome** de uma perícia na ficha de Ordem abre a descrição e os usos

@@ -4842,6 +4842,7 @@ await testarOblivioBackend({ t, preparar, novaConta, comoFn, chamar });
 /* A plataforma e os sistemas (v4.0): o registro do site entra para o
    teste conferir que os dois lados dizem o mesmo. */
 (0, eval)(await Deno.readTextFile(new URL("../js/sistemas.js", import.meta.url)));
+(0, eval)(await Deno.readTextFile(new URL("../js/suplementos.js", import.meta.url)));
 const { testarSistemasBackend } = await import("./sistemas-backend.js");
 await testarSistemasBackend({ t, preparar, novaConta, comoFn });
 const { testarVampiroBackend } = await import("./vampiro-backend.js");

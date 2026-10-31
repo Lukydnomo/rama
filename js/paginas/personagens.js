@@ -1135,13 +1135,27 @@
      em js/ficha.js. Por isso a tela diz isso aqui, antes, e não depois
      de já ser tarde. */
   function abrirEscolhaDeTipo() {
+    var SUP = global.RAMASuplementos;
+    /* Suplementos (v6.1): o rascunho da seleção de cada sistema vale até
+       a janela fechar — trocar de sistema e voltar não perde nada. Na
+       criação nova, todos começam ligados. */
+    var rascunhos = {};
+    var aberto = "";
+    var grade;
+
     /* v3.0: cada cartão leva a capa do livro do sistema ao lado do nome
-       (js/capa-sistema.js) — decorativa: o nome já está escrito. */
+       (js/capa-sistema.js) — decorativa: o nome já está escrito. O cartão
+       continua sendo UM botão; os switches dos suplementos ficam no
+       painel ao lado, nunca dentro dele. */
     function cartao(o) {
       var capa = o.sistema && global.RAMACapaSistema ? global.RAMACapaSistema.elemento(o.sistema, { tamanho: "m" }) : null;
+      var comSuplementos = !!(SUP && SUP.temSuplementos(o.sistema));
       return el("button.tipo-ficha", {
         type: "button",
+        id: "tipo-ficha-" + o.sistema,
         dataset: { sistema: o.sistema || "" },
+        "aria-expanded": comSuplementos ? "false" : null,
+        "aria-controls": comSuplementos ? "suplementos-de-" + o.sistema : null,
         onclick: function () { if (o.aoEscolher) o.aoEscolher(); },
       }, [
         el("span.tipo-ficha__cabeca", {}, [
@@ -1154,7 +1168,38 @@
         el("ul.tipo-ficha__lista", {}, o.pontos.map(function (t) {
           return el("li", { texto: t });
         })),
+        comSuplementos ? el("span.tipo-ficha__suplementos", { texto: SUP.doSistema(o.sistema).length + " suplementos — escolha antes de continuar" }) : null,
       ]);
+    }
+
+    /* Abre (ou fecha) os suplementos do sistema logo depois do cartão
+       dele, com os volumes saindo de trás do livro. */
+    function alternarSuplementos(s) {
+      var antes = grade.querySelector(".tipos-ficha__suplementos");
+      if (antes) antes.remove();
+      U.$$(".tipo-ficha", grade).forEach(function (b) {
+        b.classList.remove("tipo-ficha--escolhido");
+        if (b.hasAttribute("aria-expanded")) b.setAttribute("aria-expanded", "false");
+      });
+      if (aberto === s.id) { aberto = ""; return; }
+      aberto = s.id;
+      if (!rascunhos[s.id]) rascunhos[s.id] = SUP.ids(s.id);
+      var botao = grade.querySelector("#tipo-ficha-" + s.id);
+      botao.classList.add("tipo-ficha--escolhido");
+      botao.setAttribute("aria-expanded", "true");
+      var p = SUP.painel({ sistema: s.id, selecao: rascunhos[s.id], aoMudar: function (sel) { rascunhos[s.id] = sel; } });
+      var area = el("section.tipos-ficha__suplementos", { id: "suplementos-de-" + s.id, "aria-label": "Suplementos de " + s.nome }, [
+        el("h3.t-secao", { texto: "Suplementos de " + s.nome }),
+        el("p.t-mini", { texto: "O livro básico vale sempre. Os suplementos ligados ficam disponíveis para as escolhas da ficha — dá para mudar depois em Opções da ficha → Suplementos. Ligar um suplemento não liga regra opcional nenhuma." }),
+        p,
+        el("div.faixa.tipos-ficha__continuar", {}, [
+          el("button.r-botao.r-botao--fantasma", { type: "button", texto: "Fechar suplementos", onclick: function () { alternarSuplementos(s); botao.focus(); } }),
+          el("button.r-botao.r-botao--principal", { type: "button", texto: "Continuar com " + s.curto, onclick: function () { m.fechar(); CRIACOES[s.id]({ suplementos: rascunhos[s.id].slice() }); } }),
+        ]),
+      ]);
+      botao.insertAdjacentElement("afterend", area);
+      p.animar();
+      if (area.scrollIntoView) area.scrollIntoView({ block: "nearest", behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
     }
 
     var m = UI.modal({
@@ -1163,7 +1208,7 @@
       conteudo: [
         /* Os sistemas do registro (js/sistemas.js), na ordem dele: cada
            um com a criação que tiver nesta página (CRIACOES). */
-        el("div.tipos-ficha", {}, global.RAMASistemas.lista().filter(function (s) {
+        (grade = el("div.tipos-ficha", {}, global.RAMASistemas.lista().filter(function (s) {
           return !!CRIACOES[s.id];
         }).map(function (s) {
           return cartao({
@@ -1171,9 +1216,13 @@
             nome: s.nome,
             resumo: s.resumo,
             pontos: s.ficha.pontos || [],
-            aoEscolher: function () { m.fechar(); CRIACOES[s.id](); },
+            /* Com suplementos, o clique abre a seleção; sem, segue direto. */
+            aoEscolher: function () {
+              if (SUP && SUP.temSuplementos(s.id)) { alternarSuplementos(s); return; }
+              m.fechar(); CRIACOES[s.id]();
+            },
           });
-        })),
+        }))),
         el("p.t-mini", {
           texto: "A escolha fica gravada na ficha e não muda depois. Não existe conversão " +
                  "automática entre os modelos: ela teria de adivinhar o que vira o quê, " +
@@ -1189,7 +1238,7 @@
   /* A criação de cada sistema, pelo id do registro. Um sistema novo
      entra com a dele aqui. */
   var CRIACOES = {
-    ordem: function () { return abrirCriacaoOrdem(); },
+    ordem: function (opcoes) { return abrirCriacaoOrdem(opcoes); },
     oblivio: function () { return abrirCriacaoOblivio(); },
     vampiro: function () { return abrirCriacaoVampiro(); },
     goblins: function () { return abrirCriacaoGoblins(); },
@@ -1198,7 +1247,7 @@
 
   /* Abre a criação guiada de Ordem, se o módulo dela estiver carregado.
      Sem ele, a tela diz o que falta em vez de não fazer nada. */
-  async function abrirCriacaoOrdem() {
+  async function abrirCriacaoOrdem(opcoes) {
     if (!global.RAMAOrdemCriar) {
       UI.avisoErro("A criação de Ordem Paranormal não está disponível nesta página.");
       return;
@@ -1206,7 +1255,7 @@
     var campanhas = [];
     var r = await global.RAMAApi.listarCampanhas();
     if (r.ok) campanhas = r.dados || [];
-    global.RAMAOrdemCriar.abrir({ campanhas: campanhas });
+    global.RAMAOrdemCriar.abrir({ campanhas: campanhas, suplementos: opcoes && opcoes.suplementos });
   }
 
   /* A criação guiada de Oblívio (v3.0), do mesmo jeito. */

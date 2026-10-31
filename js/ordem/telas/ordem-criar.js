@@ -77,6 +77,7 @@
   function abrir(opcoes) {
     var o = opcoes || {};
     var campanhas = o.campanhas || [];
+    var SUP = global.RAMASuplementos;
 
     /* O rascunho. Nada é gravado até a última etapa. */
     var d = {
@@ -112,7 +113,22 @@
          antes de a ficha existir — aqui. Eles vão inteiros para a ficha
          em `gravar`, com o vínculo que as escolhas já guardam. */
       rituais: [],
+      /* Suplementos (v6.1): a seleção feita na escolha do tipo de ficha
+         (sempre uma lista explícita na criação; vazia = só o livro
+         básico). Vale para as escolhas desta criação e vai para a ficha. */
+      suplementos: SUP ? SUP.ativos("ordem", Array.isArray(o.suplementos) ? o.suplementos : null) : [],
     };
+
+    /* O que vale aqui: a seleção da criação ∩ o que a campanha escolhida
+       permite. Todas as listas perguntam a C.fonteLiberada. */
+    function aplicarSuplementos() {
+      if (!SUP) return;
+      var camp = campanhas.filter(function (c) { return c.id === d.campanhaId; })[0];
+      SUP.definirContexto({ sistema: "ordem", ficha: d.suplementos, campanha: camp ? SUP.daCampanha(camp.suplementos, "ordem") : undefined });
+    }
+    aplicarSuplementos();
+
+    function liberada(x, atual) { return !C.fonteLiberada || C.fonteLiberada(x) || (atual && x.chave === atual); }
 
     var etapa = 0;
     var corpo = el("div.pilha", {});
@@ -216,6 +232,7 @@
       if (campoConceito) d.conceito = campoConceito.entrada.value.trim();
       if (campoCampanha) d.campanhaId = campoCampanha.entrada.value || "";
       if (campoEstagio) d.estagio = R.estagioValido(campoEstagio.entrada.value);
+      aplicarSuplementos();
     }
 
     function escolherPerfil(chave) {
@@ -258,14 +275,17 @@
         el("h4.t-secao", { texto: "Perfil de progressão" }),
         el("div.criacao-lista.criacao-perfis", { role: "group", "aria-label": "Perfil de progressão" }, PERFIS.map(function (pf) {
           var marcado = d.perfil === pf.chave;
+          var cl = C.classe(pf.chave);
+          var fora = !!cl && !marcado && !liberada(cl);
           return el("button.criacao-opcao", {
             type: "button", id: "criacao-perfil-" + pf.chave,
             "aria-pressed": String(marcado), class: marcado ? "criacao-opcao--escolhida" : "",
+            disabled: fora, title: fora ? C.motivoDaFonte(cl) : "",
             onclick: function () { escolherPerfil(pf.chave); },
           }, [
             el("span.criacao-opcao__nome", { texto: pf.nome }),
             el("span.criacao-opcao__texto", { texto: pf.texto }),
-            el("span.criacao-opcao__fonte", { texto: pf.fonte }),
+            el("span.criacao-opcao__fonte", { texto: pf.fonte + (fora ? " · suplemento desligado" : "") }),
           ]);
         })),
         ajustes.length && (d.origem || d.periciasEscolhidas.length || somaDeAtributosMexida())
@@ -339,6 +359,20 @@
         seletorDePerfil(),
         comum() && !separaNivel() ? el("p.t-mini", { texto: (d.perfil === "mundano" ? "O Mundano" : "O Sobrevivente") + " começa em NEX 0% — e o NEX não sobe até o treinamento que o torna agente." }) : null,
         el("div.editar-grade", {}, [campoCampanha, campoEstagio, campoNex, campoExposicao]),
+        SUP ? seletorDeSuplementos() : null,
+      ]);
+    }
+
+    /* A seleção da escolha do tipo, ajustável aqui sem gravar nada. */
+    function seletorDeSuplementos() {
+      var total = SUP.doSistema("ordem").length;
+      var n = d.suplementos.length;
+      return el("div.faixa.criacao-suplementos", {}, [
+        el("span.t-mini", { texto: "Suplementos: " + (n === total ? "todos os " + total + " ligados" : !n ? "só o livro básico" : n + " de " + total + " ligados") + "." }),
+        el("button.r-botao.r-botao--mini", { type: "button", texto: "Suplementos…", onclick: function () {
+          guardarCamposDoConceito();
+          SUP.abrir({ sistema: "ordem", selecao: d.suplementos, titulo: "Suplementos desta ficha", aoSalvar: function (sel) { d.suplementos = sel; aplicarSuplementos(); pintar(); } });
+        } }),
       ]);
     }
 
@@ -355,6 +389,7 @@
       d.nome = campoNome.entrada.value.trim();
       d.conceito = campoConceito.entrada.value.trim();
       d.campanhaId = campoCampanha.entrada.value || "";
+      aplicarSuplementos();
       if (campoEstagio) d.estagio = R.estagioValido(campoEstagio.entrada.value);
       if (comum()) {
         /* NEX 0%: sem campo. Com NEX & Experiência, a exposição continua
@@ -474,8 +509,9 @@
     function etapaOrigem() {
       var termoAntes = buscaOrigem ? buscaOrigem.entrada.value : "";
       buscaOrigem = UI.campo({ rotulo: "Buscar origem", valor: termoAntes, limite: 40, dica: "nome da origem ou do poder" });
+      var origens = C.ORIGENS.filter(function (org) { return liberada(org, d.origem); });
       var livros = C.LIVROS.filter(function (l) {
-        return C.ORIGENS.some(function (org) { return (org.fonte || "OPRPG") === l.sigla; });
+        return origens.some(function (org) { return (org.fonte || "OPRPG") === l.sigla; });
       });
       if (!abaOrigem) {
         var escolhida = C.origem(d.origem);
@@ -487,7 +523,7 @@
 
       function achadas() {
         var termo = U.chaveDeBusca(buscaOrigem.entrada.value);
-        return C.ORIGENS.filter(function (org) {
+        return origens.filter(function (org) {
           return !termo || U.chaveDeBusca(org.nome + " " + org.poder).indexOf(termo) >= 0;
         });
       }
@@ -1171,6 +1207,7 @@
         classe: cl ? cl.nome : "",
         origem: org ? org.nome : "",
         campanhaId: d.campanhaId || null,
+        suplementos: d.suplementos.slice(),
       });
 
       ficha.ordem = ordem;
@@ -1231,6 +1268,7 @@
       largo: true,
       conteudo: [corpo, rodapeInfo],
       botoes: [{ rotulo: "Cancelar", classe: "r-botao--fantasma" }],
+      aoFechar: function () { if (SUP) SUP.definirContexto({}); },
     });
 
     var rodape = m.janela.querySelector(".r-modal__rodape");

@@ -694,6 +694,15 @@
     box-shadow: 1px 0 0 color-mix(in srgb, var(--cor-texto) 10%, transparent), var(--m20-sombra-1), 0 6px 14px -8px color-mix(in srgb, var(--cor-sombra) 70%, transparent);
   }
   & .capa-sistema--sem-capa { background: var(--m20-realce-forte); }
+
+  /* Suplementos (v6.1): os mesmos volumes, com canto e sombra suaves. */
+  & .tipo-ficha--escolhido { border-color: var(--cor-foco); box-shadow: inset 0 0 0 1px var(--cor-foco), var(--m20-sombra-1); }
+  & .tipos-ficha__suplementos { border-radius: var(--m20-raio-cartao); border-color: var(--cor-traco-media); box-shadow: var(--m20-sombra-2); }
+  & .suplemento { border-radius: var(--m20-raio-cartao); border-color: var(--m20-borda); }
+  & .suplemento--ligado { border-color: var(--cor-foco); background: var(--m20-selecao-suave); box-shadow: var(--m20-sombra-1); }
+  & .suplemento__trilho { border-radius: 999px; border-color: var(--m20-borda-controle); }
+  & .suplemento__botao { border-radius: 50%; }
+  & .suplementos-em-uso { border-radius: var(--m20-raio-controle); background: var(--m20-aviso-suave); }
   & .tipo-ficha:hover .capa-sistema,
   & .tipo-ficha:focus-visible .capa-sistema { box-shadow: 1px 0 0 color-mix(in srgb, var(--cor-texto) 10%, transparent), var(--m20-sombra-2); }
 

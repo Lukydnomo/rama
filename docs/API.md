@@ -1,5 +1,16 @@
 # A API
 
+## Suplementos — v6.1
+
+- `salvar_campanha { dados: { suplementos: { sistema, ids } } }` — só o mestre.
+  `ids` lista (vazia = só o livro básico) ou `null` (volta ao padrão: todos).
+  Muda só o sistema pedido. Sistema sem suplementos: `dados_invalidos`.
+- `ler_campanha` e `listar_campanhas` trazem `suplementos` (mapa por sistema).
+- `salvar_hexatombe`, `lancar_hexatombe`, `salvar_hacking`, `salvar_perigos` e
+  `sincronia_operar` recusam com `suplemento_desligado` quando a campanha não
+  permite o suplemento dono da ferramenta (desligar a mecânica com
+  `estado.ativo: false` continua aceito). As leituras não mudam.
+
 ## Malditos Goblins — v6.0
 
 Rotas de `Goblins.gs`; só respondem numa campanha de Malditos Goblins

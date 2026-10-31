@@ -60,6 +60,65 @@ var SISTEMAS_DO_RAMA = [
     ferramentas: ['combate'], mecanicas: [] },
 ];
 
+/* Os suplementos de cada sistema (v6.1) — o mesmo cadastro de
+   js/suplementos.js (testes/sistemas-backend.js confere): id estável e as
+   fontes de conteúdo. `ferramentas`: as da mesa que pertencem a ele.
+   Disponibilidade de conteúdo, não posse de livro: desligar na campanha
+   impede INICIAR e operar as ferramentas do suplemento; ler o que já foi
+   registrado continua permitido. */
+var SUPLEMENTOS_DO_RAMA = {
+  ordem: [
+    { id: 'ordem.sah', fontes: ['SAH'], ferramentas: [] },
+    { id: 'ordem.as1', fontes: ['AS1'], ferramentas: [] },
+    { id: 'ordem.as2', fontes: ['AS2'], ferramentas: ['hexatombe'] },
+    { id: 'ordem.as3', fontes: ['AS3'], ferramentas: [] },
+    { id: 'ordem.as4', fontes: ['AS4'], ferramentas: ['hacking'] },
+    { id: 'ordem.as5', fontes: ['AS5'], ferramentas: ['perigos', 'sincronia'] },
+    { id: 'ordem.as6', fontes: ['AS6'], ferramentas: [] },
+  ],
+};
+
+/* null (ausente: todos ligados, como antes da v6.1) ou a lista dos ids
+   conhecidos. Lista vazia continua vazia: só o livro básico. */
+function normalizarSelecaoDeSuplementos(sistemaId, valor) {
+  if (!Array.isArray(valor)) return null;
+  var validos = (SUPLEMENTOS_DO_RAMA[sistemaId] || []).map(function (s) { return s.id; });
+  return valor.filter(function (v, i, t) { return typeof v === 'string' && validos.indexOf(v) >= 0 && t.indexOf(v) === i; });
+}
+
+/* O mapa da campanha, por sistema: só sistemas com suplementos e só o
+   que veio como lista. Trocar o sistema não apaga o do outro. */
+function normalizarMapaDeSuplementos(mapa) {
+  var saida = {};
+  if (!mapa || typeof mapa !== 'object' || Array.isArray(mapa)) return saida;
+  Object.keys(SUPLEMENTOS_DO_RAMA).forEach(function (s) {
+    if (Object.prototype.hasOwnProperty.call(mapa, s)) {
+      var n = normalizarSelecaoDeSuplementos(s, mapa[s]);
+      if (n) saida[s] = n;
+    }
+  });
+  return saida;
+}
+
+function suplementoDaFerramenta(sistemaId, chave) {
+  return (SUPLEMENTOS_DO_RAMA[sistemaId] || []).filter(function (s) { return s.ferramentas.indexOf(chave) >= 0; })[0] || null;
+}
+
+/* A porta das ferramentas de suplemento: a campanha desligou o
+   suplemento? Então nada de iniciar nem operar (`estado.ativo === false`,
+   desligar a mecânica, continua permitido). Devolve null ou o erro. */
+function exigirSuplemento(ctx, chave, corpo) {
+  var dados = lerJson(ctx.campanha.dadosJson, {});
+  var sistema = sistemaDaCampanha(ctx.campanha, dados).id;
+  var sup = suplementoDaFerramenta(sistema, chave);
+  if (!sup) return null;
+  var mapa = normalizarMapaDeSuplementos(dados.suplementos);
+  var sel = Object.prototype.hasOwnProperty.call(mapa, sistema) ? mapa[sistema] : null;
+  if (!sel || sel.indexOf(sup.id) >= 0) return null;
+  if (corpo && corpo.estado && typeof corpo.estado === 'object' && corpo.estado.ativo === false) return null;
+  return { ok: false, erro: 'suplemento_desligado', suplemento: sup.id, ferramenta: chave };
+}
+
 /* Os ganchos de cada sistema, pedidos ao arquivo dele só quando usados:
    o Apps Script avalia os arquivos numa ordem que não controlamos, e
    uma tabela montada no carregamento poderia apontar para funções que

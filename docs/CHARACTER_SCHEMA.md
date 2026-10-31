@@ -5,6 +5,21 @@ padrão e normaliza o que chega de fora. Onde ela é guardada — inteira em
 `fichaJson` (formato antigo) ou em blocos (v2.15) — é assunto do backend, e não muda
 nada aqui: ver [DATABASE.md](DATABASE.md).
 
+## Suplementos — v6.1 / schema 28
+
+Campo novo no nível da ficha, comum a todo sistema que tem suplementos
+(`js/suplementos.js`):
+
+```
+"suplementos": ["ordem.sah", "ordem.as2"]   // ligados
+```
+
+- **Ausente**: ficha anterior à v6.1 — todos os suplementos ligados, como antes.
+- **Lista vazia**: só o livro básico.
+- Ids desconhecidos saem na normalização; a ordem é a do cadastro.
+- Vale só para NOVAS escolhas: nada que a ficha já tem é removido ou recalculado.
+- Acompanha salvar, duplicar, copiar e exportar/importar (é parte do JSON).
+
 ## Malditos Goblins — v6.0 / schema 27
 
 Um quinto tipo: `tipoFicha: "goblins"`, com o bloco `goblins` normalizado por

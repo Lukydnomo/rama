@@ -41,6 +41,7 @@ preferências de tela — nunca é tratado como banco.
     oblivio.css         Oblívio: criação, corpo, ataque, mesa da Testemunha (v3.0)
     vampiro.css         Vampiro: criação, ficha, rolagem com Fome, Crônica (v5.0)
     goblins.css         Malditos Goblins: ficha oficial, dados que explodem, criação, Covil (v6.0)
+    (os suplementos — volumes, switches e a animação — estão em componentes.css, v6.1)
     (estas folhas SÃO o estilo Legacy: a aparência da v2.48.4, intocada)
     interface.css       o seletor de estilo do editor de temas (vale nos dois estilos)
     densidade.css       a densidade compacta, centralizada (a par Modern20 em modern20/)
@@ -410,6 +411,15 @@ deno run --allow-read --allow-write testes/gerar-oblivio-gs.js
 deno run --allow-read testes/executar-oblivio.js
 ```
 
+**Suplementos** — 45 verificações: cadastro e capas, seleção ausente × vazia,
+ficha ∩ campanha, catálogos de Ordem (rituais, itens, biblioteca, usos de
+perícia), progressão, regra opcional ≠ suplemento, persistência e o que já
+está em uso. O servidor está em `testes/sistemas-backend.js`.
+
+```bash
+deno run --allow-read testes/executar-suplementos.js
+```
+
 **Malditos Goblins** — 253 verificações do motor e da mesa, sem navegador e
 sem rede, com os dados combinados: hits, dificuldade, explosões em cadeia
 (automáticas e uma a uma), explosão de goblin e Voz Goblin, parada de 0 dados,
@@ -770,6 +780,15 @@ próprio `<script src>`, então funciona debaixo de subpasta sem ajuste.
 segredo nenhum — ele os lê das Script Properties. Publicá-lo não expõe nada.
 
 ### Atualizar o backend
+
+**v6.1.0 — ESTANTE:** suplementos habilitáveis. **Troque** `Sistemas.gs` (o
+cadastro dos suplementos e a trava das ferramentas), `Campanhas.gs` (a escolha
+da campanha) e `Ordem.gs` (Hexatombe, Hacking, Perigos e Sincronia conferem o
+suplemento) e **crie uma versão nova da implantação**. Sem `setupRama()`: nada
+de aba nova. Publique o site — inclusive `js/suplementos.js`,
+`js/ordem/fontes-em-uso.js`, `assets/sistemas/ordem-*-capa*.webp` e as páginas
+`personagens/`, `ficha/` e `campanha/`. O schema da ficha sobe para 28 sem
+conversão (fichas antigas ficam com todos os suplementos ligados).
 
 **v6.0.0 — ESTOPIM:** Malditos Goblins (3ª edição) como sistema completo.
 **Crie** o arquivo `Goblins` no Apps Script com `backend/Goblins.gs`, **troque**
@@ -1575,7 +1594,7 @@ Três números diferentes, que não se misturam:
 
 | | Onde | O que é |
 |---|---|---|
-| versão do aplicativo | `js/versao.js` | o que a pessoa vê: v6.0.0 |
+| versão do aplicativo | `js/versao.js` | o que a pessoa vê: v6.1.0 |
 | `schemaVersion` | `js/ficha.js` | o formato da FICHA |
 | `versaoFormato` | `js/config.js` | o formato dos arquivos de importação |
 

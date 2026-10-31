@@ -384,7 +384,14 @@
      BUSCA E FILTROS
      ================================================================= */
 
-  /* filtros: { aba, busca, fonte, tipo, categoria, elemento }.
+  /* Suplemento desligado (v6.1, js/suplementos.js): fora das NOVAS
+     escolhas. O que a ficha já tem não passa por aqui. */
+  function liberada(fonte) {
+    var Cat = global.RAMAOrdemCatalogo;
+    return !Cat || !Cat.fonteLiberada || Cat.fonteLiberada(fonte);
+  }
+
+  /* filtros: { aba, busca, fonte, tipo, categoria, elemento, incluirDesligados }.
      `categoria` é "0".."4", "nula" (não informada) ou vazio. */
   function filtrar(catalogo, filtros) {
     var f = filtros || {};
@@ -393,6 +400,7 @@
       if (f.aba && e.aba !== f.aba) return false;
       if (termo && e.chaveBusca.indexOf(termo) < 0) return false;
       if (f.fonte && e.fonte !== f.fonte) return false;
+      if (!f.incluirDesligados && !liberada(e.fonte)) return false;
       if (f.tipo && e.tipoFiltro !== f.tipo) return false;
       if (f.elemento && e.elemento !== f.elemento) return false;
       if (f.categoria !== undefined && f.categoria !== null && f.categoria !== "") {
@@ -449,6 +457,7 @@
     /* Na ordem do registro único de livros (v2.31). */
     var ordemFontes = (global.RAMAOrdemCatalogo && global.RAMAOrdemCatalogo.LIVROS || []).map(function (l) { return l.sigla; });
     var fontes = unicos(function (e) { return e.fonte; })
+      .filter(liberada)
       .sort(function (a, b) { return ordemFontes.indexOf(a) - ordemFontes.indexOf(b); })
       .map(function (k) { return { valor: k, rotulo: ROTULO_FONTE[k] || k }; });
     return { tipos: tipos, categorias: categorias, elementos: elementos, fontes: fontes };

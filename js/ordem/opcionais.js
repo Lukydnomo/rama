@@ -678,6 +678,13 @@
 
     var problemas = [];
 
+    /* Suplementos (v6.1): ligar a regra de um suplemento desligado não dá.
+       Ligar o suplemento não liga a regra — só a deixa disponível. */
+    var Cat = global.RAMAOrdemCatalogo;
+    if (r.fonte && Cat && Cat.fonteLiberada && !Cat.fonteLiberada(r.fonte)) {
+      problemas.push({ tipo: "suplemento", chave: r.fonte, texto: Cat.motivoDaFonte(r.fonte) + " Ligue o suplemento para usar esta regra." });
+    }
+
     r.incompativel.forEach(function (outra) {
       if (ligada(ficha, outra)) {
         var o = regra(outra);
