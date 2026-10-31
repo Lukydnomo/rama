@@ -118,6 +118,26 @@
 
   var CHANGELOG = [
     {
+      versao: "6.0.0",
+      codinome: "ESTOPIM",
+      data: "31/10/2026",
+      mudancas: {
+        "Adicionado": [
+          "Malditos Goblins (3ª edição) como sistema completo, com a capa do livro: ficha com a cara da ficha oficial (nome, nível, ocupação, característica, os quatro atributos, equipamento e ferimentos) e criação guiada, manual ou aleatória, rolando nas tabelas de nome, ocupação, descritor e característica (com “Role 2 vezes” e os olhos extras).",
+          "Os dados do jogo: hit em 4, 5 ou 6; cada 6 explode em cadeia (sozinho ou um a um, “pode rolar”); teste fácil e difícil; todos os dados em 1 explodem o goblin — menos com a Voz Goblin. Cada rolagem mostra os dados, as explosões, de onde vem cada dado e o que o resultado quer dizer.",
+          "Combate: ataque com arma, munição, recarga e arremesso; esquiva que tira hits e impede o próximo ataque; bloqueio que gasta a durabilidade de cada proteção; Sorte, Arcano e Condutor Mágico; as manobras do livro (Catapulta, Pendurar, Duas Armas, Cacunda, Derrubar, Ciranda…).",
+          "Todas as técnicas das seis ocupações (Mestre de Armas, Inimigo, Ataque Furtivo, Ataque Brutal, Tiro Certeiro, Resistência, Imunidade, Grito de Guerra, Humilhação, Implacável…), com os usos “1 vez por dia” e efeitos que duram até um marco do jogo (próximo ataque, turnos, fim da batalha, fim do dia).",
+          "As sete magias (e a Invocação do Cthulin) com os quatro resultados: o que cai em quem conjurou é aplicado; o que pede alvo vai para a mesa. Itens mágicos com efeito (poções, anel, bracelete, coroa, Martelo do Poder, Necronomicon…), Galinha Explosiva e Veneno com tempo.",
+          "Ferimentos: morre com MAIS ferimentos que a Vitalidade; noite de descanso; níveis ao derrotar oponentes, explosão de alegria no 4 ou Níveis Épicos; morreu, explodiu ou enlouqueceu, o parente que vem vingar ganha ficha nova de nível 1 e a antiga fica.",
+          "As cinco adaptações, que se ligam e desligam sem perder nada: Chamado de Cthulin (Medo, eventos sobrenaturais, Horrores), PokéPragas (captura, batalhas e evolução), WarGoblin 40k, Goblin High (reações, conversa, romance, brigas) e Vale dos Goblins (fazenda, horta, pescaria em minijogo, construções e cozinha).",
+          "O Covil do mestre na campanha: combate com ordem manual e surpresa, todos os inimigos do livro com os números exatos, ataques dos inimigos com a reação do goblin, sorteios de todas as tabelas (aventuras, encontros, locais, itens mágicos), Bando Rival, negociação, gerador de masmorra e as ferramentas para jogar sem mestre.",
+        ],
+        "Técnico": [
+          "Ficha no schema 27 (tipoFicha \"goblins\"). Módulos js/goblins/ e backend/Goblins.gs (ler_goblins, salvar_goblins, goblins_operar), aba CAMPANHA_GOBLINS. Ataques e magias de jogador contra o Covil e técnicas em aliados são rolados no servidor e entram no histórico. Precisa do site, do Apps Script novo e de setupRama().",
+        ],
+      },
+    },
+    {
       versao: "5.4.0",
       codinome: "MANUAL",
       data: "31/10/2026",

@@ -1,5 +1,34 @@
 # A API
 
+## Malditos Goblins — v6.0
+
+Rotas de `Goblins.gs`; só respondem numa campanha de Malditos Goblins
+(ferramenta `covil`; em outra campanha, `outro_sistema`).
+
+- `ler_goblins { campanhaId }` — membro (espectador: `sem_permissao`). O mestre
+  recebe `{ mestre: true, rev, estado }`; quem joga, `{ mestre: false, rev, vista }`
+  (`RAMAGoblinsMesa.vistaDosJogadores`: sem notas, registro privado,
+  participantes, sorteios e masmorras ocultos). Os dois recebem `personagens`
+  (`id`, `nome`, `meu`, `resumo` — a projeção calculada no servidor).
+- `salvar_goblins { campanhaId, rev, opId, estado }` — só o mestre. `opId`
+  repetido devolve `repetida`; rev velha, `conflito` com os dados atuais. Goblins
+  de jogador de fora da campanha saem do combate.
+- `goblins_operar { campanhaId, opId, operacao }` — aplicado com o motor em
+  todas as fichas que a operação toca; o opId fica em cada ficha e no Covil.
+  - do mestre: `momentos { momentos: [{ tipo: novoDia|iniciarBatalha|fimDaBatalha|fimDoTurno, descansou, personagemId }] }`,
+    `dano { personagem, acertos, distancia, fogo, armaDeFogo, etereo, automatico, esquiva, protecaoId, sorteId, paraParceiro, fonte }`,
+    `curar { personagem, valor }`, `efeito { personagens, efeito }`, `medo { personagens, valor, fonte }`,
+    `progressao { personagem, oponente }` (rola no servidor), `explodir { personagem, causa }`, `regras { regras }`.
+  - de quem joga (precisa agir pelo goblin na mesa: dono ou mestre):
+    `gritoDeGuerra { quem }` (aliados: os outros goblins da campanha),
+    `humilhacao { quem, aliados: [1] }`,
+    `conjurar { quem, magia, fonte, condutorId, ciranda, dificuldade, implacavel, aliados, inimigos }`,
+    `atacarInimigo { quem, alvo, pedido: { armaId, modo, dificuldade, furtivo, brutal, tiroCerteiro, duasArmas, cacunda, giratorio }, alvoBloqueia }`.
+    Rolados no servidor e gravados em `CAMPANHA_ROLAGENS` (`tipo: "goblins"`,
+    `marcas` com `explosao`).
+- `ler_campanha` traz a ferramenta `covil`; `sincronizar_campanha` tem a parte
+  `goblins`.
+
 ## Vampiro: A Máscara — v5.0
 
 Rotas de `Vampiro.gs`; só respondem numa campanha de Vampiro (as outras

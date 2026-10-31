@@ -1,0 +1,326 @@
+/* =====================================================================
+   R.A.M.A. — Malditos Goblins (v6.0) · Legacy
+   ---------------------------------------------------------------------
+   A ficha (com a cara da ficha oficial: os quatro atributos grandes e as
+   caixas de ferimento), a criação, a janela da rolagem e o Covil. Lê só
+   os tokens do tema (css/tokens.css): nenhuma cor presa.
+
+   Estado nunca só por cor:
+     ferimento "/" na caixa; além da Vitalidade "✖" e caixa tracejada
+     hit: borda grossa; 6: "★" (explode); dado de explosão: "✦" e borda
+     dupla; 1: face apagada
+     situação (morto, explodiu…): texto no bloco superior
+   A versão Modern20 está em css/modern20/goblins.css.
+   ===================================================================== */
+
+.gob-aba { min-width: 0; }
+
+.gob-lista {
+  margin: 0;
+  padding-left: var(--e4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--e1);
+}
+.gob-lista--compacta { gap: 0; font-size: var(--texto-mini); }
+.gob-bloqueada { color: var(--cor-texto-2); }
+.gob-fonte {
+  font-size: var(--texto-mini);
+  color: var(--cor-texto-2);
+  margin-left: var(--e1);
+  white-space: nowrap;
+}
+.gob-regra {
+  background: none;
+  border: 1px solid var(--cor-traco-media);
+  border-radius: 999px;
+  padding: 0 var(--e2);
+  font: inherit;
+  font-size: var(--texto-mini);
+  color: var(--cor-texto-2);
+  cursor: pointer;
+  white-space: nowrap;
+}
+.gob-regra:hover { color: var(--cor-link); border-color: var(--cor-link); }
+.gob-regra:focus-visible { outline: 2px solid var(--cor-foco); outline-offset: 2px; }
+
+.gob-flags {
+  border: var(--borda) solid var(--cor-traco-media);
+  padding: var(--e2);
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--e1);
+  min-width: 0;
+}
+.gob-flags legend { font-size: var(--texto-mini); color: var(--cor-texto-2); padding: 0 var(--e1); }
+
+.gob-composicao summary { cursor: pointer; font-size: var(--texto-mini); color: var(--cor-texto-2); }
+.gob-composicao ul, .gob-composicao ol { margin: var(--e1) 0 0; padding-left: var(--e4); font-size: var(--texto-mini); }
+
+.gob-aviso { margin: 0; padding: var(--e1) var(--e2); border-left: 3px solid var(--cor-aviso); }
+.gob-alerta { margin: 0; padding: var(--e2); border: 2px solid var(--cor-erro); font-weight: 700; }
+.gob-ok { margin: 0; padding: var(--e1) var(--e2); border-left: 3px solid var(--cor-ok); }
+
+/* =================================================================
+   BLOCO SUPERIOR
+   ================================================================= */
+
+.gob-bloco {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, auto);
+  gap: var(--e3);
+  align-items: start;
+}
+.gob-bloco__identidade { display: flex; gap: var(--e3); align-items: flex-start; min-width: 0; }
+.gob-bloco__textos { display: flex; flex-direction: column; gap: var(--e1); min-width: 0; }
+.gob-bloco__identidade .ficha-foto { width: 6.5rem; flex: none; }
+.gob-bloco__identidade .ficha-foto__vazio svg { max-width: 2.5rem; }
+.gob-bloco__linha {
+  margin: 0;
+  color: var(--cor-texto-2);
+  letter-spacing: var(--espaco-letra-titulo);
+  text-transform: uppercase;
+  font-size: var(--texto-mini);
+}
+.gob-bloco__estado { margin: 0; display: flex; flex-wrap: wrap; gap: var(--e1); }
+.gob-bloco[data-situacao="morto"] .gob-bloco__identidade,
+.gob-bloco[data-situacao="explodiu"] .gob-bloco__identidade,
+.gob-bloco[data-situacao="explodiuDeAlegria"] .gob-bloco__identidade,
+.gob-bloco[data-situacao="louco"] .gob-bloco__identidade,
+.gob-bloco[data-situacao="sumiu"] .gob-bloco__identidade {
+  border-left: 3px solid var(--cor-erro);
+  padding-left: var(--e2);
+}
+
+/* Os quatro atributos, como na ficha oficial. */
+.gob-bloco__atributos {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(3.6rem, 1fr));
+  gap: var(--e2);
+  margin: 0;
+}
+.gob-atr {
+  border: var(--borda) solid var(--cor-traco-forte);
+  padding: var(--e1) var(--e2);
+  text-align: center;
+  min-width: 0;
+}
+.gob-atr dt { font-size: var(--texto-mini); color: var(--cor-texto-2); text-transform: uppercase; letter-spacing: var(--espaco-letra-titulo); }
+.gob-atr dd { margin: 0; display: flex; gap: var(--e1); justify-content: center; align-items: baseline; }
+.gob-atr__valor { font-size: 1.6rem; font-weight: 700; line-height: 1.1; font-variant-numeric: tabular-nums; }
+.gob-atr__delta { font-size: var(--texto-mini); color: var(--cor-texto-2); }
+
+.gob-bloco__ferimentos {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--e2);
+  align-items: center;
+}
+.gob-trilha { display: inline-flex; gap: 3px; flex-wrap: wrap; align-items: center; }
+.gob-caixa {
+  width: 1.2rem;
+  height: 1.2rem;
+  border: 1.5px solid var(--cor-traco-forte);
+  display: inline-grid;
+  place-items: center;
+  font-size: 0.8rem;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--cor-texto);
+  background: var(--fundo-superficie);
+  flex: none;
+}
+.gob-caixa--ferida { background: var(--fundo-superficie-2); }
+.gob-caixa--alem { border-style: dashed; border-color: var(--cor-erro); }
+.gob-caixa--alem.gob-caixa--ferida { background: var(--cor-erro); color: var(--fundo-superficie); }
+.gob-bloco__acoes { grid-column: 1 / -1; align-items: center; }
+
+.gob-pendencias {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--e2);
+  align-items: center;
+  padding: var(--e2);
+  border: 1px dashed var(--cor-aviso);
+  margin: 0;
+}
+.gob-pendencias p { margin: 0; }
+ul.gob-pendencias { flex-direction: column; align-items: flex-start; padding-left: var(--e5, 2rem); }
+
+/* =================================================================
+   ABA GOBLIN
+   ================================================================= */
+
+.gob-atributos {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--e3);
+}
+.gob-atributo {
+  border: var(--borda) solid var(--cor-traco-media);
+  padding: var(--e2);
+  display: flex;
+  flex-direction: column;
+  gap: var(--e1);
+  min-width: 0;
+}
+.gob-atributo__nome { font-weight: 700; text-align: left; }
+button.gob-atributo__nome { background: none; border: 0; padding: 0; font: inherit; font-weight: 700; color: inherit; cursor: pointer; text-decoration: underline dotted; text-underline-offset: 3px; }
+button.gob-atributo__nome:hover { color: var(--cor-link); }
+button.gob-atributo__nome:focus-visible { outline: 2px solid var(--cor-foco); outline-offset: 2px; }
+.gob-atributo__valor { font-size: 2rem; font-weight: 700; line-height: 1; font-variant-numeric: tabular-nums; }
+.gob-atributo__texto { margin: 0; }
+.gob-caracteristica { margin: var(--e1) 0 0; }
+.gob-caracteristica__nome { font-weight: 700; }
+
+.gob-ocupacao { display: flex; flex-direction: column; gap: var(--e1); }
+.gob-tecnica, .gob-magia, .gob-manobra, .gob-praga, .gob-estudante { padding: var(--e1) 0; border-bottom: 1px solid var(--cor-traco-fraca); }
+.gob-tecnica .r-etiqueta, .gob-estudante .r-etiqueta { margin-left: var(--e1); }
+.gob-tecnica p, .gob-manobra p, .gob-praga p, .gob-estudante p { margin: var(--e1) 0; }
+.gob-manobras { list-style: none; padding-left: 0; }
+.gob-resultados { margin: var(--e1) 0 0; padding-left: var(--e4); font-size: var(--texto-mini); }
+.gob-contador { display: inline-flex; gap: var(--e1); align-items: center; }
+
+/* =================================================================
+   EQUIPAMENTO
+   ================================================================= */
+
+.gob-itens { list-style: none; padding-left: 0; gap: var(--e2); }
+.gob-item {
+  border: var(--borda) solid var(--cor-traco-media);
+  padding: var(--e2);
+  display: flex;
+  flex-direction: column;
+  gap: var(--e1);
+  min-width: 0;
+}
+.gob-item p { margin: 0; overflow-wrap: anywhere; }
+.gob-item__topo { display: flex; flex-wrap: wrap; gap: var(--e1) var(--e2); align-items: center; }
+.gob-item__nome { font-weight: 700; }
+.gob-item__texto { color: var(--cor-texto-2); }
+.gob-item--fora { opacity: 0.7; border-style: dashed; }
+.gob-item--fora .gob-item__nome { text-decoration: line-through; }
+
+/* =================================================================
+   DADOS
+   ================================================================= */
+
+.gob-dados { display: flex; flex-wrap: wrap; gap: var(--e2); align-items: center; }
+.gob-dados--linha { display: inline-flex; gap: var(--e1); vertical-align: middle; }
+.gob-dado {
+  position: relative;
+  width: 2.5rem;
+  height: 2.5rem;
+  display: inline-grid;
+  place-items: center;
+  border: 2px solid var(--cor-traco-forte);
+  border-radius: 6px;
+  background: var(--fundo-superficie);
+  color: var(--cor-texto);
+  font: inherit;
+  font-weight: 700;
+  padding: 0;
+}
+.gob-dados--linha .gob-dado { width: 1.6rem; height: 1.6rem; border-width: 1.5px; font-size: 0.85rem; }
+button.gob-dado { cursor: pointer; }
+button.gob-dado:focus-visible { outline: 3px solid var(--cor-foco); outline-offset: 2px; }
+button.gob-dado:disabled { cursor: default; }
+.gob-dado--hit { border-color: var(--cor-texto); border-width: 3px; }
+.gob-dado--seis { box-shadow: inset 0 0 0 2px var(--cor-texto); }
+.gob-dado--um { color: var(--cor-texto-2); }
+.gob-dado--explosao { border-style: double; border-width: 4px; }
+.gob-dado--marcado { outline: 3px solid var(--cor-foco); outline-offset: 2px; background: var(--fundo-superficie-2); }
+.gob-dado__face { line-height: 1; }
+.gob-dado__simbolo { position: absolute; top: 2px; right: 4px; font-size: 0.65rem; line-height: 1; }
+.gob-legenda { margin: 0; }
+
+/* O dado de explosão no cartão de rolagem e no histórico (genérico). */
+.face--explosao {
+  border-style: double !important;
+  border-width: 3px !important;
+}
+
+.gob-resultado { display: flex; flex-direction: column; gap: var(--e2); }
+.gob-resultado p { margin: 0; }
+.gob-resultado__parada { font-size: var(--texto-mini); color: var(--cor-texto-2); }
+.gob-resultado__total { font-size: 1.15rem; }
+.gob-notas { margin: 0; padding-left: var(--e4); display: flex; flex-direction: column; gap: var(--e1); }
+.gob-sorteio { display: flex; flex-wrap: wrap; gap: var(--e1); align-items: center; min-height: 1.6rem; }
+
+/* =================================================================
+   CRIAÇÃO
+   ================================================================= */
+
+.gob-criar { display: flex; flex-direction: column; gap: var(--e3); min-width: 0; }
+.gob-criar__etapa { display: flex; flex-direction: column; gap: var(--e2); }
+.gob-criar__navegacao { justify-content: flex-end; }
+.gob-etapas {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--e1) var(--e3);
+  font-size: var(--texto-mini);
+}
+.gob-etapas li { color: var(--cor-texto-2); }
+.gob-etapa--atual { color: var(--cor-texto); font-weight: 700; }
+.gob-etapa--atual button { font-weight: 700; }
+.gob-etapa--feita button::after { content: " ✓"; }
+
+/* =================================================================
+   COVIL (campanha)
+   ================================================================= */
+
+.gob-covil__adicionar { align-items: flex-end; }
+.gob-participantes, .gob-sorteios, .gob-segmentos, .gob-historico {
+  margin: 0;
+  padding-left: var(--e4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--e2);
+}
+.gob-participante, .gob-sorteio-item {
+  border: var(--borda) solid var(--cor-traco-media);
+  padding: var(--e2);
+  display: flex;
+  flex-direction: column;
+  gap: var(--e1);
+  min-width: 0;
+}
+.gob-participante p, .gob-sorteio-item p { margin: 0; overflow-wrap: anywhere; }
+.gob-participante--vez { border-width: 2px; border-color: var(--cor-texto); }
+.gob-participante--goblin { border-left: 3px solid var(--cor-ok); }
+.gob-participante__topo { display: flex; flex-wrap: wrap; gap: var(--e1) var(--e2); align-items: center; }
+.gob-participante__acoes { gap: var(--e1); }
+.gob-segmentos { gap: var(--e1); font-size: var(--texto-mini); }
+.gob-segmentos li { margin-left: calc(var(--prof, 0) * var(--e3)); }
+.gob-historico { gap: var(--e1); font-size: var(--texto-mini); }
+.gob-masmorra, .gob-rival { display: flex; flex-direction: column; gap: var(--e1); padding-top: var(--e2); border-top: 1px solid var(--cor-traco-fraca); }
+
+/* =================================================================
+   CELULAR
+   ================================================================= */
+
+@media (max-width: 720px) {
+  .gob-bloco { grid-template-columns: minmax(0, 1fr); }
+  .gob-bloco__identidade .ficha-foto { width: 4.5rem; }
+  .gob-atributos { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .gob-bloco__atributos { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--e1); }
+  .gob-atr { padding: var(--e1); }
+  .gob-atr dt { font-size: 0.62rem; letter-spacing: 0; }
+  .gob-dado { width: 2.8rem; height: 2.8rem; }
+  .gob-segmentos li { margin-left: calc(var(--prof, 0) * var(--e1)); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gob-dado, .gob-caixa { transition: none; }
+}
+
+@media (forced-colors: active) {
+  .gob-caixa--ferida, .gob-caixa--alem.gob-caixa--ferida { background: CanvasText; color: Canvas; }
+  .gob-dado--hit { border-color: CanvasText; }
+}

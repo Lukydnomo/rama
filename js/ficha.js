@@ -179,6 +179,16 @@
      `usosFarmaceutico`. Sem conversão: uma ficha 25 abre com o estado
      vazio. Uma aba antiga descartaria a marca e as afecções ao gravar.
 
+     26 → 27: Malditos Goblins, 3ª edição (v6.0). A ficha aceita
+     `tipoFicha: "goblins"` e o bloco `goblins` (js/goblins/regras.js):
+     criação e sorteios, ocupação, descritor, características, nível e
+     níveis épicos, ajustes permanentes, ferimentos, itens com munição e
+     durabilidade, efeitos com duração por marco, usos por dia, estado
+     (morto, explodiu, louco…), regras opcionais, adaptações, linhagem e
+     o registro de operações. Sem conversão. Uma aba antiga trataria a
+     ficha como de um sistema desconhecido (só leitura); o schema maior
+     faz as ainda mais antigas recusarem em vez de gravar.
+
      Nenhuma das subidas exige migração: normalizarFicha() cria o que
      falta, vazio, e não toca no que existe. Um ritual gravado na 2 abre
      na 3 com a versão Normal em branco; uma ficha de Ordem gravada na 4
@@ -188,7 +198,7 @@
      os campos novos e os descartaria ao gravar — com o schema maior ela
      recusa abrir a ficha e pede para recarregar.
      Ver docs/CHARACTER_SCHEMA.md. */
-  var VERSAO_SCHEMA = 26;
+  var VERSAO_SCHEMA = 27;
 
   var MODULOS = {
     atributos: "Atributos", status: "Status/recursos", defesa: "Defesa",

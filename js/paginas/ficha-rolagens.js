@@ -191,18 +191,19 @@
     var dados = el("div.rolagem__dados", { "aria-hidden": "true" }, lista.map(function (valor, i) {
       var principal = temPrincipal && !marcou && valor === r.natural;
       if (principal) marcou = true;
-      var marca = marcas[i] === "fome" ? "face--fome" : "";
-      return el("span.face", { class: [principal ? "face--principal" : "", marca].filter(Boolean).join(" "), texto: String(valor), title: marca ? "Dado de Fome" : null });
+      var marca = marcas[i] === "fome" ? "face--fome" : marcas[i] === "explosao" ? "face--explosao" : "";
+      return el("span.face", { class: [principal ? "face--principal" : "", marca].filter(Boolean).join(" "), texto: String(valor), title: marca === "face--fome" ? "Dado de Fome" : marca ? "Dado de explosão (veio de um 6)" : null });
     }));
-    if (!marcas.some(function (m) { return m === "fome"; })) return dados;
+    if (!marcas.some(function (m) { return m === "fome" || m === "explosao"; })) return dados;
     return el("div", {}, [dados, el("span.so-leitor", { texto: textoDasFaces(lista, marcas) })]);
   }
 
-  /* "7, 3; de Fome: 10, 1" — o mesmo texto no cartão e no histórico. */
+  /* "7, 3; de Fome: 10, 1" — o mesmo texto no cartão e no histórico.
+     Malditos Goblins (v6.0): "6, 4; de explosão: 5". */
   function textoDasFaces(lista, marcas) {
-    var comuns = [], fome = [];
-    lista.forEach(function (v, i) { (marcas && marcas[i] === "fome" ? fome : comuns).push(v); });
-    return comuns.join(", ") + (fome.length ? (comuns.length ? "; " : "") + "de Fome: " + fome.join(", ") : "");
+    var comuns = [], fome = [], explosao = [];
+    lista.forEach(function (v, i) { (marcas && marcas[i] === "fome" ? fome : marcas && marcas[i] === "explosao" ? explosao : comuns).push(v); });
+    return comuns.join(", ") + (fome.length ? (comuns.length ? "; " : "") + "de Fome: " + fome.join(", ") : "") + (explosao.length ? (comuns.length || fome.length ? "; " : "") + "de explosão: " + explosao.join(", ") : "");
   }
 
   function parcelas(r) {

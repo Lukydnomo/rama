@@ -61,6 +61,7 @@
     "ler_hacking",
     "ler_oblivio",
     "ler_vampiro",
+    "ler_goblins",
 
     "salvar_foto",
     "salvar_perfil",
@@ -90,6 +91,9 @@
     /* E para a crônica de Vampiro (v5.0): o mesmo esquema. */
     "salvar_vampiro",
     "vampiro_operar",
+    /* E para o Covil de Malditos Goblins (v6.0): o mesmo esquema. */
+    "salvar_goblins",
+    "goblins_operar",
 
     /* registrar_rolagem repete com segurança porque carrega um id
        próprio: o servidor reconhece a segunda chegada e não cria a
@@ -185,6 +189,8 @@
     oblivio_operar: true,
     salvar_vampiro: true,
     vampiro_operar: true,
+    salvar_goblins: true,
+    goblins_operar: true,
   };
 
   var LEITURAS = {};
@@ -822,6 +828,18 @@
   function salvarVampiro(campanhaId, rev, opId, estado) {
     return post({ acao: "salvar_vampiro", campanhaId: campanhaId, rev: rev, opId: opId, estado: estado });
   }
+  /* Malditos Goblins (v6.0): o Covil do mestre — o mesmo esquema. As
+     operações que tocam fichas ou a mesa (ataques e magias dos
+     jogadores) são roladas e conferidas pelo servidor. */
+  function lerGoblins(campanhaId, opcoes) {
+    return post({ acao: "ler_goblins", campanhaId: campanhaId }, opcoes);
+  }
+  function salvarGoblins(campanhaId, rev, opId, estado) {
+    return post({ acao: "salvar_goblins", campanhaId: campanhaId, rev: rev, opId: opId, estado: estado });
+  }
+  function goblinsOperar(campanhaId, opId, operacao) {
+    return post({ acao: "goblins_operar", campanhaId: campanhaId, opId: opId, operacao: operacao });
+  }
   function vampiroOperar(campanhaId, opId, operacao) {
     return post({ acao: "vampiro_operar", campanhaId: campanhaId, opId: opId, operacao: operacao });
   }
@@ -1158,6 +1176,9 @@
     lerVampiro: lerVampiro,
     salvarVampiro: salvarVampiro,
     vampiroOperar: vampiroOperar,
+    lerGoblins: lerGoblins,
+    salvarGoblins: salvarGoblins,
+    goblinsOperar: goblinsOperar,
     sincroniaOperar: sincroniaOperar,
     lerImagemDoTurno: lerImagemDoTurno,
     excluirCombate: excluirCombate,

@@ -94,9 +94,10 @@
        resultado: os outros veem o dado de quem rolou, e uma troca de tema
        depois não muda o passado. O servidor confere de novo. */
     if (o.aparencia) rolagem.dados.aparencia = o.aparencia;
-    /* Marcas por face (v5.0: os dados de Fome de Vampiro). */
+    /* Marcas por face (v5.0: os dados de Fome de Vampiro; v6.0: os dados
+       de explosão de Malditos Goblins). */
     if (Array.isArray(resultado.marcas)) {
-      rolagem.dados.marcas = resultado.marcas.slice(0, 60).map(function (m) { return m === "fome" ? "fome" : ""; });
+      rolagem.dados.marcas = resultado.marcas.slice(0, 60).map(function (m) { return m === "fome" || m === "explosao" ? m : ""; });
     }
 
     daqui[rolagem.id] = true;

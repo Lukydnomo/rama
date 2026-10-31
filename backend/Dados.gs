@@ -394,6 +394,20 @@ var ABAS = {
     leves: 3,
     pesadas: ['dadosJson'],
   },
+  CAMPANHA_GOBLINS: {
+    /* O Covil de Malditos Goblins (v6.0): regras opcionais e adaptações
+       da campanha, o dia, o combate (participantes, ordem, rodada,
+       efeitos, ações demoradas), os sorteios das tabelas, masmorras,
+       Bando Rival, negociações e o registro — uma linha por campanha.
+       Só o mestre grava o estado inteiro; ataques e magias dos
+       jogadores contra inimigos passam por goblins_operar (Goblins.gs).
+       Trocar o sistema não apaga a linha. */
+    nome: 'CAMPANHA_GOBLINS',
+    colunas: ['campanhaId', 'atualizadoEm', 'rev', 'opsJson', 'dadosJson'],
+    chave: 'campanhaId',
+    leves: 3,
+    pesadas: ['dadosJson'],
+  },
   CAMPANHA_CAPAS: {
     /* A capa (banner) da campanha. Fora do dadosJson pelo mesmo motivo
        da foto de personagem: é o campo mais pesado e o que menos muda.

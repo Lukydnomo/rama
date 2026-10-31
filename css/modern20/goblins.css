@@ -1,0 +1,50 @@
+/* =====================================================================
+   R.A.M.A. — Malditos Goblins (v6.0) · Modern20
+   ---------------------------------------------------------------------
+   As MESMAS classes de css/goblins.css na linguagem Modern20: canto
+   leve, traço discreto, sombra só no que flutua. Estado continua com
+   texto e forma — "/" e "✖" nas caixas, "★" e "✦" nos dados.
+   ===================================================================== */
+
+:where(:root[data-interface="modern20"]) {
+
+  & .gob-atr,
+  & .gob-atributo,
+  & .gob-item,
+  & .gob-participante,
+  & .gob-sorteio-item,
+  & .gob-flags,
+  & .gob-pendencias {
+    border-color: var(--m20-borda);
+    border-radius: var(--m20-raio-controle);
+  }
+
+  & .gob-atr { background: var(--m20-destaque-suave); }
+
+  & .gob-caixa {
+    border-radius: 3px;
+    border-color: var(--m20-borda-controle);
+  }
+
+  & .gob-dado {
+    border-radius: var(--m20-raio-controle);
+    border-color: var(--m20-borda-controle);
+    box-shadow: var(--m20-sombra-1);
+  }
+  & .gob-dado--hit { border-color: var(--cor-texto); }
+  & .gob-dado--explosao { box-shadow: none; }
+  & .gob-dado--marcado { background: var(--m20-selecao-suave); }
+
+  & .gob-regra { border-color: var(--m20-borda-controle); }
+
+  & .gob-tecnica,
+  & .gob-magia,
+  & .gob-manobra,
+  & .gob-praga,
+  & .gob-estudante { border-bottom-color: var(--m20-borda); }
+
+  & .gob-pendencias { background: var(--m20-aviso-suave); border-style: solid; }
+
+  & .gob-participante--vez { box-shadow: var(--m20-sombra-1); }
+  & .gob-participante--goblin { box-shadow: inset 3px 0 0 var(--cor-ok); border-left-width: 1px; }
+}

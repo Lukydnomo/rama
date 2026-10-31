@@ -420,7 +420,7 @@ t.ok("religar: tudo de volta, sem duplicar", E.estado(antiga, null).adquiridos.f
   E.estado(antiga, null).adquiridos.some((a) => a.chave === "combateDefensivo"));
 
 t.grupo("Persistência: schema, sincronização, exportação");
-t.igual("schema 26", S.VERSAO_SCHEMA, 26);
+t.ok("schema 26 ou maior (AS6 entrou na 26)", S.VERSAO_SCHEMA >= 26);
 const fs = S.normalizarFicha({ nome: "Teste", tipoFicha: "ordem", ordem: JSON.parse(JSON.stringify(dn)) });
 t.ok("a ficha normalizada guarda o bloco arquivo6", fs.ordem.arquivo6 && fs.ordem.arquivo6.afeccoes.length === A6.dados(dn).afeccoes.length);
 const V = G.RAMAValidacao;

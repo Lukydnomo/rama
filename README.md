@@ -40,6 +40,7 @@ preferências de tela — nunca é tratado como banco.
     ficha.css           só o que é exclusivo da ficha
     oblivio.css         Oblívio: criação, corpo, ataque, mesa da Testemunha (v3.0)
     vampiro.css         Vampiro: criação, ficha, rolagem com Fome, Crônica (v5.0)
+    goblins.css         Malditos Goblins: ficha oficial, dados que explodem, criação, Covil (v6.0)
     (estas folhas SÃO o estilo Legacy: a aparência da v2.48.4, intocada)
     interface.css       o seletor de estilo do editor de temas (vale nos dois estilos)
     densidade.css       a densidade compacta, centralizada (a par Modern20 em modern20/)
@@ -121,6 +122,12 @@ preferências de tela — nunca é tratado como banco.
       regras.js         a ficha em camadas e as regras: Fome, Humanidade, frenesi, Torpor, XP…
       poderes.js        usar poderes, rituais e alquimia
       cronica.js        a crônica do Narrador e a vista dos jogadores
+    goblins/            o módulo de Malditos Goblins 3ª ed. (v6.0): motor puro, copiado em backend/Goblins.gs…
+      telas/            …e as telas: criação guiada/manual/aleatória, ficha, Covil do mestre
+      catalogo.js       todas as tabelas do livro, com página, e as inconsistências registradas
+      dados.js          d6: hits, explosões em cadeia, explosão de goblin, sorteios, quantidades, pescaria
+      regras.js         a ficha em camadas: combate, magia, técnicas, itens, níveis, adaptações
+      mesa.js           o Covil: combate, sorteios, masmorra, Bando Rival, negociação
     historico.js        rolagem → histórico da campanha, num funil só
     temas-dados.js      catálogo dos temas de dados e regras puras (copiado no Codigo.gs)
     aparencia-rolagem.js o dado e o fundo de cada rolagem: captura, ícone e aplicação no cartão
@@ -134,6 +141,7 @@ preferências de tela — nunca é tratado como banco.
     Ordem.gs            sistema Ordem Paranormal: recursos, condições, Hexatombe, Hacking, Perigos…
     Oblivio.gs          sistema Oblívio: a mesa da Testemunha e as operações entre fichas (cópia do motor)
     Vampiro.gs          sistema Vampiro: a crônica do Narrador e as operações entre fichas (cópia do motor)
+    Goblins.gs          sistema Malditos Goblins: o Covil e as operações entre fichas e mesa (cópia do motor)
     Universal.gs        sistema Universal: atributos e status livres no painel da mesa
     Cris.gs             leitura de ficha pública do CRIS (opcional)
     Feedback.gs         feedback entregue num canal do Discord (opcional)
@@ -150,6 +158,7 @@ preferências de tela — nunca é tratado como banco.
     INTERFACE.md        Legacy e Modern20: arquitetura, inventário de telas e como verificar
     OBLIVIO.md          Oblívio: matriz de cobertura, interpretações e lacunas do livro
     VAMPIRO.md          Vampiro V5: matriz de cobertura, interpretações e lacunas do livro
+    GOBLINS.md          Malditos Goblins 3ª ed.: matriz de cobertura, interpretações e lacunas do livro
     SISTEMAS.md         a plataforma e os sistemas: núcleo × módulos, registro, como entra um sistema
 ```
 
@@ -399,6 +408,26 @@ deno run --allow-read --allow-write testes/gerar-oblivio-gs.js
 
 ```bash
 deno run --allow-read testes/executar-oblivio.js
+```
+
+**Malditos Goblins** — 253 verificações do motor e da mesa, sem navegador e
+sem rede, com os dados combinados: hits, dificuldade, explosões em cadeia
+(automáticas e uma a uma), explosão de goblin e Voz Goblin, parada de 0 dados,
+sorteios e quantidades, pescaria, criação e camadas sem duplicar, ferimentos
+iguais × maiores que a Vitalidade, redução temporária, ataque, munição, recarga,
+arremesso, esquiva, bloqueio e durabilidade, Sorte, Resistência e Imunidade,
+magias, técnicas e usos do dia, efeitos que expiram por marco, ações demoradas,
+progressão básica e épica, itens mágicos, as cinco adaptações e o Covil
+(sorteios únicos, combate, a masmorra do exemplo do livro, negociação, Bando
+Rival). O lado do servidor está em `testes/goblins-backend.js`. Mudou algo em
+`js/goblins/`? Gere de novo a cópia do servidor:
+
+```bash
+deno run --allow-read --allow-write testes/gerar-goblins-gs.js
+```
+
+```bash
+deno run --allow-read testes/executar-goblins.js
 ```
 
 **Vampiro: A Máscara** — 257 verificações do motor, sem navegador e sem rede,
@@ -741,6 +770,19 @@ próprio `<script src>`, então funciona debaixo de subpasta sem ajuste.
 segredo nenhum — ele os lê das Script Properties. Publicá-lo não expõe nada.
 
 ### Atualizar o backend
+
+**v6.0.0 — ESTOPIM:** Malditos Goblins (3ª edição) como sistema completo.
+**Crie** o arquivo `Goblins` no Apps Script com `backend/Goblins.gs`, **troque**
+`Sistemas.gs` (o sistema no registro), `Dados.gs` (a aba `CAMPANHA_GOBLINS`) e
+`Campanhas.gs` (a parte `goblins` da sincronia), rode **`setupRama()`** uma vez
+(cria a aba; repetir não muda nada) e **crie uma versão nova da implantação**.
+Publique o site — inclusive `js/goblins/`, `css/goblins.css`,
+`css/modern20/goblins.css`, `assets/sistemas/goblins-capa*.webp` e as páginas
+`personagens/`, `ficha/` e `campanha/`, que passam a carregá-los. O schema da
+ficha sobe para 27 sem conversão: abas abertas na versão anterior pedem para
+recarregar. Sem o `setupRama()`, só o Covil recusa gravar
+(`instalacao_incompleta`); sem o `Goblins.gs` ou a versão nova da implantação,
+o Covil responde `acao_desconhecida`.
 
 **v5.4.0 — MANUAL:** só o site (a consulta dos usos das perícias de Ordem).
 Publique o site — inclusive `js/ordem/pericias-usos.js`,
@@ -1533,7 +1575,7 @@ Três números diferentes, que não se misturam:
 
 | | Onde | O que é |
 |---|---|---|
-| versão do aplicativo | `js/versao.js` | o que a pessoa vê: v5.4.0 |
+| versão do aplicativo | `js/versao.js` | o que a pessoa vê: v6.0.0 |
 | `schemaVersion` | `js/ficha.js` | o formato da FICHA |
 | `versaoFormato` | `js/config.js` | o formato dos arquivos de importação |
 

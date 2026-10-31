@@ -163,6 +163,37 @@
       },
     },
     {
+      id: "goblins", nome: "Malditos Goblins", curto: "Goblins", edicao: "3ª ed.",
+      resumo: "3ª edição: goblins que explodem, dados que explodem e o bando inteiro na mesa.",
+      capa: "assets/sistemas/goblins-capa.webp", capaAlt: "Capa de Malditos Goblins: o título em amarelo sobre um bando de goblins verdes de dentes à mostra, com um mago, um guerreiro e uma arqueira ao fundo",
+      ficha: {
+        bloco: "goblins", motor: "RAMAGoblins",
+        resumo: { campo: "resumoGoblins", calcular: "resumoParaMesa", normalizarAntes: true },
+        pontos: [
+          "Criação guiada, manual ou aleatória, com as tabelas do livro",
+          "Dados que explodem no 6, explosão de goblin e Voz Goblin",
+          "Ataque, esquiva, bloqueio, munição, recarga e durabilidade",
+          "Técnicas, magias, itens mágicos e as cinco adaptações",
+        ],
+        blocoSuperior: "RAMASecaoGoblins",
+        abas: [
+          { chave: "geral",       rotulo: "Goblin",      secao: "RAMASecaoGoblins" },
+          { chave: "combate",     rotulo: "Combate",     secao: "RAMASecaoGoblinsCombate" },
+          { chave: "tecnicas",    rotulo: "Técnicas e magia", secao: "RAMASecaoGoblinsTecnicas" },
+          { chave: "inventario",  rotulo: "Equipamento", secao: "RAMASecaoGoblinsEquipamento" },
+          { chave: "adaptacoes",  rotulo: "Adaptações",  secao: "RAMASecaoGoblinsAdaptacoes" },
+          { chave: "diario",      rotulo: "Diário",      secao: "RAMASecaoGoblinsDiario" },
+          { chave: "anotacoes",   rotulo: "Anotações",   secao: "RAMASecaoAnotacoes", independente: true },
+        ],
+      },
+      campanha: {
+        mestre: "Mestre",
+        descricao: "O Covil do mestre: combate com ordem manual, inimigos do livro, sorteios das tabelas, encontros, Bando Rival, negociação, gerador de masmorra e as ferramentas para jogar sem mestre.",
+        ferramentas: ["covil"],
+        mecanicas: [],
+      },
+    },
+    {
       id: "universal", nome: "Universal", curto: "Universal",
       resumo: "O modelo flexível do R.A.M.A., para qualquer sistema.",
       ficha: {
@@ -297,6 +328,7 @@
     combate: "Combate", condicoes: "condições e efeitos por turno", sincronia: "Sincronia Conectiva",
     oblivio: "mesa da Testemunha",
     cronica: "crônica do Narrador",
+    covil: "Covil do mestre",
   };
   function nomeDaFerramenta(chave) {
     if (NOMES_DE_FERRAMENTA[chave]) return NOMES_DE_FERRAMENTA[chave];

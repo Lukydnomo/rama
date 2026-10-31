@@ -82,6 +82,8 @@
     { chave: "oblivio",     rotulo: "Mesa da Testemunha", secao: "RAMACampanhaOblivio", ferramenta: "oblivio" },
     /* Vampiro: A Máscara (v4.1): a crônica do Narrador. */
     { chave: "cronica",     rotulo: "Crônica",     secao: "RAMACampanhaVampiro", ferramenta: "cronica" },
+    /* Malditos Goblins (v6.0): o Covil do mestre. */
+    { chave: "covil",       rotulo: "Covil",       secao: "RAMACampanhaGoblins", ferramenta: "covil" },
     { chave: "notas",       rotulo: "Notas",       secao: "RAMACampanhaNotas", soMestre: true },
     { chave: "config",      rotulo: "Configurações", secao: "RAMACampanhaConfig", soMestre: true },
   ];
@@ -449,6 +451,7 @@
     if (tem("perigos")) notificar("perigos");
     if (tem("oblivio")) notificar("oblivio");
     if (tem("vampiro")) notificar("cronica");
+    if (tem("goblins")) notificar("covil");
   }
 
   async function buscarPersonagensEmSegundoPlano() {

@@ -1192,6 +1192,7 @@
     ordem: function () { return abrirCriacaoOrdem(); },
     oblivio: function () { return abrirCriacaoOblivio(); },
     vampiro: function () { return abrirCriacaoVampiro(); },
+    goblins: function () { return abrirCriacaoGoblins(); },
     universal: function () { return abrirCriacao(); },
   };
 
@@ -1230,6 +1231,18 @@
     var r = await global.RAMAApi.listarCampanhas();
     if (r.ok) campanhas = r.dados || [];
     global.RAMAVampiroCriar.abrir({ campanhas: campanhas });
+  }
+
+  /* A criação de Malditos Goblins (v6.0): guiada, manual ou aleatória. */
+  async function abrirCriacaoGoblins() {
+    if (!global.RAMAGoblinsCriar || !global.RAMAGoblins) {
+      UI.avisoErro("A criação de Malditos Goblins não está disponível nesta página.");
+      return;
+    }
+    var campanhas = [];
+    var r = await global.RAMAApi.listarCampanhas();
+    if (r.ok) campanhas = r.dados || [];
+    global.RAMAGoblinsCriar.abrir({ campanhas: campanhas });
   }
 
   /* =================================================================

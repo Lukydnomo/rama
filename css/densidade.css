@@ -184,3 +184,25 @@
 :root[data-densidade="compacta"] .vamp-pns { gap: var(--e1); }
 :root[data-densidade="compacta"] .vamp-criar-janela .r-modal__corpo,
 :root[data-densidade="compacta"] .vamp-criar__etapa { gap: var(--e2); }
+
+/* ---------- Malditos Goblins ---------- */
+
+:root[data-densidade="compacta"] .gob-bloco,
+:root[data-densidade="compacta"] .gob-bloco__identidade,
+:root[data-densidade="compacta"] .gob-atributos { gap: var(--e2); }
+:root[data-densidade="compacta"] .gob-atr { padding: 2px var(--e1); }
+:root[data-densidade="compacta"] .gob-atributo,
+:root[data-densidade="compacta"] .gob-item,
+:root[data-densidade="compacta"] .gob-participante,
+:root[data-densidade="compacta"] .gob-sorteio-item { padding: var(--e1) var(--e2); }
+:root[data-densidade="compacta"] .gob-itens,
+:root[data-densidade="compacta"] .gob-participantes,
+:root[data-densidade="compacta"] .gob-sorteios { gap: var(--e1); }
+:root[data-densidade="compacta"] .gob-tecnica,
+:root[data-densidade="compacta"] .gob-magia,
+:root[data-densidade="compacta"] .gob-manobra,
+:root[data-densidade="compacta"] .gob-praga,
+:root[data-densidade="compacta"] .gob-estudante { padding: 2px 0; }
+:root[data-densidade="compacta"] .gob-dado { width: 2.2rem; height: 2.2rem; }
+:root[data-densidade="compacta"] .gob-criar,
+:root[data-densidade="compacta"] .gob-criar__etapa { gap: var(--e2); }

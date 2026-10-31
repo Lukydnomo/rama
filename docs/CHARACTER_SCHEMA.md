@@ -5,6 +5,48 @@ padrão e normaliza o que chega de fora. Onde ela é guardada — inteira em
 `fichaJson` (formato antigo) ou em blocos (v2.15) — é assunto do backend, e não muda
 nada aqui: ver [DATABASE.md](DATABASE.md).
 
+## Malditos Goblins — v6.0 / schema 27
+
+Um quinto tipo: `tipoFicha: "goblins"`, com o bloco `goblins` normalizado por
+`RAMAGoblins.normalizar` (`js/goblins/regras.js`). O schema sobe para **27 sem
+conversão**: nenhuma ficha antiga muda; uma aba aberta numa versão anterior
+recusa gravar.
+
+```
+"tipoFicha": "goblins",
+"goblins": {
+  "v": 1,
+  "criacao": { "modo", "concluida", "sorteios": [...], "equipamentoAplicado", "nomeSugerido", "pendenciaDeNome" },
+  "nomeDeFamilia", "ocupacao", "descritor", "supimpa", "modEscolhido",
+  "caracteristicas": [{ "id", "chave", "quantidade" }],
+  "equipamentoInicial": índice | null,
+  "escolhas": { "armaFavorita", "especieInimiga", "magias": [3], "grupoWar", "equipamentoWar": [2], "inicialCthulin" },
+  "nivel": 1..4, "epicas": [{ "ocupacao", "nivel" }],
+  "ajustes": [{ "id", "atributo", "valor", "motivo", "pagina", "dia" }],
+  "ferimentos",
+  "itens": [{ "id", "chave", "categoria", "nome", "equipado", "quantidade", "municao", "durabilidade",
+              "precisaRecarregar", "arremessado", "destruido", "consumido", "aceso", "magico", "personalizado", "nota" }],
+  "efeitos": [{ "id", "chave", "nome", "ate", "turnos", "mods", "dados", "ataque", "item", "alvo",
+                "semAtaque", "semAgir", "semEsquiva", "imuneFogo", "porMinuto" }],
+  "marcas": { "dia": {}, "batalha": {}, "turno": {} },
+  "tempo": { "dia", "batalha", "turno" },
+  "estado": { "situacao", "causa", "marcas", "vozGoblin", "pendenteEpico" },
+  "opcoes": { "vozGoblin", "deuRuim", "niveisEpicos", "explosoesManuais", "adaptacoes": { "cthulin", "pokepragas", "wargoblin", "goblinHigh", "vale" } },
+  "adaptacoes": { "cthulin": {medo}, "pokepragas": {...}, "goblinHigh": {...}, "vale": {...} },
+  "linhagem": { "anterior": {id,nome}|null, "seguinte": {id,nome}|null },
+  "historico": [...], "operacoes": [ids], "seq"
+}
+```
+
+- `ate`: `proximoAtaque`, `proximoTeste`, `turnos`, `fimDaBatalha`, `fimDoDia`,
+  `manual` — marcos do jogo, nunca relógio.
+- `situacao`: `ativo`, `morto`, `explodiu`, `explodiuDeAlegria`, `louco`,
+  `sumiu`, `mortoVivo`. Fim de jogo não apaga nada.
+- Os atributos NÃO são gravados: `calcular()` os monta em camadas a cada vez.
+- Desligar uma adaptação não apaga o bloco dela.
+- Junto de cada gravação vai `resumoGoblins`; o servidor calcula a projeção do
+  painel de novo, com o motor.
+
 ## Vampiro: A Máscara — v5.0 / schema 25
 
 Um quarto tipo: `tipoFicha: "vampiro"`, com o bloco `vampiro` normalizado por
@@ -55,7 +97,7 @@ e passam ao 25 na primeira gravação. Detalhes e regras: [VAMPIRO.md](VAMPIRO.m
 `tipoFicha` é lido pelo registro central (`js/sistemas.js`):
 
 - vazio → a regra das fichas antigas (Universal);
-- conhecido (`ordem`, `oblivio`, `vampiro`, `universal`) → ele;
+- conhecido (`ordem`, `oblivio`, `vampiro`, `goblins`, `universal`) → ele;
 - um identificador que esta versão não conhece → **fica como veio**, nunca vira
   Universal. A ficha abre só para leitura e nada é gravado por cima dela;
 - o que nem identificador é (um arquivo adulterado) → a regra das antigas.

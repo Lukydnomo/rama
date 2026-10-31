@@ -1,5 +1,26 @@
 # O banco
 
+## Malditos Goblins — v6.0
+
+> **Atualizando para a v6.0:** crie o arquivo `Goblins` com `backend/Goblins.gs`,
+> troque `Sistemas.gs`, `Dados.gs` e `Campanhas.gs`, rode **`setupRama()`** uma
+> vez (cria a aba `CAMPANHA_GOBLINS`; repetir não muda nada) e crie uma nova
+> versão da implantação.
+
+**CAMPANHA_GOBLINS** — `campanhaId · atualizadoEm · rev · opsJson · dadosJson`
+(leves: as três primeiras; pesada: `dadosJson`). `dadosJson` é o Covil
+normalizado por `RAMAGoblinsMesa` (cópia fiel de `js/goblins/mesa.js` em
+`Goblins.gs`): regras da campanha, dia, combate (participantes com `null` para
+atributo inexistente, proteção à parte, efeitos, ordem, rodada, ações
+demoradas, efeitos da mesa), sorteios, masmorras, Bando Rival, negociações,
+notas e registro. Quando não cabe na célula, o registro e os sorteios mais
+antigos cedem primeiro. Trocar o sistema não apaga a linha.
+
+As fichas continuam em `PERSONAGENS` (o bloco `goblins`); a projeção do painel
+ganha `tipo: "goblins"` e o bloco `goblins` (`resumoParaMesa`). Rolagens feitas
+pelo servidor (ataques e magias de jogador, Grito de Guerra) entram em
+`CAMPANHA_ROLAGENS` como as do navegador.
+
 ## Vampiro — v5.0
 
 > **Atualizando para a v5.0:** crie o arquivo `Vampiro` com `backend/Vampiro.gs`,

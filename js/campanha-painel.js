@@ -215,6 +215,30 @@
     return base;
   }
 
+  /* Malditos Goblins (v6.0): ocupação e nível identificam; atributos,
+     ferimentos, situação e efeitos vêm do resumo calculado no SERVIDOR
+     com o motor (e seguem "Esconder status dos jogadores"). */
+  function resumirGoblins(p, base) {
+    var R = global.RAMAGoblins;
+    var b = p.goblins && typeof p.goblins === "object" ? p.goblins : {};
+    base.linhas.push("Malditos Goblins" + (b.ocupacaoNome ? " · " + b.ocupacaoNome : "") + (b.nivel ? " · nível " + U.inteiro(b.nivel, 1) : ""));
+    if (!b.atributos) return base;
+    var conds = [];
+    if (b.situacao && b.situacao !== "ativo") conds.push({ chave: "situacao", nome: R && R.SITUACOES[b.situacao] ? R.SITUACOES[b.situacao] : b.situacao, ativa: true });
+    (Array.isArray(b.efeitos) ? b.efeitos : []).slice(0, 6).forEach(function (e, i) { conds.push({ chave: "efeito-" + i, nome: String(e.nome || ""), ativa: true }); });
+    base.condicoes = condicoesDoCartao(conds);
+    var a = b.atributos;
+    base.estatisticas = [
+      { chave: "ferimentos", rotulo: "Ferimentos", valor: U.inteiro(b.ferimentos, 0) + "/" + U.inteiro(a.vitalidade, 0) },
+      { chave: "combate", rotulo: "Combate", valor: String(U.inteiro(a.combate, 0)) },
+      { chave: "habilidade", rotulo: "Habilidade", valor: String(U.inteiro(a.habilidade, 0)) },
+      { chave: "nocao", rotulo: "Noção", valor: String(U.inteiro(a.nocao, 0)) },
+    ];
+    if (b.medo !== null && b.medo !== undefined) base.estatisticas.push({ chave: "medo", rotulo: "Medo", valor: String(U.inteiro(b.medo, 0)) });
+    if (Array.isArray(b.protecoes) && b.protecoes.length) base.progressao = b.protecoes.map(function (x) { return x.nome + " " + x.atual + "/" + x.original; }).join(" · ");
+    return base;
+  }
+
   function resumirOrdem(p, base) {
     var bruto = p.ordem && typeof p.ordem === "object" ? p.ordem : {};
     if (!R()) return base;
@@ -407,6 +431,7 @@
   registrar("ordem", resumirOrdem);
   registrar("oblivio", resumirOblivio);
   registrar("vampiro", resumirVampiro);
+  registrar("goblins", resumirGoblins);
   registrar("universal", resumirUniversal);
 
   global.RAMAPainelMesa = {
