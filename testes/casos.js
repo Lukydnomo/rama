@@ -20,6 +20,30 @@
     var H = global.RAMAHabilidades;
     var Ver = global.RAMAVersion;
 
+    t.grupo("Ordem · consulta dos usos das perícias (v5.4)");
+    var PUs = global.RAMAOrdemPericiasUsos;
+    var CatP = global.RAMAOrdemCatalogo;
+    if (PUs && CatP) {
+      t.ok("as 28 perícias têm consulta, pela chave do catálogo", CatP.PERICIAS.length === 28 && CatP.PERICIAS.every(function (p) { return !!PUs.consulta(p.chave) && !!PUs.consulta(p.chave).intro; }));
+      var todosUsos = [];
+      CatP.PERICIAS.forEach(function (p) { var c = PUs.consulta(p.chave); todosUsos = todosUsos.concat(c.usos, c.especificos || []); });
+      t.ok("todo uso tem nome, texto, fonte e página impressa", todosUsos.every(function (u) { return u.nome && u.texto && u.fonte && u.pagina > 0; }));
+      t.ok("nenhum ícone de dado virou “O” no texto", todosUsos.every(function (u) { return !/[–−-]O\b|\+O\b|\dO\b/.test(u.texto + (u.dt || "") + (u.acao || "")); }));
+      var nomesDe = function (k) { return PUs.consulta(k).usos.map(function (u) { return u.nome; }); };
+      t.iguais("Crime: a continuação da p. 44 (Ocultar e Sabotar)", nomesDe("crime"), ["Arrombar", "Furto", "Ocultar", "Sabotar"]);
+      t.ok("Profissão: os rendimentos da p. 48 e a fabricação do SaH à parte", nomesDe("profissao").indexOf("Rendimentos") >= 0 && PUs.consulta("profissao").especificos.some(function (e) { return e.fonte === "SAH" && e.pagina === 94; }));
+      t.ok("Tecnologia: Localizar Arquivo e Operar Dispositivo (p. 49) e os usos do AS4 e do AS5", PUs.consulta("tecnologia").usos.some(function (u) { return u.nome === "Localizar Arquivo" && u.pagina === 49; }) &&
+        PUs.consulta("tecnologia").usos.some(function (u) { return u.nome === "Obter Informações" && u.fonte === "AS4" && u.pagina === 64; }) &&
+        PUs.consulta("tecnologia").usos.some(function (u) { return u.nome === "Rastrear Trilha Digital" && u.fonte === "AS5" && u.treino === "veterano"; }));
+      t.ok("Ocultismo: Blindar a Mente (AS1 p. 43, veterano, 1 PE)", PUs.consulta("ocultismo").usos.some(function (u) { return u.nome === "Blindar a Mente" && u.fonte === "AS1" && u.custo === "1 PE" && u.treino === "veterano"; }));
+      t.ok("SaH: Recapitular e Compartilhar dizem que o teste é de Intelecto", PUs.consulta("investigacao").especificos.filter(function (e) { return /INTELECTO/.test(e.texto); }).length === 2);
+      t.ok("  Acalmar (medo) em Diplomacia, Religião e Profissão; Despistar em Furtividade; Distrair em Enganação; Atrapalhar em Luta e Reflexos",
+        ["diplomacia", "religiao", "profissao"].every(function (k) { return PUs.consulta(k).especificos.some(function (e) { return /Acalmar/.test(e.nome) && e.pagina === 88; }); }) &&
+        PUs.consulta("furtividade").especificos.some(function (e) { return /Despistar/.test(e.nome); }) && PUs.consulta("enganacao").especificos.some(function (e) { return e.nome === "Distrair"; }) &&
+        PUs.consulta("luta").especificos.some(function (e) { return /Atrapalhar/.test(e.nome); }) && PUs.consulta("reflexos").especificos.some(function (e) { return /Atrapalhar/.test(e.nome); }));
+      t.ok("  os do SaH ficam em “especificos”, nunca no lugar dos usos do livro básico", todosUsos.filter(function (u) { return u.fonte === "SAH"; }).every(function (u) { return !!u.contexto; }));
+    }
+
     t.grupo("Oblívio · a ficha atravessa o modelo como Oblívio (v3.0)");
     var OB = global.RAMAOblivio;
     if (OB) {
@@ -5401,7 +5425,7 @@
     t.iguais("duas origens: Ufólogo e Funcionário de Beira de Estrada", C.ORIGENS.filter(function (o) { return o.fonte === "AS5"; }).map(function (o) { return o.chave + ":" + o.pericias.join("+"); }),
       ["ufologo:ciencias+ocultismo", "funcionarioDeBeiraDeEstrada:fortitude+intuicao"]);
     var tudo = JSON.stringify([C.PERICIAS, P.TODOS, C.ORIGENS]);
-    t.ok("Rastrear Trilha Digital (novo uso de Tecnologia, p. 54) NÃO entrou", tudo.indexOf("Rastrear Trilha") < 0);
+    t.ok("Rastrear Trilha Digital (novo uso de Tecnologia, p. 54) não virou perícia, poder nem origem (é só consulta, v5.4)", tudo.indexOf("Rastrear Trilha") < 0);
     var tr = as5.filter(function (p) { return p.transmissao; });
     t.ok("Transmissão: elemento próprio, pré-requisitos regra opcional + Sino, sem afinidade", tr.every(function (p) {
       return p.elemento === "transmissao" && !p.afinidade && p.requisitos[0].tipo === "comRegra" && p.requisitos[0].regra === "poderesDeTransmissao" && p.requisitos[1].tipo === "sinoDeTransmissao"; }));

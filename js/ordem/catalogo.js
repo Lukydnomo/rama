@@ -1052,8 +1052,8 @@
        ARQUIVOS SECRETOS 5 v1.0, p. 54
        -----------------------------------------------------------------
        O quadro “Novo uso para a perícia Tecnologia” (Rastrear Trilha
-       Digital), na mesma página, fica FORA de propósito: os novos usos
-       gerais de perícia dos suplementos não entram no R.A.M.A.
+       Digital), na mesma página, não é origem nem automação: desde a
+       v5.4 ele é texto de consulta em js/ordem/pericias-usos.js.
        ----------------------------------------------------------------- */
 
     { chave: "ufologo", nome: "Ufólogo", fonte: AS5, pagina: 54,

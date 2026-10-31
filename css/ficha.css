@@ -1043,7 +1043,40 @@ body.pagina-ficha .app-corpo {
 .ordem-pericias__corpo { display: flex; flex-direction: column; }
 /* Com a alça de arrastar (ordem personalizada, modo edição). */
 .ordem-pericia__nome--alca { display: flex; align-items: center; gap: var(--e1); }
-.ordem-pericia__nome--alca > span:last-child { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ordem-pericia__nome--alca > span:last-child,
+.ordem-pericia__nome--alca > .ordem-pericia__consultar { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* O nome abre a consulta dos usos (v5.4): parece texto, responde como
+   botão — sublinhado ao passar e contorno no foco do teclado. */
+.ordem-pericia__consultar {
+  display: inline;
+  max-width: 100%;
+  padding: 0;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  background: none;
+  border: 0;
+  cursor: help;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: inherit;
+}
+.ordem-pericia__consultar:hover { color: var(--cor-paranormal); text-decoration: underline; text-underline-offset: 2px; }
+.ordem-pericia__consultar:focus-visible { outline: 2px solid var(--cor-paranormal); outline-offset: 2px; }
+
+/* A janela da consulta: introdução, usos com o nome em destaque e a
+   fonte de cada um, discreta. */
+.pericia-consulta__corpo { display: flex; flex-direction: column; gap: var(--e3); }
+.pericia-consulta__marcas { display: flex; flex-wrap: wrap; gap: var(--e1); }
+.pericia-consulta__intro { margin: 0; }
+.pericia-consulta__nota { margin: 0; }
+.pericia-consulta__usos { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--e3); }
+.pericia-consulta__uso p { margin: 0; }
+.pericia-consulta__uso-nome { color: var(--cor-paranormal); font-weight: 700; }
+.pericia-consulta__uso-meta { color: var(--cor-texto-2); font-size: var(--texto-mini); }
+.pericia-consulta__uso-texto { margin-top: 2px; line-height: 1.5; }
+.pericia-consulta__fonte { margin: 2px 0 0; color: var(--cor-texto-3); font-size: var(--texto-mini); }
+.pericia-consulta__subtitulo { margin: var(--e2) 0 0; padding-top: var(--e3); border-top: var(--borda) solid var(--cor-traco-fraca); }
 .ordem-pericia__celula { display: flex; align-items: center; gap: var(--e1); min-width: 0; }
 
 .ordem-pericia__atrib,

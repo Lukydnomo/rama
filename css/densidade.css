@@ -135,6 +135,11 @@
 :root[data-densidade="compacta"] .ritual-danos { gap: var(--e1) var(--e3); }
 :root[data-densidade="compacta"] .ritual-dano__rolar { min-width: var(--alvo-toque); min-height: var(--alvo-toque); }
 
+/* Consulta dos usos de uma perícia: a lista aproxima; o texto longo
+   mantém a entrelinha. */
+:root[data-densidade="compacta"] .pericia-consulta__corpo,
+:root[data-densidade="compacta"] .pericia-consulta__usos { gap: var(--e2); }
+
 /* ---------- campanha ---------- */
 
 :root[data-densidade="compacta"] .mesa-barra,

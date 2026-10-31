@@ -366,6 +366,9 @@
   }
   & .ordem-pericia__nome { color: var(--cor-texto); }
   & .ordem-pericia--destreinada .ordem-pericia__nome { color: var(--cor-texto-3); }
+  & .ordem-pericia__consultar:focus-visible { outline-offset: 1px; border-radius: var(--m20-raio-controle); }
+  & .pericia-consulta__uso-nome { font-weight: 650; }
+  & .pericia-consulta__subtitulo { border-top-color: var(--cor-traco-media); }
   & .ordem-pericia__treino,
   & .ordem-pericia__extra { font-feature-settings: "tnum"; }
   & .ordem-pericia__bonus {

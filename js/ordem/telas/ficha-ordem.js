@@ -2476,9 +2476,9 @@
       arrastar
         ? el("span.ordem-pericia__nome.ordem-pericia__nome--alca", { role: "rowheader", title: p.nome }, [
             global.RAMAArrastar.alca({ id: p.chave, rotulo: p.nome }),
-            el("span", { texto: p.nome }),
+            botaoDoNome(p, g),
           ])
-        : el("span.ordem-pericia__nome", { role: "rowheader", texto: p.nome, title: p.nome }),
+        : el("span.ordem-pericia__nome", { role: "rowheader", title: p.nome }, [botaoDoNome(p, g)]),
       el("span.ordem-pericia__celula.ordem-pericia__c-atrib", { role: "cell", "data-rotulo": "Atributo" }, [celulaAtributo]),
       el("span.ordem-pericia__celula.ordem-pericia__c-grau", { role: "cell", "data-rotulo": "Grau" }, [celulaGrau]),
       el("span.ordem-pericia__celula.ordem-pericia__c-treino", { role: "cell", "data-rotulo": "Treino" }, [
@@ -2514,6 +2514,20 @@
       el("span.ordem-pericia__celula.ordem-pericia__marcas", { role: "cell" }, [p.carga ? el("span.r-etiqueta", { texto: "carga", title: "Sofre a penalidade de carga." }) : null,
         p.kit ? el("span.r-etiqueta", { texto: "kit", title: "Precisa de um kit." }) : null]),
     ]);
+  }
+
+  /* O nome da perícia abre a consulta dos usos dela (só leitura:
+     js/ordem/telas/pericia-consulta.js). Pela CHAVE — Profissão com as
+     especialidades no nome continua achando o texto. */
+  function botaoDoNome(p, grau) {
+    if (!global.RAMAConsultaPericia) return el("span", { texto: p.nome });
+    return el("button.ordem-pericia__consultar", {
+      type: "button",
+      texto: p.nome,
+      "aria-label": p.nome + ": ver a descrição e os usos",
+      dataset: { foco: "usos-" + p.chave },
+      onclick: function () { global.RAMAConsultaPericia.abrir(p.chave, { nome: p.nome, grau: grau }); },
+    });
   }
 
   /* Recalcula e devolve o foco ao controle que mudou — redesenhar a aba

@@ -2527,9 +2527,9 @@ do AS3 (`js/ordem/arquivo3.js`).
 | 62–63 | Conexão Comunicativa, Sincronia Conectiva, Transmissão de Perícia/Poder/Ritual | poderes de Transmissão | `poderes.js` |
 | 66–69 | perigos complexos: Explosão em Contagem Regressiva, Fuga de Horda, Navio Naufragando, Prédio Ocupado, Chuva de Sangue | regra de cena (campanha) | aba Perigos da campanha |
 
-**Fora do escopo, por pedido:** “Rastrear Trilha Digital” (p. 54) não entra em
-descrição de perícia, menu, ação, biblioteca nem automação. Nenhum uso geral novo
-de perícia foi criado. As ações dos perigos complexos pertencem ao perigo — só
+**Fora do escopo, por pedido (v2.48):** “Rastrear Trilha Digital” (p. 54) não
+virou menu, ação, biblioteca nem automação. **Desde a v5.4** ele aparece só como
+texto de consulta, no uso de Tecnologia (ver “Usos das perícias”). As ações dos perigos complexos pertencem ao perigo — só
 existem dentro dele.
 
 ### Consulta × aplicação
@@ -2973,3 +2973,52 @@ Fonte `AS6`, com páginas (não é Extra). Estado em `js/ordem/arquivo6.js`; tel
 - **Infecção Cerebral III**: Intelecto 0 aplicado como dados a menos nos testes de Intelecto (o atributo não muda).
 - **Grão-Mestre (aliado: você)**: aceito como alvo próprio quando o ritual o tem como alvo.
 - **Evolução Modular**: utilidade nos degraus pares (10%, 20%… 99%), combate nos ímpares a partir de 15%; ambíguos listados em `AMBIGUOS_MODULARES` (js/ordem/poderes.js), reclassificáveis na ficha. Com NEX & Experiência, por nível; Mundano/Sobrevivente sem vagas. A redução de proporção sugerida pelo autor fica com a mesa.
+
+
+## Usos das perícias — consulta (v5.4)
+
+Clicar no **nome** de uma perícia na ficha de Ordem abre a descrição e os usos
+dela. Só consulta: não rola, não grava, não gasta nada. O texto mora em
+`js/ordem/pericias-usos.js` (indexado pela chave de `C.PERICIAS`); a janela, em
+`js/ordem/telas/pericia-consulta.js` (`UI.modal`, Esc e retorno de foco).
+
+### Padrão para as próximas atualizações
+
+- Todo uso de perícia de Ordem é consulta neste catálogo, exibido por esta janela.
+- Um suplemento que acrescentar ou mudar um uso entra em `PERICIAS_USOS`, com
+  descrição, treinamento mínimo, DT, ação, custos, alcance, efeitos,
+  restrições, fonte e **página impressa**.
+- Uso que qualquer personagem pode fazer: `usos`. Uso que só existe dentro de
+  uma regra (cena de perseguição, de furtividade, regra opcional): `especificos`,
+  com o contexto — nunca no lugar do uso do livro básico.
+- Benefício de origem, poder, trilha ou item não é uso da perícia e não entra.
+- Entrar na consulta não exige automação.
+- Dados: o ícone de d20 (que os PDFs extraem como “O”) é escrito −1d20/+1d20.
+
+### Cobertura
+
+| Fonte | Páginas | Conteúdo |
+|---|---|---|
+| Livro básico | 40–49 | as 28 perícias: regras gerais (p. 40), descrições e todos os usos, com as continuações de Crime (p. 43–44), Profissão (p. 47–48) e Tecnologia (p. 48–49); Iniciativa, Luta, Pontaria e Vontade só com a descrição geral |
+| Arquivos Secretos 1 | 43 | Ocultismo — Blindar a Mente |
+| Arquivos Secretos 4 | 64 | Tecnologia — Obter Informações |
+| Arquivos Secretos 5 | 54 | Tecnologia — Rastrear Trilha Digital |
+| Sobrevivendo ao Horror | 81, 88, 90–94 | “Usos em regras específicas”: Busca Obstinada, Recapitular e Compartilhar (Intelecto) em Investigação; Acalmar (medo) em Diplomacia, Religião e Profissão; perseguição em Atletismo, Pilotagem, Adestramento, Acrobacia, Enganação e Tática, Despistar em Furtividade, Atrapalhar em Luta e Reflexos; Esconder-se (visibilidade) em Furtividade e Distrair em Enganação; Fabricação em Campo em Profissão |
+
+### Divergências encontradas
+
+- **Intuição**: a Tabela 2.1 (p. 41) dá Intelecto como atributo-base; a
+  descrição (p. 45) diz Presença. O R.A.M.A. continua com Presença (o
+  catálogo já usava).
+- **Páginas do catálogo de perícias** (`C.PERICIAS[].pagina`): várias estão uma
+  página antes da descrição impressa (Adestramento, Artes e Atletismo estão na
+  p. 42; Diplomacia e Enganação na 44; Intimidação e Intuição na 45; Medicina e
+  Investigação na 46; Ocultismo, Percepção, Pilotagem, Pontaria e Profissão na
+  47…). A consulta usa as páginas impressas; o campo do catálogo não foi
+  mudado.
+- **Fortitude**, **Reflexos** e **Vontade** dizem “A DT é determina[da]” (erro de
+  digitação no livro).
+- **Acalmar (SaH p. 88)** não informa a DT inicial (só o +5 por repetição); a
+  consulta não inventa número.
+- **Identificar Animal** (Sobrevivência) remete a Ocultismo sem repetir a regra;
+  a consulta resume o funcionamento de Identificar Criatura.

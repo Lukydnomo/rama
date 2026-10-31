@@ -742,6 +742,10 @@ segredo nenhum — ele os lê das Script Properties. Publicá-lo não expõe nad
 
 ### Atualizar o backend
 
+**v5.4.0 — MANUAL:** só o site (a consulta dos usos das perícias de Ordem).
+Publique o site — inclusive `js/ordem/pericias-usos.js`,
+`js/ordem/telas/pericia-consulta.js` e `ficha/index.html`. Nada de `.gs`.
+
 **v5.3.0 — PANACEA:** publique o site (inclusive `js/ordem/arquivo6.js`,
 `js/ordem/telas/ficha-arquivo6.js` e `assets/criaturas/as6/`) e atualize
 `backend/Campanhas.gs` (aceita o id `as6.criatura.*` no retrato do combate),
@@ -1529,7 +1533,7 @@ Três números diferentes, que não se misturam:
 
 | | Onde | O que é |
 |---|---|---|
-| versão do aplicativo | `js/versao.js` | o que a pessoa vê: v5.3.0 |
+| versão do aplicativo | `js/versao.js` | o que a pessoa vê: v5.4.0 |
 | `schemaVersion` | `js/ficha.js` | o formato da FICHA |
 | `versaoFormato` | `js/config.js` | o formato dos arquivos de importação |
 

@@ -118,6 +118,20 @@
 
   var CHANGELOG = [
     {
+      versao: "5.4.0",
+      codinome: "MANUAL",
+      data: "31/10/2026",
+      mudancas: {
+        "Adicionado": [
+          "Ordem Paranormal: clicar no nome de uma perícia abre a descrição e todos os usos dela — treinamento, DT, ação, custo, resultado, restrições e a página de cada um. As 28 perícias do livro básico, Blindar a Mente (Arquivos Secretos 1), Obter Informações (Arquivos Secretos 4) e Rastrear Trilha Digital (Arquivos Secretos 5).",
+          "Os usos que só existem dentro de uma regra de Sobrevivendo ao Horror (investigação, medo, perseguição, furtividade e fabricação em campo) aparecem à parte, em “Usos em regras específicas”.",
+        ],
+        "Técnico": [
+          "Só consulta: abrir não grava, não rola e não gasta nada, e funciona com acesso de leitura, em edição, com a ordem personalizada e na Profissão com especialidades. Módulos js/ordem/pericias-usos.js (os textos) e js/ordem/telas/pericia-consulta.js (a janela). Só o site.",
+        ],
+      },
+    },
+    {
       versao: "5.3.0",
       codinome: "PANACEA",
       data: "30/10/2026",

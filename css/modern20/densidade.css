@@ -23,6 +23,8 @@
     margin-top: 0;
   }
 
+  &[data-densidade="compacta"] .pericia-consulta__subtitulo { margin-top: var(--e1); padding-top: var(--e2); }
+
   &[data-densidade="compacta"] .r-modal__corpo {
     padding: var(--e3);
     gap: var(--e3);
