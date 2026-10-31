@@ -776,6 +776,43 @@
   gap: var(--e3);
   padding: var(--e7) var(--e4);
   color: var(--cor-texto-3);
+  animation: r-surgir var(--tempo-medio) var(--curva) both;
+}
+.r-carregando__marca { display: inline-flex; color: var(--cor-texto-2); }
+.r-carregando__rotulo { margin: 0; letter-spacing: var(--espaco-letra-titulo); text-transform: uppercase; font-size: var(--texto-mini); }
+
+@keyframes r-surgir {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: none; }
+}
+
+/* A marca animada (v6.3): o tronco cresce, os ramos se abrem, os nós
+   acendem — e a volta recomeça. pathLength=1 deixa cada traço medir 1. */
+.marca--animada .marca__traco {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  animation: marca-traco 2.4s var(--curva) infinite;
+}
+.marca--animada .marca__traco:nth-of-type(2),
+.marca--animada .marca__traco:nth-of-type(3) { animation-delay: .25s; }
+.marca--animada .marca__traco:nth-of-type(4) { animation-delay: .5s; }
+.marca--animada .marca__no {
+  opacity: .15;
+  animation: marca-no 2.4s steps(1, end) infinite;
+}
+.marca--animada .marca__no:nth-of-type(1) { animation-delay: .2s; }
+.marca--animada .marca__no:nth-of-type(2) { animation-delay: .45s; }
+.marca--animada .marca__no:nth-of-type(3) { animation-delay: .55s; color: var(--cor-paranormal); }
+.marca--animada .marca__no:nth-of-type(4) { animation-delay: .8s; }
+@keyframes marca-traco {
+  0% { stroke-dashoffset: 1; }
+  30%, 82% { stroke-dashoffset: 0; }
+  100% { stroke-dashoffset: -1; }
+}
+@keyframes marca-no {
+  0% { opacity: .15; }
+  12%, 80% { opacity: 1; }
+  92% { opacity: .15; }
 }
 
 .r-carregando__rotulo::after {
@@ -824,6 +861,9 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .r-carregando { animation: none; }
+  .marca--animada .marca__traco,
+  .marca--animada .marca__no { animation: none; stroke-dashoffset: 0; opacity: 1; }
   .r-barra__preenche {
     animation: none;
     width: 100%;

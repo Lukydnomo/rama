@@ -462,7 +462,8 @@
   & .r-vazio__texto { line-height: 1.55; }
 
   & .r-carregando { gap: var(--e3); }
-  & .r-carregando__rotulo { font-weight: 550; color: var(--cor-texto-2); }
+  & .r-carregando__rotulo { font-weight: 550; color: var(--cor-texto-2); letter-spacing: 0; text-transform: none; font-size: var(--texto-base); }
+  & .r-carregando__marca { color: var(--cor-texto-3); }
   & .r-carregando__rotulo::after { display: none; }
   & .r-barra {
     height: 4px;

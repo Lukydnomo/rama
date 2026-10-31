@@ -347,12 +347,19 @@
 
     document.addEventListener("rama:servidor-demorando", aoDemorar);
 
+    /* v6.3: a marca se desenha (o tronco cresce, os nós acendem), com o
+       nome por extenso embaixo e uma grade de arquivo bem leve no fundo. */
     var tela = el("div.abertura", { role: "status" }, [
       el("div.abertura__caixa", {}, [
-        global.RAMAUI.marca(48),
-        el("p.abertura__nome", { texto: "R.A.M.A." }),
-        rotulo,
-        el("div.r-barra", { "aria-hidden": "true" }, [el("div.r-barra__preenche")]),
+        el("span.abertura__marca", { "aria-hidden": "true" }, [global.RAMAUI.marca(64, { animada: true })]),
+        el("div.abertura__titulos", {}, [
+          el("p.abertura__nome", { texto: "R.A.M.A." }),
+          el("p.abertura__extenso", { texto: "Rede de Arquivamento Multiversal de Agentes" }),
+        ]),
+        el("div.abertura__estado", {}, [
+          rotulo,
+          el("div.r-barra", { "aria-hidden": "true" }, [el("div.r-barra__preenche")]),
+        ]),
         explicacao,
       ]),
     ]);

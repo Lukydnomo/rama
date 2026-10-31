@@ -289,6 +289,14 @@
   & .senha__olho { height: var(--m20-controle); }
 
   & .abertura__nome { font-weight: 750; letter-spacing: 0.12em; }
+  & .abertura::before { opacity: .55; background-size: 28px 28px; }
+  & .abertura__marca {
+    border-color: var(--m20-borda);
+    border-radius: var(--m20-raio-janela);
+    box-shadow: var(--m20-sombra-2);
+  }
+  & .abertura__extenso { font-family: var(--fonte-mono); letter-spacing: .04em; text-transform: none; }
+  & .abertura__estado .r-carregando__rotulo { font-weight: 550; letter-spacing: 0; text-transform: none; }
 
   /* =================================================================
      PASTAS COMO ÍCONES

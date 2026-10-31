@@ -654,6 +654,7 @@
 
   function carregando(mensagem) {
     return el("div.r-carregando", { role: "status" }, [
+      el("span.r-carregando__marca", { "aria-hidden": "true" }, [marca(32, { animada: true })]),
       el("p.r-carregando__rotulo", { texto: mensagem || "Consultando arquivo" }),
       el("div.r-barra", { "aria-hidden": "true" }, [el("div.r-barra__preenche")]),
     ]);
@@ -702,26 +703,32 @@
      não sabe vê um diagrama de arquivo.
      ================================================================= */
 
-  function marca(tamanho) {
+  /* marca(tamanho, { animada }) — com `animada` (v6.3, carregamento),
+     o tronco cresce, os ramos se abrem e os nós acendem em ordem, como
+     um arquivo sendo aberto. Parada, é a mesma marca de sempre; com
+     movimento reduzido, a animada também fica parada. */
+  function marca(tamanho, opcoes) {
     var s = tamanho || 28;
     var svg = U.svg;
+    var animada = !!(opcoes && opcoes.animada);
     return svg("svg", {
       viewBox: "0 0 32 32", width: s, height: s,
       fill: "none", stroke: "currentColor", "stroke-width": "2",
       "stroke-linecap": "square", "aria-hidden": "true", focusable: "false",
+      class: animada ? "marca marca--animada" : "marca",
     }, [
       /* o tronco */
-      svg("path", { d: "M16 30 L16 18" }),
+      svg("path", { d: "M16 30 L16 18", pathLength: "1", class: "marca__traco" }),
       /* a primeira bifurcação */
-      svg("path", { d: "M16 18 L6 10" }),
-      svg("path", { d: "M16 18 L26 10" }),
+      svg("path", { d: "M16 18 L6 10", pathLength: "1", class: "marca__traco" }),
+      svg("path", { d: "M16 18 L26 10", pathLength: "1", class: "marca__traco" }),
       /* a segunda, só de um lado — a ramificação não é simétrica */
-      svg("path", { d: "M26 10 L26 4" }),
+      svg("path", { d: "M26 10 L26 4", pathLength: "1", class: "marca__traco" }),
       /* os nós */
-      svg("rect", { x: "13", y: "27", width: "6", height: "3", fill: "currentColor", stroke: "none" }),
-      svg("rect", { x: "3", y: "7", width: "6", height: "6", fill: "none" }),
-      svg("rect", { x: "23", y: "7", width: "6", height: "6", fill: "currentColor", stroke: "none" }),
-      svg("rect", { x: "24", y: "2", width: "4", height: "4", fill: "none" }),
+      svg("rect", { x: "13", y: "27", width: "6", height: "3", fill: "currentColor", stroke: "none", class: "marca__no" }),
+      svg("rect", { x: "3", y: "7", width: "6", height: "6", fill: "none", class: "marca__no" }),
+      svg("rect", { x: "23", y: "7", width: "6", height: "6", fill: "currentColor", stroke: "none", class: "marca__no" }),
+      svg("rect", { x: "24", y: "2", width: "4", height: "4", fill: "none", class: "marca__no" }),
     ]);
   }
 

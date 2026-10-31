@@ -781,6 +781,10 @@ segredo nenhum — ele os lê das Script Properties. Publicá-lo não expõe nad
 
 ### Atualizar o backend
 
+**v6.3.1 — PAVIO:** só o site (a tela de carregamento). Publique `js/ui.js`,
+`js/auth.js` e as folhas `css/componentes.css`, `css/layout.css` e os pares do
+Modern20. Nada de `.gs`.
+
 **v6.3.0 — VITRAL:** só o site (a Home renovada). Publique o site — inclusive
 `index.html`, `js/paginas/home.js` e `css/home.css`. Nada de `.gs`.
 
@@ -1602,7 +1606,7 @@ Três números diferentes, que não se misturam:
 
 | | Onde | O que é |
 |---|---|---|
-| versão do aplicativo | `js/versao.js` | o que a pessoa vê: v6.3.0 |
+| versão do aplicativo | `js/versao.js` | o que a pessoa vê: v6.3.1 |
 | `schemaVersion` | `js/ficha.js` | o formato da FICHA |
 | `versaoFormato` | `js/config.js` | o formato dos arquivos de importação |
 

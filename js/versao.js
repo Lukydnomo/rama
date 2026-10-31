@@ -118,6 +118,20 @@
 
   var CHANGELOG = [
     {
+      versao: "6.3.1",
+      codinome: "PAVIO",
+      data: "31/10/2026",
+      mudancas: {
+        "Melhorado": [
+          "Tela de carregamento renovada: a marca do R.A.M.A. se desenha enquanto o arquivo abre — o tronco cresce, os ramos se abrem e os nós acendem —, com o nome por extenso e uma grade leve ao fundo.",
+          "O carregamento dentro das telas ganhou a mesma marca animada, menor, acima do texto e da barra.",
+        ],
+        "Técnico": [
+          "Só o site: RAMAUI.marca(tamanho, { animada }), js/auth.js (a abertura), css/componentes.css, css/layout.css e os pares do Modern20. Com movimento reduzido, tudo fica parado.",
+        ],
+      },
+    },
+    {
       versao: "6.3.0",
       codinome: "VITRAL",
       data: "31/10/2026",

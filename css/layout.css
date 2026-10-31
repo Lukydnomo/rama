@@ -634,19 +634,62 @@ html.arrastando .pasta[data-arrastar-pasta] { border-style: dashed; border-color
   display: grid;
   place-items: center;
   background: var(--cor-fundo);
+  isolation: isolate;
+}
+/* A grade de arquivo, bem leve, sumindo para as bordas (v6.3). */
+.abertura::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background-image:
+    linear-gradient(var(--cor-traco-fraca) 1px, transparent 1px),
+    linear-gradient(90deg, var(--cor-traco-fraca) 1px, transparent 1px);
+  background-size: 32px 32px;
+  opacity: .4;
+  mask-image: radial-gradient(circle at 50% 50%, #000 0%, transparent 60%);
+  -webkit-mask-image: radial-gradient(circle at 50% 50%, #000 0%, transparent 60%);
+  pointer-events: none;
 }
 .abertura__caixa {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: var(--e3);
+  gap: var(--e4);
+  padding: var(--e5) var(--e6);
   text-align: center;
+  animation: r-surgir var(--tempo-medio) var(--curva) both;
 }
+.abertura__marca {
+  display: inline-grid;
+  place-items: center;
+  width: 104px;
+  height: 104px;
+  color: var(--cor-texto);
+  border: var(--borda) solid var(--cor-traco-fraca);
+  background: var(--fundo-superficie);
+  box-shadow: 6px 6px 0 var(--cor-fundo), 6px 6px 0 1px var(--cor-traco-fraca);
+}
+.abertura__titulos { display: flex; flex-direction: column; gap: var(--e1); }
 .abertura__nome {
+  margin: 0;
   font-weight: 700;
   font-size: var(--texto-grande);
   letter-spacing: 0.2em;
   color: var(--cor-texto);
+}
+.abertura__extenso {
+  margin: 0;
+  font-family: var(--fonte-mini);
+  font-size: var(--texto-mini);
+  letter-spacing: var(--espaco-letra-titulo);
+  text-transform: uppercase;
+  color: var(--cor-texto-3);
+}
+.abertura__estado { display: flex; flex-direction: column; align-items: center; gap: var(--e2); }
+.abertura__estado .r-carregando__rotulo { margin: 0; letter-spacing: var(--espaco-letra-titulo); text-transform: uppercase; color: var(--cor-texto-2); }
+@media (prefers-reduced-motion: reduce) {
+  .abertura__caixa { animation: none; }
 }
 
 
