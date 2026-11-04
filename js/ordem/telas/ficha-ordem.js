@@ -74,14 +74,20 @@
      O NÚMERO CALCULADO, COM A CONTA ATRÁS
      ================================================================= */
 
-  function valorCalculado(rotulo, conta, extra) {
+  /* opcoes (v6.4): `curto` é o rótulo à vista quando o completo não cabe
+     ("máx" no recurso) — o leitor de tela continua ouvindo o completo;
+     `classe` escolhe a variante (calculado--linha, calculado--inline). */
+  function valorCalculado(rotulo, conta, extra, opcoes) {
+    var op = opcoes || {};
     return el("button.calculado", {
       type: "button",
-      "aria-label": "Como " + rotulo + " foi calculado",
+      class: op.classe || "",
+      "aria-label": "Como " + rotulo + " foi calculado: " + conta.total + (extra ? " " + extra : ""),
       title: "Ver a composição",
+      dataset: op.foco ? { foco: op.foco } : {},
       onclick: function () { abrirComposicao(rotulo, conta); },
     }, [
-      el("span.calculado__rotulo", { texto: rotulo }),
+      el("span.calculado__rotulo", { texto: op.curto || rotulo }),
       el("span.calculado__valor", { texto: String(conta.total) }),
       extra ? el("span.calculado__extra", { texto: extra }) : null,
       el("span.calculado__marca", { "aria-hidden": "true", texto: "=" }),
@@ -124,13 +130,14 @@
 
   var NOMES_EXTRA = { defesa: "Defesa", bloqueio: "Bloqueio", esquiva: "Esquiva" };
 
-  function valorComExtra(ctx, o, c, qual) {
+  function valorComExtra(ctx, o, c, qual, classe) {
     var conta = c[qual];
     return el("button.calculado", {
       type: "button",
+      class: classe || "",
       "aria-label": "Como " + NOMES_EXTRA[qual] + " foi calculado: " + conta.total,
       title: "Ver a composição",
-      dataset: { estatistica: qual },
+      dataset: { estatistica: qual, foco: "calculado-" + qual },
       onclick: function () { abrirComposicaoComExtra(ctx, o, qual); },
     }, [
       el("span.calculado__rotulo", { texto: NOMES_EXTRA[qual] }),
@@ -278,36 +285,31 @@
      ================================================================= */
 
   var SecaoGeral = {
-    /* O que fica sempre à vista, acima das abas: a foto, os atributos
-       que se rolam e os recursos que se gastam. */
+    /* v6.4: acima das abas fica só a identificação e o resumo da sessão,
+       numa linha. Os painéis completos moram na aba Geral, onde são
+       usados — abrir Rituais ou Inventário não exige mais atravessar
+       atributos, recursos, condições e defesa. Nada aqui altera a ficha:
+       cada item do resumo é um atalho para o lugar onde aquilo se muda. */
     blocoSuperior: function (ctx) {
       var o = ordemDe(ctx);
       var c = calculo(ctx);
 
-      return el("div.ficha-geral", {}, [
-        el("div.ficha-identidade", {}, [
-          global.RAMASecaoGeral.foto
-            ? global.RAMASecaoGeral.foto(ctx)
-            : el("div.ficha-foto", {}, [el("div.ficha-foto__vazio", {}, [UI.marca(48)])]),
-          el("div.pilha", {}, [
-            ctx.emEdicao() ? global.RAMASecaoGeral.campoNome(ctx) : null,
-            identidadeCurta(ctx, o, c),
-          ]),
+      return el("div.ordem-cabeca", {}, [
+        el("div.ordem-cabeca__foto", { "aria-hidden": "true" }, [
+          ctx.foto
+            ? el("img", { src: ctx.foto, alt: "" })
+            : el("span.ordem-cabeca__sem-foto", {}, [UI.marca(28)]),
         ]),
-        el("div.pilha--larga", { class: "pilha" }, [
-          avisoDePendencias(ctx, c),
-          UI.painel("Atributos", painelAtributosCorpo(ctx, o)),
-          UI.painel("Recursos", painelRecursosCorpo(ctx, o, c)),
-          CD() ? painelDeCondicoes(ctx, o, c) : null,
-          UI.painel("Defesa e movimento", painelDerivadosCorpo(ctx, o, c)),
-        ]),
+        identidadeCurta(ctx, o, c),
+        resumoDeSessao(ctx, o, c),
       ]);
     },
 
-    /* A aba Geral: quem o personagem é nas regras, as proficiências e
-       resistências, e os ajustes da mesa. Os poderes ficam na aba
-       Habilidades e a carga na aba Inventário, junto do que eles
-       descrevem. */
+    /* A aba Geral (v6.4) é a visão de jogo, montada como a página 1 da
+       ficha de papel: atributos, recursos e defesa de um lado; condições,
+       ataques e perícias do outro. Embaixo, na largura toda, quem o
+       personagem é. Os ajustes da mesa foram para a aba Regras, com o que
+       se prepara fora da sessão. */
     aba: function (ctx) {
       var o = ordemDe(ctx);
       var c = calculo(ctx);
@@ -316,46 +318,202 @@
          esconde o painel, mas guarda saldos e registros. */
       var CS = global.RAMAOrdemConsumo;
       var SC = global.RAMASecaoConsumo;
-      return el("div.pilha--larga", { class: "pilha" }, [
+      var condicoes = CD() ? painelDeCondicoes(ctx, o, c) : null;
+      var critico = !!(condicoes && condicoes.dataset.critico === "sim");
+
+      var personagem = [
         painelIdentidade(ctx, o, c),
         painelCicatrizado(ctx, o, c),
-        painelResistencias(ctx, o, c),
-        CS && SC && CS.ligada(o, "contagemMunicao") ? SC.painelMunicao(ctx) : null,
         CS && SC && CS.ligada(o, "controleComponentes") ? SC.painelComponentes(ctx, c) : null,
-        UI.painel("Ajustes da mesa", botaoAjuste(ctx, o, true)),
+      ].filter(Boolean);
+
+      return el("div.ordem-geral", {}, [
+        critico ? condicoes : null,
+        el("div.ordem-sessao", {}, [
+          el("div.ordem-sessao__coluna.ordem-sessao__folha", {}, [
+            painelAtributos(ctx, o),
+            UI.painel("Recursos", painelRecursosCorpo(ctx, o, c), { classe: "ordem-painel-recursos" }),
+            painelDefesa(ctx, o, c),
+            painelResistencias(ctx, o, c),
+          ]),
+          el("div.ordem-sessao__coluna.ordem-sessao__jogo", {}, [
+            critico ? null : condicoes,
+            painelAtaques(ctx, o),
+            CS && SC && CS.ligada(o, "contagemMunicao") ? SC.painelMunicao(ctx) : null,
+            painelPericiasRapidas(ctx, o),
+          ]),
+        ]),
+        el("section.ordem-personagem", { "aria-labelledby": "ordem-personagem-titulo" }, [
+          el("h2.t-secao.ordem-personagem__titulo", { id: "ordem-personagem-titulo", texto: "Personagem" }),
+          el("div.ordem-personagem__grade", {}, personagem),
+        ]),
       ]);
     },
   };
 
-  /* Uma faixa curta, acima dos atributos, quando há decisão esperando.
-     Leva direto para a aba onde ela se resolve. */
-  function avisoDePendencias(ctx, c) {
-    var est = c.estado;
-    if (!est) return null;
-    var n = est.pendencias.length;
-    if (!n) return null;
-    return el("div.ordem-aviso-pendencias", { role: "status" }, [
-      el("span", { texto: n === 1 ? "1 escolha de progressão esperando decisão." : n + " escolhas de progressão esperando decisão." }),
-      el("button.r-botao.r-botao--mini", {
-        type: "button", texto: "Ver na Progressão",
-        onclick: function () { if (ctx.irParaAba) ctx.irParaAba("progressao"); },
-      }),
-    ]);
-  }
-
+  /* Classe, origem, NEX ou nível, estágio e patente — numa linha. A
+     patente só aparece com a regra ligada e aplicada: desligada, ela não
+     volta como campo por causa do resumo. */
   function identidadeCurta(ctx, o, c) {
     var classe = C.classe(o.classe);
     var origem = C.origem(o.origem);
-
     var sobrevivente = c.fase && c.fase.perfil === "sobrevivente";
-    return el("dl.r-dados.ficha-identidade__dados", {}, [
-      el("dt", { texto: "Classe" }), el("dd", { texto: classe ? classe.nome : "—" }),
-      el("dt", { texto: "Origem" }), el("dd", { texto: origem ? origem.nome : "—" }),
-      sobrevivente ? el("dt", { texto: "Estágio" }) : null,
-      sobrevivente ? el("dd", { texto: String(c.fase.estagio) }) : null,
-      el("dt", { texto: c.trilho.separado ? "Nível" : "NEX" }), el("dd", { texto: c.trilho.curto }),
-      el("dt", { texto: "Patente" }), el("dd", { texto: c.patente.semPatente ? "sem patente" : (c.patente.aplicada ? c.patente.patente.nome : "não aplicada") }),
+    var pares = [
+      ["Classe", classe ? classe.nome : "—"],
+      ["Origem", origem ? origem.nome : "—"],
+      sobrevivente ? ["Estágio", String(c.fase.estagio)] : null,
+      [c.trilho.separado ? "Nível" : "NEX", c.trilho.separado ? c.trilho.curto.replace(/^Nv /, "") : c.trilho.curto],
+      !c.patente.semPatente && c.patente.aplicada ? ["Patente", c.patente.patente.nome] : null,
+    ].filter(Boolean);
+    return el("dl.ordem-cabeca__identidade", {}, pares.map(function (p) {
+      return el("div.ordem-cabeca__par", {}, [el("dt", { texto: p[0] }), el("dd", { texto: p[1] })]);
+    }));
+  }
+
+  /* Os recursos em jogo, na ordem da ficha: PV e PD com "Jogando sem
+     Sanidade"; PV, PE e SAN fora dela. A MESMA lista do painel de
+     recursos e do resumo. */
+  function recursosEmJogo(c) {
+    var itens = [{ chave: "pv", nome: "Pontos de vida", curto: "PV", conta: c.pv, atual: c.atual.pv }];
+    if (c.determinacao) {
+      itens.push({ chave: "pd", nome: "Pontos de determinação", curto: "PD", conta: c.pd, atual: c.atual.pd });
+    } else {
+      itens.push({ chave: "pe", nome: "Pontos de esforço", curto: "PE", conta: c.pe, atual: c.atual.pe });
+      itens.push({ chave: "san", nome: "Sanidade", curto: "SAN", conta: c.san, atual: c.atual.san });
+    }
+    return itens;
+  }
+
+  /* Até a metade, "baixo"; com um quarto ou menos (ou zerado),
+     "critico". A barra e o resumo leem daqui. */
+  function nivelDoRecurso(atual, maximo) {
+    if (maximo <= 0) return atual <= 0 ? "critico" : "cheio";
+    if (atual <= 0 || atual / maximo <= 0.25) return "critico";
+    if (atual / maximo <= 0.5) return "baixo";
+    return "cheio";
+  }
+
+  /* As condições que exigem atenção agora, para o resumo e para subir o
+     painel de condições ao topo da Geral. */
+  function condicoesCriticas(o, c) {
+    if (!CD()) return [];
+    if (!o.condicoes || !o.condicoes.morrendo) o.condicoes = CD().normalizar(o.condicoes);
+    var cond = o.condicoes;
+    var saida = [];
+    ["morrendo", "enlouquecendo"].forEach(function (chave) {
+      var e = CD().estado(cond, chave, { pd: c.determinacao });
+      if (e.ativa) saida.push({ chave: chave, nome: e.nome, texto: e.limite ? e.contagem + "/" + e.limite : String(e.contagem), limite: !!e.atingiu });
+    });
+    if (cond.inconsciente && cond.inconsciente.ativa) saida.push({ chave: "inconsciente", nome: "Inconsciente", texto: "" });
+    if (c.determinacao && cond.perturbado && cond.perturbado.ativa) saida.push({ chave: "perturbado", nome: "Perturbado", texto: "" });
+    return saida;
+  }
+
+  /* Leva à aba Geral e põe o foco no controle pedido. Se a Geral já está
+     aberta, só o foco (e a rolagem até ele) muda. */
+  function irPara(ctx, foco) {
+    var seletor = '[data-foco="' + foco + '"]';
+    var jaNaTela = document.querySelector('[data-regiao="conteudo"] ' + seletor);
+    if (!jaNaTela && ctx.irParaAba) ctx.irParaAba("geral");
+    setTimeout(function () {
+      var alvo = document.querySelector('[data-foco="' + foco + '"]');
+      if (!alvo) return;
+      try { alvo.focus({ preventScroll: true }); } catch (e) { alvo.focus(); }
+      if (alvo.scrollIntoView) alvo.scrollIntoView({ block: "center", behavior: "auto" });
+    }, 0);
+  }
+
+  function resumoDeSessao(ctx, o, c) {
+    var itens = recursosEmJogo(c).map(function (r) {
+      var maximo = r.conta.total;
+      return el("button.ordem-resumo__item", {
+        type: "button",
+        dataset: { resumoRecurso: r.chave, nivel: nivelDoRecurso(r.atual, maximo) },
+        "aria-label": r.nome + ": " + r.atual + " de " + maximo + ". Ir para o recurso.",
+        onclick: function () { irPara(ctx, "recurso-" + r.chave); },
+      }, [
+        el("span.ordem-resumo__rotulo", { texto: r.curto }),
+        el("span.ordem-resumo__valor", {}, [
+          el("span.ordem-resumo__atual", { texto: String(r.atual) }),
+          el("span.ordem-resumo__max", { texto: "/" + maximo }),
+        ]),
+      ]);
+    });
+
+    itens.push(el("button.ordem-resumo__item", {
+      type: "button",
+      dataset: { resumoDefesa: "sim" },
+      "aria-label": "Defesa: " + c.defesa.total + ". Ir para Defesa e movimento.",
+      onclick: function () { irPara(ctx, "calculado-defesa"); },
+    }, [
+      el("span.ordem-resumo__rotulo", { texto: "DEF" }),
+      el("span.ordem-resumo__valor", {}, [el("span.ordem-resumo__atual", { texto: String(c.defesa.total) })]),
+    ]));
+
+    var alertas = condicoesCriticas(o, c).map(function (x) {
+      var foco = x.chave === "morrendo" || x.chave === "enlouquecendo" ? x.chave + "-mais"
+        : (x.chave === "inconsciente" ? "inconsciente-encerrar" : "perturbado-encerrar");
+      return el("button.ordem-resumo__alerta", {
+        type: "button",
+        class: x.limite ? "ordem-resumo__alerta--limite" : "",
+        "aria-label": x.nome + (x.texto ? ", " + x.texto + " inícios de turno nesta cena" : "") + ". Ir para as condições.",
+        onclick: function () { irPara(ctx, foco); },
+      }, [el("span", { texto: x.nome }), x.texto ? el("span.ordem-resumo__contagem", { texto: x.texto }) : null]);
+    });
+
+    var ativos = EF() && o.condicoes && Array.isArray(o.condicoes.efeitos)
+      ? o.condicoes.efeitos.filter(function (x) { return EF().ativa(x); }).length : 0;
+    if (ativos) {
+      alertas.push(el("button.ordem-resumo__efeitos", {
+        type: "button",
+        "aria-label": ativos + (ativos === 1 ? " condição ou efeito ativo" : " condições ou efeitos ativos") + ". Ir para as condições.",
+        onclick: function () { irPara(ctx, "efeitos-adicionar"); },
+      }, [el("span", { texto: ativos === 1 ? "1 efeito ativo" : ativos + " efeitos ativos" })]));
+    }
+
+    var est = c.estado;
+    var pendentes = est ? est.pendencias.length : 0;
+    if (pendentes) {
+      alertas.push(el("button.ordem-resumo__pendencias", {
+        type: "button",
+        "aria-label": (pendentes === 1 ? "1 escolha de progressão esperando decisão" : pendentes + " escolhas de progressão esperando decisão") + ". Ver na Progressão.",
+        onclick: function () { if (ctx.irParaAba) ctx.irParaAba("progressao"); },
+      }, [el("span", { texto: pendentes === 1 ? "1 escolha pendente" : pendentes + " escolhas pendentes" })]));
+    }
+
+    return el("div.ordem-resumo", { role: "group", "aria-label": "Resumo da sessão", dataset: { resumoSessao: "sim" } }, [
+      el("div.ordem-resumo__numeros", {}, itens),
+      alertas.length ? el("div.ordem-resumo__alertas", {}, alertas) : null,
     ]);
+  }
+
+  /* O ajuste manual de um recurso não redesenha a ficha (o foco fica no
+     campo). O resumo do bloco e a barra do recurso acompanham aqui, no
+     lugar — os números vêm do mesmo cálculo. */
+  function sincronizarRecursos(ctx) {
+    var c = calculo(ctx);
+    recursosEmJogo(c).forEach(function (r) {
+      var maximo = r.conta.total;
+      var nivel = nivelDoRecurso(r.atual, maximo);
+      var item = document.querySelector('[data-resumo-recurso="' + r.chave + '"]');
+      if (item) {
+        item.dataset.nivel = nivel;
+        item.setAttribute("aria-label", r.nome + ": " + r.atual + " de " + maximo + ". Ir para o recurso.");
+        var atual = item.querySelector(".ordem-resumo__atual");
+        if (atual) atual.textContent = String(r.atual);
+      }
+      var barra = document.querySelector('.ordem-recurso[data-recurso="' + r.chave + '"] .ordem-recurso__barra');
+      if (barra) {
+        barra.dataset.nivel = nivel;
+        var preenche = barra.firstElementChild;
+        if (preenche) preenche.style.width = porcentagem(r.atual, maximo) + "%";
+      }
+    });
+  }
+
+  function porcentagem(atual, maximo) {
+    if (maximo <= 0) return 0;
+    return Math.max(0, Math.min(100, Math.round((atual / maximo) * 100)));
   }
 
   function painelIdentidade(ctx, o, c) {
@@ -403,7 +561,18 @@
     var editarCampanha = ctx.emEdicao() && global.RAMASecaoGeral && global.RAMASecaoGeral.campoCampanha;
     if (!editarCampanha) linhas.push(["Campanha", ctx.nomeDaCampanha() || "—"]);
 
+    /* A foto em tamanho de verdade e o nome: no modo edição, aqui (v6.4),
+       e não mais no bloco de cima — lá fica só a miniatura. */
+    var G = global.RAMASecaoGeral;
+    var edicaoDaIdentidade = ctx.emEdicao() && G
+      ? el("div.ordem-identidade__edicao", {}, [
+          G.foto ? G.foto(ctx) : null,
+          G.campoNome ? G.campoNome(ctx) : null,
+        ])
+      : null;
+
     return UI.painel("Identidade", el("div.pilha", {}, [
+      edicaoDaIdentidade,
       el("dl.r-dados", {}, linhas.reduce(function (saida, par) {
         return saida.concat([el("dt", { texto: par[0] }), el("dd", { texto: par[1] })]);
       }, [])),
@@ -1183,8 +1352,26 @@
     ]));
   }
 
-  function painelAtributosCorpo(ctx, o) {
-    var grade = el("div.ordem-atributos", {}, C.ATRIBUTOS.map(function (a) {
+  /* =================================================================
+     ATRIBUTOS — o pentagrama (v6.4)
+     -----------------------------------------------------------------
+     AGI em cima, FOR à esquerda, INT à direita, PRE e VIG embaixo, em
+     volta do centro — a composição da ficha oficial. O desenho (anel e
+     raios) é decoração, com aria-hidden; o que se lê e se aperta são
+     elementos de verdade, na ordem do catálogo: um grupo por atributo,
+     com o botão de rolar e, ao lado (nunca dentro), o botão "conta".
+
+     No modo edição o pentagrama vira uma grade de cartões: o controle
+     de valor (− 2 +) não cabe num círculo, e editar não é jogar. Num
+     espaço estreito demais a grade também é usada (container query no
+     CSS).
+     ================================================================= */
+
+  function painelAtributos(ctx, o) {
+    var edicao = ctx.emEdicao();
+    var id = "ordem-atributos-titulo";
+
+    var nos = C.ATRIBUTOS.map(function (a) {
       var efetivo = R.atributo(o, a.chave);
       var base = R.atributoBase(o, a.chave);
       var dadosDoTeste = R.dadoDeAtributo(o, a.chave);
@@ -1192,45 +1379,82 @@
       var composicao = R.composicaoDoAtributo(o, a.chave);
       var alterado = efetivo !== base;
 
-      /* Fora da edição o cartão inteiro rola, como na ficha universal.
-         Não é <button> porque o "conta" é um botão dentro dele. */
-      var rolar = function () { rolarAtributo(ctx, a, expressao, dadosDoTeste); };
-      var cartaoRolavel = !ctx.emEdicao() ? {
-        class: "ordem-atributo--rolar", role: "button", tabindex: "0",
-        "aria-label": "Rolar " + a.nome + ", " + expressao, title: "Rolar " + expressao,
-        onclick: rolar,
-        onkeydown: function (ev) { if (ev.target === ev.currentTarget && (ev.key === "Enter" || ev.key === " ")) { ev.preventDefault(); rolar(); } },
-      } : {};
-      return el("div.ordem-atributo", cartaoRolavel, [
-        el("span.ordem-atributo__sigla", { texto: a.sigla }),
-        ctx.emEdicao()
-          ? UI.passo({
-              valor: base, minimo: 0, maximo: 5, rotulo: a.nome + " (valor da ficha)",
-              aoMudar: function (v) {
-                o.atributos[a.chave] = v;
-                aoMudarOrdem(ctx);
-              },
-            })
-          : el("span.ordem-atributo__valor", { texto: String(efetivo) }),
-        el("span.ordem-atributo__dado", { texto: ctx.emEdicao() && alterado ? "efetivo " + efetivo : expressao }),
-        alterado
-          ? el("button.ordem-atributo__conta", {
-              type: "button", texto: "conta", "aria-label": "Como " + a.nome + " foi calculado",
-              onclick: function (ev) { ev.stopPropagation(); abrirComposicao(a.nome, composicao); },
-              onkeydown: function (ev) { ev.stopPropagation(); },
-            })
-          : el("span.ordem-atributo__nome", { texto: a.nome }),
-      ]);
-    }));
+      var conta = alterado
+        ? el("button.ordem-atributo__conta", {
+            type: "button",
+            "aria-label": "Como " + a.nome + " foi calculado: " + efetivo + " (valor da ficha " + base + ")",
+            title: "Ver a composição",
+            dataset: { foco: "atributo-conta-" + a.chave },
+            onclick: function () { abrirComposicao(a.nome, composicao); },
+          }, [el("span", { texto: "conta" }), el("span.calculado__marca", { "aria-hidden": "true", texto: "=" })])
+        : null;
 
-    return el("div.pilha", {}, [
-      grade,
-      el("p.t-mini", {
-        texto: ctx.emEdicao()
+      if (edicao) {
+        return el("div.ordem-atributo.ordem-atributo--" + a.chave, { role: "group", "aria-label": a.nome }, [
+          el("span.ordem-atributo__sigla", { texto: a.sigla }),
+          el("span.ordem-atributo__nome", { texto: a.nome }),
+          UI.passo({
+            valor: base, minimo: 0, maximo: 5, rotulo: a.nome + " (valor da ficha)",
+            aoMudar: function (v) {
+              o.atributos[a.chave] = v;
+              aoMudarOrdem(ctx);
+            },
+          }),
+          el("span.ordem-atributo__dado", { texto: alterado ? "efetivo " + efetivo : expressao }),
+          conta,
+        ]);
+      }
+
+      return el("div.ordem-atributo.ordem-atributo--" + a.chave, { role: "group", "aria-label": a.nome }, [
+        el("button.ordem-atributo__rolar", {
+          type: "button",
+          "aria-label": "Rolar " + a.nome + ": " + efetivo + ", " + expressao,
+          title: "Rolar " + expressao,
+          dataset: { foco: "atributo-" + a.chave },
+          onclick: function () { rolarAtributo(ctx, a, expressao, dadosDoTeste); },
+        }, [
+          el("span.ordem-atributo__nome", { texto: a.nome }),
+          el("span.ordem-atributo__sigla", { texto: a.sigla }),
+          el("span.ordem-atributo__valor", { texto: String(efetivo) }),
+          el("span.ordem-atributo__dado", { texto: expressao }),
+        ]),
+        conta,
+      ]);
+    });
+
+    return el("section.r-painel.ordem-painel-atributos", { "aria-labelledby": id }, [
+      el("h2.r-painel__titulo", { id: id, texto: "Atributos" }),
+      el("div.ordem-pentagrama", { class: edicao ? "ordem-pentagrama--edicao" : "" }, [
+        edicao ? null : desenhoDoPentagrama(),
+        edicao ? null : el("div.ordem-pentagrama__centro", { "aria-hidden": "true" }, [el("span", { texto: "Atributos" })]),
+      ].concat(nos)),
+      el("p.t-mini.ordem-pentagrama__ajuda", {
+        texto: edicao
           ? "Aqui se edita o valor da ficha (criação e ajustes à mão). Aumentos de atributo escolhidos na Progressão somam por cima, e aparecem em “conta”."
-          : "Clique no atributo para rolar.",
+          : "Toque no atributo para rolar. “conta” mostra de onde vem um valor diferente do da ficha.",
       }),
     ]);
+  }
+
+  /* O anel que liga os cinco e os raios até o centro. Coordenadas no
+     mesmo sistema de porcentagem que o CSS usa para pôr os círculos
+     (viewBox 100 × 100). */
+  var POSICOES_DO_PENTAGRAMA = { agi: [50, 17], int: [84, 42], vig: [71, 82], pre: [29, 82], for: [16, 42] };
+  var CENTRO_DO_PENTAGRAMA = [50, 53];
+
+  function desenhoDoPentagrama() {
+    var svg = U.svg;
+    var raios = Object.keys(POSICOES_DO_PENTAGRAMA).map(function (k) {
+      var p = POSICOES_DO_PENTAGRAMA[k];
+      return svg("line", { x1: String(CENTRO_DO_PENTAGRAMA[0]), y1: String(CENTRO_DO_PENTAGRAMA[1]), x2: String(p[0]), y2: String(p[1]), class: "ordem-pentagrama__raio" });
+    });
+    return svg("svg", {
+      class: "ordem-pentagrama__desenho", viewBox: "0 0 100 100", preserveAspectRatio: "none",
+      "aria-hidden": "true", focusable: "false",
+    }, [
+      svg("circle", { cx: "50", cy: "53", r: "36", class: "ordem-pentagrama__anel" }),
+      svg("circle", { cx: "50", cy: "53", r: "29", class: "ordem-pentagrama__anel ordem-pentagrama__anel--fino" }),
+    ].concat(raios));
   }
 
   function rolarAtributo(ctx, a, expressao, dadosDoTeste) {
@@ -1265,36 +1489,53 @@
     dano: "Dano", cura: "Cura", gastar: "Gastar", danoMental: "Dano mental", recuperar: "Recuperar",
   };
 
+  /* v6.4: três camadas com rótulo escrito, para "ajustar" e "aplicar"
+     nunca virarem o mesmo +/−:
+       atual · ajuste manual   o número grande É o campo (− 12 +)
+       máximo                  o calculado, com a composição
+       aplicar com as regras   quantidade + Dano, Cura, Gastar…
+     A barra é leitura periférica do que sobrou. */
   function painelRecursosCorpo(ctx, o, c) {
-    var itens = [{ chave: "pv", nome: "Pontos de vida", conta: c.pv, atual: c.atual.pv }];
-    if (c.determinacao) {
-      itens.push({ chave: "pd", nome: "Pontos de determinação", conta: c.pd, atual: c.atual.pd });
-    } else {
-      itens.push({ chave: "pe", nome: "Pontos de esforço", conta: c.pe, atual: c.atual.pe });
-      itens.push({ chave: "san", nome: "Sanidade", conta: c.san, atual: c.atual.san });
-    }
+    var itens = recursosEmJogo(c);
 
     return el("div.pilha", {}, [
       el("div.ordem-recursos", {}, itens.map(function (item) {
+        var maximo = item.conta.total;
+        var passo = UI.passo({
+          valor: item.atual, minimo: -99, maximo: maximo,
+          rotulo: item.nome + " atual (ajuste manual)",
+          aoMudar: function (v) {
+            if (!o.recursos) o.recursos = { pv: null, pe: null, san: null, pd: null };
+            o.recursos[item.chave] = v;
+            ctx.alterou();
+            /* O ajuste não muda condição nenhuma. Só a sugestão do
+               painel de condições (PV ou SAN em 0), o resumo do bloco e
+               a barra acompanham — sem redesenhar a ficha, para o foco
+               ficar no campo. */
+            atualizarCondicoes(ctx);
+            sincronizarRecursos(ctx);
+          },
+        });
+        var campo = passo.querySelector("input");
+        if (campo) campo.dataset.foco = "recurso-" + item.chave;
+        var idRotulo = "recurso-rotulo-" + item.chave;
+
         /* data-recurso (v2.49): a cor do recurso no Modern20; o Legacy não lê. */
-        return el("div.ordem-recurso", { dataset: { recurso: item.chave } }, [
+        return el("div.ordem-recurso", { dataset: { recurso: item.chave }, role: "group", "aria-labelledby": idRotulo }, [
           el("div.ordem-recurso__topo", {}, [
-            el("span.ordem-recurso__nome", { texto: item.nome }),
-            valorCalculado("Máximo de " + item.nome.toLowerCase(), item.conta),
+            el("span.ordem-recurso__nome", { id: idRotulo, texto: item.nome }),
+            valorCalculado("Máximo de " + item.nome.toLowerCase(), item.conta, null, { curto: "máx", classe: "calculado--inline", foco: "maximo-" + item.chave }),
           ]),
-          UI.passo({
-            valor: item.atual, minimo: -99, maximo: item.conta.total,
-            rotulo: item.nome + " atual (ajuste manual)",
-            aoMudar: function (v) {
-              if (!o.recursos) o.recursos = { pv: null, pe: null, san: null, pd: null };
-              o.recursos[item.chave] = v;
-              ctx.alterou();
-              /* O ajuste não muda condição nenhuma. Só a sugestão do
-                 painel de condições (PV ou SAN em 0) acompanha — sem
-                 redesenhar a ficha, para o foco ficar no campo. */
-              atualizarCondicoes(ctx);
-            },
-          }),
+          el("div.ordem-recurso__atual", {}, [
+            el("span.ordem-recurso__legenda", { "aria-hidden": "true", texto: "Atual · ajuste manual" }),
+            el("div.ordem-recurso__linha", {}, [
+              passo,
+              el("span.ordem-recurso__de", { "aria-hidden": "true", texto: "/ " + maximo }),
+            ]),
+          ]),
+          el("div.ordem-recurso__barra", { "aria-hidden": "true", dataset: { nivel: nivelDoRecurso(item.atual, maximo) } }, [
+            el("span", { estilo: { width: porcentagem(item.atual, maximo) + "%" } }),
+          ]),
           CD() ? acoesDoRecurso(ctx, o, c, item) : null,
         ]);
       })),
@@ -1304,33 +1545,45 @@
                    "e o limite de PE por turno vale para PD. PE e Sanidade continuam gravados e voltam se a regra for desligada.",
           })
         : null,
-      el("p.t-mini", {
-        texto: "Os máximos são calculados. O número editável é ajuste manual: muda o valor e mais nada. Os botões dizem de onde veio a " +
-               "mudança — e só eles aplicam as condições que as regras ligam a ela.",
-      }),
+      el("details.ordem-explica", {}, [
+        el("summary", { texto: "Ajuste manual × aplicar com as regras" }),
+        el("p.t-mini", {
+          texto: "Os máximos são calculados. O número grande é ajuste manual: muda o valor e mais nada. “Aplicar com as regras” diz de onde veio a " +
+                 "mudança (dano, cura, gasto…) — e só ele aplica as condições que as regras ligam a ela.",
+        }),
+      ]),
     ]);
   }
 
   function acoesDoRecurso(ctx, o, c, item) {
+    var idQuanto = "acao-quanto-" + item.chave;
     var entrada = el("input.r-entrada.recurso-acoes__valor", {
+      id: idQuanto,
       type: "text", inputmode: "numeric", maxlength: 4, value: "1",
       "aria-label": "Quanto, para as ações de " + item.nome.toLowerCase(),
       dataset: { foco: "acao-valor-" + item.chave },
       onkeydown: function (ev) { if (ev.key === "Enter") ev.preventDefault(); },
     });
-    return el("div.recurso-acoes", { role: "group", "aria-label": "Ações de " + item.nome.toLowerCase() }, [entrada].concat(
-      CD().ACOES[item.chave].map(function (acao) {
-        return el("button.r-botao.r-botao--mini", {
-          type: "button",
-          texto: NOMES_DE_ACAO[acao],
-          dataset: { foco: "acao-" + item.chave + "-" + acao },
-          onclick: function () { aplicarAcaoDeRecurso(ctx, o, c, item, acao, entrada.value); },
-        });
-      })
-    ));
+    return el("div.recurso-acoes", { role: "group", "aria-label": "Aplicar com as regras em " + item.nome.toLowerCase() }, [
+      el("span.recurso-acoes__rotulo", { "aria-hidden": "true", texto: "Aplicar com as regras" }),
+      el("div.recurso-acoes__linha", {}, [entrada].concat(
+        CD().ACOES[item.chave].map(function (acao) {
+          return el("button.r-botao.r-botao--mini.recurso-acoes__acao", {
+            type: "button",
+            texto: NOMES_DE_ACAO[acao],
+            dataset: { foco: "acao-" + item.chave + "-" + acao, acao: acao },
+            onclick: function () { aplicarAcaoDeRecurso(ctx, o, c, item, acao, entrada.value); },
+          });
+        })
+      )),
+    ]);
   }
 
-  function aplicarAcaoDeRecurso(ctx, o, c, item, acao, valor) {
+  function aplicarAcaoDeRecurso(ctx, o, c0, item0, acao, valor) {
+    /* O valor de AGORA: um ajuste manual não redesenha a ficha, então o
+       que o botão guardou ao ser desenhado pode estar velho (v6.4). */
+    var c = calculo(ctx);
+    var item = recursosEmJogo(c).filter(function (x) { return x.chave === item0.chave; })[0] || item0;
     var r = CD().aplicarAcao(item.chave, acao, {
       cond: o.condicoes, atual: item.atual, maximo: item.conta.total, valor: valor, pd: c.determinacao,
     });
@@ -1363,29 +1616,52 @@
     if (novo) corpo.replaceWith(novo);
   }
 
+  /* v6.4: o que pede atenção vem primeiro e cheio (Morrendo,
+     Enlouquecendo, Perturbado, a sugestão de PV/SAN em 0); o que está
+     quieto vira uma linha. A cena fica embaixo, com "Nova cena" à vista
+     e o resto (interlúdio, combate, imunidades) num recolhível — que
+     nunca guarda uma condição crítica. */
   function painelCondicoesCorpo(ctx, o, c) {
     if (!CD()) return null;
     if (!o.condicoes || !o.condicoes.morrendo) o.condicoes = CD().normalizar(o.condicoes);
     var cond = o.condicoes;
-    var partes = [
-      linhaDaCena(ctx, cond),
-      linhaDeCondicao(ctx, o, c, "morrendo"),
-      linhaDeCondicao(ctx, o, c, "enlouquecendo"),
-    ];
+    var partes = [];
+    var quietas = [];
+
+    ["morrendo", "enlouquecendo"].forEach(function (chave) {
+      var linha = linhaDeCondicao(ctx, o, c, chave);
+      if (linha) partes.push(linha);
+      else quietas.push(chave);
+    });
     if (c.determinacao && cond.perturbado.ativa) {
-      partes.push(el("div.condicao.condicao--simples", {}, [
+      partes.push(el("div.condicao.condicao--ativa.condicao--simples", { role: "group", "aria-label": "Perturbado" }, [
         el("span.condicao__nome", { texto: "Perturbado" }),
         el("span.t-mini", { texto: "O dano mental deixou os PD abaixo da metade (SAH p. 104)." }),
         botaoDeCondicao(ctx, "Encerrar", function () { return CD().marcar(cond, "perturbado", false); }, "perturbado-encerrar"),
       ]));
     }
+    partes.push(linhaDaBarganha(ctx));
     partes.push(secaoDeEfeitos(ctx, o, c));
+    if (quietas.length) {
+      partes.push(el("div.condicoes__rastreadores", { role: "group", "aria-label": "Rastreadores que não estão ativos" }, [
+        el("span.t-mini", { texto: quietas.length === 2 ? "Não está morrendo nem enlouquecendo." : (quietas[0] === "morrendo" ? "Não está morrendo." : "Não está enlouquecendo.") }),
+        el("div.faixa", {}, quietas.map(function (chave) {
+          return botaoDeCondicao(ctx, chave === "morrendo" ? "Ficar morrendo" : "Ficar enlouquecendo",
+            function () { return CD().ativar(cond, chave); }, chave + "-ativar", { class: "r-botao--fantasma" });
+        })),
+      ]));
+    }
+    partes.push(linhaDaCena(ctx, cond));
     return el("div.pilha--curta.condicoes", { class: "pilha" }, partes);
   }
 
   function painelDeCondicoes(ctx, o, c) {
-    var painel = UI.painel("Condições", painelCondicoesCorpo(ctx, o, c));
+    var criticas = condicoesCriticas(o, c);
+    var painel = UI.painel(criticas.length ? "Condições — atenção" : "Condições e efeitos", painelCondicoesCorpo(ctx, o, c), {
+      classe: "ordem-painel-condicoes" + (criticas.length ? " ordem-painel-condicoes--critico" : ""),
+    });
     painel.dataset.painelCondicoes = "sim";
+    painel.dataset.critico = criticas.length ? "sim" : "nao";
     return painel;
   }
 
@@ -1412,78 +1688,89 @@
 
   function linhaDaCena(ctx, cond) {
     var desde = cond.cena.iniciadaEm ? "desde " + U.dataHora(cond.cena.iniciadaEm) : "a primeira desta ficha";
+    var imunes = (cond.imunidades || []).length;
     return el("div.condicoes__cena", {}, [
-      el("span.t-mini", { texto: "Cena atual: " + desde + (cond.cena.interludio ? " (interlúdio nº " + ((cond.interludio && cond.interludio.numero) || 0) + ")" : "") + "." }),
-      el("button.r-botao.r-botao--mini", {
-        type: "button", texto: "Nova cena", dataset: { foco: "condicoes-nova-cena" },
-        onclick: async function () {
-          var certo = await UI.confirmar({
-            titulo: "Começar uma nova cena?",
-            texto: "Zera a contagem de inícios de turno de morrendo e enlouquecendo, e encerra os efeitos que duram até o fim da cena.",
-            detalhe: "As condições ativas continuam ativas — morrendo não termina com a cena (OPRPG p. 88) —, e efeitos por turnos ou até serem removidos também continuam. Encerrar um combate não faz isto sozinho.",
-            rotuloConfirmar: "Nova cena",
-          });
-          if (!certo) return;
-          var fim = null;
-          var avisos5 = [];
-          mudarCondicao(ctx, function () {
-            var cenaAntes = cond.cena && cond.cena.id;
-            fim = CD().novaCena(cond);
-            /* Arquivos Secretos 5: o que acaba com a cena (o ácido na arma
-               deixa a destruição pendente), na mesma gravação. */
-            if (fim && fim.mudou !== false && global.RAMAFichaArquivo5) avisos5 = global.RAMAFichaArquivo5.aoTrocarDeCena(ctx, cenaAntes);
-            /* Arquivos Secretos 6: a imunidade a medo da cena sai; o rebote. */
-            if (fim && fim.mudou !== false && global.RAMAFichaArquivo6) avisos5 = avisos5.concat(global.RAMAFichaArquivo6.aoTrocarDeCena(ctx, cenaAntes));
-            return fim;
-          }, "condicoes-nova-cena");
-          if (fim && fim.encerradas && fim.encerradas.length) UI.aviso("Terminaram com a cena: " + fim.encerradas.join(", ") + ".");
-          avisos5.forEach(function (a) { UI.aviso(a, { duracao: 9000 }); });
-          resolverBarganhaDaCena(ctx);
-        },
-      }),
-      /* Cena de interlúdio (v2.30): o que dura "até o início da próxima
-         cena de interlúdio" (Sintonização Mental, Liturgia — AS2) vence
-         aqui. */
-      el("button.r-botao.r-botao--mini", {
-        type: "button", texto: "Novo interlúdio", dataset: { foco: "condicoes-novo-interludio" },
-        onclick: async function () {
-          var certo = await UI.confirmar({
-            titulo: "Começar uma cena de interlúdio?",
-            texto: "É uma nova cena (como “Nova cena”), marcada como interlúdio. O que dura até o início da próxima cena de interlúdio termina agora.",
-            rotuloConfirmar: "Novo interlúdio",
-          });
-          if (!certo) return;
-          var fim = null;
-          var vencidas = [];
-          var avisos5 = [];
-          mudarCondicao(ctx, function () {
-            var cenaAntes = cond.cena && cond.cena.id;
-            fim = CD().novaCena(cond, null, { interludio: true });
-            if (fim && fim.mudou !== false && global.RAMAFichaArquivo5) avisos5 = global.RAMAFichaArquivo5.aoTrocarDeCena(ctx, cenaAntes);
-            if (fim && fim.mudou !== false && global.RAMAFichaArquivo6) avisos5 = avisos5.concat(global.RAMAFichaArquivo6.aoTrocarDeCena(ctx, cenaAntes));
-            /* Quase Novo (AS4): as modificações temporárias saem aqui, na
-               mesma gravação do interlúdio. */
-            if (fim && fim.mudou !== false && global.RAMAFichaArquivo4) vencidas = global.RAMAFichaArquivo4.aoNovoInterludio(ctx);
-            return fim;
-          }, "condicoes-novo-interludio");
-          if (fim && fim.encerradas && fim.encerradas.length) UI.aviso("Terminaram com a cena: " + fim.encerradas.join(", ") + ".");
-          if (vencidas.length) UI.aviso("Quase Novo: terminaram as modificações temporárias — " + vencidas.join("; ") + ".", { duracao: 8000 });
-          avisos5.forEach(function (a) { UI.aviso(a, { duracao: 9000 }); });
-          resolverBarganhaDaCena(ctx);
-        },
-      }),
-      el("label.r-marca.condicoes__combate", {}, [
-        el("input", {
-          type: "checkbox", checked: cond.integrarCombate,
-          dataset: { foco: "condicoes-combate" },
-          onchange: function (ev) {
-            var ligar = ev.target.checked;
-            mudarCondicao(ctx, function () { cond.integrarCombate = ligar; return { mudou: true }; }, "condicoes-combate");
+      el("div.condicoes__cena-linha", {}, [
+        el("span.t-mini", { texto: "Cena atual: " + desde + (cond.cena.interludio ? " (interlúdio nº " + ((cond.interludio && cond.interludio.numero) || 0) + ")" : "") + "." }),
+        el("button.r-botao.r-botao--mini", {
+          type: "button", texto: "Nova cena", dataset: { foco: "condicoes-nova-cena" },
+          onclick: async function () {
+            var certo = await UI.confirmar({
+              titulo: "Começar uma nova cena?",
+              texto: "Zera a contagem de inícios de turno de morrendo e enlouquecendo, e encerra os efeitos que duram até o fim da cena.",
+              detalhe: "As condições ativas continuam ativas — morrendo não termina com a cena (OPRPG p. 88) —, e efeitos por turnos ou até serem removidos também continuam. Encerrar um combate não faz isto sozinho.",
+              rotuloConfirmar: "Nova cena",
+            });
+            if (!certo) return;
+            var fim = null;
+            var avisos5 = [];
+            mudarCondicao(ctx, function () {
+              var cenaAntes = cond.cena && cond.cena.id;
+              fim = CD().novaCena(cond);
+              /* Arquivos Secretos 5: o que acaba com a cena (o ácido na arma
+                 deixa a destruição pendente), na mesma gravação. */
+              if (fim && fim.mudou !== false && global.RAMAFichaArquivo5) avisos5 = global.RAMAFichaArquivo5.aoTrocarDeCena(ctx, cenaAntes);
+              /* Arquivos Secretos 6: a imunidade a medo da cena sai; o rebote. */
+              if (fim && fim.mudou !== false && global.RAMAFichaArquivo6) avisos5 = avisos5.concat(global.RAMAFichaArquivo6.aoTrocarDeCena(ctx, cenaAntes));
+              return fim;
+            }, "condicoes-nova-cena");
+            if (fim && fim.encerradas && fim.encerradas.length) UI.aviso("Terminaram com a cena: " + fim.encerradas.join(", ") + ".");
+            avisos5.forEach(function (a) { UI.aviso(a, { duracao: 9000 }); });
+            resolverBarganhaDaCena(ctx);
           },
         }),
-        el("span.t-mini", { texto: "Contar pelos turnos do combate da campanha (os inícios de turno deste personagem, e a duração dos efeitos)" }),
       ]),
-      linhaDaBarganha(ctx),
+      /* O que se usa de vez em quando: o interlúdio, a ligação com o
+         combate da campanha e as imunidades. Recolhido não esconde nada
+         que precise de atenção — as condições ativas ficam acima. */
+      el("details.condicoes__mais", {}, [
+        el("summary", { texto: "Cena, combate e imunidades" + (imunes ? " · " + imunes + (imunes === 1 ? " imunidade" : " imunidades") : "") }),
+        el("div.pilha--curta", { class: "pilha" }, [
+          /* Cena de interlúdio (v2.30): o que dura "até o início da próxima
+             cena de interlúdio" (Sintonização Mental, Liturgia — AS2) vence
+             aqui. */
+          el("div.faixa", {}, [el("button.r-botao.r-botao--mini.r-botao--fantasma", {
+            type: "button", texto: "Novo interlúdio", dataset: { foco: "condicoes-novo-interludio" },
+            onclick: async function () {
+              var certo = await UI.confirmar({
+                titulo: "Começar uma cena de interlúdio?",
+                texto: "É uma nova cena (como “Nova cena”), marcada como interlúdio. O que dura até o início da próxima cena de interlúdio termina agora.",
+                rotuloConfirmar: "Novo interlúdio",
+              });
+              if (!certo) return;
+              var fim = null;
+              var vencidas = [];
+              var avisos5 = [];
+              mudarCondicao(ctx, function () {
+                var cenaAntes = cond.cena && cond.cena.id;
+                fim = CD().novaCena(cond, null, { interludio: true });
+                if (fim && fim.mudou !== false && global.RAMAFichaArquivo5) avisos5 = global.RAMAFichaArquivo5.aoTrocarDeCena(ctx, cenaAntes);
+                if (fim && fim.mudou !== false && global.RAMAFichaArquivo6) avisos5 = avisos5.concat(global.RAMAFichaArquivo6.aoTrocarDeCena(ctx, cenaAntes));
+                /* Quase Novo (AS4): as modificações temporárias saem aqui, na
+                   mesma gravação do interlúdio. */
+                if (fim && fim.mudou !== false && global.RAMAFichaArquivo4) vencidas = global.RAMAFichaArquivo4.aoNovoInterludio(ctx);
+                return fim;
+              }, "condicoes-novo-interludio");
+              if (fim && fim.encerradas && fim.encerradas.length) UI.aviso("Terminaram com a cena: " + fim.encerradas.join(", ") + ".");
+              if (vencidas.length) UI.aviso("Quase Novo: terminaram as modificações temporárias — " + vencidas.join("; ") + ".", { duracao: 8000 });
+              avisos5.forEach(function (a) { UI.aviso(a, { duracao: 9000 }); });
+              resolverBarganhaDaCena(ctx);
+            },
+          })]),
+          el("label.r-marca.condicoes__combate", {}, [
+            el("input", {
+              type: "checkbox", checked: cond.integrarCombate,
+              dataset: { foco: "condicoes-combate" },
+              onchange: function (ev) {
+                var ligar = ev.target.checked;
+                mudarCondicao(ctx, function () { cond.integrarCombate = ligar; return { mudou: true }; }, "condicoes-combate");
+              },
+            }),
+            el("span.t-mini", { texto: "Contar pelos turnos do combate da campanha (os inícios de turno deste personagem, e a duração dos efeitos)" }),
+          ]),
+          linhaDeImunidades(ctx, ordemDe(ctx)),
+        ]),
+      ]),
     ]);
   }
 
@@ -1532,15 +1819,13 @@
     return total + " nesta cena" + origem;
   }
 
+  /* Morrendo ou Enlouquecendo. Devolve null quando não há nada a mostrar
+     além do botão de ativar (inativa, sem contagem na cena e sem
+     sugestão): aí o painel junta as duas numa linha. */
   function linhaDeCondicao(ctx, o, c, chave) {
     var cond = o.condicoes;
     var e = CD().estado(cond, chave, { pd: c.determinacao });
     var nomeDoRecurso = chave === "morrendo" ? "PV" : (c.determinacao ? "PD" : "Sanidade");
-    var estadoTexto = e.ativa
-      ? e.nome + ": " + descricaoDaContagem(e)
-      : (e.contagem
-          ? "Encerrada. Nesta cena já contou " + e.contagem + (e.limite ? " de " + e.limite : "") + " — se voltar, a conta continua daí."
-          : (chave === "morrendo" ? "Não está morrendo." : "Não está enlouquecendo."));
 
     var sugestao = null;
     if (!e.ativa && chave === "morrendo" && c.atual.pv <= 0) {
@@ -1549,19 +1834,27 @@
     if (!e.ativa && chave === "enlouquecendo" && !c.determinacao && c.atual.san <= 0) {
       sugestao = "Sanidade em " + c.atual.san + ". Pela regra, quem é reduzido a Sanidade 0 fica enlouquecendo (OPRPG p. 88).";
     }
+    var inconscienteAtivo = chave === "morrendo" && cond.inconsciente.ativa;
+    if (!e.ativa && !e.contagem && !sugestao && !inconscienteAtivo) return null;
+
+    var estadoTexto = e.ativa
+      ? e.nome + ": " + descricaoDaContagem(e)
+      : (e.contagem
+          ? "Encerrada. Nesta cena já contou " + e.contagem + (e.limite ? " de " + e.limite : "") + " — se voltar, a conta continua daí."
+          : (chave === "morrendo" ? "Não está morrendo." : "Não está enlouquecendo."));
 
     var botoes = e.ativa
       ? [
           botaoDeCondicao(ctx, "+1 início de turno", function () { return CD().somarInicio(cond, chave); }, chave + "-mais",
             { disabled: e.atingiu, title: "Um início de turno do personagem com a condição, registrado à mão" }),
-          botaoDeCondicao(ctx, "−1 corrigir", function () { return CD().corrigirMenos(cond, chave); }, chave + "-menos",
-            { disabled: !e.contagem }),
           botaoDeCondicao(ctx, "Encerrar", function () { return CD().encerrar(cond, chave); }, chave + "-encerrar"),
+          botaoDeCondicao(ctx, "−1 corrigir", function () { return CD().corrigirMenos(cond, chave); }, chave + "-menos",
+            { disabled: !e.contagem, class: "r-botao--fantasma" }),
         ]
       : [
           botaoDeCondicao(ctx, chave === "morrendo" ? "Ficar morrendo" : "Ficar enlouquecendo",
-            function () { return CD().ativar(cond, chave); }, chave + "-ativar"),
-          e.contagem ? botaoDeCondicao(ctx, "−1 corrigir", function () { return CD().corrigirMenos(cond, chave); }, chave + "-menos") : null,
+            function () { return CD().ativar(cond, chave); }, chave + "-ativar", sugestao ? { class: "r-botao--principal" } : {}),
+          e.contagem ? botaoDeCondicao(ctx, "−1 corrigir", function () { return CD().corrigirMenos(cond, chave); }, chave + "-menos", { class: "r-botao--fantasma" }) : null,
         ];
 
     var inconsciente = null;
@@ -1570,17 +1863,17 @@
         el("span.t-mini", { texto: cond.inconsciente.ativa ? "Inconsciente: sim." : "Inconsciente: não — curou PV, mas continua morrendo." }),
         cond.inconsciente.ativa
           ? botaoDeCondicao(ctx, "Encerrar inconsciência", function () { return CD().marcar(cond, "inconsciente", false); }, "inconsciente-encerrar")
-          : botaoDeCondicao(ctx, "Marcar inconsciente", function () { return CD().marcar(cond, "inconsciente", true); }, "inconsciente-marcar"),
+          : botaoDeCondicao(ctx, "Marcar inconsciente", function () { return CD().marcar(cond, "inconsciente", true); }, "inconsciente-marcar", { class: "r-botao--fantasma" }),
       ]);
     }
 
     return el("div.condicao", {
-      class: (e.ativa ? "condicao--ativa" : "") + (e.atingiu && e.ativa ? " condicao--limite" : ""),
-      role: "group", "aria-label": e.nome,
+      class: (e.ativa ? "condicao--ativa" : (sugestao ? "condicao--sugestao" : "condicao--encerrada")) + (e.atingiu && e.ativa ? " condicao--limite" : ""),
+      role: "group", "aria-label": e.nome + (e.ativa ? ", ativa" : (sugestao ? ", sugerida" : ", encerrada")),
     }, [
       el("div.condicao__topo", {}, [
         el("span.condicao__nome", { texto: e.nome }),
-        el("span.condicao__recurso", { texto: "ligada a " + nomeDoRecurso }),
+        el("span.condicao__recurso", { texto: sugestao && !e.ativa ? "sugestão · ligada a " + nomeDoRecurso : "ligada a " + nomeDoRecurso }),
         marcadores(e.contagem, e.limite),
         el("span.so-leitor", { texto: e.contagem + (e.limite ? " de " + e.limite : "") + " inícios de turno nesta cena." }),
       ]),
@@ -1691,8 +1984,8 @@
     });
 
     var partes = [
+      /* O título é o do painel (v6.4): aqui só as ações de aplicar. */
       el("div.condicoes__efeitos-topo", {}, [
-        el("p.t-rotulo", { texto: "Condições e efeitos" }),
         el("div.faixa", {}, [
           el("button.r-botao.r-botao--mini.r-botao--principal", {
             type: "button", texto: "+ Adicionar condição", dataset: { foco: "efeitos-adicionar" },
@@ -1713,7 +2006,7 @@
     }
 
     if (!ativas.length && !derivadas.length) {
-      partes.push(el("p.t-mini", { texto: "Nenhuma condição nem efeito aplicado. A biblioteca traz as condições do livro; efeitos de rituais e da mesa também entram por ali." }));
+      partes.push(el("p.t-mini.condicoes__vazio", { texto: "Nenhuma condição nem efeito aplicado." }));
     }
 
     ativas.forEach(function (inst) { partes.push(cartaoDeEfeito(ctx, o, inst)); });
@@ -1759,7 +2052,6 @@
       ]));
     }
 
-    partes.push(linhaDeImunidades(ctx, o));
     return el("div.pilha--curta.condicoes__efeitos", { class: "pilha", dataset: { secaoEfeitos: "sim" } }, partes);
   }
 
@@ -1787,12 +2079,12 @@
       el("div.faixa.efeito__botoes", {}, [
         turnos ? botaoDeEfeito("+1 turno", function () { return EF().somarTurno(cond, inst.id); }, ctx, "efeito-mais-" + inst.id,
           { title: "Um turno de duração que passou fora do combate" }) : null,
-        turnos && inst.eventos.length ? botaoDeEfeito("−1 corrigir", function () { return EF().corrigirTurno(cond, inst.id); }, ctx, "efeito-menos-" + inst.id) : null,
-        el("button.r-botao.r-botao--mini", {
+        botaoDeEfeito("Encerrar", function () { return EF().encerrar(cond, inst.id, "manual", quemAplica(ctx).nome); }, ctx, "efeitos-adicionar"),
+        turnos && inst.eventos.length ? botaoDeEfeito("−1 corrigir", function () { return EF().corrigirTurno(cond, inst.id); }, ctx, "efeito-menos-" + inst.id, { class: "r-botao--fantasma" }) : null,
+        el("button.r-botao.r-botao--mini.r-botao--fantasma", {
           type: "button", texto: "Editar", dataset: { foco: "efeito-editar-" + inst.id },
           onclick: function () { editarAplicacao(ctx, o, inst); },
         }),
-        botaoDeEfeito("Encerrar", function () { return EF().encerrar(cond, inst.id, "manual", quemAplica(ctx).nome); }, ctx, "efeitos-adicionar"),
         /* Ruído de Comunicação (AS5): inverter um efeito sobre dados. */
         global.RAMAFichaArquivo5 ? global.RAMAFichaArquivo5.botaoDoEfeito(ctx, o, inst) : null,
       ]),
@@ -1819,13 +2111,13 @@
       el("div.faixa.efeito__botoes", {}, [
         EF().expirou(inst)
           ? botaoDeEfeito("−1 corrigir", function () { return EF().corrigirTurno(cond, inst.id); }, ctx, "efeitos-adicionar",
-              { title: "Tira o último turno contado: a aplicação volta a valer" })
-          : botaoDeEfeito("Reativar", function () { return EF().reativar(cond, inst.id); }, ctx, "efeitos-adicionar"),
+              { title: "Tira o último turno contado: a aplicação volta a valer", class: "r-botao--fantasma" })
+          : botaoDeEfeito("Reativar", function () { return EF().reativar(cond, inst.id); }, ctx, "efeitos-adicionar", { class: "r-botao--fantasma" }),
         botaoDeEfeito("Remover da lista", function () {
           if (EF().ativa(inst)) return { mudou: false };
           if (inst.encerrado === null && EF().expirou(inst)) EF().encerrar(cond, inst.id, "duracao");
           return EF().remover(cond, inst.id);
-        }, ctx, "efeitos-adicionar"),
+        }, ctx, "efeitos-adicionar", { class: "r-botao--fantasma" }),
       ]),
     ]);
   }
@@ -1917,10 +2209,22 @@
     return ["Dados: " + partes.join(", ") + " → " + dados.expressao + (dados.quantos < 1 ? " (fica com o pior)" : "")];
   }
 
-  function painelDerivadosCorpo(ctx, o, c) {
-    var carga = c.carga;
+  /* =================================================================
+     DEFESA E MOVIMENTO (v6.4)
+     -----------------------------------------------------------------
+     A Defesa em destaque, como o escudo da ficha de papel; Bloqueio,
+     Esquiva, deslocamento e limite por turno numa coluna de linhas, sem
+     um cartão para cada. Os números e as janelas são os mesmos de antes
+     (valorComExtra, valorCalculado); só o peso mudou.
+     ================================================================= */
 
-    return el("div.pilha", {}, [
+  function painelDefesa(ctx, o, c) {
+    var carga = c.carga;
+    var uso = R.protecaoEmUso(ctx.ficha.inventario);
+    var protecoes = [uso.item, uso.escudo].filter(Boolean);
+    var ajustes = (o.ajustes || []).length;
+
+    return UI.painel("Defesa e movimento", el("div.pilha", {}, [
       c.defesa.contextuais && c.defesa.contextuais.length
         ? el("p.t-mini.ordem-derivados__nota", {
             texto: "Defesa, conforme quem ataca: " + c.defesa.contextuais.map(function (x) {
@@ -1928,36 +2232,174 @@
             }).join("; ") + ".",
           })
         : null,
-      el("div.ordem-derivados", {}, [
-        valorComExtra(ctx, o, c, "defesa"),
-        valorComExtra(ctx, o, c, "bloqueio"),
-        valorComExtra(ctx, o, c, "esquiva"),
-        valorCalculado("Deslocamento", c.deslocamento, "metros"),
-        valorCalculado(c.determinacao ? "Limite de PD por turno" : "Limite de PE por turno", c.limitePe),
+      el("div.ordem-defesa", {}, [
+        el("div.ordem-defesa__principal", {}, [valorComExtra(ctx, o, c, "defesa", "calculado--destaque")]),
+        el("div.ordem-derivados", {}, [
+          valorComExtra(ctx, o, c, "bloqueio", "calculado--linha"),
+          valorComExtra(ctx, o, c, "esquiva", "calculado--linha"),
+          valorCalculado("Deslocamento", c.deslocamento, "metros", { classe: "calculado--linha", foco: "calculado-deslocamento" }),
+          valorCalculado(c.determinacao ? "Limite de PD por turno" : "Limite de PE por turno", c.limitePe, null, { classe: "calculado--linha", foco: "calculado-limite" }),
+        ]),
       ]),
       c.limitePe.excecao ? el("p.t-mini.ordem-derivados__nota", { texto: c.limitePe.excecao }) : null,
       c.pd && c.pd.semTabela ? el("p.t-mini.ordem-derivados__nota", { texto: c.pd.semTabela }) : null,
 
-      el("div.ordem-carga", {}, [
-        el("span.t-rotulo", { texto: "Carga" }),
-        el("span", { texto: I.rotuloEspacos(carga.ocupado) + " / " + carga.final + " espaços" }),
-        carga.temporario ? el("span.t-mini", { texto: "(" + carga.calculada + " " + U.comSinal(carga.temporario) + " temporário)" }) : null,
-        carga.sobrecarregado
-          ? el("span.t-erro.t-mini", {
-              texto: carga.acimaDoMaximo
-                ? "Acima do máximo de " + carga.maximo + " espaços."
-                : "Sobrecarregado: −5 Defesa, −5 nas perícias de carga, −3m de deslocamento.",
-            })
+      el("dl.ordem-defesa__fatos", {}, [
+        el("div", {}, [
+          el("dt", { texto: "Proteção" }),
+          el("dd", { texto: protecoes.length
+            ? protecoes.map(function (i) { return i.nome + " (" + U.comSinal(R.defesaDaProtecao(i).total) + ")"; }).join(" + ")
+            : "nenhuma em uso" }),
+        ]),
+        el("div.ordem-defesa__carga", {}, [
+          el("dt", { texto: "Carga" }),
+          el("dd", {}, [
+            el("span", { texto: I.rotuloEspacos(carga.ocupado) + " / " + carga.final + " espaços" }),
+            carga.temporario ? el("span.t-mini", { texto: " (" + carga.calculada + " " + U.comSinal(carga.temporario) + " temporário)" }) : null,
+            carga.sobrecarregado
+              ? el("span.t-erro.t-mini.ordem-defesa__alerta", {
+                  texto: carga.acimaDoMaximo
+                    ? "Acima do máximo de " + carga.maximo + " espaços."
+                    : "Sobrecarregado: −5 Defesa, −5 nas perícias de carga, −3m de deslocamento.",
+                })
+              : null,
+          ]),
+        ]),
+        c.rituais.circuloMaximo
+          ? el("div", {}, [
+              el("dt", { texto: "Rituais" }),
+              el("dd", { texto: "Conjura até o " + c.rituais.circuloMaximo + "º círculo. Pode aprender até " + c.rituais.limitePorIntelecto + " ritual(is) pelo poder Aprender Ritual." }),
+            ])
           : null,
       ]),
-
-      c.rituais.circuloMaximo
-        ? el("p.t-mini", {
-            texto: "Conjura rituais até o " + c.rituais.circuloMaximo + "º círculo. " +
-                   "Pode aprender até " + c.rituais.limitePorIntelecto + " ritual(is) pelo poder Aprender Ritual.",
-          })
+      ajustes
+        ? el("p.t-mini.ordem-defesa__ajustes", {}, [
+            el("span", { texto: (ajustes === 1 ? "1 ajuste da mesa" : ajustes + " ajustes da mesa") + " nos números da ficha. " }),
+            el("button.r-link", {
+              type: "button", texto: "Ver em Regras",
+              onclick: function () { if (ctx.irParaAba) ctx.irParaAba("regras"); },
+            }),
+          ])
         : null,
-    ]);
+    ]), { classe: "ordem-painel-defesa" });
+  }
+
+  /* =================================================================
+     ATAQUES (v6.4)
+     -----------------------------------------------------------------
+     As armas do inventário, com o teste, o dano e o crítico efetivos —
+     a linha "Ataques" da ficha de papel. Não há cadastro aqui: os
+     botões são os do cartão da arma no Inventário
+     (SecaoInventarioOrdem.botoesDaArma), com a mesma munição, as mesmas
+     perguntas dos Arquivos Secretos e o mesmo mostrador.
+     ================================================================= */
+
+  function painelAtaques(ctx, o) {
+    var armas = ((ctx.ficha.inventario && ctx.ficha.inventario.itens) || []).filter(function (i) { return i && i.tipo === "arma"; });
+    var corpo;
+    if (!armas.length) {
+      corpo = el("div.ordem-ataques__vazio", {}, [
+        el("p.t-mini", { texto: "Nenhuma arma no inventário." }),
+        el("button.r-link", {
+          type: "button", texto: "Ir para o Inventário",
+          onclick: function () { if (ctx.irParaAba) ctx.irParaAba("inventario"); },
+        }),
+      ]);
+    } else {
+      corpo = el("ul.ordem-ataques", {}, armas.map(function (arma) {
+        var ef = R.armaEfetiva(o, ctx.ficha.inventario, arma, ctx.ficha.pericias);
+        var dados = I.dadosDoItem(arma).arma || {};
+        var detalhes = [
+          ["Teste", ef.pericia ? ef.periciaNome + " " + ef.dado + " " + U.comSinal(ef.ataque.total) : "perícia não escolhida"],
+          ["Dano", textoDoDano(ef) + (dados.tipoDano ? " " + dados.tipoDano.toLowerCase() : "")],
+          ["Crítico", criticoCurto(ef.margem, ef.multiplicador)],
+          ef.alcance ? ["Alcance", rotuloAlcance(ef.alcance)] : null,
+        ].filter(Boolean);
+        return el("li.ordem-ataque", { dataset: { armaId: arma.id || "" } }, [
+          el("div.ordem-ataque__dados", {}, [
+            el("span.ordem-ataque__nome", { texto: arma.nome || "Arma sem nome" }),
+            el("dl.ordem-ataque__numeros", {}, detalhes.map(function (d) {
+              return el("div", {}, [el("dt", { texto: d[0] }), el("dd", { texto: d[1] })]);
+            })),
+          ]),
+          botoesDeAtaque(ctx, arma),
+        ]);
+      }));
+    }
+    return UI.painel("Ataques", corpo, { classe: "ordem-painel-ataques" });
+  }
+
+  /* Os botões do cartão da arma, com o Ataque em destaque: na visão de
+     jogo ele é a ação principal da linha. */
+  function botoesDeAtaque(ctx, arma) {
+    var faixa = SecaoInventarioOrdem.botoesDaArma(ctx, arma);
+    var primeiro = faixa.querySelector(".r-botao");
+    if (primeiro) primeiro.classList.add("r-botao--principal");
+    return faixa;
+  }
+
+  /* =================================================================
+     PERÍCIAS — consulta rápida (v6.4)
+     -----------------------------------------------------------------
+     Ao lado dos atributos, como na ficha de papel: o nome abre os usos,
+     o total abre a conta e o dado rola. São os mesmos manipuladores da
+     aba Perícias (botaoDoNome, abrirComposicao, rolarPericia) e a mesma
+     ordem escolhida lá. Grau, atributo e extra se editam só na aba
+     Perícias — aqui não há formulário.
+     ================================================================= */
+
+  function painelPericiasRapidas(ctx, o) {
+    var org = organizacaoDasPericias(o);
+    var bonusPorChave = {};
+    C.PERICIAS.forEach(function (p) { bonusPorChave[p.chave] = R.bonusDePericia(o, p.chave, ctx.ficha.inventario); });
+    var ordenadas = global.RAMAOrganizar
+      ? global.RAMAOrganizar.ordenarPericias(C.PERICIAS, org.modo, function (p) { return bonusPorChave[p.chave].total; }, org.ordem)
+      : C.PERICIAS.slice();
+
+    var linhas = ordenadas.map(function (p0) {
+      var p = p0;
+      if (p.chave === "profissao" && R.especialidadesDeProfissao) {
+        var esp = R.especialidadesDeProfissao(o);
+        if (esp.length) p = Object.assign({}, p, { nome: "Profissão (" + esp.map(function (x) { return x.nome; }).join(", ") + ")" });
+      }
+      var bonus = bonusPorChave[p.chave];
+      var dado = R.dadoDePericia(o, p.chave);
+      var g = R.grauDaPericia(o, p.chave);
+      var atributo = R.atributoDaPericia(o, p.chave);
+      var podeRolar = !(p.treinada && g === "destreinado");
+      return el("li.ordem-rapida", { class: g === "destreinado" ? "ordem-rapida--destreinada" : "" }, [
+        el("span.ordem-rapida__nome", {}, [botaoDoNome(p, g, "rapida-usos-")]),
+        el("span.ordem-rapida__atrib", { texto: siglaDe(atributo) }),
+        el("span.ordem-rapida__grau.grau--" + g, { title: C.grau(g).nome, texto: C.grau(g).nome.charAt(0) }),
+        el("button.ordem-rapida__total", {
+          type: "button",
+          "aria-label": "Total de " + p.nome + ": " + U.comSinal(bonus.total) + ". Ver a composição",
+          title: "Ver a composição",
+          dataset: { foco: "rapida-total-" + p.chave },
+          onclick: function () { abrirComposicao("Bônus de " + p.nome, bonus, composicaoDosDados(o, p.chave)); },
+        }, [el("span", { texto: U.comSinal(bonus.total) })]),
+        podeRolar
+          ? el("button.r-icone.ordem-rapida__rolar", {
+              type: "button",
+              dataset: { foco: "rapida-rolar-" + p.chave },
+              "aria-label": "Rolar " + p.nome + ", " + dado + " " + U.comSinal(bonus.total),
+              title: "Rolar " + dado + " " + U.comSinal(bonus.total),
+              onclick: function () { rolarPericia(ctx, o, p, dado, bonus, atributo); },
+            }, [UI.simbolo("dado", 16)])
+          : el("span.ordem-rapida__travada", { texto: "só treinada", title: "Esta perícia exige treinamento para ser usada." }),
+      ]);
+    });
+
+    return UI.painel("Perícias", el("div.pilha--curta", { class: "pilha" }, [
+      el("ul.ordem-rapidas", { "aria-label": "Perícias: consulta e rolagem" }, linhas),
+      el("div.faixa.faixa--entre.ordem-rapidas__rodape", {}, [
+        el("span.t-mini", { texto: "Nome: usos · total: conta · dado: rolar. D, T, V, E: destreinado, treinado, veterano, expert." }),
+        el("button.r-link", {
+          type: "button", texto: ctx.emEdicao() ? "Editar graus na aba Perícias" : "Abrir a aba Perícias",
+          onclick: function () { if (ctx.irParaAba) ctx.irParaAba("pericias"); },
+        }),
+      ]),
+    ]), { classe: "ordem-painel-pericias" });
   }
 
   /* =================================================================
@@ -2535,13 +2977,13 @@
   /* O nome da perícia abre a consulta dos usos dela (só leitura:
      js/ordem/telas/pericia-consulta.js). Pela CHAVE — Profissão com as
      especialidades no nome continua achando o texto. */
-  function botaoDoNome(p, grau) {
+  function botaoDoNome(p, grau, prefixo) {
     if (!global.RAMAConsultaPericia) return el("span", { texto: p.nome });
     return el("button.ordem-pericia__consultar", {
       type: "button",
       texto: p.nome,
       "aria-label": p.nome + ": ver a descrição e os usos",
-      dataset: { foco: "usos-" + p.chave },
+      dataset: { foco: (prefixo || "usos-") + p.chave },
       onclick: function () { global.RAMAConsultaPericia.abrir(p.chave, { nome: p.nome, grau: grau }); },
     });
   }
@@ -3503,7 +3945,12 @@
           contagem,
         ]),
         vazio,
-      ].concat(grupos.map(function (g) { return g.caixa; })));
+      ].concat(grupos.map(function (g) { return g.caixa; }), [
+        /* v6.4: os ajustes da mesa moram com o que se prepara fora da
+           sessão. A composição de cada número continua mostrando o
+           ajuste, com o motivo, onde ele pesa. */
+        UI.painel("Ajustes da mesa", botaoAjuste(ctx, o, true), { classe: "ordem-painel-ajustes" }),
+      ]));
     },
   };
 
@@ -4011,6 +4458,14 @@
       }
       if (d.referencia && IT()) linhas.push(["Fonte", IT().NOME_FONTE[d.referencia.fonte] + ", p. " + d.referencia.pagina]);
       return linhas;
+    },
+
+    /* v6.4: a classe do cartão de um item em uso (a proteção vestida, o
+       escudo) — o inventário destaca o que está valendo na Defesa. */
+    classeDoItem: function (ctx, item) {
+      if (!item || item.tipo !== "armadura") return "";
+      var uso = R.protecaoEmUso(ctx.ficha.inventario);
+      return uso.item === item || uso.escudo === item ? "recolhivel--em-uso" : "";
     },
 
     /* A faixa que fica à vista com o cartão fechado: numa proteção, o

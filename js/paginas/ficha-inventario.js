@@ -234,7 +234,7 @@
     var caixa = UI.recolhivel({
       titulo: item.nome || "Sem nome",
       subtitulo: resumoDoCartao(ctx, item, perfil, efetivos),
-      classe: item.tipo === "arma" ? "recolhivel--arma" : "",
+      classe: [item.tipo === "arma" ? "recolhivel--arma" : "", perfil && perfil.classeDoItem ? perfil.classeDoItem(ctx, item) : ""].join(" ").trim(),
       conteudo: [
         detalhes(ctx, item, efetivos),
         item.descricao ? el("p.item__descricao", { texto: item.descricao }) : null,

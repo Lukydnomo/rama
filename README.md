@@ -161,6 +161,7 @@ preferências de tela — nunca é tratado como banco.
     VAMPIRO.md          Vampiro V5: matriz de cobertura, interpretações e lacunas do livro
     GOBLINS.md          Malditos Goblins 3ª ed.: matriz de cobertura, interpretações e lacunas do livro
     SISTEMAS.md         a plataforma e os sistemas: núcleo × módulos, registro, como entra um sistema
+    FICHA-ORDEM.md      a composição da ficha de Ordem e o inventário de campos (antes → depois)
 ```
 
 ---
@@ -418,6 +419,22 @@ está em uso. O servidor está em `testes/sistemas-backend.js`.
 
 ```bash
 deno run --allow-read testes/executar-suplementos.js
+```
+
+**Ficha de Ordem no navegador** — 57 verificações com o Chrome instalado (sem
+interface, pelo DevTools Protocol) contra o servidor local: o bloco de cima sem
+controles, a tira em grupos, a Geral (pentagrama, recursos, defesa, ataques,
+perícias), o ajuste manual sem redesenho, a condição crítica no topo, os atalhos
+do resumo, os ajustes na aba Regras, o modo edição, a patente desligada, Mundano,
+Sobrevivente e o celular a 390 px. Dados sintéticos; rode com o servidor
+recém-iniciado (o teste muda a ficha). `RAMA_CHROME` indica outro Chrome.
+
+```bash
+deno run --allow-read --allow-net --allow-env testes/servidor-local.js
+```
+
+```bash
+deno run --allow-run --allow-net --allow-read --allow-write --allow-env testes/ficha-ordem-interface.js
 ```
 
 **Malditos Goblins** — 253 verificações do motor e da mesa, sem navegador e
@@ -780,6 +797,12 @@ próprio `<script src>`, então funciona debaixo de subpasta sem ajuste.
 segredo nenhum — ele os lê das Script Properties. Publicá-lo não expõe nada.
 
 ### Atualizar o backend
+
+**v6.4.0 — PENTAGRAMA:** só o site (a ficha de Ordem reorganizada). Publique
+`js/ordem/telas/ficha-ordem.js`, `js/paginas/ficha.js`,
+`js/paginas/ficha-inventario.js`, `js/sistemas.js` e as folhas
+`css/ficha.css`, `css/modern20/ficha.css` e `css/densidade.css`. Nada de `.gs`,
+sem `setupRama()` e sem mudança de schema.
 
 **v6.3.1 — PAVIO:** só o site (a tela de carregamento). Publique `js/ui.js`,
 `js/auth.js` e as folhas `css/componentes.css`, `css/layout.css` e os pares do
@@ -1606,7 +1629,7 @@ Três números diferentes, que não se misturam:
 
 | | Onde | O que é |
 |---|---|---|
-| versão do aplicativo | `js/versao.js` | o que a pessoa vê: v6.3.1 |
+| versão do aplicativo | `js/versao.js` | o que a pessoa vê: v6.4.0 |
 | `schemaVersion` | `js/ficha.js` | o formato da FICHA |
 | `versaoFormato` | `js/config.js` | o formato dos arquivos de importação |
 

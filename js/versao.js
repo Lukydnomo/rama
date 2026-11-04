@@ -118,6 +118,29 @@
 
   var CHANGELOG = [
     {
+      versao: "6.4.0",
+      codinome: "PENTAGRAMA",
+      data: "31/10/2026",
+      mudancas: {
+        "Melhorado": [
+          "Ficha de Ordem reorganizada para sessões longas. Acima das abas fica só uma linha: a identificação e o resumo da sessão (PV, PE e SAN ou PD, Defesa, condições críticas, efeitos ativos e escolhas pendentes). Cada item do resumo leva ao lugar onde aquilo se muda.",
+          "A aba Geral virou a visão de jogo, como a página 1 da ficha de papel: atributos, recursos e defesa de um lado; condições, ataques e perícias do outro; e, embaixo, o personagem. No celular, tudo numa sequência.",
+          "Atributos em volta do centro, com AGI em cima, FOR e INT nos lados e PRE e VIG embaixo. O círculo inteiro rola, e “conta” fica ao lado, nunca dentro do botão. No modo edição, viram cartões com o controle de valor.",
+          "Recursos com as camadas escritas: o número grande é o ajuste manual; “Aplicar com as regras” (Dano, Cura, Gastar…) fica separado, com rótulo; uma barra mostra quanto sobrou.",
+          "Condições pedem atenção quando precisam: Morrendo, Enlouquecendo, Inconsciente e Perturbado sobem para o topo da Geral e aparecem no resumo. A sugestão de PV ou SAN em 0 é tracejada. Sem nada ativo, o painel fica compacto; interlúdio, combate e imunidades ficam num recolhível.",
+          "Ataques na Geral, com teste, dano e crítico: as armas do inventário, com os mesmos botões do Inventário. Perícias em consulta rápida ao lado (nome: usos; total: conta; dado: rolar), na ordem escolhida na aba Perícias.",
+          "A tira de abas em três grupos: jogo (Geral, Perícias), personagem (Habilidades, Rituais, Inventário, Anotações, Aliados) e preparação (Progressão, Regras). Os Ajustes da mesa foram para a aba Regras.",
+          "Na aba Perícias, o total é um número que abre a conta e o dado é o botão da linha. No Inventário, a proteção em uso ganha um traço.",
+        ],
+        "Corrigido": [
+          "Dano, Cura e as outras ações de recurso partem do valor de agora, mesmo logo depois de um ajuste manual (antes, usavam o valor de quando a ficha foi desenhada).",
+        ],
+        "Técnico": [
+          "Só o site: js/ordem/telas/ficha-ordem.js, js/paginas/ficha.js (grupos da tira), js/sistemas.js (ordem e `grupo` das abas de Ordem), js/paginas/ficha-inventario.js (classeDoItem), css/ficha.css, css/modern20/ficha.css e css/densidade.css. Sem mudança de schema nem de regra. Inventário de campos em docs/FICHA-ORDEM.md; teste de navegador em testes/ficha-ordem-interface.js.",
+        ],
+      },
+    },
+    {
       versao: "6.3.1",
       codinome: "PAVIO",
       data: "31/10/2026",

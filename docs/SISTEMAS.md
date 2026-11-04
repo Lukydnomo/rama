@@ -30,7 +30,9 @@ Dois registros, um em cada lado, que dizem a mesma coisa
   - `ficha.bloco` e `ficha.motor`: a chave do bloco de regras (`ficha.ordem`,
     `ficha.oblivio`) e o módulo que o normaliza e cria o vazio (`normalizar`,
     `fichaVazia`). Sem bloco, a ficha usa só o núcleo do modelo (Universal).
-  - `ficha.abas` e `ficha.blocoSuperior`: as seções da ficha.
+  - `ficha.abas` e `ficha.blocoSuperior`: as seções da ficha. Cada aba pode ter
+    `grupo` (v6.4): a tira abre um respiro quando o grupo muda (Ordem: jogo,
+    personagem, preparo — ver `docs/FICHA-ORDEM.md`).
   - `ficha.resumo`: o resumo que a mesa lê sem abrir a ficha (campo e função
     do motor).
   - `ficha.modulosConfiguraveis`, `ficha.periciasPadrao`, `ficha.pontos`.

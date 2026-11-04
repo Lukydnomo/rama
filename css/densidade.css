@@ -130,6 +130,25 @@
 :root[data-densidade="compacta"] .ordem-personalizacao-aviso { padding: var(--e1) var(--e3); }
 :root[data-densidade="compacta"] .ordem-personalizacao-automacao { padding: var(--e2); }
 
+/* Ficha de Ordem (v6.4): o bloco de cima, a Geral em colunas, os
+   recursos, a defesa, os ataques e a consulta rápida de perícias. Só
+   espaço — nada de tamanho de letra. */
+:root[data-densidade="compacta"] .ordem-cabeca { padding-bottom: var(--e2); gap: var(--e1) var(--e3); }
+:root[data-densidade="compacta"] .ordem-resumo__item { min-height: 30px; padding: 2px var(--e2); }
+:root[data-densidade="compacta"] .ordem-geral,
+:root[data-densidade="compacta"] .ordem-sessao,
+:root[data-densidade="compacta"] .ordem-sessao__coluna,
+:root[data-densidade="compacta"] .ordem-personagem__grade { gap: var(--e4); }
+:root[data-densidade="compacta"] .ordem-personagem { gap: var(--e3); padding-top: var(--e3); }
+:root[data-densidade="compacta"] .ordem-recursos { gap: var(--e2); }
+:root[data-densidade="compacta"] .ordem-recurso { gap: var(--e1); padding: var(--e1) var(--e2); }
+:root[data-densidade="compacta"] .recurso-acoes { padding-top: var(--e1); }
+:root[data-densidade="compacta"] .calculado--linha { min-height: 34px; }
+:root[data-densidade="compacta"] .calculado--destaque { min-height: 92px; }
+:root[data-densidade="compacta"] .ordem-ataque { padding: var(--e1) 0; }
+:root[data-densidade="compacta"] .ordem-rapida { min-height: 30px; }
+:root[data-densidade="compacta"] .ordem-pentagrama__ajuda { margin-top: var(--e2); }
+
 /* Rituais: o cabeçalho com as rolagens e o "Usar ritual". */
 :root[data-densidade="compacta"] .ritual-uso { padding: var(--e1) var(--e3) var(--e2); }
 :root[data-densidade="compacta"] .ritual-danos { gap: var(--e1) var(--e3); }

@@ -916,15 +916,413 @@ body.pagina-ficha .app-corpo {
   text-transform: uppercase;
 }
 
-/* ---------- atributos ---------- */
+/* Variantes do calculado (v6.4). A LINHA é uma estatística numa coluna
+   de estatísticas: sem caixa, com o traço de baixo. O DESTAQUE é a
+   Defesa: número grande, centrado, moldura cheia. O INLINE é o máximo
+   do recurso, ao lado do nome. As três abrem a mesma composição. */
+.calculado--linha {
+  grid-template-columns: minmax(0, 1fr) auto auto auto;
+  min-height: 40px;
+  padding: var(--e1) var(--e2);
+  background: transparent;
+  border: 0;
+  border-bottom: var(--borda) solid var(--cor-traco-fraca);
+}
+.calculado--linha:hover { background: var(--fundo-superficie-2); }
+.calculado--linha .calculado__valor { font-size: var(--texto-medio); font-variant-numeric: tabular-nums; }
 
-.ordem-atributos {
+.calculado--destaque {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  height: 100%;
+  min-height: 112px;
+  text-align: center;
+  border: 2px solid var(--cor-traco-forte);
+}
+.calculado--destaque .calculado__valor { font-size: var(--texto-numero); line-height: 1; font-variant-numeric: tabular-nums; }
+.calculado--destaque .calculado__rotulo { color: var(--cor-texto-2); font-weight: 700; }
+
+.calculado--inline {
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--e1);
+  width: auto;
+  min-height: 32px;
+  padding: 2px var(--e2);
+  background: transparent;
+  border-color: transparent;
+}
+.calculado--inline:hover { border-color: var(--cor-traco-fraca); background: transparent; }
+.calculado--inline .calculado__valor { font-size: var(--texto-base); font-variant-numeric: tabular-nums; }
+
+/* =====================================================================
+   FICHA DE ORDEM — A COMPOSIÇÃO (v6.4)
+   ---------------------------------------------------------------------
+   Acima das abas, uma linha: quem é e como está. Na Geral, a página 1
+   da ficha de papel — atributos, recursos e defesa de um lado;
+   condições, ataques e perícias do outro — e, embaixo, o personagem.
+   As áreas se distinguem pela escala dos números, pelo alinhamento e
+   pelos separadores, não por um cartão igual para cada coisa.
+   ===================================================================== */
+
+/* ---------- o bloco acima das abas ---------- */
+
+.ordem-cabeca {
   display: grid;
-  gap: var(--e2);
-  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--e2) var(--e4);
+  padding-bottom: var(--e3);
+  border-bottom: var(--borda) solid var(--cor-traco-fraca);
+}
+.ordem-cabeca__foto {
+  display: grid;
+  place-items: center;
+  width: 56px;
+  height: 56px;
+  overflow: hidden;
+  background: var(--fundo-superficie-2);
+  border: var(--borda) solid var(--cor-traco-fraca);
+  color: var(--cor-traco-media);
+}
+.ordem-cabeca__foto img { width: 100%; height: 100%; object-fit: cover; }
+
+.ordem-cabeca__identidade {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--e1) var(--e4);
+  margin: 0;
+  min-width: 0;
+}
+.ordem-cabeca__par { display: flex; flex-direction: column; min-width: 0; }
+.ordem-cabeca__par dt {
+  font-family: var(--fonte-mini);
+  font-size: var(--texto-mini);
+  letter-spacing: var(--espaco-letra-titulo);
+  text-transform: uppercase;
+  color: var(--cor-texto-3);
+}
+.ordem-cabeca__par dd { margin: 0; font-weight: 700; color: var(--cor-texto); overflow-wrap: anywhere; }
+
+.ordem-resumo { display: flex; flex-direction: column; align-items: flex-end; gap: var(--e1); min-width: 0; }
+.ordem-resumo__numeros,
+.ordem-resumo__alertas { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: var(--e1); }
+
+/* Números de consulta, não controles: traço fino, sem fundo. O nível
+   do recurso aparece no traço E na cor do número. */
+.ordem-resumo__item {
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--e1);
+  min-height: 36px;
+  padding: var(--e1) var(--e2);
+  background: transparent;
+  border: var(--borda) solid var(--cor-traco-fraca);
+  color: var(--cor-texto);
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+}
+.ordem-resumo__item:hover { background: var(--fundo-superficie); border-color: var(--cor-traco-media); }
+.ordem-resumo__rotulo {
+  font-family: var(--fonte-mini);
+  font-size: var(--texto-mini);
+  letter-spacing: var(--espaco-letra-titulo);
+  color: var(--cor-texto-3);
+}
+.ordem-resumo__atual { font-weight: 700; font-size: var(--texto-medio); line-height: 1; }
+.ordem-resumo__max { font-size: var(--texto-mini); color: var(--cor-texto-3); }
+.ordem-resumo__item[data-nivel="baixo"] { border-color: var(--cor-aviso); }
+.ordem-resumo__item[data-nivel="baixo"] .ordem-resumo__atual { color: var(--cor-aviso); }
+.ordem-resumo__item[data-nivel="critico"] { border-color: var(--cor-erro); }
+.ordem-resumo__item[data-nivel="critico"] .ordem-resumo__atual { color: var(--cor-erro); }
+
+.ordem-resumo__alerta,
+.ordem-resumo__efeitos,
+.ordem-resumo__pendencias {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--e1);
+  min-height: 32px;
+  padding: 2px var(--e2);
+  background: transparent;
+  font-family: var(--fonte-mini);
+  font-size: var(--texto-mini);
+  letter-spacing: var(--espaco-letra-titulo);
+  text-transform: uppercase;
+  cursor: pointer;
+}
+/* Crítico: traço cheio de aviso e fundo — o que não pode passar batido. */
+.ordem-resumo__alerta {
+  border: var(--borda) solid var(--cor-aviso);
+  border-left-width: 3px;
+  background: var(--fundo-superficie-2);
+  color: var(--cor-aviso);
+  font-weight: 700;
+}
+.ordem-resumo__alerta--limite { border-color: var(--cor-erro); color: var(--cor-erro); }
+.ordem-resumo__contagem { font-variant-numeric: tabular-nums; }
+.ordem-resumo__efeitos {
+  border: var(--borda) solid var(--cor-traco-fraca);
+  border-left: 3px solid var(--cor-paranormal);
+  color: var(--cor-texto-2);
+}
+.ordem-resumo__pendencias { border: var(--borda) dashed var(--cor-paranormal); color: var(--cor-texto-2); }
+.ordem-resumo__efeitos:hover,
+.ordem-resumo__pendencias:hover { color: var(--cor-texto); }
+
+@media (max-width: 760px) {
+  .ordem-cabeca { grid-template-columns: auto minmax(0, 1fr); gap: var(--e2) var(--e3); }
+  .ordem-cabeca__foto { width: 44px; height: 44px; }
+  .ordem-resumo { grid-column: 1 / -1; align-items: stretch; }
+  .ordem-resumo__numeros,
+  .ordem-resumo__alertas { justify-content: flex-start; }
+  .ordem-resumo__item { flex: 1 1 0; justify-content: center; min-height: var(--alvo-toque); }
 }
 
-.ordem-atributo {
+/* ---------- a tira de abas em grupos ---------- */
+
+.r-aba--novo-grupo { margin-left: var(--e3); }
+.r-aba--novo-grupo::before {
+  content: "";
+  position: absolute;
+  left: calc(-1 * var(--e2) - 1px);
+  top: 28%;
+  bottom: 28%;
+  border-left: var(--borda) solid var(--cor-traco-media);
+  pointer-events: none;
+}
+
+/* ---------- a aba Geral ---------- */
+
+.ordem-geral { display: flex; flex-direction: column; gap: var(--e5); }
+.ordem-sessao {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--e5);
+  align-items: start;
+}
+@media (min-width: 1000px) {
+  .ordem-sessao { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+}
+.ordem-sessao__coluna { display: flex; flex-direction: column; gap: var(--e5); min-width: 0; }
+
+.ordem-personagem {
+  display: flex;
+  flex-direction: column;
+  gap: var(--e4);
+  padding-top: var(--e4);
+  border-top: var(--borda) solid var(--cor-traco-media);
+}
+.ordem-personagem__titulo { margin: 0; }
+.ordem-personagem__grade {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 360px), 1fr));
+  gap: var(--e5);
+  align-items: start;
+}
+.ordem-identidade__edicao {
+  display: grid;
+  grid-template-columns: 120px minmax(0, 1fr);
+  gap: var(--e3);
+  align-items: start;
+}
+@media (max-width: 420px) {
+  .ordem-identidade__edicao { grid-template-columns: 96px minmax(0, 1fr); }
+}
+
+/* Explicações e configurações recolhidas: um resumo pequeno, que não
+   disputa com as ações. */
+.ordem-explica > summary,
+.condicoes__mais > summary {
+  display: flex;
+  align-items: center;
+  min-height: 32px;
+  font-size: var(--texto-mini);
+  color: var(--cor-texto-3);
+  cursor: pointer;
+}
+.ordem-explica > summary:hover,
+.condicoes__mais > summary:hover { color: var(--cor-texto-2); }
+.ordem-explica > p { margin: 0 0 var(--e2); }
+
+/* O link que leva a outra aba: texto, não botão. */
+.r-link {
+  display: inline;
+  padding: 0;
+  font: inherit;
+  font-size: var(--texto-mini);
+  color: var(--cor-link);
+  text-align: left;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  background: none;
+  border: 0;
+  cursor: pointer;
+}
+.r-link:hover { color: var(--cor-paranormal); }
+.r-link:focus-visible { outline: 2px solid var(--cor-paranormal); outline-offset: 2px; }
+
+/* ---------- atributos: o pentagrama ----------
+   AGI em cima, FOR e INT nos lados, PRE e VIG embaixo, em volta do
+   centro (posições em % de uma área quadrada; o SVG usa as mesmas). O
+   desenho fica apagado atrás; o valor é o que se lê primeiro. */
+
+.ordem-painel-atributos { container: atributos / inline-size; }
+
+.ordem-pentagrama {
+  --no: 29%;
+  position: relative;
+  width: min(100%, 420px);
+  aspect-ratio: 1;
+  margin: 0 auto;
+}
+.ordem-pentagrama__desenho {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+}
+.ordem-pentagrama__anel {
+  fill: none;
+  stroke: var(--cor-traco-media);
+  stroke-width: 3;
+  vector-effect: non-scaling-stroke;
+}
+.ordem-pentagrama__anel--fino { stroke: var(--cor-traco-fraca); stroke-width: 1; }
+.ordem-pentagrama__raio {
+  stroke: var(--cor-traco-fraca);
+  stroke-width: 2;
+  vector-effect: non-scaling-stroke;
+}
+.ordem-pentagrama__centro {
+  position: absolute;
+  left: 33%;
+  top: 36%;
+  width: 34%;
+  height: 34%;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--cor-texto);
+  color: var(--cor-fundo);
+  font-weight: 700;
+  font-size: var(--texto-mini);
+  letter-spacing: var(--espaco-letra-titulo);
+  text-transform: uppercase;
+  pointer-events: none;
+}
+
+.ordem-pentagrama .ordem-atributo {
+  position: absolute;
+  width: var(--no);
+  height: var(--no);
+}
+.ordem-pentagrama .ordem-atributo--agi { left: calc(50% - var(--no) / 2); top: calc(17% - var(--no) / 2); }
+.ordem-pentagrama .ordem-atributo--int { left: calc(84% - var(--no) / 2); top: calc(42% - var(--no) / 2); }
+.ordem-pentagrama .ordem-atributo--vig { left: calc(71% - var(--no) / 2); top: calc(82% - var(--no) / 2); }
+.ordem-pentagrama .ordem-atributo--pre { left: calc(29% - var(--no) / 2); top: calc(82% - var(--no) / 2); }
+.ordem-pentagrama .ordem-atributo--for { left: calc(16% - var(--no) / 2); top: calc(42% - var(--no) / 2); }
+
+/* O círculo inteiro é o botão de rolar: um alvo grande, sem mira. */
+.ordem-atributo__rolar {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  border-radius: 50%;
+  background: var(--fundo-superficie);
+  border: 2px solid var(--cor-traco-forte);
+  color: var(--cor-texto);
+  cursor: pointer;
+  transition: border-color var(--tempo-seco) var(--curva), background var(--tempo-seco) var(--curva);
+}
+.ordem-atributo__rolar:hover { border-color: var(--cor-paranormal); background: var(--fundo-superficie-2); }
+.ordem-atributo__rolar:hover .ordem-atributo__valor { color: var(--cor-paranormal); }
+.ordem-atributo__rolar:focus-visible { outline: 2px solid var(--cor-paranormal); outline-offset: 3px; }
+.ordem-atributo__rolar:active { background: var(--fundo-selecao); color: var(--cor-selecao-texto); }
+
+.ordem-atributo__sigla {
+  font-family: var(--fonte-mini);
+  font-size: var(--texto-mini);
+  font-weight: 700;
+  letter-spacing: var(--espaco-letra-titulo);
+  color: var(--cor-texto-2);
+}
+.ordem-atributo__valor {
+  font-size: calc(30px * var(--escala));
+  font-weight: 700;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+.ordem-atributo__dado,
+.ordem-atributo__nome {
+  font-family: var(--fonte-mini);
+  font-size: var(--texto-mini);
+  color: var(--cor-texto-3);
+  text-align: center;
+}
+.ordem-pentagrama .ordem-atributo__nome { display: none; letter-spacing: 0.04em; text-transform: uppercase; }
+.ordem-atributo__rolar:active .ordem-atributo__sigla,
+.ordem-atributo__rolar:active .ordem-atributo__dado,
+.ordem-atributo__rolar:active .ordem-atributo__nome { color: inherit; }
+
+/* "conta": encostado embaixo do círculo, fora do botão de rolar. */
+.ordem-atributo__conta {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  min-height: 26px;
+  padding: 0 var(--e2);
+  font-family: var(--fonte-mini);
+  font-size: var(--texto-mini);
+  color: var(--cor-paranormal);
+  background: var(--fundo-superficie);
+  border: var(--borda) solid var(--cor-paranormal);
+  cursor: pointer;
+}
+.ordem-atributo__conta:hover { background: var(--fundo-superficie-2); }
+.ordem-atributo__conta:focus-visible { outline: 2px solid var(--cor-paranormal); outline-offset: 2px; }
+.ordem-pentagrama .ordem-atributo__conta {
+  position: absolute;
+  left: 50%;
+  bottom: -10px;
+  transform: translateX(-50%);
+}
+@media (pointer: coarse) {
+  .ordem-atributo__conta { min-height: 34px; }
+  .ordem-pentagrama .ordem-atributo__conta { bottom: -16px; }
+}
+
+.ordem-pentagrama__ajuda { margin: var(--e3) 0 0; text-align: center; }
+
+@container atributos (min-width: 380px) {
+  .ordem-pentagrama .ordem-atributo__nome { display: block; }
+  .ordem-pentagrama__centro { font-size: var(--texto-base); }
+  .ordem-atributo__valor { font-size: calc(34px * var(--escala)); }
+}
+
+/* No modo edição, e num espaço estreito demais para o desenho: uma
+   grade de cartões, na ordem do catálogo. */
+.ordem-pentagrama--edicao {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(112px, 1fr));
+  gap: var(--e2);
+  width: 100%;
+  aspect-ratio: auto;
+}
+.ordem-pentagrama--edicao .ordem-atributo {
+  position: static;
+  width: auto;
+  height: auto;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -934,73 +1332,236 @@ body.pagina-ficha .app-corpo {
   border: var(--borda) solid var(--cor-traco-fraca);
   min-width: 0;
 }
-.ordem-atributo__sigla {
+.ordem-pentagrama--edicao .ordem-atributo__nome { display: block; }
+.ordem-pentagrama--edicao .r-passo { width: 100%; }
+.ordem-pentagrama--edicao .ordem-atributo__conta { position: static; transform: none; }
+
+@container atributos (max-width: 279px) {
+  .ordem-pentagrama:not(.ordem-pentagrama--edicao) {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--e2);
+    width: 100%;
+    aspect-ratio: auto;
+  }
+  .ordem-pentagrama__desenho,
+  .ordem-pentagrama__centro { display: none; }
+  .ordem-pentagrama .ordem-atributo {
+    position: static;
+    width: auto;
+    height: auto;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--e1);
+  }
+  .ordem-pentagrama .ordem-atributo__rolar { min-height: 84px; border-radius: 0; border-width: var(--borda); }
+  .ordem-pentagrama .ordem-atributo__conta { position: static; transform: none; justify-content: center; }
+}
+
+/* ---------- recursos ----------
+   Uma faixa por recurso, com o traço lateral. Em cima o nome e o
+   máximo; no meio o número grande, que é o próprio campo de ajuste; a
+   barra; e, separado por um tracejado e com rótulo, "aplicar com as
+   regras". Com espaço, o ajuste e as ações dividem a linha. */
+
+.ordem-painel-recursos { container: recursos / inline-size; }
+
+.ordem-recursos { display: flex; flex-direction: column; gap: var(--e3); }
+
+.ordem-recurso {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-areas: "topo" "atual" "barra" "acoes";
+  gap: var(--e2);
+  padding: var(--e2) var(--e3);
+  border-left: 3px solid var(--cor-traco-media);
+  background: var(--fundo-superficie-2);
+  min-width: 0;
+}
+.ordem-recurso__topo { grid-area: topo; display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: var(--e1) var(--e2); }
+.ordem-recurso__nome {
+  font-family: var(--fonte-mini);
+  font-size: var(--texto-mini);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: var(--espaco-letra-titulo);
+  color: var(--cor-texto-2);
+}
+.ordem-recurso__atual { grid-area: atual; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.ordem-recurso__legenda,
+.recurso-acoes__rotulo {
   font-family: var(--fonte-mini);
   font-size: var(--texto-mini);
   letter-spacing: var(--espaco-letra-titulo);
+  text-transform: uppercase;
   color: var(--cor-texto-3);
 }
-.ordem-atributo__valor {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: var(--alvo-toque);
-  min-height: var(--alvo-toque);
-  font-size: 1.6rem;
-  font-weight: 700;
-  background: transparent;
-  border: 0;
-  color: var(--cor-texto);
-  cursor: pointer;
+.ordem-recurso__linha { display: flex; align-items: center; gap: var(--e2); }
+.ordem-recurso .r-passo { width: 11rem; max-width: 100%; }
+.ordem-recurso .r-passo__valor { font-size: var(--texto-grande); padding: 0 var(--e1); }
+.ordem-recurso__de { font-size: var(--texto-medio); color: var(--cor-texto-3); font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+.ordem-recurso__barra {
+  grid-area: barra;
+  height: 6px;
+  background: var(--cor-superficie-3);
+  border: var(--borda) solid var(--cor-traco-fraca);
+  overflow: hidden;
 }
-.ordem-atributo__valor:hover { color: var(--cor-paranormal); }
-.ordem-atributo--rolar { cursor: pointer; transition: border-color var(--tempo-seco) var(--curva); }
-.ordem-atributo--rolar:hover { border-color: var(--cor-paranormal); }
-.ordem-atributo--rolar:hover .ordem-atributo__valor { color: var(--cor-paranormal); }
-.ordem-atributo--rolar:focus-visible { outline: 2px solid var(--cor-paranormal); outline-offset: 2px; }
-.ordem-atributo__dado,
-.ordem-atributo__nome {
+.ordem-recurso__barra > span { display: block; height: 100%; background: var(--cor-texto-2); transition: width var(--tempo-curto) var(--curva); }
+.ordem-recurso__barra[data-nivel="baixo"] > span { background: var(--cor-aviso); }
+.ordem-recurso__barra[data-nivel="critico"] > span { background: var(--cor-erro); }
+
+.recurso-acoes {
+  grid-area: acoes;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0;
+  padding-top: var(--e2);
+  border-top: var(--borda) dashed var(--cor-traco-fraca);
+  min-width: 0;
+}
+.recurso-acoes__linha { display: flex; flex-wrap: wrap; align-items: center; gap: var(--e1); }
+.recurso-acoes__valor { width: 3.5rem; min-height: 32px; text-align: center; font-variant-numeric: tabular-nums; }
+
+@container recursos (min-width: 520px) {
+  .ordem-recurso {
+    grid-template-columns: minmax(0, auto) minmax(0, 1fr);
+    grid-template-areas: "topo topo" "atual acoes" "barra barra";
+    column-gap: var(--e4);
+  }
+  .recurso-acoes { padding: 0 0 0 var(--e3); border-top: 0; border-left: var(--borda) dashed var(--cor-traco-fraca); }
+}
+
+/* ---------- defesa e movimento ---------- */
+
+.ordem-defesa {
+  display: grid;
+  grid-template-columns: minmax(7.5rem, 9rem) minmax(0, 1fr);
+  gap: var(--e3);
+  align-items: stretch;
+}
+.ordem-defesa__principal { display: flex; min-width: 0; }
+.ordem-defesa__principal .calculado { flex: 1 1 auto; }
+.ordem-derivados { display: flex; flex-direction: column; min-width: 0; }
+
+.ordem-defesa__fatos { display: flex; flex-direction: column; gap: var(--e1); margin: 0; }
+.ordem-defesa__fatos > div { display: grid; grid-template-columns: 6rem minmax(0, 1fr); gap: var(--e2); align-items: baseline; }
+.ordem-defesa__fatos dt {
+  font-family: var(--fonte-mini);
+  font-size: var(--texto-mini);
+  letter-spacing: var(--espaco-letra-titulo);
+  text-transform: uppercase;
+  color: var(--cor-texto-3);
+}
+.ordem-defesa__fatos dd { margin: 0; overflow-wrap: anywhere; }
+.ordem-defesa__alerta { display: block; }
+.ordem-defesa__ajustes { margin: 0; }
+
+@media (max-width: 400px) {
+  .ordem-defesa { grid-template-columns: minmax(0, 1fr); }
+  .calculado--destaque { min-height: 88px; }
+}
+
+/* ---------- ataques ---------- */
+
+.ordem-ataques { display: flex; flex-direction: column; margin: 0; padding: 0; list-style: none; }
+.ordem-ataque {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--e2) var(--e3);
+  padding: var(--e2) 0;
+  border-bottom: var(--borda) solid var(--cor-traco-fraca);
+}
+.ordem-ataque:first-child { padding-top: 0; }
+.ordem-ataque:last-child { border-bottom: 0; padding-bottom: 0; }
+.ordem-ataque__dados { display: flex; flex-direction: column; gap: 2px; flex: 1 1 14rem; min-width: 0; }
+.ordem-ataque__nome { font-weight: 700; overflow-wrap: anywhere; }
+.ordem-ataque__numeros { display: flex; flex-wrap: wrap; gap: 2px var(--e3); margin: 0; }
+.ordem-ataque__numeros > div { display: flex; align-items: baseline; gap: var(--e1); }
+.ordem-ataque__numeros dt {
+  font-family: var(--fonte-mini);
+  font-size: var(--texto-mini);
+  letter-spacing: var(--espaco-letra-titulo);
+  text-transform: uppercase;
+  color: var(--cor-texto-3);
+}
+.ordem-ataque__numeros dd { margin: 0; font-variant-numeric: tabular-nums; }
+.ordem-ataque .item__acoes--fora { flex: 0 1 auto; padding: 0; border-top: 0; flex-wrap: wrap; }
+.ordem-ataque .item__acoes .r-botao { flex: 0 0 auto; }
+.ordem-ataques__vazio { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--e2); }
+.ordem-ataques__vazio .t-mini { margin: 0; }
+
+/* ---------- perícias: consulta rápida ----------
+   Nome (os usos), atributo, grau, total (a conta) e o dado (rolar). A
+   consulta é texto que responde ao clique; a rolagem é o único botão
+   com moldura da linha. */
+
+.ordem-rapidas { display: flex; flex-direction: column; margin: 0; padding: 0; list-style: none; }
+.ordem-rapida {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 2.5rem 1.5rem 3.25rem 4.5rem;
+  align-items: center;
+  gap: var(--e2);
+  min-height: 36px;
+  padding: 0 var(--e1);
+  border-bottom: var(--borda) solid var(--cor-traco-fraca);
+}
+.ordem-rapida:nth-child(even) { background: color-mix(in srgb, var(--fundo-superficie-2) 55%, transparent); }
+.ordem-rapida__nome { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ordem-rapida--destreinada .ordem-rapida__nome { color: var(--cor-texto-3); }
+.ordem-rapida__atrib,
+.ordem-rapida__grau,
+.ordem-rapida__travada {
   font-family: var(--fonte-mini);
   font-size: var(--texto-mini);
   color: var(--cor-texto-3);
   text-align: center;
 }
-
-/* ---------- recursos e derivados ---------- */
-
-.ordem-recursos,
-.ordem-derivados {
-  display: grid;
-  gap: var(--e2);
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+.ordem-rapida__grau.grau--treinado,
+.ordem-rapida__grau.grau--veterano,
+.ordem-rapida__grau.grau--expert { color: var(--cor-grau); }
+.ordem-rapida__grau.grau--veterano { font-weight: 700; }
+.ordem-rapida__grau.grau--expert { font-weight: 700; font-style: italic; }
+.ordem-rapida__total {
+  justify-self: end;
+  min-height: 28px;
+  padding: 0 2px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--cor-texto);
+  background: none;
+  border: 0;
+  border-bottom: var(--borda) dotted var(--cor-traco-media);
+  cursor: pointer;
 }
+.ordem-rapida__total:hover { color: var(--cor-paranormal); border-bottom-color: var(--cor-paranormal); }
+.ordem-rapida__total:focus-visible { outline: 2px solid var(--cor-paranormal); outline-offset: 2px; }
+.ordem-rapida__rolar { justify-self: end; border-color: var(--cor-traco-fraca); color: var(--cor-texto-2); }
+.ordem-rapida__rolar:hover { border-color: var(--cor-paranormal); color: var(--cor-texto); }
+.ordem-rapida__travada { justify-self: end; white-space: nowrap; }
+/* O dado menor só com mouse e tela larga; no toque, o alvo inteiro. */
+@media (pointer: fine) and (min-width: 761px) {
+  .ordem-rapida__rolar { width: 32px; height: 32px; }
+}
+.ordem-rapidas__rodape { flex-wrap: wrap; gap: var(--e2); }
+.ordem-rapidas__rodape .t-mini { margin: 0; }
 
-.ordem-recurso {
-  display: flex;
-  flex-direction: column;
-  gap: var(--e2);
-  padding: var(--e2);
-  background: var(--fundo-superficie);
-  border: var(--borda) solid var(--cor-traco-fraca);
-  min-width: 0;
-}
-.ordem-recurso__topo { display: flex; flex-direction: column; gap: var(--e1); }
-.ordem-recurso__nome {
-  font-family: var(--fonte-mini);
-  font-size: var(--texto-mini);
-  text-transform: uppercase;
-  letter-spacing: var(--espaco-letra-titulo);
-  color: var(--cor-texto-2);
-}
+/* ---------- condições: o que pede atenção primeiro ---------- */
 
-.ordem-carga {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: var(--e2);
-  padding-top: var(--e2);
-  border-top: var(--borda) solid var(--cor-traco-fraca);
+.ordem-painel-condicoes--critico {
+  border: 2px solid var(--cor-aviso);
+  border-left-width: 4px;
 }
+.ordem-painel-condicoes--critico > .r-painel__titulo { color: var(--cor-aviso); }
+
+/* ---------- inventário: o que está em uso ---------- */
+
+.recolhivel--em-uso { box-shadow: inset 3px 0 0 var(--cor-paranormal); }
 
 /* ---------- perícias ---------- */
 
@@ -1106,25 +1667,32 @@ body.pagina-ficha .app-corpo {
 .ordem-pericia__extra { color: var(--cor-texto); font-variant-numeric: tabular-nums; }
 .ordem-pericia__extra--zero { color: var(--cor-texto-3); }
 
+/* v6.4: consultar e rolar não se parecem. O total é um número que abre
+   a conta (texto com sublinhado pontilhado); o dado é o botão da linha,
+   com moldura. */
 .ordem-pericia__bonus {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 1px;
-  width: 100%;
-  min-height: var(--alvo-toque);
+  min-height: 32px;
+  padding: 0 var(--e1);
   font-weight: 700;
   font-variant-numeric: tabular-nums;
   background: transparent;
-  border: var(--borda) solid var(--cor-traco-fraca);
+  border: 0;
+  border-bottom: var(--borda) dotted var(--cor-traco-media);
   color: var(--cor-texto);
   cursor: pointer;
 }
-.ordem-pericia__bonus:hover,
-.ordem-pericia__bonus:focus-visible { border-color: var(--cor-paranormal); }
+.ordem-pericia__bonus:hover { color: var(--cor-paranormal); border-bottom-color: var(--cor-paranormal); }
+.ordem-pericia__bonus:focus-visible { outline: 2px solid var(--cor-paranormal); outline-offset: 2px; }
 .ordem-pericia__outros { color: var(--cor-paranormal); }
+.ordem-pericia__c-total { justify-content: center; }
 
-.ordem-pericia__rolar { min-width: var(--alvo-toque); min-height: var(--alvo-toque); }
+.ordem-pericia__rolar { min-width: var(--alvo-toque); min-height: var(--alvo-toque); border-color: var(--cor-traco-fraca); color: var(--cor-texto-2); }
+.ordem-pericia__rolar:hover { border-color: var(--cor-paranormal); color: var(--cor-texto); }
+.ordem-pericias__corpo > .ordem-pericia:nth-child(even) { background: color-mix(in srgb, var(--fundo-superficie-2) 55%, transparent); }
 
 .ordem-pericia__marcas { flex-wrap: wrap; }
 .ordem-pericia__marcas .r-etiqueta { font-size: var(--texto-mini); }
@@ -1264,17 +1832,6 @@ body.pagina-ficha .app-corpo {
   border: var(--borda) dashed var(--cor-traco-fraca);
 }
 
-.ordem-atributo__conta {
-  padding: 0 var(--e1);
-  font-family: var(--fonte-mini);
-  font-size: var(--texto-mini);
-  color: var(--cor-paranormal);
-  background: transparent;
-  border: var(--borda) solid var(--cor-traco-fraca);
-  cursor: pointer;
-}
-.ordem-atributo__conta:hover { border-color: var(--cor-paranormal); }
-
 /* ---------- carga: a equação escrita por extenso ---------- */
 
 .ordem-equacao {
@@ -1374,29 +1931,22 @@ body.pagina-ficha--painel .ficha-topo__nome { font-size: var(--texto-medio); }
    de cor: cheio e vazio se leem sem distinguir cores.
    ===================================================================== */
 
-.recurso-acoes {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--e1);
-  margin-top: var(--e1);
-}
-
-.recurso-acoes__valor {
-  width: 3.5rem;
-  min-height: 32px;
-  text-align: center;
-  font-variant-numeric: tabular-nums;
-}
-
+/* A cena fecha o painel: "Nova cena" à vista, o resto recolhido. */
 .condicoes__cena {
   display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--e2);
+  flex-direction: column;
+  gap: var(--e1);
+  padding-top: var(--e2);
+  border-top: var(--borda) solid var(--cor-traco-fraca);
 }
+.condicoes__cena-linha { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--e2); }
+.condicoes__cena-linha .t-mini { margin: 0; }
+.condicoes__mais > .pilha { padding: var(--e1) 0 var(--e2); }
 
-.condicoes__combate { flex-basis: 100%; }
+/* Morrendo e Enlouquecendo quietos: uma linha com os dois botões. */
+.condicoes__rastreadores { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--e2); }
+.condicoes__rastreadores .t-mini { margin: 0; }
+.condicoes__vazio { margin: 0; }
 
 .condicao {
   display: flex;
@@ -1408,6 +1958,11 @@ body.pagina-ficha--painel .ficha-topo__nome { font-size: var(--texto-medio); }
 }
 
 .condicao--ativa { border-left-color: var(--cor-aviso); background: var(--fundo-superficie-2); }
+/* Sugestão ainda não aplicada (PV ou SAN em 0): tracejada, na cor de
+   aviso, sem fundo — é uma pergunta, não um estado. */
+.condicao--sugestao { border-style: dashed; border-color: var(--cor-aviso); border-left-style: solid; background: transparent; }
+/* Encerrada, com a contagem da cena guardada: apagada. */
+.condicao--encerrada { border-left-color: var(--cor-traco-media); color: var(--cor-texto-3); }
 .condicao--limite { border-left-color: var(--cor-erro); }
 .condicao--desligada { padding: var(--e1) var(--e2); border-left-width: 1px; }
 .condicao--simples { flex-direction: row; flex-wrap: wrap; align-items: center; }

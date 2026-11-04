@@ -292,49 +292,118 @@
   }
   & .composicao__total { letter-spacing: 0; text-transform: none; font-feature-settings: "tnum"; }
 
-  /* ---------- atributos ----------
-     Dentro do painel, as peças da ficha são poços (fundo de área
-     secundária, sem moldura própria) — e não cartões dentro do cartão. O
-     traço volta como resposta ao ponteiro e ao estado. */
+  /* ---------- o bloco acima das abas e a tira (v6.4) ---------- */
 
-  & .ordem-atributos { gap: var(--e2); }
-  & .ordem-atributo {
-    padding: var(--e3) var(--e2);
+  & .ordem-cabeca { border-bottom-color: var(--m20-borda); }
+  & .ordem-cabeca__foto { border-color: var(--m20-borda); border-radius: var(--m20-raio-cartao); }
+  & .ordem-cabeca__par dt {
+    font-size: var(--m20-texto-sobre);
+    font-weight: 600;
+    letter-spacing: var(--m20-espaco-sobre);
+  }
+  & .ordem-cabeca__par dd { font-weight: 650; }
+  & .ordem-resumo__item {
     border-color: transparent;
+    border-radius: var(--m20-raio-controle);
     background: var(--fundo-superficie-2);
-    border-radius: var(--m20-raio-cartao);
+    font-feature-settings: "tnum";
+    transition: border-color var(--tempo-seco) var(--curva), background var(--tempo-seco) var(--curva);
+  }
+  & .ordem-resumo__item:hover { border-color: var(--cor-traco-media); background: var(--fundo-superficie-2); }
+  & .ordem-resumo__item[data-resumo-recurso="pv"] { box-shadow: inset 0 -2px 0 var(--cor-vida); }
+  & .ordem-resumo__item[data-resumo-recurso="pe"] { box-shadow: inset 0 -2px 0 var(--cor-esforco); }
+  & .ordem-resumo__item[data-resumo-recurso="san"] { box-shadow: inset 0 -2px 0 var(--cor-sanidade); }
+  & .ordem-resumo__item[data-resumo-recurso="pd"] { box-shadow: inset 0 -2px 0 var(--cor-azul); }
+  & .ordem-resumo__item[data-nivel="baixo"] { border-color: var(--cor-aviso); }
+  & .ordem-resumo__item[data-nivel="critico"] { border-color: var(--cor-erro); }
+  & .ordem-resumo__rotulo { font-size: var(--m20-texto-sobre); font-weight: 600; letter-spacing: var(--m20-espaco-sobre); }
+  & .ordem-resumo__atual { font-weight: 750; letter-spacing: -0.01em; }
+  & .ordem-resumo__alerta,
+  & .ordem-resumo__efeitos,
+  & .ordem-resumo__pendencias {
+    border-radius: var(--m20-raio-controle);
+    font-size: var(--m20-texto-apoio);
+    letter-spacing: 0;
+    text-transform: none;
+  }
+  & .ordem-resumo__alerta { background: var(--m20-aviso-suave); font-weight: 650; }
+  & .ordem-resumo__efeitos { border-color: var(--m20-borda); border-left-color: var(--cor-paranormal); }
+  & .ordem-resumo__pendencias { background: var(--m20-destaque-suave); }
+
+  & .r-aba--novo-grupo::before { border-left-color: var(--m20-borda); }
+
+  /* ---------- a aba Geral ---------- */
+
+  & .ordem-personagem { border-top-color: var(--m20-borda); }
+  & .ordem-explica > summary,
+  & .condicoes__mais > summary { font-size: var(--m20-texto-apoio); }
+  & .r-link { font-size: var(--m20-texto-apoio); font-weight: 550; }
+
+  /* ---------- atributos: o pentagrama ----------
+     Os círculos são poços (fundo de área secundária) com traço médio; o
+     traço volta forte como resposta ao ponteiro. */
+
+  & .ordem-pentagrama__anel { stroke: var(--m20-borda-forte, var(--cor-traco-media)); }
+  & .ordem-pentagrama__anel--fino,
+  & .ordem-pentagrama__raio { stroke: var(--m20-borda); }
+  & .ordem-pentagrama__centro {
+    font-weight: 750;
+    letter-spacing: var(--m20-espaco-sobre);
+    box-shadow: var(--m20-sombra-2);
+  }
+  & .ordem-atributo__rolar {
+    background: var(--fundo-superficie-2);
+    border-color: var(--cor-traco-media);
     transition: border-color var(--tempo-seco) var(--curva), box-shadow var(--tempo-seco) var(--curva);
   }
-  & .ordem-atributo--rolar:hover { box-shadow: var(--m20-sombra-2); }
+  & .ordem-atributo__rolar:hover { box-shadow: var(--m20-sombra-2); background: var(--fundo-superficie-2); }
+  & .ordem-atributo__rolar:active { background: var(--m20-realce-forte); color: var(--cor-texto); }
   & .ordem-atributo__sigla {
     font-size: var(--m20-texto-sobre);
     font-weight: 650;
     letter-spacing: var(--m20-espaco-sobre);
   }
   & .ordem-atributo__valor {
-    font-size: calc(30px * var(--escala));
     font-weight: 750;
     letter-spacing: -0.02em;
     font-feature-settings: "tnum";
-    border-radius: var(--m20-raio-controle);
   }
   & .ordem-atributo__dado { font-family: var(--fonte-mono); }
-  & .ordem-atributo__conta { border-radius: 5px; }
+  & .ordem-atributo__conta { border-radius: 999px; font-weight: 600; }
+  & .ordem-pentagrama--edicao .ordem-atributo {
+    border-color: transparent;
+    border-radius: var(--m20-raio-cartao);
+    background: var(--fundo-superficie-2);
+  }
+  @container atributos (max-width: 279px) {
+    & .ordem-pentagrama .ordem-atributo__rolar { border-radius: var(--m20-raio-cartao); }
+  }
 
-  /* ---------- recursos: a cor de cada um no traço de cima ---------- */
+  /* ---------- calculados: linha, destaque e inline ---------- */
 
-  & .ordem-recursos,
-  & .ordem-derivados { gap: var(--e3); }
+  & .calculado--linha { border-radius: 0; border-bottom-color: var(--m20-borda); background: transparent; }
+  & .calculado--linha:hover { background: var(--m20-realce); border-color: transparent; border-bottom-color: var(--m20-borda); }
+  & .calculado--destaque {
+    border: 0;
+    border-radius: var(--m20-raio-cartao);
+    background: var(--fundo-superficie-2);
+    box-shadow: inset 0 0 0 2px var(--cor-traco-media);
+  }
+  & .calculado--destaque .calculado__valor { font-size: calc(34px * var(--escala)); letter-spacing: -0.02em; }
+  & .calculado--inline { background: transparent; }
+  & .calculado--inline .calculado__valor { font-size: var(--m20-texto-apoio); }
+
+  /* ---------- recursos: a cor de cada um no traço e na barra ---------- */
+
+  & .ordem-recursos { gap: var(--e3); }
   & .ordem-recurso {
     --m20-cor-recurso: var(--cor-traco-media);
     gap: var(--e2);
     padding: var(--e3);
-    border-color: transparent;
-    border-top: 3px solid var(--m20-cor-recurso);
-    border-radius: var(--m20-raio-cartao);
+    border-left: 3px solid var(--m20-cor-recurso);
+    border-radius: 0 var(--m20-raio-cartao) var(--m20-raio-cartao) 0;
     background: var(--fundo-superficie-2);
   }
-  & .ordem-recurso .calculado { background: var(--fundo-superficie); }
   & .ordem-recurso[data-recurso="pv"] { --m20-cor-recurso: var(--cor-vida); }
   & .ordem-recurso[data-recurso="pe"] { --m20-cor-recurso: var(--cor-esforco); }
   & .ordem-recurso[data-recurso="san"] { --m20-cor-recurso: var(--cor-sanidade); }
@@ -346,9 +415,44 @@
     text-transform: none;
     color: var(--cor-texto);
   }
-  & .ordem-recurso .r-passo__valor { font-size: calc(20px * var(--escala)); font-weight: 750; }
-  & .ordem-carga { border-top-color: var(--m20-borda); }
-  & .recurso-acoes { gap: 4px; }
+  & .ordem-recurso__legenda,
+  & .recurso-acoes__rotulo {
+    font-size: var(--m20-texto-sobre);
+    font-weight: 600;
+    letter-spacing: var(--m20-espaco-sobre);
+  }
+  & .ordem-recurso .r-passo__valor { font-size: calc(24px * var(--escala)); font-weight: 750; font-feature-settings: "tnum"; }
+  & .ordem-recurso__barra { height: 6px; border: 0; border-radius: 999px; background: var(--m20-realce-forte); }
+  & .ordem-recurso__barra > span { border-radius: 999px; background: var(--m20-cor-recurso); }
+  & .ordem-recurso__barra[data-nivel="baixo"] > span { background: var(--cor-aviso); }
+  & .ordem-recurso__barra[data-nivel="critico"] > span { background: var(--cor-erro); }
+  & .recurso-acoes { gap: 4px; border-color: var(--m20-borda); }
+  & .recurso-acoes__linha { gap: 4px; }
+
+  /* ---------- defesa, ataques e perícias rápidas ---------- */
+
+  & .ordem-defesa__fatos dt { font-size: var(--m20-texto-sobre); font-weight: 600; letter-spacing: var(--m20-espaco-sobre); }
+  & .ordem-ataque { border-bottom-color: var(--m20-borda); }
+  & .ordem-ataque__nome { font-weight: 650; }
+  & .ordem-ataque__numeros dt { font-size: var(--m20-texto-sobre); font-weight: 600; letter-spacing: var(--m20-espaco-sobre); }
+  & .ordem-ataque__numeros dd { font-feature-settings: "tnum"; }
+  & .ordem-rapida { border-bottom-color: var(--m20-borda); border-radius: var(--m20-raio-controle); }
+  & .ordem-rapida:nth-child(even) { background: transparent; }
+  & .ordem-rapida:hover { background: var(--m20-realce); }
+  & .ordem-rapida__nome { color: var(--cor-texto); }
+  & .ordem-rapida--destreinada .ordem-rapida__nome { color: var(--cor-texto-3); }
+  & .ordem-rapida__total { font-weight: 750; font-feature-settings: "tnum"; }
+  & .ordem-rapida__rolar { border-radius: var(--m20-raio-controle); }
+
+  /* ---------- condições críticas e itens em uso ---------- */
+
+  & .ordem-painel-condicoes--critico {
+    border: 0;
+    box-shadow: inset 4px 0 0 var(--cor-aviso), 0 0 0 1px var(--cor-aviso), var(--m20-sombra-1);
+    background: color-mix(in srgb, var(--m20-aviso-suave) 55%, var(--fundo-superficie));
+  }
+  & .condicao--sugestao { background: transparent; }
+  & .recolhivel--em-uso { box-shadow: inset 3px 0 0 var(--cor-paranormal), var(--m20-sombra-1); }
 
   /* ---------- perícias: uma tabela de leitura rápida ---------- */
 
@@ -372,13 +476,14 @@
   & .ordem-pericia__treino,
   & .ordem-pericia__extra { font-feature-settings: "tnum"; }
   & .ordem-pericia__bonus {
-    min-height: var(--m20-controle);
-    border-radius: var(--m20-raio-controle);
+    min-height: 32px;
+    border-radius: 0;
     font-weight: 750;
     font-feature-settings: "tnum";
-    transition: border-color var(--tempo-seco) var(--curva), background var(--tempo-seco) var(--curva);
+    transition: color var(--tempo-seco) var(--curva), border-color var(--tempo-seco) var(--curva);
   }
-  & .ordem-pericia__bonus:hover { background: var(--m20-destaque-suave); }
+  & .ordem-pericia__rolar { border-radius: var(--m20-raio-controle); }
+  & .ordem-pericias__corpo > .ordem-pericia:nth-child(even) { background: transparent; }
 
   @media (max-width: 760px) {
     & .ordem-pericia { border-radius: var(--m20-raio-controle); }

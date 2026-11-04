@@ -34,6 +34,11 @@ troca só as regiões pedidas:
 | `ctx.redesenhar()` das seções | bloco + abas + seção (o rótulo de Rituais e os módulos mudam a tira) |
 | nome, campanha | `atualizarTitulo()`, no lugar |
 
+Na ficha de Ordem, desde a v6.4, o bloco superior é só a identificação e o resumo de
+sessão; atributos, recursos, condições e defesa moram na aba Geral, que é refeita junto
+(estado de jogo). O ajuste manual de um recurso continua sem redesenho: o resumo e a
+barra acompanham no lugar (`sincronizarRecursos`).
+
 O bloco superior é a menor unidade que se refaz: atributos podem depender de condições
 (dados de teste), e granular mais exigiria uma segunda implementação das regras para
 saber o que mudou. Foco, seleção, texto ainda não confirmado e recolhíveis abertos são

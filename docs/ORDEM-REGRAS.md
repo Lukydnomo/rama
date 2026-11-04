@@ -751,7 +751,7 @@ capacidade calculada + ajuste temporário = capacidade final
 - se levaria a capacidade abaixo de zero, a final fica em 0 e a tela diz isso por
   extenso.
 
-A mesma conta alimenta o bloco superior, o painel de carga do inventário e as
+A mesma conta alimenta a aba Geral (Defesa e movimento), o painel de carga do inventário e as
 penalidades de sobrecarga.
 
 ### Valores efetivos de cada item

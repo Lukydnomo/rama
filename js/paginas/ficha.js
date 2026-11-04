@@ -484,8 +484,8 @@
 
        topo       nome, meta, indicador de gravação, modo, tema, menu
        avisos     acesso compartilhado, mestre, modo edição
-       bloco      o que fica sempre à vista: foto, atributos, recursos,
-                  condições, defesa
+       bloco      o que fica sempre à vista (na ficha de Ordem, desde a
+                  v6.4, só a identificação e o resumo da sessão)
        abas       a tira de seções
        conteudo   a seção aberta
 
@@ -1011,12 +1011,22 @@
      ABAS
      ================================================================= */
 
+  /* v6.4: uma aba com `grupo` diferente da anterior ganha a classe que
+     abre um respiro e um traço antes dela (jogo | personagem | preparo).
+     Continua sendo um tab como os outros: a separação é só visual. */
+  var NOMES_DE_GRUPO = { jogo: "durante o jogo", personagem: "consulta do personagem", preparo: "preparação" };
+
   function abas() {
-    return el("div.r-abas", { role: "tablist", "aria-label": "Seções da ficha" },
-      abasDaFicha().map(function (a) {
+    var lista = abasDaFicha();
+    return el("div.r-abas.ficha-abas", { role: "tablist", "aria-label": "Seções da ficha" },
+      lista.map(function (a, i) {
         var ativa = a.chave === estado.aba;
+        var novoGrupo = i > 0 && a.grupo && lista[i - 1].grupo && a.grupo !== lista[i - 1].grupo;
         return el("button.r-aba", {
           type: "button",
+          class: novoGrupo ? "r-aba--novo-grupo" : "",
+          title: a.grupo && NOMES_DE_GRUPO[a.grupo] ? rotuloDaAba(a) + " — " + NOMES_DE_GRUPO[a.grupo] : null,
+          dataset: a.grupo ? { grupo: a.grupo } : {},
           id: "aba-" + a.chave,
           role: "tab",
           "aria-selected": String(ativa),

@@ -135,15 +135,13 @@ export async function medirFicha(opcoes) {
       { rotulo: "Nova cena", alvo: () => botao("Nova cena", document.querySelector("[data-painel-condicoes]")), espera: 150 },
       { rotulo: "confirmar", alvo: () => botao("Nova cena", document.querySelector(".r-modal")), espera: 80 },
     ]);
-    await cenario("recurso: Dano com a aba Perícias aberta (a seção depende)", [
-      { rotulo: "Perícias", alvo: () => [...document.querySelectorAll(".ficha .r-abas .r-aba")].find((a) => a.textContent.trim() === "Perícias") },
-      { rotulo: "Dano", alvo: () => botao("Dano", document.querySelector(".ordem-recurso")) },
-      { rotulo: "Cura", alvo: () => botao("Cura", document.querySelector(".ordem-recurso")) },
-    ]);
-    await cenario("recurso: Dano com Anotações aberta (a seção não depende)", [
-      { rotulo: "Anotações", alvo: () => [...document.querySelectorAll(".ficha .r-abas .r-aba")].find((a) => a.textContent.trim() === "Anotações") },
-      { rotulo: "Dano", alvo: () => botao("Dano", document.querySelector(".ordem-recurso")) },
-      { rotulo: "Cura", alvo: () => botao("Cura", document.querySelector(".ordem-recurso")) },
+    /* v6.4: os recursos moram na aba Geral (o bloco de cima tem só o
+       resumo, sem controles). Os cenários "Dano com Perícias/Anotações
+       aberta" deixaram de existir: não há Dano fora da Geral. O resumo
+       acompanha o ajuste manual no lugar (sincronizarRecursos). */
+    await cenario("recurso: ajuste manual com o resumo do bloco", [
+      { rotulo: "+PV", alvo: () => botao("Aumentar Pontos de vida atual (ajuste manual)") },
+      { rotulo: "resumo", alvo: () => document.querySelector("[data-resumo-recurso=\"pv\"]") ? botao("Diminuir Pontos de vida atual (ajuste manual)") : null },
     ]);
   } else {
     await cenario("status: + e −", [

@@ -23,6 +23,8 @@
      ficha.abas          as abas da ficha, cada uma com a seção global
                          que a desenha.
      ficha.blocoSuperior a seção do bloco fixo acima das abas.
+                         Cada aba pode ter `grupo` (v6.4): a tira separa
+                         visualmente uma aba da anterior quando o grupo muda.
      ficha.resumo        o resumo que a mesa lê sem abrir a ficha: o campo
                          e a função do motor que o calcula antes de gravar.
      ficha.modulosConfiguraveis  o modelo deixa ligar e desligar abas.
@@ -74,15 +76,17 @@
         ],
         blocoSuperior: "RAMASecaoOrdemGeral",
         abas: [
-          { chave: "geral",        rotulo: "Geral",       secao: "RAMASecaoOrdemGeral" },
-          { chave: "pericias",     rotulo: "Perícias",    secao: "RAMASecaoOrdemPericias" },
-          { chave: "progressao",   rotulo: "Progressão",  secao: "RAMASecaoOrdemProgressao" },
-          { chave: "habilidades",  rotulo: "Habilidades", secao: "RAMASecaoOrdemHabilidades" },
-          { chave: "rituais",      rotulo: "Rituais",     secao: "RAMASecaoRituais", rotuloDaSecao: true },
-          { chave: "inventario",   rotulo: "Inventário",  secao: "RAMASecaoInventario" },
-          { chave: "anotacoes",    rotulo: "Anotações",   secao: "RAMASecaoAnotacoes", independente: true },
-          { chave: "regras",       rotulo: "Regras",      secao: "RAMASecaoOrdemRegras" },
-          { chave: "aliados",      rotulo: "Aliados",     secao: "RAMASecaoAliados" },
+          /* v6.4: pela frequência de uso — jogo, consulta do personagem,
+             preparação. `grupo` só separa a tira visualmente. */
+          { chave: "geral",        rotulo: "Geral",       secao: "RAMASecaoOrdemGeral", grupo: "jogo" },
+          { chave: "pericias",     rotulo: "Perícias",    secao: "RAMASecaoOrdemPericias", grupo: "jogo" },
+          { chave: "habilidades",  rotulo: "Habilidades", secao: "RAMASecaoOrdemHabilidades", grupo: "personagem" },
+          { chave: "rituais",      rotulo: "Rituais",     secao: "RAMASecaoRituais", rotuloDaSecao: true, grupo: "personagem" },
+          { chave: "inventario",   rotulo: "Inventário",  secao: "RAMASecaoInventario", grupo: "personagem" },
+          { chave: "anotacoes",    rotulo: "Anotações",   secao: "RAMASecaoAnotacoes", independente: true, grupo: "personagem" },
+          { chave: "aliados",      rotulo: "Aliados",     secao: "RAMASecaoAliados", grupo: "personagem" },
+          { chave: "progressao",   rotulo: "Progressão",  secao: "RAMASecaoOrdemProgressao", grupo: "preparo" },
+          { chave: "regras",       rotulo: "Regras",      secao: "RAMASecaoOrdemRegras", grupo: "preparo" },
         ],
       },
       campanha: {

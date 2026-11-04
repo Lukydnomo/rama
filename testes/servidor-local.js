@@ -21,6 +21,8 @@
 
    ROTAS DE APOIO (só existem aqui)
      /__entrar?conta=…&para=…   abre a sessão da conta sem o formulário
+                                (&ls={"chave":"valor"} grava mais chaves no
+                                localStorage antes: versão vista, densidade)
      /__ids                     ids das fichas e da campanha
      /__como?conta=…  (POST)    age como outra conta, direto no backend
      /__backend                 contadores do backend (chamadas ao Sheets,
@@ -161,7 +163,15 @@ Deno.serve({ port: PORTA, onListen: () => console.log("R.A.M.A. local em http://
     const destino = url.searchParams.get("para") || "/personagens/";
     const c = contas[quem];
     if (!c) return new Response("conta desconhecida", { status: 404 });
-    const pagina = "<!doctype html><meta charset=utf-8><script>" +
+    /* &ls={"chave":"valor"} (v6.4): chaves a mais no localStorage antes de
+       abrir — a versão já vista (sem a janela de novidades), a densidade —,
+       para capturas de tela num navegador sem perfil. */
+    let extras = "";
+    try {
+      const ls = JSON.parse(url.searchParams.get("ls") || "{}");
+      for (const [k, v] of Object.entries(ls)) extras += "localStorage.setItem(" + JSON.stringify(String(k)) + "," + JSON.stringify(String(v)) + ");";
+    } catch { extras = ""; }
+    const pagina = "<!doctype html><meta charset=utf-8><script>" + extras +
       "localStorage.setItem('rama.sessao.token'," + JSON.stringify(c.token) + ");" +
       "localStorage.setItem('rama.sessao.agente'," + JSON.stringify(JSON.stringify({ id: c.id, usuario: quem, nome: quem })) + ");" +
       "localStorage.setItem('rama.sessao.atividade', String(Date.now()));" +
