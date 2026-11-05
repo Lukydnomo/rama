@@ -118,6 +118,17 @@
 
   var CHANGELOG = [
     {
+      versao: "6.4.1",
+      codinome: "AQUARELA",
+      data: "31/10/2026",
+      mudancas: {
+        "Visual": [
+          "No Legacy, os recursos da ficha de Ordem ganharam a cor de cada um na barra e no traço lateral (PV, PE, Sanidade e PD), como no Modern20.",
+        ],
+        "Técnico": ["Só o site: css/ficha.css."],
+      },
+    },
+    {
       versao: "6.4.0",
       codinome: "PENTAGRAMA",
       data: "31/10/2026",

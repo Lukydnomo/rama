@@ -1409,7 +1409,14 @@ body.pagina-ficha .app-corpo {
   border: var(--borda) solid var(--cor-traco-fraca);
   overflow: hidden;
 }
-.ordem-recurso__barra > span { display: block; height: 100%; background: var(--cor-texto-2); transition: width var(--tempo-curto) var(--curva); }
+.ordem-recurso__barra > span { display: block; height: 100%; background: var(--cor-recurso, var(--cor-texto-2)); transition: width var(--tempo-curto) var(--curva); }
+/* A cor de cada recurso (v6.4.1), no traço lateral e na barra, como no
+   Modern20. O nível baixo ou crítico continua por cima. */
+.ordem-recurso[data-recurso="pv"] { --cor-recurso: var(--cor-vida); }
+.ordem-recurso[data-recurso="pe"] { --cor-recurso: var(--cor-esforco); }
+.ordem-recurso[data-recurso="san"] { --cor-recurso: var(--cor-sanidade); }
+.ordem-recurso[data-recurso="pd"] { --cor-recurso: var(--cor-azul); }
+.ordem-recurso[data-recurso] { border-left-color: var(--cor-recurso); }
 .ordem-recurso__barra[data-nivel="baixo"] > span { background: var(--cor-aviso); }
 .ordem-recurso__barra[data-nivel="critico"] > span { background: var(--cor-erro); }
 

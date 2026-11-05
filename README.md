@@ -798,6 +798,9 @@ segredo nenhum — ele os lê das Script Properties. Publicá-lo não expõe nad
 
 ### Atualizar o backend
 
+**v6.4.1 — AQUARELA:** só o site: publique `css/ficha.css` (cores dos recursos no
+Legacy). Nada de `.gs`.
+
 **v6.4.0 — PENTAGRAMA:** só o site (a ficha de Ordem reorganizada). Publique
 `js/ordem/telas/ficha-ordem.js`, `js/paginas/ficha.js`,
 `js/paginas/ficha-inventario.js`, `js/sistemas.js` e as folhas
@@ -1629,7 +1632,7 @@ Três números diferentes, que não se misturam:
 
 | | Onde | O que é |
 |---|---|---|
-| versão do aplicativo | `js/versao.js` | o que a pessoa vê: v6.4.0 |
+| versão do aplicativo | `js/versao.js` | o que a pessoa vê: v6.4.1 |
 | `schemaVersion` | `js/ficha.js` | o formato da FICHA |
 | `versaoFormato` | `js/config.js` | o formato dos arquivos de importação |
 
