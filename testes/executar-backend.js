@@ -4851,6 +4851,8 @@ const { testarGoblinsBackend } = await import("./goblins-backend.js");
 await testarGoblinsBackend({ t, preparar, novaConta, comoFn });
 const { testarFeedbackBackend } = await import("./feedback-backend.js");
 await testarFeedbackBackend({ t, preparar, novaConta, comoFn, chamar, ambiente });
+const { testarAcessoBackend } = await import("./acesso-backend.js");
+await testarAcessoBackend({ t, preparar, novaConta, comoFn, chamar, ambiente });
 const { testarCompartilhamentoBackend } = await import("./compartilhamento-backend.js");
 testarCompartilhamentoBackend({ t, preparar, novaConta, comoFn });
 const { testarAs5Backend } = await import("./as5-backend.js");

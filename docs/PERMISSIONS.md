@@ -63,6 +63,7 @@ Quem alcança o quê, e onde isso é decidido.
 |---|---|---|
 | enviar feedback (`enviar_feedback`) | sim, dentro do freio da conta e do canal | não (`sem_token`) |
 | ver ou trocar o webhook | ninguém pelo site — só a propriedade `RAMA_FEEDBACK_WEBHOOK`, no editor do Apps Script | — |
+| pedir acesso (`solicitar_acesso`, v6.6) | sim | sim — só publica o pedido no canal; não cria conta nem sessão, dentro do freio por usuário pedido e do canal |
 
 A identidade vem da sessão, nunca do pedido. O nome do agente só vai à mensagem
 com `identificar: true`; id, login e token nunca vão. A ação não lê ficha,

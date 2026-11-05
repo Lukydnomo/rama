@@ -165,7 +165,9 @@ das folhas. Cada linha diz onde o Modern20 a trata.
 | Rituais e inventário | cartões de ritual (marcas, conjuração, formas, complemento), danos, versões, itens e armas, biblioteca "Da biblioteca" | componentes.css, ficha.css |
 | Campanhas | lista, capa (com e sem imagem), mesa (participantes), personagens da mesa (cartões, recursos, estatísticas, condições, ocultação), rolagens (histórico, rolagem livre), documentos, notas, configurações | campanha.css |
 | Combate | turno e rodada, pendências, linhas de iniciativa (vez, selecionada, pendente), recursos, condições, painel da ficha (iframe) e da criatura, gaveta no celular, Hexatombe, Hacking, Perigos (quando ligados) | campanha.css, componentes.css |
-| Homebrew e catálogos | biblioteca, catálogo de criaturas (origens, filtros por elemento, retratos), ficha de criatura | componentes.css |
+| Homebrew e catálogos | biblioteca, ficha de criatura; o catálogo oficial mora na página Criaturas (v6.6) | componentes.css |
+| Criaturas (v6.6) | seletor de sistema, Catálogo (a biblioteca embutida em Ordem; catálogos nativos em Oblívio, Vampiro e Goblins) e Geradores (js/geradores-criaturas.js) | componentes.css |
+| Portão: pedido de acesso (v6.6) | link abaixo do login, janela com campos e prévia (lado a lado no PC, embaixo no celular) | componentes.css |
 | Perfil | identidade, recompensas e resgate, exibição (tema, estilo, tamanho, efeito), importação, sessão | componentes.css |
 | Editores | editor de temas (escolhas, estilo da interface, personalizar, gradiente, contraste, prévia, exportar/importar), editor de imagem (palco, controles, GIF), importação do CRIS (tabela) | componentes.css, interface.css |
 | Janelas e avisos | modal (e folha no celular), confirmação, pedir texto, menu suspenso, aviso passageiro, notificação de rolagem, barra de atividade, selo de sincronia, botão ocupado | componentes.css |

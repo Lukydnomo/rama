@@ -623,6 +623,17 @@
   /* Feedback (backend/Feedback.gs). Uma tentativa só — repetir quem
      decide é a pessoa, com o MESMO id de operação: o servidor reconhece
      a segunda chegada de um envio já entregue e não posta de novo. */
+  /* Pedido de acesso pelo portão (v6.6): rota pública, sem token e sem
+     repetição automática — repetir é o mesmo operacaoId, que o servidor
+     reconhece. A senha só passa por esta chamada: não vai a cache,
+     armazenamento do navegador nem medição (RAMARede guarda só a ação). */
+  function solicitarAcesso(dados, operacaoId) {
+    return global.RAMARede.postar(
+      { acao: "solicitar_acesso", dados: { nome: String(dados.nome || ""), usuario: String(dados.usuario || ""), senha: String(dados.senha || "") }, operacaoId: operacaoId },
+      { repetir: false }
+    ).then(function (r) { return r || { ok: false, erro: "sem_resposta" }; });
+  }
+
   function enviarFeedback(dados, operacaoId) {
     return post({ acao: "enviar_feedback", dados: dados, operacaoId: operacaoId });
   }
@@ -1039,6 +1050,31 @@
       titulo: "FEEDBACK INDISPONÍVEL",
       texto: "O envio de feedback não está configurado neste servidor agora. Avise quem administra o R.A.M.A.",
     },
+    /* Pedido de acesso (v6.6). */
+    acesso_invalido: {
+      titulo: "PEDIDO RECUSADO",
+      texto: "O servidor não aceitou um dos campos. Confira o que está destacado.",
+    },
+    acesso_limite: {
+      titulo: "MUITOS PEDIDOS EM POUCO TEMPO",
+      texto: "Espere um pouco antes de pedir de novo.",
+    },
+    acesso_em_andamento: {
+      titulo: "PEDIDO EM ANDAMENTO",
+      texto: "Um pedido para este usuário ainda está sendo concluído. Espere alguns segundos.",
+    },
+    acesso_ocupado: {
+      titulo: "CANAL OCUPADO",
+      texto: "O canal está recebendo muitas mensagens agora. Espere alguns segundos e tente de novo.",
+    },
+    acesso_falhou: {
+      titulo: "O PEDIDO NÃO FOI ENTREGUE",
+      texto: "O servidor não conseguiu confirmar a entrega. Nada foi enviado ao administrador. Tente de novo.",
+    },
+    acesso_indisponivel: {
+      titulo: "PEDIDO INDISPONÍVEL",
+      texto: "Os pedidos de acesso não estão configurados neste servidor agora. Fale direto com quem administra o R.A.M.A.",
+    },
     acao_desconhecida: {
       titulo: "OPERAÇÃO NÃO RECONHECIDA",
       texto: "Esta versão do site pediu algo que o servidor não conhece. Atualize a implantação do Apps Script.",
@@ -1136,6 +1172,7 @@
     lerPerfil: lerPerfil,
     resgatarCodigo: resgatarCodigo,
     enviarFeedback: enviarFeedback,
+    solicitarAcesso: solicitarAcesso,
     listarDesbloqueios: listarDesbloqueios,
     salvarPerfil: salvarPerfil,
 

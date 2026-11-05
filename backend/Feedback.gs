@@ -394,8 +394,187 @@ function acaoEnviarFeedback(corpo, usuario) {
 /* O Codigo.gs pergunta por esta função ao montar as rotas (rotaDe): com
    o arquivo instalado, a ação existe; sem ele, `acao_desconhecida`.
    Não entra no `lote`, que é só para leituras. */
+/* =====================================================================
+   PEDIDO DE ACESSO PELO PORTÃO (v6.6)
+   ---------------------------------------------------------------------
+   `solicitar_acesso` é PÚBLICA (o portão não tem sessão) e separada de
+   `enviar_feedback`, que continua exigindo sessão. Ela só publica no
+   canal do mesmo webhook (RAMA_FEEDBACK_WEBHOOK) uma mensagem
+   "Solicitação de acesso — RAMA" com nome de exibição, usuário e a
+   senha provisória EXATAMENTE como digitada, para quem administra rodar
+   criarUsuario(usuario, nome, senha) no editor. Não cria conta, não
+   abre sessão, não grava planilha nenhuma.
+
+   Regras: as de criarUsuario (usuário 3–40 de a-z 0-9 . _ -, depois de
+   tirar espaços e passar a minúsculas; senha com 8+ caracteres; usuário
+   que ainda não existe) e, para a senha chegar intacta: até 200
+   caracteres, sem caractere de controle e sem espaço nas pontas.
+   Freio sem sessão (CacheService): por usuário pedido, 1 a cada 60 s e
+   3 por hora; para o canal, 1 a cada 5 s e 20 por hora. Pedido que não
+   chega ao Discord é devolvido ao freio. O mesmo operacaoId já entregue
+   devolve sucesso sem repostar (clique duplo, resposta perdida).
+   A senha nunca vai ao log: os erros só levam o código HTTP.
+   ===================================================================== */
+
+var ACESSO_INTERVALO_USUARIO = 60;
+var ACESSO_LIMITE_USUARIO = 3;
+var ACESSO_INTERVALO_GERAL = 5;
+var ACESSO_LIMITE_GERAL = 20;
+var ACESSO_CHAVE_GERAL = 'rama.acesso.geral';
+
+var RamaAcessoCore = (function () {
+  'use strict';
+  var LIMITES = { nome: 80, senhaMin: 8, senha: 200 };
+  var LOGIN = /^[a-z0-9._-]{3,40}$/;
+  var CONTROLE = /[\u0000-\u001F\u007F]/;
+
+  function erro(campo, motivo) { return { ok: false, erro: 'acesso_invalido', campo: campo, motivo: motivo }; }
+
+  /* validar(dados) → { ok, dados: { nome, usuario, senha } } ou o campo
+     recusado. A senha não é aparada nem alterada. */
+  function validar(dados) {
+    if (!dados || typeof dados !== 'object' || Array.isArray(dados)) return erro('dados', 'tipo');
+    if (typeof dados.nome !== 'string' || typeof dados.usuario !== 'string' || typeof dados.senha !== 'string') return erro('dados', 'tipo');
+    var nome = dados.nome.replace(/[\u0000-\u001F\u007F\u202A-\u202E\u2066-\u2069]/g, '').replace(/\s+/g, ' ').trim();
+    if (!nome) return erro('nome', 'vazio');
+    if (nome.length > LIMITES.nome) return erro('nome', 'longo');
+    var usuario = dados.usuario.trim().toLowerCase();
+    if (!LOGIN.test(usuario)) return erro('usuario', 'formato');
+    var senha = dados.senha;
+    if (senha.length < LIMITES.senhaMin) return erro('senha', 'curta');
+    if (senha.length > LIMITES.senha) return erro('senha', 'longa');
+    if (CONTROLE.test(senha)) return erro('senha', 'controle');
+    if (senha !== senha.trim()) return erro('senha', 'espacos');
+    return { ok: true, dados: { nome: nome, usuario: usuario, senha: senha } };
+  }
+
+  /* A senha como o Discord mostra e deixa copiar sem mudar nada: num
+     bloco de código (nada é interpretado dentro dele). Com acento grave
+     na senha, o bloco quebraria — aí vai como texto com cada caractere
+     de marcação escapado, que o Discord mostra (e copia) sem as barras. */
+  function senhaParaDiscord(senha) {
+    if (senha.indexOf('`') < 0) return '```' + '\n' + senha + '\n' + '```';
+    return senha.replace(/([\\`*_~|>#\-\[\]()<:@])/g, '\\$1');
+  }
+
+  function montarMensagem(d, data) {
+    return {
+      username: 'R.A.M.A. · Acesso',
+      allowed_mentions: { parse: [] },
+      embeds: [{
+        author: { name: 'Solicitação de acesso — RAMA' },
+        title: 'Solicitação de acesso — RAMA',
+        description: 'Cadastre manualmente no editor do Apps Script com criarUsuario(usuario, nome, senha). Nenhuma conta foi criada.',
+        color: 0xD4A017,
+        fields: [
+          { name: 'Nome de exibição', value: RamaFeedbackCore.desarmar(d.nome), inline: true },
+          { name: 'Usuário', value: '`' + d.usuario + '`', inline: true },
+          { name: 'Senha provisória', value: senhaParaDiscord(d.senha), inline: false },
+        ],
+        footer: { text: 'Pedido em ' + (data || '—') },
+      }],
+    };
+  }
+
+  return { LIMITES: LIMITES, validar: validar, senhaParaDiscord: senhaParaDiscord, montarMensagem: montarMensagem };
+})();
+
+function acessoChaveUsuario(login) { return 'rama.acesso.usuario.' + login; }
+
+function acessoReservar(login) {
+  return feedbackComTrava(function () {
+    var cache = CacheService.getScriptCache();
+    var agora = Math.floor(Date.now() / 1000);
+    var u = feedbackLerEstado(cache, acessoChaveUsuario(login), agora);
+    var g = feedbackLerEstado(cache, ACESSO_CHAVE_GERAL, agora);
+    if (u.envio && agora - u.envio < FEEDBACK_ENVIO_SEGUNDOS) return { ok: false, erro: 'acesso_em_andamento' };
+    if (u.ultimo && agora - u.ultimo < ACESSO_INTERVALO_USUARIO) return { ok: false, erro: 'acesso_limite', segundos: ACESSO_INTERVALO_USUARIO - (agora - u.ultimo) };
+    if (u.n >= ACESSO_LIMITE_USUARIO) return { ok: false, erro: 'acesso_limite', segundos: FEEDBACK_JANELA_SEGUNDOS - (agora - u.inicio) };
+    if (g.ultimo && agora - g.ultimo < ACESSO_INTERVALO_GERAL) return { ok: false, erro: 'acesso_limite', segundos: ACESSO_INTERVALO_GERAL - (agora - g.ultimo) };
+    if (g.n >= ACESSO_LIMITE_GERAL) return { ok: false, erro: 'acesso_limite', segundos: FEEDBACK_JANELA_SEGUNDOS - (agora - g.inicio) };
+    u.anterior = u.ultimo; g.anterior = g.ultimo;
+    u.n += 1; u.ultimo = agora; u.envio = agora;
+    g.n += 1; g.ultimo = agora;
+    feedbackGravarEstado(cache, acessoChaveUsuario(login), u, agora);
+    feedbackGravarEstado(cache, ACESSO_CHAVE_GERAL, g, agora);
+    return null;
+  });
+}
+
+function acessoConcluir(login, entregue) {
+  return feedbackComTrava(function () {
+    var cache = CacheService.getScriptCache();
+    var agora = Math.floor(Date.now() / 1000);
+    var u = feedbackLerEstado(cache, acessoChaveUsuario(login), agora);
+    u.envio = 0;
+    if (!entregue) {
+      u.n = Math.max(0, u.n - 1); u.ultimo = u.anterior || 0;
+      var g = feedbackLerEstado(cache, ACESSO_CHAVE_GERAL, agora);
+      g.n = Math.max(0, g.n - 1); g.ultimo = g.anterior || 0; delete g.anterior;
+      feedbackGravarEstado(cache, ACESSO_CHAVE_GERAL, g, agora);
+    }
+    delete u.anterior;
+    feedbackGravarEstado(cache, acessoChaveUsuario(login), u, agora);
+    return { ok: true };
+  });
+}
+
+function acaoSolicitarAcesso(corpo) {
+  var v = RamaAcessoCore.validar(corpo && corpo.dados);
+  if (!v.ok) return v;
+  if (typeof acharPor === 'function' && acharPor(ABAS.USUARIOS, 'usuario', v.dados.usuario)) {
+    return { ok: false, erro: 'acesso_invalido', campo: 'usuario', motivo: 'existe' };
+  }
+
+  var webhook = propriedade(FEEDBACK_PROPRIEDADE, '');
+  if (!RamaFeedbackCore.webhookValido(webhook)) {
+    if (webhook) console.error('R.A.M.A. solicitar_acesso: ' + FEEDBACK_PROPRIEDADE + ' não é um webhook do Discord.');
+    return { ok: false, erro: 'acesso_indisponivel' };
+  }
+
+  var cache = CacheService.getScriptCache();
+  var op = feedbackOperacao(corpo);
+  var chaveOp = op ? 'rama.acesso.op.' + op : '';
+  if (chaveOp && cache.get(chaveOp) === 'entregue') return { ok: true, repetido: true };
+
+  var recusa = acessoReservar(v.dados.usuario);
+  if (recusa) return recusa;
+
+  var mensagem = RamaAcessoCore.montarMensagem(v.dados, feedbackDataDeAgora());
+  var resultado;
+  try {
+    var resposta = UrlFetchApp.fetch(RamaFeedbackCore.enderecoDeEnvio(webhook), {
+      method: 'post', contentType: 'application/json', payload: JSON.stringify(mensagem),
+      followRedirects: false, muteHttpExceptions: true, validateHttpsCertificates: true,
+    });
+    var cabecalhos = {};
+    try { cabecalhos = resposta.getHeaders ? resposta.getHeaders() || {} : {}; } catch (e) { cabecalhos = {}; }
+    var status = resposta.getResponseCode();
+    resultado = RamaFeedbackCore.lerResposta(status, resposta.getContentText('UTF-8'), cabecalhos);
+    if (!resultado.ok) console.error('R.A.M.A. solicitar_acesso: Discord respondeu HTTP ' + status);
+  } catch (e) {
+    var msg = feedbackSemEndereco((e && e.message) || e);
+    console.error('R.A.M.A. solicitar_acesso: falha de rede.');
+    resultado = /permiss|autoriz|authoriz|external_request/i.test(msg)
+      ? { ok: false, erro: 'feedback_indisponivel' } : { ok: false, erro: 'feedback_falhou', motivo: 'rede' };
+  }
+  /* Os códigos do transporte viram os do pedido de acesso. */
+  if (!resultado.ok) {
+    resultado = { ok: false, erro: resultado.erro === 'feedback_indisponivel' ? 'acesso_indisponivel'
+      : resultado.erro === 'feedback_ocupado' ? 'acesso_ocupado' : 'acesso_falhou', segundos: resultado.segundos };
+  }
+
+  acessoConcluir(v.dados.usuario, resultado.ok);
+  if (resultado.ok && chaveOp) {
+    try { cache.put(chaveOp, 'entregue', FEEDBACK_OPERACAO_SEGUNDOS); } catch (e) { /* segue */ }
+  }
+  return resultado.ok ? { ok: true } : resultado;
+}
+
 function rotasDoFeedback() {
   return {
     enviar_feedback: { publica: false, fn: acaoEnviarFeedback },
+    /* Pública de propósito (o portão não tem sessão); só publica o pedido. */
+    solicitar_acesso: { publica: true, fn: acaoSolicitarAcesso },
   };
 }

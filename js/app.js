@@ -27,6 +27,7 @@
     { chave: "home",         rotulo: "Home",        caminho: "" },
     { chave: "personagens",  rotulo: "Personagens", caminho: "personagens/" },
     { chave: "campanhas",    rotulo: "Campanhas",   caminho: "campanhas/" },
+    { chave: "criaturas",    rotulo: "Criaturas",   caminho: "criaturas/" },
     { chave: "homebrew",     rotulo: "Homebrew",    caminho: "homebrew/" },
     { chave: "perfil",       rotulo: "Perfil",      caminho: "perfil/" },
   ];

@@ -120,6 +120,33 @@ Uma ação nova, em arquivo novo (`backend/Feedback.gs`), anunciada ao núcleo p
 `rotasDoFeedback()` — o mesmo contrato do `Cris.gs`: sem o arquivo, a ação
 responde `acao_desconhecida`.
 
+#### `solicitar_acesso` (v6.6, pública)
+
+```jsonc
+{ acao: "solicitar_acesso", operacaoId: "op-…",   // sem token
+  dados: { nome: "…",       // nome de exibição, 1 a 80 depois de aparar
+           usuario: "…",    // as regras de criarUsuario: aparado, minúsculas, /^[a-z0-9._-]{3,40}$/, ainda inexistente
+           senha: "…" } }   // 8 a 200, sem controle e sem espaço nas pontas; NUNCA alterada
+→ { ok: true }   // só quando o Discord confirma a mensagem criada
+```
+
+- Rota **pública e própria** (o portão não tem sessão); `enviar_feedback`
+  continua exigindo sessão. Publica no webhook `RAMA_FEEDBACK_WEBHOOK` um embed
+  "Solicitação de acesso — RAMA" com nome, usuário e a senha provisória como
+  digitada — num bloco de código (ou, com acento grave na senha, com a
+  marcação escapada, que o Discord mostra e copia sem as barras).
+  `allowed_mentions: { parse: [] }`.
+- Não cria conta, não abre sessão, não grava planilha. Quem administra cadastra
+  com `criarUsuario(usuario, nome, senha)` no editor.
+- Freio sem sessão (CacheService): por usuário pedido, 1 a cada 60 s e 3 por
+  hora; para o canal, 1 a cada 5 s e 20 por hora. Falha de entrega devolve a
+  reserva. O mesmo `operacaoId` já entregue responde `{ ok: true, repetido: true }`
+  sem repostar.
+- Erros: `acesso_invalido` (com `campo` e `motivo`: `formato`, `curta`, `longa`,
+  `controle`, `espacos`, `vazio`, `longo`, `existe`), `acesso_limite`
+  (`segundos`), `acesso_em_andamento`, `acesso_ocupado`, `acesso_falhou`,
+  `acesso_indisponivel`. O log só leva o código HTTP — nunca senha nem webhook.
+
 #### `enviar_feedback`
 
 ```jsonc

@@ -412,6 +412,15 @@ deno run --allow-read --allow-write testes/gerar-oblivio-gs.js
 deno run --allow-read testes/executar-oblivio.js
 ```
 
+**Página Criaturas e pedido de acesso** — 30 verificações: os geradores por
+sistema (rolador fixo), o menu, o que cada página carrega e as regras do portão.
+O servidor do pedido está em `testes/acesso-backend.js` (dentro de
+`executar-backend.js`), com o Discord simulado.
+
+```bash
+deno run --allow-read testes/executar-criaturas-pagina.js
+```
+
 **Arquivos Secretos 7** — 152 verificações: fonte e suplemento, origens,
 Resguardar Espírito, Vampirismo, os cinco itens, as trilhas Monstruoso (marcos,
 elemento, procedimento do dia, sacrifícios, braços, Tatuagem, reação, 4º
@@ -807,6 +816,17 @@ próprio `<script src>`, então funciona debaixo de subpasta sem ajuste.
 segredo nenhum — ele os lê das Script Properties. Publicá-lo não expõe nada.
 
 ### Atualizar o backend
+
+**v6.6.0 — ALCATEIA:** página Criaturas e pedido de acesso no login.
+**Troque** `Feedback.gs` (a ação pública `solicitar_acesso`, pelo mesmo
+`RAMA_FEEDBACK_WEBHOOK` do feedback) e **crie uma versão nova da implantação**.
+Sem `setupRama()`. Publique o site — inclusive a página nova `criaturas/`,
+`js/paginas/criaturas.js`, `js/geradores-criaturas.js`,
+`js/paginas/criaturas-biblioteca.js`, `js/paginas/homebrew.js`, `js/app.js`,
+`js/auth.js`, `js/api.js`, `css/componentes.css` e as páginas `homebrew/`,
+`campanha/` e `ficha/`. Sem mudança de schema. Com o webhook ausente, o pedido de
+acesso responde "indisponível" e nada sai; os pedidos chegam ao canal do
+feedback, e a conta é criada à mão com `criarUsuario(usuario, nome, senha)`.
 
 **v6.5.0 — MEMBRANA:** Arquivos Secretos 7 como suplemento de Ordem.
 **Troque** `Sistemas.gs` (o suplemento `ordem.as7` no cadastro) e
@@ -1653,7 +1673,7 @@ Três números diferentes, que não se misturam:
 
 | | Onde | O que é |
 |---|---|---|
-| versão do aplicativo | `js/versao.js` | o que a pessoa vê: v6.5.0 |
+| versão do aplicativo | `js/versao.js` | o que a pessoa vê: v6.6.0 |
 | `schemaVersion` | `js/ficha.js` | o formato da FICHA |
 | `versaoFormato` | `js/config.js` | o formato dos arquivos de importação |
 

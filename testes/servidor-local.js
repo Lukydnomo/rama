@@ -32,6 +32,7 @@
                                 500, 404, rede ou sem-webhook (padrão:
                                 sem-webhook, como uma implantação nova);
                                 devolve as mensagens que ele "recebeu"
+                                (também os pedidos de acesso do portão, v6.6)
 
    Não é a implantação: a planilha é um array em memória, sem latência.
    Serve para conferir comportamento e CONTAR o que acontece — nunca
@@ -151,7 +152,7 @@ Deno.serve({ port: PORTA, onListen: () => console.log("R.A.M.A. local em http://
       else ambiente.propriedades.set("RAMA_FEEDBACK_WEBHOOK", WEBHOOK_SIMULADO);
     }
     /* &zerar=1 devolve o freio do feedback a zero, para o roteiro de teste. */
-    if (url.searchParams.get("zerar")) for (const k of [...ambiente.cache.keys()]) if (k.startsWith("rama.feedback.")) ambiente.cache.delete(k);
+    if (url.searchParams.get("zerar")) for (const k of [...ambiente.cache.keys()]) if (k.startsWith("rama.feedback.") || k.startsWith("rama.acesso.")) ambiente.cache.delete(k);
     return json({ modo: discord.modo, recebidas: discord.recebidas });
   }
   if (url.pathname === "/__como" && req.method === "POST") {

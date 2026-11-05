@@ -118,6 +118,24 @@
 
   var CHANGELOG = [
     {
+      versao: "6.6.0",
+      codinome: "ALCATEIA",
+      data: "31/10/2026",
+      mudancas: {
+        "Adicionado": [
+          "Página Criaturas no menu principal, com um seletor de sistema para duas seções. Catálogo: em Ordem, o catálogo oficial com Fonte (Todas as fontes, Livro básico e os suplementos que têm criaturas), VD, elementos, natureza, a fonte em cada resultado e Copiar para o Homebrew; em Oblívio, Vampiro e Malditos Goblins, as Ameaças, os antagonistas e os inimigos do livro, com busca e o filtro de cada sistema. O filtro só consulta: não muda os suplementos de fichas nem de campanhas.",
+          "Geradores: em Ordem, Transtornados, Produção do Anfitrião e Funcionários da TV Varminho; em Oblívio, o Encontro do Buraco; em Malditos Goblins, os encontros aleatórios. Todos com Sortear de novo, e os mesmos que a mesa usa. Sistema sem gerador mostra um estado vazio.",
+          "No login, “Não tem login? Solicite um!”: nome de exibição, nome de usuário e senha provisória (mascarada, com revelar), com a prévia do pedido ao lado (embaixo no celular). O pedido vai para o administrador pelo Discord, depois de um aviso; ele cria a conta à mão. Nada é criado nem aberto antes disso.",
+        ],
+        "Alterado": [
+          "O catálogo oficial de criaturas saiu do Homebrew (o botão leva à página Criaturas). O Homebrew fica com as criaturas personalizadas e com criar, editar, compartilhar e importar.",
+        ],
+        "Técnico": [
+          "js/geradores-criaturas.js (geradores por sistema, sobre a lógica de cada um) e criaturas/ + js/paginas/criaturas.js. A biblioteca de criaturas (combate e aliados) ganhou o modo embutido e usa os mesmos geradores. Ação pública nova solicitar_acesso em backend/Feedback.gs, pelo webhook do feedback, com freio próprio; enviar_feedback continua exigindo sessão. Precisa do site e do Apps Script novo (Feedback.gs, sem setupRama).",
+        ],
+      },
+    },
+    {
       versao: "6.5.0",
       codinome: "MEMBRANA",
       data: "31/10/2026",

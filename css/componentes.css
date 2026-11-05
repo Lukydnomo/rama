@@ -3976,3 +3976,82 @@ html.arrastando * {
 @media (max-width: 640px) {
   .feedback-tipos__grade { grid-template-columns: minmax(0, 1fr); }
 }
+
+/* =====================================================================
+   PÁGINA CRIATURAS (v6.6)
+   ---------------------------------------------------------------------
+   O seletor de sistema e as abas de seção numa linha (quebram no
+   celular); os geradores em cartões, com o botão de sortear à direita.
+   Tudo pelos tokens: os dois estilos de interface herdam sem regra própria.
+   ===================================================================== */
+.criaturas-controles {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--e2) var(--e3);
+}
+.criaturas-sistema .r-selecao { min-width: 14rem; }
+.criaturas-secoes { flex-wrap: wrap; overflow-x: visible; margin: 0; }
+.criaturas-controles > * { margin-top: 0; margin-bottom: 0; }
+.criaturas-corpo .bib-criaturas-janela .r-abas { flex-wrap: wrap; overflow-x: visible; }
+.gerador { display: flex; flex-direction: column; gap: var(--e2); }
+.gerador__topo {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--e2);
+}
+.gerador__topo .t-secao { margin: 0; }
+.gerador__resultado p { margin: 0; }
+@media (max-width: 640px) {
+  .criaturas-controles { align-items: stretch; flex-direction: column; }
+  .criaturas-sistema { flex: 0 0 auto; }
+  .criaturas-sistema, .criaturas-sistema .r-selecao { width: 100%; min-width: 0; }
+  .gerador__topo > .r-botao { width: 100%; }
+}
+
+/* =====================================================================
+   PEDIDO DE ACESSO NO PORTÃO (v6.6)
+   ---------------------------------------------------------------------
+   O link abaixo do login e a janela: campos e prévia lado a lado no PC,
+   a prévia embaixo no celular. Só tokens: os dois estilos de interface herdam.
+   ===================================================================== */
+.portao__pedido { margin: calc(var(--e3) * -1) 0 0; text-align: center; }
+.portao__pedido-botao {
+  padding: var(--e1);
+  font: inherit;
+  font-size: var(--texto-mini);
+  color: var(--cor-link);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  background: none;
+  border: 0;
+  cursor: pointer;
+}
+.portao__pedido-botao:hover { color: var(--cor-paranormal); }
+.portao__pedido-botao:focus-visible { outline: 2px solid var(--cor-paranormal); outline-offset: 2px; }
+.r-ajuda--ok { color: var(--cor-ok); }
+.acesso-grade {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: var(--e4);
+  align-items: start;
+}
+.acesso-previa {
+  display: flex;
+  flex-direction: column;
+  gap: var(--e2);
+  padding: var(--e3);
+  border: var(--borda) dashed var(--cor-traco-media);
+  background: var(--fundo-superficie);
+}
+.acesso-previa__titulo { margin: 0; font-weight: 700; }
+.acesso-previa__lista { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: var(--e1) var(--e3); margin: 0; }
+.acesso-previa__lista dt { margin: 0; }
+.acesso-previa__valor { margin: 0; overflow-wrap: anywhere; }
+.acesso-previa__senha { font-family: var(--fonte-mini); }
+@media (max-width: 720px) {
+  .acesso-grade { grid-template-columns: minmax(0, 1fr); }
+}

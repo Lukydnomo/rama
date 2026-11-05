@@ -66,9 +66,9 @@
         el("button.r-botao", {
           type: "button", texto: "Importar", onclick: importar,
         }),
-        el("button.r-botao", {
-          type: "button", texto: "Catálogo de criaturas", onclick: function () { catalogo(); },
-        }),
+        /* v6.6: o catálogo oficial mora na página Criaturas (consultar e
+           copiar para cá). Aqui ficam só as criaturas personalizadas. */
+        el("a.r-botao", { href: U.url("criaturas/"), texto: "Catálogo de criaturas" }),
         el("button.r-botao.r-botao--principal", {
           type: "button", texto: "+ Criar", onclick: function () { escolherTipo(); },
         }),
@@ -216,19 +216,6 @@
 
       el("p.t-mini", { texto: "Registro // " + U.codigoCurto(registro.id) + " · " + U.dataCurta(registro.atualizadoEm) }),
     ]);
-  }
-
-  /* O catálogo oficial a partir do Homebrew (v2.28): consultar e copiar.
-     A cópia é um registro NOVO e privado; o catálogo não muda. */
-  function catalogo() {
-    global.RAMABibliotecaCriaturas.abrir({
-      titulo: "Catálogo de criaturas",
-      aba: "oficial",
-      homebrew: false,
-      ajuda: "As fichas oficiais não são editáveis. Para ajustar uma, copie para o seu Homebrew e edite a cópia.",
-      acoes: [],
-      aoCopiar: function () { carregar(); },
-    });
   }
 
   /* A ficha inteira de uma criatura, só para leitura. */

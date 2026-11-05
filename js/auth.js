@@ -223,6 +223,169 @@
      vezes o cuidado com foco, erro e bloqueio.
      ================================================================= */
 
+  /* =================================================================
+     PEDIDO DE ACESSO (v6.6)
+     -----------------------------------------------------------------
+     Só ENVIA um pedido: o servidor publica no Discord da administração
+     (solicitar_acesso) nome de exibição, usuário e a senha provisória
+     como digitada, e quem administra cria a conta com criarUsuario.
+     Nada aqui cria conta nem abre sessão. A senha mora só no campo:
+     não vai ao armazenamento do navegador, ao log nem ao histórico, e sai do
+     campo quando o pedido é entregue ou a janela fecha.
+     As regras repetem as do servidor (criarUsuario) só para avisar
+     antes; quem decide é o servidor.
+     ================================================================= */
+
+  var AVISO_DO_PEDIDO = "A senha provisória será enviada ao Discord para o administrador criar sua conta. Use uma senha exclusiva para o RAMA.";
+
+  function regrasDoPedido(d) {
+    var e = {};
+    var nome = d.nome.replace(/\s+/g, " ").trim();
+    var usuario = d.usuario.trim().toLowerCase();
+    if (!nome) e.nome = "Informe o nome de exibição.";
+    else if (nome.length > 80) e.nome = "Até 80 caracteres.";
+    if (!/^[a-z0-9._-]{3,40}$/.test(usuario)) e.usuario = "De 3 a 40 caracteres: letras minúsculas, números, ponto, hífen e sublinhado.";
+    if (d.senha.length < 8) e.senha = "Pelo menos 8 caracteres.";
+    else if (d.senha.length > 200) e.senha = "Até 200 caracteres.";
+    else if (/[\u0000-\u001F\u007F]/.test(d.senha)) e.senha = "Sem caracteres de controle.";
+    else if (d.senha !== d.senha.trim()) e.senha = "Sem espaço no começo ou no fim (para chegar exatamente igual).";
+    return { erros: e, nome: nome, usuario: usuario };
+  }
+
+  function pedirAcesso() {
+    var UI = global.RAMAUI;
+    var revelada = false;
+    var enviando = false;
+    var entregue = false;
+    var operacao = null;
+    var assinatura = "";
+
+    function campoTexto(id, rotulo, max, auto, dica) {
+      var entrada = el("input.r-entrada", { id: id, type: "text", maxlength: max, autocomplete: auto, spellcheck: "false", autocapitalize: "off" });
+      var erro = el("p.r-ajuda.r-ajuda--erro", { id: id + "-erro", hidden: true });
+      entrada.setAttribute("aria-describedby", id + "-erro" + (dica ? " " + id + "-dica" : ""));
+      return { entrada: entrada, erro: erro, no: el("div.r-campo", {}, [
+        el("label", { for: id, texto: rotulo }), entrada,
+        dica ? el("p.r-ajuda", { id: id + "-dica", texto: dica }) : null, erro,
+      ]) };
+    }
+    var nome = campoTexto("acesso-nome", "Nome de exibição", 80, "nickname");
+    var usuario = campoTexto("acesso-usuario", "Nome de usuário", 40, "off", "3 a 40 caracteres: a–z, 0–9, ponto, hífen e sublinhado.");
+    var senha = el("input.r-entrada", { id: "acesso-senha", type: "password", maxlength: 200, autocomplete: "new-password", spellcheck: "false", autocapitalize: "off", "aria-describedby": "acesso-senha-erro acesso-senha-dica" });
+    var senhaErro = el("p.r-ajuda.r-ajuda--erro", { id: "acesso-senha-erro", hidden: true });
+    var olho = el("button.r-icone.senha__olho", { type: "button", "aria-label": "Revelar senha", "aria-pressed": "false", "aria-controls": "acesso-senha",
+      onclick: function () { revelada = !revelada; senha.type = revelada ? "text" : "password"; olho.setAttribute("aria-pressed", String(revelada));
+        olho.setAttribute("aria-label", revelada ? "Ocultar senha" : "Revelar senha"); U.trocar(olho, [UI.simbolo(revelada ? "olhoFechado" : "olho")]); pintarPrevia(); } },
+      [UI.simbolo("olho")]);
+
+    var pNome = el("dd.acesso-previa__valor"), pUsuario = el("dd.acesso-previa__valor"), pSenha = el("dd.acesso-previa__valor.acesso-previa__senha");
+    var previa = el("aside.acesso-previa", { "aria-label": "Prévia do pedido", "aria-live": "polite" }, [
+      el("p.acesso-previa__titulo", { texto: "Solicitação de acesso — RAMA" }),
+      el("dl.acesso-previa__lista", {}, [
+        el("dt.t-rotulo", { texto: "Nome de exibição" }), pNome,
+        el("dt.t-rotulo", { texto: "Usuário" }), pUsuario,
+        el("dt.t-rotulo", { texto: "Senha provisória" }), pSenha,
+      ]),
+      el("p.t-mini", { texto: "É isto que o administrador recebe. A conta só existe depois que ele cadastrar." }),
+    ]);
+
+    var recado = el("p.r-ajuda", { role: "status", hidden: true });
+    var botao = el("button.r-botao.r-botao--principal", { type: "submit", texto: "Enviar pedido" });
+
+    function dados() { return { nome: nome.entrada.value, usuario: usuario.entrada.value, senha: senha.value }; }
+
+    function pintarPrevia() {
+      var d = dados();
+      var r = regrasDoPedido(d);
+      pNome.textContent = r.nome || "—";
+      pUsuario.textContent = r.usuario || "—";
+      pSenha.textContent = d.senha ? (revelada ? d.senha : "•".repeat(Math.min(d.senha.length, 24))) : "—";
+    }
+
+    function mostrarErros(erros) {
+      [[nome, "nome"], [usuario, "usuario"]].forEach(function (x) {
+        x[0].erro.textContent = erros[x[1]] || ""; x[0].erro.hidden = !erros[x[1]];
+        x[0].entrada.setAttribute("aria-invalid", erros[x[1]] ? "true" : "false");
+      });
+      senhaErro.textContent = erros.senha || ""; senhaErro.hidden = !erros.senha;
+      senha.setAttribute("aria-invalid", erros.senha ? "true" : "false");
+    }
+
+    [nome.entrada, usuario.entrada, senha].forEach(function (c) {
+      c.addEventListener("input", function () { pintarPrevia(); if (!enviando) { recado.hidden = true; } });
+    });
+
+    var formulario = el("form.pilha.acesso-form", { novalidate: true }, [
+      nome.no, usuario.no,
+      el("div.r-campo", {}, [
+        el("label", { for: "acesso-senha", texto: "Senha provisória" }),
+        el("div.senha", {}, [senha, olho]),
+        el("p.r-ajuda", { id: "acesso-senha-dica", texto: "Pelo menos 8 caracteres. Fica mascarada na tela." }),
+        senhaErro,
+      ]),
+      recado,
+      el("div.faixa", {}, [botao]),
+    ]);
+
+    formulario.addEventListener("submit", async function (ev) {
+      ev.preventDefault();
+      if (enviando || entregue) return;
+      var d = dados();
+      var r = regrasDoPedido(d);
+      mostrarErros(r.erros);
+      if (Object.keys(r.erros).length) { recado.hidden = true; return; }
+      var sim = await UI.confirmar({ titulo: "Antes de enviar", texto: AVISO_DO_PEDIDO, rotuloConfirmar: "Enviar pedido", rotuloCancelar: "Voltar" });
+      if (!sim || enviando || entregue) return;
+      /* O mesmo conteúdo repetido (falha, clique duplo) leva o mesmo id:
+         o servidor não reposta o que já entregou. */
+      var assin = r.nome + "\u0000" + r.usuario + "\u0000" + d.senha;
+      if (!operacao || assin !== assinatura) { operacao = "op-" + U.uuid(); assinatura = assin; }
+      enviando = true;
+      botao.disabled = true;
+      botao.textContent = "Enviando…";
+      recado.hidden = true;
+      var resp = await global.RAMAApi.solicitarAcesso(d, operacao);
+      enviando = false;
+      if (resp && resp.ok) {
+        entregue = true;
+        senha.value = "";
+        assinatura = "";
+        [nome.entrada, usuario.entrada, senha, olho].forEach(function (c) { c.disabled = true; });
+        botao.textContent = "Pedido enviado";
+        recado.className = "r-ajuda r-ajuda--ok";
+        recado.textContent = "Pedido enviado. Aguarde o cadastro da sua conta.";
+        recado.hidden = false;
+        pintarPrevia();
+        return;
+      }
+      botao.disabled = false;
+      botao.textContent = "Tentar novamente";
+      if (resp && resp.erro === "acesso_invalido" && resp.campo) {
+        var e = {};
+        e[resp.campo === "dados" ? "nome" : resp.campo] = resp.motivo === "existe" ? "Este nome de usuário já está em uso." : "O servidor não aceitou este campo.";
+        mostrarErros(e);
+      }
+      var f = global.RAMAApi.frase(resp);
+      recado.className = "r-ajuda r-ajuda--erro";
+      recado.setAttribute("role", "alert");
+      recado.textContent = f.texto + (resp && resp.segundos ? " (cerca de " + resp.segundos + " s)" : "");
+      recado.hidden = false;
+    });
+
+    pintarPrevia();
+    UI.modal({
+      titulo: "Solicitar acesso",
+      largo: true,
+      conteudo: [
+        el("p.t-mini", { texto: "O pedido vai para o administrador, que cria a sua conta manualmente. Nenhuma conta é criada agora." }),
+        el("div.acesso-grade", {}, [formulario, previa]),
+      ],
+      botoes: [{ rotulo: "Fechar", classe: "r-botao--fantasma" }],
+      aoFechar: function () { senha.value = ""; },
+    });
+    setTimeout(function () { nome.entrada.focus(); }, 0);
+  }
+
   function desenharPortao(aoEntrar) {
     document.body.classList.add("tem-portao");
 
@@ -301,6 +464,9 @@
           el("p.portao__extenso", { texto: "Rede de Arquivamento Multiversal de Agentes" }),
         ]),
         formulario,
+        el("p.portao__pedido", {}, [
+          el("button.r-link.portao__pedido-botao", { type: "button", texto: "Não tem login? Solicite um!", onclick: function () { pedirAcesso(); } }),
+        ]),
         el("p.t-mini", { texto: "Acesso restrito. Toda leitura e gravação é verificada no servidor." }),
       ]),
     ]);

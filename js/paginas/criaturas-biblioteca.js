@@ -142,10 +142,10 @@
       var idLivro = id + "-livro", idMin = id + "-vdmin", idMax = id + "-vdmax";
       var outros = el("div.bib-filtros", {}, [
         comLivro ? el("div.bib-filtro", {}, [
-          el("label.t-mini", { for: idLivro, texto: "Livro" }),
+          el("label.t-mini", { for: idLivro, texto: "Fonte" }),
           el("select.r-selecao", { id: idLivro, onchange: function (ev) { estado.livro = ev.target.value; pintarLista(); } },
-            [el("option", { value: "", texto: "Todos" })].concat(Object.keys(OC().FONTES).map(function (k) {
-              return el("option", { value: k, texto: OC().FONTES[k].nome, selected: estado.livro === k });
+            [el("option", { value: "", texto: "Todas as fontes" })].concat(fontesComCriaturas().map(function (k) {
+              return el("option", { value: k, texto: OC().FONTES[k].rotulo || OC().FONTES[k].nome, selected: estado.livro === k });
             }))),
         ]) : null,
         el("div.bib-filtro", {}, [
@@ -171,98 +171,34 @@
       return { busca: busca, nos: [grupoNatureza, grupoElementos, el("div.r-busca", {}, [el("span.r-busca__marca", {}, [UI.simbolo("busca")]), busca]), outros] };
     }
 
-    /* Ferramentas do mestre que acompanham o catálogo (AS1 p. 23; AS4
-       p. 48). Só narrativa: nenhuma cria ficha. */
+    /* Ferramentas do mestre que acompanham o catálogo no fluxo da mesa
+       (combate, aliados). Os geradores moram em js/geradores-criaturas.js
+       — os mesmos da seção Geradores da página Criaturas. Só narrativa:
+       nenhum cria ficha. */
     function ferramentas() {
-      if (!OC().gerarTranstornado) return null;
-      return el("div.faixa", {}, [
-        el("button.r-botao.r-botao--mini.r-botao--fantasma", {
-          type: "button", texto: "Gerador de Transtornados",
-          title: "Perfil, traços e aparência de um Transtornado (Arquivos Secretos 1, p. 23)",
-          onclick: function () { gerador("transtornado"); },
-        }),
-        OC().gerarProducao ? el("button.r-botao.r-botao--mini.r-botao--fantasma", {
-          type: "button", texto: "Gerador de Produção do Anfitrião",
-          title: "Perfil, traços e aparência de um membro da Produção (Arquivos Secretos 4, p. 48)",
-          onclick: function () { gerador("producao"); },
-        }) : null,
-        OC().gerarVarminho ? el("button.r-botao.r-botao--mini.r-botao--fantasma", {
-          type: "button", texto: "Funcionários da TV Varminho",
-          title: "Perfil, traços e características de um funcionário da TV Varminho, e a torre como referência (Arquivos Secretos 5, p. 20–33)",
-          onclick: function () { gerador("varminho"); },
-        }) : null,
-      ]);
+      var G = global.RAMAGeradoresCriaturas;
+      if (o.geradores === false || !G) return null;
+      var lista = G.doSistema("ordem");
+      if (!lista.length) return null;
+      return el("div.faixa", {}, lista.map(function (g) {
+        return el("button.r-botao.r-botao--mini.r-botao--fantasma", {
+          type: "button", texto: g.nome, title: g.resumo + " (" + g.fonte + ")",
+          onclick: function () { G.abrir(g); },
+        });
+      }));
     }
 
-    function gerador(qual) {
-      if (qual === "varminho") { geradorVarminho(); return; }
-      var D = global.RAMADados;
-      var producao = qual === "producao";
-      var rolar = function (faces) { var r = D && D.total ? D.total("1d" + faces) : null; return r && r.ok ? r.total : 1 + Math.floor(Math.random() * faces); };
-      var saida = el("div.pilha--curta", { class: "pilha", role: "status", "aria-live": "polite" });
-      function sortear() {
-        var g = producao ? OC().gerarProducao(rolar) : OC().gerarTranstornado(rolar);
-        U.trocar(saida, [
-          el("p", { texto: "Perfil: " + g.perfil + " (1d10: " + g.dados.perfil + ")" }),
-          el("p", { texto: "Traços: " + g.tracos.join("; ") + " (" + (producao ? "dois d6, sem somar" : "2d6") + ": " + g.dados.tracos.join(" e ") + ")" }),
-          el("p", { texto: "Aparência: " + g.aparencia.join("; ") + " (d20: " + g.dados.aparencia.join(" e ") + ")" }),
-          el("p.criacao-fonte", { texto: g.referencia + (producao
-            ? ". Só narrativa: a ficha de jogo vem do catálogo (Assistente de Produção, Produtor ou Diretor), sem mudança nas estatísticas."
-            : ". A ficha de jogo vem do catálogo: Assecla, Investido ou Apóstolo do Sangue.") }),
-        ]);
-      }
-      sortear();
-      UI.modal({
-        titulo: producao ? "Gerador de Produção do Anfitrião" : "Gerador de Transtornados",
-        conteudo: [saida],
-        botoes: [
-          { rotulo: "Fechar", classe: "r-botao--fantasma" },
-          { rotulo: "Sortear de novo", classe: "r-botao--principal", aoClicar: function () { sortear(); } },
-        ],
-      });
-    }
-
-    /* TV Varminho (AS5 p. 20–33): o gerador e a torre como referência de
-       preparo. Os dados são independentes e nunca somados. */
-    function geradorVarminho() {
-      var D = global.RAMADados;
-      var rolar = function (faces) { var r = D && D.total ? D.total("1d" + faces) : null; return r && r.ok ? r.total : 1 + Math.floor(Math.random() * faces); };
-      var V = OC().VARMINHO;
-      var saida = el("div.pilha--curta", { class: "pilha", role: "status", "aria-live": "polite" });
-      function sortear() {
-        var g = OC().gerarVarminho(rolar);
-        U.trocar(saida, [
-          el("p", { texto: "Perfil: " + g.perfil + " (1d10: " + g.dados.perfil + ")" }),
-          el("p", { texto: "Traços: " + g.tracos.join("; ") + " (dois d6, sem somar: " + g.dados.tracos.join(" e ") + ")" }),
-          el("p", { texto: "Características: " + g.aparencia.join("; ") + " (dois d20, sem somar: " + g.dados.aparencia.join(" e ") + ")" }),
-          g.nota ? el("p.t-mini", { texto: g.nota }) : null,
-          el("p.criacao-fonte", { texto: g.referencia + ". Só narrativa: nenhum poder, nenhuma estatística. Para jogar com números, use as fichas do catálogo (doppelgangers, hospedeiros)." }),
-        ]);
-      }
-      sortear();
-      function lista(titulo, itens) {
-        return UI.recolhivel({ titulo: titulo, conteudo: [el("ul.pilha--curta", { class: "pilha" }, itens.map(function (x) {
-          return el("li.t-mini", {}, [el("strong", { texto: x.nome }), document.createTextNode((x.papel ? " (" + x.papel + ")" : "") + (x.texto ? " — " + x.texto : "") + (x.pagina ? " (p. " + x.pagina + ")" : ""))]);
-        }))] });
-      }
-      var referencia = V ? el("div.pilha--curta", { class: "pilha" }, [
-        el("h4.t-secao", { texto: "A TV Varminho, para preparar a missão" }),
-        el("p.t-mini", { texto: V.resumo }),
-        lista("A torre", V.andares),
-        lista("Os funcionários", V.papeis),
-        lista("Os programas", V.programas),
-        UI.recolhivel({ titulo: "Como a torre funciona", conteudo: [el("p.t-mini", { texto: V.funcionamento })] }),
-        lista("Ganchos de missão", V.ganchos),
-        lista("Funcionários de exemplo", V.exemplos),
-        el("p.t-mini", { texto: V.notaExemplos }),
-      ]) : null;
-      UI.modal({
-        titulo: "Funcionários da TV Varminho",
-        conteudo: [saida, referencia],
-        botoes: [
-          { rotulo: "Fechar", classe: "r-botao--fantasma" },
-          { rotulo: "Sortear de novo", classe: "r-botao--principal", aoClicar: function () { sortear(); } },
-        ],
+    /* Só as fontes que têm criatura no catálogo (e, numa ficha ou campanha,
+       liberadas pelos suplementos de lá — fora delas, todas): o livro
+       básico primeiro, depois os suplementos na ordem do registro. O
+       filtro só consulta: não muda suplemento nenhum. */
+    function fontesComCriaturas() {
+      var tem = {};
+      (estado.catalogo ? estado.catalogo.indice : []).forEach(function (x) { if (x.livro) tem[x.livro] = true; });
+      return Object.keys(OC().FONTES).filter(function (k) {
+        if (!tem[k]) return false;
+        var Cat = global.RAMAOrdemCatalogo;
+        return !Cat || !Cat.fonteLiberada || Cat.fonteLiberada(k);
       });
     }
 
@@ -459,10 +395,7 @@
       U.trocar(corpo, f.nos.concat([oficial ? ferramentas() : null, status, lista]));
     }
 
-    var janela = UI.modal({
-      titulo: o.titulo || "Biblioteca de criaturas",
-      largo: true,
-      conteudo: [
+    var miolo = [
         el("div.pilha.bib.bib-criaturas-janela", {}, [
           o.ajuda ? el("p.t-mini", { texto: o.ajuda }) : null,
           abas,
@@ -472,10 +405,22 @@
               "As fichas oficiais não são editáveis — copie para o Homebrew ou edite a ocorrência.",
           }),
         ]),
-      ],
-      botoes: [{ rotulo: "Fechar", classe: "r-botao--fantasma" }],
-      aoFechar: function () { aberta = false; },
-    });
+      ];
+    /* Embutida (página Criaturas): mesma lista, filtros e consulta, sem
+       janela. `fechar` some — não há o que fechar. */
+    var janela;
+    if (o.embutido) {
+      U.trocar(o.embutido, miolo);
+      janela = { fechar: function () {}, desmontar: function () { aberta = false; } };
+    } else {
+      janela = UI.modal({
+        titulo: o.titulo || "Biblioteca de criaturas",
+        largo: true,
+        conteudo: miolo,
+        botoes: [{ rotulo: "Fechar", classe: "r-botao--fantasma" }],
+        aoFechar: function () { aberta = false; },
+      });
+    }
     pintar();
     return janela;
   }
