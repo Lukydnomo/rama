@@ -118,6 +118,17 @@
 
   var CHANGELOG = [
     {
+      versao: "6.6.1",
+      codinome: "AMPULHETA",
+      data: "31/10/2026",
+      mudancas: {
+        "Melhorado": [
+          "Na ficha de Ordem, o painel do Arquivos Secretos 3 (aba Habilidades) só mostra o que serve à ficha. A cronologia da campanha aparece quando algo do AS3 conta por ela (Entrada Triunfal, Boas Recordações, Veículos Operacionais, itens e aliados do AS3); os bônus de um aliado performático, quando há um recebido valendo, quando a ficha é da trilha Performático ou com a regra Trilha Geral ligada. Sem nada disso, o painel some.",
+        ],
+        "Técnico": ["Só o site: js/ordem/telas/ficha-arquivo3.js. Nada de regra, schema nem .gs."],
+      },
+    },
+    {
       versao: "6.6.0",
       codinome: "ALCATEIA",
       data: "31/10/2026",

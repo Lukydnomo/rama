@@ -179,7 +179,10 @@
     var temAlgo = k.regras.length || k.poderes.length || k.itens.length || k.aliados.length || k.recebido || k.a.flagelo.pvGastos;
     if (!temAlgo) return null;
 
-    var secoes = [secaoCronologia(ctx, o)];
+    /* v6.6.1: cada seção só quando serve a esta ficha. A cronologia,
+       quando algo do AS3 nela mede tempo por ela; o resto, pelas regras,
+       poderes e itens que a ficha tem. Sem nada, o painel some. */
+    var secoes = [precisaCronologia(o, k) ? secaoCronologia(ctx, o) : null];
     var resumo = [];
     if (regra(o, "sacrificio")) {
       secoes.push(secaoSacrificio(ctx, o));
@@ -195,6 +198,7 @@
     if (regra(o, "circo")) secoes.push(secaoCirco(ctx, o));
     if (regra(o, "veiculos")) secoes.push(secaoVeiculos(ctx, o));
     if (regra(o, "animais")) secoes.push(secaoAnimais(ctx, o));
+    if (!secoes.filter(Boolean).length) return null;
 
     return UI.recolhivel({
       titulo: "Arquivos Secretos 3",
@@ -206,6 +210,14 @@
   }
 
   /* ---------- cronologia da campanha ---------- */
+
+  /* O que do AS3 conta pela cronologia: Entrada Triunfal (sessão), Boas
+     Recordações (missão e dia), o Arsenal dos veículos (missão), os
+     itens (Paçoca, Crânio, Couraça: dia, semana, missão) e os aliados
+     de uso por missão. O AS4 e o AS7 têm os próprios botões de tempo. */
+  function precisaCronologia(o, k) {
+    return !!(tem(o, "entradaTriunfal") || regra(o, "recordacoes") || regra(o, "veiculos") || k.itens.length || k.aliados.length);
+  }
 
   function secaoCronologia(ctx, o) {
     var cr = A3().dados(o).cronologia;
@@ -376,7 +388,10 @@
     if (a.ensaio && a.ensaio.origem === "aliado") partes.push(linha("Ensaio com " + (a.ensaio.nome || "um performático") + ": +" + a.ensaio.bonus + " na margem " + (margem ? "até o próximo interlúdio." : "(vencido: já houve outro interlúdio).")));
     if (a.ritmo && a.ritmo.origem === "aliado") partes.push(linha("Rítmo Contagiante de " + (a.ritmo.nome || "um aliado") + ": +" + a.ritmo.bonus + " na Defesa " + (A3().defesaDoRitmo(o) ? "nesta cena." : "(outra cena: vencido).")));
     if (!permitido(ctx)) return partes.length ? bloco([titulo("Combatente Performático")].concat(partes)) : null;
-    if (!minha && !partes.length && !k.regras.length && !k.poderes.length) return null;
+    /* Receber bônus de um performático só aparece quando faz sentido:
+       com algo recebido valendo, com a própria trilha, ou com a regra
+       Trilha Geral ligada (é ela que traz o Performático à mesa). */
+    if (!minha && !partes.length && !regra(o, "trilhaGeral")) return null;
     partes.push(el("div.faixa", {}, [
       botao("Ensaiei com um performático…", function () {
         UI.pedirTexto({ titulo: "Ensaio (interlúdio)", rotulo: "Com quem, e o bônus dele (1 a 4) — ex.: Ana 2", valor: "", limite: 60 }).then(function (t) {

@@ -817,6 +817,9 @@ segredo nenhum — ele os lê das Script Properties. Publicá-lo não expõe nad
 
 ### Atualizar o backend
 
+**v6.6.1 — AMPULHETA:** só o site: publique `js/ordem/telas/ficha-arquivo3.js`
+(o painel do AS3 só quando serve à ficha). Nada de `.gs`.
+
 **v6.6.0 — ALCATEIA:** página Criaturas e pedido de acesso no login.
 **Troque** `Feedback.gs` (a ação pública `solicitar_acesso`, pelo mesmo
 `RAMA_FEEDBACK_WEBHOOK` do feedback) e **crie uma versão nova da implantação**.
@@ -1673,7 +1676,7 @@ Três números diferentes, que não se misturam:
 
 | | Onde | O que é |
 |---|---|---|
-| versão do aplicativo | `js/versao.js` | o que a pessoa vê: v6.6.0 |
+| versão do aplicativo | `js/versao.js` | o que a pessoa vê: v6.6.1 |
 | `schemaVersion` | `js/ficha.js` | o formato da FICHA |
 | `versaoFormato` | `js/config.js` | o formato dos arquivos de importação |
 
