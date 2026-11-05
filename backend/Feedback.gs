@@ -10,7 +10,7 @@
    Codigo.gs continua funcionando e a ação responde `acao_desconhecida`.
 
    ---------------------------------------------------------------------
-   O WEBHOOK!
+   O WEBHOOK
    ---------------------------------------------------------------------
    O endereço mora numa propriedade do script, e só lá:
 
