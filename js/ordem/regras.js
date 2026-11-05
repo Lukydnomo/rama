@@ -578,6 +578,14 @@
       A6().efeitos(ficha, inventario).forEach(function (m) { lista.push(m); });
     }
 
+    /* Arquivos Secretos 7 (v6.5): a penalidade social das variantes de
+       Monstruoso (a do maior marco, uma só), os efeitos do procedimento
+       de HOJE (dia da cronologia) e o que vale na cena (Vasos do Tato,
+       a infecção da Apóstata). Montado do zero: recarregar não soma. */
+    if (A7()) {
+      A7().efeitos(ficha, inventario).forEach(function (m) { lista.push(m); });
+    }
+
     return lista;
   }
 
@@ -635,7 +643,7 @@
       ficha.opcionais, ficha.atributos, ficha.nex, ficha.nivel, ficha.classe, ficha.origem,
       ficha.bonusExtra, ficha.ajustes, ficha.periciasAjustes, ficha.sacrificios,
       Array.isArray(ficha.sacrificios) ? ficha.sacrificios.length : -1,
-      ficha.barganhaInsana, ficha.estadoDasOrigens, ficha.arquivo5, ficha.arquivo6,
+      ficha.barganhaInsana, ficha.estadoDasOrigens, ficha.arquivo5, ficha.arquivo6, ficha.arquivo7,
     ];
   }
 
@@ -677,11 +685,16 @@
     return inteiro(ficha && ficha.atributos ? ficha.atributos[chave] : 0, 0);
   }
 
-  function atributo(ficha, chave) {
+  /* opcoes.semSacrificio (v6.5): o sacrifício de Ser Testado (AS7 p. 82)
+     "não afeta PV, PE, SAN ou número de perícias treinadas" — as contas
+     de recurso pedem o atributo sem ele. Os +1 do dia (procedimento das
+     variantes de Monstruoso) valem em tudo. */
+  function atributo(ficha, chave, opcoes) {
     var est = estadoDe(ficha);
-    if (est && est.atributos && est.atributos[chave] !== undefined) return est.atributos[chave];
-    return atributoBase(ficha, chave);
+    var v = (est && est.atributos && est.atributos[chave] !== undefined) ? est.atributos[chave] : atributoBase(ficha, chave);
+    return A7() ? v + A7().ajusteDeAtributo(ficha, chave, opcoes) : v;
   }
+  function atributoSemSacrificio(ficha, chave) { return atributo(ficha, chave, { semSacrificio: true }); }
 
   /* A conta aberta de um atributo: base e cada efeito. */
   function composicaoDoAtributo(ficha, chave) {
@@ -692,6 +705,11 @@
         c.soma(ef.fonte, ef.valor, ef.detalhe);
       }
     });
+    if (A7()) {
+      A7().partesDoAtributo(ficha, chave).forEach(function (p) {
+        c.soma(p.fonte, p.valor, "até o fim do dia" + (p.nota ? " · " + p.nota : ""));
+      });
+    }
     return c;
   }
 
@@ -717,7 +735,7 @@
     var inicial = cl[qual + "Inicial"];
     if (!inicial) return false;
     var chave = inicial.atributo ? ((qual === "pe" || qual === "pd") && atribPe ? atribPe : inicial.atributo) : null;
-    var valorAtrib = chave ? atributo(ficha, chave) : 0;
+    var valorAtrib = chave ? atributoSemSacrificio(ficha, chave) : 0;
     c.soma(cl.nome + ", inicial", inicial.base + valorAtrib,
       chave ? "base " + inicial.base + " + " + siglaDe(chave) + " " + valorAtrib : "");
     var porEstagio = cl[qual + "PorEstagio"];
@@ -773,7 +791,7 @@
       }
     } else {
       var chavePorNex = porNex.atributo ? (atribPe || porNex.atributo) : null;
-      var atribPorNex = chavePorNex ? atributo(ficha, chavePorNex) : 0;
+      var atribPorNex = chavePorNex ? atributoSemSacrificio(ficha, chavePorNex) : 0;
 
       var anterior = fase.anterior ? C.classe(fase.anterior) : null;
       var ganhos = anterior && C.TRANSICOES[fase.anterior] ? C.TRANSICOES[fase.anterior].classes[classe.chave] : null;
@@ -796,7 +814,7 @@
            os valores de um agente novato; os PD seguem a tabela da classe
            a partir daí. Ver docs/ORDEM-REGRAS.md. */
         var chaveInicial = inicial.atributo ? (atribPe || inicial.atributo) : null;
-        var atribInicial = chaveInicial ? atributo(ficha, chaveInicial) : 0;
+        var atribInicial = chaveInicial ? atributoSemSacrificio(ficha, chaveInicial) : 0;
         c.soma(classe.nome + ", inicial" + (tabelaPv ? " (" + tabelaPv.fonte + ")" : ""), inicial.base + atribInicial,
           (chaveInicial ? "base " + inicial.base + " + " + siglaDe(chaveInicial) + " " + atribInicial : "") +
           (anterior ? " — sem tabela de PD para o " + anterior.nome + ", vale a da classe desde a transição" : ""));
@@ -853,7 +871,7 @@
         c.soma(m.fonte, m.efeito.valor, m.detalhe);
       });
       efeitosDoTipo(ficha, "peAtributo").forEach(function (m) {
-        c.soma(m.fonte, atributo(ficha, m.efeito.atributo), siglaDe(m.efeito.atributo) + " somado aos PE");
+        c.soma(m.fonte, atributoSemSacrificio(ficha, m.efeito.atributo), siglaDe(m.efeito.atributo) + " somado aos PE");
       });
     }
 
@@ -1834,7 +1852,12 @@
        transmitiu, enquanto valer — vale o maior dos dois, e a perícia
        própria não muda. */
     var recebido = A5() ? A5().grauRecebido(ficha, chave) : null;
-    if (recebido && C.grau(recebido.grau).bonus > C.grau(proprio).bonus) return recebido.grau;
+    if (recebido && C.grau(recebido.grau).bonus > C.grau(proprio).bonus) proprio = recebido.grau;
+    /* Arquivos Secretos 7: graus que valem por um tempo (Ser Apavorante
+       de Conhecimento, Vasos do Tato, estágio I da Apóstata) — o maior
+       vale, e o grau gravado na ficha não muda. */
+    var temp = A7() ? A7().grauTemporario(ficha, chave) : null;
+    if (temp && C.grau(temp.grau).bonus > C.grau(proprio).bonus) proprio = temp.grau;
     return proprio;
   }
 
@@ -1843,6 +1866,8 @@
     var fontes = est && est.fontesGrau ? (est.fontesGrau[chave] || []) : [];
     var recebido = A5() ? A5().grauRecebido(ficha, chave) : null;
     if (recebido && grauDaPericia(ficha, chave) === recebido.grau) fontes = fontes.concat([{ fonte: recebido.fonte, detalhe: recebido.detalhe }]);
+    var temp = A7() ? A7().grauTemporario(ficha, chave) : null;
+    if (temp && grauDaPericia(ficha, chave) === temp.grau) fontes = fontes.concat([{ fonte: temp.fonte, detalhe: temp.grau }]);
     return fontes;
   }
 
@@ -1870,6 +1895,13 @@
       if (m.efeito.pericia === chave) {
         c.soma(m.fonte, atributo(ficha, m.efeito.atributo), siglaDe(m.efeito.atributo) + " somado");
       }
+    });
+
+    /* "Soma sua Força em testes baseados nesse atributo" (AS7 p. 81): o
+       atributo da perícia, como ela é rolada agora. */
+    efeitosDoTipo(ficha, "bonusTestesAtributo", inventario).forEach(function (m) {
+      var at = m.efeito.atributo;
+      if (at && atributoDaPericia(ficha, chave) === at) c.soma(m.fonte, atributo(ficha, at), siglaDe(at) + " somado · " + m.detalhe);
     });
 
     efeitosDoTipo(ficha, "bonusSeTreinado", inventario).forEach(function (m) {
@@ -2387,6 +2419,14 @@
     return saida;
   }
 
+  /* O atributo da DT dos rituais: Presença, ou o que um efeito troca
+     (Ser Escarificado, AS7 p. 85, até o fim do dia). */
+  function atributoDaDt(ficha) {
+    var at = "pre";
+    efeitosDoTipo(ficha, "atributoDaDt").forEach(function (m) { if (m.efeito.atributo) at = m.efeito.atributo; });
+    return at;
+  }
+
   function dtAprimoradaDe(ficha, nome) {
     var mapa = dtAprimoradaPorAlvo(ficha);
     return mapa[chaveDeAlvo(nome)] || null;
@@ -2878,6 +2918,9 @@
     /* Arquivos Secretos 6 (v5.3). Sem o módulo, passa como veio. */
     if (A6()) A6().normalizar(ficha, b);
     else if (b.arquivo6 && typeof b.arquivo6 === "object") ficha.arquivo6 = JSON.parse(JSON.stringify(b.arquivo6));
+    /* Arquivos Secretos 7 (v6.5). Sem o módulo, passa como veio. */
+    if (A7()) A7().normalizar(ficha, b);
+    else if (b.arquivo7 && typeof b.arquivo7 === "object") ficha.arquivo7 = JSON.parse(JSON.stringify(b.arquivo7));
     /* Barganha Insana (v2.41): as conjurações e as perdas pendentes. */
     if (b.barganhaInsana && typeof b.barganhaInsana === "object") ficha.barganhaInsana = normalizarBarganha(b.barganhaInsana);
 
@@ -3219,6 +3262,7 @@
   function A4() { return global.RAMAOrdemArquivo4 || null; }
   function A5() { return global.RAMAOrdemArquivo5 || null; }
   function A6() { return global.RAMAOrdemArquivo6 || null; }
+  function A7() { return global.RAMAOrdemArquivo7 || null; }
   var ID_COURACA = "as3.amaldicoado.armadura-dos-couracas";
 
   /* Forma suprema ativa (AS2 p. 97). */
@@ -3359,6 +3403,8 @@
     modificadores: modificadores,
 
     atributo: atributo,
+    atributoSemSacrificio: atributoSemSacrificio,
+    atributoDaDt: atributoDaDt,
     atributoBase: atributoBase,
     composicaoDoAtributo: composicaoDoAtributo,
 

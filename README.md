@@ -412,7 +412,17 @@ deno run --allow-read --allow-write testes/gerar-oblivio-gs.js
 deno run --allow-read testes/executar-oblivio.js
 ```
 
-**Suplementos** — 45 verificações: cadastro e capas, seleção ausente × vazia,
+**Arquivos Secretos 7** — 152 verificações: fonte e suplemento, origens,
+Resguardar Espírito, Vampirismo, os cinco itens, as trilhas Monstruoso (marcos,
+elemento, procedimento do dia, sacrifícios, braços, Tatuagem, reação, 4º
+círculo), dia, cena e rodada sem repetir ao recarregar, infecção, regras debaixo
+d'água, as ameaças e a persistência (schema 29, exportar e importar).
+
+```bash
+deno run --allow-read testes/executar-as7.js
+```
+
+**Suplementos** — 47 verificações: cadastro e capas, seleção ausente × vazia,
 ficha ∩ campanha, catálogos de Ordem (rituais, itens, biblioteca, usos de
 perícia), progressão, regra opcional ≠ suplemento, persistência e o que já
 está em uso. O servidor está em `testes/sistemas-backend.js`.
@@ -797,6 +807,17 @@ próprio `<script src>`, então funciona debaixo de subpasta sem ajuste.
 segredo nenhum — ele os lê das Script Properties. Publicá-lo não expõe nada.
 
 ### Atualizar o backend
+
+**v6.5.0 — MEMBRANA:** Arquivos Secretos 7 como suplemento de Ordem.
+**Troque** `Sistemas.gs` (o suplemento `ordem.as7` no cadastro) e
+`Campanhas.gs` (o AS7 como fonte de criatura e o piso de PV ao trocar de forma
+na ocorrência) e **crie uma versão nova da implantação**. Sem `setupRama()`:
+nada de aba nova. Publique o site — inclusive os arquivos novos
+`js/ordem/arquivo7.js`, `js/ordem/telas/ficha-arquivo7.js`,
+`js/ordem/criaturas-as7.js`, as capas `assets/sistemas/ordem-as7-capa*.webp` e
+as imagens `assets/criaturas/as7/`, e as páginas `ficha/`, `campanha/`,
+`homebrew/` e `perfil/`, que passam a carregá-los. O schema da ficha sobe para
+29 sem conversão (abas abertas na versão anterior pedem para recarregar).
 
 **v6.4.1 — AQUARELA:** só o site: publique `css/ficha.css` (cores dos recursos no
 Legacy). Nada de `.gs`.
@@ -1632,7 +1653,7 @@ Três números diferentes, que não se misturam:
 
 | | Onde | O que é |
 |---|---|---|
-| versão do aplicativo | `js/versao.js` | o que a pessoa vê: v6.4.1 |
+| versão do aplicativo | `js/versao.js` | o que a pessoa vê: v6.5.0 |
 | `schemaVersion` | `js/ficha.js` | o formato da FICHA |
 | `versaoFormato` | `js/config.js` | o formato dos arquivos de importação |
 

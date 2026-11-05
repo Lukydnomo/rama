@@ -2975,9 +2975,80 @@ Fonte `AS6`, com páginas (não é Extra). Estado em `js/ordem/arquivo6.js`; tel
 - **Evolução Modular**: utilidade nos degraus pares (10%, 20%… 99%), combate nos ímpares a partir de 15%; ambíguos listados em `AMBIGUOS_MODULARES` (js/ordem/poderes.js), reclassificáveis na ficha. Com NEX & Experiência, por nível; Mundano/Sobrevivente sem vagas. A redução de proporção sugerida pelo autor fica com a mesa.
 
 
+## Arquivos Secretos 7, v1.0 (v6.5)
+
+Fonte `AS7`, com páginas (não é Extra); suplemento `ordem.as7`, com capa
+(`assets/sistemas/ordem-as7-capa.webp` e a pequena). Regras em
+`js/ordem/arquivo7.js`; tela da ficha em `js/ordem/telas/ficha-arquivo7.js`;
+mecânicas das ameaças no painel da ocorrência em `js/ordem/criaturas-as7.js`;
+testes em `testes/executar-as7.js`.
+
+**O tempo do jogo.** "Por dia" é o dia da cronologia da campanha (AS3:
+`A3().dados(o).cronologia.dia`, avançado por Nova missão, Novo dia ou Nova
+semana); "por cena" é `condicoes.cena.id`; "por rodada", a rodada do AS5.
+Toda ação com efeito leva um id de operação: recarregar a página, repetir o
+clique ou importar a ficha nunca refaz consumo, cura, perda ou registro.
+
+### Cobertura
+
+"Automático" = a ficha calcula ou aplica; "registro" = guarda o estado e
+recusa o que a regra proíbe, mas quem decide que aconteceu é a mesa;
+"referência" = texto de consulta, sem automação.
+
+| Conteúdo | Página | O que a ficha faz | Teste |
+|---|---|---|---|
+| Exorcizado (O Que Restou) | 80 | Automático: Fortitude e Ocultismo, RD 5 contra o elemento escolhido (Medo recusado). Registro: o primeiro contato da cena com o elemento, com a perda de 2 SAN uma vez — nunca inferido de nada; a segunda tentativa na cena é recusada; com Jogando sem Sanidade, registra sem perda | executar-as7 + navegador |
+| Sensitivo Rebelde (Sussurros e Vultos) | 80 | Automático no resultado do teste de Diplomacia, Enganação, Intimidação ou Intuição: botão que tira 2 SAN e mostra o mesmo teste com +5, uma vez por teste. Com Jogando sem Sanidade, sem perda (o mesmo contrato das outras perdas) | executar-as7 |
+| Religião · Resguardar Espírito | 80 | Referência: na consulta dos usos de Religião (sai com o suplemento desligado) | executar-as7 |
+| Vampirismo | 76–77 | Ritual no catálogo (Sangue 2, Discente +5 PE, Verdadeiro +10 PE: acréscimos, 8 e 13 PE). Registro: o corpo da cena (conjurar ≠ comer), os cinco vasos por corpo (cada um uma vez), quem comeu, a forma; o corpo encerra no fim da cena e nunca mais é alvo. Automático: Paladar cura o rolado; Visão +5/+10/+15 em ataques até o fim da cena (efeito com duração); Tato dá o grau (ou +2) só até o fim da cena, sem gravar perícia; Audição oferece o ritual do círculo da forma para conjurar na cena, sem virar ritual aprendido. Olfato é anotação (+5/+10/+15 para rastrear aquele ser) | executar-as7 + navegador |
+| Carranca Caçadora | 78 | Registro: guiar (uma por vez), terminar (consome o material) e a recusa da mesma criatura depois | executar-as7 |
+| Cajado da Cruz de Sangue | 78 | Automático, empunhado por ocultista que conhece um ritual de Sangue: –1 PE, +1 na DT e +1 dado do mesmo tipo no dano dos rituais de Sangue | executar-as7 |
+| Pé de Coelho | 79 | Automático, vestido, uma vez por cena: +1d4 nos testes da cena (dado, não bônus fixo); d4 ímpar → outro 1d4 de perda de PV, aplicado uma vez naquela rolagem | executar-as7 |
+| Sal Dourado | 79 | Registro: três linhas ou um círculo (esvazia), com o lugar | executar-as7 |
+| Terço Maculado | 79 | Registro: vestir com a súplica, o que acontece ao tirar ou contrariar (2d10 rolado), decepar, cumprir (vira item mundano) | executar-as7 |
+| Monstruoso para Especialista | 81–84 | Trilha `monstruosoEspecialista` (a Monstruoso do SAH segue com a chave `monstruoso`). Automático: Ocultismo, a penalidade social do maior marco (–2, –5, –1 dado, –2 dados; uma só), a Presença –1 em 65% e 99%, a afinidade presa ao elemento. Experimento do dia (botão, uma vez por dia): consome o componente do elemento, rola e aplica a recuperação, liga os efeitos do elemento até o próximo dia (atributo nos PE e nos testes, tamanho, deslocamento, treinado, Defesa, RD, dados e dano extra, PV temporários, limite de morrendo). Sacrifício de Ser Testado: só pontos próprios, até 0, vale nos testes, na Defesa e na carga — nunca em PV, PE, SAN nem na quantidade de perícias treinadas. Braços de Ser Expurgado (+1 no atributo, ataque do braço de Sangue uma vez por rodada, toque de Morte uma vez por item, ação padrão adicional por cena, corporeidade de Energia na cena). Ser Apavorante substitui os efeitos de Ser Experimentado e dá o ritual do elemento só no dia | executar-as7 + navegador |
+| Monstruoso para Ocultista | 85–88 | Trilha `monstruosoOcultista`. Escarificação do dia: recupera PE (PD com Jogando sem Sanidade), troca a Presença pelo atributo do elemento nos PE e na DT dos rituais, +1 nele. Ser Perfurado: rituais marcados na pele com –1 PE de Tatuagem Ritualística (uma só, mesmo com o poder), reação uma vez por cena sob a condição do elemento. Ser Rasgado: +2 na DT dos marcados e a ação de cada elemento em Usar ritual (Cicatrização –1 PE e conjurável no dia, para Morte). Ser Mutilado: +1 no atributo, marcados sem fala nem gestos (também debaixo d'água) e um ritual do elemento e um de Medo de 4º círculo só no dia (o de Medo conta como do elemento sem mudar o catálogo) | executar-as7 + navegador |
+| Progressão de NEX das variantes | 81, 85 | As alterações por NEX (25% e 35%) vêm pela trilha mesmo com NEX & Experiência desligada (`usaProgressaoDeNex`), com os mesmos ids; Transcender pela exposição continua só com a regra. Exposição em dobro só com a regra ligada | executar-as7 |
+| Raziel, O Verdadeiro Raziel, Alvira, Sabara, Velisar, Zéfero | 40–45 | Fichas de Pessoa (sem elementos nem presença). A Fúria Sanguinária é a forma `verdadeiro` da ocorrência de Raziel, com piso de 200 PV ao assumir (`pvMinimoAoAssumir`, site e servidor) e também ficha própria. No painel da ocorrência: Transferir Sangue, Madre Superior e Bolsa de Sangue (Alvira: o dano entra nos PV dela, a cura é de quem recebe; metade machucada; nunca morrendo) e as armadilhas de Velisar (armadas, disparo com rolagem, desarmadas) | executar-criaturas, executar-as7 + navegador |
+| Incinerado | 65 | Painel: –10 PV no início do turno, as duas ações padrão enquanto machucado, a explosão em 0 PV (rolagem e divisão mental/Energia) | navegador |
+| Stryzga | 67 | Painel: alimentações por alvo (+1 dado a partir da 3ª) e Constrição × Quebra-ossos na mesma rodada | executar-as7 + navegador |
+| A Apóstata | 70–73 | Painel do mestre: patamares (forma vd160/240/320 e estado), ritos (3 sucessos antes de 3 falhas), Enigma de Medo (exposta por 3 rodadas, volta aos ídolos com os PV recuperados, manifestação final e regressão ao VD 80), fios com 22 PV (destruído: liberta e tira 22 PV dela), Gnosis Absoluta (+5 de RD por tipo, acumulada). Na ficha do infectado: Mentem Corrumpere (estágio, DT 20 +1 por dia, um teste por dia, falhas seguidas que obrigam o rito, Religião treinado/+5 sem gravar perícia, condições do estágio, cura pela morte da criatura) | executar-as7 + navegador |
+| Regras debaixo d'água | 92–93 | Regra opcional `regrasSubaquaticas`, categoria Combate, **desligada por padrão** e marcada como "não oficiais e não canônicas" (Dragão Brasil #206, recuperada no Inquérito Mensal); não é Extra e não tem autor de fã inventado. Contextual: só com a ficha marcada como submersa (Condições) valem Percepção –10, –5 em ataques sem natação e as restrições; sair da água tira tudo. Pressão (50/100/300 m) é um perigo desta regra, não um perigo complexo do AS5: DT por faixa e por teste anterior, condição e perda de PV aplicadas depois do teste de Fortitude | executar-as7 + navegador |
+
+### Leituras e inconsistências da fonte
+
+- **Incinerado**: imunidade a fogo e vulnerabilidade a fogo impressas juntas; resistência e vulnerabilidade a balístico também. Mantido como impresso, com nota: o mestre decide. **Stryzga**: resistência e vulnerabilidade a balístico, idem.
+- **"página @@"**: a ficha de Alvira remete ao Vampirismo com um marcador de página não preenchido. O ritual está nas p. 76–77; a nota diz isso nos dois lugares.
+- **Zéfero / Zéfiro**: o texto usa as duas grafias; o registro usa a do título (Zéfero). **Stryzga / strygza**: idem, Stryzga.
+- **Apóstata, bônus dos patamares**: "+10/+15/+20 em testes, rolagens de dano e RD" lido como o total sobre a ficha de VD 80 (cada patamar substitui o anterior), não como bônus que se somam. Nota na ficha.
+- **Raziel**: o Abraço Sanguinolento do Verdadeiro Raziel mantém o agarrar em 4O+15 embora as garras subam para 4O+25 — valor publicado mantido.
+- **Notação "O"**: na fonte, "O" é o d20 ("4O+15" = 4d20+15; "–2O" = o pior de dois d20). Convertido para a notação do R.A.M.A. em todas as fichas; o dado de dano não muda.
+- **Infecção, DT do teste diário**: "DT 20 +1 por dia infectado" contado pelos dias da cronologia desde a infecção: no primeiro teste (dia seguinte), 21.
+- **Ritos da Apóstata**: "complexidade baixa (OPRPG p. 77)" contado como 3 sucessos antes de 3 falhas; a mesa pode concluir ou interromper antes. Concluir um rito muda a forma (PV máximos do patamar), sem restaurar os PV atuais.
+- **Sacrifício de Ser Testado**: "não afeta PV, PE, SAN ou número de perícias treinadas" — as contas desses recursos usam o atributo sem o sacrifício (`atributoSemSacrificio`); testes, Defesa e carga usam com.
+- **Tatuagem Ritualística ampliada** (Ser Perfurado): uma redução só. Quem já tem o poder não recebe outro –1 nos marcados.
+- **Pé de Coelho**: o d4 é rolado em cada teste da cena; "ímpar" é o resultado desse d4.
+- **Sussurros e Vultos com Jogando sem Sanidade**: sem perda de SAN, o bônus continua (contrato do AS4 para custos de Sanidade).
+- **Vasos da Audição**: um ritual do círculo exato da forma (1º, 2º, 3º) que a pessoa conjurava — quem diz qual é a mesa.
+- **Pressão**: as consequências (condição e 1d6 de PV) são aplicadas logo depois do teste de Fortitude; a DT sobe por teste anterior na mesma faixa e recomeça ao mudar de faixa.
+
+### O que a ficha guarda de novo (schema 29)
+
+`ordem.arquivo7`: `contatos`, `procedimento` (registros do dia, dias sem
+procedimento, usos limitados, itens tocados, escolhas de perícias e rituais
+marcados, rituais do 4º círculo, corporeidade, acoplado), `vampirismo`
+(`corpos`, `consumos`), `submerso`, `infeccao`, `exposicoes` e `usos` (ids de
+operação). Itens: `item.ordem.as7` (Carranca, Pé de Coelho, Sal, Terço).
+Condições: `condicoes.limiteExtra.morrendo` (posto e tirado conforme o dia).
+Na exportação, os ids viram `ref7` e voltam na importação (a importação apaga
+todo campo `id`); registros sem id ganham um ao normalizar; ids repetidos
+entram uma vez. A ocorrência de criatura usa só as chaves que já existiam
+(`estado:`, `uso:`, `marcador:`, `forma`) — o servidor confere igual.
+
+
 ## Suplementos habilitáveis (v6.1)
 
-Os oito suplementos (SAH, AS1–AS6 e os Extras — fonte `EXTRA`, desde a v6.2)
+Os nove suplementos (SAH, AS1–AS7 e os Extras — fonte `EXTRA`, desde a v6.2; o AS7 desde a v6.5)
 são habilitados por ficha e por campanha (`js/suplementos.js`). Os Extras
 deixaram de ser "sempre ligados": uma ficha com só o livro básico não oferece
 mais o Revoltado nem Barganha Insana para escolhas novas (os que já estão em

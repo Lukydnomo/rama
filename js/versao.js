@@ -118,6 +118,30 @@
 
   var CHANGELOG = [
     {
+      versao: "6.5.0",
+      codinome: "MEMBRANA",
+      data: "31/10/2026",
+      mudancas: {
+        "Adicionado": [
+          "Arquivos Secretos 7 (v1.0) como suplemento de Ordem Paranormal, com capa, entre o Arquivos Secretos 6 e os Extras. Começa ligado na ficha nova e respeita a escolha da ficha e da campanha, como os outros.",
+          "Origens Exorcizado e Sensitivo Rebelde. O Que Restou dá RD 5 contra o elemento escolhido e registra o primeiro contato de cada cena com a perda de 2 SAN uma vez (quem diz que houve contato é a mesa). Sussurros e Vultos aparece no resultado dos testes de Diplomacia, Enganação, Intimidação e Intuição: perde 2 SAN e mostra o mesmo teste com +5.",
+          "Trilhas Monstruoso para Especialista e para Ocultista, separadas da Monstruoso do Sobrevivendo ao Horror. O experimento ou a escarificação do dia é um botão no cartão: consome o componente, rola a recuperação e liga os efeitos do elemento até o próximo dia da cronologia, sem repetir ao recarregar. Sacrifícios de Ser Testado (que não mexem em PV, PE, SAN nem na quantidade de perícias), braços de Ser Expurgado, rituais marcados na pele, reação de Ser Perfurado, +2 na DT de Ser Rasgado e os rituais de 4º círculo de Ser Mutilado e de Ser Apavorante só no dia.",
+          "Ritual Vampirismo, com o corpo da cena e os cinco vasos: cada vaso uma vez por corpo, o corpo encerrado no fim da cena nunca mais serve, e o que os vasos dão (ataques, cura, perícia, ritual) dura só a cena.",
+          "Itens Carranca Caçadora, Cajado da Cruz de Sangue, Pé de Coelho, Sal Dourado e Terço Maculado, com os benefícios nas condições do livro (empunhado, vestido, uma vez por cena, por usos).",
+          "Resguardar Espírito na consulta dos usos de Religião.",
+          "Ameaças Raziel, O Verdadeiro Raziel, Alvira, Sabara, Velisar e Zéfero (Pessoas), Incinerado, Stryzga e a Apóstata. No combate, o painel da ocorrência controla os ritos e os patamares da Apóstata, o Enigma de Medo, os fios e Gnosis Absoluta; o sangue de Alvira; a combustão do Incinerado; as alimentações da Stryzga e as armadilhas de Velisar. A Fúria Sanguinária de Raziel é uma forma que começa com pelo menos 200 PV.",
+          "Mentem Corrumpere na ficha de quem foi infectado: estágio, teste diário (DT 20 +1 por dia), falhas seguidas e o que cada estágio dá.",
+          "Regras debaixo d'água (Arquivos Secretos 7, p. 92–93) como regra opcional, desligada por padrão e marcada como não oficial e não canônica. Ligada, as penalidades só valem com a ficha submersa; a Pressão pede Fortitude por profundidade e aplica o resultado.",
+        ],
+        "Melhorado": [
+          "Na ficha de quem joga sem Sanidade, os botões que custariam SAN dizem que a perda não se aplica antes do clique.",
+        ],
+        "Técnico": [
+          "js/ordem/arquivo7.js (regras e estado), js/ordem/telas/ficha-arquivo7.js (tela) e js/ordem/criaturas-as7.js (painel das ameaças). Ficha no schema 29 com `ordem.arquivo7`, sem conversão; ids de operação em toda ação que muda a ficha. Precisa do site e do Apps Script novo (Sistemas.gs e Campanhas.gs, sem setupRama). Testes em testes/executar-as7.js; cobertura e leituras em docs/ORDEM-REGRAS.md.",
+        ],
+      },
+    },
+    {
       versao: "6.4.1",
       codinome: "AQUARELA",
       data: "31/10/2026",

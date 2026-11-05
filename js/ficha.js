@@ -195,6 +195,15 @@
      conversão: a ficha antiga continua sem o campo. Uma aba antiga
      descartaria a escolha ao gravar — com o schema maior ela recusa.
 
+     28 → 29: Arquivos Secretos 7 (v6.5). O bloco `ordem` ganhou
+     `arquivo7` (o contato do Exorcizado, o procedimento diário das
+     variantes de Monstruoso com sacrifícios e escolhas, o Vampirismo,
+     debaixo d'água, a infecção da Apóstata, a exposição em dobro); as
+     Condições, `limiteExtra` (morrendo); o item, `as7` (Carranca, Pé de
+     Coelho, Sal Dourado, Terço). Sem conversão: uma ficha 28 abre com o
+     estado vazio. Uma aba antiga descartaria o procedimento do dia e os
+     vasos consumidos ao gravar — com o schema maior ela recusa.
+
      Nenhuma das subidas exige migração: normalizarFicha() cria o que
      falta, vazio, e não toca no que existe. Um ritual gravado na 2 abre
      na 3 com a versão Normal em branco; uma ficha de Ordem gravada na 4
@@ -204,7 +213,7 @@
      os campos novos e os descartaria ao gravar — com o schema maior ela
      recusa abrir a ficha e pede para recarregar.
      Ver docs/CHARACTER_SCHEMA.md. */
-  var VERSAO_SCHEMA = 28;
+  var VERSAO_SCHEMA = 29;
 
   var MODULOS = {
     atributos: "Atributos", status: "Status/recursos", defesa: "Defesa",

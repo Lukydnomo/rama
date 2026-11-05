@@ -407,6 +407,17 @@
       if (od.procedimentos && od.procedimentos.length) partes.push(blocoDeProcedimentos(v));
       var inq = blocoDoInquerito(v);
       if (inq) partes.push(inq);
+      /* Arquivos Secretos 7 (v6.5): a mecânica com estado de algumas
+         ameaças (ritos da Apóstata, sangue de Alvira…) — js/ordem/criaturas-as7.js.
+         Grava só pelas chaves da ocorrência (estado/uso/marcador/forma). */
+      var mec = global.RAMACriaturasMecanicas ? global.RAMACriaturasMecanicas.bloco(v.origem && (v.origem.catalogoId || v.origem.copiadoDe), {
+        atual: function () { return atual; },
+        pode: instancia && !!o.aoInstancia && !!o.aoStatus,
+        aplicar: aplicar,
+        aplicarStatus: function (id, valor) { aplicarStatus(id, valor); pintar(); },
+        rolar: rolar,
+      }) : null;
+      if (mec) partes.push(mec);
 
       if (instancia && o.aoInstancia) {
         var nota = el("textarea.r-area", { rows: 2, maxlength: 1000, "aria-label": "Condições e anotações desta ocorrência" });

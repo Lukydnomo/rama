@@ -43,6 +43,10 @@
             manda-chuva e segurança (p. 56–59), hikikomori, marca-passo e
             Estímulo (p. 60–62), experimento Ssabáka (p. 63) e os quatro
             perfis "como aliado" (p. 28, 33, 37, 41)
+     AS7    Arquivos Secretos 7, v1.0 (Jambô, pacote de conteúdo oficial)
+            Raziel, O Verdadeiro Raziel, Alvira, Sabara, Velisar e Zéfero
+            (p. 40–45, pessoas), Incinerado (p. 64–65), Stryzga (p. 66–67) e
+            a Apóstata com os quatro patamares (p. 68–73)
 
    As páginas são as do livro, não as do PDF. Os resumos são redação
    própria: guardam os números, as condições e os testes que o jogo
@@ -56,7 +60,7 @@
    FORMATO DE UMA ENTRADA
    ---------------------------------------------------------------------
 
-     id            estável: <livro>.criatura.<nome> (op, sah, as1, as2, as3, as4, as5).
+     id            estável: <livro>.criatura.<nome> (op, sah, as1 … as7).
                    Nunca muda, mesmo que o nome mude. Variantes têm o id
                    da base mais um sufixo (op.criatura.o-anfitriao.liber)
      livro, pagina a referência impressa
@@ -131,6 +135,7 @@
   var AS4 = "AS4";
   var AS5 = "AS5";
   var AS6 = "AS6";
+  var AS7 = "AS7";
 
   var SA = "sangue";
   var MO = "morte";
@@ -5619,6 +5624,399 @@
     });
   })();
 
+
+    /* =================================================================
+       ARQUIVOS SECRETOS 7 (v6.5) — p. 40–45 e 64–73
+       -----------------------------------------------------------------
+       As seis primeiras são PESSOAS na fonte (Raziel e a família): não
+       viram criaturas de Sangue pelo tema — a Monstruosidade já está
+       contabilizada nos números. O Verdadeiro Raziel é ficha própria
+       (p. 41) e também a forma "Fúria Sanguinária" da ocorrência de
+       Raziel: ao assumi-la com menos de 200 PV, fica com 200 PV
+       (`pvMinimoAoAssumir`). As mecânicas com estado (Alvira, Stryzga,
+       Incinerado, Velisar e a Apóstata) moram em js/ordem/criaturas-as7.js
+       e aparecem no painel da ocorrência; aqui só os dados publicados.
+       ================================================================= */
+
+    (function () {
+      function monstruosidade(quem, rd) {
+        return hab("Monstruosidade", quem + " já passou por incontáveis rituais para manter poderes e longevidade, sendo quase uma criatura do Outro Lado: faro, percepção às cegas, resistência a balístico, impacto e perfuração " + rd[0] + " e a Sangue " + rd[1] + ", e vulnerabilidade a Morte — já contabilizados na ficha.");
+      }
+      function perseguir(quem) {
+        return acao("movimento", "Perseguir", "Uma vez por rodada, " + quem + " percorre o dobro do deslocamento na direção de um alvo que esteja querendo matar.", { limite: [1, "rodada"] });
+      }
+      function abraco(quem, nome, teste, danoMordida, dt, gatilho) {
+        return acao("livre", nome, "Se " + quem + " acertar um ataque " + gatilho + ", pode tentar agarrar o alvo (teste " + teste + "). Uma vez por rodada, como ação livre, morde um ser agarrado: " + danoMordida + " de dano de Sangue (Fortitude DT " + dt + " reduz à metade) e recupera PV iguais à metade do dano causado.",
+          { rolagens: [teste_("Agarrar", teste), dano("Mordida", danoMordida + " Sangue")], resistencia: "Fortitude DT " + dt + " reduz à metade", limite: [1, "rodada"] });
+      }
+      function teste_(r, e) { return teste(r, e); }
+      var RD_FAMILIA = [[10, "balistico", "impacto", "perfuracao"], [20, "sangue"]];
+      var SENTIDOS = ["faro", "percepção às cegas"];
+
+      function razielBase() {
+        return {
+          id: "as7.criatura.raziel", livro: AS7, pagina: 40,
+          nome: "Raziel", natureza: "humana", tipo: "Pessoa", tamanho: "Médio", categoria: "Família de Raziel", vd: 120,
+          elementos: [],
+          descricao: "O patriarca, elegante a ponto de parecer imune à dor. Persegue e mata quem tocar na família — e, ferido ou enfurecido, assume a forma da Fúria Sanguinária.",
+          percepcao: "2d20+5", iniciativa: "4d20+10", sentidos: SENTIDOS,
+          defesa: 28, fortitude: "3d20+10", reflexos: "4d20+10", vontade: "2d20+5",
+          pv: 240, machucado: 120, pvBase: 240,
+          resistencias: RD_FAMILIA, vulnerabilidades: ["Morte"],
+          atributos: [4, 3, 3, 2, 3],
+          deslocamento: [[9, 6]],
+          pericias: [["Atletismo", "3d20+10"], ["Intimidação", "2d20+10"], ["Ocultismo", "3d20+10"]],
+          forma: { inicial: "Raziel", nota: "Raziel (VD 120) — a ficha de partida; Fúria Sanguinária é a forma O Verdadeiro Raziel" },
+          notas: [
+            "PESSOA na fonte (p. 40): sem elementos e sem presença perturbadora.",
+            "Fúria Sanguinária: ao assumir O Verdadeiro Raziel (VD 200, 400 PV) com menos de 200 PV, ele fica imediatamente com 200 PV — a troca de forma aplica isso.",
+          ],
+          habilidades: [
+            hab("Ignorar Dor", "Para efeito dramático e de intimidação, nesta forma Raziel ignora até a dor e parece imune a qualquer dano. Um teste de Intuição ou Percepção (DT 30) revela que a imunidade não é real."),
+            monstruosidade("Raziel", [10, 20]),
+            hab("Vingança", "Sempre que um familiar de Raziel morre, ele rastreia e mata não só o responsável, mas a maioria das pessoas ligadas a ele ou que estavam no mesmo local. Se acontecer na frente dele, entra em Fúria Sanguinária."),
+            hab("Fúria Sanguinária", "Machucado ou enfurecido, a critério do mestre, Raziel muda de forma: use a forma O Verdadeiro Raziel desta ocorrência."),
+          ],
+          acoes: [
+            agredir([at("Garras", "corpo a corpo", 2, "4d20+15", "2d10+20 perfuração", { critico: "18" })]),
+            acao("reacao", "Revidar e Estripar", "Uma vez por rodada, quando sofre um ataque corpo a corpo, revida com um ataque. Fazendo isso, perde as RD por 1 rodada, por deixar de se importar com a dor.", { limite: [1, "rodada"], marcador: "Sem RD nesta rodada" }),
+            abraco("Raziel", "Abraço Sanguinolento", "4d20+15", "6d6", 23, "com garras"),
+            perseguir("Raziel"),
+            acao("padrao", "Endurecer Sangue", "Bombeia sangue para os músculos: RD 5 até o fim da cena.", { marcador: "RD 5 na cena" }),
+            acao("padrao", "Fazer Sangrar", "Obriga o sangue de 1 ser em alcance curto a abandonar o corpo: 6d6 de dano de Sangue e sangrando (Fortitude DT 23 reduz à metade e evita a condição). Este sangramento faz perder 2d6 PV (em vez de 1d6).",
+              { rolagens: [dano("Fazer Sangrar", "6d6 Sangue"), dano("Sangramento (por turno)", "2d6")], resistencia: "Fortitude DT 23 reduz à metade e evita a condição" }),
+            acao("padrao", "Maldição Sanguínea", "Manipula o sangue de 1 ser em alcance curto: –1 dado em todos os testes até o fim da cena (Fortitude DT 23 reduz para 1 rodada).", { resistencia: "Fortitude DT 23 reduz para 1 rodada" }),
+          ],
+        };
+      }
+
+      function verdadeiroRaziel(id) {
+        return {
+          id: id, livro: AS7, pagina: 41,
+          nome: "O Verdadeiro Raziel", natureza: "humana", tipo: "Pessoa", tamanho: "Médio", categoria: "Família de Raziel", vd: 200,
+          elementos: [],
+          descricao: "Raziel na Fúria Sanguinária: sem elegância, só sede — vai atrás de quem ameaça Alvira ou do alvo com menos PV.",
+          percepcao: "2d20+10", iniciativa: "4d20+15", sentidos: SENTIDOS,
+          defesa: 38, fortitude: "3d20+15", reflexos: "4d20+15", vontade: "2d20+10",
+          pv: 400, machucado: 200,
+          resistencias: RD_FAMILIA, vulnerabilidades: ["Morte"],
+          atributos: [4, 3, 3, 2, 3],
+          deslocamento: [[12, 8]],
+          pericias: [["Atletismo", "3d20+15"], ["Intimidação", "2d20+15"], ["Ocultismo", "3d20+15"]],
+          notas: [
+            "PESSOA na fonte (p. 41). É também a forma Fúria Sanguinária da ocorrência de Raziel.",
+            "Assumida com menos de 200 PV, a forma começa com 200 PV (Fúria Sanguinária).",
+            "O livro mantém o teste de agarrar do Abraço Sanguinolento em 4O+15 nesta ficha, embora o ataque de garras suba para 4O+25: o valor publicado foi mantido.",
+          ],
+          habilidades: [
+            monstruosidade("Raziel", [10, 20]),
+            hab("Fúria Sanguinária", "Raziel assume esta forma machucado ou enfurecido, a critério do mestre. Com menos de 200 PV ao assumi-la, fica imediatamente com 200 PV."),
+            hab("Sede Incontrolável", "Se Alvira estiver sendo ameaçada, gasta todas as ações para matar quem a ameaça; senão, foca o alvo com menos PV na cena, para finalizá-lo."),
+          ],
+          acoes: [
+            agredir([at("Garras", "corpo a corpo", 2, "4d20+25", "5d10+30 perfuração", { critico: "18" })]),
+            acao("reacao", "Revidar e Estripar", "Uma vez por rodada, quando sofre um ataque corpo a corpo, revida com um ataque. Fazendo isso, perde as RD por 1 rodada.", { limite: [1, "rodada"], marcador: "Sem RD nesta rodada" }),
+            abraco("Raziel", "Abraço Sanguinolento", "4d20+15", "10d6", 29, "com garras"),
+            perseguir("Raziel"),
+            acao("padrao", "Bote Retalhador", "Salta sobre 1 ser em até 3 m. O alvo escolhe: Atacar — um único ataque como reação contra Raziel (sem itens nem habilidades); errando, sofre 10d10+30 de perfuração, fica caído e sangrando; acertando, metade do dano e sem as condições. Ou Escapar — Reflexos DT 29; falhando, o dano inteiro, caído e sangrando; passando, metade e sem as condições.",
+              { rolagens: [dano("Bote Retalhador", "10d10+30 perfuração")], resistencia: "Atacar (reação) ou Reflexos DT 29" }),
+          ],
+        };
+      }
+
+      var raziel = razielBase();
+      var forma = verdadeiroRaziel("verdadeiro");
+      raziel.formas = [{
+        id: "verdadeiro", nome: "O Verdadeiro Raziel (Fúria Sanguinária)", pagina: 41, vd: 200, pv: 400, machucado: 200, defesa: 38,
+        pvMinimoAoAssumir: 200,
+        percepcao: "2d20+10", iniciativa: "4d20+15", fortitude: "3d20+15", reflexos: "4d20+15", vontade: "2d20+10",
+        deslocamento: [[12, 8]],
+        ativacao: "Fúria Sanguinária: machucado ou enfurecido, a critério do mestre. Com menos de 200 PV ao assumir a forma, fica com 200 PV.",
+        pericias: forma.pericias, habilidades: forma.habilidades, acoes: forma.acoes, notas: forma.notas.slice(1),
+      }];
+      CRIATURAS.push(raziel);
+      CRIATURAS.push(verdadeiroRaziel("as7.criatura.o-verdadeiro-raziel"));
+
+      CRIATURAS.push({
+        id: "as7.criatura.alvira", livro: AS7, pagina: 42,
+        nome: "Alvira", natureza: "humana", tipo: "Pessoa", tamanho: "Médio", categoria: "Família de Raziel", vd: 120,
+        elementos: [],
+        descricao: "A madre superior da família: alimenta e cura os seus com o próprio sangue, e manipula quem bebeu dele como um títere.",
+        percepcao: "4d20+10", iniciativa: "3d20+10", sentidos: SENTIDOS,
+        defesa: 26, fortitude: "2d20+5", reflexos: "3d20+10", vontade: "4d20+10",
+        pv: 210, machucado: 105,
+        resistencias: RD_FAMILIA, vulnerabilidades: ["Morte"],
+        atributos: [3, 1, 2, 4, 2],
+        deslocamento: [[9, 6]],
+        pericias: [["Enganação", "4d20+10"], ["Medicina", "2d20+10"], ["Ocultismo", "2d20+10"], ["Religião", "4d20+10"]],
+        notas: [
+          "PESSOA na fonte (p. 42).",
+          "Vampirismo: o livro remete à “página @@”. O ritual está na biblioteca de rituais (Arquivos Secretos 7, p. 76–77).",
+          "Transferir Sangue, Madre Superior e Bolsa de Sangue têm botões no painel da ocorrência: o dano em Alvira entra nos PV dela e a cura aparece para quem a recebe aplicar.",
+        ],
+        habilidades: [
+          monstruosidade("Alvira", [10, 20]),
+          hab("Madre Superior", "Um aliado adjacente pode gastar uma ação de movimento para sugar o sangue de Alvira: ela sofre 3d8+3 de dano e o aliado se cura no mesmo valor — metade, se ela estiver machucada. Com Alvira morrendo, não pode ser usada.", { rolagens: [soma("Sangue sugado (dano nela, cura no aliado)", "3d8+3")] }),
+          hab("Rituais (DT 23)", "Conjura o ritual abaixo sem pagar PE, até 10 PE por conjuração, com a ação apropriada."),
+        ],
+        acoes: [
+          agredir([at("Cruz de Sangue", "corpo a corpo", 2, "1d20+15", "2d12+10 corte")]),
+          acao("movimento", "Clamor do Sangue Divino", "Uma vez por cena, todos os seres em alcance longo, à escolha dela, recebem +1 dado em testes de Agilidade, Força ou Vigor até o fim da cena.", { limite: [1, "cena"] }),
+          acao("padrao", "Bolsa de Sangue", "Aumenta a capacidade sanguínea de 1 ser em alcance longo: ele recebe 3d8+3 PV; o que passar dos PV máximos vira PV temporários.", { rolagens: [soma("PV recebidos", "3d8+3")] }),
+          acao("padrao", "Sussurro Horripilante", "A voz ressoa por alcance longo, com os efeitos de uma presença perturbadora (DT 23, 4d6 mental; NEX 50% é imune).", { rolagens: [dano("Dano mental", "4d6 mental")], resistencia: "Presença perturbadora DT 23" }),
+          acao("completa", "Ritual: Vampirismo (Sangue 2)", "Ritual complexo, com muitas escolhas: consulte Vampirismo na biblioteca de rituais (Arquivos Secretos 7, p. 76–77). Sem custo de PE para ela, até 10 PE."),
+          acao("completa", "Titereira de Sangue", "Cordas de Sangue manipulam o corpo de 1 ser em alcance longo até o fim da cena; o alvo precisa ter bebido ou sido curado pelo sangue dela. No turno dele, gasta todas as ações no que ela ordenar (Fortitude DT 23 evita) e pode repetir o teste no início de cada turno para se libertar.", { resistencia: "Fortitude DT 23 evita (repete no início dos turnos)" }),
+          acao("completa", "Transferir Sangue", "Uma vez por rodada, regurgita o próprio sangue num ser adjacente: ela sofre 3d8+3 de dano e cura o alvo no mesmo valor (metade, machucada). O alvo pode evitar a cura com Reflexos (DT 23). Com Alvira morrendo, não pode ser usada.",
+            { rolagens: [soma("Sangue transferido", "3d8+3")], resistencia: "Reflexos DT 23 evita a cura", limite: [1, "rodada"] }),
+        ],
+      });
+
+      CRIATURAS.push({
+        id: "as7.criatura.sabara", livro: AS7, pagina: 43,
+        nome: "Sabara", natureza: "humana", tipo: "Pessoa", tamanho: "Médio", categoria: "Família de Raziel", vd: 100,
+        elementos: [],
+        descricao: "A espadachim da família, de espada e adaga: ripostes, golpes que derrubam e uma dança de lâminas.",
+        percepcao: "2d20+5", iniciativa: "3d20+10", sentidos: SENTIDOS,
+        defesa: 25, fortitude: "2d20+5", reflexos: "3d20+10", vontade: "2d20",
+        pv: 200, machucado: 100,
+        resistencias: RD_FAMILIA, vulnerabilidades: ["Morte"],
+        atributos: [3, 3, 2, 2, 2],
+        deslocamento: [[9, 6]],
+        pericias: [["Acrobacia", "3d20+10"], ["Atletismo", "3d20+10"], ["Sobrevivência", "2d20+10"]],
+        notas: ["PESSOA na fonte (p. 43)."],
+        habilidades: [monstruosidade("Sabara", [10, 20])],
+        acoes: [
+          agredir([at("Espada e adaga", "corpo a corpo", 2, "3d20+15", ["2d6+10 corte", "2d4 Sangue"], { critico: "18/x3" })]),
+          agredir([at("Arremessar faca", "à distância (curto)", 2, "3d20+15", "4d4+10 perfuração", { critico: "19" })], { nome: "Agredir (à distância)" }),
+          acao("reacao", "Esquiva", "Uma vez por rodada, quando sofre um ataque, +10 na Defesa contra esse ataque.", { limite: [1, "rodada"] }),
+          acao("reacao", "Mil Perfurações", "Acertando os dois ataques de espada e adaga no mesmo alvo, deixa-o sangrando (Fortitude DT 21 evita). Este sangramento faz perder 2d6 PV (em vez de 1d6).", { rolagens: [dano("Sangramento (por turno)", "2d6")], resistencia: "Fortitude DT 21 evita" }),
+          acao("reacao", "Ripostar e Revidar", "Uma vez por rodada, quando sofre um ataque corpo a corpo, defende com um ataque de espada e adaga contra o ataque sofrido: vencendo o teste oposto, não sofre dano e causa 2d6+10 de corte mais 2d4 de Sangue ao atacante.",
+            { rolagens: [teste_("Ripostar (teste oposto)", "3d20+15"), dano("Riposte", ["2d6+10 corte", "2d4 Sangue"])], limite: [1, "rodada"] }),
+          acao("livre", "Ringen am Schwert", "Acertando um ataque, pode tentar agarrar o alvo (teste 3d20+15). Uma vez por rodada, como ação livre, morde um ser agarrado: 6d6 de Sangue (Fortitude DT 21 reduz à metade) e recupera PV iguais à metade do dano.",
+            { rolagens: [teste_("Agarrar", "3d20+15"), dano("Mordida", "6d6 Sangue")], resistencia: "Fortitude DT 21 reduz à metade", limite: [1, "rodada"] }),
+          perseguir("Sabara"),
+          acao("padrao", "Dança Armada", "Gira com os braços estendidos, golpeando os seres adjacentes à escolha dela: 2d6+10 de corte mais 2d4 de Sangue (Reflexos DT 21 reduz à metade).", { rolagens: [dano("Dança Armada", ["2d6+10 corte", "2d4 Sangue"])], resistencia: "Reflexos DT 21 reduz à metade" }),
+          acao("padrao", "Golpe Derrubante", "Golpeia atrás da perna de 1 ser adjacente: 2d6+10 de corte mais 2d4 de Sangue e caído (Reflexos DT 21 reduz à metade e evita). Derrubando, mantém a ponta da espada no peito dele até o próximo turno dela: se a vítima se levantar ou fizer qualquer outra ação, sofre um ataque de espada e adaga como reação; se tentar rolar para longe (ação padrão), faz Iniciativa DT 23 — passando, rola para longe; falhando, sofre o ataque.",
+            { rolagens: [dano("Golpe Derrubante", ["2d6+10 corte", "2d4 Sangue"])], resistencia: "Reflexos DT 21 reduz à metade e evita a condição" }),
+        ],
+      });
+
+      CRIATURAS.push({
+        id: "as7.criatura.velisar", livro: AS7, pagina: 44,
+        nome: "Velisar", natureza: "humana", tipo: "Pessoa", tamanho: "Médio", categoria: "Família de Raziel", vd: 100,
+        elementos: [],
+        descricao: "O cientista da família: sabe de tudo que está à volta, arma armadilhas de sangue e comanda os próprios experimentos.",
+        percepcao: "3d20+10", iniciativa: "2d20+5", sentidos: SENTIDOS,
+        defesa: 25, fortitude: "2d20", reflexos: "2d20+5", vontade: "3d20+10",
+        pv: 180, machucado: 90,
+        resistencias: RD_FAMILIA, vulnerabilidades: ["Morte"],
+        atributos: [2, 1, 4, 3, 2],
+        deslocamento: [[9, 6]],
+        pericias: [["Artes", "3d20+10"], ["Atletismo", "1d20+10"], ["Ciências", "4d20+10"], ["Ocultismo", "4d20+10"], ["Tecnologia", "4d20+10"]],
+        notas: ["PESSOA na fonte (p. 44).", "As armadilhas criadas ficam listadas no painel da ocorrência, cada uma com o próprio disparo."],
+        habilidades: [
+          monstruosidade("Velisar", [10, 20]),
+          hab("Velisar Sabe", "Percebe auras paranormais e criaturas invisíveis ou semelhantes em alcance médio, e qualquer ameaça ou armadilha num raio de 18 m."),
+        ],
+        acoes: [
+          agredir([at("Garras", "corpo a corpo", 2, "3d20+15", "2d10+10 perfuração", { critico: "19" })]),
+          acao("reacao", "Esquiva", "Uma vez por rodada, quando sofre um ataque, +5 na Defesa contra esse ataque.", { limite: [1, "rodada"] }),
+          abraco("Velisar", "Abraço Sanguinolento", "3d20+15", "6d6", 21, "com garras"),
+          perseguir("Velisar"),
+          acao("padrao", "Armadilha Sanguinária", "Cria uma armadilha paranormal num espaço desocupado em alcance médio, disparada por qualquer ser que fique a 3 m ou menos dela (Investigação DT 21 para encontrar; Ocultismo DT 21 para desarmar). Caixão de Sangue: 1 ser a 3 m fica agarrado, caído e enredado (Reflexos DT 21 evita), e Velisar pode teletransportar o caixão com a vítima para a base dele. Explosão de Carne: todos a 3 m sofrem 6d6 de perfuração e ficam sangrando (Reflexos DT 21 reduz à metade e evita a condição). Gás Paralisante: todos a 3 m ficam paralisados por 1d4+1 rodadas (Fortitude DT 21 muda para 1 rodada).",
+            { rolagens: [dano("Explosão de Carne", "6d6 perfuração"), soma("Rodadas paralisado (Gás)", "1d4+1")], resistencia: "Encontrar: Investigação DT 21 · desarmar: Ocultismo DT 21" }),
+          acao("padrao", "Comandar Experimento", "Uma vez por rodada, comanda um dos experimentos em alcance longo: se ele cumprir o comando até o início do próximo turno de Velisar e o comando envolver um teste, recebe +1 dado nele.", { limite: [1, "rodada"] }),
+          acao("padrao", "Olhar da Curiosidade Mórbida", "Encara 1 ser em alcance médio e tenta seduzi-lo: Reflexos (DT 21) para desviar o olhar ou Vontade (DT 21) para resistir. Falhando, fica fascinado e, até sair da condição (sofrer ação hostil ou ser sacudido), só faz ações de dar atenção e ser prestativo com Velisar.", { resistencia: "Reflexos ou Vontade DT 21" }),
+        ],
+      });
+
+      CRIATURAS.push({
+        id: "as7.criatura.zefero", livro: AS7, pagina: 45,
+        nome: "Zéfero", natureza: "humana", tipo: "Pessoa", tamanho: "Médio", categoria: "Família de Raziel", vd: 80,
+        elementos: [],
+        descricao: "O demônio de coleira de Velisar: domesticado a carne e sangue, escala paredes e vai atrás do mais fraco.",
+        percepcao: "2d20+5", iniciativa: "2d20+10", sentidos: SENTIDOS,
+        defesa: 23, fortitude: "3d20+10", reflexos: "2d20+5", vontade: "2d20",
+        pv: 140, machucado: 70,
+        resistencias: [[5, "balistico", "impacto", "perfuracao"], [10, "sangue"]], vulnerabilidades: ["Morte"],
+        atributos: [2, 3, 0, 2, 2],
+        deslocamento: [[12, 8], [12, 8, "escalada"]],
+        pericias: [["Atletismo", "3d20+10"]],
+        notas: [
+          "PESSOA na fonte (p. 45).",
+          "O texto grafa o nome de dois jeitos: “Zéfero” (título e habilidades) e “Zéfiro” (em Dilacerar). O registro usa Zéfero, o do título.",
+          "Fome Bestial diz “quem a ameaça” referindo-se a Velisar: o pronome está como impresso; o sentido é quem ameaça Velisar.",
+          "O deslocamento traz “8q” (quadrados): 12 m são 8 quadrados.",
+        ],
+        habilidades: [
+          hab("Demônio de Coleira", "Domesticado por Velisar, faz o que ele manda em troca de carne ou sangue. Morto Velisar, pode ser domesticado por um novo dono que ofereça carne ou sangue e passe em Adestramento (DT 20)."),
+          hab("Fome Bestial", "Com Velisar ameaçado, gasta todas as ações para matar quem o ameaça; senão, foca o alvo com menos PV na cena."),
+          monstruosidade("Zéfero", [5, 10]),
+        ],
+        acoes: [
+          agredir([at("Garras", "corpo a corpo", 2, "3d20+10", "1d10+10 perfuração", { critico: "19" })]),
+          agredir([at("Mordida Furiosa", "corpo a corpo", 1, "3d20+10", "3d12+20 Sangue", { critico: "19" })], { nome: "Agredir (mordida)" }),
+          acao("reacao", "Bloqueio", "Uma vez por rodada, quando sofre um ataque, RD 10 contra esse ataque.", { limite: [1, "rodada"] }),
+          acao("livre", "Agarrão Lacerador", "Acertando a mordida, pode tentar agarrar o alvo (teste 3d20+10). Uma vez por rodada, como ação livre, morde um ser agarrado: 4d6 de Sangue (Fortitude DT 20 reduz à metade) e recupera PV iguais à metade do dano.",
+            { rolagens: [teste_("Agarrar", "3d20+10"), dano("Mordida", "4d6 Sangue")], resistencia: "Fortitude DT 20 reduz à metade", limite: [1, "rodada"] }),
+          acao("livre", "Dilacerar", "Acertando os dois ataques de garras no mesmo alvo, dilacera-o: +1d10 de dano de perfuração.", { rolagens: [dano("Dilacerar", "1d10 perfuração")] }),
+        ],
+      });
+
+      CRIATURAS.push({
+        id: "as7.criatura.incinerado", livro: AS7, pagina: 65,
+        nome: "Incinerado", natureza: "paranormal", tipo: "Criatura", tamanho: "Médio", vd: 60,
+        elementos: [EN, SA],
+        descricao: "Cadáver consumido pelo caos e pelas chamas, formado de um corpo queimado onde a Membrana está fragilizada pela Energia. Em agonia, derrete e vira mais chamas até colapsar numa explosão de plasma (p. 64).",
+        presenca: { dt: 19, dano: "3d6", imune: "NEX 35%" },
+        percepcao: "-2d20", iniciativa: "3d20+10",
+        defesa: 21, fortitude: "2d20+5", reflexos: "3d20+10", vontade: "-2d20",
+        pv: 100, machucado: 50,
+        imunidades: ["Fogo"],
+        resistencias: [[5, "balistico", "corte", "perfuracao"], [10, "sangue"], [20, "energia"]],
+        vulnerabilidades: ["Balístico", "Fogo", "Morte"],
+        atributos: [3, 3, 0, 0, 2],
+        deslocamento: [[9, 6]],
+        notas: [
+          "Inconsistência da fonte, mantida como impressa: imunidade a fogo e vulnerabilidade a fogo; resistência e vulnerabilidade a balístico. A ficha não escolhe uma — o mestre decide (a leitura mais comum é a imunidade valer sobre a vulnerabilidade a fogo, e a resistência 5 a balístico ser aplicada depois da vulnerabilidade).",
+          "Combustão Caótica, Instabilidade Ígnea e Consumido pelo Caos têm botões no painel da ocorrência: a perda de 10 PV no início do turno entra nos PV dele, e as duas ações padrão aparecem enquanto estiver machucado.",
+          "Percepção e Vontade “–2O”: o pior de dois d20.",
+        ],
+        habilidades: [
+          hab("Combustão Caótica", "No início de cada turno, perde 10 PV. Machucado, passa a ter duas ações padrão em vez de uma, enquanto continuar machucado."),
+          hab("Consumido pelo Caos", "Um ser que fique com SAN 0 ou 0 PV em chamas e em alcance curto do incinerado é consumido pelo fogo: morre na hora e vira um incinerado que age na rodada seguinte."),
+          hab("Natureza Incendiária", "Foca em incendiar coisas sempre que puder: mira os disparos de labaredas no que pega fogo ou explode (combustíveis, explosivos, munições)."),
+        ],
+        acoes: [
+          agredir([at("Disparo de labaredas", "à distância (curto)", 2, "3d20+10", "2d8+5 fogo", { nota: "O alvo fica em chamas." })]),
+          acao("reacao", "Alimentar as Chamas", "Quando um ser sofre dano da condição em chamas em alcance curto do incinerado, ele recupera PV iguais à metade do dano sofrido."),
+          acao("reacao", "Instabilidade Ígnea", "Ao ficar com 0 PV, as chamas consomem o corpo numa explosão de 6 m de raio: 5d10 de dano (metade mental, metade Energia) e em chamas (Reflexos DT 19 reduz o dano à metade e evita a condição).",
+            { rolagens: [dano("Explosão (metade mental, metade Energia)", "5d10")], resistencia: "Reflexos DT 19 reduz à metade e evita a condição" }),
+          acao("padrao", "Agonia Incandescente", "Um berro dilacerante invade a mente das pessoas num raio de 18 m: 3d6 de dano mental (Vontade DT 19 reduz à metade). Alvos em chamas sofrem –5 no teste.",
+            { rolagens: [dano("Agonia Incandescente", "3d6 mental")], resistencia: "Vontade DT 19 reduz à metade (em chamas: –5 no teste)" }),
+        ],
+      });
+
+      CRIATURAS.push({
+        id: "as7.criatura.stryzga", livro: AS7, pagina: 67,
+        nome: "Stryzga", natureza: "paranormal", tipo: "Criatura", tamanho: "Médio", vd: 120,
+        elementos: [SA, MO],
+        descricao: "A ave monstruosa da pessoa de dois corações que nunca morre de verdade: imita as vozes de quem devorou e caça os que estão ligados a eles (Polônia, 1707; p. 66).",
+        presenca: { dt: 23, dano: "4d6", imune: "NEX 50%" },
+        percepcao: "4d20+10", iniciativa: "3d20+10", sentidos: ["visão no escuro"],
+        defesa: 28, fortitude: "2d20+5", reflexos: "3d20+10", vontade: "4d20+10",
+        pv: 240, machucado: 120,
+        resistencias: [[10, "balistico", "impacto", "perfuracao"], [20, "quimico", "sangue"]],
+        vulnerabilidades: ["Balístico", "Fogo", "Morte"],
+        atributos: [3, 2, 3, 4, 2],
+        deslocamento: [[9, 6], [12, 8, "escalada"], [12, 8, "voo"]],
+        pericias: [["Acrobacia", "3d20+10"], ["Furtividade", "3d20+20"]],
+        notas: [
+          "Resistência e vulnerabilidade a balístico, como impresso: o mestre decide como as duas convivem.",
+          "As alimentações por alvo (Absorver Essência) e a regra de Constrição e Quebra-ossos (não na mesma rodada) ficam no painel da ocorrência.",
+          "O texto grafa “strygza” em Rasante Silencioso; o registro usa Stryzga, o do título.",
+        ],
+        habilidades: [
+          hab("Absorver Essência", "Alimentando-se de um alvo três vezes ou mais, recebe +1 dado em testes contra ele."),
+          hab("Dois Corações", "Quando mata uma pessoa, uma maldição começa: se a stryzga não for morta e queimada em 1d4+3 dias, uma nova stryzga surge na sepultura mais próxima de onde a pessoa morreu.", { rolagens: [soma("Dias até a nova stryzga", "1d4+3")] }),
+          hab("Ecos de Essência", "Conhece fragmentos do inconsciente de quem consumiu (nomes, personalidades, trejeitos, emoções) e os usa para achar presas: contra um ser ligado a alguém de quem já absorveu a essência, +1 dado em testes."),
+        ],
+        acoes: [
+          agredir([at("Mordida e garras", "corpo a corpo", 2, "3d20+15", "4d10+10 corte")]),
+          acao("livre", "Imitar Voz", "Imita a voz de alguém de quem se alimentou: contra um ser em alcance curto que possa ser afetado emocionalmente por aquela voz, 4d6 de dano mental (Vontade DT 23 reduz à metade).", { rolagens: [dano("Imitar Voz", "4d6 mental")], resistencia: "Vontade DT 23 reduz à metade" }),
+          acao("reacao", "Alimentar-se", "Ao acertar um ataque de mordida e garras, alimenta-se de parte do alvo (conte no painel da ocorrência)."),
+          acao("reacao", "Constrição", "Acertando mordida e garras num alvo Médio ou menor, pode agarrá-lo (teste 3d20+15). Já agarrando um alvo enquanto voa, uma vez por rodada, aperta mais: 4d10+10 de corte (Fortitude DT 23 reduz à metade). Não usa Constrição e Quebra-ossos na mesma rodada.",
+            { rolagens: [teste_("Agarrar", "3d20+15"), dano("Constrição", "4d10+10 corte")], resistencia: "Fortitude DT 23 reduz à metade", limite: [1, "rodada"] }),
+          acao("reacao", "Quebra-ossos", "Acertando mordida e garras num alvo Médio ou menor, pode agarrá-lo (teste 3d20+15). Já agarrando um alvo enquanto voa, uma vez por rodada, atira-o da altura que preferir: dano de queda pela altura (OPRPG p. 292) +4d6. Não usa Constrição e Quebra-ossos na mesma rodada.",
+            { rolagens: [teste_("Agarrar", "3d20+15"), dano("Dano extra da queda", "4d6")], limite: [1, "rodada"] }),
+          acao("reacao", "Rasante Silencioso", "Atingindo um alvo desprevenido ligado a alguém de quem absorveu a essência, ele também sofre 4d6 de dano mental e fica apavorado até o fim da cena (Vontade DT 23 reduz à metade e muda a condição para abalado).",
+            { rolagens: [dano("Rasante Silencioso", "4d6 mental")], resistencia: "Vontade DT 23 reduz à metade e muda para abalado" }),
+        ],
+      });
+
+      /* A Apóstata (p. 70–73). Quatro patamares: o VD 80 é a ficha; os ritos
+         levam às formas de VD 160, 240 e 320. O livro dá, em cada rito, a
+         presença, a Defesa e os PV do patamar e "+10/+15/+20 em testes,
+         rolagens de dano e RD". Leitura registrada: o bônus de cada
+         patamar SUBSTITUI o do anterior (é o total sobre a ficha de VD 80,
+         como os outros números do patamar), não se acumula com ele. */
+      function patamar(id, nome, vd, n, pv, machucado, defesa, presenca, extrasFlagellum, voo) {
+        function mais(expr) {
+          var m = /^(\d+)d20([+-]\d+)?$/.exec(expr);
+          return m ? m[1] + "d20+" + ((Number(m[2]) || 0) + n) : expr;
+        }
+        return {
+          id: id, nome: nome, pagina: 71, vd: vd, pv: pv, machucado: machucado, defesa: defesa,
+          percepcao: mais("3d20+10"), iniciativa: mais("2d20+0"), fortitude: mais("2d20+5"), reflexos: mais("2d20+0"), vontade: mais("3d20+10"),
+          resistencias: [[5 + n, "balistico", "corte", "impacto", "morte"], [20 + n, "conhecimento"]],
+          deslocamento: voo ? [[0, 0], [12, 8, "voo"]] : [[0, 0]],
+          ativacao: "Conclusão do " + (n === 10 ? "primeiro" : n === 15 ? "segundo" : "terceiro") + " rito: presença perturbadora DT " + presenca.dt + ", " + presenca.dano + " mental (NEX " + presenca.imune + " é imune); +" + n + " em testes, rolagens de dano e RD" + (extrasFlagellum ? "; " + extrasFlagellum : "") + ".",
+          habilidades: [hab("Presença perturbadora (patamar)", "DT " + presenca.dt + ", " + presenca.dano + " mental; NEX " + presenca.imune + " é imune.", { rolagens: [dano("Dano mental", presenca.dano + " mental")] })],
+          acoes: [
+            agredir([at("Flagellum", "à distância (curto)", 1 + (n === 15 ? 1 : n === 20 ? 2 : 0), "3d20+" + (10 + n), "6d10+" + n + " mental")], { nome: "Agredir (patamar)" }),
+            acao("livre", "Funes Ligantes (patamar)", "Como na ficha, com o teste de agarrar em 3d20+" + (15 + n) + ".", { rolagens: [teste_("Agarrar com os fios", "3d20+" + (15 + n))] }),
+          ],
+          notas: ["Os números do patamar são os publicados; os testes, o ataque, o dano e a RD levam o +" + n + " do rito (leitura: substitui o bônus do patamar anterior)."],
+        };
+      }
+
+      CRIATURAS.push({
+        id: "as7.criatura.apostata", livro: AS7, pagina: 70,
+        nome: "Apóstata", natureza: "paranormal", tipo: "Criatura", tamanho: "Médio", vd: 80, pvBase: 111,
+        elementos: [CO, MO],
+        descricao: "A manifestação que precisa da lembrança: escondida atrás de uma parede rachada de ídolos esquecidos, contamina mentes com uma fé impossível e se fortalece a cada rito (p. 68–73).",
+        presenca: { dt: 20, dano: "3d8", imune: "NEX 40%" },
+        percepcao: "3d20+10", iniciativa: "2d20",
+        defesa: 23, fortitude: "2d20+5", reflexos: "2d20", vontade: "3d20+10",
+        pv: 111, machucado: 55,
+        imunidades: ["Dano", "Todas as condições"],
+        resistencias: [[5, "balistico", "corte", "impacto", "morte"], [20, "conhecimento"]],
+        vulnerabilidades: ["Sangue"],
+        atributos: [2, 2, 3, 4, 2],
+        deslocamento: [[0, 0]],
+        forma: { inicial: "VD 80", nota: "VD 80 — a ficha de partida, escondida atrás dos ídolos" },
+        estados: [
+          { id: "patamar", nome: "Patamar (1: VD 80 · 2: VD 160 · 3: VD 240 · 4: VD 320)", maximo: 4, inicial: 1 },
+          { id: "exposta", nome: "Rodadas exposta (Enigma de Medo)", maximo: 3 },
+          { id: "fio-1", nome: "Dano no fio 1 (22 PV)", maximo: 22 },
+          { id: "fio-2", nome: "Dano no fio 2 (22 PV)", maximo: 22 },
+        ],
+        notas: [
+          "VD 80-320: a ficha é o VD 80; os ritos levam às formas de VD 160, 240 e 320 (seletor de forma, ou os botões do rito no painel).",
+          "Leitura registrada: o “+10/+15/+20 em testes, rolagens de dano e RD” de cada patamar substitui o do anterior — é o total sobre a ficha de VD 80, como a presença, a Defesa e os PV do patamar —, não um bônus que se soma ao anterior.",
+          "Os infectados (Mentem Corrumpere) são acompanhados na FICHA de cada infectado, na doença do Arquivos Secretos 7: estágio, dias, testes diários e falhas seguidas. Aqui ficam os ritos, os patamares, os fios e o Enigma.",
+          "O livro chama o teste estendido dos ritos de “complexidade baixa (OPRPG p. 77)”: o painel da ocorrência conta 3 sucessos antes de 3 falhas para cada rito (a mesa pode encerrar antes).",
+        ],
+        habilidades: [
+          hab("Mentem Corrumpere", "A apóstata pode escolher que um ser que falhe contra a presença perturbadora não sofra dano mental: a mente dele é contaminada por uma crença impossível — o primeiro estágio de uma doença (OPRPG p. 291), sem teste para pegar. Os estágios avançam com os ritos, e só a morte da criatura cura. No início de cada dia, o infectado faz Vontade (DT 20 +1 por dia infectado); falhando, não consegue se afastar mais de 90 m dela e usa todos os meios para voltar (a apóstata pode deixar um infectado se afastar para atrair vítimas). Estágio I: treinado em Religião (já treinado: +2); dois dias seguidos de falha obrigam a iniciar o primeiro rito. Estágio II: +5 em Religião, alquebrado e começa toda cena desprevenido por uma rodada; três dias seguidos de falha obrigam ao segundo rito. Estágio III: sem ter falhado no teste do dia, não consegue atacá-la até ser atacado por ela; quatro dias seguidos de falha obrigam ao último rito. Estágio IV: abandonado pela entidade, esmorecido e abalado."),
+          hab("Murus Idolorum", "Esconde-se no vazio atrás da parede rachada de ídolos esquecidos. Ser ou objeto que atravesse a parede sofre 20d12 de dano de Conhecimento; reduzido a 0 PV, é inexistido e morre na hora. Todos diante da parede sabem que não deviam encostar no vazio.", { rolagens: [dano("Atravessar a parede", "20d12 Conhecimento")] }),
+          hab("Ritus", "Os fiéis fazem ritos em nome dela: cada um danifica a Membrana e a fortalece. Um rito é um teste estendido de Religião de complexidade baixa (OPRPG p. 77); iniciado, todo infectado que falhou no teste diário é compelido a ajudar até o fim ou a interrupção. Primeiro Rito (DT 25): escritos e símbolos de crenças esquecidas — infectados vão ao estágio II e ela ao VD 160. Segundo Rito (DT 30): um vazio com contorno humano se abre e os fiéis oferecem uma pessoa a atravessá-lo — estágio III e VD 240. Terceiro Rito (DT 35): aberturas para pessoas específicas; resistido com um teste estendido de Vontade (complexidade baixa) — quem falha atravessa; com metade ou mais falhando, o rito se completa: estágio IV e VD 320."),
+        ],
+        acoes: [
+          agredir([at("Flagellum", "à distância (curto)", 1, "3d20+10", "6d10 mental")]),
+          acao("reacao", "Idololatria", "Acertando o flagellum, absorve devoção e potencial da vítima: recupera PV iguais à metade do dano. Só com VD 160 ou mais.", { requer: { estado: "patamar", minimo: 2 } }),
+          acao("reacao", "Gnosis Absoluta", "Ao sofrer dano, compreende a natureza dele e lembra do agressor para sempre: +5 de RD contra aquele tipo de dano, cumulativo e permanente. Só com VD 320 ou mais.", { requer: { estado: "patamar", minimo: 4 } }),
+          acao("livre", "Funes Ligantes", "Uma vez por rodada, acertando o flagellum, pode agarrar o alvo com os fios (teste 3d20+15). Mantém até dois agarrados. Cada fio pode ser atacado à parte (mesmas estatísticas, mas 22 PV); destruído o fio, o ser fica livre e a apóstata perde PV iguais aos PV máximos do fio.",
+            { rolagens: [teste_("Agarrar com os fios", "3d20+15")], limite: [1, "rodada"] }),
+          acao("livre", "Gnosis Implicata", "Acertando o flagellum, o alvo fica vulnerável a dano mental até o fim da cena. Só com VD 320 ou mais.", { requer: { estado: "patamar", minimo: 4 } }),
+          acao("livre", "Potentiam Absorbere", "Drena a essência de cada ser agarrado: 2d8 de dano mental em cada um, e um ataque adicional de flagellum por ser agarrado.", { rolagens: [dano("Potentiam Absorbere", "2d8 mental")] }),
+          acao("movimento", "Visio Vetita", "Aura de horror absoluto: todos num raio de 18 m que possam vê-la sofrem 6d8 de dano mental (Vontade DT 35 reduz à metade). Falha crítica deixa o alvo permanentemente cego. Só com VD 240 ou mais.",
+            { rolagens: [dano("Visio Vetita", "6d8 mental")], resistencia: "Vontade DT 35 reduz à metade (falha crítica: cego permanente)", requer: { estado: "patamar", minimo: 3 } }),
+          acao("completa", "Vacuitatem Observa", "A parede se abre com o contorno de um ser em alcance médio: ele fica fascinado e, enquanto durar, gasta todas as ações tentando atravessar a passagem (Vontade DT 30 evita; +5 se estiver agarrado pelos fios). Só com VD 240 ou mais.",
+            { resistencia: "Vontade DT 30 evita (35 agarrado pelos fios)", requer: { estado: "patamar", minimo: 3 } }),
+        ],
+        enigma: {
+          texto: "Enigma de Medo: protegida pelos ídolos, mantém as imunidades e não pode ser derrotada de forma definitiva. Só interromper um rito antes da conclusão a expõe.",
+          efeito: "Interrompido um rito, a verdadeira forma emerge: sem imunidades e com deslocamento 9 m | 6 por 3 rodadas; depois, volta a se ocultar, recuperando as imunidades e os PV perdidos. Concluído o último rito, perde as imunidades e abandona os ídolos de vez, com o único objetivo de matar todos os seguidores; feito isso, regride ao VD 80 e volta a se esconder, para recomeçar o ciclo.",
+        },
+        formas: [
+          patamar("vd160", "VD 160 (primeiro rito)", 160, 10, 333, 166, 34, { dt: 25, dano: "4d8", imune: "55%" }, ""),
+          patamar("vd240", "VD 240 (segundo rito)", 240, 15, 555, 277, 42, { dt: 31, dano: "6d8", imune: "75%" }, "um ataque adicional com o flagellum"),
+          patamar("vd320", "VD 320 (terceiro rito)", 320, 20, 777, 388, 50, { dt: 40, dano: "9d6", imune: "95%" }, "dois ataques adicionais com o flagellum e deslocamento de voo 12 m", true),
+        ],
+      });
+    })();
+
   global.RAMAOrdemCriaturasDados = {
     versao: 1,
     fontes: {
@@ -5630,6 +6028,7 @@
       AS4: { nome: "Arquivos Secretos 4", sigla: "AS4" },
       AS5: { nome: "Arquivos Secretos 5", sigla: "AS5" },
       AS6: { nome: "Arquivos Secretos 6", sigla: "AS6" },
+      AS7: { nome: "Arquivos Secretos 7", sigla: "AS7" },
     },
     criaturas: CRIATURAS,
   };

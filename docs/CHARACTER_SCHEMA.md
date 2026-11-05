@@ -5,6 +5,41 @@ padrão e normaliza o que chega de fora. Onde ela é guardada — inteira em
 `fichaJson` (formato antigo) ou em blocos (v2.15) — é assunto do backend, e não muda
 nada aqui: ver [DATABASE.md](DATABASE.md).
 
+## Arquivos Secretos 7 — v6.5 / schema 29
+
+Ficha de Ordem, campo novo `ordem.arquivo7` (normalizado por
+`RAMAOrdemArquivo7.normalizar`, chamado de `R.normalizar`), sem conversão: uma
+ficha 28 abre com o estado vazio e nada mais muda.
+
+```
+"arquivo7": {
+  "contatos": [{ "id", "cena", "elemento", "perdeu", "em" }],          // Exorcizado, 1 por cena
+  "procedimento": {
+    "registros": [{ "id", "dia", "trilha", "elemento", "marco", "cura", "componente", "sacrificio", "temporarios", "em" }],
+    "semProcedimento": [dia], "usos": [{ "id", "chave", "periodo", "alvo", "em" }],
+    "tocados": [{ "id", "nome", "escolha", "em" }],
+    "periciasConhecimento": [], "periciasApavorante": [], "rituaisMarcados": [],
+    "rituais99": { "elemento", "medo" }, "corporeidade": "", "acoplado": ""
+  },
+  "vampirismo": { "corpos": [{ "id", "alvo", "forma", "cena", "porMim", "encerrado", "em" }],
+                  "consumos": [{ "id", "corpoId", "vaso", "forma", "cena", "beneficiario", "paraMim", "escolha", "modo", "valor", "efeitoId", "em" }] },
+  "submerso": { "ativo", "profundidade", "natacao", "oxigenio", "testes", "efeitoId", "cena", "em" },
+  "infeccao": { "ativa", "desde", "estagio", "treinoPorBonus", "falhasSeguidas", "testes": [...], "efeitos": [], "curadaEm" },
+  "exposicoes": [{ "id", "tipo", "valor", "dobro", "em" }],
+  "usos": [{ "opId", "tipo", "em" }]                                     // operações já feitas
+}
+```
+
+- Listas com teto (40; consumos, 80) e ids únicos (repetido entra uma vez).
+- `item.ordem.as7` guarda o estado dos itens do AS7 (Carranca, Pé de Coelho,
+  Sal, Terço) — só o que vale; registro sem id ganha um.
+- `ordem.condicoes.limiteExtra.morrendo`: turnos a mais em morrendo (Ser
+  Testado de Morte), posto e tirado conforme o dia — não acumula ao recarregar.
+- Exportar/importar: os ids de `arquivo7` viajam como `ref7` (a importação
+  apaga todo `id`) e voltam; os `usos` mantêm os opIds, então nada se repete
+  depois de importar. As listas são mescladas por id na sincronização
+  (`js/sync.js`).
+
 ## Suplementos — v6.1 / schema 28
 
 Campo novo no nível da ficha, comum a todo sistema que tem suplementos

@@ -171,4 +171,12 @@ export function testarCriaturasBackend({ t, preparar, novaConta, comoFn, ambient
   t.ok("  estado desconhecido vira preparando", def(simul, "procedimento:exorcismo-digital", { estado: "explodido" }) && simul.instancia.procedimentos["exorcismo-digital"].estado === "preparando");
   t.ok("  procedimento que a ficha não tem é recusado", !def(simul, "procedimento:outro", { estado: "andamento" }));
   t.ok("  null recomeça", def(simul, "procedimento:exorcismo-digital", null) && !simul.instancia.procedimentos["exorcismo-digital"]);
+
+  t.grupo("Criaturas · forma com piso de PV e chaves das mecânicas (AS7, v6.5)");
+  const furia = { status: [{ id: "vida", atual: 30, maximo: 250 }],
+    ordem: { pvBase: 250, formas: [{ id: "verdadeiro", pv: 400, pvMinimoAoAssumir: 200 }], estados: [{ id: "patamar", maximo: 4 }, { id: "fio-1", maximo: 22 }] }, instancia: {} };
+  t.ok("assumir a forma com menos PV que o piso: fica com o piso (como no site)", def(furia, "forma", "verdadeiro") && furia.status[0].maximo === 400 && furia.status[0].atual === 200);
+  t.ok("  voltar à ficha de partida não restaura nada", def(furia, "forma", "") && furia.status[0].maximo === 250 && furia.status[0].atual === 200);
+  t.ok("  as chaves das mecânicas (estado no limite, uso, marcador) passam", def(furia, "estado:patamar", 4) && def(furia, "uso:gnosis.fogo", 3) && def(furia, "uso:alimentou.ana-souza", 3) && def(furia, "marcador:manifestada", true));
+  t.ok("  e as fora da régua, não", !def(furia, "estado:patamar", 5) && !def(furia, "estado:fio-1", 23));
 }

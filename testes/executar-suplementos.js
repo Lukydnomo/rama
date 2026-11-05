@@ -49,9 +49,9 @@ const PU = globalThis.RAMAOrdemPericiasUsos, F = globalThis.RAMAFicha, FU = glob
 t.grupo("Cadastro");
 {
   const l = S.doSistema("ordem");
-  t.iguais("os oito de Ordem, na ordem (Extras por último)", l.map((s) => s.fontes[0]), ["SAH", "AS1", "AS2", "AS3", "AS4", "AS5", "AS6", "EXTRA"]);
+  t.iguais("os nove de Ordem, na ordem (Extras por último)", l.map((s) => s.fontes[0]), ["SAH", "AS1", "AS2", "AS3", "AS4", "AS5", "AS6", "AS7", "EXTRA"]);
   t.igual("AS3 é Hexatombe — Parte II", S.daFonte("ordem", "AS3").nome, "Arquivos Secretos 3: Hexatombe — Parte II");
-  t.ok("ids estáveis", l.every((s) => /^ordem\.(sah|as[1-6]|extra)$/.test(s.id)));
+  t.ok("ids estáveis", l.every((s) => /^ordem\.(sah|as[1-7]|extra)$/.test(s.id)));
   t.ok("nome, descrição e capa em todos", l.every((s) => s.nome && s.descricao && /^assets\/sistemas\/ordem-(sah|as\d|extra)-capa\.webp$/.test(s.capa)));
   let capas = true;
   for (const s of l) { for (const c of [s.capa, s.capa.replace(".webp", "-pequena.webp")]) { try { await Deno.stat(new URL("../" + c, import.meta.url)); } catch { capas = false; } } }
@@ -67,7 +67,7 @@ t.grupo("Seleção: ausente × vazia");
   t.igual("ausente: null (todos)", S.normalizarSelecao("ordem", undefined), null);
   t.iguais("vazia: só o livro básico", S.normalizarSelecao("ordem", []), []);
   t.iguais("ids desconhecidos e repetidos saem", S.normalizarSelecao("ordem", ["ordem.as2", "x", "ordem.as2", 3]), ["ordem.as2"]);
-  t.igual("ausente = os oito ativos", S.ativos("ordem", null).length, 8);
+  t.igual("ausente = os nove ativos", S.ativos("ordem", null).length, 9);
   t.iguais("mapa da campanha por sistema", S.daCampanha({ ordem: ["ordem.sah"], goblins: [] }, "ordem"), ["ordem.sah"]);
   t.igual("campanha sem a chave: todos", S.daCampanha({ goblins: [] }, "ordem"), null);
 }
@@ -154,7 +154,7 @@ t.grupo("Ficha: persistência e o que já está em uso");
   t.ok("só o livro básico continua lista vazia ao salvar e abrir", Array.isArray(F.normalizarFicha(JSON.parse(JSON.stringify(F.criarFicha({ nome: "B", tipoFicha: "ordem", suplementos: [] })))).suplementos) && F.normalizarFicha(F.criarFicha({ nome: "B", tipoFicha: "ordem", suplementos: [] })).suplementos.length === 0);
   const antiga = F.normalizarFicha({ schemaVersion: 26, nome: "Antiga", tipoFicha: "ordem" });
   t.ok("ficha antiga: sem o campo (todos ligados, como na 6.0.0)", !("suplementos" in antiga));
-  t.igual("schema 28", F.VERSAO_SCHEMA, 28);
+  t.igual("schema 29", F.VERSAO_SCHEMA, 29);
   const copia = F.normalizarFicha(JSON.parse(JSON.stringify(nova)));
   t.iguais("exportar/importar (JSON) mantém", copia.suplementos, ["ordem.as2"]);
   const comUso = { tipoFicha: "ordem", ordem: { origem: "mateiro", classe: "combatente", trilha: "", escolhas: [], opcionais: {} }, rituais: { itens: [{ nome: "R", origemCatalogoId: (globalThis.RAMAOrdemRituaisDados.rituais.find((r) => r.fonte === "SAH") || {}).id }] }, inventario: { itens: [] } };

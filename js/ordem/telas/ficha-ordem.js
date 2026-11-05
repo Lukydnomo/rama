@@ -471,6 +471,19 @@
       }, [el("span", { texto: ativos === 1 ? "1 efeito ativo" : ativos + " efeitos ativos" })]));
     }
 
+    /* Arquivos Secretos 7: só o que pede ação hoje (o procedimento do dia,
+       o teste da infecção) e "submerso". */
+    (global.RAMAFichaArquivo7 ? global.RAMAFichaArquivo7.alertasDoResumo(ctx) : []).forEach(function (x) {
+      alertas.push(el("button.ordem-resumo__pendencias", {
+        type: "button",
+        "aria-label": x.texto + ". Ir para " + (x.aba === "habilidades" ? "Habilidades" : "Geral") + ".",
+        onclick: function () {
+          if (ctx.irParaAba) ctx.irParaAba(x.aba);
+          if (x.foco) setTimeout(function () { var a = document.querySelector('[data-foco="' + x.foco + '"]'); if (a) { a.focus(); if (a.scrollIntoView) a.scrollIntoView({ block: "center" }); } }, 0);
+        },
+      }, [el("span", { texto: x.texto })]));
+    });
+
     var est = c.estado;
     var pendentes = est ? est.pendencias.length : 0;
     if (pendentes) {
@@ -1017,6 +1030,7 @@
         !aq.origemChave && aq.situacao === "ok" && global.RAMAFichaArquivo4 ? global.RAMAFichaArquivo4.controles(ctx, aq) : null,
         !aq.origemChave && aq.situacao === "ok" && global.RAMAFichaArquivo5 ? global.RAMAFichaArquivo5.controles(ctx, aq) : null,
         !aq.origemChave && aq.situacao === "ok" && global.RAMAFichaArquivo6 ? global.RAMAFichaArquivo6.controles(ctx, aq) : null,
+        !aq.origemChave && aq.situacao === "ok" && global.RAMAFichaArquivo7 ? global.RAMAFichaArquivo7.controles(ctx, aq) : null,
       ].concat(avisos, [
         aq.referencia ? el("p.criacao-fonte", { texto: aq.referencia }) : null,
       ]);
@@ -1458,6 +1472,18 @@
   }
 
   function rolarAtributo(ctx, a, expressao, dadosDoTeste) {
+    /* Arquivos Secretos 7: dados extras em testes do atributo (+1d6 de
+       Ser Testado em Intelecto, +1d4 do Pé de Coelho). */
+    var o7 = ordemDe(ctx);
+    var mods7 = global.RAMAFichaArquivo7 ? global.RAMAFichaArquivo7.modificadoresDoTeste(ctx, o7, { atributo: a.chave, atributoPuro: true }) : [];
+    if (mods7.length) {
+      var rd = D.dependente({ expressao: expressao, sigla: a.sigla, nome: a.nome, bonus: 0, modificadores: mods7 });
+      if (!rd || !rd.ok) { UI.avisoErro("Expressão de dado inválida para " + a.nome + "."); return; }
+      rd.parcelas = rd.parcelas.slice(0, 1);
+      var notas7 = global.RAMAFichaArquivo7.depoisDoTeste(ctx, rd, mods7);
+      global.RAMARolagens.mostrar(Object.assign(rd, { tipo: "atributo", nome: a.nome }), { nome: a.nome, notas: notasDosDados(dadosDoTeste).concat(notas7) });
+      return;
+    }
     var r = D.rolar(expressao);
     if (!r.ok) { UI.avisoErro("Expressão de dado inválida para " + a.nome + "."); return; }
 
@@ -1712,6 +1738,9 @@
               if (fim && fim.mudou !== false && global.RAMAFichaArquivo5) avisos5 = global.RAMAFichaArquivo5.aoTrocarDeCena(ctx, cenaAntes);
               /* Arquivos Secretos 6: a imunidade a medo da cena sai; o rebote. */
               if (fim && fim.mudou !== false && global.RAMAFichaArquivo6) avisos5 = avisos5.concat(global.RAMAFichaArquivo6.aoTrocarDeCena(ctx, cenaAntes));
+              /* Arquivos Secretos 7: os corpos do Vampirismo encerram; PV
+                 temporários de Ser Testado (Morte) na cena nova. */
+              if (fim && fim.mudou !== false && global.RAMAFichaArquivo7) avisos5 = avisos5.concat(global.RAMAFichaArquivo7.aoTrocarDeCena(ctx, cenaAntes));
               return fim;
             }, "condicoes-nova-cena");
             if (fim && fim.encerradas && fim.encerradas.length) UI.aviso("Terminaram com a cena: " + fim.encerradas.join(", ") + ".");
@@ -1746,6 +1775,7 @@
                 fim = CD().novaCena(cond, null, { interludio: true });
                 if (fim && fim.mudou !== false && global.RAMAFichaArquivo5) avisos5 = global.RAMAFichaArquivo5.aoTrocarDeCena(ctx, cenaAntes);
                 if (fim && fim.mudou !== false && global.RAMAFichaArquivo6) avisos5 = avisos5.concat(global.RAMAFichaArquivo6.aoTrocarDeCena(ctx, cenaAntes));
+                if (fim && fim.mudou !== false && global.RAMAFichaArquivo7) avisos5 = avisos5.concat(global.RAMAFichaArquivo7.aoTrocarDeCena(ctx, cenaAntes));
                 /* Quase Novo (AS4): as modificações temporárias saem aqui, na
                    mesma gravação do interlúdio. */
                 if (fim && fim.mudou !== false && global.RAMAFichaArquivo4) vencidas = global.RAMAFichaArquivo4.aoNovoInterludio(ctx);
@@ -1991,10 +2021,13 @@
             type: "button", texto: "+ Adicionar condição", dataset: { foco: "efeitos-adicionar" },
             onclick: function () { adicionarCondicao(ctx, o); },
           }),
-        ].concat(global.RAMAFichaArquivo6 ? global.RAMAFichaArquivo6.botoesDeCondicoes(ctx) : [])),
+        ].concat(global.RAMAFichaArquivo6 ? global.RAMAFichaArquivo6.botoesDeCondicoes(ctx) : [],
+          global.RAMAFichaArquivo7 ? global.RAMAFichaArquivo7.botoesDeCondicoes(ctx) : [])),
       ]),
       /* Arquivos Secretos 6: doenças e venenos, só quando há algum. */
       global.RAMAFichaArquivo6 ? global.RAMAFichaArquivo6.condicoes(ctx) : null,
+      /* Arquivos Secretos 7: debaixo d'água (com a Pressão) e a infecção da Apóstata. */
+      global.RAMAFichaArquivo7 ? global.RAMAFichaArquivo7.condicoes(ctx) : null,
     ].filter(Boolean);
 
     if (resumo.automaticas.length) {
@@ -3017,12 +3050,15 @@
       var antes5 = global.RAMAFichaArquivo5.antesDoTeste(ctx, o, p, dado, bonus, atributo);
       if (antes5) { dado = antes5.dado; bonus = antes5.bonus; atributo = antes5.atributo; notas5 = antes5.notas || []; }
     }
+    /* Arquivos Secretos 7: os DADOS que entram na rolagem (+1d6 de Ser
+       Testado, +1d4 do Pé de Coelho) — não são bônus fixo. */
+    var mods7 = global.RAMAFichaArquivo7 ? global.RAMAFichaArquivo7.modificadoresDoTeste(ctx, o, { pericia: p.chave, atributo: atributo }) : [];
     var r = D.dependente({
       expressao: dado,
       sigla: siglaDe(atributo),
       nome: p.nome,
       bonus: bonus.total,
-      modificadores: [],
+      modificadores: mods7,
     });
 
     if (!r || !r.ok) { UI.avisoErro("Expressão de dado inválida para " + p.nome + "."); return; }
@@ -3030,17 +3066,19 @@
     /* As parcelas do bônus aparecem abertas no resultado: grau, poder,
        penalidade de carga — em vez de um "+15" sem explicação. */
     r.parcelas = [r.parcelas[0]].concat(bonus.parcelas.map(function (x) { return { rotulo: x.rotulo, valor: x.valor }; }));
+    var notas7 = global.RAMAFichaArquivo7 ? global.RAMAFichaArquivo7.depoisDoTeste(ctx, r, mods7) : [];
     var dados = R.dadosDoTeste(o, p.chave);
     var restr = restricoesDaPericia(ctx, p.chave);
     global.RAMARolagens.mostrar(Object.assign(r, { tipo: "pericia", nome: p.nome }), {
       nome: p.nome,
-      notas: notasDosDados(dados).concat(restr, notas5),
+      notas: notasDosDados(dados).concat(restr, notas5, notas7),
       acoes: [acaoDeEmpenho(ctx, o, p, r)].concat(global.RAMASecaoOrigens ? global.RAMASecaoOrigens.acoesNoTeste(ctx, o, p, r, dado, bonus, atributo) : [],
         global.RAMAFichaArquivo2 ? global.RAMAFichaArquivo2.acoesNoTeste(ctx, o, p, r, dado, bonus, atributo) : [],
         global.RAMAFichaArquivo3 ? global.RAMAFichaArquivo3.acoesNoTeste(ctx, o, p, r, dado, bonus, atributo) : [],
         global.RAMAFichaArquivo4 ? global.RAMAFichaArquivo4.acoesNoTeste(ctx, o, p, r, dado, bonus, atributo) : [],
         global.RAMAFichaArquivo5 ? global.RAMAFichaArquivo5.acoesNoTeste(ctx, o, p, r, dado, bonus, atributo) : [],
-        global.RAMAFichaArquivo6 ? global.RAMAFichaArquivo6.acoesNoTeste(ctx, o, p, r, dado, bonus, atributo) : []).filter(Boolean),
+        global.RAMAFichaArquivo6 ? global.RAMAFichaArquivo6.acoesNoTeste(ctx, o, p, r, dado, bonus, atributo) : [],
+        global.RAMAFichaArquivo7 ? global.RAMAFichaArquivo7.acoesNoTeste(ctx, o, p, r, dado, bonus, atributo) : []).filter(Boolean),
     });
   }
 
@@ -3104,6 +3142,7 @@
 
       return el("div.pilha--larga", { class: "pilha" }, [
         painelNivel(ctx, o, c),
+        global.RAMAFichaArquivo7 ? global.RAMAFichaArquivo7.painelDeProgressao(ctx) : null,
         painelPendencias(ctx, o, c, est),
         painelImportacao(ctx, o, c, est),
         painelAprendizado(ctx, o, c, est),
@@ -4165,7 +4204,8 @@
       el("p.t-mini", { texto: r.efeito }),
       ES.etiquetaAutomacao(r.automacao),
       el("p.criacao-fonte", {
-        texto: global.RAMAOrdemCatalogo.nomeDoLivro(r.fonte) + ", p. " + r.pagina + (r.fa ? " · conteúdo de fã (" + r.fa.autor + "), não oficial" : ""),
+        texto: global.RAMAOrdemCatalogo.nomeDoLivro(r.fonte) + ", p. " + r.pagina + (r.fa ? " · conteúdo de fã (" + r.fa.autor + "), não oficial" : "") +
+          (r.naoOficial ? " · não oficial e não canônica (" + r.naoOficial.procedencia + ")" : ""),
       }),
       /* Arquivos Secretos 6: Evolução Modular — associar as escolhas e
          reclassificar os ambíguos. */
@@ -4211,6 +4251,7 @@
     return cartaoCompacto(ctx, "regra:" + r.chave, r.nome, [
       el("span.t-mini", { texto: r.resumo }),
       r.fa ? el("span.t-mini.t-aviso", { texto: "Conteúdo de fã: não oficial e não canônico (" + r.fa.autor + ")." }) : null,
+      r.naoOficial ? el("span.t-mini.t-aviso", { texto: r.naoOficial.aviso }) : null,
       bloqueada ? el("span.t-mini.t-erro", { texto: "Não dá para ligar agora — abra para ver por quê." }) : null,
       guardados ? el("span.t-mini.t-aviso", { texto: "Há dados desta regra guardados." }) : null,
       linhaDeOrigem(r.chave, fonte),
@@ -4583,17 +4624,23 @@
       var margemAS2 = (as2.margem || 0) + pendAtaque.margem;
       notas = notas.concat(as2.notas || [], pendAtaque.notas);
 
+      /* Arquivos Secretos 7: +1d6 de Ser Testado (Energia), +1d8 do braço
+         de Sangue (corpo a corpo), +1d4 do Pé de Coelho. */
+      var tipoArma = (I.dadosDoItem(arma).arma || {}).tipo;
+      var mods7 = global.RAMAFichaArquivo7 ? global.RAMAFichaArquivo7.modificadoresDoTeste(ctx, ordemDe(ctx),
+        { pericia: ef.pericia, atributo: ef.atributoDoTeste, ataque: tipoArma === "corpoACorpo" ? "corpo" : "distancia" }) : [];
       var r = D.dependente({
         expressao: dado,
         sigla: siglaDe(ef.atributoDoTeste),
         nome: arma.nome,
         bonus: ef.ataque.total + bonusAS2,
-        modificadores: [],
+        modificadores: mods7,
       });
       if (!r || !r.ok) { UI.avisoErro("O dado de ataque de " + arma.nome + " não é válido."); return; }
 
       r.parcelas = [r.parcelas[0]].concat(ef.ataque.parcelas.map(function (x) { return { rotulo: x.rotulo, valor: x.valor }; }));
       if (bonusAS2) r.parcelas.push({ rotulo: "Arquivos Secretos 2", valor: bonusAS2 });
+      if (global.RAMAFichaArquivo7) notas = notas.concat(global.RAMAFichaArquivo7.depoisDoTeste(ctx, r, mods7));
       /* O crítico olha o natural principal, com a margem EFETIVA. */
       var margemDoAtaque = margemAS2 && ef.margem ? Math.max(1, ef.margem - margemAS2) : ef.margem;
       var critico = D.ehCritico(r.natural, margemDoAtaque);
@@ -4665,6 +4712,17 @@
       notasAS2 = notasAS2.concat(as4.notas || []);
       /* Ácido Corrosivo (AS5): os bônus já estão na conta; o tipo vira químico. */
       if (ef.acido) notasAS2.push(ef.acido);
+      /* Arquivos Secretos 7 · Ser Testado (Sangue): dados de Sangue a mais,
+         fora da multiplicação do crítico. */
+      var extra7 = global.RAMAFichaArquivo7 ? global.RAMAFichaArquivo7.danoExtraDoAtaque(ctx, ordemDe(ctx)) : null;
+      if (extra7) {
+        var d7 = D.dano({ nome: arma.nome, dano: extra7.expressao, danoExtra: "", critico: false });
+        if (d7 && d7.ok) {
+          r.parcelas.push({ rotulo: extra7.rotulo, valor: d7.total });
+          r.total += d7.total;
+          notasAS2.push(extra7.rotulo + ": " + d7.total + " de dano de Sangue (não multiplica no crítico).");
+        }
+      }
 
       /* Atributo e modificações: parcelas próprias, fora da multiplicação
          do crítico, como qualquer bônus numérico (OPRPG p.54). */

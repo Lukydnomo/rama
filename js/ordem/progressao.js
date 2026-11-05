@@ -372,6 +372,13 @@
   }
   var MOTIVO_TROCA = "Poder Não Desejado (Sobrevivendo ao Horror, p. 28): todo novo poder de ocultista vira Transcender.";
 
+  /* A trilha usa a Progressão de NEX da regra NEX & Experiência mesmo
+     sem a regra (AS7 p. 81 e 85). */
+  function usaProgressaoDeNex(ordem) {
+    var tr = ordem && ordem.trilha ? C.trilha(ordem.trilha) : null;
+    return !!(tr && tr.progressaoDeNex && C.trilhaServe(tr, ordem.classe, ordem));
+  }
+
   function soTranscende(ordem) {
     if (!ordem || ordem.trilha !== TRILHA_SO_TRANSCENDE) return false;
     var tr = C.trilha(ordem.trilha);
@@ -511,20 +518,29 @@
       }
     }
 
-    /* Com NEX & Experiência, a exposição abre as próprias vagas. */
-    if (t.separado) {
+    /* Com NEX & Experiência, a exposição abre as próprias vagas. As
+       variantes de Monstruoso do Arquivos Secretos 7 (p. 81 e 85) usam a
+       Progressão de NEX MESMO com a regra desligada: as alterações por
+       NEX vêm pelo NEX da ficha, com os mesmos ids (ligar e desligar a
+       regra não perde a escolha). Transcender pela exposição é outra
+       coisa — com a regra desligada, ele continua sendo poder de classe —
+       e não é aberto aqui. */
+    var pelaTrilha = !t.separado && usaProgressaoDeNex(ordem);
+    if (t.separado || pelaTrilha) {
       P.ALTERACOES_GERAIS.forEach(function (a) {
         if (exposicao < a.nex) return;
         lista.push(vaga("x" + a.nex + ".alteracao", "alteracao", {
           degrau: a.nex / 5,
           ordem: (a.nex / 5) * 100 + 58,
           rotulo: a.nome,
-          explicacao: a.resumo,
+          explicacao: a.resumo + (pelaTrilha ? " (Progressão de NEX da trilha Monstruoso, Arquivos Secretos 7.)" : ""),
           beneficio: a.chave,
           nexExposicao: a.nex,
-          rotuloEtapa: "NEX de exposição " + a.nex + "%",
+          rotuloEtapa: pelaTrilha ? "NEX " + a.nex + "% · Progressão de NEX" : "NEX de exposição " + a.nex + "%",
         }));
       });
+    }
+    if (t.separado) {
       P.NEX_DE_ALTERACAO.forEach(function (n) {
         if (exposicao < n) return;
         lista.push(vaga("x" + n + ".transcender", "transcenderExposicao", {
@@ -3562,13 +3578,24 @@
 
   /* A trilha Monstruoso prende a afinidade ao elemento da maldição
      (SAH p.17). O R.A.M.A. avisa; não troca nada sozinho. */
+  /* As variantes do Arquivos Secretos 7 (p. 81 e 85) prendem do mesmo
+     jeito, pelo elemento de Ser Experimentado e de Ser Escarificado. */
+  var ELEMENTO_DO_MONSTRUOSO = [
+    { chave: "serAmaldicoado", nome: "Ser Amaldiçoado", ref: "Sobrevivendo ao Horror, p. 17" },
+    { chave: "serExperimentado", nome: "Ser Experimentado", ref: "Arquivos Secretos 7, p. 81" },
+    { chave: "serEscarificado", nome: "Ser Escarificado", ref: "Arquivos Secretos 7, p. 85" },
+  ];
+
   function conflitoDeAfinidade(ordem, percurso, af) {
     if (!af.elemento) return "";
-    var maldicao = percurso.adquiridos.filter(function (a) { return vale(a) && a.chave === "serAmaldicoado"; })[0];
-    if (!maldicao || !maldicao.opcoes || !maldicao.opcoes.elemento) return "";
-    if (maldicao.opcoes.elemento === af.elemento) return "";
-    return "A trilha Monstruoso exige afinidade com " + nomeDoElemento(maldicao.opcoes.elemento) +
-      ", o elemento de Ser Amaldiçoado (Sobrevivendo ao Horror, p. 17).";
+    for (var i = 0; i < ELEMENTO_DO_MONSTRUOSO.length; i++) {
+      var m = ELEMENTO_DO_MONSTRUOSO[i];
+      var base = percurso.adquiridos.filter(function (a) { return vale(a) && a.chave === m.chave; })[0];
+      if (!base || !base.opcoes || !base.opcoes.elemento || base.opcoes.elemento === af.elemento) continue;
+      return "A trilha Monstruoso exige afinidade com " + nomeDoElemento(base.opcoes.elemento) +
+        ", o elemento de " + m.nome + " (" + m.ref + ").";
+    }
+    return "";
   }
 
   function motivoFora(ordem, r, t) {
@@ -4086,6 +4113,7 @@
     degrauDoNex: degrauDoNex,
     nexDoDegrau: nexDoDegrau,
     degrauDeExposicao: degrauDeExposicao,
+    usaProgressaoDeNex: usaProgressaoDeNex,
     rotuloDoDegrau: rotuloDoDegrau,
 
     vagas: vagas,

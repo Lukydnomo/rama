@@ -201,7 +201,19 @@
       perturbado: normalizarSimples(b.perturbado),
       efeitos: EF() ? EF().normalizarLista(b.efeitos) : (Array.isArray(b.efeitos) ? JSON.parse(JSON.stringify(b.efeitos)) : []),
       imunidades: EF() ? EF().normalizarImunidades(b.imunidades) : (Array.isArray(b.imunidades) ? b.imunidades.slice(0, 40) : []),
+      /* Turnos a mais no limite de morrendo (v6.5): Ser Testado de Morte
+         (AS7 p. 82), posto e tirado por js/ordem/arquivo7.js conforme o
+         experimento do dia. Só existe quando vale. */
+      limiteExtra: normalizarLimiteExtra(b.limiteExtra),
     };
+  }
+
+  function normalizarLimiteExtra(b) {
+    var x = (b && typeof b === "object") ? b : {};
+    var saida = {};
+    var n = Math.round(Number(x.morrendo));
+    if (isFinite(n) && n > 0) saida.morrendo = Math.min(10, n);
+    return saida;
   }
 
   /* =================================================================
@@ -215,7 +227,9 @@
   }
 
   function limiteDe(cond, chave) {
-    return OFICIAIS[chave] ? OFICIAIS[chave].limite : null;
+    if (!OFICIAIS[chave]) return null;
+    var extra = cond && cond.limiteExtra && cond.limiteExtra[chave] ? Math.round(Number(cond.limiteExtra[chave])) || 0 : 0;
+    return OFICIAIS[chave].limite + Math.max(0, extra);
   }
 
   function eventosDaCena(cond, chave) {

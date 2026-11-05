@@ -497,6 +497,10 @@
        Compreensão Paranormal já conhecida (uma vez, nunca somado). */
     var ajuste5 = global.RAMAFichaArquivo5 ? global.RAMAFichaArquivo5.ajusteDoRitual(ctx, elemento, ritual) : { menosPe: 0, notas: [] };
     if (selo) ajuste5 = { menosPe: 0, notas: [] };
+    /* Arquivos Secretos 7: Tatuagem Ritualística ampliada (marcados na
+       pele), o Cajado da Cruz de Sangue e Cicatrização de Ser Rasgado. */
+    var ajuste7 = global.RAMAFichaArquivo7 ? global.RAMAFichaArquivo7.ajusteDoRitual(ctx, elemento, ritual) : { menosPe: 0, notas: [] };
+    var estado7 = { alvo: "", rasgado: false };
     var estado3 = { peComPv: 0 };
     /* Arquivos Secretos 6: Grão-Mestre em Elemento soma +1 PE por um efeito. */
     var estado6 = { ligado: false, maisPe: 0, elemento: "", alvo: "aliado" };
@@ -529,7 +533,7 @@
         p: CS().planoDeRitual({
           elemento: elemento, afinidade: afinidade, controle: o.componentes, inventario: inv,
           controleLigado: controle, dispensa: estado.dispensa, entregar: complexa && estado.entregar,
-          catalisadorId: estado.catalisador, custo: custo ? Math.max(0, custo.total - semBase - ajuste3.menosPe - ajuste4.menosPe - ajuste5.menosPe) + (estado6.maisPe || 0) : 0, acrescimoPe: custoPeExtra,
+          catalisadorId: estado.catalisador, custo: custo ? Math.max(0, custo.total - semBase - ajuste3.menosPe - ajuste4.menosPe - ajuste5.menosPe - ajuste7.menosPe) + (estado6.maisPe || 0) : 0, acrescimoPe: custoPeExtra,
         }),
       };
     }
@@ -558,6 +562,7 @@
         if (ajuste3.menosPe && pl.custo) detalhes.push("–" + ajuste3.menosPe + " de Torvo");
         if (ajuste4.menosPe && pl.custo) detalhes.push("–" + ajuste4.menosPe + " do Explorador da Névoa");
         if (ajuste5.menosPe && pl.custo) detalhes.push("–" + ajuste5.menosPe + " da Paralinguística Ampliada");
+        if (ajuste7.menosPe && pl.custo) detalhes.push("–" + ajuste7.menosPe + " do Arquivos Secretos 7");
         if (estado6.maisPe && pl.custo) detalhes.push("+" + estado6.maisPe + " do Grão-Mestre em Elemento");
         if (selo && pl.semBase) detalhes.push("–" + pl.semBase + (selo.plano.semCustoAvancado ? " (Selo Supremo: sem o círculo nem o adicional)" : " do selo (o círculo foi pago na fabricação)"));
         if (estado3.peComPv > total) estado3.peComPv = total;
@@ -568,7 +573,7 @@
         ]));
         if (peDeVerdade > atual) partes.push(el("p.t-aviso", { texto: "Não há " + recurso.toUpperCase() + " suficientes para o custo." }));
         if (AS3) partes = partes.concat(AS3.opcoesNoRitual(ctx, estado3, total, pintar));
-        ajuste3.notas.concat(ajuste4.notas, ajuste5.notas).forEach(function (n) { partes.push(el("p.t-mini", { texto: n })); });
+        ajuste3.notas.concat(ajuste4.notas, ajuste5.notas, ajuste7.notas).forEach(function (n) { partes.push(el("p.t-mini", { texto: n })); });
       } else {
         partes.push(el("p.t-mini", { texto: "O custo deste ritual não está nos dados dele: registre o gasto à mão, nos recursos." }));
       }
@@ -620,6 +625,7 @@
       }
       if (selo && global.RAMAFichaArquivo5) partes = partes.concat(global.RAMAFichaArquivo5.linhasDoSelo(ctx, selo.plano));
       if (global.RAMAFichaArquivo6 && pl.custo) partes = partes.concat(global.RAMAFichaArquivo6.opcoesNoRitual(ctx, estado6, ritual, pintar));
+      if (global.RAMAFichaArquivo7) partes = partes.concat(global.RAMAFichaArquivo7.opcoesNoRitual(ctx, estado7, ritual, pintar));
       partes = partes.concat(opcoesDoArquivo(as1, estado, pl, pintar));
       if (barganha) partes.push(blocoDaBarganha(o, c, recurso, estado));
       if (efeito) {
@@ -669,6 +675,12 @@
       if (!r.repetido && global.RAMAFichaArquivo6 && estado6.ligado) {
         var gm = global.RAMAFichaArquivo6.aplicarNoRitual(ctx, estado6, ritual);
         if (gm) registro = (registro ? registro + " " : "") + gm;
+      }
+      /* Arquivos Secretos 7: o corpo do Vampirismo e a ação de Ser Rasgado
+         — uma vez, junto com este uso (o mesmo opId não repete). */
+      if (!r.repetido && global.RAMAFichaArquivo7) {
+        var a7 = global.RAMAFichaArquivo7.aplicarNoRitual(ctx, estado7, ritual, pl.v.nome, estado.gastar && pl.custo ? pl.p.custo : 0);
+        if (a7) registro = (registro ? registro + " " : "") + a7;
       }
       /* Barganha Insana: a restauração vem DEPOIS do custo — os PE voltam
          ao máximo, e o custo não é descontado de novo. N'A Antena, o

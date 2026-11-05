@@ -575,6 +575,18 @@
       "ordem.arquivo6.recebidos": "id",
       "ordem.arquivo6.hesitacao": "efeitoId",
       "ordem.arquivo6.rebotes": "id",
+      /* Arquivos Secretos 7 (v6.5): cada registro casa pelo id; os vasos
+         consumidos e o procedimento do dia nunca voltam de uma cópia
+         antiga sem o registro novo. */
+      "ordem.arquivo7.contatos": "id",
+      "ordem.arquivo7.procedimento.registros": "id",
+      "ordem.arquivo7.procedimento.usos": "id",
+      "ordem.arquivo7.procedimento.tocados": "id",
+      "ordem.arquivo7.vampirismo.corpos": "id",
+      "ordem.arquivo7.vampirismo.consumos": "id",
+      "ordem.arquivo7.infeccao.testes": "id",
+      "ordem.arquivo7.exposicoes": "id",
+      "ordem.arquivo7.usos": "opId",
       /* Barganha Insana (v2.41): cada conjuração casa pelo id. */
       "ordem.barganhaInsana.pendentes": "id",
       "ordem.barganhaInsana.resolvidas": "id",

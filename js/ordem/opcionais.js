@@ -53,6 +53,7 @@
   var AS3 = "AS3";
   var AS5 = "AS5";
   var AS6 = "AS6";
+  var AS7 = "AS7";
 
   /* Cada regra:
 
@@ -74,6 +75,9 @@
        consequencias   o que avisar antes de ligar numa ficha preenchida
        fa              (AS6) conteúdo de fã publicado num pacote oficial:
                        { autor, aviso } — a tela diz que não é oficial
+       naoOficial      (AS7) regra que o próprio pacote chama de não
+                       oficial e não canônica, sem autor de fã:
+                       { aviso, procedencia } — a tela diz isso
   */
   var REGRAS = [
     {
@@ -574,6 +578,28 @@
     ],
   });
 
+  /* Arquivos Secretos 7 (v6.5): as regras debaixo d'água da Dragão
+     Brasil #206, recuperadas no Inquérito Mensal (p. 92–93). O pacote
+     diz com todas as letras: não oficiais e não canônicas. Não é Extra
+     (conteúdo oficial avulso) nem conteúdo de fã com autor. Desligada
+     por padrão; ligada, nada muda até a ficha marcar que está submersa
+     (no painel de Condições) — e sair da água tira tudo. */
+  REGRAS.push({
+    chave: "regrasSubaquaticas",
+    nome: "Regras debaixo d'água",
+    resumo: "Respiração, natação, sentidos, combate e o perigo Pressão para personagens submersos.",
+    fonte: AS7, pagina: 92,
+    naoOficial: { aviso: "Regras recuperadas da Dragão Brasil #206 no Inquérito Mensal do Arquivos Secretos 7: não oficiais e não canônicas.", procedencia: "Dragão Brasil #206 (Inquérito Mensal, AS7 p. 92–93)" },
+    afetaFicha: true,
+    automacao: "parcial",
+    efeito: "Submerso, quem não tem fonte de oxigênio prende a respiração (OPRPG p. 42); criaturas paranormais não precisam respirar, a critério do mestre. Nadar pede Atletismo pela água (OPRPG p. 42), com escolher 10 em águas calmas sem risco. Com proteção pesada dá para ignorar a natação e caminhar no fundo a 3 m — se puder respirar. Falar é impossível; Percepção para ver e ouvir sofre –10; pistas visuais em água turva ou escura, –5 a mais (sem lanterna subaquática, infravermelho ou sonar). Só conjura quem dispensa fala e gestos. Combate: –5 em ataques (quem tem deslocamento de natação não sofre), armas de fogo com alcance 3 m, outras armas à distância não funcionam (exceto as de arremesso de perfuração, balestras e redes), corte e impacto não naturais causam metade do dano; submerso, você tem camuflagem e cobertura leve contra quem está fora d'água. O mestre pode ignorar isto em efeitos paranormais. Pressão: 50–99 m, fatigado (Fortitude DT 20 evita); 100–299 m, perde 1d6 PV por turno e fica exausto (Fortitude DT 25 +1 por teste anterior reduz à metade e evita); 300 m ou mais, Fortitude DT 25 +5 por teste anterior a cada rodada — falhando, inconsciente e perde 1d6 PV por rodada.",
+    parametros: [], depende: [], incompativel: [],
+    consequencias: [
+      "Ligar não muda nada na hora: as penalidades só valem com a ficha marcada como submersa (Condições), e saem ao marcar que saiu da água.",
+      "A profundidade é da cena: ela pede os testes de Pressão, mas nunca deixa penalidade fora d'água.",
+    ],
+  });
+
   var POR_CHAVE = {};
   REGRAS.forEach(function (r) { POR_CHAVE[r.chave] = r; });
 
@@ -600,7 +626,7 @@
       regras: ["limitesCompreensao", "aprendizadoEmCampo", "conjuracaoComplexa", "controleComponentes", "reterRitual",
         "transcenderComItens", "rituaisDesconhecidos", "desastresParanormais"] },
     { chave: "combate", nome: "Combate e sobrevivência",
-      regras: ["ferimentosDebilitantes", "contagemMunicao", "combateNarrativo"] },
+      regras: ["ferimentosDebilitantes", "contagemMunicao", "combateNarrativo", "regrasSubaquaticas"] },
     { chave: "poderes", nome: "Poderes e trilhas",
       regras: ["evolucaoModular", "poderesDeIntencao", "formasSupremas", "poderesDeSacrificio", "trilhaGeral", "poderesDeTransmissao"] },
     { chave: "aliados", nome: "Aliados e vínculos",

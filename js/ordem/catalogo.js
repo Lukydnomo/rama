@@ -24,6 +24,10 @@
      AS6    Arquivos Secretos 6, v1.0, Jambô (pacote de conteúdo oficial — as
             Indústrias Panacea; a regra opcional Evolução Modular, p. 80–81,
             é conteúdo de fã publicado no pacote: não oficial, não canônica)
+     AS7    Arquivos Secretos 7, v1.0, Jambô (pacote de conteúdo oficial —
+            vampiros, terrores da fé e duas variantes de Monstruoso; as
+            regras debaixo d'água, p. 92–93, vêm da Dragão Brasil #206 e o
+            próprio pacote as chama de não oficiais e não canônicas)
      EXTRA  Extra (v5.1): conteúdo OFICIAL avulso, que não saiu em livro —
             marca-páginas e outros materiais promocionais. Não é Homebrew
             (que é da conta de quem criou) e não é um livro: a entrada não
@@ -70,6 +74,7 @@
   var AS4 = "AS4";
   var AS5 = "AS5";
   var AS6 = "AS6";
+  var AS7 = "AS7";
   var EXTRA = "EXTRA";
 
   /* Os livros, num lugar só (v2.29). Quem precisa do nome de um livro
@@ -97,6 +102,11 @@
        personagens (p. 28, 33, 37, 41) e das ameaças da Panacea
        (p. 56–63) e a regra opcional Evolução Modular (p. 80–81). */
     { sigla: AS6, nome: "Arquivos Secretos 6", curto: "Arquivos Secretos 6", abreviacao: "AS6", edicao: "v1.0" },
+    /* v6.5: páginas 76–88 (ritual Vampirismo, itens, origens, uso de
+       Religião e as duas variantes de Monstruoso), as fichas das pessoas
+       (p. 40–45) e das criaturas (p. 64–73) e as regras debaixo d'água
+       do Inquérito Mensal (p. 92–93, não oficiais e não canônicas). */
+    { sigla: AS7, nome: "Arquivos Secretos 7", curto: "Arquivos Secretos 7", abreviacao: "AS7", edicao: "v1.0" },
     /* v5.1: a fonte das publicações oficiais avulsas. Fica na mesma lista
        para valer nas etiquetas, nas bibliotecas, nos filtros e nas
        validações como qualquer fonte oficial; `avulsa` diz que não há
@@ -687,6 +697,29 @@
       resumo: "Estuda as maldições do Outro Lado para usá-las contra ele: identifica, absorve, transfere e reproduz.",
       poderes: [poder(10, "Identificação Macabra", 45), poder(40, "Compreensão de Maldições", 45),
                 poder(65, "Reproduzir Maldição", 45), poder(99, "Maldição Suprema", 45)] },
+
+    /* --- Arquivos Secretos 7, p. 81–88 ---
+       As duas variantes do Monstruoso (o de combatente é do SAH, chave
+       "monstruoso", e não muda). Chaves PRÓPRIAS: o nome igual nunca
+       colide em catálogo, importação ou concessão. As regras próprias de
+       cada variante (procedimento diário, efeitos por elemento,
+       sacrifícios, braços, rituais na pele) moram em js/ordem/arquivo7.js
+       — nada é copiado da trilha de combatente. `progressaoDeNex`: usa a
+       Progressão de NEX da regra NEX & Experiência mesmo com a regra
+       desligada; `exposicaoEmDobro`: com a regra ligada, cada exposição
+       conta em dobro. */
+    { chave: "monstruosoEspecialista", classe: "especialista", nome: "Monstruoso", pagina: 81, fonte: AS7,
+      progressaoDeNex: true, exposicaoEmDobro: true, variante: "monstruoso",
+      resumo: "Variante do Monstruoso para especialistas: transforma o corpo com estratégia, em experimentos diários com componentes ritualísticos.",
+      especial: "Variante do monstruoso para combatentes (SaH, pp. 17-21). Usa a Progressão de NEX da regra NEX & Experiência (SaH p. 98) mesmo sem a regra; com ela ligada, recebe o dobro de NEX sempre que se expõe ao paranormal (AS7 p. 81).",
+      poderes: [poder(10, "Ser Experimentado", 81), poder(40, "Ser Testado", 82),
+                poder(65, "Ser Expurgado", 83), poder(99, "Ser Apavorante", 84)] },
+    { chave: "monstruosoOcultista", classe: "ocultista", nome: "Monstruoso", pagina: 85, fonte: AS7,
+      progressaoDeNex: true, exposicaoEmDobro: true, variante: "monstruoso",
+      resumo: "Variante do Monstruoso para ocultistas: escarifica a pele todo dia com componentes ritualísticos e marca nela os rituais, em comunicação constante com uma entidade.",
+      especial: "Variante do monstruoso para combatentes (SaH, pp. 17-21). Usa a Progressão de NEX da regra NEX & Experiência (SaH p. 98) mesmo sem a regra; com ela ligada, recebe o dobro de NEX sempre que se expõe ao paranormal (AS7 p. 85).",
+      poderes: [poder(10, "Ser Escarificado", 85), poder(40, "Ser Perfurado", 86),
+                poder(65, "Ser Rasgado", 87), poder(99, "Ser Mutilado", 88)] },
   ];
 
   /* =================================================================
@@ -1119,6 +1152,32 @@
       nota: "Quem decide que a cena tem algo ligado ao trauma é o mestre: o cartão registra a ocorrência e põe o abalado em Condições, com a origem. Os 2 PE dão imunidade a efeitos de medo até o fim da cena — o abalado da ocorrência sai, e a ficha recusa outra condição de medo até a cena acabar. Nada é aplicado sem o clique." },
 
     /* -----------------------------------------------------------------
+       ARQUIVOS SECRETOS 7 v1.0, p. 80
+       -----------------------------------------------------------------
+       O contato com o elemento é coisa da cena: a ficha não deduz que
+       abrir um item ou ler um ritual já foi contato. O cartão registra a
+       primeira vez de cada cena (2 SAN, uma vez). O +5 de Sussurros e
+       Vultos é do teste em que a pessoa escolhe pagar, uma vez por teste.
+       O quadro "Novo uso para a perícia Religião" (Resguardar Espírito)
+       é texto de consulta em js/ordem/pericias-usos.js.
+       ----------------------------------------------------------------- */
+
+    { chave: "exorcizado", nome: "Exorcizado", fonte: AS7, pagina: 80,
+      pericias: ["fortitude", "ocultismo"],
+      poder: "O Que Restou", automacao: "parcial", controles: true,
+      resumo: "Uma parte da criatura que o possuiu ficou. Escolha um elemento (exceto Medo): você recebe RD 5 contra o tipo dele. Sempre que entra em contato com esse elemento pela primeira vez numa cena (presenciando rituais, itens amaldiçoados, criaturas ou poderes paranormais), perde 2 de Sanidade.",
+      escolhas: [{ chave: "elemento", tipo: "elemento", rotulo: "Elemento do que restou (exceto Medo)" }],
+      efeitosEscolha: [{ tipo: "resistenciaDano", opcao: "elemento", valor: 5 }],
+      nota: "A RD 5 entra na conta pelo elemento escolhido. Quem diz que houve contato é a mesa: o cartão registra a primeira vez da cena e tira os 2 de Sanidade uma vez só — a segunda tentativa na mesma cena é recusada. Com Jogando sem Sanidade, a perda não se aplica (SAH p. 104), como nas outras perdas de Sanidade da ficha." },
+
+    { chave: "sensitivoRebelde", nome: "Sensitivo Rebelde", fonte: AS7, pagina: 80,
+      pericias: ["intuicao", "vontade"],
+      poder: "Sussurros e Vultos", automacao: "parcial",
+      resumo: "Ao lidar com outras pessoas, vozes e vultos ajudam a compreendê-las. Quando faz um teste de Diplomacia, Enganação, Intimidação ou Intuição, você pode escolher perder 2 de Sanidade para receber +5 nesse teste.",
+      acoesNoTeste: [{ id: "sussurros", rotulo: "Sussurros e Vultos", pericias: ["diplomacia", "enganacao", "intimidacao", "intuicao"], custoSan: 2, tipo: "bonus", valor: 5, condicao: "" }],
+      nota: "No resultado de um teste de Diplomacia, Enganação, Intimidação ou Intuição, o botão tira os 2 de Sanidade e mostra o mesmo teste com +5 — uma vez por teste. Com Jogando sem Sanidade, a perda não se aplica (SAH p. 104) e o botão diz isso." },
+
+    /* -----------------------------------------------------------------
        EXTRA (v5.1) — conteúdo oficial avulso, sem livro nem página
        -----------------------------------------------------------------
        Revoltado veio de um marca-página de HQ. `seEstado`: o efeito só
@@ -1362,7 +1421,7 @@
   }
 
   global.RAMAOrdemCatalogo = {
-    FONTES: { OPRPG: OPRPG, SAH: SAH, AS1: AS1, AS2: AS2, AS3: AS3, AS4: AS4, AS5: AS5, AS6: AS6, EXTRA: EXTRA },
+    FONTES: { OPRPG: OPRPG, SAH: SAH, AS1: AS1, AS2: AS2, AS3: AS3, AS4: AS4, AS5: AS5, AS6: AS6, AS7: AS7, EXTRA: EXTRA },
     LIVROS: LIVROS,
     fonteDe: fonteDe, fonteLiberada: fonteLiberada, motivoDaFonte: motivoDaFonte,
     ehAvulsa: ehAvulsa,

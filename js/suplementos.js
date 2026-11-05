@@ -60,6 +60,10 @@
     { id: "ordem.as6", sistema: "ordem", fontes: ["AS6"], nome: "Arquivos Secretos 6: Panacea", curto: "AS6",
       descricao: "Conteúdos das Indústrias Panacea, com novas opções, medicamentos, doenças e venenos.",
       capa: "assets/sistemas/ordem-as6-capa.webp", capaAlt: "Capa de Arquivos Secretos 6: três pessoas diante de um tanque de líquido verde num laboratório" },
+    /* v6.5 */
+    { id: "ordem.as7", sistema: "ordem", fontes: ["AS7"], nome: "Arquivos Secretos 7", curto: "AS7",
+      descricao: "Vampiros e terrores da fé: o ritual Vampirismo, novos itens e origens, ameaças de Sangue e a Apóstata, e duas novas variantes de Monstruoso.",
+      capa: "assets/sistemas/ordem-as7-capa.webp", capaAlt: "Capa de Arquivos Secretos 7: cinco figuras vampirescas de presas à mostra, sob o título, num fundo vermelho" },
     /* v6.2: o conteúdo oficial avulso (fonte EXTRA: marca-páginas e
        materiais promocionais) também é complemento — habilitável como os
        outros, não sempre ligado como o livro básico. */

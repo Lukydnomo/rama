@@ -709,6 +709,10 @@
          os PV atuais sobem isso (até o máximo novo). Sem o campo, a troca
          só prende os atuais, como no AS2. */
       somaAtuais: Math.max(0, Math.min(999, U.inteiro(f.somaAtuais, 0))),
+      /* "Se estiver com menos de 200 PV quando assume essa forma, fica
+         imediatamente com 200 PV" (O Verdadeiro Raziel, AS7 p. 41): ao
+         entrar na forma, os atuais sobem até este piso. */
+      pvMinimoAoAssumir: Math.max(0, Math.min(9999, U.inteiro(f.pvMinimoAoAssumir, 0))),
       notas: textos(f.notas, 10, 1000),
       pericias: unicos(lista(f.pericias).map(normalizarPericiaOrdem)),
       habilidades: unicos(lista(f.habilidades).map(function (h) { return normalizarEfeito(h, false); })),
@@ -738,7 +742,9 @@
     var maximo = forma ? forma.pv : (c.ordem && c.ordem.pvBase) || vida.maximo;
     if (!(maximo > 0)) return;
     vida.maximo = maximo;
-    vida.atual = Math.max(0, Math.min(vida.atual + (forma && forma.somaAtuais ? forma.somaAtuais : 0), maximo));
+    var atual = vida.atual + (forma && forma.somaAtuais ? forma.somaAtuais : 0);
+    if (forma && forma.pvMinimoAoAssumir && atual < forma.pvMinimoAoAssumir) atual = forma.pvMinimoAoAssumir;
+    vida.atual = Math.max(0, Math.min(atual, maximo));
   }
 
   /* ---------------- ocorrência ---------------- */
@@ -973,7 +979,7 @@
 
   function imagensDoCatalogo(alvo) {
     var id = typeof alvo === "string" ? alvo : idDoCatalogo(alvo);
-    var m = /^(op|sah|as1|as2|as3|as4|as5|as6)\.criatura\.([a-z0-9.-]+)$/.exec(String(id || ""));
+    var m = /^(op|sah|as1|as2|as3|as4|as5|as6|as7)\.criatura\.([a-z0-9.-]+)$/.exec(String(id || ""));
     if (!m) return null;
     var base = "assets/criaturas/" + m[1] + "/" + m[2] + "/";
     var url = U.url || function (x) { return x; };

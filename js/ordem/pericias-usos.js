@@ -42,6 +42,7 @@
   var AS1 = "AS1";
   var AS4 = "AS4";
   var AS5 = "AS5";
+  var AS7 = "AS7";
   var SAH = "SAH";
 
   function uso(nome, d) { return Object.assign({ nome: nome, treino: "", dt: "", acao: "", custo: "", alcance: "", texto: "", fonte: LB, pagina: 0 }, d); }
@@ -314,6 +315,8 @@
           texto: "Mitos, profecias, relíquias sagradas…" }),
         uso("Rito", { treino: "veterano", dt: "20", pagina: 48,
           texto: "Realiza uma cerimônia religiosa (batizado, casamento, funeral…)." }),
+        uso("Resguardar Espírito", { treino: "treinado", dt: "20", acao: "ação completa", alcance: "você ou uma pessoa adjacente", fonte: AS7, pagina: 80,
+          texto: "Um breve rito religioso de proteção (rezas, oferendas, mantras…): passando, o alvo recebe +2 em testes de Vontade até o fim da cena. Falhando, não pode tentar de novo na mesma pessoa até o fim da cena. O bônus vem de como a fé motiva o ser humano — não é efeito paranormal." }),
       ],
       especificos: [
         esp(MEDO, "Acalmar (variante sem Insanidade)", "Com as regras de medo do SaH: treinado em Religião, Diplomacia ou Profissão (psicólogo), ação padrão e teste para acalmar um personagem adjacente com Sanidade 0 — ele recupera 1 de Sanidade. A DT sobe +5 por vez que ele já foi acalmado na cena.", SAH, 88),
@@ -364,7 +367,7 @@
       usos: [] },
   };
 
-  var NOMES_DOS_LIVROS = { OPRPG: "Ordem Paranormal RPG", AS1: "Arquivos Secretos 1", AS4: "Arquivos Secretos 4", AS5: "Arquivos Secretos 5", SAH: "Sobrevivendo ao Horror" };
+  var NOMES_DOS_LIVROS = { OPRPG: "Ordem Paranormal RPG", AS1: "Arquivos Secretos 1", AS4: "Arquivos Secretos 4", AS5: "Arquivos Secretos 5", AS7: "Arquivos Secretos 7", SAH: "Sobrevivendo ao Horror" };
 
   function referencia(fonte, pagina) {
     var C = global.RAMAOrdemCatalogo;

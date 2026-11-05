@@ -126,6 +126,12 @@ de ativar.
 | Morrendo e Enlouquecendo: ativar, +1 início de turno, −1 corrigir, encerrar, sugestão | bloco | Geral · Condições |
 | Inconsciente: marcar e encerrar; Perturbado: encerrar | bloco | Geral · Condições |
 | Adicionar condição; doenças e venenos (AS6) | bloco | Geral · Condições |
+| Debaixo d'água e Pressão, Mentem Corrumpere (AS7, v6.5) | — | Geral · Condições (botões do AS7) |
+| Experimento / escarificação do dia, braços, rituais marcados, reação (AS7, v6.5) | — | Habilidades · cartão do marco da trilha Monstruoso |
+| O Que Restou (contato da cena) (AS7, v6.5) | — | Habilidades · cartão da origem |
+| Sussurros e Vultos (AS7, v6.5) | — | no resultado do teste de perícia |
+| Vampirismo (corpos, refeições) e rituais da trilha só hoje (AS7, v6.5) | — | Rituais · painel "Arquivos Secretos 7" (só quando há algo) |
+| Carranca, Pé de Coelho, Sal Dourado, Terço Maculado (AS7, v6.5) | — | Inventário · opções do item |
 | Efeitos ativos: +1 turno, −1 corrigir, editar, encerrar, inverter (AS5), descrição | bloco | Geral · Condições |
 | Automáticas, trazidas por outras, contextuais, "enquanto valerem", rolagens pedidas | bloco | Geral · Condições |
 | Terminados: −1 corrigir, reativar, remover da lista | bloco | Geral · Condições ("Terminados") |

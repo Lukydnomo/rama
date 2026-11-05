@@ -26,6 +26,9 @@
      AS4    Arquivos Secretos 4, v1.0 (Jambô, pacote de conteúdo oficial)
             Granadas, Lançador de Granadas e modificações para granadas
             (p. 70–71)
+     AS7    Arquivos Secretos 7, v1.0 (Jambô, pacote de conteúdo oficial)
+            Carranca Caçadora, Cajado da Cruz de Sangue (p. 78), Pé de
+            Coelho, Sal Dourado e Terço Maculado (p. 79)
      AS6    Arquivos Secretos 6, v1.0 (Jambô, pacote de conteúdo oficial)
             Anel Invertido, Aplicador de Adrenalina e Lança-nitrogênio
             (p. 73); maldições e modificações para medicamentos (p. 74)
@@ -70,6 +73,7 @@
   var AS4 = "AS4";
   var AS5 = "AS5";
   var AS6 = "AS6";
+  var AS7 = "AS7";
   var AS3 = "AS3";
 
   var T33 = "Tabela 3.3 (p. 56–57)";
@@ -2187,6 +2191,68 @@
         "Escolha uma: o bônus em testes que o medicamento dá aumenta em +5; os PV temporários, em +2d8; os PV recuperados, em +2d8; ou, se ele só funciona uma vez por cena, passa a funcionar duas.",
       ],
       notas: ["A escolha precisa caber no medicamento (um antibiótico não tem PV para aumentar): a ficha confere ao aplicar."] },
+
+    /* =================================================================
+       ARQUIVOS SECRETOS 7 (v6.5) — p. 78–79
+       -----------------------------------------------------------------
+       O que cada item registra (a criatura guiada, a ativação da cena, os
+       usos do saleiro, a súplica) mora no próprio item, e as ações
+       aparecem no menu dele (js/ordem/telas/ficha-arquivo7.js). Nada que
+       dependa da narrativa vira bônus permanente: o +2d10 do terço é
+       oferecido no teste, para quem confirmar que age a favor da súplica.
+       ================================================================= */
+
+    { id: "as7.paranormal.carranca-cacadora", nome: "Carranca Caçadora", fonte: AS7, pagina: 78, aba: "geral", secao: "paranormais",
+      categoria: "II", espacos: 2,
+      resumo: "Cabeça raivosa de proporções animalescas, esculpida num tronco de madeira, de olhos que parecem se mover na visão periférica.",
+      efeitos: [
+        "Com um material ligado a uma criatura paranormal na boca (roupa rasgada por um zumbi de sangue, cabelo sujo de Lodo…), os olhos apontam um caminho até ela, ou até o último lugar onde esteve antes de sumir da Realidade.",
+        "O caminho guiado é sempre o mais perigoso — quem o determina é o mestre.",
+        "O efeito dura 10 minutos; depois, a carranca consome o material, para de guiar e nunca mais serve para achar a mesma criatura (outras, sim).",
+      ],
+      notas: ["O menu do item registra cada criatura guiada: enquanto os 10 minutos não terminam, ela aparece em andamento; terminados, o material sai e a mesma criatura é recusada daí em diante."] },
+
+    { id: "as7.amaldicoado.cajado-da-cruz-de-sangue", nome: "Cajado da Cruz de Sangue", elemento: "sangue", fonte: AS7, pagina: 78, aba: "amaldicoados", secao: "especiais",
+      categoria: "III", espacos: 2,
+      arma: { proficiencia: "simples", tipo: "corpoACorpo", empunhadura: "duasMaos", dano: "1d12", critico: "x2", alcance: "", tipoDano: "Corte", agil: true },
+      resumo: "Cajado ancestral e pesado, forjado com metal extraído de sangue humano, com lâminas que formam a cruz de Sangue numa das pontas.",
+      efeitos: [
+        "Arma simples corpo a corpo, de duas mãos e ágil: 1d12 de dano de corte, crítico 20/x2.",
+        "Pode ser usada com Combater com Duas Armas (e poderes parecidos) para ataques adicionais, como se fosse uma arma de uma mão e uma arma leve.",
+        "Para um ocultista que conhece pelo menos um ritual de Sangue: rituais e poderes de Sangue custam –1 PE, a DT deles sobe +1 e o dano deles ganha +1 dado do mesmo tipo.",
+      ],
+      notas: ["Os benefícios de conjurador valem com o cajado empunhado (menu do item), numa ficha de ocultista com ao menos um ritual de Sangue: o –1 PE e o +1 na DT aparecem em “Usar ritual” e na DT da aba Rituais; o dado a mais, na rolagem de dano do ritual. Em poderes de Sangue, a ficha só lembra — o custo deles é pago à mão.",
+        "A exceção de Combater com Duas Armas é de mesa: o cajado continua de duas mãos no inventário."] },
+
+    { id: "as7.paranormal.pe-de-coelho", nome: "Pé de Coelho", fonte: AS7, pagina: 79, aba: "geral", secao: "paranormais",
+      categoria: "I", espacos: 1, vestimenta: true,
+      resumo: "A pata decepada de um pequeno animal: companhia de sorte e proteção para trapaceiros e patifes, a custo do derramamento de sangue inocente.",
+      efeitos: [
+        "Deve ser vestido como vestimenta.",
+        "Uma vez por cena, ação de movimento para esfregar a pata com uma mão e soprá-la: até o fim da cena, +1d4 em todos os seus testes.",
+        "Se o resultado desse d4 for ímpar, um acidente acontece com seu próprio pé e você perde 1d4 PV.",
+      ],
+      notas: ["Ativado pelo menu (vestido, uma vez por cena), o +1d4 entra em cada teste rolado pela ficha até o fim da cena. Em cada teste, se o d4 do bônus sair ímpar, a ficha rola OUTRO 1d4 para a perda de PV e a aplica — são dois dados diferentes."] },
+
+    { id: "as7.paranormal.sal-dourado", nome: "Sal Dourado", fonte: AS7, pagina: 79, aba: "geral", secao: "paranormais",
+      categoria: "I", espacos: 1,
+      resumo: "Receita de sal produzido com ouro usado em rituais de Conhecimento, para afastar criaturas de Sangue. Não é muito poderosa, mas pode salvar vidas.",
+      efeitos: [
+        "Uma linha numa porta ou janela gasta 1 uso (3 linhas esvaziam o saleiro); um círculo esvazia o saleiro de uma vez.",
+        "Criatura de Sangue com VD 80 ou menos que tente cruzar o sal faz Vontade (DT 20): passando, fica frustrada até o fim da cena, mas cruza; falhando, fica frustrada e não atravessa até o fim da cena.",
+      ],
+      notas: ["O menu do item marca as linhas e o círculo, com a cena. O teste é da criatura, no combate: a ficha registra onde está o sal, e o mestre resolve."] },
+
+    { id: "as7.amaldicoado.terco-maculado", nome: "Terço Maculado", elemento: "sangue", fonte: AS7, pagina: 79, aba: "amaldicoados", secao: "especiais",
+      categoria: "II", espacos: 1, vestimenta: true,
+      resumo: "Símbolo religioso corrompido por uma falsa promessa: contas rubras afiadas como espinhos, presas por uma corrente de ferro dourado que irrita a pele.",
+      efeitos: [
+        "Vestido, você herda a súplica reprimida do usuário original, definida pelo mestre (por exemplo, a proteção de uma filha).",
+        "Agindo a favor da súplica num teste, +2d10 nesse teste.",
+        "Vestido, não sai mais enquanto você viver: tentar tirá-lo falha e custa 2d10 PV; agir diretamente contra a súplica, a critério do mestre, também custa 2d10 PV.",
+        "Sai de dois jeitos: outra pessoa decepa a parte do corpo onde ele está; ou a súplica é cumprida, e ele vira item mundano, sem efeito paranormal.",
+      ],
+      notas: ["Vestir pede a súplica (a mesa escreve). O +2d10 é um botão no resultado do teste, para quem confirmar que age a favor dela. Tirar, contrariar, decepar e cumprir são registros no menu do item, com a perda de PV aplicada quando a regra manda."] },
   ];
 
   global.RAMAOrdemItensDados = {
@@ -2200,6 +2266,7 @@
       AS4: { nome: "Arquivos Secretos 4", curto: "Arquivos Secretos 4", edicao: "v1.0" },
       AS5: { nome: "Arquivos Secretos 5", curto: "Arquivos Secretos 5", edicao: "v1.0" },
       AS6: { nome: "Arquivos Secretos 6", curto: "Arquivos Secretos 6", edicao: "v1.0" },
+      AS7: { nome: "Arquivos Secretos 7", curto: "Arquivos Secretos 7", edicao: "v1.0" },
     },
     itens: ITENS,
   };

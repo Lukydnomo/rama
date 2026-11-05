@@ -838,6 +838,9 @@
     var a = dados(ordem);
     a.cronologia[marco] += 1;
     if (marco === "missao" || marco === "semana") a.cronologia.dia += 1;
+    /* Arquivos Secretos 7 (v6.5): o que depende do dia (o limite de
+       morrendo de Ser Testado) acompanha a cronologia. */
+    if (marco !== "sessao" && global.RAMAOrdemArquivo7) global.RAMAOrdemArquivo7.aoMudarDia(ordem);
     return { ok: true, cronologia: a.cronologia };
   }
 

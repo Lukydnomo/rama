@@ -52,7 +52,7 @@ confere).
 
 - **Cadastro**: `{ id, sistema, fontes, nome, curto, descricao, capa, capaAlt }`.
   `fontes` são as siglas que os catálogos do sistema já usam (Ordem: `SAH`,
-  `AS1`–`AS6` e, desde a v6.2, `EXTRA` — os Extras). `FERRAMENTAS` liga ferramentas/mecânicas de mesa a um
+  `AS1`–`AS7` (o AS7 desde a v6.5) e, desde a v6.2, `EXTRA` — os Extras, sempre por último). `FERRAMENTAS` liga ferramentas/mecânicas de mesa a um
   suplemento (Ordem: Hexatombe → AS2, Hacking → AS4, Perigos e Sincronia → AS5).
 - **Ficha**: `ficha.suplementos` — ausente = todos (fichas anteriores);
   lista vazia = só o livro básico.

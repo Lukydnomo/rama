@@ -485,6 +485,21 @@
     return copia;
   }
 
+  /* Arquivos Secretos 7 (v6.5): o mesmo caminho, com `ref7`. As
+     referências internas (corpoId, efeitoId) são VALORES e atravessam
+     sem mudança. */
+  function comArquivo7Portavel(ficha) {
+    var o = ficha && ficha.ordem;
+    if (!o || !o.arquivo7 || typeof o.arquivo7 !== "object") return ficha;
+    var copia = JSON.parse(JSON.stringify(ficha));
+    trocarChave(copia.ordem.arquivo7, "id", "ref7", 0);
+    return copia;
+  }
+  function devolverArquivo7(dados) {
+    var o = dados && dados.ordem;
+    if (o && o.arquivo7 && typeof o.arquivo7 === "object") trocarChave(o.arquivo7, "ref7", "id", 0);
+  }
+
   function devolverArquivo6(dados) {
     var o = dados && dados.ordem;
     if (!o) return;
@@ -653,6 +668,7 @@
          pendentes, como se nunca tivesse aprendido nada. */
       devolverIdsDosEventos(limpo);
       devolverArquivo6(limpo);
+      devolverArquivo7(limpo);
       devolverTemaDeDados(limpo);
       devolverBarganha(limpo);
       refazerVinculosAliados(limpo);
@@ -747,7 +763,7 @@
     /* Numa ficha, o vínculo entre concessão e ritual vira posição antes
        de os ids irem embora. Ver "O VÍNCULO DE RITUAL ATRAVESSANDO A
        IMPORTAÇÃO", acima. */
-    var preparado = tipo === "personagem" ? comArquivo6Portavel(comBarganhaPortavel(comTemaDeDadosPortavel(comReferenciasPortaveis(comAliadosPortaveis(comPosicoesDeRitual(dados))))))
+    var preparado = tipo === "personagem" ? comArquivo7Portavel(comArquivo6Portavel(comBarganhaPortavel(comTemaDeDadosPortavel(comReferenciasPortaveis(comAliadosPortaveis(comPosicoesDeRitual(dados)))))))
       : (tipo === "homebrew-criatura" ? criaturaPortavel(U.copiar(dados)) : dados);
     return {
       rama: true,

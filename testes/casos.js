@@ -64,7 +64,7 @@
 
     t.grupo("Tema da ficha · schema 16 (v2.36)");
     var TEMA16 = { nome: "Roxo", base: "escuro", valores: { fundo: { tipo: "radial", forma: "circulo", x: 20, y: 30, pontos: [{ cor: "#08080a", pos: 0 }, { cor: "#3a1030", alfa: 0.8, pos: 100 }] } } };
-    t.igual("o schema subiu para 28 (Suplementos, v6.1)", S.VERSAO_SCHEMA, 28);
+    t.igual("o schema subiu para 29 (Arquivos Secretos 7, v6.5)", S.VERSAO_SCHEMA, 29);
     t.iguais("ficha nova usa o tema da conta", S.criarFicha({ nome: "Nova" }).aparencia, { v: 1, modo: "conta" });
     t.iguais("ficha antiga (sem o campo) também", S.normalizarFicha({ schemaVersion: 15, nome: "Legado" }).aparencia, { v: 1, modo: "conta" });
     ["ordem", "universal"].forEach(function (tipo) {
@@ -1527,17 +1527,17 @@
 
       /* v2.20: + contagem de munição (OPRPG p. 174) e controle de
          componentes ritualísticos (da mesa). */
-      t.igual("trinta regras opcionais: treze do SAH, duas do AS1, quatro do AS2, oito do AS3, duas do AS5 e uma do AS6", OP.REGRAS.length, 30);
+      t.igual("31 regras opcionais: treze do SAH, duas do AS1, quatro do AS2, oito do AS3, duas do AS5, uma do AS6 e uma do AS7", OP.REGRAS.length, 31);
       t.iguais("  as duas do AS1 começam desligadas", ["reterRitual", "transcenderComItens"].map(function (k) { return OP.ligada(R.fichaVazia(), k); }), [false, false]);
 
       /* v2.48.3: as categorias da aba Regras, de um registro só. */
       var naTela = ["patente"].concat(OP.REGRAS.map(function (r) { return r.chave; }));
       var grupos = OP.categorizar(naTela);
       var todasNaTela = grupos.reduce(function (l, g) { return l.concat(g.regras); }, []);
-      t.igual("categorias: as 30 regras e o cartão de patente, cada um uma vez só", todasNaTela.length + "/" + naTela.length + "/" + new Set(todasNaTela).size, "31/31/31");
+      t.igual("categorias: as 31 regras e o cartão de patente, cada um uma vez só", todasNaTela.length + "/" + naTela.length + "/" + new Set(todasNaTela).size, "32/32/32");
       t.ok("  nenhuma regra atual cai em “Outras regras”", grupos.every(function (g) { return g.chave !== "outras"; }));
       t.iguais("  sete categorias, na ordem do registro", grupos.map(function (g) { return g.nome + " " + g.regras.length; }),
-        ["Personagem e progressão 4", "Rituais e paranormal 8", "Combate e sobrevivência 3", "Poderes e trilhas 6", "Aliados e vínculos 4",
+        ["Personagem e progressão 4", "Rituais e paranormal 8", "Combate e sobrevivência 4", "Poderes e trilhas 6", "Aliados e vínculos 4",
           "Exploração e transporte 3", "Hexatombe e desafios 3"]);
       t.iguais("  a patente abre Personagem e progressão; as do AS5 em Poderes e em Aliados",
         [grupos[0].regras[0], OP.categoriaDe("poderesDeTransmissao").chave, OP.categoriaDe("beneficiosDeAliados").chave], ["patente", "poderes", "aliados"]);
@@ -1801,7 +1801,7 @@
       var duplicada = "";
       PO.TODOS.forEach(function (p) { if (chaves[p.chave]) duplicada = p.chave; chaves[p.chave] = true; });
       t.igual("nenhuma chave de poder se repete", duplicada, "");
-      t.ok("todo poder tem fonte e página", PO.TODOS.every(function (p) { return ["OPRPG", "SAH", "AS1", "AS2", "AS3", "AS4", "AS5", "AS6"].indexOf(p.fonte) >= 0 && p.pagina > 0; }));
+      t.ok("todo poder tem fonte e página", PO.TODOS.every(function (p) { return ["OPRPG", "SAH", "AS1", "AS2", "AS3", "AS4", "AS5", "AS6", "AS7"].indexOf(p.fonte) >= 0 && p.pagina > 0; }));
       t.ok("todo poder tem resumo", PO.TODOS.every(function (p) { return p.resumo.length > 10; }));
       t.ok("toda automação é calculo, parcial ou informacao",
         PO.TODOS.every(function (p) { return ["calculo", "parcial", "informacao"].indexOf(p.automacao) >= 0; }));
@@ -1811,7 +1811,7 @@
         PO.PODERES_PARANORMAIS.filter(function (p) { return p.fonte === "SAH"; }).length, 8);
       t.igual("34 poderes gerais do Sobrevivendo ao Horror (Tabela 2.3)", PO.PODERES_GERAIS.filter(function (p) { return p.fonte === "SAH"; }).length, 34);
       t.igual("cinco poderes gerais do Arquivos Secretos 1 (p. 46)", PO.PODERES_GERAIS.filter(function (p) { return p.fonte === "AS1"; }).length, 5);
-      t.igual("quatro habilidades por trilha, nas 28 trilhas", PO.HABILIDADES_TRILHA.length, 112);
+      t.igual("quatro habilidades por trilha, nas 30 trilhas (com as duas monstruosas do AS7)", PO.HABILIDADES_TRILHA.length, 120);
       t.ok("os nomes das habilidades batem com os das trilhas do catálogo",
         CC.TRILHAS.every(function (tr) {
           var h = PO.habilidadesDaTrilha(tr.chave).map(function (x) { return x.nome; });
@@ -2885,7 +2885,7 @@
       /* ---------------------------------------------------------------- */
       t.grupo("Ordem · itens — catálogo completo e estruturado");
 
-      t.igual("297 entradas nos oito livros", catalogo.itens.length, 297);
+      t.igual("302 entradas nos nove livros (5 do AS7)", catalogo.itens.length, 302);
       var contagem = {};
       catalogo.itens.forEach(function (e) {
         var k = e.aba + "/" + e.natureza + "/" + e.fonte;
@@ -2922,14 +2922,14 @@
       var idRepetido = "";
       catalogo.itens.forEach(function (e) { if (idsVistos[e.id]) idRepetido = e.id; idsVistos[e.id] = true; });
       t.igual("nenhum id se repete", idRepetido, "");
-      t.ok("todo id é estável e diz a fonte (op.…, sah.…, as1.… … as6.…)", catalogo.itens.every(function (e) {
-        return /^(op|sah|as1|as2|as3|as4|as5|as6)\.[a-z0-9.-]+$/.test(e.id) && (e.fonte === "SAH") === (e.id.indexOf("sah.") === 0) &&
+      t.ok("todo id é estável e diz a fonte (op.…, sah.…, as1.… … as7.…)", catalogo.itens.every(function (e) {
+        return /^(op|sah|as1|as2|as3|as4|as5|as6|as7)\.[a-z0-9.-]+$/.test(e.id) && (e.fonte === "AS7") === (e.id.indexOf("as7.") === 0) && (e.fonte === "SAH") === (e.id.indexOf("sah.") === 0) &&
           (e.fonte === "AS1") === (e.id.indexOf("as1.") === 0) && (e.fonte === "AS2") === (e.id.indexOf("as2.") === 0) &&
           (e.fonte === "AS3") === (e.id.indexOf("as3.") === 0) && (e.fonte === "AS4") === (e.id.indexOf("as4.") === 0) &&
           (e.fonte === "AS5") === (e.id.indexOf("as5.") === 0) && (e.fonte === "AS6") === (e.id.indexOf("as6.") === 0);
       }));
       t.ok("toda entrada tem nome, resumo, fonte e página", catalogo.itens.every(function (e) {
-        return e.nome && e.resumo && ["OPRPG", "SAH", "AS1", "AS2", "AS3", "AS4", "AS5", "AS6"].indexOf(e.fonte) >= 0 && e.pagina > 0;
+        return e.nome && e.resumo && ["OPRPG", "SAH", "AS1", "AS2", "AS3", "AS4", "AS5", "AS6", "AS7"].indexOf(e.fonte) >= 0 && e.pagina > 0;
       }));
       t.ok("todo item tem tipo de ficha e grupo; modificações e maldições não", catalogo.itens.every(function (e) {
         return e.natureza === "item" ? !!(e.tipoItem && e.grupo) : (e.tipoItem === null && e.grupo === null);
@@ -2960,7 +2960,7 @@
       IT._esquecer();
       var carga = IT.carregar();
       t.ok("carregar() devolve uma promessa e deixa o catálogo pronto", !!carga && typeof carga.then === "function" && !!IT.catalogoPronto());
-      t.igual("  com as mesmas 297 entradas", IT.catalogoPronto().itens.length, 297);
+      t.igual("  com as mesmas 302 entradas", IT.catalogoPronto().itens.length, 302);
 
       /* Conferência pontual contra as tabelas dos livros. */
       var katana = entrada("op.arma.katana");
@@ -3401,7 +3401,7 @@
       /* ---------------------------------------------------------------- */
       t.grupo("Ordem · rituais — catálogo completo e estruturado");
 
-      t.igual("107 rituais nos seis livros", catalogoR.rituais.length, 107);
+      t.igual("108 rituais nos sete livros (Vampirismo, AS7)", catalogoR.rituais.length, 108);
       var porFonte = {};
       var porElemento = {};
       var porCirculo = {};
@@ -3416,24 +3416,24 @@
       t.igual("2 do Arquivos Secretos 1", porFonte.AS1, 2);
       t.igual("4 do Arquivos Secretos 2", porFonte.AS2, 4);
       t.igual("1 do Arquivos Secretos 4 (Backup)", porFonte.AS4, 1);
-      t.iguais("por círculo: 31, 32, 23 e 21", [porCirculo[1], porCirculo[2], porCirculo[3], porCirculo[4]], [31, 32, 23, 21]);
+      t.iguais("por círculo: 31, 33, 23 e 21", [porCirculo[1], porCirculo[2], porCirculo[3], porCirculo[4]], [31, 33, 23, 21]);
       t.iguais("por elemento (Amaldiçoar Arma conta nos quatro; Passagem de Conhecimento e Hesitação Forçada, em Sangue e Conhecimento)",
         [porElemento.conhecimento, porElemento.energia, porElemento.morte, porElemento.sangue, porElemento.medo],
-        [27, 25, 25, 27, 9]);
+        [27, 25, 25, 28, 9]);
 
       var idsR = {};
       var repetidoR = "";
       catalogoR.rituais.forEach(function (e) { if (idsR[e.id]) repetidoR = e.id; idsR[e.id] = true; });
       t.igual("nenhum id se repete", repetidoR, "");
       t.ok("todo id é estável e diz a fonte", catalogoR.rituais.every(function (e) {
-        return /^(op|sah|as1|as2|as4|as6)\.ritual\.[a-z0-9-]+$/.test(e.id) && (e.fonte === "SAH") === (e.id.indexOf("sah.") === 0) &&
+        return /^(op|sah|as1|as2|as4|as6|as7)\.ritual\.[a-z0-9-]+$/.test(e.id) && (e.fonte === "SAH") === (e.id.indexOf("sah.") === 0) && (e.fonte === "AS7") === (e.id.indexOf("as7.") === 0) &&
           (e.fonte === "AS1") === (e.id.indexOf("as1.") === 0) && (e.fonte === "AS2") === (e.id.indexOf("as2.") === 0) &&
           (e.fonte === "AS4") === (e.id.indexOf("as4.") === 0) && (e.fonte === "AS6") === (e.id.indexOf("as6.") === 0);
       }));
       t.ok("toda entrada tem nome, resumo, elemento, círculo, execução, alcance, fonte e página (sem página só com a nota dizendo por quê)",
         catalogoR.rituais.every(function (e) {
           return e.nome && e.resumo && e.elementos.length && e.circulo >= 1 && e.circulo <= 4 &&
-            e.execucao && e.alcance && ["OPRPG", "SAH", "AS1", "AS2", "AS4", "AS6", "EXTRA"].indexOf(e.fonte) >= 0 &&
+            e.execucao && e.alcance && ["OPRPG", "SAH", "AS1", "AS2", "AS4", "AS6", "AS7", "EXTRA"].indexOf(e.fonte) >= 0 &&
             (e.fonte === "EXTRA" ? !(e.pagina > 0) && !!e.material : e.pagina > 0 || e.notas.some(function (n) { return /página não é informada/.test(n); }));
         }));
       t.ok("onde a duração falta, é porque o livro não informa — e a entrada registra isso",
@@ -3513,7 +3513,7 @@
         nomesR(RS.filtrar(catalogoR, { busca: "CICATRIZACAO" })).indexOf("Cicatrização") >= 0);
       t.iguais("busca sem resultado devolve lista vazia", RS.filtrar(catalogoR, { busca: "xyzzy" }), []);
       var sangue2 = RS.filtrar(catalogoR, { elemento: "sangue", circulo: 2 });
-      t.ok("elemento + círculo se combinam (7 de Sangue com o Mapa Sanguíneo, mais Passagem de Conhecimento)", sangue2.length === 8 &&
+      t.ok("elemento + círculo se combinam (7 de Sangue com o Mapa Sanguíneo, mais Passagem de Conhecimento e Vampirismo)", sangue2.length === 9 &&
         sangue2.every(function (e) { return e.elementos.indexOf("sangue") >= 0 && e.circulo === 2; }));
       t.ok("o filtro de elemento acha o ritual multielemento",
         RS.filtrar(catalogoR, { elemento: "morte" }).some(function (e) { return e.id === "op.ritual.amaldicoar-arma"; }) &&
@@ -3526,9 +3526,9 @@
         nomesR(RS.filtrar(catalogoR, { busca: "fim", elemento: "morte", circulo: 4, fonte: "OPRPG" })).join(", "),
         "Fim Inevitável");
       var contagens = RS.contagens(catalogoR, { elemento: "sangue" });
-      t.igual("a contagem de círculos respeita o elemento escolhido", contagens.circulos[2], 8);
+      t.igual("a contagem de círculos respeita o elemento escolhido", contagens.circulos[2], 9);
       t.igual("  e a de elementos ignora o próprio filtro de elemento", contagens.elementos.morte, 25);
-      t.iguais("as sete fontes aparecem no catálogo (com a Extra, v5.1, e o AS6)", RS.fontesDoCatalogo(catalogoR).sort(), ["AS1", "AS2", "AS4", "AS6", "EXTRA", "OPRPG", "SAH"]);
+      t.iguais("as oito fontes aparecem no catálogo (com a Extra, v5.1, o AS6 e o AS7)", RS.fontesDoCatalogo(catalogoR).sort(), ["AS1", "AS2", "AS4", "AS6", "AS7", "EXTRA", "OPRPG", "SAH"]);
       t.ok("  a Extra vem depois dos livros, na ordem do registro", RS.fontesDoCatalogo(catalogoR).indexOf("EXTRA") === RS.fontesDoCatalogo(catalogoR).length - 1);
       t.iguais("o filtro Extra traz só a Barganha Insana", nomesR(RS.filtrar(catalogoR, { fonte: "EXTRA" })), ["Barganha Insana"]);
       t.igual("  e a contagem do filtro conta 1", RS.contagens(catalogoR, {}).fontes.EXTRA, 1);
@@ -5146,7 +5146,7 @@
     remoto.pericias[0].bonus = 5;
     var m = S.mesclar(base, local, remoto, S.ESQUEMA_FICHA);
     t.ok("sincronizar: a fórmula daqui e o bônus de lá", m.estado.pericias[0].formula === "@STR d8" && m.estado.pericias[0].bonus === 5 && !m.conflitos.length);
-    t.igual("o schema da ficha é o atual (28)", n.schemaVersion, 28);
+    t.igual("o schema da ficha é o atual (29)", n.schemaVersion, 29);
   }
 
   /* =================================================================
@@ -5183,7 +5183,7 @@
     var m = S.mesclar(base, local, remoto, S.ESQUEMA_FICHA);
     t.ok("sincronizar: o modo daqui e o bônus de lá, sem conflito",
       m.estado.organizacao.pericias.modo === "maior" && m.estado.pericias[1].bonus === 4 && !m.conflitos.length);
-    t.igual("o schema da ficha é o atual (28)", n.schemaVersion, 28);
+    t.igual("o schema da ficha é o atual (29)", n.schemaVersion, 29);
   }
 
   /* =================================================================
@@ -5329,7 +5329,7 @@
     t.ok("exportar e importar leva pendentes (com o dado já rolado) e resolvidas", volta.ok &&
       volta.dados.ordem.barganhaInsana.pendentes[0].d4 === 2 && volta.dados.ordem.barganhaInsana.resolvidas.length === 1);
     t.ok("  mesmo sem o ritual na lista de conhecidos", volta.dados.rituais.itens.length === 0);
-    t.igual("o schema da ficha é o atual (28)", F.normalizarFicha(ficha).schemaVersion, 28);
+    t.igual("o schema da ficha é o atual (29)", F.normalizarFicha(ficha).schemaVersion, 29);
   }
 
   /* =================================================================
@@ -5370,7 +5370,7 @@
     t.iguais("  um tema de dados que este navegador não conhece também fica (a tela usa a reserva)", MT.normalizarAparencia({ dados: { id: "tema-do-futuro" } }).dados, { id: "tema-do-futuro" });
     var ficha = F.normalizarFicha(F.criarFicha({ nome: "Lia", tipoFicha: "universal", aparencia: { v: 1, modo: "conta", dados: { id: "sigilo-violeta" } } }));
     t.iguais("a ficha normalizada mantém a escolha", ficha.aparencia.dados, { id: "sigilo-violeta" });
-    t.igual("o schema da ficha é o atual (28)", ficha.schemaVersion, 28);
+    t.igual("o schema da ficha é o atual (29)", ficha.schemaVersion, 29);
     var pacote = V.exportar("personagem", ficha);
     t.ok("exportar leva a escolha sem `id` (atravessa como `tema`)", pacote.dados.aparencia.dados.tema === "sigilo-violeta" && JSON.stringify(pacote).indexOf('"id"') < 0);
     var volta = V.importado(JSON.parse(JSON.stringify(pacote)));
@@ -7129,8 +7129,8 @@
       R.resistencias(fbExp, INV).dano.some(function (d) { return d.tipo === "geral"; }) && R.dadosDoTeste(fbExp, "diplomacia").quantos === R.dadosDoTeste(baseFb, "diplomacia").quantos - 1);
     if (B) {
       var todas = B.secoes("origens").reduce(function (l, s) { return l.concat(s.entradas); }, []);
-      t.ok("a aba Origens da biblioteca tem as 56, numa seção por fonte (com AS6 e Extra)", todas.length === 56 && B.secoes("origens").length === 7 &&
-        B.secoes("origens")[6].titulo === "Origens · Extra" && B.secoes("origens")[5].titulo === "Origens · Arquivos Secretos 6");
+      t.ok("a aba Origens da biblioteca tem as 58, numa seção por fonte (com AS6, AS7 e Extra)", todas.length === 58 && B.secoes("origens").length === 8 &&
+        B.secoes("origens")[7].titulo === "Origens · Extra" && B.secoes("origens")[6].titulo === "Origens · Arquivos Secretos 7" && B.secoes("origens")[5].titulo === "Origens · Arquivos Secretos 6");
       t.ok("  busca pelo poder e pela origem", B.filtrar(B.secoes("origens"), "luta ou fuga").some(function (s) { return s.entradas.length; }) &&
         B.filtrar(B.secoes("origens"), "profetizado").some(function (s) { return s.entradas.length; }));
       var copia = B.modelo(todas.filter(function (x) { return x.entrada.nome === "Conexões"; })[0].entrada, "");

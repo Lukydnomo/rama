@@ -235,6 +235,12 @@
     if (velha) dados.envelhecida = velha;
     var usosKit = inteiroEntre(b.usosFarmaceutico, 0, 3);
     if (usosKit) dados.usosFarmaceutico = usosKit;
+    /* Arquivos Secretos 7 (v6.5): a criatura guiada pela Carranca, a
+       ativação do Pé de Coelho, os usos do Sal Dourado e a súplica do
+       Terço, em `as7`. Sem o módulo, passa como veio. */
+    var A7 = global.RAMAOrdemArquivo7;
+    if (A7 && A7.normalizarDadosDoItem) A7.normalizarDadosDoItem(dados, b);
+    else if (b.as7 && typeof b.as7 === "object") dados.as7 = JSON.parse(JSON.stringify(b.as7));
     /* Contagem de munição (v2.20, regra opcional): o que está carregado
        numa arma e o que já saiu dos pacotes de uma munição. Sem o módulo
        (uma página que não conta munição), passa como veio. */

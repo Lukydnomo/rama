@@ -2236,7 +2236,7 @@ function acaoLerImagemDoTurno(corpo, usuario) {
   if (p.tipo === 'criatura' && !imagem) {
     var origem = p.snapshot && p.snapshot.origem && typeof p.snapshot.origem === 'object' ? p.snapshot.origem : {};
     var candidato = String(origem.catalogoId || origem.copiadoDe || p.origemId || '');
-    if (/^(op|sah|as1|as2|as3|as4|as5|as6)\.criatura\.[a-z0-9.-]+$/.test(candidato)) retratoCatalogo = candidato;
+    if (/^(op|sah|as1|as2|as3|as4|as5|as6|as7)\.criatura\.[a-z0-9.-]+$/.test(candidato)) retratoCatalogo = candidato;
   }
   var nomeAtual = p.tipo === 'personagem' ? personagensDaMesaPorId(ctx)[p.personagemId] : null;
   var dadosDoTurno = { participanteId: p.id, tipo: p.tipo, nome: nomeAtual || p.nome || '', imagem: String(imagem) };
@@ -2582,8 +2582,13 @@ function definirNaInstanciaDaCriatura(snapshot, chave, valor) {
       if (vida && maximo > 0) {
         /* AS3 (v2.33): "+N PV máximos e atuais" ao entrar na forma. */
         var soma = alvo ? Math.max(0, Math.min(999, Math.round(Number(alvo.somaAtuais)) || 0)) : 0;
+        /* AS7 (v6.5): O Verdadeiro Raziel — com menos do piso ao assumir a
+           forma, fica com o piso. */
+        var piso = alvo ? Math.max(0, Math.min(9999, Math.round(Number(alvo.pvMinimoAoAssumir)) || 0)) : 0;
+        var novoAtual = (Math.round(Number(vida.atual)) || 0) + soma;
+        if (piso && novoAtual < piso) novoAtual = piso;
         vida.maximo = maximo;
-        vida.atual = Math.max(0, Math.min((Math.round(Number(vida.atual)) || 0) + soma, maximo));
+        vida.atual = Math.max(0, Math.min(novoAtual, maximo));
       }
     }
   } else if (/^procedimento:/.test(chave)) {

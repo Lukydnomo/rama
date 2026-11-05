@@ -146,6 +146,7 @@
   }
 
   function acaoDePe(ctx, o, p, r, org, ac) {
+    if (ac.custoSan) return acaoDeSan(ctx, o, p, r, org, ac);
     var usado = false;
     var sigla = siglaDoGasto(o);
     return {
@@ -183,6 +184,32 @@
     }
   }
 
+  /* Custo em Sanidade (Sussurros e Vultos, AS7 p. 80): perde a SAN e
+     mostra o mesmo teste com o bônus, uma vez por teste. Com Jogando sem
+     Sanidade, a perda não se aplica (SAH p. 104) — o mesmo contrato das
+     outras perdas de Sanidade da ficha — e o botão diz isso. */
+  function acaoDeSan(ctx, o, p, r, org, ac) {
+    var usado = false;
+    var comPd = R().usaDeterminacao(o);
+    return {
+      rotulo: ac.rotulo + ": +" + ac.valor + (comPd ? " (sem perda de SAN: Jogando sem Sanidade)" : " (" + ac.custoSan + " SAN)"),
+      dica: ac.condicao || "",
+      aoClicar: function (cartao, botao) {
+        if (usado) return;
+        var perda = global.RAMAFichaArquivo7 ? global.RAMAFichaArquivo7.perderSan(ctx, ac.custoSan) : null;
+        usado = true;
+        if (botao) botao.disabled = true;
+        salvar(ctx);
+        var nota = perda ? "Perdeu " + ac.custoSan + " SAN (" + perda.antes + " → " + perda.depois + ") — " + org.poder + ", origem " + org.nome + "."
+          : org.poder + ": Jogando sem Sanidade, a perda de " + ac.custoSan + " SAN não se aplica (SAH p. 104).";
+        global.RAMARolagens.mostrar(Object.assign({}, r, {
+          total: r.total + ac.valor,
+          parcelas: (r.parcelas || []).concat([{ rotulo: ac.rotulo, valor: ac.valor }]),
+        }), { nome: p.nome + " · " + ac.rotulo, notas: ["Mesmo teste, +" + ac.valor + ". " + nota] });
+      },
+    };
+  }
+
   function rolar(ctx, chave, rotulo) {
     if (global.RAMAOrdemRolarPericia) global.RAMAOrdemRolarPericia(ctx, chave, rotulo);
   }
@@ -212,7 +239,10 @@
       if (de4) return de4;
       var de5 = global.RAMAFichaArquivo5 ? global.RAMAFichaArquivo5.controlesDeOrigem(ctx, org) : null;
       if (de5) return de5;
-      return global.RAMAFichaArquivo6 ? global.RAMAFichaArquivo6.controlesDeOrigem(ctx, org) : null;
+      var de6 = global.RAMAFichaArquivo6 ? global.RAMAFichaArquivo6.controlesDeOrigem(ctx, org) : null;
+      if (de6) return de6;
+      /* As origens do AS7 moram em js/ordem/telas/ficha-arquivo7.js. */
+      return global.RAMAFichaArquivo7 ? global.RAMAFichaArquivo7.controlesDeOrigem(ctx, org) : null;
     }
     var partes = f(ctx, o, org, estado(o, org.chave), registroDaOrigem(o, org));
     return partes && partes.length ? el("div.pilha--curta.origem-controles", { class: "pilha" }, partes.filter(Boolean)) : null;

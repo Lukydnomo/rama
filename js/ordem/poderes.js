@@ -15,7 +15,7 @@
 
      OPRPG  Ordem Paranormal RPG — Livro de Regras, v1.1
      SAH    Sobrevivendo ao Horror, v1.2
-     AS1–AS6  Arquivos Secretos 1 a 6 (pacotes de conteúdo oficial)
+     AS1–AS7  Arquivos Secretos 1 a 7 (pacotes de conteúdo oficial)
 
    Páginas do LIVRO, não do PDF. Os resumos são próprios e curtos, para
    lembrar do que se trata na hora do jogo. O texto integral está nos
@@ -100,6 +100,7 @@
   var AS4 = "AS4";
   var AS5 = "AS5";
   var AS6 = "AS6";
+  var AS7 = "AS7";
 
   /* ------------------------------------------------------------------
      Atalhos de montagem. Existem só para a lista abaixo caber na tela.
@@ -1572,6 +1573,53 @@
             energia: [{ atributo: "for", valor: -1 }, { atributo: "agi", valor: 1 }],
           } }],
         automacao: "parcial", nota: "As mudanças de atributo por elemento entram na conta. O resto é anotação." }),
+
+    /* --- AS7: Monstruoso para Especialista, p.81-84 ---
+       Os efeitos do dia (o experimento), os sacrifícios de Ser Testado,
+       os braços de Ser Expurgado e as trocas de Ser Apavorante moram em
+       js/ordem/arquivo7.js: dependem do experimento feito HOJE (o dia da
+       cronologia da campanha). Aqui ficam só o que vale sempre — o
+       Ocultismo e a Presença reduzida. A penalidade social (–2, –5, –1
+       dado, –2 dados em Diplomacia, Enganação e Intuição) é uma só, a do
+       marco mais alto: também vem do arquivo7, para não somar as quatro. */
+    trilha("monstruosoEspecialista", 10, "serExperimentado", "Ser Experimentado", AS7, 81,
+      "Treinado em Ocultismo (+2 se já for). Escolha Sangue, Morte, Conhecimento ou Energia (–2 em Diplomacia, Enganação e Intuição). Uma vez por dia, um experimento cruel (ação completa, consome um componente do elemento) recupera 1d8+1 PV e dá os efeitos do elemento até o fim do dia; sem ele, efeitos de fome e sede. A afinidade, se vier, tem de ser com este elemento.",
+      { opcoes: [{ chave: "elemento", tipo: "elemento", rotulo: "Elemento dos experimentos" }],
+        efeitos: [ef.treinarOuBonus("ocultismo")],
+        automacao: "parcial",
+        nota: "O Ocultismo entra na conta. O experimento é um botão no cartão (uma vez por dia da cronologia): consome o componente, rola a recuperação e liga os efeitos do elemento até o próximo dia. A penalidade social entra na conta." }),
+    trilha("monstruosoEspecialista", 40, "serTestado", "Ser Testado", AS7, 82,
+      "A penalidade vira –5. O experimento recupera 2d8+2 PV e soma o efeito de Ser Testado do elemento — com o sacrifício de pontos próprios de um atributo (até 0), que não muda PV, PE, SAN nem perícias treinadas.",
+      { automacao: "parcial",
+        nota: "O sacrifício é escolhido no experimento e vale até o fim do dia: reduz o atributo nas contas de teste, de Defesa e de carga, nunca nos PV, PE, SAN nem na quantidade de perícias treinadas. Só pontos seus (sem itens nem rituais)." }),
+    trilha("monstruosoEspecialista", 65, "serExpurgado", "Ser Expurgado", AS7, 83,
+      "A Presença cai 1 para sempre e a penalidade vira –1 dado. O experimento recupera 3d8+3 PV e ativa o braço do elemento até o fim do dia; sem ele, a parte paranormal fica inutilizada.",
+      { efeitos: [{ tipo: "atributo", atributo: "pre", valor: -1 }], automacao: "parcial",
+        nota: "A Presença reduzida entra na conta. O +1 no atributo do braço e as ações dele valem no dia do experimento." }),
+    trilha("monstruosoEspecialista", 99, "serApavorante", "Ser Apavorante", AS7, 84,
+      "A Presença cai mais 1 e a penalidade vira –2 dados. O experimento recupera 4d8+4 PV e os efeitos de Ser Experimentado mudam para a forma apavorante do elemento, com +1 no atributo e um ritual aprendido enquanto durarem.",
+      { efeitos: [{ tipo: "atributo", atributo: "pre", valor: -1 }], automacao: "parcial",
+        nota: "A Presença reduzida entra na conta. A forma apavorante SUBSTITUI os efeitos de Ser Experimentado no dia do experimento; o ritual (Vínculo de Sangue, Distorção Temporal, Controle Mental ou Teletransporte) é conjurável enquanto o efeito durar, sem virar ritual aprendido." }),
+
+    /* --- AS7: Monstruoso para Ocultista, p.85-88 --- */
+    trilha("monstruosoOcultista", 10, "serEscarificado", "Ser Escarificado", AS7, 85,
+      "+2 em Ocultismo. Escolha Sangue, Morte, Conhecimento ou Energia (–2 em Diplomacia, Enganação e Intuição). Uma vez por dia, a escarificação (ação completa, consome um componente do elemento) recupera 1d4 PE e, até o fim do dia, troca a Presença pelo atributo do elemento nos PE e na DT dos rituais, com +1 nesse atributo; sem ela, efeitos de fome e sede.",
+      { opcoes: [{ chave: "elemento", tipo: "elemento", rotulo: "Elemento da escarificação" }],
+        efeitos: [ef.pericia(["ocultismo"], 2)],
+        automacao: "parcial",
+        nota: "O +2 em Ocultismo e a penalidade social entram na conta. A escarificação é um botão no cartão (uma vez por dia da cronologia): consome o componente, rola os PE e liga os efeitos até o próximo dia." }),
+    trilha("monstruosoOcultista", 40, "serPerfurado", "Ser Perfurado", AS7, 86,
+      "A penalidade vira –5. A escarificação recupera 1d6 PE e dá Tatuagem Ritualística ampliada aos rituais do elemento marcados na pele, uma conjuração como reação por cena sob certas condições e +5 em concentração com eles.",
+      { automacao: "parcial",
+        nota: "Os rituais marcados na pele são escolhidos no cartão. Com a escarificação do dia, eles custam –1 PE (a Tatuagem Ritualística, uma só, mesmo que a ficha já tenha o poder). A reação confere a condição exigida pelo elemento, uma vez por cena." }),
+    trilha("monstruosoOcultista", 65, "serRasgado", "Ser Rasgado", AS7, 87,
+      "A Presença cai 1 para sempre e a penalidade vira –1 dado. A escarificação recupera 1d8 PE; os rituais marcados do elemento ganham +2 na DT e, ao conjurar um ritual do elemento, há uma ação própria dele.",
+      { efeitos: [{ tipo: "atributo", atributo: "pre", valor: -1 }], automacao: "parcial",
+        nota: "A Presença reduzida entra na conta. O +2 na DT e a ação de cada elemento aparecem em “Usar ritual” com a escarificação do dia." }),
+    trilha("monstruosoOcultista", 99, "serMutilado", "Ser Mutilado", AS7, 88,
+      "A Presença cai mais 1 e a penalidade vira –2 dados. A escarificação recupera 1d12 PE, +1 no atributo, rituais marcados sem fala, gestos nem componentes, e um ritual do elemento e um de Medo de 4º círculo, à escolha.",
+      { efeitos: [{ tipo: "atributo", atributo: "pre", valor: -1 }], automacao: "parcial",
+        nota: "A Presença reduzida entra na conta. Os dois rituais de 4º círculo são escolhidos no cartão e conjuráveis no dia da escarificação, sem virar rituais aprendidos; o de Medo recebe os benefícios da trilha como se fosse do elemento — o catálogo não muda." }),
 
     /* --- SAH: Bibliotecário, p.23 --- */
     trilha("bibliotecario", 10, "conhecimentoPratico", "Conhecimento Prático", SAH, 23,

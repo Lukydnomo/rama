@@ -25,6 +25,7 @@
             Mapa Sanguíneo, Labirinto Mental, Capturar Momento e Rajada
             Caótica (p. 65–67)
      AS6    Arquivos Secretos 6, v1.0 (Jambô): Hesitação Forçada (p. 72)
+     AS7    Arquivos Secretos 7, v1.0 (Jambô): Vampirismo (p. 76–77)
      AS4    Arquivos Secretos 4, v1.0 (Jambô, pacote de conteúdo oficial)
             Backup (p. 68). Os rituais impressos nas fichas da Produção
             (Eletrocussão, Coincidência Forçada, Tela de Ruído…) são ações
@@ -107,6 +108,7 @@
   var AS2 = "AS2";
   var AS4 = "AS4";
   var AS6 = "AS6";
+  var AS7 = "AS7";
   var EX = "EXTRA";
 
   var CO = "conhecimento";
@@ -1525,6 +1527,37 @@
       ]
     },
 
+
+    /* --- Arquivos Secretos 7, p. 76–77 ---
+       A conjuração transforma o corpo numa refeição até o fim da cena; os
+       benefícios vêm de COMER (1 minuto), não de conjurar. O estado — o
+       corpo, os vasos já consumidos, quem comeu e o que recebeu — mora em
+       js/ordem/arquivo7.js; as escolhas aparecem em "Usar ritual" e no
+       painel do Arquivos Secretos 7, na aba Rituais. */
+    {
+      id: "as7.ritual.vampirismo", nome: "Vampirismo", elemento: SA, circulo: 2, fonte: AS7, pagina: 76,
+      execucao: "completa", alcance: "toque", alvo: "1 pessoa", duracao: "cena",
+      resumo: "Transforma o corpo de uma pessoa viva ou morta numa refeição paranormal até o fim da cena; depois disso, o mesmo corpo não pode ser alvo deste ritual de novo. Quem gasta 1 minuto comendo parte do corpo recebe os efeitos dos vasos sanguíneos que escolheu consumir, até o fim da cena. Os mesmos vasos não podem ser consumidos mais de uma vez. Vasos da Visão: +5 em testes de ataque. Da Audição: se a pessoa conjurava rituais de 1º círculo, escolha um para conjurar normalmente. Do Paladar: recupera 2d8+2 PV. Do Olfato: +5 em testes para rastrear um único ser ligado à pessoa. Do Tato: se a pessoa tinha perícias treinadas, fica treinado numa delas (já treinado: +2 nela).",
+      versoes: [
+        {
+          nome: "Discente", custo: 5, requisito: "3º círculo",
+          alteracoes: "Os vasos mudam: Visão +10 em ataques; Audição, um ritual de 2º círculo que a pessoa conjurava; Paladar, 3d8+3 PV; Olfato, +10 para rastrear; Tato, veterano numa perícia em que a pessoa era veterana (já veterano: +2 nela).",
+          rolagens: [{ tipo: "cura", rotulo: "Vasos do Paladar (discente)", expressao: "3d8", extra: "3" }],
+        },
+        {
+          nome: "Verdadeiro", custo: 10, requisito: "4º círculo e afinidade",
+          alteracoes: "Os vasos mudam: Visão +15 em ataques; Audição, um ritual de 3º círculo que a pessoa conjurava; Paladar, 4d8+4 PV; Olfato, +15 para rastrear; Tato, expert numa perícia em que a pessoa era expert (já expert: +2 nela).",
+          rolagens: [{ tipo: "cura", rotulo: "Vasos do Paladar (verdadeiro)", expressao: "4d8", extra: "4" }],
+        },
+      ],
+      rolagens: [{ tipo: "cura", rotulo: "Vasos do Paladar", expressao: "2d8", extra: "2" }],
+      notas: [
+        "Os acréscimos de +5 PE (Discente) e +10 PE (Verdadeiro) somam-se ao custo do 2º círculo (3 PE): 8 PE e 13 PE no total.",
+        "A ficha de Alvira (p. 42) remete a este ritual com “página @@”: o registro é este, das p. 76–77.",
+        "Audição e Tato dependem do que a pessoa conjurava e de quanto era treinada: quem diz é a mesa. A concessão vale até o fim da cena e não vira ritual aprendido nem grau de treinamento da ficha.",
+      ]
+    },
+
   ];
 
   /* FIM DOS RITUAIS — o próximo lote entra acima desta linha. */
@@ -1540,6 +1573,7 @@
       AS4: { nome: "Arquivos Secretos 4", curto: "Arquivos Secretos 4", edicao: "v1.0" },
       AS5: { nome: "Arquivos Secretos 5", curto: "Arquivos Secretos 5", edicao: "v1.0" },
       AS6: { nome: "Arquivos Secretos 6", curto: "Arquivos Secretos 6", edicao: "v1.0" },
+      AS7: { nome: "Arquivos Secretos 7", curto: "Arquivos Secretos 7", edicao: "v1.0" },
     },
     rituais: RITUAIS,
   };

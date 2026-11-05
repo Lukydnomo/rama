@@ -114,6 +114,7 @@
     if (!rituais.itens.length) {
       return el("div.pilha--curta", { class: "pilha" }, [
         painelDeRetencao(ctx),
+        global.RAMAFichaArquivo7 && F.ehDeOrdem(ctx.ficha) ? global.RAMAFichaArquivo7.painelDeRituais(ctx) : null,
         painelDoAprendizado(ctx, est),
         UI.vazio({
           titulo: "Nenhum registro em " + rotulo(ctx).toLowerCase(),
@@ -138,7 +139,9 @@
     var criterios = org && O() ? org.criterios(ctx) : [];
     var arrastar = org ? org.podeArrastar(ctx, "rituais") : ctx.emEdicao();
 
-    var partes = [org ? org.barra(ctx, "rituais") : null, painelDeRetencao(ctx), painelDoAprendizado(ctx, est)];
+    var partes = [org ? org.barra(ctx, "rituais") : null, painelDeRetencao(ctx),
+      global.RAMAFichaArquivo7 && F.ehDeOrdem(ctx.ficha) ? global.RAMAFichaArquivo7.painelDeRituais(ctx) : null,
+      painelDoAprendizado(ctx, est)];
     var raiz;
     if (!apr) {
       raiz = el("div.pilha--curta", { class: "pilha" }, partes.concat(listaAgrupada(ctx, "rituais", lista, criterios, modo, null, arrastar)));
@@ -838,7 +841,10 @@
      mostrador da ficha, com o TIPO no nome do resultado — cura não é
      dano, e o histórico da campanha precisa saber a diferença. */
   function rolar(ctx, ritual, versao, rolagem) {
-    var r = D.dano({ dano: rolagem.expressao, danoExtra: rolagem.extra, nome: ritual.nome });
+    /* Arquivos Secretos 7: o Cajado da Cruz de Sangue dá +1 dado do mesmo
+       tipo no dano dos rituais de Sangue. */
+    var exp7 = rolagem.tipo === "dano" && global.RAMAFichaArquivo7 ? global.RAMAFichaArquivo7.expressaoDoDano(ctx, ritual, rolagem.expressao) : { expressao: rolagem.expressao, notas: [] };
+    var r = D.dano({ dano: exp7.expressao, danoExtra: rolagem.extra, nome: ritual.nome });
 
     /* Ritual Potente (Int) e Ritual Intenso (Pre, AS1 p. 44): somam nas
        rolagens de dano e de cura dos rituais da ficha. */
@@ -863,7 +869,7 @@
     var notas6 = rolagem.tipo === "dano" && global.RAMAFichaArquivo6 ? global.RAMAFichaArquivo6.notasDoDano(ctx, ritual) : [];
     global.RAMARolagens.mostrar(r, {
       nome: rolagem.rotulo + " — " + ritual.nome + " · " + versao.nome,
-      notas: notas6,
+      notas: notas6.concat(exp7.notas),
     });
   }
 
@@ -880,11 +886,15 @@
     var A2 = global.RAMAOrdemArquivo2;
     var liturgia = A2 ? A2.dtDeFortalecimento(ctx.ficha.ordem, ritual.id) : 0;
     var antena = dtDaAntena(ctx);
-    var total = base.total + (aprim ? aprim.valor : 0) + liturgia + antena;
+    /* Arquivos Secretos 7: +2 nos marcados na pele (Ser Rasgado) e +1 do
+       Cajado da Cruz de Sangue (rituais de Sangue). */
+    var as7 = global.RAMAFichaArquivo7 ? global.RAMAFichaArquivo7.dtExtraDoRitual(ctx, ritual) : { valor: 0, partes: [] };
+    var total = base.total + (aprim ? aprim.valor : 0) + liturgia + antena + as7.valor;
     var partes = [];
     if (aprim) partes.push("+" + aprim.valor + " de Habilidade Aprimorada" + (aprim.vezes > 1 ? ", escolhida duas vezes" : ""));
     if (liturgia) partes.push("+" + liturgia + " de Liturgia, até o próximo interlúdio");
     if (antena) partes.push("+" + antena + " d’A Antena empunhada");
+    as7.partes.forEach(function (x) { partes.push(x); });
     return String(total) + (partes.length ? " (com " + partes.join("; ") + ")" : "");
   }
 

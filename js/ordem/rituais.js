@@ -70,6 +70,7 @@
     ["AS4", "Arquivos Secretos 4", "Arquivos Secretos 4", "AS4"],
     ["AS5", "Arquivos Secretos 5", "Arquivos Secretos 5", "AS5"],
     ["AS6", "Arquivos Secretos 6", "Arquivos Secretos 6", "AS6"],
+    ["AS7", "Arquivos Secretos 7", "Arquivos Secretos 7", "AS7"],
     ["EXTRA", "Extra", "Extra", "EX"],
   ];
   function mapaDeLivros(campo, indice) {
@@ -513,7 +514,10 @@
     if (!R || !ordem || !R.trilho) return null;
     var t = R.trilho(ordem);
     if (!t || !t.passos) return null;
-    var presenca = R.atributo(ordem, "pre");
+    /* Ser Escarificado (AS7 p. 85) troca a Presença pelo atributo do
+       elemento, no dia da escarificação. */
+    var atDt = R.atributoDaDt ? R.atributoDaDt(ordem) : "pre";
+    var presenca = R.atributo(ordem, atDt);
     /* Habilidades que sobem a DT de todos os rituais — hoje só Rituais
        Eficientes, de Graduado (OPRPG p.35). Vem da progressão, não de
        uma segunda tabela aqui. */
@@ -523,6 +527,7 @@
       nivel: t.passos,
       rotulo: t.rotulo,
       presenca: presenca,
+      atributoDt: atDt,
       extra: extra.total,
       partesExtra: extra.partes,
     };
