@@ -53,21 +53,49 @@
 
   /* ---------------- cabeçalho, seletor e seções ---------------- */
 
+  /* A estante de sistemas (v6.6.2): uma capa por sistema, como os
+     cartões de escolha de Personagens. Um grupo de rádio: Tab entra no
+     escolhido, as setas andam e escolhem, Enter/Espaço também. Trocar
+     de sistema limpa os filtros do sistema anterior e MANTÉM a seção
+     aberta (Geradores continua em Geradores). Depois do redesenho, o
+     foco volta ao cartão escolhido. */
+  function trocarSistema(id, comFoco) {
+    if (id === estado.sistema) return;
+    estado.sistema = id;
+    nativo = { busca: "", fonte: "", filtro: "", abertos: {}, limite: 60 };
+    desenhar();
+    if (comFoco) {
+      var novo = painel.querySelector('.estante-sistemas__opcao[data-sistema="' + id + '"]');
+      if (novo) novo.focus();
+    }
+  }
+
   function seletorDeSistema() {
-    var idc = "criaturas-sistema";
-    return el("div.bib-filtro.criaturas-sistema", {}, [
-      el("label.t-mini", { for: idc, texto: "Sistema" }),
-      el("select.r-selecao", {
-        id: idc,
-        onchange: function (ev) {
-          estado.sistema = ev.target.value;
-          nativo = { busca: "", fonte: "", filtro: "", abertos: {}, limite: 60 };
-          desenhar();
-        },
-      }, S().lista().map(function (s) {
-        return el("option", { value: s.id, texto: s.nome, selected: s.id === estado.sistema });
-      })),
-    ]);
+    var lista = S().lista();
+    var Capa = global.RAMACapaSistema;
+    function mover(ev, i) {
+      var passo = { ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1 }[ev.key];
+      var alvo = null;
+      if (passo) alvo = lista[(i + passo + lista.length) % lista.length];
+      else if (ev.key === "Home") alvo = lista[0];
+      else if (ev.key === "End") alvo = lista[lista.length - 1];
+      if (!alvo) return;
+      ev.preventDefault();
+      trocarSistema(alvo.id, true);
+    }
+    return el("div.estante-sistemas", { role: "radiogroup", "aria-label": "Sistema" }, lista.map(function (s, i) {
+      var escolhido = s.id === estado.sistema;
+      return el("button.estante-sistemas__opcao" + (escolhido ? ".estante-sistemas__opcao--escolhido" : ""), {
+        type: "button", role: "radio", "aria-checked": String(escolhido), tabindex: escolhido ? "0" : "-1",
+        dataset: { sistema: s.id },
+        onclick: function () { trocarSistema(s.id, true); },
+        onkeydown: function (ev) { mover(ev, i); },
+      }, [
+        el("span.estante-sistemas__volume", {}, [Capa ? Capa.elemento(s, { tamanho: "m" }) : null]),
+        el("span.estante-sistemas__nome", { texto: s.nome }),
+        escolhido ? el("span.estante-sistemas__marca", { texto: "Selecionado" }) : null,
+      ]);
+    }));
   }
 
   function abasDeSecao() {

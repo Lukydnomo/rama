@@ -817,6 +817,10 @@ segredo nenhum — ele os lê das Script Properties. Publicá-lo não expõe nad
 
 ### Atualizar o backend
 
+**v6.6.2 — LOMBADA:** só o site: publique `criaturas/index.html`,
+`js/paginas/criaturas.js`, `css/componentes.css` e `css/modern20/componentes.css`
+(a estante de sistemas na página Criaturas). Nada de `.gs`.
+
 **v6.6.1 — AMPULHETA:** só o site: publique `js/ordem/telas/ficha-arquivo3.js`
 (o painel do AS3 só quando serve à ficha). Nada de `.gs`.
 
@@ -1676,7 +1680,7 @@ Três números diferentes, que não se misturam:
 
 | | Onde | O que é |
 |---|---|---|
-| versão do aplicativo | `js/versao.js` | o que a pessoa vê: v6.6.1 |
+| versão do aplicativo | `js/versao.js` | o que a pessoa vê: v6.6.2 |
 | `schemaVersion` | `js/ficha.js` | o formato da FICHA |
 | `versaoFormato` | `js/config.js` | o formato dos arquivos de importação |
 

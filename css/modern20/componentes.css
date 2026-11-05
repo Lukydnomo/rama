@@ -706,6 +706,21 @@
   & .suplementos-em-uso { border-radius: var(--m20-raio-controle); background: var(--m20-aviso-suave); }
   & .tipo-ficha:hover .capa-sistema,
   & .tipo-ficha:focus-visible .capa-sistema { box-shadow: 1px 0 0 color-mix(in srgb, var(--cor-texto) 10%, transparent), var(--m20-sombra-2); }
+  /* A estante de sistemas da página Criaturas (v6.6.2). */
+  & .estante-sistemas__opcao {
+    border-radius: var(--m20-raio-cartao);
+    border-color: var(--m20-borda);
+    transition: border-color var(--tempo-seco) var(--curva), box-shadow var(--tempo-seco) var(--curva);
+  }
+  & .estante-sistemas__opcao:hover,
+  & .estante-sistemas__opcao:focus-visible { border-color: var(--cor-traco-media); background: var(--fundo-superficie); box-shadow: var(--m20-sombra-1); }
+  & .estante-sistemas__opcao--escolhido { border-color: var(--cor-foco); box-shadow: inset 0 0 0 1px var(--cor-foco), var(--m20-sombra-1); background: var(--m20-selecao-suave); }
+  & .estante-sistemas__nome { font-weight: 650; letter-spacing: 0; text-transform: none; }
+  & .estante-sistemas__marca { color: var(--cor-foco); }
+  & .estante-sistemas__marca::before { content: "● "; }
+  & .estante-sistemas__opcao:hover .capa-sistema,
+  & .estante-sistemas__opcao:focus-visible .capa-sistema,
+  & .estante-sistemas__opcao--escolhido .capa-sistema { box-shadow: 1px 0 0 color-mix(in srgb, var(--cor-texto) 10%, transparent), var(--m20-sombra-2); }
 
   /* =================================================================
      RESULTADO DE ROLAGEM

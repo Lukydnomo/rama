@@ -3986,14 +3986,72 @@ html.arrastando * {
    ===================================================================== */
 .criaturas-controles {
   display: flex;
-  flex-wrap: wrap;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: var(--e2) var(--e3);
+  flex-direction: column;
+  align-items: stretch;
+  gap: var(--e3);
 }
-.criaturas-sistema .r-selecao { min-width: 14rem; }
 .criaturas-secoes { flex-wrap: wrap; overflow-x: visible; margin: 0; }
 .criaturas-controles > * { margin-top: 0; margin-bottom: 0; }
+
+/* A estante de sistemas (v6.6.2): capas clicáveis numa fileira compacta,
+   como os cartões de escolha de Personagens. Subir a capa é transform —
+   nunca empurra o vizinho; com movimento reduzido, nada se mexe. */
+.estante-sistemas {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--e2);
+  padding-top: var(--e2);
+}
+.estante-sistemas__opcao {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--e1);
+  width: calc(112px * var(--escala));
+  min-height: 44px;
+  padding: var(--e2) var(--e1) var(--e2);
+  text-align: center;
+  color: var(--cor-texto);
+  background: var(--fundo-superficie);
+  border: var(--borda) solid var(--cor-traco-fraca);
+  cursor: pointer;
+}
+.estante-sistemas__opcao:hover,
+.estante-sistemas__opcao:focus-visible {
+  border-color: var(--cor-traco-forte);
+  background: var(--fundo-superficie-2);
+}
+.estante-sistemas__opcao:focus-visible { outline: 2px solid var(--cor-foco, var(--cor-traco-forte)); outline-offset: 2px; }
+.estante-sistemas__opcao--escolhido {
+  border-color: var(--cor-traco-forte);
+  box-shadow: inset 0 0 0 1px var(--cor-traco-forte);
+  background: var(--fundo-superficie-2);
+}
+.estante-sistemas__volume { display: flex; justify-content: center; }
+.estante-sistemas__volume .capa-sistema { margin-right: 0; }
+.estante-sistemas__nome {
+  font-weight: 700;
+  font-size: var(--texto-mini);
+  letter-spacing: var(--espaco-letra-titulo);
+  text-transform: uppercase;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+.estante-sistemas__marca {
+  font-family: var(--fonte-mini);
+  font-size: var(--texto-mini);
+  color: var(--cor-texto-2);
+}
+.estante-sistemas__marca::before { content: "■ "; }
+.estante-sistemas__opcao:hover .capa-sistema,
+.estante-sistemas__opcao:focus-visible .capa-sistema,
+.estante-sistemas__opcao--escolhido .capa-sistema { box-shadow: 2px 2px 0 var(--cor-traco-media), 4px 4px 0 var(--cor-traco-forte); }
+@media (prefers-reduced-motion: no-preference) {
+  .estante-sistemas__opcao .capa-sistema { transition: transform var(--tempo-seco) var(--curva), box-shadow var(--tempo-seco) var(--curva); }
+  .estante-sistemas__opcao:hover .capa-sistema,
+  .estante-sistemas__opcao:focus-visible .capa-sistema { transform: translateY(-4px); }
+}
 .criaturas-corpo .bib-criaturas-janela .r-abas { flex-wrap: wrap; overflow-x: visible; }
 .gerador { display: flex; flex-direction: column; gap: var(--e2); }
 .gerador__topo {
@@ -4006,9 +4064,8 @@ html.arrastando * {
 .gerador__topo .t-secao { margin: 0; }
 .gerador__resultado p { margin: 0; }
 @media (max-width: 640px) {
-  .criaturas-controles { align-items: stretch; flex-direction: column; }
-  .criaturas-sistema { flex: 0 0 auto; }
-  .criaturas-sistema, .criaturas-sistema .r-selecao { width: 100%; min-width: 0; }
+  .estante-sistemas { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); }
+  .estante-sistemas__opcao { width: auto; }
   .gerador__topo > .r-botao { width: 100%; }
 }
 

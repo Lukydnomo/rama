@@ -118,6 +118,18 @@
 
   var CHANGELOG = [
     {
+      versao: "6.6.2",
+      codinome: "LOMBADA",
+      data: "31/10/2026",
+      mudancas: {
+        "Visual": [
+          "Na página Criaturas, o sistema se escolhe numa pequena estante de capas (como a escolha de sistema em Personagens): uma fileira no PC e uma grade no celular, com o escolhido marcado como Selecionado. A capa sobe um pouco no hover e no foco; com movimento reduzido, não se mexe.",
+          "Trocar de sistema mantém a seção aberta: em Geradores, aparecem os geradores do outro sistema. A escolha funciona pelo teclado (setas, Home e End) e o foco fica no cartão escolhido.",
+        ],
+        "Técnico": ["Só o site: criaturas/index.html (carrega js/capa-sistema.js), js/paginas/criaturas.js, css/componentes.css e css/modern20/componentes.css."],
+      },
+    },
+    {
       versao: "6.6.1",
       codinome: "AMPULHETA",
       data: "31/10/2026",
