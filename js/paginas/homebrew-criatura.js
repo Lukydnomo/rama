@@ -28,6 +28,11 @@
      criatura sem sistema continua no editor de sempre. */
   function editar(original, aoSalvar, opcoes) {
     var o = opcoes || {};
+    /* v6.8: Oblívio, Vampiro e Goblins têm editor próprio. */
+    if ((original && C.ehNativa(original)) || (!original && C.SISTEMAS_NATIVOS.indexOf(o.sistema) >= 0)) {
+      global.RAMAHomebrewCriaturaSistemas.editar(original, aoSalvar, o);
+      return;
+    }
     if ((original && C.ehOrdem(original)) || (!original && o.sistema === C.SISTEMA_ORDEM)) {
       editarOrdem(original, aoSalvar, o);
       return;
@@ -867,6 +872,7 @@
   function detalhes(registro) {
     var c = C.normalizar(registro);
     if (C.ehOrdem(c)) return detalhesOrdem(c);
+    if (C.ehNativa(c) && global.RAMAHomebrewCriaturaSistemas) return global.RAMAHomebrewCriaturaSistemas.detalhes(c);
     var partes = [];
 
     if (c.status.length) {

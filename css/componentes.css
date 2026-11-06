@@ -4195,3 +4195,36 @@ html.arrastando * {
 .ficha-goblin__rotulo { flex: 1 1 auto; font-family: var(--fonte-mini); font-size: var(--texto-mini); text-transform: uppercase; color: var(--cor-texto-2); }
 .ficha-goblin__valor { font-weight: 700; font-size: var(--texto-grande, 1.3rem); min-width: 1.5ch; text-align: right; }
 .ficha-goblin__legenda { margin: 0; }
+
+/* =====================================================================
+   HOMEBREW: CRIATURA POR SISTEMA (v6.8)
+   ---------------------------------------------------------------------
+   A escolha do sistema (capa, nome e o que a ficha tem, como os cartões
+   de Personagens) e as seções do editor de Oblívio, Vampiro e Goblins.
+   ===================================================================== */
+.hb-sistemas { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 260px), 1fr)); gap: var(--e2); }
+.hb-sistemas__opcao {
+  display: flex;
+  align-items: center;
+  gap: var(--e3);
+  padding: var(--e3);
+  min-height: 44px;
+  text-align: left;
+  color: var(--cor-texto);
+  background: var(--fundo-superficie);
+  border: var(--borda) solid var(--cor-traco-fraca);
+  cursor: pointer;
+}
+.hb-sistemas__opcao:hover,
+.hb-sistemas__opcao:focus-visible { border-color: var(--cor-traco-forte); background: var(--fundo-superficie-2); }
+.hb-sistemas__textos { display: flex; flex-direction: column; gap: var(--e1); min-width: 0; }
+.hb-sistemas__nome { font-weight: 700; letter-spacing: var(--espaco-letra-titulo); text-transform: uppercase; }
+@media (prefers-reduced-motion: no-preference) {
+  .hb-sistemas__opcao .capa-sistema { transition: transform var(--tempo-seco) var(--curva); }
+  .hb-sistemas__opcao:hover .capa-sistema,
+  .hb-sistemas__opcao:focus-visible .capa-sistema { transform: translateY(-3px); }
+}
+.hb-sistema__secao { margin: 0; padding: var(--e3); border: var(--borda) solid var(--cor-traco-fraca); display: flex; flex-direction: column; gap: var(--e2); min-width: 0; }
+.hb-sistema__secao > legend { padding: 0 var(--e1); }
+.hb-sistema__linha { display: flex; flex-direction: column; gap: var(--e1); padding-bottom: var(--e2); border-bottom: var(--borda) dashed var(--cor-traco-fraca); }
+.hb-sistema__linha > .r-botao { align-self: flex-start; }

@@ -192,6 +192,7 @@
 
     var etiquetas = [
       el("span.r-etiqueta", { texto: rotuloDoTipo(registro.tipo) }),
+      registro.tipo === "criatura" ? el("span.r-etiqueta", { texto: global.RAMACriaturas.NOMES_DOS_SISTEMAS[global.RAMACriaturas.sistemaDe(registro)] || "Universal" }) : null,
       registro.visibilidade === "publico"
         ? el("span.r-etiqueta", { texto: "Pública" })
         : null,
@@ -441,8 +442,7 @@
         opcao("Armadura", "Com um valor de defesa.", "armadura"),
         opcao("Mochila", "Reduz o peso total carregado.", "mochila"),
         el("hr.r-linha"),
-        opcao("Criatura de Ordem Paranormal", "Ficha de ameaça: VD, elementos, Presença Perturbadora, defesas, ações, fases e Enigma de Medo.", "criatura-ordem"),
-        opcao("Criatura universal", "Mini ficha: status, atributos, perícias, ataques e habilidades.", "criatura"),
+        opcao("Criatura", "Escolha o sistema: Ordem Paranormal, Oblívio, Vampiro, Malditos Goblins ou a ficha universal.", "criatura-sistema"),
         opcao("Habilidade", "Texto informativo, com cor e origem.", "habilidade"),
         opcao("Ritual", "Campos do ritual e versões, com dano e custo.", "ritual"),
       ]),
@@ -452,7 +452,7 @@
       return el("button.r-botao.r-botao--bloco", {
         type: "button",
         estilo: { flexDirection: "column", alignItems: "flex-start", gap: "2px", textTransform: "none", padding: "var(--e3)" },
-        onclick: function () { m.fechar(); editar(null, tipo); },
+        onclick: function () { m.fechar(); if (tipo === "criatura-sistema") escolherSistemaDaCriatura(); else editar(null, tipo); },
       }, [
         el("span.t-secao", { texto: rotulo }),
         el("span.t-mini", { texto: ajuda }),
@@ -460,7 +460,54 @@
     }
   }
 
-  function editar(registro, tipoNovo) {
+  /* v6.8: uma "Criatura" só, e o sistema escolhido pelas capas (como na
+     página Criaturas). Vampiro pergunta o modelo do livro: o compacto
+     dos antagonistas (p. 370) ou a ficha completa (p. 374). */
+  var CRIATURA_POR_SISTEMA = {
+    ordem: "Ficha de ameaça: VD, elementos, Presença Perturbadora, defesas, ações, formas e Enigma de Medo.",
+    oblivio: "Ameaça: Grau, Dano, Proteção, Velocidade, Estresse e Regiões, atributos, habilidades e recompensa.",
+    vampiro: "Antagonista: paradas padrão e excepcionais, ou a ficha completa com Atributos, Habilidades e Disciplinas.",
+    goblins: "Inimigo: Combate, Noção, Habilidade e Vitalidade, bônus da arma, proteção e efeitos.",
+    universal: "Mini ficha livre: status, atributos, perícias, ataques e habilidades.",
+  };
+  function escolherSistemaDaCriatura() {
+    var Capa = global.RAMACapaSistema;
+    var m = UI.modal({
+      titulo: "Nova criatura · sistema",
+      largo: true,
+      conteudo: el("div.pilha--curta", { class: "pilha" }, [
+        el("p.t-mini", { texto: "Cada sistema tem a ficha do próprio livro. Criaturas de Oblívio, Vampiro e Goblins ficam para consulta no Homebrew; o combate e os aliados de Ordem usam Ordem e Universal." }),
+        el("div.hb-sistemas", { role: "list" }, global.RAMASistemas.lista().filter(function (s) { return CRIATURA_POR_SISTEMA[s.id]; }).map(function (s) {
+          return el("button.hb-sistemas__opcao", {
+            type: "button", role: "listitem", dataset: { sistema: s.id },
+            onclick: function () {
+              m.fechar();
+              if (s.id === "vampiro") { escolherModeloVampiro(); return; }
+              if (s.id === "universal") { editar(null, "criatura"); return; }
+              editar(null, "criatura", { sistema: s.id });
+            },
+          }, [
+            Capa ? Capa.elemento(s, { tamanho: "p" }) : null,
+            el("span.hb-sistemas__textos", {}, [el("span.hb-sistemas__nome", { texto: s.nome }), el("span.t-mini", { texto: CRIATURA_POR_SISTEMA[s.id] })]),
+          ]);
+        })),
+      ]),
+    });
+  }
+  function escolherModeloVampiro() {
+    var m = UI.modal({
+      titulo: "Nova criatura · Vampiro",
+      conteudo: el("div.pilha--curta", { class: "pilha" }, [["compacto", "Antagonista compacto", "Paradas de dados padrão e excepcionais, Vitalidade, Força de Vontade e regras especiais (p. 370–373)."],
+        ["completo", "Ficha completa", "Atributos, Habilidades, Disciplinas, Humanidade e Potência do Sangue (p. 374–377)."]].map(function (x) {
+        return el("button.r-botao.r-botao--bloco", {
+          type: "button", estilo: { flexDirection: "column", alignItems: "flex-start", gap: "2px", textTransform: "none", padding: "var(--e3)" },
+          onclick: function () { m.fechar(); editar(null, "criatura", { sistema: "vampiro", modelo: x[0] }); },
+        }, [el("span.t-secao", { texto: x[1] }), el("span.t-mini", { texto: x[2] })]);
+      })),
+    });
+  }
+
+  function editar(registro, tipoNovo, opcoesCriatura) {
     var criando = !registro;
     var tipo = registro ? registro.tipo : tipoNovo;
 
@@ -468,7 +515,7 @@
        se parecem em nada com peso e dano. */
     if (tipo === "criatura" || tipo === "criatura-ordem") {
       global.RAMAHomebrewCriatura.editar(criando ? null : registro, carregar,
-        tipo === "criatura-ordem" ? { sistema: global.RAMACriaturas.SISTEMA_ORDEM } : undefined);
+        tipo === "criatura-ordem" ? { sistema: global.RAMACriaturas.SISTEMA_ORDEM } : opcoesCriatura);
       return;
     }
     if (tipo === "habilidade") {

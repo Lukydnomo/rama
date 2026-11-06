@@ -716,6 +716,12 @@
   & .ficha-tabela th, & .ficha-tabela td { border-color: var(--m20-borda); }
   & .criatura-presenca { border-color: var(--cor-traco-media); }
 
+  /* Homebrew: a escolha do sistema da criatura e o editor (v6.8). */
+  & .hb-sistemas__opcao { border-radius: var(--m20-raio-cartao); border-color: var(--m20-borda); transition: border-color var(--tempo-seco) var(--curva), box-shadow var(--tempo-seco) var(--curva); }
+  & .hb-sistemas__opcao:hover, & .hb-sistemas__opcao:focus-visible { border-color: var(--cor-traco-media); background: var(--fundo-superficie); box-shadow: var(--m20-sombra-1); }
+  & .hb-sistemas__nome { font-weight: 650; letter-spacing: 0; text-transform: none; }
+  & .hb-sistema__secao { border-radius: var(--m20-raio-cartao); border-color: var(--m20-borda); }
+
   /* A estante de sistemas da página Criaturas (v6.6.2). */
   & .estante-sistemas__opcao {
     border-radius: var(--m20-raio-cartao);

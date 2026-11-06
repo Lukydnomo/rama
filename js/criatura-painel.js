@@ -47,7 +47,31 @@
 
   function criar(criatura, opcoes) {
     if (C().ehOrdem(criatura)) return criarOrdem(criatura, opcoes || {});
+    if (C().ehNativa && C().ehNativa(criatura)) return criarNativa(criatura, opcoes || {});
     return criarUniversal(criatura, opcoes || {});
+  }
+
+  /* Oblívio, Vampiro e Goblins (v6.8, Homebrew): a ficha nativa do
+     sistema (js/fichas-nativas.js), só consulta — essas criaturas não
+     entram no combate nem nos aliados de Ordem. */
+  function criarNativa(criatura, o) {
+    var c = C().normalizar(criatura);
+    var FN = global.RAMAFichasNativas;
+    var nome = o.nome || c.nome;
+    var bloco = Object.assign({ nome: c.nome }, c[c.sistema]);
+    var raiz = el("div.pilha.criatura-painel.criatura-nativa", {}, [
+      el("div.pilha--curta.criatura-cabeca", { class: "pilha" }, [
+        el("div.criatura-painel__topo", {}, [
+          el("p.t-secao", { texto: nome }),
+          el("span.r-etiqueta", { texto: o.rotulo || "Criatura" }),
+        ]),
+        el("p.t-mini.criatura-linha", { texto: [C().NOMES_DOS_SISTEMAS[c.sistema], c.categoria].filter(Boolean).join(" · ") }),
+        el("p.t-mini", { texto: "Consulta: nada aqui muda a criatura." }),
+      ]),
+      FN && FN[c.sistema] ? FN[c.sistema](bloco) : el("p.t-mini", { texto: "A ficha deste sistema não carregou nesta página." }),
+      c.descricao ? UI.painel("Descrição", el("p", { texto: c.descricao, estilo: { whiteSpace: "pre-wrap" } })) : null,
+    ]);
+    return { titulo: nome, raiz: raiz, atualizar: function () {} };
   }
 
   /* O cartão da rolagem, pelo mostrador de sempre. */

@@ -118,6 +118,21 @@
 
   var CHANGELOG = [
     {
+      versao: "6.8.0",
+      codinome: "VIVEIRO",
+      data: "31/10/2026",
+      mudancas: {
+        "Adicionado": [
+          "No Homebrew, criaturas de Oblívio, Vampiro: A Máscara e Malditos Goblins, cada uma com a ficha do próprio livro: a Ameaça de Oblívio (Grau, Dano, Proteção, Velocidade, Estresse e Regiões, atributos, conhecimento especializado, habilidades com o tipo de ação e tabela de recompensa), o antagonista de Vampiro (compacto ou completo) e o inimigo dos Goblins (com 0, “—” e “?” e o bônus da arma e a proteção à parte). Prévia antes de salvar; consultar, duplicar, exportar e importar funcionam como nas outras.",
+        ],
+        "Alterado": [
+          "“Criar na biblioteca” tem uma opção só, Criatura, e o sistema se escolhe pelas capas: Ordem Paranormal, Oblívio, Vampiro, Malditos Goblins ou a ficha universal. O cartão da criatura mostra o sistema.",
+          "O combate e os aliados de Ordem continuam usando só criaturas de Ordem e universais; as de outros sistemas ficam para consulta.",
+        ],
+        "Técnico": ["js/criaturas.js (modelo dos outros sistemas), js/paginas/homebrew-criatura-sistemas.js (novo: editores), js/criatura-painel.js (consulta pela ficha nativa), js/paginas/homebrew.js, js/paginas/homebrew-criatura.js, js/paginas/criaturas-biblioteca.js, js/api.js, homebrew/index.html e os CSS. No servidor, backend/Codigo.gs só passa a resumir a criatura com o sistema dela (troque o arquivo e crie uma versão nova da implantação; sem setupRama). Sem mudança de schema."],
+      },
+    },
+    {
       versao: "6.7.0",
       codinome: "PRANCHETA",
       data: "31/10/2026",

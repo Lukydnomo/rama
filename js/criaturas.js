@@ -100,7 +100,11 @@
     return U.uuid();
   }
 
-  function sistemaDe(c) { return c && c.sistema === SISTEMA_ORDEM ? SISTEMA_ORDEM : SISTEMA_UNIVERSAL; }
+  function sistemaDe(c) {
+    if (c && c.sistema === SISTEMA_ORDEM) return SISTEMA_ORDEM;
+    if (c && SISTEMAS_NATIVOS.indexOf(c.sistema) >= 0) return c.sistema;
+    return SISTEMA_UNIVERSAL;
+  }
   function ehOrdem(c) { return sistemaDe(c) === SISTEMA_ORDEM; }
 
   /* =================================================================
@@ -110,6 +114,7 @@
   function criar(dados) {
     var d = dados || {};
     if (d.sistema === SISTEMA_ORDEM) return criarOrdem(d);
+    if (SISTEMAS_NATIVOS.indexOf(d.sistema) >= 0) return criarNativa(d.sistema, d);
     return {
       tipo: "criatura",
       nome: U.aparar(d.nome, 120) || "Nova criatura",
@@ -145,6 +150,158 @@
     });
   }
 
+
+  /* =================================================================
+     CRIATURAS DOS OUTROS SISTEMAS (v6.8)
+     -----------------------------------------------------------------
+     Oblívio, Vampiro (V5) e Malditos Goblins no Homebrew: `sistema` diz
+     qual, e o bloco com o nome do sistema guarda os campos no MESMO
+     formato do catálogo dele (ameacas-dados, antagonistas-dados,
+     INIMIGOS) — a consulta usa a ficha nativa (js/fichas-nativas.js).
+     São fichas de consulta: o combate e os aliados de Ordem aceitam só
+     Ordem e Universal. Tudo é limitado aqui; o que não vale cai.
+     ================================================================= */
+
+  var SISTEMAS_NATIVOS = ["oblivio", "vampiro", "goblins"];
+  var NOMES_DOS_SISTEMAS = { ordem: "Ordem Paranormal", oblivio: "Oblívio", vampiro: "Vampiro: A Máscara", goblins: "Malditos Goblins", universal: "Universal" };
+  var ACOES_OBLIVIO = ["regular", "extra", "movimento", "completa", "passiva"];
+  var ATRIBUTOS_OBLIVIO = ["carne", "forca", "fuga", "determinacao", "mente"];
+  var NATUREZAS_VAMPIRO = ["mortal", "carnical", "animal", "vampiro", "criatura"];
+  var ATRIBUTOS_VAMPIRO = ["forca", "destreza", "vigor", "carisma", "manipulacao", "autocontrole", "inteligencia", "raciocinio", "determinacao"];
+  var CHAVE_SIMPLES = /^[A-Za-z][A-Za-z0-9]{0,39}$/;
+
+  function ehNativa(c) { return !!c && SISTEMAS_NATIVOS.indexOf(c.sistema) >= 0; }
+  function numero(v, min, max, padrao) {
+    var n = Number(v);
+    if (v === "" || v === null || v === undefined || !Number.isFinite(n)) return padrao;
+    return Math.max(min, Math.min(max, Math.round(n)));
+  }
+  function mapaNumerico(m, max, chaves) {
+    var saida = {};
+    if (!m || typeof m !== "object" || Array.isArray(m)) return saida;
+    Object.keys(m).slice(0, 40).forEach(function (k) {
+      if (chaves ? chaves.indexOf(k) < 0 : !CHAVE_SIMPLES.test(k)) return;
+      var n = numero(m[k], 0, max, null);
+      if (n !== null) saida[k] = n;
+    });
+    return saida;
+  }
+
+  function normalizarOblivio(b) {
+    var x = b && typeof b === "object" ? b : {};
+    var at = x.atributos && typeof x.atributos === "object" ? x.atributos : {};
+    var atributos = {};
+    ATRIBUTOS_OBLIVIO.forEach(function (k) { atributos[k] = numero(at[k], 0, 20, 0); });
+    return {
+      grau: numero(x.grau, 1, 6, 1),
+      atributos: atributos,
+      dano: numero(x.dano, 0, 99, 0),
+      protecao: numero(x.protecao, 0, 99, 0),
+      velocidade: numero(x.velocidade, 0, 99, 0),
+      limiteEstresse: numero(x.limiteEstresse, 0, 999, 0),
+      regioes: numero(x.regioes, 0, 99, 0),
+      tamanho: U.aparar(x.tamanho, 60),
+      casas: U.aparar(typeof x.casas === "number" ? String(x.casas) : (Array.isArray(x.casas) ? x.casas.join(" ou ") : x.casas), 20),
+      especializacoes: lista(x.especializacoes).map(String).filter(function (k, i, l) { return CHAVE_SIMPLES.test(k) && l.indexOf(k) === i; }).slice(0, 10),
+      habilidades: lista(x.habilidades).slice(0, 30).map(function (h) {
+        if (!h || typeof h !== "object" || !U.aparar(h.nome, 80)) return null;
+        return { nome: U.aparar(h.nome, 80), acao: ACOES_OBLIVIO.indexOf(h.acao) >= 0 ? h.acao : "regular",
+          dano: U.aparar(h.dano, 40), alcance: U.aparar(h.alcance, 40), resumo: U.aparar(h.resumo, 1500) };
+      }).filter(Boolean),
+      recompensa: lista(x.recompensa).slice(0, 6).map(function (r) {
+        if (!r || typeof r !== "object") return null;
+        var de = numero(r.de, 1, 6, null), ate = numero(r.ate, 1, 6, null);
+        if (de === null) return null;
+        if (ate === null || ate < de) ate = de;
+        var texto = U.aparar(r.texto, 200);
+        var itens = lista(r.itens).slice(0, 4).map(function (i) {
+          return i && typeof i === "object" && CHAVE_SIMPLES.test(String(i.item || "")) ? { item: String(i.item), qtd: numero(i.qtd, 1, 99, 1) } : null;
+        }).filter(Boolean);
+        return { de: de, ate: ate, itens: itens, texto: texto };
+      }).filter(Boolean),
+    };
+  }
+
+  function normalizarVampiro(b) {
+    var x = b && typeof b === "object" ? b : {};
+    var completo = x.modelo === "completo" || (!x.modelo && x.atributos && typeof x.atributos === "object");
+    var v = {
+      natureza: NATUREZAS_VAMPIRO.indexOf(x.natureza) >= 0 ? x.natureza : "mortal",
+      modelo: completo ? "completo" : "compacto",
+      vitalidade: numero(x.vitalidade, 0, 30, 0),
+      forcaDeVontade: numero(x.forcaDeVontade, 0, 30, 0),
+      especial: U.aparar(x.especial, 1500),
+      semFome: x.semFome === true,
+    };
+    if (completo) {
+      v.atributos = {};
+      var at = x.atributos && typeof x.atributos === "object" ? x.atributos : {};
+      ATRIBUTOS_VAMPIRO.forEach(function (k) { v.atributos[k] = numero(at[k], 0, 10, 1); });
+      v.habilidades = mapaNumerico(x.habilidades, 10);
+      v.disciplinas = mapaNumerico(x.disciplinas, 10);
+      var hu = numero(x.humanidade, 0, 10, null), po = numero(x.potencia, 0, 10, null);
+      if (hu !== null) v.humanidade = hu;
+      if (po !== null) v.potencia = po;
+    } else {
+      var p = x.paradas && typeof x.paradas === "object" ? x.paradas : {};
+      v.paradas = { fisico: numero(p.fisico, 0, 20, 0), social: numero(p.social, 0, 20, 0), mental: numero(p.mental, 0, 20, 0) };
+      v.excepcionais = mapaNumerico(x.excepcionais, 20);
+      var de = numero(x.danoExtra, 0, 10, 0);
+      if (de) v.danoExtra = de;
+    }
+    return v;
+  }
+
+  /* Goblins: um número, null (o "-" do livro: não existe) ou "?" (o livro
+     não dá número). 0 é zero. */
+  function valorGoblin(v) {
+    if (v === null) return null;
+    if (v === "?") return "?";
+    var n = numero(v, 0, 9999, undefined);
+    return n === undefined ? null : n;
+  }
+  function normalizarGoblins(b) {
+    var x = b && typeof b === "object" ? b : {};
+    var g = {
+      combate: valorGoblin(x.combate), nocao: valorGoblin(x.nocao), habilidade: valorGoblin(x.habilidade), vitalidade: valorGoblin(x.vitalidade),
+      bonusCombate: numero(x.bonusCombate, 0, 99, 0), protecao: numero(x.protecao, 0, 99, 0),
+      equip: U.aparar(x.equip, 200), especie: U.aparar(x.especie, 40), nota: U.aparar(x.nota, 500),
+      habilidades: lista(x.habilidades).slice(0, 20).map(function (h) {
+        return h && typeof h === "object" && U.aparar(h.nome, 80) ? { nome: U.aparar(h.nome, 80), texto: U.aparar(h.texto, 800) } : null;
+      }).filter(Boolean),
+    };
+    if (x.indescritivel === true) g.indescritivel = true;
+    return g;
+  }
+
+  var NORMALIZAR_NATIVO = { oblivio: normalizarOblivio, vampiro: normalizarVampiro, goblins: normalizarGoblins };
+
+  function normalizarNativa(b) {
+    var c = {
+      tipo: "criatura",
+      sistema: b.sistema,
+      nome: U.aparar(b.nome, 120) || "Criatura",
+      visibilidade: b.visibilidade === "publico" ? "publico" : "privado",
+      categoria: U.aparar(b.categoria, 60),
+      descricao: U.aparar(b.descricao, 4000),
+      status: [],
+    };
+    if (b.id) c.id = b.id;
+    if (b.origem && typeof b.origem === "object") c.origem = normalizarOrigem(b.origem);
+    c[b.sistema] = NORMALIZAR_NATIVO[b.sistema](b[b.sistema]);
+    return c;
+  }
+
+  function criarNativa(sistema, dados) {
+    var d = dados || {};
+    var bloco = {};
+    if (sistema === "vampiro") bloco = { modelo: d.modelo === "completo" ? "completo" : "compacto", natureza: d.modelo === "completo" ? "vampiro" : "mortal" };
+    if (sistema === "goblins") bloco = { combate: 0, nocao: 0, habilidade: 0, vitalidade: 1 };
+    var base = { sistema: sistema, nome: U.aparar(d.nome, 120) || "Nova criatura", visibilidade: d.visibilidade, origem: { tipo: "homebrew" } };
+    base[sistema] = bloco;
+    return normalizarNativa(base);
+  }
+
   /* =================================================================
      NORMALIZAR
      ================================================================= */
@@ -152,6 +309,7 @@
   function normalizar(bruto) {
     var b = (bruto && typeof bruto === "object") ? bruto : {};
     if (b.sistema === SISTEMA_ORDEM) return normalizarOrdem(b);
+    if (SISTEMAS_NATIVOS.indexOf(b.sistema) >= 0) return normalizarNativa(b);
 
     var criatura = {
       tipo: "criatura",
@@ -995,6 +1153,7 @@
     var c = bruta && bruta.sistema === SISTEMA_ORDEM && bruta.ordem && Array.isArray(bruta.acoes) ? bruta : normalizar(bruta);
     var vida = U.porId(c.status, ID_VIDA) || (c.status || [])[0] || null;
     var r = { sistema: sistemaDe(c), nome: c.nome, natureza: c.natureza || "", categoria: c.categoria || "" };
+    if (ehNativa(c)) return r;
     if (vida) r.pv = vida.maximo;
     if (ehOrdem(c)) {
       r.vd = c.ordem.vd;
@@ -1014,6 +1173,13 @@
     var c = normalizar(bruta);
     var erros = [];
     if (!U.aparar(bruta && bruta.nome)) erros.push("sem nome");
+    if (ehNativa(c)) {
+      if (c.sistema === "oblivio") {
+        var r6 = {};
+        c.oblivio.recompensa.forEach(function (r) { for (var d = r.de; d <= r.ate; d++) { if (r6[d]) erros.push("recompensa: o " + d + " aparece em duas linhas"); r6[d] = true; } });
+      }
+      return erros;
+    }
     if (!ehOrdem(c)) return erros;
 
     var o = c.ordem;
@@ -1166,6 +1332,11 @@
 
   global.RAMACriaturas = {
     SISTEMA_ORDEM: SISTEMA_ORDEM,
+    SISTEMAS_NATIVOS: SISTEMAS_NATIVOS,
+    NOMES_DOS_SISTEMAS: NOMES_DOS_SISTEMAS,
+    ACOES_OBLIVIO: ACOES_OBLIVIO,
+    ehNativa: ehNativa,
+    criarNativa: criarNativa,
     SISTEMA_UNIVERSAL: SISTEMA_UNIVERSAL,
     NAO_SE_APLICA: NAO_SE_APLICA,
     ELEMENTOS: ELEMENTOS,

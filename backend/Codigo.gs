@@ -3510,7 +3510,9 @@ function resumoDeCriatura(d) {
   var status = Array.isArray(d.status) ? d.status : [];
   var vida = status.filter(function (s) { return s && String(s.id) === 'vida'; })[0] || status[0] || null;
   var r = {
-    sistema: ordem ? 'ordem' : 'universal',
+    /* v6.8: Oblívio, Vampiro e Goblins passam com o próprio sistema (a
+       biblioteca do combate os deixa de fora). */
+    sistema: ordem ? 'ordem' : (['oblivio', 'vampiro', 'goblins'].indexOf(d.sistema) >= 0 ? d.sistema : 'universal'),
     natureza: ['paranormal', 'humana', 'animal'].indexOf(d.natureza) >= 0 ? d.natureza : '',
     categoria: String(d.categoria || '').slice(0, 60),
   };

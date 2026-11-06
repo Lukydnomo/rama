@@ -817,6 +817,16 @@ segredo nenhum — ele os lê das Script Properties. Publicá-lo não expõe nad
 
 ### Atualizar o backend
 
+**v6.8.0 — VIVEIRO:** criaturas de Oblívio, Vampiro e Goblins no Homebrew.
+**Troque** `Codigo.gs` (o resumo da criatura passa a dizer o sistema dela) e
+**crie uma versão nova da implantação**; sem `setupRama()`. Publique o site —
+inclusive o arquivo novo `js/paginas/homebrew-criatura-sistemas.js`,
+`js/criaturas.js`, `js/criatura-painel.js`, `js/paginas/homebrew.js`,
+`js/paginas/homebrew-criatura.js`, `js/paginas/criaturas-biblioteca.js`,
+`js/api.js`, `homebrew/index.html` e os dois `componentes.css`. Sem o
+`Codigo.gs` novo, o site ainda recusa usar essas criaturas no combate (confere
+ao ler a ficha), mas elas aparecem na lista do seletor.
+
 **v6.7.0 — PRANCHETA:** só o site (a ficha de criatura de cada sistema).
 Publique `js/criatura-painel.js`, o arquivo novo `js/fichas-nativas.js`,
 `js/paginas/criaturas.js`, `criaturas/index.html`, `css/componentes.css` e
@@ -1685,7 +1695,7 @@ Três números diferentes, que não se misturam:
 
 | | Onde | O que é |
 |---|---|---|
-| versão do aplicativo | `js/versao.js` | o que a pessoa vê: v6.7.0 |
+| versão do aplicativo | `js/versao.js` | o que a pessoa vê: v6.8.0 |
 | `schemaVersion` | `js/ficha.js` | o formato da FICHA |
 | `versaoFormato` | `js/config.js` | o formato dos arquivos de importação |
 

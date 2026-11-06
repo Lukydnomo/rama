@@ -117,7 +117,8 @@
         return el("tr", {}, [
           /* como o livro escreve: "2 a 4", "5 ou 6" */
           el("td", { texto: r.de === r.ate ? String(r.de) : r.de + (r.ate === r.de + 1 ? " ou " : " a ") + r.ate }),
-          el("td", { texto: r.itens && r.itens.length ? r.itens.map(itemDeRecompensa).join(" e ") : "Nada" }),
+          /* `texto`: a recompensa escrita à mão (Homebrew). */
+          el("td", { texto: r.texto || (r.itens && r.itens.length ? r.itens.map(itemDeRecompensa).join(" e ") : "Nada") }),
         ]);
       })),
     ]) : null;
@@ -200,7 +201,7 @@
   /* 0 é zero; null é o "-" do livro (sem atributo); a Besta Indescritível
      não tem número nenhum ("?"). */
   function valorGoblin(d, v) {
-    if (d.indescritivel) return "?";
+    if (d.indescritivel || v === "?") return "?";
     if (v === null) return "—";
     if (v === undefined) return "?";
     return String(v);

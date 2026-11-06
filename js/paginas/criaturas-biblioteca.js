@@ -91,7 +91,15 @@
       global.RAMAApi.listarHomebrew({ escopo: "todos", tipo: "criatura", resumo: true }).then(function (r) {
         estado.carregandoHb = false;
         if (!r || !r.ok) { estado.falhaHomebrew = r || { ok: false }; if (aberta) pintar(); return; }
-        estado.homebrew = (r.dados || []).filter(function (h) { return h.tipo === "criatura"; }).map(indiceDoHomebrew);
+        /* v6.8: criaturas de Oblívio, Vampiro e Goblins são fichas de
+           consulta do Homebrew — o combate e os aliados de Ordem usam só
+           Ordem e Universal. */
+        var nativos = (C().SISTEMAS_NATIVOS || []);
+        estado.homebrew = (r.dados || []).filter(function (h) {
+          if (h.tipo !== "criatura") return false;
+          var s = (h.resumo && h.resumo.sistema) || h.sistema;
+          return nativos.indexOf(s) < 0;
+        }).map(indiceDoHomebrew);
         if (aberta) pintar();
       });
     }
@@ -311,6 +319,7 @@
       var r = await global.RAMAApi.lerHomebrew(x.id);
       if (!r.ok) return r;
       if (!r.dados || r.dados.tipo !== "criatura") return { ok: false, erro: "nao_encontrado" };
+      if (C().ehNativa && C().ehNativa(r.dados)) return { ok: false, erro: "criatura_de_outro_sistema" };
       return { ok: true, criatura: r.dados, origem: { tipo: "homebrew", id: x.id, meu: !!r.dados.meu } };
     }
 

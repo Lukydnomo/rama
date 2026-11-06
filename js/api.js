@@ -1050,6 +1050,10 @@
       titulo: "FEEDBACK INDISPONÍVEL",
       texto: "O envio de feedback não está configurado neste servidor agora. Avise quem administra o R.A.M.A.",
     },
+    criatura_de_outro_sistema: {
+      titulo: "CRIATURA DE OUTRO SISTEMA",
+      texto: "Esta criatura é de Oblívio, Vampiro ou Malditos Goblins: fica para consulta no Homebrew e não entra no combate nem nos aliados de Ordem.",
+    },
     /* Pedido de acesso (v6.6). */
     acesso_invalido: {
       titulo: "PEDIDO RECUSADO",

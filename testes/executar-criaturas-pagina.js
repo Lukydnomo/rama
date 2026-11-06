@@ -18,7 +18,7 @@ globalThis.location = { search: "" };
 
 const raiz = new URL("../", import.meta.url);
 const ler = (c) => Deno.readTextFile(new URL(c, raiz));
-for (const c of ["js/config.js", "js/util.js", "js/dados.js", "js/ordem/criaturas.js",
+for (const c of ["js/config.js", "js/util.js", "js/dados.js", "js/habilidades.js", "js/criaturas.js", "js/ordem/criaturas.js",
   "js/vampiro/catalogo.js", "js/vampiro/disciplinas-dados.js", "js/vampiro/antagonistas-dados.js",
   "js/oblivio/catalogo.js", "js/oblivio/ameacas-dados.js", "js/oblivio/buraco-dados.js", "js/oblivio/regras.js", "js/oblivio/buraco.js",
   "js/goblins/catalogo.js", "js/goblins/dados.js", "js/goblins/mesa.js"]) {
@@ -80,6 +80,25 @@ t.ok("  criatura sem Fome diz o que acontece no lugar (p. 376)", /Não tem: o qu
 const painelJs = await ler("js/criatura-painel.js");
 t.ok("Ordem: destaques VD/PV/Defesa/Tipo/Tamanho e colunas números × ações", /destaque\("PV"/.test(painelJs) && /destaque\("Tamanho"/.test(painelJs) && /ficha-colunas__coluna/.test(painelJs));
 t.ok("  listas vazias somem (parSeTiver) e a forma se vê na consulta sem gravar", /parSeTiver\("Imunidades"/.test(painelJs) && /formaDeConsulta = x\.id; pintar\(\)/.test(painelJs));
+
+t.grupo("Homebrew: criaturas de outros sistemas (v6.8)");
+const CR = globalThis.RAMACriaturas;
+const gbH = CR.normalizar({ tipo: "criatura", sistema: "goblins", nome: "Teste", goblins: { combate: 0, nocao: null, habilidade: "?", vitalidade: 4, bonusCombate: 2, protecao: 1, lixo: 9 } });
+t.igual("Goblins: 0, — (null) e ? sobrevivem à normalização; campo estranho sai", [gbH.goblins.combate, gbH.goblins.nocao, gbH.goblins.habilidade, "lixo" in gbH.goblins], [0, null, "?", false]);
+t.ok("  e de novo, sem mudar nada (idempotente)", JSON.stringify(CR.normalizar(JSON.parse(JSON.stringify(gbH)))) === JSON.stringify(gbH));
+const obH = CR.normalizar({ tipo: "criatura", sistema: "oblivio", nome: "A", oblivio: { grau: 9, atributos: { carne: 3 }, habilidades: [{ nome: "Bote", acao: "inventada" }], recompensa: [{ de: 5, ate: 6, texto: "Munição" }] } });
+t.igual("Oblívio: grau preso em 1–6, ação desconhecida vira regular, recompensa em texto", [obH.oblivio.grau, obH.oblivio.habilidades[0].acao, obH.oblivio.recompensa[0].texto, obH.oblivio.atributos.mente], [6, "regular", "Munição", 0]);
+t.ok("  recompensa com o mesmo número em duas linhas é recusada", CR.validar({ sistema: "oblivio", nome: "A", oblivio: { recompensa: [{ de: 1, ate: 3 }, { de: 3, ate: 4 }] } }).length === 1);
+const vcH = CR.normalizar({ tipo: "criatura", sistema: "vampiro", nome: "V", vampiro: { modelo: "completo", natureza: "vampiro", atributos: { forca: 4 }, disciplinas: { auspicios: 2, "x y": 3 } } });
+const vpH = CR.normalizar({ tipo: "criatura", sistema: "vampiro", nome: "M", vampiro: { paradas: { fisico: 4 }, excepcionais: { atletismo: 5 } } });
+t.ok("Vampiro: os dois modelos (completo com atributos; compacto com paradas)", vcH.vampiro.modelo === "completo" && vcH.vampiro.atributos.forca === 4 && !("x y" in vcH.vampiro.disciplinas) && vpH.vampiro.modelo === "compacto" && vpH.vampiro.paradas.fisico === 4 && !vpH.vampiro.atributos);
+t.ok("o sistema é reconhecido (e Universal continua Universal)", CR.sistemaDe(gbH) === "goblins" && CR.ehNativa(vcH) && CR.sistemaDe({ nome: "antiga" }) === "universal" && !CR.ehNativa({ sistema: "universal" }));
+t.ok("criar já nasce no formato do sistema", CR.criar({ sistema: "goblins" }).goblins.vitalidade === 1 && CR.criarNativa("vampiro", { modelo: "completo" }).vampiro.modelo === "completo");
+const hbJs2 = await ler("js/paginas/homebrew.js");
+t.ok("Homebrew: uma opção só, “Criatura”, e o sistema pelas capas", /opcao\("Criatura", /.test(hbJs2) && !/Criatura de Ordem Paranormal"/.test(hbJs2) && !/opcao\("Criatura universal"/.test(hbJs2) && /escolherSistemaDaCriatura/.test(hbJs2) && /RAMACapaSistema/.test(hbJs2));
+const bib2 = await ler("js/paginas/criaturas-biblioteca.js");
+t.ok("combate e aliados de Ordem deixam os outros sistemas de fora (lista e leitura)", /SISTEMAS_NATIVOS/.test(bib2) && /criatura_de_outro_sistema/.test(bib2));
+t.ok("o servidor resume com o sistema da criatura", /\['oblivio', 'vampiro', 'goblins'\]\.indexOf\(d\.sistema\)/.test(await ler("backend/Codigo.gs")));
 
 t.grupo("Menu e páginas");
 const app = await ler("js/app.js");
