@@ -533,7 +533,7 @@
       });
     }
 
-    var elementos = el("div.r-abas", { role: "group", "aria-label": "Elementos" }, Object.keys(NOMES_ELEMENTO).map(function (e) {
+    var elementos = el("div.r-abas.criatura-elementos", { role: "group", "aria-label": "Elementos" }, Object.keys(NOMES_ELEMENTO).map(function (e) {
       return el("button.r-aba.bib-elemento.bib-elemento--" + e, {
         type: "button", "aria-pressed": String(od.elementos.indexOf(e) >= 0), texto: NOMES_ELEMENTO[e],
         onclick: function (ev) {

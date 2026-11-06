@@ -2746,6 +2746,25 @@
 .bib-elemento--transmissao { border-left-color: var(--cor-elemento-conhecimento); border-right: 3px solid var(--cor-elemento-energia); }
 .bib-elemento--varia { border-left-style: dashed; }
 
+/* Seletor de elementos da criatura (Homebrew): seleção múltipla pelo
+   aria-pressed. A faixa de cor diz QUAL elemento; o ✓ e o fundo dizem que
+   está marcado. O espaço do ✓ é reservado (e o peso não muda) para o
+   botão não mudar de tamanho ao clicar. */
+.criatura-elementos .r-aba::before {
+  content: "✓";
+  display: inline-block;
+  width: 1.1em;
+  margin-right: var(--e1);
+  visibility: hidden;
+}
+.criatura-elementos .r-aba[aria-pressed="true"] {
+  color: var(--cor-texto);
+  background: color-mix(in srgb, var(--cor-paranormal) 22%, var(--fundo-superficie));
+  border-top-color: var(--cor-traco-fraca);
+  border-right-color: var(--cor-traco-fraca);
+}
+.criatura-elementos .r-aba[aria-pressed="true"]::before { visibility: visible; }
+
 .bib-item__detalhes {
   display: flex;
   flex-direction: column;

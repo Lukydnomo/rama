@@ -320,6 +320,11 @@
     border-bottom-color: var(--cor-selecao);
   }
   & .r-aba.bib-elemento { border-left-width: 3px; }
+  & .criatura-elementos .r-aba[aria-pressed="true"] {
+    color: var(--cor-texto);
+    background: color-mix(in srgb, var(--cor-selecao) 20%, transparent);
+    border-bottom-color: var(--cor-selecao);
+  }
   & .r-abas--rolavel { padding-bottom: 0; }
   & .r-abas--rolavel::-webkit-scrollbar { height: 4px; }
   & .r-abas--rolavel::-webkit-scrollbar-thumb { border-radius: 999px; border: 0; }
