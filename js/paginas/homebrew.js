@@ -441,7 +441,6 @@
         opcao("Arma", "Perícia de ataque, dano, crítico e multiplicador.", "arma"),
         opcao("Armadura", "Com um valor de defesa.", "armadura"),
         opcao("Mochila", "Reduz o peso total carregado.", "mochila"),
-        el("hr.r-linha"),
         opcao("Criatura", "Escolha o sistema: Ordem Paranormal, Oblívio, Vampiro, Malditos Goblins ou a ficha universal.", "criatura-sistema"),
         opcao("Habilidade", "Texto informativo, com cor e origem.", "habilidade"),
         opcao("Ritual", "Campos do ritual e versões, com dano e custo.", "ritual"),
