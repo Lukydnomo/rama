@@ -320,6 +320,7 @@
     border-bottom-color: var(--cor-selecao);
   }
   & .r-aba.bib-elemento { border-left-width: 3px; }
+  & .ritual-simbolo { border-color: var(--m20-borda); border-radius: var(--m20-raio-controle); }
   & .criatura-elementos .r-aba[aria-pressed="true"] {
     color: var(--cor-texto);
     background: color-mix(in srgb, var(--cor-selecao) 20%, transparent);

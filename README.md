@@ -444,6 +444,16 @@ persistência (schema 30, exportar e importar).
 deno run --allow-read testes/executar-as9.js
 ```
 
+**Símbolos dos rituais** — 23 verificações: toda pasta de ritual oficial com um
+PNG 100 × 100 de verdade, o caminho pelo prefixo do id, o vínculo pela ficha
+(`origemCatalogoId`), pelas cópias da Homebrew (`simboloCatalogoId`) e o
+provisório compartilhado. Os provisórios que faltarem saem de
+`testes/gerar-simbolos-rituais.js` (ver `assets/rituais/LEIA-ME.md`).
+
+```bash
+deno run --allow-read testes/executar-simbolos-rituais.js
+```
+
 **Suplementos** — 47 verificações: cadastro e capas, seleção ausente × vazia,
 ficha ∩ campanha, catálogos de Ordem (rituais, itens, biblioteca, usos de
 perícia), progressão, regra opcional ≠ suplemento, persistência e o que já
@@ -829,6 +839,13 @@ próprio `<script src>`, então funciona debaixo de subpasta sem ajuste.
 segredo nenhum — ele os lê das Script Properties. Publicá-lo não expõe nada.
 
 ### Atualizar o backend
+
+**v6.11.0 — SINETE:** só o site (símbolos dos rituais). Publique a pasta nova
+`assets/rituais/` inteira, `js/ordem/rituais.js`, `js/ui.js`, `js/ficha.js`,
+`js/paginas/ficha-rituais.js`, `js/paginas/ficha-rituais-biblioteca.js`,
+`js/paginas/homebrew.js`, `css/tokens.css`, `css/componentes.css`,
+`css/modern20/componentes.css`, `css/densidade.css` e `css/homebrew.css`.
+Nada de `.gs`.
 
 **v6.10.0 — FICHEIRO:** só o site (o Homebrew reorganizado). Publique
 `js/paginas/homebrew.js`, os arquivos novos `css/homebrew.css` e
@@ -1724,7 +1741,7 @@ Três números diferentes, que não se misturam:
 
 | | Onde | O que é |
 |---|---|---|
-| versão do aplicativo | `js/versao.js` | o que a pessoa vê: v6.10.0 |
+| versão do aplicativo | `js/versao.js` | o que a pessoa vê: v6.11.0 |
 | `schemaVersion` | `js/ficha.js` | o formato da FICHA |
 | `versaoFormato` | `js/config.js` | o formato dos arquivos de importação |
 

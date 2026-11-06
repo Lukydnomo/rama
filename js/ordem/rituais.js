@@ -40,6 +40,58 @@
   function U() { return global.RAMAUtil; }
 
   var ARQUIVO_DADOS = "js/ordem/rituais-dados.js";
+
+  /* =================================================================
+     SÍMBOLO DO RITUAL (v6.11)
+     -----------------------------------------------------------------
+     Como as imagens das criaturas: a pasta sai do id estável do ritual
+     oficial, pelo PREFIXO do id (não pela fonte exibida, que às vezes é
+     corrigida):  op.ritual.cicatrizacao → assets/rituais/op/cicatrizacao/
+     simbolo.png. Na ficha (e nas cópias da Homebrew), o vínculo é o
+     `origemCatalogoId`; na biblioteca, o próprio `id`. Sem vínculo, ou
+     se o arquivo não carregar, vale o símbolo provisório compartilhado.
+     Trocar uma arte é só trocar o PNG: nada aqui muda.
+     ================================================================= */
+
+  var SIMBOLO_PROVISORIO = "assets/rituais/provisorio.png";
+  var ID_DE_RITUAL = /^(op|sah|as[0-9]{1,2})\.ritual\.([a-z0-9][a-z0-9.-]*)$/;
+
+  function idDoSimbolo(alvo) {
+    if (typeof alvo === "string") return ID_DE_RITUAL.test(alvo) ? alvo : "";
+    if (!alvo || typeof alvo !== "object") return "";
+    if (ID_DE_RITUAL.test(String(alvo.origemCatalogoId || ""))) return alvo.origemCatalogoId;
+    if (ID_DE_RITUAL.test(String(alvo.simboloCatalogoId || ""))) return alvo.simboloCatalogoId;
+    if (ID_DE_RITUAL.test(String(alvo.id || ""))) return alvo.id;
+    return "";
+  }
+  /* O caminho relativo à raiz do site ("" quando não há ritual oficial). */
+  function caminhoDoSimbolo(alvo) {
+    var m = ID_DE_RITUAL.exec(idDoSimbolo(alvo));
+    return m ? "assets/rituais/" + m[1] + "/" + m[2] + "/simbolo.png" : "";
+  }
+  function urlDe(caminho) { var u = U(); return u && u.url ? u.url(caminho) : caminho; }
+  function imagemDoRitual(alvo) {
+    var c = caminhoDoSimbolo(alvo);
+    return { url: urlDe(c || SIMBOLO_PROVISORIO), provisorio: urlDe(SIMBOLO_PROVISORIO), oficial: !!c, catalogoId: idDoSimbolo(alvo) };
+  }
+  /* A miniatura (ou, com grande: true, o símbolo da consulta). Carrega
+     sob demanda; falhando, troca uma vez pelo provisório. Decorativa: o
+     nome do ritual já está ao lado. */
+  function simbolo(alvo, opcoes) {
+    var u = U();
+    if (!u || !u.el || typeof document === "undefined") return null;
+    var o = opcoes || {};
+    var im = imagemDoRitual(alvo);
+    var lado = o.grande ? 100 : 40;
+    var img = u.el("img.ritual-simbolo__img", {
+      src: im.url, alt: "", width: lado, height: lado, loading: "lazy", decoding: "async", draggable: "false",
+    });
+    img.addEventListener("error", function trocar() {
+      img.removeEventListener("error", trocar);
+      if (img.getAttribute("src") !== im.provisorio) img.setAttribute("src", im.provisorio);
+    });
+    return u.el("span.ritual-simbolo" + (o.grande ? ".ritual-simbolo--grande" : ""), { "aria-hidden": "true", dataset: { ritual: im.catalogoId || "" } }, [img]);
+  }
   var PRAZO_CARGA_MS = 20000;
 
   /* Os cinco elementos do Outro Lado (OPRPG p. 118). A ordem é a do
@@ -743,6 +795,11 @@
   }
 
   global.RAMAOrdemRituais = {
+    SIMBOLO_PROVISORIO: SIMBOLO_PROVISORIO,
+    idDoSimbolo: idDoSimbolo,
+    caminhoDoSimbolo: caminhoDoSimbolo,
+    imagemDoRitual: imagemDoRitual,
+    simbolo: simbolo,
     linhaDeVersaoGerada: linhaDeVersaoGerada,
     descricaoPrincipal: descricaoPrincipal,
     complementoDaInstancia: complementoDaInstancia,

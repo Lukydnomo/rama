@@ -345,6 +345,7 @@
         catalogo: d.catalogo, nome: d.nome });
       return el("article.bib-item", { class: classeDeEstado(chave, teste) }, [
         el("div.bib-item__topo", {}, [
+          RT() && RT().simbolo ? RT().simbolo(r || { origemCatalogoId: d.catalogo }) : null,
           el("span.bib-item__texto.bib-item__texto--fixo", {}, [
             el("span.bib-item__nome", { texto: d.nome || "(sem nome)" }),
             el("span.bib-item__classe", {
@@ -455,6 +456,10 @@
     function montarDaHomebrew(h) {
       var ritual = F.criarRitual(F.normalizarRitual(h) || {});
       ritual.origemHomebrewId = h.id;
+      /* O símbolo continua o do ritual oficial de onde a cópia veio; as
+         regras de aquisição seguem sem o origemCatalogoId, como antes. */
+      var simb = h.origemCatalogoId || h.simboloCatalogoId;
+      if (simb && RT() && RT().caminhoDoSimbolo(simb)) ritual.simboloCatalogoId = simb;
       delete ritual.origemCatalogoId;
       ritual.adicionadoEm = U.agoraISO();
       var d = RT() ? RT().dadosDoRitual(ritual) : {};
@@ -673,6 +678,7 @@
         },
       }, [
         el("span.bib-item__seta", { "aria-hidden": "true" }),
+        RT().simbolo ? RT().simbolo(e.id) : null,
         el("span.bib-item__texto", {}, [
           el("span.bib-item__nome", { texto: e.nome }),
           el("span.bib-item__classe", { texto: e.classificacao }),
@@ -749,9 +755,13 @@
       U.trocar(caixa, [
         /* v2.32: a mesma grade de conjuração e o mesmo texto de leitura
            do cartão da ficha. */
-        el("dl.ritual-conjuracao.bib-item__pares", { "aria-label": "Conjuração" }, RT().detalhes(e).map(function (p) {
-          return el("div.ritual-conjuracao__campo", {}, [el("dt", { texto: p[0] }), el("dd", { texto: p[1] })]);
-        })),
+        /* v6.11: o símbolo maior, junto aos dados de conjuração. */
+        el("div.ritual-conjuracao-simbolo", {}, [
+          RT().simbolo ? RT().simbolo(e.id, { grande: true }) : null,
+          el("dl.ritual-conjuracao.bib-item__pares", { "aria-label": "Conjuração" }, RT().detalhes(e).map(function (p) {
+            return el("div.ritual-conjuracao__campo", {}, [el("dt", { texto: p[0] }), el("dd", { texto: p[1] })]);
+          })),
+        ]),
         el("div.ritual-texto", {}, [el("p.bib-item__resumo", { texto: e.resumo })]),
         e.efeitos.length ? el("h4.t-rotulo", { texto: "Efeitos" }) : null,
         listaDeTextos(e.efeitos),
@@ -1011,6 +1021,7 @@
         },
       }, [
         el("span.bib-item__seta", { "aria-hidden": "true" }),
+        RT() && RT().simbolo ? RT().simbolo(h) : null,
         el("span.bib-item__texto", {}, [
           el("span.bib-item__nome", { texto: h.nome }),
           el("span.bib-item__classe", {
@@ -1057,7 +1068,10 @@
       });
 
       U.trocar(caixa, [
-        pares.length ? el("dl.r-dados.bib-item__pares", {}, pares) : null,
+        el("div.ritual-conjuracao-simbolo", {}, [
+          RT() && RT().simbolo ? RT().simbolo(h, { grande: true }) : null,
+          pares.length ? el("dl.r-dados.bib-item__pares", {}, pares) : null,
+        ]),
         U.aparar(h[F.CAMPO_LONGO_RITUAL])
           ? el("p.bib-item__resumo", { texto: h[F.CAMPO_LONGO_RITUAL], estilo: { whiteSpace: "pre-wrap" } })
           : el("p.t-mini", { texto: "Sem descrição." }),

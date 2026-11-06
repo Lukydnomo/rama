@@ -243,3 +243,5 @@
 :root[data-densidade="compacta"] .home-estante { padding-top: var(--e5); padding-bottom: var(--e5); gap: var(--e3); }
 :root[data-densidade="compacta"] .home-sistema { padding: var(--e2); gap: var(--e2); }
 :root[data-densidade="compacta"] .home-estante__lista { gap: var(--e2); }
+:root[data-densidade="compacta"] .ritual-simbolo { --ritual-simbolo-lado: 24px; padding: 1px; }
+:root[data-densidade="compacta"] .ritual-simbolo--grande { --ritual-simbolo-lado: 72px; padding: 2px; }

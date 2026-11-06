@@ -118,6 +118,21 @@
 
   var CHANGELOG = [
     {
+      versao: "6.11.0",
+      codinome: "SINETE",
+      data: "31/10/2026",
+      mudancas: {
+        "Adicionado": [
+          "Símbolos dos rituais de Ordem Paranormal: uma miniatura ao lado do nome na biblioteca de rituais, na aba Rituais da ficha e no Homebrew, e o símbolo maior junto aos dados de conjuração na consulta aberta. A arte aparece inteira, sobre uma placa escura que funciona nos temas claros.",
+          "Cada ritual do catálogo tem a própria pasta em assets/rituais, com um símbolo provisório para ser trocado pela arte definitiva sem mexer no código. Rituais oficiais já salvos nas fichas ganham o símbolo sozinhos; cópias via Homebrew mantêm o do ritual de origem; rituais criados do zero, e qualquer imagem que não carregue, mostram o provisório compartilhado.",
+        ],
+        "Corrigido": [
+          "Duplicar um ritual no Homebrew passa a gerar um ritual (antes a cópia era tratada como item).",
+        ],
+        "Técnico": ["Só o site: js/ordem/rituais.js (caminho pelo prefixo do id: op.ritual.cicatrizacao → assets/rituais/op/cicatrizacao/simbolo.png), js/ui.js (recolhível com miniatura antes do nome), js/paginas/ficha-rituais.js, js/paginas/ficha-rituais-biblioteca.js, js/paginas/homebrew.js, js/ficha.js (o vínculo só visual `simboloCatalogoId` nas cópias da Homebrew; as regras de aquisição não mudam), css/tokens.css (papel --cor-placa-simbolo), css/componentes.css, css/modern20/componentes.css, css/densidade.css, css/homebrew.css e as imagens assets/rituais/ (108 pastas + provisorio.png). Gerador: testes/gerar-simbolos-rituais.js (só cria o que falta). Sem mudança de schema nem de .gs."],
+      },
+    },
+    {
       versao: "6.10.0",
       codinome: "FICHEIRO",
       data: "31/10/2026",

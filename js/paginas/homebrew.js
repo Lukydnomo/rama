@@ -20,6 +20,7 @@
   var V = global.RAMAValidacao;
   var D = global.RAMADados;
   var el = U.el;
+  function RT() { return global.RAMAOrdemRituais || null; }
 
   var registros = [];
   var busca = "";
@@ -309,7 +310,9 @@
       !meu ? el("span.r-etiqueta.r-etiqueta--para", { texto: "De outra conta" }) : null,
       UI.etiquetaColorida(registro.etiqueta),
     ].filter(Boolean);
-    return el("article.hb-linha", { role: "listitem", class: "hb-linha--" + registro.tipo }, [
+    var simb = registro.tipo === "ritual" && RT() && RT().simbolo ? RT().simbolo(registro) : null;
+    return el("article.hb-linha", { role: "listitem", class: "hb-linha--" + registro.tipo + (simb ? " hb-linha--com-simbolo" : "") }, [
+      simb ? el("div.hb-linha__simbolo", {}, [simb]) : null,
       el("div.hb-linha__principal", {}, [
         el("button.hb-linha__nome", {
           type: "button", texto: registro.nome, title: "Consultar " + registro.nome,
@@ -460,7 +463,7 @@
     var S = global.RAMASecaoRituais;
     if (S && S.apresentacao) {
       var rit = F.normalizarRitual(r) || r;
-      return el("div.ritual-corpo", {}, [S.marcasDoRitual(null, rit)].concat(S.apresentacao(rit, {})).filter(Boolean));
+      return el("div.ritual-corpo", {}, [S.marcasDoRitual(null, rit)].concat(S.apresentacao(rit, { simbolo: !!(RT() && RT().simbolo) })).filter(Boolean));
     }
     var linhas = [];
     F.CAMPOS_RITUAL.forEach(function (campo) {
@@ -533,6 +536,9 @@
             if (!dados) return;
 
             var pronto = F.criarRitual(dados);
+            /* O vínculo com o ritual oficial (o símbolo) sobrevive à edição. */
+            if (atual.origemCatalogoId) pronto.origemCatalogoId = atual.origemCatalogoId;
+            if (atual.simboloCatalogoId) pronto.simboloCatalogoId = atual.simboloCatalogoId;
             pronto.tipo = "ritual";
             pronto.visibilidade = visibilidade;
             if (registro && registro.id) pronto.id = registro.id;
@@ -839,7 +845,7 @@
       ? global.RAMACriaturas.normalizar(registro)
       : (registro.tipo === "habilidade"
           ? global.RAMAHabilidades.normalizarHabilidade(registro)
-          : F.normalizarItem(registro));
+          : registro.tipo === "ritual" ? (F.normalizarRitual(registro) || F.criarRitual({ nome: registro.nome })) : F.normalizarItem(registro));
 
     /* Sem id: o servidor cria um registro novo sob quem pediu. É assim
        que copiar algo público de outra conta não vira edição do

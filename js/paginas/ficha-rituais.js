@@ -425,13 +425,18 @@
        ritual" é a conjuração de verdade: fica dentro do conteúdo aberto,
        e some com os detalhes ao recolher. */
     var usar = botaoUsarRitual(ctx, ritual);
+    /* v6.11: o símbolo do ritual (fichas de Ordem), pelo origemCatalogoId;
+       sem vínculo, o provisório compartilhado. */
+    var comSimbolo = F.ehDeOrdem(ctx.ficha) && RT() && RT().simbolo;
     return UI.recolhivel({
       titulo: ritual.nome,
+      antes: comSimbolo ? RT().simbolo(ritual) : null,
       subtitulo: marcasDoRitual(ctx, ritual),
       classe: "ritual-cartao",
       conteudo: [el("div.ritual-corpo", {}, avisos.concat(apresentacao(ritual, {
         rotulos: ctx.ficha.rituais.rotulos,
         dt: dtDoRitual(ctx, ritual),
+        simbolo: comSimbolo,
         aprendizado: apr ? linhasDeAprendizado(ctx, vindo, substituido) : null,
       }))), usar ? el("div.ritual-uso", {}, [usar]) : null],
       acoes: acoes,
@@ -498,9 +503,13 @@
     if (base) dados.push(["Custo", base.base + " PE"]);
     if (o.dt) dados.push(["DT", o.dt]);
     if (dados.length) {
-      partes.push(el("dl.ritual-conjuracao", { "aria-label": "Conjuração" }, dados.map(function (d) {
+      var grade = el("dl.ritual-conjuracao", { "aria-label": "Conjuração" }, dados.map(function (d) {
         return el("div.ritual-conjuracao__campo", {}, [el("dt", { texto: d[0] }), el("dd", { texto: d[1] })]);
-      })));
+      }));
+      /* v6.11: o símbolo maior, junto aos dados de conjuração. */
+      partes.push(o.simbolo && RT() && RT().simbolo ? comSimboloGrande(ritual, grade) : grade);
+    } else if (o.simbolo && RT() && RT().simbolo) {
+      partes.push(comSimboloGrande(ritual, null));
     }
 
     /* O efeito, como texto de leitura. */
@@ -529,6 +538,10 @@
       ]));
     }
     return partes;
+  }
+
+  function comSimboloGrande(ritual, grade) {
+    return el("div.ritual-conjuracao-simbolo", {}, [RT().simbolo(ritual, { grande: true }), grade]);
   }
 
   /* Parágrafos (linha em branco), quebras de linha e listas ("• " ou

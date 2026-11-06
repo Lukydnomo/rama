@@ -1203,6 +1203,12 @@
     if (catalogo) ritual.origemCatalogoId = catalogo;
     var homebrew = U.aparar(bruto.origemHomebrewId, 80);
     if (homebrew) ritual.origemHomebrewId = homebrew;
+    /* v6.11: só o vínculo VISUAL com um ritual oficial (o símbolo), para
+       as cópias que vêm da Homebrew — que não guardam origemCatalogoId,
+       porque ele conta nas regras de aquisição. Nada além da imagem lê
+       este campo. */
+    var simbolo = U.aparar(bruto.simboloCatalogoId, 80);
+    if (simbolo && /^[a-z0-9]+\.ritual\.[a-z0-9.-]+$/.test(simbolo)) ritual.simboloCatalogoId = simbolo;
     /* v2.32: regras gerais, notas e fonte, à parte da descrição. Só
        existe quando tem texto: ritual antigo não ganha campo novo. */
     var complemento = U.aparar(bruto.complemento, 8000);

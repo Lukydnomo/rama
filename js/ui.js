@@ -922,6 +922,9 @@
        uma linha só — e num cartão estreito o extra comia o título. */
     var resumo = el("summary.recolhivel__topo", { class: [o.subtitulo ? "recolhivel__topo--empilhado" : "", o.topo ? "recolhivel__topo--com-extra" : ""].filter(Boolean).join(" ") }, [
       seta,
+      /* `antes` (v6.11): uma miniatura decorativa ao lado do nome (o
+         símbolo do ritual). */
+      o.antes ? el("span.recolhivel__antes", {}, [o.antes]) : null,
       o.subtitulo
         ? el("span.recolhivel__cabeca", {}, [
             el("span.recolhivel__titulo", { texto: o.titulo || "" }),

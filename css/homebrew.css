@@ -53,6 +53,11 @@
   min-width: 0;
 }
 #painel-homebrew .hb-linha:hover { background: var(--fundo-superficie); }
+#painel-homebrew .hb-linha--com-simbolo {
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
+  grid-template-areas: "simbolo principal marcas menu";
+}
+#painel-homebrew .hb-linha__simbolo { grid-area: simbolo; display: flex; }
 #painel-homebrew .hb-linha__principal { grid-area: principal; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 #painel-homebrew .hb-linha__marcas { grid-area: marcas; display: flex; flex-wrap: wrap; justify-content: flex-end; gap: var(--e1); }
 #painel-homebrew .hb-linha__menu { grid-area: menu; }
@@ -95,6 +100,10 @@
   #painel-homebrew .hb-linha {
     grid-template-columns: minmax(0, 1fr) auto;
     grid-template-areas: "principal menu" "marcas marcas";
+  }
+  #painel-homebrew .hb-linha--com-simbolo {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    grid-template-areas: "simbolo principal menu" "simbolo marcas marcas";
   }
   #painel-homebrew .hb-linha__marcas { justify-content: flex-start; }
   #painel-homebrew .hb-barra__contagem { flex: 1 1 100%; margin-left: 0; }

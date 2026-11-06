@@ -4247,3 +4247,47 @@ html.arrastando * {
 .hb-sistema__secao > legend { padding: 0 var(--e1); }
 .hb-sistema__linha { display: flex; flex-direction: column; gap: var(--e1); padding-bottom: var(--e2); border-bottom: var(--borda) dashed var(--cor-traco-fraca); }
 .hb-sistema__linha > .r-botao { align-self: flex-start; }
+
+/* =====================================================================
+   SÍMBOLO DO RITUAL (v6.11)
+   ---------------------------------------------------------------------
+   A arte inteira (contain: sem recorte nem deformação) sobre uma placa
+   escura fixa — a mesma nos temas claros e escuros, porque os símbolos
+   costumam ter traço claro. Miniatura ao lado do nome; o grande fica
+   junto aos dados de conjuração.
+   ===================================================================== */
+
+.ritual-simbolo {
+  --ritual-simbolo-lado: 32px;
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--ritual-simbolo-lado);
+  height: var(--ritual-simbolo-lado);
+  padding: 2px;
+  box-sizing: border-box;
+  background: var(--cor-placa-simbolo);
+  border: var(--borda) solid var(--cor-traco-fraca);
+  overflow: hidden;
+}
+.ritual-simbolo__img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+.ritual-simbolo--grande { --ritual-simbolo-lado: 96px; padding: var(--e1); }
+.recolhivel__antes { display: inline-flex; align-items: center; flex: 0 0 auto; }
+.bib-item__abrir > .ritual-simbolo,
+.bib-item__topo > .ritual-simbolo { align-self: center; }
+.ritual-conjuracao-simbolo {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--e3);
+  min-width: 0;
+}
+.ritual-conjuracao-simbolo > dl { flex: 1 1 auto; min-width: 0; margin-top: 0; }
+@media (max-width: 480px) {
+  .ritual-simbolo--grande { --ritual-simbolo-lado: 72px; }
+}
