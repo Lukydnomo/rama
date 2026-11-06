@@ -168,6 +168,14 @@
   }
 
   function aba(ctx) {
+    /* Arquivos Secretos 9 (v6.9): os drones do inventário contam como
+       aliados (p. 44) — bônus, habilidade e estado, acima dos outros. */
+    var drones = ctx.ficha.ordem && global.RAMAFichaArquivo9 ? global.RAMAFichaArquivo9.painelDeAliados(ctx) : null;
+    var principal = abaDosAliados(ctx);
+    return drones ? el("div.pilha", {}, [drones, principal]) : principal;
+  }
+
+  function abaDosAliados(ctx) {
     var aliados = ctx.ficha.aliados || [];
     return UI.painel("Aliados", aliados.length ? el("div.aliados-grade", {}, aliados.map(function (a) {
       return el("article.r-painel", {}, [

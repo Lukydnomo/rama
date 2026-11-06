@@ -75,6 +75,7 @@
   var AS5 = "AS5";
   var AS6 = "AS6";
   var AS7 = "AS7";
+  var AS9 = "AS9";
   var EXTRA = "EXTRA";
 
   /* Os livros, num lugar só (v2.29). Quem precisa do nome de um livro
@@ -107,6 +108,12 @@
        (p. 40–45) e das criaturas (p. 64–73) e as regras debaixo d'água
        do Inquérito Mensal (p. 92–93, não oficiais e não canônicas). */
     { sigla: AS7, nome: "Arquivos Secretos 7", curto: "Arquivos Secretos 7", abreviacao: "AS7", edicao: "v1.0" },
+    /* v6.9: Hell Hunters — o gerador de mercenários (p. 14), as fichas e
+       os perfis "como aliado" (p. 20–35), origens, uso de Tática, poderes,
+       trilhas Incursor e Piloto de Drone (p. 38–41), regalias para
+       veículos (p. 42) e itens com os aliados drone (p. 42–48). As
+       páginas 52–65 (playtest de Ordem Paranormal RPG 2) não mudam regra. */
+    { sigla: AS9, nome: "Arquivos Secretos 9", curto: "Arquivos Secretos 9", abreviacao: "AS9", edicao: "v1.0" },
     /* v5.1: a fonte das publicações oficiais avulsas. Fica na mesma lista
        para valer nas etiquetas, nas bibliotecas, nos filtros e nas
        validações como qualquer fonte oficial; `avulsa` diz que não há
@@ -698,6 +705,15 @@
       poderes: [poder(10, "Identificação Macabra", 45), poder(40, "Compreensão de Maldições", 45),
                 poder(65, "Reproduzir Maldição", 45), poder(99, "Maldição Suprema", 45)] },
 
+
+    /* --- Arquivos Secretos 9, p. 40–41 (v6.9) --- */
+    { chave: "incursor", classe: "combatente", nome: "Incursor", pagina: 40, fonte: AS9,
+      resumo: "Treinado para invadir complexos, combater ameaças entre paredes e escombros e agir com precisão e velocidade tática.",
+      poderes: [poder(10, "CQB", 40), poder(40, "Entrada Explosiva", 40), poder(65, "Proteger Reféns", 40), poder(99, "Alvo-prioritário", 40)] },
+    { chave: "pilotoDeDrone", classe: "especialista", nome: "Piloto de Drone", pagina: 41, fonte: AS9,
+      resumo: "Expert em drones de todo tipo: transforma o que muitos chamam de brinquedo numa ferramenta.",
+      poderes: [poder(10, "Companheiro Drone", 41), poder(40, "Protetor dos Drones", 41), poder(65, "Ás dos Drones", 41), poder(99, "Mestre dos Drones", 41)] },
+
     /* --- Arquivos Secretos 7, p. 81–88 ---
        As duas variantes do Monstruoso (o de combatente é do SAH, chave
        "monstruoso", e não muda). Chaves PRÓPRIAS: o nome igual nunca
@@ -1178,6 +1194,39 @@
       nota: "No resultado de um teste de Diplomacia, Enganação, Intimidação ou Intuição, o botão tira os 2 de Sanidade e mostra o mesmo teste com +5 — uma vez por teste. Com Jogando sem Sanidade, a perda não se aplica (SAH p. 104) e o botão diz isso." },
 
     /* -----------------------------------------------------------------
+       ARQUIVOS SECRETOS 9 v1.0, p. 38 (v6.9)
+       -----------------------------------------------------------------
+       Campo novo, opcional:
+         periciasPorEscolha  { opcao, pares }: o par de perícias que a
+                             escolha do poder exige treinado (como
+                             periciaPorElemento, do AS1)
+       Em efeitosEscolha, `seOpcao` faz o efeito valer só com aquela
+       escolha (Resistência do Treinamento: PV com Luta e Fortitude, PE
+       com Pontaria e Reflexos).
+       ----------------------------------------------------------------- */
+
+    { chave: "treinadoHellHunters", nome: "Treinado pela Hell Hunters", fonte: AS9, pagina: 38,
+      pericias: [], periciasAEscolher: 2, periciasOpcoes: ["luta", "fortitude", "pontaria", "reflexos"],
+      periciasPorEscolha: { opcao: "treino", pares: { luta: ["luta", "fortitude"], pontaria: ["pontaria", "reflexos"] } },
+      periciasObservacao: "Luta e Fortitude, ou Pontaria e Reflexos: o par escolhido decide a Resistência do Treinamento.",
+      poder: "Resistência do Treinamento", automacao: "calculo",
+      resumo: "Treinado em Luta e Fortitude ou em Pontaria e Reflexos. Com Luta e Fortitude, +2 PV no NEX 5% e +1 PV para cada 10% de NEX; com Pontaria e Reflexos, +1 PE no NEX 5% e +1 PE para cada 10% de NEX.",
+      escolhas: [{ chave: "treino", tipo: "pericia", entre: ["luta", "pontaria"], rotulo: "Treinamento da Hell Hunters (Luta: Luta e Fortitude, PV · Pontaria: Pontaria e Reflexos, PE)" }],
+      efeitosEscolha: [
+        { tipo: "pvFixo", valor: 2, seOpcao: { treino: "luta" } },
+        { tipo: "pvPorDoisDegraus", valor: 1, seOpcao: { treino: "luta" } },
+        { tipo: "peFixo", valor: 1, seOpcao: { treino: "pontaria" } },
+        { tipo: "pePorDoisDegraus", valor: 1, seOpcao: { treino: "pontaria" } },
+      ],
+      nota: "A escolha fica na Progressão e confere se o par de perícias está treinado. O bônus entra na conta: +2 PV (ou +1 PE) no NEX 5% e +1 a cada 10% de NEX — com NEX & Experiência, a cada dois níveis." },
+
+    { chave: "veteranoConflitoArmado", nome: "Veterano de Conflito Armado", fonte: AS9, pagina: 38,
+      pericias: ["luta", "pontaria"],
+      poder: "Full Metal Jacket", automacao: "parcial",
+      resumo: "Quando faz um teste de Luta ou Pontaria com alguma penalidade, você pode gastar 2 PE para ignorar a penalidade nesse teste.",
+      nota: "No resultado de um teste de Luta ou Pontaria (perícia ou ataque) com penalidade, o botão gasta 2 PE e mostra o mesmo teste sem as penalidades numéricas — só nesse teste, por escolha de quem joga." },
+
+    /* -----------------------------------------------------------------
        EXTRA (v5.1) — conteúdo oficial avulso, sem livro nem página
        -----------------------------------------------------------------
        Revoltado veio de um marca-página de HQ. `seEstado`: o efeito só
@@ -1421,7 +1470,7 @@
   }
 
   global.RAMAOrdemCatalogo = {
-    FONTES: { OPRPG: OPRPG, SAH: SAH, AS1: AS1, AS2: AS2, AS3: AS3, AS4: AS4, AS5: AS5, AS6: AS6, AS7: AS7, EXTRA: EXTRA },
+    FONTES: { OPRPG: OPRPG, SAH: SAH, AS1: AS1, AS2: AS2, AS3: AS3, AS4: AS4, AS5: AS5, AS6: AS6, AS7: AS7, AS9: AS9, EXTRA: EXTRA },
     LIVROS: LIVROS,
     fonteDe: fonteDe, fonteLiberada: fonteLiberada, motivoDaFonte: motivoDaFonte,
     ehAvulsa: ehAvulsa,

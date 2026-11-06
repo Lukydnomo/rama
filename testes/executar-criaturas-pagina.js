@@ -48,7 +48,7 @@ const textos = (nos) => nos.filter(Boolean).map((n) => n.texto).join(" | ");
 const fixo = (v) => (faces) => Math.min(faces, v);
 
 t.grupo("Geradores · por sistema, lógica dos próprios sistemas");
-t.igual("Ordem: Transtornados, Produção e TV Varminho", G.doSistema("ordem").map((g) => g.id), ["transtornado", "producao", "varminho"]);
+t.igual("Ordem: Transtornados, Produção, TV Varminho e Hell Hunters", G.doSistema("ordem").map((g) => g.id), ["transtornado", "producao", "varminho", "hellhunters"]);
 t.igual("Oblívio: Encontro do Buraco", G.doSistema("oblivio").map((g) => g.id), ["encontro"]);
 t.igual("Goblins: Encontros aleatórios", G.doSistema("goblins").map((g) => g.id), ["encontros"]);
 t.igual("Vampiro e Universal: nenhum (estado vazio)", [G.doSistema("vampiro").length, G.doSistema("universal").length], [0, 0]);

@@ -250,6 +250,17 @@
       resumo: "Tanques inundáveis dão peso ao carro para rodar firme no leito do rio ou do mar, e ar comprimido os esvazia para o veículo emergir." },
     { chave: "vedacaoHermetica", nome: "Vedação Hermética", fonte: "AS5", pagina: 59,
       resumo: "Componentes elétricos revestidos com resina e caixas pressurizadas: o veículo recebe imunidade a dano de eletricidade e não sofre curtos.", imunidade: "eletricidade" },
+
+    /* Arquivos Secretos 9, p. 42 (v6.9) — regalias para operações de
+       assalto. Só aparecem com o AS9 liberado (a escolha filtra pela
+       fonte, como toda opção de suplemento); a regra de veículos do AS3
+       continua sendo o que abre o painel. */
+    { chave: "centralDeDrones", nome: "Central de Drones", fonte: "AS9", pagina: 42,
+      resumo: "Controles, carregadores e compartimentos de lançamento: dentro do veículo, +5 em Tecnologia para operar drones; uma vez por rodada, um drone pode ser guardado ou pego da central como ação livre.", drones: 5 },
+    { chave: "estacaoDeArmas", nome: "Estação de Armas", fonte: "AS9", pagina: 42,
+      resumo: "Uma arma de fogo de duas mãos num suporte no teto ou na lateral: um passageiro a opera normalmente com a Pontaria dele, sem a penalidade por disparar de um veículo em movimento, mas sem a cobertura do veículo enquanto opera. A arma e a munição são requisitadas à parte e ficam na carga do veículo." },
+    { chave: "lancadoresDeFumaca", nome: "Lançadores de Fumaça", fonte: "AS9", pagina: 42,
+      resumo: "Uma vez por cena, um tripulante gasta uma ação de movimento para criar uma nuvem de fumaça ao redor do veículo: os mesmos efeitos de uma granada de fumaça (OPRPG p. 64).", fumaca: true },
   ];
   /* Indução Forçada (AS5 p. 59): a tabela de velocidade que substitui a do
      AS3 enquanto a regalia está instalada. */
@@ -1256,6 +1267,16 @@
        da Panacea; os de custo ou de dano ficam no texto do perfil. */
     "as6.criatura.alice-cruzes-aliado": { efeitos: [{ tipo: "dadosPericia", pericias: ["diplomacia", "tatica"], valor: 1 }], texto: "+1d20 em Diplomacia e Tática", fonte: "Arquivos Secretos 6, p. 28" },
     "as6.criatura.laila-verdante-aliado": { efeitos: [{ tipo: "resistenciaMental", valor: 2 }], texto: "resistência a dano mental 2", fonte: "Arquivos Secretos 6, p. 37" },
+    /* Arquivos Secretos 9 (v6.9): os bônus fixos dos Hell Hunters. O de
+       Arnold depende de envolver explosivos (fica no texto); Ryder pede
+       2 perícias quaisquer, escolhidas até o fim da missão. */
+    "as9.criatura.jason-bloom-aliado": { efeitos: [{ tipo: "dadosPericia", pericias: ["fortitude"], valor: 1 }], texto: "+1d20 em Fortitude", fonte: "Arquivos Secretos 9, p. 21" },
+    "as9.criatura.karen-brown-aliado": { efeitos: [{ tipo: "dadosPericia", pericias: ["pontaria"], valor: 1 }], texto: "+1d20 em Pontaria", fonte: "Arquivos Secretos 9, p. 23" },
+    "as9.criatura.troy-walker-aliado": { efeitos: [{ tipo: "dadosPericia", pericias: ["luta"], valor: 1 }], texto: "+1d20 em Luta", fonte: "Arquivos Secretos 9, p. 25" },
+    "as9.criatura.roy-stevens-aliado": { efeitos: [{ tipo: "treinadoPorAliado", pericias: ["medicina"], seJaTreinadoDados: 1 }], texto: "treinado em Medicina (+1d20 se já for)", fonte: "Arquivos Secretos 9, p. 27" },
+    "as9.criatura.stella-green-aliado": { efeitos: [{ tipo: "dadosPericia", pericias: ["pilotagem"], valor: 1 }], texto: "+1d20 em Pilotagem", fonte: "Arquivos Secretos 9, p. 29" },
+    "as9.criatura.chloe-grey-aliado": { efeitos: [{ tipo: "dadosPericia", pericias: ["investigacao"], valor: 1 }], texto: "+1d20 em Investigação", fonte: "Arquivos Secretos 9, p. 33" },
+    "as9.criatura.ryder-staten-aliado": { escolha: { quantas: 2, qualquer: true, dados: 1 }, texto: "+1d20 em 2 perícias escolhidas (até o fim da missão)", fonte: "Arquivos Secretos 9, p. 34" },
   };
 
   function normalizarRegistroDeAliado(b) {
@@ -1266,8 +1287,15 @@
     return {
       aliadoId: id, catalogoId: cat, nome: texto(x.nome, 80),
       ativo: x.ativo === true,
-      pericias: lista(x.pericias).filter(function (p) { return PERICIAS_DE_INTELECTO.indexOf(p) >= 0; }).slice(0, 2),
+      pericias: lista(x.pericias).filter(function (p) { return periciaDaEscolha(cat, p); }).slice(0, 2),
     };
+  }
+  /* A escolha de perícias do perfil: de Intelecto (Coruja, AS3) ou
+     qualquer uma (Ryder, AS9). */
+  function periciaDaEscolha(catalogoId, p) {
+    var esc = EFEITOS_DE_ALIADO[catalogoId] && EFEITOS_DE_ALIADO[catalogoId].escolha;
+    if (esc && esc.qualquer) return !!(global.RAMAOrdemCatalogo && global.RAMAOrdemCatalogo.pericia(p));
+    return PERICIAS_DE_INTELECTO.indexOf(p) >= 0;
   }
 
   /* Os efeitos fixos dos aliados acompanhando, no formato da progressão. */
@@ -1282,7 +1310,8 @@
       var fonte = "Aliado: " + (r.nome || r.catalogoId);
       (d.efeitos || []).forEach(function (ef) { saida.push(Object.assign({}, ef, { fonte: fonte, detalhe: d.fonte || "Arquivos Secretos 3, p. 116-118" })); });
       if (d.escolha && r.pericias.length) {
-        saida.push({ tipo: "treinadoPorAliado", pericias: r.pericias.slice(), seJaTreinado: 0, fonte: fonte, detalhe: "perícias escolhidas (AS3 p. 117)" });
+        if (d.escolha.dados) saida.push({ tipo: "dadosPericia", pericias: r.pericias.slice(), valor: d.escolha.dados, fonte: fonte, detalhe: "perícias escolhidas (" + (d.fonte || "") + ")" });
+        else saida.push({ tipo: "treinadoPorAliado", pericias: r.pericias.slice(), seJaTreinado: 0, fonte: fonte, detalhe: "perícias escolhidas (AS3 p. 117)" });
       }
     });
     return saida;
@@ -1304,8 +1333,8 @@
     }
     if (Array.isArray(pericias)) {
       var esc = EFEITOS_DE_ALIADO[catalogoId].escolha;
-      var l = pericias.filter(function (p, i) { return PERICIAS_DE_INTELECTO.indexOf(p) >= 0 && pericias.indexOf(p) === i; });
-      if (esc && l.length !== esc.quantas) return { ok: false, motivo: "Escolha " + esc.quantas + " perícias de Intelecto diferentes." };
+      var l = pericias.filter(function (p, i) { return periciaDaEscolha(catalogoId, p) && pericias.indexOf(p) === i; });
+      if (esc && l.length !== esc.quantas) return { ok: false, motivo: "Escolha " + esc.quantas + " perícias " + (esc.qualquer ? "" : "de Intelecto ") + "diferentes." };
       r.pericias = l.slice(0, 2);
     }
     r.ativo = !!ativo;

@@ -96,6 +96,23 @@
         return perfilOrdem(g, false, true).concat([p(g.referencia + ". Só narrativa: nenhum poder, nenhuma estatística. Para jogar com números, use as fichas do catálogo (doppelgangers, hospedeiros).", "criacao-fonte")]);
       },
       referencia: referenciaVarminho },
+    /* AS9 (v6.9): só com o suplemento liberado no contexto (numa ficha ou
+       campanha que o desligou, não aparece; na página Criaturas, sim). */
+    { id: "hellhunters", sistema: "ordem", nome: "Gerador de Mercenários Hell Hunters", fonte: "Arquivos Secretos 9, p. 14",
+      resumo: "Coluna (1d10), dois traços de personalidade (1d6) e duas características de aparência (1d20) de um mercenário.",
+      disponivel: function () {
+        var Cat = global.RAMAOrdemCatalogo;
+        return !!(OC() && OC().gerarHellHunters) && (!Cat || !Cat.fonteLiberada || Cat.fonteLiberada("AS9"));
+      },
+      sortear: function (r) {
+        var g = OC().gerarHellHunters(r);
+        return [
+          p("Coluna: " + g.coluna + " (1d10: " + g.dados.coluna + ")"),
+          p("Traços de personalidade: " + g.tracos.join("; ") + " (1d6: " + g.dados.tracos.join(" e ") + ")"),
+          p("Aparência: " + g.aparencia.join("; ") + " (1d20: " + g.dados.aparencia.join(" e ") + ")"),
+          p(g.referencia + ". Só narrativa: a ficha de combate vem do catálogo (os Hell Hunters, p. 20–35).", "criacao-fonte"),
+        ];
+      } },
   ];
 
   /* ---------------- Oblívio ---------------- */

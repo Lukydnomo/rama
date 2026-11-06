@@ -5,6 +5,31 @@ padrão e normaliza o que chega de fora. Onde ela é guardada — inteira em
 `fichaJson` (formato antigo) ou em blocos (v2.15) — é assunto do backend, e não muda
 nada aqui: ver [DATABASE.md](DATABASE.md).
 
+## Arquivos Secretos 9 — v6.9 / schema 30
+
+Ficha de Ordem, campo novo `ordem.arquivo9` (normalizado por
+`RAMAOrdemArquivo9.normalizar`, chamado de `R.normalizar`), sem conversão: uma
+ficha 29 abre com o estado vazio e nada mais muda.
+
+```
+"arquivo9": {
+  "tatica": { "planos": [{ "id", "ameaca", "total", "dados", "restantes", "cena", "em" }] },   // até 10
+  "analisar": { "cena", "bonus", "efeitoId" },                               // uma vez por cena
+  "municiar": { "pacotes", "cena", "rolagens": [] },
+  "alvo": { "nome", "vd", "em" } | null,                                      // alvo-prioritário
+  "refens": { "rodada", "nomes": [] },                                        // até 3 por rodada
+  "ripostar": { "pendente", "rodada" },
+  "drones": { "escolha99": "" | "seis" | "segundo", "metralhar" },
+  "usos": [{ "opId", "tipo", "em" }]                                          // operações já feitas (60)
+}
+```
+
+- `item.ordem.as9` (drone de combate tático): `tipo`, `pericia` (Utilitário,
+  fixa), `estado` (`danificado`/`quebrado`; ausente = funcionando), `daTrilha`,
+  `segundo`. Modificações da trilha levam `daTrilha` e
+  `semAcrescimoDeCategoria` no registro.
+- Exportar/importar: os ids de `arquivo9` viajam como `ref9` e voltam.
+
 ## Arquivos Secretos 7 — v6.5 / schema 29
 
 Ficha de Ordem, campo novo `ordem.arquivo7` (normalizado por

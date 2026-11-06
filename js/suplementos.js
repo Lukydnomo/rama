@@ -64,6 +64,10 @@
     { id: "ordem.as7", sistema: "ordem", fontes: ["AS7"], nome: "Arquivos Secretos 7", curto: "AS7",
       descricao: "Vampiros e terrores da fé: o ritual Vampirismo, novos itens e origens, ameaças de Sangue e a Apóstata, e duas novas variantes de Monstruoso.",
       capa: "assets/sistemas/ordem-as7-capa.webp", capaAlt: "Capa de Arquivos Secretos 7: cinco figuras vampirescas de presas à mostra, sob o título, num fundo vermelho" },
+    /* v6.9 */
+    { id: "ordem.as9", sistema: "ordem", fontes: ["AS9"], nome: "Arquivos Secretos 9: Hell Hunters", curto: "AS9",
+      descricao: "O esquadrão Hell Hunters: mercenários com ficha e perfil de aliado, origens, poderes de combatente, as trilhas Incursor e Piloto de Drone, regalias de veículo, itens táticos e drones.",
+      capa: "assets/sistemas/ordem-as9-capa.webp", capaAlt: "Capa de Arquivos Secretos 9: o esquadrão Hell Hunters armado diante de prédios ao entardecer, com um helicóptero no céu" },
     /* v6.2: o conteúdo oficial avulso (fonte EXTRA: marca-páginas e
        materiais promocionais) também é complemento — habilitável como os
        outros, não sempre ligado como o livro básico. */

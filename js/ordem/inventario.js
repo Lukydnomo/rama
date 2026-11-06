@@ -82,7 +82,7 @@
   };
   var TIPOS_PROTECAO = ["leve", "pesada", "escudo"];
   var ELEMENTOS = ["sangue", "morte", "conhecimento", "energia", "medo", "varia"];
-  var MARCADORES = ["acessorio", "utensilio", "vestimenta", "eletrico", "camera", "corpoACorpo", "besta", "balas", "granada", "medicamento"];
+  var MARCADORES = ["acessorio", "utensilio", "vestimenta", "eletrico", "camera", "corpoACorpo", "besta", "balas", "granada", "medicamento", "drone"];
   /* As fontes aceitas numa referência de item: as do registro único dos
      livros (C.LIVROS); sem o catálogo, a lista fixa — com o livro novo. */
   var FONTES = (global.RAMAOrdemCatalogo && global.RAMAOrdemCatalogo.LIVROS
@@ -241,6 +241,11 @@
     var A7 = global.RAMAOrdemArquivo7;
     if (A7 && A7.normalizarDadosDoItem) A7.normalizarDadosDoItem(dados, b);
     else if (b.as7 && typeof b.as7 === "object") dados.as7 = JSON.parse(JSON.stringify(b.as7));
+    /* Arquivos Secretos 9 (v6.9): o drone — tipo, perícia do Utilitário,
+       estado, se é o da trilha Piloto de Drone —, em `as9`. */
+    var A9 = global.RAMAOrdemArquivo9;
+    if (A9 && A9.normalizarDadosDoItem) A9.normalizarDadosDoItem(dados, b);
+    else if (b.as9 && typeof b.as9 === "object") dados.as9 = JSON.parse(JSON.stringify(b.as9));
     /* Contagem de munição (v2.20, regra opcional): o que está carregado
        numa arma e o que já saiu dos pacotes de uma munição. Sem o módulo
        (uma página que não conta munição), passa como veio. */
@@ -355,6 +360,7 @@
     var ref = referenciaValida(m.referencia);
     if (ref) saida.referencia = ref;
     if (m.semAcrescimoDeCategoria === true) saida.semAcrescimoDeCategoria = true;
+    if (m.daTrilha === true) saida.daTrilha = true;
     /* Maledictólogo (AS1 p. 45): a maldição reproduzida dura até o fim
        da missão; a transferida lembra de onde veio. */
     if (m.temporaria === "missao") saida.temporaria = "missao";

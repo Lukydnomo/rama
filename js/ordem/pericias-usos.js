@@ -43,6 +43,7 @@
   var AS4 = "AS4";
   var AS5 = "AS5";
   var AS7 = "AS7";
+  var AS9 = "AS9";
   var SAH = "SAH";
 
   function uso(nome, d) { return Object.assign({ nome: nome, treino: "", dt: "", acao: "", custo: "", alcance: "", texto: "", fonte: LB, pagina: 0 }, d); }
@@ -336,6 +337,8 @@
 
     tatica: { pagina: 48, intro: "Educação militar.",
       usos: [
+        uso("Analisar Perigo", { treino: "treinado", dt: "15", acao: "ação de movimento", fonte: AS9, pagina: 38,
+          texto: "Analisa a melhor forma de lidar com uma situação de perigo específica (explosivos perto de um zumbi de Sangue, um caminho seguro num tiroteio). Até o fim do seu próximo turno, +2 em testes e na Defesa — +1 a cada 5 pontos acima da DT. Uma vez por cena." }),
         uso("Analisar Terreno", { dt: "20", acao: "ação de movimento", pagina: 48,
           texto: "Observa o campo de batalha: passando, descobre uma vantagem (cobertura, camuflagem, terreno elevado), se houver." }),
         uso("Plano de Ação", { treino: "veterano", dt: "20", acao: "ação padrão", alcance: "médio (um aliado)", pagina: 48,
@@ -367,7 +370,7 @@
       usos: [] },
   };
 
-  var NOMES_DOS_LIVROS = { OPRPG: "Ordem Paranormal RPG", AS1: "Arquivos Secretos 1", AS4: "Arquivos Secretos 4", AS5: "Arquivos Secretos 5", AS7: "Arquivos Secretos 7", SAH: "Sobrevivendo ao Horror" };
+  var NOMES_DOS_LIVROS = { OPRPG: "Ordem Paranormal RPG", AS1: "Arquivos Secretos 1", AS4: "Arquivos Secretos 4", AS5: "Arquivos Secretos 5", AS7: "Arquivos Secretos 7", AS9: "Arquivos Secretos 9", SAH: "Sobrevivendo ao Horror" };
 
   function referencia(fonte, pagina) {
     var C = global.RAMAOrdemCatalogo;

@@ -64,7 +64,7 @@
 
     t.grupo("Tema da ficha · schema 16 (v2.36)");
     var TEMA16 = { nome: "Roxo", base: "escuro", valores: { fundo: { tipo: "radial", forma: "circulo", x: 20, y: 30, pontos: [{ cor: "#08080a", pos: 0 }, { cor: "#3a1030", alfa: 0.8, pos: 100 }] } } };
-    t.igual("o schema subiu para 29 (Arquivos Secretos 7, v6.5)", S.VERSAO_SCHEMA, 29);
+    t.igual("o schema subiu para 30 (Arquivos Secretos 9, v6.9)", S.VERSAO_SCHEMA, 30);
     t.iguais("ficha nova usa o tema da conta", S.criarFicha({ nome: "Nova" }).aparencia, { v: 1, modo: "conta" });
     t.iguais("ficha antiga (sem o campo) também", S.normalizarFicha({ schemaVersion: 15, nome: "Legado" }).aparencia, { v: 1, modo: "conta" });
     ["ordem", "universal"].forEach(function (tipo) {
@@ -1801,7 +1801,7 @@
       var duplicada = "";
       PO.TODOS.forEach(function (p) { if (chaves[p.chave]) duplicada = p.chave; chaves[p.chave] = true; });
       t.igual("nenhuma chave de poder se repete", duplicada, "");
-      t.ok("todo poder tem fonte e página", PO.TODOS.every(function (p) { return ["OPRPG", "SAH", "AS1", "AS2", "AS3", "AS4", "AS5", "AS6", "AS7"].indexOf(p.fonte) >= 0 && p.pagina > 0; }));
+      t.ok("todo poder tem fonte e página", PO.TODOS.every(function (p) { return ["OPRPG", "SAH", "AS1", "AS2", "AS3", "AS4", "AS5", "AS6", "AS7", "AS9"].indexOf(p.fonte) >= 0 && p.pagina > 0; }));
       t.ok("todo poder tem resumo", PO.TODOS.every(function (p) { return p.resumo.length > 10; }));
       t.ok("toda automação é calculo, parcial ou informacao",
         PO.TODOS.every(function (p) { return ["calculo", "parcial", "informacao"].indexOf(p.automacao) >= 0; }));
@@ -1811,7 +1811,7 @@
         PO.PODERES_PARANORMAIS.filter(function (p) { return p.fonte === "SAH"; }).length, 8);
       t.igual("34 poderes gerais do Sobrevivendo ao Horror (Tabela 2.3)", PO.PODERES_GERAIS.filter(function (p) { return p.fonte === "SAH"; }).length, 34);
       t.igual("cinco poderes gerais do Arquivos Secretos 1 (p. 46)", PO.PODERES_GERAIS.filter(function (p) { return p.fonte === "AS1"; }).length, 5);
-      t.igual("quatro habilidades por trilha, nas 30 trilhas (com as duas monstruosas do AS7)", PO.HABILIDADES_TRILHA.length, 120);
+      t.igual("quatro habilidades por trilha, nas 32 trilhas (com as duas monstruosas do AS7 e as duas do AS9)", PO.HABILIDADES_TRILHA.length, 128);
       t.ok("os nomes das habilidades batem com os das trilhas do catálogo",
         CC.TRILHAS.every(function (tr) {
           var h = PO.habilidadesDaTrilha(tr.chave).map(function (x) { return x.nome; });
@@ -2885,7 +2885,7 @@
       /* ---------------------------------------------------------------- */
       t.grupo("Ordem · itens — catálogo completo e estruturado");
 
-      t.igual("302 entradas nos nove livros (5 do AS7)", catalogo.itens.length, 302);
+      t.igual("320 entradas nos dez livros (5 do AS7, 18 do AS9)", catalogo.itens.length, 320);
       var contagem = {};
       catalogo.itens.forEach(function (e) {
         var k = e.aba + "/" + e.natureza + "/" + e.fonte;
@@ -2916,20 +2916,25 @@
         ["geral/item/AS4", 2, "granadas de gás lacrimogêneo e de tinta (AS4)"],
         ["geral/modificacao/AS4", 3, "modificações para granadas (AS4)"],
         ["amaldicoados/item/AS4", 1, "Granada Ctrl+C Ctrl+V (AS4)"],
+        ["armas/item/AS9", 5, "armas do Arquivos Secretos 9 (DMR, espingarda serrada, lançador portátil, machado tático, pistola taser)"],
+        ["geral/item/AS9", 4, "aríete, boroscópio, drone e capacete tático (AS9)"],
+        ["protecoes/item/AS9", 1, "escudo balístico LED (AS9)"],
+        ["municoes/item/AS9", 1, "dardos condutores (AS9)"],
+        ["geral/modificacao/AS9", 7, "modificações de drone (AS9 p. 46)"],
       ].forEach(function (c) { t.igual(c[2] + ": " + c[1], contagem[c[0]] || 0, c[1]); });
 
       var idsVistos = {};
       var idRepetido = "";
       catalogo.itens.forEach(function (e) { if (idsVistos[e.id]) idRepetido = e.id; idsVistos[e.id] = true; });
       t.igual("nenhum id se repete", idRepetido, "");
-      t.ok("todo id é estável e diz a fonte (op.…, sah.…, as1.… … as7.…)", catalogo.itens.every(function (e) {
-        return /^(op|sah|as1|as2|as3|as4|as5|as6|as7)\.[a-z0-9.-]+$/.test(e.id) && (e.fonte === "AS7") === (e.id.indexOf("as7.") === 0) && (e.fonte === "SAH") === (e.id.indexOf("sah.") === 0) &&
+      t.ok("todo id é estável e diz a fonte (op.…, sah.…, as1.… … as9.…)", catalogo.itens.every(function (e) {
+        return /^(op|sah|as1|as2|as3|as4|as5|as6|as7|as9)\.[a-z0-9.-]+$/.test(e.id) && (e.fonte === "AS7") === (e.id.indexOf("as7.") === 0) && (e.fonte === "AS9") === (e.id.indexOf("as9.") === 0) && (e.fonte === "SAH") === (e.id.indexOf("sah.") === 0) &&
           (e.fonte === "AS1") === (e.id.indexOf("as1.") === 0) && (e.fonte === "AS2") === (e.id.indexOf("as2.") === 0) &&
           (e.fonte === "AS3") === (e.id.indexOf("as3.") === 0) && (e.fonte === "AS4") === (e.id.indexOf("as4.") === 0) &&
           (e.fonte === "AS5") === (e.id.indexOf("as5.") === 0) && (e.fonte === "AS6") === (e.id.indexOf("as6.") === 0);
       }));
       t.ok("toda entrada tem nome, resumo, fonte e página", catalogo.itens.every(function (e) {
-        return e.nome && e.resumo && ["OPRPG", "SAH", "AS1", "AS2", "AS3", "AS4", "AS5", "AS6", "AS7"].indexOf(e.fonte) >= 0 && e.pagina > 0;
+        return e.nome && e.resumo && ["OPRPG", "SAH", "AS1", "AS2", "AS3", "AS4", "AS5", "AS6", "AS7", "AS9"].indexOf(e.fonte) >= 0 && e.pagina > 0;
       }));
       t.ok("todo item tem tipo de ficha e grupo; modificações e maldições não", catalogo.itens.every(function (e) {
         return e.natureza === "item" ? !!(e.tipoItem && e.grupo) : (e.tipoItem === null && e.grupo === null);
@@ -2960,7 +2965,7 @@
       IT._esquecer();
       var carga = IT.carregar();
       t.ok("carregar() devolve uma promessa e deixa o catálogo pronto", !!carga && typeof carga.then === "function" && !!IT.catalogoPronto());
-      t.igual("  com as mesmas 302 entradas", IT.catalogoPronto().itens.length, 302);
+      t.igual("  com as mesmas 320 entradas", IT.catalogoPronto().itens.length, 320);
 
       /* Conferência pontual contra as tabelas dos livros. */
       var katana = entrada("op.arma.katana");
@@ -5146,7 +5151,7 @@
     remoto.pericias[0].bonus = 5;
     var m = S.mesclar(base, local, remoto, S.ESQUEMA_FICHA);
     t.ok("sincronizar: a fórmula daqui e o bônus de lá", m.estado.pericias[0].formula === "@STR d8" && m.estado.pericias[0].bonus === 5 && !m.conflitos.length);
-    t.igual("o schema da ficha é o atual (29)", n.schemaVersion, 29);
+    t.igual("o schema da ficha é o atual (30)", n.schemaVersion, 30);
   }
 
   /* =================================================================
@@ -5183,7 +5188,7 @@
     var m = S.mesclar(base, local, remoto, S.ESQUEMA_FICHA);
     t.ok("sincronizar: o modo daqui e o bônus de lá, sem conflito",
       m.estado.organizacao.pericias.modo === "maior" && m.estado.pericias[1].bonus === 4 && !m.conflitos.length);
-    t.igual("o schema da ficha é o atual (29)", n.schemaVersion, 29);
+    t.igual("o schema da ficha é o atual (30)", n.schemaVersion, 30);
   }
 
   /* =================================================================
@@ -5329,7 +5334,7 @@
     t.ok("exportar e importar leva pendentes (com o dado já rolado) e resolvidas", volta.ok &&
       volta.dados.ordem.barganhaInsana.pendentes[0].d4 === 2 && volta.dados.ordem.barganhaInsana.resolvidas.length === 1);
     t.ok("  mesmo sem o ritual na lista de conhecidos", volta.dados.rituais.itens.length === 0);
-    t.igual("o schema da ficha é o atual (29)", F.normalizarFicha(ficha).schemaVersion, 29);
+    t.igual("o schema da ficha é o atual (30)", F.normalizarFicha(ficha).schemaVersion, 30);
   }
 
   /* =================================================================
@@ -5370,7 +5375,7 @@
     t.iguais("  um tema de dados que este navegador não conhece também fica (a tela usa a reserva)", MT.normalizarAparencia({ dados: { id: "tema-do-futuro" } }).dados, { id: "tema-do-futuro" });
     var ficha = F.normalizarFicha(F.criarFicha({ nome: "Lia", tipoFicha: "universal", aparencia: { v: 1, modo: "conta", dados: { id: "sigilo-violeta" } } }));
     t.iguais("a ficha normalizada mantém a escolha", ficha.aparencia.dados, { id: "sigilo-violeta" });
-    t.igual("o schema da ficha é o atual (29)", ficha.schemaVersion, 29);
+    t.igual("o schema da ficha é o atual (30)", ficha.schemaVersion, 30);
     var pacote = V.exportar("personagem", ficha);
     t.ok("exportar leva a escolha sem `id` (atravessa como `tema`)", pacote.dados.aparencia.dados.tema === "sigilo-violeta" && JSON.stringify(pacote).indexOf('"id"') < 0);
     var volta = V.importado(JSON.parse(JSON.stringify(pacote)));
@@ -7129,8 +7134,8 @@
       R.resistencias(fbExp, INV).dano.some(function (d) { return d.tipo === "geral"; }) && R.dadosDoTeste(fbExp, "diplomacia").quantos === R.dadosDoTeste(baseFb, "diplomacia").quantos - 1);
     if (B) {
       var todas = B.secoes("origens").reduce(function (l, s) { return l.concat(s.entradas); }, []);
-      t.ok("a aba Origens da biblioteca tem as 58, numa seção por fonte (com AS6, AS7 e Extra)", todas.length === 58 && B.secoes("origens").length === 8 &&
-        B.secoes("origens")[7].titulo === "Origens · Extra" && B.secoes("origens")[6].titulo === "Origens · Arquivos Secretos 7" && B.secoes("origens")[5].titulo === "Origens · Arquivos Secretos 6");
+      t.ok("a aba Origens da biblioteca tem as 60, numa seção por fonte (com AS6, AS7, AS9 e Extra)", todas.length === 60 && B.secoes("origens").length === 9 &&
+        B.secoes("origens")[8].titulo === "Origens · Extra" && B.secoes("origens")[7].titulo === "Origens · Arquivos Secretos 9" && B.secoes("origens")[6].titulo === "Origens · Arquivos Secretos 7" && B.secoes("origens")[5].titulo === "Origens · Arquivos Secretos 6");
       t.ok("  busca pelo poder e pela origem", B.filtrar(B.secoes("origens"), "luta ou fuga").some(function (s) { return s.entradas.length; }) &&
         B.filtrar(B.secoes("origens"), "profetizado").some(function (s) { return s.entradas.length; }));
       var copia = B.modelo(todas.filter(function (x) { return x.entrada.nome === "Conexões"; })[0].entrada, "");

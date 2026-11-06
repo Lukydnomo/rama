@@ -136,6 +136,7 @@
   var AS5 = "AS5";
   var AS6 = "AS6";
   var AS7 = "AS7";
+  var AS9 = "AS9";
 
   var SA = "sangue";
   var MO = "morte";
@@ -6017,6 +6018,260 @@
       });
     })();
 
+
+  /* =================================================================
+     ARQUIVOS SECRETOS 9: HELL HUNTERS (v6.9) — p. 20–35
+     -----------------------------------------------------------------
+     Oito PESSOAS com ficha de combate e perfil "como aliado". Os números
+     são os publicados: o Treinamento Tático (+5 em ataque, resistências,
+     dano e Defesa) e os bônus que o livro diz "já contabilizado" (Olhos
+     de Águia) estão DENTRO deles — a ficha nunca soma de novo. O "O" do
+     livro é o d20 ("2O+10" = 2d20+10). Os perfis de aliado entram na aba
+     Aliados; os bônus fixos ligam pelo painel de aliados (arquivo3.js →
+     EFEITOS_DE_ALIADO), os de custo ficam como habilidades com custo.
+     ================================================================= */
+  (function () {
+    var HH = "Hell Hunters";
+    var NOTA_TT = "Treinamento Tático: os +5 em testes de ataque, testes de resistência, rolagens de dano e na Defesa já estão nos números da ficha (p. 20–35) — não somam de novo.";
+    function treinamentoTatico(nome, quantas) {
+      return hab("Treinamento Tático", "Pelo treinamento que recebeu, " + nome + " tem +5 em testes de ataque, testes de resistência, rolagens de dano e na Defesa (já contabilizado). Pode fazer " + (quantas || "duas") + " ações agredir pelo custo de uma única ação padrão.");
+    }
+    function lutaTatica(nome) {
+      return acao("livre", "Luta Tática", "Uma vez por rodada, " + nome + " faz uma manobra de combate como ação livre.", { limite: [1, "rodada"] });
+    }
+    function pessoa(chave, nome, pagina, vd, extra) {
+      return Object.assign({
+        id: "as9.criatura." + chave, livro: AS9, pagina: pagina,
+        nome: nome, natureza: "humana", tipo: "Pessoa", tamanho: "Médio", categoria: HH, vd: vd,
+        elementos: [], deslocamento: [[9, 6]],
+        notas: ["PESSOA na fonte (p. " + pagina + "): sem elementos e sem presença perturbadora.", NOTA_TT],
+      }, extra);
+    }
+    function aliadoAs9(chave, nome, pagina, descricao, habilidades, notas, rotulo) {
+      return {
+        id: "as9.criatura." + chave + "-aliado", livro: AS9, pagina: pagina, aliada: true,
+        nome: nome + " (" + (rotulo || "aliado") + ")", natureza: "humana", tipo: "Aliado", tamanho: null, categoria: "Aliados",
+        nivel: "Aliado (OPRPG p. 170)", elementos: [], vd: null,
+        descricao: descricao,
+        ficha: { id: "as9.criatura." + chave, nome: nome, pagina: pagina },
+        notas: ["Perfil “como aliado”: os benefícios para quem o acompanha, sem estatísticas de combate. A ficha de combate é outra entrada."].concat(notas || []),
+        habilidades: habilidades,
+        acoes: [],
+      };
+    }
+    var fragmentacao = function (nome) {
+      return acao("padrao", "Fragmentação", "Uma vez por cena, " + nome + " arremessa uma granada de fragmentação em alcance curto. Seres num raio de 6 m do ponto de impacto sofrem 8d6 de dano de perfuração (Reflexos DT 23 reduz à metade).",
+        { limite: [1, "cena"], rolagens: [dano("Fragmentação", "8d6 perfuração")], resistencia: "Reflexos DT 23 reduz à metade" });
+    };
+
+    CRIATURAS.push(pessoa("jason-bloom", "Jason Bloom", 21, 140, {
+      descricao: "O guardião do esquadrão: protege a equipe com escudo e corpo, desde a SWAT até os Hell Hunters.",
+      percepcao: "2d20", iniciativa: "2d20+5",
+      defesa: 30, fortitude: "3d20+15", reflexos: "2d20+10", vontade: "2d20+5",
+      pv: 200, machucado: 100, resistencias: [[10, "dano"]],
+      atributos: [2, 3, 1, 2, 3],
+      pericias: [["Atletismo", "3d20+10"], ["Intimidação", "2d20+5"], ["Pilotagem", "2d20+10"], ["Tática", "1d20+5"]],
+      habilidades: [
+        hab("Blindado", "Pelo uso eficiente do aparato tático e do escudo, Jason tem RD 10 e não sofre penalidade de deslocamento pelo equipamento pesado."),
+        treinamentoTatico("Jason"),
+      ],
+      acoes: [
+        agredir([at("Escudada", "corpo a corpo", 1, "3d20+20", "2d8+15 impacto")]),
+        agredir([at("Pistola modificada", "curto", 1, "2d20+20", "2d10+17 balístico", { critico: "16" })]),
+        acao("reacao", "Proteger", "Uma vez por rodada, Jason redireciona para si danos, ou quaisquer outros efeitos negativos, que tenham como alvo um aliado adjacente.", { limite: [1, "rodada"] }),
+        lutaTatica("Jason"),
+        acao("padrao", "Atrás de Mim!", "Jason assume uma postura que fornece cobertura: aliados adjacentes recebem RD 10 e podem considerá-lo cobertura (+5 na Defesa) até o início do próximo turno dele.", { marcador: "Cobertura até o próximo turno" }),
+        acao("completa", "Empurrar e Atirar", "Carga com escudo: empurra um alvo adjacente uma quantidade de metros igual ao deslocamento de Jason enquanto avança disparando com a pistola. O alvo sofre 4d12+24 de dano balístico (Fortitude ou Reflexos DT 22 reduz à metade e evita o empurrão).",
+          { rolagens: [dano("Empurrar e Atirar", "4d12+24 balístico")], resistencia: "Fortitude ou Reflexos DT 22 reduz à metade e evita o empurrão" }),
+      ],
+    }));
+
+    CRIATURAS.push(pessoa("karen-brown", "Karen Brown", 23, 160, {
+      descricao: "Atiradora de elite, herdeira de uma loja de armas com estande de tiro; juntou-se ao esquadrão depois de um encontro grotesco com o paranormal.",
+      percepcao: "3d20+15", iniciativa: "4d20+10",
+      defesa: 33, fortitude: "2d20+10", reflexos: "4d20+15", vontade: "3d20+15",
+      pv: 240, machucado: 120,
+      atributos: [4, 2, 2, 3, 2],
+      pericias: [["Acrobacia", "4d20+10"], ["Atletismo", "2d20+10"], ["Furtividade", "4d20+10"], ["Intimidação", "3d20+15"], ["Pilotagem", "4d20+10"], ["Tática", "2d20+10"]],
+      habilidades: [
+        hab("Olhos de Águia", "Precisão e observação superiores: +5 em Percepção e +2 na margem de ameaça de ataques à distância (já contabilizado)."),
+        treinamentoTatico("Karen"),
+      ],
+      acoes: [
+        agredir([at("Pistola modificada", "curto", 1, "4d20+20", "2d12+17 balístico", { critico: "14" })]),
+        agredir([at("Fuzil de precisão modificado", "longo", 1, "4d20+20", "3d12+17 balístico", { critico: "15/x3" })]),
+        lutaTatica("Karen"),
+        acao("movimento", "Buscar Cobertura", "Se houver uma cobertura na linha de visão de Karen, ela percorre o dobro do deslocamento na direção dela."),
+        acao("completa", "Fogo de Supressão", "Uma vez por rodada, Karen prepara ataques à distância contra quaisquer alvos numa área (cone com o alcance da arma de fogo em uso) e espera que algum alvo faça algo para atirar nele como reação. Limite de tiros igual à Agilidade dela, no máximo 1 por alvo. Atingido ou não, o alvo faz Vontade (DT 25; 30 se foi atingido): falhando, fica intimidado e perde a ação. Termina no início do próximo turno de Karen.",
+          { limite: [1, "rodada"], resistencia: "Vontade DT 25 (30 se atingido)" }),
+      ],
+    }));
+
+    CRIATURAS.push(pessoa("troy-walker", "Troy Walker", 25, 140, {
+      descricao: "Feroz e impaciente, sempre o primeiro a avançar; quanto mais se machuca, mais se empolga.",
+      percepcao: "2d20", iniciativa: "2d20+5",
+      defesa: 29, fortitude: "3d20+15", reflexos: "2d20+10", vontade: "2d20+5",
+      pv: 180, machucado: 90,
+      atributos: [2, 3, 1, 2, 3],
+      pericias: [["Atletismo", "3d20+10"], ["Intimidação", "2d20+10"], ["Pilotagem", "2d20+10"], ["Tática", "1d20+5"]],
+      estados: [{ id: "adrenalina", nome: "Adrenalina de Pancadaria (0: acima de 135 PV · 1: 135–90 · 2: 90–45 · 3: 45–0)", maximo: 3 }],
+      habilidades: [
+        hab("Adrenalina de Pancadaria", "Conforme os PV diminuem, Troy recebe RD e dano extra: entre 135 e 90 PV, RD 5 e +5 de dano; entre 90 e 45, RD 10 e +10; entre 45 e 0, RD 15 e +15. O contador da ocorrência marca a faixa atual."),
+        hab("Pé na Porta", "Especialista em destruir objetos: +4d8 de dano extra em itens.", { rolagens: [dano("Pé na Porta (em itens)", "4d8")] }),
+        treinamentoTatico("Troy"),
+      ],
+      acoes: [
+        agredir([at("Coronhada", "corpo a corpo", 1, "3d20+20", "3d6+15 impacto")]),
+        agredir([at("Espingarda modificada", "curto", 1, "2d20+20", "4d6+17 balístico", { critico: "18/x3" })]),
+        acao("reacao", "Revidar", "Uma vez por rodada, alvo de um ataque corpo a corpo, Troy faz um teste de ataque corpo a corpo para se defender: vencendo o teste oposto, evita o ataque e causa seu dano corpo a corpo ao oponente; perdendo, é atingido normalmente.", { limite: [1, "rodada"] }),
+        lutaTatica("Troy"),
+        acao("padrao", "Pra Cima Deles!", "Troy se expõe num ataque ousado contra um alvo no alcance (ou mais, se o ataque permitir): acertando, causa dano máximo; errando, sofre –10 na Defesa por 1 rodada.", { marcador: "–10 na Defesa por 1 rodada" }),
+      ],
+    }));
+
+    CRIATURAS.push(pessoa("roy-stevens", "Roy Stevens", 27, 160, {
+      descricao: "Médico de campo do esquadrão, capaz de operar milagres sob fogo cruzado.",
+      percepcao: "4d20+10", iniciativa: "2d20+10",
+      defesa: 32, fortitude: "3d20+15", reflexos: "2d20+10", vontade: "4d20+15",
+      pv: 250, machucado: 125,
+      atributos: [2, 3, 3, 4, 3],
+      pericias: [["Atletismo", "2d20+10"], ["Diplomacia", "4d20+10"], ["Intimidação", "4d20+10"], ["Medicina", "3d20+15"], ["Pilotagem", "2d20+10"], ["Tática", "3d20+10"]],
+      habilidades: [
+        hab("Técnicas de Resgate", "Roy carrega até dois corpos humanos sem penalidade de deslocamento, desde que esteja com as mãos livres para isso."),
+        treinamentoTatico("Roy"),
+      ],
+      acoes: [
+        agredir([at("Pistola modificada", "curto", 1, "2d20+20", "2d8+17 balístico", { critico: "14" })]),
+        agredir([at("Submetralhadora modificada", "curto", 1, "2d20+20", "3d6+17 balístico", { critico: "17/x3" })]),
+        lutaTatica("Roy"),
+        acao("movimento", "Ao Resgate", "Se houver um aliado ferido na linha de visão de Roy, ele percorre o dobro do deslocamento na direção dele."),
+        acao("padrao", "Prestar Socorro", "Roy cura 3d10 PV ou remove uma condição negativa (exceto morrendo) de si ou de um aliado adjacente.", { rolagens: [soma("Prestar Socorro (PV)", "3d10")] }),
+      ],
+    }));
+
+    CRIATURAS.push(pessoa("stella-green", "Stella Green", 29, 140, {
+      descricao: "Engenheira mecânica e pilota de qualquer veículo; cuida para que a frota do esquadrão esteja sempre afinada.",
+      percepcao: "2d20+5", iniciativa: "3d20+10",
+      defesa: 29, fortitude: "2d20+5", reflexos: "3d20+15", vontade: "2d20+10",
+      pv: 190, machucado: 95,
+      atributos: [3, 2, 3, 2, 2],
+      pericias: [["Atletismo", "2d20+10"], ["Intimidação", "2d20+10"], ["Pilotagem", "3d20+15"], ["Profissão (engenheira mecânica)", "3d20+15"], ["Tática", "3d20+5"]],
+      habilidades: [
+        hab("Por Água, Céu e Terra", "Stella pilota todos os veículos desenvolvidos pela humanidade, exceto os muito exóticos (como um foguete espacial)."),
+        treinamentoTatico("Stella"),
+      ],
+      acoes: [
+        agredir([at("Pistola modificada", "curto", 1, "3d20+20", "2d10+17 balístico", { critico: "16" })]),
+        agredir([at("Fuzil de assalto modificado", "médio", 1, "3d20+20", "2d12+17 balístico", { critico: "17/x3" })]),
+        acao("reacao", "Direção Defensiva", "Uma vez por rodada, num teste para garantir a integridade de um veículo que pilota e/ou dos ocupantes, Stella recebe +1d20+5 nesse teste.", { limite: [1, "rodada"] }),
+        acao("livre", "Direção Ofensiva", "Uma vez por rodada, num teste para agredir alguém ou algo com um veículo que pilota, Stella recebe +1d20+5 nesse teste.", { limite: [1, "rodada"] }),
+        lutaTatica("Stella"),
+        acao("padrao", "Conserto de Campo", "Stella conserta um objeto danificado adjacente, que funciona normalmente até o fim da cena. Não funciona mais de uma vez no mesmo objeto."),
+      ],
+    }));
+
+    CRIATURAS.push(pessoa("arnold-strolley", "Arnold Strolley", 31, 140, {
+      descricao: "Veterano da SWAT e engenheiro químico, especialista cruel em explosivos e de humor ácido.",
+      percepcao: "2d20+5", iniciativa: "2d20",
+      defesa: 30, fortitude: "3d20+15", reflexos: "2d20+5", vontade: "2d20+10",
+      pv: 200, machucado: 100, resistencias: [[5, "eletricidade", "fogo", "frio", "quimico"]],
+      atributos: [2, 2, 4, 2, 3],
+      pericias: [["Atletismo", "2d20+10"], ["Intimidação", "2d20+10"], ["Pilotagem", "2d20+10"], ["Profissão (engenheiro químico)", "4d20+15"], ["Tática", "4d20+10"]],
+      habilidades: [
+        hab("Quimicamente Alterado", "Depois de muitos acidentes químicos, Arnold tem RD 5 contra eletricidade, fogo, frio e químico."),
+        treinamentoTatico("Arnold"),
+      ],
+      acoes: [
+        agredir([at("Pistola modificada", "curto", 1, "2d20+20", "2d10+17 balístico", { critico: "16" })]),
+        agredir([at("Metralhadora modificada", "médio", 1, "2d20+20", "3d12+17 balístico", { critico: "17/x3" })]),
+        lutaTatica("Arnold"),
+        acao("padrao", "Atordoamento", "Uma vez por cena, Arnold arremessa uma flashbang em alcance curto: seres num raio de 6 m do impacto ficam atordoados por 1 rodada (Fortitude DT 23 reduz para ofuscado e surdo por 1 rodada).",
+          { limite: [1, "cena"], resistencia: "Fortitude DT 23 reduz para ofuscado e surdo por 1 rodada" }),
+        fragmentacao("Arnold"),
+        acao("padrao", "Gás Lacrimogêneo", "Uma vez por cena, granada de gás lacrimogêneo em alcance curto: seres num raio de 6 m sofrem 4d6 de dano químico e ficam enjoados e asfixiados (OPRPG p. 293); fora da área, continuam asfixiados por 1d4 rodadas e enjoados até o fim da cena (Fortitude DT 23 reduz o dano à metade e evita enjoado).",
+          { limite: [1, "cena"], rolagens: [dano("Gás Lacrimogêneo", "4d6 químico"), soma("Rodadas asfixiado fora da área", "1d4")], resistencia: "Fortitude DT 23 reduz à metade e evita enjoado" }),
+        acao("padrao", "Incendiária", "Uma vez por cena, granada incendiária em alcance curto: seres num raio de 6 m sofrem 6d6 de dano de fogo e ficam em chamas (Reflexos DT 23 reduz à metade e evita em chamas).",
+          { limite: [1, "cena"], rolagens: [dano("Incendiária", "6d6 fogo")], resistencia: "Reflexos DT 23 reduz à metade e evita em chamas" }),
+      ],
+    }));
+
+    CRIATURAS.push(pessoa("chloe-grey", "Chloe Grey", 33, 140, {
+      descricao: "Mestra em documentação e negócios, perdeu um braço para uma múmia de Morte e ainda carrega o toque dela.",
+      percepcao: "3d20+5", iniciativa: "3d20+10",
+      defesa: 29, fortitude: "2d20+5", reflexos: "3d20+15", vontade: "3d20+10",
+      pv: 170, machucado: 85,
+      atributos: [3, 2, 3, 3, 2],
+      pericias: [["Atletismo", "2d20+10"], ["Diplomacia", "3d20+10"], ["Enganação", "3d20+10"], ["Furtividade", "3d20+10"], ["Intuição", "3d20+10"], ["Investigação", "3d20+15"], ["Pilotagem", "3d20+10"], ["Tática", "3d20+10"]],
+      notas: ["PESSOA na fonte (p. 33): sem elementos e sem presença perturbadora — Tocada pela Morte é o que sobrou da criatura, não um elemento da ficha.", NOTA_TT],
+      habilidades: [
+        hab("Braço Amputado", "Num teste em que a ausência do braço torna a ação mais difícil, Chloe sofre –1d20."),
+        hab("Esforço e Superação", "Pelo treinamento intenso, Chloe não sofre a penalidade de Braço Amputado em testes de ataque e de resistência."),
+        hab("Tocada pela Morte", "Chloe conjura Nuvem de Cinzas sem pagar o custo em PE, até 6 PE por conjuração, usando a ação apropriada. A DT para resistir ao ritual dela é 21."),
+        treinamentoTatico("Chloe"),
+      ],
+      acoes: [
+        agredir([at("Combate desarmado", "corpo a corpo", 1, "3d20+20", "2d6+15 impacto")]),
+        agredir([at("Pistola modificada", "curto", 1, "3d20+20", "2d10+17 balístico", { critico: "16" })]),
+        acao("reacao", "Olhos para Documentos", "Uma vez por rodada, num teste para encontrar pistas em documentos, Chloe faz duas tentativas e fica com o melhor resultado.", { limite: [1, "rodada"] }),
+        lutaTatica("Chloe"),
+        acao("padrao", "Ritual: Nuvem de Cinzas (Morte 1)", "Nuvem de fuligem num ponto em alcance curto: 6 m de raio e 6 m de altura, dura a cena e obscurece toda a visão — seres a até 1,5 m têm camuflagem leve; a partir de 3 m, camuflagem total. Vento forte dispersa em 4 rodadas; vendaval, em 1. Não funciona sob a água."),
+      ],
+    }));
+
+    CRIATURAS.push(pessoa("ryder-staten", "Ryder Staten", 34, 200, {
+      descricao: "Fundador e comandante de campo dos Hell Hunters; extrai o melhor de quem o acompanha. A origem dele está na p. 6.",
+      percepcao: "2d20+10", iniciativa: "4d20+10",
+      defesa: 34, fortitude: "3d20+15", reflexos: "4d20+15", vontade: "2d20+10",
+      pv: 320, machucado: 160,
+      atributos: [4, 3, 2, 2, 3],
+      pericias: [["Atletismo", "3d20+15"], ["Furtividade", "4d20+10"], ["Intimidação", "2d20+15"], ["Intuição", "2d20+10"], ["Pilotagem", "4d20+10"], ["Tática", "2d20+15"]],
+      habilidades: [treinamentoTatico("Ryder", "três")],
+      acoes: [
+        agredir([at("Pistola modificada", "curto", 1, "4d20+25", "2d10+22 balístico", { critico: "14" })]),
+        agredir([at("Fuzil de assalto modificado", "médio", 1, "4d20+25", "3d10+22 balístico", { critico: "17/x3" })]),
+        acao("reacao", "Cuidado!", "Uma vez por rodada, quando um aliado em alcance médio falha num teste, Ryder faz o mesmo teste: passando, troca a falha do aliado por um sucesso.", { limite: [1, "rodada"] }),
+        lutaTatica("Ryder"),
+        acao("movimento", "Formação!", "Ryder vocifera uma formação tática: ele e os aliados em alcance médio que o ouçam recebem o bônus até o início do próximo turno dele. Cunha: +5 em testes de ataque e na Defesa. Coluna: +3 m de deslocamento e +5 em Furtividade. Linha: +5 em testes de ataque e em rolagens de dano."),
+        fragmentacao("Ryder"),
+        acao("padrao", "Vai, Vai, Vai!", "Ryder acelera a si mesmo e os aliados em alcance médio: quem quiser se mover desloca 9 m na direção que ele aponta."),
+      ],
+    }));
+
+    /* Os perfis "como aliado" (p. 21–34). */
+    CRIATURAS.push(aliadoAs9("jason-bloom", "Jason Bloom", 21, "Um protetor confiável.", [
+      hab("Bônus", "Você recebe +1d20 em Fortitude."),
+      hab("Proteção de Jason", "Quando sofre dano, você pode gastar 2 PE como reação para reduzir o dano em 10 pontos.", { custo: "2 PE" }),
+    ], ["Com o perfil na aba Aliados, o painel de aliados liga o +1d20 em Fortitude enquanto Jason acompanha."]));
+    CRIATURAS.push(aliadoAs9("karen-brown", "Karen Brown", 23, "Uma atiradora infalível.", [
+      hab("Bônus", "Você recebe +1d20 em Pontaria."),
+      hab("Disparo de Karen", "Quando causa dano, você pode gastar 2 PE para causar +3d6 de dano extra.", { custo: "2 PE", rolagens: [dano("Disparo de Karen", "3d6")] }),
+    ], ["Com o perfil na aba Aliados, o painel de aliados liga o +1d20 em Pontaria enquanto Karen acompanha."]));
+    CRIATURAS.push(aliadoAs9("troy-walker", "Troy Walker", 25, "Um combatente pronto para fazer estrago.", [
+      hab("Bônus", "Você recebe +1d20 em Luta."),
+      hab("Investida do Troy", "Quando faz um ataque, você pode gastar 5 PE como reação para fazer um ataque adicional.", { custo: "5 PE" }),
+    ], ["Com o perfil na aba Aliados, o painel de aliados liga o +1d20 em Luta enquanto Troy acompanha."]));
+    CRIATURAS.push(aliadoAs9("roy-stevens", "Roy Stevens", 27, "Um médico de campo capaz de operar milagres.", [
+      hab("Bônus", "Você é considerado treinado em Medicina; se já for treinado, recebe +1d20 em testes de Medicina."),
+      hab("Medicina do Roy", "Você cura 3d10 PV ou remove uma condição negativa (exceto morrendo) de si ou de um aliado adjacente.", { rolagens: [soma("Medicina do Roy (PV)", "3d10")] }),
+    ], ["Com o perfil na aba Aliados, o painel de aliados liga o treinamento em Medicina (ou o +1d20, se já for treinado) enquanto Roy acompanha."]));
+    CRIATURAS.push(aliadoAs9("stella-green", "Stella Green", 29, "Uma motorista de habilidades inquestionáveis.", [
+      hab("Bônus", "Você recebe +1d20 em Pilotagem."),
+      hab("Direção da Stella", "Quando falha num teste de Pilotagem, você pode gastar 2 PE para tentar o mesmo teste mais uma vez.", { custo: "2 PE" }),
+    ], ["Com o perfil na aba Aliados, o painel de aliados liga o +1d20 em Pilotagem enquanto Stella acompanha."], "aliada"));
+    CRIATURAS.push(aliadoAs9("arnold-strolley", "Arnold Strolley", 31, "Um especialista cruel em explosivos.", [
+      hab("Bônus", "Você recebe +1d20 em testes envolvendo explosivos (como Pontaria para arremessar uma granada ou Reflexos para evitar uma explosão)."),
+      hab("Explosão do Arnold", "Uma vez por cena, você pode gastar 2 PE para receber de Arnold um explosivo à sua escolha.", { custo: "2 PE", limite: [1, "cena"] }),
+    ], ["O +1d20 depende da situação (envolver explosivos): fica como texto — a mesa confirma no teste."]));
+    CRIATURAS.push(aliadoAs9("chloe-grey", "Chloe Grey", 33, "Domina documentação como ninguém e foi tocada pela Morte.", [
+      hab("Bônus", "Você recebe +1d20 em Investigação."),
+      hab("Morte em Chloe", "Você pode conjurar o ritual Nuvem de Cinzas como se o conhecesse. Se já o conhece, o custo para lançá-lo diminui em –1 PE."),
+    ], ["Com o perfil na aba Aliados, o painel de aliados liga o +1d20 em Investigação enquanto Chloe acompanha."], "aliada"));
+    CRIATURAS.push(aliadoAs9("ryder-staten", "Ryder Staten", 34, "Um comandante de campo extremamente eficiente que extrai o melhor de quem acompanha.", [
+      hab("Bônus", "Você recebe +1d20 em 2 perícias à sua escolha. Escolhidas, não mudam até o fim da missão."),
+      hab("Comando de Ryder", "Você pode gastar uma ação de movimento e 2 PE para usar a habilidade Formação! de Ryder como se fosse sua (Cunha: +5 em ataque e Defesa; Coluna: +3 m de deslocamento e +5 em Furtividade; Linha: +5 em ataque e dano).", { custo: "2 PE" }),
+    ], ["Com o perfil na aba Aliados, o painel de aliados pede as 2 perícias e liga o +1d20 nelas enquanto Ryder acompanha."]));
+  })();
+
   global.RAMAOrdemCriaturasDados = {
     versao: 1,
     fontes: {
@@ -6029,6 +6284,7 @@
       AS5: { nome: "Arquivos Secretos 5", sigla: "AS5" },
       AS6: { nome: "Arquivos Secretos 6", sigla: "AS6" },
       AS7: { nome: "Arquivos Secretos 7", sigla: "AS7" },
+      AS9: { nome: "Arquivos Secretos 9", sigla: "AS9" },
     },
     criaturas: CRIATURAS,
   };

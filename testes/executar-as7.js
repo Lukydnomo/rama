@@ -454,9 +454,9 @@ t.grupo("Ameaças (p. 40–45, 65–73)");
    PERSISTÊNCIA
    ===================================================================== */
 
-t.grupo("Persistência · schema 29, exportar e importar");
+t.grupo("Persistência · schema 30 (desde o AS9), exportar e importar");
 {
-  t.igual("schema 29", F.VERSAO_SCHEMA, 29);
+  t.igual("schema 30 (o AS7 entrou no 29; o AS9 subiu para 30)", F.VERSAO_SCHEMA, 30);
   const antiga = F.normalizarFicha({ schemaVersion: 28, nome: "Antiga", tipoFicha: "ordem", ordem: { classe: "combatente" } });
   t.ok("ficha 28 abre com o estado vazio, sem conversão destrutiva", !!antiga.ordem.arquivo7 && antiga.ordem.arquivo7.procedimento.registros.length === 0);
   const o = monstruoso("especialista", 40, "sangue");

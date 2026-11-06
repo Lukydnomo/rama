@@ -40,6 +40,7 @@
     AS5: { nome: "Arquivos Secretos 5", sigla: "AS5", rotulo: "Arquivos Secretos 5" },
     AS6: { nome: "Arquivos Secretos 6", sigla: "AS6", rotulo: "Arquivos Secretos 6" },
     AS7: { nome: "Arquivos Secretos 7", sigla: "AS7", rotulo: "Arquivos Secretos 7" },
+    AS9: { nome: "Arquivos Secretos 9", sigla: "AS9", rotulo: "Arquivos Secretos 9" },
   };
 
   var NOMES_ELEMENTO = { sangue: "Sangue", morte: "Morte", conhecimento: "Conhecimento", energia: "Energia", medo: "Medo" };
@@ -296,7 +297,7 @@
      expressões válidas, variantes apontando para uma base que existe.
      ================================================================= */
 
-  var FORMATO_ID = /^(op|sah|as1|as2|as3|as4|as5|as6|as7)\.criatura\.[a-z0-9-]+(\.[a-z0-9-]+)?$/;
+  var FORMATO_ID = /^(op|sah|as1|as2|as3|as4|as5|as6|as7|as9)\.criatura\.[a-z0-9-]+(\.[a-z0-9-]+)?$/;
 
   function conferir(dados) {
     var erros = [];
@@ -454,6 +455,45 @@
   }
 
 
+
+  /* =================================================================
+     GERADOR DE MERCENÁRIOS HELL HUNTERS — Arquivos Secretos 9, p. 14
+     -----------------------------------------------------------------
+     1d10 escolhe a coluna (1–2, 3–4, 5–6, 7–8, 9–10); dois 1d6 dão os
+     traços de personalidade daquela coluna; dois 1d20, as
+     características de aparência. Só narrativa: a ficha de combate vem
+     do catálogo (os Hell Hunters, p. 20–35).
+     ================================================================= */
+
+  var GERADOR_HELL_HUNTERS = {
+    colunas: [
+      { ate: 2, rotulo: "1–2", tracos: ["Inteligência emocional", "Pragmatismo", "Visão sistêmica", "Desprendimento", "Humildade", "Humor ácido"] },
+      { ate: 4, rotulo: "3–4", tracos: ["Autodisciplina", "Percepção tática", "Gestão de risco", "Mentoria", "Coragem", "Prevenido"] },
+      { ate: 6, rotulo: "5–6", tracos: ["Foco", "Decisividade", "Lealdade", "Hipervigilância", "Paciência", "Cautela ambiental"] },
+      { ate: 8, rotulo: "7–8", tracos: ["Calma", "Adaptabilidade", "Confiança", "Senso de dever", "Perfeccionismo", "Aprendizagem contínua"] },
+      { ate: 10, rotulo: "9–10", tracos: ["Resiliência", "Liderança", "Objetividade", "Integridade", "Presença marcante", "Pontualidade"] },
+    ],
+    aparencia: ["Porte atlético", "Olheiras marcantes", "Passada firme", "Expressão séria", "Cicatrizes discretas", "Cabelo curto",
+      "Bronzeamento tático", "Botas táticas", "Óculos esportivos", "Cinto de utilidades", "Postura ereta", "Presença imponente",
+      "Olhar atento", "Maxilar definido", "Barba ou franja alinhada", "Asseio impecável", "Roupas funcionais", "Relógio robusto",
+      "Roupas com cores sóbrias", "Mãos calejadas"],
+  };
+
+  function gerarHellHunters(rolar) {
+    var r = typeof rolar === "function" ? rolar : function (faces) { return 1 + Math.floor(Math.random() * faces); };
+    var g = GERADOR_HELL_HUNTERS;
+    var d10 = r(10);
+    var coluna = g.colunas.filter(function (c) { return d10 <= c.ate; })[0] || g.colunas[g.colunas.length - 1];
+    var d6a = r(6), d6b = r(6), d20a = r(20), d20b = r(20);
+    return {
+      dados: { coluna: d10, tracos: [d6a, d6b], aparencia: [d20a, d20b] },
+      coluna: coluna.rotulo,
+      tracos: [coluna.tracos[d6a - 1], coluna.tracos[d6b - 1]],
+      aparencia: [g.aparencia[d20a - 1], g.aparencia[d20b - 1]],
+      referencia: "Arquivos Secretos 9, p. 14",
+    };
+  }
+
   /* =================================================================
      GERADOR DE FUNCIONÁRIOS DA TV VARMINHO — Arquivos Secretos 5, p. 23
      -----------------------------------------------------------------
@@ -585,6 +625,8 @@
     gerarTranstornado: gerarTranstornado,
     GERADOR_DE_PRODUCAO: GERADOR_DE_PRODUCAO,
     gerarProducao: gerarProducao,
+    GERADOR_HELL_HUNTERS: GERADOR_HELL_HUNTERS,
+    gerarHellHunters: gerarHellHunters,
     GERADOR_DA_VARMINHO: GERADOR_DA_VARMINHO,
     gerarVarminho: gerarVarminho,
     VARMINHO: VARMINHO,

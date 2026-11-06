@@ -425,10 +425,23 @@ deno run --allow-read testes/executar-criaturas-pagina.js
 Resguardar Espírito, Vampirismo, os cinco itens, as trilhas Monstruoso (marcos,
 elemento, procedimento do dia, sacrifícios, braços, Tatuagem, reação, 4º
 círculo), dia, cena e rodada sem repetir ao recarregar, infecção, regras debaixo
-d'água, as ameaças e a persistência (schema 29, exportar e importar).
+d'água, as ameaças e a persistência (exportar e importar; o schema é o 30 desde o AS9).
 
 ```bash
 deno run --allow-read testes/executar-as7.js
+```
+
+**Arquivos Secretos 9** — 114 verificações: fonte e suplemento ligado e
+desligado, as duas escolhas de Treinado pela Hell Hunters (PV ou PE), Full
+Metal Jacket, Analisar Perigo, os requisitos dos quatro poderes, o ciclo dos
+dados de Tática de Abordagem, Municiador Ambulante na carga, Incursor (CQB,
+reféns, alvo-prioritário), Piloto de Drone (marcos, modificações sem
+categoria, segundo drone), os drones (passivo × duas mãos, categoria até IV),
+os itens, as regalias, Jason Bloom como combatente e como aliado, o gerador e a
+persistência (schema 30, exportar e importar).
+
+```bash
+deno run --allow-read testes/executar-as9.js
 ```
 
 **Suplementos** — 47 verificações: cadastro e capas, seleção ausente × vazia,
@@ -816,6 +829,16 @@ próprio `<script src>`, então funciona debaixo de subpasta sem ajuste.
 segredo nenhum — ele os lê das Script Properties. Publicá-lo não expõe nada.
 
 ### Atualizar o backend
+
+**v6.9.0 — ESCOLTA:** Arquivos Secretos 9: Hell Hunters como suplemento de
+Ordem. **Troque** `Sistemas.gs` (o suplemento `ordem.as9` no cadastro) e
+`Campanhas.gs` (o AS9 como fonte de criatura) e **crie uma versão nova da
+implantação**. Sem `setupRama()`: nada de aba nova. Publique o site — inclusive
+os arquivos novos `js/ordem/arquivo9.js` e `js/ordem/telas/ficha-arquivo9.js`,
+as capas `assets/sistemas/ordem-as9-capa*.webp`, as imagens
+`assets/criaturas/as9/` e as páginas `ficha/`, `criaturas/`, `homebrew/` e
+`perfil/`, que passam a carregá-los. O schema da ficha sobe para 30 sem
+conversão (abas abertas na versão anterior pedem para recarregar).
 
 **v6.8.0 — VIVEIRO:** criaturas de Oblívio, Vampiro e Goblins no Homebrew.
 **Troque** `Codigo.gs` (o resumo da criatura passa a dizer o sistema dela) e
@@ -1695,7 +1718,7 @@ Três números diferentes, que não se misturam:
 
 | | Onde | O que é |
 |---|---|---|
-| versão do aplicativo | `js/versao.js` | o que a pessoa vê: v6.8.0 |
+| versão do aplicativo | `js/versao.js` | o que a pessoa vê: v6.9.0 |
 | `schemaVersion` | `js/ficha.js` | o formato da FICHA |
 | `versaoFormato` | `js/config.js` | o formato dos arquivos de importação |
 

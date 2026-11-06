@@ -3046,6 +3046,59 @@ entram uma vez. A ocorrência de criatura usa só as chaves que já existiam
 (`estado:`, `uso:`, `marcador:`, `forma`) — o servidor confere igual.
 
 
+## Arquivos Secretos 9: Hell Hunters, v1.0 (v6.9)
+
+Fonte `AS9`, com páginas (não é Extra); suplemento `ordem.as9`, com capa
+(`assets/sistemas/ordem-as9-capa.webp` e a pequena). Regras em
+`js/ordem/arquivo9.js`; tela da ficha em `js/ordem/telas/ficha-arquivo9.js`;
+testes em `testes/executar-as9.js`. As p. 5–17 e 48–49 (cenário) são só
+referência; o playtest de OP2 (p. 52–65) não muda regra nenhuma.
+
+**O que é da cena fica com a mesa.** Alvo engajado (CQB), refém a até 3 m,
+qual inimigo é o alvo-prioritário (e o VD que o mestre informa), se o ataque
+foi sem mirar, se o teste foi feito com o drone, se é a ameaça do plano: tudo
+perguntado no clique. Alcance, cobertura e narrativa não são inferidos. Toda
+ação com efeito leva um id de operação (recarregar ou repetir não refaz).
+
+### Cobertura
+
+| Conteúdo | Página | O que a ficha faz | Teste |
+|---|---|---|---|
+| Treinado pela Hell Hunters (Resistência do Treinamento) | 38 | Duas perícias entre Luta, Fortitude, Pontaria e Reflexos na criação; a escolha do treino (`b.origem.treinadoHellHunters`) exige o par certo (Luta e Fortitude ou Pontaria e Reflexos) e aponta o que falta. Automático: Luta → +2 PV e +1 PV a cada 10% de NEX (`pvFixo` + `pvPorDoisDegraus`); Pontaria → +1 PE e +1 PE a cada 10% (`peFixo` + `pePorDoisDegraus`), só com a escolha correspondente (`seOpcao`) | executar-as9 |
+| Veterano de Conflito Armado (Full Metal Jacket) | 38 | Luta e Pontaria. No resultado de um teste de Luta ou Pontaria (perícia ou ataque): 2 PE e o mesmo teste sem as parcelas negativas; outra penalidade da mesa pode ser informada. Penalidade em dados pede rolar de novo (a ficha não tira dados de uma rolagem feita) | executar-as9 + navegador |
+| Tática · Analisar Perigo | 38 | Na consulta de Tática (sai com o suplemento desligado). No resultado de um teste de Tática, treinado: o total contra DT 15 dá +2 (+1 a cada 5 acima) em testes e na Defesa, como efeito de 1 turno que termina no fim do próximo turno; uma vez por cena | executar-as9 |
+| Municiador Ambulante | 39 | Requisito Int 2. Municiar (só em cena de interlúdio): Int × 1d6 pacotes; os pacotes de munição do inventário deixam de ocupar espaço, pacote a pacote, até o número preparado, até o próximo municiar | executar-as9 |
+| Ripostar Ousado | 39 | Agi 2 e Luta treinada. Botão: 2 PE e a Defesa +5 contra o ataque; se a mesa confirma que o atacante errou, o próximo ataque corpo a corpo da rodada oferece +5 | navegador |
+| Tiro Intuitivo | 39 | Veterano em Pontaria. No resultado de um ataque à distância, confirmado "sem mirar": 2 PE, +2 na margem e o crítico conferido de novo | — |
+| Tática de Abordagem | 39 | Int 1 e veterano em Tática. Planejar (cena de interlúdio, uma vez por cena): a ameaça e o teste de Tática com os valores da ficha; DT 10 dá 1 dado, +1 a cada 5. Os dados se gastam no resultado de testes, de dano e pelo cartão (aliado ou cura), confirmando que é a ameaça do plano; os não gastos somem no início da próxima cena de interlúdio | executar-as9 + navegador |
+| Incursor | 40 | CQB: treina Pontaria; já treinado, Luta; nas duas, +2 em cada (`treinarCascata`); 1 PE anula o −5 contra alvo engajado (confirmado). Entrada Explosiva: +5 no resultado (implantar/usar explosivos) e mina ou carga com ação de movimento por 1 PE. Proteger Reféns: 2 PE (+2 para metade do dano), até três reféns diferentes por rodada. Alvo-prioritário: 5 PE, nome e VD; VD ≤ 200, nota de PV a 0 no dano; VD ≥ 201, +5 na margem no ataque contra ele | executar-as9 |
+| Piloto de Drone | 41 | Companheiro Drone entrega o drone da trilha ao inventário (`as9.daTrilha`). Modificações da trilha: 1 (40%), 3 (65%), 6 ou 3 com um segundo drone (99%), sem acréscimo de categoria (`semAcrescimoDeCategoria`). Evitar efeito negativo: 3 PE, 1 com Mestre dos Drones. Ás dos Drones: nova tentativa por 3 PE, confirmada | executar-as9 + navegador |
+| Regalias Central de Drones, Estação de Armas, Lançadores de Fumaça | 42 | No painel de Veículos Operacionais (AS3); com o AS9 desligado não se oferecem (as já instaladas ficam) | executar-as9 |
+| Itens | 42–48 | Aríete Portátil, Boroscópio Articulado, Capacete Tático, DMR, Drone de Combate Tático, Escudo Balístico LED, Espingarda Serrada, Lançador de Granadas Portátil (regras do lançador do AS4, capacidade 1), Machado Tático, Pistola Taser e Dardos Condutores, com categoria, espaços, empunhadura, dano, crítico, munição e efeitos | executar-as9, executar |
+| Drones e as sete modificações | 44–46 | O tipo escolhido em `item.ordem.as9.tipo`; os outros tipos como modificações (o mesmo tipo é recusado; até a categoria IV). Bônus passivo (menos quebrado): Atirador +1d20 em ataques; Espião +1d20 em Investigação e Percepção; Hacker +1d20 em Tecnologia; Médico treinado em Medicina (ou +1d20); Protetor +5 na Defesa; Utilitário +1d20 na perícia escolhida (não muda, e não vale para Fortitude, Luta, Pontaria, Reflexos nem Vontade). Habilidade só com o drone operado com as duas mãos (`empunhada`), ou com o Inteligente: Metralhar Tudo (+2d8 no dano se acertar), Alerta de Ameaça (+5 em resistência), Robô ao Resgate (2d8+2), Acelerar e Ocultar, Braços Articulados e Captação (efeito da cena), Meu Amigo Drone (nova tentativa). Na aba Aliados, com o estado | executar-as9 + navegador |
+| Hell Hunters | 20–35 | Jason Bloom, Karen Brown, Troy Walker, Roy Stevens, Stella Green, Arnold Strolley, Chloe Grey e Ryder Staten como Pessoas e um perfil Como aliado de cada um, com os bônus fixos em `EFEITOS_DE_ALIADO` (Ryder: duas perícias quaisquer; Roy: considerado treinado em Medicina, ou +1d20) | executar-criaturas, executar-as9 + navegador |
+| Gerador de Mercenários Hell Hunters | 14 | Criaturas → Ordem → Geradores: 1d10 (coluna), 2×1d6 (traços), 2×1d20 (aparência). Só narrativa | executar-as9, executar-criaturas-pagina |
+
+### Leituras e inconsistências da fonte
+
+- **Treinamento Tático** já está somado nos números impressos das fichas dos Hell Hunters: o registro mantém os valores e a nota diz isso, para o bônus não entrar duas vezes.
+- **Capacete Tático**: "item vestido do tipo proteção pesada" — vestimenta, sem Defesa e sem ocupar o lugar da proteção em uso; a proficiência e a penalidade são as de proteção pesada (nota no item).
+- **Pistola Taser** é arma (2d6, eletricidade, dardos condutores) e não substitui o taser operacional do livro básico.
+- **"+1d20"** dos drones e aliados é um dado a mais no teste, não bônus fixo.
+- **Acelerar e Ocultar**: sem penalidade numérica na rolagem, conta como os −5 de hackear como ação completa (OPRPG p. 49).
+- **Mestre dos Drones com o segundo drone**: cada drone da trilha fica com até 3 modificações da trilha.
+- **Proteger Reféns**: a rodada é a do AS5; o mesmo refém pode ser protegido de novo na rodada.
+
+### O que a ficha guarda de novo (schema 30)
+
+`ordem.arquivo9`: `tatica.planos` (`id`, ameaça, total, dados, restantes,
+cena), `analisar`, `municiar` (pacotes, cena, rolagens), `alvo`, `refens`
+(rodada e nomes), `ripostar`, `drones` (`escolha99`, `metralhar`) e `usos`
+(ids de operação). Itens: `item.ordem.as9` (`tipo`, `pericia`, `estado`,
+`daTrilha`, `segundo`), só o que vale. Na exportação, os ids viram `ref9` e
+voltam na importação; ids repetidos entram uma vez; a sincronização mescla
+`ordem.arquivo9.tatica.planos` por id e `ordem.arquivo9.usos` por opId.
+
 ## Suplementos habilitáveis (v6.1)
 
 Os nove suplementos (SAH, AS1–AS7 e os Extras — fonte `EXTRA`, desde a v6.2; o AS7 desde a v6.5)

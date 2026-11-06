@@ -82,6 +82,8 @@
         nota: "Aplicam-se a uma granada do inventário e somam I à categoria dela; iguais não se acumulam (Arquivos Secretos 4, p. 71)." },
       { chave: "modificacoesMedicamentos", titulo: "Modificações para medicamentos",
         nota: "Aplicam-se a um medicamento do inventário (o cicatrizante conta como medicamento) e somam I à categoria dele; iguais não se acumulam (Arquivos Secretos 6, p. 74)." },
+      { chave: "modificacoesDrones", titulo: "Modificações para drones",
+        nota: "Aplicam-se a um drone de combate tático: dão os efeitos de outro tipo de aliado drone e somam I à categoria (até IV). As dadas pela trilha Piloto de Drone não contam (Arquivos Secretos 9, p. 41 e 46)." },
     ],
     amaldicoados: [
       { chave: "especiais", titulo: "Itens amaldiçoados",
@@ -110,6 +112,7 @@
     ["AS5", "Arquivos Secretos 5", "Arquivos Secretos 5", "AS5"],
     ["AS6", "Arquivos Secretos 6", "Arquivos Secretos 6", "AS6"],
     ["AS7", "Arquivos Secretos 7", "Arquivos Secretos 7", "AS7"],
+    ["AS9", "Arquivos Secretos 9", "Arquivos Secretos 9", "AS9"],
     ["EXTRA", "Extra", "Extra", "EX"],
   ];
   function mapaDeLivros(campo, indice) {
@@ -774,6 +777,12 @@
     if (e.modificavelComo) marcadores.push(e.modificavelComo);
     if (e.id === "op.arma.besta" || e.id === "op.arma.balestra") marcadores.push("besta");
     if (e.id === "op.municao.balas-curtas" || e.id === "op.municao.balas-longas") marcadores.push("balas");
+    /* AS9 (v6.9): o drone de combate tático aceita as modificações de
+       drone e guarda o tipo de aliado escolhido. */
+    if (e.drone) {
+      marcadores.push("drone");
+      ordem.as9 = { tipo: escolhida && escolhida.valor ? escolhida.valor : "" };
+    }
     if (marcadores.length) ordem.marcadores = marcadores;
 
     var dados = {
@@ -887,7 +896,7 @@
     arma: "arma", corpoACorpo: "arma", disparo: "arma", fogo: "arma", automatica: "arma", besta: "arma",
     protecao: "armadura", leve: "armadura", pesada: "armadura", escudo: "armadura",
     balas: "item", acessorio: "item", utensilio: "item", vestimenta: "item", camera: "item", eletrico: "*", granada: "item",
-    medicamento: "item",
+    medicamento: "item", drone: "item",
   };
 
   function ehMedicamentoDoCatalogo(id) {
@@ -919,9 +928,21 @@
   };
 
   /* Pode aplicar `e` (modificação/maldição) no item? { ok, motivo, aviso } */
-  function podeAplicar(e, item, escolha) {
+  function podeAplicar(e, item, escolha, extras) {
     if (!e || e.natureza === "item") return { ok: false, motivo: "Isto não é uma modificação nem uma maldição." };
     if (!item) return { ok: false, motivo: "Escolha um item do inventário." };
+    /* Modificações de drone (AS9 p. 46): não repetem o tipo do drone, e
+       cada uma soma I de categoria até o limite IV — a não ser as dadas
+       pela trilha Piloto de Drone, que não contam (p. 41). */
+    if (e.droneTipo) {
+      var dd = marcadoresDoItem(item).dados;
+      if (dd.as9 && dd.as9.tipo === e.droneTipo) return { ok: false, motivo: item.nome + " já é desse tipo de drone — modificações com efeitos semelhantes não se acumulam." };
+      if (!(extras && extras.daTrilha) && e.limiteCategoria) {
+        var atual = Number(dd.categoria) || 0;
+        (dd.modificacoes || []).forEach(function (m) { if (m.natureza === "maldicao" || !m.semAcrescimoDeCategoria) atual += 1; });
+        if (atual >= e.limiteCategoria) return { ok: false, motivo: item.nome + " já está na categoria " + ["0", "I", "II", "III", "IV"][Math.min(4, atual)] + ": modificações de drone vão só até a categoria IV." };
+      }
+    }
 
     var perfil = marcadoresDoItem(item);
     var d = perfil.dados;
@@ -1020,13 +1041,16 @@
     if (e.escolha && e.escolha.tipo === "opcoes" && escolhida.valor) registro.escolhaId = escolhida.valor;
     if (e.calculo) registro.calculo = copia(e.calculo);
     if (e.semAcrescimoDeCategoria) registro.semAcrescimoDeCategoria = true;
+    /* Modificação de drone dada pela trilha Piloto de Drone (AS9 p. 41):
+       não conta para a categoria. */
+    if (o.daTrilha) { registro.semAcrescimoDeCategoria = true; registro.daTrilha = true; }
     return { ok: true, registro: registro };
   }
 
   /* Aplica, conferindo antes. Muda o item recebido (a cópia da ficha). */
   function aplicar(e, item, opcoes) {
     var o = opcoes || {};
-    var conferencia = podeAplicar(e, item, o.escolha);
+    var conferencia = podeAplicar(e, item, o.escolha, { daTrilha: !!o.daTrilha });
     if (!conferencia.ok) return conferencia;
     var montado = modificacaoParaItem(e, o);
     if (!montado.ok) return { ok: false, motivo: montado.mensagem };

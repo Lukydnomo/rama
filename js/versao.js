@@ -118,6 +118,32 @@
 
   var CHANGELOG = [
     {
+      versao: "6.9.0",
+      codinome: "ESCOLTA",
+      data: "31/10/2026",
+      mudancas: {
+        "Adicionado": [
+          "Arquivos Secretos 9: Hell Hunters (v1.0) como suplemento de Ordem Paranormal, com capa, entre o Arquivos Secretos 7 e os Extras. Desligado na ficha ou na campanha, o conteúdo sai das escolhas novas sem apagar o que já foi gravado.",
+          "Origens Treinado pela Hell Hunters e Veterano de Conflito Armado. No Treinado, a escolha do treino exige o par de perícias certo: Luta e Fortitude dão +2 PV, mais 1 a cada dois NEX; Pontaria e Reflexos dão +1 PE, mais 1 a cada dois NEX. Full Metal Jacket aparece no resultado dos testes de Luta e Pontaria com penalidade: por 2 PE, mostra o mesmo teste sem ela.",
+          "Analisar Perigo na consulta de Tática (treinado, DT 15, ação de movimento). No resultado de um teste de Tática, “Usar como Analisar Perigo” dá +2 em testes e na Defesa (+1 a cada 5 acima da DT) até o fim do seu próximo turno, uma vez por cena.",
+          "Poderes de Combatente Municiador Ambulante, Ripostar Ousado, Tática de Abordagem e Tiro Intuitivo, com os requisitos do livro. Municiar e Tática de Abordagem são ações da cena de interlúdio. Os pacotes preparados não ocupam espaço. O plano guarda os dados de tática, que se gastam em testes, dano e cura (seus ou de um aliado) e somem no início do próximo interlúdio.",
+          "Trilha Incursor (Combatente): CQB treina Pontaria, Luta ou dá +2 nas duas e anula o −5 contra alvo engajado por 1 PE; Entrada Explosiva; Proteger Reféns (até três por rodada); Alvo-prioritário, com o VD informado pelo mestre.",
+          "Trilha Piloto de Drone (Especialista): o drone da trilha vai para o inventário. As modificações da trilha (1, 3 e 6) não contam para a categoria; em 99%, a escolha entre 6 modificações e um segundo drone com 3. Evitar efeito negativo custa 3 PE, ou 1 com Mestre dos Drones. Ás dos Drones permite tentar de novo.",
+          "Drone de combate tático com os sete tipos de aliado drone, também como modificações (até a categoria IV). O bônus é passivo; a habilidade só com o drone operado com as duas mãos, a não ser com o Drone Inteligente. Os drones aparecem na aba Aliados, com estado (danificado, quebrado).",
+          "Itens Aríete Portátil, Boroscópio Articulado, Capacete Tático, DMR, Escudo Balístico LED, Espingarda Serrada, Lançador de Granadas Portátil (as regras do lançador do AS4, uma granada), Machado Tático, Pistola Taser (arma, diferente do taser operacional) e Dardos Condutores.",
+          "Regalias Central de Drones, Estação de Armas e Lançadores de Fumaça nos Veículos Operacionais do AS3, com o AS9 ligado.",
+          "Os oito Hell Hunters (Jason Bloom, Karen Brown, Troy Walker, Roy Stevens, Stella Green, Arnold Strolley, Chloe Grey e Ryder Staten) como Pessoas para o combate, com o Treinamento Tático já contado nos números, e o perfil Como aliado de cada um, com os bônus fixos ligados em “acompanhando”.",
+          "Gerador de Mercenários Hell Hunters em Criaturas → Ordem → Geradores: coluna, dois traços e duas características de aparência. Só narrativa.",
+        ],
+        "Melhorado": [
+          "Os dados de um teste de perícia passam a contar o que vem do inventário (o +1d20 dos drones). O do Drone Atirador vale só em ataques.",
+        ],
+        "Técnico": [
+          "js/ordem/arquivo9.js (regras e estado) e js/ordem/telas/ficha-arquivo9.js (tela). Ficha no schema 30, com `ordem.arquivo9` e `as9` no item, sem conversão; ids de operação em toda ação que muda a ficha. Precisa do site e do Apps Script novo (Sistemas.gs e Campanhas.gs, sem setupRama). Testes em testes/executar-as9.js; cobertura e leituras em docs/ORDEM-REGRAS.md.",
+        ],
+      },
+    },
+    {
       versao: "6.8.0",
       codinome: "VIVEIRO",
       data: "31/10/2026",

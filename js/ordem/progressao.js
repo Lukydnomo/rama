@@ -1866,10 +1866,22 @@
               ", e ela não está treinada. Troque a perícia escolhida da origem (aba Geral, trocar origem) ou o elemento (Arquivos Secretos 1, p. 43).");
           }
         }
+        /* Treinado pela Hell Hunters (AS9 p. 38): a escolha do treino
+           exige o par de perícias correspondente treinado. */
+        if (org.periciasPorEscolha && o[org.periciasPorEscolha.opcao]) {
+          var par = org.periciasPorEscolha.pares[o[org.periciasPorEscolha.opcao]] || [];
+          var faltando = par.filter(function (k) { return (percurso.graus[k] || 0) < 1; });
+          if (faltando.length) {
+            saida.problemas.push(org.poder + ": essa escolha pede " + par.map(nomeDaPericia).join(" e ") + " treinadas pela origem; falta " +
+              faltando.map(nomeDaPericia).join(" e ") + ". Troque as perícias da origem (aba Geral, trocar origem) ou a escolha (" + C.referencia(org) + ").");
+          }
+        }
         var estadoOrg = (ordem.estadoDasOrigens && ordem.estadoDasOrigens[org.chave]) || {};
         C.efeitosDaEscolhaDaOrigem(org).forEach(function (ef) {
           /* "Se ele morrer…": o efeito some enquanto o registro disser. */
           if (ef.seNao && estadoOrg[ef.seNao]) return;
+          /* Só com a escolha certa (AS9: PV com Luta, PE com Pontaria). */
+          if (ef.seOpcao && Object.keys(ef.seOpcao).some(function (k) { return o[k] !== ef.seOpcao[k]; })) return;
           saida.filhos.push({ efeitoDeOrigem: ef, opcoes: o, origem: org.chave, nome: org.poder });
         });
         break;
@@ -2223,6 +2235,15 @@
         if (!k || !C.pericia(k)) return;
         if ((percurso.graus[k] || 0) === 0) subirGrau(percurso, k, 1, fonte, detalhe);
         else efeitos.push({ tipo: "bonusPericia", pericias: [k], valor: ef.bonus, fonte: fonte, detalhe: detalhe + " · já era treinado" });
+        return;
+      }
+
+      /* CQB (AS9 p. 40): treina a primeira da lista que não for
+         treinada; já treinado em todas, +bonus em todas. */
+      case "treinarCascata": {
+        var livre = (ef.pericias || []).filter(function (k) { return C.pericia(k) && (percurso.graus[k] || 0) === 0; })[0];
+        if (livre) subirGrau(percurso, livre, 1, fonte, detalhe);
+        else efeitos.push({ tipo: "bonusPericia", pericias: (ef.pericias || []).slice(), valor: ef.bonus || 2, fonte: fonte, detalhe: detalhe + " · já era treinado em todas" });
         return;
       }
 

@@ -101,6 +101,7 @@
   var AS5 = "AS5";
   var AS6 = "AS6";
   var AS7 = "AS7";
+  var AS9 = "AS9";
 
   /* ------------------------------------------------------------------
      Atalhos de montagem. Existem só para a lista abaixo caber na tela.
@@ -681,6 +682,27 @@
       requisitos: [{ tipo: "poderElemento", poder: "mestreEmElemento" }, req.nex(60)],
       opcoes: [{ chave: "elemento", tipo: "elemento", rotulo: "Elemento" }], automacao: "parcial",
       nota: "Em “Usar ritual” de um ritual do elemento escolhido, a opção soma +1 PE ao custo e pergunta o alvo: em você, o efeito entra em Condições com a origem; num aliado, ele registra o efeito recebido na própria ficha (painel do Arquivos Secretos 6); num inimigo, a condição é da mesa — e ignora imunidades." }),
+
+    /* --- Arquivos Secretos 9, p. 39 (v6.9) ---
+       Os dois de interlúdio (Municiar e Tática de Abordagem), os dados de
+       tática e os usos com PE moram em js/ordem/arquivo9.js e no cartão
+       do poder (js/ordem/telas/ficha-arquivo9.js). */
+    entrada({ chave: "municiadorAmbulante", nome: "Municiador Ambulante", tipo: "classe", classes: ["combatente"], fonte: AS9, pagina: 39,
+      resumo: "Nova ação de interlúdio, municiar: prepare uma quantidade de pacotes de munição que está com você igual a 1d6 para cada ponto de Intelecto. Você carrega os pacotes preparados sem que ocupem espaço.",
+      requisitos: [req.atr("int", 2)], automacao: "calculo",
+      nota: "O botão do cartão (numa cena de interlúdio) rola Intelecto × 1d6 e guarda quantos pacotes estão preparados; até esse número de pacotes de munição do inventário deixam de ocupar espaço na carga, até o próximo municiar." }),
+    entrada({ chave: "ripostarOusado", nome: "Ripostar Ousado", tipo: "classe", classes: ["combatente"], fonte: AS9, pagina: 39,
+      resumo: "Quando for alvo de um ataque corpo a corpo, antes de saber se foi atingido, gaste sua reação especial de defesa e 2 PE para contra-atacar: +5 na Defesa contra esse ataque e, se o atacante errar, +5 no teste de ataque do contra-ataque.",
+      requisitos: [req.atr("agi", 2), req.trein("luta")], automacao: "parcial",
+      nota: "O botão do cartão gasta os 2 PE e lembra o +5 na Defesa contra aquele ataque; se ele errar, o próximo ataque corpo a corpo da ficha oferece o +5 do contra-ataque." }),
+    entrada({ chave: "taticaDeAbordagem", nome: "Tática de Abordagem", tipo: "classe", classes: ["combatente"], fonte: AS9, pagina: 39,
+      resumo: "Nova ação de interlúdio, tática de abordagem: proponha um plano contra uma ameaça futura e faça um teste de Tática (DT 10). Passando, recebe 1 dado de tática (d6), +1 para cada 5 pontos acima da DT. Diante da ameaça do plano, gaste dados (como reação, quantos quiser) para dar +1d6 num teste, no dano ou na cura — seu ou de um aliado que planejou junto. Dados não gastos se perdem no início da próxima cena de interlúdio. Uma vez por cena.",
+      requisitos: [req.atr("int", 1), req.grau("tatica", 2)], automacao: "calculo",
+      nota: "O botão do cartão (numa cena de interlúdio) pede a ameaça do plano, rola Tática e guarda os dados. Nos resultados de testes, dano e cura aparece “Gastar dados de tática”, pedindo a confirmação de que é a ameaça do plano. No começo da próxima cena de interlúdio, os dados que sobraram somem." }),
+    entrada({ chave: "tiroIntuitivo", nome: "Tiro Intuitivo", tipo: "classe", classes: ["combatente"], fonte: AS9, pagina: 39,
+      resumo: "Quando faz um ataque à distância sem fazer a ação mirar, você pode gastar 2 PE para receber +2 na margem de ameaça desse ataque.",
+      requisitos: [req.grau("pontaria", 2)], automacao: "calculo",
+      nota: "No resultado de um ataque à distância, o botão confirma que não houve mirar, gasta os 2 PE e confere o crítico de novo com a margem 2 maior." }),
   ];
 
   /* =================================================================
@@ -1620,6 +1642,44 @@
       "A Presença cai mais 1 e a penalidade vira –2 dados. A escarificação recupera 1d12 PE, +1 no atributo, rituais marcados sem fala, gestos nem componentes, e um ritual do elemento e um de Medo de 4º círculo, à escolha.",
       { efeitos: [{ tipo: "atributo", atributo: "pre", valor: -1 }], automacao: "parcial",
         nota: "A Presença reduzida entra na conta. Os dois rituais de 4º círculo são escolhidos no cartão e conjuráveis no dia da escarificação, sem virar rituais aprendidos; o de Medo recebe os benefícios da trilha como se fosse do elemento — o catálogo não muda." }),
+
+
+    /* --- AS9: Incursor (combatente), p. 40 ---
+       CQB treina Pontaria, ou Luta, ou dá +2 nas duas (`treinarCascata`).
+       Os usos com PE (anular a penalidade contra engajado, implantar
+       explosivo como movimento, proteger reféns, alvo-prioritário) são
+       botões e escolhas explícitas: js/ordem/telas/ficha-arquivo9.js. */
+    trilha("incursor", 10, "cqb", "CQB", AS9, 40,
+      "Treinamento em Pontaria; se já for treinado, em Luta; se já for treinado nas duas, +2 nas duas. Gaste 1 PE para anular a penalidade de –5 em Pontaria contra um alvo engajado em combate corpo a corpo.",
+      { efeitos: [{ tipo: "treinarCascata", pericias: ["pontaria", "luta"], bonus: 2 }], automacao: "calculo",
+        nota: "O treinamento entra na conta. No resultado de um ataque à distância, o botão pergunta se o alvo está engajado em corpo a corpo e, confirmado, gasta 1 PE e devolve os 5 pontos." }),
+    trilha("incursor", 40, "entradaExplosiva", "Entrada Explosiva", AS9, 40,
+      "+5 em testes para implantar ou usar explosivos (Tática para posicionar C4, ataque com granadas). Gaste 1 PE para implantar uma mina antipessoal ou carga de arrombamento com uma ação de movimento, em vez de completa.",
+      { automacao: "parcial", nota: "O +5 é oferecido no resultado de testes de Tática e de ataques, confirmando que é um explosivo. A implantação com 1 PE é um botão no cartão." }),
+    trilha("incursor", 65, "protegerRefens", "Proteger Reféns", AS9, 40,
+      "A até 3 m de um refém que protege, quando ele for alvo de um efeito negativo, gaste 2 PE como reação para se tornar o alvo; se for dano, mais 2 PE reduzem à metade o dano que você sofre. Várias vezes por rodada, mas com até três reféns diferentes.",
+      { automacao: "parcial", nota: "O botão do cartão pede o nome do refém e a confirmação de que ele está a até 3 m; conta os reféns diferentes da rodada (até três)." }),
+    trilha("incursor", 99, "alvoPrioritario", "Alvo-prioritário", AS9, 40,
+      "O mestre informa o VD de inimigos na sua linha de visão. Gaste 5 PE para marcar um inimigo que possa ver: com VD 200 ou menos, qualquer dano seu nele reduz os PV dele a 0; com VD 201 ou mais, +5 nas margens de ameaça contra ele. Dura até ele ser eliminado ou você marcar outro.",
+      { automacao: "parcial", nota: "O botão do cartão pede o nome e o VD (o mestre informa) e gasta os 5 PE. No ataque, a ficha pergunta se o alvo é o marcado: VD 201+ ganha +5 na margem; VD até 200, o dano lembra que os PV dele vão a 0." }),
+
+    /* --- AS9: Piloto de Drone (especialista), p. 41 ---
+       O drone é um item do inventário (Drone de Combate Tático, p. 44) e
+       um aliado (aba Aliados). As modificações dadas pela trilha não
+       contam para a categoria (`semAcrescimoDeCategoria`) e têm limite
+       por marco; em 99% vale a escolha de um segundo drone. */
+    trilha("pilotoDeDrone", 10, "companheiroDrone", "Companheiro Drone", AS9, 41,
+      "Você recebe um drone de combate tático (p. 44) como companheiro: um aliado (OPRPG p. 170) do tipo de aliado drone à sua escolha. Quebrado, 1 ação de interlúdio conserta (com as peças) ou 2 ações adquirem outro.",
+      { automacao: "calculo", nota: "O cartão entrega o drone ao inventário, com o tipo escolhido; ele aparece em Aliados, com o bônus passivo e a habilidade (que exige operar com as duas mãos)." }),
+    trilha("pilotoDeDrone", 40, "protetorDosDrones", "Protetor dos Drones", AS9, 41,
+      "Aplique uma modificação no seu drone, sem contar para o limite de categoria. Quando o drone sofrer um efeito negativo, gaste 3 PE para evitar.",
+      { automacao: "calculo", nota: "A modificação da trilha entra pelo cartão do drone (Aliados ou Inventário), sem somar categoria. O botão de evitar o efeito gasta 3 PE." }),
+    trilha("pilotoDeDrone", 65, "asDosDrones", "Ás dos Drones", AS9, 41,
+      "Aplique duas modificações no drone (3 no total), sem contar para o limite de categoria. Ao falhar num teste feito com o drone, gaste 3 PE para tentar de novo, só mais uma vez.",
+      { automacao: "calculo", nota: "O limite de modificações da trilha sobe para 3. A nova tentativa aparece no resultado do teste, uma vez." }),
+    trilha("pilotoDeDrone", 99, "mestreDosDrones", "Mestre dos Drones", AS9, 41,
+      "Aplique três modificações no drone (6 no total), sem contar para o limite de categoria — ou receba um segundo drone com 3 modificações. Evitar um efeito negativo no drone passa a custar 1 PE.",
+      { automacao: "calculo", nota: "O cartão pede a escolha: 6 modificações no drone, ou um segundo drone com 3 (e o primeiro fica com 3). Evitar o efeito passa a 1 PE." }),
 
     /* --- SAH: Bibliotecário, p.23 --- */
     trilha("bibliotecario", 10, "conhecimentoPratico", "Conhecimento Prático", SAH, 23,

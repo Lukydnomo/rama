@@ -204,6 +204,15 @@
      estado vazio. Uma aba antiga descartaria o procedimento do dia e os
      vasos consumidos ao gravar — com o schema maior ela recusa.
 
+     29 → 30: Arquivos Secretos 9 (v6.9). O bloco `ordem` ganhou
+     `arquivo9` (os planos e dados da Tática de Abordagem, Analisar
+     Perigo, os pacotes do Municiador Ambulante, o alvo-prioritário, os
+     reféns da rodada, Ripostar, a escolha do Mestre dos Drones); o item,
+     `as9` (tipo do drone, perícia do Utilitário, estado, drone da
+     trilha). Sem conversão: uma ficha 29 abre com o estado vazio. Uma aba
+     antiga descartaria os dados de tática e os drones ao gravar — com o
+     schema maior ela recusa.
+
      Nenhuma das subidas exige migração: normalizarFicha() cria o que
      falta, vazio, e não toca no que existe. Um ritual gravado na 2 abre
      na 3 com a versão Normal em branco; uma ficha de Ordem gravada na 4
@@ -213,7 +222,7 @@
      os campos novos e os descartaria ao gravar — com o schema maior ela
      recusa abrir a ficha e pede para recarregar.
      Ver docs/CHARACTER_SCHEMA.md. */
-  var VERSAO_SCHEMA = 29;
+  var VERSAO_SCHEMA = 30;
 
   var MODULOS = {
     atributos: "Atributos", status: "Status/recursos", defesa: "Defesa",

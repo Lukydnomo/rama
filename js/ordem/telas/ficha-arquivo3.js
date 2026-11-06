@@ -419,7 +419,7 @@
   /* ---------- aliados do AS3 ---------- */
 
   function secaoAliados(ctx, o, aliados) {
-    var partes = [titulo("Aliados com bônus fixo (Arquivos Secretos 3 e 6)"),
+    var partes = [titulo("Aliados com bônus fixo (Arquivos Secretos 3, 6 e 9)"),
       linha("Ligue “acompanhando” enquanto o aliado estiver com o personagem: os bônus fixos entram nas contas. Os de custo e os condicionais aparecem nos resultados das rolagens.")];
     aliados.forEach(function (a) {
       var cat = catalogoDoAliado(a);
@@ -483,7 +483,10 @@
 
   function escolherPericiasDoAliado(ctx, o, a, cat) {
     var marcadas = ((A3().registroDeAliado(o, a.id) || {}).pericias || []).slice();
-    var lista = el("div.pilha--curta", { class: "pilha" }, A3().PERICIAS_DE_INTELECTO.map(function (k) {
+    /* Ryder (AS9 p. 34): duas perícias quaisquer, com +1d20. */
+    var esc = (A3().EFEITOS_DE_ALIADO && A3().EFEITOS_DE_ALIADO[cat] && A3().EFEITOS_DE_ALIADO[cat].escolha) || {};
+    var opcoes = esc.qualquer ? C().PERICIAS.map(function (p) { return p.chave; }) : A3().PERICIAS_DE_INTELECTO;
+    var lista = el("div.pilha--curta", { class: "pilha" }, opcoes.map(function (k) {
       return el("label.r-marca", {}, [
         el("input", { type: "checkbox", checked: marcadas.indexOf(k) >= 0, onchange: function (ev) {
           if (ev.target.checked) marcadas.push(k); else marcadas = marcadas.filter(function (x) { return x !== k; });
@@ -493,7 +496,7 @@
     }));
     UI.modal({
       titulo: "Perícias de " + a.criatura.nome,
-      conteudo: [linha("Duas perícias de Intelecto: você é considerado treinado nelas (AS3 p. 117)."), lista],
+      conteudo: [linha(esc.qualquer ? "Duas perícias quaisquer: +1d20 nelas, sem trocar até o fim da missão (" + (A3().EFEITOS_DE_ALIADO[cat].fonte || "") + ")." : "Duas perícias de Intelecto: você é considerado treinado nelas (AS3 p. 117)."), lista],
       botoes: [
         { rotulo: "Cancelar", classe: "r-botao--fantasma" },
         { rotulo: "Salvar", classe: "r-botao--principal", aoClicar: function (fechar) {
@@ -890,10 +893,15 @@
           el("input", { type: "checkbox", checked: modoExtra, disabled: temExtraProprio(), onchange: function (ev) { modoExtra = ev.target.checked; } }),
           el("span", { texto: temExtraProprio() ? "A regalia extra de " + nomeProprio + " (Apaixonado por Veículos) já está no veículo." : "A próxima regalia é a extra de " + nomeProprio + " (Apaixonado por Veículos): não conta no limite." }),
         ]) : null,
-      ].concat(A3().REGALIAS.map(function (d) {
+      ].concat(A3().REGALIAS.filter(function (d) {
+        /* Regalias de suplemento (AS5, AS9) só para novas escolhas com a
+           fonte liberada; as já instaladas continuam no veículo. */
+        var Cat = global.RAMAOrdemCatalogo;
+        return !d.fonte || !Cat || !Cat.fonteLiberada || Cat.fonteLiberada(d.fonte) || escolhidas.some(function (r) { return r.chave === d.chave; });
+      }).map(function (d) {
         var n = escolhidas.filter(function (r) { return r.chave === d.chave; }).length;
         return el("div.faixa", {}, [
-          el("span", { texto: d.nome + (d.fonte === "AS5" ? " [AS5]" : "") + (n ? " ×" + n : "") + " — " + d.resumo }),
+          el("span", { texto: d.nome + (d.fonte ? " [" + d.fonte + "]" : "") + (n ? " ×" + n : "") + " — " + d.resumo }),
           botao("+", function () {
             var comoExtra = modoExtra && podeExtra && !temExtraProprio();
             if (!comoExtra && noLimite() >= m.regalias) { UI.avisoAtencao("O veículo já tem " + m.regalias + " regalia(s) no limite."); return; }

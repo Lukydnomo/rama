@@ -586,6 +586,13 @@
       A7().efeitos(ficha, inventario).forEach(function (m) { lista.push(m); });
     }
 
+    /* Arquivos Secretos 9 (v6.9): os bônus passivos dos drones do
+       inventário (o tipo e as modificações de cada um), menos os
+       quebrados. As habilidades dos drones são da tela. */
+    if (A9()) {
+      A9().efeitos(ficha, inventario).forEach(function (m) { lista.push(m); });
+    }
+
     return lista;
   }
 
@@ -643,7 +650,7 @@
       ficha.opcionais, ficha.atributos, ficha.nex, ficha.nivel, ficha.classe, ficha.origem,
       ficha.bonusExtra, ficha.ajustes, ficha.periciasAjustes, ficha.sacrificios,
       Array.isArray(ficha.sacrificios) ? ficha.sacrificios.length : -1,
-      ficha.barganhaInsana, ficha.estadoDasOrigens, ficha.arquivo5, ficha.arquivo6, ficha.arquivo7,
+      ficha.barganhaInsana, ficha.estadoDasOrigens, ficha.arquivo5, ficha.arquivo6, ficha.arquivo7, ficha.arquivo9,
     ];
   }
 
@@ -842,6 +849,12 @@
     if (qual === "pv") {
       efeitosDoTipo(ficha, "pvFixo").forEach(function (m) {
         c.soma(m.fonte, m.efeito.valor, m.detalhe);
+      });
+      /* "+1 PV para cada 10% de NEX" (Treinado pela Hell Hunters, AS9
+         p. 38): um a cada dois degraus. */
+      efeitosDoTipo(ficha, "pvPorDoisDegraus").forEach(function (m) {
+        var n2 = Math.floor(passos / 2);
+        c.soma(m.fonte, m.efeito.valor * n2, "1 a cada 10% de NEX × " + n2);
       });
     }
 
@@ -1436,6 +1449,11 @@
       });
     });
 
+    /* Municiador Ambulante (AS9 p. 39): os pacotes preparados no último
+       municiar não ocupam espaço — contados pacote a pacote, na ordem do
+       inventário, até o número preparado. */
+    var pacotesLivres = A9() && ficha.arquivo9 && A9().temPoder(ficha, "municiadorAmbulante") ? ficha.arquivo9.municiar.pacotes : 0;
+
     var total = 0;
     var lista = itens.map(function (item) {
       var e = I() ? I().espacosDoItem(item) : { unitario: Math.max(0, Number(item.espacos) || 0), padrao: false, quantidade: 1 };
@@ -1496,6 +1514,13 @@
           notas.push(r.fonte + ": −" + tirar + " espaço");
         }
       });
+
+      if (pacotesLivres > 0 && A9().ehMunicao(item) && soma > 0) {
+        var preparados = Math.min(pacotesLivres, e.quantidade);
+        var semPesoM = Math.min(soma, preparados * unitario);
+        pacotesLivres -= preparados;
+        if (semPesoM > 0) { soma -= semPesoM; notas.push("Municiador Ambulante: " + preparados + " pacote(s) preparado(s) não ocupam espaço"); }
+      }
 
       /* Duas casas: 0,1 × 3 é 0,3, e não 0,30000000000000004 — que
          passaria do limite por um fio. */
@@ -1669,7 +1694,7 @@
     /* O contexto do ataque: corpo a corpo ou à distância. Um efeito que
        vale só num deles não vira bônus de todo ataque. */
     var contexto = { ataque: a.tipo === "corpoACorpo" ? "corpo" : (a.tipo ? "distancia" : (chave === "luta" ? "corpo" : "distancia")) };
-    var dados = dadosDoTeste(ficha, chave, Object.assign({ atributo: atributoDoTeste }, contexto), quantosDados);
+    var dados = dadosDoTeste(ficha, chave, Object.assign({ atributo: atributoDoTeste, inventario: inventario }, contexto), quantosDados);
     var dado = atributoDoTeste ? dados.expressao : "-2d20";
 
     var ataque = pe ? bonusDePericia(ficha, chave, inventario, contexto) : conta();
@@ -2016,8 +2041,18 @@
     /* Dados a mais ou a menos numa perícia, permanentes (Mutação, SAH
        p. 9: –1 dado em Diplomacia). Não é bônus numérico. */
     if (pe) {
-      efeitosDoTipo(ficha, "dadosPericia").forEach(function (m) {
-        if ((m.efeito.pericias || []).indexOf(chave) >= 0) c.soma(m.fonte, m.efeito.valor, m.detalhe);
+      var invT = (teste && teste.inventario) || inventarioVisto(ficha);
+      efeitosDoTipo(ficha, "dadosPericia", invT).forEach(function (m) {
+        if ((m.efeito.pericias || []).indexOf(chave) < 0) return;
+        /* Drone Atirador (AS9 p. 44): "+1d20 em testes de ataque". */
+        if (m.efeito.soAtaque && !(teste && teste.ataque)) return;
+        c.soma(m.fonte, m.efeito.valor, m.detalhe);
+      });
+      /* "Considerado treinado; se já for, +1d20" (Roy e o Drone Médico,
+         AS9 p. 27 e 45): o dado a mais só para quem já era treinado. */
+      efeitosDoTipo(ficha, "treinadoPorAliado", invT).forEach(function (m) {
+        if (!m.efeito.seJaTreinadoDados || (m.efeito.pericias || []).indexOf(chave) < 0) return;
+        if (C.grau(grauDaPericia(ficha, chave)).bonus > 0) c.soma(m.fonte, m.efeito.seJaTreinadoDados, "já era treinado · " + m.detalhe);
       });
     }
     /* Desertor do Hexatombe: –1 dado em testes (AS2 p. 11). */
@@ -2647,8 +2682,16 @@
      O PANORAMA
      ================================================================= */
 
+  /* O último inventário calculado com cada ficha (v6.9): os dados de um
+     teste (dadosDoTeste) não recebem o inventário de quem chama, e os
+     drones do AS9 dão dados pelo inventário. Sem inventário visto, nada
+     muda. */
+  var INVENTARIO_VISTO = typeof WeakMap !== "undefined" ? new WeakMap() : null;
+  function inventarioVisto(ficha) { return INVENTARIO_VISTO && ficha && typeof ficha === "object" ? INVENTARIO_VISTO.get(ficha) : undefined; }
+
   function calcular(ficha, inventario) {
     var med = global.RAMAMedicao;
+    if (INVENTARIO_VISTO && ficha && typeof ficha === "object" && inventario) INVENTARIO_VISTO.set(ficha, inventario);
     if (CICLO && ficha) {
       var marca = marcaDoCalculo(ficha, inventario);
       var ja = lembrado(CICLO.calculos, ficha, marca);
@@ -2921,6 +2964,9 @@
     /* Arquivos Secretos 7 (v6.5). Sem o módulo, passa como veio. */
     if (A7()) A7().normalizar(ficha, b);
     else if (b.arquivo7 && typeof b.arquivo7 === "object") ficha.arquivo7 = JSON.parse(JSON.stringify(b.arquivo7));
+    /* Arquivos Secretos 9 (v6.9). Sem o módulo, passa como veio. */
+    if (A9()) A9().normalizar(ficha, b);
+    else if (b.arquivo9 && typeof b.arquivo9 === "object") ficha.arquivo9 = JSON.parse(JSON.stringify(b.arquivo9));
     /* Barganha Insana (v2.41): as conjurações e as perdas pendentes. */
     if (b.barganhaInsana && typeof b.barganhaInsana === "object") ficha.barganhaInsana = normalizarBarganha(b.barganhaInsana);
 
@@ -3263,6 +3309,7 @@
   function A5() { return global.RAMAOrdemArquivo5 || null; }
   function A6() { return global.RAMAOrdemArquivo6 || null; }
   function A7() { return global.RAMAOrdemArquivo7 || null; }
+  function A9() { return global.RAMAOrdemArquivo9 || null; }
   var ID_COURACA = "as3.amaldicoado.armadura-dos-couracas";
 
   /* Forma suprema ativa (AS2 p. 97). */

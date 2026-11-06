@@ -76,6 +76,7 @@ var SUPLEMENTOS_DO_RAMA = {
     { id: 'ordem.as5', fontes: ['AS5'], ferramentas: ['perigos', 'sincronia'] },
     { id: 'ordem.as6', fontes: ['AS6'], ferramentas: [] },
     { id: 'ordem.as7', fontes: ['AS7'], ferramentas: [] },
+    { id: 'ordem.as9', fontes: ['AS9'], ferramentas: [] },
     { id: 'ordem.extra', fontes: ['EXTRA'], ferramentas: [] },
   ],
 };

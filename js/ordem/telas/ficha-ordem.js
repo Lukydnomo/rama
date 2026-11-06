@@ -1031,6 +1031,7 @@
         !aq.origemChave && aq.situacao === "ok" && global.RAMAFichaArquivo5 ? global.RAMAFichaArquivo5.controles(ctx, aq) : null,
         !aq.origemChave && aq.situacao === "ok" && global.RAMAFichaArquivo6 ? global.RAMAFichaArquivo6.controles(ctx, aq) : null,
         !aq.origemChave && aq.situacao === "ok" && global.RAMAFichaArquivo7 ? global.RAMAFichaArquivo7.controles(ctx, aq) : null,
+        !aq.origemChave && aq.situacao === "ok" && global.RAMAFichaArquivo9 ? global.RAMAFichaArquivo9.controles(ctx, aq) : null,
       ].concat(avisos, [
         aq.referencia ? el("p.criacao-fonte", { texto: aq.referencia }) : null,
       ]);
@@ -1779,6 +1780,8 @@
                 /* Quase Novo (AS4): as modificações temporárias saem aqui, na
                    mesma gravação do interlúdio. */
                 if (fim && fim.mudou !== false && global.RAMAFichaArquivo4) vencidas = global.RAMAFichaArquivo4.aoNovoInterludio(ctx);
+                /* Tática de Abordagem (AS9): os dados não gastos somem. */
+                if (fim && fim.mudou !== false && global.RAMAFichaArquivo9) avisos5 = avisos5.concat(global.RAMAFichaArquivo9.aoNovoInterludio(ctx));
                 return fim;
               }, "condicoes-novo-interludio");
               if (fim && fim.encerradas && fim.encerradas.length) UI.aviso("Terminaram com a cena: " + fim.encerradas.join(", ") + ".");
@@ -2028,6 +2031,8 @@
       global.RAMAFichaArquivo6 ? global.RAMAFichaArquivo6.condicoes(ctx) : null,
       /* Arquivos Secretos 7: debaixo d'água (com a Pressão) e a infecção da Apóstata. */
       global.RAMAFichaArquivo7 ? global.RAMAFichaArquivo7.condicoes(ctx) : null,
+      /* Arquivos Secretos 9: dados de tática, alvo-prioritário, Ripostar. */
+      global.RAMAFichaArquivo9 ? global.RAMAFichaArquivo9.condicoes(ctx) : null,
     ].filter(Boolean);
 
     if (resumo.automaticas.length) {
@@ -3078,7 +3083,8 @@
         global.RAMAFichaArquivo4 ? global.RAMAFichaArquivo4.acoesNoTeste(ctx, o, p, r, dado, bonus, atributo) : [],
         global.RAMAFichaArquivo5 ? global.RAMAFichaArquivo5.acoesNoTeste(ctx, o, p, r, dado, bonus, atributo) : [],
         global.RAMAFichaArquivo6 ? global.RAMAFichaArquivo6.acoesNoTeste(ctx, o, p, r, dado, bonus, atributo) : [],
-        global.RAMAFichaArquivo7 ? global.RAMAFichaArquivo7.acoesNoTeste(ctx, o, p, r, dado, bonus, atributo) : []).filter(Boolean),
+        global.RAMAFichaArquivo7 ? global.RAMAFichaArquivo7.acoesNoTeste(ctx, o, p, r, dado, bonus, atributo) : [],
+        global.RAMAFichaArquivo9 ? global.RAMAFichaArquivo9.acoesNoTeste(ctx, o, p, r, dado, bonus, atributo) : []).filter(Boolean),
     });
   }
 
@@ -4648,15 +4654,22 @@
       /* Arquivos Secretos 3: Rítmo Contagiante conta o crítico; Frase de
          Efeito oferece o multiplicador do dano deste crítico. */
       var as3 = global.RAMAFichaArquivo3 ? global.RAMAFichaArquivo3.acoesNoAtaque(ctx, arma, r, critico, ef) : { acoes: [], notas: [] };
+      /* Arquivos Secretos 9: Full Metal Jacket, Tiro Intuitivo, CQB,
+         alvo-prioritário, Ripostar, Metralhar Tudo e o dado de tática —
+         cada um mostra o ataque de novo, com o crítico conferido. */
+      var as9 = global.RAMAFichaArquivo9 ? global.RAMAFichaArquivo9.acoesNoAtaque(ctx, arma, r, critico, ef, {
+        margem: margemDoAtaque, pericia: ef.pericia, distancia: tipoArma !== "corpoACorpo",
+        rolarDano: temDano ? function (crit) { SecaoInventarioOrdem.rolarDano(ctx, arma, crit, false, m.modo, { dano: as2.dano || 0, ignoraRd: as2.ignoraRd || 0 }); } : null,
+      }) : { acoes: [], notas: [] };
 
       global.RAMARolagens.mostrar(r, {
         nome: arma.nome + " · Ataque (" + ef.periciaNome + ")" + (m.modo === "rajada" ? " · rajada" : m.modo === "doisCanos" ? " · dois canos" : ""),
         critico: critico,
-        notas: notas.concat(as3.notas),
+        notas: notas.concat(as3.notas, as9.notas),
         acoes: [temDano ? {
           rotulo: critico ? "Rolar dano crítico" : "Rolar dano",
           aoClicar: function () { SecaoInventarioOrdem.rolarDano(ctx, arma, critico, false, m.modo, { dano: as2.dano || 0, ignoraRd: as2.ignoraRd || 0 }); },
-        } : null].concat(as3.acoes).filter(Boolean),
+        } : null].concat(as3.acoes, as9.acoes).filter(Boolean),
       });
 
       if (ef.proficiencia.proficiente === false) UI.avisoAtencao(ef.proficiencia.texto);
@@ -4709,6 +4722,8 @@
       var notasAS2 = global.RAMAFichaArquivo2 ? global.RAMAFichaArquivo2.noDano(ctx, arma, r, ef, extras) : [];
       if (multFrase) notasAS2.push("Frase de Efeito: multiplicador ×" + multFrase + ".");
       if (global.RAMAFichaArquivo3) notasAS2 = notasAS2.concat(global.RAMAFichaArquivo3.noDano(ctx, arma, r, ef));
+      /* Arquivos Secretos 9: Metralhar Tudo armado (+2d8), alvo-prioritário. */
+      if (global.RAMAFichaArquivo9) notasAS2 = notasAS2.concat(global.RAMAFichaArquivo9.noDano(ctx, arma, r, ef));
       notasAS2 = notasAS2.concat(as4.notas || []);
       /* Ácido Corrosivo (AS5): os bônus já estão na conta; o tipo vira químico. */
       if (ef.acido) notasAS2.push(ef.acido);
@@ -4739,7 +4754,8 @@
         critico: !!critico,
         notas: (nota ? [nota] : []).concat(notasAS2),
         acoes: (global.RAMAFichaArquivo3 ? global.RAMAFichaArquivo3.acoesNoDano(ctx, arma, r) : [])
-          .concat(global.RAMAFichaArquivo4 ? global.RAMAFichaArquivo4.acoesNoDano(ctx, arma, r) : []),
+          .concat(global.RAMAFichaArquivo4 ? global.RAMAFichaArquivo4.acoesNoDano(ctx, arma, r) : [])
+          .concat(global.RAMAFichaArquivo9 ? global.RAMAFichaArquivo9.acoesNoDano(ctx, arma, r) : []),
       });
     },
 

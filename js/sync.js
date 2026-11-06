@@ -587,6 +587,8 @@
       "ordem.arquivo7.infeccao.testes": "id",
       "ordem.arquivo7.exposicoes": "id",
       "ordem.arquivo7.usos": "opId",
+      "ordem.arquivo9.tatica.planos": "id",
+      "ordem.arquivo9.usos": "opId",
       /* Barganha Insana (v2.41): cada conjuração casa pelo id. */
       "ordem.barganhaInsana.pendentes": "id",
       "ordem.barganhaInsana.resolvidas": "id",

@@ -74,6 +74,7 @@
   var AS5 = "AS5";
   var AS6 = "AS6";
   var AS7 = "AS7";
+  var AS9 = "AS9";
   var AS3 = "AS3";
 
   var T33 = "Tabela 3.3 (p. 56–57)";
@@ -2253,6 +2254,110 @@
         "Sai de dois jeitos: outra pessoa decepa a parte do corpo onde ele está; ou a súplica é cumprida, e ele vira item mundano, sem efeito paranormal.",
       ],
       notas: ["Vestir pede a súplica (a mesa escreve). O +2d10 é um botão no resultado do teste, para quem confirmar que age a favor dela. Tirar, contrariar, decepar e cumprir são registros no menu do item, com a perda de PV aplicada quando a regra manda."] },
+
+    /* --- Arquivos Secretos 9, p. 42–48 (v6.9) ---
+       O lançador portátil usa as regras do lançador do AS4 com uma
+       granada por vez; a pistola taser é arma (dano e atordoamento),
+       distinta do taser operacional do livro básico. O drone escolhe o
+       tipo de aliado ao entrar no inventário; os outros tipos entram como
+       modificações (+I de categoria cada, até IV; as da trilha Piloto de
+       Drone não contam). Regras e telas: js/ordem/arquivo9.js. */
+    { id: "as9.geral.ariete-portatil", nome: "Aríete portátil", fonte: AS9, pagina: 42, aba: "geral", secao: "operacionais",
+      categoria: "I", espacos: 2,
+      resumo: "Cilindro pesado de aço com empunhaduras laterais, para romper portas, fechaduras e barricadas pela força bruta.",
+      efeitos: ["Empunhar exige as duas mãos.", "+10 em testes para arrombar um objeto usando o aríete."] },
+    { id: "as9.geral.boroscopio-articulado", nome: "Boroscópio articulado", fonte: AS9, pagina: 43, aba: "geral", secao: "operacionais",
+      categoria: "I", espacos: 1, camera: true,
+      resumo: "Visor e câmera na ponta de um cabo flexível, para observar através de frestas.",
+      efeitos: ["Empunhar exige as duas mãos.", "Mostra ambientes sem entrar neles; permite testes de Investigação e Percepção pela câmera, que tem visão no escuro.", "O cabo flexível tem alcance de 3 m."] },
+    /* "Item vestido do tipo proteção pesada": vestimenta (não ocupa o
+       lugar da proteção em uso nem soma Defesa); a proficiência e a
+       penalidade são as de proteção pesada. */
+    { id: "as9.protecao.capacete-tatico", nome: "Capacete tático", fonte: AS9, pagina: 43, aba: "geral", secao: "acessorios",
+      categoria: "II", espacos: 1, vestimenta: true,
+      resumo: "Proteção especial de liga leve, feita para garantir a segurança do crânio.",
+      efeitos: ["Item vestido do tipo proteção pesada (para proficiência e penalidade).", "25% de chance (1 em 1d4) de ignorar o dano adicional de um acerto crítico ou ataque furtivo."] },
+    { id: "as9.arma.dmr", nome: "Designated Marksman Rifle (DMR)", fonte: AS9, pagina: 43, aba: "armas",
+      categoria: "III", espacos: 3,
+      arma: { proficiencia: "tatica", tipo: "fogo", empunhadura: "duasMaos", dano: "2d10", critico: "19/x3", alcance: "medio", tipoDano: "B", municao: "op.municao.balas-longas" },
+      resumo: "Rifle de Atirador Designado: precisão em longo alcance, sem perder a combatividade em confrontos próximos.",
+      efeitos: ["Permite usar Ataque Furtivo até alcance médio.", "Veterano em Pontaria e mirando com a DMR (OPRPG p. 87): +5 na margem de ameaça do ataque.", "Usa balas longas como munição (OPRPG p. 59)."] },
+    { id: "as9.geral.drone-de-combate-tatico", nome: "Drone de combate tático", fonte: AS9, pagina: 44, aba: "geral", secao: "operacionais",
+      categoria: "III", espacos: 2, drone: true,
+      escolha: { tipo: "opcoes", rotulo: "Tipo de aliado drone", valores: [{ valor: "atirador", rotulo: "Atirador" }, { valor: "espiao", rotulo: "Espião" }, { valor: "hacker", rotulo: "Hacker" }, { valor: "inteligente", rotulo: "Inteligente" }, { valor: "medico", rotulo: "Médico" }, { valor: "protetor", rotulo: "Protetor" }, { valor: "utilitario", rotulo: "Utilitário" }] },
+      resumo: "Pequeno veículo aéreo não tripulado, com inteligência artificial adaptada para combate, câmera e controle remoto.",
+      efeitos: [
+        "Operar exige as duas mãos. É um aliado (OPRPG p. 171) com câmera filmadora: mostra ambientes sem entrar neles e permite testes de Investigação e Percepção pela câmera.",
+        "Ao adquirir, escolha um tipo de aliado drone. O bônus do tipo é passivo; a habilidade só com o drone operado com as duas mãos, e continua sendo ação livre.",
+        "Sugestões de movimento: deslocamento 6 m e voo 12 m; uma ação de movimento por rodada, só para se deslocar; precisa ficar num raio de 5 km do controle.",
+        "Danificado ou quebrado conforme a narrativa, a critério do mestre.",
+      ] },
+    { id: "as9.protecao.escudo-balistico-led", nome: "Escudo balístico LED", fonte: AS9, pagina: 46, aba: "protecoes",
+      categoria: "II", espacos: 2,
+      protecao: { tipo: "escudo", defesa: 2 },
+      resumo: "Escudo largo e reforçado contra projéteis, com lanterna frontal.",
+      efeitos: [
+        "Proteção pesada; precisa ser empunhado em uma mão. +2 na Defesa e resistência a balístico 10.",
+        "Ação de movimento: cobertura leve para você e qualquer ser Médio ou menor atrás de você, até você se deslocar.",
+        "Lanterna tática no gatilho da empunhadura: ilumina um cone de 9 m. Ação de movimento para mirar a luz nos olhos de um ser em alcance curto: ofuscado por 1 rodada, imune à lanterna pelo resto da cena.",
+      ] },
+    { id: "as9.arma.espingarda-serrada", nome: "Espingarda serrada", fonte: AS9, pagina: 46, aba: "armas",
+      categoria: "I", espacos: 1,
+      arma: { proficiencia: "tatica", tipo: "fogo", empunhadura: "umaMao", dano: "3d6", critico: "x3", alcance: "curto", tipoDano: "B", municao: "op.municao.cartuchos" },
+      resumo: "Escopeta portátil, muito usada em arrombamentos: mais leve e compacta, com menos alcance e estrago.",
+      efeitos: ["Causa apenas metade do dano em alcance médio ou maior.", "Usa cartuchos como munição (OPRPG p. 59)."] },
+    { id: "as9.arma.lancador-de-granadas-portatil", nome: "Lançador de granadas portátil", fonte: AS9, pagina: 47, aba: "armas",
+      categoria: "II", espacos: 1, lancador: { capacidade: 1 },
+      arma: { proficiencia: "pesada", tipo: "distancia", empunhadura: "duasMaos", dano: "", alcance: "longo", semMunicao: true },
+      resumo: "Versão compacta do lançador de granadas, popular em forças militares que marcham longas distâncias.",
+      efeitos: ["Funciona como um lançador de granadas (Arquivos Secretos 4, p. 71), mas só comporta uma granada por vez."],
+      notas: ["O lançador não tem dano próprio: o dano é o da granada carregada. Recarregar a única granada é uma ação de movimento, como no lançador do AS4."] },
+    { id: "as9.arma.machado-tatico", nome: "Machado tático", fonte: AS9, pagina: 47, aba: "armas",
+      categoria: "II", espacos: 1,
+      arma: { proficiencia: "tatica", tipo: "corpoACorpo", empunhadura: "leve", dano: "1d8", critico: "x3", alcance: "curto", tipoDano: "C", agil: true, arremessavel: true },
+      resumo: "Ferramenta e arma de combate, com estrutura interna toda de aço: mais resistente e pesada.",
+      efeitos: ["Arma ágil, de uma mão; pode ser arremessada em alcance curto.", "Na ação especial contra-ataque, +2 no teste de ataque para contra-atacar.", "Na ação especial bloqueio, gaste 2 PE e sacrifique o machado para aumentar a RD do bloqueio em +20."] },
+    { id: "as9.municao.dardos-condutores", nome: "Dardos condutores", fonte: AS9, pagina: 48, aba: "municoes",
+      categoria: "I", espacos: 1,
+      municao: { unidade: "pacote", duracao: "", armas: "pistola taser", contagem: 20 },
+      resumo: "Dardos metálicos (sondas ou eletrodos) acoplados a fios condutores finos ligados à arma que os dispara.",
+      efeitos: ["Com a contagem de munição (OPRPG p. 174), cada pacote tem munição para 20 ataques.", "A pistola taser armazena 10 dardos."] },
+    { id: "as9.arma.pistola-taser", nome: "Pistola taser", fonte: AS9, pagina: 48, aba: "armas",
+      categoria: "II", espacos: 1,
+      arma: { proficiencia: "simples", tipo: "disparo", empunhadura: "leve", dano: "2d6", critico: "x3", alcance: "curto", tipoDano: "Eletricidade", municao: "as9.municao.dardos-condutores", capacidade: 10 },
+      resumo: "Pistola atordoante: dardos ligados por fios de cobre descarregam alta tensão — mais letal que o taser operacional.",
+      efeitos: ["Um ser atingido fica atordoado por 1 rodada (Fortitude DT Agi evita).", "O mesmo alvo só pode ficar atordoado por este item uma vez por cena (o livro deixa a mesa decidir manter ou retirar esse limite).", "Usa dardos condutores como munição; armazena 10."],
+      notas: ["É uma arma, distinta do taser operacional do livro básico (p. 66)."] },
+
+    /* --- Modificações para drones, AS9 p. 46 --- */
+    { id: "as9.mod.drone.atirador", nome: "Drone Atirador", natureza: "modificacao", fonte: AS9, pagina: 44, aba: "geral", secao: "modificacoesDrones",
+      aplicaEm: ["drone"], droneTipo: "atirador", limiteCategoria: 4,
+      resumo: "Drone modificado para comportar arma de fogo e auxiliar em disparos.",
+      efeitos: ["Bônus: +1d20 em testes de ataque.", "Metralhar Tudo: quando ataca, gaste 2 PE; se acertar, +2d8 de dano balístico.", "O bônus vale como efeito passivo; a habilidade só com o drone operado com as duas mãos (ação livre)."] },
+    { id: "as9.mod.drone.espiao", nome: "Drone Espião", natureza: "modificacao", fonte: AS9, pagina: 45, aba: "geral", secao: "modificacoesDrones",
+      aplicaEm: ["drone"], droneTipo: "espiao", limiteCategoria: 4,
+      resumo: "Drone modificado para ser mais eficiente com espionagem.",
+      efeitos: ["Bônus: +1d20 em testes de Investigação e Percepção em que o drone possa ajudar; a câmera passa a ter visão no escuro.", "Captação Térmica e de Áudio: 2 PE até o fim da cena — visão térmica (ignora camuflagem) e testes de Tecnologia pelo drone para captar ondas de rádio.", "O bônus vale como efeito passivo; a habilidade só com o drone operado com as duas mãos (ação livre)."] },
+    { id: "as9.mod.drone.hacker", nome: "Drone Hacker", natureza: "modificacao", fonte: AS9, pagina: 45, aba: "geral", secao: "modificacoesDrones",
+      aplicaEm: ["drone"], droneTipo: "hacker", limiteCategoria: 4,
+      resumo: "Drone modificado para ser mais eficiente com hacking.",
+      efeitos: ["Bônus: +1d20 em testes de Tecnologia em que o drone possa ajudar; hackeia wireless ou localmente, a uma distância segura.", "Acelerar e Ocultar: hackeando como ação completa, 2 PE evitam a penalidade; falhando, pode tentar de novo com a mesma informação, só mais uma vez; falhando por 5 ou mais, 3 PE evitam ser rastreado.", "O bônus vale como efeito passivo; a habilidade só com o drone operado com as duas mãos (ação livre)."] },
+    { id: "as9.mod.drone.inteligente", nome: "Drone Inteligente", natureza: "modificacao", fonte: AS9, pagina: 45, aba: "geral", secao: "modificacoesDrones",
+      aplicaEm: ["drone"], droneTipo: "inteligente", limiteCategoria: 4,
+      resumo: "Drone modificado para ser ainda mais inteligente.",
+      efeitos: ["Bônus: funciona por comandos de voz — não é preciso usar as mãos para operá-lo.", "Braços Articulados: 2 PE, até o fim da cena, o drone carrega até 5 espaços de itens e faz trabalhos manuais simples e lentos.", "O bônus vale como efeito passivo; a habilidade só com o drone operado com as duas mãos (ação livre)."] },
+    { id: "as9.mod.drone.medico", nome: "Drone Médico", natureza: "modificacao", fonte: AS9, pagina: 45, aba: "geral", secao: "modificacoesDrones",
+      aplicaEm: ["drone"], droneTipo: "medico", limiteCategoria: 4,
+      resumo: "Drone modificado para executar funções médicas de primeiros socorros.",
+      efeitos: ["Bônus: treinado em Medicina; se já for treinado, +1d20 em testes de Medicina.", "Robô ao Resgate: 2 PE para recuperar 2d8+2 PV de um alvo adjacente ao drone.", "O bônus vale como efeito passivo; a habilidade só com o drone operado com as duas mãos (ação livre)."] },
+    { id: "as9.mod.drone.protetor", nome: "Drone Protetor", natureza: "modificacao", fonte: AS9, pagina: 45, aba: "geral", secao: "modificacoesDrones",
+      aplicaEm: ["drone"], droneTipo: "protetor", limiteCategoria: 4,
+      resumo: "Drone modificado para proteger.",
+      efeitos: ["Bônus: +5 na Defesa.", "Alerta de Ameaça: num teste de resistência, 2 PE para +5 nesse teste.", "O bônus vale como efeito passivo; a habilidade só com o drone operado com as duas mãos (ação livre)."] },
+    { id: "as9.mod.drone.utilitario", nome: "Drone Utilitário", natureza: "modificacao", fonte: AS9, pagina: 45, aba: "geral", secao: "modificacoesDrones",
+      aplicaEm: ["drone"], droneTipo: "utilitario", limiteCategoria: 4,
+      resumo: "Drone modificado para tornar a vida mais fácil num aspecto específico.",
+      efeitos: ["Bônus: escolha uma perícia (exceto Fortitude, Luta, Pontaria, Reflexos ou Vontade): +1d20 em testes dela. Escolhida, não muda mais.", "Meu Amigo Drone: falhando num teste da perícia escolhida, 3 PE para tentar de novo, só mais uma vez.", "O bônus vale como efeito passivo; a habilidade só com o drone operado com as duas mãos (ação livre)."] },
   ];
 
   global.RAMAOrdemItensDados = {
@@ -2267,6 +2372,7 @@
       AS5: { nome: "Arquivos Secretos 5", curto: "Arquivos Secretos 5", edicao: "v1.0" },
       AS6: { nome: "Arquivos Secretos 6", curto: "Arquivos Secretos 6", edicao: "v1.0" },
       AS7: { nome: "Arquivos Secretos 7", curto: "Arquivos Secretos 7", edicao: "v1.0" },
+      AS9: { nome: "Arquivos Secretos 9", curto: "Arquivos Secretos 9", edicao: "v1.0" },
     },
     itens: ITENS,
   };

@@ -242,7 +242,10 @@
       var de6 = global.RAMAFichaArquivo6 ? global.RAMAFichaArquivo6.controlesDeOrigem(ctx, org) : null;
       if (de6) return de6;
       /* As origens do AS7 moram em js/ordem/telas/ficha-arquivo7.js. */
-      return global.RAMAFichaArquivo7 ? global.RAMAFichaArquivo7.controlesDeOrigem(ctx, org) : null;
+      var de7 = global.RAMAFichaArquivo7 ? global.RAMAFichaArquivo7.controlesDeOrigem(ctx, org) : null;
+      if (de7) return de7;
+      /* As origens do AS9 moram em js/ordem/telas/ficha-arquivo9.js. */
+      return global.RAMAFichaArquivo9 ? global.RAMAFichaArquivo9.controlesDeOrigem(ctx, org) : null;
     }
     var partes = f(ctx, o, org, estado(o, org.chave), registroDaOrigem(o, org));
     return partes && partes.length ? el("div.pilha--curta.origem-controles", { class: "pilha" }, partes.filter(Boolean)) : null;
