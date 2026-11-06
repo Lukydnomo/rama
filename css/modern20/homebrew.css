@@ -1,0 +1,26 @@
+/* =====================================================================
+   R.A.M.A. — Modern20 · Homebrew
+   ---------------------------------------------------------------------
+   A mesma hierarquia do Legacy com a pele do Modern20: barra e lista em
+   cartão de cantos suaves, nome sem caixa alta, tipo em texto de apoio.
+   ===================================================================== */
+
+:where(:root[data-interface="modern20"]) {
+  & #painel-homebrew .hb-barra {
+    border-color: var(--m20-borda);
+    border-radius: var(--m20-raio-cartao);
+  }
+  & #painel-homebrew .hb-lista {
+    border: 1px solid var(--m20-borda);
+    border-radius: var(--m20-raio-cartao);
+    overflow: hidden;
+  }
+  & #painel-homebrew .hb-linha { border-bottom-color: var(--m20-borda); }
+  & #painel-homebrew .hb-linha:last-child { border-bottom: 0; }
+  & #painel-homebrew .hb-linha:hover { background: var(--m20-realce); }
+  & #painel-homebrew .hb-linha__nome { font-weight: 650; letter-spacing: -0.005em; }
+  & #painel-homebrew .hb-linha__tipo { text-transform: none; letter-spacing: 0; font-weight: 600; color: var(--m20-texto-apoio); }
+  & #painel-homebrew .hb-nada { border: 0; }
+  & .hb-criar__opcao.r-botao--bloco { border-radius: var(--m20-raio-controle); font-weight: 550; }
+  & .hb-criar__titulo { text-transform: none; letter-spacing: 0; }
+}

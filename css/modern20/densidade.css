@@ -26,6 +26,7 @@
   &[data-densidade="compacta"] .pericia-consulta__subtitulo { margin-top: var(--e1); padding-top: var(--e2); }
 
   /* Malditos Goblins: o atributo da ficha oficial perde a folga, mas não o canto. */
+  &[data-densidade="compacta"] .r-busca .r-entrada { padding-left: calc(var(--e3) + 22px); }
   &[data-densidade="compacta"] .gob-atr { border-radius: var(--m20-raio-controle); }
 
   &[data-densidade="compacta"] .r-modal__corpo {

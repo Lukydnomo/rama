@@ -88,6 +88,8 @@
 :root[data-densidade="compacta"] .editar-grade { gap: var(--e2); }
 :root[data-densidade="compacta"] .r-entrada,
 :root[data-densidade="compacta"] .r-selecao { padding: var(--e1) var(--e2); }
+/* A busca guarda o recuo da lupa (sem ele, o texto passa por baixo dela). */
+:root[data-densidade="compacta"] .r-busca .r-entrada { padding-left: var(--e6); }
 :root[data-densidade="compacta"] .pasta,
 :root[data-densidade="compacta"] .pasta-opcao,
 :root[data-densidade="compacta"] .exibicao__opcao { padding: 2px var(--e2); }

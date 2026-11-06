@@ -830,6 +830,12 @@ segredo nenhum — ele os lê das Script Properties. Publicá-lo não expõe nad
 
 ### Atualizar o backend
 
+**v6.10.0 — FICHEIRO:** só o site (o Homebrew reorganizado). Publique
+`js/paginas/homebrew.js`, os arquivos novos `css/homebrew.css` e
+`css/modern20/homebrew.css`, `homebrew/index.html`, `css/densidade.css`,
+`css/modern20/densidade.css`, `js/paginas/homebrew-criatura.js` e os dois
+`componentes.css`. Nada de `.gs`.
+
 **v6.9.0 — ESCOLTA:** Arquivos Secretos 9: Hell Hunters como suplemento de
 Ordem. **Troque** `Sistemas.gs` (o suplemento `ordem.as9` no cadastro) e
 `Campanhas.gs` (o AS9 como fonte de criatura) e **crie uma versão nova da
@@ -1718,7 +1724,7 @@ Três números diferentes, que não se misturam:
 
 | | Onde | O que é |
 |---|---|---|
-| versão do aplicativo | `js/versao.js` | o que a pessoa vê: v6.9.0 |
+| versão do aplicativo | `js/versao.js` | o que a pessoa vê: v6.10.0 |
 | `schemaVersion` | `js/ficha.js` | o formato da FICHA |
 | `versaoFormato` | `js/config.js` | o formato dos arquivos de importação |
 

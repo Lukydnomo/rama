@@ -118,6 +118,24 @@
 
   var CHANGELOG = [
     {
+      versao: "6.10.0",
+      codinome: "FICHEIRO",
+      data: "31/10/2026",
+      mudancas: {
+        "Melhorado": [
+          "Homebrew reorganizado: + Criar como ação principal, Importar ao lado e o Catálogo oficial de criaturas como link. Minhas criações e Públicas ficam logo abaixo do título e continuam ali carregando, com erro e com a biblioteca vazia.",
+          "Busca, filtros por tipo e a contagem numa barra compacta; digitar só atualiza os resultados, sem perder o foco. Biblioteca vazia e “nenhum resultado para esses filtros” são mensagens diferentes, a segunda com Limpar filtros.",
+          "A lista mostra nome, tipo e um resumo de cada registro (dano e crítico, Defesa, elemento e círculo, sistema e a estatística principal da criatura). O nome abre a consulta, com a descrição e o código do registro; o menu de três pontos fica à parte. No celular, duas linhas por registro, sem rolagem lateral.",
+          "+ Criar em três grupos: Equipamentos, Criaturas e Habilidades e rituais. Criar, importar ou copiar estando em Públicas leva o resultado para Minhas criações.",
+          "No editor de criatura de Ordem, cada elemento marcado mostra ✓ e fundo destacado, sem mudar o tamanho do botão.",
+        ],
+        "Corrigido": [
+          "No modo compacto, o texto das buscas passava por baixo da lupa.",
+        ],
+        "Técnico": ["Só o site: js/paginas/homebrew.js, os arquivos novos css/homebrew.css e css/modern20/homebrew.css (carregados em homebrew/index.html), css/densidade.css, css/modern20/densidade.css, js/paginas/homebrew-criatura.js e os dois componentes.css. Nada de .gs, schema nem formato de registro."],
+      },
+    },
+    {
       versao: "6.9.0",
       codinome: "ESCOLTA",
       data: "31/10/2026",
