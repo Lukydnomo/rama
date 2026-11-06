@@ -102,16 +102,27 @@ t.ok("o servidor resume com o sistema da criatura", /\['oblivio', 'vampiro', 'go
 
 t.grupo("Menu e páginas");
 const app = await ler("js/app.js");
-t.ok("Criaturas no menu principal, entre Campanhas e Homebrew", /campanhas\/"[^\n]*\n[^\n]*criaturas\/"[^\n]*\n[^\n]*homebrew\/"/.test(app));
-const pag = await ler("criaturas/index.html");
-t.ok("a página carrega os catálogos dos quatro sistemas, a biblioteca e os geradores", ["ordem/criaturas.js", "oblivio/ameacas-dados.js", "vampiro/antagonistas-dados.js", "goblins/catalogo.js", "geradores-criaturas.js", "paginas/criaturas-biblioteca.js", "paginas/criaturas.js"].every((x) => pag.includes(x)));
-const pjs = await ler("js/paginas/criaturas.js");
-t.ok("estante de capas no lugar do select: grupo de rádio com RAMACapaSistema", !/<select|"select\.r-selecao", \{\s*id: idc/.test(pjs) && /role: "radiogroup"/.test(pjs) && /RAMACapaSistema/.test(pjs) && pag.indexOf("capa-sistema.js") > pag.indexOf("js/sistemas.js") && pag.indexOf("capa-sistema.js") < pag.indexOf("paginas/criaturas.js"));
-t.ok("  trocar de sistema limpa os filtros e não mexe na seção", /function trocarSistema[\s\S]{0,200}nativo = \{ busca: ""/.test(pjs) && !/function trocarSistema[\s\S]{0,300}estado\.secao =/.test(pjs));
+t.ok("Catálogo no menu principal, entre Campanhas e Homebrew (v6.12: substituiu Criaturas)", /campanhas\/"[^\n]*\n[^\n]*catalogo\/"[^\n]*\n[^\n]*homebrew\/"/.test(app) && !/caminho: "criaturas\/"/.test(app));
+const pag = await ler("catalogo/index.html");
+t.ok("o Catálogo carrega os catálogos dos quatro sistemas, a biblioteca, os geradores e os de Ordem (poderes, itens, rituais)", ["ordem/criaturas.js", "oblivio/ameacas-dados.js", "vampiro/antagonistas-dados.js", "goblins/catalogo.js", "geradores-criaturas.js", "paginas/criaturas-biblioteca.js", "ordem/poderes.js", "ordem/biblioteca.js", "ordem/itens.js", "ordem/rituais.js", "paginas/catalogo.js"].every((x) => pag.includes(x)));
+const pjs = await ler("js/paginas/catalogo.js");
+t.ok("estante de capas: grupo de rádio com RAMACapaSistema", /role: "radiogroup"/.test(pjs) && /RAMACapaSistema/.test(pjs) && pag.indexOf("capa-sistema.js") > pag.indexOf("js/sistemas.js") && pag.indexOf("capa-sistema.js") < pag.indexOf("paginas/catalogo.js"));
+t.ok("  trocar de sistema limpa a busca e os filtros", /function trocarSistema[\s\S]{0,200}limparConsulta\(\)/.test(pjs));
 t.ok("  movimento só sem prefers-reduced-motion", /prefers-reduced-motion: no-preference\) \{\s*\.estante-sistemas__opcao \.capa-sistema/.test(await ler("css/componentes.css")));
-t.ok("  e não define contexto de suplemento (só consulta)", !(await ler("js/paginas/criaturas.js")).includes("definirContexto"));
+t.ok("  e não define contexto de suplemento (só consulta)", !pjs.includes("definirContexto"));
+t.grupo("Criaturas → Catálogo · links antigos");
+{
+  const enc = await ler("js/paginas/criaturas.js"), velha = await ler("criaturas/index.html");
+  (0, eval)(enc);
+  const D = globalThis.RAMAEncaminharCriaturas.destino;
+  t.ok("criaturas/ só encaminha (sem a página antiga)", velha.includes("paginas/criaturas.js") && !velha.includes("criaturas-biblioteca.js"));
+  t.igual("sem parâmetros: Ordem, Criaturas", D("", "/criaturas/"), "/catalogo/?sistema=ordem&categoria=criaturas");
+  t.igual("sistema preservado; secao=geradores abre Geradores", D("?sistema=goblins&secao=geradores", "/criaturas/"), "/catalogo/?sistema=goblins&categoria=geradores");
+  t.igual("catálogo de outro sistema: a categoria das criaturas dele", D("?sistema=vampiro&secao=catalogo", "/rama/criaturas/index.html"), "/rama/catalogo/?sistema=vampiro&categoria=criaturas");
+  t.igual("sistema desconhecido cai em Ordem", D("?sistema=xyz", "/criaturas/"), "/catalogo/?sistema=ordem&categoria=criaturas");
+}
 const hb = await ler("homebrew/index.html"), hbJs = await ler("js/paginas/homebrew.js");
-t.ok("o Homebrew não abre mais o catálogo oficial (aponta para Criaturas)", !hb.includes("criaturas-biblioteca.js") && !hbJs.includes("RAMABibliotecaCriaturas") && hbJs.includes('U.url("criaturas/")'));
+t.ok("o Homebrew não abre o catálogo oficial: aponta para o Catálogo (criaturas de Ordem)", !hb.includes("criaturas-biblioteca.js") && !hbJs.includes("RAMABibliotecaCriaturas") && hbJs.includes('U.url("catalogo/?sistema=ordem&categoria=criaturas")'));
 t.ok("  e mantém criar, importar e as criaturas personalizadas", /\+ Criar/.test(hbJs) && /Importar/.test(hbJs) && /criatura/.test(hbJs));
 for (const p of ["campanha/index.html", "ficha/index.html"]) {
   const h = await ler(p);

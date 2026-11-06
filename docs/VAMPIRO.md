@@ -261,7 +261,9 @@ quem joga ou com o Narrador.
 |---|---|---|---|---|---|---|
 | Mortais, animais, vampiros e criaturas (sem Fome) | 369–377 (373–381) | `AN.LISTA` | PN a partir do modelo (cópia) | | | T |
 | Modelos de mortais (Fraco a Mortífero) | 377 | `MODELOS_MORTAIS` | — | | | — |
-| Armas e armaduras | 379–380 | `ARMAS`, `ARMADURAS` | aba Equipamento | | | N |
+| Armas e armaduras (tabela de Conflito; incendiárias e lançador de estacas do cap. Itens) | 304, 380–381 | `ARMAS`, `ARMADURAS` (com `pagina`) | aba Equipamento; Catálogo → Equipamentos | | | N, T |
+| Itens: Saco Antissol, Caoscópio, MirasX, armas camufladas, incendiárias caseiras, lançador de redes; equipamento sobrenatural (Urna Ancestral, Pedras Entalhadas, Terra da Sepultura, Dinheiro Velho, Sangue Preservado) | 378–381 | `EQUIPAMENTOS`, `GRUPOS_DE_EQUIPAMENTO` | Catálogo → Equipamentos (consulta; efeitos a critério do Narrador ficam com ele) | | sim | T |
+| Projetos (Apêndice II) e Orientação para o Jogo Ponderado (Apêndice III) | 415–418, 419–423 | `REFERENCIAS_DA_MESA` | Catálogo → Referências da mesa (resumo para consulta; sem gerenciador de Projetos) | | sim | T |
 | Fé Verdadeira e drogas | 381 | `FE_VERDADEIRA`, `DROGAS` | referência | | | — |
 
 ---
@@ -311,8 +313,8 @@ implementada — nunca uma errata.
   em grafo desenhado.
 - **Efeitos narrativos** de poderes e Discrasias ficam como texto na ficha;
   o motor aplica os que mudam número (paradas, trilhas, custos, durações).
-- **Projetos, jogo ponderado e Apêndice II/III** (pp. 413–425): não
-  automatizados.
+- **Projetos e jogo ponderado** (Apêndices II e III, pp. 415–423): só como
+  referência de consulta no Catálogo; não há gerenciador de Projetos.
 - **Visão do jogador da crônica no navegador** não foi revista com uma
   segunda conta; é coberta pelos testes do servidor.
 

@@ -118,6 +118,23 @@
 
   var CHANGELOG = [
     {
+      versao: "6.12.0",
+      codinome: "SUMÁRIO",
+      data: "31/10/2026",
+      mudancas: {
+        "Adicionado": [
+          "Catálogo no menu principal, no lugar de Criaturas: o conteúdo oficial dos sistemas numa página de consulta, sem ficha nem campanha. Escolha o sistema pela capa, a categoria e busque ou abra uma entrada.",
+          "Ordem Paranormal: rituais (com os símbolos), itens e equipamentos, poderes, habilidades de classe e trilha, origens, criaturas e aliados (com a ficha completa e Copiar para o Homebrew), usos de perícias e geradores, com filtros por fonte, elemento, círculo, tipo, classe e VD onde se aplicam.",
+          "Oblívio: Ameaças, equipamentos e modificações, habilidades, papéis, conhecimentos, motivações, mazelas, fardos e geradores. Malditos Goblins: inimigos, armas, proteções, equipamentos, itens mágicos, magias, ocupações e técnicas, características, adaptações, tabelas de aventura e geradores.",
+          "Vampiro: A Máscara: antagonistas, disciplinas e poderes, rituais de Feitiçaria de Sangue, Alquimia Sangue-Ralo, clãs, tipos de predador, vantagens e defeitos, Fichas de Conhecimento e equipamentos — agora com o capítulo Itens completo (Saco Antissol, Caoscópio, MirasX, armas camufladas e incendiárias caseiras, lançador de redes e o equipamento sobrenatural, p. 378–381) e, em Referências da mesa, Projetos (p. 415–418) e a Orientação para o Jogo Ponderado (p. 419–423).",
+        ],
+        "Alterado": [
+          "Links antigos de Criaturas continuam funcionando: levam ao Catálogo no mesmo sistema, em Criaturas ou em Geradores. No Homebrew, o atalho virou Catálogo oficial.",
+        ],
+        "Técnico": ["Só o site: catalogo/ e js/paginas/catalogo.js (novos), criaturas/index.html e js/paginas/criaturas.js (encaminhamento), js/app.js, js/paginas/homebrew.js, js/vampiro/catalogo.js (EQUIPAMENTOS, GRUPOS_DE_EQUIPAMENTO, REFERENCIAS_DA_MESA e a página das armas e armaduras) e css/componentes.css. A página só lê os mesmos dados das fichas e campanhas: não liga suplementos nem muda regras de aquisição. Testes em testes/executar-catalogo.js. backend/Vampiro.gs só recebe a cópia atualizada de js/vampiro/catalogo.js (troque o arquivo e crie uma versão nova da implantação; sem setupRama). Sem schema."],
+      },
+    },
+    {
       versao: "6.11.0",
       codinome: "SINETE",
       data: "31/10/2026",

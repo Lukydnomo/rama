@@ -90,7 +90,7 @@
       acoes: [
         /* v6.6: o catálogo oficial mora na página Criaturas (consultar e
            copiar para cá). Aqui ficam só as criações. */
-        el("a.r-botao.r-botao--fantasma.hb-catalogo", { href: U.url("criaturas/"), texto: "Catálogo oficial de criaturas" }),
+        el("a.r-botao.r-botao--fantasma.hb-catalogo", { href: U.url("catalogo/?sistema=ordem&categoria=criaturas"), texto: "Catálogo oficial" }),
         el("button.r-botao", { type: "button", texto: "Importar", onclick: importar }),
         el("button.r-botao.r-botao--principal", {
           type: "button", texto: "+ Criar", onclick: function () { escolherTipo(); },

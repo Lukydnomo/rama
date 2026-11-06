@@ -4003,14 +4003,30 @@ html.arrastando * {
    celular); os geradores em cartões, com o botão de sortear à direita.
    Tudo pelos tokens: os dois estilos de interface herdam sem regra própria.
    ===================================================================== */
-.criaturas-controles {
+.criaturas-controles,
+.catalogo-controles {
   display: flex;
   flex-direction: column;
   align-items: stretch;
   gap: var(--e3);
 }
 .criaturas-secoes { flex-wrap: wrap; overflow-x: visible; margin: 0; }
-.criaturas-controles > * { margin-top: 0; margin-bottom: 0; }
+.criaturas-controles > *,
+.catalogo-controles > * { margin-top: 0; margin-bottom: 0; }
+
+/* Catálogo (v6.12): as categorias quebram em linhas em vez de rolar de
+   lado; a consulta aberta usa os blocos de leitura da biblioteca. */
+.catalogo-categorias { flex-wrap: wrap; overflow-x: visible; margin: 0; row-gap: var(--e1); }
+.catalogo-categorias > .r-aba { white-space: nowrap; }
+.catalogo-ficha { min-width: 0; }
+.catalogo-texto { margin: 0; color: var(--cor-texto); overflow-wrap: anywhere; }
+.catalogo-texto--longo { white-space: pre-wrap; }
+.catalogo-dados { margin: 0; }
+.catalogo-lista { margin: 0; padding-left: var(--e4); display: flex; flex-direction: column; gap: var(--e1); }
+.catalogo-tabela { margin: 0; padding-left: var(--e5); display: flex; flex-direction: column; gap: 2px; font-variant-numeric: tabular-nums; }
+.catalogo-secao { display: flex; flex-direction: column; gap: var(--e1); }
+.catalogo-secao + .catalogo-secao { padding-top: var(--e2); border-top: var(--borda) solid var(--cor-traco-fraca); }
+.catalogo-mais { align-self: center; }
 
 /* A estante de sistemas (v6.6.2): capas clicáveis numa fileira compacta,
    como os cartões de escolha de Personagens. Subir a capa é transform —
@@ -4071,7 +4087,8 @@ html.arrastando * {
   .estante-sistemas__opcao:hover .capa-sistema,
   .estante-sistemas__opcao:focus-visible .capa-sistema { transform: translateY(-4px); }
 }
-.criaturas-corpo .bib-criaturas-janela .r-abas { flex-wrap: wrap; overflow-x: visible; }
+.criaturas-corpo .bib-criaturas-janela .r-abas,
+.catalogo-corpo .bib-criaturas-janela .r-abas { flex-wrap: wrap; overflow-x: visible; }
 .gerador { display: flex; flex-direction: column; gap: var(--e2); }
 .gerador__topo {
   display: flex;

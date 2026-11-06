@@ -925,28 +925,28 @@ function acaoVampiroOperar(corpo, usuario) {
      --------------------------------------------------------------- */
 
   var ARMAS = {
-    improvisada: { nome: "Arma improvisada", dano: 0, tipo: "impacto" },
-    estaca: { nome: "Estaca", dano: 0, tipo: "perfuracao", estaca: true },
-    impactoLeve: { nome: "Impacto leve (soco inglês)", dano: 1, tipo: "impacto" },
-    impactoPesado: { nome: "Impacto pesado (cassetete, taco, chave de roda)", dano: 2, tipo: "impacto" },
-    perfuracaoLeve: { nome: "Perfuração leve (virote de besta, canivete)", dano: 2, tipo: "perfuracao" },
-    disparoLeve: { nome: "Disparo leve (pistola .22)", dano: 2, tipo: "disparo", distancia: true },
-    brancaPesada: { nome: "Arma branca pesada (espada larga, machado de bombeiro)", dano: 3, tipo: "corte" },
-    disparoMedio: { nome: "Disparo médio (rifle .308, pistola 9 mm, escopeta no alcance)", dano: 3, tipo: "disparo", distancia: true },
-    disparoPesado: { nome: "Disparo pesado (escopeta 12 à curta, Magnum .357)", dano: 4, tipo: "disparo", distancia: true },
-    brancaEnorme: { nome: "Arma branca enorme (claymore, viga de aço)", dano: 4, tipo: "corte" },
-    soproDeDragao: { nome: "Munição sopro de dragão", dano: 0, tipo: "fogo", distancia: true, agravadoEmVampiros: true, incendeia: 1 },
-    raufoss: { nome: "Raufoss", dano: 5, tipo: "disparo", distancia: true, ignoraArmadura: true, agravadoEmVampiros: true },
-    hafla: { nome: "Hafla", dano: 3, tipo: "fogo", distancia: true, agravadoEmVampiros: true, incendeia: 3, dificuldadeMinima: 3 },
-    lancaChamas: { nome: "Lança-chamas", dano: 0, tipo: "fogo", distancia: true, agravadoEmVampiros: true, incendeia: 1 },
-    molotov: { nome: "Coquetel Molotov", dano: 0, tipo: "fogo", distancia: true, agravadoEmVampiros: true, incendeia: 2, dificuldadeMinima: 4 },
-    lancadorDeEstacas: { nome: "Lançador de estacas", dano: 0, tipo: "perfuracao", distancia: true, estaca: true },
+    improvisada: { pagina: 304, nome: "Arma improvisada", dano: 0, tipo: "impacto" },
+    estaca: { pagina: 304, nome: "Estaca", dano: 0, tipo: "perfuracao", estaca: true },
+    impactoLeve: { pagina: 304, nome: "Impacto leve (soco inglês)", dano: 1, tipo: "impacto" },
+    impactoPesado: { pagina: 304, nome: "Impacto pesado (cassetete, taco, chave de roda)", dano: 2, tipo: "impacto" },
+    perfuracaoLeve: { pagina: 304, nome: "Perfuração leve (virote de besta, canivete)", dano: 2, tipo: "perfuracao" },
+    disparoLeve: { pagina: 304, nome: "Disparo leve (pistola .22)", dano: 2, tipo: "disparo", distancia: true },
+    brancaPesada: { pagina: 304, nome: "Arma branca pesada (espada larga, machado de bombeiro)", dano: 3, tipo: "corte" },
+    disparoMedio: { pagina: 304, nome: "Disparo médio (rifle .308, pistola 9 mm, escopeta no alcance)", dano: 3, tipo: "disparo", distancia: true },
+    disparoPesado: { pagina: 304, nome: "Disparo pesado (escopeta 12 à curta, Magnum .357)", dano: 4, tipo: "disparo", distancia: true },
+    brancaEnorme: { pagina: 304, nome: "Arma branca enorme (claymore, viga de aço)", dano: 4, tipo: "corte" },
+    soproDeDragao: { pagina: 380, nome: "Munição sopro de dragão", dano: 0, tipo: "fogo", distancia: true, agravadoEmVampiros: true, incendeia: 1 },
+    raufoss: { pagina: 380, nome: "Raufoss", dano: 5, tipo: "disparo", distancia: true, ignoraArmadura: true, agravadoEmVampiros: true },
+    hafla: { pagina: 380, nome: "Hafla", dano: 3, tipo: "fogo", distancia: true, agravadoEmVampiros: true, incendeia: 3, dificuldadeMinima: 3 },
+    lancaChamas: { pagina: 380, nome: "Lança-chamas", dano: 0, tipo: "fogo", distancia: true, agravadoEmVampiros: true, incendeia: 1 },
+    molotov: { pagina: 380, nome: "Coquetel Molotov", dano: 0, tipo: "fogo", distancia: true, agravadoEmVampiros: true, incendeia: 2, dificuldadeMinima: 4 },
+    lancadorDeEstacas: { pagina: 381, nome: "Lançador de estacas", dano: 0, tipo: "perfuracao", distancia: true, estaca: true },
   };
   var ARMADURAS = {
-    reforcada: { nome: "Roupa reforçada / couro pesado", valor: 2, contraBalas: 0 },
-    balistico: { nome: "Tecido balístico", valor: 2 },
-    kevlar: { nome: "Colete Kevlar / jaqueta flak", valor: 4 },
-    swat: { nome: "Armadura tática da SWAT / militar", valor: 6, penalidade: { destreza: 1 } },
+    reforcada: { pagina: 304, nome: "Roupa reforçada / couro pesado", valor: 2, contraBalas: 0 },
+    balistico: { pagina: 304, nome: "Tecido balístico", valor: 2 },
+    kevlar: { pagina: 304, nome: "Colete Kevlar / jaqueta flak", valor: 4 },
+    swat: { pagina: 304, nome: "Armadura tática da SWAT / militar", valor: 6, penalidade: { destreza: 1 } },
   };
   var COBERTURA = [
     { chave: "nenhuma", nome: "Nenhuma cobertura", dados: -2 },
@@ -1070,6 +1070,71 @@ function acaoVampiroOperar(corpo, usuario) {
     veneno: { nome: "Veneno", penalidades: { todas: 1 }, danoSuperficial: [1, 3] },
   };
 
+  /* Itens (p. 378–381): o que o capítulo traz além das armas e
+     armaduras da tabela de Conflito (p. 304, em ARMAS e ARMADURAS) e das
+     armas incendiárias e do lançador de estacas (já em ARMAS, com
+     `pagina`). Consulta: quem decide o efeito do que o livro deixa a
+     critério do Narrador é o Narrador — nada aqui entra numa conta. */
+  var EQUIPAMENTOS = {
+    sacoAntissol: { nome: "Saco Antissol", grupo: "equipamento", pagina: 378,
+      texto: "Saco de dormir de material grosso e resistente à luz do sol, com o zíper por dentro, que cobre o corpo inteiro. Dormir só com ele, ao relento, é tido em alguns círculos como teste de coragem; comum entre Gangrel em trânsito que ainda não dominam Fusão com a Terra." },
+    caoscopio: { nome: "Caoscópio", grupo: "equipamento", pagina: 378,
+      texto: "Leitor de perturbações eletromagnéticas (inclusive as do Sangue vampírico), instalado só no local ou em veículos grandes. Detectar com segurança um vampiro: Inteligência + Percepção, Dificuldade 6. Já tendo detectado com segurança um vampiro da mesma geração ou do mesmo clã, a Dificuldade cai 1 por quesito já visto. Rubor de Vida não afeta o caoscópio.",
+      parada: "Inteligência + Percepção", dificuldade: "6 (−1 por geração ou clã já detectados)" },
+    mirasx: { nome: "MirasX", grupo: "equipamento", pagina: 378, paginas: "378–379",
+      texto: "Detector de batimentos, respiração e calor corporal, usado em segurança de aeroportos e em versões portáteis disfarçadas de câmera. Rubor de Vida engana as MirasX básicas. As de segunda geração distinguem o fluxo natural do sangue da imitação: um vampiro que não seja Crepuscular precisa de Rubor de Vida e de Autocontrole + Vigor contra Dificuldade 5 + a Determinação do operador para passar. Sangues-ralos ainda não são detectáveis.",
+      parada: "Autocontrole + Vigor (2ª geração)", dificuldade: "5 + Determinação do operador" },
+    armasCamufladas: { nome: "Armas camufladas", grupo: "arma", pagina: 379,
+      texto: "Bengala-espada, caneta-tinteiro calibre .22, relógio de bolso com lâmina giratória. Fabricar: Inteligência + uma Especialização adequada ou Ofícios. Descobrir: Raciocínio + Percepção contra Dificuldade 1 + a Furtividade do portador ou os Ofícios do fabricante (o que for maior). Mal equilibradas, tiram um dado da parada de ataque, a menos que o fabricante tenha obtido uma vitória crítica na fabricação.",
+      parada: "Fabricar: Inteligência + Especialização/Ofícios · Descobrir: Raciocínio + Percepção", dificuldade: "Descobrir: 1 + Furtividade ou Ofícios (o maior)" },
+    incendiariasCaseiras: { nome: "Armas incendiárias caseiras", grupo: "arma", pagina: 379,
+      texto: "Caseiras ou do mercado negro, com combustíveis e produtos inferiores: causam um ponto a menos de dano e, numa falha total na rolagem de ataque, podem incendiar as mãos e o rosto do usuário (3 pontos de dano Agravado). Projéteis traçantes não têm material incendiário suficiente para causar dano Agravado. As armas incendiárias de fábrica (sopro de dragão, Raufoss, hafla, lança-chamas, coquetel Molotov) estão entre as armas." },
+    lancadorDeRedes: { nome: "Lançador de redes", grupo: "arma", pagina: 380,
+      texto: "As redes enredam e grudam. O dano é subtraído da Destreza do alvo, não da Vitalidade, e é reduzido à metade como dano Superficial. Com Destreza 0, o alvo está enredado e não pode atacar. Livrar-se exige uma ação: Força + Atletismo contra uma parada igual ao total de sucessos de todos os ataques com rede anteriores. O adesivo das redes da Inquisição é bastante inflamável.",
+      parada: "Livrar-se: Força + Atletismo", dificuldade: "Parada oposta: sucessos dos ataques com rede" },
+    urnaAncestral: { nome: "Urna Ancestral", grupo: "sobrenatural", pagina: 381,
+      texto: "Lenda Ventrue: quem tiver as cinzas de três ancestrais diretos na mesma urna ganha grande poder. O vampiro nunca a segura em pessoa; um carniçal de confiança a guarda, e sempre que uma mão digna toca a urna, o vampiro mestre desse carniçal se ergue do Torpor, seja qual for o seu estado." },
+    pedrasEntalhadas: { nome: "Pedras Entalhadas", grupo: "sobrenatural", pagina: 381,
+      texto: "Três pedras comuns com os nomes da Segunda Geração escritos em Enoque primitivo; postas sobre o local de descanso de um vampiro, a alma dele passaria para o corpo de quem as posicionou. O destino da alma do novo hospedeiro é desconhecido." },
+    terraDaSepultura: { nome: "Terra da Sepultura", grupo: "sobrenatural", pagina: 381,
+      texto: "Terra de uma sepultura cujo morto retornou à vida como vampiro tem propriedades sagradas para os Membros: quem dormir com alguns punhados dela desperta na noite seguinte com a mesma Fome com que foi dormir. O efeito dura cerca de uma semana, até a terra ficar inerte." },
+    dinheiroVelho: { nome: "Dinheiro Velho", grupo: "sobrenatural", pagina: 381,
+      texto: "Moedas ou notas antigas e fora de circulação, abençoadas por alguém santo, queimam qualquer não vivo que as toque (dano Agravado) — Membros e fantasmas. Amaldiçoadas por um demônio ou feiticeiro, causam o mesmo dano Agravado, mas aos vivos." },
+    sanguePreservado: { nome: "Sangue Preservado", grupo: "sobrenatural", pagina: 381,
+      texto: "Vitae preservada por rituais de Feitiçaria de Sangue, normalmente misturada a outro líquido numa bebida parecida com vinho. Cara e pouco saciante, vale pelo gosto e pela possibilidade de beber socialmente." },
+  };
+  var GRUPOS_DE_EQUIPAMENTO = {
+    equipamento: "Equipamento (p. 378–379)",
+    arma: "Armas convencionais (p. 379–381)",
+    sobrenatural: "Equipamento sobrenatural (p. 381) — as mecânicas exatas ficam a cargo do Narrador",
+  };
+
+  /* Apêndices (p. 415–423): referência de consulta para a mesa, resumida.
+     Nada disso é automatizado (não há gerenciador de Projetos). */
+  var REFERENCIAS_DA_MESA = {
+    projetos: { nome: "Projetos", apendice: "Apêndice II", pagina: 415, paginas: "415–418", secoes: [
+      { titulo: "Lançando um projeto", texto: "O jogador descreve o objetivo em termos de história e, com o Narrador, a representação mecânica: pontos em um Antecedente ou outra Característica (ou mudar a Ressonância de uma bolsa: 1 ponto altera e torna Intensa; 2 pontos alteram e acrescentam uma Discrasia). Esse número de pontos é o Escopo do projeto." },
+      { titulo: "Incremento", texto: "A unidade de tempo do projeto (dias, semanas, meses, anos…), mais ou menos a duração provável dividida por dez. Projeto de menos de dez dias é um teste estendido (p. 293)." },
+      { titulo: "Rolagem de Lançamento", texto: "Parada definida pelo Narrador, em geral Habilidade + Antecedente, contra Dificuldade igual ao Escopo + 2; sem Força de Vontade nem Surto de Sangue (Disciplinas a critério do Narrador). Crítico: não compromete pontos. Vitória: compromete Escopo + 1 − margem (mínimo 1) — pontos “retidos” até o projeto terminar. Falha: pode recomeçar com +1 na Dificuldade. Falha total: um inimigo novo ou motivado. Vários jogadores podem cooperar (Antecedente de Coterie ou Trabalho em Equipe, p. 122), e cada um compromete pontos." },
+      { titulo: "Rolagem de Objetivo", texto: "O Dado do Projeto começa em 10 e cai 1 a cada incremento. A qualquer momento, o jogador rola uma parada definida pelo Narrador (pode usar os pontos comprometidos) num conflito contra uma parada igual ao valor atual do Dado; sem Força de Vontade, Surto de Sangue nem (em geral) Disciplinas, e sem críticos para quem rola o Objetivo (os 10 da oposição contam). Vencendo, subtrai do Dado os sucessos extras; abaixo de 1, o projeto dá certo. Perdendo, sofre dano em Antecedentes, começando pelos comprometidos; zerando os comprometidos, o projeto falha (a menos que a Rolagem de Lançamento tenha sido crítica)." },
+      { titulo: "Encerrar um projeto", texto: "O iniciador pode encerrá-lo quando quiser, embora os inimigos ganhos continuem. O Narrador pode cobrar Experiência pelos pontos ganhos — o sistema dá a justificativa narrativa." },
+      { titulo: "A Longue Durée", texto: "Projetos de décadas ou séculos precisam ter sido lançados há décadas ou séculos: um capítulo de lançamento em Memoriam (p. 311). Os pontos de Objetivo conquistados na Memoriam entram na parada e reduzem o Dado no presente." },
+      { titulo: "Projetos da oposição", texto: "Descobrir um projeto inimigo pode exigir ações específicas; o Dado de um projeto inimigo cai pelo menos uma vez por história. A coterie pode afetá-lo dedicando um capítulo a ele (interferências aumentam ou diminuem o Dado, a critério do Narrador, e costumam trazer represálias) ou usá-lo: teste estendido difícil (Dificuldade 5) com número-alvo 15 menos o Dado do Projeto. Saquear transfere metade do Escopo (arredondado para cima); sequestrar exige uma Rolagem de Objetivo imediata, ganhando o benefício central ou perdendo pontos de Antecedente." },
+    ] },
+    jogoPonderado: { nome: "Orientação para o Jogo Ponderado", apendice: "Apêndice III", pagina: 419, paginas: "419–423", secoes: [
+      { titulo: "A identidade de personagens e jogadores", texto: "Interpretar alguém diferente pede um retrato complexo, matizado e respeitoso; respeite as identidades dos jogadores (que não se confundem com as dos personagens) e, na dúvida, peça conselho a alguém do grupo retratado." },
+      { titulo: "Fascismo em jogo", texto: "O jogo é declaradamente antifascista. A cultura dos Membros é monstruosa e o horror político vem daí: jogue as diferenças entre facções e indivíduos, deixe os personagens se oporem ao sistema e trate o fascista como vilão a ser redimido ou destruído — fora do jogo, ninguém precisa tolerar esse discurso." },
+      { titulo: "Violência sexual nos jogos", texto: "A alimentação pode lembrar agressão; combine com a mesa. Os princípios da crônica de exemplo (p. 172–173) não permitem abuso de humanos; Máculas são ferramentas (sugira-as quando um personagem quebra um princípio); a Humanidade abre espaço para reparação (Remorso, p. 239); e as pessoas importam mais do que o jogo." },
+      { titulo: "Linhas e Véus", texto: "Antes do jogo, duas listas: Linhas (o que não aparece de jeito nenhum) e Véus (o que acontece fora de cena, com um fade). Editáveis a qualquer momento, com o consentimento da mesa; servem para restringir temas, não para apagar antagonistas." },
+      { titulo: "Fade (desvanecer)", texto: "Cortar a cena antes do que não precisa ser narrado; qualquer jogador pode pedir um fade quando estiver desconfortável (ver Tipos de Cenas, p. 290–291)." },
+      { titulo: "O sistema Refletores", texto: "Três círculos na mesa: verde (pode intensificar), amarelo (mantenha como está), vermelho (diminua ou pare). O Narrador também pode tocar uma cor para perguntar à mesa." },
+      { titulo: "A Carta X", texto: "Uma carta com um X no centro da mesa: tocá-la interrompe o que estiver incomodando, sem precisar explicar; o jogo segue quando todos estiverem bem." },
+      { titulo: "A verificação de bem-estar", texto: "Sinal de OK com a mão; a pessoa responde com joia (continue), polegar para baixo (pare) ou mão balançando (incerto). Qualquer coisa que não seja joia pausa o jogo." },
+      { titulo: "A porta está sempre aberta", texto: "Qualquer jogador pode sair da sessão depois de avisar o Narrador — inclusive o Narrador, que também tem o direito de parar." },
+      { titulo: "Descompressão", texto: "Depois da sessão, um tempo fora dos personagens para conversar sobre o jogo: o ápice da sessão, a interação favorita, o que melhorar. Opcional, sem duração fixa; mais longa depois de sessões intensas." },
+    ] },
+  };
+
   global.RAMAVampiroCatalogo = {
     paginaDoPdf: paginaDoPdf,
     ATRIBUTOS: ATRIBUTOS, CATEGORIAS: CATEGORIAS, HABILIDADES: HABILIDADES,
@@ -1083,6 +1148,7 @@ function acaoVampiroOperar(corpo, usuario) {
     DOMINIO: DOMINIO, dificuldadeDeCacaDoChasse: dificuldadeDeCacaDoChasse, COTERIES: COTERIES,
     ARMAS: ARMAS, ARMADURAS: ARMADURAS, COBERTURA: COBERTURA, AUDIENCIA_SOCIAL: AUDIENCIA_SOCIAL, FERIMENTOS: FERIMENTOS, ROLAGEM_UNICA: ROLAGEM_UNICA,
     FICHAS_DE_CONHECIMENTO: FICHAS_DE_CONHECIMENTO,
+    EQUIPAMENTOS: EQUIPAMENTOS, GRUPOS_DE_EQUIPAMENTO: GRUPOS_DE_EQUIPAMENTO, REFERENCIAS_DA_MESA: REFERENCIAS_DA_MESA,
     ACOES_PADRAO: ACOES_PADRAO, ATITUDES_SOCIAIS: ATITUDES_SOCIAIS, FAVORES: FAVORES, FE_VERDADEIRA: FE_VERDADEIRA, DROGAS: DROGAS,
     atributo: function (k) { return ATRIBUTOS.filter(function (a) { return a.chave === k; })[0] || null; },
     habilidade: function (k) { return HABILIDADES.filter(function (h) { return h.chave === k; })[0] || null; },

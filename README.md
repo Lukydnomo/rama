@@ -421,6 +421,16 @@ O servidor do pedido está em `testes/acesso-backend.js` (dentro de
 deno run --allow-read testes/executar-criaturas-pagina.js
 ```
 
+**Catálogo** — 39 verificações: as categorias de cada sistema (só as com
+conteúdo), entradas com nome, busca, referência e consulta que abre, os filtros
+de Ordem, os itens novos de Vampiro V5 (p. 378–381) sem duplicar armas,
+Projetos e Jogo Ponderado, e que a página é só consulta. Os links antigos de
+`criaturas/` estão em `executar-criaturas-pagina.js`.
+
+```bash
+deno run --allow-read testes/executar-catalogo.js
+```
+
 **Arquivos Secretos 7** — 152 verificações: fonte e suplemento, origens,
 Resguardar Espírito, Vampirismo, os cinco itens, as trilhas Monstruoso (marcos,
 elemento, procedimento do dia, sacrifícios, braços, Tatuagem, reação, 4º
@@ -839,6 +849,14 @@ próprio `<script src>`, então funciona debaixo de subpasta sem ajuste.
 segredo nenhum — ele os lê das Script Properties. Publicá-lo não expõe nada.
 
 ### Atualizar o backend
+
+**v6.12.0 — SUMÁRIO:** o Catálogo no lugar de Criaturas. **Troque**
+`Vampiro.gs` (a cópia de `js/vampiro/catalogo.js` ganhou os itens do capítulo
+Itens e as referências da mesa; nenhuma regra do servidor muda) e **crie uma
+versão nova da implantação**; sem `setupRama()`. Publique a página nova `catalogo/` (com `js/paginas/catalogo.js`), `criaturas/index.html` e
+`js/paginas/criaturas.js` (agora só encaminham para o Catálogo), `js/app.js`,
+`js/paginas/homebrew.js`, `js/vampiro/catalogo.js` e `css/componentes.css`. Sem
+mudança de schema nem de formato de registro.
 
 **v6.11.0 — SINETE:** só o site (símbolos dos rituais). Publique a pasta nova
 `assets/rituais/` inteira, `js/ordem/rituais.js`, `js/ui.js`, `js/ficha.js`,
@@ -1741,7 +1759,7 @@ Três números diferentes, que não se misturam:
 
 | | Onde | O que é |
 |---|---|---|
-| versão do aplicativo | `js/versao.js` | o que a pessoa vê: v6.11.0 |
+| versão do aplicativo | `js/versao.js` | o que a pessoa vê: v6.12.0 |
 | `schemaVersion` | `js/ficha.js` | o formato da FICHA |
 | `versaoFormato` | `js/config.js` | o formato dos arquivos de importação |
 
