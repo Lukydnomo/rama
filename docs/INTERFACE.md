@@ -166,6 +166,7 @@ das folhas. Cada linha diz onde o Modern20 a trata.
 | Campanhas | lista, capa (com e sem imagem), mesa (participantes), personagens da mesa (cartões, recursos, estatísticas, condições, ocultação), rolagens (histórico, rolagem livre), documentos, notas, configurações | campanha.css |
 | Combate | turno e rodada, pendências, linhas de iniciativa (vez, selecionada, pendente), recursos, condições, painel da ficha (iframe) e da criatura, gaveta no celular, Hexatombe, Hacking, Perigos (quando ligados) | campanha.css, componentes.css |
 | Homebrew e catálogos | biblioteca, ficha de criatura; o catálogo oficial mora na página Criaturas (v6.6) | componentes.css |
+| Ficha de criatura por sistema (v6.7) | Ordem (criatura-painel.js): destaques, colunas números × ações, forma vista na consulta; Oblívio, Vampiro (compacto e completo) e Goblins (js/fichas-nativas.js); Universal inalterada | componentes.css |
 | Criaturas (v6.6) | seletor de sistema, Catálogo (a biblioteca embutida em Ordem; catálogos nativos em Oblívio, Vampiro e Goblins) e Geradores (js/geradores-criaturas.js) | componentes.css |
 | Portão: pedido de acesso (v6.6) | link abaixo do login, janela com campos e prévia (lado a lado no PC, embaixo no celular) | componentes.css |
 | Perfil | identidade, recompensas e resgate, exibição (tema, estilo, tamanho, efeito), importação, sessão | componentes.css |

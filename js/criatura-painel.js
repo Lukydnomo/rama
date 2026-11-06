@@ -335,6 +335,12 @@
       marcaMachucado.hidden = !C().estaMachucada(atual);
     }
 
+    /* Uma caixa de destaque: rótulo pequeno, valor grande. Sem valor, nada. */
+    function destaque(rotulo, valor) {
+      if (valor === "" || valor === null || valor === undefined || valor === "—") return null;
+      return el("div.ficha-destaque", {}, [el("span.ficha-destaque__rotulo", { texto: rotulo }), el("span.ficha-destaque__valor", { texto: valor })]);
+    }
+
     function cabecalho(v) {
       var od = v.ordem;
       var linha = [];
@@ -349,13 +355,24 @@
         : (origem.copiadoDe ? "Homebrew · cópia de " + (ref || origem.copiadoDe) : "Homebrew");
 
       var imagens = o.semImagem ? null : C().imagensDoCatalogo(v);
+      /* v6.7: o que a mesa olha primeiro, como no topo do bloco do livro
+         — VD, PV, Defesa, tipo e tamanho; os elementos logo abaixo. */
+      var vidaRef = U.porId(v.status, "vida");
+      var destaques = el("div.ficha-destaques", {}, [
+        typeof od.vd === "number" ? destaque("VD", String(od.vd)) : destaque("Nível", od.aliada ? "" : (od.nivel || "")),
+        destaque("PV", vidaRef && vidaRef.maximo ? String(vidaRef.maximo) : ""),
+        destaque("Defesa", od.defesa === null || od.defesa === undefined || od.aliada ? "" : C().classificar(od.defesa).texto),
+        destaque("Tipo", od.tipo || ""),
+        destaque("Tamanho", od.tamanho || ""),
+      ].filter(Boolean));
       return el("div.pilha--curta.criatura-cabeca", { class: "pilha" }, [
         el("div.criatura-painel__topo", {}, [
           imagens ? retratoComCorpo(imagens, nome) : null,
           el("p.t-secao", { texto: nome + (v.formaAtiva ? " · " + v.formaAtiva.nome : "") }),
           el("span.r-etiqueta", { texto: o.rotulo || (od.aliada ? "Aliado" : "Criatura") }),
         ]),
-        el("p.t-mini.criatura-linha", { texto: linha.filter(Boolean).join(" · ") }),
+        destaques.childNodes.length ? destaques : null,
+        el("p.t-mini.criatura-linha", { texto: linha.filter(function (x) { return x && x !== od.tipo && x !== od.tamanho && !/^VD /.test(x); }).join(" · ") }),
         el("div.faixa.criatura-elementos", {}, od.elementos.map(function (e) {
           return el("span.r-etiqueta.bib-elemento.bib-elemento--" + e, { texto: NOMES_ELEMENTO[e] || e });
         }).concat(od.elementos.length ? [] : [el("span.r-etiqueta", { texto: v.natureza === "paranormal" ? "Sem elemento" : "Realidade" })])),
@@ -426,7 +443,7 @@
         partes.push(el("div.r-campo", {}, [el("label.t-mini", { texto: "Condições e anotações desta ocorrência" }), nota]));
       }
 
-      return UI.painel(instancia ? "Esta ocorrência" : "Recursos", el("div.pilha--curta", { class: "pilha" }, partes));
+      return UI.painel(instancia ? "Esta ocorrência" : (od.formas && od.formas.length ? "Recursos e formas" : "Recursos"), el("div.pilha--curta", { class: "pilha" }, partes));
     }
 
     /* Inquérito Paranormal (AS4 p. 76–78): ajudas que a investigação pode
@@ -485,6 +502,16 @@
             },
           });
         })));
+      } else if (o.consulta) {
+        /* v6.7: na consulta, ver cada forma com os números dela — troca
+           só nesta tela, nada é gravado. */
+        partes.push(el("div.faixa", { role: "group", "aria-label": "Ver a forma" }, opcoes.map(function (x) {
+          return el("button.filtro", {
+            type: "button", texto: rotulo(x), "aria-pressed": String(x.id === ativa),
+            onclick: function () { if (x.id === ativa) return; formaDeConsulta = x.id; pintar(); },
+          });
+        })));
+        partes.push(el("p.t-mini", { texto: "Só consulta: a ficha mostra os números da forma escolhida, sem mudar o catálogo." }));
       } else {
         partes.push(el("p.t-mini", { texto: "Forma: " + rotulo(opcoes.filter(function (x) { return x.id === ativa; })[0] || opcoes[0]) }));
       }
@@ -658,13 +685,20 @@
     function blocoDeFicha(v) {
       var od = v.ordem;
       var pares = [];
+      var grupos = { presenca: [], sentidos: [], defesas: [] };
+      var alvo = "sentidos";
 
       function par(rotulo, valor, chave) {
-        pares.push(el("dt", { texto: rotulo }));
-        pares.push(el("dd", {}, [valor, chave ? marcaAlterado(v, chave) : null]));
+        grupos[alvo].push(el("dt", { texto: rotulo }));
+        grupos[alvo].push(el("dd", {}, [valor, chave ? marcaAlterado(v, chave) : null]));
+      }
+      /* Lista vazia some — a não ser que uma fase a tenha mudado. */
+      function parSeTiver(rotulo, lista, texto, chave) {
+        if ((lista && lista.length) || (chave && v.alterados && v.alterados[chave])) par(rotulo, el("span", { texto: texto }), chave);
       }
 
       if (od.presenca) {
+        alvo = "presenca";
         var p = od.presenca;
         var danoOk = D().termos(p.dano).ok;
         par("Presença Perturbadora", el("span.faixa", {}, [
@@ -679,6 +713,7 @@
         ]));
       }
 
+      alvo = "sentidos";
       ["percepcao", "iniciativa"].forEach(function (k) {
         par(NOMES_DEFESA[k], el("span.faixa", {}, [
           botaoTeste(NOMES_DEFESA[k], od[k], "", k === "iniciativa" && o.aoIniciativa ? function (r) {
@@ -689,12 +724,13 @@
       });
       if (od.sentidos.length) par("Sentidos", el("span", { texto: od.sentidos.join(", ") }));
 
+      alvo = "defesas";
       par("Defesa", el("span.t-forte", { texto: C().classificar(od.defesa).texto }), "defesa");
       ["fortitude", "reflexos", "vontade"].forEach(function (k) { par(NOMES_DEFESA[k], botaoTeste(NOMES_DEFESA[k], od[k]), k); });
-      par("Resistências", el("span", { texto: textoResistencias(od.resistencias) }), "resistencias");
-      par("Imunidades", el("span", { texto: listaTexto(od.imunidades) }), "imunidades");
-      par("Vulnerabilidades", el("span", { texto: listaTexto(od.vulnerabilidades) }), "vulnerabilidades");
-      par("Deslocamento", el("span", { texto: textoDeslocamento(od.deslocamento) }), "deslocamento");
+      parSeTiver("Resistências", od.resistencias, textoResistencias(od.resistencias), "resistencias");
+      parSeTiver("Imunidades", od.imunidades, listaTexto(od.imunidades), "imunidades");
+      parSeTiver("Vulnerabilidades", od.vulnerabilidades, listaTexto(od.vulnerabilidades), "vulnerabilidades");
+      parSeTiver("Deslocamento", od.deslocamento, textoDeslocamento(od.deslocamento), "deslocamento");
 
       var atributos = el("div.atributos", {}, v.atributos.map(function (a) {
         var rolavel = rolaveis && !!a.dado;
@@ -721,8 +757,11 @@
         }, [el("span.pericia__nome", { texto: p.nome }), el("span.pericia__bonus", { texto: p.expressao || "—" })]);
       })) : null;
 
+      void pares;
       return [
-        UI.painel("Ficha", el("dl.r-dados.criatura-dados", {}, pares)),
+        grupos.presenca.length ? UI.painel("Presença perturbadora", el("dl.r-dados.criatura-dados", {}, grupos.presenca), { classe: "criatura-presenca" }) : null,
+        UI.painel("Sentidos", el("dl.r-dados.criatura-dados", {}, grupos.sentidos)),
+        UI.painel("Defesa e resistências", el("dl.r-dados.criatura-dados", {}, grupos.defesas)),
         UI.painel("Atributos", atributos),
         pericias ? UI.painel("Perícias", pericias) : null,
       ];
@@ -845,8 +884,19 @@
       return UI.painel("Enigma de Medo", el("div.pilha--curta", { class: "pilha" }, partes));
     }
 
+    /* A forma vista na consulta (null: a do registro). Nunca gravada. */
+    var formaDeConsulta = null;
+
     function pintar() {
-      var v = C().vistaEfetiva(atual);
+      var base = atual;
+      if (o.consulta && formaDeConsulta !== null) {
+        base = U.copiar(atual);
+        C().definirNaInstancia(base, "forma", formaDeConsulta);
+        /* Consulta é a ficha publicada: PV cheios da forma, sem a regra de
+           troca (que vale para a ocorrência no combate). */
+        (base.status || []).forEach(function (s) { if (s.maximo > 0) s.atual = s.maximo; });
+      }
+      var v = C().vistaEfetiva(base);
       var rolagem = raiz.parentNode ? raiz.parentNode.scrollTop : 0;
       controlesDeStatus = {};
 
@@ -868,12 +918,21 @@
 
       var notasDaForma = v.formaAtiva ? v.formaAtiva.notas : [];
       var notas = v.ordem.notas.concat(notasDaForma);
+      /* v6.7: os números (sentidos, defesa, atributos, perícias) numa
+         coluna e o que se faz (habilidades e ações) na outra — lado a lado
+         quando há largura, empilhados no celular e no painel do combate. */
+      var colunaAcoes = [
+        v.habilidades.length ? UI.painel("Habilidades", el("div.pilha--curta", { class: "pilha" }, v.habilidades.map(function (h) { return efeito(h, v, false); }))) : null,
+        acoes.length ? UI.painel("Ações", el("div.pilha--curta", { class: "pilha" }, acoes.map(function (a) { return efeito(a, v, true); }))) : null,
+      ].filter(Boolean);
       U.trocar(raiz, [
         cabecalho(v),
         blocoDaOcorrencia(v),
-      ].concat(blocoDeFicha(v)).concat([
-        v.habilidades.length ? UI.painel("Habilidades", el("div.pilha--curta", { class: "pilha" }, v.habilidades.map(function (h) { return efeito(h, v, false); }))) : null,
-        acoes.length ? UI.painel("Ações", el("div.pilha--curta", { class: "pilha" }, acoes.map(function (a) { return efeito(a, v, true); }))) : null,
+        el("div.ficha-colunas", {}, [
+          el("div.ficha-colunas__coluna", {}, blocoDeFicha(v).filter(Boolean)),
+          colunaAcoes.length ? el("div.ficha-colunas__coluna", {}, colunaAcoes) : null,
+        ]),
+      ].concat([
         blocoDeEnigma(v),
         v.descricao ? UI.painel("Descrição", el("p", { texto: v.descricao, estilo: { whiteSpace: "pre-wrap" } })) : null,
         notas.length ? UI.painel("Notas do catálogo", el("ul.bib-lista-textos", {}, notas.map(function (n) { return el("li.t-mini", { texto: n }); }))) : null,

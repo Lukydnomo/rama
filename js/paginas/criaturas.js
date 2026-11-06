@@ -252,26 +252,12 @@
     ]));
   }
 
-  /* ---------------- fichas nativas (só leitura) ---------------- */
+  /* ---------------- fichas nativas (só leitura) ----------------
+     O arranjo de cada sistema mora em js/fichas-nativas.js. */
 
   function humanizar(k) {
     return String(k || "").replace(/([a-z])([A-Z])/g, "$1 $2").replace(/^./, function (c) { return c.toUpperCase(); });
   }
-  function nomeEm(listaOuMapa, chave) {
-    if (!listaOuMapa) return humanizar(chave);
-    if (Array.isArray(listaOuMapa)) { var x = listaOuMapa.filter(function (i) { return i.chave === chave; })[0]; return x ? x.nome : humanizar(chave); }
-    var y = listaOuMapa[chave]; return y && y.nome ? y.nome : humanizar(chave);
-  }
-  function numeros(pares) {
-    return el("div.editar-grade", {}, pares.filter(function (p) { return p[1] !== undefined && p[1] !== null && p[1] !== ""; }).map(function (p) {
-      return el("div.painel-numero", {}, [el("span.t-rotulo", { texto: p[0] }), el("span.t-forte", { texto: String(p[1]) })]);
-    }));
-  }
-  function mapaEmTexto(mapa, nomes) {
-    return Object.keys(mapa || {}).map(function (k) { return nomeEm(nomes, k) + " " + mapa[k]; }).join(", ");
-  }
-  function ficha(partes) { return el("div.pilha--curta.criaturas-ficha", { class: "pilha" }, partes.filter(Boolean)); }
-  function texto(rotulo, t) { return t ? el("p.t-mini", {}, [el("strong", { texto: rotulo + ": " }), document.createTextNode(t)]) : null; }
 
   var NATIVOS = {
     oblivio: {
@@ -281,23 +267,12 @@
       fontes: function () { return [{ valor: "LB", rotulo: "Livro básico" }]; },
       filtro: { rotulo: "Grau", todos: "Todos os graus", opcoes: function () { return [1, 2, 3, 4, 5, 6].map(function (g) { return { valor: String(g), rotulo: "Grau " + g }; }); } },
       entradas: function () {
-        var OC = global.RAMAOblivioCatalogo || {};
         return global.RAMAOblivioAmeacas.AMEACAS.map(function (a) {
           return {
             id: a.chave, nome: a.nome, fonte: "LB", filtro: String(a.grau), referencia: "Livro básico, p. " + a.pag,
             chave: U.chaveDeBusca(a.nome), marcas: ["Grau " + a.grau],
             linha: ["Dano " + a.dano, "Proteção " + a.protecao, "Estresse " + a.limiteEstresse, a.tamanho].filter(Boolean).join(" · "),
-            detalhes: function () {
-              return ficha([
-                numeros((OC.ATRIBUTOS || []).map(function (at) { return [at.nome, a.atributos[at.chave]]; })),
-                numeros([["Dano", a.dano], ["Proteção", a.protecao], ["Velocidade", a.velocidade], ["Limite de Estresse", a.limiteEstresse], ["Regiões", a.regioes]]),
-                texto("Tamanho", a.tamanho),
-                texto("Especializações", (a.especializacoes || []).map(function (k) { return nomeEm(OC.CONHECIMENTOS, k); }).join(", ")),
-                (a.habilidades || []).length ? el("ul.bib-lista-textos", {}, a.habilidades.map(function (h) {
-                  return el("li.t-mini", {}, [el("strong", { texto: h.nome + (h.acao ? " (" + humanizar(h.acao) + ")" : "") + ": " }), document.createTextNode(h.resumo || "")]);
-                })) : null,
-              ]);
-            },
+            detalhes: function () { return global.RAMAFichasNativas.oblivio(a); },
           };
         });
       },
@@ -311,26 +286,13 @@
         return [["mortal", "Mortais"], ["carnical", "Carniçais"], ["animal", "Animais"], ["vampiro", "Vampiros"], ["criatura", "Criaturas de horror"]].map(function (n) { return { valor: n[0], rotulo: n[1] }; });
       } },
       entradas: function () {
-        var VC = global.RAMAVampiroCatalogo || {};
-        var VD = global.RAMAVampiroDisciplinas || {};
         var NAT = { mortal: "Mortal", carnical: "Carniçal", animal: "Animal", vampiro: "Vampiro", criatura: "Criatura de horror" };
         return global.RAMAVampiroAntagonistas.LISTA.map(function (a) {
           return {
             id: a.chave, nome: a.nome, fonte: "LB", filtro: a.natureza, referencia: "Livro básico, p. " + a.pagina,
             chave: U.chaveDeBusca(a.nome + " " + (NAT[a.natureza] || "")), marcas: [NAT[a.natureza] || a.natureza],
             linha: ["Vitalidade " + a.vitalidade, "Força de Vontade " + a.forcaDeVontade].join(" · "),
-            detalhes: function () {
-              return ficha([
-                a.paradas ? numeros([["Físico", a.paradas.fisico], ["Social", a.paradas.social], ["Mental", a.paradas.mental]]) : null,
-                a.atributos ? numeros(Object.keys(a.atributos).map(function (k) { return [nomeEm(VC.ATRIBUTOS, k), a.atributos[k]]; })) : null,
-                numeros([["Vitalidade", a.vitalidade], ["Força de Vontade", a.forcaDeVontade], ["Humanidade", a.humanidade], ["Potência do Sangue", a.potencia], ["Dano extra", a.danoExtra]]),
-                texto("Paradas excepcionais", mapaEmTexto(a.excepcionais, VC.HABILIDADES)),
-                texto("Habilidades", mapaEmTexto(a.habilidades, VC.HABILIDADES)),
-                typeof a.disciplinas === "object" ? texto("Disciplinas", mapaEmTexto(a.disciplinas, VD.DISCIPLINAS)) : texto("Disciplinas", a.disciplinas ? String(a.disciplinas) : ""),
-                a.semFome ? texto("Fome", "Não tem: o que seria Checagem vira 1 de dano Superficial (p. 376).") : null,
-                texto("Especial", a.especial),
-              ]);
-            },
+            detalhes: function () { return global.RAMAFichasNativas.vampiro(a); },
           };
         });
       },
@@ -346,7 +308,6 @@
       } },
       entradas: function () {
         var K = global.RAMAGoblinsCatalogo;
-        function num(v) { return v === null || v === undefined ? "—" : v; }
         return Object.keys(K.INIMIGOS).map(function (k) {
           var d = K.INIMIGOS[k];
           var ad = d.adaptacao && K.ADAPTACOES[d.adaptacao];
@@ -354,19 +315,8 @@
             id: k, nome: d.nome, fonte: "LB", filtro: d.adaptacao || "-", referencia: "Livro básico, p. " + d.pagina,
             chave: U.chaveDeBusca(d.nome + " " + (d.especie || "") + " " + (ad ? ad.nome : "")),
             marcas: [ad ? ad.nome : null, d.especie ? humanizar(d.especie) : null].filter(Boolean),
-            linha: ["Combate " + num(d.combate) + (d.bonusCombate ? " (+" + d.bonusCombate + ")" : ""), "Vitalidade " + num(d.vitalidade)].join(" · "),
-            detalhes: function () {
-              return ficha([
-                numeros([["Combate", num(d.combate)], ["Bônus de combate", d.bonusCombate || 0], ["Noção", num(d.nocao)], ["Habilidade", num(d.habilidade)], ["Vitalidade", d.semVitalidade ? "—" : num(d.vitalidade)], ["Proteção", d.protecao || 0]]),
-                texto("Equipamento", d.equip),
-                texto("Terror", d.terror),
-                (d.habilidades || []).length ? el("ul.bib-lista-textos", {}, d.habilidades.map(function (h) {
-                  return el("li.t-mini", {}, [el("strong", { texto: h.nome + ": " }), document.createTextNode(h.texto || "")]);
-                })) : null,
-                texto("Nota", d.nota),
-                d.indescritivel ? texto("Indescritível", "Sem números: a mesa decide.") : null,
-              ]);
-            },
+            linha: global.RAMAFichasNativas.linhaGoblin(d),
+            detalhes: function () { return global.RAMAFichasNativas.goblins(d); },
           };
         });
       },

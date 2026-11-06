@@ -118,6 +118,22 @@
 
   var CHANGELOG = [
     {
+      versao: "6.7.0",
+      codinome: "PRANCHETA",
+      data: "31/10/2026",
+      mudancas: {
+        "Melhorado": [
+          "A ficha de criatura de cada sistema segue o arranjo do próprio livro. Ordem Paranormal: VD, PV, Defesa, tipo e tamanho no topo, com os elementos logo abaixo; Presença Perturbadora, sentidos, defesa e resistências, atributos e perícias numa coluna e habilidades e ações na outra; listas vazias não aparecem mais com “—”. Enigma de Medo e o perfil Como aliado aparecem só quando existem.",
+          "Na consulta, as formas alternativas (Fúria Sanguinária de Raziel, os patamares da Apóstata…) podem ser vistas com os números de cada uma, sem gravar nada.",
+          "Oblívio: Grau, Dano, Proteção, Velocidade e Tamanho no topo; Limite de Estresse e Regiões separados; os cinco atributos, o conhecimento especializado, as habilidades com o tipo de ação e a tabela de recompensa.",
+          "Vampiro V5: o modelo compacto dos antagonistas (paradas padrão e excepcionais, Vitalidade, Força de Vontade, especial) e o completo (Atributos por categoria, Habilidades, Disciplinas, Humanidade e Potência do Sangue); Fome só onde se aplica.",
+          "Malditos Goblins: o bloco curto do livro (Combate, Noção, Habilidade, Vitalidade), com o bônus da arma e a proteção à parte e a diferença entre 0, sem atributo (—) e indefinido (?).",
+          "No PC, números e ações lado a lado; no celular e no painel do combate, os blocos empilham com os destaques no topo.",
+        ],
+        "Técnico": ["Só o site: js/criatura-painel.js, js/fichas-nativas.js (novo), js/paginas/criaturas.js, criaturas/index.html, css/componentes.css e css/modern20/componentes.css. Sem mudança de catálogo, regra nem schema. A ficha Universal e o editor do Homebrew continuam como estavam."],
+      },
+    },
+    {
       versao: "6.6.2",
       codinome: "LOMBADA",
       data: "31/10/2026",

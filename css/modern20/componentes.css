@@ -706,6 +706,16 @@
   & .suplementos-em-uso { border-radius: var(--m20-raio-controle); background: var(--m20-aviso-suave); }
   & .tipo-ficha:hover .capa-sistema,
   & .tipo-ficha:focus-visible .capa-sistema { box-shadow: 1px 0 0 color-mix(in srgb, var(--cor-texto) 10%, transparent), var(--m20-sombra-2); }
+  /* As fichas de criatura por sistema (v6.7): as mesmas peças, com canto e sombra suaves. */
+  & .ficha-destaque { border-radius: var(--m20-raio-controle); border-color: var(--m20-borda); background: var(--fundo-superficie); }
+  & .ficha-destaque__rotulo { letter-spacing: 0; text-transform: none; }
+  & .ficha-caixa { border-radius: var(--m20-raio-controle); border-color: var(--m20-borda-controle); }
+  & .ficha-caixa__sigla, & .ficha-goblin__rotulo, & .ficha-tabela th { text-transform: none; }
+  & .ficha-goblin { border-radius: var(--m20-raio-cartao); border-color: var(--m20-borda); overflow: hidden; }
+  & .ficha-goblin__celula { border-color: var(--m20-borda); }
+  & .ficha-tabela th, & .ficha-tabela td { border-color: var(--m20-borda); }
+  & .criatura-presenca { border-color: var(--cor-traco-media); }
+
   /* A estante de sistemas da página Criaturas (v6.6.2). */
   & .estante-sistemas__opcao {
     border-radius: var(--m20-raio-cartao);

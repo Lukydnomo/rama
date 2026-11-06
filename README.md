@@ -817,6 +817,11 @@ segredo nenhum — ele os lê das Script Properties. Publicá-lo não expõe nad
 
 ### Atualizar o backend
 
+**v6.7.0 — PRANCHETA:** só o site (a ficha de criatura de cada sistema).
+Publique `js/criatura-painel.js`, o arquivo novo `js/fichas-nativas.js`,
+`js/paginas/criaturas.js`, `criaturas/index.html`, `css/componentes.css` e
+`css/modern20/componentes.css`. Nada de `.gs`.
+
 **v6.6.2 — LOMBADA:** só o site: publique `criaturas/index.html`,
 `js/paginas/criaturas.js`, `css/componentes.css` e `css/modern20/componentes.css`
 (a estante de sistemas na página Criaturas). Nada de `.gs`.
@@ -1680,7 +1685,7 @@ Três números diferentes, que não se misturam:
 
 | | Onde | O que é |
 |---|---|---|
-| versão do aplicativo | `js/versao.js` | o que a pessoa vê: v6.6.2 |
+| versão do aplicativo | `js/versao.js` | o que a pessoa vê: v6.7.0 |
 | `schemaVersion` | `js/ficha.js` | o formato da FICHA |
 | `versaoFormato` | `js/config.js` | o formato dos arquivos de importação |
 

@@ -4112,3 +4112,86 @@ html.arrastando * {
 @media (max-width: 720px) {
   .acesso-grade { grid-template-columns: minmax(0, 1fr); }
 }
+
+/* =====================================================================
+   FICHA DE CRIATURA POR SISTEMA (v6.7)
+   ---------------------------------------------------------------------
+   Peças comuns às fichas de Ordem (criatura-painel.js) e às nativas
+   (fichas-nativas.js): os destaques do topo, as duas colunas (números
+   de um lado, ações do outro, quando há largura — o painel estreito do
+   combate e o celular empilham sozinhos), as caixas de atributo, os
+   efeitos com o tipo de ação, a tabela de recompensa e o bloco curto
+   dos Goblins. Cada sistema arranja as peças do seu jeito.
+   ===================================================================== */
+.ficha-destaques {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--e2);
+}
+.ficha-destaque {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 4.5rem;
+  padding: var(--e1) var(--e2);
+  border: var(--borda) solid var(--cor-traco-media);
+  background: var(--fundo-superficie-2);
+}
+.ficha-destaque__rotulo {
+  font-family: var(--fonte-mini);
+  font-size: var(--texto-mini);
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  color: var(--cor-texto-3);
+}
+.ficha-destaque__valor { font-weight: 700; font-size: var(--texto-medio, 1.05rem); line-height: 1.15; overflow-wrap: anywhere; }
+.ficha-colunas {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 330px), 1fr));
+  gap: var(--e3);
+  align-items: start;
+}
+.ficha-colunas__coluna { display: flex; flex-direction: column; gap: var(--e3); min-width: 0; }
+.ficha-colunas__coluna > .r-painel { margin: 0; }
+.criatura-presenca { border-color: var(--cor-traco-forte); }
+.ficha-caixas { display: flex; flex-wrap: wrap; gap: var(--e2); }
+.ficha-caixa {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 3.5rem;
+  padding: var(--e1) var(--e2);
+  border: var(--borda) solid var(--cor-traco-forte);
+  background: var(--fundo-superficie);
+}
+.ficha-caixa__sigla { font-family: var(--fonte-mini); font-size: var(--texto-mini); text-transform: uppercase; color: var(--cor-texto-2); }
+.ficha-caixa__valor { font-weight: 700; font-size: var(--texto-grande, 1.3rem); line-height: 1.1; }
+.ficha-efeito { display: flex; flex-direction: column; gap: 2px; padding-bottom: var(--e2); border-bottom: var(--borda) dashed var(--cor-traco-fraca); }
+.ficha-efeito:last-child { border-bottom: 0; padding-bottom: 0; }
+.ficha-efeito p { margin: 0; }
+.ficha-efeito__titulo { display: flex; flex-wrap: wrap; align-items: center; gap: var(--e1) var(--e2); }
+.ficha-efeito__texto { white-space: pre-wrap; }
+.ficha-grupos { display: grid; grid-template-columns: repeat(auto-fit, minmax(8.5rem, 1fr)); gap: var(--e2) var(--e3); }
+.ficha-grupo .criatura-dados { grid-template-columns: minmax(6em, auto) auto; }
+.ficha-tabela { width: 100%; border-collapse: collapse; font-size: var(--texto-mini); }
+.ficha-tabela caption { text-align: left; font-weight: 700; padding-bottom: var(--e1); }
+.ficha-tabela th, .ficha-tabela td { padding: var(--e1) var(--e2); border: var(--borda) solid var(--cor-traco-fraca); text-align: left; }
+.ficha-tabela th { background: var(--fundo-superficie-2); font-family: var(--fonte-mini); text-transform: uppercase; }
+.ficha-tabela td:first-child { white-space: nowrap; width: 5.5rem; }
+.ficha-goblin {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  border: var(--borda) solid var(--cor-traco-forte);
+  max-width: 34rem;
+}
+.ficha-goblin__celula {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--e1) var(--e2);
+  padding: var(--e2);
+  border: var(--borda) solid var(--cor-traco-fraca);
+}
+.ficha-goblin__rotulo { flex: 1 1 auto; font-family: var(--fonte-mini); font-size: var(--texto-mini); text-transform: uppercase; color: var(--cor-texto-2); }
+.ficha-goblin__valor { font-weight: 700; font-size: var(--texto-grande, 1.3rem); min-width: 1.5ch; text-align: right; }
+.ficha-goblin__legenda { margin: 0; }

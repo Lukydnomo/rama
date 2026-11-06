@@ -19,6 +19,7 @@ globalThis.location = { search: "" };
 const raiz = new URL("../", import.meta.url);
 const ler = (c) => Deno.readTextFile(new URL(c, raiz));
 for (const c of ["js/config.js", "js/util.js", "js/dados.js", "js/ordem/criaturas.js",
+  "js/vampiro/catalogo.js", "js/vampiro/disciplinas-dados.js", "js/vampiro/antagonistas-dados.js",
   "js/oblivio/catalogo.js", "js/oblivio/ameacas-dados.js", "js/oblivio/buraco-dados.js", "js/oblivio/regras.js", "js/oblivio/buraco.js",
   "js/goblins/catalogo.js", "js/goblins/dados.js", "js/goblins/mesa.js"]) {
   (0, eval)(await ler(c));
@@ -30,6 +31,11 @@ globalThis.RAMAUtil = Object.assign({}, U0, { el: (tag, o, filhos) => ({ tag, te
 globalThis.RAMAUI = { recolhivel: (o) => ({ titulo: o.titulo }) };
 (0, eval)(await ler("js/geradores-criaturas.js"));
 const G = globalThis.RAMAGeradoresCriaturas;
+globalThis.RAMAUI.painel = (titulo, conteudo) => ({ tag: "section", texto: titulo, filhos: [conteudo] });
+(0, eval)(await ler("js/fichas-nativas.js"));
+const FN = globalThis.RAMAFichasNativas;
+/* Todo o texto de uma árvore do construtor mínimo, em ordem. */
+const tudo = (n) => !n ? "" : (typeof n === "string" ? n : [n.texto || ""].concat((n.filhos || []).map(tudo)).filter(Boolean).join(" | "));
 
 const VERDE = "\x1b[32m", VERMELHO = "\x1b[31m", CINZA = "\x1b[90m", FORTE = "\x1b[1m", FIM = "\x1b[0m";
 let passaram = 0, falharam = 0;
@@ -55,6 +61,25 @@ t.ok("Oblívio, fácil, 1: Arrastão com 3 Trombadinhas", /Arrastão \(1d6: 1\)/
 const gb = textos(G.doSistema("goblins")[0].sortear(fixo(1), { tabela: "viajante" }));
 t.ok("Goblins, Viajante com 1+1: a entrada 2 (Dragão) e o grupo resolvido", /Viajante Aleatório \(2d6: 1 \+ 1\)/.test(gb) && /1× /.test(gb));
 t.ok("Goblins usa as tabelas do Covil (mesa.tabelas)", !!globalThis.RAMAGoblinsMesa.tabelas().viajante.encontro);
+
+t.grupo("Fichas por sistema (v6.7)");
+const K = globalThis.RAMAGoblinsCatalogo;
+t.igual("Goblins: 0 é zero, null é —, a Besta é ?", [FN.valorGoblin({}, 0), FN.valorGoblin({}, null), FN.valorGoblin(K.INIMIGOS.besta, 3)], ["0", "—", "?"]);
+t.igual("  o bônus da arma e a proteção à parte do valor base", FN.linhaGoblin(K.INIMIGOS.guarda), "Combate 4 (+3) · Vitalidade 3 (+3)");
+const guarda = tudo(FN.goblins(K.INIMIGOS.guarda));
+t.ok("  o bloco traz +3 arma e +3 proteção como marcas próprias", /Combate \| 4 \| \+3 arma/.test(guarda) && /Vitalidade \| 3 \| \+3 proteção/.test(guarda) && /Lança e Peitoral/.test(guarda));
+const carcaca = tudo(FN.oblivio(globalThis.RAMAOblivioAmeacas.ameaca.carcaca));
+t.ok("Oblívio: Limite de Estresse e Regiões separados", /Limite de Estresse \| 22/.test(carcaca) && /Regiões \| 4/.test(carcaca));
+t.ok("  recompensa da Carcaça como no livro (1 · 2 a 4 · 5 ou 6)", /1 \| Nada/.test(carcaca) && /2 a 4 \| Vestimenta Leve/.test(carcaca) && /5 ou 6 \| Munição/.test(carcaca));
+t.ok("  habilidades com o tipo de ação", /Efeito Passivo/.test(carcaca) && /Ação Regular/.test(carcaca));
+const AN = globalThis.RAMAVampiroAntagonistas;
+const det = tudo(FN.vampiro(AN.porChave("detetive"))), harpia = tudo(FN.vampiro(AN.porChave("harpiaDeElisio"))), lobis = tudo(FN.vampiro(AN.porChave("lobisomem")));
+t.ok("V5 compacto (Detetive): paradas padrão e excepcionais, sem Fome", /Paradas de dados padrão/.test(det) && /Investigação 6/.test(det) && !/Fome/.test(det) && !FN.vampiroCompleto(AN.porChave("detetive")));
+t.ok("V5 completo (Harpia): atributos por categoria, habilidades, disciplinas, Humanidade e Potência", /Físicos/.test(harpia) && /Disciplinas/.test(harpia) && /Humanidade \| 6/.test(harpia) && /Potência do Sangue \| 3/.test(harpia) && /Fome/.test(harpia));
+t.ok("  criatura sem Fome diz o que acontece no lugar (p. 376)", /Não tem: o que seria Checagem/.test(lobis));
+const painelJs = await ler("js/criatura-painel.js");
+t.ok("Ordem: destaques VD/PV/Defesa/Tipo/Tamanho e colunas números × ações", /destaque\("PV"/.test(painelJs) && /destaque\("Tamanho"/.test(painelJs) && /ficha-colunas__coluna/.test(painelJs));
+t.ok("  listas vazias somem (parSeTiver) e a forma se vê na consulta sem gravar", /parSeTiver\("Imunidades"/.test(painelJs) && /formaDeConsulta = x\.id; pintar\(\)/.test(painelJs));
 
 t.grupo("Menu e páginas");
 const app = await ler("js/app.js");
