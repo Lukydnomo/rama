@@ -850,6 +850,9 @@ segredo nenhum — ele os lê das Script Properties. Publicá-lo não expõe nad
 
 ### Atualizar o backend
 
+**v6.12.1 — GRAVURA:** só imagens. Publique os 70 `simbolo.png` novos em
+`assets/rituais/op/` e `js/versao.js`. Nada de `.gs`.
+
 **v6.12.0 — SUMÁRIO:** o Catálogo no lugar de Criaturas. **Troque**
 `Vampiro.gs` (a cópia de `js/vampiro/catalogo.js` ganhou os itens do capítulo
 Itens e as referências da mesa; nenhuma regra do servidor muda) e **crie uma
@@ -1759,7 +1762,7 @@ Três números diferentes, que não se misturam:
 
 | | Onde | O que é |
 |---|---|---|
-| versão do aplicativo | `js/versao.js` | o que a pessoa vê: v6.12.0 |
+| versão do aplicativo | `js/versao.js` | o que a pessoa vê: v6.12.1 |
 | `schemaVersion` | `js/ficha.js` | o formato da FICHA |
 | `versaoFormato` | `js/config.js` | o formato dos arquivos de importação |
 

@@ -118,6 +118,17 @@
 
   var CHANGELOG = [
     {
+      versao: "6.12.1",
+      codinome: "GRAVURA",
+      data: "31/10/2026",
+      mudancas: {
+        "Visual": [
+          "Símbolos definitivos de 70 rituais de Ordem Paranormal no lugar dos provisórios: aparecem no Catálogo, na biblioteca de rituais, na aba Rituais das fichas (inclusive nas que já tinham esses rituais) e no Homebrew.",
+        ],
+        "Técnico": ["Só imagens: assets/rituais/op/<ritual>/simbolo.png, cada uma num quadrado transparente de 1000 × 1000, centralizada e sem recorte nem deformação. Nada de código, .gs ou schema."],
+      },
+    },
+    {
       versao: "6.12.0",
       codinome: "SUMÁRIO",
       data: "31/10/2026",
