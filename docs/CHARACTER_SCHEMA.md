@@ -1,4 +1,4 @@
-# O formato da ficha
+# O formato da ficha.
 
 O que é uma ficha. Definido em `js/ficha.js`, que também é quem cria a ficha
 padrão e normaliza o que chega de fora. Onde ela é guardada — inteira em
