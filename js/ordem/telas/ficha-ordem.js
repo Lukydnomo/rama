@@ -362,8 +362,10 @@
       ["Classe", classe ? classe.nome : "—"],
       ["Origem", origem ? origem.nome : "—"],
       sobrevivente ? ["Estágio", String(c.fase.estagio)] : null,
-      [c.trilho.separado ? "Nível" : "NEX", c.trilho.separado ? c.trilho.curto.replace(/^Nv /, "") : c.trilho.curto],
-      !c.patente.semPatente && c.patente.aplicada ? ["Patente", c.patente.patente.nome] : null,
+      /* Evolução por Patentes: a patente é a progressão, e o NEX vira exposição. */
+      c.trilho.porPatente ? ["Patente", c.trilho.rotulo] : [c.trilho.separado ? "Nível" : "NEX", c.trilho.separado ? c.trilho.curto.replace(/^Nv /, "") : c.trilho.curto],
+      c.trilho.porPatente ? ["NEX", c.exposicao + "%"] : null,
+      !c.trilho.porPatente && !c.patente.semPatente && c.patente.aplicada ? ["Patente", c.patente.patente.nome] : null,
     ].filter(Boolean);
     return el("dl.ordem-cabeca__identidade", {}, pares.map(function (p) {
       return el("div.ordem-cabeca__par", {}, [el("dt", { texto: p[0] }), el("dd", { texto: p[1] })]);
@@ -547,13 +549,13 @@
     } else if (!fase.comum) {
       linhas.push(["Trilha", trilha ? C.nomeDaTrilha(trilha, o.classe) : "—"]);
     }
-    linhas.push([c.trilho.separado ? "Nível de experiência" : "NEX", c.trilho.rotulo]);
+    linhas.push([c.trilho.porPatente ? "Patente (Evolução por Patentes)" : (c.trilho.separado ? "Nível de experiência" : "NEX"), c.trilho.rotulo + (c.trilho.porPatente ? " · " + o.prestigio + " PP" : "")]);
     if (fase.transicao) linhas.push(["Trajetória", textoDaTrajetoria(fase)]);
     if (fase.trajetoriaSemEfeito) {
       linhas.push(["Trajetória", "guardada, sem efeito: a classe foi trocada depois da transição"]);
     }
 
-    if (c.trilho.separado) linhas.push(["NEX por exposição", c.exposicao + "%"]);
+    if (c.trilho.separado || c.trilho.porPatente) linhas.push(["NEX por exposição", c.exposicao + "%"]);
 
     if (est && est.afinidade.gatilho) {
       linhas.push(["Afinidade", textoAfinidade(est.afinidade)]);
@@ -563,9 +565,9 @@
       linhas.push(["Patente", "sem patente — " + (classe ? classe.nome : "") + " não usa o sistema de patentes (Ordem Paranormal RPG, p. 171)"]);
       if (c.patente.aplicada) linhas.push(["Equipamento", "um item de categoria I e itens de categoria 0 que a origem permita"]);
     } else if (c.patente.aplicada) {
-      linhas.push(["Patente", c.patente.patente.nome]);
+      if (!c.trilho.porPatente) linhas.push(["Patente", c.patente.patente.nome]);
       linhas.push(["Limite de crédito", c.patente.credito + (c.patente.creditoElevado ? " (elevado)" : "")]);
-    } else {
+    } else if (!c.trilho.porPatente) {
       linhas.push(["Patente", "Regra de patente desligada"]);
     }
 
@@ -1790,6 +1792,7 @@
               resolverBarganhaDaCena(ctx);
             },
           })]),
+          botoesDeRecuperacao(ctx, ordemDe(ctx), cond),
           el("label.r-marca.condicoes__combate", {}, [
             el("input", {
               type: "checkbox", checked: cond.integrarCombate,
@@ -3184,6 +3187,7 @@
 
   function painelNivel(ctx, o, c) {
     if (c.fase && c.fase.comum) return painelFaseComum(ctx, o, c);
+    if (c.trilho.porPatente) return painelPatente(ctx, o, c);
     var separado = c.trilho.separado;
     var campos = [];
 
@@ -3241,6 +3245,89 @@
       el("p.t-mini", { texto: "Baixar o NEX não apaga escolha nenhuma: as das etapas acima ficam guardadas, sem efeito, e voltam a valer se o personagem chegar lá de novo." }),
       el("div.editar-grade", {}, campos),
     ]));
+  }
+
+  /* Evolução por Patentes (SAH p. 108-112): a patente é o trilho. Os PP
+     promovem sozinhos — várias patentes de uma vez, se for o caso — e a
+     patente conquistada fica guardada: perder PP não rebaixa. O NEX
+     continua na ficha, só como exposição. Os PP daqui existem mesmo com
+     "Aplicar regras de patente" desligada: são eles que promovem; o
+     cartão de crédito e equipamento é que depende daquela chave. */
+  function painelPatente(ctx, o, c) {
+    var pt = R.patenteDeProgressao(o);
+    var EP = C.EVOLUCAO_PATENTES;
+    var campos = [UI.campo({
+      rotulo: "Pontos de prestígio", tipo: "numero", valor: String(o.prestigio), limite: 4,
+      ajuda: "Chegar aos PP de uma patente promove. Perder PP não rebaixa (Sobrevivendo ao Horror, p. 109).",
+      dataset: { foco: "patente-pp" },
+      aoMudar: function (v) {
+        o.prestigio = Math.max(0, U.inteiro(v, 0));
+        var ganhas = R.registrarPromocao(o);
+        aoMudarOrdem(ctx);
+        if (ganhas.length) {
+          UI.avisoOk("Promovido a " + ganhas.map(function (x) { return x.nome; }).join(", depois a ") + ". As escolhas " + (ganhas.length > 1 ? "dessas patentes" : "da patente") + " estão em Falta decidir.", { duracao: 9000 });
+        }
+      },
+    }), UI.campo({
+      rotulo: "NEX por exposição (%)", tipo: "numero", valor: String(o.nex), limite: 2,
+      ajuda: "Mede só a exposição ao Outro Lado: poderes paranormais, afinidade elemental e Presença Perturbadora.",
+      aoMudar: function (v) {
+        if (recusaAbaixoDoMarco(o, "nex", R.nexValido(v))) { ctx.redesenhar(); return; }
+        o.nex = R.nexValido(v);
+        aoMudarOrdem(ctx);
+      },
+    })];
+    /* Correção da mesa: a única forma de baixar a patente conquistada. */
+    if (ctx.emEdicao()) {
+      campos.push(UI.campo({
+        rotulo: "Patente conquistada (correção da mesa)", tipo: "selecao", valor: String(o.patenteConquistada || 0),
+        opcoes: EP.patentes.map(function (x) { return { valor: String(x.indice), rotulo: x.nome + " (" + x.pp + " PP)" }; }),
+        ajuda: "Só para corrigir um engano: os PP atuais ainda promovem até a patente que alcançam.",
+        aoMudar: function (v) { o.patenteConquistada = Math.max(0, Math.min(4, U.inteiro(v, 0))); aoMudarOrdem(ctx); },
+      }));
+    }
+    var linhas = [
+      ["Patente", pt.nome + (pt.abaixoDoMinimo ? " — com " + pt.prestigio + " PP, abaixo dos " + pt.minimo + " da patente; não é rebaixado" : "")],
+      ["Limite de PD por turno", String(pt.limitePd) + " (também o nível para pré-requisitos e efeitos de origem e classe)"],
+      ["Recuperação", "+" + pt.recuperacao + " PV ao dormir · +" + pt.recuperacao + " PD ao relaxar"],
+      ["Próxima patente", pt.proxima ? pt.proxima.nome + " em " + pt.proxima.pp + " PP (faltam " + pt.proxima.faltam + ")" : "nenhuma — agente de elite é a mais alta"],
+    ];
+    return UI.painel("Patente e exposição", el("div.pilha", {}, [
+      el("p.t-mini", { texto: "A regra opcional “Evolução por Patentes” está ligada: a patente é a progressão, e o NEX mede só a exposição (Sobrevivendo ao Horror, p. 108-109)." }),
+      el("dl.r-dados", {}, linhas.reduce(function (l, x) { l.push(el("dt", { texto: x[0] })); l.push(el("dd", { texto: x[1] })); return l; }, [])),
+      el("div.editar-grade", {}, campos),
+      el("p.t-mini", { texto: "Baixar os PP ou a patente não apaga escolha nenhuma: as das patentes acima ficam guardadas, sem efeito, e voltam a valer." }),
+    ]));
+  }
+
+  /* Evolução por Patentes: "ao usar uma ação para dormir ou relaxar, o
+     personagem recupera 1 PV ou 1 PD por patente atingida" (SAH p. 109)
+     — a coluna de recuperação, não o limite de PD. Só numa cena de
+     interlúdio; a mesa decide se a ação foi feita. */
+  function botoesDeRecuperacao(ctx, o, cond) {
+    if (!R.porPatente(o)) return null;
+    var pt = R.patenteDeProgressao(o);
+    var noInterludio = !!(cond && cond.cena && cond.cena.interludio);
+    function recuperar(qual, rotulo) {
+      var c = calculo(ctx);
+      var maximo = qual === "pv" ? c.pv.total : c.pd.total;
+      var atual = c.atual[qual];
+      var r = CD().aplicarAcao(qual, qual === "pv" ? "cura" : "recuperar", { cond: o.condicoes, atual: atual, maximo: maximo, valor: pt.recuperacao, pd: qual === "pd" });
+      if (!r || !r.ok) { UI.avisoAtencao((r && r.motivo) || "Não deu para recuperar."); return; }
+      if (!o.recursos) o.recursos = { pv: null, pe: null, san: null, pd: null };
+      o.recursos[qual] = r.valor;
+      aoMudarOrdem(ctx);
+      UI.avisoOk(rotulo + ": " + qual.toUpperCase() + " " + atual + " → " + r.valor + " (recuperação de " + pt.nome + ").");
+    }
+    return el("div.pilha--curta", { class: "pilha" }, [
+      el("div.faixa", {}, [
+        el("button.r-botao.r-botao--mini", { type: "button", texto: "Dormir (+" + pt.recuperacao + " PV)", disabled: !noInterludio,
+          title: noInterludio ? "" : "Só numa cena de interlúdio.", dataset: { foco: "patente-dormir" }, onclick: function () { recuperar("pv", "Dormir"); } }),
+        el("button.r-botao.r-botao--mini", { type: "button", texto: "Relaxar (+" + pt.recuperacao + " PD)", disabled: !noInterludio,
+          title: noInterludio ? "" : "Só numa cena de interlúdio.", dataset: { foco: "patente-relaxar" }, onclick: function () { recuperar("pd", "Relaxar"); } }),
+      ]),
+      el("p.t-mini", { texto: "Evolução por Patentes: dormir e relaxar recuperam " + pt.recuperacao + " pela patente (" + pt.nome + "), não pelo limite de PD (Sobrevivendo ao Horror, p. 109)." }),
+    ]);
   }
 
   /* Mundano e Sobrevivente: NEX 0% fixo (nível 0 com NEX & Experiência),
@@ -3818,6 +3905,22 @@
       el("p.t-mini", { texto: "Sobrevivendo ao Horror, p. 31 · limite de PE sempre 1" }),
     ]) : null;
     if (c.fase && c.fase.comum) return UI.painel("Progressão do Sobrevivente", tabelaEstagios);
+    if (c.trilho.porPatente) {
+      var tabEp = C.EVOLUCAO_PATENTES.classes[o.classe];
+      if (tabEp) {
+        return UI.painel("Progressão por patente", el("div.pilha", {}, [
+          tabelaEstagios,
+          el("div.ordem-degraus", {}, tabEp.patentes.map(function (pt, i) {
+            var pat = C.patenteDaEvolucao(i);
+            return el("div.ordem-degrau", { class: i <= c.trilho.patente ? "ordem-degrau--alcancado" : "" }, [
+              el("span.ordem-degrau__nex", { texto: pat.nome }),
+              el("span.ordem-degrau__texto", { texto: pat.pp + " PP · limite " + pat.limitePd + " PD · " + pt.rotulos.join(" · ") }),
+            ]);
+          })),
+          el("p.t-mini", { texto: "Sobrevivendo ao Horror, p. 108 e " + tabEp.pagina + " (" + tabEp.tabela + ")" }),
+        ]));
+      }
+    }
     var progressao = C.progressaoDaClasse(o.classe);
     if (!progressao.length) {
       return UI.painel("Progressão", el("p.t-mini", { texto: "Escolha uma classe para ver a progressão." }));

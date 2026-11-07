@@ -99,7 +99,60 @@
   var REGRA_DETERMINACAO = "semSanidade";
 
   function usaDeterminacao(ficha) {
-    return !!(ficha && ficha.opcionais && ficha.opcionais[REGRA_DETERMINACAO] === true);
+    if (!!(ficha && ficha.opcionais && ficha.opcionais[REGRA_DETERMINACAO] === true)) return true;
+    /* Evolução por Patentes "usa Pontos de Determinação (veja 'Jogando
+       Sem Sanidade')" (SAH p. 108) — para quem tem patente, o agente.
+       Mundano e Sobrevivente seguem como estavam. */
+    return porPatente(ficha);
+  }
+
+  /* =================================================================
+     EVOLUÇÃO POR PATENTES (regra opcional, SAH p. 108-112)
+     -----------------------------------------------------------------
+     A PATENTE CONQUISTADA é guardada à parte dos pontos de prestígio
+     (`patenteConquistada`, o índice 0 a 4): perder PP não rebaixa ("ele
+     não é rebaixado", p. 109). Ela sobe sozinha quando os PP alcançam a
+     patente seguinte — inclusive várias de uma vez — e só desce pela mão
+     da mesa (modo edição). Com a regra desligada, o campo fica guardado
+     e não faz nada.
+     ================================================================= */
+
+  var REGRA_PATENTES = "evolucaoPatentes";
+
+  function regraDePatentesLigada(ficha) {
+    return !!(ficha && ficha.opcionais && ficha.opcionais[REGRA_PATENTES] === true);
+  }
+  /* A regra vale para o agente: Mundano e Sobrevivente não têm patente. */
+  function porPatente(ficha) {
+    return regraDePatentesLigada(ficha) && !faseDe(ficha).comum;
+  }
+  function indiceConquistado(ficha) {
+    var guardado = Math.max(0, Math.min(4, inteiro(ficha && ficha.patenteConquistada, 0)));
+    return Math.max(guardado, C.indiceDePatentePorPp(ficha && ficha.prestigio));
+  }
+  /* A patente de progressão, com o que ela dá (Tabela 2.6). */
+  function patenteDeProgressao(ficha) {
+    var i = indiceConquistado(ficha);
+    var p = C.patenteDaEvolucao(i);
+    var pp = Math.max(0, inteiro(ficha && ficha.prestigio, 0));
+    var proxima = i < 4 ? C.patenteDaEvolucao(i + 1) : null;
+    return {
+      indice: i, chave: p.chave, nome: p.nome, limitePd: p.limitePd, recuperacao: p.recuperacao,
+      prestigio: pp, minimo: p.pp, abaixoDoMinimo: pp < p.pp,
+      peloPrestigio: C.indiceDePatentePorPp(pp),
+      proxima: proxima ? { nome: proxima.nome, pp: proxima.pp, faltam: Math.max(0, proxima.pp - pp) } : null,
+    };
+  }
+  /* Grava a promoção que os PP alcançaram (nunca rebaixa). Devolve as
+     patentes ganhas agora, da mais baixa à mais alta. */
+  function registrarPromocao(ficha) {
+    if (!ficha) return [];
+    var antes = Math.max(0, Math.min(4, inteiro(ficha.patenteConquistada, 0)));
+    var agora = Math.max(antes, C.indiceDePatentePorPp(ficha.prestigio));
+    ficha.patenteConquistada = agora;
+    var ganhas = [];
+    for (var i = antes + 1; i <= agora; i++) ganhas.push(C.patenteDaEvolucao(i));
+    return ganhas;
   }
 
   /* =================================================================
@@ -168,6 +221,7 @@
       /* chave da perícia → grau. O que não está aqui é destreinado. */
       pericias: {},
       prestigio: 0,
+      patenteConquistada: 0,
 
       /* --- decisões de progressão, por etapa (progressao.js) --- */
       escolhas: [],
@@ -456,6 +510,19 @@
         comum: true,
         perfil: fase.perfil,
         estagio: fase.estagio,
+      };
+    }
+    if (porPatente(ficha)) {
+      var pt = patenteDeProgressao(ficha);
+      return {
+        /* "O nível de experiência é igual ao limite de PD" (SAH p. 109). */
+        passos: pt.limitePd,
+        rotulo: pt.nome,
+        curto: pt.nome,
+        nexEquivalente: pt.limitePd * 5,
+        separado: false,
+        porPatente: true,
+        patente: pt.indice,
       };
     }
     if (separaNivelENex(ficha)) {
@@ -765,12 +832,28 @@
 
     var inicial = classe[qual + "Inicial"];
     var porNex = classe[qual + "PorNex"];
+
+    /* Evolução por Patentes (SAH p. 110-112): PV e PD pela tabela da
+       classe — inicial + atributo, e mais (base + atributo) a cada nova
+       patente. Não há PE nem Sanidade. Os efeitos que contam por degrau
+       (Calejado) usam o limite de PD como nível (p. 109). */
+    if (t.porPatente && (qual === "pv" || qual === "pd")) {
+      var tabEp = C.EVOLUCAO_PATENTES.classes[classe.chave] && C.EVOLUCAO_PATENTES.classes[classe.chave][qual];
+      if (tabEp) {
+        inicial = { base: tabEp.base, atributo: tabEp.atributo };
+        porNex = { base: tabEp.porPatente, atributo: tabEp.atributo };
+        if (qual === "pv") {
+          var tabelaTroca = efeitosDoTipo(ficha, "tabelaDePv")[0];
+          if (tabelaTroca) c.aviso = tabelaTroca.fonte + " troca a tabela de PV por NEX; com Evolução por Patentes vale a tabela da patente (" + C.nomeDoLivro("SAH") + ", p. " + C.EVOLUCAO_PATENTES.classes[classe.chave].pagina + ").";
+        }
+      }
+    }
     if (!fase.comum && (!inicial || !porNex)) return c;
 
     /* Vitalidade Sofrida (AS3 p. 108): a tabela de PV muda para 24 + Vig
        e 6 + Vig, nos níveis que já tem e nos futuros. É uma TROCA da
        tabela, não um bônus: a conta é refeita com ela, uma vez só. */
-    var tabelaPv = qual === "pv" && !fase.comum ? efeitosDoTipo(ficha, "tabelaDePv")[0] : null;
+    var tabelaPv = qual === "pv" && !fase.comum && !t.porPatente ? efeitosDoTipo(ficha, "tabelaDePv")[0] : null;
     if (tabelaPv) {
       inicial = Object.assign({}, inicial, { base: tabelaPv.efeito.inicial });
       porNex = Object.assign({}, porNex, { base: tabelaPv.efeito.porNex });
@@ -803,7 +886,17 @@
       var anterior = fase.anterior ? C.classe(fase.anterior) : null;
       var ganhos = anterior && C.TRANSICOES[fase.anterior] ? C.TRANSICOES[fase.anterior].classes[classe.chave] : null;
 
-      if (anterior && ganhos && !(qual === "pd" && fase.anterior === "mundano")) {
+      if (t.porPatente) {
+        var tabC = C.EVOLUCAO_PATENTES.classes[classe.chave];
+        var chaveEp = inicial.atributo ? ((qual === "pd") && atribPe ? atribPe : inicial.atributo) : null;
+        var atribEp = chaveEp ? atributoSemSacrificio(ficha, chaveEp) : 0;
+        var porPat = porNex.base + atribEp;
+        c.soma(classe.nome + ", recruta (" + tabC.tabela + ")", inicial.base + atribEp,
+          "base " + inicial.base + " + " + siglaDe(chaveEp) + " " + atribEp + " — Sobrevivendo ao Horror, p. " + tabC.pagina);
+        if (t.patente > 0) {
+          c.soma(t.patente + "× nova patente", porPat * t.patente, porPat + " por patente (" + porNex.base + " + " + siglaDe(chaveEp) + " " + atribEp + ") até " + t.rotulo);
+        }
+      } else if (anterior && ganhos && !(qual === "pd" && fase.anterior === "mundano")) {
         /* Agente que foi Mundano ou Sobrevivente: parte do que aquela
            fase deu, soma os ganhos da transição e, dali em diante, sobe
            como a classe nova. */
@@ -827,7 +920,7 @@
           (anterior ? " — sem tabela de PD para o " + anterior.nome + ", vale a da classe desde a transição" : ""));
       }
 
-      if (passos > 1) {
+      if (passos > 1 && !t.porPatente) {
         var porDegrau = porNex.base + atribPorNex;
         c.soma((passos - 1) + "× degrau de progressão" + (tabelaPv ? " (" + tabelaPv.fonte + ")" : ""), porDegrau * (passos - 1),
           porDegrau + " por degrau até " + t.rotulo);
@@ -2102,6 +2195,9 @@
 
     var atual = C.PATENTES[0];
     C.PATENTES.forEach(function (p) { if (pp >= p.pp) atual = p; });
+    /* Com Evolução por Patentes, crédito e equipamento são os da patente
+       CONQUISTADA — perder PP não rebaixa (SAH p. 109). */
+    if (porPatente(ficha)) atual = C.PATENTES[indiceConquistado(ficha)] || atual;
 
     var indiceCredito = C.CREDITOS.indexOf(atual.credito);
     efeitosDoTipo(ficha, "creditoAcima").forEach(function (m) {
@@ -2834,6 +2930,9 @@
       origem: chaveConhecida(b.origem, C.ORIGENS),
       trilha: chaveConhecida(b.trilha, C.TRILHAS),
       prestigio: Math.max(0, inteiro(b.prestigio, 0)),
+      /* Evolução por Patentes: a patente conquistada (índice 0 a 4), à
+         parte dos PP. Guardada sempre; só vale com a regra. */
+      patenteConquistada: Math.max(0, Math.min(4, inteiro(b.patenteConquistada, 0))),
       atributos: {},
       pericias: {},
       escolhas: [],
@@ -2976,6 +3075,10 @@
     });
     var limiteTemp = global.RAMAOrdemInventario ? global.RAMAOrdemInventario.LIMITES.ajusteTemporario : 99;
     ficha.temporarios.capacidade = Math.max(-limiteTemp, Math.min(limiteTemp, inteiro(temp.capacidade, 0)));
+
+    /* Evolução por Patentes: os PP que chegaram a uma patente a deixam
+       conquistada — e salvar e reabrir com menos PP não rebaixa. */
+    if (porPatente(ficha)) registrarPromocao(ficha);
 
     return ficha;
   }
@@ -3460,6 +3563,10 @@
     sanidade: sanidade,
     determinacao: determinacao,
     usaDeterminacao: usaDeterminacao,
+    porPatente: porPatente,
+    regraDePatentesLigada: regraDePatentesLigada,
+    patenteDeProgressao: patenteDeProgressao,
+    registrarPromocao: registrarPromocao,
     REGRA_DETERMINACAO: REGRA_DETERMINACAO,
     maximosDosRecursos: maximosDosRecursos,
     limiteDeEsforco: limiteDeEsforco,

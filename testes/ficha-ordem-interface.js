@@ -11,7 +11,8 @@
    recursos com ajuste e "aplicar com as regras" separados, defesa,
    ataques, perícias), o ajuste manual sem redesenho, a condição crítica
    no topo, os atalhos do resumo, os ajustes da mesa na aba Regras, o
-   modo edição, a patente desligada, Mundano e Sobrevivente, e o celular
+   modo edição, a patente desligada, Mundano e Sobrevivente, a Evolução por
+   Patentes (promoção, PP sem rebaixar, desligar) e o celular
    sem rolagem horizontal. Rode com o servidor recém-iniciado: o teste
    muda a ficha sintética (PV, condições, patente).
 
@@ -224,6 +225,43 @@ try {
       ${n === 1 ? `ok("Sobrevivente: o estágio no bloco", $$(".ordem-cabeca__par dt").some((d) => d.textContent === "Estágio"));` : ""}
       return saida;`);
   }
+
+  t.grupo("Evolução por Patentes (SAH p. 108-112)");
+  const idPatente = await avaliar(`
+    const F = RAMAFicha, R = RAMAOrdemRegras;
+    const f = F.criarFicha({ nome: "Patente de teste", tipoFicha: "ordem", suplementos: [] });
+    f.ordem = R.fichaVazia(); f.ordem.classe = "combatente"; f.ordem.origem = "academico"; f.ordem.nex = 10; f.ordem.prestigio = 120;
+    f.ordem.atributos = { agi: 2, for: 2, int: 1, pre: 2, vig: 3 }; f.ordem.opcionais = { evolucaoPatentes: true };
+    const r = await RAMAApi.criarPersonagem(f);
+    return r.ok ? r.dados.id : "";`);
+  t.ok("a ficha com a regra abriu", !!idPatente && await abrir(idPatente));
+  await conferir(AJUDA + `
+    const par = (n) => { const d = $$(".ordem-cabeca__par").find((x) => x.querySelector("dt").textContent === n); return d ? d.querySelector("dd").textContent : ""; };
+    ok("no bloco: a patente no lugar do NEX, e o NEX como exposição", par("Patente") === "Oficial de operações" && par("NEX") === "10%", par("Patente") + " / " + par("NEX"));
+    ok("PV e PD (sem PE e Sanidade)", $("[data-resumo-recurso='pd']") && !$("[data-resumo-recurso='pe']") && !$("[data-resumo-recurso='san']"));
+    ok("PV pela tabela 2.7: 20 + Vig e 10 + Vig por patente (62 em oficial)", $("[data-resumo-recurso='pv']").textContent.includes("62/62"), $("[data-resumo-recurso='pv']").textContent);
+    await aba("progressao");
+    const painel = $$(".r-painel").find((p) => /Patente e exposição/.test(p.textContent));
+    ok("Progressão: o painel da patente, com limite de PD e recuperação", painel && painel.textContent.includes("10 (também o nível") && painel.textContent.includes("+4 PV ao dormir"));
+    ok("  as vagas das três patentes alcançadas", ["Operador", "Agente especial", "Oficial de operações"].every((n) => $$(".r-painel").some((p) => /Escolhas pendentes/.test(p.textContent) && p.textContent.indexOf(n) >= 0)));
+    ok("  e a tabela da classe por patente", $$(".r-painel__titulo").some((x) => x.textContent === "Progressão por patente"));
+    const pp = painel.querySelector("input");
+    pp.value = "48"; pp.dispatchEvent(new Event("input", { bubbles: true })); pp.dispatchEvent(new Event("change", { bubbles: true })); pp.blur();
+    await espera(2500);
+    ok("baixar os PP para 48 não rebaixa", par("Patente") === "Oficial de operações", par("Patente"));
+    await aba("geral");
+    return saida;`);
+  t.ok("reaberta depois de salvar", await abrir(idPatente));
+  await conferir(AJUDA + `
+    const par = (n) => { const d = $$(".ordem-cabeca__par").find((x) => x.querySelector("dt").textContent === n); return d ? d.querySelector("dd").textContent : ""; };
+    ok("reaberta com 48 PP: continua oficial de operações", par("Patente") === "Oficial de operações", par("Patente"));
+    await aba("regras");
+    $("[data-foco='regra:evolucaoPatentes']").click(); await espera(400);
+    const des = $$(".r-modal .r-botao").find((b) => /^Desligar/.test(b.textContent.trim())); if (des) des.click();
+    await espera(1500);
+    ok("desligar a regra: volta o NEX, PE e Sanidade", par("NEX") === "10%" && $("[data-resumo-recurso='pe']") && $("[data-resumo-recurso='san']"));
+    await aba("geral");
+    return saida;`);
 
   t.grupo("celular");
   await tela(390, 844, true);

@@ -400,9 +400,9 @@ t.grupo("Gerador de Mercenários Hell Hunters");
    PERSISTÊNCIA
    ===================================================================== */
 
-t.grupo("Persistência · schema 30, exportar e importar");
+t.grupo("Persistência · schema 31, exportar e importar");
 {
-  t.igual("schema 30", F.VERSAO_SCHEMA, 30);
+  t.igual("schema 31 (o AS9 entrou no 30)", F.VERSAO_SCHEMA, 31);
   const antiga = F.normalizarFicha({ schemaVersion: 29, nome: "Antiga", tipoFicha: "ordem", ordem: { classe: "combatente" } });
   t.ok("ficha 29 abre com o estado vazio, sem conversão", !!antiga.ordem.arquivo9 && antiga.ordem.arquivo9.tatica.planos.length === 0);
   const o = ficha({ classe: "combatente", origem: "academico", nex: 15, atributos: ATR, pericias: { tatica: "veterano" } });

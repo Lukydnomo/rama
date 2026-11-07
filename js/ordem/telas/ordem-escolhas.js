@@ -873,6 +873,31 @@
           break;
         }
 
+        /* Evolução por Patentes: a 3ª ou a 4ª habilidade da trilha, em
+           agente de elite (SAH p. 110-112). */
+        case "trilhaElite": {
+          var trEl = C.trilha(ordem.trilha);
+          var opsEl = trEl ? E.opcoesDeElite(trEl.chave) : [];
+          if (!opsEl.length) {
+            partes.push(el("p.t-mini.t-aviso", { texto: "Escolha a trilha (na vaga de agente especial) para ver as duas habilidades." }));
+            break;
+          }
+          partes.push(el("div.criacao-lista.escolha-lista", {}, opsEl.map(function (h, i) {
+            var marcada = candidato.valor === h.chave;
+            return el("button.criacao-opcao.escolha-cartao", {
+              type: "button", class: marcada ? "criacao-opcao--escolhida" : "", "aria-pressed": String(marcada),
+              dataset: { foco: "trilha-elite-" + h.chave },
+              onclick: function () { if (candidato.valor === h.chave) return; candidato.valor = h.chave; candidato.opcoes = {}; pintar(); },
+            }, [
+              el("span.criacao-opcao__nome", { texto: h.nome }),
+              el("span.criacao-opcao__texto", { texto: h.resumo }),
+              el("span.criacao-opcao__meta", { texto: (i === 0 ? "3ª" : "4ª") + " habilidade de " + C.nomeDaTrilha(trEl, ordem.classe) + " (NEX " + h.nex + "% na progressão comum)" }),
+              el("span.criacao-opcao__fonte", { texto: P.referencia ? P.referencia(h) : "" }),
+            ]);
+          })));
+          partes.push(el("p.t-mini", { texto: "A outra não chega: com Evolução por Patentes, o agente de elite tem três habilidades de trilha (Sobrevivendo ao Horror, p. 108)." }));
+          break;
+        }
         case "trilhaSobrevivente":
           partes.push(el("div.criacao-lista.escolha-lista", {}, C.TRILHAS_SOBREVIVENTE.map(function (ts) {
             var marcada = candidato.valor === ts.chave;

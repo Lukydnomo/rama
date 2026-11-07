@@ -213,6 +213,13 @@
      antiga descartaria os dados de tática e os drones ao gravar — com o
      schema maior ela recusa.
 
+     30 → 31: Evolução por Patentes (v6.13). O bloco `ordem` ganhou
+     `patenteConquistada` (o índice 0 a 4 da patente conquistada, à parte
+     dos pontos de prestígio: perder PP não rebaixa, SAH p. 109). Sem
+     conversão: uma ficha 30 abre com 0 e, com a regra ligada, sobe pelos
+     PP que já tem. Uma aba antiga descartaria o campo ao gravar — e a
+     patente cairia com os PP —, então com o schema maior ela recusa.
+
      Nenhuma das subidas exige migração: normalizarFicha() cria o que
      falta, vazio, e não toca no que existe. Um ritual gravado na 2 abre
      na 3 com a versão Normal em branco; uma ficha de Ordem gravada na 4
@@ -222,7 +229,7 @@
      os campos novos e os descartaria ao gravar — com o schema maior ela
      recusa abrir a ficha e pede para recarregar.
      Ver docs/CHARACTER_SCHEMA.md. */
-  var VERSAO_SCHEMA = 30;
+  var VERSAO_SCHEMA = 31;
 
   var MODULOS = {
     atributos: "Atributos", status: "Status/recursos", defesa: "Defesa",

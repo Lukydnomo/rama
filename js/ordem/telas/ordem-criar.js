@@ -215,6 +215,16 @@
       return !!(OP && OP.ligada(d, "nexExperiencia"));
     }
 
+    /* Evolução por Patentes (SAH p. 108-112): o agente começa como
+       recruta; o NEX só mede exposição; as perícias de classe são as das
+       tabelas 2.7 a 2.9 (o ocultista escolhe Ocultismo OU Vontade). */
+    function porPatente() {
+      return !!(OP && OP.ligada(d, "evolucaoPatentes")) && !comum();
+    }
+    function periciasDeClasse() {
+      return C.periciasDaClasse(d.classe, porPatente());
+    }
+
     function comum() { return d.perfil === "mundano" || d.perfil === "sobrevivente"; }
 
     function geracao() { return comum() ? C.GERACAO_ATRIBUTOS_COMUM : C.GERACAO_ATRIBUTOS; }
@@ -341,6 +351,13 @@
           opcoes: opcoesDeParametro({ chave: "nex", minimo: 0, maximo: C.REGRAS.nexMaximo }),
           ajuda: "Mede só o contato com o Outro Lado: afinidade elemental e poderes paranormais.",
         });
+      } else if (porPatente()) {
+        campoNex = null;
+        campoExposicao = UI.campo({
+          rotulo: "NEX por exposição", tipo: "selecao", valor: String(d.nex),
+          opcoes: opcoesDeParametro({ chave: "nex", minimo: 0, maximo: C.REGRAS.nexMaximo }),
+          ajuda: "Evolução por Patentes está ligada: o agente começa como recruta, e o NEX mede só o contato com o Outro Lado.",
+        });
       } else {
         campoNex = UI.campo({
           rotulo: "NEX inicial", tipo: "selecao", valor: String(d.nex),
@@ -395,6 +412,9 @@
         /* NEX 0%: sem campo. Com NEX & Experiência, a exposição continua
            editável. */
         d.nex = campoExposicao ? R.nexValido(campoExposicao.entrada.value) : 0;
+      } else if (campoExposicao && !campoNex) {
+        /* Evolução por Patentes: só a exposição. */
+        d.nex = R.nexValido(campoExposicao.entrada.value);
       } else if (campoExposicao) {
         d.nivel = Math.max(1, Math.min(20, parseInt(campoNex.entrada.value, 10) || 1));
         d.nex = R.nexValido(campoExposicao.entrada.value);
@@ -653,11 +673,11 @@
       var lista = el("div.criacao-lista", {}, C.classesDeAgente().map(cartaoDeClasse));
 
       var extra = [];
-      var classe = C.classe(d.classe);
+      var classe = C.classe(d.classe) ? periciasDeClasse() : null;
 
       if (classe && classe.periciasEscolhaObrigatoria.length) {
         extra.push(el("h4.t-secao", { texto: "Perícias da classe" }));
-        extra.push(el("p.t-mini", { texto: "O combatente escolhe uma de cada par." }));
+        extra.push(el("p.t-mini", { texto: "Escolha uma de cada par" + (porPatente() ? " (Evolução por Patentes, Sobrevivendo ao Horror, p. 110-112)." : ".") }));
 
         classe.periciasEscolhaObrigatoria.forEach(function (par, i) {
           var atual = d.escolhasDeClasse[i] || "";
@@ -747,7 +767,7 @@
 
     function conferirClasse() {
       if (!d.classe) return "Escolha uma classe.";
-      var classe = C.classe(d.classe);
+      var classe = periciasDeClasse();
       var faltando = classe.periciasEscolhaObrigatoria.some(function (par, i) {
         return !d.escolhasDeClasse[i];
       });
@@ -771,20 +791,23 @@
         if (p) conjunto[p] = "Origem";
       });
 
-      (C.classe(d.classe) ? C.classe(d.classe).periciasFixas : []).forEach(function (p) {
+      (C.classe(d.classe) ? periciasDeClasse().periciasFixas : []).forEach(function (p) {
         if (!conjunto[p]) conjunto[p] = "Classe";
       });
 
-      d.escolhasDeClasse.forEach(function (p) {
-        if (p && !conjunto[p]) conjunto[p] = "Classe";
+      var obrig = C.classe(d.classe) ? periciasDeClasse().periciasEscolhaObrigatoria : [];
+      d.escolhasDeClasse.forEach(function (p, i) {
+        /* Só as escolhas que a classe pede agora (ligar a regra pode
+           mudar os pares). */
+        if (p && i < obrig.length && obrig[i].entre.indexOf(p) >= 0 && !conjunto[p]) conjunto[p] = "Classe";
       });
 
       return conjunto;
     }
 
     function quantasLivres() {
-      var classe = C.classe(d.classe);
-      if (!classe) return 0;
+      if (!C.classe(d.classe)) return 0;
+      var classe = periciasDeClasse();
       return classe.periciasLivres.base + (d.atributos[classe.periciasLivres.atributo] || 0);
     }
 
@@ -837,7 +860,7 @@
       return el("div.pilha", {}, [
         el("p", {
           texto: "A origem já treinou o que aparece marcado. Sua classe dá " + alvo +
-                 " perícia(s) a mais — " + (C.classe(d.classe) ? C.classe(d.classe).periciasLivres.base : 0) +
+                 " perícia(s) a mais — " + (C.classe(d.classe) ? periciasDeClasse().periciasLivres.base : 0) +
                  " da classe mais " + (d.atributos.int || 0) + " do Intelecto.",
         }),
         resumo,
@@ -1088,6 +1111,15 @@
                      " → NEX " + nex + "%).",
               detalhe: "O NEX por exposição definido na regra deixa de valer, e as pendências por exposição somem." };
       }
+      if (r.chave === "evolucaoPatentes") {
+        var ocult = d.classe === "ocultista";
+        return ligar
+          ? { texto: "A patente passa a ser a progressão: o agente começa como recruta, com PV e PD da tabela da classe (Sobrevivendo ao Horror, p. 110-112). " +
+                     "O NEX " + d.nex + "% passa a medir só a exposição.",
+              detalhe: (ocult ? "O ocultista escolhe Ocultismo ou Vontade — confira a etapa Classe. " : "") + "As escolhas de NEX ficam guardadas, sem efeito." }
+          : { texto: "O NEX volta a mandar na progressão, em " + Math.max(C.REGRAS.nexMinimo, d.nex) + "%.",
+              detalhe: "As escolhas das patentes ficam guardadas, sem efeito." };
+      }
       return {
         texto: ligar ? r.efeito : "A regra deixa de ser registrada na ficha.",
         detalhe: r.automacao !== "calculo" ? "O R.A.M.A. ainda não recalcula a progressão com esta regra." : "",
@@ -1144,6 +1176,12 @@
       }
 
       var aviso = null;
+      if (r.chave === "evolucaoPatentes" && !comum()) {
+        if (!ligar && ordem.nex < C.REGRAS.nexMinimo) ordem.nex = C.REGRAS.nexMinimo;
+        aviso = ligar
+          ? "Evolução por Patentes: o agente começa como recruta. O NEX " + ordem.nex + "% fica como exposição." + (d.classe === "ocultista" ? " Volte à etapa Classe para escolher Ocultismo ou Vontade." : "")
+          : "O NEX voltou a mandar na progressão: NEX " + ordem.nex + "%.";
+      }
       if (ligar && r.chave === "nexExperiencia") {
         aviso = "O nível começou em " + ordem.nivel + ", o equivalente ao NEX " + ordem.nex +
                 "% escolhido. O NEX por exposição continua " + ordem.nex + "% — ajuste os dois se a mesa combinou outros valores.";

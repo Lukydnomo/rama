@@ -178,14 +178,26 @@
       fonte: SAH, pagina: 108,
       afetaFicha: true,
       progressao: true,
-      automacao: "parcial",
-      efeito: "A patente passa a ser o trilho de progressão. Os detalhes da tabela de patentes desta regra " +
-              "ainda não foram estruturados: ver a pendência em docs/ORDEM-REGRAS.md.",
+      automacao: "calculo",
+      efeito: "A patente vira o trilho de progressão do agente: recruta (0 PP), operador (20), agente especial (50), " +
+              "oficial de operações (100) e agente de elite (200). Cada patente dá o limite de PD por turno (1/3/6/10/15), " +
+              "a recuperação ao dormir e relaxar (1 a 5) e o que a tabela da classe concede: PV e PD, poderes, aumento " +
+              "de atributo (até 4), grau de treinamento, Ataque Especial e Perito, trilha e, ao ocultista, rituais. " +
+              "A regra usa pontos de determinação. Para pré-requisitos e efeitos de origem e classe, o nível é o limite " +
+              "de PD; o NEX passa a medir só a exposição.",
       parametros: [],
       depende: [],
       incompativel: ["nexExperiencia"],
       consequencias: [
         "Esta regra e NEX & Experiência propõem dois trilhos de progressão diferentes, e não podem valer juntas.",
+        "Os pontos de prestígio sobem a patente sozinhos — várias de uma vez, se for o caso. A patente conquistada fica " +
+        "guardada: perder PP não rebaixa (Sobrevivendo ao Horror, p. 109).",
+        "PE e Sanidade saem da ficha do agente (pontos de determinação). Os valores continuam gravados e voltam ao desligar.",
+        "As escolhas da progressão por NEX ficam guardadas, sem efeito, e voltam a valer ao desligar a regra; as das " +
+        "patentes também ficam guardadas quando ela é desligada.",
+        "Mundano e Sobrevivente não têm patente: seguem com NEX 0% e estágios.",
+        "Ocultista: três rituais de 1º círculo e dois por promoção, fora do limite de conhecidos. Junto com Aprendizado " +
+        "em Campo ou Aprendizado Lento o livro não diz como fica — a ficha mostra a leitura do R.A.M.A.",
       ],
     },
 

@@ -280,9 +280,13 @@
      Com NEX & Experiência, o degrau é o nível e o acesso acompanha o
      nível: "Escolhido pelo Outro Lado" é habilidade de CLASSE, e o
      nível "substitui o NEX em Benefícios por NEX" (SAH p. 98). */
-  function circuloMaximoNoDegrau(chaveClasse, degrau) {
+  function circuloMaximoNoDegrau(chaveClasse, degrau, porPatente) {
     var classe = C() ? C().classe(chaveClasse) : null;
     if (!classe || !classe.circuloPorNex) return 0;
+    /* Evolução por Patentes (SAH p. 112): 1º círculo até operador, 2º
+       em agente especial, 3º em oficial de operações, 4º em elite. O
+       degrau é o limite de PD da patente. */
+    if (porPatente) return C().EVOLUCAO_PATENTES.circulos[C().indiceDoDegrauDePatente(degrau)] || 1;
     var nex = degrau >= 20 ? 99 : Math.max(0, degrau) * 5;
     var maximo = 0;
     classe.circuloPorNex.forEach(function (faixa) {
@@ -294,10 +298,18 @@
   /* Os degraus em que a classe GANHA um círculo novo, depois de um
      degrau de corte. É o gatilho de "toda vez que ganha acesso a um
      novo círculo" (Saber Ampliado e Grimório, OPRPG p. 35). */
-  function degrausDeCirculoNovo(chaveClasse, depoisDoDegrau) {
+  function degrausDeCirculoNovo(chaveClasse, depoisDoDegrau, porPatente) {
     var classe = C() ? C().classe(chaveClasse) : null;
     if (!classe || !classe.circuloPorNex) return [];
     var saida = [];
+    if (porPatente) {
+      var EP = C().EVOLUCAO_PATENTES;
+      EP.patentes.forEach(function (pt) {
+        var circ = EP.circulos[pt.indice];
+        if (pt.indice > 0 && circ > EP.circulos[pt.indice - 1] && pt.limitePd > depoisDoDegrau) saida.push({ degrau: pt.limitePd, circulo: circ });
+      });
+      return saida;
+    }
     classe.circuloPorNex.forEach(function (faixa) {
       var d = faixa.nex >= 99 ? 20 : Math.round(faixa.nex / 5);
       if (d > depoisDoDegrau) saida.push({ degrau: d, circulo: faixa.circulo });
@@ -457,9 +469,41 @@
      CLASSE — Escolhido pelo Outro Lado (OPRPG p. 32)
      --------------------------------------------------------------- */
 
+  /* Evolução por Patentes e os dois limites de aprendizado (SAH p. 113):
+     o livro não diz como se combinam. A leitura do R.A.M.A., mostrada na
+     tela: com aprendizado em campo, nada de rituais por promoção (só os
+     três iniciais, "não aprendem novos rituais conforme avançam"); com
+     aprendizado lento, UM por promoção em vez de dois (a regra corta os
+     avanços pela metade). */
+  var NOTA_PATENTE_CAMPO = "Evolução por Patentes com aprendizado em campo: o livro não define a combinação. O R.A.M.A. segue o aprendizado em campo — não há rituais por promoção; novos rituais vêm por estudo (Sobrevivendo ao Horror, p. 112-113).";
+  var NOTA_PATENTE_LENTO = "Evolução por Patentes com aprendizado lento: o livro não define a combinação. O R.A.M.A. dá UM ritual por promoção em vez de dois (o aprendizado lento corta os avanços pela metade) — Sobrevivendo ao Horror, p. 112-113.";
+
+  function concessoesDaClassePorPatente(lista, c, passos) {
+    var EP = C().EVOLUCAO_PATENTES;
+    lista.push(concessao({
+      id: "d1.rituaisIniciais", degrau: 1, origem: ORIGENS.classe.chave,
+      poder: "escolhidoPeloOutroLado", nomePoder: "Escolhido pelo Outro Lado",
+      fonte: SAH, pagina: 112, quantidade: 3, circulos: [1], rotuloEtapa: EP.patentes[0].nome,
+      nota: "Evolução por Patentes: três rituais de 1º círculo. Não contam no limite de rituais conhecidos (Sobrevivendo ao Horror, p. 112).",
+    }));
+    if (c.campo) return;
+    EP.patentes.forEach(function (pt) {
+      if (pt.indice === 0 || pt.limitePd > passos) return;
+      var circ = EP.circulos[pt.indice];
+      lista.push(concessao({
+        id: "p" + pt.indice + ".rituaisPatente", degrau: pt.limitePd, origem: ORIGENS.classe.chave,
+        poder: "escolhidoPeloOutroLado", nomePoder: "Escolhido pelo Outro Lado",
+        fonte: SAH, pagina: 112, quantidade: c.lento ? 1 : 2, circulos: ate(circ), rotuloEtapa: pt.nome,
+        patente: pt.indice,
+        nota: (c.lento ? NOTA_PATENTE_LENTO + " " : "") + "Ao chegar a " + pt.nome + ": rituais de qualquer círculo até o " + circ + "º, o que a patente que concedeu a vaga permite. Não contam no limite de rituais conhecidos.",
+      }));
+    });
+  }
+
   function concessoesDaClasse(lista, c, passos) {
     var maximoInicial = circuloMaximoNoDegrau(c.classe, 1);
     if (!maximoInicial) return;   /* a classe não conjura por NEX */
+    if (c.porPatente) { concessoesDaClassePorPatente(lista, c, passos); return; }
 
     lista.push(concessao({
       id: "d1.rituaisIniciais",
@@ -500,12 +544,16 @@
      TRILHA GRADUADO — Saber Ampliado e Grimório (OPRPG p. 35)
      --------------------------------------------------------------- */
 
-  var DEGRAU_SABER_AMPLIADO = 2;    /* NEX 10% */
-  var DEGRAU_GRIMORIO = 8;          /* NEX 40% */
+  var DEGRAU_SABER = 2;    /* NEX 10% */
+  var DEGRAU_GRIM = 8;      /* NEX 40% */
 
   function concessoesDaTrilha(lista, c, passos) {
     if (c.trilha !== "graduado") return;
     if (!circuloMaximoNoDegrau(c.classe, 1)) return;
+    /* Com patentes, Saber Ampliado e Grimório chegam com a habilidade
+       (agente especial e oficial de operações). */
+    var DEGRAU_SABER_AMPLIADO = c.porPatente && c.degrauDaTrilha ? c.degrauDaTrilha(10) : DEGRAU_SABER;
+    var DEGRAU_GRIMORIO = c.porPatente && c.degrauDaTrilha ? c.degrauDaTrilha(40) : DEGRAU_GRIM;
 
     /* Saber Ampliado: "Você aprende um ritual de 1º círculo. Toda vez
        que ganha acesso a um novo círculo, aprende um ritual adicional
@@ -522,7 +570,7 @@
         circulos: [1],
       }));
 
-      degrausDeCirculoNovo(c.classe, DEGRAU_SABER_AMPLIADO).forEach(function (novo) {
+      degrausDeCirculoNovo(c.classe, DEGRAU_SABER_AMPLIADO, c.porPatente).forEach(function (novo) {
         if (novo.degrau > passos) return;
         lista.push(concessao({
           id: "d" + novo.degrau + ".saberAmpliado",
@@ -554,7 +602,7 @@
         destino: DESTINOS.grimorio.chave,
       }));
 
-      degrausDeCirculoNovo(c.classe, DEGRAU_GRIMORIO).forEach(function (novo) {
+      degrausDeCirculoNovo(c.classe, DEGRAU_GRIMORIO, c.porPatente).forEach(function (novo) {
         if (novo.degrau > passos) return;
         lista.push(concessao({
           id: "d" + novo.degrau + ".grimorio",
@@ -579,8 +627,8 @@
   function concessoesAutomaticas(lista, c, passos) {
     RITUAIS_DE_TRILHA.forEach(function (entrada) {
       if (entrada.trilha !== c.trilha) return;
-      var d = entrada.nex >= 99 ? 20 : Math.round(entrada.nex / 5);
-      if (d > passos) return;
+      var d = c.porPatente && c.degrauDaTrilha ? c.degrauDaTrilha(entrada.nex) : (entrada.nex >= 99 ? 20 : Math.round(entrada.nex / 5));
+      if (!(d <= passos)) return;
 
       var base = {
         id: "d" + d + "." + entrada.poder,
@@ -638,7 +686,7 @@
         lista.push(concessao({ id: "dom" + d + ".saberAmpliado", degrau: d, origem: ORIGENS.poder.chave,
           poder: "saberAmpliado", nomePoder: "Saber Ampliado (dominado)", fonte: OPRPG, pagina: 35, quantidade: 1, circulos: [1],
           nota: "Dominado com Dominar Habilidade Ritualística (Arquivos Secretos 2, p. 75)." }));
-        degrausDeCirculoNovo(c.classe, d).forEach(function (novo) {
+        degrausDeCirculoNovo(c.classe, d, c.porPatente).forEach(function (novo) {
           if (novo.degrau > passos) return;
           lista.push(concessao({ id: "dom" + novo.degrau + ".saberAmpliado.c" + novo.circulo, degrau: novo.degrau, origem: ORIGENS.poder.chave,
             poder: "saberAmpliado", nomePoder: "Saber Ampliado (dominado)", fonte: OPRPG, pagina: 35, quantidade: 1, circulos: [novo.circulo] }));
@@ -650,7 +698,7 @@
           poder: "grimorioRitualistico", nomePoder: "Grimório Ritualístico (dominado)", fonte: OPRPG, pagina: 35,
           quantidade: "intelecto", circulos: [1, 2], destino: DESTINOS.grimorio.chave,
           nota: "Dominado com Dominar Habilidade Ritualística (Arquivos Secretos 2, p. 75)." }));
-        degrausDeCirculoNovo(c.classe, d).forEach(function (novo) {
+        degrausDeCirculoNovo(c.classe, d, c.porPatente).forEach(function (novo) {
           if (novo.degrau > passos) return;
           lista.push(concessao({ id: "dom" + novo.degrau + ".grimorio.c" + novo.circulo, degrau: novo.degrau, origem: ORIGENS.poder.chave,
             poder: "grimorioRitualistico", nomePoder: "Grimório Ritualístico (dominado)", fonte: OPRPG, pagina: 35, quantidade: 1,
@@ -684,6 +732,7 @@
   function rotuloDaConcessao(c) {
     if (!c) return "Rituais";
     if (c.id === "d1.rituaisIniciais") return "Rituais iniciais";
+    if (/^p\d\.rituaisPatente$/.test(c.id)) return "Rituais da patente";
     /* Sem o nome do ritual: quem mostra o rótulo mostra a decisão do
        lado ("Ritual concedido: Conhecendo o Medo"), e repetir o nome nos
        dois daria "Conhecendo o Medo: Conhecendo o Medo". */
@@ -823,18 +872,19 @@
   function avisosDoAprendizado(flags) {
     var f = flags || {};
     var saida = [];
-    if (f.patentes) {
-      saida.push("Evolução por Patentes está ligada, mas o R.A.M.A. ainda não calcula o trilho por patente: " +
-        "as concessões abaixo seguem o NEX. Pelo livro, o ocultista começa com três rituais de 1º círculo e " +
-        "aprende dois a cada nova patente, com o 2º círculo como agente especial, o 3º como oficial de operações " +
-        "e o 4º como agente de elite (Sobrevivendo ao Horror, p. 112). A diferença fica com a mesa.");
+    if (f.patentes && f.ocultista) {
+      saida.push("Evolução por Patentes: três rituais de 1º círculo como recruta e dois a cada nova patente, de " +
+        "qualquer círculo que a patente que concedeu a vaga permite — 2º como agente especial, 3º como oficial de " +
+        "operações, 4º como agente de elite. Nenhum conta no limite de conhecidos (Sobrevivendo ao Horror, p. 112).");
+      if (f.campo) saida.push(NOTA_PATENTE_CAMPO);
+      if (f.lento) saida.push(NOTA_PATENTE_LENTO);
     }
-    if (f.campo && f.ocultista) {
+    if (f.campo && f.ocultista && !f.patentes) {
       saida.push("Aprendizado em campo (Sobrevivendo ao Horror, p. 113): nenhum ritual vem por avanço. Um ritual " +
         "novo precisa ser encontrado e estudado — uma ação de interlúdio e Ocultismo DT 20 (1º círculo), 25 (2º), " +
         "30 (3º) ou 35 (4º), só em círculos a que o personagem tem acesso. Os três iniciais continuam.");
     }
-    if (f.lento && f.ocultista) {
+    if (f.lento && f.ocultista && !f.patentes) {
       saida.push("Aprendizado lento (Sobrevivendo ao Horror, p. 113): o ritual do avanço vem só nos degraus ímpares " +
         "— NEX 15%, 25%, 35%… ou nível 3, 5, 7….");
     }
@@ -879,8 +929,8 @@
     exigenciasDoRitual: exigenciasDoRitual,
     REGRA_LENTO: REGRA_LENTO,
     REGRA_CAMPO: REGRA_CAMPO,
-    DEGRAU_SABER_AMPLIADO: DEGRAU_SABER_AMPLIADO,
-    DEGRAU_GRIMORIO: DEGRAU_GRIMORIO,
+    DEGRAU_SABER_AMPLIADO: DEGRAU_SABER,
+    DEGRAU_GRIMORIO: DEGRAU_GRIM,
     CIRCULO_DE_APRENDER_RITUAL: CIRCULO_DE_APRENDER_RITUAL,
 
     concessoes: concessoes,
@@ -898,6 +948,8 @@
     ate: ate,
 
     REGRA_PATENTES: REGRA_PATENTES,
+    NOTA_PATENTE_CAMPO: NOTA_PATENTE_CAMPO,
+    NOTA_PATENTE_LENTO: NOTA_PATENTE_LENTO,
     REGRA_NEX_EXPERIENCIA: REGRA_NEX_EXPERIENCIA,
     DT_DE_ESTUDO: DT_DE_ESTUDO,
     FONTES_DE_ESTUDO: FONTES_DE_ESTUDO,

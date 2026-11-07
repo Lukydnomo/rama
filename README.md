@@ -435,7 +435,7 @@ deno run --allow-read testes/executar-catalogo.js
 Resguardar Espírito, Vampirismo, os cinco itens, as trilhas Monstruoso (marcos,
 elemento, procedimento do dia, sacrifícios, braços, Tatuagem, reação, 4º
 círculo), dia, cena e rodada sem repetir ao recarregar, infecção, regras debaixo
-d'água, as ameaças e a persistência (exportar e importar; o schema é o 30 desde o AS9).
+d'água, as ameaças e a persistência (exportar e importar; o schema é o 31 desde a Evolução por Patentes).
 
 ```bash
 deno run --allow-read testes/executar-as7.js
@@ -448,7 +448,7 @@ dados de Tática de Abordagem, Municiador Ambulante na carga, Incursor (CQB,
 reféns, alvo-prioritário), Piloto de Drone (marcos, modificações sem
 categoria, segundo drone), os drones (passivo × duas mãos, categoria até IV),
 os itens, as regalias, Jason Bloom como combatente e como aliado, o gerador e a
-persistência (schema 30, exportar e importar).
+persistência (schema 31, exportar e importar).
 
 ```bash
 deno run --allow-read testes/executar-as9.js
@@ -473,12 +473,13 @@ está em uso. O servidor está em `testes/sistemas-backend.js`.
 deno run --allow-read testes/executar-suplementos.js
 ```
 
-**Ficha de Ordem no navegador** — 57 verificações com o Chrome instalado (sem
+**Ficha de Ordem no navegador** — 68 verificações com o Chrome instalado (sem
 interface, pelo DevTools Protocol) contra o servidor local: o bloco de cima sem
 controles, a tira em grupos, a Geral (pentagrama, recursos, defesa, ataques,
 perícias), o ajuste manual sem redesenho, a condição crítica no topo, os atalhos
 do resumo, os ajustes na aba Regras, o modo edição, a patente desligada, Mundano,
-Sobrevivente e o celular a 390 px. Dados sintéticos; rode com o servidor
+Sobrevivente, a Evolução por Patentes (promoção, PP sem rebaixar, desligar) e
+o celular a 390 px. Dados sintéticos; rode com o servidor
 recém-iniciado (o teste muda a ficha). `RAMA_CHROME` indica outro Chrome.
 
 ```bash
@@ -849,6 +850,13 @@ próprio `<script src>`, então funciona debaixo de subpasta sem ajuste.
 segredo nenhum — ele os lê das Script Properties. Publicá-lo não expõe nada.
 
 ### Atualizar o backend
+
+**v6.13.0 — INSÍGNIA:** Evolução por Patentes calculada. Só o site: publique
+`js/ordem/catalogo.js`, `js/ordem/regras.js`, `js/ordem/progressao.js`,
+`js/ordem/aprendizado.js`, `js/ordem/opcionais.js`,
+`js/ordem/telas/ficha-ordem.js`, `js/ordem/telas/ordem-criar.js`,
+`js/ordem/telas/ordem-escolhas.js`, `js/ficha.js` (schema 31, sem conversão) e
+`js/versao.js`. Nada de `.gs` nem `setupRama()`.
 
 **v6.12.1 — GRAVURA:** só imagens. Publique os 70 `simbolo.png` novos em
 `assets/rituais/op/` e `js/versao.js`. Nada de `.gs`.
@@ -1762,7 +1770,7 @@ Três números diferentes, que não se misturam:
 
 | | Onde | O que é |
 |---|---|---|
-| versão do aplicativo | `js/versao.js` | o que a pessoa vê: v6.12.1 |
+| versão do aplicativo | `js/versao.js` | o que a pessoa vê: v6.13.0 |
 | `schemaVersion` | `js/ficha.js` | o formato da FICHA |
 | `versaoFormato` | `js/config.js` | o formato dos arquivos de importação |
 

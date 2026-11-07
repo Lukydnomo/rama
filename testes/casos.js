@@ -64,7 +64,7 @@
 
     t.grupo("Tema da ficha · schema 16 (v2.36)");
     var TEMA16 = { nome: "Roxo", base: "escuro", valores: { fundo: { tipo: "radial", forma: "circulo", x: 20, y: 30, pontos: [{ cor: "#08080a", pos: 0 }, { cor: "#3a1030", alfa: 0.8, pos: 100 }] } } };
-    t.igual("o schema subiu para 30 (Arquivos Secretos 9, v6.9)", S.VERSAO_SCHEMA, 30);
+    t.igual("o schema subiu para 31 (Evolução por Patentes, v6.13)", S.VERSAO_SCHEMA, 31);
     t.iguais("ficha nova usa o tema da conta", S.criarFicha({ nome: "Nova" }).aparencia, { v: 1, modo: "conta" });
     t.iguais("ficha antiga (sem o campo) também", S.normalizarFicha({ schemaVersion: 15, nome: "Legado" }).aparencia, { v: 1, modo: "conta" });
     ["ordem", "universal"].forEach(function (tipo) {
@@ -4683,7 +4683,7 @@
 
       var paO = apOcultista(40);
       paO.opcionais = { evolucaoPatentes: true };
-      t.ok("com Evolução por Patentes, a ficha avisa que o trilho por patente não é calculado",
+      t.ok("com Evolução por Patentes, o aprendizado mostra os rituais por patente (três iniciais e dois por promoção)",
         APe.estado(paO, { rituais: [] }).rituais.avisos.some(function (a) { return /dois a cada nova patente/.test(a); }));
     }
 
@@ -4726,6 +4726,12 @@
       casosDaV229(t, global.RAMAOrdemCatalogo, RRs, global.RAMAOrdemProgressao, global.RAMAOrdemPoderes, global.RAMAOrdemAprendizado,
         global.RAMAOrdemRituais, global.RAMAOrdemRituaisDados, global.RAMAFicha, global.RAMAOrdemOpcionais, global.RAMAOrdemMaldicoes,
         global.RAMAOrdemItens, global.RAMAOrdemItensDados);
+    }
+
+    /* v6.13 — EVOLUÇÃO POR PATENTES (SAH p. 108-112) */
+    if (RRs && global.RAMAOrdemProgressao && global.RAMAOrdemRituaisDados && global.RAMAOrdemOpcionais) {
+      casosDaEvolucaoPorPatentes(t, global.RAMAOrdemCatalogo, RRs, global.RAMAOrdemProgressao, global.RAMAOrdemPoderes, global.RAMAOrdemAprendizado,
+        global.RAMAOrdemRituais, global.RAMAOrdemRituaisDados, global.RAMAFicha, global.RAMAOrdemOpcionais);
     }
 
     /* v2.31 — REGRAS OPCIONAIS DO HEXATOMBE E A BIBLIOTECA */
@@ -5151,7 +5157,7 @@
     remoto.pericias[0].bonus = 5;
     var m = S.mesclar(base, local, remoto, S.ESQUEMA_FICHA);
     t.ok("sincronizar: a fórmula daqui e o bônus de lá", m.estado.pericias[0].formula === "@STR d8" && m.estado.pericias[0].bonus === 5 && !m.conflitos.length);
-    t.igual("o schema da ficha é o atual (30)", n.schemaVersion, 30);
+    t.igual("o schema da ficha é o atual (31)", n.schemaVersion, 31);
   }
 
   /* =================================================================
@@ -5188,7 +5194,7 @@
     var m = S.mesclar(base, local, remoto, S.ESQUEMA_FICHA);
     t.ok("sincronizar: o modo daqui e o bônus de lá, sem conflito",
       m.estado.organizacao.pericias.modo === "maior" && m.estado.pericias[1].bonus === 4 && !m.conflitos.length);
-    t.igual("o schema da ficha é o atual (30)", n.schemaVersion, 30);
+    t.igual("o schema da ficha é o atual (31)", n.schemaVersion, 31);
   }
 
   /* =================================================================
@@ -5334,7 +5340,7 @@
     t.ok("exportar e importar leva pendentes (com o dado já rolado) e resolvidas", volta.ok &&
       volta.dados.ordem.barganhaInsana.pendentes[0].d4 === 2 && volta.dados.ordem.barganhaInsana.resolvidas.length === 1);
     t.ok("  mesmo sem o ritual na lista de conhecidos", volta.dados.rituais.itens.length === 0);
-    t.igual("o schema da ficha é o atual (30)", F.normalizarFicha(ficha).schemaVersion, 30);
+    t.igual("o schema da ficha é o atual (31)", F.normalizarFicha(ficha).schemaVersion, 31);
   }
 
   /* =================================================================
@@ -5375,7 +5381,7 @@
     t.iguais("  um tema de dados que este navegador não conhece também fica (a tela usa a reserva)", MT.normalizarAparencia({ dados: { id: "tema-do-futuro" } }).dados, { id: "tema-do-futuro" });
     var ficha = F.normalizarFicha(F.criarFicha({ nome: "Lia", tipoFicha: "universal", aparencia: { v: 1, modo: "conta", dados: { id: "sigilo-violeta" } } }));
     t.iguais("a ficha normalizada mantém a escolha", ficha.aparencia.dados, { id: "sigilo-violeta" });
-    t.igual("o schema da ficha é o atual (30)", ficha.schemaVersion, 30);
+    t.igual("o schema da ficha é o atual (31)", ficha.schemaVersion, 31);
     var pacote = V.exportar("personagem", ficha);
     t.ok("exportar leva a escolha sem `id` (atravessa como `tema`)", pacote.dados.aparencia.dados.tema === "sigilo-violeta" && JSON.stringify(pacote).indexOf('"id"') < 0);
     var volta = V.importado(JSON.parse(JSON.stringify(pacote)));
@@ -8266,6 +8272,154 @@
         ordem: { classe: "ocultista", nex: 5, opcionais: { semSanidade: true } }, inventario: { itens: [] } });
       t.igual("com Jogando sem Sanidade, o cartão mostra PV e PD", comPdCartao.recursos.map(function (r) { return r.rotulo; }).join(","), "PV,PD");
     }
+  }
+
+
+  /* =================================================================
+     EVOLUÇÃO POR PATENTES (regra opcional, SAH p. 108-112)
+     ================================================================= */
+
+  function casosDaEvolucaoPorPatentes(t, C, R, E, P, A, RT, RTD, F, OP) {
+    var INV = { itens: [] };
+    var cat = RT.normalizarCatalogo(RTD);
+    function ficha(extra) {
+      var o = R.fichaVazia();
+      Object.keys(extra || {}).forEach(function (k) { o[k] = extra[k]; });
+      return R.normalizar(JSON.parse(JSON.stringify(o)));
+    }
+    function agente(classe, pp, atributos, extra) {
+      return ficha(Object.assign({ classe: classe, origem: "academico", nex: 20, prestigio: pp, opcionais: { evolucaoPatentes: true },
+        atributos: atributos || { agi: 1, "for": 1, int: 2, pre: 2, vig: 3 } }, extra || {}));
+    }
+    function vaga(o, id) { return E.vagas(o).filter(function (v) { return v.id === id; })[0]; }
+    function ids(o) { return E.vagas(o).map(function (v) { return v.id; }); }
+    function registrar(o, id, valor, opcoes) {
+      var v = vaga(o, id);
+      if (!v) throw new Error("vaga inexistente: " + id);
+      return E.registrar(o, v, { valor: valor, opcoes: opcoes || {} });
+    }
+    function simular(o, id, valor, opcoes) {
+      return E.simular(o, vaga(o, id), { valor: valor, opcoes: opcoes || {} }, null).avaliacao;
+    }
+    function ritual(id) {
+      var e = cat.porId[id];
+      var m = RT.paraFicha(e, { escolha: e.escolha ? "conhecimento" : undefined });
+      return F.criarRitual(m.dados);
+    }
+
+    t.grupo("Evolução por Patentes · patentes, limite de PD e recuperação (Tabela 2.6)");
+    t.iguais("cinco patentes: PP, limite de PD e recuperação",
+      C.EVOLUCAO_PATENTES.patentes.map(function (p) { return [p.pp, p.limitePd, p.recuperacao]; }),
+      [[0, 1, 1], [20, 3, 2], [50, 6, 3], [100, 10, 4], [200, 15, 5]]);
+    var op = OP.regra("evolucaoPatentes");
+    t.ok("a regra é calculada, não parcial", op.automacao === "calculo" && !/não foram estruturados/.test(op.efeito));
+    var rec = agente("combatente", 0);
+    t.iguais("recruta: trilho, nível 1 e limite de 1 PD", [R.trilho(rec).rotulo, R.trilho(rec).passos, R.calcular(rec, INV).limitePe.total], ["Recruta", 1, 1]);
+    t.ok("  usa pontos de determinação (sem PE nem Sanidade)", R.usaDeterminacao(rec) && R.calcular(rec, INV).determinacao);
+    var pp = R.patenteDeProgressao(agente("especialista", 50));
+    t.iguais("agente especial: limite 6, recuperação 3", [pp.nome, pp.limitePd, pp.recuperacao], ["Agente especial", 6, 3]);
+
+    t.grupo("Evolução por Patentes · promoção e não rebaixar");
+    var pr = agente("combatente", 0);
+    pr.prestigio = 120;
+    var ganhas = R.registrarPromocao(pr);
+    t.iguais("de 0 a 120 PP: promovido direto por três marcos, na ordem", ganhas.map(function (x) { return x.nome; }),
+      ["Operador", "Agente especial", "Oficial de operações"]);
+    t.ok("  e as vagas das três patentes abrem de uma vez",
+      ["p1.poderClasse", "p1.atributo", "p2.trilha", "p2.poderClasse", "p2.grauTreinamento", "p3.poderClasse", "p3.atributo"].every(function (id) { return ids(pr).indexOf(id) >= 0; }) &&
+      ids(pr).indexOf("p4.poderClasse") < 0);
+    var cai = agente("combatente", 50);
+    t.igual("com 50 PP, agente especial conquistado", cai.patenteConquistada, 2);
+    cai.prestigio = 48;
+    var reaberta = R.normalizar(JSON.parse(JSON.stringify(cai)));
+    t.iguais("cair para 48 PP, salvar e reabrir: continua agente especial", [reaberta.prestigio, reaberta.patenteConquistada, R.trilho(reaberta).rotulo], [48, 2, "Agente especial"]);
+    t.igual("  e crédito e equipamento são os da patente efetiva", R.patente(reaberta).patente.nome, "Agente especial");
+    var semRegra = ficha({ classe: "combatente", origem: "academico", nex: 20, prestigio: 48, patenteConquistada: 2 });
+    t.igual("sem a regra, a patente da OPRPG continua pelos PP", R.patente(semRegra).patente.nome, "Operador");
+
+    t.grupo("Evolução por Patentes · PV e PD por classe (Tabelas 2.7 a 2.9)");
+    var elite = agente("combatente", 200, { agi: 1, "for": 2, int: 1, pre: 2, vig: 3 });
+    t.igual("combatente de elite com Vigor 3: 75 PV (o exemplo do livro, p. 108)", R.calcular(elite, INV).pv.total, 75);
+    t.igual("  PD: 8 + Pre e 4 + Pre por patente", R.calcular(elite, INV).pd.total, (8 + 2) + 4 * (4 + 2));
+    var esp = agente("especialista", 50, { agi: 1, "for": 1, int: 2, pre: 1, vig: 2 });
+    t.iguais("especialista agente especial: 16 + Vig + 2 × (8 + Vig) PV; 12 + Pre + 2 × (6 + Pre) PD",
+      [R.calcular(esp, INV).pv.total, R.calcular(esp, INV).pd.total], [18 + 2 * 10, 13 + 2 * 7]);
+    var oc = agente("ocultista", 100, { agi: 1, "for": 1, int: 2, pre: 3, vig: 2 });
+    t.iguais("ocultista oficial: 12 + Vig + 3 × (6 + Vig) PV; 16 + Pre + 3 × (8 + Pre) PD", [R.calcular(oc, INV).pv.total, R.calcular(oc, INV).pd.total], [14 + 24, 19 + 33]);
+    t.iguais("perícias de classe: o ocultista escolhe Ocultismo ou Vontade", [C.periciasDaClasse("ocultista", true).periciasEscolhaObrigatoria[0].entre, C.periciasDaClasse("ocultista", true).periciasFixas], [["ocultismo", "vontade"], []]);
+    t.iguais("  sem a regra, as duas fixas (OPRPG)", C.periciasDaClasse("ocultista", false).periciasFixas, ["ocultismo", "vontade"]);
+    var calejado = agente("combatente", 50, null, { origem: "desgarrado" });
+    var semCalejado = agente("combatente", 50);
+    t.igual("Calejado: +6 PV no agente especial (o nível é o limite de PD, p. 109)",
+      R.calcular(calejado, INV).pv.total - R.calcular(semCalejado, INV).pv.total, 6);
+
+    t.grupo("Evolução por Patentes · poderes, atributo, grau, escalas e trilha");
+    var cb = agente("combatente", 200);
+    t.iguais("combatente: as vagas por patente", ids(cb).filter(function (id) { return /^p\d\./.test(id); }),
+      ["p1.poderClasse", "p1.atributo", "p2.trilha", "p2.poderClasse", "p2.grauTreinamento", "p3.poderClasse", "p3.atributo", "p4.trilhaElite", "p4.poderClasse", "p4.grauTreinamento"]);
+    t.ok("  sem Versatilidade e sem as vagas do NEX", ids(cb).every(function (id) { return !/^d\d+\.(poderClasse|versatilidade|atributo)$/.test(id); }));
+    t.igual("aumento de atributo com teto 4", vaga(cb, "p1.atributo").maximo, 4);
+    var teto = agente("combatente", 20, { agi: 1, "for": 4, int: 1, pre: 1, vig: 2 });
+    t.ok("  Força 4 não sobe pelo aumento da patente", simular(teto, "p1.atributo", "for").motivos.some(function (x) { return /não passa de 4/.test(x); }));
+    var grau = agente("combatente", 50, null, { pericias: { luta: "treinado", fortitude: "treinado" } });
+    t.ok("grau de treinamento em agente especial sobe treinado → veterano (sem NEX mínimo)", simular(grau, "p2.grauTreinamento", "", { pericias: ["luta"] }).motivos.length === 0);
+    var auto = E.automaticas(agente("combatente", 100)).filter(function (a) { return a.entrada.chave === "ataqueEspecial"; })[0];
+    t.igual("Ataque Especial pela patente (oficial: 3 PD, +15)", auto && auto.estagio, "3 PD: +15");
+    var peri = E.automaticas(agente("especialista", 200)).map(function (a) { return a.entrada.chave + ":" + a.estagio; });
+    t.ok("Perito na elite: 4 PD, +1d12; sem Engenhosidade", peri.indexOf("perito:4 PD: +1d12") >= 0 && !peri.some(function (x) { return /^engenhosidade/.test(x); }));
+    var tr = agente("combatente", 200, null, { trilha: "aniquilador" });
+    var habs = P.habilidadesDaTrilha("aniquilador").slice().sort(function (a, b) { return a.nex - b.nex; });
+    function temHab(o, h) { return E.estado(o, null).adquiridos.some(function (a) { return a.chave === h.chave; }); }
+    t.ok("trilha: 1ª e 2ª chegam (especial e oficial); 3ª e 4ª esperam a escolha da elite",
+      temHab(tr, habs[0]) && temHab(tr, habs[1]) && !temHab(tr, habs[2]) && !temHab(tr, habs[3]));
+    t.iguais("  a elite oferece a 3ª e a 4ª", E.opcoesDeElite("aniquilador").map(function (h) { return h.chave; }), [habs[2].chave, habs[3].chave]);
+    var tr3 = JSON.parse(JSON.stringify(tr)); registrar(tr3, "p4.trilhaElite", habs[2].chave);
+    var tr4 = JSON.parse(JSON.stringify(tr)); registrar(tr4, "p4.trilhaElite", habs[3].chave);
+    t.ok("  escolhendo a 3ª, vem a 3ª e não a 4ª", temHab(tr3, habs[2]) && !temHab(tr3, habs[3]));
+    t.ok("  escolhendo a 4ª, vem a 4ª e não a 3ª", temHab(tr4, habs[3]) && !temHab(tr4, habs[2]));
+    t.ok("  a 1ª habilidade não serve de escolha da elite", simular(tr, "p4.trilhaElite", habs[0].chave).motivos.length > 0);
+
+    t.grupo("Evolução por Patentes · rituais do ocultista");
+    var ri = agente("ocultista", 200, { agi: 1, "for": 1, int: 2, pre: 3, vig: 1 });
+    var conc = E.vagas(ri).filter(function (v) { return v.tipo === "rituais"; }).map(function (v) { return [v.id, v.concessao.quantidade, v.concessao.circulos.slice(-1)[0]]; });
+    t.iguais("três de 1º círculo e dois por promoção, até o círculo da patente que concedeu", conc,
+      [["d1.rituaisIniciais", 3, 1], ["p1.rituaisPatente", 2, 1], ["p2.rituaisPatente", 2, 2], ["p3.rituaisPatente", 2, 3], ["p4.rituaisPatente", 2, 4]]);
+    t.ok("  nenhum conta no limite de conhecidos", E.vagas(ri).filter(function (v) { return v.tipo === "rituais"; }).every(function (v) { return !v.concessao.contaNoLimite; }));
+    var seg = ritual("op.ritual." + cat.rituais.filter(function (e) { return e.circulo === 2 && /^op\./.test(e.id); })[0].id.split(".")[2]);
+    var reg1 = JSON.parse(JSON.stringify(ri)); E.adicionarRitual(reg1, "p1.rituaisPatente", seg);
+    var reg2 = JSON.parse(JSON.stringify(ri)); E.adicionarRitual(reg2, "p2.rituaisPatente", seg);
+    function invalido(o, idVaga) {
+      var est = E.estado(o, { rituais: [seg] });
+      return est.pendencias.some(function (p) { return p.id === idVaga && p.situacao === "invalida"; }) ||
+        (est.problemas || []).some(function (p) { return p.registro && p.registro.etapa === idVaga; });
+    }
+    t.ok("um ritual de 2º círculo não cabe na vaga de operador", invalido(reg1, "p1.rituaisPatente"));
+    t.ok("  e cabe na de agente especial", !invalido(reg2, "p2.rituaisPatente"));
+    var campo = agente("ocultista", 200, null, { opcionais: { evolucaoPatentes: true, aprendizadoEmCampo: true } });
+    t.ok("com aprendizado em campo: só os três iniciais, e o aviso diz que o livro não define",
+      E.vagas(campo).filter(function (v) { return v.tipo === "rituais"; }).length === 1 &&
+      E.estado(campo, { rituais: [] }).rituais.avisos.some(function (x) { return /não define a combinação/.test(x); }));
+    var lento = agente("ocultista", 200, null, { opcionais: { evolucaoPatentes: true, limitesCompreensao: true } });
+    t.ok("com aprendizado lento: um por promoção, e o aviso explica",
+      E.vagas(lento).filter(function (v) { return /^p\d\.rituaisPatente$/.test(v.id); }).every(function (v) { return v.concessao.quantidade === 1; }) &&
+      E.estado(lento, { rituais: [] }).rituais.avisos.some(function (x) { return /UM ritual por promoção/.test(x); }));
+
+    t.grupo("Evolução por Patentes · compatibilidade e desligar");
+    var mistura = agente("combatente", 50);
+    t.ok("continua incompatível com NEX & Experiência", !OP.definir(JSON.parse(JSON.stringify(mistura)), "nexExperiencia", true).ok);
+    var sob = ficha({ classe: "sobrevivente", origem: "academico", estagio: 3, opcionais: { evolucaoPatentes: true } });
+    t.ok("Sobrevivente mantém os estágios (sem patente, sem PD forçado)", !R.trilho(sob).porPatente && R.trilho(sob).comum && !R.usaDeterminacao(sob));
+    var mun = ficha({ classe: "mundano", origem: "academico", opcionais: { evolucaoPatentes: true } });
+    t.ok("Mundano continua em NEX 0%", R.trilho(mun).rotulo === "NEX 0%" && !R.trilho(mun).porPatente);
+    var liga = agente("combatente", 50, null, { trilha: "aniquilador" });
+    registrar(liga, "p1.poderClasse", "golpePesado");
+    var desl = JSON.parse(JSON.stringify(liga)); desl.opcionais = {};
+    desl = R.normalizar(desl);
+    t.ok("desligar: volta o trilho por NEX, PE e Sanidade", R.trilho(desl).rotulo === "NEX 20%" && !R.usaDeterminacao(desl) && !!R.calcular(desl, INV).pe);
+    t.ok("  as escolhas das patentes ficam guardadas, sem efeito", desl.escolhas.some(function (r) { return r.etapa === "p1.poderClasse"; }) &&
+      E.estado(desl, null).fora.some(function (f) { return f.registro.etapa === "p1.poderClasse" && /desligada/.test(f.motivos[0]); }));
+    var religa = JSON.parse(JSON.stringify(desl)); religa.opcionais = { evolucaoPatentes: true }; religa = R.normalizar(religa);
+    t.ok("  e religar devolve a escolha", E.estado(religa, null).adquiridos.some(function (a) { return a.chave === "golpePesado"; }));
   }
 
   global.RAMACasos = casos;

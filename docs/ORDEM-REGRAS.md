@@ -1778,7 +1778,7 @@ Todas do **SAH**, capítulo 2, "Novas Regras Opcionais" (p.98-123). Começam
 | Jogando sem Sanidade | SAH p.104-105 | pontos de determinação (PD) no lugar de PE e SAN — ver [Jogando sem Sanidade: pontos de determinação](#jogando-sem-sanidade-pontos-de-determinação) | **P** |
 | Ferimentos Debilitantes | SAH p.105 | registro de ferimentos | **P** |
 | Jogando sem Mapa | SAH p.106 | não afeta a ficha | **I** |
-| Evolução por Patentes | SAH p.108-112 | progressão por patente em vez de NEX | **P** |
+| Evolução por Patentes | SAH p.108-112 | progressão por patente em vez de NEX — ver [Evolução por Patentes](#evolução-por-patentes-v613) | **A** |
 | Limite de rituais por aprendizado lento (A) | SAH p.113 | o ritual por avanço vem só nos degraus ímpares | **A** |
 | Limite de rituais por aprendizado em campo (B) | SAH p.113 | nenhum ritual por avanço; o estudo é registrado com a confirmação da mesa e vira aquisição | **P** |
 | Conjuração Complexa | SAH p.114-116 | campos a mais no ritual | **P** |
@@ -1789,6 +1789,82 @@ Todas do **SAH**, capítulo 2, "Novas Regras Opcionais" (p.98-123). Começam
 
 A chave "Aplicar regras de patente" **não** é uma destas regras: é configuração
 da ficha, e começa ligada.
+
+### Evolução por Patentes (v6.13)
+
+Regra opcional `evolucaoPatentes` (SAH p. 108-112), calculada. Só vale para o
+agente (combatente, especialista, ocultista): Mundano continua em NEX 0% e o
+Sobrevivente nos estágios. Continua incompatível com NEX & Experiência.
+
+**A patente (Tabela 2.6, p. 108).**
+
+| patente | PP | limite de PD | recuperação |
+|---|---|---|---|
+| Recruta | 0 | 1 | 1 |
+| Operador | 20 | 3 | 2 |
+| Agente especial | 50 | 6 | 3 |
+| Oficial de operações | 100 | 10 | 4 |
+| Agente de elite | 200 | 15 | 5 |
+
+- A **patente conquistada** fica em `ordem.patenteConquistada` (0 a 4), à parte
+  dos PP. Os PP promovem sozinhos — várias patentes de uma vez, se for o caso —
+  ao mudar o campo e ao normalizar a ficha. Perder PP não rebaixa ("ele não é
+  rebaixado", p. 109): 48 PP depois de 50 continua agente especial, inclusive
+  depois de salvar e reabrir. Só a mesa baixa a patente (modo edição, campo de
+  correção).
+- O **degrau** de progressão é o limite de PD (1, 3, 6, 10, 15): é o "nível de
+  experiência" que a p. 109 manda usar em pré-requisitos e efeitos de origem e
+  classe (Calejado dá +6 PV a um agente especial; um requisito "NEX 30%" é nível
+  6). O limite de PD por turno sai do mesmo número.
+- **Recuperação**: com a regra ligada, a Condições mostra **Dormir (+N PV)** e
+  **Relaxar (+N PD)** numa cena de interlúdio, com N da coluna de recuperação —
+  não o limite de PD.
+- **Crédito e equipamento** (com "Aplicar regras de patente" ligada) são os da
+  patente conquistada. As duas chaves são distintas: desligar "Aplicar regras de
+  patente" tira o cartão de crédito e de itens por categoria; os PP da Evolução
+  por Patentes continuam no painel de progressão, porque são eles que promovem.
+- **Pontos de determinação**: a regra "usa Pontos de Determinação" (p. 108). O
+  agente fica com PV e PD (sem PE e Sanidade), com ou sem "Jogando sem Sanidade".
+
+**A classe (Tabelas 2.7 a 2.9, p. 110-112).**
+
+| classe | PV | por patente | PD | por patente | perícias |
+|---|---|---|---|---|---|
+| Combatente | 20 + Vig | 10 + Vig | 8 + Pre | 4 + Pre | Luta ou Pontaria; Fortitude ou Reflexos; 1 + Int |
+| Especialista | 16 + Vig | 8 + Vig | 12 + Pre | 6 + Pre | 7 + Int |
+| Ocultista | 12 + Vig | 6 + Vig | 16 + Pre | 8 + Pre | Ocultismo **ou** Vontade; 3 + Int |
+
+Exemplo do livro: combatente de elite com Vigor 3 = 23 + 4 × 13 = **75 PV**
+(testado). As proficiências são as do livro básico.
+
+| patente | o que vem (vagas com id `p<índice>.<tipo>`) |
+|---|---|
+| Recruta | Ataque Especial (1 PD, +5) · Eclético e Perito (1 PD, +1d6; vaga `d1.perito`) · Escolhido pelo Outro Lado (1º círculo, 3 rituais) |
+| Operador | aumento de atributo (teto 4) · poder de classe · 2 rituais |
+| Agente especial | grau de treinamento · poder de classe · trilha (1ª habilidade) · Ataque Especial/Perito/2º círculo · 2 rituais |
+| Oficial de operações | aumento de atributo (teto 4) · poder de classe · 2ª habilidade da trilha · 3º círculo · 2 rituais |
+| Agente de elite | grau de treinamento · poder de classe · **3ª ou 4ª** habilidade da trilha (vaga `p4.trilhaElite`) · 4º círculo · 2 rituais |
+
+- Não há Versatilidade nem Engenhosidade (não estão nas tabelas).
+- O grau de treinamento sobe um (treinado → veterano, veterano → expert) sem o
+  NEX mínimo da progressão comum.
+- As escalas de Ataque Especial e Perito são mostradas pela patente.
+
+**Ligar e desligar.** As vagas da patente têm ids próprios (`p<índice>.…`) e as
+da progressão por NEX ficam guardadas, sem efeito, enquanto a regra está
+ligada; ao desligar, as das patentes é que ficam guardadas. Nada é apagado nem
+convertido. Os rituais iniciais e Perito do recruta usam o mesmo id nos dois
+modos. A ficha subiu para o schema 31 por causa de `patenteConquistada`.
+
+**Leituras e lacunas.**
+
+- Transcender continua poder de ocultista (o livro não diz o contrário para esta
+  variante) e as alterações por exposição de NEX & Experiência não abrem.
+- A transição de Mundano ou Sobrevivente para agente com a regra ligada usa a
+  tabela da patente desde a transição (o livro não combina as duas).
+- Trilha Graduado: Saber Ampliado e o Grimório chegam com as habilidades
+  (agente especial e oficial de operações); os rituais "a cada círculo novo"
+  seguem os círculos da patente.
 
 ### Regras opcionais dos Arquivos Secretos (v2.31)
 
@@ -1940,11 +2016,11 @@ onde o livro não diz.
   [que] avança de patente, aprende dois rituais de qualquer círculo que possa
   lançar. Esses rituais não contam no seu limite"; o 2º círculo vem como agente
   especial, o 3º como oficial de operações e o 4º como agente de elite (p.112).
-- *O que o R.A.M.A. faz:* **não calcula.** O trilho por patente não está
-  estruturado (ver a regra na tabela acima): com ela ligada, as concessões
-  continuam seguindo NEX ou nível, e a aba Rituais e a Progressão avisam com os
-  números do livro. A diferença fica com a mesa — por exemplo, com **Registrar
-  como concessão da mesa**. Ver lacuna 23.
+- *O que o R.A.M.A. faz:* **calcula** (v6.13). Três rituais de 1º círculo
+  (`d1.rituaisIniciais`, o mesmo id da progressão por NEX) e dois a cada nova
+  patente (`p<índice>.rituaisPatente`), conferidos pelo círculo da patente que
+  concedeu a vaga; nenhum conta no limite de conhecidos. Ver [Evolução por
+  Patentes](#evolução-por-patentes-v613) e a lacuna 23.
 
 **Conjurando Rituais Desconhecidos** (`rituaisDesconhecidos`, SAH p.117).
 
@@ -2789,15 +2865,14 @@ aberta, a adotada está escrita — e é a que os testes travam.
 
 23. **Evolução por Patentes e os rituais.** A tabela do ocultista por patente
     (SAH p.112) dá três rituais iniciais e **dois** a cada nova patente, com os
-    círculos por patente. A regra opcional de patentes ainda não tem o trilho de
-    progressão estruturado no R.A.M.A. (ver a entrada dela acima), então as
-    concessões de ritual continuam seguindo os degraus de NEX ou de nível
-    enquanto ela estiver ligada — com o aviso, e os números do livro, na aba
-    Rituais e na Progressão. A ficha não inventa a tabela. O livro também não
-    diz: como A e B, escritas para NEX e nível, se aplicam por patente; e se
-    Aprender Ritual, com patentes, olha o limite de PD (a p.109 manda usá-lo como
-    nível só para "habilidades de origem e classe", e Aprender Ritual é poder
-    paranormal). Ficam com a mesa até o trilho existir.
+    círculos por patente — e o R.A.M.A. aplica isso desde a v6.13. O livro não
+    diz como A e B, escritas para NEX e nível, se aplicam por patente. A leitura
+    adotada, mostrada na aba Rituais e na Progressão: com **aprendizado em
+    campo**, só os três iniciais (nenhum por promoção; os novos vêm por estudo,
+    no círculo da patente); com **aprendizado lento**, **um** por promoção em vez
+    de dois. Aprender Ritual continua olhando o NEX de exposição: a p.109 manda
+    usar o limite de PD como nível só para "habilidades de origem e classe", e
+    Aprender Ritual é poder paranormal.
 
 24. **Aprender um ritual sobe o NEX.** Com NEX & Experiência, "sempre que o
     personagem aprende um ritual, seu NEX aumenta em um valor igual ao círculo do
@@ -2826,9 +2901,9 @@ aberta, a adotada está escrita — e é a que os testes travam.
     chama de "uma variante da regra de Nível de Experiência e Nível de Exposição"
     (SAH p.109), e as duas trocam o trilho de progressão; a lista de estilos de
     jogo da ficha de série, no fim do livro, sugere as duas no "Foco em Horror".
-    O R.A.M.A. as trata como incompatíveis desde que as duas chaves existem: sem
-    o trilho de patentes estruturado, não há como aplicar as duas ao mesmo tempo
-    sem inventar a combinação.
+    O R.A.M.A. as trata como incompatíveis desde que as duas chaves existem: as
+    duas trocam o trilho de progressão, e aplicar as duas ao mesmo tempo exigiria
+    inventar a combinação. Continua assim com o trilho de patentes calculado.
 
 28. **Morrendo no apêndice de condições.** O apêndice diz que o personagem morre
     se "ficar mais de três rodadas" morrendo e que a condição termina se ele

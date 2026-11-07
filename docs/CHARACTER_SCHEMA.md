@@ -5,6 +5,18 @@ padrão e normaliza o que chega de fora. Onde ela é guardada — inteira em
 `fichaJson` (formato antigo) ou em blocos (v2.15) — é assunto do backend, e não muda
 nada aqui: ver [DATABASE.md](DATABASE.md).
 
+## Evolução por Patentes — v6.13 / schema 31
+
+Ficha de Ordem, campo novo `ordem.patenteConquistada` (inteiro 0 a 4: recruta,
+operador, agente especial, oficial de operações, agente de elite). Guardado à
+parte de `ordem.prestigio`: com a regra opcional `evolucaoPatentes` ligada,
+`R.normalizar` o sobe até a patente que os PP alcançam e nunca o baixa (perder PP
+não rebaixa, SAH p. 109); só a correção da mesa, no modo edição, o diminui. Com a
+regra desligada, o campo fica guardado sem efeito. Sem conversão: uma ficha 30
+abre com 0. As escolhas das patentes ficam em `ordem.escolhas` com etapas
+`p<índice>.<tipo>` (por exemplo `p2.trilha`, `p4.trilhaElite`,
+`p3.rituaisPatente`).
+
 ## Arquivos Secretos 9 — v6.9 / schema 30
 
 Ficha de Ordem, campo novo `ordem.arquivo9` (normalizado por

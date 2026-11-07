@@ -118,6 +118,26 @@
 
   var CHANGELOG = [
     {
+      versao: "6.13.0",
+      codinome: "INSÍGNIA",
+      data: "31/10/2026",
+      mudancas: {
+        "Adicionado": [
+          "Ordem Paranormal: a regra opcional Evolução por Patentes (Sobrevivendo ao Horror, p. 108–112) passa a ser calculada. Com ela ligada, o agente progride de recruta a agente de elite pelos pontos de prestígio (0, 20, 50, 100 e 200 PP), com PV, PD, perícias, poderes, aumentos de atributo (até 4), grau de treinamento e habilidades de trilha das tabelas 2.7 a 2.9, e Pontos de Determinação no lugar de PE e Sanidade.",
+          "Promoção automática, inclusive de várias patentes de uma vez. A patente conquistada fica guardada à parte dos PP: perder PP não rebaixa, nem depois de salvar e reabrir. No modo edição, a mesa pode corrigir a patente.",
+          "Em agente de elite, a escolha entre a 3ª e a 4ª habilidade da trilha.",
+          "Ocultista: três rituais de 1º círculo na criação e dois a cada nova patente, fora do limite de conhecidos; 2º círculo em agente especial, 3º em oficial de operações e 4º em agente de elite, conferidos pela patente que concedeu a vaga.",
+          "Condições: Dormir e Relaxar numa cena de interlúdio recuperam PV e PD pela coluna de recuperação da patente (1 a 5).",
+        ],
+        "Alterado": [
+          "O limite de PD da patente vale como nível para efeitos e requisitos de origem e classe; o NEX continua, à parte, como exposição ao paranormal. Crédito e equipamento (com Aplicar regras de patente) são os da patente conquistada.",
+          "Os avisos de implementação parcial na criação, na Progressão e na aba Rituais deram lugar ao que a regra faz. O que o livro não define — aprendizado em campo ou lento junto com as patentes — é dito na tela, com a leitura adotada.",
+          "Desligar a regra esconde o trilho das patentes e volta ao cálculo por NEX sem apagar nenhuma escolha. Continua incompatível com NEX & Experiência; Mundano e Sobrevivente seguem como antes.",
+        ],
+        "Técnico": ["Só o site: js/ordem/catalogo.js (EVOLUCAO_PATENTES), js/ordem/regras.js, js/ordem/progressao.js (vagas p<patente>.<tipo>), js/ordem/aprendizado.js, js/ordem/opcionais.js, js/ordem/telas/ficha-ordem.js, js/ordem/telas/ordem-criar.js, js/ordem/telas/ordem-escolhas.js e js/ficha.js. Schema 31, sem conversão: o campo novo ordem.patenteConquistada, para uma aba da versão anterior recusar a ficha em vez de perder a patente ao gravar. Nada de .gs."],
+      },
+    },
+    {
       versao: "6.12.1",
       codinome: "GRAVURA",
       data: "31/10/2026",

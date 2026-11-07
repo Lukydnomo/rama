@@ -171,6 +171,10 @@
       rotulo: "Afinidade elemental", verbo: "Escolher elemento",
       explicacao: "Com NEX 50% você se conecta a um elemento. A afinidade em si vem na próxima vez que transcender.",
     },
+    trilhaElite: {
+      rotulo: "Habilidade de trilha (elite)", verbo: "Escolher habilidade",
+      explicacao: "Ao se tornar agente de elite, você recebe mais uma habilidade da trilha, à sua escolha entre a terceira e a quarta (Sobrevivendo ao Horror, p. 110-112).",
+    },
     rituais: {
       rotulo: "Rituais", verbo: "Escolher rituais",
       explicacao: "Escolha os rituais que esta etapa concede. A biblioteca abre no contexto desta concessão.",
@@ -181,7 +185,7 @@
      vem antes de Versatilidade para um poder escolhido ali já enxergar
      o atributo aumentado. */
   var POSICAO = {
-    poderOrigem: 1, trilha: 5, trilhaAuto: 10, opcoesBeneficio: 11, perito: 15,
+    poderOrigem: 1, trilha: 5, trilhaElite: 6, trilhaAuto: 10, opcoesBeneficio: 11, perito: 15,
     poderClasse: 20, atributo: 30, grauTreinamento: 40, versatilidade: 50,
     /* Depois do aumento de atributo do mesmo degrau: o grimório guarda
        "rituais iguais ao seu Intelecto", e o Intelecto que vale é o
@@ -210,6 +214,92 @@
 
   function rotuloDoDegrau(d, separado) {
     return separado ? "Nível " + d : "NEX " + nexDoDegrau(d) + "%";
+  }
+
+  /* -----------------------------------------------------------------
+     EVOLUÇÃO POR PATENTES (regra opcional, SAH p. 108-112)
+
+     Os degraus são os limites de PD de cada patente (1, 3, 6, 10, 15):
+     é o "nível" que a p. 109 manda usar em pré-requisitos e efeitos de
+     origem e classe. As vagas da patente têm ids próprios —
+     p<índice>.<tipo> — e nunca colidem com as do NEX (d<degrau>.<tipo>):
+     ligar e desligar a regra não apaga escolha nenhuma. As exceções
+     são as do recruta que existem igual nas duas progressões — os
+     rituais iniciais (d1.rituaisIniciais) e Perito (d1.perito).
+
+     A trilha: a 1ª habilidade em agente especial, a 2ª em oficial de
+     operações e, em agente de elite, a 3ª OU a 4ª, à escolha (vaga
+     p4.trilhaElite). A outra nunca chega.
+     ----------------------------------------------------------------- */
+
+  var ID_ELITE = "p4.trilhaElite";
+
+  function patenteDoDegrau(d) { return C.patenteDaEvolucao(C.indiceDoDegrauDePatente(d)); }
+  function rotuloDaEtapaDePatente(indice) { return C.patenteDaEvolucao(indice).nome; }
+
+  /* A habilidade escolhida na elite (a chave), lida das escolhas. */
+  function escolhaDeElite(ordem) {
+    var achada = null;
+    (ordem && ordem.escolhas || []).forEach(function (r) {
+      if (r && r.etapa === ID_ELITE && (!achada || String(r.registradoEm || "") > String(achada.registradoEm || ""))) achada = r;
+    });
+    return achada ? String(achada.valor || "") : "";
+  }
+
+  /* As duas habilidades que a elite oferece (a 3ª e a 4ª, pelo NEX). */
+  function opcoesDeElite(chaveTrilha) {
+    var habs = P.habilidadesDaTrilha(chaveTrilha).slice().sort(function (a, b) { return a.nex - b.nex; });
+    return habs.slice(2, 4);
+  }
+
+  /* O degrau em que uma habilidade de trilha chega; Infinity = não chega. */
+  function degrauDaHabilidadeDeTrilha(ordem, h, t) {
+    if (!t || !t.porPatente) return degrauDoNex(h.nex);
+    var habs = P.habilidadesDaTrilha(h.trilha).slice().sort(function (a, b) { return a.nex - b.nex; });
+    var i = habs.map(function (x) { return x.chave; }).indexOf(h.chave);
+    if (i === 0) return C.degrauDaPatente(2);
+    if (i === 1) return C.degrauDaPatente(3);
+    if (i === 2 || i === 3) return escolhaDeElite(ordem) === h.chave ? C.degrauDaPatente(4) : Infinity;
+    return Infinity;
+  }
+
+  /* O degrau equivalente a um NEX de habilidade de trilha (para os
+     rituais concedidos por trilha): o da habilidade daquele NEX. */
+  function degrauDeTrilhaPorNex(ordem, t, nex) {
+    if (!t || !t.porPatente) return nex >= 99 ? 20 : Math.round(nex / 5);
+    var tr = ordem && ordem.trilha;
+    var h = tr ? P.habilidadesDaTrilha(tr).filter(function (x) { return x.nex === nex; })[0] : null;
+    return h ? degrauDaHabilidadeDeTrilha(ordem, h, t) : Infinity;
+  }
+
+  /* As vagas da classe numa progressão por patente. */
+  function vagasDePatente(ordem, t, classe) {
+    var lista = [];
+    var tab = C.EVOLUCAO_PATENTES.classes[classe.chave];
+    if (!tab) return lista;
+    var ref = "Sobrevivendo ao Horror, p. " + tab.pagina;
+    tab.patentes.forEach(function (pt, indice) {
+      if (indice > t.patente) return;
+      var d = C.degrauDaPatente(indice);
+      var rotuloEtapa = rotuloDaEtapaDePatente(indice);
+      pt.escolhas.forEach(function (tipo) {
+        var extra = { degrau: d, ordem: d * 100 + (POSICAO[tipo] || 60), rotuloEtapa: rotuloEtapa, patente: indice, porPatente: true };
+        if (tipo === "atributo") {
+          extra.maximo = C.EVOLUCAO_PATENTES.maximoDeAtributo;
+          extra.fonteTexto = ref;
+          extra.explicacao = "Aumente um atributo em +1. Você não pode aumentar um atributo além de 4 desta forma (" + ref + ").";
+        }
+        if (tipo === "grauTreinamento") {
+          extra.explicacao = "Escolha perícias treinadas, tantas quanto " + classe.grauTreinamentoBase + " + Intelecto: o grau sobe um (de treinado para veterano ou de veterano para expert, " + ref + ").";
+        }
+        if (tipo === "trilha") extra.explicacao = "Escolha uma trilha da sua classe. A 1ª habilidade vem agora; a 2ª em oficial de operações; em agente de elite, a 3ª ou a 4ª, à sua escolha (" + ref + ").";
+        if (tipo === "poderClasse") extra.explicacao = "Escolha um poder da sua classe — ou, pelo Sobrevivendo ao Horror, um poder geral (" + ref + ").";
+        /* Perito do recruta é a mesma vaga do NEX 5%: o mesmo id. */
+        var id = tipo === "perito" ? "d1.perito" : "p" + indice + "." + tipo;
+        lista.push(vaga(id, tipo, extra));
+      });
+    });
+    return lista;
   }
 
   /* =================================================================
@@ -400,7 +490,10 @@
 
     var modular = modularLigada(ordem);
 
-    if (classe) {
+    if (classe && t.porPatente) {
+      vagasDePatente(ordem, t, classe).forEach(function (v) { lista.push(v); });
+    }
+    if (classe && !t.porPatente) {
       C.progressaoDaClasse(classe.chave).forEach(function (etapa) {
         var d = degrauDoNex(etapa.nex);
         if (d > t.passos) return;
@@ -431,11 +524,12 @@
         });
       });
       if (modular) vagasModulares(ordem, t).forEach(function (v) { lista.push(v); });
-
+    }
+    if (classe) {
       var trilha = C.trilha(ordem.trilha);
       if (trilha && C.trilhaServe(trilha, classe.chave, ordem)) {
         P.habilidadesDaTrilha(trilha.chave).forEach(function (h) {
-          var d = degrauDoNex(h.nex);
+          var d = degrauDaHabilidadeDeTrilha(ordem, h, t);
           if (d > t.passos || !h.opcoes.length) return;
           lista.push(vaga("b." + h.chave, "opcoesBeneficio", {
             degrau: d,
@@ -443,7 +537,7 @@
             rotulo: h.nome,
             explicacao: h.resumo,
             beneficio: h.chave,
-            rotuloEtapa: rotuloDoDegrau(d, t.separado),
+            rotuloEtapa: t.porPatente ? patenteDoDegrau(d).nome : rotuloDoDegrau(d, t.separado),
           }));
         });
       }
@@ -621,6 +715,11 @@
       trilha: trilhaValida(ordem) ? ordem.trilha : "",
       passos: t.passos,
       separado: t.separado,
+      porPatente: !!t.porPatente,
+      patente: t.porPatente ? t.patente : -1,
+      /* O degrau de uma habilidade de trilha pelo NEX dela (os rituais
+         concedidos pela trilha chegam com a habilidade). */
+      degrauDaTrilha: function (nex) { return degrauDeTrilhaPorNex(ordem, t, nex); },
       lento: !!(OP() && A && OP().ligada(ordem, A.REGRA_LENTO)),
       campo: !!(OP() && A && OP().ligada(ordem, A.REGRA_CAMPO)),
       elementoMaldicao: elementoDaMaldicao(ordem),
@@ -638,8 +737,9 @@
     var achado = 0;
     (ordem.escolhas || []).forEach(function (r) {
       var m = /^d(\d+)\./.exec(String(r && r.etapa || ""));
-      if (!m) return;
-      var degrau = Number(m[1]);
+      var mp = /^p(\d)\./.exec(String(r && r.etapa || ""));
+      if (!m && !mp) return;
+      var degrau = m ? Number(m[1]) : C.degrauDaPatente(parseInt(mp[1], 10));
       (function andar(v, prof) {
         if (!v || typeof v !== "object" || prof > 6) return;
         if (v.valor === chave && (!achado || degrau < achado)) achado = degrau;
@@ -828,6 +928,10 @@
   function descrever(ordem, r) {
     var o = r.opcoes || {};
     switch (r.tipo) {
+      case "trilhaElite": {
+        var he = P.poder(r.valor);
+        return he ? he.nome : String(r.valor || "");
+      }
       case "trilhaSobrevivente": {
         var ts = C.trilhaSobrevivente(r.valor);
         return ts ? "Trilha " + ts.nome : "";
@@ -1010,15 +1114,18 @@
     var exposicao;
     if (v.nexExposicao) exposicao = v.nexExposicao;
     else if (t.separado) exposicao = 0;
+    /* Evolução por Patentes: o NEX é só exposição, e é o da ficha. */
+    else if (t.porPatente) exposicao = exposicaoAtual;
     else exposicao = nexDaEtapa;
 
     return {
       id: v.id,
       degrau: d,
       nex: nexDaEtapa,
-      exposicao: Math.min(exposicao, t.separado ? exposicaoAtual : 99),
+      exposicao: Math.min(exposicao, t.separado || t.porPatente ? exposicaoAtual : 99),
       separado: t.separado,
-      rotulo: v.rotuloEtapa || rotuloDoDegrau(d, t.separado),
+      porPatente: !!t.porPatente,
+      rotulo: v.rotuloEtapa || (t.porPatente && d ? patenteDoDegrau(d).nome : rotuloDoDegrau(d, t.separado)),
     };
   }
 
@@ -1081,8 +1188,8 @@
         return { ok: algum, texto: "Treinado em " + nomes, falta: "Treinado em " + nomes };
       }
       case "nex":
-        return { ok: etapa.nex >= r.minimo, texto: textoNex(r.minimo, etapa.separado),
-          falta: textoNex(r.minimo, etapa.separado) + " (esta escolha é de " + etapa.rotulo + ")" };
+        return { ok: etapa.nex >= r.minimo, texto: textoNex(r.minimo, etapa.separado || etapa.porPatente),
+          falta: textoNex(r.minimo, etapa.separado || etapa.porPatente) + (etapa.porPatente ? " (com Evolução por Patentes, o nível é o limite de PD da patente — " + etapa.rotulo + " vale nível " + etapa.degrau + ")" : " (esta escolha é de " + etapa.rotulo + ")") };
       case "poder": {
         var alvo = P.poder(r.poder);
         var ok = percurso.adquiridos.some(function (a) { return vale(a) && a.chave === r.poder; });
@@ -1595,7 +1702,9 @@
     if (atual >= 3) return nome + " já é expert.";
     if (atual === 0 && !podeTreinar) return nome + " não é treinada.";
     var novo = atual + 1;
-    if (etapa.nex < NEX_DO_GRAU[novo]) {
+    /* Evolução por Patentes: "aumenta em um (de treinado para veterano
+       ou de veterano para expert)" — sem degrau mínimo de NEX. */
+    if (!etapa.porPatente && etapa.nex < NEX_DO_GRAU[novo]) {
       return nome + " só pode ir a " + GRAUS[novo] + " a partir de " + textoNex(NEX_DO_GRAU[novo], etapa.separado) + ".";
     }
     return "";
@@ -1740,6 +1849,14 @@
     var saida = { faltam: [], problemas: [], filhos: [], transcender: false };
 
     switch (v.tipo) {
+      case "trilhaElite": {
+        if (!r.valor) { saida.faltam.push("Habilidade da trilha"); break; }
+        var trE = C.trilha(ordem.trilha);
+        var opE = trE ? opcoesDeElite(trE.chave) : [];
+        if (!trE) saida.problemas.push("Escolha a trilha (agente especial) antes.");
+        else if (!opE.some(function (h) { return h.chave === r.valor; })) saida.problemas.push("Esta habilidade não é a 3ª nem a 4ª da trilha " + trE.nome + ".");
+        break;
+      }
       case "trilhaSobrevivente":
         if (!r.valor) { saida.faltam.push("Trilha"); break; }
         if (!C.trilhaSobrevivente(r.valor)) saida.problemas.push("Trilha de sobrevivente desconhecida.");
@@ -2583,7 +2700,7 @@
     var suspensa = classe && trilhaSuspensa(ordem) ? C.trilha(ordem.trilha) : null;
     if (trilhaEscolhida) {
       P.habilidadesDaTrilha(trilhaEscolhida.chave).forEach(function (h) {
-        var d = degrauDoNex(h.nex);
+        var d = degrauDaHabilidadeDeTrilha(ordem, h, t);
         if (d > t.passos || h.opcoes.length) return;
         eventos.push({ ordem: d * 100 + POSICAO.trilhaAuto, trilhaAuto: h, degrau: d });
       });
@@ -2931,7 +3048,7 @@
 
     var ocultista = C.classe(ordem.classe) && !!A && A.circuloMaximoNoDegrau(ordem.classe, 1) > 0;
     var flags = {
-      patentes: !!(OP() && A && OP().ligada(ordem, A.REGRA_PATENTES)),
+      patentes: !!t.porPatente,
       nexExperiencia: t.separado,
       campo: !!(OP() && A && OP().ligada(ordem, A.REGRA_CAMPO)),
       lento: !!(OP() && A && OP().ligada(ordem, A.REGRA_LENTO)),
@@ -2960,7 +3077,7 @@
          a biblioteca confere com isto; a gravação, com a etapa. */
       conhecimento: comConhecimento({}, ordem, percurso, { exposicao: R().exposicao(ordem) }, contexto),
       maldicao: compreensaoDisponivel(ordem, t),
-      circuloMaximo: A ? A.circuloMaximoNoDegrau(ordem.classe, t.passos) : 0,
+      circuloMaximo: A ? A.circuloMaximoNoDegrau(ordem.classe, t.passos, t.porPatente) : 0,
       degrauAtual: t.passos,
     };
   }
@@ -3055,7 +3172,7 @@
       return "O estudo não foi confirmado: faltou dizer que a fonte foi achada e que o teste de Ocultismo passou.";
     }
     var degrau = reg.degrau || t.passos;
-    var teste = A.avaliarContraRegra({ tipo: "campo", maximo: A.circuloMaximoNoDegrau(ordem.classe, degrau) }, dado);
+    var teste = A.avaliarContraRegra({ tipo: "campo", maximo: A.circuloMaximoNoDegrau(ordem.classe, degrau, R().trilho(ordem).porPatente) }, dado);
     return teste.ok ? "" : teste.motivo;
   }
 
@@ -3107,7 +3224,7 @@
         elementos: elementosDoDado(dado.naFicha === null ? reg : dado),
         excecao: reg.tipo === "mesa",
         regra: reg.tipo === "maldicao" ? { tipo: "maldicao" } : reg.tipo === "campo"
-          ? { tipo: "campo", maximo: A ? A.circuloMaximoNoDegrau(ordem.classe, degrau) : 0 }
+          ? { tipo: "campo", maximo: A ? A.circuloMaximoNoDegrau(ordem.classe, degrau, R().trilho(ordem).porPatente) : 0 }
           : { tipo: "mesa" },
       }));
       saida.push({ registro: reg, valido: true, motivo: "" });
@@ -3314,7 +3431,7 @@
 
       case "campo": {
         if (!agora.rituais.emCampo || !agora.rituais.ocultista) return null;
-        var maximoCampo = A.circuloMaximoNoDegrau(ordem.classe, t.passos);
+        var maximoCampo = A.circuloMaximoNoDegrau(ordem.classe, t.passos, t.porPatente);
         return montar({
           tipo: "campo", id: "campo", vaga: "",
           rotulo: "Estudo em campo", rotuloEtapa: rotuloDoDegrau(t.passos, t.separado),
@@ -3625,6 +3742,13 @@
     }
     if (/^t\./.test(r.etapa)) {
       return "Esta escolha é da transição para agente, que não vale mais (a classe mudou depois). Ela fica guardada.";
+    }
+    if (/^p\d\./.test(r.etapa)) {
+      if (!t.porPatente) return "Esta escolha é de uma patente da Evolução por Patentes, que está desligada nesta ficha (aba Regras). Ela fica guardada e volta a valer ao religar.";
+      return "Esta escolha é de uma patente acima de " + t.rotulo + " (ou de uma classe que a ficha não tem mais). Ela fica guardada e volta a valer quando a patente for conquistada.";
+    }
+    if (t.porPatente && /^d\d+\./.test(r.etapa) && !/^d1\.(rituaisIniciais|perito)$/.test(r.etapa)) {
+      return "Esta escolha é da progressão por NEX. Com a Evolução por Patentes ligada, as vagas são as das patentes: a escolha fica guardada e volta a valer ao desligar a regra.";
     }
     if (/^d\d+\.(rituaisIniciais|ritualClasse|saberAmpliado|grimorio)$/.test(r.etapa)) {
       return "Esta concessão de rituais não existe mais — a classe, a trilha, o degrau ou uma regra " +
@@ -3949,16 +4073,23 @@
     (est ? est.efeitos : []).forEach(function (ef) {
       if (ef.tipo === "custoHabilidade") (custos[ef.habilidade] = custos[ef.habilidade] || []).push(ef);
     });
+    var EP = C.EVOLUCAO_PATENTES;
     return P.AUTOMATICAS.filter(function (a) {
       if (a.classes.indexOf(classe.chave) >= 0) {
+        /* Evolução por Patentes: só as habilidades das tabelas 2.7 a 2.9
+           (sem Engenhosidade), todas desde recruta. */
+        if (t.porPatente) return EP.automaticas.indexOf(a.chave) >= 0;
         var inicio = P.NEX_INICIAL_AUTOMATICA[a.chave];
         return t.nexEquivalente >= (inicio === undefined ? 5 : inicio);
       }
       return !!preservada && a.classes.indexOf(preservada) >= 0;
     }).map(function (a) {
-      var estagios = P.ESTAGIOS[a.chave] || [];
       var atual = null;
-      estagios.forEach(function (s) { if (t.nexEquivalente >= s.nex) atual = s; });
+      if (t.porPatente && EP.estagios[a.chave]) {
+        EP.estagios[a.chave].forEach(function (s) { if (t.patente >= s.patente) atual = s; });
+      } else {
+        (P.ESTAGIOS[a.chave] || []).forEach(function (s) { if (t.nexEquivalente >= s.nex) atual = s; });
+      }
       var texto = atual ? atual.texto : "";
       (custos[a.chave] || []).forEach(function (ef) {
         texto += (texto ? " · " : "") + "custo " + (ef.valor > 0 ? "+" : "") + ef.valor + " PE (" + ef.fonte + ", Treinamento Especial)";
@@ -4167,6 +4298,9 @@
     candidatosPoderClasse: candidatosPoderClasse,
     modularLigada: modularLigada,
     grupoDoDegrau: grupoDoDegrau,
+    opcoesDeElite: opcoesDeElite,
+    escolhaDeElite: escolhaDeElite,
+    degrauDaHabilidadeDeTrilha: degrauDaHabilidadeDeTrilha,
     associacoesModulares: associacoesModulares,
     associarModular: associarModular,
     candidatosParanormais: candidatosParanormais,

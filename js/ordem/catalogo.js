@@ -1262,6 +1262,132 @@
 
   var CREDITOS = ["Baixo", "Médio", "Alto", "Ilimitado"];
 
+  /* =================================================================
+     EVOLUÇÃO POR PATENTES — regra opcional, SAH p. 108-112
+     -----------------------------------------------------------------
+     A progressão passa a ser a patente, não o NEX. É "uma variante da
+     regra de Nível de Experiência e Nível de Exposição" (p. 108): o NEX
+     continua existindo, mas só mede a exposição.
+
+     Tabela 2.6 (p. 108): pontos de prestígio para cada patente, o limite
+     de PD por turno e a recuperação (PV ao dormir, PD ao relaxar).
+     "Para efeito dos pré-requisitos e efeitos de habilidades de origem e
+     classe, considere que o nível de experiência do personagem é igual
+     ao seu limite de PD" (p. 109): é o DEGRAU da progressão (1, 3, 6, 10
+     e 15), o que faz Calejado dar +6 PV a um agente especial.
+
+     Tabelas 2.7 a 2.9 (p. 110-112): PV e PD por classe, perícias,
+     proficiências e o que cada patente concede.
+     ================================================================= */
+
+  var EVOLUCAO_PATENTES = {
+    fonte: SAH,
+    pagina: 108,
+    patentes: [
+      { indice: 0, chave: "recruta",  nome: "Recruta",              pp: 0,   limitePd: 1,  recuperacao: 1 },
+      { indice: 1, chave: "operador", nome: "Operador",             pp: 20,  limitePd: 3,  recuperacao: 2 },
+      { indice: 2, chave: "especial", nome: "Agente especial",      pp: 50,  limitePd: 6,  recuperacao: 3 },
+      { indice: 3, chave: "oficial",  nome: "Oficial de operações", pp: 100, limitePd: 10, recuperacao: 4 },
+      { indice: 4, chave: "elite",    nome: "Agente de elite",      pp: 200, limitePd: 15, recuperacao: 5 },
+    ],
+    /* Escolhido pelo Outro Lado (p. 112): o círculo que o ocultista pode
+       lançar em cada patente. */
+    circulos: [1, 1, 2, 3, 4],
+    /* "Você não pode aumentar um atributo além de 4 desta forma." */
+    maximoDeAtributo: 4,
+    classes: {
+      combatente: {
+        pagina: 110, tabela: "Tabela 2.7",
+        pv: { base: 20, porPatente: 10, atributo: "vig" },
+        pd: { base: 8, porPatente: 4, atributo: "pre" },
+        periciasEscolhaObrigatoria: [{ entre: ["luta", "pontaria"] }, { entre: ["fortitude", "reflexos"] }],
+        periciasFixas: [],
+        periciasLivres: { base: 1, atributo: "int" },
+        proficiencias: ["Armas simples", "Armas táticas", "Proteções leves"],
+        /* O que cada patente concede: vagas de escolha e as linhas da
+           tabela (a escala de Ataque Especial é do cartão da habilidade). */
+        patentes: [
+          { escolhas: [], rotulos: ["Ataque Especial (1 PD, +5)"] },
+          { escolhas: ["atributo", "poderClasse"], rotulos: ["Aumento de atributo", "Poder de combatente"] },
+          { escolhas: ["grauTreinamento", "poderClasse", "trilha"], rotulos: ["Ataque Especial (2 PD, +10)", "Grau de treinamento", "Poder de combatente", "Trilha (1ª habilidade)"] },
+          { escolhas: ["atributo", "poderClasse"], rotulos: ["Ataque Especial (3 PD, +15)", "Aumento de atributo", "Poder de combatente", "Trilha (2ª habilidade)"] },
+          { escolhas: ["grauTreinamento", "poderClasse", "trilhaElite"], rotulos: ["Ataque Especial (4 PD, +20)", "Grau de treinamento", "Poder de combatente", "Trilha (3ª ou 4ª habilidade)"] },
+        ],
+      },
+      especialista: {
+        pagina: 111, tabela: "Tabela 2.8",
+        pv: { base: 16, porPatente: 8, atributo: "vig" },
+        pd: { base: 12, porPatente: 6, atributo: "pre" },
+        periciasEscolhaObrigatoria: [],
+        periciasFixas: [],
+        periciasLivres: { base: 7, atributo: "int" },
+        proficiencias: ["Armas simples", "Proteções leves"],
+        patentes: [
+          { escolhas: ["perito"], rotulos: ["Eclético", "Perito (1 PD, +1d6)"] },
+          { escolhas: ["atributo", "poderClasse"], rotulos: ["Aumento de atributo", "Poder de especialista"] },
+          { escolhas: ["grauTreinamento", "poderClasse", "trilha"], rotulos: ["Perito (2 PD, +1d8)", "Grau de treinamento", "Poder de especialista", "Trilha (1ª habilidade)"] },
+          { escolhas: ["atributo", "poderClasse"], rotulos: ["Perito (3 PD, +1d10)", "Aumento de atributo", "Poder de especialista", "Trilha (2ª habilidade)"] },
+          { escolhas: ["grauTreinamento", "poderClasse", "trilhaElite"], rotulos: ["Perito (4 PD, +1d12)", "Grau de treinamento", "Poder de especialista", "Trilha (3ª ou 4ª habilidade)"] },
+        ],
+      },
+      ocultista: {
+        pagina: 112, tabela: "Tabela 2.9",
+        pv: { base: 12, porPatente: 6, atributo: "vig" },
+        pd: { base: 16, porPatente: 8, atributo: "pre" },
+        /* "Escolha Ocultismo ou Vontade" — no livro básico são as duas. */
+        periciasEscolhaObrigatoria: [{ entre: ["ocultismo", "vontade"] }],
+        periciasFixas: [],
+        periciasLivres: { base: 3, atributo: "int" },
+        proficiencias: ["Armas simples"],
+        patentes: [
+          { escolhas: [], rotulos: ["Escolhido pelo Outro Lado (1º círculo)", "3 rituais de 1º círculo"] },
+          { escolhas: ["atributo", "poderClasse"], rotulos: ["Aumento de atributo", "Poder de ocultista", "2 rituais"] },
+          { escolhas: ["grauTreinamento", "poderClasse", "trilha"], rotulos: ["Escolhido pelo Outro Lado (2º círculo)", "Grau de treinamento", "Poder de ocultista", "Trilha (1ª habilidade)", "2 rituais"] },
+          { escolhas: ["atributo", "poderClasse"], rotulos: ["Escolhido pelo Outro Lado (3º círculo)", "Aumento de atributo", "Poder de ocultista", "Trilha (2ª habilidade)", "2 rituais"] },
+          { escolhas: ["grauTreinamento", "poderClasse", "trilhaElite"], rotulos: ["Escolhido pelo Outro Lado (4º círculo)", "Grau de treinamento", "Poder de ocultista", "Trilha (3ª ou 4ª habilidade)", "2 rituais"] },
+        ],
+      },
+    },
+    /* As escalas das habilidades automáticas, pela patente (índice). */
+    estagios: {
+      ataqueEspecial: [{ patente: 0, texto: "1 PD: +5" }, { patente: 2, texto: "2 PD: +10" }, { patente: 3, texto: "3 PD: +15" }, { patente: 4, texto: "4 PD: +20" }],
+      perito: [{ patente: 0, texto: "1 PD: +1d6" }, { patente: 2, texto: "2 PD: +1d8" }, { patente: 3, texto: "3 PD: +1d10" }, { patente: 4, texto: "4 PD: +1d12" }],
+      ecletico: [{ patente: 0, texto: "2 PD" }],
+      escolhidoPeloOutroLado: [{ patente: 0, texto: "1º círculo" }, { patente: 2, texto: "2º círculo" }, { patente: 3, texto: "3º círculo" }, { patente: 4, texto: "4º círculo" }],
+    },
+    /* As automáticas da classe que existem nesta regra (Engenhosidade e
+       Versatilidade não estão nas tabelas 2.7 a 2.9). */
+    automaticas: ["ataqueEspecial", "ecletico", "perito", "escolhidoPeloOutroLado"],
+  };
+
+  function patenteDaEvolucao(indice) {
+    var l = EVOLUCAO_PATENTES.patentes;
+    return l[Math.max(0, Math.min(l.length - 1, Math.round(Number(indice) || 0)))];
+  }
+  /* A patente que os PP alcançam (o índice). */
+  function indiceDePatentePorPp(pp) {
+    var n = Math.max(0, Number(pp) || 0), i = 0;
+    EVOLUCAO_PATENTES.patentes.forEach(function (p) { if (n >= p.pp) i = p.indice; });
+    return i;
+  }
+  /* O degrau de progressão de cada patente: o limite de PD. */
+  function degrauDaPatente(indice) { return patenteDaEvolucao(indice).limitePd; }
+  /* A patente mais alta cujo degrau é <= d. */
+  function indiceDoDegrauDePatente(d) {
+    var i = 0;
+    EVOLUCAO_PATENTES.patentes.forEach(function (p) { if (d >= p.limitePd) i = p.indice; });
+    return i;
+  }
+  /* As perícias de classe na criação: com a regra, as do SAH (p. 110-112). */
+  function periciasDaClasse(chaveClasse, porPatente) {
+    var cl = CLASSES.filter(function (c) { return c.chave === chaveClasse; })[0];
+    if (!cl) return { periciasEscolhaObrigatoria: [], periciasFixas: [], periciasLivres: { base: 0, atributo: "int" }, proficiencias: [] };
+    var ep = porPatente ? EVOLUCAO_PATENTES.classes[chaveClasse] : null;
+    var base = ep || cl;
+    return { periciasEscolhaObrigatoria: base.periciasEscolhaObrigatoria || [], periciasFixas: base.periciasFixas || [],
+      periciasLivres: base.periciasLivres || { base: 0, atributo: "int" }, proficiencias: base.proficiencias || cl.proficiencias || [] };
+  }
+
   /* Categorias de item — OPRPG p.53. "Você pode escolher quantos itens
      quiser de categoria 0". Guardadas como número (0 a 4), mostradas em
      romano. */
@@ -1493,6 +1619,8 @@
     TRILHAS: TRILHAS,
     ORIGENS: ORIGENS,
     PATENTES: PATENTES,
+    EVOLUCAO_PATENTES: EVOLUCAO_PATENTES, patenteDaEvolucao: patenteDaEvolucao, indiceDePatentePorPp: indiceDePatentePorPp,
+    degrauDaPatente: degrauDaPatente, indiceDoDegrauDePatente: indiceDoDegrauDePatente, periciasDaClasse: periciasDaClasse,
     CREDITOS: CREDITOS,
     CATEGORIAS_ITEM: CATEGORIAS_ITEM,
     ELEMENTOS: ELEMENTOS,
