@@ -4,7 +4,7 @@
        deno run --allow-read testes/executar-simbolos-rituais.js
 
    Todo ritual oficial tem a pasta e um simbolo.png de verdade (PNG,
-   100 × 100, com transparência); o caminho sai do PREFIXO do id; a ficha
+   100 × 100 ou 1000 × 1000, com transparência); o caminho sai do PREFIXO do id; a ficha
    resolve pelo origemCatalogoId e as cópias da Homebrew pelo vínculo só
    visual (simboloCatalogoId), sem mexer nas regras de aquisição; o que
    não tem vínculo usa o provisório compartilhado. Sem rede; dados
@@ -32,6 +32,10 @@ const t = {
 };
 const semUrl = (u) => String(u).replace(/^.*?(assets\/)/, "$1");
 
+/* Tamanhos aceitos para o símbolo: 100 × 100 (o provisório) ou
+   1000 × 1000 (arte em alta). A tela reduz qualquer um sem recortar. */
+const TAMANHO_OK = (c) => c.largura === c.altura && (c.largura === 100 || c.largura === 1000);
+
 async function cabecalhoPng(rel) {
   try {
     const b = await Deno.readFile(new URL("../" + rel, import.meta.url));
@@ -51,13 +55,14 @@ t.grupo("Pastas e arquivos · um simbolo.png por ritual oficial");
     const c = await cabecalhoPng(rel);
     if (!c) faltam.push(rel);
     else if (!c.ok) ruins.push(rel + " (não é PNG)");
+    else if (!TAMANHO_OK(c)) ruins.push(rel + " (" + c.largura + " × " + c.altura + ")");
   }
   t.ok(`os ${ids.length} rituais oficiais têm a pasta e o PNG`, !faltam.length, faltam.slice(0, 5).join(", "));
-  t.ok("  todos são PNG de verdade", !ruins.length, ruins.slice(0, 5).join(", "));
+  t.ok("  todos são PNG de verdade, 100 × 100 ou 1000 × 1000", !ruins.length, ruins.slice(0, 5).join(", "));
   const prov = await cabecalhoPng(RT.SIMBOLO_PROVISORIO);
   t.igual("o provisório compartilhado: PNG 100 × 100 com transparência (RGBA)", prov && [prov.ok, prov.largura, prov.altura, prov.tipoCor], [true, 100, 100, 6]);
   const amostra = await cabecalhoPng("assets/rituais/op/cicatrizacao/simbolo.png");
-  t.igual("  e os provisórios por ritual também (Cicatrização)", amostra && [amostra.largura, amostra.altura, amostra.tipoCor], [100, 100, 6]);
+  t.ok("  e os de cada ritual: quadrados de 100 ou 1000 px (Cicatrização)", !!amostra && TAMANHO_OK(amostra));
   const leia = await Deno.readTextFile(new URL("../assets/rituais/LEIA-ME.md", import.meta.url)).catch(() => "");
   t.ok("assets/rituais/LEIA-ME.md explica onde fica cada ritual e como trocar", /op\.ritual\.cicatrizacao/.test(leia) && /simbolo\.png/.test(leia) && /gerar-simbolos-rituais/.test(leia));
 }

@@ -7,7 +7,7 @@ trocar pela arte de cada ritual sem mexer no código.
 
 | Arquivo          | Formato                                        | Onde aparece |
 |------------------|------------------------------------------------|--------------|
-| `simbolo.png`    | quadrado, **100 × 100 px**, fundo transparente | miniatura ao lado do nome (biblioteca de rituais, aba Rituais da ficha, Homebrew) e o símbolo maior junto aos dados de conjuração, na consulta aberta |
+| `simbolo.png`    | quadrado, **100 × 100 ou 1000 × 1000 px**, fundo transparente | miniatura ao lado do nome (biblioteca de rituais, aba Rituais da ficha, Homebrew) e o símbolo maior junto aos dados de conjuração, na consulta aberta |
 | `provisorio.png` | o mesmo formato                                | ritual sem vínculo com o catálogo (criado do zero) e qualquer símbolo que não carregar |
 
 ## Onde fica cada ritual
@@ -33,9 +33,10 @@ em `js/ordem/rituais-dados.js` (campo `id`).
 
 Recomendações:
 
-- **PNG quadrado com fundo transparente**; 100 × 100 é o tamanho de referência
-  (pode ser maior, como 200 × 200 ou 512 × 512 — a tela reduz sem recortar nem
-  deformar; formatos não quadrados ficam inteiros, com sobra nas bordas).
+- **PNG quadrado com fundo transparente, em 100 × 100 ou 1000 × 1000 px.** Os
+  provisórios são 100 × 100; 1000 × 1000 serve para arte em alta resolução. A
+  tela reduz os dois sem recortar nem deformar, e só baixa a imagem quando ela
+  aparece. O teste `testes/executar-simbolos-rituais.js` acusa outros tamanhos.
 - O símbolo é mostrado sobre uma **placa escura**, igual nos temas claro e
   escuro: prefira traço claro ou colorido.
 - Use apenas imagens que você tem direito de publicar: tudo nesta pasta vai para
