@@ -880,6 +880,10 @@ segredo nenhum — ele os lê das Script Properties. Publicá-lo não expõe nad
 
 ### Atualizar o backend
 
+**v7.0.1 — LACRE:** só o site (a abertura animada do histórico depois de uma
+atualização). Publique `js/app.js`, `js/ui.js`, `js/versao.js`, `css/layout.css`
+e `css/modern20/layout.css`. Nada de `.gs`.
+
 **v7.0.0 — CARNIFICINA:** BRUTAL — Corte Rápido como sistema completo.
 **Crie** o arquivo `Brutal` no Apps Script com `backend/Brutal.gs`, **troque**
 `Sistemas.gs` (o sistema no registro), `Dados.gs` (a aba `CAMPANHA_BRUTAL`) e
@@ -1815,7 +1819,7 @@ Três números diferentes, que não se misturam:
 
 | | Onde | O que é |
 |---|---|---|
-| versão do aplicativo | `js/versao.js` | o que a pessoa vê: v7.0.0 |
+| versão do aplicativo | `js/versao.js` | o que a pessoa vê: v7.0.1 |
 | `schemaVersion` | `js/ficha.js` | o formato da FICHA |
 | `versaoFormato` | `js/config.js` | o formato dos arquivos de importação |
 

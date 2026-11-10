@@ -118,6 +118,21 @@
 
   var CHANGELOG = [
     {
+      versao: "7.0.1",
+      codinome: "LACRE",
+      data: "31/10/2026",
+      mudancas: {
+        "Visual": [
+          "Depois de uma atualização, o histórico se abre como um registro: uma linha corre o cabeçalho, o painel se expande e o conteúdo entra, com a versão e o codinome em destaque. Sem a sequência para quem pediu menos movimento ou desligou os efeitos.",
+        ],
+        "Melhorado": [
+          "O aviso de versão nova espera a página montar, a aba estar à vista e nenhuma outra janela aberta, e só conta como visto depois de aparecer de verdade. Uma página antiga ainda aberta não rebaixa a versão registrada.",
+          "Clicar fora do histórico fecha direto, sem perguntar.",
+        ],
+        "Técnico": ["Só o site: js/app.js, js/ui.js (RAMAUI.quandoSemModais), css/layout.css e css/modern20/layout.css. Nada de .gs nem de schema."],
+      },
+    },
+    {
       versao: "7.0.0",
       codinome: "CARNIFICINA",
       data: "31/10/2026",

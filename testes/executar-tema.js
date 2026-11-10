@@ -970,38 +970,117 @@ t.grupo("Aparência num lugar só (v2.49.1): o editor, não Exibição");
   t.ok("  previaEfeitos(null) volta ao que o aparelho guarda", html.dataset.efeitos === "on" && aplicadas === 1);
 }
 
-t.grupo("Depois de uma atualização, o histórico primeiro (v2.49.2)");
+t.grupo("Depois de uma atualização, o histórico primeiro (v2.49.2; apresentação na v7.0.1)");
 {
-  const fonte = await Deno.readTextFile(new URL("../js/app.js", import.meta.url));
-  const corpo = fonte.slice(fonte.indexOf("function novidadesDaVersao"), fonte.indexOf("/* =================================================================\n     CABEÇALHO DE PÁGINA"));
-  function aparelho(guardada, quebrado) {
+  const ler = (c) => Deno.readTextFile(new URL("../" + c, import.meta.url)).then((x) => x.replace(/\r\n/g, "\n"));
+  const fonte = await ler("js/app.js");
+  const corpo = fonte.slice(fonte.indexOf("function versaoJaVista"), fonte.indexOf("/* =================================================================\n     CABEÇALHO DE PÁGINA"));
+  const comparar = (a, b) => { const x = a.split(".").map(Number), y = b.split(".").map(Number); for (let i = 0; i < 3; i++) if (x[i] !== y[i]) return x[i] - y[i]; return 0; };
+  /* Um navegador: armazenamento, aba, janelas abertas. */
+  function aparelho(guardada, op = {}) {
     const mapa = new Map(guardada ? [["rama.versao.vista", guardada]] : []);
     const ls = {
-      getItem: (k) => { if (quebrado) throw new Error("bloqueado"); return mapa.has(k) ? mapa.get(k) : null; },
-      setItem: (k, v) => { if (quebrado) throw new Error("bloqueado"); mapa.set(k, v); },
+      getItem: (k) => { if (op.quebrado) throw new Error("bloqueado"); return mapa.has(k) ? mapa.get(k) : null; },
+      setItem: (k, v) => { if (op.quebrado || op.semGravar) throw new Error("cheio"); mapa.set(k, v); },
+      removeItem: (k) => mapa.delete(k),
     };
-    const abertos = [];
-    const fn = new Function("global", "localStorage", "CHAVE_VERSAO_VISTA", "abrirChangelog", corpo + "; return novidadesDaVersao;")(
-      { RAMAVersion: { numero: "9.9.9" } }, ls, "rama.versao.vista", (o) => abertos.push(o));
-    return { fn, mapa, abertos };
+    const ouvintes = new Set();
+    const doc = {
+      hidden: !!op.escondida,
+      addEventListener: (_, f) => ouvintes.add(f),
+      removeEventListener: (_, f) => ouvintes.delete(f),
+    };
+    const abertos = [], fila = [];
+    const gravadaAoAbrir = [];
+    const abrir = (o) => {
+      gravadaAoAbrir.push(mapa.get("rama.versao.vista") || null);
+      if (op.falha) throw new Error("não abriu");
+      abertos.push(o);
+      return op.semJanela ? undefined : { janela: { isConnected: true } };
+    };
+    const global = { RAMAVersion: { numero: "9.9.9", comparar }, RAMAUI: { quandoSemModais: (f) => fila.push(f) } };
+    const silencioso = { warn() {} };
+    const fn = new Function("global", "localStorage", "CHAVE_VERSAO_VISTA", "CHAVE_VERSAO_SONDA", "abrirChangelog", "document", "console", corpo + "; return novidadesDaVersao;")(
+      global, ls, "rama.versao.vista", "rama.versao.sonda", abrir, doc, silencioso);
+    const liberar = () => { while (fila.length) fila.shift()(); };
+    const voltar = () => { doc.hidden = false; [...ouvintes].forEach((f) => f()); };
+    return { fn, mapa, abertos, fila, doc, liberar, voltar, gravadaAoAbrir, ouvintes };
   }
   let a = aparelho("9.9.8");
-  a.fn();
-  t.ok("versão nova neste aparelho: abre o histórico como novidade", a.abertos.length === 1 && a.abertos[0].novidade === true);
-  t.igual("  e marca como visto", a.mapa.get("rama.versao.vista"), "9.9.9");
-  a.fn();
+  a.fn(); a.liberar();
+  t.ok("versão nova neste navegador: abre o histórico como novidade", a.abertos.length === 1 && a.abertos[0].novidade === true);
+  t.igual("  a versão só é gravada depois da abertura", a.gravadaAoAbrir[0], "9.9.8");
+  t.igual("  e fica marcada como vista", a.mapa.get("rama.versao.vista"), "9.9.9");
+  t.ok("  a sonda não fica no armazenamento", !a.mapa.has("rama.versao.sonda"));
+  a.fn(); a.liberar();
   t.igual("  a próxima página não abre de novo", a.abertos.length, 1);
   a = aparelho(null);
-  a.fn();
-  t.igual("aparelho sem registro (primeira visita ou primeira versão com o aviso): abre", a.abertos.length, 1);
+  a.fn(); a.liberar();
+  t.igual("navegador sem registro: apresenta a versão atual uma vez", a.abertos.length, 1);
   a = aparelho("9.9.9");
-  a.fn();
+  a.fn(); a.liberar();
   t.igual("versão já vista: não abre", a.abertos.length, 0);
-  a = aparelho(null, true);
+  a = aparelho("10.0.0");
+  a.fn(); a.liberar();
+  t.ok("página antiga com registro mais novo: não abre nem rebaixa", a.abertos.length === 0 && a.mapa.get("rama.versao.vista") === "10.0.0");
+  a = aparelho("9.10.0");
+  a.fn(); a.liberar();
+  t.igual("  compara por número, não como texto (9.10.0 é mais nova que 9.9.9)", a.abertos.length, 0);
+  a = aparelho("lixo");
+  a.fn(); a.liberar();
+  t.ok("registro que não é versão conta como nenhum", a.abertos.length === 1 && a.mapa.get("rama.versao.vista") === "9.9.9");
+  a = aparelho(null, { quebrado: true });
+  a.fn(); a.liberar();
+  t.igual("armazenamento bloqueado: não abre (senão abriria em toda página)", a.abertos.length, 0);
+  a = aparelho(null, { semGravar: true });
+  a.fn(); a.liberar();
+  t.igual("armazenamento que lê mas não grava: também não abre", a.abertos.length, 0);
+  a = aparelho("9.9.8", { falha: true });
+  a.fn(); a.liberar();
+  t.igual("a abertura falhou: o aviso não se perde", a.mapa.get("rama.versao.vista"), "9.9.8");
+  a = aparelho("9.9.8", { semJanela: true });
+  a.fn(); a.liberar();
+  t.igual("nenhuma janela apresentada: também não marca", a.mapa.get("rama.versao.vista"), "9.9.8");
+  a = aparelho("9.9.8");
   a.fn();
-  t.igual("sem armazenamento: não abre (senão abriria em toda página)", a.abertos.length, 0);
+  t.ok("com outra janela aberta, espera e não marca", a.abertos.length === 0 && a.fila.length === 1 && a.mapa.get("rama.versao.vista") === "9.9.8");
+  a.liberar();
+  t.igual("  abre quando a pilha de janelas esvazia", a.abertos.length, 1);
+  a = aparelho("9.9.8", { escondida: true });
+  a.fn(); a.liberar();
+  t.ok("aba em segundo plano: não abre nem marca", a.abertos.length === 0 && a.mapa.get("rama.versao.vista") === "9.9.8" && a.ouvintes.size === 1);
+  a.voltar(); a.liberar();
+  t.ok("  abre ao voltar à vista e para de ouvir", a.abertos.length === 1 && a.ouvintes.size === 0);
+  a = aparelho("9.9.8", { escondida: true });
+  a.fn();
+  a.mapa.set("rama.versao.vista", "9.9.9");
+  a.voltar(); a.liberar();
+  t.igual("outra aba já mostrou: ao voltar, não repete", a.abertos.length, 0);
+  a = aparelho("9.9.8");
+  a.fn();
+  a.doc.hidden = true;
+  a.liberar();
+  t.ok("escondeu enquanto esperava: adia de novo", a.abertos.length === 0 && a.ouvintes.size === 1);
+
   t.ok("só com a casca: a ficha embutida no combate não avisa", /if \(!o\.semCasca\) novidadesDaVersao\(\);/.test(fonte));
+  t.ok("o aviso vem depois de a página montar", fonte.indexOf("await aoPronto(agente, casca") < fonte.indexOf("if (!o.semCasca) novidadesDaVersao();"));
   t.ok("o número no rodapé abre o histórico comum, não o aviso", /onclick: function \(\) \{ abrirChangelog\(\); \}/.test(fonte));
+  t.ok("a classe da animação é só da abertura automática", /classe: novidade \? "r-modal--novidade" : ""/.test(fonte));
+  t.ok("o fundo fecha direto (janela de consulta)", /fundoFecha: true/.test(fonte.slice(fonte.indexOf("function abrirChangelog"), fonte.indexOf("function versaoJaVista"))));
+  t.ok("o histórico aberto à mão conta como visto", /if \(!novidade\) registrarVersaoVista\(V\);/.test(fonte));
+  const ui = await ler("js/ui.js");
+  t.ok("as janelas avisam quando a pilha esvazia", /quandoSemModais: quandoSemModais/.test(ui) && /if \(o\.aoFechar\) o\.aoFechar\(resultado\);\n      agendarSemModais\(\);/.test(ui));
+
+  const legacy = await ler("css/layout.css"), m20 = await ler("css/modern20/layout.css");
+  const bloco = legacy.slice(legacy.indexOf(".r-modal.r-modal--novidade"), legacy.indexOf("/* Histórico de versões: uma etiqueta"));
+  t.ok("Legacy e Modern20 têm a própria abertura", /animation: novidade-abrir/.test(bloco) && /r-modal--novidade \{ animation: m20-novidade-janela/.test(m20) && /animation-name: m20-novidade-folha/.test(m20));
+  t.ok("efeitos desligados e movimento reduzido: sem a sequência", /html\[data-efeitos="off"\] \.r-modal\.r-modal--novidade/.test(bloco) && /prefers-reduced-motion: reduce[\s\S]*\.r-modal\.r-modal--novidade/.test(bloco) && (bloco.match(/animation: none !important/g) || []).length === 2);
+  t.ok("a sequência cabe em 400–600 ms", (() => {
+    const fim = (d, a) => d + a;
+    const total = Math.max(fim(40, 340), fim(0, 320), fim(300, 220));
+    return total >= 400 && total <= 600 && /novidade-conteudo 220ms var\(--curva\) 240ms/.test(bloco) && /:nth-child\(n\+3\)[\s\S]*animation-delay: 300ms/.test(bloco);
+  })());
+  t.ok("só cores do tema na apresentação", !/#[0-9a-f]{3,8}\b|rgba?\(/i.test(bloco));
 }
 
 /* ---------- fim ---------- */

@@ -355,9 +355,34 @@
       if (!pilhaDeModais.length) soltarRolagem();
       if (focoAnterior && focoAnterior.focus) focoAnterior.focus();
       if (o.aoFechar) o.aoFechar(resultado);
+      agendarSemModais();
     }
 
     return { fechar: fechar, janela: janela, corpo: corpo };
+  }
+
+  /* Quem não pode abrir por cima de outra janela (o aviso de versão nova)
+     espera aqui. A folga deixa passar uma janela que abre logo depois de
+     outra fechar, como a segunda etapa de uma confirmação, e a primeira
+     pintura da página; se outra abriu nesse meio-tempo, espera por ela. */
+  var FOLGA_SEM_MODAIS = 180;
+  var esperandoSemModais = [];
+  var timerSemModais = null;
+
+  function agendarSemModais() {
+    if (timerSemModais !== null || pilhaDeModais.length || !esperandoSemModais.length) return;
+    timerSemModais = setTimeout(function () {
+      timerSemModais = null;
+      if (pilhaDeModais.length) return;
+      var lista = esperandoSemModais;
+      esperandoSemModais = [];
+      lista.forEach(function (fn) { fn(); });
+    }, FOLGA_SEM_MODAIS);
+  }
+
+  function quandoSemModais(fn) {
+    esperandoSemModais.push(fn);
+    agendarSemModais();
   }
 
   /* "Salvar" → "Salvando…". O verbo diz o que está acontecendo; o que
@@ -1189,6 +1214,7 @@
     avisoAtencao: avisoAtencao,
     avisoDeFalha: avisoDeFalha,
     modal: modal,
+    quandoSemModais: quandoSemModais,
     confirmar: confirmar,
     pedirTexto: pedirTexto,
     menu: menu,

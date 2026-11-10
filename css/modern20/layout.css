@@ -332,6 +332,16 @@
     letter-spacing: var(--m20-espaco-sobre);
   }
   & .versao-lista { line-height: 1.6; }
+  & .r-modal.r-modal--novidade { animation: m20-novidade-janela 340ms var(--curva) 40ms both; }
+  & .versao-novidade {
+    border-left: 0;
+    border-radius: var(--m20-raio-controle);
+    background: var(--m20-destaque-suave);
+  }
+  & .versao-novidade__codinome { font-family: var(--fonte-corpo); letter-spacing: 0.04em; }
+  @media (max-width: 640px) {
+    & .r-modal.r-modal--novidade { animation-name: m20-novidade-folha; }
+  }
   & .versao-selo {
     border-radius: 999px;
     font-size: var(--m20-texto-sobre);
@@ -345,4 +355,14 @@
     font-family: var(--fonte-mono);
     font-size: 0.9em;
   }
+}
+
+/* O aviso de versão nova: o painel cresce de leve; no celular, a folha sobe. */
+@keyframes m20-novidade-janela {
+  from { opacity: 0; transform: translateY(6px) scale(0.965); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes m20-novidade-folha {
+  from { opacity: 0.7; transform: translateY(32px); }
+  to { opacity: 1; transform: none; }
 }

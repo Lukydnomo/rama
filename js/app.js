@@ -36,6 +36,7 @@
   var CHAVE_ESCALA = "rama.pref.escala";
   /* A última versão cujo histórico este aparelho já mostrou (v2.49.2). */
   var CHAVE_VERSAO_VISTA = "rama.versao.vista";
+  var CHAVE_VERSAO_SONDA = "rama.versao.sonda";
 
   /* =================================================================
      PREFERÊNCIAS DE EXIBIÇÃO
@@ -280,32 +281,87 @@
       return cartao;
     });
 
-    global.RAMAUI.modal({
+    var janela = global.RAMAUI.modal({
       titulo: novidade ? "O R.A.M.A. foi atualizado" : "Histórico de versões",
       largo: true,
+      classe: novidade ? "r-modal--novidade" : "",
+      /* Só consulta: não há o que perder ao clicar fora. */
+      fundoFecha: true,
       conteudo: [
         novidade
-          ? el("p", { texto: "Agora na " + V.rotulo + ". O que mudou está logo abaixo; as versões anteriores ficam recolhidas. O histórico continua no número da versão, no rodapé." })
+          ? el("div.versao-novidade", {}, [
+              el("strong.versao-novidade__numero", { texto: "v" + V.numero }),
+              el("span.versao-novidade__codinome", { texto: V.codinome }),
+            ])
+          : null,
+        novidade
+          ? el("p", { texto: "O que mudou está logo abaixo; as versões anteriores ficam recolhidas. O histórico continua no número da versão, no rodapé." })
           : null,
         el("p.t-mini", { texto: "A versão que aparece no rodapé é sempre a do topo desta lista. Marco: uma virada do R.A.M.A. (X.0.0). Destaque: uma expansão importante. Manutenção: correções e refinos (X.Y.Z)." }),
         el("div.pilha--curta", { class: "pilha" }, registros),
       ],
       botoes: [{ rotulo: "Fechar", classe: "r-botao--principal" }],
     });
+    /* Quem abriu o histórico à mão já viu a versão atual: o aviso que
+       ainda esperava a página terminar de montar não repete. */
+    if (!novidade) registrarVersaoVista(V);
+    return janela;
   }
 
-  /* A primeira página aberta depois de uma atualização começa pelo
-     histórico (v2.49.2). Uma vez por versão e por aparelho: abrir já
-     conta como visto. Sem armazenamento, não abre — senão abriria em
-     toda página. */
+  /* A versão guardada já cobre esta? Igual ou mais nova: uma página
+     antiga ainda aberta não avisa nem rebaixa o registro. Valor que não
+     é versão conta como nenhum. Pode lançar (armazenamento bloqueado). */
+  function versaoJaVista(V) {
+    var vista = localStorage.getItem(CHAVE_VERSAO_VISTA);
+    return /^\d+\.\d+\.\d+$/.test(vista || "") && V.comparar(vista, V.numero) >= 0;
+  }
+
+  /* Sem poder gravar, não abre: o aviso se repetiria em toda página. A
+     sonda usa outra chave, porque a versão só conta depois de mostrada. */
+  function podeAvisarVersao(V) {
+    try {
+      if (versaoJaVista(V)) return false;
+      localStorage.setItem(CHAVE_VERSAO_SONDA, "1");
+      localStorage.removeItem(CHAVE_VERSAO_SONDA);
+      return true;
+    } catch (e) { return false; }
+  }
+
+  function registrarVersaoVista(V) {
+    try {
+      if (!versaoJaVista(V)) localStorage.setItem(CHAVE_VERSAO_VISTA, V.numero);
+    } catch (e) { /* segue sem guardar */ }
+  }
+
+  /* A primeira página aberta depois de uma atualização mostra o histórico
+     (v2.49.2): uma vez por versão e por navegador. Espera a aba estar à
+     vista e nenhuma janela aberta, confere de novo na hora (outra aba
+     pode ter mostrado) e só registra depois que a janela existe. */
   function novidadesDaVersao() {
     var V = global.RAMAVersion;
-    if (!V) return;
-    try {
-      if (localStorage.getItem(CHAVE_VERSAO_VISTA) === V.numero) return;
-      localStorage.setItem(CHAVE_VERSAO_VISTA, V.numero);
-    } catch (e) { return; }
-    abrirChangelog({ novidade: true });
+    if (!V || !podeAvisarVersao(V)) return;
+
+    function aoVoltar() {
+      if (document.hidden) return;
+      document.removeEventListener("visibilitychange", aoVoltar);
+      esperar();
+    }
+
+    function esperar() {
+      if (document.hidden) { document.addEventListener("visibilitychange", aoVoltar); return; }
+      global.RAMAUI.quandoSemModais(apresentar);
+    }
+
+    function apresentar() {
+      if (document.hidden) { esperar(); return; }
+      if (!podeAvisarVersao(V)) return;
+      var janela = null;
+      try { janela = abrirChangelog({ novidade: true }); }
+      catch (e) { console.warn("[R.A.M.A.] o aviso de versão não abriu", e); return; }
+      if (janela && janela.janela && janela.janela.isConnected) registrarVersaoVista(V);
+    }
+
+    esperar();
   }
 
   /* =================================================================
@@ -380,11 +436,12 @@
         var casca = o.semCasca
           ? { cabecalho: null, conteudo: U.$("#conteudo") }
           : montar({ secao: secao, agente: agente });
-        /* Na ficha embutida no combate (semCasca), não: quem avisa é a
-           página de fora. */
-        if (!o.semCasca) novidadesDaVersao();
         try {
           await aoPronto(agente, casca, respostas || []);
+          /* Com a página montada, para o aviso não disputar com ela. Na
+             ficha embutida no combate (semCasca), não: quem avisa é a
+             página de fora. */
+          if (!o.semCasca) novidadesDaVersao();
         } catch (e) {
           console.error("[R.A.M.A.] a página falhou ao montar", e);
           var conteudo = U.$("#conteudo");

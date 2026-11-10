@@ -881,6 +881,77 @@ html.arrastando .soltos__titulo[data-arrastar-pasta] .soltos__soltar { display: 
   .pasta-icone.arrastar-alvo-dentro .pasta-icone__caixa { transform: none; }
 }
 
+/* O aviso de versão nova: o registro se abre uma vez, com a linha do
+   cabeçalho, o painel e o conteúdo em sequência (cerca de 520 ms). Só na
+   classe da abertura automática; o rodapé segue com a transição comum. */
+.r-modal.r-modal--novidade { animation: novidade-abrir 340ms var(--curva) 40ms both; }
+.r-modal--novidade .r-modal__topo { position: relative; }
+.r-modal--novidade .r-modal__topo::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -1px;
+  height: 2px;
+  background: var(--fundo-selecao);
+  transform-origin: left center;
+  opacity: 0;
+  pointer-events: none;
+  animation: novidade-linha 320ms var(--curva) both;
+}
+.r-modal--novidade .r-modal__corpo > *,
+.r-modal--novidade .r-modal__rodape { animation: novidade-conteudo 220ms var(--curva) 240ms both; }
+.r-modal--novidade .r-modal__corpo > :nth-child(2) { animation-delay: 270ms; }
+.r-modal--novidade .r-modal__corpo > :nth-child(n+3),
+.r-modal--novidade .r-modal__rodape { animation-delay: 300ms; }
+
+@keyframes novidade-abrir {
+  from { clip-path: inset(0 3% 86% 3%); opacity: 0.7; }
+  to { clip-path: inset(0 0 0 0); opacity: 1; }
+}
+@keyframes novidade-linha {
+  0% { transform: scaleX(0); opacity: 1; }
+  65% { transform: scaleX(1); opacity: 1; }
+  100% { transform: scaleX(1); opacity: 0; }
+}
+@keyframes novidade-conteudo {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: none; }
+}
+
+/* Mesmo conteúdo, sem a sequência. */
+html[data-efeitos="off"] .r-fundo:has(.r-modal--novidade),
+html[data-efeitos="off"] .r-modal.r-modal--novidade,
+html[data-efeitos="off"] .r-modal--novidade .r-modal__topo::after,
+html[data-efeitos="off"] .r-modal--novidade .r-modal__corpo > *,
+html[data-efeitos="off"] .r-modal--novidade .r-modal__rodape { animation: none !important; }
+@media (prefers-reduced-motion: reduce) {
+  .r-fundo:has(.r-modal--novidade),
+  .r-modal.r-modal--novidade,
+  .r-modal--novidade .r-modal__topo::after,
+  .r-modal--novidade .r-modal__corpo > *,
+  .r-modal--novidade .r-modal__rodape { animation: none !important; }
+}
+
+.versao-novidade {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--e1) var(--e3);
+  padding: var(--e2) var(--e3);
+  border-left: 3px solid var(--cor-traco-forte);
+  background: var(--fundo-superficie-2);
+}
+.versao-novidade__numero { font-size: var(--texto-grande); line-height: 1.1; overflow-wrap: anywhere; }
+.versao-novidade__codinome {
+  font-family: var(--fonte-mini);
+  font-size: var(--texto-medio);
+  font-weight: 700;
+  letter-spacing: var(--espaco-letra-titulo);
+  color: var(--cor-paranormal);
+  overflow-wrap: anywhere;
+}
+
 /* Histórico de versões: uma etiqueta por categoria, com a cor da natureza
    da mudança, e itens em lista de verdade, com respiro entre eles. */
 /* O selo do lançamento (v2.49.2): Marco na major, Destaque na minor
