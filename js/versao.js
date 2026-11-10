@@ -120,7 +120,7 @@
     {
       versao: "7.0.1",
       codinome: "LACRE",
-      data: "31/10/2026",
+      data: "10/11/2026",
       mudancas: {
         "Visual": [
           "Depois de uma atualização, o histórico se abre como um registro: uma linha corre o cabeçalho, o painel se expande e o conteúdo entra, com a versão e o codinome em destaque. Sem a sequência para quem pediu menos movimento ou desligou os efeitos.",
@@ -135,7 +135,7 @@
     {
       versao: "7.0.0",
       codinome: "CARNIFICINA",
-      data: "31/10/2026",
+      data: "10/11/2026",
       mudancas: {
         "Adicionado": [
           "BRUTAL — Corte Rápido como sistema jogável: crie uma Sobrevivente escolhendo um dos oito Arquétipos em cartas (Atleta, Cética, Esbelta, Heroína, Inocente, Nerd, Relaxada e Valentona), com os Estilos, a Habilidade e a Iniciativa do livro, e Apegos que rendem Pontos de Tensão.",
@@ -153,7 +153,7 @@
     {
       versao: "6.13.0",
       codinome: "INSÍGNIA",
-      data: "31/10/2026",
+      data: "06/11/2026",
       mudancas: {
         "Adicionado": [
           "Ordem Paranormal: a regra opcional Evolução por Patentes (Sobrevivendo ao Horror, p. 108–112) passa a ser calculada. Com ela ligada, o agente progride de recruta a agente de elite pelos pontos de prestígio (0, 20, 50, 100 e 200 PP), com PV, PD, perícias, poderes, aumentos de atributo (até 4), grau de treinamento e habilidades de trilha das tabelas 2.7 a 2.9, e Pontos de Determinação no lugar de PE e Sanidade.",
@@ -173,7 +173,7 @@
     {
       versao: "6.12.1",
       codinome: "GRAVURA",
-      data: "31/10/2026",
+      data: "06/11/2026",
       mudancas: {
         "Visual": [
           "Símbolos definitivos de 70 rituais de Ordem Paranormal no lugar dos provisórios: aparecem no Catálogo, na biblioteca de rituais, na aba Rituais das fichas (inclusive nas que já tinham esses rituais) e no Homebrew.",
@@ -184,7 +184,7 @@
     {
       versao: "6.12.0",
       codinome: "SUMÁRIO",
-      data: "31/10/2026",
+      data: "06/11/2026",
       mudancas: {
         "Adicionado": [
           "Catálogo no menu principal, no lugar de Criaturas: o conteúdo oficial dos sistemas numa página de consulta, sem ficha nem campanha. Escolha o sistema pela capa, a categoria e busque ou abra uma entrada.",
@@ -201,7 +201,7 @@
     {
       versao: "6.11.0",
       codinome: "SINETE",
-      data: "31/10/2026",
+      data: "06/11/2026",
       mudancas: {
         "Adicionado": [
           "Símbolos dos rituais de Ordem Paranormal: uma miniatura ao lado do nome na biblioteca de rituais, na aba Rituais da ficha e no Homebrew, e o símbolo maior junto aos dados de conjuração na consulta aberta. A arte aparece inteira, sobre uma placa escura que funciona nos temas claros.",
@@ -216,7 +216,7 @@
     {
       versao: "6.10.0",
       codinome: "FICHEIRO",
-      data: "31/10/2026",
+      data: "06/11/2026",
       mudancas: {
         "Melhorado": [
           "Homebrew reorganizado: + Criar como ação principal, Importar ao lado e o Catálogo oficial de criaturas como link. Minhas criações e Públicas ficam logo abaixo do título e continuam ali carregando, com erro e com a biblioteca vazia.",
@@ -234,7 +234,7 @@
     {
       versao: "6.9.0",
       codinome: "ESCOLTA",
-      data: "31/10/2026",
+      data: "06/11/2026",
       mudancas: {
         "Adicionado": [
           "Arquivos Secretos 9: Hell Hunters (v1.0) como suplemento de Ordem Paranormal, com capa, entre o Arquivos Secretos 7 e os Extras. Desligado na ficha ou na campanha, o conteúdo sai das escolhas novas sem apagar o que já foi gravado.",
@@ -260,7 +260,7 @@
     {
       versao: "6.8.0",
       codinome: "VIVEIRO",
-      data: "31/10/2026",
+      data: "05/11/2026",
       mudancas: {
         "Adicionado": [
           "No Homebrew, criaturas de Oblívio, Vampiro: A Máscara e Malditos Goblins, cada uma com a ficha do próprio livro: a Ameaça de Oblívio (Grau, Dano, Proteção, Velocidade, Estresse e Regiões, atributos, conhecimento especializado, habilidades com o tipo de ação e tabela de recompensa), o antagonista de Vampiro (compacto ou completo) e o inimigo dos Goblins (com 0, “—” e “?” e o bônus da arma e a proteção à parte). Prévia antes de salvar; consultar, duplicar, exportar e importar funcionam como nas outras.",
@@ -275,7 +275,7 @@
     {
       versao: "6.7.0",
       codinome: "PRANCHETA",
-      data: "31/10/2026",
+      data: "05/11/2026",
       mudancas: {
         "Melhorado": [
           "A ficha de criatura de cada sistema segue o arranjo do próprio livro. Ordem Paranormal: VD, PV, Defesa, tipo e tamanho no topo, com os elementos logo abaixo; Presença Perturbadora, sentidos, defesa e resistências, atributos e perícias numa coluna e habilidades e ações na outra; listas vazias não aparecem mais com “—”. Enigma de Medo e o perfil Como aliado aparecem só quando existem.",
@@ -291,7 +291,7 @@
     {
       versao: "6.6.2",
       codinome: "LOMBADA",
-      data: "31/10/2026",
+      data: "05/11/2026",
       mudancas: {
         "Visual": [
           "Na página Criaturas, o sistema se escolhe numa pequena estante de capas (como a escolha de sistema em Personagens): uma fileira no PC e uma grade no celular, com o escolhido marcado como Selecionado. A capa sobe um pouco no hover e no foco; com movimento reduzido, não se mexe.",
@@ -303,7 +303,7 @@
     {
       versao: "6.6.1",
       codinome: "AMPULHETA",
-      data: "31/10/2026",
+      data: "05/11/2026",
       mudancas: {
         "Melhorado": [
           "Na ficha de Ordem, o painel do Arquivos Secretos 3 (aba Habilidades) só mostra o que serve à ficha. A cronologia da campanha aparece quando algo do AS3 conta por ela (Entrada Triunfal, Boas Recordações, Veículos Operacionais, itens e aliados do AS3); os bônus de um aliado performático, quando há um recebido valendo, quando a ficha é da trilha Performático ou com a regra Trilha Geral ligada. Sem nada disso, o painel some.",
@@ -314,7 +314,7 @@
     {
       versao: "6.6.0",
       codinome: "ALCATEIA",
-      data: "31/10/2026",
+      data: "05/11/2026",
       mudancas: {
         "Adicionado": [
           "Página Criaturas no menu principal, com um seletor de sistema para duas seções. Catálogo: em Ordem, o catálogo oficial com Fonte (Todas as fontes, Livro básico e os suplementos que têm criaturas), VD, elementos, natureza, a fonte em cada resultado e Copiar para o Homebrew; em Oblívio, Vampiro e Malditos Goblins, as Ameaças, os antagonistas e os inimigos do livro, com busca e o filtro de cada sistema. O filtro só consulta: não muda os suplementos de fichas nem de campanhas.",
@@ -332,7 +332,7 @@
     {
       versao: "6.5.0",
       codinome: "MEMBRANA",
-      data: "31/10/2026",
+      data: "05/11/2026",
       mudancas: {
         "Adicionado": [
           "Arquivos Secretos 7 (v1.0) como suplemento de Ordem Paranormal, com capa, entre o Arquivos Secretos 6 e os Extras. Começa ligado na ficha nova e respeita a escolha da ficha e da campanha, como os outros.",
@@ -356,7 +356,7 @@
     {
       versao: "6.4.1",
       codinome: "AQUARELA",
-      data: "31/10/2026",
+      data: "04/11/2026",
       mudancas: {
         "Visual": [
           "No Legacy, os recursos da ficha de Ordem ganharam a cor de cada um na barra e no traço lateral (PV, PE, Sanidade e PD), como no Modern20.",
@@ -367,7 +367,7 @@
     {
       versao: "6.4.0",
       codinome: "PENTAGRAMA",
-      data: "31/10/2026",
+      data: "04/11/2026",
       mudancas: {
         "Melhorado": [
           "Ficha de Ordem reorganizada para sessões longas. Acima das abas fica só uma linha: a identificação e o resumo da sessão (PV, PE e SAN ou PD, Defesa, condições críticas, efeitos ativos e escolhas pendentes). Cada item do resumo leva ao lugar onde aquilo se muda.",
