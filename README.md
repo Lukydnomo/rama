@@ -41,6 +41,7 @@ preferências de tela — nunca é tratado como banco.
     oblivio.css         Oblívio: criação, corpo, ataque, mesa da Testemunha (v3.0)
     vampiro.css         Vampiro: criação, ficha, rolagem com Fome, Crônica (v5.0)
     goblins.css         Malditos Goblins: ficha oficial, dados que explodem, criação, Covil (v6.0)
+    brutal.css          BRUTAL: a ficha-tabuleiro, as cartas dos Arquétipos, a Mesa da Diretora (v7.0)
     (os suplementos — volumes, switches e a animação — estão em componentes.css, v6.1)
     (estas folhas SÃO o estilo Legacy: a aparência da v2.48.4, intocada)
     interface.css       o seletor de estilo do editor de temas (vale nos dois estilos)
@@ -129,6 +130,11 @@ preferências de tela — nunca é tratado como banco.
       dados.js          d6: hits, explosões em cadeia, explosão de goblin, sorteios, quantidades, pescaria
       regras.js         a ficha em camadas: combate, magia, técnicas, itens, níveis, adaptações
       mesa.js           o Covil: combate, sorteios, masmorra, Bando Rival, negociação
+    brutal/             o módulo de BRUTAL Corte Rápido (v7.0): motor puro, copiado em backend/Brutal.gs…
+      telas/            …e as telas: as cartas dos Arquétipos, a ficha-tabuleiro, a Mesa da Diretora
+      catalogo.js       Arquétipos, Estilos, Vantagens, Ações, Assassinos, Apavoros, Intentos e as lacunas
+      regras.js         a ficha persistente: Arquétipo, Apegos, detalhes e o treino sem campanha
+      mesa.js           o Thriller: pilhas, testes, cenas, Encontro, ações do Assassino, vista das jogadoras
     historico.js        rolagem → histórico da campanha, num funil só
     temas-dados.js      catálogo dos temas de dados e regras puras (copiado no Codigo.gs)
     aparencia-rolagem.js o dado e o fundo de cada rolagem: captura, ícone e aplicação no cartão
@@ -143,6 +149,7 @@ preferências de tela — nunca é tratado como banco.
     Oblivio.gs          sistema Oblívio: a mesa da Testemunha e as operações entre fichas (cópia do motor)
     Vampiro.gs          sistema Vampiro: a crônica do Narrador e as operações entre fichas (cópia do motor)
     Goblins.gs          sistema Malditos Goblins: o Covil e as operações entre fichas e mesa (cópia do motor)
+    Brutal.gs           sistema BRUTAL: a Mesa da Diretora, o Thriller e as rolagens no servidor (cópia do motor)
     Universal.gs        sistema Universal: atributos e status livres no painel da mesa
     Cris.gs             leitura de ficha pública do CRIS (opcional)
     Feedback.gs         feedback entregue num canal do Discord (opcional)
@@ -160,6 +167,7 @@ preferências de tela — nunca é tratado como banco.
     OBLIVIO.md          Oblívio: matriz de cobertura, interpretações e lacunas do livro
     VAMPIRO.md          Vampiro V5: matriz de cobertura, interpretações e lacunas do livro
     GOBLINS.md          Malditos Goblins 3ª ed.: matriz de cobertura, interpretações e lacunas do livro
+    BRUTAL.md           BRUTAL Corte Rápido: ficha × Thriller, cobertura, decisões da Diretora e lacunas
     SISTEMAS.md         a plataforma e os sistemas: núcleo × módulos, registro, como entra um sistema
     FICHA-ORDEM.md      a composição da ficha de Ordem e o inventário de campos (antes → depois)
 ```
@@ -421,10 +429,11 @@ O servidor do pedido está em `testes/acesso-backend.js` (dentro de
 deno run --allow-read testes/executar-criaturas-pagina.js
 ```
 
-**Catálogo** — 39 verificações: as categorias de cada sistema (só as com
+**Catálogo** — 48 verificações: as categorias de cada sistema (só as com
 conteúdo), entradas com nome, busca, referência e consulta que abre, os filtros
 de Ordem, os itens novos de Vampiro V5 (p. 378–381) sem duplicar armas,
-Projetos e Jogo Ponderado, e que a página é só consulta. Os links antigos de
+Projetos e Jogo Ponderado, BRUTAL (Arquétipos, Estilos, Vantagens com as
+lacunas, Ações e Assassinos), e que a página é só consulta. Os links antigos de
 `criaturas/` estão em `executar-criaturas-pagina.js`.
 
 ```bash
@@ -508,6 +517,26 @@ deno run --allow-read --allow-write testes/gerar-goblins-gs.js
 
 ```bash
 deno run --allow-read testes/executar-goblins.js
+```
+
+**BRUTAL — Corte Rápido** — 122 verificações do motor, sem navegador e sem
+rede, com os dados combinados: catálogo e lacunas, ficha × Thriller (a mesma
+ficha em dois Thrillers), testes em Livre e Suspense (sacrificar), Teste
+Complexo com 1, 2 e 3 sucessos, Susto (descartar, Intentos, Benefício da
+Dúvida), o Encontro (condição, meta da Fuga, Iniciativa, vez, as seis Ações,
+Carência, Arriscar Tudo, fim e recargas), FERIR, Sequelas, MUTILAR, SEGURAR,
+INCAPACITAR, Possuir, Restringir, Devorar, Vantagens (inclusive uma da mesa que
+reduz a próxima Ferida), Apegos, PT, permissões e a vista das jogadoras. O lado
+do servidor está em `testes/brutal-backend.js` (uma Diretora e duas jogadoras,
+repetição de `opId`, `rev`, isolamento). Mudou algo em `js/brutal/`? Gere de
+novo a cópia do servidor:
+
+```bash
+deno run --allow-read --allow-write testes/gerar-brutal-gs.js
+```
+
+```bash
+deno run --allow-read testes/executar-brutal.js
 ```
 
 **Vampiro: A Máscara** — 257 verificações do motor, sem navegador e sem rede,
@@ -850,6 +879,22 @@ próprio `<script src>`, então funciona debaixo de subpasta sem ajuste.
 segredo nenhum — ele os lê das Script Properties. Publicá-lo não expõe nada.
 
 ### Atualizar o backend
+
+**v7.0.0 — CARNIFICINA:** BRUTAL — Corte Rápido como sistema completo.
+**Crie** o arquivo `Brutal` no Apps Script com `backend/Brutal.gs`, **troque**
+`Sistemas.gs` (o sistema no registro), `Dados.gs` (a aba `CAMPANHA_BRUTAL`) e
+`Campanhas.gs` (a parte `brutal` da sincronia), rode **`setupRama()`** uma vez
+(cria a aba; repetir não muda nada) e **crie uma versão nova da implantação**.
+Publique o site — inclusive `js/brutal/`, `css/brutal.css`, `assets/brutal/`,
+`assets/sistemas/brutal-capa*.webp`, `js/sistemas.js`, `js/api.js`,
+`js/ficha.js`, `js/campanha-painel.js`, `js/paginas/personagens.js`,
+`js/paginas/campanha.js`, `js/paginas/catalogo.js` e as páginas `personagens/`,
+`ficha/` (que passa a carregar também `js/sincronia.js`), `campanha/` e
+`catalogo/`. O schema da ficha sobe para 32 sem conversão: abas abertas na
+versão anterior pedem para recarregar. Sem o `setupRama()`, só a Mesa da
+Diretora recusa gravar (`instalacao_incompleta`); sem o `Brutal.gs` ou a versão
+nova da implantação, ela responde `acao_desconhecida` (as fichas de BRUTAL
+continuam abrindo, no treino).
 
 **v6.13.0 — INSÍGNIA:** Evolução por Patentes calculada. Só o site: publique
 `js/ordem/catalogo.js`, `js/ordem/regras.js`, `js/ordem/progressao.js`,
@@ -1770,7 +1815,7 @@ Três números diferentes, que não se misturam:
 
 | | Onde | O que é |
 |---|---|---|
-| versão do aplicativo | `js/versao.js` | o que a pessoa vê: v6.13.0 |
+| versão do aplicativo | `js/versao.js` | o que a pessoa vê: v7.0.0 |
 | `schemaVersion` | `js/ficha.js` | o formato da FICHA |
 | `versaoFormato` | `js/config.js` | o formato dos arquivos de importação |
 

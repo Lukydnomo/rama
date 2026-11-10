@@ -64,7 +64,7 @@
 
     t.grupo("Tema da ficha · schema 16 (v2.36)");
     var TEMA16 = { nome: "Roxo", base: "escuro", valores: { fundo: { tipo: "radial", forma: "circulo", x: 20, y: 30, pontos: [{ cor: "#08080a", pos: 0 }, { cor: "#3a1030", alfa: 0.8, pos: 100 }] } } };
-    t.igual("o schema subiu para 31 (Evolução por Patentes, v6.13)", S.VERSAO_SCHEMA, 31);
+    t.igual("o schema subiu para 32 (BRUTAL, v7.0)", S.VERSAO_SCHEMA, 32);
     t.iguais("ficha nova usa o tema da conta", S.criarFicha({ nome: "Nova" }).aparencia, { v: 1, modo: "conta" });
     t.iguais("ficha antiga (sem o campo) também", S.normalizarFicha({ schemaVersion: 15, nome: "Legado" }).aparencia, { v: 1, modo: "conta" });
     ["ordem", "universal"].forEach(function (tipo) {
@@ -5157,7 +5157,7 @@
     remoto.pericias[0].bonus = 5;
     var m = S.mesclar(base, local, remoto, S.ESQUEMA_FICHA);
     t.ok("sincronizar: a fórmula daqui e o bônus de lá", m.estado.pericias[0].formula === "@STR d8" && m.estado.pericias[0].bonus === 5 && !m.conflitos.length);
-    t.igual("o schema da ficha é o atual (31)", n.schemaVersion, 31);
+    t.igual("o schema da ficha é o atual (32)", n.schemaVersion, 32);
   }
 
   /* =================================================================
@@ -5194,7 +5194,7 @@
     var m = S.mesclar(base, local, remoto, S.ESQUEMA_FICHA);
     t.ok("sincronizar: o modo daqui e o bônus de lá, sem conflito",
       m.estado.organizacao.pericias.modo === "maior" && m.estado.pericias[1].bonus === 4 && !m.conflitos.length);
-    t.igual("o schema da ficha é o atual (31)", n.schemaVersion, 31);
+    t.igual("o schema da ficha é o atual (32)", n.schemaVersion, 32);
   }
 
   /* =================================================================
@@ -5340,7 +5340,7 @@
     t.ok("exportar e importar leva pendentes (com o dado já rolado) e resolvidas", volta.ok &&
       volta.dados.ordem.barganhaInsana.pendentes[0].d4 === 2 && volta.dados.ordem.barganhaInsana.resolvidas.length === 1);
     t.ok("  mesmo sem o ritual na lista de conhecidos", volta.dados.rituais.itens.length === 0);
-    t.igual("o schema da ficha é o atual (31)", F.normalizarFicha(ficha).schemaVersion, 31);
+    t.igual("o schema da ficha é o atual (32)", F.normalizarFicha(ficha).schemaVersion, 32);
   }
 
   /* =================================================================
@@ -5381,7 +5381,7 @@
     t.iguais("  um tema de dados que este navegador não conhece também fica (a tela usa a reserva)", MT.normalizarAparencia({ dados: { id: "tema-do-futuro" } }).dados, { id: "tema-do-futuro" });
     var ficha = F.normalizarFicha(F.criarFicha({ nome: "Lia", tipoFicha: "universal", aparencia: { v: 1, modo: "conta", dados: { id: "sigilo-violeta" } } }));
     t.iguais("a ficha normalizada mantém a escolha", ficha.aparencia.dados, { id: "sigilo-violeta" });
-    t.igual("o schema da ficha é o atual (31)", ficha.schemaVersion, 31);
+    t.igual("o schema da ficha é o atual (32)", ficha.schemaVersion, 32);
     var pacote = V.exportar("personagem", ficha);
     t.ok("exportar leva a escolha sem `id` (atravessa como `tema`)", pacote.dados.aparencia.dados.tema === "sigilo-violeta" && JSON.stringify(pacote).indexOf('"id"') < 0);
     var volta = V.importado(JSON.parse(JSON.stringify(pacote)));
@@ -8239,9 +8239,9 @@
     var PM = global.RAMAPainelMesa;
     if (PM) {
       t.grupo("Painel da mesa · o cartão é do sistema da ficha (v4.0)");
-      var desconhecido = PM.resumir({ id: "f", nome: "Do futuro", tipoFicha: "brutal", detalhado: true, atributos: [{ id: "a", nome: "Raiva", valor: 9 }], status: [{ id: "s", nome: "Vida", atual: 1, maximo: 2 }] });
+      var desconhecido = PM.resumir({ id: "f", nome: "Do futuro", tipoFicha: "tormenta20", detalhado: true, atributos: [{ id: "a", nome: "Raiva", valor: 9 }], status: [{ id: "s", nome: "Vida", atual: 1, maximo: 2 }] });
       t.ok("ficha de sistema desconhecido: só a identificação, nunca o cartão Universal",
-        desconhecido.tipo === "brutal" && desconhecido.atributos.length === 0 && desconhecido.recursos.length === 0 && /não reconhecido/.test(desconhecido.linhas.join(" ")));
+        desconhecido.tipo === "tormenta20" && desconhecido.atributos.length === 0 && desconhecido.recursos.length === 0 && /não reconhecido/.test(desconhecido.linhas.join(" ")));
       var semTipo = PM.resumir({ id: "g", nome: "Ilegível", tipoFicha: "", fichaIlegivel: true });
       t.ok("ficha ilegível: sem tipo suposto", semTipo.tipo === "" && semTipo.ilegivel);
       var livre = PM.resumir({ id: "h", nome: "Livre", tipoFicha: "universal", detalhado: true, atributos: [{ id: "a", nome: "Força", sigla: "FOR", valor: 2 }], status: [{ id: "s", nome: "Vida", atual: 3, maximo: 5 }] });

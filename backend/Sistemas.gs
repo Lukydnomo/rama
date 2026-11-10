@@ -22,6 +22,9 @@
                    operações entre personagens (cópia do motor; v4.1).
      Goblins.gs    Malditos Goblins (3ª ed.): o Covil do mestre e as
                    operações entre goblins e a mesa (cópia do motor; v6.0).
+     Brutal.gs     BRUTAL (Corte Rápido): a Mesa da Diretora — o
+                   Thriller da campanha, com as rolagens feitas aqui
+                   (cópia do motor; v7.0).
      Universal.gs  o modelo flexível do R.A.M.A.: atributos e status
                    livres no painel da mesa.
 
@@ -56,6 +59,8 @@ var SISTEMAS_DO_RAMA = [
     ferramentas: ['cronica'], mecanicas: [] },
   { id: 'goblins', nome: 'Malditos Goblins', arquivo: 'Goblins.gs',
     ferramentas: ['covil'], mecanicas: [] },
+  { id: 'brutal', nome: 'BRUTAL', arquivo: 'Brutal.gs',
+    ferramentas: ['diretora'], mecanicas: [] },
   { id: 'universal', nome: 'Universal', arquivo: 'Universal.gs',
     ferramentas: ['combate'], mecanicas: [] },
 ];
@@ -131,6 +136,7 @@ var MODULOS_DE_SISTEMA = {
   oblivio: function () { return typeof sistemaOblivio === 'function' ? sistemaOblivio() : null; },
   vampiro: function () { return typeof sistemaVampiro === 'function' ? sistemaVampiro() : null; },
   goblins: function () { return typeof sistemaGoblins === 'function' ? sistemaGoblins() : null; },
+  brutal: function () { return typeof sistemaBrutal === 'function' ? sistemaBrutal() : null; },
   universal: function () { return typeof sistemaUniversal === 'function' ? sistemaUniversal() : null; },
 };
 

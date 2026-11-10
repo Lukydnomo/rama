@@ -198,6 +198,33 @@
       },
     },
     {
+      id: "brutal", nome: "BRUTAL", curto: "BRUTAL", edicao: "Corte Rápido",
+      resumo: "Corte Rápido: slasher com pilhas de dados, Pontos de Tensão e um Assassino nas mãos da Diretora.",
+      capa: "assets/sistemas/brutal-capa.webp", capaAlt: "Capa de BRUTAL, Fastplay: o título em vermelho sobre uma ilustração vermelha de uma vítima gritando, cercada de mãos e pregos",
+      ficha: {
+        bloco: "brutal", motor: "RAMABrutal",
+        resumo: { campo: "resumoBrutal", calcular: "resumoParaMesa", normalizarAntes: true },
+        pontos: [
+          "Os oito Arquétipos do Corte Rápido, com Estilos e Habilidade",
+          "Pilha Comum, Pilha de Fuga, Descarte e Marcadores sempre à mão",
+          "Testes comuns e Complexos, Sustos e as seis Ações de Encontro",
+          "Vantagens, Apegos e Pontos de Tensão com custo e recarga",
+        ],
+        blocoSuperior: "RAMASecaoBrutal",
+        abas: [
+          { chave: "geral",      rotulo: "Sobrevivente", secao: "RAMASecaoBrutal" },
+          { chave: "thriller",   rotulo: "Thriller",     secao: "RAMASecaoBrutalThriller" },
+          { chave: "anotacoes",  rotulo: "Anotações",    secao: "RAMASecaoAnotacoes", independente: true },
+        ],
+      },
+      campanha: {
+        mestre: "Diretora",
+        descricao: "A Mesa da Diretora: cenas Livre, Suspense e Encontro, a Pilha da Diretora, Pontos de Horror, o Assassino (Bruto, Sangria, Rato, Profeta ou personalizado), testes pedidos, Iniciativa e as ações do Assassino.",
+        ferramentas: ["diretora"],
+        mecanicas: [],
+      },
+    },
+    {
       id: "universal", nome: "Universal", curto: "Universal",
       resumo: "O modelo flexível do R.A.M.A., para qualquer sistema.",
       ficha: {
@@ -333,6 +360,7 @@
     oblivio: "mesa da Testemunha",
     cronica: "crônica do Narrador",
     covil: "Covil do mestre",
+    diretora: "Mesa da Diretora",
   };
   function nomeDaFerramenta(chave) {
     if (NOMES_DE_FERRAMENTA[chave]) return NOMES_DE_FERRAMENTA[chave];

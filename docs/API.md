@@ -11,6 +11,31 @@
   permite o suplemento dono da ferramenta (desligar a mecânica com
   `estado.ativo: false` continua aceito). As leituras não mudam.
 
+## BRUTAL — v7.0
+
+Rotas de `Brutal.gs`; só respondem numa campanha de BRUTAL
+(`exigirFerramenta('diretora')`, senão `outro_sistema`).
+
+- `ler_brutal { campanhaId }` — membro (espectador: `sem_permissao`). A
+  Diretora (mestre) recebe `{ mestre: true, rev, estado, personagens, pode }`;
+  a jogadora, `{ mestre: false, rev, vista, personagens, pode }`
+  (`RAMABrutalMesa.vista`: sem Pontos de Horror, ficha do Assassino, meta da
+  Fuga, Testes de Susto restantes, decisões e registro privado; a meta só para
+  a Nerd que a descobriu). `pode`: as Sobreviventes que a conta conduz.
+- `brutal_operar { campanhaId, opId, operacao, rev? }` — toda mudança do
+  Thriller. `operacao.tipo` da Diretora (configurar o Assassino e as lacunas,
+  cenas, sessão, PT, ajustes, marcadores, testes pedidos, Encontro, ações do
+  Assassino…) exige mestre; o das Sobreviventes (`teste`, `confirmarTeste`,
+  `repetirSusto`, `acaoEncontro`, `habilidade`, `vantagem`, `apego`, `recurso`,
+  `dadoManual`, `usarPlanejarFuga`, `preferencia`) exige ser a dona da ficha (ou
+  a Diretora). O motor valida cena, vez, custos e recargas: recusa é
+  `dados_invalidos` com `motivo`. Os dados são rolados aqui e gravados em
+  `CAMPANHA_ROLAGENS`. `opId` repetido devolve `repetida` com o estado atual;
+  `rev` velha numa configuração devolve `conflito`. Resposta:
+  `{ rev, dados: (como ler_brutal), resultado: { eventos, pendente, rolagens, faltam } }`
+  (eventos privados só para a Diretora). Revelar o Desejo Obscuro grava também
+  a ficha.
+
 ## Malditos Goblins — v6.0
 
 Rotas de `Goblins.gs`; só respondem numa campanha de Malditos Goblins

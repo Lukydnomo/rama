@@ -84,6 +84,8 @@
     { chave: "cronica",     rotulo: "Crônica",     secao: "RAMACampanhaVampiro", ferramenta: "cronica" },
     /* Malditos Goblins (v6.0): o Covil do mestre. */
     { chave: "covil",       rotulo: "Covil",       secao: "RAMACampanhaGoblins", ferramenta: "covil" },
+    /* BRUTAL (v7.0): a Mesa da Diretora — o Thriller da campanha. */
+    { chave: "diretora",    rotulo: "Mesa da Diretora", secao: "RAMACampanhaBrutal", ferramenta: "diretora" },
     { chave: "notas",       rotulo: "Notas",       secao: "RAMACampanhaNotas", soMestre: true },
     { chave: "config",      rotulo: "Configurações", secao: "RAMACampanhaConfig", soMestre: true },
   ];
@@ -457,6 +459,7 @@
     if (tem("oblivio")) notificar("oblivio");
     if (tem("vampiro")) notificar("cronica");
     if (tem("goblins")) notificar("covil");
+    if (tem("brutal")) notificar("diretora");
   }
 
   async function buscarPersonagensEmSegundoPlano() {

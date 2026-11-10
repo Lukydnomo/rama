@@ -37,6 +37,7 @@
   function V() { return global.RAMAVampiroCatalogo; }
   function VD() { return global.RAMAVampiroDisciplinas; }
   function K() { return global.RAMAGoblinsCatalogo; }
+  function BR() { return global.RAMABrutalCatalogo; }
 
   var painel = null;
   var estado = { sistema: "ordem", categoria: "", busca: "", filtros: {}, abertos: {}, limite: 60 };
@@ -705,7 +706,107 @@
   };
 
 
-  var CATEGORIAS = { ordem: ORDEM, oblivio: OBLIVIO, vampiro: VAMPIRO, goblins: GOBLINS };
+  /* =================================================================
+     BRUTAL · CORTE RÁPIDO (v7.0) — os mesmos dados da ficha e da mesa
+     ================================================================= */
+
+  function refBr(pag) { return "CR p. " + pag; }
+  function tituloBr(pag) { return BR().referencia(pag); }
+  function nomeEstiloBr(k) { return BR().ESTILOS[k] ? BR().ESTILOS[k].nome : k; }
+  function nomeRecargaBr(k) { return (BR().RECARGAS[k] || {}).nome || k; }
+  function imagemBr(caminho, alt) { return el("img.catalogo-retrato", { src: U.url(caminho), alt: alt || "", loading: "lazy", width: 120, height: 180 }); }
+  function acoesBr(l) { return l.map(function (x) { return BR().ACOES_ASSASSINO[x].nome; }).join(", "); }
+
+  var BRUTAL = [
+    { id: "arquetipos", nome: "Arquétipos", tem: function () { return !!BR(); },
+      ajuda: "Os oito Arquétipos do Corte Rápido: Estilos, Habilidade e Iniciativa. A criação da ficha mostra as mesmas cartas.",
+      entradas: function () {
+        return BR().ORDEM_ARQUETIPOS.map(function (k) {
+          var a = BR().ARQUETIPOS[k];
+          var est = a.estilos.map(nomeEstiloBr);
+          return entradaSimples("arq", { chave: k, nome: a.nome, texto: a.resumo }, {
+            linha: est.join(" e ") + " · Iniciativa " + a.iniciativa, referencia: refBr(a.pagina), tituloRef: tituloBr(a.pagina),
+            marcas: est, f: { estilo: est.join(",") }, busca: a.adjetivos + " " + a.habilidade.nome + " " + a.habilidade.texto,
+            pares: [["Adjetivos", a.adjetivos], ["Estilos", est.join(" e ")], ["Habilidade", a.habilidade.nome + " — " + a.habilidade.texto], ["Cena / Recarga", a.habilidade.cena + " · " + nomeRecargaBr(a.habilidade.recarga)], ["Iniciativa", a.iniciativa + "º (o Assassino é sempre o último)"], ["Fonte", tituloBr(a.pagina)]],
+            extra: function () { return imagemBr("assets/brutal/arquetipos/" + k + ".webp", "Arte de " + a.nome); },
+          });
+        });
+      },
+      filtros: function () { return [{ chave: "estilo", rotulo: "Estilo", todos: "Todos", multiplo: true }]; } },
+    { id: "estilos", nome: "Estilos", tem: function () { return !!BR(); },
+      ajuda: "Um teste num Estilo seu tem a Dificuldade reduzida em 1 (sucesso em 3+).",
+      entradas: function () {
+        return BR().ORDEM_ESTILOS.map(function (k) {
+          var e = BR().ESTILOS[k];
+          var quem = BR().ORDEM_ARQUETIPOS.filter(function (a) { return BR().ARQUETIPOS[a].estilos.indexOf(k) >= 0; }).map(function (a) { return BR().ARQUETIPOS[a].nome; });
+          return entradaSimples("est", { chave: k, nome: e.nome, texto: e.texto }, { linha: quem.join(", "), referencia: refBr(e.pagina), tituloRef: tituloBr(e.pagina), pares: [["Arquétipos", quem.join(", ")], ["Fonte", tituloBr(e.pagina)]] });
+        });
+      } },
+    { id: "vantagens", nome: "Vantagens", tem: function () { return !!BR(); },
+      ajuda: "Fora de Encontros, por Pontos de Tensão. As lacunas (o custo de Tratar Feridas, campos trocados) ficam com a Diretora.",
+      entradas: function () {
+        return BR().ORDEM_VANTAGENS.map(function (k) {
+          var v = BR().VANTAGENS[k];
+          var tipo = v.estilo ? "De Estilo · " + nomeEstiloBr(v.estilo) : "Geral";
+          var custo = v.custo === null ? (v.custoTexto || "—") : v.custo + " PT";
+          return entradaSimples("van", { chave: k, nome: v.nome, texto: v.texto }, {
+            linha: tipo + " · " + custo + " · " + nomeRecargaBr(v.recarga), referencia: refBr(v.pagina), tituloRef: tituloBr(v.pagina), f: { tipo: v.estilo ? "De Estilo" : "Geral" },
+            pares: [["Tipo", tipo], ["Custo", custo], ["Recarga", nomeRecargaBr(v.recarga)], ["Fonte", tituloBr(v.pagina)]],
+            extra: function () { return v.lacuna ? texto("Lacuna: " + BR().LACUNAS[v.lacuna].texto, "t-mini") : null; },
+          });
+        });
+      },
+      filtros: function () { return [{ chave: "tipo", rotulo: "Tipo", todos: "Todas" }]; } },
+    { id: "acoes", nome: "Ações", tem: function () { return !!BR(); },
+      ajuda: "As Ações de Encontro das Sobreviventes e as Ações do Assassino (Gerais e Únicas).",
+      entradas: function () {
+        var enc = BR().ORDEM_ACOES_ENCONTRO.map(function (k) {
+          var a = BR().ACOES_ENCONTRO[k];
+          var teste = a.estilo === "livre" ? "Teste no Estilo apropriado" : a.estilo ? "Teste " + nomeEstiloBr(a.estilo) + (a.teste === "complexo" ? " (Complexo)" : "") : "Sem teste";
+          return entradaSimples("enc", { chave: k, nome: a.nome, texto: a.texto }, { linha: "Ação de Encontro · " + teste, referencia: refBr(a.pagina), tituloRef: tituloBr(a.pagina), f: { tipo: "Ação de Encontro" }, marcas: ["Sobrevivente"], pares: [["Teste", teste], ["Fonte", tituloBr(a.pagina)]] });
+        });
+        var ass = Object.keys(BR().ACOES_ASSASSINO).map(function (k) {
+          var a = BR().ACOES_ASSASSINO[k];
+          var tipo = a.tipo === "unica" ? "Ação Única do Assassino" : "Ação Geral do Assassino";
+          var cenas = a.cena.map(function (c) { return BR().CENAS[c].nome; }).join(", ");
+          return entradaSimples("ass", { chave: k, nome: a.nome, texto: a.texto }, { linha: tipo + " · " + cenas + (a.custo ? " · " + a.custo + " PH" : ""), referencia: refBr(a.pagina), tituloRef: tituloBr(a.pagina), f: { tipo: tipo }, marcas: ["Assassino"], pares: [["Tipo", tipo], ["Cena", cenas], ["Custo", a.custo ? a.custo + " PH" : "Sem restrição"], ["Fonte", tituloBr(a.pagina)]] });
+        });
+        return enc.concat(ass);
+      },
+      filtros: function () { return [{ chave: "tipo", rotulo: "Tipo", todos: "Todas" }]; } },
+    { id: "assassinos", nome: "Assassinos", tem: function () { return !!BR(); },
+      ajuda: "Os Assassinos prontos, as Ameaças, os Apavoros e os Intentos. A Mesa da Diretora usa os mesmos.",
+      entradas: function () {
+        var prontos = BR().ORDEM_ASSASSINOS.map(function (k) {
+          var a = BR().ASSASSINOS[k];
+          var am = a.ameacas.map(function (m) { return BR().AMEACAS[m].nome; }).join(" ");
+          return entradaSimples("kil", { chave: k, nome: a.nome, texto: a.resumo }, {
+            linha: am + " · " + a.dados + " dados · " + a.ph + " PH · " + a.sustos + " Susto(s)", referencia: refBr(a.pagina), tituloRef: tituloBr(a.pagina), f: { tipo: "Assassino pronto" }, marcas: [am],
+            pares: [["Ameaças", am], ["Dados iniciais", a.dados], ["Pontos de Horror iniciais", a.ph], ["Testes de Susto por Encontro", a.sustos], ["Ações Únicas", acoesBr(a.acoesUnicas)], ["Apavoro", BR().APAVOROS[a.apavoro].nome], ["Fonte", tituloBr(a.pagina)]],
+            extra: function () { return imagemBr("assets/brutal/assassinos/" + k + ".webp", "Arte de " + a.nome); },
+          });
+        });
+        var ameacas = Object.keys(BR().AMEACAS).map(function (k) {
+          var m = BR().AMEACAS[k];
+          return entradaSimples("ame", { chave: k, nome: m.nome, texto: m.texto }, { linha: m.definida ? "Ameaça · " + acoesBr(m.acoesUnicas) : "Ameaça sem descrição no Corte Rápido", referencia: refBr(m.pagina), tituloRef: tituloBr(m.pagina), f: { tipo: "Ameaça" },
+            pares: [["Adjetivos", m.adjetivos || ""], ["Ações Únicas disponíveis", acoesBr(m.acoesUnicas)], ["Intento Único", (BR().INTENTOS_UNICOS[k] || {}).texto || ""], ["Fonte", tituloBr(m.pagina)]] });
+        });
+        var apavoros = Object.keys(BR().APAVOROS).map(function (k) {
+          var a = BR().APAVOROS[k];
+          var custo = a.custo === null ? a.custoPorInterprete + " PH por Intérprete" : a.custo + " PH";
+          return entradaSimples("apa", { chave: k, nome: a.nome, texto: a.texto }, { linha: "Apavoro · " + custo + " · " + nomeRecargaBr(a.recarga), referencia: refBr(a.pagina), tituloRef: tituloBr(a.pagina), f: { tipo: "Apavoro" }, pares: [["Cena", a.cena], ["Recarga", nomeRecargaBr(a.recarga)], ["Custo", custo], ["Fonte", tituloBr(a.pagina)]] });
+        });
+        var intentos = BR().ORDEM_INTENTOS.map(function (k) {
+          var i = BR().INTENTOS_HORRIVEIS[k];
+          return entradaSimples("int", { chave: k, nome: i.texto, texto: "Intento Horrível: +" + i.ph + " PH. " + (i.auto ? "A Mesa da Diretora confere sozinha." : "A Diretora marca na mesa.") }, { linha: "Intento Horrível · +" + i.ph + " PH", referencia: refBr(12), tituloRef: tituloBr(12), f: { tipo: "Intento" } });
+        });
+        return prontos.concat(ameacas, apavoros, intentos);
+      },
+      filtros: function () { return [{ chave: "tipo", rotulo: "Tipo", todos: "Todos" }]; } },
+  ];
+
+
+  var CATEGORIAS = { ordem: ORDEM, oblivio: OBLIVIO, vampiro: VAMPIRO, goblins: GOBLINS, brutal: BRUTAL };
 
   /* Só as categorias com conteúdo. As carregadas sob demanda (rituais e
      itens de Ordem) contam como tendo conteúdo quando o módulo existe. */

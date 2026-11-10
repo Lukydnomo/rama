@@ -118,6 +118,24 @@
 
   var CHANGELOG = [
     {
+      versao: "7.0.0",
+      codinome: "CARNIFICINA",
+      data: "31/10/2026",
+      mudancas: {
+        "Adicionado": [
+          "BRUTAL — Corte Rápido como sistema jogável: crie uma Sobrevivente escolhendo um dos oito Arquétipos em cartas (Atleta, Cética, Esbelta, Heroína, Inocente, Nerd, Relaxada e Valentona), com os Estilos, a Habilidade e a Iniciativa do livro, e Apegos que rendem Pontos de Tensão.",
+          "A ficha é um tabuleiro de jogo: Pontos de Tensão, Ferida, Sequela, Marcadores, Recursos, Dificuldade, as Rolagens, a Pilha da Intérprete e a Pilha de Fuga sempre à vista, os botões Arriscar Tudo, Descartar, Sacrificar e Rolar, e Vantagens, Habilidades, Ações, Iniciativa e Detalhes ao alcance — com o motivo de cada coisa indisponível.",
+          "Testes comuns e Complexos (exatamente dois sucessos), Testes de Susto, falhas sacrificadas em cena Livre e Suspense e descartadas no Encontro, Recursos, Vantagens com custo e recarga, e as seis Ações de Encontro, com Pilha de Fuga e escapada.",
+          "A Mesa da Diretora em toda campanha de BRUTAL: cenas, sessões, a Pilha da Diretora e os Pontos de Horror, testes pedidos, o Encontro com a condição de entrada conferida e a Iniciativa organizada, as ações do Assassino (Ferir, Matar, Mutilar, Assustar, Escapar, Possuir, Restringir, Segurar, Incapacitar, Devorar, Acidentar), Apavoros, Intentos automáticos e os quatro Assassinos prontos ou um personalizado.",
+          "BRUTAL no Catálogo: Arquétipos, Estilos, Vantagens, Ações e Assassinos, com os mesmos dados da ficha e da mesa.",
+        ],
+        "Alterado": [
+          "O que o Corte Rápido não define (o tamanho da Pilha de Fuga de cada Assassino, o custo de Tratar Feridas, o fim da habilidade da Valentona…) aparece como decisão da Diretora no ponto de uso, com a lacuna registrada — nenhum valor oficial inventado.",
+        ],
+        "Técnico": ["Novo backend/Brutal.gs (ler_brutal, brutal_operar com opId e rev; rolagens no servidor) e a aba CAMPANHA_BRUTAL: crie o arquivo, troque Sistemas.gs, Dados.gs e Campanhas.gs, rode setupRama() e crie uma versão nova da implantação. A ficha guarda quem a Sobrevivente é; o jogo de cada campanha fica no Thriller da Mesa da Diretora. Schema 32, sem conversão. Site: js/brutal/, css/brutal.css, assets/brutal/, a capa e as páginas personagens/, ficha/, campanha/ e catalogo/."],
+      },
+    },
+    {
       versao: "6.13.0",
       codinome: "INSÍGNIA",
       data: "31/10/2026",

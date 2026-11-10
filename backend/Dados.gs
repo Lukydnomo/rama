@@ -408,6 +408,22 @@ var ABAS = {
     leves: 3,
     pesadas: ['dadosJson'],
   },
+  CAMPANHA_BRUTAL: {
+    /* A Mesa da Diretora de BRUTAL (v7.0): o THRILLER da campanha —
+       cena, sessão, a Pilha da Diretora, Pontos de Horror, o Descarte,
+       o Assassino, as lacunas configuradas, o estado de jogo de cada
+       Sobrevivente (pilhas, PT, Feridas, Marcadores, recargas), o
+       Encontro (Iniciativa, vez, Fuga), testes pedidos e o registro —
+       uma linha por campanha. A ficha da Sobrevivente fica fora: a
+       mesma ficha em outra campanha começa outro Thriller. Toda mudança
+       passa por brutal_operar (Brutal.gs), com opId. Trocar o sistema
+       não apaga a linha. */
+    nome: 'CAMPANHA_BRUTAL',
+    colunas: ['campanhaId', 'atualizadoEm', 'rev', 'opsJson', 'dadosJson'],
+    chave: 'campanhaId',
+    leves: 3,
+    pesadas: ['dadosJson'],
+  },
   CAMPANHA_CAPAS: {
     /* A capa (banner) da campanha. Fora do dadosJson pelo mesmo motivo
        da foto de personagem: é o campo mais pesado e o que menos muda.

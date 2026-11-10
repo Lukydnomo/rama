@@ -1,0 +1,34 @@
+/* =====================================================================
+   R.A.M.A. — BRUTAL (v7.0) · Modern20
+   ---------------------------------------------------------------------
+   As MESMAS classes de css/brutal.css na linguagem Modern20: canto
+   leve, traço discreto, sombra só no que flutua. Estado continua com
+   texto e forma — ✓/✗ nos dados, "(incapacitado)" no Estilo.
+   ===================================================================== */
+
+:where(:root[data-interface="modern20"]) {
+
+  & .brt-cartao,
+  & .brt-item,
+  & .brt-faixa,
+  & .brt-rolagem,
+  & .brt-mesa__sob,
+  & .brt-mesa__topo,
+  & .brt-pendente,
+  & .brt-pedidos,
+  & .brt-turno,
+  & .brt-recursos-teste,
+  & .brt-pedido-mesa {
+    border-color: var(--m20-borda);
+    border-radius: var(--m20-raio-controle);
+  }
+
+  & .brt-rolagens { border-color: var(--brt-acento); }
+  & .brt-pilha-cartao--comum { border-color: #4caf50; }
+  & .brt-pilha-cartao--fuga { border-color: #2b9fd0; }
+  & .brt-arquetipo__topo { border-radius: var(--m20-raio-controle); }
+  & .brt-estilo,
+  & .brt-quantos__opcao { border-radius: var(--m20-raio-controle); border-color: var(--m20-borda-controle); }
+  & .brt-aba--ativa { border-radius: var(--m20-raio-controle); }
+  & .brt-carta { border-radius: calc(var(--m20-raio-controle) * 2); }
+}

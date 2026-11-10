@@ -1,5 +1,27 @@
 # O banco
 
+## BRUTAL — v7.0
+
+> **Atualizando para a v7.0:** crie o arquivo `Brutal` com `backend/Brutal.gs`,
+> troque `Sistemas.gs`, `Dados.gs` e `Campanhas.gs`, rode **`setupRama()`** uma
+> vez (cria a aba `CAMPANHA_BRUTAL`; repetir não muda nada) e crie uma nova
+> versão da implantação.
+
+**CAMPANHA_BRUTAL** — `campanhaId · atualizadoEm · rev · opsJson · dadosJson`
+(leves: as três primeiras; pesada: `dadosJson`). `dadosJson` é o Thriller
+normalizado por `RAMABrutalMesa` (cópia fiel de `js/brutal/mesa.js` em
+`Brutal.gs`): sessão, cena, o Assassino, a Pilha e os Pontos de Horror da
+Diretora, o Descarte, as lacunas configuradas, as Vantagens da mesa, o estado
+de jogo de cada Sobrevivente (por id da ficha), o Encontro, testes pedidos,
+decisões, rolagens e os registros público e privado. `opsJson` guarda os
+últimos 120 `opId` aplicados. Quando não cabe na célula, registros e rolagens
+mais antigos cedem primeiro. Trocar o sistema não apaga a linha.
+
+As fichas continuam em `PERSONAGENS` (o bloco `brutal`: quem a Sobrevivente é,
+não o jogo); a projeção do painel ganha `tipo: "brutal"` e o bloco `brutal`
+(`resumoParaMesa`). Rolagens feitas pelo servidor entram em
+`CAMPANHA_ROLAGENS` (`tipo: "brutal"`).
+
 ## Malditos Goblins — v6.0
 
 > **Atualizando para a v6.0:** crie o arquivo `Goblins` com `backend/Goblins.gs`,

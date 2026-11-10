@@ -5,6 +5,28 @@ padrão e normaliza o que chega de fora. Onde ela é guardada — inteira em
 `fichaJson` (formato antigo) ou em blocos (v2.15) — é assunto do backend, e não muda
 nada aqui: ver [DATABASE.md](DATABASE.md).
 
+## BRUTAL — v7.0 / schema 32
+
+`tipoFicha: "brutal"` e o bloco `brutal` (js/brutal/regras.js):
+
+```
+brutal: {
+  versao: 1,
+  arquetipo: "atleta" | "cetica" | "esbelta" | "heroina" | "inocente" | "nerd" | "relaxada" | "valentona" | "",
+  pronomes, interprete,
+  apegos: { item: { nome, texto }, relacao: { nome, texto }, desejo: { texto, revelado, reveladoEm } },
+  detalhes: { aparencia, historia, notas },
+  treino: <Thriller de uma Sobrevivente, sem campanha> | null,
+  operacoes: [opId…]
+}
+```
+
+O estado de jogo de uma campanha NÃO fica na ficha: mora no Thriller da Mesa da
+Diretora (`CAMPANHA_BRUTAL`), por campanha. O Desejo Obscuro revelado é a única
+marca de jogo que a ficha guarda (vale em qualquer Thriller). Sem conversão: o
+schema subiu para uma aba antiga recusar a ficha em vez de tratá-la como de um
+sistema desconhecido.
+
 ## Evolução por Patentes — v6.13 / schema 31
 
 Ficha de Ordem, campo novo `ordem.patenteConquistada` (inteiro 0 a 4: recruta,

@@ -1242,6 +1242,7 @@
     oblivio: function () { return abrirCriacaoOblivio(); },
     vampiro: function () { return abrirCriacaoVampiro(); },
     goblins: function () { return abrirCriacaoGoblins(); },
+    brutal: function () { return abrirCriacaoBrutal(); },
     universal: function () { return abrirCriacao(); },
   };
 
@@ -1292,6 +1293,18 @@
     var r = await global.RAMAApi.listarCampanhas();
     if (r.ok) campanhas = r.dados || [];
     global.RAMAGoblinsCriar.abrir({ campanhas: campanhas });
+  }
+
+  /* A criação de BRUTAL (v7.0): os oito Arquétipos em cartas. */
+  async function abrirCriacaoBrutal() {
+    if (!global.RAMABrutalCriar || !global.RAMABrutal) {
+      UI.avisoErro("A criação de BRUTAL não está disponível nesta página.");
+      return;
+    }
+    var campanhas = [];
+    var r = await global.RAMAApi.listarCampanhas();
+    if (r.ok) campanhas = r.dados || [];
+    global.RAMABrutalCriar.abrir({ campanhas: campanhas });
   }
 
   /* =================================================================

@@ -239,6 +239,18 @@
     return base;
   }
 
+  /* BRUTAL (v7.0): o Arquétipo e os Estilos identificam. Pilhas, PT e
+     Feridas são do Thriller da campanha (Mesa da Diretora), não da
+     ficha — o cartão não os inventa. */
+  function resumirBrutal(p, base) {
+    var K = global.RAMABrutalCatalogo;
+    var b = p.brutal && typeof p.brutal === "object" ? p.brutal : {};
+    var estilos = (Array.isArray(b.estilos) ? b.estilos : []).map(function (e) { return K && K.ESTILOS[e] ? K.ESTILOS[e].nome : e; });
+    base.linhas.push("BRUTAL" + (b.arquetipoNome ? " · " + b.arquetipoNome : "") + (estilos.length ? " · " + estilos.join(" e ") : ""));
+    if (b.pronomes) base.linhas.push(String(b.pronomes).slice(0, 40));
+    return base;
+  }
+
   function resumirOrdem(p, base) {
     var bruto = p.ordem && typeof p.ordem === "object" ? p.ordem : {};
     if (!R()) return base;
@@ -432,6 +444,7 @@
   registrar("oblivio", resumirOblivio);
   registrar("vampiro", resumirVampiro);
   registrar("goblins", resumirGoblins);
+  registrar("brutal", resumirBrutal);
   registrar("universal", resumirUniversal);
 
   global.RAMAPainelMesa = {

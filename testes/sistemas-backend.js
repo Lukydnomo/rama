@@ -30,7 +30,7 @@ export async function testarSistemasBackend({ t, preparar, novaConta, comoFn }) 
   const mestra = novaConta("sis_mestra"), ana = novaConta("sis_ana"), fora = novaConta("sis_fora");
   const M = comoFn(mestra), A = comoFn(ana), F = comoFn(fora);
   t.recusa("sem sistema, a campanha não nasce (nenhum é suposto)", M({ acao: "criar_campanha", dados: { nome: "Sem sistema" } }), "dados_invalidos");
-  t.recusa("um sistema que não existe também não", M({ acao: "criar_campanha", dados: { nome: "Futuro", sistema: "brutal" } }), "dados_invalidos");
+  t.recusa("um sistema que não existe também não", M({ acao: "criar_campanha", dados: { nome: "Futuro", sistema: "tormenta20" } }), "dados_invalidos");
   const uni = M({ acao: "criar_campanha", dados: { nome: "Livre", sistema: "Universal" } });
   t.ok("Universal é um sistema como os outros", uni.ok && uni.dados.sistema === "universal");
   const lu = M({ acao: "ler_campanha", campanhaId: uni.dados.id }).dados;
@@ -87,7 +87,7 @@ export async function testarSistemasBackend({ t, preparar, novaConta, comoFn }) 
 
   const rv = M({ acao: "ler_campanha", campanhaId: ordem }).rev;
   t.recusa("jogadora não troca o sistema", A({ acao: "salvar_campanha", campanhaId: ordem, rev: rv, dados: { sistema: "oblivio" } }), "sem_permissao");
-  t.recusa("um sistema desconhecido é recusado", M({ acao: "salvar_campanha", campanhaId: ordem, rev: rv, dados: { sistema: "brutal" } }), "dados_invalidos");
+  t.recusa("um sistema desconhecido é recusado", M({ acao: "salvar_campanha", campanhaId: ordem, rev: rv, dados: { sistema: "tormenta20" } }), "dados_invalidos");
   const troca = M({ acao: "salvar_campanha", campanhaId: ordem, rev: rv, dados: { sistema: "oblivio" } });
   t.ok("a mestra troca para Oblívio", troca.ok && troca.dados.sistema === "oblivio");
   const lt = A({ acao: "ler_campanha", campanhaId: ordem }).dados;
@@ -119,13 +119,13 @@ export async function testarSistemasBackend({ t, preparar, novaConta, comoFn }) 
 
   t.grupo("Sistemas · o cartão da mesa é do sistema da ficha");
   const pUni = A({ acao: "criar_personagem", dados: { nome: "Livre", tipoFicha: "universal", atributos: [{ id: "a1", nome: "Força", sigla: "FOR", valor: 2 }], status: [{ id: "s1", nome: "Vida", atual: 3, maximo: 5 }] } }).dados.id;
-  const pFut = A({ acao: "criar_personagem", dados: { nome: "Do futuro", tipoFicha: "brutal", atributos: [{ id: "a2", nome: "Raiva", valor: 9 }] } }).dados.id;
+  const pFut = A({ acao: "criar_personagem", dados: { nome: "Do futuro", tipoFicha: "tormenta20", atributos: [{ id: "a2", nome: "Raiva", valor: 9 }] } }).dados.id;
   A({ acao: "vincular_personagem", campanhaId: ordem, personagemId: pUni });
   A({ acao: "vincular_personagem", campanhaId: ordem, personagemId: pFut });
   const mesa = M({ acao: "listar_personagens_campanha", campanhaId: ordem }).dados;
   const cUni = mesa.find((p) => p.id === pUni), cFut = mesa.find((p) => p.id === pFut);
   t.ok("ficha Universal: atributos e status, pelo módulo Universal", cUni.tipoFicha === "universal" && cUni.atributos.length === 1 && cUni.status[0].atual === 3);
-  t.ok("ficha de um sistema que esta versão não conhece: só a identificação", cFut.tipoFicha === "brutal" && cFut.atributos === undefined && cFut.status === undefined);
+  t.ok("ficha de um sistema que esta versão não conhece: só a identificação", cFut.tipoFicha === "tormenta20" && cFut.atributos === undefined && cFut.status === undefined);
   t.ok("  nunca vira Universal", cFut.tipoFicha !== "universal");
   t.recusa("ajuste de recurso é de Ordem: numa ficha Universal, recusado",
     M({ acao: "ajustar_personagem", campanhaId: ordem, personagemId: pUni, rev: A({ acao: "ler_personagem", personagemId: pUni }).rev, alvo: "recurso", itemId: "pv", campo: "atual", valor: 1, operacaoId: "sis-aj-1-aaaaaaa" }), "dados_invalidos");

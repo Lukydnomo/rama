@@ -454,9 +454,9 @@ t.grupo("Ameaças (p. 40–45, 65–73)");
    PERSISTÊNCIA
    ===================================================================== */
 
-t.grupo("Persistência · schema 31 (desde a Evolução por Patentes), exportar e importar");
+t.grupo("Persistência · schema 32 (desde BRUTAL), exportar e importar");
 {
-  t.igual("schema 31 (o AS7 entrou no 29; o AS9 subiu para 30; as patentes, para 31)", F.VERSAO_SCHEMA, 31);
+  t.igual("schema 32 (o AS7 entrou no 29; o AS9 subiu para 30; as patentes, para 31; BRUTAL, para 32)", F.VERSAO_SCHEMA, 32);
   const antiga = F.normalizarFicha({ schemaVersion: 28, nome: "Antiga", tipoFicha: "ordem", ordem: { classe: "combatente" } });
   t.ok("ficha 28 abre com o estado vazio, sem conversão destrutiva", !!antiga.ordem.arquivo7 && antiga.ordem.arquivo7.procedimento.registros.length === 0);
   const o = monstruoso("especialista", 40, "sangue");

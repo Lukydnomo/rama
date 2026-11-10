@@ -25,7 +25,8 @@ for (const c of ["js/config.js", "js/util.js", "js/sistemas.js", "js/suplementos
   "js/criaturas.js", "js/ordem/criaturas.js",
   "js/vampiro/catalogo.js", "js/vampiro/disciplinas-dados.js", "js/vampiro/antagonistas-dados.js",
   "js/oblivio/catalogo.js", "js/oblivio/ameacas-dados.js", "js/oblivio/buraco-dados.js", "js/oblivio/regras.js", "js/oblivio/buraco.js",
-  "js/goblins/catalogo.js", "js/goblins/dados.js", "js/goblins/mesa.js"]) {
+  "js/goblins/catalogo.js", "js/goblins/dados.js", "js/goblins/mesa.js",
+  "js/brutal/catalogo.js", "js/brutal/regras.js", "js/brutal/mesa.js"]) {
   (0, eval)(await ler(c));
 }
 const U0 = globalThis.RAMAUtil;
@@ -68,8 +69,9 @@ t.grupo("Categorias · só as que têm conteúdo");
   t.igual("Oblívio", ids("oblivio"), ["criaturas", "equipamentos", "habilidades", "papeis", "conhecimentos", "motivacoes", "mazelas", "fardos", "geradores"]);
   t.igual("Vampiro (sem Geradores: o sistema não tem)", ids("vampiro"), ["criaturas", "disciplinas", "rituais", "alquimia", "clas", "predadores", "vantagens", "fichas", "equipamentos", "mesa"]);
   t.igual("Malditos Goblins", ids("goblins"), ["criaturas", "armas", "protecoes", "equipamentos", "magicos", "magias", "ocupacoes", "caracteristicas", "adaptacoes", "aventuras", "geradores"]);
+  t.igual("BRUTAL (Corte Rápido)", ids("brutal"), ["arquetipos", "estilos", "vantagens", "acoes", "assassinos"]);
   const erros = [];
-  for (const s of ["ordem", "oblivio", "vampiro", "goblins"]) {
+  for (const s of ["ordem", "oblivio", "vampiro", "goblins", "brutal"]) {
     for (const c of PC.categoriasDe(s)) {
       if (c.tipo) continue;
       const l = PC.entradasDe(s, c.id);
@@ -136,6 +138,20 @@ t.grupo("Outros sistemas · os dados das fichas e das campanhas");
   t.ok("Goblins: ocupações com as técnicas na consulta", /Mestre de Armas/.test(tudo(PC.entradasDe("goblins", "ocupacoes").filter((x) => x.nome === "Mercenário")[0].detalhes())));
   t.ok("Goblins: tabelas de aventura (inspiração, viajantes, masmorras)", ["Inspiração", "Viajantes", "Templo Esquecido"].every((n) => busca("goblins", "aventuras", n).length >= 1));
   t.ok("criaturas nativas com a ficha completa (fichas-nativas)", /RAMAFichasNativas\.(oblivio|vampiro|goblins)/.test(fonteDaPagina));
+}
+
+t.grupo("BRUTAL · os mesmos dados da ficha e da Mesa da Diretora");
+{
+  const BRC = globalThis.RAMABrutalCatalogo;
+  const detalheDe = (cat, nome) => tudo(PC.entradasDe("brutal", cat).filter((x) => x.nome === nome)[0].detalhes());
+  t.igual("8 Arquétipos", PC.entradasDe("brutal", "arquetipos").length, 8);
+  t.ok("Valentona: Firme e Potente, Cara Lavada", /Firme e Potente/.test(detalheDe("arquetipos", "Valentona")) && /Cara Lavada/.test(detalheDe("arquetipos", "Valentona")));
+  t.igual("5 Estilos", PC.entradasDe("brutal", "estilos").length, 5);
+  t.igual("8 Vantagens (3 Gerais + 5 de Estilo)", PC.entradasDe("brutal", "vantagens").length, BRC.ORDEM_VANTAGENS.length);
+  t.ok("Tratar Feridas mostra a lacuna do custo", /Lacuna/.test(detalheDe("vantagens", "Tratar Feridas")));
+  t.igual("Ações: 6 de Encontro + 12 do Assassino", PC.entradasDe("brutal", "acoes").length, 18);
+  t.ok("Assassinos: os 4 prontos, Ameaças, Apavoros e Intentos", ["Bruto", "Sangria", "Rato", "Profeta", "Brutamontes", "Buh!"].every((n) => busca("brutal", "assassinos", n).length >= 1));
+  t.ok("filtro por Estilo nos Arquétipos (vários valores)", PC.entradasDe("brutal", "arquetipos").filter((x) => String(x.f.estilo).split(",").indexOf("Sagaz") >= 0).length === 4);
 }
 
 console.log(`\n${FORTE}${passaram + falharam} verificações${FIM} · ${VERDE}${passaram} ok${FIM} · ${falharam ? VERMELHO : CINZA}${falharam} falhas${FIM}`);

@@ -220,6 +220,15 @@
      PP que já tem. Uma aba antiga descartaria o campo ao gravar — e a
      patente cairia com os PP —, então com o schema maior ela recusa.
 
+     31 → 32: BRUTAL — Corte Rápido (v7.0). A ficha aceita
+     `tipoFicha: "brutal"` e o bloco `brutal` (js/brutal/regras.js):
+     Arquétipo, pronomes, intérprete, Apegos (o Desejo Obscuro revelado
+     é para sempre), detalhes, o Thriller de treino (sem campanha) e o
+     registro de operações. O estado de jogo de uma campanha fica na
+     Mesa da Diretora (CAMPANHA_BRUTAL), não na ficha. Sem conversão.
+     Uma aba antiga trataria a ficha como de um sistema desconhecido; o
+     schema maior faz as ainda mais antigas recusarem em vez de gravar.
+
      Nenhuma das subidas exige migração: normalizarFicha() cria o que
      falta, vazio, e não toca no que existe. Um ritual gravado na 2 abre
      na 3 com a versão Normal em branco; uma ficha de Ordem gravada na 4
@@ -229,7 +238,7 @@
      os campos novos e os descartaria ao gravar — com o schema maior ela
      recusa abrir a ficha e pede para recarregar.
      Ver docs/CHARACTER_SCHEMA.md. */
-  var VERSAO_SCHEMA = 31;
+  var VERSAO_SCHEMA = 32;
 
   var MODULOS = {
     atributos: "Atributos", status: "Status/recursos", defesa: "Defesa",

@@ -62,6 +62,7 @@
     "ler_oblivio",
     "ler_vampiro",
     "ler_goblins",
+    "ler_brutal",
 
     "salvar_foto",
     "salvar_perfil",
@@ -94,6 +95,9 @@
     /* E para o Covil de Malditos Goblins (v6.0): o mesmo esquema. */
     "salvar_goblins",
     "goblins_operar",
+    /* E para a Mesa da Diretora de BRUTAL (v7.0): cada operação leva
+       opId, e o servidor reconhece a segunda chegada pelo Thriller. */
+    "brutal_operar",
 
     /* registrar_rolagem repete com segurança porque carrega um id
        próprio: o servidor reconhece a segunda chegada e não cria a
@@ -191,6 +195,7 @@
     vampiro_operar: true,
     salvar_goblins: true,
     goblins_operar: true,
+    brutal_operar: true,
   };
 
   var LEITURAS = {};
@@ -851,6 +856,17 @@
   function goblinsOperar(campanhaId, opId, operacao) {
     return post({ acao: "goblins_operar", campanhaId: campanhaId, opId: opId, operacao: operacao });
   }
+
+  /* BRUTAL (v7.0): a Mesa da Diretora. Ler e operar o Thriller; `rev`
+     só nas configurações (o servidor recusa sobre um estado velho). */
+  function lerBrutal(campanhaId, opcoes) {
+    return post({ acao: "ler_brutal", campanhaId: campanhaId }, opcoes);
+  }
+  function brutalOperar(campanhaId, opId, operacao, rev) {
+    var corpo = { acao: "brutal_operar", campanhaId: campanhaId, opId: opId, operacao: operacao };
+    if (rev !== undefined && rev !== null) corpo.rev = rev;
+    return post(corpo);
+  }
   function vampiroOperar(campanhaId, opId, operacao) {
     return post({ acao: "vampiro_operar", campanhaId: campanhaId, opId: opId, operacao: operacao });
   }
@@ -1225,6 +1241,8 @@
     lerGoblins: lerGoblins,
     salvarGoblins: salvarGoblins,
     goblinsOperar: goblinsOperar,
+    lerBrutal: lerBrutal,
+    brutalOperar: brutalOperar,
     sincroniaOperar: sincroniaOperar,
     lerImagemDoTurno: lerImagemDoTurno,
     excluirCombate: excluirCombate,
