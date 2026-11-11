@@ -223,13 +223,20 @@ modelo oficial imutável, as imagens de cada criatura e a exportação/importaç
 deno run --allow-read testes/executar-criaturas.js
 ```
 
-**Importação do CRIS** — 171 verificações, sem rede e sem gravar: link,
+**Importação do CRIS** — 254 verificações, sem rede e sem gravar: link,
 texto seguro, expressões de dano, os retratos públicos do Jeff e da Gina
 guardados em `testes/fixtures/cris` (valores-alvo, itens, ataques, críticos,
 rituais, procedência, marco, evolução acima dele, exportar e importar sem perder
-vínculos) e casos sintéticos (zeros, campos ausentes, NEX 99%, NEX &
+vínculos), casos sintéticos (zeros, campos ausentes, NEX 99%, NEX &
 Experiência, Mundano e Sobrevivente, ataque sem item, dano composto, expressão
-fora do formato, conteúdo personalizado). A leitura no servidor está em
+fora do formato, conteúdo personalizado) e o assistente da v7.2: a Meko com tudo
+reconhecido ainda passa pela revisão por seção; uma associação automática
+corrigida devolve à revisão só o que mudou; a Vesper (ficha sintética) testa a
+arma renomeada sobre a Espada com o ataque vinculado, o ritual do Homebrew, o
+personalizado, Anotações e Não importar, os conflitos de tipo e círculo e o
+JSON exportado igual à prévia. O `testes/servidor-local.js` simula o CRIS com
+essas fichas (`/agente/TesteAssistenteV72` é a Vesper) e cria um Homebrew de
+teste para a conta `dona`, para conferir o assistente no navegador. A leitura no servidor está em
 `testes/cris-backend.js`, dentro de `executar-backend.js`:
 
 ```bash
@@ -879,6 +886,12 @@ próprio `<script src>`, então funciona debaixo de subpasta sem ajuste.
 segredo nenhum — ele os lê das Script Properties. Publicá-lo não expõe nada.
 
 ### Atualizar o backend
+
+**v7.2.0 — ADUANA:** só o site (o novo assistente de Importar do CRIS). Publique
+`js/importar-cris.js`, `js/importar-cris-tela.js`, `css/componentes.css`,
+`css/modern20/componentes.css` e `js/versao.js`. O Apps Script **não precisa**
+ser republicado: `Cris.gs` e `Codigo.gs` não mudaram — a leitura do CRIS, a
+criação da ficha e a gravação no Homebrew usam as ações que já existem.
 
 **v7.1.1 — PRENSA:** imagens em WebP. Publique o site inteiro de `assets/rituais`,
 `assets/criaturas` e `assets/dados` (os `.webp` novos; os `.png` trocados saíram
@@ -1834,7 +1847,7 @@ Três números diferentes, que não se misturam:
 
 | | Onde | O que é |
 |---|---|---|
-| versão do aplicativo | `js/versao.js` | o que a pessoa vê: v7.1.1 |
+| versão do aplicativo | `js/versao.js` | o que a pessoa vê: v7.2.0 |
 | `schemaVersion` | `js/ficha.js` | o formato da FICHA |
 | `versaoFormato` | `js/config.js` | o formato dos arquivos de importação |
 

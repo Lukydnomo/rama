@@ -1090,6 +1090,21 @@
   & .cris-tabela td { border-bottom-color: var(--m20-borda); }
   & .cris-tabela__grupo th { text-transform: none; letter-spacing: 0; font-weight: 650; color: var(--cor-texto); }
   & .cris-situacao { padding: 0 6px; border-radius: 5px; }
+  & .cris-passos__botao,
+  & .cris-secoes__botao { border-color: var(--m20-borda); border-radius: 999px; padding-inline: 12px; }
+  & .cris-passos__item--atual .cris-passos__botao,
+  & .cris-secoes__botao--atual { border-color: var(--m20-realce); background: var(--m20-selecao-suave); }
+  & .cris-passos__numero { border-radius: 50%; }
+  & .cris-progresso progress { border-radius: 999px; overflow: hidden; }
+  & .cris-entrada { border-color: var(--m20-borda); border-left-width: 4px; border-radius: var(--m20-raio-cartao); box-shadow: var(--m20-sombra-1); }
+  & .cris-estado { padding: 0 8px; border-radius: 999px; }
+  & .cris-lado__rotulo { text-transform: none; letter-spacing: 0; font-weight: 600; color: var(--m20-texto-apoio); }
+  & .cris-destino { border-radius: var(--m20-raio-controle); border-color: var(--m20-borda-controle); background: var(--m20-controle); }
+  & .cris-resultado { border-radius: var(--m20-raio-controle); }
+  & .cris-resultado[aria-pressed="true"] { border-color: var(--m20-realce); background: var(--m20-selecao-suave); }
+  & .cris-lote, & .cris-falta { border-color: var(--m20-borda); border-radius: var(--m20-raio-cartao); }
+  & .cris-voltou { border-radius: var(--m20-raio-cartao); background: var(--m20-erro-suave); }
+  & .cris-secao__topo, & .cris-navegacao { border-color: var(--m20-borda); }
 
   /* =================================================================
      EDITOR DE TEMAS

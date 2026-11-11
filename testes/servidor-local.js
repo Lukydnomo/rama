@@ -73,8 +73,37 @@ for (const arq of NUCLEO.concat(["Sistemas.gs", "Ordem.gs", "Universal.gs", "Obl
    abaixo só tem o formato de um webhook; não existe. */
 const WEBHOOK_SIMULADO = "https://discord.com/api/webhooks/000000000000000000/simulado-local-nao-existe-0000";
 const discord = { modo: "sem-webhook", recebidas: [] };
+/* O CRIS, SIMULADO (v7.2): as fichas públicas guardadas em
+   testes/fixtures/cris respondem pelo id do link, no formato do
+   Firestore. Nada sai para a rede; ids desconhecidos dão 404. */
+const BASE_CRIS = "https://firestore.googleapis.com/v1/projects/cris-ordem-paranormal/databases/(default)/documents/characters/";
+const docsDoCris = {};
+function fsValor(v) {
+  if (v === null || v === undefined) return { nullValue: null };
+  if (Array.isArray(v)) return { arrayValue: { values: v.map(fsValor) } };
+  if (typeof v === "boolean") return { booleanValue: v };
+  if (typeof v === "number") return Number.isInteger(v) ? { integerValue: String(v) } : { doubleValue: v };
+  if (typeof v === "string") return { stringValue: v };
+  return { mapValue: { fields: Object.fromEntries(Object.entries(v).map(([k, x]) => [k, fsValor(x)])) } };
+}
+try {
+  for await (const arq of Deno.readDir(new URL("./fixtures/cris/", import.meta.url))) {
+    if (!arq.name.endsWith(".json")) continue;
+    const dado = JSON.parse(await Deno.readTextFile(new URL("./fixtures/cris/" + arq.name, import.meta.url)));
+    if (dado.adaptador && dado.fonte && dado.ficha) docsDoCris[dado.fonte.documentId] = dado.ficha;
+    else if (arq.name === "jeff-cris-publico.json") docsDoCris.OwH4ajq32U6pYGVlJBHa = dado;
+  }
+} catch (_) { /* sem fixtures: o CRIS simulado só responde 404 */ }
+
 globalThis.UrlFetchApp = {
   fetch(endereco, opcoes) {
+    if (String(endereco).indexOf(BASE_CRIS) === 0) {
+      const id = String(endereco).slice(BASE_CRIS.length);
+      const ficha = docsDoCris[id];
+      const corpo = ficha ? JSON.stringify({ name: "projects/cris-ordem-paranormal/databases/(default)/documents/characters/" + id, fields: fsValor(ficha).mapValue.fields, updateTime: "2026-11-11T00:00:00Z" }) : "{}";
+      const bytes = new TextEncoder().encode(corpo);
+      return { getResponseCode: () => (ficha ? 200 : 404), getContentText: () => corpo, getContent: () => bytes, getHeaders: () => ({}) };
+    }
     if (discord.modo === "rede") throw new Error("Address unavailable: " + endereco);
     const status = { ok: 200, "429": 429, "500": 500, "404": 404 }[discord.modo] || 200;
     if (status === 200) discord.recebidas.push({ corpo: JSON.parse(opcoes.payload) });
@@ -93,6 +122,12 @@ for (const nome of ["dona", "editora", "leitora", "mestre"]) {
   contas[nome] = { token: r.token, id: r.agente.id };
 }
 const como = (c) => (corpo) => chamar(globalThis, Object.assign({ token: contas[c].token }, corpo));
+
+/* Homebrew sintético para o assistente do CRIS (v7.2): dois rituais da
+   dona e um público da editora. */
+como("dona")({ acao: "salvar_homebrew", dados: { tipo: "ritual", nome: "Prece do Vigia", circulo: "1º círculo", elemento: "Conhecimento", execucao: "Padrão", alcance: "Curto", alvo: "1 ser", duracao: "Cena", resistencia: "Vontade anula", descricao: "Ritual sintético da Homebrew (teste)." } });
+como("dona")({ acao: "salvar_homebrew", dados: { tipo: "ritual", nome: "Sussurro Sintético", circulo: "1º círculo", elemento: "Conhecimento", execucao: "Padrão", alcance: "Pessoal", alvo: "Você", duracao: "Cena", descricao: "Ritual sintético da Homebrew (teste)." } });
+como("editora")({ acao: "salvar_homebrew", dados: { tipo: "ritual", nome: "Canto Público de Teste", visibilidade: "publico", circulo: "2º círculo", elemento: "Energia", descricao: "Ritual sintético público (teste)." } });
 
 const ordem = como("dona")({ acao: "criar_personagem", dados: fichas.ordem }).dados.id;
 const universal = como("dona")({ acao: "criar_personagem", dados: fichas.universal }).dados.id;

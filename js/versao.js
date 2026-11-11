@@ -118,6 +118,26 @@
 
   var CHANGELOG = [
     {
+      versao: "7.2.0",
+      codinome: "ADUANA",
+      data: "11/11/2026",
+      mudancas: {
+        "Adicionado": [
+          "Importar do CRIS virou um assistente em etapas (Carregar ficha → Revisar por seção → Conferir e criar), ainda pelo Perfil. Depois de ler o link, ele mostra o nome da personagem e quantas sugestões estão prontas e quantas entradas precisam de destino.",
+          "Revisão por seção, como na ficha de Ordem: identidade e progressão, atributos, perícias, recursos e defesas, inventário e ataques, poderes e habilidades, rituais e anotações. Cada entrada mostra o que veio do CRIS → como fica no R.A.M.A. (lado a lado no computador, empilhado no celular), com Confirmar e Alterar; descrições, cálculos e diferenças ficam em Detalhes. Nada começa conferido — nem o que foi reconhecido sozinho. “Confirmar as sugestões desta seção” mostra antes a lista com os destinos e não resolve o que está sem destino ou em conflito.",
+          "“O que é isso na sua ficha?”: um seletor com busca no Catálogo e no Homebrew (suas criações e os públicos), com os mais prováveis primeiro. Dá para usar um item, ritual ou poder como base mantendo o nome do CRIS (a Lâmina da Véspera sobre a Espada), editar nome e descrição da cópia, aplicar uma entrada como modificação ou maldição de outro item, criar um personalizado a partir dos dados do CRIS (com os campos do tipo) e escolher se ele também vai para o Homebrew, guardar em Anotações ou não importar.",
+          "O vínculo de cada ataque com a arma fica à vista e pode ser corrigido: o ataque acompanha a arma escolhida mesmo com outro nome, ou vira uma arma própria, vai para Anotações ou fica de fora.",
+          "Toda escolha refaz a prévia. Se ela mudar algo já conferido, o assistente diz exatamente o que voltou para a revisão, com o antes e o depois; o resto continua conferido. “Ir para a próxima pendência” leva à primeira entrada que falta.",
+          "Conferir e criar mostra o resumo da ficha e as diferenças que afetam o jogo; a comparação completa fica em Ver detalhes. Criar ficha e Baixar JSON do RAMA só liberam quando todas as entradas foram conferidas ou receberam destino; depois de criar, Abrir ficha.",
+        ],
+        "Alterado": [
+          "Nome idêntico com tipo, círculo ou elemento incompatível (uma arma com nome de proteção, um ritual do catálogo com outro círculo) agora pede decisão em vez de valer o catálogo calado. Nome com mais de uma correspondência e item, ritual ou poder sem correspondência também pedem destino.",
+          "Quando você escolhe outro item do catálogo ou do Homebrew, vale o modelo escolhido (dado, crítico, categoria, espaços, Defesa); só o que é do ataque (bônus no teste e parte fixa do dano) acompanha a arma. A Defesa ganhou a escolha entre manter o valor do CRIS e usar a conta do R.A.M.A.",
+        ],
+        "Técnico": ["Só o site: js/importar-cris.js devolve `entradas` (seção, antes → depois, destino, estado e uma assinatura do resultado) e aceita `decisoes.destinos` e `decisoes.vinculos` por chave estável do CRIS; funções puras situacao, confirmarSecao, reconciliarConfirmacoes e sugerirDestinos. js/importar-cris-tela.js reescrito; estilos em css/componentes.css e css/modern20/componentes.css. A criação continua com operacaoId fixo por leitura (sem duplicar), a foto continua opcional e Cancelar descarta o rascunho. O Homebrew só é gravado para o personalizado marcado, ao criar a ficha, uma vez cada. Testes: 254 verificações em testes/executar-cris.js (Vesper, ficha sintética nova em testes/fixtures/cris); testes/servidor-local.js simula o CRIS com essas fichas."],
+      },
+    },
+    {
       versao: "7.1.1",
       codinome: "PRENSA",
       data: "11/11/2026",

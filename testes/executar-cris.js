@@ -566,6 +566,138 @@ t.grupo("Ciclo de cálculo · mesmo resultado, com e sem o ciclo");
   t.ok("ciclos aninhados se juntam ao de fora", aninhado === true && !R.emCiclo());
 }
 
+/* =====================================================================
+   O ASSISTENTE (v7.2): entradas por seção, conferência por assinatura,
+   destinos explícitos e vínculos de ataque. Dados sintéticos: a Vesper
+   (testes/fixtures/cris/vesper-retrato.json) é a Meko com uma arma de
+   nome próprio, dois rituais e um poder inventados para o teste.
+   ===================================================================== */
+const vesper = await ler("vesper-retrato.json");
+const HB = {
+  itens: [],
+  rituais: [
+    { id: "hb-prece", tipo: "ritual", meu: true, nome: "Prece do Vigia", circulo: "1º círculo", elemento: "Conhecimento", execucao: "Padrão", alcance: "Curto", duracao: "Cena", descricao: "Ritual sintético da Homebrew." },
+    { id: "hb-sussurro", tipo: "ritual", meu: true, nome: "Sussurro Sintético", circulo: "1º círculo", elemento: "Conhecimento", descricao: "Ritual sintético." },
+  ],
+  habilidades: [],
+};
+const depsHb = Object.assign({}, deps, { homebrew: HB });
+const conv = (retrato, dec, d) => X.converter(JSON.parse(JSON.stringify(retrato)), dec || {}, d || depsHb);
+const ent = (r, chave) => r.entradas.find((e) => e.chave === chave);
+const confirmarTudo = (r, c) => X.SECOES.reduce((acc, s) => X.confirmarSecao(r.entradas, acc, s.chave), c || {});
+
+t.grupo("Assistente · tudo reconhecido ainda passa pela revisão (Meko)");
+{
+  const r = conv(meko, {}, deps);
+  const s0 = X.situacao(r.entradas, {});
+  t.ok("uma entrada por coisa do CRIS, em sete seções", r.entradas.length > 60 && X.SECOES.every((s) => s0.porSecao[s.chave].total > 0));
+  t.igual("nada precisa de destino", s0.semDestino, 0);
+  t.ok("nada começa conferido: criar fica bloqueado", !s0.pronto && s0.conferidas === 0 && s0.sugeridas === r.entradas.length);
+  const so1 = X.confirmarSecao(r.entradas, {}, "identidade");
+  const s1 = X.situacao(r.entradas, so1);
+  t.ok("confirmar uma seção não confirma as outras", s1.porSecao.identidade.conferidas === s1.porSecao.identidade.total && s1.porSecao.atributos.conferidas === 0 && !s1.pronto);
+  t.ok("confirmando seção por seção, a ficha fica pronta", X.situacao(r.entradas, confirmarTudo(r)).pronto);
+  t.ok("toda entrada mostra o antes e o depois", r.entradas.every((e) => typeof e.cris === "string" && e.cris && typeof e.rama === "string" && e.rama));
+  t.ok("os poderes da classe e da trilha não duplicam: ficam “pelas regras”", [/^Eclético$/, /^Perito$/, /Mira de Elite/].every((n) => (r.entradas.find((e) => e.tipo === "poder" && n.test(e.rotulo)) || {}).destino?.tipo === "regras"));
+}
+
+t.grupo("Assistente · associação automática corrigida à mão");
+{
+  const r0 = conv(meko, {}, deps);
+  const chaveProt = r0.entradas.find((e) => e.tipo === "item" && e.rotulo === "Proteção Leve").chave;
+  const conf = confirmarTudo(r0);
+  const r1 = conv(meko, { destinos: { [chaveProt]: { tipo: "catalogo", id: "op.protecao.pesada" } } }, deps);
+  const e1 = ent(r1, chaveProt);
+  t.ok("a entrada passa a ser a escolha explícita", e1.estado === "escolhido" && /Proteção pesada/.test(e1.rotuloDestino) && /^Proteção Leve \(base: Proteção pesada\)/.test(e1.rama));
+  const it = r1.ficha.inventario.itens.find((i) => i.nome === "Proteção Leve");
+  t.ok("vale o modelo escolhido, sem ajuste que force o número do CRIS", it.origemCatalogoId === "op.protecao.pesada" && !(it.ordem.ajustesImportados || {}).defesa && R.defesaDaProtecao(it).total === 10);
+  const rec = X.reconciliarConfirmacoes(r0.entradas, r1.entradas, conf);
+  const defesa = rec.voltaram.find((v) => v.chave === "def:defesa");
+  t.ok("a Defesa conferida volta para a revisão, com o antes e o depois", !!defesa && defesa.antes !== defesa.depois);
+  t.iguais("voltam exatamente o item e o que ele muda (Defesa, carga e as perícias com penalidade de carga)", rec.voltaram.map((v) => v.chave).filter((k) => k !== chaveProt).sort(),
+    ["def:defesa", "pericia:acrobacia", "pericia:crime", "pericia:furtividade", "rec:carga"]);
+  t.igual("o resto continua conferido", Object.keys(rec.confirmados).length, r0.entradas.length - rec.voltaram.length);
+  const r2 = conv(meko, { destinos: { [chaveProt]: { tipo: "catalogo", id: "op.protecao.pesada" } }, defesa: "cris" }, deps);
+  t.igual("e dá para manter a Defesa do CRIS, por decisão", calcular(r2.ficha).defesa.total, Number(ent(r0, "def:defesa").detalhes[0].cris));
+}
+
+t.grupo("Assistente · arma renomeada com ataque vinculado (Vesper)");
+{
+  const r0 = conv(vesper);
+  const lam = ent(r0, "item:lamina-vespera"), golpe = ent(r0, "ataque:golpe-vespera");
+  t.ok("sem correspondência confiável, a arma pede destino", lam.estado === "sem_destino" && !X.podeConfirmar(lam));
+  t.ok("o ataque já mostra o vínculo do CRIS", golpe.alvoChave === "item:lamina-vespera" && /Lâmina da Véspera/.test(golpe.rama));
+  t.ok("as sugestões trazem armas primeiro", X.sugerirDestinos(lam, "espada", { catalogoItens: deps.catalogoItens, ITM: IT, homebrew: HB })[0].id === "op.arma.espada");
+  const s0 = X.situacao(r0.entradas, confirmarTudo(r0));
+  t.ok("confirmar as seções não resolve o que está sem destino", !s0.pronto && s0.pendentes.includes("item:lamina-vespera"));
+  const dec = { destinos: { "item:lamina-vespera": { tipo: "catalogo", id: "op.arma.espada", nome: "Lâmina da Véspera" } } };
+  const r1 = conv(vesper, dec);
+  const arma = r1.ficha.inventario.itens.find((i) => i.nome === "Lâmina da Véspera");
+  t.ok("a Espada é a base, o nome personalizado fica", !!arma && arma.origemCatalogoId === "op.arma.espada" && arma.tipo === "arma");
+  t.ok("o ataque vinculado acompanha a arma escolhida", /^Em “Lâmina da Véspera”/.test(ent(r1, "ataque:golpe-vespera").rama) && arma.ordem.pericia === "luta" && arma.ordem.arma.atributoDano === "for");
+  t.ok("e nenhuma arma extra é criada para ele", !r1.ficha.inventario.itens.some((i) => /^Ataque:/.test(i.nome)));
+  const rProprio = conv(vesper, Object.assign({}, dec, { vinculos: { "ataque:golpe-vespera": "proprio" } }));
+  t.ok("corrigir o vínculo: arma própria de 0 espaço", rProprio.ficha.inventario.itens.some((i) => i.nome === "Ataque: Golpe da Véspera") && /^Arma própria/.test(ent(rProprio, "ataque:golpe-vespera").rama));
+  const rAnot = conv(vesper, { destinos: { "item:lamina-vespera": { tipo: "anotacao" } } });
+  t.ok("arma guardada em Anotações: o ataque perde o vínculo e pede decisão", ent(rAnot, "ataque:golpe-vespera").estado === "conflito");
+}
+
+t.grupo("Assistente · Homebrew, personalizado, Anotações e Não importar");
+{
+  const r0 = conv(vesper);
+  t.ok("ritual com o mesmo nome na Homebrew: sugerido, não imposto", ent(r0, "ritual:sussurro-sintetico").estado === "sugerido" && /Homebrew/.test(ent(r0, "ritual:sussurro-sintetico").rotuloDestino));
+  t.ok("ritual sem correspondência pede destino", ent(r0, "ritual:prece-esquecida").estado === "sem_destino");
+  t.ok("poder desconhecido pede destino", ent(r0, "poder:dom-vespera").estado === "sem_destino");
+  const busca = X.sugerirDestinos(ent(r0, "ritual:prece-esquecida"), "vigia", { catalogoRituais: deps.catalogoRituais, homebrew: HB });
+  t.ok("a busca alcança a Homebrew", busca.some((x) => x.tipo === "homebrew" && x.id === "hb-prece"));
+  const dec = {
+    destinos: {
+      "item:lamina-vespera": { tipo: "catalogo", id: "op.arma.espada", nome: "Lâmina da Véspera" },
+      "ritual:prece-esquecida": { tipo: "homebrew", registro: HB.rituais[0] },
+      "poder:dom-vespera": { tipo: "personalizado", dados: { nome: "Dom da Véspera", descricao: "Relembra um detalhe esquecido (editado)." }, salvarHomebrew: false },
+      "texto:historia": { tipo: "ignorar" },
+    },
+  };
+  const r = conv(vesper, dec);
+  const f = r.ficha;
+  const prece = f.rituais.itens.find((x) => x.origemHomebrewId === "hb-prece");
+  t.ok("ritual do Homebrew entra como cópia, com o rastro", !!prece && prece.nome === "Prece do Vigia");
+  const dom = H.todasAsHabilidades(f.habilidades).find((h) => h.nome === "Dom da Véspera");
+  t.ok("personalizado entra com o texto editado, só na ficha", !!dom && /editado/.test(dom.texto) && !dom.origemHabilidadeId);
+  t.ok("“Não importar” tira o texto das Anotações", !f.anotacoes.pastas.some((p) => p.notas.some((n) => n.titulo === "História")));
+  t.ok("“Guardar em Anotações” e escolhas explícitas contam como conferidas ao escolher", ["escolhido"].includes(ent(r, "texto:historia").estado));
+  const c = confirmarTudo(r);
+  t.ok("com tudo conferido ou com destino, pronto para criar", X.situacao(r.entradas, c).pronto);
+  t.igual("a conferência não acha divergência", r.conferencia.divergente, 0);
+  /* O arquivo exportado é a mesma ficha da prévia. */
+  const volta = V.importado(JSON.parse(JSON.stringify(V.exportar("personagem", f))));
+  const g = volta.dados;
+  t.ok("JSON: a arma renomeada com a base do catálogo", volta.ok && g.inventario.itens.some((i) => i.nome === "Lâmina da Véspera" && i.origemCatalogoId === "op.arma.espada"));
+  t.ok("JSON: o ritual da Homebrew e o personalizado", g.rituais.itens.some((x) => x.origemHomebrewId === "hb-prece") && H.todasAsHabilidades(g.habilidades).some((h) => h.nome === "Dom da Véspera"));
+  t.iguais("JSON: mesmos itens, rituais e habilidades da prévia",
+    [g.inventario.itens.map((i) => i.nome), g.rituais.itens.map((x) => x.nome), H.todasAsHabilidades(g.habilidades).map((h) => h.nome)],
+    [f.inventario.itens.map((i) => i.nome), f.rituais.itens.map((x) => x.nome), H.todasAsHabilidades(f.habilidades).map((h) => h.nome)]);
+  const rIgn = conv(vesper, { destinos: { "item:lamina-vespera": { tipo: "ignorar" } }, vinculos: { "ataque:golpe-vespera": "ignorar" } });
+  t.ok("Não importar: a arma e o ataque ficam de fora, sem divergência na contagem", !rIgn.ficha.inventario.itens.some((i) => /Véspera/.test(i.nome)) && rIgn.conferencia.divergente === 0);
+  const rItemPers = conv(vesper, { destinos: { "item:lamina-vespera": { tipo: "personalizado", dados: { nome: "Lâmina da Véspera", tipoItem: "arma", dano: "1d10", critico: "18", multiplicador: "3", categoria: "2" }, salvarHomebrew: true, homebrewId: "hb-novo" } } });
+  const lp = rItemPers.ficha.inventario.itens.find((i) => i.nome === "Lâmina da Véspera");
+  t.ok("personalizado editado: valem os campos escritos, com o rastro do Homebrew", lp.dano === "1d10" && lp.critico === 18 && lp.multiplicador === 3 && lp.ordem.categoria === 2 && lp.origemHomebrewId === "hb-novo");
+}
+
+t.grupo("Assistente · nome idêntico, tipo ou círculo incompatível");
+{
+  const base = JSON.parse(JSON.stringify(vesper));
+  base.ficha.inventory.push({ id: "falsa", name: "Proteção Leve", itemType: "weapon", damage: "1d4", slots: 1, category: "0", mods: [] });
+  base.ficha.rituals.push({ id: "pert", name: "Perturbação", circle: 3, element: "Conhecimento" });
+  const r = conv(base);
+  t.ok("arma com nome de proteção: conflito, com o homônimo entre os candidatos", ent(r, "item:falsa").estado === "conflito" && ent(r, "item:falsa").candidatos.includes("op.protecao.leve"));
+  t.ok("ritual com o nome do catálogo e outro círculo: conflito", ent(r, "ritual:pert").estado === "conflito");
+  const c = X.confirmarSecao(r.entradas, {}, "rituais");
+  t.ok("confirmar a seção não resolve o conflito", c["ritual:pert"] === undefined && !X.podeConfirmar(ent(r, "ritual:pert")));
+  const r2 = conv(base, { destinos: { "ritual:pert": { tipo: "catalogo", id: "op.ritual.perturbacao" } } });
+  t.ok("escolher o do catálogo mesmo assim resolve", ent(r2, "ritual:pert").estado === "escolhido");
+}
+
 console.log(`\n${FORTE}${passaram + falharam} verificações${FIM} · ${VERDE}${passaram} ok${FIM} · ${falharam ? VERMELHO : CINZA}${falharam} falhas${FIM}`);
 if (falhas.length) { console.log(`\n${VERMELHO}Falhou:${FIM}`); falhas.forEach((f) => console.log(`  · ${f}`)); }
 Deno.exit(falharam ? 1 : 0);
