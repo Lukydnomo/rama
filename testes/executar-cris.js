@@ -698,6 +698,22 @@ t.grupo("Assistente · nome idêntico, tipo ou círculo incompatível");
   t.ok("escolher o do catálogo mesmo assim resolve", ent(r2, "ritual:pert").estado === "escolhido");
 }
 
+t.grupo("Assistente · item do catálogo que pede uma opção (Kit de perícia)");
+{
+  const base = JSON.parse(JSON.stringify(vesper));
+  base.ficha.inventory.push({ id: "kit-crime", name: "Kit de Crime", itemType: "misc", slots: 1, category: "0", mods: [] });
+  const opcoes = IT.opcoesDaEscolha(deps.catalogoItens.porId["op.geral.kit-de-pericia"].escolha);
+  t.igual("a opção sai do nome: Kit de Crime → Crime", X.escolhaPeloNome(opcoes, "Kit de Crime"), "crime");
+  t.igual("sem dizer a opção, o nome resolve sozinho", ent(conv(base, { destinos: { "item:kit-crime": { tipo: "catalogo", id: "op.geral.kit-de-pericia" } } }), "item:kit-crime").estado, "escolhido");
+  base.ficha.inventory.push({ id: "kit-x", name: "Kit Misterioso", itemType: "misc", slots: 1, category: "0", mods: [] });
+  const semOpcao = conv(base, { destinos: { "item:kit-x": { tipo: "catalogo", id: "op.geral.kit-de-pericia" } } });
+  t.ok("sem a opção, continua pedindo e diz o que falta", ent(semOpcao, "item:kit-x").estado === "conflito" && /escolha a op/.test(ent(semOpcao, "item:kit-x").motivo));
+  const comOpcao = conv(base, { destinos: { "item:kit-crime": { tipo: "catalogo", id: "op.geral.kit-de-pericia", escolha: "crime", nome: "Kit de Crime" } } });
+  const e = ent(comOpcao, "item:kit-crime");
+  t.ok("com a opção, a escolha fica resolvida e confirmável", e.estado === "escolhido" && X.podeConfirmar(e));
+  t.ok("e o item entra do catálogo, com o nome do CRIS", comOpcao.ficha.inventario.itens.some((i) => i.nome === "Kit de Crime" && i.origemCatalogoId === "op.geral.kit-de-pericia"));
+}
+
 console.log(`\n${FORTE}${passaram + falharam} verificações${FIM} · ${VERDE}${passaram} ok${FIM} · ${falharam ? VERMELHO : CINZA}${falharam} falhas${FIM}`);
 if (falhas.length) { console.log(`\n${VERMELHO}Falhou:${FIM}`); falhas.forEach((f) => console.log(`  · ${f}`)); }
 Deno.exit(falharam ? 1 : 0);

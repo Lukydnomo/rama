@@ -671,7 +671,26 @@
     function formularioDaEscolha(e, x) {
       var partes = [el("p.cris-destino__selecionado", { texto: "Escolhido: " + x.nome + (x.detalhe ? " · " + x.detalhe : "") })];
       var dc = e.dadosCris || {};
-      var nomeCampo = null, descCampo = null, alvoSel = null;
+      var nomeCampo = null, descCampo = null, alvoSel = null, escolhaCampo = null;
+      /* Item do catálogo que pede uma opção (o Kit de perícia pede a
+         perícia): a opção vem junto, sugerida pelo nome quando dá. */
+      var entCat = x.tipo === "catalogo" && e.tipo === "item" ? catalogos.itens.porId[x.id] : null;
+      var ITM = global.RAMAOrdemItens;
+      if (entCat && entCat.escolha) {
+        var idE = idSeguro("esc-" + e.chave);
+        var opcoesE = ITM.opcoesDaEscolha(entCat.escolha);
+        if (entCat.escolha.tipo === "texto" || !opcoesE.length) {
+          escolhaCampo = el("input.r-entrada", { id: idE, type: "text", maxlength: "60" });
+        } else {
+          var sugerida = X().escolhaPeloNome(opcoesE, dc.nome) || "";
+          escolhaCampo = el("select.r-selecao", { id: idE }, [el("option", { value: "", texto: entCat.escolha.opcional ? "Nenhuma" : "Escolha…" })].concat(opcoesE.map(function (op) {
+            return el("option", { value: op.valor, texto: op.rotulo, selected: op.valor === sugerida });
+          })));
+          escolhaCampo.value = sugerida;
+        }
+        partes.push(el("div.r-campo", {}, [el("label", { for: idE, texto: entCat.escolha.rotulo || "Opção" }), escolhaCampo]));
+      }
+      var avisoEscolha = el("p.t-mini.t-erro", { role: "alert" });
       if (x.tipo === "modificacao") {
         var alvos = entradas().filter(function (y) { return y.tipo === "item" && y.chave !== e.chave && y.alvo && y.alvo.itemId; });
         var idA = idSeguro("alvo-" + e.chave);
@@ -694,12 +713,19 @@
           escolherDestino(e, { tipo: "modificacao", id: x.id, alvo: alvoSel.value });
           return;
         }
+        if (escolhaCampo && !U.aparar(escolhaCampo.value) && !(entCat.escolha && entCat.escolha.opcional)) {
+          avisoEscolha.textContent = (entCat.escolha.rotulo || "Escolha a opção") + ": escolha antes de usar.";
+          escolhaCampo.focus();
+          return;
+        }
         var d = x.tipo === "homebrew" ? { tipo: "homebrew", registro: x.registro } : { tipo: "catalogo", id: x.id };
+        if (escolhaCampo && U.aparar(escolhaCampo.value)) d.escolha = U.aparar(escolhaCampo.value);
         if (nomeCampo && U.aparar(nomeCampo.value) && U.aparar(nomeCampo.value) !== x.nome) d.nome = U.aparar(nomeCampo.value);
         else if (nomeCampo && e.tipo === "item" && U.aparar(nomeCampo.value)) d.nome = U.aparar(nomeCampo.value);
         if (descCampo && U.aparar(descCampo.value)) d.descricao = descCampo.value;
         escolherDestino(e, d);
       }, true)]));
+      partes.push(avisoEscolha);
       return el("div.pilha.pilha--curta", {}, partes);
     }
 

@@ -118,6 +118,17 @@
 
   var CHANGELOG = [
     {
+      versao: "7.2.1",
+      codinome: "GAZUA",
+      data: "11/11/2026",
+      mudancas: {
+        "Corrigido": [
+          "Importar do CRIS: escolher um item do catálogo que pede uma opção (o Kit de perícia pede a perícia) deixava a entrada em “Precisa de destino” de novo. Agora o seletor pede a opção junto — já sugerida pelo nome, como Kit de Crime → Crime — e a entrada fica conferida.",
+        ],
+        "Técnico": ["Só o site: js/importar-cris.js aceita `escolha` no destino do catálogo e lê a opção pelo nome do CRIS (escolhaPeloNome); js/importar-cris-tela.js mostra o campo da opção. 259 verificações em testes/executar-cris.js."],
+      },
+    },
+    {
       versao: "7.2.0",
       codinome: "ADUANA",
       data: "11/11/2026",

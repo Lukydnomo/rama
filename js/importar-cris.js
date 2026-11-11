@@ -179,6 +179,12 @@
   ];
   var CONFIRMAVEIS = { sugerido: true, escolhido: true };
 
+  function escolhaPeloNome(opcoes, nome) {
+    var k = " " + chaveDeTexto(nome) + " ";
+    var achadas = (opcoes || []).filter(function (o) { var r = chaveDeTexto(o.rotulo); return r && k.indexOf(" " + r + " ") >= 0; });
+    return achadas.length === 1 ? achadas[0].valor : undefined;
+  }
+
   function podeConfirmar(e) { return !!(e && CONFIRMAVEIS[e.estado]); }
 
   function situacao(entradas, confirmados) {
@@ -663,6 +669,9 @@
         var par = /\(([^)]*)\)\s*$/.exec(String(it.name || ""));
         return par ? par[1].trim() : undefined;
       }
+      /* "Kit de Crime", "Kit de perícia (Medicina)": a opção que aparece
+         no nome, quando é uma só. */
+      if (ITM.opcoesDaEscolha) return escolhaPeloNome(ITM.opcoesDaEscolha(es), it.name);
       return undefined;
     }
 
@@ -779,7 +788,14 @@
       }
 
       if (entrada) {
-        var montado = ITM.paraInventario(entrada, { escolha: escolhaPara(entrada, it), quantidade: qtdCris, catalogo: catItens });
+        var escolhaExplicita = dI && dI.tipo === "catalogo" && dI.escolha !== undefined && dI.escolha !== "" ? String(dI.escolha) : undefined;
+        var montado = ITM.paraInventario(entrada, { escolha: escolhaExplicita !== undefined ? escolhaExplicita : escolhaPara(entrada, it), quantidade: qtdCris, catalogo: catItens });
+        if (!montado.ok && entrada.escolha && dI && dI.tipo === "catalogo") {
+          /* Escolheu o item, falta a opção dele: continua pedindo, e o
+             motivo diz qual. */
+          mI.estado = "conflito";
+          mI.motivo = (entrada.escolha.rotulo || "O item pede uma escolha") + ": escolha a opção de " + entrada.nome + ".";
+        }
         if (!montado.ok && entrada.escolha) montado = ITM.paraInventario(entrada, { escolha: undefined, quantidade: 1, catalogo: catItens });
         if (montado.ok) {
           item = F.criarItem(montado.tipo, montado.dados);
@@ -788,7 +804,7 @@
           if (!mI.destino) mI.destino = { tipo: "catalogo", id: entrada.id };
         } else {
           aviso("item_escolha", "revisao", "inventory." + i, "“" + it.name + "”: " + (montado.mensagem || "o catálogo pede uma escolha que o CRIS não informa") + " Entrou como item personalizado.");
-          mI.estado = "sem_destino"; mI.motivo = "O catálogo pede uma escolha que o CRIS não informa.";
+          if (mI.estado !== "conflito") { mI.estado = "sem_destino"; mI.motivo = "O catálogo pede uma escolha que o CRIS não informa."; }
         }
       }
       if (!item) {
@@ -2301,5 +2317,6 @@
     confirmarSecao: confirmarSecao,
     reconciliarConfirmacoes: reconciliarConfirmacoes,
     sugerirDestinos: sugerirDestinos,
+    escolhaPeloNome: escolhaPeloNome,
   };
 })(typeof window !== "undefined" ? window : globalThis);

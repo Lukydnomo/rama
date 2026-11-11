@@ -223,7 +223,7 @@ modelo oficial imutável, as imagens de cada criatura e a exportação/importaç
 deno run --allow-read testes/executar-criaturas.js
 ```
 
-**Importação do CRIS** — 254 verificações, sem rede e sem gravar: link,
+**Importação do CRIS** — 259 verificações, sem rede e sem gravar: link,
 texto seguro, expressões de dano, os retratos públicos do Jeff e da Gina
 guardados em `testes/fixtures/cris` (valores-alvo, itens, ataques, críticos,
 rituais, procedência, marco, evolução acima dele, exportar e importar sem perder
@@ -886,6 +886,9 @@ próprio `<script src>`, então funciona debaixo de subpasta sem ajuste.
 segredo nenhum — ele os lê das Script Properties. Publicá-lo não expõe nada.
 
 ### Atualizar o backend
+
+**v7.2.1 — GAZUA:** só o site. Publique `js/importar-cris.js`,
+`js/importar-cris-tela.js` e `js/versao.js`; o Apps Script não muda.
 
 **v7.2.0 — ADUANA:** só o site (o novo assistente de Importar do CRIS). Publique
 `js/importar-cris.js`, `js/importar-cris-tela.js`, `css/componentes.css`,
@@ -1847,7 +1850,7 @@ Três números diferentes, que não se misturam:
 
 | | Onde | O que é |
 |---|---|---|
-| versão do aplicativo | `js/versao.js` | o que a pessoa vê: v7.2.0 |
+| versão do aplicativo | `js/versao.js` | o que a pessoa vê: v7.2.1 |
 | `schemaVersion` | `js/ficha.js` | o formato da FICHA |
 | `versaoFormato` | `js/config.js` | o formato dos arquivos de importação |
 
