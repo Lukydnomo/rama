@@ -118,6 +118,21 @@
 
   var CHANGELOG = [
     {
+      versao: "7.1.0",
+      codinome: "VETOR",
+      data: "11/11/2026",
+      mudancas: {
+        "Adicionado": [
+          "Fórmulas nos atributos da ficha Universal, como nas perícias: \"@FOR d20 + @AGI\", \"(@VIG/2 + 1)d6\", funções como teto e max, e a escolha de como os dados contam (o maior, o menor ou a soma). Vazia, o atributo rola o dado de sempre.",
+          "No modo normal, a caixa do atributo mostra o que a fórmula rola com os valores de agora (\"3d20 + 2\"); com erro, avisa em vez de rolar. No modo edição, a prévia acompanha a digitação e o erro aparece embaixo do campo, sem apagar o que foi escrito.",
+        ],
+        "Alterado": [
+          "Renomear a sigla ou o nome de um atributo atualiza também as fórmulas dos atributos, e remover um atributo avisa quantas fórmulas de perícias e de atributos o citam.",
+        ],
+        "Técnico": ["Só o site: js/ficha.js (schema 33, sem conversão: o atributo ganhou `formula` e `contagem`; rolarAtributo e previaDoAtributo), js/paginas/ficha-geral.js, js/validacao.js, css/ficha.css e css/modern20/ficha.css. Nada de .gs."],
+      },
+    },
+    {
       versao: "7.0.1",
       codinome: "LACRE",
       data: "10/11/2026",

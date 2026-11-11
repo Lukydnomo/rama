@@ -64,7 +64,7 @@
 
     t.grupo("Tema da ficha · schema 16 (v2.36)");
     var TEMA16 = { nome: "Roxo", base: "escuro", valores: { fundo: { tipo: "radial", forma: "circulo", x: 20, y: 30, pontos: [{ cor: "#08080a", pos: 0 }, { cor: "#3a1030", alfa: 0.8, pos: 100 }] } } };
-    t.igual("o schema subiu para 32 (BRUTAL, v7.0)", S.VERSAO_SCHEMA, 32);
+    t.igual("o schema subiu para 33 (fórmulas nos atributos, v7.1)", S.VERSAO_SCHEMA, 33);
     t.iguais("ficha nova usa o tema da conta", S.criarFicha({ nome: "Nova" }).aparencia, { v: 1, modo: "conta" });
     t.iguais("ficha antiga (sem o campo) também", S.normalizarFicha({ schemaVersion: 15, nome: "Legado" }).aparencia, { v: 1, modo: "conta" });
     ["ordem", "universal"].forEach(function (tipo) {
@@ -5157,7 +5157,46 @@
     remoto.pericias[0].bonus = 5;
     var m = S.mesclar(base, local, remoto, S.ESQUEMA_FICHA);
     t.ok("sincronizar: a fórmula daqui e o bônus de lá", m.estado.pericias[0].formula === "@STR d8" && m.estado.pericias[0].bonus === 5 && !m.conflitos.length);
-    t.igual("o schema da ficha é o atual (32)", n.schemaVersion, 32);
+    t.igual("o schema da ficha é o atual (33)", n.schemaVersion, 33);
+
+    t.grupo("v7.1 · fórmulas nos atributos da ficha universal");
+    var fa = F.criarFicha({ nome: "Atributos com fórmula", tipoFicha: "universal" });
+    t.ok("atributo novo nasce sem fórmula, valendo o maior dado", fa.atributos.every(function (a) { return a.formula === "" && a.contagem === "maior"; }));
+    var antigo = F.normalizarFicha({ schemaVersion: 32, tipoFicha: "universal", nome: "Velha", atributos: [{ id: "a1", nome: "Força", sigla: "FOR", valor: 3, dado: "2d20" }] });
+    t.iguais("ficha 32: abre sem fórmula e com \"maior\"", [antigo.atributos[0].formula, antigo.atributos[0].contagem], ["", "maior"]);
+    var forA = fa.atributos.filter(function (a) { return a.sigla === "FOR"; })[0];
+    var agiA = fa.atributos.filter(function (a) { return a.sigla === "AGI"; })[0];
+    forA.valor = 3; agiA.valor = 2;
+    forA.formula = "@FOR d20 + @AGI"; forA.contagem = "maior";
+    agiA.formula = "@AGI d6"; agiA.contagem = "soma";
+    var na = F.normalizarFicha(JSON.parse(JSON.stringify(fa)));
+    var forN = na.atributos.filter(function (a) { return a.sigla === "FOR"; })[0];
+    var agiN = na.atributos.filter(function (a) { return a.sigla === "AGI"; })[0];
+    t.iguais("a fórmula e a contagem atravessam a normalização", [forN.formula, forN.contagem, agiN.contagem], ["@FOR d20 + @AGI", "maior", "soma"]);
+    t.igual("prévia com os valores de agora", F.previaDoAtributo(na, forN).texto, "3d20 + 2");
+    var rf = comDados([4, 17, 9], function () { return F.rolarAtributo(na, forN); });
+    t.iguais("rola pela fórmula: 3d20 vale o maior (17), + AGI 2", [rf.ok, rf.total, rf.natural, rf.rolagens.length], [true, 19, 17, 3]);
+    var rs = comDados([3, 5], function () { return F.rolarAtributo(na, agiN); });
+    t.iguais("\"soma\": todos os dados contam", [rs.total, rs.tipo], [8, "soma"]);
+    var sem = na.atributos.filter(function (a) { return !a.formula; })[0];
+    var rd = comDados([7, 15], function () { return F.rolarAtributo(na, Object.assign({}, sem, { dado: "2d20" })); });
+    t.iguais("sem fórmula: o dado de sempre (o maior de 2d20)", [rd.ok, rd.total, rd.tipo], [true, 15, "atributo"]);
+    t.ok("fórmula com erro: não rola e diz por quê", !F.rolarAtributo(na, Object.assign({}, forN, { formula: "@XYZ d6" })).ok &&
+      !F.previaDoAtributo(na, Object.assign({}, forN, { formula: "@FOR + 2" })).ok);
+    forN.sigla = "STR";
+    F.renomearReferencia(na, "FOR", "STR");
+    t.igual("renomear a sigla leva a fórmula do próprio atributo junto", forN.formula, "@STR d20 + @AGI");
+    t.iguais("as fórmulas que citam AGI incluem o outro atributo (não o próprio)", F.formulasQueUsam(na, agiN).map(function (x) { return x.nome; }), [forN.nome]);
+    t.ok("validação: fórmula de atributo errada é recusada", !V.personagem(Object.assign({}, na, { atributos: [Object.assign({}, forN, { formula: "2d" })] })).ok &&
+      V.personagem(na).ok);
+    var voltaA = V.importado(JSON.parse(JSON.stringify(V.exportar("personagem", na))));
+    t.ok("exportar e importar: a fórmula do atributo volta", voltaA.ok && voltaA.dados.atributos.some(function (a) { return a.formula === "@STR d20 + @AGI"; }));
+    var baseA = JSON.parse(JSON.stringify(na)), localA = JSON.parse(JSON.stringify(na)), remotoA = JSON.parse(JSON.stringify(na));
+    localA.atributos.filter(function (a) { return a.id === forN.id; })[0].formula = "@STR d12";
+    remotoA.atributos.filter(function (a) { return a.id === forN.id; })[0].valor = 5;
+    var mA = S.mesclar(baseA, localA, remotoA, S.ESQUEMA_FICHA);
+    var forM = mA.estado.atributos.filter(function (a) { return a.id === forN.id; })[0];
+    t.ok("sincronizar: a fórmula daqui e o valor de lá", forM.formula === "@STR d12" && forM.valor === 5 && !mA.conflitos.length);
   }
 
   /* =================================================================
@@ -5194,7 +5233,7 @@
     var m = S.mesclar(base, local, remoto, S.ESQUEMA_FICHA);
     t.ok("sincronizar: o modo daqui e o bônus de lá, sem conflito",
       m.estado.organizacao.pericias.modo === "maior" && m.estado.pericias[1].bonus === 4 && !m.conflitos.length);
-    t.igual("o schema da ficha é o atual (32)", n.schemaVersion, 32);
+    t.igual("o schema da ficha é o atual (33)", n.schemaVersion, 33);
   }
 
   /* =================================================================
@@ -5340,7 +5379,7 @@
     t.ok("exportar e importar leva pendentes (com o dado já rolado) e resolvidas", volta.ok &&
       volta.dados.ordem.barganhaInsana.pendentes[0].d4 === 2 && volta.dados.ordem.barganhaInsana.resolvidas.length === 1);
     t.ok("  mesmo sem o ritual na lista de conhecidos", volta.dados.rituais.itens.length === 0);
-    t.igual("o schema da ficha é o atual (32)", F.normalizarFicha(ficha).schemaVersion, 32);
+    t.igual("o schema da ficha é o atual (33)", F.normalizarFicha(ficha).schemaVersion, 33);
   }
 
   /* =================================================================
@@ -5381,7 +5420,7 @@
     t.iguais("  um tema de dados que este navegador não conhece também fica (a tela usa a reserva)", MT.normalizarAparencia({ dados: { id: "tema-do-futuro" } }).dados, { id: "tema-do-futuro" });
     var ficha = F.normalizarFicha(F.criarFicha({ nome: "Lia", tipoFicha: "universal", aparencia: { v: 1, modo: "conta", dados: { id: "sigilo-violeta" } } }));
     t.iguais("a ficha normalizada mantém a escolha", ficha.aparencia.dados, { id: "sigilo-violeta" });
-    t.igual("o schema da ficha é o atual (32)", ficha.schemaVersion, 32);
+    t.igual("o schema da ficha é o atual (33)", ficha.schemaVersion, 33);
     var pacote = V.exportar("personagem", ficha);
     t.ok("exportar leva a escolha sem `id` (atravessa como `tema`)", pacote.dados.aparencia.dados.tema === "sigilo-violeta" && JSON.stringify(pacote).indexOf('"id"') < 0);
     var volta = V.importado(JSON.parse(JSON.stringify(pacote)));

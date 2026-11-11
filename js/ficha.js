@@ -229,6 +229,12 @@
      Uma aba antiga trataria a ficha como de um sistema desconhecido; o
      schema maior faz as ainda mais antigas recusarem em vez de gravar.
 
+     32 → 33: fórmulas nos atributos da universal (v7.1). O atributo
+     ganhou `formula` e `contagem`, como as perícias: vazia, ele rola o
+     dado de sempre. Sem conversão (a ficha 32 abre sem fórmula, com
+     "maior"). Uma aba antiga descartaria a fórmula ao gravar — com o
+     schema maior ela recusa.
+
      Nenhuma das subidas exige migração: normalizarFicha() cria o que
      falta, vazio, e não toca no que existe. Um ritual gravado na 2 abre
      na 3 com a versão Normal em branco; uma ficha de Ordem gravada na 4
@@ -238,7 +244,7 @@
      os campos novos e os descartaria ao gravar — com o schema maior ela
      recusa abrir a ficha e pede para recarregar.
      Ver docs/CHARACTER_SCHEMA.md. */
-  var VERSAO_SCHEMA = 32;
+  var VERSAO_SCHEMA = 33;
 
   var MODULOS = {
     atributos: "Atributos", status: "Status/recursos", defesa: "Defesa",
@@ -512,6 +518,9 @@
       /* valor e dado são independentes de propósito: um atributo 2 pode
          rolar 3d20, e um atributo 5 pode rolar 1d20 */
       dado: DADO_PADRAO,
+      /* v7.1: a fórmula, como nas perícias; vazia, rola o dado. */
+      formula: "",
+      contagem: "maior",
     };
   }
 
@@ -1276,6 +1285,11 @@
       sigla: (U.aparar(a.sigla, 6) || nome.slice(0, 3)).toUpperCase(),
       valor: U.inteiro(a.valor, 0),
       dado: D.normalizar(a.dado) || DADO_PADRAO,
+      /* v7.1 (schema 33): guardada como foi escrita, mesmo com erro — a
+         rolagem é que recusa. Sem o campo, "maior": o dado do atributo
+         (2d20) sempre valeu o maior. */
+      formula: U.aparar(a.formula, D.MAX_FORMULA || 200),
+      contagem: D.contagemValida ? D.contagemValida(a.contagem === undefined ? "maior" : a.contagem) : "maior",
     };
   }
 
@@ -1453,11 +1467,40 @@
     return { ok: true, texto: atributo.dado };
   }
 
+  /* O atributo rola pela fórmula, se houver; senão pelo dado (v7.1).
+     A fórmula pode citar qualquer atributo — inclusive ele mesmo: @FOR
+     é o VALOR de FOR, nunca outra rolagem. */
+  function rolarAtributo(ficha, atributo) {
+    if (temFormula(atributo)) {
+      return D.formula({
+        nome: atributo.nome,
+        sigla: atributo.sigla,
+        formula: atributo.formula,
+        contagem: atributo.contagem,
+        valorDe: function (n) { return valorDeReferencia(ficha, n); },
+      });
+    }
+    var r = D.rolar(atributo.dado);
+    if (!r.ok) return { ok: false, mensagem: "O dado de " + atributo.nome + " (" + atributo.dado + ") não é uma expressão válida." };
+    return {
+      ok: true, tipo: "atributo", nome: atributo.nome, expressao: r.expressao,
+      rolagens: r.rolagens, natural: r.principal, total: r.principal, parcelas: [],
+    };
+  }
+
+  /* O que o atributo rola, com os números de agora. */
+  function previaDoAtributo(ficha, atributo) {
+    if (!temFormula(atributo)) return { ok: true, texto: atributo.dado };
+    var p = D.previaDaFormula(atributo.formula, function (n) { return valorDeReferencia(ficha, n); });
+    if (p.ok && !p.dados) return { ok: false, texto: "fórmula com erro", mensagem: "A fórmula precisa ter pelo menos um dado (por exemplo, 1d20)." };
+    return p.ok ? { ok: true, texto: p.texto } : { ok: false, texto: "fórmula com erro", mensagem: p.mensagem };
+  }
+
   /* Renomear a sigla ou o nome de um atributo leva junto as fórmulas
-     que o citam. Devolve quantas perícias mudaram. */
+     que o citam — das perícias e dos atributos. Devolve quantas mudaram. */
   function renomearReferencia(ficha, antiga, nova) {
     var mudou = 0;
-    ((ficha && ficha.pericias) || []).forEach(function (p) {
+    ((ficha && ficha.pericias) || []).concat((ficha && ficha.atributos) || []).forEach(function (p) {
       if (!temFormula(p)) return;
       var f = D.trocarReferencia(p.formula, antiga, nova);
       if (f !== p.formula) { p.formula = f; mudou++; }
@@ -1465,10 +1508,12 @@
     return mudou;
   }
 
-  /* As perícias cuja fórmula cita um atributo (pela sigla ou pelo nome). */
+  /* As perícias e os outros atributos cuja fórmula cita um atributo
+     (pela sigla ou pelo nome). */
   function formulasQueUsam(ficha, atributo) {
     var chaves = [U.chaveDeBusca(atributo.sigla), U.chaveDeBusca(atributo.nome)];
-    return ((ficha && ficha.pericias) || []).filter(function (p) {
+    return ((ficha && ficha.pericias) || []).concat((ficha && ficha.atributos) || []).filter(function (p) {
+      if (p === atributo || p.id === atributo.id) return false;
       if (!temFormula(p)) return false;
       var l = D.lerFormula(p.formula);
       return l.ok && l.referencias.some(function (r) { return chaves.indexOf(U.chaveDeBusca(r)) >= 0; });
@@ -1563,6 +1608,8 @@
     previaDaPericia: previaDaPericia,
     renomearReferencia: renomearReferencia,
     formulasQueUsam: formulasQueUsam,
+    rolarAtributo: rolarAtributo,
+    previaDoAtributo: previaDoAtributo,
     pedidoDeRolagem: pedidoDeRolagem,
     resumoDeStatus: resumoDeStatus,
     rotuloDoTipo: rotuloDoTipo,

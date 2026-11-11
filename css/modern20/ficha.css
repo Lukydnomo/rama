@@ -132,6 +132,7 @@
     font-feature-settings: "tnum";
   }
   & .atributo__dado { font-family: var(--fonte-mono); }
+  & .atributo__caixa.atributo__caixa--erro { border-color: var(--cor-erro); }
 
   & .status {
     gap: var(--e2);

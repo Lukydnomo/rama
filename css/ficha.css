@@ -237,6 +237,12 @@
 
 .atributo__edicao { display: flex; flex-direction: column; gap: var(--e1); }
 
+/* v7.1: com fórmula, a caixa mostra o que ela rola ("1d20 + 3"), que
+   pode ser maior que um dado; com erro, borda e texto de erro. */
+.atributo__dado { max-width: 100%; text-align: center; overflow-wrap: anywhere; }
+.atributo__caixa--erro { border-color: var(--cor-erro); }
+.atributo__caixa--erro .atributo__dado { color: var(--cor-erro); }
+
 /* ---------- status ---------- */
 
 .status-lista {

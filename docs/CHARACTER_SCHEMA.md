@@ -5,6 +5,15 @@ padrão e normaliza o que chega de fora. Onde ela é guardada — inteira em
 `fichaJson` (formato antigo) ou em blocos (v2.15) — é assunto do backend, e não muda
 nada aqui: ver [DATABASE.md](DATABASE.md).
 
+## Fórmulas nos atributos — v7.1 / schema 33
+
+Ficha Universal: cada item de `atributos` ganhou `formula` (texto, até 200
+caracteres, o mesmo formato da fórmula das perícias: `@SIGLA`, `@{Nome}`,
+`NdX`, `+ - * /`, piso/teto/arred/min/max/abs) e `contagem` (`maior`, `menor`
+ou `soma`; padrão `maior`, como o dado do atributo sempre valeu). Vazia, o
+atributo rola `dado`. `@` é o VALOR de um atributo, nunca outra rolagem. Sem
+conversão: uma ficha 32 abre sem fórmula.
+
 ## BRUTAL — v7.0 / schema 32
 
 `tipoFicha: "brutal"` e o bloco `brutal` (js/brutal/regras.js):

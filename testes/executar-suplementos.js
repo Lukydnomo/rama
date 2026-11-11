@@ -154,7 +154,7 @@ t.grupo("Ficha: persistência e o que já está em uso");
   t.ok("só o livro básico continua lista vazia ao salvar e abrir", Array.isArray(F.normalizarFicha(JSON.parse(JSON.stringify(F.criarFicha({ nome: "B", tipoFicha: "ordem", suplementos: [] })))).suplementos) && F.normalizarFicha(F.criarFicha({ nome: "B", tipoFicha: "ordem", suplementos: [] })).suplementos.length === 0);
   const antiga = F.normalizarFicha({ schemaVersion: 26, nome: "Antiga", tipoFicha: "ordem" });
   t.ok("ficha antiga: sem o campo (todos ligados, como na 6.0.0)", !("suplementos" in antiga));
-  t.igual("schema 32", F.VERSAO_SCHEMA, 32);
+  t.igual("schema 33", F.VERSAO_SCHEMA, 33);
   const copia = F.normalizarFicha(JSON.parse(JSON.stringify(nova)));
   t.iguais("exportar/importar (JSON) mantém", copia.suplementos, ["ordem.as2"]);
   const comUso = { tipoFicha: "ordem", ordem: { origem: "mateiro", classe: "combatente", trilha: "", escolhas: [], opcionais: {} }, rituais: { itens: [{ nome: "R", origemCatalogoId: (globalThis.RAMAOrdemRituaisDados.rituais.find((r) => r.fonte === "SAH") || {}).id }] }, inventario: { itens: [] } };

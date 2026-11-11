@@ -24,6 +24,7 @@
   var UI = global.RAMAUI;
   var F = global.RAMAFicha;
   var V = global.RAMAValidacao;
+  var D = global.RAMADados;
   var el = U.el;
 
   /* =================================================================
@@ -201,42 +202,102 @@
       return el("p.t-mini", { texto: "Nenhum atributo. Acrescente um no modo edição." });
     }
 
-    return el("div.atributos", {}, ctx.ficha.atributos.map(function (a) {
+    var grade = el("div.atributos", {}, ctx.ficha.atributos.map(function (a) {
       return ctx.emEdicao() ? atributoEmEdicao(ctx, a) : atributoNormal(ctx, a);
     }));
+    /* A explicação da fórmula aparece uma vez, acima da grade: repetida
+       em cada coluna estreita, viraria uma parede de texto. */
+    if (!ctx.emEdicao()) return grade;
+    return el("div.pilha--curta", { class: "pilha" }, [el("p.t-mini.atributos__ajuda", { texto: AJUDA_DA_FORMULA }), grade]);
   }
 
   function atributoNormal(ctx, a) {
+    /* v7.1: com fórmula, a caixa mostra o que ela rola com os valores de
+       agora ("2d20 + 3"); com erro, diz isso — e o clique explica. */
+    var formula = F.temFormula(a);
+    var previa = F.previaDoAtributo(ctx.ficha, a);
+    var titulo = formula
+      ? (previa.ok ? "Rolar " + previa.texto + " (fórmula: " + a.formula + ")" : "Fórmula com erro: " + previa.mensagem)
+      : "Rolar " + a.dado;
     return el("div.atributo", {}, [
       el("button.atributo__caixa", {
         type: "button",
-        "aria-label": "Rolar " + a.nome + ", " + a.dado,
-        title: "Rolar " + a.dado,
-        onclick: function () { rolarAtributo(a); },
+        class: formula && !previa.ok ? "atributo__caixa--erro" : "",
+        "aria-label": "Rolar " + a.nome + ", " + (previa.ok ? previa.texto : "fórmula com erro"),
+        title: titulo,
+        onclick: function () { rolarAtributo(ctx, a); },
       }, [
         el("span.atributo__sigla", { texto: a.sigla }),
         el("span.atributo__valor", { texto: String(a.valor) }),
-        el("span.atributo__dado", { texto: a.dado }),
+        el("span.atributo__dado", { class: formula ? "atributo__dado--formula" : "", texto: previa.ok ? previa.texto : "fórmula com erro" }),
       ]),
       el("span.t-mini", { texto: a.nome, estilo: { textAlign: "center" } }),
     ]);
   }
 
-  function rolarAtributo(a) {
-    var r = global.RAMADados.rolar(a.dado);
+  function rolarAtributo(ctx, a) {
+    var r = F.rolarAtributo(ctx.ficha, a);
     if (!r.ok) {
-      UI.avisoErro("O dado de " + a.nome + " (" + a.dado + ") não é uma expressão válida.");
+      UI.avisoErro(F.temFormula(a) ? a.nome + ": " + r.mensagem : r.mensagem);
       return;
     }
-    global.RAMARolagens.mostrar({
-      tipo: "atributo",
-      nome: a.nome,
-      expressao: r.expressao,
-      rolagens: r.rolagens,
-      natural: r.principal,
-      total: r.principal,
-      parcelas: [],
-    }, { nome: a.nome });
+    if (!F.temFormula(a)) r.tipo = "atributo";
+    global.RAMARolagens.mostrar(r, { nome: a.nome + (F.temFormula(a) ? " (" + a.sigla + ")" : "") });
+  }
+
+  /* A fórmula do atributo (v7.1): o mesmo campo das perícias — prévia
+     com os valores de agora enquanto digita, erro embaixo sem apagar o
+     que foi escrito, e "como os dados contam" quando há fórmula. */
+  var AJUDA_DA_FORMULA = "Fórmula (opcional, em cada atributo): vazia, ele rola o dado. Exemplos: @FOR d20 (o valor de FOR como quantidade) · " +
+    "1d20 + @FOR · (@FOR/2 + 1)d6 · teto(@AGI/2)d10 + @{Nome do atributo}. @ é o VALOR do atributo, nunca outra rolagem. " +
+    "Funções: piso, teto, arred, min, max, abs. Divisões arredondam para baixo no fim.";
+  var ROTULOS_DE_CONTAGEM = {
+    maior: "O maior dado",
+    menor: "O menor dado",
+    soma: "A soma dos dados",
+  };
+
+  function campoDaFormula(ctx, a) {
+    var previa = el("p.t-mini.atributo__previa", { "aria-live": "polite" });
+    var campo = UI.campo({
+      rotulo: "Fórmula (opcional)",
+      valor: a.formula || "",
+      limite: D.MAX_FORMULA,
+      dica: "ex.: 1d20 + @" + a.sigla,
+      ajuda: "Vazia: rola o dado.",
+      aoMudar: function (v) {
+        var antes = !!U.aparar(a.formula);
+        a.formula = U.aparar(v, D.MAX_FORMULA);
+        ctx.alterou();
+        if (antes !== !!a.formula) ctx.redesenhar();
+      },
+    });
+    campo.entrada.setAttribute("spellcheck", "false");
+    campo.entrada.setAttribute("autocapitalize", "off");
+
+    function atualizar() {
+      var texto = U.aparar(campo.entrada.value);
+      if (!texto) { campo.marcarErro(""); previa.textContent = ""; return; }
+      var r = D.previaDaFormula(texto, function (n) { return F.valorDeReferencia(ctx.ficha, n); });
+      var semDado = r.ok && !r.dados;
+      campo.marcarErro(r.ok ? (semDado ? "A fórmula precisa ter pelo menos um dado (por exemplo, 1d20)." : "") : r.mensagem);
+      previa.textContent = r.ok && !semDado ? "Com os valores de agora: " + r.texto : "";
+    }
+    campo.entrada.addEventListener("input", atualizar);
+    atualizar();
+
+    var partes = [campo, previa];
+    if (U.aparar(a.formula)) {
+      partes.push(UI.campo({
+        rotulo: "Como os dados contam",
+        tipo: "selecao",
+        valor: D.contagemValida(a.contagem),
+        opcoes: D.CONTAGENS.map(function (c) { return { valor: c, rotulo: ROTULOS_DE_CONTAGEM[c] }; }),
+        ajuda: "Maior e menor valem para o primeiro grupo de dados; os outros somam.",
+        aoMudar: function (v) { a.contagem = D.contagemValida(v); ctx.alterou(); },
+      }));
+    }
+    return el("div.pilha--curta.atributo__formula", { class: "pilha" }, partes);
   }
 
   function atributoEmEdicao(ctx, a) {
@@ -271,13 +332,14 @@
           },
         }),
         UI.campo({
-          rotulo: "Dado", valor: a.dado, limite: 12, ajuda: "NdX, ex. 2d20 ou -2d20",
+          rotulo: "Dado", valor: a.dado, limite: 12, ajuda: F.temFormula(a) ? "Com fórmula, o dado fica guardado e não rola." : "NdX, ex. 2d20 ou -2d20",
           aoMudar: function (v, entrada) {
             var r = V.dado(v);
             if (!r.ok) { entrada.value = a.dado; UI.avisoErro(r.mensagem); return; }
             a.dado = r.valor; entrada.value = r.valor; ctx.alterou();
           },
         }),
+        campoDaFormula(ctx, a),
         el("button.r-botao.r-botao--mini.r-botao--perigo", {
           type: "button", texto: "Remover",
           onclick: function () { removerAtributo(ctx, a); },
@@ -294,6 +356,8 @@
       sigla: "NOV",
       valor: 0,
       dado: F.DADO_PADRAO,
+      formula: "",
+      contagem: "maior",
     });
     ctx.alterou();
     ctx.redesenhar();

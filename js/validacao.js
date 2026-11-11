@@ -197,8 +197,15 @@
     if (!Array.isArray(f.atributos) || !f.atributos.length) problemas.push("A ficha precisa de pelo menos um atributo.");
 
     (f.atributos || []).forEach(function (a) {
+      var nomeA = a && a.nome ? a.nome : "?";
       var d = dado(a && a.dado);
-      if (!d.ok) problemas.push("Atributo " + (a && a.nome ? a.nome : "?") + ": " + d.mensagem);
+      if (!d.ok) problemas.push("Atributo " + nomeA + ": " + d.mensagem);
+      var formulaA = a && typeof a.formula === "string" ? a.formula.trim() : "";
+      if (formulaA && global.RAMADados && global.RAMADados.lerFormula) {
+        var lidaA = global.RAMADados.lerFormula(formulaA);
+        if (!lidaA.ok) problemas.push("Atributo " + nomeA + ", fórmula: " + lidaA.mensagem);
+        else if (!lidaA.dados) problemas.push("Atributo " + nomeA + ", fórmula: precisa ter pelo menos um dado (por exemplo, 1d20).");
+      }
     });
 
     (f.pericias || []).forEach(function (p) {
