@@ -118,6 +118,18 @@
 
   var CHANGELOG = [
     {
+      versao: "7.1.1",
+      codinome: "PRENSA",
+      data: "11/11/2026",
+      mudancas: {
+        "Performance": [
+          "Símbolos dos rituais, retratos e corpo inteiro das criaturas e temas de dados passam a WebP: 524 imagens convertidas e cerca de 36 MB a menos (de 90,4 MB para 54,8 MB) — páginas de rituais, criaturas e rolagens com tema carregam mais rápido, sobretudo no celular.",
+          "Símbolos, máscaras e camadas dos dados foram convertidos sem perda (idênticos pixel a pixel). Em 5 artes grandes, uma qualidade 90 ou 85 conferida no tamanho de exibição economiza muito mais sem diferença visível; 108 retratos e corpos que já eram PNGs otimizados continuam em PNG.",
+        ],
+        "Técnico": ["js/ordem/rituais.js e js/criaturas.js montam .webp e consultam um mapa GERADO (testes/gerar-mapa-imagens.js) das imagens que continuam em PNG: cada uma carrega pelo caminho certo na primeira tentativa. O símbolo provisório agora é assets/rituais/provisorio.webp, e continua sendo o reserva de qualquer símbolo que não carregar. js/temas-dados.js aponta para os WebP (ids, versões, códigos e vínculos dos temas iguais) e a cópia em backend/Codigo.gs foi sincronizada — só texto: o servidor não usa os caminhos. Novos: testes/otimizar-imagens.py (converte com as mesmas regras) e testes/medidas-imagem.js; gerador de provisórios, testes e os LEIA-ME de assets/ atualizados."],
+      },
+    },
+    {
       versao: "7.1.0",
       codinome: "VETOR",
       data: "11/11/2026",

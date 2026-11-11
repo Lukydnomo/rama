@@ -9,6 +9,7 @@
    imagem só e de proporção livre, e o kit de modelo está completo.
    ===================================================================== */
 
+import { medirImagem } from "./medidas-imagem.js";
 globalThis.window = globalThis;
 (0, eval)(await Deno.readTextFile(new URL("../js/temas-dados.js", import.meta.url)));
 const TD = globalThis.RAMATemasDados;
@@ -26,19 +27,11 @@ const t = {
 const raiz = new URL("../", import.meta.url);
 async function existe(caminho) { try { await Deno.stat(new URL(caminho, raiz)); return true; } catch { return false; } }
 
-/* Largura e altura de um PNG (cabeçalho IHDR) ou de um SVG (viewBox). */
+/* Largura e altura de um PNG, WebP (cabeçalho) ou SVG (viewBox). */
 async function medidas(caminho) {
-  const bytes = await Deno.readFile(new URL(caminho, raiz));
-  if (caminho.endsWith(".png")) {
-    const v = new DataView(bytes.buffer);
-    return { w: v.getUint32(16), h: v.getUint32(20), alfa: bytes[25] === 6 || bytes[25] === 4 };
-  }
-  if (caminho.endsWith(".svg")) {
-    const texto = new TextDecoder().decode(bytes);
-    const m = /viewBox="\s*0\s+0\s+([\d.]+)\s+([\d.]+)"/.exec(texto);
-    return m ? { w: +m[1], h: +m[2], svg: texto } : null;
-  }
-  return null;
+  const m = medirImagem(await Deno.readFile(new URL(caminho, raiz)));
+  if (!m || !caminho.endsWith("." + m.formato)) return null;
+  return { w: m.largura, h: m.altura, alfa: m.alfa, svg: m.svg, formato: m.formato };
 }
 
 t.grupo("Temas de dados · assets do catálogo");
@@ -65,8 +58,8 @@ for (const tema of TD.lista()) {
 }
 
 t.grupo("Temas de dados · kit de modelo");
-for (const arq of ["LEIA-ME.md", "base-dado.png", "mascara-d20.png", "mascara-d20.svg", "camada-facetas.png", "camada-detalhes-vazia.png",
-  "guia-alinhamento.png", "modelo-editavel.svg", "previa-dado.png", "fundo-notificacao-exemplo.png", "tema-exemplo.json"]) {
+for (const arq of ["LEIA-ME.md", "base-dado.webp", "mascara-d20.webp", "mascara-d20.svg", "camada-facetas.webp", "camada-detalhes-vazia.webp",
+  "guia-alinhamento.webp", "modelo-editavel.svg", "previa-dado.webp", "fundo-notificacao-exemplo.webp", "tema-exemplo.json"]) {
   t.ok("assets/dados/modelo/" + arq, await existe("assets/dados/modelo/" + arq));
 }
 const exemplo = JSON.parse(await Deno.readTextFile(new URL("assets/dados/modelo/tema-exemplo.json", raiz)));

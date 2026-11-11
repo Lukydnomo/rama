@@ -1,12 +1,12 @@
 # Imagens das criaturas do catálogo
 
 Cada criatura do catálogo oficial (`js/ordem/criaturas-dados.js`) tem uma pasta
-aqui, com **duas imagens provisórias** — uma silhueta com o nome da criatura:
+aqui, com **duas imagens** (WebP; algumas continuam em PNG, veja abaixo):
 
 | Arquivo       | Formato                         | Onde aparece                                        |
 |---------------|---------------------------------|-----------------------------------------------------|
-| `retrato.png` | quadrada (1:1), 512×512 sugerido | lista da biblioteca, cabeçalho da ficha, painel do turno no combate, cartão do aliado |
-| `corpo.png`   | corpo inteiro, **qualquer tamanho** | botão "Corpo inteiro" da ficha                      |
+| `retrato.webp` | quadrada (1:1), 512×512 sugerido | lista da biblioteca, cabeçalho da ficha, painel do turno no combate, cartão do aliado |
+| `corpo.webp`  | corpo inteiro, **qualquer tamanho** | botão "Corpo inteiro" da ficha                      |
 
 ## Onde fica cada criatura
 
@@ -33,9 +33,26 @@ As facetas do Anfitrião são variantes e têm pasta própria.
 
 ## Como trocar
 
-Substitua o arquivo **mantendo o nome** (`retrato.png` ou `corpo.png`). Nada no
-código precisa mudar. Prefira PNG ou converta para PNG; o retrato fica melhor
-em 1:1 — ele é mostrado num quadrado, e o que sobrar é cortado ao centro.
+Substitua o arquivo **mantendo o nome** (`retrato` ou `corpo`, em `.webp` ou
+`.png`) e siga "Formato: WebP primeiro", abaixo. O retrato fica melhor em 1:1 —
+ele é mostrado num quadrado (64 px na lista), e o que sobrar é cortado ao centro.
+
+## Formato: WebP primeiro
+
+Desde a v7.2 as imagens daqui são **WebP**. Para trocar uma arte, você pode
+soltar um PNG com o nome certo e depois rodar, na raiz do projeto:
+
+```bash
+python testes/otimizar-imagens.py --aplicar assets/criaturas
+deno run --allow-read --allow-write testes/gerar-mapa-imagens.js
+```
+
+O primeiro converte para WebP quando compensa (WebP sem perda; se ele economizar menos de 30%, qualidade 90 ou 85 comparada no tamanho de exibição, e só se cair mais 10%. Fica PNG quando o PNG é menor — hoje, 108 imagens já otimizadas em PNG) e apaga o PNG
+trocado; o segundo atualiza o mapa das imagens que continuam em PNG, para o site
+pedir cada uma pelo caminho certo na primeira tentativa. Se você já tiver um
+WebP, salve direto com o nome em `.webp` e rode só o segundo. Nunca deixe o
+`.webp` e o `.png` do mesmo arquivo juntos: vale o `.webp`.
+
 
 Use apenas imagens que você tem direito de publicar: tudo nesta pasta vai para
 o site, e o site é público.

@@ -442,8 +442,9 @@ t.grupo("Ameaças (p. 40–45, 65–73)");
   t.ok("  voltar à ficha de partida não restaura", CR.definirNaInstancia(rz, "forma", "") && rz.status.filter((s) => s.id === "vida")[0].atual <= 200);
   t.ok("as imagens provisórias existem", await (async () => {
     for (const c of DADOS.criaturas.filter((x) => /^as7\./.test(x.id))) {
-      for (const arq of ["retrato.png", "corpo.png"]) {
-        try { await Deno.stat(new URL("../assets/criaturas/as7/" + c.id.replace("as7.criatura.", "") + "/" + arq, import.meta.url)); } catch { return false; }
+      const img = globalThis.RAMACriaturas.imagensDoCatalogo(c.id);
+      for (const caminho of [img.retrato, img.corpo]) {
+        try { await Deno.stat(new URL("../" + String(caminho).replace(/^.*?(assets\/)/, "$1"), import.meta.url)); } catch { return false; }
       }
     }
     return true;

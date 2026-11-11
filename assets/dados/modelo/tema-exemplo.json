@@ -5,17 +5,17 @@
   "versoes": [
     {
       "versao": 1,
-      "previa": "assets/dados/temas/exemplo-modelo/v1/previa.png",
+      "previa": "assets/dados/temas/exemplo-modelo/v1/previa.webp",
       "dado": {
         "mascara": "assets/dados/mascaras/d20-v1.svg",
-        "base": "assets/dados/temas/exemplo-modelo/v1/base.png",
+        "base": "assets/dados/temas/exemplo-modelo/v1/base.webp",
         "camadas": [
-          { "imagem": "assets/dados/temas/exemplo-modelo/v1/facetas.png", "opacidade": 1, "recortar": true },
-          { "imagem": "assets/dados/temas/exemplo-modelo/v1/detalhes.png", "opacidade": 1, "recortar": true }
+          { "imagem": "assets/dados/temas/exemplo-modelo/v1/facetas.webp", "opacidade": 1, "recortar": true },
+          { "imagem": "assets/dados/temas/exemplo-modelo/v1/detalhes.webp", "opacidade": 1, "recortar": true }
         ]
       },
       "notificacao": {
-        "fundo": "assets/dados/temas/exemplo-modelo/v1/fundo.png",
+        "fundo": "assets/dados/temas/exemplo-modelo/v1/fundo.webp",
         "ajusteFundo": { "modo": "zoom-pela-altura", "alinhamentoHorizontal": 0.5 },
         "cores": {
           "superficie": "#121216",

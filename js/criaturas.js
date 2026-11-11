@@ -1123,12 +1123,128 @@
      IMAGENS DO CATÁLOGO (v2.28)
      -----------------------------------------------------------------
      Toda criatura do catálogo tem duas imagens no próprio site:
-     assets/criaturas/<livro>/<nome>/retrato.png (1:1) e corpo.png
+     assets/criaturas/<livro>/<nome>/retrato.webp (1:1) e corpo.webp
      (corpo inteiro, qualquer tamanho) — ver assets/criaturas/LEIA-ME.md.
      Valem para a ficha do catálogo e para as cópias dela (Homebrew,
      combate, aliado), pelo rastro em `origem`. Nada disso é gravado na
      criatura: o caminho sai do id, sempre.
+
+     v7.2: o formato é WebP; as imagens que continuam em PNG estão no
+     mapa abaixo, gerado a partir do disco (testes/gerar-mapa-imagens.js).
      ================================================================= */
+
+/* >>> mapa gerado (testes/gerar-mapa-imagens.js) */
+  var IMAGENS_EM_PNG = {
+    "op/aberracao-de-carne/corpo": 1,
+    "op/aberracao-de-carne/retrato": 1,
+    "op/anarquico-descontrolado/corpo": 1,
+    "op/anarquico-descontrolado/retrato": 1,
+    "op/anarquico/corpo": 1,
+    "op/anarquico/retrato": 1,
+    "op/aniquilacao/corpo": 1,
+    "op/aniquilacao/retrato": 1,
+    "op/anjo/corpo": 1,
+    "op/anjo/retrato": 1,
+    "op/anomalia/corpo": 1,
+    "op/anomalia/retrato": 1,
+    "op/anomiatico/corpo": 1,
+    "op/anomiatico/retrato": 1,
+    "op/aracnasita/corpo": 1,
+    "op/aracnasita/retrato": 1,
+    "op/bicho-papao/corpo": 1,
+    "op/bicho-papao/retrato": 1,
+    "op/carente/corpo": 1,
+    "op/carente/retrato": 1,
+    "op/carnical-preto-da-morte/corpo": 1,
+    "op/carnical-preto-da-morte/retrato": 1,
+    "op/ceifador-espiral/corpo": 1,
+    "op/ceifador-espiral/retrato": 1,
+    "op/ciborgue/corpo": 1,
+    "op/ciborgue/retrato": 1,
+    "op/dama-de-sangue/corpo": 1,
+    "op/dama-de-sangue/retrato": 1,
+    "op/degolificada/corpo": 1,
+    "op/degolificada/retrato": 1,
+    "op/enpap-x/corpo": 1,
+    "op/enpap-x/retrato": 1,
+    "op/enraizado/corpo": 1,
+    "op/enraizado/retrato": 1,
+    "op/escutado/corpo": 1,
+    "op/escutado/retrato": 1,
+    "op/espreitador/corpo": 1,
+    "op/espreitador/retrato": 1,
+    "op/esqueleto-de-lodo/corpo": 1,
+    "op/esqueleto-de-lodo/retrato": 1,
+    "op/estrangeiro/corpo": 1,
+    "op/estrangeiro/retrato": 1,
+    "op/existido/corpo": 1,
+    "op/existido/retrato": 1,
+    "op/infecticidio/corpo": 1,
+    "op/infecticidio/retrato": 1,
+    "op/kerberos/corpo": 1,
+    "op/kerberos/retrato": 1,
+    "op/lembrado/corpo": 1,
+    "op/lembrado/retrato": 1,
+    "op/marionete/corpo": 1,
+    "op/marionete/retrato": 1,
+    "op/mascara-do-desespero/corpo": 1,
+    "op/mascara-do-desespero/retrato": 1,
+    "op/minotauro/corpo": 1,
+    "op/minotauro/retrato": 1,
+    "op/mulher-afogada/corpo": 1,
+    "op/mulher-afogada/retrato": 1,
+    "op/mumia-xipofaga/corpo": 1,
+    "op/mumia-xipofaga/retrato": 1,
+    "op/nidere/corpo": 1,
+    "op/nidere/retrato": 1,
+    "op/o-anfitriao/corpo": 1,
+    "op/o-anfitriao/retrato": 1,
+    "op/o-deus-da-morte/corpo": 1,
+    "op/o-deus-da-morte/retrato": 1,
+    "op/o-diabo/corpo": 1,
+    "op/o-diabo/retrato": 1,
+    "op/ocioso/corpo": 1,
+    "op/ocioso/retrato": 1,
+    "op/parasita-de-culpa/corpo": 1,
+    "op/parasita-de-culpa/retrato": 1,
+    "op/perturbado-de-energia/corpo": 1,
+    "op/perturbado-de-energia/retrato": 1,
+    "op/rastejador-sombrio/corpo": 1,
+    "op/rastejador-sombrio/retrato": 1,
+    "op/sempiternal/corpo": 1,
+    "op/sempiternal/retrato": 1,
+    "op/silhueta/corpo": 1,
+    "op/succ/corpo": 1,
+    "op/succ/retrato": 1,
+    "op/sukkalgir/corpo": 1,
+    "op/sukkalgir/retrato": 1,
+    "op/telopsia/corpo": 1,
+    "op/telopsia/retrato": 1,
+    "op/tempestuoso/corpo": 1,
+    "op/tempestuoso/retrato": 1,
+    "op/tita-de-sangue/corpo": 1,
+    "op/tita-de-sangue/retrato": 1,
+    "op/viajante/corpo": 1,
+    "op/viajante/retrato": 1,
+    "op/vulto/corpo": 1,
+    "op/vulto/retrato": 1,
+    "op/zumbi-de-sangue-bestial/corpo": 1,
+    "op/zumbi-de-sangue-bestial/retrato": 1,
+    "op/zumbi-de-sangue/corpo": 1,
+    "op/zumbi-de-sangue/retrato": 1,
+    "sah/amigo-imaginario/corpo": 1,
+    "sah/derretido/corpo": 1,
+    "sah/espectro-inesquecido/corpo": 1,
+    "sah/medusa/corpo": 1,
+    "sah/melancolia/corpo": 1,
+    "sah/memento-mori/corpo": 1,
+    "sah/mescla/corpo": 1,
+    "sah/o-terminal/corpo": 1,
+    "sah/o-uivar/corpo": 1,
+    "sah/quibungo/corpo": 1,
+    "sah/rascunho/corpo": 1,
+  };
+  /* <<< mapa gerado */
 
   function idDoCatalogo(c) {
     var o = (c && c.origem) || {};
@@ -1139,9 +1255,10 @@
     var id = typeof alvo === "string" ? alvo : idDoCatalogo(alvo);
     var m = /^(op|sah|as1|as2|as3|as4|as5|as6|as7|as9)\.criatura\.([a-z0-9.-]+)$/.exec(String(id || ""));
     if (!m) return null;
-    var base = "assets/criaturas/" + m[1] + "/" + m[2] + "/";
+    var pasta = m[1] + "/" + m[2] + "/";
     var url = U.url || function (x) { return x; };
-    return { retrato: url(base + "retrato.png"), corpo: url(base + "corpo.png") };
+    function arquivo(nome) { return url("assets/criaturas/" + pasta + nome + "." + (IMAGENS_EM_PNG[pasta + nome] ? "png" : "webp")); }
+    return { retrato: arquivo("retrato"), corpo: arquivo("corpo") };
   }
 
   /* =================================================================

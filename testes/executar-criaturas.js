@@ -253,16 +253,18 @@ t.igual("mexer na cópia não mexe no catálogo", OC.criatura("op.criatura.zumbi
 let congelado = false;
 try { cat.porId["op.criatura.zumbi-de-sangue"].nome = "x"; } catch (e) { congelado = true; }
 t.ok("o catálogo carregado é congelado", congelado || cat.porId["op.criatura.zumbi-de-sangue"].nome === "Zumbi de Sangue");
-t.igual("imagens do catálogo pelo id (retrato 1:1 e corpo inteiro)", C.imagensDoCatalogo("op.criatura.o-anfitriao.liber"),
-  { retrato: globalThis.RAMAUtil.url("assets/criaturas/op/o-anfitriao.liber/retrato.png"), corpo: globalThis.RAMAUtil.url("assets/criaturas/op/o-anfitriao.liber/corpo.png") });
+const imgLiber = C.imagensDoCatalogo("op.criatura.o-anfitriao.liber");
+t.ok("imagens do catálogo pelo id (retrato 1:1 e corpo inteiro; WebP, ou PNG pelo mapa)",
+  /assets\/criaturas\/op\/o-anfitriao\.liber\/retrato\.(webp|png)$/.test(imgLiber.retrato) && /assets\/criaturas\/op\/o-anfitriao\.liber\/corpo\.(webp|png)$/.test(imgLiber.corpo), JSON.stringify(imgLiber));
 t.ok("  a cópia no Homebrew usa a do original; criatura sem catálogo não tem", !!C.imagensDoCatalogo(copia) && C.imagensDoCatalogo(antigaNorm) === null);
 const faltando = [];
 for (const c of DADOS.criaturas) {
-  const m = /^(op|sah|as1|as2|as3|as4|as5|as6|as7|as9)\.criatura\.(.+)$/.exec(c.id);
-  for (const arq of ["retrato.png", "corpo.png"]) {
+  const img = C.imagensDoCatalogo(c.id);
+  for (const caminho of [img.retrato, img.corpo]) {
     /* A pasta pode estar num disco sincronizado (Google Drive), que às
        vezes demora a responder: uma segunda tentativa antes de acusar. */
-    const url = new URL(`../assets/criaturas/${m[1]}/${m[2]}/${arq}`, import.meta.url);
+    const arq = String(caminho).replace(/^.*?(assets\/)/, "$1");
+    const url = new URL("../" + arq, import.meta.url);
     let achou = false;
     for (let tentativa = 0; tentativa < 3 && !achou; tentativa++) {
       try { await Deno.stat(url); achou = true; } catch (e) { await new Promise((r) => setTimeout(r, 100)); }
@@ -270,7 +272,7 @@ for (const c of DADOS.criaturas) {
     if (!achou) faltando.push(c.id + "/" + arq);
   }
 }
-t.igual("toda criatura tem as duas imagens (provisórias) no site", faltando, []);
+t.igual("toda criatura tem as duas imagens no caminho que o código monta (a primeira tentativa acerta)", faltando, []);
 
 /* =====================================================================
    ARQUIVOS SECRETOS 5 — os Alheios (v2.48)

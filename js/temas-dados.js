@@ -77,16 +77,16 @@
       descricao: "O exemplo do kit: base cinza, facetas claras e o fundo com as linhas de topo e base.",
       versoes: [{
         versao: 1,
-        previa: "assets/dados/temas/modelo-tecnico/v1/previa.png",
+        previa: "assets/dados/temas/modelo-tecnico/v1/previa.webp",
         dado: {
           mascara: "assets/dados/mascaras/d20-v1.svg",
-          base: "assets/dados/temas/modelo-tecnico/v1/base.png",
+          base: "assets/dados/temas/modelo-tecnico/v1/base.webp",
           camadas: [
-            { imagem: "assets/dados/temas/modelo-tecnico/v1/facetas.png", opacidade: 1, recortar: true },
+            { imagem: "assets/dados/temas/modelo-tecnico/v1/facetas.webp", opacidade: 1, recortar: true },
           ],
         },
         notificacao: {
-          fundo: "assets/dados/temas/modelo-tecnico/v1/fundo.png",
+          fundo: "assets/dados/temas/modelo-tecnico/v1/fundo.webp",
           ajusteFundo: { modo: "zoom-pela-altura", alinhamentoHorizontal: 0.5 },
           cores: {
             superficie: "#121216", texto: "#ffffff", texto2: "#d4d4dd", texto3: "#b4b4c0",
@@ -104,14 +104,14 @@
       descricao: "Amor da minha vida.",
       versoes: [{
         versao: 1,
-        previa: "assets/dados/temas/mandinha-linda/v1/previa.png",
+        previa: "assets/dados/temas/mandinha-linda/v1/previa.webp",
         dado: {
           mascara: "assets/dados/mascaras/d20-v1.svg",
-          base: "assets/dados/temas/mandinha-linda/v1/base.png",
+          base: "assets/dados/temas/mandinha-linda/v1/base.webp",
           camadas: [],
         },
         notificacao: {
-          fundo: "assets/dados/temas/mandinha-linda/v1/fundo.png",
+          fundo: "assets/dados/temas/mandinha-linda/v1/fundo.webp",
           ajusteFundo: {
             modo: "zoom-pela-altura",
             alinhamentoHorizontal: 0.5
@@ -148,14 +148,14 @@
       descricao: "Eu sou o que eu quiser.",
       versoes: [{
         versao: 1,
-        previa: "assets/dados/temas/gender-fluid/v1/previa.png",
+        previa: "assets/dados/temas/gender-fluid/v1/previa.webp",
         dado: {
           mascara: "assets/dados/mascaras/d20-v1.svg",
-          base: "assets/dados/temas/gender-fluid/v1/base.png",
+          base: "assets/dados/temas/gender-fluid/v1/base.webp",
           camadas: [],
         },
         notificacao: {
-          fundo: "assets/dados/temas/gender-fluid/v1/fundo.png",
+          fundo: "assets/dados/temas/gender-fluid/v1/fundo.webp",
           ajusteFundo: {
             modo: "zoom-pela-altura",
             alinhamentoHorizontal: 0.5
@@ -193,14 +193,14 @@
       descricao: "Eu sou algo.",
       versoes: [{
         versao: 1,
-        previa: "assets/dados/temas/non-binary/v1/previa.png",
+        previa: "assets/dados/temas/non-binary/v1/previa.webp",
         dado: {
           mascara: "assets/dados/mascaras/d20-v1.svg",
-          base: "assets/dados/temas/non-binary/v1/base.png",
+          base: "assets/dados/temas/non-binary/v1/base.webp",
           camadas: [],
         },
         notificacao: {
-          fundo: "assets/dados/temas/non-binary/v1/fundo.png",
+          fundo: "assets/dados/temas/non-binary/v1/fundo.webp",
           ajusteFundo: {
             modo: "zoom-pela-altura",
             alinhamentoHorizontal: 0.5
@@ -238,14 +238,14 @@
       descricao: "Just me.",
       versoes: [{
         versao: 1,
-        previa: "assets/dados/temas/trans/v1/previa.png",
+        previa: "assets/dados/temas/trans/v1/previa.webp",
         dado: {
           mascara: "assets/dados/mascaras/d20-v1.svg",
-          base: "assets/dados/temas/trans/v1/base.png",
+          base: "assets/dados/temas/trans/v1/base.webp",
           camadas: [],
         },
         notificacao: {
-          fundo: "assets/dados/temas/trans/v1/fundo.png",
+          fundo: "assets/dados/temas/trans/v1/fundo.webp",
           ajusteFundo: {
             modo: "zoom-pela-altura",
             alinhamentoHorizontal: 0.5
@@ -284,25 +284,25 @@
       "versoes": [
         {
           "versao": 1,
-          "previa": "assets/dados/temas/slowpoke/v1/previa.png",
+          "previa": "assets/dados/temas/slowpoke/v1/previa.webp",
           "dado": {
             "mascara": "assets/dados/mascaras/d20-v1.svg",
-            "base": "assets/dados/temas/slowpoke/v1/base.png",
+            "base": "assets/dados/temas/slowpoke/v1/base.webp",
             "camadas": [
               {
-                "imagem": "assets/dados/temas/slowpoke/v1/facetas.png",
+                "imagem": "assets/dados/temas/slowpoke/v1/facetas.webp",
                 "opacidade": 1,
                 "recortar": true
               },
               {
-                "imagem": "assets/dados/temas/slowpoke/v1/detalhes.png",
+                "imagem": "assets/dados/temas/slowpoke/v1/detalhes.webp",
                 "opacidade": 1,
                 "recortar": true
               }
             ]
           },
           "notificacao": {
-            "fundo": "assets/dados/temas/slowpoke/v1/fundo.png",
+            "fundo": "assets/dados/temas/slowpoke/v1/fundo.webp",
             "ajusteFundo": {
               "modo": "zoom-pela-altura",
               "alinhamentoHorizontal": 0.5
@@ -336,14 +336,14 @@
       "versoes": [
         {
           "versao": 1,
-          "previa": "assets/dados/temas/elemento-sangue/v1/previa.png",
+          "previa": "assets/dados/temas/elemento-sangue/v1/previa.webp",
           "dado": {
             "mascara": "assets/dados/mascaras/d20-v1.svg",
-            "base": "assets/dados/temas/elemento-sangue/v1/base.png",
+            "base": "assets/dados/temas/elemento-sangue/v1/base.webp",
             "camadas": []
           },
           "notificacao": {
-            "fundo": "assets/dados/temas/elemento-sangue/v1/fundo.png",
+            "fundo": "assets/dados/temas/elemento-sangue/v1/fundo.webp",
             "ajusteFundo": {
               "modo": "zoom-pela-altura",
               "alinhamentoHorizontal": 0.5
@@ -381,14 +381,14 @@
       "versoes": [
         {
           "versao": 1,
-          "previa": "assets/dados/temas/elemento-energia/v1/previa.png",
+          "previa": "assets/dados/temas/elemento-energia/v1/previa.webp",
           "dado": {
             "mascara": "assets/dados/mascaras/d20-v1.svg",
-            "base": "assets/dados/temas/elemento-energia/v1/base.png",
+            "base": "assets/dados/temas/elemento-energia/v1/base.webp",
             "camadas": []
           },
           "notificacao": {
-            "fundo": "assets/dados/temas/elemento-energia/v1/fundo.png",
+            "fundo": "assets/dados/temas/elemento-energia/v1/fundo.webp",
             "ajusteFundo": {
               "modo": "zoom-pela-altura",
               "alinhamentoHorizontal": 0.5
@@ -427,14 +427,14 @@
       "versoes": [
         {
           "versao": 1,
-          "previa": "assets/dados/temas/elemento-morte/v1/previa.png",
+          "previa": "assets/dados/temas/elemento-morte/v1/previa.webp",
           "dado": {
             "mascara": "assets/dados/mascaras/d20-v1.svg",
-            "base": "assets/dados/temas/elemento-morte/v1/base.png",
+            "base": "assets/dados/temas/elemento-morte/v1/base.webp",
             "camadas": []
           },
           "notificacao": {
-            "fundo": "assets/dados/temas/elemento-morte/v1/fundo.png",
+            "fundo": "assets/dados/temas/elemento-morte/v1/fundo.webp",
             "ajusteFundo": {
               "modo": "zoom-pela-altura",
               "alinhamentoHorizontal": 0.5
@@ -474,14 +474,14 @@
       "versoes": [
         {
           "versao": 1,
-          "previa": "assets/dados/temas/elemento-conhecimento/v1/previa.png",
+          "previa": "assets/dados/temas/elemento-conhecimento/v1/previa.webp",
           "dado": {
             "mascara": "assets/dados/mascaras/d20-v1.svg",
-            "base": "assets/dados/temas/elemento-conhecimento/v1/base.png",
+            "base": "assets/dados/temas/elemento-conhecimento/v1/base.webp",
             "camadas": []
           },
           "notificacao": {
-            "fundo": "assets/dados/temas/elemento-conhecimento/v1/fundo.png",
+            "fundo": "assets/dados/temas/elemento-conhecimento/v1/fundo.webp",
             "ajusteFundo": {
               "modo": "zoom-pela-altura",
               "alinhamentoHorizontal": 0.5
@@ -520,18 +520,18 @@
       descricao: "Violeta com um sigilo gravado no dado, faíscas em volta e linhas de néon no fundo.",
       versoes: [{
         versao: 1,
-        previa: "assets/dados/temas/sigilo-violeta/v1/previa.png",
+        previa: "assets/dados/temas/sigilo-violeta/v1/previa.webp",
         dado: {
           mascara: "assets/dados/mascaras/d20-v1.svg",
-          base: "assets/dados/temas/sigilo-violeta/v1/base.png",
+          base: "assets/dados/temas/sigilo-violeta/v1/base.webp",
           camadas: [
-            { imagem: "assets/dados/temas/sigilo-violeta/v1/facetas.png", opacidade: 0.8, recortar: true },
-            { imagem: "assets/dados/temas/sigilo-violeta/v1/sigilo.png", opacidade: 1, recortar: true },
-            { imagem: "assets/dados/temas/sigilo-violeta/v1/faiscas.png", opacidade: 1, recortar: false },
+            { imagem: "assets/dados/temas/sigilo-violeta/v1/facetas.webp", opacidade: 0.8, recortar: true },
+            { imagem: "assets/dados/temas/sigilo-violeta/v1/sigilo.webp", opacidade: 1, recortar: true },
+            { imagem: "assets/dados/temas/sigilo-violeta/v1/faiscas.webp", opacidade: 1, recortar: false },
           ],
         },
         notificacao: {
-          fundo: "assets/dados/temas/sigilo-violeta/v1/fundo.png",
+          fundo: "assets/dados/temas/sigilo-violeta/v1/fundo.webp",
           ajusteFundo: { modo: "zoom-pela-altura", alinhamentoHorizontal: 0.5 },
           cores: {
             superficie: "#1a0f2a", texto: "#ffffff", texto2: "#e6dcf5", texto3: "#c3b4dc",

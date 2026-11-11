@@ -4,11 +4,18 @@
        deno run --allow-read --allow-write testes/gerar-simbolos-rituais.js
 
    Para cada ritual do catálogo oficial (js/ordem/rituais-dados.js), cria
-   a pasta assets/rituais/<prefixo>/<nome>/ e um simbolo.png provisório
-   (100 × 100, fundo transparente) — SÓ quando o arquivo não existe. Pode
-   rodar de novo depois de um ritual novo entrar no catálogo: as artes
-   que já foram trocadas não são tocadas. Também cria, se faltar, o
-   provisório compartilhado assets/rituais/provisorio.png.
+   a pasta assets/rituais/<prefixo>/<nome>/ e um símbolo provisório
+   (100 × 100, fundo transparente) — SÓ quando a pasta ainda não tem
+   simbolo.webp nem simbolo.png. Pode rodar de novo depois de um ritual
+   novo entrar no catálogo: as artes que já foram trocadas não são
+   tocadas.
+
+   v7.2: o provisório é o WebP sem perda assets/rituais/provisorio.webp,
+   COPIADO para cada pasta nova como simbolo.webp. Se o provisório não
+   existir, o desenho abaixo o recria como provisorio.png; aí rode
+   `python testes/otimizar-imagens.py --aplicar assets/rituais` para
+   convertê-lo e de novo este script. Depois, sempre:
+   `deno run --allow-read --allow-write testes/gerar-mapa-imagens.js`.
 
    O desenho é o mesmo em todos: um selo neutro (dois anéis e um
    triângulo com o olho), cinza médio, que aparece sobre a placa escura
@@ -97,19 +104,30 @@ async function png(px) {
 
 async function existe(url) { try { await Deno.stat(url); return true; } catch { return false; } }
 
-const bytes = await png(desenhar());
+/* O provisório: o WebP do repositório; sem ele, o desenho em PNG. */
+let ext = "webp";
+if (!(await existe(new URL("assets/rituais/provisorio.webp", RAIZ)))) {
+  ext = "png";
+  const urlPng = new URL("assets/rituais/provisorio.png", RAIZ);
+  if (!(await existe(urlPng))) {
+    await Deno.writeFile(urlPng, await png(desenhar()));
+    console.log("assets/rituais/provisorio.png recriado pelo desenho — converta com testes/otimizar-imagens.py --aplicar assets/rituais");
+  }
+}
+const bytes = await Deno.readFile(new URL("assets/rituais/provisorio." + ext, RAIZ));
 let criados = 0, mantidos = 0, ignorados = [];
-async function garantir(rel) {
-  const url = new URL(rel, RAIZ);
+async function garantir(pasta) {
+  const url = new URL(pasta + "simbolo." + ext, RAIZ);
+  if (await existe(new URL(pasta + "simbolo.webp", RAIZ)) || await existe(new URL(pasta + "simbolo.png", RAIZ))) { mantidos++; return; }
   if (await existe(url)) { mantidos++; return; }
-  await Deno.mkdir(new URL(".", url), { recursive: true });
+  await Deno.mkdir(new URL(pasta, RAIZ), { recursive: true });
   await Deno.writeFile(url, bytes);
   criados++;
 }
-await garantir("assets/rituais/provisorio.png");
 for (const r of lista) {
   const m = ID.exec(String(r && r.id || ""));
   if (!m) { ignorados.push(r && r.id); continue; }
-  await garantir("assets/rituais/" + m[1] + "/" + m[2] + "/simbolo.png");
+  await garantir("assets/rituais/" + m[1] + "/" + m[2] + "/");
 }
-console.log(`${lista.length} rituais no catálogo · ${criados} PNG criados · ${mantidos} já existiam (não tocados)` + (ignorados.length ? ` · ids fora do padrão: ${ignorados.join(", ")}` : ""));
+console.log(`${lista.length} rituais no catálogo · ${criados} provisório(s) criado(s) (.${ext}) · ${mantidos} já existiam (não tocados)` + (ignorados.length ? ` · ids fora do padrão: ${ignorados.join(", ")}` : ""));
+if (criados) console.log("Agora: deno run --allow-read --allow-write testes/gerar-mapa-imagens.js");

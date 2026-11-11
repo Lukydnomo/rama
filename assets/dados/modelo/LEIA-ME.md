@@ -12,14 +12,14 @@ camadas de uma versão tenham o mesmo tamanho**.
 
 | Arquivo | Para quê |
 |---|---|
-| `base-dado.png` | a arte de baixo. Pode preencher o quadrado inteiro: o site aplica a máscara. |
-| `mascara-d20.png` / `mascara-d20.svg` | branco opaco na silhueta, transparente fora. É máscara **alfa**: recorta, não aparece. A do site é `assets/dados/mascaras/d20-v1.svg`. |
-| `camada-facetas.png` | detalhe transparente opcional (as arestas). Tire do tema se quiser só a silhueta. |
-| `camada-detalhes-vazia.png` | camada 100% transparente para desenhar símbolos, brilhos e ornamentos. Parece vazia de propósito. |
-| `guia-alinhamento.png` | contorno, eixos e área central. **Não entra na composição final.** |
+| `base-dado.webp` | a arte de baixo. Pode preencher o quadrado inteiro: o site aplica a máscara. |
+| `mascara-d20.webp` / `mascara-d20.svg` | branco opaco na silhueta, transparente fora. É máscara **alfa**: recorta, não aparece. A do site é `assets/dados/mascaras/d20-v1.svg`. |
+| `camada-facetas.webp` | detalhe transparente opcional (as arestas). Tire do tema se quiser só a silhueta. |
+| `camada-detalhes-vazia.webp` | camada 100% transparente para desenhar símbolos, brilhos e ornamentos. Parece vazia de propósito. |
+| `guia-alinhamento.webp` | contorno, eixos e área central. **Não entra na composição final.** |
 | `modelo-editavel.svg` | os grupos (base, facetas, detalhes, guia) para editar. Oculte o guia e exporte a **página inteira**, nunca só o conteúdo selecionado. |
-| `previa-dado.png` | a composição recortada, para conferência. Sem número. |
-| `fundo-notificacao-exemplo.png` | exemplo de fundo (3200 × 1000). O fundo não precisa ser quadrado. |
+| `previa-dado.webp` | a composição recortada, para conferência. Sem número. |
+| `fundo-notificacao-exemplo.webp` | exemplo de fundo (3200 × 1000). O fundo não precisa ser quadrado. |
 | `tema-exemplo.json` | um tema no contrato do catálogo (`js/temas-dados.js`). |
 
 ## Ordem das camadas no site
@@ -47,13 +47,14 @@ legível.
 ## Passo a passo
 
 1. **Criar a arte a partir do modelo.** Abra `modelo-editavel.svg` (ou use as
-   PNGs) e pinte base e detalhes em 1024 × 1024.
-2. **Exportar mantendo proporção e alinhamento.** Cada camada como PNG (ou WebP)
+   imagens do kit, em WebP sem perda — GIMP, Krita e Photoshop abrem) e pinte base e detalhes em 1024 × 1024.
+2. **Exportar mantendo proporção e alinhamento.** Cada camada como WebP sem perda (ou PNG,
+   que você converte com `python testes/otimizar-imagens.py --aplicar assets/dados`)
    com transparência verdadeira, na tela inteira, sem recortar ao conteúdo — é o
    que mantém os detalhes no lugar. Sem números, rótulos ou o guia na arte.
 3. **Adicionar ao projeto.** Uma pasta por tema e versão:
-   `assets/dados/temas/<id>/v<versão>/` com `base.png`, as camadas, `fundo.png` e
-   `previa.png` (a composição recortada, para listas). Versões são imutáveis: arte
+   `assets/dados/temas/<id>/v<versão>/` com `base.webp`, as camadas, `fundo.webp` e
+   `previa.webp` (a composição recortada, para listas). Versões são imutáveis: arte
    nova vai numa pasta `v2/`, e as rolagens antigas continuam com a `v1`.
 4. **Registrar no catálogo.** Acrescente o tema em `BRUTO`, em
    `js/temas-dados.js`, no formato de `tema-exemplo.json` (id estável em

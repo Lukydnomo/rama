@@ -880,6 +880,15 @@ segredo nenhum — ele os lê das Script Properties. Publicá-lo não expõe nad
 
 ### Atualizar o backend
 
+**v7.1.1 — PRENSA:** imagens em WebP. Publique o site inteiro de `assets/rituais`,
+`assets/criaturas` e `assets/dados` (os `.webp` novos; os `.png` trocados saíram
+da árvore), mais `js/ordem/rituais.js`, `js/criaturas.js`, `js/temas-dados.js` e
+`js/versao.js`. O Apps Script **não precisa** ser republicado: a cópia do
+catálogo de temas no `Codigo.gs` mudou só nos caminhos das imagens, que o
+servidor não usa (ele guarda e confere id e versão do tema). Troque o
+`Codigo.gs` na próxima publicação do backend, para as cópias continuarem
+idênticas.
+
 **v7.1.0 — VETOR:** só o site (fórmulas nos atributos da ficha Universal).
 Publique `js/ficha.js`, `js/paginas/ficha-geral.js`, `js/validacao.js`,
 `js/versao.js`, `css/ficha.css` e `css/modern20/ficha.css`. O schema da ficha
@@ -1825,7 +1834,7 @@ Três números diferentes, que não se misturam:
 
 | | Onde | O que é |
 |---|---|---|
-| versão do aplicativo | `js/versao.js` | o que a pessoa vê: v7.1.0 |
+| versão do aplicativo | `js/versao.js` | o que a pessoa vê: v7.1.1 |
 | `schemaVersion` | `js/ficha.js` | o formato da FICHA |
 | `versaoFormato` | `js/config.js` | o formato dos arquivos de importação |
 

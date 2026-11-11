@@ -47,13 +47,21 @@
      Como as imagens das criaturas: a pasta sai do id estável do ritual
      oficial, pelo PREFIXO do id (não pela fonte exibida, que às vezes é
      corrigida):  op.ritual.cicatrizacao → assets/rituais/op/cicatrizacao/
-     simbolo.png. Na ficha (e nas cópias da Homebrew), o vínculo é o
+     simbolo.webp. Na ficha (e nas cópias da Homebrew), o vínculo é o
      `origemCatalogoId`; na biblioteca, o próprio `id`. Sem vínculo, ou
      se o arquivo não carregar, vale o símbolo provisório compartilhado.
-     Trocar uma arte é só trocar o PNG: nada aqui muda.
+     Trocar uma arte é só trocar o arquivo: nada aqui muda.
+
+     v7.2: o formato é WebP. Os símbolos que continuam em PNG (o PNG saiu
+     menor) estão no mapa abaixo, GERADO a partir do disco por
+     testes/gerar-mapa-imagens.js — cada um carrega pelo caminho certo na
+     primeira tentativa, sem tentar .webp e cair no .png.
      ================================================================= */
 
-  var SIMBOLO_PROVISORIO = "assets/rituais/provisorio.png";
+/* >>> mapa gerado (testes/gerar-mapa-imagens.js) */
+  var SIMBOLO_PROVISORIO = "assets/rituais/provisorio.webp";
+  var SIMBOLOS_EM_PNG = {};
+  /* <<< mapa gerado */
   var ID_DE_RITUAL = /^(op|sah|as[0-9]{1,2})\.ritual\.([a-z0-9][a-z0-9.-]*)$/;
 
   function idDoSimbolo(alvo) {
@@ -67,7 +75,9 @@
   /* O caminho relativo à raiz do site ("" quando não há ritual oficial). */
   function caminhoDoSimbolo(alvo) {
     var m = ID_DE_RITUAL.exec(idDoSimbolo(alvo));
-    return m ? "assets/rituais/" + m[1] + "/" + m[2] + "/simbolo.png" : "";
+    if (!m) return "";
+    var pasta = m[1] + "/" + m[2];
+    return "assets/rituais/" + pasta + "/simbolo." + (SIMBOLOS_EM_PNG[pasta] ? "png" : "webp");
   }
   function urlDe(caminho) { var u = U(); return u && u.url ? u.url(caminho) : caminho; }
   function imagemDoRitual(alvo) {
