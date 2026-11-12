@@ -5,6 +5,17 @@ padrão e normaliza o que chega de fora. Onde ela é guardada — inteira em
 `fichaJson` (formato antigo) ou em blocos (v2.15) — é assunto do backend, e não muda
 nada aqui: ver [DATABASE.md](DATABASE.md).
 
+## Tormenta20 — v8.0 / schema 34
+
+`tipoFicha: "tormenta20"` e o bloco `tormenta20` (`js/tormenta20/regras.js`).
+O formato completo, campo a campo, está em [TORMENTA20.md](TORMENTA20.md#a-ficha-fichatormenta20).
+Nada calculado é gravado (PV, PM, Defesa e perícias saem do motor); o estado
+atual (PV, PM, temporários, condições, efeitos ativos, usos) é gravado e
+preservado quando um atributo muda. Exportar leva os ids de catálogo do bloco
+como `idT20` (a importação apaga `id`) e os devolve; itens, efeitos ativos,
+engenhocas e parceiros nascem com ids novos. Sem conversão: uma ficha 33 abre
+igual; uma aba ainda na 33 recusa a ficha 34 em vez de descartar o bloco.
+
 ## Fórmulas nos atributos — v7.1 / schema 33
 
 Ficha Universal: cada item de `atributos` ganhou `formula` (texto, até 200

@@ -61,6 +61,8 @@ var SISTEMAS_DO_RAMA = [
     ferramentas: ['covil'], mecanicas: [] },
   { id: 'brutal', nome: 'BRUTAL', arquivo: 'Brutal.gs',
     ferramentas: ['diretora'], mecanicas: [] },
+  { id: 'tormenta20', nome: 'Tormenta20', arquivo: 'Tormenta20.gs',
+    ferramentas: ['mesaT20'], mecanicas: [] },
   { id: 'universal', nome: 'Universal', arquivo: 'Universal.gs',
     ferramentas: ['combate'], mecanicas: [] },
 ];
@@ -137,6 +139,7 @@ var MODULOS_DE_SISTEMA = {
   vampiro: function () { return typeof sistemaVampiro === 'function' ? sistemaVampiro() : null; },
   goblins: function () { return typeof sistemaGoblins === 'function' ? sistemaGoblins() : null; },
   brutal: function () { return typeof sistemaBrutal === 'function' ? sistemaBrutal() : null; },
+  tormenta20: function () { return typeof sistemaTormenta20 === 'function' ? sistemaTormenta20() : null; },
   universal: function () { return typeof sistemaUniversal === 'function' ? sistemaUniversal() : null; },
 };
 

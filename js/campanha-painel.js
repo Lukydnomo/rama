@@ -251,6 +251,26 @@
     return base;
   }
 
+  /* Tormenta20 (v8.0): raça, classes e nível identificam; PV, PM, Defesa
+     e condições vêm do resumo calculado no SERVIDOR com o motor (e seguem
+     "Esconder status dos jogadores"). */
+  function resumirTormenta20(p, base) {
+    var D = global.RAMATormenta20Dados;
+    var b = p.tormenta20 && typeof p.tormenta20 === "object" ? p.tormenta20 : {};
+    base.linhas.push("Tormenta20" + (b.raca ? " · " + b.raca : "") + (b.classes ? " · " + b.classes : "") + (b.nivel ? " · nível " + U.inteiro(b.nivel, 1) : ""));
+    if (!b.pv) return base;
+    var conds = (Array.isArray(b.condicoes) ? b.condicoes : []).slice(0, 8).map(function (c) { return { chave: c, nome: D && D.CONDICAO[c] ? D.CONDICAO[c].nome : c, ativa: true }; });
+    if (b.sangrando) conds.unshift({ chave: "sangrando", nome: "Sangrando", ativa: true });
+    base.condicoes = condicoesDoCartao(conds);
+    base.estatisticas = [
+      { chave: "pv", rotulo: "PV", valor: U.inteiro(b.pv.atual, 0) + "/" + U.inteiro(b.pv.max, 0) + (b.pv.temp ? " (+" + b.pv.temp + ")" : "") },
+      { chave: "pm", rotulo: "PM", valor: U.inteiro(b.pm.atual, 0) + "/" + U.inteiro(b.pm.max, 0) },
+      { chave: "defesa", rotulo: "Defesa", valor: String(U.inteiro(b.defesa, 10)) },
+      { chave: "iniciativa", rotulo: "Iniciativa", valor: (b.iniciativa >= 0 ? "+" : "") + U.inteiro(b.iniciativa, 0) },
+    ];
+    return base;
+  }
+
   function resumirOrdem(p, base) {
     var bruto = p.ordem && typeof p.ordem === "object" ? p.ordem : {};
     if (!R()) return base;
@@ -445,6 +465,7 @@
   registrar("vampiro", resumirVampiro);
   registrar("goblins", resumirGoblins);
   registrar("brutal", resumirBrutal);
+  registrar("tormenta20", resumirTormenta20);
   registrar("universal", resumirUniversal);
 
   global.RAMAPainelMesa = {

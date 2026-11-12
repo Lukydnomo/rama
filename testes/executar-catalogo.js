@@ -26,7 +26,7 @@ for (const c of ["js/config.js", "js/util.js", "js/sistemas.js", "js/suplementos
   "js/vampiro/catalogo.js", "js/vampiro/disciplinas-dados.js", "js/vampiro/antagonistas-dados.js",
   "js/oblivio/catalogo.js", "js/oblivio/ameacas-dados.js", "js/oblivio/buraco-dados.js", "js/oblivio/regras.js", "js/oblivio/buraco.js",
   "js/goblins/catalogo.js", "js/goblins/dados.js", "js/goblins/mesa.js",
-  "js/brutal/catalogo.js", "js/brutal/regras.js", "js/brutal/mesa.js"]) {
+  "js/brutal/catalogo.js", "js/brutal/regras.js", "js/brutal/mesa.js"].concat(["dados", "expressao", "racas", "classes-a", "classes-b", "classes-c", "origens", "deuses", "poderes", "equipamento", "magias", "magias-1", "magias-2", "magias-3", "magias-4", "magias-5", "ameacas", "ameacas-1", "ameacas-2", "ameacas-3", "ameacas-4", "ameacas-5", "ameacas-6", "ameacas-7", "parceiros", "itens-magicos", "itens-magicos-2", "mesa-dados", "regras"].map((a) => "js/tormenta20/" + a + ".js"))) {
   (0, eval)(await ler(c));
 }
 const U0 = globalThis.RAMAUtil;
@@ -70,8 +70,9 @@ t.grupo("Categorias · só as que têm conteúdo");
   t.igual("Vampiro (sem Geradores: o sistema não tem)", ids("vampiro"), ["criaturas", "disciplinas", "rituais", "alquimia", "clas", "predadores", "vantagens", "fichas", "equipamentos", "mesa"]);
   t.igual("Malditos Goblins", ids("goblins"), ["criaturas", "armas", "protecoes", "equipamentos", "magicos", "magias", "ocupacoes", "caracteristicas", "adaptacoes", "aventuras", "geradores"]);
   t.igual("BRUTAL (Corte Rápido)", ids("brutal"), ["arquetipos", "estilos", "vantagens", "acoes", "assassinos"]);
+  t.igual("Tormenta20 (Jogo do Ano)", ids("tormenta20"), ["racas", "classes", "origens", "divindades", "pericias", "poderes", "magias", "equipamento", "itensMagicos", "ameacas", "perigos", "regras"]);
   const erros = [];
-  for (const s of ["ordem", "oblivio", "vampiro", "goblins", "brutal"]) {
+  for (const s of ["ordem", "oblivio", "vampiro", "goblins", "brutal", "tormenta20"]) {
     for (const c of PC.categoriasDe(s)) {
       if (c.tipo) continue;
       const l = PC.entradasDe(s, c.id);
@@ -128,6 +129,29 @@ t.grupo("Vampiro V5 · Projetos e Jogo Ponderado");
   const proj = tudo(mesa[0].detalhes());
   t.ok("Projetos: Escopo, Lançamento (Escopo + 2), Dado do Projeto em 10", /Escopo/.test(proj) && /Escopo \+ 2/.test(proj) && /começa em 10/.test(proj));
   t.ok("a busca acha a Carta X e Linhas e Véus", busca("vampiro", "mesa", "Carta X").length === 1 && busca("vampiro", "mesa", "Linhas e Véus").length === 1);
+}
+
+t.grupo("Tormenta20 · os mesmos dados da ficha e da Mesa");
+{
+  const T = (m) => globalThis["RAMATormenta20" + m];
+  const n = (cat) => PC.entradasDe("tormenta20", cat).length;
+  t.igual("17 raças e 14 classes", [n("racas"), n("classes")], [17, 14]);
+  t.igual("origens do básico + a origem própria", n("origens"), T("Origens").ORIGENS.length + 1);
+  t.igual("as 20 divindades", n("divindades"), T("Deuses").DEUSES.length);
+  t.igual("todas as magias (1º ao 5º círculo)", n("magias"), T("Magias").MAGIAS.length);
+  t.ok("magias filtram por tipo, círculo e escola", PC.entradasDe("tormenta20", "magias").every((x) => x.f.tipo && /º círculo/.test(x.f.circulo) && x.f.escola));
+  const bola = tudo(busca("tormenta20", "magias", "Bola de Fogo")[0].detalhes());
+  t.ok("a consulta da magia mostra os aprimoramentos e a página", /Aprimoramentos/.test(bola) && /PM/.test(bola) && /p\. \d+/.test(bola));
+  t.ok("poderes gerais e de classe, com requisitos em texto", n("poderes") > T("Poderes").PODERES.length && /Destreza|Força|nível|treinado/.test(PC.entradasDe("tormenta20", "poderes").map((x) => x.linha).join(" ")));
+  t.igual("as 80 ameaças com ND (nativo)", n("ameacas"), T("Ameacas").AMEACAS.length);
+  const kobold = PC.entradasDe("tormenta20", "ameacas").filter((x) => /ND 1\/4|ND 1\/2/.test(x.marcas.join(" ")));
+  t.ok("ND fracionário aparece como fração", kobold.length > 0);
+  const ficha = tudo(PC.entradasDe("tormenta20", "ameacas")[0].detalhes());
+  t.ok("a ficha de ameaça tem Defesa, PV, resistências e ataques", /Defesa/.test(ficha) && /PV/.test(ficha) && /Fort/.test(ficha) && /Ataques/.test(ficha));
+  t.ok("perigos: armadilhas, perigos complexos, doenças e ambiente", ["Armadilha", "Perigo complexo", "Doença", "Ambiente"].every((k) => PC.entradasDe("tormenta20", "perigos").some((x) => x.f.tipo === k)));
+  t.ok("condições, manobras, parceiros e a tabela de NPC", ["Condição", "Manobra", "Parceiro", "Tabela"].every((k) => PC.entradasDe("tormenta20", "regras").some((x) => x.f.tipo === k)));
+  t.ok("equipamento inclui materiais especiais e melhorias", ["Material especial", "Melhoria (superior)", "Escudo", "Munição"].every((k) => PC.entradasDe("tormenta20", "equipamento").some((x) => x.f.tipo === k)));
+  t.ok("ameaças: Copiar para o Homebrew", /Copiar para o Homebrew/.test(fonteDaPagina) && /sistema: "tormenta20"/.test(fonteDaPagina));
 }
 
 t.grupo("Outros sistemas · os dados das fichas e das campanhas");

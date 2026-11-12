@@ -703,6 +703,35 @@
         });
       },
     },
+    /* Tormenta20 (v8.0): as ameaças do Livro Básico no formato do livro,
+       com ND fracionário. A Mesa da campanha põe uma ocorrência
+       independente no combate; "Copiar para o Homebrew" cria uma ficha
+       editável. */
+    tormenta20: {
+      disponivel: function () { return !!(global.RAMATormenta20Ameacas && global.RAMATormenta20Ameacas.AMEACAS.length); },
+      nomeDoLivro: "Tormenta20 — Jogo do Ano",
+      ajuda: "As ameaças do Livro Básico (cap. 7). ND é o nível de desafio de Tormenta20. Na campanha, a Mesa as põe em combate; para ajustar uma, copie para o seu Homebrew.",
+      fontes: function () { return [{ valor: "LB", rotulo: "Livro básico" }]; },
+      filtro: { rotulo: "Grupo", todos: "Todos os grupos", opcoes: function () {
+        var G0 = global.RAMATormenta20Ameacas.GRUPOS;
+        return Object.keys(G0).filter(function (k) { return global.RAMATormenta20Ameacas.AMEACAS.some(function (a) { return a.grupo === k; }); }).map(function (k) { return { valor: k, rotulo: G0[k] }; });
+      } },
+      entradas: function () {
+        return global.RAMATormenta20Ameacas.listar().map(function (a) {
+          return {
+            id: a.id, nome: a.nome, fonte: "LB", filtro: a.grupo, referencia: "Livro básico, p. " + a.pagina,
+            chave: U.chaveDeBusca(a.nome + " " + a.tipoNome + " " + a.grupoNome + " " + a.resumo),
+            marcas: ["ND " + a.nd, a.tipoNome, a.papel === "lacaio" ? "Lacaio" : a.papel === "especial" ? "Especial" : null].filter(Boolean),
+            linha: global.RAMAFichasNativas.linhaTormenta20(a),
+            detalhes: function () {
+              var botao = el("button.r-botao.r-botao--mini", { type: "button", texto: "Copiar para o Homebrew" });
+              botao.addEventListener("click", function () { copiarAmeacaT20(a, botao); });
+              return el("div.pilha--curta", { class: "pilha" }, [global.RAMAFichasNativas.tormenta20(a), global.RAMAApi && global.RAMAApi.salvarHomebrew ? botao : null]);
+            },
+          };
+        });
+      },
+    },
   };
 
 
@@ -806,7 +835,271 @@
   ];
 
 
-  var CATEGORIAS = { ordem: ORDEM, oblivio: OBLIVIO, vampiro: VAMPIRO, goblins: GOBLINS, brutal: BRUTAL };
+  /* =================================================================
+     TORMENTA20 — JOGO DO ANO (v8.0) — os mesmos dados da ficha e da mesa
+     ================================================================= */
+
+  function T2(m) { return global["RAMATormenta20" + (m || "")]; }
+  function refT20(pag) { return pag ? "T20 p. " + pag : "T20"; }
+  function tituloT20(pag) { return "Tormenta20 — Jogo do Ano" + (pag ? ", p. " + pag : ""); }
+  var SIGLA_T20 = { "for": "For", des: "Des", con: "Con", "int": "Int", sab: "Sab", car: "Car" };
+  function sinalT20(v) { var n = Number(v) || 0; return (n >= 0 ? "+" : "−") + Math.abs(n); }
+  function atributosT20(a) {
+    var x = a || {}, p = [];
+    Object.keys(x.fixo || {}).forEach(function (k) { p.push(SIGLA_T20[k] + " " + sinalT20(x.fixo[k])); });
+    if (x.escolha) p.push("+" + x.escolha.valor + " em " + x.escolha.quantidade + " atributos à escolha" + (x.escolha.exceto ? " (exceto " + x.escolha.exceto.map(function (k) { return SIGLA_T20[k]; }).join(", ") + ")" : ""));
+    return p.join(", ");
+  }
+  function nomePericiaT20(k) { var P0 = T2("Dados").PERICIA[k]; return P0 ? P0.nome : humanizar(k); }
+  function nomePoderT20(id, classe) {
+    var P0 = T2("Poderes").PODER[id];
+    if (P0) return P0.nome;
+    var R0 = T2();
+    return R0 && R0.nomeDoPoder ? R0.nomeDoPoder(id, classe) : humanizar(id);
+  }
+  function nomeItemT20(id) { var E0 = T2("Equipamento").ITEM[id]; return E0 ? E0.nome : humanizar(id); }
+  function moedaT20(v) { return v === undefined || v === null ? "" : "T$ " + Number(v).toLocaleString("pt-BR"); }
+  /* Requisitos como texto: o motor confere o poder contra uma ficha
+     vazia; o que falta é o requisito. */
+  var calcVazioT20 = null;
+  function requisitosT20(def, classe) {
+    var R0 = T2();
+    if (!def || !def.req || !R0 || !R0.cumpreRequisitos) return "";
+    try {
+      var vazia = R0.fichaVazia();
+      if (!calcVazioT20) calcVazioT20 = R0.calcular(vazia);
+      return R0.cumpreRequisitos(vazia, def, classe, calcVazioT20).falta.map(function (f) { return f.replace(/^\(mesa\) /, ""); }).join("; ");
+    } catch (e) { return ""; }
+  }
+
+  var TORMENTA20 = [
+    { id: "racas", nome: "Raças", tem: function () { return !!T2("Racas"); },
+      ajuda: "As 17 raças do Livro Básico. A criação de personagem aplica os ajustes e as escolhas.",
+      entradas: function () {
+        return T2("Racas").RACAS.map(function (r) {
+          var atr = r.variantes ? r.variantes.map(function (v) { return v.nome + ": " + atributosT20(v.atributos); }).join(" · ") : atributosT20(r.atributos);
+          return entradaSimples("raca", { chave: r.id, nome: r.nome }, {
+            linha: atr, referencia: refT20(r.pagina), tituloRef: tituloT20(r.pagina), busca: r.habilidades.map(function (h) { return h.nome + " " + (h.resumo || ""); }).join(" "),
+            pares: [["Atributos", atr], ["Fonte", tituloT20(r.pagina)]],
+            extra: function () { return listaDeTextos(r.habilidades.map(function (h) { return h.nome + ": " + (h.resumo || ""); }), "Habilidades de raça"); },
+          });
+        });
+      } },
+    { id: "classes", nome: "Classes", tem: function () { return !!T2("Classes"); },
+      ajuda: "As 14 classes: PV, PM, perícias, proficiências, a tabela de habilidades por nível e os poderes de classe.",
+      entradas: function () {
+        return T2("Classes").CLASSES.map(function (c) {
+          var per = c.pericias || {};
+          var pericias = (per.fixas || []).map(nomePericiaT20).concat((per.ou || []).map(function (o) { return o.map(nomePericiaT20).join(" ou "); })).join(", ") + (per.escolha ? " e mais " + per.escolha.n + " entre " + per.escolha.de.map(nomePericiaT20).join(", ") : "");
+          var linha = "PV " + c.pv.inicial + " + Con (" + c.pv.nivel + " + Con/nível) · PM " + c.pm + "/nível";
+          return entradaSimples("cls", { chave: c.id, nome: c.nome }, {
+            linha: linha, referencia: refT20(c.pagina), tituloRef: tituloT20(c.pagina), busca: Object.keys(c.habilidades || {}).map(function (k) { return c.habilidades[k].nome; }).join(" "),
+            pares: [["Atributo-chave", c.atributo], ["Pontos de vida", c.pv.inicial + " + Constituição no 1º nível; " + c.pv.nivel + " + Constituição por nível"], ["Pontos de mana", c.pm + " por nível"], ["Perícias", pericias], ["Proficiências", (c.proficiencias || []).map(humanizar).join(", ") || "Nenhuma além das simples"], ["Magias", c.magias ? humanizar(c.magias.tipo) : ""], ["Fonte", tituloT20(c.pagina)]],
+            extra: function () {
+              var niveis = Object.keys(c.tabela || {}).map(function (n) {
+                return n + "º: " + c.tabela[n].map(function (k) { var h = (c.habilidades || {})[k]; return h ? h.nome : humanizar(k); }).join(", ");
+              });
+              var habs = Object.keys(c.habilidades || {}).filter(function (k) { return c.habilidades[k].resumo; }).map(function (k) { return c.habilidades[k].nome + ": " + c.habilidades[k].resumo; });
+              return el("div.pilha--curta", { class: "pilha" }, [
+                listaDeTextos(niveis, "Progressão"),
+                listaDeTextos(habs, "Habilidades de classe"),
+                listaDeTextos((c.poderes || []).map(function (p) { var r = requisitosT20(p, c.id); return p.nome + ": " + (p.resumo || "") + (r ? " (Requisitos: " + r + ")" : ""); }), "Poderes de " + c.nome),
+              ]);
+            },
+          });
+        });
+      } },
+    { id: "origens", nome: "Origens", tem: function () { return !!T2("Origens"); },
+      ajuda: "Cada origem dá itens e dois benefícios entre as perícias e os poderes listados. A criação também permite a origem própria (p. 95).",
+      entradas: function () {
+        var O0 = T2("Origens");
+        return O0.ORIGENS.map(function (o) {
+          var ben = o.pericias.map(nomePericiaT20).concat(o.poderes.map(function (p) { return nomePoderT20(p); }));
+          return entradaSimples("ori", { chave: o.id, nome: o.nome, resumo: o.unico ? o.unico.nome + ": " + o.unico.resumo : "" }, {
+            linha: ben.join(", "), referencia: refT20(o.pagina), tituloRef: tituloT20(o.pagina),
+            pares: [["Itens", (o.itens || []).join(", ")], ["Benefícios (escolha dois)", ben.join(", ") + (o.unico ? ", " + o.unico.nome : "")], ["Fonte", tituloT20(o.pagina)]],
+          });
+        }).concat([entradaSimples("ori", { chave: "propria", nome: "Origem própria", resumo: O0.PROPRIA.resumo }, { linha: "Regra opcional", referencia: refT20(O0.PROPRIA.pagina), tituloRef: tituloT20(O0.PROPRIA.pagina) })]);
+      } },
+    { id: "divindades", nome: "Divindades", tem: function () { return !!T2("Deuses"); },
+      ajuda: "O Panteão: quem pode ser devoto, a energia canalizada, a arma preferida, os poderes concedidos e as obrigações e restrições.",
+      entradas: function () {
+        return T2("Deuses").DEUSES.map(function (d) {
+          var devotos = Array.isArray(d.devotos) ? d.devotos.map(humanizar).join(", ") : humanizar(d.devotos);
+          return entradaSimples("deus", { chave: d.id, nome: d.nome, resumo: d.obrigacoes ? "Obrigações e restrições: " + d.obrigacoes : "" }, {
+            linha: (d.titulo || "") + " · energia " + d.energia, referencia: refT20(d.pagina), tituloRef: tituloT20(d.pagina),
+            pares: [["Título", d.titulo], ["Devotos", devotos], ["Energia", humanizar(d.energia)], ["Arma preferida", nomeItemT20(d.armaPreferida)], ["Poderes concedidos", (d.poderes || []).map(function (p) { return nomePoderT20(p); }).join(", ")], ["Fonte", tituloT20(d.pagina)]],
+          });
+        });
+      } },
+    { id: "pericias", nome: "Perícias", tem: function () { return !!T2("Dados"); },
+      ajuda: "Perícia = ½ nível + atributo + treino (+2, +4 no 7º, +6 no 15º). Os usos rolam pela ficha, com a CD quando o livro dá uma.",
+      entradas: function () {
+        return T2("Dados").PERICIAS.map(function (p) {
+          var marcas = [p.treinada ? "Só treinada" : null, p.armadura ? "Penalidade de armadura" : null].filter(Boolean);
+          return entradaSimples("per", { chave: p.chave, nome: p.nome }, {
+            linha: SIGLA_T20[p.atributo] + (marcas.length ? " · " + marcas.join(" · ") : ""), marcas: marcas, referencia: refT20(p.pagina), tituloRef: tituloT20(p.pagina), busca: (p.usos || []).map(function (u) { return u.nome; }).join(" "),
+            pares: [["Atributo", SIGLA_T20[p.atributo]], ["Fonte", tituloT20(p.pagina)]],
+            extra: function () { return listaDeTextos((p.usos || []).map(function (u) { return u.nome + (u.cd ? " (CD " + u.cd + ")" : "") + (u.treinado ? " · só treinado" : "") + (u.execucao ? " · " + u.execucao : "") + ": " + (u.resumo || ""); }), "Usos"); },
+          });
+        });
+      } },
+    { id: "poderes", nome: "Poderes", tem: function () { return !!T2("Poderes"); },
+      ajuda: "Poderes gerais (combate, destino, magia, concedidos e da Tormenta) e poderes de classe, com os requisitos. Os que mudam cálculos mudam a ficha.",
+      entradas: function () {
+        var G0 = T2("Poderes").GRUPOS;
+        var gerais = T2("Poderes").PODERES.map(function (p) {
+          var r = requisitosT20(p);
+          return entradaSimples("pod", { chave: p.id, nome: p.nome, resumo: p.resumo }, {
+            linha: (G0[p.grupo] || humanizar(p.grupo)) + (r ? " · " + r : ""), referencia: refT20(p.pagina), tituloRef: tituloT20(p.pagina), f: { grupo: G0[p.grupo] || humanizar(p.grupo) },
+            pares: [["Tipo", "Poder " + (p.grupo === "concedido" ? "concedido" : "de " + (G0[p.grupo] || p.grupo).toLowerCase())], ["Requisitos", r], ["Fonte", tituloT20(p.pagina)]],
+          });
+        });
+        var deClasse = [];
+        T2("Classes").CLASSES.forEach(function (c) {
+          (c.poderes || []).forEach(function (p) {
+            if (p.aumento) return;
+            deClasse.push(entradaSimples("pc:" + c.id, { chave: p.id, nome: p.nome, resumo: p.resumo }, {
+              linha: "Poder de " + c.nome, referencia: refT20(p.pagina || c.pagina), tituloRef: tituloT20(p.pagina || c.pagina), f: { grupo: "De classe · " + c.nome },
+              pares: [["Classe", c.nome], ["Requisitos", requisitosT20(p, c.id)], ["Fonte", tituloT20(p.pagina || c.pagina)]],
+            }));
+          });
+        });
+        return gerais.concat(deClasse);
+      },
+      filtros: function () { return [{ chave: "grupo", rotulo: "Tipo", todos: "Todos", ordem: ["Combate", "Destino", "Magia", "Concedidos", "Tormenta"] }]; } },
+    { id: "magias", nome: "Magias", tem: function () { return !!T2("Magias"); },
+      ajuda: "As magias arcanas e divinas do 1º ao 5º círculo, com os aprimoramentos. Na ficha, o lançamento mostra o custo e o efeito antes de confirmar.",
+      entradas: function () {
+        var M0 = T2("Magias"), D0 = T2("Dados");
+        var escolas = {}; D0.ESCOLAS.forEach(function (e) { escolas[e[0]] = e[1]; });
+        return M0.MAGIAS.map(function (m) {
+          var tipo = m.tipo === "universal" ? "Universal" : humanizar(m.tipo);
+          var b = m.base || {};
+          var campos = [["Execução", M0.nomeExecucao ? M0.nomeExecucao(b.ex) : humanizar(b.ex)], ["Alcance", humanizar(b.al)], ["Alvo / área / efeito", b.alvo], ["Duração", humanizar(b.du)], ["Resistência", b.res]];
+          return entradaSimples("mag", { chave: m.id, nome: m.nome, resumo: m.resumo }, {
+            linha: tipo + " " + m.circulo + "º · " + (escolas[m.escola] || m.escola) + " · " + D0.CUSTO_CIRCULO[m.circulo] + " PM", referencia: refT20(m.pagina), tituloRef: tituloT20(m.pagina),
+            f: { tipo: tipo, circulo: m.circulo + "º círculo", escola: escolas[m.escola] || m.escola },
+            pares: [["Tipo e círculo", tipo + " " + m.circulo + "º círculo (" + D0.CUSTO_CIRCULO[m.circulo] + " PM)"], ["Escola", escolas[m.escola] || m.escola]].concat(campos).concat([["Fonte", tituloT20(m.pagina)]]),
+            extra: function () {
+              return listaDeTextos((m.aprimoramentos || []).map(function (a) { return (a.tipo === "T" ? "Truque" : "+" + a.custo + " PM") + (a.requer ? " (requer " + a.requer + "º círculo)" : "") + ": " + a.texto; }), "Aprimoramentos");
+            },
+          });
+        });
+      },
+      filtros: function () { return [{ chave: "tipo", rotulo: "Tipo", todos: "Todas" }, { chave: "circulo", rotulo: "Círculo", todos: "Todos" }, { chave: "escola", rotulo: "Escola", todos: "Todas" }]; } },
+    { id: "equipamento", nome: "Equipamento", tem: function () { return !!T2("Equipamento"); },
+      ajuda: "Armas, munições, armaduras e escudos, itens gerais, alquímicos, melhorias (itens superiores) e materiais especiais. Carga em espaços.",
+      entradas: function () {
+        var E0 = T2("Equipamento");
+        var armas = E0.ARMAS.map(function (a) {
+          var crit = (a.margem && a.margem < 20 ? a.margem + "/" : "") + "x" + (a.mult || 2);
+          return entradaSimples("arma", { chave: a.id, nome: a.nome }, {
+            linha: humanizar(a.proficiencia) + " · " + a.dano + " " + crit + " · " + a.tipo + " · " + moedaT20(a.preco), referencia: refT20(a.pagina), tituloRef: tituloT20(a.pagina), f: { tipo: "Arma · " + humanizar(a.proficiencia) },
+            pares: [["Proficiência", humanizar(a.proficiencia)], ["Propósito", humanizar(a.proposito)], ["Empunhadura", humanizar(a.empunhadura)], ["Dano", a.dano], ["Crítico", crit], ["Alcance", a.alcance ? humanizar(a.alcance) : ""], ["Tipo", a.tipo], ["Espaços", a.espacos], ["Preço", moedaT20(a.preco)], ["Habilidades", (a.habilidades || []).map(humanizar).join(", ")], ["Fonte", tituloT20(a.pagina)]],
+          });
+        });
+        var mun = E0.MUNICOES.map(function (m) { return entradaSimples("mun", { chave: m.id, nome: m.nome }, { linha: "Munição · " + moedaT20(m.preco), referencia: refT20(m.pagina), tituloRef: tituloT20(m.pagina), f: { tipo: "Munição" }, pares: [["Quantidade", m.quantidade], ["Espaços", m.espacos], ["Preço", moedaT20(m.preco)], ["Fonte", tituloT20(m.pagina)]] }); });
+        var arm = E0.ARMADURAS.map(function (a) {
+          return entradaSimples("armd", { chave: a.id, nome: a.nome }, {
+            linha: humanizar(a.tipoArmadura) + " · Defesa +" + a.defesa + " · penalidade " + (a.penalidade ? "−" + a.penalidade : "0") + " · " + moedaT20(a.preco), referencia: refT20(a.pagina), tituloRef: tituloT20(a.pagina), f: { tipo: a.tipoArmadura === "escudo" ? "Escudo" : "Armadura" },
+            pares: [["Tipo", humanizar(a.tipoArmadura)], ["Defesa", "+" + a.defesa], ["Penalidade de armadura", a.penalidade ? "−" + a.penalidade : "0"], ["Espaços", a.espacos], ["Preço", moedaT20(a.preco)], ["Fonte", tituloT20(a.pagina)]],
+          });
+        });
+        var itens = E0.ITENS.map(function (i) {
+          var u = i.uso || {};
+          return entradaSimples("item", { chave: i.id, nome: i.nome, resumo: i.resumo }, {
+            linha: humanizar(i.categoria) + " · " + moedaT20(i.preco) + " · " + i.espacos + " espaço(s)", referencia: refT20(i.pagina), tituloRef: tituloT20(i.pagina), f: { tipo: "Item · " + humanizar(i.categoria) },
+            pares: [["Categoria", humanizar(i.categoria)], ["Preço", moedaT20(i.preco)], ["Espaços", i.espacos], ["Uso", u.execucao ? humanizar(u.execucao) + (u.alcance ? ", alcance " + humanizar(u.alcance) : "") + (u.alvo ? ", " + u.alvo : "") : ""], ["Dano / efeito", u.dano ? u.dano.dados + " " + humanizar(u.dano.tipo) : ""], ["Resistência", u.resistencia ? humanizar(u.resistencia.pericia) + " (" + humanizar(u.resistencia.efeito) + ")" : ""], ["Fonte", tituloT20(i.pagina)]],
+          });
+        });
+        var mel = E0.MELHORIAS.map(function (m) { return entradaSimples("mel", { chave: m.id, nome: m.nome, resumo: m.resumo }, { linha: "Melhoria · " + (m.categorias || []).map(humanizar).join(", "), referencia: refT20(m.pagina), tituloRef: tituloT20(m.pagina), f: { tipo: "Melhoria (superior)" }, pares: [["Aplica-se a", (m.categorias || []).map(humanizar).join(", ")], ["Fonte", tituloT20(m.pagina)]] }); });
+        var mat = E0.MATERIAIS.map(function (m) {
+          return entradaSimples("mat", { chave: m.id, nome: m.nome }, {
+            linha: "Material especial", referencia: refT20(m.pagina), tituloRef: tituloT20(m.pagina), f: { tipo: "Material especial" },
+            pares: [["Em armas", m.arma], ["Em armaduras", m.armadura], ["Em esotéricos", m.esoterico], ["Preço adicional", Object.keys(m.precos || {}).map(function (k) { return humanizar(k) + " " + moedaT20(m.precos[k]); }).join(", ")], ["Fonte", tituloT20(m.pagina)]],
+          });
+        });
+        return armas.concat(mun, arm, itens, mel, mat);
+      },
+      filtros: function () { return [{ chave: "tipo", rotulo: "Tipo", todos: "Todos" }]; } },
+    { id: "itensMagicos", nome: "Itens mágicos", tem: function () { return !!(T2("ItensMagicos") && T2("ItensMagicos").ITENS); },
+      ajuda: "Encantos de armas e armaduras, armas e armaduras específicas, poções e pergaminhos, acessórios e artefatos. A mesa sorteia pelas tabelas do capítulo 8.",
+      entradas: function () {
+        var IM0 = T2("ItensMagicos");
+        var CAT = { menor: "Menor", medio: "Médio", maior: "Maior", artefato: "Artefato" };
+        var enc = IM0.ENCANTOS_ARMA.map(function (e) { return entradaSimples("enca", { chave: e.id, nome: e.nome, resumo: e.r }, { linha: "Encanto de arma" + (e.valor > 1 ? " · conta como " + e.valor + " encantos" : ""), referencia: refT20(333), tituloRef: tituloT20(333), f: { tipo: "Encanto de arma" } }); })
+          .concat(IM0.ENCANTOS_ARMADURA.map(function (e) { return entradaSimples("encd", { chave: e.id, nome: e.nome, resumo: e.r }, { linha: "Encanto de armadura" + (e.valor > 1 ? " · conta como " + e.valor + " encantos" : ""), referencia: refT20(337), tituloRef: tituloT20(337), f: { tipo: "Encanto de armadura" } }); }));
+        var acess = {}; Object.keys(IM0.ACESSORIOS || {}).forEach(function (k) { (IM0.ACESSORIOS[k] || []).forEach(function (id) { acess[id] = true; }); });
+        var esp = IM0.ITENS.map(function (i) {
+          var tipo = i.categoriaMagica === "artefato" ? "Artefato" : acess[i.id] ? "Acessório" : IM0.ARMAS_ESPECIFICAS.indexOf(i.id) >= 0 ? "Arma específica" : IM0.ARMADURAS_ESPECIFICAS.indexOf(i.id) >= 0 ? "Armadura específica" : "Item específico";
+          return entradaSimples("ime", { chave: i.id, nome: i.nome, resumo: i.resumo }, {
+            linha: tipo + " · " + (CAT[i.categoriaMagica] || i.categoriaMagica) + (i.preco ? " · " + moedaT20(i.preco) : ""), referencia: refT20(i.pagina), tituloRef: tituloT20(i.pagina), f: { tipo: tipo },
+            pares: [["Tipo", tipo + " " + (CAT[i.categoriaMagica] || i.categoriaMagica).toLowerCase()], ["Item base", i.base ? nomeItemT20(i.base) : ""], ["Preço", moedaT20(i.preco)], ["Fonte", tituloT20(i.pagina)]],
+          });
+        });
+        var poc = IM0.POCOES.map(function (p, n) {
+          var forma = p[5] || "pocao";
+          return entradaSimples("poc" + n, { chave: p[1], nome: p[4] }, { linha: humanizar(forma) + " · " + moedaT20(p[3]), referencia: refT20(341), tituloRef: tituloT20(341), f: { tipo: "Poção / óleo / granada" }, pares: [["Forma", humanizar(forma)], ["Preço", moedaT20(p[3])], ["Uso", IM0.REGRAS_POCOES.pocao]] });
+        });
+        var bar = entradaSimples("art", { chave: "baralhoDoCaos", nome: "Baralho do Caos (cartas)" }, { linha: "Tabela de cartas · " + IM0.BARALHO_DO_CAOS.length + " resultados", referencia: refT20(348), tituloRef: tituloT20(348), f: { tipo: "Artefato" },
+          extra: function () { return tabela(IM0.BARALHO_DO_CAOS.map(function (c) { return "até " + c[0] + " · " + c[1] + ": " + c[2]; }), "Cartas"); } });
+        return enc.concat(esp, poc, [bar]);
+      },
+      filtros: function () { return [{ chave: "tipo", rotulo: "Tipo", todos: "Todos" }]; } },
+    { id: "ameacas", nome: "Ameaças", nativo: "tormenta20" },
+    { id: "perigos", nome: "Perigos e ambiente", tem: function () { return !!(T2("Ameacas") && T2("Ameacas").PERIGOS.length); },
+      ajuda: "Armadilhas e perigos complexos (com ND), doenças e perigos do ambiente. Na Mesa, o mestre conduz um perigo complexo rodada a rodada.",
+      entradas: function () {
+        var A0 = T2("Ameacas");
+        var per = A0.PERIGOS.map(function (p) {
+          var complexo = p.tipo !== "armadilha";
+          return entradaSimples("prg", { chave: p.id, nome: p.nome, resumo: p.resumo }, {
+            linha: (complexo ? "Perigo complexo" : "Armadilha") + " · ND " + p.nd, referencia: refT20(p.pagina), tituloRef: tituloT20(p.pagina), f: { tipo: complexo ? "Perigo complexo" : "Armadilha" }, marcas: ["ND " + p.nd],
+            pares: [["ND", p.nd], ["Resistência", p.res ? humanizar(p.res) + " CD " + p.cd + (p.efeitoRes ? " (" + p.efeitoRes + ")" : "") : ""], ["Notar (Investigação)", p.investigacao ? "CD " + p.investigacao : ""], ["Desarmar (Ladinagem)", p.ladinagem ? "CD " + p.ladinagem : ""], ["Fonte", tituloT20(p.pagina)]],
+          });
+        });
+        var doe = (A0.DOENCAS || []).map(function (d) { return entradaSimples("doe", { chave: d.id, nome: d.nome, resumo: d.r || d.resumo }, { linha: "Doença · " + humanizar(d.via) + " · Fortitude CD " + d.cd, referencia: refT20(d.pagina), tituloRef: tituloT20(d.pagina), f: { tipo: "Doença" }, pares: [["Transmissão", humanizar(d.via)], ["Fortitude", "CD " + d.cd], ["Estágios", (d.estagios || []).map(humanizar).join(" → ")], ["Fonte", tituloT20(d.pagina)]] }); });
+        var amb = (A0.AMBIENTE || []).map(function (a) { return entradaSimples("amb", { chave: a.id, nome: a.nome, resumo: a.r }, { linha: "Ambiente", referencia: refT20(a.pagina), tituloRef: tituloT20(a.pagina), f: { tipo: "Ambiente" } }); });
+        return per.concat(doe, amb);
+      },
+      filtros: function () { return [{ chave: "tipo", rotulo: "Tipo", todos: "Todos" }]; } },
+    { id: "regras", nome: "Condições e regras", tem: function () { return !!T2("Dados"); },
+      ajuda: "Condições (com o que acontece quando se repetem), manobras, parceiros e a tabela de estatísticas de NPC. A ficha e a Mesa aplicam as condições.",
+      entradas: function () {
+        var D0 = T2("Dados"), PA0 = T2("Parceiros"), A0 = T2("Ameacas");
+        var cond = D0.CONDICOES.map(function (c) { return entradaSimples("cond", { chave: c.id, nome: c.nome, resumo: c.resumo }, { linha: "Condição" + (c.tipo ? " · " + humanizar(c.tipo) : ""), referencia: refT20(394), tituloRef: tituloT20(394), f: { tipo: "Condição" } }); });
+        var man = D0.MANOBRAS.map(function (m) { return entradaSimples("man", { chave: m.id, nome: m.nome, resumo: m.resumo }, { linha: "Manobra de combate", referencia: refT20(234), tituloRef: tituloT20(234), f: { tipo: "Manobra" } }); });
+        var par = PA0 ? Object.keys(PA0.TIPOS).map(function (k) {
+          var t = PA0.TIPOS[k];
+          return entradaSimples("par", { chave: k, nome: t.nome, resumo: t.resumo }, { linha: "Parceiro", referencia: refT20(t.pagina), tituloRef: tituloT20(t.pagina), f: { tipo: "Parceiro" },
+            extra: function () { return listaDeTextos(Object.keys(t.niveis || {}).map(function (n) { return humanizar(n) + ": " + t.niveis[n].r; }), "Por grau"); } });
+        }) : [];
+        var nds = A0 && A0.TABELA_NPC ? Object.keys(A0.TABELA_NPC).sort(function (x, y) { return A0.ndNumero(x) - A0.ndNumero(y); }) : [];
+        var npc = nds.length ? [entradaSimples("npc", { chave: "tabela", nome: "Estatísticas de NPC (Tabela 7-2)", resumo: "Ataque, dano, Defesa, PV, perícias e CD por ND. A Mesa gera a ficha rápida a partir desta tabela." }, { linha: "Tabela · " + nds.length + " linhas", referencia: refT20(322), tituloRef: tituloT20(322), f: { tipo: "Tabela" },
+          extra: function () { return tabela(nds.map(function (nd) { var l = A0.TABELA_NPC[nd]; return "ND " + nd + " (" + humanizar(l.patamar) + "): ataque +" + l.ataque + (l.ataques > 1 ? " x" + l.ataques : "") + ", dano " + l.dano + ", Defesa " + l.def + ", PV " + l.pv + ", perícias +" + l.pericias.join("/+") + ", CD " + l.cd; }), "Estatísticas de NPC"); } })] : [];
+        return cond.concat(man, par, npc);
+      },
+      filtros: function () { return [{ chave: "tipo", rotulo: "Tipo", todos: "Todos" }]; } },
+  ];
+
+  /* Copiar uma ameaça do Livro Básico para o Homebrew: uma ficha nova,
+     privada, que se pode editar sem mexer no catálogo. */
+  function copiarAmeacaT20(a, botao) {
+    if (!global.RAMAApi || !global.RAMAApi.salvarHomebrew) return;
+    botao.disabled = true;
+    var ficha = JSON.parse(JSON.stringify(a));
+    delete ficha.fonte;
+    var registro = { tipo: "criatura", sistema: "tormenta20", nome: a.nome + " (cópia)", visibilidade: "privado", categoria: a.grupoNome || "", origem: { tipo: "homebrew" }, tormenta20: ficha };
+    if (global.RAMACriaturas && global.RAMACriaturas.normalizar) registro = global.RAMACriaturas.normalizar(registro);
+    global.RAMAApi.salvarHomebrew(registro).then(function (r) {
+      botao.disabled = false;
+      if (r && r.ok) UI.avisoOk("Cópia salva no seu Homebrew (privada).");
+      else UI.avisoErro("Não foi possível copiar: " + ((r && r.erro) || "erro"));
+    }, function () { botao.disabled = false; UI.avisoErro("Sem conexão. Tente de novo."); });
+  }
+
+  var CATEGORIAS = { ordem: ORDEM, oblivio: OBLIVIO, vampiro: VAMPIRO, goblins: GOBLINS, brutal: BRUTAL, tormenta20: TORMENTA20 };
 
   /* Só as categorias com conteúdo. As carregadas sob demanda (rituais e
      itens de Ordem) contam como tendo conteúdo quando o módulo existe. */

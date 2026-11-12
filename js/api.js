@@ -63,6 +63,7 @@
     "ler_vampiro",
     "ler_goblins",
     "ler_brutal",
+    "ler_tormenta20",
 
     "salvar_foto",
     "salvar_perfil",
@@ -98,6 +99,10 @@
     /* E para a Mesa da Diretora de BRUTAL (v7.0): cada operação leva
        opId, e o servidor reconhece a segunda chegada pelo Thriller. */
     "brutal_operar",
+    /* E para a mesa de Tormenta20 (v8.0): salvar com rev e opId; operar
+       com opId gravado na mesa e em cada ficha tocada. */
+    "salvar_tormenta20",
+    "tormenta20_operar",
 
     /* registrar_rolagem repete com segurança porque carrega um id
        próprio: o servidor reconhece a segunda chegada e não cria a
@@ -196,6 +201,8 @@
     salvar_goblins: true,
     goblins_operar: true,
     brutal_operar: true,
+    salvar_tormenta20: true,
+    tormenta20_operar: true,
   };
 
   var LEITURAS = {};
@@ -867,6 +874,19 @@
     if (rev !== undefined && rev !== null) corpo.rev = rev;
     return post(corpo);
   }
+  /* Tormenta20 (v8.0): a mesa do Mestre. Ler (o mestre recebe tudo; o
+     jogador, a vista), salvar o estado (só o mestre, rev + opId) e
+     operar (recompensas, dano, descanso, ataques e magias contra
+     ameaças — rolados e aplicados no servidor, uma vez por opId). */
+  function lerTormenta20(campanhaId, opcoes) {
+    return post({ acao: "ler_tormenta20", campanhaId: campanhaId }, opcoes);
+  }
+  function salvarTormenta20(campanhaId, rev, opId, estado) {
+    return post({ acao: "salvar_tormenta20", campanhaId: campanhaId, rev: rev, opId: opId, estado: estado });
+  }
+  function tormenta20Operar(campanhaId, opId, operacao) {
+    return post({ acao: "tormenta20_operar", campanhaId: campanhaId, opId: opId, operacao: operacao });
+  }
   function vampiroOperar(campanhaId, opId, operacao) {
     return post({ acao: "vampiro_operar", campanhaId: campanhaId, opId: opId, operacao: operacao });
   }
@@ -1243,6 +1263,9 @@
     goblinsOperar: goblinsOperar,
     lerBrutal: lerBrutal,
     brutalOperar: brutalOperar,
+    lerTormenta20: lerTormenta20,
+    salvarTormenta20: salvarTormenta20,
+    tormenta20Operar: tormenta20Operar,
     sincroniaOperar: sincroniaOperar,
     lerImagemDoTurno: lerImagemDoTurno,
     excluirCombate: excluirCombate,

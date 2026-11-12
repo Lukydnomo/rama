@@ -1,0 +1,316 @@
+/* =====================================================================
+   R.A.M.A. — Tormenta20 — Jogo do Ano (v8.0) · Legacy
+   ---------------------------------------------------------------------
+   A ficha (na hierarquia da ficha oficial: identidade, atributos, PV/PM,
+   Defesa e ações à mão; perícias, inventário, poderes, magias e
+   parceiros nas abas), a criação passo a passo, o diálogo de magia com
+   os aprimoramentos e a Mesa da campanha. Lê só os tokens do tema
+   (css/tokens.css): nenhuma cor presa.
+
+   Estado nunca só por cor:
+     valor com parcelas: <details> com "▸" e a lista ao abrir
+     parcela situacional: "(quando valer)" no texto e traço pontilhado
+     vez no combate: "▶" antes do nome e aria-current
+     ameaça derrotada: texto riscado e a etiqueta "derrotada"
+     passo atual da criação: "●", negrito e aria-current
+   A versão Modern20 está em css/modern20/tormenta20.css.
+   ===================================================================== */
+
+/* ---------------------------------------------------------- comuns */
+.t20-lista {
+  margin: 0;
+  padding-left: var(--e4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--e1);
+  min-width: 0;
+}
+.t20-lista > li { overflow-wrap: anywhere; }
+.t20-fonte, .t20-link {
+  font-size: var(--texto-mini);
+  color: var(--cor-texto-2);
+}
+.t20-link { color: var(--cor-link); }
+.t20-indisponivel { color: var(--cor-texto-3); }
+.t20-num { font-variant-numeric: tabular-nums; text-align: right; white-space: nowrap; }
+.t20-pares { margin: 0; display: grid; grid-template-columns: max-content 1fr; gap: var(--e1) var(--e3); }
+.t20-pares > div { display: contents; }
+.t20-pares dt { color: var(--cor-texto-2); font-size: var(--texto-mini); }
+.t20-pares dd { margin: 0; min-width: 0; overflow-wrap: anywhere; }
+.t20-erros { color: var(--cor-erro); margin: 0; padding-left: var(--e4); }
+.t20-pendencias {
+  border: var(--borda) dashed var(--cor-aviso);
+  padding: var(--e2) var(--e3);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--e2);
+}
+.t20-pendencias p { margin: 0; }
+
+/* Um número com as parcelas: o total à vista; ao expandir, de onde vem. */
+.t20-valor { min-width: 0; }
+.t20-valor > summary {
+  cursor: pointer;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: var(--e1) var(--e2);
+  border: var(--borda) solid var(--cor-traco-fraca);
+  border-radius: var(--raio);
+  min-height: var(--alvo-toque);
+  justify-content: center;
+}
+.t20-valor > summary::-webkit-details-marker { display: none; }
+.t20-valor > summary:focus-visible { outline: 2px solid var(--cor-foco); outline-offset: 2px; }
+.t20-valor__rotulo { font-size: var(--texto-mini); color: var(--cor-texto-2); }
+.t20-valor__rotulo::before { content: "▸ "; }
+.t20-valor[open] .t20-valor__rotulo::before { content: "▾ "; }
+.t20-valor__total { font-size: var(--texto-medio); font-variant-numeric: tabular-nums; font-weight: 600; }
+.t20-valor--grande .t20-valor__total { font-size: var(--texto-grande); }
+.t20-parcelas {
+  margin: var(--e1) 0 0;
+  padding: var(--e1) var(--e2);
+  list-style: none;
+  font-size: var(--texto-mini);
+  border-left: var(--borda) solid var(--cor-traco-media);
+}
+.t20-parcelas li { display: flex; justify-content: space-between; gap: var(--e2); }
+.t20-parcela__valor { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.t20-parcela--situacional { color: var(--cor-texto-2); border-bottom: 1px dotted var(--cor-traco-media); }
+
+/* Tabelas (ataques, perícias, inventário): rolam de lado no celular. */
+.t20-tabela {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--texto-mini);
+}
+.t20-tabela th, .t20-tabela td {
+  text-align: left;
+  padding: var(--e1) var(--e2);
+  border-bottom: 1px solid var(--cor-traco-fraca);
+  vertical-align: middle;
+}
+.t20-tabela th { color: var(--cor-texto-2); font-weight: 600; }
+.t20-tabela td.t20-num, .t20-tabela th.t20-num { text-align: right; }
+.t20-tabela button { white-space: nowrap; }
+
+/* ------------------------------------------------- bloco superior */
+.t20-bloco { display: flex; flex-direction: column; gap: var(--e3); min-width: 0; }
+.t20-bloco__identidade { display: flex; align-items: flex-start; gap: var(--e3); min-width: 0; }
+.t20-bloco__identidade .ficha-foto { width: 6.5rem; flex: none; }
+.t20-bloco__identidade .ficha-foto__vazio svg { max-width: 2.5rem; }
+.t20-bloco__identidade .capa-sistema { flex: none; }
+.t20-bloco__textos { min-width: 0; flex: 1; display: flex; flex-direction: column; gap: var(--e1); }
+.t20-bloco__linha { margin: 0; color: var(--cor-texto-2); overflow-wrap: anywhere; }
+.t20-bloco__estado { margin: 0; display: flex; flex-wrap: wrap; gap: var(--e1); }
+
+.t20-atributos {
+  margin: 0;
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: var(--e2);
+}
+.t20-atr {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  border: var(--borda) solid var(--cor-traco-media);
+  border-radius: var(--raio);
+  padding: var(--e1);
+  min-width: 0;
+}
+.t20-atr dt { font-size: var(--texto-mini); color: var(--cor-texto-2); text-transform: uppercase; letter-spacing: var(--espaco-letra); }
+.t20-atr dd { margin: 0; }
+.t20-atr__valor {
+  background: none;
+  border: 0;
+  font: inherit;
+  font-size: var(--texto-grande);
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  color: var(--cor-texto);
+  cursor: pointer;
+  min-width: var(--alvo-toque);
+  min-height: var(--alvo-toque);
+}
+.t20-atr__valor:hover { color: var(--cor-link); }
+.t20-atr__valor:focus-visible { outline: 2px solid var(--cor-foco); outline-offset: 2px; }
+
+.t20-recursos {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 2fr);
+  gap: var(--e3);
+  align-items: start;
+}
+.t20-recurso { display: flex; flex-direction: column; gap: var(--e1); min-width: 0; }
+.t20-recurso__topo { min-width: 0; }
+.t20-barra {
+  height: 8px;
+  border: 1px solid var(--cor-traco-media);
+  background: var(--fundo-superficie-2);
+  overflow: hidden;
+}
+.t20-barra__cheio { display: block; height: 100%; background: var(--cor-texto-2); }
+.t20-recurso--pv .t20-barra__cheio { background: var(--cor-vida); }
+.t20-recurso--pm .t20-barra__cheio { background: var(--cor-esforco); }
+.t20-numeros {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(9rem, 1fr));
+  gap: var(--e2);
+  min-width: 0;
+}
+.t20-acoes { flex-wrap: wrap; gap: var(--e2); }
+.t20-acoes > .r-botao { white-space: nowrap; flex: none; }
+
+/* ---------------------------------------------------------- abas */
+.t20-resists { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--e2); }
+.t20-resist { display: flex; flex-direction: column; gap: var(--e1); min-width: 0; }
+.t20-resist > .r-botao { align-self: flex-start; }
+.t20-situacoes {
+  border: var(--borda) solid var(--cor-traco-fraca);
+  padding: var(--e2);
+  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--e1) var(--e3);
+  min-width: 0;
+}
+.t20-situacoes legend { font-size: var(--texto-mini); color: var(--cor-texto-2); padding: 0 var(--e1); }
+.t20-habilidade { border-bottom: 1px solid var(--cor-traco-fraca); padding: var(--e1) 0; }
+.t20-usos, .t20-usos-ficha { font-size: var(--texto-mini); }
+.t20-niveis, .t20-poderes, .t20-magias, .t20-beneficios { display: flex; flex-direction: column; gap: var(--e2); }
+.t20-atributos-base { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: var(--e2); }
+.t20-ataque-info { font-size: var(--texto-mini); color: var(--cor-texto-2); }
+.t20-rolagens { display: flex; flex-wrap: wrap; gap: var(--e1); font-variant-numeric: tabular-nums; }
+.t20-tirar { white-space: nowrap; }
+
+/* ------------------------------------------ magia e aprimoramentos */
+.t20-aprims { display: flex; flex-direction: column; gap: var(--e1); }
+.t20-aprim {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--e2);
+  padding: var(--e1) var(--e2);
+  border-left: var(--borda) solid var(--cor-traco-media);
+}
+.t20-previa {
+  border: var(--borda) solid var(--cor-traco-forte);
+  padding: var(--e2) var(--e3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--e1);
+  position: sticky;
+  bottom: 0;
+  background: var(--fundo-superficie);
+}
+.t20-alvos {
+  border: var(--borda) solid var(--cor-traco-fraca);
+  padding: var(--e2);
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--e1);
+}
+.t20-alvos legend { font-size: var(--texto-mini); color: var(--cor-texto-2); padding: 0 var(--e1); }
+
+/* -------------------------------------------------------- criação */
+.t20-criar { display: flex; flex-direction: column; gap: var(--e3); min-width: 0; }
+.t20-passos {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--e1);
+  font-size: var(--texto-mini);
+}
+.t20-passos li {
+  display: flex;
+  align-items: center;
+  gap: var(--e1);
+  padding: 2px var(--e2);
+  border: 1px solid var(--cor-traco-fraca);
+  border-radius: 999px;
+  color: var(--cor-texto-2);
+}
+.t20-passos__atual { color: var(--cor-texto) !important; font-weight: 700; border-color: var(--cor-traco-forte) !important; }
+.t20-passos__atual::before { content: "●"; }
+.t20-escolhas-multiplas { display: flex; flex-wrap: wrap; gap: var(--e1) var(--e3); }
+.t20-resumo-criacao { display: flex; flex-direction: column; gap: var(--e2); }
+
+/* --------------------------------------------------------- mesa */
+.t20-mesa { min-width: 0; }
+.t20-ordem {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--e1);
+}
+.t20-ordem > li {
+  display: flex;
+  align-items: center;
+  gap: var(--e2);
+  padding: var(--e1) var(--e2);
+  border: 1px solid var(--cor-traco-fraca);
+  min-width: 0;
+}
+.t20-ordem__ini { min-width: 2.5ch; text-align: right; font-variant-numeric: tabular-nums; font-weight: 600; }
+.t20-ordem__vez { border-color: var(--cor-traco-forte) !important; border-width: var(--borda) !important; font-weight: 600; }
+.t20-ordem__vez::before { content: "▶"; }
+.t20-ameaca {
+  border: var(--borda) solid var(--cor-traco-media);
+  padding: var(--e2) var(--e3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--e2);
+  min-width: 0;
+}
+.t20-ameaca--derrotada { color: var(--cor-texto-3); border-style: dashed; }
+.t20-ameaca--derrotada h3, .t20-ameaca--derrotada h4 { text-decoration: line-through; }
+.t20-perigo {
+  border: var(--borda) dashed var(--cor-traco-media);
+  padding: var(--e2) var(--e3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--e2);
+}
+.t20-inventario td:first-child { min-width: 8rem; }
+
+/* ------------------------------------------------------- celular */
+@media (max-width: 720px) {
+  .t20-bloco__identidade .ficha-foto { width: 4.5rem; }
+  .t20-atributos { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .t20-atributos-base { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .t20-recursos { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+  .t20-numeros { grid-column: 1 / -1; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .t20-resists { grid-template-columns: minmax(0, 1fr); }
+  /* As ações de jogo ficam ao alcance do polegar enquanto a ficha rola. */
+  /* Fixa na base da tela (não só dentro do bloco superior); a página
+     ganha espaço embaixo para nada ficar escondido. */
+  body:has(.t20-acoes) .app-corpo { padding-bottom: calc(var(--alvo-toque) + var(--e5)); }
+  .t20-acoes {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    padding-left: var(--e3) !important;
+    padding-right: var(--e3) !important;
+    z-index: var(--z-fixo);
+    background: var(--fundo-pagina);
+    padding: var(--e2) 0;
+    border-top: 1px solid var(--cor-traco-fraca);
+    overflow-x: auto;
+    flex-wrap: nowrap;
+  }
+  .t20-tabela { display: block; overflow-x: auto; }
+  .t20-pares { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 380px) {
+  .t20-recursos { grid-template-columns: minmax(0, 1fr); }
+}

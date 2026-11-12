@@ -40,10 +40,10 @@ t.grupo("Registro de sistemas");
 t.igual("Ordem Paranormal é conhecido", [S.de("ordem").nome, S.de("ordem").conhecido], ["Ordem Paranormal", true]);
 t.igual("Universal é conhecido", [S.de("universal").nome, S.de("universal").antigo], ["Universal", false]);
 t.igual("ficha antiga (vazio) segue a compatibilidade: universal, marcada como antiga", [S.de("").id, S.de("").antigo, S.de(undefined).id, S.de(null).id], ["universal", true, "universal", "universal"]);
-const futuro = S.de("Tormenta20");
-t.igual("identificador desconhecido fica com o próprio id", [futuro.id, futuro.conhecido], ["tormenta20", false]);
-t.ok("  e com nome que diz que não é reconhecido", /não reconhecido/.test(futuro.nome) && futuro.nome.indexOf("tormenta20") >= 0);
-t.igual("a lista traz os conhecidos na ordem de exibição", S.lista().map((s) => s.id), ["ordem", "oblivio", "vampiro", "goblins", "brutal", "universal"]);
+const futuro = S.de("Sistema-Futuro");
+t.igual("identificador desconhecido fica com o próprio id", [futuro.id, futuro.conhecido], ["sistema-futuro", false]);
+t.ok("  e com nome que diz que não é reconhecido", /não reconhecido/.test(futuro.nome) && futuro.nome.indexOf("sistema-futuro") >= 0);
+t.igual("a lista traz os conhecidos na ordem de exibição", S.lista().map((s) => s.id), ["ordem", "oblivio", "vampiro", "goblins", "brutal", "tormenta20", "universal"]);
 t.igual("os desconhecidos vêm depois", [S.de("zeta"), S.de("universal"), S.de("alfa"), S.de("ordem")].sort(S.comparar).map((s) => s.id), ["ordem", "universal", "alfa", "zeta"]);
 
 t.grupo("Registro de sistemas — capacidades (v4.0)");
@@ -63,14 +63,14 @@ t.ok("nenhuma mecânica tem dois donos", (() => {
     return true;
   }));
 })());
-t.igual("sistema desconhecido: nenhuma ferramenta, nenhuma aba", [S.de("tormenta20").campanha.ferramentas.length, S.de("tormenta20").ficha.abas.length, S.temFerramenta("tormenta20", "combate")], [0, 0, false]);
+t.igual("sistema desconhecido: nenhuma ferramenta, nenhuma aba", [S.de("sistema-futuro").campanha.ferramentas.length, S.de("sistema-futuro").ficha.abas.length, S.temFerramenta("sistema-futuro", "combate")], [0, 0, false]);
 t.igual("campanha que diz o sistema: ele, sem herança", S.daCampanha({ sistema: "Universal" }).id + "/" + S.daCampanha({ sistema: "universal" }).herdado, "universal/false");
 t.igual("campanha antiga (servidor sem o campo): Ordem, herdado", [S.daCampanha({}).id, S.daCampanha({}).herdado], ["ordem", true]);
 t.igual("campanha antiga com a mesa de Oblívio da v3.0: Oblívio, herdado", [S.daCampanha({ oblivio: true }).id, S.daCampanha({ oblivio: true }).herdado], ["oblivio", true]);
 t.igual("o servidor manda a herança: ela é respeitada", S.daCampanha({ sistema: "ordem", sistemaHerdado: true }).herdado, true);
-t.igual("campanha de um sistema desconhecido não cai na regra antiga", S.daCampanha({ sistema: "tormenta20" }).id, "tormenta20");
+t.igual("campanha de um sistema desconhecido não cai na regra antiga", S.daCampanha({ sistema: "sistema-futuro" }).id, "sistema-futuro");
 t.ok("os nomes das ferramentas servem para explicar uma troca", S.nomeDaFerramenta("hexatombe") === "Hexatombe" && S.nomeDaFerramenta("oblivio") === "mesa da Testemunha");
-t.igual("os tipos de ficha são os do registro", S.idsDeFicha(), ["ordem", "oblivio", "vampiro", "goblins", "brutal", "universal"]);
+t.igual("os tipos de ficha são os do registro", S.idsDeFicha(), ["ordem", "oblivio", "vampiro", "goblins", "brutal", "tormenta20", "universal"]);
 
 /* ---------- dados sintéticos ---------- */
 
@@ -79,7 +79,7 @@ const base = () => [
   { id: "1", nome: "Lia Ordem", campanha: "Mesa", classe: "Combatente", origem: "Militar", sistema: "ordem", pastaId: "sabado" },
   { id: "2", nome: "Beto Livre", campanha: "", classe: "Bardo", origem: "", sistema: "universal", pastaId: "sabado" },
   { id: "3", nome: "Caio Antigo", campanha: "", classe: "", origem: "", sistema: "", pastaId: null },
-  { id: "4", nome: "Duda Futura", campanha: "", classe: "", origem: "", sistema: "tormenta20", pastaId: null },
+  { id: "4", nome: "Duda Futura", campanha: "", classe: "", origem: "", sistema: "sistema-futuro", pastaId: null },
   { id: "5", nome: "Eva Ordem", campanha: "Outra", classe: "Ocultista", origem: "Acadêmico", sistema: "ordem", pastaId: null },
   { id: "6", nome: "Fábio Pendente", campanha: "", classe: "", origem: "", sistema: null, pastaId: "morto" },
 ];
@@ -97,7 +97,7 @@ t.igual("vínculo para pasta inexistente conta como Sem pasta", O.contagens([{ i
 t.grupo("Busca e sistema dentro da seleção");
 t.igual("filtro Ordem dentro da pasta (uma pasta mistura sistemas)", ids(O.montar(r, PASTAS, { pasta: "sabado", sistema: "ordem" }).visiveis), ["1"]);
 t.igual("filtro Universal inclui as fichas antigas", ids(O.montar(r, PASTAS, { pasta: "todos", sistema: "universal" }).visiveis), ["2", "3"]);
-t.igual("filtro do sistema desconhecido", ids(O.montar(r, PASTAS, { pasta: "todos", sistema: "tormenta20" }).visiveis), ["4"]);
+t.igual("filtro do sistema desconhecido", ids(O.montar(r, PASTAS, { pasta: "todos", sistema: "sistema-futuro" }).visiveis), ["4"]);
 t.igual("busca por nome atua na seleção", ids(O.montar(r, PASTAS, { pasta: "sem-pasta", busca: "eva" }).visiveis), ["5"]);
 t.igual("busca por campanha, classe e origem, sem acento", [
   ids(O.montar(r, PASTAS, { busca: "outra" }).visiveis),
@@ -109,7 +109,7 @@ t.igual("a busca não acha o que está fora da pasta aberta", ids(O.montar(r, PA
 
 t.grupo("Agrupar por sistema");
 const g = O.montar(r, PASTAS, { pasta: "todos", agrupar: true }).grupos;
-t.igual("grupos na ordem do registro, desconhecido e pendente no fim", g.map((x) => x.sistema.id), ["ordem", "universal", "tormenta20", "?"]);
+t.igual("grupos na ordem do registro, desconhecido e pendente no fim", g.map((x) => x.sistema.id), ["ordem", "universal", "sistema-futuro", "?"]);
 t.igual("cada grupo com os seus", g.map((x) => ids(x.itens)), [["1", "5"], ["2", "3"], ["4"], ["6"]]);
 t.igual("agrupar dentro da pasta", O.montar(r, PASTAS, { pasta: "sabado", agrupar: true }).grupos.map((x) => x.sistema.id), ["ordem", "universal"]);
 t.igual("agrupar com filtro: um grupo só", O.montar(r, PASTAS, { sistema: "ordem", agrupar: true }).grupos.length, 1);
@@ -118,8 +118,8 @@ t.igual("o pendente é diferente da ficha antiga", [O.sistemaDe({ sistema: null 
 
 t.grupo("Sistemas oferecidos no filtro");
 const ofertas = O.montar(r, PASTAS, { pasta: "sabado" }).sistemas;
-t.igual("os conhecidos sempre, com a contagem da seleção", ofertas.map((o) => [o.sistema.id, o.n]), [["ordem", 1], ["oblivio", 0], ["vampiro", 0], ["goblins", 0], ["brutal", 0], ["universal", 1]]);
-t.igual("os desconhecidos presentes entram", O.montar(r, PASTAS, { pasta: "todos" }).sistemas.map((o) => o.sistema.id), ["ordem", "oblivio", "vampiro", "goblins", "brutal", "universal", "tormenta20", "?"]);
+t.igual("os conhecidos sempre, com a contagem da seleção", ofertas.map((o) => [o.sistema.id, o.n]), [["ordem", 1], ["oblivio", 0], ["vampiro", 0], ["goblins", 0], ["brutal", 0], ["tormenta20", 0], ["universal", 1]]);
+t.igual("os desconhecidos presentes entram", O.montar(r, PASTAS, { pasta: "todos" }).sistemas.map((o) => o.sistema.id), ["ordem", "oblivio", "vampiro", "goblins", "brutal", "tormenta20", "universal", "sistema-futuro", "?"]);
 
 t.grupo("Estados vazios");
 t.igual("sem nenhum personagem", O.montar([], PASTAS, {}).vazio, "nenhum");
@@ -147,7 +147,7 @@ t.grupo("Nada muda de lugar ao filtrar ou agrupar");
 r = base();
 const antes = JSON.stringify(r);
 O.montar(r, PASTAS, { pasta: "sabado", busca: "lia", sistema: "ordem", agrupar: true });
-O.montar(r, PASTAS, { pasta: "todos", sistema: "tormenta20", agrupar: true });
+O.montar(r, PASTAS, { pasta: "todos", sistema: "sistema-futuro", agrupar: true });
 t.ok("os registros saem idênticos (pasta e sistema intactos)", JSON.stringify(r) === antes);
 
 console.log(`\n${FORTE}${passaram + falharam} verificações${FIM} · ${VERDE}${passaram} ok${FIM} · ${falharam ? VERMELHO : CINZA}${falharam} falhas${FIM}`);

@@ -42,6 +42,7 @@ preferências de tela — nunca é tratado como banco.
     vampiro.css         Vampiro: criação, ficha, rolagem com Fome, Crônica (v5.0)
     goblins.css         Malditos Goblins: ficha oficial, dados que explodem, criação, Covil (v6.0)
     brutal.css          BRUTAL: a ficha-tabuleiro, as cartas dos Arquétipos, a Mesa da Diretora (v7.0)
+    tormenta20.css      Tormenta20: ficha com parcelas, criação em 8 passos, magia com aprimoramentos, Mesa (v8.0)
     (os suplementos — volumes, switches e a animação — estão em componentes.css, v6.1)
     (estas folhas SÃO o estilo Legacy: a aparência da v2.48.4, intocada)
     interface.css       o seletor de estilo do editor de temas (vale nos dois estilos)
@@ -134,6 +135,11 @@ preferências de tela — nunca é tratado como banco.
       telas/            …e as telas: as cartas dos Arquétipos, a ficha-tabuleiro, a Mesa da Diretora
       catalogo.js       Arquétipos, Estilos, Vantagens, Ações, Assassinos, Apavoros, Intentos e as lacunas
       regras.js         a ficha persistente: Arquétipo, Apegos, detalhes e o treino sem campanha
+    tormenta20/         o módulo de Tormenta20 — Jogo do Ano (v8.0): motor e catálogos, copiados nos .gs…
+      telas/            …e as telas: criação, ficha, a Mesa do Mestre
+      regras.js         o motor: cálculo com parcelas, acúmulo, combate, manobras, magias, progressão
+      mesa.js           a mesa: combate, ameaças independentes, encontros, XP, tesouro, perigos
+      magias*.js, ameacas*.js, classes-*.js, itens-magicos*.js …  os catálogos do Livro Básico, com página
       mesa.js           o Thriller: pilhas, testes, cenas, Encontro, ações do Assassino, vista das jogadoras
     historico.js        rolagem → histórico da campanha, num funil só
     temas-dados.js      catálogo dos temas de dados e regras puras (copiado no Codigo.gs)
@@ -150,6 +156,8 @@ preferências de tela — nunca é tratado como banco.
     Vampiro.gs          sistema Vampiro: a crônica do Narrador e as operações entre fichas (cópia do motor)
     Goblins.gs          sistema Malditos Goblins: o Covil e as operações entre fichas e mesa (cópia do motor)
     Brutal.gs           sistema BRUTAL: a Mesa da Diretora, o Thriller e as rolagens no servidor (cópia do motor)
+    Tormenta20.gs       sistema Tormenta20: a Mesa do Mestre e as operações entre fichas e ameaças (cópia do motor)
+    Tormenta20Dados.gs  os catálogos de Tormenta20 (cópia de js/tormenta20/)
     Universal.gs        sistema Universal: atributos e status livres no painel da mesa
     Cris.gs             leitura de ficha pública do CRIS (opcional)
     Feedback.gs         feedback entregue num canal do Discord (opcional)
@@ -168,6 +176,7 @@ preferências de tela — nunca é tratado como banco.
     VAMPIRO.md          Vampiro V5: matriz de cobertura, interpretações e lacunas do livro
     GOBLINS.md          Malditos Goblins 3ª ed.: matriz de cobertura, interpretações e lacunas do livro
     BRUTAL.md           BRUTAL Corte Rápido: ficha × Thriller, cobertura, decisões da Diretora e lacunas
+    TORMENTA20.md       Tormenta20 Jogo do Ano: ficha, efeitos, cobertura por capítulo e lacunas com página
     SISTEMAS.md         a plataforma e os sistemas: núcleo × módulos, registro, como entra um sistema
     FICHA-ORDEM.md      a composição da ficha de Ordem e o inventário de campos (antes → depois)
 ```
@@ -436,11 +445,13 @@ O servidor do pedido está em `testes/acesso-backend.js` (dentro de
 deno run --allow-read testes/executar-criaturas-pagina.js
 ```
 
-**Catálogo** — 48 verificações: as categorias de cada sistema (só as com
+**Catálogo** — 63 verificações: as categorias de cada sistema (só as com
 conteúdo), entradas com nome, busca, referência e consulta que abre, os filtros
 de Ordem, os itens novos de Vampiro V5 (p. 378–381) sem duplicar armas,
 Projetos e Jogo Ponderado, BRUTAL (Arquétipos, Estilos, Vantagens com as
-lacunas, Ações e Assassinos), e que a página é só consulta. Os links antigos de
+lacunas, Ações e Assassinos), Tormenta20 (raças, classes, magias com filtros,
+ameaças com ND fracionário e "Copiar para o Homebrew", perigos, condições), e
+que a página é só consulta. Os links antigos de
 `criaturas/` estão em `executar-criaturas-pagina.js`.
 
 ```bash
@@ -544,6 +555,22 @@ deno run --allow-read --allow-write testes/gerar-brutal-gs.js
 
 ```bash
 deno run --allow-read testes/executar-brutal.js
+```
+
+**Tormenta20 — Jogo do Ano** — 114 verificações do motor, sem navegador e sem
+rede, com os dados fixados: compra e rolagem de atributos, evolução com e sem
+multiclasse, Constituição que recalcula PV preservando o dano, armadura e
+sobrecarga nas perícias certas, Bola de Fogo com aprimoramento e o limite de PM,
+sustentada (início do turno, uma por vez, sem PM termina), metamagia,
+engenhoca, crítico com dado extra, munição, manobras com desempate,
+sangramento e estabilização, encontro com ND fracionário, descanso, tesouro e
+XP sem duplicar, Ofício por especialização e salvar, reabrir, exportar e
+importar. O servidor (permissões, operações uma vez por `opId`, manobras,
+recompensas) está em `testes/tormenta20-backend.js`, dentro de
+`executar-backend.js`.
+
+```bash
+deno run --allow-read testes/executar-tormenta20.js
 ```
 
 **Vampiro: A Máscara** — 257 verificações do motor, sem navegador e sem rede,
@@ -886,6 +913,26 @@ próprio `<script src>`, então funciona debaixo de subpasta sem ajuste.
 segredo nenhum — ele os lê das Script Properties. Publicá-lo não expõe nada.
 
 ### Atualizar o backend
+
+**v8.0.0 — BIFURCAÇÃO:** Tormenta20 — Jogo do Ano como sistema completo.
+**Crie** os arquivos `Tormenta20` e `Tormenta20Dados` no Apps Script com
+`backend/Tormenta20.gs` e `backend/Tormenta20Dados.gs`, **troque**
+`Sistemas.gs` (o sistema no registro), `Dados.gs` (a aba
+`CAMPANHA_TORMENTA20`), `Campanhas.gs` (a parte `tormenta20` da sincronia) e
+`Codigo.gs` (o resumo das ameaças de Tormenta20 no Homebrew), rode
+**`setupRama()`** uma vez (cria a aba; repetir não muda nada) e **crie uma
+versão nova da implantação**. Publique o site — inclusive `js/tormenta20/`,
+`css/tormenta20.css`, `css/modern20/tormenta20.css`, `js/sistemas.js`,
+`js/api.js`, `js/ficha.js`, `js/validacao.js`, `js/criaturas.js`,
+`js/fichas-nativas.js`, `js/campanha-painel.js`, `js/paginas/personagens.js`,
+`js/paginas/campanha.js`, `js/paginas/catalogo.js`, `js/paginas/homebrew.js`,
+`js/paginas/homebrew-criatura-sistemas.js`, `js/versao.js` e as páginas
+`personagens/`, `ficha/`, `campanha/`, `catalogo/` e `homebrew/`. O schema da
+ficha sobe para 34 sem conversão: abas abertas na versão anterior pedem para
+recarregar. Sem o `setupRama()`, só a Mesa recusa gravar
+(`instalacao_incompleta`); sem os `.gs` novos ou a versão nova da implantação,
+ela responde `acao_desconhecida` (as fichas de Tormenta20 continuam abrindo e
+calculando no navegador).
 
 **v7.2.1 — GAZUA:** só o site. Publique `js/importar-cris.js`,
 `js/importar-cris-tela.js` e `js/versao.js`; o Apps Script não muda.
@@ -1850,7 +1897,7 @@ Três números diferentes, que não se misturam:
 
 | | Onde | O que é |
 |---|---|---|
-| versão do aplicativo | `js/versao.js` | o que a pessoa vê: v7.2.1 |
+| versão do aplicativo | `js/versao.js` | o que a pessoa vê: v8.0.0 |
 | `schemaVersion` | `js/ficha.js` | o formato da FICHA |
 | `versaoFormato` | `js/config.js` | o formato dos arquivos de importação |
 

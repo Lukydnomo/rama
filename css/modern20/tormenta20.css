@@ -1,0 +1,56 @@
+/* =====================================================================
+   R.A.M.A. — Tormenta20 — Jogo do Ano (v8.0) · Modern20
+   ---------------------------------------------------------------------
+   As MESMAS classes de css/tormenta20.css na linguagem Modern20: canto
+   leve, traço discreto, sombra só no que flutua. O estado continua com
+   texto e forma — "▸/▾" nas parcelas, "▶" na vez, risco na derrota.
+   ===================================================================== */
+
+:where(:root[data-interface="modern20"]) {
+
+  & .t20-valor > summary,
+  & .t20-atr,
+  & .t20-ameaca,
+  & .t20-perigo,
+  & .t20-situacoes,
+  & .t20-alvos,
+  & .t20-pendencias,
+  & .t20-ordem > li {
+    border-color: var(--m20-borda);
+    border-radius: var(--m20-raio-controle);
+  }
+
+  & .t20-atr { background: var(--m20-destaque-suave); }
+  & .t20-valor > summary:hover { border-color: var(--m20-borda-controle); }
+  & .t20-valor[open] > summary { background: var(--m20-selecao-suave); }
+
+  & .t20-barra {
+    border: 0;
+    border-radius: 999px;
+    height: 6px;
+    background: var(--m20-destaque-suave);
+  }
+  & .t20-barra__cheio { border-radius: 999px; }
+
+  & .t20-parcelas { border-left-color: var(--m20-borda); }
+  & .t20-aprim { border-left-color: var(--m20-borda-controle); border-radius: 0 var(--m20-raio-controle) var(--m20-raio-controle) 0; }
+
+  & .t20-previa {
+    border-color: var(--m20-borda-controle);
+    border-radius: var(--m20-raio-cartao);
+    box-shadow: var(--m20-sombra-1);
+  }
+
+  & .t20-passos li { border-color: var(--m20-borda); }
+  & .t20-passos__atual { background: var(--m20-selecao-suave); }
+
+  & .t20-ordem__vez { background: var(--m20-selecao-suave); }
+  & .t20-ameaca { box-shadow: var(--m20-sombra-1); }
+  & .t20-ameaca--derrotada { box-shadow: none; }
+
+  & .t20-tabela th, & .t20-tabela td { border-bottom-color: var(--m20-borda); }
+
+  @media (max-width: 720px) {
+    & .t20-acoes { box-shadow: var(--m20-sombra-2); border-top-color: var(--m20-borda); }
+  }
+}

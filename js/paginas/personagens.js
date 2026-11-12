@@ -1243,6 +1243,7 @@
     vampiro: function () { return abrirCriacaoVampiro(); },
     goblins: function () { return abrirCriacaoGoblins(); },
     brutal: function () { return abrirCriacaoBrutal(); },
+    tormenta20: function () { return abrirCriacaoTormenta20(); },
     universal: function () { return abrirCriacao(); },
   };
 
@@ -1293,6 +1294,15 @@
     var r = await global.RAMAApi.listarCampanhas();
     if (r.ok) campanhas = r.dados || [];
     global.RAMAGoblinsCriar.abrir({ campanhas: campanhas });
+  }
+
+  /* A criação de Tormenta20 (v8.0): o passo a passo do livro. */
+  function abrirCriacaoTormenta20() {
+    if (!global.RAMATormenta20Criar || !global.RAMATormenta20) {
+      UI.avisoErro("A criação de Tormenta20 não está disponível nesta página.");
+      return;
+    }
+    global.RAMATormenta20Criar.abrir({});
   }
 
   /* A criação de BRUTAL (v7.0): os oito Arquétipos em cartas. */

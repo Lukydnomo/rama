@@ -118,6 +118,24 @@
 
   var CHANGELOG = [
     {
+      versao: "8.0.0",
+      codinome: "BIFURCAÇÃO",
+      data: "12/11/2026",
+      mudancas: {
+        "Adicionado": [
+          "Tormenta20 — Jogo do Ano como sistema jogável, só com o Livro Básico. Crie o personagem num passo a passo de 8 etapas: atributos por compra de 10 pontos (Tabela 1-1) ou seis rolagens de 4d6 descartando o menor, raça (as 17, com variantes e escolhas), origem (as 35 ou uma própria), classe (as 14), divindade, magias e o equipamento inicial do livro — arma simples, marcial se proficiente, armadura ou brunea, escudo leve e T$ 4d6.",
+          "A ficha na hierarquia da ficha oficial: identidade, atributos, PV e PM com barras, Defesa, deslocamento, penalidade de armadura e carga em espaços à mão; ataques, perícias, poderes, magias, inventário, parceiros, progressão e anotações nas abas. Todo número abre as parcelas: base, raça, nível, item, magia, condição. No celular, as ações de jogo ficam fixas na base da tela.",
+          "Níveis 1 a 20 com XP, patamares e multiclasse (a segunda classe não repete PV iniciais, perícias nem proficiências), requisitos de poder conferidos no nível que vai ser alcançado, e mudanças de atributo que recalculam PV e PM sem perder o dano sofrido.",
+          "As 198 magias do 1º ao 5º círculo com aprimoramentos: antes de confirmar, a prévia mostra custo, execução, alcance, área ou alvo, resistência, dano e efeito; truques, \u201cmuda\u201d que não acumula, limite de PM por fonte, CD pelo atributo-chave certo, testes em armadura e em condições ruins, uma sustentada por vez com 1 PM no início do turno, e os poderes Magia Acelerada, Ampliada e Discreta como aprimoramentos de qualquer magia.",
+          "Combate pelas regras do livro: ataque contra a Defesa antes do crítico, crítico que multiplica só os dados da arma, manobras (agarrar, derrubar, desarmar, empurrar, quebrar) com teste oposto, situações de combate, RD, imunidades, vulnerabilidades, PV temporários, não letal, sangramento com Constituição CD 15, estabilização e morte; munição gasta a cada disparo; as 35 condições com sobreposição e expiração.",
+          "Engenhocas do Inventor (fabricar e ativar com a CD do livro, +5 por ativação no dia, aprimoramentos até a Inteligência, penalidade de armadura e enguiçar), parceiros com graus e a variante de parceiros vulneráveis, descanso, compra, venda e fabricação por Ofício — agora com a especialização separada de cada Ofício.",
+          "A Mesa do Mestre em toda campanha de Tormenta20: iniciativa e surpresa, as 80 ameaças do livro (ND fracionário incluso) como ocorrências independentes, com PV, condições e recargas próprias; ataques, magias e manobras entre jogadores e ameaças rolados e aplicados no servidor; encontros com ND, desafios e XP, tesouro pela Tabela 8-1 com prévia editável, distribuição de XP, tibares e itens às fichas, perigos complexos rodada a rodada, ferramentas do capítulo 6 e notas só do Mestre. Os jogadores veem o estado aparente das ameaças, não os PV.",
+          "Tormenta20 no Catálogo: raças, classes, origens, divindades, perícias e usos, poderes (gerais e de classe, com requisitos), magias com filtros por tipo, círculo e escola, equipamento, itens mágicos, ameaças com a ficha completa e \u201cCopiar para o Homebrew\u201d, perigos, condições, manobras, parceiros e a tabela de NPC. No Homebrew, a ameaça de Tormenta20 tem formulário próprio.",
+        ],
+        "Técnico": ["Novos backend/Tormenta20.gs (sistemaTormenta20, ler_tormenta20, salvar_tormenta20 e tormenta20_operar com opId e rev, rolagens no servidor) e backend/Tormenta20Dados.gs (os catálogos), copiados de js/tormenta20/ por testes/gerar-tormenta20-gs.js, e a aba CAMPANHA_TORMENTA20: crie os dois arquivos, troque Sistemas.gs, Dados.gs, Campanhas.gs e Codigo.gs, rode setupRama() e crie uma versão nova da implantação. Schema 34, sem conversão; exportar e importar levam as referências do catálogo do bloco como idT20. Site: js/tormenta20/, css/tormenta20.css, css/modern20/tormenta20.css e as páginas personagens/, ficha/, campanha/, catalogo/ e homebrew/. Cobertura por capítulo e lacunas com página em docs/TORMENTA20.md. Testes: testes/executar-tormenta20.js (aceitação do motor), testes/tormenta20-backend.js e Tormenta20 em testes/executar-catalogo.js."],
+      },
+    },
+    {
       versao: "7.2.1",
       codinome: "GAZUA",
       data: "11/11/2026",

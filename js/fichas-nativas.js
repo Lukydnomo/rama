@@ -238,8 +238,29 @@
     ]);
   }
 
+  /* Tormenta20 (v8.0): a ficha de ameaça na ordem do livro (p. 283–284). */
+  function sinalT20(v) { var x = Number(v) || 0; return (x >= 0 ? "+" : "−") + Math.abs(x); }
+  function atrT20(v) { return v === null || v === undefined ? "—" : sinalT20(v); }
+  function linhaTormenta20(d) {
+    return "ND " + d.nd + " · " + humanizar(d.tipo) + (d.sub ? " (" + d.sub + ")" : "") + " " + humanizar(d.tam) + " · Defesa " + d.def + " · PV " + d.pv + (d.papel ? " · " + d.papel : "");
+  }
+  function tormenta20(d) {
+    var D = global.RAMATormenta20Dados, MG = global.RAMATormenta20Magias, IM = global.RAMATormenta20ItensMagicos;
+    var nomeAcao = function (a) { return D && D.NOMES_ACAO[a] ? D.NOMES_ACAO[a] : humanizar(a); };
+    var rd = Object.keys(d.rd || {}).map(function (k) { return "RD " + (k === "geral" ? "" : k === "naoMagico" ? "/mágico " : k === "naoLuz" ? "/luz " : k + " ") + d.rd[k]; }).join(", ");
+    return ficha("tormenta20", [
+      destaques([["ND", d.nd], ["Defesa", d.def], ["PV", d.pv], ["PM", d.pm || ""], ["Deslocamento", d.desl + " m" + Object.keys(d.mov || {}).map(function (k) { return ", " + k + " " + d.mov[k] + " m"; }).join("")]]),
+      pares([["Tipo", humanizar(d.tipo) + (d.sub ? " (" + d.sub + ")" : "") + " · " + humanizar(d.tam) + (d.papel ? " · " + d.papel : "")], ["Iniciativa / Percepção", sinalT20(d.ini) + " / " + sinalT20(d.per) + (d.sentidos && d.sentidos.length ? " · " + d.sentidos.join(", ") : "")], ["Resistências", "Fort " + sinalT20(d.fort) + ", Ref " + sinalT20(d.ref) + ", Von " + sinalT20(d.von)], ["Defesas", [rd, (d.imune || []).length ? "imune a " + d.imune.join(", ") : "", (d.vulner || []).length ? "vulnerável a " + d.vulner.join(", ") : "", d.defesasTexto].filter(Boolean).join("; ")]]),
+      painel("Ataques", (d.ataques || []).map(function (a) { return efeito((a.q > 1 ? a.q + "× " : "") + a.n, a.dist ? "À distância" : "Corpo a corpo", sinalT20(a.a) + " (" + a.d + (a.x ? " mais " + a.x : "") + (a.m && a.m < 20 ? ", " + a.m : "") + (a.c && a.c > 2 ? ", x" + a.c : "") + ")", a.efeito || ""); })),
+      (d.habs || []).length ? painel("Habilidades", d.habs.map(function (h) { return efeito(h.n, h.acao ? nomeAcao(h.acao) + (h.pm ? ", " + h.pm + " PM" : "") : "", h.recarga ? "Recarga (" + nomeAcao(h.recarga) + ")" : "", h.r || ""); })) : null,
+      d.magias ? painel("Magias", [el("p.t-mini", { texto: "Como " + d.magias.como + " (CD " + d.magias.cd + ")" })].concat((d.magias.lista || []).map(function (m) { return efeito((MG && MG.MAGIA[m.id] ? MG.MAGIA[m.id].nome : humanizar(m.id)), m.acao ? nomeAcao(m.acao) + (m.pm ? ", " + m.pm + " PM" : "") : "", "", m.r || ""); }))) : null,
+      pares([["Atributos", "For " + atrT20(d.atr[0]) + ", Des " + atrT20(d.atr[1]) + ", Con " + atrT20(d.atr[2]) + ", Int " + atrT20(d.atr[3]) + ", Sab " + atrT20(d.atr[4]) + ", Car " + atrT20(d.atr[5])], ["Perícias", Object.keys(d.pericias || {}).map(function (k) { return humanizar(k.replace("oficio:", "Ofício ")) + " " + sinalT20(d.pericias[k]); }).join(", ")], ["Equipamento", d.equip], ["Tesouro", IM && IM.CATEGORIAS_TESOURO[d.tesouro] ? IM.CATEGORIAS_TESOURO[d.tesouro] : d.tesouro], ["Recursos", d.recursos]]),
+      d.resumo ? el("p.t-mini", { texto: d.resumo }) : null,
+    ]);
+  }
+
   global.RAMAFichasNativas = {
-    oblivio: oblivio, vampiro: vampiro, goblins: goblins,
+    oblivio: oblivio, vampiro: vampiro, goblins: goblins, tormenta20: tormenta20, linhaTormenta20: linhaTormenta20,
     vampiroCompleto: vampiroCompleto, valorGoblin: valorGoblin, linhaGoblin: linhaGoblin, itemDeRecompensa: itemDeRecompensa,
     NOMES_ACAO_OBLIVIO: NOMES_ACAO_OBLIVIO,
   };

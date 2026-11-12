@@ -1,5 +1,29 @@
 # O banco
 
+## Tormenta20 — v8.0
+
+> **Atualizando para a v8.0:** crie os arquivos `Tormenta20` e
+> `Tormenta20Dados` com `backend/Tormenta20.gs` e `backend/Tormenta20Dados.gs`,
+> troque `Sistemas.gs`, `Dados.gs`, `Campanhas.gs` e `Codigo.gs`, rode
+> **`setupRama()`** uma vez (cria a aba `CAMPANHA_TORMENTA20`; repetir não muda
+> nada) e crie uma nova versão da implantação.
+
+**CAMPANHA_TORMENTA20** — `campanhaId · atualizadoEm · rev · opsJson · dadosJson`
+(leves: as três primeiras; pesada: `dadosJson`). `dadosJson` é a Mesa
+normalizada por `RAMATormenta20Mesa` (cópia fiel de `js/tormenta20/mesa.js` em
+`Tormenta20.gs`): dia e cena, regras da campanha (parceiros vulneráveis, avanço
+por marcos, custo de vida), combate (participantes: PCs por id da ficha e
+ameaças como ocorrências independentes com PV, PM, condições e recargas
+próprias; ordem, rodada, vez, surpresa), encontros salvos, desafios, tesouros
+rolados (por `opId`), distribuições, perigos complexos em andamento, notas do
+mestre e registro. `opsJson` guarda os últimos `opId` aplicados.
+
+As fichas continuam em `PERSONAGENS` (o bloco `tormenta20`); a projeção do
+painel ganha o bloco `tormenta20` (`resumoParaMesa`, calculado no servidor).
+Rolagens do servidor entram em `CAMPANHA_ROLAGENS` (id `t20-<opId>-<sufixo>`,
+sem duplicar). Ameaças de Tormenta20 do Homebrew ficam em `HOMEBREW`
+(`tipo: "criatura"`, `sistema: "tormenta20"`, bloco `tormenta20`).
+
 ## BRUTAL — v7.0
 
 > **Atualizando para a v7.0:** crie o arquivo `Brutal` com `backend/Brutal.gs`,

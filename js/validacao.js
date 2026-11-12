@@ -693,6 +693,7 @@
       devolverArquivo9(limpo);
       devolverTemaDeDados(limpo);
       devolverBarganha(limpo);
+      devolverTormenta20(limpo);
       refazerVinculosAliados(limpo);
       var avisos = devolverReferencias(limpo);
       var ficha = F.normalizarFicha(limpo);
@@ -780,12 +781,49 @@
     });
   }
 
+  /* Tormenta20 (v8.0): no bloco `tormenta20`, `id` é quase sempre
+     REFERÊNCIA ao catálogo (raça, origem, divindade, magias, poderes,
+     condições, escolhas de nível). Ele atravessa como `idT20`; na volta,
+     as referências voltam a ser `id` e as IDENTIDADES (itens, efeitos
+     ativos, engenhocas, parceiros) nascem de novo, com os vínculos entre
+     elas refeitos. O registro de operações da mesa não atravessa. */
+  function renomearChaveT20(v, de, para, prof) {
+    if (prof > 14 || !v || typeof v !== "object") return v;
+    if (Array.isArray(v)) return v.map(function (x) { return renomearChaveT20(x, de, para, prof + 1); });
+    var saida = {};
+    Object.keys(v).forEach(function (k) { saida[k === de ? para : k] = renomearChaveT20(v[k], de, para, prof + 1); });
+    return saida;
+  }
+  function comTormenta20Portavel(ficha) {
+    if (!ficha || !ficha.tormenta20 || typeof ficha.tormenta20 !== "object") return ficha;
+    var copia = JSON.parse(JSON.stringify(ficha));
+    copia.tormenta20 = renomearChaveT20(copia.tormenta20, "id", "idT20", 0);
+    return copia;
+  }
+  function devolverTormenta20(dados) {
+    if (!dados || !dados.tormenta20 || typeof dados.tormenta20 !== "object") return;
+    var b = renomearChaveT20(dados.tormenta20, "idT20", "id", 0);
+    var novo = function () { return U.uuid(); };
+    var itens = {}, engenhocas = {};
+    (b.inventario && Array.isArray(b.inventario.itens) ? b.inventario.itens : []).forEach(function (it) { if (it && typeof it === "object") { var n = novo(); if (it.id) itens[it.id] = n; it.id = n; } });
+    (Array.isArray(b.engenhocas) ? b.engenhocas : []).forEach(function (g) { if (g && typeof g === "object") { var n = novo(); if (g.id) engenhocas[g.id] = n; g.id = n; } });
+    (Array.isArray(b.parceiros) ? b.parceiros : []).forEach(function (p) { if (p && typeof p === "object") p.id = novo(); });
+    (Array.isArray(b.ativos) ? b.ativos : []).forEach(function (a) {
+      if (!a || typeof a !== "object") return;
+      a.id = novo();
+      if (a.alvo && itens[a.alvo]) a.alvo = itens[a.alvo];
+      if (a.engenhoca && engenhocas[a.engenhoca]) { a.engenhoca = engenhocas[a.engenhoca]; a.fonte = "engenhoca:" + a.engenhoca; }
+    });
+    b.operacoes = [];
+    dados.tormenta20 = b;
+  }
+
   /* Monta o pacote de saída. A contraparte de importado(). */
   function exportar(tipo, dados) {
     /* Numa ficha, o vínculo entre concessão e ritual vira posição antes
        de os ids irem embora. Ver "O VÍNCULO DE RITUAL ATRAVESSANDO A
        IMPORTAÇÃO", acima. */
-    var preparado = tipo === "personagem" ? comArquivo9Portavel(comArquivo7Portavel(comArquivo6Portavel(comBarganhaPortavel(comTemaDeDadosPortavel(comReferenciasPortaveis(comAliadosPortaveis(comPosicoesDeRitual(dados))))))))
+    var preparado = tipo === "personagem" ? comTormenta20Portavel(comArquivo9Portavel(comArquivo7Portavel(comArquivo6Portavel(comBarganhaPortavel(comTemaDeDadosPortavel(comReferenciasPortaveis(comAliadosPortaveis(comPosicoesDeRitual(dados)))))))))
       : (tipo === "homebrew-criatura" ? criaturaPortavel(U.copiar(dados)) : dados);
     return {
       rama: true,

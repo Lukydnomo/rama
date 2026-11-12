@@ -13,7 +13,7 @@ export function testarPastasBackend({ t, preparar, novaConta, comoFn, ambiente }
   const pOrdem = A({ acao: "criar_personagem", dados: ficha("Ordem", { tipoFicha: "ordem", ordem: { classe: "combatente" } }) }).dados.id;
   const pUni = A({ acao: "criar_personagem", dados: ficha("Uni", { tipoFicha: "universal" }) }).dados.id;
   const pAntiga = A({ acao: "criar_personagem", dados: ficha("Antiga") }).dados.id;
-  const pFutura = A({ acao: "criar_personagem", dados: ficha("Futura", { tipoFicha: "Tormenta20" }) }).dados.id;
+  const pFutura = A({ acao: "criar_personagem", dados: ficha("Futura", { tipoFicha: "Sistema-Futuro" }) }).dados.id;
   const pBeto = B({ acao: "criar_personagem", dados: ficha("Do Beto", { tipoFicha: "universal" }) }).dados.id;
 
   const listar = (como) => como({ acao: "listar_personagens" });
@@ -24,11 +24,11 @@ export function testarPastasBackend({ t, preparar, novaConta, comoFn, ambiente }
   t.igual("sistema da ficha de Ordem", de(l, pOrdem).sistema, "ordem");
   t.igual("sistema da universal", de(l, pUni).sistema, "universal");
   t.igual("ficha antiga, sem tipoFicha: vazio (o site trata como universal)", de(l, pAntiga).sistema, "");
-  t.igual("identificador desconhecido fica como veio (aparado)", de(l, pFutura).sistema, "tormenta20");
+  t.igual("identificador desconhecido fica como veio (aparado)", de(l, pFutura).sistema, "sistema-futuro");
   t.ok("todas começam sem pasta", l.dados.every((p) => p.pastaId === null));
   t.ok("a listagem não traz a ficha", l.dados.every((p) => p.fichaJson === undefined && p.ordem === undefined && p.atributos === undefined));
   t.ok("só as fichas da conta", l.dados.length === 4 && !de(l, pBeto));
-  t.igual("a ficha desconhecida não é alterada", A({ acao: "ler_personagem", personagemId: pFutura }).dados.tipoFicha, "Tormenta20");
+  t.igual("a ficha desconhecida não é alterada", A({ acao: "ler_personagem", personagemId: pFutura }).dados.tipoFicha, "Sistema-Futuro");
 
   /* Criar */
   const op = "op-pasta-criacao-1";
@@ -122,7 +122,7 @@ export function testarPastasBackend({ t, preparar, novaConta, comoFn, ambiente }
   let lidas = 0;
   globalThis.lerFichasDosPersonagens = (regs) => { lidas += regs.length; return original(regs); };
   l = listar(A);
-  t.ok("ficha sem índice aparece, com o sistema lido dela", de(l, pOrdem).sistema === "ordem" && de(l, pFutura).sistema === "tormenta20");
+  t.ok("ficha sem índice aparece, com o sistema lido dela", de(l, pOrdem).sistema === "ordem" && de(l, pFutura).sistema === "sistema-futuro");
   t.ok("  e sem pasta", l.dados.every((p) => p.pastaId === null));
   t.ok("  o sistema foi lido uma vez", lidas === l.dados.length);
   lidas = 0;

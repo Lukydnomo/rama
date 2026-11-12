@@ -273,6 +273,7 @@
       if (sis === "oblivio" && c.oblivio) { p.push("Grau " + c.oblivio.grau); p.push("Dano " + c.oblivio.dano); }
       else if (sis === "vampiro" && c.vampiro) { if (c.vampiro.vitalidade) p.push("Vitalidade " + c.vampiro.vitalidade); }
       else if (sis === "goblins" && c.goblins) p.push("Vitalidade " + c.goblins.vitalidade);
+      else if (sis === "tormenta20" && c.tormenta20) p.push("ND " + c.tormenta20.nd + " · PV " + c.tormenta20.pv);
       else {
         var s = CR.resumo(c);
         if (typeof s.vd === "number") p.push("VD " + s.vd); else if (s.nivel) p.push(s.nivel);
@@ -635,6 +636,7 @@
     oblivio: "Ameaça: Grau, Dano, Proteção, Velocidade, Estresse e Regiões, atributos, habilidades e recompensa.",
     vampiro: "Antagonista: paradas padrão e excepcionais, ou a ficha completa com Atributos, Habilidades e Disciplinas.",
     goblins: "Inimigo: Combate, Noção, Habilidade e Vitalidade, bônus da arma, proteção e efeitos.",
+    tormenta20: "Ameaça de Tormenta20: ND, Defesa, resistências, PV, ataques, habilidades e magias.",
     universal: "Mini ficha livre: status, atributos, perícias, ataques e habilidades.",
   };
   function escolherSistemaDaCriatura() {
@@ -643,7 +645,7 @@
       titulo: "Nova criatura · sistema",
       largo: true,
       conteudo: el("div.pilha--curta", { class: "pilha" }, [
-        el("p.t-mini", { texto: "Cada sistema tem a ficha do próprio livro. Criaturas de Oblívio, Vampiro e Goblins ficam para consulta no Homebrew; o combate e os aliados de Ordem usam Ordem e Universal." }),
+        el("p.t-mini", { texto: "Cada sistema tem a ficha do próprio livro. Criaturas de Oblívio, Vampiro e Goblins ficam para consulta no Homebrew; as ameaças de Tormenta20 entram no combate pela Mesa da campanha de Tormenta20; o combate e os aliados de Ordem usam Ordem e Universal." }),
         el("div.hb-sistemas", { role: "list" }, global.RAMASistemas.lista().filter(function (s) { return CRIATURA_POR_SISTEMA[s.id]; }).map(function (s) {
           return el("button.hb-sistemas__opcao", {
             type: "button", role: "listitem", dataset: { sistema: s.id },

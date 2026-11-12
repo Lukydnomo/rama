@@ -225,6 +225,37 @@
       },
     },
     {
+      id: "tormenta20", nome: "Tormenta20", curto: "T20", edicao: "Jogo do Ano",
+      resumo: "Jogo do Ano: as 17 raças, as 14 classes, magias com aprimoramentos, ameaças por ND e a campanha inteira.",
+      ficha: {
+        bloco: "tormenta20", motor: "RAMATormenta20",
+        resumo: { campo: "resumoTormenta20", calcular: "resumoParaMesa", normalizarAntes: true },
+        pontos: [
+          "Raças, classes, origens e divindades do Livro Básico, com multiclasse",
+          "Atributos por compra de 10 pontos ou 4d6, perícias por ½ nível",
+          "Magias com aprimoramentos, sustentadas e limite de PM por fonte",
+          "Defesa, carga em espaços, ataques e críticos calculados com as parcelas",
+        ],
+        blocoSuperior: "RAMASecaoTormenta20",
+        abas: [
+          { chave: "geral",       rotulo: "Personagem", secao: "RAMASecaoTormenta20", grupo: "jogo" },
+          { chave: "pericias",    rotulo: "Perícias",   secao: "RAMASecaoTormenta20Pericias", grupo: "jogo" },
+          { chave: "habilidades", rotulo: "Poderes",    secao: "RAMASecaoTormenta20Habilidades", grupo: "personagem" },
+          { chave: "magias",      rotulo: "Magias",     secao: "RAMASecaoTormenta20Magias", grupo: "personagem" },
+          { chave: "inventario",  rotulo: "Inventário", secao: "RAMASecaoTormenta20Inventario", grupo: "personagem" },
+          { chave: "parceiros",   rotulo: "Parceiros",  secao: "RAMASecaoTormenta20Parceiros", grupo: "personagem" },
+          { chave: "progressao",  rotulo: "Progressão", secao: "RAMASecaoTormenta20Progressao", grupo: "preparo" },
+          { chave: "anotacoes",   rotulo: "Anotações",  secao: "RAMASecaoAnotacoes", independente: true, grupo: "preparo" },
+        ],
+      },
+      campanha: {
+        mestre: "Mestre",
+        descricao: "A mesa do Mestre: combate com iniciativa, surpresa e ameaças do livro por ND (cada uma com PV e condições próprias), encontros, desafios e XP, tesouro pelas tabelas com prévia, descanso, perigos complexos e tempo entre aventuras.",
+        ferramentas: ["mesaT20"],
+        mecanicas: [],
+      },
+    },
+    {
       id: "universal", nome: "Universal", curto: "Universal",
       resumo: "O modelo flexível do R.A.M.A., para qualquer sistema.",
       ficha: {

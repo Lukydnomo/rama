@@ -424,6 +424,22 @@ var ABAS = {
     leves: 3,
     pesadas: ['dadosJson'],
   },
+  CAMPANHA_TORMENTA20: {
+    /* A mesa do Mestre de Tormenta20 (v8.0): regras da campanha, dia e
+       cena, o combate (personagens e ocorrências independentes de
+       ameaças com PV, condições e recargas próprios, iniciativa,
+       surpresa, rodada, vez), encontros, desafios para XP, tesouros
+       rolados, distribuições aplicadas (por opId), perigos complexos,
+       notas do mestre e o registro — uma linha por campanha. O que muda
+       fichas (recompensa, dano, descanso, magia contra ameaça) passa por
+       tormenta20_operar (Tormenta20.gs), com opId nas duas pontas.
+       Trocar o sistema não apaga a linha. */
+    nome: 'CAMPANHA_TORMENTA20',
+    colunas: ['campanhaId', 'atualizadoEm', 'rev', 'opsJson', 'dadosJson'],
+    chave: 'campanhaId',
+    leves: 3,
+    pesadas: ['dadosJson'],
+  },
   CAMPANHA_CAPAS: {
     /* A capa (banner) da campanha. Fora do dadosJson pelo mesmo motivo
        da foto de personagem: é o campo mais pesado e o que menos muda.

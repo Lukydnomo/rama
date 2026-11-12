@@ -12,7 +12,7 @@ funciona o sistema de uma campanha e como entra um sistema novo.
 |---|---|---|
 | **O quê** | sessão, contas, permissões, compartilhamento, armazenamento em blocos, pastas, Homebrew, temas, a estrutura da campanha (participantes, sistema da campanha, personagens vinculados, rolagens, documentos, notas, capa, marcas) e o rastreador de combate (ordem, turno, rodada) | o bloco de regras da ficha, os cálculos, o que o painel da mesa mostra, o resumo que a mesa lê, as ferramentas e mecânicas de mesa do sistema |
 | **Servidor** | `Dados.gs`, `Codigo.gs`, `Campanhas.gs`, `Sistemas.gs` | `Ordem.gs`, `Oblivio.gs`, `Vampiro.gs`, `Goblins.gs`, `Brutal.gs`, `Universal.gs` |
-| **Site** | `js/*.js`, `js/paginas/` (telas da plataforma e seções de ficha comuns: Geral, Perícias, Habilidades, Rituais, Inventário, Anotações, Aliados) | `js/ordem/` e `js/ordem/telas/`, `js/oblivio/` e `js/oblivio/telas/`, `js/vampiro/` e `js/vampiro/telas/`, `js/goblins/` e `js/goblins/telas/`, `js/brutal/` e `js/brutal/telas/`; o modelo Universal usa as seções comuns |
+| **Site** | `js/*.js`, `js/paginas/` (telas da plataforma e seções de ficha comuns: Geral, Perícias, Habilidades, Rituais, Inventário, Anotações, Aliados) | `js/ordem/` e `js/ordem/telas/`, `js/oblivio/` e `js/oblivio/telas/`, `js/vampiro/` e `js/vampiro/telas/`, `js/goblins/` e `js/goblins/telas/`, `js/brutal/` e `js/brutal/telas/`, `js/tormenta20/` e `js/tormenta20/telas/`; o modelo Universal usa as seções comuns |
 
 Seções comuns (Habilidades, Rituais, Inventário, Anotações, Aliados) são as
 mesmas em todo sistema que as usa — duplicá-las só para mudar o cabeçalho seria
@@ -76,17 +76,17 @@ catálogos dele, a pergunta `fonteLiberada` nas listas de escolha.
 
 ### Os ganchos do servidor
 
-| Gancho | Quem chama | Ordem | Oblívio | Vampiro | Goblins | BRUTAL | Universal |
-|---|---|---|---|---|---|---|---|
-| `rotas()` | `rotaDe()` (Codigo.gs) | efeito, resumo, Hexatombe, Hacking, Perigos, Sincronia | `ler_oblivio`, `salvar_oblivio`, `oblivio_operar` | `ler_vampiro`, `salvar_vampiro`, `vampiro_operar` | `ler_goblins`, `salvar_goblins`, `goblins_operar` | `ler_brutal`, `brutal_operar` | — |
-| `fichaDoSistema(ficha)` | `moduloDaFicha` | tem o bloco `ordem` | tem o bloco `oblivio` | tem o bloco `vampiro` | tem o bloco `goblins` | tem o bloco `brutal` | — |
-| `projecao(ficha)` | a projeção do painel | bloco do painel, itens, resumo | a Persona do painel | `resumoParaMesa`, calculado com o motor | `resumoParaMesa`, calculado com o motor | `resumoParaMesa` (Arquétipo, Estilos) | atributos e status |
-| `painel(proj, o)` | `listar_personagens_campanha` | o cartão de Ordem | o da Persona | trilhas, Fome, Humanidade, Potência (ou só clã e natureza) | atributos, ferimentos, efeitos (ou só ocupação e nível) | Arquétipo e Estilos (o jogo é da Mesa da Diretora) | atributos e status |
-| `recursosNoCombate(proj)` | a lista do combate | PV/PE/SAN/PD e condições | — | — | — | — | status |
-| `turnosNasFichas(...)` | `atualizar_combate` | condições e efeitos por turno | — | — | — | — | — |
-| `resumo` | criar/salvar personagem | `resumoRecursos` | — | — | — | — | — |
-| `ajustes` | `ajustar_personagem` | o alvo `recurso` | — | — | — | — | — |
-| `estadoDasMecanicas` | `ler_campanha` | Hexatombe, Hacking, Perigos | a mesa gravada | a crônica gravada | o Covil gravado | o Thriller gravado | — |
+| Gancho | Quem chama | Ordem | Oblívio | Vampiro | Goblins | BRUTAL | Tormenta20 | Universal |
+|---|---|---|---|---|---|---|---|---|
+| `rotas()` | `rotaDe()` (Codigo.gs) | efeito, resumo, Hexatombe, Hacking, Perigos, Sincronia | `ler_oblivio`, `salvar_oblivio`, `oblivio_operar` | `ler_vampiro`, `salvar_vampiro`, `vampiro_operar` | `ler_goblins`, `salvar_goblins`, `goblins_operar` | `ler_brutal`, `brutal_operar` | `ler_tormenta20`, `salvar_tormenta20`, `tormenta20_operar` | — |
+| `fichaDoSistema(ficha)` | `moduloDaFicha` | tem o bloco `ordem` | tem o bloco `oblivio` | tem o bloco `vampiro` | tem o bloco `goblins` | tem o bloco `brutal` | tem o bloco `tormenta20` | — |
+| `projecao(ficha)` | a projeção do painel | bloco do painel, itens, resumo | a Persona do painel | `resumoParaMesa`, calculado com o motor | `resumoParaMesa`, calculado com o motor | `resumoParaMesa` (Arquétipo, Estilos) | `resumoParaMesa` calculado com o motor (PV, PM, Defesa, condições) | atributos e status |
+| `painel(proj, o)` | `listar_personagens_campanha` | o cartão de Ordem | o da Persona | trilhas, Fome, Humanidade, Potência (ou só clã e natureza) | atributos, ferimentos, efeitos (ou só ocupação e nível) | Arquétipo e Estilos (o jogo é da Mesa da Diretora) | raça, classes, nível; PV, PM, Defesa, iniciativa e condições seguindo "Esconder status" | atributos e status |
+| `recursosNoCombate(proj)` | a lista do combate | PV/PE/SAN/PD e condições | — | — | — | — | — | status |
+| `turnosNasFichas(...)` | `atualizar_combate` | condições e efeitos por turno | — | — | — | — | — | — |
+| `resumo` | criar/salvar personagem | `resumoRecursos` | — | — | — | — | — | — |
+| `ajustes` | `ajustar_personagem` | o alvo `recurso` | — | — | — | — | — | — |
+| `estadoDasMecanicas` | `ler_campanha` | Hexatombe, Hacking, Perigos | a mesa gravada | a crônica gravada | o Covil gravado | o Thriller gravado | a Mesa gravada | — |
 
 Status e atributo, no ajuste rápido, são do núcleo: todo modelo de ficha tem
 essas listas.

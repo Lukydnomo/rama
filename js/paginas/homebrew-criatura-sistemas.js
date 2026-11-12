@@ -209,7 +209,43 @@
     };
   }
 
-  var FORMS = { oblivio: formOblivio, vampiro: formVampiro, goblins: formGoblins };
+  /* Tormenta20 (v8.0): a ficha de ameaça — ND, defesas, ataques e
+     habilidades, no formato do catálogo. Para NPCs rápidos, a mesa tem o
+     gerador da Tabela 7-2. */
+  function formTormenta20(b) {
+    var nd = texto("ND (1/4, 1/2, 1…20)", b.nd, 6);
+    var tipo = selecao("Tipo", [["animal", "Animal"], ["construto", "Construto"], ["espirito", "Espírito"], ["humanoide", "Humanoide"], ["monstro", "Monstro"], ["mortoVivo", "Morto-vivo"]], b.tipo);
+    var tam = selecao("Tamanho", [["minusculo", "Minúsculo"], ["pequeno", "Pequeno"], ["medio", "Médio"], ["grande", "Grande"], ["enorme", "Enorme"], ["colossal", "Colossal"]], b.tam);
+    var papel = selecao("Papel", [["solo", "Solo"], ["lacaio", "Lacaio"], ["especial", "Especial"]], b.papel);
+    var nums = [["ini", "Iniciativa"], ["per", "Percepção"], ["def", "Defesa"], ["fort", "Fortitude"], ["ref", "Reflexos"], ["von", "Vontade"], ["pv", "PV"], ["pm", "PM"], ["desl", "Deslocamento (m)"]].map(function (x) { var c = numero(x[1], b[x[0]], 99999); c.chave = x[0]; return c; });
+    var atrs = ["For", "Des", "Con", "Int", "Sab", "Car"].map(function (r, i) { var c = texto(r + " (— se nulo)", b.atr && b.atr[i] === null ? "—" : String(b.atr ? b.atr[i] : 0), 4); return c; });
+    var rd = texto("Redução de dano (geral 5, fogo 10…)", Object.keys(b.rd || {}).map(function (k) { return k + " " + b.rd[k]; }).join(", "), 200);
+    var imune = texto("Imunidades (separadas por vírgula)", (b.imune || []).join(", "), 300), vulner = texto("Vulnerabilidades", (b.vulner || []).join(", "), 200);
+    var ataques = listaEditavel("+ Ataque", b.ataques, function (a) {
+      var n = texto("Nome", a.n, 80), bo = numero("Bônus", a.a, 99), d = texto("Dano (1d8+6)", a.d, 40), x = texto("Extra (1d6 fogo)", a.x, 60), m = numero("Margem", a.m || 20, 20), c = numero("Multiplicador", a.c || 2, 6), t = texto("Tipo (C, I, P)", a.t, 20), q = numero("Quantidade", a.q || 1, 10), di = marca("À distância", a.dist);
+      return { no: grade([n, bo, d, x, m, c, t, q, di.no]), valor: function () { return n.valor() ? { n: n.valor(), a: bo.valor() || 0, d: d.valor(), x: x.valor(), m: m.valor() || 20, c: c.valor() || 2, t: t.valor(), q: q.valor() || 1, dist: di.valor() } : null; } };
+    }, 12);
+    var habs = listaEditavel("+ Habilidade", b.habs, function (h) {
+      var n = texto("Nome", h.n, 80), a = selecao("Ação", [["", "Passiva"], ["padrao", "Padrão"], ["movimento", "Movimento"], ["completa", "Completa"], ["livre", "Livre"], ["reacao", "Reação"]], h.acao || ""), pm = numero("PM", h.pm, 99), dn = texto("Dano", h.dano, 40), r = texto("Efeito", h.r, 1500, true);
+      return { no: el("div.pilha--curta", { class: "pilha" }, [grade([n, a, pm, dn]), r]), valor: function () { return n.valor() ? { n: n.valor(), acao: a.valor(), pm: pm.valor() || 0, dano: dn.valor(), r: r.valor() } : null; } };
+    }, 20);
+    var tesouro = selecao("Tesouro", [["nenhum", "Nenhum"], ["metade", "Metade"], ["padrao", "Padrão"], ["dobro", "Dobro"]], b.tesouro || "padrao");
+    var equip = texto("Equipamento", b.equip, 300), resumo = texto("Resumo", b.resumo, 600, true);
+    function listaTexto(v) { return String(v || "").split(",").map(function (s) { return s.trim(); }).filter(Boolean); }
+    return {
+      nos: [secao("Identidade (p. 282–284)", [grade([nd, tipo, tam, papel])]), secao("Números", [grade(nums), grade(atrs)]), secao("Defesas", [grade([rd, imune, vulner])]), secao("Ataques", [ataques.no]), secao("Habilidades", [habs.no]), secao("Outros", [grade([tesouro, equip]), resumo])],
+      ler: function () {
+        var bloco = { nd: nd.valor() || "1", tipo: tipo.valor(), tam: tam.valor(), papel: papel.valor(), rd: {}, imune: listaTexto(imune.valor()), vulner: listaTexto(vulner.valor()), ataques: ataques.valor().map(function (a, i) { a.id = "a" + i; return a; }), habs: habs.valor(), tesouro: tesouro.valor(), equip: equip.valor(), resumo: resumo.valor() };
+        nums.forEach(function (c) { bloco[c.chave] = c.valor() || 0; });
+        bloco.atr = atrs.map(function (c) { var v = c.valor(); return v === "—" || v === "-" ? null : (parseInt(v, 10) || 0); });
+        listaTexto(rd.valor()).forEach(function (p) { var m = /^(.*?)\s*(\d+)$/.exec(p); if (m) bloco.rd[m[1].trim() || "geral"] = Number(m[2]); });
+        if (!bloco.pv) return { ok: false, motivo: "Informe os PV." };
+        return { ok: true, bloco: bloco };
+      },
+    };
+  }
+
+  var FORMS = { oblivio: formOblivio, vampiro: formVampiro, goblins: formGoblins, tormenta20: formTormenta20 };
 
   /* ---------- o editor ---------- */
 
@@ -278,6 +314,7 @@
     if (c.sistema === "oblivio") linha = "Grau " + b.grau + " · Dano " + b.dano + " · Proteção " + b.protecao + " · Estresse " + b.limiteEstresse + " / " + b.regioes + " Regiões";
     if (c.sistema === "vampiro") linha = (NAT_VAMPIRO.filter(function (n) { return n[0] === b.natureza; })[0] || ["", ""])[1] + " · " + (b.modelo === "completo" ? "ficha completa" : "antagonista compacto") + " · Vitalidade " + b.vitalidade + " · Força de Vontade " + b.forcaDeVontade;
     if (c.sistema === "goblins") linha = FN() ? FN().linhaGoblin(b) : "";
+    if (c.sistema === "tormenta20") linha = FN() ? FN().linhaTormenta20(b) : "";
     return el("dl.r-dados", {}, [
       el("dt", { texto: "Sistema" }), el("dd", { texto: C().NOMES_DOS_SISTEMAS[c.sistema] }),
       el("dt", { texto: "Ficha" }), el("dd", { texto: linha }),

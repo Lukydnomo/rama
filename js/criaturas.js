@@ -162,8 +162,8 @@
      Ordem e Universal. Tudo é limitado aqui; o que não vale cai.
      ================================================================= */
 
-  var SISTEMAS_NATIVOS = ["oblivio", "vampiro", "goblins"];
-  var NOMES_DOS_SISTEMAS = { ordem: "Ordem Paranormal", oblivio: "Oblívio", vampiro: "Vampiro: A Máscara", goblins: "Malditos Goblins", universal: "Universal" };
+  var SISTEMAS_NATIVOS = ["oblivio", "vampiro", "goblins", "tormenta20"];
+  var NOMES_DOS_SISTEMAS = { ordem: "Ordem Paranormal", oblivio: "Oblívio", vampiro: "Vampiro: A Máscara", goblins: "Malditos Goblins", tormenta20: "Tormenta20", universal: "Universal" };
   var ACOES_OBLIVIO = ["regular", "extra", "movimento", "completa", "passiva"];
   var ATRIBUTOS_OBLIVIO = ["carne", "forca", "fuga", "determinacao", "mente"];
   var NATUREZAS_VAMPIRO = ["mortal", "carnical", "animal", "vampiro", "criatura"];
@@ -274,7 +274,33 @@
     return g;
   }
 
-  var NORMALIZAR_NATIVO = { oblivio: normalizarOblivio, vampiro: normalizarVampiro, goblins: normalizarGoblins };
+  /* Tormenta20 (v8.0): a ficha de ameaça no formato do catálogo
+     (js/tormenta20/ameacas.js), com ND, defesas, ataques e habilidades.
+     O registro do catálogo normaliza quando está na página; sem ele,
+     os campos passam limitados. */
+  function normalizarTormenta20(b) {
+    var x = b && typeof b === "object" ? b : {};
+    var A = global.RAMATormenta20Ameacas;
+    var f = A && A.daFicha ? A.daFicha(x) : x;
+    var n = function (v, min, max) { return numero(v, min, max, 0); };
+    var y = {
+      id: U.aparar(f.id, 80), nd: U.aparar(String(f.nd || "1"), 6), tipo: U.aparar(f.tipo, 20) || "monstro", sub: U.aparar(f.sub, 40), tam: U.aparar(f.tam, 20) || "medio", papel: ["solo", "lacaio", "especial"].indexOf(f.papel) >= 0 ? f.papel : "solo",
+      ini: n(f.ini, -20, 99), per: n(f.per, -20, 99), def: n(f.def, 0, 200), fort: n(f.fort, -20, 99), ref: n(f.ref, -20, 99), von: n(f.von, -20, 99), pv: n(f.pv, 1, 99999) || 1, desl: n(f.desl, 0, 200), pm: n(f.pm, 0, 9999),
+      sentidos: lista(f.sentidos).map(function (s) { return U.aparar(s, 40); }).slice(0, 10), imune: lista(f.imune).map(function (s) { return U.aparar(s, 30); }).slice(0, 30), vulner: lista(f.vulner).map(function (s) { return U.aparar(s, 30); }).slice(0, 10),
+      rd: {}, mov: {}, atr: lista(f.atr).slice(0, 6).map(function (v) { return v === null ? null : n(v, -10, 30); }), defesasTexto: U.aparar(f.defesasTexto, 300),
+      ataques: lista(f.ataques).slice(0, 12).map(function (a) { var z = a && typeof a === "object" ? a : {}; return { id: U.aparar(z.id, 20) || "a0", n: U.aparar(z.n, 80), a: n(z.a, -20, 99), d: U.aparar(z.d, 40), x: U.aparar(z.x, 60), m: n(z.m, 2, 20) || 20, c: n(z.c, 2, 6) || 2, t: U.aparar(z.t, 20), q: n(z.q, 1, 10) || 1, dist: !!z.dist, alc: U.aparar(z.alc, 20), efeito: U.aparar(z.efeito, 200), grupo: U.aparar(z.grupo, 20) }; }).filter(function (a) { return a.n; }),
+      habs: lista(f.habs).slice(0, 20).map(function (h) { var z = h && typeof h === "object" ? h : {}; return { n: U.aparar(z.n, 80), acao: U.aparar(z.acao, 20), pm: n(z.pm, 0, 99), r: U.aparar(z.r, 1500), cd: n(z.cd, 0, 99), res: U.aparar(z.res, 20), dano: U.aparar(z.dano, 40), tipoDano: U.aparar(z.tipoDano, 20), recarga: U.aparar(z.recarga, 20), condicao: U.aparar(z.condicao, 30) }; }).filter(function (h) { return h.n; }),
+      pericias: {}, equip: U.aparar(f.equip, 300), tesouro: U.aparar(f.tesouro, 120) || "nenhum", resumo: U.aparar(f.resumo, 600), pagina: n(f.pagina, 0, 999),
+    };
+    Object.keys(f.rd || {}).slice(0, 12).forEach(function (k) { y.rd[U.aparar(k, 20)] = n(f.rd[k], 0, 999); });
+    Object.keys(f.mov || {}).slice(0, 6).forEach(function (k) { y.mov[U.aparar(k, 20)] = n(f.mov[k], 0, 999); });
+    Object.keys(f.pericias || {}).slice(0, 20).forEach(function (k) { y.pericias[U.aparar(k, 40)] = n(f.pericias[k], -20, 99); });
+    while (y.atr.length < 6) y.atr.push(0);
+    if (f.magias && typeof f.magias === "object") y.magias = { como: U.aparar(f.magias.como, 120), cd: n(f.magias.cd, 0, 99), lista: lista(f.magias.lista).slice(0, 20).map(function (m) { return { id: U.aparar(m.id, 60), acao: U.aparar(m.acao, 20), pm: n(m.pm, 0, 99), r: U.aparar(m.r, 300) }; }) };
+    return y;
+  }
+
+  var NORMALIZAR_NATIVO = { oblivio: normalizarOblivio, vampiro: normalizarVampiro, goblins: normalizarGoblins, tormenta20: normalizarTormenta20 };
 
   function normalizarNativa(b) {
     var c = {
@@ -297,6 +323,7 @@
     var bloco = {};
     if (sistema === "vampiro") bloco = { modelo: d.modelo === "completo" ? "completo" : "compacto", natureza: d.modelo === "completo" ? "vampiro" : "mortal" };
     if (sistema === "goblins") bloco = { combate: 0, nocao: 0, habilidade: 0, vitalidade: 1 };
+    if (sistema === "tormenta20") bloco = { nd: "1", tipo: "monstro", tam: "medio", def: 16, pv: 20, ini: 2, per: 2, fort: 4, ref: 2, von: 1, desl: 9, atr: [2, 1, 2, 0, 0, 0], ataques: [{ n: "Ataque", a: 9, d: "1d8+6", t: "C" }] };
     var base = { sistema: sistema, nome: U.aparar(d.nome, 120) || "Nova criatura", visibilidade: d.visibilidade, origem: { tipo: "homebrew" } };
     base[sistema] = bloco;
     return normalizarNativa(base);

@@ -86,6 +86,9 @@
     { chave: "covil",       rotulo: "Covil",       secao: "RAMACampanhaGoblins", ferramenta: "covil" },
     /* BRUTAL (v7.0): a Mesa da Diretora — o Thriller da campanha. */
     { chave: "diretora",    rotulo: "Mesa da Diretora", secao: "RAMACampanhaBrutal", ferramenta: "diretora" },
+    /* Tormenta20 (v8.0): a mesa do Mestre — combate, encontros, XP e
+       tesouro, perigos e ferramentas. */
+    { chave: "mesaT20",     rotulo: "Mesa",        secao: "RAMACampanhaTormenta20", ferramenta: "mesaT20" },
     { chave: "notas",       rotulo: "Notas",       secao: "RAMACampanhaNotas", soMestre: true },
     { chave: "config",      rotulo: "Configurações", secao: "RAMACampanhaConfig", soMestre: true },
   ];
@@ -460,6 +463,7 @@
     if (tem("vampiro")) notificar("cronica");
     if (tem("goblins")) notificar("covil");
     if (tem("brutal")) notificar("diretora");
+    if (tem("tormenta20")) notificar("mesaT20");
   }
 
   async function buscarPersonagensEmSegundoPlano() {

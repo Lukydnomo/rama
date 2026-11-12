@@ -3512,11 +3512,16 @@ function resumoDeCriatura(d) {
   var r = {
     /* v6.8: Oblívio, Vampiro e Goblins passam com o próprio sistema (a
        biblioteca do combate os deixa de fora). */
-    sistema: ordem ? 'ordem' : (['oblivio', 'vampiro', 'goblins'].indexOf(d.sistema) >= 0 ? d.sistema : 'universal'),
+    sistema: ordem ? 'ordem' : (['oblivio', 'vampiro', 'goblins', 'tormenta20'].indexOf(d.sistema) >= 0 ? d.sistema : 'universal'),
     natureza: ['paranormal', 'humana', 'animal'].indexOf(d.natureza) >= 0 ? d.natureza : '',
     categoria: String(d.categoria || '').slice(0, 60),
   };
   if (vida) r.pv = Math.max(0, Math.round(Number(vida.maximo)) || 0);
+  /* v8.0: a ameaça de Tormenta20 resume ND e PV para a biblioteca. */
+  if (r.sistema === 'tormenta20' && d.tormenta20 && typeof d.tormenta20 === 'object') {
+    r.nd = String(d.tormenta20.nd || '').slice(0, 6);
+    r.pv = Math.max(0, Math.round(Number(d.tormenta20.pv)) || 0);
+  }
   if (ordem) {
     r.vd = typeof ordem.vd === 'number' && isFinite(ordem.vd) ? ordem.vd : null;
     r.nivel = String(ordem.nivel || '').slice(0, 60);

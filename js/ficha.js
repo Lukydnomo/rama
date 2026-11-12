@@ -235,6 +235,19 @@
      "maior"). Uma aba antiga descartaria a fórmula ao gravar — com o
      schema maior ela recusa.
 
+     33 → 34: Tormenta20 — Jogo do Ano (v8.0). A ficha aceita
+     `tipoFicha: "tormenta20"` e o bloco `tormenta20` (js/tormenta20/
+     regras.js): método e valores de atributos, raça (e variante e
+     escolhas), origem (ou origem própria), divindade, cada nível com a
+     classe e as escolhas, perícias pela Inteligência, poderes avulsos,
+     magias conhecidas por fonte, inventário (estado vestido/empunhado,
+     melhorias, material, encantos), recursos atuais (PV, PM, temporários,
+     não letal, sangramento), condições, efeitos ativos, usos, XP,
+     parceiros, engenhocas, fórmulas, opções e o registro de operações.
+     Nada calculado é gravado. Sem conversão. Uma aba antiga trataria a
+     ficha como de um sistema desconhecido; o schema maior faz as ainda
+     mais antigas recusarem em vez de gravar.
+
      Nenhuma das subidas exige migração: normalizarFicha() cria o que
      falta, vazio, e não toca no que existe. Um ritual gravado na 2 abre
      na 3 com a versão Normal em branco; uma ficha de Ordem gravada na 4
@@ -244,7 +257,7 @@
      os campos novos e os descartaria ao gravar — com o schema maior ela
      recusa abrir a ficha e pede para recarregar.
      Ver docs/CHARACTER_SCHEMA.md. */
-  var VERSAO_SCHEMA = 33;
+  var VERSAO_SCHEMA = 34;
 
   var MODULOS = {
     atributos: "Atributos", status: "Status/recursos", defesa: "Defesa",

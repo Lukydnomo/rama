@@ -11,6 +11,30 @@
   permite o suplemento dono da ferramenta (desligar a mecânica com
   `estado.ativo: false` continua aceito). As leituras não mudam.
 
+## Tormenta20 — v8.0
+
+Rotas de `Tormenta20.gs`; só respondem numa campanha de Tormenta20
+(ferramenta `mesaT20`, senão `outro_sistema`).
+
+- `ler_tormenta20 { campanhaId }` — membro (espectador: `sem_permissao`). O
+  mestre recebe `{ mestre: true, rev, estado, personagens }`; quem joga,
+  `{ mestre: false, rev, vista, personagens }` (`RAMATormenta20Mesa.vistaDosJogadores`:
+  ameaças ocultas somem; PV das ameaças viram estado aparente; sem notas do
+  mestre, tesouros não distribuídos e registro privado).
+- `salvar_tormenta20 { campanhaId, rev, opId, estado }` — só o mestre. `rev`
+  velha: `conflito` (com o estado atual). O servidor preserva as distribuições
+  e os desafios e tesouros já distribuídos contra um estado vindo do cliente.
+- `tormenta20_operar { campanhaId, opId, operacao }` — operações que mudam
+  fichas (e a mesa), roladas e aplicadas aqui, uma vez por `opId` (repetir
+  devolve `repetida`; o `opId` fica na mesa e em cada ficha tocada).
+  Do mestre: `recompensa` (XP, tibares e itens por ficha), `dano`, `curar`,
+  `condicao`, `descanso`, `fimDeCena`, `ataqueAmeaca` (ataque de uma ameaça
+  contra a Defesa da ficha), `sangramento`, `manobraDeAmeaca`. De quem conduz
+  o personagem (`operacao.quem`): `iniciativa`, `atacarAmeaca` (confere e gasta
+  a munição), `magiaAmeaca` (cobra PM, rola dano e resistências das ameaças),
+  `manobraContraAmeaca`. Recusas: `sem_permissao`, `nao_encontrado`,
+  `dados_invalidos` com `motivo`. Rolagens vão para `CAMPANHA_ROLAGENS`.
+
 ## BRUTAL — v7.0
 
 Rotas de `Brutal.gs`; só respondem numa campanha de BRUTAL
