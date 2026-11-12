@@ -226,6 +226,7 @@
     },
     {
       id: "tormenta20", nome: "Tormenta20", curto: "T20", edicao: "Jogo do Ano",
+      capa: "assets/sistemas/tormenta20-capa.webp", capaAlt: "Capa de Tormenta20, Jogo do Ano: o título em vermelho e dourado sobre um grupo de aventureiros em batalha, com um paladino de armadura erguendo a espada ao centro",
       resumo: "Jogo do Ano: as 17 raças, as 14 classes, magias com aprimoramentos, ameaças por ND e a campanha inteira.",
       ficha: {
         bloco: "tormenta20", motor: "RAMATormenta20",

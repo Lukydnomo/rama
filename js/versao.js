@@ -118,6 +118,17 @@
 
   var CHANGELOG = [
     {
+      versao: "8.0.1",
+      codinome: "FRONTISPÍCIO",
+      data: "12/11/2026",
+      mudancas: {
+        "Visual": [
+          "Tormenta20 ganhou a capa do Livro Básico (Jogo do Ano) no lugar da lombada provisória: na escolha do sistema da ficha e da campanha, na estante do Catálogo e no topo da ficha.",
+        ],
+        "Técnico": ["Só o site: assets/sistemas/tormenta20-capa.webp (320 px) e tormenta20-capa-pequena.webp (160 px), tiradas da capa do PDF, e js/sistemas.js (capa e capaAlt). Nada de .gs."],
+      },
+    },
+    {
       versao: "8.0.0",
       codinome: "BIFURCAÇÃO",
       data: "12/11/2026",

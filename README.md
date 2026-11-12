@@ -914,6 +914,10 @@ segredo nenhum — ele os lê das Script Properties. Publicá-lo não expõe nad
 
 ### Atualizar o backend
 
+**v8.0.1 — FRONTISPÍCIO:** só o site (a capa de Tormenta20). Publique
+`assets/sistemas/tormenta20-capa.webp`, `assets/sistemas/tormenta20-capa-pequena.webp`,
+`js/sistemas.js` e `js/versao.js`. Nada de `.gs`.
+
 **v8.0.0 — BIFURCAÇÃO:** Tormenta20 — Jogo do Ano como sistema completo.
 **Crie** os arquivos `Tormenta20` e `Tormenta20Dados` no Apps Script com
 `backend/Tormenta20.gs` e `backend/Tormenta20Dados.gs`, **troque**
@@ -1897,7 +1901,7 @@ Três números diferentes, que não se misturam:
 
 | | Onde | O que é |
 |---|---|---|
-| versão do aplicativo | `js/versao.js` | o que a pessoa vê: v8.0.0 |
+| versão do aplicativo | `js/versao.js` | o que a pessoa vê: v8.0.1 |
 | `schemaVersion` | `js/ficha.js` | o formato da FICHA |
 | `versaoFormato` | `js/config.js` | o formato dos arquivos de importação |
 
