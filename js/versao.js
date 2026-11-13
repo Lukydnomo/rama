@@ -118,6 +118,18 @@
 
   var CHANGELOG = [
     {
+      versao: "8.1.1",
+      codinome: "RETOQUE",
+      data: "12/11/2026",
+      mudancas: {
+        "Melhorado": [
+          "Os bônus que vieram da importação do CRIS agora são editáveis. Em Regras → Ajustes da mesa, cada ajuste ganhou “Editar” (valor e motivo; zero remove). Os importados levam a etiqueta “do CRIS”, e os de perícia aparecem pelo nome (“Perícia: Luta”) em vez da chave interna.",
+          "No editor do item (modo edição), as diferenças que a importação gravou no item — bônus no teste de ataque, dano, dados de dano, margem, multiplicador, Defesa, espaços e categoria — aparecem em “Ajustes da importação (CRIS)” para corrigir ou zerar.",
+        ],
+        "Técnico": ["Só o site: js/ordem/telas/ficha-ordem.js (abrirAjuste edita um ajuste existente; o editor do item lê e grava `ordem.ajustesImportados`). O bônus extra de Defesa, Esquiva e Bloqueio já era editável na composição. Nada de .gs nem de schema."],
+      },
+    },
+    {
       versao: "8.1.0",
       codinome: "ESTANDARTE",
       data: "12/11/2026",

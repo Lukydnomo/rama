@@ -2617,6 +2617,17 @@
     { valor: "capacidade", rotulo: "Capacidade de carga (espaços)" },
   ];
 
+  /* O nome do alvo de um ajuste: os da lista, as perícias ("pericia:luta",
+     como a importação do CRIS grava) e o resto como veio. */
+  function rotuloDoAlvo(alvo) {
+    var a = ALVOS_DE_AJUSTE.filter(function (x) { return x.valor === alvo; })[0];
+    if (a) return a.rotulo;
+    var m = /^pericia:(.+)$/.exec(String(alvo || ""));
+    if (m) return "Perícia: " + (C.pericia(m[1]) ? C.pericia(m[1]).nome : m[1]);
+    return String(alvo || "");
+  }
+  function ajusteImportado(a) { return /^Importação CRIS/.test(a.motivo || ""); }
+
   function botaoAjuste(ctx, o, semTitulo) {
     var lista = (o.ajustes || []);
 
@@ -2624,12 +2635,18 @@
       semTitulo ? null : el("h4.t-secao", { texto: "Ajustes da mesa" }),
       lista.length
         ? el("div.pilha--curta", { class: "pilha" }, lista.map(function (a) {
-            var alvo = ALVOS_DE_AJUSTE.filter(function (x) { return x.valor === a.alvo; })[0];
             return el("div.faixa", {}, [
               el("span.t-mini", {
-                texto: (alvo ? alvo.rotulo : a.alvo) + ": " + U.comSinal(a.valor) +
+                texto: rotuloDoAlvo(a.alvo) + ": " + U.comSinal(a.valor) +
                        (a.motivo ? " — " + a.motivo : ""),
               }),
+              ajusteImportado(a) ? el("span.r-etiqueta", { texto: "do CRIS" }) : null,
+              ctx.emEdicao()
+                ? el("button.r-botao.r-botao--mini", {
+                    type: "button", texto: "Editar", "aria-label": "Editar o ajuste de " + rotuloDoAlvo(a.alvo),
+                    onclick: function () { abrirAjuste(ctx, o, a); },
+                  })
+                : null,
               ctx.emEdicao()
                 ? el("button.r-botao.r-botao--mini.r-botao--fantasma", {
                     type: "button", texto: "Remover",
@@ -2652,16 +2669,48 @@
     ]);
   }
 
-  function abrirAjuste(ctx, o) {
+  /* Acrescentar um ajuste, ou editar um que existe (inclusive os que a
+     importação do CRIS criou: perícias, PV, PE, Sanidade…). Editar mantém
+     o id e o alvo; zero remove. */
+  function abrirAjuste(ctx, o, existente) {
+    var opcoesAlvo = ALVOS_DE_AJUSTE.map(function (a) { return { valor: a.valor, rotulo: a.rotulo }; });
+    if (existente && !ALVOS_DE_AJUSTE.some(function (x) { return x.valor === existente.alvo; })) opcoesAlvo.push({ valor: existente.alvo, rotulo: rotuloDoAlvo(existente.alvo) });
     var alvo = UI.campo({
-      rotulo: "O que ajustar", tipo: "selecao", valor: "defesa",
-      opcoes: ALVOS_DE_AJUSTE.map(function (a) { return { valor: a.valor, rotulo: a.rotulo }; }),
+      rotulo: "O que ajustar", tipo: "selecao", valor: existente ? existente.alvo : "defesa",
+      opcoes: opcoesAlvo,
     });
-    var valor = UI.campo({ rotulo: "Quanto", tipo: "numero", valor: "0", limite: 6 });
+    var valor = UI.campo({ rotulo: "Quanto", tipo: "numero", valor: String(existente ? existente.valor : 0), limite: 6 });
     var motivo = UI.campo({
-      rotulo: "Motivo", valor: "", limite: 120,
+      rotulo: "Motivo", valor: existente ? existente.motivo || "" : "", limite: 120,
       ajuda: "Por que a mesa decidiu isto. Aparece na composição do número.",
     });
+    if (existente) {
+      return UI.modal({
+        titulo: "Editar ajuste",
+        conteudo: el("div.pilha", {}, [
+          el("p.t-mini", { texto: ajusteImportado(existente)
+            ? "Este ajuste veio da importação do CRIS: é a diferença entre o número do CRIS e a conta do R.A.M.A. Corrija o valor se ele não fizer mais sentido; zero remove."
+            : "Mude o valor ou o motivo. Zero remove o ajuste." }),
+          alvo, valor, motivo,
+        ]),
+        botoes: [
+          { rotulo: "Cancelar", classe: "r-botao--fantasma" },
+          {
+            rotulo: "Salvar", classe: "r-botao--principal",
+            aoClicar: function (fechar) {
+              var n = U.inteiro(valor.entrada.value, 0);
+              if (n && !motivo.entrada.value.trim()) { motivo.marcarErro("Escreva o motivo."); return; }
+              if (!n) o.ajustes = o.ajustes.filter(function (x) { return x.id !== existente.id; });
+              else o.ajustes = o.ajustes.map(function (x) {
+                return x.id === existente.id ? Object.assign({}, x, { alvo: alvo.entrada.value, valor: n, motivo: motivo.entrada.value.trim().slice(0, 120) }) : x;
+              });
+              aoMudarOrdem(ctx);
+              fechar();
+            },
+          },
+        ],
+      });
+    }
 
     UI.modal({
       titulo: "Ajuste manual",
@@ -4983,6 +5032,25 @@
             })
           : [el("p.t-mini", { texto: "Nenhuma. Aplique pelo menu do item, em “Modificações e maldições…”." })]);
       }
+      /* As diferenças que a importação do CRIS gravou no item (ataque,
+         dano, Defesa, espaços…): editáveis; zero tira a parcela. */
+      var AJ_ROTULOS = { categoria: "Categoria", espacos: "Espaços", defesa: "Defesa", ataque: "Bônus no teste de ataque", dano: "Dano (parte fixa)", dadosDano: "Dados de dano", margem: "Margem de ameaça", multiplicador: "Multiplicador de crítico" };
+      var ajImp = d.ajustesImportados && typeof d.ajustesImportados === "object" ? d.ajustesImportados : null;
+      var camposAjuste = null, motivoAjuste = null;
+      if (ajImp) {
+        var dimensoes = ["categoria", "espacos"].concat(atual.tipo === "arma" ? ["ataque", "dano", "dadosDano", "margem", "multiplicador"] : []).concat(atual.tipo === "armadura" ? ["defesa"] : []);
+        Object.keys(ajImp).forEach(function (k) { if (k !== "motivo" && dimensoes.indexOf(k) < 0) dimensoes.push(k); });
+        camposAjuste = {};
+        dimensoes.forEach(function (k) {
+          camposAjuste[k] = UI.campo({ rotulo: AJ_ROTULOS[k] || k, tipo: "numero", valor: String(ajImp[k] || 0), limite: 4 });
+        });
+        motivoAjuste = UI.campo({ rotulo: "Motivo", valor: ajImp.motivo || "", limite: 300 });
+        elementos.push(el("h4.t-secao", { texto: "Ajustes da importação (CRIS)" }));
+        elementos.push(el("p.t-mini", { texto: "Diferenças entre o item no CRIS e a conta do R.A.M.A., somadas como parcela. Corrija ou zere o que não fizer mais sentido." }));
+        elementos.push(el("div.editar-grade", {}, Object.keys(camposAjuste).map(function (k) { return camposAjuste[k]; })));
+        elementos.push(motivoAjuste);
+      }
+
       if (atual.id && (modificacoes.length || atual.tipo === "arma" || atual.tipo === "armadura")) {
         pintarMods();
         elementos.push(el("h4.t-secao", { texto: "Modificações e maldições" }));
@@ -5035,6 +5103,15 @@
           }
           if (modificacoes.length) saida.modificacoes = modificacoes;
           else delete saida.modificacoes;
+          if (camposAjuste) {
+            var aj = {};
+            Object.keys(camposAjuste).forEach(function (k) {
+              var v = parseInt(String(camposAjuste[k].entrada.value).replace("−", "-"), 10);
+              if (isFinite(v) && v) aj[k] = v;
+            });
+            if (Object.keys(aj).length) { aj.motivo = motivoAjuste.entrada.value.trim().slice(0, 300) || "Importação: diferença observada"; saida.ajustesImportados = aj; }
+            else delete saida.ajustesImportados;
+          }
           return saida;
         },
       };
