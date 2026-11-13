@@ -955,6 +955,14 @@ t.grupo("Perfil (v8.2): uma seção por vez, teclado e movimento curto");
   t.ok("as folhas do Perfil (Legacy e Modern20) vêm antes da densidade", html.indexOf("css/perfil.css") > 0 && html.indexOf("css/modern20/perfil.css") > html.indexOf("css/perfil.css") && html.indexOf("css/densidade.css") > html.indexOf("css/modern20/perfil.css"));
 }
 
+t.grupo("Personagens (v8.2.1): Exibição Abas/Ícones só no celular");
+{
+  const pg = await Deno.readTextFile(new URL("../js/paginas/personagens.js", import.meta.url));
+  t.ok("o controle de Exibição só entra na tela estreita", /organizacao\.suportada && celular\(\) \? controleDeExibicao\(\)/.test(pg));
+  t.ok("no desktop vale Abas mesmo com Ícones salvo", /function exibicaoEfetiva\(\) \{ return celular\(\) \? exibicao\(\) : "abas"; \}/.test(pg) && /exibicaoEfetiva\(\) === "icones"/.test(pg));
+  t.ok("redimensionar a tela redesenha quando a exibição efetiva muda", /function ouvirTela\(\)/.test(pg) && /ouvirTela\(\);/.test(pg));
+}
+
 t.grupo("Aparência num lugar só (v2.49.1): o editor, não Exibição");
 {
   const perfil = await Deno.readTextFile(new URL("../js/paginas/perfil.js", import.meta.url));

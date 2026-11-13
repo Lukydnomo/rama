@@ -118,6 +118,17 @@
 
   var CHANGELOG = [
     {
+      versao: "8.2.1",
+      codinome: "RECORTE",
+      data: "13/11/2026",
+      mudancas: {
+        "Melhorado": [
+          "Em Personagens, a escolha de Exibição (Abas ou Ícones) agora só aparece no celular. No computador a página mostra sempre as abas de pastas, mesmo que a conta tenha Ícones salvo — a escolha continua guardada e volta a valer ao abrir no celular. Girar ou redimensionar a tela troca sozinho, sem perder pasta, busca nem filtro.",
+        ],
+        "Técnico": ["Só o site: js/paginas/personagens.js (exibicaoEfetiva: Ícones só com a tela até 760px, o mesmo corte do resto do site; a preferência `exibicaoPastas` não muda). Nada de .gs."],
+      },
+    },
+    {
       versao: "8.2.0",
       codinome: "VESTÍBULO",
       data: "13/11/2026",

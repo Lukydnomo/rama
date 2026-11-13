@@ -915,6 +915,9 @@ segredo nenhum — ele os lê das Script Properties. Publicá-lo não expõe nad
 
 ### Atualizar o backend
 
+**v8.2.1 — RECORTE:** só o site (Exibição Abas/Ícones só no celular, em
+Personagens). Publique `js/paginas/personagens.js` e `js/versao.js`. Nada de `.gs`.
+
 **v8.2.0 — VESTÍBULO:** só o site (o Perfil refeito). Publique
 `perfil/index.html`, `js/paginas/perfil.js`, `css/perfil.css`,
 `css/modern20/perfil.css` e `js/versao.js`. Nada de `.gs`.
@@ -1915,7 +1918,7 @@ Três números diferentes, que não se misturam:
 
 | | Onde | O que é |
 |---|---|---|
-| versão do aplicativo | `js/versao.js` | o que a pessoa vê: v8.2.0 |
+| versão do aplicativo | `js/versao.js` | o que a pessoa vê: v8.2.1 |
 | `schemaVersion` | `js/ficha.js` | o formato da FICHA |
 | `versaoFormato` | `js/config.js` | o formato dos arquivos de importação |
 

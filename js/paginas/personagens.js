@@ -96,6 +96,7 @@
     painel = U.$("#painel-personagens");
     lerEstadoDaUrl();
     ouvirPreferencias();
+    ouvirTela();
     if (contexto === "recebidos") await carregarRecebidos();
     else await carregar();
 
@@ -197,7 +198,7 @@
     gravarEstadoNaUrl();
 
     var icones = modoIcones();
-    exibicaoDesenhada = exibicao();
+    exibicaoDesenhada = exibicaoEfetiva();
     U.trocar(painel, [
       cabecalho(),
       abasDeContexto(),
@@ -335,7 +336,7 @@
         }),
         el("span", { texto: "Agrupar por sistema" }),
       ]) : null,
-      organizacao.suportada ? controleDeExibicao() : null,
+      organizacao.suportada && celular() ? controleDeExibicao() : null,
     ]);
   }
 
@@ -519,7 +520,25 @@
 
   /* Ícones só fazem sentido com organização: sem ela não há pastas nem
      grupos para mostrar como ícone. */
-  function modoIcones() { return organizacao.suportada && exibicao() === "icones"; }
+  function modoIcones() { return organizacao.suportada && exibicaoEfetiva() === "icones"; }
+
+  /* Ícones é coisa de celular (v8.2.1): a escolha só aparece na tela
+     estreita, e no desktop vale Abas mesmo com "Ícones" salvo na conta
+     (a preferência fica guardada para quando abrir no celular). */
+  var ESTREITO = "(max-width: 760px)";
+  function celular() { return !!(global.matchMedia && global.matchMedia(ESTREITO).matches); }
+  function exibicaoEfetiva() { return celular() ? exibicao() : "abas"; }
+
+  function ouvirTela() {
+    if (!global.matchMedia) return;
+    var mq = global.matchMedia(ESTREITO);
+    var aoTrocar = function () {
+      if (exibicaoEfetiva() !== "icones") fecharExpansao(true);
+      if (carregado && painel && contexto !== "recebidos" && exibicaoEfetiva() !== exibicaoDesenhada) desenhar();
+    };
+    if (mq.addEventListener) mq.addEventListener("change", aoTrocar);
+    else if (mq.addListener) mq.addListener(aoTrocar);
+  }
 
   function ouvirPreferencias() {
     var P = global.RAMAPreferencias;
@@ -535,7 +554,7 @@
       /* Só redesenha quando a exibição mudou de fato (outra aba, a
          sessão confirmando outro valor): o resto é estado do salvamento. */
       if (info.valor !== "icones") fecharExpansao(true);
-      if (carregado && painel && info.valor !== exibicaoDesenhada) desenhar();
+      if (carregado && painel && exibicaoEfetiva() !== exibicaoDesenhada) desenhar();
     });
   }
 
@@ -560,7 +579,7 @@
     if (valor !== "icones") fecharExpansao(true);
     if (global.RAMAPreferencias) global.RAMAPreferencias.salvar("exibicaoPastas", valor);
     else exibicaoLocal = valor;
-    if (exibicao() !== exibicaoDesenhada) desenhar();
+    if (exibicaoEfetiva() !== exibicaoDesenhada) desenhar();
   }
 
   function nomeDaSelecao(pastaId) {
