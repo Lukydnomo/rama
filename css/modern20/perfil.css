@@ -1,0 +1,38 @@
+/* =====================================================================
+   R.A.M.A. — Perfil (v8.2) · Modern20
+   ---------------------------------------------------------------------
+   As MESMAS classes de css/perfil.css na linguagem Modern20: cantos
+   leves, traço discreto, a seleção num fundo suave. O indicador e o
+   negrito continuam marcando a seção ativa sem depender de cor.
+   ===================================================================== */
+
+:where(:root[data-interface="modern20"]) {
+  & .perfil-cab,
+  & .perfil-bloco,
+  & .perfil-destaque,
+  & .perfil-tema,
+  & .perfil-import,
+  & .perfil-emuso > div {
+    border-color: var(--m20-borda);
+    border-radius: var(--m20-raio-cartao);
+  }
+  & .perfil-destaque { border-color: var(--m20-borda-controle); box-shadow: var(--m20-sombra-1); }
+  & .perfil-bloco--sessao { border-style: solid; background: var(--m20-realce); }
+  & .perfil-bloco__titulo { text-transform: none; letter-spacing: 0; font-size: var(--texto-medio); }
+  & .perfil-bloco__etiqueta { border-radius: 999px; border-color: var(--m20-borda-controle); text-transform: none; letter-spacing: 0; }
+
+  & .perfil-nav { border-left-color: var(--m20-borda); }
+  & .perfil-nav__aba { border-radius: var(--m20-raio-controle); }
+  & .perfil-nav__aba:hover { background: var(--m20-realce); }
+  & .perfil-nav__aba[aria-selected="true"] { background: var(--m20-selecao-suave); }
+  & .perfil-nav__aba[aria-selected="true"] .perfil-nav__rotulo::before { content: none; }
+  & .perfil-nav__indicador { border-radius: 999px; background: var(--cor-selecao); }
+
+  & .perfil-tema__cabeca { border-radius: var(--m20-raio-cartao); }
+  & .perfil-tema__cabeca:hover { background: var(--m20-realce); }
+
+  @media (max-width: 760px) {
+    & .perfil-nav__aba { border-color: var(--m20-borda); }
+    & .perfil-nav__aba[aria-selected="true"] { border-color: var(--cor-selecao); }
+  }
+}

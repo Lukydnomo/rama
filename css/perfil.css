@@ -1,0 +1,181 @@
+/* =====================================================================
+   R.A.M.A. — Perfil (v8.2) · Legacy
+   ---------------------------------------------------------------------
+   Cabeçalho compacto, navegação por seções (lateral no desktop,
+   segmentada acima do conteúdo no celular) e uma seção por vez. Só os
+   tokens do tema: nenhuma cor presa.
+
+   Seção ativa sem depender de cor: o indicador (barra lateral / traço
+   de baixo), o texto em negrito e o "▸" antes do rótulo, além de
+   aria-selected.
+
+   Movimento: --tempo-curto (160 ms) e --curva, que já valem 0 com
+   prefers-reduced-motion (tokens.css). Nada aqui bloqueia o clique.
+   A versão Modern20 está em css/modern20/perfil.css.
+   ===================================================================== */
+
+.perfil-titulo { margin: 0; }
+
+/* ---------------------------------------------- cabeçalho compacto */
+.perfil-cab {
+  display: flex; align-items: center; gap: var(--e3);
+  padding: var(--e3);
+  border: var(--borda) solid var(--cor-traco-media);
+  background: var(--fundo-superficie);
+}
+.perfil-cab__avatar { width: 56px; height: 56px; font-size: var(--texto-medio); flex: none; }
+.perfil-cab__textos { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.perfil-cab__nome { margin: 0; font-size: var(--texto-medio); overflow-wrap: anywhere; }
+.perfil-cab__usuario { margin: 0; color: var(--cor-texto-2); font-size: var(--texto-mini); }
+.perfil-cab__detalhes { font-size: var(--texto-mini); }
+.perfil-cab__detalhes > summary { cursor: pointer; color: var(--cor-link); width: max-content; }
+.perfil-cab__detalhes > summary:focus-visible { outline: 2px solid var(--cor-foco); outline-offset: 2px; }
+.perfil-cab__detalhes .r-dados { margin-top: var(--e1); }
+
+/* ------------------------------------------------- casca e navegação */
+.perfil { display: grid; grid-template-columns: 14rem minmax(0, 1fr); gap: var(--e4); align-items: start; }
+.perfil-nav {
+  position: relative;
+  display: flex; flex-direction: column; gap: 2px;
+  padding-left: 4px;
+  border-left: var(--borda) solid var(--cor-traco-fraca);
+}
+.perfil-nav__indicador {
+  position: absolute; left: -2px; top: 0; width: 4px; height: 0;
+  background: var(--cor-texto);
+  transition: transform var(--tempo-curto) var(--curva), height var(--tempo-curto) var(--curva), width var(--tempo-curto) var(--curva);
+  pointer-events: none;
+}
+.perfil-nav__aba {
+  display: flex; align-items: center; gap: var(--e2);
+  min-height: var(--alvo-toque);
+  padding: var(--e1) var(--e3);
+  background: transparent; border: 0;
+  font: inherit; color: var(--cor-texto-2); text-align: left; cursor: pointer;
+  transition: color var(--tempo-seco) var(--curva), background var(--tempo-seco) var(--curva);
+}
+.perfil-nav__aba:hover { color: var(--cor-texto); background: var(--fundo-superficie); }
+.perfil-nav__aba:focus-visible { outline: 2px solid var(--cor-foco); outline-offset: -2px; }
+.perfil-nav__aba[aria-selected="true"] { color: var(--cor-texto); font-weight: 700; }
+.perfil-nav__aba[aria-selected="true"] .perfil-nav__rotulo::before { content: "▸ "; }
+.perfil-nav__icone { display: inline-grid; place-items: center; width: 1.2rem; height: 1.2rem; flex: none; }
+.perfil-nav__icone svg { width: 100%; height: 100%; }
+
+/* A seção: entra com fade curto e 4 px. A altura de antes fica presa
+   durante a entrada (perfil.js), para a rolagem não pular. */
+.perfil-secao { min-width: 0; outline: none; }
+.perfil-secao--entrando > * { animation: perfil-entrar var(--tempo-curto) var(--curva) both; }
+@keyframes perfil-entrar { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+
+/* Só o bloco que mudou (editar nome, prévia de um tema). */
+.perfil-anima { animation: perfil-abrir var(--tempo-curto) var(--curva) both; }
+@keyframes perfil-abrir { from { opacity: 0; transform: translateY(-3px); } to { opacity: 1; transform: none; } }
+
+/* ----------------------------------------------------------- blocos */
+.perfil-pilha { display: flex; flex-direction: column; gap: var(--e4); }
+.perfil-pilha--curta { gap: var(--e2); }
+.perfil-bloco {
+  display: flex; flex-direction: column; gap: var(--e3);
+  padding: var(--e3) var(--e4);
+  border: var(--borda) solid var(--cor-traco-media);
+  background: var(--fundo-superficie);
+  min-width: 0;
+}
+.perfil-bloco__topo { display: flex; align-items: center; gap: var(--e2); flex-wrap: wrap; }
+.perfil-bloco__titulo { margin: 0; font-size: var(--texto-base); text-transform: uppercase; letter-spacing: var(--espaco-letra-titulo); }
+.perfil-bloco__etiqueta {
+  font-size: var(--texto-mini); color: var(--cor-texto-2);
+  border: 1px solid var(--cor-traco-media); padding: 0 var(--e1);
+  text-transform: uppercase; letter-spacing: var(--espaco-letra);
+}
+.perfil-bloco--sessao { border-style: dashed; }
+
+/* ------------------------------------------------------------ conta */
+.perfil-avatar { display: flex; align-items: center; gap: var(--e3); flex-wrap: wrap; }
+.perfil-avatar__acoes { display: flex; flex-direction: column; align-items: flex-start; gap: var(--e1); }
+.perfil-nome { min-width: 0; }
+.perfil-nome, .perfil-nome__leitura { display: flex; align-items: center; justify-content: space-between; gap: var(--e3); flex-wrap: wrap; }
+.perfil-nome__leitura { flex-direction: column; align-items: flex-start; justify-content: flex-start; gap: 2px; }
+.perfil-nome__rotulo { font-size: var(--texto-mini); color: var(--cor-texto-2); text-transform: uppercase; letter-spacing: var(--espaco-letra); }
+.perfil-nome__valor { font-size: var(--texto-medio); overflow-wrap: anywhere; }
+.perfil-nome__edicao { flex: 1; display: flex; flex-direction: column; gap: var(--e2); min-width: min(100%, 18rem); }
+.perfil-nome .r-botao svg, .perfil-bloco .r-botao svg, .perfil-destaque .r-botao svg { width: 1em; height: 1em; }
+.perfil-bloco .r-botao, .perfil-destaque .r-botao { gap: var(--e1); }
+
+/* -------------------------------------------------------- aparência */
+.perfil-emuso { margin: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr)); gap: var(--e2); }
+.perfil-emuso > div { display: flex; flex-direction: column; gap: 2px; padding: var(--e2); border: 1px solid var(--cor-traco-fraca); }
+.perfil-emuso dt { font-size: var(--texto-mini); color: var(--cor-texto-2); text-transform: uppercase; letter-spacing: var(--espaco-letra); }
+.perfil-emuso dd { margin: 0; overflow-wrap: anywhere; }
+.perfil-opcoes__topo { display: flex; align-items: baseline; justify-content: space-between; gap: var(--e2); flex-wrap: wrap; }
+.perfil-opcoes__atual { font-size: var(--texto-mini); color: var(--cor-texto-2); }
+.perfil-opcao[aria-pressed="true"]::before { content: "✓ "; }
+
+/* --------------------------------------------------- temas de dados */
+.perfil-destaque {
+  display: flex; align-items: center; justify-content: space-between; gap: var(--e3); flex-wrap: wrap;
+  padding: var(--e3) var(--e4);
+  border: var(--borda) solid var(--cor-traco-forte);
+  background: var(--fundo-superficie);
+}
+.perfil-destaque__textos { display: flex; flex-direction: column; gap: var(--e1); min-width: 0; flex: 1 1 16rem; }
+.perfil-temas { margin: 0; padding: 0; list-style: none; display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 16rem), 1fr)); gap: var(--e2); align-items: start; }
+.perfil-tema { border: var(--borda) solid var(--cor-traco-media); background: var(--fundo-pagina); min-width: 0; }
+.perfil-tema__cabeca {
+  display: flex; align-items: center; gap: var(--e2); width: 100%;
+  min-height: var(--alvo-toque); padding: var(--e2);
+  background: transparent; border: 0; font: inherit; color: var(--cor-texto); text-align: left; cursor: pointer;
+}
+.perfil-tema__cabeca:hover { background: var(--fundo-superficie); }
+.perfil-tema__cabeca:focus-visible { outline: 2px solid var(--cor-foco); outline-offset: -2px; }
+.perfil-tema__miniatura { flex: none; display: inline-grid; place-items: center; }
+.perfil-tema__nome { flex: 1; min-width: 0; overflow-wrap: anywhere; font-weight: 700; }
+.perfil-tema__seta { color: var(--cor-texto-2); transition: transform var(--tempo-curto) var(--curva); }
+.perfil-tema__cabeca[aria-expanded="true"] .perfil-tema__seta { transform: rotate(90deg); }
+.perfil-tema__detalhe { display: flex; flex-direction: column; gap: var(--e2); padding: 0 var(--e2) var(--e2); }
+.perfil-tema__detalhe[hidden] { display: none; }
+.perfil-tema--fantasma { height: calc(var(--alvo-toque) + var(--e2)); border-style: dashed; opacity: .55; }
+/* O tema recém-resgatado: um pulso discreto na borda, uma vez. */
+.perfil-tema--novo { animation: perfil-pulso calc(var(--tempo-curto) * 4) var(--curva) 1; }
+@keyframes perfil-pulso {
+  0% { box-shadow: 0 0 0 0 var(--cor-texto); border-color: var(--cor-texto); }
+  60% { box-shadow: 0 0 0 4px transparent; border-color: var(--cor-texto); }
+  100% { box-shadow: 0 0 0 0 transparent; }
+}
+.perfil-vazio, .perfil-falha { display: flex; flex-direction: column; align-items: flex-start; gap: var(--e2); }
+.perfil-vazio p, .perfil-falha p { margin: 0; }
+.perfil-vazio__icone { width: 2rem; height: 2rem; color: var(--cor-texto-2); }
+.perfil-vazio__icone svg { width: 100%; height: 100%; }
+
+/* ------------------------------------------------------- importações */
+.perfil-imports { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: var(--e2); }
+.perfil-import {
+  display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: var(--e3);
+  padding: var(--e3); border: var(--borda) solid var(--cor-traco-media); background: var(--fundo-pagina);
+}
+.perfil-import__icone { width: 1.6rem; height: 1.6rem; color: var(--cor-texto-2); }
+.perfil-import__icone svg { width: 100%; height: 100%; }
+.perfil-import__textos { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.perfil-import__titulo { margin: 0; font-size: var(--texto-base); }
+.perfil-import__textos p { margin: 0; }
+.perfil-import__tipo { font-size: var(--texto-mini); color: var(--cor-texto-2); width: max-content; border-bottom: 1px dotted var(--cor-traco-media); }
+
+/* ----------------------------------------------------------- celular */
+@media (max-width: 760px) {
+  .perfil { grid-template-columns: minmax(0, 1fr); gap: var(--e3); }
+  /* Controles compactos acima do conteúdo: uma grade 2 × 2, sempre
+     inteira à vista (sem rolagem lateral, mesmo com escala ampliada). */
+  .perfil-nav {
+    display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--e1);
+    padding: 0; border-left: 0;
+  }
+  .perfil-nav__indicador { left: 0; top: 0; height: 3px; width: 0; }
+  .perfil-nav__aba { min-width: 0; padding: var(--e1) var(--e2); border: 1px solid var(--cor-traco-fraca); justify-content: flex-start; }
+  .perfil-nav__rotulo { min-width: 0; overflow-wrap: anywhere; line-height: 1.15; }
+  .perfil-nav__aba[aria-selected="true"] { border-color: var(--cor-texto); }
+  .perfil-nav__aba[aria-selected="true"] .perfil-nav__rotulo::before { content: none; }
+  .perfil-cab { padding: var(--e2); }
+  .perfil-bloco, .perfil-destaque { padding: var(--e3); }
+  .perfil-import { grid-template-columns: auto minmax(0, 1fr); }
+  .perfil-import > .r-botao { grid-column: 1 / -1; justify-self: start; }
+}

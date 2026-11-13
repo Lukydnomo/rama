@@ -940,6 +940,21 @@ t.grupo("Estilo da interface · as páginas e o isolamento das folhas");
   t.ok("o Modern20 não usa !important", importantes.length === 0, importantes.join(", "));
 }
 
+t.grupo("Perfil (v8.2): uma seção por vez, teclado e movimento curto");
+{
+  const perfil = await Deno.readTextFile(new URL("../js/paginas/perfil.js", import.meta.url));
+  const css = (await Deno.readTextFile(new URL("../css/perfil.css", import.meta.url))).replace(/\/\*[\s\S]*?\*\//g, "");
+  const html = await Deno.readTextFile(new URL("../perfil/index.html", import.meta.url));
+  t.ok("quatro seções: Conta, Aparência, Temas de dados, Importações (começa em Conta)", /chave: "conta"[\s\S]*chave: "aparencia"[\s\S]*chave: "dados"[\s\S]*chave: "importar"/.test(perfil) && /var estado = \{ secao: "conta" \}/.test(perfil));
+  t.ok("navegação é uma lista de abas com setas, Home e End", /role: "tablist"/.test(perfil) && /role: "tab"/.test(perfil) && /role: "tabpanel"/.test(perfil) && /"ArrowDown"/.test(perfil) && /"Home"/.test(perfil) && /"End"/.test(perfil));
+  t.ok("a aba ativa não depende só de cor (indicador e ▸)", /perfil-nav__indicador/.test(css) && /aria-selected="true"\] \.perfil-nav__rotulo::before \{ content: "▸ "; \}/.test(css));
+  t.ok("o movimento usa os tokens (0 ms com prefers-reduced-motion), sem duração presa", !/\d+m?s\b/.test(css.replace(/@keyframes[^{]*\{[\s\S]*?\}\s*\}/g, "")) && /var\(--tempo-curto\)/.test(css));
+  t.ok("salvar não redesenha a página: só o trecho afetado", !/function desenhar\(\)/.test(perfil) && /function pintarNome\(/.test(perfil) && /function pintarAvatar\(/.test(perfil) && /function pintarEmUso\(/.test(perfil));
+  t.ok("falhou ao gravar o nome: o que foi digitado fica", /O que você digitou continua aqui/.test(perfil));
+  t.ok("a coleção prevê carregamento, vazio e falha com Tentar novamente", /Consultando a sua coleção/.test(perfil) && /Nenhum tema de dados desbloqueado ainda/.test(perfil) && /Tentar novamente/.test(perfil));
+  t.ok("as folhas do Perfil (Legacy e Modern20) vêm antes da densidade", html.indexOf("css/perfil.css") > 0 && html.indexOf("css/modern20/perfil.css") > html.indexOf("css/perfil.css") && html.indexOf("css/densidade.css") > html.indexOf("css/modern20/perfil.css"));
+}
+
 t.grupo("Aparência num lugar só (v2.49.1): o editor, não Exibição");
 {
   const perfil = await Deno.readTextFile(new URL("../js/paginas/perfil.js", import.meta.url));

@@ -25,7 +25,7 @@ preferências de tela — nunca é tratado como banco.
   campanhas/            lista de campanhas
   campanha/             uma campanha (?id=...)
   homebrew/             biblioteca de itens
-  perfil/               conta, exibição e importação
+  perfil/               conta, aparência, temas de dados e importações (uma seção por vez)
   ficha/                a ficha (?id=...)
   testes/               casos de teste, no navegador e no terminal
   assets/criaturas/     retrato 1:1 e corpo inteiro de cada criatura do catálogo (trocáveis)
@@ -43,6 +43,7 @@ preferências de tela — nunca é tratado como banco.
     goblins.css         Malditos Goblins: ficha oficial, dados que explodem, criação, Covil (v6.0)
     brutal.css          BRUTAL: a ficha-tabuleiro, as cartas dos Arquétipos, a Mesa da Diretora (v7.0)
     tormenta20.css      Tormenta20: ficha com parcelas, criação em 8 passos, magia com aprimoramentos, Mesa (v8.0)
+    perfil.css          o Perfil: cabeçalho compacto, navegação por seções, coleção de temas (v8.2)
     (os suplementos — volumes, switches e a animação — estão em componentes.css, v6.1)
     (estas folhas SÃO o estilo Legacy: a aparência da v2.48.4, intocada)
     interface.css       o seletor de estilo do editor de temas (vale nos dois estilos)
@@ -913,6 +914,10 @@ próprio `<script src>`, então funciona debaixo de subpasta sem ajuste.
 segredo nenhum — ele os lê das Script Properties. Publicá-lo não expõe nada.
 
 ### Atualizar o backend
+
+**v8.2.0 — VESTÍBULO:** só o site (o Perfil refeito). Publique
+`perfil/index.html`, `js/paginas/perfil.js`, `css/perfil.css`,
+`css/modern20/perfil.css` e `js/versao.js`. Nada de `.gs`.
 
 **v8.1.1 — RETOQUE:** só o site (bônus importados do CRIS editáveis). Publique
 `js/ordem/telas/ficha-ordem.js` e `js/versao.js`. Nada de `.gs`.
@@ -1910,7 +1915,7 @@ Três números diferentes, que não se misturam:
 
 | | Onde | O que é |
 |---|---|---|
-| versão do aplicativo | `js/versao.js` | o que a pessoa vê: v8.1.1 |
+| versão do aplicativo | `js/versao.js` | o que a pessoa vê: v8.2.0 |
 | `schemaVersion` | `js/ficha.js` | o formato da FICHA |
 | `versaoFormato` | `js/config.js` | o formato dos arquivos de importação |
 

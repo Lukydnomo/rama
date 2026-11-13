@@ -118,6 +118,24 @@
 
   var CHANGELOG = [
     {
+      versao: "8.2.0",
+      codinome: "VESTÍBULO",
+      data: "13/11/2026",
+      mudancas: {
+        "Melhorado": [
+          "O Perfil foi refeito. Abre com um cabeçalho compacto (avatar, nome e @usuário; a data da conta e o código do agente ficam em “Detalhes da conta”) e mostra uma seção por vez: Conta, Aparência, Temas de dados e Importações. No computador, a navegação fica ao lado; no celular, em botões compactos acima do conteúdo. Abre em Conta (ou na seção do endereço) e continua na mesma seção ao salvar ou fechar um editor.",
+          "Conta: Trocar avatar (com o editor de recorte) e Editar nome à vista. O campo de nome só abre ao editar, com Salvar e Cancelar (Enter e Esc também). Se a gravação falhar, o que foi digitado fica e dá para tentar de novo. Remover avatar virou ação secundária, com confirmação. Testar conexão, servidor e Encerrar sessão ficam num bloco à parte; o resultado do teste aparece no próprio bloco.",
+          "Aparência: Personalizar aparência abre o editor de sempre (tema, Legacy/Modern20, efeito de tela antiga), e a seção mostra o tema e o estilo em uso. Tamanho da interface e Densidade ficam em “Neste aparelho”, com a opção atual marcada (✓) e escrita.",
+          "Temas de dados: a coleção e Resgatar código em destaque, cada tema com miniatura e nome; a descrição e a prévia da rolagem abrem no próprio tema. Há aviso de carregamento, de coleção vazia e de falha, com Tentar novamente. Depois de um resgate, o tema novo pisca a borda uma vez quando a janela fecha.",
+          "Importações: Importar ficha do RAMA e Importar item para o Homebrew (recebem arquivo .json) e Importar ficha do CRIS (usa o link público, com a revisão por seção), cada um com uma linha de orientação.",
+        ],
+        "Visual": [
+          "Movimento curto, com as curvas do RAMA: o indicador acompanha a seção escolhida, o conteúdo entra com um fade de poucos pixels, e só o bloco que muda anima ao editar o nome ou abrir um tema. Nada bloqueia os controles nem faz a página pular, e tudo some com o movimento reduzido do sistema. A seção ativa é marcada pelo indicador e pelo “▸”, não só pela cor, e a navegação funciona pelas setas, Home e End.",
+        ],
+        "Técnico": ["Só o site: js/paginas/perfil.js (reescrito; salvar ou mudar uma preferência atualiza só o trecho afetado), css/perfil.css e css/modern20/perfil.css (novas) e perfil/index.html. Testes: o Perfil em testes/executar-tema.js; testes/servidor-local.js ganhou /__codigo para cadastrar um código de resgate sintético. Nada de .gs."],
+      },
+    },
+    {
       versao: "8.1.1",
       codinome: "RETOQUE",
       data: "12/11/2026",

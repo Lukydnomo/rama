@@ -25,6 +25,7 @@
                                 localStorage antes: versão vista, densidade)
      /__ids                     ids das fichas e da campanha
      /__como?conta=…  (POST)    age como outra conta, direto no backend
+     /__codigo?codigo=…&tema=…  cadastra um código de resgate sintético
      /__backend                 contadores do backend (chamadas ao Sheets,
                                 células, leituras) desde a partida
      /__backend/zerar           zera esses contadores
@@ -189,6 +190,15 @@ Deno.serve({ port: PORTA, onListen: () => console.log("R.A.M.A. local em http://
     /* &zerar=1 devolve o freio do feedback a zero, para o roteiro de teste. */
     if (url.searchParams.get("zerar")) for (const k of [...ambiente.cache.keys()]) if (k.startsWith("rama.feedback.") || k.startsWith("rama.acesso.")) ambiente.cache.delete(k);
     return json({ modo: discord.modo, recebidas: discord.recebidas });
+  }
+  /* /__codigo?codigo=…&tema=… cadastra um código de resgate SINTÉTICO
+     (o mesmo cadastrarCodigo do editor do Apps Script), para testar o
+     resgate de temas de dados no Perfil. */
+  if (url.pathname === "/__codigo") {
+    const codigo = url.searchParams.get("codigo") || "TESTE-RAMA-01";
+    const tema = url.searchParams.get("tema") || "mandinha-linda";
+    try { return json({ ok: true, msg: globalThis.cadastrarCodigo(codigo, [tema], "teste local") }); }
+    catch (e) { return json({ ok: false, erro: String(e && e.message || e) }); }
   }
   if (url.pathname === "/__como" && req.method === "POST") {
     const quem = url.searchParams.get("conta") || "editora";
