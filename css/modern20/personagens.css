@@ -1,0 +1,22 @@
+/* =====================================================================
+   R.A.M.A. — Personagens · Pastas laterais (v8.3) · Modern20
+   ---------------------------------------------------------------------
+   As MESMAS classes de css/personagens.css na linguagem Modern20: cantos
+   leves, traço discreto, a pasta aberta num fundo suave. A barra, o
+   negrito e o "▸" continuam marcando a aberta sem depender de cor.
+   ===================================================================== */
+
+:where(:root[data-interface="modern20"]) {
+  & .pastas-laterais__titulo { font-size: var(--m20-texto-apoio); font-weight: 600; letter-spacing: 0; text-transform: none; }
+  & .pastas-laterais__corpo { border-left-color: var(--m20-borda); }
+  & .pastas-laterais__fixas { border-bottom-style: solid; border-bottom-color: var(--m20-borda); }
+  & .pastas-laterais__indicador { border-radius: 999px; background: var(--cor-selecao); }
+
+  & .pasta-lateral { border-radius: var(--m20-raio-controle); }
+  & .pasta-lateral:hover { background: var(--m20-realce); }
+  & .pasta-lateral[aria-current="true"] { background: var(--m20-selecao-suave); font-weight: 650; }
+  & .pasta-lateral__n { font-family: inherit; }
+  & .pasta-lateral--nova .pasta-lateral__nome { font-family: inherit; font-size: var(--m20-texto-apoio); letter-spacing: 0; text-transform: none; }
+
+  & .pp-conteudo__cab { border-bottom-color: var(--m20-borda); }
+}

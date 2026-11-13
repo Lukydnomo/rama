@@ -779,6 +779,8 @@
     abas: "M2 6 h12 v8 h-12z M2 6 V3 h4 v3 M7 6 V3 h4 v3",
     grade: "M2 2 h5 v5 h-5z M9 2 h5 v5 h-5z M2 9 h5 v5 h-5z M9 9 h5 v5 h-5z",
     pasta: "M2 4 h4 l1.5 1.5 H14 v8 H2z",
+    semPasta: "M2 4 h4 l1.5 1.5 H14 v8 H2z M5 7.5 l6 3.5",
+    lateral: "M2 3 h12 v10 h-12z M6 3 v10 M3.4 5.5 h1.2 M3.4 8 h1.2 M3.4 10.5 h1.2",
     /* Personalizar o tema (v2.36). */
     lapis: "M10.5 2.5 l3 3 L5.5 13.5 H2.5 v-3z M9 4 l3 3",
     /* Menu do agente e feedback. */

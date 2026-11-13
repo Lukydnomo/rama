@@ -1,0 +1,140 @@
+/* =====================================================================
+   R.A.M.A. — Personagens · Pastas laterais (v8.3) · Legacy
+   ---------------------------------------------------------------------
+   Só no desktop (a escolha some até 760px). Duas colunas: a lateral de
+   pastas, estreita e presa na tela, com o mesmo peso da navegação do
+   Perfil; e o conteúdo da pasta, com a lista de sempre em destaque.
+
+   Pasta aberta sem depender de cor: fundo discreto, a barra na borda
+   (o indicador, que desliza na troca), negrito e "▸", além de
+   aria-current. Movimento: --tempo-curto e --curva, que já valem 0 com
+   prefers-reduced-motion (tokens.css). A versão Modern20 está em
+   css/modern20/personagens.css.
+   ===================================================================== */
+
+/* O seletor Abas | Pastas laterais, ao lado de + Adicionar personagem. */
+.pagina-topo__acoes .exibicao--desktop { margin-right: var(--e2); }
+
+.pp-lateral {
+  display: grid;
+  grid-template-columns: minmax(11rem, 1fr) minmax(0, 4fr);
+  gap: var(--e4);
+  align-items: start;
+}
+
+/* ------------------------------------------------------------ lateral */
+.pastas-laterais {
+  position: sticky;
+  top: calc(var(--pp-topo, 0px) + var(--e3));
+  display: flex;
+  flex-direction: column;
+  gap: var(--e2);
+  max-height: calc(100vh - var(--pp-topo, 0px) - var(--e3) - var(--pp-depois, 0px));
+  max-height: calc(100dvh - var(--pp-topo, 0px) - var(--e3) - var(--pp-depois, 0px));
+  min-width: 0;
+}
+.pastas-laterais__titulo {
+  margin: 0;
+  padding-left: var(--e3);
+  font-family: var(--fonte-mini);
+  font-size: var(--texto-mini);
+  letter-spacing: var(--espaco-letra-titulo);
+  text-transform: uppercase;
+  color: var(--cor-texto-3);
+}
+/* O corpo leva o traço e o indicador; Todos e Sem pasta ficam presos
+   no alto, e só as pastas da conta rolam. */
+.pastas-laterais__corpo {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-height: 0;
+  padding-left: 4px;
+  border-left: var(--borda) solid var(--cor-traco-fraca);
+}
+.pastas-laterais__fixas { flex: none; padding-bottom: 2px; border-bottom: var(--borda) dashed var(--cor-traco-fraca); margin-bottom: 2px; }
+.pastas-laterais__rolagem {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.pastas-laterais__indicador {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 4px;
+  height: 0;
+  background: var(--cor-texto);
+  transition: transform var(--tempo-curto) var(--curva), height var(--tempo-curto) var(--curva);
+  pointer-events: none;
+  z-index: 1;
+}
+.pastas-laterais__lista { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 1px; }
+.pastas-laterais__dica { margin: 0; padding-left: var(--e3); color: var(--cor-texto-3); }
+
+.pasta-lateral {
+  display: flex;
+  align-items: center;
+  gap: var(--e2);
+  width: 100%;
+  min-height: calc(var(--alvo-toque) - 8px);
+  padding: 2px var(--e2) 2px var(--e3);
+  background: transparent;
+  border: 0;
+  font: inherit;
+  font-size: var(--texto-base);
+  color: var(--cor-texto-2);
+  text-align: left;
+  cursor: pointer;
+  transition: color var(--tempo-seco) var(--curva), background var(--tempo-seco) var(--curva);
+}
+.pasta-lateral:hover { color: var(--cor-texto); background: var(--fundo-superficie); }
+.pasta-lateral:focus-visible { outline: 2px solid var(--cor-foco); outline-offset: -2px; }
+.pasta-lateral[aria-current="true"] { color: var(--cor-texto); background: var(--fundo-superficie); font-weight: 700; }
+.pasta-lateral[aria-current="true"] .pasta-lateral__nome::before { content: "▸ "; }
+.pasta-lateral__icone { display: inline-grid; place-items: center; width: 14px; flex: none; color: var(--cor-texto-3); }
+.pasta-lateral[aria-current="true"] .pasta-lateral__icone { color: currentColor; }
+.pasta-lateral__nome { flex: 1 1 auto; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.pasta-lateral__n {
+  flex: none;
+  margin-left: auto;
+  font-family: var(--fonte-mini);
+  font-size: var(--texto-mini);
+  font-variant-numeric: tabular-nums;
+  color: var(--cor-texto-3);
+}
+.pasta-lateral--ocupada { opacity: .7; cursor: progress; }
+.pasta-lateral--nova { color: var(--cor-texto-3); }
+.pasta-lateral--nova .pasta-lateral__nome { font-family: var(--fonte-mini); font-size: var(--texto-mini); letter-spacing: var(--espaco-letra-titulo); text-transform: uppercase; }
+
+/* Durante o arraste: quem recebe ganha o traço; Todos (só consulta) e
+   Nova pasta recuam. O que está sob o ponteiro fica com o contorno de
+   arrastar.js. */
+html.arrastando .pasta-lateral[data-arrastar-pasta]:not([data-pasta="todos"]) { box-shadow: inset 0 0 0 1px var(--cor-paranormal); }
+html.arrastando .pasta-lateral[data-pasta="todos"]:not(.arrastar-alvo-recusado),
+html.arrastando .pasta-lateral--nova { opacity: .5; }
+.pasta-lateral.arrastar-alvo-dentro { color: var(--cor-texto); }
+
+/* ----------------------------------------------------------- conteúdo */
+.pp-conteudo { min-width: 0; display: flex; flex-direction: column; gap: var(--e3); }
+.pp-conteudo__cab {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--e2);
+  padding-bottom: var(--e2);
+  border-bottom: var(--borda) solid var(--cor-traco-fraca);
+}
+.pp-conteudo__titulo { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--e1) var(--e2); min-width: 0; }
+.pp-conteudo__titulo .t-secao { margin: 0; overflow-wrap: anywhere; }
+.pp-conteudo__titulo .t-mini { color: var(--cor-texto-3); }
+
+/* A lista da pasta nova entra com fade curto e 4 px; nada bloqueia. */
+.pp-entrando > * { animation: pp-entrar var(--tempo-curto) var(--curva) both; }
+@keyframes pp-entrar { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+
+:root[data-densidade="compacta"] .pasta-lateral { min-height: calc(var(--alvo-toque) - 14px); }
+:root[data-densidade="compacta"] .pp-conteudo { gap: var(--e2); }

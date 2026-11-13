@@ -118,6 +118,25 @@
 
   var CHANGELOG = [
     {
+      versao: "8.3.0",
+      codinome: "MARGEM",
+      data: "13/11/2026",
+      mudancas: {
+        "Novo": [
+          "Pastas laterais em Personagens, no computador. Ao lado de “+ Adicionar personagem”, a Exibição escolhe entre Abas e Pastas laterais. Nas Pastas laterais, Meus personagens vira duas colunas: à esquerda, Todos, Sem pasta e as suas pastas em linhas compactas, com a contagem à direita e “+ Nova pasta” no fim; à direita, o nome da pasta, quantos personagens ela tem, o menu da pasta (Renomear, Excluir pasta), a busca, o filtro de sistema, “Agrupar por sistema” e os cartões de sempre. Trocar de pasta atualiza a lista ali mesmo, sem janela por cima.",
+          "A lateral fica presa na tela enquanto você percorre as fichas, e a lista de pastas rola sozinha quando é longa. Todos e Sem pasta ficam sempre no alto. Nomes longos aparecem cortados, com o nome inteiro ao passar o mouse.",
+          "Mover pela lateral: arraste a ficha pela alça (⠿) até uma pasta. As pastas que podem receber se destacam, e a linha inteira aceita a soltura. Soltar em “Sem pasta” retira a ficha da pasta; “Todos” é só consulta e diz isso durante o arraste. “Mover para pasta…”, no menu da ficha, continua como caminho pelo teclado. As pastas também andam pelas setas, Home e End.",
+        ],
+        "Melhorado": [
+          "A escolha do computador fica guardada só neste navegador e começa em Abas. Ela não mexe na preferência do celular: até 760px continuam valendo Abas ou Ícones, como a conta já guardava. Atravessar esse limite, girando ou redimensionando a tela, mantém a pasta, a busca, o filtro e o agrupamento.",
+        ],
+        "Visual": [
+          "A pasta aberta tem fundo discreto, a barra na borda, “▸” e negrito, sem depender só da cor. Na troca, a barra desliza e a lista entra com um fade curto, nas curvas e cores do RAMA. A página não pula: no fundo de uma lista longa, a pasta nova começa à vista, logo abaixo do cabeçalho. Com o movimento reduzido do sistema, nada anima. Legacy e Modern20.",
+        ],
+        "Técnico": ["Só o site: js/paginas/personagens.js (modo `lateral`, a mesma `O.montar`, `filtros` e `resultado` das abas; escolha do desktop em localStorage `rama.personagens.exibicaoDesktop`), css/personagens.css e css/modern20/personagens.css (novas), personagens/index.html, js/arrastar.js (`data-arrastar-pasta-inteira`: a linha inteira é destino) e js/ui.js (símbolos `lateral` e `semPasta`). Testes em testes/executar-tema.js. Nada de .gs."],
+      },
+    },
+    {
       versao: "8.2.1",
       codinome: "RECORTE",
       data: "13/11/2026",

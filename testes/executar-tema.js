@@ -959,8 +959,26 @@ t.grupo("Personagens (v8.2.1): Exibição Abas/Ícones só no celular");
 {
   const pg = await Deno.readTextFile(new URL("../js/paginas/personagens.js", import.meta.url));
   t.ok("o controle de Exibição só entra na tela estreita", /organizacao\.suportada && celular\(\) \? controleDeExibicao\(\)/.test(pg));
-  t.ok("no desktop vale Abas mesmo com Ícones salvo", /function exibicaoEfetiva\(\) \{ return celular\(\) \? exibicao\(\) : "abas"; \}/.test(pg) && /exibicaoEfetiva\(\) === "icones"/.test(pg));
+  t.ok("no desktop Ícones não vale, mesmo salvo (vale a escolha do desktop)", /function exibicaoEfetiva\(\) \{ return celular\(\) \? exibicao\(\) : exibicaoDesktopLocal; \}/.test(pg) && /exibicaoEfetiva\(\) === "icones"/.test(pg) && /=== "lateral" \? "lateral" : "abas"/.test(pg));
   t.ok("redimensionar a tela redesenha quando a exibição efetiva muda", /function ouvirTela\(\)/.test(pg) && /ouvirTela\(\);/.test(pg));
+}
+
+t.grupo("Personagens (v8.3): Pastas laterais no desktop");
+{
+  const pg = await Deno.readTextFile(new URL("../js/paginas/personagens.js", import.meta.url));
+  const arr = await Deno.readTextFile(new URL("../js/arrastar.js", import.meta.url));
+  const css = (await Deno.readTextFile(new URL("../css/personagens.css", import.meta.url))).replace(/\/\*[\s\S]*?\*\//g, "");
+  const html = await Deno.readTextFile(new URL("../personagens/index.html", import.meta.url));
+  t.ok("a escolha do desktop fica no navegador, separada de exibicaoPastas", /CHAVE_DESKTOP = "rama\.personagens\.exibicaoDesktop"/.test(pg) && !/salvar\("exibicaoPastas", *exibicaoDesktop/.test(pg) && /localStorage\.setItem\(CHAVE_DESKTOP/.test(pg));
+  t.ok("Abas é o padrão do desktop", /function lerExibicaoDesktop\(\)[\s\S]{0,200}: "abas"/.test(pg));
+  t.ok("o seletor Abas | Pastas laterais fica no cabeçalho, só no desktop e com pastas", /contexto === "meus" && organizacao\.disponivel && !celular\(\) \? controleDeExibicaoDesktop\(\)/.test(pg) && /rotulo: "Pastas laterais"/.test(pg));
+  t.ok("sem pastas disponíveis, a lista simples continua", /function modoLateral\(\) \{ return organizacao\.disponivel && /.test(pg));
+  t.ok("a lista à direita é a MESMA `resultado` das abas, com os mesmos filtros", /function conteudoLateral\(m\)[\s\S]*?filtros\(m\)[\s\S]*?resultado\(m\)/.test(pg));
+  t.ok("Sem pasta e as pastas recebem arraste na linha inteira; Todos recusa com motivo", /arrastarPastaInteira: "1"/.test(pg) && /data-arrastar-pasta-inteira/.test(arr) && /destino\.lista === O\.TODOS\) return \{ ok: false/.test(pg));
+  t.ok("Todos e Sem pasta ficam presos acima da lista que rola", /pastas-laterais__fixas/.test(pg) && /\.pastas-laterais__rolagem \{[^}]*overflow-y: auto/.test(css));
+  t.ok("a pasta aberta não depende só de cor (barra, ▸ e aria-current)", /\.pasta-lateral\[aria-current="true"\] \.pasta-lateral__nome::before \{ content: "▸ "; \}/.test(css) && /"aria-current": aberta \? "true"/.test(pg));
+  t.ok("o movimento usa os tokens (0 ms com prefers-reduced-motion), sem duração presa", !/\d+m?s\b/.test(css.replace(/@keyframes[^{]*\{[\s\S]*?\}\s*\}/g, "")) && /var\(--tempo-curto\)/.test(css));
+  t.ok("as folhas (Legacy e Modern20) vêm antes da densidade", html.indexOf("css/personagens.css") > 0 && html.indexOf("css/modern20/personagens.css") > html.indexOf("css/personagens.css") && html.indexOf("css/densidade.css") > html.indexOf("css/modern20/personagens.css"));
 }
 
 t.grupo("Aparência num lugar só (v2.49.1): o editor, não Exibição");

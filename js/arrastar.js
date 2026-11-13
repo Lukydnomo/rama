@@ -132,7 +132,10 @@
     var cabeca = sob.closest("[data-arrastar-pasta]");
     if (cabeca && a.raiz.contains(cabeca) && !a.item.contains(cabeca)) {
       var caixa = cabeca.getBoundingClientRect();
-      var meio = y > caixa.top + caixa.height * 0.25 && y < caixa.bottom - caixa.height * 0.25;
+      /* data-arrastar-pasta-inteira (v8.3): a linha inteira é destino —
+         linhas compactas de pasta, que não aceitam "antes/depois". */
+      var meio = cabeca.hasAttribute("data-arrastar-pasta-inteira") ||
+        (y > caixa.top + caixa.height * 0.25 && y < caixa.bottom - caixa.height * 0.25);
       if (meio) {
         var chave = cabeca.dataset.arrastarPasta;
         var listaDentro = a.raiz.querySelector('[data-arrastar-lista="' + cssEscapar(chave) + '"]');

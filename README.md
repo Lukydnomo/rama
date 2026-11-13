@@ -44,6 +44,7 @@ preferências de tela — nunca é tratado como banco.
     brutal.css          BRUTAL: a ficha-tabuleiro, as cartas dos Arquétipos, a Mesa da Diretora (v7.0)
     tormenta20.css      Tormenta20: ficha com parcelas, criação em 8 passos, magia com aprimoramentos, Mesa (v8.0)
     perfil.css          o Perfil: cabeçalho compacto, navegação por seções, coleção de temas (v8.2)
+    personagens.css     Personagens: as Pastas laterais do desktop (v8.3)
     (os suplementos — volumes, switches e a animação — estão em componentes.css, v6.1)
     (estas folhas SÃO o estilo Legacy: a aparência da v2.48.4, intocada)
     interface.css       o seletor de estilo do editor de temas (vale nos dois estilos)
@@ -914,6 +915,11 @@ próprio `<script src>`, então funciona debaixo de subpasta sem ajuste.
 segredo nenhum — ele os lê das Script Properties. Publicá-lo não expõe nada.
 
 ### Atualizar o backend
+
+**v8.3.0 — MARGEM:** só o site (Pastas laterais em Personagens, no desktop).
+Publique `personagens/index.html`, `js/paginas/personagens.js`, `js/arrastar.js`,
+`js/ui.js`, `css/personagens.css`, `css/modern20/personagens.css` e
+`js/versao.js`. Nada de `.gs`.
 
 **v8.2.1 — RECORTE:** só o site (Exibição Abas/Ícones só no celular, em
 Personagens). Publique `js/paginas/personagens.js` e `js/versao.js`. Nada de `.gs`.
@@ -1918,7 +1924,7 @@ Três números diferentes, que não se misturam:
 
 | | Onde | O que é |
 |---|---|---|
-| versão do aplicativo | `js/versao.js` | o que a pessoa vê: v8.2.1 |
+| versão do aplicativo | `js/versao.js` | o que a pessoa vê: v8.3.0 |
 | `schemaVersion` | `js/ficha.js` | o formato da FICHA |
 | `versaoFormato` | `js/config.js` | o formato dos arquivos de importação |
 

@@ -57,6 +57,23 @@
    gesto dura (aoIniciar/aoTerminar de arrastar.js) e os ícones das
    pastas pessoais recebem o personagem. Grupos de sistema não são
    destino: o sistema de uma ficha não muda por arraste.
+
+   PASTAS LATERAIS (v8.3, só no desktop)
+   ---------------------------------------------------------------------
+   No desktop a escolha é Abas | Pastas laterais, no cabeçalho, guardada
+   SÓ neste navegador (localStorage `rama.personagens.exibicaoDesktop`)
+   — `exibicaoPastas` continua sendo a do celular (Abas | Ícones). Até
+   760px vale a do celular; cruzar o limite redesenha com a mesma pasta,
+   busca, sistema e agrupamento (estão em `estado`).
+
+   · Lateral: Todos, Sem pasta e as pastas da conta em linhas compactas,
+     presa na tela (sticky) e com rolagem própria quando é longa. A
+     ativa tem fundo, barra (o indicador, que desliza na troca) e "▸".
+     Sem pasta e as pastas recebem arraste na linha inteira
+     (data-arrastar-pasta-inteira); Todos é só consulta.
+   · Conteúdo: o nome da pasta, a contagem, o menu da pasta (Renomear,
+     Excluir pasta), os filtros e a MESMA lista `resultado` das abas.
+     Trocar de pasta redesenha no lugar, sem janela por cima.
    ===================================================================== */
 
 (function (global) {
@@ -87,10 +104,21 @@
      confirmar a preferência antes da listagem, e redesenhar sem dados
      mostraria "nenhum personagem" por engano. */
   var exibicaoDesenhada = null;
+  var celularDesenhado = null;
   var carregado = false;
   /* Sem preferencias.js (página que não o carrega), a escolha vale só
      nesta tela. */
   var exibicaoLocal = "abas";
+  /* Pastas laterais (v8.3): a escolha do desktop, só neste navegador. */
+  var CHAVE_DESKTOP = "rama.personagens.exibicaoDesktop";
+  var exibicaoDesktopLocal = lerExibicaoDesktop();
+  /* O que a troca de pasta na lateral leva de um desenho ao outro: a
+     rolagem da lista de pastas, onde o indicador estava e se a troca
+     deve animar. */
+  var rolagemLateral = 0;
+  var indicadorLateral = null;
+  var animarTrocaDePasta = false;
+  var rolagemDuranteArraste = null;
 
   global.RAMAApp.iniciar("personagens", async function () {
     painel = U.$("#painel-personagens");
@@ -173,6 +201,7 @@
         ? "Compartilhados // " + (recebidos.estado === "pronto" ? recebidos.lista.length + " ficha(s)" : "…")
         : "Arquivo // " + registros.length + " registro(s)"],
       acoes: [
+        contexto === "meus" && organizacao.disponivel && !celular() ? controleDeExibicaoDesktop() : null,
         el("button.r-botao.r-botao--principal", {
           type: "button", texto: "+ Adicionar personagem", onclick: abrirEscolhaDeTipo,
         }),
@@ -199,6 +228,10 @@
 
     var icones = modoIcones();
     exibicaoDesenhada = exibicaoEfetiva();
+    celularDesenhado = celular();
+    if (modoLateral()) { desenharLateral(m, foco, cursor); return; }
+    rolagemLateral = 0;
+    indicadorLateral = null;
     U.trocar(painel, [
       cabecalho(),
       abasDeContexto(),
@@ -210,14 +243,16 @@
       el("div.lista-personagens", { id: "lista-personagens", role: "tabpanel", "aria-labelledby": "contexto-meus", "aria-live": "polite" }, [icones ? resultadoEmIcones(m) : resultado(m)]),
     ]);
 
-    if (foco) {
-      var novo = painel.querySelector('[data-foco="' + foco + '"]');
-      if (novo) {
-        novo.focus();
-        if (cursor !== null) { try { novo.setSelectionRange(cursor, cursor); } catch (e) { /* não é texto */ } }
-      }
-    }
+    restaurarFoco(foco, cursor);
     atualizarExpansao();
+  }
+
+  function restaurarFoco(foco, cursor) {
+    if (!foco) return;
+    var novo = painel.querySelector('[data-foco="' + foco + '"]');
+    if (!novo) return;
+    novo.focus({ preventScroll: true });
+    if (cursor !== null) { try { novo.setSelectionRange(cursor, cursor); } catch (e) { /* não é texto */ } }
   }
 
   function avisoDeOrganizacao() {
@@ -367,6 +402,8 @@
         titulo: "Pasta vazia",
         texto: "Nenhum personagem nesta pasta ainda. " + (modoIcones()
           ? "Arraste um personagem pela alça (⠿) até o ícone dela, ou use “Mover para pasta…” no menu dele."
+          : modoLateral()
+          ? "Arraste um personagem pela alça (⠿) até ela, na lateral, ou use “Mover para pasta…” no menu dele."
           : "Arraste um personagem até ela ou use “Mover para pasta…” no menu dele."),
         acao: { rotulo: "Ver todos os personagens", aoClicar: irParaTodos },
       });
@@ -523,21 +560,49 @@
   function modoIcones() { return organizacao.suportada && exibicaoEfetiva() === "icones"; }
 
   /* Ícones é coisa de celular (v8.2.1): a escolha só aparece na tela
-     estreita, e no desktop vale Abas mesmo com "Ícones" salvo na conta
-     (a preferência fica guardada para quando abrir no celular). */
+     estreita, e no desktop vale a escolha do desktop (Abas ou Pastas
+     laterais, v8.3) mesmo com "Ícones" salvo na conta (a preferência
+     fica guardada para quando abrir no celular). */
   var ESTREITO = "(max-width: 760px)";
   function celular() { return !!(global.matchMedia && global.matchMedia(ESTREITO).matches); }
-  function exibicaoEfetiva() { return celular() ? exibicao() : "abas"; }
+  function exibicaoEfetiva() { return celular() ? exibicao() : exibicaoDesktopLocal; }
+
+  /* Pastas laterais precisam de pastas: sem organização disponível, a
+     lista simples das abas continua valendo. */
+  function modoLateral() { return organizacao.disponivel && exibicaoEfetiva() === "lateral"; }
+
+  function lerExibicaoDesktop() {
+    try { return global.localStorage && global.localStorage.getItem(CHAVE_DESKTOP) === "lateral" ? "lateral" : "abas"; }
+    catch (e) { return "abas"; }
+  }
+
+  function trocarExibicaoDesktop(valor) {
+    exibicaoDesktopLocal = valor === "lateral" ? "lateral" : "abas";
+    try { if (global.localStorage) global.localStorage.setItem(CHAVE_DESKTOP, exibicaoDesktopLocal); }
+    catch (e) { /* sem armazenamento: vale até recarregar */ }
+    if (exibicaoEfetiva() !== exibicaoDesenhada) desenhar();
+  }
 
   function ouvirTela() {
     if (!global.matchMedia) return;
     var mq = global.matchMedia(ESTREITO);
     var aoTrocar = function () {
       if (exibicaoEfetiva() !== "icones") fecharExpansao(true);
-      if (carregado && painel && contexto !== "recebidos" && exibicaoEfetiva() !== exibicaoDesenhada) desenhar();
+      /* O seletor do cabeçalho também depende do lado do limite. */
+      if (carregado && painel && contexto !== "recebidos" &&
+          (exibicaoEfetiva() !== exibicaoDesenhada || celular() !== celularDesenhado)) desenhar();
     };
     if (mq.addEventListener) mq.addEventListener("change", aoTrocar);
     else if (mq.addListener) mq.addListener(aoTrocar);
+    /* Outra aba trocou a escolha do desktop. */
+    global.addEventListener("storage", function (ev) {
+      if (ev.key !== CHAVE_DESKTOP) return;
+      exibicaoDesktopLocal = lerExibicaoDesktop();
+      if (carregado && painel && contexto !== "recebidos" && exibicaoEfetiva() !== exibicaoDesenhada) desenhar();
+    });
+    global.addEventListener("resize", medirTopo);
+    /* A fonte pixel muda a altura do cabeçalho quando chega. */
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(function () { medirTopo(); posicionarIndicadorLateral(false); });
   }
 
   function ouvirPreferencias() {
@@ -558,20 +623,36 @@
     });
   }
 
-  function controleDeExibicao() {
-    var atual = exibicao();
-    function opcao(valor, rotulo, simbolo) {
+  /* O seletor segmentado, o mesmo no celular (Abas | Ícones) e no
+     desktop (Abas | Pastas laterais). */
+  function seletorDeExibicao(o) {
+    function opcao(op) {
       return el("button.exibicao__opcao", {
         type: "button",
-        "aria-pressed": String(atual === valor),
-        dataset: { foco: "exibicao-" + valor },
-        onclick: function () { if (exibicao() !== valor) trocarExibicao(valor); },
-      }, [UI.simbolo(simbolo, 14), el("span", { texto: rotulo })]);
+        "aria-pressed": String(o.atual === op.valor),
+        dataset: { foco: "exibicao-" + op.valor },
+        onclick: function () { if (o.ler() !== op.valor) o.trocar(op.valor); },
+      }, [UI.simbolo(op.simbolo, 14), el("span", { texto: op.rotulo })]);
     }
-    return el("div.exibicao", { role: "group", "aria-labelledby": "rotulo-exibicao" }, [
-      el("span.r-rotulo", { id: "rotulo-exibicao", texto: "Exibição" }),
-      el("div.exibicao__opcoes", {}, [opcao("abas", "Abas", "abas"), opcao("icones", "Ícones", "grade")]),
+    return el("div.exibicao", { role: "group", "aria-labelledby": o.id, class: o.classe || "" }, [
+      el("span.r-rotulo", { id: o.id, texto: "Exibição" }),
+      el("div.exibicao__opcoes", {}, o.opcoes.map(opcao)),
     ]);
+  }
+
+  function controleDeExibicao() {
+    return seletorDeExibicao({
+      id: "rotulo-exibicao", atual: exibicao(), ler: exibicao, trocar: trocarExibicao,
+      opcoes: [{ valor: "abas", rotulo: "Abas", simbolo: "abas" }, { valor: "icones", rotulo: "Ícones", simbolo: "grade" }],
+    });
+  }
+
+  function controleDeExibicaoDesktop() {
+    return seletorDeExibicao({
+      id: "rotulo-exibicao-desktop", classe: "exibicao--desktop",
+      atual: exibicaoDesktopLocal, ler: function () { return exibicaoDesktopLocal; }, trocar: trocarExibicaoDesktop,
+      opcoes: [{ valor: "abas", rotulo: "Abas", simbolo: "abas" }, { valor: "lateral", rotulo: "Pastas laterais", simbolo: "lateral" }],
+    });
   }
 
   /* A troca é imediata: pasta, busca, sistema e agrupamento ficam. */
@@ -893,6 +974,260 @@
   }
 
   /* =================================================================
+     PASTAS LATERAIS (v8.3) — só no desktop
+     ================================================================= */
+
+  function desenharLateral(m, foco, cursor) {
+    var animar = animarTrocaDePasta;
+    animarTrocaDePasta = false;
+    var rolagemAntes = painel.querySelector(".pastas-laterais__rolagem");
+    if (rolagemAntes) rolagemLateral = rolagemAntes.scrollTop;
+    var conteudoAntes = painel.querySelector(".pp-conteudo");
+    var topoAntes = conteudoAntes ? conteudoAntes.getBoundingClientRect().top : null;
+    var listaAntes = painel.querySelector("#lista-personagens");
+    var alturaAntes = listaAntes ? listaAntes.offsetHeight : 0;
+    if (!rolagemAntes) indicadorLateral = null;
+
+    U.trocar(painel, [
+      cabecalho(),
+      abasDeContexto(),
+      avisoDeOrganizacao(),
+      el("div.pp-lateral", {}, [lateralDePastas(m), conteudoLateral(m)]),
+    ]);
+    medirTopo();
+
+    var rolagem = painel.querySelector(".pastas-laterais__rolagem");
+    if (rolagem) rolagem.scrollTop = rolagemLateral;
+    posicionarIndicadorLateral(animar);
+    restaurarFoco(foco, cursor);
+
+    if (!animar) return;
+    var lista = painel.querySelector("#lista-personagens");
+    var conteudo = painel.querySelector(".pp-conteudo");
+    /* Fundo de uma lista longa: a pasta nova começa à vista, logo abaixo
+       do cabeçalho do site. Mais acima, a página fica onde estava. */
+    var limite = alturaDoTopo() + 8;
+    if (conteudo && topoAntes !== null && topoAntes < limite) {
+      global.scrollBy(0, conteudo.getBoundingClientRect().top - limite);
+    } else if (lista && alturaAntes) {
+      /* A altura de antes segura a página durante a entrada. */
+      lista.style.minHeight = alturaAntes + "px";
+      setTimeout(function () { if (lista.isConnected) lista.style.minHeight = ""; }, 220);
+    }
+    if (lista) {
+      lista.classList.add("pp-entrando");
+      setTimeout(function () { if (lista.isConnected) lista.classList.remove("pp-entrando"); }, 220);
+    }
+  }
+
+  /* O cabeçalho do site é fixo: a lateral para logo abaixo dele. */
+  function alturaDoTopo() {
+    var topo = document.querySelector(".app-topo");
+    return topo ? topo.offsetHeight : 0;
+  }
+  /* E o que vem depois das colunas (a margem e o rodapé): no fim da
+     página, a lateral inteira ainda cabe abaixo do cabeçalho, sem
+     entrar por baixo dele. */
+  function medirTopo() {
+    if (!painel) return;
+    painel.style.setProperty("--pp-topo", alturaDoTopo() + "px");
+    var grade = painel.querySelector(".pp-lateral");
+    if (!grade) return;
+    var fim = grade.getBoundingClientRect().bottom + (global.scrollY || 0);
+    var depois = Math.max(0, document.documentElement.scrollHeight - fim);
+    painel.style.setProperty("--pp-depois", Math.ceil(depois) + "px");
+  }
+
+  function lateralDePastas(m) {
+    var c = m.contagens;
+    var f = m.filtradas;
+    function linhaDePasta(id, nome, total, filtrado, alvo, simbolo) {
+      var filtrando = !!f;
+      var n = filtrando ? (filtrado || 0) : total;
+      var ocupada = !!ocupados["pasta:" + id];
+      var aberta = m.pasta === id;
+      var botao = el("button.pasta-lateral", {
+        type: "button",
+        title: nome,
+        "aria-current": aberta ? "true" : null,
+        "aria-label": nome + ", " + rotuloDeContagem(n, total, filtrando) + (aberta ? ", pasta aberta" : "") + (ocupada ? ", sendo alterada" : ""),
+        class: ocupada ? "pasta-lateral--ocupada" : "",
+        dataset: Object.assign({ foco: "pasta-" + id, pasta: id }, alvo ? { arrastarPasta: id, arrastarPastaInteira: "1" } : {}),
+      }, [
+        el("span.pasta-lateral__icone", { "aria-hidden": "true" }, [UI.simbolo(simbolo, 14)]),
+        el("span.pasta-lateral__nome", { "aria-hidden": "true", texto: nome }),
+        el("span.pasta-lateral__n", { "aria-hidden": "true", texto: textoDeContagem(n, total, filtrando) }),
+      ]);
+      botao.addEventListener("click", function () {
+        /* O clique que o navegador manda no fim de um arraste não troca. */
+        if (global.RAMAArrastar && global.RAMAArrastar.arrastando()) return;
+        trocarPastaLateral(id);
+      });
+      return el("li", {}, [botao]);
+    }
+
+    /* Todos e Sem pasta ficam presos no alto: Sem pasta recebe o arraste
+       (retirar da pasta) mesmo com a lista longa rolada. */
+    var fixas = [
+      /* Todos é destino só para RECUSAR com o motivo (é só consulta). */
+      linhaDePasta(O.TODOS, "Todos", c.todos, f && f.todos, true, "grade"),
+      linhaDePasta(O.SEM_PASTA, "Sem pasta", c.semPasta, f && f.semPasta, true, "semPasta"),
+    ];
+    var daConta = pastas.map(function (p) {
+      return linhaDePasta(p.id, p.nome, c.porPasta[p.id] || 0, f && f.porPasta[p.id], true, "pasta");
+    }).concat([
+      el("li", {}, [el("button.pasta-lateral.pasta-lateral--nova", {
+        type: "button", dataset: { foco: "nova-pasta" },
+        onclick: function () { novaPasta(); },
+      }, [
+        el("span.pasta-lateral__icone", { "aria-hidden": "true" }, [UI.simbolo("mais", 14)]),
+        el("span.pasta-lateral__nome", { texto: "Nova pasta" }),
+      ])]),
+    ]);
+
+    return el("nav.pastas-laterais", { "aria-labelledby": "pastas-laterais-titulo" }, [
+      el("h2.pastas-laterais__titulo", { id: "pastas-laterais-titulo", texto: "Pastas" }),
+      el("div.pastas-laterais__corpo", { onkeydown: tecladoDaLateral }, [
+        el("span.pastas-laterais__indicador", { "aria-hidden": "true" }),
+        el("ul.pastas-laterais__lista.pastas-laterais__fixas", {}, fixas),
+        el("div.pastas-laterais__rolagem", { onscroll: function () { posicionarIndicadorLateral(false, true); } }, [
+          el("ul.pastas-laterais__lista", {}, daConta),
+        ]),
+      ]),
+      registros.length
+        ? el("p.t-mini.pastas-laterais__dica", { texto: "Arraste pela alça (⠿) até uma pasta; “Sem pasta” retira. Ou use “Mover para pasta…” no menu." })
+        : null,
+    ]);
+  }
+
+  /* Setas, Home e End andam entre as pastas; Enter/Espaço abrem. */
+  function tecladoDaLateral(ev) {
+    var teclas = { ArrowDown: 1, ArrowUp: -1, Home: "inicio", End: "fim" };
+    if (!(ev.key in teclas)) return;
+    var botoes = Array.prototype.slice.call(ev.currentTarget.querySelectorAll(".pasta-lateral"));
+    var i = botoes.indexOf(document.activeElement);
+    if (i < 0) return;
+    ev.preventDefault();
+    var t = teclas[ev.key];
+    var j = t === "inicio" ? 0 : t === "fim" ? botoes.length - 1 : Math.max(0, Math.min(botoes.length - 1, i + t));
+    botoes[j].focus();
+  }
+
+  /* O indicador mora no corpo da lateral (não rola) e é medido pela
+     tela: acompanha a linha aberta, presa ou na lista que rola, e é
+     cortado pela borda da rolagem. Na troca de pasta, sai de onde
+     estava e desliza; nos outros desenhos e ao rolar, vai direto.
+     `soRolagem`: chamado pela rolagem — não mexe na rolagem de volta. */
+  function posicionarIndicadorLateral(animar, soRolagem) {
+    var ind = painel && painel.querySelector(".pastas-laterais__indicador");
+    if (!ind) return;
+    var corpo = ind.parentNode;
+    var ativa = corpo.querySelector('.pasta-lateral[aria-current="true"]');
+    if (!ativa) { ind.style.opacity = "0"; indicadorLateral = null; return; }
+    var caixa = corpo.querySelector(".pastas-laterais__rolagem");
+    var naRolagem = caixa && caixa.contains(ativa);
+    /* A pasta aberta fica à vista dentro da lista que rola. */
+    if (naRolagem && !soRolagem && caixa.clientHeight) {
+      var oy = ativa.offsetTop, oh = ativa.offsetHeight;
+      if (oy < caixa.scrollTop) caixa.scrollTop = oy;
+      else if (oy + oh > caixa.scrollTop + caixa.clientHeight) caixa.scrollTop = oy + oh - caixa.clientHeight;
+    }
+    var base = corpo.getBoundingClientRect();
+    var r = ativa.getBoundingClientRect();
+    var cima = r.top, baixo = r.bottom;
+    if (naRolagem) {
+      var b = caixa.getBoundingClientRect();
+      cima = Math.max(cima, b.top);
+      baixo = Math.min(baixo, b.bottom);
+    }
+    var y = Math.round(cima - base.top - corpo.clientTop), h = Math.max(0, Math.round(baixo - cima));
+    ind.style.opacity = h > 0 ? "1" : "0";
+    if (animar && indicadorLateral) {
+      ind.style.transition = "none";
+      ind.style.transform = "translateY(" + indicadorLateral.y + "px)";
+      ind.style.height = indicadorLateral.h + "px";
+      void ind.offsetHeight;
+      ind.style.transition = "";
+    } else {
+      ind.style.transition = "none";
+    }
+    ind.style.transform = "translateY(" + y + "px)";
+    ind.style.height = h + "px";
+    if (!animar) { void ind.offsetHeight; ind.style.transition = ""; }
+    indicadorLateral = { y: y, h: h };
+  }
+
+  function trocarPastaLateral(id) {
+    if (id === estado.pasta) return;
+    estado.pasta = id;
+    animarTrocaDePasta = true;
+    desenhar();
+  }
+
+  /* À direita: a pasta aberta, os filtros e a lista de sempre. */
+  function conteudoLateral(m) {
+    var p = pastaPorId(m.pasta);
+    var ocupada = p && !!ocupados["pasta:" + p.id];
+    var acoes = null;
+    if (p && ocupada) {
+      acoes = el("span.registro__estado", { role: "status", texto: "Alterando a pasta…" });
+    } else if (p) {
+      acoes = UI.menu([
+        { rotulo: "Renomear", icone: "lapis", aoClicar: function () { renomearPasta(p); } },
+        "separador",
+        { rotulo: "Excluir pasta", icone: "lixeira", perigo: true, aoClicar: function () { excluirPasta(p); } },
+      ], { rotulo: "Opções da pasta " + p.nome, icone: "tresPontos" });
+      var gatilho = acoes.querySelector("button");
+      if (gatilho) gatilho.dataset.foco = "menu-pasta";
+    }
+    return el("section.pp-conteudo", { "aria-labelledby": "pp-pasta-titulo" }, [
+      el("div.pp-conteudo__cab", {}, [
+        el("div.pp-conteudo__titulo", {}, [
+          p ? el("span.r-rotulo", { texto: "Pasta" }) : null,
+          el("h2.t-secao", { id: "pp-pasta-titulo", texto: nomeDaSelecao(m.pasta) }),
+          el("span.t-mini", { texto: rotuloDeContagem(m.visiveis.length, m.base.length, m.filtrando) }),
+        ]),
+        acoes,
+      ]),
+      registros.length || pastas.length ? filtros(m) : null,
+      el("div.lista-personagens", { id: "lista-personagens", role: "tabpanel", "aria-labelledby": "contexto-meus", "aria-live": "polite" }, [resultado(m)]),
+    ]);
+  }
+
+  /* Durante um arraste, a lista de pastas longa rola sozinha quando o
+     ponteiro chega perto da borda dela (a página já rola em arrastar.js). */
+  function iniciarRolagemDaLateral() {
+    pararRolagemDaLateral();
+    var caixa = painel && painel.querySelector(".pastas-laterais__rolagem");
+    if (!caixa || caixa.scrollHeight <= caixa.clientHeight) return;
+    var r = { x: null, y: null, quadro: 0 };
+    r.mover = function (ev) { r.x = ev.clientX; r.y = ev.clientY; };
+    document.addEventListener("pointermove", r.mover, true);
+    function passo() {
+      if (rolagemDuranteArraste !== r) return;
+      if (r.y !== null && caixa.isConnected) {
+        var b = caixa.getBoundingClientRect(), borda = 32, dy = 0;
+        if (r.x >= b.left && r.x <= b.right) {
+          if (r.y < b.top + borda && r.y > b.top - borda) dy = -Math.ceil(10 * Math.min(1, (b.top + borda - r.y) / borda));
+          else if (r.y > b.bottom - borda && r.y < b.bottom + borda) dy = Math.ceil(10 * Math.min(1, (r.y - b.bottom + borda) / borda));
+        }
+        if (dy) caixa.scrollTop += dy;
+      }
+      r.quadro = global.requestAnimationFrame(passo);
+    }
+    rolagemDuranteArraste = r;
+    r.quadro = global.requestAnimationFrame(passo);
+  }
+
+  function pararRolagemDaLateral() {
+    var r = rolagemDuranteArraste;
+    if (!r) return;
+    rolagemDuranteArraste = null;
+    document.removeEventListener("pointermove", r.mover, true);
+    if (r.quadro) global.cancelAnimationFrame(r.quadro);
+  }
+
+  /* =================================================================
      MOVER — arrastar, a lista e o "Retirar da pasta"
      ================================================================= */
 
@@ -904,14 +1239,17 @@
     global.RAMAArrastar.ligar(document.body, {
       aoIniciar: function () {
         if (expansao && expansao.modal.janela.parentNode) expansao.modal.janela.parentNode.classList.add("pasta-expansao--arrastando");
+        iniciarRolagemDaLateral();
       },
       aoTerminar: function () {
         if (expansao && expansao.modal.janela.parentNode) expansao.modal.janela.parentNode.classList.remove("pasta-expansao--arrastando");
+        pararRolagemDaLateral();
       },
       podeSoltar: function (item, destino) {
         var p = registroPorId(item.id);
         if (!p) return { ok: false, motivo: "Personagem não encontrado." };
         if (!destino.dentro) return { ok: false, motivo: "Solte sobre uma pasta." };
+        if (destino.lista === O.TODOS) return { ok: false, motivo: "“Todos” é só para consulta: solte numa pasta ou em “Sem pasta”." };
         if (ocupados["p:" + p.id]) return { ok: false, motivo: "Este personagem já está sendo movido." };
         var alvo = destino.lista === O.SEM_PASTA ? null : destino.lista;
         if (alvo && !pastaPorId(alvo)) return { ok: false, motivo: "Esta pasta não está disponível." };
