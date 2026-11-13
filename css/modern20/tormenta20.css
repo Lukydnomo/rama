@@ -2,55 +2,63 @@
    R.A.M.A. — Tormenta20 — Jogo do Ano (v8.0) · Modern20
    ---------------------------------------------------------------------
    As MESMAS classes de css/tormenta20.css na linguagem Modern20: canto
-   leve, traço discreto, sombra só no que flutua. O estado continua com
-   texto e forma — "▸/▾" nas parcelas, "▶" na vez, risco na derrota.
+   leve, traço discreto, sombra só no que flutua. O vermelho de Tormenta
+   continua nos traços e acentos (--cor-vida); o estado continua com
+   texto e forma ("●", "✓", "▶", risco na derrota).
    ===================================================================== */
 
 :where(:root[data-interface="modern20"]) {
 
-  & .t20-valor > summary,
+  & .t20-painel,
   & .t20-atr,
+  & .t20-recurso,
+  & .t20-dados,
+  & .t20-inv-caixa,
+  & .t20-magia,
+  & .t20-fonte-magia,
+  & .t20-resist,
+  & .t20-escolhido,
+  & .t20-criar__resumo,
+  & .t20-compra__atr,
+  & .t20-carta,
   & .t20-ameaca,
   & .t20-perigo,
-  & .t20-situacoes,
-  & .t20-alvos,
   & .t20-pendencias,
   & .t20-ordem > li {
     border-color: var(--m20-borda);
     border-radius: var(--m20-raio-controle);
   }
+  & .t20-atr, & .t20-compra__atr, & .t20-inv-caixa, & .t20-fonte-magia, & .t20-criar__resumo { border-top-color: var(--cor-vida); }
+  & .t20-escolhido { border-left-color: var(--cor-vida); }
+  & .t20-painel { border-radius: var(--m20-raio-cartao); }
+  & .t20-painel::before, & .t20-painel::after { display: none; }
+  & .t20-painel__titulo { padding: 0; background: none; border-bottom: 3px solid var(--cor-vida); text-transform: none; letter-spacing: 0; }
 
-  & .t20-atr { background: var(--m20-destaque-suave); }
-  & .t20-valor > summary:hover { border-color: var(--m20-borda-controle); }
-  & .t20-valor[open] > summary { background: var(--m20-selecao-suave); }
-
-  & .t20-barra {
-    border: 0;
-    border-radius: 999px;
-    height: 6px;
-    background: var(--m20-destaque-suave);
-  }
-  & .t20-barra__cheio { border-radius: 999px; }
-
-  & .t20-parcelas { border-left-color: var(--m20-borda); }
-  & .t20-aprim { border-left-color: var(--m20-borda-controle); border-radius: 0 var(--m20-raio-controle) var(--m20-raio-controle) 0; }
-
-  & .t20-previa {
+  & .t20-rol__valor { border-color: var(--m20-borda-controle); border-radius: var(--m20-raio-controle); }
+  & .t20-rol--atr .t20-rol__valor { border-color: transparent; }
+  & .t20-valor[open] > .t20-parcelas, & .t20-rol__det[open] > .t20-parcelas {
     border-color: var(--m20-borda-controle);
     border-radius: var(--m20-raio-cartao);
-    box-shadow: var(--m20-sombra-1);
+    box-shadow: var(--m20-sombra-2);
   }
 
-  & .t20-passos li { border-color: var(--m20-borda); }
-  & .t20-passos__atual { background: var(--m20-selecao-suave); }
+  & .t20-barra { border: 0; border-radius: 999px; height: 6px; background: var(--m20-destaque-suave); }
+  & .t20-barra__cheio { border-radius: 999px; }
+
+  & .t20-carta[aria-pressed="true"] { background: var(--m20-selecao-suave); box-shadow: none; }
+  & .t20-passo { border-color: var(--m20-borda); border-radius: 999px; }
+  & .t20-passo--atual { background: var(--m20-selecao-suave); border-bottom-width: 1px; border-color: var(--cor-vida); }
+
+  & .t20-previa { border-color: var(--m20-borda-controle); border-radius: var(--m20-raio-cartao); box-shadow: var(--m20-sombra-1); }
+  & .t20-aprim { border-left-color: var(--m20-borda-controle); }
+  & .t20-tabela th, & .t20-tabela td { border-bottom-color: var(--m20-borda); }
+  & .t20-select { border-color: var(--m20-borda-controle); border-radius: var(--m20-raio-controle); }
 
   & .t20-ordem__vez { background: var(--m20-selecao-suave); }
   & .t20-ameaca { box-shadow: var(--m20-sombra-1); }
   & .t20-ameaca--derrotada { box-shadow: none; }
 
-  & .t20-tabela th, & .t20-tabela td { border-bottom-color: var(--m20-borda); }
-
   @media (max-width: 720px) {
-    & .t20-acoes { box-shadow: var(--m20-sombra-2); border-top-color: var(--m20-borda); }
+    & .t20-acoes { box-shadow: var(--m20-sombra-2); }
   }
 }

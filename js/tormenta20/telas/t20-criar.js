@@ -125,14 +125,14 @@
 
   /* =================================================== a criação */
   var PASSOS = [
-    { chave: "atributos", nome: "Atributos", pagina: 17 },
-    { chave: "raca", nome: "Raça", pagina: 18 },
-    { chave: "origem", nome: "Origem", pagina: 85 },
-    { chave: "classe", nome: "Classe", pagina: 32 },
-    { chave: "divindade", nome: "Divindade", pagina: 96 },
-    { chave: "magias", nome: "Magias", pagina: 170 },
-    { chave: "equipamento", nome: "Equipamento", pagina: 140 },
-    { chave: "conferir", nome: "Conferir", pagina: 106 },
+    { chave: "atributos", nome: "Atributos", pagina: 17, intro: "Dê um nome e defina os seis atributos: compre com 10 pontos ou role 4d6 seis vezes." },
+    { chave: "raca", nome: "Raça", pagina: 18, intro: "A raça ajusta atributos e dá habilidades. Clique numa carta para ver os detalhes." },
+    { chave: "origem", nome: "Origem", pagina: 85, intro: "O que o personagem fazia antes de se aventurar: itens e dois benefícios." },
+    { chave: "classe", nome: "Classe", pagina: 32, intro: "A classe define PV, PM, perícias e o que o personagem sabe fazer." },
+    { chave: "divindade", nome: "Divindade", pagina: 96, intro: "Opcional (obrigatória para clérigos, druidas e paladinos): devotos ganham um poder e seguem obrigações." },
+    { chave: "magias", nome: "Magias", pagina: 170, intro: "Conjuradores começam com magias de 1º círculo." },
+    { chave: "equipamento", nome: "Equipamento", pagina: 140, intro: "O equipamento inicial do livro e os tibares." },
+    { chave: "conferir", nome: "Conferir", pagina: 106, intro: "Confira antes de criar. Tudo pode ser ajustado depois na ficha." },
   ];
 
   function abrir(opcoes) {
@@ -158,6 +158,25 @@
     function calc() { try { return R().calcular(R().normalizar(b)); } catch (e) { return null; } }
     function classe() { return CL().CLASSE[estado.classe] || null; }
     function nivel1() { if (!b.niveis[0]) b.niveis[0] = { classe: estado.classe, escolhas: {} }; b.niveis[0].classe = estado.classe; return b.niveis[0]; }
+    var SIGLA = { "for": "For", des: "Des", con: "Con", "int": "Int", sab: "Sab", car: "Car" };
+    function textoAtributos(a) {
+      var x = a || {}, l = [];
+      Object.keys(x.fixo || {}).forEach(function (k) { l.push(SIGLA[k] + " " + T().sinal(x.fixo[k])); });
+      if (x.escolha) l.push("+" + x.escolha.valor + " em " + x.escolha.quantidade + " à escolha");
+      return l.join(", ");
+    }
+    /* Uma grade de cartas; a escolhida fica marcada (aria-pressed). */
+    function cartas(rotulo, itens, atual, aoEscolher) {
+      return el("ul.t20-cartas", { "aria-label": rotulo }, itens.map(function (x) {
+        return el("li", {}, [el("button.t20-carta" + (x.indisponivel ? ".t20-carta--indisponivel" : ""), {
+          type: "button", "aria-pressed": String(atual === x.id), title: x.dica || "",
+          onclick: function () { aoEscolher(x.id); },
+        }, [el("span.t20-carta__nome", { texto: x.nome })].concat((x.linhas || []).filter(Boolean).map(function (l) { return el("span.t20-carta__linha", { texto: l }); })))]);
+      }));
+    }
+    function escolhido(titulo, conteudo) {
+      return el("section.t20-escolhido", { "aria-label": titulo }, [el("h4.t20-escolhido__titulo", { texto: titulo })].concat(conteudo.filter(Boolean)));
+    }
 
     function pendencia(i) {
       var p = PASSOS[i].chave;
@@ -215,27 +234,27 @@
     function passoAtributos() {
       var c = calc();
       var cp = R().custoDosPontos(b.atributosBase);
-      var linhas = R().ATR.map(function (a) {
+      var mods = R().modificadoresDeRaca(b);
+      var quadros = R().ATR.map(function (a) {
         var base = b.atributosBase[a];
-        var raca = R().modificadoresDeRaca(b)[a];
-        return el("tr", {}, [
-          el("th", { scope: "row", texto: T().nomeAtr(a) }),
-          el("td", {}, b.metodo === "pontos" ? [
+        var raca = mods[a];
+        return el("div.t20-compra__atr", {}, [
+          el("span.t20-compra__sigla", { texto: T().siglaAtr(a) }),
+          b.metodo === "pontos" ? el("span.t20-compra__ajuste", {}, [
             T().botao("−", function () { if (base > -1) { b.atributosBase[a] = base - 1; desenhar(); } }, { rotulo: "Diminuir " + T().nomeAtr(a), motivo: base <= -1 ? "Mínimo −1 na compra." : "" }),
-            el("span.t20-num", { texto: T().sinal(base) }),
+            el("span.t20-compra__valor", { texto: T().sinal(base), "aria-live": "polite" }),
             T().botao("+", function () { if (base < 4) { b.atributosBase[a] = base + 1; desenhar(); } }, { rotulo: "Aumentar " + T().nomeAtr(a), motivo: base >= 4 ? "Máximo 4 na compra." : "" }),
-          ] : [el("span.t20-num", { texto: T().sinal(base) })]),
-          el("td", { texto: b.metodo === "pontos" ? String(D().CUSTO_PONTOS[String(base)]) : "—" }),
-          el("td", { texto: raca ? T().sinal(raca) : "" }),
-          el("td.t20-num", { texto: c ? T().sinal(c.atr[a]) : "" }),
+          ]) : el("span.t20-compra__valor", { texto: T().sinal(base) }),
+          el("span.t20-compra__info", { texto: T().nomeAtr(a) + (b.metodo === "pontos" ? " · custo " + D().CUSTO_PONTOS[String(base)] : "") }),
+          raca ? el("span.t20-compra__total", { texto: "raça " + T().sinal(raca) + " → " + (c ? T().sinal(c.atr[a]) : "") }) : null,
         ]);
       });
       return [
         UI().campo({ rotulo: "Nome do personagem", valor: estado.nome, aoMudar: function (v) { estado.nome = v; }, aoDigitar: true }),
-        T().selecao("Método", [{ valor: "pontos", rotulo: "Compra de 10 pontos (Tabela 1-1)" }, { valor: "rolagem", rotulo: "Seis rolagens de 4d6, descartando o menor" }], b.metodo, function (v) { b.metodo = v; if (v === "pontos") R().ATR.forEach(function (a) { b.atributosBase[a] = 0; }); desenhar(); }),
-        b.metodo === "pontos" ? el("p", { role: "status", texto: "Pontos: " + (D().PONTOS_INICIAIS - cp.restante) + " de " + D().PONTOS_INICIAIS + " usados · restam " + cp.restante + ". Custo: −1 devolve 1 ponto; 0 custa 0; 1 custa 1; 2 custa 2; 3 custa 4; 4 custa 7." }) : passoRolagem(),
-        el("table.t20-tabela", {}, [el("thead", {}, [el("tr", {}, ["Atributo", "Base", "Custo", "Raça", "Total"].map(function (h) { return el("th", { scope: "col", texto: h }); }))]), el("tbody", {}, linhas)]),
-        el("p.t-mini", { texto: "O total já mostra os ajustes da raça escolhida. Aumentos de atributo por poder entram pela progressão. " + T().referencia(17) }),
+        T().selecao("Como definir os atributos", [{ valor: "pontos", rotulo: "Compra de 10 pontos (Tabela 1-1)" }, { valor: "rolagem", rotulo: "Seis rolagens de 4d6, descartando o menor" }], b.metodo, function (v) { b.metodo = v; if (v === "pontos") R().ATR.forEach(function (a) { b.atributosBase[a] = 0; }); desenhar(); }),
+        b.metodo === "pontos" ? el("p.t20-compra-saldo", { role: "status" }, [el("strong", { texto: String(cp.restante) }), el("span", { texto: " de " + D().PONTOS_INICIAIS + " pontos restantes" })]) : passoRolagem(),
+        el("div.t20-compra", {}, quadros),
+        el("p.t20-legenda", { texto: b.metodo === "pontos" ? "Cada valor custa: −1 devolve 1 · 0 custa 0 · 1 custa 1 · 2 custa 2 · 3 custa 4 · 4 custa 7. A raça entra no passo seguinte." : "A raça entra no passo seguinte." }),
       ];
     }
     function passoRolagem() {
@@ -251,16 +270,20 @@
       var c = calc();
       var raca = RA().RACA[b.raca.id];
       var at = raca ? RA().atributosDe(b.raca.id, b.raca.variante) : null;
-      var itens = [T().selecao("Raça", [{ valor: "", rotulo: "—" }].concat(RA().RACAS.map(function (r) { return { valor: r.id, rotulo: r.nome + " (p. " + r.pagina + ")" }; })), b.raca.id, function (v) { b.raca = { id: v, variante: "", atributos: [], escolhas: {} }; desenhar(); })];
-      if (raca && raca.variantes) itens.push(T().selecao("Variante", [{ valor: "", rotulo: "—" }].concat(raca.variantes.map(function (x) { return { valor: x.id, rotulo: x.nome }; })), b.raca.variante, function (v) { b.raca.variante = v; b.raca.atributos = []; desenhar(); }));
-      if (at && at.escolha) itens.push(campoDeEscolha({ id: "atr", tipo: "opcao", quantidade: at.escolha.quantidade, rotulo: "Atributo +" + at.escolha.valor, opcoes: R().ATR.filter(function (a) { return (at.escolha.exceto || []).indexOf(a) < 0; }).map(function (a) { return [a, T().nomeAtr(a)]; }) }, b.raca.atributos, function (v) { b.raca.atributos = v; desenhar(); }, {}));
+      var itens = [cartas("Raças", RA().RACAS.map(function (r) {
+        return { id: r.id, nome: r.nome, linhas: [r.variantes ? r.variantes.map(function (v) { return v.nome; }).join(" ou ") : textoAtributos(r.atributos), "p. " + r.pagina] };
+      }), b.raca.id, function (v) { if (v !== b.raca.id) { b.raca = { id: v, variante: "", atributos: [], escolhas: {} }; } desenhar(); })];
       if (raca) {
-        itens.push(el("p", { texto: raca.resumo || "" }));
+        var det = [];
+        if (raca.variantes) det.push(T().selecao("Variante", [{ valor: "", rotulo: "—" }].concat(raca.variantes.map(function (x) { return { valor: x.id, rotulo: x.nome + " (" + textoAtributos(x.atributos) + ")" }; })), b.raca.variante, function (v) { b.raca.variante = v; b.raca.atributos = []; desenhar(); }));
+        if (at) det.push(el("p.t20-legenda", { texto: "Atributos: " + textoAtributos(at) + "." }));
+        if (at && at.escolha) det.push(campoDeEscolha({ id: "atr", tipo: "opcao", quantidade: at.escolha.quantidade, rotulo: "Atributo +" + at.escolha.valor, opcoes: R().ATR.filter(function (a) { return (at.escolha.exceto || []).indexOf(a) < 0; }).map(function (a) { return [a, T().nomeAtr(a)]; }) }, b.raca.atributos, function (v) { b.raca.atributos = v; desenhar(); }, {}));
         RA().habilidadesDe(b.raca.id, b.raca.variante).forEach(function (h) {
-          itens.push(el("div.t20-habilidade", {}, [el("strong", { texto: h.nome }), el("span", { texto: " — " + h.resumo })].concat((h.escolhas || []).map(function (e) {
+          det.push(el("div.t20-habilidade", {}, [el("strong", { texto: h.nome }), el("span.t-mini", { texto: h.resumo })].concat((h.escolhas || []).map(function (e) {
             return campoDeEscolha(e, b.raca.escolhas[e.id], function (v) { b.raca.escolhas[e.id] = v; desenhar(); }, { calc: c, t20: b });
           }))));
         });
+        itens.push(escolhido(raca.nome + " · p. " + raca.pagina, det));
       }
       return itens;
     }
@@ -268,32 +291,37 @@
       var raca = RA().RACA[b.raca.id];
       if (raca && raca.semOrigem) return [el("p", { texto: raca.nome + " não tem origem (veja a raça, p. " + raca.pagina + ")." })];
       var o = OR().ORIGEM[b.origem.id];
-      var itens = [T().selecao("Origem", [{ valor: "", rotulo: "—" }].concat(OR().ORIGENS.map(function (x) { return { valor: x.id, rotulo: x.nome + " (p. " + x.pagina + ")" }; })).concat([{ valor: "propria", rotulo: "Origem própria (p. 95)" }]), b.origem.id, function (v) { b.origem = { id: v, beneficios: [], escolhas: {}, propria: v === "propria" ? { nome: "", unico: { nome: "", resumo: "" }, itens: "" } : null }; desenhar(); })];
+      var lista = OR().ORIGENS.map(function (x) { return { id: x.id, nome: x.nome, linhas: [x.pericias.map(R().nomePericia).slice(0, 3).join(", ") + (x.pericias.length > 3 ? "…" : ""), "p. " + x.pagina] }; }).concat([{ id: "propria", nome: "Origem própria", linhas: ["Crie com o mestre", "p. 95"] }]);
+      var itens = [cartas("Origens", lista, b.origem.id, function (v) { if (v !== b.origem.id) b.origem = { id: v, beneficios: [], escolhas: {}, propria: v === "propria" ? { nome: "", unico: { nome: "", resumo: "" }, itens: "" } : null }; desenhar(); })];
       if (b.origem.id === "propria") {
         var pr = b.origem.propria;
-        itens.push(UI().campo({ rotulo: "Nome da origem", valor: pr.nome, aoMudar: function (v) { pr.nome = v; } }));
-        itens.push(UI().campo({ rotulo: "Itens", valor: pr.itens, aoMudar: function (v) { pr.itens = v; } }));
-        itens.push(el("p.t-mini", { texto: "Escolha dois benefícios entre perícias e poderes gerais (o mestre aprova). " + T().referencia(95) }));
-        itens.push(beneficiosLivres());
+        itens.push(escolhido("Origem própria · p. 95", [
+          UI().campo({ rotulo: "Nome da origem", valor: pr.nome, aoMudar: function (v) { pr.nome = v; } }),
+          UI().campo({ rotulo: "Itens", valor: pr.itens, aoMudar: function (v) { pr.itens = v; } }),
+          el("p.t20-legenda", { texto: "Escolha dois benefícios entre perícias e poderes gerais (o mestre aprova)." }),
+          beneficiosLivres(),
+        ]));
         return itens;
       }
       if (!o) return itens;
-      itens.push(el("p.t-mini", { texto: "Itens: " + o.itens.map(function (i) { return typeof i === "string" ? i : i.texto; }).join("; ") }));
-      if (o.especial === "mestre") { itens.push(el("p", { texto: o.unico.nome + ": " + o.unico.resumo })); return itens; }
+      var det = [el("p.t20-legenda", { texto: "Itens: " + o.itens.map(function (i) { return typeof i === "string" ? i : i.texto; }).join("; ") + "." })];
+      if (o.especial === "mestre") { det.push(el("p", { texto: o.unico.nome + ": " + o.unico.resumo })); itens.push(escolhido(o.nome + " · p. " + o.pagina, det)); return itens; }
       var opcoes = o.pericias.map(function (k) { return { tipo: "pericia", id: k, rotulo: "Perícia: " + R().nomePericia(k) }; })
-        .concat(o.poderes.map(function (k) { var p = PO().PODER[k]; return { tipo: "poder", id: k, rotulo: "Poder: " + (p ? p.nome : k) }; }))
-        .concat(o.unico ? [{ tipo: "poder", id: o.unico.id, rotulo: "Poder único: " + o.unico.nome + " — " + o.unico.resumo }] : []);
-      itens.push(el("fieldset.t20-beneficios", {}, [el("legend", { texto: "Escolha " + OR().BENEFICIOS + " benefícios" })].concat(opcoes.map(function (x) {
+        .concat(o.poderes.map(function (k) { var p = PO().PODER[k]; return { tipo: "poder", id: k, rotulo: "Poder: " + (p ? p.nome : k), dica: p ? p.resumo : "" }; }))
+        .concat(o.unico ? [{ tipo: "poder", id: o.unico.id, rotulo: "Poder único: " + o.unico.nome, dica: o.unico.resumo }] : []);
+      det.push(el("fieldset.t20-beneficios", {}, [el("legend", { texto: "Escolha " + OR().BENEFICIOS + " benefícios (" + b.origem.beneficios.length + "/" + OR().BENEFICIOS + ")" })].concat(opcoes.map(function (x) {
         var marcado = b.origem.beneficios.some(function (y) { return y.id === x.id; });
-        return el("label.r-marca", {}, [el("input", { type: "checkbox", checked: marcado, onchange: function (ev) {
+        return el("label.r-marca", { title: x.dica || "" }, [el("input", { type: "checkbox", checked: marcado, onchange: function (ev) {
           if (ev.currentTarget.checked) { if (b.origem.beneficios.length >= OR().BENEFICIOS) { ev.currentTarget.checked = false; UI().avisoAtencao("Já há " + OR().BENEFICIOS + " benefícios."); return; } b.origem.beneficios.push({ tipo: x.tipo, id: x.id, escolhas: {} }); }
           else b.origem.beneficios = b.origem.beneficios.filter(function (y) { return y.id !== x.id; });
           desenhar();
         } }), el("span", { texto: x.rotulo })]);
       }))));
       var benOf = b.origem.beneficios.filter(function (y) { return y.tipo === "pericia" && y.id === "oficio"; })[0];
-      if (benOf) itens.push(T().selecao("Especialização do Ofício da origem", [{ valor: "", rotulo: "—" }].concat(D().OFICIOS.map(function (o2) { return { valor: o2.chave, rotulo: o2.nome }; })), (benOf.escolhas || {}).oficio || "", function (v) { benOf.escolhas = benOf.escolhas || {}; benOf.escolhas.oficio = v; desenhar(); }));
-      (o.qualquer || []).forEach(function (g) { itens.push(el("p.t-mini", { texto: "Esta origem também permite poderes de " + g + " no lugar dos listados (p. " + o.pagina + "); escolha em Progressão → Poderes avulsos, com o mestre." })); });
+      if (benOf) det.push(T().selecao("Especialização do Ofício da origem", [{ valor: "", rotulo: "—" }].concat(D().OFICIOS.map(function (o2) { return { valor: o2.chave, rotulo: o2.nome }; })), (benOf.escolhas || {}).oficio || "", function (v) { benOf.escolhas = benOf.escolhas || {}; benOf.escolhas.oficio = v; desenhar(); }));
+      if (o.unico) det.push(el("p.t20-legenda", { texto: o.unico.nome + ": " + o.unico.resumo }));
+      (o.qualquer || []).forEach(function (g) { det.push(el("p.t20-legenda", { texto: "Esta origem também permite poderes de " + g + " no lugar dos listados; escolha depois na ficha (Habilidades → Poder avulso), com o mestre." })); });
+      itens.push(escolhido(o.nome + " · p. " + o.pagina, det));
       return itens;
     }
     function beneficiosLivres() {
@@ -311,70 +339,97 @@
     function passoClasse() {
       var c = calc();
       var cl = classe();
-      var itens = [T().selecao("Classe", [{ valor: "", rotulo: "—" }].concat(CL().CLASSES.map(function (x) { return { valor: x.id, rotulo: x.nome + " (PV " + x.pv.inicial + "+Con, " + x.pm + " PM/nível; p. " + x.pagina + ")" }; })), estado.classe, function (v) { estado.classe = v; b.niveis = v ? [{ classe: v, escolhas: {} }] : []; b.magias = []; b.periciasInt = []; desenhar(); })];
+      var itens = [cartas("Classes", CL().CLASSES.map(function (x) {
+        return { id: x.id, nome: x.nome, linhas: ["PV " + x.pv.inicial + " + Con · PM " + x.pm + "/nível", x.atributo, "p. " + x.pagina] };
+      }), estado.classe, function (v) { if (v !== estado.classe) { estado.classe = v; b.niveis = v ? [{ classe: v, escolhas: {} }] : []; b.magias = []; b.periciasInt = []; } desenhar(); })];
       if (!cl) return itens;
       var esc = nivel1().escolhas;
-      itens.push(el("p.t-mini", { texto: "Perícias fixas: " + (cl.pericias.fixas.map(R().nomePericia).join(", ") || "—") + ". Proficiências: " + (cl.proficiencias.join(", ") || "só simples e leves") + "." }));
+      var det = [el("p.t20-legenda", { texto: "Perícias fixas: " + (cl.pericias.fixas.map(R().nomePericia).join(", ") || "—") + " · Proficiências: " + (cl.proficiencias.join(", ") || "só armas simples e armaduras leves") + "." })];
       (cl.pericias.ou || []).forEach(function (par, i) {
         esc.ou = esc.ou || [];
-        itens.push(T().selecao("Perícia (uma das duas)", par.map(function (k) { return { valor: k, rotulo: R().nomePericia(k) }; }), esc.ou[i] || par[0], function (v) { esc.ou[i] = v; desenhar(); }));
+        det.push(T().selecao("Perícia (uma das duas)", par.map(function (k) { return { valor: k, rotulo: R().nomePericia(k) }; }), esc.ou[i] || par[0], function (v) { esc.ou[i] = v; desenhar(); }));
       });
-      itens.push(campoDeEscolha({ id: "pericias", tipo: "opcao", quantidade: cl.pericias.escolha.n, rotulo: "Perícia da classe", opcoes: cl.pericias.escolha.de.map(function (k) { return [k, R().nomePericia(k)]; }) }, esc.pericias || [], function (v) { esc.pericias = v; desenhar(); }, {}));
-      /* Cada Ofício da classe pede a especialização (p. 121). */
+      det.push(campoDeEscolha({ id: "pericias", tipo: "opcao", quantidade: cl.pericias.escolha.n, rotulo: "Perícia da classe", opcoes: cl.pericias.escolha.de.map(function (k) { return [k, R().nomePericia(k)]; }) }, esc.pericias || [], function (v) { esc.pericias = v; desenhar(); }, {}));
       var quantosOficios = cl.pericias.fixas.concat((cl.pericias.ou || []).map(function (par, i) { return (esc.ou || [])[i] || par[0]; })).concat(esc.pericias || []).filter(function (k) { return k === "oficio"; }).length;
       for (var iOf = 0; iOf < quantosOficios; iOf++) {
         (function (i) {
           esc.oficios = esc.oficios || [];
-          itens.push(T().selecao("Especialização do Ofício" + (quantosOficios > 1 ? " " + (i + 1) : ""), [{ valor: "", rotulo: "—" }].concat(D().OFICIOS.map(function (o) { return { valor: o.chave, rotulo: o.nome }; })), esc.oficios[i] || "", function (v) { esc.oficios[i] = v; desenhar(); }));
+          det.push(T().selecao("Especialização do Ofício" + (quantosOficios > 1 ? " " + (i + 1) : ""), [{ valor: "", rotulo: "—" }].concat(D().OFICIOS.map(function (o) { return { valor: o.chave, rotulo: o.nome }; })), esc.oficios[i] || "", function (v) { esc.oficios[i] = v; desenhar(); }));
         })(iOf);
       }
+      var nInt = c ? Math.max(0, c.atr["int"]) : 0;
+      if (nInt) det.push(campoDeEscolha({ id: "int", tipo: "opcao", quantidade: nInt, rotulo: "Perícia pela Inteligência", opcoes: D().PERICIAS.filter(function (p) { return p.chave !== "oficio"; }).map(function (p) { return [p.chave, p.nome]; }).concat(D().OFICIOS.map(function (o) { return ["oficio:" + o.chave, "Ofício (" + o.nome + ")"]; })) }, b.periciasInt, function (v) { b.periciasInt = v; desenhar(); }, {}));
       (cl.tabela[1] || []).forEach(function (hid) {
         var h = cl.habilidades[hid];
         if (!h) return;
-        itens.push(el("div.t20-habilidade", {}, [el("strong", { texto: h.nome }), el("span", { texto: " — " + h.resumo })].concat((h.escolhas || []).map(function (e) {
+        det.push(el("div.t20-habilidade", {}, [el("strong", { texto: h.nome }), el("span.t-mini", { texto: h.resumo })].concat((h.escolhas || []).map(function (e) {
           return campoDeEscolha(e, esc[e.id], function (v) { esc[e.id] = v; desenhar(); }, { calc: c, t20: b, classe: cl.id });
         }))));
       });
-      var nInt = c ? Math.max(0, c.atr["int"]) : 0;
-      if (nInt) itens.push(campoDeEscolha({ id: "int", tipo: "opcao", quantidade: nInt, rotulo: "Perícia pela Inteligência", opcoes: D().PERICIAS.filter(function (p) { return p.chave !== "oficio"; }).map(function (p) { return [p.chave, p.nome]; }).concat(D().OFICIOS.map(function (o) { return ["oficio:" + o.chave, "Ofício (" + o.nome + ")"]; })) }, b.periciasInt, function (v) { b.periciasInt = v; desenhar(); }, {}));
+      itens.push(escolhido(cl.nome + " · p. " + cl.pagina, det));
       return itens;
     }
     function passoDivindade() {
       var nv = b.niveis.map(function (n) { return n.classe; });
-      var lista = DE().DEUSES.map(function (d) { var pode = DE().podeSerDevoto(d, b.raca.id, b.raca.variante, nv); return { valor: d.id, rotulo: d.nome + (pode === false ? " (sua raça e classe não estão entre os devotos)" : pode === null ? " (o mestre decide)" : ""), pode: pode }; });
       var dv = b.divindade && DE().DEUS[b.divindade.id];
-      var itens = [T().selecao("Divindade", [{ valor: "", rotulo: "Nenhuma (não devoto)" }].concat(lista.filter(function (x) { return x.pode !== false; })), b.divindade ? b.divindade.id : "", function (v) { b.divindade = v ? { id: v, energia: "", poderes: [] } : null; desenhar(); })];
+      var lista = [{ id: "", nome: "Nenhuma", linhas: ["Não devoto"] }].concat(DE().DEUSES.map(function (d) {
+        var pode = DE().podeSerDevoto(d, b.raca.id, b.raca.variante, nv);
+        return { id: d.id, nome: d.nome, linhas: [d.titulo || "", pode === false ? "Sua raça e classe não estão entre os devotos" : pode === null ? "O mestre decide" : "p. " + d.pagina], indisponivel: pode === false, dica: pode === false ? "Não pode ser devoto" : "" };
+      }));
+      var itens = [cartas("Divindades", lista, b.divindade ? b.divindade.id : "", function (v) {
+        var d = v && DE().DEUS[v];
+        if (d && DE().podeSerDevoto(d, b.raca.id, b.raca.variante, nv) === false) { UI().avisoAtencao("Sua raça e classe não estão entre os devotos de " + d.nome + "."); return; }
+        b.divindade = v ? { id: v, energia: "", poderes: [] } : null; desenhar();
+      })];
       if (dv) {
-        itens.push(el("p", { texto: "Obrigações & Restrições: " + dv.obrigacoes }));
-        itens.push(el("p.t-mini", { texto: "Energia: " + dv.energia + " · arma preferida: " + (EQ().ITEM[dv.armaPreferida] ? EQ().ITEM[dv.armaPreferida].nome : dv.armaPreferida) + " · p. " + dv.pagina }));
-        if (dv.energia === "qualquer") itens.push(T().selecao("Energia canalizada (definitiva)", [{ valor: "positiva", rotulo: "Positiva" }, { valor: "negativa", rotulo: "Negativa" }], b.divindade.energia || "positiva", function (v) { b.divindade.energia = v; }));
-        itens.push(T().selecao("Poder concedido (um ao se tornar devoto)", [{ valor: "", rotulo: "—" }].concat(dv.poderes.map(function (k) { var p = PO().PODER[k]; return { valor: k, rotulo: (p ? p.nome : k) + (p ? " — " + p.resumo : "") }; })), b.divindade.poderes[0] ? b.divindade.poderes[0].id : "", function (v) { b.divindade.poderes = v ? [{ id: v, escolhas: {} }] : []; desenhar(); }));
+        itens.push(escolhido(dv.nome + " · p. " + dv.pagina, [
+          el("p", {}, [el("strong", { texto: "Obrigações e restrições: " }), el("span", { texto: dv.obrigacoes })]),
+          el("p.t20-legenda", { texto: "Energia: " + dv.energia + " · arma preferida: " + (EQ().ITEM[dv.armaPreferida] ? EQ().ITEM[dv.armaPreferida].nome : dv.armaPreferida) }),
+          dv.energia === "qualquer" ? T().selecao("Energia canalizada (definitiva)", [{ valor: "positiva", rotulo: "Positiva" }, { valor: "negativa", rotulo: "Negativa" }], b.divindade.energia || "positiva", function (v) { b.divindade.energia = v; }) : null,
+          el("fieldset.t20-beneficios", {}, [el("legend", { texto: "Poder concedido (escolha um)" })].concat(dv.poderes.map(function (k) {
+            var pz = PO().PODER[k];
+            return el("label.r-marca", {}, [el("input", { type: "radio", name: "t20-poder-concedido", checked: !!(b.divindade.poderes[0] && b.divindade.poderes[0].id === k), onchange: function () { b.divindade.poderes = [{ id: k, escolhas: {} }]; desenhar(); } }), el("span", {}, [el("strong", { texto: pz ? pz.nome : k }), el("span.t-mini", { texto: pz ? " — " + pz.resumo : "" })])]);
+          }))),
+        ]));
       }
       return itens;
     }
     function passoMagias() {
       var cl = classe();
       var n = magiasIniciais();
-      if (!n) return [el("p", { texto: cl ? cl.nome + " não começa com magias de classe." : "Escolha a classe antes." })];
+      if (!n) return [el("p", { texto: cl ? cl.nome + " não começa com magias de classe. Pode avançar." : "Escolha a classe antes." })];
       var c = calc();
       var fs = c.magias.fontes["classe:" + cl.id];
-      var disponiveis = MG().MAGIAS.filter(function (m) { return MG().disponivel(m, { tipo: fs.tipo, circuloMax: 1, escolas: fs.escolas }); });
+      var disponiveis = MG().MAGIAS.filter(function (m) { return MG().disponivel(m, { tipo: fs.tipo, circuloMax: 1, escolas: fs.escolas }); }).sort(function (a, z) { return a.nome.localeCompare(z.nome); });
+      var escolhidas = b.magias.map(function (m) { return m.id; });
       return [
-        el("p", { texto: "Escolha " + n + " magia(s) de 1º círculo (" + fs.tipo + (fs.escolas ? "; escolas " + fs.escolas.join(", ") : "") + "). CD " + fs.cd + ", atributo " + T().nomeAtr(fs.atributo) + "." }),
-        campoDeEscolha({ id: "magias", tipo: "opcao", quantidade: n, rotulo: "Magia", opcoes: disponiveis.map(function (m) { return [m.id, m.nome + " (" + m.escola + ")"]; }) }, b.magias.map(function (m) { return m.id; }), function (v) { b.magias = v.map(function (id) { return { id: id, fonte: "classe:" + cl.id, atributo: "", memorizada: true }; }); desenhar(); }, {}),
+        escolhido("Escolha " + n + " magia(s) de 1º círculo (" + escolhidas.length + "/" + n + ")", [
+          el("p.t20-legenda", { texto: humanizarTipo(fs.tipo) + (fs.escolas ? " · escolas " + fs.escolas.join(", ") : "") + " · CD " + fs.cd + " (" + T().nomeAtr(fs.atributo) + ") · 1 PM cada." }),
+          el("div.t20-beneficios", { role: "group", "aria-label": "Magias de 1º círculo" }, disponiveis.map(function (m) {
+            var marcada = escolhidas.indexOf(m.id) >= 0;
+            return el("label.r-marca", { title: m.resumo }, [el("input", { type: "checkbox", checked: marcada, onchange: function (ev) {
+              var lista = b.magias.map(function (x) { return x.id; });
+              if (ev.currentTarget.checked) { if (lista.length >= n) { ev.currentTarget.checked = false; UI().avisoAtencao("Já há " + n + " magias."); return; } lista.push(m.id); }
+              else lista = lista.filter(function (x) { return x !== m.id; });
+              b.magias = lista.map(function (id) { return { id: id, fonte: "classe:" + cl.id, atributo: "", memorizada: true }; });
+              desenhar();
+            } }), el("span", {}, [el("strong", { texto: m.nome }), el("span.t-mini", { texto: " — " + m.resumo })])]);
+          })),
+        ]),
       ];
     }
+    function humanizarTipo(t) { return t === "arcana" ? "Arcanas" : t === "divina" ? "Divinas" : "Universais"; }
     function passoEquipamento() {
       var cl = classe();
-      var ini = EQ().ITENS_INICIAIS || {};
       var o = OR().ORIGEM[b.origem.id];
       return [
-        el("p", { texto: "Equipamento inicial (p. 140): uma mochila, um saco de dormir e um traje de viajante; armas e armadura conforme as proficiências; T$ 4d6 de dinheiro." }),
-        el("p.t-mini", { texto: (ini.resumo || "") + (o ? " Itens da origem: " + o.itens.map(function (i) { return typeof i === "string" ? i : i.texto; }).join("; ") + "." : "") }),
-        el("div.faixa", {}, [T().botao("Rolar T$ 4d6", function () { var r = T().rolarExpressao("Dinheiro inicial", "4d6", "teste"); b.inventario.tibar = r.total; desenhar(); }), el("span", { role: "status", texto: "Tibares: T$ " + b.inventario.tibar })]),
-      ].concat(escolhasIniciais(cl)).concat([
-        el("p.t-mini", { texto: "O resto se compra no Inventário da ficha, pelo preço da Tabela 3-3." }),
-      ]);
+        escolhido("Sempre", [
+          el("p", { texto: "Mochila, saco de dormir e traje de viajante." + (o ? " Da origem: " + o.itens.map(function (i) { return typeof i === "string" ? i : i.texto; }).join("; ") + "." : "") }),
+          el("div.faixa", {}, [T().botao("Rolar T$ 4d6", function () { var r = T().rolarExpressao("Dinheiro inicial", "4d6", "teste"); b.inventario.tibar = r.total; desenhar(); }), el("strong", { role: "status", texto: "T$ " + b.inventario.tibar })]),
+        ]),
+        ctx ? null : escolhido("Armas e armadura (grátis)", escolhasIniciais(cl)),
+        el("p.t20-legenda", { texto: "O resto se compra na aba Equipamento da ficha, pelo preço da Tabela 3-3." }),
+      ];
     }
     /* As armas e a armadura que vêm de graça no 1º nível (p. 140): uma
        arma simples; uma marcial se proficiente; couro, couro batido ou
@@ -386,7 +441,7 @@
       var prof = c ? c.proficiencias : {};
       var ini = estado.inicial;
       var opcoesDe = function (l) { return [{ valor: "", rotulo: "—" }].concat(l.map(function (a) { return { valor: a.id, rotulo: a.nome + " (" + a.dano + (a.margem < 20 ? ", " + a.margem : "") + ", x" + (a.mult || 2) + ")" }; })); };
-      var itens = [el("h4.t-rotulo", { texto: "Armas e armadura iniciais (grátis)" })];
+      var itens = [];
       itens.push(T().selecao("Arma simples", opcoesDe(EQ().ARMAS.filter(function (a) { return a.proficiencia === "simples"; })), ini.simples, function (v) { ini.simples = v; }));
       if (prof.marciais) itens.push(T().selecao("Arma marcial", opcoesDe(EQ().ARMAS.filter(function (a) { return a.proficiencia === "marcial"; })), ini.marcial, function (v) { ini.marcial = v; }));
       if (cl.id === "arcanista") itens.push(el("p.t-mini", { texto: "Arcanistas começam sem armadura." }));
@@ -400,24 +455,54 @@
     function passoConferir() {
       var c = calc();
       if (!c) return [el("p", { texto: "Falta alguma escolha." })];
+      var dv = b.divindade && DE().DEUS[b.divindade.id];
       return [
-        el("p", { texto: estado.nome + " — " + (RA().RACA[b.raca.id] || {}).nome + ", " + (classe() || {}).nome + " 1" + (b.divindade ? ", devoto de " + DE().DEUS[b.divindade.id].nome : "") }),
-        el("div.t20-resumo-criacao", {}, [T().valor("PV", c.pv.max, c.pv.parcelas), T().valor("PM", c.pm.max, c.pm.parcelas), T().valor("Defesa", c.defesa.total, c.defesa.parcelas), T().valor("Deslocamento", c.deslocamento.terrestre + " m", c.deslocamento.parcelas)]),
-        el("p.t-mini", { texto: "Perícias treinadas: " + Object.keys(c.pericias).filter(function (k) { return c.pericias[k].treinado; }).map(R().nomePericia).join(", ") }),
+        escolhido(estado.nome || "Sem nome", [
+          el("p", { texto: [(RA().RACA[b.raca.id] || {}).nome, (OR().ORIGEM[b.origem.id] || {}).nome || (b.origem.propria && b.origem.propria.nome), (classe() || {}).nome + " 1", dv ? "devoto de " + dv.nome : ""].filter(Boolean).join(" · ") }),
+          el("div.t20-resumo-criacao", {}, [T().valor("PV", c.pv.max, c.pv.parcelas), T().valor("PM", c.pm.max, c.pm.parcelas), T().valor("Defesa", c.defesa.total, c.defesa.parcelas), T().valor("Deslocamento", c.deslocamento.terrestre + " m", c.deslocamento.parcelas)]),
+          el("p.t20-legenda", { texto: "Perícias treinadas: " + Object.keys(c.pericias).filter(function (k) { return c.pericias[k].treinado; }).map(R().nomePericia).join(", ") + "." }),
+          b.magias.length ? el("p.t20-legenda", { texto: "Magias: " + b.magias.map(function (m) { return (MG().MAGIA[m.id] || {}).nome; }).join(", ") + "." }) : null,
+        ]),
       ];
     }
-
+    function resumoLateral() {
+      var c = calc();
+      if (!c) return null;
+      var cl = classe();
+      return el("aside.t20-criar__resumo", { "aria-label": "Resumo do personagem" }, [
+        el("h4", { texto: estado.nome || "Novo personagem" }),
+        el("span.t-mini", { texto: [(RA().RACA[b.raca.id] || {}).nome, (OR().ORIGEM[b.origem.id] || {}).nome, cl ? cl.nome + " 1" : ""].filter(Boolean).join(" · ") || "Escolhas em andamento" }),
+        el("div.t20-criar__atrs", {}, R().ATR.map(function (a) { return el("div", {}, [el("span", { texto: T().siglaAtr(a) }), el("strong", { texto: T().sinal(c.atr[a]) })]); })),
+        cl ? el("div.t20-criar__vitais", {}, [["PV", c.pv.max], ["PM", c.pm.max], ["Defesa", c.defesa.total]].map(function (x) { return el("div", {}, [el("strong", { texto: String(x[1]) }), el("span", { texto: x[0] })]); })) : null,
+        cl ? el("p.t20-criar__extra", { texto: "Treinado em " + Object.keys(c.pericias).filter(function (k) { return c.pericias[k].treinado; }).length + " perícias." }) : null,
+      ]);
+    }
+    function podeIrPara(i) { for (var k = 0; k < i; k++) if (pendencia(k)) return false; return true; }
     function desenhar() {
       var p = PASSOS[estado.passo];
       var conteudo;
       try {
         conteudo = { atributos: passoAtributos, raca: passoRaca, origem: passoOrigem, classe: passoClasse, divindade: passoDivindade, magias: passoMagias, equipamento: passoEquipamento, conferir: passoConferir }[p.chave]();
       } catch (e) { conteudo = [el("p.t-erro", { texto: "Erro ao montar o passo: " + e.message })]; }
+      var rolagem = corpo.closest ? corpo.closest(".r-modal__corpo, [role=dialog]") : null;
       U.trocar(corpo, [
-        el("ol.t20-passos", { "aria-label": "Passos da criação" }, PASSOS.map(function (x, i) { return el("li" + (i === estado.passo ? ".t20-passos__atual" : ""), { "aria-current": i === estado.passo ? "step" : null, texto: (i + 1) + ". " + x.nome }); })),
-        el("h3.t-secao", { texto: p.nome }), el("p.t-mini", { texto: T().referencia(p.pagina) }),
-        el("div.pilha", {}, conteudo),
+        el("ol.t20-passos", { "aria-label": "Passos da criação" }, PASSOS.map(function (x, i) {
+          var feito = i < estado.passo && !pendencia(i);
+          return el("li", {}, [el("button.t20-passo" + (i === estado.passo ? ".t20-passo--atual" : "") + (feito ? ".t20-passo--feito" : ""), {
+            type: "button", "aria-current": i === estado.passo ? "step" : null, disabled: i !== estado.passo && !podeIrPara(i),
+            "aria-label": (i + 1) + ". " + x.nome + (feito ? " (feito)" : ""),
+            onclick: function () { if (i !== estado.passo && podeIrPara(i)) { estado.passo = i; desenhar(); } },
+          }, [el("span.t20-passo__n", {}, [el("span", { texto: String(i + 1) })]), el("span", { texto: x.nome })])]);
+        })),
+        el("div.t20-criar__grade" + (p.chave === "atributos" ? ".t20-criar__grade--so" : ""), {}, [
+          el("div.t20-criar__principal", {}, [
+            el("p.t20-criar__intro", {}, [el("span", { texto: p.intro }), el("span.t-mini", { texto: " · " + T().referencia(p.pagina) })]),
+            el("div.pilha", {}, conteudo),
+          ]),
+          p.chave === "atributos" ? null : resumoLateral(),
+        ]),
       ]);
+      if (rolagem && estado.ultimoPasso !== estado.passo) { rolagem.scrollTop = 0; estado.ultimoPasso = estado.passo; }
       /* No último passo, o botão diz o que vai acontecer. */
       var dialogo = corpo.closest ? corpo.closest("[role=dialog]") : null;
       var principal = dialogo ? dialogo.querySelector(".r-botao--principal") : null;

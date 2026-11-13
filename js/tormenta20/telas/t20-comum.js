@@ -132,6 +132,33 @@
       lista.length ? el("ul.t20-parcelas", {}, lista) : el("p.t-mini", { texto: "Sem parcelas." }),
     ]);
   }
+  /* O número que rola: o valor é o botão (clicar rola ou abre a ação) e
+     as parcelas abrem num balão ao lado, sem empurrar a tela. */
+  function rolavel(rotulo, total, parcelas, aoClicar, opcoes) {
+    var op = opcoes || {};
+    var lista = (parcelas || []).filter(function (p) { return p && p.valor !== 0 && p.valor !== undefined && p.valor !== ""; }).map(function (p) {
+      var v = typeof p.valor === "number" ? sinal(p.valor) : String(p.valor);
+      return el("li" + (p.situacional ? ".t20-parcela--situacional" : ""), {}, [el("span", { texto: p.rotulo + (p.situacional ? " (quando valer)" : "") }), el("span.t20-parcela__valor", { texto: v })]);
+    });
+    var texto = String(op.formato ? op.formato(total) : total);
+    return el("span.t20-rol" + (op.classe ? "." + op.classe : ""), {}, [
+      el("button.t20-rol__valor", { type: "button", texto: texto, disabled: !!op.desabilitado, title: op.dica || "", "aria-label": (op.acao || "Rolar") + " " + rotulo + " (" + texto + ")", onclick: aoClicar }),
+      lista.length ? el("details.t20-rol__det", {}, [
+        el("summary", { "aria-label": "Ver as parcelas de " + rotulo, title: "De onde vem" }, [el("span", { "aria-hidden": "true", texto: "i" })]),
+        el("ul.t20-parcelas", {}, lista),
+      ]) : null,
+    ]);
+  }
+  /* Painel com a faixa de título, como os quadros da ficha oficial. */
+  var contadorSecao = 0;
+  function secao(titulo, conteudo, opcoes) {
+    var op = opcoes || {};
+    var id = "t20-secao-" + (++contadorSecao);
+    return el("section.t20-painel" + (op.classe ? "." + op.classe : ""), { "aria-labelledby": id }, [
+      el("header.t20-painel__topo", {}, [el("h3.t20-painel__titulo", { id: id, texto: titulo }), op.info ? el("span.t20-painel__info", { texto: op.info }) : null, op.acoes ? el("span.t20-painel__acoes", {}, [].concat(op.acoes).filter(Boolean)) : null]),
+      el("div.t20-painel__corpo", {}, [].concat(conteudo).filter(Boolean)),
+    ]);
+  }
   function etiqueta(texto, aviso) { return el("span.r-etiqueta" + (aviso ? ".r-etiqueta--aviso" : ""), { texto: texto }); }
   function selecao(rotulo, opcoes, valorAtual, aoMudar, extra) { return UI().campo(Object.assign({ rotulo: rotulo, tipo: "selecao", valor: valorAtual, opcoes: opcoes, aoMudar: aoMudar }, extra || {})); }
   function numero(rotulo, v, extra) { return UI().campo(Object.assign({ rotulo: rotulo, tipo: "numero", valor: v === undefined || v === null ? "" : v }, extra || {})); }
@@ -197,7 +224,7 @@
   global.RAMATormenta20Tela = {
     referencia: referencia, fonte: fonte, sinal: sinal, nomeAtr: nomeAtr, siglaAtr: siglaAtr, botao: botao, novaOperacao: novaOperacao,
     rolar: rolar, operar: operar, mostrar: mostrar, teste: teste, mostrarTeste: mostrarTeste, ataque: ataque, rolarExpressao: rolarExpressao,
-    valor: valor, etiqueta: etiqueta, selecao: selecao, numero: numero, lerNumero: lerNumero, painel: painel, consulta: consulta,
+    valor: valor, rolavel: rolavel, secao: secao, etiqueta: etiqueta, selecao: selecao, numero: numero, lerNumero: lerNumero, painel: painel, consulta: consulta,
   };
   global.RAMATormenta20MesaDaFicha = { carregar: carregar, naMesa: naMesa, estado: estadoDaMesa, alvos: alvosDaMesa, operar: operarNaMesa, dados: function () { return lido.dados; } };
 })(window);

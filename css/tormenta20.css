@@ -1,316 +1,499 @@
 /* =====================================================================
    R.A.M.A. — Tormenta20 — Jogo do Ano (v8.0) · Legacy
    ---------------------------------------------------------------------
-   A ficha (na hierarquia da ficha oficial: identidade, atributos, PV/PM,
-   Defesa e ações à mão; perícias, inventário, poderes, magias e
-   parceiros nas abas), a criação passo a passo, o diálogo de magia com
-   os aprimoramentos e a Mesa da campanha. Lê só os tokens do tema
-   (css/tokens.css): nenhuma cor presa.
+   A ficha na hierarquia da ficha oficial: quem é o personagem, os seis
+   atributos, PV e PM, a Defesa em escudo e o que se consulta em jogo;
+   depois, abas com quadros de faixa de título (ataques, perícias,
+   habilidades, magias, equipamento). A criação passo a passo, o diálogo
+   de magia e a Mesa da campanha também moram aqui.
+
+   O jeito de Tormenta, só com os tokens do tema (nenhuma cor presa):
+     vermelho = --cor-vida (o pincel dos quadros, as barras, os acentos)
+     dourado  = --cor-aviso (marcas de treino, escolhas da criação)
+     quadros com a faixa de pincel sob o título e cantos marcados,
+     a Defesa num escudo, atributos com a sigla sobre o traço vermelho.
 
    Estado nunca só por cor:
-     valor com parcelas: <details> com "▸" e a lista ao abrir
-     parcela situacional: "(quando valer)" no texto e traço pontilhado
-     vez no combate: "▶" antes do nome e aria-current
-     ameaça derrotada: texto riscado e a etiqueta "derrotada"
-     passo atual da criação: "●", negrito e aria-current
+     parcelas: o "i" ao lado do número abre o balão com a conta
+     perícia treinada: "●" (não treinada "○")
+     passo atual da criação: "●", negrito e aria-current; feito: "✓"
+     vez no combate: "▶" e aria-current; ameaça derrotada: riscada
    A versão Modern20 está em css/modern20/tormenta20.css.
    ===================================================================== */
 
-/* ---------------------------------------------------------- comuns */
-.t20-lista {
-  margin: 0;
-  padding-left: var(--e4);
-  display: flex;
-  flex-direction: column;
-  gap: var(--e1);
-  min-width: 0;
-}
+/* ---------------------------------------------------------- base */
+.t20-aba { display: flex; flex-direction: column; gap: var(--e4); min-width: 0; }
+.t20-colunas { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 22rem), 1fr)); gap: var(--e4); align-items: start; }
+.t20-lista { margin: 0; padding-left: var(--e4); display: flex; flex-direction: column; gap: var(--e1); min-width: 0; }
 .t20-lista > li { overflow-wrap: anywhere; }
-.t20-fonte, .t20-link {
-  font-size: var(--texto-mini);
-  color: var(--cor-texto-2);
-}
-.t20-link { color: var(--cor-link); }
+.t20-fonte { font-size: var(--texto-mini); color: var(--cor-texto-2); }
+.t20-link { background: none; border: 0; padding: 0; font: inherit; color: var(--cor-link); cursor: pointer; text-decoration: underline; text-underline-offset: 2px; }
 .t20-indisponivel { color: var(--cor-texto-3); }
 .t20-num { font-variant-numeric: tabular-nums; text-align: right; white-space: nowrap; }
+.t20-legenda { margin: 0; font-size: var(--texto-mini); color: var(--cor-texto-2); }
+.t20-erros { color: var(--cor-erro); margin: 0; padding-left: var(--e4); }
 .t20-pares { margin: 0; display: grid; grid-template-columns: max-content 1fr; gap: var(--e1) var(--e3); }
 .t20-pares > div { display: contents; }
 .t20-pares dt { color: var(--cor-texto-2); font-size: var(--texto-mini); }
 .t20-pares dd { margin: 0; min-width: 0; overflow-wrap: anywhere; }
-.t20-erros { color: var(--cor-erro); margin: 0; padding-left: var(--e4); }
+.t20-pares--linha { display: flex; flex-wrap: wrap; gap: var(--e1) var(--e4); }
+.t20-pares--linha > div { display: flex; flex-direction: column; }
 .t20-pendencias {
   border: var(--borda) dashed var(--cor-aviso);
   padding: var(--e2) var(--e3);
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--e2);
+  display: flex; flex-wrap: wrap; align-items: center; gap: var(--e2);
 }
 .t20-pendencias p { margin: 0; }
+.t20-select {
+  font: inherit; font-size: var(--texto-mini);
+  color: var(--cor-texto); background: var(--cor-campo);
+  border: 1px solid var(--cor-traco-media);
+  padding: 2px var(--e1); min-height: 2rem; max-width: 100%;
+}
+.t20-select:focus-visible { outline: 2px solid var(--cor-foco); outline-offset: 1px; }
 
-/* Um número com as parcelas: o total à vista; ao expandir, de onde vem. */
-.t20-valor { min-width: 0; }
-.t20-valor > summary {
-  cursor: pointer;
-  list-style: none;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  padding: var(--e1) var(--e2);
-  border: var(--borda) solid var(--cor-traco-fraca);
-  border-radius: var(--raio);
-  min-height: var(--alvo-toque);
-  justify-content: center;
+/* O quadro: faixa de pincel sob o título e cantos marcados, como os
+   quadros da ficha oficial. */
+.t20-painel {
+  position: relative;
+  border: var(--borda) solid var(--cor-traco-media);
+  background: var(--cor-superficie);
+  padding: var(--e3);
+  display: flex; flex-direction: column; gap: var(--e3);
+  min-width: 0;
 }
-.t20-valor > summary::-webkit-details-marker { display: none; }
-.t20-valor > summary:focus-visible { outline: 2px solid var(--cor-foco); outline-offset: 2px; }
+.t20-painel::before, .t20-painel::after {
+  content: ""; position: absolute; width: 10px; height: 10px; pointer-events: none;
+}
+.t20-painel::before { top: -2px; left: -2px; border-top: 3px solid var(--cor-vida); border-left: 3px solid var(--cor-vida); }
+.t20-painel::after { bottom: -2px; right: -2px; border-bottom: 3px solid var(--cor-vida); border-right: 3px solid var(--cor-vida); }
+.t20-painel__topo { display: flex; flex-wrap: wrap; align-items: center; gap: var(--e2) var(--e3); }
+.t20-painel__titulo {
+  margin: 0;
+  font-size: var(--texto-medio);
+  letter-spacing: var(--espaco-letra-titulo);
+  text-transform: uppercase;
+  padding: 0 var(--e2);
+  background: linear-gradient(to bottom, transparent 55%, color-mix(in srgb, var(--cor-vida) 55%, transparent) 55%, color-mix(in srgb, var(--cor-vida) 55%, transparent) 92%, transparent 92%);
+}
+.t20-painel__info { font-size: var(--texto-mini); color: var(--cor-texto-2); }
+.t20-painel__acoes { margin-left: auto; display: flex; flex-wrap: wrap; gap: var(--e1); }
+.t20-painel__corpo { display: flex; flex-direction: column; gap: var(--e3); min-width: 0; }
+
+/* -------------------------------------- números com parcelas (balão) */
+.t20-valor, .t20-rol__det { position: relative; }
+.t20-valor > summary, .t20-rol__det > summary { cursor: pointer; list-style: none; }
+.t20-valor > summary::-webkit-details-marker, .t20-rol__det > summary::-webkit-details-marker { display: none; }
+.t20-valor > summary:focus-visible, .t20-rol__det > summary:focus-visible { outline: 2px solid var(--cor-foco); outline-offset: 2px; }
+.t20-valor > summary { display: flex; flex-direction: column; gap: 2px; }
 .t20-valor__rotulo { font-size: var(--texto-mini); color: var(--cor-texto-2); }
-.t20-valor__rotulo::before { content: "▸ "; }
-.t20-valor[open] .t20-valor__rotulo::before { content: "▾ "; }
+.t20-valor__rotulo::after { content: " ⓘ"; color: var(--cor-texto-3); }
 .t20-valor__total { font-size: var(--texto-medio); font-variant-numeric: tabular-nums; font-weight: 600; }
-.t20-valor--grande .t20-valor__total { font-size: var(--texto-grande); }
 .t20-parcelas {
-  margin: var(--e1) 0 0;
-  padding: var(--e1) var(--e2);
-  list-style: none;
+  margin: 0; padding: var(--e2) var(--e3); list-style: none;
   font-size: var(--texto-mini);
-  border-left: var(--borda) solid var(--cor-traco-media);
+  display: flex; flex-direction: column; gap: 2px;
 }
-.t20-parcelas li { display: flex; justify-content: space-between; gap: var(--e2); }
+.t20-valor[open] > .t20-parcelas, .t20-rol__det[open] > .t20-parcelas, .t20-valor[open] > p {
+  position: absolute; z-index: var(--z-flutuante); top: calc(100% + 4px); left: 0;
+  min-width: 15rem; max-width: min(22rem, 80vw);
+  background: var(--cor-superficie-2, var(--cor-superficie));
+  border: var(--borda) solid var(--cor-traco-forte);
+  box-shadow: 0 6px 18px var(--cor-sombra);
+}
+.t20-parcelas li { display: flex; justify-content: space-between; gap: var(--e3); }
 .t20-parcela__valor { font-variant-numeric: tabular-nums; white-space: nowrap; }
 .t20-parcela--situacional { color: var(--cor-texto-2); border-bottom: 1px dotted var(--cor-traco-media); }
 
-/* Tabelas (ataques, perícias, inventário): rolam de lado no celular. */
-.t20-tabela {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: var(--texto-mini);
+/* O número que rola, com o "i" das parcelas ao lado. */
+.t20-rol { display: inline-flex; align-items: center; gap: 2px; position: relative; }
+.t20-rol__valor {
+  font: inherit; font-variant-numeric: tabular-nums; font-weight: 700;
+  color: var(--cor-texto); background: var(--cor-campo);
+  border: 1px solid var(--cor-traco-media);
+  min-width: 3rem; min-height: 2rem; padding: 0 var(--e2);
+  cursor: pointer;
 }
-.t20-tabela th, .t20-tabela td {
-  text-align: left;
-  padding: var(--e1) var(--e2);
-  border-bottom: 1px solid var(--cor-traco-fraca);
-  vertical-align: middle;
+.t20-rol__valor:hover:not(:disabled) { border-color: var(--cor-vida); color: var(--cor-vida); }
+.t20-rol__valor:focus-visible { outline: 2px solid var(--cor-foco); outline-offset: 2px; }
+.t20-rol__det > summary {
+  display: inline-grid; place-items: center;
+  width: 1.4rem; height: 1.4rem;
+  font-size: var(--texto-mini); font-style: italic;
+  color: var(--cor-texto-2); border: 1px solid var(--cor-traco-fraca); border-radius: 50%;
 }
-.t20-tabela th { color: var(--cor-texto-2); font-weight: 600; }
+.t20-rol__det > summary:hover { color: var(--cor-texto); border-color: var(--cor-traco-forte); }
+.t20-rol__det[open] > .t20-parcelas { left: auto; right: 0; }
+
+/* Tabelas (ataques, inventário): rolam de lado no celular. */
+.t20-tabela-rolo { overflow-x: auto; min-width: 0; }
+.t20-tabela { width: 100%; border-collapse: collapse; font-size: var(--texto-mini); }
+.t20-tabela th, .t20-tabela td { text-align: left; padding: var(--e1) var(--e2); border-bottom: 1px solid var(--cor-traco-fraca); vertical-align: middle; }
+.t20-tabela thead th { color: var(--cor-texto-2); font-weight: 600; border-bottom-color: var(--cor-traco-media); white-space: nowrap; }
+.t20-tabela tbody th { font-weight: 600; }
 .t20-tabela td.t20-num, .t20-tabela th.t20-num { text-align: right; }
 .t20-tabela button { white-space: nowrap; }
 
-/* ------------------------------------------------- bloco superior */
-.t20-bloco { display: flex; flex-direction: column; gap: var(--e3); min-width: 0; }
-.t20-bloco__identidade { display: flex; align-items: flex-start; gap: var(--e3); min-width: 0; }
-.t20-bloco__identidade .ficha-foto { width: 6.5rem; flex: none; }
-.t20-bloco__identidade .ficha-foto__vazio svg { max-width: 2.5rem; }
-.t20-bloco__identidade .capa-sistema { flex: none; }
-.t20-bloco__textos { min-width: 0; flex: 1; display: flex; flex-direction: column; gap: var(--e1); }
-.t20-bloco__linha { margin: 0; color: var(--cor-texto-2); overflow-wrap: anywhere; }
-.t20-bloco__estado { margin: 0; display: flex; flex-wrap: wrap; gap: var(--e1); }
-
-.t20-atributos {
-  margin: 0;
-  display: grid;
-  grid-template-columns: repeat(6, minmax(0, 1fr));
-  gap: var(--e2);
-}
-.t20-atr {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 2px;
-  border: var(--borda) solid var(--cor-traco-media);
-  border-radius: var(--raio);
-  padding: var(--e1);
-  min-width: 0;
-}
-.t20-atr dt { font-size: var(--texto-mini); color: var(--cor-texto-2); text-transform: uppercase; letter-spacing: var(--espaco-letra); }
-.t20-atr dd { margin: 0; }
-.t20-atr__valor {
-  background: none;
-  border: 0;
-  font: inherit;
-  font-size: var(--texto-grande);
-  font-variant-numeric: tabular-nums;
-  font-weight: 700;
-  color: var(--cor-texto);
-  cursor: pointer;
-  min-width: var(--alvo-toque);
-  min-height: var(--alvo-toque);
-}
-.t20-atr__valor:hover { color: var(--cor-link); }
-.t20-atr__valor:focus-visible { outline: 2px solid var(--cor-foco); outline-offset: 2px; }
-
-.t20-recursos {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 2fr);
-  gap: var(--e3);
-  align-items: start;
-}
-.t20-recurso { display: flex; flex-direction: column; gap: var(--e1); min-width: 0; }
-.t20-recurso__topo { min-width: 0; }
-.t20-barra {
-  height: 8px;
-  border: 1px solid var(--cor-traco-media);
-  background: var(--fundo-superficie-2);
-  overflow: hidden;
-}
+/* Barras de PV, PM, XP e carga. */
+.t20-barra { display: block; height: 6px; border: 1px solid var(--cor-traco-media); background: var(--fundo-superficie-2); overflow: hidden; }
 .t20-barra__cheio { display: block; height: 100%; background: var(--cor-texto-2); }
 .t20-recurso--pv .t20-barra__cheio { background: var(--cor-vida); }
 .t20-recurso--pm .t20-barra__cheio { background: var(--cor-esforco); }
-.t20-numeros {
+.t20-barra--xp { height: 4px; }
+.t20-barra--xp .t20-barra__cheio { background: var(--cor-aviso); }
+
+/* =================================================== BLOCO SUPERIOR */
+.t20-bloco { display: flex; flex-direction: column; gap: var(--e3); min-width: 0; }
+
+.t20-cab { display: flex; align-items: flex-start; gap: var(--e3); min-width: 0; }
+.t20-cab .ficha-foto { width: 5.5rem; flex: none; }
+.t20-cab .ficha-foto__vazio svg { max-width: 2.2rem; }
+.t20-cab__textos { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: var(--e2); }
+.t20-cab__dados {
+  margin: 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--e1) var(--e3);
+}
+.t20-cab__dados > div { display: flex; flex-direction: column-reverse; min-width: 0; border-bottom: 1px solid var(--cor-traco-media); padding-bottom: 2px; }
+.t20-cab__dados dt { font-size: var(--texto-mini); color: var(--cor-texto-2); text-transform: uppercase; letter-spacing: var(--espaco-letra); }
+.t20-cab__dados dd { margin: 0; overflow-wrap: anywhere; }
+.t20-cab__xp { display: grid; grid-template-columns: auto auto minmax(4rem, 1fr); align-items: center; gap: var(--e1) var(--e3); }
+.t20-cab__marca { flex: none; opacity: .9; }
+.t20-estados { margin: 0; display: flex; flex-wrap: wrap; gap: var(--e1); }
+.t20-tirar { margin-left: 2px; }
+
+/* Os seis atributos: a sigla sobre o traço vermelho e o valor grande. */
+.t20-atributos { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: var(--e2); }
+.t20-atr {
+  position: relative;
+  display: flex; flex-direction: column; align-items: center; gap: 2px;
+  padding: var(--e2) var(--e1) var(--e1);
+  border: var(--borda) solid var(--cor-traco-media);
+  border-top: 4px solid var(--cor-vida);
+  background: var(--cor-superficie);
+  min-width: 0;
+}
+.t20-atr__sigla { font-size: var(--texto-medio); letter-spacing: var(--espaco-letra-titulo); text-transform: uppercase; }
+.t20-atr__nome { font-size: var(--texto-mini); color: var(--cor-texto-2); }
+.t20-rol--atr .t20-rol__valor {
+  font-size: var(--texto-grande); min-width: 3.6rem; min-height: 3rem;
+  background: transparent; border-color: transparent;
+}
+.t20-rol--atr .t20-rol__valor:hover:not(:disabled) { border-color: var(--cor-vida); }
+.t20-rol--atr { position: static; }
+.t20-rol--atr .t20-rol__det { position: absolute; top: var(--e1); right: var(--e1); }
+.t20-rol--atr .t20-rol__det[open] > .t20-parcelas { right: 0; left: auto; }
+
+/* PV, PM, Defesa e dados do personagem. */
+.t20-vitais {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(9rem, 1fr));
-  gap: var(--e2);
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 1.2fr) auto minmax(0, 1.4fr);
+  gap: var(--e3); align-items: stretch;
+}
+.t20-recurso {
+  display: flex; flex-direction: column; gap: var(--e1);
+  border: var(--borda) solid var(--cor-traco-media);
+  background: var(--cor-superficie);
+  padding: var(--e2) var(--e3);
   min-width: 0;
 }
-.t20-acoes { flex-wrap: wrap; gap: var(--e2); }
-.t20-acoes > .r-botao { white-space: nowrap; flex: none; }
+.t20-recurso__topo { display: flex; justify-content: space-between; align-items: baseline; gap: var(--e2); }
+.t20-recurso__nome { font-size: var(--texto-mini); text-transform: uppercase; letter-spacing: var(--espaco-letra); }
+.t20-recurso__numeros { margin: 0; display: flex; align-items: baseline; gap: var(--e1); flex-wrap: wrap; }
+.t20-recurso__atual { font-size: var(--texto-grande); font-weight: 700; font-variant-numeric: tabular-nums; }
+.t20-recurso__max { color: var(--cor-texto-2); font-variant-numeric: tabular-nums; }
+.t20-recurso__temp { font-size: var(--texto-mini); color: var(--cor-aviso); }
+.t20-recurso__acoes { display: flex; flex-wrap: wrap; gap: var(--e1); margin-top: auto; }
+.t20-valor--mini .t20-valor__rotulo { display: none; }
+.t20-valor--mini .t20-valor__total { font-size: var(--texto-mini); font-weight: 400; color: var(--cor-texto-2); }
+.t20-valor--mini .t20-valor__total::after { content: " ⓘ"; color: var(--cor-texto-3); }
+.t20-valor--mini[open] > .t20-parcelas { left: auto; right: 0; }
 
-/* ---------------------------------------------------------- abas */
+/* A Defesa num escudo: o contorno vermelho e o miolo no tom da folha,
+   desenhados atrás (o balão das parcelas não é recortado). */
+.t20-defesa { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; min-width: 6.5rem; }
+.t20-defesa__nome { font-size: var(--texto-mini); text-transform: uppercase; letter-spacing: var(--espaco-letra); }
+.t20-defesa__escudo { position: relative; width: 5.6rem; height: 6.2rem; display: grid; place-items: center; }
+.t20-defesa__escudo::before, .t20-defesa__escudo::after {
+  content: ""; position: absolute; inset: 0; z-index: 0;
+  clip-path: polygon(50% 0, 100% 12%, 100% 52%, 50% 100%, 0 52%, 0 12%);
+}
+.t20-defesa__escudo::before { background: var(--cor-vida); }
+.t20-defesa__escudo::after { inset: 4px; background: var(--cor-superficie); }
+.t20-valor--defesa { position: relative; z-index: 1; }
+.t20-valor--defesa > summary { align-items: center; padding-bottom: var(--e2); }
+.t20-valor--defesa .t20-valor__rotulo { order: 2; font-size: 0; }
+.t20-valor--defesa .t20-valor__rotulo::after { font-size: var(--texto-mini); }
+.t20-valor--defesa .t20-valor__total { font-size: calc(var(--texto-grande) * 1.35); }
+.t20-valor--defesa[open] > .t20-parcelas { left: 50%; transform: translateX(-50%); top: calc(100% + 8px); }
+
+.t20-dados {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(8rem, 1fr));
+  gap: var(--e1) var(--e2); align-content: start;
+  border: var(--borda) solid var(--cor-traco-media);
+  background: var(--cor-superficie);
+  padding: var(--e2) var(--e3);
+}
+.t20-valor--dado > summary { padding: 2px 0; border-bottom: 1px dotted var(--cor-traco-fraca); }
+.t20-valor--dado .t20-valor__total { font-size: var(--texto-base); }
+.t20-valor--alerta .t20-valor__total { color: var(--cor-erro); }
+.t20-valor--alerta .t20-valor__total::before { content: "! "; }
+
+/* As ações: o que se faz na vez à esquerda, a rotina do turno à direita. */
+.t20-acoes { display: flex; flex-wrap: wrap; justify-content: space-between; gap: var(--e2); padding-top: var(--e2); border-top: 1px solid var(--cor-traco-fraca); }
+.t20-acoes__grupo { display: flex; flex-wrap: wrap; gap: var(--e1); }
+.t20-acoes .r-botao { white-space: nowrap; flex: none; }
+
+/* ======================================================= COMBATE */
+.t20-ataques th:first-child { min-width: 9rem; }
 .t20-resists { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--e2); }
-.t20-resist { display: flex; flex-direction: column; gap: var(--e1); min-width: 0; }
-.t20-resist > .r-botao { align-self: flex-start; }
-.t20-situacoes {
-  border: var(--borda) solid var(--cor-traco-fraca);
-  padding: var(--e2);
-  margin: 0;
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--e1) var(--e3);
-  min-width: 0;
+.t20-resist {
+  display: flex; flex-direction: column; align-items: center; gap: var(--e1);
+  padding: var(--e2); border: 1px solid var(--cor-traco-fraca);
 }
+.t20-resist__nome { font-size: var(--texto-mini); text-transform: uppercase; letter-spacing: var(--espaco-letra); }
+.t20-chips { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: var(--e1); }
+.t20-chips > li { border-left: 3px solid var(--cor-aviso); padding-left: var(--e2); }
+.t20-linhas { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; }
+.t20-linhas > li {
+  display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 2px var(--e2);
+  padding: var(--e1) 0; border-bottom: 1px solid var(--cor-traco-fraca);
+}
+.t20-linhas > li:last-child { border-bottom: 0; }
+.t20-linhas__principal { min-width: 0; overflow-wrap: anywhere; }
+.t20-linhas__texto { grid-column: 1 / -1; margin: 0; font-size: var(--texto-mini); color: var(--cor-texto-2); }
+.t20-situacoes { border: 0; padding: 0; margin: 0; display: flex; flex-wrap: wrap; gap: var(--e1) var(--e3); min-width: 0; }
+fieldset.t20-situacoes { border: var(--borda) solid var(--cor-traco-fraca); padding: var(--e2); }
 .t20-situacoes legend { font-size: var(--texto-mini); color: var(--cor-texto-2); padding: 0 var(--e1); }
-.t20-habilidade { border-bottom: 1px solid var(--cor-traco-fraca); padding: var(--e1) 0; }
-.t20-usos, .t20-usos-ficha { font-size: var(--texto-mini); }
-.t20-niveis, .t20-poderes, .t20-magias, .t20-beneficios { display: flex; flex-direction: column; gap: var(--e2); }
-.t20-atributos-base { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: var(--e2); }
-.t20-ataque-info { font-size: var(--texto-mini); color: var(--cor-texto-2); }
-.t20-rolagens { display: flex; flex-wrap: wrap; gap: var(--e1); font-variant-numeric: tabular-nums; }
-.t20-tirar { white-space: nowrap; }
 
-/* ------------------------------------------ magia e aprimoramentos */
-.t20-aprims { display: flex; flex-direction: column; gap: var(--e1); }
-.t20-aprim {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--e2);
-  padding: var(--e1) var(--e2);
-  border-left: var(--borda) solid var(--cor-traco-media);
+/* ====================================================== PERÍCIAS */
+.t20-per-cabecas { display: grid; grid-template-columns: minmax(0, 1fr); gap: 0 var(--e5); }
+.t20-per-cabecas > .t20-per-cabeca:nth-child(2) { display: none; }
+.t20-per-cabeca, .t20-per {
+  display: grid;
+  grid-template-columns: 1.1rem minmax(0, 1fr) auto 12.5rem;
+  align-items: center; gap: var(--e2);
 }
+.t20-per-cabeca { font-size: var(--texto-mini); color: var(--cor-texto-2); padding: 0 0 var(--e1); border-bottom: 1px solid var(--cor-traco-media); }
+.t20-per-lista { margin: 0; padding: 0; list-style: none; column-gap: var(--e5); }
+.t20-per { break-inside: avoid; padding: 2px 0; border-bottom: 1px solid var(--cor-traco-fraca); min-height: 2.4rem; }
+.t20-per__marca::before { content: "○"; color: var(--cor-texto-3); }
+.t20-per--treinada .t20-per__marca::before { content: "●"; color: var(--cor-aviso); }
+.t20-per__nome {
+  background: none; border: 0; padding: var(--e1) 0; text-align: left;
+  font: inherit; color: var(--cor-texto); cursor: pointer; min-width: 0; overflow-wrap: anywhere;
+}
+.t20-per__nome:hover { color: var(--cor-vida); text-decoration: underline; text-underline-offset: 2px; }
+.t20-per__nome:focus-visible { outline: 2px solid var(--cor-foco); outline-offset: 2px; }
+.t20-per--treinada .t20-per__nome { font-weight: 700; }
+.t20-per--indisponivel .t20-per__nome, .t20-per--indisponivel .t20-rol__valor { color: var(--cor-texto-3); }
+.t20-per__sinais { color: var(--cor-texto-2); margin-left: 2px; }
+.t20-per__conta { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--e1); font-size: var(--texto-mini); color: var(--cor-texto-2); text-align: center; font-variant-numeric: tabular-nums; }
+.t20-per-cabeca .t20-per__conta { color: var(--cor-texto-2); }
+@media (min-width: 1180px) {
+  .t20-per-cabecas { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .t20-per-cabecas > .t20-per-cabeca:nth-child(2) { display: grid; }
+  .t20-per-lista { columns: 2; }
+}
+
+/* =================================================== HABILIDADES */
+.t20-habs { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: var(--e2); }
+.t20-hab { padding: var(--e2) 0 var(--e2) var(--e3); border-left: 3px solid var(--cor-vida); }
+.t20-hab--inativo { border-left-style: dashed; color: var(--cor-texto-2); }
+.t20-hab__topo { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--e1) var(--e2); }
+.t20-hab__nome { font-size: var(--texto-base); }
+.t20-hab__origem { font-size: var(--texto-mini); color: var(--cor-texto-2); }
+.t20-hab__topo > .r-botao, .t20-hab__acoes { margin-left: auto; display: flex; gap: var(--e1); }
+.t20-hab__texto { margin: var(--e1) 0 0; font-size: var(--texto-mini); color: var(--cor-texto-2); }
+
+/* ======================================================== MAGIAS */
+.t20-fontes-magia { display: flex; flex-direction: column; gap: var(--e2); }
+.t20-fonte-magia { display: flex; flex-direction: column; gap: var(--e1); padding: var(--e2) var(--e3); border: 1px solid var(--cor-traco-fraca); border-top: 3px solid var(--cor-vida); }
+.t20-fonte-magia dd { font-weight: 700; }
+.t20-magias { margin: 0; padding: 0; list-style: none; display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 19rem), 1fr)); gap: var(--e2); }
+.t20-magia { display: flex; flex-direction: column; gap: var(--e1); padding: var(--e2) var(--e3); border: 1px solid var(--cor-traco-fraca); background: var(--cor-fundo); }
+.t20-magia__topo { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: var(--e1); }
+.t20-magia__nome {
+  display: inline-flex; align-items: baseline; gap: var(--e2);
+  background: none; border: 0; padding: 0; text-align: left;
+  font: inherit; font-weight: 700; color: var(--cor-texto); cursor: pointer;
+}
+.t20-magia__nome:hover > span:first-child { color: var(--cor-vida); text-decoration: underline; text-underline-offset: 2px; }
+.t20-magia__nome:focus-visible { outline: 2px solid var(--cor-foco); outline-offset: 2px; }
+.t20-magia__custo { font-size: var(--texto-mini); font-weight: 400; padding: 0 var(--e1); border: 1px solid var(--cor-esforco); color: var(--cor-texto); white-space: nowrap; }
+.t20-magia__tipo { font-size: var(--texto-mini); color: var(--cor-texto-2); }
+.t20-magia__meta { margin: 0; font-size: var(--texto-mini); color: var(--cor-texto-2); }
+.t20-magia__desc > summary { cursor: pointer; font-size: var(--texto-mini); color: var(--cor-link); }
+.t20-magia__desc > p { margin: var(--e1) 0 0; font-size: var(--texto-mini); }
+.t20-magia__acoes { display: flex; flex-wrap: wrap; align-items: center; gap: var(--e2); }
+
+/* =================================================== EQUIPAMENTO */
+.t20-inv-resumo { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 13rem), 1fr)); gap: var(--e3); }
+.t20-inv-caixa { display: flex; flex-direction: column; gap: var(--e1); padding: var(--e2) var(--e3); border: var(--borda) solid var(--cor-traco-media); border-top: 3px solid var(--cor-vida); background: var(--cor-superficie); }
+.t20-inv-caixa--alerta { border-color: var(--cor-erro); }
+.t20-inv-caixa__nome { font-size: var(--texto-mini); text-transform: uppercase; letter-spacing: var(--espaco-letra); color: var(--cor-texto-2); }
+.t20-inv-caixa__valor { font-size: var(--texto-medio); font-variant-numeric: tabular-nums; }
+.t20-inv-caixa > .r-botao { align-self: flex-start; }
+.t20-inventario th:first-child { min-width: 10rem; }
+.t20-inv__nome { display: block; }
+.t20-inv__extras { display: block; font-size: var(--texto-mini); font-weight: 400; color: var(--cor-aviso); }
+.t20-inv__onde { display: flex; flex-wrap: wrap; gap: var(--e1); }
+.t20-inv--guardado th, .t20-inv--guardado td { color: var(--cor-texto-2); }
+.t20-menu-item { display: flex; flex-direction: column; gap: var(--e1); }
+.t20-menu-item .r-botao { justify-content: flex-start; }
+
+/* ===================================================== PROGRESSÃO */
+.t20-xp { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--e1) var(--e3); }
+.t20-xp__nivel { font-size: var(--texto-grande); }
+.t20-niveis { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; }
+.t20-niveis > li { display: grid; grid-template-columns: 2rem 8rem minmax(0, 1fr); align-items: baseline; gap: var(--e2); padding: var(--e1) 0; border-bottom: 1px solid var(--cor-traco-fraca); }
+.t20-niveis__n { font-variant-numeric: tabular-nums; color: var(--cor-vida); font-weight: 700; text-align: right; }
+.t20-atributos-base { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: var(--e2); }
+
+/* ================================== magia: aprimoramentos e prévia */
+.t20-aprims { display: flex; flex-direction: column; gap: var(--e1); }
+.t20-aprim { display: flex; flex-wrap: wrap; align-items: center; gap: var(--e2); padding: var(--e1) var(--e2); border-left: var(--borda) solid var(--cor-traco-media); }
 .t20-previa {
   border: var(--borda) solid var(--cor-traco-forte);
   padding: var(--e2) var(--e3);
-  display: flex;
-  flex-direction: column;
-  gap: var(--e1);
-  position: sticky;
-  bottom: 0;
+  display: flex; flex-direction: column; gap: var(--e1);
+  position: sticky; bottom: 0;
   background: var(--fundo-superficie);
 }
-.t20-alvos {
-  border: var(--borda) solid var(--cor-traco-fraca);
-  padding: var(--e2);
-  margin: 0;
-  display: flex;
-  flex-direction: column;
-  gap: var(--e1);
-}
+.t20-alvos { border: var(--borda) solid var(--cor-traco-fraca); padding: var(--e2); margin: 0; display: flex; flex-direction: column; gap: var(--e1); }
 .t20-alvos legend { font-size: var(--texto-mini); color: var(--cor-texto-2); padding: 0 var(--e1); }
+.t20-ataque-info { font-size: var(--texto-mini); color: var(--cor-texto-2); display: flex; flex-wrap: wrap; gap: var(--e3); }
+.t20-usos, .t20-usos-ficha { font-size: var(--texto-mini); }
+.t20-rolagens { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: var(--e1); font-variant-numeric: tabular-nums; }
+.t20-rolagens > li { display: flex; flex-wrap: wrap; align-items: center; gap: var(--e2); }
 
-/* -------------------------------------------------------- criação */
+/* ======================================================== CRIAÇÃO */
+.r-modal.t20-criar-janela { max-width: min(1100px, 100%); }
 .t20-criar { display: flex; flex-direction: column; gap: var(--e3); min-width: 0; }
-.t20-passos {
-  margin: 0;
-  padding: 0;
-  list-style: none;
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--e1);
+.t20-criar__grade { display: grid; grid-template-columns: minmax(0, 1fr) 15rem; gap: var(--e4); align-items: start; }
+.t20-criar__grade--so { grid-template-columns: minmax(0, 1fr); }
+.t20-criar__principal { display: flex; flex-direction: column; gap: var(--e3); min-width: 0; }
+.t20-criar__intro { margin: 0; color: var(--cor-texto-2); }
+.t20-criar__resumo {
+  position: sticky; top: 0;
+  display: flex; flex-direction: column; gap: var(--e2);
+  padding: var(--e3); border: var(--borda) solid var(--cor-traco-media);
+  border-top: 4px solid var(--cor-vida); background: var(--cor-superficie);
   font-size: var(--texto-mini);
 }
-.t20-passos li {
-  display: flex;
-  align-items: center;
-  gap: var(--e1);
-  padding: 2px var(--e2);
-  border: 1px solid var(--cor-traco-fraca);
-  border-radius: 999px;
-  color: var(--cor-texto-2);
-}
-.t20-passos__atual { color: var(--cor-texto) !important; font-weight: 700; border-color: var(--cor-traco-forte) !important; }
-.t20-passos__atual::before { content: "●"; }
-.t20-escolhas-multiplas { display: flex; flex-wrap: wrap; gap: var(--e1) var(--e3); }
-.t20-resumo-criacao { display: flex; flex-direction: column; gap: var(--e2); }
+.t20-criar__resumo h4 { margin: 0; font-size: var(--texto-base); }
+.t20-criar__atrs { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--e1); }
+.t20-criar__atrs > div { display: flex; flex-direction: column; align-items: center; padding: 2px; border: 1px solid var(--cor-traco-fraca); }
+.t20-criar__atrs strong { font-size: var(--texto-medio); font-variant-numeric: tabular-nums; }
+.t20-criar__vitais { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--e1); text-align: center; }
+.t20-criar__vitais strong { display: block; font-size: var(--texto-medio); }
 
-/* --------------------------------------------------------- mesa */
+/* O caminho: os passos numerados, feitos com "✓", o atual em destaque. */
+.t20-passos { margin: 0; padding: 0; list-style: none; display: flex; flex-wrap: wrap; gap: var(--e1); }
+.t20-passo {
+  display: inline-flex; align-items: center; gap: var(--e1);
+  padding: 2px var(--e2); font: inherit; font-size: var(--texto-mini);
+  color: var(--cor-texto-2); background: transparent;
+  border: 1px solid var(--cor-traco-fraca); cursor: pointer;
+}
+.t20-passo:disabled { cursor: default; opacity: .6; }
+.t20-passo__n { display: inline-grid; place-items: center; width: 1.3rem; height: 1.3rem; border: 1px solid currentColor; border-radius: 50%; font-variant-numeric: tabular-nums; }
+.t20-passo--feito { color: var(--cor-texto); }
+.t20-passo--feito .t20-passo__n::before { content: "✓"; }
+.t20-passo--feito .t20-passo__n > span { display: none; }
+.t20-passo--atual { color: var(--cor-texto); font-weight: 700; border-color: var(--cor-vida); border-bottom-width: 3px; }
+.t20-passo--atual .t20-passo__n { background: var(--cor-vida); border-color: var(--cor-vida); }
+
+/* Cartas de escolha (raça, classe, origem, divindade). */
+.t20-cartas { margin: 0; padding: 0; list-style: none; display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 11rem), 1fr)); gap: var(--e2); }
+.t20-carta {
+  width: 100%; height: 100%; text-align: left;
+  display: flex; flex-direction: column; gap: 2px;
+  padding: var(--e2); font: inherit; color: var(--cor-texto);
+  background: var(--cor-superficie); border: 1px solid var(--cor-traco-media);
+  cursor: pointer;
+}
+.t20-carta:hover { border-color: var(--cor-vida); }
+.t20-carta:focus-visible { outline: 2px solid var(--cor-foco); outline-offset: 2px; }
+.t20-carta[aria-pressed="true"] { border: var(--borda) solid var(--cor-vida); box-shadow: inset 0 -4px 0 var(--cor-vida); }
+.t20-carta[aria-pressed="true"] .t20-carta__nome::before { content: "● "; color: var(--cor-vida); }
+.t20-carta__nome { font-weight: 700; }
+.t20-carta__linha { font-size: var(--texto-mini); color: var(--cor-texto-2); }
+.t20-carta--indisponivel { opacity: .55; }
+.t20-escolhido {
+  display: flex; flex-direction: column; gap: var(--e2);
+  padding: var(--e3); border: var(--borda) solid var(--cor-traco-media); border-left: 4px solid var(--cor-vida);
+  background: var(--cor-superficie);
+}
+.t20-escolhido__titulo { margin: 0; font-size: var(--texto-medio); }
+.t20-escolhas-multiplas { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 12rem), 1fr)); gap: var(--e1) var(--e3); }
+.t20-habilidade { padding: var(--e1) 0 var(--e1) var(--e2); border-left: 2px solid var(--cor-traco-media); display: flex; flex-direction: column; gap: var(--e1); }
+.t20-beneficios { border: 0; padding: 0; margin: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 16rem), 1fr)); gap: var(--e1) var(--e3); }
+.t20-beneficios legend { font-weight: 700; margin-bottom: var(--e1); }
+.t20-resumo-criacao { display: grid; grid-template-columns: repeat(auto-fit, minmax(8rem, 1fr)); gap: var(--e2); }
+
+/* A compra de atributos: um quadro por atributo, o custo embaixo. */
+.t20-compra-saldo { margin: 0; font-size: var(--texto-medio); }
+.t20-compra-saldo strong { font-size: var(--texto-grande); color: var(--cor-vida); }
+.t20-compra { display: grid; grid-template-columns: repeat(auto-fill, minmax(7.5rem, 1fr)); gap: var(--e2); }
+.t20-compra__atr { display: flex; flex-direction: column; align-items: center; gap: var(--e1); padding: var(--e2) var(--e1); border: var(--borda) solid var(--cor-traco-media); border-top: 4px solid var(--cor-vida); background: var(--cor-superficie); }
+.t20-compra__sigla { text-transform: uppercase; letter-spacing: var(--espaco-letra-titulo); }
+.t20-compra__ajuste { display: flex; align-items: center; gap: var(--e1); }
+.t20-compra__valor { font-size: var(--texto-grande); font-weight: 700; min-width: 2.4rem; text-align: center; font-variant-numeric: tabular-nums; }
+.t20-compra__info { font-size: var(--texto-mini); color: var(--cor-texto-2); text-align: center; }
+.t20-compra__total { font-size: var(--texto-mini); }
+
+/* ========================================================== MESA */
 .t20-mesa { min-width: 0; }
-.t20-ordem {
-  margin: 0;
-  padding: 0;
-  list-style: none;
-  display: flex;
-  flex-direction: column;
-  gap: var(--e1);
-}
-.t20-ordem > li {
-  display: flex;
-  align-items: center;
-  gap: var(--e2);
-  padding: var(--e1) var(--e2);
-  border: 1px solid var(--cor-traco-fraca);
-  min-width: 0;
-}
+.t20-ordem { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: var(--e1); }
+.t20-ordem > li { display: flex; align-items: center; gap: var(--e2); padding: var(--e1) var(--e2); border: 1px solid var(--cor-traco-fraca); min-width: 0; }
 .t20-ordem__ini { min-width: 2.5ch; text-align: right; font-variant-numeric: tabular-nums; font-weight: 600; }
 .t20-ordem__vez { border-color: var(--cor-traco-forte) !important; border-width: var(--borda) !important; font-weight: 600; }
 .t20-ordem__vez::before { content: "▶"; }
-.t20-ameaca {
-  border: var(--borda) solid var(--cor-traco-media);
-  padding: var(--e2) var(--e3);
-  display: flex;
-  flex-direction: column;
-  gap: var(--e2);
-  min-width: 0;
-}
+.t20-ameaca { border: var(--borda) solid var(--cor-traco-media); padding: var(--e2) var(--e3); display: flex; flex-direction: column; gap: var(--e2); min-width: 0; }
 .t20-ameaca--derrotada { color: var(--cor-texto-3); border-style: dashed; }
-.t20-ameaca--derrotada h3, .t20-ameaca--derrotada h4 { text-decoration: line-through; }
-.t20-perigo {
-  border: var(--borda) dashed var(--cor-traco-media);
-  padding: var(--e2) var(--e3);
-  display: flex;
-  flex-direction: column;
-  gap: var(--e2);
-}
-.t20-inventario td:first-child { min-width: 8rem; }
+.t20-ameaca--derrotada strong { text-decoration: line-through; }
+.t20-perigo { border: var(--borda) dashed var(--cor-traco-media); padding: var(--e2) var(--e3); display: flex; flex-direction: column; gap: var(--e2); }
 
-/* ------------------------------------------------------- celular */
+/* ======================================================= CELULAR */
+@media (max-width: 1000px) {
+  .t20-vitais { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+  .t20-defesa { flex-direction: row; justify-content: flex-start; gap: var(--e3); border: var(--borda) solid var(--cor-traco-media); background: var(--cor-superficie); padding: var(--e1) var(--e3); }
+  .t20-criar__grade { grid-template-columns: minmax(0, 1fr); }
+  .t20-criar__resumo { position: static; order: -1; }
+  .t20-criar__resumo .t20-criar__extra { display: none; }
+  .t20-criar__resumo { padding: var(--e2); gap: var(--e1); }
+  .t20-criar__atrs { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+  .t20-criar__atrs > div { border: 0; padding: 0; }
+  .t20-criar__atrs strong, .t20-criar__vitais strong { font-size: var(--texto-base); }
+  .t20-criar__vitais { display: flex; justify-content: space-around; }
+  .t20-criar__vitais > div { display: flex; gap: var(--e1); align-items: baseline; }
+}
 @media (max-width: 720px) {
-  .t20-bloco__identidade .ficha-foto { width: 4.5rem; }
-  .t20-atributos { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-  .t20-atributos-base { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-  .t20-recursos { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
-  .t20-numeros { grid-column: 1 / -1; grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .t20-resists { grid-template-columns: minmax(0, 1fr); }
-  /* As ações de jogo ficam ao alcance do polegar enquanto a ficha rola. */
-  /* Fixa na base da tela (não só dentro do bloco superior); a página
-     ganha espaço embaixo para nada ficar escondido. */
+  .t20-cab .ficha-foto { width: 4rem; }
+  .t20-cab__marca { display: none; }
+  .t20-cab__dados { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .t20-atributos, .t20-atributos-base { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .t20-atr { padding: var(--e1); }
+  .t20-rol--atr .t20-rol__valor { min-height: 2.4rem; }
+  .t20-vitais { gap: var(--e2); }
+  .t20-recurso { padding: var(--e2); }
+  .t20-defesa, .t20-dados { grid-column: 1 / -1; }
+  .t20-resists { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--e1); }
+  .t20-per, .t20-per-cabeca { grid-template-columns: 1.1rem minmax(0, 1fr) auto; }
+  .t20-per__conta { display: none; }
+  .t20-niveis > li { grid-template-columns: 1.6rem minmax(0, 1fr); }
+  .t20-niveis > li > .t-mini { grid-column: 2; }
+  .t20-pares { grid-template-columns: minmax(0, 1fr); }
+  /* As ações de jogo ficam fixas na base da tela, ao alcance do polegar. */
   body:has(.t20-acoes) .app-corpo { padding-bottom: calc(var(--alvo-toque) + var(--e5)); }
   .t20-acoes {
-    position: fixed;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    padding-left: var(--e3) !important;
-    padding-right: var(--e3) !important;
-    z-index: var(--z-fixo);
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: var(--z-fixo);
     background: var(--fundo-pagina);
-    padding: var(--e2) 0;
-    border-top: 1px solid var(--cor-traco-fraca);
-    overflow-x: auto;
-    flex-wrap: nowrap;
+    padding: var(--e2) var(--e3);
+    border-top: 2px solid var(--cor-vida);
+    overflow-x: auto; flex-wrap: nowrap; justify-content: flex-start;
   }
-  .t20-tabela { display: block; overflow-x: auto; }
-  .t20-pares { grid-template-columns: minmax(0, 1fr); }
+  .t20-acoes__grupo { flex-wrap: nowrap; }
 }
-@media (max-width: 380px) {
-  .t20-recursos { grid-template-columns: minmax(0, 1fr); }
+@media (max-width: 330px) {
+  .t20-vitais { grid-template-columns: minmax(0, 1fr); }
 }

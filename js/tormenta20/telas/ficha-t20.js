@@ -54,14 +54,26 @@
   function nomeCondicao(id) { return D().CONDICAO[id] ? D().CONDICAO[id].nome : id; }
   function janela(titulo, conteudo, botoes, extra) { return UI().modal(Object.assign({ titulo: titulo, conteudo: conteudo, botoes: botoes || [{ rotulo: "Fechar" }] }, extra || {})); }
 
-  /* ================================================ BLOCO SUPERIOR */
-  function linhaIdentidade(b, c) {
+  /* ================================================ BLOCO SUPERIOR
+     A hierarquia da ficha oficial (p. 1): quem é o personagem, os seis
+     atributos, PV e PM, Defesa e o que se consulta em jogo, e as ações.
+     Tudo à mão; os detalhes abrem no "i" de cada número. */
+  var SENTIDOS = { visaoNoEscuro: "Visão no escuro", visaoNaPenumbra: "Visão na penumbra", faro: "Faro", percepcaoAsCegas: "Percepção às cegas", visaoVerdadeira: "Visão verdadeira", sentirVibracoes: "Sentir vibrações" };
+  function nomeSentido(k) { return SENTIDOS[k] || humanizar(k); }
+  function dadosDeIdentidade(b, c) {
     var r = RA().RACA[b.raca.id];
     var o = b.origem.propria ? b.origem.propria.nome : (OR().ORIGEM[b.origem.id] || {}).nome;
     var classes = Object.keys(c.niveisClasse).map(function (k) { return nomeClasse(k) + " " + c.niveisClasse[k]; }).join(" / ");
     var dv = b.divindade && DE().DEUS[b.divindade.id];
-    return [r ? r.nome + (b.raca.variante ? " (" + b.raca.variante + ")" : "") : "sem raça", o || "", classes || "sem classe", "Nível " + c.nivel + " · " + c.patamar.nome, dv ? "devoto de " + dv.nome : ""].filter(Boolean).join(" · ");
+    var variante = r && r.variantes && b.raca.variante ? (r.variantes.filter(function (v) { return v.id === b.raca.variante; })[0] || {}).nome : "";
+    return [
+      ["Raça", r ? r.nome + (variante ? " (" + variante + ")" : "") : "—"],
+      ["Origem", o || "—"],
+      ["Classe e nível", classes || "—"],
+      ["Divindade", dv ? dv.nome : "Nenhuma"],
+    ];
   }
+  function linhaIdentidade(b, c) { return dadosDeIdentidade(b, c).map(function (x) { return x[1]; }).join(" · "); }
   function etiquetas(ctx, b, c) {
     var e = [];
     c.condicoes.forEach(function (x) {
@@ -74,6 +86,31 @@
     if (c.minimos.length) e.push(T().etiqueta("Atributo abaixo de −5", true));
     return e;
   }
+  function pct(a, m) { return m ? Math.max(0, Math.min(100, Math.round(a / m * 100))) : 0; }
+  function recurso(ctx, qual, c) {
+    var r = c[qual];
+    var pv = qual === "pv";
+    var nome = pv ? "Pontos de Vida" : "Pontos de Mana";
+    var parcelas = pv ? r.parcelas.concat([{ rotulo: "Morre em", valor: String(r.limiteMorte) }]) : r.parcelas;
+    return el("div.t20-recurso.t20-recurso--" + qual, {}, [
+      el("div.t20-recurso__topo", {}, [el("span.t20-recurso__nome", { texto: nome }), T().valor(nome + " máximos", r.max, parcelas, { classe: "t20-valor--mini", formato: function (v) { return "máx. " + v; } })]),
+      el("p.t20-recurso__numeros", {}, [
+        el("span.t20-recurso__atual", { texto: String(r.atual) }),
+        el("span.t20-recurso__max", { texto: "/ " + r.max }),
+        r.temp ? el("span.t20-recurso__temp", { texto: "+" + r.temp + " temp." }) : null,
+      ]),
+      el("div.t20-barra", { role: "img", "aria-label": (pv ? "PV " : "PM ") + r.atual + " de " + r.max }, [el("span.t20-barra__cheio", { style: "width:" + pct(r.atual, r.max) + "%" })]),
+      pode(ctx) ? el("div.t20-recurso__acoes", {}, pv ? [
+        botao("− Dano", function () { dialogoDano(ctx); }, { rotulo: "Sofrer dano" }),
+        botao("+ Cura", function () { dialogoCura(ctx); }, { rotulo: "Curar" }),
+        botao("Temp.", function () { dialogoTemp(ctx, "pv"); }, { classe: "r-botao--fantasma", rotulo: "PV temporários" }),
+      ] : [
+        botao("− Gastar", function () { dialogoPM(ctx, -1); }, { rotulo: "Gastar PM" }),
+        botao("+ Recuperar", function () { dialogoPM(ctx, 1); }, { rotulo: "Recuperar PM" }),
+        botao("Temp.", function () { dialogoTemp(ctx, "pm"); }, { classe: "r-botao--fantasma", rotulo: "PM temporários" }),
+      ]) : null,
+    ]);
+  }
   function blocoSuperior(ctx) {
     var b = bl(ctx);
     if (!b || !R()) return el("p", { texto: "O motor de Tormenta20 não está carregado nesta página." });
@@ -82,56 +119,64 @@
     var geral = global.RAMASecaoGeral;
     if (!c) return el("p.t-erro", { texto: "A ficha tem dados que o motor não entendeu." });
     var semClasse = !b.niveis.length;
-    var pvPct = c.pv.max ? Math.max(0, Math.min(100, Math.round(c.pv.atual / c.pv.max * 100))) : 0;
-    var pmPct = c.pm.max ? Math.max(0, Math.min(100, Math.round(c.pm.atual / c.pm.max * 100))) : 0;
     var fontesMagia = Object.keys(c.magias.fontes);
+    var xpAnt = D().xpDoNivel(c.nivel), xpProx = c.proximoNivelXp;
+    var estados = etiquetas(ctx, b, c);
+    var temMagia = R().magiasConhecidas(b, c).length > 0;
     return el("div.t20-bloco", {}, [
-      el("div.t20-bloco__identidade", {}, [
-        global.RAMACapaSistema ? global.RAMACapaSistema.elemento("tormenta20", { tamanho: "p" }) : null,
+      el("div.t20-cab", {}, [
         geral && geral.foto ? geral.foto(ctx) : null,
-        el("div.t20-bloco__textos", {}, [
+        el("div.t20-cab__textos", {}, [
           geral && geral.campoNome ? geral.campoNome(ctx) : el("h1.t-titulo", { texto: ctx.ficha.nome }),
-          el("p.t20-bloco__linha", { texto: linhaIdentidade(b, c) }),
-          el("p.t20-bloco__estado", { role: "status" }, etiquetas(ctx, b, c)),
+          el("dl.t20-cab__dados", {}, dadosDeIdentidade(b, c).map(function (x) { return el("div", {}, [el("dt", { texto: x[0] }), el("dd", { texto: x[1] })]); })),
+          el("div.t20-cab__xp", {}, [
+            el("span", { texto: "Nível " + c.nivel + " · " + c.patamar.nome }),
+            el("span.t-mini", { texto: xpProx ? "XP " + b.xp + " / " + xpProx : "XP " + b.xp + " · nível máximo" }),
+            xpProx ? el("span.t20-barra.t20-barra--xp", { role: "img", "aria-label": "Experiência: " + b.xp + " de " + xpProx }, [el("span.t20-barra__cheio", { style: "width:" + pct(b.xp - xpAnt, xpProx - xpAnt) + "%" })]) : null,
+          ]),
         ]),
+        global.RAMACapaSistema ? el("span.t20-cab__marca", {}, [global.RAMACapaSistema.elemento("tormenta20", { tamanho: "p" })]) : null,
       ]),
       semClasse ? el("div.t20-pendencias", { role: "status" }, [el("p", { texto: "A criação ainda não terminou: falta raça, origem ou classe." }), pode(ctx) && global.RAMATormenta20Criar ? botao("Abrir a criação", function () { global.RAMATormenta20Criar.abrir({ ctx: ctx }); }) : null]) : null,
-      el("dl.t20-atributos", {}, R().ATR.map(function (a) {
+      estados.length ? el("p.t20-estados", { role: "status" }, estados) : null,
+      el("div.t20-atributos", { role: "group", "aria-label": "Atributos (clique para rolar)" }, R().ATR.map(function (a) {
         var x = c.atributos[a];
         return el("div.t20-atr", {}, [
-          el("dt", { texto: T().siglaAtr(a), title: T().nomeAtr(a) }),
-          el("dd", {}, [el("button.t20-atr__valor", { type: "button", texto: T().sinal(x.total), title: "Teste de " + T().nomeAtr(a) + ": " + x.parcelas.map(function (p) { return p.rotulo + " " + T().sinal(p.valor); }).join(", "), "aria-label": "Rolar teste de " + T().nomeAtr(a) + " (" + T().sinal(x.total) + ")", onclick: function () { T().teste("Teste de " + T().nomeAtr(a), x.total, x.parcelas); } })]),
+          el("span.t20-atr__sigla", { texto: T().siglaAtr(a), "aria-hidden": "true" }),
+          T().rolavel(T().nomeAtr(a), T().sinal(x.total), x.parcelas, function () { T().teste("Teste de " + T().nomeAtr(a), x.total, x.parcelas); }, { classe: "t20-rol--atr", acao: "Rolar teste de" }),
+          el("span.t20-atr__nome", { texto: T().nomeAtr(a) }),
         ]);
       })),
-      el("div.t20-recursos", {}, [
-        el("div.t20-recurso.t20-recurso--pv", {}, [
-          el("div.t20-recurso__topo", {}, [T().valor("PV", c.pv.atual + " / " + c.pv.max + (c.pv.temp ? " (+" + c.pv.temp + ")" : ""), c.pv.parcelas.concat([{ rotulo: "Morre em", valor: String(c.pv.limiteMorte) }]))]),
-          el("div.t20-barra", { role: "img", "aria-label": "PV " + c.pv.atual + " de " + c.pv.max }, [el("span.t20-barra__cheio", { style: "width:" + pvPct + "%" })]),
-          pode(ctx) ? el("div.faixa", {}, [botao("Dano", function () { dialogoDano(ctx); }), botao("Cura", function () { dialogoCura(ctx); }), botao("PV temp.", function () { dialogoTemp(ctx, "pv"); }, { classe: "r-botao--fantasma" })]) : null,
+      el("div.t20-vitais", {}, [
+        recurso(ctx, "pv", c),
+        recurso(ctx, "pm", c),
+        el("div.t20-defesa", {}, [
+          el("span.t20-defesa__nome", { texto: "Defesa" }),
+          el("div.t20-defesa__escudo", {}, [T().valor("Defesa", c.defesa.total, c.defesa.parcelas, { classe: "t20-valor--defesa" })]),
+          c.defesa.distancia !== undefined && c.defesa.distancia !== c.defesa.total ? el("span.t-mini", { texto: "contra distância " + c.defesa.distancia }) : null,
         ]),
-        el("div.t20-recurso.t20-recurso--pm", {}, [
-          el("div.t20-recurso__topo", {}, [T().valor("PM", c.pm.atual + " / " + c.pm.max + (c.pm.temp ? " (+" + c.pm.temp + ")" : ""), c.pm.parcelas)]),
-          el("div.t20-barra", { role: "img", "aria-label": "PM " + c.pm.atual + " de " + c.pm.max }, [el("span.t20-barra__cheio", { style: "width:" + pmPct + "%" })]),
-          pode(ctx) ? el("div.faixa", {}, [botao("Gastar", function () { dialogoPM(ctx, -1); }), botao("Recuperar", function () { dialogoPM(ctx, 1); }), botao("PM temp.", function () { dialogoTemp(ctx, "pm"); }, { classe: "r-botao--fantasma" })]) : null,
-        ]),
-        el("div.t20-numeros", {}, [
-          T().valor("Defesa", c.defesa.total, c.defesa.parcelas, { classe: "t20-valor--grande" }),
-          T().valor("Deslocamento", c.deslocamento.terrestre + " m", c.deslocamento.parcelas, { formato: function (v) { return v + Object.keys(c.deslocamento.outros).map(function (k) { return " · " + k + " " + c.deslocamento.outros[k] + " m"; }).join(""); } }),
-          T().valor("Penalidade de armadura", c.penalidadeArmadura.total, c.penalidadeArmadura.parcelas),
-          T().valor("Carga", c.carga.usada + " / " + c.carga.limite + " espaços", [{ rotulo: "Limite (10 + 2 × Força)", valor: c.carga.limite }, { rotulo: "Máximo (dobro)", valor: c.carga.maximo }]),
-          fontesMagia.length ? T().valor("CD de magia", fontesMagia.map(function (k) { return c.magias.fontes[k].cd; }).join(" / "), fontesMagia.map(function (k) { var f = c.magias.fontes[k]; return { rotulo: f.nome + ": 10 + ½ nível + " + T().nomeAtr(f.atributo) + " (círculo máx. " + f.circuloMax + ")", valor: f.cd }; })) : null,
+        el("div.t20-dados", {}, [
+          T().valor("Deslocamento", c.deslocamento.terrestre + " m", c.deslocamento.parcelas, { classe: "t20-valor--dado", formato: function (v) { return v + Object.keys(c.deslocamento.outros).map(function (k) { return " · " + k + " " + c.deslocamento.outros[k] + " m"; }).join(""); } }),
+          T().valor("Penalidade de armadura", c.penalidadeArmadura.total, c.penalidadeArmadura.parcelas, { classe: "t20-valor--dado" }),
+          T().valor("Carga (espaços)", c.carga.usada + " / " + c.carga.limite, [{ rotulo: "Limite (10 + 2 × Força)", valor: c.carga.limite }, { rotulo: "Máximo (dobro)", valor: c.carga.maximo }], { classe: "t20-valor--dado" + (c.carga.sobrecarregado ? ".t20-valor--alerta" : "") }),
+          T().valor("Tamanho", c.tamanho.nome, [{ rotulo: "Manobras", valor: c.tamanho.manobra || 0 }, { rotulo: "Furtividade", valor: c.tamanho.furtividade || 0 }], { classe: "t20-valor--dado" }),
+          fontesMagia.length ? T().valor("CD de magia", fontesMagia.map(function (k) { return c.magias.fontes[k].cd; }).join(" / "), fontesMagia.map(function (k) { var f = c.magias.fontes[k]; return { rotulo: f.nome + ": 10 + ½ nível + " + T().nomeAtr(f.atributo), valor: f.cd }; }), { classe: "t20-valor--dado" }) : null,
         ]),
       ]),
-      el("div.faixa.t20-acoes", {}, [
-        botao("Teste", function () { dialogoTeste(ctx); }),
-        c.ataques.length ? botao("Atacar", function () { dialogoAtaque(ctx); }) : null,
-        botao("Manobra", function () { dialogoManobra(ctx); }, { classe: "r-botao--fantasma", dica: "Agarrar, derrubar, desarmar, empurrar ou quebrar (p. 234)" }),
-        R().magiasConhecidas(b, c).length ? botao("Lançar magia", function () { dialogoListaMagias(ctx); }) : null,
-        pode(ctx) ? botao("Condição", function () { dialogoCondicao(ctx); }, { classe: "r-botao--fantasma" }) : null,
-        pode(ctx) ? botao("Início do turno", function () { inicioDoTurno(ctx); }, { dica: "Cobra 1 PM de cada efeito sustentado; sem PM, ele termina (p. 224)", classe: "r-botao--fantasma" }) : null,
-        pode(ctx) ? botao("Fim de cena", function () { op(ctx, function (t) { var r = R().fimDeCena(t); UI().avisoOk("Fim de cena: " + r.efeitos + " efeito(s) e " + r.condicoes + " condição(ões) terminaram."); return ok(); }); }, { classe: "r-botao--fantasma" }) : null,
-        pode(ctx) ? botao("Descansar", function () { dialogoDescanso(ctx); }, { classe: "r-botao--fantasma" }) : null,
-        pode(ctx) && b.recursos.sangrando ? botao("Sangrando: testar Constituição", function () { testeSangramento(ctx); }) : null,
+      el("div.t20-acoes", { role: "toolbar", "aria-label": "Ações de jogo" }, [
+        el("span.t20-acoes__grupo", {}, [
+          botao("Teste", function () { dialogoTeste(ctx); }, { classe: "r-botao--principal" }),
+          c.ataques.length ? botao("Atacar", function () { dialogoAtaque(ctx); }, { classe: "r-botao--principal" }) : null,
+          temMagia ? botao("Lançar magia", function () { dialogoListaMagias(ctx); }, { classe: "r-botao--principal" }) : null,
+          botao("Manobra", function () { dialogoManobra(ctx); }, { dica: "Agarrar, derrubar, desarmar, empurrar ou quebrar (p. 234)" }),
+        ]),
+        pode(ctx) ? el("span.t20-acoes__grupo.t20-acoes__grupo--turno", {}, [
+          b.recursos.sangrando ? botao("Sangrando: Con CD 15", function () { testeSangramento(ctx); }, { classe: "r-botao--principal" }) : null,
+          botao("Início do turno", function () { inicioDoTurno(ctx); }, { dica: "Cobra 1 PM de cada efeito sustentado; sem PM, ele termina (p. 224)", classe: "r-botao--fantasma" }),
+          botao("Fim de cena", function () { op(ctx, function (t) { var r = R().fimDeCena(t); UI().avisoOk("Fim de cena: " + r.efeitos + " efeito(s) e " + r.condicoes + " condição(ões) terminaram."); return ok(); }); }, { classe: "r-botao--fantasma" }),
+          botao("Descansar", function () { dialogoDescanso(ctx); }, { classe: "r-botao--fantasma" }),
+          botao("Condição", function () { dialogoCondicao(ctx); }, { classe: "r-botao--fantasma" }),
+        ]) : null,
       ]),
     ]);
   }
@@ -343,24 +388,64 @@
     ]);
   }
 
-  /* =================================================== ABA PERSONAGEM */
+  /* ===================================================== ABA COMBATE
+     Ataques como na ficha oficial (teste, dano, crítico, tipo, alcance),
+     resistências, defesas especiais, condições e efeitos, e as
+     habilidades que se usam em jogo. */
   function abaPersonagem(ctx) {
     var b = bl(ctx);
     var c = calc(ctx);
     if (!c) return el("p.t-erro", { texto: "A ficha tem dados que o motor não entendeu." });
-    var resist = ["fortitude", "reflexos", "vontade"].map(function (k) { var p = c.pericias[k]; return el("div.t20-resist", {}, [T().valor(p.nome, T().sinal(p.total), p.parcelas), botao("Rolar", function () { T().teste(p.nome, p.total, p.parcelas); }, { rotulo: "Rolar " + p.nome })]); });
     var acoes = c.fontes.filter(function (f) { return f.def && (f.def.acao || f.def.reacao || f.acaoCaminho); });
-    return el("div.pilha", {}, [
-      T().painel("Ataques", c.ataques.length ? [el("table.t20-tabela", {}, [
-        el("thead", {}, [el("tr", {}, ["Ataque", "Teste", "Dano", "Crítico", "Tipo", ""].map(function (h) { return el("th", { scope: "col", texto: h }); }))]),
-        el("tbody", {}, c.ataques.map(function (a) {
-          return el("tr", {}, [el("th", { scope: "row", texto: a.nome + (a.alcance ? " (" + a.alcance + ")" : "") }), el("td", {}, [T().valor("Ataque com " + a.nome, T().sinal(a.ataque), a.parcelasAtaque)]), el("td", { texto: a.dano + T().sinal(a.danoFixo) + a.extras.map(function (x) { return " + " + x.dados + (x.tipo ? " " + x.tipo : ""); }).join("") }), el("td", { texto: (a.margem < 20 ? a.margem + "/" : "") + "x" + a.mult }), el("td", { texto: a.tipo || "" }), el("td", {}, [botao("Atacar", function () { dialogoAtaque(ctx, a.id); }, { rotulo: "Atacar com " + a.nome })])]);
-        })),
-      ]), linha("Manobras (p. 234): " + D().MANOBRAS.map(function (m) { return m.nome; }).join(", ") + " — teste de manobra é ataque corpo a corpo oposto.")] : [linha("Nenhuma arma empunhada; o ataque desarmado aparece aqui quando a ficha tem classe.")]),
-      T().painel("Resistências", [el("div.t20-resists", {}, resist), Object.keys(c.rd).length ? linha("Redução de dano: " + Object.keys(c.rd).map(function (k) { return (k === "geral" ? "geral" : k) + " " + c.rd[k]; }).join(", ")) : null, Object.keys(c.imunidades).length ? linha("Imunidades: " + Object.keys(c.imunidades).join(", ")) : null, Object.keys(c.sentidos).length ? linha("Sentidos: " + Object.keys(c.sentidos).join(", ")) : null, linha("Tamanho " + c.tamanho.nome + " · tipo " + c.tipoCriatura)]),
-      c.situacionais.length ? T().painel("Bônus por situação", [linha("Marque quando a situação valer; a ficha recalcula."), el("div.t20-situacoes", {}, uniq(c.situacionais.map(function (s) { return s.cond; })).map(function (k) { var desc = c.situacionais.filter(function (s) { return s.cond === k; }).map(function (s) { return s.fonte + " (" + s.alvo + " " + s.valor + ")"; }).join("; "); return el("label.r-marca", { title: desc }, [el("input", { type: "checkbox", checked: !!b.situacoes[k], disabled: !pode(ctx), onchange: function (ev) { var v = ev.currentTarget.checked; op(ctx, function (t) { t.situacoes[k] = v; return ok(); }); } }), el("span", { texto: humanizar(k) + " — " + desc })]); }))]) : null,
-      T().painel("Efeitos ativos", b.ativos.length ? [el("ul.t20-lista", {}, b.ativos.map(function (a) { return el("li", {}, [el("span", { texto: a.nome + " · " + (a.sustentada ? "sustentada (1 PM por turno)" : a.duracao) + (a.efeitos.length ? " · " + a.efeitos.map(textoEfeito).filter(Boolean).join(", ") : "") }), pode(ctx) ? botao("Encerrar", function () { op(ctx, function (t) { R().encerrarAtivo(t, a.id); return ok(); }); }, { classe: "r-botao--fantasma" }) : null]); }))] : [linha("Nenhum.")]),
-      acoes.length ? T().painel("Habilidades com ação", [el("ul.t20-lista", {}, acoes.map(function (f) { return itemDeAcao(ctx, f, c); }))]) : null,
+    var defesas = [
+      Object.keys(c.rd).length ? ["Redução de dano", Object.keys(c.rd).map(function (k) { return (k === "geral" ? "" : humanizar(k) + " ") + c.rd[k]; }).join(", ")] : null,
+      Object.keys(c.imunidades).length ? ["Imunidades", Object.keys(c.imunidades).map(humanizar).join(", ")] : null,
+      Object.keys(c.vulnerabilidades || {}).length ? ["Vulnerabilidades", Object.keys(c.vulnerabilidades).map(humanizar).join(", ")] : null,
+      Object.keys(c.sentidos).length ? ["Sentidos", Object.keys(c.sentidos).map(nomeSentido).join(", ")] : null,
+      ["Tipo", humanizar(c.tipoCriatura) + " · " + c.tamanho.nome],
+    ].filter(Boolean);
+    var situacoes = uniq(c.situacionais.map(function (s) { return s.cond; }));
+    return el("div.t20-aba", {}, [
+      T().secao("Ataques", c.ataques.length ? [
+        el("div.t20-tabela-rolo", {}, [el("table.t20-tabela.t20-ataques", {}, [
+          el("thead", {}, [el("tr", {}, ["Ataque", "Teste", "Dano", "Crítico", "Tipo", "Alcance"].map(function (h) { return el("th", { scope: "col", texto: h }); }))]),
+          el("tbody", {}, c.ataques.map(function (a) {
+            var dano = a.dano + (a.danoFixo ? T().sinal(a.danoFixo) : "") + a.extras.map(function (x) { return " + " + x.dados + (x.tipo ? " " + x.tipo : ""); }).join("");
+            return el("tr", {}, [
+              el("th", { scope: "row", texto: a.nome.replace(/ \(arremessada\)$/, "") + (a.arremessada ? " (arremesso)" : "") }),
+              el("td", {}, [T().rolavel(a.nome, T().sinal(a.ataque), a.parcelasAtaque, function () { dialogoAtaque(ctx, a.id); }, { acao: "Atacar com", dica: "Atacar" })]),
+              el("td", { texto: dano }),
+              el("td", { texto: (a.margem < 20 ? a.margem + "/" : "") + "x" + a.mult }),
+              el("td", { texto: a.tipo || "—" }),
+              el("td", { texto: a.alcance ? rotulo(a.alcance) : (a.distancia ? "—" : "Corpo a corpo") }),
+            ]);
+          })),
+        ])]),
+      ] : [linha("Nenhuma arma empunhada. O ataque desarmado aparece quando a ficha tem classe.")], { acoes: [botao("Manobra", function () { dialogoManobra(ctx); }, { classe: "r-botao--fantasma", dica: "Agarrar, derrubar, desarmar, empurrar ou quebrar (p. 234)" })] }),
+      el("div.t20-colunas", {}, [
+        T().secao("Resistências", [
+          el("div.t20-resists", {}, ["fortitude", "reflexos", "vontade"].map(function (k) {
+            var p = c.pericias[k];
+            return el("div.t20-resist", {}, [el("span.t20-resist__nome", { texto: p.nome }), T().rolavel(p.nome, T().sinal(p.total), p.parcelas, function () { T().teste(p.nome, p.total, p.parcelas); })]);
+          })),
+          el("dl.t20-pares", {}, defesas.map(function (d) { return el("div", {}, [el("dt", { texto: d[0] }), el("dd", { texto: d[1] })]); })),
+        ]),
+        T().secao("Condições e efeitos", [
+          c.condicoes.length ? el("ul.t20-chips", {}, c.condicoes.map(function (x) { return el("li", { title: (D().CONDICAO[x.id] || {}).resumo || "" }, [el("strong", { texto: x.nome }), el("span.t-mini", { texto: " " + ((D().CONDICAO[x.id] || {}).resumo || "") })]); })) : null,
+          b.ativos.length ? el("ul.t20-linhas", {}, b.ativos.map(function (a) {
+            return el("li", {}, [
+              el("span.t20-linhas__principal", {}, [el("strong", { texto: a.nome }), el("span.t-mini", { texto: " · " + (a.sustentada ? "sustentada (1 PM por turno)" : rotulo(a.duracao || "")) })]),
+              pode(ctx) ? botao("Encerrar", function () { op(ctx, function (t) { R().encerrarAtivo(t, a.id); return ok(); }); }, { classe: "r-botao--fantasma", rotulo: "Encerrar " + a.nome }) : null,
+            ]);
+          })) : null,
+          !c.condicoes.length && !b.ativos.length ? linha("Nenhuma condição nem efeito ativo.") : null,
+        ], { acoes: pode(ctx) ? [botao("+ Condição", function () { dialogoCondicao(ctx); }, { classe: "r-botao--fantasma" })] : null }),
+      ]),
+      acoes.length ? T().secao("Habilidades de uso", [el("ul.t20-linhas", {}, acoes.map(function (f) { return itemDeAcao(ctx, f, c); }))], { info: "custo em PM e execução" }) : null,
+      situacoes.length ? T().secao("Bônus por situação", [linha("Marque quando a situação valer; a ficha recalcula."), el("div.t20-situacoes", {}, situacoes.map(function (k) {
+        var desc = c.situacionais.filter(function (s) { return s.cond === k; }).map(function (s) { return s.fonte + " (" + s.valor + ")"; }).join("; ");
+        return el("label.r-marca", { title: desc }, [el("input", { type: "checkbox", checked: !!b.situacoes[k], disabled: !pode(ctx), onchange: function (ev) { var v = ev.currentTarget.checked; op(ctx, function (t) { t.situacoes[k] = v; return ok(); }); } }), el("span", { texto: humanizar(k) }), el("span.t-mini", { texto: " " + desc })]);
+      }))]) : null,
     ]);
   }
   function uniq(l) { return l.filter(function (x, i) { return l.indexOf(x) === i; }); }
@@ -369,10 +454,11 @@
   function itemDeAcao(ctx, f, c) {
     var a = f.def.acao || f.acaoCaminho || f.def.reacao;
     var custo = (a.custo || 0) + (a.escala ? " + " + (a.escala.pm || 1) + " por " + (a.escala.rotulo || "aumento") : "");
+    var execucao = D().NOMES_ACAO[a.execucao] || a.execucao || (f.def.reacao ? "Reação" : "");
     return el("li", {}, [
-      el("span", { texto: f.nome + " · " + (D().NOMES_ACAO[a.execucao] || a.execucao || (f.def.reacao ? "reação" : "")) + " · " + custo + " PM" + (a.duracao ? " · " + a.duracao : "") }),
+      el("span.t20-linhas__principal", {}, [el("strong", { texto: f.nome }), el("span.t-mini", { texto: " · " + [rotulo(execucao), custo + " PM", a.duracao ? rotulo(a.duracao) : ""].filter(Boolean).join(" · ") })]),
       pode(ctx) ? botao("Usar", function () { usarHabilidade(ctx, f, a, c); }, { rotulo: "Usar " + f.nome }) : null,
-      el("span.t-mini", { texto: " " + (f.def.resumo || "") }),
+      f.def.resumo ? el("p.t20-linhas__texto", { texto: f.def.resumo }) : null,
     ]);
   }
   function usarHabilidade(ctx, f, a, c) {
@@ -398,51 +484,102 @@
     ]);
   }
 
-  /* ===================================================== PERÍCIAS */
+  /* ===================================================== PERÍCIAS
+     Como a coluna da ficha oficial: total = ½ nível + atributo + treino +
+     outros. O total rola na hora; o nome abre o teste com CD e os usos. */
   function abaPericias(ctx) {
     var c = calc(ctx);
     if (!c) return el("p");
     var chaves = Object.keys(c.pericias).sort(function (a, b) { return c.pericias[a].nome.localeCompare(c.pericias[b].nome); });
     var ofOpcoes = [{ valor: "", rotulo: "—" }].concat(D().OFICIOS.map(function (o) { return { valor: o.chave, rotulo: o.nome }; }));
-    return el("div.pilha", {}, [
+    function partes(p) {
+      var meio = Math.floor(c.nivel / 2);
+      var atr = c.atr[p.atributo] || 0;
+      var treino = p.treinado ? c.treino : 0;
+      return { meio: meio, atr: atr, treino: treino, outros: p.total - meio - atr - treino };
+    }
+    var linhas = chaves.map(function (k) {
+      var p = c.pericias[k];
+      var x = partes(p);
+      var marcas = (p.somenteTreinada ? "*" : "") + (p.armadura ? "⚔" : "");
+      return el("li.t20-per" + (p.treinado ? ".t20-per--treinada" : "") + (p.utilizavel ? "" : ".t20-per--indisponivel"), {}, [
+        el("span.t20-per__marca", { "aria-hidden": "true", title: p.treinado ? "Treinada" : "Não treinada" }),
+        el("button.t20-per__nome", { type: "button", "aria-label": p.nome + (p.treinado ? ", treinada" : "") + ": abrir o teste com CD e usos", onclick: function () { if (!p.utilizavel) { UI().avisoAtencao(p.nome + " exige treinamento."); return; } dialogoTeste(ctx, "per:" + k); } }, [
+          el("span", { texto: p.nome }), marcas ? el("sup.t20-per__sinais", { texto: marcas }) : null,
+        ]),
+        T().rolavel(p.nome, T().sinal(p.total), p.parcelas, function () { if (!p.utilizavel) { UI().avisoAtencao(p.nome + " exige treinamento."); return; } T().teste(p.nome, p.total, p.parcelas); }, { classe: "t20-rol--per" }),
+        el("span.t20-per__conta", { "aria-hidden": "true" }, [
+          el("span", { texto: String(x.meio) }), el("span", { texto: T().siglaAtr(p.atributo) + " " + T().sinal(x.atr) }), el("span", { texto: x.treino ? "+" + x.treino : "—" }), el("span", { texto: x.outros ? T().sinal(x.outros) : "—" }),
+        ]),
+      ]);
+    });
+    return el("div.t20-aba", {}, [
       c.oficiosPendentes.length ? el("div.t20-pendencias", { role: "status" }, [el("p", { texto: "Ofício sem especialização: o treino só vale depois de escolher qual (p. 121)." })].concat(pode(ctx) ? c.oficiosPendentes.map(function (p) {
         return T().selecao("Ofício de " + p.fonte, ofOpcoes, "", function (v) { if (v) op(ctx, function (t) { return R().definirOficio(t, p, v); }); });
       }) : [])) : null,
-      linha("Perícia = ½ nível (" + Math.floor(c.nivel / 2) + ") + atributo + treino (+" + c.treino + " no seu nível) + bônus. Penalidade de armadura em Acrobacia, Furtividade e Ladinagem (p. 114)."),
-      el("table.t20-tabela.t20-pericias", {}, [
-        el("thead", {}, [el("tr", {}, ["Perícia", "Atr.", "Treinada", "Total", ""].map(function (h) { return el("th", { scope: "col", texto: h }); }))]),
-        el("tbody", {}, chaves.map(function (k) {
-          var p = c.pericias[k];
-          var def = D().PERICIA[k.split(":")[0]] || {};
-          return el("tr" + (p.utilizavel ? "" : ".t20-indisponivel"), {}, [
-            el("th", { scope: "row" }, [el("span", { texto: p.nome + (p.somenteTreinada ? " *" : "") + (p.armadura ? " ⚔" : "") }), def.usos && def.usos.length ? el("details.t20-usos-ficha", {}, [el("summary", { texto: def.usos.length + " usos" }), el("ul", {}, def.usos.map(function (u) { return el("li", { texto: u.nome + (u.cd ? " (CD " + u.cd + ")" : "") + (u.treinado ? " · só treinado" : "") + " — " + u.resumo }); }))]) : null]),
-            el("td", { texto: T().siglaAtr(p.atributo) }), el("td", { texto: p.treinado ? "sim" : "" }),
-            el("td", {}, [T().valor(p.nome, T().sinal(p.total), p.parcelas)]),
-            el("td", {}, [botao("Rolar", function () { if (!p.utilizavel) { UI().avisoAtencao(p.nome + " exige treinamento."); return; } dialogoTeste(ctx, "per:" + k); }, { rotulo: "Rolar " + p.nome })]),
-          ]);
-        })),
-      ]),
-      linha("* só pode ser usada treinada. ⚔ sofre penalidade de armadura. Ofícios: cada especialização é uma perícia separada; aprenda em Progressão."),
+      T().secao("Perícias", [
+        el("div.t20-per-cabecas", { "aria-hidden": "true" }, [0, 1].map(function () { return el("div.t20-per-cabeca", {}, [el("span"), el("span", { texto: "Perícia" }), el("span", { texto: "Total" }), el("span.t20-per__conta", {}, [el("span", { texto: "½ nív." }), el("span", { texto: "Atrib." }), el("span", { texto: "Treino" }), el("span", { texto: "Outros" })])]); })),
+        el("ul.t20-per-lista", {}, linhas),
+        el("p.t20-legenda", { texto: "● treinada · * só treinada · ⚔ penalidade de armadura. Clique no total para rolar; no nome, para escolher a CD e ver os usos (p. 114)." }),
+      ], { info: "½ nível " + Math.floor(c.nivel / 2) + " · treino +" + c.treino }),
     ]);
   }
 
-  /* =================================================== PODERES */
-  var TIPOS_FONTE = { raca: "Raça", origem: "Origem", classe: "Classe", geral: "Poderes gerais", deus: "Divindade", int: "Inteligência", item: "Itens", parceiro: "Parceiros", ativo: "Efeitos ativos" };
+  /* =================================================== HABILIDADES
+     Como a página 2 da ficha oficial: raça e origem; classe e poderes.
+     Treinos e proficiências (sem texto próprio) já aparecem nas perícias
+     e no combate, e não repetem aqui. */
   function abaHabilidades(ctx) {
     var b = bl(ctx);
     var c = calc(ctx);
     if (!c) return el("p");
-    var grupos = {};
-    c.fontes.forEach(function (f) { if (f.tipoFonte === "int" || f.tipoFonte === "ativo") return; (grupos[f.tipoFonte] = grupos[f.tipoFonte] || []).push(f); });
-    return el("div.pilha", {}, Object.keys(TIPOS_FONTE).filter(function (k) { return grupos[k]; }).map(function (k) {
-      return T().painel(TIPOS_FONTE[k], [el("ul.t20-lista.t20-poderes", {}, grupos[k].map(function (f) {
-        var d = f.def || {};
-        return el("li", {}, [el("strong", { texto: f.nome }), el("span.t-mini", { texto: " (" + f.origem + (d.pagina ? ", p. " + d.pagina : "") + ")" }), d.resumo ? el("p", { texto: d.resumo }) : null, (d.acao || d.reacao || f.acaoCaminho) && pode(ctx) ? botao("Usar", function () { usarHabilidade(ctx, f, d.acao || f.acaoCaminho || d.reacao, c); }) : null]);
-      }))]);
-    }).concat([
-      c.poderesTormenta ? linha("Poderes da Tormenta: " + c.poderesTormenta + " · perda de Carisma: " + c.perdaCarisma + " (p. 136).") : null,
-      pode(ctx) ? T().painel("Poderes avulsos", [linha("Poderes ganhos fora da subida de nível (origem com poderes de combate ou da Tormenta, recompensas, decisão do mestre). Os requisitos são conferidos."), botao("Adicionar poder", function () { dialogoPoderAvulso(ctx); }), b.poderes.length ? el("ul.t20-lista", {}, b.poderes.map(function (p, i) { return el("li", {}, [el("span", { texto: R().nomeDoPoder(p.id) + (p.origem ? " · " + p.origem : "") }), botao("Remover", function () { op(ctx, function (t) { t.poderes.splice(i, 1); return ok(); }); }, { classe: "r-botao--fantasma" })]); })) : null]) : null,
-    ]));
+    var visiveis = c.fontes.filter(function (f) {
+      if (f.tipoFonte === "int" || f.tipoFonte === "ativo") return false;
+      var d = f.def || {};
+      return !!(d.resumo || d.acao || d.reacao || f.acaoCaminho);
+    });
+    /* A escolha feita (caminho, linhagem, elemento…) aparece no nome; o
+       caminho do Arcanista mostra só o texto do caminho escolhido. */
+    function escolhaFeita(f, d) {
+      var esc = f.escolhas || {};
+      return (d.escolhas || []).map(function (e) {
+        var v = esc[e.id];
+        if (!v || !e.opcoes) return "";
+        var vs = Array.isArray(v) ? v : [v];
+        return vs.map(function (x) { var o = e.opcoes.filter(function (y) { return y[0] === x; })[0]; return o ? o[1] : x; }).join(", ");
+      }).filter(Boolean).join(" · ");
+    }
+    function cartao(f) {
+      var d = f.def || {};
+      var a = d.acao || f.acaoCaminho || d.reacao;
+      var feita = escolhaFeita(f, d);
+      var caminho = d.caminhos && f.escolhas && d.caminhos[f.escolhas.caminho];
+      var texto = caminho ? caminho.resumo : d.resumo;
+      return el("li.t20-hab", {}, [
+        el("div.t20-hab__topo", {}, [
+          el("strong.t20-hab__nome", { texto: f.nome + (feita ? ": " + feita : "") }),
+          el("span.t20-hab__origem", { texto: f.origem + (d.pagina ? " · p. " + d.pagina : "") }),
+          a && pode(ctx) ? botao("Usar" + (a.custo ? " · " + a.custo + " PM" : ""), function () { usarHabilidade(ctx, f, a, c); }, { rotulo: "Usar " + f.nome }) : null,
+        ]),
+        texto ? el("p.t20-hab__texto", { texto: texto }) : null,
+      ]);
+    }
+    var racaOrigem = visiveis.filter(function (f) { return f.tipoFonte === "raca" || f.tipoFonte === "origem"; });
+    var classe = visiveis.filter(function (f) { return f.tipoFonte === "classe"; });
+    var poderes = visiveis.filter(function (f) { return f.tipoFonte === "geral" || f.tipoFonte === "deus"; });
+    var outros = visiveis.filter(function (f) { return f.tipoFonte === "item" || f.tipoFonte === "parceiro"; });
+    return el("div.t20-aba", {}, [
+      el("div.t20-colunas", {}, [
+        T().secao("Raça e origem", racaOrigem.length ? [el("ul.t20-habs", {}, racaOrigem.map(cartao))] : [linha("Nada ainda.")]),
+        T().secao("Classe", classe.length ? [el("ul.t20-habs", {}, classe.map(cartao))] : [linha("Nada ainda.")]),
+      ]),
+      T().secao("Poderes", [
+        poderes.length ? el("ul.t20-habs", {}, poderes.map(cartao)) : linha("Nenhum poder geral ou concedido."),
+        c.poderesTormenta ? el("p.t20-legenda", { texto: "Poderes da Tormenta: " + c.poderesTormenta + " · perda de Carisma: " + c.perdaCarisma + " (p. 136)." }) : null,
+        b.poderes.length && pode(ctx) ? el("ul.t20-linhas", {}, b.poderes.map(function (p, i) { return el("li", {}, [el("span.t20-linhas__principal", { texto: "Avulso: " + R().nomeDoPoder(p.id) + (p.origem ? " · " + p.origem : "") }), botao("Remover", function () { op(ctx, function (t) { t.poderes.splice(i, 1); return ok(); }); }, { classe: "r-botao--fantasma", rotulo: "Remover " + R().nomeDoPoder(p.id) })]); })) : null,
+      ], { acoes: pode(ctx) ? [botao("+ Poder avulso", function () { dialogoPoderAvulso(ctx); }, { classe: "r-botao--fantasma", dica: "Poderes ganhos fora da subida de nível (origem, recompensa, mestre). Os requisitos são conferidos." })] : null }),
+      outros.length ? T().secao("De itens e parceiros", [el("ul.t20-habs", {}, outros.map(cartao))]) : null,
+    ]);
   }
   function dialogoPoderAvulso(ctx) {
     var c = calc(ctx);
@@ -463,33 +600,58 @@
     ]);
   }
 
-  /* ===================================================== MAGIAS */
+  /* ===================================================== MAGIAS
+     Como o quadro de magias da ficha oficial: atributo-chave, CD e o
+     limite por fonte em cima; as magias por círculo, cada uma com o que
+     se consulta na mesa. O nome lança (com a prévia dos aprimoramentos). */
+  /* Alcance, duração e execução com acento e maiúscula. */
+  function rotulo(v) {
+    var t = String(v || "").replace(/medio/g, "médio").replace(/instantanea/g, "instantânea").replace(/ate/g, "até");
+    return t.charAt(0).toUpperCase() + t.slice(1);
+  }
+  function nomeEscola(k) { var e = D().ESCOLAS.filter(function (x) { return x[0] === k; })[0]; return e ? e[1] : humanizar(k); }
   function abaMagias(ctx) {
     var b = bl(ctx);
     var c = calc(ctx);
     if (!c) return el("p");
     var conhecidas = R().magiasConhecidas(b, c);
-    var fontes = Object.keys(c.magias.fontes).map(function (k) { var f = c.magias.fontes[k]; return el("li", { texto: f.nome + ": magias " + f.tipo + " até o " + f.circuloMax + "º círculo · CD " + f.cd + " (" + T().nomeAtr(f.atributo) + ") · limite de " + f.limitePM + " PM por magia" + (f.escolas ? " · escolas " + f.escolas.join(", ") : "") }); });
     var porCirculo = {};
     conhecidas.forEach(function (m) { var mg = MG().MAGIA[m.id]; (porCirculo[mg.circulo] = porCirculo[mg.circulo] || []).push({ e: m, mg: mg }); });
     var caminho = R().valorDeEscolhaDaClasse(b, "arcanista", "caminho");
-    return el("div.pilha", {}, [
-      T().painel("Fontes de magia", [fontes.length ? el("ul.t20-lista", {}, fontes) : linha("Nenhuma classe conjuradora."), c.magias.concedidas.length ? linha("Concedidas por raça, poderes ou itens: " + c.magias.concedidas.map(function (x) { return (MG().MAGIA[x.id] || {}).nome + " (" + x.fonte + ")"; }).join(", ") + " — sem aprimoramentos de “Requer círculo” (p. 172).") : null, linha("Custo por círculo: 1, 3, 6, 10, 15 PM. Truque custa 0 e não combina. Arcanas de armadura pedem Misticismo CD 20 + PM (p. 172).")]),
-      el("div.faixa", {}, [pode(ctx) ? botao("Aprender magia", function () { dialogoAprender(ctx); }) : null]),
+    var fontes = Object.keys(c.magias.fontes).map(function (k) {
+      var f = c.magias.fontes[k];
+      return el("div.t20-fonte-magia", {}, [
+        el("strong", { texto: f.nome }),
+        el("dl.t20-pares.t20-pares--linha", {}, [["Tipo", humanizar(f.tipo)], ["Atributo-chave", T().nomeAtr(f.atributo)], ["CD", String(f.cd)], ["Limite", f.limitePM + " PM"], ["Círculo", "até " + f.circuloMax + "º"]].map(function (d) { return el("div", {}, [el("dt", { texto: d[0] }), el("dd", { texto: d[1] })]); })),
+      ]);
+    });
+    var memorizadas = b.magias.filter(function (m) { return m.memorizada; }).length;
+    var limiteMemo = Math.floor(b.magias.filter(function (m) { return m.fonte === "classe:arcanista"; }).length / 2);
+    return el("div.t20-aba", {}, [
+      T().secao("Conjuração", [
+        fontes.length ? el("div.t20-fontes-magia", {}, fontes) : linha("Nenhuma classe conjuradora."),
+        c.magias.concedidas.length ? el("p.t20-legenda", { texto: "Concedidas por raça, poderes ou itens: " + c.magias.concedidas.map(function (x) { return (MG().MAGIA[x.id] || {}).nome + " (" + x.fonte + ")"; }).join(", ") + "." }) : null,
+        caminho === "mago" ? el("p.t20-legenda", { texto: "Mago: só lança as memorizadas (" + memorizadas + " de " + limiteMemo + "), estudando o grimório uma hora por dia (p. 37)." }) : null,
+        el("p.t20-legenda", { texto: "Custo por círculo: 1, 3, 6, 10, 15 PM. Arcanas de armadura pedem Misticismo CD 20 + PM (p. 172)." }),
+      ], { acoes: pode(ctx) && fontes.length ? [botao("+ Aprender magia", function () { dialogoAprender(ctx); }, { classe: "r-botao--fantasma" })] : null }),
     ].concat(Object.keys(porCirculo).sort().map(function (circ) {
-      return T().painel(circ + "º círculo", [el("ul.t20-lista.t20-magias", {}, porCirculo[circ].map(function (x) {
-        var mg = x.mg;
-        return el("li", {}, [
-          el("strong", { texto: mg.nome }), el("span.t-mini", { texto: " " + mg.tipo + " · " + mg.escola + " · " + MG().nomeExecucao(mg.base.ex) + " · " + mg.base.al + " · " + (mg.base.alvo || mg.base.area || mg.base.ef || "") + " · " + mg.base.du + (mg.base.res ? " · " + mg.base.res : "") + " · p. " + mg.pagina }),
-          el("p", { texto: mg.resumo }),
-          el("div.faixa", {}, [
-            botao("Lançar", function () { dialogoLancar(ctx, x.e); }, { rotulo: "Lançar " + mg.nome }),
-            caminho === "mago" && x.e.fonte === "classe:arcanista" && pode(ctx) ? el("label.r-marca", {}, [el("input", { type: "checkbox", checked: !!x.e.memorizada, onchange: function (ev) { var v = ev.currentTarget.checked; op(ctx, function (t) { var m = t.magias.filter(function (y) { return y.id === x.e.id && y.fonte === x.e.fonte; })[0]; if (m) m.memorizada = v; return ok(); }); } }), el("span", { texto: "Memorizada hoje" })]) : null,
-            !x.e.concedida && pode(ctx) ? botao("Esquecer", function () { op(ctx, function (t) { t.magias = t.magias.filter(function (y) { return !(y.id === x.e.id && y.fonte === x.e.fonte); }); return ok(); }); }, { classe: "r-botao--fantasma" }) : null,
+      return T().secao(circ + "º círculo", [el("ul.t20-magias", {}, porCirculo[circ].map(function (x) {
+        var mg = x.mg, base = mg.base;
+        var meta = [nomeEscola(mg.escola), rotulo(MG().nomeExecucao(base.ex)), rotulo(base.al), base.alvo || base.area || base.ef || "", rotulo(base.du), base.res || ""].filter(Boolean);
+        return el("li.t20-magia", {}, [
+          el("div.t20-magia__topo", {}, [
+            el("button.t20-magia__nome", { type: "button", "aria-label": "Lançar " + mg.nome, onclick: function () { dialogoLancar(ctx, x.e); } }, [el("span", { texto: mg.nome }), el("span.t20-magia__custo", { texto: MG().custoBase(mg.circulo) + " PM" })]),
+            el("span.t20-magia__tipo", { texto: humanizar(mg.tipo) + " · p. " + mg.pagina }),
           ]),
+          el("p.t20-magia__meta", { texto: meta.join(" · ") }),
+          el("details.t20-magia__desc", {}, [el("summary", { texto: "Descrição" }), el("p", { texto: mg.resumo })]),
+          pode(ctx) && (caminho === "mago" && x.e.fonte === "classe:arcanista" || !x.e.concedida) ? el("div.t20-magia__acoes", {}, [
+            caminho === "mago" && x.e.fonte === "classe:arcanista" ? el("label.r-marca", {}, [el("input", { type: "checkbox", checked: !!x.e.memorizada, onchange: function (ev) { var v = ev.currentTarget.checked; op(ctx, function (t) { var m = t.magias.filter(function (y) { return y.id === x.e.id && y.fonte === x.e.fonte; })[0]; if (m) m.memorizada = v; return ok(); }); } }), el("span", { texto: "Memorizada" })]) : null,
+            !x.e.concedida ? botao("Esquecer", function () { UI().confirmar({ titulo: "Esquecer " + mg.nome + "?", texto: "A magia sai da lista de conhecidas.", rotuloConfirmar: "Esquecer" }).then(function (s) { if (s) op(ctx, function (t) { t.magias = t.magias.filter(function (y) { return !(y.id === x.e.id && y.fonte === x.e.fonte); }); return ok(); }); }); }, { classe: "r-botao--fantasma", rotulo: "Esquecer " + mg.nome }) : null,
+          ]) : null,
         ]);
       }))]);
-    })).concat([caminho === "mago" ? linha("Mago: só lança as memorizadas — até metade das conhecidas, estudando o grimório uma hora por dia (p. 37). Memorizadas: " + b.magias.filter(function (m) { return m.memorizada; }).length + " de " + Math.floor(b.magias.filter(function (m) { return m.fonte === "classe:arcanista"; }).length / 2) + ".") : null]));
+    })));
   }
   function dialogoAprender(ctx) {
     var c = calc(ctx);
@@ -633,28 +795,46 @@
     var b = bl(ctx);
     var c = calc(ctx);
     if (!c) return el("p");
-    var estados = [{ valor: "mochila", rotulo: "Mochila" }, { valor: "vestido", rotulo: "Vestido" }, { valor: "empunhado", rotulo: "Empunhado" }, { valor: "guardado", rotulo: "Guardado (fora da carga)" }];
-    return el("div.pilha", {}, [
-      el("div.t20-numeros", {}, [
-        T().valor("Tibares", "T$ " + b.inventario.tibar, []),
-        T().valor("Carga", c.carga.usada + " / " + c.carga.limite, [{ rotulo: "Sobrecarregado acima de", valor: c.carga.limite }, { rotulo: "Máximo", valor: c.carga.maximo }, { rotulo: "1.000 moedas", valor: "1 espaço" }]),
-        T().valor("Itens vestidos", c.vestidos + " / " + c.limiteVestidos, [{ rotulo: "Limite (p. 143)", valor: c.limiteVestidos }]),
+    var estados = [{ valor: "mochila", rotulo: "Mochila" }, { valor: "vestido", rotulo: "Vestido" }, { valor: "empunhado", rotulo: "Empunhado" }, { valor: "guardado", rotulo: "Guardado" }];
+    function mudar(it, campo, v) { op(ctx, function (t) { var x = t.inventario.itens.filter(function (y) { return y.id === it.id; })[0]; if (x) x[campo] = v; return ok(); }); }
+    function menuDoItem(it, base) {
+      var m = janela(R().nomeDoItem(it), [
+        base.resumo ? el("p", { texto: base.resumo }) : null,
+        el("p.t-mini", { texto: [base.pagina ? "p. " + base.pagina : "", "preço " + precoDe(it) + " T$", R().espacosDoItem(it) + " espaço(s)"].filter(Boolean).join(" · ") }),
+        el("div.t20-menu-item", {}, [
+          (base.pocao || base.categoria === "alquimico") ? botao("Usar", function () { m.fechar(); usarConsumivel(ctx, it); }, { classe: "r-botao--principal" }) : null,
+          botao("Editar (melhorias, encantos, nome)", function () { m.fechar(); dialogoEditarItem(ctx, it); }),
+          botao("Vender", function () { m.fechar(); venderItem(ctx, it); }),
+          botao("Remover", function () { m.fechar(); UI().confirmar({ titulo: "Remover " + R().nomeDoItem(it) + "?", texto: "O item sai do inventário sem devolver tibares.", rotuloConfirmar: "Remover" }).then(function (s) { if (s) op(ctx, function (t) { t.inventario.itens = t.inventario.itens.filter(function (y) { return y.id !== it.id; }); return ok(); }); }); }, { classe: "r-botao--fantasma" }),
+        ]),
+      ], [{ rotulo: "Fechar" }], { fundoFecha: true });
+    }
+    var cargaPct = pct(c.carga.usada, c.carga.limite);
+    return el("div.t20-aba", {}, [
+      el("div.t20-inv-resumo", {}, [
+        el("div.t20-inv-caixa", {}, [el("span.t20-inv-caixa__nome", { texto: "Tibares" }), el("strong.t20-inv-caixa__valor", { texto: "T$ " + b.inventario.tibar }), pode(ctx) ? botao("Ajustar", function () { dialogoTibar(ctx); }, { classe: "r-botao--fantasma", rotulo: "Ajustar tibares" }) : null]),
+        el("div.t20-inv-caixa" + (c.carga.sobrecarregado ? ".t20-inv-caixa--alerta" : ""), {}, [el("span.t20-inv-caixa__nome", { texto: "Carga" }), el("strong.t20-inv-caixa__valor", { texto: c.carga.usada + " / " + c.carga.limite + " espaços" }), el("span.t20-barra", { role: "img", "aria-label": "Carga " + c.carga.usada + " de " + c.carga.limite }, [el("span.t20-barra__cheio", { style: "width:" + cargaPct + "%" })]), el("span.t-mini", { texto: c.carga.sobrecarregado ? "Sobrecarregado: –5 de penalidade e –3 m (máximo " + c.carga.maximo + ")" : "Máximo " + c.carga.maximo + " (10 + 2 × Força, p. 157)" })]),
+        el("div.t20-inv-caixa" + (c.vestidos > c.limiteVestidos ? ".t20-inv-caixa--alerta" : ""), {}, [el("span.t20-inv-caixa__nome", { texto: "Itens vestidos" }), el("strong.t20-inv-caixa__valor", { texto: c.vestidos + " / " + c.limiteVestidos }), c.vestidos > c.limiteVestidos ? el("span.t-mini", { texto: "Os excedentes não dão benefícios." }) : null]),
       ]),
-      c.vestidos > c.limiteVestidos ? el("p.t-erro", { texto: "Mais itens vestidos que o limite: os excedentes não dão benefícios." }) : null,
-      pode(ctx) ? el("div.faixa", {}, [botao("Adicionar item", function () { dialogoItem(ctx); }), botao("Tibares", function () { dialogoTibar(ctx); }, { classe: "r-botao--fantasma" }), botao("Fabricar", function () { dialogoFabricar(ctx); }, { classe: "r-botao--fantasma" })]) : null,
-      el("table.t20-tabela.t20-inventario", {}, [
-        el("thead", {}, [el("tr", {}, ["Item", "Qtd.", "Espaços", "Estado", ""].map(function (h) { return el("th", { scope: "col", texto: h }); }))]),
-        el("tbody", {}, b.inventario.itens.map(function (it) {
-          var base = R().itemBase(it) || {};
-          var extras = [(it.melhorias || []).map(function (m) { return (EQ().MELHORIA[m] || {}).nome || m; }).join(", "), it.material ? (EQ().MATERIAL[it.material] || {}).nome : "", (it.encantos || []).map(function (e) { return (IM().ENCANTO[e] || {}).nome || e; }).join(", ")].filter(Boolean).join(" · ");
-          return el("tr", {}, [
-            el("th", { scope: "row" }, [el("span", { texto: R().nomeDoItem(it) }), extras ? el("span.t-mini", { texto: " " + extras }) : null, base.resumo ? el("p.t-mini", { texto: base.resumo }) : null]),
-            el("td", { texto: String(it.quantidade) }), el("td", { texto: String(R().espacosDoItem(it)) }),
-            el("td", {}, [pode(ctx) ? T().selecao("Estado de " + R().nomeDoItem(it), estados, it.estado, function (v) { op(ctx, function (t) { var x = t.inventario.itens.filter(function (y) { return y.id === it.id; })[0]; if (x) x.estado = v; return ok(); }); }) : el("span", { texto: it.estado })].concat(it.estado === "empunhado" && pode(ctx) ? [T().selecao("Mão", [{ valor: "principal", rotulo: "Principal" }, { valor: "secundaria", rotulo: "Secundária" }, { valor: "duas", rotulo: "Duas mãos" }], it.mao, function (v) { op(ctx, function (t) { var x = t.inventario.itens.filter(function (y) { return y.id === it.id; })[0]; if (x) x.mao = v; return ok(); }); })] : [])),
-            el("td", {}, pode(ctx) ? [botao("Editar", function () { dialogoEditarItem(ctx, it); }, { classe: "r-botao--fantasma" }), (base.pocao || (base.categoria === "alquimico")) ? botao("Usar", function () { usarConsumivel(ctx, it); }) : null, botao("Vender", function () { venderItem(ctx, it); }, { classe: "r-botao--fantasma" }), botao("Remover", function () { op(ctx, function (t) { t.inventario.itens = t.inventario.itens.filter(function (y) { return y.id !== it.id; }); return ok(); }); }, { classe: "r-botao--fantasma" })] : []),
-          ]);
-        })),
-      ]),
+      T().secao("Equipamento", [
+        b.inventario.itens.length ? el("div.t20-tabela-rolo", {}, [el("table.t20-tabela.t20-inventario", {}, [
+          el("thead", {}, [el("tr", {}, ["Item", "Qtd.", "Espaços", "Onde", ""].map(function (h) { return el("th", { scope: "col", texto: h }); }))]),
+          el("tbody", {}, b.inventario.itens.map(function (it) {
+            var base = R().itemBase(it) || {};
+            var extras = [(it.melhorias || []).map(function (m) { return (EQ().MELHORIA[m] || {}).nome || m; }).join(", "), it.material ? (EQ().MATERIAL[it.material] || {}).nome : "", (it.encantos || []).map(function (e) { return (IM().ENCANTO[e] || {}).nome || e; }).join(", ")].filter(Boolean).join(" · ");
+            return el("tr" + (it.estado === "guardado" ? ".t20-inv--guardado" : ""), {}, [
+              el("th", { scope: "row" }, [el("span.t20-inv__nome", { texto: R().nomeDoItem(it) }), extras ? el("span.t20-inv__extras", { texto: extras }) : null]),
+              el("td.t20-num", { texto: String(it.quantidade) }),
+              el("td.t20-num", { texto: String(R().espacosDoItem(it)) }),
+              el("td", {}, pode(ctx) ? [el("span.t20-inv__onde", {}, [
+                el("select.t20-select", { "aria-label": "Onde está " + R().nomeDoItem(it), onchange: function (ev) { mudar(it, "estado", ev.currentTarget.value); } }, estados.map(function (e) { return el("option", { value: e.valor, selected: it.estado === e.valor, texto: e.rotulo }); })),
+                it.estado === "empunhado" ? el("select.t20-select", { "aria-label": "Mão de " + R().nomeDoItem(it), onchange: function (ev) { mudar(it, "mao", ev.currentTarget.value); } }, [["principal", "Mão principal"], ["secundaria", "Mão secundária"], ["duas", "Duas mãos"]].map(function (o) { return el("option", { value: o[0], selected: it.mao === o[0], texto: o[1] }); })) : null,
+              ])] : [el("span", { texto: (estados.filter(function (e) { return e.valor === it.estado; })[0] || {}).rotulo || it.estado })]),
+              el("td", {}, pode(ctx) ? [botao("⋯", function () { menuDoItem(it, base); }, { classe: "r-botao--fantasma", rotulo: "Opções de " + R().nomeDoItem(it) })] : []),
+            ]);
+          })),
+        ])]) : linha("Inventário vazio."),
+      ], { acoes: pode(ctx) ? [botao("+ Item", function () { dialogoItem(ctx); }, { classe: "r-botao--fantasma" }), botao("Fabricar", function () { dialogoFabricar(ctx); }, { classe: "r-botao--fantasma" })] : null }),
       engenhocas(ctx, c),
     ]);
   }
@@ -873,17 +1053,21 @@
     var b = bl(ctx);
     var c = calc(ctx);
     var lim = PA().limite(c.nivel);
-    return el("div.pilha", {}, [
-      linha("Parceiros dão um bônus a quem ajudam; não agem nem sofrem ações hostis (p. 260). Limite no seu patamar: " + lim + ". Bônus de parceiros não se somam entre si."),
-      el("ul.t20-lista", {}, b.parceiros.map(function (p, i) {
-        var tipos = (p.tipos.length ? p.tipos : [p.tipo]).map(function (t) { return PA().TIPOS[t] ? PA().TIPOS[t].nome : t; }).join(" e ");
-        var res = (p.tipos.length ? p.tipos : [p.tipo]).map(function (t) { var d = PA().TIPOS[t]; return d ? d.niveis[p.nivel].r : ""; }).join(" ");
-        return el("li", {}, [el("strong", { texto: p.nome || tipos }), el("span", { texto: " · " + tipos + " " + p.nivel + (p.ferido ? " · ferido" : "") + (p.morto ? " · morto" : "") + (p.ativo ? "" : " · fora") }), el("p.t-mini", { texto: res }),
-          pode(ctx) ? el("div.faixa", {}, [botao(p.ativo ? "Deixar de usar" : "Usar", function () { op(ctx, function (t) { t.parceiros[i].ativo = !t.parceiros[i].ativo; return ok(); }); }, { classe: "r-botao--fantasma", motivo: p.morto ? "Morto." : "" }), p.ferido ? botao("Curado", function () { op(ctx, function (t) { t.parceiros[i].ferido = false; return ok(); }); }, { classe: "r-botao--fantasma" }) : null, botao("Remover", function () { op(ctx, function (t) { t.parceiros.splice(i, 1); return ok(); }); }, { classe: "r-botao--fantasma" })]) : null]);
-      })),
-      pode(ctx) ? botao("Adicionar parceiro", function () { dialogoParceiro(ctx); }) : null,
-      el("p.t-mini", { texto: PA().REGRAS_MONTARIA.texto + " (p. 261)" }),
-      el("label.r-marca", {}, [el("input", { type: "checkbox", checked: !!b.opcoes.parceirosVulneraveis, disabled: !pode(ctx), onchange: function (ev) { var v = ev.currentTarget.checked; op(ctx, function (t) { t.opcoes.parceirosVulneraveis = v; return ok(); }); } }), el("span", { texto: "Variante: parceiros vulneráveis (p. 262) — ao sofrer dano, d4/d6/d8 por parceiro; 1 fere, outro 1 mata." })]),
+    return el("div.t20-aba", {}, [
+      T().secao("Parceiros", [
+        b.parceiros.length ? el("ul.t20-habs", {}, b.parceiros.map(function (p, i) {
+          var tipos = (p.tipos.length ? p.tipos : [p.tipo]).map(function (t) { return PA().TIPOS[t] ? PA().TIPOS[t].nome : t; }).join(" e ");
+          var res = (p.tipos.length ? p.tipos : [p.tipo]).map(function (t) { var d = PA().TIPOS[t]; return d ? d.niveis[p.nivel].r : ""; }).join(" ");
+          var estado = [p.nivel, p.ferido ? "ferido" : "", p.morto ? "morto" : "", p.ativo ? "" : "fora de ação"].filter(Boolean).join(" · ");
+          return el("li.t20-hab" + (p.ativo && !p.morto ? "" : ".t20-hab--inativo"), {}, [
+            el("div.t20-hab__topo", {}, [el("strong.t20-hab__nome", { texto: p.nome || tipos }), el("span.t20-hab__origem", { texto: tipos + " · " + estado }),
+              pode(ctx) ? el("span.t20-hab__acoes", {}, [botao(p.ativo ? "Dispensar" : "Chamar", function () { op(ctx, function (t) { t.parceiros[i].ativo = !t.parceiros[i].ativo; return ok(); }); }, { classe: "r-botao--fantasma", motivo: p.morto ? "Morto." : "" }), p.ferido ? botao("Curado", function () { op(ctx, function (t) { t.parceiros[i].ferido = false; return ok(); }); }, { classe: "r-botao--fantasma" }) : null, botao("Remover", function () { op(ctx, function (t) { t.parceiros.splice(i, 1); return ok(); }); }, { classe: "r-botao--fantasma", rotulo: "Remover " + (p.nome || tipos) })]) : null]),
+            el("p.t20-hab__texto", { texto: res }),
+          ]);
+        })) : linha("Nenhum parceiro. Parceiros dão um bônus a quem ajudam; não agem nem sofrem ações hostis (p. 260)."),
+        el("label.r-marca", {}, [el("input", { type: "checkbox", checked: !!b.opcoes.parceirosVulneraveis, disabled: !pode(ctx), onchange: function (ev) { var v = ev.currentTarget.checked; op(ctx, function (t) { t.opcoes.parceirosVulneraveis = v; return ok(); }); } }), el("span", { texto: "Variante: parceiros vulneráveis (p. 262)" })]),
+        UI().recolhivel({ titulo: "Regras de parceiros e montarias", conteudo: [el("p.t-mini", { texto: "Bônus de parceiros não se somam entre si. Vulneráveis: ao sofrer dano, d4/d6/d8 por parceiro; 1 fere, outro 1 mata (p. 262)." }), el("p.t-mini", { texto: PA().REGRAS_MONTARIA.texto + " (p. 261)" })] }),
+      ], { info: "limite no seu patamar: " + lim, acoes: pode(ctx) ? [botao("+ Parceiro", function () { dialogoParceiro(ctx); }, { classe: "r-botao--fantasma" })] : null }),
     ]);
   }
   function dialogoParceiro(ctx) {
@@ -907,31 +1091,45 @@
     var b = bl(ctx);
     var c = calc(ctx);
     if (!c) return el("p");
-    var proximo = c.proximoNivelXp;
-    return el("div.pilha", {}, [
-      T().painel("Experiência", [
-        el("p", { texto: "XP " + b.xp + (proximo ? " · próximo nível em " + proximo + " (" + Math.max(0, proximo - b.xp) + " restantes)" : " · nível máximo") + " · " + c.patamar.nome }),
-        pode(ctx) ? el("div.faixa", {}, [botao("Somar XP", function () { var v = T().numero("XP", 0); janela("Somar XP", [v, linha("Desafio: ND × 1.000 dividido pelo grupo; empate metade, derrota um quarto (p. 326).")], [{ rotulo: "Cancelar", classe: "r-botao--fantasma" }, { rotulo: "Somar", classe: "r-botao--principal", aoClicar: function (f) { op(ctx, function (t) { R().adicionarXp(t, T().lerNumero(v, 0)); return ok(); }); f(); } }]); }), botao("Subir de nível", function () { dialogoSubir(ctx); }, { motivo: R().podeSubir(b).ok ? "" : R().podeSubir(b).motivo })]) : null,
+    var proximo = c.proximoNivelXp, anterior = D().xpDoNivel(c.nivel);
+    var sobe = R().podeSubir(b);
+    return el("div.t20-aba", {}, [
+      T().secao("Experiência", [
+        el("div.t20-xp", {}, [
+          el("strong.t20-xp__nivel", { texto: "Nível " + c.nivel }),
+          el("span", { texto: c.patamar.nome }),
+          el("span.t-mini", { texto: proximo ? b.xp + " de " + proximo + " XP (faltam " + Math.max(0, proximo - b.xp) + ")" : b.xp + " XP · nível máximo" }),
+        ]),
+        proximo ? el("span.t20-barra.t20-barra--xp", { role: "img", "aria-label": "Experiência: " + b.xp + " de " + proximo }, [el("span.t20-barra__cheio", { style: "width:" + pct(b.xp - anterior, proximo - anterior) + "%" })]) : null,
+      ], { acoes: pode(ctx) ? [
+        botao("+ XP", function () { var v = T().numero("XP", 0); janela("Somar XP", [v, linha("Desafio: ND × 1.000 dividido pelo grupo; empate metade, derrota um quarto (p. 326).")], [{ rotulo: "Cancelar", classe: "r-botao--fantasma" }, { rotulo: "Somar", classe: "r-botao--principal", aoClicar: function (f) { op(ctx, function (t) { R().adicionarXp(t, T().lerNumero(v, 0)); return ok(); }); f(); } }]); }, { classe: "r-botao--fantasma" }),
+        botao("Subir de nível", function () { dialogoSubir(ctx); }, { classe: sobe.ok ? "r-botao--principal" : "", motivo: sobe.ok ? "" : sobe.motivo }),
+      ] : null }),
+      T().secao("Níveis", [
+        el("ol.t20-niveis", {}, b.niveis.map(function (n, i) {
+          var cl = CL().CLASSE[n.classe];
+          var nc = b.niveis.slice(0, i + 1).filter(function (x) { return x.classe === n.classe; }).length;
+          var hab = cl ? (cl.tabela[nc] || []).map(function (h) { return h === "poder" ? "Poder: " + (n.escolhas.poder && n.escolhas.poder.id ? R().nomeDoPoder(n.escolhas.poder.id, n.classe) : "—") : (cl.habilidades[h] || {}).nome || h; }).join(", ") : "";
+          return el("li", {}, [el("span.t20-niveis__n", { texto: String(i + 1) }), el("strong", { texto: nomeClasse(n.classe) + " " + nc }), el("span.t-mini", { texto: hab })]);
+        })),
+      ], { acoes: pode(ctx) && b.niveis.length > 1 ? [botao("Desfazer o último", function () { UI().confirmar({ titulo: "Desfazer o último nível?", texto: "As escolhas desse nível se perdem; a XP fica.", rotuloConfirmar: "Desfazer" }).then(function (s) { if (s) op(ctx, function (t) { return R().desfazerUltimoNivel(t); }); }); }, { classe: "r-botao--fantasma" })] : null }),
+      el("div.t20-colunas", {}, [
+        T().secao("Atributos base", [
+          el("div.t20-atributos-base", {}, R().ATR.map(function (a) { var n = T().numero(T().siglaAtr(a), b.atributosBase[a], { desabilitado: !(pode(ctx) && ctx.emEdicao()) }); n.entrada.addEventListener("change", function () { var v = T().lerNumero(n, 0); op(ctx, function (t) { t.atributosBase[a] = v; return ok(); }); }); return n; })),
+          el("p.t20-legenda", { texto: (b.metodo === "pontos" ? "Compra de pontos" : b.metodo === "rolagem" ? "Rolagem (" + b.rolagens.join(", ") + ")" : "Livre") + ". Sem raça nem aumentos; mudar recalcula PV, PM e perícias, mantendo o dano." + (ctx.emEdicao() ? "" : " Para corrigir, use o modo Edição.") }),
+        ]),
+        T().secao("Perícias pela Inteligência", [
+          el("p.t20-legenda", { texto: "Inteligência " + c.atr["int"] + ": " + Math.max(0, c.atr["int"]) + " perícia(s) treinada(s) a mais (p. 17)." }),
+          pode(ctx) ? E().campo({ id: "int", tipo: "pericia", quantidade: Math.max(0, c.atr["int"]) }, b.periciasInt, function (v) { op(ctx, function (t) { t.periciasInt = v; return ok(); }); }, {}) : el("p", { texto: b.periciasInt.map(R().nomePericia).join(", ") || "Nenhuma." }),
+        ]),
       ]),
-      T().painel("Níveis", [
-        el("ol.t20-niveis", {}, b.niveis.map(function (n, i) { var cl = CL().CLASSE[n.classe]; var nc = b.niveis.slice(0, i + 1).filter(function (x) { return x.classe === n.classe; }).length; var hab = cl ? (cl.tabela[nc] || []).map(function (h) { return h === "poder" ? "Poder: " + (n.escolhas.poder && n.escolhas.poder.id ? R().nomeDoPoder(n.escolhas.poder.id, n.classe) : "—") : (cl.habilidades[h] || {}).nome || h; }).join(", ") : ""; return el("li", { texto: nomeClasse(n.classe) + " " + nc + " — " + hab }); })),
-        pode(ctx) && b.niveis.length > 1 ? botao("Desfazer o último nível", function () { UI().confirmar({ titulo: "Desfazer o último nível?", texto: "As escolhas desse nível se perdem; a XP fica.", rotuloConfirmar: "Desfazer" }).then(function (s) { if (s) op(ctx, function (t) { return R().desfazerUltimoNivel(t); }); }); }, { classe: "r-botao--fantasma" }) : null,
-      ]),
-      T().painel("Atributos base", [el("p.t-mini", { texto: "Método: " + (b.metodo === "pontos" ? "compra de pontos" : b.metodo === "rolagem" ? "rolagem (" + b.rolagens.join(", ") + ")" : "livre") + ". Mudanças recalculam PV, PM, perícias e ataques; o dano sofrido é mantido." }),
-        el("div.t20-atributos-base", {}, R().ATR.map(function (a) { var n = T().numero(T().nomeAtr(a), b.atributosBase[a], { desabilitado: !(pode(ctx) && ctx.emEdicao()) }); n.entrada.addEventListener("change", function () { var v = T().lerNumero(n, 0); op(ctx, function (t) { t.atributosBase[a] = v; return ok(); }); }); return n; })),
-        !ctx.emEdicao() ? linha("Para corrigir valores base, use o modo Edição.") : null]),
-      T().painel("Perícias pela Inteligência e ofícios", [
-        linha("Inteligência " + c.atr["int"] + ": " + Math.max(0, c.atr["int"]) + " perícia(s) treinada(s) a mais (p. 17). Atuais: " + (b.periciasInt.map(R().nomePericia).join(", ") || "nenhuma") + "."),
-        pode(ctx) ? E().campo({ id: "int", tipo: "pericia", quantidade: Math.max(0, c.atr["int"]) }, b.periciasInt, function (v) { op(ctx, function (t) { t.periciasInt = v; return ok(); }); }, {}) : null,
-        linha("Ofícios conhecidos sem treino: " + (b.oficios.join(", ") || "nenhum") + ". Treino em Ofício vem de classe, origem ou Inteligência (escolha a especialização)."),
-        pode(ctx) ? T().selecao("Somar ofício à lista", [{ valor: "", rotulo: "—" }].concat(D().OFICIOS.map(function (o) { return { valor: o.chave, rotulo: o.nome }; })), "", function (v) { if (v) op(ctx, function (t) { if (t.oficios.indexOf(v) < 0) t.oficios.push(v); return ok(); }); }) : null,
-      ]),
-      T().painel("Opções", [
-        el("label.r-marca", {}, [el("input", { type: "checkbox", checked: !!b.opcoes.envelhecimento, disabled: !pode(ctx), onchange: function (ev) { var v = ev.currentTarget.checked; op(ctx, function (t) { t.opcoes.envelhecimento = v; return ok(); }); } }), el("span", { texto: "Envelhecimento (p. 106): aplica os modificadores de idade" })]),
-        pode(ctx) ? T().numero("Idade", b.idade === null ? "" : b.idade) : null,
+      T().secao("Mais", [
+        el("label.r-marca", {}, [el("input", { type: "checkbox", checked: !!b.opcoes.envelhecimento, disabled: !pode(ctx), onchange: function (ev) { var v = ev.currentTarget.checked; op(ctx, function (t) { t.opcoes.envelhecimento = v; return ok(); }); } }), el("span", { texto: "Envelhecimento (p. 106)" })]),
+        el("p.t20-legenda", { texto: "Ofícios conhecidos sem treino: " + (b.oficios.join(", ") || "nenhum") + "." }),
+        pode(ctx) ? T().selecao("Somar ofício conhecido", [{ valor: "", rotulo: "—" }].concat(D().OFICIOS.map(function (o) { return { valor: o.chave, rotulo: o.nome }; })), "", function (v) { if (v) op(ctx, function (t) { if (t.oficios.indexOf(v) < 0) t.oficios.push(v); return ok(); }); }) : null,
         pode(ctx) && global.RAMATormenta20Criar ? botao("Refazer escolhas da criação", function () { global.RAMATormenta20Criar.abrir({ ctx: ctx }); }, { classe: "r-botao--fantasma" }) : null,
+        b.historico.length ? UI().recolhivel({ titulo: "Histórico (" + b.historico.length + ")", conteudo: [el("ol.t20-lista", { reversed: true }, b.historico.slice().reverse().map(function (h) { return el("li", { texto: h.texto + " · " + (h.quando || "").slice(0, 10) }); }))] }) : null,
       ]),
-      b.historico.length ? T().painel("Histórico", [el("ol.t20-lista", { reversed: true }, b.historico.slice().reverse().map(function (h) { return el("li", { texto: h.texto + " · " + (h.quando || "").slice(0, 10) }); }))]) : null,
     ]);
   }
   /* Subir de nível: classe (a mesma ou outra), habilidades do novo nível

@@ -118,6 +118,29 @@
 
   var CHANGELOG = [
     {
+      versao: "8.1.0",
+      codinome: "ESTANDARTE",
+      data: "12/11/2026",
+      mudancas: {
+        "Melhorado": [
+          "A ficha de Tormenta20 foi reorganizada pela ficha oficial. No topo: raça, origem, classe e divindade como num formulário, a barra de XP, os seis atributos (clique para rolar), Pontos de Vida e de Mana com o atual em destaque, a Defesa num escudo e deslocamento, penalidade, carga, tamanho e CD de magia num quadro só.",
+          "As ações principais (Teste, Atacar, Lançar magia, Manobra) ficam à esquerda; a rotina do turno (início do turno, fim de cena, descanso, condição) fica à direita, mais discreta.",
+          "De onde vem cada número abre num balão pelo “i”, sem empurrar a tela.",
+          "As abas viraram Combate, Perícias, Habilidades, Magias, Equipamento, Parceiros, Progressão e Anotações.",
+          "Combate: a tabela de ataques como a da ficha (teste, dano, crítico, tipo, alcance), em que o teste é o botão de atacar, e as resistências e condições lado a lado.",
+          "Perícias: a coluna da ficha oficial (total, ½ nível, atributo, treino, outros), em duas colunas. ● marca as treinadas; o total rola na hora e o nome abre o teste com CD e usos.",
+          "Habilidades: raça e origem, classe e poderes, sem as entradas técnicas que se repetiam. O caminho, a linhagem ou a escolha feita aparece no nome.",
+          "Magias: atributo-chave, CD e limite em cima, e cartas por círculo com custo, execução, alcance, duração e a descrição sob demanda.",
+          "Equipamento: tibares, carga e itens vestidos em destaque. Cada item tem um seletor de onde está e um menu ⋯ com usar, editar, vender e remover.",
+          "A criação ficou mais direta: passos clicáveis com ✓, a compra de atributos em quadros com os pontos restantes em destaque, raças, origens, classes e divindades em cartas com os detalhes da escolhida embaixo, as magias iniciais com a descrição, e um resumo ao lado que mostra atributos, PV, PM e Defesa enquanto você escolhe.",
+        ],
+        "Visual": [
+          "O jeito de Tormenta, com as cores do tema: quadros com a faixa de pincel vermelha sob o título e cantos marcados, atributos com a sigla sobre o traço vermelho, a Defesa em escudo, dourado nas perícias treinadas. No celular, as ações ficam fixas na base, PV e PM lado a lado e o resumo da criação numa linha.",
+        ],
+        "Técnico": ["Só o site: js/tormenta20/telas/ficha-t20.js, t20-criar.js e t20-comum.js (rolavel e secao), js/sistemas.js (nomes das abas), css/tormenta20.css e css/modern20/tormenta20.css. Nada de .gs nem de schema."],
+      },
+    },
+    {
       versao: "8.0.1",
       codinome: "FRONTISPÍCIO",
       data: "12/11/2026",
