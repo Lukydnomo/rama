@@ -533,3 +533,111 @@ Servidor: troque **Ordem2.gs** e crie uma versão nova da implantação.
 `js/ordem2/telas/campanha-o2.js`, `js/sistemas.js`, `css/ordem2.css`,
 `css/modern20/ordem2.css`, `js/versao.js` e as páginas `ficha/`, `campanha/`,
 `personagens/`, `catalogo/`.
+
+## v9.3 — criação em etapas e progressão do 1 ao 10
+
+### Criação: só o que se decide agora (`js/ordem2/telas/o2-criar.js`)
+
+Primeira tela "Como você quer criar?", com três opções visíveis e nenhuma
+escolhida (a guiada em destaque, com o selo Experimental). Etapas:
+
+| Modo | Etapas |
+|---|---|
+| Criação guiada | Identidade → Atributos → Perícias → Habilidades e recursos → Revisão |
+| Ficha pronta | Escolher ficha → Revisão |
+| Criação livre | Identidade → Dados e recursos → Revisão |
+
+- "Passo X de Y", a sequência das etapas no desktop (▶ atual, ✓ feita, "(a
+  seguir)") e só a contagem no celular; Voltar/Continuar no rodapé;
+  Criar/Copiar só na revisão, que tem "Editar" por seção e "Voltar à revisão".
+- Um rascunho por modo enquanto o assistente está aberto; trocar a versão diz o
+  que depende dela (perícias de outra lista, ocupação, especialização) e só
+  limpa com confirmação — nome, perfil, atributos e recursos ficam.
+- Campanha: a versão das regras dela é lida da mesa (`ler_ordem2`); havendo
+  divergência, aviso com "Usar a versão da campanha" ou "Criar sem campanha".
+  Ficha pronta nunca é convertida.
+- Guiada: atributos com −/+ (d6, 2 passos, teto d10); perícias agrupadas pelo
+  atributo-base, busca, "Ver só as melhoradas", contador preso, próximo dado e
+  o motivo de não poder subir; Aptidão com especialização; habilidade de perfil
+  em destaque, a de ocupação quando documentada ou "Definir depois"; 16 PV / 12
+  PD como referência experimental editável. Passos sobrando: a revisão pede
+  confirmação (o motor permite). Validação final: `conferirGuiada`/`deGuiada`.
+- Pronta: filtro Alpha/Beta; cartão com nome, perfil, nível, PV e PD; a prévia
+  abre só do escolhido (resumo primeiro; perícias, habilidades, equipamento,
+  relações e procedência em detalhes). Nome digitado à mão não é sobrescrito ao
+  trocar de ficha. `dePreset()` dá ids próprios à cópia.
+- Livre: nível inicial 1–10 sem melhorias retroativas; dados e recursos diretos.
+- Sair com alterações pergunta (continuar ou descartar). O envio bloqueia o
+  clique duplo, mantém o rascunho se falhar e repete com o MESMO `operacaoId`
+  enquanto nada mudou (o servidor devolve a ficha da primeira tentativa).
+
+### Progressão: um caminho só (`js/ordem2/telas/o2-evolucao.js`)
+
+**Progressão experimental do RAMA** — os playtests não trazem tabela.
+
+- Entrada: ao lado do NÍVEL, "Ver progressão" ou a ação pendente ("Escolher
+  melhoria para o nível 4"); aba **Evolução** na navegação (nível atual e
+  próximo, estado, uma ação principal, a escolha, a trilha 1–10 em lista, o
+  histórico, o modo e o NEX em detalhes). A edição direta do nível saiu de
+  Identidade; o patamar continua à parte.
+- Por marcos (2 a 10): uma melhoria à escolha em cada subida — +1 passo num
+  atributo, +1 passo numa perícia, +PV/+PD máximos (padrão +2) ou uma
+  habilidade aprovada. Teto do valor permanente (padrão d12), sem d20; máximo
+  maior mantém os atuais; prévia específica ("Mente d8 → d10", "PV máx. 16 →
+  18; PV atuais continuam 9"); indisponível com o motivo na opção.
+- Patamar sugerido para a mesa (1–3 Iniciante, 4–6 Veterano, 7–9 Elite, 10
+  Lenda) só em detalhes: nunca aplicado; vale o registrado na ficha.
+- Campanha: o Mestre libera o marco na mesa; quem joga escolhe; habilidade
+  proposta mostra "Aguardando aprovação"; recusa volta à escolha sem perder o
+  marco; cancelar não concede nada. Ficha avulsa: o dono escolhe o modo ("por
+  marcos" recomendado ali), sobe e escolhe, sem aprovação. Campanha carregando
+  ou sem a mesa: sem controles locais. Leitor: o estado, sem controles.
+- Histórico: data, origem, nível anterior/novo e antes/depois; desfazer só o
+  último aplicável, com prévia; nunca devolve dano nem PD gastos.
+
+**Servidor (regras conferidas, não confiadas ao navegador):**
+
+- `subirNivel` exige o modo "por marcos" da mesa (o atalho `local` vindo do
+  navegador acabou; a ficha avulsa liga o modo na mesa local) e aceita
+  `nivelAntes` para recusar tela desatualizada.
+- `escolherMelhoria`, `aprovarHabilidade` e `cancelarSubida` aceitam
+  `pendente` (o id do marco) e recusam marco trocado; com proposta aguardando,
+  quem joga não escolhe outra por cima; habilidade personalizada exige nome e
+  efeito.
+- `definirNivel` e `desfazerEvolucao` recusam com marco pendente; mudar a
+  configuração não mexe num marco (ele guarda a sua).
+- `salvar_personagem` numa campanha de Ordem II mantém `nivel`, `evolucao` e
+  as habilidades com `origemEvolucao` gravados (`preservarEvolucaoDeOrdem2`,
+  Ordem2.gs, chamado por Codigo.gs). Aba antiga: a rev recusa (`conflito`).
+
+### Validação v9.3
+
+Automática:
+
+- `testes/executar-ordem2-etapa4.js` (novo) — presets com os números de origem
+  (Rhiona 22/12, os 14), guiada (orçamentos, tetos, devolução, Aptidão,
+  versões), progressão do 1 ao 10 (pendência por id, nível manual e desfazer
+  bloqueados com marco, configuração congelada, ferida com máximo maior,
+  habilidade proposta/recusada/aprovada, teto permanente, exportar/importar no
+  meio do marco, desfazer com dependência, nível 10), modo livre e ficha antiga.
+- `testes/ordem2-backend.js` — aba antiga recusada; nível, evolução e
+  habilidade "ganha" adulterados ignorados na gravação comum; marco antigo,
+  nível manual e `local: true` recusados; cancelar sem ganho.
+
+Na interface (servidor local, contas sintéticas): os três modos de ponta a
+ponta (desktop Legacy; celular 375 px; Modern20), troca Alpha/Beta com
+confirmação, divergência de campanha, teclado nos −/+, busca com foco
+preservado, "Editar" e "Voltar à revisão", falha simulada no envio + clique
+duplo + reenvio = uma ficha; na campanha com outra conta como Mestre: marco
+liberado, escolha com prévia, habilidade proposta → aguardando → recusada →
+escolha de novo, PV máx. com atuais preservados; leitor sem controles; ficha
+avulsa: "por marcos" recomendado, subir, escolher, desfazer com prévia.
+
+### Publicar a v9.3
+
+Servidor: troque **Ordem2.gs** e **Codigo.gs** e crie uma versão nova da
+implantação (a proteção da gravação comum mora nos dois). `setupRama()` não é
+necessário; `Ordem2Pacotes` não mudou. Site: `js/ordem2/evolucao.js`,
+`js/ordem2/telas/` (`o2-criar.js`, o novo `o2-evolucao.js`, `o2-paranormal.js`,
+`ficha-o2.js`, `campanha-o2.js`), `js/sistemas.js`, `css/ordem2.css`,
+`css/modern20/ordem2.css`, `js/versao.js` e as páginas `ficha/` e `campanha/`.

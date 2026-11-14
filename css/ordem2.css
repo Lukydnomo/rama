@@ -464,3 +464,120 @@
   .o2-caixa { width: 0.7rem; height: 0.7rem; }
   .o2-cab__nome .r-entrada, .o2-cab__nome h1 { font-size: 1.6rem; }
 }
+
+/* ------------------------------------------- criação em etapas (v9.3)
+   "Como você quer criar?", a sequência de etapas (texto: ▶ atual, ✓
+   feita, "(a seguir)"), o conteúdo da etapa com um resumo lateral curto e
+   o rodapé com Voltar/Continuar preso no fim da janela. No celular, uma
+   coluna, "Passo X de Y" e o resumo recolhível. */
+.o2-assist { display: flex; flex-direction: column; gap: var(--e3); min-width: 0; }
+.o2-assist__titulo { margin: 0; font-size: var(--texto-grande, 1.25rem); }
+.o2-assist__titulo:focus-visible { outline: 2px solid var(--cor-foco); outline-offset: 2px; }
+.o2-assist__modos { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 1fr)); gap: var(--e3); }
+.o2-assist__modo {
+  display: flex; flex-direction: column; align-items: flex-start; gap: var(--e1);
+  padding: var(--e3); text-align: left; font: inherit; color: var(--cor-texto);
+  background: var(--cor-superficie); border: var(--borda) solid var(--cor-traco-media); cursor: pointer;
+}
+.o2-assist__modo:hover { border-color: var(--o2-acento); }
+.o2-assist__modo:focus-visible { outline: 2px solid var(--cor-foco); outline-offset: 2px; }
+.o2-assist__modo--destaque { border: 2px solid var(--o2-acento); }
+.o2-assist__modo-titulo { font-size: var(--texto-medio); font-weight: 700; }
+.o2-assist__modo-texto { margin: 0; }
+.o2-assist__destaque { border-color: var(--o2-acento); }
+.o2-assist__rascunho { color: var(--cor-aviso); }
+.o2-assist .o2-preset__marca { position: static; font-size: var(--texto-mini); }
+.o2-assist__cabeca { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--e2); }
+.o2-assist__modo-atual { margin: 0; display: flex; gap: var(--e2); align-items: center; }
+.o2-assist__passos { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: var(--e1) var(--e3); font-size: var(--texto-mini); }
+.o2-assist__passo { padding: 2px var(--e2); border-bottom: 2px solid var(--cor-traco-fraca); }
+.o2-assist__passo--atual { border-bottom-color: var(--o2-acento); font-weight: 700; }
+.o2-assist__passo--futura { color: var(--cor-texto-3); }
+.o2-assist__passo-botao { font: inherit; color: var(--cor-texto); background: none; border: 0; padding: 0; text-decoration: underline; cursor: pointer; }
+.o2-assist__passo-botao:focus-visible { outline: 2px solid var(--cor-foco); outline-offset: 1px; }
+.o2-assist__contagem { margin: 0; font-size: var(--texto-mini); color: var(--cor-texto-2); }
+.o2-assist__grade { display: grid; grid-template-columns: minmax(0, 1fr) minmax(12rem, 16rem); gap: var(--e4); align-items: start; }
+.o2-assist__etapa { min-width: 0; }
+.o2-assist__resumo { position: sticky; top: 0; padding: var(--e2) var(--e3); border: var(--borda) solid var(--cor-traco-fraca); font-size: var(--texto-mini); }
+.o2-assist__resumo summary { cursor: pointer; font-weight: 700; }
+.o2-assist__rodape {
+  position: sticky; bottom: calc(-1 * var(--e4)); z-index: 2;
+  display: flex; flex-wrap: wrap; justify-content: space-between; gap: var(--e2);
+  margin-top: var(--e2); padding: var(--e2) 0;
+  background: var(--fundo-superficie, var(--cor-superficie)); border-top: var(--borda) solid var(--cor-traco-media);
+}
+.o2-assist__rodape .r-botao--principal { margin-left: auto; }
+.o2-assist__opcoes { margin: 0; padding: var(--e2) var(--e3); border: var(--borda) solid var(--cor-traco-fraca); display: flex; flex-direction: column; gap: var(--e1); min-width: 0; }
+.o2-assist__opcoes legend { font-size: var(--texto-mini); padding: 0 var(--e1); }
+.o2-assist__opcoes--linha { flex-direction: row; flex-wrap: wrap; gap: var(--e1) var(--e4); }
+.o2-assist__radio { display: flex; gap: var(--e2); align-items: flex-start; cursor: pointer; }
+.o2-assist__radio input { margin-top: 0.2em; flex: none; }
+.o2-assist__radio--cartao { padding: var(--e1) var(--e2); border: 1px solid var(--cor-traco-fraca); }
+.o2-assist__radio--cartao:has(input:checked) { border-color: var(--o2-acento); }
+.o2-assist__concede { display: block; color: var(--cor-texto); }
+.o2-assist__contador { font-weight: 700; }
+.o2-assist__contador--preso { position: sticky; top: 0; z-index: 1; padding: var(--e1) 0; background: var(--fundo-superficie, var(--cor-superficie)); }
+.o2-assist__atributos { display: flex; flex-direction: column; gap: var(--e2); }
+.o2-assist__atributo { display: grid; grid-template-columns: minmax(6rem, 1fr) auto auto auto minmax(7rem, auto); align-items: center; gap: var(--e2); padding: var(--e1) 0; border-bottom: 1px dotted var(--cor-traco-fraca); }
+.o2-assist__atributo-nome { font-size: var(--texto-medio); font-weight: 700; text-transform: uppercase; letter-spacing: var(--espaco-letra-titulo); }
+.o2-assist__grupo > summary { cursor: pointer; font-weight: 700; padding: var(--e1) 0; }
+.o2-assist__pericias { list-style: none; margin: 0; padding: 0; }
+.o2-assist__pericia { display: grid; grid-template-columns: minmax(0, 1fr) auto auto auto minmax(4.5rem, auto); align-items: center; gap: var(--e1) var(--e2); padding: 2px 0; border-bottom: 1px dotted var(--cor-traco-fraca); }
+.o2-assist__pericia .r-campo { grid-column: 1 / -1; margin: 0; }
+.o2-assist__pericia .o2-dado { --o2-tam: 1.7rem; }
+.o2-assist__pericia--melhorada .o2-assist__pericia-nome { font-weight: 700; }
+.o2-assist__proximo { color: var(--cor-texto-2); }
+.o2-assist__habilidade { padding: var(--e2) var(--e3); border: var(--borda) solid var(--cor-traco-fraca); }
+.o2-assist__habilidade--perfil { border-color: var(--o2-acento); }
+.o2-assist__secao { padding: var(--e2) var(--e3); border: var(--borda) solid var(--cor-traco-fraca); }
+.o2-assist__secao-topo { display: flex; justify-content: space-between; align-items: center; gap: var(--e2); }
+.o2-assist__secao-topo h4 { margin: 0; }
+.o2-erros-revisao { padding: var(--e2) var(--e3); border: var(--borda) solid var(--cor-erro); }
+.o2-erros-revisao ul { margin: 0; padding-left: var(--e4); display: flex; flex-direction: column; gap: var(--e1); }
+@media (prefers-reduced-motion: no-preference) {
+  .o2-assist__etapa { animation: o2-assist-entra var(--tempo-seco, 160ms) var(--curva, ease-out); }
+  @keyframes o2-assist-entra { from { opacity: 0.4; } to { opacity: 1; } }
+}
+@media (max-width: 760px) {
+  .o2-assist__passos { display: none; }
+  .o2-assist__grade { grid-template-columns: minmax(0, 1fr); }
+  .o2-assist__resumo { position: static; order: -1; }
+  .o2-assist__atributo { grid-template-columns: minmax(0, 1fr) auto auto auto; }
+  .o2-assist__atributo > .t-mini { grid-column: 1 / -1; }
+  .o2-assist__pericia { grid-template-columns: minmax(0, 1fr) auto auto auto; }
+  .o2-assist__proximo { grid-column: 1 / -1; }
+  .o2-assist__rodape .r-botao { flex: 1 1 auto; }
+}
+
+/* ------------------------------------------- progressão (v9.3) */
+.o2-nivel__acao {
+  font: inherit; font-size: var(--texto-mini); color: var(--cor-texto); background: none; cursor: pointer;
+  padding: 2px var(--e2); border: 1px solid var(--cor-traco-media); text-transform: none; letter-spacing: 0;
+}
+.o2-nivel__acao:hover { border-color: var(--o2-acento); }
+.o2-nivel__acao:focus-visible { outline: 2px solid var(--cor-foco); outline-offset: 1px; }
+.o2-nivel__acao--pendente { border: 2px solid var(--o2-acento); font-weight: 700; }
+.o2-nivel__acao--pendente::before { content: "● "; color: var(--o2-acento); }
+.o2-nivel-leitura { display: flex; flex-wrap: wrap; align-items: center; gap: var(--e2); }
+.o2-evo-cartao { display: flex; flex-direction: column; gap: var(--e1); padding: var(--e2) var(--e3); border: var(--borda) solid var(--cor-traco-media); }
+.o2-evo-cartao__niveis { margin: 0; }
+.o2-evo-topo { display: flex; flex-direction: column; gap: var(--e2); padding: var(--e3); border: 2px solid var(--o2-acento); }
+.o2-evo-topo__niveis { display: flex; gap: var(--e4); }
+.o2-evo-nivel { display: flex; flex-direction: column; }
+.o2-evo-nivel__rotulo { font-family: var(--fonte-mini); font-size: var(--texto-mini); text-transform: uppercase; letter-spacing: var(--espaco-letra-titulo); color: var(--cor-texto-2); }
+.o2-evo-nivel__valor { font-size: 2rem; font-weight: 700; line-height: 1.1; font-variant-numeric: tabular-nums; }
+.o2-evo-topo__estado { margin: 0; font-weight: 700; }
+.o2-evo-topo > .r-botao { align-self: flex-start; }
+.o2-evo-escolha { display: flex; flex-direction: column; gap: var(--e2); padding: var(--e3); border: var(--borda) solid var(--o2-acento); scroll-margin-top: var(--e8, 4rem); }
+.o2-evo-grupo { margin: 0; padding: var(--e2) var(--e3); border: var(--borda) solid var(--cor-traco-fraca); display: flex; flex-direction: column; gap: var(--e1); min-width: 0; }
+.o2-evo-grupo legend { font-size: var(--texto-mini); padding: 0 var(--e1); }
+.o2-evo-opcao { display: flex; gap: var(--e2); align-items: flex-start; cursor: pointer; }
+.o2-evo-opcao input { margin-top: 0.2em; flex: none; }
+.o2-evo-opcao--indisponivel { color: var(--cor-texto-3); cursor: default; }
+.o2-trilha-niveis { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.o2-trilha-nivel { display: grid; grid-template-columns: 3rem minmax(0, 1fr); gap: var(--e2); padding: var(--e1) 0; border-bottom: 1px dotted var(--cor-traco-fraca); }
+.o2-trilha-nivel__n { font-weight: 700; font-variant-numeric: tabular-nums; }
+.o2-trilha-nivel--atual { background: var(--fundo-superficie-2, var(--cor-superficie-2)); }
+.o2-trilha-nivel--atual .o2-trilha-nivel__n, .o2-trilha-nivel--pendente .o2-trilha-nivel__n { color: var(--o2-acento); }
+.o2-trilha-nivel--futuro { color: var(--cor-texto-2); }
+.o2-mesa__evo-estado { margin: 0; }

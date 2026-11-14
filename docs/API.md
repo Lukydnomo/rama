@@ -11,6 +11,19 @@
   permite o suplemento dono da ferramenta (desligar a mecânica com
   `estado.ativo: false` continua aceito). As leituras não mudam.
 
+## Ordem Paranormal RPG II · progressão — v9.3
+
+- `subirNivel {personagem, nivelAntes?}` — só no modo "por marcos" da mesa
+  (o campo `local` deixou de valer); `nivelAntes` diferente do atual: recusa.
+- `escolherMelhoria`, `aprovarHabilidade`, `cancelarSubida` aceitam `pendente`
+  (id do marco) e recusam marco trocado; com proposta aguardando, quem joga não
+  escolhe outra. Habilidade personalizada exige `nome` e `texto`.
+- `definirNivel` e `desfazerEvolucao` recusam com marco pendente.
+- `personagens[].resumo.evolucao` ganha `pendente.id`, `pendente.nivelAntes` e
+  `desfazivel` (o registro que dá para desfazer agora).
+- `salvar_personagem` (Codigo.gs): numa campanha de Ordem II, `ordem2.nivel`,
+  `ordem2.evolucao` e as habilidades com `origemEvolucao` ficam os gravados.
+
 ## Ordem Paranormal RPG II · evolução e paranormal — v9.2
 
 Mesmas rotas (`ler_ordem2`, `ordem2_operar` com `opId`); novos tipos de

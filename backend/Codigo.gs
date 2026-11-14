@@ -2929,6 +2929,11 @@ function acaoSalvarPersonagem(corpo, usuario) {
       registro.campanhaId = campanhaValida(ficha.campanhaId, usuario);
     }
     ficha.campanhaId = registro.campanhaId || null;
+    /* v9.3: numa campanha de Ordem II, nível e evolução só mudam pela mesa. */
+    if (typeof preservarEvolucaoDeOrdem2 === 'function' && ficha.ordem2 && registro.campanhaId) {
+      if (!anterior) anterior = lerFichaDoPersonagem(registro);
+      preservarEvolucaoDeOrdem2(ficha, registro, anterior);
+    }
     registro.classe = String(ficha.classe || '').slice(0, 80);
     registro.origem = String(ficha.origem || '').slice(0, 80);
     registro.atualizadoEm = agora;

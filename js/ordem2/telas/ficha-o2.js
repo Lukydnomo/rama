@@ -74,6 +74,7 @@
             el("span.o2-perfil-tag", { texto: x.perfil ? K().PERFIS[x.perfil].nome : "Sem perfil" }),
             el("span.o2-cab__ocupacao", { texto: x.ocupacao.nome || "sem " + pr.termoOcupacao.toLowerCase() }),
             el("span.o2-nivel", { role: "img", "aria-label": "Nível " + x.nivel }, [el("span.o2-nivel__rotulo", { "aria-hidden": "true", texto: "Nível" }), el("span.o2-nivel__caixa", { "aria-hidden": "true", texto: String(x.nivel) })]),
+            global.RAMAOrdem2EvolucaoTela ? global.RAMAOrdem2EvolucaoTela.ficha.acaoNoTopo(ctx) : null,
           ]),
           el("p.t-mini.o2-cab__amb", {}, [
             el("span.o2-variante", { title: pr.texto, texto: pr.nome }),
@@ -214,7 +215,7 @@
     var x = b(ctx);
     var ed = edita(ctx);
     var geral = global.RAMASecaoGeral;
-    var tela = global.RAMAOrdem2ParanormalTela;
+    var tela = global.RAMAOrdem2EvolucaoTela;
     var atributos = el("div.o2-livro-atributos", {}, K().ORDEM_ATRIBUTOS.map(function (k) {
       var f = R().dadoDoAtributo(x, k), base = x.base.atributos[k];
       var nome = K().ATRIBUTOS[k].nome;
@@ -271,7 +272,7 @@
         ]),
         el("section.o2-livro__centro", { "aria-label": "Retrato e nível" }, [
           geral && geral.foto ? el("div.o2-livro__retrato", {}, [geral.foto(ctx)]) : null,
-          tela ? tela.ficha.evolucao(ctx) : null,
+          tela ? tela.ficha.cartao(ctx) : null,
         ]),
         el("section.o2-livro__dir", { "aria-label": "Habilidades" }, [
           tag("Habilidades"),
@@ -293,7 +294,8 @@
       el("div.o2-criar__campos", {}, [
         UI().campo({ rotulo: "Perfil", tipo: "selecao", valor: x.perfil, desabilitado: !ed, opcoes: [{ valor: "", rotulo: "—" }].concat(K().ORDEM_PERFIS.map(function (k) { return { valor: k, rotulo: K().PERFIS[k].nome }; })), aoMudar: function (v) { x.perfil = v; alterou(ctx); } }),
         UI().campo({ rotulo: pr.termoOcupacao, valor: x.ocupacao.nome, limite: 80, desabilitado: !ed, aoMudar: function (v) { x.ocupacao.nome = String(v).slice(0, 80); alterou(ctx); } }),
-        UI().campo({ rotulo: "Nível", tipo: "selecao", valor: String(x.nivel), desabilitado: !ed, opcoes: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(function (n) { return { valor: String(n), rotulo: String(n) }; }), aoMudar: function (v) { x.nivel = Number(v); alterou(ctx); } }),
+        /* v9.3: o nível só muda pela aba Evolução (operações da mesa). */
+        el("div.o2-nivel-leitura", {}, [el("span.t-mini", { texto: "Nível " + x.nivel + " — muda pela aba Evolução." }), ctx.irParaAba ? botao("Abrir Evolução", function () { ctx.irParaAba("evolucao"); }) : null]),
         UI().campo({ rotulo: "Patamar (bônus em lesão/trauma)", tipo: "selecao", valor: x.patamar, desabilitado: !ed, opcoes: Object.keys(K().PATAMARES).map(function (k) { return { valor: k, rotulo: K().PATAMARES[k].nome + (K().PATAMARES[k].bonus ? " (+" + K().PATAMARES[k].bonus + ")" : "") }; }), ajuda: "O playtest não define patamares: sem informar, +0.", aoMudar: function (v) { x.patamar = v; alterou(ctx); } }),
       ]),
       el("div.o2-criar__campos", {}, [

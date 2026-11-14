@@ -276,6 +276,7 @@
         blocoSuperior: "RAMASecaoOrdem2",
         abas: [
           { chave: "geral",        rotulo: "Ficha",        secao: "RAMASecaoOrdem2", grupo: "jogo" },
+          { chave: "evolucao",     rotulo: "Evolução",     secao: "RAMASecaoOrdem2Evolucao", grupo: "jogo" },
           { chave: "habilidades",  rotulo: "Habilidades",  secao: "RAMASecaoOrdem2Habilidades", grupo: "jogo" },
           { chave: "paranormal",   rotulo: "Paranormal",   secao: "RAMASecaoOrdem2Paranormal", grupo: "jogo" },
           { chave: "investigacao", rotulo: "Investigação", secao: "RAMASecaoOrdem2Investigacao", grupo: "jogo" },

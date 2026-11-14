@@ -118,6 +118,26 @@
 
   var CHANGELOG = [
     {
+      versao: "9.3.0",
+      codinome: "DEGRAU",
+      data: "14/11/2026",
+      mudancas: {
+        "Adicionado": [
+          "Criação de Ordem II em etapas: primeiro \"Como você quer criar?\" (guiada, ficha pronta ou livre), depois uma escolha por vez, com \"Passo X de Y\", Voltar e Continuar e uma revisão com \"Editar\" em cada seção. Cada modo guarda o próprio rascunho enquanto a janela está aberta.",
+          "Na guiada: atributos com − e +, perícias agrupadas pelo atributo com busca e \"Ver só as melhoradas\", o contador de passos sempre à vista e o motivo de não poder subir. Trocar entre Alpha e Beta diz o que muda e pede confirmação. Se a campanha usa outra versão, aparece o aviso, com as duas correções.",
+          "Na ficha pronta: filtro Alpha/Beta, a prévia só do personagem escolhido (detalhes abertos quando você quiser) e o nome editável antes de copiar.",
+          "Progressão de Ordem II do nível 1 ao 10 numa aba Evolução: o nível atual e o próximo, o que falta fazer, a escolha da melhoria com prévia (\"Mente d8 → d10\", \"PV máx. 16 → 18; PV atuais continuam 9\"), a trilha nível a nível e o histórico com desfazer. Ao lado do NÍVEL, \"Ver progressão\" ou a ação pendente.",
+          "Na campanha, o Mestre libera o marco na mesa, aprova ou recusa a habilidade proposta e pode cancelar o marco. A recusa volta para a escolha, sem perder o marco. Na ficha sem campanha, o dono ativa \"por marcos\" (recomendado) e sobe de nível ali mesmo.",
+        ],
+        "Corrigido": [
+          "O nível de Ordem II não muda mais pela Identidade, contornando os registros: só pela aba Evolução.",
+          "Uma gravação comum da ficha, de uma aba antiga ou adulterada, não altera mais o nível nem a evolução de um personagem numa campanha de Ordem II.",
+          "Criar uma ficha de Ordem II com a conexão instável não gera mais duas fichas: tentar de novo repete o mesmo envio.",
+        ],
+        "Técnico": ["Novo js/ordem2/telas/o2-evolucao.js (a evolução saiu de o2-paranormal.js); o2-criar.js reescrito como assistente. O servidor confere o modo, o id do marco e o nível (subirNivel não aceita mais o atalho local do navegador) e preserva nível e evolução na gravação comum (Codigo.gs + Ordem2.gs). Novo testes/executar-ordem2-etapa4.js."],
+      },
+    },
+    {
       versao: "9.2.0",
       codinome: "SIGILO",
       data: "14/11/2026",

@@ -61,4 +61,21 @@
   & .o2-pericia__rolar { border-radius: var(--m20-raio-controle); font-family: inherit; letter-spacing: 0; }
   & .o2-livro-atr { border-radius: var(--m20-raio-controle); }
   & .o2-habilidade { border-top-color: var(--o2-acento); }
+  /* v9.3: criação em etapas e progressão */
+  & .o2-assist__modo,
+  & .o2-assist__opcoes,
+  & .o2-assist__radio--cartao,
+  & .o2-assist__resumo,
+  & .o2-assist__habilidade,
+  & .o2-assist__secao,
+  & .o2-erros-revisao,
+  & .o2-evo-cartao,
+  & .o2-evo-topo,
+  & .o2-evo-escolha,
+  & .o2-evo-grupo,
+  & .o2-nivel__acao { border-radius: var(--m20-raio-controle); }
+  & .o2-assist__modo, & .o2-assist__opcoes, & .o2-assist__resumo, & .o2-assist__secao, & .o2-evo-cartao, & .o2-evo-grupo { border-color: var(--m20-borda); }
+  & .o2-assist__modo--destaque, & .o2-evo-topo, & .o2-evo-escolha { border-color: var(--o2-acento); }
+  & .o2-assist__atributo-nome, & .o2-evo-nivel__rotulo { text-transform: none; letter-spacing: 0; font-weight: 600; }
+  & .o2-assist__rodape { box-shadow: var(--m20-sombra-1); }
 }

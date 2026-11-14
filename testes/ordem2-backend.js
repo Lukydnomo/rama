@@ -195,6 +195,29 @@ export async function testarOrdem2Backend({ t, preparar, novaConta, comoFn }) {
       const fAlan = fichaDe(A, fA);
       t.ok("subir de nível com o mesmo opId duas vezes: um nível e +2 PD uma vez", e1.ok && e2.repetida && fAlan.nivel === nivelAntes + 1 && fAlan.evolucao.registros.length === 1 && R.pdMax(fAlan) === fAlan.recursos.pd.max + 2);
       t.recusa("a jogadora não desfaz (é do Mestre)", op2(A, { tipo: "desfazerEvolucao", personagem: fA, registro: fAlan.evolucao.registros[0].id }), "sem_permissao");
+
+      /* v9.3: a gravação comum da ficha não contorna o marco. */
+      const lidaA = A({ acao: "ler_personagem", personagemId: fA });
+      const velha = JSON.parse(JSON.stringify(lidaA.dados));
+      const revVelha = lidaA.rev;
+      op2(M, { tipo: "subirNivel", personagem: fA, nivelAntes: fAlan.nivel });
+      const pendId = fichaDe(A, fA).evolucao.pendente.id;
+      t.recusa("aba antiga (rev velha) não sobrescreve o marco liberado pelo servidor", A({ acao: "salvar_personagem", personagemId: fA, rev: revVelha, dados: velha }), "conflito");
+      const atual = A({ acao: "ler_personagem", personagemId: fA });
+      const adulterada = JSON.parse(JSON.stringify(atual.dados));
+      adulterada.ordem2.nivel = 10;
+      adulterada.ordem2.evolucao = { nex: "", pendente: null, registros: [] };
+      adulterada.ordem2.habilidades.push({ id: "h-falsa", nome: "Falsa", texto: "x", origemEvolucao: "reg-falso" });
+      adulterada.ordem2.recursos.pv.atual = 1;
+      const sv = A({ acao: "salvar_personagem", personagemId: fA, rev: atual.rev, dados: adulterada });
+      const depoisSv = fichaDe(A, fA);
+      t.ok("nível e evolução mandados pela gravação comum são ignorados (ficam os do servidor)", sv.ok && depoisSv.nivel === fAlan.nivel && depoisSv.evolucao.pendente && depoisSv.evolucao.pendente.id === pendId && depoisSv.evolucao.registros.length === 1);
+      t.ok("…habilidade 'ganha' inventada não entra; o resto da gravação (PV atuais) vale", !depoisSv.habilidades.some((h) => h.id === "h-falsa") && depoisSv.recursos.pv.atual === 1);
+      t.recusa("escolher com o id de um marco antigo é recusado", op2(A, { tipo: "escolherMelhoria", quem: fA, pendente: "marco-velho", escolha: { tipo: "pv" } }), "dados_invalidos");
+      t.recusa("o Mestre não define nível por cima de um marco pendente", op2(M, { tipo: "definirNivel", personagem: fA, nivel: 9 }), "dados_invalidos");
+      t.recusa("subir com 'local: true' vindo do navegador não dispensa a regra da campanha", op2(M, { tipo: "subirNivel", personagem: fA, local: true }), "dados_invalidos");
+      op2(M, { tipo: "cancelarSubida", personagem: fA, pendente: pendId });
+      t.ok("cancelar o marco volta ao estado anterior, sem ganho", !fichaDe(A, fA).evolucao.pendente && fichaDe(A, fA).nivel === fAlan.nivel && fichaDe(A, fA).evolucao.registros.length === 1);
       op2(M, { tipo: "paranormalConfigurar", config: { ativo: true } }, id("par"), M({ acao: "ler_ordem2", campanhaId: c2 }).rev);
       op2(M, { tipo: "ritualSalvar", ritual: { id: "sopro", nome: "Sopro frio", classe: "experimental", complexidade: "simples", alvo: "proprio", efeitos: { normal: [{ tipo: "cura", valor: "1", recurso: "pd", quem: "proprio" }] } } });
       op2(M, { tipo: "ritualEnsinar", ritual: "sopro", para: [fA] });

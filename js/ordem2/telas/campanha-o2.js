@@ -35,6 +35,7 @@
   function T() { return global.RAMAOrdem2Tela; }
   function PT() { return global.RAMAOrdem2ProcTela; }
   function PN() { return global.RAMAOrdem2ParanormalTela; }
+  function EVT() { return global.RAMAOrdem2EvolucaoTela; }
 
   function botao(t, fn, o) { return T().botao(t, fn, o); }
   function linha(t) { return el("p.t-mini", { texto: t }); }
@@ -176,6 +177,7 @@
             botao("Condições…", function () { abrirCondicoes(p.id, p.nome, x); }),
             botao("Zerar contadores de lesão/trauma", function () { operar({ tipo: "corrigir", personagem: p.id, alvo: "contadores" }); }),
           ]),
+          EVT() ? EVT().mestre.personagem(m91(), p) : null,
           PN() ? PN().mestre.personagem(m91(), p) : null,
         ]);
       }));
@@ -406,7 +408,7 @@
         ]),
         botao("Salvar", function () { operar({ tipo: "configurar", perfil: st.perfil, ambientacao: st.ambientacao }); }, { classe: "r-botao--principal" }),
         UI.recolhivel({ titulo: "Divergências entre as fontes e decisões", conteudo: el("ul.pilha.pilha--curta", {}, K().DIVERGENCIAS.map(function (d) { return el("li.t-mini", {}, [el("strong", { texto: d.fontes + ": " }), el("span", { texto: d.texto + " → " + d.escolha })]); }).concat(K().DECISOES.map(function (d) { return el("li.t-mini", { texto: "Decisão: " + d.texto }); }))) }),
-      ])), PN() ? PN().mestre.config(m91()) : null]);
+      ])), EVT() ? EVT().mestre.config(m91()) : null, PN() ? PN().mestre.config(m91()) : null]);
     }
 
     /* =================================================================

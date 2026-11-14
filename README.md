@@ -929,6 +929,13 @@ segredo nenhum — ele os lê das Script Properties. Publicá-lo não expõe nad
 
 ### Atualizar o backend
 
+**v9.3.0 — DEGRAU:** criação de Ordem II em etapas e a progressão do 1 ao 10.
+Troque **`Ordem2.gs`** e **`Codigo.gs`** e crie uma versão nova da implantação.
+**`setupRama()` não é necessário** e `Ordem2Pacotes` não mudou. Site:
+`js/ordem2/evolucao.js`, `js/ordem2/telas/` (inclui o novo `o2-evolucao.js`),
+`js/sistemas.js`, `css/ordem2.css`, `css/modern20/ordem2.css`, `js/versao.js`
+e as páginas `ficha/` e `campanha/`. Detalhes em `docs/ORDEM2.md`.
+
 **v9.2.0 — SIGILO:** a ficha de Ordem II no estilo do livro, evolução e o
 módulo paranormal (experimentais). Troque `Ordem2.gs` e crie uma versão nova da
 implantação. **`setupRama()` não é necessário** e `Ordem2Pacotes` não mudou.
@@ -1964,7 +1971,7 @@ Três números diferentes, que não se misturam:
 
 | | Onde | O que é |
 |---|---|---|
-| versão do aplicativo | `js/versao.js` | o que a pessoa vê: v9.2.0 |
+| versão do aplicativo | `js/versao.js` | o que a pessoa vê: v9.3.0 |
 | `schemaVersion` | `js/ficha.js` | o formato da FICHA |
 | `versaoFormato` | `js/config.js` | o formato dos arquivos de importação |
 

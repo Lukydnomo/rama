@@ -112,11 +112,13 @@
     if (e.tipo === "pv" || e.tipo === "pd") {
       var n = e.tipo === "pv" ? cfg.pvPorEscolha : cfg.pdPorEscolha;
       var max = e.tipo === "pv" ? R().pvMax(b) : R().pdMax(b);
-      return { ok: true, ganho: { tipo: e.tipo, chave: "", n: n, de: String(max), para: String(max + n) }, rotulo: (e.tipo === "pv" ? "PV" : "PD") + " máximos: " + max + " → " + (max + n) + " (os atuais ficam como estão)" };
+      var atual = e.tipo === "pv" ? b.recursos.pv.atual : b.recursos.pd.atual;
+      return { ok: true, ganho: { tipo: e.tipo, chave: "", n: n, de: String(max), para: String(max + n) }, rotulo: (e.tipo === "pv" ? "PV" : "PD") + " máx. " + max + " → " + (max + n) + "; " + (e.tipo === "pv" ? "PV" : "PD") + " atuais continuam " + atual };
     }
     var h = obj(e.habilidade);
     var nome = texto(h.nome || (K().HABILIDADES[h.ref] || {}).nome, 80);
     if (!nome) return { ok: false, motivo: "Descreva a habilidade (nome e efeito)." };
+    if (!h.ref && !texto(h.texto, 1200).trim()) return { ok: false, motivo: "Escreva o efeito da habilidade personalizada." };
     return { ok: true, ganho: { tipo: "habilidade", chave: texto(h.ref, 60), n: 1, de: "", para: nome, habilidade: { ref: texto(h.ref, 60), nome: nome, texto: texto(h.texto || (K().HABILIDADES[h.ref] || {}).texto, 1200) } }, rotulo: "Nova habilidade: " + nome, precisaAprovar: true };
   }
 
@@ -160,6 +162,26 @@
     return { ok: true, registro: reg };
   }
 
+  /* A trilha 1–10 (só leitura; nada aqui muda a ficha). Patamar é
+     SUGESTÃO de mesa: nunca é aplicado a partir do nível. */
+  var PATAMAR_SUGERIDO = { 1: "iniciante", 2: "iniciante", 3: "iniciante", 4: "veterano", 5: "veterano", 6: "veterano", 7: "elite", 8: "elite", 9: "elite", 10: "lenda" };
+  function trilha(b) {
+    var evo = bloco(b), vivosL = vivos(b), l = [];
+    for (var n = 1; n <= 10; n++) {
+      var reg = vivosL.filter(function (r) { return r.nivelDepois === n && r.nivelAntes < n; }).slice(-1)[0] || null;
+      var estado = n < b.nivel ? "passado" : n === b.nivel ? "atual" : evo.pendente && evo.pendente.nivelDepois === n ? "pendente" : "futuro";
+      l.push({ nivel: n, estado: estado, registro: reg, patamarSugerido: PATAMAR_SUGERIDO[n] });
+    }
+    return l;
+  }
+  /* O registro que dá para desfazer agora: o vivo mais recente sem
+     dependentes (e nenhum marco pendente). */
+  function desfazivel(b) {
+    var v = vivos(b);
+    for (var i = v.length - 1; i >= 0; i--) { if (!dependentes(b, v[i]).length) return v[i]; }
+    return null;
+  }
+
   /* O rótulo de um ganho já registrado (histórico e resumo da mesa). */
   function rotuloGanho(g, b) {
     if (g.tipo === "atributo") return (K().ATRIBUTOS[g.chave] ? K().ATRIBUTOS[g.chave].nome : g.chave) + " " + g.de + " → " + g.para;
@@ -172,7 +194,8 @@
     var e = bloco(b);
     return {
       nex: e.nex,
-      pendente: e.pendente ? { nivelDepois: e.pendente.nivelDepois, proposta: e.pendente.proposta ? texto(e.pendente.proposta.rotulo, 120) : "" } : null,
+      pendente: e.pendente ? { id: e.pendente.id, nivelAntes: e.pendente.nivelAntes, nivelDepois: e.pendente.nivelDepois, proposta: e.pendente.proposta ? texto(e.pendente.proposta.rotulo, 120) : "" } : null,
+      desfazivel: (desfazivel(b) || {}).id || "",
       registros: e.registros.slice(-6).map(function (r) { return { id: r.id, nivelAntes: r.nivelAntes, nivelDepois: r.nivelDepois, modo: r.modo, desfeito: r.desfeito, quando: r.quando.slice(0, 10), ganhos: r.ganhos.map(function (g) { return rotuloGanho(g, b); }).join("; ") || r.nota }; }),
     };
   }
@@ -203,6 +226,7 @@
       if (!b) return { ok: false, motivo: "Personagem não encontrado." };
       var n = inteiro(o.nivel, 1, 10, b.nivel);
       if (n === b.nivel) return { ok: false, motivo: "O nível já é " + n + "." };
+      if (bloco(b).pendente) return { ok: false, motivo: "Há um marco pendente: escolha a melhoria ou cancele o marco antes de mudar o nível." };
       registrar(b, { modo: "livre", nivelDepois: n, opId: o.opId, nota: texto(o.nota, 300) || "Nível definido pelo Mestre (modo livre)." }, []);
       ev(s, nome(fichas, o.personagem) + ": nível " + n + " (o Mestre define as mudanças na ficha).");
       log(e, nome(fichas, o.personagem) + " vai ao nível " + n + ".");
@@ -212,9 +236,12 @@
       var b = fichaDe(fichas, o.personagem);
       if (!b) return { ok: false, motivo: "Personagem não encontrado." };
       var cfg = configDaMesa(e);
-      if (cfg.modo !== "marcos" && !o.local) return { ok: false, motivo: "A campanha está no modo livre: use \"definir nível\"." };
+      /* Sem atalho vindo do navegador: a ficha avulsa liga "por marcos"
+         na própria mesa local (evolucaoConfigurar), como a campanha. */
+      if (cfg.modo !== "marcos") return { ok: false, motivo: "O modo é livre: o nível muda por \"definir nível\"." };
       if (b.nivel >= 10) return { ok: false, motivo: "Nível 10 é o máximo (Alpha p. 15; Beta p. 8)." };
       var evo = bloco(b);
+      if (o.nivelAntes !== undefined && Number(o.nivelAntes) !== b.nivel) return { ok: false, motivo: "O nível mudou desde que a tela abriu: confira e tente de novo." };
       if (evo.pendente) return { ok: false, motivo: "Já há uma subida de nível esperando a escolha." };
       evo.pendente = { id: id(), nivelAntes: b.nivel, nivelDepois: b.nivel + 1, aprovadoEm: new Date().toISOString(), proposta: null, config: cfg };
       ev(s, nome(fichas, o.personagem) + " pode subir ao nível " + (b.nivel + 1) + ": escolha a melhoria.");
@@ -225,6 +252,8 @@
       if (!b || !ME().podeAgir(papel, pid)) return { ok: false, motivo: "Você não conduz este personagem." };
       var evo = bloco(b);
       if (!evo.pendente) return { ok: false, motivo: "Não há subida de nível pendente." };
+      if (o.pendente && o.pendente !== evo.pendente.id) return { ok: false, motivo: "Este marco mudou (foi cancelado ou refeito): a tela foi atualizada." };
+      if (evo.pendente.proposta && !papel.mestre) return { ok: false, motivo: "Já há uma habilidade aguardando a aprovação do Mestre." };
       var pv = previa(b, o.escolha, evo.pendente.config);
       if (!pv.ok) return pv;
       if (pv.precisaAprovar && !papel.mestre) {
@@ -244,6 +273,7 @@
       if (!b) return { ok: false, motivo: "Personagem não encontrado." };
       var evo = bloco(b);
       if (!evo.pendente || !evo.pendente.proposta) return { ok: false, motivo: "Não há habilidade proposta." };
+      if (o.pendente && o.pendente !== evo.pendente.id) return { ok: false, motivo: "Este marco mudou: a tela foi atualizada." };
       if (o.aprovar === false) { evo.pendente.proposta = null; ev(s, "O Mestre não aprovou a habilidade: escolha outra melhoria."); return; }
       var pv = previa(b, evo.pendente.proposta.escolha, evo.pendente.config);
       if (!pv.ok) return pv;
@@ -255,12 +285,14 @@
     ME().registrarOperacao("cancelarSubida", function (e, fichas, o, papel, rolar, s) {
       var b = fichaDe(fichas, o.personagem);
       if (!b || !bloco(b).pendente) return { ok: false, motivo: "Nada pendente." };
+      if (o.pendente && o.pendente !== bloco(b).pendente.id) return { ok: false, motivo: "Este marco mudou: a tela foi atualizada." };
       bloco(b).pendente = null;
       ev(s, "Subida de nível cancelada.");
     }, { mestre: true });
     ME().registrarOperacao("desfazerEvolucao", function (e, fichas, o, papel, rolar, s) {
       var b = fichaDe(fichas, o.personagem);
       if (!b) return { ok: false, motivo: "Personagem não encontrado." };
+      if (bloco(b).pendente) return { ok: false, motivo: "Há um marco pendente: resolva ou cancele antes de desfazer." };
       var r = desfazer(b, o.registro);
       if (!r.ok) return r;
       ev(s, nome(fichas, o.personagem) + ": desfeito o nível " + r.registro.nivelAntes + " → " + r.registro.nivelDepois + " (só os ganhos dele; dano antigo não volta).");
@@ -309,6 +341,6 @@
     permanenteAtributo: permanenteAtributo, permanentePericia: permanentePericia,
     previa: previa, registrar: registrar, desfazer: desfazer, dependentes: dependentes, vivos: vivos,
     previaAtualizacao: previaAtualizacao, aplicarAtualizacao: aplicarAtualizacao,
-    rotuloGanho: rotuloGanho, resumo: resumo,
+    rotuloGanho: rotuloGanho, resumo: resumo, trilha: trilha, desfazivel: desfazivel, PATAMAR_SUGERIDO: PATAMAR_SUGERIDO,
   };
 })(typeof window !== "undefined" ? window : globalThis);
