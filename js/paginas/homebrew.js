@@ -274,6 +274,7 @@
       else if (sis === "vampiro" && c.vampiro) { if (c.vampiro.vitalidade) p.push("Vitalidade " + c.vampiro.vitalidade); }
       else if (sis === "goblins" && c.goblins) p.push("Vitalidade " + c.goblins.vitalidade);
       else if (sis === "tormenta20" && c.tormenta20) p.push("ND " + c.tormenta20.nd + " · PV " + c.tormenta20.pv);
+      else if (sis === "ordem2" && c.ordem2) p.push(global.RAMAFichasNativas ? global.RAMAFichasNativas.linhaOrdem2(c.ordem2) : "Ordem II");
       else {
         var s = CR.resumo(c);
         if (typeof s.vd === "number") p.push("VD " + s.vd); else if (s.nivel) p.push(s.nivel);
@@ -637,6 +638,7 @@
     vampiro: "Antagonista: paradas padrão e excepcionais, ou a ficha completa com Atributos, Habilidades e Disciplinas.",
     goblins: "Inimigo: Combate, Noção, Habilidade e Vitalidade, bônus da arma, proteção e efeitos.",
     tormenta20: "Ameaça de Tormenta20: ND, Defesa, resistências, PV, ataques, habilidades e magias.",
+    ordem2: "Ameaça de Ordem II: dados de atributo e perícia, PV, ações com RA + n, habilidades e lacunas. Entra no combate pela mesa de Ordem II.",
     universal: "Mini ficha livre: status, atributos, perícias, ataques e habilidades.",
   };
   function escolherSistemaDaCriatura() {

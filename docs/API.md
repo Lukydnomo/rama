@@ -11,6 +11,50 @@
   permite o suplemento dono da ferramenta (desligar a mecânica com
   `estado.ativo: false` continua aceito). As leituras não mudam.
 
+## Ordem Paranormal RPG II · procedimentos das missões — v9.1
+
+Mesmas duas rotas; novos tipos de `operacao` (registrados por
+`js/ordem2/procedimentos.js` na porta `RAMAOrdem2Mesa.aplicar`).
+
+- `ler_ordem2` — o Mestre recebe também `pacotes` (só id, nome e cenas dos
+  pacotes que o projeto do Apps Script tem em `PACOTES_ORDEM2`) e `cena` (a
+  cena carregada, hidratada: anexos, compêndio, roteiro, efeitos). O `estado`
+  do Mestre vem com os pontos do pacote; o do jogador (`vista`) ganha `proc`:
+  desafios visíveis sem segredo (senha, resposta, ordem) nem config oculta,
+  pistas do grupo, itens com ele, posse/cargas das ferramentas, o compêndio
+  **só** se um dos personagens dele o carrega ou tem permissão, anexos **só** de
+  pistas recebidas, tabelas ativas sem as linhas futuras da maldição,
+  perseguição, esconderijo (dados próprios; dos outros, a contagem), recursos.
+- Operações do Mestre: `carregarCena {pacote, cena, jogadores?, manterFlags?}`
+  e `descarregarCena` (com `rev`), `configurarCena`, `revelarPista {ponto,
+  pista | texto, para: [pids] | "grupo"}`, `concederPista {solicitacao, ponto?,
+  pista? | texto}`, `flag`, `anexo {id, documentoId?, url?}`, `item`,
+  `desafioMestre {id, acao: anunciar|resolver|reabrir|danificar|ajustar|
+  aceitarResposta|criar|remover}`, `travessiaArea`, `ferramentaPosse`,
+  `tabela {id, acao: criar|ativar|suspender|isentar}`, `encerrarRodada
+  {rodada}`, `encontro {acao: iniciar|etapa|ondas|ondaAgora|bloqueio|encerrar}`,
+  `adicionarAmeaca {ameaca | ficha, quantidade, rd?}`, `adicionarObjeto`,
+  `efeitoEmGrupo {efeito, alvos?, abrigo?}`, `acaoEspecial {ator, especial,
+  alvo?, esquivou?, concluir?}`, `perseguicao {acao: iniciar|encerrar}`,
+  `desempatePerseguicao`, `esconderijo {acao: iniciar|criaturas|chegou|encerrar}`.
+- Operações de personagem (o dono de `quem`, ou o Mestre): `desafioAgir {id,
+  acao, quem, …}`, `usarFerramenta {quem, ferramenta, ponto | area}`,
+  `passarFerramenta`, `laboratorio {id, acao: rolar|rerrolar|concluir}`,
+  `compendium {acao: permitir|marcar}`, `passarItem`, `perseguir {quem, acao:
+  avancar|carregar|recuperar|sacrificio|outra, folego?, esforco?, pericia?,
+  alvo?}`, `esconder {quem, acao: inicial|esconderSe|distrair|chamarAtencao|
+  chamativa|sopro|parar}`, `usarRecurso`.
+- `encerrarRodada` e `proximaRodada` aceitam `rodada`: se não for a atual,
+  `dados_invalidos` ("já foi encerrada") — além do `opId` repetido, que devolve
+  `repetida`. Sobrecarga, afogamento, sustentar, ondas e dano de perseguição não
+  aplicam duas vezes.
+- `configurarFases {preset: "tres" | "quatro"}` remapeia as declarações da
+  rodada para a fase equivalente sem perder nem repetir ação.
+- Anexo ligado a documento: ao revelar a pista, o servidor acrescenta ao
+  `visiveisJson` do documento as contas de quem a recebeu (nunca remove).
+- `respostaDaFechadura` (motor) passou a dizer onde está a senha (o exemplo do
+  livro: 3-5-2 × 4-5-1 → baixo, exato, alto); a v9.0 respondia ao contrário.
+
 ## Ordem Paranormal RPG II — v9.0
 
 Só numa campanha de Ordem II (ferramenta `mesaOrdem2`; de outro sistema:

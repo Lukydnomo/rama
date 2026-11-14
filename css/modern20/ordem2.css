@@ -42,4 +42,9 @@
   & .o2-resultado--critico { border-color: var(--cor-ok); }
   & .o2-resultado--falha-critica { border-color: var(--cor-erro); }
   & .o2-barra { border-radius: 999px; overflow: hidden; }
+  /* v9.1: procedimentos */
+  & .o2-desafio,
+  & .o2-compendio__item { border-radius: var(--m20-raio-controle); border-color: var(--m20-borda); background: var(--fundo-superficie); }
+  & .o2-desafio { border-top: 3px solid var(--cor-paranormal); }
+  & .o2-ponto--oculto { border-style: dashed; }
 }

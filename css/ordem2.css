@@ -277,3 +277,33 @@
 :root[data-densidade="compacta"] .o2-faixa { padding: var(--e1); gap: var(--e1); }
 :root[data-densidade="compacta"] .o2-habilidade, :root[data-densidade="compacta"] .o2-ponto, :root[data-densidade="compacta"] .o2-relacao, :root[data-densidade="compacta"] .o2-item { padding: var(--e2); }
 :root[data-densidade="compacta"] .o2-pericia { padding: 1px var(--e1); }
+
+/* ------------------------------------------- procedimentos (v9.1)
+   Quadro de investigação, desafios, ferramentas, compêndio, encontros.
+   Estado nunca só por cor: "oculto"/"anunciado" escrito; o ponto
+   oculto também tem borda tracejada. */
+.o2-quadro { min-width: 0; }
+.o2-ponto__cab { display: flex; flex-wrap: wrap; align-items: center; gap: var(--e2); }
+.o2-ponto__cab h4 { margin: 0; }
+.o2-ponto--oculto { border-style: dashed; }
+.o2-pista__marcas { color: var(--cor-texto-2); }
+.o2-tabela-rolagem { overflow-x: auto; max-width: 100%; }
+.o2-desafio { display: flex; flex-direction: column; gap: var(--e2); padding: var(--e3); border: var(--borda) solid var(--cor-traco-media); min-width: 0; }
+.o2-desafio__problema { margin: 0; font-size: var(--texto-grande, 1.25rem); font-weight: 700; color: var(--cor-paranormal); }
+.o2-destaque { font-weight: 700; }
+.o2-destaque::before { content: "▶ "; }
+.o2-linha, .o2-anexo, .o2-tabela { display: flex; flex-wrap: wrap; align-items: center; gap: var(--e2); min-width: 0; }
+.o2-linha .r-campo { flex: 0 1 14rem; margin: 0; }
+.o2-nichos { display: grid; grid-template-columns: repeat(auto-fill, minmax(8rem, 1fr)); gap: var(--e2); margin: 0; padding-left: var(--e5); }
+.o2-nichos li { overflow-wrap: anywhere; }
+.o2-lab { margin: 0; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.o2-compendio { display: grid; grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr)); gap: var(--e3); }
+.o2-compendio__item { padding: var(--e2) var(--e3); border: var(--borda) solid var(--cor-traco-media); min-width: 0; }
+.o2-compendio__item h5 { margin: 0 0 var(--e1); }
+.o2-compendio__item ul { margin: 0; padding-left: var(--e4); }
+.ficha-lacuna { color: var(--cor-aviso); }
+:root[data-densidade="compacta"] .o2-desafio, :root[data-densidade="compacta"] .o2-compendio__item { padding: var(--e2); }
+@media (max-width: 40rem) {
+  .o2-pistas { font-size: var(--texto-mini); }
+  .o2-ponto__cab .r-botao { flex: 0 0 auto; }
+}

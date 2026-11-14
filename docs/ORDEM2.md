@@ -1,4 +1,4 @@
-# Ordem Paranormal RPG II — Experimental no R.A.M.A. — v9.0
+# Ordem Paranormal RPG II — Experimental no R.A.M.A. — v9.0 e v9.1
 
 Sistema **à parte**, id `ordem2`. Não é DLC, suplemento nem migração de
 `ordem` (Ordem Paranormal, 1ª edição): nenhuma ficha, campanha, suplemento ou
@@ -201,3 +201,229 @@ Site: `js/ordem2/`, `css/ordem2.css`, `css/modern20/ordem2.css`,
 changelog). Servidor: crie o arquivo **Ordem2** com `backend/Ordem2.gs`, troque
 `Sistemas.gs`, `Dados.gs` e `Campanhas.gs`, rode **`setupRama()`** (cria
 `CAMPANHA_ORDEM2`) e crie uma versão nova da implantação.
+
+## Etapa 2 — os procedimentos das missões (v9.1)
+
+O mesmo sistema `ordem2` (id, regras de Ordem I e resultados já salvos
+intocados). A meta: conduzir pelo R.A.M.A. os procedimentos jogáveis do Alpha
+(Atos I e II) e das duas missões do Beta. **O Mestre decide narrativa e
+revelações; o site resolve contadores, testes e efeitos.**
+
+### Fontes desta etapa
+
+| Lote | Páginas | O que virou |
+|---|---|---|
+| Alpha — investigação e acesso | pp. 21–25 | quadro (pontos, perícias, limiares, Examinar, Interagir, Recapitular, Compartilhar), destrancar, arrombar, hack técnico e social, alcançar, sustentar |
+| Alpha — Ato I | pp. 28–64 | cena `ato1` do pacote: 29 pontos (pertences, porão, sala secreta), 19 desafios, itens, tabela da maldição, efeitos do Ídolo e do freezer, roteiro |
+| Alpha — ferramentas | pp. 65–70, 74–76 | `FERRAMENTAS` (cargas, modo de uso), laboratório, rádio, laser por ambiente, EMF, compêndio |
+| Alpha — Ato II e sobrecarga | pp. 72–77 | cena `ato2`: preset exato da sobrecarga do porão, ferramentas por ponto |
+| Alpha — cena, pontos e desfecho | pp. 78–102 | os 25 pontos do Ato II com o setor de ferramentas, a resposta do caso (só no pacote) |
+| Compendium (ZIP do Ato II) | pp. 3–12 | as cinco manifestações e os sinais por elemento × ferramenta (no pacote; consulta só de quem carrega e de quem ele permitir) |
+| Beta — investigação e acesso | pp. 13–17 | Investigar/Observar/Examinar, equilíbrio (2d10 + d4), alcançar e sustentar |
+| Beta — Missão 1 | pp. 28–49 | cenas `afogados` e `aughisk` (enxurrada = perseguição, ilhota, confronto com ondas) |
+| Beta — furtividade e travessias | pp. 50–59 | cena `mata`: esconderijo, bosque, rio (tronco = equilíbrio), encosta, runa de Brenna |
+| Beta — gruta | pp. 60–67 | cena `gruta`: enigmas, runas, baú, nicho, escadaria, monólito |
+| Beta — combate e ondas | pp. 68–71 | a mesma cena `gruta`: preparação, quatro fases, bloqueio da entrada, ondas das crias |
+| Beta — perseguição e desfecho | pp. 72–75 | cena `cabecas`: perseguição de 5 rodadas, cabeças, vala oculta, facilitar |
+| ZIPs 03 e 04 | — | mapas, handouts, tokens, músicas e fichas: só referência (nome, caminho, sha256) |
+
+### Onde mora (v9.1)
+
+| Arquivo | O quê |
+|---|---|
+| `js/ordem2/ameacas.js` | `RAMAOrdem2Ameacas`: fichas **nativas** (Afogado p. 33, Aughisk p. 43, Crias da Floresta p. 71; Ellén Trechend só com os efeitos da perseguição; inventário do Alpha sem ficha), `normalizar`, `linha`, `paraNpc` (uma ocorrência com PV e ações próprios). É também o bloco `ordem2` de uma criatura de Homebrew. |
+| `js/ordem2/procedimentos.js` | `RAMAOrdem2Proc`: as operações e ganchos dos procedimentos (quadro, desafios, ferramentas, tabelas por rodada, encontros, perseguição, esconderijo), a hidratação do pacote e a vista do jogador. Registrado na MESMA porta (`RAMAOrdem2Mesa.aplicar`). |
+| `js/ordem2/telas/o2-procedimentos.js` | as telas do Mestre (Cena, Quadro, Desafios, Encontro) e de quem joga (desafios, ferramentas, laboratório, compêndio, anexos, itens, perseguição, esconderijo) — na mesa e na ficha |
+| `backend/Ordem2.gs` | carrega o pacote local, hidrata a cena, passa `pacotes` ao motor, desidrata antes de gravar, libera documentos de anexo |
+| `backend/Ordem2Pacotes.local.gs` | **o pacote do Mestre — fora do git e do site** (ver abaixo) |
+| `testes/fixtures/ordem2-pacote-sintetico.js` | um pacote inventado, no mesmo formato, para os testes públicos |
+| `testes/executar-ordem2-missoes.js` | os testes desta etapa (pacote sintético; com o pacote local, também as conferências dele) |
+
+### O pacote do Mestre (conteúdo exclusivo fora dos arquivos públicos)
+
+O repositório é público e o GitHub Pages serve a raiz inteira — inclusive
+`backend/`. Por isso, **pontos de interesse, pistas, senhas, soluções,
+roteiros, a resposta do caso e o compêndio não estão em nenhum arquivo
+versionado**. Eles moram em `backend/Ordem2Pacotes.local.gs`, que o
+`.gitignore` já exclui (`backend/*.local.gs`) e que só existe nesta pasta e no
+projeto do Apps Script (arquivo **Ordem2Pacotes**). O servidor:
+
+- lista ao Mestre só os nomes (`ler_ordem2` → `pacotes`);
+- ao carregar uma cena, cria as instâncias (desafios com a senha sorteada ou a
+  impressa, tabelas, itens, ferramentas) e **hidrata** os pontos a cada leitura
+  e operação — o conteúdo do pacote nunca é copiado para a planilha; só ficam
+  lá o estado dinâmico e o que o Mestre editou;
+- devolve ao Mestre a cena hidratada (`estado` + `cena`: anexos, compêndio,
+  roteiro, efeitos) e ao jogador só a vista.
+
+Sem o arquivo, a mesa funciona como na v9.0 (pontos próprios do Mestre). Os
+textos do pacote são paráfrases curtas; nada é cópia do livro.
+
+**Handouts, mapas, tokens e músicas não vêm com o site.** O pacote guarda a
+referência (nome no texto, caminho no ZIP, sha256) e, quando o arquivo não
+veio, uma descrição para o Mestre narrar (e os padrões de bips do EMF). O
+Mestre liga cada anexo a um **documento da campanha** (aba Documentos, visível
+a ninguém) ou a um link próprio: quando alguém recebe a pista com aquele anexo,
+o servidor acrescenta a conta dessa pessoa ao `visiveisJson` do documento (nunca
+tira) — o handout privado só aparece para quem o achou. O documento guarda a
+imagem que a aba Documentos aceita (até ~65 KB); para handout com texto miúdo,
+o link evita perder legibilidade. Duplicatas: 8 arquivos dos ZIPs são idênticos
+(as duas músicas e os seis tokens de personagem que vêm na Missão 1 e na 2):
+o manifesto guarda cada conteúdo uma vez (`igualA`). O mapa da caverna vem em
+JPG e em PNG de 51 MB: a referência é o JPG.
+
+### Fato — o que o motor faz porque o texto diz
+
+- **Quadro**: ponto oculto/anunciado; a descrição básica para todos; pistas por
+  perícia e DT; Examinar sem novidade custa 1 PD (Alpha p. 22; Beta p. 14);
+  Recapitular e Compartilhar com DT 10 e trava na cena (Alpha pp. 22–23; Beta
+  p. 15); pistas "só para" um personagem; linhas por número de jogadores
+  (ícones 3/4/5 do Alpha); pré-requisitos (cadeado, hack, ter achado a foto e a
+  pulseira).
+- **Destrancar**: senha secreta; a resposta posição a posição; tentativas por
+  rodada pelo Crime (d4 1 … d12 5); máximo da fechadura → danificada (só força
+  ou chave) (Alpha p. 24; Beta p. 16). **Arrombar**: 1 PV por tentativa,
+  Atletismo contra a DT, soma a RA até a PA. **Senha de teclado**: três erros
+  bloqueiam duas rodadas (Alpha p. 50).
+- **Hack técnico**: teste de Tecnologia → problema da faixa do resultado, com o
+  tempo da faixa (painel: 10+/7–9/5–6/1–4; computador: 20/15/10 s). **Hack
+  social**: Intuição; uma chance extra a cada 3 acima da DT; N respostas certas
+  (celular: 4) (Alpha p. 25).
+- **Alcançar** seguro (duas ações; falha: dano = RB e recomeça) e arriscado (DT
+  +3; falha: dano = RA); **Sustentar** (1 PV; novo teste a cada rodada com −1
+  passo acumulado; quem passa sofre na falha) (Alpha p. 25; Beta p. 17);
+  **Equilíbrio** (2d10 sem somar; diferença ≤ 1; d4 de reserva = metade da
+  Acrobacia, gastos até o fim da travessia) (Beta p. 17).
+- **Escalar** a tocha (rápido DT 8 soma RA; cauteloso DT 6 soma RB; meta 10;
+  falha: cai com dano igual ao acumulado) (Beta p. 41); **travessias** do bosque,
+  rio e encosta, com escuridão e salto de fé (Beta pp. 57–59).
+- **Ferramentas**: UV 3 cargas, pó 5; termômetro ilimitado; laser por ambiente
+  com a lista de pontos; rádio: Tecnologia tira 0/2/3/todos os falsos (6−,
+  7–9, 10–12, 13+), a ordem fica para os jogadores; **laboratório**: 4–6 dados
+  em sequência começando em d4 e subindo um passo até a Aptidão (Exatas), não
+  decrescente, metade da Mente em novas rolagens — fora do teto de quatro dados
+  de um teste (Alpha pp. 74–76). Compêndio: quem carrega e quem ele permite.
+- **Sobrecarga** do porão: 0, 0, 1, 1, 1d4, 1d4, 1d6, 1d6, 2d4 da 9ª em diante,
+  cada um rola o seu, no fim de cada rodada (Alpha p. 77 — conferido na página
+  renderizada). **Maldição** do Ídolo: rodadas 4/7/10 com perda a menos que o
+  personagem fira outro marcado; +1 PV/+1 PD com o Ídolo quebrado (Alpha pp.
+  52–53).
+- **Encontros**: quatro fases nas missões (Beta pp. 32, 69); afogar (só escapar;
+  1d6 no fim da rodada; escapar com −1 passo; aliado sem a redução) (p. 33);
+  investida e enxurrada do aughisk, presença aterradora, tributo mortal (p. 43);
+  ondas do aughisk (rodadas 2, 4, 6…, metade dos personagens, chegam e atacam na
+  seguinte) (p. 44); ondas das crias (2, 5, 8…; param com a chama depois de duas;
+  Intuição DT 10 na 3ª e 4ª) e bloqueio da entrada (exatamente dois; até duas
+  crias por defensor; −2 passos a quem atira de fora) (pp. 69–70); perseguições
+  (fôlego, esforço extra, carregar outro, recuperar fôlego, sacrifício, vala,
+  cabeças, limiares, só o de menor PA morre) (pp. 35, 73–74); esconderijo (os
+  dados do teste viram esconderijo; a tabela d10 das criaturas; DT +3 por uso;
+  encontrado sofre 1d6 por rodada) (pp. 55–56).
+
+### Inferência — lido nas entrelinhas, com o nome
+
+- Rádio do Ato II: os conjuntos falsos vêm em vermelho no livro; no texto
+  extraído a cor some. O pacote deduz os falsos da solução impressa.
+- No Beta, as linhas "Pesquisar" da árvore (p. 38) usam **Inspecionar** — o
+  Beta não tem Pesquisar (a mesma decisão de Compartilhar da v9.0).
+- A tocha (p. 41) tem duas linhas "Percepção"; a segunda foi lida como
+  Inspecionar. A tocha é destruída quando acerta (o texto: "se usada dessa
+  forma").
+- O buraco das raízes (p. 63) traz em Percepção 8 a linha da carroça: o pacote
+  põe "há um entalhe rúnico" e marca para o Mestre confirmar.
+- Laser: o "ambiente" é a área do mapa (porão ou sala secreta).
+
+### Proposta — decisões de implementação (não são regras)
+
+As de `DECISOES` no catálogo: efeitos em grupo rolam direto no servidor;
+Sustentar testa sozinho ao encerrar a rodada; encerrar a rodada leva o número
+dela (nada aplica duas vezes); pontuação = RA, duas maiores no crítico do Beta;
+crítico do esconderijo dá um dado do maior tipo rolado; hack social sem DT
+impressa usa 7 e o Mestre pode aceitar resposta à mão; novas rolagens do
+laboratório em qualquer dado já rolado.
+
+### Divergências desta etapa — fonte, comportamento e teste
+
+| Divergência | Fontes | Comportamento | Teste |
+|---|---|---|---|
+| Sentido de alto/baixo da fechadura | Alpha p. 24; Beta p. 16 | a resposta diz onde está a senha (3-5-2 × 4-5-1 → baixo, exato, alto); **a v9.0 respondia ao contrário e foi corrigida** | `executar-ordem2-missoes`: senha 3-5-2 |
+| Remissões de página | Beta pp. 31, 39, 42, 70 | cita a página do arquivo (33, 37, 43, 71) e guarda a do texto | `executar-ordem2-missoes`: ameaças com a página do arquivo |
+| "NEX 35%+" no aughisk | Beta p. 43 | ignorado (termo de Ordem I) | `executar-ordem2-missoes`: Presença Aterradora sem NEX |
+| RD do aughisk não impressa | Beta pp. 38, 41, 43 | lacuna: o Mestre informa no encontro | `executar-ordem2-missoes`: aughisk sem RD inventada |
+| Efeito da tocha "na Fase 3" | Beta p. 41 | ondas pelo roteiro + interruptor manual | `executar-ordem2-missoes`: ondas do aughisk |
+| Ondas das crias (duração, intervalo, tamanho) | Beta p. 70 | 2, 5, 8…; 1 cria por personagem (crescente opcional); param com a chama depois de duas | `executar-ordem2-missoes`: ondas param |
+| Freezer "DT acumulada 12" | Alpha p. 58 | PA 12, DT 7 até o Mestre ajustar; destrancar 4d6 sem limite impresso | `executar-ordem2-missoes`: arrombar soma a RA |
+| Alcançar com Atletismo na plataforma | Beta pp. 17 × 64 | a exceção da cena vale (Atletismo 7/10) | pacote local: baú atrás da plataforma |
+| Números dos handouts do Ato II | Alpha pp. 88–100 × ZIP | ligados pelo conteúdo, com os dois nomes | pacote local: anexos |
+| Arquivos que não vieram | Alpha pp. 31–59, 76, 87, 100 | referência + descrição/padrão | pacote local: referências faltantes |
+| Caixas com texto trocado | Alpha pp. 91–100; Beta pp. 62–63 | o pacote usa o texto do ponto | — |
+| Tabela da sobrecarga em ícones | Alpha p. 77 | conferida na página renderizada | pacote local: preset exato |
+| Enigma das cinzas: o trajeto impresso contradiz o "caminho do sol" do próprio texto | Beta p. 64 | a mesa aceita o trajeto impresso e também o do sol (as duas respostas só no pacote; o Mestre vê ambas) | pacote local (`segredo.alternativas`) |
+| Sequência do laboratório nas roupas | Alpha p. 97 | não impressa: o site pede ao Mestre | pacote local: laboratório nas roupas |
+| Destrancar o baú sem número de tentativas | Beta p. 65 | sem limite até o Mestre ajustar; +1 com o Ofício | pacote local: baú com limite ajustado |
+
+### Fichas e procedimentos implementados
+
+- **Ameaças nativas**: Afogado, Aughisk, Cria da Floresta, Ellén Trechend
+  (efeitos), Ídolo de Pedra, Cadáveres erguidos, a manifestação do compêndio —
+  no Catálogo (Ordem II → Ameaças, com "Copiar para o Homebrew"), no Homebrew
+  (sistema Ordem Paranormal RPG II, formulário nativo) e na mesa (catálogo ou
+  Homebrew; cada ocorrência com PV e ações próprios; objetos atacáveis como o
+  crânio, PV 5/RD 5, com efeito ao destruir).
+- **Quadro**: cena do pacote, pontos por área e número, pistas com requisito,
+  exclusividade, jogadores, anexo, ordem; revelação manual a personagens ou ao
+  grupo; o que cada um e o grupo já sabem (a mesma pista não rende duas vezes);
+  Recapitular/Compartilhar/Interagir com a pista nova escolhida pelo Mestre
+  (só as que a pessoa ainda não tem); flags; itens de cena.
+- **Desafios**: destrancar, senha, arrombar, alcançar, sustentar, equilíbrio,
+  escalar, travessia, hack técnico e social, enigma, runas, ação de cena
+  (consertar/municiar/disparar a balista, erguer a carroça, pegar o crânio,
+  atacar com a tocha, nicho, monólito).
+- **Ferramentas**: as dez, com posse, empréstimo, cargas, leitura por ponto,
+  laser, rádio, laboratório e o compêndio com marcas e evidências comparáveis.
+- **Tabelas por rodada**: sobrecarga e maldição, com ativar, suspender e isentar.
+- **Encontros**: etapas, troca de 3 ↔ 4 fases sem perder ação, ondas com chegada,
+  tributo, bloqueio, afogar/escapar, efeitos em grupo, ações especiais,
+  perseguição (arrastado/devorado, empate pelo Mestre, facilitado),
+  esconderijo, runa de Brenna.
+
+### Referências que faltam nos arquivos
+
+Ato I: os handouts 01–14, os mapas 02 e 03, as músicas "O Porão" e "O Ídolo",
+e as fichas de Victor, Eloísa, Edgar e Kênia (só a de Alan existe, p. 15).
+Ato II: os áudios EMF 1 e 3 (os padrões 1-1-3 e 1-1-1 estão no texto). Beta:
+nada faltou para os procedimentos (os handouts, mapas, tokens e músicas vieram).
+
+### Validação desta etapa (simulada, não é a implantação)
+
+- `testes/executar-ordem2-missoes.js` — 140 verificações (115 com o pacote
+  sintético + 25 com o pacote local, puladas onde ele não existe): ponto Alpha
+  com ferramenta e sobrecarga; tranca com limite (sintética e o baú real);
+  equilíbrio; encontro com pista + runas + ondas; 3 ↔ 4 fases; payload do
+  jogador sem pista não revelada, senha, handout privado nem bastidores;
+  recarregar no meio do desafio; encerrar a rodada duas vezes sem duplicar dano,
+  tentativas ou ondas; afogar; perseguição; esconderijo.
+- `testes/ordem2-backend.js` — a sessão pelo servidor simulado com o pacote
+  sintético: lista de pacotes só para o Mestre, planilha sem o conteúdo do
+  pacote, documento de anexo liberado só para quem recebeu a pista, tranca,
+  arrombar recarregado, sobrecarga com o mesmo opId (repetida) e onda sem
+  duplicar.
+- No navegador (servidor local, contas sintéticas, pacote real): o Mestre
+  carregou o Ato II e a gruta pela tela, entregou ferramentas, viu os segredos
+  na aba Desafios; a jogadora usou termômetro e laboratório pela ficha,
+  resolveu o buraco das raízes, rolou a escadaria; o Catálogo mostrou as
+  ameaças e copiou o Aughisk para o Homebrew, que entrou na mesa com PV e ações
+  próprios. Celular 375 px sem rolagem lateral; nenhum erro no console.
+
+### Publicar a v9.1
+
+Servidor: troque **Ordem2.gs** e **Codigo.gs**; crie o arquivo
+**Ordem2Pacotes** com o conteúdo de `backend/Ordem2Pacotes.local.gs` (só existe
+nesta pasta — não está no GitHub); crie uma versão nova da implantação.
+**`setupRama()` não é necessário** (nenhuma aba nova: o estado da etapa 2 mora
+em `CAMPANHA_ORDEM2.dadosJson`). Site: `js/ordem2/` (inclui `ameacas.js`,
+`procedimentos.js`, `telas/o2-procedimentos.js`), `css/ordem2.css`,
+`css/modern20/ordem2.css`, `js/criaturas.js`, `js/fichas-nativas.js`,
+`js/paginas/homebrew.js`, `js/paginas/homebrew-criatura-sistemas.js`,
+`js/paginas/catalogo.js`, `js/versao.js` e as páginas `personagens/`, `ficha/`,
+`campanha/`, `catalogo/`, `homebrew/`.

@@ -577,8 +577,11 @@
      MINIJOGOS
      --------------------------------------------------------------- */
   function tentativasDeDestrancar(crimeFaces) { return Math.max(1, [4, 6, 8, 10, 12].indexOf(crimeFaces) + 1); }
+  /* A resposta diz onde está a SENHA em relação ao dado posto — o
+     exemplo do livro: senha 3-5-2, tentativa 4-5-1 → "baixo, exato,
+     alto" (Alpha p. 24; Beta p. 16). A v9.0 respondia ao contrário. */
   function respostaDaFechadura(senha, tentativa) {
-    return lista(senha).map(function (v, i) { var t = Number(tentativa[i]); return t === v ? "exato" : t < v ? "baixo" : "alto"; });
+    return lista(senha).map(function (v, i) { var t = Number(tentativa[i]); return t === v ? "exato" : v < t ? "baixo" : "alto"; });
   }
   function dadosDeEquilibrio(acrobaciaFaces) { return Math.max(1, Math.floor(acrobaciaFaces / 2)); }
   function equilibrado(a, b) { return Math.abs(a - b) <= 1; }

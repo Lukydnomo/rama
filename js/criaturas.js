@@ -162,8 +162,8 @@
      Ordem e Universal. Tudo é limitado aqui; o que não vale cai.
      ================================================================= */
 
-  var SISTEMAS_NATIVOS = ["oblivio", "vampiro", "goblins", "tormenta20"];
-  var NOMES_DOS_SISTEMAS = { ordem: "Ordem Paranormal", oblivio: "Oblívio", vampiro: "Vampiro: A Máscara", goblins: "Malditos Goblins", tormenta20: "Tormenta20", universal: "Universal" };
+  var SISTEMAS_NATIVOS = ["oblivio", "vampiro", "goblins", "tormenta20", "ordem2"];
+  var NOMES_DOS_SISTEMAS = { ordem: "Ordem Paranormal", oblivio: "Oblívio", vampiro: "Vampiro: A Máscara", goblins: "Malditos Goblins", tormenta20: "Tormenta20", ordem2: "Ordem Paranormal RPG II", universal: "Universal" };
   var ACOES_OBLIVIO = ["regular", "extra", "movimento", "completa", "passiva"];
   var ATRIBUTOS_OBLIVIO = ["carne", "forca", "fuga", "determinacao", "mente"];
   var NATUREZAS_VAMPIRO = ["mortal", "carnical", "animal", "vampiro", "criatura"];
@@ -300,7 +300,15 @@
     return y;
   }
 
-  var NORMALIZAR_NATIVO = { oblivio: normalizarOblivio, vampiro: normalizarVampiro, goblins: normalizarGoblins, tormenta20: normalizarTormenta20 };
+  /* Ordem Paranormal RPG II (v9.1): o bloco nativo de js/ordem2/ameacas.js
+     (dados de atributo e perícia, PV, ações com RA + n, habilidades com
+     motor). Sem o módulo na página, passa como veio, limitado pelo servidor. */
+  function normalizarOrdem2(b) {
+    var A = global.RAMAOrdem2Ameacas;
+    return A ? A.normalizar(b) : (b && typeof b === "object" ? JSON.parse(JSON.stringify(b)) : {});
+  }
+
+  var NORMALIZAR_NATIVO = { oblivio: normalizarOblivio, vampiro: normalizarVampiro, goblins: normalizarGoblins, tormenta20: normalizarTormenta20, ordem2: normalizarOrdem2 };
 
   function normalizarNativa(b) {
     var c = {
@@ -323,6 +331,7 @@
     var bloco = {};
     if (sistema === "vampiro") bloco = { modelo: d.modelo === "completo" ? "completo" : "compacto", natureza: d.modelo === "completo" ? "vampiro" : "mortal" };
     if (sistema === "goblins") bloco = { combate: 0, nocao: 0, habilidade: 0, vitalidade: 1 };
+    if (sistema === "ordem2") bloco = { natureza: "criatura", pv: 10, atributos: { fisico: 6, mente: 4, emocao: 4 }, pericias: { luta: 6 }, acoes: [{ id: "garras", nome: "Ataque", alcance: "corpo", pericia: "luta", dano: 1 }] };
     if (sistema === "tormenta20") bloco = { nd: "1", tipo: "monstro", tam: "medio", def: 16, pv: 20, ini: 2, per: 2, fort: 4, ref: 2, von: 1, desl: 9, atr: [2, 1, 2, 0, 0, 0], ataques: [{ n: "Ataque", a: 9, d: "1d8+6", t: "C" }] };
     var base = { sistema: sistema, nome: U.aparar(d.nome, 120) || "Nova criatura", visibilidade: d.visibilidade, origem: { tipo: "homebrew" } };
     base[sistema] = bloco;

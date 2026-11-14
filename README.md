@@ -149,6 +149,8 @@ preferências de tela — nunca é tratado como banco.
       regras.js         a ficha: dados-base, efeitos, recursos, presets e a criação guiada
       motor.js          o teste (4 dados/3 somados, pavor, crítico, RA/RB), dano, lesões e traumas
       mesa.js           a mesa: testes e pós-rolagem, investigação, combate em fases, a vista do jogador
+      ameacas.js        ameaças nativas (Afogado, Aughisk, Crias, Ellén Trechend, inventário do Alpha) (v9.1)
+      procedimentos.js  quadro, desafios, ferramentas, sobrecarga, ondas, perseguição, esconderijo (v9.1)
       mesa.js           o Thriller: pilhas, testes, cenas, Encontro, ações do Assassino, vista das jogadoras
     historico.js        rolagem → histórico da campanha, num funil só
     temas-dados.js      catálogo dos temas de dados e regras puras (copiado no Codigo.gs)
@@ -168,6 +170,7 @@ preferências de tela — nunca é tratado como banco.
     Tormenta20.gs       sistema Tormenta20: a Mesa do Mestre e as operações entre fichas e ameaças (cópia do motor)
     Tormenta20Dados.gs  os catálogos de Tormenta20 (cópia de js/tormenta20/)
     Ordem2.gs           sistema Ordem Paranormal RPG II: a mesa, as operações com opId e as rolagens no servidor (cópia do motor)
+    Ordem2Pacotes.local.gs  (fora do git) o conteúdo do Mestre das missões de Ordem II: só no Apps Script
     Universal.gs        sistema Universal: atributos e status livres no painel da mesa
     Cris.gs             leitura de ficha pública do CRIS (opcional)
     Feedback.gs         feedback entregue num canal do Discord (opcional)
@@ -923,6 +926,16 @@ próprio `<script src>`, então funciona debaixo de subpasta sem ajuste.
 segredo nenhum — ele os lê das Script Properties. Publicá-lo não expõe nada.
 
 ### Atualizar o backend
+
+**v9.1.0 — LAMPARINA:** missões de Ordem II pela mesa. Troque `Ordem2.gs` e
+`Codigo.gs`, crie o arquivo **Ordem2Pacotes** com o conteúdo de
+`backend/Ordem2Pacotes.local.gs` (o conteúdo do Mestre das missões; só existe
+na sua pasta, fora do GitHub) e crie uma versão nova da implantação.
+**`setupRama()` não é necessário.** Site: `js/ordem2/`, `css/ordem2.css`,
+`css/modern20/ordem2.css`, `js/criaturas.js`, `js/fichas-nativas.js`,
+`js/paginas/homebrew*.js`, `js/paginas/catalogo.js`, `js/versao.js` e as páginas
+`personagens/`, `ficha/`, `campanha/`, `catalogo/`, `homebrew/`. Detalhes em
+`docs/ORDEM2.md`.
 
 **v9.0.0 — BRUMA:** Ordem Paranormal RPG II (Experimental). Crie o arquivo
 **Ordem2** com `backend/Ordem2.gs`, troque `Sistemas.gs`, `Dados.gs` e
@@ -1940,7 +1953,7 @@ Três números diferentes, que não se misturam:
 
 | | Onde | O que é |
 |---|---|---|
-| versão do aplicativo | `js/versao.js` | o que a pessoa vê: v9.0.0 |
+| versão do aplicativo | `js/versao.js` | o que a pessoa vê: v9.1.0 |
 | `schemaVersion` | `js/ficha.js` | o formato da FICHA |
 | `versaoFormato` | `js/config.js` | o formato dos arquivos de importação |
 

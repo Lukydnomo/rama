@@ -391,7 +391,7 @@
         var pericias = p.pericias || ME().periciasDoPonto(p);
         var achadas = meus.filter(function (d) { return d.ponto === p.id; });
         return el("article.o2-ponto", {}, [
-          el("h3.o2-ponto__nome", { texto: p.nome }),
+          el("h3.o2-ponto__nome", { texto: (p.numero ? p.numero + ". " : "") + p.nome }),
           el("p", { texto: p.descricao }),
           el("p.t-mini", { texto: "Perícias listadas: " + pericias.map(function (k) { var c = k.split(":"); return K().nomeDaPericia(e.perfil, c[0], e.ambientacao) + (c[1] ? " (" + c[1] + ")" : ""); }).join(", ") }),
           achadas.length ? el("ul.o2-ponto__achados", {}, achadas.map(function (d) { return el("li", {}, [el("span", { texto: d.texto }), el("span.t-mini", { texto: " — " + d.como })]); })) : null,
@@ -410,6 +410,9 @@
         })) : null,
         referenciaInvestigacao(e.perfil),
       ])),
+      /* v9.1: desafios, ferramentas, compêndio, anexos, itens, perseguição e
+         esconderijo — atalhos que disparam a ação real no quadro da mesa. */
+      global.RAMAOrdem2ProcTela ? global.RAMAOrdem2ProcTela.jogador({ estado: e, mestre: false, pcs: personagensDaMesa(ctx).map(function (p) { return { id: p.id, nome: p.nome, meu: p.id === eu }; }), meus: [eu], operar: function (o) { return op(ctx, o); } }) : null,
     ]);
   }
   function referenciaInvestigacao(perfil) {
@@ -478,7 +481,7 @@
       ]);
     }).concat([el("p.t-mini", { texto: "Dano normal: RA + a arma; no crítico do Beta, as duas maiores (p. 11/21). Desarmado causa dano não letal." })]))));
     partes.push(UI().painel("Estado", estadoDoPersonagem(ctx)));
-    partes.push(UI().recolhivel({ titulo: "Ações de combate (Beta pp. 18–21)", conteudo: el("ul.pilha.pilha--curta", {}, Object.keys(K().ACOES_COMBATE).map(function (k) { var a = K().ACOES_COMBATE[k]; return el("li", {}, [el("strong", { texto: a.nome + " — " + K().FASES[a.fase].nome + ". " }), el("span.t-mini", { texto: a.texto })]); }).concat([el("li.t-mini", { texto: "Ações livres: sacar/guardar e erguer-se (−1 passo em todos os testes da rodada), jogar-se no chão." })])) }));
+    partes.push(UI().recolhivel({ titulo: "Ações de combate (Beta pp. 18–21)", conteudo: el("ul.pilha.pilha--curta", {}, Object.keys(K().ACOES_COMBATE).map(function (k) { var a = K().ACOES_COMBATE[k]; return el("li", {}, [el("strong", { texto: a.nome + " — " + K().FASES[a.fase].nome + (a.fase4 ? " (com quatro fases: " + K().FASES[a.fase4].nome + ")" : "") + ". " }), el("span.t-mini", { texto: a.texto })]); }).concat([el("li.t-mini", { texto: "Ações livres: sacar/guardar e erguer-se (−1 passo em todos os testes da rodada), jogar-se no chão." })])) }));
     partes.push(UI().recolhivel({ titulo: "Minijogos (Alpha pp. 24–25; Beta pp. 16–17)", conteudo: minijogos(ctx) }));
     return el("div.o2-aba", {}, partes);
   }
@@ -543,9 +546,10 @@
       var ataque = st.acao === "agredirCorpo" || st.acao === "agredirDistancia" || a.manobra;
       var armas = x.itens.filter(function (i) { return (i.tipo === "arma" && i.alcance === (st.acao === "agredirDistancia" ? "distancia" : "corpo")) || (st.acao === "agredirDistancia" && i.consumivel === "vespa"); });
       U.trocar(corpo, [
-        UI().campo({ rotulo: "Ação", tipo: "selecao", valor: st.acao, opcoes: Object.keys(K().ACOES_COMBATE).map(function (k) { return { valor: k, rotulo: K().ACOES_COMBATE[k].nome + " (" + K().FASES[K().ACOES_COMBATE[k].fase].nome + ")" }; }), aoMudar: function (v) { st.acao = v; st.arma = ""; desenhar(); } }),
+        UI().campo({ rotulo: "Ação", tipo: "selecao", valor: st.acao, opcoes: Object.keys(K().ACOES_COMBATE).map(function (k) { return { valor: k, rotulo: K().ACOES_COMBATE[k].nome + " (" + K().FASES[K().faseDaAcao(k, c.ordemFases)].nome + ")" }; }), aoMudar: function (v) { st.acao = v; st.arma = ""; desenhar(); } }),
         el("p.t-mini", { texto: a.texto }),
-        ["preparar", "habilidade", "outra"].indexOf(st.acao) < 0 ? UI().campo({ rotulo: st.acao === "defender" ? "Contra quem (o ataque escolhido antes da rolagem)" : "Alvo", tipo: "selecao", valor: st.alvo, opcoes: alvos.map(function (p) { return { valor: p.id, rotulo: p.nome + (p.situacao ? " (" + p.situacao + ")" : "") }; }), aoMudar: function (v) { st.alvo = v; } }) : null,
+        st.acao === "escapar" ? UI().campo({ rotulo: "Perícia para escapar", tipo: "selecao", valor: st.opcoes.pericia || "acrobacia", opcoes: [{ valor: "acrobacia", rotulo: "Acrobacia" }, { valor: "luta", rotulo: "Luta" }], ajuda: "Sendo afogado(a): −1 passo. Ajudando um aliado: escolha-o como alvo, sem a redução.", aoMudar: function (v) { st.opcoes.pericia = v; } }) : null,
+        ["preparar", "habilidade", "outra", "mover", "investigar", "abrigo"].indexOf(st.acao) < 0 ? UI().campo({ rotulo: st.acao === "defender" ? "Contra quem (o ataque escolhido antes da rolagem)" : "Alvo", tipo: "selecao", valor: st.alvo, opcoes: alvos.map(function (p) { return { valor: p.id, rotulo: p.nome + (p.situacao ? " (" + p.situacao + ")" : "") }; }), aoMudar: function (v) { st.alvo = v; } }) : null,
         ataque && st.acao !== "agarrar" ? UI().campo({ rotulo: "Arma", tipo: "selecao", valor: st.arma, opcoes: [{ valor: "", rotulo: "Desarmado (não letal)" }].concat(armas.map(function (i) { return { valor: i.id, rotulo: i.nome + (i.consumivel === "vespa" ? " (Sobrevivência, RA+1)" : " (RA" + (i.dano >= 0 ? "+" : "") + i.dano + ")") }; })), aoMudar: function (v) { st.arma = v; } }) : null,
         st.acao === "agredirDistancia" ? el("div.o2-criar__campos", {}, [
           UI().campo({ rotulo: "Alcance", tipo: "selecao", valor: st.opcoes.alcance, opcoes: [{ valor: "curto", rotulo: "Curto (DT 7)" }, { valor: "longo", rotulo: "Longo (+3)" }], aoMudar: function (v) { st.opcoes.alcance = v; } }),

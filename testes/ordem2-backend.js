@@ -118,6 +118,70 @@ export async function testarOrdem2Backend({ t, preparar, novaConta, comoFn }) {
     M({ acao: "salvar_campanha", campanhaId: camp, dados: { sistema: "ordem2" } });
     const volta = M({ acao: "ler_ordem2", campanhaId: camp });
     t.ok("voltando a Ordem II, o estado está como estava", volta.ok && volta.dados.estado.investigacao.pontos.length === 1 && volta.dados.estado.combate.ativo === true);
+
+    /* ---------------- v9.1: pacote de missão no servidor ---------------- */
+    t.grupo("Ordem II · pacote de missão (conteúdo do Mestre só no servidor)");
+    (0, eval)(await ler("testes/fixtures/ordem2-pacote-sintetico.js"));
+    const pacoteAntes = G.PACOTES_ORDEM2;
+    G.PACOTES_ORDEM2 = G.PACOTE_SINTETICO_ORDEM2;
+    try {
+      const fA = A({ acao: "criar_personagem", dados: ficha("alan", "Alan") }).dados.id;
+      const fV = B({ acao: "criar_personagem", dados: ficha("val", "Val") }).dados.id;
+      const c2 = M({ acao: "criar_campanha", dados: { sistema: "ordem2", nome: "Porão sintético" } }).dados.id;
+      M({ acao: "salvar_participantes", campanhaId: c2, membros: [{ userId: ana.id, papel: "jogador" }, { userId: bia.id, papel: "jogador" }] });
+      A({ acao: "vincular_personagem", campanhaId: c2, personagemId: fA });
+      B({ acao: "vincular_personagem", campanhaId: c2, personagemId: fV });
+      const op2 = (C, operacao, opId, rev) => C(Object.assign({ acao: "ordem2_operar", campanhaId: c2, opId: opId || id("op"), operacao }, rev === undefined ? {} : { rev }));
+      const l1 = M({ acao: "ler_ordem2", campanhaId: c2 });
+      t.ok("o Mestre vê a lista de pacotes (só nomes)", l1.ok && l1.dados.pacotes.some((p) => p.id === "sintetico" && p.cenas.length === 3) && !JSON.stringify(l1.dados.pacotes).includes("SOLUCAO"));
+      t.ok("a jogadora não recebe a lista de pacotes", A({ acao: "ler_ordem2", campanhaId: c2 }).dados.pacotes === undefined);
+      op2(M, { tipo: "configurar", perfil: "alpha-contemporaneo" }, id("cfg"), l1.rev);
+      const lc2 = M({ acao: "ler_ordem2", campanhaId: c2 });
+      const car = op2(M, { tipo: "carregarCena", pacote: "sintetico", cena: "sala" }, id("car"), lc2.rev);
+      t.ok("carregar a cena: o Mestre recebe pontos com contexto, anexos e compêndio", car.ok && car.dados.estado.investigacao.pontos.some((p) => p.notaPrivada === "SOLUCAO-SECRETA") && car.dados.cena && car.dados.cena.anexos.length === 3);
+      const linha = G.acharPor(G.ABAS.CAMPANHA_ORDEM2, "campanhaId", c2);
+      t.ok("a planilha guarda só o estado dinâmico (nem pistas nem solução)", !String(linha.dadosJson).includes("SOLUCAO-SECRETA") && !String(linha.dadosJson).includes("Uma caixa tem fundo falso") && String(linha.dadosJson).includes('"pacote"'));
+      const vj = JSON.stringify(A({ acao: "ler_ordem2", campanhaId: c2 }).dados);
+      t.ok("payload da jogadora: sem pista não revelada, senha, solução, roteiro nem ponto oculto", vj.includes("Estante sintética") && !/SOLUCAO-SECRETA|Uma caixa tem fundo falso|482915|"senha":\[|Fulano|PISTA-DO-OCULTO|A caixa está vazia/.test(vj));
+      // Handout privado: documento da campanha ligado ao anexo.
+      const doc = M({ acao: "salvar_documento", campanhaId: c2, dados: { nome: "Foto da estante", descricao: "handout", visiveis: [] } });
+      t.ok("o Mestre guarda o handout como documento privado", doc.ok);
+      op2(M, { tipo: "anexo", id: "h-foto", documentoId: doc.dados.id });
+      const docsAntes = A({ acao: "listar_documentos", campanhaId: c2 });
+      t.ok("antes da pista, a jogadora nem sabe que o documento existe", docsAntes.ok && !JSON.stringify(docsAntes.dados).includes("Foto da estante"));
+      op2(M, { tipo: "revelarPista", ponto: "estante", pista: "e2", para: [fA] });
+      t.ok("revelada a pista com o anexo, só quem a recebeu vê o documento", JSON.stringify(A({ acao: "listar_documentos", campanhaId: c2 }).dados).includes("Foto da estante") && !JSON.stringify(B({ acao: "listar_documentos", campanhaId: c2 }).dados).includes("Foto da estante"));
+      // Tranca e senha.
+      const tr = op2(A, { tipo: "desafioAgir", id: "cofre", acao: "tentar", quem: fA, valores: [4, 5, 1] });
+      t.iguais("tranca no servidor: 4-5-1 → baixo, exato, alto", tr.ok && tr.resultado.resultado.resposta, ["baixo", "exato", "alto"]);
+      // Arrombar no meio: recarregar e continuar.
+      rolar(6, 5);
+      op2(B, { tipo: "desafioAgir", id: "porta", acao: "tentar", quem: fV, confirmar: true });
+      const recarregada = B({ acao: "ler_ordem2", campanhaId: c2 }).dados.vista.proc.desafios.find((d) => d.id === "porta");
+      t.ok("recarregar no meio do arrombamento mantém a pontuação (6/10)", recarregada && recarregada.dados.pa === 6);
+      // Sobrecarga: encerrar a rodada com o mesmo opId duas vezes.
+      const pd0 = [fichaDe(A, fA).recursos.pd.atual, fichaDe(B, fV).recursos.pd.atual];
+      op2(M, { tipo: "encerrarRodada", rodada: 1 }); op2(M, { tipo: "encerrarRodada", rodada: 2 });
+      const opR3 = id("r3");
+      const r3 = op2(M, { tipo: "encerrarRodada", rodada: 3 }, opR3);
+      const r3b = op2(M, { tipo: "encerrarRodada", rodada: 3 }, opR3);
+      const r3c = op2(M, { tipo: "encerrarRodada", rodada: 3 });
+      t.ok("rodada 3 encerrada uma vez: repetir o opId devolve 'repetida', outro pedido é recusado", r3.ok && r3b.ok && r3b.repetida && !r3c.ok);
+      t.iguais("sobrecarga aplicada uma vez nas fichas (−1 PD cada)", [fichaDe(A, fA).recursos.pd.atual, fichaDe(B, fV).recursos.pd.atual], [pd0[0] - 1, pd0[1] - 1]);
+      // Encontro com ondas: repetir o fim de rodada não duplica a onda.
+      const l3 = M({ acao: "ler_ordem2", campanhaId: c2 });
+      op2(M, { tipo: "carregarCena", pacote: "sintetico", cena: "gruta" }, id("car"), l3.rev);
+      op2(M, { tipo: "configurar", perfil: "beta-vigilia" }, id("cfg"), M({ acao: "ler_ordem2", campanhaId: c2 }).rev);
+      op2(M, { tipo: "iniciarCombate", personagens: [fA, fV], antecipar: false });
+      op2(M, { tipo: "encontro", acao: "iniciar" });
+      const opR = id("onda");
+      const o1 = op2(M, { tipo: "proximaRodada", rodada: 1 }, opR);
+      const o2 = op2(M, { tipo: "proximaRodada", rodada: 1 }, opR);
+      const crias = M({ acao: "ler_ordem2", campanhaId: c2 }).dados.estado.combate.participantes.filter((p) => p.ameaca === "cria-da-floresta").length;
+      t.ok("onda da rodada 2 gerada uma vez (repetir o opId não duplica)", o1.ok && o2.repetida && crias === 2);
+      const vg = JSON.stringify(A({ acao: "ler_ordem2", campanhaId: c2 }).dados);
+      t.ok("bastidores do encontro (roteiro, ordem das runas) fora do payload da jogadora", !/ROTEIRO-SECRETO|"ordem":\["terra"/.test(vg));
+    } finally { G.PACOTES_ORDEM2 = pacoteAntes; }
   } finally {
     G.roladorDeOrdem2 = original;
   }

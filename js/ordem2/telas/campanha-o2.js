@@ -28,6 +28,7 @@
   function R() { return global.RAMAOrdem2; }
   function ME() { return global.RAMAOrdem2Mesa; }
   function T() { return global.RAMAOrdem2Tela; }
+  function PT() { return global.RAMAOrdem2ProcTela; }
 
   function botao(t, fn, o) { return T().botao(t, fn, o); }
   function linha(t) { return el("p.t-mini", { texto: t }); }
@@ -51,6 +52,8 @@
     function mestre() { return !!(mem.dados && mem.dados.mestre); }
     function pcs() { return mem.dados ? mem.dados.personagens : []; }
     function nomePc(pid) { var p = pcs().filter(function (x) { return x.id === pid; })[0]; return p ? p.nome : "?"; }
+    /* O pacote de dados das telas dos procedimentos (v9.1). */
+    function m91() { return { estado: estado(), mestre: mestre(), pcs: pcs(), meus: pcs().filter(function (p) { return p.meu; }).map(function (p) { return p.id; }), operar: operar, cena: mem.dados ? mem.dados.cena : null, pacotes: (mem.dados && mem.dados.pacotes) || [] }; }
 
     async function operar(op) {
       if (mem.ocupado) return { ok: false };
@@ -98,9 +101,9 @@
        O MESTRE
        ================================================================= */
     function vistaDoMestre(e) {
-      var lista = [["cena", "Cena"], ["personagens", "Personagens"], ["combate", "Combate"], ["investigacao", "Investigação"], ["registro", "Registro"], ["config", "Configuração"]];
+      var lista = [["cena", "Cena"], ["personagens", "Personagens"], ["combate", "Combate"], ["investigacao", "Quadro"], ["desafios", "Desafios"], ["encontro", "Encontro"], ["registro", "Registro"], ["config", "Configuração"]];
       if (!lista.some(function (a) { return a[0] === mem.aba; })) mem.aba = "cena";
-      var conteudo = { cena: abaCena, personagens: abaPersonagens, combate: abaCombate, investigacao: abaInvestigacao, registro: abaRegistro, config: abaConfig }[mem.aba];
+      var conteudo = { cena: abaCena, personagens: abaPersonagens, combate: abaCombate, investigacao: abaInvestigacao, desafios: function () { return PT().mestre.desafios(m91()); }, encontro: function () { return PT().mestre.encontro(m91()); }, registro: abaRegistro, config: abaConfig }[mem.aba];
       return el("div.pilha", {}, [topo(e), abas(lista), conteudo(e)]);
     }
 
@@ -108,6 +111,7 @@
       var st = { rotulo: "", pericia: "", atributo: "", dt: "7", alvos: [], oculto: false, cenaNome: "", cenaTipo: "livre", missaoNome: "" };
       var pericias = K().listaDePericias(e.perfil);
       return el("div.pilha", {}, [
+        PT() ? PT().mestre.cena(m91()) : null,
         UI.painel("Missão e cena", el("div.pilha", {}, [
           el("div.o2-criar__campos", {}, [
             UI.campo({ rotulo: "Nome da próxima cena", limite: 120, aoMudar: function (v) { st.cenaNome = v; } }),
@@ -205,10 +209,11 @@
           el("ol.o2-fases", {}, c.ordemFases.map(function (f, i) { return el("li" + (i === c.fase ? ".o2-fases__atual" : i < c.fase ? ".o2-fases__feita" : ""), { "aria-current": i === c.fase ? "step" : null, texto: (i === c.fase ? "▶ " : i < c.fase ? "✓ " : "") + K().FASES[f].nome + (i === c.fase && c.etapa === "rolada" ? " (rolada)" : "") }); })),
           el("div.faixa", {}, [
             fase ? botao(c.etapa === "declarar" ? "Rolar a " + K().FASES[fase].nome : "Aplicar a " + K().FASES[fase].nome + " (simultâneo)", function () { operar({ tipo: "aplicarFase" }); }, { classe: "r-botao--principal" }) : null,
-            botao("Próxima rodada", function () { operar({ tipo: "proximaRodada" }); }, { classe: fase ? "" : "r-botao--principal" }),
+            botao("Próxima rodada", function () { operar({ tipo: "proximaRodada", rodada: c.rodada }); }, { classe: fase ? "" : "r-botao--principal" }),
             botao("Encerrar combate", function () { operar({ tipo: "encerrarCombate" }); }, { classe: "r-botao--fantasma" }),
           ]),
           linha("Ações na mesma fase acontecem ao mesmo tempo: quem cai nela ainda resolve a ação; quem cai antes de uma fase posterior não age nela."),
+          e.proc && (e.proc.agarres || []).length ? el("p.o2-privado", { texto: "Sendo afogados: " + e.proc.agarres.map(function (a) { var v = ME().participante(e, a.vitima), q = ME().participante(e, a.por); return (v ? v.nome : "?") + (q ? " (por " + q.nome + ")" : ""); }).join(", ") + " — perdem o dano no fim da rodada; só podem escapar." }) : null,
           daFase.length ? el("ul.o2-declaracoes", {}, daFase.map(function (d) {
             var alvo = ME().participante(e, d.alvo);
             var res = d.resultado ? " — " + ME().descreverResultado(d.resultado) : "";
@@ -266,8 +271,9 @@
     function configurarFases(e) {
       var ordem = e.combate.ordemFases.slice();
       return UI.recolhivel({ titulo: "Ordem das fases (configurável por cena)", conteudo: el("div.pilha", {}, [
-        linha("Padrão: Geral → Distância → Corpo a corpo. Cenas especiais podem mudar a ordem."),
-        el("div.o2-criar__campos", {}, [0, 1, 2].map(function (i) { return UI.campo({ rotulo: (i + 1) + "ª fase", tipo: "selecao", valor: ordem[i] || "", opcoes: [{ valor: "", rotulo: "—" }].concat(Object.keys(K().FASES).map(function (f) { return { valor: f, rotulo: K().FASES[f].nome }; })), aoMudar: function (v) { ordem[i] = v; } }); })),
+        linha("Padrão: Geral → Distância → Corpo a corpo. As missões do Beta usam quatro: Suporte → Distância → Corpo a corpo → Final. Trocar no meio da rodada não perde nem repete ação."),
+        el("div.faixa", {}, [botao("Três fases (Beta pp. 18–21)", function () { operar({ tipo: "configurarFases", preset: "tres" }); }), botao("Quatro fases (Beta pp. 32, 69)", function () { operar({ tipo: "configurarFases", preset: "quatro" }); })]),
+        el("div.o2-criar__campos", {}, [0, 1, 2, 3].map(function (i) { return UI.campo({ rotulo: (i + 1) + "ª fase", tipo: "selecao", valor: ordem[i] || "", opcoes: [{ valor: "", rotulo: "—" }].concat(Object.keys(K().FASES).map(function (f) { return { valor: f, rotulo: K().FASES[f].nome }; })), aoMudar: function (v) { ordem[i] = v; } }); })),
         botao("Salvar a ordem", function () { operar({ tipo: "configurarFases", ordem: ordem.filter(Boolean) }); }),
       ]) });
     }
@@ -311,7 +317,9 @@
           ]);
         }))) : null,
         UI.painel("Dar uma pista", darPista(e)),
-        UI.painel("Pontos de interesse", el("div.pilha", {}, inv.pontos.map(function (p) { return pontoDoMestre(e, p); }).concat([botao("+ Ponto de interesse", function () { mem.editandoPonto = { id: "", nome: "", descricao: "", revelado: true, pistas: [{ pericias: ["percepcao"], dt: 6, texto: "" }], contextual: "", notaPrivada: "" }; pintar(); })]).concat(mem.editandoPonto && !mem.editandoPonto.id ? [editorDePonto(e, mem.editandoPonto)] : []))),
+        PT() ? PT().mestre.quadro(m91(), function (p) { mem.editandoPonto = JSON.parse(JSON.stringify(p)); pintar(); }) : null,
+        mem.editandoPonto && mem.editandoPonto.id ? UI.painel("Editando: " + mem.editandoPonto.nome, editorDePonto(e, mem.editandoPonto)) : null,
+        UI.painel("Pontos de interesse (próprios)", el("div.pilha", {}, inv.pontos.filter(function () { return !PT(); }).map(function (p) { return pontoDoMestre(e, p); }).concat([botao("+ Ponto de interesse", function () { mem.editandoPonto = { id: "", nome: "", descricao: "", revelado: true, pistas: [{ pericias: ["percepcao"], dt: 6, texto: "" }], contextual: "", notaPrivada: "" }; pintar(); })]).concat(mem.editandoPonto && !mem.editandoPonto.id ? [editorDePonto(e, mem.editandoPonto)] : []))),
         UI.painel("Travas da cena", linha("Recapitular: " + (inv.travas.recapitular ? "travado (já houve sucesso)" : "livre") + " · Compartilhar: " + (inv.travas.compartilhar ? "travado" : "livre") + ". Nova cena destrava.")),
       ]);
     }
@@ -418,7 +426,10 @@
           ]));
         },
         investigacao: function () {
-          return UI.painel("Pontos de interesse", e.investigacao.pontos.length ? el("div.pilha", {}, e.investigacao.pontos.map(function (p) { return el("article.o2-ponto", {}, [el("h3.o2-ponto__nome", { texto: p.nome }), el("p", { texto: p.descricao })]); }).concat([linha("Investigue pela aba Investigação da sua ficha.")])) : linha("Nenhum ponto de interesse nesta cena."));
+          return el("div.pilha", {}, [
+            UI.painel("Pontos de interesse", e.investigacao.pontos.length ? el("div.pilha", {}, e.investigacao.pontos.map(function (p) { return el("article.o2-ponto", {}, [el("h3.o2-ponto__nome", { texto: (p.numero ? p.numero + ". " : "") + p.nome }), el("p", { texto: p.descricao })]); }).concat([linha("Investigue pela aba Investigação da sua ficha.")])) : linha("Nenhum ponto de interesse nesta cena.")),
+            PT() && meus.length ? PT().jogador(m91()) : null,
+          ]);
         },
         registro: function () { return abaRegistro(e); },
       }[mem.aba];

@@ -5,6 +5,8 @@
 # planilha e iterações das Script Properties; se você mantiver uma cópia
 # local com valores preenchidos, ela fica de fora.
 backend/*.local.gs
+# (inclui backend/Ordem2Pacotes.local.gs: o conteúdo do Mestre das missões de
+#  Ordem II — pistas, senhas, soluções — que vai só para o Apps Script)
 backend/.clasp.json
 segredos.txt
 senhas.txt

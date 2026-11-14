@@ -98,7 +98,7 @@ const hbJs2 = await ler("js/paginas/homebrew.js");
 t.ok("Homebrew: uma opção só, “Criatura”, e o sistema pelas capas", /opcao\("Criatura", /.test(hbJs2) && !/Criatura de Ordem Paranormal"/.test(hbJs2) && !/opcao\("Criatura universal"/.test(hbJs2) && /escolherSistemaDaCriatura/.test(hbJs2) && /RAMACapaSistema/.test(hbJs2));
 const bib2 = await ler("js/paginas/criaturas-biblioteca.js");
 t.ok("combate e aliados de Ordem deixam os outros sistemas de fora (lista e leitura)", /SISTEMAS_NATIVOS/.test(bib2) && /criatura_de_outro_sistema/.test(bib2));
-t.ok("o servidor resume com o sistema da criatura (v8.0: e Tormenta20)", /\['oblivio', 'vampiro', 'goblins', 'tormenta20'\]\.indexOf\(d\.sistema\)/.test(await ler("backend/Codigo.gs")));
+t.ok("o servidor resume com o sistema da criatura (v8.0: e Tormenta20; v9.1: e Ordem II)", /\['oblivio', 'vampiro', 'goblins', 'tormenta20', 'ordem2'\]\.indexOf\(d\.sistema\)/.test(await ler("backend/Codigo.gs")));
 
 t.grupo("Menu e páginas");
 const app = await ler("js/app.js");

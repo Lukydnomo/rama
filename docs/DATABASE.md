@@ -1,5 +1,24 @@
 # O banco
 
+## Ordem Paranormal RPG II · procedimentos — v9.1
+
+Nenhuma aba nova (**`setupRama()` não é necessário**). `CAMPANHA_ORDEM2.dadosJson`
+ganha o campo `proc` (versão 1): o pacote e a cena carregados, a rodada da cena
+e as já encerradas, presentes, número de jogadores, pontos anunciados, flags,
+pistas do grupo, ligações de anexos, itens de cena, posse e cargas das
+ferramentas, compêndio (portador, permitidos, marcas), as instâncias de desafio
+(com o `segredo` — senha, resposta, ordem — que só o Mestre recebe), tabelas por
+rodada, quem causou dano em cada rodada, agarres, encontro (ondas geradas,
+bloqueio), perseguição, esconderijo e recursos de cena. O **conteúdo** do
+pacote (pontos, pistas, contexto, soluções) não é gravado: é hidratado do
+arquivo `Ordem2Pacotes` do Apps Script a cada leitura/operação; só os pontos
+que o Mestre editou ficam no estado (`editado: true`). As descobertas guardam
+também `anexo`, `ferramenta`, `conjuntos` (rádio), `area` (laser) e `sucesso`
+(laboratório). Revelar uma pista com anexo ligado a um documento acrescenta
+contas ao `CAMPANHA_DOCUMENTOS.visiveisJson` daquele documento (nunca remove;
+`rev` sobe). Uma criatura de Homebrew pode ter `sistema: "ordem2"` com o bloco
+`ordem2` (o resumo da biblioteca leva os PV).
+
 ## Ordem Paranormal RPG II — v9.0
 
 > **Atualizando para a v9.0:** crie o arquivo `Ordem2` com `backend/Ordem2.gs`,

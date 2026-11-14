@@ -118,6 +118,27 @@
 
   var CHANGELOG = [
     {
+      versao: "9.1.0",
+      codinome: "LAMPARINA",
+      data: "14/11/2026",
+      mudancas: {
+        "Adicionado": [
+          "Ordem II: as missões dos playtests jogáveis pela mesa — o Ato I e o Ato II da Maldição do Ídolo de Pedra (Alpha) e as duas missões do Beta (o Aughisk e Ellén Trechend). O Mestre carrega a cena, anuncia os pontos e decide as revelações; o site cuida de contadores, testes e efeitos.",
+          "Quadro de investigação: pontos ocultos ou anunciados, pistas com pré-requisito, personagem exclusivo, número de jogadores e anexo; o que cada personagem e o grupo já sabem (a mesma pista não rende duas vezes); revelação manual; em Recapitular, Compartilhar e Interagir, o Mestre escolhe a pista nova entre as que a pessoa ainda não tem.",
+          "Desafios de acesso com as regras próprias: destrancar (senha secreta, tentativas pelo Crime e limite da fechadura), senha de teclado com bloqueio, arrombar, alcançar seguro ou arriscado, sustentar, equilíbrio com dados de reserva, escalar, travessias por áreas, hack técnico (problema com tempo) e social (perguntas e chances), enigmas e o encaixe de runas.",
+          "As ferramentas da Ordo Realitas (Ato II): quem leva cada uma, empréstimo e cargas, a leitura de cada ponto, o laser por ambiente, o rádio que tira os conjuntos falsos, o laboratório (a sequência de 4 a 6 dados) e o compêndio, consultado por quem o carrega e por quem ele permitir, com as evidências comparáveis.",
+          "Sobrecarga mental e a maldição do Ídolo por rodada (o porão com o preset exato), aplicadas uma vez por rodada, com suspensão e isenção.",
+          "Encontros: troca entre três e quatro fases sem perder ação, ondas de afogados e de crias, o roteiro do aughisk, tributo, bloqueio da entrada da gruta, afogar e escapar, efeitos em grupo, perseguições (a enxurrada e as três cabeças) e o esconderijo da mata.",
+          "Ameaças nativas de Ordem II no Catálogo, no Homebrew e na mesa: Afogado, Aughisk, Crias da Floresta, Ellén Trechend (efeitos) e o inventário do Alpha, sem preencher o que o texto não imprime. Cada ocorrência tem PV e ações próprios.",
+        ],
+        "Corrigido": [
+          "Destrancar em Ordem II respondia alto e baixo ao contrário do exemplo do livro (senha 3-5-2, tentativa 4-5-1 → baixo, exato, alto).",
+          "Trocar o perfil de regras da campanha sem escolher a ambientação agora usa a ambientação do perfil.",
+        ],
+        "Técnico": ["Novos js/ordem2/ameacas.js, js/ordem2/procedimentos.js e js/ordem2/telas/o2-procedimentos.js, copiados no Ordem2.gs (testes/gerar-ordem2-gs.js). O conteúdo do Mestre (pontos, pistas, senhas, soluções, roteiros e o compêndio) mora em backend/Ordem2Pacotes.local.gs, fora do git e do site, e é hidratado no servidor a cada leitura; a planilha guarda só o estado dinâmico. Handouts, mapas, tokens e músicas ficam como referência (sha256, sem duplicar), ligados a um documento da campanha que só aparece para quem recebeu a pista. Servidor: troque Ordem2.gs e Codigo.gs, crie o arquivo Ordem2Pacotes com backend/Ordem2Pacotes.local.gs e crie uma versão nova da implantação; setupRama() não é necessário. Site: js/ordem2/ (e telas/), css/ordem2.css, css/modern20/ordem2.css, js/criaturas.js, js/fichas-nativas.js, js/paginas/homebrew.js, homebrew-criatura-sistemas.js e catalogo.js, js/versao.js e as páginas personagens/, ficha/, campanha/, catalogo/ e homebrew/. Testes: testes/executar-ordem2-missoes.js (pacote sintético em testes/fixtures/) e a sessão nova em testes/ordem2-backend.js. Fontes, fatos, inferências, propostas e divergências com o teste que fixa em docs/ORDEM2.md."],
+      },
+    },
+    {
       versao: "9.0.0",
       codinome: "BRUMA",
       data: "13/11/2026",

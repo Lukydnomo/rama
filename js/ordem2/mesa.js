@@ -55,6 +55,18 @@
   /* Configurações com `rev` (um estado velho não sobrescreve). */
   var OPS_COM_REV = ["configurar", "ponto", "removerPonto", "configurarFases"];
 
+  /* Extensão (v9.1): js/ordem2/procedimentos.js registra operações e
+     ganchos aqui — a porta continua uma só. */
+  var GANCHOS = { normalizar: [], vista: [], pistaBloqueada: [], aoRevelar: [], flag: null, novaCena: [], fimDeRodadaCombate: [], inicioDeRodadaCombate: [], validarDeclaracao: [], passosDeclaracao: [], aoFinalizar: [], aoDano: [], aoAtaque: [] };
+  function gancho(nome, fn) { if (GANCHOS[nome]) GANCHOS[nome].push(fn); }
+  function registrarOperacao(nome, fn, o) {
+    var x = o || {};
+    OPERACOES[nome] = fn;
+    (x.mestre ? OPS_DO_MESTRE : OPS_DO_PERSONAGEM).push(nome);
+    if (x.semFicha) OPS_SEM_FICHA.push(nome);
+    if (x.rev) OPS_COM_REV.push(nome);
+  }
+
   function estadoVazio(perfil) {
     var pr = K().PERFIS_REGRAS[perfil] ? perfil : "beta-vigilia";
     return {
@@ -97,9 +109,16 @@
     cv.miras = marcasDeRodada(c.miras); cv.fintas = marcasDeRodada(c.fintas);
     v.combate = cv;
     var inv = obj(b.investigacao);
-    v.investigacao.pontos = lista(inv.pontos).map(normalizarPonto).slice(0, 60);
+    v.investigacao.pontos = lista(inv.pontos).map(normalizarPontoV91).slice(0, 80);
     Object.keys(obj(inv.descobertas)).forEach(function (pid) {
-      v.investigacao.descobertas[texto(pid, 80)] = lista(inv.descobertas[pid]).map(function (x) { var o = obj(x); return { id: texto(o.id, 80) || id(), pista: texto(o.pista, 80), ponto: texto(o.ponto, 80), texto: texto(o.texto, 1200), como: texto(o.como, 80), critico: o.critico === true }; }).slice(-120);
+      v.investigacao.descobertas[texto(pid, 80)] = lista(inv.descobertas[pid]).map(function (x) { var o = obj(x); var d = { id: texto(o.id, 80) || id(), pista: texto(o.pista, 80), ponto: texto(o.ponto, 80), texto: texto(o.texto, 1200), como: texto(o.como, 80), critico: o.critico === true };
+        /* v9.1: anexo autorizado, ferramenta, conjuntos do rádio, área do laser. */
+        if (o.anexo) d.anexo = texto(o.anexo, 80);
+        if (o.ferramenta) d.ferramenta = texto(o.ferramenta, 30);
+        if (Array.isArray(o.conjuntos)) d.conjuntos = o.conjuntos.map(function (c) { return texto(c, 120); }).slice(0, 30);
+        if (o.area) d.area = texto(o.area, 60);
+        if (o.sucesso !== undefined) d.sucesso = o.sucesso === true;
+        return d; }).slice(-120);
     });
     var tr = obj(inv.travas);
     v.investigacao.travas = { recapitular: tr.recapitular === true, compartilhar: tr.compartilhar === true };
@@ -111,6 +130,7 @@
     v.rolagens = lista(b.rolagens).map(function (p) { return copiar(obj(p)); }).slice(-MAX_ROLAGENS);
     v.registro = lista(b.registro).map(function (r) { var o = obj(r); return { quando: texto(o.quando, 40), texto: texto(o.texto, 400) }; }).slice(-MAX_REGISTRO);
     v.privado = lista(b.privado).map(function (r) { var o = obj(r); return { quando: texto(o.quando, 40), texto: texto(o.texto, 400) }; }).slice(-MAX_REGISTRO);
+    GANCHOS.normalizar.forEach(function (fn) { fn(v, b); });
     return v;
   }
 
@@ -127,6 +147,31 @@
       contextual: texto(p.contextual, 4000), notaPrivada: texto(p.notaPrivada, 2000),
     };
   }
+  /* Os campos novos de um ponto (v9.1): número, área, estado (oculto /
+     anunciado), pré-requisitos, anexos, ordem de descoberta, desafios e
+     a leitura das ferramentas. Acrescentados sem mexer no formato antigo. */
+  function normalizarPontoV91(x) {
+    var p = obj(x);
+    var n = normalizarPonto(p);
+    n.numero = texto(p.numero, 12);
+    n.area = texto(p.area, 60);
+    n.origem = p.origem === "pacote" ? "pacote" : "";
+    n.desafios = lista(p.desafios).map(function (d) { return texto(d, 80); }).filter(Boolean).slice(0, 8);
+    n.ferramentas = copiar(obj(p.ferramentas));
+    n.normal = p.normal === true;
+    n.pistas = n.pistas.map(function (q, i) {
+      var o = obj(lista(p.pistas)[i]);
+      q.requer = lista(o.requer).map(function (r) { return texto(r, 120); }).filter(Boolean).slice(0, 6);
+      q.concede = lista(o.concede).map(function (r) { return texto(r, 120); }).filter(Boolean).slice(0, 6);
+      q.anexo = texto(o.anexo, 80);
+      q.ordem = inteiro(o.ordem, 0, 999, i);
+      q.jogadores = lista(o.jogadores).map(function (j) { return inteiro(j, 1, 12, 0); }).filter(Boolean).slice(0, 6);
+      q.dtSe = o.dtSe && obj(o.dtSe).flag ? { flag: texto(o.dtSe.flag, 120), dt: inteiro(o.dtSe.dt, 0, 40, 10) } : null;
+      q.ferramenta = texto(o.ferramenta, 30);
+      return q;
+    });
+    return n;
+  }
 
   function normalizarParticipante(x) {
     var p = obj(x);
@@ -140,6 +185,15 @@
       v.bloco = R().normalizar(p.bloco);
       v.ataques = lista(p.ataques).map(function (a) { return R().normalizarItem(Object.assign({ tipo: "arma" }, obj(a))); }).slice(0, 6);
       v.notas = texto(p.notas, 1200);
+      /* v9.1: ameaça de origem, RD (null = não impressa), especiais com
+         motor, quando chega (ondas) e a quem está agarrando. */
+      v.ameaca = texto(p.ameaca, 60);
+      v.rd = p.rd === null || p.rd === undefined || p.rd === "" ? null : inteiro(p.rd, 0, 99, 0);
+      v.especiais = lista(p.especiais).map(function (x) { var o = obj(x); return o.id && o.motor ? { id: texto(o.id, 40), nome: texto(o.nome, 80), motor: copiar(obj(o.motor)), fase: texto(o.fase, 20), dano: o.dano === null || o.dano === undefined ? null : inteiro(o.dano, -10, 50, 0) } : null; }).filter(Boolean).slice(0, 8);
+      v.chegaEm = inteiro(p.chegaEm, 0, 100000, 0);
+      v.onda = inteiro(p.onda, 0, 999, 0);
+      v.aoDestruir = lista(p.aoDestruir).map(function (s) { return texto(s, 60); }).filter(Boolean).slice(0, 6);
+      v.objeto = p.objeto === true;
     }
     return v;
   }
@@ -202,6 +256,7 @@
     if (OPS_DO_MESTRE.indexOf(o.tipo) < 0 && OPS_DO_PERSONAGEM.indexOf(o.tipo) < 0) return { ok: false, motivo: "Operação desconhecida." };
     if (OPS_DO_MESTRE.indexOf(o.tipo) >= 0 && !papel.mestre) return { ok: false, motivo: "Só o Mestre pode fazer isso." };
     var fn = OPERACOES[o.tipo];
+    saida.documentos = [];
     var r = fn(e, fichas, o, papel, rolar, saida, ctx);
     if (r && r.ok === false) return r;
     Object.keys(fichas).forEach(function (pid) { if (JSON.stringify(fichas[pid].bloco) !== antes[pid]) saida.tocadas.push(pid); });
@@ -218,8 +273,11 @@
      --------------------------------------------------------------- */
   var OPERACOES = {};
   OPERACOES.configurar = function (e, f, o, p, rolar, s) {
+    var mudouPerfil = o.perfil && K().PERFIS_REGRAS[o.perfil] && o.perfil !== e.perfil;
     if (o.perfil && K().PERFIS_REGRAS[o.perfil]) e.perfil = o.perfil;
     if (o.ambientacao && K().AMBIENTACOES[o.ambientacao]) e.ambientacao = o.ambientacao;
+    /* Trocar o perfil sem dizer a ambientação: vale a do perfil (v9.1). */
+    else if (mudouPerfil) e.ambientacao = K().PERFIS_REGRAS[e.perfil].ambientacao;
     log(e, "Perfil de regras da campanha: " + K().PERFIS_REGRAS[e.perfil].nome + ".");
     ev(s, "Configuração salva.");
   };
@@ -238,6 +296,7 @@
     e.investigacao.travas = { recapitular: false, compartilhar: false };
     e.ajudas = []; e.reservasGrupo = [];
     e.pedidos.forEach(function (x) { x.aberto = false; });
+    GANCHOS.novaCena.forEach(function (fn) { fn(e, fichas, o, s); });
     Object.keys(fichas).forEach(function (pid) {
       M().inicioDeCena(fichas[pid].bloco).forEach(function (x) { s.eventos.push({ texto: fichas[pid].nome + ": " + x.texto, privado: false }); });
     });
@@ -489,6 +548,7 @@
     }
     if (cx.investigacao) concluirExaminar(e, fichas, t, res, s);
     if (cx.solicitacao) concluirSolicitacao(e, t, res, s);
+    if (cx.proc) GANCHOS.aoFinalizar.forEach(function (fn) { fn(e, fichas, t, res, s, rolar, ctx); });
     if (cx.habilidade) concluirHabilidade(e, fichas, t, res, s, rolar, ctx);
     if (cx.combate) {
       var d = e.combate.declaracoes.filter(function (x) { return x.id === cx.combate; })[0];
@@ -723,10 +783,11 @@
   /* ---------------------------------------------------------------
      INVESTIGAÇÃO (Alpha pp. 21–23; Beta pp. 13–15)
      --------------------------------------------------------------- */
+  function semAcentoEsp(t) { return String(t || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase(); }
   function pistaCabe(b, pista, per) {
-    var ch = per.chave + (per.especializacao ? ":" + per.especializacao.toLowerCase() : "");
+    var ch = per.chave + (per.especializacao ? ":" + semAcentoEsp(per.especializacao) : "");
     return pista.pericias.some(function (k) {
-      var kk = K().ALIASES[k] || k;
+      var kk = semAcentoEsp(K().ALIASES[k] || k);
       if (kk.indexOf("aptidao") === 0) return per.chave === "aptidao" && (kk === "aptidao" || kk === ch);
       return kk === per.chave;
     });
@@ -735,10 +796,17 @@
     var ja = e.investigacao.descobertas[pid] || (e.investigacao.descobertas[pid] = []);
     var novas = [];
     ponto.pistas.forEach(function (q) {
-      if (!pistaCabe(b, q, per) || q.dt > limite) return;
+      if (!pistaCabe(b, q, per)) return;
+      var dt = q.dt;
+      if (q.dtSe && GANCHOS.flag && GANCHOS.flag(e, q.dtSe.flag, pid)) dt = q.dtSe.dt;
+      if (dt > limite) return;
       if (ja.some(function (d) { return d.pista === q.id; })) return;
-      var d = { id: id(), pista: q.id, ponto: ponto.id, texto: q.texto, como: como, critico: false };
+      /* v9.1: pré-requisito, personagem exclusivo, número de jogadores e
+         o que o grupo já sabe (a mesma pista não rende duas vezes). */
+      if (GANCHOS.pistaBloqueada.some(function (fn) { return fn(e, pid, q, b, ponto); })) return;
+      var d = { id: id(), pista: q.id, ponto: ponto.id, texto: q.texto, como: como, critico: false, anexo: q.anexo || "" };
       ja.push(d); novas.push(d);
+      GANCHOS.aoRevelar.forEach(function (fn) { fn(e, pid, d, q, ponto); });
     });
     return novas;
   }
@@ -875,7 +943,8 @@
   };
 
   OPERACOES.ponto = function (e, f, o, p, rolar, s) {
-    var n = normalizarPonto(o.ponto);
+    var n = normalizarPontoV91(o.ponto);
+    if (n.origem === "pacote") n.editado = true;
     var i = e.investigacao.pontos.map(function (x) { return x.id; }).indexOf(n.id);
     if (i >= 0) e.investigacao.pontos[i] = n; else e.investigacao.pontos.push(n);
     ev(s, "Ponto de interesse salvo: " + n.nome + ".", true);
@@ -924,6 +993,7 @@
       bloco: { perfilRegras: "beta-vigilia", base: { atributos: { fisico: at.fisico || 6, mente: at.mente || 6, emocao: at.emocao || 6 }, pericias: pericias.length ? pericias : [{ chave: "luta", dado: 6 }, { chave: "pontaria", dado: 4 }, { chave: "acrobacia", dado: 4 }, { chave: "percepcao", dado: 4 }, { chave: "intuicao", dado: 4 }] }, recursos: { pv: { max: pv, atual: pv }, pd: { max: inteiro(o.pd, 1, 999, 10), atual: inteiro(o.pd, 1, 999, 10) } }, itens: o.armadura ? [{ nome: "Proteção", armadura: inteiro(o.armadura, 0, 20), vestido: true }] : [] },
       ataques: lista(o.ataques).length ? o.ataques : [{ nome: "Ataque", alcance: "corpo", dano: 1 }],
       notas: o.notas,
+      ameaca: o.ameaca, rd: o.rd, especiais: o.especiais, chegaEm: o.chegaEm, onda: o.onda, aoDestruir: o.aoDestruir, objeto: o.objeto,
     });
   }
   OPERACOES.adicionarNpc = function (e, f, o, p, rolar, s) {
@@ -936,12 +1006,46 @@
     e.combate.declaracoes = e.combate.declaracoes.filter(function (d) { return d.ator !== o.id; });
   };
   OPERACOES.configurarFases = function (e, f, o, p, rolar, s) {
-    var ordem = lista(o.ordem).filter(function (x, i, t) { return K().FASES[x] && t.indexOf(x) === i; });
+    var ordem = o.preset === "quatro" ? K().ORDEM_FASES_4.slice() : o.preset === "tres" ? K().ORDEM_FASES_PADRAO.slice() : lista(o.ordem).filter(function (x, i, t) { return K().FASES[x] && t.indexOf(x) === i; });
     if (!ordem.length) return { ok: false, motivo: "Escolha ao menos uma fase." };
-    e.combate.ordemFases = ordem; e.combate.fase = 0; e.combate.etapa = "declarar";
+    reordenarFases(e, ordem);
     log(e, "Ordem de fases: " + ordem.map(function (x) { return K().FASES[x].nome; }).join(" → ") + ".");
   };
 
+  /* Trocar a ordem no meio da rodada (v9.1): cada declaração vai para a
+     fase equivalente na ordem nova — a ação não se perde nem se repete;
+     as já resolvidas ficam como estão; a posição segue a fase atual
+     (ou a equivalente) e nada já aplicado volta a acontecer. */
+  function equivalente(fase, ordem) {
+    if (ordem.indexOf(fase) >= 0) return fase;
+    if (fase === "geral") return ordem.indexOf("suporte") >= 0 ? "suporte" : ordem.indexOf("final") >= 0 ? "final" : "";
+    if (fase === "suporte" || fase === "final") return ordem.indexOf("geral") >= 0 ? "geral" : "";
+    return "";
+  }
+  function reordenarFases(e, ordem) {
+    var c = e.combate;
+    var antiga = c.ordemFases.slice();
+    var atual = antiga[c.fase] || "";
+    var feitas = antiga.slice(0, Math.min(c.fase, antiga.length));
+    c.declaracoes.forEach(function (d) {
+      if (d.rodada !== c.rodada || ordem.indexOf(d.fase) >= 0) return;
+      d.faseAntes = d.fase;
+      d.fase = K().faseDaAcao(d.acao, ordem);
+    });
+    c.ordemFases = ordem;
+    var pos;
+    if (c.fase >= antiga.length) pos = ordem.length;
+    else {
+      var eq = equivalente(atual, ordem);
+      pos = eq ? ordem.indexOf(eq) : 0;
+      /* "Geral" já aplicada vira "Suporte" feita; "Final" ainda vem. */
+      while (pos < ordem.length && feitas.some(function (f) { return equivalente(f, ordem) === ordem[pos] && !(f === "geral" && ordem[pos] === "final"); })) pos++;
+    }
+    /* Uma declaração ainda não rolada que caiu numa fase já passada vem para a atual. */
+    c.declaracoes.forEach(function (d) { if (d.rodada === c.rodada && d.estado === "declarada" && pos < ordem.length && ordem.indexOf(d.fase) < pos) d.fase = ordem[pos]; });
+    if (ordem[pos] !== atual) c.etapa = "declarar";
+    c.fase = pos;
+  }
   function faseAtual(e) { return e.combate.ordemFases[e.combate.fase] || ""; }
   function acoesNaRodada(e, ator) { return Number(e.combate.agiu[ator] || 0); }
   function podeDeclarar(e, fichas, pa, fase) {
@@ -968,7 +1072,7 @@
     if (pa.tipo === "npc" ? !papel.mestre : !podeAgir(papel, pa.personagemId)) return { ok: false, motivo: "Você não conduz este participante." };
     var acao = K().ACOES_COMBATE[o.acao];
     if (!acao) return { ok: false, motivo: "Ação desconhecida." };
-    var fase = acao.fase;
+    var fase = K().faseDaAcao(o.acao, c.ordemFases);
     /* Prontidão: uma ação geral feita numa fase posterior. */
     if (o.naFase && K().FASES[o.naFase] && o.naFase !== fase) {
       var bP = blocoDoAtor(e, fichas, pa);
@@ -978,6 +1082,8 @@
     if (c.ordemFases.indexOf(fase) < 0) return { ok: false, motivo: K().FASES[fase].nome + " não está na ordem desta cena." };
     var motivo = podeDeclarar(e, fichas, pa, fase);
     if (motivo) return { ok: false, motivo: motivo };
+    var proposta = { ator: pa.id, acao: o.acao, fase: fase, alvo: texto(o.alvo, 80), opcoes: obj(o.opcoes) };
+    for (var gi = 0; gi < GANCHOS.validarDeclaracao.length; gi++) { var mg = GANCHOS.validarDeclaracao[gi](e, fichas, pa, proposta); if (mg) return { ok: false, motivo: mg }; }
     var d = { id: id(), ator: pa.id, nome: pa.nome, acao: o.acao, fase: fase, alvo: texto(o.alvo, 80), arma: texto(o.arma, 80), opcoes: copiar(obj(o.opcoes)), descricao: texto(o.descricao, 400), estado: "declarada", rodada: c.rodada };
     c.declaracoes.push(d);
     c.agiu[pa.id] = acoesNaRodada(e, pa.id) + 1;
@@ -1036,6 +1142,7 @@
     if (acao === "atrapalhar") return d.opcoes && d.opcoes.pericia ? d.opcoes.pericia : "enganacao";
     if (acao === "fintar") return "enganacao";
     if (acao === "defender") return d.opcoes && d.opcoes.comLuta ? "luta" : "acrobacia";
+    if (acao === "escapar") return d.opcoes && d.opcoes.pericia === "luta" ? "luta" : "acrobacia";
     return "";
   }
   function rolarDeclaracao(e, fichas, d, papel, rolar, s, ctx) {
@@ -1089,6 +1196,8 @@
     } else if (d.acao === "atrapalhar" || d.acao === "fintar") {
       pedido.tipo = "oposto"; pedido.dt = null;
     } else { pedido.tipo = "oposto"; pedido.dt = null; }
+    if (d.acao === "escapar") { pedido.tipo = "oposto"; pedido.dt = null; }
+    GANCHOS.passosDeclaracao.forEach(function (fn) { lista(fn(e, fichas, pa, d)).forEach(function (x) { pedido.passos.push({ alvo: "pericia", n: x.n, fonte: x.fonte }); }); });
     /* Passos de rodada sobre o ator (atrapalhado, empurrado…). */
     if (pa.tipo === "pc") {
       var r0 = OPERACOES.teste(e, fichas, { quem: pa.personagemId, pedido: pedido, contexto: { combate: d.id }, confirmar: false }, { mestre: true, pode: [pa.personagemId] }, rolar, s, ctx);
@@ -1142,7 +1251,9 @@
       if (!b) return;
       var escolha = obj(o.armadura)[pa.id];
       var arm = R().armaduraAtual(b) > 0 && (escolha === true || (escolha !== false && pa.armaduraAuto));
-      var evd = M().aplicarDano(b, { valor: x.valor, tipo: "fisico", naoLetal: x.naoLetal, externo: true, armadura: arm });
+      var valorFinal = x.valor;
+      if (pa.tipo === "npc" && pa.rd) { var ign = Math.min(pa.rd, x.ignoraRd || 0); var corte = pa.rd - ign; valorFinal = Math.max(0, x.valor - corte); if (corte || ign) ev(s, pa.nome + ": RD " + pa.rd + (ign ? " (" + ign + " ignorados)" : "") + " → " + valorFinal + " de dano.", pa.oculto); }
+      var evd = M().aplicarDano(b, { valor: valorFinal, tipo: "fisico", naoLetal: x.naoLetal, externo: true, armadura: arm });
       evd.forEach(function (y) { ev(s, pa.nome + ": " + y.texto, pa.oculto); });
       log(e, pa.nome + ": " + evd.map(function (y) { return y.texto; }).join(" "), pa.oculto);
       if (x.vespa && b.recursos.pv.atual > 0) {
@@ -1153,6 +1264,7 @@
         ev(s, pa.nome + " perde a próxima ação espantando as vespas.", pa.oculto);
       }
       if (pa.tipo === "npc" && b.recursos.pv.atual <= 0) { b.estado.pendentes = []; b.estado.inconsciente = true; ev(s, pa.nome + " está fora de combate.", pa.oculto); }
+      GANCHOS.aoDano.forEach(function (fn) { fn(e, fichas, pa, b, x, s); });
     });
     daFase.forEach(function (d) { if (d.estado === "rolada") d.estado = "aplicada"; });
     c.fase++;
@@ -1244,6 +1356,10 @@
       else { c.fintas.push({ a: d.ator, b: d.alvo, de: c.rodada, ate: c.rodada + 1 }); ev(s, d.nome + " finta " + alvo.nome + ": +2 passos no próximo ataque contra ele (até o fim da próxima rodada)."); }
     });
     daFase.filter(function (d) { return d.acao === "mirar" && d.alvo; }).forEach(function (d) { c.miras.push({ a: d.ator, b: d.alvo, de: c.rodada, ate: c.rodada + 1 }); ev(s, d.nome + " mira: +d6 no ataque à distância na próxima rodada."); });
+    /* Escapar (v9.1): os ganchos resolvem contra quem agarra. */
+    daFase.filter(function (d) { return d.resultado && d.acao === "escapar"; }).forEach(function (d) {
+      GANCHOS.aoAtaque.forEach(function (fn) { fn(e, fichas, d, null, null, rolar, s, "escapar"); });
+    });
     return danos;
   }
   function testeDe(e, d) { return d.teste ? e.testes.filter(function (x) { return x.id === d.teste; })[0] : null; }
@@ -1255,6 +1371,8 @@
   /* O dano de um acerto: RA + arma (duas maiores no crítico Beta);
      Para Bellum; o escudo de Sorcha no oposto perdido. */
   function golpe(e, fichas, d, at, bAt, alvo, bAl, arma, res, s, resDoAlvo) {
+    /* Ataque com efeito próprio (Afogar): o gancho decide; true = sem dano. */
+    if (arma && lista(arma.efeitos).length && GANCHOS.aoAtaque.some(function (fn) { return fn(e, fichas, d, at, alvo, null, s, "acerto", arma) === true; })) return [];
     var extras = [];
     if (arma && arma.categoria) R().habilidadesDoTipo(bAt, "danoPorCategoria").forEach(function (h) { var m = R().motorDe(h); if (m.categoria === arma.categoria) extras.push({ valor: m.valor, fonte: h.nome }); });
     var dn = M().dano(res, d.vespa ? { dano: 1 } : arma, extras, true);
@@ -1264,13 +1382,17 @@
       ev(s, alvo.nome + " · Escudo: −" + resDoAlvo.rb + " (rolagem baixa) no dano.");
     }
     ev(s, at.nome + " acerta " + alvo.nome + ": " + (res.critico ? "duas maiores " + dn.base : "RA " + dn.base) + (dn.arma ? " + " + dn.arma : "") + (extras.length ? " + " + extras.map(function (x) { return x.valor + " " + x.fonte; }).join(" + ") : "") + " = " + valor + " de dano.");
-    return [{ alvo: alvo.id, valor: valor, naoLetal: !!d.naoLetal, vespa: !!d.vespa }];
+    var ignora = arma ? lista(arma.efeitos).map(function (x) { var m = /^ignoraRd:(\d+)$/.exec(x); return m ? Number(m[1]) : 0; }).reduce(function (a, b) { return Math.max(a, b); }, 0) : 0;
+    return [{ alvo: alvo.id, valor: valor, naoLetal: !!d.naoLetal, vespa: !!d.vespa, ignoraRd: ignora, atordoa: !!(arma && lista(arma.efeitos).indexOf("atordoa") >= 0), ator: at.id, arma: arma ? arma.id : "" }];
   }
 
   OPERACOES.proximaRodada = function (e, fichas, o, p, rolar, s) {
     var c = e.combate;
     if (!c.ativo) return { ok: false, motivo: "Não há combate." };
     var rodada = c.rodada;
+    /* A rodada pedida é a atual: o mesmo pedido de outra janela não encerra duas. */
+    if (o.rodada !== undefined && o.rodada !== null && Number(o.rodada) !== rodada) return { ok: false, motivo: "A rodada " + o.rodada + " já foi encerrada." };
+    GANCHOS.fimDeRodadaCombate.forEach(function (fn) { fn(e, fichas, rodada, rolar, s); });
     c.participantes.forEach(function (pa) {
       var b = blocoDoAtor(e, fichas, pa);
       if (!b) return;
@@ -1283,6 +1405,7 @@
     c.declaracoes = c.declaracoes.filter(function (d) { return d.rodada >= rodada; }).slice(-40);
     log(e, "Rodada " + c.rodada + ".");
     ev(s, "Rodada " + c.rodada + ".");
+    GANCHOS.inicioDeRodadaCombate.forEach(function (fn) { fn(e, fichas, c.rodada, rolar, s); });
   };
   /* As escolhas de quem joga sobre o próprio participante. */
   OPERACOES.configurarParticipante = function (e, fichas, o, papel, rolar, s) {
@@ -1329,13 +1452,15 @@
     }
     danos.forEach(function (x) {
       M().aplicarDano(x.b, { valor: x.valor, tipo: "fisico", externo: true }).forEach(function (y) { ev(s, x.nome + ": " + y.texto); log(e, x.nome + ": " + y.texto); });
+      var vitima = x.b === bD ? df : at, autor = x.b === bD ? at : df;
+      GANCHOS.aoDano.forEach(function (fn) { fn(e, fichas, vitima, x.b, { valor: x.valor, ator: autor.id, conflitoAlpha: true }, s); });
     });
   };
 
   /* ---------------------------------------------------------------
      A VISTA DO JOGADOR — sem soluções nem notas privadas
      --------------------------------------------------------------- */
-  function vista(e, papel) {
+  function vista(e, papel, ctx) {
     var v = copiar(e);
     var meus = lista(papel.pode);
     v.privado = [];
@@ -1356,6 +1481,7 @@
     var ocultos = e.combate.participantes.filter(function (p) { return p.oculto; }).map(function (p) { return p.id; });
     v.combate.declaracoes = e.combate.declaracoes.filter(function (d) { return ocultos.indexOf(d.ator) < 0; }).map(function (d) { var q = copiar(d); delete q.montagem; return q; });
     v.rolagens = e.rolagens.filter(function (r) { return ocultos.indexOf(r.quem) < 0; });
+    GANCHOS.vista.forEach(function (fn) { fn(v, e, papel, ctx); });
     return v;
   }
 
@@ -1370,5 +1496,10 @@
     participante: participante, participanteDoPersonagem: participanteDoPersonagem, blocoDoAtor: blocoDoAtor,
     faseAtual: faseAtual, podeDeclarar: podeDeclarar, periciasDoPonto: periciasDoPonto, descreverResultado: descreverResultado,
     passosDeAjuda: passosDeAjuda,
+    /* v9.1 */
+    GANCHOS: GANCHOS, gancho: gancho, registrarOperacao: registrarOperacao, OPERACOES: OPERACOES,
+    normalizarPonto: normalizarPontoV91, novoNpc: novoNpc, combateVazio: combateVazio, foraDeCombate: foraDeCombate, reordenarFases: reordenarFases,
+    podeAgir: podeAgir, bloco: bloco, nomeDe: nomeDe, registrarRolagem: registrarRolagem, log: log, ev: ev, finalizar: finalizar,
+    revelar: revelar, pistaCabe: pistaCabe, OPS_SEM_FICHA: OPS_SEM_FICHA,
   };
 })(typeof window !== "undefined" ? window : globalThis);

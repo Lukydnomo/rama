@@ -344,20 +344,32 @@
   /* ---------------------------------------------------------------
      COMBATE (Beta pp. 18–21)
      --------------------------------------------------------------- */
+  /* Três fases (Beta pp. 18–21: Geral → Distância → Corpo a corpo) ou as
+     quatro das missões (Beta pp. 32 e 69: Suporte → Distância → Corpo a
+     corpo → Final). Uma ação "geral" vai para Suporte ou para Final
+     conforme `fase4` — trocar a ordem no meio da cena remapeia as
+     declarações, sem perder ação (faseDaAcao, mesa.configurarFases). */
   var FASES = {
     geral: { nome: "Fase Geral", texto: "Qualquer ação, exceto ataques." },
+    suporte: { nome: "Fase de Suporte", texto: "Ações de combate que não são ataque nem movimento puro: preparar esquiva, habilidades e itens que ajudam (Beta p. 69)." },
     distancia: { nome: "Ataques à Distância", texto: "Ataques com armas de arremesso ou disparo." },
     corpo: { nome: "Corpo a Corpo", texto: "Ataques corpo a corpo e manobras." },
+    final: { nome: "Fase Final", texto: "Movimento puro (inclusive fugir) e o que não é combate — investigar durante a luta, encaixar runas (Beta p. 69)." },
   };
   var ORDEM_FASES_PADRAO = ["geral", "distancia", "corpo"];
+  var ORDEM_FASES_4 = ["suporte", "distancia", "corpo", "final"];
   var ACOES_COMBATE = {
-    atrapalhar: { fase: "geral", nome: "Atrapalhar", texto: "Perícia coerente contra a Percepção do alvo (curto); vencendo, o alvo sofre −1 passo em todos os testes até o fim da rodada." },
-    defender: { fase: "geral", nome: "Defender-se", texto: "Acrobacia +d6 (ou Luta, contra corpo a corpo) oposta a um ataque escolhido antes da rolagem; vencendo, não sofre dano (nem causa)." },
-    fintar: { fase: "geral", nome: "Fintar", texto: "Enganação contra a Intuição do alvo (curto); vencendo, +2 passos no próximo ataque contra ele até o fim da próxima rodada." },
-    mirar: { fase: "geral", nome: "Mirar", texto: "Na próxima rodada, +d6 em ataques à distância contra o alvo." },
-    preparar: { fase: "geral", nome: "Preparar", texto: "Declara uma ação e o evento que a dispara; ela acontece antes do evento. Sem o evento, perde a ação." },
-    habilidade: { fase: "geral", nome: "Usar habilidade ou item", texto: "Conforme o texto da habilidade ou item." },
-    outra: { fase: "geral", nome: "Outra ação", texto: "Movimentar-se, ajudar, interagir…" },
+    atrapalhar: { fase: "geral", fase4: "suporte", nome: "Atrapalhar", texto: "Perícia coerente contra a Percepção do alvo (curto); vencendo, o alvo sofre −1 passo em todos os testes até o fim da rodada." },
+    defender: { fase: "geral", fase4: "suporte", nome: "Defender-se", texto: "Acrobacia +d6 (ou Luta, contra corpo a corpo) oposta a um ataque escolhido antes da rolagem; vencendo, não sofre dano (nem causa)." },
+    fintar: { fase: "geral", fase4: "suporte", nome: "Fintar", texto: "Enganação contra a Intuição do alvo (curto); vencendo, +2 passos no próximo ataque contra ele até o fim da próxima rodada." },
+    mirar: { fase: "geral", fase4: "suporte", nome: "Mirar", texto: "Na próxima rodada, +d6 em ataques à distância contra o alvo." },
+    preparar: { fase: "geral", fase4: "suporte", nome: "Preparar", texto: "Declara uma ação e o evento que a dispara; ela acontece antes do evento. Sem o evento, perde a ação." },
+    habilidade: { fase: "geral", fase4: "suporte", nome: "Usar habilidade ou item", texto: "Conforme o texto da habilidade ou item." },
+    outra: { fase: "geral", fase4: "final", nome: "Outra ação", texto: "Movimentar-se, ajudar, interagir…" },
+    mover: { fase: "geral", fase4: "final", nome: "Mover-se ou fugir", texto: "Movimento puro, inclusive tentar fugir do combate (Beta p. 69)." },
+    investigar: { fase: "geral", fase4: "final", nome: "Investigar durante a luta", texto: "Uma ação de investigação, desafio ou encaixe de runa no meio do combate (Beta p. 69): a ação mesmo é feita no quadro." },
+    abrigo: { fase: "geral", fase4: "suporte", nome: "Procurar abrigo", texto: "Contra um efeito em área anunciado (ex.: a Enxurrada de Morte na primeira ação do aughisk): +d6 no teste e, passando, sem dano (Beta p. 43)." },
+    escapar: { fase: "corpo", nome: "Escapar (ou soltar um aliado)", texto: "Acrobacia ou Luta oposta à Luta de quem agarra; a vítima sofre −1 passo, quem ajuda não (Beta p. 33)." },
     agredirDistancia: { fase: "distancia", nome: "Agredir (à distância)", texto: "Pontaria contra DT 7 (+3 em alcance longo)." },
     agredirCorpo: { fase: "corpo", nome: "Agredir (corpo a corpo)", texto: "Luta contra DT 7 (alcance curto)." },
     agarrar: { fase: "corpo", manobra: true, nome: "Agarrar", texto: "O alvo fica imóvel, −1 passo em ataques e só ataca com armas pequenas." },
@@ -386,7 +398,84 @@
     sustentar: { nome: "Sustentar", fonte: "beta", pagina: 17, texto: "1 PV e Atletismo; a cada rodada, novo teste com −1 passo acumulado." },
     hackTecnico: { nome: "Hack técnico", fonte: "alpha", pagina: 25, texto: "Teste de Tecnologia e um problema matemático em 10 segundos (mais fácil quanto maior o resultado)." },
     hackSocial: { nome: "Hack social", fonte: "alpha", pagina: 25, texto: "Teste de Intuição e perguntas sobre quem criou a senha; a cada 3 acima da DT, uma chance extra." },
+    senha: { nome: "Senha (teclado)", fonte: "alpha", pagina: 50, texto: "Um código que se digita; a missão diz quantos erros bloqueiam o teclado e por quanto tempo." },
+    escalar: { nome: "Escalar (acumular)", fonte: "beta", pagina: 41, texto: "A cada ação, rápido (DT maior, soma a RA) ou cauteloso (DT menor, soma a RB) até a meta; falhando, cai com dano igual ao acumulado." },
+    travessia: { nome: "Travessia por áreas", fonte: "beta", pagina: 57, texto: "Cada área pede uma soma de avanços; cada ação diz a perícia, a DT, quanto avança e o que acontece na falha." },
+    enigma: { nome: "Enigma", fonte: "beta", pagina: 60, texto: "Uma resposta conferida pela mesa (ou pelo Mestre); a missão diz o custo de errar." },
+    runas: { nome: "Encaixe de runas", fonte: "beta", pagina: 60, texto: "Pedras encontradas na cena, postas nos nichos na ordem certa." },
+    laboratorio: { nome: "Laboratório portátil", fonte: "alpha", pagina: 74, texto: "De 4 a 6 dados rolados um por vez, começando em d4 e subindo um passo até a Aptidão (Exatas); cada um precisa ser igual ou maior que o anterior; metade da Mente em novas rolagens. Não usa o teto de quatro dados de um teste." },
+    radio: { nome: "Rádio modificado", fonte: "alpha", pagina: 76, texto: "Conjuntos de palavras para ordenar; um teste de Tecnologia tira conjuntos falsos (7–9: 2; 10–12: 3; 13+: todos)." },
+    perseguicao: { nome: "Perseguição", fonte: "beta", pagina: 35, texto: "Rodadas contadas; avançar com Atletismo DT 10 (sucesso soma a RA, falha a RB); fôlego (d6, metade do Vigor) como dados bônus; esforço extra, carregar outro e os limiares de cada rodada." },
+    esconderijo: { nome: "Esconderijo", fonte: "beta", pagina: 55, texto: "Os dados do teste viram dados de esconderijo; as criaturas procuram rolando e descartam os iguais; sem dados, você foi encontrado." },
   };
+
+  /* ---------------------------------------------------------------
+     FERRAMENTAS DA ORDO REALITAS (Alpha pp. 65–70; uso pp. 74–76)
+     Cada ponto de interesse da missão diz o que cada uma mostra ali; sem
+     linha para a ferramenta, a leitura é normal/sem reação — e isso
+     também é informação (p. 81).
+     --------------------------------------------------------------- */
+  var FERRAMENTAS = {
+    laboratorio: { nome: "Laboratório portátil", pagina: 66, uso: 74, modo: "minijogo", texto: "Coleta e analisa amostras: a sequência de dados do minijogo." },
+    camera: { nome: "Câmera modificada", pagina: 67, uso: 74, modo: "anexo", texto: "Fotografa resíduos imagéticos: o Mestre envia o handout do ponto (ou descreve)." },
+    uv: { nome: "Lanterna de estouro ultravioleta", pagina: 67, uso: 74, cargas: 3, modo: "texto", texto: "Pulso UV revela vestígios; 3 cargas (iluminar não gasta)." },
+    laser: { nome: "Laser de varredura", pagina: 68, uso: 76, modo: "ambiente", texto: "Ativado no ambiente: mostra quais pontos reagem às outras ferramentas." },
+    infravermelho: { nome: "Leitor infravermelho", pagina: 68, uso: 76, modo: "texto", texto: "Gradientes térmicos paranormais; requer interpretação." },
+    emf: { nome: "Medidor EMF", pagina: 69, uso: 76, modo: "anexo", texto: "Apita num padrão: o Mestre envia o áudio do ponto (ou faz os bips); comparar com o compêndio." },
+    radio: { nome: "Rádio modificado", pagina: 69, uso: 76, modo: "radio", pericia: "tecnologia", texto: "Conjuntos de palavras para ordenar; o teste de Tecnologia tira os falsos." },
+    po: { nome: "Pó revelador", pagina: 69, uso: 76, cargas: 5, modo: "texto", texto: "Reage em tons e formas conforme o elemento; 5 usos." },
+    termometro: { nome: "Termômetro diferencial", pagina: 70, uso: 76, modo: "texto", texto: "Quantas vezes quiser: mais quente, mais frio ou igual ao ambiente." },
+    compendium: { nome: "Compêndio da Ordem", pagina: 70, uso: 74, modo: "consulta", texto: "Quem carrega (e quem ele permitir, no mesmo ambiente) consulta a qualquer momento." },
+  };
+  var ORDEM_FERRAMENTAS = ["laboratorio", "camera", "uv", "laser", "infravermelho", "emf", "radio", "po", "termometro", "compendium"];
+  /* Rádio (p. 76): quantos conjuntos falsos saem pelo resultado. */
+  var RADIO_FALSOS = [{ ate: 6, remove: 0 }, { ate: 9, remove: 2 }, { ate: 12, remove: 3 }, { ate: 999, remove: "todos" }];
+  function falsosDoRadio(total) { for (var i = 0; i < RADIO_FALSOS.length; i++) if (total <= RADIO_FALSOS[i].ate) return RADIO_FALSOS[i].remove; return "todos"; }
+
+  /* Sobrecarga mental (Alpha p. 77): a partir de certo ponto, dano
+     emocional no fim de cada rodada da investigação; a tabela é de cada
+     ambiente (vem com a cena). Dado: cada um rola o seu. */
+  var SOBRECARGA = { pagina: 77, texto: "No fim de cada rodada de investigação, cada personagem sofre o dano emocional da linha da rodada; quando é um dado, cada um rola o próprio. A tabela é do ambiente." };
+
+  /* Desafios de acesso: os testes normais ficam com o teste (montar,
+     pós-rolagem); estes números são as regras próprias de cada um. */
+  var DESAFIOS = {
+    destrancar: { pericia: "crime", tentativasPorDado: { 4: 1, 6: 2, 8: 3, 10: 4, 12: 5 }, pagina: { alpha: 24, beta: 16 } },
+    arrombar: { pericia: "atletismo", custoPv: 1, pagina: { alpha: 24, beta: 16 } },
+    alcancar: { pericia: "acrobacia", arriscadoDt: 3, pagina: { alpha: 25, beta: 17 } },
+    sustentar: { pericia: "atletismo", custoPv: 1, pagina: { alpha: 25, beta: 17 } },
+    equilibrio: { faces: 10, reservaFaces: 4, pagina: { beta: 17 } },
+    hackSocial: { pericia: "intuicao", pontosPorChance: 3, pagina: { alpha: 25 } },
+    hackTecnico: { pericia: "tecnologia", segundos: 10, pagina: { alpha: 25 } },
+    esconderijo: { pericia: "furtividade", esconderDt: 7, distrairDt: 7, passoDt: 3, danoEncontrado: "1d6", pagina: { beta: 55 } },
+    perseguicao: { pericia: "atletismo", dt: 10, folegoFaces: 6, pagina: { beta: 35 } },
+  };
+  /* A tabela das criaturas procurando (Beta p. 56), d10. */
+  var ESCONDERIJO_CRIATURAS = {
+    1: { tipo: "numeros", texto: "O Mestre fala dois números; descartam-se os dados de esconderijo desses números." },
+    2: { tipo: "sopro", texto: "Sopro na nuca: um personagem sorteado fica parado (2d6 PD) ou sai de perto (perde um dado)." },
+    3: { tipo: "todos", dados: [[1, 10]], texto: "As criaturas procuram todos: 1d10." },
+    4: { tipo: "todos", dados: [[2, 8]], texto: "As criaturas procuram todos: 2d8." },
+    5: { tipo: "todos", dados: [[3, 6]], texto: "As criaturas procuram todos: 3d6." },
+    6: { tipo: "todos", dados: [[1, 8]], texto: "As criaturas procuram todos: 1d8." },
+    7: { tipo: "todos", dados: [[2, 6]], texto: "As criaturas procuram todos: 2d6." },
+    8: { tipo: "um", porMaior: { 12: [1, 12], 10: [2, 10], 0: [3, 8] }, texto: "Uma criatura salta num personagem sorteado: 1d12, 2d10 ou 3d8 pelo maior dado de esconderijo dele." },
+    9: { tipo: "um", porMaior: { 12: [1, 10], 10: [2, 8], 0: [3, 6] }, texto: "Uma criatura procura um personagem sorteado: 1d10, 2d8 ou 3d6 pelo maior dado de esconderijo dele." },
+    10: { tipo: "nada", texto: "As criaturas param por um momento: ninguém é procurado." },
+  };
+  function faseDaAcao(chave, ordem) {
+    var a = ACOES_COMBATE[chave];
+    if (!a) return "";
+    var o = Array.isArray(ordem) && ordem.length ? ordem : ORDEM_FASES_PADRAO;
+    if (o.indexOf(a.fase) >= 0) return a.fase;
+    if (a.fase === "geral") {
+      if (a.fase4 && o.indexOf(a.fase4) >= 0) return a.fase4;
+      if (o.indexOf("suporte") >= 0) return "suporte";
+      if (o.indexOf("final") >= 0) return "final";
+    }
+    if ((a.fase === "suporte" || a.fase === "final") && o.indexOf("geral") >= 0) return "geral";
+    return a.fase;
+  }
 
   /* ---------------------------------------------------------------
      O BLOCO PARANORMAL — consultável, ainda sem conjuração (etapa 3)
@@ -556,6 +645,19 @@
     { id: "arsenal", fontes: "Ficha de Muirenn", texto: "Os preparados são de uso único, sem quantidade impressa.", escolha: "Inferência: uma dose de cada, editável.", teste: "—" },
     { id: "diarmaid", fontes: "Ficha de Cormac", texto: "A nota de rodapé de Herança fala em \"Diarmaid\" (nome anterior).", escolha: "Nada muda; só registrado.", teste: "—" },
     { id: "ocupacaoAlan", fontes: "Alpha pp. 15 e 62", texto: "A ficha de Alan diz Cientista; a missão o chama de arqueólogo.", escolha: "Vale a ficha.", teste: "executar-ordem2: presets conferidos" },
+    /* Etapa 2 (v9.1): procedimentos das missões. */
+    { id: "fechaduraSentido", fontes: "Alpha p. 24; Beta p. 16", texto: "\"Alto/baixo\" pode ler-se como o dado posto ou como a senha. O exemplo (senha 3-5-2, tentativa 4-5-1 → baixo, exato, alto) fixa: diz onde está a senha.", escolha: "A resposta descreve a senha em relação ao dado posto. A v9.0 respondia ao contrário e foi corrigida.", teste: "executar-ordem2: senha 3-5-2, tentativa 4-5-1 → baixo, exato, alto" },
+    { id: "remissoes", fontes: "Beta pp. 31, 39, 42, 70 (texto) × pp. 33, 37, 43, 71 (arquivo)", texto: "As remissões do texto apontam páginas que, no arquivo, são outras: Afogado (p. 35 → 33), balista (p. 39 → 37), Aughisk (p. 46 → 43), Crias da Floresta (p. 73 → 71).", escolha: "O R.A.M.A. cita a página do arquivo e guarda a do texto na ficha da ameaça.", teste: "executar-ordem2: ameaças com a página do arquivo" },
+    { id: "nexAughisk", fontes: "Beta p. 43", texto: "Presença Aterradora diz \"NEX 35%+ evita\" — NEX é da primeira edição e não existe nos playtests.", escolha: "Ignorado: vale o resto (2d6 emocional; Disciplina DT 10 reduz à metade). Não puxamos regra de Ordem I.", teste: "executar-ordem2: Presença Aterradora sem NEX" },
+    { id: "rdAughisk", fontes: "Beta pp. 38, 41, 43", texto: "Destruir o crânio tira a \"redução de dano\" do aughisk, mas a ficha não imprime o valor; balista e tocha \"ignoram 5 pontos de RD\".", escolha: "A RD do aughisk fica como lacuna (o Mestre informa no encontro); nada é inventado. O crânio tem RD 5, impresso.", teste: "executar-ordem2: aughisk sem RD inventada" },
+    { id: "tochaFase3", fontes: "Beta p. 41", texto: "\"O efeito da tocha é descrito na Fase 3\", mas a Fase 3 não descreve efeito nenhum.", escolha: "As ondas seguem o roteiro da p. 44; a tocha tem um interruptor manual do Mestre (\"a tocha afeta as ondas\") e o ataque da p. 41.", teste: "executar-ordem2: ondas do aughisk pelo roteiro" },
+    { id: "ondasCrias", fontes: "Beta p. 70", texto: "A onda \"dura 4 rodadas\", a próxima vem \"no início da quinta\" e depois \"a cada 3 rodadas\"; \"com mais uma criatura por personagem\" pode ser uma por personagem de novo ou uma a mais que a anterior.", escolha: "Ondas nas rodadas 2, 5, 8…; cada uma com 1 cria por personagem (o Mestre pode ligar \"crescente\"). Param quando a chama acende e ao menos duas ondas já vieram.", teste: "executar-ordem2: ondas da gruta param com a chama depois da 2ª" },
+    { id: "freezerArrombar", fontes: "Alpha p. 58", texto: "O freezer diz \"Arrombar — DT acumulada 12\", sem a DT do teste.", escolha: "PA 12; a DT do teste fica 7 (a padrão) até o Mestre mudar. Destrancar 4d6 não traz número de tentativas: sem limite até o Mestre definir.", teste: "executar-ordem2: arrombar soma a RA até a PA" },
+    { id: "alcancarPericia", fontes: "Beta pp. 17 × 64", texto: "A regra geral de Alcançar usa Acrobacia (DT e DT +3); a plataforma da gruta usa Atletismo DT 7 e DT 10.", escolha: "A cena manda na exceção explícita: o pacote da plataforma traz Atletismo 7/10; o resto usa a regra geral.", teste: "executar-ordem2: alcançar com perícia e DT da cena" },
+    { id: "handoutsAto2", fontes: "Alpha pp. 88–100 × ZIP de extras do Ato II", texto: "O texto chama os handouts do Ato II por outros números (Foto do Altar = 01, Depósito B = 03, Freezer = 04, Varredura = 16A/16B); no ZIP são 03, 04, 06 e 02A/02B.", escolha: "O pacote liga cada pista ao arquivo pelo conteúdo e mostra os dois nomes.", teste: "pacote local: anexos com nome do texto e do arquivo" },
+    { id: "faltantes", fontes: "Alpha pp. 31–59, 76, 87, 100; ZIPs", texto: "Os handouts e mapas 02/03 do Ato I, as fichas de Victor, Eloísa, Edgar e Kênia, os áudios EMF e as músicas \"O Porão\"/\"O Ídolo\" não vieram nos arquivos.", escolha: "Ficam como referência no pacote, com envio manual ou descrição pelo Mestre (os padrões de bips do texto estão lá).", teste: "pacote local: referências faltantes marcadas" },
+    { id: "copiaTrocada", fontes: "Alpha pp. 91, 93, 95, 97, 100; Beta pp. 62–63", texto: "Algumas caixas repetem o texto de outra (Depósito A com a descrição do teto; roupas com as chaves; ferramentas do freezer rotuladas \"Laboratório\"; o altar e o buraco da gruta com linhas da balista e da carroça).", escolha: "O pacote usa o texto que corresponde ao ponto (o do Ato I quando é o mesmo lugar) e não copia a linha trocada.", teste: "—" },
+    { id: "sobrecargaIcones", fontes: "Alpha p. 77", texto: "A tabela do porão vem com dados desenhados; no texto extraído viram \"4_on_d4\".", escolha: "Conferida na página renderizada: 0, 0, 1, 1, 1d4, 1d4, 1d6, 1d6 e 2d4 da 9ª em diante.", teste: "pacote local: preset exato do porão" },
   ];
 
   /* Decisões de implementação (não são regras publicadas). */
@@ -569,6 +671,13 @@
     { id: "passoSemAlvo", texto: "Quando o efeito não diz que dado recebe o passo, a tela pergunta (padrão: a perícia) e registra a escolha." },
     { id: "pvPdGuiada", texto: "Criação guiada: 16 PV e 12 PD de referência inicial de mesa para teste — valores novos, editáveis, não uma dedução do livro." },
     { id: "armadura", texto: "Gastar o ponto de armadura é marcado ao aplicar o dano (uma vez por ocorrência)." },
+    { id: "efeitoEmGrupo", texto: "Efeitos que pedem um teste de todos ao mesmo tempo (Presença Aterradora, Enxurrada, o susto dos afogados, o Ídolo) rolam direto no servidor, sem escolhas pós-rolagem; o resultado fica no registro." },
+    { id: "sustentarRodada", texto: "O novo teste de Sustentar no fim da rodada é rolado na hora de encerrar a rodada, com −1 passo por rodada já sustentada, para quem não soltou." },
+    { id: "umaVezPorRodada", texto: "Encerrar uma rodada leva o número dela: repetir o pedido (mesma operação ou outra janela) não aplica sobrecarga, afogamento, ondas ou dano de perseguição duas vezes." },
+    { id: "criticoAvanco", texto: "Pontuação de arrombar, escalar e avançar: a RA; no crítico do Beta, as duas maiores (a regra da p. 11 para pontuações)." },
+    { id: "criticoEsconderijo", texto: "Crítico no esconderijo: o dado extra é do maior tipo rolado no teste." },
+    { id: "hackSocialDt", texto: "Sem DT impressa para o hack social, vale 7 até o Mestre mudar; respostas são conferidas sem acento, maiúsculas nem pontuação, e o Mestre pode aceitar uma resposta à mão." },
+    { id: "laboratorioRerrolar", texto: "Laboratório: os dados saem um por vez; as novas rolagens (metade da Mente) podem ser gastas em qualquer dado já rolado, antes de concluir." },
   ];
 
   global.RAMAOrdem2Catalogo = {
@@ -581,8 +690,10 @@
     PERFIS: PERFIS, ORDEM_PERFIS: ORDEM_PERFIS, HABILIDADE_DE_PERFIL: HABILIDADE_DE_PERFIL,
     HABILIDADES: HABILIDADES, OCUPACOES: OCUPACOES, GRAUS_RELACAO: GRAUS_RELACAO,
     FALHA_CRITICA: FALHA_CRITICA, LESOES: LESOES, TRAUMAS: TRAUMAS, daTabela: daTabela, PATAMARES: PATAMARES,
-    FASES: FASES, ORDEM_FASES_PADRAO: ORDEM_FASES_PADRAO, ACOES_COMBATE: ACOES_COMBATE, ACOES_LIVRES: ACOES_LIVRES,
+    FASES: FASES, ORDEM_FASES_PADRAO: ORDEM_FASES_PADRAO, ORDEM_FASES_4: ORDEM_FASES_4, ACOES_COMBATE: ACOES_COMBATE, ACOES_LIVRES: ACOES_LIVRES, faseDaAcao: faseDaAcao,
     MINIJOGOS: MINIJOGOS, PARANORMAL: PARANORMAL,
+    FERRAMENTAS: FERRAMENTAS, ORDEM_FERRAMENTAS: ORDEM_FERRAMENTAS, RADIO_FALSOS: RADIO_FALSOS, falsosDoRadio: falsosDoRadio,
+    SOBRECARGA: SOBRECARGA, DESAFIOS: DESAFIOS, ESCONDERIJO_CRIATURAS: ESCONDERIJO_CRIATURAS,
     PRESETS: PRESETS, preset: preset, IMPRESSO_BETA: IMPRESSO_BETA,
     DIVERGENCIAS: DIVERGENCIAS, DECISOES: DECISOES,
   };

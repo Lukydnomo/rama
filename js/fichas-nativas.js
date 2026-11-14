@@ -259,7 +259,32 @@
     ]);
   }
 
+  /* Ordem Paranormal RPG II (v9.1): a ficha nativa — dados de atributo e
+     perícia, PV, ações com a perícia do teste e RA + n, habilidades e as
+     lacunas que o texto não imprime (nunca preenchidas). */
+  var NOMES_O2 = { fisico: "Físico", mente: "Mente", emocao: "Emoção" };
+  function linhaOrdem2(d) {
+    var A = global.RAMAOrdem2Ameacas;
+    if (A) return A.linha(d);
+    return d.pv !== null && d.pv !== undefined ? "PV " + d.pv : "sem ficha";
+  }
+  function ordem2(d) {
+    var A = global.RAMAOrdem2Ameacas;
+    var x = A ? A.normalizar(d) : d;
+    var nomeP = function (k) { var K0 = global.RAMAOrdem2Catalogo; return K0 ? K0.nomeDaPericia("beta-vigilia", k, "vigilia") : humanizar(k); };
+    var fonte = x.fonte && x.fonte.pagina ? (x.fonte.doc === "alpha" ? "Playtest Alpha" : "Playtest Beta") + ", p. " + x.fonte.pagina + (x.fonte.paginaNoTexto && x.fonte.paginaNoTexto !== x.fonte.pagina ? " (o texto remete à p. " + x.fonte.paginaNoTexto + ")" : "") : "";
+    return ficha("ordem2", [
+      x.semFicha ? el("p.t-mini", { texto: "Sem ficha de combate nos arquivos: só efeitos." }) : destaques([["PV", x.pv === null ? "—" : x.pv], ["RD", x.rd === null ? "não impressa" : x.rd], ["Armadura", x.armadura || ""]].concat(x.atributos ? Object.keys(NOMES_O2).map(function (k) { return [NOMES_O2[k], "d" + x.atributos[k]]; }) : [])),
+      pares([["Natureza", (A && A.NATUREZAS[x.natureza]) || x.natureza], ["Elementos", (x.elementos || []).join(", ")], ["Perícias", Object.keys(x.pericias || {}).map(function (k) { return nomeP(k) + " d" + x.pericias[k]; }).join(", ")], ["Fonte", fonte]]),
+      (x.acoes || []).length ? painel("Ações", x.acoes.map(function (a) { return efeito(a.nome, (A && A.ALCANCES[a.alcance]) || a.alcance, a.alcance === "especial" ? "" : nomeP(a.pericia) + (a.dano !== null && a.dano !== undefined ? ", dano RA" + (a.dano >= 0 ? "+" : "") + a.dano : ""), a.texto || ""); })) : null,
+      (x.habilidades || []).length ? painel("Habilidades", x.habilidades.map(function (h) { return efeito(h.nome, "", "", h.texto || ""); })) : null,
+      x.estrategia ? el("p.t-mini", { texto: "Estratégia: " + x.estrategia }) : null,
+      (x.lacunas || []).length ? el("p.t-mini.ficha-lacuna", { texto: "Lacunas do texto (não preenchidas): " + x.lacunas.join(" ") }) : null,
+    ]);
+  }
+
   global.RAMAFichasNativas = {
+    ordem2: ordem2, linhaOrdem2: linhaOrdem2,
     oblivio: oblivio, vampiro: vampiro, goblins: goblins, tormenta20: tormenta20, linhaTormenta20: linhaTormenta20,
     vampiroCompleto: vampiroCompleto, valorGoblin: valorGoblin, linhaGoblin: linhaGoblin, itemDeRecompensa: itemDeRecompensa,
     NOMES_ACAO_OBLIVIO: NOMES_ACAO_OBLIVIO,

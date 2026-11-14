@@ -8,7 +8,7 @@
    "/* <<< caminho *\/"; o teste do backend confere que as cópias batem
    com os originais. Rode depois de mudar o motor.
    ===================================================================== */
-export const ARQUIVOS_ORDEM2 = ["catalogo", "regras", "motor", "mesa"].map((n) => "js/ordem2/" + n + ".js");
+export const ARQUIVOS_ORDEM2 = ["catalogo", "regras", "motor", "mesa", "ameacas", "procedimentos"].map((n) => "js/ordem2/" + n + ".js");
 
 if (import.meta.main) {
   const alvo = new URL("../backend/Ordem2.gs", import.meta.url);

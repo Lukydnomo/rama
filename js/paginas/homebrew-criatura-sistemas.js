@@ -245,7 +245,39 @@
     };
   }
 
-  var FORMS = { oblivio: formOblivio, vampiro: formVampiro, goblins: formGoblins, tormenta20: formTormenta20 };
+  /* Ordem II (v9.1): a ficha nativa dos playtests — dados, PV, ações com a
+     perícia do teste e RA + n. Lacuna fica lacuna (RD vazia = não impressa). */
+  function formOrdem2(b) {
+    var A = global.RAMAOrdem2Ameacas;
+    var x = A ? A.normalizar(b) : b;
+    var dadoSel = function (rotulo, v) { return selecao(rotulo, [["4", "d4"], ["6", "d6"], ["8", "d8"], ["10", "d10"], ["12", "d12"], ["20", "d20 (paranormal)"]], String(v || 4)); };
+    var nat = selecao("Natureza", Object.keys(A ? A.NATUREZAS : { criatura: 1 }).map(function (k) { return [k, A ? A.NATUREZAS[k] : k]; }), x.natureza);
+    var els = texto("Elementos (Sangue, Morte, Conhecimento, Energia, Medo)", (x.elementos || []).join(", "), 120);
+    var pv = numero("PV", x.pv, 9999), rd = numero("RD (vazio = não impressa)", x.rd, 99), arm = numero("Armadura", x.armadura, 20);
+    var fi = dadoSel("Físico", x.atributos && x.atributos.fisico), me = dadoSel("Mente", x.atributos && x.atributos.mente), em = dadoSel("Emoção", x.atributos && x.atributos.emocao);
+    var per = texto("Perícias em dados (\"luta 6, atletismo 8\")", Object.keys(x.pericias || {}).map(function (k) { return k + " " + x.pericias[k]; }).join(", "), 300);
+    var acoes = listaEditavel("+ Ação", x.acoes, function (a) {
+      var n = texto("Nome", a.nome, 80), al = selecao("Alcance", [["corpo", "Corpo a corpo"], ["distancia", "À distância"], ["especial", "Especial"]], a.alcance || "corpo"), pe = texto("Perícia do teste", a.pericia || "luta", 40), dn = numero("Dano (RA + n; vazio = sem dano)", a.dano, 50), t = texto("Efeito", a.texto, 800, true);
+      return { no: el("div.pilha--curta", { class: "pilha" }, [grade([n, al, pe, dn]), t]), valor: function () { return n.valor() ? { nome: n.valor(), alcance: al.valor(), pericia: pe.valor() || "luta", dano: dn.valor(), texto: t.valor(), motor: a.motor || null, efeitos: a.efeitos || [] } : null; } };
+    }, 12);
+    var habs = listaEditavel("+ Habilidade", x.habilidades, function (h) {
+      var n = texto("Nome", h.nome, 80), t = texto("Efeito", h.texto, 1200, true);
+      return { no: el("div.pilha--curta", { class: "pilha" }, [n, t]), valor: function () { return n.valor() ? { nome: n.valor(), texto: t.valor(), motor: h.motor || null } : null; } };
+    }, 16);
+    var estr = texto("Estratégia", x.estrategia, 800, true);
+    return {
+      nos: [secao("Identidade", [grade([nat, els])]), secao("Números", [grade([pv, rd, arm]), grade([fi, me, em]), per]), secao("Ações", [acoes.no]), secao("Habilidades", [habs.no, estr])],
+      ler: function () {
+        var pericias = {};
+        String(per.valor() || "").split(/[,;\n]+/).forEach(function (parte) { var m = /^\s*([a-zçãéíóú]+)\s+(\d{1,2})\s*$/i.exec(parte); if (m) pericias[m[1].toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "")] = Number(m[2]); });
+        var bloco = { natureza: nat.valor(), elementos: String(els.valor() || "").split(",").map(function (s) { return s.trim(); }).filter(Boolean), pv: pv.valor(), rd: rd.valor(), armadura: arm.valor() || 0, atributos: { fisico: Number(fi.valor()), mente: Number(me.valor()), emocao: Number(em.valor()) }, pericias: pericias, acoes: acoes.valor(), habilidades: habs.valor(), estrategia: estr.valor(), fonte: x.fonte, lacunas: x.lacunas };
+        if (!bloco.pv && bloco.pv !== 0) return { ok: false, motivo: "Informe os PV." };
+        return { ok: true, bloco: A ? A.normalizar(bloco) : bloco };
+      },
+    };
+  }
+
+  var FORMS = { oblivio: formOblivio, vampiro: formVampiro, goblins: formGoblins, tormenta20: formTormenta20, ordem2: formOrdem2 };
 
   /* ---------- o editor ---------- */
 
@@ -315,6 +347,7 @@
     if (c.sistema === "vampiro") linha = (NAT_VAMPIRO.filter(function (n) { return n[0] === b.natureza; })[0] || ["", ""])[1] + " · " + (b.modelo === "completo" ? "ficha completa" : "antagonista compacto") + " · Vitalidade " + b.vitalidade + " · Força de Vontade " + b.forcaDeVontade;
     if (c.sistema === "goblins") linha = FN() ? FN().linhaGoblin(b) : "";
     if (c.sistema === "tormenta20") linha = FN() ? FN().linhaTormenta20(b) : "";
+    if (c.sistema === "ordem2") linha = FN() ? FN().linhaOrdem2(b) : "";
     return el("dl.r-dados", {}, [
       el("dt", { texto: "Sistema" }), el("dd", { texto: C().NOMES_DOS_SISTEMAS[c.sistema] }),
       el("dt", { texto: "Ficha" }), el("dd", { texto: linha }),

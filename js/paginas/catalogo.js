@@ -732,7 +732,46 @@
         });
       },
     },
+    /* Ordem II (v9.1): as ameaças nativas dos playtests (Afogado, Aughisk,
+       Crias da Floresta, Ellén Trechend e o inventário do Alpha, sem ficha
+       onde o texto não dá). A mesa de Ordem II põe ocorrências no combate. */
+    ordem2: {
+      disponivel: function () { return !!(global.RAMAOrdem2Ameacas && global.RAMAOrdem2Ameacas.LISTA.length); },
+      nomeDoLivro: "Ordem Paranormal RPG II — Playtests",
+      ajuda: "Fichas nativas de Ordem II: atributos e perícias em dados, PV, ações com RA + n. O que o texto não imprime fica como lacuna. Soluções de enigma ficam com o Mestre (pacote da missão).",
+      fontes: function () { return [{ valor: "alpha", rotulo: "Playtest Alpha" }, { valor: "beta", rotulo: "Playtest Beta" }]; },
+      filtro: { rotulo: "Natureza", todos: "Todas", opcoes: function () { var N = global.RAMAOrdem2Ameacas.NATUREZAS; return Object.keys(N).map(function (k) { return { valor: k, rotulo: N[k] }; }); } },
+      entradas: function () {
+        var A0 = global.RAMAOrdem2Ameacas;
+        return A0.LISTA.map(function (a) {
+          var x = a.ordem2;
+          return {
+            id: "o2am:" + a.id, nome: a.nome, fonte: x.fonte.doc, filtro: x.natureza,
+            referencia: (x.fonte.doc === "alpha" ? "Alpha" : "Beta") + (x.fonte.pagina ? " p. " + x.fonte.pagina : ""),
+            chave: U.chaveDeBusca(a.nome + " " + (x.elementos || []).join(" ") + " " + (x.estrategia || "")),
+            marcas: [A0.NATUREZAS[x.natureza]].concat(x.elementos || []).concat(x.semFicha ? ["sem ficha"] : []),
+            linha: global.RAMAFichasNativas.linhaOrdem2(x),
+            detalhes: function () {
+              var botao = el("button.r-botao.r-botao--mini", { type: "button", texto: "Copiar para o Homebrew" });
+              botao.addEventListener("click", function () { copiarAmeacaO2(a, botao); });
+              return el("div.pilha--curta", { class: "pilha" }, [global.RAMAFichasNativas.ordem2(x), global.RAMAApi && global.RAMAApi.salvarHomebrew && !x.semFicha ? botao : null]);
+            },
+          };
+        });
+      },
+    },
   };
+  function copiarAmeacaO2(a, botao) {
+    if (!global.RAMAApi || !global.RAMAApi.salvarHomebrew) return;
+    botao.disabled = true;
+    var registro = { tipo: "criatura", sistema: "ordem2", nome: a.nome + " (cópia)", visibilidade: "privado", categoria: "", origem: { tipo: "homebrew" }, ordem2: JSON.parse(JSON.stringify(a.ordem2)) };
+    if (global.RAMACriaturas && global.RAMACriaturas.normalizar) registro = global.RAMACriaturas.normalizar(registro);
+    global.RAMAApi.salvarHomebrew(registro).then(function (r) {
+      botao.disabled = false;
+      if (r && r.ok) UI.avisoOk("Cópia salva no seu Homebrew (privada).");
+      else UI.avisoErro("Não foi possível copiar: " + ((r && r.erro) || "erro"));
+    }, function () { botao.disabled = false; UI.avisoErro("Sem conexão. Tente de novo."); });
+  }
 
 
   /* =================================================================
@@ -1171,16 +1210,19 @@
       ajuda: "Falha crítica, lesões, traumas, ações de combate, minijogos e graus de relação, com a página.",
       entradas: function () {
         var l = [];
+        if (O2().FERRAMENTAS) Object.keys(O2().FERRAMENTAS).forEach(function (k) { var fz = O2().FERRAMENTAS[k]; l.push(entradaSimples("o2fer", { chave: k, nome: fz.nome, texto: fz.texto + (fz.cargas ? " " + fz.cargas + " cargas." : "") }, { linha: "Ferramenta da Ordo Realitas", referencia: "Alpha pp. " + fz.pagina + ", " + fz.uso, f: { tipo: "Ferramenta" } })); });
+        if (O2().SOBRECARGA) l.push(entradaSimples("o2sob", { chave: "sobrecarga", nome: "Sobrecarga mental", texto: O2().SOBRECARGA.texto }, { linha: "Investigação", referencia: "Alpha p. 77", f: { tipo: "Investigação" } }));
         O2().FALHA_CRITICA.forEach(function (x) { l.push(entradaSimples("o2fc", { chave: String(x.d), nome: x.d + " · " + x.nome, texto: x.texto }, { linha: "Falha crítica (1d8)", referencia: "Alpha p. 19; Beta p. 11", f: { tipo: "Falha crítica" } })); });
         O2().LESOES.forEach(function (x) { l.push(entradaSimples("o2les", { chave: x.id, nome: faixaO2(x), texto: x.texto }, { linha: "Lesão (1d20)" + (x.perm ? " · permanente" : ""), referencia: "Beta p. 22", f: { tipo: "Lesão" } })); });
         O2().TRAUMAS.forEach(function (x) { l.push(entradaSimples("o2tra", { chave: x.id, nome: faixaO2(x), texto: x.texto }, { linha: "Trauma (1d20)" + (x.cura ? " · até ser curado" : ""), referencia: "Beta p. 23", f: { tipo: "Trauma" } })); });
-        Object.keys(O2().ACOES_COMBATE).forEach(function (k) { var a = O2().ACOES_COMBATE[k]; l.push(entradaSimples("o2ac", { chave: k, nome: a.nome, texto: a.texto }, { linha: "Ação de combate · " + O2().FASES[a.fase].nome, referencia: "Beta pp. 18–20", f: { tipo: "Ação de combate" } })); });
+        Object.keys(O2().ACOES_COMBATE).forEach(function (k) { var a = O2().ACOES_COMBATE[k]; l.push(entradaSimples("o2ac", { chave: k, nome: a.nome, texto: a.texto }, { linha: "Ação de combate · " + O2().FASES[a.fase].nome + (a.fase4 ? " (4 fases: " + O2().FASES[a.fase4].nome + ")" : ""), referencia: "Beta pp. 18–20", f: { tipo: "Ação de combate" } })); });
         Object.keys(O2().MINIJOGOS).forEach(function (k) { var m = O2().MINIJOGOS[k]; l.push(entradaSimples("o2mj", { chave: k, nome: m.nome, texto: m.texto }, { linha: "Minijogo", referencia: refO2(m.fonte, m.pagina), f: { tipo: "Minijogo" } })); });
         [1, 2, 3].forEach(function (g) { var x = O2().GRAUS_RELACAO[g]; l.push(entradaSimples("o2rel", { chave: String(g), nome: "Grau " + g + " · " + x.nome, texto: "+d" + x.dado + " num teste ligado à pessoa ou na ajuda a ela" + (x.recuperar ? "; uma ação para motivá-la (" + x.recuperar + " PD)" : "") + (x.acaoExtra ? "; ação extra para ajudá-la em perigo" : "") + ". Uma invocação por relação por missão." }, { linha: "Relação", referencia: "Beta pp. 24–25", f: { tipo: "Relação" } })); });
         l.push(entradaSimples("o2par", { chave: "paranormal", nome: "Paranormal (etapa 3)", texto: O2().PARANORMAL.texto }, { linha: "Consulta — sem conjuração nesta etapa", f: { tipo: "Paranormal" } }));
         return l;
       },
       filtros: function () { return [{ chave: "tipo", rotulo: "Tipo", todos: "Todas" }]; } },
+    { id: "ameacas", nome: "Ameaças", nativo: "ordem2" },
     { id: "divergencias", nome: "Divergências e decisões", tem: function () { return !!O2(); },
       ajuda: "Onde as fontes divergem, o que o R.A.M.A. adota e o teste que fixa; e as decisões de implementação (não são regras publicadas).",
       entradas: function () {
