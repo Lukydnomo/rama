@@ -694,6 +694,7 @@
       devolverTemaDeDados(limpo);
       devolverBarganha(limpo);
       devolverTormenta20(limpo);
+      devolverOrdem2(limpo);
       refazerVinculosAliados(limpo);
       var avisos = devolverReferencias(limpo);
       var ficha = F.normalizarFicha(limpo);
@@ -818,12 +819,41 @@
     dados.tormenta20 = b;
   }
 
+  /* Ordem II (v9.0): o bloco `ordem2` atravessa quase inteiro. Não vão o
+     registro de operações (é da mesa de origem), o estado local da mesa
+     (testes e registro de quem jogou sem campanha) nem o vínculo de
+     relação com uma ficha (o id é de outra campanha/conta); na volta,
+     habilidades, itens, relações, perícias, efeitos, lesões e traumas
+     nascem com ids novos. Nada é convertido de/para Ordem I. */
+  function comOrdem2Portavel(ficha) {
+    if (!ficha || !ficha.ordem2 || typeof ficha.ordem2 !== "object") return ficha;
+    var copia = JSON.parse(JSON.stringify(ficha));
+    copia.ordem2.operacoes = [];
+    copia.ordem2.local = null;
+    (Array.isArray(copia.ordem2.relacoes) ? copia.ordem2.relacoes : []).forEach(function (r) { if (r && typeof r === "object") r.alvoPersonagemId = ""; });
+    return copia;
+  }
+  function devolverOrdem2(dados) {
+    if (!dados || !dados.ordem2 || typeof dados.ordem2 !== "object") return;
+    var b = dados.ordem2;
+    var novo = function (x) { if (x && typeof x === "object") x.id = U.uuid(); };
+    ["habilidades", "itens", "relacoes", "efeitos"].forEach(function (k) { (Array.isArray(b[k]) ? b[k] : []).forEach(novo); });
+    if (b.base && Array.isArray(b.base.pericias)) b.base.pericias.forEach(novo);
+    if (b.estado && typeof b.estado === "object") {
+      ["lesoes", "traumas", "reservas"].forEach(function (k) { (Array.isArray(b.estado[k]) ? b.estado[k] : []).forEach(novo); });
+      b.estado.pendentes = [];
+    }
+    (Array.isArray(b.relacoes) ? b.relacoes : []).forEach(function (r) { if (r && typeof r === "object") r.alvoPersonagemId = ""; });
+    b.operacoes = [];
+    b.local = null;
+  }
+
   /* Monta o pacote de saída. A contraparte de importado(). */
   function exportar(tipo, dados) {
     /* Numa ficha, o vínculo entre concessão e ritual vira posição antes
        de os ids irem embora. Ver "O VÍNCULO DE RITUAL ATRAVESSANDO A
        IMPORTAÇÃO", acima. */
-    var preparado = tipo === "personagem" ? comTormenta20Portavel(comArquivo9Portavel(comArquivo7Portavel(comArquivo6Portavel(comBarganhaPortavel(comTemaDeDadosPortavel(comReferenciasPortaveis(comAliadosPortaveis(comPosicoesDeRitual(dados)))))))))
+    var preparado = tipo === "personagem" ? comOrdem2Portavel(comTormenta20Portavel(comArquivo9Portavel(comArquivo7Portavel(comArquivo6Portavel(comBarganhaPortavel(comTemaDeDadosPortavel(comReferenciasPortaveis(comAliadosPortaveis(comPosicoesDeRitual(dados))))))))))
       : (tipo === "homebrew-criatura" ? criaturaPortavel(U.copiar(dados)) : dados);
     return {
       rama: true,

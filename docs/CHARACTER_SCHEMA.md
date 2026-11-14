@@ -5,6 +5,18 @@ padrão e normaliza o que chega de fora. Onde ela é guardada — inteira em
 `fichaJson` (formato antigo) ou em blocos (v2.15) — é assunto do backend, e não muda
 nada aqui: ver [DATABASE.md](DATABASE.md).
 
+## Ordem Paranormal RPG II — v9.0 / schema 35
+
+`tipoFicha: "ordem2"` e o bloco `ordem2` (`js/ordem2/regras.js`). O formato
+completo está em [ORDEM2.md](ORDEM2.md#a-ficha-fichaordem2-schema-do-bloco-1-ficha-schema-35).
+Dados-base (atributos e perícias) ficam separados dos efeitos temporários; PV e
+PD são os impressos (fichas prontas) ou os decididos (livre/guiada) — nada é
+calculado por fórmula. Perfil de regras, ambientação, modo de criação e
+procedência (com a versão dos dados do preset) ficam gravados. Sistema à parte
+de `ordem`: nenhuma conversão entre os dois. Sem conversão de schema.
+Exportar não leva `operacoes`, o estado local da mesa nem o vínculo de relação
+com outra ficha; importar dá ids novos.
+
 ## Tormenta20 — v8.0 / schema 34
 
 `tipoFicha: "tormenta20"` e o bloco `tormenta20` (`js/tormenta20/regras.js`).

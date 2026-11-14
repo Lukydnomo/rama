@@ -13,7 +13,7 @@
 
 import { instalarAmbiente, chamar, comoOSheetsGuarda } from "./apps-script-simulado.js";
 
-const ARQUIVOS = ["backend/Dados.gs", "backend/Codigo.gs", "backend/Campanhas.gs", "backend/Sistemas.gs", "backend/Ordem.gs", "backend/Universal.gs", "backend/Cris.gs", "backend/Feedback.gs", "backend/Oblivio.gs", "backend/Vampiro.gs", "backend/Goblins.gs", "backend/Brutal.gs", "backend/Tormenta20Dados.gs", "backend/Tormenta20.gs"];
+const ARQUIVOS = ["backend/Dados.gs", "backend/Codigo.gs", "backend/Campanhas.gs", "backend/Sistemas.gs", "backend/Ordem.gs", "backend/Universal.gs", "backend/Cris.gs", "backend/Feedback.gs", "backend/Oblivio.gs", "backend/Vampiro.gs", "backend/Goblins.gs", "backend/Brutal.gs", "backend/Tormenta20Dados.gs", "backend/Tormenta20.gs", "backend/Ordem2.gs"];
 
 /* O simulador silencia o console para o backend não encher a saída com
    os avisos do setupRama. O relatório dos testes precisa de uma porta
@@ -2308,7 +2308,7 @@ t.grupo("Marcas da mesa — sincronização leve");
 
   const marcas = (como) => comoFn(como)({ acao: "sincronizar_campanha", campanhaId: mesa });
   const m0 = marcas(ana);
-  t.ok("a jogadora recebe as marcas da mesa", m0.ok && m0.dados.papel === "jogador" && Object.keys(m0.dados.marcas).length === 14); // + oblivio (v3.0), vampiro (v4.1), goblins (v6.0), brutal (v7.0)
+  t.ok("a jogadora recebe as marcas da mesa", m0.ok && m0.dados.papel === "jogador" && Object.keys(m0.dados.marcas).length === 15); // + oblivio (v3.0), vampiro (v4.1), goblins (v6.0), brutal (v7.0), tormenta20 (v8.0), ordem2 (v9.0)
   t.iguais("ler_campanha traz as mesmas marcas como ponto de partida", comoAna({ acao: "ler_campanha", campanhaId: mesa }).dados.marcas, m0.dados.marcas);
 
   const contador = ambiente.contador;
@@ -4853,6 +4853,8 @@ const { testarBrutalBackend } = await import("./brutal-backend.js");
 await testarBrutalBackend({ t, preparar, novaConta, comoFn });
 const { testarTormenta20Backend } = await import("./tormenta20-backend.js");
 await testarTormenta20Backend({ t, preparar, novaConta, comoFn });
+const { testarOrdem2Backend } = await import("./ordem2-backend.js");
+await testarOrdem2Backend({ t, preparar, novaConta, comoFn });
 const { testarFeedbackBackend } = await import("./feedback-backend.js");
 await testarFeedbackBackend({ t, preparar, novaConta, comoFn, chamar, ambiente });
 const { testarAcessoBackend } = await import("./acesso-backend.js");

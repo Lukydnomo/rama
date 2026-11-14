@@ -207,8 +207,14 @@
     var itens = (ficha.inventario && ficha.inventario.itens) || [];
     var notas = F.todasAsNotas(ficha.anotacoes).length;
 
+    var S = global.RAMASistemas;
+    var sistema = S ? S.daFicha(ficha) : null;
+    var o2 = ficha.ordem2 && global.RAMAOrdem2Catalogo ? global.RAMAOrdem2Catalogo.PERFIS_REGRAS[ficha.ordem2.perfilRegras] : null;
     return el("dl.r-dados", {}, [
       linha("Nome", ficha.nome),
+      /* v9.0: o sistema escrito (Ordem II nunca passa pelo conversor do
+         CRIS, que é de Ordem I). */
+      linha("Sistema", sistema ? sistema.nome + (sistema.edicao ? " · " + sistema.edicao : "") + (o2 ? " — " + o2.nome : "") : "—"),
       linha("Classe", ficha.classe || "—"),
       linha("Origem", ficha.origem || "—"),
       linha("Atributos", ficha.atributos.length + " (" + ficha.atributos.map(function (a) { return a.sigla; }).join(", ") + ")"),

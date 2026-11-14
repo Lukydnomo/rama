@@ -30,8 +30,12 @@
     var base = S ? (S.lista().filter(function (x) { return x.id === s.id; })[0] || s) : s;
     var tamanho = ["p", "m", "g"].indexOf(o.tamanho) >= 0 ? o.tamanho : "m";
     var capa = base.capa ? U.url(tamanho === "p" ? base.capa.replace(/\.webp$/, "-pequena.webp") : base.capa) : "";
+    /* `capaEncaixe: "conter"` (v9.0): arte que não é capa de livro 2:3
+       (a de Ordem II é 9:16) aparece INTEIRA, sem cortar o título nem
+       deformar — o volume completa o espaço com o fundo da arte. */
+    var conter = capa && base.capaEncaixe === "conter";
     var atributos = {
-      class: "capa-sistema--" + tamanho + (capa ? "" : " capa-sistema--sem-capa"),
+      class: "capa-sistema--" + tamanho + (capa ? "" : " capa-sistema--sem-capa") + (conter ? " capa-sistema--conter" : ""),
       dataset: { sistema: base.id || "" },
     };
     if (!o.rotulada) atributos["aria-hidden"] = "true";

@@ -11,6 +11,29 @@
   permite o suplemento dono da ferramenta (desligar a mecânica com
   `estado.ativo: false` continua aceito). As leituras não mudam.
 
+## Ordem Paranormal RPG II — v9.0
+
+Só numa campanha de Ordem II (ferramenta `mesaOrdem2`; de outro sistema:
+`outro_sistema`). Espectador: `sem_permissao`.
+
+- `ler_ordem2 { campanhaId }` — membro. O Mestre recebe `{ mestre: true, rev,
+  estado, personagens, pode }`; o jogador, `{ mestre: false, rev, vista,
+  personagens, pode }` — a vista não tem nota privada, descrição contextual, DT
+  nem pistas não descobertas (só as perícias listadas de cada ponto), nem NPCs
+  ocultos; NPCs aparecem só com a situação (de pé, ferido, caído, fora).
+  `pode` são os personagens da campanha que a conta conduz.
+- `ordem2_operar { campanhaId, opId, operacao, rev? }` — TODA ação (testes,
+  escolhas pós-rolagem, habilidades, ajuda, relações, investigação, combate,
+  dano, cura, pavor, condições, correções, configuração). `operacao.tipo` é uma
+  de `RAMAOrdem2Mesa.OPS_DO_MESTRE` (só o Mestre) ou `OPS_DO_PERSONAGEM` (o
+  dono do personagem `quem`, ou o Mestre). Os dados são rolados no servidor e
+  entram em `CAMPANHA_ROLAGENS` (tipo `ordem2`; id derivado do opId). A segunda
+  chegada do mesmo `opId` responde `{ ok: true, repetida: true }` sem aplicar
+  nada — nem custo, nem dano. `configurar`, `ponto`, `removerPonto` e
+  `configurarFases` aceitam `rev` (estado velho: `conflito`, com os dados
+  atuais). Resposta: `{ ok, rev, dados (como ler_ordem2), resultado: { eventos,
+  tocadas, resultado } }`; recusa da regra: `dados_invalidos` com `motivo`.
+
 ## Tormenta20 — v8.0
 
 Rotas de `Tormenta20.gs`; só respondem numa campanha de Tormenta20

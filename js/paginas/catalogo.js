@@ -1099,7 +1099,98 @@
     }, function () { botao.disabled = false; UI.avisoErro("Sem conexão. Tente de novo."); });
   }
 
-  var CATEGORIAS = { ordem: ORDEM, oblivio: OBLIVIO, vampiro: VAMPIRO, goblins: GOBLINS, brutal: BRUTAL, tormenta20: TORMENTA20 };
+  /* =================================================================
+     ORDEM PARANORMAL RPG II · EXPERIMENTAL (v9.0) — os mesmos dados da
+     ficha e da mesa (js/ordem2/catalogo.js)
+     ================================================================= */
+
+  function O2() { return global.RAMAOrdem2Catalogo; }
+  function refO2(fonte, pag) { return O2().referencia(fonte, pag); }
+  function nomeO2(perfil, k) { return O2().nomeDaPericia(perfil, k, O2().PERFIS_REGRAS[perfil].ambientacao); }
+  function faixaO2(x) { return (x.de === x.ate ? String(x.de) : x.de + "–" + (x.ate > 20 ? "20+" : x.ate)) + " · " + x.nome; }
+
+  var ORDEM2 = [
+    { id: "pericias", nome: "Perícias", tem: function () { return !!O2(); },
+      ajuda: "As duas listas: Alpha (p. 17) e Beta (p. 9). Ocultismo é uma perícia só, chamada Bruxaria na Vigília; no Beta, Metalurgia aceita o rótulo Ofício das fichas; Pesquisar (Alpha) e Inspecionar (Beta) nunca coexistem.",
+      entradas: function () {
+        return O2().ORDEM_PERFIS_REGRAS.reduce(function (saida, pr) {
+          var p = O2().PERFIS_REGRAS[pr];
+          return saida.concat(O2().listaDePericias(pr).map(function (x) {
+            var esp = x.chave === "aptidao" ? O2().ESPECIALIZACOES[pr].join(", ") : "";
+            return entradaSimples("o2p-" + pr, { chave: x.chave, nome: nomeO2(pr, x.chave), texto: x.texto }, {
+              linha: p.curto + " · " + O2().ATRIBUTOS[x.atributo].nome, referencia: refO2(p.fonte, pr === "beta-vigilia" ? 9 : 17),
+              f: { perfil: p.nome, atributo: O2().ATRIBUTOS[x.atributo].nome }, marcas: [p.curto],
+              pares: [["Atributo-base", O2().ATRIBUTOS[x.atributo].nome], ["Perfil de regras", p.nome], ["Especializações", esp], ["Alias na ficha", x.chave === "metalurgia" ? "Ofício" : ""]],
+            });
+          }));
+        }, []);
+      },
+      filtros: function () { return [{ chave: "perfil", rotulo: "Perfil de regras", todos: "Todos" }, { chave: "atributo", rotulo: "Atributo", todos: "Todos" }]; } },
+    { id: "perfis", nome: "Perfis e ocupações", tem: function () { return !!O2(); },
+      ajuda: "Executor, Analista e Vigilante (Alpha p. 14; Beta p. 6) e as ocupações (Alpha) e vocações (Beta) das fichas prontas, com a habilidade quando documentada.",
+      entradas: function () {
+        var perfis = O2().ORDEM_PERFIS.map(function (k) {
+          var p = O2().PERFIS[k];
+          var habs = O2().ORDEM_PERFIS_REGRAS.map(function (pr) { var h = O2().HABILIDADES[O2().HABILIDADE_DE_PERFIL[pr][k]]; return O2().PERFIS_REGRAS[pr].curto + ": " + h.nome; }).join(" · ");
+          return entradaSimples("o2perfil", { chave: k, nome: p.nome, texto: p.texto }, { linha: "Perfil · " + habs, referencia: "Alpha p. 14; Beta p. 6", f: { tipo: "Perfil" }, pares: [["Habilidade de perfil", habs]] });
+        });
+        var ocs = O2().ORDEM_PERFIS_REGRAS.reduce(function (saida, pr) {
+          var pf = O2().PERFIS_REGRAS[pr];
+          return saida.concat((O2().OCUPACOES[pr] || []).map(function (o) {
+            return entradaSimples("o2oc-" + pr, { chave: o.id, nome: o.nome, texto: o.nota || "" }, {
+              linha: pf.termoOcupacao + " (" + pf.curto + ")" + (o.habilidade ? " · " + O2().HABILIDADES[o.habilidade].nome : " · habilidade não documentada"), f: { tipo: pf.termoOcupacao },
+              pares: [["Habilidade documentada", o.habilidade ? O2().HABILIDADES[o.habilidade].nome : "—"], ["Vistas nas fichas", o.vistas.map(function (h) { return O2().HABILIDADES[h].nome; }).join(", ")]],
+            });
+          }));
+        }, []);
+        return perfis.concat(ocs);
+      },
+      filtros: function () { return [{ chave: "tipo", rotulo: "Tipo", todos: "Todos" }]; } },
+    { id: "habilidades", nome: "Habilidades", tem: function () { return !!O2(); },
+      ajuda: "As habilidades das fichas dos playtests, com a versão (Alpha/Beta) e o que o R.A.M.A. automatiza.",
+      entradas: function () {
+        return Object.keys(O2().HABILIDADES).map(function (k) {
+          var h = O2().HABILIDADES[k];
+          var versao = h.versao === "alpha" ? "Alpha" : h.versao === "beta" ? "Beta" : "Alpha e Beta";
+          return entradaSimples("o2h", { chave: k, nome: h.nome, texto: h.texto }, { linha: versao + (h.ficha ? " · " + h.ficha : "") + (h.perfil ? " · de perfil" : ""), referencia: refO2(h.fonte, h.pagina), f: { versao: versao }, pares: [["Versão", versao], ["Ficha", h.ficha || ""], ["Automação", h.motor ? h.motor.tipo : "narrativa"]] });
+        });
+      },
+      filtros: function () { return [{ chave: "versao", rotulo: "Versão", todos: "Todas" }]; } },
+    { id: "prontas", nome: "Fichas prontas", tem: function () { return !!O2(); },
+      ajuda: "Os 14 personagens dos playtests (Alan, os cinco do Ato II e os oito do Beta). A criação mostra a prévia completa antes de copiar; PV e PD são os impressos.",
+      entradas: function () {
+        return O2().PRESETS.map(function (p) {
+          return entradaSimples("o2pre", { chave: p.id, nome: p.nomeCompleto || p.nome, texto: p.resumo }, {
+            linha: O2().PERFIS[p.perfil].nome + " · " + p.ocupacao + " · nível " + p.nivel + " · PV " + p.pv + " / PD " + p.pd, referencia: refO2(p.fonte, p.pagina), f: { perfil: O2().PERFIS_REGRAS[p.perfilRegras].nome }, marcas: [O2().PERFIS_REGRAS[p.perfilRegras].curto],
+            pares: [["Atributos", "Físico d" + p.atributos.fisico + ", Mente d" + p.atributos.mente + ", Emoção d" + p.atributos.emocao], ["Habilidades", p.habilidades.map(function (h) { return O2().HABILIDADES[h.id].nome; }).join(", ")], ["Equipamento", p.itens.map(function (i) { return i.nome; }).join(", ")], ["Idade", p.idade || ""]],
+          });
+        });
+      },
+      filtros: function () { return [{ chave: "perfil", rotulo: "Perfil de regras", todos: "Todos" }]; } },
+    { id: "regras", nome: "Regras e tabelas", tem: function () { return !!O2(); },
+      ajuda: "Falha crítica, lesões, traumas, ações de combate, minijogos e graus de relação, com a página.",
+      entradas: function () {
+        var l = [];
+        O2().FALHA_CRITICA.forEach(function (x) { l.push(entradaSimples("o2fc", { chave: String(x.d), nome: x.d + " · " + x.nome, texto: x.texto }, { linha: "Falha crítica (1d8)", referencia: "Alpha p. 19; Beta p. 11", f: { tipo: "Falha crítica" } })); });
+        O2().LESOES.forEach(function (x) { l.push(entradaSimples("o2les", { chave: x.id, nome: faixaO2(x), texto: x.texto }, { linha: "Lesão (1d20)" + (x.perm ? " · permanente" : ""), referencia: "Beta p. 22", f: { tipo: "Lesão" } })); });
+        O2().TRAUMAS.forEach(function (x) { l.push(entradaSimples("o2tra", { chave: x.id, nome: faixaO2(x), texto: x.texto }, { linha: "Trauma (1d20)" + (x.cura ? " · até ser curado" : ""), referencia: "Beta p. 23", f: { tipo: "Trauma" } })); });
+        Object.keys(O2().ACOES_COMBATE).forEach(function (k) { var a = O2().ACOES_COMBATE[k]; l.push(entradaSimples("o2ac", { chave: k, nome: a.nome, texto: a.texto }, { linha: "Ação de combate · " + O2().FASES[a.fase].nome, referencia: "Beta pp. 18–20", f: { tipo: "Ação de combate" } })); });
+        Object.keys(O2().MINIJOGOS).forEach(function (k) { var m = O2().MINIJOGOS[k]; l.push(entradaSimples("o2mj", { chave: k, nome: m.nome, texto: m.texto }, { linha: "Minijogo", referencia: refO2(m.fonte, m.pagina), f: { tipo: "Minijogo" } })); });
+        [1, 2, 3].forEach(function (g) { var x = O2().GRAUS_RELACAO[g]; l.push(entradaSimples("o2rel", { chave: String(g), nome: "Grau " + g + " · " + x.nome, texto: "+d" + x.dado + " num teste ligado à pessoa ou na ajuda a ela" + (x.recuperar ? "; uma ação para motivá-la (" + x.recuperar + " PD)" : "") + (x.acaoExtra ? "; ação extra para ajudá-la em perigo" : "") + ". Uma invocação por relação por missão." }, { linha: "Relação", referencia: "Beta pp. 24–25", f: { tipo: "Relação" } })); });
+        l.push(entradaSimples("o2par", { chave: "paranormal", nome: "Paranormal (etapa 3)", texto: O2().PARANORMAL.texto }, { linha: "Consulta — sem conjuração nesta etapa", f: { tipo: "Paranormal" } }));
+        return l;
+      },
+      filtros: function () { return [{ chave: "tipo", rotulo: "Tipo", todos: "Todas" }]; } },
+    { id: "divergencias", nome: "Divergências e decisões", tem: function () { return !!O2(); },
+      ajuda: "Onde as fontes divergem, o que o R.A.M.A. adota e o teste que fixa; e as decisões de implementação (não são regras publicadas).",
+      entradas: function () {
+        return O2().DIVERGENCIAS.map(function (d) { return entradaSimples("o2div", { chave: d.id, nome: d.texto.slice(0, 80) + (d.texto.length > 80 ? "…" : ""), texto: d.texto }, { linha: "Divergência · " + d.fontes, referencia: d.fontes, f: { tipo: "Divergência" }, pares: [["Fontes", d.fontes], ["Escolha", d.escolha], ["Teste", d.teste]] }); })
+          .concat(O2().DECISOES.map(function (d) { return entradaSimples("o2dec", { chave: d.id, nome: d.texto.slice(0, 80) + (d.texto.length > 80 ? "…" : ""), texto: d.texto }, { linha: "Decisão de implementação", f: { tipo: "Decisão" } }); }));
+      },
+      filtros: function () { return [{ chave: "tipo", rotulo: "Tipo", todos: "Todas" }]; } },
+  ];
+
+  var CATEGORIAS = { ordem: ORDEM, oblivio: OBLIVIO, vampiro: VAMPIRO, goblins: GOBLINS, brutal: BRUTAL, tormenta20: TORMENTA20, ordem2: ORDEM2 };
 
   /* Só as categorias com conteúdo. As carregadas sob demanda (rituais e
      itens de Ordem) contam como tendo conteúdo quando o módulo existe. */

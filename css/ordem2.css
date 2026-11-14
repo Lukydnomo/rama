@@ -1,0 +1,279 @@
+/* =====================================================================
+   R.A.M.A. — Ordem Paranormal RPG II · Experimental (v9.0) · Legacy
+   ---------------------------------------------------------------------
+   A ficha na hierarquia das de Rhiona e Alan: quem é o personagem no
+   topo, a faixa de recursos sempre à mão (presa no alto no celular), uma
+   linha por perícia com o dado e o atributo-base, e as seções. A mesa da
+   campanha, a criação e os diálogos de teste também moram aqui.
+
+   Só os tokens do tema (nenhuma cor presa). O acento de Ordem II é o
+   --cor-paranormal (o brilho da arte); vida e determinação usam
+   --cor-vida e --cor-sanidade.
+
+   Estado nunca só por cor:
+     dado: a FORMA diz o tipo (d4 triângulo, d6 quadrado, d8 losango,
+           d10 pentágono, d12 hexágono, d20 estrela) e o número está escrito
+     anulado pelo pavor: "∅" e riscado; fora da soma: "−" e esmaecido
+     perícia treinada: "●" antes do nome; fase atual: "▶"; feita: "✓"
+     marcadores: ◆/◇; ímpeto: ■/□ e "3/5"
+   A versão Modern20 está em css/modern20/ordem2.css.
+   ===================================================================== */
+
+/* ---------------------------------------------------------- base */
+.o2-aba { display: flex; flex-direction: column; gap: var(--e4); min-width: 0; }
+.o2-fonte { font-size: var(--texto-mini); color: var(--cor-texto-2); white-space: nowrap; }
+.o2-motivo { margin: 0; font-size: var(--texto-mini); color: var(--cor-aviso); }
+.o2-auto { margin: 0; font-size: var(--texto-mini); color: var(--cor-texto-3); }
+.o2-pares { margin: 0; display: grid; grid-template-columns: max-content 1fr; gap: var(--e1) var(--e3); }
+.o2-pares > div { display: contents; }
+.o2-pares dt { color: var(--cor-texto-2); font-size: var(--texto-mini); }
+.o2-pares dd { margin: 0; min-width: 0; overflow-wrap: anywhere; }
+.o2-pares--linha { display: flex; flex-wrap: wrap; gap: var(--e1) var(--e4); }
+.o2-pares--linha > div { display: flex; flex-direction: column; }
+.o2-erros { margin: 0; padding-left: var(--e4); color: var(--cor-erro); }
+.o2-ok { margin: 0; color: var(--cor-ok); }
+.o2-experimental { margin: 0; padding: var(--e2) var(--e3); border: var(--borda) dashed var(--cor-paranormal); font-size: var(--texto-mini); }
+.o2-aviso-mini { color: var(--cor-aviso); font-size: var(--texto-mini); }
+.o2-privado { margin: 0; padding: var(--e1) var(--e2); border-left: 3px solid var(--cor-paranormal); font-size: var(--texto-mini); color: var(--cor-texto-2); }
+.o2-criar__campos { display: flex; flex-wrap: wrap; gap: var(--e2) var(--e3); align-items: end; }
+.o2-criar__campos > * { flex: 1 1 11rem; min-width: 0; }
+.o2-criar__campos > .r-botao { flex: 0 0 auto; }
+
+/* ---------------------------------------------------------- o dado */
+.o2-dado {
+  --o2-tam: 2.1rem;
+  position: relative;
+  display: inline-grid; place-items: center;
+  width: var(--o2-tam); height: var(--o2-tam);
+  flex: none;
+  font-variant-numeric: tabular-nums;
+}
+.o2-dado::before {
+  content: ""; position: absolute; inset: 0;
+  background: var(--cor-texto);
+  clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%);
+}
+.o2-dado--d4::before { clip-path: polygon(50% 4%, 98% 92%, 2% 92%); }
+.o2-dado--d6::before { clip-path: polygon(8% 8%, 92% 8%, 92% 92%, 8% 92%); }
+.o2-dado--d8::before { clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%); }
+.o2-dado--d10::before { clip-path: polygon(50% 0, 100% 38%, 82% 100%, 18% 100%, 0 38%); }
+.o2-dado--d12::before { clip-path: polygon(25% 3%, 75% 3%, 100% 50%, 75% 97%, 25% 97%, 0 50%); }
+.o2-dado--d20::before { clip-path: polygon(50% 0, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%); }
+.o2-dado__face {
+  position: relative; z-index: 1;
+  font-size: var(--texto-mini); font-weight: 700; line-height: 1;
+  color: var(--cor-fundo);
+}
+.o2-dado--d4 .o2-dado__face { transform: translateY(18%); }
+.o2-dado__marca {
+  position: absolute; right: -0.35rem; top: -0.35rem; z-index: 2;
+  font-size: var(--texto-mini); line-height: 1;
+  color: var(--cor-texto); background: var(--cor-superficie);
+  border: 1px solid var(--cor-traco-media); padding: 0 2px;
+}
+.o2-dado--anulado::before { background: var(--cor-traco-media); }
+.o2-dado--anulado .o2-dado__face { text-decoration: line-through; color: var(--cor-texto); }
+.o2-dado--fora { opacity: .6; }
+.o2-dado--pavor::before { background: var(--cor-erro); }
+
+/* ---------------------------------------------------------- topo e faixa */
+.o2-bloco { display: flex; flex-direction: column; gap: var(--e3); min-width: 0; }
+.o2-cab { display: flex; align-items: flex-start; gap: var(--e3); min-width: 0; }
+/* O retrato do núcleo (RAMASecaoGeral.foto), no tamanho de um cabeçalho. */
+.o2-cab .ficha-foto { width: 5.5rem; flex: none; }
+.o2-cab .ficha-foto__vazio svg { max-width: 2.2rem; }
+.o2-cab__textos { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: var(--e1); }
+.o2-cab__linha { margin: 0; display: flex; flex-wrap: wrap; gap: var(--e1) var(--e2); align-items: center; }
+.o2-cab__identidade { font-family: var(--fonte-mini); letter-spacing: var(--espaco-letra-titulo); text-transform: uppercase; font-size: var(--texto-mini); }
+.o2-cab__amb { margin: 0; color: var(--cor-texto-2); }
+.o2-cab__marca { flex: none; }
+.o2-variante {
+  display: inline-flex; align-items: center; padding: 1px var(--e2);
+  border: var(--borda) solid var(--cor-paranormal); color: var(--cor-texto);
+  font-size: var(--texto-mini); font-family: var(--fonte-mini); text-transform: uppercase; letter-spacing: var(--espaco-letra);
+}
+.o2-avisos { display: flex; flex-direction: column; gap: var(--e2); }
+.o2-aviso { margin: 0; padding: var(--e2) var(--e3); border: var(--borda) dashed var(--cor-aviso); font-size: var(--texto-mini); }
+.o2-aviso--grave { border-style: solid; border-color: var(--cor-erro); font-weight: 700; }
+.o2-pendente { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--e2); padding: var(--e2) var(--e3); border: var(--borda) solid var(--cor-aviso); }
+.o2-pendente--pedido { border-color: var(--cor-paranormal); }
+
+.o2-faixa {
+  display: flex; flex-wrap: wrap; align-items: stretch; gap: var(--e2);
+  padding: var(--e2);
+  background: var(--fundo-superficie, var(--cor-superficie));
+  border: var(--borda) solid var(--cor-traco-media);
+}
+.o2-faixa__atributos { display: flex; gap: var(--e2); flex-wrap: wrap; }
+.o2-atr {
+  display: inline-flex; flex-direction: column; align-items: center; gap: 2px;
+  min-width: 4.4rem; padding: var(--e1) var(--e2);
+  background: transparent; color: var(--cor-texto); font: inherit;
+  border: var(--borda) solid var(--cor-traco-fraca); cursor: pointer;
+}
+.o2-atr:hover:not(:disabled) { border-color: var(--cor-paranormal); }
+.o2-atr:focus-visible { outline: 2px solid var(--cor-foco); outline-offset: 1px; }
+.o2-atr:disabled { cursor: default; }
+.o2-atr__nome { font-family: var(--fonte-mini); font-size: var(--texto-mini); text-transform: uppercase; letter-spacing: var(--espaco-letra-titulo); }
+.o2-atr__base { font-size: var(--texto-mini); color: var(--cor-aviso); }
+.o2-recurso {
+  display: grid; grid-template-columns: auto auto; align-content: center; gap: 2px var(--e2);
+  min-width: 7.5rem; padding: var(--e1) var(--e2);
+  border: var(--borda) solid var(--cor-traco-fraca);
+}
+.o2-recurso__rotulo { font-family: var(--fonte-mini); font-size: var(--texto-mini); text-transform: uppercase; letter-spacing: var(--espaco-letra-titulo); color: var(--cor-texto-2); }
+.o2-recurso__valor { font-variant-numeric: tabular-nums; }
+.o2-recurso__valor strong { font-size: var(--texto-medio); }
+.o2-recurso__nota { grid-column: 1 / -1; font-size: var(--texto-mini); color: var(--cor-texto-3); }
+.o2-recurso__botoes { grid-column: 1 / -1; display: flex; gap: var(--e1); }
+.o2-recurso--pavor.o2-recurso--ativo { border-color: var(--cor-erro); }
+.o2-barra { grid-column: 1 / -1; display: block; height: 4px; background: var(--cor-traco-fraca); }
+.o2-barra__cheio { display: block; height: 100%; background: var(--cor-vida); }
+.o2-recurso--pd .o2-barra__cheio { background: var(--cor-sanidade); }
+.o2-faixa__condicoes { display: flex; flex-wrap: wrap; gap: var(--e1); align-items: center; }
+.o2-acoes { display: flex; flex-wrap: wrap; gap: var(--e2); }
+
+/* ---------------------------------------------------------- perícias */
+.o2-pericias { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 19rem), 1fr)); gap: 2px var(--e4); }
+.o2-pericia {
+  display: grid; grid-template-columns: minmax(0, 1fr) auto auto auto; align-items: center; gap: var(--e2);
+  padding: 2px var(--e1); border-bottom: 1px dotted var(--cor-traco-fraca);
+}
+.o2-pericia__nome { min-width: 0; overflow-wrap: anywhere; display: inline-flex; gap: var(--e1); align-items: baseline; }
+.o2-pericia--treinada .o2-pericia__nome::before { content: "●"; color: var(--cor-paranormal); font-size: .7em; }
+.o2-pericia:not(.o2-pericia--treinada) .o2-pericia__nome::before { content: "○"; color: var(--cor-texto-3); font-size: .7em; }
+.o2-pericia__nota { color: var(--cor-aviso); cursor: help; }
+.o2-pericia__atr { font-size: var(--texto-mini); color: var(--cor-texto-2); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.o2-pericia .r-campo { margin: 0; }
+
+/* ---------------------------------------------------------- habilidades */
+.o2-habilidades { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 20rem), 1fr)); gap: var(--e3); align-items: start; }
+.o2-habilidade { display: flex; flex-direction: column; gap: var(--e2); padding: var(--e3); border: var(--borda) solid var(--cor-traco-media); border-top: 3px solid var(--cor-paranormal); background: var(--cor-superficie); }
+.o2-habilidade__topo { display: flex; justify-content: space-between; align-items: baseline; gap: var(--e2); }
+.o2-habilidade__nome { margin: 0; font-size: var(--texto-medio); }
+.o2-habilidade__texto { margin: 0; }
+.o2-habilidade__estado { display: flex; flex-direction: column; gap: var(--e1); }
+.o2-impeto { display: flex; align-items: center; gap: 2px; font-size: var(--texto-medio); }
+.o2-impeto__espaco--cheio { color: var(--cor-paranormal); }
+.o2-marcadores { margin: 0; font-variant-numeric: tabular-nums; }
+.o2-paranormal { border-style: dashed; }
+
+/* ---------------------------------------------------------- investigação */
+.o2-pontos { display: flex; flex-direction: column; gap: var(--e3); }
+.o2-ponto { display: flex; flex-direction: column; gap: var(--e2); padding: var(--e3); border: var(--borda) solid var(--cor-traco-media); }
+.o2-ponto__nome { margin: 0; font-size: var(--texto-medio); }
+.o2-ponto__achados { margin: 0; padding-left: var(--e4); }
+.o2-solicitacoes { margin: 0; padding-left: var(--e4); display: flex; flex-direction: column; gap: var(--e2); }
+.o2-pistas { width: 100%; border-collapse: collapse; font-size: var(--texto-mini); }
+.o2-pistas th, .o2-pistas td { text-align: left; padding: 2px var(--e2); border-bottom: 1px solid var(--cor-traco-fraca); vertical-align: top; }
+.o2-editor-ponto__pista { padding: var(--e2); border: 1px dashed var(--cor-traco-fraca); }
+
+/* ---------------------------------------------------------- combate e relações */
+.o2-arma { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--e1) var(--e3); padding: var(--e1) 0; border-bottom: 1px dotted var(--cor-traco-fraca); }
+.o2-fases { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: var(--e2); }
+.o2-fases > li { padding: 2px var(--e2); border: var(--borda) solid var(--cor-traco-fraca); font-size: var(--texto-mini); }
+.o2-fases__atual { border-color: var(--cor-paranormal); font-weight: 700; }
+.o2-fases__feita { color: var(--cor-texto-3); }
+.o2-declaracoes, .o2-participantes { margin: 0; padding-left: var(--e4); display: flex; flex-direction: column; gap: var(--e1); }
+.o2-participante { display: flex; flex-wrap: wrap; align-items: center; gap: var(--e1) var(--e2); }
+.o2-historico { margin: 0; padding-left: var(--e4); display: flex; flex-direction: column; gap: 2px; font-size: var(--texto-mini); }
+.o2-relacoes, .o2-itens { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 19rem), 1fr)); gap: var(--e3); align-items: start; }
+.o2-relacao, .o2-item { display: flex; flex-direction: column; gap: var(--e2); padding: var(--e3); border: var(--borda) solid var(--cor-traco-media); }
+.o2-relacao__topo, .o2-item__topo { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--e1) var(--e2); }
+.o2-relacao__topo h3 { margin: 0; font-size: var(--texto-medio); }
+.o2-grau { border-color: var(--cor-paranormal); }
+
+/* ---------------------------------------------------------- testes */
+.o2-teste__campos { display: flex; flex-wrap: wrap; gap: var(--e2) var(--e3); }
+.o2-teste__campos > * { flex: 1 1 10rem; min-width: 0; }
+.o2-teste__habs { margin: 0; padding: var(--e2) var(--e3); border: var(--borda) solid var(--cor-traco-fraca); display: flex; flex-direction: column; gap: var(--e1); }
+.o2-teste__habs legend { font-size: var(--texto-mini); font-family: var(--fonte-mini); text-transform: uppercase; letter-spacing: var(--espaco-letra-titulo); padding: 0 var(--e1); }
+.o2-teste__previa { padding: var(--e2) var(--e3); border: var(--borda) dashed var(--cor-paranormal); display: flex; flex-direction: column; gap: var(--e1); }
+.o2-teste__dados { display: flex; flex-wrap: wrap; gap: var(--e3); }
+.o2-teste__dado { display: inline-flex; flex-direction: column; align-items: center; gap: 2px; }
+.o2-teste__fontes { margin: 0; padding-left: var(--e4); }
+.o2-resultado { display: flex; flex-direction: column; gap: var(--e2); padding: var(--e3); border: var(--borda) solid var(--cor-traco-media); }
+.o2-resultado--critico { border-color: var(--cor-ok); border-width: 2px; }
+.o2-resultado--falha-critica { border-color: var(--cor-erro); border-width: 2px; }
+.o2-resultado--falha { border-style: dashed; }
+.o2-resultado__titulo { font-size: var(--texto-mini); text-transform: uppercase; letter-spacing: var(--espaco-letra-titulo); }
+.o2-resultado__dados { display: flex; flex-wrap: wrap; gap: var(--e3); }
+.o2-resultado__dado { display: inline-flex; flex-direction: column; align-items: center; gap: 2px; }
+.o2-resultado__fonte { font-size: var(--texto-mini); color: var(--cor-texto-2); max-width: 6rem; text-align: center; overflow-wrap: anywhere; }
+.o2-resultado__linha { margin: 0; }
+.o2-pos__dados { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: var(--e2); }
+.o2-pos__linha { display: flex; flex-wrap: wrap; align-items: center; gap: var(--e2); }
+.o2-pos__fonte { min-width: 8rem; font-size: var(--texto-mini); }
+
+/* ---------------------------------------------------------- criação */
+.o2-criar__modos { margin-bottom: var(--e2); }
+.o2-presets { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 22rem), 1fr)); gap: var(--e3); }
+.o2-presets__titulo { margin: 0 0 var(--e1); font-size: var(--texto-mini); text-transform: uppercase; letter-spacing: var(--espaco-letra-titulo); color: var(--cor-texto-2); }
+.o2-presets__lista { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 10rem), 1fr)); gap: var(--e2); }
+.o2-preset {
+  position: relative; display: flex; flex-direction: column; align-items: flex-start; gap: 2px;
+  padding: var(--e2); text-align: left; font: inherit; color: var(--cor-texto);
+  background: var(--cor-superficie); border: var(--borda) solid var(--cor-traco-fraca); cursor: pointer;
+}
+.o2-preset:hover { border-color: var(--cor-paranormal); }
+.o2-preset:focus-visible { outline: 2px solid var(--cor-foco); outline-offset: 1px; }
+.o2-preset--escolhido { border: 2px solid var(--cor-paranormal); }
+.o2-preset__nome { font-weight: 700; }
+.o2-preset__sub, .o2-preset__rec { font-size: var(--texto-mini); color: var(--cor-texto-2); }
+.o2-preset__marca { position: absolute; top: var(--e1); right: var(--e2); font-weight: 700; color: var(--cor-paranormal); }
+.o2-previa { padding: var(--e3); border: var(--borda) solid var(--cor-traco-media); }
+.o2-previa__topo { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--e1) var(--e3); }
+.o2-previa__nome { margin: 0; font-size: var(--texto-grande); }
+.o2-previa__bloco > summary { cursor: pointer; font-weight: 700; }
+.o2-previa__pericias { columns: 2 14rem; margin: var(--e1) 0 0; padding-left: var(--e4); }
+.o2-criar__pericias { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 16rem), 1fr)); gap: var(--e2) var(--e3); }
+.o2-criar__pericia { display: flex; flex-wrap: wrap; align-items: end; gap: var(--e1) var(--e2); padding: var(--e1); border-bottom: 1px dotted var(--cor-traco-fraca); }
+.o2-criar__pericia-nome { flex: 1 1 100%; font-size: var(--texto-mini); }
+.o2-contador { margin: 0; font-size: var(--texto-mini); font-variant-numeric: tabular-nums; }
+.o2-contador--erro { color: var(--cor-erro); font-weight: 700; }
+
+/* ---------------------------------------------------------- mesa */
+.o2-mesa__topo { display: flex; align-items: center; gap: var(--e3); }
+.o2-mesa__textos { min-width: 0; }
+.o2-mesa__titulo { margin: 0; font-weight: 700; }
+.o2-mesa__pcs { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 20rem), 1fr)); gap: var(--e3); }
+.o2-mesa__pc { display: flex; flex-direction: column; gap: var(--e2); padding: var(--e3); border: var(--borda) solid var(--cor-traco-media); }
+.o2-mesa__pc header h3 { margin: 0; }
+.o2-mesa__pc-rec { margin: 0; font-variant-numeric: tabular-nums; }
+.o2-pedidos { margin: 0; padding-left: var(--e4); display: flex; flex-direction: column; gap: var(--e2); }
+
+/* A mini-faixa do rodapé: só no celular (a faixa grande sai de vista). */
+.o2-faixa-mini { display: none; }
+
+/* ---------------------------------------------------------- celular */
+@media (max-width: 760px) {
+  .o2-faixa { gap: var(--e1); padding: var(--e1); }
+  .o2-atr { min-width: 3.6rem; padding: 2px var(--e1); }
+  .o2-recurso { min-width: 5.8rem; padding: 2px var(--e1); }
+  .o2-recurso__nota { display: none; }
+  .o2-dado { --o2-tam: 1.85rem; }
+  /* Uma linha por perícia também no celular: nome, atributo-base, dado
+     e o botão. */
+  .o2-pericia { gap: var(--e1); padding: 1px 0; }
+  .o2-pericia .r-botao { padding-inline: var(--e2); }
+  .o2-cab__marca { display: none; }
+  .o2-faixa-mini {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: var(--z-fixo, 5);
+    display: flex; align-items: center; gap: var(--e2); flex-wrap: wrap;
+    padding: var(--e1) var(--e3);
+    background: var(--fundo-superficie, var(--cor-superficie));
+    border-top: var(--borda) solid var(--cor-traco-media);
+    font-variant-numeric: tabular-nums; font-size: var(--texto-mini);
+  }
+  .o2-faixa-mini .r-botao { margin-left: auto; }
+  .o2-faixa-mini__item--pavor { color: var(--cor-erro); font-weight: 700; }
+  body:has(.o2-faixa-mini) .app-corpo { padding-bottom: calc(var(--e8) + 2.5rem); }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .o2-preset, .o2-atr { transition: border-color var(--tempo-seco) var(--curva); }
+}
+
+/* Densidade compacta (a mesma família de css/densidade.css). */
+:root[data-densidade="compacta"] .o2-faixa { padding: var(--e1); gap: var(--e1); }
+:root[data-densidade="compacta"] .o2-habilidade, :root[data-densidade="compacta"] .o2-ponto, :root[data-densidade="compacta"] .o2-relacao, :root[data-densidade="compacta"] .o2-item { padding: var(--e2); }
+:root[data-densidade="compacta"] .o2-pericia { padding: 1px var(--e1); }

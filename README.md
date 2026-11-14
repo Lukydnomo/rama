@@ -43,6 +43,7 @@ preferências de tela — nunca é tratado como banco.
     goblins.css         Malditos Goblins: ficha oficial, dados que explodem, criação, Covil (v6.0)
     brutal.css          BRUTAL: a ficha-tabuleiro, as cartas dos Arquétipos, a Mesa da Diretora (v7.0)
     tormenta20.css      Tormenta20: ficha com parcelas, criação em 8 passos, magia com aprimoramentos, Mesa (v8.0)
+    ordem2.css          Ordem Paranormal RPG II: ficha, mesa, criação e diálogos de teste (v9.0)
     perfil.css          o Perfil: cabeçalho compacto, navegação por seções, coleção de temas (v8.2)
     personagens.css     Personagens: as Pastas laterais do desktop (v8.3)
     (os suplementos — volumes, switches e a animação — estão em componentes.css, v6.1)
@@ -142,6 +143,12 @@ preferências de tela — nunca é tratado como banco.
       regras.js         o motor: cálculo com parcelas, acúmulo, combate, manobras, magias, progressão
       mesa.js           a mesa: combate, ameaças independentes, encontros, XP, tesouro, perigos
       magias*.js, ameacas*.js, classes-*.js, itens-magicos*.js …  os catálogos do Livro Básico, com página
+    ordem2/             Ordem Paranormal RPG II — Experimental (v9.0), à parte de ordem/: copiado no Ordem2.gs…
+      telas/            …e as telas: criação (pronta, livre, guiada), ficha, a mesa do Mestre
+      catalogo.js       perícias, perfis, habilidades, as 14 fichas prontas, tabelas, divergências e decisões
+      regras.js         a ficha: dados-base, efeitos, recursos, presets e a criação guiada
+      motor.js          o teste (4 dados/3 somados, pavor, crítico, RA/RB), dano, lesões e traumas
+      mesa.js           a mesa: testes e pós-rolagem, investigação, combate em fases, a vista do jogador
       mesa.js           o Thriller: pilhas, testes, cenas, Encontro, ações do Assassino, vista das jogadoras
     historico.js        rolagem → histórico da campanha, num funil só
     temas-dados.js      catálogo dos temas de dados e regras puras (copiado no Codigo.gs)
@@ -160,6 +167,7 @@ preferências de tela — nunca é tratado como banco.
     Brutal.gs           sistema BRUTAL: a Mesa da Diretora, o Thriller e as rolagens no servidor (cópia do motor)
     Tormenta20.gs       sistema Tormenta20: a Mesa do Mestre e as operações entre fichas e ameaças (cópia do motor)
     Tormenta20Dados.gs  os catálogos de Tormenta20 (cópia de js/tormenta20/)
+    Ordem2.gs           sistema Ordem Paranormal RPG II: a mesa, as operações com opId e as rolagens no servidor (cópia do motor)
     Universal.gs        sistema Universal: atributos e status livres no painel da mesa
     Cris.gs             leitura de ficha pública do CRIS (opcional)
     Feedback.gs         feedback entregue num canal do Discord (opcional)
@@ -915,6 +923,14 @@ próprio `<script src>`, então funciona debaixo de subpasta sem ajuste.
 segredo nenhum — ele os lê das Script Properties. Publicá-lo não expõe nada.
 
 ### Atualizar o backend
+
+**v9.0.0 — BRUMA:** Ordem Paranormal RPG II (Experimental). Crie o arquivo
+**Ordem2** com `backend/Ordem2.gs`, troque `Sistemas.gs`, `Dados.gs` e
+`Campanhas.gs`, rode **`setupRama()`** uma vez (cria `CAMPANHA_ORDEM2`) e crie
+uma versão nova da implantação. Site: `js/ordem2/`, `css/ordem2.css`,
+`css/modern20/ordem2.css`, `assets/sistemas/ordem2-capa*`, as páginas
+`personagens/`, `ficha/`, `campanha/` e `catalogo/` e os arquivos de núcleo do
+changelog. Detalhes em `docs/ORDEM2.md`.
 
 **v8.3.0 — MARGEM:** só o site (Pastas laterais em Personagens, no desktop).
 Publique `personagens/index.html`, `js/paginas/personagens.js`, `js/arrastar.js`,
@@ -1924,7 +1940,7 @@ Três números diferentes, que não se misturam:
 
 | | Onde | O que é |
 |---|---|---|
-| versão do aplicativo | `js/versao.js` | o que a pessoa vê: v8.3.0 |
+| versão do aplicativo | `js/versao.js` | o que a pessoa vê: v9.0.0 |
 | `schemaVersion` | `js/ficha.js` | o formato da FICHA |
 | `versaoFormato` | `js/config.js` | o formato dos arquivos de importação |
 

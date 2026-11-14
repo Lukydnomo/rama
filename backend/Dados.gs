@@ -440,6 +440,23 @@ var ABAS = {
     leves: 3,
     pesadas: ['dadosJson'],
   },
+  CAMPANHA_ORDEM2: {
+    /* A mesa de Ordem Paranormal RPG II (Experimental, v9.0): perfil de
+       regras e ambientação da campanha, missão e cena, testes pedidos e
+       testes aguardando escolhas pós-rolagem, ajudas, investigação
+       (pontos de interesse com pistas por perícia/limiar e notas
+       privadas, descobertas por personagem, travas da cena), combate em
+       fases (participantes, NPCs com bloco próprio, declarações, rodada)
+       e o registro — uma linha por campanha. PV, PD e o estado de cada
+       personagem moram na FICHA; o que a mesa muda nela passa por
+       ordem2_operar (Ordem2.gs), com opId nas duas pontas. Trocar o
+       sistema não apaga a linha. */
+    nome: 'CAMPANHA_ORDEM2',
+    colunas: ['campanhaId', 'atualizadoEm', 'rev', 'opsJson', 'dadosJson'],
+    chave: 'campanhaId',
+    leves: 3,
+    pesadas: ['dadosJson'],
+  },
   CAMPANHA_CAPAS: {
     /* A capa (banner) da campanha. Fora do dadosJson pelo mesmo motivo
        da foto de personagem: é o campo mais pesado e o que menos muda.

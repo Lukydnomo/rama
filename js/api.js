@@ -64,6 +64,7 @@
     "ler_goblins",
     "ler_brutal",
     "ler_tormenta20",
+    "ler_ordem2",
 
     "salvar_foto",
     "salvar_perfil",
@@ -103,6 +104,9 @@
        com opId gravado na mesa e em cada ficha tocada. */
     "salvar_tormenta20",
     "tormenta20_operar",
+    /* E para a mesa de Ordem II (v9.0): opId na mesa e em cada ficha
+       que a operação muda; rev nas configurações. */
+    "ordem2_operar",
 
     /* registrar_rolagem repete com segurança porque carrega um id
        próprio: o servidor reconhece a segunda chegada e não cria a
@@ -203,6 +207,7 @@
     brutal_operar: true,
     salvar_tormenta20: true,
     tormenta20_operar: true,
+    ordem2_operar: true,
   };
 
   var LEITURAS = {};
@@ -887,6 +892,18 @@
   function tormenta20Operar(campanhaId, opId, operacao) {
     return post({ acao: "tormenta20_operar", campanhaId: campanhaId, opId: opId, operacao: operacao });
   }
+  /* Ordem Paranormal RPG II (v9.0): a mesa. Ler (o Mestre recebe tudo;
+     o jogador, a vista sem soluções) e operar (testes, habilidades,
+     investigação, combate — rolados e aplicados no servidor, uma vez
+     por opId); `rev` só nas configurações. */
+  function lerOrdem2(campanhaId, opcoes) {
+    return post({ acao: "ler_ordem2", campanhaId: campanhaId }, opcoes);
+  }
+  function ordem2Operar(campanhaId, opId, operacao, rev) {
+    var corpo = { acao: "ordem2_operar", campanhaId: campanhaId, opId: opId, operacao: operacao };
+    if (rev !== undefined && rev !== null) corpo.rev = rev;
+    return post(corpo);
+  }
   function vampiroOperar(campanhaId, opId, operacao) {
     return post({ acao: "vampiro_operar", campanhaId: campanhaId, opId: opId, operacao: operacao });
   }
@@ -1262,6 +1279,8 @@
     salvarGoblins: salvarGoblins,
     goblinsOperar: goblinsOperar,
     lerBrutal: lerBrutal,
+    lerOrdem2: lerOrdem2,
+    ordem2Operar: ordem2Operar,
     brutalOperar: brutalOperar,
     lerTormenta20: lerTormenta20,
     salvarTormenta20: salvarTormenta20,

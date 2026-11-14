@@ -64,7 +64,7 @@
 
     t.grupo("Tema da ficha · schema 16 (v2.36)");
     var TEMA16 = { nome: "Roxo", base: "escuro", valores: { fundo: { tipo: "radial", forma: "circulo", x: 20, y: 30, pontos: [{ cor: "#08080a", pos: 0 }, { cor: "#3a1030", alfa: 0.8, pos: 100 }] } } };
-    t.igual("o schema subiu para 34 (Tormenta20, v8.0)", S.VERSAO_SCHEMA, 34);
+    t.igual("o schema subiu para 35 (Ordem II, v9.0)", S.VERSAO_SCHEMA, 35);
     t.iguais("ficha nova usa o tema da conta", S.criarFicha({ nome: "Nova" }).aparencia, { v: 1, modo: "conta" });
     t.iguais("ficha antiga (sem o campo) também", S.normalizarFicha({ schemaVersion: 15, nome: "Legado" }).aparencia, { v: 1, modo: "conta" });
     ["ordem", "universal"].forEach(function (tipo) {
@@ -5157,7 +5157,7 @@
     remoto.pericias[0].bonus = 5;
     var m = S.mesclar(base, local, remoto, S.ESQUEMA_FICHA);
     t.ok("sincronizar: a fórmula daqui e o bônus de lá", m.estado.pericias[0].formula === "@STR d8" && m.estado.pericias[0].bonus === 5 && !m.conflitos.length);
-    t.igual("o schema da ficha é o atual (34)", n.schemaVersion, 34);
+    t.igual("o schema da ficha é o atual (35)", n.schemaVersion, 35);
 
     t.grupo("v7.1 · fórmulas nos atributos da ficha universal");
     var fa = F.criarFicha({ nome: "Atributos com fórmula", tipoFicha: "universal" });
@@ -5233,7 +5233,7 @@
     var m = S.mesclar(base, local, remoto, S.ESQUEMA_FICHA);
     t.ok("sincronizar: o modo daqui e o bônus de lá, sem conflito",
       m.estado.organizacao.pericias.modo === "maior" && m.estado.pericias[1].bonus === 4 && !m.conflitos.length);
-    t.igual("o schema da ficha é o atual (34)", n.schemaVersion, 34);
+    t.igual("o schema da ficha é o atual (35)", n.schemaVersion, 35);
   }
 
   /* =================================================================
@@ -5379,7 +5379,7 @@
     t.ok("exportar e importar leva pendentes (com o dado já rolado) e resolvidas", volta.ok &&
       volta.dados.ordem.barganhaInsana.pendentes[0].d4 === 2 && volta.dados.ordem.barganhaInsana.resolvidas.length === 1);
     t.ok("  mesmo sem o ritual na lista de conhecidos", volta.dados.rituais.itens.length === 0);
-    t.igual("o schema da ficha é o atual (34)", F.normalizarFicha(ficha).schemaVersion, 34);
+    t.igual("o schema da ficha é o atual (35)", F.normalizarFicha(ficha).schemaVersion, 35);
   }
 
   /* =================================================================
@@ -5420,7 +5420,7 @@
     t.iguais("  um tema de dados que este navegador não conhece também fica (a tela usa a reserva)", MT.normalizarAparencia({ dados: { id: "tema-do-futuro" } }).dados, { id: "tema-do-futuro" });
     var ficha = F.normalizarFicha(F.criarFicha({ nome: "Lia", tipoFicha: "universal", aparencia: { v: 1, modo: "conta", dados: { id: "sigilo-violeta" } } }));
     t.iguais("a ficha normalizada mantém a escolha", ficha.aparencia.dados, { id: "sigilo-violeta" });
-    t.igual("o schema da ficha é o atual (34)", ficha.schemaVersion, 34);
+    t.igual("o schema da ficha é o atual (35)", ficha.schemaVersion, 35);
     var pacote = V.exportar("personagem", ficha);
     t.ok("exportar leva a escolha sem `id` (atravessa como `tema`)", pacote.dados.aparencia.dados.tema === "sigilo-violeta" && JSON.stringify(pacote).indexOf('"id"') < 0);
     var volta = V.importado(JSON.parse(JSON.stringify(pacote)));
@@ -8461,5 +8461,30 @@
     t.ok("  e religar devolve a escolha", E.estado(religa, null).adquiridos.some(function (a) { return a.chave === "golpePesado"; }));
   }
 
-  global.RAMACasos = casos;
+  /* =================================================================
+     ORDEM PARANORMAL RPG II (v9.0) — a ficha no núcleo
+     ================================================================= */
+  function casosDeOrdem2(t) {
+    var S = global.RAMAFicha, V = global.RAMAValidacao, R = global.RAMAOrdem2, ME = global.RAMAOrdem2Mesa, PM = global.RAMAPainelMesa;
+    if (!R || !S || !V) return;
+    t.grupo("Ordem II · a ficha no núcleo, exportar e importar (v9.0)");
+    var b = R.dePreset("cormac");
+    b.relacoes[3].alvoPersonagemId = "id-de-outra-conta";
+    b.operacoes = ["op-da-mesa"];
+    b.local = ME.local("beta-vigilia");
+    var ficha = S.normalizarFicha(S.criarFicha({ nome: "Cormac", tipoFicha: "ordem2", ordem2: b }));
+    t.ok("tipoFicha ordem2 guarda o bloco ordem2 e nenhum bloco `ordem`", ficha.tipoFicha === "ordem2" && !!ficha.ordem2 && !ficha.ordem && ficha.ordem2.recursos.pv.max === 17);
+    t.ok("uma ficha de Ordem I continua sem bloco ordem2", !S.normalizarFicha(S.criarFicha({ nome: "Antiga", tipoFicha: "ordem" })).ordem2);
+    var pacote = V.exportar("personagem", ficha);
+    t.ok("exportar não leva o registro de operações, o estado local nem o vínculo com outra ficha", pacote.dados.ordem2.operacoes.length === 0 && pacote.dados.ordem2.local === null && pacote.dados.ordem2.relacoes[3].alvoPersonagemId === "");
+    var volta = V.importado(JSON.parse(JSON.stringify(pacote)));
+    var o = volta.dados.ordem2;
+    t.ok("importar devolve ordem2 com ids novos e o grau preservado", volta.ok && volta.dados.tipoFicha === "ordem2" && o.habilidades[0].id !== b.habilidades[0].id && o.relacoes[3].grau === 2 && o.recursos.pd.max === 15);
+    if (PM) {
+      var cartao = PM.resumir({ id: "x", nome: "Cormac", tipoFicha: "ordem2", detalhado: true, ordem2: R.resumoParaMesa(b) });
+      t.ok("o cartão da mesa identifica Ordem II e mostra PV, PD e armadura", cartao.tipo === "ordem2" && /Ordem II/.test(cartao.linhas.join(" ")) && cartao.estatisticas.map(function (e) { return e.chave; }).join() === "pv,pd,armadura");
+    }
+  }
+
+  global.RAMACasos = function (t) { casos(t); casosDeOrdem2(t); };
 })(typeof window !== "undefined" ? window : globalThis);

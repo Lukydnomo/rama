@@ -25,6 +25,9 @@
      Brutal.gs     BRUTAL (Corte Rápido): a Mesa da Diretora — o
                    Thriller da campanha, com as rolagens feitas aqui
                    (cópia do motor; v7.0).
+     Ordem2.gs     Ordem Paranormal RPG II (Experimental): a mesa de
+                   Ordem II, com o motor copiado e as fichas alteradas por
+                   operação com opId (v9.0). À parte de Ordem.gs.
      Universal.gs  o modelo flexível do R.A.M.A.: atributos e status
                    livres no painel da mesa.
 
@@ -63,6 +66,8 @@ var SISTEMAS_DO_RAMA = [
     ferramentas: ['diretora'], mecanicas: [] },
   { id: 'tormenta20', nome: 'Tormenta20', arquivo: 'Tormenta20.gs',
     ferramentas: ['mesaT20'], mecanicas: [] },
+  { id: 'ordem2', nome: 'Ordem Paranormal RPG II', arquivo: 'Ordem2.gs',
+    ferramentas: ['mesaOrdem2'], mecanicas: [] },
   { id: 'universal', nome: 'Universal', arquivo: 'Universal.gs',
     ferramentas: ['combate'], mecanicas: [] },
 ];
@@ -140,6 +145,7 @@ var MODULOS_DE_SISTEMA = {
   goblins: function () { return typeof sistemaGoblins === 'function' ? sistemaGoblins() : null; },
   brutal: function () { return typeof sistemaBrutal === 'function' ? sistemaBrutal() : null; },
   tormenta20: function () { return typeof sistemaTormenta20 === 'function' ? sistemaTormenta20() : null; },
+  ordem2: function () { return typeof sistemaOrdem2 === 'function' ? sistemaOrdem2() : null; },
   universal: function () { return typeof sistemaUniversal === 'function' ? sistemaUniversal() : null; },
 };
 

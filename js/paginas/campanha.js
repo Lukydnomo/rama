@@ -89,6 +89,9 @@
     /* Tormenta20 (v8.0): a mesa do Mestre — combate, encontros, XP e
        tesouro, perigos e ferramentas. */
     { chave: "mesaT20",     rotulo: "Mesa",        secao: "RAMACampanhaTormenta20", ferramenta: "mesaT20" },
+    /* Ordem II (v9.0): a mesa do Mestre — cena, testes pedidos,
+       investigação, combate em fases, dano, lesões e pavor. */
+    { chave: "mesaOrdem2",  rotulo: "Mesa",        secao: "RAMACampanhaOrdem2", ferramenta: "mesaOrdem2" },
     { chave: "notas",       rotulo: "Notas",       secao: "RAMACampanhaNotas", soMestre: true },
     { chave: "config",      rotulo: "Configurações", secao: "RAMACampanhaConfig", soMestre: true },
   ];
@@ -464,6 +467,7 @@
     if (tem("goblins")) notificar("covil");
     if (tem("brutal")) notificar("diretora");
     if (tem("tormenta20")) notificar("mesaT20");
+    if (tem("ordem2")) notificar("mesaOrdem2");
   }
 
   async function buscarPersonagensEmSegundoPlano() {

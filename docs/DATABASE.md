@@ -1,5 +1,23 @@
 # O banco
 
+## Ordem Paranormal RPG II — v9.0
+
+> **Atualizando para a v9.0:** crie o arquivo `Ordem2` com `backend/Ordem2.gs`,
+> troque `Sistemas.gs`, `Dados.gs` e `Campanhas.gs`, rode **`setupRama()`** uma
+> vez (cria a aba `CAMPANHA_ORDEM2`; repetir não muda nada) e crie uma nova
+> versão da implantação.
+
+**CAMPANHA_ORDEM2** — `campanhaId · atualizadoEm · rev · opsJson · dadosJson`
+(leves: as três primeiras; pesada: `dadosJson`). `dadosJson` é a mesa
+normalizada por `RAMAOrdem2Mesa` (cópia fiel de `js/ordem2/mesa.js` em
+`Ordem2.gs`): perfil e ambientação, missão e cena, combate em fases (NPCs com
+bloco próprio), investigação (pistas e notas privadas), pedidos, ajudas, testes
+aguardando escolhas, reserva do grupo, rolagens e registros. `opsJson`: os
+últimos 160 `opId`. As fichas continuam em `PERSONAGENS` (bloco `ordem2`), e o
+que a mesa muda nelas leva o `opId` no bloco; a projeção do painel ganha o
+bloco `ordem2` (`resumoParaMesa`, calculado no servidor). A parte de
+sincronia é `ordem2`.
+
 ## Tormenta20 — v8.0
 
 > **Atualizando para a v8.0:** crie os arquivos `Tormenta20` e

@@ -1601,6 +1601,7 @@
     goblins: function () { return abrirCriacaoGoblins(); },
     brutal: function () { return abrirCriacaoBrutal(); },
     tormenta20: function () { return abrirCriacaoTormenta20(); },
+    ordem2: function () { return abrirCriacaoOrdem2(); },
     universal: function () { return abrirCriacao(); },
   };
 
@@ -1651,6 +1652,18 @@
     var r = await global.RAMAApi.listarCampanhas();
     if (r.ok) campanhas = r.dados || [];
     global.RAMAGoblinsCriar.abrir({ campanhas: campanhas });
+  }
+
+  /* A criação de Ordem II (v9.0): ficha pronta, livre ou guiada. */
+  async function abrirCriacaoOrdem2() {
+    if (!global.RAMAOrdem2Criar || !global.RAMAOrdem2) {
+      UI.avisoErro("A criação de Ordem II não está disponível nesta página.");
+      return;
+    }
+    var campanhas = [];
+    var r = await global.RAMAApi.listarCampanhas();
+    if (r.ok) campanhas = r.dados || [];
+    global.RAMAOrdem2Criar.abrir({ campanhas: campanhas });
   }
 
   /* A criação de Tormenta20 (v8.0): o passo a passo do livro. */

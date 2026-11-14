@@ -1805,6 +1805,10 @@
 .capa-sistema--sem-capa {
   background: var(--fundo-superficie-2);
 }
+/* v9.0: arte inteira, sem corte (Ordem II é 9:16 num volume 2:3). O fundo
+   é o da própria arte, para o encaixe parecer parte dela. */
+.capa-sistema--conter { background: #081216; }
+.capa-sistema--conter .capa-sistema__imagem { object-fit: contain; }
 .capa-sistema__lombada {
   position: absolute;
   inset: 0;

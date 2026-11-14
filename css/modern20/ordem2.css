@@ -1,0 +1,45 @@
+/* =====================================================================
+   R.A.M.A. — Ordem Paranormal RPG II · Experimental (v9.0) · Modern20
+   ---------------------------------------------------------------------
+   As MESMAS classes de css/ordem2.css na linguagem Modern20: canto leve,
+   traço discreto, sombra só no que flutua. O acento continua sendo o
+   --cor-paranormal; o estado continua com texto e forma (dado com a
+   forma do tipo e o número, "∅", "●", "▶", "✓", ◆/◇, ■/□).
+   ===================================================================== */
+
+:where(:root[data-interface="modern20"]) {
+  & .o2-faixa,
+  & .o2-atr,
+  & .o2-recurso,
+  & .o2-habilidade,
+  & .o2-ponto,
+  & .o2-relacao,
+  & .o2-item,
+  & .o2-mesa__pc,
+  & .o2-preset,
+  & .o2-previa,
+  & .o2-resultado,
+  & .o2-teste__habs,
+  & .o2-teste__previa,
+  & .o2-pendente,
+  & .o2-aviso,
+  & .o2-experimental,
+  & .o2-fases > li {
+    border-color: var(--m20-borda);
+    border-radius: var(--m20-raio-controle);
+  }
+  & .o2-faixa { box-shadow: var(--m20-sombra-1); background: var(--fundo-superficie); }
+  & .o2-habilidade { border-top: 3px solid var(--cor-paranormal); }
+  & .o2-preset--escolhido, & .o2-fases__atual, & .o2-variante { border-color: var(--cor-paranormal); }
+  & .o2-variante { border-radius: 999px; text-transform: none; letter-spacing: 0; font-weight: 600; }
+  & .o2-cab__identidade,
+  & .o2-atr__nome,
+  & .o2-recurso__rotulo,
+  & .o2-teste__habs legend,
+  & .o2-presets__titulo,
+  & .o2-resultado__titulo { text-transform: none; letter-spacing: 0; font-weight: 600; }
+  & .o2-dado__marca { border-radius: 999px; border-color: var(--m20-borda); }
+  & .o2-resultado--critico { border-color: var(--cor-ok); }
+  & .o2-resultado--falha-critica { border-color: var(--cor-erro); }
+  & .o2-barra { border-radius: 999px; overflow: hidden; }
+}

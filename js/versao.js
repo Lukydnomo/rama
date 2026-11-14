@@ -118,11 +118,31 @@
 
   var CHANGELOG = [
     {
+      versao: "9.0.0",
+      codinome: "BRUMA",
+      data: "13/11/2026",
+      mudancas: {
+        "Adicionado": [
+          "Ordem Paranormal RPG II — Experimental, como sistema próprio (à parte de Ordem Paranormal: nenhuma ficha, campanha, suplemento ou importador da primeira edição muda). Baseado nos playtests Alpha (pp. 14–26) e Beta (pp. 2 e 6–25) e nas fichas dos extras, com a fonte de cada regra.",
+          "Criação em três caminhos: Ficha pronta (Alan, os cinco do Ato II e os oito do Beta, com a prévia completa — perícias, habilidades, equipamento, relações, idade e as diferenças impressas — antes de copiar), Criação livre e Criação guiada (experimental: d6 nos atributos com 2 passos, perícias d4 com 8 passos e 16 PV/12 PD de referência de mesa, editáveis).",
+          "A ficha na ordem das de Rhiona e Alan: retrato, perfil, ocupação/vocação, nível e a variante no topo; Físico, Mente, Emoção, PV, PD, armadura e pavor sempre à mão (no celular, presos no rodapé); uma linha por perícia com dado, atributo-base e o botão de teste; seções de Habilidades, Investigação, Combate, Relações, Inventário e Anotações.",
+          "O teste completo: atributo + perícia contra DT 7, até quatro dados com três somados (a soma sugere os três maiores e dá para escolher), RA e RB, crítico e falha crítica, pavor separado anulando os menores, passos com a fonte escrita, e as escolhas pós-rolagem antes de valer — Análise ±1, Prontidão, Olhar Infalível, Mentoria.",
+          "As habilidades das fichas automatizadas (Ímpeto nas três versões, Análise, Avaliação, Prontidão Alpha e Beta, Foco Mental, Curandeiro, Plano Estratégico, Arsenal de Herborista, o lobo de Rowan, Guardiã, Instinto de Sobrevivência e as demais); relações com graus, uma invocação por missão e motivação entre fichas.",
+          "A mesa de Ordem II na campanha: missão e cena, testes pedidos, investigação por pontos de interesse com pistas por perícia e notas privadas (Investigar, Observar, Examinar, Interagir, Recapitular e Compartilhar), combate em três fases configuráveis com ações simultâneas e ataque mútuo, o conflito simplificado do Alpha, dano físico e emocional, armadura, lesões, traumas, moribundo e morte lenta, pavor e correções do Mestre no histórico. Tudo rolado no servidor.",
+          "Ordem II no Catálogo (perícias, perfis e ocupações, habilidades, fichas prontas, regras e tabelas, divergências) e a capa nova no seletor, na campanha e no Catálogo, inteira, sem corte.",
+        ],
+        "Corrigido": [
+          "O changelog da v8.3.0 usava uma categoria que não existe (\"Novo\"); agora é \"Adicionado\".",
+        ],
+        "Técnico": ["Novo backend/Ordem2.gs (sistemaOrdem2, ler_ordem2 e ordem2_operar com opId na mesa e em cada ficha que muda, rev nas configurações, rolagens no servidor), copiado de js/ordem2/ por testes/gerar-ordem2-gs.js, e a aba CAMPANHA_ORDEM2: crie o arquivo Ordem2, troque Sistemas.gs, Dados.gs e Campanhas.gs, rode setupRama() e crie uma versão nova da implantação. Schema 35, sem conversão. Site: js/ordem2/ e js/ordem2/telas/, css/ordem2.css e css/modern20/ordem2.css, assets/sistemas/ordem2-capa (PNG original e WebP sem perda), js/sistemas.js, js/api.js, js/ficha.js, js/validacao.js, js/importar.js, js/campanha-painel.js, js/capa-sistema.js, css/componentes.css, js/paginas/personagens.js, campanha.js e catalogo.js, e as páginas personagens/, ficha/, campanha/ e catalogo/. Fontes, fatos, inferências, propostas e divergências com o teste que fixa em docs/ORDEM2.md. Testes: testes/executar-ordem2.js, testes/ordem2-backend.js e Ordem II em testes/casos.js."],
+      },
+    },
+    {
       versao: "8.3.0",
       codinome: "MARGEM",
       data: "13/11/2026",
       mudancas: {
-        "Novo": [
+        "Adicionado": [
           "Pastas laterais em Personagens, no computador. Ao lado de “+ Adicionar personagem”, a Exibição escolhe entre Abas e Pastas laterais. Nas Pastas laterais, Meus personagens vira duas colunas: à esquerda, Todos, Sem pasta e as suas pastas em linhas compactas, com a contagem à direita e “+ Nova pasta” no fim; à direita, o nome da pasta, quantos personagens ela tem, o menu da pasta (Renomear, Excluir pasta), a busca, o filtro de sistema, “Agrupar por sistema” e os cartões de sempre. Trocar de pasta atualiza a lista ali mesmo, sem janela por cima.",
           "A lateral fica presa na tela enquanto você percorre as fichas, e a lista de pastas rola sozinha quando é longa. Todos e Sem pasta ficam sempre no alto. Nomes longos aparecem cortados, com o nome inteiro ao passar o mouse.",
           "Mover pela lateral: arraste a ficha pela alça (⠿) até uma pasta. As pastas que podem receber se destacam, e a linha inteira aceita a soltura. Soltar em “Sem pasta” retira a ficha da pasta; “Todos” é só consulta e diz isso durante o arraste. “Mover para pasta…”, no menu da ficha, continua como caminho pelo teclado. As pastas também andam pelas setas, Home e End.",
