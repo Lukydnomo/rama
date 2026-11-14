@@ -929,6 +929,17 @@ segredo nenhum — ele os lê das Script Properties. Publicá-lo não expõe nad
 
 ### Atualizar o backend
 
+**v9.5.0 — FORQUILHA:** Ramificação (planos de evolução de Ordem). Troque
+**`Dados.gs`**, **`Ordem.gs`**, **`Codigo.gs`** e **`Sistemas.gs`**, **rode
+`setupRama()`** (cria a aba `PLANOS_EVOLUCAO`) e crie uma versão nova da
+implantação. Sem o `setupRama`, salvar um plano responde
+`instalacao_incompleta` (a tela avisa e mantém o rascunho). Site:
+`js/ordem/ramificacao.js`, `js/ordem/telas/ficha-ramificacao.js`,
+`js/ordem/telas/ficha-ordem.js`, `js/ordem/progressao.js`,
+`js/ordem/regras.js`, `js/paginas/ficha.js`, `js/api.js`, `ficha/index.html`,
+`css/ficha.css`, `css/modern20/ficha.css` e `js/versao.js`. Detalhes em
+`docs/FICHA-ORDEM.md`.
+
 **v9.4.1 — VIZINHO:** só site (`js/sistemas.js`, `js/versao.js`): Ordem II ao lado de Ordem I na escolha de sistema. Sem mudança no Apps Script.
 
 **v9.4.0 — UNÍSSONO:** Ordem II com regras unificadas. Troque **`Ordem2.gs`** e
@@ -1981,7 +1992,7 @@ Três números diferentes, que não se misturam:
 
 | | Onde | O que é |
 |---|---|---|
-| versão do aplicativo | `js/versao.js` | o que a pessoa vê: v9.4.1 |
+| versão do aplicativo | `js/versao.js` | o que a pessoa vê: v9.5.0 |
 | `schemaVersion` | `js/ficha.js` | o formato da FICHA |
 | `versaoFormato` | `js/config.js` | o formato dos arquivos de importação |
 

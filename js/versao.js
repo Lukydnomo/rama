@@ -118,6 +118,21 @@
 
   var CHANGELOG = [
     {
+      versao: "9.5.0",
+      codinome: "FORQUILHA",
+      data: "14/11/2026",
+      mudancas: {
+        "Adicionado": [
+          "Ramificação, na ficha de Ordem Paranormal: Planejar evolução, na aba Progressão, abre um espaço de simulação com planos (até 8 por ficha), o alvo (NEX, nível e exposição, patente ou estágio) e as escolhas de cada marco, pelas mesmas janelas da Progressão. Nada disso muda a ficha.",
+          "Resumo antes → depois (PV, PE, SAN ou PD, limite por turno, Defesa, atributos, perícias, poderes e rituais, com o marco de origem) e comparação Ficha atual × plano ou Plano A × Plano B. Escolhas que deixaram de fechar ficam em Revisar, com o motivo.",
+          "Aplicação automática: com um plano ativo, cada avanço real da progressão aplica as escolhas daquele marco, em ordem e conferidas de novo. O que não fecha fica pendente, sem substituto, e nada é concedido duas vezes. Se o Mestre subir o NEX, o plano age na próxima vez que a dona ou o dono abrir a ficha.",
+          "Os planos são só do dono da ficha, conferido no servidor, e acompanham a conta em qualquer aparelho. Salvar um plano não grava a ficha.",
+        ],
+        "Corrigido": ["O servidor lista os sistemas na mesma ordem do site (Ordem II ao lado de Ordem I)."],
+        "Técnico": ["Novo js/ordem/ramificacao.js (núcleo puro, sobre RAMAOrdemProgressao/RAMAOrdemRegras) e js/ordem/telas/ficha-ramificacao.js. ordem.ramificacao (ativação e recibos) e escolhas[].procedencia na ficha. Aba PLANOS_EVOLUCAO com rev/opId e as rotas ler/salvar_planos_evolucao (Ordem.gs). Novos testes/executar-ramificacao.js e testes/ramificacao-backend.js."],
+      },
+    },
+    {
       versao: "9.4.1",
       codinome: "VIZINHO",
       data: "14/11/2026",

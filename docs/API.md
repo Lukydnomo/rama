@@ -1,5 +1,23 @@
 # A API
 
+## Ordem Paranormal · Ramificação (planos de evolução) — v9.5
+
+- `ler_planos_evolucao {personagemId}` → `{ ok, rev, dados: { rev, formato,
+  planos, limite, atualizadoEm } }`. Só o **dono** da ficha (`exigeDono`):
+  Mestre, Editor e Leitor recebem `sem_permissao`; quem não alcança a ficha,
+  `nao_encontrado`. Leitura idempotente.
+- `salvar_planos_evolucao {personagemId, rev, opId, dados: { formato, planos }}`
+  → `{ ok, rev, dados }`. Só o dono. `rev` velha: `conflito` (com `dados`
+  atuais); o mesmo `opId`: `repetida`, sem gravar de novo (gravação
+  repetível); mais de 8 planos: `limite`; maior que uma célula:
+  `dados_grandes`; forma errada (id repetido, planos que não são lista,
+  sem opId): `dados_invalidos`; sem a aba: `instalacao_incompleta`. Campos
+  desconhecidos e chaves de vaga inválidas são descartados. **Não grava a
+  ficha nem muda a revisão dela.**
+- `excluir_personagem` apaga também os planos da ficha.
+- A ativação e os recibos da aplicação automática ficam DENTRO da ficha
+  (`ordem.ramificacao`) e sobem com `salvar_personagem`, como sempre.
+
 ## Suplementos — v6.1
 
 - `salvar_campanha { dados: { suplementos: { sistema, ids } } }` — só o mestre.

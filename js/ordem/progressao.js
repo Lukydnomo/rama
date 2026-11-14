@@ -838,6 +838,8 @@
       registradoEm: typeof bruto.registradoEm === "string" ? bruto.registradoEm.slice(0, 40) : "",
       /* Evolução Modular (AS6): a escolha normal de onde esta veio. */
       associadoDe: typeof bruto.associadoDe === "string" && /^[A-Za-z0-9_-]{1,60}$/.test(bruto.associadoDe) ? bruto.associadoDe : undefined,
+      /* v9.5: de onde a escolha veio (o plano da Ramificação que a aplicou). */
+      procedencia: typeof bruto.procedencia === "string" && bruto.procedencia ? bruto.procedencia.slice(0, 160) : undefined,
     };
   }
 

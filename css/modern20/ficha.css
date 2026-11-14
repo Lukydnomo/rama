@@ -553,3 +553,14 @@
 
   & .aliado-imagem { border-radius: var(--m20-raio-cartao); }
 }
+
+/* Ramificação (v9.5): o planejador com os cartões e raios do Modern20. */
+:where(:root[data-interface="modern20"]) {
+  & .ram-selo { border-radius: 999px; border-style: solid; background: var(--m20-destaque-suave); }
+  & .ram-plano { border-radius: var(--m20-raio-controle); border-color: var(--m20-borda); }
+  & .ram-plano[aria-pressed="true"] { box-shadow: none; background: var(--m20-selecao-suave); }
+  & .ram-item, & .ram-aviso { border-radius: var(--m20-raio-controle); }
+  & .ram-resumo { border-radius: var(--m20-raio-cartao); border-color: var(--m20-borda); box-shadow: var(--m20-sombra-1); }
+  & .ram-aviso { background: var(--m20-aviso-suave); }
+  & .ram-estado { border-radius: 999px; }
+}

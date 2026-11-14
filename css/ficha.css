@@ -2206,3 +2206,116 @@ body.pagina-ficha--painel .ficha-topo__nome { font-size: var(--texto-medio); }
 @media (max-width: 560px) {
   .as3-faixa .r-botao { flex: 1 1 100%; }
 }
+
+/* =====================================================================
+   RAMIFICAÇÃO (v9.5) — o planejador de evolução de Ordem
+   ---------------------------------------------------------------------
+   Selo "Simulação" sempre à vista no topo da janela; estados com TEXTO
+   (definida, a definir, revisar, conflito, bloqueada), não só cor. No
+   largo: escolhas à esquerda, resumo à direita. No estreito: abas
+   Escolhas / Resumo / Comparar, e a comparação numa linha quando cabe,
+   sem rolagem lateral.
+   ===================================================================== */
+.ram-janela.r-modal--largo { max-width: 1080px; }
+.ram-selo {
+  display: inline-block;
+  margin-left: var(--e2);
+  padding: 1px var(--e2);
+  font-family: var(--fonte-mini);
+  font-size: var(--texto-mini);
+  letter-spacing: var(--espaco-letra-titulo);
+  text-transform: uppercase;
+  vertical-align: middle;
+  color: var(--cor-paranormal);
+  border: var(--borda) dashed var(--cor-paranormal);
+}
+.ram-espaco { display: flex; flex-direction: column; gap: var(--e3); min-width: 0; }
+.ram-cabecalho { display: flex; flex-direction: column; gap: var(--e2); }
+.ram-voltar { justify-content: space-between; align-items: center; }
+.ram-planos { display: flex; flex-wrap: wrap; gap: var(--e1); }
+.ram-plano {
+  display: inline-flex; align-items: center; gap: var(--e1);
+  min-height: var(--alvo-toque);
+  padding: var(--e1) var(--e2);
+  font: inherit;
+  color: var(--cor-texto);
+  background: var(--fundo-superficie);
+  border: var(--borda) solid var(--cor-traco-media);
+  cursor: pointer;
+}
+.ram-plano[aria-pressed="true"] { border-color: var(--cor-paranormal); box-shadow: inset 0 -3px 0 var(--cor-paranormal); font-weight: 700; }
+.ram-abas { display: flex; gap: var(--e1); border-bottom: var(--borda) solid var(--cor-traco-fraca); }
+.ram-aba {
+  min-height: var(--alvo-toque);
+  padding: var(--e1) var(--e3);
+  font: inherit;
+  color: var(--cor-texto-2);
+  background: none;
+  border: 0;
+  border-bottom: 3px solid transparent;
+  cursor: pointer;
+}
+.ram-aba[aria-selected="true"] { color: var(--cor-texto); border-bottom-color: var(--cor-paranormal); font-weight: 700; }
+.ram-so-estreito { display: none; }
+.ram-grade { display: grid; grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); gap: var(--e4); align-items: start; }
+.ram-grade[data-aba="comparar"] { grid-template-columns: minmax(0, 1fr); }
+.ram-grade[data-aba="comparar"] .ram-escolhas, .ram-grade[data-aba="comparar"] .ram-resumo { display: none; }
+.ram-escolhas, .ram-resumo, .ram-comparar { display: flex; flex-direction: column; gap: var(--e3); min-width: 0; }
+.ram-resumo { padding: var(--e3); background: var(--fundo-superficie-2); border: var(--borda) solid var(--cor-traco-fraca); position: sticky; top: 0; }
+.ram-trajeto { font-weight: 700; }
+.ram-alvo .faixa { align-items: flex-end; }
+.ram-campo-alvo { min-width: 12rem; }
+.ram-aviso { padding: var(--e2) var(--e3); border-left: 4px solid var(--cor-aviso); background: var(--fundo-superficie); display: flex; flex-wrap: wrap; gap: var(--e2); align-items: center; }
+.ram-aviso p { margin: 0; flex: 1 1 18rem; }
+.ram-auto ul, .ram-itens, .ram-linhas, .ram-pendentes { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--e1); }
+.ram-marco { display: flex; flex-direction: column; gap: var(--e2); }
+.ram-marco__titulo { font-size: var(--texto-medio); margin: 0; padding-bottom: var(--e1); border-bottom: var(--borda) solid var(--cor-traco-fraca); }
+.ram-item {
+  display: flex; flex-wrap: wrap; gap: var(--e2); align-items: center; justify-content: space-between;
+  padding: var(--e2);
+  background: var(--fundo-superficie);
+  border-left: 4px solid var(--cor-traco-media);
+}
+.ram-item[data-estado="definida"] { border-left-color: var(--cor-ok); }
+.ram-item[data-estado="pendente"] { border-left-style: dashed; }
+.ram-item[data-estado="revisar"] { border-left-color: var(--cor-erro); }
+.ram-item__corpo { flex: 1 1 16rem; min-width: 0; overflow-wrap: anywhere; display: flex; flex-wrap: wrap; gap: 0 var(--e1); align-items: baseline; }
+.ram-item__rotulo { font-weight: 700; }
+.ram-item__ajuda, .ram-item__corpo .t-erro { flex-basis: 100%; }
+.ram-estado {
+  display: inline-block;
+  padding: 0 var(--e1);
+  font-family: var(--fonte-mini);
+  font-size: var(--texto-mini);
+  text-transform: uppercase;
+  letter-spacing: var(--espaco-letra-titulo);
+  border: var(--borda) solid currentColor;
+}
+.ram-estado[data-estado="definida"], .ram-estado[data-estado="aplicada"] { color: var(--cor-ok); }
+.ram-estado[data-estado="pendente"] { color: var(--cor-texto-3); border-style: dashed; }
+.ram-estado[data-estado="revisar"], .ram-estado[data-estado="conflito"], .ram-estado[data-estado="bloqueada"] { color: var(--cor-erro); }
+.ram-grupo { display: flex; flex-direction: column; gap: var(--e1); }
+.ram-linha { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0 var(--e2); padding: 2px 0; border-bottom: var(--borda) solid var(--cor-traco-fraca); }
+.ram-linha__rotulo { flex: 1 1 9rem; min-width: 0; overflow-wrap: anywhere; }
+.ram-linha__valores { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.ram-linha[data-mudou="sim"] .ram-linha__valores { font-weight: 700; }
+.ram-linha__dif { font-family: var(--fonte-mini); font-size: var(--texto-mini); text-transform: uppercase; color: var(--cor-paranormal); }
+.ram-linha__marco { flex-basis: 100%; color: var(--cor-texto-3); }
+.ram-cmp-escolha { align-items: flex-end; }
+.ram-cmp-x { padding-bottom: var(--e2); color: var(--cor-texto-3); }
+.ram-rodape { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: var(--e2); padding-top: var(--e2); border-top: var(--borda) solid var(--cor-traco-fraca); }
+.ram-rodape p { margin: 0; flex: 1 1 16rem; }
+.ram-vazio p { margin: 0 0 var(--e2); }
+@media (max-width: 760px) {
+  .ram-so-estreito { display: inline-block; }
+  .ram-grade { grid-template-columns: minmax(0, 1fr); }
+  .ram-grade[data-aba="escolhas"] .ram-resumo { display: none; }
+  .ram-grade[data-aba="resumo"] .ram-escolhas { display: none; }
+  .ram-resumo { position: static; }
+  .ram-campo-alvo { min-width: 0; flex: 1 1 100%; }
+  .ram-cmp-escolha .r-campo { flex: 1 1 8rem; min-width: 0; }
+  .ram-cmp-escolha select { width: 100%; }
+}
+@media (min-width: 761px) {
+  .ram-grade[data-aba="resumo"] .ram-escolhas { display: flex; }
+}

@@ -457,6 +457,20 @@ var ABAS = {
     leves: 3,
     pesadas: ['dadosJson'],
   },
+  PLANOS_EVOLUCAO: {
+    /* Ramificação (v9.5): os planos de evolução de uma ficha de Ordem
+       Paranormal — só do DONO da ficha (ler/salvar exigem dono; Mestre,
+       Editor e Leitor nunca recebem). Uma linha por personagem, fora da
+       ficha: salvar um plano não grava a ficha nem muda a revisão dela.
+       `rev` + `opsJson` (opIds já aplicados) protegem de duas abas e de
+       reenvio. A ATIVAÇÃO e os recibos moram na própria ficha
+       (`ordem.ramificacao`). Excluir a ficha apaga a linha. */
+    nome: 'PLANOS_EVOLUCAO',
+    colunas: ['personagemId', 'ownerId', 'atualizadoEm', 'rev', 'opsJson', 'dadosJson'],
+    chave: 'personagemId',
+    leves: 4,
+    pesadas: ['dadosJson'],
+  },
   CAMPANHA_CAPAS: {
     /* A capa (banner) da campanha. Fora do dadosJson pelo mesmo motivo
        da foto de personagem: é o campo mais pesado e o que menos muda.

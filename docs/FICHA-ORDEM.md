@@ -163,3 +163,171 @@ de ativar.
 A aba **Perícias** continua sendo onde se edita grau, atributo e extra, onde
 se escolhe a ordem e onde se arrasta. As demais abas (Progressão, Habilidades,
 Rituais, Inventário, Anotações, Regras, Aliados) têm o mesmo conteúdo de antes.
+
+## Ramificação: futuros do personagem — v9.5
+
+Um planejador de evolução para fichas de **Ordem Paranormal (1ª edição)**. Na
+aba Progressão, o painel **Ramificação · futuros do personagem** (só para o
+DONO) fica separado dos avanços reais. **Planejar evolução** abre uma janela
+com o selo **Simulação** no título o tempo todo e **← Voltar à Progressão**.
+
+### O que é um plano
+
+Um caminho possível: nome, alvo ("Partindo de 35% → Alvo: 50%") e as
+decisões de cada marco até lá, guardadas por **vaga estável** da progressão
+(`d8.ritualClasse`, `d10.atributo`, `afinidade`…). Até **8 planos por
+ficha** (o limite aparece na tela). Criar, duplicar (id novo, sem ficha
+nova), renomear, comparar e excluir. Mudanças ficam num rascunho até
+**Salvar planos**. Uma falha de rede mantém o rascunho aberto, e duas abas
+dão conflito com a lista atual.
+
+| trilho | alvo |
+|---|---|
+| NEX convencional | NEX acima do atual, até 99% |
+| NEX & Experiência | nível e exposição independentes (um eixo ou os dois; "não planejar") |
+| Evolução por Patentes | a patente, com o mínimo de PP |
+| Sobrevivente | o estágio |
+| Mundano | sem marcos (o painel explica) |
+
+O alvo nunca fica abaixo da ficha nem acima do teto. Um alvo já alcançado
+aparece como "(já alcançado)", com o aviso.
+
+### Tudo pelo motor de verdade
+
+`js/ordem/ramificacao.js` (`RAMAOrdemRamificacao`) não tem tabela própria. A
+**projeção** é uma cópia da ficha no alvo. As vagas novas vêm de
+`RAMAOrdemProgressao.vagas` (as da projeção menos as da ficha), em ordem.
+Cada decisão é gravada na projeção pela MESMA porta da Progressão
+(`confirmarAquisicao`; trilha por `candidatosTrilha`; afinidade). Os recursos
+vêm de `RAMAOrdemRegras.calcular`. Os suplementos ligados e as restrições da
+campanha valem como na ficha.
+
+"Escolher agora" abre a **mesma janela** da Progressão (e a biblioteca de
+rituais, no catálogo oficial e só com o que cabe) em cima da projeção. Nada
+da ficha é tocado. Uma decisão que deixou de fechar (requisito, escolha
+anterior trocada, ritual de um suplemento desligado) fica em **Revisar**, com
+o motivo, sem contar na conta. Ela volta a valer quando fecha de novo.
+Reduzir o alvo guarda as decisões além dele como "fora do plano atual", e
+aumentar traz de volta.
+
+Estados com texto: **definida**, **a definir**, **revisar** (e, na
+aplicação, **conflito** e **bloqueada**).
+
+**Resumo** (à direita no largo; aba no celular): ficha atual → alvo de PV, PE
+e SAN (ou PD), limite por turno, Defesa com o mesmo equipamento, atributos,
+perícias que mudam, poderes e rituais, com o marco de origem. Também diz
+quantas escolhas estão "a definir". **Comparar**: Ficha atual × plano ou
+Plano A × Plano B, com "difere" em cada linha e o aviso de alvos diferentes.
+No celular cabe numa linha por item, sem rolagem lateral.
+
+**Base alterada**: a assinatura da base (classe, origem, trilha, atributos,
+graus, escolhas, regras opcionais, progressão, afinidade, equipamento) não
+inclui dano, cargas, condições nem notas. Se mudar, aparece "A ficha mudou
+desde este plano" com **Atualizar base** (prévia do que muda). Uma regra de
+evolução trocada (por exemplo, Sobrevivente → agente) pede revisão, sem
+conversão.
+
+### Aplicação automática
+
+**Ativar aplicação automática** grava na ficha só `ordem.ramificacao`
+(`planoId`, `nomePlano`, `tipo`, `processado` = a progressão de partida,
+`recibos`, `pendentes`, `ultimoResumo`, `pausado`). Ativar **não concede
+nada**. Uma ficha tem um plano ativo por vez. Trocar de plano mostra o que
+muda, e desativar, trocar ou excluir cancela só as escolhas futuras.
+
+O gatilho é **só um avanço real** da progressão (NEX, nível, PP, estágio)
+pelo caminho normal. As vagas que passaram a existir desde `processado` são
+processadas **em ordem**: 40% → 50% faz 45% antes de 50%. Cada uma é
+**conferida de novo** pela Progressão (incluindo a aquisição real de
+ritual):
+
+- a mesma opção já está na ficha: **atendida**;
+- outra opção já está lá: fica a da ficha, como **conflito**;
+- não fecha agora: **bloqueada**, com o motivo, sem substituto. As
+  independentes entram;
+- sem decisão no plano: a vaga fica aberta na Progressão, como sempre.
+
+O que entra recebe `procedencia` ("Plano Mais rituais (aplicação automática,
+NEX 40%)"), que aparece na lista de escolhas. Cada vaga tem um **recibo**
+`planoId|vaga` (opId `ram:<chave>`): repetir, recarregar, abrir duas abas,
+perder a resposta, o NEX cair e voltar ao mesmo marco ou corrigir à mão
+nunca concede de novo nem sobrescreve. As escolhas, os recibos e o novo
+`processado` sobem numa gravação só da ficha, protegida pela revisão dela.
+
+Roda no navegador do **dono**: depois de `aoMudarOrdem` (com uma folga para
+quem digita) e na abertura da ficha. Se o Mestre subiu o NEX, a mudança dele
+fica conservada e o plano é aplicado na **primeira abertura do dono**. O
+painel mostra o plano ativo, o próximo marco real (com quantas escolhas
+estão planejadas), a última aplicação e os pendentes. Há também **Retomar
+aplicação**, **Revisar escolhas já liberadas** (plano ativado depois do
+marco), **Revisar plano** e **Desativar**. Os dois primeiros mostram antes,
+numa cópia, o que entraria.
+
+Um trilho que muda (agente ↔ sobrevivente, regra de patentes) **pausa** o
+plano, com as escolhas guardadas.
+
+### Armazenamento e permissões
+
+Os planos ficam no servidor, numa aba própria (`PLANOS_EVOLUCAO`, uma linha
+por personagem, `rev` + `opsJson`). Não são fichas e não entram na
+sincronia normal: a tela pede a lista ao abrir o planejador e, com um plano
+ativo, quando a progressão avança. **Salvar plano não grava a ficha nem muda
+a revisão dela.**
+
+As cópias de ritual vão como **referência** (id, id do catálogo, elemento) e
+são refeitas pelo catálogo ao abrir, com o mesmo id. Um ritual que saiu do
+catálogo ativo (suplemento desligado) fica em Revisar.
+
+Só o **dono** lê e grava (`exigeDono`, conferido no servidor). Mestre,
+Editor e Leitor recebem `sem_permissao`, e quem não alcança a ficha recebe
+`nao_encontrado`. Excluir a ficha apaga os planos.
+
+### Limites conhecidos
+
+- Os marcos de NEX & Experiência aparecem na ordem do motor (nível, depois
+  exposição, no mesmo degrau). Não dá para reordenar à mão; na mesa, cada
+  eixo dispara quando sobe.
+- O servidor confere a forma dos planos, não as regras: elas são
+  conferidas no navegador ao planejar e de novo ao aplicar.
+
+### Validação v9.5
+
+Automática: `testes/executar-ramificacao.js` (novo, 64) cobre:
+
+- o Ocultista de 35% → 50% com "Mais rituais" e "Mais resistente", com a
+  projeção igual à ficha real com as mesmas escolhas;
+- o Revisar em cadeia e o alvo menor e maior;
+- a aplicação a 40% só, o salto a 50%, o repetir, o NEX que cai e volta, o
+  conflito, a mesma escolha já feita, o requisito quebrado, a troca de
+  plano, a desativação, o plano atrasado e a recarga;
+- NEX & Experiência (só nível, só exposição, juntos, ordem inversa);
+- patentes (abaixo de 50 PP, cruzar, promoção dupla, perda de PP);
+- Sobrevivente e a transição para agente, e Mundano;
+- a base alterada e o armazenamento enxuto, com o suplemento desligado e
+  religado.
+
+`testes/ramificacao-backend.js`: só o dono, Mestre, Editor e Leitor
+recusados, rev, opId repetido, limite, tamanho, campos estranhos e excluir a
+ficha.
+
+Na interface (servidor local, contas sintéticas):
+
+- os dois planos criados, uma escolha trocada, comparados, salvos e
+  conferidos depois de recarregar, com a ficha intacta (revisão 1);
+- a ativação sem conceder nada;
+- o NEX a 40% aplicando só o ritual de 40%;
+- o Mestre subindo o NEX a 50% sem ver o painel, e o plano aplicado na
+  abertura da dona, sem duplicar o ritual;
+- a procedência na lista;
+- o celular (abas, sem rolagem lateral), Legacy e Modern20.
+
+### Publicar a v9.5
+
+Servidor: troque **`Dados.gs`**, **`Ordem.gs`**, **`Codigo.gs`** e
+**`Sistemas.gs`**, **rode `setupRama()`** (cria a aba `PLANOS_EVOLUCAO`) e crie
+uma versão nova da implantação. Sem `setupRama`, salvar um plano responde
+`instalacao_incompleta`, e a tela avisa sem perder o rascunho. Site:
+`js/ordem/ramificacao.js`, `js/ordem/telas/ficha-ramificacao.js`,
+`js/ordem/telas/ficha-ordem.js`, `js/ordem/progressao.js`,
+`js/ordem/regras.js`, `js/paginas/ficha.js`, `js/api.js`, `ficha/index.html`,
+`css/ficha.css`, `css/modern20/ficha.css` e `js/versao.js`.

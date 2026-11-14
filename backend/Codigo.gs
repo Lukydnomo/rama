@@ -2992,6 +2992,9 @@ function acaoExcluirPersonagem(corpo, usuario) {
     lembrarContagemDeAcessos(registro.id, 0);
     cacheApagar(chaveDaMarcaDeIndice(registro.id));
 
+    /* Os planos de evolução (Ramificação, v9.5) são desta ficha e só dela. */
+    if (typeof apagarPlanosDoPersonagem === 'function') apagarPlanosDoPersonagem(registro.id);
+
     avisarMesas([registro.campanhaId], ['personagens', 'combates']);
 
     return { ok: true };

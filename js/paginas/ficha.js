@@ -240,6 +240,12 @@
     if (!PAINEL && !somenteLeitura() && F.ehDeOrdem(estado.ficha) && global.RAMASecaoOrdemProgressao && global.RAMASecaoOrdemProgressao.verificarAfinidade) {
       global.RAMASecaoOrdemProgressao.verificarAfinidade(ctx);
     }
+    /* Ramificação (v9.5): se a progressão real passou do que o plano ativo
+       já conferiu (o Mestre subiu o NEX, por exemplo), o plano é aplicado
+       agora — na primeira abertura do DONO. Ninguém mais aplica. */
+    if (!PAINEL && !somenteLeitura() && F.ehDeOrdem(estado.ficha) && global.RAMAFichaRamificacao) {
+      global.RAMAFichaRamificacao.aoAbrir(ctx);
+    }
   }, {
     /* Roda antes de a sessão ser confirmada, então só pode olhar para o
        endereço da página. O servidor confere a permissão de cada uma

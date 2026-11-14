@@ -65,6 +65,7 @@
     "ler_brutal",
     "ler_tormenta20",
     "ler_ordem2",
+    "ler_planos_evolucao",
 
     "salvar_foto",
     "salvar_perfil",
@@ -86,6 +87,8 @@
     "salvar_hexatombe",
     /* E para o Hacking (v2.38). */
     "salvar_hacking",
+    /* E para os planos de evolução da Ramificação (v9.5): rev e opId. */
+    "salvar_planos_evolucao",
     /* E para a mesa de Oblívio (v3.0): o estado leva rev e opId; cada
        operação leva opId, e o servidor reconhece a segunda chegada pela
        mesa e pelas fichas que ela tocou. */
@@ -198,6 +201,7 @@
     atualizar_combate: true,
     salvar_hexatombe: true,
     salvar_hacking: true,
+    salvar_planos_evolucao: true,
     salvar_oblivio: true,
     oblivio_operar: true,
     salvar_vampiro: true,
@@ -825,6 +829,14 @@
   function salvarHacking(campanhaId, rev, opId, estado) {
     return post({ acao: "salvar_hacking", campanhaId: campanhaId, rev: rev, opId: opId, estado: estado });
   }
+  /* Planos de evolução de uma ficha de Ordem (Ramificação, v9.5): só o
+     dono; fora da ficha (não muda a revisão dela); rev + opId. */
+  function lerPlanosEvolucao(personagemId, opcoes) {
+    return post({ acao: "ler_planos_evolucao", personagemId: personagemId }, opcoes);
+  }
+  function salvarPlanosEvolucao(personagemId, rev, opId, dados) {
+    return post({ acao: "salvar_planos_evolucao", personagemId: personagemId, rev: rev, opId: opId, dados: dados });
+  }
   /* Perigos complexos (v2.48, AS5): o mesmo esquema do Hacking. */
   function lerPerigos(campanhaId, opcoes) {
     return post({ acao: "ler_perigos", campanhaId: campanhaId }, opcoes);
@@ -1266,6 +1278,8 @@
     salvarHexatombe: salvarHexatombe,
     lancarHexatombe: lancarHexatombe,
     lerHacking: lerHacking,
+    lerPlanosEvolucao: lerPlanosEvolucao,
+    salvarPlanosEvolucao: salvarPlanosEvolucao,
     salvarHacking: salvarHacking,
     lerPerigos: lerPerigos,
     salvarPerigos: salvarPerigos,

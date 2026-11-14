@@ -56,6 +56,8 @@
 var SISTEMAS_DO_RAMA = [
   { id: 'ordem', nome: 'Ordem Paranormal', arquivo: 'Ordem.gs',
     ferramentas: ['combate', 'condicoes', 'sincronia'], mecanicas: ['hexatombe', 'hacking', 'perigos'] },
+  { id: 'ordem2', nome: 'Ordem Paranormal RPG II', arquivo: 'Ordem2.gs',
+    ferramentas: ['mesaOrdem2'], mecanicas: [] },
   { id: 'oblivio', nome: 'Oblívio', arquivo: 'Oblivio.gs',
     ferramentas: ['oblivio'], mecanicas: [] },
   { id: 'vampiro', nome: 'Vampiro: A Máscara', arquivo: 'Vampiro.gs',
@@ -66,8 +68,6 @@ var SISTEMAS_DO_RAMA = [
     ferramentas: ['diretora'], mecanicas: [] },
   { id: 'tormenta20', nome: 'Tormenta20', arquivo: 'Tormenta20.gs',
     ferramentas: ['mesaT20'], mecanicas: [] },
-  { id: 'ordem2', nome: 'Ordem Paranormal RPG II', arquivo: 'Ordem2.gs',
-    ferramentas: ['mesaOrdem2'], mecanicas: [] },
   { id: 'universal', nome: 'Universal', arquivo: 'Universal.gs',
     ferramentas: ['combate'], mecanicas: [] },
 ];

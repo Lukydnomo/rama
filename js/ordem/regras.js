@@ -2982,6 +2982,13 @@
     /* Aprendizado de ritual fora da progressão — estudo em campo e
        concessão da mesa (v2.18). Mesmo cuidado: sem o motor, passa como
        veio, e nunca some numa gravação. */
+    /* v9.5: o plano da Ramificação ativo nesta ficha e os recibos do que
+       ele já aplicou (js/ordem/ramificacao.js). Sem o módulo, passa como
+       veio — nunca some numa gravação. */
+    ficha.ramificacao = global.RAMAOrdemRamificacao
+      ? global.RAMAOrdemRamificacao.normalizarRamificacao(b.ramificacao)
+      : (b.ramificacao && typeof b.ramificacao === "object" ? JSON.parse(JSON.stringify(b.ramificacao)) : null);
+
     ficha.registrosDeRitual = (E() && E().normalizarRegistrosDeRitual)
       ? E().normalizarRegistrosDeRitual(b.registrosDeRitual)
       : (Array.isArray(b.registrosDeRitual) ? JSON.parse(JSON.stringify(b.registrosDeRitual)) : []);

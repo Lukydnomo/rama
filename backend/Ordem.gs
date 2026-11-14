@@ -58,6 +58,8 @@ function rotasDeOrdem() {
     ler_perigos:                 { publica: false, fn: acaoLerPerigos },
     salvar_perigos:              { publica: false, fn: acaoSalvarPerigos },
     sincronia_operar:            { publica: false, fn: acaoSincroniaOperar },
+    ler_planos_evolucao:         { publica: false, fn: acaoLerPlanosEvolucao },
+    salvar_planos_evolucao:      { publica: false, fn: acaoSalvarPlanosEvolucao },
   };
 }
 
@@ -3875,4 +3877,137 @@ function acaoSincroniaOperar(corpo, usuario) {
     marcarMesa(campanhaId, ['personagens']);
     return { ok: true, dados: { valor: valor, gravadas: gravadas.length } };
   });
+}
+
+
+/* =====================================================================
+   RAMIFICAÇÃO (v9.5) — os planos de evolução de uma ficha de Ordem
+   ---------------------------------------------------------------------
+   Os planos são do DONO da ficha e de mais ninguém: ler e salvar exigem
+   dono, conferido aqui (Mestre, Editor e Leitor recebem sem_permissao —
+   e quem nem alcança a ficha, nao_encontrado). Ficam numa aba à parte
+   (PLANOS_EVOLUCAO): salvar um plano NÃO grava a ficha nem muda a
+   revisão dela, e não entra na sincronia normal — a tela pede a lista
+   ao abrir o planejador e, com um plano ativo, quando a progressão real
+   avança.
+
+   O servidor não simula nada (o motor de Ordem mora no navegador):
+   aqui só a forma é conferida — no máximo LIMITE_PLANOS_EVOLUCAO planos,
+   campos conhecidos, tamanho de uma célula. `rev` recusa a gravação de
+   uma aba velha (conflito, com a lista atual) e o opId já aplicado
+   responde `repetida` sem gravar de novo (resposta perdida, reenvio).
+   O que o plano CONCEDE só entra na ficha pela gravação normal dela,
+   com os recibos (ordem.ramificacao).
+   ===================================================================== */
+
+var LIMITE_PLANOS_EVOLUCAO = 8;
+var MAX_OPS_PLANOS = 40;
+
+function registroDosPlanos(personagemId) {
+  try { return acharPor(ABAS.PLANOS_EVOLUCAO, 'personagemId', String(personagemId)); } catch (erro) { return null; }
+}
+
+function planosParaCliente(registro) {
+  var dados = registro ? lerJson(registro.dadosJson, null) : null;
+  return {
+    rev: registro ? Number(registro.rev) || 0 : 0,
+    formato: dados && dados.formato ? dados.formato : 1,
+    planos: dados && Array.isArray(dados.planos) ? dados.planos : [],
+    limite: LIMITE_PLANOS_EVOLUCAO,
+    atualizadoEm: registro ? String(registro.atualizadoEm || '') : '',
+  };
+}
+
+/* Só a forma: o resto (vagas, requisitos) é do motor, no navegador, e é
+   conferido de novo na hora de aplicar. */
+function limparPlanosEvolucao(bruto) {
+  var d = bruto && typeof bruto === 'object' && !Array.isArray(bruto) ? bruto : null;
+  if (!d || !Array.isArray(d.planos)) return null;
+  if (d.planos.length > LIMITE_PLANOS_EVOLUCAO) return { erro: 'limite' };
+  var vistos = {};
+  var planos = [];
+  for (var i = 0; i < d.planos.length; i++) {
+    var p = d.planos[i];
+    if (!p || typeof p !== 'object' || Array.isArray(p)) return null;
+    var id = String(p.id || '');
+    if (!/^[A-Za-z0-9_-]{4,60}$/.test(id) || vistos[id]) return null;
+    vistos[id] = true;
+    var decisoes = p.decisoes && typeof p.decisoes === 'object' && !Array.isArray(p.decisoes) ? p.decisoes : {};
+    var limpas = {};
+    Object.keys(decisoes).forEach(function (k) {
+      if (/^[A-Za-z0-9.]{1,60}$/.test(k) && decisoes[k] && typeof decisoes[k] === 'object') limpas[k] = decisoes[k];
+    });
+    var objeto = function (x) { return x && typeof x === 'object' && !Array.isArray(x) ? x : {}; };
+    planos.push({
+      id: id,
+      nome: String(p.nome || 'Plano').slice(0, 60),
+      formato: Number(p.formato) || 1,
+      alvo: objeto(p.alvo),
+      base: { progresso: objeto(objeto(p.base).progresso), assinatura: String(objeto(p.base).assinatura || '').slice(0, 40) },
+      regras: { tipo: String(objeto(p.regras).tipo || 'nex').slice(0, 20) },
+      decisoes: limpas,
+      criadoEm: String(p.criadoEm || '').slice(0, 40),
+      atualizadoEm: String(p.atualizadoEm || '').slice(0, 40),
+    });
+  }
+  return { formato: 1, planos: planos };
+}
+
+function acaoLerPlanosEvolucao(corpo, usuario) {
+  var acesso = personagemAcessivel(corpo.personagemId, usuario, { exigeDono: true, leve: true });
+  if (!acesso.ok) return acesso;
+  var dados = planosParaCliente(registroDosPlanos(acesso.personagem.id));
+  return { ok: true, rev: dados.rev, dados: dados };
+}
+
+function acaoSalvarPlanosEvolucao(corpo, usuario) {
+  var opId = String(corpo.opId || '');
+  if (!/^[A-Za-z0-9_-]{8,80}$/.test(opId)) return { ok: false, erro: 'dados_invalidos' };
+  var revPedida = Number(corpo.rev);
+  if (!Number.isFinite(revPedida)) return { ok: false, erro: 'dados_invalidos' };
+  var limpo = limparPlanosEvolucao(corpo.dados);
+  if (!limpo) return { ok: false, erro: 'dados_invalidos' };
+  if (limpo.erro === 'limite') return { ok: false, erro: 'limite', limite: LIMITE_PLANOS_EVOLUCAO };
+  var json = JSON.stringify(limpo);
+  if (json.length > MAX_CELULA) return { ok: false, erro: 'dados_grandes' };
+
+  return comTrava(function () {
+    var acesso = personagemAcessivel(corpo.personagemId, usuario, { exigeDono: true, leve: true });
+    if (!acesso.ok) return acesso;
+    try {
+      aba(ABAS.PLANOS_EVOLUCAO);
+    } catch (erro) {
+      return { ok: false, erro: 'instalacao_incompleta', detalhe: 'PLANOS_EVOLUCAO' };
+    }
+    var personagemId = String(acesso.personagem.id);
+    var registro = registroDosPlanos(personagemId);
+    var revAtual = registro ? Number(registro.rev) || 0 : 0;
+    var feitas = registro ? (lerJson(registro.opsJson, []) || []) : [];
+    if (!Array.isArray(feitas)) feitas = [];
+
+    if (feitas.indexOf(opId) >= 0) return { ok: true, repetida: true, rev: revAtual, dados: planosParaCliente(registro) };
+    if (revPedida !== revAtual) return { ok: false, erro: 'conflito', rev: revAtual, dados: planosParaCliente(registro) };
+
+    feitas.push(opId);
+    if (feitas.length > MAX_OPS_PLANOS) feitas = feitas.slice(feitas.length - MAX_OPS_PLANOS);
+    var novo = {
+      personagemId: personagemId,
+      ownerId: String(usuario.id),
+      atualizadoEm: new Date().toISOString(),
+      rev: revAtual + 1,
+      opsJson: JSON.stringify(feitas),
+      dadosJson: json,
+    };
+    if (registro) atualizarLinha(ABAS.PLANOS_EVOLUCAO, registro._linha, Object.assign({}, registro, novo));
+    else inserir(ABAS.PLANOS_EVOLUCAO, novo);
+    var gravado = registroDosPlanos(personagemId);
+    return { ok: true, rev: revAtual + 1, dados: planosParaCliente(gravado) };
+  });
+}
+
+/* Excluir a ficha leva os planos junto (chamado por acaoExcluirPersonagem). */
+function apagarPlanosDoPersonagem(personagemId) {
+  var r;
+  try { r = linhaLeve(ABAS.PLANOS_EVOLUCAO, 'personagemId', personagemId); } catch (erro) { return; }
+  if (r) apagarLinha(ABAS.PLANOS_EVOLUCAO, r._linha);
 }

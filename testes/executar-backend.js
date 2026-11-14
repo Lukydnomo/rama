@@ -4855,6 +4855,8 @@ const { testarTormenta20Backend } = await import("./tormenta20-backend.js");
 await testarTormenta20Backend({ t, preparar, novaConta, comoFn });
 const { testarOrdem2Backend } = await import("./ordem2-backend.js");
 await testarOrdem2Backend({ t, preparar, novaConta, comoFn });
+const { testarRamificacaoBackend } = await import("./ramificacao-backend.js");
+testarRamificacaoBackend({ t, preparar, novaConta, comoFn });
 const { testarFeedbackBackend } = await import("./feedback-backend.js");
 await testarFeedbackBackend({ t, preparar, novaConta, comoFn, chamar, ambiente });
 const { testarAcessoBackend } = await import("./acesso-backend.js");

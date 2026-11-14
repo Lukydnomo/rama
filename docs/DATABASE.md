@@ -1,5 +1,19 @@
 # O banco
 
+## Ordem Paranormal · Ramificação — v9.5
+
+Aba nova **`PLANOS_EVOLUCAO`** (`personagemId`, `ownerId`, `atualizadoEm`,
+`rev`, `opsJson`, `dadosJson`; chave `personagemId`; **rode `setupRama()`**).
+Uma linha por ficha de Ordem com os planos de evolução do dono (até 8). As
+cópias de ritual vão como referência (`compacto`, `origemCatalogoId`,
+`elemento`) e são refeitas pelo catálogo no navegador. Excluir a ficha apaga a
+linha.
+
+Na ficha, o bloco `ordem` ganha `ramificacao` (`planoId`, `nomePlano`, `tipo`,
+`ativadoEm`, `processado`, `recibos[]`, `pendentes[]`, `ultimoResumo`,
+`pausado`), e cada registro de `ordem.escolhas` pode ter `procedencia`. Tudo
+opcional: fichas antigas não mudam e o schema não sobe.
+
 ## Ordem Paranormal RPG II · regras unificadas — v9.4
 
 Nenhuma aba nova (**`setupRama()` não é necessário**). O bloco `ordem2` da ficha

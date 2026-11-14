@@ -2,6 +2,18 @@
 
 Quem alcança o quê, e onde isso é decidido.
 
+## Ramificação (planos de evolução de Ordem) — v9.5
+
+| ação | dono | Mestre da campanha | Editor / Leitor | de fora |
+|---|---|---|---|---|
+| ler os planos (`ler_planos_evolucao`) | sim | não (`sem_permissao`) | não (`sem_permissao`) | `nao_encontrado` |
+| salvar os planos (`salvar_planos_evolucao`) | sim | não | não | não |
+| ver o painel e o planejador | sim | não aparece | não aparece | — |
+| aplicação automática na ficha | só no navegador do dono | a mudança de NEX/PP dele fica; o plano age na próxima abertura do dono | — | — |
+
+Decidido no servidor (`personagemAcessivel` com `exigeDono`). A tela só
+esconde.
+
 ## Vampiro — v5.0
 
 | ação | Narrador | jogador | espectador / de fora |

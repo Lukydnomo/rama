@@ -3200,6 +3200,8 @@
 
       return el("div.pilha--larga", { class: "pilha" }, [
         painelNivel(ctx, o, c),
+        /* Ramificação (v9.5): o planejador, separado dos avanços reais. Só o dono. */
+        global.RAMAFichaRamificacao ? global.RAMAFichaRamificacao.painel(ctx) : null,
         global.RAMAFichaArquivo7 ? global.RAMAFichaArquivo7.painelDeProgressao(ctx) : null,
         painelPendencias(ctx, o, c, est),
         painelImportacao(ctx, o, c, est),
@@ -3821,6 +3823,7 @@
         situacao: situacao,
         motivos: a.motivos,
         faltam: a.faltam,
+        procedencia: r.procedencia || "",
         acoes: acoes,
       }) });
     });
@@ -3855,6 +3858,7 @@
         rotuloSituacao ? el("span.etiqueta", { texto: rotuloSituacao }) : null,
         (d.motivos && d.motivos.length) ? el("span.t-mini" + (d.situacao === "mantida" ? "" : ".t-erro"), { texto: d.motivos.join(" ") }) : null,
         (d.faltam && d.faltam.length) ? el("span.t-mini.t-aviso", { texto: "Falta: " + d.faltam.join("; ") + "." }) : null,
+        d.procedencia ? el("span.t-mini", { texto: "Procedência: " + d.procedencia }) : null,
       ]),
       d.acoes && d.acoes.length ? el("div.faixa", {}, d.acoes) : null,
     ]);
@@ -5315,6 +5319,10 @@
     R.aparar(o, R.maximosDosRecursos(o));
     ctx.alterou();
     atualizarEstadoDeJogo(ctx);
+    /* Um avanço REAL (NEX, nível, PP, estágio) pode disparar o plano
+       ativo da Ramificação — só no navegador do dono, e só se passou do
+       que já foi conferido. */
+    if (global.RAMAFichaRamificacao) global.RAMAFichaRamificacao.aoMudarOrdem(ctx);
   }
 
   function atualizarEstadoDeJogo(ctx) {
