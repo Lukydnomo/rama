@@ -118,6 +118,20 @@
 
   var CHANGELOG = [
     {
+      versao: "9.6.0",
+      codinome: "BROCHURA",
+      data: "14/11/2026",
+      mudancas: {
+        "Adicionado": [
+          "Pacotes, no Homebrew: reúna criaturas, armas, armaduras, itens, mochilas, rituais e habilidades de um sistema (ou Universal) num livrinho com nome, descrição e capa 2:3. Ele nasce privado, e cada entrada é uma cópia de agora: mudar o original não muda o pacote, a menos que você escolha Atualizar pela criação original.",
+          "Compartilhar por código (gerar, copiar, gerar outro, revogar) ou publicar na galeria de Pacotes públicos. O endereço sozinho não abre um pacote privado.",
+          "Abrir com código: prévia com capa e conteúdo por tipo, consulta, e importar tudo ou só o que quiser. As cópias ficam privadas e editáveis em Minhas criações, com a procedência. Repetir o envio não duplica, e revogar ou excluir o pacote não apaga o que já foi copiado.",
+          "Uma criatura só entra em pacote do sistema dela, sem conversão; rituais, em Ordem Paranormal e Universal. O motivo aparece na seleção.",
+        ],
+        "Técnico": ["Novo backend/HomebrewPacotes.gs (oito rotas) e cinco abas PACOTES_HOMEBREW_* (rode setupRama). Código guardado só como hash com o pepper, conferido a cada leitura e importação; rev e opId no salvar e no importar; estado 'montando' durante a gravação. Destino \"pacote\" no RAMAEditorImagem (2:3, 320 × 480, estático). Novos js/pacotes-homebrew.js e js/paginas/homebrew-pacotes.js, testes/pacotes-backend.js e testes/executar-pacotes.js."],
+      },
+    },
+    {
       versao: "9.5.0",
       codinome: "FORQUILHA",
       data: "14/11/2026",

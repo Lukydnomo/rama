@@ -135,3 +135,113 @@
 }
 :root[data-densidade="compacta"] .hb-criar { gap: var(--e3); }
 :root[data-densidade="compacta"] .hb-criar__opcao.r-botao--bloco { padding: var(--e2); }
+
+/* =====================================================================
+   PACOTES (v9.6) — js/paginas/homebrew-pacotes.js
+   ---------------------------------------------------------------------
+   Cada pacote é um LIVRO na moldura 2:3 das capas dos sistemas: a capa
+   recortada (320 × 480) aparece inteira, sem segundo corte (a moldura e o
+   arquivo têm a mesma proporção); sem capa, uma lombada neutra com nome e
+   sistema. A grade quebra em colunas estreitas no celular.
+   ===================================================================== */
+.pc-raiz { display: flex; flex-direction: column; gap: var(--e3); min-width: 0; }
+.pc-destaque {
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--e2) var(--e3);
+  padding: var(--e3); border: var(--borda) dashed var(--cor-traco-media); background: var(--fundo-superficie);
+}
+.pc-destaque__texto { flex: 1 1 280px; min-width: 0; }
+.pc-destaque__texto p { margin: 0; }
+.pc-painel, .pc-conteudo { display: flex; flex-direction: column; gap: var(--e3); min-width: 0; }
+.pc-barra__sistema { flex: 0 1 220px; min-width: 0; }
+.pc-grade { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 168px), 1fr)); gap: var(--e3); }
+.pc-cartao { display: flex; flex-direction: column; gap: var(--e1); min-width: 0; }
+.pc-cartao__abrir {
+  display: flex; flex-direction: column; align-items: flex-start; gap: var(--e1); width: 100%;
+  padding: var(--e2); font: inherit; text-align: left; color: var(--cor-texto); cursor: pointer;
+  background: var(--fundo-superficie); border: var(--borda) solid var(--cor-traco-fraca);
+}
+.pc-cartao__abrir:hover, .pc-cartao__abrir:focus-visible { border-color: var(--cor-traco-forte); background: var(--fundo-superficie-2); }
+.pc-cartao__nome { font-weight: 700; overflow-wrap: anywhere; }
+.pc-cartao__meta, .pc-cartao__tipos { color: var(--cor-texto-3); font-size: var(--texto-mini); }
+.pc-cartao__marcas { display: flex; flex-wrap: wrap; gap: var(--e1); }
+
+/* O volume: a mesma moldura de .capa-sistema, em dois tamanhos. */
+.pc-volume {
+  --pc-largura: 100%;
+  position: relative; display: block; width: var(--pc-largura); aspect-ratio: 2 / 3; overflow: hidden;
+  background: #0b0b0b; border: var(--borda) solid var(--cor-traco-forte);
+  box-shadow: 2px 2px 0 var(--cor-traco-fraca), 3px 3px 0 var(--cor-traco-forte);
+}
+.pc-volume--m { --pc-largura: 100%; max-width: 200px; }
+.pc-volume--g { --pc-largura: calc(160px * var(--escala)); flex: 0 0 auto; }
+.pc-volume::before {
+  content: ""; position: absolute; inset: 0 auto 0 0; width: 10%; z-index: 1; pointer-events: none;
+  background: linear-gradient(90deg, rgba(255, 255, 255, .16), rgba(0, 0, 0, .35) 70%, transparent);
+}
+/* Arquivo e moldura têm a mesma proporção: "cover" não corta nada. */
+.pc-volume__imagem { display: block; width: 100%; height: 100%; object-fit: cover; }
+.pc-volume--lombada {
+  display: flex; flex-direction: column; justify-content: space-between; gap: var(--e1);
+  padding: var(--e3) var(--e2) var(--e2) 16%; background: var(--fundo-superficie-2); color: var(--cor-texto);
+}
+.pc-volume--lombada[data-capa="carregando"] { opacity: .8; }
+.pc-volume__titulo { font-family: var(--fonte-titulo, inherit); font-weight: 700; line-height: 1.15; overflow-wrap: anywhere; display: -webkit-box; -webkit-line-clamp: 5; -webkit-box-orient: vertical; overflow: hidden; }
+.pc-volume__sistema { font-family: var(--fonte-mini); font-size: var(--texto-mini); text-transform: uppercase; letter-spacing: var(--espaco-letra-titulo); color: var(--cor-texto-3); }
+
+/* ---------- detalhe e prévia ---------- */
+.pc-detalhe, .pc-editor { display: flex; flex-direction: column; gap: var(--e3); min-width: 0; }
+.pc-detalhe__topo { display: flex; gap: var(--e3); align-items: flex-start; min-width: 0; }
+.pc-detalhe__info { display: flex; flex-direction: column; gap: var(--e1); min-width: 0; flex: 1 1 auto; }
+.pc-detalhe__info p { margin: 0; }
+.pc-detalhe__sistema { align-items: center; gap: var(--e2); }
+.pc-detalhe__descricao { white-space: pre-wrap; overflow-wrap: anywhere; }
+.pc-dono { display: flex; flex-direction: column; gap: var(--e2); padding: var(--e3); border: var(--borda) solid var(--cor-traco-fraca); background: var(--fundo-superficie); }
+.pc-dono p { margin: 0; }
+.pc-codigo { display: flex; flex-wrap: wrap; align-items: center; gap: var(--e2); padding: var(--e2); border: var(--borda) dashed var(--cor-paranormal); }
+.pc-codigo__valor { font-size: var(--texto-grande); letter-spacing: .08em; font-variant-numeric: tabular-nums; user-select: all; }
+.pc-codigo p { flex-basis: 100%; margin: 0; }
+.pc-grupo { display: flex; flex-direction: column; gap: var(--e1); }
+.pc-grupo h3 { margin: 0; }
+.pc-entradas, .pc-bib { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
+.pc-entrada, .pc-bib__item {
+  display: flex; flex-wrap: wrap; align-items: center; gap: var(--e1) var(--e2); padding: var(--e1) var(--e2);
+  border-bottom: var(--borda) solid var(--cor-traco-fraca); min-height: var(--alvo-toque);
+}
+.pc-entrada__nome, .pc-bib__nome { font-weight: 600; overflow-wrap: anywhere; flex: 1 1 10rem; min-width: 0; }
+.pc-entrada[data-importada="sim"] .pc-entrada__nome { color: var(--cor-texto-3); }
+.pc-entrada .r-botao--fantasma { margin-left: auto; }
+.pc-bib__item[data-estado="indisponivel"] .pc-bib__nome { color: var(--cor-texto-3); }
+.pc-bib__motivo { flex-basis: 100%; color: var(--cor-texto-3); }
+.pc-bib { max-height: min(46vh, 420px); overflow-y: auto; border: var(--borda) solid var(--cor-traco-fraca); }
+.pc-importar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--e2); padding: var(--e2) 0; border-bottom: var(--borda) solid var(--cor-traco-fraca); }
+.pc-importar p { margin: 0; }
+.pc-alerta { padding: var(--e2) var(--e3); border-left: 4px solid var(--cor-erro); background: var(--fundo-superficie); }
+.pc-alerta p, .pc-alerta ul { margin: 0; }
+.pc-contador { margin: 0; font-variant-numeric: tabular-nums; font-weight: 600; }
+
+/* ---------- editor em três etapas ---------- */
+.pc-passos { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: var(--e1); border-bottom: var(--borda) solid var(--cor-traco-fraca); }
+.pc-passo { display: inline-flex; align-items: center; gap: var(--e1); min-height: var(--alvo-toque); padding: var(--e1) var(--e2); font: inherit; color: var(--cor-texto-2); background: none; border: 0; border-bottom: 3px solid transparent; cursor: pointer; }
+.pc-passo[aria-current="step"] { color: var(--cor-texto); font-weight: 700; border-bottom-color: var(--cor-paranormal); }
+.pc-passo:disabled { cursor: not-allowed; opacity: .55; }
+.pc-passo__n { display: inline-grid; place-items: center; width: 1.6em; height: 1.6em; border: var(--borda) solid currentColor; font-variant-numeric: tabular-nums; }
+.pc-editor__passo { display: flex; flex-direction: column; gap: var(--e3); min-width: 0; }
+.pc-sistemas { border: 0; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--e2); min-width: 0; }
+.pc-sistema[aria-checked="true"] { border-color: var(--cor-paranormal); box-shadow: inset 0 -3px 0 var(--cor-paranormal); }
+.pc-capa-editor__corpo { display: flex; gap: var(--e3); align-items: flex-start; }
+.pc-capa-editor__corpo .pc-volume--m { width: calc(120px * var(--escala)); flex: 0 0 auto; }
+.pc-capa-editor__corpo p { margin: 0; }
+.pc-visibilidade { border: 0; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--e2); }
+.pc-visibilidade p { margin: 0; }
+.pc-aviso-copias { padding-left: var(--e2); border-left: 3px solid var(--cor-aviso); }
+.pc-editor__rodape { justify-content: flex-end; padding-top: var(--e2); border-top: var(--borda) solid var(--cor-traco-fraca); }
+
+@media (max-width: 620px) {
+  .pc-grade { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--e2); }
+  .pc-detalhe__topo { flex-direction: column; }
+  .pc-volume--g { --pc-largura: calc(132px * var(--escala)); }
+  .pc-capa-editor__corpo { flex-direction: column; }
+  .pc-importar .faixa, .pc-editor__rodape { width: 100%; }
+  .pc-importar .faixa .r-botao, .pc-editor__rodape .r-botao { flex: 1 1 auto; }
+  .pc-barra__sistema { flex: 1 1 100%; }
+}

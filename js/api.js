@@ -66,6 +66,11 @@
     "ler_tormenta20",
     "ler_ordem2",
     "ler_planos_evolucao",
+    /* Pacotes de Homebrew (v9.6): leituras (o código vai no corpo, nunca no endereço). */
+    "listar_pacotes",
+    "ler_pacote",
+    "abrir_pacote_codigo",
+    "ler_capas_pacotes",
 
     "salvar_foto",
     "salvar_perfil",
@@ -89,6 +94,11 @@
     "salvar_hacking",
     /* E para os planos de evolução da Ramificação (v9.5): rev e opId. */
     "salvar_planos_evolucao",
+    /* E para os pacotes de Homebrew (v9.6): salvar com rev e opId;
+       importar com a revisão da prévia e opId (o recibo de cada entrada
+       reconhece a segunda chegada). */
+    "salvar_pacote",
+    "importar_pacote",
     /* E para a mesa de Oblívio (v3.0): o estado leva rev e opId; cada
        operação leva opId, e o servidor reconhece a segunda chegada pela
        mesa e pelas fichas que ela tocou. */
@@ -202,6 +212,8 @@
     salvar_hexatombe: true,
     salvar_hacking: true,
     salvar_planos_evolucao: true,
+    salvar_pacote: true,
+    importar_pacote: true,
     salvar_oblivio: true,
     oblivio_operar: true,
     salvar_vampiro: true,
@@ -837,6 +849,16 @@
   function salvarPlanosEvolucao(personagemId, rev, opId, dados) {
     return post({ acao: "salvar_planos_evolucao", personagemId: personagemId, rev: rev, opId: opId, dados: dados });
   }
+  /* Pacotes de Homebrew (v9.6). `codigo` só na memória da página de quem
+     abriu: vai no corpo de cada leitura/importação e o servidor confere. */
+  function listarPacotes(escopo) { return post({ acao: "listar_pacotes", escopo: escopo || "meus" }); }
+  function lerPacote(pacoteId, codigo) { return post({ acao: "ler_pacote", pacoteId: pacoteId, codigo: codigo || undefined }); }
+  function abrirPacoteComCodigo(codigo) { return post({ acao: "abrir_pacote_codigo", codigo: codigo }); }
+  function lerCapasPacotes(pacoteIds, codigo) { return post({ acao: "ler_capas_pacotes", pacoteIds: pacoteIds, codigo: codigo || undefined }, { segundoPlano: true }); }
+  function salvarPacote(corpo) { return post(Object.assign({ acao: "salvar_pacote" }, corpo)); }
+  function excluirPacote(pacoteId) { return post({ acao: "excluir_pacote", pacoteId: pacoteId }); }
+  function codigoPacote(pacoteId, tipo) { return post({ acao: "codigo_pacote", pacoteId: pacoteId, tipo: tipo }); }
+  function importarPacote(corpo) { return post(Object.assign({ acao: "importar_pacote" }, corpo)); }
   /* Perigos complexos (v2.48, AS5): o mesmo esquema do Hacking. */
   function lerPerigos(campanhaId, opcoes) {
     return post({ acao: "ler_perigos", campanhaId: campanhaId }, opcoes);
@@ -1279,6 +1301,14 @@
     lancarHexatombe: lancarHexatombe,
     lerHacking: lerHacking,
     lerPlanosEvolucao: lerPlanosEvolucao,
+    listarPacotes: listarPacotes,
+    lerPacote: lerPacote,
+    abrirPacoteComCodigo: abrirPacoteComCodigo,
+    lerCapasPacotes: lerCapasPacotes,
+    salvarPacote: salvarPacote,
+    excluirPacote: excluirPacote,
+    codigoPacote: codigoPacote,
+    importarPacote: importarPacote,
     salvarPlanosEvolucao: salvarPlanosEvolucao,
     salvarHacking: salvarHacking,
     lerPerigos: lerPerigos,

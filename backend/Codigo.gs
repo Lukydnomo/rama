@@ -320,6 +320,13 @@ function rotaDe(acao) {
       Object.keys(dosSistemas).forEach(function (chave) { CACHE_ROTAS[chave] = dosSistemas[chave]; });
     }
 
+    /* HomebrewPacotes.gs (v9.6): os Pacotes de Homebrew. Mesmo contrato:
+       sem o arquivo, 'acao_desconhecida'. */
+    if (typeof rotasDosPacotes === 'function') {
+      var dosPacotes = rotasDosPacotes();
+      Object.keys(dosPacotes).forEach(function (chave) { CACHE_ROTAS[chave] = dosPacotes[chave]; });
+    }
+
     /* Feedback.gs: o envio de feedback ao Discord. Mesmo contrato do
        Cris.gs — sem o arquivo, 'acao_desconhecida'. */
     if (typeof rotasDoFeedback === 'function') {

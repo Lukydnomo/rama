@@ -1,5 +1,32 @@
 # A API
 
+## Pacotes de Homebrew — v9.6
+
+Rotas de `HomebrewPacotes.gs`. Todas exigem sessão. Detalhes em
+`docs/HOMEBREW-PACOTES.md`.
+
+- `listar_pacotes {escopo: meus|publicos}`: leve (sem capa, sem conteúdo).
+  `publicos` traz só os públicos e prontos de outras contas.
+- `ler_pacote {pacoteId, codigo?}` / `abrir_pacote_codigo {codigo}`:
+  metadados, descrição e entradas (`id, tipo, nome, dados, temImagem,
+  importada` e, para o dono, `origemExiste, origemMudou, copiadoEm`). Privado
+  sem o dono nem um código válido responde `nao_encontrado`; código inválido,
+  revogado ou trocado, `codigo_invalido`.
+- `ler_capas_pacotes {pacoteIds ≤ 24, codigo?}` → `{ dados: { id: dataURL } }`,
+  só das que a conta alcança.
+- `salvar_pacote {pacoteId?, rev, opId, dados: {sistema, nome, descricao,
+  visibilidade}, conteudo?: {manter, adicionar, atualizar}, capa?: {acao:
+  trocar, imagem} | {acao: remover}}`. O conteúdo são **ids**: o servidor lê
+  as criações do dono. Erros: `conflito` (rev), `repetida` (o mesmo opId),
+  `incompativel` (com `itens[{id, nome, motivo}]`), `limite`, `dados_grandes`,
+  `nao_encontrado` (pacote ou criação de outra conta), `dados_invalidos`.
+- `codigo_pacote {pacoteId, tipo: gerar|revogar}`: só o dono. `gerar`
+  devolve `dados.codigo` uma única vez.
+- `excluir_pacote {pacoteId}`: só o dono.
+- `importar_pacote {pacoteId, codigo?, rev, opId, entradas ≤ 40}` →
+  `{ copiados, existentes, falhas }`. `pacote_mudou` (com `rev`) quando a
+  prévia ficou velha. O mesmo opId devolve as mesmas cópias, sem duplicar.
+
 ## Ordem Paranormal · Ramificação (planos de evolução) — v9.5
 
 - `ler_planos_evolucao {personagemId}` → `{ ok, rev, dados: { rev, formato,

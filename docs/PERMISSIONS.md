@@ -2,6 +2,20 @@
 
 Quem alcança o quê, e onde isso é decidido.
 
+## Pacotes de Homebrew — v9.6
+
+| ação | dono | com o código | conta autenticada (pacote público) | conta autenticada (pacote privado, sem código) |
+|---|---|---|---|---|
+| ver na galeria / contar | Meus pacotes | não | sim | não |
+| ler metadados, lista e detalhes, capa | sim | sim | sim (pelo id) | `nao_encontrado` |
+| importar | sim | sim | sim | `nao_encontrado` |
+| editar, capa, visibilidade, código, excluir | sim | não | não | não |
+
+O código é conferido no servidor a cada leitura e importação (hash +
+pepper). Gerar outro invalida o anterior, e revogar ou tornar privado
+também. Um pacote `montando` não abre para ninguém além do dono. Decidido em
+`pacoteAlcancavel` (HomebrewPacotes.gs); a tela só esconde.
+
 ## Ramificação (planos de evolução de Ordem) — v9.5
 
 | ação | dono | Mestre da campanha | Editor / Leitor | de fora |

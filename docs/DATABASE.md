@@ -1,5 +1,21 @@
 # O banco
 
+## Pacotes de Homebrew — v9.6
+
+**Rode `setupRama()`**: são cinco abas novas.
+
+| Aba | O que guarda |
+|---|---|
+| `PACOTES_HOMEBREW` | Metadados leves: `id, ownerId, sistema, nome, visibilidade, estado, rev, qtd, tiposJson, temCapa, codigoHash, codigoEm, opCriacao, criadoEm, atualizadoEm`. As pesadas são `descricao` e `opsJson`. `codigoHash` é só o hash do código. `estado` = `montando` enquanto uma gravação troca as entradas. |
+| `PACOTES_HOMEBREW_ENTRADAS` | Uma linha por entrada: `id, pacoteId, ownerId, tipo, nome, ordem, origemId, copiadoEm, origemAtualizadaEm, dadosJson` (a cópia). |
+| `PACOTES_HOMEBREW_IMAGENS` | A imagem copiada de uma criatura (`imagem` + `imagemCont`). |
+| `PACOTES_HOMEBREW_CAPAS` | A capa 320 × 480 (`imagem` + `imagemCont`). |
+| `PACOTES_HOMEBREW_IMPORTACOES` | Recibos: `id, pacoteId, entradaId, userId, homebrewId, opId, criadoEm`. |
+
+As cópias importadas são linhas novas do `HOMEBREW` (privadas) com
+`dadosJson.pacote = { id, entradaId, nome, rev, importadoEm }`. Nada
+existente muda, e `PLANOS_EVOLUCAO` continua igual.
+
 ## Ordem Paranormal · Ramificação — v9.5
 
 Aba nova **`PLANOS_EVOLUCAO`** (`personagemId`, `ownerId`, `atualizadoEm`,

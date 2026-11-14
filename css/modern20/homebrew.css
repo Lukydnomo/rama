@@ -24,3 +24,19 @@
   & .hb-criar__opcao.r-botao--bloco { border-radius: var(--m20-raio-controle); font-weight: 550; }
   & .hb-criar__titulo { text-transform: none; letter-spacing: 0; }
 }
+
+/* Pacotes (v9.6): cartões de cantos suaves, o livro com a sombra do Modern20. */
+:where(:root[data-interface="modern20"]) {
+  & .pc-destaque, & .pc-dono { border-radius: var(--m20-raio-cartao); border-color: var(--m20-borda); }
+  & .pc-destaque { border-style: solid; background: var(--m20-destaque-suave); }
+  & .pc-cartao__abrir { border-radius: var(--m20-raio-cartao); border-color: var(--m20-borda); }
+  & .pc-cartao__abrir:hover { background: var(--m20-realce); }
+  & .pc-cartao__nome { font-weight: 650; }
+  & .pc-volume { border-radius: 3px 6px 6px 3px; border-color: var(--m20-borda); box-shadow: var(--m20-sombra-2); }
+  & .pc-volume__sistema { text-transform: none; letter-spacing: 0; color: var(--m20-texto-apoio); }
+  & .pc-codigo { border-radius: var(--m20-raio-controle); border-style: solid; background: var(--m20-selecao-suave); }
+  & .pc-bib { border-radius: var(--m20-raio-controle); border-color: var(--m20-borda); }
+  & .pc-alerta { border-radius: var(--m20-raio-controle); }
+  & .pc-passo__n { border-radius: 999px; }
+  & .pc-sistema[aria-checked="true"] { box-shadow: none; background: var(--m20-selecao-suave); }
+}

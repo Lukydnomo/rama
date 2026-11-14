@@ -929,6 +929,18 @@ segredo nenhum — ele os lê das Script Properties. Publicá-lo não expõe nad
 
 ### Atualizar o backend
 
+**v9.6.0 — BROCHURA:** Pacotes de Homebrew.
+1. Adicione **`HomebrewPacotes.gs`** (novo) e troque **`Dados.gs`** e **`Codigo.gs`**.
+2. **Rode `setupRama()`**: ele cria as cinco abas `PACOTES_HOMEBREW*`.
+3. Crie uma versão nova da implantação.
+
+Sem o arquivo, as rotas respondem `acao_desconhecida`; sem `setupRama`,
+`instalacao_incompleta`, e a aba Pacotes explica. Site:
+`js/pacotes-homebrew.js`, `js/paginas/homebrew-pacotes.js`,
+`js/paginas/homebrew.js`, `js/imagem-editor.js`, `js/api.js`,
+`homebrew/index.html`, `css/homebrew.css`, `css/modern20/homebrew.css` e
+`js/versao.js`. Detalhes em `docs/HOMEBREW-PACOTES.md`.
+
 **v9.5.0 — FORQUILHA:** Ramificação (planos de evolução de Ordem). Troque
 **`Dados.gs`**, **`Ordem.gs`**, **`Codigo.gs`** e **`Sistemas.gs`**, **rode
 `setupRama()`** (cria a aba `PLANOS_EVOLUCAO`) e crie uma versão nova da
@@ -1992,7 +2004,7 @@ Três números diferentes, que não se misturam:
 
 | | Onde | O que é |
 |---|---|---|
-| versão do aplicativo | `js/versao.js` | o que a pessoa vê: v9.5.0 |
+| versão do aplicativo | `js/versao.js` | o que a pessoa vê: v9.6.0 |
 | `schemaVersion` | `js/ficha.js` | o formato da FICHA |
 | `versaoFormato` | `js/config.js` | o formato dos arquivos de importação |
 

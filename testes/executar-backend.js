@@ -13,7 +13,7 @@
 
 import { instalarAmbiente, chamar, comoOSheetsGuarda } from "./apps-script-simulado.js";
 
-const ARQUIVOS = ["backend/Dados.gs", "backend/Codigo.gs", "backend/Campanhas.gs", "backend/Sistemas.gs", "backend/Ordem.gs", "backend/Universal.gs", "backend/Cris.gs", "backend/Feedback.gs", "backend/Oblivio.gs", "backend/Vampiro.gs", "backend/Goblins.gs", "backend/Brutal.gs", "backend/Tormenta20Dados.gs", "backend/Tormenta20.gs", "backend/Ordem2.gs"];
+const ARQUIVOS = ["backend/Dados.gs", "backend/Codigo.gs", "backend/Campanhas.gs", "backend/Sistemas.gs", "backend/Ordem.gs", "backend/Universal.gs", "backend/Cris.gs", "backend/Feedback.gs", "backend/Oblivio.gs", "backend/Vampiro.gs", "backend/Goblins.gs", "backend/Brutal.gs", "backend/Tormenta20Dados.gs", "backend/Tormenta20.gs", "backend/Ordem2.gs", "backend/HomebrewPacotes.gs"];
 
 /* O simulador silencia o console para o backend não encher a saída com
    os avisos do setupRama. O relatório dos testes precisa de uma porta
@@ -4857,6 +4857,8 @@ const { testarOrdem2Backend } = await import("./ordem2-backend.js");
 await testarOrdem2Backend({ t, preparar, novaConta, comoFn });
 const { testarRamificacaoBackend } = await import("./ramificacao-backend.js");
 testarRamificacaoBackend({ t, preparar, novaConta, comoFn });
+const { testarPacotesBackend } = await import("./pacotes-backend.js");
+testarPacotesBackend({ t, preparar, novaConta, comoFn });
 const { testarFeedbackBackend } = await import("./feedback-backend.js");
 await testarFeedbackBackend({ t, preparar, novaConta, comoFn, chamar, ambiente });
 const { testarAcessoBackend } = await import("./acesso-backend.js");

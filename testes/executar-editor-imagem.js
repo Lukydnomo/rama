@@ -32,7 +32,13 @@ const perto = (a, b, e = 1e-6) => Math.abs(a - b) <= e;
 const dentro = (R, W, H) => R.x >= -1e-9 && R.y >= -1e-9 && R.x + R.w <= W + 1e-6 && R.y + R.h <= H + 1e-6 && R.w > 0 && R.h > 0;
 
 t.grupo("Destinos");
-t.igual("os seis destinos", E.DESTINOS, ["avatar", "retrato", "criatura", "aliado", "capa", "documento"]);
+t.igual("os sete destinos", E.DESTINOS, ["avatar", "retrato", "criatura", "aliado", "capa", "pacote", "documento"]);
+const pacote = E.configuracao("pacote");
+t.ok("pacote: 2:3 (a moldura das capas dos sistemas), 320 × 480 exato, sempre estática", Math.abs(pacote.proporcao - 2 / 3) < 1e-9 && pacote.largura === 320 && pacote.altura === 480 && pacote.exato && pacote.somenteEstatica);
+const Rp = G.inicial(1000, 1000, pacote);
+t.ok("pacote numa foto quadrada: recorte 2:3 central, a altura toda", Math.abs(Rp.w / Rp.h - 2 / 3) < 1e-9 && Rp.h === 1000 && Math.abs(Rp.x - (1000 - Rp.w) / 2) < 1e-9);
+t.igual("pacote sai sempre com 320 × 480 (imagem grande)", G.saida(Rp, pacote), { largura: 320, altura: 480 });
+t.igual("pacote sai com 320 × 480 também de uma imagem pequena (sem distorcer: a proporção é a mesma)", G.saida(G.inicial(200, 300, pacote), pacote), { largura: 320, altura: 480 });
 const avatar = E.configuracao("avatar");
 t.ok("avatar: 1:1 com máscara redonda e 256 px", avatar.proporcao === 1 && avatar.mascara === "circulo" && avatar.lado === 256);
 const retrato = E.configuracao("retrato");

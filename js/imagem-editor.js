@@ -63,6 +63,13 @@
       titulo: "Capa da campanha", proporcao: 3, largura: 1500, gifMaximo: 4096,
       explicacao: "A capa aparece numa faixa 3:1 no topo da Visão geral. A área clara é exatamente o que vai ser salvo.",
     },
+    /* A capa de um pacote de Homebrew (v9.6): a MESMA moldura 2:3 das capas
+       dos sistemas, gravada com exatamente 320 × 480. Sempre estática: um
+       GIF é convertido (com aviso) para poder ser recortado. */
+    pacote: {
+      titulo: "Capa do pacote", proporcao: 2 / 3, largura: 320, altura: 480, exato: true, somenteEstatica: true,
+      explicacao: "A capa aparece como um livro, na moldura 2:3 das capas dos sistemas. A área clara é exatamente o que vai ser salvo, com 320 × 480 px.",
+    },
     /* Precisa ser legível: vai inteira por padrão; recorte livre se a
        pessoa quiser. Nunca um quadrado forçado. */
     documento: {
@@ -177,6 +184,9 @@
     /* O tamanho salvo. Nunca amplia: ampliar só entrega borrão pesando
        mais. `largura` (capa) limita a largura; `lado`, o maior lado. */
     function saida(R, cfg) {
+      /* `exato` (capa de pacote): sempre o tamanho declarado — a moldura
+         é fixa, e o cartão mostra a capa sem um segundo corte. */
+      if (cfg.exato) return { largura: cfg.largura, altura: cfg.altura };
       var e = cfg.largura ? Math.min(1, cfg.largura / R.w) : Math.min(1, cfg.lado / Math.max(R.w, R.h));
       return { largura: Math.max(1, Math.round(R.w * e)), altura: Math.max(1, Math.round(R.h * e)) };
     }
@@ -291,9 +301,11 @@
       var ocupado = false;
 
       var grandeDemais = cfg.gifMaximo && (aberta.largura > cfg.gifMaximo || aberta.altura > cfg.gifMaximo);
-      var podeOriginal = aberta.gifCabe && !grandeDemais;
+      var podeOriginal = aberta.gifCabe && !grandeDemais && !cfg.somenteEstatica;
 
-      var motivo = !aberta.gifCabe
+      var motivo = cfg.somenteEstatica
+        ? "Esta capa é sempre uma imagem estática, recortada na moldura. Para usar este GIF, ele precisa ser convertido: fica o primeiro quadro, sem animação."
+        : !aberta.gifCabe
         ? RI.MENSAGEM_GIF_GRANDE
         : grandeDemais
           ? "Para manter a animação, a imagem precisa ter até " + cfg.gifMaximo + " pixels de largura e altura."
@@ -598,9 +610,9 @@
       if (botoesDeModo) botoesDeModo.forEach(function (b) { b.setAttribute("aria-pressed", String(b.dataset.modo === modo)); });
 
       var s = G.saida(R, cfg);
-      var pequena = !cfg.livre && (cfg.largura ? R.w < cfg.largura * 0.4 : R.w < cfg.lado * 0.5);
+      var pequena = !cfg.livre && (cfg.largura ? R.w < cfg.largura * (cfg.exato ? 0.75 : 0.4) : R.w < cfg.lado * 0.5);
       info.textContent = (travado ? "Imagem inteira: " : "Área de ") + Math.round(R.w) + " × " + Math.round(R.h) +
-        " px da original; salva com até " + s.largura + " × " + s.altura + " px." +
+        " px da original; salva com " + (cfg.exato ? "" : "até ") + s.largura + " × " + s.altura + " px." +
         (pequena ? " A área é pequena e pode ficar borrada." : "");
       /* A miniatura é pequena e é o que confirma o resultado: desenhada na
          hora. O palco, grande, espera o próximo quadro. */

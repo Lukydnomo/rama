@@ -242,6 +242,65 @@ var ABAS = {
     pesadas: ['imagem', 'imagemCont'],
     somenteTexto: ['imagemCont'],
   },
+  PACOTES_HOMEBREW: {
+    /* Pacotes de Homebrew (v9.6, HomebrewPacotes.gs): os metadados LEVES
+       de cada pacote (as 15 primeiras colunas: o que a galeria e "Meus
+       pacotes" listam sem abrir conteúdo nem capa). `codigoHash` é só o
+       HASH do código de acesso (pepper do servidor) — o código em claro
+       nunca é gravado. `estado` "montando" = uma gravação em curso: não
+       aparece como pacote válido para ninguém além do dono. `opCriacao`
+       e `opsJson` reconhecem o reenvio de uma gravação. */
+    nome: 'PACOTES_HOMEBREW',
+    colunas: ['id', 'ownerId', 'sistema', 'nome', 'visibilidade', 'estado', 'rev', 'qtd', 'tiposJson', 'temCapa',
+      'codigoHash', 'codigoEm', 'opCriacao', 'criadoEm', 'atualizadoEm', 'descricao', 'opsJson'],
+    chave: 'id',
+    leves: 15,
+    pesadas: ['descricao', 'opsJson'],
+  },
+  PACOTES_HOMEBREW_ENTRADAS: {
+    /* Uma linha por entrada: a CÓPIA dos dados da criação no momento em
+       que entrou (dadosJson, até uma célula, como no HOMEBREW). Editar ou
+       apagar o original não muda nada aqui. `origemId` e
+       `origemAtualizadaEm` só servem ao dono ("Atualizar pela criação
+       original"). */
+    nome: 'PACOTES_HOMEBREW_ENTRADAS',
+    colunas: ['id', 'pacoteId', 'ownerId', 'tipo', 'nome', 'ordem', 'origemId', 'copiadoEm', 'origemAtualizadaEm', 'dadosJson'],
+    chave: 'id',
+    leves: 9,
+    pesadas: ['dadosJson'],
+  },
+  PACOTES_HOMEBREW_IMAGENS: {
+    /* A imagem de uma criatura que entrou num pacote — cópia da
+       CRIATURAS_IMAGENS daquele momento, para a importação levar junto. */
+    nome: 'PACOTES_HOMEBREW_IMAGENS',
+    colunas: ['entradaId', 'pacoteId', 'imagem', 'atualizadoEm', 'imagemCont'],
+    chave: 'entradaId',
+    leves: 2,
+    pesadas: ['imagem', 'imagemCont'],
+    somenteTexto: ['imagemCont'],
+  },
+  PACOTES_HOMEBREW_CAPAS: {
+    /* A capa do pacote, já recortada na moldura 2:3 (320 × 480). Fora dos
+       metadados: a lista não lê imagem; os cartões pedem as capas
+       visíveis em lote (ler_capas_pacotes), com a mesma permissão do
+       pacote. */
+    nome: 'PACOTES_HOMEBREW_CAPAS',
+    colunas: ['pacoteId', 'ownerId', 'atualizadoEm', 'largura', 'altura', 'imagem', 'imagemCont'],
+    chave: 'pacoteId',
+    leves: 5,
+    pesadas: ['imagem', 'imagemCont'],
+    somenteTexto: ['imagemCont'],
+  },
+  PACOTES_HOMEBREW_IMPORTACOES: {
+    /* O recibo de cada cópia importada: quem, de qual pacote e entrada,
+       para qual registro novo do HOMEBREW, com o opId do pedido. Serve
+       para reconhecer reenvio e "já está na sua biblioteca" sem tocar na
+       cópia (as edições de quem importou são dela). Uma cópia apagada
+       deixa de contar. Tudo leve. */
+    nome: 'PACOTES_HOMEBREW_IMPORTACOES',
+    colunas: ['id', 'pacoteId', 'entradaId', 'userId', 'homebrewId', 'opId', 'criadoEm'],
+    chave: 'id',
+  },
   CAMPANHAS: {
     nome: 'CAMPANHAS',
     colunas: ['id', 'ownerId', 'nome', 'visibilidade', 'criadoEm', 'atualizadoEm', 'rev', 'dadosJson'],

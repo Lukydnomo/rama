@@ -45,7 +45,10 @@
   var ESCOPOS = [
     { chave: "meus", rotulo: "Minhas criações" },
     { chave: "publicos", rotulo: "Públicas" },
+    /* v9.6: coleções de criações com capa (js/paginas/homebrew-pacotes.js). */
+    { chave: "pacotes", rotulo: "Pacotes" },
   ];
+  function PK() { return global.RAMAHomebrewPacotes || null; }
   var escopo = "meus";
   /* "carregando" | "erro" | "pronto". As abas existem nos três. */
   var estado = "carregando";
@@ -55,10 +58,16 @@
 
   global.RAMAApp.iniciar("homebrew", async function () {
     painel = U.$("#painel-homebrew");
+    /* Link direto de um pacote (?pacote=id): abre a aba Pacotes e o pacote,
+       se esta conta o alcança. O código NUNCA vem pelo endereço. */
+    var link = U.parametro("pacote");
+    if (link && PK()) escopo = "pacotes";
     await carregar();
+    if (link && PK()) PK().abrirPorLink(link);
   });
 
   async function carregar() {
+    if (escopo === "pacotes") { ++pedido; estado = "pronto"; desenhar(); return; }
     var meu = ++pedido;
     estado = "carregando";
     desenhar();
@@ -83,6 +92,14 @@
      ================================================================= */
 
   function cabecalho() {
+    if (escopo === "pacotes" && PK()) {
+      var n = PK().total();
+      return global.RAMAApp.titulo({
+        titulo: "Homebrew",
+        trilha: ["Pacotes // " + (typeof n === "number" ? n + " pacote(s)" : "…")],
+        acoes: PK().acoesDoCabecalho(),
+      });
+    }
     var total = estado === "pronto" ? registros.length + " registro(s)" : "…";
     return global.RAMAApp.titulo({
       titulo: "Homebrew",
@@ -111,12 +128,21 @@
         onkeydown: function (ev) {
           if (ev.key !== "ArrowRight" && ev.key !== "ArrowLeft") return;
           ev.preventDefault();
-          trocarEscopo(escopo === "meus" ? "publicos" : "meus");
+          var i = ESCOPOS.map(function (x) { return x.chave; }).indexOf(escopo);
+          var passo = ev.key === "ArrowRight" ? 1 : ESCOPOS.length - 1;
+          trocarEscopo(ESCOPOS[(i + passo) % ESCOPOS.length].chave);
           var outra = painel.querySelector('[data-foco="hb-aba-' + escopo + '"]');
           if (outra) outra.focus();
         },
       }, [el("span", { texto: e.rotulo }), typeof n === "number" ? el("span.abas-contexto__n", { texto: " (" + n + ")" }) : null]);
     }));
+  }
+
+  /* A aba Pacotes repinta só o que é dela; o cabeçalho (contagem) troca
+     aqui, sem redesenhar o painel inteiro. */
+  function atualizarCabecalho() {
+    if (escopo !== "pacotes" || !painel || !painel.firstChild) return;
+    painel.replaceChild(cabecalho(), painel.firstChild);
   }
 
   function trocarEscopo(chave) {
@@ -139,6 +165,16 @@
   function desenhar() {
     var focoAba = document.activeElement && document.activeElement.dataset ? document.activeElement.dataset.foco : "";
     var corpo;
+    if (escopo === "pacotes") {
+      resultados = null;
+      corpo = PK() ? PK().painel({
+        aoMudar: atualizarCabecalho,
+        irParaMinhas: function () { trocarEscopo("meus"); },
+      }) : el("p.t-mini", { texto: "Os pacotes não carregaram nesta página." });
+      U.trocar(painel, [cabecalho(), abas(), el("section.hb-painel", { id: "hb-lista", role: "tabpanel", "aria-labelledby": "hb-aba-pacotes" }, [corpo])]);
+      if (focoAba && /^hb-aba-/.test(focoAba)) { var ab = painel.querySelector('[data-foco="' + focoAba + '"]'); if (ab) ab.focus(); }
+      return;
+    }
     if (estado === "carregando") corpo = UI.carregando("Consultando biblioteca");
     else if (estado === "erro") corpo = UI.erroDeTela(falha, carregar);
     else if (!registros.length) corpo = bibliotecaVazia();
@@ -333,8 +369,9 @@
 
   /* A consulta: criatura pela ficha inteira (o painel de sempre); o resto
      com os detalhes, a descrição longa e o código do registro. */
-  function consultar(registro) {
-    if (registro.tipo === "criatura") { consultarCriatura(registro); return; }
+  function consultar(registro, opcoesConsulta) {
+    var semRegistro = !!(opcoesConsulta && opcoesConsulta.semRegistro);
+    if (registro.tipo === "criatura") { consultarCriatura(registro, semRegistro); return; }
     var meu = registro.meu !== false;
     UI.modal({
       titulo: registro.nome,
@@ -348,7 +385,7 @@
         registro.tipo === "ritual" ? detalhesDoRitual(registro)
           : registro.tipo === "habilidade" ? detalhesDaHabilidade(registro) : detalhes(registro),
         registro.tipo !== "ritual" && registro.descricao ? el("p.item__descricao", { texto: registro.descricao }) : null,
-        rodapeDoRegistro(registro),
+        semRegistro ? el("p.t-mini", { texto: "Entrada de pacote: a cópia guardada no pacote. Importar cria uma criação nova na sua biblioteca." }) : rodapeDoRegistro(registro),
       ],
       botoes: [{ rotulo: "Fechar", classe: "r-botao--fantasma" }],
     });
@@ -362,13 +399,15 @@
   }
 
   function rodapeDoRegistro(r) {
-    return el("p.t-mini.hb-registro", { texto: "Registro // " + U.codigoCurto(r.id) + (r.atualizadoEm ? " · " + U.dataCurta(r.atualizadoEm) : "") });
+    /* v9.6: a procedência de uma cópia importada de um pacote. */
+    var doPacote = r.pacote && r.pacote.nome ? " · copiada do pacote " + r.pacote.nome + (r.pacote.importadoEm ? " em " + U.dataCurta(r.pacote.importadoEm) : "") : "";
+    return el("p.t-mini.hb-registro", { texto: "Registro // " + U.codigoCurto(r.id) + (r.atualizadoEm ? " · " + U.dataCurta(r.atualizadoEm) : "") + doPacote });
   }
 
   /* A ficha inteira de uma criatura, só para leitura. */
-  function consultarCriatura(registro) {
-    var painelC = global.RAMACriaturaPainel.criar(registro, { consulta: true, rotulo: "Homebrew" });
-    UI.modal({ titulo: registro.nome, largo: true, conteudo: [painelC.raiz, rodapeDoRegistro(registro)], botoes: [{ rotulo: "Fechar" }] });
+  function consultarCriatura(registro, semRegistro) {
+    var painelC = global.RAMACriaturaPainel.criar(registro, { consulta: true, rotulo: semRegistro ? "Pacote" : "Homebrew" });
+    UI.modal({ titulo: registro.nome, largo: true, conteudo: [painelC.raiz, semRegistro ? null : rodapeDoRegistro(registro)], botoes: [{ rotulo: "Fechar" }] });
   }
 
   function rotuloDoTipo(tipo) {
@@ -912,6 +951,9 @@
       ],
     });
   }
+
+  /* Para a aba Pacotes consultar uma entrada com o mesmo desenho. */
+  global.RAMAHomebrew = { consultar: consultar, irPara: trocarEscopo };
 
   function importar() {
     global.RAMAImportar.abrir({
