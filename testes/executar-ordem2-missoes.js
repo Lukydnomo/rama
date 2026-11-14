@@ -269,7 +269,8 @@ t.grupo("Ponto Alpha com ferramenta e SOBRECARGA (uma vez por rodada; suspensão
   // A maldição isenta quem causou dano a outro personagem na rodada.
   operar(s, { tipo: "tabela", id: "maldicao", acao: "ativar", inicio: 5 });
   operar(s, { tipo: "iniciarCombate", personagens: ["alan", "val"], antecipar: false });
-  const ca = operar(s, { tipo: "conflitoAlpha", atacante: "pc-alan", defensor: "pc-val", defesa: "nenhuma" }, MESTRE, fila(6, 5));
+  /* v9.4: sem o conflito simplificado — o dano de Alan em Val entra pela mesa, com o autor. */
+  const ca = operar(s, { tipo: "dano", personagem: "val", valor: 5, danoTipo: "fisico", ator: "pc-alan" });
   operar(s, { tipo: "encerrarCombate" });
   const a8 = pd();
   operar(s, { tipo: "encerrarRodada", rodada: 8 }, MESTRE, fila(1, 1));

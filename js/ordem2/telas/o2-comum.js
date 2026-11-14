@@ -142,7 +142,7 @@
   function dadosDaCampanha() { return lido.dados; }
   function localDe(ctx) {
     var b = ctx.ficha.ordem2;
-    if (!b.local) b.local = ME().local(b.perfilRegras);
+    if (!b.local) b.local = ME().local(b.ambientacao);
     return b.local;
   }
   function pid(ctx) { return String(ctx.personagemId || "eu"); }

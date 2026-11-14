@@ -641,3 +641,105 @@ necessário; `Ordem2Pacotes` não mudou. Site: `js/ordem2/evolucao.js`,
 `js/ordem2/telas/` (`o2-criar.js`, o novo `o2-evolucao.js`, `o2-paranormal.js`,
 `ficha-o2.js`, `campanha-o2.js`), `js/sistemas.js`, `css/ordem2.css`,
 `css/modern20/ordem2.css`, `js/versao.js` e as páginas `ficha/` e `campanha/`.
+
+## v9.4 — regras unificadas
+
+Ordem II continua um sistema à parte (id `ordem2`), agora com **um único
+conjunto de regras** (`K().REGRAS`: `ordem2-unificada`, versão 1, gravado na
+ficha e na mesa como `regras`/`versaoRegras`). Alpha e Beta passam a ser
+**Fonte** (procedência de presets, missões e textos) e as duas
+**ambientações** (Contemporâneo, Contos da Vigília) só mudam sugestões —
+ocupações, especializações, NPCs e materiais. Não é edição oficial.
+
+### Precedência
+
+1. Revisão geral mais recente (Contos da Vigília / Beta).
+2. Recurso antigo ainda compatível, quando não há sucessor (Alpha: Máquinas,
+   Tecnologia, ferramentas da Ordo Realitas, sobrecarga, hacking, laboratório,
+   EMF, rádio, Compêndio).
+3. Exceção explícita da habilidade ou da cena, só no seu escopo (ex.: a
+   plataforma da gruta usa Atletismo 7/10; Afogados e gruta usam quatro fases).
+
+Lacunas: valem as decisões experimentais já documentadas; adaptações novas
+são decisões do R.A.M.A. (`K().DECISOES`).
+
+### Matriz
+
+| Parte | Regra unificada |
+|---|---|
+| Testes, pavor, relações | Cálculos do Beta (RA/RB, passos, pavor, relações, críticos, limites). Pontuações e dano: RA; no crítico, as duas maiores (Beta p. 11), para todos. Nada depende do playtest de origem da ficha. |
+| Combate | Geral → Distância → Corpo a corpo (Beta p. 18), simultaneidade, manobras; armadura, não letal, lesão, trauma e contadores por cena para todos; gasto voluntário de PD ≠ dano emocional. O conflito simplificado do Alpha e o teste de Vigor/Disciplina a 0 PV/PD não iniciam ações novas (pendências antigas resolvem pela regra congelada). |
+| Combate de missão | Quatro fases (Suporte → Distância → Corpo a corpo → Final) onde o encontro manda; ondas, perseguições e roteiros seguem a cena. |
+| Investigação | Investigar entrega a passiva; Observar (outra perícia listada, passiva) ou Examinar (teste; sem novidade, −1 PD); Interagir é alternativa narrativa, sem passiva. Crítico examinando: **aviso ao Mestre** (solicitação "crítico"), sem descoberta fabricada. Recapitular: Intuição DT 10. **Compartilhar: Pesquisar DT 10** (o texto do Alpha p. 23 e do Beta p. 15; a tabela-resumo que diz Intuição fica registrada como divergência), o Mestre pode trocar ao aprovar. |
+| Ferramentas e desafios | Todas as do Alpha e do Beta continuam; dados expressos numa cena (senha, DT, perícia, custo, dano, gatilho) mandam ali. Tabelas por rodada (sobrecarga, maldição) contam rodadas da **cena**: a rodada de combate avança o mesmo contador, sem aplicar duas vezes ao alternar. Quem causou dano também é registrado na rodada da cena. |
+| Ocupações | "Ocupação" na tela; um catálogo com `ambientacoes` (sugestões), as outras pesquisáveis, entrada personalizada; ids preservados (Professor existe nas duas). |
+| Perícias | Uma lista de 22: a do Alpha + Animais e Ofício do Beta, com atributo-base e escopo do Beta e exemplos contemporâneos. Aliases: Bruxaria → Ocultismo, Inspecionar → Pesquisar, Ofício/Metalurgia → `metalurgia` (rótulo "Ofício"; a especialização impressa fica). Metalurgia ≠ Máquinas ≠ Tecnologia. Aptidão: a união das especializações, ordenadas pela ambientação. |
+| Habilidades de perfil | Ímpeto: barra de 5, +d4 por 1, passo ou ação extra em conflito por 3, esvazia no fim da cena. **Avaliação** (nome contemporâneo) com o efeito da Análise: ação → 2 marcadores (máx. 4), ajustes pós-rolagem, somem no fim da cena. Prontidão: 2 PD, 1×/rodada, rolar de novo um dado que não deu 1, com a flexibilidade de fase. Uma entrada funcional cada; o original fica na procedência. Antecipação Tática, Foco Mental, Mentoria e Varredura Ampla continuam à parte. |
+| Varredura Ampla (adaptação de integração) | Duas perícias na passiva e, depois, ainda pode Examinar; não soma a Observar (máx. duas perícias na mesma ação); a mesma pista não sai duas vezes. |
+| Progressão e paranormal | A aba Evolução, as configurações de mesa e os registros da v9.3 ficam; o catálogo de habilidades não filtra por playtest. O módulo paranormal normaliza a perícia do teste e as chaves dos efeitos (Bruxaria → Ocultismo). |
+
+### Migração (repetível, nos dois lados)
+
+`RAMAOrdem2.normalizar` (ficha) e `RAMAOrdem2Mesa.normalizar` (mesa) são a
+migração: o mesmo código roda no navegador e no `Ordem2.gs`.
+
+- Ficha sem `versaoRegras`: `perfilRegras` vira `migracao.de`; a ambientação
+  fica (ou vem do perfil antigo); procedência ganha `origem` (alpha/beta) e
+  `habilidadesOriginais` (texto anterior). Um aviso aparece **uma vez** na
+  ficha ("Entendi" grava `migracao.visto`).
+- Perícias: aliases normalizados; uma ficha com Pesquisar **e** Inspecionar
+  mostra uma perícia, com as duas `origens` (cada uma com o dado impresso e os
+  próprios ganhos de evolução); vale o melhor caminho, **sem somar**; um ganho
+  novo vai para o caminho maior e o estorno sai dele. As perícias que faltam
+  entram em d4 com id fixo (`o2p-<chave>`), sem reabrir a criação.
+- Itens e efeitos: chaves por alias; dois aliases do mesmo bônus contam uma vez.
+- Habilidades de perfil antigas (`impeto_alpha3/alpha5/beta`, `analise_beta`,
+  `avaliacao_alpha`, `prontidao_alpha/beta`) viram as unificadas com o mesmo id
+  de instância; nome e texto personalizados ficam; `origemEvolucao` e usos
+  ficam; dados guardados pela Avaliação antiga expiram (sem saldo nem PD de
+  volta); barras compatíveis não passam do novo limite. Personalizada com o
+  mesmo nome continua personalizada. Antecipação Tática não é concedida a quem
+  tinha a Prontidão antiga.
+- Mesa sem `versaoRegras`: `perfil` vira `migracao.de`, a ambientação fica;
+  testes aguardando escolhas e declarações já feitas seguem a montagem
+  congelada; o Mestre vê o aviso com as pendências ("Entendi" grava
+  `migracao.visto` por `configurar`).
+- Servidor: `salvar_personagem` passa toda ficha de Ordem II por
+  `RAMAOrdem2.normalizar` (a migração é gravada no fluxo normal; uma aba antiga
+  que mande `perfilRegras` não reintroduz o esquema). `configurar` com `perfil`
+  não muda regra; `conflitoAlpha` é recusado mesmo chamado direto. Pacotes de
+  missão: o campo `perfil` das cenas virou só fonte; pistas e desafios com
+  "inspecionar"/"bruxaria" funcionam pelos aliases (nada a republicar).
+
+### Validação v9.4
+
+Automática: `testes/executar-ordem2-unificada.js` (novo, 49) — mesma rolagem
+para Alan/Muirenn e Val/Rhiona em qualquer ambientação; Prontidão em Val e
+Rowan; Avaliação em Amanda e Rhiona; Ímpeto num Executor antigo; Varredura,
+Antecipação Tática e personalizadas; Rhiona 22/12 e Val 18/32; ficha antiga
+com Inspecionar + Pesquisar, Ofício, item com alias, marco pendente e ritual,
+migrada e normalizada duas vezes, desfazer o ganho migrado, exportar/importar;
+Tecnologia, lesão e combate em três fases; investigação com privacidade;
+sobrecarga exploração → combate → exploração sem dobrar; mesa antiga no meio
+de uma fase (nada rolado, cobrado ou ferido). As suítes antigas tiveram os
+resultados esperados das regras que mudaram atualizados
+(`executar-ordem2.js`, `executar-ordem2-missoes.js`, etapa 4, backend); a
+leitura de dados legados continua testada.
+
+Na interface (servidor local, contas sintéticas): assistente sem "Versão das
+regras", com a ambientação sugerida pela campanha e ocupações agrupadas;
+prévia de Val com a Prontidão atual e a original na procedência; ficha gravada
+no formato da v9.3 aberta, com o aviso uma vez e a migração gravada ao
+confirmar; mesa sem "Perfil de regras" nem conflito simplificado; Val (Alpha)
+investigando numa campanha de Contos da Vigília pelo fluxo único.
+
+### Publicar a v9.4
+
+Servidor: troque **Ordem2.gs** e **Codigo.gs** e crie uma versão nova da
+implantação. **`setupRama()` não é necessário** e `Ordem2Pacotes` não muda.
+**Nenhum passo manual antes de abrir uma campanha existente**: a migração
+acontece ao ler e é gravada na próxima escrita normal (o Mestre vê o aviso
+uma vez). Site: `js/ordem2/` (catalogo, regras, motor, mesa, procedimentos,
+evolucao, paranormal e `telas/`), `js/paginas/catalogo.js`,
+`js/campanha-painel.js`, `js/importar.js`, `js/versao.js` e as páginas que já
+carregam Ordem II.

@@ -929,6 +929,14 @@ segredo nenhum — ele os lê das Script Properties. Publicá-lo não expõe nad
 
 ### Atualizar o backend
 
+**v9.4.0 — UNÍSSONO:** Ordem II com regras unificadas. Troque **`Ordem2.gs`** e
+**`Codigo.gs`** e crie uma versão nova da implantação. **`setupRama()` não é
+necessário**, `Ordem2Pacotes` não muda e **não há passo manual antes de abrir
+uma campanha existente** (a migração acontece ao ler e é gravada na próxima
+escrita). Site: `js/ordem2/` (inclui `telas/`), `js/paginas/catalogo.js`,
+`js/campanha-painel.js`, `js/importar.js` e `js/versao.js`. Detalhes em
+`docs/ORDEM2.md`.
+
 **v9.3.0 — DEGRAU:** criação de Ordem II em etapas e a progressão do 1 ao 10.
 Troque **`Ordem2.gs`** e **`Codigo.gs`** e crie uma versão nova da implantação.
 **`setupRama()` não é necessário** e `Ordem2Pacotes` não mudou. Site:
@@ -1971,7 +1979,7 @@ Três números diferentes, que não se misturam:
 
 | | Onde | O que é |
 |---|---|---|
-| versão do aplicativo | `js/versao.js` | o que a pessoa vê: v9.3.0 |
+| versão do aplicativo | `js/versao.js` | o que a pessoa vê: v9.4.0 |
 | `schemaVersion` | `js/ficha.js` | o formato da FICHA |
 | `versaoFormato` | `js/config.js` | o formato dos arquivos de importação |
 

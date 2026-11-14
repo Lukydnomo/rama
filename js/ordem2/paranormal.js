@@ -78,7 +78,7 @@
     var c = obj(x), v = configPadrao();
     v.ativo = c.ativo === true;
     v.atributo = K().ATRIBUTOS[c.atributo] ? c.atributo : "mente";
-    v.pericia = texto(c.pericia, 40) || "ocultismo";
+    v.pericia = K().chaveDePericia(texto(c.pericia, 40)) || "ocultismo"; /* v9.4: Bruxaria → Ocultismo */
     var d = obj(c.dts), q = obj(c.custos), f = obj(c.forcar);
     Object.keys(v.dts).forEach(function (k) { v.dts[k] = inteiro(d[k], 0, 40, v.dts[k]); v.custos[k] = inteiro(q[k], 0, 40, v.custos[k]); });
     v.forcar = { permitido: f.permitido === true, pv: inteiro(f.pv, 0, 20, 2), passos: inteiro(f.passos, 1, 2, 1), alternativa: ["pv", "pavor", "componente"].indexOf(f.alternativa) >= 0 ? f.alternativa : "pv" };
@@ -90,7 +90,7 @@
     if (!TIPOS_EFEITO[e.tipo]) return null;
     return {
       tipo: e.tipo, valor: texto(e.valor, 20), recurso: e.recurso === "pd" ? "pd" : "pv", danoTipo: e.danoTipo === "emocional" ? "emocional" : "fisico",
-      condicao: CONDICOES.indexOf(e.condicao) >= 0 ? e.condicao : "", alvoDado: e.alvoDado === "atributo" || e.alvoDado === "todos" ? e.alvoDado : "pericia", chave: texto(e.chave, 40),
+      condicao: CONDICOES.indexOf(e.condicao) >= 0 ? e.condicao : "", alvoDado: e.alvoDado === "atributo" || e.alvoDado === "todos" ? e.alvoDado : "pericia", chave: e.alvoDado === "atributo" || e.alvoDado === "todos" ? texto(e.chave, 40) : K().chaveDePericia(texto(e.chave, 40)),
       n: inteiro(e.n, -4, 4, 1), faces: [4, 6, 8, 10, 12, 20].indexOf(Number(e.faces)) >= 0 ? Number(e.faces) : 0, d20: e.d20 === true,
       duracao: DURACOES[e.duracao] ? e.duracao : "", quem: e.quem === "proprio" ? "proprio" : "alvo", texto: texto(e.texto, 600),
     };
@@ -177,7 +177,7 @@
     return {
       ok: !problemas.length, problemas: problemas, ritual: r,
       acao: r.modo === "elaborado" ? r.etapas.length + " etapa(s): " + r.etapas.map(function (t) { return t.nome + (t.acao ? " (" + t.acao + ")" : ""); }).join(" → ") : r.acao,
-      teste: K().ATRIBUTOS[cfg.atributo].nome + " + " + (per ? R().nomeDaPericia(b, per) : K().nomeDaPericia(b.perfilRegras, cfg.pericia, b.ambientacao)),
+      teste: K().ATRIBUTOS[cfg.atributo].nome + " + " + (per ? R().nomeDaPericia(b, per) : K().nomeDaPericia(null, cfg.pericia)),
       dt: dtDe(cfg, r), custoPd: custo, custoPv: r.custoPv + pvForcar,
       forcar: fz ? (fz.alternativa === "pv" ? "+" + fz.passos + " passo por " + fz.pv + " PV" : fz.alternativa === "pavor" ? "+" + fz.passos + " passo, com risco de pavor na falha" : "+" + fz.passos + " passo consumindo um componente") : "",
       alvo: ALVOS[r.alvo], duracao: DURACOES[r.duracao], componentes: r.componentes.map(function (c) { return c.nome + (c.consome ? " (consumido)" : ""); }),

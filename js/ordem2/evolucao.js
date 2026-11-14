@@ -84,12 +84,32 @@
 
   /* Somas dos registros vivos (os dados impressos ficam em `base`). */
   function passosAtributo(b, chave) { var n = 0; vivos(b).forEach(function (r) { r.ganhos.forEach(function (g) { if (g.tipo === "atributo" && g.chave === chave) n += g.n; }); }); return n; }
-  function passosPericia(b, p) { var k = chaveDaPericia(p), n = 0; vivos(b).forEach(function (r) { r.ganhos.forEach(function (g) { if (g.tipo === "pericia" && g.chave === k) n += g.n; }); }); return n; }
+  function passosDaChave(b, k) { var n = 0; vivos(b).forEach(function (r) { r.ganhos.forEach(function (g) { if (g.tipo === "pericia" && g.chave === k) n += g.n; }); }); return n; }
+  /* v9.4: uma perícia pode ter mais de uma ORIGEM (Pesquisar e Inspecionar
+     de uma ficha antiga viraram uma só). Cada origem guarda o próprio
+     dado impresso e os próprios ganhos; vale a melhor, sem somar passos. */
+  function origensDe(p) {
+    var esp = p.especializacao ? ":" + String(p.especializacao).toLowerCase() : "";
+    var l = lista(p.origens);
+    if (!l.length) return [{ chave: chaveDaPericia(p), dado: p.dado }];
+    return l.map(function (o, i) { return { chave: o.chave + esp, dado: i === 0 ? p.dado : o.dado }; });
+  }
+  function melhorOrigem(b, p) {
+    var melhor = null;
+    origensDe(p).forEach(function (o) { var f = R().passoDado(o.dado, passosDaChave(b, o.chave), false); if (!melhor || f > melhor.valor) melhor = { chave: o.chave, valor: f }; });
+    return melhor;
+  }
+  function passosPericia(b, p) { return passosDaChave(b, melhorOrigem(b, p).chave); }
   function extra(b, tipo) { var n = 0; vivos(b).forEach(function (r) { r.ganhos.forEach(function (g) { if (g.tipo === tipo) n += g.n; }); }); return n; }
 
   /* O valor SEM efeitos temporários (o que a melhoria mexe). */
   function permanenteAtributo(b, chave) { return R().passoDado(b.base.atributos[chave] || 6, passosAtributo(b, chave), false); }
-  function permanentePericia(b, p) { return R().passoDado(p.dado, passosPericia(b, p), false); }
+  function permanentePericia(b, p) { return melhorOrigem(b, p).valor; }
+  function pericaDaEscolha(b, chave) {
+    var c = String(chave || "");
+    return lista(b.base.pericias).filter(function (q) { return q.id === c || chaveDaPericia(q) === c || origensDe(q).some(function (o) { return o.chave === c; }); })[0] ||
+      lista(b.base.pericias).filter(function (q) { return q.chave === K().chaveDePericia(c.split(":")[0]) && !q.especializacao; })[0] || null;
+  }
 
   /* A prévia de uma escolha: antes/depois, ou o motivo de não caber. */
   function previa(b, escolha, config) {
@@ -103,11 +123,12 @@
       return { ok: true, ganho: { tipo: "atributo", chave: e.chave, n: 1, de: "d" + a, para: "d" + R().passoDado(a, 1, false) }, rotulo: K().ATRIBUTOS[e.chave].nome + ": d" + a + " → d" + R().passoDado(a, 1, false) };
     }
     if (e.tipo === "pericia") {
-      var p = lista(b.base.pericias).filter(function (q) { return q.id === e.chave || chaveDaPericia(q) === e.chave; })[0];
+      var p = pericaDaEscolha(b, e.chave);
       if (!p) return { ok: false, motivo: "Escolha a perícia." };
       var d = permanentePericia(b, p);
       if (p.dado === 20 || d >= cfg.teto) return { ok: false, motivo: R().nomeDaPericia(b, p) + " já está em d" + d + " (teto d" + cfg.teto + "; sem d20)." };
-      return { ok: true, ganho: { tipo: "pericia", chave: chaveDaPericia(p), n: 1, de: "d" + d, para: "d" + R().passoDado(d, 1, false) }, rotulo: R().nomeDaPericia(b, p) + ": d" + d + " → d" + R().passoDado(d, 1, false) };
+      /* O ganho vai para o caminho que hoje é o maior (estornar tira dele). */
+      return { ok: true, ganho: { tipo: "pericia", chave: melhorOrigem(b, p).chave, n: 1, de: "d" + d, para: "d" + R().passoDado(d, 1, false) }, rotulo: R().nomeDaPericia(b, p) + ": d" + d + " → d" + R().passoDado(d, 1, false) };
     }
     if (e.tipo === "pv" || e.tipo === "pd") {
       var n = e.tipo === "pv" ? cfg.pvPorEscolha : cfg.pdPorEscolha;
@@ -185,7 +206,7 @@
   /* O rótulo de um ganho já registrado (histórico e resumo da mesa). */
   function rotuloGanho(g, b) {
     if (g.tipo === "atributo") return (K().ATRIBUTOS[g.chave] ? K().ATRIBUTOS[g.chave].nome : g.chave) + " " + g.de + " → " + g.para;
-    if (g.tipo === "pericia") { var c = String(g.chave).split(":"); return K().nomeDaPericia(b ? b.perfilRegras : "alpha-contemporaneo", c[0], b ? b.ambientacao : "") + (c[1] ? " (" + c[1] + ")" : "") + " " + g.de + " → " + g.para; }
+    if (g.tipo === "pericia") { var c = String(g.chave).split(":"); return K().nomeDaPericia(null, c[0]) + (c[1] && c[0] === "aptidao" ? " (" + c[1] + ")" : "") + " " + g.de + " → " + g.para; }
     if (g.tipo === "pv" || g.tipo === "pd") return g.tipo.toUpperCase() + " máx. " + g.de + " → " + g.para;
     return "Habilidade: " + g.para;
   }
@@ -324,7 +345,10 @@
     if (!p.ok) return p;
     if (confirmar !== true) return Object.assign({}, p, { ok: false, motivo: "Confirme depois de ver a prévia." });
     var antiga = copiar(b.procedencia);
+    var antigas = lista(b.base.pericias);
     b.base = copiar(p.novo.base);
+    /* v9.4: as origens (caminhos antigos dos ganhos) não se perdem. */
+    b.base.pericias.forEach(function (q) { var v = antigas.filter(function (x) { return chaveDaPericia(x) === chaveDaPericia(q); })[0]; if (v && lista(v.origens).length) { q.origens = copiar(v.origens); q.origens[0].dado = q.dado; } });
     b.recursos.pv.max = p.novo.recursos.pv.max;
     b.recursos.pd.max = p.novo.recursos.pd.max;
     b.procedencia = Object.assign({}, p.novo.procedencia);
@@ -337,7 +361,7 @@
   global.RAMAOrdem2Evolucao = {
     MODOS: MODOS, TIPOS: TIPOS, PADRAO: PADRAO,
     normalizar: normalizar, normalizarConfig: normalizarConfig, configDaMesa: configDaMesa,
-    passosAtributo: passosAtributo, passosPericia: passosPericia, extra: extra, chaveDaPericia: chaveDaPericia,
+    passosAtributo: passosAtributo, passosPericia: passosPericia, extra: extra, chaveDaPericia: chaveDaPericia, origensDe: origensDe, melhorOrigem: melhorOrigem,
     permanenteAtributo: permanenteAtributo, permanentePericia: permanentePericia,
     previa: previa, registrar: registrar, desfazer: desfazer, dependentes: dependentes, vivos: vivos,
     previaAtualizacao: previaAtualizacao, aplicarAtualizacao: aplicarAtualizacao,

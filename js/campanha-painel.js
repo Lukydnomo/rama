@@ -273,12 +273,12 @@
 
   /* Ordem II (v9.0): perfil, ocupação/vocação e nível identificam; PV,
      PD, armadura, pavor e condições vêm do resumo calculado no SERVIDOR
-     com o motor (e seguem "Esconder status dos jogadores"). O perfil de
-     regras aparece quando difere do da campanha. */
+     com o motor (e seguem "Esconder status dos jogadores"). v9.4: regras
+     unificadas — o cartão mostra a ambientação, não um perfil de regras. */
   function resumirOrdem2(p, base) {
     var K = global.RAMAOrdem2Catalogo, RG = global.RAMAOrdem2;
     var x = p.ordem2 && typeof p.ordem2 === "object" ? p.ordem2 : {};
-    var pr = K && K.PERFIS_REGRAS[x.perfilRegras] ? K.PERFIS_REGRAS[x.perfilRegras].curto : "";
+    var pr = K && K.AMBIENTACOES && K.AMBIENTACOES[x.ambientacao] ? K.AMBIENTACOES[x.ambientacao].curto : "";
     base.linhas.push("Ordem II" + (pr ? " (" + pr + ")" : "") + (x.perfilNome ? " · " + x.perfilNome : "") + (x.ocupacao ? " · " + x.ocupacao : "") + (x.nivel ? " · nível " + U.inteiro(x.nivel, 1) : ""));
     if (!x.pv) return base;
     var conds = (Array.isArray(x.condicoes) ? x.condicoes : []).filter(function (c) { return c !== "pavor"; }).slice(0, 8).map(function (c) { return { chave: c, nome: RG && RG.NOMES_CONDICAO[c] ? RG.NOMES_CONDICAO[c] : c, ativa: true }; });

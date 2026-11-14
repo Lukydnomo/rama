@@ -118,6 +118,25 @@
 
   var CHANGELOG = [
     {
+      versao: "9.4.0",
+      codinome: "UNÍSSONO",
+      data: "14/11/2026",
+      mudancas: {
+        "Adicionado": [
+          "Ordem II com um único conjunto de regras (Regras unificadas do R.A.M.A., não oficial): Contos da Vigília quando revisa uma mecânica geral, nomenclatura contemporânea e o que só o Alpha tem (Máquinas, Tecnologia, ferramentas da Ordo Realitas, sobrecarga, hacking). Alpha e Beta viram fonte; Contemporâneo e Contos da Vigília são ambientações que só mudam sugestões.",
+          "Uma lista de 22 perícias, com aliases: Bruxaria é Ocultismo, Inspecionar é Pesquisar, Ofício e Metalurgia são a mesma. Um catálogo de ocupações com sugestões por ambientação.",
+          "Habilidades de perfil com o efeito mais recente para todos: Ímpeto (barra de 5), Avaliação (o efeito da Análise) e Prontidão (2 PD para rolar de novo). O texto original fica na procedência da ficha.",
+          "Investigação num fluxo só: Investigar, depois Observar ou Examinar; Interagir sem passiva. O crítico examinando avisa o Mestre, sem inventar descoberta. Compartilhar usa Pesquisar, DT 10.",
+          "Fichas e campanhas antigas migram sozinhas e de forma repetível: nada é rolado, cobrado ou apagado, e um aviso aparece uma vez. Ganhos de evolução de Inspecionar e Pesquisar ficam no caminho certo, sem somar.",
+        ],
+        "Corrigido": [
+          "Sobrecarga e maldição do Ídolo não aplicam duas vezes (nem pulam) ao alternar entre rodadas de exploração e de combate.",
+          "Uma aba antiga não consegue mais trocar a regra de uma ficha ou campanha de Ordem II.",
+        ],
+        "Técnico": ["Motor sem ramos por playtest (perfilRegras/perfil viraram legado em migracao.de). Os mesmos normalizar fazem a migração no navegador e no Ordem2.gs; salvar_personagem passa as fichas de Ordem II por eles. Novo testes/executar-ordem2-unificada.js; as suítes antigas tiveram os esperados das regras que mudaram atualizados."],
+      },
+    },
+    {
       versao: "9.3.0",
       codinome: "DEGRAU",
       data: "14/11/2026",

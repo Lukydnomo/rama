@@ -56,14 +56,12 @@ t.grupo("Catálogo · perícias, perfis de regras e fontes");
 {
   t.igual("20 perícias no Alpha (p. 17)", K.PERICIAS_ALPHA.length, 20);
   t.igual("20 perícias no Beta (p. 9)", K.PERICIAS_BETA.length, 20);
-  const chA = K.listaDePericias("alpha-contemporaneo").map((p) => p.chave), chB = K.listaDePericias("beta-vigilia").map((p) => p.chave);
-  t.ok("ocultismo é UMA chave nas duas listas", chA.filter((c) => c === "ocultismo").length === 1 && chB.filter((c) => c === "ocultismo").length === 1 && chB.indexOf("bruxaria") < 0);
-  t.igual("  rótulo Ocultismo no contemporâneo", K.nomeDaPericia("alpha-contemporaneo", "ocultismo", "contemporaneo"), "Ocultismo");
-  t.igual("  rótulo Bruxaria na Vigília", K.nomeDaPericia("beta-vigilia", "ocultismo", "vigilia"), "Bruxaria");
-  t.ok("Pesquisar só no Alpha, Inspecionar só no Beta (nunca as duas)", chA.indexOf("pesquisar") >= 0 && chA.indexOf("inspecionar") < 0 && chB.indexOf("inspecionar") >= 0 && chB.indexOf("pesquisar") < 0);
-  t.igual("Ofício é alias de Metalurgia", K.pericia("beta-vigilia", "oficio").chave, "metalurgia");
-  t.igual("Compartilhar usa a perícia de pesquisa do perfil (Alpha)", K.periciaDePesquisa("alpha-contemporaneo"), "pesquisar");
-  t.igual("  e Inspecionar no Beta (o texto pede Pesquisar, que o Beta não tem)", K.periciaDePesquisa("beta-vigilia"), "inspecionar");
+  const ch = K.listaDePericias().map((p) => p.chave);
+  t.ok("v9.4: UMA lista (22): a do Alpha + Animais e Ofício do Beta", ch.length === 22 && ["maquinas", "tecnologia", "animais", "metalurgia", "pesquisar"].every((c) => ch.indexOf(c) >= 0) && ch.indexOf("inspecionar") < 0);
+  t.ok("o argumento antigo (perfil) não muda a lista", JSON.stringify(K.listaDePericias("beta-vigilia")) === JSON.stringify(K.listaDePericias("alpha-contemporaneo")));
+  t.iguais("aliases de entrada: Bruxaria → Ocultismo, Inspecionar → Pesquisar, Ofício → metalurgia", [K.pericia(null, "bruxaria").chave, K.pericia(null, "inspecionar").chave, K.pericia(null, "oficio").chave], ["ocultismo", "pesquisar", "metalurgia"]);
+  t.iguais("  nomes contemporâneos em qualquer ambientação", [K.nomeDaPericia("beta-vigilia", "ocultismo", "vigilia"), K.nomeDaPericia(null, "metalurgia"), K.nomeDaPericia(null, "inspecionar")], ["Ocultismo", "Ofício", "Pesquisar"]);
+  t.igual("Compartilhar usa Pesquisar (um comportamento só)", K.periciaDePesquisa("beta-vigilia"), "pesquisar");
   t.ok("cada divergência tem fonte, escolha e teste", K.DIVERGENCIAS.every((d) => d.fontes && d.escolha && d.teste));
   t.ok("o bloco paranormal é consultável e NÃO conjura (etapa 3)", K.PARANORMAL.disponivel === false && /d20/.test(K.PARANORMAL.texto));
 }
@@ -79,9 +77,9 @@ t.grupo("Fichas prontas · conferidas com os playtests");
   t.iguais("  Martelo de forja: corpo a corpo, dano RA+3", [martelo.alcance, martelo.dano], ["corpo", 3]);
   t.iguais("  Ofício (Metalurgia) d8 preservado com a especialização", (() => { const p = rh.base.pericias.find((x) => x.chave === "metalurgia"); return [p.dado, p.especializacao, p.rotuloImpresso]; })(), [8, "Metalurgia", "Ofício (Metalurgia)"]);
   const val = R.dePreset("val");
-  t.iguais("Val 18/32 com a Prontidão Alpha (3 PD)", [val.recursos.pv.max, val.recursos.pd.max, val.habilidades[0].ref, R.motorDe(val.habilidades[0]).pd], [18, 32, "prontidao_alpha", 3]);
-  t.iguais("Alan: Executor Cientista, PV 10 / PD 16, Ímpeto de 3 espaços", (() => { const a = R.dePreset("alan"); return [a.perfil, a.ocupacao.nome, a.recursos.pv.max, a.recursos.pd.max, R.motorDe(R.habilidadesDoTipo(a, "impeto")[0]).espacos]; })(), ["executor", "Cientista", 10, 16, 3]);
-  t.iguais("Heitor (Executor Alpha): Ímpeto de 5 com +d10 e ação extra", (() => { const h = R.dePreset("heitor"); return R.motorDe(R.habilidadesDoTipo(h, "impeto")[0]).opcoes.map((o) => o.custo + ":" + (o.faces || o.efeito)); })(), ["1:4", "2:10", "3:passoAtributo", "5:acaoExtra"]);
+  t.iguais("Val 18/32 com a Prontidão unificada (2 PD, rolar de novo); a original fica na procedência", [val.recursos.pv.max, val.recursos.pd.max, val.habilidades[0].ref, R.motorDe(val.habilidades[0]).pd, val.procedencia.habilidadesOriginais[0].ref], [18, 32, "prontidao", 2, "prontidao_alpha"]);
+  t.iguais("Alan: Executor Cientista, PV 10 / PD 16, Ímpeto unificado (5 espaços)", (() => { const a = R.dePreset("alan"); return [a.perfil, a.ocupacao.nome, a.recursos.pv.max, a.recursos.pd.max, R.motorDe(R.habilidadesDoTipo(a, "impeto")[0]).espacos]; })(), ["executor", "Cientista", 10, 16, 5]);
+  t.iguais("Heitor (Executor do Ato II): o Ímpeto unificado — +d4 por 1, passo ou ação extra por 3", (() => { const h = R.dePreset("heitor"); return R.motorDe(R.habilidadesDoTipo(h, "impeto")[0]).opcoes.map((o) => o.custo + ":" + (o.faces || o.efeito)); })(), ["1:4", "3:passoAtributo", "3:acaoExtra"]);
   t.iguais("Muirenn (Executor Beta): Ímpeto de 5 que esvazia no fim da cena", (() => { const m = R.motorDe(R.habilidadesDoTipo(R.dePreset("muirenn"), "impeto")[0]); return [m.espacos, m.zeraFimCena]; })(), [5, true]);
   t.iguais("Foco Mental de Alan 2 PD/+d4 e de Amanda 4 PD/+d8", [R.motorDe(R.dePreset("alan").habilidades[0]).pd, R.motorDe(R.dePreset("amanda").habilidades[1]).faces], [2, 8]);
   t.ok("PV/PD dos presets são os impressos (Sorcha 22, Guardiã já anotada)", R.dePreset("sorcha").recursos.pv.max === 22);
@@ -107,11 +105,11 @@ t.grupo("Criação guiada (experimental) e livre");
   t.ok("mais de 8 passos de perícia recusado", !R.conferirGuiada(Object.assign({}, base, { pericias: [{ chave: "luta", dado: 8 }, { chave: "vigor", dado: 8 }, { chave: "atletismo", dado: 8 }, { chave: "medicina", dado: 8 }, { chave: "crime", dado: 6 }] })).ok);
   const g = R.deGuiada(Object.assign({}, base, { habilidadeOcupacao: "segredo_do_aco" }));
   t.iguais("nível 1, 16 PV e 12 PD de referência", [g.bloco.nivel, g.bloco.recursos.pv.max, g.bloco.recursos.pd.max, g.bloco.modoCriacao], [1, 16, 12, "guiada"]);
-  t.iguais("  habilidade de perfil (Ímpeto Beta) + a de vocação escolhida", g.bloco.habilidades.map((h) => h.ref), ["impeto_beta", "segredo_do_aco"]);
+  t.iguais("  habilidade de perfil (Ímpeto unificado) + a de ocupação escolhida", g.bloco.habilidades.map((h) => h.ref), ["impeto", "segredo_do_aco"]);
   const g2 = R.deGuiada(Object.assign({}, base, { pv: 20, pd: 10 }));
   t.iguais("  PV/PD editáveis, marcados como editados", [g2.bloco.recursos.pv.max, g2.bloco.escolhas.pvPdReferencia.editados], [20, true]);
-  const g3 = R.deGuiada(Object.assign({}, base, { perfilRegras: "alpha-contemporaneo", perfil: "executor", ocupacaoNome: "Bartender", ocupacaoId: "" }));
-  t.iguais("Alpha: Executor ganha o Ímpeto de 3 espaços; ocupação personalizada sem habilidade", [g3.bloco.habilidades.map((h) => h.ref).join(","), g3.bloco.ocupacao.personalizada], ["impeto_alpha3", true]);
+  const g3 = R.deGuiada(Object.assign({}, base, { ambientacao: "contemporaneo", perfil: "executor", ocupacaoNome: "Bartender", ocupacaoId: "" }));
+  t.iguais("contemporâneo: o mesmo Ímpeto (a ambientação não muda a regra); ocupação personalizada sem habilidade", [g3.bloco.habilidades.map((h) => h.ref).join(","), g3.bloco.ocupacao.personalizada, g3.bloco.ambientacao], ["impeto", true, "contemporaneo"]);
   const livre = R.normalizar({ perfilRegras: "alpha-contemporaneo", nivel: 10, base: { atributos: { fisico: 12, mente: 20, emocao: 4 } }, recursos: { pv: { max: 40 }, pd: { max: 50 } } });
   t.iguais("livre aceita direto (nível 10, d20 por efeito anotado)", [livre.nivel, livre.base.atributos.mente, livre.recursos.pv.atual], [10, 20, 40]);
 }
@@ -214,14 +212,17 @@ t.grupo("Habilidades · Análise, Ímpeto, Prontidão, Avaliação");
   ap(m, { tipo: "resolverTeste", testeId: rp.resultado.teste, rerrolar: { indice: 1, fonte: "prontidao", por: "sira" } }, jog("sira"), fila(10));
   const de2 = ap(m, { tipo: "resolverTeste", testeId: rp.resultado.teste, rerrolar: { indice: 1, fonte: "prontidao", por: "sira" } }, jog("sira"), fila(10));
   t.iguais("  2 PD, 4 vira 10, e só uma vez", [pdAntes - si.recursos.pd.atual, m.e.testes.find((x) => x.id === rp.resultado.teste).resultado.dados[1].valor, de2.ok], [2, 10, false]);
-  /* Avaliação (Alpha). */
+  /* Avaliação (v9.4: o efeito da Análise) em Amanda, do Ato II. */
   const ma = mesa("alpha-contemporaneo", ["amanda"]);
-  const am = ma.fichas.amanda.bloco, av = R.habilidadesDoTipo(am, "avaliacao")[0];
-  ap(ma, { tipo: "usarHabilidade", quem: "amanda", habilidade: av.id, alvo: "a cena do crime" }, jog("amanda"));
-  const cheia = ap(ma, { tipo: "usarHabilidade", quem: "amanda", habilidade: av.id }, jog("amanda"));
-  t.iguais("Avaliação: ação + 2 PD → 2d4 guardados; máximo 2", [av.estado.reserva.length, am.recursos.pd.atual, cheia.ok], [2, 24, false]);
-  const mt = MO.montar(am, { pericia: "percepcao", usar: { reservas: [av.estado.reserva[0].id] } });
-  t.igual("  usar um d4 da reserva num teste (+d4 em dois testes ou +2d4 num)", mt.montagem.dados.length, 3);
+  const av = () => R.habilidadesDoTipo(ma.fichas.amanda.bloco, "analise")[0];
+  t.iguais("Amanda: Avaliação com o efeito unificado (marcadores, sem custo de PD)", [av().ref, av().nome, R.motorDe(av()).maximo], ["avaliacao", "Avaliação", 4]);
+  const pdAm = ma.fichas.amanda.bloco.recursos.pd.atual;
+  ap(ma, { tipo: "usarHabilidade", quem: "amanda", habilidade: av().id }, jog("amanda"));
+  ap(ma, { tipo: "usarHabilidade", quem: "amanda", habilidade: av().id }, jog("amanda"));
+  const cheia = ap(ma, { tipo: "usarHabilidade", quem: "amanda", habilidade: av().id }, jog("amanda"));
+  t.iguais("  ação → 2 marcadores; não passa de 4; sem PD", [av().estado.marcadores, pdAm - ma.fichas.amanda.bloco.recursos.pd.atual, cheia.ok], [4, 0, true]);
+  ap(ma, { tipo: "novaCena" });
+  t.igual("  os marcadores somem no fim da cena", av().estado.marcadores, 0);
 }
 
 t.grupo("Ajuda e Mentoria; relações (Beta pp. 24–25)");
@@ -336,22 +337,23 @@ t.grupo("Dano, armadura, lesão e trauma (Beta pp. 21–24)");
   t.igual("  primeiro teste de trauma da cena recupera 9 PD", rv.recursos.pd.atual, 9);
 }
 
-t.grupo("Zero de PV/PD no Alpha fiel (p. 26)");
+t.grupo("Zero de PV/PD · uma regra para todos (v9.4)");
 {
   const al = R.dePreset("alan");
   MO.aplicarDano(al, { valor: 10, tipo: "fisico" });
-  t.iguais("0 PV: teste de Vigor DT 7", [al.estado.pendentes[0].tipo, al.estado.pendentes[0].dt], ["vigorAlpha", 7]);
+  t.iguais("Alan (do Alpha) a 0 PV: teste de lesão DT 7, como qualquer ficha", [al.estado.pendentes[0].tipo, al.estado.pendentes[0].dt], ["lesao", 7]);
   MO.resolverPendente(al, al.estado.pendentes[0].id, MO.resolver(montagem([6, 6], { dt: 7 }), { faces: [4, 4], pavor: 0 }, {}), nada);
-  MO.aplicarDano(al, { valor: 2, tipo: "fisico" });
-  t.igual("  passou: continua; o próximo dano pede DT 10", al.estado.pendentes[0].dt, 10);
+  t.igual("  o contador sobe…", al.estado.testesLesao, 1);
   MO.fimDeCena(al);
-  t.igual("  no Alpha o contador NÃO zera no fim da cena", al.estado.testesLesao, 1);
-  MO.resolverPendente(al, al.estado.pendentes[0].id, MO.resolver(montagem([6, 6], { dt: 10 }), { faces: [2, 3], pavor: 0 }, {}), nada);
-  t.igual("  falhou: morre", al.estado.morto, true);
+  t.igual("  …e zera no fim da cena (para todos)", al.estado.testesLesao, 0);
   const a2 = R.dePreset("antonio");
   MO.aplicarDano(a2, { valor: 99, tipo: "emocional" });
-  MO.resolverPendente(a2, a2.estado.pendentes[0].id, MO.resolver(montagem([6, 10], { dt: 7 }), { faces: [1, 2], pavor: 0 }, {}), nada);
-  t.iguais("0 PD no Alpha: Disciplina; falhou = colapso", [a2.estado.colapso, a2.estado.morto], [true, true]);
+  t.igual("0 PD por dano externo: teste de trauma (não mais Disciplina do Alpha)", a2.estado.pendentes[0].tipo, "trauma");
+  /* Pendência antiga gravada antes da v9.4: resolve pela regra congelada. */
+  const leg = R.normalizar({ perfilRegras: "alpha-contemporaneo", recursos: { pv: { max: 10, atual: 0 } }, estado: { pendentes: [{ id: "pv0", tipo: "vigorAlpha", dt: 7, motivo: "antiga" }] } });
+  t.igual("ficha antiga com teste de Vigor pendente: a pendência continua", leg.estado.pendentes[0].tipo, "vigorAlpha");
+  MO.resolverPendente(leg, "pv0", MO.resolver(montagem([6, 6], { dt: 7 }), { faces: [2, 3], pavor: 0 }, {}), nada);
+  t.igual("  e resolve pela regra em que foi criada (falhou: morre)", leg.estado.morto, true);
 }
 
 t.grupo("Combate Beta · fases, simultaneidade e ataque mútuo (pp. 18–21)");
@@ -405,27 +407,26 @@ t.grupo("Combate Beta · fases, simultaneidade e ataque mútuo (pp. 18–21)");
   const rf = ap(m2, { tipo: "aplicarFase" });
   t.iguais("ataque mútuo pela mesa: 9×9 empate, os dois acertam (Sira RA 5+3, Cria RA 6+2)", [20 - cria.bloco.recursos.pv.atual, pvS - m2.fichas.sira.bloco.recursos.pv.atual], [8, 8]);
 
-  /* Rodada antecipada. */
-  const m3 = mesa("alpha-contemporaneo", ["val"]);
-  ap(m3, { tipo: "iniciarCombate", personagens: ["val"], npcs: [{ nome: "Cultista", pv: 8 }] });
-  const pdVal = m3.fichas.val.bloco.recursos.pd.atual;
-  const ant = ap(m3, { tipo: "usarHabilidade", quem: "val", habilidade: m3.fichas.val.bloco.habilidades[0].id }, jog("val"));
-  t.iguais("Val: Prontidão Alpha no início do conflito, 3 PD → rodada antecipada", [ant.ok, pdVal - m3.fichas.val.bloco.recursos.pd.atual, m3.e.combate.antecipados.length], [true, 3, 1]);
+  /* Rodada antecipada: Antecipação Tática (Sira) — habilidade à parte. */
+  const m3 = mesa("beta-vigilia", ["sira"]);
+  ap(m3, { tipo: "iniciarCombate", personagens: ["sira"], npcs: [{ nome: "Cultista", pv: 8 }] });
+  const at3 = R.habilidadesDoTipo(m3.fichas.sira.bloco, "rodadaAntecipada")[0];
+  const pdS3 = m3.fichas.sira.bloco.recursos.pd.atual;
+  const ant = ap(m3, { tipo: "usarHabilidade", quem: "sira", habilidade: at3.id }, jog("sira"));
+  t.iguais("Antecipação Tática (Sira): 2 PD → rodada antecipada", [ant.ok, pdS3 - m3.fichas.sira.bloco.recursos.pd.atual, m3.e.combate.antecipados.length], [true, 2, 1]);
   const npc3 = m3.e.combate.participantes.find((p) => p.tipo === "npc");
-  t.ok("  na rodada antecipada o NPC não age", !ap(m3, { tipo: "declarar", ator: npc3.id, acao: "agredirCorpo", alvo: "pc-val" }).ok);
+  t.ok("  na rodada antecipada o NPC não age", !ap(m3, { tipo: "declarar", ator: npc3.id, acao: "agredirCorpo", alvo: "pc-sira" }).ok);
+  t.ok("Val (Prontidão antiga) NÃO ganha Antecipação Tática na migração", !R.habilidadesDoTipo(R.dePreset("val"), "rodadaAntecipada").length && R.habilidadesDoTipo(R.dePreset("val"), "prontidao").length === 1);
 }
 
-t.grupo("Conflito simplificado do Alpha (p. 26)");
+t.grupo("Conflito simplificado do Alpha: não inicia ações (v9.4)");
 {
   const m = mesa("alpha-contemporaneo", ["heitor", "alan"]);
   ap(m, { tipo: "iniciarCombate", personagens: ["heitor", "alan"], antecipar: false });
   const pv = m.fichas.alan.bloco.recursos.pv.atual;
-  ap(m, { tipo: "conflitoAlpha", atacante: "pc-heitor", defensor: "pc-alan", defesa: "lutar", armadoAtacante: true }, MESTRE, fila(9, 7, 2, 3));
-  t.igual("oposto de Luta: o vencedor armado causa RA (9)", pv - m.fichas.alan.bloco.recursos.pv.atual, 9);
-  const m2 = mesa("alpha-contemporaneo", ["heitor", "alan"]);
-  ap(m2, { tipo: "iniciarCombate", personagens: ["heitor", "alan"], antecipar: false });
-  ap(m2, { tipo: "conflitoAlpha", atacante: "pc-heitor", defensor: "pc-alan", defesa: "esquivar" }, MESTRE, fila(5, 5, 4, 4, 3));
-  t.igual("esquiva: Acrobacia +d6; vencendo, ninguém sofre dano", m2.fichas.alan.bloco.recursos.pv.atual + m2.fichas.heitor.bloco.recursos.pv.atual, 10 + 34);
+  const r = ap(m, { tipo: "conflitoAlpha", atacante: "pc-heitor", defensor: "pc-alan", defesa: "lutar", armadoAtacante: true }, MESTRE, nada);
+  t.ok("chamado direto (ou de uma aba antiga): recusado, sem rolar nem causar dano", !r.ok && /combate em fases/.test(r.motivo) && m.fichas.alan.bloco.recursos.pv.atual === pv);
+  t.iguais("cenas do Alpha usam o combate em três fases", m.e.combate.ordemFases, K.ORDEM_FASES_PADRAO);
 }
 
 t.grupo("Investigação (Alpha pp. 21–23; Beta pp. 13–15)");
@@ -443,6 +444,8 @@ t.grupo("Investigação (Alpha pp. 21–23; Beta pp. 13–15)");
   t.ok("Amanda: Percepção d10 passiva já pega q1 e q2", am.ok && m.e.investigacao.descobertas.amanda.length === 2);
   const v = ap(m, { tipo: "investigar", quem: "val", ponto: "p1", pericia: "percepcao", segunda: "medicina", modo: "nada" }, jog("val"));
   t.ok("Varredura Ampla: duas perícias na passiva", v.ok);
+  const v3 = ap(m, { tipo: "investigar", quem: "val", ponto: "p1", pericia: "percepcao", segunda: "medicina", modo: "observar" }, jog("val"));
+  t.ok("  com Observar, a segunda perícia é a observação (nunca três perícias na mesma ação)", v3.ok && v3.resultado.novas.length === 0);
   t.iguais("Examinar não tem DT (sem falha: o Ímpeto de Alan não enche)", [m.e.testes.find((x) => x.quem === "alan" && x.montagem.examinar).montagem.dt, R.habilidadesDoTipo(m.fichas.alan.bloco, "impeto")[0].estado.espacos], [null, 0]);
   const naoVal = ap(m, { tipo: "investigar", quem: "alan", ponto: "p1", pericia: "percepcao", segunda: "medicina", modo: "nada" }, jog("alan"));
   t.ok("  sem Varredura Ampla, duas perícias são recusadas", !naoVal.ok);
@@ -462,17 +465,25 @@ t.grupo("Investigação (Alpha pp. 21–23; Beta pp. 13–15)");
   t.ok("  outra recapitulação é recusada", !ap(m, { tipo: "recapitular", quem: "val" }, jog("val")).ok);
   ap(m, { tipo: "compartilhar", quem: "alan", aliado: "amanda", descricao: "O sangue é recente." }, jog("alan"));
   const sc = m.e.investigacao.solicitacoes.find((s) => s.tipo === "compartilhar");
-  t.igual("Compartilhar: o aliado testa Pesquisar no Alpha", sc.pericia, "pesquisar");
+  t.igual("Compartilhar: o aliado testa Pesquisar (DT 10)", sc.pericia, "pesquisar");
   ap(m, { tipo: "novaCena" });
   t.igual("nova cena destrava", m.e.investigacao.travas.recapitular, false);
   const mb = mesa("beta-vigilia", ["cavan", "rhiona"]);
   ap(mb, { tipo: "ponto", ponto: { id: "pb", nome: "Potes de argila", descricao: "Dois potes tampados.", pistas: [{ id: "b1", pericias: ["percepcao"], dt: 6, texto: "Talvez tenham algo dentro." }, { id: "b2", pericias: ["medicina"], dt: 6, texto: "Bálsamo de confrei." }] } });
   const ob = ap(mb, { tipo: "investigar", quem: "cavan", ponto: "pb", pericia: "percepcao", segunda: "medicina", modo: "observar" }, jog("cavan"));
-  t.ok("Beta: Observar com segunda perícia (passiva)", ob.ok && mb.e.investigacao.descobertas.cavan.length === 2);
+  t.ok("Observar com segunda perícia (passiva) — vale em qualquer ambientação", ob.ok && mb.e.investigacao.descobertas.cavan.length === 2);
   ap(mb, { tipo: "compartilhar", quem: "cavan", aliado: "rhiona" }, jog("cavan"));
-  t.igual("  Compartilhar no Beta usa Inspecionar", mb.e.investigacao.solicitacoes[0].pericia, "inspecionar");
+  t.igual("  Compartilhar na Vigília também usa Pesquisar (Inspecionar é alias)", mb.e.investigacao.solicitacoes[0].pericia, "pesquisar");
   const it = ap(mb, { tipo: "investigar", quem: "rhiona", ponto: "pb", modo: "interagir", descricao: "Abro os potes." }, jog("rhiona"));
-  t.ok("  Interagir no Beta é a alternativa a Investigar (sem passiva)", it.ok && !mb.e.investigacao.descobertas.rhiona);
+  t.ok("  Interagir é a alternativa a Investigar (sem passiva)", it.ok && !mb.e.investigacao.descobertas.rhiona);
+  const ia = ap(m, { tipo: "investigar", quem: "val", ponto: "p1", pericia: "percepcao", modo: "interagir", descricao: "Levanto o quadro." }, jog("val"));
+  t.ok("  no contemporâneo, idem: Interagir não entrega passiva", ia.ok && !ia.resultado.novas);
+  /* Crítico examinando: aviso ao Mestre, sem descoberta fabricada. */
+  const mc = mesa("alpha-contemporaneo", ["amanda"]);
+  ap(mc, { tipo: "ponto", ponto: { id: "pc", nome: "Gaveta", descricao: "Uma gaveta.", revelado: true, pistas: [{ id: "c1", pericias: ["percepcao"], dt: 20, texto: "SEGREDO-PRIVADO" }] } });
+  const cr = ap(mc, { tipo: "investigar", quem: "amanda", ponto: "pc", pericia: "percepcao", modo: "examinar", confirmar: true }, jog("amanda"), fila(8, 8));
+  const descA = mc.e.investigacao.descobertas.amanda || [];
+  t.ok("crítico examinando: o Mestre é avisado (solicitação), nada é revelado sozinho", cr.ok && mc.e.investigacao.solicitacoes.some((x) => x.tipo === "critico" && x.quem === "amanda") && !descA.some((d) => d.critico) && JSON.stringify(ME.vista(mc.e, jog("amanda"))).indexOf("SEGREDO-PRIVADO") < 0);
 }
 
 t.grupo("Testes pedidos, pendentes e fim de cena");
@@ -497,10 +508,12 @@ t.grupo("Normalização · sem conversão silenciosa");
   const b = R.dePreset("rhiona");
   const n = R.normalizar(JSON.parse(JSON.stringify(b)));
   t.ok("normalizar é estável", JSON.stringify(n) === JSON.stringify(R.normalizar(JSON.parse(JSON.stringify(n)))));
-  t.igual("perfil desconhecido cai no Beta (ficha nova)", R.normalizar({ perfilRegras: "gama" }).perfilRegras, "beta-vigilia");
-  t.ok("o resumo da mesa não inventa números", (() => { const r = R.resumoParaMesa(b); return r.pv.max === 22 && r.pd.max === 12 && r.perfilRegras === "beta-vigilia"; })());
+  t.iguais("perfil desconhecido: regras unificadas, ambientação padrão (contemporâneo)", (() => { const x = R.normalizar({ perfilRegras: "gama" }); return [x.regras, x.versaoRegras, x.ambientacao, x.perfilRegras]; })(), [K.REGRAS.id, 1, "contemporaneo", undefined]);
+  t.ok("o resumo da mesa não inventa números", (() => { const r = R.resumoParaMesa(b); return r.pv.max === 22 && r.pd.max === 12 && r.ambientacao === "vigilia"; })());
   const e = ME.normalizar(JSON.parse(JSON.stringify(ME.estadoVazio("alpha-contemporaneo"))));
-  t.igual("mesa normalizada mantém o perfil", e.perfil, "alpha-contemporaneo");
+  t.iguais("mesa antiga: perfil vira ambientação; regra única", [e.ambientacao, e.regras, e.perfil], ["contemporaneo", K.REGRAS.id, undefined]);
+  const emig = ME.normalizar({ perfil: "beta-vigilia" });
+  t.iguais("  mesa gravada na v9.3 (perfil Beta): migra para Contos da Vigília e guarda o legado", [emig.ambientacao, emig.migracao.de], ["vigilia", "beta-vigilia"]);
 }
 
 console.log(`\n${FORTE}${passaram + falharam} verificações${FIM} · ${VERDE}${passaram} ok${FIM} · ${falharam ? VERMELHO : CINZA}${falharam} falhas${FIM}`);

@@ -11,6 +11,18 @@
   permite o suplemento dono da ferramenta (desligar a mecânica com
   `estado.ativo: false` continua aceito). As leituras não mudam.
 
+## Ordem Paranormal RPG II · regras unificadas — v9.4
+
+- `ordem2_operar {configurar}`: só `ambientacao` (e `migracaoVista`); `perfil`
+  de uma aba antiga é ignorado. `conflitoAlpha`: sempre recusado.
+- `ordem2_operar {dano}` aceita `ator` (participante que causou), para as
+  isenções da cena.
+- `ler_ordem2`: estado/vista com `regras`, `versaoRegras`, `ambientacao` e
+  `migracao` (sem `perfil`); `personagens[].resumo` com `ambientacao` (sem
+  `perfilRegras`).
+- `salvar_personagem`: toda ficha de Ordem II passa por `RAMAOrdem2.normalizar`
+  (migração gravada no fluxo normal).
+
 ## Ordem Paranormal RPG II · progressão — v9.3
 
 - `subirNivel {personagem, nivelAntes?}` — só no modo "por marcos" da mesa

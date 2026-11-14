@@ -61,11 +61,16 @@ function sistemaOrdem2() {
    própria ficha é a mesa local. */
 function preservarEvolucaoDeOrdem2(ficha, registro, anterior) {
   if (!ficha || !ficha.ordem2 || typeof ficha.ordem2 !== 'object') return;
+  /* v9.4: toda gravação passa pela MESMA normalização do navegador — a
+     migração para as regras unificadas é gravada no fluxo normal, e uma
+     aba antiga que mande `perfilRegras` não reintroduz o esquema velho. */
+  try { ficha.ordem2 = RAMAOrdem2.normalizar(ficha.ordem2); } catch (erro) { /* fica como veio */ }
   if (!registro || !registro.campanhaId) return;
   var camp = acharPor(ABAS.CAMPANHAS, 'id', String(registro.campanhaId));
   if (!camp || sistemaDaCampanha(camp).id !== 'ordem2') return;
   if (!anterior || !anterior.ok || !anterior.ficha || !anterior.ficha.ordem2) return;
   var antes = anterior.ficha.ordem2, novo = ficha.ordem2;
+  try { antes = RAMAOrdem2.normalizar(antes); } catch (erro) { /* segue */ }
   novo.nivel = antes.nivel;
   novo.evolucao = antes.evolucao === undefined ? null : JSON.parse(JSON.stringify(antes.evolucao));
   var ganhas = (Array.isArray(antes.habilidades) ? antes.habilidades : []).filter(function (h) { return h && h.origemEvolucao; });
@@ -391,25 +396,25 @@ function acaoOrdem2Operar(corpo, usuario) {
   /* ---------------------------------------------------------------
      PERFIS DE REGRAS E AMBIENTAÇÃO
      --------------------------------------------------------------- */
+  /* v9.4: UM conjunto de regras. Os antigos "perfis de regras" ficam só
+     como LEGADO: dizem de que playtest veio uma ficha, uma mesa ou um
+     preset (Fonte) e qual ambientação ela usava — nunca escolhem regra. */
+  var REGRAS = {
+    id: "ordem2-unificada", versao: 1, nome: "Regras unificadas do R.A.M.A.",
+    texto: "Contos da Vigília (Beta) como fonte mais recente quando revisa uma mecânica geral; nomenclatura contemporânea; perícias, ferramentas e recursos do Alpha que a Vigília não cobre. Não é edição oficial.",
+  };
   var PERFIS_REGRAS = {
-    "alpha-contemporaneo": {
-      id: "alpha-contemporaneo", nome: "Alpha · Contemporâneo", curto: "Alpha",
-      fonte: "alpha", ambientacao: "contemporaneo", termoOcupacao: "Ocupação",
-      combate: "simplificado", /* Alpha p. 26: só o conflito simplificado */
-      texto: "Investigação do Playtest Alpha (pp. 14–26), perícias da p. 17, ocupação, e o conflito simplificado da p. 26.",
-    },
-    "beta-vigilia": {
-      id: "beta-vigilia", nome: "Beta · Vigília", curto: "Beta",
-      fonte: "beta", ambientacao: "vigilia", termoOcupacao: "Vocação",
-      combate: "fases", /* Beta p. 18: três fases */
-      texto: "Ação do Playtest Beta (pp. 6–25), perícias da p. 9, vocação, combate em fases, lesões e traumas, pavor e relações.",
-    },
+    "alpha-contemporaneo": { id: "alpha-contemporaneo", nome: "Playtest Alpha", curto: "Alpha", fonte: "alpha", ambientacao: "contemporaneo" },
+    "beta-vigilia": { id: "beta-vigilia", nome: "Playtest Beta", curto: "Beta", fonte: "beta", ambientacao: "vigilia" },
   };
   var ORDEM_PERFIS_REGRAS = ["alpha-contemporaneo", "beta-vigilia"];
   var AMBIENTACOES = {
-    contemporaneo: { nome: "Contemporâneo (Ordo Realitas)", rotuloOcultismo: "Ocultismo" },
-    vigilia: { nome: "Vigília (Idade Média)", rotuloOcultismo: "Bruxaria" },
+    contemporaneo: { nome: "Contemporâneo (Ordo Realitas)", curto: "Contemporâneo" },
+    vigilia: { nome: "Contos da Vigília (Idade Média)", curto: "Contos da Vigília" },
   };
+  var ORDEM_AMBIENTACOES = ["contemporaneo", "vigilia"];
+  function ambientacaoValida(a) { if (AMBIENTACOES[a]) return a; if (PERFIS_REGRAS[a]) return PERFIS_REGRAS[a].ambientacao; return "contemporaneo"; }
+  var TERMO_OCUPACAO = "Ocupação";
 
   /* ---------------------------------------------------------------
      ATRIBUTOS E DEGRAUS (Alpha p. 16; Beta p. 8)
@@ -426,14 +431,17 @@ function acaoOrdem2Operar(corpo, usuario) {
   var ESCALA_PERICIA = { 4: "Destreinado", 6: "Treinado", 8: "Especialista", 10: "Mestre", 12: "Grão-mestre", 20: "Sobre-humano (paranormal)" };
 
   /* ---------------------------------------------------------------
-     PERÍCIAS — duas listas (Alpha p. 17; Beta p. 9)
-     `ocultismo` é UMA chave: o rótulo segue a ambientação (Ocultismo /
-     Bruxaria). `metalurgia` aceita "Ofício" como alias. Pesquisar
-     (Alpha) e Inspecionar (Beta) são a mesma função em perfis
-     diferentes: cada perfil tem a sua, nunca as duas.
+     PERÍCIAS — UMA lista (v9.4). Atributo-base e escopo do Beta (p. 9),
+     com exemplos contemporâneos; Máquinas e Tecnologia (Alpha p. 17) e
+     Animais (Beta p. 9) continuam. Nomes contemporâneos, com aliases de
+     entrada: Bruxaria → Ocultismo, Inspecionar → Pesquisar, Ofício e
+     Metalurgia → a chave `metalurgia` (rótulo "Ofício"). Metalurgia não
+     vira Máquinas nem Tecnologia: são competências distintas.
+     As listas de cada playtest ficam como FONTE (PERICIAS_ALPHA/BETA).
      --------------------------------------------------------------- */
-  var PERICIAS_ALPHA = [
-    ["acrobacia", "Acrobacia", "fisico", "Ginástica, parkour, skate e patins."],
+  var PERICIAS = [
+    ["acrobacia", "Acrobacia", "fisico", "Ginástica, equilíbrio e parkour (skate e patins, na ambientação contemporânea)."],
+    ["animais", "Animais", "emocao", "Manejar e acalmar animais, montar e conduzir."],
     ["aptidao", "Aptidão", "mente", "Conhecimento em um campo específico (especialização)."],
     ["atletismo", "Atletismo", "fisico", "Correr, saltar, escalar, nadar, remar."],
     ["crime", "Crime", "fisico", "Furtar, abrir fechaduras, falsificar documentos."],
@@ -445,67 +453,49 @@ function acaoOrdem2Operar(corpo, usuario) {
     ["luta", "Luta", "fisico", "Atacar desarmado ou com armas corpo a corpo."],
     ["maquinas", "Máquinas", "mente", "Operar e consertar máquinas, dirigir veículos."],
     ["medicina", "Medicina", "mente", "Primeiros socorros, tratamentos, necropsias."],
-    ["ocultismo", "Ocultismo", "mente", "Conhecimento sobre o paranormal."],
+    ["ocultismo", "Ocultismo", "mente", "Conhecimento sobre o paranormal (chamado Bruxaria na Vigília)."],
+    ["metalurgia", "Ofício", "mente", "Fabricar e consertar objetos; a especialização diz o ofício (ex.: Metalurgia)."],
     ["percepcao", "Percepção", "mente", "Notar coisas pelos sentidos, revistar lugares."],
     ["persuasao", "Persuasão", "emocao", "Convencer com argumentos e lábia."],
-    ["pesquisar", "Pesquisar", "mente", "Pesquisar documentos e bancos de dados, analisar evidências."],
+    ["pesquisar", "Pesquisar", "mente", "Examinar documentos e bancos de dados, analisar evidências (Inspecionar, na Vigília)."],
     ["pontaria", "Pontaria", "fisico", "Atacar com armas de arremesso ou de disparo."],
-    ["sobrevivencia", "Sobrevivência", "mente", "Acampar, rastrear, acalmar animais ferozes."],
+    ["sobrevivencia", "Sobrevivência", "mente", "Acampar, rastrear, orientar-se na natureza."],
     ["tecnologia", "Tecnologia", "mente", "Operar dispositivos, hackear redes."],
     ["vigor", "Vigor", "fisico", "Fôlego, venenos, suportar ferimentos."],
   ];
-  var PERICIAS_BETA = [
-    ["acrobacia", "Acrobacia", "fisico", "Ginástica, parkour, equilíbrio."],
-    ["animais", "Animais", "emocao", "Manejar animais, acalmar feras, cavalgar."],
-    ["aptidao", "Aptidão", "mente", "Conhecimento em um campo específico (especialização)."],
-    ["atletismo", "Atletismo", "fisico", "Correr, saltar, escalar, nadar, remar."],
-    ["ocultismo", "Bruxaria", "mente", "Conhecimento sobre o paranormal."],
-    ["crime", "Crime", "fisico", "Furtar, abrir fechaduras, falsificar documentos."],
-    ["disciplina", "Disciplina", "emocao", "Estudar, meditar, resistir a traumas e sustos."],
-    ["enganacao", "Enganação", "emocao", "Mentir, disfarçar-se, seduzir."],
-    ["furtividade", "Furtividade", "fisico", "Esconder-se, andar sem ser visto ou ouvido."],
-    ["intimidar", "Intimidar", "emocao", "Assustar e coagir pessoas."],
-    ["intuicao", "Intuição", "emocao", "\"Sexto sentido\" sobre pessoas e ambientes."],
-    ["inspecionar", "Inspecionar", "mente", "Examinar documentos e analisar evidências."],
-    ["luta", "Luta", "fisico", "Atacar desarmado ou com armas corpo a corpo."],
-    ["medicina", "Medicina", "mente", "Primeiros socorros, tratamentos."],
-    ["metalurgia", "Metalurgia", "mente", "Fabricar e consertar itens. Nas fichas: \"Ofício\"."],
-    ["percepcao", "Percepção", "mente", "Notar coisas pelos sentidos, revistar lugares."],
-    ["persuasao", "Persuasão", "emocao", "Convencer com argumentos e lábia."],
-    ["pontaria", "Pontaria", "fisico", "Atacar com armas de arremesso ou de disparo."],
-    ["sobrevivencia", "Sobrevivência", "mente", "Acampar, rastrear, acalmar animais ferozes."],
-    ["vigor", "Vigor", "fisico", "Fôlego, venenos, suportar ferimentos."],
-  ];
+  /* Fonte: as listas impressas de cada playtest (só consulta). */
+  var PERICIAS_ALPHA = ["acrobacia", "aptidao", "atletismo", "crime", "disciplina", "enganacao", "furtividade", "intimidar", "intuicao", "luta", "maquinas", "medicina", "ocultismo", "percepcao", "persuasao", "pesquisar", "pontaria", "sobrevivencia", "tecnologia", "vigor"];
+  var PERICIAS_BETA = ["acrobacia", "animais", "aptidao", "atletismo", "ocultismo", "crime", "disciplina", "enganacao", "furtividade", "intimidar", "intuicao", "pesquisar", "luta", "medicina", "metalurgia", "percepcao", "persuasao", "pontaria", "sobrevivencia", "vigor"];
+  /* Aptidão: a UNIÃO das especializações; a ambientação só ordena as
+     sugestões. */
   var ESPECIALIZACOES = {
-    "alpha-contemporaneo": ["Artes", "Atualidades", "Burocracia", "Exatas", "Humanas", "Tática"],
-    "beta-vigilia": ["Artes", "Erudição", "Folclore", "Guerra", "Nobreza", "Religião"],
+    contemporaneo: ["Artes", "Atualidades", "Burocracia", "Exatas", "Humanas", "Tática"],
+    vigilia: ["Artes", "Erudição", "Folclore", "Guerra", "Nobreza", "Religião"],
   };
-  /* Rótulos de ficha que apontam para uma chave da lista (Beta: as
-     fichas impressas usam "Ofício" para Metalurgia e "Ocultismo" para
-     Bruxaria). */
-  var ALIASES = { oficio: "metalurgia", "ofício": "metalurgia", bruxaria: "ocultismo" };
+  var TODAS_ESPECIALIZACOES = ["Artes", "Atualidades", "Burocracia", "Erudição", "Exatas", "Folclore", "Guerra", "Humanas", "Nobreza", "Religião", "Tática"];
+  function especializacoes(ambientacao) {
+    var sug = ESPECIALIZACOES[ambientacaoValida(ambientacao)] || [];
+    return sug.concat(TODAS_ESPECIALIZACOES.filter(function (e) { return sug.indexOf(e) < 0; }));
+  }
+  var ALIASES = { oficio: "metalurgia", "ofício": "metalurgia", bruxaria: "ocultismo", inspecionar: "pesquisar" };
+  function chaveDePericia(chave) { var c = String(chave || "").toLowerCase(); return ALIASES[c] || c; }
 
-  function listaDePericias(perfil) {
-    var l = perfil === "beta-vigilia" ? PERICIAS_BETA : PERICIAS_ALPHA;
-    return l.map(function (p) { return { chave: p[0], nome: p[1], atributo: p[2], texto: p[3] }; });
+  /* O argumento (antigo perfil) é ignorado: a lista é uma só. */
+  function listaDePericias() {
+    return PERICIAS.map(function (p) { return { chave: p[0], nome: p[1], atributo: p[2], texto: p[3] }; });
   }
-  function pericia(perfil, chave) {
-    var c = ALIASES[chave] || chave;
-    return listaDePericias(perfil).filter(function (p) { return p.chave === c; })[0] || null;
+  function pericia(_perfil, chave) {
+    var c = chaveDePericia(chave);
+    return listaDePericias().filter(function (p) { return p.chave === c; })[0] || null;
   }
-  /* O nome que a tela mostra: Ocultismo/Bruxaria pela ambientação. */
-  function nomeDaPericia(perfil, chave, ambientacao) {
-    if (chave === "ocultismo") {
-      var amb = AMBIENTACOES[ambientacao] || AMBIENTACOES[(PERFIS_REGRAS[perfil] || {}).ambientacao] || AMBIENTACOES.contemporaneo;
-      return amb.rotuloOcultismo;
-    }
-    var p = pericia(perfil, chave);
-    if (p) return p.nome;
-    var outra = pericia(perfil === "beta-vigilia" ? "alpha-contemporaneo" : "beta-vigilia", chave);
-    return outra ? outra.nome : chave;
+  /* O nome da tela é o contemporâneo, em qualquer ambientação. */
+  function nomeDaPericia(_perfil, chave) {
+    var p = pericia(null, chave);
+    return p ? p.nome : String(chave || "");
   }
-  /* A perícia de "pesquisa" do perfil (Compartilhar, ver DIVERGENCIAS). */
-  function periciaDePesquisa(perfil) { return perfil === "beta-vigilia" ? "inspecionar" : "pesquisar"; }
+  /* Compartilhar: Pesquisar, DT 10 (texto do Alpha p. 23 e do Beta p. 15;
+     o Mestre pode trocar). */
+  function periciaDePesquisa() { return "pesquisar"; }
 
   /* ---------------------------------------------------------------
      PERFIS (Alpha p. 14; Beta p. 6)
@@ -517,15 +507,8 @@ function acaoOrdem2Operar(corpo, usuario) {
   };
   var ORDEM_PERFIS = ["executor", "analista", "vigilante"];
 
-  /* A habilidade de perfil que cada perfil de regras DOCUMENTA para uma
-     ficha nova. Beta: as fichas prontas trazem o mesmo texto por perfil
-     (fato). Alpha: as fichas do Ato II são de nível 6; para Executor o
-     R.A.M.A. usa a versão de 3 espaços (Alan, nível 2, e Raven) —
-     inferência registrada em DIVERGENCIAS. */
-  var HABILIDADE_DE_PERFIL = {
-    "alpha-contemporaneo": { executor: "impeto_alpha3", analista: "avaliacao_alpha", vigilante: "prontidao_alpha" },
-    "beta-vigilia": { executor: "impeto_beta", analista: "analise_beta", vigilante: "prontidao_beta" },
-  };
+  /* A habilidade de perfil: o efeito mais recente (fichas do Beta). */
+  var HABILIDADE_DE_PERFIL = { executor: "impeto", analista: "avaliacao", vigilante: "prontidao" };
 
   /* ---------------------------------------------------------------
      HABILIDADES
@@ -535,77 +518,78 @@ function acaoOrdem2Operar(corpo, usuario) {
      cenaConflito | missao | porAlvoCena.
      --------------------------------------------------------------- */
   var HABILIDADES = {
-    impeto_alpha3: { nome: "Ímpeto", versao: "alpha", fonte: "alpha", pagina: 15, perfil: "executor",
-      texto: "Barra com 3 espaços; cada teste falho preenche 1. Gaste 1 espaço para +d4 num teste ou 3 para aumentar um atributo em um passo até o fim da cena.",
-      motor: { tipo: "impeto", espacos: 3, zeraFimCena: false, opcoes: [{ custo: 1, efeito: "dado", faces: 4 }, { custo: 3, efeito: "passoAtributo" }] } },
-    impeto_alpha5: { nome: "Ímpeto", versao: "alpha", fonte: "alphaAto2", pagina: null, perfil: "executor", ficha: "Heitor",
-      texto: "Barra com 5 espaços; cada teste falho preenche 1. Gaste 1 para +d4, 2 para +d10, 3 para aumentar um atributo até o fim da cena ou 5 para uma ação extra na rodada.",
-      motor: { tipo: "impeto", espacos: 5, zeraFimCena: false, opcoes: [{ custo: 1, efeito: "dado", faces: 4 }, { custo: 2, efeito: "dado", faces: 10 }, { custo: 3, efeito: "passoAtributo" }, { custo: 5, efeito: "acaoExtra" }] } },
-    impeto_beta: { nome: "Ímpeto", versao: "beta", fonte: "betaFichas", pagina: null, perfil: "executor",
-      texto: "Barra com 5 espaços; cada teste falho preenche 1. Ação livre: 1 espaço dá +d4 num teste; 3 aumentam um atributo até o fim da cena; 3 dão uma ação extra em cena de conflito. Esvazia no fim da cena.",
+    impeto: { nome: "Ímpeto", fonte: "betaFichas", pagina: null, perfil: "executor",
+      texto: "Barra com 5 espaços; cada teste falho preenche 1. Ação livre: 1 espaço dá +d4 num teste; 3 aumentam um atributo em um passo até o fim da cena; 3 dão uma ação extra em cena de conflito. Esvazia no fim da cena.",
       motor: { tipo: "impeto", espacos: 5, zeraFimCena: true, opcoes: [{ custo: 1, efeito: "dado", faces: 4 }, { custo: 3, efeito: "passoAtributo" }, { custo: 3, efeito: "acaoExtra", soConflito: true }] } },
-    impeto_fervilhante: { nome: "Ímpeto Fervilhante", versao: "beta", fonte: "betaFichas", ficha: "Malik",
+    impeto_fervilhante: { nome: "Ímpeto Fervilhante", fonte: "betaFichas", ficha: "Malik",
       texto: "No início de cada cena, preenche 1 espaço da barra de ímpeto.", motor: { tipo: "impetoInicioCena", espacos: 1 } },
-    analise_beta: { nome: "Análise", versao: "beta", fonte: "beta", pagina: 7, perfil: "analista",
-      texto: "Uma ação dá 2 marcadores (máximo 4). Depois de rolar, cada marcador muda um dado em +1 ou −1, dentro das faces dele. Os não usados somem no fim da cena.",
+    avaliacao: { nome: "Avaliação", fonte: "beta", pagina: 7, perfil: "analista",
+      texto: "Uma ação dá 2 marcadores (máximo 4). Depois de rolar, cada marcador muda um dado em +1 ou −1, dentro das faces dele. Os não usados somem no fim da cena. (No Beta, chamada Análise.)",
       motor: { tipo: "analise", ganho: 2, maximo: 4, zeraFimCena: true } },
-    leitura_combate: { nome: "Leitura de Combate", versao: "beta", fonte: "beta", pagina: 7, ficha: "Rhiona",
-      texto: "Em combate, gastar uma ação para se defender dá 1 marcador de análise.", motor: { tipo: "marcadorAoDefender", ganho: 1 } },
-    segredo_do_aco: { nome: "Segredo do Aço", versao: "beta", fonte: "beta", pagina: 7, ficha: "Rhiona",
+    leitura_combate: { nome: "Leitura de Combate", fonte: "beta", pagina: 7, ficha: "Rhiona",
+      texto: "Em combate, gastar uma ação para se defender dá 1 marcador de Avaliação.", motor: { tipo: "marcadorAoDefender", ganho: 1 } },
+    segredo_do_aco: { nome: "Segredo do Aço", fonte: "beta", pagina: 7, ficha: "Rhiona",
       texto: "Sabe usar equipamento marcial; um item vestido que dá pontos de armadura dá 1 ponto a mais.", motor: { tipo: "armaduraExtra", valor: 1 } },
-    avaliacao_alpha: { nome: "Avaliação", versao: "alpha", fonte: "alphaAto2", perfil: "analista", ficha: "Amanda e Antônio",
-      texto: "Uma ação e 2 PD para observar um ser ou ambiente: recebe 2 dados bônus d4 para testes relativos a ele (+2d4 num teste ou +d4 em dois). No máximo 2 dados por esta habilidade.",
-      motor: { tipo: "avaliacao", pd: 2, dados: 2, faces: 4, maximo: 2 } },
-    prontidao_alpha: { nome: "Prontidão", versao: "alpha", fonte: "alphaAto2", perfil: "vigilante", ficha: "Val",
-      texto: "No início de qualquer conflito, gaste 3 PD para ganhar uma rodada em que age antes dos demais personagens e NPCs.",
-      motor: { tipo: "rodadaAntecipada", pd: 3 } },
-    prontidao_beta: { nome: "Prontidão", versao: "beta", fonte: "betaFichas", perfil: "vigilante",
+    prontidao: { nome: "Prontidão", fonte: "betaFichas", perfil: "vigilante",
       texto: "Uma vez por rodada, quando você ou outro ser em alcance curto faz um teste, gaste 2 PD para rolar de novo um dado que não deu 1. Em combate, pode agir na fase da ação ou em fases posteriores, e depois das rolagens daquela fase.",
       motor: { tipo: "prontidao", pd: 2, limite: "rodada", atrasar: true } },
-    antecipacao_tatica: { nome: "Antecipação Tática", versao: "beta", fonte: "betaFichas", ficha: "Sira",
+    antecipacao_tatica: { nome: "Antecipação Tática", fonte: "betaFichas", ficha: "Sira",
       texto: "No início de qualquer combate, gaste 2 PD para ganhar uma rodada em que age antes dos demais.", motor: { tipo: "rodadaAntecipada", pd: 2 } },
-    foco_mental: { nome: "Foco Mental", versao: "alpha", fonte: "alpha", pagina: 15,
+    foco_mental: { nome: "Foco Mental", fonte: "alpha", pagina: 15,
       texto: "Num teste mental (com o atributo Mente), gaste PD para receber um dado bônus. O custo e o dado dependem da ficha.",
       motor: { tipo: "dadoPorPd", atributo: "mente", pd: 2, faces: 4 } },
-    olhar_infalivel: { nome: "Olhar Infalível", versao: "alpha", fonte: "alphaAto2", ficha: "Amanda",
+    olhar_infalivel: { nome: "Olhar Infalível", fonte: "alphaAto2", ficha: "Amanda",
       texto: "Num teste de examinar, gaste 2 PD para rolar de novo um dos dados.", motor: { tipo: "rerrolarExaminar", pd: 2 } },
-    amor_descoberta: { nome: "Amor pela Descoberta", versao: "alpha", fonte: "alphaAto2", ficha: "Antônio",
+    amor_descoberta: { nome: "Amor pela Descoberta", fonte: "alphaAto2", ficha: "Antônio",
       texto: "Quando examina um ponto de interesse e recebe informação nova, recupera 1 PD.", motor: { tipo: "pdAoDescobrir", pd: 1 } },
-    mentoria: { nome: "Mentoria", versao: "ambas", fonte: "alphaAto2", ficha: "Antônio e Cavan",
+    mentoria: { nome: "Mentoria", fonte: "alphaAto2", ficha: "Antônio e Cavan",
       texto: "Ao ajudar, faça um teste da perícia usada contra DT 7. Se passar, quem foi ajudado pode trocar um dos dados dele pela sua rolagem alta.", motor: { tipo: "mentoria", dt: 7 } },
-    incansavel: { nome: "Incansável", versao: "alpha", fonte: "alphaAto2", ficha: "Heitor",
+    incansavel: { nome: "Incansável", fonte: "alphaAto2", ficha: "Heitor",
       texto: "Uma vez por cena de conflito, gaste 5 PV para fazer uma ação extra.", motor: { tipo: "acaoExtraPorPv", pv: 5, limite: "cenaConflito" } },
-    linha_de_tiro: { nome: "Linha de Tiro", versao: "alpha", fonte: "alphaAto2", ficha: "Heitor",
+    linha_de_tiro: { nome: "Linha de Tiro", fonte: "alphaAto2", ficha: "Heitor",
       texto: "Proficiência com armas de fogo; num ataque com elas, gaste 4 PD para +d10.", motor: { tipo: "dadoEmAtaque", categoria: "fogo", pd: 4, faces: 10 } },
-    estoico: { nome: "Estoico", versao: "alpha", fonte: "alphaAto2", ficha: "Raven",
+    estoico: { nome: "Estoico", fonte: "alphaAto2", ficha: "Raven",
       texto: "+d6 em testes de trauma; na primeira vez em cada cena em que faz um teste de trauma, recupera 9 PD.", motor: { tipo: "estoico", faces: 6, pd: 9 } },
-    para_bellum: { nome: "Para Bellum", versao: "alpha", fonte: "alphaAto2", ficha: "Raven",
+    para_bellum: { nome: "Para Bellum", fonte: "alphaAto2", ficha: "Raven",
       texto: "Proficiência com armas de fogo; dano com elas +2.", motor: { tipo: "danoPorCategoria", categoria: "fogo", valor: 2 } },
-    tecnica_medicinal: { nome: "Técnica Medicinal", versao: "alpha", fonte: "alphaAto2", ficha: "Val",
+    tecnica_medicinal: { nome: "Técnica Medicinal", fonte: "alphaAto2", ficha: "Val",
       texto: "Efeitos de cura que você usa curam +1 PV (ou +1 PV por dado).", motor: { tipo: "curaExtra", valor: 1 } },
-    varredura_ampla: { nome: "Varredura Ampla", versao: "alpha", fonte: "alphaAto2", ficha: "Val",
+    varredura_ampla: { nome: "Varredura Ampla", fonte: "alphaAto2", ficha: "Val",
       texto: "Ao investigar um ponto de interesse, escolha duas perícias e receba as informações de ambas.", motor: { tipo: "duasPericias" } },
-    esquiva: { nome: "Esquiva", versao: "beta", fonte: "betaFichas", ficha: "Rowan",
+    esquiva: { nome: "Esquiva", fonte: "betaFichas", ficha: "Rowan",
       texto: "Uma vez por rodada, ao sofrer um ataque, faça um teste de Acrobacia oposto como ação livre; se vencer, evita o ataque.", motor: { tipo: "esquiva", limite: "rodada" } },
-    espectro_lobo: { nome: "Espectro, o Lobo", versao: "beta", fonte: "betaFichas", ficha: "Rowan",
+    espectro_lobo: { nome: "Espectro, o Lobo", fonte: "betaFichas", ficha: "Rowan",
       texto: "Um lobo parceiro dá +d6 em ataques corpo a corpo; se esse dado der 1, o lobo se machuca e não ajuda até o fim da cena.", motor: { tipo: "parceiro", faces: 6, ataque: "corpo" } },
-    arsenal_herborista: { nome: "Arsenal de Herborista", versao: "beta", fonte: "betaFichas", ficha: "Muirenn",
+    arsenal_herborista: { nome: "Arsenal de Herborista", fonte: "betaFichas", ficha: "Muirenn",
       texto: "Preparados de uso único (uma ação e um alvo): tônico de urtiga-feroz (Físico +1 passo por uma cena), bálsamo de confrei (2d4 PV; outro alvo fica parado na rodada) e pote de vespa (ataque à distância com Sobrevivência, dano RA+1; o alvo que sobreviver perde a próxima ação).",
       motor: { tipo: "consumiveis" } },
-    curandeiro: { nome: "Curandeiro", versao: "beta", fonte: "betaFichas", ficha: "Cavan",
+    curandeiro: { nome: "Curandeiro", fonte: "betaFichas", ficha: "Cavan",
       texto: "Uma ação e 2 PD: teste de Medicina (DT 7); se passar, cura PV do aliado iguais à RA. Uma vez por cena em cada alvo.", motor: { tipo: "curaPorTeste", pd: 2, dt: 7, pericia: "medicina", limite: "porAlvoCena" } },
-    sorrateiro: { nome: "Sorrateiro", versao: "beta", fonte: "betaFichas", ficha: "Sira",
+    sorrateiro: { nome: "Sorrateiro", fonte: "betaFichas", ficha: "Sira",
       texto: "Num teste de Crime ou Furtividade, gaste 3 PD para +d8.", motor: { tipo: "dadoPorPd", pericias: ["crime", "furtividade"], pd: 3, faces: 8 } },
-    guardia: { nome: "Guardiã", versao: "beta", fonte: "betaFichas", ficha: "Sorcha",
+    guardia: { nome: "Guardiã", fonte: "betaFichas", ficha: "Sorcha",
       texto: "+1 PV por patamar (já anotado na ficha). Uma vez por rodada, quando um aliado em alcance curto sofre um ataque, gaste 2 PD para se tornar o alvo.", motor: { tipo: "redirecionarAtaque", pd: 2, limite: "rodada" } },
-    instinto_sobrevivencia: { nome: "Instinto de Sobrevivência", versao: "beta", fonte: "betaFichas", ficha: "Sorcha",
+    instinto_sobrevivencia: { nome: "Instinto de Sobrevivência", fonte: "betaFichas", ficha: "Sorcha",
       texto: "Com metade ou menos dos PV máximos, recebe um aumento de passo em todos os testes.", motor: { tipo: "passoComPvBaixo" } },
-    heranca: { nome: "Herança", versao: "beta", fonte: "betaFichas", ficha: "Cormac",
+    heranca: { nome: "Herança", fonte: "betaFichas", ficha: "Cormac",
       texto: "A categoria de riqueza aumenta em 1 (as regras de compra virão depois).", motor: { tipo: "narrativa" } },
-    plano_estrategico: { nome: "Plano Estratégico", versao: "beta", fonte: "betaFichas", ficha: "Cormac",
+    plano_estrategico: { nome: "Plano Estratégico", fonte: "betaFichas", ficha: "Cormac",
       texto: "Uma ação e 3 PD: teste de Aptidão (Guerra) contra DT 7. Se passar, o grupo recebe d6, mais d6 a cada 3 pontos acima da DT, para gastar em testes até o fim da cena.",
       motor: { tipo: "reservaDeGrupo", pd: 3, dt: 7, pericia: "aptidao", especializacao: "Guerra", faces: 6 } },
   };
+
+  /* As habilidades de perfil ANTIGAS (v9.0–9.3): o id antigo leva à
+     unificada; o texto original fica na procedência da ficha. */
+  var HABILIDADES_LEGADAS = {
+    impeto_alpha3: { nova: "impeto", nome: "Ímpeto", fonte: "alpha", pagina: 15, texto: "Barra com 3 espaços; cada teste falho preenche 1. Gaste 1 espaço para +d4 num teste ou 3 para aumentar um atributo em um passo até o fim da cena." },
+    impeto_alpha5: { nova: "impeto", nome: "Ímpeto", fonte: "alphaAto2", pagina: null, texto: "Barra com 5 espaços; cada teste falho preenche 1. Gaste 1 para +d4, 2 para +d10, 3 para aumentar um atributo até o fim da cena ou 5 para uma ação extra na rodada." },
+    impeto_beta: { nova: "impeto", nome: "Ímpeto", fonte: "betaFichas", pagina: null, texto: "Barra com 5 espaços; cada teste falho preenche 1. Ação livre: 1 espaço dá +d4 num teste; 3 aumentam um atributo até o fim da cena; 3 dão uma ação extra em cena de conflito. Esvazia no fim da cena." },
+    analise_beta: { nova: "avaliacao", nome: "Análise", fonte: "beta", pagina: 7, texto: "Uma ação dá 2 marcadores (máximo 4). Depois de rolar, cada marcador muda um dado em +1 ou −1, dentro das faces dele. Os não usados somem no fim da cena." },
+    avaliacao_alpha: { nova: "avaliacao", nome: "Avaliação", fonte: "alphaAto2", pagina: null, texto: "Uma ação e 2 PD para observar um ser ou ambiente: recebe 2 dados bônus d4 para testes relativos a ele (+2d4 num teste ou +d4 em dois). No máximo 2 dados por esta habilidade." },
+    prontidao_alpha: { nova: "prontidao", nome: "Prontidão", fonte: "alphaAto2", pagina: null, texto: "No início de qualquer conflito, gaste 3 PD para ganhar uma rodada em que age antes dos demais personagens e NPCs." },
+    prontidao_beta: { nova: "prontidao", nome: "Prontidão", fonte: "betaFichas", pagina: null, texto: "Uma vez por rodada, quando você ou outro ser em alcance curto faz um teste, gaste 2 PD para rolar de novo um dado que não deu 1. Em combate, pode agir na fase da ação ou em fases posteriores, e depois das rolagens daquela fase." },
+  };
+  function refDeHabilidade(ref) { return HABILIDADES_LEGADAS[ref] ? HABILIDADES_LEGADAS[ref].nova : ref; }
 
   /* ---------------------------------------------------------------
      OCUPAÇÕES (Alpha) E VOCAÇÕES (Beta)
@@ -614,25 +598,30 @@ function acaoOrdem2Operar(corpo, usuario) {
      dizer qual é a da ocupação — a criação guiada só dá uma se a
      pessoa escolher explicitamente.
      --------------------------------------------------------------- */
-  var OCUPACOES = {
-    "alpha-contemporaneo": [
-      { id: "cientista", nome: "Cientista", habilidade: "foco_mental", nota: "Alan (nível 2) tem só Ímpeto e Foco Mental: Foco Mental é a de ocupação.", vistas: ["foco_mental", "avaliacao_alpha", "olhar_infalivel"] },
-      { id: "professor", nome: "Professor", habilidade: "", vistas: ["amor_descoberta", "mentoria"] },
-      { id: "policial", nome: "Policial", habilidade: "", vistas: ["incansavel", "linha_de_tiro"] },
-      { id: "militar", nome: "Militar", habilidade: "", vistas: ["estoico", "para_bellum"] },
-      { id: "medico", nome: "Médico", habilidade: "", vistas: ["tecnica_medicinal", "varredura_ampla"] },
-    ],
-    "beta-vigilia": [
-      { id: "ferreira", nome: "Ferreira", habilidade: "", vistas: ["leitura_combate", "segredo_do_aco"] },
-      { id: "adestrador", nome: "Adestrador", habilidade: "", vistas: ["esquiva", "espectro_lobo"] },
-      { id: "herborista", nome: "Herborista", habilidade: "arsenal_herborista", nota: "Muirenn tem só Ímpeto e Arsenal de Herborista.", vistas: ["arsenal_herborista"] },
-      { id: "professor", nome: "Professor", habilidade: "", vistas: ["curandeiro", "mentoria"] },
-      { id: "explorador", nome: "Explorador", habilidade: "impeto_fervilhante", nota: "Malik tem só Ímpeto e Ímpeto Fervilhante.", vistas: ["impeto_fervilhante"] },
-      { id: "viking", nome: "Viking", habilidade: "", vistas: ["antecipacao_tatica", "sorrateiro"] },
-      { id: "talentosa", nome: "Talentosa", habilidade: "", vistas: ["guardia", "instinto_sobrevivencia"] },
-      { id: "aristocrata", nome: "Aristocrata", habilidade: "", vistas: ["heranca", "plano_estrategico"] },
-    ],
-  };
+  /* v9.4: UM catálogo ("Ocupação" na tela; "Vocação" fica nas citações
+     do Beta). `ambientacoes`: onde ela é sugerida; dá para pesquisar
+     nas outras e escrever uma própria. Ids preservados. */
+  var OCUPACOES = [
+    { id: "cientista", ambientacoes: ["contemporaneo"], nome: "Cientista", habilidade: "foco_mental", nota: "Alan (nível 2) tem só Ímpeto e Foco Mental: Foco Mental é a de ocupação.", vistas: ["foco_mental", "avaliacao", "olhar_infalivel"] },
+    { id: "professor", ambientacoes: ["contemporaneo", "vigilia"], nome: "Professor", habilidade: "", vistas: ["amor_descoberta", "mentoria", "curandeiro"] },
+    { id: "policial", ambientacoes: ["contemporaneo"], nome: "Policial", habilidade: "", vistas: ["incansavel", "linha_de_tiro"] },
+    { id: "militar", ambientacoes: ["contemporaneo"], nome: "Militar", habilidade: "", vistas: ["estoico", "para_bellum"] },
+    { id: "medico", ambientacoes: ["contemporaneo"], nome: "Médico", habilidade: "", vistas: ["tecnica_medicinal", "varredura_ampla"] },
+    { id: "ferreira", ambientacoes: ["vigilia"], nome: "Ferreira", habilidade: "", vistas: ["leitura_combate", "segredo_do_aco"] },
+    { id: "adestrador", ambientacoes: ["vigilia"], nome: "Adestrador", habilidade: "", vistas: ["esquiva", "espectro_lobo"] },
+    { id: "herborista", ambientacoes: ["vigilia"], nome: "Herborista", habilidade: "arsenal_herborista", nota: "Muirenn tem só Ímpeto e Arsenal de Herborista.", vistas: ["arsenal_herborista"] },
+    { id: "explorador", ambientacoes: ["vigilia"], nome: "Explorador", habilidade: "impeto_fervilhante", nota: "Malik tem só Ímpeto e Ímpeto Fervilhante.", vistas: ["impeto_fervilhante"] },
+    { id: "viking", ambientacoes: ["vigilia"], nome: "Viking", habilidade: "", vistas: ["antecipacao_tatica", "sorrateiro"] },
+    { id: "talentosa", ambientacoes: ["vigilia"], nome: "Talentosa", habilidade: "", vistas: ["guardia", "instinto_sobrevivencia"] },
+    { id: "aristocrata", ambientacoes: ["vigilia"], nome: "Aristocrata", habilidade: "", vistas: ["heranca", "plano_estrategico"] },
+  ];
+
+  /* As ocupações sugeridas primeiro para a ambientação; as outras depois. */
+  function ocupacoes(ambientacao) {
+    var a = ambientacaoValida(ambientacao);
+    return OCUPACOES.filter(function (o) { return o.ambientacoes.indexOf(a) >= 0; }).concat(OCUPACOES.filter(function (o) { return o.ambientacoes.indexOf(a) < 0; }));
+  }
+  function ocupacao(id) { return OCUPACOES.filter(function (o) { return o.id === id; })[0] || null; }
 
   /* ---------------------------------------------------------------
      RELAÇÕES (Beta pp. 24–25)
@@ -976,19 +965,20 @@ function acaoOrdem2Operar(corpo, usuario) {
      DIVERGENCIAS — fonte, escolha e o teste que fixa (docs/ORDEM2.md)
      --------------------------------------------------------------- */
   var DIVERGENCIAS = [
-    { id: "compartilhar", fontes: "Alpha p. 23; Beta p. 15", texto: "O texto de Compartilhar pede Pesquisar (DT 10); a tabela-resumo diz Intuição. O Beta não tem Pesquisar.", escolha: "Vale o texto: Pesquisar no Alpha e Inspecionar (a mesma descrição, p. 9) no Beta. O Mestre pode trocar a perícia.", teste: "executar-ordem2: Compartilhar usa a perícia de pesquisa do perfil" },
-    { id: "ocultismo", fontes: "Beta p. 9; fichas Beta", texto: "A lista do Beta chama a perícia de Bruxaria; as fichas impressas dizem Ocultismo.", escolha: "Uma chave só (ocultismo); a tela mostra Bruxaria na Vigília e guarda o rótulo impresso no preset.", teste: "executar-ordem2: ocultismo é único e o rótulo segue a ambientação" },
+    { id: "precedencia", fontes: "Alpha pp. 14–26; Beta pp. 6–25", texto: "Os dois playtests trazem versões diferentes da mesma regra geral (Ímpeto, Prontidão, Avaliação/Análise, contadores de lesão, conflito).", escolha: "Regras unificadas do R.A.M.A. (v9.4): revisão geral mais recente (Beta) → recurso antigo compatível sem sucessor (Alpha: Máquinas, Tecnologia, ferramentas, sobrecarga, hacking) → exceção explícita da cena ou habilidade, só no seu escopo. Não é edição oficial.", teste: "executar-ordem2-unificada" },
+    { id: "compartilhar", fontes: "Alpha p. 23; Beta p. 15", texto: "O texto de Compartilhar pede Pesquisar (DT 10); a tabela-resumo diz Intuição.", escolha: "Vale o texto: Pesquisar (Inspecionar, na Vigília, é o mesmo) DT 10. O Mestre pode trocar a perícia ao aprovar. Um comportamento só.", teste: "executar-ordem2-unificada: Compartilhar usa Pesquisar" },
+    { id: "ocultismo", fontes: "Beta p. 9; fichas Beta", texto: "A lista do Beta chama a perícia de Bruxaria; as fichas impressas dizem Ocultismo.", escolha: "Uma chave e um nome: Ocultismo (Bruxaria é alias de entrada); o rótulo impresso fica no preset.", teste: "executar-ordem2: aliases" },
     { id: "oficio", fontes: "Beta p. 9; fichas Beta", texto: "A lista diz Metalurgia; as fichas dizem Ofício (Rhiona: Ofício (Metalurgia)).", escolha: "Metalurgia, com Ofício como alias; a especialização escrita fica.", teste: "executar-ordem2: Ofício é alias de Metalurgia" },
     { id: "atributoImpresso", fontes: "Fichas Beta de Sira, Sorcha e Cavan", texto: "A coluna de atributo-base impressa está desalinhada (ex.: Intuição/Físico, Luta/Mente, Percepção/Emoção).", escolha: "O motor usa o atributo-base da lista (p. 9); o preset guarda o impresso e a confirmação mostra a diferença. O Mestre pode trocar o atributo de um teste.", teste: "executar-ordem2: atributo impresso divergente não muda o atributo-base" },
     { id: "graus", fontes: "Beta pp. 24–25; fichas Beta", texto: "As relações das fichas têm rótulos livres (Confiança, Amizade, Neutro…); os graus são Afinidade, Vínculo e Devoção.", escolha: "O grau não é deduzido do rótulo; só Vínculo e Afinidade de Cormac viram grau. Sem grau, a relação não pode ser invocada até alguém escolher.", teste: "executar-ordem2: rótulo livre não vira grau" },
-    { id: "impetoAlpha", fontes: "Alpha p. 15 (Alan); Ato II (Heitor, Raven); fichas Beta", texto: "Ímpeto tem 3 espaços (Alan, Raven), 5 com +d10 e ação extra (Heitor) e 5 que esvaziam no fim da cena (Beta).", escolha: "Cada ficha usa a versão dela; uma ficha nova de Executor no Alpha recebe a de 3 espaços (inferência: a de Alan, nível 2).", teste: "executar-ordem2: as três versões de Ímpeto" },
-    { id: "prontidaoAlpha", fontes: "Ato II (Val); fichas Beta", texto: "Prontidão no Alpha é a rodada antecipada por 3 PD; no Beta é a rolagem de novo por 2 PD (e Antecipação Tática é a rodada por 2 PD).", escolha: "Cada ficha usa a sua; Val gasta 3 PD no início do conflito.", teste: "executar-ordem2: Val 18/32 com a Prontidão Alpha" },
+    { id: "impetoAlpha", fontes: "Alpha p. 15 (Alan); Ato II (Heitor, Raven); fichas Beta", texto: "Ímpeto tem 3 espaços (Alan, Raven), 5 com +d10 e ação extra (Heitor) e 5 que esvaziam no fim da cena (Beta).", escolha: "v9.4: uma versão só, a mais recente (Beta): 5 espaços, +d4 por 1, passo de atributo ou ação extra em conflito por 3, esvazia no fim da cena. O texto antigo fica na procedência.", teste: "executar-ordem2-unificada: Ímpeto de Alan" },
+    { id: "prontidaoAlpha", fontes: "Ato II (Val); fichas Beta", texto: "Prontidão no Alpha é a rodada antecipada por 3 PD; no Beta é a rolagem de novo por 2 PD (e Antecipação Tática é a rodada por 2 PD).", escolha: "v9.4: a do Beta para todos (Val incluída). Antecipação Tática continua à parte e não é dada a quem tinha a antiga.", teste: "executar-ordem2-unificada: Prontidão de Val" },
     { id: "testeDeMorte", fontes: "Beta pp. 21–23", texto: "Moribundo pede \"teste de morte\"; a p. 21 chama o mesmo teste de \"teste de lesão\".", escolha: "Um só teste (Físico + Vigor, DT 7 +3 por teste na cena) na máquina de estados de lesão.", teste: "executar-ordem2: moribundo faz o teste de lesão no fim da rodada" },
     { id: "naoLetal", fontes: "Beta p. 23", texto: "Dano não letal dá +1d6 no \"teste de morte\" e, num \"ferimento grave\", 2d20 escolhendo o melhor.", escolha: "+d6 no teste de lesão e 2d20 (o maior) na tabela de lesões, quando o zero veio da soma de letal e não letal.", teste: "executar-ordem2: não letal" },
     { id: "patamar", fontes: "Beta pp. 22–23", texto: "Lesão e trauma dão +1 por patamar acima de iniciante, mas o playtest não define patamares.", escolha: "Bônus só quando o patamar estiver informado na ficha (padrão: não informado = +0).", teste: "executar-ordem2: patamar só quando informado" },
     { id: "laceracao", fontes: "Beta p. 22", texto: "Laceração Profunda: \"perde 2 PV\" e é permanente.", escolha: "Inferência: o máximo de PV cai 2 (acumula). Chaga da Alma: o máximo de PD cai 2 enquanto não for curada.", teste: "executar-ordem2: duplicatas e Laceração" },
     { id: "modNumerico", fontes: "Beta pp. 22–23", texto: "Lesões e traumas dão \"−1 em Percepção\", \"−2 em Vigor\"… num sistema de passos.", escolha: "Modificador numérico somado ao resultado do teste; passos continuam passos.", teste: "executar-ordem2: modificador numérico de lesão" },
-    { id: "contadorAlpha", fontes: "Alpha p. 26; Beta pp. 21, 23", texto: "Alpha: DT 7 +3 \"por teste já realizado\"; Beta: \"na cena\".", escolha: "Beta zera no fim da cena; Alpha mantém até o Mestre zerar.", teste: "executar-ordem2: zero de PV/PD nos dois perfis" },
+    { id: "contadorAlpha", fontes: "Alpha p. 26; Beta pp. 21, 23", texto: "Alpha: DT 7 +3 \"por teste já realizado\"; Beta: \"na cena\".", escolha: "v9.4: zera no fim da cena (Beta) para todos; o teste de Vigor/Disciplina do Alpha a 0 PV/PD virou lesão/trauma (pendências antigas ainda se resolvem).", teste: "executar-ordem2-unificada: zero de PV/PD" },
     { id: "fases", fontes: "Beta pp. 12, 18, 24", texto: "A p. 12 diz que a ordem de combate virá depois; a p. 18 a define; a p. 18 também cita uma \"fase tática\" e a p. 24 uma \"fase de suporte\".", escolha: "Três fases (Geral → Distância → Corpo a corpo); tática e suporte = Fase Geral. A ordem é configurável por cena.", teste: "executar-ordem2: fases e simultaneidade" },
     { id: "caido", fontes: "Beta pp. 21 e 24", texto: "A p. 21 dá +1 passo ao corpo a corpo e DT +3 à distância contra caído; a p. 24 diz \"ataques\" +1 passo.", escolha: "Vale a p. 21 (mais específica).", teste: "executar-ordem2: modificadores de ataque" },
     { id: "ajudaPagina", fontes: "Beta p. 11", texto: "Ajuda remete à \"página 20\" (a do Alpha).", escolha: "Passos pela p. 12 do Beta.", teste: "—" },
@@ -1013,6 +1003,11 @@ function acaoOrdem2Operar(corpo, usuario) {
 
   /* Decisões de implementação (não são regras publicadas). */
   var DECISOES = [
+    { id: "avaliacaoAnalise", texto: "v9.4: Avaliação é o nome contemporâneo da habilidade do Analista; o efeito é o da Análise (Beta p. 7). Dados de Avaliação guardados com a regra antiga expiram na migração (sem reembolso)." },
+    { id: "varreduraAmpla", texto: "v9.4 (adaptação de integração): Varredura Ampla dá duas perícias na passiva e depois ainda permite Examinar; não soma a Observar (no máximo duas perícias na mesma ação) e não revela a mesma pista duas vezes." },
+    { id: "criticoInvestigacao", texto: "v9.4: crítico examinando avisa o Mestre de que há direito a uma informação adicional (Alpha p. 19); a tela não fabrica descoberta nem entrega pista privada." },
+    { id: "conflitoSimplificado", texto: "v9.4: o conflito simplificado do Alpha (p. 26) deixa de iniciar ações; cenas do Alpha usam o combate em três fases. Encontros com quatro fases (Afogados, gruta) seguem a configuração da cena." },
+    { id: "sobrecargaRodadas", texto: "v9.4: as tabelas por rodada (sobrecarga, maldição) contam rodadas da CENA; rodadas de combate avançam o mesmo contador, sem aplicar duas vezes ao alternar." },
     { id: "tresMaiores", texto: "Com quatro dados de teste, a soma sugerida é a dos três maiores; a pessoa pode escolher outros três (Alpha p. 20; Beta p. 12 não dizem quais)." },
     { id: "sobreviventes", texto: "Crítico, RA e RB leem os dados de teste que sobraram depois do pavor; a escolha dos três afeta só a soma. O dado de pavor nunca entra no crítico. Sem dado sobrando: falha crítica." },
     { id: "pavorPiso", texto: "Controlar o pavor não desce abaixo de d4; o efeito só termina com o resultado 1 (ou pelo Mestre)." },
@@ -1034,12 +1029,12 @@ function acaoOrdem2Operar(corpo, usuario) {
   global.RAMAOrdem2Catalogo = {
     VERSAO_DADOS: VERSAO_DADOS,
     FONTES: FONTES, referencia: referencia,
-    PERFIS_REGRAS: PERFIS_REGRAS, ORDEM_PERFIS_REGRAS: ORDEM_PERFIS_REGRAS, AMBIENTACOES: AMBIENTACOES,
+    REGRAS: REGRAS, PERFIS_REGRAS: PERFIS_REGRAS, ORDEM_PERFIS_REGRAS: ORDEM_PERFIS_REGRAS, AMBIENTACOES: AMBIENTACOES, ORDEM_AMBIENTACOES: ORDEM_AMBIENTACOES, ambientacaoValida: ambientacaoValida, TERMO_OCUPACAO: TERMO_OCUPACAO,
     ATRIBUTOS: ATRIBUTOS, ORDEM_ATRIBUTOS: ORDEM_ATRIBUTOS, DEGRAUS: DEGRAUS, ESCALA_ATRIBUTO: ESCALA_ATRIBUTO, ESCALA_PERICIA: ESCALA_PERICIA,
-    PERICIAS_ALPHA: PERICIAS_ALPHA, PERICIAS_BETA: PERICIAS_BETA, ESPECIALIZACOES: ESPECIALIZACOES, ALIASES: ALIASES,
+    PERICIAS: PERICIAS, PERICIAS_ALPHA: PERICIAS_ALPHA, PERICIAS_BETA: PERICIAS_BETA, ESPECIALIZACOES: ESPECIALIZACOES, TODAS_ESPECIALIZACOES: TODAS_ESPECIALIZACOES, especializacoes: especializacoes, ALIASES: ALIASES, chaveDePericia: chaveDePericia,
     listaDePericias: listaDePericias, pericia: pericia, nomeDaPericia: nomeDaPericia, periciaDePesquisa: periciaDePesquisa,
     PERFIS: PERFIS, ORDEM_PERFIS: ORDEM_PERFIS, HABILIDADE_DE_PERFIL: HABILIDADE_DE_PERFIL,
-    HABILIDADES: HABILIDADES, OCUPACOES: OCUPACOES, GRAUS_RELACAO: GRAUS_RELACAO,
+    HABILIDADES: HABILIDADES, HABILIDADES_LEGADAS: HABILIDADES_LEGADAS, refDeHabilidade: refDeHabilidade, OCUPACOES: OCUPACOES, ocupacoes: ocupacoes, ocupacao: ocupacao, GRAUS_RELACAO: GRAUS_RELACAO,
     FALHA_CRITICA: FALHA_CRITICA, LESOES: LESOES, TRAUMAS: TRAUMAS, daTabela: daTabela, PATAMARES: PATAMARES,
     FASES: FASES, ORDEM_FASES_PADRAO: ORDEM_FASES_PADRAO, ORDEM_FASES_4: ORDEM_FASES_4, ACOES_COMBATE: ACOES_COMBATE, ACOES_LIVRES: ACOES_LIVRES, faseDaAcao: faseDaAcao,
     MINIJOGOS: MINIJOGOS, PARANORMAL: PARANORMAL,
@@ -1070,7 +1065,10 @@ function acaoOrdem2Operar(corpo, usuario) {
    PV e PD de uma ficha pronta são os IMPRESSOS; nada é calculado por
    fórmula. A guiada sugere 16/12, editáveis (decisão de mesa, não regra).
 
-   O perfil de regras (`alpha-contemporaneo` | `beta-vigilia`) é fixo
+   v9.4: UMA regra (K().REGRAS, gravada em `regras`/`versaoRegras`); a
+   ambientação (contemporâneo | vigília) só muda sugestões. Fichas antigas
+   com `perfilRegras` migram aqui (normalizar), de forma repetível.
+   (Histórico:) O perfil de regras (`alpha-contemporaneo` | `beta-vigilia`) era fixo
    na ficha; a campanha tem o dela, e a tela avisa quando divergem.
 
    Copiado para backend/Ordem2.gs (testes/gerar-ordem2-gs.js).
@@ -1108,21 +1106,26 @@ function acaoOrdem2Operar(corpo, usuario) {
     var n = inteiro(v, 0, 20, padrao || 4);
     return FACES.indexOf(n) >= 0 ? n : (padrao || 4);
   }
-  function perfilValido(p) { return K().PERFIS_REGRAS[p] ? p : "beta-vigilia"; }
+  /* v9.4: a ambientação (ou um perfil antigo, que vira a ambientação dele). */
+  function ambValida(a) { return K().ambientacaoValida(a); }
 
   /* ---------------------------------------------------------------
      O VAZIO E A NORMALIZAÇÃO
      --------------------------------------------------------------- */
-  function periciasBase(perfil) {
-    return K().listaDePericias(perfil).map(function (p) { return { id: novoId(), chave: p.chave, especializacao: "", dado: 4, rotuloImpresso: "", atributoImpresso: "" }; });
+  function periciasBase() {
+    return K().listaDePericias().map(function (p) { return { id: novoId(), chave: p.chave, especializacao: "", dado: 4, rotuloImpresso: "", atributoImpresso: "", origens: [] }; });
   }
 
-  function fichaVazia(perfil) {
-    var pr = perfilValido(perfil || "beta-vigilia");
+  /* `ambientacao`: "contemporaneo" (padrão) ou "vigilia"; um perfil antigo
+     ("alpha-contemporaneo"/"beta-vigilia") é aceito e vira a ambientação
+     dele. A REGRA é uma só (K().REGRAS), registrada na ficha. */
+  function fichaVazia(ambientacao) {
+    var amb = ambValida(ambientacao);
     return {
       versao: VERSAO,
-      perfilRegras: pr,
-      ambientacao: K().PERFIS_REGRAS[pr].ambientacao,
+      regras: K().REGRAS.id, versaoRegras: K().REGRAS.versao,
+      ambientacao: amb,
+      migracao: null,
       modoCriacao: "livre",
       procedencia: null,
       escolhas: null,
@@ -1134,7 +1137,7 @@ function acaoOrdem2Operar(corpo, usuario) {
       resumo: "",
       historia: "",
       aparencia: "",
-      base: { atributos: { fisico: 6, mente: 6, emocao: 6 }, pericias: periciasBase(pr) },
+      base: { atributos: { fisico: 6, mente: 6, emocao: 6 }, pericias: periciasBase() },
       recursos: { pv: { max: 16, atual: 16 }, pd: { max: 12, atual: 12 }, naoLetal: 0, armaduraGasta: 0 },
       habilidades: [],
       itens: [],
@@ -1166,19 +1169,63 @@ function acaoOrdem2Operar(corpo, usuario) {
     };
   }
 
-  function normalizarPericia(x, perfil) {
+  /* Aliases (v9.4): Bruxaria → Ocultismo, Inspecionar → Pesquisar,
+     Ofício → `metalurgia`. Quando a chave muda por alias, a de origem
+     fica em `origens` — os ganhos de evolução antigos apontam para ela.
+     `origens[0]` é o caminho principal (o dado dele é `dado`); os outros
+     guardam o próprio dado impresso (ficha que tinha Pesquisar E
+     Inspecionar: uma perícia só, com as duas origens). */
+  var ROTULO_DE_ALIAS = { inspecionar: "Inspecionar", bruxaria: "Bruxaria", oficio: "Ofício", "ofício": "Ofício" };
+  function normalizarPericia(x) {
     var p = obj(x);
-    var chave = texto(p.chave, 40).toLowerCase();
-    if (K().ALIASES[chave]) chave = K().ALIASES[chave];
+    var original = texto(p.chave, 40).toLowerCase();
+    var chave = K().chaveDePericia(original);
     if (!chave) return null;
+    var dado = faces(p.dado, 4);
+    var origens = lista(p.origens).map(function (o) { var q = obj(o); var c = texto(q.chave, 40).toLowerCase(); return c ? { chave: c, dado: faces(q.dado, 4) } : null; }).filter(Boolean).slice(0, 4);
+    if (!origens.length && original !== chave) origens = [{ chave: original, dado: dado }];
+    if (origens.length) origens[0].dado = dado;
     return {
       id: texto(p.id, 80) || novoId(),
       chave: chave,
       especializacao: texto(p.especializacao, 40),
-      dado: faces(p.dado, 4),
-      rotuloImpresso: texto(p.rotuloImpresso, 60),
+      dado: dado,
+      rotuloImpresso: texto(p.rotuloImpresso, 60) || (original !== chave && ROTULO_DE_ALIAS[original] ? ROTULO_DE_ALIAS[original] : ""),
       atributoImpresso: texto(p.atributoImpresso, 20),
+      origens: origens,
     };
+  }
+  /* Junta as perícias de uma ficha num caminho só: aliases que colidem
+     viram UMA perícia (o maior dado impresso é o principal; as origens
+     ficam), sem somar passos. Toda perícia da lista única existe (as que
+     faltam entram destreinadas, d4, com id fixo — sem reabrir a criação). */
+  function unirPericias(brutas, avisos) {
+    var l = [], porChave = {};
+    lista(brutas).forEach(function (x) {
+      var q = normalizarPericia(x);
+      if (!q) return;
+      var k = q.chave + (q.chave === "aptidao" ? ":" + q.especializacao.toLowerCase() : "");
+      var ja = porChave[k];
+      if (avisos && q.origens.length && q.origens[0].chave !== q.chave && (ROTULO_DE_ALIAS[q.origens[0].chave] || q.origens[0].chave) !== K().nomeDaPericia(null, q.chave)) { var t = (ROTULO_DE_ALIAS[q.origens[0].chave] || q.origens[0].chave) + " agora se chama " + K().nomeDaPericia(null, q.chave) + " (a mesma perícia; o valor e os ganhos ficam)."; if (avisos.indexOf(t) < 0) avisos.push(t); }
+      if (!ja) { porChave[k] = q; l.push(q); return; }
+      /* colisão por alias (ex.: Pesquisar + Inspecionar) */
+      var oa = ja.origens.length ? ja.origens : [{ chave: ja.chave, dado: ja.dado }];
+      var ob = q.origens.length ? q.origens : [{ chave: q.chave, dado: q.dado }];
+      var todas = oa.concat(ob.filter(function (o) { return !oa.some(function (z) { return z.chave === o.chave; }); }));
+      todas.sort(function (a, b) { return b.dado - a.dado; });
+      ja.origens = todas.slice(0, 4);
+      ja.dado = ja.origens[0].dado;
+      if (!ja.rotuloImpresso && q.rotuloImpresso) ja.rotuloImpresso = q.rotuloImpresso;
+      if (avisos) avisos.push(K().nomeDaPericia(null, ja.chave) + ": as entradas " + ja.origens.map(function (o) { return o.chave; }).join(" e ") + " viraram uma só (vale o melhor valor; nada somado).");
+    });
+    var faltam = [];
+    K().listaDePericias().forEach(function (d) {
+      if (l.some(function (q) { return q.chave === d.chave; })) return;
+      l.push({ id: "o2p-" + d.chave, chave: d.chave, especializacao: "", dado: 4, rotuloImpresso: "", atributoImpresso: "", origens: [] });
+      faltam.push(d.nome);
+    });
+    if (avisos && faltam.length && brutas && brutas.length) avisos.push("Perícias da lista única acrescentadas como destreinadas (d4): " + faltam.join(", ") + ".");
+    return l.slice(0, 60);
   }
 
   function normalizarHabilidade(x) {
@@ -1206,7 +1253,8 @@ function acaoOrdem2Operar(corpo, usuario) {
   function normalizarItem(x) {
     var i = obj(x);
     var passos = {};
-    Object.keys(obj(i.passos)).forEach(function (k) { passos[texto(k, 40)] = inteiro(i.passos[k], -4, 4); });
+    /* Alias no modificador do item; dois aliases do mesmo bônus não somam. */
+    Object.keys(obj(i.passos)).forEach(function (k) { var c = K().chaveDePericia(texto(k, 40)); if (passos[c] === undefined) passos[c] = inteiro(i.passos[k], -4, 4); });
     return {
       id: texto(i.id, 80) || novoId(),
       nome: texto(i.nome, 120) || "Item",
@@ -1246,7 +1294,7 @@ function acaoOrdem2Operar(corpo, usuario) {
     return {
       id: texto(e.id, 80) || novoId(),
       tipo: e.tipo,
-      alvo: texto(e.alvo, 40),
+      alvo: e.tipo === "passoPericia" ? K().chaveDePericia(texto(e.alvo, 40)) : texto(e.alvo, 40),
       n: inteiro(e.n, -4, 4),
       faces: e.faces ? faces(e.faces, 4) : 0,
       expira: EXPIRA.indexOf(e.expira) >= 0 ? e.expira : "cena",
@@ -1279,6 +1327,33 @@ function acaoOrdem2Operar(corpo, usuario) {
     return v;
   }
 
+  function normalizarMigracao(x) {
+    if (!x || typeof x !== "object") return null;
+    return { versao: inteiro(x.versao, 0, 99), de: texto(x.de, 40), quando: texto(x.quando, 40), avisos: lista(x.avisos).map(function (t) { return texto(t, 400); }).slice(0, 20), visto: x.visto === true };
+  }
+  /* A habilidade de perfil antiga vira a unificada: mesmo id de instância,
+     nome e texto personalizados preservados; reservas incompatíveis
+     expiram (sem reembolso); barra compatível não passa do novo limite. */
+  function migrarHabilidade(x, avisos, originais) {
+    var h = obj(x);
+    var leg = K().HABILIDADES_LEGADAS[texto(h.ref, 60)];
+    if (!leg) return normalizarHabilidade(h);
+    var nova = K().HABILIDADES[leg.nova];
+    var m = copiar(h);
+    m.ref = leg.nova;
+    if (!m.nome || m.nome === leg.nome) m.nome = nova.nome;
+    if (!m.texto || m.texto === leg.texto) m.texto = nova.texto;
+    var e = obj(m.estado);
+    var notas = [];
+    if (lista(e.reserva).length) { notas.push(lista(e.reserva).length + " dado(s) de Avaliação guardado(s) pela regra antiga expiraram"); e.reserva = []; }
+    if (nova.motor.tipo === "impeto" && Number(e.espacos) > nova.motor.espacos) { e.espacos = nova.motor.espacos; notas.push("barra limitada a " + nova.motor.espacos); }
+    if (nova.motor.tipo === "analise" && Number(e.marcadores) > nova.motor.maximo) e.marcadores = nova.motor.maximo;
+    m.estado = e;
+    if (originais && !originais.some(function (o) { return o.ref === h.ref; })) originais.push({ ref: h.ref, nome: leg.nome, texto: leg.texto, fonte: leg.fonte });
+    if (avisos) avisos.push(nova.nome + (leg.nome !== nova.nome ? " (antes " + leg.nome + ")" : "") + ": agora com o efeito unificado — " + nova.texto + (notas.length ? " (" + notas.join("; ") + ".)" : ""));
+    return normalizarHabilidade(m);
+  }
+
   function normalizarProcedencia(x) {
     if (!x || typeof x !== "object") return null;
     var p = obj(x);
@@ -1287,14 +1362,24 @@ function acaoOrdem2Operar(corpo, usuario) {
     return {
       preset: texto(p.preset, 40), nome: texto(p.nome, 120), fonte: texto(p.fonte, 40), pagina: p.pagina ? inteiro(p.pagina, 1, 999) : null,
       versaoDados: inteiro(p.versaoDados, 0, 9999), copiadoEm: texto(p.copiadoEm, 40), atributosImpressos: impressos,
+      /* v9.4: o playtest de origem (Fonte) e o texto ORIGINAL das
+         habilidades que mudaram para o efeito unificado. */
+      origem: p.origem === "alpha" || p.origem === "beta" ? p.origem : "",
+      habilidadesOriginais: lista(p.habilidadesOriginais).map(function (h) { var o = obj(h); return { ref: texto(o.ref, 60), nome: texto(o.nome, 80), texto: texto(o.texto, 1200), fonte: texto(o.fonte, 40) }; }).slice(0, 12),
     };
   }
 
+  /* A normalização é também a MIGRAÇÃO (v9.4), repetível: uma ficha sem
+     `versaoRegras` (v9.0–9.3, com `perfilRegras`) passa ao caminho único
+     — a ambientação e a procedência ficam; o perfil antigo vai para
+     `migracao.de`. Um pedido que traga o perfil antigo não muda regra
+     nenhuma: o campo é só lido como legado. */
   function normalizar(bruto) {
     var b = obj(bruto);
-    var v = fichaVazia(b.perfilRegras);
-    var pr = v.perfilRegras;
-    v.ambientacao = K().AMBIENTACOES[b.ambientacao] ? b.ambientacao : K().PERFIS_REGRAS[pr].ambientacao;
+    var legada = !(Number(b.versaoRegras) >= K().REGRAS.versao);
+    var de = K().PERFIS_REGRAS[b.perfilRegras] ? b.perfilRegras : "";
+    var v = fichaVazia(K().AMBIENTACOES[b.ambientacao] ? b.ambientacao : (de || "contemporaneo"));
+    var avisos = [], originais = [];
     v.modoCriacao = ["pronta", "livre", "guiada"].indexOf(b.modoCriacao) >= 0 ? b.modoCriacao : "livre";
     v.procedencia = normalizarProcedencia(b.procedencia);
     v.escolhas = b.escolhas && typeof b.escolhas === "object" ? copiar(b.escolhas) : null;
@@ -1310,7 +1395,7 @@ function acaoOrdem2Operar(corpo, usuario) {
     var base = obj(b.base);
     var at = obj(base.atributos);
     v.base.atributos = { fisico: faces(at.fisico, 6), mente: faces(at.mente, 6), emocao: faces(at.emocao, 6) };
-    if (Array.isArray(base.pericias)) v.base.pericias = base.pericias.map(function (p) { return normalizarPericia(p, pr); }).filter(Boolean).slice(0, 60);
+    v.base.pericias = unirPericias(Array.isArray(base.pericias) ? base.pericias : [], legada ? avisos : null);
     var r = obj(b.recursos);
     var pv = obj(r.pv), pd = obj(r.pd);
     v.recursos.pv.max = inteiro(pv.max, 1, 999, 16);
@@ -1319,16 +1404,26 @@ function acaoOrdem2Operar(corpo, usuario) {
     v.recursos.pd.atual = inteiro(pd.atual === undefined ? v.recursos.pd.max : pd.atual, 0, 999);
     v.recursos.naoLetal = inteiro(r.naoLetal, 0, 999);
     v.recursos.armaduraGasta = inteiro(r.armaduraGasta, 0, 99);
-    v.habilidades = lista(b.habilidades).map(normalizarHabilidade).slice(0, 40);
+    v.habilidades = lista(b.habilidades).map(function (h) { return migrarHabilidade(h, avisos, originais); }).slice(0, 40);
     v.itens = lista(b.itens).map(normalizarItem).slice(0, 80);
     v.relacoes = lista(b.relacoes).map(normalizarRelacao).slice(0, 24);
-    v.efeitos = lista(b.efeitos).map(normalizarEfeito).filter(Boolean).slice(0, 40);
+    /* Dois aliases do mesmo efeito não aplicam duas vezes. */
+    var chavesEf = {};
+    v.efeitos = lista(b.efeitos).map(normalizarEfeito).filter(Boolean).filter(function (e) { var k = [e.tipo, e.alvo, e.n, e.expira, e.fonte].join("|"); if (chavesEf[k]) return false; chavesEf[k] = true; return true; }).slice(0, 40);
     v.estado = normalizarEstado(b.estado);
     v.historico = lista(b.historico).map(function (h) { var o = obj(h); return { quando: texto(o.quando, 40), tipo: texto(o.tipo, 30), texto: texto(o.texto, 400), corrigido: o.corrigido === true }; }).slice(-80);
     v.local = b.local && typeof b.local === "object" ? (global.RAMAOrdem2Mesa ? global.RAMAOrdem2Mesa.normalizar(b.local) : copiar(b.local)) : null;
     v.operacoes = lista(b.operacoes).map(function (x) { return texto(x, 80); }).filter(Boolean).slice(-MAX_OPS);
     v.evolucao = global.RAMAOrdem2Evolucao ? global.RAMAOrdem2Evolucao.normalizar(b.evolucao) : (b.evolucao && typeof b.evolucao === "object" ? copiar(b.evolucao) : v.evolucao);
     v.paranormal = global.RAMAOrdem2Paranormal ? global.RAMAOrdem2Paranormal.normalizarBloco(b.paranormal) : (b.paranormal && typeof b.paranormal === "object" ? copiar(b.paranormal) : v.paranormal);
+    if (originais.length) {
+      if (!v.procedencia) v.procedencia = normalizarProcedencia({ nome: "", origem: de === "alpha-contemporaneo" ? "alpha" : de === "beta-vigilia" ? "beta" : "" });
+      originais.forEach(function (o) { if (!v.procedencia.habilidadesOriginais.some(function (x) { return x.ref === o.ref; })) v.procedencia.habilidadesOriginais.push(o); });
+    }
+    if (v.procedencia && !v.procedencia.origem && de) v.procedencia.origem = de === "alpha-contemporaneo" ? "alpha" : "beta";
+    v.migracao = legada
+      ? { versao: K().REGRAS.versao, de: de, quando: new Date().toISOString(), avisos: avisos.slice(0, 20), visto: !avisos.length }
+      : normalizarMigracao(b.migracao);
     /* Atual nunca acima do máximo efetivo. */
     v.recursos.pv.atual = Math.min(v.recursos.pv.atual, pvMax(v));
     v.recursos.pd.atual = Math.min(v.recursos.pd.atual, pdMax(v));
@@ -1353,19 +1448,19 @@ function acaoOrdem2Operar(corpo, usuario) {
     return lista(b.habilidades).filter(function (h) { var m = motorDe(h); return m && m.tipo === tipo; });
   }
 
+  /* Por id, pela chave ou por um alias (inspecionar, bruxaria, ofício). */
   function pericia(b, idOuChave) {
     var l = lista(b.base.pericias);
+    var c = K().chaveDePericia(idOuChave);
     return l.filter(function (p) { return p.id === idOuChave; })[0] ||
-      l.filter(function (p) { return p.chave === (K().ALIASES[idOuChave] || idOuChave); })[0] || null;
+      l.filter(function (p) { return p.chave === c; })[0] || null;
   }
   function atributoBase(b, chave) {
-    var p = K().pericia(b.perfilRegras, chave);
-    if (p) return p.atributo;
-    var outra = K().pericia(b.perfilRegras === "beta-vigilia" ? "alpha-contemporaneo" : "beta-vigilia", chave);
-    return outra ? outra.atributo : "mente";
+    var p = K().pericia(null, chave);
+    return p ? p.atributo : "mente";
   }
   function nomeDaPericia(b, p) {
-    var n = K().nomeDaPericia(b.perfilRegras, p.chave, b.ambientacao);
+    var n = K().nomeDaPericia(null, p.chave);
     return p.especializacao && p.chave === "aptidao" ? n + " (" + p.especializacao + ")" : n;
   }
 
@@ -1473,23 +1568,27 @@ function acaoOrdem2Operar(corpo, usuario) {
   function dePreset(id, agora) {
     var p = K().preset(id);
     if (!p) return null;
-    var v = fichaVazia(p.perfilRegras);
+    var v = fichaVazia(K().PERFIS_REGRAS[p.perfilRegras].ambientacao);
     v.modoCriacao = "pronta";
-    v.procedencia = { preset: p.id, nome: p.nome, fonte: p.fonte, pagina: p.pagina || null, versaoDados: K().VERSAO_DADOS, copiadoEm: agora || new Date().toISOString(), atributosImpressos: copiar(p.atributosImpressos || {}) };
+    var originais = p.habilidades.filter(function (h) { return K().HABILIDADES_LEGADAS[h.id]; }).map(function (h) { var l = K().HABILIDADES_LEGADAS[h.id]; return { ref: h.id, nome: l.nome, texto: l.texto, fonte: l.fonte }; });
+    v.procedencia = { preset: p.id, nome: p.nome, fonte: p.fonte, pagina: p.pagina || null, versaoDados: K().VERSAO_DADOS, copiadoEm: agora || new Date().toISOString(), atributosImpressos: copiar(p.atributosImpressos || {}), origem: K().PERFIS_REGRAS[p.perfilRegras].fonte, habilidadesOriginais: originais };
     v.perfil = p.perfil;
-    var oc = (K().OCUPACOES[p.perfilRegras] || []).filter(function (o) { return o.nome === p.ocupacao; })[0];
+    var oc = K().OCUPACOES.filter(function (o) { return o.nome === p.ocupacao; })[0];
     v.ocupacao = { id: oc ? oc.id : "", nome: p.ocupacao, personalizada: !oc };
     v.nivel = p.nivel;
     v.idade = p.idade ? String(p.idade) : "";
     v.resumo = p.resumo || "";
     v.base.atributos = copiar(p.atributos);
-    v.base.pericias = p.pericias.map(function (x) {
-      var e = normalizarPericia(Object.assign({ id: novoId() }, x), p.perfilRegras);
-      if (p.atributosImpressos && p.atributosImpressos[e.chave]) e.atributoImpresso = p.atributosImpressos[e.chave];
+    /* A chave já entra unificada (a cópia não precisa de "origens"); o
+       rótulo impresso (Inspecionar, Ofício…) fica. */
+    v.base.pericias = unirPericias(p.pericias.map(function (x) {
+      var ch = K().chaveDePericia(x.chave);
+      var e = normalizarPericia(Object.assign({ id: novoId() }, x, { chave: ch, rotuloImpresso: x.rotuloImpresso || (ch !== x.chave && ROTULO_DE_ALIAS[x.chave] ? ROTULO_DE_ALIAS[x.chave] : "") }));
+      if (p.atributosImpressos && p.atributosImpressos[x.chave]) e.atributoImpresso = p.atributosImpressos[x.chave];
       return e;
-    });
+    }), null);
     v.recursos = { pv: { max: p.pv, atual: p.pv }, pd: { max: p.pd, atual: p.pd }, naoLetal: 0, armaduraGasta: 0 };
-    v.habilidades = p.habilidades.map(function (h) { return habilidadeDoCatalogo(h.id, h.param); });
+    v.habilidades = p.habilidades.map(function (h) { return habilidadeDoCatalogo(K().refDeHabilidade(h.id), h.param); });
     v.itens = p.itens.map(function (i) { return normalizarItem(Object.assign({ id: novoId() }, i)); });
     v.relacoes = p.relacoes.map(function (r) { return normalizarRelacao(Object.assign({ id: novoId() }, r)); });
     return normalizar(v);
@@ -1520,27 +1619,26 @@ function acaoOrdem2Operar(corpo, usuario) {
     });
     if (gastosP > GUIADA.passosPericia) erros.push("Perícias: " + gastosP + " passos usados de " + GUIADA.passosPericia + ".");
     if (!K().PERFIS[o.perfil]) erros.push("Escolha o perfil.");
-    if (!texto(o.ocupacaoNome).trim()) erros.push("Escolha ou escreva a " + K().PERFIS_REGRAS[perfilValido(o.perfilRegras)].termoOcupacao.toLowerCase() + ".");
+    if (!texto(o.ocupacaoNome).trim()) erros.push("Escolha ou escreva a ocupação.");
     return { ok: !erros.length, erros: erros.filter(function (e, i, t) { return t.indexOf(e) === i; }), passosAtributo: gastosA, passosPericia: gastosP };
   }
   function deGuiada(o) {
     var c = conferirGuiada(o);
     if (!c.ok) return { ok: false, erros: c.erros };
-    var pr = perfilValido(o.perfilRegras);
-    var v = fichaVazia(pr);
+    var v = fichaVazia(o.ambientacao || o.perfilRegras);
     v.modoCriacao = "guiada";
     v.perfil = o.perfil;
-    var oc = (K().OCUPACOES[pr] || []).filter(function (x) { return x.id === o.ocupacaoId; })[0];
+    var oc = K().ocupacao(o.ocupacaoId);
     v.ocupacao = { id: oc ? oc.id : "", nome: texto(o.ocupacaoNome, 80), personalizada: !oc };
     v.nivel = GUIADA.nivel;
     v.base.atributos = { fisico: faces(o.atributos.fisico, 6), mente: faces(o.atributos.mente, 6), emocao: faces(o.atributos.emocao, 6) };
-    v.base.pericias = lista(o.pericias).map(function (p) { return normalizarPericia(p, pr); }).filter(Boolean);
+    v.base.pericias = unirPericias(lista(o.pericias), null);
     var pv = inteiro(o.pv, 1, 999, GUIADA.pv), pd = inteiro(o.pd, 1, 999, GUIADA.pd);
     v.recursos = { pv: { max: pv, atual: pv }, pd: { max: pd, atual: pd }, naoLetal: 0, armaduraGasta: 0 };
     var habs = [];
-    var dePerfil = K().HABILIDADE_DE_PERFIL[pr][o.perfil];
+    var dePerfil = K().HABILIDADE_DE_PERFIL[o.perfil];
     if (dePerfil) habs.push(habilidadeDoCatalogo(dePerfil));
-    var daOc = texto(o.habilidadeOcupacao, 60);
+    var daOc = K().refDeHabilidade(texto(o.habilidadeOcupacao, 60));
     if (daOc && K().HABILIDADES[daOc] && daOc !== dePerfil) habs.push(habilidadeDoCatalogo(daOc));
     v.habilidades = habs;
     v.escolhas = { passosAtributo: c.passosAtributo, passosPericia: c.passosPericia, pvPdReferencia: { pv: GUIADA.pv, pd: GUIADA.pd, editados: pv !== GUIADA.pv || pd !== GUIADA.pd }, habilidadeOcupacao: daOc || "", habilidadeOcupacaoDocumentada: !!(oc && oc.habilidade && oc.habilidade === daOc) };
@@ -1554,7 +1652,7 @@ function acaoOrdem2Operar(corpo, usuario) {
   function resumoParaMesa(bruto) {
     var b = normalizar(bruto);
     return {
-      perfilRegras: b.perfilRegras,
+      ambientacao: b.ambientacao,
       perfil: b.perfil, perfilNome: b.perfil ? K().PERFIS[b.perfil].nome : "",
       ocupacao: b.ocupacao.nome, nivel: b.nivel,
       atributos: { fisico: dadoDoAtributo(b, "fisico"), mente: dadoDoAtributo(b, "mente"), emocao: dadoDoAtributo(b, "emocao") },
@@ -1648,7 +1746,7 @@ function acaoOrdem2Operar(corpo, usuario) {
   var MAX_DADOS_SOMADOS = 3;
   var DT_PADRAO = 7;
 
-  function ehBeta(b) { return b.perfilRegras === "beta-vigilia"; }
+  /* v9.4: uma regra só — nada depende do playtest de origem da ficha. */
 
   /* ---------------------------------------------------------------
      MONTAR
@@ -1676,7 +1774,7 @@ function acaoOrdem2Operar(corpo, usuario) {
     /* Passos sem alvo prescrito: a tela pergunta; padrão, a perícia. */
     var alvoSemPrescricao = p.alvoDosPassos === "atributo" ? "atributo" : "pericia";
     lista(b.efeitos).forEach(function (e) { if (e.tipo === "passoTodos") passo(alvoSemPrescricao, e.n, e.fonte || "efeito"); });
-    if (b.estado.caido && atributo === "fisico" && ehBeta(b)) passo("atributo", -1, "Caído (Beta p. 21)");
+    if (b.estado.caido && atributo === "fisico") passo("atributo", -1, "Caído (Beta p. 21)");
     R().habilidadesDoTipo(b, "passoComPvBaixo").forEach(function () {
       if (b.recursos.pv.atual <= Math.floor(R().pvMax(b) / 2)) passo(alvoSemPrescricao, 1, "Instinto de Sobrevivência");
     });
@@ -1779,7 +1877,7 @@ function acaoOrdem2Operar(corpo, usuario) {
         dt: dt, modificador: modificador, fontesModificador: mod.fontes.concat(Number(p.modificador) ? ["Mestre (" + (p.modificador > 0 ? "+" : "") + p.modificador + ")"] : []),
         fontes: fontes, custos: custos, criticoMin: criticoMin,
         arma: arma ? arma.id : "", alcance: p.alcance === "distancia" ? "distancia" : (p.alcance === "corpo" ? "corpo" : ""),
-        examinar: p.examinar === true, beta: ehBeta(b),
+        examinar: p.examinar === true, regras: K().REGRAS.versao,
       },
     };
   }
@@ -1849,7 +1947,9 @@ function acaoOrdem2Operar(corpo, usuario) {
 
   /* Pontuação de um teste estendido / dano de ataque: RA, ou as duas
      maiores no crítico do Beta (p. 11). */
-  function pontuacao(res, beta) { return res.critico && beta ? res.duasMaiores : res.ra; }
+  /* Pontuações (arrombar, escalar, avançar, dano): RA; no crítico, as duas
+     maiores (Beta p. 11), para todos. Efeitos que dizem RA/RB usam RA/RB. */
+  function pontuacao(res) { return res.critico ? res.duasMaiores : res.ra; }
 
   /* Oposto (Alpha/Beta p. 19/11): crítico vence o que não é; empate
      genérico fica para a cena. */
@@ -1892,7 +1992,7 @@ function acaoOrdem2Operar(corpo, usuario) {
   }
 
   function dano(res, arma, extras, beta) {
-    var base = pontuacao(res, beta);
+    var base = pontuacao(res);
     var bonusArma = arma ? arma.dano : 0;
     var extra = lista(extras).reduce(function (s, e) { return s + (Number(e.valor) || 0); }, 0);
     return { valor: Math.max(0, base + bonusArma + extra), base: base, arma: bonusArma, extras: lista(extras) };
@@ -1952,7 +2052,6 @@ function acaoOrdem2Operar(corpo, usuario) {
     var ev = [];
     var valor = Math.max(0, Math.floor(Number(x.valor) || 0));
     var tipo = x.tipo === "emocional" ? "emocional" : "fisico";
-    var beta = ehBeta(b);
     if (tipo === "fisico" && x.armadura && R().armaduraAtual(b) > 0 && valor > 0) {
       b.recursos.armaduraGasta++;
       var reduz = Math.min(10, valor);
@@ -1966,8 +2065,8 @@ function acaoOrdem2Operar(corpo, usuario) {
       ev.push(evento(valor + " de dano emocional (PD " + b.recursos.pd.atual + "/" + R().pdMax(b) + ")."));
       if (x.externo !== false && (b.recursos.pd.atual === 0) && (antesPd > 0 || valor > 0)) {
         var dtT = 7 + 3 * b.estado.testesTrauma;
-        b.estado.pendentes.push({ id: R().novoId(), tipo: beta ? "trauma" : "disciplinaAlpha", dt: dtT, naoLetal: false, motivo: antesPd > 0 ? "Reduzido a 0 PD" : "Dano emocional com 0 PD" });
-        ev.push(evento((beta ? "Teste de trauma" : "Teste de Disciplina") + " pendente (DT " + dtT + ")."));
+        b.estado.pendentes.push({ id: R().novoId(), tipo: "trauma", dt: dtT, naoLetal: false, motivo: antesPd > 0 ? "Reduzido a 0 PD" : "Dano emocional com 0 PD" });
+        ev.push(evento("Teste de trauma pendente (DT " + dtT + ")."));
       }
       return ev;
     }
@@ -1979,8 +2078,8 @@ function acaoOrdem2Operar(corpo, usuario) {
     if (b.recursos.pv.atual === 0 && (antes > 0 || valor > 0)) {
       var dt = 7 + 3 * b.estado.testesLesao;
       var naoLetal = b.recursos.naoLetal > 0;
-      b.estado.pendentes.push({ id: R().novoId(), tipo: beta ? "lesao" : "vigorAlpha", dt: dt, naoLetal: beta && naoLetal, motivo: antes > 0 ? "Reduzido a 0 PV" : "Perdeu PV com 0 PV" });
-      ev.push(evento((beta ? "Teste de lesão" : "Teste de Vigor") + " pendente (DT " + dt + ")."));
+      b.estado.pendentes.push({ id: R().novoId(), tipo: "lesao", dt: dt, naoLetal: naoLetal, motivo: antes > 0 ? "Reduzido a 0 PV" : "Perdeu PV com 0 PV" });
+      ev.push(evento("Teste de lesão pendente (DT " + dt + ")."));
     }
     return ev;
   }
@@ -2132,7 +2231,7 @@ function acaoOrdem2Operar(corpo, usuario) {
       registrar(b, "morte", "Morreu ao fim da rodada (morte lenta).");
     }
     /* Moribundo: teste no fim de cada rodada, exceto a em que ficou. */
-    if (b.estado.moribundo && !b.estado.morto && ehBeta(b)) {
+    if (b.estado.moribundo && !b.estado.morto) {
       var desde = b.estado.usos.moribundoDesde;
       if (desde === null || desde === undefined || rodada > desde) {
         var dt = 7 + 3 * b.estado.testesLesao;
@@ -2151,7 +2250,6 @@ function acaoOrdem2Operar(corpo, usuario) {
 
   function fimDeCena(b) {
     var ev = [];
-    var beta = ehBeta(b);
     lista(b.habilidades).forEach(function (h) {
       var m = R().motorDe(h);
       if (!m) return;
@@ -2164,9 +2262,9 @@ function acaoOrdem2Operar(corpo, usuario) {
     var antes = b.efeitos.length;
     b.efeitos = b.efeitos.filter(function (e) { return ["teste", "rodada", "cena"].indexOf(e.expira) < 0; });
     if (antes !== b.efeitos.length) ev.push(evento("Efeitos de cena terminam."));
-    if (beta) { b.estado.testesLesao = 0; b.estado.testesTrauma = 0; }
+    b.estado.testesLesao = 0; b.estado.testesTrauma = 0;
     /* Beta p. 22: sobreviveu à cena com 0 PV → 1 PV. */
-    if (beta && b.recursos.pv.atual === 0 && !b.estado.morto) { curar(b, "pv", 1); ev.push(evento("Fim da cena com 0 PV: recupera 1 PV.")); }
+    if (b.recursos.pv.atual === 0 && !b.estado.morto) { curar(b, "pv", 1); ev.push(evento("Fim da cena com 0 PV: recupera 1 PV.")); }
     Object.keys(b.estado.usos).forEach(function (k) { if (/^(cena|rodada|estoico):/.test(k) || k === "moribundoDesde") delete b.estado.usos[k]; });
     b.estado.perdeAcao = 0; b.estado.acaoExtra = 0;
     return ev;
@@ -2228,11 +2326,12 @@ function acaoOrdem2Operar(corpo, usuario) {
      investigação      pontos de interesse com descrição pública, pistas
                        por perícia/limiar e nota privada; Investigar,
                        Observar, Examinar, Interagir, Recapitular e
-                       Compartilhar conforme o perfil de regras
-     combate           Beta: fases configuráveis (Geral → Distância →
-                       Corpo a corpo), declarar, rolar, aplicar a fase
-                       de uma vez (simultaneidade); Alpha: o conflito
-                       simplificado da p. 26
+                       Compartilhar (v9.4: um fluxo só)
+     combate           fases configuráveis (Geral → Distância → Corpo a
+                       corpo; quatro onde o encontro manda), declarar,
+                       rolar, aplicar a fase de uma vez (simultaneidade).
+                       v9.4: o conflito simplificado do Alpha não inicia
+                       ações novas
 
    `fichas`: { personagemId: { nome, bloco } } — só as que a operação
    toca (fichasDaOperacao). O retorno diz quais blocos mudaram.
@@ -2278,11 +2377,14 @@ function acaoOrdem2Operar(corpo, usuario) {
     if (x.rev) OPS_COM_REV.push(nome);
   }
 
-  function estadoVazio(perfil) {
-    var pr = K().PERFIS_REGRAS[perfil] ? perfil : "beta-vigilia";
+  /* `ambientacao` (ou um perfil antigo, que vira a ambientação dele). A
+     regra é uma só (v9.4): `regras`/`versaoRegras`. */
+  function estadoVazio(ambientacao) {
     return {
       versao: VERSAO,
-      perfil: pr, ambientacao: K().PERFIS_REGRAS[pr].ambientacao,
+      regras: K().REGRAS.id, versaoRegras: K().REGRAS.versao,
+      ambientacao: K().ambientacaoValida(ambientacao),
+      migracao: null,
       missao: { numero: 1, nome: "" },
       cena: { numero: 1, nome: "", tipo: "livre" },
       combate: combateVazio(),
@@ -2299,10 +2401,15 @@ function acaoOrdem2Operar(corpo, usuario) {
     return lista(v).map(function (x) { var o = obj(x); return { a: texto(o.a, 80), b: texto(o.b, 80), de: inteiro(o.de, 0, 100000), ate: inteiro(o.ate, 0, 100000) }; }).filter(function (x) { return x.a && x.b; }).slice(-30);
   }
 
+  /* Também é a MIGRAÇÃO da mesa (v9.4), repetível: o `perfil` antigo vira
+     legado (`migracao.de`), a ambientação fica; o que estava em curso
+     (testes aguardando escolhas, declarações já roladas) segue com a
+     montagem congelada e aparece ao Mestre como pendência. */
   function normalizar(bruto) {
     var b = obj(bruto);
-    var v = estadoVazio(b.perfil);
-    v.ambientacao = K().AMBIENTACOES[b.ambientacao] ? b.ambientacao : v.ambientacao;
+    var legada = !(Number(b.versaoRegras) >= K().REGRAS.versao);
+    var de = K().PERFIS_REGRAS[b.perfil] ? b.perfil : "";
+    var v = estadoVazio(K().AMBIENTACOES[b.ambientacao] ? b.ambientacao : (de || "contemporaneo"));
     var mi = obj(b.missao), ce = obj(b.cena);
     v.missao = { numero: inteiro(mi.numero, 1, 100000, 1), nome: texto(mi.nome, 120) };
     v.cena = { numero: inteiro(ce.numero, 1, 100000, 1), nome: texto(ce.nome, 120), tipo: ["livre", "investigacao", "combate", "acao"].indexOf(ce.tipo) >= 0 ? ce.tipo : "livre" };
@@ -2342,6 +2449,14 @@ function acaoOrdem2Operar(corpo, usuario) {
     v.registro = lista(b.registro).map(function (r) { var o = obj(r); return { quando: texto(o.quando, 40), texto: texto(o.texto, 400) }; }).slice(-MAX_REGISTRO);
     v.privado = lista(b.privado).map(function (r) { var o = obj(r); return { quando: texto(o.quando, 40), texto: texto(o.texto, 400) }; }).slice(-MAX_REGISTRO);
     GANCHOS.normalizar.forEach(function (fn) { fn(v, b); });
+    var mg = obj(b.migracao);
+    if (legada) {
+      var pend = [];
+      var ag = v.testes.filter(function (t) { return t.estado === "aguardando"; }).length;
+      if (ag) pend.push(ag + " teste(s) aguardando escolhas: resolvem com a regra da montagem.");
+      if (v.combate.ativo && v.combate.declaracoes.length) pend.push("Combate em andamento (rodada " + v.combate.rodada + "): as ações já declaradas seguem como foram montadas; as novas usam as regras unificadas.");
+      v.migracao = { versao: K().REGRAS.versao, de: de, quando: new Date().toISOString(), pendencias: pend, visto: false };
+    } else v.migracao = b.migracao ? { versao: R().inteiro(mg.versao, 0, 99), de: texto(mg.de, 40), quando: texto(mg.quando, 40), pendencias: lista(mg.pendencias).map(function (t) { return texto(t, 300); }).slice(0, 10), visto: mg.visto === true } : null;
     return v;
   }
 
@@ -2483,13 +2598,15 @@ function acaoOrdem2Operar(corpo, usuario) {
      MISSÃO, CENA, CONFIGURAÇÃO
      --------------------------------------------------------------- */
   var OPERACOES = {};
+  /* v9.4: só a ambientação. Um pedido de uma aba antiga com `perfil` não
+     muda regra nenhuma (as regras são uma só). Trocar a ambientação não
+     mexe em dados, habilidades, combate, pistas nem resultados. */
   OPERACOES.configurar = function (e, f, o, p, rolar, s) {
-    var mudouPerfil = o.perfil && K().PERFIS_REGRAS[o.perfil] && o.perfil !== e.perfil;
-    if (o.perfil && K().PERFIS_REGRAS[o.perfil]) e.perfil = o.perfil;
-    if (o.ambientacao && K().AMBIENTACOES[o.ambientacao]) e.ambientacao = o.ambientacao;
-    /* Trocar o perfil sem dizer a ambientação: vale a do perfil (v9.1). */
-    else if (mudouPerfil) e.ambientacao = K().PERFIS_REGRAS[e.perfil].ambientacao;
-    log(e, "Perfil de regras da campanha: " + K().PERFIS_REGRAS[e.perfil].nome + ".");
+    if (o.ambientacao && K().AMBIENTACOES[o.ambientacao] && o.ambientacao !== e.ambientacao) {
+      e.ambientacao = o.ambientacao;
+      log(e, "Ambientação da campanha: " + K().AMBIENTACOES[e.ambientacao].nome + " (as regras são as mesmas).");
+    }
+    if (o.migracaoVista && e.migracao) e.migracao.visto = true;
     ev(s, "Configuração salva.");
   };
   OPERACOES.novaMissao = function (e, f, o, p, rolar, s) {
@@ -2538,6 +2655,10 @@ function acaoOrdem2Operar(corpo, usuario) {
     var evd = M().aplicarDano(a.b, { valor: o.valor, tipo: o.danoTipo, naoLetal: o.naoLetal === true, externo: o.externo !== false, armadura: o.armadura === true });
     evd.forEach(function (x) { ev(s, a.nome + ": " + x.texto); });
     log(e, a.nome + ": " + evd.map(function (x) { return x.texto; }).join(" "));
+    /* v9.4: o Mestre pode dizer quem causou (isenções da cena, efeitos de autor). */
+    var autor = o.ator ? participante(e, o.ator) : null;
+    var vitima = o.participante ? participante(e, o.participante) : participanteDoPersonagem(e, o.personagem);
+    if (autor && Number(o.valor) > 0) GANCHOS.aoDano.forEach(function (fn) { fn(e, fichas, vitima, a.b, { valor: Number(o.valor), ator: autor.id }, s); });
   };
   OPERACOES.curar = function (e, fichas, o, p, rolar, s) {
     var a = alvoDoMestre(e, fichas, o);
@@ -2766,7 +2887,6 @@ function acaoOrdem2Operar(corpo, usuario) {
       if (d) { d.teste = t.id; d.resultado = res; }
     }
     if (res.falhaCritica && cx.tabelaFalha !== false) ev(s, t.nome + ": falha crítica — o Mestre aplica a penalidade ou rola 1d8 na tabela (p. 19/11).");
-    if (res.critico && t.montagem.examinar && !t.montagem.beta) ev(s, t.nome + ": crítico examinando — o Mestre revela uma informação adicional (Alpha p. 19).", true);
     s.resultado.teste = t.id;
     s.resultado.final = true;
     s.resultado.resultado = res;
@@ -3032,31 +3152,34 @@ function acaoOrdem2Operar(corpo, usuario) {
     if (!b || !podeAgir(papel, pid)) return { ok: false, motivo: "Você não conduz este personagem." };
     var ponto = e.investigacao.pontos.filter(function (x) { return x.id === o.ponto && x.revelado; })[0];
     if (!ponto) return { ok: false, motivo: "Ponto de interesse não encontrado." };
-    var beta = e.perfil === "beta-vigilia";
+    /* v9.4 — o fluxo mais recente (Beta pp. 13–15), para todos:
+       Investigar entrega a passiva da perícia escolhida; depois, Observar
+       (OUTRA perícia listada, passiva) ou Examinar (teste da escolhida;
+       sem novidade, −1 PD); Interagir é a alternativa narrativa, sem
+       passiva. Varredura Ampla: duas perícias na passiva e ainda pode
+       Examinar — nunca três perícias na mesma ação. */
     var nome = nomeDe(fichas, pid);
-    var modo = String(o.modo || "examinar");
+    var modo = ["observar", "examinar", "nada", "interagir"].indexOf(o.modo) >= 0 ? o.modo : "examinar";
     function interagir() {
       var sol = { id: id(), tipo: "interagir", quem: pid, nome: nome, ponto: ponto.id, descricao: texto(o.descricao, 600), estado: "pendente" };
       e.investigacao.solicitacoes.push(sol);
       ev(s, nome + " interage com " + ponto.nome + ": " + (sol.descricao || "(sem descrição)") + " — o Mestre resolve pela descrição contextual.");
       log(e, s.eventos[s.eventos.length - 1].texto);
     }
-    /* Beta (p. 14): Interagir é a alternativa a Investigar, sem passiva. */
-    if (modo === "interagir" && (beta || !o.pericia)) { interagir(); return; }
+    if (modo === "interagir") { interagir(); return; }
     var per = R().pericia(b, o.pericia);
     if (!per) return { ok: false, motivo: "Escolha uma perícia listada do ponto." };
     var face = R().dadoDaPericia(b, per);
     var novas = revelar(e, pid, ponto, per, face, b, R().nomeDaPericia(b, per) + " d" + face + " (passiva)");
     var linha = nome + " investiga " + ponto.nome + " com " + R().nomeDaPericia(b, per) + " d" + face + ": " + novas.length + " informação(ões) passiva(s).";
-    /* Varredura Ampla (Alpha): duas perícias na passiva. */
-    if (o.segunda && !beta) {
+    /* Varredura Ampla (adaptação de integração): duas perícias na passiva. */
+    if (o.segunda && modo !== "observar") {
       if (!R().habilidadesDoTipo(b, "duasPericias").length) return { ok: false, motivo: "Duas perícias na passiva é da Varredura Ampla." };
       var p2 = R().pericia(b, o.segunda);
       if (p2) { var f2 = R().dadoDaPericia(b, p2); var n2 = revelar(e, pid, ponto, p2, f2, b, R().nomeDaPericia(b, p2) + " d" + f2 + " (Varredura Ampla)"); novas = novas.concat(n2); linha += " Varredura Ampla com " + R().nomeDaPericia(b, p2) + ": +" + n2.length + "."; }
     }
-    /* Beta: Observar com outra perícia (passiva). */
+    /* Observar com outra perícia (passiva). */
     if (modo === "observar") {
-      if (!beta) return { ok: false, motivo: "Observar é do Beta (p. 14)." };
       var p3 = R().pericia(b, o.segunda);
       if (!p3 || p3.id === per.id) return { ok: false, motivo: "Observar usa OUTRA perícia listada." };
       var f3 = R().dadoDaPericia(b, p3);
@@ -3067,8 +3190,6 @@ function acaoOrdem2Operar(corpo, usuario) {
     s.resultado.novas = novas;
     ev(s, linha);
     log(e, linha);
-    /* Alpha (p. 22): depois da passiva, examinar OU interagir. */
-    if (modo === "interagir") { interagir(); return; }
     if (modo === "examinar") {
       return OPERACOES.teste(e, fichas, { quem: pid, pedido: Object.assign({}, obj(o.pedido), { pericia: per.id, dt: null, semDt: true, tipo: "simples", examinar: true, rotulo: "Examinar " + ponto.nome + " (" + R().nomeDaPericia(b, per) + ")" }), contexto: { investigacao: { ponto: ponto.id, pericia: per.id } }, confirmar: o.confirmar }, papel, rolar, s, ctx);
     }
@@ -3082,7 +3203,12 @@ function acaoOrdem2Operar(corpo, usuario) {
     if (!ponto || !per) return;
     var limite = res.falhaCritica ? -1 : res.total;
     var novas = revelar(e, t.quem, ponto, per, limite, b, "Examinar (" + res.total + ")");
-    if (res.critico) { var ds = e.investigacao.descobertas[t.quem]; ds.push({ id: id(), pista: "", ponto: ponto.id, texto: "Crítico: o Mestre revela uma informação adicional.", como: "Crítico (Alpha p. 19)", critico: true }); }
+    /* Crítico examinando (Alpha p. 19): AVISO ao Mestre de que há direito a
+       uma informação adicional — nada é fabricado nem revelado sozinho. */
+    if (res.critico) {
+      e.investigacao.solicitacoes.push({ id: id(), tipo: "critico", quem: t.quem, nome: t.nome, ponto: ponto.id, descricao: "Crítico examinando " + ponto.nome + ": o Mestre decide a informação adicional.", estado: "pendente" });
+      ev(s, t.nome + ": crítico examinando " + ponto.nome + " — o Mestre decide uma informação adicional (Alpha p. 19).", true);
+    }
     if (novas.length) {
       ev(s, t.nome + " examina " + ponto.nome + ": " + novas.length + " informação(ões) nova(s).");
       R().habilidadesDoTipo(b, "pdAoDescobrir").forEach(function (h) { var n = M().curar(b, "pd", R().motorDe(h).pd); ev(s, t.nome + " · " + h.nome + ": +" + n + " PD."); });
@@ -3111,7 +3237,7 @@ function acaoOrdem2Operar(corpo, usuario) {
     if (e.investigacao.travas.compartilhar) return { ok: false, motivo: "Uma dedução por Compartilhar já saiu nesta cena." };
     var aliado = String(o.aliado || "");
     if (!fichas[aliado] || aliado === pid) return { ok: false, motivo: "Escolha o aliado que ouve." };
-    var sol = { id: id(), tipo: "compartilhar", quem: pid, nome: nomeDe(fichas, pid), aliado: aliado, nomeAliado: nomeDe(fichas, aliado), descricao: texto(o.descricao, 1200), estado: "pendente", pericia: K().periciaDePesquisa(e.perfil), dt: 10 };
+    var sol = { id: id(), tipo: "compartilhar", quem: pid, nome: nomeDe(fichas, pid), aliado: aliado, nomeAliado: nomeDe(fichas, aliado), descricao: texto(o.descricao, 1200), estado: "pendente", pericia: K().periciaDePesquisa(), dt: 10 };
     e.investigacao.solicitacoes.push(sol);
     ev(s, sol.nome + " compartilha uma pista com " + sol.nomeAliado + " — aguardando o Mestre.");
     log(e, s.eventos[0].texto);
@@ -3122,8 +3248,8 @@ function acaoOrdem2Operar(corpo, usuario) {
     sol.estado = o.aprovar ? "aprovada" : "recusada";
     if (o.pericia) sol.pericia = texto(o.pericia, 40);
     if (o.dt !== undefined && o.dt !== null && o.dt !== "") sol.dt = inteiro(o.dt, 0, 40, 10);
-    if (sol.tipo === "interagir") { sol.estado = "resolvida"; sol.resposta = texto(o.resposta, 1200); }
-    ev(s, (sol.tipo === "interagir" ? "Interação de " + sol.nome + " resolvida." : sol.nome + ": " + (o.aprovar ? "o Mestre aprova; teste de " + K().nomeDaPericia(e.perfil, sol.pericia, e.ambientacao) + " (DT " + sol.dt + ")" + (sol.tipo === "compartilhar" ? " por " + sol.nomeAliado + ", como ação livre" : "") + "." : "o Mestre não aprovou.")));
+    if (sol.tipo === "interagir" || sol.tipo === "critico") { sol.estado = "resolvida"; sol.resposta = texto(o.resposta, 1200); }
+    ev(s, (sol.tipo === "interagir" || sol.tipo === "critico" ? (sol.tipo === "critico" ? "Crítico de " : "Interação de ") + sol.nome + " resolvido(a)." : sol.nome + ": " + (o.aprovar ? "o Mestre aprova; teste de " + K().nomeDaPericia(null, sol.pericia) + " (DT " + sol.dt + ")" + (sol.tipo === "compartilhar" ? " por " + sol.nomeAliado + ", como ação livre" : "") + "." : "o Mestre não aprovou.")));
     log(e, s.eventos[0].texto);
   };
   function concluirSolicitacao(e, t, res, s) {
@@ -3201,7 +3327,7 @@ function acaoOrdem2Operar(corpo, usuario) {
     var pv = inteiro(o.pv, 1, 999, 10);
     return normalizarParticipante({
       id: "npc-" + id(), tipo: "npc", nome: texto(o.nome, 120) || "NPC", oculto: o.oculto === true,
-      bloco: { perfilRegras: "beta-vigilia", base: { atributos: { fisico: at.fisico || 6, mente: at.mente || 6, emocao: at.emocao || 6 }, pericias: pericias.length ? pericias : [{ chave: "luta", dado: 6 }, { chave: "pontaria", dado: 4 }, { chave: "acrobacia", dado: 4 }, { chave: "percepcao", dado: 4 }, { chave: "intuicao", dado: 4 }] }, recursos: { pv: { max: pv, atual: pv }, pd: { max: inteiro(o.pd, 1, 999, 10), atual: inteiro(o.pd, 1, 999, 10) } }, itens: o.armadura ? [{ nome: "Proteção", armadura: inteiro(o.armadura, 0, 20), vestido: true }] : [] },
+      bloco: { versaoRegras: K().REGRAS.versao, base: { atributos: { fisico: at.fisico || 6, mente: at.mente || 6, emocao: at.emocao || 6 }, pericias: pericias.length ? pericias : [{ chave: "luta", dado: 6 }, { chave: "pontaria", dado: 4 }, { chave: "acrobacia", dado: 4 }, { chave: "percepcao", dado: 4 }, { chave: "intuicao", dado: 4 }] }, recursos: { pv: { max: pv, atual: pv }, pd: { max: inteiro(o.pd, 1, 999, 10), atual: inteiro(o.pd, 1, 999, 10) } }, itens: o.armadura ? [{ nome: "Proteção", armadura: inteiro(o.armadura, 0, 20), vestido: true }] : [] },
       ataques: lista(o.ataques).length ? o.ataques : [{ nome: "Ataque", alcance: "corpo", dano: 1 }],
       notas: o.notas,
       ameaca: o.ameaca, rd: o.rd, especiais: o.especiais, chegaEm: o.chegaEm, onda: o.onda, aoDestruir: o.aoDestruir, objeto: o.objeto,
@@ -3379,7 +3505,7 @@ function acaoOrdem2Operar(corpo, usuario) {
     if (d.acao === "defender") {
       pedido.bonus.push({ faces: 6, fonte: "Defender-se (+d6)" });
       /* Leitura de Combate: gastar a ação para se defender dá 1 marcador. */
-      if (R().habilidadesDoTipo(b, "marcadorAoDefender").length) R().habilidadesDoTipo(b, "analise").forEach(function (h) { var mx = R().motorDe(h).maximo; if (h.estado.marcadores < mx) { h.estado.marcadores++; ev(s, pa.nome + " · Leitura de Combate: +1 marcador de análise."); } });
+      if (R().habilidadesDoTipo(b, "marcadorAoDefender").length) R().habilidadesDoTipo(b, "analise").forEach(function (h) { var mx = R().motorDe(h).maximo; if (h.estado.marcadores < mx) { h.estado.marcadores++; ev(s, pa.nome + " · Leitura de Combate: +1 marcador de Avaliação."); } });
     }
     if (d.acao === "agredirCorpo" || d.acao === "agredirDistancia" || acao.manobra) {
       pedido.tipo = "ataque"; pedido.alcance = d.acao === "agredirDistancia" ? "distancia" : "corpo";
@@ -3637,35 +3763,11 @@ function acaoOrdem2Operar(corpo, usuario) {
   /* ---------------------------------------------------------------
      COMBATE · ALPHA SIMPLIFICADO (p. 26)
      --------------------------------------------------------------- */
-  OPERACOES.conflitoAlpha = function (e, fichas, o, papel, rolar, s, ctx) {
-    var at = participante(e, o.atacante), df = participante(e, o.defensor);
-    if (!at || !df) return { ok: false, motivo: "Escolha atacante e defensor." };
-    var bA = blocoDoAtor(e, fichas, at), bD = blocoDoAtor(e, fichas, df);
-    var defesa = o.defesa === "esquivar" ? "esquivar" : o.defesa === "nenhuma" ? "nenhuma" : "lutar";
-    var mA = M().montar(bA, { pericia: "luta", tipo: "oposto", dt: defesa === "nenhuma" ? 7 : null, rotulo: "Luta (conflito)" }, {});
-    if (!mA.ok) return mA;
-    var rA = M().resolver(mA.montagem, M().rolar(mA.montagem, rolar), {});
-    registrarRolagem(e, at.id, at.nome, mA.montagem, rA, s);
-    var danos = [];
-    if (defesa === "nenhuma") {
-      /* Múltiplos agressores: o outro testa Luta contra DT 7. */
-      ev(s, at.nome + " ataca " + df.nome + " (agressor extra): " + descreverResultado(rA));
-      if (rA.sucesso) danos.push({ b: bD, nome: df.nome, valor: o.armadoAtacante ? rA.ra : rA.rb });
-    } else {
-      var mD = M().montar(bD, { pericia: defesa === "esquivar" ? "acrobacia" : "luta", tipo: "oposto", dt: null, rotulo: defesa === "esquivar" ? "Esquiva (+d6)" : "Luta (conflito)", bonus: defesa === "esquivar" ? [{ faces: 6, fonte: "Esquiva (+d6)" }] : [] }, {});
-      if (!mD.ok) return mD;
-      var rD = M().resolver(mD.montagem, M().rolar(mD.montagem, rolar), {});
-      registrarRolagem(e, df.id, df.nome, mD.montagem, rD, s);
-      var v = M().opor(rA, rD);
-      ev(s, at.nome + " " + rA.total + " × " + df.nome + " " + rD.total + (defesa === "esquivar" ? " (esquiva)" : "") + ": " + (v === "empate" ? "empate" : "vence " + (v === "a" ? at.nome : df.nome)) + ".");
-      if (v === "a") danos.push({ b: bD, nome: df.nome, valor: o.armadoAtacante ? rA.ra : rA.rb });
-      if (v === "b" && defesa === "lutar") danos.push({ b: bA, nome: at.nome, valor: o.armadoDefensor ? rD.ra : rD.rb });
-    }
-    danos.forEach(function (x) {
-      M().aplicarDano(x.b, { valor: x.valor, tipo: "fisico", externo: true }).forEach(function (y) { ev(s, x.nome + ": " + y.texto); log(e, x.nome + ": " + y.texto); });
-      var vitima = x.b === bD ? df : at, autor = x.b === bD ? at : df;
-      GANCHOS.aoDano.forEach(function (fn) { fn(e, fichas, vitima, x.b, { valor: x.valor, ator: autor.id, conflitoAlpha: true }, s); });
-    });
+  /* v9.4: o conflito simplificado do Alpha (p. 26) não inicia ações
+     novas — nem chamado direto, nem por uma aba antiga. As cenas usam o
+     combate em fases (três; quatro onde o encontro manda). */
+  OPERACOES.conflitoAlpha = function () {
+    return { ok: false, motivo: "O conflito simplificado do Alpha foi substituído pelo combate em fases das regras unificadas: inicie um combate." };
   };
 
   /* ---------------------------------------------------------------
@@ -3696,8 +3798,8 @@ function acaoOrdem2Operar(corpo, usuario) {
     return v;
   }
 
-  /* Um estado local (ficha sem campanha), com o próprio perfil. */
-  function local(perfil) { return estadoVazio(perfil); }
+  /* Um estado local (ficha sem campanha), na ambientação da ficha. */
+  function local(ambientacao) { return estadoVazio(ambientacao); }
 
   global.RAMAOrdem2Mesa = {
     VERSAO: VERSAO,
@@ -4028,7 +4130,10 @@ function acaoOrdem2Operar(corpo, usuario) {
   function podeAgir(papel, pid) { return !!papel.mestre || lista(papel.pode).indexOf(pid) >= 0; }
   /* A rodada que conta: a do combate do Beta; no Alpha (conflito simplificado,
      sem rodadas próprias) e fora de combate, a rodada da cena. */
-  function rodadaAtual(e) { return e.combate.ativo && e.perfil !== "alpha-contemporaneo" ? e.combate.rodada : e.proc.rodada; }
+  /* A rodada da atividade em curso: a do combate, se houver; senão a da
+     cena. As TABELAS (sobrecarga, maldição) contam rodadas da cena: o
+     combate avança o mesmo contador (v9.4), sem aplicar duas vezes. */
+  function rodadaAtual(e) { return e.combate.ativo ? e.combate.rodada : e.proc.rodada; }
   /* "1", "1d4", "2d6+1" → { total, faces[] } */
   function rolarExpr(expr, rolar) {
     var t = String(expr === undefined || expr === null ? "0" : expr).replace(/\s/g, "").toLowerCase();
@@ -4167,7 +4272,6 @@ function acaoOrdem2Operar(corpo, usuario) {
     log(e, "Cena carregada: " + cena.nome + ".");
     log(e, "Pacote " + texto(pac.nome, 80) + " · cena " + cena.nome + " (versão " + p.pacote.versao + ").", true);
     ev(s, "Cena carregada: " + cena.nome + ". Anuncie os pontos de interesse quando quiser.");
-    if (cena.perfil && cena.perfil !== e.perfil) ev(s, "Atenção: a cena é do perfil " + K().PERFIS_REGRAS[cena.perfil].nome + " e a campanha está em " + K().PERFIS_REGRAS[e.perfil].nome + " — nada é convertido; troque o perfil da campanha se for o caso.", true);
   }, { mestre: true, semFicha: true, rev: true });
 
   OP("descarregarCena", function (e, fichas, o, papel, rolar, s) {
@@ -4268,8 +4372,10 @@ function acaoOrdem2Operar(corpo, usuario) {
     var sol = e.investigacao.solicitacoes.filter(function (x) { return x.id === o.solicitacao; })[0];
     if (!sol) return { ok: false, motivo: "Solicitação não encontrada." };
     if (sol.concedida) return { ok: false, motivo: "Essa solicitação já rendeu a pista dela." };
-    var ok = sol.tipo === "interagir" ? ["pendente", "resolvida"].indexOf(sol.estado) >= 0 : sol.estado === "sucesso";
-    if (!ok) return { ok: false, motivo: sol.tipo === "interagir" ? "Interação já fechada." : "Só depois de um teste bem-sucedido." };
+    /* Interagir e o crítico examinando (v9.4): o Mestre decide; sem teste. */
+    var semTeste = sol.tipo === "interagir" || sol.tipo === "critico";
+    var ok = semTeste ? ["pendente", "resolvida"].indexOf(sol.estado) >= 0 : sol.estado === "sucesso";
+    if (!ok) return { ok: false, motivo: semTeste ? "Já fechada." : "Só depois de um teste bem-sucedido." };
     var pid = sol.tipo === "compartilhar" ? sol.aliado : sol.quem;
     var achado = o.pista ? acharPista(e, o.ponto, o.pista) : { pista: null };
     if (o.pista && !achado.pista) return { ok: false, motivo: "Pista não encontrada." };
@@ -4744,7 +4850,7 @@ function acaoOrdem2Operar(corpo, usuario) {
     if (cx.tipo === "esconderijo") concluirEsconderijo(e, fichas, t, res, s, rolar, cx);
     if (cx.tipo === "radio") concluirRadio(e, fichas, t, res, s, rolar, cx);
   });
-  function pontos(res, b) { return M().pontuacao(res, b.perfilRegras === "beta-vigilia"); }
+  function pontos(res) { return M().pontuacao(res); }
   function concluirDesafio(e, fichas, t, res, s, rolar, ctx, cx) {
     var d = desafio(e, cx.desafio);
     if (!d) return;
@@ -4755,7 +4861,7 @@ function acaoOrdem2Operar(corpo, usuario) {
       if (res.sucesso) {
         var pts = pontos(res, b);
         d.dados.pa = inteiro(d.dados.pa, 0, 999, 0) + pts;
-        var linha = nome + " soma " + pts + (res.critico && b.perfilRegras === "beta-vigilia" ? " (crítico: duas maiores)" : "") + " → " + d.dados.pa + "/" + inteiro(cf.pa, 1, 999, 10) + ".";
+        var linha = nome + " soma " + pts + (res.critico ? " (crítico: duas maiores)" : "") + " → " + d.dados.pa + "/" + inteiro(cf.pa, 1, 999, 10) + ".";
         hist(d, linha); ev(s, linha);
         if (d.dados.pa >= inteiro(cf.pa, 1, 999, 10)) vencer(e, d, s, pid, "arrombado" + (cf.consequencia ? " — " + cf.consequencia : ""));
       } else { hist(d, nome + " não consegue (" + res.total + ")."); ev(s, nome + " não consegue arrombar desta vez."); }
@@ -4807,7 +4913,7 @@ function acaoOrdem2Operar(corpo, usuario) {
       if (res.sucesso && cf.ataque) {
         var alvoPa = ME().participante(e, cx.alvo), bAlvo = alvoPa ? ME().blocoDoAtor(e, fichas, alvoPa) : null;
         if (bAlvo) {
-          var dnA = M().dano(res, { dano: inteiro(cf.ataque.dano, -10, 50, 0) }, [], b.perfilRegras === "beta-vigilia");
+          var dnA = M().dano(res, { dano: inteiro(cf.ataque.dano, -10, 50, 0) }, []);
           var rd = alvoPa.tipo === "npc" && alvoPa.rd ? Math.max(0, alvoPa.rd - inteiro(cf.ataque.ignoraRd, 0, 99, 0)) : 0;
           var val = Math.max(0, dnA.valor - rd);
           M().aplicarDano(bAlvo, { valor: val, tipo: "fisico", externo: true }).forEach(function (y) { ev(s, alvoPa.nome + " (" + d.nome + ", " + dnA.valor + (rd ? " − RD " + rd : "") + "): " + y.texto); });
@@ -5048,9 +5154,9 @@ function acaoOrdem2Operar(corpo, usuario) {
       return;
     }
     if (!t) return { ok: false, motivo: "Tabela não encontrada." };
-    if (o.acao === "ativar") { t.ativa = o.valor !== false; if (t.ativa && o.inicio !== undefined) t.inicio = inteiro(o.inicio, 0, 100000, rodadaAtual(e)); else if (t.ativa && o.agora) t.inicio = rodadaAtual(e); }
+    if (o.acao === "ativar") { t.ativa = o.valor !== false; if (t.ativa && o.inicio !== undefined) t.inicio = inteiro(o.inicio, 0, 100000, e.proc.rodada); else if (t.ativa && o.agora) t.inicio = e.proc.rodada; }
     else if (o.acao === "suspender") t.suspensa = o.valor !== false;
-    else if (o.acao === "isentar") { var r = String(inteiro(o.rodada, 0, 100000, rodadaAtual(e))); t.isentos[r] = lista(t.isentos[r]).filter(function (p) { return p !== o.personagem; }); if (o.valor !== false) t.isentos[r].push(String(o.personagem)); }
+    else if (o.acao === "isentar") { var r = String(inteiro(o.rodada, 0, 100000, e.proc.rodada)); t.isentos[r] = lista(t.isentos[r]).filter(function (p) { return p !== o.personagem; }); if (o.valor !== false) t.isentos[r].push(String(o.personagem)); }
     else return { ok: false, motivo: "Ação desconhecida." };
     log(e, t.nome + ": " + (t.ativa ? (t.suspensa ? "suspensa" : "ativa desde a rodada " + t.inicio) : "desligada") + ".");
     ev(s, t.nome + ": " + o.acao + ".");
@@ -5087,7 +5193,7 @@ function acaoOrdem2Operar(corpo, usuario) {
      ENCERRAR A RODADA (fora do combate) — e o que vem com ela
      --------------------------------------------------------------- */
   function fimDeRodadaComum(e, fichas, r, rolar, s) {
-    aplicarTabelas(e, fichas, r, rolar, s);
+    aplicarTabelas(e, fichas, e.proc.rodada, rolar, s);
     /* Sustentar: novo teste para quem não soltou. */
     e.proc.desafios.filter(function (d) { return d.tipo === "sustentar" && d.dados.sustentador; }).forEach(function (d) {
       var pid = d.dados.sustentador, b = bloco(fichas, pid);
@@ -5150,6 +5256,10 @@ function acaoOrdem2Operar(corpo, usuario) {
     });
     e.proc.agarres = e.proc.agarres.filter(function (a) { var por_ = ME().participante(e, a.por); return a.soltouEm !== r && por_ && !ME().foraDeCombate(ME().blocoDoAtor(e, fichas, por_)); });
     fimDeRodadaComum(e, fichas, r, rolar, s);
+    /* A rodada de combate também é uma rodada da cena (tabelas). */
+    if (e.proc.encerradas.indexOf(e.proc.rodada) < 0) e.proc.encerradas.push(e.proc.rodada);
+    e.proc.rodada++;
+    e.proc.encerradas = e.proc.encerradas.slice(-60);
   });
   ME().gancho("inicioDeRodadaCombate", function (e, fichas, r, rolar, s) {
     if (!e.proc) return;
@@ -5166,7 +5276,8 @@ function acaoOrdem2Operar(corpo, usuario) {
   /* Quem causou dano em quem (a maldição do Ídolo isenta). */
   ME().gancho("aoDano", function (e, fichas, alvoPa, b, x, s) {
     if (!e.proc || !x.ator || !x.valor) return;
-    var r = String(rodadaAtual(e));
+    /* Rodada da CENA (a das tabelas): também vale para dano em combate. */
+    var r = String(e.proc.rodada);
     var autor = ME().participante(e, x.ator);
     var pid = autor && autor.tipo === "pc" ? autor.personagemId : "";
     if (pid && alvoPa && alvoPa.tipo === "pc") { var l = e.proc.causouDano[r] || (e.proc.causouDano[r] = []); if (l.indexOf(pid) < 0) l.push(pid); }
@@ -5398,7 +5509,7 @@ function acaoOrdem2Operar(corpo, usuario) {
       var res = null;
       if (ef.pericia) {
         var bonus = abrigados.indexOf(pid) >= 0 && ef.abrigo ? [{ faces: inteiro(ef.abrigo.bonus, 4, 12, 6), fonte: "Abrigo" }] : [];
-        var mt = M().montar(b, { pericia: ef.pericia, dt: inteiro(ef.dt, 0, 40, 10), rotulo: nomeEf + " (" + K().nomeDaPericia(b.perfilRegras, ef.pericia, b.ambientacao) + ")", bonus: bonus }, {});
+        var mt = M().montar(b, { pericia: ef.pericia, dt: inteiro(ef.dt, 0, 40, 10), rotulo: nomeEf + " (" + K().nomeDaPericia(null, ef.pericia) + ")", bonus: bonus }, {});
         if (mt.ok) { res = M().resolver(mt.montagem, M().rolar(mt.montagem, rolar), {}); ME().registrarRolagem(e, pid, nome, mt.montagem, res, s); M().aposTeste(b, mt.montagem, res); }
       }
       var passou = res ? res.sucesso === true : false;
@@ -5547,7 +5658,7 @@ function acaoOrdem2Operar(corpo, usuario) {
       var dn = rolarExpr(x.esforcos + "d4", rolar);
       M().aplicarDano(b, { valor: dn.total, tipo: "fisico", externo: false }).forEach(function (y) { ev(s, t.nome + " · esforço extra (" + descreverRolagem(dn) + "): " + y.texto); });
     }
-    var ganho = res.sucesso ? M().pontuacao(res, b.perfilRegras === "beta-vigilia") : res.rb;
+    var ganho = res.sucesso ? M().pontuacao(res) : res.rb;
     if (cx.acao === "carregar" && cx.alvo && p.por[cx.alvo]) {
       var y = p.por[cx.alvo];
       if (y.pa < x.pa) x.pa = y.pa;
@@ -5856,7 +5967,7 @@ function acaoOrdem2Operar(corpo, usuario) {
     meus.forEach(function (pid) { lista(e.investigacao.descobertas[pid]).forEach(function (d) { if (d.anexo) ids[d.anexo] = true; }); });
     p.grupo.forEach(function (d) { if (d.anexo) ids[d.anexo] = true; });
     vp.anexos = Object.keys(ids).map(function (k) { var a = anexoDef(e, k); return { id: k, nome: a.nome, url: a.url || "", documentoId: a.documentoId || "", descricao: a.descricao || a.alternativa || "", veio: a.veio }; });
-    vp.tabelas = p.tabelas.filter(function (t) { return t.ativa; }).map(function (t) { var n = rodadaAtual(e) - t.inicio + 1; return { id: t.id, nome: t.nome, tipo: t.tipo, suspensa: t.suspensa, rodadaNaTabela: n, linhaAtual: t.tipo === "sobrecarga" ? copiar(linhaDaTabela(t, rodadaAtual(e))) : null, passadas: t.tipo === "maldicao" ? t.linhas.filter(function (l) { return l.de <= n && l.texto; }).map(function (l) { return l.texto; }) : [] }; });
+    vp.tabelas = p.tabelas.filter(function (t) { return t.ativa; }).map(function (t) { var n = e.proc.rodada - t.inicio + 1; return { id: t.id, nome: t.nome, tipo: t.tipo, suspensa: t.suspensa, rodadaNaTabela: n, linhaAtual: t.tipo === "sobrecarga" ? copiar(linhaDaTabela(t, e.proc.rodada)) : null, passadas: t.tipo === "maldicao" ? t.linhas.filter(function (l) { return l.de <= n && l.texto; }).map(function (l) { return l.texto; }) : [] }; });
     vp.agarres = p.agarres.map(function (a) { return { vitima: a.vitima, por: ME().participante(e, a.por) && !ME().participante(e, a.por).oculto ? a.por : "" }; });
     if (p.perseguicao) { var pe = copiar(p.perseguicao); vp.perseguicao = { ativa: pe.ativa, rodada: rodadaDaPerseguicao(e), rodadas: pe.config.rodadas, limiares: pe.config.limiares, efeito: pe.config.efeito, por: pe.por, mortes: pe.mortes, recuperarFolego: !!pe.config.recuperarFolego, sacrificio: !!pe.config.sacrificio, chegada: pe.config.chegada || 0 }; }
     if (p.esconderijo) { var h = p.esconderijo; vp.esconderijo = { ativo: h.ativo, distrair: h.distrair, por: {} }; Object.keys(h.por).forEach(function (pid) { var x = h.por[pid]; vp.esconderijo.por[pid] = meus.indexOf(pid) >= 0 ? copiar(x) : { quantos: x.dados.length, descoberto: x.descoberto, chegou: x.chegou, parado: x.parado }; }); vp.esconderijo.ultima = lista(h.rolagens).slice(-1).map(function (x) { return { rodada: x.rodada, d10: x.d10, valores: x.valores }; })[0] || null; }
@@ -5985,12 +6096,32 @@ function acaoOrdem2Operar(corpo, usuario) {
 
   /* Somas dos registros vivos (os dados impressos ficam em `base`). */
   function passosAtributo(b, chave) { var n = 0; vivos(b).forEach(function (r) { r.ganhos.forEach(function (g) { if (g.tipo === "atributo" && g.chave === chave) n += g.n; }); }); return n; }
-  function passosPericia(b, p) { var k = chaveDaPericia(p), n = 0; vivos(b).forEach(function (r) { r.ganhos.forEach(function (g) { if (g.tipo === "pericia" && g.chave === k) n += g.n; }); }); return n; }
+  function passosDaChave(b, k) { var n = 0; vivos(b).forEach(function (r) { r.ganhos.forEach(function (g) { if (g.tipo === "pericia" && g.chave === k) n += g.n; }); }); return n; }
+  /* v9.4: uma perícia pode ter mais de uma ORIGEM (Pesquisar e Inspecionar
+     de uma ficha antiga viraram uma só). Cada origem guarda o próprio
+     dado impresso e os próprios ganhos; vale a melhor, sem somar passos. */
+  function origensDe(p) {
+    var esp = p.especializacao ? ":" + String(p.especializacao).toLowerCase() : "";
+    var l = lista(p.origens);
+    if (!l.length) return [{ chave: chaveDaPericia(p), dado: p.dado }];
+    return l.map(function (o, i) { return { chave: o.chave + esp, dado: i === 0 ? p.dado : o.dado }; });
+  }
+  function melhorOrigem(b, p) {
+    var melhor = null;
+    origensDe(p).forEach(function (o) { var f = R().passoDado(o.dado, passosDaChave(b, o.chave), false); if (!melhor || f > melhor.valor) melhor = { chave: o.chave, valor: f }; });
+    return melhor;
+  }
+  function passosPericia(b, p) { return passosDaChave(b, melhorOrigem(b, p).chave); }
   function extra(b, tipo) { var n = 0; vivos(b).forEach(function (r) { r.ganhos.forEach(function (g) { if (g.tipo === tipo) n += g.n; }); }); return n; }
 
   /* O valor SEM efeitos temporários (o que a melhoria mexe). */
   function permanenteAtributo(b, chave) { return R().passoDado(b.base.atributos[chave] || 6, passosAtributo(b, chave), false); }
-  function permanentePericia(b, p) { return R().passoDado(p.dado, passosPericia(b, p), false); }
+  function permanentePericia(b, p) { return melhorOrigem(b, p).valor; }
+  function pericaDaEscolha(b, chave) {
+    var c = String(chave || "");
+    return lista(b.base.pericias).filter(function (q) { return q.id === c || chaveDaPericia(q) === c || origensDe(q).some(function (o) { return o.chave === c; }); })[0] ||
+      lista(b.base.pericias).filter(function (q) { return q.chave === K().chaveDePericia(c.split(":")[0]) && !q.especializacao; })[0] || null;
+  }
 
   /* A prévia de uma escolha: antes/depois, ou o motivo de não caber. */
   function previa(b, escolha, config) {
@@ -6004,11 +6135,12 @@ function acaoOrdem2Operar(corpo, usuario) {
       return { ok: true, ganho: { tipo: "atributo", chave: e.chave, n: 1, de: "d" + a, para: "d" + R().passoDado(a, 1, false) }, rotulo: K().ATRIBUTOS[e.chave].nome + ": d" + a + " → d" + R().passoDado(a, 1, false) };
     }
     if (e.tipo === "pericia") {
-      var p = lista(b.base.pericias).filter(function (q) { return q.id === e.chave || chaveDaPericia(q) === e.chave; })[0];
+      var p = pericaDaEscolha(b, e.chave);
       if (!p) return { ok: false, motivo: "Escolha a perícia." };
       var d = permanentePericia(b, p);
       if (p.dado === 20 || d >= cfg.teto) return { ok: false, motivo: R().nomeDaPericia(b, p) + " já está em d" + d + " (teto d" + cfg.teto + "; sem d20)." };
-      return { ok: true, ganho: { tipo: "pericia", chave: chaveDaPericia(p), n: 1, de: "d" + d, para: "d" + R().passoDado(d, 1, false) }, rotulo: R().nomeDaPericia(b, p) + ": d" + d + " → d" + R().passoDado(d, 1, false) };
+      /* O ganho vai para o caminho que hoje é o maior (estornar tira dele). */
+      return { ok: true, ganho: { tipo: "pericia", chave: melhorOrigem(b, p).chave, n: 1, de: "d" + d, para: "d" + R().passoDado(d, 1, false) }, rotulo: R().nomeDaPericia(b, p) + ": d" + d + " → d" + R().passoDado(d, 1, false) };
     }
     if (e.tipo === "pv" || e.tipo === "pd") {
       var n = e.tipo === "pv" ? cfg.pvPorEscolha : cfg.pdPorEscolha;
@@ -6086,7 +6218,7 @@ function acaoOrdem2Operar(corpo, usuario) {
   /* O rótulo de um ganho já registrado (histórico e resumo da mesa). */
   function rotuloGanho(g, b) {
     if (g.tipo === "atributo") return (K().ATRIBUTOS[g.chave] ? K().ATRIBUTOS[g.chave].nome : g.chave) + " " + g.de + " → " + g.para;
-    if (g.tipo === "pericia") { var c = String(g.chave).split(":"); return K().nomeDaPericia(b ? b.perfilRegras : "alpha-contemporaneo", c[0], b ? b.ambientacao : "") + (c[1] ? " (" + c[1] + ")" : "") + " " + g.de + " → " + g.para; }
+    if (g.tipo === "pericia") { var c = String(g.chave).split(":"); return K().nomeDaPericia(null, c[0]) + (c[1] && c[0] === "aptidao" ? " (" + c[1] + ")" : "") + " " + g.de + " → " + g.para; }
     if (g.tipo === "pv" || g.tipo === "pd") return g.tipo.toUpperCase() + " máx. " + g.de + " → " + g.para;
     return "Habilidade: " + g.para;
   }
@@ -6225,7 +6357,10 @@ function acaoOrdem2Operar(corpo, usuario) {
     if (!p.ok) return p;
     if (confirmar !== true) return Object.assign({}, p, { ok: false, motivo: "Confirme depois de ver a prévia." });
     var antiga = copiar(b.procedencia);
+    var antigas = lista(b.base.pericias);
     b.base = copiar(p.novo.base);
+    /* v9.4: as origens (caminhos antigos dos ganhos) não se perdem. */
+    b.base.pericias.forEach(function (q) { var v = antigas.filter(function (x) { return chaveDaPericia(x) === chaveDaPericia(q); })[0]; if (v && lista(v.origens).length) { q.origens = copiar(v.origens); q.origens[0].dado = q.dado; } });
     b.recursos.pv.max = p.novo.recursos.pv.max;
     b.recursos.pd.max = p.novo.recursos.pd.max;
     b.procedencia = Object.assign({}, p.novo.procedencia);
@@ -6238,7 +6373,7 @@ function acaoOrdem2Operar(corpo, usuario) {
   global.RAMAOrdem2Evolucao = {
     MODOS: MODOS, TIPOS: TIPOS, PADRAO: PADRAO,
     normalizar: normalizar, normalizarConfig: normalizarConfig, configDaMesa: configDaMesa,
-    passosAtributo: passosAtributo, passosPericia: passosPericia, extra: extra, chaveDaPericia: chaveDaPericia,
+    passosAtributo: passosAtributo, passosPericia: passosPericia, extra: extra, chaveDaPericia: chaveDaPericia, origensDe: origensDe, melhorOrigem: melhorOrigem,
     permanenteAtributo: permanenteAtributo, permanentePericia: permanentePericia,
     previa: previa, registrar: registrar, desfazer: desfazer, dependentes: dependentes, vivos: vivos,
     previaAtualizacao: previaAtualizacao, aplicarAtualizacao: aplicarAtualizacao,
@@ -6328,7 +6463,7 @@ function acaoOrdem2Operar(corpo, usuario) {
     var c = obj(x), v = configPadrao();
     v.ativo = c.ativo === true;
     v.atributo = K().ATRIBUTOS[c.atributo] ? c.atributo : "mente";
-    v.pericia = texto(c.pericia, 40) || "ocultismo";
+    v.pericia = K().chaveDePericia(texto(c.pericia, 40)) || "ocultismo"; /* v9.4: Bruxaria → Ocultismo */
     var d = obj(c.dts), q = obj(c.custos), f = obj(c.forcar);
     Object.keys(v.dts).forEach(function (k) { v.dts[k] = inteiro(d[k], 0, 40, v.dts[k]); v.custos[k] = inteiro(q[k], 0, 40, v.custos[k]); });
     v.forcar = { permitido: f.permitido === true, pv: inteiro(f.pv, 0, 20, 2), passos: inteiro(f.passos, 1, 2, 1), alternativa: ["pv", "pavor", "componente"].indexOf(f.alternativa) >= 0 ? f.alternativa : "pv" };
@@ -6340,7 +6475,7 @@ function acaoOrdem2Operar(corpo, usuario) {
     if (!TIPOS_EFEITO[e.tipo]) return null;
     return {
       tipo: e.tipo, valor: texto(e.valor, 20), recurso: e.recurso === "pd" ? "pd" : "pv", danoTipo: e.danoTipo === "emocional" ? "emocional" : "fisico",
-      condicao: CONDICOES.indexOf(e.condicao) >= 0 ? e.condicao : "", alvoDado: e.alvoDado === "atributo" || e.alvoDado === "todos" ? e.alvoDado : "pericia", chave: texto(e.chave, 40),
+      condicao: CONDICOES.indexOf(e.condicao) >= 0 ? e.condicao : "", alvoDado: e.alvoDado === "atributo" || e.alvoDado === "todos" ? e.alvoDado : "pericia", chave: e.alvoDado === "atributo" || e.alvoDado === "todos" ? texto(e.chave, 40) : K().chaveDePericia(texto(e.chave, 40)),
       n: inteiro(e.n, -4, 4, 1), faces: [4, 6, 8, 10, 12, 20].indexOf(Number(e.faces)) >= 0 ? Number(e.faces) : 0, d20: e.d20 === true,
       duracao: DURACOES[e.duracao] ? e.duracao : "", quem: e.quem === "proprio" ? "proprio" : "alvo", texto: texto(e.texto, 600),
     };
@@ -6427,7 +6562,7 @@ function acaoOrdem2Operar(corpo, usuario) {
     return {
       ok: !problemas.length, problemas: problemas, ritual: r,
       acao: r.modo === "elaborado" ? r.etapas.length + " etapa(s): " + r.etapas.map(function (t) { return t.nome + (t.acao ? " (" + t.acao + ")" : ""); }).join(" → ") : r.acao,
-      teste: K().ATRIBUTOS[cfg.atributo].nome + " + " + (per ? R().nomeDaPericia(b, per) : K().nomeDaPericia(b.perfilRegras, cfg.pericia, b.ambientacao)),
+      teste: K().ATRIBUTOS[cfg.atributo].nome + " + " + (per ? R().nomeDaPericia(b, per) : K().nomeDaPericia(null, cfg.pericia)),
       dt: dtDe(cfg, r), custoPd: custo, custoPv: r.custoPv + pvForcar,
       forcar: fz ? (fz.alternativa === "pv" ? "+" + fz.passos + " passo por " + fz.pv + " PV" : fz.alternativa === "pavor" ? "+" + fz.passos + " passo, com risco de pavor na falha" : "+" + fz.passos + " passo consumindo um componente") : "",
       alvo: ALVOS[r.alvo], duracao: DURACOES[r.duracao], componentes: r.componentes.map(function (c) { return c.nome + (c.consome ? " (consumido)" : ""); }),

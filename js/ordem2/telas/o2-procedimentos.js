@@ -34,7 +34,7 @@
   function opcoesPcs(m, vazio) { return (vazio ? [{ valor: "", rotulo: vazio }] : []).concat(m.pcs.map(function (p) { return { valor: p.id, rotulo: p.nome }; })); }
   function nomePericia(e, k) { if (k === "mestre") return "Revelação do Mestre"; var c = String(k).split(":"); return K().nomeDaPericia(e.perfil, c[0], e.ambientacao) + (c[1] ? " (" + c[1] + ")" : ""); }
   function proc(e) { return e.proc || {}; }
-  function rodada(e) { return e.combate && e.combate.ativo && e.perfil !== "alpha-contemporaneo" ? e.combate.rodada : proc(e).rodada || 1; }
+  function rodada(e) { return e.combate && e.combate.ativo ? e.combate.rodada : proc(e).rodada || 1; }
   function nomeFerramenta(f) { return (K().FERRAMENTAS[f] || { nome: f }).nome; }
   function desafiosDoPonto(e, p) { return lista(proc(e).desafios).filter(function (d) { return d.ponto === p.id || lista(p.desafios).indexOf(d.id) >= 0; }); }
   function pontoNome(e, pid) { var p = lista(e.investigacao.pontos).filter(function (x) { return x.id === pid; })[0]; return p ? (p.numero ? p.numero + ". " : "") + p.nome : pid; }
@@ -153,7 +153,7 @@
   /* Recapitular, Compartilhar, Interagir: o Mestre escolhe a pista NOVA. */
   function solicitacoesComPista(m) {
     var e = m.estado;
-    var prontas = e.investigacao.solicitacoes.filter(function (s) { return !s.concedida && (s.estado === "sucesso" || (s.tipo === "interagir" && ["pendente", "resolvida"].indexOf(s.estado) >= 0)); });
+    var prontas = e.investigacao.solicitacoes.filter(function (s) { return !s.concedida && (s.estado === "sucesso" || ((s.tipo === "interagir" || s.tipo === "critico") && ["pendente", "resolvida"].indexOf(s.estado) >= 0)); });
     if (!prontas.length) return null;
     return UI.painel("Escolher a pista nova", el("ul.o2-solicitacoes", {}, prontas.map(function (s) {
       var quem = s.tipo === "compartilhar" ? s.aliado : s.quem;
@@ -161,7 +161,7 @@
       var opcoes = [{ valor: "", rotulo: "— pista livre (escreva abaixo) —" }];
       e.investigacao.pontos.forEach(function (pt) { pt.pistas.forEach(function (q) { var ja = lista((e.investigacao.descobertas || {})[quem]).some(function (d) { return d.pista === q.id; }) || lista(proc(e).grupo).some(function (d) { return d.pista === q.id; }); if (!ja) opcoes.push({ valor: pt.id + "|" + q.id, rotulo: (pt.numero ? pt.numero + ". " : "") + pt.nome + " — " + q.texto.slice(0, 70) }); }); });
       return el("li.o2-solicitacao", {}, [
-        el("strong", { texto: { recapitular: "Recapitular", compartilhar: "Compartilhar", interagir: "Interagir" }[s.tipo] + " — " + nomePc(m, quem) + (s.descricao ? ": " + s.descricao.slice(0, 160) : "") }),
+        el("strong", { texto: { recapitular: "Recapitular", compartilhar: "Compartilhar", interagir: "Interagir", critico: "Crítico examinando (informação adicional)" }[s.tipo] + " — " + nomePc(m, quem) + (s.descricao ? ": " + s.descricao.slice(0, 160) : "") }),
         UI.campo({ rotulo: "Pista do quadro (só as que " + nomePc(m, quem) + " ainda não tem)", tipo: "selecao", valor: "", opcoes: opcoes, aoMudar: function (v) { st.chave = v; } }),
         UI.campo({ rotulo: "Ou uma pista livre", tipo: "area", linhas: 2, limite: 1200, aoMudar: function (v) { st.texto = v; } }),
         botao("Dar a pista (confirma a coerência)", function () { var c = st.chave.split("|"); m.operar({ tipo: "concederPista", solicitacao: s.id, ponto: c[0] || "", pista: c[1] || "", texto: st.texto }); }, { classe: "r-botao--principal" }),

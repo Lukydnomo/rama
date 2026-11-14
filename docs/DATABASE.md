@@ -1,5 +1,15 @@
 # O banco
 
+## Ordem Paranormal RPG II · regras unificadas — v9.4
+
+Nenhuma aba nova (**`setupRama()` não é necessário**). O bloco `ordem2` da ficha
+troca `perfilRegras` por `regras` + `versaoRegras` (+ `migracao` com o perfil
+antigo e os avisos); perícias ganham `origens` (os caminhos antigos dos ganhos,
+quando houve alias); a procedência ganha `origem` e `habilidadesOriginais`.
+`CAMPANHA_ORDEM2.dadosJson` troca `perfil` por `regras` + `versaoRegras` (+
+`migracao` com as pendências). A conversão é feita ao ler e gravada na próxima
+escrita normal — nenhum dado é apagado.
+
 ## Ordem Paranormal RPG II · evolução e paranormal — v9.2
 
 Nenhuma aba nova (**`setupRama()` não é necessário**). `CAMPANHA_ORDEM2.dadosJson`

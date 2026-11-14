@@ -1145,67 +1145,63 @@
 
   function O2() { return global.RAMAOrdem2Catalogo; }
   function refO2(fonte, pag) { return O2().referencia(fonte, pag); }
-  function nomeO2(perfil, k) { return O2().nomeDaPericia(perfil, k, O2().PERFIS_REGRAS[perfil].ambientacao); }
+  function nomeO2(k) { return O2().nomeDaPericia(null, k); }
   function faixaO2(x) { return (x.de === x.ate ? String(x.de) : x.de + "–" + (x.ate > 20 ? "20+" : x.ate)) + " · " + x.nome; }
 
   var ORDEM2 = [
     { id: "pericias", nome: "Perícias", tem: function () { return !!O2(); },
-      ajuda: "As duas listas: Alpha (p. 17) e Beta (p. 9). Ocultismo é uma perícia só, chamada Bruxaria na Vigília; no Beta, Metalurgia aceita o rótulo Ofício das fichas; Pesquisar (Alpha) e Inspecionar (Beta) nunca coexistem.",
+      ajuda: "Uma lista (v9.4, regras unificadas): atributo-base do Beta, Máquinas e Tecnologia do Alpha, Animais do Beta. Aliases de entrada: Bruxaria → Ocultismo, Inspecionar → Pesquisar, Ofício/Metalurgia → Ofício.",
       entradas: function () {
-        return O2().ORDEM_PERFIS_REGRAS.reduce(function (saida, pr) {
-          var p = O2().PERFIS_REGRAS[pr];
-          return saida.concat(O2().listaDePericias(pr).map(function (x) {
-            var esp = x.chave === "aptidao" ? O2().ESPECIALIZACOES[pr].join(", ") : "";
-            return entradaSimples("o2p-" + pr, { chave: x.chave, nome: nomeO2(pr, x.chave), texto: x.texto }, {
-              linha: p.curto + " · " + O2().ATRIBUTOS[x.atributo].nome, referencia: refO2(p.fonte, pr === "beta-vigilia" ? 9 : 17),
-              f: { perfil: p.nome, atributo: O2().ATRIBUTOS[x.atributo].nome }, marcas: [p.curto],
-              pares: [["Atributo-base", O2().ATRIBUTOS[x.atributo].nome], ["Perfil de regras", p.nome], ["Especializações", esp], ["Alias na ficha", x.chave === "metalurgia" ? "Ofício" : ""]],
-            });
-          }));
-        }, []);
+        var alias = { ocultismo: "Bruxaria", pesquisar: "Inspecionar", metalurgia: "Metalurgia" };
+        return O2().listaDePericias().map(function (x) {
+          var fontes = [O2().PERICIAS_ALPHA.indexOf(x.chave) >= 0 ? "Alpha p. 17" : "", O2().PERICIAS_BETA.indexOf(x.chave) >= 0 ? "Beta p. 9" : ""].filter(Boolean).join("; ");
+          var esp = x.chave === "aptidao" ? O2().TODAS_ESPECIALIZACOES.join(", ") : "";
+          return entradaSimples("o2p", { chave: x.chave, nome: nomeO2(x.chave), texto: x.texto }, {
+            linha: O2().ATRIBUTOS[x.atributo].nome, referencia: fontes,
+            f: { atributo: O2().ATRIBUTOS[x.atributo].nome },
+            pares: [["Atributo-base", O2().ATRIBUTOS[x.atributo].nome], ["Especializações", esp], ["Alias", alias[x.chave] || ""], ["Fonte", fontes]],
+          });
+        });
       },
-      filtros: function () { return [{ chave: "perfil", rotulo: "Perfil de regras", todos: "Todos" }, { chave: "atributo", rotulo: "Atributo", todos: "Todos" }]; } },
+      filtros: function () { return [{ chave: "atributo", rotulo: "Atributo", todos: "Todos" }]; } },
     { id: "perfis", nome: "Perfis e ocupações", tem: function () { return !!O2(); },
-      ajuda: "Executor, Analista e Vigilante (Alpha p. 14; Beta p. 6) e as ocupações (Alpha) e vocações (Beta) das fichas prontas, com a habilidade quando documentada.",
+      ajuda: "Executor, Analista e Vigilante (Alpha p. 14; Beta p. 6), com a habilidade de perfil no efeito mais recente, e as ocupações das fichas prontas num catálogo só (sugeridas por ambientação).",
       entradas: function () {
         var perfis = O2().ORDEM_PERFIS.map(function (k) {
-          var p = O2().PERFIS[k];
-          var habs = O2().ORDEM_PERFIS_REGRAS.map(function (pr) { var h = O2().HABILIDADES[O2().HABILIDADE_DE_PERFIL[pr][k]]; return O2().PERFIS_REGRAS[pr].curto + ": " + h.nome; }).join(" · ");
-          return entradaSimples("o2perfil", { chave: k, nome: p.nome, texto: p.texto }, { linha: "Perfil · " + habs, referencia: "Alpha p. 14; Beta p. 6", f: { tipo: "Perfil" }, pares: [["Habilidade de perfil", habs]] });
+          var p = O2().PERFIS[k], h = O2().HABILIDADES[O2().HABILIDADE_DE_PERFIL[k]];
+          return entradaSimples("o2perfil", { chave: k, nome: p.nome, texto: p.texto }, { linha: "Perfil · " + h.nome, referencia: "Alpha p. 14; Beta p. 6", f: { tipo: "Perfil" }, pares: [["Habilidade de perfil", h.nome + " — " + h.texto]] });
         });
-        var ocs = O2().ORDEM_PERFIS_REGRAS.reduce(function (saida, pr) {
-          var pf = O2().PERFIS_REGRAS[pr];
-          return saida.concat((O2().OCUPACOES[pr] || []).map(function (o) {
-            return entradaSimples("o2oc-" + pr, { chave: o.id, nome: o.nome, texto: o.nota || "" }, {
-              linha: pf.termoOcupacao + " (" + pf.curto + ")" + (o.habilidade ? " · " + O2().HABILIDADES[o.habilidade].nome : " · habilidade não documentada"), f: { tipo: pf.termoOcupacao },
-              pares: [["Habilidade documentada", o.habilidade ? O2().HABILIDADES[o.habilidade].nome : "—"], ["Vistas nas fichas", o.vistas.map(function (h) { return O2().HABILIDADES[h].nome; }).join(", ")]],
-            });
-          }));
-        }, []);
+        var ocs = O2().OCUPACOES.map(function (o) {
+          var amb = o.ambientacoes.map(function (a) { return O2().AMBIENTACOES[a].curto; }).join(", ");
+          return entradaSimples("o2oc", { chave: o.id, nome: o.nome, texto: o.nota || "" }, {
+            linha: "Ocupação · " + amb + (o.habilidade ? " · " + O2().HABILIDADES[o.habilidade].nome : " · habilidade não documentada"), f: { tipo: "Ocupação" },
+            pares: [["Sugerida em", amb], ["Habilidade documentada", o.habilidade ? O2().HABILIDADES[o.habilidade].nome : "—"], ["Vistas nas fichas", o.vistas.map(function (h) { return O2().HABILIDADES[O2().refDeHabilidade(h)].nome; }).join(", ")]],
+          });
+        });
         return perfis.concat(ocs);
       },
       filtros: function () { return [{ chave: "tipo", rotulo: "Tipo", todos: "Todos" }]; } },
     { id: "habilidades", nome: "Habilidades", tem: function () { return !!O2(); },
-      ajuda: "As habilidades das fichas dos playtests, com a versão (Alpha/Beta) e o que o R.A.M.A. automatiza.",
+      ajuda: "Um catálogo (v9.4): as habilidades de perfil têm uma entrada só, com o efeito mais recente; a fonte diz de onde veio cada uma.",
       entradas: function () {
         return Object.keys(O2().HABILIDADES).map(function (k) {
           var h = O2().HABILIDADES[k];
-          var versao = h.versao === "alpha" ? "Alpha" : h.versao === "beta" ? "Beta" : "Alpha e Beta";
-          return entradaSimples("o2h", { chave: k, nome: h.nome, texto: h.texto }, { linha: versao + (h.ficha ? " · " + h.ficha : "") + (h.perfil ? " · de perfil" : ""), referencia: refO2(h.fonte, h.pagina), f: { versao: versao }, pares: [["Versão", versao], ["Ficha", h.ficha || ""], ["Automação", h.motor ? h.motor.tipo : "narrativa"]] });
+          var fonte = O2().FONTES[h.fonte] ? O2().FONTES[h.fonte].curto : "";
+          return entradaSimples("o2h", { chave: k, nome: h.nome, texto: h.texto }, { linha: fonte + (h.ficha ? " · " + h.ficha : "") + (h.perfil ? " · de perfil" : ""), referencia: refO2(h.fonte, h.pagina), f: { fonte: fonte }, pares: [["Fonte", fonte], ["Ficha", h.ficha || ""], ["Automação", h.motor ? h.motor.tipo : "narrativa"]] });
         });
       },
-      filtros: function () { return [{ chave: "versao", rotulo: "Versão", todos: "Todas" }]; } },
+      filtros: function () { return [{ chave: "fonte", rotulo: "Fonte", todos: "Todas" }]; } },
     { id: "prontas", nome: "Fichas prontas", tem: function () { return !!O2(); },
       ajuda: "Os 14 personagens dos playtests (Alan, os cinco do Ato II e os oito do Beta). A criação mostra a prévia completa antes de copiar; PV e PD são os impressos.",
       entradas: function () {
         return O2().PRESETS.map(function (p) {
           return entradaSimples("o2pre", { chave: p.id, nome: p.nomeCompleto || p.nome, texto: p.resumo }, {
-            linha: O2().PERFIS[p.perfil].nome + " · " + p.ocupacao + " · nível " + p.nivel + " · PV " + p.pv + " / PD " + p.pd, referencia: refO2(p.fonte, p.pagina), f: { perfil: O2().PERFIS_REGRAS[p.perfilRegras].nome }, marcas: [O2().PERFIS_REGRAS[p.perfilRegras].curto],
-            pares: [["Atributos", "Físico d" + p.atributos.fisico + ", Mente d" + p.atributos.mente + ", Emoção d" + p.atributos.emocao], ["Habilidades", p.habilidades.map(function (h) { return O2().HABILIDADES[h.id].nome; }).join(", ")], ["Equipamento", p.itens.map(function (i) { return i.nome; }).join(", ")], ["Idade", p.idade || ""]],
+            linha: O2().PERFIS[p.perfil].nome + " · " + p.ocupacao + " · nível " + p.nivel + " · PV " + p.pv + " / PD " + p.pd, referencia: refO2(p.fonte, p.pagina), f: { fonte: O2().PERFIS_REGRAS[p.perfilRegras].nome }, marcas: [O2().PERFIS_REGRAS[p.perfilRegras].curto],
+            pares: [["Atributos", "Físico d" + p.atributos.fisico + ", Mente d" + p.atributos.mente + ", Emoção d" + p.atributos.emocao], ["Habilidades (efeito atual)", p.habilidades.map(function (h) { return O2().HABILIDADES[O2().refDeHabilidade(h.id)].nome; }).join(", ")], ["Equipamento", p.itens.map(function (i) { return i.nome; }).join(", ")], ["Idade", p.idade || ""]],
           });
         });
       },
-      filtros: function () { return [{ chave: "perfil", rotulo: "Perfil de regras", todos: "Todos" }]; } },
+      filtros: function () { return [{ chave: "fonte", rotulo: "Fonte", todos: "Todas" }]; } },
     { id: "regras", nome: "Regras e tabelas", tem: function () { return !!O2(); },
       ajuda: "Falha crítica, lesões, traumas, ações de combate, minijogos e graus de relação, com a página.",
       entradas: function () {

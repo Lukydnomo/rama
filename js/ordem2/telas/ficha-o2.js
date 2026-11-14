@@ -62,22 +62,21 @@
     var x = b(ctx);
     if (!x || !R() || !MO()) return el("p", { texto: "O motor de Ordem II não está carregado nesta página." });
     var geral = global.RAMASecaoGeral;
-    var pr = K().PERFIS_REGRAS[x.perfilRegras];
     var m = J().modo(ctx);
     var mesa = m === "carregando" ? null : J().estado(ctx);
     var pat = x.patamar && K().PATAMARES[x.patamar] && K().PATAMARES[x.patamar].bonus ? " · patamar " + K().PATAMARES[x.patamar].nome : "";
-    return el("div.o2-bloco", { dataset: { perfilRegras: x.perfilRegras } }, [
+    return el("div.o2-bloco", { dataset: { ambientacao: x.ambientacao } }, [
       el("header.o2-cab", {}, [
         el("div.o2-cab__textos", {}, [
           el("div.o2-cab__nome", {}, [geral && geral.campoNome ? geral.campoNome(ctx) : el("h1.t-titulo", { texto: ctx.ficha.nome })]),
           el("p.o2-cab__linha", {}, [
             el("span.o2-perfil-tag", { texto: x.perfil ? K().PERFIS[x.perfil].nome : "Sem perfil" }),
-            el("span.o2-cab__ocupacao", { texto: x.ocupacao.nome || "sem " + pr.termoOcupacao.toLowerCase() }),
+            el("span.o2-cab__ocupacao", { texto: x.ocupacao.nome || "sem ocupação" }),
             el("span.o2-nivel", { role: "img", "aria-label": "Nível " + x.nivel }, [el("span.o2-nivel__rotulo", { "aria-hidden": "true", texto: "Nível" }), el("span.o2-nivel__caixa", { "aria-hidden": "true", texto: String(x.nivel) })]),
             global.RAMAOrdem2EvolucaoTela ? global.RAMAOrdem2EvolucaoTela.ficha.acaoNoTopo(ctx) : null,
           ]),
           el("p.t-mini.o2-cab__amb", {}, [
-            el("span.o2-variante", { title: pr.texto, texto: pr.nome }),
+            el("span.o2-variante", { title: K().REGRAS.texto, texto: "Regras unificadas" }),
             el("span", { texto: " " + K().AMBIENTACOES[x.ambientacao].nome + pat + (x.evolucao && x.evolucao.nex ? " · NEX " + x.evolucao.nex : "") + (x.modoCriacao === "guiada" ? " · criação guiada (experimental)" : x.modoCriacao === "pronta" && x.procedencia ? " · ficha pronta: " + x.procedencia.nome : "") }),
           ]),
         ]),
@@ -105,7 +104,12 @@
 
   function avisos(ctx, mesa, m) {
     var x = b(ctx), l = [];
-    if (m === "campanha" && mesa && mesa.perfil && mesa.perfil !== x.perfilRegras) l.push(el("p.o2-aviso", { role: "status", texto: "⚠ Perfil de regras diferente da campanha: a ficha é " + K().PERFIS_REGRAS[x.perfilRegras].nome + " e a mesa usa " + K().PERFIS_REGRAS[mesa.perfil].nome + ". Habilidades seguem a ficha; cenas (combate, investigação) seguem a mesa." }));
+    /* v9.4: o aviso da migração para as regras unificadas, uma vez. */
+    if (x.migracao && !x.migracao.visto && x.migracao.avisos.length) l.push(el("div.o2-aviso.o2-aviso--migracao", { role: "status" }, [
+      el("p", {}, [el("strong", { texto: "Esta ficha passou para as regras unificadas de Ordem II." }), el("span", { texto: " Nada foi convertido de cenário; os textos antigos ficam na procedência." })]),
+      el("ul", {}, x.migracao.avisos.map(function (t) { return el("li.t-mini", { texto: t }); })),
+      ctx.podeEditar() ? botao("Entendi", function () { x.migracao.visto = true; alterou(ctx, true); }) : null,
+    ]));
     if (m === "outra") l.push(el("p.o2-aviso", { role: "status", texto: "A campanha desta ficha não abriu a mesa de Ordem II (" + (J().erro() || "?") + "): o jogo fica local, na ficha." }));
     if (R().presetDesatualizado(x)) l.push(el("p.o2-aviso", { role: "status", texto: "Os dados da ficha pronta mudaram depois da cópia (versão " + x.procedencia.versaoDados + " → " + K().VERSAO_DADOS + "). Nada foi alterado nesta ficha." }));
     if (x.estado.morto || x.estado.colapso) l.push(el("p.o2-aviso.o2-aviso--grave", { role: "status", texto: x.estado.colapso ? "☠ Colapso total: o personagem está perdido." : "☠ O personagem morreu." }));
@@ -268,7 +272,7 @@
           tag("Perícias"),
           el("p.t-mini.o2-livro__dica", { texto: "Teste = dado da perícia + dado do atributo (DT 7, salvo o que o texto disser). ● treinada (d6 ou mais). Toque na linha para rolar." }),
           el("ul.o2-pericias", {}, linhas),
-          ed ? botao("+ Aptidão (outra especialização)", function () { x.base.pericias.push(R().normalizarPericia({ chave: "aptidao", dado: 4 }, x.perfilRegras)); alterou(ctx, true); }) : null,
+          ed ? botao("+ Aptidão (outra especialização)", function () { x.base.pericias.push(R().normalizarPericia({ chave: "aptidao", dado: 4 })); alterou(ctx, true); }) : null,
         ]),
         el("section.o2-livro__centro", { "aria-label": "Retrato e nível" }, [
           geral && geral.foto ? el("div.o2-livro__retrato", {}, [geral.foto(ctx)]) : null,
@@ -287,13 +291,13 @@
   function identidade(ctx) {
     var x = b(ctx);
     var ed = edita(ctx);
-    var pr = K().PERFIS_REGRAS[x.perfilRegras];
     function texto(rotulo, chave, limite, area) { return UI().campo({ rotulo: rotulo, tipo: area ? "area" : undefined, linhas: area ? 3 : undefined, valor: x[chave], limite: limite, desabilitado: !ed, aoMudar: function (v) { x[chave] = String(v).slice(0, limite); ctx.alterou(); } }); }
     var proc = x.procedencia;
     return UI().recolhivel({ titulo: "Identidade, narrativa e procedência", aberto: false, conteudo: el("div.pilha", {}, [
       el("div.o2-criar__campos", {}, [
         UI().campo({ rotulo: "Perfil", tipo: "selecao", valor: x.perfil, desabilitado: !ed, opcoes: [{ valor: "", rotulo: "—" }].concat(K().ORDEM_PERFIS.map(function (k) { return { valor: k, rotulo: K().PERFIS[k].nome }; })), aoMudar: function (v) { x.perfil = v; alterou(ctx); } }),
-        UI().campo({ rotulo: pr.termoOcupacao, valor: x.ocupacao.nome, limite: 80, desabilitado: !ed, aoMudar: function (v) { x.ocupacao.nome = String(v).slice(0, 80); alterou(ctx); } }),
+        UI().campo({ rotulo: "Ocupação", valor: x.ocupacao.nome, limite: 80, desabilitado: !ed, aoMudar: function (v) { x.ocupacao.nome = String(v).slice(0, 80); alterou(ctx); } }),
+        UI().campo({ rotulo: "Ambientação", tipo: "selecao", valor: x.ambientacao, desabilitado: !ed, ajuda: "Muda a ambientação e as sugestões; as regras são as mesmas.", opcoes: K().ORDEM_AMBIENTACOES.map(function (k) { return { valor: k, rotulo: K().AMBIENTACOES[k].nome }; }), aoMudar: function (v) { x.ambientacao = K().ambientacaoValida(v); alterou(ctx, true); } }),
         /* v9.3: o nível só muda pela aba Evolução (operações da mesa). */
         el("div.o2-nivel-leitura", {}, [el("span.t-mini", { texto: "Nível " + x.nivel + " — muda pela aba Evolução." }), ctx.irParaAba ? botao("Abrir Evolução", function () { ctx.irParaAba("evolucao"); }) : null]),
         UI().campo({ rotulo: "Patamar (bônus em lesão/trauma)", tipo: "selecao", valor: x.patamar, desabilitado: !ed, opcoes: Object.keys(K().PATAMARES).map(function (k) { return { valor: k, rotulo: K().PATAMARES[k].nome + (K().PATAMARES[k].bonus ? " (+" + K().PATAMARES[k].bonus + ")" : "") }; }), ajuda: "O playtest não define patamares: sem informar, +0.", aoMudar: function (v) { x.patamar = v; alterou(ctx); } }),
@@ -305,9 +309,12 @@
       ]),
       texto("Resumo", "resumo", 600, true), texto("História", "historia", 6000, true), texto("Aparência", "aparencia", 2000, true),
       el("dl.o2-pares", {}, [
-        el("div", {}, [el("dt", { texto: "Perfil de regras" }), el("dd", { texto: pr.nome + " (fixo nesta ficha) — " + pr.texto })]),
+        el("div", {}, [el("dt", { texto: "Regras" }), el("dd", { texto: K().REGRAS.nome + " (v" + x.versaoRegras + ") — " + K().REGRAS.texto })]),
+        x.migracao && x.migracao.de ? el("div", {}, [el("dt", { texto: "Migração" }), el("dd", { texto: "Gravada na v9.0–9.3 como " + K().PERFIS_REGRAS[x.migracao.de].nome + "; passou ao caminho único em " + String(x.migracao.quando).slice(0, 10) + "." })]) : null,
         el("div", {}, [el("dt", { texto: "Criação" }), el("dd", { texto: { pronta: "Ficha pronta", livre: "Criação livre", guiada: "Criação guiada (experimental)" }[x.modoCriacao] })]),
-        proc ? el("div", {}, [el("dt", { texto: "Procedência" }), el("dd", { texto: proc.nome + " · " + K().referencia(proc.fonte, proc.pagina) + " · dados v" + proc.versaoDados + " · copiada em " + String(proc.copiadoEm).slice(0, 10) })]) : null,
+        proc && proc.preset ? el("div", {}, [el("dt", { texto: "Procedência" }), el("dd", { texto: proc.nome + " · " + K().referencia(proc.fonte, proc.pagina) + " · dados v" + proc.versaoDados + " · copiada em " + String(proc.copiadoEm).slice(0, 10) })]) : null,
+        proc && proc.origem ? el("div", {}, [el("dt", { texto: "Fonte" }), el("dd", { texto: proc.origem === "alpha" ? "Playtest Alpha" : "Playtest Beta" })]) : null,
+        proc && proc.habilidadesOriginais.length ? el("div", {}, [el("dt", { texto: "Textos originais" }), el("dd", {}, proc.habilidadesOriginais.map(function (o) { return el("p.t-mini", { texto: o.nome + " (" + K().referencia(o.fonte, null) + "): " + o.texto }); }))]) : null,
         x.escolhas && x.escolhas.pvPdReferencia ? el("div", {}, [el("dt", { texto: "PV/PD" }), el("dd", { texto: "Referência de mesa 16/12" + (x.escolhas.pvPdReferencia.editados ? " (editados na criação)" : "") + " — não é regra do livro." })]) : null,
       ]),
     ]) });
@@ -385,12 +392,12 @@
 
   function adicionarHabilidade(ctx) {
     var x = b(ctx);
-    var versao = x.perfilRegras === "beta-vigilia" ? "beta" : "alpha";
     var st = { ref: "", nome: "", texto: "" };
-    var opcoes = Object.keys(K().HABILIDADES).filter(function (k) { var h = K().HABILIDADES[k]; return h.versao === versao || h.versao === "ambas"; }).map(function (k) { return { valor: k, rotulo: K().HABILIDADES[k].nome + (K().HABILIDADES[k].ficha ? " (" + K().HABILIDADES[k].ficha + ")" : "") }; });
+    /* v9.4: um catálogo só (as de perfil com o efeito mais recente). */
+    var opcoes = Object.keys(K().HABILIDADES).map(function (k) { return { valor: k, rotulo: K().HABILIDADES[k].nome + (K().HABILIDADES[k].ficha ? " (" + K().HABILIDADES[k].ficha + ")" : "") }; });
     return UI().painel("Adicionar habilidade", el("div.pilha", {}, [
       el("div.o2-criar__campos", {}, [
-        UI().campo({ rotulo: "Do catálogo (" + (versao === "beta" ? "Beta" : "Alpha") + ")", tipo: "selecao", valor: "", opcoes: [{ valor: "", rotulo: "Escolha…" }].concat(opcoes), aoMudar: function (v) { st.ref = v; } }),
+        UI().campo({ rotulo: "Do catálogo", tipo: "selecao", valor: "", opcoes: [{ valor: "", rotulo: "Escolha…" }].concat(opcoes), aoMudar: function (v) { st.ref = v; } }),
         botao("Adicionar", function () { if (!st.ref) return; x.habilidades.push(R().habilidadeDoCatalogo(st.ref)); alterou(ctx, true); }),
       ]),
       el("div.o2-criar__campos", {}, [
@@ -428,11 +435,10 @@
     if (m === "carregando") return UI().carregando("Abrindo a mesa");
     if (m !== "campanha") return el("div.o2-aba", {}, [UI().painel("Investigação", el("div.pilha", {}, [
       el("p.t-mini", { texto: "Pontos de interesse, pistas e as ações de investigação moram na mesa da campanha (o Mestre guarda as soluções). Sem campanha, use os testes da aba Ficha." }),
-      referenciaInvestigacao(x.perfilRegras),
+      referenciaInvestigacao(),
     ]))]);
     var e = J().estado(ctx);
     var eu = J().pid(ctx);
-    var beta = e.perfil === "beta-vigilia";
     var meus = (e.investigacao.descobertas || {})[eu] || [];
     var pontos = e.investigacao.pontos || [];
     var solicitacoes = (e.investigacao.solicitacoes || []).filter(function (s) { return s.quem === eu || s.aliado === eu; });
@@ -445,7 +451,7 @@
           el("p", { texto: p.descricao }),
           el("p.t-mini", { texto: "Perícias listadas: " + pericias.map(function (k) { var c = k.split(":"); return K().nomeDaPericia(e.perfil, c[0], e.ambientacao) + (c[1] ? " (" + c[1] + ")" : ""); }).join(", ") }),
           achadas.length ? el("ul.o2-ponto__achados", {}, achadas.map(function (d) { return el("li", {}, [el("span", { texto: d.texto }), el("span.t-mini", { texto: " — " + d.como })]); })) : null,
-          pode(ctx) ? el("div.faixa", {}, [botao("Investigar…", function () { abrirInvestigar(ctx, p, pericias, beta); }, { classe: "r-botao--principal" })]) : null,
+          pode(ctx) ? el("div.faixa", {}, [botao("Investigar…", function () { abrirInvestigar(ctx, p, pericias); }, { classe: "r-botao--principal" })]) : null,
         ]);
       })) : el("p.t-mini", { texto: "O Mestre ainda não apresentou pontos de interesse nesta cena." })),
       UI().painel("Ações de investigação", el("div.pilha", {}, [
@@ -455,52 +461,50 @@
         ]),
         solicitacoes.length ? el("ul.o2-solicitacoes", {}, solicitacoes.map(function (s) {
           var minha = (s.tipo === "compartilhar" ? s.aliado : s.quem) === eu;
-          var texto = { recapitular: "Recapitular", compartilhar: "Compartilhar", interagir: "Interagir" }[s.tipo] + " · " + ({ pendente: "aguardando o Mestre", aprovada: "aprovada — teste de " + K().nomeDaPericia(e.perfil, s.pericia, e.ambientacao) + " (DT " + s.dt + ")", recusada: "o Mestre não aprovou", sucesso: "sucesso", falha: "falhou", resolvida: "resolvida" + (s.resposta ? ": " + s.resposta : "") }[s.estado] || s.estado);
+          var texto = { recapitular: "Recapitular", compartilhar: "Compartilhar", interagir: "Interagir", critico: "Crítico examinando" }[s.tipo] + " · " + ({ pendente: "aguardando o Mestre", aprovada: "aprovada — teste de " + K().nomeDaPericia(e.perfil, s.pericia, e.ambientacao) + " (DT " + s.dt + ")", recusada: "o Mestre não aprovou", sucesso: "sucesso", falha: "falhou", resolvida: "resolvida" + (s.resposta ? ": " + s.resposta : "") }[s.estado] || s.estado);
           return el("li", {}, [el("span", { texto: texto }), s.estado === "aprovada" && minha && pode(ctx) ? botao("Rolar", function () { op(ctx, { tipo: "teste", contexto: { solicitacao: s.id } }); }, { classe: "r-botao--principal" }) : null]);
         })) : null,
-        referenciaInvestigacao(e.perfil),
+        referenciaInvestigacao(),
       ])),
       /* v9.1: desafios, ferramentas, compêndio, anexos, itens, perseguição e
          esconderijo — atalhos que disparam a ação real no quadro da mesa. */
       global.RAMAOrdem2ProcTela ? global.RAMAOrdem2ProcTela.jogador({ estado: e, mestre: false, pcs: personagensDaMesa(ctx).map(function (p) { return { id: p.id, nome: p.nome, meu: p.id === eu }; }), meus: [eu], operar: function (o) { return op(ctx, o); } }) : null,
     ]);
   }
-  function referenciaInvestigacao(perfil) {
-    var beta = perfil === "beta-vigilia";
-    return UI().recolhivel({ titulo: "Como funciona (" + (beta ? "Beta pp. 13–15" : "Alpha pp. 21–23") + ")", conteudo: el("ul.pilha.pilha--curta", {}, (beta ? [
+  /* v9.4: um fluxo só (Beta pp. 13–15, com o crítico do Alpha p. 19). */
+  function referenciaInvestigacao() {
+    return UI().recolhivel({ titulo: "Como funciona (regras unificadas)", conteudo: el("ul.pilha.pilha--curta", {}, [
       "Investigar: escolha um ponto e uma perícia listada; você recebe passivamente as linhas cuja DT ≤ o seu dado (ex.: d6 → 6).",
-      "Depois, Observar (outra perícia, também passiva) OU Examinar (teste da primeira perícia; sem informação nova, −1 PD).",
-      "Interagir é a alternativa a Investigar: uma ação simples com o ponto; o Mestre resolve.",
-      "Recapitular: Intuição DT 10 com a aprovação do Mestre; Compartilhar: o aliado testa Inspecionar DT 10 como ação livre. Um sucesso trava a ação na cena.",
-    ] : [
-      "Investigar: escolha um ponto e uma perícia listada; você recebe as linhas cuja DT ≤ o seu dado.",
-      "Depois, Examinar (teste da perícia; sem informação nova, −1 PD) OU Interagir (descreva uma ação simples).",
-      "Crítico investigando: o Mestre revela uma informação adicional (p. 19).",
-      "Recapitular: Intuição DT 10; Compartilhar: o aliado testa Pesquisar DT 10 (ação livre). Um sucesso trava a ação na cena.",
-    ]).map(function (t) { return el("li.t-mini", { texto: t }); })) });
+      "Depois, Observar (outra perícia listada, também passiva) OU Examinar (teste da perícia escolhida; sem informação nova, −1 PD).",
+      "Interagir é a alternativa a Investigar: uma ação simples com o ponto, sem passiva; o Mestre resolve.",
+      "Crítico examinando: o Mestre decide uma informação adicional (Alpha p. 19).",
+      "Recapitular: Intuição DT 10 com a aprovação do Mestre; Compartilhar: o aliado testa Pesquisar DT 10 como ação livre. Um sucesso trava a ação na cena.",
+      "Varredura Ampla: duas perícias na passiva e, depois, ainda pode Examinar (nunca três perícias na mesma ação).",
+    ].map(function (t) { return el("li.t-mini", { texto: t }); })) });
   }
-  function abrirInvestigar(ctx, ponto, pericias, beta) {
+  function abrirInvestigar(ctx, ponto, pericias) {
     var x = b(ctx);
-    var minhas = x.base.pericias.filter(function (p) { return pericias.some(function (k) { var c = k.split(":"); var ch = K().ALIASES[c[0]] || c[0]; return p.chave === ch && (!c[1] || p.especializacao.toLowerCase() === c[1].toLowerCase()); }); });
+    var minhas = x.base.pericias.filter(function (p) { return pericias.some(function (k) { var c = k.split(":"); var ch = K().chaveDePericia(c[0]); return p.chave === ch && (!c[1] || p.especializacao.toLowerCase() === c[1].toLowerCase()); }); });
     var todas = minhas.length ? minhas : x.base.pericias;
-    var varredura = !beta && R().habilidadesDoTipo(x, "duasPericias").length > 0;
-    var st = { pericia: (todas[0] || {}).id || "", segunda: "", modo: beta ? "observar" : "examinar", descricao: "" };
-    var modos = beta ? [["observar", "Investigar e Observar (2ª perícia, passiva)"], ["examinar", "Investigar e Examinar (teste; sem novidade, −1 PD)"], ["nada", "Só a passiva"], ["interagir", "Interagir (em vez de investigar)"]]
-      : [["examinar", "Investigar e Examinar (teste; sem novidade, −1 PD)"], ["interagir", "Investigar e Interagir"], ["nada", "Só a passiva"]];
+    var varredura = R().habilidadesDoTipo(x, "duasPericias").length > 0;
+    var st = { pericia: (todas[0] || {}).id || "", segunda: "", modo: "observar", descricao: "" };
+    var modos = [["observar", "Investigar e Observar (2ª perícia, passiva)"], ["examinar", "Investigar e Examinar (teste; sem novidade, −1 PD)"], ["nada", "Só a passiva"], ["interagir", "Interagir (em vez de investigar, sem passiva)"]];
     var corpo = el("div.pilha");
+    function opcoesPericia(vazio) { return [{ valor: "", rotulo: vazio }].concat(todas.map(function (p) { return { valor: p.id, rotulo: R().nomeDaPericia(x, p) + " d" + R().dadoDaPericia(x, p) }; })); }
     function desenhar() {
       U.trocar(corpo, [
         el("p", { texto: ponto.descricao }),
-        UI().campo({ rotulo: "Perícia", tipo: "selecao", valor: st.pericia, opcoes: todas.map(function (p) { return { valor: p.id, rotulo: R().nomeDaPericia(x, p) + " d" + R().dadoDaPericia(x, p) }; }), aoMudar: function (v) { st.pericia = v; } }),
         UI().campo({ rotulo: "Depois", tipo: "selecao", valor: st.modo, opcoes: modos.map(function (m) { return { valor: m[0], rotulo: m[1] }; }), aoMudar: function (v) { st.modo = v; desenhar(); } }),
-        (beta && st.modo === "observar") || varredura ? UI().campo({ rotulo: varredura ? "Segunda perícia (Varredura Ampla)" : "Perícia para Observar", tipo: "selecao", valor: st.segunda, opcoes: [{ valor: "", rotulo: varredura ? "Não usar" : "Escolha…" }].concat(todas.map(function (p) { return { valor: p.id, rotulo: R().nomeDaPericia(x, p) + " d" + R().dadoDaPericia(x, p) }; })), aoMudar: function (v) { st.segunda = v; } }) : null,
+        st.modo !== "interagir" ? UI().campo({ rotulo: "Perícia", tipo: "selecao", valor: st.pericia, opcoes: todas.map(function (p) { return { valor: p.id, rotulo: R().nomeDaPericia(x, p) + " d" + R().dadoDaPericia(x, p) }; }), aoMudar: function (v) { st.pericia = v; } }) : null,
+        st.modo === "observar" ? UI().campo({ rotulo: "Perícia para Observar (outra listada)", tipo: "selecao", valor: st.segunda, opcoes: opcoesPericia("Escolha…"), aoMudar: function (v) { st.segunda = v; } })
+          : varredura && (st.modo === "examinar" || st.modo === "nada") ? UI().campo({ rotulo: "Segunda perícia na passiva (Varredura Ampla)", tipo: "selecao", valor: st.segunda, opcoes: opcoesPericia("Não usar"), aoMudar: function (v) { st.segunda = v; } }) : null,
         st.modo === "interagir" ? UI().campo({ rotulo: "O que você faz com o ponto", tipo: "area", linhas: 2, limite: 600, aoMudar: function (v) { st.descricao = v; } }) : null,
       ]);
     }
     desenhar();
     UI().modal({ titulo: "Investigar — " + ponto.nome, classe: "o2-janela", conteudo: [corpo], botoes: [{ rotulo: "Cancelar", classe: "r-botao--fantasma" }, { rotulo: "Investigar", classe: "r-botao--principal", aoClicar: function (f) {
-      if (beta && st.modo === "observar" && !st.segunda) { UI().avisoAtencao("Escolha a perícia para Observar."); return; }
-      f(); op(ctx, { tipo: "investigar", ponto: ponto.id, pericia: st.modo === "interagir" && beta ? undefined : st.pericia, segunda: st.segunda || undefined, modo: st.modo, descricao: st.descricao });
+      if (st.modo === "observar" && !st.segunda) { UI().avisoAtencao("Escolha a perícia para Observar."); return; }
+      f(); op(ctx, { tipo: "investigar", ponto: ponto.id, pericia: st.modo === "interagir" ? undefined : st.pericia, segunda: st.modo === "interagir" ? undefined : st.segunda || undefined, modo: st.modo, descricao: st.descricao });
     } }] });
   }
   function abrirCompartilhar(ctx) {
@@ -541,7 +545,7 @@
     var s = x.estado;
     return el("div.pilha", {}, [
       el("dl.o2-pares.o2-pares--linha", {}, [
-        el("div", {}, [el("dt", { texto: "Testes de lesão" + (x.perfilRegras === "beta-vigilia" ? " (cena)" : "") }), el("dd", { texto: String(s.testesLesao) + " → próxima DT " + (7 + 3 * s.testesLesao) })]),
+        el("div", {}, [el("dt", { texto: "Testes de lesão (cena)" }), el("dd", { texto: String(s.testesLesao) + " → próxima DT " + (7 + 3 * s.testesLesao) })]),
         el("div", {}, [el("dt", { texto: "Testes de trauma" }), el("dd", { texto: String(s.testesTrauma) + " → próxima DT " + (7 + 3 * s.testesTrauma) })]),
         el("div", {}, [el("dt", { texto: "Ação extra" }), el("dd", { texto: String(s.acaoExtra) })]),
       ]),

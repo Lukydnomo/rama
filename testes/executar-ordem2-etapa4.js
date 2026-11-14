@@ -51,8 +51,8 @@ const bl = (m, pid) => m.fichas[pid].bloco;
 t.grupo("Ficha pronta: os números de origem");
 {
   const rh = R.dePreset("rhiona");
-  t.ok("Rhiona (Beta) continua com 22 PV / 12 PD", rh.recursos.pv.max === 22 && rh.recursos.pd.max === 12 && rh.perfilRegras === "beta-vigilia");
-  const todos = K.PRESETS.every((p) => { const b = R.dePreset(p.id); return b.recursos.pv.max === p.pv && b.recursos.pd.max === p.pd && b.nivel === p.nivel && b.perfilRegras === p.perfilRegras && b.base.atributos.fisico === p.atributos.fisico; });
+  t.ok("Rhiona (Beta) continua com 22 PV / 12 PD", rh.recursos.pv.max === 22 && rh.recursos.pd.max === 12 && rh.ambientacao === "vigilia" && rh.procedencia.origem === "beta");
+  const todos = K.PRESETS.every((p) => { const b = R.dePreset(p.id); return b.recursos.pv.max === p.pv && b.recursos.pd.max === p.pd && b.nivel === p.nivel && b.ambientacao === K.PERFIS_REGRAS[p.perfilRegras].ambientacao && b.base.atributos.fisico === p.atributos.fisico; });
   t.ok("os 14 presets conservam PV, PD, nível, versão e dados de origem", todos && K.PRESETS.length === 14);
   const a = R.dePreset("val"), b = R.dePreset("val");
   t.ok("cada cópia ganha ids próprios", a.base.pericias[0].id !== b.base.pericias[0].id);
@@ -73,11 +73,11 @@ t.grupo("Criação guiada: orçamento, teto, devolução, Aptidão, versão");
   const apt = R.deGuiada(base({ pericias: [{ chave: "aptidao", especializacao: "Folclore", dado: 6 }] }));
   t.ok("Aptidão leva a especialização e custa uma vez", apt.ok && apt.bloco.base.pericias.some((p) => p.chave === "aptidao" && p.especializacao === "Folclore" && p.dado === 6) && apt.bloco.escolhas.passosPericia === 1);
   const g = R.deGuiada(base({}));
-  t.ok("guiada: nível 1, 16 PV / 12 PD de referência, habilidade do perfil", g.ok && g.bloco.nivel === 1 && g.bloco.recursos.pv.max === 16 && g.bloco.habilidades.some((h) => h.ref === K.HABILIDADE_DE_PERFIL["beta-vigilia"].analista));
+  t.ok("guiada: nível 1, 16 PV / 12 PD de referência, habilidade do perfil", g.ok && g.bloco.nivel === 1 && g.bloco.recursos.pv.max === 16 && g.bloco.habilidades.some((h) => h.ref === K.HABILIDADE_DE_PERFIL.analista));
   t.ok("passos sobrando são permitidos pelo motor (a tela pede confirmação)", g.ok && g.bloco.escolhas.passosAtributo === 0);
-  const alpha = R.deGuiada(base({ perfilRegras: "alpha-contemporaneo", ocupacaoId: "cientista", ocupacaoNome: "Cientista", habilidadeOcupacao: "foco_mental" }));
+  const alpha = R.deGuiada(base({ ambientacao: "contemporaneo", ocupacaoId: "cientista", ocupacaoNome: "Cientista", habilidadeOcupacao: "foco_mental" }));
   t.ok("Alpha: ocupação documentada traz a habilidade dela", alpha.ok && alpha.bloco.habilidades.some((h) => h.ref === "foco_mental"));
-  t.ok("Beta: a lista de perícias é a da Vigília (Bruxaria, sem Tecnologia)", K.listaDePericias("beta-vigilia").some((p) => p.chave === "ocultismo") && !K.listaDePericias("beta-vigilia").some((p) => p.chave === "tecnologia"));
+  t.ok("v9.4: uma lista de perícias para todos (Ocultismo, Pesquisar, Tecnologia, Animais)", ["ocultismo", "pesquisar", "tecnologia", "animais"].every((c) => K.listaDePericias().some((p) => p.chave === c)));
 }
 
 t.grupo("Progressão por marcos: do 1 ao 10");

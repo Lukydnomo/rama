@@ -131,7 +131,10 @@
   function podeAgir(papel, pid) { return !!papel.mestre || lista(papel.pode).indexOf(pid) >= 0; }
   /* A rodada que conta: a do combate do Beta; no Alpha (conflito simplificado,
      sem rodadas próprias) e fora de combate, a rodada da cena. */
-  function rodadaAtual(e) { return e.combate.ativo && e.perfil !== "alpha-contemporaneo" ? e.combate.rodada : e.proc.rodada; }
+  /* A rodada da atividade em curso: a do combate, se houver; senão a da
+     cena. As TABELAS (sobrecarga, maldição) contam rodadas da cena: o
+     combate avança o mesmo contador (v9.4), sem aplicar duas vezes. */
+  function rodadaAtual(e) { return e.combate.ativo ? e.combate.rodada : e.proc.rodada; }
   /* "1", "1d4", "2d6+1" → { total, faces[] } */
   function rolarExpr(expr, rolar) {
     var t = String(expr === undefined || expr === null ? "0" : expr).replace(/\s/g, "").toLowerCase();
@@ -270,7 +273,6 @@
     log(e, "Cena carregada: " + cena.nome + ".");
     log(e, "Pacote " + texto(pac.nome, 80) + " · cena " + cena.nome + " (versão " + p.pacote.versao + ").", true);
     ev(s, "Cena carregada: " + cena.nome + ". Anuncie os pontos de interesse quando quiser.");
-    if (cena.perfil && cena.perfil !== e.perfil) ev(s, "Atenção: a cena é do perfil " + K().PERFIS_REGRAS[cena.perfil].nome + " e a campanha está em " + K().PERFIS_REGRAS[e.perfil].nome + " — nada é convertido; troque o perfil da campanha se for o caso.", true);
   }, { mestre: true, semFicha: true, rev: true });
 
   OP("descarregarCena", function (e, fichas, o, papel, rolar, s) {
@@ -371,8 +373,10 @@
     var sol = e.investigacao.solicitacoes.filter(function (x) { return x.id === o.solicitacao; })[0];
     if (!sol) return { ok: false, motivo: "Solicitação não encontrada." };
     if (sol.concedida) return { ok: false, motivo: "Essa solicitação já rendeu a pista dela." };
-    var ok = sol.tipo === "interagir" ? ["pendente", "resolvida"].indexOf(sol.estado) >= 0 : sol.estado === "sucesso";
-    if (!ok) return { ok: false, motivo: sol.tipo === "interagir" ? "Interação já fechada." : "Só depois de um teste bem-sucedido." };
+    /* Interagir e o crítico examinando (v9.4): o Mestre decide; sem teste. */
+    var semTeste = sol.tipo === "interagir" || sol.tipo === "critico";
+    var ok = semTeste ? ["pendente", "resolvida"].indexOf(sol.estado) >= 0 : sol.estado === "sucesso";
+    if (!ok) return { ok: false, motivo: semTeste ? "Já fechada." : "Só depois de um teste bem-sucedido." };
     var pid = sol.tipo === "compartilhar" ? sol.aliado : sol.quem;
     var achado = o.pista ? acharPista(e, o.ponto, o.pista) : { pista: null };
     if (o.pista && !achado.pista) return { ok: false, motivo: "Pista não encontrada." };
@@ -847,7 +851,7 @@
     if (cx.tipo === "esconderijo") concluirEsconderijo(e, fichas, t, res, s, rolar, cx);
     if (cx.tipo === "radio") concluirRadio(e, fichas, t, res, s, rolar, cx);
   });
-  function pontos(res, b) { return M().pontuacao(res, b.perfilRegras === "beta-vigilia"); }
+  function pontos(res) { return M().pontuacao(res); }
   function concluirDesafio(e, fichas, t, res, s, rolar, ctx, cx) {
     var d = desafio(e, cx.desafio);
     if (!d) return;
@@ -858,7 +862,7 @@
       if (res.sucesso) {
         var pts = pontos(res, b);
         d.dados.pa = inteiro(d.dados.pa, 0, 999, 0) + pts;
-        var linha = nome + " soma " + pts + (res.critico && b.perfilRegras === "beta-vigilia" ? " (crítico: duas maiores)" : "") + " → " + d.dados.pa + "/" + inteiro(cf.pa, 1, 999, 10) + ".";
+        var linha = nome + " soma " + pts + (res.critico ? " (crítico: duas maiores)" : "") + " → " + d.dados.pa + "/" + inteiro(cf.pa, 1, 999, 10) + ".";
         hist(d, linha); ev(s, linha);
         if (d.dados.pa >= inteiro(cf.pa, 1, 999, 10)) vencer(e, d, s, pid, "arrombado" + (cf.consequencia ? " — " + cf.consequencia : ""));
       } else { hist(d, nome + " não consegue (" + res.total + ")."); ev(s, nome + " não consegue arrombar desta vez."); }
@@ -910,7 +914,7 @@
       if (res.sucesso && cf.ataque) {
         var alvoPa = ME().participante(e, cx.alvo), bAlvo = alvoPa ? ME().blocoDoAtor(e, fichas, alvoPa) : null;
         if (bAlvo) {
-          var dnA = M().dano(res, { dano: inteiro(cf.ataque.dano, -10, 50, 0) }, [], b.perfilRegras === "beta-vigilia");
+          var dnA = M().dano(res, { dano: inteiro(cf.ataque.dano, -10, 50, 0) }, []);
           var rd = alvoPa.tipo === "npc" && alvoPa.rd ? Math.max(0, alvoPa.rd - inteiro(cf.ataque.ignoraRd, 0, 99, 0)) : 0;
           var val = Math.max(0, dnA.valor - rd);
           M().aplicarDano(bAlvo, { valor: val, tipo: "fisico", externo: true }).forEach(function (y) { ev(s, alvoPa.nome + " (" + d.nome + ", " + dnA.valor + (rd ? " − RD " + rd : "") + "): " + y.texto); });
@@ -1151,9 +1155,9 @@
       return;
     }
     if (!t) return { ok: false, motivo: "Tabela não encontrada." };
-    if (o.acao === "ativar") { t.ativa = o.valor !== false; if (t.ativa && o.inicio !== undefined) t.inicio = inteiro(o.inicio, 0, 100000, rodadaAtual(e)); else if (t.ativa && o.agora) t.inicio = rodadaAtual(e); }
+    if (o.acao === "ativar") { t.ativa = o.valor !== false; if (t.ativa && o.inicio !== undefined) t.inicio = inteiro(o.inicio, 0, 100000, e.proc.rodada); else if (t.ativa && o.agora) t.inicio = e.proc.rodada; }
     else if (o.acao === "suspender") t.suspensa = o.valor !== false;
-    else if (o.acao === "isentar") { var r = String(inteiro(o.rodada, 0, 100000, rodadaAtual(e))); t.isentos[r] = lista(t.isentos[r]).filter(function (p) { return p !== o.personagem; }); if (o.valor !== false) t.isentos[r].push(String(o.personagem)); }
+    else if (o.acao === "isentar") { var r = String(inteiro(o.rodada, 0, 100000, e.proc.rodada)); t.isentos[r] = lista(t.isentos[r]).filter(function (p) { return p !== o.personagem; }); if (o.valor !== false) t.isentos[r].push(String(o.personagem)); }
     else return { ok: false, motivo: "Ação desconhecida." };
     log(e, t.nome + ": " + (t.ativa ? (t.suspensa ? "suspensa" : "ativa desde a rodada " + t.inicio) : "desligada") + ".");
     ev(s, t.nome + ": " + o.acao + ".");
@@ -1190,7 +1194,7 @@
      ENCERRAR A RODADA (fora do combate) — e o que vem com ela
      --------------------------------------------------------------- */
   function fimDeRodadaComum(e, fichas, r, rolar, s) {
-    aplicarTabelas(e, fichas, r, rolar, s);
+    aplicarTabelas(e, fichas, e.proc.rodada, rolar, s);
     /* Sustentar: novo teste para quem não soltou. */
     e.proc.desafios.filter(function (d) { return d.tipo === "sustentar" && d.dados.sustentador; }).forEach(function (d) {
       var pid = d.dados.sustentador, b = bloco(fichas, pid);
@@ -1253,6 +1257,10 @@
     });
     e.proc.agarres = e.proc.agarres.filter(function (a) { var por_ = ME().participante(e, a.por); return a.soltouEm !== r && por_ && !ME().foraDeCombate(ME().blocoDoAtor(e, fichas, por_)); });
     fimDeRodadaComum(e, fichas, r, rolar, s);
+    /* A rodada de combate também é uma rodada da cena (tabelas). */
+    if (e.proc.encerradas.indexOf(e.proc.rodada) < 0) e.proc.encerradas.push(e.proc.rodada);
+    e.proc.rodada++;
+    e.proc.encerradas = e.proc.encerradas.slice(-60);
   });
   ME().gancho("inicioDeRodadaCombate", function (e, fichas, r, rolar, s) {
     if (!e.proc) return;
@@ -1269,7 +1277,8 @@
   /* Quem causou dano em quem (a maldição do Ídolo isenta). */
   ME().gancho("aoDano", function (e, fichas, alvoPa, b, x, s) {
     if (!e.proc || !x.ator || !x.valor) return;
-    var r = String(rodadaAtual(e));
+    /* Rodada da CENA (a das tabelas): também vale para dano em combate. */
+    var r = String(e.proc.rodada);
     var autor = ME().participante(e, x.ator);
     var pid = autor && autor.tipo === "pc" ? autor.personagemId : "";
     if (pid && alvoPa && alvoPa.tipo === "pc") { var l = e.proc.causouDano[r] || (e.proc.causouDano[r] = []); if (l.indexOf(pid) < 0) l.push(pid); }
@@ -1501,7 +1510,7 @@
       var res = null;
       if (ef.pericia) {
         var bonus = abrigados.indexOf(pid) >= 0 && ef.abrigo ? [{ faces: inteiro(ef.abrigo.bonus, 4, 12, 6), fonte: "Abrigo" }] : [];
-        var mt = M().montar(b, { pericia: ef.pericia, dt: inteiro(ef.dt, 0, 40, 10), rotulo: nomeEf + " (" + K().nomeDaPericia(b.perfilRegras, ef.pericia, b.ambientacao) + ")", bonus: bonus }, {});
+        var mt = M().montar(b, { pericia: ef.pericia, dt: inteiro(ef.dt, 0, 40, 10), rotulo: nomeEf + " (" + K().nomeDaPericia(null, ef.pericia) + ")", bonus: bonus }, {});
         if (mt.ok) { res = M().resolver(mt.montagem, M().rolar(mt.montagem, rolar), {}); ME().registrarRolagem(e, pid, nome, mt.montagem, res, s); M().aposTeste(b, mt.montagem, res); }
       }
       var passou = res ? res.sucesso === true : false;
@@ -1650,7 +1659,7 @@
       var dn = rolarExpr(x.esforcos + "d4", rolar);
       M().aplicarDano(b, { valor: dn.total, tipo: "fisico", externo: false }).forEach(function (y) { ev(s, t.nome + " · esforço extra (" + descreverRolagem(dn) + "): " + y.texto); });
     }
-    var ganho = res.sucesso ? M().pontuacao(res, b.perfilRegras === "beta-vigilia") : res.rb;
+    var ganho = res.sucesso ? M().pontuacao(res) : res.rb;
     if (cx.acao === "carregar" && cx.alvo && p.por[cx.alvo]) {
       var y = p.por[cx.alvo];
       if (y.pa < x.pa) x.pa = y.pa;
@@ -1959,7 +1968,7 @@
     meus.forEach(function (pid) { lista(e.investigacao.descobertas[pid]).forEach(function (d) { if (d.anexo) ids[d.anexo] = true; }); });
     p.grupo.forEach(function (d) { if (d.anexo) ids[d.anexo] = true; });
     vp.anexos = Object.keys(ids).map(function (k) { var a = anexoDef(e, k); return { id: k, nome: a.nome, url: a.url || "", documentoId: a.documentoId || "", descricao: a.descricao || a.alternativa || "", veio: a.veio }; });
-    vp.tabelas = p.tabelas.filter(function (t) { return t.ativa; }).map(function (t) { var n = rodadaAtual(e) - t.inicio + 1; return { id: t.id, nome: t.nome, tipo: t.tipo, suspensa: t.suspensa, rodadaNaTabela: n, linhaAtual: t.tipo === "sobrecarga" ? copiar(linhaDaTabela(t, rodadaAtual(e))) : null, passadas: t.tipo === "maldicao" ? t.linhas.filter(function (l) { return l.de <= n && l.texto; }).map(function (l) { return l.texto; }) : [] }; });
+    vp.tabelas = p.tabelas.filter(function (t) { return t.ativa; }).map(function (t) { var n = e.proc.rodada - t.inicio + 1; return { id: t.id, nome: t.nome, tipo: t.tipo, suspensa: t.suspensa, rodadaNaTabela: n, linhaAtual: t.tipo === "sobrecarga" ? copiar(linhaDaTabela(t, e.proc.rodada)) : null, passadas: t.tipo === "maldicao" ? t.linhas.filter(function (l) { return l.de <= n && l.texto; }).map(function (l) { return l.texto; }) : [] }; });
     vp.agarres = p.agarres.map(function (a) { return { vitima: a.vitima, por: ME().participante(e, a.por) && !ME().participante(e, a.por).oculto ? a.por : "" }; });
     if (p.perseguicao) { var pe = copiar(p.perseguicao); vp.perseguicao = { ativa: pe.ativa, rodada: rodadaDaPerseguicao(e), rodadas: pe.config.rodadas, limiares: pe.config.limiares, efeito: pe.config.efeito, por: pe.por, mortes: pe.mortes, recuperarFolego: !!pe.config.recuperarFolego, sacrificio: !!pe.config.sacrificio, chegada: pe.config.chegada || 0 }; }
     if (p.esconderijo) { var h = p.esconderijo; vp.esconderijo = { ativo: h.ativo, distrair: h.distrair, por: {} }; Object.keys(h.por).forEach(function (pid) { var x = h.por[pid]; vp.esconderijo.por[pid] = meus.indexOf(pid) >= 0 ? copiar(x) : { quantos: x.dados.length, descoberto: x.descoberto, chegou: x.chegou, parado: x.parado }; }); vp.esconderijo.ultima = lista(h.rolagens).slice(-1).map(function (x) { return { rodada: x.rodada, d10: x.d10, valores: x.valores }; })[0] || null; }

@@ -40,25 +40,25 @@
   /* ---------------------------------------------------------------
      PERFIS DE REGRAS E AMBIENTAÇÃO
      --------------------------------------------------------------- */
+  /* v9.4: UM conjunto de regras. Os antigos "perfis de regras" ficam só
+     como LEGADO: dizem de que playtest veio uma ficha, uma mesa ou um
+     preset (Fonte) e qual ambientação ela usava — nunca escolhem regra. */
+  var REGRAS = {
+    id: "ordem2-unificada", versao: 1, nome: "Regras unificadas do R.A.M.A.",
+    texto: "Contos da Vigília (Beta) como fonte mais recente quando revisa uma mecânica geral; nomenclatura contemporânea; perícias, ferramentas e recursos do Alpha que a Vigília não cobre. Não é edição oficial.",
+  };
   var PERFIS_REGRAS = {
-    "alpha-contemporaneo": {
-      id: "alpha-contemporaneo", nome: "Alpha · Contemporâneo", curto: "Alpha",
-      fonte: "alpha", ambientacao: "contemporaneo", termoOcupacao: "Ocupação",
-      combate: "simplificado", /* Alpha p. 26: só o conflito simplificado */
-      texto: "Investigação do Playtest Alpha (pp. 14–26), perícias da p. 17, ocupação, e o conflito simplificado da p. 26.",
-    },
-    "beta-vigilia": {
-      id: "beta-vigilia", nome: "Beta · Vigília", curto: "Beta",
-      fonte: "beta", ambientacao: "vigilia", termoOcupacao: "Vocação",
-      combate: "fases", /* Beta p. 18: três fases */
-      texto: "Ação do Playtest Beta (pp. 6–25), perícias da p. 9, vocação, combate em fases, lesões e traumas, pavor e relações.",
-    },
+    "alpha-contemporaneo": { id: "alpha-contemporaneo", nome: "Playtest Alpha", curto: "Alpha", fonte: "alpha", ambientacao: "contemporaneo" },
+    "beta-vigilia": { id: "beta-vigilia", nome: "Playtest Beta", curto: "Beta", fonte: "beta", ambientacao: "vigilia" },
   };
   var ORDEM_PERFIS_REGRAS = ["alpha-contemporaneo", "beta-vigilia"];
   var AMBIENTACOES = {
-    contemporaneo: { nome: "Contemporâneo (Ordo Realitas)", rotuloOcultismo: "Ocultismo" },
-    vigilia: { nome: "Vigília (Idade Média)", rotuloOcultismo: "Bruxaria" },
+    contemporaneo: { nome: "Contemporâneo (Ordo Realitas)", curto: "Contemporâneo" },
+    vigilia: { nome: "Contos da Vigília (Idade Média)", curto: "Contos da Vigília" },
   };
+  var ORDEM_AMBIENTACOES = ["contemporaneo", "vigilia"];
+  function ambientacaoValida(a) { if (AMBIENTACOES[a]) return a; if (PERFIS_REGRAS[a]) return PERFIS_REGRAS[a].ambientacao; return "contemporaneo"; }
+  var TERMO_OCUPACAO = "Ocupação";
 
   /* ---------------------------------------------------------------
      ATRIBUTOS E DEGRAUS (Alpha p. 16; Beta p. 8)
@@ -75,14 +75,17 @@
   var ESCALA_PERICIA = { 4: "Destreinado", 6: "Treinado", 8: "Especialista", 10: "Mestre", 12: "Grão-mestre", 20: "Sobre-humano (paranormal)" };
 
   /* ---------------------------------------------------------------
-     PERÍCIAS — duas listas (Alpha p. 17; Beta p. 9)
-     `ocultismo` é UMA chave: o rótulo segue a ambientação (Ocultismo /
-     Bruxaria). `metalurgia` aceita "Ofício" como alias. Pesquisar
-     (Alpha) e Inspecionar (Beta) são a mesma função em perfis
-     diferentes: cada perfil tem a sua, nunca as duas.
+     PERÍCIAS — UMA lista (v9.4). Atributo-base e escopo do Beta (p. 9),
+     com exemplos contemporâneos; Máquinas e Tecnologia (Alpha p. 17) e
+     Animais (Beta p. 9) continuam. Nomes contemporâneos, com aliases de
+     entrada: Bruxaria → Ocultismo, Inspecionar → Pesquisar, Ofício e
+     Metalurgia → a chave `metalurgia` (rótulo "Ofício"). Metalurgia não
+     vira Máquinas nem Tecnologia: são competências distintas.
+     As listas de cada playtest ficam como FONTE (PERICIAS_ALPHA/BETA).
      --------------------------------------------------------------- */
-  var PERICIAS_ALPHA = [
-    ["acrobacia", "Acrobacia", "fisico", "Ginástica, parkour, skate e patins."],
+  var PERICIAS = [
+    ["acrobacia", "Acrobacia", "fisico", "Ginástica, equilíbrio e parkour (skate e patins, na ambientação contemporânea)."],
+    ["animais", "Animais", "emocao", "Manejar e acalmar animais, montar e conduzir."],
     ["aptidao", "Aptidão", "mente", "Conhecimento em um campo específico (especialização)."],
     ["atletismo", "Atletismo", "fisico", "Correr, saltar, escalar, nadar, remar."],
     ["crime", "Crime", "fisico", "Furtar, abrir fechaduras, falsificar documentos."],
@@ -94,67 +97,49 @@
     ["luta", "Luta", "fisico", "Atacar desarmado ou com armas corpo a corpo."],
     ["maquinas", "Máquinas", "mente", "Operar e consertar máquinas, dirigir veículos."],
     ["medicina", "Medicina", "mente", "Primeiros socorros, tratamentos, necropsias."],
-    ["ocultismo", "Ocultismo", "mente", "Conhecimento sobre o paranormal."],
+    ["ocultismo", "Ocultismo", "mente", "Conhecimento sobre o paranormal (chamado Bruxaria na Vigília)."],
+    ["metalurgia", "Ofício", "mente", "Fabricar e consertar objetos; a especialização diz o ofício (ex.: Metalurgia)."],
     ["percepcao", "Percepção", "mente", "Notar coisas pelos sentidos, revistar lugares."],
     ["persuasao", "Persuasão", "emocao", "Convencer com argumentos e lábia."],
-    ["pesquisar", "Pesquisar", "mente", "Pesquisar documentos e bancos de dados, analisar evidências."],
+    ["pesquisar", "Pesquisar", "mente", "Examinar documentos e bancos de dados, analisar evidências (Inspecionar, na Vigília)."],
     ["pontaria", "Pontaria", "fisico", "Atacar com armas de arremesso ou de disparo."],
-    ["sobrevivencia", "Sobrevivência", "mente", "Acampar, rastrear, acalmar animais ferozes."],
+    ["sobrevivencia", "Sobrevivência", "mente", "Acampar, rastrear, orientar-se na natureza."],
     ["tecnologia", "Tecnologia", "mente", "Operar dispositivos, hackear redes."],
     ["vigor", "Vigor", "fisico", "Fôlego, venenos, suportar ferimentos."],
   ];
-  var PERICIAS_BETA = [
-    ["acrobacia", "Acrobacia", "fisico", "Ginástica, parkour, equilíbrio."],
-    ["animais", "Animais", "emocao", "Manejar animais, acalmar feras, cavalgar."],
-    ["aptidao", "Aptidão", "mente", "Conhecimento em um campo específico (especialização)."],
-    ["atletismo", "Atletismo", "fisico", "Correr, saltar, escalar, nadar, remar."],
-    ["ocultismo", "Bruxaria", "mente", "Conhecimento sobre o paranormal."],
-    ["crime", "Crime", "fisico", "Furtar, abrir fechaduras, falsificar documentos."],
-    ["disciplina", "Disciplina", "emocao", "Estudar, meditar, resistir a traumas e sustos."],
-    ["enganacao", "Enganação", "emocao", "Mentir, disfarçar-se, seduzir."],
-    ["furtividade", "Furtividade", "fisico", "Esconder-se, andar sem ser visto ou ouvido."],
-    ["intimidar", "Intimidar", "emocao", "Assustar e coagir pessoas."],
-    ["intuicao", "Intuição", "emocao", "\"Sexto sentido\" sobre pessoas e ambientes."],
-    ["inspecionar", "Inspecionar", "mente", "Examinar documentos e analisar evidências."],
-    ["luta", "Luta", "fisico", "Atacar desarmado ou com armas corpo a corpo."],
-    ["medicina", "Medicina", "mente", "Primeiros socorros, tratamentos."],
-    ["metalurgia", "Metalurgia", "mente", "Fabricar e consertar itens. Nas fichas: \"Ofício\"."],
-    ["percepcao", "Percepção", "mente", "Notar coisas pelos sentidos, revistar lugares."],
-    ["persuasao", "Persuasão", "emocao", "Convencer com argumentos e lábia."],
-    ["pontaria", "Pontaria", "fisico", "Atacar com armas de arremesso ou de disparo."],
-    ["sobrevivencia", "Sobrevivência", "mente", "Acampar, rastrear, acalmar animais ferozes."],
-    ["vigor", "Vigor", "fisico", "Fôlego, venenos, suportar ferimentos."],
-  ];
+  /* Fonte: as listas impressas de cada playtest (só consulta). */
+  var PERICIAS_ALPHA = ["acrobacia", "aptidao", "atletismo", "crime", "disciplina", "enganacao", "furtividade", "intimidar", "intuicao", "luta", "maquinas", "medicina", "ocultismo", "percepcao", "persuasao", "pesquisar", "pontaria", "sobrevivencia", "tecnologia", "vigor"];
+  var PERICIAS_BETA = ["acrobacia", "animais", "aptidao", "atletismo", "ocultismo", "crime", "disciplina", "enganacao", "furtividade", "intimidar", "intuicao", "pesquisar", "luta", "medicina", "metalurgia", "percepcao", "persuasao", "pontaria", "sobrevivencia", "vigor"];
+  /* Aptidão: a UNIÃO das especializações; a ambientação só ordena as
+     sugestões. */
   var ESPECIALIZACOES = {
-    "alpha-contemporaneo": ["Artes", "Atualidades", "Burocracia", "Exatas", "Humanas", "Tática"],
-    "beta-vigilia": ["Artes", "Erudição", "Folclore", "Guerra", "Nobreza", "Religião"],
+    contemporaneo: ["Artes", "Atualidades", "Burocracia", "Exatas", "Humanas", "Tática"],
+    vigilia: ["Artes", "Erudição", "Folclore", "Guerra", "Nobreza", "Religião"],
   };
-  /* Rótulos de ficha que apontam para uma chave da lista (Beta: as
-     fichas impressas usam "Ofício" para Metalurgia e "Ocultismo" para
-     Bruxaria). */
-  var ALIASES = { oficio: "metalurgia", "ofício": "metalurgia", bruxaria: "ocultismo" };
+  var TODAS_ESPECIALIZACOES = ["Artes", "Atualidades", "Burocracia", "Erudição", "Exatas", "Folclore", "Guerra", "Humanas", "Nobreza", "Religião", "Tática"];
+  function especializacoes(ambientacao) {
+    var sug = ESPECIALIZACOES[ambientacaoValida(ambientacao)] || [];
+    return sug.concat(TODAS_ESPECIALIZACOES.filter(function (e) { return sug.indexOf(e) < 0; }));
+  }
+  var ALIASES = { oficio: "metalurgia", "ofício": "metalurgia", bruxaria: "ocultismo", inspecionar: "pesquisar" };
+  function chaveDePericia(chave) { var c = String(chave || "").toLowerCase(); return ALIASES[c] || c; }
 
-  function listaDePericias(perfil) {
-    var l = perfil === "beta-vigilia" ? PERICIAS_BETA : PERICIAS_ALPHA;
-    return l.map(function (p) { return { chave: p[0], nome: p[1], atributo: p[2], texto: p[3] }; });
+  /* O argumento (antigo perfil) é ignorado: a lista é uma só. */
+  function listaDePericias() {
+    return PERICIAS.map(function (p) { return { chave: p[0], nome: p[1], atributo: p[2], texto: p[3] }; });
   }
-  function pericia(perfil, chave) {
-    var c = ALIASES[chave] || chave;
-    return listaDePericias(perfil).filter(function (p) { return p.chave === c; })[0] || null;
+  function pericia(_perfil, chave) {
+    var c = chaveDePericia(chave);
+    return listaDePericias().filter(function (p) { return p.chave === c; })[0] || null;
   }
-  /* O nome que a tela mostra: Ocultismo/Bruxaria pela ambientação. */
-  function nomeDaPericia(perfil, chave, ambientacao) {
-    if (chave === "ocultismo") {
-      var amb = AMBIENTACOES[ambientacao] || AMBIENTACOES[(PERFIS_REGRAS[perfil] || {}).ambientacao] || AMBIENTACOES.contemporaneo;
-      return amb.rotuloOcultismo;
-    }
-    var p = pericia(perfil, chave);
-    if (p) return p.nome;
-    var outra = pericia(perfil === "beta-vigilia" ? "alpha-contemporaneo" : "beta-vigilia", chave);
-    return outra ? outra.nome : chave;
+  /* O nome da tela é o contemporâneo, em qualquer ambientação. */
+  function nomeDaPericia(_perfil, chave) {
+    var p = pericia(null, chave);
+    return p ? p.nome : String(chave || "");
   }
-  /* A perícia de "pesquisa" do perfil (Compartilhar, ver DIVERGENCIAS). */
-  function periciaDePesquisa(perfil) { return perfil === "beta-vigilia" ? "inspecionar" : "pesquisar"; }
+  /* Compartilhar: Pesquisar, DT 10 (texto do Alpha p. 23 e do Beta p. 15;
+     o Mestre pode trocar). */
+  function periciaDePesquisa() { return "pesquisar"; }
 
   /* ---------------------------------------------------------------
      PERFIS (Alpha p. 14; Beta p. 6)
@@ -166,15 +151,8 @@
   };
   var ORDEM_PERFIS = ["executor", "analista", "vigilante"];
 
-  /* A habilidade de perfil que cada perfil de regras DOCUMENTA para uma
-     ficha nova. Beta: as fichas prontas trazem o mesmo texto por perfil
-     (fato). Alpha: as fichas do Ato II são de nível 6; para Executor o
-     R.A.M.A. usa a versão de 3 espaços (Alan, nível 2, e Raven) —
-     inferência registrada em DIVERGENCIAS. */
-  var HABILIDADE_DE_PERFIL = {
-    "alpha-contemporaneo": { executor: "impeto_alpha3", analista: "avaliacao_alpha", vigilante: "prontidao_alpha" },
-    "beta-vigilia": { executor: "impeto_beta", analista: "analise_beta", vigilante: "prontidao_beta" },
-  };
+  /* A habilidade de perfil: o efeito mais recente (fichas do Beta). */
+  var HABILIDADE_DE_PERFIL = { executor: "impeto", analista: "avaliacao", vigilante: "prontidao" };
 
   /* ---------------------------------------------------------------
      HABILIDADES
@@ -184,77 +162,78 @@
      cenaConflito | missao | porAlvoCena.
      --------------------------------------------------------------- */
   var HABILIDADES = {
-    impeto_alpha3: { nome: "Ímpeto", versao: "alpha", fonte: "alpha", pagina: 15, perfil: "executor",
-      texto: "Barra com 3 espaços; cada teste falho preenche 1. Gaste 1 espaço para +d4 num teste ou 3 para aumentar um atributo em um passo até o fim da cena.",
-      motor: { tipo: "impeto", espacos: 3, zeraFimCena: false, opcoes: [{ custo: 1, efeito: "dado", faces: 4 }, { custo: 3, efeito: "passoAtributo" }] } },
-    impeto_alpha5: { nome: "Ímpeto", versao: "alpha", fonte: "alphaAto2", pagina: null, perfil: "executor", ficha: "Heitor",
-      texto: "Barra com 5 espaços; cada teste falho preenche 1. Gaste 1 para +d4, 2 para +d10, 3 para aumentar um atributo até o fim da cena ou 5 para uma ação extra na rodada.",
-      motor: { tipo: "impeto", espacos: 5, zeraFimCena: false, opcoes: [{ custo: 1, efeito: "dado", faces: 4 }, { custo: 2, efeito: "dado", faces: 10 }, { custo: 3, efeito: "passoAtributo" }, { custo: 5, efeito: "acaoExtra" }] } },
-    impeto_beta: { nome: "Ímpeto", versao: "beta", fonte: "betaFichas", pagina: null, perfil: "executor",
-      texto: "Barra com 5 espaços; cada teste falho preenche 1. Ação livre: 1 espaço dá +d4 num teste; 3 aumentam um atributo até o fim da cena; 3 dão uma ação extra em cena de conflito. Esvazia no fim da cena.",
+    impeto: { nome: "Ímpeto", fonte: "betaFichas", pagina: null, perfil: "executor",
+      texto: "Barra com 5 espaços; cada teste falho preenche 1. Ação livre: 1 espaço dá +d4 num teste; 3 aumentam um atributo em um passo até o fim da cena; 3 dão uma ação extra em cena de conflito. Esvazia no fim da cena.",
       motor: { tipo: "impeto", espacos: 5, zeraFimCena: true, opcoes: [{ custo: 1, efeito: "dado", faces: 4 }, { custo: 3, efeito: "passoAtributo" }, { custo: 3, efeito: "acaoExtra", soConflito: true }] } },
-    impeto_fervilhante: { nome: "Ímpeto Fervilhante", versao: "beta", fonte: "betaFichas", ficha: "Malik",
+    impeto_fervilhante: { nome: "Ímpeto Fervilhante", fonte: "betaFichas", ficha: "Malik",
       texto: "No início de cada cena, preenche 1 espaço da barra de ímpeto.", motor: { tipo: "impetoInicioCena", espacos: 1 } },
-    analise_beta: { nome: "Análise", versao: "beta", fonte: "beta", pagina: 7, perfil: "analista",
-      texto: "Uma ação dá 2 marcadores (máximo 4). Depois de rolar, cada marcador muda um dado em +1 ou −1, dentro das faces dele. Os não usados somem no fim da cena.",
+    avaliacao: { nome: "Avaliação", fonte: "beta", pagina: 7, perfil: "analista",
+      texto: "Uma ação dá 2 marcadores (máximo 4). Depois de rolar, cada marcador muda um dado em +1 ou −1, dentro das faces dele. Os não usados somem no fim da cena. (No Beta, chamada Análise.)",
       motor: { tipo: "analise", ganho: 2, maximo: 4, zeraFimCena: true } },
-    leitura_combate: { nome: "Leitura de Combate", versao: "beta", fonte: "beta", pagina: 7, ficha: "Rhiona",
-      texto: "Em combate, gastar uma ação para se defender dá 1 marcador de análise.", motor: { tipo: "marcadorAoDefender", ganho: 1 } },
-    segredo_do_aco: { nome: "Segredo do Aço", versao: "beta", fonte: "beta", pagina: 7, ficha: "Rhiona",
+    leitura_combate: { nome: "Leitura de Combate", fonte: "beta", pagina: 7, ficha: "Rhiona",
+      texto: "Em combate, gastar uma ação para se defender dá 1 marcador de Avaliação.", motor: { tipo: "marcadorAoDefender", ganho: 1 } },
+    segredo_do_aco: { nome: "Segredo do Aço", fonte: "beta", pagina: 7, ficha: "Rhiona",
       texto: "Sabe usar equipamento marcial; um item vestido que dá pontos de armadura dá 1 ponto a mais.", motor: { tipo: "armaduraExtra", valor: 1 } },
-    avaliacao_alpha: { nome: "Avaliação", versao: "alpha", fonte: "alphaAto2", perfil: "analista", ficha: "Amanda e Antônio",
-      texto: "Uma ação e 2 PD para observar um ser ou ambiente: recebe 2 dados bônus d4 para testes relativos a ele (+2d4 num teste ou +d4 em dois). No máximo 2 dados por esta habilidade.",
-      motor: { tipo: "avaliacao", pd: 2, dados: 2, faces: 4, maximo: 2 } },
-    prontidao_alpha: { nome: "Prontidão", versao: "alpha", fonte: "alphaAto2", perfil: "vigilante", ficha: "Val",
-      texto: "No início de qualquer conflito, gaste 3 PD para ganhar uma rodada em que age antes dos demais personagens e NPCs.",
-      motor: { tipo: "rodadaAntecipada", pd: 3 } },
-    prontidao_beta: { nome: "Prontidão", versao: "beta", fonte: "betaFichas", perfil: "vigilante",
+    prontidao: { nome: "Prontidão", fonte: "betaFichas", perfil: "vigilante",
       texto: "Uma vez por rodada, quando você ou outro ser em alcance curto faz um teste, gaste 2 PD para rolar de novo um dado que não deu 1. Em combate, pode agir na fase da ação ou em fases posteriores, e depois das rolagens daquela fase.",
       motor: { tipo: "prontidao", pd: 2, limite: "rodada", atrasar: true } },
-    antecipacao_tatica: { nome: "Antecipação Tática", versao: "beta", fonte: "betaFichas", ficha: "Sira",
+    antecipacao_tatica: { nome: "Antecipação Tática", fonte: "betaFichas", ficha: "Sira",
       texto: "No início de qualquer combate, gaste 2 PD para ganhar uma rodada em que age antes dos demais.", motor: { tipo: "rodadaAntecipada", pd: 2 } },
-    foco_mental: { nome: "Foco Mental", versao: "alpha", fonte: "alpha", pagina: 15,
+    foco_mental: { nome: "Foco Mental", fonte: "alpha", pagina: 15,
       texto: "Num teste mental (com o atributo Mente), gaste PD para receber um dado bônus. O custo e o dado dependem da ficha.",
       motor: { tipo: "dadoPorPd", atributo: "mente", pd: 2, faces: 4 } },
-    olhar_infalivel: { nome: "Olhar Infalível", versao: "alpha", fonte: "alphaAto2", ficha: "Amanda",
+    olhar_infalivel: { nome: "Olhar Infalível", fonte: "alphaAto2", ficha: "Amanda",
       texto: "Num teste de examinar, gaste 2 PD para rolar de novo um dos dados.", motor: { tipo: "rerrolarExaminar", pd: 2 } },
-    amor_descoberta: { nome: "Amor pela Descoberta", versao: "alpha", fonte: "alphaAto2", ficha: "Antônio",
+    amor_descoberta: { nome: "Amor pela Descoberta", fonte: "alphaAto2", ficha: "Antônio",
       texto: "Quando examina um ponto de interesse e recebe informação nova, recupera 1 PD.", motor: { tipo: "pdAoDescobrir", pd: 1 } },
-    mentoria: { nome: "Mentoria", versao: "ambas", fonte: "alphaAto2", ficha: "Antônio e Cavan",
+    mentoria: { nome: "Mentoria", fonte: "alphaAto2", ficha: "Antônio e Cavan",
       texto: "Ao ajudar, faça um teste da perícia usada contra DT 7. Se passar, quem foi ajudado pode trocar um dos dados dele pela sua rolagem alta.", motor: { tipo: "mentoria", dt: 7 } },
-    incansavel: { nome: "Incansável", versao: "alpha", fonte: "alphaAto2", ficha: "Heitor",
+    incansavel: { nome: "Incansável", fonte: "alphaAto2", ficha: "Heitor",
       texto: "Uma vez por cena de conflito, gaste 5 PV para fazer uma ação extra.", motor: { tipo: "acaoExtraPorPv", pv: 5, limite: "cenaConflito" } },
-    linha_de_tiro: { nome: "Linha de Tiro", versao: "alpha", fonte: "alphaAto2", ficha: "Heitor",
+    linha_de_tiro: { nome: "Linha de Tiro", fonte: "alphaAto2", ficha: "Heitor",
       texto: "Proficiência com armas de fogo; num ataque com elas, gaste 4 PD para +d10.", motor: { tipo: "dadoEmAtaque", categoria: "fogo", pd: 4, faces: 10 } },
-    estoico: { nome: "Estoico", versao: "alpha", fonte: "alphaAto2", ficha: "Raven",
+    estoico: { nome: "Estoico", fonte: "alphaAto2", ficha: "Raven",
       texto: "+d6 em testes de trauma; na primeira vez em cada cena em que faz um teste de trauma, recupera 9 PD.", motor: { tipo: "estoico", faces: 6, pd: 9 } },
-    para_bellum: { nome: "Para Bellum", versao: "alpha", fonte: "alphaAto2", ficha: "Raven",
+    para_bellum: { nome: "Para Bellum", fonte: "alphaAto2", ficha: "Raven",
       texto: "Proficiência com armas de fogo; dano com elas +2.", motor: { tipo: "danoPorCategoria", categoria: "fogo", valor: 2 } },
-    tecnica_medicinal: { nome: "Técnica Medicinal", versao: "alpha", fonte: "alphaAto2", ficha: "Val",
+    tecnica_medicinal: { nome: "Técnica Medicinal", fonte: "alphaAto2", ficha: "Val",
       texto: "Efeitos de cura que você usa curam +1 PV (ou +1 PV por dado).", motor: { tipo: "curaExtra", valor: 1 } },
-    varredura_ampla: { nome: "Varredura Ampla", versao: "alpha", fonte: "alphaAto2", ficha: "Val",
+    varredura_ampla: { nome: "Varredura Ampla", fonte: "alphaAto2", ficha: "Val",
       texto: "Ao investigar um ponto de interesse, escolha duas perícias e receba as informações de ambas.", motor: { tipo: "duasPericias" } },
-    esquiva: { nome: "Esquiva", versao: "beta", fonte: "betaFichas", ficha: "Rowan",
+    esquiva: { nome: "Esquiva", fonte: "betaFichas", ficha: "Rowan",
       texto: "Uma vez por rodada, ao sofrer um ataque, faça um teste de Acrobacia oposto como ação livre; se vencer, evita o ataque.", motor: { tipo: "esquiva", limite: "rodada" } },
-    espectro_lobo: { nome: "Espectro, o Lobo", versao: "beta", fonte: "betaFichas", ficha: "Rowan",
+    espectro_lobo: { nome: "Espectro, o Lobo", fonte: "betaFichas", ficha: "Rowan",
       texto: "Um lobo parceiro dá +d6 em ataques corpo a corpo; se esse dado der 1, o lobo se machuca e não ajuda até o fim da cena.", motor: { tipo: "parceiro", faces: 6, ataque: "corpo" } },
-    arsenal_herborista: { nome: "Arsenal de Herborista", versao: "beta", fonte: "betaFichas", ficha: "Muirenn",
+    arsenal_herborista: { nome: "Arsenal de Herborista", fonte: "betaFichas", ficha: "Muirenn",
       texto: "Preparados de uso único (uma ação e um alvo): tônico de urtiga-feroz (Físico +1 passo por uma cena), bálsamo de confrei (2d4 PV; outro alvo fica parado na rodada) e pote de vespa (ataque à distância com Sobrevivência, dano RA+1; o alvo que sobreviver perde a próxima ação).",
       motor: { tipo: "consumiveis" } },
-    curandeiro: { nome: "Curandeiro", versao: "beta", fonte: "betaFichas", ficha: "Cavan",
+    curandeiro: { nome: "Curandeiro", fonte: "betaFichas", ficha: "Cavan",
       texto: "Uma ação e 2 PD: teste de Medicina (DT 7); se passar, cura PV do aliado iguais à RA. Uma vez por cena em cada alvo.", motor: { tipo: "curaPorTeste", pd: 2, dt: 7, pericia: "medicina", limite: "porAlvoCena" } },
-    sorrateiro: { nome: "Sorrateiro", versao: "beta", fonte: "betaFichas", ficha: "Sira",
+    sorrateiro: { nome: "Sorrateiro", fonte: "betaFichas", ficha: "Sira",
       texto: "Num teste de Crime ou Furtividade, gaste 3 PD para +d8.", motor: { tipo: "dadoPorPd", pericias: ["crime", "furtividade"], pd: 3, faces: 8 } },
-    guardia: { nome: "Guardiã", versao: "beta", fonte: "betaFichas", ficha: "Sorcha",
+    guardia: { nome: "Guardiã", fonte: "betaFichas", ficha: "Sorcha",
       texto: "+1 PV por patamar (já anotado na ficha). Uma vez por rodada, quando um aliado em alcance curto sofre um ataque, gaste 2 PD para se tornar o alvo.", motor: { tipo: "redirecionarAtaque", pd: 2, limite: "rodada" } },
-    instinto_sobrevivencia: { nome: "Instinto de Sobrevivência", versao: "beta", fonte: "betaFichas", ficha: "Sorcha",
+    instinto_sobrevivencia: { nome: "Instinto de Sobrevivência", fonte: "betaFichas", ficha: "Sorcha",
       texto: "Com metade ou menos dos PV máximos, recebe um aumento de passo em todos os testes.", motor: { tipo: "passoComPvBaixo" } },
-    heranca: { nome: "Herança", versao: "beta", fonte: "betaFichas", ficha: "Cormac",
+    heranca: { nome: "Herança", fonte: "betaFichas", ficha: "Cormac",
       texto: "A categoria de riqueza aumenta em 1 (as regras de compra virão depois).", motor: { tipo: "narrativa" } },
-    plano_estrategico: { nome: "Plano Estratégico", versao: "beta", fonte: "betaFichas", ficha: "Cormac",
+    plano_estrategico: { nome: "Plano Estratégico", fonte: "betaFichas", ficha: "Cormac",
       texto: "Uma ação e 3 PD: teste de Aptidão (Guerra) contra DT 7. Se passar, o grupo recebe d6, mais d6 a cada 3 pontos acima da DT, para gastar em testes até o fim da cena.",
       motor: { tipo: "reservaDeGrupo", pd: 3, dt: 7, pericia: "aptidao", especializacao: "Guerra", faces: 6 } },
   };
+
+  /* As habilidades de perfil ANTIGAS (v9.0–9.3): o id antigo leva à
+     unificada; o texto original fica na procedência da ficha. */
+  var HABILIDADES_LEGADAS = {
+    impeto_alpha3: { nova: "impeto", nome: "Ímpeto", fonte: "alpha", pagina: 15, texto: "Barra com 3 espaços; cada teste falho preenche 1. Gaste 1 espaço para +d4 num teste ou 3 para aumentar um atributo em um passo até o fim da cena." },
+    impeto_alpha5: { nova: "impeto", nome: "Ímpeto", fonte: "alphaAto2", pagina: null, texto: "Barra com 5 espaços; cada teste falho preenche 1. Gaste 1 para +d4, 2 para +d10, 3 para aumentar um atributo até o fim da cena ou 5 para uma ação extra na rodada." },
+    impeto_beta: { nova: "impeto", nome: "Ímpeto", fonte: "betaFichas", pagina: null, texto: "Barra com 5 espaços; cada teste falho preenche 1. Ação livre: 1 espaço dá +d4 num teste; 3 aumentam um atributo até o fim da cena; 3 dão uma ação extra em cena de conflito. Esvazia no fim da cena." },
+    analise_beta: { nova: "avaliacao", nome: "Análise", fonte: "beta", pagina: 7, texto: "Uma ação dá 2 marcadores (máximo 4). Depois de rolar, cada marcador muda um dado em +1 ou −1, dentro das faces dele. Os não usados somem no fim da cena." },
+    avaliacao_alpha: { nova: "avaliacao", nome: "Avaliação", fonte: "alphaAto2", pagina: null, texto: "Uma ação e 2 PD para observar um ser ou ambiente: recebe 2 dados bônus d4 para testes relativos a ele (+2d4 num teste ou +d4 em dois). No máximo 2 dados por esta habilidade." },
+    prontidao_alpha: { nova: "prontidao", nome: "Prontidão", fonte: "alphaAto2", pagina: null, texto: "No início de qualquer conflito, gaste 3 PD para ganhar uma rodada em que age antes dos demais personagens e NPCs." },
+    prontidao_beta: { nova: "prontidao", nome: "Prontidão", fonte: "betaFichas", pagina: null, texto: "Uma vez por rodada, quando você ou outro ser em alcance curto faz um teste, gaste 2 PD para rolar de novo um dado que não deu 1. Em combate, pode agir na fase da ação ou em fases posteriores, e depois das rolagens daquela fase." },
+  };
+  function refDeHabilidade(ref) { return HABILIDADES_LEGADAS[ref] ? HABILIDADES_LEGADAS[ref].nova : ref; }
 
   /* ---------------------------------------------------------------
      OCUPAÇÕES (Alpha) E VOCAÇÕES (Beta)
@@ -263,25 +242,30 @@
      dizer qual é a da ocupação — a criação guiada só dá uma se a
      pessoa escolher explicitamente.
      --------------------------------------------------------------- */
-  var OCUPACOES = {
-    "alpha-contemporaneo": [
-      { id: "cientista", nome: "Cientista", habilidade: "foco_mental", nota: "Alan (nível 2) tem só Ímpeto e Foco Mental: Foco Mental é a de ocupação.", vistas: ["foco_mental", "avaliacao_alpha", "olhar_infalivel"] },
-      { id: "professor", nome: "Professor", habilidade: "", vistas: ["amor_descoberta", "mentoria"] },
-      { id: "policial", nome: "Policial", habilidade: "", vistas: ["incansavel", "linha_de_tiro"] },
-      { id: "militar", nome: "Militar", habilidade: "", vistas: ["estoico", "para_bellum"] },
-      { id: "medico", nome: "Médico", habilidade: "", vistas: ["tecnica_medicinal", "varredura_ampla"] },
-    ],
-    "beta-vigilia": [
-      { id: "ferreira", nome: "Ferreira", habilidade: "", vistas: ["leitura_combate", "segredo_do_aco"] },
-      { id: "adestrador", nome: "Adestrador", habilidade: "", vistas: ["esquiva", "espectro_lobo"] },
-      { id: "herborista", nome: "Herborista", habilidade: "arsenal_herborista", nota: "Muirenn tem só Ímpeto e Arsenal de Herborista.", vistas: ["arsenal_herborista"] },
-      { id: "professor", nome: "Professor", habilidade: "", vistas: ["curandeiro", "mentoria"] },
-      { id: "explorador", nome: "Explorador", habilidade: "impeto_fervilhante", nota: "Malik tem só Ímpeto e Ímpeto Fervilhante.", vistas: ["impeto_fervilhante"] },
-      { id: "viking", nome: "Viking", habilidade: "", vistas: ["antecipacao_tatica", "sorrateiro"] },
-      { id: "talentosa", nome: "Talentosa", habilidade: "", vistas: ["guardia", "instinto_sobrevivencia"] },
-      { id: "aristocrata", nome: "Aristocrata", habilidade: "", vistas: ["heranca", "plano_estrategico"] },
-    ],
-  };
+  /* v9.4: UM catálogo ("Ocupação" na tela; "Vocação" fica nas citações
+     do Beta). `ambientacoes`: onde ela é sugerida; dá para pesquisar
+     nas outras e escrever uma própria. Ids preservados. */
+  var OCUPACOES = [
+    { id: "cientista", ambientacoes: ["contemporaneo"], nome: "Cientista", habilidade: "foco_mental", nota: "Alan (nível 2) tem só Ímpeto e Foco Mental: Foco Mental é a de ocupação.", vistas: ["foco_mental", "avaliacao", "olhar_infalivel"] },
+    { id: "professor", ambientacoes: ["contemporaneo", "vigilia"], nome: "Professor", habilidade: "", vistas: ["amor_descoberta", "mentoria", "curandeiro"] },
+    { id: "policial", ambientacoes: ["contemporaneo"], nome: "Policial", habilidade: "", vistas: ["incansavel", "linha_de_tiro"] },
+    { id: "militar", ambientacoes: ["contemporaneo"], nome: "Militar", habilidade: "", vistas: ["estoico", "para_bellum"] },
+    { id: "medico", ambientacoes: ["contemporaneo"], nome: "Médico", habilidade: "", vistas: ["tecnica_medicinal", "varredura_ampla"] },
+    { id: "ferreira", ambientacoes: ["vigilia"], nome: "Ferreira", habilidade: "", vistas: ["leitura_combate", "segredo_do_aco"] },
+    { id: "adestrador", ambientacoes: ["vigilia"], nome: "Adestrador", habilidade: "", vistas: ["esquiva", "espectro_lobo"] },
+    { id: "herborista", ambientacoes: ["vigilia"], nome: "Herborista", habilidade: "arsenal_herborista", nota: "Muirenn tem só Ímpeto e Arsenal de Herborista.", vistas: ["arsenal_herborista"] },
+    { id: "explorador", ambientacoes: ["vigilia"], nome: "Explorador", habilidade: "impeto_fervilhante", nota: "Malik tem só Ímpeto e Ímpeto Fervilhante.", vistas: ["impeto_fervilhante"] },
+    { id: "viking", ambientacoes: ["vigilia"], nome: "Viking", habilidade: "", vistas: ["antecipacao_tatica", "sorrateiro"] },
+    { id: "talentosa", ambientacoes: ["vigilia"], nome: "Talentosa", habilidade: "", vistas: ["guardia", "instinto_sobrevivencia"] },
+    { id: "aristocrata", ambientacoes: ["vigilia"], nome: "Aristocrata", habilidade: "", vistas: ["heranca", "plano_estrategico"] },
+  ];
+
+  /* As ocupações sugeridas primeiro para a ambientação; as outras depois. */
+  function ocupacoes(ambientacao) {
+    var a = ambientacaoValida(ambientacao);
+    return OCUPACOES.filter(function (o) { return o.ambientacoes.indexOf(a) >= 0; }).concat(OCUPACOES.filter(function (o) { return o.ambientacoes.indexOf(a) < 0; }));
+  }
+  function ocupacao(id) { return OCUPACOES.filter(function (o) { return o.id === id; })[0] || null; }
 
   /* ---------------------------------------------------------------
      RELAÇÕES (Beta pp. 24–25)
@@ -625,19 +609,20 @@
      DIVERGENCIAS — fonte, escolha e o teste que fixa (docs/ORDEM2.md)
      --------------------------------------------------------------- */
   var DIVERGENCIAS = [
-    { id: "compartilhar", fontes: "Alpha p. 23; Beta p. 15", texto: "O texto de Compartilhar pede Pesquisar (DT 10); a tabela-resumo diz Intuição. O Beta não tem Pesquisar.", escolha: "Vale o texto: Pesquisar no Alpha e Inspecionar (a mesma descrição, p. 9) no Beta. O Mestre pode trocar a perícia.", teste: "executar-ordem2: Compartilhar usa a perícia de pesquisa do perfil" },
-    { id: "ocultismo", fontes: "Beta p. 9; fichas Beta", texto: "A lista do Beta chama a perícia de Bruxaria; as fichas impressas dizem Ocultismo.", escolha: "Uma chave só (ocultismo); a tela mostra Bruxaria na Vigília e guarda o rótulo impresso no preset.", teste: "executar-ordem2: ocultismo é único e o rótulo segue a ambientação" },
+    { id: "precedencia", fontes: "Alpha pp. 14–26; Beta pp. 6–25", texto: "Os dois playtests trazem versões diferentes da mesma regra geral (Ímpeto, Prontidão, Avaliação/Análise, contadores de lesão, conflito).", escolha: "Regras unificadas do R.A.M.A. (v9.4): revisão geral mais recente (Beta) → recurso antigo compatível sem sucessor (Alpha: Máquinas, Tecnologia, ferramentas, sobrecarga, hacking) → exceção explícita da cena ou habilidade, só no seu escopo. Não é edição oficial.", teste: "executar-ordem2-unificada" },
+    { id: "compartilhar", fontes: "Alpha p. 23; Beta p. 15", texto: "O texto de Compartilhar pede Pesquisar (DT 10); a tabela-resumo diz Intuição.", escolha: "Vale o texto: Pesquisar (Inspecionar, na Vigília, é o mesmo) DT 10. O Mestre pode trocar a perícia ao aprovar. Um comportamento só.", teste: "executar-ordem2-unificada: Compartilhar usa Pesquisar" },
+    { id: "ocultismo", fontes: "Beta p. 9; fichas Beta", texto: "A lista do Beta chama a perícia de Bruxaria; as fichas impressas dizem Ocultismo.", escolha: "Uma chave e um nome: Ocultismo (Bruxaria é alias de entrada); o rótulo impresso fica no preset.", teste: "executar-ordem2: aliases" },
     { id: "oficio", fontes: "Beta p. 9; fichas Beta", texto: "A lista diz Metalurgia; as fichas dizem Ofício (Rhiona: Ofício (Metalurgia)).", escolha: "Metalurgia, com Ofício como alias; a especialização escrita fica.", teste: "executar-ordem2: Ofício é alias de Metalurgia" },
     { id: "atributoImpresso", fontes: "Fichas Beta de Sira, Sorcha e Cavan", texto: "A coluna de atributo-base impressa está desalinhada (ex.: Intuição/Físico, Luta/Mente, Percepção/Emoção).", escolha: "O motor usa o atributo-base da lista (p. 9); o preset guarda o impresso e a confirmação mostra a diferença. O Mestre pode trocar o atributo de um teste.", teste: "executar-ordem2: atributo impresso divergente não muda o atributo-base" },
     { id: "graus", fontes: "Beta pp. 24–25; fichas Beta", texto: "As relações das fichas têm rótulos livres (Confiança, Amizade, Neutro…); os graus são Afinidade, Vínculo e Devoção.", escolha: "O grau não é deduzido do rótulo; só Vínculo e Afinidade de Cormac viram grau. Sem grau, a relação não pode ser invocada até alguém escolher.", teste: "executar-ordem2: rótulo livre não vira grau" },
-    { id: "impetoAlpha", fontes: "Alpha p. 15 (Alan); Ato II (Heitor, Raven); fichas Beta", texto: "Ímpeto tem 3 espaços (Alan, Raven), 5 com +d10 e ação extra (Heitor) e 5 que esvaziam no fim da cena (Beta).", escolha: "Cada ficha usa a versão dela; uma ficha nova de Executor no Alpha recebe a de 3 espaços (inferência: a de Alan, nível 2).", teste: "executar-ordem2: as três versões de Ímpeto" },
-    { id: "prontidaoAlpha", fontes: "Ato II (Val); fichas Beta", texto: "Prontidão no Alpha é a rodada antecipada por 3 PD; no Beta é a rolagem de novo por 2 PD (e Antecipação Tática é a rodada por 2 PD).", escolha: "Cada ficha usa a sua; Val gasta 3 PD no início do conflito.", teste: "executar-ordem2: Val 18/32 com a Prontidão Alpha" },
+    { id: "impetoAlpha", fontes: "Alpha p. 15 (Alan); Ato II (Heitor, Raven); fichas Beta", texto: "Ímpeto tem 3 espaços (Alan, Raven), 5 com +d10 e ação extra (Heitor) e 5 que esvaziam no fim da cena (Beta).", escolha: "v9.4: uma versão só, a mais recente (Beta): 5 espaços, +d4 por 1, passo de atributo ou ação extra em conflito por 3, esvazia no fim da cena. O texto antigo fica na procedência.", teste: "executar-ordem2-unificada: Ímpeto de Alan" },
+    { id: "prontidaoAlpha", fontes: "Ato II (Val); fichas Beta", texto: "Prontidão no Alpha é a rodada antecipada por 3 PD; no Beta é a rolagem de novo por 2 PD (e Antecipação Tática é a rodada por 2 PD).", escolha: "v9.4: a do Beta para todos (Val incluída). Antecipação Tática continua à parte e não é dada a quem tinha a antiga.", teste: "executar-ordem2-unificada: Prontidão de Val" },
     { id: "testeDeMorte", fontes: "Beta pp. 21–23", texto: "Moribundo pede \"teste de morte\"; a p. 21 chama o mesmo teste de \"teste de lesão\".", escolha: "Um só teste (Físico + Vigor, DT 7 +3 por teste na cena) na máquina de estados de lesão.", teste: "executar-ordem2: moribundo faz o teste de lesão no fim da rodada" },
     { id: "naoLetal", fontes: "Beta p. 23", texto: "Dano não letal dá +1d6 no \"teste de morte\" e, num \"ferimento grave\", 2d20 escolhendo o melhor.", escolha: "+d6 no teste de lesão e 2d20 (o maior) na tabela de lesões, quando o zero veio da soma de letal e não letal.", teste: "executar-ordem2: não letal" },
     { id: "patamar", fontes: "Beta pp. 22–23", texto: "Lesão e trauma dão +1 por patamar acima de iniciante, mas o playtest não define patamares.", escolha: "Bônus só quando o patamar estiver informado na ficha (padrão: não informado = +0).", teste: "executar-ordem2: patamar só quando informado" },
     { id: "laceracao", fontes: "Beta p. 22", texto: "Laceração Profunda: \"perde 2 PV\" e é permanente.", escolha: "Inferência: o máximo de PV cai 2 (acumula). Chaga da Alma: o máximo de PD cai 2 enquanto não for curada.", teste: "executar-ordem2: duplicatas e Laceração" },
     { id: "modNumerico", fontes: "Beta pp. 22–23", texto: "Lesões e traumas dão \"−1 em Percepção\", \"−2 em Vigor\"… num sistema de passos.", escolha: "Modificador numérico somado ao resultado do teste; passos continuam passos.", teste: "executar-ordem2: modificador numérico de lesão" },
-    { id: "contadorAlpha", fontes: "Alpha p. 26; Beta pp. 21, 23", texto: "Alpha: DT 7 +3 \"por teste já realizado\"; Beta: \"na cena\".", escolha: "Beta zera no fim da cena; Alpha mantém até o Mestre zerar.", teste: "executar-ordem2: zero de PV/PD nos dois perfis" },
+    { id: "contadorAlpha", fontes: "Alpha p. 26; Beta pp. 21, 23", texto: "Alpha: DT 7 +3 \"por teste já realizado\"; Beta: \"na cena\".", escolha: "v9.4: zera no fim da cena (Beta) para todos; o teste de Vigor/Disciplina do Alpha a 0 PV/PD virou lesão/trauma (pendências antigas ainda se resolvem).", teste: "executar-ordem2-unificada: zero de PV/PD" },
     { id: "fases", fontes: "Beta pp. 12, 18, 24", texto: "A p. 12 diz que a ordem de combate virá depois; a p. 18 a define; a p. 18 também cita uma \"fase tática\" e a p. 24 uma \"fase de suporte\".", escolha: "Três fases (Geral → Distância → Corpo a corpo); tática e suporte = Fase Geral. A ordem é configurável por cena.", teste: "executar-ordem2: fases e simultaneidade" },
     { id: "caido", fontes: "Beta pp. 21 e 24", texto: "A p. 21 dá +1 passo ao corpo a corpo e DT +3 à distância contra caído; a p. 24 diz \"ataques\" +1 passo.", escolha: "Vale a p. 21 (mais específica).", teste: "executar-ordem2: modificadores de ataque" },
     { id: "ajudaPagina", fontes: "Beta p. 11", texto: "Ajuda remete à \"página 20\" (a do Alpha).", escolha: "Passos pela p. 12 do Beta.", teste: "—" },
@@ -662,6 +647,11 @@
 
   /* Decisões de implementação (não são regras publicadas). */
   var DECISOES = [
+    { id: "avaliacaoAnalise", texto: "v9.4: Avaliação é o nome contemporâneo da habilidade do Analista; o efeito é o da Análise (Beta p. 7). Dados de Avaliação guardados com a regra antiga expiram na migração (sem reembolso)." },
+    { id: "varreduraAmpla", texto: "v9.4 (adaptação de integração): Varredura Ampla dá duas perícias na passiva e depois ainda permite Examinar; não soma a Observar (no máximo duas perícias na mesma ação) e não revela a mesma pista duas vezes." },
+    { id: "criticoInvestigacao", texto: "v9.4: crítico examinando avisa o Mestre de que há direito a uma informação adicional (Alpha p. 19); a tela não fabrica descoberta nem entrega pista privada." },
+    { id: "conflitoSimplificado", texto: "v9.4: o conflito simplificado do Alpha (p. 26) deixa de iniciar ações; cenas do Alpha usam o combate em três fases. Encontros com quatro fases (Afogados, gruta) seguem a configuração da cena." },
+    { id: "sobrecargaRodadas", texto: "v9.4: as tabelas por rodada (sobrecarga, maldição) contam rodadas da CENA; rodadas de combate avançam o mesmo contador, sem aplicar duas vezes ao alternar." },
     { id: "tresMaiores", texto: "Com quatro dados de teste, a soma sugerida é a dos três maiores; a pessoa pode escolher outros três (Alpha p. 20; Beta p. 12 não dizem quais)." },
     { id: "sobreviventes", texto: "Crítico, RA e RB leem os dados de teste que sobraram depois do pavor; a escolha dos três afeta só a soma. O dado de pavor nunca entra no crítico. Sem dado sobrando: falha crítica." },
     { id: "pavorPiso", texto: "Controlar o pavor não desce abaixo de d4; o efeito só termina com o resultado 1 (ou pelo Mestre)." },
@@ -683,12 +673,12 @@
   global.RAMAOrdem2Catalogo = {
     VERSAO_DADOS: VERSAO_DADOS,
     FONTES: FONTES, referencia: referencia,
-    PERFIS_REGRAS: PERFIS_REGRAS, ORDEM_PERFIS_REGRAS: ORDEM_PERFIS_REGRAS, AMBIENTACOES: AMBIENTACOES,
+    REGRAS: REGRAS, PERFIS_REGRAS: PERFIS_REGRAS, ORDEM_PERFIS_REGRAS: ORDEM_PERFIS_REGRAS, AMBIENTACOES: AMBIENTACOES, ORDEM_AMBIENTACOES: ORDEM_AMBIENTACOES, ambientacaoValida: ambientacaoValida, TERMO_OCUPACAO: TERMO_OCUPACAO,
     ATRIBUTOS: ATRIBUTOS, ORDEM_ATRIBUTOS: ORDEM_ATRIBUTOS, DEGRAUS: DEGRAUS, ESCALA_ATRIBUTO: ESCALA_ATRIBUTO, ESCALA_PERICIA: ESCALA_PERICIA,
-    PERICIAS_ALPHA: PERICIAS_ALPHA, PERICIAS_BETA: PERICIAS_BETA, ESPECIALIZACOES: ESPECIALIZACOES, ALIASES: ALIASES,
+    PERICIAS: PERICIAS, PERICIAS_ALPHA: PERICIAS_ALPHA, PERICIAS_BETA: PERICIAS_BETA, ESPECIALIZACOES: ESPECIALIZACOES, TODAS_ESPECIALIZACOES: TODAS_ESPECIALIZACOES, especializacoes: especializacoes, ALIASES: ALIASES, chaveDePericia: chaveDePericia,
     listaDePericias: listaDePericias, pericia: pericia, nomeDaPericia: nomeDaPericia, periciaDePesquisa: periciaDePesquisa,
     PERFIS: PERFIS, ORDEM_PERFIS: ORDEM_PERFIS, HABILIDADE_DE_PERFIL: HABILIDADE_DE_PERFIL,
-    HABILIDADES: HABILIDADES, OCUPACOES: OCUPACOES, GRAUS_RELACAO: GRAUS_RELACAO,
+    HABILIDADES: HABILIDADES, HABILIDADES_LEGADAS: HABILIDADES_LEGADAS, refDeHabilidade: refDeHabilidade, OCUPACOES: OCUPACOES, ocupacoes: ocupacoes, ocupacao: ocupacao, GRAUS_RELACAO: GRAUS_RELACAO,
     FALHA_CRITICA: FALHA_CRITICA, LESOES: LESOES, TRAUMAS: TRAUMAS, daTabela: daTabela, PATAMARES: PATAMARES,
     FASES: FASES, ORDEM_FASES_PADRAO: ORDEM_FASES_PADRAO, ORDEM_FASES_4: ORDEM_FASES_4, ACOES_COMBATE: ACOES_COMBATE, ACOES_LIVRES: ACOES_LIVRES, faseDaAcao: faseDaAcao,
     MINIJOGOS: MINIJOGOS, PARANORMAL: PARANORMAL,

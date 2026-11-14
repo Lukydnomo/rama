@@ -32,7 +32,10 @@
   function T() { return global.RAMAOrdem2Tela; }
 
   var DADOS = [4, 6, 8, 10, 12];
-  var VERSOES = { "alpha-contemporaneo": "Alpha · Contemporâneo", "beta-vigilia": "Beta · Contos da Vigília" };
+  /* v9.4: uma regra só. A ambientação muda sugestões (ocupações,
+     especializações); o playtest de origem é FONTE (filtro dos presets). */
+  var AMB = { contemporaneo: "Contemporâneo", vigilia: "Contos da Vigília" };
+  var FONTE = { "alpha-contemporaneo": "Playtest Alpha", "beta-vigilia": "Playtest Beta" };
   var ETAPAS = {
     guiada: [["identidade", "Identidade"], ["atributos", "Atributos"], ["pericias", "Perícias"], ["habilidades", "Habilidades e recursos"], ["revisao", "Revisão"]],
     pronta: [["escolher", "Escolher ficha"], ["revisao", "Revisão"]],
@@ -48,7 +51,7 @@
   function linhaPar(rotulo, valor) { return el("div", {}, [el("dt", { texto: rotulo }), el("dd", { texto: valor })]); }
   function passo(f, n) { var i = DADOS.indexOf(f) + n; return DADOS[Math.max(0, Math.min(DADOS.length - 1, i))]; }
   function passosEntre(de, ate) { return DADOS.indexOf(ate) - DADOS.indexOf(de); }
-  function termo(pr) { return K().PERFIS_REGRAS[pr].termoOcupacao; }
+  function termo() { return "Ocupação"; }
   /* Um botão que pode receber o foco de volta depois de redesenhar. */
   function bt(texto, fn, o, foco) { var b = T().botao(texto, fn, o); if (foco) b.dataset.foco = foco; return b; }
 
@@ -59,7 +62,7 @@
     return el("div.pilha.o2-previa", {}, [
       el("div.o2-previa__topo", {}, [
         el("h3.o2-previa__nome", { texto: p.nomeCompleto || p.nome }),
-        el("p.t-mini", { texto: K().PERFIS[p.perfil].nome + " · " + p.ocupacao + " · nível " + p.nivel + " · " + VERSOES[p.perfilRegras] }),
+        el("p.t-mini", { texto: K().PERFIS[p.perfil].nome + " · " + p.ocupacao + " · nível " + p.nivel + " · " + AMB[b.ambientacao] + " · fonte: " + FONTE[p.perfilRegras] }),
       ]),
       el("dl.o2-pares.o2-pares--linha", {}, [
         linhaPar("Físico", "d" + p.atributos.fisico), linhaPar("Mente", "d" + p.atributos.mente), linhaPar("Emoção", "d" + p.atributos.emocao),
@@ -77,7 +80,10 @@
         el("ul.pilha.pilha--curta", {}, b.habilidades.map(function (h) { var m = R().motorDe(h); return el("li", {}, [el("strong", { texto: h.nome }), el("span.t-mini", { texto: (m && (m.pd || m.faces) ? " (" + [m.pd ? m.pd + " PD" : "", m.faces ? "d" + m.faces : ""].filter(Boolean).join(", ") + ")" : "") }), el("p.t-mini", { texto: h.texto })]); }))]),
       b.itens.length ? el("details.o2-previa__bloco", {}, [el("summary", { texto: "Equipamento (" + b.itens.length + ")" }), el("ul", {}, b.itens.map(function (i) { return el("li", { texto: i.nome + (i.tipo === "arma" ? " — " + (i.alcance === "distancia" ? "à distância" : "corpo a corpo") + ", dano RA" + (i.dano >= 0 ? "+" : "") + i.dano : "") + (i.armadura ? " — " + i.armadura + " ponto(s) de armadura" : "") + (i.especial ? " · " + i.especial : "") + (i.quantidade !== null ? " ×" + i.quantidade : "") }); }))]) : null,
       b.relacoes.length ? el("details.o2-previa__bloco", {}, [el("summary", { texto: "Relações (" + b.relacoes.length + ")" }), el("ul", {}, b.relacoes.map(function (r) { return el("li", { texto: r.nome + ": " + r.rotulo + (r.grau ? " (grau " + r.grau + " — " + K().GRAUS_RELACAO[r.grau].nome + ")" : " (sem grau: o rótulo da ficha não define grau)") + " — " + r.descricao }); }))]) : null,
-      el("details.o2-previa__bloco", {}, [el("summary", { texto: "Procedência" }), el("p.t-mini", {}, [el("span", { texto: "Copiada de " + (p.nomeCompleto || p.nome) + " · " }), T().fonte(p.fonte, p.pagina), el("span", { texto: " · os valores do playtest, com ids próprios na cópia." })])]),
+      el("details.o2-previa__bloco", {}, [el("summary", { texto: "Procedência" }), el("div.pilha.pilha--curta", {}, [
+        el("p.t-mini", {}, [el("span", { texto: "Copiada de " + (p.nomeCompleto || p.nome) + " · " }), T().fonte(p.fonte, p.pagina), el("span", { texto: " · os valores do playtest, com ids próprios na cópia. As habilidades mostram o efeito atual (regras unificadas)." })]),
+        b.procedencia.habilidadesOriginais.length ? el("ul.pilha.pilha--curta", {}, b.procedencia.habilidadesOriginais.map(function (o) { return el("li.t-mini", { texto: "Original — " + o.nome + ": " + o.texto }); })) : null,
+      ])]),
     ]);
   }
 
@@ -87,11 +93,11 @@
     var st = {
       modo: null, alterado: false, ocupado: false, descartar: false, envio: null, focarTitulo: false, revisar: false,
       etapa: { guiada: 0, pronta: 0, livre: 0 }, alcancada: { guiada: 0, pronta: 0, livre: 0 },
-      perfilDaCampanha: {},
+      ambDaCampanha: {},
       r: {
-        guiada: { nome: "", campanhaId: "", perfilRegras: "beta-vigilia", perfil: "", ocupacaoId: "", ocupacaoNome: "", propria: false, atributos: { fisico: 6, mente: 6, emocao: 6 }, pericias: {}, habilidadeOcupacao: "", pv: 16, pd: 12, sobraOk: false, busca: "", soMelhoradas: false, grupoAberto: "" },
+        guiada: { nome: "", campanhaId: "", ambientacao: "contemporaneo", ambManual: false, perfil: "", ocupacaoId: "", ocupacaoNome: "", propria: false, atributos: { fisico: 6, mente: 6, emocao: 6 }, pericias: {}, habilidadeOcupacao: "", pv: 16, pd: 12, sobraOk: false, busca: "", soMelhoradas: false, grupoAberto: "" },
         pronta: { nome: "", nomeDoPreset: "", campanhaId: "", preset: "", filtro: "" },
-        livre: { nome: "", campanhaId: "", perfilRegras: "beta-vigilia", perfil: "", ocupacao: "", nivel: 1, atributos: { fisico: 6, mente: 6, emocao: 6 }, pv: 16, pd: 12 },
+        livre: { nome: "", campanhaId: "", ambientacao: "contemporaneo", ambManual: false, perfil: "", ocupacao: "", nivel: 1, atributos: { fisico: 6, mente: 6, emocao: 6 }, pv: 16, pd: 12 },
       },
     };
     var raiz = el("div.o2-assist");
@@ -108,77 +114,45 @@
       desenhar(true);
     }
 
-    /* A versão das regras da campanha (lida da mesa; null = sem mesa). */
-    function perfilDaCampanha(cid) {
+    /* A ambientação da campanha (lida da mesa; null = sem mesa). Só uma
+       SUGESTÃO: as regras são as mesmas em qualquer ambientação. */
+    function ambDaCampanha(cid) {
       if (!cid) return null;
-      if (st.perfilDaCampanha[cid] === undefined) {
-        st.perfilDaCampanha[cid] = "carregando";
+      if (st.ambDaCampanha[cid] === undefined) {
+        st.ambDaCampanha[cid] = "carregando";
         Promise.resolve(global.RAMAApi && global.RAMAApi.lerOrdem2 ? global.RAMAApi.lerOrdem2(cid, { segundoPlano: true }) : { ok: false }).then(function (r) {
           var e = r && r.ok && r.dados ? (r.dados.estado || r.dados.vista) : null;
-          st.perfilDaCampanha[cid] = e && e.perfil ? e.perfil : null;
+          st.ambDaCampanha[cid] = e ? K().ambientacaoValida(e.ambientacao || e.perfil) : null;
+          /* Sem escolha manual, a ficha acompanha a ambientação da campanha. */
+          var d = st.modo && st.modo !== "pronta" ? D() : null;
+          if (d && d.campanhaId === cid && !d.ambManual && st.ambDaCampanha[cid]) d.ambientacao = st.ambDaCampanha[cid];
           desenhar();
-        }, function () { st.perfilDaCampanha[cid] = null; desenhar(); });
+        }, function () { st.ambDaCampanha[cid] = null; desenhar(); });
       }
-      return st.perfilDaCampanha[cid];
+      return st.ambDaCampanha[cid];
     }
     function nomeCampanha(cid) { var c = campanhas.filter(function (x) { return x.id === cid; })[0]; return c ? c.nome : ""; }
-    /* Aviso de divergência campanha × versão, com as duas correções. */
-    function avisoDaCampanha(d, versao, podeTrocarVersao) {
-      if (!d.campanhaId) return null;
-      var p = perfilDaCampanha(d.campanhaId);
-      if (p === "carregando") return el("p.t-mini", { role: "status", texto: "Conferindo a versão das regras da campanha…" });
-      if (!p) return el("p.t-mini", { texto: "A campanha ainda não abriu a mesa de Ordem II: a versão das regras dela é desconhecida." });
-      if (p === versao) return el("p.o2-ok", { texto: "✓ Mesma versão da campanha " + nomeCampanha(d.campanhaId) + " (" + VERSOES[p] + ", da configuração da mesa)." });
-      return el("div.o2-aviso", { role: "alert" }, [
-        el("p", { texto: "A campanha " + nomeCampanha(d.campanhaId) + " usa " + VERSOES[p] + " (da configuração da mesa); esta ficha é " + VERSOES[versao] + ". A ficha não é convertida: habilidades seguem a ficha; cenas seguem a mesa." }),
-        el("div.faixa", {}, [
-          podeTrocarVersao ? T().botao("Usar " + VERSOES[p], function () { trocarVersao(p); }) : null,
-          T().botao("Criar sem campanha", function () { d.campanhaId = ""; mudou(); desenhar(); }),
-        ]),
-      ]);
-    }
-    function campoCampanha(d, versao, podeTrocarVersao) {
+    function campoCampanha(d) {
+      var a = d.campanhaId ? ambDaCampanha(d.campanhaId) : null;
       return el("div.pilha.pilha--curta", {}, [
         UI().campo({ rotulo: "Campanha (opcional)", tipo: "selecao", valor: d.campanhaId, opcoes: [{ valor: "", rotulo: "Sem campanha (jogo local na ficha)" }].concat(campanhas.map(function (c) { return { valor: c.id, rotulo: c.nome }; })), aoMudar: function (v) { d.campanhaId = v; mudou(); desenhar(); } }),
-        avisoDaCampanha(d, versao, podeTrocarVersao),
+        a && a !== "carregando" ? el("p.t-mini", { texto: "A campanha " + nomeCampanha(d.campanhaId) + " está em " + AMB[a] + " (da configuração da mesa)." }) : null,
       ]);
+    }
+    /* Ambientação: muda sugestões, nunca a regra. */
+    function seletorDeAmbientacao(d) {
+      var a = d.campanhaId ? ambDaCampanha(d.campanhaId) : null;
+      return el("fieldset.o2-assist__opcoes", {}, [el("legend", { texto: "Ambientação" })].concat(K().ORDEM_AMBIENTACOES.map(function (k) {
+        return el("label.o2-assist__radio", {}, [el("input", { type: "radio", name: "o2-amb-" + st.modo, checked: d.ambientacao === k, onchange: function () { d.ambientacao = k; d.ambManual = true; mudou(); desenhar(); } }), el("span", {}, [el("strong", { texto: AMB[k] }), a === k ? el("span.t-mini", { texto: " — a da campanha" }) : null])]);
+      })).concat([el("p.t-mini", { texto: "Muda a ambientação e as sugestões; as regras são as mesmas." })]));
     }
     function campoNome(d, aviso) {
       return UI().campo({ rotulo: "Nome do personagem", valor: d.nome, limite: 120, aoDigitar: true, ajuda: aviso || "", aoMudar: function (v) { d.nome = v; mudou(); atualizarResumo(); } });
     }
 
-    /* Trocar a versão: diz o que depende dela e só limpa com confirmação. */
-    function trocarVersao(nova) {
-      var d = D();
-      if (d.perfilRegras === nova) return;
-      var lista = K().listaDePericias(nova).map(function (p) { return p.chave; });
-      var perde = [];
-      if (st.modo === "guiada") {
-        Object.keys(d.pericias).forEach(function (k) { var c = k.split(":")[0]; var v = d.pericias[k]; if ((v.dado > 4 || v.esp) && (lista.indexOf(c) < 0 || (v.esp && K().ESPECIALIZACOES[nova].indexOf(v.esp) < 0))) perde.push(K().nomeDaPericia(d.perfilRegras, c) + (v.esp ? " (" + v.esp + ")" : "")); });
-        if (d.ocupacaoId) perde.push(termo(d.perfilRegras) + ": " + d.ocupacaoNome);
-        if (d.habilidadeOcupacao) perde.push("habilidade de " + termo(d.perfilRegras).toLowerCase());
-      }
-      function aplicar() {
-        if (st.modo === "guiada") {
-          var novo = {};
-          Object.keys(d.pericias).forEach(function (k) { var c = k.split(":")[0], v = d.pericias[k]; if (lista.indexOf(c) >= 0) novo[k] = { dado: v.dado, esp: v.esp && K().ESPECIALIZACOES[nova].indexOf(v.esp) >= 0 ? v.esp : "" }; });
-          d.pericias = novo;
-          if (d.ocupacaoId) { d.ocupacaoId = ""; d.ocupacaoNome = ""; d.propria = false; }
-          d.habilidadeOcupacao = "";
-        }
-        d.perfilRegras = nova; mudou(); desenhar();
-      }
-      if (!perde.length) { aplicar(); return; }
-      UI().confirmar({ titulo: "Trocar para " + VERSOES[nova], texto: "Dependem da versão e serão limpas: " + perde.join("; ") + ". Nome, perfil, atributos e recursos ficam.", rotuloConfirmar: "Trocar a versão" }).then(function (ok) { if (ok) aplicar(); });
-    }
-    function seletorDeVersao(d) {
-      return el("fieldset.o2-assist__opcoes", {}, [el("legend", { texto: "Versão das regras" })].concat(K().ORDEM_PERFIS_REGRAS.map(function (k) {
-        return el("label.o2-assist__radio", {}, [el("input", { type: "radio", name: "o2-versao-" + st.modo, checked: d.perfilRegras === k, onchange: function () { trocarVersao(k); } }), el("span", {}, [el("strong", { texto: VERSOES[k] }), el("span.t-mini", { texto: " — " + K().AMBIENTACOES[K().PERFIS_REGRAS[k].ambientacao].nome })])]);
-      })));
-    }
     function seletorDePerfil(d) {
       return el("fieldset.o2-assist__opcoes", {}, [el("legend", { texto: "Perfil do personagem" })].concat(K().ORDEM_PERFIS.map(function (k) {
-        var h = K().HABILIDADE_DE_PERFIL[d.perfilRegras][k];
+        var h = K().HABILIDADE_DE_PERFIL[k];
         return el("label.o2-assist__radio.o2-assist__radio--cartao", {}, [el("input", { type: "radio", name: "o2-perfil-" + st.modo, checked: d.perfil === k, onchange: function () { d.perfil = k; mudou(); desenhar(); } }), el("span", {}, [el("strong", { texto: K().PERFIS[k].nome }), el("span.t-mini", { texto: " — " + K().PERFIS[k].texto }), h ? el("span.t-mini.o2-assist__concede", { texto: " Concede: " + K().HABILIDADES[h].nome + "." }) : null])]);
       })));
     }
@@ -205,26 +179,34 @@
     /* ---------------- GUIADA ---------------- */
     function montarGuiada() {
       var G = st.r.guiada;
-      var pericias = K().listaDePericias(G.perfilRegras).map(function (p) {
+      var pericias = K().listaDePericias().map(function (p) {
         var chave = p.chave + (p.chave === "aptidao" ? ":" : "");
         var v = G.pericias[chave] || { dado: 4, esp: "" };
         return { chave: p.chave, especializacao: v.esp || "", dado: v.dado };
       });
-      return { perfilRegras: G.perfilRegras, perfil: G.perfil, ocupacaoId: G.ocupacaoId, ocupacaoNome: G.ocupacaoNome, atributos: G.atributos, pericias: pericias, habilidadeOcupacao: G.habilidadeOcupacao, pv: G.pv, pd: G.pd };
+      return { ambientacao: G.ambientacao, perfil: G.perfil, ocupacaoId: G.ocupacaoId, ocupacaoNome: G.ocupacaoNome, atributos: G.atributos, pericias: pericias, habilidadeOcupacao: G.habilidadeOcupacao, pv: G.pv, pd: G.pd };
+    }
+    /* Ocupação: um catálogo; as sugeridas para a ambientação primeiro, as
+       outras pesquisáveis, e a personalizada. */
+    function campoOcupacao(d, aoEscolher) {
+      var sug = K().ocupacoes(d.ambientacao).filter(function (o) { return o.ambientacoes.indexOf(d.ambientacao) >= 0; });
+      var outras = K().ocupacoes(d.ambientacao).filter(function (o) { return o.ambientacoes.indexOf(d.ambientacao) < 0; });
+      return UI().campo({ rotulo: "Ocupação", tipo: "selecao", valor: d.ocupacaoId || (d.propria ? "__propria" : ""), ajuda: "Sugeridas para " + AMB[d.ambientacao] + " primeiro; as outras também valem.",
+        opcoes: [{ valor: "", rotulo: "Escolha…" }].concat(sug.map(function (x) { return { valor: x.id, rotulo: x.nome }; })).concat(outras.length ? [{ valor: "__sep", rotulo: "— de outras ambientações —" }] : []).concat(outras.map(function (x) { return { valor: x.id, rotulo: x.nome + " (" + x.ambientacoes.map(function (a) { return AMB[a]; }).join(", ") + ")" }; })).concat([{ valor: "__propria", rotulo: "Personalizada…" }]),
+        aoMudar: function (v) { if (v === "__sep") { desenhar(); return; } aoEscolher(v); mudou(); desenhar(); } });
     }
     function gIdentidade() {
-      var G = st.r.guiada, pr = G.perfilRegras, ocs = K().OCUPACOES[pr] || [];
+      var G = st.r.guiada;
       return el("div.pilha", {}, [
         campoNome(G),
-        campoCampanha(G, pr, true),
-        seletorDeVersao(G),
+        campoCampanha(G),
+        seletorDeAmbientacao(G),
         seletorDePerfil(G),
-        UI().campo({ rotulo: termo(pr), tipo: "selecao", valor: G.ocupacaoId || (G.propria ? "__propria" : ""), opcoes: [{ valor: "", rotulo: "Escolha…" }].concat(ocs.map(function (x) { return { valor: x.id, rotulo: x.nome }; })).concat([{ valor: "__propria", rotulo: "Personalizada…" }]), aoMudar: function (v) {
+        campoOcupacao(G, function (v) {
           if (v === "__propria") { G.ocupacaoId = ""; G.propria = true; G.habilidadeOcupacao = ""; }
-          else { G.propria = false; G.ocupacaoId = v; var x = ocs.filter(function (y) { return y.id === v; })[0]; G.ocupacaoNome = x ? x.nome : ""; G.habilidadeOcupacao = x && x.habilidade ? x.habilidade : ""; }
-          mudou(); desenhar();
-        } }),
-        G.propria ? UI().campo({ rotulo: "Nome da " + termo(pr).toLowerCase(), valor: G.ocupacaoNome, limite: 80, aoDigitar: true, aoMudar: function (v) { G.ocupacaoNome = v; mudou(); atualizarResumo(); } }) : null,
+          else { G.propria = false; G.ocupacaoId = v; var x = K().ocupacao(v); G.ocupacaoNome = x ? x.nome : ""; G.habilidadeOcupacao = x && x.habilidade ? x.habilidade : ""; }
+        }),
+        G.propria ? UI().campo({ rotulo: "Nome da ocupação", valor: G.ocupacaoNome, limite: 80, aoDigitar: true, aoMudar: function (v) { G.ocupacaoNome = v; mudou(); atualizarResumo(); } }) : null,
       ]);
     }
     function gAtributos() {
@@ -247,7 +229,7 @@
       ]);
     }
     function gPericias() {
-      var G = st.r.guiada, pr = G.perfilRegras;
+      var G = st.r.guiada;
       var c = R().conferirGuiada(montarGuiada());
       var resta = R().GUIADA.passosPericia - c.passosPericia;
       var lista = el("div.pilha.o2-assist__grupos");
@@ -256,9 +238,9 @@
         var busca = String(G.busca || "").trim().toLowerCase();
         var celular = global.matchMedia && global.matchMedia("(max-width: 760px)").matches;
         var grupos = K().ORDEM_ATRIBUTOS.map(function (a) {
-          var itens = K().listaDePericias(pr).filter(function (p) { return p.atributo === a; }).filter(function (p) {
+          var itens = K().listaDePericias().filter(function (p) { return p.atributo === a; }).filter(function (p) {
             var chave = p.chave + (p.chave === "aptidao" ? ":" : ""), v = G.pericias[chave] || { dado: 4 };
-            return (!busca || K().nomeDaPericia(pr, p.chave).toLowerCase().indexOf(busca) >= 0) && (!G.soMelhoradas || v.dado > 4);
+            return (!busca || K().nomeDaPericia(null, p.chave).toLowerCase().indexOf(busca) >= 0) && (!G.soMelhoradas || v.dado > 4);
           });
           if (!itens.length) return null;
           var aberto = busca || G.soMelhoradas || !celular || G.grupoAberto === a || (!G.grupoAberto && a === "fisico");
@@ -267,7 +249,7 @@
             el("ul.o2-assist__pericias", {}, itens.map(function (p) {
               var chave = p.chave + (p.chave === "aptidao" ? ":" : "");
               var v = G.pericias[chave] || { dado: 4, esp: "" };
-              var nome = K().nomeDaPericia(pr, p.chave);
+              var nome = K().nomeDaPericia(null, p.chave);
               var podeMais = v.dado < R().GUIADA.tetoPericia && resta > 0;
               var id = "per-" + p.chave;
               return el("li.o2-assist__pericia" + (v.dado > 4 ? ".o2-assist__pericia--melhorada" : ""), {}, [
@@ -276,7 +258,7 @@
                 bt("−", function () { G.pericias[chave] = { dado: passo(v.dado, -1), esp: v.esp }; mudou(); repintar(id + "-menos"); }, { rotulo: "Diminuir " + nome, motivo: v.dado > 4 ? "" : "Já está em d4." }, id + "-menos"),
                 bt("+", function () { G.pericias[chave] = { dado: passo(v.dado, 1), esp: v.esp }; mudou(); repintar(id + "-mais"); }, { rotulo: "Aumentar " + nome, motivo: podeMais ? "" : v.dado >= R().GUIADA.tetoPericia ? "No teto (d8)." : "Sem passos disponíveis." }, id + "-mais"),
                 el("span.t-mini.o2-assist__proximo", { texto: podeMais ? "→ d" + passo(v.dado, 1) : v.dado >= R().GUIADA.tetoPericia ? "no teto (d8)" : "sem passos" }),
-                p.chave === "aptidao" ? UI().campo({ rotulo: "Especialização", tipo: "selecao", valor: v.esp, opcoes: [{ valor: "", rotulo: "—" }].concat(K().ESPECIALIZACOES[pr].map(function (e) { return { valor: e, rotulo: e }; })), aoMudar: function (x) { G.pericias[chave] = { dado: (G.pericias[chave] || v).dado, esp: x }; mudou(); atualizarResumo(); } }) : null,
+                p.chave === "aptidao" ? UI().campo({ rotulo: "Especialização", tipo: "selecao", valor: v.esp, opcoes: [{ valor: "", rotulo: "—" }].concat(K().especializacoes(G.ambientacao).map(function (e) { return { valor: e, rotulo: e }; })), aoMudar: function (x) { G.pericias[chave] = { dado: (G.pericias[chave] || v).dado, esp: x }; mudou(); atualizarResumo(); } }) : null,
               ]);
             })),
           ]);
@@ -293,7 +275,7 @@
       }
       pintarLista();
       return el("div.pilha", {}, [
-        el("p", { texto: "Um passo muda o dado: d4 → d6 → d8. Agrupadas pelo atributo-base de " + VERSOES[pr] + "." }),
+        el("p", { texto: "Um passo muda o dado: d4 → d6 → d8. Agrupadas pelo atributo-base (a lista é a mesma em qualquer ambientação)." }),
         contador,
         el("div.o2-criar__campos", {}, [
           UI().campo({ rotulo: "Buscar perícia", valor: G.busca, limite: 40, aoDigitar: true, aoMudar: function (v) { G.busca = v; pintarLista(); } }),
@@ -303,15 +285,15 @@
       ]);
     }
     function gHabilidades() {
-      var G = st.r.guiada, pr = G.perfilRegras;
-      var oc = (K().OCUPACOES[pr] || []).filter(function (x) { return x.id === G.ocupacaoId; })[0];
-      var dePerfil = G.perfil ? K().HABILIDADE_DE_PERFIL[pr][G.perfil] : "";
-      var t = termo(pr).toLowerCase();
+      var G = st.r.guiada;
+      var oc = K().ocupacao(G.ocupacaoId);
+      var dePerfil = G.perfil ? K().HABILIDADE_DE_PERFIL[G.perfil] : "";
+      var t = "ocupação";
       return el("div.pilha", {}, [
         dePerfil ? el("div.o2-assist__habilidade.o2-assist__habilidade--perfil", {}, [el("span.o2-tag-titulo", { texto: K().HABILIDADES[dePerfil].nome }), el("span.t-mini", { texto: " Concedida pelo perfil " + K().PERFIS[G.perfil].nome + "." }), el("p.t-mini", { texto: K().HABILIDADES[dePerfil].texto })])
           : el("p.o2-motivo", { texto: "Escolha o perfil na Identidade para ver a habilidade dele." }),
         oc && oc.habilidade ? el("div.o2-assist__habilidade", {}, [el("strong", { texto: "De " + t + " (documentada): " + K().HABILIDADES[oc.habilidade].nome + ". " }), el("p.t-mini", { texto: K().HABILIDADES[oc.habilidade].texto })])
-          : oc ? UI().campo({ rotulo: "Habilidade de " + t, tipo: "selecao", valor: G.habilidadeOcupacao, ajuda: "O playtest não diz qual é: escolha uma das vistas nas fichas desta " + t + " ou defina depois, na ficha.", opcoes: [{ valor: "", rotulo: "Definir depois" }].concat(oc.vistas.filter(function (h) { return h !== dePerfil; }).map(function (h) { return { valor: h, rotulo: K().HABILIDADES[h].nome }; })), aoMudar: function (v) { G.habilidadeOcupacao = v; mudou(); desenhar(); } })
+          : oc ? UI().campo({ rotulo: "Habilidade de " + t, tipo: "selecao", valor: G.habilidadeOcupacao, ajuda: "O playtest não diz qual é: escolha uma das vistas nas fichas desta ocupação ou defina depois, na ficha.", opcoes: [{ valor: "", rotulo: "Definir depois" }].concat(oc.vistas.filter(function (h) { return h !== dePerfil; }).map(function (h) { return { valor: h, rotulo: K().HABILIDADES[h].nome }; })), aoMudar: function (v) { G.habilidadeOcupacao = v; mudou(); desenhar(); } })
           : el("p.t-mini", { texto: G.propria ? "Ocupação personalizada: a habilidade dela entra depois, na ficha." : "Escolha a " + t + " na Identidade." }),
         G.habilidadeOcupacao && oc && !oc.habilidade ? el("p.t-mini", { texto: K().HABILIDADES[G.habilidadeOcupacao].texto }) : null,
         el("h4.t-secao", { texto: "Recursos" }),
@@ -332,9 +314,9 @@
     /* ---------------- PRONTA ---------------- */
     function pEscolher() {
       var P = st.r.pronta, p = K().preset(P.preset);
-      var grupos = [["alpha-contemporaneo", VERSOES["alpha-contemporaneo"]], ["beta-vigilia", VERSOES["beta-vigilia"]]].filter(function (g) { return !P.filtro || P.filtro === g[0]; });
+      var grupos = [["alpha-contemporaneo", FONTE["alpha-contemporaneo"] + " (contemporâneo)"], ["beta-vigilia", FONTE["beta-vigilia"] + " (Contos da Vigília)"]].filter(function (g) { return !P.filtro || P.filtro === g[0]; });
       return el("div.pilha", {}, [
-        el("fieldset.o2-assist__opcoes.o2-assist__opcoes--linha", {}, [el("legend", { texto: "Mostrar" })].concat([["", "Todas"], ["alpha-contemporaneo", "Alpha"], ["beta-vigilia", "Beta"]].map(function (f) {
+        el("fieldset.o2-assist__opcoes.o2-assist__opcoes--linha", {}, [el("legend", { texto: "Fonte" })].concat([["", "Todas"], ["alpha-contemporaneo", "Alpha"], ["beta-vigilia", "Beta"]].map(function (f) {
           return el("label.o2-assist__radio", {}, [el("input", { type: "radio", name: "o2-filtro", checked: P.filtro === f[0], onchange: function () { P.filtro = f[0]; desenhar(); } }), el("span", { texto: f[1] })]);
         }))),
         el("div.o2-presets", {}, grupos.map(function (g) {
@@ -355,7 +337,8 @@
           previaDoPreset(p),
           campoNome(P, P.nome && P.nome !== P.nomeDoPreset ? "Nome editado: fica o seu, mesmo trocando de ficha." : "Pode usar o nome original ou editar antes de copiar."),
           P.nome && P.nome !== (p.nomeCompleto || p.nome) && P.nome !== P.nomeDoPreset ? T().botao("Usar o nome original (" + (p.nomeCompleto || p.nome) + ")", function () { P.nome = p.nomeCompleto || p.nome; P.nomeDoPreset = P.nome; mudou(); desenhar(); }) : null,
-          campoCampanha(P, p.perfilRegras, false),
+          campoCampanha(P),
+          linha("Uma ficha pronta entra em qualquer campanha de Ordem II: as regras são as mesmas; nada é convertido."),
         ]) : el("p.t-mini", { texto: "Escolha um personagem para ver a prévia." }),
       ]);
     }
@@ -369,14 +352,14 @@
 
     /* ---------------- LIVRE ---------------- */
     function lIdentidade() {
-      var L = st.r.livre, pr = L.perfilRegras;
-      var ocs = (K().OCUPACOES[pr] || []).map(function (x) { return x.nome; });
+      var L = st.r.livre;
+      var ocs = K().ocupacoes(L.ambientacao).map(function (x) { return x.nome; });
       return el("div.pilha", {}, [
         campoNome(L),
-        campoCampanha(L, pr, true),
-        seletorDeVersao(L),
+        campoCampanha(L),
+        seletorDeAmbientacao(L),
         seletorDePerfil(L),
-        UI().campo({ rotulo: termo(pr), valor: L.ocupacao, limite: 80, ajuda: "Do catálogo (" + ocs.join(", ") + ") ou outra.", aoDigitar: true, aoMudar: function (v) { L.ocupacao = v; mudou(); atualizarResumo(); } }),
+        UI().campo({ rotulo: "Ocupação", valor: L.ocupacao, limite: 80, ajuda: "Do catálogo (" + ocs.join(", ") + ") ou outra.", aoDigitar: true, aoMudar: function (v) { L.ocupacao = v; mudou(); atualizarResumo(); } }),
         UI().campo({ rotulo: "Nível inicial (1–10)", tipo: "selecao", valor: String(L.nivel), ajuda: "Informar um nível maior não concede melhorias dos níveis anteriores: a ficha começa com os valores que você der.", opcoes: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(function (n) { return { valor: String(n), rotulo: String(n) }; }), aoMudar: function (v) { L.nivel = Number(v); mudou(); atualizarResumo(); } }),
       ]);
     }
@@ -419,30 +402,28 @@
       var d = D(), partes = [], erros = [], pr;
       if (st.modo === "guiada") {
         var G = d, c = R().conferirGuiada(montarGuiada());
-        pr = G.perfilRegras; erros = errosGuiada();
-        var melhoradas = montarGuiada().pericias.filter(function (p) { return p.dado > 4; }).map(function (p) { return K().nomeDaPericia(pr, p.chave) + (p.especializacao ? " (" + p.especializacao + ")" : "") + " d" + p.dado; });
-        var dePerfil = G.perfil ? K().HABILIDADE_DE_PERFIL[pr][G.perfil] : "";
-        partes.push(secao("Identidade", "identidade", [["Nome", G.nome || "—"], ["Versão", VERSOES[pr]], ["Campanha", G.campanhaId ? nomeCampanha(G.campanhaId) : "Sem campanha"], ["Perfil", G.perfil ? K().PERFIS[G.perfil].nome : "—"], [termo(pr), G.ocupacaoNome || "—"], ["Nível inicial", "1"]]));
+        erros = errosGuiada();
+        var melhoradas = montarGuiada().pericias.filter(function (p) { return p.dado > 4; }).map(function (p) { return K().nomeDaPericia(null, p.chave) + (p.especializacao ? " (" + p.especializacao + ")" : "") + " d" + p.dado; });
+        var dePerfil = G.perfil ? K().HABILIDADE_DE_PERFIL[G.perfil] : "";
+        partes.push(secao("Identidade", "identidade", [["Nome", G.nome || "—"], ["Ambientação", AMB[G.ambientacao]], ["Campanha", G.campanhaId ? nomeCampanha(G.campanhaId) : "Sem campanha"], ["Perfil", G.perfil ? K().PERFIS[G.perfil].nome : "—"], ["Ocupação", G.ocupacaoNome || "—"], ["Nível inicial", "1"]]));
         partes.push(secao("Atributos", "atributos", K().ORDEM_ATRIBUTOS.map(function (k) { return [K().ATRIBUTOS[k].nome, "d" + G.atributos[k]]; })));
         partes.push(secao("Perícias", "pericias", [["Melhoradas", melhoradas.join(", ") || "nenhuma (todas em d4)"], ["Passos usados", c.passosPericia + " de " + R().GUIADA.passosPericia]]));
-        partes.push(secao("Habilidades e recursos", "habilidades", [["Habilidades", [dePerfil ? K().HABILIDADES[dePerfil].nome : "", G.habilidadeOcupacao ? K().HABILIDADES[G.habilidadeOcupacao].nome : "a de " + termo(pr).toLowerCase() + ": definir depois"].filter(Boolean).join(", ")], ["PV / PD", G.pv + " / " + G.pd + (G.pv !== 16 || G.pd !== 12 ? " (editados)" : " (referência experimental)")]]));
+        partes.push(secao("Habilidades e recursos", "habilidades", [["Habilidades", [dePerfil ? K().HABILIDADES[dePerfil].nome : "", G.habilidadeOcupacao ? K().HABILIDADES[G.habilidadeOcupacao].nome : "a de ocupação: definir depois"].filter(Boolean).join(", ")], ["PV / PD", G.pv + " / " + G.pd + (G.pv !== 16 || G.pd !== 12 ? " (editados)" : " (referência experimental)")]]));
         var sobraA = R().GUIADA.passosAtributo - c.passosAtributo, sobraP = R().GUIADA.passosPericia - c.passosPericia;
         if ((sobraA > 0 || sobraP > 0) && !erros.length) partes.push(el("div.o2-aviso", { role: "status" }, [
           el("p", { texto: "Passos sem uso: " + [sobraA ? sobraA + " de atributo" : "", sobraP ? sobraP + " de perícia" : ""].filter(Boolean).join(" e ") + "." }),
           el("label.r-marca", {}, [el("input", { type: "checkbox", checked: G.sobraOk, onchange: function (ev) { G.sobraOk = ev.currentTarget.checked; desenhar(); } }), el("span", { texto: "Deixar sem uso e criar assim" })]),
         ]));
       } else if (st.modo === "pronta") {
-        var p = K().preset(d.preset); erros = errosPronta(); pr = p ? p.perfilRegras : "";
-        partes.push(secao("Ficha", "escolher", [["Personagem", p ? (p.nomeCompleto || p.nome) : "—"], ["Nome da cópia", d.nome || "—"], ["Versão", p ? VERSOES[p.perfilRegras] : "—"], ["Campanha", d.campanhaId ? nomeCampanha(d.campanhaId) : "Sem campanha"], p ? ["Perfil", K().PERFIS[p.perfil].nome + " · " + p.ocupacao + " · nível " + p.nivel] : null, p ? ["Dados", "Físico d" + p.atributos.fisico + " · Mente d" + p.atributos.mente + " · Emoção d" + p.atributos.emocao] : null, p ? ["PV / PD", p.pv + " / " + p.pd + " (os do playtest)"] : null, p ? ["Habilidades", p.habilidades.map(function (h) { return (K().HABILIDADES[h.id] || {}).nome || h.id; }).join(", ")] : null]));
+        var p = K().preset(d.preset); erros = errosPronta();
+        partes.push(secao("Ficha", "escolher", [["Personagem", p ? (p.nomeCompleto || p.nome) : "—"], ["Nome da cópia", d.nome || "—"], ["Fonte", p ? FONTE[p.perfilRegras] : "—"], ["Campanha", d.campanhaId ? nomeCampanha(d.campanhaId) : "Sem campanha"], p ? ["Perfil", K().PERFIS[p.perfil].nome + " · " + p.ocupacao + " · nível " + p.nivel] : null, p ? ["Dados", "Físico d" + p.atributos.fisico + " · Mente d" + p.atributos.mente + " · Emoção d" + p.atributos.emocao] : null, p ? ["PV / PD", p.pv + " / " + p.pd + " (os do playtest)"] : null, p ? ["Habilidades (efeito atual)", p.habilidades.map(function (h) { return (K().HABILIDADES[K().refDeHabilidade(h.id)] || {}).nome || h.id; }).join(", ")] : null]));
       } else {
-        erros = errosLivre(); pr = d.perfilRegras;
-        partes.push(secao("Identidade", "identidade", [["Nome", d.nome || "—"], ["Versão", VERSOES[pr]], ["Campanha", d.campanhaId ? nomeCampanha(d.campanhaId) : "Sem campanha"], ["Perfil", d.perfil ? K().PERFIS[d.perfil].nome : "—"], [termo(pr), d.ocupacao || "a preencher na ficha"], ["Nível inicial", String(d.nivel)]]));
+        erros = errosLivre();
+        partes.push(secao("Identidade", "identidade", [["Nome", d.nome || "—"], ["Ambientação", AMB[d.ambientacao]], ["Campanha", d.campanhaId ? nomeCampanha(d.campanhaId) : "Sem campanha"], ["Perfil", d.perfil ? K().PERFIS[d.perfil].nome : "—"], ["Ocupação", d.ocupacao || "a preencher na ficha"], ["Nível inicial", String(d.nivel)]]));
         partes.push(secao("Dados e recursos", "dados", K().ORDEM_ATRIBUTOS.map(function (k) { return [K().ATRIBUTOS[k].nome, "d" + d.atributos[k]]; }).concat([["PV / PD", d.pv + " / " + d.pd], ["Perícias", "d4 em todas (ajuste na ficha)"]])));
       }
-      var div = pr ? avisoDaCampanha(d, pr, st.modo !== "pronta") : null;
       return el("div.pilha", {}, [
         erros.length ? el("div.o2-erros-revisao", { role: "alert" }, [el("p", {}, [el("strong", { texto: "Falta resolver antes de criar:" })]), el("ul", {}, erros.map(function (e) { var i = etapas().map(function (x) { return x[0]; }).indexOf(e[0]); return el("li", {}, [el("span", { texto: e[1] + " " }), T().botao("Corrigir", function () { st.revisar = true; ir(i); })]); }))]) : null,
-        div,
       ].concat(partes).concat([linha("Resumo, história e aparência são opcionais: dá para preencher depois, na ficha.")]));
     }
     function linha(t) { return el("p.t-mini", { texto: t }); }
@@ -454,10 +435,9 @@
       var d = D(), l = [];
       if (st.modo === "pronta") {
         var p = K().preset(d.preset);
-        l = [["Nome", d.nome || "—"], ["Ficha", p ? p.nome : "—"], ["Versão", p ? VERSOES[p.perfilRegras] : "—"], p ? ["PV / PD", p.pv + " / " + p.pd] : null];
+        l = [["Nome", d.nome || "—"], ["Ficha", p ? p.nome : "—"], ["Fonte", p ? FONTE[p.perfilRegras] : "—"], p ? ["PV / PD", p.pv + " / " + p.pd] : null];
       } else {
-        var pr = d.perfilRegras;
-        l = [["Nome", d.nome || "—"], ["Versão", VERSOES[pr]], ["Perfil", d.perfil ? K().PERFIS[d.perfil].nome : "—"], [termo(pr), (st.modo === "guiada" ? d.ocupacaoNome : d.ocupacao) || "—"], ["Dados", K().ORDEM_ATRIBUTOS.map(function (k) { return K().ATRIBUTOS[k].curto + " d" + d.atributos[k]; }).join(" · ")], ["PV / PD", d.pv + " / " + d.pd]];
+        l = [["Nome", d.nome || "—"], ["Ambientação", AMB[d.ambientacao]], ["Perfil", d.perfil ? K().PERFIS[d.perfil].nome : "—"], ["Ocupação", (st.modo === "guiada" ? d.ocupacaoNome : d.ocupacao) || "—"], ["Dados", K().ORDEM_ATRIBUTOS.map(function (k) { return K().ATRIBUTOS[k].curto + " d" + d.atributos[k]; }).join(" · ")], ["PV / PD", d.pv + " / " + d.pd]];
         if (st.modo === "guiada") { var c = R().conferirGuiada(montarGuiada()); l.push(["Passos livres", "atributos " + (R().GUIADA.passosAtributo - c.passosAtributo) + " · perícias " + (R().GUIADA.passosPericia - c.passosPericia)]); }
       }
       U.trocar(resumoAlvo, [el("dl.o2-pares", {}, l.filter(Boolean).map(function (x) { return linhaPar(x[0], x[1]); }))]);
@@ -516,7 +496,7 @@
     function montarFicha() {
       var d = D(), bloco;
       if (st.modo === "pronta") bloco = R().dePreset(d.preset);
-      else if (st.modo === "livre") bloco = R().normalizar({ perfilRegras: d.perfilRegras, modoCriacao: "livre", perfil: d.perfil, ocupacao: { nome: d.ocupacao, personalizada: true }, nivel: d.nivel, base: { atributos: d.atributos }, recursos: { pv: { max: d.pv, atual: d.pv }, pd: { max: d.pd, atual: d.pd } } });
+      else if (st.modo === "livre") bloco = R().normalizar({ versaoRegras: K().REGRAS.versao, ambientacao: d.ambientacao, modoCriacao: "livre", perfil: d.perfil, ocupacao: { nome: d.ocupacao, personalizada: true }, nivel: d.nivel, base: { atributos: d.atributos }, recursos: { pv: { max: d.pv, atual: d.pv }, pd: { max: d.pd, atual: d.pd } } });
       else { var g = R().deGuiada(montarGuiada()); if (!g.ok) return { ok: false, erro: g.erros[0] }; bloco = g.bloco; }
       return { ok: true, ficha: global.RAMAFicha.criarFicha({ nome: String(d.nome).trim(), tipoFicha: "ordem2", campanhaId: d.campanhaId || null, ordem2: bloco }) };
     }
@@ -568,5 +548,5 @@
     return m;
   }
 
-  global.RAMAOrdem2Criar = { abrir: abrir, previaDoPreset: previaDoPreset, VERSOES: VERSOES };
+  global.RAMAOrdem2Criar = { abrir: abrir, previaDoPreset: previaDoPreset, AMB: AMB };
 })(window);

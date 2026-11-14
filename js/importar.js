@@ -209,7 +209,9 @@
 
     var S = global.RAMASistemas;
     var sistema = S ? S.daFicha(ficha) : null;
-    var o2 = ficha.ordem2 && global.RAMAOrdem2Catalogo ? global.RAMAOrdem2Catalogo.PERFIS_REGRAS[ficha.ordem2.perfilRegras] : null;
+    /* v9.4: regras unificadas; mostra a ambientação (um arquivo antigo com perfil de regras migra ao importar). */
+    var K2 = global.RAMAOrdem2Catalogo, a2 = ficha.ordem2 && K2 ? K2.ambientacaoValida(ficha.ordem2.ambientacao || ficha.ordem2.perfilRegras) : "";
+    var o2 = a2 ? { nome: K2.AMBIENTACOES[a2].nome } : null;
     return el("dl.r-dados", {}, [
       linha("Nome", ficha.nome),
       /* v9.0: o sistema escrito (Ordem II nunca passa pelo conversor do

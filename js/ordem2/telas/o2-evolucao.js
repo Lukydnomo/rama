@@ -166,7 +166,7 @@
      motivo escrito na própria opção. */
   function escolha(ctx, c) {
     var x = c.x, pend = c.evo.pendente, cfg = pend.config;
-    var versao = x.perfilRegras === "beta-vigilia" ? "beta" : "alpha";
+    /* v9.4: um catálogo só — as de perfil com o efeito mais recente. */
     var st = { tipo: "", chave: "", habilidade: { ref: "", nome: "", texto: "" } };
     var area = el("div.pilha");
     var raiz = el("section.o2-evo-escolha", { id: "o2-evo-escolha", "aria-label": "Escolher uma melhoria" }, [area]);
@@ -195,7 +195,7 @@
           el("legend", { texto: "Habilidade" + (c.local || c.mestre ? "" : " (o Mestre aprova)") }),
           el("label.r-marca", {}, [el("input", { type: "radio", name: "o2-evo-op", checked: st.tipo === "habilidade", onchange: function () { st.tipo = "habilidade"; st.chave = ""; desenhar(); } }), el("span", { texto: "Uma habilidade nova" })]),
           st.tipo === "habilidade" ? el("div.o2-criar__campos", {}, [
-            UI().campo({ rotulo: "Do catálogo (" + (versao === "beta" ? "Beta" : "Alpha") + ")", tipo: "selecao", valor: st.habilidade.ref, opcoes: [{ valor: "", rotulo: "Uma personalizada…" }].concat(Object.keys(K().HABILIDADES).filter(function (k) { var h = K().HABILIDADES[k]; return (h.versao === versao || h.versao === "ambas") && !x.habilidades.some(function (y) { return y.ref === k; }); }).map(function (k) { return { valor: k, rotulo: K().HABILIDADES[k].nome }; })), aoMudar: function (v) { st.habilidade.ref = v; desenhar(); } }),
+            UI().campo({ rotulo: "Do catálogo", tipo: "selecao", valor: st.habilidade.ref, opcoes: [{ valor: "", rotulo: "Uma personalizada…" }].concat(Object.keys(K().HABILIDADES).filter(function (k) { return !x.habilidades.some(function (y) { return y.ref === k; }); }).map(function (k) { return { valor: k, rotulo: K().HABILIDADES[k].nome }; })), aoMudar: function (v) { st.habilidade.ref = v; desenhar(); } }),
             !st.habilidade.ref ? UI().campo({ rotulo: "Nome", valor: st.habilidade.nome, limite: 80, aoDigitar: true, aoMudar: function (v) { st.habilidade.nome = v; } }) : null,
             !st.habilidade.ref ? UI().campo({ rotulo: "Efeito", tipo: "area", linhas: 2, valor: st.habilidade.texto, limite: 1200, aoDigitar: true, aoMudar: function (v) { st.habilidade.texto = v; } }) : null,
             st.habilidade.ref ? linha(K().HABILIDADES[st.habilidade.ref].texto + (R().motorDe({ ref: st.habilidade.ref }) ? " (com automação)" : "")) : linha("Uma personalizada só automatiza o que estiver estruturado; o resto é narrativo."),

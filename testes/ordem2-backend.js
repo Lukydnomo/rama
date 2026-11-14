@@ -63,7 +63,7 @@ export async function testarOrdem2Backend({ t, preparar, novaConta, comoFn }) {
     t.grupo("Ordem II · configuração com rev e papéis");
     t.recusa("jogadora não configura", op(A, { tipo: "configurar", perfil: "alpha-contemporaneo" }), "sem_permissao");
     const cfg = op(M, { tipo: "configurar", perfil: "beta-vigilia", ambientacao: "vigilia" }, id("cfg"), 0);
-    t.ok("o Mestre fixa o perfil da campanha (Beta · Vigília)", cfg.ok && cfg.dados.estado.perfil === "beta-vigilia");
+    t.ok("o Mestre escolhe a ambientação (Contos da Vigília); o perfil antigo no pedido não muda regra", cfg.ok && cfg.dados.estado.ambientacao === "vigilia" && cfg.dados.estado.regras === G.RAMAOrdem2Catalogo.REGRAS.id && cfg.dados.estado.perfil === undefined);
     t.recusa("configuração sobre um estado velho: conflito", op(M, { tipo: "configurar", perfil: "alpha-contemporaneo" }, id("cfg"), 0), "conflito");
     t.recusa("jogadora não age pelo personagem da outra", op(A, { tipo: "teste", quem: fb, pedido: { pericia: "luta" } }), "dados_invalidos");
 
@@ -110,7 +110,18 @@ export async function testarOrdem2Backend({ t, preparar, novaConta, comoFn }) {
     const recarga = A({ acao: "ler_personagem", personagemId: pa });
     t.ok("recarregar a ficha traz o PV e o opId no bloco", recarga.ok && recarga.dados.ordem2.recursos.pv.atual === pvDepois - 5 && recarga.dados.ordem2.operacoes.indexOf(opDano) >= 0);
     const painel = M({ acao: "listar_personagens_campanha", campanhaId: camp });
-    t.ok("o painel da mesa lê o resumo de Ordem II calculado no servidor", painel.ok && JSON.stringify(painel.dados).includes("beta-vigilia"));
+    t.ok("o painel da mesa lê o resumo de Ordem II calculado no servidor", painel.ok && JSON.stringify(painel.dados).includes("\"ambientacao\":\"vigilia\""));
+
+    /* v9.4: a gravação comum grava a migração; aba antiga não volta o esquema. */
+    t.grupo("Ordem II · migração para as regras unificadas no fluxo normal de escrita");
+    const leg = A({ acao: "ler_personagem", personagemId: pa });
+    const velha = JSON.parse(JSON.stringify(leg.dados));
+    delete velha.ordem2.regras; delete velha.ordem2.versaoRegras; velha.ordem2.perfilRegras = "alpha-contemporaneo";
+    const pq = velha.ordem2.base.pericias.find((p) => p.chave === "pesquisar"); pq.chave = "inspecionar"; delete pq.origens;
+    const svLeg = A({ acao: "salvar_personagem", personagemId: pa, rev: leg.rev, dados: velha });
+    const gravada = A({ acao: "ler_personagem", personagemId: pa }).dados.ordem2;
+    t.ok("uma aba antiga grava com perfilRegras/Inspecionar: o servidor grava o caminho único", svLeg.ok && gravada.regras === G.RAMAOrdem2Catalogo.REGRAS.id && gravada.perfilRegras === undefined && !gravada.base.pericias.some((p) => p.chave === "inspecionar") && gravada.base.pericias.some((p) => p.chave === "pesquisar"));
+    t.ok("  o perfil antigo da aba não muda a ambientação já gravada (vigília)", gravada.ambientacao === "vigilia");
 
     t.grupo("Ordem II · trocar o sistema guarda a mesa");
     M({ acao: "salvar_campanha", campanhaId: camp, dados: { sistema: "universal" } });

@@ -38,7 +38,7 @@
   var MAX_DADOS_SOMADOS = 3;
   var DT_PADRAO = 7;
 
-  function ehBeta(b) { return b.perfilRegras === "beta-vigilia"; }
+  /* v9.4: uma regra só — nada depende do playtest de origem da ficha. */
 
   /* ---------------------------------------------------------------
      MONTAR
@@ -66,7 +66,7 @@
     /* Passos sem alvo prescrito: a tela pergunta; padrão, a perícia. */
     var alvoSemPrescricao = p.alvoDosPassos === "atributo" ? "atributo" : "pericia";
     lista(b.efeitos).forEach(function (e) { if (e.tipo === "passoTodos") passo(alvoSemPrescricao, e.n, e.fonte || "efeito"); });
-    if (b.estado.caido && atributo === "fisico" && ehBeta(b)) passo("atributo", -1, "Caído (Beta p. 21)");
+    if (b.estado.caido && atributo === "fisico") passo("atributo", -1, "Caído (Beta p. 21)");
     R().habilidadesDoTipo(b, "passoComPvBaixo").forEach(function () {
       if (b.recursos.pv.atual <= Math.floor(R().pvMax(b) / 2)) passo(alvoSemPrescricao, 1, "Instinto de Sobrevivência");
     });
@@ -169,7 +169,7 @@
         dt: dt, modificador: modificador, fontesModificador: mod.fontes.concat(Number(p.modificador) ? ["Mestre (" + (p.modificador > 0 ? "+" : "") + p.modificador + ")"] : []),
         fontes: fontes, custos: custos, criticoMin: criticoMin,
         arma: arma ? arma.id : "", alcance: p.alcance === "distancia" ? "distancia" : (p.alcance === "corpo" ? "corpo" : ""),
-        examinar: p.examinar === true, beta: ehBeta(b),
+        examinar: p.examinar === true, regras: K().REGRAS.versao,
       },
     };
   }
@@ -239,7 +239,9 @@
 
   /* Pontuação de um teste estendido / dano de ataque: RA, ou as duas
      maiores no crítico do Beta (p. 11). */
-  function pontuacao(res, beta) { return res.critico && beta ? res.duasMaiores : res.ra; }
+  /* Pontuações (arrombar, escalar, avançar, dano): RA; no crítico, as duas
+     maiores (Beta p. 11), para todos. Efeitos que dizem RA/RB usam RA/RB. */
+  function pontuacao(res) { return res.critico ? res.duasMaiores : res.ra; }
 
   /* Oposto (Alpha/Beta p. 19/11): crítico vence o que não é; empate
      genérico fica para a cena. */
@@ -282,7 +284,7 @@
   }
 
   function dano(res, arma, extras, beta) {
-    var base = pontuacao(res, beta);
+    var base = pontuacao(res);
     var bonusArma = arma ? arma.dano : 0;
     var extra = lista(extras).reduce(function (s, e) { return s + (Number(e.valor) || 0); }, 0);
     return { valor: Math.max(0, base + bonusArma + extra), base: base, arma: bonusArma, extras: lista(extras) };
@@ -342,7 +344,6 @@
     var ev = [];
     var valor = Math.max(0, Math.floor(Number(x.valor) || 0));
     var tipo = x.tipo === "emocional" ? "emocional" : "fisico";
-    var beta = ehBeta(b);
     if (tipo === "fisico" && x.armadura && R().armaduraAtual(b) > 0 && valor > 0) {
       b.recursos.armaduraGasta++;
       var reduz = Math.min(10, valor);
@@ -356,8 +357,8 @@
       ev.push(evento(valor + " de dano emocional (PD " + b.recursos.pd.atual + "/" + R().pdMax(b) + ")."));
       if (x.externo !== false && (b.recursos.pd.atual === 0) && (antesPd > 0 || valor > 0)) {
         var dtT = 7 + 3 * b.estado.testesTrauma;
-        b.estado.pendentes.push({ id: R().novoId(), tipo: beta ? "trauma" : "disciplinaAlpha", dt: dtT, naoLetal: false, motivo: antesPd > 0 ? "Reduzido a 0 PD" : "Dano emocional com 0 PD" });
-        ev.push(evento((beta ? "Teste de trauma" : "Teste de Disciplina") + " pendente (DT " + dtT + ")."));
+        b.estado.pendentes.push({ id: R().novoId(), tipo: "trauma", dt: dtT, naoLetal: false, motivo: antesPd > 0 ? "Reduzido a 0 PD" : "Dano emocional com 0 PD" });
+        ev.push(evento("Teste de trauma pendente (DT " + dtT + ")."));
       }
       return ev;
     }
@@ -369,8 +370,8 @@
     if (b.recursos.pv.atual === 0 && (antes > 0 || valor > 0)) {
       var dt = 7 + 3 * b.estado.testesLesao;
       var naoLetal = b.recursos.naoLetal > 0;
-      b.estado.pendentes.push({ id: R().novoId(), tipo: beta ? "lesao" : "vigorAlpha", dt: dt, naoLetal: beta && naoLetal, motivo: antes > 0 ? "Reduzido a 0 PV" : "Perdeu PV com 0 PV" });
-      ev.push(evento((beta ? "Teste de lesão" : "Teste de Vigor") + " pendente (DT " + dt + ")."));
+      b.estado.pendentes.push({ id: R().novoId(), tipo: "lesao", dt: dt, naoLetal: naoLetal, motivo: antes > 0 ? "Reduzido a 0 PV" : "Perdeu PV com 0 PV" });
+      ev.push(evento("Teste de lesão pendente (DT " + dt + ")."));
     }
     return ev;
   }
@@ -522,7 +523,7 @@
       registrar(b, "morte", "Morreu ao fim da rodada (morte lenta).");
     }
     /* Moribundo: teste no fim de cada rodada, exceto a em que ficou. */
-    if (b.estado.moribundo && !b.estado.morto && ehBeta(b)) {
+    if (b.estado.moribundo && !b.estado.morto) {
       var desde = b.estado.usos.moribundoDesde;
       if (desde === null || desde === undefined || rodada > desde) {
         var dt = 7 + 3 * b.estado.testesLesao;
@@ -541,7 +542,6 @@
 
   function fimDeCena(b) {
     var ev = [];
-    var beta = ehBeta(b);
     lista(b.habilidades).forEach(function (h) {
       var m = R().motorDe(h);
       if (!m) return;
@@ -554,9 +554,9 @@
     var antes = b.efeitos.length;
     b.efeitos = b.efeitos.filter(function (e) { return ["teste", "rodada", "cena"].indexOf(e.expira) < 0; });
     if (antes !== b.efeitos.length) ev.push(evento("Efeitos de cena terminam."));
-    if (beta) { b.estado.testesLesao = 0; b.estado.testesTrauma = 0; }
+    b.estado.testesLesao = 0; b.estado.testesTrauma = 0;
     /* Beta p. 22: sobreviveu à cena com 0 PV → 1 PV. */
-    if (beta && b.recursos.pv.atual === 0 && !b.estado.morto) { curar(b, "pv", 1); ev.push(evento("Fim da cena com 0 PV: recupera 1 PV.")); }
+    if (b.recursos.pv.atual === 0 && !b.estado.morto) { curar(b, "pv", 1); ev.push(evento("Fim da cena com 0 PV: recupera 1 PV.")); }
     Object.keys(b.estado.usos).forEach(function (k) { if (/^(cena|rodada|estoico):/.test(k) || k === "moribundoDesde") delete b.estado.usos[k]; });
     b.estado.perdeAcao = 0; b.estado.acaoExtra = 0;
     return ev;

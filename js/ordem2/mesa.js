@@ -17,11 +17,12 @@
      investigação      pontos de interesse com descrição pública, pistas
                        por perícia/limiar e nota privada; Investigar,
                        Observar, Examinar, Interagir, Recapitular e
-                       Compartilhar conforme o perfil de regras
-     combate           Beta: fases configuráveis (Geral → Distância →
-                       Corpo a corpo), declarar, rolar, aplicar a fase
-                       de uma vez (simultaneidade); Alpha: o conflito
-                       simplificado da p. 26
+                       Compartilhar (v9.4: um fluxo só)
+     combate           fases configuráveis (Geral → Distância → Corpo a
+                       corpo; quatro onde o encontro manda), declarar,
+                       rolar, aplicar a fase de uma vez (simultaneidade).
+                       v9.4: o conflito simplificado do Alpha não inicia
+                       ações novas
 
    `fichas`: { personagemId: { nome, bloco } } — só as que a operação
    toca (fichasDaOperacao). O retorno diz quais blocos mudaram.
@@ -67,11 +68,14 @@
     if (x.rev) OPS_COM_REV.push(nome);
   }
 
-  function estadoVazio(perfil) {
-    var pr = K().PERFIS_REGRAS[perfil] ? perfil : "beta-vigilia";
+  /* `ambientacao` (ou um perfil antigo, que vira a ambientação dele). A
+     regra é uma só (v9.4): `regras`/`versaoRegras`. */
+  function estadoVazio(ambientacao) {
     return {
       versao: VERSAO,
-      perfil: pr, ambientacao: K().PERFIS_REGRAS[pr].ambientacao,
+      regras: K().REGRAS.id, versaoRegras: K().REGRAS.versao,
+      ambientacao: K().ambientacaoValida(ambientacao),
+      migracao: null,
       missao: { numero: 1, nome: "" },
       cena: { numero: 1, nome: "", tipo: "livre" },
       combate: combateVazio(),
@@ -88,10 +92,15 @@
     return lista(v).map(function (x) { var o = obj(x); return { a: texto(o.a, 80), b: texto(o.b, 80), de: inteiro(o.de, 0, 100000), ate: inteiro(o.ate, 0, 100000) }; }).filter(function (x) { return x.a && x.b; }).slice(-30);
   }
 
+  /* Também é a MIGRAÇÃO da mesa (v9.4), repetível: o `perfil` antigo vira
+     legado (`migracao.de`), a ambientação fica; o que estava em curso
+     (testes aguardando escolhas, declarações já roladas) segue com a
+     montagem congelada e aparece ao Mestre como pendência. */
   function normalizar(bruto) {
     var b = obj(bruto);
-    var v = estadoVazio(b.perfil);
-    v.ambientacao = K().AMBIENTACOES[b.ambientacao] ? b.ambientacao : v.ambientacao;
+    var legada = !(Number(b.versaoRegras) >= K().REGRAS.versao);
+    var de = K().PERFIS_REGRAS[b.perfil] ? b.perfil : "";
+    var v = estadoVazio(K().AMBIENTACOES[b.ambientacao] ? b.ambientacao : (de || "contemporaneo"));
     var mi = obj(b.missao), ce = obj(b.cena);
     v.missao = { numero: inteiro(mi.numero, 1, 100000, 1), nome: texto(mi.nome, 120) };
     v.cena = { numero: inteiro(ce.numero, 1, 100000, 1), nome: texto(ce.nome, 120), tipo: ["livre", "investigacao", "combate", "acao"].indexOf(ce.tipo) >= 0 ? ce.tipo : "livre" };
@@ -131,6 +140,14 @@
     v.registro = lista(b.registro).map(function (r) { var o = obj(r); return { quando: texto(o.quando, 40), texto: texto(o.texto, 400) }; }).slice(-MAX_REGISTRO);
     v.privado = lista(b.privado).map(function (r) { var o = obj(r); return { quando: texto(o.quando, 40), texto: texto(o.texto, 400) }; }).slice(-MAX_REGISTRO);
     GANCHOS.normalizar.forEach(function (fn) { fn(v, b); });
+    var mg = obj(b.migracao);
+    if (legada) {
+      var pend = [];
+      var ag = v.testes.filter(function (t) { return t.estado === "aguardando"; }).length;
+      if (ag) pend.push(ag + " teste(s) aguardando escolhas: resolvem com a regra da montagem.");
+      if (v.combate.ativo && v.combate.declaracoes.length) pend.push("Combate em andamento (rodada " + v.combate.rodada + "): as ações já declaradas seguem como foram montadas; as novas usam as regras unificadas.");
+      v.migracao = { versao: K().REGRAS.versao, de: de, quando: new Date().toISOString(), pendencias: pend, visto: false };
+    } else v.migracao = b.migracao ? { versao: R().inteiro(mg.versao, 0, 99), de: texto(mg.de, 40), quando: texto(mg.quando, 40), pendencias: lista(mg.pendencias).map(function (t) { return texto(t, 300); }).slice(0, 10), visto: mg.visto === true } : null;
     return v;
   }
 
@@ -272,13 +289,15 @@
      MISSÃO, CENA, CONFIGURAÇÃO
      --------------------------------------------------------------- */
   var OPERACOES = {};
+  /* v9.4: só a ambientação. Um pedido de uma aba antiga com `perfil` não
+     muda regra nenhuma (as regras são uma só). Trocar a ambientação não
+     mexe em dados, habilidades, combate, pistas nem resultados. */
   OPERACOES.configurar = function (e, f, o, p, rolar, s) {
-    var mudouPerfil = o.perfil && K().PERFIS_REGRAS[o.perfil] && o.perfil !== e.perfil;
-    if (o.perfil && K().PERFIS_REGRAS[o.perfil]) e.perfil = o.perfil;
-    if (o.ambientacao && K().AMBIENTACOES[o.ambientacao]) e.ambientacao = o.ambientacao;
-    /* Trocar o perfil sem dizer a ambientação: vale a do perfil (v9.1). */
-    else if (mudouPerfil) e.ambientacao = K().PERFIS_REGRAS[e.perfil].ambientacao;
-    log(e, "Perfil de regras da campanha: " + K().PERFIS_REGRAS[e.perfil].nome + ".");
+    if (o.ambientacao && K().AMBIENTACOES[o.ambientacao] && o.ambientacao !== e.ambientacao) {
+      e.ambientacao = o.ambientacao;
+      log(e, "Ambientação da campanha: " + K().AMBIENTACOES[e.ambientacao].nome + " (as regras são as mesmas).");
+    }
+    if (o.migracaoVista && e.migracao) e.migracao.visto = true;
     ev(s, "Configuração salva.");
   };
   OPERACOES.novaMissao = function (e, f, o, p, rolar, s) {
@@ -327,6 +346,10 @@
     var evd = M().aplicarDano(a.b, { valor: o.valor, tipo: o.danoTipo, naoLetal: o.naoLetal === true, externo: o.externo !== false, armadura: o.armadura === true });
     evd.forEach(function (x) { ev(s, a.nome + ": " + x.texto); });
     log(e, a.nome + ": " + evd.map(function (x) { return x.texto; }).join(" "));
+    /* v9.4: o Mestre pode dizer quem causou (isenções da cena, efeitos de autor). */
+    var autor = o.ator ? participante(e, o.ator) : null;
+    var vitima = o.participante ? participante(e, o.participante) : participanteDoPersonagem(e, o.personagem);
+    if (autor && Number(o.valor) > 0) GANCHOS.aoDano.forEach(function (fn) { fn(e, fichas, vitima, a.b, { valor: Number(o.valor), ator: autor.id }, s); });
   };
   OPERACOES.curar = function (e, fichas, o, p, rolar, s) {
     var a = alvoDoMestre(e, fichas, o);
@@ -555,7 +578,6 @@
       if (d) { d.teste = t.id; d.resultado = res; }
     }
     if (res.falhaCritica && cx.tabelaFalha !== false) ev(s, t.nome + ": falha crítica — o Mestre aplica a penalidade ou rola 1d8 na tabela (p. 19/11).");
-    if (res.critico && t.montagem.examinar && !t.montagem.beta) ev(s, t.nome + ": crítico examinando — o Mestre revela uma informação adicional (Alpha p. 19).", true);
     s.resultado.teste = t.id;
     s.resultado.final = true;
     s.resultado.resultado = res;
@@ -821,31 +843,34 @@
     if (!b || !podeAgir(papel, pid)) return { ok: false, motivo: "Você não conduz este personagem." };
     var ponto = e.investigacao.pontos.filter(function (x) { return x.id === o.ponto && x.revelado; })[0];
     if (!ponto) return { ok: false, motivo: "Ponto de interesse não encontrado." };
-    var beta = e.perfil === "beta-vigilia";
+    /* v9.4 — o fluxo mais recente (Beta pp. 13–15), para todos:
+       Investigar entrega a passiva da perícia escolhida; depois, Observar
+       (OUTRA perícia listada, passiva) ou Examinar (teste da escolhida;
+       sem novidade, −1 PD); Interagir é a alternativa narrativa, sem
+       passiva. Varredura Ampla: duas perícias na passiva e ainda pode
+       Examinar — nunca três perícias na mesma ação. */
     var nome = nomeDe(fichas, pid);
-    var modo = String(o.modo || "examinar");
+    var modo = ["observar", "examinar", "nada", "interagir"].indexOf(o.modo) >= 0 ? o.modo : "examinar";
     function interagir() {
       var sol = { id: id(), tipo: "interagir", quem: pid, nome: nome, ponto: ponto.id, descricao: texto(o.descricao, 600), estado: "pendente" };
       e.investigacao.solicitacoes.push(sol);
       ev(s, nome + " interage com " + ponto.nome + ": " + (sol.descricao || "(sem descrição)") + " — o Mestre resolve pela descrição contextual.");
       log(e, s.eventos[s.eventos.length - 1].texto);
     }
-    /* Beta (p. 14): Interagir é a alternativa a Investigar, sem passiva. */
-    if (modo === "interagir" && (beta || !o.pericia)) { interagir(); return; }
+    if (modo === "interagir") { interagir(); return; }
     var per = R().pericia(b, o.pericia);
     if (!per) return { ok: false, motivo: "Escolha uma perícia listada do ponto." };
     var face = R().dadoDaPericia(b, per);
     var novas = revelar(e, pid, ponto, per, face, b, R().nomeDaPericia(b, per) + " d" + face + " (passiva)");
     var linha = nome + " investiga " + ponto.nome + " com " + R().nomeDaPericia(b, per) + " d" + face + ": " + novas.length + " informação(ões) passiva(s).";
-    /* Varredura Ampla (Alpha): duas perícias na passiva. */
-    if (o.segunda && !beta) {
+    /* Varredura Ampla (adaptação de integração): duas perícias na passiva. */
+    if (o.segunda && modo !== "observar") {
       if (!R().habilidadesDoTipo(b, "duasPericias").length) return { ok: false, motivo: "Duas perícias na passiva é da Varredura Ampla." };
       var p2 = R().pericia(b, o.segunda);
       if (p2) { var f2 = R().dadoDaPericia(b, p2); var n2 = revelar(e, pid, ponto, p2, f2, b, R().nomeDaPericia(b, p2) + " d" + f2 + " (Varredura Ampla)"); novas = novas.concat(n2); linha += " Varredura Ampla com " + R().nomeDaPericia(b, p2) + ": +" + n2.length + "."; }
     }
-    /* Beta: Observar com outra perícia (passiva). */
+    /* Observar com outra perícia (passiva). */
     if (modo === "observar") {
-      if (!beta) return { ok: false, motivo: "Observar é do Beta (p. 14)." };
       var p3 = R().pericia(b, o.segunda);
       if (!p3 || p3.id === per.id) return { ok: false, motivo: "Observar usa OUTRA perícia listada." };
       var f3 = R().dadoDaPericia(b, p3);
@@ -856,8 +881,6 @@
     s.resultado.novas = novas;
     ev(s, linha);
     log(e, linha);
-    /* Alpha (p. 22): depois da passiva, examinar OU interagir. */
-    if (modo === "interagir") { interagir(); return; }
     if (modo === "examinar") {
       return OPERACOES.teste(e, fichas, { quem: pid, pedido: Object.assign({}, obj(o.pedido), { pericia: per.id, dt: null, semDt: true, tipo: "simples", examinar: true, rotulo: "Examinar " + ponto.nome + " (" + R().nomeDaPericia(b, per) + ")" }), contexto: { investigacao: { ponto: ponto.id, pericia: per.id } }, confirmar: o.confirmar }, papel, rolar, s, ctx);
     }
@@ -871,7 +894,12 @@
     if (!ponto || !per) return;
     var limite = res.falhaCritica ? -1 : res.total;
     var novas = revelar(e, t.quem, ponto, per, limite, b, "Examinar (" + res.total + ")");
-    if (res.critico) { var ds = e.investigacao.descobertas[t.quem]; ds.push({ id: id(), pista: "", ponto: ponto.id, texto: "Crítico: o Mestre revela uma informação adicional.", como: "Crítico (Alpha p. 19)", critico: true }); }
+    /* Crítico examinando (Alpha p. 19): AVISO ao Mestre de que há direito a
+       uma informação adicional — nada é fabricado nem revelado sozinho. */
+    if (res.critico) {
+      e.investigacao.solicitacoes.push({ id: id(), tipo: "critico", quem: t.quem, nome: t.nome, ponto: ponto.id, descricao: "Crítico examinando " + ponto.nome + ": o Mestre decide a informação adicional.", estado: "pendente" });
+      ev(s, t.nome + ": crítico examinando " + ponto.nome + " — o Mestre decide uma informação adicional (Alpha p. 19).", true);
+    }
     if (novas.length) {
       ev(s, t.nome + " examina " + ponto.nome + ": " + novas.length + " informação(ões) nova(s).");
       R().habilidadesDoTipo(b, "pdAoDescobrir").forEach(function (h) { var n = M().curar(b, "pd", R().motorDe(h).pd); ev(s, t.nome + " · " + h.nome + ": +" + n + " PD."); });
@@ -900,7 +928,7 @@
     if (e.investigacao.travas.compartilhar) return { ok: false, motivo: "Uma dedução por Compartilhar já saiu nesta cena." };
     var aliado = String(o.aliado || "");
     if (!fichas[aliado] || aliado === pid) return { ok: false, motivo: "Escolha o aliado que ouve." };
-    var sol = { id: id(), tipo: "compartilhar", quem: pid, nome: nomeDe(fichas, pid), aliado: aliado, nomeAliado: nomeDe(fichas, aliado), descricao: texto(o.descricao, 1200), estado: "pendente", pericia: K().periciaDePesquisa(e.perfil), dt: 10 };
+    var sol = { id: id(), tipo: "compartilhar", quem: pid, nome: nomeDe(fichas, pid), aliado: aliado, nomeAliado: nomeDe(fichas, aliado), descricao: texto(o.descricao, 1200), estado: "pendente", pericia: K().periciaDePesquisa(), dt: 10 };
     e.investigacao.solicitacoes.push(sol);
     ev(s, sol.nome + " compartilha uma pista com " + sol.nomeAliado + " — aguardando o Mestre.");
     log(e, s.eventos[0].texto);
@@ -911,8 +939,8 @@
     sol.estado = o.aprovar ? "aprovada" : "recusada";
     if (o.pericia) sol.pericia = texto(o.pericia, 40);
     if (o.dt !== undefined && o.dt !== null && o.dt !== "") sol.dt = inteiro(o.dt, 0, 40, 10);
-    if (sol.tipo === "interagir") { sol.estado = "resolvida"; sol.resposta = texto(o.resposta, 1200); }
-    ev(s, (sol.tipo === "interagir" ? "Interação de " + sol.nome + " resolvida." : sol.nome + ": " + (o.aprovar ? "o Mestre aprova; teste de " + K().nomeDaPericia(e.perfil, sol.pericia, e.ambientacao) + " (DT " + sol.dt + ")" + (sol.tipo === "compartilhar" ? " por " + sol.nomeAliado + ", como ação livre" : "") + "." : "o Mestre não aprovou.")));
+    if (sol.tipo === "interagir" || sol.tipo === "critico") { sol.estado = "resolvida"; sol.resposta = texto(o.resposta, 1200); }
+    ev(s, (sol.tipo === "interagir" || sol.tipo === "critico" ? (sol.tipo === "critico" ? "Crítico de " : "Interação de ") + sol.nome + " resolvido(a)." : sol.nome + ": " + (o.aprovar ? "o Mestre aprova; teste de " + K().nomeDaPericia(null, sol.pericia) + " (DT " + sol.dt + ")" + (sol.tipo === "compartilhar" ? " por " + sol.nomeAliado + ", como ação livre" : "") + "." : "o Mestre não aprovou.")));
     log(e, s.eventos[0].texto);
   };
   function concluirSolicitacao(e, t, res, s) {
@@ -990,7 +1018,7 @@
     var pv = inteiro(o.pv, 1, 999, 10);
     return normalizarParticipante({
       id: "npc-" + id(), tipo: "npc", nome: texto(o.nome, 120) || "NPC", oculto: o.oculto === true,
-      bloco: { perfilRegras: "beta-vigilia", base: { atributos: { fisico: at.fisico || 6, mente: at.mente || 6, emocao: at.emocao || 6 }, pericias: pericias.length ? pericias : [{ chave: "luta", dado: 6 }, { chave: "pontaria", dado: 4 }, { chave: "acrobacia", dado: 4 }, { chave: "percepcao", dado: 4 }, { chave: "intuicao", dado: 4 }] }, recursos: { pv: { max: pv, atual: pv }, pd: { max: inteiro(o.pd, 1, 999, 10), atual: inteiro(o.pd, 1, 999, 10) } }, itens: o.armadura ? [{ nome: "Proteção", armadura: inteiro(o.armadura, 0, 20), vestido: true }] : [] },
+      bloco: { versaoRegras: K().REGRAS.versao, base: { atributos: { fisico: at.fisico || 6, mente: at.mente || 6, emocao: at.emocao || 6 }, pericias: pericias.length ? pericias : [{ chave: "luta", dado: 6 }, { chave: "pontaria", dado: 4 }, { chave: "acrobacia", dado: 4 }, { chave: "percepcao", dado: 4 }, { chave: "intuicao", dado: 4 }] }, recursos: { pv: { max: pv, atual: pv }, pd: { max: inteiro(o.pd, 1, 999, 10), atual: inteiro(o.pd, 1, 999, 10) } }, itens: o.armadura ? [{ nome: "Proteção", armadura: inteiro(o.armadura, 0, 20), vestido: true }] : [] },
       ataques: lista(o.ataques).length ? o.ataques : [{ nome: "Ataque", alcance: "corpo", dano: 1 }],
       notas: o.notas,
       ameaca: o.ameaca, rd: o.rd, especiais: o.especiais, chegaEm: o.chegaEm, onda: o.onda, aoDestruir: o.aoDestruir, objeto: o.objeto,
@@ -1168,7 +1196,7 @@
     if (d.acao === "defender") {
       pedido.bonus.push({ faces: 6, fonte: "Defender-se (+d6)" });
       /* Leitura de Combate: gastar a ação para se defender dá 1 marcador. */
-      if (R().habilidadesDoTipo(b, "marcadorAoDefender").length) R().habilidadesDoTipo(b, "analise").forEach(function (h) { var mx = R().motorDe(h).maximo; if (h.estado.marcadores < mx) { h.estado.marcadores++; ev(s, pa.nome + " · Leitura de Combate: +1 marcador de análise."); } });
+      if (R().habilidadesDoTipo(b, "marcadorAoDefender").length) R().habilidadesDoTipo(b, "analise").forEach(function (h) { var mx = R().motorDe(h).maximo; if (h.estado.marcadores < mx) { h.estado.marcadores++; ev(s, pa.nome + " · Leitura de Combate: +1 marcador de Avaliação."); } });
     }
     if (d.acao === "agredirCorpo" || d.acao === "agredirDistancia" || acao.manobra) {
       pedido.tipo = "ataque"; pedido.alcance = d.acao === "agredirDistancia" ? "distancia" : "corpo";
@@ -1426,35 +1454,11 @@
   /* ---------------------------------------------------------------
      COMBATE · ALPHA SIMPLIFICADO (p. 26)
      --------------------------------------------------------------- */
-  OPERACOES.conflitoAlpha = function (e, fichas, o, papel, rolar, s, ctx) {
-    var at = participante(e, o.atacante), df = participante(e, o.defensor);
-    if (!at || !df) return { ok: false, motivo: "Escolha atacante e defensor." };
-    var bA = blocoDoAtor(e, fichas, at), bD = blocoDoAtor(e, fichas, df);
-    var defesa = o.defesa === "esquivar" ? "esquivar" : o.defesa === "nenhuma" ? "nenhuma" : "lutar";
-    var mA = M().montar(bA, { pericia: "luta", tipo: "oposto", dt: defesa === "nenhuma" ? 7 : null, rotulo: "Luta (conflito)" }, {});
-    if (!mA.ok) return mA;
-    var rA = M().resolver(mA.montagem, M().rolar(mA.montagem, rolar), {});
-    registrarRolagem(e, at.id, at.nome, mA.montagem, rA, s);
-    var danos = [];
-    if (defesa === "nenhuma") {
-      /* Múltiplos agressores: o outro testa Luta contra DT 7. */
-      ev(s, at.nome + " ataca " + df.nome + " (agressor extra): " + descreverResultado(rA));
-      if (rA.sucesso) danos.push({ b: bD, nome: df.nome, valor: o.armadoAtacante ? rA.ra : rA.rb });
-    } else {
-      var mD = M().montar(bD, { pericia: defesa === "esquivar" ? "acrobacia" : "luta", tipo: "oposto", dt: null, rotulo: defesa === "esquivar" ? "Esquiva (+d6)" : "Luta (conflito)", bonus: defesa === "esquivar" ? [{ faces: 6, fonte: "Esquiva (+d6)" }] : [] }, {});
-      if (!mD.ok) return mD;
-      var rD = M().resolver(mD.montagem, M().rolar(mD.montagem, rolar), {});
-      registrarRolagem(e, df.id, df.nome, mD.montagem, rD, s);
-      var v = M().opor(rA, rD);
-      ev(s, at.nome + " " + rA.total + " × " + df.nome + " " + rD.total + (defesa === "esquivar" ? " (esquiva)" : "") + ": " + (v === "empate" ? "empate" : "vence " + (v === "a" ? at.nome : df.nome)) + ".");
-      if (v === "a") danos.push({ b: bD, nome: df.nome, valor: o.armadoAtacante ? rA.ra : rA.rb });
-      if (v === "b" && defesa === "lutar") danos.push({ b: bA, nome: at.nome, valor: o.armadoDefensor ? rD.ra : rD.rb });
-    }
-    danos.forEach(function (x) {
-      M().aplicarDano(x.b, { valor: x.valor, tipo: "fisico", externo: true }).forEach(function (y) { ev(s, x.nome + ": " + y.texto); log(e, x.nome + ": " + y.texto); });
-      var vitima = x.b === bD ? df : at, autor = x.b === bD ? at : df;
-      GANCHOS.aoDano.forEach(function (fn) { fn(e, fichas, vitima, x.b, { valor: x.valor, ator: autor.id, conflitoAlpha: true }, s); });
-    });
+  /* v9.4: o conflito simplificado do Alpha (p. 26) não inicia ações
+     novas — nem chamado direto, nem por uma aba antiga. As cenas usam o
+     combate em fases (três; quatro onde o encontro manda). */
+  OPERACOES.conflitoAlpha = function () {
+    return { ok: false, motivo: "O conflito simplificado do Alpha foi substituído pelo combate em fases das regras unificadas: inicie um combate." };
   };
 
   /* ---------------------------------------------------------------
@@ -1485,8 +1489,8 @@
     return v;
   }
 
-  /* Um estado local (ficha sem campanha), com o próprio perfil. */
-  function local(perfil) { return estadoVazio(perfil); }
+  /* Um estado local (ficha sem campanha), na ambientação da ficha. */
+  function local(ambientacao) { return estadoVazio(ambientacao); }
 
   global.RAMAOrdem2Mesa = {
     VERSAO: VERSAO,

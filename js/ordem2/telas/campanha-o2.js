@@ -11,7 +11,8 @@
                    pavor, condições e correções que ficam no histórico
      Combate       Beta: participantes e NPCs, ordem das fases, declarar,
                    rolar a fase, aplicar de uma vez, próxima rodada;
-                   Alpha: o conflito simplificado (p. 26)
+                   (v9.4: regras unificadas; o conflito simplificado do
+                   Alpha não inicia ações novas)
      Investigação  pontos de interesse (descrição pública, pistas por
                    perícia/limiar, contexto e nota privada), solicitações
                    (Recapitular, Compartilhar, Interagir), pistas dadas
@@ -88,13 +89,23 @@
     }
 
     function topo(e) {
-      var pr = K().PERFIS_REGRAS[e.perfil];
       return el("section.o2-mesa__topo", { "aria-label": "A mesa" }, [
         global.RAMACapaSistema ? global.RAMACapaSistema.elemento("ordem2", { tamanho: "m" }) : null,
         el("div.o2-mesa__textos", {}, [
           el("p.o2-mesa__titulo", { texto: "Missão " + e.missao.numero + (e.missao.nome ? " — " + e.missao.nome : "") + " · Cena " + e.cena.numero + (e.cena.nome ? " — " + e.cena.nome : "") }),
-          el("p.t-mini", { texto: pr.nome + " · " + K().AMBIENTACOES[e.ambientacao].nome + (e.combate.ativo ? " · COMBATE, rodada " + e.combate.rodada : "") }),
+          el("p.t-mini", { texto: "Regras unificadas · " + K().AMBIENTACOES[e.ambientacao].nome + (e.combate.ativo ? " · COMBATE, rodada " + e.combate.rodada : "") }),
         ]),
+      ]);
+    }
+    /* v9.4: a mesa gravada antes das regras unificadas — uma vez, com o que
+       ainda está em curso (resolve pela montagem congelada). */
+    function avisoDeMigracao(e) {
+      var mg = e.migracao;
+      if (!mg || mg.visto || !mg.de) return null;
+      return el("div.o2-aviso.o2-aviso--migracao", { role: "status" }, [
+        el("p", {}, [el("strong", { texto: "Esta campanha passou para as regras unificadas de Ordem II." }), el("span", { texto: " A ambientação ficou (" + K().AMBIENTACOES[e.ambientacao].nome + "); nada foi rolado, cobrado ou apagado. Ações novas usam a regra única." })]),
+        mg.pendencias.length ? el("ul", {}, mg.pendencias.map(function (t) { return el("li.t-mini", { texto: t }); })) : linha("Nada em curso precisava de atenção."),
+        botao("Entendi", function () { operar({ tipo: "configurar", migracaoVista: true }); }),
       ]);
     }
     function abas(lista) {
@@ -111,12 +122,12 @@
       var lista = [["cena", "Cena"], ["personagens", "Personagens"], ["combate", "Combate"], ["investigacao", "Quadro"], ["desafios", "Desafios"], ["encontro", "Encontro"], ["paranormal", "Paranormal"], ["registro", "Registro"], ["config", "Configuração"]];
       if (!lista.some(function (a) { return a[0] === mem.aba; })) mem.aba = "cena";
       var conteudo = { cena: abaCena, personagens: abaPersonagens, combate: abaCombate, investigacao: abaInvestigacao, desafios: function () { return PT().mestre.desafios(m91()); }, encontro: function () { return PT().mestre.encontro(m91()); }, paranormal: function () { return PN() ? PN().mestre.biblioteca(m91()) : linha("Tela paranormal não carregada."); }, registro: abaRegistro, config: abaConfig }[mem.aba];
-      return el("div.pilha", {}, [topo(e), abas(lista), conteudo(e)]);
+      return el("div.pilha", {}, [topo(e), avisoDeMigracao(e), abas(lista), conteudo(e)]);
     }
 
     function abaCena(e) {
       var st = { rotulo: "", pericia: "", atributo: "", dt: "7", alvos: [], oculto: false, cenaNome: "", cenaTipo: "livre", missaoNome: "" };
-      var pericias = K().listaDePericias(e.perfil);
+      var pericias = K().listaDePericias();
       return el("div.pilha", {}, [
         PT() ? PT().mestre.cena(m91()) : null,
         UI.painel("Missão e cena", el("div.pilha", {}, [
@@ -133,7 +144,7 @@
         UI.painel("Pedir um teste", el("div.pilha", {}, [
           el("div.o2-criar__campos", {}, [
             UI.campo({ rotulo: "Rótulo", limite: 120, dica: "Escalar o paredão", aoMudar: function (v) { st.rotulo = v; } }),
-            UI.campo({ rotulo: "Perícia", tipo: "selecao", valor: "", opcoes: [{ valor: "", rotulo: "— a escolher —" }].concat(pericias.map(function (p) { return { valor: p.chave, rotulo: K().nomeDaPericia(e.perfil, p.chave, e.ambientacao) }; })), aoMudar: function (v) { st.pericia = v; } }),
+            UI.campo({ rotulo: "Perícia", tipo: "selecao", valor: "", opcoes: [{ valor: "", rotulo: "— a escolher —" }].concat(pericias.map(function (p) { return { valor: p.chave, rotulo: K().nomeDaPericia(null, p.chave, e.ambientacao) }; })), aoMudar: function (v) { st.pericia = v; } }),
             UI.campo({ rotulo: "Atributo (opcional: troca o da perícia)", tipo: "selecao", valor: "", opcoes: [{ valor: "", rotulo: "O da perícia" }].concat(K().ORDEM_ATRIBUTOS.map(function (k) { return { valor: k, rotulo: K().ATRIBUTOS[k].nome }; })), aoMudar: function (v) { st.atributo = v; } }),
             UI.campo({ rotulo: "DT (vazio = oposto)", tipo: "numero", valor: "7", aoMudar: function (v) { st.dt = v; } }),
           ]),
@@ -166,7 +177,7 @@
         var x = p.resumo || {};
         var conds = (x.condicoes || []).filter(function (c) { return c !== "pavor"; }).map(function (c) { return R().NOMES_CONDICAO[c] || c; });
         return el("article.o2-mesa__pc", {}, [
-          el("header", {}, [el("h3", { texto: p.nome }), el("span.t-mini", { texto: [x.perfilNome, x.ocupacao, x.nivel ? "nível " + x.nivel : "", x.perfilRegras && x.perfilRegras !== e.perfil ? "⚠ perfil " + K().PERFIS_REGRAS[x.perfilRegras].curto : ""].filter(Boolean).join(" · ") })]),
+          el("header", {}, [el("h3", { texto: p.nome }), el("span.t-mini", { texto: [x.perfilNome, x.ocupacao, x.nivel ? "nível " + x.nivel : "", x.ambientacao && x.ambientacao !== e.ambientacao ? "ambientação " + K().AMBIENTACOES[x.ambientacao].curto : ""].filter(Boolean).join(" · ") })]),
           x.pv ? el("p.o2-mesa__pc-rec", { texto: "PV " + x.pv.atual + "/" + x.pv.max + (x.pv.naoLetal ? " (" + x.pv.naoLetal + " NL)" : "") + " · PD " + x.pd.atual + "/" + x.pd.max + " · Armadura " + x.armadura.atual + "/" + x.armadura.max + (x.pavor ? " · Pavor d" + x.pavor : "") + (x.lesoes ? " · " + x.lesoes + " lesão(ões)" : "") + (x.traumas ? " · " + x.traumas + " trauma(s)" : "") }) : null,
           conds.length ? el("p", {}, conds.map(function (c) { return el("span.r-etiqueta.r-etiqueta--aviso", { texto: c }); })) : null,
           el("div.faixa", {}, [
@@ -209,7 +220,6 @@
     /* ---------------- COMBATE ---------------- */
     function abaCombate(e) {
       var c = e.combate;
-      if (e.perfil === "alpha-contemporaneo") return combateAlpha(e);
       if (!c.ativo) return iniciarCombate(e);
       var fase = c.ordemFases[c.fase];
       var daFase = c.declaracoes.filter(function (d) { return d.rodada === c.rodada; });
@@ -286,28 +296,6 @@
         botao("Salvar a ordem", function () { operar({ tipo: "configurarFases", ordem: ordem.filter(Boolean) }); }),
       ]) });
     }
-    function combateAlpha(e) {
-      var c = e.combate;
-      if (!c.ativo) return el("div.pilha", {}, [linha("Alpha (p. 26): conflito simplificado — teste oposto de Luta; quem vence causa RA (armado) ou RB (desarmado). Esquiva: Acrobacia +d6 oposta; vencendo, ninguém sofre dano. Múltiplos agressores: os outros testam Luta contra DT 7."), iniciarCombate(e)]);
-      var st = { atacante: (c.participantes[0] || {}).id, defensor: (c.participantes[1] || {}).id, defesa: "lutar", armadoAtacante: false, armadoDefensor: false };
-      var ops = c.participantes.map(function (p) { return { valor: p.id, rotulo: p.nome }; });
-      return el("div.pilha", {}, [
-        UI.painel("Conflito simplificado (Alpha p. 26)", el("div.pilha", {}, [
-          el("div.o2-criar__campos", {}, [
-            UI.campo({ rotulo: "Quem ataca", tipo: "selecao", valor: st.atacante, opcoes: ops, aoMudar: function (v) { st.atacante = v; } }),
-            UI.campo({ rotulo: "Quem é atacado", tipo: "selecao", valor: st.defensor, opcoes: ops, aoMudar: function (v) { st.defensor = v; } }),
-            UI.campo({ rotulo: "O atacado", tipo: "selecao", valor: "lutar", opcoes: [{ valor: "lutar", rotulo: "Luta de volta (oposto)" }, { valor: "esquivar", rotulo: "Só se esquiva (Acrobacia +d6)" }, { valor: "nenhuma", rotulo: "Agressor extra: Luta contra DT 7" }], aoMudar: function (v) { st.defesa = v; } }),
-          ]),
-          el("div.faixa", {}, [marca("Atacante armado (RA)", false, function (v) { st.armadoAtacante = v; }), marca("Atacado armado (RA)", false, function (v) { st.armadoDefensor = v; })]),
-          botao("Resolver", function () { operar({ tipo: "conflitoAlpha", atacante: st.atacante, defensor: st.defensor, defesa: st.defesa, armadoAtacante: st.armadoAtacante, armadoDefensor: st.armadoDefensor }); }, { classe: "r-botao--principal" }),
-          linha("Zero de PV ou PD: teste de Vigor/Disciplina contra DT 7, +3 por teste já feito; falhou, morre (ou colapso)."),
-          botao("Encerrar conflito", function () { operar({ tipo: "encerrarCombate" }); }, { classe: "r-botao--fantasma" }),
-        ])),
-        UI.painel("Participantes", el("ul.o2-participantes", {}, c.participantes.map(function (p) { return el("li", { texto: p.nome }); }).concat([el("li", {}, [formNpc(e)])]))),
-      ]);
-    }
-
-    /* ---------------- INVESTIGAÇÃO ---------------- */
     function abaInvestigacao(e) {
       var inv = e.investigacao;
       var pend = inv.solicitacoes.filter(function (s) { return s.estado === "pendente"; });
@@ -315,13 +303,13 @@
         pend.length ? UI.painel("Solicitações", el("ul.o2-solicitacoes", {}, pend.map(function (s) {
           var st = { pericia: s.pericia || "", dt: s.dt || 10, resposta: "" };
           return el("li.o2-solicitacao", {}, [
-            el("strong", { texto: { recapitular: "Recapitular", compartilhar: "Compartilhar", interagir: "Interagir" }[s.tipo] + " — " + s.nome + (s.nomeAliado ? " → " + s.nomeAliado : "") }),
+            el("strong", { texto: { recapitular: "Recapitular", compartilhar: "Compartilhar", interagir: "Interagir", critico: "Crítico examinando" }[s.tipo] + " — " + s.nome + (s.nomeAliado ? " → " + s.nomeAliado : "") }),
             s.descricao ? el("p", { texto: s.descricao }) : null,
-            s.tipo === "interagir" ? UI.campo({ rotulo: "Resposta (pela descrição contextual)", tipo: "area", linhas: 2, limite: 1200, aoMudar: function (v) { st.resposta = v; } }) : el("div.o2-criar__campos", {}, [
-              UI.campo({ rotulo: "Perícia do teste", tipo: "selecao", valor: st.pericia, opcoes: K().listaDePericias(e.perfil).map(function (p) { return { valor: p.chave, rotulo: K().nomeDaPericia(e.perfil, p.chave, e.ambientacao) }; }), aoMudar: function (v) { st.pericia = v; } }),
+            s.tipo === "interagir" || s.tipo === "critico" ? UI.campo({ rotulo: s.tipo === "critico" ? "A informação adicional (ou dê uma pista nova em Desafios → Escolher a pista nova)" : "Resposta (pela descrição contextual)", tipo: "area", linhas: 2, limite: 1200, aoMudar: function (v) { st.resposta = v; } }) : el("div.o2-criar__campos", {}, [
+              UI.campo({ rotulo: "Perícia do teste", tipo: "selecao", valor: st.pericia, opcoes: K().listaDePericias().map(function (p) { return { valor: p.chave, rotulo: K().nomeDaPericia(null, p.chave, e.ambientacao) }; }), aoMudar: function (v) { st.pericia = v; } }),
               UI.campo({ rotulo: "DT", tipo: "numero", valor: String(st.dt), aoMudar: function (v) { st.dt = U.inteiro(v, 10); } }),
             ]),
-            el("div.faixa", {}, s.tipo === "interagir" ? [botao("Responder", function () { operar({ tipo: "resolverSolicitacao", id: s.id, aprovar: true, resposta: st.resposta }); }, { classe: "r-botao--principal" })]
+            el("div.faixa", {}, s.tipo === "interagir" || s.tipo === "critico" ? [botao("Responder", function () { operar({ tipo: "resolverSolicitacao", id: s.id, aprovar: true, resposta: st.resposta }); }, { classe: "r-botao--principal" })]
               : [botao("Aprovar (recapitulação coerente)", function () { operar({ tipo: "resolverSolicitacao", id: s.id, aprovar: true, pericia: st.pericia, dt: st.dt }); }, { classe: "r-botao--principal" }), botao("Não aprovar", function () { operar({ tipo: "resolverSolicitacao", id: s.id, aprovar: false }); })]),
           ]);
         }))) : null,
@@ -340,7 +328,7 @@
         el("p", { texto: p.descricao }),
         el("table.o2-pistas", {}, [el("thead", {}, [el("tr", {}, [el("th", { texto: "Perícia" }), el("th", { texto: "DT" }), el("th", { texto: "Informação" }), el("th", { texto: "Quem achou" })])]), el("tbody", {}, p.pistas.map(function (q) {
           var quem = Object.keys(desc).filter(function (pid) { return desc[pid].some(function (d) { return d.pista === q.id; }); }).map(nomePc);
-          return el("tr", {}, [el("td", { texto: q.pericias.map(function (k) { var c = k.split(":"); return K().nomeDaPericia(e.perfil, c[0], e.ambientacao) + (c[1] ? " (" + c[1] + ")" : ""); }).join(" ou ") }), el("td", { texto: String(q.dt) }), el("td", { texto: q.texto }), el("td", { texto: quem.join(", ") || "—" })]);
+          return el("tr", {}, [el("td", { texto: q.pericias.map(function (k) { var c = k.split(":"); return K().nomeDaPericia(null, c[0], e.ambientacao) + (c[1] ? " (" + c[1] + ")" : ""); }).join(" ou ") }), el("td", { texto: String(q.dt) }), el("td", { texto: q.texto }), el("td", { texto: quem.join(", ") || "—" })]);
         }))]),
         p.contextual ? el("p.o2-privado", { texto: "Contexto (só o Mestre): " + p.contextual }) : null,
         p.notaPrivada ? el("p.o2-privado", { texto: "Nota privada: " + p.notaPrivada }) : null,
@@ -352,7 +340,7 @@
       ]);
     }
     function editorDePonto(e, p) {
-      var pericias = K().listaDePericias(e.perfil).map(function (x) { return { valor: x.chave, rotulo: K().nomeDaPericia(e.perfil, x.chave, e.ambientacao) }; }).concat(K().ESPECIALIZACOES[e.perfil].map(function (esp) { return { valor: "aptidao:" + esp.toLowerCase(), rotulo: "Aptidão (" + esp + ")" }; }));
+      var pericias = K().listaDePericias().map(function (x) { return { valor: x.chave, rotulo: K().nomeDaPericia(null, x.chave, e.ambientacao) }; }).concat(K().ESPECIALIZACOES[e.perfil].map(function (esp) { return { valor: "aptidao:" + esp.toLowerCase(), rotulo: "Aptidão (" + esp + ")" }; }));
       var area = el("div.pilha.o2-editor-ponto");
       function desenhar() {
         U.trocar(area, [
@@ -399,14 +387,13 @@
       ]);
     }
     function abaConfig(e) {
-      var st = { perfil: e.perfil, ambientacao: e.ambientacao };
+      var st = { ambientacao: e.ambientacao };
       return el("div.pilha", {}, [UI.painel("Configuração da mesa", el("div.pilha", {}, [
-        linha("O perfil de regras fica fixo na campanha e em cada ficha; fichas de outro perfil recebem um aviso (não são convertidas)."),
+        linha(K().REGRAS.nome + ": uma regra para todas as fichas e cenas (" + K().REGRAS.texto + ")"),
         el("div.o2-criar__campos", {}, [
-          UI.campo({ rotulo: "Perfil de regras", tipo: "selecao", valor: st.perfil, opcoes: K().ORDEM_PERFIS_REGRAS.map(function (k) { return { valor: k, rotulo: K().PERFIS_REGRAS[k].nome }; }), aoMudar: function (v) { st.perfil = v; } }),
-          UI.campo({ rotulo: "Ambientação", tipo: "selecao", valor: st.ambientacao, opcoes: Object.keys(K().AMBIENTACOES).map(function (k) { return { valor: k, rotulo: K().AMBIENTACOES[k].nome }; }), aoMudar: function (v) { st.ambientacao = v; } }),
+          UI.campo({ rotulo: "Ambientação", tipo: "selecao", valor: st.ambientacao, ajuda: "Muda a ambientação e as sugestões; as regras são as mesmas. Trocar não altera fichas, combate, pistas nem resultados.", opcoes: K().ORDEM_AMBIENTACOES.map(function (k) { return { valor: k, rotulo: K().AMBIENTACOES[k].nome }; }), aoMudar: function (v) { st.ambientacao = v; } }),
         ]),
-        botao("Salvar", function () { operar({ tipo: "configurar", perfil: st.perfil, ambientacao: st.ambientacao }); }, { classe: "r-botao--principal" }),
+        botao("Salvar", function () { operar({ tipo: "configurar", ambientacao: st.ambientacao }); }, { classe: "r-botao--principal" }),
         UI.recolhivel({ titulo: "Divergências entre as fontes e decisões", conteudo: el("ul.pilha.pilha--curta", {}, K().DIVERGENCIAS.map(function (d) { return el("li.t-mini", {}, [el("strong", { texto: d.fontes + ": " }), el("span", { texto: d.texto + " → " + d.escolha })]); }).concat(K().DECISOES.map(function (d) { return el("li.t-mini", { texto: "Decisão: " + d.texto }); }))) }),
       ])), EVT() ? EVT().mestre.config(m91()) : null, PN() ? PN().mestre.config(m91()) : null]);
     }
