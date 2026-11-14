@@ -15,7 +15,12 @@
      Investigação  pontos de interesse (descrição pública, pistas por
                    perícia/limiar, contexto e nota privada), solicitações
                    (Recapitular, Compartilhar, Interagir), pistas dadas
-     Registro e Configuração (perfil de regras da campanha)
+     Paranormal    (v9.2) a biblioteca do Mestre, ensinar e as pendências
+                   dos rituais — módulo experimental, desligado por padrão
+     Registro e Configuração (perfil de regras da campanha; v9.2: modo
+                   de evolução e o módulo paranormal)
+     Personagens também ganha (v9.2): subir/definir nível, aprovar a
+                   habilidade proposta, desfazer, encerrar efeitos ativos
 
    Cada ação: ordem2_operar (opId; `rev` nas configurações).
    ===================================================================== */
@@ -29,6 +34,7 @@
   function ME() { return global.RAMAOrdem2Mesa; }
   function T() { return global.RAMAOrdem2Tela; }
   function PT() { return global.RAMAOrdem2ProcTela; }
+  function PN() { return global.RAMAOrdem2ParanormalTela; }
 
   function botao(t, fn, o) { return T().botao(t, fn, o); }
   function linha(t) { return el("p.t-mini", { texto: t }); }
@@ -101,9 +107,9 @@
        O MESTRE
        ================================================================= */
     function vistaDoMestre(e) {
-      var lista = [["cena", "Cena"], ["personagens", "Personagens"], ["combate", "Combate"], ["investigacao", "Quadro"], ["desafios", "Desafios"], ["encontro", "Encontro"], ["registro", "Registro"], ["config", "Configuração"]];
+      var lista = [["cena", "Cena"], ["personagens", "Personagens"], ["combate", "Combate"], ["investigacao", "Quadro"], ["desafios", "Desafios"], ["encontro", "Encontro"], ["paranormal", "Paranormal"], ["registro", "Registro"], ["config", "Configuração"]];
       if (!lista.some(function (a) { return a[0] === mem.aba; })) mem.aba = "cena";
-      var conteudo = { cena: abaCena, personagens: abaPersonagens, combate: abaCombate, investigacao: abaInvestigacao, desafios: function () { return PT().mestre.desafios(m91()); }, encontro: function () { return PT().mestre.encontro(m91()); }, registro: abaRegistro, config: abaConfig }[mem.aba];
+      var conteudo = { cena: abaCena, personagens: abaPersonagens, combate: abaCombate, investigacao: abaInvestigacao, desafios: function () { return PT().mestre.desafios(m91()); }, encontro: function () { return PT().mestre.encontro(m91()); }, paranormal: function () { return PN() ? PN().mestre.biblioteca(m91()) : linha("Tela paranormal não carregada."); }, registro: abaRegistro, config: abaConfig }[mem.aba];
       return el("div.pilha", {}, [topo(e), abas(lista), conteudo(e)]);
     }
 
@@ -170,6 +176,7 @@
             botao("Condições…", function () { abrirCondicoes(p.id, p.nome, x); }),
             botao("Zerar contadores de lesão/trauma", function () { operar({ tipo: "corrigir", personagem: p.id, alvo: "contadores" }); }),
           ]),
+          PN() ? PN().mestre.personagem(m91(), p) : null,
         ]);
       }));
     }
@@ -391,7 +398,7 @@
     }
     function abaConfig(e) {
       var st = { perfil: e.perfil, ambientacao: e.ambientacao };
-      return UI.painel("Configuração da mesa", el("div.pilha", {}, [
+      return el("div.pilha", {}, [UI.painel("Configuração da mesa", el("div.pilha", {}, [
         linha("O perfil de regras fica fixo na campanha e em cada ficha; fichas de outro perfil recebem um aviso (não são convertidas)."),
         el("div.o2-criar__campos", {}, [
           UI.campo({ rotulo: "Perfil de regras", tipo: "selecao", valor: st.perfil, opcoes: K().ORDEM_PERFIS_REGRAS.map(function (k) { return { valor: k, rotulo: K().PERFIS_REGRAS[k].nome }; }), aoMudar: function (v) { st.perfil = v; } }),
@@ -399,7 +406,7 @@
         ]),
         botao("Salvar", function () { operar({ tipo: "configurar", perfil: st.perfil, ambientacao: st.ambientacao }); }, { classe: "r-botao--principal" }),
         UI.recolhivel({ titulo: "Divergências entre as fontes e decisões", conteudo: el("ul.pilha.pilha--curta", {}, K().DIVERGENCIAS.map(function (d) { return el("li.t-mini", {}, [el("strong", { texto: d.fontes + ": " }), el("span", { texto: d.texto + " → " + d.escolha })]); }).concat(K().DECISOES.map(function (d) { return el("li.t-mini", { texto: "Decisão: " + d.texto }); }))) }),
-      ]));
+      ])), PN() ? PN().mestre.config(m91()) : null]);
     }
 
     /* =================================================================

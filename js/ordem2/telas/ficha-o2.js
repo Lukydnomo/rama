@@ -1,17 +1,20 @@
 /* =====================================================================
    R.A.M.A. — Ordem Paranormal RPG II · a ficha (v9.0)
    ---------------------------------------------------------------------
-   A hierarquia das fichas de Rhiona (Beta p. 7) e Alan (Alpha p. 15):
-   no topo, nome, retrato, perfil · ocupação/vocação · nível e a
-   variante (perfil de regras); logo abaixo, a FAIXA de recursos sempre
-   à mão — Físico, Mente, Emoção, PV, PD, armadura e pavor — presa no
-   alto no celular. Depois, as seções:
+   v9.2: a organização da ficha do livro (Val no Alpha, Rhiona no
+   Beta). No topo, o NOME grande, a etiqueta do perfil · ocupação/vocação
+   · a caixa de NÍVEL; logo abaixo, a FAIXA com PV e PD em quadradinhos,
+   armadura e pavor (a mini-faixa fica presa no rodapé do celular).
+   Depois, as seções:
 
-     Perícias      uma linha por perícia: dado, atributo-base e o botão
-                   de teste; identidade e procedência recolhidas
+     Ficha         a página do livro: ATRIBUTOS (nome grande e o dado) e
+                   PERÍCIAS ("NOME [d] + [d] ATRIBUTO", a linha rola) à
+                   esquerda; o retrato e "Nível e evolução" no centro;
+                   HABILIDADES (título em etiqueta, números em destaque)
+                   à direita. Identidade e procedência recolhidas
      Habilidades   cada uma com o estado (barra de ímpeto, marcadores,
-                   reservas) e as ações que o motor automatiza; o bloco
-                   paranormal só para consulta (etapa 3)
+                   reservas) e as ações que o motor automatiza
+     Paranormal    o módulo experimental (telas/o2-paranormal.js)
      Investigação  pontos de interesse da mesa, descobertas e as ações
                    (Investigar, Observar, Examinar, Interagir, Recapitular,
                    Compartilhar) do perfil de regras
@@ -51,7 +54,9 @@
   function outros(ctx) { return personagensDaMesa(ctx).filter(function (p) { return p.id !== J().pid(ctx); }); }
 
   /* =================================================================
-     O TOPO E A FAIXA
+     O TOPO (v9.2: na hierarquia da ficha do livro)
+     Nome grande; a etiqueta do perfil · ocupação/vocação · a caixa de
+     NÍVEL; depois a faixa de PV e PD em quadradinhos, armadura e pavor.
      ================================================================= */
   function blocoSuperior(ctx) {
     var x = b(ctx);
@@ -60,21 +65,20 @@
     var pr = K().PERFIS_REGRAS[x.perfilRegras];
     var m = J().modo(ctx);
     var mesa = m === "carregando" ? null : J().estado(ctx);
-    var identidade = [
-      x.perfil ? K().PERFIS[x.perfil].nome : "Sem perfil",
-      x.ocupacao.nome || "sem " + pr.termoOcupacao.toLowerCase(),
-      "Nível " + x.nivel,
-    ];
+    var pat = x.patamar && K().PATAMARES[x.patamar] && K().PATAMARES[x.patamar].bonus ? " · patamar " + K().PATAMARES[x.patamar].nome : "";
     return el("div.o2-bloco", { dataset: { perfilRegras: x.perfilRegras } }, [
-      el("div.o2-cab", {}, [
-        geral && geral.foto ? geral.foto(ctx) : null,
+      el("header.o2-cab", {}, [
         el("div.o2-cab__textos", {}, [
-          geral && geral.campoNome ? geral.campoNome(ctx) : el("h1.t-titulo", { texto: ctx.ficha.nome }),
+          el("div.o2-cab__nome", {}, [geral && geral.campoNome ? geral.campoNome(ctx) : el("h1.t-titulo", { texto: ctx.ficha.nome })]),
           el("p.o2-cab__linha", {}, [
-            el("span.o2-cab__identidade", { texto: identidade.join(" · ") }),
-            el("span.o2-variante", { title: pr.texto, texto: pr.nome }),
+            el("span.o2-perfil-tag", { texto: x.perfil ? K().PERFIS[x.perfil].nome : "Sem perfil" }),
+            el("span.o2-cab__ocupacao", { texto: x.ocupacao.nome || "sem " + pr.termoOcupacao.toLowerCase() }),
+            el("span.o2-nivel", { role: "img", "aria-label": "Nível " + x.nivel }, [el("span.o2-nivel__rotulo", { "aria-hidden": "true", texto: "Nível" }), el("span.o2-nivel__caixa", { "aria-hidden": "true", texto: String(x.nivel) })]),
           ]),
-          el("p.t-mini.o2-cab__amb", { texto: K().AMBIENTACOES[x.ambientacao].nome + (x.modoCriacao === "guiada" ? " · criação guiada (experimental)" : x.modoCriacao === "pronta" && x.procedencia ? " · ficha pronta: " + x.procedencia.nome : "") }),
+          el("p.t-mini.o2-cab__amb", {}, [
+            el("span.o2-variante", { title: pr.texto, texto: pr.nome }),
+            el("span", { texto: " " + K().AMBIENTACOES[x.ambientacao].nome + pat + (x.evolucao && x.evolucao.nex ? " · NEX " + x.evolucao.nex : "") + (x.modoCriacao === "guiada" ? " · criação guiada (experimental)" : x.modoCriacao === "pronta" && x.procedencia ? " · ficha pronta: " + x.procedencia.nome : "") }),
+          ]),
         ]),
         global.RAMACapaSistema ? el("span.o2-cab__marca", {}, [global.RAMACapaSistema.elemento("ordem2", { tamanho: "p" })]) : null,
       ]),
@@ -120,7 +124,13 @@
   }
   function fichasLocais(ctx) { var f = {}; f[J().pid(ctx)] = { nome: ctx.ficha.nome, bloco: b(ctx) }; return f; }
 
-  /* A faixa: o que se consulta e se mexe o tempo todo. */
+  /* A faixa: PV e PD em quadradinhos (como na ficha do livro), com o
+     número escrito; armadura, pavor e condições. */
+  function trilha(atual, max, chave) {
+    var n = Math.min(max, 40), l = [];
+    for (var i = 0; i < n; i++) l.push(el("span.o2-caixa" + (i < atual ? ".o2-caixa--cheia" : "")));
+    return el("span.o2-trilha.o2-trilha--" + chave, { "aria-hidden": "true" }, l.concat(max > 40 ? [el("span.t-mini", { texto: " …" })] : []));
+  }
   function faixa(ctx) {
     var x = b(ctx);
     var podeMexer = ctx.podeEditar();
@@ -129,21 +139,13 @@
       return el("div.o2-recurso.o2-recurso--" + chave, { role: "group", "aria-label": rotulo + ": " + atual + " de " + max }, [
         el("span.o2-recurso__rotulo", { texto: rotulo }),
         el("span.o2-recurso__valor", {}, [el("strong", { texto: String(atual) }), el("span", { texto: "/" + max })]),
-        el("span.o2-barra", { "aria-hidden": "true" }, [el("span.o2-barra__cheio", { style: "width:" + Math.round(100 * atual / Math.max(1, max)) + "%" })]),
+        trilha(atual, max, chave),
         podeMexer ? el("span.o2-recurso__botoes", {}, [botao("−", function () { muda(-1); }, { rotulo: "−1 " + rotulo }), botao("+", function () { muda(1); }, { rotulo: "+1 " + rotulo })]) : null,
         extra || null,
       ]);
     }
     var cond = R().condicoes(x).filter(function (c) { return c !== "pavor"; });
     return el("div.o2-faixa", { role: "region", "aria-label": "Recursos" }, [
-      el("div.o2-faixa__atributos", {}, K().ORDEM_ATRIBUTOS.map(function (k) {
-        var f = R().dadoDoAtributo(x, k), base = x.base.atributos[k];
-        return el("button.o2-atr", { type: "button", title: "Testar só " + K().ATRIBUTOS[k].nome, "aria-label": K().ATRIBUTOS[k].nome + " d" + f + (f !== base ? " (base d" + base + ")" : "") + ". Testar.", disabled: !pode(ctx), onclick: function () { T().abrirTeste(ctx, { atributo: k, rotulo: K().ATRIBUTOS[k].nome }); } }, [
-          el("span.o2-atr__nome", { texto: K().ATRIBUTOS[k].nome }),
-          T().dado(f, { rotulo: "d" + f }),
-          f !== base ? el("span.o2-atr__base", { texto: "base d" + base }) : null,
-        ]);
-      })),
       recurso("PV", "pv", x.recursos.pv.atual, R().pvMax(x), x.recursos.naoLetal ? el("span.o2-recurso__nota", { texto: x.recursos.naoLetal + " não letal" }) : null),
       recurso("PD", "pd", x.recursos.pd.atual, R().pdMax(x)),
       el("div.o2-recurso.o2-recurso--armadura", { role: "group", "aria-label": "Armadura: " + R().armaduraAtual(x) + " de " + R().armaduraMax(x) }, [
@@ -196,11 +198,33 @@
   }
 
   /* =================================================================
-     PERÍCIAS
+     A FICHA (v9.2): a página do livro — ATRIBUTOS e PERÍCIAS à
+     esquerda, o retrato no centro, HABILIDADES à direita. No celular,
+     uma coluna: retrato, atributos, perícias, habilidades.
      ================================================================= */
+  /* Números que importam no texto (d6, 2 PD, DT 10, +1…) em destaque. */
+  var RE_NUM = /(\+?\d*d\d+|\d+\s?(?:PD|PV)\b|DT\s?\d+|[+−]\d+|\b\d+\b)/g;
+  var RE_NUM_TODO = /^(\+?\d*d\d+|\d+\s?(?:PD|PV)|DT\s?\d+|[+−]\d+|\d+)$/;
+  function realce(texto) {
+    return String(texto || "").split(RE_NUM).filter(function (t) { return t !== ""; }).map(function (t) { return RE_NUM_TODO.test(t) ? el("strong.o2-num", { texto: t }) : document.createTextNode(t); });
+  }
+  function tag(t) { return el("h2.o2-tag", { texto: t }); }
+
   function abaPericias(ctx) {
     var x = b(ctx);
     var ed = edita(ctx);
+    var geral = global.RAMASecaoGeral;
+    var tela = global.RAMAOrdem2ParanormalTela;
+    var atributos = el("div.o2-livro-atributos", {}, K().ORDEM_ATRIBUTOS.map(function (k) {
+      var f = R().dadoDoAtributo(x, k), base = x.base.atributos[k];
+      var nome = K().ATRIBUTOS[k].nome;
+      if (ed) return el("div.o2-livro-atr", {}, [el("span.o2-livro-atr__nome", { texto: nome }), UI().campo({ rotulo: nome + " (impresso)", tipo: "selecao", valor: String(base), opcoes: opcoesDeDado([4, 6, 8, 10, 12, 20]), aoMudar: function (v) { x.base.atributos[k] = Number(v); alterou(ctx); } })]);
+      return el("button.o2-livro-atr", { type: "button", title: "Testar só " + nome, "aria-label": nome + " d" + f + (f !== base ? " (impresso d" + base + ")" : "") + ". Testar.", disabled: !pode(ctx), onclick: function () { T().abrirTeste(ctx, { atributo: k, rotulo: nome }); } }, [
+        el("span.o2-livro-atr__nome", { texto: nome }),
+        T().dado(f, { rotulo: "d" + f }),
+        f !== base ? el("span.o2-livro-atr__base", { texto: "impresso d" + base }) : null,
+      ]);
+    }));
     var linhas = x.base.pericias.map(function (p) {
       var f = R().dadoDaPericia(x, p);
       var atr = R().atributoBase(x, p.chave);
@@ -209,25 +233,52 @@
       var notas = [];
       if (p.rotuloImpresso) notas.push("Na ficha: " + p.rotuloImpresso + ".");
       if (p.atributoImpresso) notas.push("Atributo impresso: " + p.atributoImpresso + "; o motor usa " + K().ATRIBUTOS[atr].nome + " (lista da perícia).");
-      if (f !== p.dado) notas.push("Base d" + p.dado + "; agora d" + f + " (efeitos/itens).");
+      if (f !== p.dado) notas.push("Impresso d" + p.dado + "; agora d" + f + " (evolução, efeitos ou itens).");
       var mod = R().modificadorNumerico(x, p.chave, atr);
       if (mod.valor) notas.push((mod.valor > 0 ? "+" : "") + mod.valor + " (" + mod.fontes.join(", ") + ").");
+      var nota = notas.length ? el("span.o2-pericia__nota", { role: "img", "aria-label": notas.join(" "), title: notas.join(" "), texto: "ⓘ" }) : null;
+      if (ed) return el("li.o2-pericia.o2-pericia--edicao" + (f > 4 ? ".o2-pericia--treinada" : ""), { dataset: { pericia: p.chave } }, [
+        el("span.o2-pericia__nome", {}, [el("span", { texto: nome }), nota]),
+        UI().campo({ rotulo: "Dado de " + nome, tipo: "selecao", valor: String(p.dado), opcoes: opcoesDeDado([4, 6, 8, 10, 12, 20]), aoMudar: function (v) { p.dado = Number(v); alterou(ctx); } }),
+        el("span.o2-pericia__atr", { texto: "+ " + K().ATRIBUTOS[atr].curto }),
+        p.chave === "aptidao" ? UI().campo({ rotulo: "Especialização", valor: p.especializacao, limite: 40, aoMudar: function (v) { p.especializacao = String(v).slice(0, 40); alterou(ctx); } }) : null,
+        p.chave === "aptidao" && x.base.pericias.filter(function (q) { return q.chave === "aptidao"; }).length > 1 ? botao("Remover", function () { x.base.pericias = x.base.pericias.filter(function (q) { return q.id !== p.id; }); alterou(ctx, true); }) : null,
+      ]);
+      /* A linha do livro: NOME [dado] + [dado] ATRIBUTO — a linha inteira rola. */
       return el("li.o2-pericia" + (f > 4 ? ".o2-pericia--treinada" : ""), { dataset: { pericia: p.chave } }, [
-        el("span.o2-pericia__nome", {}, [el("span", { texto: nome }), notas.length ? el("span.o2-pericia__nota", { role: "img", "aria-label": notas.join(" "), title: notas.join(" "), texto: "ⓘ" }) : null]),
-        ed ? UI().campo({ rotulo: "Dado de " + nome, tipo: "selecao", valor: String(p.dado), opcoes: opcoesDeDado([4, 6, 8, 10, 12, 20]), aoMudar: function (v) { p.dado = Number(v); alterou(ctx); } }) : T().dado(f, { rotulo: nome + " d" + f }),
-        el("span.o2-pericia__atr", { title: "Atributo-base", texto: "+ " + K().ATRIBUTOS[atr].curto + " d" + dA }),
-        ed && p.chave === "aptidao" ? UI().campo({ rotulo: "Especialização", valor: p.especializacao, limite: 40, aoMudar: function (v) { p.especializacao = String(v).slice(0, 40); alterou(ctx); } }) : null,
-        ed && p.chave === "aptidao" && x.base.pericias.filter(function (q) { return q.chave === "aptidao"; }).length > 1 ? botao("Remover", function () { x.base.pericias = x.base.pericias.filter(function (q) { return q.id !== p.id; }); alterou(ctx, true); }) : null,
-        !ed ? botao("Rolar", function () { T().abrirTeste(ctx, { pericia: p.id }); }, { rotulo: "Testar " + nome + ": d" + dA + " " + K().ATRIBUTOS[atr].nome + " + d" + f + " " + nome, motivo: pode(ctx) ? "" : "Só leitura." }) : null,
+        el("button.o2-pericia__rolar", { type: "button", disabled: !pode(ctx), title: pode(ctx) ? "Testar " + nome : "Só leitura.", "aria-label": "Testar " + nome + ": d" + f + " " + nome + " + d" + dA + " " + K().ATRIBUTOS[atr].nome, onclick: function () { T().abrirTeste(ctx, { pericia: p.id }); } }, [
+          el("span.o2-pericia__nome", { texto: nome }),
+          T().dado(f, { rotulo: nome + " d" + f, estado: "pericia" }),
+          el("span.o2-pericia__mais", { "aria-hidden": "true", texto: "+" }),
+          T().dado(dA, { rotulo: K().ATRIBUTOS[atr].nome + " d" + dA }),
+          el("span.o2-pericia__atr", { texto: K().ATRIBUTOS[atr].nome }),
+          el("span.o2-pericia__atr-curto", { "aria-hidden": "true", texto: K().ATRIBUTOS[atr].curto }),
+        ]),
+        nota,
       ]);
     });
-    return el("div.o2-aba", {}, [
-      ed ? el("div.o2-criar__campos", {}, K().ORDEM_ATRIBUTOS.map(function (k) { return UI().campo({ rotulo: K().ATRIBUTOS[k].nome + " (base)", tipo: "selecao", valor: String(x.base.atributos[k]), opcoes: opcoesDeDado([4, 6, 8, 10, 12, 20]), aoMudar: function (v) { x.base.atributos[k] = Number(v); alterou(ctx); } }); })) : null,
-      UI().painel("Perícias", el("div.pilha", {}, [
-        el("p.t-mini", { texto: "Teste = dado do atributo + dado da perícia (DT 7, salvo o que o texto disser). Treinada: d6 ou mais (●)." }),
-        el("ul.o2-pericias", {}, linhas),
-        ed ? botao("+ Aptidão (outra especialização)", function () { x.base.pericias.push(R().normalizarPericia({ chave: "aptidao", dado: 4 }, x.perfilRegras)); alterou(ctx, true); }) : null,
-      ])),
+    var habs = x.habilidades.map(function (h) {
+      return el("article.o2-livro-hab", {}, [el("h3.o2-tag-titulo", { texto: h.nome }), el("p.o2-livro-hab__texto", {}, realce(h.texto)), h.origemEvolucao ? el("span.t-mini", { texto: "(evolução)" }) : null]);
+    });
+    return el("div.o2-aba.o2-livro", {}, [
+      el("div.o2-livro__grade", {}, [
+        el("section.o2-livro__esq", { "aria-label": "Atributos e perícias" }, [
+          tag("Atributos"), atributos,
+          tag("Perícias"),
+          el("p.t-mini.o2-livro__dica", { texto: "Teste = dado da perícia + dado do atributo (DT 7, salvo o que o texto disser). ● treinada (d6 ou mais). Toque na linha para rolar." }),
+          el("ul.o2-pericias", {}, linhas),
+          ed ? botao("+ Aptidão (outra especialização)", function () { x.base.pericias.push(R().normalizarPericia({ chave: "aptidao", dado: 4 }, x.perfilRegras)); alterou(ctx, true); }) : null,
+        ]),
+        el("section.o2-livro__centro", { "aria-label": "Retrato e nível" }, [
+          geral && geral.foto ? el("div.o2-livro__retrato", {}, [geral.foto(ctx)]) : null,
+          tela ? tela.ficha.evolucao(ctx) : null,
+        ]),
+        el("section.o2-livro__dir", { "aria-label": "Habilidades" }, [
+          tag("Habilidades"),
+          habs.length ? el("div.o2-livro-habs", {}, habs) : el("p.t-mini", { texto: "Nenhuma habilidade." }),
+          habs.length ? el("p.t-mini", { texto: "Estado e ações (ímpeto, marcadores, reservas) na aba Habilidades." }) : null,
+        ]),
+      ]),
       identidade(ctx),
     ]);
   }
@@ -270,10 +321,7 @@
     return el("div.o2-aba", {}, [
       el("div.o2-habilidades", {}, cartoes.length ? cartoes : [el("p.t-mini", { texto: "Nenhuma habilidade." })]),
       ed ? adicionarHabilidade(ctx) : null,
-      UI().painel("Paranormal (etapa 3)", el("div.pilha", {}, [
-        el("p.t-mini", { texto: K().PARANORMAL.texto }),
-        el("p.t-mini", { texto: "Consulta apenas: rituais e poderes chegam numa etapa futura — por isso não há botão de conjurar." }),
-      ]), { classe: "o2-paranormal" }),
+      el("p.t-mini", { texto: "Rituais, poderes e objetos: aba Paranormal (módulo experimental, desligado por padrão)." }),
     ]);
   }
 
@@ -322,10 +370,10 @@
     ]) : null;
     return el("article.o2-habilidade", { dataset: { habilidade: h.ref || "propria" } }, [
       el("header.o2-habilidade__topo", {}, [
-        el("h3.o2-habilidade__nome", { texto: h.nome }),
+        el("h3.o2-habilidade__nome.o2-tag-titulo", { texto: h.nome }),
         cat ? T().fonte(cat.fonte, cat.pagina) : el("span.o2-fonte", { texto: "Personalizada" }),
       ]),
-      ed && !cat ? UI().campo({ rotulo: "Texto", tipo: "area", linhas: 3, valor: h.texto, limite: 1200, aoMudar: function (v) { h.texto = String(v).slice(0, 1200); ctx.alterou(); } }) : el("p.o2-habilidade__texto", { texto: h.texto }),
+      ed && !cat ? UI().campo({ rotulo: "Texto", tipo: "area", linhas: 3, valor: h.texto, limite: 1200, aoMudar: function (v) { h.texto = String(v).slice(0, 1200); ctx.alterou(); } }) : el("p.o2-habilidade__texto", {}, realce(h.texto)),
       estado.length ? el("div.o2-habilidade__estado", {}, estado) : null,
       params,
       acoes.length ? el("div.faixa.o2-habilidade__acoes", {}, acoes) : null,
@@ -377,7 +425,7 @@
     var m = J().modo(ctx);
     if (m === "carregando") return UI().carregando("Abrindo a mesa");
     if (m !== "campanha") return el("div.o2-aba", {}, [UI().painel("Investigação", el("div.pilha", {}, [
-      el("p.t-mini", { texto: "Pontos de interesse, pistas e as ações de investigação moram na mesa da campanha (o Mestre guarda as soluções). Sem campanha, use os testes da aba Perícias." }),
+      el("p.t-mini", { texto: "Pontos de interesse, pistas e as ações de investigação moram na mesa da campanha (o Mestre guarda as soluções). Sem campanha, use os testes da aba Ficha." }),
       referenciaInvestigacao(x.perfilRegras),
     ]))]);
     var e = J().estado(ctx);

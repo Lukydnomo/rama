@@ -151,6 +151,8 @@ preferências de tela — nunca é tratado como banco.
       mesa.js           a mesa: testes e pós-rolagem, investigação, combate em fases, a vista do jogador
       ameacas.js        ameaças nativas (Afogado, Aughisk, Crias, Ellén Trechend, inventário do Alpha) (v9.1)
       procedimentos.js  quadro, desafios, ferramentas, sobrecarga, ondas, perseguição, esconderijo (v9.1)
+      evolucao.js       evolução experimental: modo livre e por marcos, registros e desfazer (v9.2)
+      paranormal.js     módulo paranormal experimental: biblioteca, conjurar, elaborado, efeitos (v9.2)
       mesa.js           o Thriller: pilhas, testes, cenas, Encontro, ações do Assassino, vista das jogadoras
     historico.js        rolagem → histórico da campanha, num funil só
     temas-dados.js      catálogo dos temas de dados e regras puras (copiado no Codigo.gs)
@@ -926,6 +928,15 @@ próprio `<script src>`, então funciona debaixo de subpasta sem ajuste.
 segredo nenhum — ele os lê das Script Properties. Publicá-lo não expõe nada.
 
 ### Atualizar o backend
+
+**v9.2.0 — SIGILO:** a ficha de Ordem II no estilo do livro, evolução e o
+módulo paranormal (experimentais). Troque `Ordem2.gs` e crie uma versão nova da
+implantação. **`setupRama()` não é necessário** e `Ordem2Pacotes` não mudou.
+Site: `js/ordem2/evolucao.js`, `js/ordem2/paranormal.js`, `js/ordem2/regras.js`,
+`js/ordem2/telas/` (inclui o novo `o2-paranormal.js`), `js/sistemas.js`,
+`css/ordem2.css`, `css/modern20/ordem2.css`, `js/versao.js` e as páginas
+`ficha/`, `campanha/`, `personagens/`, `catalogo/`. Detalhes em
+`docs/ORDEM2.md`.
 
 **v9.1.0 — LAMPARINA:** missões de Ordem II pela mesa. Troque `Ordem2.gs` e
 `Codigo.gs`, crie o arquivo **Ordem2Pacotes** com o conteúdo de
@@ -1953,7 +1964,7 @@ Três números diferentes, que não se misturam:
 
 | | Onde | O que é |
 |---|---|---|
-| versão do aplicativo | `js/versao.js` | o que a pessoa vê: v9.1.0 |
+| versão do aplicativo | `js/versao.js` | o que a pessoa vê: v9.2.0 |
 | `schemaVersion` | `js/ficha.js` | o formato da FICHA |
 | `versaoFormato` | `js/config.js` | o formato dos arquivos de importação |
 

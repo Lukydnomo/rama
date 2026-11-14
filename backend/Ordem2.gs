@@ -1124,6 +1124,10 @@ function acaoOrdem2Operar(corpo, usuario) {
       historico: [],
       local: null,
       operacoes: [],
+      /* v9.2: registros de evolução (separados dos impressos) e o bloco
+         paranormal experimental (rituais conhecidos, em andamento, ativos). */
+      evolucao: { nex: "", pendente: null, registros: [] },
+      paranormal: { rituais: [], emAndamento: null, ativos: [], historico: [] },
     };
   }
 
@@ -1169,6 +1173,7 @@ function acaoOrdem2Operar(corpo, usuario) {
       texto: texto(h.texto || (cat ? cat.texto : ""), 1200),
       param: obj(copiar(h.param)),
       personalizada: !cat,
+      origemEvolucao: texto(h.origemEvolucao, 80),
       estado: {
         espacos: inteiro(e.espacos, 0, 20),
         marcadores: inteiro(e.marcadores, 0, 20),
@@ -1302,6 +1307,8 @@ function acaoOrdem2Operar(corpo, usuario) {
     v.historico = lista(b.historico).map(function (h) { var o = obj(h); return { quando: texto(o.quando, 40), tipo: texto(o.tipo, 30), texto: texto(o.texto, 400), corrigido: o.corrigido === true }; }).slice(-80);
     v.local = b.local && typeof b.local === "object" ? (global.RAMAOrdem2Mesa ? global.RAMAOrdem2Mesa.normalizar(b.local) : copiar(b.local)) : null;
     v.operacoes = lista(b.operacoes).map(function (x) { return texto(x, 80); }).filter(Boolean).slice(-MAX_OPS);
+    v.evolucao = global.RAMAOrdem2Evolucao ? global.RAMAOrdem2Evolucao.normalizar(b.evolucao) : (b.evolucao && typeof b.evolucao === "object" ? copiar(b.evolucao) : v.evolucao);
+    v.paranormal = global.RAMAOrdem2Paranormal ? global.RAMAOrdem2Paranormal.normalizarBloco(b.paranormal) : (b.paranormal && typeof b.paranormal === "object" ? copiar(b.paranormal) : v.paranormal);
     /* Atual nunca acima do máximo efetivo. */
     v.recursos.pv.atual = Math.min(v.recursos.pv.atual, pvMax(v));
     v.recursos.pd.atual = Math.min(v.recursos.pd.atual, pdMax(v));
@@ -1367,14 +1374,20 @@ function acaoOrdem2Operar(corpo, usuario) {
     });
     return { n: n, d20: d20 };
   }
+  /* Evolução (v9.2): os passos dos registros vivos entram como passos
+     permanentes — o valor impresso em `base` não muda. */
+  function EV() { return global.RAMAOrdem2Evolucao; }
   function dadoDoAtributo(b, chave) {
     var e = passosDeEfeitos(b, "passoAtributo", chave);
-    return passoDado(b.base.atributos[chave] || 6, e.n, e.d20);
+    var base = b.evolucao && EV() ? EV().permanenteAtributo(b, chave) : (b.base.atributos[chave] || 6);
+    if (b.base.atributos[chave] === 20) base = 20;
+    return passoDado(base, e.n, e.d20);
   }
   function dadoDaPericia(b, p) {
     if (!p) return 4;
     var e = passosDeEfeitos(b, "passoPericia", p.chave);
-    return passoDado(p.dado, e.n + passosDeItens(b, p.chave), e.d20);
+    var base = b.evolucao && EV() && p.dado !== 20 ? EV().permanentePericia(b, p) : p.dado;
+    return passoDado(base, e.n + passosDeItens(b, p.chave), e.d20);
   }
 
   /* Modificadores NUMÉRICOS de lesões e traumas (ver DIVERGENCIAS). */
@@ -1395,12 +1408,12 @@ function acaoOrdem2Operar(corpo, usuario) {
   }
 
   function pvMax(b) {
-    var n = b.recursos.pv.max;
+    var n = b.recursos.pv.max + (b.evolucao && EV() ? EV().extra(b, "pv") : 0);
     lista(b.estado && b.estado.lesoes).forEach(function (l) { if (l.ref === "laceracao") n -= 2; });
     return Math.max(1, n);
   }
   function pdMax(b) {
-    var n = b.recursos.pd.max;
+    var n = b.recursos.pd.max + (b.evolucao && EV() ? EV().extra(b, "pd") : 0);
     lista(b.estado && b.estado.traumas).forEach(function (l) { if (l.ref === "chaga" && !l.curado) n -= 2; });
     return Math.max(1, n);
   }
@@ -1533,6 +1546,8 @@ function acaoOrdem2Operar(corpo, usuario) {
       lesoes: b.estado.lesoes.length,
       traumas: b.estado.traumas.filter(function (t) { return !t.curado; }).length,
       preset: b.procedencia ? b.procedencia.preset : "",
+      evolucao: global.RAMAOrdem2Evolucao ? global.RAMAOrdem2Evolucao.resumo(b) : null,
+      paranormal: global.RAMAOrdem2Paranormal ? global.RAMAOrdem2Paranormal.resumo(b) : null,
     };
   }
 
@@ -5862,3 +5877,772 @@ function acaoOrdem2Operar(corpo, usuario) {
   };
 })(typeof window !== "undefined" ? window : globalThis);
 /* <<< js/ordem2/procedimentos.js */
+
+/* >>> js/ordem2/evolucao.js */
+/* =====================================================================
+   R.A.M.A. — Ordem Paranormal RPG II · evolução (v9.2)
+   Experimental — regra do R.A.M.A.
+   ---------------------------------------------------------------------
+   O QUE O TEXTO DIZ (Alpha pp. 15–16; Beta p. 8): nível de 1 a 10; a
+   ficha começa com duas habilidades (perfil e ocupação/vocação) e
+   "recebe novas habilidades à medida que subir de nível ou treinar";
+   d20 só com influência paranormal. NÃO HÁ tabela de evolução.
+
+   O QUE ESTE MÓDULO PROPÕE (configurável pela campanha, nunca chamado
+   de regra publicada):
+     livre       o Mestre define nível e mudanças (edita a ficha); nada é
+                 automático
+     marcos      o Mestre confirma subir UM nível; quem joga escolhe UMA
+                 melhoria: +1 passo num atributo ou perícia (até d12, sem
+                 d20), +2 PV máximos, +2 PD máximos, ou uma habilidade
+                 que o Mestre aprova
+   Nada é inferido dos presets (nem ganho, nem patamar, nem promoção).
+   As melhorias ficam em REGISTROS separados dos valores impressos
+   (`base` nunca muda): os dados efetivos somam os passos dos registros
+   vivos. Aumentar o máximo preserva os pontos atuais (recuperar é outra
+   ação); desfazer tira só os ganhos daquele registro — se um registro
+   posterior depende dele, pede para desfazer esse antes — e nunca
+   devolve dano antigo. Perícias são referidas pela CHAVE (os ids mudam
+   ao importar), habilidades pela marca `origemEvolucao`.
+
+   Copiado para backend/Ordem2.gs (testes/gerar-ordem2-gs.js).
+   ===================================================================== */
+
+(function (global) {
+  "use strict";
+
+  function K() { return global.RAMAOrdem2Catalogo; }
+  function R() { return global.RAMAOrdem2; }
+  function ME() { return global.RAMAOrdem2Mesa; }
+  function lista(v) { return Array.isArray(v) ? v : []; }
+  function obj(v) { return v && typeof v === "object" && !Array.isArray(v) ? v : {}; }
+  function texto(v, n) { return String(v === undefined || v === null ? "" : v).slice(0, n || 200); }
+  function inteiro(v, a, b, p) { var n = Math.floor(Number(v)); if (!Number.isFinite(n)) return p === undefined ? a : p; return Math.max(a, Math.min(b, n)); }
+  function copiar(v) { return v === undefined ? undefined : JSON.parse(JSON.stringify(v)); }
+  function id() { return R().novoId(); }
+
+  var MODOS = { livre: "Livre (o Mestre atribui)", marcos: "Por marcos — Experimental (regra do R.A.M.A.)" };
+  var TIPOS = {
+    atributo: "+1 passo num atributo (até d12)",
+    pericia: "+1 passo numa perícia (até d12)",
+    pv: "+2 PV máximos",
+    pd: "+2 PD máximos",
+    habilidade: "Uma habilidade (aprovada pelo Mestre)",
+  };
+  var PADRAO = { modo: "livre", pvPorEscolha: 2, pdPorEscolha: 2, teto: 12 };
+
+  function normalizarConfig(x) {
+    var c = obj(x);
+    return { modo: MODOS[c.modo] ? c.modo : "livre", pvPorEscolha: inteiro(c.pvPorEscolha, 1, 10, 2), pdPorEscolha: inteiro(c.pdPorEscolha, 1, 10, 2), teto: [8, 10, 12].indexOf(Number(c.teto)) >= 0 ? Number(c.teto) : 12 };
+  }
+  function normalizarGanho(x) {
+    var g = obj(x);
+    if (!TIPOS[g.tipo]) return null;
+    return { tipo: g.tipo, chave: texto(g.chave, 60), n: inteiro(g.n, -4, 10, 1), de: texto(g.de, 20), para: texto(g.para, 20), habilidade: g.habilidade ? copiar(obj(g.habilidade)) : null };
+  }
+  function normalizar(x) {
+    var e = obj(x);
+    return {
+      nex: texto(e.nex, 20),
+      pendente: e.pendente && typeof e.pendente === "object" ? {
+        id: texto(e.pendente.id, 80) || id(), nivelDepois: inteiro(e.pendente.nivelDepois, 1, 10, 1), nivelAntes: inteiro(e.pendente.nivelAntes, 1, 10, 1),
+        aprovadoEm: texto(e.pendente.aprovadoEm, 40), proposta: e.pendente.proposta ? copiar(obj(e.pendente.proposta)) : null, config: normalizarConfig(e.pendente.config),
+      } : null,
+      registros: lista(e.registros).map(function (r) {
+        var o = obj(r);
+        return {
+          id: texto(o.id, 80) || id(), quando: texto(o.quando, 40), opId: texto(o.opId, 80), modo: MODOS[o.modo] ? o.modo : "livre",
+          nivelAntes: inteiro(o.nivelAntes, 1, 10, 1), nivelDepois: inteiro(o.nivelDepois, 1, 10, 1),
+          ganhos: lista(o.ganhos).map(normalizarGanho).filter(Boolean).slice(0, 6), nota: texto(o.nota, 300),
+          desfeito: o.desfeito === true, desfeitoEm: texto(o.desfeitoEm, 40), procedencia: texto(o.procedencia, 120),
+        };
+      }).slice(-60),
+    };
+  }
+  function bloco(b) { if (!b.evolucao || !b.evolucao.registros) b.evolucao = normalizar(b.evolucao); return b.evolucao; }
+  function vivos(b) { return lista(bloco(b).registros).filter(function (r) { return !r.desfeito; }); }
+  function chaveDaPericia(p) { return p.chave + (p.especializacao ? ":" + String(p.especializacao).toLowerCase() : ""); }
+
+  /* Somas dos registros vivos (os dados impressos ficam em `base`). */
+  function passosAtributo(b, chave) { var n = 0; vivos(b).forEach(function (r) { r.ganhos.forEach(function (g) { if (g.tipo === "atributo" && g.chave === chave) n += g.n; }); }); return n; }
+  function passosPericia(b, p) { var k = chaveDaPericia(p), n = 0; vivos(b).forEach(function (r) { r.ganhos.forEach(function (g) { if (g.tipo === "pericia" && g.chave === k) n += g.n; }); }); return n; }
+  function extra(b, tipo) { var n = 0; vivos(b).forEach(function (r) { r.ganhos.forEach(function (g) { if (g.tipo === tipo) n += g.n; }); }); return n; }
+
+  /* O valor SEM efeitos temporários (o que a melhoria mexe). */
+  function permanenteAtributo(b, chave) { return R().passoDado(b.base.atributos[chave] || 6, passosAtributo(b, chave), false); }
+  function permanentePericia(b, p) { return R().passoDado(p.dado, passosPericia(b, p), false); }
+
+  /* A prévia de uma escolha: antes/depois, ou o motivo de não caber. */
+  function previa(b, escolha, config) {
+    var cfg = normalizarConfig(config);
+    var e = obj(escolha);
+    if (!TIPOS[e.tipo]) return { ok: false, motivo: "Escolha o tipo de melhoria." };
+    if (e.tipo === "atributo") {
+      if (!K().ATRIBUTOS[e.chave]) return { ok: false, motivo: "Escolha o atributo." };
+      var a = permanenteAtributo(b, e.chave);
+      if (b.base.atributos[e.chave] === 20 || a >= cfg.teto) return { ok: false, motivo: K().ATRIBUTOS[e.chave].nome + " já está em d" + a + " (teto d" + cfg.teto + "; d20 só com efeito paranormal)." };
+      return { ok: true, ganho: { tipo: "atributo", chave: e.chave, n: 1, de: "d" + a, para: "d" + R().passoDado(a, 1, false) }, rotulo: K().ATRIBUTOS[e.chave].nome + ": d" + a + " → d" + R().passoDado(a, 1, false) };
+    }
+    if (e.tipo === "pericia") {
+      var p = lista(b.base.pericias).filter(function (q) { return q.id === e.chave || chaveDaPericia(q) === e.chave; })[0];
+      if (!p) return { ok: false, motivo: "Escolha a perícia." };
+      var d = permanentePericia(b, p);
+      if (p.dado === 20 || d >= cfg.teto) return { ok: false, motivo: R().nomeDaPericia(b, p) + " já está em d" + d + " (teto d" + cfg.teto + "; sem d20)." };
+      return { ok: true, ganho: { tipo: "pericia", chave: chaveDaPericia(p), n: 1, de: "d" + d, para: "d" + R().passoDado(d, 1, false) }, rotulo: R().nomeDaPericia(b, p) + ": d" + d + " → d" + R().passoDado(d, 1, false) };
+    }
+    if (e.tipo === "pv" || e.tipo === "pd") {
+      var n = e.tipo === "pv" ? cfg.pvPorEscolha : cfg.pdPorEscolha;
+      var max = e.tipo === "pv" ? R().pvMax(b) : R().pdMax(b);
+      return { ok: true, ganho: { tipo: e.tipo, chave: "", n: n, de: String(max), para: String(max + n) }, rotulo: (e.tipo === "pv" ? "PV" : "PD") + " máximos: " + max + " → " + (max + n) + " (os atuais ficam como estão)" };
+    }
+    var h = obj(e.habilidade);
+    var nome = texto(h.nome || (K().HABILIDADES[h.ref] || {}).nome, 80);
+    if (!nome) return { ok: false, motivo: "Descreva a habilidade (nome e efeito)." };
+    return { ok: true, ganho: { tipo: "habilidade", chave: texto(h.ref, 60), n: 1, de: "", para: nome, habilidade: { ref: texto(h.ref, 60), nome: nome, texto: texto(h.texto || (K().HABILIDADES[h.ref] || {}).texto, 1200) } }, rotulo: "Nova habilidade: " + nome, precisaAprovar: true };
+  }
+
+  /* Aplica um registro (o nível sobe aqui). Não mexe em `base`. */
+  function registrar(b, meta, ganhos) {
+    var ev = bloco(b);
+    var r = { id: id(), quando: meta.quando || new Date().toISOString(), opId: texto(meta.opId, 80), modo: meta.modo || "marcos", nivelAntes: b.nivel, nivelDepois: inteiro(meta.nivelDepois, 1, 10, b.nivel), ganhos: lista(ganhos).map(normalizarGanho).filter(Boolean), nota: texto(meta.nota, 300), desfeito: false, desfeitoEm: "", procedencia: texto(meta.procedencia, 120) };
+    r.ganhos.forEach(function (g) {
+      if (g.tipo === "habilidade" && g.habilidade) {
+        var h = R().normalizarHabilidade(g.habilidade);
+        h.origemEvolucao = r.id;
+        b.habilidades.push(h);
+      }
+    });
+    b.nivel = r.nivelDepois;
+    ev.registros.push(r);
+    ev.registros = ev.registros.slice(-60);
+    return r;
+  }
+
+  /* Desfazer: só os ganhos daquele registro; dependências primeiro. */
+  function dependentes(b, reg) {
+    var todos = lista(bloco(b).registros), i = todos.indexOf(reg);
+    var depois = todos.slice(i + 1).filter(function (r) { return !r.desfeito; });
+    return depois.filter(function (r) {
+      return r.ganhos.some(function (g) { return reg.ganhos.some(function (h) { return (g.tipo === h.tipo && g.chave === h.chave && (g.tipo === "atributo" || g.tipo === "pericia")); }); }) || r.nivelAntes >= reg.nivelDepois;
+    });
+  }
+  function desfazer(b, regId) {
+    var reg = lista(bloco(b).registros).filter(function (r) { return r.id === regId; })[0];
+    if (!reg || reg.desfeito) return { ok: false, motivo: "Registro não encontrado (ou já desfeito)." };
+    var dep = dependentes(b, reg);
+    if (dep.length) return { ok: false, motivo: "Antes, desfaça o(s) registro(s) posterior(es) que dependem deste: " + dep.map(function (r) { return "nível " + r.nivelAntes + " → " + r.nivelDepois; }).join(", ") + ".", dependentes: dep.map(function (r) { return r.id; }) };
+    reg.desfeito = true;
+    reg.desfeitoEm = new Date().toISOString();
+    b.habilidades = b.habilidades.filter(function (h) { return h.origemEvolucao !== reg.id; });
+    if (b.nivel === reg.nivelDepois) b.nivel = reg.nivelAntes;
+    /* Máximo menor: o atual não passa dele (dano antigo não volta). */
+    b.recursos.pv.atual = Math.min(b.recursos.pv.atual, R().pvMax(b));
+    b.recursos.pd.atual = Math.min(b.recursos.pd.atual, R().pdMax(b));
+    return { ok: true, registro: reg };
+  }
+
+  /* O rótulo de um ganho já registrado (histórico e resumo da mesa). */
+  function rotuloGanho(g, b) {
+    if (g.tipo === "atributo") return (K().ATRIBUTOS[g.chave] ? K().ATRIBUTOS[g.chave].nome : g.chave) + " " + g.de + " → " + g.para;
+    if (g.tipo === "pericia") { var c = String(g.chave).split(":"); return K().nomeDaPericia(b ? b.perfilRegras : "alpha-contemporaneo", c[0], b ? b.ambientacao : "") + (c[1] ? " (" + c[1] + ")" : "") + " " + g.de + " → " + g.para; }
+    if (g.tipo === "pv" || g.tipo === "pd") return g.tipo.toUpperCase() + " máx. " + g.de + " → " + g.para;
+    return "Habilidade: " + g.para;
+  }
+  /* O que a mesa do Mestre vê de cada ficha (vai no resumo). */
+  function resumo(b) {
+    var e = bloco(b);
+    return {
+      nex: e.nex,
+      pendente: e.pendente ? { nivelDepois: e.pendente.nivelDepois, proposta: e.pendente.proposta ? texto(e.pendente.proposta.rotulo, 120) : "" } : null,
+      registros: e.registros.slice(-6).map(function (r) { return { id: r.id, nivelAntes: r.nivelAntes, nivelDepois: r.nivelDepois, modo: r.modo, desfeito: r.desfeito, quando: r.quando.slice(0, 10), ganhos: r.ganhos.map(function (g) { return rotuloGanho(g, b); }).join("; ") || r.nota }; }),
+    };
+  }
+
+  /* ---------------------------------------------------------------
+     A CONFIGURAÇÃO DA CAMPANHA (e.modulos.evolucao) e as operações
+     --------------------------------------------------------------- */
+  function configDaMesa(e) { return normalizarConfig(e.modulos && e.modulos.evolucao); }
+  function ev(s, t, privado) { s.eventos.push({ texto: String(t), privado: !!privado }); }
+  function log(e, t) { ME().log(e, t); }
+  function fichaDe(fichas, pid) { return fichas[pid] ? fichas[pid].bloco : null; }
+  function nome(fichas, pid) { return fichas[pid] ? fichas[pid].nome : "?"; }
+
+  if (ME()) {
+    ME().gancho("normalizar", function (v, b) {
+      var m = obj(b.modulos);
+      v.modulos = { evolucao: normalizarConfig(m.evolucao), paranormal: m.paranormal ? copiar(m.paranormal) : null };
+    });
+    ME().registrarOperacao("evolucaoConfigurar", function (e, fichas, o, papel, rolar, s) {
+      e.modulos = e.modulos || {};
+      e.modulos.evolucao = normalizarConfig(Object.assign({}, configDaMesa(e), obj(o.config)));
+      ev(s, "Evolução: " + MODOS[e.modulos.evolucao.modo] + ".");
+      log(e, "Evolução da campanha: " + MODOS[e.modulos.evolucao.modo] + ".");
+    }, { mestre: true, semFicha: true, rev: true });
+    /* Livre: o Mestre põe o nível (e registra a mudança, sem ganhos). */
+    ME().registrarOperacao("definirNivel", function (e, fichas, o, papel, rolar, s) {
+      var b = fichaDe(fichas, o.personagem);
+      if (!b) return { ok: false, motivo: "Personagem não encontrado." };
+      var n = inteiro(o.nivel, 1, 10, b.nivel);
+      if (n === b.nivel) return { ok: false, motivo: "O nível já é " + n + "." };
+      registrar(b, { modo: "livre", nivelDepois: n, opId: o.opId, nota: texto(o.nota, 300) || "Nível definido pelo Mestre (modo livre)." }, []);
+      ev(s, nome(fichas, o.personagem) + ": nível " + n + " (o Mestre define as mudanças na ficha).");
+      log(e, nome(fichas, o.personagem) + " vai ao nível " + n + ".");
+    }, { mestre: true });
+    /* Marcos: o Mestre confirma subir um nível; fica a escolha pendente. */
+    ME().registrarOperacao("subirNivel", function (e, fichas, o, papel, rolar, s) {
+      var b = fichaDe(fichas, o.personagem);
+      if (!b) return { ok: false, motivo: "Personagem não encontrado." };
+      var cfg = configDaMesa(e);
+      if (cfg.modo !== "marcos" && !o.local) return { ok: false, motivo: "A campanha está no modo livre: use \"definir nível\"." };
+      if (b.nivel >= 10) return { ok: false, motivo: "Nível 10 é o máximo (Alpha p. 15; Beta p. 8)." };
+      var evo = bloco(b);
+      if (evo.pendente) return { ok: false, motivo: "Já há uma subida de nível esperando a escolha." };
+      evo.pendente = { id: id(), nivelAntes: b.nivel, nivelDepois: b.nivel + 1, aprovadoEm: new Date().toISOString(), proposta: null, config: cfg };
+      ev(s, nome(fichas, o.personagem) + " pode subir ao nível " + (b.nivel + 1) + ": escolha a melhoria.");
+      log(e, "O Mestre confirma: " + nome(fichas, o.personagem) + " sobe ao nível " + (b.nivel + 1) + " (escolha pendente).");
+    }, { mestre: true });
+    ME().registrarOperacao("escolherMelhoria", function (e, fichas, o, papel, rolar, s) {
+      var pid = String(o.quem || ""), b = fichaDe(fichas, pid);
+      if (!b || !ME().podeAgir(papel, pid)) return { ok: false, motivo: "Você não conduz este personagem." };
+      var evo = bloco(b);
+      if (!evo.pendente) return { ok: false, motivo: "Não há subida de nível pendente." };
+      var pv = previa(b, o.escolha, evo.pendente.config);
+      if (!pv.ok) return pv;
+      if (pv.precisaAprovar && !papel.mestre) {
+        evo.pendente.proposta = { escolha: copiar(o.escolha), rotulo: pv.rotulo };
+        ev(s, nome(fichas, pid) + " propõe: " + pv.rotulo + " — aguardando o Mestre.");
+        log(e, nome(fichas, pid) + " propõe uma habilidade para o nível " + evo.pendente.nivelDepois + ".");
+        return;
+      }
+      var r = registrar(b, { modo: evo.pendente.config.modo, nivelDepois: evo.pendente.nivelDepois, opId: o.opId, procedencia: "marcos" }, [pv.ganho]);
+      evo.pendente = null;
+      ev(s, nome(fichas, pid) + " sobe ao nível " + r.nivelDepois + ": " + pv.rotulo + ".");
+      log(e, nome(fichas, pid) + " sobe ao nível " + r.nivelDepois + ": " + pv.rotulo + ".");
+      s.resultado.registro = r.id;
+    });
+    ME().registrarOperacao("aprovarHabilidade", function (e, fichas, o, papel, rolar, s) {
+      var b = fichaDe(fichas, o.personagem);
+      if (!b) return { ok: false, motivo: "Personagem não encontrado." };
+      var evo = bloco(b);
+      if (!evo.pendente || !evo.pendente.proposta) return { ok: false, motivo: "Não há habilidade proposta." };
+      if (o.aprovar === false) { evo.pendente.proposta = null; ev(s, "O Mestre não aprovou a habilidade: escolha outra melhoria."); return; }
+      var pv = previa(b, evo.pendente.proposta.escolha, evo.pendente.config);
+      if (!pv.ok) return pv;
+      var r = registrar(b, { modo: evo.pendente.config.modo, nivelDepois: evo.pendente.nivelDepois, procedencia: "marcos (aprovada pelo Mestre)" }, [pv.ganho]);
+      evo.pendente = null;
+      ev(s, nome(fichas, o.personagem) + " sobe ao nível " + r.nivelDepois + ": " + pv.rotulo + " (aprovada).");
+      log(e, nome(fichas, o.personagem) + " sobe ao nível " + r.nivelDepois + ": " + pv.rotulo + ".");
+    }, { mestre: true });
+    ME().registrarOperacao("cancelarSubida", function (e, fichas, o, papel, rolar, s) {
+      var b = fichaDe(fichas, o.personagem);
+      if (!b || !bloco(b).pendente) return { ok: false, motivo: "Nada pendente." };
+      bloco(b).pendente = null;
+      ev(s, "Subida de nível cancelada.");
+    }, { mestre: true });
+    ME().registrarOperacao("desfazerEvolucao", function (e, fichas, o, papel, rolar, s) {
+      var b = fichaDe(fichas, o.personagem);
+      if (!b) return { ok: false, motivo: "Personagem não encontrado." };
+      var r = desfazer(b, o.registro);
+      if (!r.ok) return r;
+      ev(s, nome(fichas, o.personagem) + ": desfeito o nível " + r.registro.nivelAntes + " → " + r.registro.nivelDepois + " (só os ganhos dele; dano antigo não volta).");
+      log(e, nome(fichas, o.personagem) + ": evolução desfeita (" + r.registro.nivelAntes + " → " + r.registro.nivelDepois + ").");
+    }, { mestre: true });
+    ME().registrarOperacao("nex", function (e, fichas, o, papel, rolar, s) {
+      var pid = String(o.quem || o.personagem || ""), b = fichaDe(fichas, pid);
+      if (!b || !ME().podeAgir(papel, pid)) return { ok: false, motivo: "Sem permissão." };
+      bloco(b).nex = texto(o.valor, 20);
+      ev(s, "NEX anotado (só metadado; sem efeito nas regras).");
+    });
+  }
+
+  /* Atualizar a ficha para outra versão do preset: só com prévia e
+     confirmação; registros de evolução e o histórico ficam. */
+  function previaAtualizacao(b) {
+    if (!b.procedencia || !b.procedencia.preset) return { ok: false, motivo: "Esta ficha não veio de uma ficha pronta." };
+    var novo = R().dePreset(b.procedencia.preset);
+    if (!novo) return { ok: false, motivo: "Preset não encontrado." };
+    var dif = [];
+    K().ORDEM_ATRIBUTOS.forEach(function (k) { if (novo.base.atributos[k] !== b.base.atributos[k]) dif.push(K().ATRIBUTOS[k].nome + ": d" + b.base.atributos[k] + " → d" + novo.base.atributos[k]); });
+    novo.base.pericias.forEach(function (p) { var q = lista(b.base.pericias).filter(function (x) { return chaveDaPericia(x) === chaveDaPericia(p); })[0]; if (!q || q.dado !== p.dado) dif.push(R().nomeDaPericia(novo, p) + ": " + (q ? "d" + q.dado : "—") + " → d" + p.dado); });
+    if (novo.recursos.pv.max !== b.recursos.pv.max) dif.push("PV impressos: " + b.recursos.pv.max + " → " + novo.recursos.pv.max);
+    if (novo.recursos.pd.max !== b.recursos.pd.max) dif.push("PD impressos: " + b.recursos.pd.max + " → " + novo.recursos.pd.max);
+    return { ok: true, diferencas: dif, versaoAntes: b.procedencia.versaoDados, versaoDepois: K().VERSAO_DADOS, novo: novo };
+  }
+  function aplicarAtualizacao(b, confirmar) {
+    var p = previaAtualizacao(b);
+    if (!p.ok) return p;
+    if (confirmar !== true) return Object.assign({}, p, { ok: false, motivo: "Confirme depois de ver a prévia." });
+    var antiga = copiar(b.procedencia);
+    b.base = copiar(p.novo.base);
+    b.recursos.pv.max = p.novo.recursos.pv.max;
+    b.recursos.pd.max = p.novo.recursos.pd.max;
+    b.procedencia = Object.assign({}, p.novo.procedencia);
+    b.historico.push({ quando: new Date().toISOString(), tipo: "preset", texto: "Atualizada do preset " + antiga.preset + " (dados v" + antiga.versaoDados + " → v" + b.procedencia.versaoDados + "): " + (p.diferencas.join("; ") || "sem diferenças nos números") + ". Registros de evolução preservados.", corrigido: false });
+    b.recursos.pv.atual = Math.min(b.recursos.pv.atual, R().pvMax(b));
+    b.recursos.pd.atual = Math.min(b.recursos.pd.atual, R().pdMax(b));
+    return { ok: true, diferencas: p.diferencas };
+  }
+
+  global.RAMAOrdem2Evolucao = {
+    MODOS: MODOS, TIPOS: TIPOS, PADRAO: PADRAO,
+    normalizar: normalizar, normalizarConfig: normalizarConfig, configDaMesa: configDaMesa,
+    passosAtributo: passosAtributo, passosPericia: passosPericia, extra: extra, chaveDaPericia: chaveDaPericia,
+    permanenteAtributo: permanenteAtributo, permanentePericia: permanentePericia,
+    previa: previa, registrar: registrar, desfazer: desfazer, dependentes: dependentes, vivos: vivos,
+    previaAtualizacao: previaAtualizacao, aplicarAtualizacao: aplicarAtualizacao,
+    rotuloGanho: rotuloGanho, resumo: resumo,
+  };
+})(typeof window !== "undefined" ? window : globalThis);
+/* <<< js/ordem2/evolucao.js */
+
+/* >>> js/ordem2/paranormal.js */
+/* =====================================================================
+   R.A.M.A. — Ordem Paranormal RPG II · paranormal (v9.2)
+   Experimental — regra do R.A.M.A.
+   ---------------------------------------------------------------------
+   O QUE O TEXTO DIZ: o Beta (p. 2) anuncia um sistema paranormal —
+   rituais, poderes, objetos amaldiçoados — que NÃO está nos playtests;
+   d20 só vem do paranormal (Alpha p. 16; Beta p. 8). A gruta (Beta pp.
+   60–71) é o PROCEDIMENTO de uma aventura (encaixar runas acende a
+   chama), não um modo geral de conjurar; o ritual de um handout e a
+   classificação do compêndio também não são prova de custo.
+
+   Por isso, três classes de entrada, sempre separadas:
+     procedimento   documentado numa missão: joga-se pelo desafio da cena
+                    (runas etc.), nunca pela conjuração livre
+     consulta       referência sem automação (objeto, manifestação)
+     experimental   criado pelo Mestre para o MÓDULO EXPERIMENTAL — este
+                    sim conjurável, e só com o módulo ligado
+
+   O MÓDULO (desligado por padrão; o Mestre liga na campanha):
+     imediato    consome a ação indicada; Mente + Ocultismo/Bruxaria
+     elaborado   etapas, componentes e ordem; teste na execução final
+     DT e custo  rascunho ajustável: simples 7/1 PD, intermediário 10/3,
+                 complexo 13/5 (campanha e ritual mudam)
+     custo       cobrado UMA vez na confirmação da execução, também na
+                 falha; repetir a mesma operação (opId) não cobra de novo
+     efeitos     normal, crítico, falha e falha crítica separados; sem
+                 efeito configurado, vai para o Mestre (nada inventado)
+     forçar      opcional: antes da rolagem, 2 PV por +1 passo num dado
+                 do teste, uma vez; preço e vantagem editáveis; risco de
+                 pavor ou consumo de componente como ALTERNATIVA explícita
+     elemento    descreve; não concede efeito sozinho
+   Nada de círculo, afinidade, custo ou NEX de Ordem I.
+
+   Desligar o módulo bloqueia conjurações novas e preserva rituais,
+   histórico e efeitos ativos (o Mestre finaliza ou encerra à mão).
+   Copiado para backend/Ordem2.gs (testes/gerar-ordem2-gs.js).
+   ===================================================================== */
+
+(function (global) {
+  "use strict";
+
+  function K() { return global.RAMAOrdem2Catalogo; }
+  function R() { return global.RAMAOrdem2; }
+  function M() { return global.RAMAOrdem2Motor; }
+  function ME() { return global.RAMAOrdem2Mesa; }
+  function P() { return global.RAMAOrdem2Proc; }
+  function lista(v) { return Array.isArray(v) ? v : []; }
+  function obj(v) { return v && typeof v === "object" && !Array.isArray(v) ? v : {}; }
+  function texto(v, n) { return String(v === undefined || v === null ? "" : v).slice(0, n || 200); }
+  function inteiro(v, a, b, p) { var n = Math.floor(Number(v)); if (!Number.isFinite(n)) return p === undefined ? a : p; return Math.max(a, Math.min(b, n)); }
+  function copiar(v) { return v === undefined ? undefined : JSON.parse(JSON.stringify(v)); }
+  function id() { return R().novoId(); }
+  function agora() { return new Date().toISOString(); }
+
+  var SELO = "Experimental — regra do R.A.M.A.";
+  var ELEMENTOS = ["Sangue", "Morte", "Conhecimento", "Energia", "Medo"];
+  var TIPOS = { ritual: "Ritual", poder: "Poder", objeto: "Objeto amaldiçoado" };
+  var CLASSES = { experimental: "Experimental (conjurável com o módulo ligado)", procedimento: "Procedimento de missão (joga-se pela cena)", consulta: "Consulta (sem automação)" };
+  var COMPLEXIDADES = { simples: "Simples", intermediario: "Intermediário", complexo: "Complexo" };
+  var MODOS = { imediato: "Imediato", elaborado: "Elaborado" };
+  var DURACOES = { instantaneo: "Instantâneo", rodada: "Até o fim da rodada", cena: "A cena", missao: "A missão", permanente: "Permanente (até encerrar)" };
+  var ALVOS = { proprio: "Quem conjura", um: "Um alvo", varios: "Vários alvos", area: "Área (o Mestre escolhe)" };
+  var TIPOS_EFEITO = { dano: "Dano", cura: "Cura", condicao: "Condição", passo: "Passo num dado", dado: "Dado bônus guardado", marcador: "Marcador", mestre: "Decisão do Mestre" };
+  var RESULTADOS = ["normal", "critico", "falha", "falhaCritica"];
+  var CONDICOES = ["caido", "perdeAcao", "inconsciente"];
+
+  /* O rascunho da campanha (todos ajustáveis). */
+  function configPadrao() {
+    return {
+      ativo: false,
+      atributo: "mente", pericia: "ocultismo",
+      dts: { simples: 7, intermediario: 10, complexo: 13 },
+      custos: { simples: 1, intermediario: 3, complexo: 5 },
+      forcar: { permitido: false, pv: 2, passos: 1, alternativa: "pv" }, /* pv | pavor | componente */
+    };
+  }
+  function normalizarConfig(x) {
+    var c = obj(x), v = configPadrao();
+    v.ativo = c.ativo === true;
+    v.atributo = K().ATRIBUTOS[c.atributo] ? c.atributo : "mente";
+    v.pericia = texto(c.pericia, 40) || "ocultismo";
+    var d = obj(c.dts), q = obj(c.custos), f = obj(c.forcar);
+    Object.keys(v.dts).forEach(function (k) { v.dts[k] = inteiro(d[k], 0, 40, v.dts[k]); v.custos[k] = inteiro(q[k], 0, 40, v.custos[k]); });
+    v.forcar = { permitido: f.permitido === true, pv: inteiro(f.pv, 0, 20, 2), passos: inteiro(f.passos, 1, 2, 1), alternativa: ["pv", "pavor", "componente"].indexOf(f.alternativa) >= 0 ? f.alternativa : "pv" };
+    return v;
+  }
+
+  function normalizarEfeito(x) {
+    var e = obj(x);
+    if (!TIPOS_EFEITO[e.tipo]) return null;
+    return {
+      tipo: e.tipo, valor: texto(e.valor, 20), recurso: e.recurso === "pd" ? "pd" : "pv", danoTipo: e.danoTipo === "emocional" ? "emocional" : "fisico",
+      condicao: CONDICOES.indexOf(e.condicao) >= 0 ? e.condicao : "", alvoDado: e.alvoDado === "atributo" || e.alvoDado === "todos" ? e.alvoDado : "pericia", chave: texto(e.chave, 40),
+      n: inteiro(e.n, -4, 4, 1), faces: [4, 6, 8, 10, 12, 20].indexOf(Number(e.faces)) >= 0 ? Number(e.faces) : 0, d20: e.d20 === true,
+      duracao: DURACOES[e.duracao] ? e.duracao : "", quem: e.quem === "proprio" ? "proprio" : "alvo", texto: texto(e.texto, 600),
+    };
+  }
+  function normalizarEntrada(x) {
+    var r = obj(x);
+    var nome = texto(r.nome, 120);
+    if (!nome) return null;
+    var ef = obj(r.efeitos), efeitos = {};
+    RESULTADOS.forEach(function (k) { efeitos[k] = lista(ef[k]).map(normalizarEfeito).filter(Boolean).slice(0, 6); });
+    return {
+      id: texto(r.id, 80) || id(), nome: nome, tipo: TIPOS[r.tipo] ? r.tipo : "ritual", classe: CLASSES[r.classe] ? r.classe : "experimental",
+      modo: MODOS[r.modo] ? r.modo : "imediato", complexidade: COMPLEXIDADES[r.complexidade] ? r.complexidade : "simples",
+      elementos: lista(r.elementos).filter(function (e) { return ELEMENTOS.indexOf(e) >= 0; }).slice(0, 5),
+      escopo: texto(r.escopo, 120), tempo: texto(r.tempo, 60), acao: texto(r.acao, 60) || "uma ação", alcance: texto(r.alcance, 60),
+      alvo: ALVOS[r.alvo] ? r.alvo : "um", duracao: DURACOES[r.duracao] ? r.duracao : "instantaneo", gatilho: texto(r.gatilho, 200),
+      componentes: lista(r.componentes).map(function (c) { var o = obj(c); return texto(o.nome, 80) ? { nome: texto(o.nome, 80), consome: o.consome === true, etapa: inteiro(o.etapa, 0, 20, 0), item: texto(o.item, 80) } : null; }).filter(Boolean).slice(0, 10),
+      etapas: lista(r.etapas).map(function (t) { var o = obj(t); return texto(o.nome, 80) ? { nome: texto(o.nome, 80), acao: texto(o.acao, 60) } : null; }).filter(Boolean).slice(0, 10),
+      testePorEtapa: r.testePorEtapa === true, interrompeComDano: r.interrompeComDano !== false,
+      dt: r.dt === null || r.dt === undefined || r.dt === "" ? null : inteiro(r.dt, 0, 40, 7),
+      custoPd: r.custoPd === null || r.custoPd === undefined || r.custoPd === "" ? null : inteiro(r.custoPd, 0, 40, 1),
+      custoPv: inteiro(r.custoPv, 0, 40, 0),
+      forcar: r.forcar && typeof r.forcar === "object" ? { pv: inteiro(r.forcar.pv, 0, 20, 2), passos: inteiro(r.forcar.passos, 1, 2, 1), alternativa: ["pv", "pavor", "componente"].indexOf(r.forcar.alternativa) >= 0 ? r.forcar.alternativa : "pv" } : null,
+      efeitos: efeitos,
+      referencias: lista(r.referencias).map(function (f) { var o = obj(f); return texto(o.fonte, 80) ? { fonte: texto(o.fonte, 80), pagina: texto(o.pagina, 20), nota: texto(o.nota, 300) } : null; }).filter(Boolean).slice(0, 8),
+      notas: texto(r.notas, 2000),
+      historico: lista(r.historico).map(function (h) { return texto(h, 300); }).slice(-30),
+      origem: texto(r.origem, 80), versao: inteiro(r.versao, 1, 9999, 1),
+    };
+  }
+  /* O bloco da ficha: rituais conhecidos (cópias), em andamento, ativos. */
+  function normalizarBloco(x) {
+    var b = obj(x);
+    var em = b.emAndamento && typeof b.emAndamento === "object" ? b.emAndamento : null;
+    return {
+      rituais: lista(b.rituais).map(normalizarEntrada).filter(Boolean).slice(0, 40),
+      emAndamento: em ? { id: texto(em.id, 80) || id(), ritual: texto(em.ritual, 80), etapa: inteiro(em.etapa, 0, 20, 0), alvos: lista(em.alvos).map(String).slice(0, 12), iniciado: texto(em.iniciado, 40), interrompido: em.interrompido === true, motivo: texto(em.motivo, 200), consumidos: lista(em.consumidos).map(String).slice(0, 10) } : null,
+      ativos: lista(b.ativos).map(function (a) { var o = obj(a); return o.id ? { id: texto(o.id, 80), ritual: texto(o.ritual, 120), alvos: lista(o.alvos).map(String).slice(0, 12), duracao: DURACOES[o.duracao] ? o.duracao : "cena", efeitos: lista(o.efeitos).map(function (z) { var q = obj(z); return { pid: texto(q.pid, 80), efeitoId: texto(q.efeitoId, 80), descricao: texto(q.descricao, 200) }; }).slice(0, 12), desde: texto(o.desde, 40) } : null; }).filter(Boolean).slice(0, 20),
+      historico: lista(b.historico).map(function (h) { var o = obj(h); return { quando: texto(o.quando, 40), texto: texto(o.texto, 400) }; }).slice(-60),
+    };
+  }
+  /* A parte da mesa: config, biblioteca do Mestre, pendências. */
+  function normalizarMesa(x) {
+    var p = obj(x);
+    return {
+      biblioteca: lista(p.biblioteca).map(normalizarEntrada).filter(Boolean).slice(0, 80),
+      pendentes: lista(p.pendentes).map(function (q) { var o = obj(q); return o.id ? { id: texto(o.id, 80), quem: texto(o.quem, 80), ritual: texto(o.ritual, 120), resultado: texto(o.resultado, 20), alvos: lista(o.alvos).map(String).slice(0, 12), texto: texto(o.texto, 600), estado: o.estado === "resolvido" ? "resolvido" : "pendente", resposta: texto(o.resposta, 600) } : null; }).filter(Boolean).slice(-30),
+      historico: lista(p.historico).map(function (h) { var o = obj(h); return { quando: texto(o.quando, 40), texto: texto(o.texto, 400) }; }).slice(-80),
+    };
+  }
+
+  /* O que a mesa do Mestre vê de cada ficha (vai no resumo). */
+  function resumo(b) {
+    var p = normalizarBloco(b.paranormal);
+    var em = p.emAndamento, rit = em ? p.rituais.filter(function (r) { return r.id === em.ritual; })[0] : null;
+    return {
+      rituais: p.rituais.slice(0, 12).map(function (r) { return { id: r.id, nome: r.nome, origem: r.origem }; }),
+      emAndamento: em ? { ritual: rit ? rit.nome : "?", etapa: em.etapa, total: rit ? Math.max(1, rit.etapas.length) : 1, interrompido: em.interrompido, motivo: em.motivo } : null,
+      ativos: p.ativos.map(function (a) { return { id: a.id, ritual: a.ritual, duracao: a.duracao, descricao: a.efeitos.map(function (z) { return z.descricao; }).join("; ") }; }),
+    };
+  }
+  function configDaMesa(e) { return normalizarConfig(e.modulos && e.modulos.paranormal); }
+  function dtDe(cfg, r) { return r.dt !== null ? r.dt : cfg.dts[r.complexidade]; }
+  function custoDe(cfg, r) { return r.custoPd !== null ? r.custoPd : cfg.custos[r.complexidade]; }
+  function forcarDe(cfg, r) { return r.forcar || (cfg.forcar.permitido ? cfg.forcar : null); }
+
+  /* A prévia mostrada antes de confirmar. */
+  function previa(e, b, ritual, opcoes) {
+    var cfg = configDaMesa(e), o = obj(opcoes);
+    var r = normalizarEntrada(ritual);
+    var problemas = [];
+    if (!cfg.ativo) problemas.push("O módulo paranormal experimental está desligado nesta campanha.");
+    if (r.classe !== "experimental") problemas.push(r.classe === "procedimento" ? "É um procedimento de missão: joga-se pela cena (desafio), não pela conjuração livre." : "Entrada de consulta: sem automação.");
+    var per = R().pericia(b, cfg.pericia);
+    var custo = custoDe(cfg, r);
+    var fz = o.forcar ? forcarDe(cfg, r) : null;
+    if (o.forcar && !fz) problemas.push("Forçar a conjuração não está habilitado.");
+    var pvForcar = fz && fz.alternativa === "pv" ? fz.pv : 0;
+    if (custo > b.recursos.pd.atual) problemas.push("PD insuficiente (" + b.recursos.pd.atual + "/" + custo + ").");
+    if (pvForcar + r.custoPv > b.recursos.pv.atual) problemas.push("PV insuficiente para o custo.");
+    var faltaComp = r.componentes.filter(function (c) { return c.item && !c.etapa && !lista(b.itens).some(function (i) { return i.id === c.item || i.nome === c.item; }); }).map(function (c) { return c.nome; });
+    if (faltaComp.length) problemas.push("Faltam componentes: " + faltaComp.join(", ") + ".");
+    if (fz && fz.alternativa === "componente" && !r.componentes.length) problemas.push("Forçar consumindo componente exige um componente no ritual.");
+    return {
+      ok: !problemas.length, problemas: problemas, ritual: r,
+      acao: r.modo === "elaborado" ? r.etapas.length + " etapa(s): " + r.etapas.map(function (t) { return t.nome + (t.acao ? " (" + t.acao + ")" : ""); }).join(" → ") : r.acao,
+      teste: K().ATRIBUTOS[cfg.atributo].nome + " + " + (per ? R().nomeDaPericia(b, per) : K().nomeDaPericia(b.perfilRegras, cfg.pericia, b.ambientacao)),
+      dt: dtDe(cfg, r), custoPd: custo, custoPv: r.custoPv + pvForcar,
+      forcar: fz ? (fz.alternativa === "pv" ? "+" + fz.passos + " passo por " + fz.pv + " PV" : fz.alternativa === "pavor" ? "+" + fz.passos + " passo, com risco de pavor na falha" : "+" + fz.passos + " passo consumindo um componente") : "",
+      alvo: ALVOS[r.alvo], duracao: DURACOES[r.duracao], componentes: r.componentes.map(function (c) { return c.nome + (c.consome ? " (consumido)" : ""); }),
+      selo: SELO,
+    };
+  }
+
+  /* ---------------------------------------------------------------
+     AS OPERAÇÕES (mesma porta, mesmo opId)
+     --------------------------------------------------------------- */
+  function ev(s, t, privado) { s.eventos.push({ texto: String(t), privado: !!privado }); }
+  function nome(fichas, pid) { return fichas[pid] ? fichas[pid].nome : "?"; }
+  function fichaDe(fichas, pid) { return fichas[pid] ? fichas[pid].bloco : null; }
+  function blocoP(b) { if (!b.paranormal || !b.paranormal.rituais) b.paranormal = normalizarBloco(b.paranormal); return b.paranormal; }
+  function histFicha(b, t) { var p = blocoP(b); p.historico.push({ quando: agora(), texto: String(t).slice(0, 400) }); p.historico = p.historico.slice(-60); }
+  function histMesa(e, t) { e.paranormal.historico.push({ quando: agora(), texto: String(t).slice(0, 400) }); e.paranormal.historico = e.paranormal.historico.slice(-80); ME().log(e, t); }
+  function rolarExpr(x, rolar) { return P() ? P().rolarExpr(x, rolar) : { total: Number(x) || 0, faces: [], expr: String(x) }; }
+
+  function garantir(e) { if (!e.paranormal || !Array.isArray(e.paranormal.biblioteca)) e.paranormal = normalizarMesa(e.paranormal); if (!e.modulos) e.modulos = {}; }
+  function OP(nome, fn, o) { ME().registrarOperacao(nome, function (e) { garantir(e); return fn.apply(null, arguments); }, o); }
+
+  if (ME()) {
+    ME().gancho("normalizar", function (v, b) { v.paranormal = normalizarMesa(b.paranormal); });
+    ME().gancho("vista", function (v, e, papel) {
+      garantir(e);
+      /* A biblioteca é do Mestre; quem joga vê a configuração e as próprias pendências. */
+      v.paranormal = { biblioteca: [], historico: e.paranormal.historico.slice(-20), pendentes: e.paranormal.pendentes.filter(function (q) { return lista(papel.pode).indexOf(q.quem) >= 0; }).map(function (q) { return { id: q.id, quem: q.quem, ritual: q.ritual, estado: q.estado, resposta: q.resposta }; }) };
+    });
+
+    OP("paranormalConfigurar", function (e, fichas, o, papel, rolar, s) {
+      e.modulos = e.modulos || {};
+      var antes = configDaMesa(e);
+      var novo = normalizarConfig(Object.assign({}, antes, obj(o.config), { dts: Object.assign({}, antes.dts, obj(obj(o.config).dts)), custos: Object.assign({}, antes.custos, obj(obj(o.config).custos)), forcar: Object.assign({}, antes.forcar, obj(obj(o.config).forcar)) }));
+      e.modulos.paranormal = novo;
+      var t = "Paranormal (experimental): " + (novo.ativo ? "ligado" : "desligado") + " · DT/custo " + ["simples", "intermediario", "complexo"].map(function (k) { return novo.dts[k] + "/" + novo.custos[k] + " PD"; }).join(", ") + (novo.forcar.permitido ? " · forçar: " + novo.forcar.alternativa : "") + ".";
+      if (antes.ativo && !novo.ativo) t += " Conjurações novas bloqueadas; rituais, histórico e efeitos ativos ficam (encerre os ativos à mão).";
+      histMesa(e, t); ev(s, t);
+    }, { mestre: true, semFicha: true, rev: true });
+
+    OP("ritualSalvar", function (e, fichas, o, papel, rolar, s) {
+      var r = normalizarEntrada(o.ritual);
+      if (!r) return { ok: false, motivo: "Dê um nome ao ritual." };
+      var i = e.paranormal.biblioteca.map(function (x) { return x.id; }).indexOf(r.id);
+      if (i >= 0) { r.versao = e.paranormal.biblioteca[i].versao + 1; r.historico = e.paranormal.biblioteca[i].historico.concat(["v" + r.versao + " salva em " + agora().slice(0, 10)]).slice(-30); e.paranormal.biblioteca[i] = r; }
+      else { r.historico = ["criada em " + agora().slice(0, 10)]; e.paranormal.biblioteca.push(r); }
+      ev(s, "Biblioteca: " + r.nome + " (" + CLASSES[r.classe] + ").", true);
+      s.resultado.ritual = r.id;
+    }, { mestre: true, semFicha: true });
+    OP("ritualRemover", function (e, fichas, o, papel, rolar, s) {
+      e.paranormal.biblioteca = e.paranormal.biblioteca.filter(function (x) { return x.id !== o.id; });
+      ev(s, "Removido da biblioteca (as cópias nas fichas ficam).", true);
+    }, { mestre: true, semFicha: true });
+    /* Ensinar: uma CÓPIA vai para a ficha (exporta junto; a biblioteca pode mudar depois). */
+    OP("ritualEnsinar", function (e, fichas, o, papel, rolar, s) {
+      var r = e.paranormal.biblioteca.filter(function (x) { return x.id === o.ritual; })[0];
+      if (!r) return { ok: false, motivo: "Ritual não encontrado na biblioteca." };
+      var para = lista(o.para).map(String).filter(function (pid) { return fichas[pid]; });
+      if (!para.length) return { ok: false, motivo: "Para quem?" };
+      para.forEach(function (pid) {
+        var p = blocoP(fichas[pid].bloco);
+        var copia = normalizarEntrada(Object.assign(copiar(r), { origem: r.id }));
+        p.rituais = p.rituais.filter(function (x) { return x.origem !== r.id; }).concat([copia]);
+        histFicha(fichas[pid].bloco, "Aprendeu " + r.nome + " (v" + r.versao + ").");
+      });
+      ev(s, r.nome + " ensinado a " + para.map(function (x) { return nome(fichas, x); }).join(", ") + ".");
+      histMesa(e, r.nome + " ensinado a " + para.map(function (x) { return nome(fichas, x); }).join(", ") + ".");
+    }, { mestre: true });
+
+    /* CONJURAR (imediato) ou COMEÇAR (elaborado). Sem `confirmar`: só a prévia. */
+    OP("conjurar", function (e, fichas, o, papel, rolar, s, ctx) {
+      var pid = String(o.quem || ""), b = fichaDe(fichas, pid);
+      if (!b || !ME().podeAgir(papel, pid)) return { ok: false, motivo: "Você não conduz este personagem." };
+      var p = blocoP(b);
+      var r = p.rituais.filter(function (x) { return x.id === o.ritual; })[0];
+      if (!r) return { ok: false, motivo: "Ritual não encontrado na ficha." };
+      var pv = previa(e, b, r, { forcar: !!o.forcar });
+      s.resultado.previa = pv;
+      if (!pv.ok) return { ok: false, motivo: pv.problemas.join(" ") };
+      if (o.confirmar !== true) { ev(s, "Prévia: " + r.nome + " — " + pv.teste + " DT " + pv.dt + ", " + pv.custoPd + " PD" + (pv.custoPv ? " e " + pv.custoPv + " PV" : "") + "."); return; }
+      if (r.modo === "elaborado") {
+        if (p.emAndamento && !p.emAndamento.interrompido) return { ok: false, motivo: "Já há um ritual em andamento: conclua ou interrompa." };
+        p.emAndamento = { id: id(), ritual: r.id, etapa: 0, alvos: lista(o.alvos).map(String), iniciado: agora(), interrompido: false, motivo: "", consumidos: [] };
+        histFicha(b, "Começa " + r.nome + " (elaborado, " + r.etapas.length + " etapa(s)).");
+        ev(s, nome(fichas, pid) + " começa " + r.nome + ": etapa 1 de " + Math.max(1, r.etapas.length) + " — " + ((r.etapas[0] || {}).nome || "preparo") + ".");
+        ME().log(e, nome(fichas, pid) + " começa o ritual " + r.nome + ".");
+        return;
+      }
+      return executar(e, fichas, o, papel, rolar, s, ctx, b, pid, r, lista(o.alvos).map(String));
+    });
+    OP("ritualEtapa", function (e, fichas, o, papel, rolar, s, ctx) {
+      var pid = String(o.quem || ""), b = fichaDe(fichas, pid);
+      if (!b || !ME().podeAgir(papel, pid)) return { ok: false, motivo: "Você não conduz este personagem." };
+      var p = blocoP(b), em = p.emAndamento;
+      if (!em) return { ok: false, motivo: "Nenhum ritual em andamento." };
+      if (em.interrompido) return { ok: false, motivo: "O ritual foi interrompido: recomece." };
+      if (!configDaMesa(e).ativo) return { ok: false, motivo: "O módulo está desligado: o Mestre decide como encerrar o ritual em andamento." };
+      var r = p.rituais.filter(function (x) { return x.id === em.ritual; })[0];
+      if (!r) return { ok: false, motivo: "Ritual não encontrado." };
+      var total = Math.max(1, r.etapas.length);
+      if (o.etapa !== undefined && inteiro(o.etapa, 0, 20, -1) !== em.etapa) return { ok: false, motivo: "Fora de ordem: a etapa agora é a " + (em.etapa + 1) + "." };
+      /* Componentes daquela etapa. */
+      var falta = r.componentes.filter(function (c) { return c.etapa === em.etapa + 1 && c.item && !lista(b.itens).some(function (i) { return i.id === c.item || i.nome === c.item; }); });
+      if (falta.length) return { ok: false, motivo: "Falta o componente: " + falta.map(function (c) { return c.nome; }).join(", ") + "." };
+      r.componentes.filter(function (c) { return c.etapa === em.etapa + 1 && c.consome; }).forEach(function (c) { consumir(b, c); em.consumidos.push(c.nome); });
+      if (r.testePorEtapa && em.etapa < total - 1) {
+        return ME().OPERACOES.teste(e, fichas, { quem: pid, pedido: pedidoDoRitual(e, b, r, null), contexto: { proc: { tipo: "ritualEtapa", ritual: r.id, etapa: em.etapa } }, confirmar: o.confirmar }, papel, rolar, s, ctx);
+      }
+      if (em.etapa < total - 1) {
+        em.etapa++;
+        ev(s, nome(fichas, pid) + ": etapa " + em.etapa + " de " + total + " feita (" + ((r.etapas[em.etapa - 1] || {}).nome || "") + "). Próxima: " + ((r.etapas[em.etapa] || {}).nome || "a execução") + ".");
+        return;
+      }
+      /* Última etapa: a execução, com o custo e o teste. */
+      if (o.confirmar !== true) { var pv = previa(e, b, r, { forcar: !!o.forcar }); s.resultado.previa = pv; ev(s, "Prévia da execução final: DT " + pv.dt + ", " + pv.custoPd + " PD."); return; }
+      p.emAndamento = null;
+      return executar(e, fichas, o, papel, rolar, s, ctx, b, pid, r, em.alvos);
+    });
+    OP("ritualInterromper", function (e, fichas, o, papel, rolar, s) {
+      var pid = String(o.quem || o.personagem || ""), b = fichaDe(fichas, pid);
+      if (!b || !ME().podeAgir(papel, pid)) return { ok: false, motivo: "Sem permissão." };
+      var em = blocoP(b).emAndamento;
+      if (!em) return { ok: false, motivo: "Nenhum ritual em andamento." };
+      interromper(b, texto(o.motivo, 200) || (papel.mestre ? "interrompido pelo Mestre" : "interrompido por quem conjura"), s, nome(fichas, pid));
+      if (o.descartar) blocoP(b).emAndamento = null;
+    });
+    OP("efeitoRitualEncerrar", function (e, fichas, o, papel, rolar, s) {
+      var pid = String(o.personagem || ""), b = fichaDe(fichas, pid);
+      if (!b) return { ok: false, motivo: "Personagem não encontrado." };
+      var p = blocoP(b);
+      var a = p.ativos.filter(function (x) { return x.id === o.efeito; })[0];
+      if (!a) return { ok: false, motivo: "Efeito não encontrado." };
+      a.efeitos.forEach(function (z) { var bz = fichaDe(fichas, z.pid); if (bz) bz.efeitos = bz.efeitos.filter(function (x) { return x.id !== z.efeitoId; }); });
+      p.ativos = p.ativos.filter(function (x) { return x.id !== a.id; });
+      var t = a.ritual + ": efeito " + (o.como === "finalizar" ? "finalizado" : "encerrado") + " pelo Mestre.";
+      histFicha(b, t); histMesa(e, nome(fichas, pid) + " · " + t); ev(s, t);
+    }, { mestre: true });
+    OP("pendenteRitual", function (e, fichas, o, papel, rolar, s) {
+      var q = e.paranormal.pendentes.filter(function (x) { return x.id === o.id; })[0];
+      if (!q || q.estado !== "pendente") return { ok: false, motivo: "Pendência não encontrada." };
+      q.estado = "resolvido"; q.resposta = texto(o.resposta, 600) || "Resolvido pelo Mestre.";
+      histMesa(e, "Ritual " + q.ritual + " (" + q.resultado + "): " + q.resposta);
+      ev(s, "Pendência resolvida.");
+    }, { mestre: true });
+  }
+
+  function consumir(b, c) {
+    if (!c.item) return;
+    var it = lista(b.itens).filter(function (i) { return i.id === c.item || i.nome === c.item; })[0];
+    if (!it) return;
+    if (it.quantidade !== null && it.quantidade > 1) it.quantidade--;
+    else b.itens = b.itens.filter(function (i) { return i !== it; });
+  }
+  function interromper(b, motivo, s, nomePc) {
+    var em = blocoP(b).emAndamento;
+    if (!em || em.interrompido) return;
+    em.interrompido = true; em.motivo = motivo;
+    histFicha(b, "Ritual interrompido (" + motivo + "); nenhum custo de execução foi cobrado" + (em.consumidos.length ? "; componentes já gastos: " + em.consumidos.join(", ") : "") + ".");
+    if (s) ev(s, (nomePc || "") + ": ritual interrompido (" + motivo + ").");
+  }
+  /* Dano em quem conduz um ritual elaborado que se interrompe com dano. */
+  if (M()) {
+    var aplicarDanoOriginal = M().aplicarDano;
+    M().aplicarDano = function (b, o) {
+      var r = aplicarDanoOriginal.apply(null, arguments);
+      try {
+        var em = b && b.paranormal && b.paranormal.emAndamento;
+        if (em && !em.interrompido && Number(obj(o).valor) > 0) {
+          var rit = lista(b.paranormal.rituais).filter(function (x) { return x.id === em.ritual; })[0];
+          if (rit && rit.interrompeComDano) { interromper(b, "sofreu dano", null); r.push({ texto: "O ritual em andamento foi interrompido pelo dano.", privado: false }); }
+        }
+      } catch (erro) { /* sem ritual, nada */ }
+      return r;
+    };
+  }
+
+  function pedidoDoRitual(e, b, r, forcar) {
+    var cfg = configDaMesa(e);
+    var per = R().pericia(b, cfg.pericia);
+    var passos = [];
+    if (forcar) { var fz = forcarDe(cfg, r); passos.push({ alvo: forcar.dado === "atributo" ? "atributo" : "pericia", n: fz.passos, fonte: "Forçar a conjuração (" + SELO + ")" }); }
+    return { atributo: cfg.atributo, pericia: per ? per.id : "", dt: dtDe(cfg, r), rotulo: r.nome + " (" + COMPLEXIDADES[r.complexidade].toLowerCase() + ")", passos: passos };
+  }
+  /* A execução: cobra UMA vez (também na falha) e rola; os efeitos saem
+     depois do teste valer (escolhas pós-rolagem incluídas). */
+  function executar(e, fichas, o, papel, rolar, s, ctx, b, pid, r, alvos) {
+    var cfg = configDaMesa(e);
+    var fz = o.forcar ? forcarDe(cfg, r) : null;
+    var pedido = pedidoDoRitual(e, b, r, fz ? obj(o.forcar) : null);
+    var mt = M().montar(b, pedido, { permitir20: false });
+    if (!mt.ok) return mt;
+    var custos = { pd: custoDe(cfg, r), pv: r.custoPv + (fz && fz.alternativa === "pv" ? fz.pv : 0) };
+    if (custos.pd > b.recursos.pd.atual || custos.pv > b.recursos.pv.atual) return { ok: false, motivo: "Custo não pode ser pago." };
+    if (fz && fz.alternativa === "componente") { var c = r.componentes[0]; if (c) consumir(b, c); }
+    M().pagarCustos(b, custos);
+    r.componentes.filter(function (c) { return c.consome && !c.etapa; }).forEach(function (c) { consumir(b, c); });
+    var execId = id();
+    histFicha(b, "Conjura " + r.nome + ": custo " + custos.pd + " PD" + (custos.pv ? " e " + custos.pv + " PV" : "") + " (cobrado na confirmação).");
+    ev(s, nome(fichas, pid) + " conjura " + r.nome + " — paga " + custos.pd + " PD" + (custos.pv ? " e " + custos.pv + " PV" : "") + ".");
+    return ME().OPERACOES.teste(e, fichas, { quem: pid, pedido: pedido, contexto: { proc: { tipo: "ritual", ritual: r.id, alvos: alvos, execucao: execId, pavorNaFalha: !!(fz && fz.alternativa === "pavor") } }, confirmar: o.confirmar === true && o.aguardar !== true }, papel, rolar, s, ctx);
+  }
+
+  /* O teste VALEU: os efeitos do resultado. */
+  if (ME()) ME().gancho("aoFinalizar", function (e, fichas, t, res, s, rolar) {
+    var cx = obj(t.contexto.proc);
+    if (cx.tipo === "ritual" || cx.tipo === "ritualEtapa") garantir(e);
+    var b = fichaDe(fichas, t.quem);
+    if (!b) return;
+    if (cx.tipo === "ritualEtapa") {
+      var em = blocoP(b).emAndamento;
+      if (!em) return;
+      if (res.sucesso) { em.etapa++; ev(s, t.nome + ": etapa " + em.etapa + " feita."); }
+      else interromper(b, "falhou na etapa " + (em.etapa + 1), s, t.nome);
+      return;
+    }
+    if (cx.tipo !== "ritual") return;
+    var r = blocoP(b).rituais.filter(function (x) { return x.id === cx.ritual; })[0];
+    if (!r) return;
+    var chave = res.critico ? "critico" : res.falhaCritica ? "falhaCritica" : res.sucesso ? "normal" : "falha";
+    var efeitos = r.efeitos[chave];
+    if (chave === "critico" && !efeitos.length) efeitos = r.efeitos.normal; /* sem crítico próprio, vale o normal — e o Mestre é avisado */
+    var nomeRes = { normal: "sucesso", critico: "crítico", falha: "falha", falhaCritica: "falha crítica" }[chave];
+    if (cx.pavorNaFalha && res.sucesso === false) M().darPavor(b).forEach(function (y) { ev(s, t.nome + " (forçou com risco de pavor): " + y.texto); });
+    histFicha(b, r.nome + ": " + nomeRes + " (" + res.total + " vs DT " + res.dt + ").");
+    if (!efeitos.length) {
+      pendente(e, t.quem, r, chave, cx.alvos, "Efeito de " + nomeRes + " não configurado: o Mestre decide.");
+      ev(s, r.nome + ": " + nomeRes + " — sem efeito configurado; o Mestre decide (nada é inventado).");
+      return;
+    }
+    if (chave === "critico" && !r.efeitos.critico.length) pendente(e, t.quem, r, chave, cx.alvos, "Crítico sem efeito próprio: aplicado o efeito normal; o Mestre pode acrescentar algo.");
+    var ativo = { id: id(), ritual: r.nome, alvos: cx.alvos.slice(), duracao: r.duracao, efeitos: [], desde: agora() };
+    efeitos.forEach(function (ef) { aplicarEfeito(e, fichas, t.quem, r, ef, cx.alvos, rolar, s, ativo, chave); });
+    if (ativo.efeitos.length && r.duracao !== "instantaneo") blocoP(b).ativos.push(ativo);
+  });
+  function pendente(e, quem, r, resultado, alvos, txt) {
+    e.paranormal.pendentes.push({ id: id(), quem: quem, ritual: r.nome, resultado: resultado, alvos: lista(alvos).slice(), texto: txt, estado: "pendente", resposta: "" });
+    e.paranormal.pendentes = e.paranormal.pendentes.slice(-30);
+  }
+  /* Alvos: personagens da mesa (ids) ou participantes do combate (npc-…). */
+  function blocosDosAlvos(e, fichas, quem, ef, alvos) {
+    if (ef.quem === "proprio" || !lista(alvos).length) return [{ pid: quem, b: fichaDe(fichas, quem), nome: nome(fichas, quem) }];
+    return lista(alvos).map(function (a) {
+      if (fichas[a]) return { pid: a, b: fichaDe(fichas, a), nome: nome(fichas, a) };
+      var pa = ME().participante(e, a);
+      return pa ? { pid: pa.tipo === "pc" ? pa.personagemId : "", b: ME().blocoDoAtor(e, fichas, pa), nome: pa.nome } : null;
+    }).filter(function (x) { return x && x.b; });
+  }
+  var EXPIRA_DE = { instantaneo: "teste", rodada: "rodada", cena: "cena", missao: "missao", permanente: "permanente" };
+  function aplicarEfeito(e, fichas, quem, r, ef, alvos, rolar, s, ativo, chave) {
+    if (ef.tipo === "mestre") { pendente(e, quem, r, chave, alvos, ef.texto || "O Mestre narra o efeito."); ev(s, r.nome + ": " + (ef.texto || "efeito narrado pelo Mestre") + " — aguardando o Mestre."); return; }
+    blocosDosAlvos(e, fichas, quem, ef, alvos).forEach(function (a) {
+      if (ef.tipo === "dano") { var d = rolarExpr(ef.valor, rolar); M().aplicarDano(a.b, { valor: d.total, tipo: ef.danoTipo, externo: true }).forEach(function (y) { ev(s, a.nome + " (" + r.nome + ", " + (d.faces.length ? d.expr + " [" + d.faces.join(", ") + "]" : d.total) + "): " + y.texto); }); return; }
+      if (ef.tipo === "cura") { var c = rolarExpr(ef.valor, rolar); var n = M().curar(a.b, ef.recurso, c.total); ev(s, a.nome + " recupera " + n + " " + ef.recurso.toUpperCase() + " (" + r.nome + ")."); return; }
+      if (ef.tipo === "condicao" && ef.condicao) { if (ef.condicao === "perdeAcao") a.b.estado.perdeAcao = 2; else a.b.estado[ef.condicao] = true; ev(s, a.nome + ": " + (R().NOMES_CONDICAO[ef.condicao] || ef.condicao) + " (" + r.nome + ")."); return; }
+      if (ef.tipo === "passo" || ef.tipo === "marcador") {
+        var eff = R().normalizarEfeito({ tipo: ef.alvoDado === "atributo" ? "passoAtributo" : ef.alvoDado === "todos" ? "passoTodos" : "passoPericia", alvo: ef.chave, n: ef.n, expira: EXPIRA_DE[ef.duracao || r.duracao] || "cena", fonte: r.nome + " (ritual experimental)", d20: ef.d20 });
+        if (eff) { a.b.efeitos.push(eff); if (ativo && a.pid) ativo.efeitos.push({ pid: a.pid, efeitoId: eff.id, descricao: (ef.n > 0 ? "+" : "") + ef.n + " passo" + (ef.chave ? " em " + ef.chave : "") + (ef.d20 ? " (pode chegar a d20)" : "") }); ev(s, a.nome + ": " + (ef.n > 0 ? "+" : "") + ef.n + " passo" + (ef.chave ? " em " + ef.chave : "") + " (" + r.nome + ")."); }
+        return;
+      }
+      if (ef.tipo === "dado" && ef.faces) { a.b.estado.reservas.push({ id: id(), faces: ef.faces, fonte: r.nome + " (ritual)", expira: EXPIRA_DE[ef.duracao || r.duracao] || "cena", alvo: ef.texto || "" }); ev(s, a.nome + " guarda +d" + ef.faces + " (" + r.nome + ")."); }
+    });
+  }
+
+  global.RAMAOrdem2Paranormal = {
+    SELO: SELO, ELEMENTOS: ELEMENTOS, TIPOS: TIPOS, CLASSES: CLASSES, COMPLEXIDADES: COMPLEXIDADES, MODOS: MODOS, DURACOES: DURACOES, ALVOS: ALVOS, TIPOS_EFEITO: TIPOS_EFEITO, RESULTADOS: RESULTADOS, CONDICOES: CONDICOES,
+    configPadrao: configPadrao, normalizarConfig: normalizarConfig, configDaMesa: configDaMesa,
+    normalizarEntrada: normalizarEntrada, normalizarBloco: normalizarBloco, normalizarMesa: normalizarMesa, normalizarEfeito: normalizarEfeito,
+    previa: previa, dtDe: dtDe, custoDe: custoDe, resumo: resumo,
+  };
+})(typeof window !== "undefined" ? window : globalThis);
+/* <<< js/ordem2/paranormal.js */

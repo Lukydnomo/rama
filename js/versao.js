@@ -118,6 +118,24 @@
 
   var CHANGELOG = [
     {
+      versao: "9.2.0",
+      codinome: "SIGILO",
+      data: "14/11/2026",
+      mudancas: {
+        "Adicionado": [
+          "A ficha de Ordem II reorganizada no estilo da ficha do livro: nome grande, a etiqueta do perfil, a ocupação ou vocação e a caixa de NÍVEL no topo; PV e PD em quadradinhos; a aba Ficha com ATRIBUTOS e PERÍCIAS (\"NOME [d] + [d] ATRIBUTO\", a linha inteira rola) à esquerda, o retrato no centro e as HABILIDADES à direita, com o título em etiqueta e os números em destaque. No celular, uma coluna.",
+          "Evolução de Ordem II (Experimental — regra do R.A.M.A.): nível de 1 a 10, patamar à parte e NEX só como anotação. No modo livre, o Mestre define o nível. No modo por marcos, o Mestre confirma um nível e quem joga escolhe uma melhoria (+1 passo num atributo ou perícia até d12, +2 PV, +2 PD ou uma habilidade que o Mestre aprova), sempre com antes e depois.",
+          "As melhorias ficam registradas à parte dos valores impressos, com a procedência; desfazer tira só aquela operação (dependências primeiro) e nunca devolve dano antigo. Atualizar uma ficha pronta só com prévia e confirmação, e os registros são preservados.",
+          "Módulo paranormal experimental de Ordem II, desligado por padrão: a biblioteca do Mestre de rituais, poderes e objetos (experimental, procedimento de missão ou consulta), ensinar aos personagens e conjurar com prévia de ação, custo, DT, alvo e pré-requisitos. Rituais imediatos e elaborados (etapas, componentes, ordem), efeitos separados para sucesso, crítico, falha e falha crítica, e forçar a conjuração como opção.",
+          "Sem campanha, a própria ficha liga o módulo, cria rituais e muda o modo de evolução.",
+        ],
+        "Corrigido": [
+          "Habilidades de Ordem II ganhas por evolução somem só quando o registro dela é desfeito; as impressas nunca são tocadas.",
+        ],
+        "Técnico": ["Novos js/ordem2/evolucao.js, js/ordem2/paranormal.js e js/ordem2/telas/o2-paranormal.js; os dois motores entram no Ordem2.gs (8 arquivos). Custos cobrados uma vez na confirmação, com o mesmo opId sem cobrar de novo; o resumo da mesa leva a evolução e os rituais; nenhuma aba nova."],
+      },
+    },
+    {
       versao: "9.1.0",
       codinome: "LAMPARINA",
       data: "14/11/2026",

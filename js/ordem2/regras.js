@@ -90,6 +90,10 @@
       historico: [],
       local: null,
       operacoes: [],
+      /* v9.2: registros de evolução (separados dos impressos) e o bloco
+         paranormal experimental (rituais conhecidos, em andamento, ativos). */
+      evolucao: { nex: "", pendente: null, registros: [] },
+      paranormal: { rituais: [], emAndamento: null, ativos: [], historico: [] },
     };
   }
 
@@ -135,6 +139,7 @@
       texto: texto(h.texto || (cat ? cat.texto : ""), 1200),
       param: obj(copiar(h.param)),
       personalizada: !cat,
+      origemEvolucao: texto(h.origemEvolucao, 80),
       estado: {
         espacos: inteiro(e.espacos, 0, 20),
         marcadores: inteiro(e.marcadores, 0, 20),
@@ -268,6 +273,8 @@
     v.historico = lista(b.historico).map(function (h) { var o = obj(h); return { quando: texto(o.quando, 40), tipo: texto(o.tipo, 30), texto: texto(o.texto, 400), corrigido: o.corrigido === true }; }).slice(-80);
     v.local = b.local && typeof b.local === "object" ? (global.RAMAOrdem2Mesa ? global.RAMAOrdem2Mesa.normalizar(b.local) : copiar(b.local)) : null;
     v.operacoes = lista(b.operacoes).map(function (x) { return texto(x, 80); }).filter(Boolean).slice(-MAX_OPS);
+    v.evolucao = global.RAMAOrdem2Evolucao ? global.RAMAOrdem2Evolucao.normalizar(b.evolucao) : (b.evolucao && typeof b.evolucao === "object" ? copiar(b.evolucao) : v.evolucao);
+    v.paranormal = global.RAMAOrdem2Paranormal ? global.RAMAOrdem2Paranormal.normalizarBloco(b.paranormal) : (b.paranormal && typeof b.paranormal === "object" ? copiar(b.paranormal) : v.paranormal);
     /* Atual nunca acima do máximo efetivo. */
     v.recursos.pv.atual = Math.min(v.recursos.pv.atual, pvMax(v));
     v.recursos.pd.atual = Math.min(v.recursos.pd.atual, pdMax(v));
@@ -333,14 +340,20 @@
     });
     return { n: n, d20: d20 };
   }
+  /* Evolução (v9.2): os passos dos registros vivos entram como passos
+     permanentes — o valor impresso em `base` não muda. */
+  function EV() { return global.RAMAOrdem2Evolucao; }
   function dadoDoAtributo(b, chave) {
     var e = passosDeEfeitos(b, "passoAtributo", chave);
-    return passoDado(b.base.atributos[chave] || 6, e.n, e.d20);
+    var base = b.evolucao && EV() ? EV().permanenteAtributo(b, chave) : (b.base.atributos[chave] || 6);
+    if (b.base.atributos[chave] === 20) base = 20;
+    return passoDado(base, e.n, e.d20);
   }
   function dadoDaPericia(b, p) {
     if (!p) return 4;
     var e = passosDeEfeitos(b, "passoPericia", p.chave);
-    return passoDado(p.dado, e.n + passosDeItens(b, p.chave), e.d20);
+    var base = b.evolucao && EV() && p.dado !== 20 ? EV().permanentePericia(b, p) : p.dado;
+    return passoDado(base, e.n + passosDeItens(b, p.chave), e.d20);
   }
 
   /* Modificadores NUMÉRICOS de lesões e traumas (ver DIVERGENCIAS). */
@@ -361,12 +374,12 @@
   }
 
   function pvMax(b) {
-    var n = b.recursos.pv.max;
+    var n = b.recursos.pv.max + (b.evolucao && EV() ? EV().extra(b, "pv") : 0);
     lista(b.estado && b.estado.lesoes).forEach(function (l) { if (l.ref === "laceracao") n -= 2; });
     return Math.max(1, n);
   }
   function pdMax(b) {
-    var n = b.recursos.pd.max;
+    var n = b.recursos.pd.max + (b.evolucao && EV() ? EV().extra(b, "pd") : 0);
     lista(b.estado && b.estado.traumas).forEach(function (l) { if (l.ref === "chaga" && !l.curado) n -= 2; });
     return Math.max(1, n);
   }
@@ -499,6 +512,8 @@
       lesoes: b.estado.lesoes.length,
       traumas: b.estado.traumas.filter(function (t) { return !t.curado; }).length,
       preset: b.procedencia ? b.procedencia.preset : "",
+      evolucao: global.RAMAOrdem2Evolucao ? global.RAMAOrdem2Evolucao.resumo(b) : null,
+      paranormal: global.RAMAOrdem2Paranormal ? global.RAMAOrdem2Paranormal.resumo(b) : null,
     };
   }
 

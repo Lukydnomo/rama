@@ -1,5 +1,17 @@
 # O banco
 
+## Ordem Paranormal RPG II · evolução e paranormal — v9.2
+
+Nenhuma aba nova (**`setupRama()` não é necessário**). `CAMPANHA_ORDEM2.dadosJson`
+ganha `modulos` (`evolucao`: modo, PV/PD por escolha, teto; `paranormal`:
+ativo, atributo, perícia, DTs, custos, forçar) e `paranormal` (biblioteca do
+Mestre, pendências, histórico). O bloco `ordem2` da ficha ganha `evolucao`
+(`nex`, `pendente`, `registros` com os ganhos — separados dos valores impressos
+em `base`) e `paranormal` (`rituais` copiados da biblioteca, `emAndamento`,
+`ativos`, `historico`); habilidades ganhas por evolução levam
+`origemEvolucao`. A projeção (`resumoParaMesa`) leva o resumo dos dois. Fichas
+antigas normalizam com os blocos vazios (nada migra nem se perde).
+
 ## Ordem Paranormal RPG II · procedimentos — v9.1
 
 Nenhuma aba nova (**`setupRama()` não é necessário**). `CAMPANHA_ORDEM2.dadosJson`

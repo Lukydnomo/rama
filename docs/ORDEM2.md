@@ -427,3 +427,109 @@ em `CAMPANHA_ORDEM2.dadosJson`). Site: `js/ordem2/` (inclui `ameacas.js`,
 `js/paginas/homebrew.js`, `js/paginas/homebrew-criatura-sistemas.js`,
 `js/paginas/catalogo.js`, `js/versao.js` e as páginas `personagens/`, `ficha/`,
 `campanha/`, `catalogo/`, `homebrew/`.
+
+## Etapa 3 — evolução e paranormal (v9.2)
+
+Dois módulos **opcionais**, com o selo "Experimental — regra do R.A.M.A.".
+Nenhuma das propostas abaixo é chamada de regra publicada; nada vem de Ordem I
+(catálogo, círculos, afinidade, custos, NEX).
+
+### Fontes desta etapa
+
+- Alpha pp. 14–16 e Beta pp. 6–8: nível, patamar, aquisição de habilidades.
+- Beta p. 2: o sistema paranormal é anunciado (rituais, poderes, objetos
+  amaldiçoados) e **não** está nos playtests.
+- Beta pp. 60–71: a gruta (runas, chama) — procedimento de aventura, não modo
+  geral de conjurar.
+
+### Onde mora (v9.2)
+
+| Parte | Arquivo |
+|---|---|
+| Evolução (motor) | `js/ordem2/evolucao.js` → `RAMAOrdem2Evolucao` |
+| Paranormal (motor) | `js/ordem2/paranormal.js` → `RAMAOrdem2Paranormal` |
+| Telas (ficha e Mestre) | `js/ordem2/telas/o2-paranormal.js` → `RAMAOrdem2ParanormalTela`, `RAMASecaoOrdem2Paranormal` |
+| Ficha no estilo do livro | `js/ordem2/telas/ficha-o2.js`, `css/ordem2.css`, `css/modern20/ordem2.css` |
+| Servidor | os dois motores copiados em `backend/Ordem2.gs` (8 arquivos) |
+
+### A ficha no estilo do livro
+
+A organização das fichas de Val (Alpha) e Rhiona (Beta): nome grande; a
+etiqueta do perfil · ocupação/vocação · a caixa de NÍVEL; PV e PD em
+quadradinhos (o número escrito ao lado); a aba **Ficha** (antes "Perícias") com
+ATRIBUTOS e PERÍCIAS ("NOME [d] + [d] ATRIBUTO", a linha inteira rola) à
+esquerda, o retrato e "Nível e evolução" no centro, HABILIDADES (título em
+etiqueta, números em destaque) à direita. Acento verde do tema
+(`--cor-verde`); estado sempre escrito, nunca só cor. Celular: uma coluna
+(retrato pequeno, atributos, perícias com o atributo abreviado, habilidades).
+A aba **Paranormal** entra depois de Habilidades.
+
+### Cobertura — confirmado, inferido, experimental
+
+**Confirmado (o texto diz):**
+
+| Regra | Fonte | Teste |
+|---|---|---|
+| Nível de 1 a 10 | Alpha p. 15; Beta p. 8 | etapa3 "Evolução · modo livre e por marcos" (subir do 10 recusado) |
+| A ficha começa com as habilidades de perfil e ocupação/vocação; ganha outras ao subir ou treinar | Alpha p. 15; Beta p. 8 | etapa3 "O que o texto diz" (presets sem evolução inferida) |
+| d20 só com influência paranormal | Alpha p. 16; Beta p. 8 | etapa3 (teto d12 na melhoria; d20 só de efeito que permite) |
+| O sistema paranormal não está nos playtests | Beta p. 2 | etapa3 "Paranormal · desligado por padrão" |
+| A gruta é um procedimento (runas → chama) | Beta pp. 60–71 | etapa3 "A gruta da etapa 2 continua jogável sem conjuração livre" |
+
+**Inferido (lido nas entrelinhas, com o nome):** patamar é campo à parte do
+nível (os textos não ligam um ao outro); NEX não aparece nos playtests, então
+fica só como anotação; a classificação de um item no compêndio e o ritual de um
+handout não provam custo nem modo geral de conjuração.
+
+**Experimental (proposta do R.A.M.A., configurável):**
+
+| Proposta | Padrão | Teste |
+|---|---|---|
+| Modo livre (o Mestre define o nível; registra sem ganhos) | ligado | etapa3 "Evolução · modo livre e por marcos" |
+| Por marcos: o Mestre confirma um nível; quem joga escolhe UMA melhoria — +1 passo em atributo/perícia (até d12, sem d20), +2 PV máx., +2 PD máx. ou habilidade aprovada | desligado | idem; backend (opId repetido = um nível só) |
+| Melhorias em registros separados dos valores impressos; máximo maior preserva os pontos atuais | — | etapa3 + navegador (PD 12/12 → 12/14) |
+| Desfazer só a operação, dependências primeiro; nunca devolve dano antigo | — | etapa3 "desfazer só a operação, com dependências" |
+| Atualizar do preset só com prévia e confirmação, registros preservados | — | etapa3 |
+| Módulo paranormal desligado por padrão | desligado | etapa3; backend |
+| Teste Mente + Ocultismo/Bruxaria; DT/custo simples 7/1, intermediário 10/3, complexo 13/5 PD (campanha e ritual mudam) | — | etapa3 "prévia, custo único…" |
+| Imediato consome a ação; elaborado com etapas, componentes e ordem, teste na execução final | — | etapa3 "elaborado"; navegador |
+| Custo cobrado UMA vez na confirmação, também na falha; repetir o opId não cobra de novo | — | etapa3; backend (`opRit`) |
+| Efeitos separados para sucesso, crítico, falha e falha crítica; sem efeito configurado vai para o Mestre | — | etapa3 |
+| Forçar: 2 PV por +1 passo, uma vez, recusado se não puder pagar; pavor ou componente como alternativa (nunca dois) | desligado | etapa3 "forçar" |
+| Desligar bloqueia conjurações novas e preserva rituais, histórico e efeitos ativos | — | etapa3 "desligar sem perder dados" |
+| Três classes: experimental (conjurável), procedimento de missão, consulta | — | etapa3 "procedimento ≠ conjuração" |
+
+### Casos de validação
+
+- `testes/executar-ordem2-etapa3.js` — 78 verificações: subir e desfazer;
+  exportar/importar com evolução e ritual (ids novos); desligar sem perder
+  dados; conjurar com sucesso, falha e crítico; interromper o elaborado por
+  dano; forçar; a gruta sem conjuração livre; sessões Alpha (investigação +
+  ferramenta) e Beta (pavor, relação, lesão, encontro em fases), cada uma com o
+  módulo desligado e ligado; o resumo que a mesa do Mestre vê.
+- `testes/ordem2-backend.js` (dentro de `executar-backend.js`) — marcos com o
+  mesmo opId repetido (um nível, +2 PD uma vez); jogador não desfaz; outro
+  jogador não conjura; conjurar com o mesmo opId cobra uma vez; a biblioteca não
+  vai para o jogador; desligado bloqueia e preserva.
+- No navegador (servidor local, contas sintéticas): ficha local com "por
+  marcos", subir, escolher, desfazer; ritual criado, ensinado e conjurado; na
+  campanha, o Mestre configurou os dois módulos, criou um ritual elaborado,
+  ensinou, confirmou a subida; a jogadora escolheu +2 PD, fez as duas etapas e a
+  execução final (3 PD uma vez) e o Mestre encerrou o efeito ativo. Legacy e
+  Modern20; celular 375 px sem rolagem lateral; console limpo.
+
+### Lacunas das fontes
+
+Não há tabela de evolução, valores de patamar, custos de ritual, círculos,
+lista de rituais nem regras de objetos amaldiçoados nos playtests. Tudo isso
+fica no módulo experimental, configurável e com o selo — ou com o Mestre.
+
+### Publicar a v9.2
+
+Servidor: troque **Ordem2.gs** e crie uma versão nova da implantação.
+**`setupRama()` não é necessário** e `Ordem2Pacotes` não mudou. Site:
+`js/ordem2/evolucao.js`, `js/ordem2/paranormal.js`, `js/ordem2/regras.js`,
+`js/ordem2/telas/o2-paranormal.js` (novo), `js/ordem2/telas/ficha-o2.js`,
+`js/ordem2/telas/campanha-o2.js`, `js/sistemas.js`, `css/ordem2.css`,
+`css/modern20/ordem2.css`, `js/versao.js` e as páginas `ficha/`, `campanha/`,
+`personagens/`, `catalogo/`.

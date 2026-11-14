@@ -275,8 +275,9 @@
         ],
         blocoSuperior: "RAMASecaoOrdem2",
         abas: [
-          { chave: "geral",        rotulo: "Perícias",     secao: "RAMASecaoOrdem2", grupo: "jogo" },
+          { chave: "geral",        rotulo: "Ficha",        secao: "RAMASecaoOrdem2", grupo: "jogo" },
           { chave: "habilidades",  rotulo: "Habilidades",  secao: "RAMASecaoOrdem2Habilidades", grupo: "jogo" },
+          { chave: "paranormal",   rotulo: "Paranormal",   secao: "RAMASecaoOrdem2Paranormal", grupo: "jogo" },
           { chave: "investigacao", rotulo: "Investigação", secao: "RAMASecaoOrdem2Investigacao", grupo: "jogo" },
           { chave: "combate",      rotulo: "Combate",      secao: "RAMASecaoOrdem2Combate", grupo: "jogo" },
           { chave: "relacoes",     rotulo: "Relações",     secao: "RAMASecaoOrdem2Relacoes", grupo: "personagem" },

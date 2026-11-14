@@ -11,6 +11,38 @@
   permite o suplemento dono da ferramenta (desligar a mecânica com
   `estado.ativo: false` continua aceito). As leituras não mudam.
 
+## Ordem Paranormal RPG II · evolução e paranormal — v9.2
+
+Mesmas rotas (`ler_ordem2`, `ordem2_operar` com `opId`); novos tipos de
+`operacao`, todos "Experimental — regra do R.A.M.A.":
+
+- Evolução — Mestre: `evolucaoConfigurar {config: {modo: livre|marcos,
+  pvPorEscolha, pdPorEscolha, teto}}` (com `rev`), `definirNivel {personagem,
+  nivel, nota?}` (livre), `subirNivel {personagem}` (marcos; sem ficha de
+  campanha, `local: true`), `aprovarHabilidade {personagem, aprovar?}`,
+  `cancelarSubida {personagem}`, `desfazerEvolucao {personagem, registro}`
+  (recusa com a lista de `dependentes` quando um registro posterior depende
+  deste). Personagem: `escolherMelhoria {escolha: {tipo: atributo|pericia|pv|pd|
+  habilidade, chave?, habilidade?}}` (habilidade fica como proposta até o
+  Mestre aprovar), `nex {valor}` (só anotação).
+- Paranormal — Mestre: `paranormalConfigurar {config: {ativo, atributo, pericia,
+  dts, custos, forcar: {permitido, pv, passos, alternativa}}}` (com `rev`),
+  `ritualSalvar {ritual}` / `ritualRemover {id}` (biblioteca; `versao` sobe),
+  `ritualEnsinar {ritual, para: [pids]}` (cópia na ficha),
+  `efeitoRitualEncerrar {personagem, efeito, como?: "finalizar"}`,
+  `pendenteRitual {id, resposta}`. Personagem: `conjurar {ritual, alvos?,
+  forcar?: {dado}, confirmar?}` — sem `confirmar` devolve só
+  `resultado.previa` (ação, teste, DT, custo, alvo, problemas); elaborado
+  começa `emAndamento` —, `ritualEtapa {etapa, confirmar?, forcar?}` (ordem
+  conferida; a última etapa executa), `ritualInterromper {descartar?}`.
+- Custos cobrados uma vez na confirmação (também na falha); o mesmo `opId` não
+  cobra de novo. Recusas: módulo desligado, entrada de procedimento/consulta,
+  PD/PV insuficientes, componente faltando, fora de ordem.
+- `ler_ordem2`: o jogador recebe `vista.paranormal` sem a biblioteca (só as
+  próprias pendências e o histórico recente); `personagens[].resumo` ganha
+  `evolucao` (pendente, últimos registros) e `paranormal` (rituais, em
+  andamento, ativos).
+
 ## Ordem Paranormal RPG II · procedimentos das missões — v9.1
 
 Mesmas duas rotas; novos tipos de `operacao` (registrados por

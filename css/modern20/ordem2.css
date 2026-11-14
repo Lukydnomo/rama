@@ -47,4 +47,18 @@
   & .o2-compendio__item { border-radius: var(--m20-raio-controle); border-color: var(--m20-borda); background: var(--fundo-superficie); }
   & .o2-desafio { border-top: 3px solid var(--cor-paranormal); }
   & .o2-ponto--oculto { border-style: dashed; }
+  /* v9.2: a ficha do livro e os módulos experimentais */
+  & .o2-ritual,
+  & .o2-editor__lista,
+  & .o2-selo { border-radius: var(--m20-raio-controle); border-color: var(--m20-borda); }
+  & .o2-ritual { background: var(--fundo-superficie); border-top: 3px solid var(--o2-acento); }
+  & .o2-ritual--fora { border-top-style: dashed; }
+  & .o2-selo { border-color: var(--o2-acento); }
+  & .o2-cab__ocupacao, & .o2-nivel { text-transform: none; letter-spacing: 0; font-weight: 600; }
+  & .o2-nivel__caixa { border-radius: var(--m20-raio-controle); }
+  & .o2-caixa { border-radius: 3px; }
+  & .o2-livro__retrato .ficha-foto { border-radius: var(--m20-raio-controle); }
+  & .o2-pericia__rolar { border-radius: var(--m20-raio-controle); font-family: inherit; letter-spacing: 0; }
+  & .o2-livro-atr { border-radius: var(--m20-raio-controle); }
+  & .o2-habilidade { border-top-color: var(--o2-acento); }
 }

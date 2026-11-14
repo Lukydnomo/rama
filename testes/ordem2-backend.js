@@ -181,6 +181,35 @@ export async function testarOrdem2Backend({ t, preparar, novaConta, comoFn }) {
       t.ok("onda da rodada 2 gerada uma vez (repetir o opId não duplica)", o1.ok && o2.repetida && crias === 2);
       const vg = JSON.stringify(A({ acao: "ler_ordem2", campanhaId: c2 }).dados);
       t.ok("bastidores do encontro (roteiro, ordem das runas) fora do payload da jogadora", !/ROTEIRO-SECRETO|"ordem":\["terra"/.test(vg));
+
+      /* ---------------- v9.2: evolução e paranormal (experimentais) ---------------- */
+      t.grupo("Ordem II · evolução por marcos e paranormal experimental no servidor");
+      const l9 = M({ acao: "ler_ordem2", campanhaId: c2 });
+      t.recusa("jogadora não liga a evolução por marcos", op2(A, { tipo: "evolucaoConfigurar", config: { modo: "marcos" } }), "sem_permissao");
+      op2(M, { tipo: "evolucaoConfigurar", config: { modo: "marcos" } }, id("evo"), l9.rev);
+      op2(M, { tipo: "subirNivel", personagem: fA });
+      const nivelAntes = fichaDe(A, fA).nivel;
+      const opEsc = id("esc");
+      const e1 = op2(A, { tipo: "escolherMelhoria", quem: fA, escolha: { tipo: "pd" } }, opEsc);
+      const e2 = op2(A, { tipo: "escolherMelhoria", quem: fA, escolha: { tipo: "pd" } }, opEsc);
+      const fAlan = fichaDe(A, fA);
+      t.ok("subir de nível com o mesmo opId duas vezes: um nível e +2 PD uma vez", e1.ok && e2.repetida && fAlan.nivel === nivelAntes + 1 && fAlan.evolucao.registros.length === 1 && R.pdMax(fAlan) === fAlan.recursos.pd.max + 2);
+      t.recusa("a jogadora não desfaz (é do Mestre)", op2(A, { tipo: "desfazerEvolucao", personagem: fA, registro: fAlan.evolucao.registros[0].id }), "sem_permissao");
+      op2(M, { tipo: "paranormalConfigurar", config: { ativo: true } }, id("par"), M({ acao: "ler_ordem2", campanhaId: c2 }).rev);
+      op2(M, { tipo: "ritualSalvar", ritual: { id: "sopro", nome: "Sopro frio", classe: "experimental", complexidade: "simples", alvo: "proprio", efeitos: { normal: [{ tipo: "cura", valor: "1", recurso: "pd", quem: "proprio" }] } } });
+      op2(M, { tipo: "ritualEnsinar", ritual: "sopro", para: [fA] });
+      const rit = fichaDe(A, fA).paranormal.rituais[0].id;
+      t.recusa("a outra jogadora não conjura pelo Alan", op2(B, { tipo: "conjurar", quem: fA, ritual: rit, confirmar: true }), "dados_invalidos");
+      const pdAntesR = fichaDe(A, fA).recursos.pd.atual;
+      rolar(2, 1);
+      const opRit = id("rit");
+      const r1 = op2(A, { tipo: "conjurar", quem: fA, ritual: rit, confirmar: true }, opRit);
+      const r2 = op2(A, { tipo: "conjurar", quem: fA, ritual: rit, confirmar: true }, opRit);
+      t.ok("conjurar repetido com o mesmo opId não cobra dois custos (falha: 1 PD uma vez)", r1.ok && r2.repetida && fichaDe(A, fA).recursos.pd.atual === pdAntesR - 1);
+      t.ok("a biblioteca do Mestre não vai para a jogadora", A({ acao: "ler_ordem2", campanhaId: c2 }).dados.vista.paranormal.biblioteca.length === 0);
+      op2(M, { tipo: "paranormalConfigurar", config: { ativo: false } }, id("par"), M({ acao: "ler_ordem2", campanhaId: c2 }).rev);
+      t.recusa("desligado: conjuração bloqueada", op2(A, { tipo: "conjurar", quem: fA, ritual: rit, confirmar: true }), "dados_invalidos");
+      t.ok("…e o ritual e o histórico continuam na ficha", fichaDe(A, fA).paranormal.rituais.length === 1 && fichaDe(A, fA).paranormal.historico.length >= 2);
     } finally { G.PACOTES_ORDEM2 = pacoteAntes; }
   } finally {
     G.roladorDeOrdem2 = original;

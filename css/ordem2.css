@@ -307,3 +307,160 @@
   .o2-pistas { font-size: var(--texto-mini); }
   .o2-ponto__cab .r-botao { flex: 0 0 auto; }
 }
+
+/* ------------------------------------------- a ficha do livro (v9.2)
+   A organização das fichas de Val (Alpha) e Rhiona (Beta): nome grande,
+   etiqueta do perfil em paralelogramo, a caixa de NÍVEL; PV e PD em
+   quadradinhos; ATRIBUTOS e PERÍCIAS à esquerda, o retrato no centro e
+   HABILIDADES à direita, com o título em etiqueta e os números em
+   destaque. O acento é o verde do tema (--cor-verde), como no livro;
+   o estado continua escrito (número, "●", "✓", "▶"), nunca só cor. */
+.o2-bloco, .o2-aba, .o2-janela, .o2-mesa { --o2-acento: var(--cor-verde); --o2-acento-texto: var(--cor-fundo); }
+
+.o2-cab { align-items: flex-end; padding-bottom: var(--e2); border-bottom: 2px solid var(--o2-acento); }
+.o2-cab__nome .r-campo { margin: 0; }
+.o2-cab__nome .r-campo > label { font-size: var(--texto-mini); color: var(--cor-texto-3); }
+.o2-cab__nome .r-entrada,
+.o2-cab__nome h1 {
+  width: 100%; margin: 0; padding: 0;
+  font-size: clamp(1.75rem, 4.5vw, 3rem); line-height: 1.05; font-weight: 700;
+  text-transform: uppercase; letter-spacing: var(--espaco-letra-titulo);
+  background: transparent; border: 0; border-bottom: 1px dashed transparent; color: var(--cor-texto);
+}
+.o2-cab__nome .r-entrada:hover { border-bottom-color: var(--cor-traco-media); }
+.o2-cab__nome .r-entrada:focus-visible { outline: 2px solid var(--cor-foco); outline-offset: 2px; }
+.o2-cab__linha { gap: var(--e1) var(--e3); }
+.o2-perfil-tag {
+  display: inline-block; padding: 2px var(--e4);
+  background: var(--o2-acento); color: var(--o2-acento-texto);
+  font-family: var(--fonte-mini); font-weight: 700; text-transform: uppercase; letter-spacing: var(--espaco-letra-titulo);
+  clip-path: polygon(0.6rem 0, 100% 0, calc(100% - 0.6rem) 100%, 0 100%);
+}
+.o2-cab__ocupacao { font-family: var(--fonte-mini); text-transform: uppercase; letter-spacing: var(--espaco-letra-titulo); }
+.o2-cab__ocupacao::before { content: "• "; color: var(--o2-acento); }
+.o2-nivel { display: inline-flex; align-items: center; gap: var(--e2); font-family: var(--fonte-mini); text-transform: uppercase; letter-spacing: var(--espaco-letra-titulo); }
+.o2-nivel::before { content: "•"; color: var(--o2-acento); }
+.o2-nivel__caixa {
+  display: inline-grid; place-items: center; min-width: 2rem; height: 2rem; padding: 0 var(--e1);
+  border: 2px solid var(--o2-acento); font-size: var(--texto-medio); font-weight: 700; font-variant-numeric: tabular-nums;
+}
+.o2-cab__amb { display: flex; flex-wrap: wrap; align-items: center; gap: var(--e1); }
+.o2-variante { border-color: var(--o2-acento); }
+
+/* PV e PD em quadradinhos (o número segue escrito ao lado). */
+.o2-recurso--pv, .o2-recurso--pd { min-width: min(100%, 15rem); flex: 1 1 15rem; }
+.o2-trilha { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 3px; }
+.o2-caixa { width: 0.85rem; height: 0.85rem; border: 1.5px solid var(--cor-traco-media); }
+.o2-trilha--pv .o2-caixa--cheia { background: var(--cor-vida); border-color: var(--cor-vida); }
+.o2-trilha--pd .o2-caixa--cheia { background: var(--cor-sanidade); border-color: var(--cor-sanidade); }
+.o2-recurso__rotulo { color: var(--cor-texto); font-weight: 700; }
+
+/* As etiquetas de seção (ATRIBUTOS, PERÍCIAS, HABILIDADES) e de título. */
+.o2-tag {
+  align-self: flex-start; margin: 0; padding: 2px var(--e4) 2px var(--e3);
+  background: var(--o2-acento); color: var(--o2-acento-texto);
+  font-family: var(--fonte-mini); font-size: var(--texto-medio); font-weight: 700; text-transform: uppercase; letter-spacing: var(--espaco-letra-titulo);
+  clip-path: polygon(0 0, 100% 0, calc(100% - 0.7rem) 100%, 0 100%);
+}
+.o2-tag-titulo {
+  display: inline-block; align-self: flex-start; margin: 0; padding: 1px var(--e4) 1px var(--e2);
+  background: var(--o2-acento); color: var(--o2-acento-texto);
+  font-size: var(--texto-base, 1rem); font-weight: 700; text-transform: uppercase; letter-spacing: var(--espaco-letra);
+  clip-path: polygon(0 0, 100% 0, calc(100% - 0.5rem) 100%, 0 100%);
+}
+.o2-num { color: var(--o2-acento); font-weight: 700; font-variant-numeric: tabular-nums; }
+
+/* A grade da página. */
+.o2-livro__grade {
+  display: grid; gap: var(--e4) var(--e6, 2rem); align-items: start;
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.8fr) minmax(0, 1.05fr);
+  grid-template-areas: "esq centro dir";
+}
+.o2-livro__esq { grid-area: esq; }
+.o2-livro__centro { grid-area: centro; }
+.o2-livro__dir { grid-area: dir; }
+.o2-livro__esq, .o2-livro__centro, .o2-livro__dir { display: flex; flex-direction: column; gap: var(--e3); min-width: 0; }
+.o2-livro__retrato .ficha-foto { aspect-ratio: 3 / 4; border: 2px solid var(--o2-acento); }
+.o2-livro__dica { margin: 0; }
+
+.o2-livro-atributos { display: flex; flex-direction: column; gap: var(--e1); }
+.o2-livro-atr {
+  display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 0 var(--e3);
+  padding: var(--e1) var(--e2); background: transparent; color: var(--cor-texto); font: inherit; text-align: left;
+  border: 0; border-bottom: 1px solid var(--cor-traco-fraca); cursor: pointer;
+}
+.o2-livro-atr:hover:not(:disabled) { border-bottom-color: var(--o2-acento); }
+.o2-livro-atr:focus-visible { outline: 2px solid var(--cor-foco); outline-offset: 1px; }
+.o2-livro-atr:disabled { cursor: default; }
+.o2-livro-atr__nome { font-size: clamp(1.4rem, 3vw, 2rem); font-weight: 700; text-transform: uppercase; letter-spacing: var(--espaco-letra-titulo); line-height: 1.1; }
+.o2-livro-atr .o2-dado { --o2-tam: 2.6rem; }
+.o2-livro-atr .o2-dado::before { background: var(--o2-acento); }
+.o2-livro-atr .o2-dado__face { font-size: var(--texto-base, 1rem); color: var(--o2-acento-texto); }
+.o2-livro-atr__base { grid-column: 1 / -1; font-size: var(--texto-mini); color: var(--cor-aviso); }
+.o2-livro-atr .r-campo { margin: 0; }
+
+/* Perícias: "NOME [d] + [d] ATRIBUTO", em caixa alta e fonte de máquina. */
+.o2-livro .o2-pericias { grid-template-columns: 1fr; gap: 0; }
+.o2-livro .o2-pericia { grid-template-columns: minmax(0, 1fr) auto; padding: 0; border-bottom: 1px dotted var(--cor-traco-fraca); }
+.o2-livro .o2-pericia--edicao { grid-template-columns: minmax(0, 1fr) auto auto auto; gap: var(--e2); padding: 2px var(--e1); }
+.o2-pericia__rolar {
+  display: grid; grid-template-columns: minmax(0, 1fr) auto auto auto minmax(4.2rem, auto); align-items: center; gap: var(--e1) var(--e2);
+  width: 100%; padding: 3px var(--e1); background: transparent; color: var(--cor-texto); border: 0; text-align: left; cursor: pointer;
+  font-family: var(--fonte-mini); text-transform: uppercase; letter-spacing: var(--espaco-letra);
+}
+.o2-pericia__rolar:hover:not(:disabled) { background: var(--fundo-superficie-2, var(--cor-superficie-2)); }
+.o2-pericia__rolar:focus-visible { outline: 2px solid var(--cor-foco); outline-offset: -2px; }
+.o2-pericia__rolar:disabled { cursor: default; }
+.o2-pericia__rolar .o2-dado { --o2-tam: 1.7rem; }
+.o2-pericia--treinada .o2-dado--pericia::before { background: var(--o2-acento); }
+.o2-pericia--treinada .o2-dado--pericia .o2-dado__face { color: var(--o2-acento-texto); }
+.o2-pericia__mais { color: var(--cor-texto-3); }
+.o2-pericia__rolar .o2-pericia__atr, .o2-pericia__atr-curto { font-size: var(--texto-mini); color: var(--cor-texto-2); }
+.o2-pericia__atr-curto { display: none; }
+.o2-livro .o2-pericia--treinada .o2-pericia__nome::before { color: var(--o2-acento); }
+
+/* Habilidades em texto corrido, como no livro. */
+.o2-livro-habs { display: flex; flex-direction: column; gap: var(--e3); }
+.o2-livro-hab { display: flex; flex-direction: column; gap: var(--e1); }
+.o2-livro-hab__texto { margin: 0; }
+.o2-habilidade { border-top-color: var(--o2-acento); }
+
+/* Evolução e paranormal. */
+.o2-selo { margin: 0; padding: var(--e1) var(--e3); border: var(--borda) dashed var(--o2-acento); font-size: var(--texto-mini); }
+.o2-antes-depois { margin: 0; font-weight: 700; }
+.o2-antes-depois::before { content: "↑ "; color: var(--o2-acento); }
+.o2-registros { margin: 0; padding-left: var(--e4); display: flex; flex-direction: column; gap: var(--e1); }
+.o2-registro--desfeito { color: var(--cor-texto-3); text-decoration: line-through; }
+.o2-registro .r-botao { margin-left: var(--e2); }
+.o2-rituais { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 22rem), 1fr)); gap: var(--e3); align-items: start; }
+.o2-ritual { display: flex; flex-direction: column; gap: var(--e2); padding: var(--e3); border: var(--borda) solid var(--cor-traco-media); min-width: 0; }
+.o2-ritual--fora { border-style: dashed; }
+.o2-ritual__topo { display: flex; flex-wrap: wrap; align-items: center; gap: var(--e1) var(--e2); }
+.o2-ritual__elementos { font-size: var(--texto-mini); color: var(--cor-texto-2); }
+.o2-ritual__efeitos { margin: 0; padding-left: var(--e4); font-size: var(--texto-mini); }
+.o2-ritual__notas { margin: 0; white-space: pre-line; }
+.o2-etapas { margin: 0; padding-left: var(--e4); }
+.o2-etapas__atual { font-weight: 700; }
+.o2-etapas__feita { color: var(--cor-texto-3); }
+.o2-editor__lista { margin: 0; padding: var(--e2) var(--e3); border: var(--borda) solid var(--cor-traco-fraca); display: flex; flex-direction: column; gap: var(--e2); min-width: 0; }
+.o2-editor__lista legend { font-size: var(--texto-mini); padding: 0 var(--e1); }
+.o2-editor__linha { padding-bottom: var(--e2); border-bottom: 1px dotted var(--cor-traco-fraca); }
+.o2-mesa__evolucao { padding-top: var(--e2); border-top: 1px dotted var(--cor-traco-fraca); }
+.o2-paranormal-cab { display: flex; flex-direction: column; gap: var(--e2); }
+
+@media (max-width: 1100px) {
+  .o2-livro__grade { grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); grid-template-areas: "esq centro" "esq dir"; }
+}
+@media (max-width: 760px) {
+  .o2-livro__grade { grid-template-columns: minmax(0, 1fr); grid-template-areas: "centro" "esq" "dir"; }
+  .o2-livro__retrato { width: min(100%, 8rem); align-self: center; }
+  .o2-livro-atributos { flex-direction: row; flex-wrap: wrap; }
+  .o2-livro-atr { flex: 1 1 6rem; grid-template-columns: 1fr; justify-items: center; border: var(--borda) solid var(--cor-traco-fraca); }
+  .o2-livro-atr__nome { font-size: 1.1rem; }
+  .o2-livro-atr__base { text-align: center; }
+  .o2-pericia__rolar { grid-template-columns: minmax(0, 1fr) auto auto auto 2.2rem; }
+  .o2-pericia__rolar .o2-pericia__atr { display: none; }
+  .o2-pericia__atr-curto { display: inline; }
+  .o2-caixa { width: 0.7rem; height: 0.7rem; }
+  .o2-cab__nome .r-entrada, .o2-cab__nome h1 { font-size: 1.6rem; }
+}
