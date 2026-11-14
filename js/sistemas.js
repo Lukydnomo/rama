@@ -104,6 +104,43 @@
       },
     },
     {
+      /* v9.0: sistema À PARTE de "ordem" (1ª edição) — nada de lá é
+         convertido, herdado ou migrado. A arte é vertical (9:16): a capa
+         usa encaixe sem corte (`capaEncaixe: "conter"`). */
+      id: "ordem2", nome: "Ordem Paranormal RPG II", curto: "Ordem II", edicao: "Experimental",
+      capa: "assets/sistemas/ordem2-capa.webp", capaEncaixe: "conter",
+      capaAlt: "Arte de Ordem Paranormal RPG II: o título em letras claras com brilho azulado e um II grande ao fundo, sobre um fundo escuro com partículas",
+      resumo: "Experimental: os playtests Alpha e Beta — dados por degrau, investigação por pontos de interesse, combate em fases, relações e pavor.",
+      ficha: {
+        bloco: "ordem2", motor: "RAMAOrdem2",
+        resumo: { campo: "resumoOrdem2", calcular: "resumoParaMesa", normalizarAntes: true },
+        pontos: [
+          "Fichas prontas dos playtests, criação livre e guiada (experimental)",
+          "Atributo + perícia por degrau (d4–d12), RA/RB, críticos e pavor",
+          "Análise, Ímpeto, Prontidão e as habilidades das fichas, automatizadas",
+          "Investigação, combate em três fases, lesões, traumas e relações",
+        ],
+        blocoSuperior: "RAMASecaoOrdem2",
+        abas: [
+          { chave: "geral",        rotulo: "Ficha",        secao: "RAMASecaoOrdem2", grupo: "jogo" },
+          { chave: "evolucao",     rotulo: "Evolução",     secao: "RAMASecaoOrdem2Evolucao", grupo: "jogo" },
+          { chave: "habilidades",  rotulo: "Habilidades",  secao: "RAMASecaoOrdem2Habilidades", grupo: "jogo" },
+          { chave: "paranormal",   rotulo: "Paranormal",   secao: "RAMASecaoOrdem2Paranormal", grupo: "jogo" },
+          { chave: "investigacao", rotulo: "Investigação", secao: "RAMASecaoOrdem2Investigacao", grupo: "jogo" },
+          { chave: "combate",      rotulo: "Combate",      secao: "RAMASecaoOrdem2Combate", grupo: "jogo" },
+          { chave: "relacoes",     rotulo: "Relações",     secao: "RAMASecaoOrdem2Relacoes", grupo: "personagem" },
+          { chave: "inventario",   rotulo: "Inventário",   secao: "RAMASecaoOrdem2Inventario", grupo: "personagem" },
+          { chave: "anotacoes",    rotulo: "Anotações",    secao: "RAMASecaoAnotacoes", independente: true, grupo: "personagem" },
+        ],
+      },
+      campanha: {
+        mestre: "Mestre",
+        descricao: "A mesa do Mestre de Ordem II: missão e cena, testes pedidos, investigação com pontos de interesse e pistas privadas, combate em fases (ou o conflito simplificado do Alpha), dano, lesões, traumas e pavor — tudo rolado no servidor.",
+        ferramentas: ["mesaOrdem2"],
+        mecanicas: [],
+      },
+    },
+    {
       id: "oblivio", nome: "Oblívio", curto: "Oblívio",
       resumo: "Personas, Buracos e a Escuridão — o sistema completo do livro.",
       capa: "assets/sistemas/oblivio-capa.webp", capaAlt: "Capa de Oblívio RPG: a marca Oblívio, em branco, sobre fundo escuro",
@@ -253,43 +290,6 @@
         mestre: "Mestre",
         descricao: "A mesa do Mestre: combate com iniciativa, surpresa e ameaças do livro por ND (cada uma com PV e condições próprias), encontros, desafios e XP, tesouro pelas tabelas com prévia, descanso, perigos complexos e tempo entre aventuras.",
         ferramentas: ["mesaT20"],
-        mecanicas: [],
-      },
-    },
-    {
-      /* v9.0: sistema À PARTE de "ordem" (1ª edição) — nada de lá é
-         convertido, herdado ou migrado. A arte é vertical (9:16): a capa
-         usa encaixe sem corte (`capaEncaixe: "conter"`). */
-      id: "ordem2", nome: "Ordem Paranormal RPG II", curto: "Ordem II", edicao: "Experimental",
-      capa: "assets/sistemas/ordem2-capa.webp", capaEncaixe: "conter",
-      capaAlt: "Arte de Ordem Paranormal RPG II: o título em letras claras com brilho azulado e um II grande ao fundo, sobre um fundo escuro com partículas",
-      resumo: "Experimental: os playtests Alpha e Beta — dados por degrau, investigação por pontos de interesse, combate em fases, relações e pavor.",
-      ficha: {
-        bloco: "ordem2", motor: "RAMAOrdem2",
-        resumo: { campo: "resumoOrdem2", calcular: "resumoParaMesa", normalizarAntes: true },
-        pontos: [
-          "Fichas prontas dos playtests, criação livre e guiada (experimental)",
-          "Atributo + perícia por degrau (d4–d12), RA/RB, críticos e pavor",
-          "Análise, Ímpeto, Prontidão e as habilidades das fichas, automatizadas",
-          "Investigação, combate em três fases, lesões, traumas e relações",
-        ],
-        blocoSuperior: "RAMASecaoOrdem2",
-        abas: [
-          { chave: "geral",        rotulo: "Ficha",        secao: "RAMASecaoOrdem2", grupo: "jogo" },
-          { chave: "evolucao",     rotulo: "Evolução",     secao: "RAMASecaoOrdem2Evolucao", grupo: "jogo" },
-          { chave: "habilidades",  rotulo: "Habilidades",  secao: "RAMASecaoOrdem2Habilidades", grupo: "jogo" },
-          { chave: "paranormal",   rotulo: "Paranormal",   secao: "RAMASecaoOrdem2Paranormal", grupo: "jogo" },
-          { chave: "investigacao", rotulo: "Investigação", secao: "RAMASecaoOrdem2Investigacao", grupo: "jogo" },
-          { chave: "combate",      rotulo: "Combate",      secao: "RAMASecaoOrdem2Combate", grupo: "jogo" },
-          { chave: "relacoes",     rotulo: "Relações",     secao: "RAMASecaoOrdem2Relacoes", grupo: "personagem" },
-          { chave: "inventario",   rotulo: "Inventário",   secao: "RAMASecaoOrdem2Inventario", grupo: "personagem" },
-          { chave: "anotacoes",    rotulo: "Anotações",    secao: "RAMASecaoAnotacoes", independente: true, grupo: "personagem" },
-        ],
-      },
-      campanha: {
-        mestre: "Mestre",
-        descricao: "A mesa do Mestre de Ordem II: missão e cena, testes pedidos, investigação com pontos de interesse e pistas privadas, combate em fases (ou o conflito simplificado do Alpha), dano, lesões, traumas e pavor — tudo rolado no servidor.",
-        ferramentas: ["mesaOrdem2"],
         mecanicas: [],
       },
     },

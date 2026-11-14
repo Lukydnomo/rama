@@ -929,6 +929,8 @@ segredo nenhum — ele os lê das Script Properties. Publicá-lo não expõe nad
 
 ### Atualizar o backend
 
+**v9.4.1 — VIZINHO:** só site (`js/sistemas.js`, `js/versao.js`): Ordem II ao lado de Ordem I na escolha de sistema. Sem mudança no Apps Script.
+
 **v9.4.0 — UNÍSSONO:** Ordem II com regras unificadas. Troque **`Ordem2.gs`** e
 **`Codigo.gs`** e crie uma versão nova da implantação. **`setupRama()` não é
 necessário**, `Ordem2Pacotes` não muda e **não há passo manual antes de abrir
@@ -1979,7 +1981,7 @@ Três números diferentes, que não se misturam:
 
 | | Onde | O que é |
 |---|---|---|
-| versão do aplicativo | `js/versao.js` | o que a pessoa vê: v9.4.0 |
+| versão do aplicativo | `js/versao.js` | o que a pessoa vê: v9.4.1 |
 | `schemaVersion` | `js/ficha.js` | o formato da FICHA |
 | `versaoFormato` | `js/config.js` | o formato dos arquivos de importação |
 

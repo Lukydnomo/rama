@@ -118,6 +118,14 @@
 
   var CHANGELOG = [
     {
+      versao: "9.4.1",
+      codinome: "VIZINHO",
+      data: "14/11/2026",
+      mudancas: {
+        "Corrigido": ["Na escolha de sistema, Ordem Paranormal RPG II aparece logo ao lado de Ordem Paranormal."],
+      },
+    },
+    {
       versao: "9.4.0",
       codinome: "UNÍSSONO",
       data: "14/11/2026",
