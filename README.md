@@ -929,6 +929,11 @@ segredo nenhum — ele os lê das Script Properties. Publicá-lo não expõe nad
 
 ### Atualizar o backend
 
+**v9.18.0 — VLOGUEIRA:** Arquétipo e Estilo Homebrew de BRUTAL. Troque
+**`Codigo.gs`** e **`Brutal.gs`** e crie uma versão nova da implantação.
+**`setupRama()` não é necessário.** Site: os arquivos listados em
+`docs/HOMEBREW-SISTEMAS.md` (seção "Publicar a v9.18.0").
+
 **v9.17.0 — SOPRADOR:** Ocupação e Descritor Homebrew de Malditos
 Goblins. Troque **`Codigo.gs`** e **`Goblins.gs`** e crie uma versão nova
 da implantação. **`setupRama()` não é necessário.** Site: os arquivos
@@ -2064,7 +2069,7 @@ Três números diferentes, que não se misturam:
 
 | | Onde | O que é |
 |---|---|---|
-| versão do aplicativo | `js/versao.js` | o que a pessoa vê: v9.17.0 |
+| versão do aplicativo | `js/versao.js` | o que a pessoa vê: v9.18.0 |
 | `schemaVersion` | `js/ficha.js` | o formato da FICHA |
 | `versaoFormato` | `js/config.js` | o formato dos arquivos de importação |
 

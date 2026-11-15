@@ -118,6 +118,19 @@
 
   var CHANGELOG = [
     {
+      versao: "9.18.0",
+      codinome: "VLOGUEIRA",
+      data: "15/11/2026",
+      mudancas: {
+        "Adicionado": [
+          "Arquétipo Homebrew de BRUTAL: adjetivos, cor, Iniciativa, os dois Estilos e a Habilidade (com recarga). Aparece na criação de Sobreviventes e na troca de Arquétipo; a mesa da Diretora recebe a cópia pela ficha.",
+          "Estilo Homebrew de BRUTAL: nome e para que serve. Aparece nos Arquétipos e nas listas de Estilo; usar um Estilo seu reduz a Dificuldade em 1, como os do livro.",
+          "A ficha guarda a própria cópia do Arquétipo: mudar a biblioteca não muda uma Sobrevivente em jogo.",
+        ],
+        "Técnico": ["Novos js/brutal/homebrew-brutal.js e js/paginas/homebrew-brutal.js. O catálogo de BRUTAL ganhou normalizar/registrar Arquétipo (hbba-, versionado) e Estilo (hbbe-, estável); a ficha guarda as cópias e o resumo para a mesa as leva; a mesa as registra (estado.homebrew). A Iniciativa do Encontro segue o número do Arquétipo. Servidor: tipos arquetipo e estilo (só BRUTAL). Novo testes/executar-homebrew-brutal.js (18 verificações)."],
+      },
+    },
+    {
       versao: "9.17.0",
       codinome: "SOPRADOR",
       data: "15/11/2026",

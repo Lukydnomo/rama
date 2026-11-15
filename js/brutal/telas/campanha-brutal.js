@@ -457,7 +457,7 @@
           e.vantagensDaMesa.length ? el("ul", {}, e.vantagensDaMesa.map(function (v) { return el("li", {}, [el("span", { texto: v.nome + " · " + (v.estilo ? T().nomeEstilo(v.estilo) : "Geral") + " · " + v.custo + " PT · " + T().nomeRecarga(v.recarga) + " · " + K().EFEITOS_DE_VANTAGEM[v.efeito].nome + (v.efeito === "reduzirFerida" ? " " + v.valor : "") + " "}), botao("Remover", function () { operar({ tipo: "vantagemDaMesa", acao: "remover", id: v.id }); }, { classe: "r-botao--fantasma" })]); })) : null,
           el("div.brt-criar__campos", {}, [
             UI.campo({ rotulo: "Nome", limite: 60, aoMudar: function (v) { nova.nome = v; } }),
-            selecao("Estilo", [{ valor: "", rotulo: "Geral (todas)" }].concat(K().ORDEM_ESTILOS.map(function (k) { return { valor: k, rotulo: T().nomeEstilo(k) }; })), "", function (v) { nova.estilo = v; }),
+            selecao("Estilo", [{ valor: "", rotulo: "Geral (todas)" }].concat((K().estilosDisponiveis ? K().estilosDisponiveis() : K().ORDEM_ESTILOS).map(function (k) { return { valor: k, rotulo: T().nomeEstilo(k) }; })), "", function (v) { nova.estilo = v; }),
             UI.campo({ rotulo: "Custo (PT)", tipo: "numero", valor: 2, aoMudar: function (v) { nova.custo = U.inteiro(v, 0); } }),
             selecao("Recarga", ["semRestricao", "fimEncontro", "inicioEncontro", "inicioSessao", "encontroLivre"].map(function (k) { return { valor: k, rotulo: T().nomeRecarga(k) }; }), "fimEncontro", function (v) { nova.recarga = v; }),
             selecao("Efeito", Object.keys(K().EFEITOS_DE_VANTAGEM).map(function (k) { return { valor: k, rotulo: K().EFEITOS_DE_VANTAGEM[k].nome }; }), "reduzirFerida", function (v) { nova.efeito = v; }),

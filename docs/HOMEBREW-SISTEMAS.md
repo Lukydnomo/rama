@@ -1500,3 +1500,102 @@ nova da implantação. **`setupRama()` não é necessário.**
   `js/paginas/homebrew-origem-divindade-t20.js`;
 - `js/versao.js`;
 - `homebrew/index.html`, `ficha/index.html`, `personagens/index.html`.
+
+## v9.18.0 — Etapa 2: Arquétipo e Estilo Homebrew de BRUTAL
+
+### Os editores
+
+**Homebrew → + Criar → BRUTAL → Arquétipo.** Três etapas:
+- **Identidade:** nome, adjetivos, resumo, cor e Iniciativa (1º a 9º).
+  No empate, o Arquétipo do livro age antes;
+- **Estilos e Habilidade:**
+  - os dois Estilos, do livro ou Homebrew;
+  - a Habilidade: nome, cena, recarga (as do livro) e texto;
+- **Revisão:** a prévia, o automático e o que fica com a mesa.
+
+**→ Estilo.** Nome e para que serve. A chave é **estável** (sem
+versão), como o Elemento de Ordem, porque os Arquétipos apontam para ela.
+
+### Onde entra
+
+- **Criação de Sobrevivente** e **troca de Arquétipo** na ficha: as
+  cartas Homebrew vêm depois das do livro, com a inicial no lugar da arte.
+  O detalhe mostra Estilos, Habilidade, Vantagens de Estilo e Iniciativa.
+- **Ficha:** os Estilos (Dificuldade −1), a Habilidade e a Iniciativa.
+- **Mesa da Diretora:** o resumo que a ficha manda leva a cópia do
+  Arquétipo e dos Estilos Homebrew dele. A mesa os registra no navegador
+  e no servidor e os guarda em `estado.homebrew`. A Sobrevivente fica com
+  o Arquétipo, os Estilos valem na Dificuldade e a Habilidade usa a
+  recarga.
+- A **Iniciativa** do Encontro passou a seguir o número do Arquétipo
+  (`ordemDeIniciativa`). Para os do livro, a ordem é a mesma de antes.
+- As listas de Estilo da ficha e da mesa incluem os Estilos Homebrew
+  (`estilosDisponiveis`).
+
+### Cópia, versão e servidor
+
+- Arquétipo `hbba-…`, versionado; Estilo `hbbe-…`, estável. A cópia na
+  ficha fica em `brutal.homebrew` (o Arquétipo e os Estilos Homebrew dele);
+- sem cópia e sem catálogo, o Arquétipo some;
+- o servidor roda o mesmo código (`catalogo.js`, `regras.js` e `mesa.js`
+  em `Brutal.gs`, por `testes/gerar-brutal-gs.js`);
+- `RAMABrutalHomebrew` tem `versoesNovas` e `atualizarVersao`.
+
+### Servidor e pacotes
+
+- `TIPOS_HOMEBREW` ganhou `arquetipo` e `estilo`; os estruturais de
+  BRUTAL são os dois.
+- Os pacotes ganharam "Arquétipos" e "Estilos".
+
+### Validação da v9.18.0
+
+**Automática.** O novo `testes/executar-homebrew-brutal.js` tem 18
+verificações:
+- **Definição:**
+  - a chave estável do Estilo;
+  - a chave do Arquétipo;
+  - os Estilos válidos, a cor e a Habilidade;
+  - a chave estável ao normalizar de novo;
+  - as listas, com as do livro intactas;
+  - a Iniciativa entre a Atleta e a Valentona.
+- **Ficha e mesa:**
+  - a ficha guarda as cópias;
+  - o resumo leva a cópia;
+  - some sem cópia nem catálogo;
+  - a mesa, com o catálogo vazio, registra pela cópia (ao sincronizar e
+    ao normalizar, como no servidor);
+  - o Estilo Homebrew reduz a Dificuldade.
+- **Biblioteca:** guardar, voltar com a mesma chave, destino, resumo,
+  arquivo, pacote e a versão nova do Arquétipo.
+
+`testes/pacotes-backend.js`: o Arquétipo de BRUTAL é aceito.
+
+**Na interface** (servidor local, conta sintética):
+- Criei o Estilo **Estiloso**. Ele apareceu nas opções do editor de
+  Arquétipo.
+- Criei o Arquétipo **Vlogueira** (Iniciativa 2º, Estiloso e Ligeiro,
+  Habilidade Ao Vivo com recarga no início da sessão).
+- Na criação de Sobrevivente:
+  - a carta Vlogueira veio depois das oito do livro;
+  - o detalhe mostrou Estilos, Habilidade, Vantagem de Estilo (Planejar
+    Fuga, de Ligeiro) e Iniciativa 2º.
+- **Ficha:** os Estilos Estiloso e Ligeiro, a Habilidade e as cópias
+  guardadas.
+- **Correção encontrada:** a ficha pedia a arte do Arquétipo (404). O
+  Arquétipo Homebrew agora mostra a inicial.
+
+### Publicar a v9.18.0
+
+**Servidor:** troque **`Codigo.gs`** e **`Brutal.gs`**, e crie uma versão
+nova da implantação. **`setupRama()` não é necessário.**
+
+**Site:**
+- `js/brutal/homebrew-brutal.js` e `js/paginas/homebrew-brutal.js`
+  (novos);
+- `js/brutal/catalogo.js`, `regras.js`, `mesa.js`;
+- `js/brutal/telas/brutal-criar.js`, `brutal-comum.js`,
+  `ficha-brutal.js`, `campanha-brutal.js`;
+- `js/homebrew-adaptadores.js`, `js/pacotes-homebrew.js`,
+  `js/paginas/homebrew-editor.js`, `js/paginas/homebrew.js`;
+- `js/versao.js`;
+- `homebrew/index.html`, `ficha/index.html`, `personagens/index.html`.

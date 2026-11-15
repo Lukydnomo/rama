@@ -104,7 +104,7 @@
   function consulta(titulo, texto, pagina) {
     return UI().modal({ titulo: titulo, classe: "brt-consulta", fundoFecha: true, conteudo: [el("p.t-mini", { texto: K().referencia(pagina) }), el("p", { texto: texto })] });
   }
-  function fonte(pagina) { return el("span.brt-fonte", { texto: "p. " + pagina, title: K().referencia(pagina) }); }
+  function fonte(pagina) { return el("span.brt-fonte", { texto: pagina ? "p. " + pagina : "Homebrew", title: pagina ? K().referencia(pagina) : "Homebrew" }); }
 
   function nomeEstilo(k) { return K().ESTILOS[k] ? K().ESTILOS[k].nome : k; }
   function nomeRecarga(k) { return (K().RECARGAS[k] || {}).nome || k; }

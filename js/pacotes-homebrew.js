@@ -35,6 +35,8 @@
     { chave: "divindade", rotulo: "Divindades", um: "Divindade" },
     { chave: "ocupacao", rotulo: "Ocupações", um: "Ocupação" },
     { chave: "descritor", rotulo: "Descritores", um: "Descritor" },
+    { chave: "arquetipo", rotulo: "Arquétipos", um: "Arquétipo" },
+    { chave: "estilo", rotulo: "Estilos", um: "Estilo" },
   ];
   var GENERICOS = ["item", "arma", "armadura", "mochila", "habilidade"];
   var NATIVOS = ["oblivio", "vampiro", "goblins", "tormenta20", "ordem2"];

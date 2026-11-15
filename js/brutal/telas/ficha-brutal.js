@@ -19,6 +19,7 @@
 
 (function (global) {
   "use strict";
+  var bibliotecaPedida = false;
 
   var U = global.RAMAUtil;
   var el = U.el;
@@ -151,7 +152,7 @@
     function campoLivre(rotulo, chave, limite) {
       return UI().campo({ rotulo: rotulo, valor: b[chave], limite: limite, desabilitado: !edita, aoMudar: function (v) { b[chave] = String(v).slice(0, limite); ctx.alterou(); } });
     }
-    var foto = geral && geral.foto && ctx.foto ? geral.foto(ctx) : (x.a ? el("img.brt-avatar", { src: global.RAMABrutalCriar ? global.RAMABrutalCriar.imagem(b.arquetipo) : "", alt: "" }) : el("span.brt-avatar.brt-avatar--vazio", { "aria-hidden": "true", texto: "?" }));
+    var foto = geral && geral.foto && ctx.foto ? geral.foto(ctx) : (x.a && x.a.homebrew ? el("span.brt-avatar.brt-avatar--vazio", { "aria-hidden": "true", texto: x.a.nome.charAt(0) }) : x.a ? el("img.brt-avatar", { src: global.RAMABrutalCriar ? global.RAMABrutalCriar.imagem(b.arquetipo) : "", alt: "" }) : el("span.brt-avatar.brt-avatar--vazio", { "aria-hidden": "true", texto: "?" }));
     return el("section.brt-cartao.brt-identidade", { "aria-label": "Identidade" }, [
       el("div.brt-identidade__foto", {}, [foto]),
       el("div.brt-identidade__campos", {}, [
@@ -270,7 +271,7 @@
         return el("li" + (vez === id ? ".brt-iniciativa--vez" : "") + (y && y.id === s.id ? ".brt-iniciativa--eu" : ""), { texto: nome + sit + (vez === id ? " — vez" : "") });
       })), el("p.t-mini", { texto: "Rodada " + e.encontro.rodada + "." })];
     }
-    return [el("p.t-mini", { texto: "A Iniciativa é fixa, pelo Arquétipo; o Assassino é sempre o último (p. 21)." }), el("ol.brt-iniciativa", {}, K().INICIATIVA.map(function (k) {
+    return [el("p.t-mini", { texto: "A Iniciativa é fixa, pelo Arquétipo; o Assassino é sempre o último (p. 21)." }), el("ol.brt-iniciativa", {}, (K().arquetiposPorIniciativa ? K().arquetiposPorIniciativa() : K().INICIATIVA).map(function (k) {
       return el("li" + (k === s.arquetipo ? ".brt-iniciativa--eu" : ""), { texto: K().ARQUETIPOS[k].nome });
     }).concat([el("li", { texto: "Assassino" })]))];
   }
@@ -354,7 +355,7 @@
     return el("section.brt-cartao.brt-dificuldade", {}, [
       el("span.brt-rotulo", { texto: "Dificuldade" }),
       el("div.brt-dificuldade__valor", {}, [el("span.t-mini", { texto: "Acima de" }), el("strong", { texto: String(d.valor - 1) })]),
-      UI().campo({ rotulo: "Estilo", tipo: "selecao", valor: ui.estilo, opcoes: [{ valor: "", rotulo: "Sem Estilo" }].concat(K().ORDEM_ESTILOS.map(function (k) { return { valor: k, rotulo: nomeEstilo(k) + (s.estilos.indexOf(k) >= 0 ? (s.incapacitados.indexOf(k) >= 0 ? " (incapacitado)" : " (seu: −1)") : "") }; })), aoMudar: function (v) { ui.estilo = v; ctx.atualizar(["bloco"]); } }),
+      UI().campo({ rotulo: "Estilo", tipo: "selecao", valor: ui.estilo, opcoes: [{ valor: "", rotulo: "Sem Estilo" }].concat((K().estilosDisponiveis ? K().estilosDisponiveis() : K().ORDEM_ESTILOS).map(function (k) { return { valor: k, rotulo: nomeEstilo(k) + (s.estilos.indexOf(k) >= 0 ? (s.incapacitados.indexOf(k) >= 0 ? " (incapacitado)" : " (seu: −1)") : "") }; })), aoMudar: function (v) { ui.estilo = v; ctx.atualizar(["bloco"]); } }),
       M().forcadoComplexo(s) ? el("p.t-mini.brt-alerta", { texto: "RESTRITA: todos os testes são Complexos." }) : null,
     ]);
   }
@@ -457,7 +458,7 @@
     var conteudo = el("div.pilha", {}, [
       p ? el("p", {}, [el("strong", { texto: p.rotulo }), el("span", { texto: p.tipo === "susto" ? " — 1 dado da Pilha Comum." : "" })]) : el("p.t-mini", { texto: "Cena " + K().CENAS[e.cena].nome + ": " + K().CENAS[e.cena].texto }),
       st.susto ? null : el("div", {}, [el("span.brt-rotulo", { texto: "Dados arriscados (de " + s.pilha + ")" }), seletorDeDados(s.pilha, st.dados, function (n) { st.dados = n; previa(); })]),
-      UI().campo({ rotulo: "Estilo", tipo: "selecao", valor: st.estilo, opcoes: [{ valor: "", rotulo: "Sem Estilo" }].concat(K().ORDEM_ESTILOS.map(function (k) { return { valor: k, rotulo: nomeEstilo(k) + (s.estilos.indexOf(k) >= 0 && s.incapacitados.indexOf(k) < 0 ? " (seu: −1)" : "") }; })), aoMudar: function (v) { st.estilo = v; previa(); } }),
+      UI().campo({ rotulo: "Estilo", tipo: "selecao", valor: st.estilo, opcoes: [{ valor: "", rotulo: "Sem Estilo" }].concat((K().estilosDisponiveis ? K().estilosDisponiveis() : K().ORDEM_ESTILOS).map(function (k) { return { valor: k, rotulo: nomeEstilo(k) + (s.estilos.indexOf(k) >= 0 && s.incapacitados.indexOf(k) < 0 ? " (seu: −1)" : "") }; })), aoMudar: function (v) { st.estilo = v; previa(); } }),
       recursosMarcaveis(s, st.recursos),
       !p && !st.susto ? el("label.r-marca", {}, [el("input", { type: "checkbox", disabled: M().forcadoComplexo(s), checked: M().forcadoComplexo(s), onchange: function (ev) { st.complexo = ev.currentTarget.checked; previa(); } }), el("span", { texto: "Teste Complexo (a Diretora disse)" + (M().forcadoComplexo(s) ? " — RESTRITA: sempre" : "") })]) : null,
       !p ? el("label.r-marca", {}, [el("input", { type: "checkbox", onchange: function (ev) { st.susto = ev.currentTarget.checked; previa(); } }), el("span", { texto: "É um Teste de Susto (1 dado, falha descartada)" })]) : null,
@@ -509,7 +510,7 @@
     } else {
       if (acao === "ajudarAlguem" || acao === "livrarAliada") corpo.push(UI().campo({ rotulo: acao === "ajudarAlguem" ? "Ajudar quem" : "Livrar quem", tipo: "selecao", valor: st.alvo, opcoes: outras.map(function (y) { return { valor: y.id, rotulo: y.nome + " (" + y.pilha + " dados)" }; }), aoMudar: function (v) { st.alvo = v; } }));
       corpo.push(el("div", {}, [el("span.brt-rotulo", { texto: "Dados arriscados (de " + s.pilha + ")" }), seletorDeDados(s.pilha, st.dados, function (n) { st.dados = n; previa(); })]));
-      if (acao === "ajudarAlguem" || acao === "livrarAliada") corpo.push(UI().campo({ rotulo: "Estilo apropriado", tipo: "selecao", valor: st.estilo, opcoes: K().ORDEM_ESTILOS.map(function (k) { return { valor: k, rotulo: nomeEstilo(k) + (s.estilos.indexOf(k) >= 0 ? " (seu)" : "") }; }), aoMudar: function (v) { st.estilo = v; previa(); } }));
+      if (acao === "ajudarAlguem" || acao === "livrarAliada") corpo.push(UI().campo({ rotulo: "Estilo apropriado", tipo: "selecao", valor: st.estilo, opcoes: (K().estilosDisponiveis ? K().estilosDisponiveis() : K().ORDEM_ESTILOS).map(function (k) { return { valor: k, rotulo: nomeEstilo(k) + (s.estilos.indexOf(k) >= 0 ? " (seu)" : "") }; }), aoMudar: function (v) { st.estilo = v; previa(); } }));
       if (acao === "livrarRestricao") corpo.push(UI().campo({ rotulo: "Estilo", tipo: "selecao", valor: st.estilo, opcoes: [{ valor: "ligeiro", rotulo: "Ligeiro" }, { valor: "sagaz", rotulo: "Sagaz" }], aoMudar: function (v) { st.estilo = v; previa(); } }));
       corpo.push(recursosMarcaveis(s, st.recursos));
       if (acao === "partirParaCima" && s.pendentes.surpreender) corpo.push(el("p.t-mini", { texto: "Surpreender: um sucesso garantido neste teste." }));
@@ -594,6 +595,8 @@
       return UI().campo({ rotulo: rotulo, tipo: area ? "area" : undefined, linhas: area ? 3 : undefined, valor: alvo[chave], limite: limite, desabilitado: !edita, aoMudar: function (v) { alvo[chave] = String(v).slice(0, limite); ctx.alterou(); } });
     }
     var revelado = b.apegos.desejo.revelado;
+    /* v9.18: os Arquétipos Homebrew da biblioteca entram na troca (uma viagem). */
+    if (global.RAMABrutalHomebrew && edita && !bibliotecaPedida) { bibliotecaPedida = true; global.RAMABrutalHomebrew.carregarBiblioteca().then(function (r) { if (r && r.arquetipos.length) ctx.redesenhar(); }); }
     return el("div.pilha.brt-sobrevivente", {}, [
       UI().painel("Arquétipo", el("div.pilha", {}, [
         el("p.t-mini", { texto: "O Arquétipo dá os Estilos, a Habilidade e a Iniciativa (p. 6). Trocar não mexe no Thriller (as pilhas continuam), só no que o Arquétipo dá." }),

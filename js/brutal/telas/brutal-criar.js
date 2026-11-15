@@ -22,14 +22,15 @@
 
   /* A grade de cartas (também usada na troca de Arquétipo da ficha). */
   function cartas(escolhido, aoEscolher) {
-    return el("div.brt-cartas", { role: "radiogroup", "aria-label": "Arquétipo" }, K().ORDEM_ARQUETIPOS.map(function (k) {
+    /* v9.18: os Arquétipos Homebrew da biblioteca vêm depois dos do livro. */
+    return el("div.brt-cartas", { role: "radiogroup", "aria-label": "Arquétipo" }, (K().arquetiposDisponiveis ? K().arquetiposDisponiveis() : K().ORDEM_ARQUETIPOS).map(function (k) {
       var a = K().ARQUETIPOS[k];
       var sel = escolhido === k;
       return el("button.brt-carta" + (sel ? ".brt-carta--escolhida" : ""), {
         type: "button", role: "radio", "aria-checked": String(sel), dataset: { arquetipo: k }, style: "--brt-cor: " + a.cor,
         onclick: function () { aoEscolher(k); },
       }, [
-        el("img.brt-carta__arte", { src: imagem(k), alt: "", loading: "lazy" }),
+        a.homebrew ? el("span.brt-carta__arte.brt-carta__arte--homebrew", { "aria-hidden": "true", texto: a.nome.charAt(0) }) : el("img.brt-carta__arte", { src: imagem(k), alt: "", loading: "lazy" }),
         el("span.brt-carta__nome", { texto: a.nome }),
         sel ? el("span.brt-carta__marca", { "aria-hidden": "true", texto: "✓" }) : null,
       ]);
@@ -43,7 +44,7 @@
     var vant = a.estilos.map(function (e) { var v = Object.keys(K().VANTAGENS).map(function (x) { return K().VANTAGENS[x]; }).filter(function (v) { return v.estilo === e; })[0]; return v ? v.nome + " (" + T().nomeEstilo(e) + ")" : ""; }).filter(Boolean);
     return el("div.brt-arquetipo-detalhe", { style: "--brt-cor: " + a.cor }, [
       el("h3.brt-arquetipo-detalhe__nome", { texto: a.nome }),
-      el("p.t-mini", { texto: a.adjetivos.toUpperCase() }),
+      el("p.t-mini", { texto: (a.adjetivos || "").toUpperCase() }),
       el("p", { texto: a.resumo }),
       el("dl.r-dados", {}, [
         el("dt", { texto: "Estilos" }), el("dd", { texto: a.estilos.map(T().nomeEstilo).join(" e ") }),
@@ -114,6 +115,8 @@
       ],
     });
     desenhar();
+    /* v9.18: os Arquétipos Homebrew da conta (uma viagem). */
+    if (global.RAMABrutalHomebrew) global.RAMABrutalHomebrew.carregarBiblioteca().then(function (r) { if (r && r.arquetipos.length) desenhar(); });
     return m;
   }
 

@@ -87,6 +87,7 @@
           if (t.chave === "classe" && sistema === "tormenta20") { if (global.RAMAHomebrewClasseT20) global.RAMAHomebrewClasseT20.editor({ aoSalvar: o.aoSalvar }); return; }
           if (t.chave === "classe") { if (global.RAMAHomebrewClasse) global.RAMAHomebrewClasse.editor({ aoSalvar: o.aoSalvar }); return; }
           if (t.chave === "elemento") { editor({ sistema: sistema, grupo: "estrutural", subtipo: "elemento", aoSalvar: o.aoSalvar }); return; }
+          if (sistema === "brutal" && (t.chave === "arquetipo" || t.chave === "estilo") && global.RAMAHomebrewBrutal) { global.RAMAHomebrewBrutal[t.chave]({ aoSalvar: o.aoSalvar }); return; }
           if (sistema === "goblins" && (t.chave === "ocupacao" || t.chave === "descritor") && global.RAMAHomebrewGoblins) { global.RAMAHomebrewGoblins[t.chave]({ aoSalvar: o.aoSalvar }); return; }
           if (sistema === "tormenta20" && (t.chave === "origem" || t.chave === "divindade") && global.RAMAHomebrewT20Estruturais) { global.RAMAHomebrewT20Estruturais[t.chave]({ aoSalvar: o.aoSalvar }); return; }
           if (sistema === "ordem" && (t.chave === "origem" || t.chave === "trilha") && global.RAMAHomebrewOrigemTrilha) { global.RAMAHomebrewOrigemTrilha[t.chave]({ aoSalvar: o.aoSalvar }); return; }
@@ -430,6 +431,10 @@
       if (x && x.def && st === "trilha") x.def.poderes.forEach(function (p) { if (p.resumo) pares.push(["NEX " + p.nex + "% · " + p.nome, p.resumo]); });
     }
     /* Raça Homebrew de Tormenta20 (v9.10): a prévia e o texto das habilidades. */
+    if (s === "brutal" && (st === "arquetipo" || st === "estilo") && global.RAMABrutalHomebrew) {
+      var HBr = global.RAMABrutalHomebrew, xb = HBr.deRegistro(reg);
+      if (xb && xb.def) (st === "arquetipo" ? HBr.previaArquetipo(xb.def) : HBr.previaEstilo(xb.def)).forEach(function (t, i) { pares.push([i ? "" : "Regras", t]); });
+    }
     if (s === "goblins" && (st === "ocupacao" || st === "descritor") && global.RAMAGoblinsHomebrew) {
       var HG = global.RAMAGoblinsHomebrew, xg = HG.deRegistro(reg);
       if (xg && xg.def) (st === "ocupacao" ? HG.previaOcupacao(xg.def) : HG.previaDescritor(xg.def)).forEach(function (t, i) { pares.push([i ? "" : "Regras", t]); });

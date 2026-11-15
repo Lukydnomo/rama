@@ -1,5 +1,13 @@
 # O banco
 
+## Arquétipo e Estilo Homebrew de BRUTAL — v9.18
+
+Nenhuma aba nova. No `HOMEBREW`, a coluna `tipo` aceita `arquetipo` e
+`estilo`. Na ficha de BRUTAL, `brutal.homebrew` guarda a cópia do
+Arquétipo (`hbba-…`) e dos Estilos Homebrew dele (`hbbe-…`). No estado da
+mesa de BRUTAL (`CAMPANHA_BRUTAL`), `homebrew` guarda as mesmas cópias.
+Opcional.
+
 ## Ocupação e Descritor Homebrew de Malditos Goblins — v9.17
 
 Nenhuma aba nova. No `HOMEBREW`, a coluna `tipo` aceita `ocupacao` e

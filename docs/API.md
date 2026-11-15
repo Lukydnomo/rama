@@ -1,5 +1,12 @@
 # A API
 
+## Arquétipo e Estilo Homebrew de BRUTAL — v9.18
+
+- `salvar_homebrew`: o grupo `estrutural` de `brutal` aceita `arquetipo` e
+  `estilo`.
+- A mesa de BRUTAL (`salvar_brutal` e a sincronia do elenco) guarda as
+  cópias em `estado.homebrew`.
+
 ## Ocupação e Descritor Homebrew de Malditos Goblins — v9.17
 
 - `salvar_homebrew`: o grupo `estrutural` de `goblins` aceita `ocupacao` e

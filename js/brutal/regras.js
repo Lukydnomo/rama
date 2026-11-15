@@ -45,9 +45,33 @@
     };
   }
 
+  /* v9.18: o Arquétipo Homebrew (e os Estilos Homebrew dele) vêm com a
+     CÓPIA guardada na ficha, ou do catálogo se acabaram de ser escolhidos.
+     Sem cópia e sem catálogo, a escolha some. */
+  function registrarBloco(hb) {
+    var k = K(), x = obj(hb);
+    Object.keys(obj(x.estilos)).forEach(function (c) { if (k.ehEstiloHomebrew(c)) k.registrarEstiloHomebrew(k.normalizarEstiloHomebrew(Object.assign({}, x.estilos[c], { chave: c }))); });
+    Object.keys(obj(x.arquetipos)).forEach(function (c) { if (k.ehArquetipoHomebrew(c)) k.registrarArquetipoHomebrew(k.normalizarArquetipoHomebrew(Object.assign({}, x.arquetipos[c], { chave: c }))); });
+  }
+  function blocoDoArquetipo(chave) {
+    var k = K(), a = k.ARQUETIPOS[chave];
+    if (!a || !a.homebrew) return null;
+    var out = { versao: 1, arquetipos: {}, estilos: {} };
+    out.arquetipos[chave] = copiar(a);
+    a.estilos.forEach(function (e) { if (k.ehEstiloHomebrew(e) && k.ESTILOS[e]) out.estilos[e] = copiar(k.ESTILOS[e]); });
+    return out;
+  }
+  function homebrewDaFicha(b, v) {
+    if (!K().ehArquetipoHomebrew || !K().ehArquetipoHomebrew(b.arquetipo)) return;
+    registrarBloco(b.homebrew);
+    var bloco = blocoDoArquetipo(b.arquetipo);
+    if (bloco) v.homebrew = bloco;
+  }
+
   function normalizar(bruto) {
     var b = obj(bruto);
     var v = fichaVazia();
+    homebrewDaFicha(b, v);
     v.arquetipo = K().ARQUETIPOS[b.arquetipo] ? b.arquetipo : "";
     v.pronomes = texto(b.pronomes, 40);
     v.interprete = texto(b.interprete, 80);
@@ -76,6 +100,8 @@
     var a = arquetipo(n);
     return {
       arquetipo: n.arquetipo,
+      /* v9.18: a mesa registra o Arquétipo Homebrew por esta cópia. */
+      homebrew: n.homebrew ? copiar(n.homebrew) : undefined,
       arquetipoNome: a ? a.nome : "",
       estilos: a ? a.estilos.slice() : [],
       iniciativa: a ? a.iniciativa : 0,
@@ -113,7 +139,7 @@
     arquetipo: arquetipo,
     estilos: estilos,
     nomeDoArquetipo: nomeDoArquetipo,
-    resumoParaMesa: resumoParaMesa,
+    resumoParaMesa: resumoParaMesa, registrarBloco: registrarBloco, blocoDoArquetipo: blocoDoArquetipo,
     pendencias: pendencias,
     aplicarOperacao: aplicarOperacao,
     copiar: copiar,

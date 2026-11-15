@@ -341,7 +341,62 @@
       texto: "Vantagens de outras versões de BRUTAL não estão no PDF. A Diretora pode criá-las como Vantagens da mesa, com custo, recarga e um efeito automático." },
   };
 
+  /* =================================================================
+     v9.18 — ARQUÉTIPO e ESTILO HOMEBREW (chaves hbba-/hbbe-<id>-<hash>).
+     O Arquétipo no formato dos do livro: adjetivos, cor, Iniciativa
+     (1 a 9; empata depois do do livro), resumo, os dois Estilos e a
+     Habilidade (nome, cena, recarga e texto — o efeito é da mesa, como
+     nas do livro que não têm automação). O Estilo: nome e texto; usar um
+     Estilo seu reduz a Dificuldade em 1, como os do livro. Registrados
+     nos MESMOS mapas; a ficha e a mesa guardam as cópias. Puro.
+     ================================================================= */
+  var PADRAO_ARQ = /^hbba-[a-z0-9-]{3,30}$/, PADRAO_EST = /^hbbe-[a-z0-9-]{3,30}$/;
+  var ARQ_HB = [], EST_HB = [];
+  function hbObj(v) { return v && typeof v === "object" && !Array.isArray(v) ? v : {}; }
+  function hbTx(v, max) { return String(v === undefined || v === null ? "" : v).slice(0, max || 200); }
+  function hbInt(v, min, max, p) { var n = Math.round(Number(v)); return v !== "" && v !== null && v !== undefined && isFinite(n) ? Math.max(min, Math.min(max, n)) : p; }
+  function hbEstavel(v) {
+    if (Array.isArray(v)) return "[" + v.map(hbEstavel).join(",") + "]";
+    if (v && typeof v === "object") return "{" + Object.keys(v).sort().map(function (k) { return JSON.stringify(k) + ":" + hbEstavel(v[k]); }).join(",") + "}";
+    return JSON.stringify(v === undefined ? null : v);
+  }
+  function hbHash(t) { var h = 5381; for (var i = 0; i < t.length; i++) h = ((h << 5) + h + t.charCodeAt(i)) | 0; return (h >>> 0).toString(36).slice(0, 6); }
+  function hbChave(prefixo, d) { var sem = Object.assign({}, d); delete sem.chave; return prefixo + (String(d.homebrewId || "local").toLowerCase().replace(/[^a-z0-9]/g, "").slice(0, 8) || "local") + "-" + hbHash(hbEstavel(sem)); }
+  function ehArquetipoHomebrew(k) { return PADRAO_ARQ.test(String(k || "")); }
+  function ehEstiloHomebrew(k) { return PADRAO_EST.test(String(k || "")); }
+  function normalizarEstiloHomebrew(bruto) {
+    var b = hbObj(bruto);
+    var d = { chave: ehEstiloHomebrew(b.chave) ? b.chave : "", nome: hbTx(b.nome, 40).trim() || "Estilo Homebrew", homebrew: true, homebrewId: hbTx(b.homebrewId, 80), texto: hbTx(b.texto, 400).trim(), pagina: 0 };
+    /* Chave ESTÁVEL (sem versão): os Arquétipos apontam para ela. */
+    if (!d.chave) d.chave = "hbbe-" + (String(d.homebrewId || "local").toLowerCase().replace(/[^a-z0-9]/g, "").slice(0, 12) || "local");
+    return d;
+  }
+  function normalizarArquetipoHomebrew(bruto) {
+    var b = hbObj(bruto), h = hbObj(b.habilidade);
+    var cor = /^#[0-9a-fA-F]{6}$/.test(String(b.cor || "")) ? String(b.cor).toLowerCase() : "#888888";
+    var d = {
+      chave: ehArquetipoHomebrew(b.chave) ? b.chave : "",
+      nome: hbTx(b.nome, 40).trim() || "Arquétipo Homebrew",
+      homebrew: true, homebrewId: hbTx(b.homebrewId, 80), pagina: 0,
+      adjetivos: hbTx(b.adjetivos, 80).trim(), cor: cor, iniciativa: hbInt(b.iniciativa, 1, 9, 9),
+      resumo: hbTx(b.resumo, 600).trim(),
+      estilos: (Array.isArray(b.estilos) ? b.estilos : []).map(String).filter(function (k, i, l) { return (!!ESTILOS[k] || ehEstiloHomebrew(k)) && l.indexOf(k) === i; }).slice(0, 2),
+      habilidade: { chave: "", nome: hbTx(h.nome, 60).trim() || "Habilidade", cena: hbTx(h.cena, 40).trim() || "Sem restrição", recarga: RECARGAS[h.recarga] ? h.recarga : "fimEncontro", texto: hbTx(h.texto, 600).trim() },
+    };
+    if (!d.chave) d.chave = hbChave("hbba-", d);
+    d.habilidade.chave = d.chave + "-h";
+    return d;
+  }
+  function registrarEstiloHomebrew(def) { if (!def || !ehEstiloHomebrew(def.chave)) return null; ESTILOS[def.chave] = def; if (EST_HB.indexOf(def.chave) < 0) EST_HB.push(def.chave); return def; }
+  function registrarArquetipoHomebrew(def) { if (!def || !ehArquetipoHomebrew(def.chave)) return null; ARQUETIPOS[def.chave] = def; if (ARQ_HB.indexOf(def.chave) < 0) ARQ_HB.push(def.chave); return def; }
+  /* A ordem de Iniciativa: pelo número; no empate, o do livro primeiro. */
+  function ordemDeIniciativa(k) { var a = ARQUETIPOS[k]; return a ? (a.iniciativa || 99) + (a.homebrew ? 0.5 : 0) : 99; }
+  function arquetiposPorIniciativa() { return INICIATIVA.concat(ARQ_HB.filter(function (k) { return !!ARQUETIPOS[k]; })).sort(function (a, b) { return ordemDeIniciativa(a) - ordemDeIniciativa(b); }); }
+
   global.RAMABrutalCatalogo = {
+    ehArquetipoHomebrew: ehArquetipoHomebrew, ehEstiloHomebrew: ehEstiloHomebrew, normalizarArquetipoHomebrew: normalizarArquetipoHomebrew, normalizarEstiloHomebrew: normalizarEstiloHomebrew,
+    registrarArquetipoHomebrew: registrarArquetipoHomebrew, registrarEstiloHomebrew: registrarEstiloHomebrew, ordemDeIniciativa: ordemDeIniciativa, arquetiposPorIniciativa: arquetiposPorIniciativa,
+    arquetiposDisponiveis: function () { return ORDEM_ARQUETIPOS.concat(ARQ_HB); }, estilosDisponiveis: function () { return ORDEM_ESTILOS.concat(EST_HB); },
     FONTE: FONTE, referencia: referencia, LIMITES: LIMITES, CENAS: CENAS,
     ESTILOS: ESTILOS, ORDEM_ESTILOS: ORDEM_ESTILOS, RECARGAS: RECARGAS,
     ARQUETIPOS: ARQUETIPOS, ORDEM_ARQUETIPOS: ORDEM_ARQUETIPOS, INICIATIVA: INICIATIVA,

@@ -791,6 +791,10 @@
       return;
     }
     var sisHb = registro && registro.modelo ? registro.modelo.sistema : "";
+    if (sisHb === "brutal" && (stHb === "arquetipo" || stHb === "estilo") && global.RAMAHomebrewBrutal) {
+      global.RAMAHomebrewBrutal[stHb]({ registro: registro, aoSalvar: carregar });
+      return;
+    }
     if (sisHb === "goblins" && (stHb === "ocupacao" || stHb === "descritor") && global.RAMAHomebrewGoblins) {
       global.RAMAHomebrewGoblins[stHb]({ registro: registro, aoSalvar: carregar });
       return;

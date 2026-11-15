@@ -90,6 +90,15 @@
     return { id: texto(x.id, 40) || novoId("m"), tipo: tipo, nome: texto(x.nome, 60) || (tipo === "possessao" ? "Possessão" : tipo === "restricao" ? "Restrição" : "Condição"), valor: limitar(inteiro(x.valor, 1), 0, 6) };
   }
 
+  /* v9.18: as cópias de Arquétipos e Estilos Homebrew da mesa. */
+  function registrarHomebrew(hb) {
+    var k = K(), x = obj(hb), out = { versao: 1, arquetipos: {}, estilos: {} };
+    if (!k.ehArquetipoHomebrew) return out;
+    Object.keys(obj(x.estilos)).slice(0, 20).forEach(function (c) { if (k.ehEstiloHomebrew(c)) out.estilos[c] = k.registrarEstiloHomebrew(k.normalizarEstiloHomebrew(Object.assign({}, x.estilos[c], { chave: c }))); });
+    Object.keys(obj(x.arquetipos)).slice(0, 20).forEach(function (c) { if (k.ehArquetipoHomebrew(c)) out.arquetipos[c] = k.registrarArquetipoHomebrew(k.normalizarArquetipoHomebrew(Object.assign({}, x.arquetipos[c], { chave: c }))); });
+    return out;
+  }
+
   function normalizarSobrevivente(bruto, id) {
     var b = obj(bruto);
     var s = sobreviventeVazio(id, b.nome);
@@ -123,6 +132,8 @@
   function normalizar(bruto) {
     var b = obj(bruto);
     var e = estadoVazio();
+    var hbMesa = registrarHomebrew(b.homebrew);
+    if (Object.keys(hbMesa.arquetipos).length || Object.keys(hbMesa.estilos).length) e.homebrew = JSON.parse(JSON.stringify(hbMesa));
     e.sessao = Math.max(1, inteiro(b.sessao, 1));
     e.cena = ["livre", "suspense", "encontro"].indexOf(b.cena) >= 0 ? b.cena : "livre";
     var a = obj(b.assassino), av = assassinoVazio();
@@ -211,6 +222,12 @@
       var s = estado.sobreviventes[id] || (estado.sobreviventes[id] = sobreviventeVazio(id, p.nome));
       s.nome = texto(p.nome, 120) || s.nome;
       s.foraDaCampanha = false;
+      if (r.homebrew) {
+        var hbS = registrarHomebrew(r.homebrew);
+        estado.homebrew = estado.homebrew || { versao: 1, arquetipos: {}, estilos: {} };
+        Object.keys(hbS.arquetipos).forEach(function (c) { estado.homebrew.arquetipos[c] = JSON.parse(JSON.stringify(hbS.arquetipos[c])); });
+        Object.keys(hbS.estilos).forEach(function (c) { estado.homebrew.estilos[c] = JSON.parse(JSON.stringify(hbS.estilos[c])); });
+      }
       if (K().ARQUETIPOS[r.arquetipo]) {
         s.arquetipo = r.arquetipo;
         s.estilos = K().ARQUETIPOS[r.arquetipo].estilos.slice();
@@ -613,8 +630,8 @@
     if (custo > e.diretora.ph) return { ok: false, motivo: "Faltam Pontos de Horror: custa " + custo + ", há " + e.diretora.ph + "." };
     e.diretora.ph -= custo;
     var ordem = part.slice().sort(function (a, b) {
-      var ia = K().INICIATIVA.indexOf(a.arquetipo), ib = K().INICIATIVA.indexOf(b.arquetipo);
-      return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib);
+      /* v9.18: pelo número de Iniciativa do Arquétipo (o do livro primeiro no empate). */
+      return K().ordemDeIniciativa(a.arquetipo) - K().ordemDeIniciativa(b.arquetipo);
     }).map(function (s) { return s.id; });
     if (op.dificultar) { meta += 1; log(c, "DIFICULTAR (4 PH): a Pilha de Fuga aumenta em 1.", true); }
     e.lacunas.ultimaMeta = op.dificultar ? meta - 1 : meta;
