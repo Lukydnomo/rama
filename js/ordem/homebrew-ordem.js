@@ -368,7 +368,36 @@
     return carga;
   }
 
+  /* v9.15: as cópias da ficha e as versões novas da biblioteca (classe,
+     origem, trilha; o elemento tem chave estável e não versiona). */
+  var CAMPOS_VERSAO = [["classes", "classes", "classe"], ["origens", "origens", "origem"], ["trilhas", "trilhas", "trilha"]];
+  function trocarChave(bloco, antiga, nova) {
+    var novo = JSON.parse(JSON.stringify(bloco).split(antiga).join(nova));
+    Object.keys(bloco).forEach(function (k) { delete bloco[k]; });
+    Object.keys(novo).forEach(function (k) { bloco[k] = novo[k]; });
+  }
+  function copiasDaFicha(ordem) {
+    var hb = obj(obj(ordem).homebrew), out = [];
+    CAMPOS_VERSAO.forEach(function (c) { Object.keys(obj(hb[c[0]])).forEach(function (k) { var d = hb[c[0]][k]; out.push({ campo: c[0], tipo: c[2], chave: k, nome: d.nome || k, homebrewId: d.homebrewId || "" }); }); });
+    return out;
+  }
+  function versoesNovas(ordem, bib) {
+    var b = obj(bib);
+    return copiasDaFicha(ordem).map(function (cp) {
+      var lista = (CAMPOS_VERSAO.filter(function (c) { return c[0] === cp.campo; })[0] || [])[1];
+      var nova = (b[lista] || []).filter(function (d) { return cp.homebrewId && d.homebrewId === cp.homebrewId && d.chave !== cp.chave; })[0];
+      return nova ? Object.assign({}, cp, { def: nova }) : null;
+    }).filter(Boolean);
+  }
+  function atualizarVersao(ordem, item) {
+    var def = JSON.parse(JSON.stringify(item.def)); delete def.meu;
+    trocarChave(ordem, item.chave, def.chave);
+    guardarNaFicha(ordem, item.tipo, def);
+    return true;
+  }
+
   global.RAMAOrdemHomebrew = {
+    copiasDaFicha: copiasDaFicha, versoesNovas: versoesNovas, atualizarVersao: atualizarVersao,
     carregarBiblioteca: carregarBiblioteca,
     NEX: NEX, ESCOLHAS: ESCOLHAS, ESCOLHAS_PATENTE: ESCOLHAS_PATENTE, OFICIAIS: OFICIAIS,
     normalizarClasse: normalizarClasse, chaveDaClasse: chaveDaClasse, disponivelNoTrilho: disponivelNoTrilho, faltas: faltas,

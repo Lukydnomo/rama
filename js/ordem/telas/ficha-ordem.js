@@ -3202,6 +3202,7 @@
 
       return el("div.pilha--larga", { class: "pilha" }, [
         painelNivel(ctx, o, c),
+        painelVersoesHomebrew(ctx, o),
         /* Ramificação (v9.5): o planejador, separado dos avanços reais. Só o dono. */
         global.RAMAFichaRamificacao ? global.RAMAFichaRamificacao.painel(ctx) : null,
         global.RAMAFichaArquivo7 ? global.RAMAFichaArquivo7.painelDeProgressao(ctx) : null,
@@ -5316,6 +5317,22 @@
   /* v2.46: uma mudança no bloco de Ordem refaz o bloco superior e a
      seção aberta (os dois leem o mesmo cálculo, feito uma vez no ciclo);
      cabeçalho, avisos e a tira de abas ficam. */
+  /* v9.15: as cópias Homebrew da ficha e a atualização de versão. */
+  function painelVersoesHomebrew(ctx, o) {
+    var HO = global.RAMAOrdemHomebrew, V = global.RAMAHomebrewVersoes;
+    if (!HO || !HO.copiasDaFicha || !V || !HO.copiasDaFicha(o).length) return null;
+    return el("section.pilha--curta", { class: "pilha", "aria-label": "Homebrew desta ficha" }, [
+      el("h3.t-secao", { texto: "Homebrew desta ficha" }),
+      V.painel({
+        copias: function () { return HO.copiasDaFicha(ordemDe(ctx)); },
+        carregar: function () { return HO.carregarBiblioteca(true); },
+        novas: function (bib) { return HO.versoesNovas(ordemDe(ctx), bib); },
+        aplicar: function (item) { HO.atualizarVersao(ordemDe(ctx), item); var cl = C.classe(ordemDe(ctx).classe); if (cl) ctx.ficha.classe = cl.nome; aoMudarOrdem(ctx); },
+        podeEditar: !ctx.podeEditar || !!ctx.podeEditar(),
+      }),
+    ]);
+  }
+
   function aoMudarOrdem(ctx) {
     var o = ordemDe(ctx);
     R.aparar(o, R.maximosDosRecursos(o));

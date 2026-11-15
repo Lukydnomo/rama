@@ -239,7 +239,38 @@
     return carga;
   }
 
+  /* v9.15: as cópias da ficha e as versões novas da biblioteca. */
+  var CAMPOS_VERSAO = [["racas", "racas", "raca"], ["origens", "origens", "origem"], ["deuses", "divindades", "divindade"], ["classes", "classes", "classe"], ["magias", "magias", "magia"], ["poderes", "poderes", "poder"]];
+  function trocarChave(bloco, antiga, nova) {
+    var novo = JSON.parse(JSON.stringify(bloco).split(antiga).join(nova));
+    Object.keys(bloco).forEach(function (k) { delete bloco[k]; });
+    Object.keys(novo).forEach(function (k) { bloco[k] = novo[k]; });
+  }
+  function copiasDaFicha(t20) {
+    var hb = obj(obj(t20).homebrew), out = [];
+    CAMPOS_VERSAO.forEach(function (c) { Object.keys(obj(hb[c[0]])).forEach(function (k) { var d = hb[c[0]][k]; out.push({ campo: c[0], tipo: c[2], chave: k, nome: d.nome || k, homebrewId: d.homebrewId || "" }); }); });
+    return out;
+  }
+  function versoesNovas(t20, bib) {
+    var b = obj(bib);
+    return copiasDaFicha(t20).map(function (cp) {
+      var lista = (CAMPOS_VERSAO.filter(function (c) { return c[0] === cp.campo; })[0] || [])[1];
+      var nova = (b[lista] || []).filter(function (d) { return cp.homebrewId && d.homebrewId === cp.homebrewId && d.id !== cp.chave; })[0];
+      return nova ? Object.assign({}, cp, { def: nova }) : null;
+    }).filter(Boolean);
+  }
+  function atualizarVersao(t20, item) {
+    var def = JSON.parse(JSON.stringify(item.def)); delete def.meu;
+    trocarChave(t20, item.chave, def.id);
+    t20.homebrew = t20.homebrew || { versao: 1 };
+    t20.homebrew[item.campo] = t20.homebrew[item.campo] || {};
+    t20.homebrew[item.campo][def.id] = def;
+    registrarDef({ tipo: item.tipo, def: def });
+    return true;
+  }
+
   global.RAMATormenta20Homebrew = {
+    copiasDaFicha: copiasDaFicha, versoesNovas: versoesNovas, atualizarVersao: atualizarVersao,
     EFEITOS: EFEITOS, efeitosPara: efeitosPara, textoAcao: textoAcao, EXECUCOES: EXECUCOES, DURACOES: DURACOES, SENTIDOS: SENTIDOS, PROFS: PROFS, NOMES_ATR: NOMES_ATR,
     chaveDoEfeito: chaveDoEfeito, textoEfeito: textoEfeito, textoEscolha: textoEscolha, textoAtributos: textoAtributos,
     previaRaca: previaRaca, automacao: automacao, previaOrigem: previaOrigem, previaDeus: previaDeus, previaClasse: previaClasse, previaMagia: previaMagia, previaPoder: previaPoder, NOMES_ESCOLA: NOMES_ESCOLA, nomePoder: nomePoder, nomePericiaOuOficio: nomePericiaOuOficio, deRegistro: deRegistro, carregarBiblioteca: carregarBiblioteca,

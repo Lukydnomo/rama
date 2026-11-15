@@ -929,6 +929,11 @@ segredo nenhum — ele os lê das Script Properties. Publicá-lo não expõe nad
 
 ### Atualizar o backend
 
+**v9.15.0 — ATUALIZA:** atualizar a cópia Homebrew de uma ficha para a
+versão da biblioteca (Ordem e Tormenta20). **Servidor: nada muda.**
+Site: os arquivos listados em `docs/HOMEBREW-SISTEMAS.md` (seção
+"Publicar a v9.15.0").
+
 **v9.14.0 — ESTILHACO:** Magia e Poder Homebrew no motor de Tormenta20
 (etapa 2, parte 7). Troque **`Tormenta20.gs`** e **`Tormenta20Dados.gs`**
 e crie uma versão nova da implantação. **`setupRama()` não é
@@ -2049,7 +2054,7 @@ Três números diferentes, que não se misturam:
 
 | | Onde | O que é |
 |---|---|---|
-| versão do aplicativo | `js/versao.js` | o que a pessoa vê: v9.14.0 |
+| versão do aplicativo | `js/versao.js` | o que a pessoa vê: v9.15.0 |
 | `schemaVersion` | `js/ficha.js` | o formato da FICHA |
 | `versaoFormato` | `js/config.js` | o formato dos arquivos de importação |
 

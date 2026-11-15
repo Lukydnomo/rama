@@ -118,6 +118,17 @@
 
   var CHANGELOG = [
     {
+      versao: "9.15.0",
+      codinome: "ATUALIZA",
+      data: "15/11/2026",
+      mudancas: {
+        "Adicionado": [
+          "Fichas de Ordem e Tormenta20: o painel \u201cHomebrew desta ficha\u201d (aba Progressão) lista as cópias Homebrew e, quando a biblioteca tem uma versão nova do mesmo registro, oferece atualizar — de propósito, com confirmação. Sem isso, mudar a biblioteca continua sem mudar o personagem.",
+        ],
+        "Técnico": ["Novo js/homebrew-versoes.js (painel e troca de chave). RAMAOrdemHomebrew e RAMATormenta20Homebrew ganharam copiasDaFicha, versoesNovas e atualizarVersao (troca a chave versionada em todo o bloco, inclusive as derivadas, e grava a cópia nova)."],
+      },
+    },
+    {
       versao: "9.14.0",
       codinome: "ESTILHACO",
       data: "15/11/2026",

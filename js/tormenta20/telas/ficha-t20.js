@@ -1106,6 +1106,18 @@
   }
 
   /* ==================================================== PROGRESSÃO */
+  /* v9.15: as cópias Homebrew da ficha e a atualização de versão. */
+  function secaoVersoesHomebrew(ctx) {
+    var HB = global.RAMATormenta20Homebrew, V = global.RAMAHomebrewVersoes;
+    if (!HB || !V || !HB.copiasDaFicha(bl(ctx)).length) return null;
+    return T().secao("Homebrew desta ficha", [V.painel({
+      copias: function () { return HB.copiasDaFicha(bl(ctx)); },
+      carregar: function () { return HB.carregarBiblioteca(true); },
+      novas: function (bib) { return HB.versoesNovas(bl(ctx), bib); },
+      aplicar: function (item) { op(ctx, function (t) { HB.atualizarVersao(t, item); return ok(); }); },
+      podeEditar: pode(ctx),
+    })]);
+  }
   function abaProgressao(ctx) {
     var b = bl(ctx);
     var c = calc(ctx);
@@ -1113,6 +1125,7 @@
     var proximo = c.proximoNivelXp, anterior = D().xpDoNivel(c.nivel);
     var sobe = R().podeSubir(b);
     return el("div.t20-aba", {}, [
+      secaoVersoesHomebrew(ctx),
       T().secao("Experiência", [
         el("div.t20-xp", {}, [
           el("strong.t20-xp__nivel", { texto: "Nível " + c.nivel }),

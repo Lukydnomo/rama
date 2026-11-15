@@ -465,7 +465,8 @@ T20 recusado e pacotes.
   NEX).
 - Classes Homebrew também na troca de classe e na transição de uma ficha
   existente (hoje, só na criação).
-- Atualizar uma ficha para a versão nova de uma classe (hoje fica a cópia).
+- ~~Atualizar uma ficha para a versão nova de uma classe~~ — feito na v9.15.0
+  (painel "Homebrew desta ficha").
 - Elemento Homebrew em poderes paranormais e maldições Homebrew (dependem
   dos editores desses tipos).
 
@@ -1241,3 +1242,74 @@ uma versão nova da implantação. `Codigo.gs` não mudou.
 - `js/homebrew-adaptadores.js`, `js/paginas/homebrew-editor.js`,
   `js/paginas/homebrew.js`, `js/paginas/homebrew-origem-divindade-t20.js`;
 - `js/versao.js`, `homebrew/index.html`.
+
+## v9.15.0 — Atualizar a cópia de uma ficha para a versão da biblioteca
+
+A ficha guarda a cópia de cada definição Homebrew que usa, com a chave
+versionada pelo conteúdo. Editar na biblioteca não muda o personagem em
+jogo. Agora dá para **trazer a versão nova de propósito**.
+
+### Onde
+
+Aba **Progressão**, painel **"Homebrew desta ficha"**, nas fichas de
+Ordem e de Tormenta20. Ele só aparece quando a ficha tem alguma cópia.
+- lista as cópias: nome, tipo e versão (o fim da chave);
+- **Procurar versões novas** consulta a biblioteca (as suas e as
+  públicas). Uma cópia tem versão nova quando o mesmo registro (mesmo
+  `homebrewId`) está lá com outra chave;
+- **Atualizar** pede confirmação, porque os números podem mudar.
+
+O que pode ser atualizado:
+- **Ordem:** classe, origem e trilha. O elemento tem chave estável e não
+  versiona;
+- **Tormenta20:** raça, origem, divindade, classe, magia e poder.
+
+### Como
+
+`atualizarVersao` (em `RAMAOrdemHomebrew` e `RAMATormenta20Homebrew`):
+1. troca a chave antiga pela nova em todo o bloco da ficha. Isso inclui
+   as escolhas que apontam para ela e as chaves derivadas, como
+   `<divindade>-p1` ou os poderes de trilha `<trilha>-p10`;
+2. grava a cópia nova;
+3. registra a cópia no catálogo.
+
+A normalização tira a cópia antiga, que ninguém mais usa. As escolhas
+feitas continuam; as que não existirem na versão nova ficam sem efeito.
+O painel é `js/homebrew-versoes.js` (novo), o mesmo para os dois
+sistemas.
+
+### Validação da v9.15.0
+
+**Automática.**
+- `testes/executar-homebrew-t20.js` passou de 124 para 130:
+  - as cópias da ficha;
+  - só o mesmo registro com outra chave é versão nova;
+  - a ficha na mesma versão não tem nada a atualizar;
+  - depois de atualizar, raça, divindade e o poder derivado apontam para
+    as chaves novas, e as cópias antigas saem;
+  - os números seguem a versão nova (12 m; +4 Furtividade) e a escolha
+    de perícia fica.
+- `testes/executar-homebrew-ordem.js` passou de 71 para 75:
+  - origem e trilha atualizadas, com as chaves novas e as antigas fora;
+  - Defesa e PV recalculados pela versão nova (o +1 PV por marco saiu, e
+    o Primeiro Corte passou a dar +6).
+
+**Na interface** (servidor local, conta sintética, ficha de Tormenta20):
+- Usei uma raça Vidrado com 6 m e depois mudei o deslocamento dela para
+  9 m na biblioteca.
+- A ficha continuou com 6 m.
+- Em Progressão → "Homebrew desta ficha", "Procurar versões novas"
+  mostrou "há uma versão nova na biblioteca".
+- "Atualizar" pediu confirmação. Confirmado, o deslocamento foi a 9 m e
+  a versão mudou.
+- Sem erros no console.
+
+### Publicar a v9.15.0
+
+**Servidor:** nada muda. **`setupRama()` não é necessário.**
+
+**Site:**
+- `js/homebrew-versoes.js` (novo);
+- `js/tormenta20/homebrew-t20.js`, `js/tormenta20/telas/ficha-t20.js`;
+- `js/ordem/homebrew-ordem.js`, `js/ordem/telas/ficha-ordem.js`;
+- `js/versao.js`, `ficha/index.html`.

@@ -336,5 +336,23 @@ const aM = ida2(gM), aP = ida2(gP);
 t.ok("exportar e importar: a magia mantém dano; o poder mantém efeitos e ativação", aM.ok && aM.dados.modelo.def.dano === "4d8" && aP.ok && aP.dados.modelo.def.efeitos.length === 1 && aP.dados.modelo.def.acao.custo === 1, JSON.stringify(aP.ok ? aP.dados.modelo.def : aP));
 t.ok("prévias", /2º círculo \(3 PM\) · Evocação/.test(H.previaMagia(lanca)[0]) && /dano 4d8 de perfuração \(a resistência reduz à metade\)/.test(H.previaMagia(lanca).join(" ")) && /a partir do 3º nível/.test(H.previaPoder(lince)[0]));
 
+/* ================= v9.15: atualizar a versão de uma cópia ================= */
+t.grupo("T20 Homebrew · atualizar a cópia para a versão da biblioteca");
+const fV = R.normalizar({ atributosBase: atrBase, raca: { id: vid.id, escolhas: { h2e: ["furtividade"] } }, origem: { id: "acolito", beneficios: [] },
+  niveis: [{ classe: "guerreiro", escolhas: {} }], divindade: { id: vit.id, energia: "", poderes: [{ id: vit.id + "-p1" }] }, homebrew: { racas: { [vid.id]: vid }, deuses: { [vit.id]: vit } } });
+t.iguais("as cópias da ficha (tipo, chave, registro)", H.copiasDaFicha(fV).map((c) => [c.tipo, c.chave === vid.id || c.chave === vit.id, c.homebrewId.slice(0, 8)]), [["raca", true, "f1e2d3c4"], ["divindade", true, "d4c3b2a1"]]);
+const vidNova = RA.normalizarRacaHomebrew(Object.assign(copia(bruta), { deslocamento: 12 }));
+const vitNova = DE.normalizarHomebrew(Object.assign(copia(deusB), { poderesProprios: [{ nome: "Pele Translúcida", resumo: "Ainda mais difícil de ver.", efeitos: [{ t: "bonus", alvo: "pericia.furtividade", valor: 4 }] }] }));
+const bibV = { racas: [vidNova, RA.normalizarRacaHomebrew(Object.assign(copia(bruta), { homebrewId: "outro-registro" }))], divindades: [vitNova] };
+const novasV = H.versoesNovas(fV, bibV);
+t.ok("versões novas: só o mesmo registro com outra chave", novasV.length === 2 && novasV[0].def.id === vidNova.id && novasV[1].def.id === vitNova.id);
+t.ok("na mesma versão, nada a atualizar", H.versoesNovas(fV, { racas: [vid], divindades: [vit] }).length === 0);
+const fU = copia(fV);
+novasV.forEach((n) => H.atualizarVersao(fU, n));
+const fU2 = R.normalizar(fU);
+t.ok("atualizada: a ficha aponta para as chaves novas (raça, divindade e o poder derivado)", fU2.raca.id === vidNova.id && fU2.divindade.id === vitNova.id && fU2.divindade.poderes[0].id === vitNova.id + "-p1");
+t.ok("as cópias antigas saem; as novas ficam", !fU2.homebrew.racas[vid.id] && fU2.homebrew.racas[vidNova.id] && !fU2.homebrew.deuses[vit.id] && fU2.homebrew.deuses[vitNova.id]);
+t.iguais("os números seguem a versão nova (12m; +4 Furtividade em vez de +2) e a escolha fica", [R.calcular(fU2).deslocamento.terrestre, R.calcular(fU2).pericias.furtividade.total - R.calcular(fV).pericias.furtividade.total, fU2.raca.escolhas.h2e[0]], [12, 2, "furtividade"]);
+
 console.log(`\n${FORTE}${passaram} ok${FIM}, ${falharam ? VERMELHO : ""}${falharam} falha(s)${FIM}.`);
 if (falharam) Deno.exit(1);

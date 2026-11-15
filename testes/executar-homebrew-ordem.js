@@ -201,5 +201,19 @@ t.ok("da biblioteca, a Trilha tem o resumo pela descrição", H.deRegistro(Objec
 t.ok("pacote: Origem e Trilha de Ordem só em pacote de Ordem", A.compativelComPacote(gOr.registro, "ordem").ok && !A.compativelComPacote(gTr.registro, "vampiro").ok);
 t.ok("o resumo da lista diz o essencial", /2 perícias/.test(A.resumo(gOr.registro)) && /para Combatente/.test(A.resumo(gTr.registro)));
 
+/* ===================== v9.15: atualizar a versão de uma cópia ===================== */
+t.grupo("Ordem Homebrew · atualizar a cópia para a versão da biblioteca");
+const fVer = R.normalizar({ classe: "combatente", origem: vidr.chave, trilha: lap.chave, nex: 40, atributos: { agi: 1, for: 2, int: 1, pre: 2, vig: 2 }, pericias: { profissao: "treinado" }, homebrew: { origens: { [vidr.chave]: vidr }, trilhas: { [lap.chave]: lap } } });
+t.iguais("as cópias da ficha", H.copiasDaFicha(fVer).map((c) => c.tipo + ":" + c.homebrewId.slice(0, 8)), ["origem:e5f6a7b8", "trilha:c9d0e1f2"]);
+const vidrNova = H.normalizarOrigem(Object.assign(copia(orgBruta), { efeitos: [{ tipo: "defesa", valor: 3 }] }));
+const lapNova = H.normalizarTrilha(Object.assign(copia(trBruta), { poderes: [{ nex: 10, nome: "Primeiro Corte", efeitos: [{ tipo: "pvFixo", valor: 6 }] }, { nex: 40, nome: "Faceta" }, { nex: 65, nome: "Brilho" }, { nex: 99, nome: "Diamante" }] }));
+const novasO = H.versoesNovas(fVer, { origens: [vidrNova], trilhas: [lapNova], classes: [] });
+t.ok("versões novas: origem e trilha do mesmo registro, com outra chave", novasO.length === 2 && novasO[0].def.chave === vidrNova.chave && novasO[1].def.chave === lapNova.chave);
+const fAtu = copia(fVer);
+novasO.forEach((n) => H.atualizarVersao(fAtu, n));
+const fAtu2 = R.normalizar(fAtu);
+t.ok("atualizada: chaves novas na ficha e nas cópias; as antigas saem", fAtu2.origem === vidrNova.chave && fAtu2.trilha === lapNova.chave && fAtu2.homebrew.origens[vidrNova.chave] && !fAtu2.homebrew.origens[vidr.chave] && !fAtu2.homebrew.trilhas[lap.chave]);
+t.iguais("os números seguem a versão nova: Defesa +3 no lugar de +1 e da Faceta (+1); sem o +1 PV por marco (−8 em NEX 40%) e Primeiro Corte +6 em vez de +3", [R.calcular(fAtu2).defesa.total - R.calcular(fVer).defesa.total, R.calcular(fAtu2).pv.total - R.calcular(fVer).pv.total], [1, -5]);
+
 console.log(`\n${FORTE}${passaram} ok${FIM}, ${falharam ? VERMELHO : ""}${falharam} falha(s)${FIM}.`);
 if (falharam) Deno.exit(1);
