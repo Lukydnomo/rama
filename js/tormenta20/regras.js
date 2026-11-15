@@ -298,6 +298,7 @@
             var alt = obj(val);
             var op = lista(esc.opcoes).filter(function (x) { return x.id === alt.opcao; })[0];
             if (op && op.escolha && op.escolha.efeito) f.efeitos = f.efeitos.concat(efeitosDaEscolha(op.escolha, alt.valor));
+            if (op && op.escolha && op.escolha.tipo === "poderGeral") poderesDaRaca(alt.valor, h);
             if (op && op.id === "raca" && alt.raca && alt.habilidade) {
               var hab = RA().habilidade(alt.raca, alt.habilidade);
               if (hab) fontes.push(fonte("raca:memoria:" + hab.id, hab.nome + " (Memória Póstuma)", raca.nome, hab, { tipoFonte: "raca" }));
@@ -306,11 +307,28 @@
                 if (tam) f.efeitos = f.efeitos.concat([tam]);
               }
             }
+          } else if (esc.tipo === "poderGeral") {
+            poderesDaRaca(val, h);
           } else {
             f.efeitos = f.efeitos.concat(efeitosDaEscolha(esc, val));
           }
         });
         fontes.push(f);
+      });
+    }
+    /* v9.26: o poder geral escolhido numa habilidade de raça (Propósito
+       de Criação do golem, Memória Póstuma do osteon, uma Raça Homebrew)
+       entra na conta como um poder: até a v9.25 a escolha ficava gravada
+       e o poder não somava. */
+    function poderesDaRaca(valor, h) {
+      (Array.isArray(valor) ? valor : [valor]).forEach(function (id) {
+        if (typeof id !== "string" || !id) return;
+        var def = poderGeral(id);
+        if (!def) return;
+        var esc = obj(obj(obj(t20.raca).escolhasPoder)[id]);
+        var fp = fonte("raca:poder:" + id, def.nome, (RA().RACA[t20.raca.id] || {}).nome + " · " + h.nome, def, { escolhas: esc, tipoFonte: "raca", poderId: def.id });
+        lista(def.escolhas).forEach(function (e) { fp.efeitos = fp.efeitos.concat(efeitosDaEscolha(e, esc[e.id])); });
+        fontes.push(fp);
       });
     }
 

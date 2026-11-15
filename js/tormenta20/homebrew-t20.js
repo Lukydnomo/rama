@@ -75,6 +75,7 @@
   }
   function textoEscolha(esc) {
     if (esc.tipo === "magia") return "uma magia de " + (esc.circulo || 1) + "º círculo à escolha (" + (NOMES_ATR[esc.efeito.atributo] || "Carisma") + ")";
+    if (esc.tipo === "poderGeral") return "um poder geral à escolha";
     var n = esc.quantidade || 1;
     return n + (n === 1 ? " perícia" : " perícias") + " à escolha, " + (esc.efeito.t === "bonus" ? "com " + sinal(esc.efeito.valor) : (n === 1 ? "treinada" : "treinadas"));
   }

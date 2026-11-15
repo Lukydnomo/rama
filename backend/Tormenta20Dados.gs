@@ -771,6 +771,8 @@
     var x = oo(bruto);
     /* v9.13: uma magia à escolha (como a Tatuagem Mística do qareen). */
     if (x.tipo === "magia") return { id: id, tipo: "magia", circulo: nn(x.circulo, 1, 2, 1), quantidade: 1, efeito: { t: "magia", atributo: ["int", "sab", "car"].indexOf(oo(x.efeito).atributo) >= 0 ? x.efeito.atributo : "car", desconto: 0 } };
+    /* v9.26: um poder geral à escolha (como Propósito de Criação). */
+    if (x.tipo === "poderGeral") return { id: id, tipo: "poderGeral", quantidade: 1 };
     if (x.tipo !== "pericia") return null;
     var q = nn(x.quantidade, 1, 3, 1);
     var ef = oo(x.efeito);

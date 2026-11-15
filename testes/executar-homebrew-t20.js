@@ -354,5 +354,22 @@ t.ok("atualizada: a ficha aponta para as chaves novas (raça, divindade e o pode
 t.ok("as cópias antigas saem; as novas ficam", !fU2.homebrew.racas[vid.id] && fU2.homebrew.racas[vidNova.id] && !fU2.homebrew.deuses[vit.id] && fU2.homebrew.deuses[vitNova.id]);
 t.iguais("os números seguem a versão nova (12m; +4 Furtividade em vez de +2) e a escolha fica", [R.calcular(fU2).deslocamento.terrestre, R.calcular(fU2).pericias.furtividade.total - R.calcular(fV).pericias.furtividade.total, fU2.raca.escolhas.h2e[0]], [12, 2, "furtividade"]);
 
+t.grupo("Poder geral escolhido numa habilidade de raça (v9.26)");
+{
+  const def = (f) => R.calcular(f).defesa.total;
+  const gSem = fichaCom({ id: "golem", atributos: [], escolhas: {} }), gCom = fichaCom({ id: "golem", atributos: [], escolhas: { poder: "esquiva" } });
+  t.ok("golem, Propósito de Criação → Esquiva: +2 na Defesa (antes a escolha ficava gravada e não somava)", def(gCom) === def(gSem) + 2 && R.calcular(gCom).fontes.some((x) => x.id === "raca:poder:esquiva"), [def(gSem), def(gCom)].join(" → "));
+  const oCom = fichaCom({ id: "osteon", atributos: ["for", "des", "int"], escolhas: { memoria: { opcao: "poder", valor: "esquiva" } } });
+  const oSem = fichaCom({ id: "osteon", atributos: ["for", "des", "int"], escolhas: { memoria: { opcao: "pericia", valor: "luta" } } });
+  t.ok("osteon, Memória Póstuma → um poder geral (Esquiva) também soma", def(oCom) === def(oSem) + 2, [def(oSem), def(oCom)].join(" → "));
+  const hbPg = RA.normalizarRacaHomebrew({ nome: "Forjado", homebrewId: "f0f0f0f0-sintetico", habilidades: [{ nome: "Molde", resumo: "Um poder geral.", escolhas: [{ tipo: "poderGeral" }] }] });
+  const escH = hbPg.habilidades[0].escolhas[0];
+  t.ok("Raça Homebrew: a escolha de poder geral fica na definição", escH && escH.tipo === "poderGeral" && escH.quantidade === 1, JSON.stringify(hbPg.habilidades[0]));
+  const fHb = fichaCom({ id: hbPg.id, escolhas: { [escH.id]: "esquiva" } }, { homebrew: { racas: { [hbPg.id]: hbPg } } });
+  const fHb0 = fichaCom({ id: hbPg.id, escolhas: {} }, { homebrew: { racas: { [hbPg.id]: hbPg } } });
+  t.ok("  e o poder escolhido entra na conta", def(fHb) === def(fHb0) + 2, [def(fHb0), def(fHb)].join(" → "));
+  t.ok("  um id que não é poder é ignorado (nada inventado)", def(fichaCom({ id: hbPg.id, escolhas: { [escH.id]: "naoExiste" } }, { homebrew: { racas: { [hbPg.id]: hbPg } } })) === def(fHb0));
+}
+
 console.log(`\n${FORTE}${passaram} ok${FIM}, ${falharam ? VERMELHO : ""}${falharam} falha(s)${FIM}.`);
 if (falharam) Deno.exit(1);

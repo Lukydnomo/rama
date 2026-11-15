@@ -118,6 +118,18 @@
 
   var CHANGELOG = [
     {
+      versao: "9.26.0",
+      codinome: "MOLDE",
+      data: "15/11/2026",
+      mudancas: {
+        "Adicionado": [
+          "Tormenta20: uma habilidade de Raça Homebrew pode dar um poder geral à escolha (como o Propósito de Criação do golem). O editor tem a opção, e a prévia diz \u201cum poder geral à escolha\u201d.",
+        ],
+        "Corrigido": ["Tormenta20: o poder geral escolhido numa habilidade de raça (Propósito de Criação do golem, Memória Póstuma do osteon) ficava gravado, mas não entrava na conta da ficha. Agora entra como um poder, com os efeitos dele."],
+        "Técnico": ["regras.js (coletarFontes) põe o poder geral da escolha de raça como fonte raca:poder:<id>; racas.js aceita a escolha poderGeral na Raça Homebrew. backend/Tormenta20.gs e Tormenta20Dados.gs regenerados. testes/executar-homebrew-t20.js: 5 verificações novas (135)."],
+      },
+    },
+    {
       versao: "9.25.0",
       codinome: "FACETA",
       data: "15/11/2026",

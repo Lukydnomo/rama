@@ -139,7 +139,7 @@
     function blocoHabilidade(h, i) {
       var id = "hbr-h" + i;
       var e = h.escolhas[0] || null;
-      var modoEsc = !e ? "" : (e.tipo === "magia" ? "magia" : e.efeito && e.efeito.t === "bonus" ? "bonus" : "treino");
+      var modoEsc = !e ? "" : (e.tipo === "magia" ? "magia" : e.tipo === "poderGeral" ? "poderGeral" : e.efeito && e.efeito.t === "bonus" ? "bonus" : "treino");
       var C2 = global.RAMAHomebrewT20Estruturais.ferramentas.controles(mudou);
       return el("fieldset.r-campo.hbr-hab", {}, [
         el("legend.r-rotulo", { texto: "Habilidade " + (i + 1) }),
@@ -147,12 +147,12 @@
         txt(id + "-texto", "Texto", h.resumo, function (v) { h.resumo = v; }, 600, "Como aparece na ficha (Raça e origem).", true),
         blocoEfeitos(h, id + "-ef"),
         el("div.editar-grade", {}, [
-          sel(id + "-esc", "Escolha (opcional)", [["", "Nenhuma"], ["treino", "Perícias treinadas (como Híbrido)"], ["bonus", "Perícias com bônus (como Deformidade)"], ["magia", "Uma magia (como Tatuagem Mística)"]], modoEsc, function (v) {
-            h.escolhas = v === "magia" ? [{ tipo: "magia", circulo: 1, efeito: { t: "magia", atributo: "car" } }] : v ? [{ tipo: "pericia", quantidade: e && e.quantidade ? e.quantidade : 1, efeito: v === "bonus" ? { t: "bonus", valor: 2 } : { t: "treino" } }] : [];
+          sel(id + "-esc", "Escolha (opcional)", [["", "Nenhuma"], ["treino", "Perícias treinadas (como Híbrido)"], ["bonus", "Perícias com bônus (como Deformidade)"], ["magia", "Uma magia (como Tatuagem Mística)"], ["poderGeral", "Um poder geral (como Propósito de Criação)"]], modoEsc, function (v) {
+            h.escolhas = v === "poderGeral" ? [{ tipo: "poderGeral" }] : v === "magia" ? [{ tipo: "magia", circulo: 1, efeito: { t: "magia", atributo: "car" } }] : v ? [{ tipo: "pericia", quantidade: e && e.quantidade ? e.quantidade : 1, efeito: v === "bonus" ? { t: "bonus", valor: 2 } : { t: "treino" } }] : [];
           }, "Quem joga escolhe na criação; o efeito entra na conta."),
           e && modoEsc === "magia" ? sel(id + "-esc-atr", "Atributo da magia", [["int", "Inteligência"], ["sab", "Sabedoria"], ["car", "Carisma"]], e.efeito.atributo || "car", function (v) { e.efeito.atributo = v; }) : null,
           e && modoEsc === "magia" ? sel(id + "-esc-circ", "Círculo", [[1, "1º"], [2, "até o 2º"]], e.circulo || 1, function (v) { e.circulo = Number(v); }) : null,
-          e && modoEsc !== "magia" ? sel(id + "-esc-q", "Quantas", [[1, "1"], [2, "2"], [3, "3"]], e.quantidade || 1, function (v) { e.quantidade = Number(v); }) : null,
+          e && modoEsc !== "magia" && modoEsc !== "poderGeral" ? sel(id + "-esc-q", "Quantas", [[1, "1"], [2, "2"], [3, "3"]], e.quantidade || 1, function (v) { e.quantidade = Number(v); }) : null,
           e && modoEsc === "bonus" ? sel(id + "-esc-v", "Bônus", [[1, "+1"], [2, "+2"], [3, "+3"], [4, "+4"], [5, "+5"]], e.efeito.valor || 2, function (v) { e.efeito.valor = Number(v); }) : null,
         ]),
         C2.ativada(h, id + "-at"),

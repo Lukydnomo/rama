@@ -2286,3 +2286,54 @@ sistema:
 - a Ficha de Conhecimento em Vampiro;
 - a origem Exorcizado e a Mácula de Ferido por Ritual continuam só com
   os elementos do livro (revisar se a mesa quer o Homebrew ali).
+
+## v9.26.0 — Tormenta20: poder geral numa habilidade de raça
+
+### A correção (vale também para as raças do livro)
+
+Duas habilidades de raça do livro dão um poder geral à escolha:
+- **Propósito de Criação**, do golem;
+- **Memória Póstuma**, do osteon (na opção "um poder geral").
+
+A criação gravava o poder escolhido, mas o motor não o lia, e o poder
+não somava na ficha. Por exemplo, um golem com Esquiva ficava sem o +2 na
+Defesa e em Reflexos.
+
+Agora `coletarFontes` põe esse poder como uma fonte própria
+(`raca:poder:<id>`), com os efeitos dele. Ele aparece na aba Habilidades
+e entra na conta. Um id que não é poder é ignorado: nada é inventado.
+
+### Na Raça Homebrew
+
+O editor de Raça (escolha da habilidade) ganhou **"Um poder geral (como
+Propósito de Criação)"**. A definição guarda `{ tipo: "poderGeral",
+quantidade: 1 }`, e a prévia diz "um poder geral à escolha". Na
+criação, a lista é a mesma do golem.
+
+### Validação da v9.26.0
+
+**Automática.** `testes/executar-homebrew-t20.js` ganhou 5
+verificações (agora 135):
+- golem com Esquiva: +2 na Defesa;
+- osteon com Esquiva pela Memória Póstuma: +2 na Defesa;
+- a escolha na definição da Raça Homebrew;
+- o poder escolhido numa Raça Homebrew entra na conta;
+- um id inválido é ignorado.
+
+As outras suítes continuam verdes.
+
+**Na interface** (servidor local, conta sintética): um golem guerreiro
+com Propósito de Criação → Esquiva mostrou Defesa 15 (13 sem o poder) e
+"Esquiva" na aba Habilidades.
+
+### Publicar a v9.26.0
+
+**Servidor:** troque **`Tormenta20.gs`** e **`Tormenta20Dados.gs`**
+(regenerados por `testes/gerar-tormenta20-gs.js`) e crie uma versão nova
+da implantação. **`setupRama()` não é necessário.**
+
+**Site:**
+- `js/tormenta20/regras.js`, `js/tormenta20/racas.js`,
+  `js/tormenta20/homebrew-t20.js`;
+- `js/paginas/homebrew-raca-t20.js`;
+- `js/versao.js`.
