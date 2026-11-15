@@ -138,6 +138,8 @@
         efeitos: RA() ? ll(u0.efeitos).map(RA().efeitoHomebrew).filter(Boolean).slice(0, 4) : [],
       },
     };
+    var acU = RA() && RA().acaoHomebrew ? RA().acaoHomebrew(u0.acao) : null;
+    if (acU) d.unico.acao = acU;
     if (!d.id) d.id = RA() ? RA().chaveHomebrew("hbor-", d) : "hbor-local-000000";
     return d;
   }

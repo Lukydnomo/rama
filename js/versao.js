@@ -118,6 +118,18 @@
 
   var CHANGELOG = [
     {
+      versao: "9.13.0",
+      codinome: "REFLEXO",
+      data: "15/11/2026",
+      mudancas: {
+        "Adicionado": [
+          "Habilidades e poderes Homebrew de Tormenta20 (raça, origem, divindade e classe) podem ser ativados: custo em PM, execução, duração, uma vez por cena se quiser, e efeitos enquanto dura (Defesa, perícia, ataque, dano, redução de dano, sentido). Na ficha, o botão Usar cobra os PM e cria o efeito ativo.",
+          "Raça Homebrew: uma magia à escolha (como a Tatuagem Mística) e variantes, cada uma com atributos e habilidades próprios (como o Suraggel).",
+        ],
+        "Técnico": ["racas.js ganhou acaoHomebrew (o filtro da ativada), a escolha de magia e as variantes; origens, deuses e classes aceitam acao nos poderes. testes/executar-homebrew-t20.js: 102 verificações."],
+      },
+    },
+    {
       versao: "9.12.0",
       codinome: "OFICINA",
       data: "15/11/2026",

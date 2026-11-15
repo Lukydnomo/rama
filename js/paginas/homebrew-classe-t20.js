@@ -42,8 +42,8 @@
     d.pericias = d.pericias || { fixas: [], escolha: { n: 0, de: [] } };
     d.pericias.escolha = d.pericias.escolha || { n: 0, de: [] };
     d.niveisDePoder = Array.isArray(d.niveisDePoder) ? d.niveisDePoder : TODOS.slice();
-    d.habilidadesDaTabela = (d.habilidadesDaTabela || []).map(function (h) { return { nivel: h.nivel || 1, nome: h.nome || "", resumo: h.resumo || "", efeitos: h.efeitos || [], escolhas: h.escolhas || [] }; });
-    d.poderesProprios = (d.poderesProprios || []).map(function (p) { return { nome: p.nome || "", resumo: p.resumo || "", efeitos: p.efeitos || [], ncMinimo: p.ncMinimo || 1 }; });
+    d.habilidadesDaTabela = (d.habilidadesDaTabela || []).map(function (h) { return { nivel: h.nivel || 1, nome: h.nome || "", resumo: h.resumo || "", efeitos: h.efeitos || [], escolhas: h.escolhas || [], acao: h.acao || null }; });
+    d.poderesProprios = (d.poderesProprios || []).map(function (p) { return { nome: p.nome || "", resumo: p.resumo || "", efeitos: p.efeitos || [], ncMinimo: p.ncMinimo || 1, acao: p.acao || null }; });
     var r = F().rascunho(reg);
     var m;
     function mudou(rep) { r.sujo = true; if (rep) m.pintar(); else m.pintarLado(); }
@@ -96,6 +96,7 @@
           ]),
           c.txt("hbtc-h" + i + "-texto", "Texto", h.resumo, function (v) { h.resumo = v; }, 600, null, true),
           c.efeitos(h, "hbtc-h" + i + "-ef"),
+          c.ativada(h, "hbtc-h" + i + "-at"),
           el("div.editar-grade", {}, [
             c.sel("hbtc-h" + i + "-esc", "Perícias à escolha (opcional)", [["", "Nenhuma"], ["treino", "Treinadas"], ["bonus", "Com bônus"]], modo, function (v) { h.escolhas = v ? [{ tipo: "pericia", quantidade: e ? e.quantidade : 1, efeito: v === "bonus" ? { t: "bonus", valor: 2 } : { t: "treino" } }] : []; }),
             e ? c.sel("hbtc-h" + i + "-esc-q", "Quantas", [[1, "1"], [2, "2"], [3, "3"]], e.quantidade || 1, function (v) { e.quantidade = Number(v); }) : null,
@@ -116,6 +117,7 @@
           ]),
           c.txt("hbtc-p" + i + "-texto", "Texto", p.resumo, function (v) { p.resumo = v; }, 600, null, true),
           c.efeitos(p, "hbtc-p" + i + "-ef"),
+          c.ativada(p, "hbtc-p" + i + "-at"),
           el("button.r-botao.r-botao--mini.r-botao--fantasma", { type: "button", texto: "Remover poder", onclick: function () { d.poderesProprios.splice(i, 1); mudou(true); } }),
         ]));
       });

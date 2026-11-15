@@ -52,13 +52,14 @@
     };
     c.pericias = function () { return D().PERICIAS.filter(function (p) { return p.chave !== "oficio"; }).map(function (p) { return [p.chave, p.nome]; }); };
     /* Os efeitos (o mesmo conjunto da raça). */
-    c.efeitos = function (dono, id) {
+    c.efeitos = function (dono, id, ativada) {
       dono.efeitos = dono.efeitos || [];
-      var tipos = H().EFEITOS.map(function (x) { return [x.chave, x.rotulo]; });
-      return el("fieldset.r-campo.hbo-efeitos", {}, [el("legend.r-rotulo", { texto: "Efeito na conta da ficha (opcional)" })].concat(dono.efeitos.map(function (ef, j) {
+      var lista = H().efeitosPara(!!ativada);
+      var tipos = lista.map(function (x) { return [x.chave, x.rotulo]; });
+      return el("fieldset.r-campo.hbo-efeitos", {}, [el("legend.r-rotulo", { texto: ativada ? "Efeito enquanto dura (opcional)" : "Efeito na conta da ficha (opcional)" })].concat(dono.efeitos.map(function (ef, j) {
         var k = H().chaveDoEfeito(ef);
         var campos = [c.sel(id + "-t" + j, "Efeito", tipos, k, function (v) { dono.efeitos[j] = copia(H().EFEITOS.filter(function (x) { return x.chave === v; })[0].modelo); })];
-        if (k === "defesa") campos.push(c.num(id + "-v" + j, "Valor", ef.valor, function (v) { ef.valor = v; }));
+        if (k === "defesa" || k === "ataque" || k === "dano") campos.push(c.num(id + "-v" + j, "Valor", ef.valor, function (v) { ef.valor = v; }));
         if (k === "pericia") campos.push(c.sel(id + "-p" + j, "Perícia", c.pericias(), String(ef.alvo).slice(8), function (v) { ef.alvo = "pericia." + v; }), c.num(id + "-v" + j, "Valor", ef.valor, function (v) { ef.valor = v; }));
         if (k === "treino") campos.push(c.sel(id + "-p" + j, "Perícia", c.pericias(), ef.pericia, function (v) { ef.pericia = v; }));
         if (k === "pv") campos.push(c.num(id + "-i" + j, "No 1º nível", ef.inicial, function (v) { ef.inicial = v; }), c.num(id + "-v" + j, "Por nível seguinte", ef.valor, function (v) { ef.valor = v; }));
@@ -69,9 +70,26 @@
         campos.push(el("button.r-botao.r-botao--mini.r-botao--fantasma", { type: "button", texto: "Remover", "aria-label": "Remover o efeito " + (j + 1), onclick: function () { dono.efeitos.splice(j, 1); mudou(true); } }));
         return el("div.faixa.hbc-par", {}, campos);
       })).concat([
-        dono.efeitos.length < 4 ? el("button.r-botao.r-botao--mini", { type: "button", id: id + "-mais", texto: "+ Efeito", onclick: function () { dono.efeitos.push(copia(H().EFEITOS[0].modelo)); mudou(true); } }) : null,
-        el("p.r-ajuda", { texto: "Sem efeito, o poder é informativo: a ficha mostra o texto e a mesa aplica." }),
+        dono.efeitos.length < 4 ? el("button.r-botao.r-botao--mini", { type: "button", id: id + "-mais", texto: "+ Efeito", onclick: function () { dono.efeitos.push(copia(lista[0].modelo)); mudou(true); } }) : null,
+        ativada ? null : el("p.r-ajuda", { texto: "Sem efeito, o poder é informativo: a ficha mostra o texto e a mesa aplica." }),
       ]));
+    };
+    /* v9.13: habilidade ATIVADA (gasta PM): a ficha ganha o botão Usar. */
+    c.ativada = function (dono, id) {
+      var a = dono.acao;
+      var partes = [el("legend.r-rotulo", { texto: "Ativada (gasta PM) — opcional" }),
+        c.sel(id + "-liga", "Ativada?", [["", "Não: efeito sempre ligado ou só texto"], ["sim", "Sim: a ficha ganha o botão Usar"]], a ? "sim" : "", function (v) { dono.acao = v ? { custo: 1, execucao: "movimento", duracao: "cena", efeitos: [] } : null; })];
+      if (a) {
+        partes.push(el("div.editar-grade", {}, [
+          c.sel(id + "-custo", "Custo", [[0, "0 PM"], [1, "1 PM"], [2, "2 PM"], [3, "3 PM"], [4, "4 PM"], [5, "5 PM"]], a.custo, function (v) { a.custo = Number(v); }),
+          c.sel(id + "-exec", "Execução", Object.keys(H().EXECUCOES).map(function (k) { return [k, H().EXECUCOES[k]]; }), a.execucao, function (v) { a.execucao = v; }),
+          c.sel(id + "-dur", "Duração", Object.keys(H().DURACOES).map(function (k) { return [k, H().DURACOES[k]]; }), a.duracao, function (v) { a.duracao = v; }),
+          c.sel(id + "-lim", "Limite", [["", "Sem limite"], ["cena", "Uma vez por cena"]], a.limite || "", function (v) { if (v) a.limite = v; else delete a.limite; }),
+        ]));
+        partes.push(c.efeitos(a, id + "-ef", true));
+        partes.push(el("p.r-ajuda", { texto: "Ex.: Armadura de Allihanna — 1 PM, movimento, cena: +2 na Defesa. Usar cobra os PM e cria o efeito ativo." }));
+      }
+      return el("fieldset.r-campo.hbo-efeitos", {}, partes);
     };
     return c;
   }
@@ -162,6 +180,7 @@
           c.txt("hbto-unico-nome", "Nome", d.unico.nome, function (v) { d.unico.nome = v; }, 60),
           c.txt("hbto-unico-texto", "Texto", d.unico.resumo, function (v) { d.unico.resumo = v; }, 600, "Como aparece na ficha.", true),
           c.efeitos(d.unico, "hbto-unico-ef"),
+          c.ativada(d.unico, "hbto-unico-at"),
         ]),
       ]);
     }
@@ -194,7 +213,7 @@
     var reg = o.registro || null;
     var d = reg && reg.modelo && reg.modelo.def ? copia(reg.modelo.def) : { titulo: "", energia: "qualquer", armaPreferida: "", devotos: "qualquer", obrigacoes: "", poderes: [], poderesProprios: [] };
     d.poderes = (d.poderes || []).filter(function (k) { return !/-p\d$/.test(k); });
-    d.poderesProprios = (d.poderesProprios || []).map(function (p) { return { nome: p.nome || "", resumo: p.resumo || "", efeitos: p.efeitos || [] }; });
+    d.poderesProprios = (d.poderesProprios || []).map(function (p) { return { nome: p.nome || "", resumo: p.resumo || "", efeitos: p.efeitos || [], acao: p.acao || null }; });
     var r = rascunho(reg);
     var m;
     function mudou(rep) { r.sujo = true; if (rep) m.pintar(); else m.pintarLado(); }
@@ -227,6 +246,7 @@
           c.txt("hbtd-p" + i + "-nome", "Nome", p.nome, function (v) { p.nome = v; }, 60),
           c.txt("hbtd-p" + i + "-texto", "Texto", p.resumo, function (v) { p.resumo = v; }, 600, null, true),
           c.efeitos(p, "hbtd-p" + i + "-ef"),
+          c.ativada(p, "hbtd-p" + i + "-at"),
           el("button.r-botao.r-botao--mini.r-botao--fantasma", { type: "button", texto: "Remover poder", onclick: function () { d.poderesProprios.splice(i, 1); mudou(true); } }),
         ]);
       })).concat([d.poderesProprios.length < 3 ? el("button.r-botao.r-botao--mini", { type: "button", id: "hbtd-mais-poder", texto: "+ Poder próprio", onclick: function () { d.poderesProprios.push({ nome: "", resumo: "", efeitos: [] }); mudou(true); } }) : null]));

@@ -123,7 +123,10 @@
       poderes: ll(b.poderes).map(String).filter(function (k, i, l) { var p = PO() && PO().PODER[k]; return (!PO() || (p && p.grupo === "concedido" && !p.homebrew)) && l.indexOf(k) === i; }).slice(0, 6),
       poderesProprios: ll(b.poderesProprios).slice(0, 3).map(function (p0, i) {
         var p = oo(p0);
-        return { nome: tx(p.nome, 60).trim() || "Poder concedido " + (i + 1), resumo: tx(p.resumo, 600).trim(), efeitos: RA() ? ll(p.efeitos).map(RA().efeitoHomebrew).filter(Boolean).slice(0, 4) : [] };
+        var x = { nome: tx(p.nome, 60).trim() || "Poder concedido " + (i + 1), resumo: tx(p.resumo, 600).trim(), efeitos: RA() ? ll(p.efeitos).map(RA().efeitoHomebrew).filter(Boolean).slice(0, 4) : [] };
+        var ac = RA() && RA().acaoHomebrew ? RA().acaoHomebrew(p.acao) : null;
+        if (ac) x.acao = ac;
+        return x;
       }),
     };
     if (d.devotos !== QUALQUER && !d.devotos.length) d.devotos = QUALQUER;
@@ -138,7 +141,7 @@
     DEUS[def.id] = def;
     DEUSES_HOMEBREW = DEUSES_HOMEBREW.filter(function (x) { return x.id !== def.id; }).concat([def]);
     if (PO()) ll(def.poderesProprios).forEach(function (p) {
-      PO().PODER[p.id] = { id: p.id, nome: p.nome, resumo: p.resumo, grupo: "concedido", efeitos: p.efeitos, homebrew: true, fonte: "HOMEBREW", pagina: 0, deuses: [def.id], req: { devoto: [def.id] } };
+      PO().PODER[p.id] = { id: p.id, nome: p.nome, resumo: p.resumo, grupo: "concedido", efeitos: p.efeitos, acao: p.acao, homebrew: true, fonte: "HOMEBREW", pagina: 0, deuses: [def.id], req: { devoto: [def.id] } };
     });
     return def;
   }

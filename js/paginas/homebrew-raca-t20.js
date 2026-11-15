@@ -36,7 +36,9 @@
     var d = reg && reg.modelo && reg.modelo.def ? copia(reg.modelo.def) : vazia();
     d.atributos = d.atributos || { fixo: {} };
     d.atributos.fixo = d.atributos.fixo || {};
-    d.habilidades = (d.habilidades || []).filter(function (h) { return h && h.id !== "corpo"; }).map(function (h) { return { nome: h.nome || "", resumo: h.resumo || "", efeitos: h.efeitos || [], escolhas: h.escolhas || [] }; });
+    /* As habilidades guardam o id (h1, h2…) para as variantes apontarem. */
+    d.habilidades = (d.habilidades || []).filter(function (h) { return h && h.id !== "corpo"; }).map(function (h) { return { nome: h.nome || "", resumo: h.resumo || "", efeitos: h.efeitos || [], escolhas: h.escolhas || [], acao: h.acao || null }; });
+    d.variantes = (d.variantes || []).map(function (v) { return { nome: v.nome || "", atributos: v.atributos || { fixo: {} }, habilidades: (v.habilidades || []).filter(function (k) { return k !== "corpo"; }) }; });
     if (!d.habilidades.length) d.habilidades.push({ nome: "", resumo: "", efeitos: [], escolhas: [] });
     var r = { nome: reg ? reg.nome : "", descricao: reg ? reg.descricao || "" : "", visibilidade: reg ? reg.visibilidade || "privado" : "privado", passo: 1, sujo: false };
     var form = el("div.hbe-form"), lado = el("aside.hbe-lado", { "aria-label": "Revisão" });
@@ -112,30 +114,54 @@
       ];
       d.habilidades.forEach(function (h, i) { partes.push(blocoHabilidade(h, i)); });
       if (d.habilidades.length < 6) partes.push(el("button.r-botao.r-botao--mini", { type: "button", id: "hbr-mais-hab", texto: "+ Habilidade", onclick: function () { d.habilidades.push({ nome: "", resumo: "", efeitos: [], escolhas: [] }); mudou(true); } }));
+      partes.push(blocoVariantes());
       return el("div.pc-editor__passo", {}, partes);
+    }
+    /* v9.13: variantes (como o Suraggel: Aggelus ou Sulfure). */
+    function blocoVariantes() {
+      var C3 = global.RAMAHomebrewT20Estruturais.ferramentas.controles(mudou);
+      var habs = d.habilidades.map(function (h, i) { return ["h" + (i + 1), h.nome || "Habilidade " + (i + 1)]; });
+      return el("fieldset.r-campo.hbr-hab", {}, [el("legend.r-rotulo", { texto: "Variantes (opcional)" }),
+        el("p.r-ajuda", { texto: "Com duas ou mais, quem joga escolhe a variante na criação: cada uma tem os seus atributos e as habilidades marcadas (os atributos acima deixam de valer)." })].concat(d.variantes.map(function (v, i) {
+        return el("div.pilha.hbr-variante", {}, [
+          txtVar(v, i),
+          el("div.hbr-atributos", {}, ["for", "des", "con", "int", "sab", "car"].map(function (a) {
+            return sel("hbr-v" + i + "-atr-" + a, H().NOMES_ATR[a], [[-2, "–2"], [-1, "–1"], [0, "0"], [1, "+1"], [2, "+2"]], (v.atributos.fixo || {})[a] || 0, function (x) { var n = Number(x); v.atributos.fixo = v.atributos.fixo || {}; if (n) v.atributos.fixo[a] = n; else delete v.atributos.fixo[a]; });
+          })),
+          C3.marcas("hbr-v" + i + "-habs", "Habilidades desta variante", habs, v.habilidades, function (k, on) { var j = v.habilidades.indexOf(k); if (on && j < 0) v.habilidades.push(k); if (!on && j >= 0) v.habilidades.splice(j, 1); }),
+          el("button.r-botao.r-botao--mini.r-botao--fantasma", { type: "button", texto: "Remover variante", onclick: function () { d.variantes.splice(i, 1); mudou(true); } }),
+        ]);
+      })).concat([d.variantes.length < 3 ? el("button.r-botao.r-botao--mini", { type: "button", id: "hbr-mais-variante", texto: "+ Variante", onclick: function () { d.variantes.push({ nome: "", atributos: { fixo: {} }, habilidades: d.habilidades.map(function (h, j) { return "h" + (j + 1); }) }); mudou(true); } }) : null]));
+    }
+    function txtVar(v, i) {
+      return txt("hbr-v" + i + "-nome", "Nome da variante " + (i + 1), v.nome, function (x) { v.nome = x; }, 40);
     }
     function blocoHabilidade(h, i) {
       var id = "hbr-h" + i;
       var e = h.escolhas[0] || null;
-      var modoEsc = !e ? "" : (e.efeito && e.efeito.t === "bonus" ? "bonus" : "treino");
+      var modoEsc = !e ? "" : (e.tipo === "magia" ? "magia" : e.efeito && e.efeito.t === "bonus" ? "bonus" : "treino");
+      var C2 = global.RAMAHomebrewT20Estruturais.ferramentas.controles(mudou);
       return el("fieldset.r-campo.hbr-hab", {}, [
         el("legend.r-rotulo", { texto: "Habilidade " + (i + 1) }),
         txt(id + "-nome", "Nome", h.nome, function (v) { h.nome = v; }, 60),
         txt(id + "-texto", "Texto", h.resumo, function (v) { h.resumo = v; }, 600, "Como aparece na ficha (Raça e origem).", true),
         blocoEfeitos(h, id + "-ef"),
         el("div.editar-grade", {}, [
-          sel(id + "-esc", "Perícias à escolha (opcional)", [["", "Nenhuma"], ["treino", "Treinadas (como Híbrido)"], ["bonus", "Com bônus (como Deformidade)"]], modoEsc, function (v) {
-            h.escolhas = v ? [{ tipo: "pericia", quantidade: e ? e.quantidade : 1, efeito: v === "bonus" ? { t: "bonus", valor: 2 } : { t: "treino" } }] : [];
+          sel(id + "-esc", "Escolha (opcional)", [["", "Nenhuma"], ["treino", "Perícias treinadas (como Híbrido)"], ["bonus", "Perícias com bônus (como Deformidade)"], ["magia", "Uma magia (como Tatuagem Mística)"]], modoEsc, function (v) {
+            h.escolhas = v === "magia" ? [{ tipo: "magia", circulo: 1, efeito: { t: "magia", atributo: "car" } }] : v ? [{ tipo: "pericia", quantidade: e && e.quantidade ? e.quantidade : 1, efeito: v === "bonus" ? { t: "bonus", valor: 2 } : { t: "treino" } }] : [];
           }, "Quem joga escolhe na criação; o efeito entra na conta."),
-          e ? sel(id + "-esc-q", "Quantas", [[1, "1"], [2, "2"], [3, "3"]], e.quantidade || 1, function (v) { e.quantidade = Number(v); }) : null,
+          e && modoEsc === "magia" ? sel(id + "-esc-atr", "Atributo da magia", [["int", "Inteligência"], ["sab", "Sabedoria"], ["car", "Carisma"]], e.efeito.atributo || "car", function (v) { e.efeito.atributo = v; }) : null,
+          e && modoEsc === "magia" ? sel(id + "-esc-circ", "Círculo", [[1, "1º"], [2, "até o 2º"]], e.circulo || 1, function (v) { e.circulo = Number(v); }) : null,
+          e && modoEsc !== "magia" ? sel(id + "-esc-q", "Quantas", [[1, "1"], [2, "2"], [3, "3"]], e.quantidade || 1, function (v) { e.quantidade = Number(v); }) : null,
           e && modoEsc === "bonus" ? sel(id + "-esc-v", "Bônus", [[1, "+1"], [2, "+2"], [3, "+3"], [4, "+4"], [5, "+5"]], e.efeito.valor || 2, function (v) { e.efeito.valor = Number(v); }) : null,
         ]),
+        C2.ativada(h, id + "-at"),
         d.habilidades.length > 1 ? el("button.r-botao.r-botao--mini.r-botao--fantasma", { type: "button", id: id + "-remover", texto: "Remover habilidade", onclick: function () { d.habilidades.splice(i, 1); mudou(true); } }) : null,
       ]);
     }
     /* Os efeitos de uma habilidade (só os que o motor já soma). */
     function blocoEfeitos(h, id) {
-      var tipos = H().EFEITOS.map(function (x) { return [x.chave, x.rotulo]; });
+      var tipos = H().efeitosPara(false).map(function (x) { return [x.chave, x.rotulo]; });
       return el("fieldset.r-campo.hbo-efeitos", {}, [el("legend.r-rotulo", { texto: "Efeito na conta da ficha (opcional)" })].concat(h.efeitos.map(function (ef, j) {
         var k = H().chaveDoEfeito(ef);
         var campos = [sel(id + "-t" + j, "Efeito", tipos, k, function (v) { h.efeitos[j] = copia(H().EFEITOS.filter(function (x) { return x.chave === v; })[0].modelo); })];

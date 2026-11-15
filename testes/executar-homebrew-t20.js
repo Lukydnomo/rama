@@ -243,5 +243,44 @@ t.ok("exportar e importar: habilidades, níveis de poder e poderes voltam (pelo 
 t.ok("pacote: só em pacote de T20", A.compativelComPacote(gC.registro, "tormenta20").ok && !A.compativelComPacote(gC.registro, "ordem").ok);
 t.ok("prévia", /1º nível: 18 PV/.test(H.previaClasse(vdr)[0]) && H.previaClasse(vdr).some((l) => /3º nível · Pele Temperada: \+2 em Defesa/.test(l)));
 
+/* ================= v9.13: ativadas, magia e variantes ================= */
+t.grupo("T20 Homebrew · habilidade ativada (PM), escolha de magia, variantes");
+const ac = RA.acaoHomebrew({ custo: 2, execucao: "movimento", duracao: "cena", limite: "cena", efeitos: [{ t: "bonus", alvo: "defesa", valor: 2 }, { t: "bonus", alvo: "ataque", valor: 1 }, { t: "pvNivel", inicial: 9 }, { t: "imune", valor: "fogo" }] });
+t.iguais("ativada: custo, execução, duração, uma vez por cena; só efeitos que duram (PV e imunidade saem)", ac, { custo: 2, execucao: "movimento", duracao: "cena", efeitos: [{ t: "bonus", alvo: "defesa", valor: 2 }, { t: "bonus", alvo: "ataque", valor: 1 }], limite: "cena" });
+const espelho = RA.normalizarRacaHomebrew({ nome: "Espelhado", homebrewId: "e0e0e0e0-sintetico",
+  habilidades: [
+    { nome: "Reflexo", resumo: "Desvia golpes.", acao: { custo: 1, execucao: "movimento", duracao: "cena", efeitos: [{ t: "bonus", alvo: "defesa", valor: 2 }] } },
+    { nome: "Brilho Arcano", escolhas: [{ tipo: "magia", circulo: 1, efeito: { atributo: "int" } }] },
+    { nome: "Pele Fria", efeitos: [{ t: "rd", valor: 5, tipos: ["frio"] }] },
+  ],
+  variantes: [{ nome: "Prateado", atributos: { fixo: { car: 2, des: 1 } }, habilidades: ["h1", "h3"] }, { nome: "Fumê", atributos: { fixo: { "int": 2, sab: 1 } }, habilidades: ["h2", "h3", "h9"] }] });
+RA.registrarRacaHomebrew(espelho);
+t.ok("variantes: cada uma com atributos e as habilidades que existem", espelho.variantes.length === 2 && espelho.variantes[1].habilidades.join() === "h2,h3" && RA.atributosDe(espelho.id, "v2").fixo["int"] === 2);
+t.iguais("habilidadesDe pela variante (o motor de sempre)", [RA.habilidadesDe(espelho.id, "v1").map((h) => h.nome), RA.habilidadesDe(espelho.id, "v2").map((h) => h.nome)], [["Reflexo", "Pele Fria"], ["Brilho Arcano", "Pele Fria"]]);
+const fEsp = (variante, escolhas) => R.normalizar({ atributosBase: atrBase, raca: { id: espelho.id, variante: variante, escolhas: escolhas || {} }, origem: { id: "acolito", beneficios: [] }, niveis: [{ classe: "guerreiro", escolhas: {} }], homebrew: { racas: { [espelho.id]: espelho } } });
+const cP = R.calcular(fEsp("v1")), cF = R.calcular(fEsp("v2", { h2e: ["controlarPlantas"] }));
+t.iguais("Prateado: Car +2; Fumê: Int +2", [cP.atr.car, cF.atr["int"]], [2, 2]);
+t.ok("Fumê: a magia escolhida (Controlar Plantas) é concedida, pela Inteligência", cF.magias.concedidas.some((m) => m.id === "controlarPlantas" && m.atributo === "int"));
+const fAt = fEsp("v1"); R.sincronizarRecursos && R.sincronizarRecursos(fAt);
+const pmAntes = R.calcular(fAt).pm.atual, defAntes = R.calcular(fAt).defesa.total;
+const usou = R.ativar(fAt, "raca:h1", {});
+t.ok("Reflexo (ativada): Usar cobra 1 PM e dá +2 na Defesa até o fim da cena", usou.ok && R.calcular(fAt).pm.atual === pmAntes - 1 && R.calcular(fAt).defesa.total === defAntes + 2, JSON.stringify(usou));
+const sopU = OR.normalizarHomebrew(Object.assign(copia(orgB), { unico: { nome: "Fôlego de Fornalha", acao: { custo: 1, execucao: "padrao", duracao: "rodada", efeitos: [{ t: "bonus", alvo: "dano", valor: 2 }] } } }));
+const fOU = R.normalizar({ atributosBase: atrBase, raca: { id: "humano", atributos: ["for", "des", "con"] }, origem: { id: sopU.id, beneficios: [{ tipo: "poder", id: "hbUnico" }, { tipo: "pericia", id: "investigacao" }] }, niveis: [{ classe: "guerreiro", escolhas: {} }], homebrew: { origens: { [sopU.id]: sopU } } });
+const uOU = R.ativar(fOU, "origem:poder:hbUnico", {});
+t.ok("poder único ativado (origem): +2 no dano por 1 rodada", uOU.ok && uOU.ativo && uOU.ativo.efeitos[0].alvo === "dano" && uOU.ativo.duracao === "rodada", JSON.stringify(uOU));
+const clA = CL.normalizarHomebrew(Object.assign(copia(clB), { poderesProprios: [{ nome: "Fúria Cristalina", acao: { custo: 2, execucao: "livre", duracao: "cena", efeitos: [{ t: "bonus", alvo: "ataque", valor: 2 }] } }] }));
+const fCA = R.normalizar({ atributosBase: atrBase, raca: { id: "humano", atributos: ["for", "des", "con"] }, origem: { id: "acolito", beneficios: [] }, niveis: [{ classe: clA.id, escolhas: {} }, { classe: clA.id, escolhas: { poder: { id: clA.id + "-cp1" } } }], homebrew: { classes: { [clA.id]: clA } } });
+const fonteCA = R.calcular(fCA).fontes.filter((f) => f.poderId === clA.id + "-cp1")[0];
+const uCA = fonteCA ? R.ativar(fCA, fonteCA.id, {}) : { ok: false };
+t.ok("poder de classe ativado: 2 PM, +2 nos ataques", uCA.ok && uCA.custo === 2 && uCA.ativo.efeitos[0].alvo === "ataque", JSON.stringify(uCA));
+const vitA = DE.normalizarHomebrew(Object.assign(copia(deusB), { poderesProprios: [{ nome: "Prisma", acao: { custo: 1, execucao: "reacao", duracao: "rodada", efeitos: [{ t: "rd", valor: 5, tipos: ["luz"] }] } }] }));
+DE.registrarHomebrew(vitA);
+t.ok("poder concedido próprio ativado: entra no catálogo de poderes com a ação", G.RAMATormenta20Poderes.PODER[vitA.id + "-p1"].acao.execucao === "reacao");
+t.ok("prévias mencionam a ativada e a magia", /ativada: 1 PM, ação de movimento, até o fim da cena: \+2 em Defesa/.test(H.previaRaca(espelho).join(" ")) && /uma magia de 1º círculo à escolha \(Inteligência\)/.test(H.previaRaca(espelho).join(" ")) && /Variante Prateado/.test(H.previaRaca(espelho)[0]));
+const gV = A.guardar("tormenta20", "estrutural", "raca", { nome: "Espelhado", descricao: "", valores: {}, def: (() => { const x = copia(espelho); ["id", "homebrewId", "homebrew", "fonte", "pagina", "nome", "descricao"].forEach((k) => delete x[k]); return x; })() });
+const aV = G.RAMAValidacao.importado(JSON.parse(JSON.stringify(G.RAMAValidacao.exportar(G.RAMAValidacao.tipoDeExportacao(gV.registro), gV.registro))));
+t.ok("arquivo: variantes, ativada e escolha de magia voltam", aV.ok && aV.dados.modelo.def.variantes.length === 2 && aV.dados.modelo.def.habilidades[0].acao.custo === 1 && aV.dados.modelo.def.habilidades[1].escolhas[0].tipo === "magia");
+
 console.log(`\n${FORTE}${passaram} ok${FIM}, ${falharam ? VERMELHO : ""}${falharam} falha(s)${FIM}.`);
 if (falharam) Deno.exit(1);

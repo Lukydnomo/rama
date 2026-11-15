@@ -231,6 +231,7 @@
   function periciaOk(k) { return !Dd() || Dd().PERICIAS.some(function (p) { return p.chave === k; }); }
   function pericias(v, max) { return ll(v).map(String).filter(function (k, i, l) { return periciaOk(k) && l.indexOf(k) === i; }).slice(0, max); }
   function efeitos(v) { return RA() ? ll(v).map(RA().efeitoHomebrew).filter(Boolean).slice(0, 4) : []; }
+  function acao(v) { return RA() && RA().acaoHomebrew ? RA().acaoHomebrew(v) : null; }
   function aumento() {
     var a = C.CLASSE.arcanista && ll(C.CLASSE.arcanista.poderes).filter(function (p) { return p.aumento; })[0];
     return JSON.parse(JSON.stringify(a || { id: "aumentoDeAtributo", nome: "Aumento de Atributo", resumo: "+1 em um atributo; várias vezes, uma vez por patamar para o mesmo atributo.", repetivel: true, aumento: true }));
@@ -266,11 +267,16 @@
       var x = { id: id, nivel: nn(h.nivel, 1, 20, 1), nome: tx(h.nome, 60).trim() || "Habilidade " + (i + 1), resumo: tx(h.resumo, 600).trim(), efeitos: efeitos(h.efeitos) };
       var e = RA() ? ll(h.escolhas).map(function (y) { return RA().escolhaHomebrew(y, id + "e"); }).filter(Boolean)[0] : null;
       if (e) x.escolhas = [e];
+      var ac = acao(h.acao);
+      if (ac) x.acao = ac;
       return x;
     });
     d.poderesProprios = ll(b.poderesProprios).slice(0, 12).map(function (p0, i) {
       var p = oo(p0);
-      return { nome: tx(p.nome, 60).trim() || "Poder " + (i + 1), resumo: tx(p.resumo, 600).trim(), efeitos: efeitos(p.efeitos), ncMinimo: nn(p.ncMinimo, 1, 20, 1) };
+      var x = { nome: tx(p.nome, 60).trim() || "Poder " + (i + 1), resumo: tx(p.resumo, 600).trim(), efeitos: efeitos(p.efeitos), ncMinimo: nn(p.ncMinimo, 1, 20, 1) };
+      var ac = acao(p.acao);
+      if (ac) x.acao = ac;
+      return x;
     });
     if (!d.id) d.id = RA() ? RA().chaveHomebrew("hbcl-", d) : "hbcl-local-000000";
     montar(d);
@@ -281,7 +287,7 @@
     d.poderesProprios.forEach(function (p, i) { p.id = d.id + "-cp" + (i + 1); });
     d.habilidades = { poder: { nome: "Poder de " + d.nome, poder: true } };
     if (d.magias) d.habilidades.magias = { nome: "Magias", resumo: "Magias " + (d.magias.tipo === "arcana" ? "arcanas" : "divinas") + " (" + ({ "int": "Inteligência", sab: "Sabedoria", car: "Carisma" })[d.magias.atributo] + "): começa com " + d.magias.iniciais + " de 1º círculo" + (d.magias.porNivel ? " e aprende uma por nível" : "") + "; círculos " + (d.magias.progressao === "parcial" ? "no 1º, 6º, 10º e 14º níveis (até o 4º)" : "no 1º, 5º, 9º, 13º e 17º níveis") + "." };
-    d.habilidadesDaTabela.forEach(function (h) { d.habilidades[h.id] = { nome: h.nome, resumo: h.resumo, efeitos: h.efeitos, escolhas: h.escolhas, homebrew: true }; });
+    d.habilidadesDaTabela.forEach(function (h) { d.habilidades[h.id] = { nome: h.nome, resumo: h.resumo, efeitos: h.efeitos, escolhas: h.escolhas, acao: h.acao, homebrew: true }; });
     d.tabela = {};
     for (var n = 1; n <= 20; n++) {
       var linha = [];
@@ -291,7 +297,7 @@
       d.tabela[n] = linha;
     }
     d.poderes = d.poderesProprios.map(function (p) {
-      var x = { id: p.id, nome: p.nome, resumo: p.resumo, efeitos: p.efeitos, homebrew: true };
+      var x = { id: p.id, nome: p.nome, resumo: p.resumo, efeitos: p.efeitos, acao: p.acao, homebrew: true };
       if (p.ncMinimo > 1) x.req = { nc: p.ncMinimo };
       return x;
     }).concat([aumento()]);

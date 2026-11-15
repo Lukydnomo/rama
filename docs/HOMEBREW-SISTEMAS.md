@@ -6,7 +6,7 @@ organiza em três etapas.
 | Etapa | Situação |
 |---|---|
 | **1 — Estrutura e compatibilidade** | entregue na **v9.7.0** |
-| **2 — Tipos estruturais e elementos** | parte 1 na **v9.8.0** (Elemento e Classe de Ordem I), parte 2 na **v9.9.0** (Origem e Trilha de Ordem I), parte 3 na **v9.10.0** (Raça de Tormenta20), parte 4 na **v9.11.0** (Origem e Divindade de Tormenta20), parte 5 na **v9.12.0** (Classe de Tormenta20); o resto pendente |
+| **2 — Tipos estruturais e elementos** | parte 1 na **v9.8.0** (Elemento e Classe de Ordem I), parte 2 na **v9.9.0** (Origem e Trilha de Ordem I), parte 3 na **v9.10.0** (Raça de Tormenta20), parte 4 na **v9.11.0** (Origem e Divindade de Tormenta20), parte 5 na **v9.12.0** (Classe de Tormenta20), parte 6 na **v9.13.0** (ativadas, magia e variantes em T20); o resto pendente |
 | **3 — Automação por sistema, publicação e regressão** | pendente |
 
 Este documento é o **inventário de cobertura**. Para cada sistema e tipo,
@@ -1043,3 +1043,93 @@ verificações:
 - `js/homebrew-adaptadores.js`, `js/paginas/homebrew-editor.js`,
   `js/paginas/homebrew.js`, `js/paginas/homebrew-origem-divindade-t20.js`;
 - `js/versao.js`, `homebrew/index.html`.
+
+## v9.13.0 — Etapa 2, parte 6: habilidades ativadas, escolha de magia e variantes (Tormenta20)
+
+### Habilidade ativada (gasta PM)
+
+Todo poder ou habilidade Homebrew de T20 pode ser **ativado**:
+- habilidades da raça;
+- poder único da origem;
+- poderes concedidos próprios da divindade;
+- habilidades e poderes da classe.
+
+O editor ganhou o bloco "Ativada (gasta PM)":
+- custo (0 a 5 PM);
+- execução (livre, movimento, padrão, completa, reação);
+- duração (até o fim da cena, 1 rodada, instantânea);
+- limite opcional de uma vez por cena;
+- os efeitos enquanto dura: bônus em Defesa, perícia, **ataque** ou
+  **dano**, redução de dano ou sentido.
+
+Na ficha, a habilidade ganha o botão **Usar · N PM**. É o mesmo caminho
+das habilidades do livro (`RAMATormenta20.ativar`): cobra os PM, confere
+o limite por cena e cria o efeito ativo, que some no fim da duração. O
+filtro (`acaoHomebrew` em `racas.js`) descarta efeitos que não fazem
+sentido temporários (PV por nível, treino, imunidade…).
+
+### Escolha de magia
+
+A habilidade da raça pode dar **uma magia à escolha** de 1º círculo (ou
+até o 2º), com o atributo dela, como a Tatuagem Mística do qareen. Quem
+joga escolhe na criação, e a magia entra nas concedidas da ficha.
+
+### Variantes da raça
+
+Como o Suraggel, a raça pode ter **2 ou 3 variantes**, cada uma com
+atributos fixos e as habilidades que tem. A criação mostra "Variante" e
+a ficha mostra "Raça (Variante)". O motor usa `atributosDe` e
+`habilidadesDe` com a variante, o mesmo das raças do livro. "Tamanho e
+deslocamento" vale para todas.
+
+### Trocar a raça (e as outras escolhas) de uma ficha
+
+Já existia, para qualquer raça: aba **Progressão → "Refazer escolhas da
+criação"** reabre o passo a passo com a ficha. As raças, origens,
+divindades e classes Homebrew aparecem nele, porque ele carrega a
+biblioteca.
+
+### Validação da v9.13.0
+
+**Automática.** `testes/executar-homebrew-t20.js` passou de 91 para 102
+verificações:
+- o filtro da ativada;
+- variantes: atributos, habilidades existentes e `habilidadesDe` por
+  variante;
+- Car e Int por variante;
+- a magia escolhida é concedida pela Inteligência;
+- a habilidade de raça ativada cobra 1 PM e dá +2 Defesa;
+- o poder único da origem ativado dá +2 no dano por 1 rodada;
+- o poder de classe ativado custa 2 PM e dá +2 nos ataques;
+- o poder concedido próprio entra no catálogo com a ação;
+- as prévias;
+- o arquivo devolve as variantes, a ativada e a escolha de magia.
+
+**Na interface** (servidor local, conta sintética):
+- Criei a raça **Espelhado** pelo editor:
+  - Reflexo, ativada: 1 PM, movimento, cena, +2 Defesa;
+  - Brilho Arcano: magia à escolha, por Inteligência;
+  - as variantes Prateado (Car +2; só Reflexo) e Fumê (Int +2; as duas).
+
+  A revisão mostrou as duas variantes.
+- Na criação, a carta diz "Prateado ou Fumê", e a variante é um campo do
+  passo Raça.
+- Na ficha:
+  - a raça aparece como "Espelhado (Prateado)";
+  - Reflexo tem o botão "Usar · 1 PM";
+  - ao usar, os PM foram de 3 para 2 e a Defesa de 12 para 14.
+- Sem erros no console nem no servidor.
+
+### Publicar a v9.13.0
+
+**Servidor:** troque **`Tormenta20.gs`** e **`Tormenta20Dados.gs`**, e crie
+uma versão nova da implantação. `Codigo.gs` não mudou.
+**`setupRama()` não é necessário.**
+
+**Site:**
+- `js/tormenta20/racas.js`, `origens.js`, `deuses.js`, `classes-c.js`,
+  `homebrew-t20.js`;
+- `js/paginas/homebrew-raca-t20.js`,
+  `js/paginas/homebrew-origem-divindade-t20.js`,
+  `js/paginas/homebrew-classe-t20.js`;
+- `js/versao.js`.

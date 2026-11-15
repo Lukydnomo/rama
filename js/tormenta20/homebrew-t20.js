@@ -37,20 +37,31 @@
     { chave: "sentido", rotulo: "Sentido", exemplo: "visão no escuro", modelo: { t: "sentido", valor: "visaoNoEscuro" } },
     { chave: "rd", rotulo: "Redução de dano", exemplo: "redução de fogo 5", modelo: { t: "rd", valor: 5, tipos: ["fogo"] } },
     { chave: "prof", rotulo: "Proficiência", exemplo: "armas marciais", modelo: { t: "prof", qual: "marciais" } },
+    /* v9.13: só na habilidade ativada (efeito que dura a cena/rodada). */
+    { chave: "ataque", rotulo: "Bônus em ataque", exemplo: "+2 nos ataques", modelo: { t: "bonus", alvo: "ataque", valor: 2 }, soAtivada: true },
+    { chave: "dano", rotulo: "Bônus em dano", exemplo: "+2 no dano", modelo: { t: "bonus", alvo: "dano", valor: 2 }, soAtivada: true },
   ];
+  /* O que cada lugar aceita: passivo (sempre ligado) ou ativado (gasta PM). */
+  var NA_ATIVADA = ["defesa", "pericia", "sentido", "rd", "ataque", "dano"];
+  function efeitosPara(ativada) { return EFEITOS.filter(function (e) { return ativada ? NA_ATIVADA.indexOf(e.chave) >= 0 : !e.soAtivada; }); }
+  var EXECUCOES = { livre: "ação livre", movimento: "ação de movimento", padrao: "ação padrão", completa: "ação completa", reacao: "reação" };
+  var DURACOES = { cena: "até o fim da cena", rodada: "por 1 rodada", instantanea: "instantânea" };
+  function textoAcao(a) {
+    return a.custo + " PM, " + EXECUCOES[a.execucao] + ", " + DURACOES[a.duracao] + (a.limite === "cena" ? ", uma vez por cena" : "") + (a.efeitos.length ? ": " + a.efeitos.map(textoEfeito).join(", ") : "");
+  }
   var SENTIDOS = { visaoNoEscuro: "Visão no escuro", visaoNaPenumbra: "Visão na penumbra", faro: "Faro" };
   var PROFS = { marciais: "Armas marciais", escudos: "Escudos", pesadas: "Armaduras pesadas", exoticas: "Armas exóticas", fogo: "Armas de fogo" };
   var NOMES_ATR = { "for": "Força", des: "Destreza", con: "Constituição", "int": "Inteligência", sab: "Sabedoria", car: "Carisma" };
 
   function chaveDoEfeito(e) {
-    if (e.t === "bonus") return e.alvo === "defesa" ? "defesa" : "pericia";
+    if (e.t === "bonus") return e.alvo === "defesa" ? "defesa" : e.alvo === "ataque" ? "ataque" : e.alvo === "dano" ? "dano" : "pericia";
     return ({ treino: "treino", pvNivel: "pv", pmNivel: "pm", sentido: "sentido", rd: "rd", prof: "prof" })[e.t] || "";
   }
   function nomePericia(k) { var p = D() && D().PERICIAS.filter(function (x) { return x.chave === k; })[0]; return p ? p.nome : k; }
   function nomeDano(k) { var x = D() && D().TIPOS_DANO.filter(function (y) { return y[0] === k; })[0]; return x ? x[1].toLowerCase() : k; }
   function sinal(v) { return v > 0 ? "+" + v : String(v); }
   function textoEfeito(e) {
-    if (e.t === "bonus") return sinal(e.valor) + " em " + (e.alvo === "defesa" ? "Defesa" : nomePericia(String(e.alvo).slice(8)));
+    if (e.t === "bonus") return sinal(e.valor) + " em " + (e.alvo === "defesa" ? "Defesa" : e.alvo === "ataque" ? "ataques" : e.alvo === "dano" ? "dano" : nomePericia(String(e.alvo).slice(8)));
     if (e.t === "treino") return "treinado em " + nomePericia(e.pericia);
     if (e.t === "pvNivel") return [e.inicial ? sinal(e.inicial) + " PV no 1º nível" : "", e.valor ? sinal(e.valor) + " PV por nível seguinte" : ""].filter(Boolean).join(" e ");
     if (e.t === "pmNivel") return sinal(e.valor) + " PM por nível";
@@ -62,6 +73,7 @@
     return "";
   }
   function textoEscolha(esc) {
+    if (esc.tipo === "magia") return "uma magia de " + (esc.circulo || 1) + "º círculo à escolha (" + (NOMES_ATR[esc.efeito.atributo] || "Carisma") + ")";
     var n = esc.quantidade || 1;
     return n + (n === 1 ? " perícia" : " perícias") + " à escolha, " + (esc.efeito.t === "bonus" ? "com " + sinal(esc.efeito.valor) : (n === 1 ? "treinada" : "treinadas"));
   }
@@ -74,9 +86,10 @@
 
   /* A prévia (revisão do editor, consulta da biblioteca). */
   function previaRaca(d) {
-    var linhas = ["Atributos: " + textoAtributos(d.atributos) + ".", RA().textoCorpo(d.tamanho, d.deslocamento)];
+    var linhas = d.variantes ? d.variantes.map(function (v) { return "Variante " + v.nome + ": " + textoAtributos(v.atributos) + "; " + (v.habilidades.filter(function (k) { return k !== "corpo"; }).map(function (k) { return (d.habilidades.filter(function (h) { return h.id === k; })[0] || {}).nome; }).join(", ") || "sem habilidades") + "."; }) : ["Atributos: " + textoAtributos(d.atributos) + "."];
+    linhas.push(RA().textoCorpo(d.tamanho, d.deslocamento));
     d.habilidades.filter(function (h) { return h.id !== "corpo"; }).forEach(function (h) {
-      var partes = h.efeitos.map(textoEfeito).concat((h.escolhas || []).map(textoEscolha));
+      var partes = h.efeitos.map(textoEfeito).concat((h.escolhas || []).map(textoEscolha)).concat(h.acao ? ["ativada: " + textoAcao(h.acao)] : []);
       linhas.push(h.nome + (partes.length ? ": " + partes.join("; ") : " (informativa)") + ".");
     });
     return linhas;
@@ -86,10 +99,12 @@
     var auto = ["Atributos, tamanho e deslocamento entram na conta da ficha."], escolha = [], mesa = [];
     d.habilidades.filter(function (h) { return h.id !== "corpo"; }).forEach(function (h) {
       if (h.efeitos.length) auto.push(h.nome + ": " + h.efeitos.map(textoEfeito).join(", ") + ".");
+      if (h.acao) auto.push(h.nome + ": botão Usar na ficha (" + textoAcao(h.acao) + "), que cobra os PM e cria o efeito ativo.");
       (h.escolhas || []).forEach(function (e) { escolha.push(h.nome + ": " + textoEscolha(e) + " (escolhida na criação)."); });
-      if (!h.efeitos.length && !(h.escolhas || []).length) mesa.push(h.nome + ": a ficha mostra o texto; a mesa aplica.");
+      if (!h.efeitos.length && !(h.escolhas || []).length && !h.acao) mesa.push(h.nome + ": a ficha mostra o texto; a mesa aplica.");
     });
-    if (d.atributos.escolha) escolha.unshift("Os " + d.atributos.escolha.quantidade + " atributos à escolha (na criação).");
+    if (d.atributos.escolha && !d.variantes) escolha.unshift("Os " + d.atributos.escolha.quantidade + " atributos à escolha (na criação).");
+    if (d.variantes) escolha.unshift("A variante (" + d.variantes.map(function (v) { return v.nome; }).join(" ou ") + "), na criação.");
     return { automatico: auto, escolha: escolha, mesa: mesa.concat(["O que o texto descreve além dos efeitos é aplicado pela mesa."]) };
   }
 
@@ -104,7 +119,7 @@
     if (d.itens.length) l.push("Itens: " + d.itens.join("; ") + ".");
     l.push("Perícias: " + (d.pericias.map(nomePericiaOuOficio).join(", ") || "nenhuma") + ".");
     l.push("Poderes gerais: " + (d.poderes.map(nomePoder).join(", ") || "nenhum") + ".");
-    l.push("Poder único: " + d.unico.nome + (d.unico.efeitos.length ? " (" + d.unico.efeitos.map(textoEfeito).join(", ") + ")" : " (informativo)") + ".");
+    l.push("Poder único: " + d.unico.nome + (d.unico.efeitos.length ? " (" + d.unico.efeitos.map(textoEfeito).join(", ") + ")" : d.unico.acao ? "" : " (informativo)") + (d.unico.acao ? " — ativado: " + textoAcao(d.unico.acao) : "") + ".");
     l.push("Quem joga escolhe 2 benefícios entre esses " + (d.pericias.length + d.poderes.length + 1) + ".");
     return l;
   }
@@ -119,7 +134,7 @@
     l.push("Devotos: " + (d.devotos === "qualquer" ? "qualquer um" : d.devotos.map(nomeDevoto).join(", ") + " (e humanos e clérigos)") + ".");
     l.push("Poderes concedidos: " + (d.poderes.map(function (k) {
       var p = d.poderesProprios.filter(function (x) { return x.id === k; })[0];
-      return p ? p.nome + (p.efeitos.length ? " (" + p.efeitos.map(textoEfeito).join(", ") + ")" : "") : nomePoder(k);
+      return p ? p.nome + (p.efeitos.length ? " (" + p.efeitos.map(textoEfeito).join(", ") + ")" : "") + (p.acao ? " (ativado: " + textoAcao(p.acao) + ")" : "") : nomePoder(k);
     }).join(", ") || "nenhum") + ".");
     if (d.obrigacoes) l.push("Obrigações e restrições: " + d.obrigacoes);
     return l;
@@ -132,11 +147,11 @@
     l.push("Proficiências: " + (d.proficiencias.map(function (q) { return (PROFS[q] || q).toLowerCase(); }).join(", ") || "só armas simples e armaduras leves") + ".");
     if (d.magias) l.push(d.habilidades.magias.resumo);
     d.habilidadesDaTabela.slice().sort(function (a, b) { return a.nivel - b.nivel; }).forEach(function (h) {
-      var partes = h.efeitos.map(textoEfeito).concat((h.escolhas || []).map(textoEscolha));
+      var partes = h.efeitos.map(textoEfeito).concat((h.escolhas || []).map(textoEscolha)).concat(h.acao ? ["ativada: " + textoAcao(h.acao)] : []);
       l.push(h.nivel + "º nível · " + h.nome + (partes.length ? ": " + partes.join("; ") : "") + ".");
     });
     l.push("Poder de " + d.nome + " nos níveis: " + (d.niveisDePoder.join(", ") || "nenhum") + ".");
-    l.push("Poderes de classe: " + (d.poderesProprios.map(function (p) { return p.nome + (p.ncMinimo > 1 ? " (" + p.ncMinimo + "º nível)" : "") + (p.efeitos.length ? " [" + p.efeitos.map(textoEfeito).join(", ") + "]" : ""); }).concat(["Aumento de Atributo"]).join(", ")) + "; e os poderes gerais.");
+    l.push("Poderes de classe: " + (d.poderesProprios.map(function (p) { return p.nome + (p.ncMinimo > 1 ? " (" + p.ncMinimo + "º nível)" : "") + (p.efeitos.length ? " [" + p.efeitos.map(textoEfeito).join(", ") + "]" : "") + (p.acao ? " [ativado: " + textoAcao(p.acao) + "]" : ""); }).concat(["Aumento de Atributo"]).join(", ")) + "; e os poderes gerais.");
     return l;
   }
 
@@ -184,7 +199,7 @@
   }
 
   global.RAMATormenta20Homebrew = {
-    EFEITOS: EFEITOS, SENTIDOS: SENTIDOS, PROFS: PROFS, NOMES_ATR: NOMES_ATR,
+    EFEITOS: EFEITOS, efeitosPara: efeitosPara, textoAcao: textoAcao, EXECUCOES: EXECUCOES, DURACOES: DURACOES, SENTIDOS: SENTIDOS, PROFS: PROFS, NOMES_ATR: NOMES_ATR,
     chaveDoEfeito: chaveDoEfeito, textoEfeito: textoEfeito, textoEscolha: textoEscolha, textoAtributos: textoAtributos,
     previaRaca: previaRaca, automacao: automacao, previaOrigem: previaOrigem, previaDeus: previaDeus, previaClasse: previaClasse, nomePoder: nomePoder, nomePericiaOuOficio: nomePericiaOuOficio, deRegistro: deRegistro, carregarBiblioteca: carregarBiblioteca,
   };

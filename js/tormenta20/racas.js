@@ -271,13 +271,42 @@
     if (e.t === "prof") return PROFS_HB.indexOf(e.qual) >= 0 ? { t: "prof", qual: e.qual } : null;
     return null;
   }
+  /* v9.13: a habilidade ATIVADA (gasta PM): custo, execução, duração e
+     efeitos que viram um efeito ativo na ficha (bônus em Defesa, perícia,
+     ataque ou dano; redução de dano; sentido). Uma vez por cena, se quiser. */
+  var EXECUCOES_HB = ["livre", "movimento", "padrao", "completa", "reacao"];
+  var DURACOES_HB = ["cena", "rodada", "instantanea"];
+  function acaoHomebrew(bruto) {
+    var a = oo(bruto);
+    if (!Object.keys(a).length) return null;
+    var efs = ll(a.efeitos).map(function (e0) {
+      var e = oo(e0);
+      if (e.t === "bonus" && (e.alvo === "ataque" || e.alvo === "dano")) { var v = nn(e.valor, -5, 10, 0); return v ? { t: "bonus", alvo: e.alvo, valor: v } : null; }
+      var x = efeitoHomebrew(e);
+      return x && (x.t === "bonus" || x.t === "rd" || x.t === "sentido") ? x : null;
+    }).filter(Boolean).slice(0, 4);
+    var d = { custo: nn(a.custo, 0, 10, 1), execucao: EXECUCOES_HB.indexOf(a.execucao) >= 0 ? a.execucao : "padrao", duracao: DURACOES_HB.indexOf(a.duracao) >= 0 ? a.duracao : "cena", efeitos: efs };
+    if (a.limite === "cena") d.limite = "cena";
+    return d;
+  }
   function escolhaHomebrew(bruto, id) {
     var x = oo(bruto);
+    /* v9.13: uma magia à escolha (como a Tatuagem Mística do qareen). */
+    if (x.tipo === "magia") return { id: id, tipo: "magia", circulo: nn(x.circulo, 1, 2, 1), quantidade: 1, efeito: { t: "magia", atributo: ["int", "sab", "car"].indexOf(oo(x.efeito).atributo) >= 0 ? x.efeito.atributo : "car", desconto: 0 } };
     if (x.tipo !== "pericia") return null;
     var q = nn(x.quantidade, 1, 3, 1);
     var ef = oo(x.efeito);
     var efeito = ef.t === "bonus" ? { t: "bonus", valor: nn(ef.valor, 1, 5, 2) } : { t: "treino" };
     return { id: id, tipo: "pericia", quantidade: q, efeito: efeito };
+  }
+  function atributosHomebrew(bruto) {
+    var at = oo(bruto), fixo = {};
+    ATRS.forEach(function (a) { var v = nn(oo(at.fixo)[a], -2, 2, 0); if (v) fixo[a] = v; });
+    var atributos = { fixo: fixo };
+    var esc = oo(at.escolha), q = nn(esc.quantidade, 0, 3, 0);
+    if (q) atributos.escolha = { quantidade: q, valor: nn(esc.valor, 1, 2, 1), exceto: ll(esc.exceto).filter(function (a, i, l) { return ATRS.indexOf(a) >= 0 && !fixo[a] && l.indexOf(a) === i; }).concat(Object.keys(fixo)) };
+    if (atributos.escolha && !atributos.escolha.exceto.length) delete atributos.escolha.exceto;
+    return atributos;
   }
   function textoCorpo(tam, desl) {
     var nome = ((Dd() && Dd().TAMANHO && Dd().TAMANHO[tam]) || { nome: tam }).nome;
@@ -285,12 +314,7 @@
   }
   function normalizarRacaHomebrew(bruto) {
     var b = oo(bruto);
-    var at = oo(b.atributos), fixo = {};
-    ATRS.forEach(function (a) { var v = nn(oo(at.fixo)[a], -2, 2, 0); if (v) fixo[a] = v; });
-    var atributos = { fixo: fixo };
-    var esc = oo(at.escolha), q = nn(esc.quantidade, 0, 3, 0);
-    if (q) atributos.escolha = { quantidade: q, valor: nn(esc.valor, 1, 2, 1), exceto: ll(esc.exceto).filter(function (a, i, l) { return ATRS.indexOf(a) >= 0 && !fixo[a] && l.indexOf(a) === i; }).concat(Object.keys(fixo)) };
-    if (atributos.escolha && !atributos.escolha.exceto.length) delete atributos.escolha.exceto;
+    var atributos = atributosHomebrew(b.atributos);
     var tam = TAMANHOS_HB.indexOf(b.tamanho) >= 0 ? b.tamanho : "medio";
     var desl = Math.max(3, Math.min(18, Math.round((Number(b.deslocamento) || 9) / 1.5) * 1.5));
     var d = {
@@ -308,13 +332,24 @@
       var x = { id: id, nome: tx(h.nome, 60).trim() || "Habilidade " + (i + 1), resumo: tx(h.resumo, 600).trim(), efeitos: ll(h.efeitos).map(efeitoHomebrew).filter(Boolean).slice(0, 4), homebrew: true };
       var e = ll(h.escolhas).map(function (y) { return escolhaHomebrew(y, id + "e"); }).filter(Boolean)[0];
       if (e) x.escolhas = [e];
+      var ac = acaoHomebrew(h.acao);
+      if (ac) x.acao = ac;
       d.habilidades.push(x);
     });
+    /* v9.13: VARIANTES (como o Suraggel): cada uma com os seus atributos
+       e as habilidades que tem. Só valem a partir de duas. */
+    var idsHab = d.habilidades.map(function (h) { return h.id; });
+    var vars = ll(b.variantes).slice(0, 3).map(function (v0, i) {
+      var v = oo(v0);
+      return { id: "v" + (i + 1), nome: tx(v.nome, 40).trim() || "Variante " + (i + 1), atributos: atributosHomebrew(v.atributos), habilidades: ll(v.habilidades).map(String).filter(function (k, j, l) { return idsHab.indexOf(k) >= 0 && l.indexOf(k) === j; }) };
+    });
+    if (vars.length >= 2) d.variantes = vars;
     if (tam !== "medio" || desl !== 9) {
       var corpo = [];
       if (tam !== "medio") corpo.push({ t: "tamanho", valor: tam });
       if (desl !== 9) corpo.push({ t: "deslocamento", tipo: "terrestre", base: desl });
       d.habilidades.unshift({ id: "corpo", nome: "Tamanho e deslocamento", resumo: textoCorpo(tam, desl), efeitos: corpo, homebrew: true });
+      if (d.variantes) d.variantes.forEach(function (v) { v.habilidades.unshift("corpo"); });
     }
     if (!d.id) d.id = chaveHomebrew("hbr-", d);
     return d;
@@ -337,7 +372,7 @@
   function referencia(r) { return r && r.homebrew ? "Homebrew" : (r && r.pagina ? "p. " + r.pagina : ""); }
 
   global.RAMATormenta20Racas = { RACAS: RACAS, RACA: RACA, habilidade: habilidade, habilidadesDe: habilidadesDe, atributosDe: atributosDe, HUMANOIDES: HUMANOIDES,
-    ehHomebrew: ehHomebrew, chaveHomebrew: chaveHomebrew, escolhaHomebrew: escolhaHomebrew, normalizarRacaHomebrew: normalizarRacaHomebrew, registrarRacaHomebrew: registrarRacaHomebrew, efeitoHomebrew: efeitoHomebrew,
+    ehHomebrew: ehHomebrew, chaveHomebrew: chaveHomebrew, escolhaHomebrew: escolhaHomebrew, acaoHomebrew: acaoHomebrew, EXECUCOES_HB: EXECUCOES_HB, DURACOES_HB: DURACOES_HB, normalizarRacaHomebrew: normalizarRacaHomebrew, registrarRacaHomebrew: registrarRacaHomebrew, efeitoHomebrew: efeitoHomebrew,
     racasHomebrew: racasHomebrew, racasDisponiveis: racasDisponiveis, referencia: referencia, textoCorpo: textoCorpo,
     TAMANHOS_HB: TAMANHOS_HB, SENTIDOS_HB: SENTIDOS_HB, PROFS_HB: PROFS_HB };
 })(typeof window !== "undefined" ? window : globalThis);

@@ -1,5 +1,11 @@
 # O banco
 
+## Tipos Homebrew de Tormenta20 — v9.13
+
+Nenhuma coluna nova. As definições guardadas (no `HOMEBREW` e nas cópias
+em `tormenta20.homebrew`) aceitam `acao` nos poderes e habilidades,
+`escolhas` do tipo `magia` e `variantes` na raça. Tudo é opcional.
+
 ## Classe Homebrew de Tormenta20 — v9.12
 
 Nenhuma aba nova. A classe de T20 usa a coluna `classe` do `HOMEBREW`
