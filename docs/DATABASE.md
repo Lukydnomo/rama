@@ -1,5 +1,14 @@
 # O banco
 
+## Magia e Técnica Homebrew de Goblins — v9.30
+
+Nenhuma aba nova. Registros do tipo `habilidade`: subtipo `magia`
+(`modelo.def` = `{ r0..r3, e0..e3 }`, o texto e o efeito de cada
+resultado) e `tecnica` (`{ uso }`, com o texto na descrição). Na ficha de
+Goblins, `goblins.tecnicasHb` lista as técnicas concedidas;
+`goblins.homebrew.magias` e `goblins.homebrew.tecnicas` guardam as
+cópias; `escolhas.magias` aceita as chaves `hbgm-…`. Opcional.
+
 ## Poder de Disciplina Homebrew de Vampiro — v9.29
 
 Nenhuma aba nova. O registro é do tipo `habilidade` (subtipo

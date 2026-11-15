@@ -779,6 +779,7 @@
   function magico(k) { return ITENS_MAGICOS[k] || null; }
   function inimigo(k) { return INIMIGOS[k] || null; }
   function tecnica(chave) {
+    if (TECNICAS_HB[chave]) return Object.assign({ ocupacao: "", concedida: true, pagina: 0 }, TECNICAS_HB[chave]);
     var achada = null;
     Object.keys(OCUPACOES).some(function (o) { return OCUPACOES[o].tecnicas.some(function (t) { if (t.chave === chave) { achada = Object.assign({ ocupacao: o }, t); return true; } return false; }); });
     return achada;
@@ -864,10 +865,55 @@
   }
   function descritoresDisponiveis() { return DESCRITOR_D6.concat(DESCRITORES_HB); }
 
+  /* v9.30 — MAGIA e TÉCNICA HOMEBREW (chaves hbgm-/hbgt-<id>-<hash>).
+     Magia: os quatro resultados por hits (0, 1, 2, 3+), como as do livro,
+     cada um com o texto e, se a mesa quiser, um efeito que o motor já
+     aplica (ferimento em quem conjurou, ferimentos num inimigo, cura
+     num aliado); entra na escolha do Bruxo. Técnica: nome, texto e o uso
+     (1 vez por dia, marcado pela ficha); a mesa a concede a um goblin. */
+  var PADRAO_MAGIA = /^hbgm-[a-z0-9-]{3,30}$/, PADRAO_TEC = /^hbgt-[a-z0-9-]{3,30}$/;
+  var MAGIAS_HB = [], TECNICAS_HB = {};
+  var EFEITOS_DE_MAGIA = {
+    proprio1: { proprio: { ferimentos: 1 } },
+    inimigo1: { alvos: { quem: "umInimigo", ferimentos: 1 } }, inimigo2: { alvos: { quem: "umInimigo", ferimentos: 2 } }, inimigo3: { alvos: { quem: "umInimigo", ferimentos: 3 } },
+    aliado1: { alvos: { quem: "umAliado", curar: 1 } }, aliadoTodos: { alvos: { quem: "umAliado", curar: "todos" } },
+  };
+  function ehMagiaHomebrew(k) { return PADRAO_MAGIA.test(String(k || "")); }
+  function ehTecnicaHomebrew(k) { return PADRAO_TEC.test(String(k || "")); }
+  function normalizarMagiaHomebrew(bruto) {
+    var b = hbObj(bruto);
+    var res = [0, 1, 2, 3].map(function (i) { var r = hbObj(hbLista(b.resultados)[i]); return { texto: hbTexto(r.texto, 400).trim(), efeito: EFEITOS_DE_MAGIA[r.efeito] ? r.efeito : "" }; });
+    if (!res.some(function (r) { return r.texto; })) return null;
+    var d = { chave: ehMagiaHomebrew(b.chave) ? b.chave : "", nome: hbTexto(b.nome, 60).trim() || "Magia Homebrew", homebrew: true, homebrewId: hbTexto(b.homebrewId, 80), resultados: res };
+    if (!d.chave) d.chave = hbChave("hbgm-", d);
+    return d;
+  }
+  function registrarMagiaHomebrew(def) {
+    if (!def || !ehMagiaHomebrew(def.chave)) return null;
+    MAGIAS[def.chave] = { nome: def.nome, pagina: 0, homebrew: true, def: JSON.parse(JSON.stringify(def)), resultados: def.resultados.map(function (r) {
+      var e = r.efeito ? JSON.parse(JSON.stringify(EFEITOS_DE_MAGIA[r.efeito])) : { narrativo: true };
+      return Object.assign({ texto: r.texto || "(sem texto)" }, e);
+    }) };
+    if (MAGIAS_HB.indexOf(def.chave) < 0) MAGIAS_HB.push(def.chave);
+    return MAGIAS[def.chave];
+  }
+  function magiasDoBruxo() { return MAGIAS_DO_BRUXO.concat(MAGIAS_HB); }
+  function normalizarTecnicaHomebrew(bruto) {
+    var b = hbObj(bruto);
+    var d = { chave: ehTecnicaHomebrew(b.chave) ? b.chave : "", nome: hbTexto(b.nome, 60).trim() || "Técnica Homebrew", homebrew: true, homebrewId: hbTexto(b.homebrewId, 80), texto: hbTexto(b.texto, 600).trim() };
+    if (b.uso === "dia") d.uso = "dia";
+    if (!d.chave) d.chave = hbChave("hbgt-", d);
+    return d;
+  }
+  function registrarTecnicaHomebrew(def) { if (!def || !ehTecnicaHomebrew(def.chave)) return null; TECNICAS_HB[def.chave] = JSON.parse(JSON.stringify(def)); return TECNICAS_HB[def.chave]; }
+  function tecnicasHomebrew() { return Object.keys(TECNICAS_HB).map(function (k) { return TECNICAS_HB[k]; }); }
+
   global.RAMAGoblinsCatalogo = {
     ehOcupacaoHomebrew: ehOcupacaoHomebrew, ehDescritorHomebrew: ehDescritorHomebrew,
     normalizarOcupacaoHomebrew: normalizarOcupacaoHomebrew, normalizarDescritorHomebrew: normalizarDescritorHomebrew,
     registrarOcupacaoHomebrew: registrarOcupacaoHomebrew, registrarDescritorHomebrew: registrarDescritorHomebrew, descritoresDisponiveis: descritoresDisponiveis,
+    ehMagiaHomebrew: ehMagiaHomebrew, ehTecnicaHomebrew: ehTecnicaHomebrew, normalizarMagiaHomebrew: normalizarMagiaHomebrew, registrarMagiaHomebrew: registrarMagiaHomebrew, magiasDoBruxo: magiasDoBruxo,
+    normalizarTecnicaHomebrew: normalizarTecnicaHomebrew, registrarTecnicaHomebrew: registrarTecnicaHomebrew, tecnicasHomebrew: tecnicasHomebrew, EFEITOS_DE_MAGIA: EFEITOS_DE_MAGIA,
     LIVRO: LIVRO, referencia: referencia,
     ATRIBUTOS: ATRIBUTOS, CHAVES_ATRIBUTO: CHAVES_ATRIBUTO, NOMES: NOMES,
     OCUPACOES: OCUPACOES, OCUPACAO_D6: OCUPACAO_D6, DESCRITORES: DESCRITORES, DESCRITOR_D6: DESCRITOR_D6,

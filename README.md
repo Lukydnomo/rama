@@ -929,6 +929,11 @@ segredo nenhum — ele os lê das Script Properties. Publicá-lo não expõe nad
 
 ### Atualizar o backend
 
+**v9.30.0 — CACO:** Magia e Técnica Homebrew no motor de Malditos Goblins.
+Troque **`Goblins.gs`** e crie uma versão nova da implantação.
+**`setupRama()` não é necessário.** Site: os arquivos listados em
+`docs/HOMEBREW-SISTEMAS.md` (seção "Publicar a v9.30.0").
+
 **v9.29.0 — CRISTAL:** Poder de Disciplina Homebrew no motor de Vampiro.
 Troque **`Vampiro.gs`** e crie uma versão nova da implantação.
 **`setupRama()` não é necessário.** Site: os arquivos listados em
@@ -2127,7 +2132,7 @@ Três números diferentes, que não se misturam:
 
 | | Onde | O que é |
 |---|---|---|
-| versão do aplicativo | `js/versao.js` | o que a pessoa vê: v9.29.0 |
+| versão do aplicativo | `js/versao.js` | o que a pessoa vê: v9.30.0 |
 | `schemaVersion` | `js/ficha.js` | o formato da FICHA |
 | `versaoFormato` | `js/config.js` | o formato dos arquivos de importação |
 

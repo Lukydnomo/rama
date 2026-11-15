@@ -440,7 +440,7 @@
     }
     if (s === "vampiro" && ["cla", "predador", "disciplina", "vantagem", "conhecimento"].indexOf(st) >= 0 && global.RAMAVampiroHomebrew) {
       var HV = global.RAMAVampiroHomebrew, xv = HV.deRegistro(reg);
-      if (xv && xv.def) HV.previa(st, xv.def).forEach(function (t, i) { pares.push([i ? "" : "Regras", t]); });
+      if (xv && xv.def) HV.previa(xv.tipo, xv.def).forEach(function (t, i) { pares.push([i ? "" : "Regras", t]); });
     }
     if (s === "oblivio" && ["papel", "motivacao", "mazela", "fardo"].indexOf(st) >= 0 && global.RAMAOblivioHomebrew) {
       var HO2 = global.RAMAOblivioHomebrew, xo2 = HO2.deRegistro(reg);
@@ -450,9 +450,9 @@
       var HBr = global.RAMABrutalHomebrew, xb = HBr.deRegistro(reg);
       if (xb && xb.def) (st === "arquetipo" ? HBr.previaArquetipo(xb.def) : HBr.previaEstilo(xb.def)).forEach(function (t, i) { pares.push([i ? "" : "Regras", t]); });
     }
-    if (s === "goblins" && (st === "ocupacao" || st === "descritor") && global.RAMAGoblinsHomebrew) {
+    if (s === "goblins" && ["ocupacao", "descritor", "magia", "tecnica"].indexOf(st) >= 0 && global.RAMAGoblinsHomebrew) {
       var HG = global.RAMAGoblinsHomebrew, xg = HG.deRegistro(reg);
-      if (xg && xg.def) (st === "ocupacao" ? HG.previaOcupacao(xg.def) : HG.previaDescritor(xg.def)).forEach(function (t, i) { pares.push([i ? "" : "Regras", t]); });
+      if (xg && xg.def) ({ ocupacao: HG.previaOcupacao, descritor: HG.previaDescritor, magia: HG.previaMagia, tecnica: HG.previaTecnica })[xg.tipo](xg.def).forEach(function (t, i) { pares.push([i ? "" : "Regras", t]); });
     }
     if (s === "tormenta20" && (st === "magia" || st === "poder") && global.RAMATormenta20Homebrew) {
       var HT4 = global.RAMATormenta20Homebrew, xm = HT4.deRegistro(reg);

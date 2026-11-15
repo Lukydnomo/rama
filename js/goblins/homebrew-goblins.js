@@ -26,8 +26,23 @@
     return [(textoMods(d.mod) || "Sem modificador fixo") + (d.escolha ? "; quem joga escolhe um atributo para +1" : "") + "." + (d.texto ? " " + d.texto : "")];
   }
 
+  /* v9.30: Magia e Técnica Homebrew (tipo Habilidade). */
+  var ROT_EFEITO = { proprio1: "1 ferimento em quem conjurou", inimigo1: "1 ferimento num inimigo", inimigo2: "2 ferimentos num inimigo", inimigo3: "3 ferimentos num inimigo", aliado1: "remove 1 ferimento de um aliado", aliadoTodos: "remove todos os ferimentos de um aliado" };
+  function previaMagia(d) {
+    return d.resultados.map(function (r, i) { return (i === 3 ? "3+ hits" : i + (i === 1 ? " hit" : " hits")) + ": " + (r.texto || "(sem texto)") + (r.efeito ? " [a ficha aplica: " + ROT_EFEITO[r.efeito] + "]" : ""); });
+  }
+  function previaTecnica(d) { return [(d.uso === "dia" ? "1 vez por dia (a ficha marca o uso). " : "") + (d.texto || "(sem texto)")]; }
   function deRegistro(reg) {
     var m = obj(obj(reg).modelo);
+    if (m.sistema === "goblins" && m.grupo === "habilidade" && C() && C().normalizarMagiaHomebrew) {
+      var v = obj(m.def);
+      if (m.subtipo === "magia") {
+        var dm = C().normalizarMagiaHomebrew({ chave: "", nome: reg.nome, homebrewId: reg.id, resultados: [0, 1, 2, 3].map(function (i) { return { texto: v["r" + i], efeito: v["e" + i] }; }) });
+        return dm ? { tipo: "magia", def: dm } : null;
+      }
+      if (m.subtipo === "tecnica") return { tipo: "tecnica", def: C().normalizarTecnicaHomebrew({ chave: "", nome: reg.nome, homebrewId: reg.id, texto: reg.descricao || "", uso: v.uso }) };
+      return null;
+    }
     if (m.sistema !== "goblins" || m.grupo !== "estrutural" || !C()) return null;
     var base = Object.assign({}, obj(m.def), { chave: "", nome: reg.nome, homebrewId: reg.id });
     if (m.subtipo === "ocupacao") return { tipo: "ocupacao", def: C().normalizarOcupacaoHomebrew(Object.assign(base, { descricao: reg.descricao || "" })) };
@@ -39,16 +54,16 @@
   function carregarBiblioteca(forcar) {
     if (biblioteca && !forcar) return Promise.resolve(biblioteca);
     if (carga && !forcar) return carga;
-    var API = global.RAMAApi, VAZIA = { ocupacoes: [], descritores: [] };
+    var API = global.RAMAApi, VAZIA = { ocupacoes: [], descritores: [], magias: [], tecnicas: [] };
     if (!API || !API.listarHomebrew || !C()) return Promise.resolve(VAZIA);
-    carga = API.listarHomebrew({ escopo: "todos", tipos: ["ocupacao", "descritor"] }).then(function (r) {
+    carga = API.listarHomebrew({ escopo: "todos", tipos: ["ocupacao", "descritor", "habilidade"] }).then(function (r) {
       carga = null;
-      var saida = { ocupacoes: [], descritores: [] };
+      var saida = { ocupacoes: [], descritores: [], magias: [], tecnicas: [] };
       ((r && r.ok && r.dados) || []).forEach(function (reg) {
         var x = deRegistro(reg);
         if (!x || !x.def) return;
-        if (x.tipo === "ocupacao") { C().registrarOcupacaoHomebrew(x.def); saida.ocupacoes.push(x.def); }
-        else { C().registrarDescritorHomebrew(x.def); saida.descritores.push(x.def); }
+        registrar(x.tipo, x.def);
+        saida[CAMPO[x.tipo]].push(x.def);
       });
       biblioteca = saida;
       return saida;
@@ -57,7 +72,14 @@
   }
 
   /* As cópias da ficha e as versões novas (o painel de js/homebrew-versoes.js). */
-  var CAMPOS = [["ocupacoes", "ocupacoes", "ocupacao"], ["descritores", "descritores", "descritor"]];
+  var CAMPOS = [["ocupacoes", "ocupacoes", "ocupacao"], ["descritores", "descritores", "descritor"], ["magias", "magias", "magia"], ["tecnicas", "tecnicas", "tecnica"]];
+  var CAMPO = { ocupacao: "ocupacoes", descritor: "descritores", magia: "magias", tecnica: "tecnicas" };
+  function registrar(tipo, def) {
+    if (tipo === "ocupacao") C().registrarOcupacaoHomebrew(def);
+    else if (tipo === "descritor") C().registrarDescritorHomebrew(def);
+    else if (tipo === "magia") C().registrarMagiaHomebrew(def);
+    else if (tipo === "tecnica") C().registrarTecnicaHomebrew(def);
+  }
   function copiasDaFicha(o) {
     var hb = obj(obj(o).homebrew), out = [];
     CAMPOS.forEach(function (c) { Object.keys(obj(hb[c[0]])).forEach(function (k) { var d = hb[c[0]][k]; out.push({ campo: c[0], tipo: c[2], chave: k, nome: d.nome || k, homebrewId: d.homebrewId || "" }); }); });
@@ -78,10 +100,10 @@
     o.homebrew = o.homebrew || { versao: 1 };
     o.homebrew[item.campo] = o.homebrew[item.campo] || {};
     o.homebrew[item.campo][def.chave] = def;
-    if (item.tipo === "ocupacao") C().registrarOcupacaoHomebrew(def); else C().registrarDescritorHomebrew(def);
+    registrar(item.tipo, def);
     return true;
   }
 
-  global.RAMAGoblinsHomebrew = { previaOcupacao: previaOcupacao, previaDescritor: previaDescritor, textoMods: textoMods, deRegistro: deRegistro, carregarBiblioteca: carregarBiblioteca,
+  global.RAMAGoblinsHomebrew = { previaMagia: previaMagia, previaTecnica: previaTecnica, previaOcupacao: previaOcupacao, previaDescritor: previaDescritor, textoMods: textoMods, deRegistro: deRegistro, carregarBiblioteca: carregarBiblioteca,
     copiasDaFicha: copiasDaFicha, versoesNovas: versoesNovas, atualizarVersao: atualizarVersao };
 })(typeof window !== "undefined" ? window : globalThis);

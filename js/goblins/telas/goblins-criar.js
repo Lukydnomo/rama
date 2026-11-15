@@ -198,8 +198,8 @@
       if (ad.cthulin) partes.push(selecao("Cthulin: comece com", [{ valor: "", rotulo: "—" }, { valor: "chapeu", rotulo: "Chapéu" }, { valor: "livroEspecial", rotulo: "Livro Especial" }], o.escolhas.inicialCthulin, function (v) { o.escolhas.inicialCthulin = v; }));
       if (oc.escolhas.indexOf("armaFavorita") >= 0) partes.push(selecao("Arma favorita (Mestre de Armas)", [{ valor: "", rotulo: "—" }].concat(Object.keys(C().ARMAS).filter(function (k) { var a = C().ARMAS[k]; return !a.adaptacao || ad[a.adaptacao]; }).map(function (k) { return { valor: k, rotulo: C().ARMAS[k].nome }; })), o.escolhas.armaFavorita, function (v) { o.escolhas.armaFavorita = v; }));
       if (oc.escolhas.indexOf("especieInimiga") >= 0) partes.push(UI().campo({ rotulo: "Espécie inimiga (Inimigo): +1 dado contra ela", valor: o.escolhas.especieInimiga, limite: 60, dica: "ex.: lobo, humano, goblin", aoMudar: function (v) { o.escolhas.especieInimiga = v; } }));
-      if (oc.escolhas.indexOf("magias") >= 0) partes.push(el("fieldset.gob-flags", {}, [el("legend", { texto: "Magias (escolha 3, p. 10–11)" })].concat(C().MAGIAS_DO_BRUXO.map(function (k) {
-        return marca(C().MAGIAS[k].nome, o.escolhas.magias.indexOf(k) >= 0, function (v) {
+      if (oc.escolhas.indexOf("magias") >= 0) partes.push(el("fieldset.gob-flags", {}, [el("legend", { texto: "Magias (escolha 3, p. 10–11)" })].concat(C().magiasDoBruxo().map(function (k) {
+        return marca(C().MAGIAS[k].nome + (C().MAGIAS[k].homebrew ? " (Homebrew)" : ""), o.escolhas.magias.indexOf(k) >= 0, function (v) {
           var l = o.escolhas.magias.filter(function (x) { return x !== k; });
           if (v) { if (l.length >= 3) { UI().avisoAtencao("São 3 magias."); desenhar(); return; } l.push(k); }
           o.escolhas.magias = l;

@@ -223,7 +223,7 @@
     id: "goblins",
     tipos: [
       { chave: "item", rotulo: "Item", ajuda: "Arma (mãos, ataque, bônus, munição, recarga), proteção (uso e durabilidade) ou outro item." },
-      { chave: "habilidade", rotulo: "Habilidade", ajuda: "Magia, técnica ou habilidade — por enquanto para consulta e anotações." },
+      { chave: "habilidade", rotulo: "Habilidade", ajuda: "Magia (entra na escolha do Bruxo, resultado por hits), técnica (a mesa concede, com uso de 1 vez por dia) ou habilidade, para consulta." },
       { chave: "criatura", rotulo: "Inimigo", ajuda: "Combate, Noção, Habilidade e Vitalidade, bônus da arma, proteção e efeitos." },
       { chave: "ocupacao", rotulo: "Ocupação", ajuda: "Modificador de atributo, opções de equipamento inicial e as três técnicas. Entra na criação de goblins." },
       { chave: "descritor", rotulo: "Descritor", ajuda: "Modificadores de atributo (ou um +1 à escolha, como Supimpa). Entra na criação de goblins." },
@@ -238,8 +238,15 @@
     },
     habilidade: {
       subtipos: [
-        { chave: "magia", rotulo: "Magia", campos: [campo("custo", "Custo", "texto", { limite: 40 }), campo("hits", "Dados / hits", "texto", { limite: 60, exemplo: "2 hits: o efeito dobra" })] },
-        { chave: "tecnica", rotulo: "Técnica", campos: [campo("uso", "Uso", "texto", { limite: 60, exemplo: "1 vez por dia" })] },
+        /* v9.30: a Magia entra na escolha do Bruxo e se conjura como as do
+           livro (teste de Noção, o resultado pelos hits); a Técnica, a
+           mesa concede ao goblin. */
+        { chave: "magia", rotulo: "Magia", campos: [0, 1, 2, 3].map(function (i) {
+          var rot = i === 3 ? "3+ hits" : i + (i === 1 ? " hit" : " hits");
+          return [campo("r" + i, rot + ": o que acontece", "area", { limite: 400, exemplo: i === 0 ? "Uma explosão queima seu rosto." : "" }),
+            sel("e" + i, rot + ": a ficha aplica", [["", "Só o texto (a mesa)"], ["proprio1", "1 ferimento em quem conjurou"], ["inimigo1", "1 ferimento num inimigo"], ["inimigo2", "2 ferimentos num inimigo"], ["inimigo3", "3 ferimentos num inimigo"], ["aliado1", "Remove 1 ferimento de um aliado"], ["aliadoTodos", "Remove todos os ferimentos de um aliado"]], { padrao: "" })];
+        }).reduce(function (a, b) { return a.concat(b); }, []) },
+        { chave: "tecnica", rotulo: "Técnica", campos: [sel("uso", "Uso", [["", "Quando o texto diz"], ["dia", "1 vez por dia (a ficha marca)"]], { padrao: "" })] },
         { chave: "habilidade", rotulo: "Habilidade", campos: [] },
       ],
     },
@@ -610,6 +617,8 @@
       if (g === "item") return { modo: "nativo", texto: destino === "brutal" ? "Vira o Apego \"item\" da ficha." : "Entra no inventário com as regras do sistema." };
       if (s === "ordem" || s === "universal" || s === "ordem2") return { modo: "nativo", texto: "Entra nas habilidades da ficha." };
       var stH = subtipoDe(r), dH = defDe(r);
+      if (s === "goblins" && stH === "magia" && [0, 1, 2, 3].some(function (i) { return dH["r" + i]; })) return { modo: "nativo", texto: "Entra na escolha de magias do Bruxo e se conjura como as do livro (teste de Noção; o resultado pelos hits, com o que a ficha aplica). A cópia fica na ficha." };
+      if (s === "goblins" && stH === "tecnica") return { modo: "nativo", texto: "A mesa concede ao goblin (aba Técnicas, em edição); o uso de 1 vez por dia é marcado pela ficha. A cópia fica na ficha." };
       if (s === "vampiro" && stH === "disciplina" && dH.disciplina) return { modo: "nativo", texto: "Entra nos poderes da Disciplina (criação e compras com XP), com o custo em Checagens, a parada e a duração; o efeito é da mesa. A cópia fica na ficha." };
       if (s === "tormenta20" && stH === "magia") return { modo: "nativo", texto: "Aprendida na aba Magias (+ Aprender magia) e lançada com o custo do círculo, o dano, a cura e os efeitos configurados. A cópia fica na ficha." };
       if (s === "tormenta20" && stH === "poder" && (dH.grupoT20 || dH.grupo === "geral" || dH.grupo === "tormenta")) return { modo: "nativo", texto: "Escolhido ao subir de nível ou em + Poder avulso, com os efeitos e a ativação configurados. A cópia fica na ficha." };

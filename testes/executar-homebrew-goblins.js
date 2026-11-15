@@ -100,5 +100,38 @@ t.grupo("Painel \u201cHomebrew desta ficha\u201d (v9.22)");
   } finally { U.el = elAntes; U.trocar = trocarAntes; }
 }
 
+t.grupo("Magia e Técnica Homebrew no motor (v9.30)");
+{
+  const fila = (...faces) => { const q = faces.flat(); return () => q.shift(); };
+  const mgB = { nome: "Estilhaço", homebrewId: "c1c1c1c1-sintetico", resultados: [{ texto: "O vidro corta você.", efeito: "proprio1" }, { texto: "Cacos no chão." }, { texto: "Um caco voa num inimigo.", efeito: "inimigo2" }, { texto: "Chuva de cacos.", efeito: "inventado" }] };
+  const mg = C.normalizarMagiaHomebrew(mgB);
+  t.ok("Magia: chave hbgm-, quatro resultados; efeito só os que o motor aplica", /^hbgm-c1c1c1c1-[a-z0-9]+$/.test(mg.chave) && mg.resultados.length === 4 && mg.resultados[3].efeito === "");
+  t.ok("  sem nenhum texto de resultado, não vira magia (nada é inventado)", C.normalizarMagiaHomebrew({ nome: "Vazia" }) === null);
+  C.registrarMagiaHomebrew(mg);
+  t.ok("  entra na escolha do Bruxo, depois das do livro", C.magiasDoBruxo().slice(-1)[0] === mg.chave && C.magiasDoBruxo().indexOf("fogo") === 0);
+  const ob = R.normalizar(Object.assign(R.fichaVazia(), { ocupacao: "bruxo", descritor: "mediocre", escolhas: Object.assign(R.fichaVazia().escolhas, { magias: ["fogo", "cura", mg.chave] }), homebrew: { magias: { [mg.chave]: mg } } }));
+  t.ok("  a ficha guarda a escolha e a cópia", ob.escolhas.magias.indexOf(mg.chave) >= 0 && ob.homebrew.magias[mg.chave].nome === "Estilhaço");
+  let r = R.conjurar(ob, { magia: mg.chave }, fila(1, 2, 3));
+  t.ok("  conjurar com 0 hits: 1 ferimento em quem conjurou (o motor aplica)", r.ok && r.resultado === 0 && ob.ferimentos === 1, JSON.stringify(r).slice(0, 200));
+  r = R.conjurar(ob, { magia: mg.chave }, fila(4, 5, 2));
+  t.ok("  2 hits: pede um inimigo, 2 ferimentos", r.ok && r.resultado === 2 && r.efeito.alvos.quem === "umInimigo" && r.efeito.alvos.ferimentos === 2);
+  const tcB = { nome: "Assobio de Vidro", homebrewId: "d2d2d2d2-sintetico", texto: "Quebra um copo à distância.", uso: "dia" };
+  const tc = C.normalizarTecnicaHomebrew(tcB);
+  C.registrarTecnicaHomebrew(tc);
+  const ot = R.normalizar(Object.assign(R.fichaVazia(), { ocupacao: "gatuno", descritor: "mediocre", tecnicasHb: [tc.chave, "hbgt-zzzzzzzz-abcdef"], homebrew: { tecnicas: { [tc.chave]: tc } } }));
+  t.ok("Técnica concedida: entra nas técnicas do goblin; sem cópia nem catálogo, sai", ot.tecnicasHb.length === 1 && R.tecnicasDe(ot).some((x) => x.chave === tc.chave && x.concedida));
+  const u1 = R.usarTecnica(ot, tc.chave, {}, null), u2 = R.usarTecnica(ot, tc.chave, {}, null);
+  t.ok("  1 vez por dia: marca o uso e recusa a segunda", u1.ok && !u2.ok && R.usoDiario(ot, tc.chave));
+  const oc2 = R.fichaVazia(); oc2.ocupacao = "gatuno"; oc2.descritor = "mediocre";
+  const rOp = R.aplicarOperacao(oc2, "op-gob-1", (b) => { b.tecnicasHb.push(tc.chave); b.ocupacao = "bruxo"; b.escolhas.magias = [mg.chave]; return { ok: true, eventos: [] }; });
+  t.ok("  depois de uma operação, as cópias (magia e técnica) vão para a ficha", rOp.ok && oc2.homebrew && oc2.homebrew.tecnicas[tc.chave] && oc2.homebrew.magias[mg.chave], JSON.stringify(oc2.homebrew));
+  const gM = A.guardar("goblins", "habilidade", "magia", { nome: "Estilhaço", descricao: "", valores: { r0: "O vidro corta você.", e0: "proprio1", r1: "Cacos no chão.", r2: "Um caco voa num inimigo.", e2: "inimigo2", r3: "Chuva de cacos." } });
+  const xM = gM.ok ? H.deRegistro(Object.assign({}, gM.registro, { id: "c1c1c1c1-sintetico" })) : null;
+  t.ok("biblioteca: o registro de Habilidade vira a magia (mesma chave); destino nativo", xM && xM.tipo === "magia" && xM.def.chave === mg.chave && A.destinoNaFicha(gM.registro, "goblins").modo === "nativo", JSON.stringify(gM.ok ? gM.registro.modelo : gM));
+  const gT = A.guardar("goblins", "habilidade", "tecnica", { nome: "Assobio de Vidro", descricao: "Quebra um copo à distância.", valores: { uso: "dia" } });
+  t.ok("  e a técnica", gT.ok && H.deRegistro(Object.assign({}, gT.registro, { id: "d2d2d2d2-sintetico" })).def.chave === tc.chave);
+  t.ok("prévias", /0 hits: O vidro corta você. \[a ficha aplica: 1 ferimento em quem conjurou\]/.test(H.previaMagia(mg)[0]) && /1 vez por dia/.test(H.previaTecnica(tc)[0]));
+}
+
 console.log(`\n${FORTE}${passaram} ok${FIM}, ${falharam ? VERMELHO : ""}${falharam} falha(s)${FIM}.`);
 if (falharam) Deno.exit(1);

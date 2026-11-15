@@ -2561,3 +2561,88 @@ implantação. **`setupRama()` não é necessário.**
   `js/vampiro/telas/vampiro-criar.js`;
 - `js/homebrew-adaptadores.js`;
 - `js/versao.js`.
+
+## v9.30.0 — Malditos Goblins: Magia e Técnica Homebrew no motor
+
+### Magia
+
+**Homebrew → + Criar → Malditos Goblins → Habilidade → Magia**. Para cada
+resultado (0, 1, 2 e 3+ hits):
+- **o que acontece**, em texto;
+- **o que a ficha aplica**, se a mesa quiser:
+  - só o texto;
+  - 1 ferimento em quem conjurou;
+  - 1, 2 ou 3 ferimentos num inimigo;
+  - remove 1 ferimento, ou todos, de um aliado.
+
+São os efeitos que o motor já aplica nas magias do livro. Nada além
+disso é automatizado.
+
+No motor:
+- chave `hbgm-<id>-<hash>`, versionada;
+- a magia entra em `MAGIAS`, e na escolha de **magias do Bruxo** (criação
+  e ficha, em edição) depois das sete do livro, com "(Homebrew)";
+- **conjurar** é o caminho de sempre: teste de Noção, Condutor Mágico,
+  Arcano, Ciranda; o resultado vem pelos hits, e Implacável também vale;
+- uma magia sem nenhum texto de resultado não é aceita.
+
+### Técnica
+
+**Habilidade → Técnica**: nome, texto e o uso (quando o texto diz, ou **1
+vez por dia**).
+
+Técnicas vêm das ocupações. Esta, a **mesa concede**: aba **Técnicas e
+magia**, painel "Técnicas concedidas pela mesa", em edição. A técnica
+entra nas técnicas do goblin (`tecnicasDe`). O uso de 1 vez por dia é
+marcado pela ficha e volta no dia seguinte, como nas do livro; o efeito
+é o do texto.
+
+### Cópias e versões
+
+- A ficha guarda as cópias em `goblins.homebrew.magias` e
+  `goblins.homebrew.tecnicas`. Sem cópia e sem catálogo, a escolha sai.
+- Como em Vampiro (v9.29), `aplicarOperacao` garante, depois de cada
+  operação, as cópias de tudo o que é Homebrew: magias, técnicas,
+  ocupação e descritor.
+- O painel "Homebrew desta ficha" mostra as cópias e as versões novas.
+
+### Correção na consulta da biblioteca
+
+A consulta da biblioteca escolhia a prévia pelo subtipo. O Poder de
+Disciplina de Vampiro (v9.29) tem o mesmo subtipo (`disciplina`) da
+Disciplina estrutural. Agora a prévia vem pelo tipo resolvido.
+
+### Validação da v9.30.0
+
+**Automática.** `testes/executar-homebrew-goblins.js` ganhou 12
+verificações (agora 39):
+- a magia: definição, recusa sem texto, lista do Bruxo, cópia;
+- conjurar com 0 e com 2 hits, com o efeito aplicado;
+- a técnica concedida: a entrada, a saída sem cópia, o uso diário;
+- as cópias depois de uma operação;
+- a biblioteca e o destino;
+- as prévias.
+
+As outras suítes continuam verdes.
+
+**Na interface** (servidor local, conta sintética):
+- Gravei a Magia **Estilhaço** e a Técnica **Assobio de Vidro**, com os
+  campos que o editor grava.
+- Num Bruxo, em edição, a escolha de magias mostrou "Estilhaço
+  (Homebrew)", e o painel novo ofereceu "Assobio de Vidro (1×/dia)".
+- Marquei a magia e concedi a técnica. A ficha relida do servidor tinha
+  as duas, com as cópias.
+- A magia ganhou o botão Conjurar. "Usar (1 vez por dia)" marcou a
+  técnica como usada hoje.
+
+### Publicar a v9.30.0
+
+**Servidor:** troque **`Goblins.gs`** e crie uma versão nova da
+implantação. **`setupRama()` não é necessário.**
+
+**Site:**
+- `js/goblins/catalogo.js`, `js/goblins/regras.js`,
+  `js/goblins/homebrew-goblins.js`;
+- `js/goblins/telas/ficha-goblins.js`, `js/goblins/telas/goblins-criar.js`;
+- `js/homebrew-adaptadores.js`, `js/paginas/homebrew-editor.js`;
+- `js/versao.js`.

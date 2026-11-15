@@ -552,6 +552,38 @@
       painel("Técnicas", cards.length ? cards : [linha("Escolha a ocupação na criação.")], [T().regra("niveis")]),
       painel("Escolhas", [escolhas(ctx)]),
       painel("Magias", [magias(ctx)], [T().regra("magia")]),
+      painelTecnicasHb(ctx),
+    ]);
+  }
+
+  /* v9.30: as Técnicas Homebrew que a mesa concede (biblioteca); o uso
+     de 1 vez por dia é marcado pela ficha, o efeito é o do texto. */
+  var bibliotecaHbPedida = false;
+  function painelTecnicasHb(ctx) {
+    var o = ctx.ficha.goblins;
+    var HG = global.RAMAGoblinsHomebrew;
+    if (HG && !bibliotecaHbPedida) { bibliotecaHbPedida = true; HG.carregarBiblioteca().then(function (r) { if (r && ((r.tecnicas || []).length || (r.magias || []).length) && ctx.redesenhar) ctx.redesenhar(); }); }
+    var p = pode(ctx), muda = ctx.podeEditar() && ctx.emEdicao();
+    var lista = o.tecnicasHb.map(function (k) {
+      var t = C().tecnica(k);
+      var usada = t.uso === "dia" && R().usoDiario(o, k);
+      return el("li.gob-tecnica", {}, [
+        el("strong", { texto: t.nome + " (Homebrew)" }),
+        t.uso === "dia" ? el("span.r-etiqueta" + (usada ? ".r-etiqueta--aviso" : ""), { texto: usada ? "usada hoje" : "1×/dia" }) : null,
+        el("p.t-mini", { texto: t.texto }),
+        p ? acaoDaTecnica(ctx, t, usada, M().naMesa(ctx)) : null,
+        muda ? botao("Tirar", function () { op(ctx, function (b) { b.tecnicasHb = b.tecnicasHb.filter(function (x) { return x !== k; }); return ok(); }); }) : null,
+      ]);
+    });
+    var livres = C().tecnicasHomebrew().filter(function (t) { return o.tecnicasHb.indexOf(t.chave) < 0; });
+    var sel = muda && livres.length ? selecao("Técnica Homebrew", [{ valor: "", rotulo: "Escolha…" }].concat(livres.map(function (t) { return { valor: t.chave, rotulo: t.nome + (t.uso === "dia" ? " (1×/dia)" : "") }; })), "", function () {}) : null;
+    if (!lista.length && !sel) return null;
+    return painel("Técnicas concedidas pela mesa", [
+      lista.length ? el("ul.gob-lista", {}, lista) : linha("Nenhuma."),
+      sel ? el("div.faixa", {}, [sel, botao("Conceder", function () {
+        var k = sel.entrada.value; if (!k) return;
+        op(ctx, function (b) { if (b.tecnicasHb.indexOf(k) < 0) b.tecnicasHb.push(k); return ok(); });
+      })]) : null,
     ]);
   }
 
@@ -580,7 +612,7 @@
     if (t.chave === "ataqueBrutal" || t.chave === "tiroCerteiro") return botao(t.nome, function () { abrirAtaque(ctx, {}); }, { motivo: motivo, dica: "Marque a opção na janela de ataque" });
     if (t.chave === "implacavel") return botao("Conjurar escolhendo o resultado", function () { abrirConjurar(ctx, null, { implacavel: true }); }, { motivo: motivo });
     /* v9.17: técnica Homebrew de 1 vez por dia: marca o uso (o efeito é o do texto). */
-    if (/^hbgo-/.test(t.chave) && t.uso === "dia") return botao("Usar (1 vez por dia)", function () { op(ctx, function (b) { return R().usarTecnica(b, t.chave, {}, T().rolador); }); }, { motivo: motivo });
+    if (/^hb(go|gt)-/.test(t.chave) && t.uso === "dia") return botao("Usar (1 vez por dia)", function () { op(ctx, function (b) { return R().usarTecnica(b, t.chave, {}, T().rolador); }); }, { motivo: motivo });
     return null;
   }
 
@@ -598,9 +630,9 @@
       ? UI().campo({ rotulo: "Espécie inimiga (Inimigo)", valor: o.escolhas.especieInimiga, limite: 60, aoMudar: function (v) { op(ctx, function (b) { b.escolhas.especieInimiga = String(v).slice(0, 60); return ok(); }, { silencioso: true }); } })
       : linha("Espécie inimiga: " + (o.escolhas.especieInimiga || "—")));
     if (precisa("magias")) partes.push(muda
-      ? el("fieldset.gob-flags", {}, [el("legend", { texto: "Magias do Bruxo (escolha 3)" })].concat(C().MAGIAS_DO_BRUXO.map(function (k) {
+      ? el("fieldset.gob-flags", {}, [el("legend", { texto: "Magias do Bruxo (escolha 3)" })].concat(C().magiasDoBruxo().map(function (k) {
         var marcada = o.escolhas.magias.indexOf(k) >= 0;
-        return marcaCaixa(C().MAGIAS[k].nome, marcada, function (v) {
+        return marcaCaixa(C().MAGIAS[k].nome + (C().MAGIAS[k].homebrew ? " (Homebrew)" : ""), marcada, function (v) {
           op(ctx, function (b) {
             var l = b.escolhas.magias.filter(function (x) { return x !== k; });
             if (v) { if (l.length >= 3) return { ok: false, motivo: "São 3 magias." }; l.push(k); }

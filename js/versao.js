@@ -118,6 +118,18 @@
 
   var CHANGELOG = [
     {
+      versao: "9.30.0",
+      codinome: "CACO",
+      data: "15/11/2026",
+      mudancas: {
+        "Adicionado": [
+          "Malditos Goblins: a Magia Homebrew entra na escolha de magias do Bruxo e se conjura como as do livro — teste de Noção, o resultado pelos hits (0, 1, 2, 3+), com o texto e, se a mesa quiser, um efeito que a ficha aplica (ferimento em quem conjurou, ferimentos num inimigo, cura num aliado).",
+          "Malditos Goblins: a Técnica Homebrew, a mesa concede ao goblin (aba Técnicas e magia, em edição); o uso de 1 vez por dia é marcado pela ficha.",
+        ],
+        "Técnico": ["catalogo.js: Magia (hbgm-) em MAGIAS e na lista do Bruxo, Técnica (hbgt-) em tecnica(); regras.js: goblins.tecnicasHb, cópias em goblins.homebrew.magias/tecnicas e garantirCopiasHomebrew depois de aplicarOperacao. Os subtipos Magia e Técnica ganharam campos estruturados. A consulta da biblioteca escolhe a prévia pelo tipo resolvido (o Poder de Disciplina de Vampiro tinha o mesmo subtipo da Disciplina). Goblins.gs regenerado. testes/executar-homebrew-goblins.js: 12 verificações novas (39)."],
+      },
+    },
+    {
       versao: "9.29.0",
       codinome: "CRISTAL",
       data: "15/11/2026",

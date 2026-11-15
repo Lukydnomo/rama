@@ -105,7 +105,7 @@
       equipamentoInicial: null,
       escolhas: { armaFavorita: "", especieInimiga: "", magias: [], grupoWar: "", equipamentoWar: [], inicialCthulin: "" },
       nivel: 1,
-      epicas: [],
+      epicas: [], tecnicasHb: [],
       ajustes: [],
       ferimentos: 0,
       itens: [],
@@ -238,6 +238,22 @@
       var def = Object.keys(cp).length ? Cc.normalizarDescritorHomebrew(Object.assign({}, cp, { chave: k })) : (Cc.DESCRITORES[k] && Cc.DESCRITORES[k].homebrew ? JSON.parse(JSON.stringify(Cc.DESCRITORES[k])) : null);
       if (def) { Cc.registrarDescritorHomebrew(def); (saida.descritores = saida.descritores || {})[k] = def; }
     }
+    /* v9.30: Magias (do Bruxo) e Técnicas concedidas Homebrew. */
+    if (Cc.ehMagiaHomebrew) {
+      lista(objeto(b.escolhas).magias).forEach(function (k) {
+        if (!Cc.ehMagiaHomebrew(k) || (saida.magias && saida.magias[k])) return;
+        var cp = objeto(objeto(hb.magias)[k]);
+        var def = Object.keys(cp).length ? Cc.normalizarMagiaHomebrew(Object.assign({}, cp, { chave: k })) : (Cc.MAGIAS[k] && Cc.MAGIAS[k].def ? JSON.parse(JSON.stringify(Cc.MAGIAS[k].def)) : null);
+        if (def) { Cc.registrarMagiaHomebrew(def); (saida.magias = saida.magias || {})[k] = def; }
+      });
+      lista(b.tecnicasHb).forEach(function (k) {
+        if (!Cc.ehTecnicaHomebrew(k) || (saida.tecnicas && saida.tecnicas[k])) return;
+        var cp = objeto(objeto(hb.tecnicas)[k]);
+        var t = Cc.tecnica(k);
+        var def = Object.keys(cp).length ? Cc.normalizarTecnicaHomebrew(Object.assign({}, cp, { chave: k })) : (t && t.concedida ? Cc.normalizarTecnicaHomebrew(t) : null);
+        if (def) { Cc.registrarTecnicaHomebrew(def); (saida.tecnicas = saida.tecnicas || {})[k] = def; }
+      });
+    }
     if (Object.keys(saida).length) o.homebrew = Object.assign({ versao: 1 }, saida);
   }
 
@@ -268,12 +284,14 @@
     o.escolhas = {
       armaFavorita: C().ARMAS[es.armaFavorita] ? es.armaFavorita : "",
       especieInimiga: texto(es.especieInimiga, 60),
-      magias: lista(es.magias).filter(function (m) { return C().MAGIAS_DO_BRUXO.indexOf(m) >= 0; }).filter(function (m, i, t) { return t.indexOf(m) === i; }).slice(0, 3),
+      magias: lista(es.magias).filter(function (m) { return (C().magiasDoBruxo ? C().magiasDoBruxo() : C().MAGIAS_DO_BRUXO).indexOf(m) >= 0; }).filter(function (m, i, t) { return t.indexOf(m) === i; }).slice(0, 3),
       grupoWar: C().WARGOBLIN.grupos[es.grupoWar] ? es.grupoWar : "",
       equipamentoWar: lista(es.equipamentoWar).filter(function (k) { return C().WARGOBLIN.equipamento.indexOf(k) >= 0; }).slice(0, 2),
       inicialCthulin: C().CTHULIN.inicial.indexOf(es.inicialCthulin) >= 0 ? es.inicialCthulin : "",
     };
     o.nivel = Math.max(1, Math.min(4, inteiro(b.nivel, 1, 1)));
+    /* v9.30: Técnicas Homebrew concedidas pela mesa (registradas pela cópia). */
+    o.tecnicasHb = lista(b.tecnicasHb).filter(function (k, i, l) { var t = C().tecnica(k); return C().ehTecnicaHomebrew && C().ehTecnicaHomebrew(k) && t && t.concedida && l.indexOf(k) === i; }).slice(0, 12);
     o.epicas = lista(b.epicas).map(function (e) { var y = objeto(e); return { ocupacao: C().OCUPACOES[y.ocupacao] ? y.ocupacao : "", nivel: Math.max(1, Math.min(4, inteiro(y.nivel, 1, 1))) }; }).filter(function (e) { return e.ocupacao; }).slice(0, 8);
     o.ajustes = lista(b.ajustes).slice(0, 60).map(function (a) {
       var y = objeto(a);
@@ -351,6 +369,8 @@
         if (t.nivel <= oc.nivel) r.push(Object.assign({ ocupacao: oc.ocupacao, pagina: def.pagina }, t));
       });
     });
+    /* v9.30: as Técnicas Homebrew que a mesa concedeu. */
+    lista(o.tecnicasHb).forEach(function (k) { var t = C().tecnica(k); if (t && t.concedida) r.push(t); });
     return r;
   }
   function temTecnica(o, chave) { return tecnicasDe(o).some(function (t) { return t.chave === chave; }); }
@@ -1003,7 +1023,7 @@
     var eventos = [];
     /* v9.17: técnica Homebrew de 1 vez por dia: a ficha marca o uso e
        registra; o efeito é o do texto (a mesa aplica). */
-    if (/^hbgo-/.test(chave) && t.uso === "dia") {
+    if (/^hb(go|gt)-/.test(chave) && t.uso === "dia") {
       o.marcas.dia["tecnica:" + chave] = true;
       registrar(o, "tecnica", t.nome + (op.alvo ? " em " + op.alvo : ""));
       return ok([evento("tecnica", { chave: chave })]);
@@ -1983,6 +2003,23 @@
 
   /* fn(copia) → { ok, motivo?, eventos }. Aplicada numa CÓPIA: falhou
      no meio, a ficha fica como estava. Uma vez por id. */
+  /* v9.30: depois de cada operação, o que é Homebrew na ficha tem a
+     CÓPIA da definição (aberta sem a biblioteca, continua inteira). */
+  function guardarCopia(o, campo, def) {
+    if (!def || !def.chave) return;
+    if (!o.homebrew || typeof o.homebrew !== "object") o.homebrew = { versao: 1 };
+    if (!o.homebrew[campo] || typeof o.homebrew[campo] !== "object") o.homebrew[campo] = {};
+    if (!o.homebrew[campo][def.chave]) o.homebrew[campo][def.chave] = copiar(def);
+  }
+  function garantirCopiasHomebrew(o) {
+    var Cc = C();
+    if (!Cc.ehMagiaHomebrew) return;
+    lista(objeto(o.escolhas).magias).forEach(function (k) { if (Cc.ehMagiaHomebrew(k) && Cc.MAGIAS[k] && Cc.MAGIAS[k].def) guardarCopia(o, "magias", Cc.MAGIAS[k].def); });
+    lista(o.tecnicasHb).forEach(function (k) { var t = Cc.tecnica(k); if (t && t.concedida) guardarCopia(o, "tecnicas", Cc.normalizarTecnicaHomebrew(t)); });
+    [o.ocupacao].concat(lista(o.epicas).map(function (e) { return objeto(e).ocupacao; })).forEach(function (k) { if (Cc.ehOcupacaoHomebrew(k) && Cc.OCUPACOES[k]) guardarCopia(o, "ocupacoes", Cc.OCUPACOES[k]); });
+    if (Cc.ehDescritorHomebrew(o.descritor) && Cc.DESCRITORES[o.descritor]) guardarCopia(o, "descritores", Cc.DESCRITORES[o.descritor]);
+  }
+
   function aplicarOperacao(o, opId, fn) {
     var id = texto(opId, 120);
     if (!id) return falha("Operação sem identificação.");
@@ -1990,6 +2027,7 @@
     var copia = copiar(o);
     var r = fn(copia) || { ok: true, eventos: [] };
     if (r.ok === false) return r;
+    garantirCopiasHomebrew(copia);
     Object.keys(o).forEach(function (k) { delete o[k]; });
     Object.assign(o, copia);
     o.operacoes.push(id);

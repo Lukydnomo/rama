@@ -1229,6 +1229,7 @@ function acaoGoblinsOperar(corpo, usuario) {
   function magico(k) { return ITENS_MAGICOS[k] || null; }
   function inimigo(k) { return INIMIGOS[k] || null; }
   function tecnica(chave) {
+    if (TECNICAS_HB[chave]) return Object.assign({ ocupacao: "", concedida: true, pagina: 0 }, TECNICAS_HB[chave]);
     var achada = null;
     Object.keys(OCUPACOES).some(function (o) { return OCUPACOES[o].tecnicas.some(function (t) { if (t.chave === chave) { achada = Object.assign({ ocupacao: o }, t); return true; } return false; }); });
     return achada;
@@ -1314,10 +1315,55 @@ function acaoGoblinsOperar(corpo, usuario) {
   }
   function descritoresDisponiveis() { return DESCRITOR_D6.concat(DESCRITORES_HB); }
 
+  /* v9.30 — MAGIA e TÉCNICA HOMEBREW (chaves hbgm-/hbgt-<id>-<hash>).
+     Magia: os quatro resultados por hits (0, 1, 2, 3+), como as do livro,
+     cada um com o texto e, se a mesa quiser, um efeito que o motor já
+     aplica (ferimento em quem conjurou, ferimentos num inimigo, cura
+     num aliado); entra na escolha do Bruxo. Técnica: nome, texto e o uso
+     (1 vez por dia, marcado pela ficha); a mesa a concede a um goblin. */
+  var PADRAO_MAGIA = /^hbgm-[a-z0-9-]{3,30}$/, PADRAO_TEC = /^hbgt-[a-z0-9-]{3,30}$/;
+  var MAGIAS_HB = [], TECNICAS_HB = {};
+  var EFEITOS_DE_MAGIA = {
+    proprio1: { proprio: { ferimentos: 1 } },
+    inimigo1: { alvos: { quem: "umInimigo", ferimentos: 1 } }, inimigo2: { alvos: { quem: "umInimigo", ferimentos: 2 } }, inimigo3: { alvos: { quem: "umInimigo", ferimentos: 3 } },
+    aliado1: { alvos: { quem: "umAliado", curar: 1 } }, aliadoTodos: { alvos: { quem: "umAliado", curar: "todos" } },
+  };
+  function ehMagiaHomebrew(k) { return PADRAO_MAGIA.test(String(k || "")); }
+  function ehTecnicaHomebrew(k) { return PADRAO_TEC.test(String(k || "")); }
+  function normalizarMagiaHomebrew(bruto) {
+    var b = hbObj(bruto);
+    var res = [0, 1, 2, 3].map(function (i) { var r = hbObj(hbLista(b.resultados)[i]); return { texto: hbTexto(r.texto, 400).trim(), efeito: EFEITOS_DE_MAGIA[r.efeito] ? r.efeito : "" }; });
+    if (!res.some(function (r) { return r.texto; })) return null;
+    var d = { chave: ehMagiaHomebrew(b.chave) ? b.chave : "", nome: hbTexto(b.nome, 60).trim() || "Magia Homebrew", homebrew: true, homebrewId: hbTexto(b.homebrewId, 80), resultados: res };
+    if (!d.chave) d.chave = hbChave("hbgm-", d);
+    return d;
+  }
+  function registrarMagiaHomebrew(def) {
+    if (!def || !ehMagiaHomebrew(def.chave)) return null;
+    MAGIAS[def.chave] = { nome: def.nome, pagina: 0, homebrew: true, def: JSON.parse(JSON.stringify(def)), resultados: def.resultados.map(function (r) {
+      var e = r.efeito ? JSON.parse(JSON.stringify(EFEITOS_DE_MAGIA[r.efeito])) : { narrativo: true };
+      return Object.assign({ texto: r.texto || "(sem texto)" }, e);
+    }) };
+    if (MAGIAS_HB.indexOf(def.chave) < 0) MAGIAS_HB.push(def.chave);
+    return MAGIAS[def.chave];
+  }
+  function magiasDoBruxo() { return MAGIAS_DO_BRUXO.concat(MAGIAS_HB); }
+  function normalizarTecnicaHomebrew(bruto) {
+    var b = hbObj(bruto);
+    var d = { chave: ehTecnicaHomebrew(b.chave) ? b.chave : "", nome: hbTexto(b.nome, 60).trim() || "Técnica Homebrew", homebrew: true, homebrewId: hbTexto(b.homebrewId, 80), texto: hbTexto(b.texto, 600).trim() };
+    if (b.uso === "dia") d.uso = "dia";
+    if (!d.chave) d.chave = hbChave("hbgt-", d);
+    return d;
+  }
+  function registrarTecnicaHomebrew(def) { if (!def || !ehTecnicaHomebrew(def.chave)) return null; TECNICAS_HB[def.chave] = JSON.parse(JSON.stringify(def)); return TECNICAS_HB[def.chave]; }
+  function tecnicasHomebrew() { return Object.keys(TECNICAS_HB).map(function (k) { return TECNICAS_HB[k]; }); }
+
   global.RAMAGoblinsCatalogo = {
     ehOcupacaoHomebrew: ehOcupacaoHomebrew, ehDescritorHomebrew: ehDescritorHomebrew,
     normalizarOcupacaoHomebrew: normalizarOcupacaoHomebrew, normalizarDescritorHomebrew: normalizarDescritorHomebrew,
     registrarOcupacaoHomebrew: registrarOcupacaoHomebrew, registrarDescritorHomebrew: registrarDescritorHomebrew, descritoresDisponiveis: descritoresDisponiveis,
+    ehMagiaHomebrew: ehMagiaHomebrew, ehTecnicaHomebrew: ehTecnicaHomebrew, normalizarMagiaHomebrew: normalizarMagiaHomebrew, registrarMagiaHomebrew: registrarMagiaHomebrew, magiasDoBruxo: magiasDoBruxo,
+    normalizarTecnicaHomebrew: normalizarTecnicaHomebrew, registrarTecnicaHomebrew: registrarTecnicaHomebrew, tecnicasHomebrew: tecnicasHomebrew, EFEITOS_DE_MAGIA: EFEITOS_DE_MAGIA,
     LIVRO: LIVRO, referencia: referencia,
     ATRIBUTOS: ATRIBUTOS, CHAVES_ATRIBUTO: CHAVES_ATRIBUTO, NOMES: NOMES,
     OCUPACOES: OCUPACOES, OCUPACAO_D6: OCUPACAO_D6, DESCRITORES: DESCRITORES, DESCRITOR_D6: DESCRITOR_D6,
@@ -1779,7 +1825,7 @@ function acaoGoblinsOperar(corpo, usuario) {
       equipamentoInicial: null,
       escolhas: { armaFavorita: "", especieInimiga: "", magias: [], grupoWar: "", equipamentoWar: [], inicialCthulin: "" },
       nivel: 1,
-      epicas: [],
+      epicas: [], tecnicasHb: [],
       ajustes: [],
       ferimentos: 0,
       itens: [],
@@ -1912,6 +1958,22 @@ function acaoGoblinsOperar(corpo, usuario) {
       var def = Object.keys(cp).length ? Cc.normalizarDescritorHomebrew(Object.assign({}, cp, { chave: k })) : (Cc.DESCRITORES[k] && Cc.DESCRITORES[k].homebrew ? JSON.parse(JSON.stringify(Cc.DESCRITORES[k])) : null);
       if (def) { Cc.registrarDescritorHomebrew(def); (saida.descritores = saida.descritores || {})[k] = def; }
     }
+    /* v9.30: Magias (do Bruxo) e Técnicas concedidas Homebrew. */
+    if (Cc.ehMagiaHomebrew) {
+      lista(objeto(b.escolhas).magias).forEach(function (k) {
+        if (!Cc.ehMagiaHomebrew(k) || (saida.magias && saida.magias[k])) return;
+        var cp = objeto(objeto(hb.magias)[k]);
+        var def = Object.keys(cp).length ? Cc.normalizarMagiaHomebrew(Object.assign({}, cp, { chave: k })) : (Cc.MAGIAS[k] && Cc.MAGIAS[k].def ? JSON.parse(JSON.stringify(Cc.MAGIAS[k].def)) : null);
+        if (def) { Cc.registrarMagiaHomebrew(def); (saida.magias = saida.magias || {})[k] = def; }
+      });
+      lista(b.tecnicasHb).forEach(function (k) {
+        if (!Cc.ehTecnicaHomebrew(k) || (saida.tecnicas && saida.tecnicas[k])) return;
+        var cp = objeto(objeto(hb.tecnicas)[k]);
+        var t = Cc.tecnica(k);
+        var def = Object.keys(cp).length ? Cc.normalizarTecnicaHomebrew(Object.assign({}, cp, { chave: k })) : (t && t.concedida ? Cc.normalizarTecnicaHomebrew(t) : null);
+        if (def) { Cc.registrarTecnicaHomebrew(def); (saida.tecnicas = saida.tecnicas || {})[k] = def; }
+      });
+    }
     if (Object.keys(saida).length) o.homebrew = Object.assign({ versao: 1 }, saida);
   }
 
@@ -1942,12 +2004,14 @@ function acaoGoblinsOperar(corpo, usuario) {
     o.escolhas = {
       armaFavorita: C().ARMAS[es.armaFavorita] ? es.armaFavorita : "",
       especieInimiga: texto(es.especieInimiga, 60),
-      magias: lista(es.magias).filter(function (m) { return C().MAGIAS_DO_BRUXO.indexOf(m) >= 0; }).filter(function (m, i, t) { return t.indexOf(m) === i; }).slice(0, 3),
+      magias: lista(es.magias).filter(function (m) { return (C().magiasDoBruxo ? C().magiasDoBruxo() : C().MAGIAS_DO_BRUXO).indexOf(m) >= 0; }).filter(function (m, i, t) { return t.indexOf(m) === i; }).slice(0, 3),
       grupoWar: C().WARGOBLIN.grupos[es.grupoWar] ? es.grupoWar : "",
       equipamentoWar: lista(es.equipamentoWar).filter(function (k) { return C().WARGOBLIN.equipamento.indexOf(k) >= 0; }).slice(0, 2),
       inicialCthulin: C().CTHULIN.inicial.indexOf(es.inicialCthulin) >= 0 ? es.inicialCthulin : "",
     };
     o.nivel = Math.max(1, Math.min(4, inteiro(b.nivel, 1, 1)));
+    /* v9.30: Técnicas Homebrew concedidas pela mesa (registradas pela cópia). */
+    o.tecnicasHb = lista(b.tecnicasHb).filter(function (k, i, l) { var t = C().tecnica(k); return C().ehTecnicaHomebrew && C().ehTecnicaHomebrew(k) && t && t.concedida && l.indexOf(k) === i; }).slice(0, 12);
     o.epicas = lista(b.epicas).map(function (e) { var y = objeto(e); return { ocupacao: C().OCUPACOES[y.ocupacao] ? y.ocupacao : "", nivel: Math.max(1, Math.min(4, inteiro(y.nivel, 1, 1))) }; }).filter(function (e) { return e.ocupacao; }).slice(0, 8);
     o.ajustes = lista(b.ajustes).slice(0, 60).map(function (a) {
       var y = objeto(a);
@@ -2025,6 +2089,8 @@ function acaoGoblinsOperar(corpo, usuario) {
         if (t.nivel <= oc.nivel) r.push(Object.assign({ ocupacao: oc.ocupacao, pagina: def.pagina }, t));
       });
     });
+    /* v9.30: as Técnicas Homebrew que a mesa concedeu. */
+    lista(o.tecnicasHb).forEach(function (k) { var t = C().tecnica(k); if (t && t.concedida) r.push(t); });
     return r;
   }
   function temTecnica(o, chave) { return tecnicasDe(o).some(function (t) { return t.chave === chave; }); }
@@ -2677,7 +2743,7 @@ function acaoGoblinsOperar(corpo, usuario) {
     var eventos = [];
     /* v9.17: técnica Homebrew de 1 vez por dia: a ficha marca o uso e
        registra; o efeito é o do texto (a mesa aplica). */
-    if (/^hbgo-/.test(chave) && t.uso === "dia") {
+    if (/^hb(go|gt)-/.test(chave) && t.uso === "dia") {
       o.marcas.dia["tecnica:" + chave] = true;
       registrar(o, "tecnica", t.nome + (op.alvo ? " em " + op.alvo : ""));
       return ok([evento("tecnica", { chave: chave })]);
@@ -3657,6 +3723,23 @@ function acaoGoblinsOperar(corpo, usuario) {
 
   /* fn(copia) → { ok, motivo?, eventos }. Aplicada numa CÓPIA: falhou
      no meio, a ficha fica como estava. Uma vez por id. */
+  /* v9.30: depois de cada operação, o que é Homebrew na ficha tem a
+     CÓPIA da definição (aberta sem a biblioteca, continua inteira). */
+  function guardarCopia(o, campo, def) {
+    if (!def || !def.chave) return;
+    if (!o.homebrew || typeof o.homebrew !== "object") o.homebrew = { versao: 1 };
+    if (!o.homebrew[campo] || typeof o.homebrew[campo] !== "object") o.homebrew[campo] = {};
+    if (!o.homebrew[campo][def.chave]) o.homebrew[campo][def.chave] = copiar(def);
+  }
+  function garantirCopiasHomebrew(o) {
+    var Cc = C();
+    if (!Cc.ehMagiaHomebrew) return;
+    lista(objeto(o.escolhas).magias).forEach(function (k) { if (Cc.ehMagiaHomebrew(k) && Cc.MAGIAS[k] && Cc.MAGIAS[k].def) guardarCopia(o, "magias", Cc.MAGIAS[k].def); });
+    lista(o.tecnicasHb).forEach(function (k) { var t = Cc.tecnica(k); if (t && t.concedida) guardarCopia(o, "tecnicas", Cc.normalizarTecnicaHomebrew(t)); });
+    [o.ocupacao].concat(lista(o.epicas).map(function (e) { return objeto(e).ocupacao; })).forEach(function (k) { if (Cc.ehOcupacaoHomebrew(k) && Cc.OCUPACOES[k]) guardarCopia(o, "ocupacoes", Cc.OCUPACOES[k]); });
+    if (Cc.ehDescritorHomebrew(o.descritor) && Cc.DESCRITORES[o.descritor]) guardarCopia(o, "descritores", Cc.DESCRITORES[o.descritor]);
+  }
+
   function aplicarOperacao(o, opId, fn) {
     var id = texto(opId, 120);
     if (!id) return falha("Operação sem identificação.");
@@ -3664,6 +3747,7 @@ function acaoGoblinsOperar(corpo, usuario) {
     var copia = copiar(o);
     var r = fn(copia) || { ok: true, eventos: [] };
     if (r.ok === false) return r;
+    garantirCopiasHomebrew(copia);
     Object.keys(o).forEach(function (k) { delete o[k]; });
     Object.assign(o, copia);
     o.operacoes.push(id);
