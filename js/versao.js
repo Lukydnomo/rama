@@ -118,6 +118,17 @@
 
   var CHANGELOG = [
     {
+      versao: "9.24.0",
+      codinome: "CIRCULO",
+      data: "15/11/2026",
+      mudancas: {
+        "Adicionado": [
+          "Ordem Paranormal: a Classe Homebrew pode conjurar rituais como o Ocultista. No editor (etapa Perícias → Rituais), marque \u201cConjura rituais\u201d e diga em que NEX cada círculo abre; a ficha dá os três rituais iniciais e um a cada marco, com o círculo máximo da tabela da mesa. Partir das tabelas do Ocultista já traz os círculos dele.",
+        ],
+        "Técnico": ["normalizarClasse ganhou circuloPorNex (só quando marcado: as classes de antes mantêm a chave); o motor de rituais já lia esse campo da classe. As concessões de Escolhido pelo Outro Lado de uma Classe Homebrew levam classeHomebrew e o rótulo \u201cRitual de classe\u201d. testes/executar-homebrew-ordem.js: 11 verificações novas (103)."],
+      },
+    },
+    {
       versao: "9.23.0",
       codinome: "SELO",
       data: "15/11/2026",

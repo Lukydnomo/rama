@@ -478,11 +478,15 @@
   var NOTA_PATENTE_CAMPO = "Evolução por Patentes com aprendizado em campo: o livro não define a combinação. O R.A.M.A. segue o aprendizado em campo — não há rituais por promoção; novos rituais vêm por estudo (Sobrevivendo ao Horror, p. 112-113).";
   var NOTA_PATENTE_LENTO = "Evolução por Patentes com aprendizado lento: o livro não define a combinação. O R.A.M.A. dá UM ritual por promoção em vez de dois (o aprendizado lento corta os avanços pela metade) — Sobrevivendo ao Horror, p. 112-113.";
 
+  /* v9.24: a Classe Homebrew que conjura usa as mesmas concessões do
+     Ocultista; o rótulo diz "Ritual de classe". */
+  function classeHomebrew(c) { var cl = C() ? C().classe(c.classe) : null; return !!(cl && cl.homebrew); }
+
   function concessoesDaClassePorPatente(lista, c, passos) {
     var EP = C().EVOLUCAO_PATENTES;
     lista.push(concessao({
       id: "d1.rituaisIniciais", degrau: 1, origem: ORIGENS.classe.chave,
-      poder: "escolhidoPeloOutroLado", nomePoder: "Escolhido pelo Outro Lado",
+      poder: "escolhidoPeloOutroLado", classeHomebrew: classeHomebrew(c), nomePoder: "Escolhido pelo Outro Lado",
       fonte: SAH, pagina: 112, quantidade: 3, circulos: [1], rotuloEtapa: EP.patentes[0].nome,
       nota: "Evolução por Patentes: três rituais de 1º círculo. Não contam no limite de rituais conhecidos (Sobrevivendo ao Horror, p. 112).",
     }));
@@ -492,7 +496,7 @@
       var circ = EP.circulos[pt.indice];
       lista.push(concessao({
         id: "p" + pt.indice + ".rituaisPatente", degrau: pt.limitePd, origem: ORIGENS.classe.chave,
-        poder: "escolhidoPeloOutroLado", nomePoder: "Escolhido pelo Outro Lado",
+        poder: "escolhidoPeloOutroLado", classeHomebrew: classeHomebrew(c), nomePoder: "Escolhido pelo Outro Lado",
         fonte: SAH, pagina: 112, quantidade: c.lento ? 1 : 2, circulos: ate(circ), rotuloEtapa: pt.nome,
         patente: pt.indice,
         nota: (c.lento ? NOTA_PATENTE_LENTO + " " : "") + "Ao chegar a " + pt.nome + ": rituais de qualquer círculo até o " + circ + "º, o que a patente que concedeu a vaga permite. Não contam no limite de rituais conhecidos.",
@@ -509,7 +513,7 @@
       id: "d1.rituaisIniciais",
       degrau: 1,
       origem: ORIGENS.classe.chave,
-      poder: "escolhidoPeloOutroLado",
+      poder: "escolhidoPeloOutroLado", classeHomebrew: classeHomebrew(c),
       nomePoder: "Escolhido pelo Outro Lado",
       pagina: 32,
       quantidade: 3,
@@ -530,7 +534,7 @@
         id: "d" + d + ".ritualClasse",
         degrau: d,
         origem: ORIGENS.classe.chave,
-        poder: "escolhidoPeloOutroLado",
+        poder: "escolhidoPeloOutroLado", classeHomebrew: classeHomebrew(c),
         nomePoder: "Escolhido pelo Outro Lado",
         pagina: 32,
         quantidade: 1,
@@ -739,7 +743,7 @@
     if (c.fixo) return "Ritual concedido";
     if (c.destino === DESTINOS.grimorio.chave) return "Rituais do grimório";
     if (c.poder === "saberAmpliado") return "Saber Ampliado";
-    if (c.poder === "escolhidoPeloOutroLado") return "Ritual de ocultista";
+    if (c.poder === "escolhidoPeloOutroLado") return c.classeHomebrew ? "Ritual de classe" : "Ritual de ocultista";
     if (c.poder === "maculaRitualistica") return "Mácula Ritualística";
     return "Rituais — " + c.nomePoder;
   }

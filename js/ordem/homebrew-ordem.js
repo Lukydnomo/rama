@@ -237,10 +237,31 @@
         patentes: [0, 1, 2, 3, 4].map(function (i) { var e = obj(lista(pt.patentes)[i]); return { escolhas: escolhasDe(e.escolhas, ESCOLHAS_PATENTE), rotulos: rotulos(e.rotulos) }; }),
       };
     }
+    /* v9.24: a classe que conjura rituais, como o Ocultista (Escolhido
+       pelo Outro Lado): o círculo máximo por NEX. Só existe quando a
+       mesa marcou — sem ela, a definição (e a chave) fica como antes. */
+    var circulos = circulosPorNex(b.circuloPorNex);
+    if (circulos) d.circuloPorNex = circulos;
     if (!d.chave) d.chave = chaveDaClasse(d);
     return d;
   }
-  /* A chave muda quando a definição muda: cada versão é uma classe. */
+  /* Até quatro faixas, uma por círculo (1º, 2º, 3º, 4º), cada uma num
+     marco de NEX depois da anterior. A 1ª é obrigatória; um círculo sem
+     marco válido encerra a lista (não há 3º sem 2º). */
+  var CIRCULOS_DO_OCULTISTA = [{ nex: 5, circulo: 1 }, { nex: 25, circulo: 2 }, { nex: 55, circulo: 3 }, { nex: 85, circulo: 4 }];
+  function circulosPorNex(v) {
+    var l = lista(v).map(obj);
+    if (!l.length) return null;
+    var saida = [], ultimo = 0;
+    for (var c = 1; c <= 4; c++) {
+      var f = l.filter(function (x) { return Number(x.circulo) === c; })[0] || (l[c - 1] && l[c - 1].circulo === undefined ? l[c - 1] : null);
+      var nex = f ? Math.round(Number(f.nex)) : NaN;
+      if (!f || NEX.indexOf(nex) < 0 || nex <= ultimo) break;
+      saida.push({ nex: nex, circulo: c });
+      ultimo = nex;
+    }
+    return saida.length ? saida : null;
+  }
   function chaveDaClasse(d) { return chaveVersionada("hbc-", d); }
 
   /* O trilho em uso aceita esta classe? */
@@ -341,6 +362,7 @@
       linhas.push("Até NEX 99%: " + Object.keys(esc).map(function (k) { return esc[k] + "× " + ESCOLHAS.filter(function (e) { return e.chave === k; })[0].rotulo.toLowerCase(); }).join(", ") + ".");
     }
     if (d.patentes) linhas.push("Patentes: " + (d.patentes.pv.base + (d.patentes.pv.atributo ? a.vig : 0)) + " PV em Recruta, +" + d.patentes.pv.porPatente + " por patente.");
+    if (d.circuloPorNex) linhas.push("Conjura rituais (como o Ocultista): 3 de 1º círculo no 1º marco e um a cada marco; " + d.circuloPorNex.map(function (f) { return f.circulo + "º círculo em NEX " + f.nex + "%"; }).join(", ") + ".");
     return linhas;
   }
   /* A prévia de uma origem e de uma trilha (revisão do editor, consulta). */
@@ -371,7 +393,9 @@
     var ep = C().EVOLUCAO_PATENTES && C().EVOLUCAO_PATENTES.classes[chave];
     if (ep) d.patentes = JSON.parse(JSON.stringify(ep));
     d.poderesDe = chave; d.trilhasDe = chave;
-    delete d.chave; delete d.pagina; delete d.circuloPorNex;
+    /* v9.24: a tabela de círculos vem junto (partir do Ocultista dá uma
+       classe que conjura; a mesa pode desmarcar). */
+    delete d.chave; delete d.pagina;
     return d;
   }
 
@@ -439,7 +463,7 @@
     NEX: NEX, ESCOLHAS: ESCOLHAS, ESCOLHAS_PATENTE: ESCOLHAS_PATENTE, OFICIAIS: OFICIAIS,
     normalizarClasse: normalizarClasse, chaveDaClasse: chaveDaClasse, disponivelNoTrilho: disponivelNoTrilho, faltas: faltas,
     normalizarBloco: normalizarBloco, registrar: registrar, deRegistro: deRegistro, guardarNaFicha: guardarNaFicha,
-    previa: previa, modeloDeOficial: modeloDeOficial,
+    previa: previa, modeloDeOficial: modeloDeOficial, circulosPorNex: circulosPorNex, CIRCULOS_DO_OCULTISTA: CIRCULOS_DO_OCULTISTA,
     NEX_TRILHA: NEX_TRILHA, EFEITOS: EFEITOS, MODOS_ESCOLHA: MODOS_ESCOLHA, escolhaDoPoder: escolhaDoPoder, textoEscolha: textoEscolha, normalizarOrigem: normalizarOrigem, normalizarTrilha: normalizarTrilha,
     textoEfeito: textoEfeito, previaOrigem: previaOrigem, previaTrilha: previaTrilha, embutir: embutir, tipoDaChave: tipoDaChave,
   };

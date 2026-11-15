@@ -148,6 +148,33 @@
         ]),
         linhas("hbc-prof", "Proficiências (uma por linha)", d.proficiencias, function (v) { d.proficiencias = v; }, "Ex.: Armas simples, Proteções leves."),
         linhas("hbc-hab", "Habilidades iniciais (uma por linha)", d.habilidadesIniciais, function (v) { d.habilidadesIniciais = v; }, "Aparecem como benefício do 1º marco (o efeito mecânico de cada uma é decidido pela mesa)."),
+        blocoRituais(),
+      ]);
+    }
+    /* v9.24: conjura rituais como o Ocultista? O círculo máximo por NEX. */
+    function blocoRituais() {
+      var conj = !!(d.circuloPorNex && d.circuloPorNex.length);
+      var nexes = H().NEX.map(function (n) { return [String(n), n + "%"]; });
+      return el("fieldset.r-campo.hbc-rituais", {}, [
+        el("legend.r-rotulo", { texto: "Rituais" }),
+        el("label.r-marca", {}, [el("input", { type: "checkbox", id: "hbc-conjura", checked: conj, onchange: function (ev) {
+          d.circuloPorNex = ev.target.checked ? JSON.parse(JSON.stringify(H().CIRCULOS_DO_OCULTISTA)) : undefined;
+          if (!ev.target.checked) delete d.circuloPorNex;
+          mudou(true);
+        } }), el("span", { texto: "Conjura rituais como o Ocultista (Escolhido pelo Outro Lado)" })]),
+        conj ? el("p.t-mini", { texto: "3 rituais de 1º círculo no 1º marco e um a cada marco depois, de qualquer círculo que já alcance; não contam no limite por Intelecto. Diga em que NEX cada círculo abre (deixe \u201c—\u201d para parar antes)." })
+          : el("p.t-mini", { texto: "Sem isso, a classe aprende rituais só por poderes (Aprender Ritual), como Combatente e Especialista." }),
+        conj ? el("div.editar-grade", {}, [1, 2, 3, 4].map(function (c) {
+          var f = d.circuloPorNex.filter(function (x) { return x.circulo === c; })[0];
+          return sel("hbc-circ" + c, c + "º círculo em", c === 1 ? nexes : [["", "—"]].concat(nexes), f ? String(f.nex) : "", function (v) {
+            /* Troca só este círculo; o que ficar fora de ordem (ou sem o
+               anterior) sai pela mesma regra do motor. */
+            var l = d.circuloPorNex.filter(function (x) { return x.circulo !== c; });
+            if (v) l.push({ nex: Number(v), circulo: c });
+            l.sort(function (a, b) { return a.circulo - b.circulo; });
+            d.circuloPorNex = H().circulosPorNex(l) || [l[0] || H().CIRCULOS_DO_OCULTISTA[0]];
+          });
+        })) : null,
       ]);
     }
     /* ---------- 4. NEX e nível ---------- */

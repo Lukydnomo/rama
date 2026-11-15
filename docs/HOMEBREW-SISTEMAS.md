@@ -2086,3 +2086,83 @@ Continuam pendentes:
   - o elemento Homebrew em poderes paranormais e maldições;
 - detalhes por sistema, como a escolha de poder geral dentro de uma
   habilidade de raça em T20 e a Ficha de Conhecimento em Vampiro.
+
+## v9.24.0 — Ordem I: a Classe Homebrew que conjura rituais
+
+Até a v9.23, uma Classe Homebrew de Ordem só aprendia rituais por poderes
+(Aprender Ritual), como Combatente e Especialista. Agora ela pode
+conjurar como o Ocultista (Escolhido pelo Outro Lado, OPRPG p. 33).
+
+### No editor
+
+Na etapa **Perícias**, o bloco **Rituais** tem a marca **"Conjura rituais
+como o Ocultista"**. Marcada, aparecem quatro campos, um por círculo, com
+o NEX em que cada um abre. O padrão é o do Ocultista: 5%, 25%, 55% e
+85%.
+
+As regras dos campos:
+- o 1º círculo é obrigatório;
+- "—" num círculo encerra a tabela ali (não há 3º sem 2º);
+- cada círculo abre num marco de NEX depois do anterior. Um valor fora
+  de ordem é recusado.
+
+A prévia da revisão diz, por exemplo: "Conjura rituais (como o
+Ocultista): …; 1º círculo em NEX 5%, 2º círculo em NEX 30%."
+
+Partir de **"Tabelas do Ocultista"** já traz a marca e os círculos dele.
+A mesa pode desmarcar.
+
+### No motor
+
+- `normalizarClasse` guarda `circuloPorNex` **só quando a marca existe**.
+  As classes de antes continuam com a mesma definição e a mesma chave:
+  nenhuma ficha ganha uma "versão nova" por causa desta mudança.
+- O motor de rituais já lia `circuloPorNex` da classe. Com ele, a Classe
+  Homebrew recebe as mesmas concessões do Ocultista:
+  - 3 rituais de 1º círculo no 1º marco;
+  - um ritual por marco depois, até o círculo que já alcança;
+  - nada disso conta no limite por Intelecto;
+  - as regras de aprendizado em campo, aprendizado lento e Evolução por
+    Patentes valem como para o Ocultista.
+- O círculo máximo e a DT vêm da tabela da mesa.
+- Essas concessões levam `classeHomebrew` e aparecem como **"Ritual de
+  classe"**, não "Ritual de ocultista".
+
+### Validação da v9.24.0
+
+**Automática.** `testes/executar-homebrew-ordem.js` ganhou 11
+verificações (agora 103):
+- sem a marca, a definição e a chave não mudam;
+- partir do Ocultista traz os círculos dele;
+- círculos fora de ordem, sem o anterior ou em NEX que não é marco são
+  recusados;
+- a marca muda a chave;
+- a prévia;
+- o círculo máximo pelo NEX;
+- as concessões de NEX 15% e o rótulo;
+- a classe sem a marca não conjura.
+
+As outras suítes continuam verdes.
+
+**Na interface** (servidor local, conta sintética), no editor de Classe:
+- **Tabelas do Ocultista** marcou "Conjura rituais" com 5/25/55/85.
+- Pôr "—" no 2º círculo tirou o 3º e o 4º.
+- Pôr 30% no 2º funcionou. Pôr 20% no 3º, antes do 2º, foi recusado.
+- A revisão mostrou "1º círculo em NEX 5%, 2º círculo em NEX 30%".
+
+### Publicar a v9.24.0
+
+**Servidor:** nada muda.
+
+**Site:**
+- `js/ordem/homebrew-ordem.js`, `js/ordem/aprendizado.js`;
+- `js/paginas/homebrew-classe.js`;
+- `js/versao.js`.
+
+### Etapa 2 depois da v9.24
+
+Continuam pendentes:
+- em **Ordem I**, o elemento Homebrew em poderes paranormais e
+  maldições;
+- detalhes por sistema, como a escolha de poder geral dentro de uma
+  habilidade de raça em T20 e a Ficha de Conhecimento em Vampiro.

@@ -272,5 +272,25 @@ t.grupo("Classe Homebrew · Mundano e Sobrevivente viram agente (v9.23)");
   t.ok("Sobrevivente → Vigilante: +6 PV e +1 PE sobre o que tinha, sem ponto de atributo", rs.ok && R.calcular(os2).pv.total === pvS + 6 && R.calcular(os2).pe.total === peS + 1 && E.vagas(os2).every((v) => v.id !== "t.atributo"), [pvS, R.calcular(os2).pv.total, peS, R.calcular(os2).pe.total].join(","));
 }
 
+t.grupo("Classe Homebrew · conjura rituais como o Ocultista (v9.24)");
+{
+  t.ok("sem a marca, a definição não ganha a tabela (a chave das classes de antes não muda)", !("circuloPorNex" in vig) && H.normalizarClasse(copia(bruto)).chave === vig.chave);
+  const doOc = H.modeloDeOficial("ocultista");
+  t.iguais("partir do Ocultista traz os círculos dele", H.normalizarClasse(doOc).circuloPorNex.map((f) => f.nex), [5, 25, 55, 85]);
+  t.iguais("círculos fora de ordem ou sem o anterior saem pela regra", H.circulosPorNex([{ nex: 10, circulo: 1 }, { nex: 5, circulo: 2 }]), [{ nex: 10, circulo: 1 }]);
+  t.iguais("  e o 3º sem o 2º não entra", H.circulosPorNex([{ nex: 5, circulo: 1 }, { nex: 40, circulo: 3 }]), [{ nex: 5, circulo: 1 }]);
+  t.ok("  NEX que não é marco é recusado", H.circulosPorNex([{ nex: 7, circulo: 1 }]) === null);
+  const mago = H.normalizarClasse(Object.assign(copia(bruto), { nome: "Arcanista", homebrewId: "e5e5e5e5-sintetico", circuloPorNex: [{ nex: 5, circulo: 1 }, { nex: 30, circulo: 2 }] }));
+  t.ok("a marca muda a chave (é outra versão)", mago.chave !== H.normalizarClasse(Object.assign(copia(bruto), { nome: "Arcanista", homebrewId: "e5e5e5e5-sintetico" })).chave);
+  t.ok("a prévia diz em que NEX cada círculo abre", /2º círculo em NEX 30%/.test(H.previa(mago).join(" ")));
+  const fm = (nex) => R.normalizar({ classe: mago.chave, origem: "academico", nex, atributos: { agi: 1, for: 1, int: 1, pre: 2, vig: 2 }, homebrew: { classes: { [mago.chave]: mago } } });
+  t.iguais("círculo máximo pelo NEX da tabela da mesa (5% → 1º, 25% → 1º, 30% → 2º)", [R.rituais(fm(5)).circuloMaximo, R.rituais(fm(25)).circuloMaximo, R.rituais(fm(30)).circuloMaximo], [1, 1, 2]);
+  const AP = G.RAMAOrdemAprendizado;
+  t.iguais("NEX 15%: os três iniciais e um ritual por avanço, como o Ocultista", E.concessoesDeRitual(fm(15)).map((c) => c.id), ["d1.rituaisIniciais", "d2.ritualClasse", "d3.ritualClasse"]);
+  const d2 = E.concessoesDeRitual(fm(15)).filter((c) => c.id === "d2.ritualClasse")[0];
+  t.ok("  rotulada como ritual de classe", d2 && d2.classeHomebrew && AP.rotuloDaConcessao(d2) === "Ritual de classe", JSON.stringify(d2));
+  t.ok("a classe sem a marca não conjura", R.rituais(ficha({ nex: 30 })).circuloMaximo === 0 && E.concessoesDeRitual(ficha({ nex: 30 })).length === 0);
+}
+
 console.log(`\n${FORTE}${passaram} ok${FIM}, ${falharam ? VERMELHO : ""}${falharam} falha(s)${FIM}.`);
 if (falharam) Deno.exit(1);
