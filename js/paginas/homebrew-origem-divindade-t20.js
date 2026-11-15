@@ -253,5 +253,5 @@
     return m.janela;
   }
 
-  global.RAMAHomebrewT20Estruturais = { origem: origem, divindade: divindade };
+  global.RAMAHomebrewT20Estruturais = { origem: origem, divindade: divindade, ferramentas: { controles: controles, moldura: moldura, rascunho: rascunho, limpar: limpar } };
 })(typeof window !== "undefined" ? window : globalThis);

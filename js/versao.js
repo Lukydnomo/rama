@@ -118,6 +118,19 @@
 
   var CHANGELOG = [
     {
+      versao: "9.12.0",
+      codinome: "OFICINA",
+      data: "15/11/2026",
+      mudancas: {
+        "Adicionado": [
+          "Classe Homebrew de Tormenta20: PV e PM, perícias fixas e à escolha, proficiências, magias (arcanas ou divinas, com progressão completa ou parcial), as habilidades de cada nível (com efeito na conta e perícias à escolha), os níveis com poder de classe e os poderes de classe (com nível mínimo).",
+          "A classe aparece na criação de personagem e ao subir de nível, também como multiclasse. A ficha guarda a própria cópia: mudar a classe na biblioteca não muda um personagem em jogo.",
+        ],
+        "Corrigido": ["A Classe de Tormenta20 abria o editor e as regras da Classe de Ordem (ao criar, ao editar pela lista e ao importar de arquivo)."],
+        "Técnico": ["Novo js/paginas/homebrew-classe-t20.js. RAMATormenta20Classes ganhou normalizarHomebrew/registrarHomebrew/classesDisponiveis (chave hbcl- versionada; tabela, habilidades e poderes montados no formato das classes do livro). Sem a cópia, os níveis da classe ficam na ficha. Servidor: classe entre os estruturais de T20. testes/executar-homebrew-t20.js: 91 verificações."],
+      },
+    },
+    {
       versao: "9.11.0",
       codinome: "PANTEAO",
       data: "15/11/2026",

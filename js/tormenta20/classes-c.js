@@ -200,3 +200,112 @@
     ],
   });
 })(typeof window !== "undefined" ? window : globalThis);
+
+/* =====================================================================
+   v9.12 — CLASSE HOMEBREW de Tormenta20 (chave hbcl-<id>-<hash>, cópia
+   em t20.homebrew.classes). No formato das classes do livro:
+     pv { inicial, nivel } (+ Con), pm por nível, perícias fixas e à
+     escolha, proficiências, magias (arcanas ou divinas, progressão
+     completa como o Arcanista ou parcial como o Bardo), as habilidades
+     da tabela (cada uma no seu nível, com texto, efeitos que o motor já
+     soma e uma escolha de perícias) e os poderes de classe (texto,
+     efeitos e o nível mínimo na classe), mais Aumento de Atributo.
+   Os níveis com "Poder de <classe>" são escolhidos (padrão: 2 a 20).
+   Puro: o servidor roda este arquivo.
+   ===================================================================== */
+(function (global) {
+  "use strict";
+
+  var C = global.RAMATormenta20Classes = global.RAMATormenta20Classes || { CLASSES: [], CLASSE: {} };
+  var PADRAO_HB = /^hbcl-[a-z0-9-]{3,30}$/;
+  var PROFS = ["marciais", "pesadas", "escudos", "exoticas", "fogo"];
+  var PROGRESSOES = { completa: { 1: 1, 5: 2, 9: 3, 13: 4, 17: 5 }, parcial: { 1: 1, 6: 2, 10: 3, 14: 4 } };
+  var CLASSES_HOMEBREW = [];
+  function RA() { return global.RAMATormenta20Racas; }
+  function Dd() { return global.RAMATormenta20Dados; }
+  function oo(v) { return v && typeof v === "object" && !Array.isArray(v) ? v : {}; }
+  function ll(v) { return Array.isArray(v) ? v : []; }
+  function tx(v, max) { return String(v === undefined || v === null ? "" : v).slice(0, max || 200); }
+  function nn(v, min, max, p) { var n = Math.round(Number(v)); return v !== "" && v !== null && v !== undefined && isFinite(n) ? Math.max(min, Math.min(max, n)) : p; }
+  function ehHomebrew(id) { return PADRAO_HB.test(String(id || "")); }
+  function periciaOk(k) { return !Dd() || Dd().PERICIAS.some(function (p) { return p.chave === k; }); }
+  function pericias(v, max) { return ll(v).map(String).filter(function (k, i, l) { return periciaOk(k) && l.indexOf(k) === i; }).slice(0, max); }
+  function efeitos(v) { return RA() ? ll(v).map(RA().efeitoHomebrew).filter(Boolean).slice(0, 4) : []; }
+  function aumento() {
+    var a = C.CLASSE.arcanista && ll(C.CLASSE.arcanista.poderes).filter(function (p) { return p.aumento; })[0];
+    return JSON.parse(JSON.stringify(a || { id: "aumentoDeAtributo", nome: "Aumento de Atributo", resumo: "+1 em um atributo; várias vezes, uma vez por patamar para o mesmo atributo.", repetivel: true, aumento: true }));
+  }
+
+  function normalizarClasseHomebrew(bruto) {
+    var b = oo(bruto), pv = oo(b.pv), pe = oo(b.pericias), mg = oo(b.magias);
+    var d = {
+      id: ehHomebrew(b.id) ? b.id : "",
+      nome: tx(b.nome, 60).trim() || "Classe Homebrew",
+      homebrew: true, homebrewId: tx(b.homebrewId, 80), fonte: "HOMEBREW", pagina: 0,
+      descricao: tx(b.descricao, 1200),
+      atributo: tx(b.atributo, 60).trim(),
+      pv: { inicial: nn(pv.inicial, 1, 40, 12), nivel: nn(pv.nivel, 1, 10, 3) },
+      pm: nn(b.pm, 0, 10, 3),
+      pericias: { fixas: pericias(pe.fixas, 4), ou: [], escolha: { n: 0, de: [] } },
+      proficiencias: ll(b.proficiencias).filter(function (q, i, l) { return PROFS.indexOf(q) >= 0 && l.indexOf(q) === i; }),
+      magias: null,
+      niveisDePoder: [],
+      habilidadesDaTabela: [],
+      poderesProprios: [],
+    };
+    var de = pericias(oo(pe.escolha).de, 20).filter(function (k) { return d.pericias.fixas.indexOf(k) < 0; });
+    d.pericias.escolha = { n: Math.min(nn(oo(pe.escolha).n, 0, 8, 0), de.length), de: de };
+    if (mg.tipo === "arcana" || mg.tipo === "divina") {
+      var prog = mg.progressao === "parcial" ? "parcial" : "completa";
+      d.magias = { tipo: mg.tipo, atributo: ["int", "sab", "car"].indexOf(mg.atributo) >= 0 ? mg.atributo : (mg.tipo === "arcana" ? "int" : "sab"), somaPM: mg.somaPM !== false, progressao: prog, circulos: PROGRESSOES[prog], iniciais: nn(mg.iniciais, 1, 4, 2), porNivel: nn(mg.porNivel, 0, 1, 1) };
+    }
+    var np = b.niveisDePoder === undefined ? [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20] : ll(b.niveisDePoder);
+    d.niveisDePoder = np.map(Number).filter(function (n, i, l) { return n >= 1 && n <= 20 && Math.floor(n) === n && l.indexOf(n) === i; }).sort(function (x, y) { return x - y; });
+    d.habilidadesDaTabela = ll(b.habilidadesDaTabela).slice(0, 12).map(function (h0, i) {
+      var h = oo(h0), id = "h" + (i + 1);
+      var x = { id: id, nivel: nn(h.nivel, 1, 20, 1), nome: tx(h.nome, 60).trim() || "Habilidade " + (i + 1), resumo: tx(h.resumo, 600).trim(), efeitos: efeitos(h.efeitos) };
+      var e = RA() ? ll(h.escolhas).map(function (y) { return RA().escolhaHomebrew(y, id + "e"); }).filter(Boolean)[0] : null;
+      if (e) x.escolhas = [e];
+      return x;
+    });
+    d.poderesProprios = ll(b.poderesProprios).slice(0, 12).map(function (p0, i) {
+      var p = oo(p0);
+      return { nome: tx(p.nome, 60).trim() || "Poder " + (i + 1), resumo: tx(p.resumo, 600).trim(), efeitos: efeitos(p.efeitos), ncMinimo: nn(p.ncMinimo, 1, 20, 1) };
+    });
+    if (!d.id) d.id = RA() ? RA().chaveHomebrew("hbcl-", d) : "hbcl-local-000000";
+    montar(d);
+    return d;
+  }
+  /* A tabela, as habilidades e os poderes no formato que o motor lê. */
+  function montar(d) {
+    d.poderesProprios.forEach(function (p, i) { p.id = d.id + "-cp" + (i + 1); });
+    d.habilidades = { poder: { nome: "Poder de " + d.nome, poder: true } };
+    if (d.magias) d.habilidades.magias = { nome: "Magias", resumo: "Magias " + (d.magias.tipo === "arcana" ? "arcanas" : "divinas") + " (" + ({ "int": "Inteligência", sab: "Sabedoria", car: "Carisma" })[d.magias.atributo] + "): começa com " + d.magias.iniciais + " de 1º círculo" + (d.magias.porNivel ? " e aprende uma por nível" : "") + "; círculos " + (d.magias.progressao === "parcial" ? "no 1º, 6º, 10º e 14º níveis (até o 4º)" : "no 1º, 5º, 9º, 13º e 17º níveis") + "." };
+    d.habilidadesDaTabela.forEach(function (h) { d.habilidades[h.id] = { nome: h.nome, resumo: h.resumo, efeitos: h.efeitos, escolhas: h.escolhas, homebrew: true }; });
+    d.tabela = {};
+    for (var n = 1; n <= 20; n++) {
+      var linha = [];
+      if (n === 1 && d.magias) linha.push("magias");
+      d.habilidadesDaTabela.forEach(function (h) { if (h.nivel === n) linha.push(h.id); });
+      if (d.niveisDePoder.indexOf(n) >= 0) linha.push("poder");
+      d.tabela[n] = linha;
+    }
+    d.poderes = d.poderesProprios.map(function (p) {
+      var x = { id: p.id, nome: p.nome, resumo: p.resumo, efeitos: p.efeitos, homebrew: true };
+      if (p.ncMinimo > 1) x.req = { nc: p.ncMinimo };
+      return x;
+    }).concat([aumento()]);
+  }
+  function registrarClasseHomebrew(def) {
+    if (!def || !ehHomebrew(def.id)) return null;
+    C.CLASSE[def.id] = def;
+    CLASSES_HOMEBREW = CLASSES_HOMEBREW.filter(function (x) { return x.id !== def.id; }).concat([def]);
+    return def;
+  }
+  C.ehHomebrew = ehHomebrew;
+  C.normalizarHomebrew = normalizarClasseHomebrew;
+  C.registrarHomebrew = registrarClasseHomebrew;
+  C.classesDisponiveis = function () { return C.CLASSES.concat(CLASSES_HOMEBREW); };
+  C.PROGRESSOES_HB = PROGRESSOES;
+  C.PROFS_HB = PROFS;
+})(typeof window !== "undefined" ? window : globalThis);

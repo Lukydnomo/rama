@@ -216,10 +216,12 @@ export function testarPacotesBackend({ t, preparar, novaConta, comoFn }) {
   /* v9.10: Raça de T20. */
   const racaHb = A({ acao: "salvar_homebrew", dados: { tipo: "item", nome: "Vidrado", modelo: Object.assign(modelo("tormenta20", "estrutural", "raca"), { def: { tamanho: "pequeno", deslocamento: 6, atributos: { fixo: { des: 2 } }, habilidades: [] } }) } });
   t.ok("Raça de T20: coluna tipo \"raca\" (v9.10)", racaHb.ok && A({ acao: "ler_homebrew", homebrewId: racaHb.dados.id }).dados.tipo === "raca");
-  t.recusa("tipo estrutural que o sistema ainda não usa (Classe em T20) é recusado", A({ acao: "salvar_homebrew", dados: { tipo: "item", nome: "Classe", modelo: modelo("tormenta20", "estrutural", "classe") } }), "dados_invalidos");
+  const classeT20 = A({ acao: "salvar_homebrew", dados: { tipo: "item", nome: "Vidreiro", modelo: Object.assign(modelo("tormenta20", "estrutural", "classe"), { def: { pv: { inicial: 16, nivel: 4 }, pm: 3 } }) } });
+  t.ok("Classe de T20 (v9.12): coluna \"classe\", sistema tormenta20", classeT20.ok && A({ acao: "ler_homebrew", homebrewId: classeT20.dados.id }).dados.tipo === "classe");
+  t.recusa("tipo estrutural que o sistema não usa (Elemento em T20) é recusado", A({ acao: "salvar_homebrew", dados: { tipo: "item", nome: "Elemento", modelo: modelo("tormenta20", "estrutural", "elemento") } }), "dados_invalidos");
   t.ok("pacote de T20 aceita a Raça; o de Ordem a recusa", salvar(A, { dados: dados("Povos de Vidro", "tormenta20"), conteudo: { adicionar: [racaHb.dados.id] } }).ok && salvar(A, { dados: dados("Errado 2", "ordem"), conteudo: { adicionar: [racaHb.dados.id] } }).erro === "incompativel");
   t.recusa("subtipo estrutural desconhecido em Ordem", A({ acao: "salvar_homebrew", dados: { tipo: "item", nome: "X", modelo: modelo("ordem", "estrutural", "raca") } }), "dados_invalidos");
-  t.ok("listar com tipos [classe, elemento] devolve os dois", A({ acao: "listar_homebrew", tipos: ["classe", "elemento"] }).dados.length === 2);
+  t.ok("listar com tipos [classe, elemento] devolve os três (classe de Ordem, de T20 e o elemento)", A({ acao: "listar_homebrew", tipos: ["classe", "elemento"] }).dados.length === 3);
   const pOrdemEst = salvar(A, { dados: dados("Livro do Vidro", "ordem"), conteudo: { adicionar: [vidro.dados.id, classeHb.dados.id] } });
   t.ok("pacote de Ordem aceita Classe e Elemento", pOrdemEst.ok && pOrdemEst.dados.tipos.classe === 1 && pOrdemEst.dados.tipos.elemento === 1);
   t.ok("pacote de T20 recusa a Classe de Ordem", salvar(A, { dados: dados("Errado", "tormenta20"), conteudo: { adicionar: [classeHb.dados.id] } }).erro === "incompativel");

@@ -77,6 +77,7 @@
         cartoes.push(cartao(t.rotulo, t.ajuda, function () {
           janela.fechar();
           if (t.chave === "criatura") { if (o.editarCriatura) o.editarCriatura(sistema); return; }
+          if (t.chave === "classe" && sistema === "tormenta20") { if (global.RAMAHomebrewClasseT20) global.RAMAHomebrewClasseT20.editor({ aoSalvar: o.aoSalvar }); return; }
           if (t.chave === "classe") { if (global.RAMAHomebrewClasse) global.RAMAHomebrewClasse.editor({ aoSalvar: o.aoSalvar }); return; }
           if (t.chave === "elemento") { editor({ sistema: sistema, grupo: "estrutural", subtipo: "elemento", aoSalvar: o.aoSalvar }); return; }
           if (sistema === "tormenta20" && (t.chave === "origem" || t.chave === "divindade") && global.RAMAHomebrewT20Estruturais) { global.RAMAHomebrewT20Estruturais[t.chave]({ aoSalvar: o.aoSalvar }); return; }
@@ -101,8 +102,7 @@
           el("span.t-rotulo", { texto: nome(sistema) }),
         ]),
         el("div.hbe-tipos", { role: "list", "aria-label": "Tipos de " + nome(sistema) }, cartoes),
-        sistema === "tormenta20" ? el("p.t-mini", { texto: "A Classe de Tormenta20 chega numa próxima etapa do Homebrew por sistema." }) :
-          sistema !== "universal" && sistema !== "ordem" ? el("p.t-mini", { texto: "Os tipos estruturais deste sistema (clã, papel, arquétipo…) chegam numa próxima etapa do Homebrew por sistema." }) : null,
+        sistema !== "universal" && sistema !== "tormenta20" && sistema !== "ordem" ? el("p.t-mini", { texto: "Os tipos estruturais deste sistema (clã, papel, arquétipo…) chegam numa próxima etapa do Homebrew por sistema." }) : null,
       ]);
       var b = corpo.querySelector(".hbe-tipo"); if (b) b.focus();
     }
@@ -421,6 +421,13 @@
       if (x && x.def && st === "trilha") x.def.poderes.forEach(function (p) { if (p.resumo) pares.push(["NEX " + p.nex + "% · " + p.nome, p.resumo]); });
     }
     /* Raça Homebrew de Tormenta20 (v9.10): a prévia e o texto das habilidades. */
+    if (s === "tormenta20" && st === "classe" && global.RAMATormenta20Homebrew) {
+      var HT3 = global.RAMATormenta20Homebrew, xc = HT3.deRegistro(reg);
+      if (xc && xc.def) {
+        HT3.previaClasse(xc.def).forEach(function (t, i) { pares.push([i ? "" : "Regras", t]); });
+        xc.def.habilidadesDaTabela.concat(xc.def.poderesProprios).forEach(function (h) { if (h.resumo) pares.push([h.nome, h.resumo]); });
+      }
+    }
     if (s === "tormenta20" && (st === "origem" || st === "divindade") && global.RAMATormenta20Homebrew) {
       var HT2 = global.RAMATormenta20Homebrew, xo = HT2.deRegistro(reg);
       if (xo && xo.def) {

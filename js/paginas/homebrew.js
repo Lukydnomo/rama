@@ -776,7 +776,11 @@
   }
 
   function editar(registro, tipoNovo, opcoesCriatura) {
-    if (registro && registro.modelo && registro.modelo.grupo === "estrutural" && registro.modelo.subtipo === "classe" && global.RAMAHomebrewClasse) {
+    if (registro && registro.modelo && registro.modelo.grupo === "estrutural" && registro.modelo.subtipo === "classe" && registro.modelo.sistema === "tormenta20" && global.RAMAHomebrewClasseT20) {
+      global.RAMAHomebrewClasseT20.editor({ registro: registro, aoSalvar: carregar });
+      return;
+    }
+    if (registro && registro.modelo && registro.modelo.grupo === "estrutural" && registro.modelo.subtipo === "classe" && registro.modelo.sistema === "ordem" && global.RAMAHomebrewClasse) {
       global.RAMAHomebrewClasse.editor({ registro: registro, aoSalvar: carregar });
       return;
     }

@@ -658,6 +658,10 @@ function acaoTormenta20Operar(corpo, usuario) {
       ids: function (v) { return [v.origem.id]; }, tirar: function (v) { v.origem = { id: "", beneficios: [], escolhas: {}, propria: null }; } },
     { campo: "deuses", cat: DE, norm: "normalizarHomebrew", reg: "registrarHomebrew", mapa: "DEUS",
       ids: function (v) { return v.divindade ? [v.divindade.id] : []; }, tirar: function (v) { v.divindade = null; } },
+    /* v9.12: classes (multiclasse: cada uma). Sem a cópia, os níveis
+       FICAM (o motor ignora a classe que não conhece; nada é apagado). */
+    { campo: "classes", cat: CL, norm: "normalizarHomebrew", reg: "registrarHomebrew", mapa: "CLASSE",
+      ids: function (v) { return v.niveis.map(function (n) { return n.classe; }).filter(function (k, i, l) { return l.indexOf(k) === i; }); }, tirar: function () {} },
   ];
   function homebrewDaFicha(b, v) {
     var hb = obj(b.homebrew), saida = {};
@@ -906,7 +910,7 @@ function acaoTormenta20Operar(corpo, usuario) {
     /* poderes avulsos (trocas, Planejamento Marcial, mestre…) */
     lista(t20.poderes).forEach(function (pz, i) {
       var def = poderPorId(pz.id, null);
-      if (!def && CL()) CL().CLASSES.some(function (c) { def = poderDeClasse(c, pz.id); return !!def; });
+      if (!def && CL()) (CL().classesDisponiveis ? CL().classesDisponiveis() : CL().CLASSES).some(function (c) { def = poderDeClasse(c, pz.id); return !!def; });
       if (!def) return;
       var f = fonte("poder:" + i + ":" + pz.id, def.nome, pz.origem || "Poder", def, { escolhas: obj(pz.escolhas), tipoFonte: def.grupo ? "geral" : "classe", poderId: def.id });
       lista(def.escolhas).forEach(function (e) { f.efeitos = f.efeitos.concat(efeitosDaEscolha(e, obj(pz.escolhas)[e.id])); });
@@ -2078,7 +2082,7 @@ function acaoTormenta20Operar(corpo, usuario) {
     if (jaTem && !def.repetivel) falta.push("já possui (não repetível)");
     return { ok: !falta.filter(function (x) { return x.indexOf("(mesa)") !== 0; }).length, falta: falta };
   }
-  function nomeDoPoder(id, classeId) { var d = poderPorId(id, classeId); if (!d && CL()) CL().CLASSES.some(function (c) { d = poderDeClasse(c, id); return !!d; }); return d ? d.nome : id; }
+  function nomeDoPoder(id, classeId) { var d = poderPorId(id, classeId); if (!d && CL()) (CL().classesDisponiveis ? CL().classesDisponiveis() : CL().CLASSES).some(function (c) { d = poderDeClasse(c, id); return !!d; }); return d ? d.nome : id; }
   function nomePericia(k) { if (k.indexOf("oficio:") === 0) return "Ofício (" + k.slice(7) + ")"; var p = D().PERICIA[k]; return p ? p.nome : k; }
 
   /* =================================================================

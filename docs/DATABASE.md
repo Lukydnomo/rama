@@ -1,5 +1,12 @@
 # O banco
 
+## Classe Homebrew de Tormenta20 — v9.12
+
+Nenhuma aba nova. A classe de T20 usa a coluna `classe` do `HOMEBREW`
+(com `modelo.sistema` igual a `tormenta20`). Na ficha de Tormenta20,
+`tormenta20.homebrew.classes` guarda as cópias (chave `hbcl-…`), e
+`niveis[].classe` aceita essas chaves. Opcional: nada existente muda.
+
 ## Origem e Divindade Homebrew de Tormenta20 — v9.11
 
 Nenhuma aba nova. No `HOMEBREW`, a coluna `tipo` aceita `divindade`; a

@@ -345,8 +345,9 @@
     function passoClasse() {
       var c = calc();
       var cl = classe();
-      var itens = [cartas("Classes", CL().CLASSES.map(function (x) {
-        return { id: x.id, nome: x.nome, linhas: ["PV " + x.pv.inicial + " + Con · PM " + x.pm + "/nível", x.atributo, "p. " + x.pagina] };
+      /* v9.12: as classes Homebrew da biblioteca vêm depois das do livro. */
+      var itens = [cartas("Classes", (CL().classesDisponiveis ? CL().classesDisponiveis() : CL().CLASSES).map(function (x) {
+        return { id: x.id, nome: x.nome, linhas: ["PV " + x.pv.inicial + " + Con · PM " + x.pm + "/nível", x.atributo, x.homebrew ? "Homebrew" : "p. " + x.pagina] };
       }), estado.classe, function (v) { if (v !== estado.classe) { estado.classe = v; b.niveis = v ? [{ classe: v, escolhas: {} }] : []; b.magias = []; b.periciasInt = []; } desenhar(); })];
       if (!cl) return itens;
       var esc = nivel1().escolhas;
@@ -372,7 +373,8 @@
           return campoDeEscolha(e, esc[e.id], function (v) { esc[e.id] = v; desenhar(); }, { calc: c, t20: b, classe: cl.id });
         }))));
       });
-      itens.push(escolhido(cl.nome + " · p. " + cl.pagina, det));
+      if (cl.homebrew && cl.descricao) det.unshift(el("p.t20-legenda", { texto: cl.descricao }));
+      itens.push(escolhido(cl.nome + " · " + (cl.homebrew ? "Homebrew" : "p. " + cl.pagina), det));
       return itens;
     }
     function passoDivindade() {

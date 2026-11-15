@@ -6,7 +6,7 @@ organiza em três etapas.
 | Etapa | Situação |
 |---|---|
 | **1 — Estrutura e compatibilidade** | entregue na **v9.7.0** |
-| **2 — Tipos estruturais e elementos** | parte 1 na **v9.8.0** (Elemento e Classe de Ordem I), parte 2 na **v9.9.0** (Origem e Trilha de Ordem I), parte 3 na **v9.10.0** (Raça de Tormenta20), parte 4 na **v9.11.0** (Origem e Divindade de Tormenta20); o resto pendente |
+| **2 — Tipos estruturais e elementos** | parte 1 na **v9.8.0** (Elemento e Classe de Ordem I), parte 2 na **v9.9.0** (Origem e Trilha de Ordem I), parte 3 na **v9.10.0** (Raça de Tormenta20), parte 4 na **v9.11.0** (Origem e Divindade de Tormenta20), parte 5 na **v9.12.0** (Classe de Tormenta20); o resto pendente |
 | **3 — Automação por sistema, publicação e regressão** | pendente |
 
 Este documento é o **inventário de cobertura**. Para cada sistema e tipo,
@@ -160,7 +160,8 @@ Legenda:
 | Ordem II | Ameaça | o de sempre | mesa de Ordem II | **N** | Perfil e Ocupação: **Etapa 2** |
 | **Tormenta20** | Item: arma, armadura, escudo, vestuário, ferramenta, alquímico, esotérico, aventura, alimentação, munição, outro | adaptador (preço, espaços, proficiência, empunhadura, dano, margem, multiplicador, tipo, alcance, munição, bônus de perícia) | inventário (Do Homebrew), como `personalizado` | **N**: ataque calculado, Defesa e penalidade, bônus de perícia (`efeitos`), espaços | melhorias e encantos (pela ficha, como antes) |
 | Tormenta20 | Habilidade: magia (círculo, escola, execução…), poder, habilidade | adaptador | anotações | **Ma** | o motor só aplica poderes e magias do livro: **Etapa 2** |
-| Tormenta20 | Ameaça | o de sempre | mesa de T20 | **N** | Classe: **Etapa 2** |
+| Tormenta20 | Ameaça | o de sempre | mesa de T20 | **N** | — |
+| Tormenta20 | **Classe** (v9.12) | editor próprio em 4 etapas | criação de personagem; Subir de nível (também multiclasse) | **N**: PV, PM, perícias, proficiências, magias (CD, círculo, PM), habilidades da tabela com efeitos e escolha de perícia, poderes de classe com efeitos e nível mínimo | o resto do texto das habilidades e poderes; habilidades ativadas (PM) |
 | Tormenta20 | **Origem** (v9.11) | editor próprio em 3 etapas | criação de personagem (depois das do livro) | **N**: os dois benefícios (perícia treinada, poder geral com as regras do livro, poder único com efeitos) | itens (texto); o resto do texto do poder único |
 | Tormenta20 | **Divindade** (v9.11) | editor próprio em 3 etapas | criação de personagem (depois do Panteão); poderes concedidos na ficha | **N**: devotos, energia, arma preferida; poderes concedidos do livro (regras do livro) e próprios (efeitos) | obrigações e restrições (texto); o resto dos poderes próprios |
 | Tormenta20 | **Raça** (v9.10) | editor próprio em 3 etapas | criação de personagem (passo Raça, depois das do livro) | **N**: atributos fixos e à escolha, tamanho, deslocamento; efeitos que o motor soma (Defesa, perícia, treino, PV/PM por nível, sentido, RD, proficiência); perícias à escolha (treino ou bônus) | variantes, habilidades ativadas (PM), escolhas de magia/poder; o resto do texto é da mesa |
@@ -269,8 +270,8 @@ nova, e o modelo vai no `dadosJson` de sempre.
     `js/ordem/regras.js`, `js/ordem/progressao.js` e
     `js/ordem/inventario.js`. O elemento aceito pelo campo fica separado do
     efeito oficial. O caso de teste é "Vidro".
-- **T20**: ~~Raça~~ (v9.10.0), ~~Origem e Divindade~~ (v9.11.0) e Classe,
-  selecionáveis na criação e na progressão.
+- **T20**: ~~Raça~~ (v9.10.0), ~~Origem e Divindade~~ (v9.11.0) e ~~Classe~~
+  (v9.12.0), selecionáveis na criação e na progressão.
 - **Ordem II**: Perfil e Ocupação.
 - **Oblívio**: Papel, Motivação, Mazela e Fardo.
 - **Vampiro**: Clã, Predador, Disciplina, Vantagem, Defeito e Ficha de
@@ -909,3 +910,136 @@ verificações:
 - `js/homebrew-adaptadores.js`, `js/pacotes-homebrew.js`,
   `js/paginas/homebrew-editor.js`, `js/paginas/homebrew.js`;
 - `css/homebrew.css`, `js/versao.js`, `homebrew/index.html`.
+
+## v9.12.0 — Etapa 2, parte 5: Classe Homebrew de Tormenta20
+
+### O editor
+
+**Homebrew → + Criar → Tormenta20 → Classe.** Quatro etapas:
+- **Identidade:** nome, descrição, atributo-chave (texto), PV no 1º nível
+  e por nível seguinte (+ Con), PM por nível;
+- **Perícias e magias:**
+  - perícias fixas (até 4, inclusive Ofício) e à escolha (quantas e entre
+    quais);
+  - proficiências além de armas simples e armaduras leves;
+  - magias, se a classe conjura: arcanas ou divinas, o atributo, os
+    círculos e quantas aprende. A progressão pode ser completa, como o
+    Arcanista (1º, 5º, 9º, 13º, 17º), ou parcial, como o Bardo (1º, 6º,
+    10º, 14º; até o 4º círculo). Também diz se o atributo soma nos PM;
+- **Habilidades e poderes:**
+  - as **habilidades da tabela** (até 12), cada uma no seu nível, com
+    texto, efeitos do mesmo conjunto da raça e uma escolha de perícias;
+  - os **níveis com "Poder de <classe>"** (padrão: do 2º ao 20º);
+  - os **poderes de classe** (até 12): texto, efeitos e o nível mínimo na
+    classe. Aumento de Atributo e os poderes gerais entram sozinhos;
+- **Revisão:** a prévia, a tabela dos 20 níveis, o que é automático, o
+  que quem joga escolhe e o que fica com a mesa.
+
+### No motor
+
+A classe é montada no formato das do livro: `pv`, `pm`, `pericias`,
+`proficiencias`, `magias`, `tabela` (nível → habilidades), `habilidades`
+e `poderes`. Por isso:
+- a criação e o "Subir de nível" (também como multiclasse) usam o mesmo
+  código das classes do livro. A lista de classes do "Subir de nível"
+  carrega a biblioteca uma vez;
+- PV, PM, perícias, proficiências, CD e círculo das magias, habilidades
+  com efeito, a escolha de perícia de uma habilidade e o poder escolhido
+  em cada nível entram na conta;
+- o nível mínimo de um poder de classe é conferido ao subir de nível;
+- as habilidades e os poderes aparecem na aba Habilidades com
+  "Homebrew".
+
+### Cópia, versão e servidor
+
+- chave `hbcl-…`, versionada; cópia em `tormenta20.homebrew.classes`, uma
+  por classe usada (multiclasse);
+- sem a cópia e sem o catálogo, os níveis **ficam** na ficha, e o motor
+  ignora a classe que não conhece: nada é apagado;
+- o servidor roda o mesmo código (`classes-c.js` em
+  `Tormenta20Dados.gs`).
+
+**Correção:** a Classe de Tormenta20 abria o editor e o normalizador da
+Classe de Ordem. Agora cada sistema usa o seu (editor, edição pela lista e
+importação de arquivo).
+
+### Servidor e pacotes
+
+- Os estruturais de Tormenta20 passaram a ser `raca`, `origem`,
+  `divindade` e `classe`. A coluna `classe` serve a Ordem e a T20;
+  `modelo.sistema` diz qual.
+
+### Validação da v9.12.0
+
+**Automática.** `testes/executar-homebrew-t20.js` passou de 65 para 91
+verificações:
+- **Definição:**
+  - chave;
+  - perícias fixas e à escolha;
+  - proficiências;
+  - magias parciais;
+  - a tabela (magias e habilidade no 1º, habilidade no 3º, poderes nos
+    níveis pares);
+  - só efeitos aceitos;
+  - poderes próprios (com nível mínimo) mais Aumento de Atributo;
+  - chave estável.
+- **Motor:**
+  - PV 18 e PM 6 no 1º nível;
+  - perícias e Ofício com especialização;
+  - redução de fogo 5 e a perícia escolhida;
+  - proficiência marcial e magias arcanas pela Inteligência;
+  - 3º nível com PV 30 e +2 Defesa;
+  - o poder escolhido dá +2 em Luta;
+  - o nível mínimo é conferido;
+  - multiclasse com PV 28;
+  - resumo da Mesa;
+  - sem cópia, o nível fica;
+  - listas e nome do poder.
+- **Biblioteca:** guardar, voltar com a mesma chave, destino, resumo,
+  arquivo e pacote.
+
+`testes/pacotes-backend.js`:
+- a Classe de T20 é aceita;
+- o Elemento em T20 é recusado;
+- a listagem por classe traz a de Ordem e a de T20.
+
+**Na interface** (servidor local, conta sintética):
+- Criei a classe **Vidreiro** pelo editor:
+  - 16/4 PV e 4 PM;
+  - Reflexos e Ofício fixos, mais 2 entre Percepção, Investigação e
+    Furtividade;
+  - armas marciais;
+  - magias arcanas parciais;
+  - Sopro Firme no 1º nível (redução de fogo 5 e uma perícia treinada à
+    escolha);
+  - Pele Temperada no 3º (+2 Defesa);
+  - o poder Lâmina de Vidro (+2 Luta).
+
+  A revisão mostrou a tabela dos 20 níveis.
+- **Criação:**
+  - um anão Vidreiro, com a classe depois das 14 do livro e "Homebrew";
+  - perícias, Ofício (artesão) e Furtividade pelo Sopro Firme;
+  - 2 magias arcanas;
+  - a conferência deu PV 23 (16 + Con 4 + 3) e PM 5.
+- **Ficha:**
+  - Magias e Sopro Firme na aba Habilidades.
+- **Subir de nível:**
+  - o Vidreiro (nível 2) aparece na lista, com Lâmina de Vidro e Aumento
+    de Atributo;
+  - escolhido o poder, ficou Vidreiro 2, PV 32 e Luta +3;
+  - Lâmina de Vidro aparece com "Vidreiro 2º · Homebrew".
+- Sem erros no console nem no servidor.
+
+### Publicar a v9.12.0
+
+**Servidor:** troque **`Codigo.gs`**, **`Tormenta20.gs`** e
+**`Tormenta20Dados.gs`**, e crie uma versão nova da implantação.
+**`setupRama()` não é necessário.**
+
+**Site:**
+- `js/paginas/homebrew-classe-t20.js` (novo);
+- `js/tormenta20/classes-c.js`, `regras.js`, `homebrew-t20.js`,
+  `telas/t20-criar.js`, `telas/ficha-t20.js`;
+- `js/homebrew-adaptadores.js`, `js/paginas/homebrew-editor.js`,
+  `js/paginas/homebrew.js`, `js/paginas/homebrew-origem-divindade-t20.js`;
+- `js/versao.js`, `homebrew/index.html`.

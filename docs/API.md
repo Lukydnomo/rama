@@ -1,5 +1,11 @@
 # A API
 
+## Classe Homebrew de Tormenta20 — v9.12
+
+- `salvar_homebrew`: o grupo `estrutural` de Tormenta20 aceita também
+  `classe`. A coluna `classe` serve a Ordem e a T20 (`modelo.sistema`).
+- O motor do servidor mantém as cópias em `tormenta20.homebrew.classes`.
+
 ## Origem e Divindade Homebrew de Tormenta20 — v9.11
 
 - `salvar_homebrew`: o grupo `estrutural` de Tormenta20 aceita `raca`,

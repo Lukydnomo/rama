@@ -1144,9 +1144,19 @@
      na classe com escolhas, e o poder (de classe ou geral) com os
      requisitos conferidos no nível que vai ser alcançado. */
   function dialogoSubir(ctx) {
+    /* v9.12: as classes Homebrew da biblioteca entram na lista (multiclasse). */
+    var HB = global.RAMATormenta20Homebrew;
+    if (HB && !dialogoSubir.carregado) {
+      dialogoSubir.carregado = true;
+      HB.carregarBiblioteca().then(function () { abrirSubir(ctx); }, function () { abrirSubir(ctx); });
+      return;
+    }
+    abrirSubir(ctx);
+  }
+  function abrirSubir(ctx) {
     var b = bl(ctx);
     var c = calc(ctx);
-    var classe = T().selecao("Classe", CL().CLASSES.map(function (x) { return { valor: x.id, rotulo: x.nome + (c.niveisClasse[x.id] ? " (nível " + (c.niveisClasse[x.id] + 1) + ")" : " — multiclasse: sem PV iniciais, perícias nem proficiências") }; }), b.niveis[b.niveis.length - 1] ? b.niveis[b.niveis.length - 1].classe : "guerreiro");
+    var classe = T().selecao("Classe", (CL().classesDisponiveis ? CL().classesDisponiveis() : CL().CLASSES).map(function (x) { return { valor: x.id, rotulo: x.nome + (c.niveisClasse[x.id] ? " (nível " + (c.niveisClasse[x.id] + 1) + ")" : " — multiclasse: sem PV iniciais, perícias nem proficiências") }; }), b.niveis[b.niveis.length - 1] ? b.niveis[b.niveis.length - 1].classe : "guerreiro");
     var area = el("div.pilha");
     var escolhas = {};
     function desenhar() {

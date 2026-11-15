@@ -1,5 +1,5 @@
 /* =====================================================================
-   R.A.M.A. — testes: Raça, Origem e Divindade Homebrew de Tormenta20 (v9.10–9.11)
+   R.A.M.A. — testes: Raça, Origem, Divindade e Classe Homebrew de Tormenta20 (v9.10–9.12)
    ---------------------------------------------------------------------
        deno run --allow-read testes/executar-homebrew-t20.js
 
@@ -183,6 +183,65 @@ const aO = ida(gO), aD = ida(gD);
 t.ok("exportar e importar: origem e divindade (com os poderes próprios) voltam", aO.ok && aO.dados.modelo.def.unico.nome === "Olho de Vidreiro" && aD.ok && aD.dados.modelo.def.poderesProprios.length === 2 && aD.dados.modelo.def.poderes.join() === "fulgorSolar", JSON.stringify(aD.ok ? aD.dados.modelo.def : aD));
 t.ok("pacote: só em pacote de T20", A.compativelComPacote(gO.registro, "tormenta20").ok && !A.compativelComPacote(gD.registro, "ordem").ok && G.RAMAPacotesHomebrew.TIPOS.some((x) => x.chave === "divindade"));
 t.ok("prévias", /Vontade de Ferro/.test(H.previaOrigem(sop).join(" ")) && /Pele Translúcida \(\+2 em Furtividade\)/.test(H.previaDeus(vit).join(" ")));
+
+/* ================= v9.12: Classe ================= */
+const CL = G.RAMATormenta20Classes;
+t.grupo("Classe Homebrew de T20 · definição");
+const clB = { nome: "Vidreiro", homebrewId: "c1a2b3c4-sintetico", atributo: "Destreza", pv: { inicial: 16, nivel: 4 }, pm: 4,
+  pericias: { fixas: ["oficio", "reflexos", "inventada"], escolha: { n: 9, de: ["percepcao", "investigacao", "reflexos", "furtividade"] } },
+  proficiencias: ["marciais", "voar"], magias: { tipo: "arcana", atributo: "int", progressao: "parcial", iniciais: 2, porNivel: 1 },
+  niveisDePoder: [2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 99],
+  habilidadesDaTabela: [
+    { nivel: 1, nome: "Sopro Firme", resumo: "Resistente ao calor.", efeitos: [{ t: "rd", valor: 5, tipos: ["fogo"] }], escolhas: [{ tipo: "pericia", quantidade: 1, efeito: { t: "treino" } }] },
+    { nivel: 3, nome: "Pele Temperada", efeitos: [{ t: "bonus", alvo: "defesa", valor: 2 }, { t: "imune", valor: "fogo" }] },
+  ],
+  poderesProprios: [{ nome: "Lâmina de Vidro", resumo: "+2 em Luta.", efeitos: [{ t: "bonus", alvo: "pericia.luta", valor: 2 }] }, { nome: "Catedral", ncMinimo: 10 }] };
+const vdr = CL.normalizarHomebrew(clB);
+t.ok("chave versionada hbcl-<id>-<hash>", /^hbcl-c1a2b3c4-[a-z0-9]+$/.test(vdr.id));
+t.iguais("perícias: fixas válidas; à escolha sem as fixas e limitada às opções", [vdr.pericias.fixas, vdr.pericias.escolha], [["oficio", "reflexos"], { n: 3, de: ["percepcao", "investigacao", "furtividade"] }]);
+t.iguais("proficiências válidas; magias parciais (até o 4º círculo)", [vdr.proficiencias, vdr.magias.circulos], [["marciais"], { 1: 1, 6: 2, 10: 3, 14: 4 }]);
+t.iguais("tabela: magias e Sopro Firme no 1º, Pele Temperada no 3º, poder nos pares", [vdr.tabela[1], vdr.tabela[2], vdr.tabela[3], vdr.tabela[20]], [["magias", "h1"], ["poder"], ["h2"], ["poder"]]);
+t.ok("só efeitos aceitos (imune sai); escolha de perícia na habilidade", vdr.habilidades.h2.efeitos.length === 1 && vdr.habilidades.h1.escolhas[0].id === "h1e");
+t.ok("poderes: os próprios (chave da classe, nível mínimo) e Aumento de Atributo", vdr.poderes.length === 3 && vdr.poderes[0].id === vdr.id + "-cp1" && vdr.poderes[1].req.nc === 10 && vdr.poderes[2].aumento);
+const semIdC = copia(vdr); delete semIdC.id;
+t.ok("normalizar de novo (com tabela e poderes montados) dá a mesma chave", CL.normalizarHomebrew(Object.assign(semIdC, { id: "" })).id === vdr.id);
+
+t.grupo("Classe Homebrew de T20 · no motor");
+const fCl = (niveis, extra) => R.normalizar(Object.assign({ atributosBase: { "for": 0, des: 2, con: 2, "int": 2, sab: 0, car: 0 }, raca: { id: "humano", atributos: ["for", "sab", "car"] }, origem: { id: "acolito", beneficios: [] },
+  niveis: niveis, homebrew: { classes: { [vdr.id]: vdr } } }, extra || {}));
+const nv1 = [{ classe: vdr.id, escolhas: { pericias: ["percepcao", "investigacao"], oficios: ["artesao"], h1e: ["furtividade"] } }];
+const c1c = R.calcular(fCl(nv1));
+t.ok("a classe Homebrew sobrevive à normalização, com a cópia", fCl(nv1).niveis[0].classe === vdr.id && fCl(nv1).homebrew.classes[vdr.id].nome === "Vidreiro");
+t.iguais("1º nível: PV 16 + Con 2 = 18; PM 4 + Int 2 (magias somam) = 6", [c1c.pv.max, c1c.pm.max], [18, 6]);
+t.ok("perícias fixas e escolhidas treinadas; Ofício com especialização", c1c.pericias.reflexos.treinado && c1c.pericias.percepcao.treinado && c1c.pericias.investigacao.treinado && !!c1c.pericias["oficio:artesao"] && c1c.pericias["oficio:artesao"].treinado);
+t.ok("Sopro Firme: redução de fogo 5 e a perícia escolhida (Furtividade) treinada", c1c.rd.fogo === 5 && c1c.pericias.furtividade.treinado);
+t.ok("proficiência marcial; magias arcanas de 1º círculo pela Inteligência", c1c.proficiencias.marciais && c1c.magias.fontes["classe:" + vdr.id].circuloMax === 1 && c1c.magias.fontes["classe:" + vdr.id].atributo === "int");
+const nv3 = nv1.concat([{ classe: vdr.id, escolhas: { poder: { id: vdr.id + "-cp1" } } }, { classe: vdr.id, escolhas: {} }]);
+const c3c = R.calcular(fCl(nv3));
+t.iguais("3º nível: PV 18 + 2 × (4 + 2) = 30; Pele Temperada +2 Defesa", [c3c.pv.max, c3c.defesa.total - c1c.defesa.total], [30, 2]);
+t.iguais("o poder de classe escolhido no 2º nível: +2 em Luta", c3c.pericias.luta.total - c1c.pericias.luta.total - 1, 2);
+const fSub = fCl(nv1);
+const sub = R.subirNivel(fSub, vdr.id, { poder: { id: vdr.id + "-cp2" } }, { ignorarXp: true });
+t.ok("subir de nível confere o nível mínimo do poder de classe (Catedral: 10º)", !sub.ok && /10º nível de Vidreiro/.test(sub.motivo), JSON.stringify(sub));
+const multi = R.normalizar(Object.assign(copia(fCl(nv1)), { niveis: [{ classe: "guerreiro", escolhas: {} }, { classe: vdr.id, escolhas: {} }] }));
+const cm = R.calcular(multi);
+t.iguais("multiclasse (Guerreiro 1 / Vidreiro 1): PV 20 + 2 + 4 + 2 = 28", cm.pv.max, 28);
+t.ok("resumo da Mesa mostra a classe", /Vidreiro 1/.test(R.resumoParaMesa(fCl(nv1)).classes));
+const semCopiaC = R.normalizar({ niveis: [{ classe: "hbcl-zzzzzzzz-abcdef", escolhas: {} }] });
+t.ok("sem cópia e sem catálogo: o nível FICA (nada apagado) e o motor o ignora", semCopiaC.niveis.length === 1 && !semCopiaC.homebrew && R.calcular(semCopiaC).pv.max >= 1);
+t.ok("entra nas listas (classesDisponiveis) sem mexer em CLASSES", CL.classesDisponiveis().some((x) => x.id === vdr.id) && CL.CLASSES.every((x) => !x.homebrew));
+t.ok("nome do poder de classe Homebrew (poderes avulsos)", R.nomeDoPoder ? R.nomeDoPoder(vdr.id + "-cp1") === "Lâmina de Vidro" : true);
+
+t.grupo("Classe de T20 · biblioteca, arquivo e pacote");
+const limpaC = (d) => { const x = copia(d); ["id", "homebrewId", "homebrew", "fonte", "pagina", "nome", "descricao", "habilidades", "tabela", "poderes"].forEach((k) => delete x[k]); x.poderesProprios.forEach((p) => delete p.id); return x; };
+const gC = A.guardar("tormenta20", "estrutural", "classe", { nome: "Vidreiro", descricao: "", valores: {}, def: limpaC(vdr) });
+t.ok("guardada: coluna \"classe\", sistema tormenta20", gC.ok && gC.registro.tipo === "classe" && gC.registro.modelo.sistema === "tormenta20" && !gC.registro.modelo.def.tabela);
+t.ok("da biblioteca volta com a mesma chave", H.deRegistro(Object.assign({}, gC.registro, { id: "c1a2b3c4-sintetico" })).def.id === CL.normalizarHomebrew(Object.assign(limpaC(vdr), { nome: "Vidreiro", descricao: "", homebrewId: "c1a2b3c4-sintetico" })).id);
+t.ok("destino e resumo de T20", /subir de nível/.test(A.destinoNaFicha(gC.registro, "tormenta20").texto) && /PV 16 \+ Con · PM 4\/nível · magias arcanas/.test(A.resumo(gC.registro)), A.resumo(gC.registro));
+const aC = G.RAMAValidacao.importado(JSON.parse(JSON.stringify(G.RAMAValidacao.exportar(G.RAMAValidacao.tipoDeExportacao(gC.registro), gC.registro))));
+t.ok("exportar e importar: habilidades, níveis de poder e poderes voltam (pelo motor de T20)", aC.ok && aC.dados.modelo.def.habilidadesDaTabela.length === 2 && aC.dados.modelo.def.niveisDePoder.length === 10 && aC.dados.modelo.def.poderesProprios.length === 2 && !aC.dados.modelo.def.tabela, JSON.stringify(aC.ok ? Object.keys(aC.dados.modelo.def) : aC));
+t.ok("pacote: só em pacote de T20", A.compativelComPacote(gC.registro, "tormenta20").ok && !A.compativelComPacote(gC.registro, "ordem").ok);
+t.ok("prévia", /1º nível: 18 PV/.test(H.previaClasse(vdr)[0]) && H.previaClasse(vdr).some((l) => /3º nível · Pele Temperada: \+2 em Defesa/.test(l)));
 
 console.log(`\n${FORTE}${passaram} ok${FIM}, ${falharam ? VERMELHO : ""}${falharam} falha(s)${FIM}.`);
 if (falharam) Deno.exit(1);

@@ -51,7 +51,7 @@ página, não o reproduz.
   rolagens: [valores das seis rolagens já convertidos],
   atributosBase: { for, des, con, int, sab, car },     // sem raça: a raça entra no cálculo
   raca: { id, variante, atributos: [os +1 escolhidos], escolhas },   // id pode ser "hbr-…" (v9.10)
-  homebrew: { versao, racas: { "hbr-…": … }, origens: { "hbor-…": … }, deuses: { "hbdv-…": … } },  // cópias, só quando usadas (v9.10–9.11)
+  homebrew: { versao, racas: { "hbr-…": … }, origens: { "hbor-…": … }, deuses: { "hbdv-…": … }, classes: { "hbcl-…": … } },  // cópias, só quando usadas (v9.10–9.12)
   origem: { id, beneficios: [{ tipo: "pericia"|"poder", id, escolhas: { oficio? } }], escolhas, propria },
   divindade: { id, energia, poderes: [{ id, escolhas }] } | null,
   niveis: [{ classe, escolhas }],                       // um por nível de personagem, em ordem

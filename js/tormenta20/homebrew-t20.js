@@ -125,6 +125,21 @@
     return l;
   }
 
+  /* v9.12: a prévia de uma classe (1º nível com Con +2, a tabela). */
+  function previaClasse(d) {
+    var l = ["1º nível: " + (d.pv.inicial + 2) + " PV (com Con +2) e " + d.pm + " PM; depois, +" + d.pv.nivel + " PV + Con e +" + d.pm + " PM por nível."];
+    l.push("Perícias: " + (d.pericias.fixas.map(nomePericia).join(", ") || "nenhuma fixa") + (d.pericias.escolha.n ? " + " + d.pericias.escolha.n + " entre " + d.pericias.escolha.de.map(nomePericia).join(", ") : "") + ".");
+    l.push("Proficiências: " + (d.proficiencias.map(function (q) { return (PROFS[q] || q).toLowerCase(); }).join(", ") || "só armas simples e armaduras leves") + ".");
+    if (d.magias) l.push(d.habilidades.magias.resumo);
+    d.habilidadesDaTabela.slice().sort(function (a, b) { return a.nivel - b.nivel; }).forEach(function (h) {
+      var partes = h.efeitos.map(textoEfeito).concat((h.escolhas || []).map(textoEscolha));
+      l.push(h.nivel + "º nível · " + h.nome + (partes.length ? ": " + partes.join("; ") : "") + ".");
+    });
+    l.push("Poder de " + d.nome + " nos níveis: " + (d.niveisDePoder.join(", ") || "nenhum") + ".");
+    l.push("Poderes de classe: " + (d.poderesProprios.map(function (p) { return p.nome + (p.ncMinimo > 1 ? " (" + p.ncMinimo + "º nível)" : "") + (p.efeitos.length ? " [" + p.efeitos.map(textoEfeito).join(", ") + "]" : ""); }).concat(["Aumento de Atributo"]).join(", ")) + "; e os poderes gerais.");
+    return l;
+  }
+
   /* Da biblioteca para a definição do motor. */
   function deRegistro(reg) {
     var m = obj(obj(reg).modelo);
@@ -171,6 +186,6 @@
   global.RAMATormenta20Homebrew = {
     EFEITOS: EFEITOS, SENTIDOS: SENTIDOS, PROFS: PROFS, NOMES_ATR: NOMES_ATR,
     chaveDoEfeito: chaveDoEfeito, textoEfeito: textoEfeito, textoEscolha: textoEscolha, textoAtributos: textoAtributos,
-    previaRaca: previaRaca, automacao: automacao, previaOrigem: previaOrigem, previaDeus: previaDeus, nomePoder: nomePoder, nomePericiaOuOficio: nomePericiaOuOficio, deRegistro: deRegistro, carregarBiblioteca: carregarBiblioteca,
+    previaRaca: previaRaca, automacao: automacao, previaOrigem: previaOrigem, previaDeus: previaDeus, previaClasse: previaClasse, nomePoder: nomePoder, nomePericiaOuOficio: nomePericiaOuOficio, deRegistro: deRegistro, carregarBiblioteca: carregarBiblioteca,
   };
 })(typeof window !== "undefined" ? window : globalThis);
