@@ -442,9 +442,9 @@
       var HV = global.RAMAVampiroHomebrew, xv = HV.deRegistro(reg);
       if (xv && xv.def) HV.previa(xv.tipo, xv.def).forEach(function (t, i) { pares.push([i ? "" : "Regras", t]); });
     }
-    if (s === "oblivio" && ["papel", "motivacao", "mazela", "fardo"].indexOf(st) >= 0 && global.RAMAOblivioHomebrew) {
+    if (s === "oblivio" && ["papel", "motivacao", "mazela", "fardo", "habilidade"].indexOf(st) >= 0 && global.RAMAOblivioHomebrew) {
       var HO2 = global.RAMAOblivioHomebrew, xo2 = HO2.deRegistro(reg);
-      if (xo2 && xo2.def) HO2.previa(st, xo2.def).forEach(function (t, i) { pares.push([i ? "" : "Regras", t]); });
+      if (xo2 && xo2.def) HO2.previa(xo2.tipo, xo2.def).forEach(function (t, i) { pares.push([i ? "" : "Regras", t]); });
     }
     if (s === "brutal" && (st === "arquetipo" || st === "estilo") && global.RAMABrutalHomebrew) {
       var HBr = global.RAMABrutalHomebrew, xb = HBr.deRegistro(reg);

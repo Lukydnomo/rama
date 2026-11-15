@@ -13,7 +13,10 @@
   function C() { return global.RAMAOblivioCatalogo; }
   function obj(v) { return v && typeof v === "object" && !Array.isArray(v) ? v : {}; }
   var TIPOS = ["papel", "motivacao", "mazela", "fardo"];
-  var CAMPO = { papel: "papeis", motivacao: "motivacoes", mazela: "mazelas", fardo: "fardos" };
+  var CAMPO = { papel: "papeis", motivacao: "motivacoes", mazela: "mazelas", fardo: "fardos", habilidade: "habilidades" };
+  /* v9.31: a Habilidade Homebrew vem do tipo Habilidade (grupo habilidade). */
+  var TIPOS_COPIA = TIPOS.concat(["habilidade"]);
+  var ESCOPOS = { rodada: "por rodada", cena: "por cena", cenaCalma: "por cena de Descanso ou Interação", descanso: "entre Descansos", partida: "por Partida" };
   var ACOES = { passiva: "passiva", regular: "Ação Regular", extra: "Ação Extra", completa: "Ação Completa", "regular+movimento": "Regular + Movimento" };
 
   function previa(tipo, d) {
@@ -25,11 +28,15 @@
     }
     if (tipo === "mazela") return [d.resumo || "(sem texto)", "Sai com: " + (d.remocao.map(function (r) { return r === "balsamo" ? "Bálsamo" : "Kit de Primeiros Socorros"; }).join(" ou ") || "decisão da mesa") + "."];
     if (tipo === "fardo") return [d.resumo || "(sem texto)", d.acumula ? "Acumula." : "Não acumula."];
+    if (tipo === "habilidade") return ["Geral · " + ACOES[d.acao] + (d.limites ? " · " + d.limites[0].vezes + "× " + ESCOPOS[d.limite] + " (a ficha conta)" : "") + ".", d.resumo];
     return [d.resumo || "(sem texto)"];
   }
 
   function deRegistro(reg) {
     var m = obj(obj(reg).modelo);
+    if (m.sistema === "oblivio" && m.grupo === "habilidade" && m.subtipo === "habilidade" && C() && C().normalizarHomebrew) {
+      return { tipo: "habilidade", def: C().normalizarHomebrew("habilidade", Object.assign({}, obj(m.def), { chave: "", nome: reg.nome, homebrewId: reg.id, texto: reg.descricao || "" })) };
+    }
     if (m.sistema !== "oblivio" || m.grupo !== "estrutural" || TIPOS.indexOf(m.subtipo) < 0 || !C() || !C().normalizarHomebrew) return null;
     var base = Object.assign({}, obj(m.def), { chave: "", nome: reg.nome, homebrewId: reg.id });
     if (!base.resumo && reg.descricao) base.resumo = reg.descricao;
@@ -37,13 +44,13 @@
   }
 
   var biblioteca = null, carga = null;
-  function vazia() { return { papeis: [], motivacoes: [], mazelas: [], fardos: [] }; }
+  function vazia() { return { papeis: [], motivacoes: [], mazelas: [], fardos: [], habilidades: [] }; }
   function carregarBiblioteca(forcar) {
     if (biblioteca && !forcar) return Promise.resolve(biblioteca);
     if (carga && !forcar) return carga;
     var API = global.RAMAApi;
     if (!API || !API.listarHomebrew || !C()) return Promise.resolve(vazia());
-    carga = API.listarHomebrew({ escopo: "todos", tipos: TIPOS }).then(function (r) {
+    carga = API.listarHomebrew({ escopo: "todos", tipos: TIPOS.concat(["habilidade"]) }).then(function (r) {
       carga = null;
       var saida = vazia();
       ((r && r.ok && r.dados) || []).forEach(function (reg) {
@@ -60,7 +67,7 @@
 
   function copiasDaFicha(o) {
     var hb = obj(obj(o).homebrew), out = [];
-    TIPOS.forEach(function (t) { Object.keys(obj(hb[CAMPO[t]])).forEach(function (k) { var d = hb[CAMPO[t]][k]; out.push({ campo: CAMPO[t], tipo: t, chave: k, nome: d.nome || k, homebrewId: d.homebrewId || "" }); }); });
+    TIPOS_COPIA.forEach(function (t) { Object.keys(obj(hb[CAMPO[t]])).forEach(function (k) { var d = hb[CAMPO[t]][k]; out.push({ campo: CAMPO[t], tipo: t, chave: k, nome: d.nome || k, homebrewId: d.homebrewId || "" }); }); });
     return out;
   }
   function versoesNovas(o, bib) {

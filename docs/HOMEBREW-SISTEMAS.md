@@ -2646,3 +2646,80 @@ implantação. **`setupRama()` não é necessário.**
 - `js/goblins/telas/ficha-goblins.js`, `js/goblins/telas/goblins-criar.js`;
 - `js/homebrew-adaptadores.js`, `js/paginas/homebrew-editor.js`;
 - `js/versao.js`.
+
+## v9.31.0 — Oblívio: Habilidade Homebrew no motor
+
+### O editor
+
+**Homebrew → + Criar → Oblívio → Habilidade**:
+- **ação**: passiva, Regular, Extra, Completa, ou Regular + Movimento;
+- **limite de uso**, um dos que a ficha já conta nas habilidades do
+  livro: por rodada, por cena, por cena de Descanso ou Interação, entre
+  Descansos ou por Partida;
+- **vezes** nesse limite, de 1 a 3;
+- **custo** e **alvo**, em texto;
+- **requisitos**, em texto (a Testemunha confere);
+- o **texto** do registro é o efeito.
+
+Um registro antigo, com o limite escrito em texto ("uma vez por
+sessão"), mantém o texto na habilidade ("Limite: …, a mesa controla").
+Ele não vira regra.
+
+### No motor
+
+- Chave `hboh-<id>-<hash>`, versionada. A habilidade entra no catálogo
+  (`HABILIDADES`) como **Geral**, sem Papel.
+- Ela aparece, com "· Homebrew":
+  - na **escolha ao concluir uma Missão** (Única do Papel ou Geral);
+  - em **"Habilidade concedida pela Testemunha"**, na aba Habilidades.
+- **Usar** (ação que não é passiva) confere o limite, conta o uso e
+  registra. O efeito é o do texto, aplicado pela mesa. Uma passiva diz
+  isso no cartão, em vez de "Automática".
+- A ficha guarda a cópia em `oblivio.homebrew.habilidades`.
+  `aplicarOperacao` garante, depois de cada operação, as cópias de tudo
+  o que é Homebrew: Papel, Motivação, Mazelas, Fardos e habilidades.
+- A aba Habilidades passou a consultar a biblioteca.
+
+### Validação da v9.31.0
+
+**Automática.** `testes/executar-homebrew-oblivio.js` ganhou 11
+verificações (agora 31):
+- a definição e o limite;
+- a cópia renormalizada mantém as vezes;
+- o texto com custo e alvo;
+- o limite antigo em texto;
+- o catálogo;
+- a concessão pela Testemunha;
+- a cópia depois de uma operação;
+- o uso: 2 por cena, e o terceiro recusado;
+- a ficha reaberta sem a biblioteca;
+- a biblioteca e o destino;
+- a prévia.
+
+As outras suítes continuam verdes.
+
+**Na interface** (servidor local, conta sintética):
+- Gravei **Reflexo Partido** (Ação Extra, 2 por cena, custo 1 de
+  Estresse, alvo uma Ameaça).
+- Numa Persona, "Habilidade concedida pela Testemunha" ofereceu
+  "Reflexo Partido (Geral) · Homebrew". Adquiri. A ficha relida do
+  servidor tinha a habilidade e a cópia.
+- Usei duas vezes. Na terceira, o botão ficou desabilitado: "limite de
+  2 por cena atingido".
+- Duas correções saíram dessa validação, antes desta entrega:
+  - o cartão não mostrava o botão Usar, porque só as habilidades do livro
+    tinham ativação;
+  - a cópia renormalizada voltava para 1 vez, porque as vezes ficavam só
+    dentro do limite.
+
+### Publicar a v9.31.0
+
+**Servidor:** troque **`Oblivio.gs`** e crie uma versão nova da
+implantação. **`setupRama()` não é necessário.**
+
+**Site:**
+- `js/oblivio/catalogo.js`, `js/oblivio/regras.js`,
+  `js/oblivio/habilidades.js`, `js/oblivio/homebrew-oblivio.js`;
+- `js/oblivio/telas/ficha-oblivio.js`;
+- `js/homebrew-adaptadores.js`, `js/paginas/homebrew-editor.js`;
+- `js/versao.js`.

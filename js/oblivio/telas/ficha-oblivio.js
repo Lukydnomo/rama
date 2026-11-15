@@ -283,6 +283,8 @@
 
   function abaHabilidades(ctx) {
     var o = ctx.ficha.oblivio;
+    /* v9.31: as Habilidades Homebrew da biblioteca entram na escolha (uma viagem). */
+    if (global.RAMAOblivioHomebrew && ctx.podeEditar() && !bibliotecaPedida) { bibliotecaPedida = true; global.RAMAOblivioHomebrew.carregarBiblioteca().then(function (r) { if (r && ((r.habilidades || []).length || r.mazelas.length || r.fardos.length) && ctx.redesenhar) ctx.redesenhar(); }); }
     var cx = contextoDeJogo(ctx);
     var possuidas = o.habilidades.map(function (h) {
       var cat = C().habilidade[h.chave];
@@ -300,7 +302,7 @@
           el("button.r-botao.r-botao--mini", { type: "button", texto: "Usar", disabled: !pode.ok || !ctx.podeEditar(), title: pode.ok ? "" : pode.motivo,
             onclick: function () { global.RAMAOblivioJogo.usarHabilidade(ctx, h.chave); } }),
           !pode.ok ? el("span.t-mini", { texto: pode.motivo }) : null,
-        ]) : el("p.t-mini", { texto: "Automática: o motor aplica quando a condição acontece." }),
+        ]) : el("p.t-mini", { texto: cat.homebrew ? "Passiva: o efeito é o do texto (a mesa aplica)." : "Automática: o motor aplica quando a condição acontece." }),
       ]);
     });
     if (R().temHabilidade(o, "sobrecarga")) possuidas.push(el("li.oblivio-hab", {}, [el("span.oblivio-hab__nome", { texto: "Sobrecarga (Ir Além)" }), el("p.oblivio-hab__resumo", { texto: C().SOBRECARGA.resumo })]));
@@ -322,7 +324,7 @@
       if (h.papel && h.papel !== o.papel && origem === "progressao") return false;
       return h.repetivel || !R().temHabilidade(o, h.chave);
     });
-    var sel = UI().campo({ rotulo: "Habilidade", tipo: "selecao", opcoes: [{ valor: "", rotulo: "Escolha…" }].concat(opcoes.map(function (h) { return { valor: h.chave, rotulo: h.nome + (h.papel ? " (" + C().papel[h.papel].nome + ")" : " (Geral)") }; })) });
+    var sel = UI().campo({ rotulo: "Habilidade", tipo: "selecao", opcoes: [{ valor: "", rotulo: "Escolha…" }].concat(opcoes.map(function (h) { return { valor: h.chave, rotulo: h.nome + (h.papel ? " (" + C().papel[h.papel].nome + ")" : " (Geral)") + (h.homebrew && !h.papel ? " · Homebrew" : "") }; })) });
     var extra = el("div.oblivio-hab-param");
     var param = {};
     sel.entrada.addEventListener("change", function () {
@@ -358,7 +360,7 @@
     var cx = contextoDeJogo(ctx);
     var pode = ctx.podeEditar();
     /* v9.19: as Mazelas e os Fardos Homebrew da biblioteca entram na lista (uma viagem). */
-    if (global.RAMAOblivioHomebrew && pode && !bibliotecaPedida) { bibliotecaPedida = true; global.RAMAOblivioHomebrew.carregarBiblioteca().then(function (r) { if (r && (r.mazelas.length || r.fardos.length) && ctx.redesenhar) ctx.redesenhar(); }); }
+    if (global.RAMAOblivioHomebrew && pode && !bibliotecaPedida) { bibliotecaPedida = true; global.RAMAOblivioHomebrew.carregarBiblioteca().then(function (r) { if (r && (r.mazelas.length || r.fardos.length || (r.habilidades || []).length) && ctx.redesenhar) ctx.redesenhar(); }); }
     var mazelas = el("ul.oblivio-mazelas", {}, o.mazelas.map(function (m) {
       var cat = C().mazela[m.chave];
       var detalhe = m.chave === "ferida" ? " — " + m.param.dano + " por rodada" : m.chave === "pegandoFogo" ? " — próximo: " + m.param.proximo : m.chave === "coragemCega" ? " — −" + m.param.reducao + " de Proteção" : m.chave === "semFolego" ? " — " + m.param.turnos + "/" + m.param.maximo + " turnos" : m.chave === "semReacao" ? " — turno " + (m.param.turnos || 0) + "/2" : "";

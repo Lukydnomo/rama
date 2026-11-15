@@ -247,6 +247,14 @@
   function usar(chave, contexto) {
     var cx = Object.assign({ fichas: {}, alvos: [], param: {}, ctx: {} }, contexto || {});
     var f = USOS[chave];
+    /* v9.31: Habilidade Homebrew com ação: confere o limite, conta o uso
+       e registra; o efeito é o do texto (a mesa aplica). */
+    var hd = global.RAMAOblivioCatalogo && global.RAMAOblivioCatalogo.habilidade[chave];
+    if (!f && hd && hd.homebrew && hd.acao !== "passiva") {
+      var b = base(cx, chave); if (b.erro) return falha(b.erro);
+      R.registrarUso(b.o, chave, cx.ctx);
+      return { ok: true, eventos: [ev("habilidadeUsada", { chave: chave, nome: hd.nome })], texto: hd.nome + ": " + hd.resumo };
+    }
     if (!f) return falha("Esta habilidade é passiva ou não tem ativação.");
     return f(cx);
   }
@@ -407,7 +415,7 @@
   }
 
   global.RAMAOblivioHabilidades = {
-    usar: usar, agir: agir, temAtivacao: function (chave) { return !!USOS[chave]; }, temAcao: function (chave) { return !!ACOES[chave]; },
+    usar: usar, agir: agir, temAtivacao: function (chave) { var hd = global.RAMAOblivioCatalogo && global.RAMAOblivioCatalogo.habilidade[chave]; return !!USOS[chave] || !!(hd && hd.homebrew && hd.acao !== "passiva"); }, temAcao: function (chave) { return !!ACOES[chave]; },
     armaduraDeEspinhos: armaduraDeEspinhos, sedeDeSangue: sedeDeSangue, primeiroAcertoNoAlvo: primeiroAcertoNoAlvo, registrarAcerto: registrarAcerto,
     ultimaEsperancaNoTurno: ultimaEsperancaNoTurno, repartirADor: repartirADor, registrarCuraDoPapel: registrarCuraDoPapel,
     custoDaAcao: custoDaAcao, turnoVazio: turnoVazio, gastarAcao: gastarAcao,

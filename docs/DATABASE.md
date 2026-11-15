@@ -1,5 +1,13 @@
 # O banco
 
+## Habilidade Homebrew de Oblívio — v9.31
+
+Nenhuma aba nova. Registro do tipo `habilidade` (subtipo `habilidade`),
+com `modelo.def` = `{ acao, limite, vezes, custo, alvo, requisitos }` e o
+texto na descrição. Na ficha de Oblívio, `oblivio.homebrew.habilidades`
+guarda as cópias; `habilidades[].chave` aceita as chaves `hboh-…`.
+Opcional.
+
 ## Magia e Técnica Homebrew de Goblins — v9.30
 
 Nenhuma aba nova. Registros do tipo `habilidade`: subtipo `magia`

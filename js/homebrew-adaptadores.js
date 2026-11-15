@@ -308,7 +308,7 @@
     id: "oblivio",
     tipos: [
       { chave: "item", rotulo: "Item", ajuda: "Equipamento sobre uma base do catálogo (espaços, Durabilidade, Dano, Proteção) ou objeto narrativo." },
-      { chave: "habilidade", rotulo: "Habilidade", ajuda: "Requisitos, custo, alvo e limite — por enquanto para consulta e anotações." },
+      { chave: "habilidade", rotulo: "Habilidade", ajuda: "Habilidade Geral: ação, limite de uso (a ficha conta), custo, alvo e requisitos. Escolhida na progressão ou concedida pela Testemunha." },
       { chave: "criatura", rotulo: "Ameaça", ajuda: "Grau, Dano, Proteção, Velocidade, Estresse e Regiões." },
       { chave: "papel", rotulo: "Papel", ajuda: "Estresse, cor, os seis Conhecimentos, a Habilidade Principal e as Únicas. Entra na criação de Personas." },
       { chave: "motivacao", rotulo: "Motivação", ajuda: "Nome e resumo. Entra na criação de Personas." },
@@ -323,7 +323,14 @@
     },
     habilidade: {
       subtipos: [
-        { chave: "habilidade", rotulo: "Habilidade", campos: [campo("requisitos", "Requisitos", "texto", { limite: 200 }), campo("custo", "Custo", "texto", { limite: 60, exemplo: "1 de Estresse" }), campo("alvo", "Alvo", "texto", { limite: 80 }), campo("limite", "Limite", "texto", { limite: 60, exemplo: "uma vez por cena" })] },
+        /* v9.31: uma habilidade Geral no motor (escolhida na progressão ou
+           concedida pela Testemunha); o limite é um dos que a ficha conta. */
+        { chave: "habilidade", rotulo: "Habilidade", campos: [
+          sel("acao", "Ação", [["passiva", "Passiva"], ["regular", "Ação Regular"], ["extra", "Ação Extra"], ["completa", "Ação Completa"], ["regular+movimento", "Regular + Movimento"]], { padrao: "passiva" }),
+          sel("limite", "Limite de uso", [["", "Sem limite"], ["rodada", "Por rodada"], ["cena", "Por cena"], ["cenaCalma", "Por cena de Descanso ou Interação"], ["descanso", "Entre Descansos"], ["partida", "Por Partida"]], { padrao: "" }),
+          campo("vezes", "Vezes nesse limite", "numero", { min: 1, max: 3, padrao: 1 }),
+          campo("custo", "Custo", "texto", { limite: 60, exemplo: "1 de Estresse" }), campo("alvo", "Alvo", "texto", { limite: 80 }),
+          campo("requisitos", "Requisitos (a Testemunha confere)", "texto", { limite: 200 })] },
       ],
     },
   };
@@ -617,6 +624,7 @@
       if (g === "item") return { modo: "nativo", texto: destino === "brutal" ? "Vira o Apego \"item\" da ficha." : "Entra no inventário com as regras do sistema." };
       if (s === "ordem" || s === "universal" || s === "ordem2") return { modo: "nativo", texto: "Entra nas habilidades da ficha." };
       var stH = subtipoDe(r), dH = defDe(r);
+      if (s === "oblivio" && stH === "habilidade") return { modo: "nativo", texto: "Entra como habilidade Geral: escolhida ao concluir uma Missão ou concedida pela Testemunha (aba Habilidades); o limite de uso é contado pela ficha. A cópia fica na ficha." };
       if (s === "goblins" && stH === "magia" && [0, 1, 2, 3].some(function (i) { return dH["r" + i]; })) return { modo: "nativo", texto: "Entra na escolha de magias do Bruxo e se conjura como as do livro (teste de Noção; o resultado pelos hits, com o que a ficha aplica). A cópia fica na ficha." };
       if (s === "goblins" && stH === "tecnica") return { modo: "nativo", texto: "A mesa concede ao goblin (aba Técnicas, em edição); o uso de 1 vez por dia é marcado pela ficha. A cópia fica na ficha." };
       if (s === "vampiro" && stH === "disciplina" && dH.disciplina) return { modo: "nativo", texto: "Entra nos poderes da Disciplina (criação e compras com XP), com o custo em Checagens, a parada e a duração; o efeito é da mesa. A cópia fica na ficha." };

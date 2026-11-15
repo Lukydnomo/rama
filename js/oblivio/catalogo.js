@@ -674,8 +674,11 @@
      As mecânicas especiais do livro (por chave) não valem para as
      Homebrew: a ficha registra; a mesa aplica. Puro (o servidor roda).
      ================================================================= */
-  var PADROES = { papel: /^hbop-[a-z0-9-]{3,30}$/, motivacao: /^hbmo-[a-z0-9-]{3,30}$/, mazela: /^hbmz-[a-z0-9-]{3,30}$/, fardo: /^hbfd-[a-z0-9-]{3,30}$/ };
-  var PREFIXOS = { papel: "hbop-", motivacao: "hbmo-", mazela: "hbmz-", fardo: "hbfd-" };
+  var PADROES = { papel: /^hbop-[a-z0-9-]{3,30}$/, motivacao: /^hbmo-[a-z0-9-]{3,30}$/, mazela: /^hbmz-[a-z0-9-]{3,30}$/, fardo: /^hbfd-[a-z0-9-]{3,30}$/, habilidade: /^hboh-[a-z0-9-]{3,30}$/ };
+  var PREFIXOS = { papel: "hbop-", motivacao: "hbmo-", mazela: "hbmz-", fardo: "hbfd-", habilidade: "hboh-" };
+  /* v9.31: Habilidade Homebrew — uma habilidade Geral, com a ação e um
+     limite de uso que o motor já controla (os escopos das do livro). */
+  var ESCOPOS_HAB = ["rodada", "cena", "cenaCalma", "descanso", "partida"];
   var ACOES_HAB = ["passiva", "regular", "extra", "completa", "regular+movimento"];
   function hbObj(v) { return v && typeof v === "object" && !Array.isArray(v) ? v : {}; }
   function hbTx(v, max) { return String(v === undefined || v === null ? "" : v).slice(0, max || 200); }
@@ -707,6 +710,17 @@
         remocao: (Array.isArray(b.remocao) ? b.remocao : ["balsamo"]).filter(function (r, i, l) { return ["balsamo", "kitPrimeirosSocorros"].indexOf(r) >= 0 && l.indexOf(r) === i; }) });
     } else if (tipo === "fardo") {
       d = Object.assign(base, { nome: hbTx(b.nome, 40).trim() || "Fardo Homebrew", resumo: hbTx(b.resumo, 600).trim(), acumula: b.acumula === true });
+    } else if (tipo === "habilidade") {
+      var esc = ESCOPOS_HAB.indexOf(b.limite) >= 0 ? b.limite : "";
+      var limTexto = !esc && typeof b.limite === "string" ? hbTx(b.limite, 60).trim() : "";
+      d = Object.assign(base, {
+        nome: hbTx(b.nome, 60).trim() || "Habilidade Homebrew", papel: null, tipo: "geral",
+        acao: ACOES_HAB.indexOf(b.acao) >= 0 ? b.acao : "passiva",
+        texto: hbTx(b.texto, 600).trim(), requisitos: hbTx(b.requisitos, 200).trim(), custo: hbTx(b.custo, 60).trim(), alvo: hbTx(b.alvo, 80).trim(),
+      });
+      if (esc) { d.limite = esc; d.vezes = hbInt(b.vezes !== undefined ? b.vezes : (hbObj((b.limites || [])[0]).vezes), 1, 3, 1); d.limites = [{ escopo: esc, vezes: d.vezes }]; }
+      if (limTexto) d.limiteTexto = limTexto;
+      d.resumo = [d.texto, d.custo ? "Custo: " + d.custo + "." : "", d.alvo ? "Alvo: " + d.alvo + "." : "", d.requisitos ? "Requisitos (a Testemunha confere): " + d.requisitos + "." : "", limTexto ? "Limite: " + limTexto + " (a mesa controla)." : ""].filter(Boolean).join(" ") || "(sem texto)";
     } else return null;
     if (!d.chave) d.chave = hbChave(tipo, d);
     if (tipo === "papel") {
@@ -715,7 +729,7 @@
     }
     return d;
   }
-  var MAPA = { papel: ["papel", "PAPEIS"], motivacao: ["motivacao", "MOTIVACOES"], mazela: ["mazela", "MAZELAS"], fardo: ["fardo", "FARDOS"] };
+  var MAPA = { papel: ["papel", "PAPEIS"], motivacao: ["motivacao", "MOTIVACOES"], mazela: ["mazela", "MAZELAS"], fardo: ["fardo", "FARDOS"], habilidade: ["habilidade", "HABILIDADES"] };
   function registrarHomebrew(tipo, def) {
     if (!def || !ehHomebrew(tipo, def.chave)) return null;
     var m = MAPA[tipo];

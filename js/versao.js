@@ -118,6 +118,17 @@
 
   var CHANGELOG = [
     {
+      versao: "9.31.0",
+      codinome: "ESPELHADO",
+      data: "15/11/2026",
+      mudancas: {
+        "Adicionado": [
+          "Oblívio: a Habilidade Homebrew entra no motor como habilidade Geral — ação, limite de uso (por rodada, cena, cena de Descanso ou Interação, entre Descansos ou por Partida, até 3 vezes), custo, alvo e requisitos. Escolhida ao concluir uma Missão ou concedida pela Testemunha; o botão Usar confere e conta o limite, e o efeito é o do texto.",
+        ],
+        "Técnico": ["catalogo.js: tipo habilidade (hboh-) em HABILIDADES; regras.js: cópias em oblivio.homebrew.habilidades e garantirCopiasHomebrew depois de aplicarOperacao; habilidades.js: uso genérico da Homebrew com ação. Registros antigos com o limite em texto mantêm o texto, sem virar regra. Oblivio.gs regenerado. testes/executar-homebrew-oblivio.js: 11 verificações novas (31)."],
+      },
+    },
+    {
       versao: "9.30.0",
       codinome: "CACO",
       data: "15/11/2026",

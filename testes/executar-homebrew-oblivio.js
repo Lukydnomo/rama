@@ -81,5 +81,35 @@ const fU = copia(fN); H.atualizarVersao(fU, novas[0]);
 const fU2 = R.normalizar(fU);
 t.ok("versão nova do Papel: chave nova (também a da Principal), limite 20 + 3", novas.length === 1 && fU2.papel === papNovo.chave && fU2.habilidades.some((h) => h.chave === papNovo.principal) && R.limiteTotal(fU2).total === 23);
 
+t.grupo("Habilidade Homebrew no motor (v9.31)");
+{
+  const HB = G.RAMAOblivioHabilidades;
+  const hbB = { nome: "Reflexo Partido", homebrewId: "e3e3e3e3-sintetico", acao: "extra", limite: "cena", vezes: 2, custo: "1 de Estresse", alvo: "uma Ameaça", texto: "Confunde o alvo com o próprio reflexo." };
+  const hh = C.normalizarHomebrew("habilidade", hbB);
+  t.ok("chave hboh-; Geral, sem Papel; o limite é um dos que a ficha conta", /^hboh-e3e3e3e3-[a-z0-9]+$/.test(hh.chave) && hh.tipo === "geral" && hh.papel === null && hh.limites[0].escopo === "cena" && hh.limites[0].vezes === 2);
+  t.ok("  renormalizar a cópia mantém as vezes do limite (e a chave)", (() => { const z = C.normalizarHomebrew("habilidade", copia(hh)); return z.limites[0].vezes === 2 && z.chave === hh.chave; })());
+  t.ok("  o texto mostra custo e alvo", /Custo: 1 de Estresse\. Alvo: uma Ameaça\./.test(hh.resumo));
+  const velho = C.normalizarHomebrew("habilidade", { nome: "Antiga", limite: "uma vez por sessão" });
+  t.ok("  um limite antigo, em texto, fica no texto (a mesa controla), sem virar regra", !velho.limites && /Limite: uma vez por sessão/.test(velho.resumo));
+  C.registrarHomebrew("habilidade", hh);
+  t.ok("  entra no catálogo de habilidades (lista e mapa)", C.habilidade[hh.chave] && C.HABILIDADES.some((x) => x.chave === hh.chave));
+  const o = R.normalizar({ papel: "age", habilidades: [], homebrew: {} });
+  const ad = R.adquirirHabilidade(o, hh.chave, {}, "mesa");
+  t.ok("a Testemunha concede (e a progressão pode escolher, por ser Geral)", ad.ok && R.temHabilidade(o, hh.chave));
+  const rOp = R.aplicarOperacao(o, "op-obl-1", () => ({ ok: true, eventos: [] }));
+  t.ok("  depois de uma operação, a cópia vai para a ficha", rOp.ok && o.homebrew.habilidades && o.homebrew.habilidades[hh.chave]);
+  const cx = { tipoDeCena: "combate", cena: "c1", rodada: 1 };
+  const u1 = HB.usar(hh.chave, { fichas: { eu: o }, quem: "eu", ctx: cx }), u2 = HB.usar(hh.chave, { fichas: { eu: o }, quem: "eu", ctx: cx }), u3 = HB.usar(hh.chave, { fichas: { eu: o }, quem: "eu", ctx: cx });
+  t.ok("usar: conta o limite (2 por cena) e recusa o terceiro", u1.ok && u2.ok && !u3.ok && /limite/.test(u3.motivo), JSON.stringify([u1.ok, u2.ok, u3]));
+  const k = hh.chave; const salvo = C.habilidade[k]; delete C.habilidade[k];
+  const y = R.normalizar(copia(o));
+  t.ok("reaberta sem a biblioteca: volta pela cópia", y.habilidades.some((h) => h.chave === k) && !!C.habilidade[k]);
+  if (!C.habilidade[k]) C.habilidade[k] = salvo;
+  const g = A.guardar("oblivio", "habilidade", "habilidade", { nome: "Reflexo Partido", descricao: "Confunde o alvo com o próprio reflexo.", valores: { acao: "extra", limite: "cena", vezes: 2, custo: "1 de Estresse", alvo: "uma Ameaça" } });
+  const x = g.ok ? H.deRegistro(Object.assign({}, g.registro, { id: "e3e3e3e3-sintetico" })) : null;
+  t.ok("biblioteca: o registro de Habilidade vira a habilidade (mesma chave); destino nativo", x && x.tipo === "habilidade" && x.def.chave === hh.chave && A.destinoNaFicha(g.registro, "oblivio").modo === "nativo", JSON.stringify(g.ok ? g.registro.modelo : g));
+  t.ok("prévia", /Geral · Ação Extra · 2× por cena/.test(H.previa("habilidade", hh)[0]));
+}
+
 console.log(`\n${FORTE}${passaram} ok${FIM}, ${falharam ? VERMELHO : ""}${falharam} falha(s)${FIM}.`);
 if (falharam) Deno.exit(1);
