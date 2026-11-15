@@ -929,6 +929,11 @@ segredo nenhum — ele os lê das Script Properties. Publicá-lo não expõe nad
 
 ### Atualizar o backend
 
+**v9.35.0 — TONICO:** ações do Modelo Universal nas fichas de sistema,
+com os recursos nativos. **Só o site muda: o servidor fica como está.**
+Site: os arquivos listados em `docs/HOMEBREW-SISTEMAS.md` (seção
+"Publicar a v9.35.0").
+
 **v9.34.0 — ELO:** dependências entre criações nos pacotes (aviso ao
 montar e ao importar; chaves remapeadas na importação). Troque
 **`HomebrewPacotes.gs`** e crie uma versão nova da implantação.
@@ -2154,7 +2159,7 @@ Três números diferentes, que não se misturam:
 
 | | Onde | O que é |
 |---|---|---|
-| versão do aplicativo | `js/versao.js` | o que a pessoa vê: v9.34.0 |
+| versão do aplicativo | `js/versao.js` | o que a pessoa vê: v9.35.0 |
 | `schemaVersion` | `js/ficha.js` | o formato da FICHA |
 | `versaoFormato` | `js/config.js` | o formato dos arquivos de importação |
 

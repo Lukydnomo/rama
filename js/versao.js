@@ -118,6 +118,18 @@
 
   var CHANGELOG = [
     {
+      versao: "9.35.0",
+      codinome: "TONICO",
+      data: "15/11/2026",
+      mudancas: {
+        "Adicionado": [
+          "Etapa 3, parte 1: as ações do Modelo Universal rodam nas fichas de sistema, com os recursos NATIVOS — Ordem (PV, PE, SAN, PD), Ordem II (PV, PD), Tormenta20 (PV, PM), Goblins (Vitalidade pelos ferimentos) e Vampiro (Vitalidade e Força de Vontade pelo dano Superficial). Em Oblívio e BRUTAL, o recurso fica com a mesa e a ficha diz o porquê; o teste e os usos funcionam.",
+          "Um item Universal com ações, trazido do Homebrew para uma ficha de sistema, entra no painel \u201cAções Homebrew\u201d da ficha. Num teste, dá para somar uma perícia nativa (Ordem e Tormenta20).",
+        ],
+        "Técnico": ["Novo js/homebrew-recursos.js (recursos, aplicar com o id da operação onde o motor tem, semRecursos, pericias). executarAcao aceita bonusTeste; homebrew-ficha.js usa os recursos nativos, pergunta a perícia e tem o painel secaoAcoes (ligado pelo comPainel das fichas e na Progressão de T20). Novo testes/executar-homebrew-acoes.js (22 verificações)."],
+      },
+    },
+    {
       versao: "9.34.0",
       codinome: "ELO",
       data: "15/11/2026",

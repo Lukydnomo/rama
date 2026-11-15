@@ -652,6 +652,8 @@
       if (s === "tormenta20" && stH === "poder" && (dH.grupoT20 || dH.grupo === "geral" || dH.grupo === "tormenta")) return { modo: "nativo", texto: "Escolhido ao subir de nível ou em + Poder avulso, com os efeitos e a ativação configurados. A cópia fica na ficha." };
       return { modo: "manual", texto: "O motor de " + nomeDoSistema(s) + " ainda só aplica habilidades do livro: a habilidade entra nas anotações da ficha, para consulta (Manual)." };
     }
+    /* v9.35: com ações, entra nas Ações Homebrew da ficha (recursos nativos). */
+    if (s === "universal" && lista(obj(obj(r).universal).acoes).length && destino !== "universal") return { modo: "manual", texto: "Conteúdo Universal com ações: entra nas Ações Homebrew da ficha, e as ações usam os recursos dela (custo, efeito e usos; o que não tiver recurso nativo, a mesa resolve)." };
     if (s === "universal") return { modo: "manual", texto: "Conteúdo Universal: entra como item narrativo (nome e descrição); regras e ações ficam marcadas como Manual." };
     return { modo: "incompativel", texto: "É de " + nomeDoSistema(s) + ": o R.A.M.A. não converte conteúdo entre sistemas." };
   }
@@ -815,7 +817,10 @@
     }
     var rolagens = [];
     var teste = null;
-    if (a.teste) { teste = rolar(a.teste); if (!teste || !teste.ok) return { ok: false, motivo: "O teste não rolou." }; rolagens.push({ rotulo: "Teste", expressao: a.teste, total: teste.total }); }
+    /* v9.35: a perícia nativa escolhida soma ao teste (Ordem, Tormenta20). */
+    var bonusT = Math.round(Number(obj(escolhas).bonusTeste) || 0);
+    var expTeste = a.teste ? a.teste + (bonusT ? (bonusT > 0 ? "+" : "") + bonusT : "") : "";
+    if (a.teste) { teste = rolar(expTeste); if (!teste || !teste.ok) return { ok: false, motivo: "O teste não rolou." }; rolagens.push({ rotulo: "Teste" + (obj(escolhas).rotuloTeste ? " (" + obj(escolhas).rotuloTeste + ")" : ""), expressao: expTeste, total: teste.total }); }
     var efeito = a.efeito;
     var valor = null;
     if (efeito.expressao) { var r = rolar(efeito.expressao); if (!r || !r.ok) return { ok: false, motivo: "O efeito não rolou." }; valor = r.total; rolagens.push({ rotulo: "Efeito", expressao: efeito.expressao, total: r.total }); }

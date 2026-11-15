@@ -118,7 +118,10 @@
     return function (ctx) {
       var no = fn.apply(this, arguments);
       var M = global[motor];
-      return secaoNaFicha(no, ctx, bloco, global[modulo], M && M.normalizar ? function (b) { return M.normalizar(b); } : null);
+      secaoNaFicha(no, ctx, bloco, global[modulo], M && M.normalizar ? function (b) { return M.normalizar(b); } : null);
+      /* v9.35: as Ações Homebrew (Universal) da ficha, no mesmo lugar. */
+      if (global.RAMAHomebrewFicha && global.RAMAHomebrewFicha.secaoAcoes) global.RAMAHomebrewFicha.secaoAcoes(no, ctx);
+      return no;
     };
   }
 

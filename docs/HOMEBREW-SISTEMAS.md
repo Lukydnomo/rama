@@ -2983,3 +2983,87 @@ implantação. **`setupRama()` não é necessário.**
 
 Com esta versão, a Etapa 2 da especificação está completa. A próxima, a
 Etapa 3, é a automação por sistema.
+
+## v9.35.0 — Etapa 3, parte 1: ações Universais com recursos nativos
+
+Até aqui, uma ação do Modelo Universal só rodava na ficha Universal, que
+tem recursos com nome. Agora ela roda em qualquer ficha. O novo
+`js/homebrew-recursos.js` traduz a ficha do sistema para a lista de
+recursos que o motor das ações conhece e grava a mudança pelo caminho de
+cada motor.
+
+| Sistema | Recursos | Como grava |
+|---|---|---|
+| Universal | os da ficha (status) | o atual do recurso |
+| Ordem Paranormal | PV, PE, SAN; PD com "Jogando sem Sanidade" | `ordem.recursos` |
+| Ordem II | PV e PD | a operação do motor (com id) |
+| Tormenta20 | PV e PM | a operação do motor (com id) |
+| Malditos Goblins | Vitalidade | os ferimentos, pela operação (com id) |
+| Vampiro | Vitalidade e Força de Vontade | perder vira dano Superficial; recuperar o tira (com id) |
+| Oblívio | — | o Estresse é por região: fica com a mesa |
+| BRUTAL | — | os Pontos de Tensão moram na mesa da Diretora |
+
+Nada é ligado por nome parecido. Um recurso que a ficha não tem pelo
+nome (como "Vida" numa ficha de Goblins), a pessoa escolhe na lista,
+como já acontecia na ficha Universal. Onde não há recurso nativo, a
+ficha diz o porquê, e o teste e os usos funcionam do mesmo jeito.
+
+### Na ficha
+
+- **Do Homebrew → Universal**: um item Universal **com ações** entra no
+  painel **Ações Homebrew (Universal)** da ficha. O painel fica no fim
+  da aba principal de Goblins, BRUTAL, Oblívio, Vampiro e Ordem II, e na
+  aba Progressão de Tormenta20. Ele mostra os recursos de agora
+  ("Vitalidade 0/2") e os botões das ações, com os usos restantes. Em
+  edição, tem também o botão Tirar.
+- Em Ordem e na ficha Universal, as ações continuam no inventário e
+  agora usam os recursos nativos.
+- **Teste com perícia nativa**: em Ordem e Tormenta20, antes de rolar, a
+  ficha pergunta se a pessoa quer somar uma perícia (com o bônus de
+  agora). É opcional.
+- **Confirmação e reenvio**: rolar e desistir não gasta nada. O id da
+  operação nasce com a janela. Confirmar de novo não grava duas vezes
+  onde o motor tem id (Ordem II, Tormenta20, Goblins, Vampiro); nos
+  outros, a janela só aplica uma vez.
+
+### Validação da v9.35.0
+
+**Automática.** O novo `testes/executar-homebrew-acoes.js` tem 22
+verificações, uma ação em cada sistema:
+- custo e efeito nos recursos nativos, e a gravação;
+- a perícia somada ao teste;
+- o recurso sem nome que vira Manual com escolha;
+- o reenvio com o mesmo id;
+- Oblívio e BRUTAL com o motivo, e o teste e os usos funcionando.
+
+As outras suítes continuam verdes.
+
+**Na interface** (servidor local, conta sintética):
+- Gravei o item Universal **Tônico de Ervas**, com a ação "Beber"
+  (recupera 2 de "Vida", 2 usos).
+- Num goblin com 2 ferimentos, "Do Homebrew" adicionou o item. O painel
+  da aba Goblin mostrou "Vitalidade 0/2" e "Beber (2/2)".
+- Usei a ação. Como "Vida" não existe, a ficha pediu o recurso e
+  ofereceu "Vitalidade (0/2)". A prévia mostrou "Vitalidade: 0 → 2" e
+  "restam 1 de 2".
+- Apliquei. A ficha relida do servidor tinha 0 ferimentos e 1 uso gasto.
+- O texto do seletor ainda dizia que as ações ficam Manuais; corrigi.
+
+### Publicar a v9.35.0
+
+**Servidor:** nada muda.
+
+**Site:**
+- `js/homebrew-recursos.js` (novo);
+- `js/homebrew-adaptadores.js`, `js/homebrew-versoes.js`,
+  `js/paginas/homebrew-ficha.js`;
+- `js/tormenta20/telas/ficha-t20.js`;
+- `ficha/index.html`;
+- `js/versao.js`.
+
+### Etapa 3 depois da v9.35
+
+Falta:
+- o inventário de cobertura (tipo, editor, destino, automações e pontos
+  manuais) e a matriz de regressão por sistema;
+- a validação em celular e desktop, nos dois temas, com teclado.

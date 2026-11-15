@@ -92,6 +92,15 @@
         return;
       }
       if (grupo === "habilidade") { if (o.aoAdicionarHabilidade) o.aoAdicionarHabilidade(h); return; }
+      /* v9.35: Universal COM ações numa ficha de sistema: entra nas Ações
+         Homebrew da ficha (o inventário comum), com as ações que rodam
+         pelos recursos nativos. */
+      if (A().sistemaDe(h) === "universal" && sistema !== "universal" && sistema !== "ordem" && h.universal && (h.universal.acoes || []).length && global.RAMAFicha) {
+        if (!ctx.ficha.inventario) ctx.ficha.inventario = { limite: 0, itens: [] };
+        var it = global.RAMAFicha.normalizarItem({ tipo: "item", nome: h.nome, descricao: h.descricao || "", universal: h.universal, origemHomebrewId: h.id });
+        if (it) { ctx.ficha.inventario.itens.push(it); ctx.alterou(); if (ctx.redesenhar) ctx.redesenhar(); UI.avisoOk(h.nome + " entrou nas Ações Homebrew da ficha (as ações usam os recursos dela)."); }
+        return;
+      }
       var objeto = destino.modo === "nativo" ? A().paraFicha(h) : A().narrativoPara(h, sistema);
       if (!objeto) { UI.avisoErro("Este item não tem como entrar nesta ficha."); return; }
       objeto.origemHomebrewId = h.id;
@@ -141,10 +150,17 @@
       return { ok: !!(r && r.ok), total: r ? r.total : 0 };
     };
   }
+  /* v9.35: os recursos nativos da ficha (PV/PE/SAN, PM, Vitalidade…),
+     por js/homebrew-recursos.js; sem o módulo, os da ficha Universal. */
+  function Rc() { return global.RAMAHomebrewRecursos; }
+  function recursosDe(ficha) { return Rc() ? Rc().recursos(ficha) : (ficha.status || []); }
   function usar(ctx, item, acao, botao, escolhas) {
     if (emUso[item.id]) return;
+    /* Teste com perícia nativa à mão: pergunta antes de rolar (opcional). */
+    var pers = Rc() && acao.teste && !(escolhas && escolhas.periciaPerguntada) ? Rc().pericias(ctx.ficha) : [];
+    if (pers.length) { escolherPericia(ctx, item, acao, botao, escolhas, pers); return; }
     var guardadas = [];
-    var res = A().executarAcao(item.universal, acao.chave, ctx.ficha, rolarDeVerdade(guardadas), escolhas);
+    var res = A().executarAcao(item.universal, acao.chave, { status: recursosDe(ctx.ficha) }, rolarDeVerdade(guardadas), escolhas);
     if (!res.ok && res.manual) { escolherRecurso(ctx, item, acao, botao, res.motivo); return; }
     if (!res.ok) { UI.avisoAtencao(res.motivo); return; }
     emUso[item.id] = true;
@@ -154,6 +170,9 @@
     if (acao.usos) linhas.push(el("p.t-mini", { texto: "Gasta 1 uso (restam " + (A().usosRestantes(Object.assign({}, item.universal, { estado: res.estado }), acao)) + " de " + acao.usos.max + ")." }));
     if (res.manual) linhas.push(el("p.t-mini.t-aviso", { texto: "Manual: " + (res.texto || "aplique o efeito à mão") + (acao.alvo === "escolher" ? " (alvo escolhido na hora)" : "") + "." }));
     var aplicado = false;
+    /* O id da operação nasce com a janela: confirmar de novo (clique
+       duplo, resposta perdida) não aplica duas vezes onde o motor tem id. */
+    var opId = "hbac-" + U.uuid().replace(/[^A-Za-z0-9]/g, "").slice(0, 24);
     UI.modal({
       titulo: item.nome + " · " + acao.nome,
       conteudo: el("div.pilha--curta", { class: "pilha" }, linhas.length ? linhas : [el("p", { texto: "Sem rolagem nem recurso: só o uso." })]),
@@ -163,10 +182,11 @@
           if (aplicado) return;
           aplicado = true;
           item.universal.estado = res.estado;
-          res.mudancas.forEach(function (m) {
-            var s = (ctx.ficha.status || []).filter(function (x) { return x.id === m.statusId; })[0];
-            if (s) s.atual = m.para;
-          });
+          if (res.mudancas.length) {
+            var rApl = Rc() ? Rc().aplicar(ctx.ficha, res.mudancas, opId) : { ok: true };
+            if (!Rc()) res.mudancas.forEach(function (m) { var s = (ctx.ficha.status || []).filter(function (x) { return x.id === m.statusId; })[0]; if (s) s.atual = m.para; });
+            if (rApl && rApl.ok === false) UI.avisoAtencao(rApl.motivo || "O recurso não foi alterado.");
+          }
           guardadas.forEach(function (r, i) { if (global.RAMARolagens) global.RAMARolagens.mostrar(r, { nome: item.nome + " · " + acao.nome + " (" + (res.rolagens[i] || {}).rotulo + ")", tipo: "item" }); });
           fechar();
           ctx.alterou();
@@ -176,9 +196,24 @@
       aoFechar: function () { delete emUso[item.id]; if (botao) botao.disabled = false; },
     });
   }
+  function escolherPericia(ctx, item, acao, botao, escolhas, pers) {
+    var campo = UI.campo({ rotulo: "Somar uma perícia da ficha ao teste (" + acao.teste + ")?", tipo: "selecao", opcoes: [{ valor: "", rotulo: "Não somar" }].concat(pers.map(function (p) { return { valor: p.id, rotulo: p.nome + " (" + (p.bonus >= 0 ? "+" : "") + p.bonus + ")" }; })), valor: "" });
+    UI.modal({
+      titulo: item.nome + " · " + acao.nome,
+      conteudo: el("div.pilha", {}, [campo, el("p.t-mini", { texto: "O bônus é o desta ficha agora. A escolha é sua: o R.A.M.A. não liga a ação a uma perícia sozinho." })]),
+      botoes: [
+        { rotulo: "Cancelar", classe: "r-botao--fantasma" },
+        { rotulo: "Rolar", classe: "r-botao--principal", aoClicar: function (fechar) {
+          var p = pers.filter(function (x) { return x.id === campo.entrada.value; })[0];
+          fechar();
+          usar(ctx, item, acao, botao, Object.assign({}, escolhas || {}, { periciaPerguntada: true }, p ? { bonusTeste: p.bonus, rotuloTeste: p.nome } : {}));
+        } },
+      ],
+    });
+  }
   function escolherRecurso(ctx, item, acao, botao, motivo) {
-    var status = ctx.ficha.status || [];
-    if (!status.length) { UI.avisoAtencao(motivo + " A ficha não tem recursos: aplique o efeito à mão."); return; }
+    var status = recursosDe(ctx.ficha);
+    if (!status.length) { UI.avisoAtencao(motivo + " " + (Rc() ? Rc().semRecursos(ctx.ficha) : "A ficha não tem recursos: aplique o efeito à mão.")); return; }
     var campo = UI.campo({ rotulo: "Qual recurso desta ficha?", tipo: "selecao", opcoes: status.map(function (s) { return { valor: s.id, rotulo: s.nome + " (" + s.atual + "/" + s.maximo + ")" }; }), valor: status[0].id });
     UI.modal({
       titulo: "Escolha o recurso",
@@ -186,9 +221,9 @@
       botoes: [
         { rotulo: "Cancelar", classe: "r-botao--fantasma" },
         { rotulo: "Continuar", classe: "r-botao--principal", aoClicar: function (fechar) {
-          var esc = {};
+          var esc = { periciaPerguntada: true };
           if (acao.efeito && (acao.efeito.tipo === "recuperar" || acao.efeito.tipo === "gastar")) esc.recursoEfeito = campo.entrada.value;
-          if (acao.custo && !(ctx.ficha.status || []).some(function (s) { return s.nome.toLowerCase() === acao.custo.recurso.toLowerCase(); })) esc.recursoCusto = campo.entrada.value;
+          if (acao.custo && !status.some(function (s) { return s.nome.toLowerCase() === acao.custo.recurso.toLowerCase(); })) esc.recursoCusto = campo.entrada.value;
           fechar();
           usar(ctx, item, acao, botao, esc);
         } },
@@ -222,5 +257,30 @@
     return el("button.r-botao.r-botao--fantasma.r-botao--mini.hbf-botao", { type: "button", texto: "Do Homebrew", onclick: function () { abrir(ctx, opcoes); } });
   }
 
-  global.RAMAHomebrewFicha = { abrir: abrir, botao: botao, acoesDoItem: acoesDoItem, camposDoItem: camposDoItem };
+  /* v9.35: as ações Universais numa ficha de SISTEMA (que não mostra o
+     inventário comum): os itens Universais com ações, guardados em
+     ficha.inventario.itens, num painel no fim da aba principal. */
+  function itensComAcoes(ficha) { return ((ficha.inventario || {}).itens || []).filter(function (i) { return i.universal && Array.isArray(i.universal.acoes) && i.universal.acoes.length; }); }
+  function secaoAcoes(no, ctx) {
+    if (!no || !no.appendChild || !ctx || !ctx.ficha) return no;
+    var itens = itensComAcoes(ctx.ficha);
+    if (!itens.length) return no;
+    var rec = recursosDe(ctx.ficha);
+    no.appendChild(el("section.pilha--curta.hbf-acoes-secao", { class: "pilha", "aria-label": "Ações Homebrew" }, [
+      el("h3.t-secao", { texto: "Ações Homebrew (Universal)" }),
+      el("p.t-mini", { texto: rec.length ? "Custos e efeitos usam os recursos desta ficha: " + rec.map(function (r) { return r.nome + " " + r.atual + "/" + r.maximo; }).join(" · ") + "." : (Rc() ? Rc().semRecursos(ctx.ficha) : "") }),
+      el("ul.hbf-lista", {}, itens.map(function (item) {
+        return el("li.hbf-item", {}, [
+          el("div.hbf-item__corpo", {}, [el("strong", { texto: item.nome }), item.descricao ? el("span.t-mini", { texto: item.descricao.slice(0, 160) }) : null, acoesDoItem(ctx, item)]),
+          ctx.podeEditar && ctx.podeEditar() && ctx.emEdicao && ctx.emEdicao() ? el("button.r-botao.r-botao--mini.r-botao--fantasma", { type: "button", texto: "Tirar", "aria-label": "Tirar " + item.nome, onclick: function () {
+            ctx.ficha.inventario.itens = ctx.ficha.inventario.itens.filter(function (x) { return x !== item; });
+            ctx.alterou(); if (ctx.redesenhar) ctx.redesenhar();
+          } }) : null,
+        ]);
+      })),
+    ]));
+    return no;
+  }
+
+  global.RAMAHomebrewFicha = { abrir: abrir, botao: botao, acoesDoItem: acoesDoItem, camposDoItem: camposDoItem, secaoAcoes: secaoAcoes, itensComAcoes: itensComAcoes };
 })(window);

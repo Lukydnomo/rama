@@ -1,5 +1,13 @@
 # O banco
 
+## Ações Homebrew nas fichas de sistema — v9.35
+
+Nenhuma aba nova. O item Universal com ações, numa ficha de sistema, fica
+em `inventario.itens` (o inventário comum de toda ficha), com
+`universal.estado.usos`. Os recursos gastos ou recuperados são os do
+bloco do sistema (`ordem.recursos`, `tormenta20.recursos`,
+`goblins.ferimentos`, `vampiro.vitalidade`…).
+
 ## Opções das variantes de Goblins — v9.33
 
 Nenhuma aba nova. No `HOMEBREW`, a coluna `tipo` aceita `pokepraga` e

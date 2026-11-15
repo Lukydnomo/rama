@@ -1126,6 +1126,8 @@
     var sobe = R().podeSubir(b);
     return el("div.t20-aba", {}, [
       secaoVersoesHomebrew(ctx),
+      /* v9.35: as Ações Homebrew (Universal) da ficha, com PV e PM. */
+      (function () { var d = el("div"); if (global.RAMAHomebrewFicha && global.RAMAHomebrewFicha.secaoAcoes) global.RAMAHomebrewFicha.secaoAcoes(d, ctx); return d.childNodes.length ? d : null; })(),
       T().secao("Experiência", [
         el("div.t20-xp", {}, [
           el("strong.t20-xp__nivel", { texto: "Nível " + c.nivel }),
