@@ -519,7 +519,9 @@
     ]);
   }
 
-  global.RAMASecaoOblivio = { blocoSuperior: blocoSuperior, aba: abaPersona };
+  /* v9.22: o painel "Homebrew desta ficha" (js/homebrew-versoes.js) no fim da aba. */
+  function comVersoes(fn) { return function (ctx) { var V = global.RAMAHomebrewVersoes; return V && V.comPainel ? V.comPainel(fn, "oblivio", "RAMAOblivioHomebrew", "RAMAOblivio")(ctx) : fn(ctx); }; }
+  global.RAMASecaoOblivio = { blocoSuperior: blocoSuperior, aba: comVersoes(abaPersona) };
   global.RAMASecaoOblivioHabilidades = { aba: abaHabilidades };
   global.RAMASecaoOblivioEstado = { aba: abaEstado };
   global.RAMAOblivioFicha = { operar: operar, narrar: narrar, contextoDeJogo: contextoDeJogo, rolador: rolador, mostrarRolagem: mostrarRolagem, composicao: composicao, tratarLimite: tratarLimite };

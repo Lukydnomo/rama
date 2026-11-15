@@ -667,7 +667,9 @@
     return el("div.pilha.brt-thriller", {}, partes);
   }
 
-  global.RAMASecaoBrutal = { blocoSuperior: blocoSuperior, aba: abaSobrevivente };
+  /* v9.22: o painel "Homebrew desta ficha" (js/homebrew-versoes.js) no fim da aba. */
+  function comVersoes(fn) { return function (ctx) { var V = global.RAMAHomebrewVersoes; return V && V.comPainel ? V.comPainel(fn, "brutal", "RAMABrutalHomebrew", "RAMABrutal")(ctx) : fn(ctx); }; }
+  global.RAMASecaoBrutal = { blocoSuperior: blocoSuperior, aba: comVersoes(abaSobrevivente) };
   global.RAMASecaoBrutalThriller = { aba: abaThriller };
   global.RAMABrutalFicha = { abrirTeste: abrirTeste, abrirAcao: abrirAcao, ui: ui };
 })(window);

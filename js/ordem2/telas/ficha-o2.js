@@ -741,7 +741,9 @@
   }
 
   global.RAMASecaoOrdem2 = { blocoSuperior: blocoSuperior, aba: abaPericias };
-  global.RAMASecaoOrdem2Habilidades = { aba: abaHabilidades };
+  /* v9.22: o painel "Homebrew desta ficha" (js/homebrew-versoes.js) no fim da aba. */
+  function comVersoes(fn) { return function (ctx) { var V = global.RAMAHomebrewVersoes; return V && V.comPainel ? V.comPainel(fn, "ordem2", "RAMAOrdem2Homebrew", "RAMAOrdem2")(ctx) : fn(ctx); }; }
+  global.RAMASecaoOrdem2Habilidades = { aba: comVersoes(abaHabilidades) };
   global.RAMASecaoOrdem2Investigacao = { aba: abaInvestigacao };
   global.RAMASecaoOrdem2Combate = { aba: abaCombate };
   global.RAMASecaoOrdem2Relacoes = { aba: abaRelacoes };

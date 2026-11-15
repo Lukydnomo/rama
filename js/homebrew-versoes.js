@@ -31,7 +31,9 @@
     return bloco;
   }
 
-  var ROTULOS = { classe: "Classe", origem: "Origem", trilha: "Trilha", raca: "Raça", divindade: "Divindade", magia: "Magia", poder: "Poder" };
+  var ROTULOS = { classe: "Classe", origem: "Origem", trilha: "Trilha", raca: "Raça", divindade: "Divindade", magia: "Magia", poder: "Poder",
+    ocupacao: "Ocupação", descritor: "Descritor", arquetipo: "Arquétipo", papel: "Papel", motivacao: "Motivação", mazela: "Mazela", fardo: "Fardo",
+    cla: "Clã", predador: "Predador", disciplina: "Disciplina", vantagem: "Vantagem", perfil: "Perfil" };
 
   /* O painel: as cópias e, depois de consultar a biblioteca, as versões
      novas. `aplicar(item)` muda a ficha (o chamador grava). */
@@ -85,5 +87,40 @@
     return caixa;
   }
 
-  global.RAMAHomebrewVersoes = { trocarChave: trocarChave, painel: painel, ROTULOS: ROTULOS };
+  /* v9.22: o painel na aba de uma ficha dos outros sistemas (Goblins,
+     BRUTAL, Oblívio, Vampiro, Ordem II). `bloco` é a chave do bloco na
+     ficha; H, o módulo de Homebrew do sistema; normalizar, o do motor.
+     Atualizar muda o bloco, renormaliza (tira a cópia antiga) e grava
+     pelo caminho de sempre da ficha (ctx.alterou). */
+  function secaoNaFicha(no, ctx, bloco, H, normalizar) {
+    var U = global.RAMAUtil, el = U.el;
+    if (!no || !no.appendChild || !H || !H.copiasDaFicha || !ctx || !ctx.ficha || !ctx.ficha[bloco]) return no;
+    if (!H.copiasDaFicha(ctx.ficha[bloco]).length) return no;
+    no.appendChild(el("section.pilha--curta.hb-versoes-secao", { class: "pilha", "aria-label": "Homebrew desta ficha" }, [
+      el("h3.t-secao", { texto: "Homebrew desta ficha" }),
+      painel({
+        copias: function () { return H.copiasDaFicha(ctx.ficha[bloco]); },
+        carregar: function () { return H.carregarBiblioteca(true); },
+        novas: function (bib) { return H.versoesNovas(ctx.ficha[bloco], bib); },
+        aplicar: function (item) {
+          var b = ctx.ficha[bloco];
+          H.atualizarVersao(b, item);
+          if (normalizar) { var n = normalizar(b); Object.keys(b).forEach(function (k) { delete b[k]; }); Object.keys(n).forEach(function (k) { b[k] = n[k]; }); }
+          if (ctx.alterou) ctx.alterou();
+          if (ctx.redesenhar) ctx.redesenhar();
+        },
+        podeEditar: !ctx.podeEditar || !!ctx.podeEditar(),
+      }),
+    ]));
+    return no;
+  }
+  function comPainel(fn, bloco, modulo, motor) {
+    return function (ctx) {
+      var no = fn.apply(this, arguments);
+      var M = global[motor];
+      return secaoNaFicha(no, ctx, bloco, global[modulo], M && M.normalizar ? function (b) { return M.normalizar(b); } : null);
+    };
+  }
+
+  global.RAMAHomebrewVersoes = { trocarChave: trocarChave, painel: painel, ROTULOS: ROTULOS, secaoNaFicha: secaoNaFicha, comPainel: comPainel };
 })(typeof window !== "undefined" ? window : globalThis);

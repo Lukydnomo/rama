@@ -82,5 +82,23 @@ const fU = copia(f1); H.atualizarVersao(fU, novas[0]);
 const fU2 = R.normalizar(fU);
 t.ok("atualizada: chave nova, cópia nova, atributos novos (Combate 2 + 2 − 1 = 3)", fU2.ocupacao === ocNova.chave && !fU2.homebrew.ocupacoes[oc.chave] && R.calcular(fU2).atributos.combate.valor === 3);
 
+t.grupo("Painel \u201cHomebrew desta ficha\u201d (v9.22)");
+{
+  (0, eval)(await Deno.readTextFile(new URL("../js/homebrew-versoes.js", import.meta.url)));
+  const U = G.RAMAUtil, elAntes = U.el, trocarAntes = U.trocar;
+  const no = (tag) => ({ tag, filhos: [], appendChild(x) { this.filhos.push(x); return x; } });
+  U.el = (tag, _a, filhos) => Object.assign(no(tag), { filhos: (filhos || []).filter(Boolean) });
+  U.trocar = (caixa, filhos) => { caixa.filhos = filhos; };
+  try {
+    const V = G.RAMAHomebrewVersoes;
+    const aba = () => no("div");
+    const comCopia = V.comPainel(aba, "goblins", "RAMAGoblinsHomebrew", "RAMAGoblins")({ ficha: { goblins: f1 }, podeEditar: () => true });
+    const semCopia = V.comPainel(aba, "goblins", "RAMAGoblinsHomebrew", "RAMAGoblins")({ ficha: { goblins: R.fichaVazia() }, podeEditar: () => true });
+    t.ok("com cópias, a aba ganha a seção no fim", comCopia.filhos.length === 1 && /hb-versoes-secao/.test(comCopia.filhos[0].tag));
+    t.ok("sem cópias, a aba fica como era", semCopia.filhos.length === 0);
+    t.ok("os rótulos dos tipos dos outros sistemas", V.ROTULOS.ocupacao === "Ocupação" && V.ROTULOS.cla === "Clã" && V.ROTULOS.perfil === "Perfil");
+  } finally { U.el = elAntes; U.trocar = trocarAntes; }
+}
+
 console.log(`\n${FORTE}${passaram} ok${FIM}, ${falharam ? VERMELHO : ""}${falharam} falha(s)${FIM}.`);
 if (falharam) Deno.exit(1);

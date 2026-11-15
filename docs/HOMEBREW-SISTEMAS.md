@@ -1922,3 +1922,75 @@ Continuam pendentes:
   painel está só em Ordem I e T20;
 - detalhes por sistema, como a escolha de poder geral dentro de uma
   habilidade de raça em T20 e a Ficha de Conhecimento em Vampiro.
+
+## v9.22.0 — Painel "Homebrew desta ficha" nos outros sistemas
+
+O painel de versões, que Ordem Paranormal e Tormenta20 já tinham (v9.15),
+chega às fichas de **Malditos Goblins** (aba Goblin), **BRUTAL** (aba
+Sobrevivente), **Oblívio** (aba Persona), **Vampiro** (aba Experiência) e
+**Ordem Paranormal RPG II** (aba Habilidades).
+
+### Como funciona
+
+- Aparece no fim da aba só quando a ficha guarda alguma cópia Homebrew.
+- Lista as cópias: nome, tipo (Ocupação, Descritor, Arquétipo, Papel,
+  Motivação, Mazela, Fardo, Clã, Predador, Disciplina, Vantagem, Perfil…)
+  e a versão.
+- **Procurar versões novas** consulta a biblioteca. Quando o mesmo
+  registro tem outra versão, oferece **Atualizar**, com confirmação. Quem
+  só pode ler a ficha não vê o botão, e o servidor confere de novo ao
+  gravar.
+- Atualizar troca a chave em todo o bloco, grava a cópia nova, roda o
+  `normalizar` do motor (a cópia antiga sai) e salva pelo caminho de
+  sempre da ficha.
+
+### Código
+
+`js/homebrew-versoes.js` ganhou:
+- `secaoNaFicha(no, ctx, bloco, H, normalizar)`;
+- `comPainel(aba, bloco, módulo, motor)`, que envolve a função da aba;
+- os rótulos dos tipos dos outros sistemas.
+
+Cada ficha envolve a aba com `comPainel`. As funções de versão
+(`copiasDaFicha`, `versoesNovas`, `atualizarVersao`) são as dos módulos
+`RAMA<Sistema>Homebrew`, que já existiam e têm testes.
+
+### Validação da v9.22.0
+
+**Automática.** `testes/executar-homebrew-goblins.js` ganhou 3
+verificações (agora 27):
+- com cópias, a aba ganha a seção no fim;
+- sem cópias, a aba fica como era;
+- os rótulos dos tipos.
+
+As outras suítes continuam verdes.
+
+**Na interface** (servidor local, conta sintética):
+- Criei a Ocupação Homebrew **Vidreiro** e um goblin com a cópia dela.
+- Depois mudei o Vidreiro na biblioteca.
+- Na ficha, o painel mostrou a cópia. **Procurar versões novas**
+  encontrou a versão nova, e **Atualizar** pediu confirmação.
+- Depois de confirmar, a ficha passou a mostrar a versão nova, com os
+  atributos novos. Relida do servidor, a ficha tinha só a cópia nova.
+
+### Publicar a v9.22.0
+
+**Servidor:** nada muda.
+
+**Site:**
+- `js/homebrew-versoes.js`;
+- `js/goblins/telas/ficha-goblins.js`, `js/brutal/telas/ficha-brutal.js`,
+  `js/oblivio/telas/ficha-oblivio.js`,
+  `js/vampiro/telas/ficha-vampiro.js`, `js/ordem2/telas/ficha-o2.js`;
+- `js/versao.js`.
+
+### Etapa 2 depois da v9.22
+
+Continuam pendentes:
+- em **Ordem I**:
+  - a classe que conjura rituais;
+  - a Classe Homebrew na transição de mundano ou sobrevivente para
+    agente;
+  - o elemento Homebrew em poderes paranormais e maldições;
+- detalhes por sistema, como a escolha de poder geral dentro de uma
+  habilidade de raça em T20 e a Ficha de Conhecimento em Vampiro.

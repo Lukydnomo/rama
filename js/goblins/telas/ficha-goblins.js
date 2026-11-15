@@ -1149,7 +1149,9 @@
     });
   }
 
-  global.RAMASecaoGoblins = { blocoSuperior: blocoSuperior, aba: abaGoblin };
+  /* v9.22: o painel "Homebrew desta ficha" (js/homebrew-versoes.js) no fim da aba. */
+  function comVersoes(fn) { return function (ctx) { var V = global.RAMAHomebrewVersoes; return V && V.comPainel ? V.comPainel(fn, "goblins", "RAMAGoblinsHomebrew", "RAMAGoblins")(ctx) : fn(ctx); }; }
+  global.RAMASecaoGoblins = { blocoSuperior: blocoSuperior, aba: comVersoes(abaGoblin) };
   global.RAMASecaoGoblinsCombate = { aba: abaCombate };
   global.RAMASecaoGoblinsTecnicas = { aba: abaTecnicas };
   global.RAMASecaoGoblinsEquipamento = { aba: abaEquipamento };

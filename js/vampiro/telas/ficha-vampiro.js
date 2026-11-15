@@ -814,7 +814,9 @@
   global.RAMASecaoVampiroSangue = { aba: abaSangue };
   global.RAMASecaoVampiroHumanidade = { aba: abaHumanidade };
   global.RAMASecaoVampiroVantagens = { aba: abaVantagens };
-  global.RAMASecaoVampiroExperiencia = { aba: abaExperiencia };
+  /* v9.22: o painel "Homebrew desta ficha" (js/homebrew-versoes.js) no fim da aba. */
+  function comVersoes(fn) { return function (ctx) { var V = global.RAMAHomebrewVersoes; return V && V.comPainel ? V.comPainel(fn, "vampiro", "RAMAVampiroHomebrew", "RAMAVampiro")(ctx) : fn(ctx); }; }
+  global.RAMASecaoVampiroExperiencia = { aba: comVersoes(abaExperiencia) };
   global.RAMASecaoVampiroEquipamento = { aba: abaEquipamento };
   global.RAMAVampiroFicha = { corrigir: corrigir, checagem: checagem, composicaoTexto: composicaoTexto };
 })(window);

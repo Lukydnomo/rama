@@ -118,6 +118,17 @@
 
   var CHANGELOG = [
     {
+      versao: "9.22.0",
+      codinome: "CARIMBO",
+      data: "15/11/2026",
+      mudancas: {
+        "Adicionado": [
+          "Painel \u201cHomebrew desta ficha\u201d nas fichas de Malditos Goblins, BRUTAL, Oblívio, Vampiro e Ordem Paranormal RPG II: mostra as cópias de Homebrew que o personagem usa, procura versões novas na biblioteca e atualiza, com confirmação, como já acontecia em Ordem Paranormal e Tormenta20.",
+        ],
+        "Técnico": ["js/homebrew-versoes.js ganhou secaoNaFicha e comPainel (o painel no fim da aba de cada sistema, com o normalizar do motor depois de atualizar) e os rótulos dos tipos dos outros sistemas. testes/executar-homebrew-goblins.js: 3 verificações novas (27)."],
+      },
+    },
+    {
       versao: "9.21.0",
       codinome: "GUARDIAO",
       data: "15/11/2026",
