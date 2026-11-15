@@ -118,6 +118,18 @@
 
   var CHANGELOG = [
     {
+      versao: "9.32.0",
+      codinome: "VIDRARIA",
+      data: "15/11/2026",
+      mudancas: {
+        "Adicionado": [
+          "BRUTAL: modelos de mesa Homebrew — Assassino (Ameaças, dados, PH, Testes de Susto, Ações Únicas, Apavoro), Ameaça (adjetivos, Ações Únicas do livro e o Intento Único com PH) e Apavoro (cena, recarga, custo em PH e texto). A Diretora escolhe o Assassino Homebrew como os prontos; o Intento Único e o Apavoro viram botões da Diretora, com os PH e a recarga contados pela mesa.",
+          "BRUTAL: a Vantagem Homebrew (tipo Habilidade) tem Estilo, custo em PT, recarga e um efeito que o motor aplica; a Diretora traz para a mesa em Vantagens da mesa → Da biblioteca.",
+        ],
+        "Técnico": ["catalogo.js: Ameaça (hbbm-), Apavoro (hbbp-) e Assassino (hbbk-) nos mesmos mapas; mesa.js: registrarHomebrew com os modelos, cópias em mesa.homebrew, configurarAssassino recebe as cópias (o servidor não tem a biblioteca) e as operações apavoroHomebrew e intentoUnicoHomebrew (da Diretora). Servidor: tipos assassino, ameaca e apavoro; Brutal.gs regenerado. campanha/index.html carrega js/brutal/homebrew-brutal.js. testes/executar-homebrew-brutal.js: 15 verificações novas (33)."],
+      },
+    },
+    {
       versao: "9.31.0",
       codinome: "ESPELHADO",
       data: "15/11/2026",

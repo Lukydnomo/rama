@@ -1,5 +1,13 @@
 # O banco
 
+## Modelos de mesa de BRUTAL — v9.32
+
+Nenhuma aba nova. No `HOMEBREW`, a coluna `tipo` aceita `assassino`,
+`ameaca` e `apavoro`. No estado da mesa, `homebrew.assassinos`,
+`homebrew.ameacas` e `homebrew.apavoros` guardam as cópias;
+`assassino.modelo`, `assassino.ameacas` e `assassino.apavoro` aceitam as
+chaves (`hbbk-…`, `hbbm-…`, `hbbp-…`). Opcional.
+
 ## Habilidade Homebrew de Oblívio — v9.31
 
 Nenhuma aba nova. Registro do tipo `habilidade` (subtipo `habilidade`),

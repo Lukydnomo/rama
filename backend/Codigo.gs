@@ -3424,7 +3424,7 @@ function acaoSalvarFoto(corpo, usuario) {
    HOMEBREW
    ===================================================================== */
 
-var TIPOS_HOMEBREW = ['item', 'arma', 'armadura', 'mochila', 'criatura', 'habilidade', 'ritual', 'classe', 'elemento', 'origem', 'trilha', 'raca', 'divindade', 'ocupacao', 'descritor', 'arquetipo', 'estilo', 'papel', 'motivacao', 'mazela', 'fardo', 'cla', 'predador', 'disciplina', 'vantagem', 'perfil', 'conhecimento'];
+var TIPOS_HOMEBREW = ['item', 'arma', 'armadura', 'mochila', 'criatura', 'habilidade', 'ritual', 'classe', 'elemento', 'origem', 'trilha', 'raca', 'divindade', 'ocupacao', 'descritor', 'arquetipo', 'estilo', 'papel', 'motivacao', 'mazela', 'fardo', 'cla', 'predador', 'disciplina', 'vantagem', 'perfil', 'conhecimento', 'assassino', 'ameaca', 'apavoro'];
 
 /* Até a v2.4.2, 'habilidade' faltava na lista acima e toda habilidade
    enviada à biblioteca era gravada com a coluna tipo = 'item' — mas o
@@ -3652,7 +3652,7 @@ function acaoSalvarHomebrew(corpo, usuario) {
 var GRUPOS_DE_HOMEBREW = ['item', 'habilidade', 'estrutural'];
 /* v9.8: os tipos estruturais que cada sistema já sabe usar de verdade
    (v9.9: Ordem ganhou origem e trilha; v9.10: Tormenta20, raça; v9.11: origem e divindade; v9.12: classe; v9.17: Goblins, ocupação e descritor; v9.18: BRUTAL, arquétipo e estilo; v9.19: Oblívio, papel, motivação, mazela e fardo; v9.20: Vampiro, clã, predador, disciplina e vantagem; v9.21: Ordem II, perfil e ocupação). */
-var ESTRUTURAIS_POR_SISTEMA = { ordem: ['classe', 'elemento', 'origem', 'trilha'], tormenta20: ['raca', 'origem', 'divindade', 'classe'], goblins: ['ocupacao', 'descritor'], brutal: ['arquetipo', 'estilo'], oblivio: ['papel', 'motivacao', 'mazela', 'fardo'], vampiro: ['cla', 'predador', 'disciplina', 'vantagem', 'conhecimento'], ordem2: ['perfil', 'ocupacao'] };
+var ESTRUTURAIS_POR_SISTEMA = { ordem: ['classe', 'elemento', 'origem', 'trilha'], tormenta20: ['raca', 'origem', 'divindade', 'classe'], goblins: ['ocupacao', 'descritor'], brutal: ['arquetipo', 'estilo', 'assassino', 'ameaca', 'apavoro'], oblivio: ['papel', 'motivacao', 'mazela', 'fardo'], vampiro: ['cla', 'predador', 'disciplina', 'vantagem', 'conhecimento'], ordem2: ['perfil', 'ocupacao'] };
 function conferirModeloDeHomebrew(dados, tipoPedido) {
   var m = dados.modelo;
   if (!m || typeof m !== 'object' || Array.isArray(m)) return { ok: false, erro: 'dados_invalidos', detalhe: 'modelo' };

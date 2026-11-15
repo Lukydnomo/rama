@@ -234,6 +234,8 @@ export function testarPacotesBackend({ t, preparar, novaConta, comoFn }) {
   t.ok("Perfil e Ocupação de Ordem II (v9.21)", perfO2.ok && ocupO2.ok && A({ acao: "ler_homebrew", homebrewId: perfO2.dados.id }).dados.tipo === "perfil");
   const fcV = A({ acao: "salvar_homebrew", dados: { tipo: "item", nome: "Os Vidreiros", modelo: Object.assign(modelo("vampiro", "estrutural", "conhecimento"), { def: { niveis: [{ nome: "Olho Treinado" }] } }) } });
   t.ok("Ficha de Conhecimento de Vampiro (v9.27)", fcV.ok && A({ acao: "ler_homebrew", homebrewId: fcV.dados.id }).dados.tipo === "conhecimento");
+  const mdB = ["assassino", "ameaca", "apavoro"].map((st) => A({ acao: "salvar_homebrew", dados: { tipo: "item", nome: "Modelo " + st, modelo: Object.assign(modelo("brutal", "estrutural", st), { def: {} }) } }));
+  t.ok("Modelos de mesa de BRUTAL: Assassino, Ameaça e Apavoro (v9.32)", mdB.every((r) => r.ok) && A({ acao: "ler_homebrew", homebrewId: mdB[0].dados.id }).dados.tipo === "assassino");
   t.recusa("Ocupação em Vampiro é recusada", A({ acao: "salvar_homebrew", dados: { tipo: "item", nome: "X", modelo: modelo("vampiro", "estrutural", "ocupacao") } }), "dados_invalidos");
   t.ok("listar com tipos [classe, elemento] devolve os três (classe de Ordem, de T20 e o elemento)", A({ acao: "listar_homebrew", tipos: ["classe", "elemento"] }).dados.length === 3);
   const pOrdemEst = salvar(A, { dados: dados("Livro do Vidro", "ordem"), conteudo: { adicionar: [vidro.dados.id, classeHb.dados.id] } });

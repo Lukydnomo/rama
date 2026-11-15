@@ -372,32 +372,60 @@
           botao("Caiu numa Armadilha (+2" + (M().temAmeaca(e, "estrategico") && e.cena === "suspense" ? " +1 Estratégico" : "") + ")", function () { operar({ tipo: "intento", chave: "armadilha", alvo: st.alvo || undefined }); }),
           botao("Suspirou de medo / nojo no Susto (+1)", function () { operar({ tipo: "intento", chave: "suspiro" }); }),
         ]),
+        /* v9.32: o Intento Único e o Apavoro de modelos Homebrew (a Diretora marca e usa). */
+        (function () {
+          var itH = K().INTENTOS_UNICOS[e.assassino.ameacas[0]], apH = K().APAVOROS[e.assassino.apavoro];
+          var partes = [];
+          if (itH && itH.homebrew) partes.push(botao("Intento Único: " + itH.texto + " (+" + itH.ph + ")", function () { operar({ tipo: "intentoUnicoHomebrew" }); }));
+          if (apH && apH.homebrew) partes.push(botao("Apavoro " + apH.nome + (apH.custo ? " (" + apH.custo + " PH)" : ""), function () { operar({ tipo: "apavoroHomebrew" }); }, { motivo: e.diretora.usos[e.assassino.apavoro] ? "Já usado — volta: " + K().RECARGAS[apH.recarga].nome + "." : (apH.cena === "Encontro" && !e.encontro ? "É de Encontro." : ""), dica: apH.texto }));
+          return partes.length ? el("div.faixa", {}, partes) : null;
+        })(),
       ]));
     }
 
     /* ---------- aba Assassino ---------- */
+    /* v9.32: os modelos de mesa Homebrew da biblioteca (uma consulta). */
+    var bibliotecaMesaPedida = false;
+    function pedirBibliotecaDaMesa() {
+      if (bibliotecaMesaPedida || !global.RAMABrutalHomebrew) return;
+      bibliotecaMesaPedida = true;
+      global.RAMABrutalHomebrew.carregarBiblioteca().then(function (r) { if (r && ((r.assassinos || []).length || (r.ameacas || []).length || (r.apavoros || []).length || (r.vantagens || []).length) && redesenharMesa) redesenharMesa(); });
+    }
+    var redesenharMesa = null;
+    /* As cópias dos modelos Homebrew que o Assassino escolhido usa (vão na operação). */
+    function copiasDosModelos(st) {
+      var out = {};
+      function por(g, c, d) { if (d && d.homebrew) (out[g] = out[g] || {})[c] = JSON.parse(JSON.stringify(d)); }
+      var pronto = K().ASSASSINOS[st.modelo];
+      if (pronto) por("assassinos", st.modelo, pronto);
+      (pronto ? pronto.ameacas : st.ameacas).forEach(function (m) { por("ameacas", m, K().AMEACAS[m]); });
+      var apv = pronto ? pronto.apavoro : st.apavoro;
+      if (apv) por("apavoros", apv, K().APAVOROS[apv]);
+      return out;
+    }
     function abaAssassino(e) {
+      pedirBibliotecaDaMesa();
       var a = e.assassino;
       var st = { modelo: a.modelo || "bruto", nome: a.nome, ameacas: a.ameacas.slice(), acoesUnicas: a.acoesUnicas.slice(), apavoro: a.apavoro, dados: a.dadosIniciais === null ? "" : a.dadosIniciais, ph: a.phIniciais === null ? "" : a.phIniciais, sustos: a.sustosPorEncontro === null ? "" : a.sustosPorEncontro, estigma: a.estigma, notas: a.notas, aplicarPilha: !a.nome };
       var area = el("div.pilha");
       function desenhar() {
         var pronto = K().ASSASSINOS[st.modelo];
-        var ameacasDefinidas = K().AMEACAS_DEFINIDAS.map(function (k) { return { valor: k, rotulo: K().AMEACAS[k].nome }; });
+        var ameacasDefinidas = (K().ameacasDefinidasDisponiveis ? K().ameacasDefinidasDisponiveis() : K().AMEACAS_DEFINIDAS).map(function (k) { return { valor: k, rotulo: K().AMEACAS[k].nome + (K().AMEACAS[k].homebrew ? " (Homebrew)" : "") }; });
         var permitidas = [];
         st.ameacas.forEach(function (m) { (K().AMEACAS[m] ? K().AMEACAS[m].acoesUnicas : []).forEach(function (x) { if (permitidas.indexOf(x) < 0) permitidas.push(x); }); });
         U.trocar(area, [
-          el("div.brt-cartas.brt-cartas--assassinos", {}, K().ORDEM_ASSASSINOS.map(function (k) {
+          el("div.brt-cartas.brt-cartas--assassinos", {}, (K().assassinosDisponiveis ? K().assassinosDisponiveis() : K().ORDEM_ASSASSINOS).map(function (k) {
             var d = K().ASSASSINOS[k], sel = st.modelo === k;
-            return el("button.brt-carta" + (sel ? ".brt-carta--escolhida" : ""), { type: "button", "aria-pressed": String(sel), style: "--brt-cor: #8b1020", onclick: function () { st.modelo = k; st.nome = d.nome; desenhar(); } }, [
-              el("img.brt-carta__arte", { src: U.url("assets/brutal/assassinos/" + k + ".webp"), alt: "", loading: "lazy" }),
-              el("span.brt-carta__nome", { texto: d.nome }),
+            return el("button.brt-carta" + (d.homebrew ? ".brt-carta--texto" : "") + (sel ? ".brt-carta--escolhida" : ""), { type: "button", "aria-pressed": String(sel), style: "--brt-cor: #8b1020", onclick: function () { st.modelo = k; st.nome = d.nome; desenhar(); } }, [
+              d.homebrew ? null : el("img.brt-carta__arte", { src: U.url("assets/brutal/assassinos/" + k + ".webp"), alt: "", loading: "lazy" }),
+              el("span.brt-carta__nome", { texto: d.nome + (d.homebrew ? " (Homebrew)" : "") }),
             ]);
           }).concat([el("button.brt-carta.brt-carta--texto" + (st.modelo === "personalizado" ? ".brt-carta--escolhida" : ""), { type: "button", "aria-pressed": String(st.modelo === "personalizado"), onclick: function () { st.modelo = "personalizado"; desenhar(); } }, [el("span.brt-carta__nome", { texto: "Personalizado" })])])),
           pronto ? el("dl.r-dados", {}, [
             el("dt", { texto: "Ameaças" }), el("dd", { texto: pronto.ameacas.map(function (m) { return K().AMEACAS[m].nome + (K().AMEACAS[m].definida ? "" : " (sem descrição no Corte Rápido)"); }).join(" · ") }),
             el("dt", { texto: "Dados / PH / Sustos por Encontro" }), el("dd", { texto: pronto.dados + " / " + pronto.ph + " / " + pronto.sustos }),
             el("dt", { texto: "Ações Únicas" }), el("dd", { texto: pronto.acoesUnicas.map(function (x) { return K().ACOES_ASSASSINO[x].nome; }).join(", ") }),
-            el("dt", { texto: "Apavoro" }), el("dd", { texto: K().APAVOROS[pronto.apavoro].nome }),
+            el("dt", { texto: "Apavoro" }), el("dd", { texto: pronto.apavoro && K().APAVOROS[pronto.apavoro] ? K().APAVOROS[pronto.apavoro].nome + (K().APAVOROS[pronto.apavoro].homebrew ? " (Homebrew): " + K().APAVOROS[pronto.apavoro].texto : "") : "—" }),
             el("dt", { texto: "Intento Único" }), el("dd", { texto: (K().INTENTOS_UNICOS[pronto.ameacas[0]] || {}).texto || "—" }),
             el("dd", { texto: pronto.resumo }),
           ]) : el("div.pilha", {}, [
@@ -405,7 +433,7 @@
             selecao("Ameaça Principal", [{ valor: "", rotulo: "—" }].concat(ameacasDefinidas), st.ameacas[0] || "", function (v) { st.ameacas[0] = v; st.ameacas = st.ameacas.filter(Boolean); desenhar(); }),
             selecao("Segunda Ameaça", [{ valor: "", rotulo: "—" }].concat(ameacasDefinidas), st.ameacas[1] || "", function (v) { st.ameacas[1] = v; st.ameacas = st.ameacas.filter(Boolean); desenhar(); }),
             el("fieldset.brt-recursos-teste", {}, [el("legend", { texto: "Ações Únicas (uma por Ameaça)" })].concat(permitidas.map(function (k) { return marca(K().ACOES_ASSASSINO[k].nome, st.acoesUnicas.indexOf(k) >= 0, function (v) { var i = st.acoesUnicas.indexOf(k); if (v && i < 0) st.acoesUnicas.push(k); if (!v && i >= 0) st.acoesUnicas.splice(i, 1); }); }))),
-            selecao("Apavoro", [{ valor: "", rotulo: "—" }].concat(Object.keys(K().APAVOROS).map(function (k) { return { valor: k, rotulo: K().APAVOROS[k].nome }; })), st.apavoro, function (v) { st.apavoro = v; }),
+            selecao("Apavoro", [{ valor: "", rotulo: "—" }].concat(Object.keys(K().APAVOROS).map(function (k) { return { valor: k, rotulo: K().APAVOROS[k].nome + (K().APAVOROS[k].homebrew ? " (Homebrew)" : "") }; })), st.apavoro, function (v) { st.apavoro = v; }),
             el("div.faixa", {}, [
               UI.campo({ rotulo: "Dados iniciais", tipo: "numero", valor: st.dados, aoMudar: function (v) { st.dados = v; } }),
               UI.campo({ rotulo: "PH iniciais", tipo: "numero", valor: st.ph, aoMudar: function (v) { st.ph = v; } }),
@@ -417,12 +445,13 @@
           UI.campo({ rotulo: "Notas da Diretora", tipo: "area", linhas: 3, valor: st.notas, limite: 2000, aoMudar: function (v) { st.notas = v; } }),
           marca("Pôr a Pilha e os PH iniciais agora", st.aplicarPilha, function (v) { st.aplicarPilha = v; }),
           el("div.faixa", {}, [
-            botao("Salvar o Assassino", function () { operar({ tipo: "configurarAssassino", modelo: st.modelo, nome: st.nome, ameacas: st.ameacas, acoesUnicas: st.acoesUnicas, apavoro: st.apavoro, dados: st.dados, ph: st.ph, sustos: st.sustos, estigma: st.estigma, notas: st.notas, aplicarPilha: st.aplicarPilha }); }, { mini: false, classe: "r-botao--principal" }),
+            botao("Salvar o Assassino", function () { operar({ tipo: "configurarAssassino", modelo: st.modelo, nome: st.nome, ameacas: st.ameacas, acoesUnicas: st.acoesUnicas, apavoro: st.apavoro, dados: st.dados, ph: st.ph, sustos: st.sustos, estigma: st.estigma, notas: st.notas, aplicarPilha: st.aplicarPilha, homebrew: copiasDosModelos(st) }); }, { mini: false, classe: "r-botao--principal" }),
             a.nome ? botao(a.revelado ? "Ocultar das jogadoras" : "Revelar às jogadoras", function () { operar({ tipo: "revelarAssassino", revelado: !a.revelado }); }) : null,
           ]),
         ]);
       }
       desenhar();
+      redesenharMesa = desenhar;
       var mudar = null;
       if (a.apavoro === "mudandoDePlanos") {
         var sm = { de: a.acoesUnicas[0] || "", para: "" };
@@ -465,6 +494,17 @@
           ]),
           UI.campo({ rotulo: "Texto", tipo: "area", linhas: 2, limite: 400, aoMudar: function (v) { nova.texto = v; } }),
           botao("Criar a Vantagem", function () { operar({ tipo: "vantagemDaMesa", vantagem: nova }); }),
+          /* v9.32: uma Vantagem Homebrew da biblioteca entra como Vantagem da mesa (cópia). */
+          (function () {
+            pedirBibliotecaDaMesa();
+            var bib = global.RAMABrutalHomebrew && global.RAMABrutalHomebrew.vantagensDaBiblioteca ? global.RAMABrutalHomebrew.vantagensDaBiblioteca() : [];
+            if (!bib.length) return null;
+            var escolhida = "";
+            return el("div.faixa", {}, [
+              selecao("Da biblioteca (Vantagem Homebrew)", [{ valor: "", rotulo: "Escolha…" }].concat(bib.map(function (v, i) { return { valor: String(i), rotulo: v.nome + " · " + v.custo + " PT · " + K().EFEITOS_DE_VANTAGEM[v.efeito].nome }; })), "", function (v) { escolhida = v; }),
+              botao("Trazer para a mesa", function () { if (escolhida === "") return; operar({ tipo: "vantagemDaMesa", vantagem: Object.assign({}, bib[Number(escolhida)], { id: "" }) }); }),
+            ]);
+          })(),
         ])),
       ]);
     }

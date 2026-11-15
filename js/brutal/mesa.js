@@ -96,6 +96,22 @@
     if (!k.ehArquetipoHomebrew) return out;
     Object.keys(obj(x.estilos)).slice(0, 20).forEach(function (c) { if (k.ehEstiloHomebrew(c)) out.estilos[c] = k.registrarEstiloHomebrew(k.normalizarEstiloHomebrew(Object.assign({}, x.estilos[c], { chave: c }))); });
     Object.keys(obj(x.arquetipos)).slice(0, 20).forEach(function (c) { if (k.ehArquetipoHomebrew(c)) out.arquetipos[c] = k.registrarArquetipoHomebrew(k.normalizarArquetipoHomebrew(Object.assign({}, x.arquetipos[c], { chave: c }))); });
+    /* v9.32: os modelos de mesa (Ameaças e Apavoros antes do Assassino, que aponta para eles). */
+    if (k.ehAmeacaHomebrew) {
+      [["ameacas", k.ehAmeacaHomebrew, k.normalizarAmeacaHomebrew, k.registrarAmeacaHomebrew], ["apavoros", k.ehApavoroHomebrew, k.normalizarApavoroHomebrew, k.registrarApavoroHomebrew], ["assassinos", k.ehAssassinoHomebrew, k.normalizarAssassinoHomebrew, k.registrarAssassinoHomebrew]].forEach(function (g) {
+        Object.keys(obj(x[g[0]])).slice(0, 20).forEach(function (c) { if (g[1](c)) { var d = g[3](g[2](Object.assign({}, x[g[0]][c], { chave: c }))); if (d) (out[g[0]] = out[g[0]] || {})[c] = d; } });
+      });
+    }
+    return out;
+  }
+  function temHomebrewDaMesa(h) { return ["arquetipos", "estilos", "ameacas", "apavoros", "assassinos"].some(function (g) { return Object.keys(obj(h[g])).length; }); }
+  /* As cópias dos modelos que o Assassino da mesa usa. */
+  function copiasDoAssassino(e) {
+    var k = K(), a = e.assassino, out = {};
+    function por(g, c) { var d = g === "assassinos" ? k.ASSASSINOS[c] : g === "ameacas" ? k.AMEACAS[c] : k.APAVOROS[c]; if (d && d.homebrew) (out[g] = out[g] || {})[c] = JSON.parse(JSON.stringify(d)); }
+    if (a.modelo && k.ehAssassinoHomebrew && k.ehAssassinoHomebrew(a.modelo)) por("assassinos", a.modelo);
+    a.ameacas.forEach(function (c) { if (k.ehAmeacaHomebrew && k.ehAmeacaHomebrew(c)) por("ameacas", c); });
+    if (k.ehApavoroHomebrew && k.ehApavoroHomebrew(a.apavoro)) por("apavoros", a.apavoro);
     return out;
   }
 
@@ -133,11 +149,11 @@
     var b = obj(bruto);
     var e = estadoVazio();
     var hbMesa = registrarHomebrew(b.homebrew);
-    if (Object.keys(hbMesa.arquetipos).length || Object.keys(hbMesa.estilos).length) e.homebrew = JSON.parse(JSON.stringify(hbMesa));
+    if (temHomebrewDaMesa(hbMesa)) e.homebrew = JSON.parse(JSON.stringify(hbMesa));
     e.sessao = Math.max(1, inteiro(b.sessao, 1));
     e.cena = ["livre", "suspense", "encontro"].indexOf(b.cena) >= 0 ? b.cena : "livre";
     var a = obj(b.assassino), av = assassinoVazio();
-    av.modelo = K().ASSASSINOS[a.modelo] || a.modelo === "personalizado" ? a.modelo : "";
+    av.modelo = K().ASSASSINOS[a.modelo] || a.modelo === "personalizado" ? a.modelo : (K().ehAssassinoHomebrew && K().ehAssassinoHomebrew(a.modelo) ? "personalizado" : "");
     av.nome = texto(a.nome, 80);
     av.ameacas = lista(a.ameacas).filter(function (x, i, t) { return !!K().AMEACAS[x] && t.indexOf(x) === i; }).slice(0, 2);
     av.acoesUnicas = lista(a.acoesUnicas).filter(function (x, i, t) { var d = K().ACOES_ASSASSINO[x]; return d && d.tipo === "unica" && t.indexOf(x) === i; }).slice(0, 4);
@@ -889,7 +905,7 @@
      A PORTA: aplicar(estado, op, papel, rolar)
      ================================================================= */
 
-  var OPS_DA_DIRETORA = ["configurarAssassino", "configurarLacunas", "vantagemDaMesa", "novoThriller", "novaSessao", "mudarCena", "presenca",
+  var OPS_DA_DIRETORA = ["configurarAssassino", "configurarLacunas", "vantagemDaMesa", "apavoroHomebrew", "intentoUnicoHomebrew", "novoThriller", "novaSessao", "mudarCena", "presenca",
     "darPt", "ajustar", "ajustarDiretora", "marcador", "estilo", "situacao", "pedirTeste", "encerrarPedido", "intento", "resolverPendencia",
     "iniciarEncontro", "encerrarEncontro", "passarVez", "fimDoTurno", "assustar", "ferir", "acidentar", "resolverSeis", "incapacitar", "segurar",
     "matar", "matarPorPossessao", "escapar", "possuir", "restringir", "devorar", "sintoCheiro", "mudandoDePlanos", "revelarAssassino"];
@@ -931,6 +947,8 @@
     var s = o.alvo !== undefined ? sob(e, o.alvo) : null;
     switch (tipo) {
       case "configurarAssassino": {
+        /* v9.32: os modelos Homebrew vêm junto (o servidor não tem a biblioteca). */
+        if (o.homebrew) registrarHomebrew(o.homebrew);
         var modelo = K().ASSASSINOS[o.modelo] ? o.modelo : "personalizado";
         var base = K().ASSASSINOS[o.modelo];
         var a = e.assassino;
@@ -960,7 +978,33 @@
         a.notas = texto(o.notas, 2000);
         if (!base && (a.dadosIniciais === null || a.phIniciais === null || a.sustosPorEncontro === null)) return { ok: false, motivo: "Um Assassino personalizado precisa de dados iniciais, PH iniciais e Testes de Susto por Encontro (o Corte Rápido não traz o Nível de Brutalidade)." };
         if (o.aplicarPilha) { e.diretora.pilha = a.dadosIniciais || 0; e.diretora.ph = a.phIniciais || 0; log(c, "Pilha da Diretora: " + e.diretora.pilha + " dado(s); " + e.diretora.ph + " PH.", true); }
+        /* As cópias dos modelos Homebrew em uso ficam na mesa. */
+        var cpA = copiasDoAssassino(e);
+        if (Object.keys(cpA).length) {
+          e.homebrew = e.homebrew || { versao: 1, arquetipos: {}, estilos: {} };
+          Object.keys(cpA).forEach(function (g) { e.homebrew[g] = Object.assign({}, e.homebrew[g] || {}, cpA[g]); });
+        }
         log(c, "Assassino: " + a.nome + " (" + a.ameacas.map(function (m) { return K().AMEACAS[m].nome; }).join(" ") + ").", true);
+        return { ok: true };
+      }
+      /* v9.32: o Apavoro Homebrew do Assassino — paga os PH, marca o uso
+         (volta pela recarga dele) e registra; o efeito é o do texto. */
+      case "apavoroHomebrew": {
+        var kap = e.assassino.apavoro, ap = K().APAVOROS[kap];
+        if (!ap || !ap.homebrew) return { ok: false, motivo: "O Apavoro deste Assassino não é Homebrew." };
+        if (e.diretora.usos[kap]) return { ok: false, motivo: ap.nome + " já foi usado — volta: " + K().RECARGAS[ap.recarga].nome + "." };
+        if (ap.cena === "Encontro" && !e.encontro) return { ok: false, motivo: ap.nome + " é de Encontro." };
+        if (ap.custo > e.diretora.ph) return { ok: false, motivo: "Faltam Pontos de Horror: custa " + ap.custo + ", há " + e.diretora.ph + "." };
+        e.diretora.ph -= ap.custo;
+        if (ap.recarga !== "semRestricao") e.diretora.usos[kap] = true;
+        log(c, "Apavoro " + ap.nome + (ap.custo ? " (−" + ap.custo + " PH)" : "") + ": " + (ap.texto || "efeito da mesa") + ".", true);
+        return { ok: true };
+      }
+      /* v9.32: o Intento Único de uma Ameaça Homebrew (a Diretora marca). */
+      case "intentoUnicoHomebrew": {
+        var km = e.assassino.ameacas[0], it = K().INTENTOS_UNICOS[km];
+        if (!it || !it.homebrew) return { ok: false, motivo: "A Ameaça Principal não tem Intento Único Homebrew." };
+        ganharPh(c, it.ph, "Intento Único (" + K().AMEACAS[km].nome + "): " + it.texto);
         return { ok: true };
       }
       case "revelarAssassino": e.assassino.revelado = o.revelado !== false; log(c, e.assassino.revelado ? "O Assassino foi revelado: " + e.assassino.nome + "." : "O Assassino voltou a ficar oculto."); return { ok: true };

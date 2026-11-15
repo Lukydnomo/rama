@@ -1,5 +1,13 @@
 # A API
 
+## Modelos de mesa de BRUTAL — v9.32
+
+- `salvar_homebrew`: o grupo `estrutural` de `brutal` aceita `assassino`,
+  `ameaca` e `apavoro`.
+- Operação da mesa `configurarAssassino`: aceita `homebrew` (as cópias
+  dos modelos usados). Operações novas da Diretora: `apavoroHomebrew` e
+  `intentoUnicoHomebrew`.
+
 ## Ficha de Conhecimento Homebrew de Vampiro — v9.27
 
 - `salvar_homebrew`: o grupo `estrutural` de `vampiro` aceita

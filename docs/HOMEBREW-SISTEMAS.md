@@ -279,7 +279,7 @@ nova, e o modelo vai no `dadosJson` de sempre.
 - **Vampiro**: ~~Clã, Predador, Disciplina, Vantagem, Defeito~~ (v9.20.0) e
   ~~Ficha de Conhecimento~~ (v9.27.0).
 - **Goblins**: ~~Ocupação, Descritor~~ (v9.17.0) e opções das variantes.
-- **BRUTAL**: Arquétipo, Estilo e modelos de mesa.
+- **BRUTAL**: Arquétipo, Estilo e ~~modelos de mesa~~ (v9.32.0).
 - **Habilidades Homebrew no motor** de T20, Vampiro, Goblins, Oblívio e
   BRUTAL: resolver ids de Homebrew junto com o catálogo, com cópia
   versionada na ficha.
@@ -2722,4 +2722,104 @@ implantação. **`setupRama()` não é necessário.**
   `js/oblivio/habilidades.js`, `js/oblivio/homebrew-oblivio.js`;
 - `js/oblivio/telas/ficha-oblivio.js`;
 - `js/homebrew-adaptadores.js`, `js/paginas/homebrew-editor.js`;
+- `js/versao.js`.
+
+## v9.32.0 — BRUTAL: modelos de mesa e Vantagem Homebrew
+
+### Os modelos de mesa
+
+**Homebrew → + Criar → BRUTAL** ganhou três tipos, cada um com uma etapa
+e a revisão:
+- **Ameaça**:
+  - nome, adjetivos e texto;
+  - as **Ações Únicas** dela, do livro;
+  - o **Intento Único** (opcional), com texto e PH (+1 a +4);
+- **Apavoro**: nome, **cena** (Livre ou Encontro), **recarga** (sem
+  restrição, fim ou início de Encontro, início de sessão, cena Livre),
+  **custo** em PH e o texto;
+- **Assassino**:
+  - as **Ameaças** (a primeira é a Principal), do livro ou Homebrew;
+  - dados, PH e Testes de Susto por Encontro iniciais;
+  - as **Ações Únicas**, das Ameaças escolhidas;
+  - o **Apavoro**, do livro ou Homebrew;
+  - o resumo.
+
+Chaves `hbbm-`, `hbbp-` e `hbbk-`, versionadas, nos mesmos mapas do
+Corte Rápido (`AMEACAS`, `INTENTOS_UNICOS`, `APAVOROS`, `ASSASSINOS`).
+
+### Na mesa da Diretora
+
+- **Assassino**: a carta do Assassino Homebrew aparece depois dos quatro
+  prontos, com "(Homebrew)" e sem arte. Escolhê-la dá os valores do
+  modelo, como nos prontos. No Personalizado, as Ameaças e o Apavoro
+  Homebrew também aparecem.
+- **Salvar o Assassino** leva junto as cópias dos modelos usados. O
+  servidor não tem a biblioteca e roda o mesmo motor. A mesa guarda as
+  cópias em `homebrew.assassinos`, `homebrew.ameacas` e
+  `homebrew.apavoros`.
+- **Jogo → Intentos**: o Intento Único de uma Ameaça Homebrew vira um
+  botão. A Diretora marca quando acontece e ganha os PH.
+- **Apavoro Homebrew**: um botão que paga os PH, marca o uso e registra o
+  efeito do texto. O uso volta pela recarga do Apavoro, como os do livro.
+  Um Apavoro de Encontro só vale num Encontro.
+- As operações novas (`apavoroHomebrew`, `intentoUnicoHomebrew`) são só
+  da Diretora, e o servidor confere isso.
+
+### A Vantagem
+
+**Habilidade → Vantagem**, no formato das Vantagens da mesa:
+- **Estilo**, ou Geral;
+- **custo** em PT;
+- **recarga**;
+- **efeito** que o motor aplica: +1 dado, reduzir a próxima Ferida, um
+  sucesso no Partir Para Cima, Recurso e os demais da lista, ou "só
+  registra".
+
+Em **Lacunas e Vantagens → Vantagens da mesa**, a Diretora escolhe
+**Da biblioteca** e a Vantagem entra na mesa como cópia.
+
+Um registro antigo, com Tensão e janela em texto, vira custo (o número da
+Tensão), efeito "só registra" e "Janela: …" no texto. Nada se perde.
+
+### Validação da v9.32.0
+
+**Automática.** `testes/executar-homebrew-brutal.js` ganhou 15
+verificações (agora 33):
+- as três definições;
+- configurar o Assassino Homebrew com as cópias;
+- a mesa reaberta sem a biblioteca;
+- o Apavoro: recusado fora de Encontro; num Encontro, paga, marca e
+  recusa o segundo uso;
+- o Intento Único e a restrição à Diretora;
+- a Vantagem para a mesa, inclusive o registro antigo;
+- a biblioteca, o destino e o pacote;
+- as prévias.
+
+`testes/pacotes-backend.js` verifica que o servidor aceita os três tipos.
+As outras suítes continuam verdes.
+
+**Na interface** (servidor local, conta sintética):
+- Criei pelos editores a Ameaça **Vidraceiro** (Intento +2), o Apavoro
+  **Estilhaçar!** (Encontro, 4 PH) e o Assassino **O Vidraceiro**, que
+  usa os dois. A revisão do Assassino mostrou "Dados 5 · PH 2 · Testes de
+  Susto por Encontro 2".
+- Numa campanha de BRUTAL sintética, a aba Assassino mostrou "O
+  Vidraceiro (Homebrew)". Os dados mostraram o Apavoro e o Intento.
+  Salvei. O estado da mesa, lido do servidor, tinha o modelo, a Ameaça, o
+  Apavoro e as três cópias.
+- Na aba Jogo, "Intento Único: … (+2)" deu os 2 PH. O botão do Apavoro
+  ficou desabilitado fora do Encontro ("É de Encontro").
+
+### Publicar a v9.32.0
+
+**Servidor:** troque **`Codigo.gs`** e **`Brutal.gs`** e crie uma versão
+nova da implantação. **`setupRama()` não é necessário.**
+
+**Site:**
+- `js/brutal/catalogo.js`, `js/brutal/mesa.js`,
+  `js/brutal/homebrew-brutal.js`, `js/brutal/telas/campanha-brutal.js`;
+- `js/paginas/homebrew-brutal.js`, `js/paginas/homebrew-editor.js`,
+  `js/paginas/homebrew.js`;
+- `js/homebrew-adaptadores.js`, `js/pacotes-homebrew.js`;
+- `campanha/index.html`;
 - `js/versao.js`.

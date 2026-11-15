@@ -393,7 +393,64 @@
   function ordemDeIniciativa(k) { var a = ARQUETIPOS[k]; return a ? (a.iniciativa || 99) + (a.homebrew ? 0.5 : 0) : 99; }
   function arquetiposPorIniciativa() { return INICIATIVA.concat(ARQ_HB.filter(function (k) { return !!ARQUETIPOS[k]; })).sort(function (a, b) { return ordemDeIniciativa(a) - ordemDeIniciativa(b); }); }
 
+  /* =================================================================
+     v9.32 — MODELOS DE MESA HOMEBREW (chaves hbbm-/hbbp-/hbbk-<id>-<hash>),
+     nas estruturas do Corte Rápido e nos MESMOS mapas:
+       Ameaça    adjetivos, texto, as Ações Únicas (do livro) e o Intento
+                 Único (texto e PH; a Diretora marca quando acontece)
+       Apavoro   cena, recarga, custo em PH e texto (o efeito é da mesa)
+       Assassino as Ameaças (a primeira é a Principal), dados, PH e Testes
+                 de Susto iniciais, as Ações Únicas, o Apavoro e o resumo
+     Puro (o servidor roda).
+     ================================================================= */
+  var PADRAO_AME = /^hbbm-[a-z0-9-]{3,30}$/, PADRAO_APV = /^hbbp-[a-z0-9-]{3,30}$/, PADRAO_ASS = /^hbbk-[a-z0-9-]{3,30}$/;
+  var AME_HB = [], ASS_HB = [];
+  var RECARGAS_DE_APAVORO = ["semRestricao", "fimEncontro", "inicioEncontro", "inicioSessao", "livre"];
+  function ehAmeacaHomebrew(k) { return PADRAO_AME.test(String(k || "")); }
+  function ehApavoroHomebrew(k) { return PADRAO_APV.test(String(k || "")); }
+  function ehAssassinoHomebrew(k) { return PADRAO_ASS.test(String(k || "")); }
+  function unicasOk(l) { return (Array.isArray(l) ? l : []).map(String).filter(function (k, i, x) { return ACOES_ASSASSINO[k] && ACOES_ASSASSINO[k].tipo === "unica" && x.indexOf(k) === i; }).slice(0, 4); }
+  function normalizarAmeacaHomebrew(bruto) {
+    var b = hbObj(bruto);
+    var d = { chave: ehAmeacaHomebrew(b.chave) ? b.chave : "", nome: hbTx(b.nome, 40).trim() || "Ameaça Homebrew", homebrew: true, homebrewId: hbTx(b.homebrewId, 80), pagina: 0, definida: true,
+      adjetivos: hbTx(b.adjetivos, 80).trim(), texto: hbTx(b.texto, 600).trim(), acoesUnicas: unicasOk(b.acoesUnicas),
+      intentoTexto: hbTx(b.intentoTexto, 300).trim(), intentoPh: hbInt(b.intentoPh, 1, 4, 1) };
+    if (!d.chave) d.chave = hbChave("hbbm-", d);
+    d.intento = d.intentoTexto ? d.chave : "";
+    return d;
+  }
+  function registrarAmeacaHomebrew(def) {
+    if (!def || !ehAmeacaHomebrew(def.chave)) return null;
+    AMEACAS[def.chave] = def;
+    if (def.intentoTexto) INTENTOS_UNICOS[def.chave] = { texto: def.intentoTexto, ph: def.intentoPh, auto: false, homebrew: true };
+    if (AME_HB.indexOf(def.chave) < 0) AME_HB.push(def.chave);
+    return def;
+  }
+  function normalizarApavoroHomebrew(bruto) {
+    var b = hbObj(bruto);
+    var d = { chave: ehApavoroHomebrew(b.chave) ? b.chave : "", nome: hbTx(b.nome, 40).trim() || "Apavoro Homebrew", homebrew: true, homebrewId: hbTx(b.homebrewId, 80), pagina: 0,
+      cena: b.cena === "Encontro" ? "Encontro" : "Livre", recarga: RECARGAS_DE_APAVORO.indexOf(b.recarga) >= 0 ? b.recarga : "fimEncontro", custo: hbInt(b.custo, 0, 10, 3), texto: hbTx(b.texto, 600).trim() };
+    if (!d.chave) d.chave = hbChave("hbbp-", d);
+    return d;
+  }
+  function registrarApavoroHomebrew(def) { if (!def || !ehApavoroHomebrew(def.chave)) return null; APAVOROS[def.chave] = def; return def; }
+  function normalizarAssassinoHomebrew(bruto) {
+    var b = hbObj(bruto);
+    var d = { chave: ehAssassinoHomebrew(b.chave) ? b.chave : "", nome: hbTx(b.nome, 40).trim() || "Assassino Homebrew", homebrew: true, homebrewId: hbTx(b.homebrewId, 80), pagina: 0,
+      ameacas: (Array.isArray(b.ameacas) ? b.ameacas : []).map(String).filter(function (k, i, l) { return ((AMEACAS[k] && AMEACAS[k].definida) || ehAmeacaHomebrew(k)) && l.indexOf(k) === i; }).slice(0, 2),
+      dados: hbInt(b.dados, 0, 30, 3), ph: hbInt(b.ph, 0, 30, 1), sustos: hbInt(b.sustos, 0, 20, 2),
+      acoesUnicas: unicasOk(b.acoesUnicas), apavoro: APAVOROS[b.apavoro] || ehApavoroHomebrew(b.apavoro) ? b.apavoro : "", resumo: hbTx(b.resumo, 600).trim() };
+    if (!d.chave) d.chave = hbChave("hbbk-", d);
+    return d;
+  }
+  function registrarAssassinoHomebrew(def) { if (!def || !ehAssassinoHomebrew(def.chave)) return null; ASSASSINOS[def.chave] = def; if (ASS_HB.indexOf(def.chave) < 0) ASS_HB.push(def.chave); return def; }
+
   global.RAMABrutalCatalogo = {
+    ehAmeacaHomebrew: ehAmeacaHomebrew, ehApavoroHomebrew: ehApavoroHomebrew, ehAssassinoHomebrew: ehAssassinoHomebrew,
+    normalizarAmeacaHomebrew: normalizarAmeacaHomebrew, registrarAmeacaHomebrew: registrarAmeacaHomebrew,
+    normalizarApavoroHomebrew: normalizarApavoroHomebrew, registrarApavoroHomebrew: registrarApavoroHomebrew,
+    normalizarAssassinoHomebrew: normalizarAssassinoHomebrew, registrarAssassinoHomebrew: registrarAssassinoHomebrew, RECARGAS_DE_APAVORO: RECARGAS_DE_APAVORO,
+    assassinosDisponiveis: function () { return ORDEM_ASSASSINOS.concat(ASS_HB); }, ameacasDefinidasDisponiveis: function () { return AMEACAS_DEFINIDAS.concat(AME_HB); },
     ehArquetipoHomebrew: ehArquetipoHomebrew, ehEstiloHomebrew: ehEstiloHomebrew, normalizarArquetipoHomebrew: normalizarArquetipoHomebrew, normalizarEstiloHomebrew: normalizarEstiloHomebrew,
     registrarArquetipoHomebrew: registrarArquetipoHomebrew, registrarEstiloHomebrew: registrarEstiloHomebrew, ordemDeIniciativa: ordemDeIniciativa, arquetiposPorIniciativa: arquetiposPorIniciativa,
     arquetiposDisponiveis: function () { return ORDEM_ARQUETIPOS.concat(ARQ_HB); }, estilosDisponiveis: function () { return ORDEM_ESTILOS.concat(EST_HB); },

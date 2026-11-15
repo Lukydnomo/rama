@@ -75,5 +75,43 @@ const fV = R.normalizar(copia(f));
 const novas = H.versoesNovas(fV, { arquetipos: [vNova] });
 t.ok("versão nova do Arquétipo: atualizar troca a chave e a cópia", novas.length === 1 && (() => { H.atualizarVersao(fV, novas[0]); const n = R.normalizar(fV); return n.arquetipo === vNova.chave && n.homebrew.arquetipos[vNova.chave].iniciativa === 5 && !n.homebrew.arquetipos[vlog.chave]; })());
 
+t.grupo("Modelos de mesa e Vantagem Homebrew (v9.32)");
+{
+  const DIR = { diretora: true }, nada = () => { throw new Error("rolou"); };
+  const am = K.normalizarAmeacaHomebrew({ nome: "Vidraceiro", homebrewId: "f1f1f1f1-sintetico", adjetivos: "Frio · Cortante · Paciente", texto: "Corta com cacos.", acoesUnicas: ["restringir", "segurar", "inventada"], intentoTexto: "Uma Sobrevivente se corta em vidro.", intentoPh: 2 });
+  t.ok("Ameaça: chave hbbm-, Ações Únicas só do livro, Intento Único com PH", /^hbbm-f1f1f1f1-/.test(am.chave) && am.acoesUnicas.join() === "restringir,segurar" && am.intento === am.chave && am.intentoPh === 2);
+  const ap = K.normalizarApavoroHomebrew({ nome: "Estilhaçar!", homebrewId: "f2f2f2f2-sintetico", cena: "Encontro", recarga: "fimEncontro", custo: 4, texto: "Todas descartam 1 dado." });
+  t.ok("Apavoro: chave hbbp-, cena, recarga, custo", /^hbbp-f2f2f2f2-/.test(ap.chave) && ap.cena === "Encontro" && ap.custo === 4);
+  const as = K.normalizarAssassinoHomebrew({ nome: "O Vidraceiro", homebrewId: "f3f3f3f3-sintetico", ameacas: [am.chave, "estrategico"], dados: 5, ph: 2, sustos: 2, acoesUnicas: ["restringir", "acidentar"], apavoro: ap.chave, resumo: "Mora numa vidraria." });
+  t.ok("Assassino: chave hbbk-, aponta para a Ameaça e o Apavoro Homebrew", /^hbbk-f3f3f3f3-/.test(as.chave) && as.ameacas[0] === am.chave && as.apavoro === ap.chave);
+  const hbMesa = { ameacas: { [am.chave]: am }, apavoros: { [ap.chave]: ap }, assassinos: { [as.chave]: as } };
+  const e = M.estadoVazio();
+  M.sincronizarElenco(e, [{ id: "p1", nome: "Lu", resumo: { arquetipo: "atleta" } }]);
+  const r = M.aplicar(e, { tipo: "configurarAssassino", modelo: as.chave, aplicarPilha: true, homebrew: hbMesa }, DIR, nada);
+  t.ok("configurar o Assassino Homebrew: os valores do modelo (como os prontos)", r.ok && e.assassino.modelo === as.chave && e.assassino.ameacas[0] === am.chave && e.assassino.apavoro === ap.chave && e.diretora.pilha === 5 && e.diretora.ph === 2, JSON.stringify(r.ok ? e.assassino : r));
+  t.ok("  a mesa guarda as cópias dos três modelos", e.homebrew && e.homebrew.assassinos[as.chave] && e.homebrew.ameacas[am.chave] && e.homebrew.apavoros[ap.chave]);
+  const e2 = M.normalizar(copia(e));
+  t.ok("  reaberta (o servidor, sem a biblioteca): continua com o Assassino e as cópias", e2.assassino.modelo === as.chave && e2.assassino.ameacas[0] === am.chave && e2.homebrew.apavoros[ap.chave]);
+  const semEncontro = M.aplicar(e, { tipo: "apavoroHomebrew" }, DIR, nada);
+  t.ok("Apavoro de Encontro fora de Encontro: recusado, com o motivo", !semEncontro.ok && /Encontro/.test(semEncontro.motivo));
+  const e3 = copia(e); e3.encontro = { rodada: 1, participantes: ["p1"], ordem: ["p1", "assassino"], vez: 0, meta: 3 }; e3.diretora.ph = 5;
+  const u1 = M.aplicar(e3, { tipo: "apavoroHomebrew" }, DIR, nada), u2 = M.aplicar(e3, { tipo: "apavoroHomebrew" }, DIR, nada);
+  t.ok("  num Encontro: paga os 4 PH, marca o uso e recusa o segundo (volta no fim do Encontro)", u1.ok && e3.diretora.ph === 1 && e3.diretora.usos[ap.chave] && !u2.ok, JSON.stringify([u1, u2]));
+  const ph0 = e.diretora.ph;
+  const it = M.aplicar(e, { tipo: "intentoUnicoHomebrew" }, DIR, nada);
+  t.ok("Intento Único Homebrew: a Diretora marca e ganha os PH", it.ok && e.diretora.ph === ph0 + 2);
+  t.ok("  só a Diretora (as operações novas estão na lista dela)", M.OPS_DA_DIRETORA.indexOf("apavoroHomebrew") >= 0 && M.OPS_DA_DIRETORA.indexOf("intentoUnicoHomebrew") >= 0 && !M.aplicar(e, { tipo: "intentoUnicoHomebrew" }, { diretora: false, sobrevivente: "p1" }, nada).ok);
+  const gV = A.guardar("brutal", "habilidade", "vantagem", { nome: "Respirar Fundo", descricao: "Recupera o fôlego.", valores: { estilo: "firme", custo: 3, recarga: "fimEncontro", efeito: "dado", valor: 1 } });
+  const xv = gV.ok ? H.deRegistro(Object.assign({}, gV.registro, { id: "f4f4f4f4-sintetico" })) : null;
+  t.ok("Vantagem: vira uma Vantagem da mesa (Estilo, custo, recarga, efeito)", xv && xv.tipo === "vantagem" && xv.def.custo === 3 && xv.def.efeito === "dado" && xv.def.estilo === "firme", JSON.stringify(xv));
+  const rv = M.aplicar(e, { tipo: "vantagemDaMesa", vantagem: Object.assign({}, xv.def, { id: "" }) }, DIR, nada);
+  t.ok("  a Diretora traz para a mesa (o motor aplica como as da mesa)", rv.ok && e.vantagensDaMesa.some((v) => v.nome === "Respirar Fundo" && v.efeito === "dado"));
+  const velho = H.deRegistro({ id: "x", nome: "Antiga", descricao: "Texto.", modelo: { sistema: "brutal", grupo: "habilidade", subtipo: "vantagem", def: { tensao: "2", janela: "uma vez por cena" } } });
+  t.ok("  um registro antigo (Tensão e janela em texto): custo 2, efeito manual, a janela no texto", velho.def.custo === 2 && velho.def.efeito === "manual" && /Janela: uma vez por cena/.test(velho.def.texto));
+  const gA = A.guardar("brutal", "estrutural", "assassino", { nome: "O Vidraceiro", descricao: "Mora numa vidraria.", valores: {}, def: (() => { const x = copia(as); ["chave", "homebrewId", "homebrew", "nome", "pagina", "resumo"].forEach((k) => delete x[k]); return x; })() });
+  t.ok("biblioteca: o Assassino volta com a mesma chave; destino nativo; pacote", gA.ok && H.deRegistro(Object.assign({}, gA.registro, { id: "f3f3f3f3-sintetico" })).def.chave === as.chave && A.destinoNaFicha(gA.registro, "brutal").modo === "nativo" && G.RAMAPacotesHomebrew.TIPOS.some((x) => x.chave === "assassino"));
+  t.ok("prévias", /Intento Único: Uma Sobrevivente se corta em vidro \(\+2 PH/.test(H.previaAmeaca(am).join(" ")) && /Dados 5 · PH 2/.test(H.previaAssassino(as).join(" ")) && /4 PH/.test(H.previaApavoro(ap)[0]));
+}
+
 console.log(`\n${FORTE}${passaram} ok${FIM}, ${falharam ? VERMELHO : ""}${falharam} falha(s)${FIM}.`);
 if (falharam) Deno.exit(1);

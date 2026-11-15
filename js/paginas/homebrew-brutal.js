@@ -114,5 +114,81 @@
     return m.janela;
   }
 
-  global.RAMAHomebrewBrutal = { arquetipo: arquetipo, estilo: estilo };
+  /* v9.32 — os modelos de mesa: Ameaça, Apavoro e Assassino (uma etapa e
+     a revisão), pelos normalizadores do catálogo. */
+  function modelo(qual, opcoes) {
+    var o = opcoes || {};
+    var reg = o.registro || null;
+    var ROT = { ameaca: "Ameaça", apavoro: "Apavoro", assassino: "Assassino" }[qual];
+    var PREF = { ameaca: "hbbm", apavoro: "hbbp", assassino: "hbbk" }[qual];
+    var padrao = { ameaca: { adjetivos: "", acoesUnicas: [], intentoTexto: "", intentoPh: 1 }, apavoro: { cena: "Livre", recarga: "fimEncontro", custo: 3 }, assassino: { ameacas: [], dados: 3, ph: 1, sustos: 2, acoesUnicas: [], apavoro: "" } }[qual];
+    var d = reg && reg.modelo && reg.modelo.def ? copia(reg.modelo.def) : copia(padrao);
+    var r = F().rascunho(reg);
+    var m;
+    function mudou(rep) { r.sujo = true; if (rep) m.pintar(); else m.pintarLado(); }
+    var c = F().controles(mudou);
+    function def() {
+      var x = copia(d); x.nome = r.nome || ROT + " Homebrew"; x.homebrewId = reg ? reg.id : "rascunho"; x.chave = "";
+      if (qual === "assassino") { x.resumo = r.descricao; return K().normalizarAssassinoHomebrew(x); }
+      x.texto = r.descricao;
+      return qual === "ameaca" ? K().normalizarAmeacaHomebrew(x) : K().normalizarApavoroHomebrew(x);
+    }
+    function previa() { var x = def(); return qual === "ameaca" ? H().previaAmeaca(x) : qual === "apavoro" ? H().previaApavoro(x) : H().previaAssassino(x); }
+    function alterna(campo) { return function (k, on) { d[campo] = (d[campo] || []).filter(function (x) { return x !== k; }); if (on) d[campo].push(k); }; }
+    var unicas = function () { return Object.keys(K().ACOES_ASSASSINO).filter(function (k) { return K().ACOES_ASSASSINO[k].tipo === "unica"; }).map(function (k) { return [k, K().ACOES_ASSASSINO[k].nome, K().ACOES_ASSASSINO[k].texto]; }); };
+    function passo1() {
+      var partes = [c.txt(PREF + "-nome", "Nome", r.nome, function (v) { r.nome = v; }, 40)];
+      if (qual === "ameaca") {
+        partes.push(c.txt(PREF + "-adj", "Adjetivos", d.adjetivos, function (v) { d.adjetivos = v; }, 80, "Três palavras, como no livro: \u201cEtérea · Macabra · Nefasta\u201d."));
+        partes.push(c.txt(PREF + "-desc", "Texto", r.descricao, function (v) { r.descricao = v; }, 600, null, true));
+        partes.push(c.marcas(PREF + "-unicas", "Ações Únicas da Ameaça", unicas(), d.acoesUnicas || [], alterna("acoesUnicas"), "O Assassino escolhe uma delas por Ameaça (p. 11)."));
+        partes.push(c.txt(PREF + "-int", "Intento Único (opcional)", d.intentoTexto, function (v) { d.intentoTexto = v; }, 300, "Quando acontece, a Diretora marca e ganha os PH.", true));
+        partes.push(c.sel(PREF + "-intph", "PH do Intento", [[1, "+1"], [2, "+2"], [3, "+3"], [4, "+4"]], d.intentoPh || 1, function (v) { d.intentoPh = Number(v); }));
+      } else if (qual === "apavoro") {
+        partes.push(el("div.editar-grade", {}, [
+          c.sel(PREF + "-cena", "Cena", [["Livre", "Livre"], ["Encontro", "Encontro"]], d.cena, function (v) { d.cena = v; }),
+          c.sel(PREF + "-rec", "Recarga", K().RECARGAS_DE_APAVORO.map(function (k) { return [k, K().RECARGAS[k].nome]; }), d.recarga, function (v) { d.recarga = v; }),
+          c.num(PREF + "-custo", "Custo (PH)", d.custo, function (v) { d.custo = v; }),
+        ]));
+        partes.push(c.txt(PREF + "-desc", "Texto (o efeito é da mesa)", r.descricao, function (v) { r.descricao = v; }, 600, null, true));
+      } else {
+        var ameacas = (K().ameacasDefinidasDisponiveis ? K().ameacasDefinidasDisponiveis() : K().AMEACAS_DEFINIDAS).map(function (k) { return [k, K().AMEACAS[k].nome + (K().AMEACAS[k].homebrew ? " (Homebrew)" : "")]; });
+        partes.push(el("div.editar-grade", {}, [
+          c.sel(PREF + "-am0", "Ameaça Principal", [["", "—"]].concat(ameacas), (d.ameacas || [])[0] || "", function (v) { d.ameacas = [v, (d.ameacas || [])[1]].filter(Boolean); }),
+          c.sel(PREF + "-am1", "Segunda Ameaça", [["", "—"]].concat(ameacas), (d.ameacas || [])[1] || "", function (v) { d.ameacas = [(d.ameacas || [])[0], v].filter(Boolean); }),
+        ]));
+        partes.push(el("div.editar-grade", {}, [
+          c.num(PREF + "-dados", "Dados iniciais", d.dados, function (v) { d.dados = v; }),
+          c.num(PREF + "-ph", "PH iniciais", d.ph, function (v) { d.ph = v; }),
+          c.num(PREF + "-sustos", "Testes de Susto por Encontro", d.sustos, function (v) { d.sustos = v; }),
+        ]));
+        var permitidas = [];
+        (d.ameacas || []).forEach(function (a) { ((K().AMEACAS[a] || {}).acoesUnicas || []).forEach(function (x) { if (permitidas.indexOf(x) < 0) permitidas.push(x); }); });
+        partes.push(c.marcas(PREF + "-unicas", "Ações Únicas (das Ameaças)", unicas().filter(function (p) { return permitidas.indexOf(p[0]) >= 0; }), d.acoesUnicas || [], alterna("acoesUnicas"), permitidas.length ? "" : "Escolha as Ameaças para ver as Ações delas."));
+        partes.push(c.sel(PREF + "-apv", "Apavoro", [["", "—"]].concat(Object.keys(K().APAVOROS).map(function (k) { return [k, K().APAVOROS[k].nome + (K().APAVOROS[k].homebrew ? " (Homebrew)" : "")]; })), d.apavoro, function (v) { d.apavoro = v; }));
+        partes.push(c.txt(PREF + "-desc", "Resumo", r.descricao, function (v) { r.descricao = v; }, 600, null, true));
+      }
+      return el("div.pc-editor__passo", {}, partes);
+    }
+    function passo2() {
+      return el("div.pc-editor__passo", {}, [].concat(m.lista("Prévia", previa()),
+        m.lista("Automático", [qual === "assassino" ? "Ao escolher este Assassino na mesa: Ameaças, Ações Únicas, Apavoro, dados, PH e Testes de Susto, como os prontos." : qual === "ameaca" ? "As Ações Únicas entram no Assassino; o Intento vira um botão da Diretora." : "Pagar os PH e marcar o uso (volta pela recarga)."]),
+        m.lista("Decisão da mesa", [qual === "apavoro" ? "O efeito do texto." : qual === "ameaca" ? "Quando o Intento acontece." : "O Estigma e o resto da narrativa."]),
+        [m.visibilidade()]));
+    }
+    m = F().moldura({ r: r, reg: reg, pref: PREF, rotulo: ROT.toLowerCase(), subtipo: qual, sistema: "brutal", aoSalvar: o.aoSalvar,
+      titulo: (reg ? "Editar " : "Novo · ") + ROT + " · BRUTAL", rotuloSalvar: reg ? "Salvar" : "Criar " + ROT.toLowerCase(),
+      passos: [[ROT, passo1], ["Revisão", passo2]],
+      previa: previa,
+      paraGravar: function () { var x = def(); ["chave", "homebrewId", "homebrew", "nome", "pagina", "definida", "intento"].forEach(function (k) { delete x[k]; }); if (qual === "assassino") delete x.resumo; else delete x.texto; return x; },
+      recarregar: function () { if (H()) H().carregarBiblioteca(true); },
+      okCriar: ROT + " criado(a). Aparece na mesa da Diretora, ao configurar o Assassino.",
+      okEditar: ROT + " atualizado(a). A mesa que já o usa continua com a cópia dela." });
+    if (H()) H().carregarBiblioteca().then(function () { m.pintar(); });
+    m.pintar();
+    return m.janela;
+  }
+
+  global.RAMAHomebrewBrutal = { arquetipo: arquetipo, estilo: estilo,
+    ameaca: function (o) { return modelo("ameaca", o); }, apavoro: function (o) { return modelo("apavoro", o); }, assassino: function (o) { return modelo("assassino", o); } };
 })(typeof window !== "undefined" ? window : globalThis);

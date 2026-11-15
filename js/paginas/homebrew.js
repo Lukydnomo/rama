@@ -803,7 +803,7 @@
       global.RAMAHomebrewOblivio[stHb]({ registro: registro, aoSalvar: carregar });
       return;
     }
-    if (sisHb === "brutal" && (stHb === "arquetipo" || stHb === "estilo") && global.RAMAHomebrewBrutal) {
+    if (sisHb === "brutal" && ["arquetipo", "estilo", "assassino", "ameaca", "apavoro"].indexOf(stHb) >= 0 && global.RAMAHomebrewBrutal) {
       global.RAMAHomebrewBrutal[stHb]({ registro: registro, aoSalvar: carregar });
       return;
     }

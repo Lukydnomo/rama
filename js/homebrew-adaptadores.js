@@ -372,14 +372,23 @@
     id: "brutal",
     tipos: [
       { chave: "item", rotulo: "Item", ajuda: "O Apego \"item\" do Corte Rápido: nome e o que ele significa. Sem Defesa, PV nem mochila." },
-      { chave: "habilidade", rotulo: "Habilidade", ajuda: "Vantagem com Tensão e janela — por enquanto para consulta e anotações." },
+      { chave: "habilidade", rotulo: "Habilidade", ajuda: "Vantagem: Estilo, custo em PT, recarga e um efeito que o motor aplica. A Diretora traz para a mesa (Vantagens da mesa)." },
       { chave: "arquetipo", rotulo: "Arquétipo", ajuda: "Adjetivos, cor, Iniciativa, os dois Estilos e a Habilidade (com recarga). Entra na criação de Sobreviventes, na troca e na mesa." },
       { chave: "estilo", rotulo: "Estilo", ajuda: "Um Estilo novo (nome e para que serve), para os seus Arquétipos e as listas de Estilo." },
+      { chave: "assassino", rotulo: "Assassino", ajuda: "Modelo de mesa: Ameaças, dados, PH, Testes de Susto, Ações Únicas e Apavoro. A Diretora escolhe ao configurar o Assassino." },
+      { chave: "ameaca", rotulo: "Ameaça", ajuda: "Modelo de mesa: adjetivos, Ações Únicas e o Intento Único (PH)." },
+      { chave: "apavoro", rotulo: "Apavoro", ajuda: "Modelo de mesa: cena, recarga, custo em PH e texto." },
     ],
     item: { subtipos: [{ chave: "apego", rotulo: "Apego: item", campos: [] }] },
     /* v9.18: Arquétipo e Estilo (js/paginas/homebrew-brutal.js). */
-    estrutural: { subtipos: [{ chave: "arquetipo", rotulo: "Arquétipo", campos: [] }, { chave: "estilo", rotulo: "Estilo", campos: [] }] },
-    habilidade: { subtipos: [{ chave: "vantagem", rotulo: "Vantagem", campos: [campo("tensao", "Tensão", "texto", { limite: 40 }), campo("janela", "Janela", "texto", { limite: 60, exemplo: "uma vez por cena" })] }] },
+    estrutural: { subtipos: [{ chave: "arquetipo", rotulo: "Arquétipo", campos: [] }, { chave: "estilo", rotulo: "Estilo", campos: [] }, { chave: "assassino", rotulo: "Assassino", campos: [] }, { chave: "ameaca", rotulo: "Ameaça", campos: [] }, { chave: "apavoro", rotulo: "Apavoro", campos: [] }] },
+    /* v9.32: a Vantagem no formato das Vantagens da mesa (o efeito que o motor aplica). */
+    habilidade: { subtipos: [{ chave: "vantagem", rotulo: "Vantagem", campos: [
+      sel("estilo", "Estilo", [["", "Geral (todas)"], ["desenrolado", "Desenrolado"], ["firme", "Firme"], ["ligeiro", "Ligeiro"], ["potente", "Potente"], ["sagaz", "Sagaz"]], { padrao: "" }),
+      campo("custo", "Custo (Pontos de Tensão)", "numero", { min: 0, max: 10, padrao: 2 }),
+      sel("recarga", "Recarga", [["semRestricao", "Sem restrição"], ["fimEncontro", "Fim de um Encontro"], ["inicioEncontro", "Início de um Encontro"], ["inicioSessao", "Início de uma sessão"], ["encontroLivre", "Encontro, Livre"]], { padrao: "fimEncontro" }),
+      sel("efeito", "Efeito (o motor aplica)", [["manual", "Só registra (a mesa resolve)"], ["dado", "+1 dado na Pilha Comum"], ["reduzirFerida", "Reduz a próxima Ferida"], ["sucessoPartir", "Um sucesso garantido no próximo Partir Para Cima"], ["fugaNoEncontro", "Mover 1 dado para a Pilha de Fuga no próximo Encontro"], ["recurso", "Recebe um Recurso (1 uso)"], ["recuperarEstilo", "Recupera um Estilo Incapacitado"], ["transferirPt", "Transfere PT para outra Sobrevivente"]], { padrao: "manual" }),
+      campo("valor", "Valor (reduzir Ferida)", "numero", { min: 1, max: 6, padrao: 1 })] }] },
   };
 
   var SISTEMAS = { ordem: ORDEM, ordem2: ORDEM2, tormenta20: TORMENTA20, oblivio: OBLIVIO, vampiro: VAMPIRO, goblins: GOBLINS, brutal: BRUTAL, universal: UNIVERSAL };
@@ -505,7 +514,7 @@
         v.chave = chaveAntiga && ELx && ELx.ehHomebrew(chaveAntiga) ? chaveAntiga : (ELx ? ELx.chaveNova(nome, r.id || "") : "");
       }
       if (subtipo === "classe" && r.classe) reg.modelo.def = r.classe;
-      if (["origem", "trilha", "raca", "divindade", "classe", "ocupacao", "descritor", "arquetipo", "estilo", "papel", "motivacao", "mazela", "fardo", "cla", "predador", "disciplina", "vantagem", "perfil", "conhecimento"].indexOf(subtipo) >= 0 && r.def) reg.modelo.def = r.def;
+      if (["origem", "trilha", "raca", "divindade", "classe", "ocupacao", "descritor", "arquetipo", "estilo", "papel", "motivacao", "mazela", "fardo", "cla", "predador", "disciplina", "vantagem", "perfil", "conhecimento", "assassino", "ameaca", "apavoro"].indexOf(subtipo) >= 0 && r.def) reg.modelo.def = r.def;
     }
     if (r.universal && sistema === "universal") reg.universal = normalizarUniversal(r.universal);
     if (r.id) reg.id = r.id;
@@ -605,6 +614,7 @@
       if (s === "ordem2") return { modo: "nativo", texto: stE === "perfil" ? "Escolhido na criação de personagens de Ordem II (experimental), com a habilidade de perfil. A cópia fica na ficha." : "Escolhida na criação de personagens de Ordem II (experimental), com a habilidade de ocupação. A cópia fica na ficha." };
       if (s === "vampiro") return { modo: "nativo", texto: ({ cla: "Escolhido na criação de vampiros; a Compulsão entra pelo mesmo caminho das do livro. A cópia fica na ficha.", predador: "Escolhido na criação: a especialização, a Disciplina e o que ele dá entram na ficha. A cópia fica na ficha.", disciplina: "Aparece na criação (clã e predador) e nas compras com XP; os poderes têm custo, teste e duração. A cópia fica na ficha.", vantagem: "Aparece na criação e nas compras com XP. A cópia fica na ficha.", conhecimento: "Aparece na criação e nas compras com XP (cada nível à parte). A cópia fica na ficha." })[stE] };
       if (s === "oblivio") return { modo: "nativo", texto: ({ papel: "Escolhido na criação de Personas, com a Habilidade Principal; a cópia fica na ficha.", motivacao: "Escolhida na criação de Personas, depois das do livro; a cópia fica na ficha.", mazela: "Aparece em \u201cAplicar mazela\u201d na ficha; a cópia fica na ficha.", fardo: "A mesa aplica na ficha (\u201cAplicar Fardo Homebrew\u201d); a cópia fica na ficha." })[stE] };
+      if (s === "brutal" && ["assassino", "ameaca", "apavoro"].indexOf(stE) >= 0) return { modo: "nativo", texto: "Modelo de mesa: aparece na mesa da Diretora, ao configurar o Assassino; a mesa guarda a cópia." };
       if (s === "brutal") return { modo: "nativo", texto: stE === "arquetipo" ? "Escolhido na criação de Sobreviventes e na troca de Arquétipo; a mesa recebe a cópia pelo resumo da ficha." : "Aparece no editor de Arquétipo e nas listas de Estilo da ficha e da mesa." };
       if (s === "goblins") return { modo: "nativo", texto: stE === "ocupacao" ? "Escolhida na criação de goblins (e como ocupação épica), com a cópia guardada na ficha." : "Escolhido na criação de goblins, depois dos do livro, com a cópia guardada na ficha." };
       if (s === "tormenta20") return { modo: "nativo", texto: ({
@@ -624,6 +634,7 @@
       if (g === "item") return { modo: "nativo", texto: destino === "brutal" ? "Vira o Apego \"item\" da ficha." : "Entra no inventário com as regras do sistema." };
       if (s === "ordem" || s === "universal" || s === "ordem2") return { modo: "nativo", texto: "Entra nas habilidades da ficha." };
       var stH = subtipoDe(r), dH = defDe(r);
+      if (s === "brutal" && stH === "vantagem") return { modo: "nativo", texto: "A Diretora traz para a mesa (Vantagens da mesa → Da biblioteca): custo em PT, recarga e o efeito que o motor aplica. A mesa guarda a cópia." };
       if (s === "oblivio" && stH === "habilidade") return { modo: "nativo", texto: "Entra como habilidade Geral: escolhida ao concluir uma Missão ou concedida pela Testemunha (aba Habilidades); o limite de uso é contado pela ficha. A cópia fica na ficha." };
       if (s === "goblins" && stH === "magia" && [0, 1, 2, 3].some(function (i) { return dH["r" + i]; })) return { modo: "nativo", texto: "Entra na escolha de magias do Bruxo e se conjura como as do livro (teste de Noção; o resultado pelos hits, com o que a ficha aplica). A cópia fica na ficha." };
       if (s === "goblins" && stH === "tecnica") return { modo: "nativo", texto: "A mesa concede ao goblin (aba Técnicas, em edição); o uso de 1 vez por dia é marcado pela ficha. A cópia fica na ficha." };
@@ -892,6 +903,11 @@
       defImportada = m.subtipo === "arquetipo" ? BC.normalizarArquetipoHomebrew(Object.assign({}, m.def, { chave: "", nome: x.nome })) : { texto: BC.normalizarEstiloHomebrew(Object.assign({}, m.def, { chave: "", nome: x.nome })).texto };
       ["chave", "homebrewId", "homebrew", "nome", "pagina"].forEach(function (k) { delete defImportada[k]; });
       if (defImportada.habilidade) delete defImportada.habilidade.chave;
+    }
+    /* Modelos de mesa de BRUTAL (v9.32): Ameaça, Apavoro e Assassino. */
+    if (g === "estrutural" && m.sistema === "brutal" && BC && BC.normalizarAmeacaHomebrew && ["ameaca", "apavoro", "assassino"].indexOf(m.subtipo) >= 0) {
+      defImportada = ({ ameaca: BC.normalizarAmeacaHomebrew, apavoro: BC.normalizarApavoroHomebrew, assassino: BC.normalizarAssassinoHomebrew })[m.subtipo](Object.assign({}, m.def, { chave: "", nome: x.nome }));
+      ["chave", "homebrewId", "homebrew", "nome", "pagina", "definida", "intento"].forEach(function (k) { delete defImportada[k]; });
     }
     /* Ocupação e Descritor de Goblins (v9.17). */
     var GC = global.RAMAGoblinsCatalogo;

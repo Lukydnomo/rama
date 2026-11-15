@@ -88,6 +88,7 @@
           if (t.chave === "classe") { if (global.RAMAHomebrewClasse) global.RAMAHomebrewClasse.editor({ aoSalvar: o.aoSalvar }); return; }
           if (t.chave === "elemento") { editor({ sistema: sistema, grupo: "estrutural", subtipo: "elemento", aoSalvar: o.aoSalvar }); return; }
           if (sistema === "ordem2" && (t.chave === "perfil" || t.chave === "ocupacao") && global.RAMAHomebrewOrdem2) { global.RAMAHomebrewOrdem2[t.chave]({ aoSalvar: o.aoSalvar }); return; }
+          if (sistema === "brutal" && ["assassino", "ameaca", "apavoro"].indexOf(t.chave) >= 0 && global.RAMAHomebrewBrutal && global.RAMAHomebrewBrutal[t.chave]) { global.RAMAHomebrewBrutal[t.chave]({ aoSalvar: o.aoSalvar }); return; }
           if (sistema === "vampiro" && ["cla", "predador", "disciplina", "vantagem", "defeito", "conhecimento"].indexOf(t.chave) >= 0 && global.RAMAHomebrewVampiro) { global.RAMAHomebrewVampiro[t.chave]({ aoSalvar: o.aoSalvar }); return; }
           if (sistema === "oblivio" && ["papel", "motivacao", "mazela", "fardo"].indexOf(t.chave) >= 0 && global.RAMAHomebrewOblivio) { global.RAMAHomebrewOblivio[t.chave]({ aoSalvar: o.aoSalvar }); return; }
           if (sistema === "brutal" && (t.chave === "arquetipo" || t.chave === "estilo") && global.RAMAHomebrewBrutal) { global.RAMAHomebrewBrutal[t.chave]({ aoSalvar: o.aoSalvar }); return; }
@@ -446,9 +447,9 @@
       var HO2 = global.RAMAOblivioHomebrew, xo2 = HO2.deRegistro(reg);
       if (xo2 && xo2.def) HO2.previa(xo2.tipo, xo2.def).forEach(function (t, i) { pares.push([i ? "" : "Regras", t]); });
     }
-    if (s === "brutal" && (st === "arquetipo" || st === "estilo") && global.RAMABrutalHomebrew) {
+    if (s === "brutal" && ["arquetipo", "estilo", "assassino", "ameaca", "apavoro", "vantagem"].indexOf(st) >= 0 && global.RAMABrutalHomebrew) {
       var HBr = global.RAMABrutalHomebrew, xb = HBr.deRegistro(reg);
-      if (xb && xb.def) (st === "arquetipo" ? HBr.previaArquetipo(xb.def) : HBr.previaEstilo(xb.def)).forEach(function (t, i) { pares.push([i ? "" : "Regras", t]); });
+      if (xb && xb.def) ({ arquetipo: HBr.previaArquetipo, estilo: HBr.previaEstilo, assassino: HBr.previaAssassino, ameaca: HBr.previaAmeaca, apavoro: HBr.previaApavoro, vantagem: HBr.previaVantagem })[xb.tipo](xb.def).forEach(function (t, i) { pares.push([i ? "" : "Regras", t]); });
     }
     if (s === "goblins" && ["ocupacao", "descritor", "magia", "tecnica"].indexOf(st) >= 0 && global.RAMAGoblinsHomebrew) {
       var HG = global.RAMAGoblinsHomebrew, xg = HG.deRegistro(reg);
