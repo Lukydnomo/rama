@@ -1738,6 +1738,7 @@
 
   function ehDeOutraClasse(e, classe) {
     if (!e || e.tipo !== "classe") return false;
+    if (C.classeDosPoderes) classe = C.classeDosPoderes(classe);
     /* Os poderes que o Sobrevivendo ao Horror abre a todos (`geral`, como
        Combater com Duas Armas) continuam sendo de outra classe: também
        podem vir pela Expansão de Conhecimento (v2.34.2). */
@@ -2949,7 +2950,9 @@
         nomeOutro: af.nomeOutro,
         adiada: af.adiada,
         escolhida: !!af.elemento && (af.elemento !== "outro" || !!af.nomeOutro.trim()),
-        homebrew: af.elemento === "outro",
+        /* v9.8: "Outro" (nome livre) ou um elemento Homebrew de Ordem: sem
+           efeito mecânico nenhum da afinidade. */
+        homebrew: af.elemento === "outro" || /^hbe-/.test(String(af.elemento || "")),
         ativa: !!af.elemento && percurso.afinidadeAtiva,
         conflito: conflitoDeAfinidade(ordem, percurso, af),
       },
@@ -3839,7 +3842,7 @@
     if (c.vaga.soTranscender) oferta = oferta.filter(function (e) { return e.chave === "transcender"; });
     return oferta.map(function (e) {
       var cand = candidato(e, c.percurso, c.etapa, ordem);
-      cand.viaGeral = e.tipo === "geral" || (e.classes.indexOf(ordem.classe) < 0 && !!e.geral);
+      cand.viaGeral = e.tipo === "geral" || (e.classes.indexOf(C.classeDosPoderes ? C.classeDosPoderes(ordem.classe) : ordem.classe) < 0 && !!e.geral);
       /* Evolução Modular: o poder do outro grupo fica à vista, com o motivo. */
       var mg = motivoDoGrupo(e, c.vaga, ordem);
       if (mg) { cand.disponivel = false; cand.motivos = cand.motivos.concat([mg]); }

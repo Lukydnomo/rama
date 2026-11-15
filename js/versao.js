@@ -118,6 +118,20 @@
 
   var CHANGELOG = [
     {
+      versao: "9.8.0",
+      codinome: "SOTAQUE",
+      data: "15/11/2026",
+      mudancas: {
+        "Adicionado": [
+          "Elemento Homebrew de Ordem Paranormal (ex.: Vidro): nome, cor, símbolo e, se quiser, relações e afinidade. Aparece onde a regra deixa escolher elemento: rituais (inclusive com vários elementos), criaturas, itens paranormais e a afinidade. Nunca herda a regra de um elemento oficial.",
+          "Classe Homebrew de Ordem Paranormal: PV, PE, SAN e PD iniciais e por marco, perícias, proficiências e as tabelas de NEX/nível e de Patentes. Pode começar da tabela de uma classe do livro. Entra na criação do agente e na progressão, e funciona na Ramificação.",
+          "A ficha guarda a própria cópia da classe e do elemento: mudar a biblioteca não muda um personagem em jogo, e o Mestre não precisa da sua biblioteca.",
+        ],
+        "Corrigido": ["Num ritual de vários elementos, a lista agora pode ser editada (antes só era preservada)."],
+        "Técnico": ["Novos js/ordem/elementos.js (catálogo: aceito × oficial, cópias, referência pendente), js/ordem/homebrew-ordem.js (classe e bloco ordem.homebrew, registro no catálogo com chave versionada) e js/paginas/homebrew-classe.js. Catálogo, poderes, progressão e regras de Ordem leem a classe Homebrew sem cair numa oficial. Servidor: tipos classe/elemento e grupo estrutural (só Ordem). Novo testes/executar-homebrew-ordem.js."],
+      },
+    },
+    {
       versao: "9.7.0",
       codinome: "DIALETO",
       data: "15/11/2026",

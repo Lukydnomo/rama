@@ -77,6 +77,8 @@
         cartoes.push(cartao(t.rotulo, t.ajuda, function () {
           janela.fechar();
           if (t.chave === "criatura") { if (o.editarCriatura) o.editarCriatura(sistema); return; }
+          if (t.chave === "classe") { if (global.RAMAHomebrewClasse) global.RAMAHomebrewClasse.editor({ aoSalvar: o.aoSalvar }); return; }
+          if (t.chave === "elemento") { editor({ sistema: sistema, grupo: "estrutural", subtipo: "elemento", aoSalvar: o.aoSalvar }); return; }
           if (t.chave === "ritual") { if (o.editarRitual) o.editarRitual(); return; }
           editor({ sistema: sistema, grupo: t.chave, aoSalvar: o.aoSalvar });
         }));
@@ -96,7 +98,7 @@
           el("span.t-rotulo", { texto: nome(sistema) }),
         ]),
         el("div.hbe-tipos", { role: "list", "aria-label": "Tipos de " + nome(sistema) }, cartoes),
-        sistema !== "universal" ? el("p.t-mini", { texto: "Tipos estruturais (classe, raça, origem, elemento…) chegam na próxima etapa do Homebrew por sistema." }) : null,
+        sistema !== "universal" && sistema !== "ordem" ? el("p.t-mini", { texto: "Os tipos estruturais deste sistema (raça, clã, papel, arquétipo…) chegam numa próxima etapa do Homebrew por sistema." }) : null,
       ]);
       var b = corpo.querySelector(".hbe-tipo"); if (b) b.focus();
     }
@@ -117,6 +119,8 @@
     var sistema = reg ? A().sistemaDe(reg) : o.sistema;
     var grupo = reg ? A().grupoDe(reg) : o.grupo;
     var subs = A().subtipos(sistema, grupo);
+    /* Tipos estruturais não se trocam entre si (Elemento não vira Classe). */
+    if (grupo === "estrutural") { var fixo = reg ? A().subtipoDe(reg) : o.subtipo; subs = subs.filter(function (s) { return s.chave === fixo; }); }
     if (!subs.length) { UI.avisoErro("Este tipo não tem editor neste sistema."); return null; }
     var r = {
       nome: reg ? reg.nome : "",
@@ -142,7 +146,7 @@
 
     var form = el("div.hbe-form");
     var lado = el("aside.hbe-lado", { "aria-label": "Resumo" });
-    var titulo = (reg ? "Editar " : "Novo · ") + (grupo === "item" ? "item" : "habilidade") + " · " + nome(sistema);
+    var titulo = (reg ? "Editar " : "Novo · ") + (grupo === "item" ? "item" : grupo === "estrutural" ? subs[0].rotulo.toLowerCase() : "habilidade") + " · " + nome(sistema);
     var janela = UI.modal({
       titulo: titulo, largo: true, classe: "hbe-janela",
       conteudo: el("div.hbe-grade", {}, [form, lado]),
@@ -192,7 +196,19 @@
       var id = "hbe-c-" + c.chave, v = r.valores[c.chave];
       var entrada;
       var ao = function (valor) { r.valores[c.chave] = valor; r.tocados[c.chave] = true; delete r.erros[c.chave]; mudou(); };
-      if (c.tipo === "selecao") {
+      var EL = global.RAMAOrdemElementos;
+      if (c.tipo === "cor") {
+        entrada = el("input.r-entrada.hbe-cor", { id: id, type: "color", value: /^#[0-9a-f]{6}$/i.test(String(v || "")) ? v : "#5c7c8a", oninput: function (ev) { ao(ev.target.value); } });
+      } else if (c.tipo === "elemento") {
+        var opsEl = (EL ? EL.paraSelecao() : []).concat([{ chave: "varia", nome: "Varia" }]);
+        entrada = el("select.r-selecao", { id: id, onchange: function (ev) { ao(ev.target.value); } }, [el("option", { value: "", texto: "—" })].concat(opsEl.map(function (e) { return el("option", { value: e.chave, texto: e.nome + (e.oficial === false ? " (Homebrew)" : ""), selected: e.chave === v }); })));
+      } else if (c.tipo === "elementos") {
+        var marcados = Array.isArray(v) ? v : [];
+        var proprio = r.valores && r.valores.chave;
+        return el("fieldset.r-campo.hbe-elementos", {}, [el("legend.r-rotulo", { texto: c.rotulo })].concat((EL ? EL.paraSelecao() : []).filter(function (e) { return e.chave !== proprio; }).map(function (e) {
+          return el("label.r-marca", {}, [el("input", { type: "checkbox", checked: marcados.indexOf(e.chave) >= 0, onchange: function (ev) { var l = (Array.isArray(r.valores[c.chave]) ? r.valores[c.chave] : []).filter(function (k) { return k !== e.chave; }); if (ev.target.checked) l.push(e.chave); ao(l); } }), el("span", { texto: e.nome })]);
+        })).concat([c.ajuda ? el("p.r-ajuda", { texto: c.ajuda }) : null]));
+      } else if (c.tipo === "selecao") {
         entrada = el("select.r-selecao", { id: id, onchange: function (ev) { var op = c.opcoes.filter(function (x) { return String(x.valor) === ev.target.value; })[0]; ao(op ? op.valor : ev.target.value); } },
           (c.obrigatorio && v === undefined ? [el("option", { value: "", texto: "Escolha…" })] : []).concat(c.opcoes.map(function (op) { return el("option", { value: String(op.valor), texto: op.rotulo, selected: String(op.valor) === String(v) }); })));
       } else if (c.tipo === "booleano") {
@@ -353,12 +369,14 @@
     }
 
     async function salvar(fechar) {
-      var g = A().guardar(sistema, grupo, r.subtipo, { id: reg ? reg.id : undefined, nome: r.nome, descricao: r.descricao, origem: r.origem, valores: r.valores, universal: r.universal, visibilidade: r.visibilidade, etiqueta: reg ? reg.etiqueta : undefined });
+      var g = A().guardar(sistema, grupo, r.subtipo, { id: reg ? reg.id : undefined, nome: r.nome, descricao: r.descricao, origem: r.origem, valores: r.valores, universal: r.universal, visibilidade: r.visibilidade, etiqueta: reg ? reg.etiqueta : undefined, modeloAnterior: reg ? reg.modelo : null });
       if (!g.ok) { r.erros = g.campos || {}; pintar(); var p = form.querySelector(".r-ajuda--erro"); if (p && p.previousElementSibling) (p.parentNode.querySelector("input, select, textarea") || p).focus(); UI.avisoErro(g.erro); return; }
       var resp = await global.RAMAApi.salvarHomebrew(g.registro);
       /* Falhou: o rascunho continua aberto, igual. */
       if (!resp.ok) { UI.avisoDeFalha(resp, "gravação na biblioteca"); return; }
       r.sujo = false;
+      /* Um elemento novo já vale nos seletores desta página. */
+      if (grupo === "estrutural" && r.subtipo === "elemento" && global.RAMAOrdemElementos) global.RAMAOrdemElementos.registrar(Object.assign({}, g.registro.modelo.def, { nome: g.registro.nome, descricao: g.registro.descricao, homebrewId: resp.dados && resp.dados.id }));
       fechar();
       UI.avisoOk(reg ? "Registro atualizado." : "Criado em Minhas criações.");
       if (o.aoSalvar) o.aoSalvar(resp.dados && resp.dados.id);
@@ -383,6 +401,18 @@
       if (v === true) v = "Sim";
       pares.push([c.rotulo, String(v) + (c.unidade && typeof v !== "string" ? " " + c.unidade : "")]);
     });
+    /* Classe Homebrew de Ordem: a prévia e o que falta, pelo módulo da ficha. */
+    if (s === "ordem" && st === "classe" && global.RAMAOrdemHomebrew) {
+      var HOx = global.RAMAOrdemHomebrew;
+      var defC = HOx.normalizarClasse(Object.assign({}, d, { nome: reg.nome, homebrewId: reg.id }));
+      HOx.previa(defC, { agi: 2, for: 2, int: 2, pre: 2, vig: 2 }).forEach(function (t, i) { pares.push(["Prévia " + (i + 1), t]); });
+      pares.push(["Trilhos", (defC.progressao ? "NEX e nível" : "sem NEX/nível") + " · " + (defC.patentes ? "Patentes" : "sem Patentes")]);
+      pares.push(["Poderes e trilhas", (defC.poderesDe || "só gerais") + " · " + (defC.trilhasDe || "sem trilhas")]);
+    }
+    if (s === "ordem" && st === "elemento") {
+      if (d.forteContra && d.forteContra.length) pares.push(["Forte contra", d.forteContra.map(function (k) { return global.RAMAOrdemElementos ? global.RAMAOrdemElementos.nome(k) : k; }).join(", ")]);
+      if (d.fracoContra && d.fracoContra.length) pares.push(["Fraco contra", d.fracoContra.map(function (k) { return global.RAMAOrdemElementos ? global.RAMAOrdemElementos.nome(k) : k; }).join(", ")]);
+    }
     var u = reg.universal;
     if (u) (u.campos || []).forEach(function (c) { var v = (u.valores || {})[c.chave]; if (v === undefined) return; if (v && typeof v === "object" && !Array.isArray(v)) v = v.max ? "máximo " + v.max : ""; if (Array.isArray(v)) v = v.join(", "); if (v === true) v = "Sim"; pares.push([c.rotulo, String(v)]); });
     return el("div.pilha--curta", { class: "pilha" }, [

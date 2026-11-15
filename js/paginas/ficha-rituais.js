@@ -476,10 +476,17 @@
   function elementosDoRitual(ritual) {
     var lista = RT() ? RT().ELEMENTOS : [];
     var o = ritual.ordem || {};
+    /* v9.8: um elemento Homebrew de Ordem aparece pelo nome (catálogo de
+       elementos), com a marca visual "homebrew" — nunca com a de um oficial. */
+    function porChave(k) {
+      var e = lista.filter(function (x) { return x.chave === k; })[0];
+      return { chave: e ? k : "homebrew", nome: e ? e.nome : (RT() && RT().nomeDoElemento ? RT().nomeDoElemento(k) : k) };
+    }
     if (o.todosOsElementos && Array.isArray(o.elementos) && o.elementos.length) {
-      return o.elementos.map(function (k) { var e = lista.filter(function (x) { return x.chave === k; })[0]; return { chave: k, nome: e ? e.nome : k }; });
+      return o.elementos.map(porChave);
     }
     var texto = U.texto(ritual.elemento).trim();
+    if (!texto && o.elemento) return [porChave(o.elemento)];
     if (!texto) return [];
     /* A chave só quando o texto É o nome do elemento: o que a pessoa
        escreveu não é adivinhado. */
@@ -1242,13 +1249,27 @@
     var RT = global.RAMAOrdemRituais;
     var d = RT ? RT.dadosDoRitual(atual) : {};
 
+    /* v9.8: o catálogo de elementos de Ordem — oficiais e Homebrew (os da
+       biblioteca e os que o ritual já tinha, mesmo pendentes). */
+    var ELr = global.RAMAOrdemElementos;
+    var opcoesEl = ELr ? ELr.paraSelecao() : (RT ? RT.ELEMENTOS : []).map(function (e) { return { chave: e.chave, nome: e.nome, oficial: true }; });
+    [d.elemento].concat(d.elementos || []).forEach(function (k) { if (k && !opcoesEl.some(function (e) { return e.chave === k; })) opcoesEl.push({ chave: k, nome: ELr ? ELr.nome(k) : k, oficial: false }); });
     var elemento = UI.campo({
-      rotulo: "Elemento (regras de Ordem)", tipo: "selecao", valor: d.elemento || "",
-      opcoes: [{ valor: "", rotulo: "Não informado" }].concat((RT ? RT.ELEMENTOS : []).map(function (e) {
-        return { valor: e.chave, rotulo: e.nome };
+      rotulo: "Elemento principal (regras de Ordem)", tipo: "selecao", valor: d.elemento || "",
+      opcoes: [{ valor: "", rotulo: "Não informado" }].concat(opcoesEl.map(function (e) {
+        return { valor: e.chave, rotulo: e.nome + (e.oficial ? "" : " (Homebrew)") };
       })),
-      ajuda: "Usado pelos avisos de afinidade e pelo custo em Sanidade dos rituais de Medo.",
+      ajuda: "Usado pelos avisos de afinidade e pelo custo em Sanidade dos rituais de Medo. Um elemento Homebrew não herda regra de nenhum oficial.",
     });
+    var multiplos = { ligado: !!(d.todosOsElementos && (d.elementos || []).length > 1), lista: (d.elementos || []).slice() };
+    var caixaMultiplos = el("fieldset.r-campo.ritual-multiplos", {}, [
+      el("legend.r-rotulo", { texto: "Vários elementos (AS1 p. 49)" }),
+      el("label.r-marca", {}, [el("input", { type: "checkbox", checked: multiplos.ligado, onchange: function (ev) { multiplos.ligado = ev.target.checked; lista.hidden = !multiplos.ligado; } }), el("span", { texto: "Este ritual pertence a todos os elementos marcados" })]),
+    ]);
+    var lista = el("div.faixa", { hidden: !multiplos.ligado }, opcoesEl.map(function (e) {
+      return el("label.r-marca", {}, [el("input", { type: "checkbox", checked: multiplos.lista.indexOf(e.chave) >= 0, onchange: function (ev) { multiplos.lista = multiplos.lista.filter(function (k) { return k !== e.chave; }); if (ev.target.checked) multiplos.lista.push(e.chave); } }), el("span", { texto: e.nome })]);
+    }));
+    caixaMultiplos.appendChild(lista);
 
     var circulo = UI.campo({
       rotulo: "Círculo (1 a 4)", tipo: "selecao", valor: d.circulo ? String(d.circulo) : "",
@@ -1268,6 +1289,7 @@
       elemento: el("div.pilha--curta", { class: "pilha" }, [
         el("h4.t-secao", { texto: "Ordem Paranormal" }),
         el("div.editar-grade", {}, [elemento, circulo]),
+        caixaMultiplos,
         custo,
       ]),
       coletar: function () {
@@ -1282,10 +1304,14 @@
         if (atual.ordem && atual.ordem.referencia) saida.referencia = atual.ordem.referencia;
         /* Ritual de vários elementos (AS1 p. 49): o editor não mexe na
            lista — ela continua como estava, em vez de sumir ao salvar. */
-        if (atual.ordem && atual.ordem.todosOsElementos && Array.isArray(atual.ordem.elementos)) {
-          saida.elementos = atual.ordem.elementos.slice();
-          saida.todosOsElementos = true;
+        /* Vários elementos: a lista marcada (o principal entra nela). */
+        if (multiplos.ligado) {
+          var l = multiplos.lista.slice();
+          if (saida.elemento && l.indexOf(saida.elemento) < 0) l.unshift(saida.elemento);
+          if (l.length > 1) { saida.elementos = l; saida.todosOsElementos = true; if (!saida.elemento) saida.elemento = l[0]; }
         }
+        /* As cópias das definições Homebrew já presentes ficam (pendentes inclusive). */
+        if (atual.ordem && atual.ordem.elementosHomebrew) saida.elementosHomebrew = JSON.parse(JSON.stringify(atual.ordem.elementosHomebrew));
         return Object.keys(saida).length ? saida : null;
       },
     };

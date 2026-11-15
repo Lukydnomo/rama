@@ -73,6 +73,25 @@
   var NAO_SE_APLICA = "—";
 
   var ELEMENTOS = ["sangue", "morte", "conhecimento", "energia", "medo"];
+  var OFICIAIS_FIXOS = ELEMENTOS;
+
+  /* v9.8: elementos Homebrew de Ordem (js/ordem/elementos.js). O campo
+     aceita os oficiais e os Homebrew; a definição viaja copiada em
+     `elementosHomebrew` e é registrada ao normalizar. Uma chave hbe-…
+     sem definição é preservada como referência pendente. */
+  function EL() { return global.RAMAOrdemElementos || null; }
+  function elementoAceito(k) { return EL() ? EL().aceito(k) : OFICIAIS_FIXOS.indexOf(k) >= 0; }
+  function copiasDeElementos(bruto, chaves) {
+    if (!EL()) return null;
+    EL().registrarMapa(bruto && bruto.elementosHomebrew);
+    var hb = (chaves || []).filter(function (k) { return EL().ehHomebrew(k); });
+    if (!hb.length) return null;
+    var m = EL().copiasPara(hb);
+    /* Uma pendente (sem definição) continua com a cópia que já veio, se veio. */
+    hb.forEach(function (k) { if (!m[k] && bruto && bruto.elementosHomebrew && bruto.elementosHomebrew[k]) m[k] = JSON.parse(JSON.stringify(bruto.elementosHomebrew[k])); });
+    return Object.keys(m).length ? m : null;
+  }
+
   var NATUREZAS = ["paranormal", "humana", "animal"];
   var TIPOS_DE_ACAO = ["padrao", "movimento", "completa", "livre", "reacao"];
   var PERIODOS = ["rodada", "turno", "cena", "combate", "interlúdio", "dia", "missão"];
@@ -719,7 +738,7 @@
     var saida = {
       vd: vd,
       nivel: U.aparar(o.nivel, 60),
-      elementos: lista(o.elementos).filter(function (e, i, l) { return ELEMENTOS.indexOf(e) >= 0 && l.indexOf(e) === i; }),
+      elementos: lista(o.elementos).filter(function (e, i, l) { return elementoAceito(e) && l.indexOf(e) === i; }),
       tipo: U.aparar(o.tipo, 40) || "Criatura",
       tamanho: o.tamanho ? U.aparar(o.tamanho, 30) : null,
       presenca: null,
@@ -815,6 +834,9 @@
         saida.ficha = { id: U.aparar(o.ficha.id, 120), nome: U.aparar(o.ficha.nome, 120), pagina: o.ficha.pagina ? U.inteiro(o.ficha.pagina, 0) : null };
       }
     }
+
+    var copiasEl = copiasDeElementos(o, saida.elementos);
+    if (copiasEl) saida.elementosHomebrew = copiasEl;
 
     return saida;
   }

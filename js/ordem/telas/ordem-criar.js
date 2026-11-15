@@ -671,6 +671,7 @@
     function etapaClasse() {
       if (comum()) return etapaClasseComum();
       var lista = el("div.criacao-lista", {}, C.classesDeAgente().map(cartaoDeClasse));
+      var homebrew = secaoClassesHomebrew();
 
       var extra = [];
       var classe = C.classe(d.classe) ? periciasDeClasse() : null;
@@ -707,6 +708,7 @@
       return el("div.pilha", {}, [
         el("p", { texto: "A classe é o treinamento que você recebeu dentro da Ordem." }),
         lista,
+        homebrew,
       ].concat(extra).concat([referencia("Ordem Paranormal RPG, p. 22-35")]));
     }
 
@@ -739,6 +741,46 @@
       ]);
     }
 
+    /* v9.8: Classes Homebrew (as suas e as públicas). Cada uma só é
+       oferecida no trilho cuja tabela a mesa definiu; a ficha guarda uma
+       CÓPIA da versão escolhida (ordem.homebrew). */
+    var bibliotecaHb = null;
+    function secaoClassesHomebrew() {
+      var H = global.RAMAOrdemHomebrew;
+      if (!H) return null;
+      if (!bibliotecaHb) {
+        H.carregarBiblioteca().then(function (b) { bibliotecaHb = b; pintar(); });
+        return el("p.t-mini", { texto: "Consultando as Classes Homebrew…" });
+      }
+      if (!bibliotecaHb.classes.length) return el("p.t-mini", { texto: "Nenhuma Classe Homebrew na sua biblioteca nem nas públicas. Crie em Homebrew → + Criar → Ordem Paranormal → Classe." });
+      var trilho = R.trilho(rascunhoParaRegras());
+      return el("div.pilha--curta", { class: "pilha" }, [
+        el("h4.t-secao", { texto: "Classes Homebrew" }),
+        el("div.criacao-lista", {}, bibliotecaHb.classes.map(function (def) {
+          var disp = H.disponivelNoTrilho(def, trilho);
+          var escolhida = d.classe === def.chave;
+          return el("button.criacao-opcao", {
+            type: "button", "aria-pressed": String(escolhida), disabled: !disp.ok || null,
+            class: escolhida ? "criacao-opcao--escolhida" : "",
+            onclick: function () {
+              if (!disp.ok) return;
+              C.registrarClasseHomebrew(def);
+              d.classe = escolhida ? "" : def.chave;
+              d.homebrewClasse = escolhida ? null : JSON.parse(JSON.stringify(def));
+              d.escolhasDeClasse = []; d.periciasEscolhidas = []; d.trilha = "";
+              pintar();
+            },
+          }, [
+            el("span.criacao-opcao__nome", { texto: def.nome + " (Homebrew)" }),
+            el("span.criacao-opcao__meta", { texto: H.previa(def, d.atributos)[0] }),
+            def.resumo ? el("span.criacao-opcao__texto", { texto: def.resumo }) : null,
+            el("span.criacao-opcao__texto", { texto: (def.poderesDe ? "Poderes do " + C.classe(def.poderesDe).nome : "Só poderes gerais") + " · " + (def.trilhasDe ? "trilhas do " + C.classe(def.trilhasDe).nome : "sem trilhas de classe") + "." }),
+            !disp.ok ? el("span.criacao-opcao__texto.t-aviso", { texto: disp.motivo }) : null,
+          ]);
+        })),
+      ]);
+    }
+
     function cartaoDeClasse(cl) {
       var escolhida = d.classe === cl.chave;
       var pericias = cl.periciasLivres.base + " + Intelecto perícias à escolha";
@@ -749,6 +791,7 @@
         class: escolhida ? "criacao-opcao--escolhida" : "",
         onclick: function () {
           d.classe = escolhida ? "" : cl.chave;
+          d.homebrewClasse = null;
           d.escolhasDeClasse = [];
           d.periciasEscolhidas = [];
           d.trilha = "";
@@ -1219,6 +1262,11 @@
       ordem.atributos = Object.assign({}, d.atributos);
       ordem.escolhas = JSON.parse(JSON.stringify(d.escolhas || []));
       ordem.afinidade = Object.assign({}, d.afinidade);
+      /* v9.8: a cópia da Classe Homebrew escolhida viaja na ficha. */
+      if (d.homebrewClasse && d.classe === d.homebrewClasse.chave) {
+        ordem.homebrew = { versao: 1, classes: {}, elementos: {} };
+        ordem.homebrew.classes[d.classe] = JSON.parse(JSON.stringify(d.homebrewClasse));
+      }
 
       var jaTem = periciasJaTreinadas();
       Object.keys(jaTem).forEach(function (p) { ordem.pericias[p] = "treinado"; });

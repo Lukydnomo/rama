@@ -2913,6 +2913,17 @@
     var b = (bruto && typeof bruto === "object") ? bruto : {};
     var vazia = fichaVazia();
 
+    /* v9.8: as definições Homebrew que a ficha usa (cópias) entram no
+       catálogo ANTES de a classe ser conferida — senão a chave de uma
+       classe Homebrew seria apagada aqui. */
+    var homebrew = global.RAMAOrdemHomebrew ? global.RAMAOrdemHomebrew.normalizarBloco(b.homebrew)
+      : (b.homebrew && typeof b.homebrew === "object" ? JSON.parse(JSON.stringify(b.homebrew)) : null);
+    if (homebrew && global.RAMAOrdemHomebrew) global.RAMAOrdemHomebrew.registrar(homebrew);
+    /* Numa página sem o módulo, as cópias ainda entram no catálogo — e a
+       classe Homebrew nunca é apagada por uma página que não a conhece. */
+    else if (homebrew && C.registrarClasseHomebrew) Object.keys(homebrew.classes || {}).forEach(function (k) { C.registrarClasseHomebrew(Object.assign({}, homebrew.classes[k], { chave: k })); });
+    var classesValidas = C.classesHomebrew ? C.CLASSES.concat(C.classesHomebrew()) : C.CLASSES;
+
     var ficha = {
       nex: nexValido(b.nex),
       nivel: Math.max(1, Math.min(20, inteiro(b.nivel, 1))),
@@ -2926,7 +2937,7 @@
       especialidades: (Array.isArray(b.especialidades) ? b.especialidades : [])
         .map(function (x) { return String(x || "").trim().slice(0, 40); }).filter(function (x, i, l) { return x && l.indexOf(x) === i; }).slice(0, 12),
       estadoDasOrigens: normalizarEstadoDasOrigens(b.estadoDasOrigens),
-      classe: chaveConhecida(b.classe, C.CLASSES),
+      classe: chaveConhecida(b.classe, classesValidas) || (homebrew && homebrew.classes && /^hbc-[a-z0-9-]{3,60}$/.test(String(b.classe || "")) && homebrew.classes[b.classe] ? b.classe : ""),
       origem: chaveConhecida(b.origem, C.ORIGENS),
       trilha: chaveConhecida(b.trilha, C.TRILHAS),
       prestigio: Math.max(0, inteiro(b.prestigio, 0)),
@@ -2985,6 +2996,7 @@
     /* v9.5: o plano da Ramificação ativo nesta ficha e os recibos do que
        ele já aplicou (js/ordem/ramificacao.js). Sem o módulo, passa como
        veio — nunca some numa gravação. */
+    if (homebrew) ficha.homebrew = homebrew;
     ficha.ramificacao = global.RAMAOrdemRamificacao
       ? global.RAMAOrdemRamificacao.normalizarRamificacao(b.ramificacao)
       : (b.ramificacao && typeof b.ramificacao === "object" ? JSON.parse(JSON.stringify(b.ramificacao)) : null);
@@ -3211,7 +3223,8 @@
 
   function normalizarAfinidade(bruto) {
     var b = (bruto && typeof bruto === "object") ? bruto : {};
-    var elemento = ELEMENTOS_DA_AFINIDADE.indexOf(b.elemento) >= 0 ? b.elemento : "";
+    /* v9.8: um elemento Homebrew de Ordem também (sem efeito mecânico). */
+    var elemento = ELEMENTOS_DA_AFINIDADE.indexOf(b.elemento) >= 0 || /^hbe-[a-z0-9-]{3,60}$/.test(String(b.elemento || "")) ? b.elemento : "";
     return {
       elemento: elemento,
       /* O nome do elemento Homebrew fica guardado mesmo quando a

@@ -192,7 +192,16 @@
         aprimoramento: b.acoplavel.aprimoramento === "multiplicador" ? "multiplicador" : "margem",
         acoplada: b.acoplavel.acoplada === true, principal: b.acoplavel.principal === true };
     }
-    if (ELEMENTOS.indexOf(b.elemento) >= 0) dados.elemento = b.elemento;
+    /* v9.8: o elemento de um item aceita também um Homebrew de Ordem (a
+       definição viaja copiada). */
+    var EL = global.RAMAOrdemElementos;
+    if (ELEMENTOS.indexOf(b.elemento) >= 0 || (EL && EL.ehHomebrew(b.elemento))) dados.elemento = b.elemento;
+    if (EL && EL.ehHomebrew(dados.elemento)) {
+      EL.registrarMapa(b.elementosHomebrew);
+      var copiaEl = EL.copiasPara([dados.elemento]);
+      if (!copiaEl[dados.elemento] && b.elementosHomebrew && b.elementosHomebrew[dados.elemento]) copiaEl = { }, copiaEl[dados.elemento] = JSON.parse(JSON.stringify(b.elementosHomebrew[dados.elemento]));
+      if (Object.keys(copiaEl).length) dados.elementosHomebrew = copiaEl;
+    }
     var marcadores = (Array.isArray(b.marcadores) ? b.marcadores : []).filter(function (m, i, lista) {
       return MARCADORES.indexOf(m) >= 0 && lista.indexOf(m) === i;
     });

@@ -3424,7 +3424,7 @@ function acaoSalvarFoto(corpo, usuario) {
    HOMEBREW
    ===================================================================== */
 
-var TIPOS_HOMEBREW = ['item', 'arma', 'armadura', 'mochila', 'criatura', 'habilidade', 'ritual'];
+var TIPOS_HOMEBREW = ['item', 'arma', 'armadura', 'mochila', 'criatura', 'habilidade', 'ritual', 'classe', 'elemento'];
 
 /* Até a v2.4.2, 'habilidade' faltava na lista acima e toda habilidade
    enviada à biblioteca era gravada com a coluna tipo = 'item' — mas o
@@ -3544,8 +3544,14 @@ function resumoDeCriatura(d) {
   if (ordem) {
     r.vd = typeof ordem.vd === 'number' && isFinite(ordem.vd) ? ordem.vd : null;
     r.nivel = String(ordem.nivel || '').slice(0, 60);
+    /* v9.8: também os elementos Homebrew de Ordem (hbe-…), com o nome
+       copiado na criatura — sem regra oficial nenhuma. */
+    var hbEl = ordem.elementosHomebrew && typeof ordem.elementosHomebrew === 'object' ? ordem.elementosHomebrew : {};
     r.elementos = (Array.isArray(ordem.elementos) ? ordem.elementos : [])
-      .filter(function (e) { return ELEMENTOS_DE_CRIATURA.indexOf(e) >= 0; });
+      .filter(function (e) { return ELEMENTOS_DE_CRIATURA.indexOf(e) >= 0 || /^hbe-[a-z0-9-]{3,60}$/.test(String(e)); });
+    var nomesHb = {};
+    r.elementos.forEach(function (e) { if (hbEl[e] && hbEl[e].nome) nomesHb[e] = String(hbEl[e].nome).slice(0, 40); });
+    if (Object.keys(nomesHb).length) r.nomesDeElementos = nomesHb;
     r.tamanho = String(ordem.tamanho || '').slice(0, 30);
     r.tipo = String(ordem.tipo || '').slice(0, 40);
   }
@@ -3643,7 +3649,9 @@ function acaoSalvarHomebrew(corpo, usuario) {
    armadura, mochila, item); os outros sistemas, "item" com a definição
    nativa em modelo.def. Habilidade é "habilidade"; o ritual de Ordem e
    Universal continua com o tipo "ritual". */
-var GRUPOS_DE_HOMEBREW = ['item', 'habilidade'];
+var GRUPOS_DE_HOMEBREW = ['item', 'habilidade', 'estrutural'];
+/* v9.8: os tipos estruturais que cada sistema já sabe usar de verdade. */
+var ESTRUTURAIS_POR_SISTEMA = { ordem: ['classe', 'elemento'] };
 function conferirModeloDeHomebrew(dados, tipoPedido) {
   var m = dados.modelo;
   if (!m || typeof m !== 'object' || Array.isArray(m)) return { ok: false, erro: 'dados_invalidos', detalhe: 'modelo' };
@@ -3655,6 +3663,12 @@ function conferirModeloDeHomebrew(dados, tipoPedido) {
   if (dados.sistema !== undefined && String(dados.sistema) !== String(m.sistema)) return { ok: false, erro: 'dados_invalidos', detalhe: 'sistema' };
   var ramaFicha = m.sistema === 'ordem' || m.sistema === 'universal';
   var tipo;
+  if (m.grupo === 'estrutural') {
+    var aceitos = ESTRUTURAIS_POR_SISTEMA[String(m.sistema)] || [];
+    if (aceitos.indexOf(String(m.subtipo)) < 0) return { ok: false, erro: 'dados_invalidos', detalhe: 'subtipo' };
+    dados.sistema = String(m.sistema);
+    return { ok: true, tipo: String(m.subtipo) };
+  }
   if (m.grupo === 'habilidade') tipo = tipoPedido === 'ritual' && ramaFicha ? 'ritual' : 'habilidade';
   else tipo = ramaFicha && ['item', 'arma', 'armadura', 'mochila'].indexOf(tipoPedido) >= 0 ? tipoPedido : 'item';
   dados.sistema = String(m.sistema);

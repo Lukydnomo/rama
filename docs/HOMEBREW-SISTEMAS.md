@@ -6,7 +6,7 @@ organiza em três etapas.
 | Etapa | Situação |
 |---|---|
 | **1 — Estrutura e compatibilidade** | entregue na **v9.7.0** |
-| **2 — Tipos estruturais e elementos** | pendente |
+| **2 — Tipos estruturais e elementos** | parte 1 na **v9.8.0** (Elemento e Classe de Ordem I); o resto pendente |
 | **3 — Automação por sistema, publicação e regressão** | pendente |
 
 Este documento é o **inventário de cobertura**. Para cada sistema e tipo,
@@ -151,7 +151,9 @@ Legenda:
 | **Ordem I** | Item: geral, arma, proteção, munição, acessório, consumível, paranormal, mochila, outro | adaptador (categoria 0–IV, espaços, proficiência, tipo, empunhadura, alcance, dano, crítico, RD, elemento, capacidade) | inventário (biblioteca da ficha) | **N**: ataque, dano, crítico, Defesa e carga pelo inventário de Ordem | modificações e maldições pelo item na ficha (como antes) |
 | Ordem I | Habilidade / poder; Ritual | os de sempre (habilidade; ritual com o editor da ficha) | aba Habilidades / Rituais (bibliotecas da ficha) | **N** (ritual: símbolo, círculo, elemento, conjuração) | — |
 | Ordem I | Criatura | o de sempre | combate, aliados, consulta | **N** | — |
-| Ordem I | **Elemento, Classe, Origem, Trilha** | — | — | — | **Etapa 2** |
+| Ordem I | **Elemento** (v9.8) | adaptador (cor, símbolo, relações, afinidade) | rituais (principal e vários), criaturas, item paranormal, afinidade | **N** nos campos; sem regra oficial herdada | relações: guardadas, automação na Etapa 3 |
+| Ordem I | **Classe** (v9.8) | editor próprio em 6 etapas | criação de agente (Classes Homebrew), Progressão, Ramificação | **N**: PV/PE/SAN/PD, vagas, poderes e trilhas escolhidos, em NEX, nível e Patentes (com a tabela) | conjuração de rituais pela classe; troca de classe numa ficha existente |
+| Ordem I | **Origem, Trilha** | — | — | — | **Etapa 2** (próxima parte) |
 | **Ordem II** | Item: arma, proteção, consumível, equipamento (passos em perícia), outro | adaptador | inventário (Do Homebrew) | **N**: RA + dano, armadura, passos | — |
 | Ordem II | Habilidade, Poder, Ritual (experimental) | adaptador | habilidades (habilidade própria) | **C** (texto) | efeitos estruturados: **Etapa 3** |
 | Ordem II | Ameaça | o de sempre | mesa de Ordem II | **N** | Perfil e Ocupação: **Etapa 2** |
@@ -282,3 +284,191 @@ ficha: bônus por condição, dano/cura, custos, cargas, concessões e
 expiração. Ações de Universal em ficha de sistema cadastrado pelo adaptador
 de destino, com a escolha do recurso ou da perícia nativa. Reenvio com IDs
 de operação nas mesas. A matriz de regressão por sistema.
+
+## v9.8.0 — Etapa 2, parte 1: Elemento e Classe Homebrew de Ordem I
+
+### Elemento Homebrew de Ordem
+
+**Homebrew → + Criar → Ordem Paranormal → Elemento.** Os campos são nome,
+descrição, cor, símbolo opcional e, em opções avançadas, "forte contra",
+"fraco contra" e "pode ser escolhido como afinidade". O elemento recebe uma
+**chave estável** (`hbe-<nome>-<id>`), que não muda ao renomear nem ao
+importar.
+
+**Catálogo único** (`js/ordem/elementos.js`). Ele separa duas perguntas:
+
+| Pergunta | Quem responde |
+|---|---|
+| O **campo aceita** este elemento? | oficiais + Homebrew |
+| Há **regra oficial** para ele? | só os cinco oficiais |
+
+**O que passou a usar o catálogo:**
+- normalização de ritual, inclusive principal e vários elementos;
+- normalização de criatura e de item de Ordem;
+- `RAMAOrdemCatalogo.elemento`;
+- nomes no painel de criatura e no ritual;
+- resumo de criatura no servidor (`nomesDeElementos`);
+- filtro e marcas da biblioteca de criaturas;
+- editor de ritual: principal e a lista de vários elementos, agora
+  editável;
+- editor de criatura e item paranormal;
+- **afinidade**, só para os que a mesa permitiu.
+
+**O que continua só com os oficiais:** requisito de Sangue, afinidade
+oficial sem Medo, Opressão, horda, Arquivos 6/7, consumo, dano das origens.
+Um elemento Homebrew **nunca herda** mecânica pela cor ou pelo nome. Na
+afinidade, ele é marcado Homebrew, sem efeito oficial. As relações que a
+mesa configurou ficam guardadas (`relacaoHomebrew`) para a automação da
+Etapa 3.
+
+**Cópia, não vínculo.** A definição viaja junto de quem a usa:
+- `ordem.elementosHomebrew`, no bloco do ritual, da criatura ou do item;
+- `ordem.homebrew.elementos`, na ficha, para a afinidade.
+
+Renomear ou apagar na biblioteca não quebra nada. Uma chave `hbe-…` sem
+definição (arquivo incompleto) fica como **referência pendente
+identificada** ("Elemento Homebrew não encontrado (…)"). Ela nunca vira
+Medo nem "sem elemento".
+
+### Classe Homebrew de Ordem I
+
+**Homebrew → + Criar → Ordem Paranormal → Classe.** O editor tem seis
+etapas, com a prévia ao lado:
+
+1. **Identidade**: poderes de classe e trilhas vêm de uma classe oficial
+   escolhida, ou de nenhuma.
+2. **Recursos**: PV, PE, SAN e PD, inicial e por marco, com parcela de
+   atributo opcional (ex.: + Vigor).
+3. **Perícias**: fixas, escolhas obrigatórias, livres, grau de
+   treinamento, proficiências e habilidades iniciais.
+4. **NEX e nível**: 20 marcos, com o que cada um concede e o que pede
+   (trilha, poder, atributo, grau, versatilidade).
+5. **Patentes**: a tabela, opcional.
+6. **Revisão**: a prévia pelo motor, o que é automático e o que falta.
+
+O editor pode começar de uma **cópia** das tabelas de Combatente,
+Especialista ou Ocultista.
+
+**No motor.** A classe registrada entra em `RAMAOrdemCatalogo.classe`, na
+tabela de NEX (que também serve ao nível com NEX & Experiência) e em
+`EVOLUCAO_PATENTES.classes`. Isso alimenta:
+- PV, PE, SAN e PD calculados;
+- as vagas da Progressão;
+- os candidatos a poder de classe (`classeDosPoderes`) e as trilhas
+  (`trilhaServe`);
+- as perícias da criação (`periciasDaClasse`);
+- a **Ramificação** (planos com a classe Homebrew; os planos existentes não
+  mudam).
+
+**Trilho sem tabela.** Se falta a tabela de um trilho, a criação mostra a
+classe desabilitada com o motivo, e uma ficha nesse trilho fica sem vagas.
+Ela **nunca** usa a tabela de uma classe oficial.
+
+**Na ficha.** Ela guarda a sua **cópia versionada** (`ordem.homebrew.classes`,
+chave `hbc-<id>-<hash>`):
+- editar a classe na biblioteca cria outra versão, e o personagem em jogo
+  continua com a dele;
+- o Mestre e quem recebeu a ficha não precisam alcançar a biblioteca;
+- uma página sem o módulo novo também preserva a classe.
+
+**Criação de agente.** A etapa Classe ganhou **Classes Homebrew** (as suas e
+as públicas), com a prévia pelos atributos da ficha e a disponibilidade no
+trilho.
+
+### Servidor e pacotes
+
+- `TIPOS_HOMEBREW` ganhou `classe` e `elemento`, e o grupo `estrutural`
+  passou a ser aceito.
+- Só os estruturais que o sistema usa de verdade são aceitos (por enquanto,
+  Ordem: classe e elemento). Raça em T20, por exemplo, ainda é recusada.
+- Pacotes: Classe e Elemento entram em pacote de Ordem, agrupados em
+  "Classes" e "Elementos".
+- Um ritual ou criatura com Vidro leva a cópia do elemento dentro: a
+  dependência viaja junto, e quem importa vê "Vidro" mesmo sem o elemento
+  na biblioteca.
+- Exportar e importar (`homebrew-estrutural`) mantêm a chave do elemento e
+  as tabelas da classe.
+
+### Validação da v9.8.0
+
+**Automática.**
+
+`testes/executar-homebrew-ordem.js` (novo, 44), pelo motor:
+- **Classe**: chave versionada; NEX 5% com 20 PV e NEX 10% com 27; não é a
+  tabela do Combatente; vagas da tabela própria; poderes só do "poderes
+  de…" ou só gerais; trilhas só com "trilhas de…".
+- **Nível**: o nível 2 ganha o 2º marco.
+- **Patentes**: sem tabela, nenhuma vaga e nada emprestado; com tabela, 33
+  PV (fórmula do SAH, p. 110), e não 46 (Combatente), com as vagas da
+  tabela.
+- **Cópia**: recarregar e exportar/importar a ficha mantêm a classe; a
+  Ramificação projeta 10 → 20% com a tabela.
+- **Vidro**: ritual Vidro + Energia com a cópia; criatura; reabrir sem a
+  biblioteca; referência pendente; lixo recusado; item paranormal;
+  afinidade sem efeito oficial; afinidade oficial intacta; relação só a
+  configurada.
+- **Adaptador e arquivo**: chave do elemento ao renomear e importar, classe
+  ida e volta, pacotes.
+
+`testes/pacotes-backend.js`: Classe e Elemento no servidor, estrutural de
+T20 recusado e pacotes.
+
+**Na interface** (servidor local, conta sintética):
+- Criei o **Vidro** (cor, ◇, forte contra Morte, afinidade). O ritual
+  **Estilhaços Refletidos**, de Vidro + Energia e 2º círculo, aparece na
+  lista e na consulta como "Vidro e Energia".
+- Criei a **criatura Espectro de Vidro**; o servidor resume com o nome.
+- Criei a **classe Vigilante** pelo editor (tabelas do Combatente, PV 18 +
+  Vig e 5 + Vig, sem Patentes). A revisão avisou da falta de Patentes.
+- **Criação de agente**: o Vigilante aparece em Classes Homebrew com a
+  prévia (21 PV com Vigor 3), as escolhas de perícia da classe e PV 21 na
+  revisão. Ficha gravada com a cópia. NEX 10% deu **29 PV** e a vaga de
+  Trilha.
+- **Ocultista a 55%**: a afinidade abriu com "Vidro (Homebrew)". A escolha
+  foi gravada com a cópia na ficha, e o painel mostra "Vidro (Homebrew)".
+- Editor de classe no celular: uma coluna, sem rolagem lateral.
+- Sem erros no console nem no servidor.
+
+### Publicar a v9.8.0
+
+**Servidor:** troque **`Codigo.gs`** e crie uma versão nova da implantação.
+**`setupRama()` não é necessário.**
+
+**Site:**
+- `js/ordem/elementos.js`, `js/ordem/homebrew-ordem.js`,
+  `js/paginas/homebrew-classe.js` (novos);
+- `js/ordem/catalogo.js`, `js/ordem/poderes.js`, `js/ordem/progressao.js`,
+  `js/ordem/regras.js`, `js/ordem/rituais.js`, `js/ordem/inventario.js`,
+  `js/ordem/criaturas.js`, `js/criaturas.js`;
+- `js/ordem/telas/ordem-criar.js`, `js/ordem/telas/ordem-escolhas.js`,
+  `js/ordem/telas/ficha-ordem.js`;
+- `js/paginas/ficha-rituais.js`, `js/paginas/homebrew-criatura.js`,
+  `js/paginas/criaturas-biblioteca.js`, `js/paginas/homebrew.js`,
+  `js/paginas/homebrew-editor.js`, `js/paginas/ficha.js`;
+- `js/homebrew-adaptadores.js`, `js/pacotes-homebrew.js`, `js/validacao.js`;
+- `css/homebrew.css`, `css/componentes.css`, `js/versao.js`;
+- as páginas que carregam Ordem: `index.html`, `ficha/`, `homebrew/`,
+  `personagens/`, `campanha/`, `campanhas/`, `catalogo/`, `perfil/`.
+
+### O que ainda falta na Etapa 2
+
+**Ordem I:**
+- **Origem** e **Trilha** Homebrew.
+- Classe que conjura rituais (o "Escolhido pelo Outro Lado" com círculos por
+  NEX).
+- Classes Homebrew também na troca de classe e na transição de uma ficha
+  existente (hoje, só na criação).
+- Atualizar uma ficha para a versão nova de uma classe (hoje fica a cópia).
+- Elemento Homebrew em poderes paranormais e maldições Homebrew (dependem
+  dos editores desses tipos).
+
+**Os outros sistemas:**
+- T20: Raça, Origem, Classe e Divindade.
+- Ordem II: Perfil e Ocupação.
+- Oblívio: Papel, Motivação, Mazela e Fardo.
+- Vampiro: Clã, Predador, Disciplina, Vantagem e Defeito.
+- Goblins: Ocupação e Descritor.
+- BRUTAL: Arquétipo e Estilo.
+- As habilidades Homebrew no motor desses sistemas.
+
+A **Etapa 3** (automação por sistema) continua como descrita acima.

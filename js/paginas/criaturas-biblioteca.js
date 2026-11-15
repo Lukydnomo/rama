@@ -33,6 +33,20 @@
      Transmissão, que continuam com Conhecimento e Energia nos elementos. */
   var ELEMENTOS = ["sangue", "morte", "conhecimento", "energia", "medo", "transmissao"];
   var NOMES_ELEMENTO = { sangue: "Sangue", morte: "Morte", conhecimento: "Conhecimento", energia: "Energia", medo: "Medo", transmissao: "Transmissão" };
+  /* v9.8: o filtro e as marcas também mostram os elementos Homebrew de
+     Ordem que as criaturas listadas usam (com o nome copiado nelas). */
+  function elementosDoFiltro(lista) {
+    var l = ELEMENTOS.slice();
+    (lista || []).forEach(function (x) { (x.elementos || []).forEach(function (e) { if (l.indexOf(e) < 0 && /^hbe-/.test(e)) l.push(e); }); });
+    return l;
+  }
+  function nomeDoElemento(e, x, lista) {
+    if (NOMES_ELEMENTO[e]) return NOMES_ELEMENTO[e];
+    if (x && x.nomesDeElementos && x.nomesDeElementos[e]) return x.nomesDeElementos[e];
+    var achado = (lista || []).filter(function (y) { return y.nomesDeElementos && y.nomesDeElementos[e]; })[0];
+    if (achado) return achado.nomesDeElementos[e];
+    return global.RAMAOrdemElementos ? global.RAMAOrdemElementos.nome(e) : e;
+  }
   var NATUREZAS = [{ v: "", r: "Todas" }, { v: "paranormal", r: "Paranormais" }, { v: "humana", r: "Pessoas" }, { v: "animal", r: "Animais" }];
 
   var lembrado = { aba: "oficial" };
@@ -113,7 +127,7 @@
         id: h.id, nome: h.nome, meu: !!h.meu, visibilidade: h.visibilidade,
         chave: U.chaveDeBusca(h.nome + " " + (r.categoria || "")),
         sistema: r.sistema, natureza: r.natureza || "", vd: typeof r.vd === "number" ? r.vd : null, nivel: r.nivel || "",
-        elementos: r.elementos || [], manifestacao: r.manifestacao || "", tamanho: r.tamanho || "", tipo: r.tipo || "", pv: r.pv, livro: "",
+        elementos: r.elementos || [], nomesDeElementos: r.nomesDeElementos || null, manifestacao: r.manifestacao || "", tamanho: r.tamanho || "", tipo: r.tipo || "", pv: r.pv, livro: "",
         categoria: r.categoria || "",
       };
     }
@@ -130,8 +144,8 @@
         return el("button.r-aba" + (classe ? "." + classe : ""), { type: "button", "aria-pressed": String(ativo), texto: rotulo, onclick: aoClicar });
       }
 
-      var grupoElementos = el("div.r-abas.biblioteca-abas", { role: "group", "aria-label": "Elementos" }, ELEMENTOS.map(function (e) {
-        return chip(NOMES_ELEMENTO[e], estado.elementos.indexOf(e) >= 0, function () {
+      var grupoElementos = el("div.r-abas.biblioteca-abas", { role: "group", "aria-label": "Elementos" }, elementosDoFiltro(estado.aba === "homebrew" ? estado.homebrew : null).map(function (e) {
+        return chip(nomeDoElemento(e, null, estado.homebrew), estado.elementos.indexOf(e) >= 0, function () {
           var i = estado.elementos.indexOf(e);
           if (i >= 0) estado.elementos.splice(i, 1); else estado.elementos.push(e);
           pintar();
@@ -296,7 +310,7 @@
       var marcas = el("span.bib-item__marcas", {}, (x.manifestacao === "transmissao"
         ? [el("span.r-etiqueta.bib-elemento.bib-elemento--transmissao", { texto: "Transmissão", title: "Conhecimento e Energia ao mesmo tempo (Arquivos Secretos 5, p. 46)" })]
         : []).concat((x.elementos || []).map(function (e) {
-        return el("span.r-etiqueta.bib-elemento.bib-elemento--" + e, { texto: NOMES_ELEMENTO[e] });
+        return el("span.r-etiqueta.bib-elemento.bib-elemento--" + (NOMES_ELEMENTO[e] ? e : "homebrew"), { texto: nomeDoElemento(e, x, estado.homebrew) });
       })).concat([
         x.livro ? el("span.r-etiqueta.bib-fonte", { texto: OC().referencia(x.livro, x.pagina), title: OC().FONTES[x.livro].nome }) : null,
         estado.aba === "homebrew" ? el("span.r-etiqueta", { texto: x.meu ? (x.visibilidade === "publico" ? "Sua · pública" : "Sua") : "Pública" }) : null,

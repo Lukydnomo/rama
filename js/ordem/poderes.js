@@ -2129,6 +2129,10 @@
      inclusive os quatro poderes de classe que o suplemento transformou
      em gerais. */
   function poderesDeClasse(classe) {
+    /* v9.8: uma classe Homebrew usa os poderes da classe oficial que a
+       mesa escolheu (ou só os gerais). */
+    var CAT = global.RAMAOrdemCatalogo;
+    if (CAT && CAT.classeDosPoderes) classe = CAT.classeDosPoderes(classe);
     return PODERES_CLASSE.filter(function (p) {
       return p.classes.indexOf(classe) >= 0 || !!p.geral;
     }).concat(PODERES_GERAIS);
@@ -2139,6 +2143,8 @@
      dizer de onde veio a permissão. */
   function pertenceAClasse(p, classe) {
     if (!p) return false;
+    var CAT = global.RAMAOrdemCatalogo;
+    if (CAT && CAT.classeDosPoderes) classe = CAT.classeDosPoderes(classe);
     if (p.tipo === "geral") return true;
     if (p.classes.indexOf(classe) >= 0) return true;
     return !!p.geral;

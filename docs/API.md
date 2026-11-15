@@ -1,5 +1,13 @@
 # A API
 
+## Elemento e Classe Homebrew de Ordem — v9.8
+
+- `salvar_homebrew`: `modelo.grupo` igual a `estrutural` só para os
+  subtipos que o sistema usa de verdade (Ordem: `classe`, `elemento`).
+  Outros sistemas respondem `dados_invalidos` (`detalhe: subtipo`).
+- `listar_homebrew` aceita `tipos: ["classe", "elemento"]`.
+- O resumo de criatura traz `nomesDeElementos` para os elementos Homebrew.
+
 ## Homebrew por sistema — v9.7
 
 - `salvar_homebrew`: um registro com `modelo` (`{ versao, sistema, grupo:

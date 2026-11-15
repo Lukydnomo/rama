@@ -1,5 +1,16 @@
 # O banco
 
+## Elemento e Classe Homebrew de Ordem — v9.8
+
+Nenhuma aba nova. No `HOMEBREW`, a coluna `tipo` aceita `classe` e
+`elemento`, com `modelo.grupo` igual a `estrutural`. Na ficha de Ordem:
+- `ordem.homebrew = { versao, classes: { hbc-…: def }, elementos: { hbe-…: def } }`
+  guarda as cópias usadas;
+- os blocos de ritual, criatura e item podem trazer `elementosHomebrew`;
+- `ordem.afinidade.elemento` aceita uma chave `hbe-…`.
+
+Tudo é opcional: nada existente muda.
+
 ## Homebrew por sistema — v9.7
 
 Nenhuma aba nova (**`setupRama()` não é necessário**). O `dadosJson` do

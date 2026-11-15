@@ -744,7 +744,9 @@
 
   function textoAfinidade(af) {
     if (!af.escolhida) return af.adiada ? "a decidir (adiada)" : "a decidir";
-    var nome = af.homebrew ? af.nomeOutro + " (Homebrew)" : ((C.elemento(af.elemento) || {}).nome || af.elemento);
+    /* v9.8: "Outro" usa o nome livre; um elemento Homebrew de Ordem, o nome do catálogo. */
+    var hbNome = af.elemento && af.elemento !== "outro" && C.elemento(af.elemento) ? C.elemento(af.elemento).nome : af.nomeOutro;
+    var nome = af.homebrew ? hbNome + " (Homebrew)" : ((C.elemento(af.elemento) || {}).nome || af.elemento);
     return nome + (af.ativa ? " — afinidade desenvolvida" : " — conexão; a afinidade vem ao transcender");
   }
 

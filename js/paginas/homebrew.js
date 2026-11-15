@@ -71,6 +71,9 @@
     painel = U.$("#painel-homebrew");
     /* Link direto de um pacote (?pacote=id): abre a aba Pacotes e o pacote,
        se esta conta o alcança. O código NUNCA vem pelo endereço. */
+    /* v9.8: os elementos Homebrew de Ordem da biblioteca entram nos
+       seletores (ritual, criatura, item), sem esperar. */
+    if (global.RAMAOrdemHomebrew) global.RAMAOrdemHomebrew.carregarBiblioteca();
     var link = U.parametro("pacote");
     if (link && PK()) escopo = "pacotes";
     await carregar();
@@ -311,6 +314,11 @@
       p.push("Peso " + U.peso(r.peso));
     } else if (r.tipo === "ritual") {
       if (r.elemento) p.push(String(r.elemento).replace(/^./, function (c) { return c.toUpperCase(); }));
+      /* v9.8: sem o texto, os elementos de Ordem (oficiais e Homebrew) pelo nome. */
+      else if (r.ordem && (r.ordem.elemento || (r.ordem.elementos || []).length) && RT() && RT().nomeDoElemento) {
+        var ks = r.ordem.todosOsElementos && (r.ordem.elementos || []).length ? r.ordem.elementos : [r.ordem.elemento];
+        p.push(ks.map(function (k) { return RT().nomeDoElemento(k); }).join(" e "));
+      }
       if (r.circulo) p.push(/^\d+$/.test(String(r.circulo)) ? r.circulo + "º círculo" : String(r.circulo));
       if (r.execucao) p.push(r.execucao);
     } else if (r.tipo === "habilidade") {
@@ -768,8 +776,12 @@
   }
 
   function editar(registro, tipoNovo, opcoesCriatura) {
+    if (registro && registro.modelo && registro.modelo.grupo === "estrutural" && registro.modelo.subtipo === "classe" && global.RAMAHomebrewClasse) {
+      global.RAMAHomebrewClasse.editor({ registro: registro, aoSalvar: carregar });
+      return;
+    }
     if (registro && registro.modelo && global.RAMAHomebrewEditor) {
-      global.RAMAHomebrewEditor.editor({ registro: registro, aoSalvar: carregar });
+      global.RAMAHomebrewEditor.editor({ registro: registro, aoSalvar: function () { if (global.RAMAOrdemHomebrew) global.RAMAOrdemHomebrew.carregarBiblioteca(true); carregar(); } });
       return;
     }
     var criando = !registro;

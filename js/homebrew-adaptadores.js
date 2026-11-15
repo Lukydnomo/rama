@@ -72,6 +72,9 @@
       if (c.tipo === "booleano") { if (v === true) saida[c.chave] = true; return; }
       if (c.tipo === "selecao") { if (lista(c.opcoes).some(function (o) { return String(o.valor) === String(v); })) saida[c.chave] = v; else if (c.padrao !== undefined) saida[c.chave] = c.padrao; return; }
       if (c.tipo === "dado") { var t = texto(v, 40).trim(); if (t && dadoOk(t)) saida[c.chave] = t; return; }
+      if (c.tipo === "cor") { if (/^#[0-9a-fA-F]{6}$/.test(String(v || ""))) saida[c.chave] = String(v).toLowerCase(); return; }
+      if (c.tipo === "elemento") { var EL = global.RAMAOrdemElementos; if (v && (EL ? EL.aceito(v) || v === "varia" : true)) saida[c.chave] = String(v); return; }
+      if (c.tipo === "elementos") { var EL2 = global.RAMAOrdemElementos; var l = lista(v).map(String).filter(function (k, i, ll) { return (EL2 ? EL2.aceito(k) : true) && ll.indexOf(k) === i; }).slice(0, 10); if (l.length) saida[c.chave] = l; return; }
       var s = texto(v, c.tipo === "area" ? (c.limite || 4000) : (c.limite || 120)).trim();
       if (s) saida[c.chave] = s;
     });
@@ -99,6 +102,8 @@
       { chave: "item", rotulo: "Item", ajuda: "Arma, proteção, munição, acessório, consumível ou item paranormal, com categoria e espaços." },
       { chave: "habilidade", rotulo: "Habilidade", ajuda: "Poderes e habilidades — e Ritual, com o editor de rituais." },
       { chave: "criatura", rotulo: "Criatura", ajuda: "A ficha de ameaça: VD, elementos, Presença Perturbadora e ações." },
+      { chave: "elemento", rotulo: "Elemento", ajuda: "Um elemento da sua mesa (ex.: Vidro): nome, cor, símbolo e, se quiser, relações e afinidade. Aparece onde a regra deixa escolher elemento." },
+      { chave: "classe", rotulo: "Classe", ajuda: "PV/PE/SAN, perícias, proficiências e as tabelas de NEX, nível e Patentes. Entra na criação do agente e na progressão." },
     ],
     item: {
       subtipos: [
@@ -128,7 +133,7 @@
         { chave: "municao", rotulo: "Munição", campos: [campo("quantidade", "Quantidade", "numero", { min: 1, max: 999, padrao: 1 }), sel("categoria", "Categoria", [[0, "0"], [1, "I"], [2, "II"]], { padrao: 0 }), campo("espacos", "Espaços", "numero", { min: 0, max: 99, padrao: 1 })] },
         { chave: "acessorio", rotulo: "Acessório", campos: [sel("categoria", "Categoria", [[0, "0"], [1, "I"], [2, "II"], [3, "III"], [4, "IV"]], { padrao: 1 }), campo("espacos", "Espaços", "numero", { min: 0, max: 99, padrao: 1 })] },
         { chave: "consumivel", rotulo: "Consumível", campos: [campo("quantidade", "Quantidade", "numero", { min: 1, max: 999, padrao: 1 }), sel("categoria", "Categoria", [[0, "0"], [1, "I"], [2, "II"]], { padrao: 0 }), campo("espacos", "Espaços", "numero", { min: 0, max: 99, padrao: 1 })] },
-        { chave: "paranormal", rotulo: "Item paranormal", campos: [sel("elemento", "Elemento", [["", "—"], ["sangue", "Sangue"], ["morte", "Morte"], ["conhecimento", "Conhecimento"], ["energia", "Energia"], ["medo", "Medo"], ["varia", "Varia"]]), sel("categoria", "Categoria", [[0, "0"], [1, "I"], [2, "II"], [3, "III"], [4, "IV"]], { padrao: 2 }), campo("espacos", "Espaços", "numero", { min: 0, max: 99, padrao: 1 })] },
+        { chave: "paranormal", rotulo: "Item paranormal", campos: [campo("elemento", "Elemento", "elemento", { ajuda: "Os oficiais e os seus elementos Homebrew de Ordem." }), sel("categoria", "Categoria", [[0, "0"], [1, "I"], [2, "II"], [3, "III"], [4, "IV"]], { padrao: 2 }), campo("espacos", "Espaços", "numero", { min: 0, max: 99, padrao: 1 })] },
         { chave: "mochila", rotulo: "Mochila / recipiente", campos: [campo("capacidade", "Aumenta a carga em", "numero", { min: 0, max: 50, padrao: 2, unidade: "espaços" }), sel("categoria", "Categoria", [[0, "0"], [1, "I"], [2, "II"]], { padrao: 1 })] },
         { chave: "outro", rotulo: "Outro (narrativo)", campos: [] },
       ],
@@ -324,6 +329,20 @@
 
   var SISTEMAS = { ordem: ORDEM, ordem2: ORDEM2, tormenta20: TORMENTA20, oblivio: OBLIVIO, vampiro: VAMPIRO, goblins: GOBLINS, brutal: BRUTAL, universal: UNIVERSAL };
 
+  /* v9.8: tipos estruturais de Ordem. Elemento usa o editor guiado;
+     Classe tem editor próprio (js/paginas/homebrew-classe.js). */
+  ORDEM.estrutural = { subtipos: [
+    { chave: "elemento", rotulo: "Elemento", campos: [
+      campo("cor", "Cor", "cor", { ajuda: "Usada nas marcas do elemento. Escolha uma cor com bom contraste." }),
+      campo("simbolo", "Símbolo (opcional)", "texto", { limite: 4, exemplo: "◇" }),
+    ], avancado: [
+      campo("forteContra", "Forte contra", "elementos", { ajuda: "Só vale se a mesa usar a relação — nunca herdada de um elemento oficial." }),
+      campo("fracoContra", "Fraco contra", "elementos"),
+      campo("permiteAfinidade", "Pode ser escolhido como afinidade (sem efeitos mecânicos oficiais)", "booleano"),
+    ] },
+    { chave: "classe", rotulo: "Classe", campos: [] },
+  ] };
+
   /* Habilidade de Ordem e Universal: o modelo do RAMAHabilidades (o
      editor de sempre); Ordem ganha Ritual como subtipo. */
   ORDEM.habilidade = { subtipos: [{ chave: "habilidade", rotulo: "Habilidade / poder", campos: [] }, { chave: "ritual", rotulo: "Ritual", campos: [] }] };
@@ -351,6 +370,7 @@
   function grupoDe(r) {
     var t = obj(r).tipo;
     if (obj(r).modelo && obj(r).modelo.grupo) return obj(r).modelo.grupo;
+    if (t === "classe" || t === "elemento") return "estrutural";
     if (t === "criatura") return "criatura";
     if (t === "habilidade" || t === "ritual") return "habilidade";
     return "item";
@@ -406,6 +426,15 @@
       reg.tipo = "habilidade";
       reg.texto = descricao;
       reg.origem = texto(r.origem, 60);
+    } else if (grupo === "estrutural") {
+      reg.tipo = subtipo;
+      /* Elemento: a chave estável nasce uma vez (e não muda ao renomear). */
+      if (subtipo === "elemento") {
+        var ELx = global.RAMAOrdemElementos;
+        var chaveAntiga = obj(obj(r.modeloAnterior).def).chave;
+        v.chave = chaveAntiga && ELx && ELx.ehHomebrew(chaveAntiga) ? chaveAntiga : (ELx ? ELx.chaveNova(nome, r.id || "") : "");
+      }
+      if (subtipo === "classe" && r.classe) reg.modelo.def = r.classe;
     }
     if (r.universal && sistema === "universal") reg.universal = normalizarUniversal(r.universal);
     if (r.id) reg.id = r.id;
@@ -499,6 +528,10 @@
   function destinoNaFicha(r, destino) {
     var s = sistemaDe(r), g = grupoDe(r);
     if (g === "criatura") return { modo: "outro", texto: "Criaturas entram no combate, nos aliados e na consulta — não na ficha de personagem." };
+    if (g === "estrutural") {
+      if (s !== destino) return { modo: "incompativel", texto: "É de " + nomeDoSistema(s) + "." };
+      return { modo: "nativo", texto: subtipoDe(r) === "classe" ? "Escolhida na criação do agente (Classes Homebrew), com a cópia guardada na ficha." : "Aparece nos seletores de elemento (rituais, criaturas, itens e, se permitido, afinidade)." };
+    }
     if (s === destino) {
       if (g === "item") return { modo: "nativo", texto: destino === "brutal" ? "Vira o Apego \"item\" da ficha." : "Entra no inventário com as regras do sistema." };
       if (s === "ordem" || s === "universal" || s === "ordem2") return { modo: "nativo", texto: "Entra nas habilidades da ficha." };
@@ -539,6 +572,8 @@
     if (s === "ordem2" && st === "arma") p.push("dano " + (d.dano || 0));
     if (s === "ordem2" && st === "protecao") p.push("armadura " + (d.armadura || 0));
     if (s === "tormenta20" && st === "magia") p.push(d.circulo + "º círculo");
+    if (s === "ordem" && st === "elemento" && d.permiteAfinidade) p.push("pode ser afinidade");
+    if (s === "ordem" && st === "classe" && d.pvInicial) p.push(d.pvInicial.base + (d.pvInicial.atributo ? " + " + d.pvInicial.atributo.toUpperCase() : "") + " PV iniciais" + (d.patentes ? " · Patentes" : ""));
     var u = obj(r).universal;
     if (u && lista(u.acoes).length) p.push(u.acoes.length === 1 ? "1 ação" : u.acoes.length + " ações");
     return p.filter(Boolean).join(" · ");
@@ -706,9 +741,11 @@
   function deArquivo(bruto) {
     var x = obj(bruto), m = obj(x.modelo);
     if (!SISTEMAS[m.sistema]) return { ok: false, erro: "O arquivo é de um sistema que esta versão não conhece." };
-    var g = m.grupo === "habilidade" ? "habilidade" : "item";
+    var g = ["habilidade", "estrutural"].indexOf(m.grupo) >= 0 ? m.grupo : "item";
     if (!especDoSubtipo(m.sistema, g, m.subtipo)) return { ok: false, erro: "O tipo deste arquivo não existe neste sistema." };
-    var r = guardar(m.sistema, g, m.subtipo, { nome: x.nome, descricao: x.descricao || x.texto, origem: x.origem, valores: m.def, universal: x.universal, etiqueta: x.etiqueta });
+    var classeImportada = g === "estrutural" && m.subtipo === "classe" && global.RAMAOrdemHomebrew ? global.RAMAOrdemHomebrew.normalizarClasse(Object.assign({}, m.def, { chave: "" })) : null;
+    if (classeImportada) { delete classeImportada.chave; delete classeImportada.homebrewId; }
+    var r = guardar(m.sistema, g, m.subtipo, { nome: x.nome, descricao: x.descricao || x.texto, origem: x.origem, valores: m.def, universal: x.universal, etiqueta: x.etiqueta, modeloAnterior: m, classe: classeImportada });
     if (r.ok) { delete r.registro.id; r.registro.visibilidade = "privado"; }
     return r;
   }

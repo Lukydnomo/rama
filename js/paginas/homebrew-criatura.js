@@ -533,9 +533,16 @@
       });
     }
 
-    var elementos = el("div.r-abas.criatura-elementos", { role: "group", "aria-label": "Elementos" }, Object.keys(NOMES_ELEMENTO).map(function (e) {
-      return el("button.r-aba.bib-elemento.bib-elemento--" + e, {
-        type: "button", "aria-pressed": String(od.elementos.indexOf(e) >= 0), texto: NOMES_ELEMENTO[e],
+    /* v9.8: os oficiais e os elementos Homebrew de Ordem (o mesmo
+       catálogo dos rituais). Um elemento que a criatura já tinha continua
+       na lista, mesmo pendente. */
+    var ELc = global.RAMAOrdemElementos;
+    var chavesEl = Object.keys(NOMES_ELEMENTO);
+    if (ELc) ELc.paraSelecao().forEach(function (e) { if (!e.oficial && chavesEl.indexOf(e.chave) < 0) chavesEl.push(e.chave); });
+    od.elementos.forEach(function (e) { if (chavesEl.indexOf(e) < 0) chavesEl.push(e); });
+    var elementos = el("div.r-abas.criatura-elementos", { role: "group", "aria-label": "Elementos" }, chavesEl.map(function (e) {
+      return el("button.r-aba.bib-elemento.bib-elemento--" + (NOMES_ELEMENTO[e] ? e : "homebrew"), {
+        type: "button", "aria-pressed": String(od.elementos.indexOf(e) >= 0), texto: NOMES_ELEMENTO[e] || (ELc ? ELc.nome(e) : e),
         onclick: function (ev) {
           var i = od.elementos.indexOf(e);
           if (i >= 0) od.elementos.splice(i, 1); else od.elementos.push(e);
@@ -852,7 +859,7 @@
     if (od.tamanho) linha.push(od.tamanho);
     var partes = [
       ["Ficha", linha.join(" · ")],
-      ["Elementos", od.elementos.length ? od.elementos.map(function (e) { return NOMES_ELEMENTO[e]; }).join(", ") : "—"],
+      ["Elementos", od.elementos.length ? od.elementos.map(function (e) { return NOMES_ELEMENTO[e] || (global.RAMAOrdemElementos ? global.RAMAOrdemElementos.nome(e) : e); }).join(", ") : "—"],
     ];
     /* Perfil "como aliado" (AS1/AS2): sem PV nem Defesa para mostrar. */
     if (od.aliada) partes.push(["Aliado", "Benefícios para quem acompanha; sem PV nem PE (OPRPG p. 170)"]);

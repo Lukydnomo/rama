@@ -1320,6 +1320,12 @@
         var e = C.elemento(k);
         return cartaoElemento(k, e.nome, e.resumo);
       });
+      /* v9.8: elementos Homebrew de Ordem que a mesa marcou como possíveis
+         afinidades — sem efeitos mecânicos de elemento oficial. */
+      var ELx = global.RAMAOrdemElementos;
+      if (ELx) ELx.paraSelecao({ afinidade: true }).filter(function (e) { return !e.oficial; }).forEach(function (e) {
+        cartoes.push(cartaoElemento(e.chave, e.nome + " (Homebrew)", (ELx.def(e.chave).descricao || "Elemento Homebrew da sua mesa.") + " Sem efeitos automáticos."));
+      });
       cartoes.push(cartaoElemento("outro", "Outro", "Um elemento Homebrew da sua mesa. Sem efeitos automáticos."));
 
       U.trocar(corpo, [
@@ -1411,6 +1417,9 @@
         nomeOutro: escolha === "outro" ? nome : (atual.nomeOutro || ""),
         adiada: false,
       };
+      /* Elemento Homebrew: a definição fica copiada na ficha. */
+      var ELy = global.RAMAOrdemElementos, HO = global.RAMAOrdemHomebrew;
+      if (ELy && HO && ELy.ehHomebrew(escolha) && ELy.def(escolha)) HO.guardarNaFicha(ordem, "elemento", ELy.def(escolha));
       fechar();
       if (o.aoConfirmar) o.aoConfirmar(ordem.afinidade);
     }

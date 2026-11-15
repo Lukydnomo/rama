@@ -115,6 +115,25 @@
   ];
 
   var CIRCULOS = [1, 2, 3, 4];
+  var OFICIAIS_FIXOS = ["conhecimento", "energia", "morte", "sangue", "medo"];
+
+  /* v9.8: elementos Homebrew de Ordem (js/ordem/elementos.js). O campo
+     aceita os oficiais e os Homebrew; a definição viaja copiada em
+     `elementosHomebrew` e é registrada ao normalizar. Uma chave hbe-…
+     sem definição é preservada como referência pendente. */
+  function EL() { return global.RAMAOrdemElementos || null; }
+  function elementoAceito(k) { return EL() ? EL().aceito(k) : OFICIAIS_FIXOS.indexOf(k) >= 0; }
+  function copiasDeElementos(bruto, chaves) {
+    if (!EL()) return null;
+    EL().registrarMapa(bruto && bruto.elementosHomebrew);
+    var hb = (chaves || []).filter(function (k) { return EL().ehHomebrew(k); });
+    if (!hb.length) return null;
+    var m = EL().copiasPara(hb);
+    /* Uma pendente (sem definição) continua com a cópia que já veio, se veio. */
+    hb.forEach(function (k) { if (!m[k] && bruto && bruto.elementosHomebrew && bruto.elementosHomebrew[k]) m[k] = JSON.parse(JSON.stringify(bruto.elementosHomebrew[k])); });
+    return Object.keys(m).length ? m : null;
+  }
+
 
   /* Custo em PE da forma básica, por círculo (OPRPG p. 119, Tabela 5.2).
      Vem do catálogo de regras quando ele está carregado — uma fonte só. */
@@ -168,6 +187,7 @@
 
   function nomeDoElemento(chave) {
     var e = ELEMENTOS.filter(function (x) { return x.chave === chave; })[0];
+    if (!e && EL()) return EL().nome(chave);
     return e ? e.nome : String(chave || "");
   }
 
@@ -748,13 +768,13 @@
     var saida = {};
 
     var elemento = String(bruto.elemento || "");
-    if (ELEMENTOS.some(function (e) { return e.chave === elemento; })) saida.elemento = elemento;
+    if (elementoAceito(elemento)) saida.elemento = elemento;
 
     /* Ritual de vários elementos (AS1 p. 49): a lista inteira, e a marca
        de que ele pertence a todos de uma vez. */
     if (Array.isArray(bruto.elementos)) {
       var lista = bruto.elementos.map(String).filter(function (k, i, l) {
-        return ELEMENTOS.some(function (e) { return e.chave === k; }) && l.indexOf(k) === i;
+        return elementoAceito(k) && l.indexOf(k) === i;
       });
       if (lista.length > 1 && bruto.todosOsElementos === true) {
         saida.elementos = lista;
@@ -762,6 +782,9 @@
         if (!saida.elemento) saida.elemento = lista[0];
       }
     }
+
+    var copias = copiasDeElementos(bruto, [saida.elemento].concat(saida.elementos || []));
+    if (copias) saida.elementosHomebrew = copias;
 
     var circulo = Math.round(Number(bruto.circulo));
     if (circulo >= 1 && circulo <= 4) saida.circulo = circulo;

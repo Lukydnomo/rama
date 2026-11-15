@@ -339,7 +339,11 @@
      APRESENTAÇÃO
      ================================================================= */
 
-  function nomeDoElemento(e) { return e === "transmissao" ? "Transmissão" : (NOMES_ELEMENTO[e] || String(e || "")); }
+  function nomeDoElemento(e) {
+    if (e === "transmissao") return "Transmissão";
+    if (NOMES_ELEMENTO[e]) return NOMES_ELEMENTO[e];
+    return global.RAMAOrdemElementos ? global.RAMAOrdemElementos.nome(e) : String(e || "");
+  }
   function nomeDaNatureza(n) { return NOMES_NATUREZA[n] || String(n || ""); }
 
   function referencia(livro, pagina) {

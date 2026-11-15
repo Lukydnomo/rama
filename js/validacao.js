@@ -254,7 +254,7 @@
      "homebrew-item": passá-las pela normalização de item transformaria
      uma criatura num item com nome e peso, perdendo status, atributos,
      perícias e ataques em silêncio. */
-  var TIPOS_IMPORTACAO = ["personagem", "homebrew-item", "homebrew-criatura", "homebrew-habilidade"];
+  var TIPOS_IMPORTACAO = ["personagem", "homebrew-item", "homebrew-criatura", "homebrew-habilidade", "homebrew-estrutural"];
 
   /* Descobre o tipo de exportação a partir do registro. */
   function tipoDeExportacao(registro) {
@@ -262,6 +262,8 @@
     if (registro.tipo === "criatura") return "homebrew-criatura";
     /* v9.7: uma habilidade de sistema (com modelo) também é habilidade. */
     if (registro.tipo === "habilidade" || (registro.modelo && registro.modelo.grupo === "habilidade")) return "homebrew-habilidade";
+    /* v9.8: classe e elemento (tipos estruturais). */
+    if (registro.modelo && registro.modelo.grupo === "estrutural") return "homebrew-estrutural";
     return "homebrew-item";
   }
 
@@ -727,7 +729,7 @@
     /* v9.7: Homebrew por sistema (com `modelo`): volta pelo adaptador, com
        a mesma validação do editor — sem o normalizador genérico, que
        apagaria o modelo e o bloco nativo. */
-    if (limpo && limpo.modelo && typeof limpo.modelo === "object" && (pacote.tipo === "homebrew-item" || pacote.tipo === "homebrew-habilidade")) {
+    if (limpo && limpo.modelo && typeof limpo.modelo === "object" && (pacote.tipo === "homebrew-item" || pacote.tipo === "homebrew-habilidade" || pacote.tipo === "homebrew-estrutural")) {
       if (!global.RAMAHomebrewAdaptadores) return ruim("tipo", "Este arquivo é uma criação de sistema. Importe-o pela tela Homebrew.");
       var nativo = global.RAMAHomebrewAdaptadores.deArquivo(limpo);
       if (!nativo.ok) return ruim("invalido", nativo.erro);

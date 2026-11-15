@@ -2744,6 +2744,8 @@
 .bib-elemento--sangue { border-left-color: var(--cor-elemento-sangue); }
 .bib-elemento--morte { border-left-color: var(--cor-elemento-morte); }
 .bib-elemento--conhecimento { border-left-color: var(--cor-elemento-conhecimento); }
+/* v9.8: elemento Homebrew de Ordem — tracejado, sem a cor de um oficial. */
+.bib-elemento--homebrew { border-left-style: dashed; border-left-color: var(--cor-traco-forte); }
 .bib-elemento--energia { border-left-color: var(--cor-elemento-energia); }
 .bib-elemento--medo { border-left-color: var(--cor-elemento-medo); }
 /* Transmissão (AS5): Conhecimento e Energia ao mesmo tempo — as duas cores. */

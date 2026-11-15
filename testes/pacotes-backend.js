@@ -199,4 +199,16 @@ export function testarPacotesBackend({ t, preparar, novaConta, comoFn }) {
   t.ok("pacote de Ordem recusa o item de T20, com o motivo (sem converter)", pOrdem.erro === "incompativel" && /Tormenta20/.test(pOrdem.itens[0].motivo));
   const kitU = A({ acao: "salvar_homebrew", dados: { tipo: "item", nome: "Kit Universal", modelo: modelo("universal", "item", "consumivel"), universal: { acoes: [{ chave: "usar", nome: "Usar" }] } } });
   t.ok("Universal entra em qualquer pacote (até no de BRUTAL)", salvar(A, { dados: dados("Universal no BRUTAL", "brutal"), conteudo: { adicionar: [kitU.dados.id] } }).ok);
+
+  t.grupo("Tipos estruturais (v9.8) · Classe e Elemento de Ordem");
+  const vidro = A({ acao: "salvar_homebrew", dados: { tipo: "item", nome: "Vidro", modelo: Object.assign(modelo("ordem", "estrutural", "elemento"), { def: { chave: "hbe-vidro-abc12345", cor: "#9ad1d4" } }) } });
+  t.ok("Elemento de Ordem: gravado com a coluna tipo \"elemento\"", vidro.ok && A({ acao: "ler_homebrew", homebrewId: vidro.dados.id }).dados.tipo === "elemento");
+  const classeHb = A({ acao: "salvar_homebrew", dados: { tipo: "habilidade", nome: "Vigilante", modelo: Object.assign(modelo("ordem", "estrutural", "classe"), { def: { pvInicial: { base: 18, atributo: "vig" } } }) } });
+  t.ok("Classe de Ordem: coluna tipo \"classe\"", classeHb.ok && A({ acao: "ler_homebrew", homebrewId: classeHb.dados.id }).dados.tipo === "classe");
+  t.recusa("tipo estrutural que o sistema ainda não usa (Raça em T20) é recusado", A({ acao: "salvar_homebrew", dados: { tipo: "item", nome: "Raça", modelo: modelo("tormenta20", "estrutural", "raca") } }), "dados_invalidos");
+  t.recusa("subtipo estrutural desconhecido em Ordem", A({ acao: "salvar_homebrew", dados: { tipo: "item", nome: "X", modelo: modelo("ordem", "estrutural", "trilha") } }), "dados_invalidos");
+  t.ok("listar com tipos [classe, elemento] devolve os dois", A({ acao: "listar_homebrew", tipos: ["classe", "elemento"] }).dados.length === 2);
+  const pOrdemEst = salvar(A, { dados: dados("Livro do Vidro", "ordem"), conteudo: { adicionar: [vidro.dados.id, classeHb.dados.id] } });
+  t.ok("pacote de Ordem aceita Classe e Elemento", pOrdemEst.ok && pOrdemEst.dados.tipos.classe === 1 && pOrdemEst.dados.tipos.elemento === 1);
+  t.ok("pacote de T20 recusa a Classe de Ordem", salvar(A, { dados: dados("Errado", "tormenta20"), conteudo: { adicionar: [classeHb.dados.id] } }).erro === "incompativel");
 }

@@ -1380,7 +1380,8 @@
   }
   /* As perícias de classe na criação: com a regra, as do SAH (p. 110-112). */
   function periciasDaClasse(chaveClasse, porPatente) {
-    var cl = CLASSES.filter(function (c) { return c.chave === chaveClasse; })[0];
+    /* v9.8: também a classe Homebrew registrada (mesmo índice de classe()). */
+    var cl = POR_CHAVE.classes[chaveClasse] || CLASSES.filter(function (c) { return c.chave === chaveClasse; })[0];
     if (!cl) return { periciasEscolhaObrigatoria: [], periciasFixas: [], periciasLivres: { base: 0, atributo: "int" }, proficiencias: [] };
     var ep = porPatente ? EVOLUCAO_PATENTES.classes[chaveClasse] : null;
     var base = ep || cl;
@@ -1510,7 +1511,14 @@
   var POR_MANIFESTACAO = {};
   MANIFESTACOES.forEach(function (m) { POR_MANIFESTACAO[m.chave] = m; });
 
-  function elemento(chave) { return POR_CHAVE.elementos[chave] || POR_MANIFESTACAO[chave] || null; }
+  function elemento(chave) {
+    var oficial = POR_CHAVE.elementos[chave] || POR_MANIFESTACAO[chave];
+    if (oficial) return oficial;
+    /* v9.8: um elemento Homebrew de Ordem (sem regra oficial nenhuma). */
+    var EL = global.RAMAOrdemElementos;
+    var hb = EL && EL.ehHomebrew(chave) ? EL.def(chave) : null;
+    return hb ? { chave: hb.chave, nome: hb.nome, resumo: hb.descricao, homebrew: true, cor: hb.cor } : null;
+  }
   function manifestacao(chave) { return POR_MANIFESTACAO[chave] || null; }
 
   /* "agente", "mundano" ou "sobrevivente". Sem classe, "". */
@@ -1564,6 +1572,9 @@
   function trilhaServe(tr, chaveClasse, ordem) {
     if (!tr || !chaveClasse) return false;
     if (tr.classe === chaveClasse) return true;
+    /* v9.8: classe Homebrew com "usa as trilhas de…" (a mesa escolheu). */
+    var hb = POR_CHAVE.classes[chaveClasse];
+    if (hb && hb.homebrew) return !!hb.trilhasDe && tr.classe === hb.trilhasDe;
     if (!tr.geral || !ehAgente(chaveClasse)) return false;
     var OP = global.RAMAOrdemOpcionais;
     return !!(OP && ordem && OP.ligada(ordem, "trilhaGeral"));
@@ -1585,6 +1596,35 @@
     return PROGRESSAO[chaveClasse] || [];
   }
 
+  /* =================================================================
+     CLASSES HOMEBREW (v9.8, js/ordem/homebrew-ordem.js)
+     -----------------------------------------------------------------
+     Registradas a partir da CÓPIA que a ficha guarda (ordem.homebrew),
+     com chave versionada (hbc-…): entram em classe(), na tabela de NEX
+     (que também serve ao nível) e na de Patentes — só nas que a mesa
+     definiu. Faltou uma: a classe não tem vagas naquele trilho (nunca
+     a tabela de uma classe oficial). As oficiais não mudam.
+     ================================================================= */
+  var CLASSES_HOMEBREW = {};
+  function registrarClasseHomebrew(d) {
+    if (!d || !/^hbc-[a-z0-9-]{3,60}$/.test(String(d.chave || ""))) return null;
+    var def = JSON.parse(JSON.stringify(d));
+    def.homebrew = true; def.perfil = "agente";
+    CLASSES_HOMEBREW[def.chave] = def;
+    POR_CHAVE.classes[def.chave] = def;
+    if (Array.isArray(def.progressao) && def.progressao.length) PROGRESSAO[def.chave] = def.progressao; else delete PROGRESSAO[def.chave];
+    if (def.patentes && Array.isArray(def.patentes.patentes)) EVOLUCAO_PATENTES.classes[def.chave] = def.patentes; else delete EVOLUCAO_PATENTES.classes[def.chave];
+    return def;
+  }
+  function classesHomebrew() { return Object.keys(CLASSES_HOMEBREW).map(function (k) { return CLASSES_HOMEBREW[k]; }); }
+  /* A classe cujos poderes de classe valem para esta (Homebrew: a que a
+     mesa escolheu, ou nenhuma). */
+  function classeDosPoderes(chave) {
+    var c = POR_CHAVE.classes[chave];
+    if (c && c.homebrew) return c.poderesDe || "";
+    return chave;
+  }
+
   /* A referência de livro e página, como texto, para aparecer ao lado
      de cada entrada do catálogo. */
   function referencia(entrada) {
@@ -1596,6 +1636,7 @@
   }
 
   global.RAMAOrdemCatalogo = {
+    registrarClasseHomebrew: registrarClasseHomebrew, classesHomebrew: classesHomebrew, classeDosPoderes: classeDosPoderes,
     FONTES: { OPRPG: OPRPG, SAH: SAH, AS1: AS1, AS2: AS2, AS3: AS3, AS4: AS4, AS5: AS5, AS6: AS6, AS7: AS7, AS9: AS9, EXTRA: EXTRA },
     LIVROS: LIVROS,
     fonteDe: fonteDe, fonteLiberada: fonteLiberada, motivoDaFonte: motivoDaFonte,

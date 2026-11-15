@@ -238,11 +238,17 @@
        combate, não: o mestre abriu para consultar, não para decidir a
        progressão do jogador. Nem para quem só lê (v2.44). */
     if (!PAINEL && !somenteLeitura() && F.ehDeOrdem(estado.ficha) && global.RAMASecaoOrdemProgressao && global.RAMASecaoOrdemProgressao.verificarAfinidade) {
-      global.RAMASecaoOrdemProgressao.verificarAfinidade(ctx);
+      /* v9.8: espera os elementos Homebrew da biblioteca (os que podem ser
+         afinidade aparecem na escolha); sem o módulo, na hora. */
+      if (global.RAMAOrdemHomebrew) global.RAMAOrdemHomebrew.carregarBiblioteca().then(function () { global.RAMASecaoOrdemProgressao.verificarAfinidade(ctx); });
+      else global.RAMASecaoOrdemProgressao.verificarAfinidade(ctx);
     }
     /* Ramificação (v9.5): se a progressão real passou do que o plano ativo
        já conferiu (o Mestre subiu o NEX, por exemplo), o plano é aplicado
        agora — na primeira abertura do DONO. Ninguém mais aplica. */
+    /* v9.8: os elementos Homebrew de Ordem da biblioteca (seletores de
+       ritual e afinidade), em segundo plano — só para quem edita. */
+    if (!PAINEL && !somenteLeitura() && F.ehDeOrdem(estado.ficha) && global.RAMAOrdemHomebrew) global.RAMAOrdemHomebrew.carregarBiblioteca();
     if (!PAINEL && !somenteLeitura() && F.ehDeOrdem(estado.ficha) && global.RAMAFichaRamificacao) {
       global.RAMAFichaRamificacao.aoAbrir(ctx);
     }
