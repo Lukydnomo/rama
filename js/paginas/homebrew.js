@@ -795,7 +795,7 @@
       global.RAMAHomebrewOrdem2[stHb]({ registro: registro, aoSalvar: carregar });
       return;
     }
-    if (sisHb === "vampiro" && ["cla", "predador", "disciplina", "vantagem"].indexOf(stHb) >= 0 && global.RAMAHomebrewVampiro) {
+    if (sisHb === "vampiro" && ["cla", "predador", "disciplina", "vantagem", "conhecimento"].indexOf(stHb) >= 0 && global.RAMAHomebrewVampiro) {
       global.RAMAHomebrewVampiro[stHb]({ registro: registro, aoSalvar: carregar });
       return;
     }

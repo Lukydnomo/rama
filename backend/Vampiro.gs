@@ -1158,7 +1158,11 @@ function acaoVampiroOperar(corpo, usuario) {
   }
   function hbHash(t) { var h = 5381; for (var i = 0; i < t.length; i++) h = ((h << 5) + h + t.charCodeAt(i)) | 0; return (h >>> 0).toString(36).slice(0, 6); }
   function hbChave(prefixo, d) { var sem = Object.assign({}, d); delete sem.chave; return prefixo + (String(d.homebrewId || "local").toLowerCase().replace(/[^a-z0-9]/g, "").slice(0, 8) || "local") + "-" + hbHash(hbEstavel(sem)); }
-  var PADROES = { cla: /^hbvc-[a-z0-9-]{3,30}$/, predador: /^hbvp-[a-z0-9-]{3,30}$/, vantagem: /^hbvv-[a-z0-9-]{3,30}$/ };
+  var PADROES = { cla: /^hbvc-[a-z0-9-]{3,30}$/, predador: /^hbvp-[a-z0-9-]{3,30}$/, vantagem: /^hbvv-[a-z0-9-]{3,30}$/, conhecimento: /^hbvf-[a-z0-9-]{3,30}$/ };
+  /* v9.27: Ficha de Conhecimento — de 1 a 5 níveis, cada um com nome,
+     limite de uso e texto (como as do livro, p. 382–406); clã exclusivo
+     opcional (do livro ou Homebrew). */
+  var USOS_DE_FICHA = ["historia", "sessao", "cronica"];
   function ehHomebrew(tipo, k) { return !!PADROES[tipo] && PADROES[tipo].test(String(k || "")); }
   function DSh() { return global.RAMAVampiroDisciplinas; }
   function disciplinaOk(k) { return !DSh() || !!DSh().DISCIPLINAS[k] || (DSh().ehDisciplinaHomebrew && DSh().ehDisciplinaHomebrew(k)); }
@@ -1169,7 +1173,7 @@ function acaoVampiroOperar(corpo, usuario) {
     return hbLista(l).slice(0, 2).map(function (v0) { var v = hbObj(v0); var d = VANTAGENS[v.chave]; return d && d.tipo === tipo && !d.homebrew ? { chave: v.chave, pontos: hbInt(v.pontos, 1, 5, d.niveis[0]), nota: hbTx(v.nota, 60) } : null; }).filter(Boolean);
   }
   function normalizarHomebrew(tipo, bruto) {
-    var b = hbObj(bruto), d, prefixo = { cla: "hbvc-", predador: "hbvp-", vantagem: "hbvv-" }[tipo];
+    var b = hbObj(bruto), d, prefixo = { cla: "hbvc-", predador: "hbvp-", vantagem: "hbvv-", conhecimento: "hbvf-" }[tipo];
     if (!prefixo) return null;
     var base = { chave: ehHomebrew(tipo, b.chave) ? b.chave : "", homebrew: true, homebrewId: hbTx(b.homebrewId, 80), pagina: 0 };
     if (tipo === "cla") {
@@ -1192,6 +1196,16 @@ function acaoVampiroOperar(corpo, usuario) {
         proibidoPara: clasOk(b.proibidoPara),
       });
       if (!d.proibidoPara.length) delete d.proibidoPara;
+    } else if (tipo === "conhecimento") {
+      var nvf = hbLista(b.niveis).slice(0, 5).map(function (n0, i) {
+        var n = hbObj(n0);
+        return { nivel: i + 1, nome: hbTx(n.nome, 60).trim() || "Nível " + (i + 1), uso: USOS_DE_FICHA.indexOf(n.uso) >= 0 ? n.uso : "", texto: hbTx(n.texto, 600).trim() };
+      });
+      d = Object.assign(base, {
+        nome: hbTx(b.nome, 60).trim() || "Ficha de Conhecimento Homebrew", descricao: hbTx(b.descricao, 600).trim(),
+        cla: CLAS[b.cla] || ehHomebrew("cla", b.cla) ? b.cla : "",
+        niveis: nvf.length ? nvf : [{ nivel: 1, nome: "Nível 1", uso: "", texto: "" }],
+      });
     } else {
       var nv = hbLista(b.niveis).map(Number).filter(function (n, i, l) { return n >= 1 && n <= 5 && Math.floor(n) === n && l.indexOf(n) === i; }).sort();
       var soc = hbInt(hbObj(b.efeito).social, -3, 3, 0);
@@ -1209,7 +1223,7 @@ function acaoVampiroOperar(corpo, usuario) {
   }
   function registrarHomebrew(tipo, def) {
     if (!def || !ehHomebrew(tipo, def.chave)) return null;
-    ({ cla: CLAS, predador: PREDADORES, vantagem: VANTAGENS })[tipo][def.chave] = def;
+    ({ cla: CLAS, predador: PREDADORES, vantagem: VANTAGENS, conhecimento: FICHAS_DE_CONHECIMENTO })[tipo][def.chave] = def;
     return def;
   }
 
@@ -2035,6 +2049,11 @@ function acaoVampiroOperar(corpo, usuario) {
       var k = objeto(v).chave;
       usar("vantagens", k, function (x) { return C.ehHomebrew("vantagem", x); }, C.VANTAGENS[k], function (x) { return C.normalizarHomebrew("vantagem", x); }, function (d) { C.registrarHomebrew("vantagem", d); });
     });
+    /* v9.27: Fichas de Conhecimento Homebrew. */
+    lista(b.fichas).forEach(function (f) {
+      var k = objeto(f).ficha;
+      usar("fichas", k, function (x) { return C.ehHomebrew("conhecimento", x); }, C.FICHAS_DE_CONHECIMENTO[k], function (x) { return C.normalizarHomebrew("conhecimento", x); }, function (d) { C.registrarHomebrew("conhecimento", d); });
+    });
     if (Object.keys(saida).length) o.homebrew = Object.assign({ versao: 1 }, saida);
   }
 
@@ -2073,6 +2092,8 @@ function acaoVampiroOperar(corpo, usuario) {
     var vistos = {};
     o.fichas = lista(b.fichas).filter(function (x) {
       if (!x || !chaveValida(x.ficha) || !C.FICHAS_DE_CONHECIMENTO[x.ficha]) return false;
+      /* Só os níveis que a ficha tem (uma Homebrew pode ter menos de 5). */
+      if (!C.FICHAS_DE_CONHECIMENTO[x.ficha].niveis[inteiro(x.nivel, 1, 5, 1) - 1]) return false;
       var k = x.ficha + ":" + inteiro(x.nivel, 1, 5, 1);
       if (vistos[k]) return false;
       vistos[k] = true;
@@ -3620,6 +3641,7 @@ function acaoVampiroOperar(corpo, usuario) {
       if (!fdef) return falha("Ficha de Conhecimento desconhecida.");
       para = inteiro(p.para, 1, 5, 1); de = 0;
       if (fdef.cla && fdef.cla !== o.cla) return falha(fdef.nome + " é exclusiva do clã " + C.CLAS[fdef.cla].nome + ".");
+      if (!fdef.niveis[para - 1]) return falha(fdef.nome + " não tem o nível " + para + ".");
       if (o.fichas.some(function (x) { return x.ficha === alvo && x.nivel === para; })) return falha("Já tem este nível.");
       custo = para * C.CUSTOS_XP.vantagem.porPonto;
     } else if (tipo === "ritual" || tipo === "formula") {
@@ -3662,6 +3684,13 @@ function acaoVampiroOperar(corpo, usuario) {
     return { total: total, usados: usados };
   }
 
+  function guardarCopiaHomebrew(o, campo, def) {
+    if (!def || !def.homebrew || !def.chave) return;
+    if (!o.homebrew || typeof o.homebrew !== "object") o.homebrew = { versao: 1 };
+    if (!o.homebrew[campo] || typeof o.homebrew[campo] !== "object") o.homebrew[campo] = {};
+    if (!o.homebrew[campo][def.chave]) o.homebrew[campo][def.chave] = copiar(def);
+  }
+
   function comprar(o, p) {
     var v = validarCompra(o, p || {});
     if (!v.ok) return v;
@@ -3690,6 +3719,11 @@ function acaoVampiroOperar(corpo, usuario) {
     } else if (p.tipo === "disciplina") {
       lista(p.poderes).forEach(function (k) { o.poderes.push({ id: novoId("po"), chave: k, origem: "xp" }); });
     }
+    /* v9.27: o que é Homebrew entra com a CÓPIA na ficha, já na compra
+       (antes, só quando a ficha era normalizada com a biblioteca à mão). */
+    if (p.tipo === "vantagem") guardarCopiaHomebrew(o, "vantagens", C.VANTAGENS[p.alvo]);
+    if (p.tipo === "ficha") guardarCopiaHomebrew(o, "fichas", C.FICHAS_DE_CONHECIMENTO[p.alvo]);
+    if (p.tipo === "disciplina" && DS()) guardarCopiaHomebrew(o, "disciplinas", DS().DISCIPLINAS[p.alvo]);
     o.compras.push(compra);
     eventos.push(evento("compra", { compra: p.tipo, alvo: p.alvo, de: v.de, para: v.para, custo: compra.custo, credito: v.desconto }));
     return { ok: true, eventos: eventos, compra: compra };

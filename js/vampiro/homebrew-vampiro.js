@@ -13,8 +13,9 @@
   function C() { return global.RAMAVampiroCatalogo; }
   function DS() { return global.RAMAVampiroDisciplinas; }
   function obj(v) { return v && typeof v === "object" && !Array.isArray(v) ? v : {}; }
-  var TIPOS = ["cla", "predador", "disciplina", "vantagem"];
-  var CAMPO = { cla: "clas", predador: "predadores", disciplina: "disciplinas", vantagem: "vantagens" };
+  var TIPOS = ["cla", "predador", "disciplina", "vantagem", "conhecimento"];
+  var CAMPO = { cla: "clas", predador: "predadores", disciplina: "disciplinas", vantagem: "vantagens", conhecimento: "fichas" };
+  var USOS = { historia: "1× por história", sessao: "1× por sessão", cronica: "1× por crônica" };
   function nomeDisc(k) { return (DS() && DS().DISCIPLINAS[k] || { nome: k }).nome; }
   function nomeHab(k) { var h = C() && C().habilidade(k); return h ? h.nome : k; }
   function nomeAtr(k) { var a = C() && C().atributo(k); return a ? a.nome : k; }
@@ -35,6 +36,9 @@
     if (tipo === "disciplina") return [(d.tipo === "fisica" ? "Física" : "Mental") + (d.ressonancia ? " · ressonância " + d.ressonancia : "") + "."].concat(d.poderesHb.map(function (p) {
       return "Nível " + p.nivel + " · " + p.nome + " (" + (p.checagens ? p.checagens + " Checagem(ns)" : "grátis") + (p.atributo ? ", " + nomeAtr(p.atributo) + " + Disciplina" : "") + ", " + DURACOES[p.duracao] + ")" + (p.efeito ? ": " + p.efeito : "");
     }));
+    if (tipo === "conhecimento") return [(d.cla ? "Exclusiva do clã " + ((C().CLAS[d.cla] || {}).nome || d.cla) + ". " : "") + "Cada nível se compra à parte (Antecedente, 3 XP por ponto)."].concat(d.niveis.map(function (n) {
+      return "Nível " + n.nivel + " · " + n.nome + (n.uso ? " (" + USOS[n.uso] + ")" : "") + (n.texto ? ": " + n.texto.replace(/\.$/, "") + "." : "");
+    }));
     return [(d.tipo === "defeito" ? "Defeito" : "Vantagem") + " de " + d.niveis.join(", ") + " ponto(s)" + (d.efeito ? "; " + (d.efeito.social > 0 ? "+" : "") + d.efeito.social + " dados em paradas Sociais" : "") + ".", d.texto || "(sem texto)"];
   }
 
@@ -43,7 +47,7 @@
     if (m.sistema !== "vampiro" || m.grupo !== "estrutural" || TIPOS.indexOf(m.subtipo) < 0 || !C() || !C().normalizarHomebrew) return null;
     var base = Object.assign({}, obj(m.def), { chave: "", nome: reg.nome, homebrewId: reg.id });
     if (m.subtipo === "disciplina") return { tipo: "disciplina", def: DS().normalizarDisciplinaHomebrew(base) };
-    if ((m.subtipo === "cla" || m.subtipo === "predador") && !base.descricao) base.descricao = reg.descricao || "";
+    if ((m.subtipo === "cla" || m.subtipo === "predador" || m.subtipo === "conhecimento") && !base.descricao) base.descricao = reg.descricao || "";
     if (m.subtipo === "vantagem" && !base.texto) base.texto = reg.descricao || "";
     return { tipo: m.subtipo, def: C().normalizarHomebrew(m.subtipo, base) };
   }
@@ -52,7 +56,7 @@
   }
 
   var biblioteca = null, carga = null;
-  function vazia() { return { clas: [], predadores: [], disciplinas: [], vantagens: [] }; }
+  function vazia() { return { clas: [], predadores: [], disciplinas: [], vantagens: [], fichas: [] }; }
   function carregarBiblioteca(forcar) {
     if (biblioteca && !forcar) return Promise.resolve(biblioteca);
     if (carga && !forcar) return carga;
@@ -93,6 +97,6 @@
     return true;
   }
 
-  global.RAMAVampiroHomebrew = { TIPOS: TIPOS, DURACOES: DURACOES, previa: previa, deRegistro: deRegistro, carregarBiblioteca: carregarBiblioteca,
+  global.RAMAVampiroHomebrew = { TIPOS: TIPOS, DURACOES: DURACOES, USOS: USOS, previa: previa, deRegistro: deRegistro, carregarBiblioteca: carregarBiblioteca,
     copiasDaFicha: copiasDaFicha, versoesNovas: versoesNovas, atualizarVersao: atualizarVersao };
 })(typeof window !== "undefined" ? window : globalThis);

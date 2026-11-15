@@ -18,7 +18,7 @@
   function H() { return global.RAMAVampiroHomebrew; }
   function F() { return global.RAMAHomebrewT20Estruturais.ferramentas; }
   function copia(x) { return JSON.parse(JSON.stringify(x)); }
-  var ROT = { cla: "Clã", predador: "Predador", disciplina: "Disciplina", vantagem: "Vantagem", defeito: "Defeito" };
+  var ROT = { cla: "Clã", predador: "Predador", disciplina: "Disciplina", vantagem: "Vantagem", defeito: "Defeito", conhecimento: "Ficha de Conhecimento" };
 
   function editor(qual, opcoes) {
     var o = opcoes || {};
@@ -29,6 +29,7 @@
       predador: { especializacoes: [], disciplinas: [], humanidade: 0, vantagens: [], defeitos: [], parada: [] },
       disciplina: { tipo: "mental", ressonancia: "", poderesHb: [{ nivel: 1, nome: "", checagens: 0, atributo: "", duracao: "cena", efeito: "" }] },
       vantagem: { tipo: qual === "defeito" ? "defeito" : "qualidade", niveis: [1], texto: "" },
+      conhecimento: { cla: "", niveis: [1, 2, 3].map(function (n) { return { nome: "", uso: "", texto: "" }; }) },
     }[tipo];
     var d = reg && reg.modelo && reg.modelo.def ? copia(reg.modelo.def) : copia(padrao);
     if (tipo === "vantagem" && reg) qual = d.tipo === "defeito" ? "defeito" : "vantagem";
@@ -38,7 +39,7 @@
     var c = F().controles(mudou);
     function def() {
       var x = copia(d); x.nome = r.nome || ROT[qual] + " Homebrew"; x.homebrewId = reg ? reg.id : "rascunho"; x.chave = "";
-      if (tipo === "cla" || tipo === "predador") x.descricao = r.descricao;
+      if (tipo === "cla" || tipo === "predador" || tipo === "conhecimento") x.descricao = r.descricao;
       if (tipo === "vantagem") x.texto = r.descricao;
       return tipo === "disciplina" ? DS().normalizarDisciplinaHomebrew(x) : C().normalizarHomebrew(tipo, x);
     }
@@ -117,6 +118,23 @@
         c.marcas("hbvvant-proib", "Proibido para (opcional)", clas(), d.proibidoPara || [], function (k, on) { d.proibidoPara = d.proibidoPara || []; alterna(d.proibidoPara)(k, on); }),
       ]));
     };
+    /* v9.27: Ficha de Conhecimento — os níveis (1 a 5), cada um à parte. */
+    if (tipo === "conhecimento") corpo = function () {
+      var partes = identidade([c.sel("hbvconhecimento-cla", "Exclusiva do clã (opcional)", [["", "Qualquer clã"]].concat(clas()), d.cla, function (v) { d.cla = v; }, "Como Descendente de Tyler (só Brujah).")]);
+      partes.push(el("p.t-rotulo", { texto: "Níveis (cada um se compra à parte, 3 XP por ponto)" }));
+      d.niveis.forEach(function (n, i) {
+        partes.push(el("fieldset.r-campo.hbr-hab", {}, [el("legend.r-rotulo", { texto: "Nível " + (i + 1) }),
+          el("div.editar-grade", {}, [
+            c.txt("hbvconhecimento-n" + i + "-nome", "Nome", n.nome, function (v) { n.nome = v; }, 60),
+            c.sel("hbvconhecimento-n" + i + "-uso", "Limite de uso", [["", "Sem limite"]].concat(Object.keys(H().USOS).map(function (k) { return [k, H().USOS[k]]; })), n.uso, function (v) { n.uso = v; }),
+          ]),
+          c.txt("hbvconhecimento-n" + i + "-txt", "Texto", n.texto, function (v) { n.texto = v; }, 600, null, true),
+          i === d.niveis.length - 1 && i > 0 ? el("button.r-botao.r-botao--mini.r-botao--fantasma", { type: "button", texto: "Remover este nível", onclick: function () { d.niveis.pop(); mudou(true); } }) : null,
+        ]));
+      });
+      if (d.niveis.length < 5) partes.push(el("button.r-botao.r-botao--mini", { type: "button", id: "hbvconhecimento-mais", texto: "+ Nível " + (d.niveis.length + 1), onclick: function () { d.niveis.push({ nome: "", uso: "", texto: "" }); mudou(true); } }));
+      return el("div.pc-editor__passo", {}, partes);
+    };
     var passos = [[ROT[qual], corpo], ["Revisão", function () {
       return el("div.pc-editor__passo", {}, [].concat(m.lista("Prévia", H().previa(tipo, def())), m.lista("Decisão da mesa", ["O que o texto descreve além do que a ficha calcula."]), [m.visibilidade()]));
     }]];
@@ -124,7 +142,7 @@
       titulo: (reg ? "Editar " : "Novo · ") + ROT[qual] + " · Vampiro", rotuloSalvar: reg ? "Salvar" : "Criar " + ROT[qual].toLowerCase(),
       passos: passos,
       previa: function () { return H().previa(tipo, def()); },
-      paraGravar: function () { var x = def(); ["chave", "homebrewId", "homebrew", "nome", "pagina", "descricao"].forEach(function (k) { delete x[k]; }); if (x.compulsao) delete x.compulsao.chave; if (tipo === "vantagem") { delete x.texto; delete x.grupo; } return x; },
+      paraGravar: function () { var x = def(); ["chave", "homebrewId", "homebrew", "nome", "pagina", "descricao"].forEach(function (k) { delete x[k]; }); if (tipo === "conhecimento") x.niveis.forEach(function (n) { delete n.nivel; }); if (x.compulsao) delete x.compulsao.chave; if (tipo === "vantagem") { delete x.texto; delete x.grupo; } return x; },
       recarregar: function () { if (H()) H().carregarBiblioteca(true); },
       okCriar: ROT[qual] + " criado(a). Aparece na criação e nas compras com XP da ficha de Vampiro.",
       okEditar: ROT[qual] + " atualizado(a). As fichas que já usam continuam com a versão delas." });
@@ -136,5 +154,6 @@
   global.RAMAHomebrewVampiro = {
     cla: function (o) { return editor("cla", o); }, predador: function (o) { return editor("predador", o); }, disciplina: function (o) { return editor("disciplina", o); },
     vantagem: function (o) { return editor("vantagem", o); }, defeito: function (o) { return editor("defeito", o); },
+    conhecimento: function (o) { return editor("conhecimento", o); },
   };
 })(typeof window !== "undefined" ? window : globalThis);

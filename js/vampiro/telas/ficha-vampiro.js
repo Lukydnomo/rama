@@ -718,7 +718,7 @@
       if (p.tipo === "habilidade" || p.tipo === "especializacao") return C().HABILIDADES.map(function (h) { return { valor: h.chave, rotulo: h.nome + " (" + R().valorDeHabilidade(o, h.chave) + ")" }; });
       if (p.tipo === "disciplina") return Object.keys(DS().DISCIPLINAS).map(function (k) { return { valor: k, rotulo: DS().DISCIPLINAS[k].nome + " (" + R().valorDeDisciplina(o, k) + ")" }; });
       if (p.tipo === "vantagem") return Object.keys(C().VANTAGENS).filter(function (k) { return C().VANTAGENS[k].tipo !== "defeito"; }).map(function (k) { return { valor: k, rotulo: C().VANTAGENS[k].grupo + " · " + C().VANTAGENS[k].nome + " (" + R().pontosDeVantagem(o, k) + ")" }; });
-      if (p.tipo === "ficha") return Object.keys(C().FICHAS_DE_CONHECIMENTO).map(function (k) { var f = C().FICHAS_DE_CONHECIMENTO[k]; return { valor: k, rotulo: f.nome + (f.cla ? " (só " + C().CLAS[f.cla].nome + ")" : "") }; });
+      if (p.tipo === "ficha") return Object.keys(C().FICHAS_DE_CONHECIMENTO).map(function (k) { var f = C().FICHAS_DE_CONHECIMENTO[k]; return { valor: k, rotulo: f.nome + (f.homebrew ? " (Homebrew)" : "") + (f.cla ? " (só " + (C().CLAS[f.cla] || { nome: f.cla }).nome + ")" : "") }; });
       if (p.tipo === "ritual") return DS().RITUAIS.map(function (r) { return { valor: r.chave, rotulo: "Nível " + r.nivel + " · " + r.nome }; });
       if (p.tipo === "formula") return DS().PODERES.filter(function (x) { return x.formula; }).map(function (x) { return { valor: x.chave, rotulo: "Nível " + x.nivel + " · " + x.nome }; });
       return [];

@@ -929,6 +929,12 @@ segredo nenhum — ele os lê das Script Properties. Publicá-lo não expõe nad
 
 ### Atualizar o backend
 
+**v9.27.0 — MURANO:** Ficha de Conhecimento Homebrew em Vampiro, e a
+compra com XP de Homebrew passa a gravar a cópia. Troque **`Codigo.gs`**
+e **`Vampiro.gs`** e crie uma versão nova da implantação.
+**`setupRama()` não é necessário.** Site: os arquivos listados em
+`docs/HOMEBREW-SISTEMAS.md` (seção "Publicar a v9.27.0").
+
 **v9.26.0 — MOLDE:** poder geral à escolha na Raça Homebrew de Tormenta20,
 e o poder geral escolhido no golem e no osteon passa a entrar na conta.
 Troque **`Tormenta20.gs`** e **`Tormenta20Dados.gs`** e crie uma versão
@@ -2112,7 +2118,7 @@ Três números diferentes, que não se misturam:
 
 | | Onde | O que é |
 |---|---|---|
-| versão do aplicativo | `js/versao.js` | o que a pessoa vê: v9.26.0 |
+| versão do aplicativo | `js/versao.js` | o que a pessoa vê: v9.27.0 |
 | `schemaVersion` | `js/ficha.js` | o formato da FICHA |
 | `versaoFormato` | `js/config.js` | o formato dos arquivos de importação |
 

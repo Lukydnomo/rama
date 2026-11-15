@@ -45,6 +45,7 @@
     { chave: "predador", rotulo: "Predadores", um: "Predador" },
     { chave: "disciplina", rotulo: "Disciplinas", um: "Disciplina" },
     { chave: "vantagem", rotulo: "Vantagens e Defeitos", um: "Vantagem" },
+    { chave: "conhecimento", rotulo: "Fichas de Conhecimento", um: "Ficha de Conhecimento" },
     { chave: "perfil", rotulo: "Perfis", um: "Perfil" },
   ];
   var GENERICOS = ["item", "arma", "armadura", "mochila", "habilidade"];

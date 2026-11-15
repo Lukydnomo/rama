@@ -824,7 +824,11 @@
   }
   function hbHash(t) { var h = 5381; for (var i = 0; i < t.length; i++) h = ((h << 5) + h + t.charCodeAt(i)) | 0; return (h >>> 0).toString(36).slice(0, 6); }
   function hbChave(prefixo, d) { var sem = Object.assign({}, d); delete sem.chave; return prefixo + (String(d.homebrewId || "local").toLowerCase().replace(/[^a-z0-9]/g, "").slice(0, 8) || "local") + "-" + hbHash(hbEstavel(sem)); }
-  var PADROES = { cla: /^hbvc-[a-z0-9-]{3,30}$/, predador: /^hbvp-[a-z0-9-]{3,30}$/, vantagem: /^hbvv-[a-z0-9-]{3,30}$/ };
+  var PADROES = { cla: /^hbvc-[a-z0-9-]{3,30}$/, predador: /^hbvp-[a-z0-9-]{3,30}$/, vantagem: /^hbvv-[a-z0-9-]{3,30}$/, conhecimento: /^hbvf-[a-z0-9-]{3,30}$/ };
+  /* v9.27: Ficha de Conhecimento — de 1 a 5 níveis, cada um com nome,
+     limite de uso e texto (como as do livro, p. 382–406); clã exclusivo
+     opcional (do livro ou Homebrew). */
+  var USOS_DE_FICHA = ["historia", "sessao", "cronica"];
   function ehHomebrew(tipo, k) { return !!PADROES[tipo] && PADROES[tipo].test(String(k || "")); }
   function DSh() { return global.RAMAVampiroDisciplinas; }
   function disciplinaOk(k) { return !DSh() || !!DSh().DISCIPLINAS[k] || (DSh().ehDisciplinaHomebrew && DSh().ehDisciplinaHomebrew(k)); }
@@ -835,7 +839,7 @@
     return hbLista(l).slice(0, 2).map(function (v0) { var v = hbObj(v0); var d = VANTAGENS[v.chave]; return d && d.tipo === tipo && !d.homebrew ? { chave: v.chave, pontos: hbInt(v.pontos, 1, 5, d.niveis[0]), nota: hbTx(v.nota, 60) } : null; }).filter(Boolean);
   }
   function normalizarHomebrew(tipo, bruto) {
-    var b = hbObj(bruto), d, prefixo = { cla: "hbvc-", predador: "hbvp-", vantagem: "hbvv-" }[tipo];
+    var b = hbObj(bruto), d, prefixo = { cla: "hbvc-", predador: "hbvp-", vantagem: "hbvv-", conhecimento: "hbvf-" }[tipo];
     if (!prefixo) return null;
     var base = { chave: ehHomebrew(tipo, b.chave) ? b.chave : "", homebrew: true, homebrewId: hbTx(b.homebrewId, 80), pagina: 0 };
     if (tipo === "cla") {
@@ -858,6 +862,16 @@
         proibidoPara: clasOk(b.proibidoPara),
       });
       if (!d.proibidoPara.length) delete d.proibidoPara;
+    } else if (tipo === "conhecimento") {
+      var nvf = hbLista(b.niveis).slice(0, 5).map(function (n0, i) {
+        var n = hbObj(n0);
+        return { nivel: i + 1, nome: hbTx(n.nome, 60).trim() || "Nível " + (i + 1), uso: USOS_DE_FICHA.indexOf(n.uso) >= 0 ? n.uso : "", texto: hbTx(n.texto, 600).trim() };
+      });
+      d = Object.assign(base, {
+        nome: hbTx(b.nome, 60).trim() || "Ficha de Conhecimento Homebrew", descricao: hbTx(b.descricao, 600).trim(),
+        cla: CLAS[b.cla] || ehHomebrew("cla", b.cla) ? b.cla : "",
+        niveis: nvf.length ? nvf : [{ nivel: 1, nome: "Nível 1", uso: "", texto: "" }],
+      });
     } else {
       var nv = hbLista(b.niveis).map(Number).filter(function (n, i, l) { return n >= 1 && n <= 5 && Math.floor(n) === n && l.indexOf(n) === i; }).sort();
       var soc = hbInt(hbObj(b.efeito).social, -3, 3, 0);
@@ -875,7 +889,7 @@
   }
   function registrarHomebrew(tipo, def) {
     if (!def || !ehHomebrew(tipo, def.chave)) return null;
-    ({ cla: CLAS, predador: PREDADORES, vantagem: VANTAGENS })[tipo][def.chave] = def;
+    ({ cla: CLAS, predador: PREDADORES, vantagem: VANTAGENS, conhecimento: FICHAS_DE_CONHECIMENTO })[tipo][def.chave] = def;
     return def;
   }
 

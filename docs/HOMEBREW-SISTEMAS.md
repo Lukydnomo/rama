@@ -277,7 +277,7 @@ nova, e o modelo vai no `dadosJson` de sempre.
 - **Ordem II**: ~~Perfil e Ocupação~~ (v9.21.0).
 - **Oblívio**: ~~Papel, Motivação, Mazela e Fardo~~ (v9.19.0).
 - **Vampiro**: ~~Clã, Predador, Disciplina, Vantagem, Defeito~~ (v9.20.0) e
-  Ficha de Conhecimento.
+  ~~Ficha de Conhecimento~~ (v9.27.0).
 - **Goblins**: ~~Ocupação, Descritor~~ (v9.17.0) e opções das variantes.
 - **BRUTAL**: Arquétipo, Estilo e modelos de mesa.
 - **Habilidades Homebrew no motor** de T20, Vampiro, Goblins, Oblívio e
@@ -2336,4 +2336,94 @@ da implantação. **`setupRama()` não é necessário.**
 - `js/tormenta20/regras.js`, `js/tormenta20/racas.js`,
   `js/tormenta20/homebrew-t20.js`;
 - `js/paginas/homebrew-raca-t20.js`;
+- `js/versao.js`.
+
+## v9.27.0 — Vampiro: Ficha de Conhecimento Homebrew
+
+### O editor
+
+**Homebrew → + Criar → Vampiro: A Máscara → Ficha de Conhecimento**:
+- nome e texto;
+- **clã exclusivo** (opcional), do livro ou Homebrew, como Descendente de
+  Tyler (só Brujah);
+- de **1 a 5 níveis**, cada um com nome, **limite de uso** (sem limite,
+  1× por história, 1× por sessão ou 1× por crônica) e texto.
+
+A prévia lista os níveis com o limite de uso.
+
+### No motor
+
+- Chave `hbvf-<id>-<hash>`, versionada. A definição entra no mesmo mapa
+  das 25 do livro (`FICHAS_DE_CONHECIMENTO`), e as telas a mostram com
+  "(Homebrew)":
+  - na **criação**, entre as Vantagens (cada nível à parte);
+  - nas **compras com XP** (3 XP por ponto, cada nível à parte).
+- A ficha guarda a cópia em `vampiro.homebrew.fichas`. Sem cópia e sem
+  catálogo, a ficha some: nada é inventado.
+- Uma Ficha de Conhecimento Homebrew pode ter menos de 5 níveis. Comprar
+  ou escolher um nível que ela não tem é recusado com o motivo, e a
+  normalização tira um nível assim.
+- A exclusividade de clã vale como nas do livro.
+- `RAMAVampiroHomebrew` cuida da biblioteca, da prévia e das versões. O
+  painel "Homebrew desta ficha" (v9.22) mostra as cópias.
+
+### Correção: a compra com XP grava a cópia
+
+Comprar com XP uma Vantagem, uma Disciplina ou uma Ficha de Conhecimento
+Homebrew não gravava a cópia da definição na ficha. A cópia só
+aparecia quando a ficha era normalizada com a biblioteca carregada. Uma
+ficha gravada sem a cópia perderia a compra ao ser aberta sem a
+biblioteca.
+
+Agora `comprar` grava a cópia na hora. Achei o problema validando esta
+versão no navegador.
+
+### Servidor e pacotes
+
+- `TIPOS_HOMEBREW` ganhou `conhecimento`, que também passa a ser um dos
+  estruturais de Vampiro.
+- `Vampiro.gs` foi regenerado (`testes/gerar-vampiro-gs.js`).
+- Os pacotes ganharam o grupo "Fichas de Conhecimento".
+
+### Validação da v9.27.0
+
+**Automática.** `testes/executar-homebrew-vampiro.js` ganhou 14
+verificações (agora 32):
+- a definição: chave, até 5 níveis, limite de uso, clã;
+- a ficha: a cópia registra, e um nível inexistente sai;
+- a compra com XP: o custo, o nível inexistente recusado e a
+  exclusividade de clã;
+- a compra grava a cópia, e a ficha sobrevive sem a biblioteca;
+- sem cópia, a ficha some;
+- a prévia;
+- a biblioteca;
+- o destino e o pacote;
+- a versão nova.
+
+`testes/pacotes-backend.js` verifica que o servidor aceita o tipo. As
+outras suítes continuam verdes; a suíte do servidor teve, numa
+execução, a falha intermitente já conhecida, e passou nas duas
+seguintes.
+
+**Na interface** (servidor local, conta sintética):
+- Criei **Os Vidreiros de Murano** pelo editor, com três níveis, e tirei
+  o terceiro. A revisão mostrou "Nível 1 · Olho Treinado (1× por
+  história)". Gravou com 2 níveis.
+- Numa vampira com 20 XP, em Experiência → Comprar → Ficha de
+  Conhecimento, apareceu "Os Vidreiros de Murano (Homebrew)". Comprei o
+  nível 1 por 3 XP. A ficha relida do servidor tinha o nível e a cópia, e
+  a aba Vantagens mostrou "Os Vidreiros de Murano — Olho Treinado".
+
+### Publicar a v9.27.0
+
+**Servidor:** troque **`Codigo.gs`** e **`Vampiro.gs`** e crie uma
+versão nova da implantação. **`setupRama()` não é necessário.**
+
+**Site:**
+- `js/vampiro/catalogo.js`, `js/vampiro/regras.js`,
+  `js/vampiro/homebrew-vampiro.js`;
+- `js/vampiro/telas/vampiro-criar.js`, `js/vampiro/telas/ficha-vampiro.js`;
+- `js/paginas/homebrew-vampiro.js`, `js/paginas/homebrew-editor.js`,
+  `js/paginas/homebrew.js`;
+- `js/homebrew-adaptadores.js`, `js/pacotes-homebrew.js`;
 - `js/versao.js`.

@@ -1,5 +1,11 @@
 # A API
 
+## Ficha de Conhecimento Homebrew de Vampiro — v9.27
+
+- `salvar_homebrew`: o grupo `estrutural` de `vampiro` aceita
+  `conhecimento`.
+- O motor do servidor mantém as cópias em `vampiro.homebrew.fichas`.
+
 ## Perfil e Ocupação Homebrew de Ordem II — v9.21
 
 - `salvar_homebrew`: o grupo `estrutural` de `ordem2` aceita `perfil` e

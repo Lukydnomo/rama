@@ -118,6 +118,18 @@
 
   var CHANGELOG = [
     {
+      versao: "9.27.0",
+      codinome: "MURANO",
+      data: "15/11/2026",
+      mudancas: {
+        "Adicionado": [
+          "Vampiro: Ficha de Conhecimento Homebrew — nome, texto, clã exclusivo opcional (do livro ou Homebrew) e de 1 a 5 níveis, cada um com nome, limite de uso e texto. Aparece na criação e nas compras com XP (cada nível à parte, 3 XP por ponto), como as do livro.",
+        ],
+        "Corrigido": ["Vampiro: comprar com XP uma Vantagem, uma Disciplina ou uma Ficha de Conhecimento Homebrew não gravava a cópia da definição na ficha (ela só aparecia quando a ficha era normalizada com a biblioteca carregada). Agora a compra grava a cópia."],
+        "Técnico": ["catalogo.js: tipo conhecimento (chaves hbvf- versionadas) em FICHAS_DE_CONHECIMENTO; regras.js guarda as cópias em vampiro.homebrew.fichas, recusa níveis que a ficha não tem e grava a cópia na compra. Servidor: tipo conhecimento e o estrutural de Vampiro; Vampiro.gs regenerado. testes/executar-homebrew-vampiro.js: 14 verificações novas (32)."],
+      },
+    },
+    {
       versao: "9.26.0",
       codinome: "MOLDE",
       data: "15/11/2026",

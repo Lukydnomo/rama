@@ -382,7 +382,7 @@
       var selV = UI().campo({ rotulo: "Vantagem ou Defeito", tipo: "selecao", valor: "", opcoes: [{ valor: "", rotulo: "Escolha…" }].concat(Object.keys(V).filter(function (k) { return !(V[k].proibidoPara && V[k].proibidoPara.indexOf(o.cla) >= 0); }).map(function (k) { return { valor: k, rotulo: (V[k].tipo === "defeito" ? "Defeito · " : "") + V[k].grupo + " · " + V[k].nome + " (" + V[k].niveis.join("/") + ")" }; })) });
       var pts = UI().campo({ rotulo: "Pontos", tipo: "numero", valor: 1 });
       var nota = UI().campo({ rotulo: "Nota (quem, onde…)", valor: "", limite: 200 });
-      var selF = UI().campo({ rotulo: "Ficha de Conhecimento", tipo: "selecao", valor: "", opcoes: [{ valor: "", rotulo: "Escolha…" }].concat(Object.keys(C().FICHAS_DE_CONHECIMENTO).filter(function (k) { var f = C().FICHAS_DE_CONHECIMENTO[k]; return !f.cla || f.cla === o.cla; }).map(function (k) { return { valor: k, rotulo: C().FICHAS_DE_CONHECIMENTO[k].nome }; })) });
+      var selF = UI().campo({ rotulo: "Ficha de Conhecimento", tipo: "selecao", valor: "", opcoes: [{ valor: "", rotulo: "Escolha…" }].concat(Object.keys(C().FICHAS_DE_CONHECIMENTO).filter(function (k) { var f = C().FICHAS_DE_CONHECIMENTO[k]; return !f.cla || f.cla === o.cla; }).map(function (k) { return { valor: k, rotulo: C().FICHAS_DE_CONHECIMENTO[k].nome + (C().FICHAS_DE_CONHECIMENTO[k].homebrew ? " (Homebrew)" : "") }; })) });
       var nivF = UI().campo({ rotulo: "Nível (cada nível é à parte)", tipo: "selecao", valor: "1", opcoes: [1, 2, 3, 4, 5].map(function (n) { return { valor: String(n), rotulo: String(n) }; }) });
       var filhos = [
         el("p.vamp-criar__contador", { role: "status", texto: "Vantagens: " + qual + "/" + (7 + extra) + " · Defeitos: " + defe + "/" + (2 + extraDef) }),
@@ -399,6 +399,9 @@
           var k = selF.entrada.value; if (!k) return;
           var n = U.inteiro(nivF.entrada.value, 1);
           if (o.fichas.some(function (f) { return f.ficha === k && f.nivel === n; })) return;
+          /* v9.27: uma Ficha de Conhecimento Homebrew pode ter menos de 5 níveis. */
+          var fdN = C().FICHAS_DE_CONHECIMENTO[k];
+          if (!fdN.niveis[n - 1]) { UI().avisoAtencao(fdN.nome + " tem " + fdN.niveis.length + " nível(is)."); return; }
           o.fichas.push({ id: R().novoId("fc"), ficha: k, nivel: n, origem: "criacao" });
           desenhar();
         } })]),

@@ -1,5 +1,11 @@
 # O banco
 
+## Ficha de Conhecimento Homebrew de Vampiro — v9.27
+
+Nenhuma aba nova. No `HOMEBREW`, a coluna `tipo` aceita `conhecimento`.
+Na ficha de Vampiro, `vampiro.homebrew.fichas` guarda as cópias;
+`fichas[].ficha` aceita essas chaves (`hbvf-…`). Opcional.
+
 ## Perfil e Ocupação Homebrew de Ordem II — v9.21
 
 Nenhuma aba nova. No `HOMEBREW`, a coluna `tipo` aceita `perfil`. Na

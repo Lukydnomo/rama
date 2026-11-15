@@ -79,5 +79,40 @@ const fU = copia(f); H.atualizarVersao(fU, novas[0]);
 const fU2 = R.normalizar(fU);
 t.ok("versão nova da Disciplina: chave nova em toda a ficha (clã, predador, poderes)", novas.length === 1 && fU2.disciplinas[vitNova.chave] === 1 && fU2.poderes.some((p) => p.chave === vitNova.chave + "-p1") && fU2.homebrew.clas[cla.chave].disciplinas.indexOf(vitNova.chave) >= 0 && DS.DISCIPLINAS[vitNova.chave].tipo === "mental");
 
+t.grupo("Ficha de Conhecimento Homebrew (v9.27)");
+{
+  const fcB = { nome: "Os Vidreiros de Murano", homebrewId: "e7e7e7e7-sintetico", cla: cla.chave, descricao: "Uma linhagem de sopradores.",
+    niveis: [{ nome: "Olho Treinado", uso: "historia", texto: "Uma pista sobre um objeto de vidro." }, { nome: "Forno Antigo", uso: "inventado", texto: "Um Refúgio com forno." }, {}, {}, {}, { nome: "Sexto" }] };
+  const fc = C.normalizarHomebrew("conhecimento", fcB);
+  t.ok("chave hbvf-<id>-<hash>; no máximo 5 níveis, numerados", /^hbvf-e7e7e7e7-[a-z0-9]+$/.test(fc.chave) && fc.niveis.length === 5 && fc.niveis[4].nivel === 5, JSON.stringify(fc.niveis.map((n) => n.nivel)));
+  t.ok("limite de uso só os do livro; nível sem nome ganha \u201cNível N\u201d", fc.niveis[0].uso === "historia" && fc.niveis[1].uso === "" && fc.niveis[2].nome === "Nível 3");
+  t.ok("clã exclusivo: do livro ou Homebrew; outro texto não", fc.cla === cla.chave && C.normalizarHomebrew("conhecimento", { cla: "brujah" }).cla === "brujah" && C.normalizarHomebrew("conhecimento", { cla: "inventado" }).cla === "");
+  const fc2 = C.normalizarHomebrew("conhecimento", { nome: "Curta", homebrewId: "f8f8f8f8-sintetico", niveis: [{ nome: "Um" }, { nome: "Dois" }] });
+  const hbF = Object.assign(copia(hb), { fichas: { [fc.chave]: fc, [fc2.chave]: fc2 } });
+  const ff = R.normalizar({ natureza: "vampiro", cla: cla.chave, predador: pr.chave, homebrew: hbF, fichas: [{ ficha: fc.chave, nivel: 1 }, { ficha: fc2.chave, nivel: 2 }, { ficha: fc2.chave, nivel: 3 }] });
+  t.ok("na ficha: a cópia registra, os níveis que existem ficam e o nível 3 de uma ficha de 2 níveis sai", ff.fichas.length === 2 && ff.fichas.some((x) => x.ficha === fc2.chave && x.nivel === 2) && !!ff.homebrew.fichas[fc.chave] && C.FICHAS_DE_CONHECIMENTO[fc.chave].nome === "Os Vidreiros de Murano", JSON.stringify(ff.fichas));
+  R.receberXP(ff, 30, "teste");
+  t.ok("comprar com XP: 3 XP por ponto, cada nível à parte", R.validarCompra(ff, { tipo: "ficha", alvo: fc.chave, para: 2 }).ok && R.validarCompra(ff, { tipo: "ficha", alvo: fc.chave, para: 2 }).custo === 6);
+  const fBuy = R.normalizar({ natureza: "vampiro", cla: "toreador" });
+  C.registrarHomebrew("conhecimento", fc2); C.registrarHomebrew("vantagem", va);
+  R.receberXP(fBuy, 40, "teste");
+  const rb1 = R.comprar(fBuy, { tipo: "ficha", alvo: fc2.chave, para: 1 }), rb2 = R.comprar(fBuy, { tipo: "vantagem", alvo: va.chave, para: 2 });
+  t.ok("  comprar já grava a cópia na ficha (Ficha de Conhecimento e Vantagem Homebrew)", rb1.ok && rb2.ok && !!fBuy.homebrew.fichas[fc2.chave] && !!fBuy.homebrew.vantagens[va.chave], JSON.stringify([rb1.ok ? "" : rb1, rb2.ok ? "" : rb2, fBuy.homebrew]));
+  t.ok("  e sobrevive a normalizar sem a biblioteca (pela cópia)", (() => { const k = fc2.chave; const def = C.FICHAS_DE_CONHECIMENTO[k]; delete C.FICHAS_DE_CONHECIMENTO[k]; const y = R.normalizar(copia(fBuy)); C.FICHAS_DE_CONHECIMENTO[k] = def; return y.fichas.some((x) => x.ficha === k); })());
+  t.ok("  um nível que a ficha não tem é recusado", /não tem o nível 3/.test(R.validarCompra(ff, { tipo: "ficha", alvo: fc2.chave, para: 3 }).motivo || JSON.stringify(R.validarCompra(ff, { tipo: "ficha", alvo: fc2.chave, para: 3 }))));
+  const outroCla = R.normalizar({ natureza: "vampiro", cla: "brujah", homebrew: hbF, fichas: [] });
+  R.receberXP(outroCla, 30, "teste");
+  t.ok("  exclusiva do clã Homebrew: outro clã não compra", !R.validarCompra(outroCla, { tipo: "ficha", alvo: fc.chave, para: 1 }).ok);
+  const semCopia = R.normalizar({ natureza: "vampiro", cla: "brujah", fichas: [{ ficha: "hbvf-zzzzzzzz-abc123", nivel: 1 }] });
+  t.ok("sem cópia e sem catálogo, a ficha some (nada é inventado)", semCopia.fichas.length === 0);
+  t.ok("prévia: o clã e os níveis com o limite de uso", /Exclusiva do clã Vidreiros/.test(H.previa("conhecimento", fc)[0]) && /Nível 1 · Olho Treinado \(1× por história\)/.test(H.previa("conhecimento", fc).join(" ")));
+  const gF = A.guardar("vampiro", "estrutural", "conhecimento", { nome: "Os Vidreiros de Murano", descricao: "Uma linhagem.", valores: {}, def: (() => { const x = copia(fc); ["chave", "homebrewId", "homebrew", "nome", "pagina", "descricao"].forEach((k) => delete x[k]); return x; })() });
+  t.ok("biblioteca: guarda e volta com os níveis", gF.ok && H.deRegistro(Object.assign({}, gF.registro, { id: "e7e7e7e7-sintetico" })).def.niveis.length === 5, JSON.stringify(gF.ok ? [gF.registro.modelo, H.deRegistro(Object.assign({}, gF.registro, { id: "e7e7e7e7-sintetico" }))] : gF).slice(0, 700));
+  t.ok("destino e pacote: só Vampiro", A.destinoNaFicha(gF.registro, "vampiro").modo === "nativo" && A.destinoNaFicha(gF.registro, "ordem").modo === "incompativel" && G.RAMAPacotesHomebrew.TIPOS.some((x) => x.chave === "conhecimento"));
+  const fcN = C.normalizarHomebrew("conhecimento", Object.assign(copia(fcB), { niveis: [{ nome: "Olho Muito Treinado" }] }));
+  const novas = H.versoesNovas(ff, { fichas: [fcN] });
+  t.ok("versão nova da biblioteca é oferecida e atualizar troca a chave", novas.length === 1 && (() => { const x = copia(ff); H.atualizarVersao(x, novas[0]); const y = R.normalizar(x); return y.fichas.some((z) => z.ficha === fcN.chave) && !y.homebrew.fichas[fc.chave]; })());
+}
+
 console.log(`\n${FORTE}${passaram} ok${FIM}, ${falharam ? VERMELHO : ""}${falharam} falha(s)${FIM}.`);
 if (falharam) Deno.exit(1);

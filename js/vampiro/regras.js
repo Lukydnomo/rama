@@ -131,6 +131,11 @@
       var k = objeto(v).chave;
       usar("vantagens", k, function (x) { return C.ehHomebrew("vantagem", x); }, C.VANTAGENS[k], function (x) { return C.normalizarHomebrew("vantagem", x); }, function (d) { C.registrarHomebrew("vantagem", d); });
     });
+    /* v9.27: Fichas de Conhecimento Homebrew. */
+    lista(b.fichas).forEach(function (f) {
+      var k = objeto(f).ficha;
+      usar("fichas", k, function (x) { return C.ehHomebrew("conhecimento", x); }, C.FICHAS_DE_CONHECIMENTO[k], function (x) { return C.normalizarHomebrew("conhecimento", x); }, function (d) { C.registrarHomebrew("conhecimento", d); });
+    });
     if (Object.keys(saida).length) o.homebrew = Object.assign({ versao: 1 }, saida);
   }
 
@@ -169,6 +174,8 @@
     var vistos = {};
     o.fichas = lista(b.fichas).filter(function (x) {
       if (!x || !chaveValida(x.ficha) || !C.FICHAS_DE_CONHECIMENTO[x.ficha]) return false;
+      /* Só os níveis que a ficha tem (uma Homebrew pode ter menos de 5). */
+      if (!C.FICHAS_DE_CONHECIMENTO[x.ficha].niveis[inteiro(x.nivel, 1, 5, 1) - 1]) return false;
       var k = x.ficha + ":" + inteiro(x.nivel, 1, 5, 1);
       if (vistos[k]) return false;
       vistos[k] = true;
@@ -1716,6 +1723,7 @@
       if (!fdef) return falha("Ficha de Conhecimento desconhecida.");
       para = inteiro(p.para, 1, 5, 1); de = 0;
       if (fdef.cla && fdef.cla !== o.cla) return falha(fdef.nome + " é exclusiva do clã " + C.CLAS[fdef.cla].nome + ".");
+      if (!fdef.niveis[para - 1]) return falha(fdef.nome + " não tem o nível " + para + ".");
       if (o.fichas.some(function (x) { return x.ficha === alvo && x.nivel === para; })) return falha("Já tem este nível.");
       custo = para * C.CUSTOS_XP.vantagem.porPonto;
     } else if (tipo === "ritual" || tipo === "formula") {
@@ -1758,6 +1766,13 @@
     return { total: total, usados: usados };
   }
 
+  function guardarCopiaHomebrew(o, campo, def) {
+    if (!def || !def.homebrew || !def.chave) return;
+    if (!o.homebrew || typeof o.homebrew !== "object") o.homebrew = { versao: 1 };
+    if (!o.homebrew[campo] || typeof o.homebrew[campo] !== "object") o.homebrew[campo] = {};
+    if (!o.homebrew[campo][def.chave]) o.homebrew[campo][def.chave] = copiar(def);
+  }
+
   function comprar(o, p) {
     var v = validarCompra(o, p || {});
     if (!v.ok) return v;
@@ -1786,6 +1801,11 @@
     } else if (p.tipo === "disciplina") {
       lista(p.poderes).forEach(function (k) { o.poderes.push({ id: novoId("po"), chave: k, origem: "xp" }); });
     }
+    /* v9.27: o que é Homebrew entra com a CÓPIA na ficha, já na compra
+       (antes, só quando a ficha era normalizada com a biblioteca à mão). */
+    if (p.tipo === "vantagem") guardarCopiaHomebrew(o, "vantagens", C.VANTAGENS[p.alvo]);
+    if (p.tipo === "ficha") guardarCopiaHomebrew(o, "fichas", C.FICHAS_DE_CONHECIMENTO[p.alvo]);
+    if (p.tipo === "disciplina" && DS()) guardarCopiaHomebrew(o, "disciplinas", DS().DISCIPLINAS[p.alvo]);
     o.compras.push(compra);
     eventos.push(evento("compra", { compra: p.tipo, alvo: p.alvo, de: v.de, para: v.para, custo: compra.custo, credito: v.desconto }));
     return { ok: true, eventos: eventos, compra: compra };
