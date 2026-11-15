@@ -929,168 +929,21 @@ segredo nenhum — ele os lê das Script Properties. Publicá-lo não expõe nad
 
 ### Atualizar o backend
 
-**v9.37.0 — CHANCELA:** validação dos pacotes da Etapa 3 (só
-documentação). **Nada a publicar além de `js/versao.js`.**
+**v9.7.0 — DIALETO:** Homebrew nativo por sistema e Modelo Universal.
+1. Troque **`Codigo.gs`**, **`HomebrewPacotes.gs`**, **`Ordem.gs`**,
+   **`Ordem2.gs`**, **`Tormenta20.gs`**, **`Tormenta20Dados.gs`**,
+   **`Vampiro.gs`**, **`Oblivio.gs`**, **`Goblins.gs`** e **`Brutal.gs`**.
+   Nenhum arquivo novo.
+2. **`setupRama()` não é necessário**: nenhuma aba nova.
+3. Crie uma versão nova da implantação.
 
-**v9.36.0 — MATRIZ:** inventário de cobertura e matriz de regressão do
-Homebrew. **Só o site muda: o servidor fica como está.** Site:
-`js/homebrew-adaptadores.js`, `js/paginas/homebrew-ficha.js` e
-`js/versao.js`.
-
-**v9.35.0 — TONICO:** ações do Modelo Universal nas fichas de sistema,
-com os recursos nativos. **Só o site muda: o servidor fica como está.**
-Site: os arquivos listados em `docs/HOMEBREW-SISTEMAS.md` (seção
-"Publicar a v9.35.0").
-
-**v9.34.0 — ELO:** dependências entre criações nos pacotes (aviso ao
-montar e ao importar; chaves remapeadas na importação). Troque
-**`HomebrewPacotes.gs`** e crie uma versão nova da implantação.
-**`setupRama()` não é necessário.** Site: os arquivos listados em
-`docs/HOMEBREW-SISTEMAS.md` (seção "Publicar a v9.34.0").
-
-**v9.33.0 — GRAMAALTA:** PokéPraga e Receita Homebrew (variantes de
-Malditos Goblins). Troque **`Codigo.gs`** e **`Goblins.gs`** e crie uma
-versão nova da implantação. **`setupRama()` não é necessário.** Site: os
-arquivos listados em `docs/HOMEBREW-SISTEMAS.md` (seção "Publicar a
-v9.33.0").
-
-**v9.32.0 — VIDRARIA:** modelos de mesa e Vantagem Homebrew em BRUTAL.
-Troque **`Codigo.gs`** e **`Brutal.gs`** e crie uma versão nova da
-implantação. **`setupRama()` não é necessário.** Site: os arquivos
-listados em `docs/HOMEBREW-SISTEMAS.md` (seção "Publicar a v9.32.0").
-
-**v9.31.0 — ESPELHADO:** Habilidade Homebrew no motor de Oblívio. Troque
-**`Oblivio.gs`** e crie uma versão nova da implantação.
-**`setupRama()` não é necessário.** Site: os arquivos listados em
-`docs/HOMEBREW-SISTEMAS.md` (seção "Publicar a v9.31.0").
-
-**v9.30.0 — CACO:** Magia e Técnica Homebrew no motor de Malditos Goblins.
-Troque **`Goblins.gs`** e crie uma versão nova da implantação.
-**`setupRama()` não é necessário.** Site: os arquivos listados em
-`docs/HOMEBREW-SISTEMAS.md` (seção "Publicar a v9.30.0").
-
-**v9.29.0 — CRISTAL:** Poder de Disciplina Homebrew no motor de Vampiro.
-Troque **`Vampiro.gs`** e crie uma versão nova da implantação.
-**`setupRama()` não é necessário.** Site: os arquivos listados em
-`docs/HOMEBREW-SISTEMAS.md` (seção "Publicar a v9.29.0").
-
-**v9.28.0 — RESQUICIO:** o Exorcizado de Ordem Paranormal aceita o
-elemento Homebrew. **Só o site muda: o servidor fica como está.** Site:
-`js/ordem/catalogo.js` e `js/versao.js`.
-
-**v9.27.0 — MURANO:** Ficha de Conhecimento Homebrew em Vampiro, e a
-compra com XP de Homebrew passa a gravar a cópia. Troque **`Codigo.gs`**
-e **`Vampiro.gs`** e crie uma versão nova da implantação.
-**`setupRama()` não é necessário.** Site: os arquivos listados em
-`docs/HOMEBREW-SISTEMAS.md` (seção "Publicar a v9.27.0").
-
-**v9.26.0 — MOLDE:** poder geral à escolha na Raça Homebrew de Tormenta20,
-e o poder geral escolhido no golem e no osteon passa a entrar na conta.
-Troque **`Tormenta20.gs`** e **`Tormenta20Dados.gs`** e crie uma versão
-nova da implantação. **`setupRama()` não é necessário.** Site: os
-arquivos listados em `docs/HOMEBREW-SISTEMAS.md` (seção "Publicar a
-v9.26.0").
-
-**v9.25.0 — FACETA:** elemento Homebrew de Ordem em poderes, itens e
-maldições. **Só o site muda: o servidor fica como está.** Site: os
-arquivos listados em `docs/HOMEBREW-SISTEMAS.md` (seção "Publicar a
-v9.25.0").
-
-**v9.24.0 — CIRCULO:** a Classe Homebrew de Ordem Paranormal pode
-conjurar rituais como o Ocultista. **Só o site muda: o servidor fica
-como está.** Site: os arquivos listados em `docs/HOMEBREW-SISTEMAS.md`
-(seção "Publicar a v9.24.0").
-
-**v9.23.0 — SELO:** Mundano e Sobrevivente viram agente de uma Classe
-Homebrew em Ordem Paranormal. **Só o site muda: o servidor fica como
-está.** Site: os arquivos listados em `docs/HOMEBREW-SISTEMAS.md` (seção
-"Publicar a v9.23.0").
-
-**v9.22.0 — CARIMBO:** painel "Homebrew desta ficha" em Goblins, BRUTAL,
-Oblívio, Vampiro e Ordem II. **Só o site muda: o servidor fica como
-está.** Site: os arquivos listados em `docs/HOMEBREW-SISTEMAS.md` (seção
-"Publicar a v9.22.0").
-
-**v9.21.0 — GUARDIAO:** Perfil e Ocupação Homebrew de Ordem Paranormal
-RPG II. Troque **`Codigo.gs`** e **`Ordem2.gs`** e crie uma versão nova da
-implantação. **`setupRama()` não é necessário.** Site: os arquivos
-listados em `docs/HOMEBREW-SISTEMAS.md` (seção "Publicar a v9.21.0").
-
-**v9.20.0 — VITRIFICACAO:** Clã, Predador, Disciplina, Vantagem e Defeito
-Homebrew de Vampiro. Troque **`Codigo.gs`** e **`Vampiro.gs`** e crie uma
-versão nova da implantação. **`setupRama()` não é necessário.** Site: os
-arquivos listados em `docs/HOMEBREW-SISTEMAS.md` (seção "Publicar a
-v9.20.0").
-
-**v9.19.0 — VIGIA:** Papel, Motivação, Mazela e Fardo Homebrew de
-Oblívio. Troque **`Codigo.gs`** e **`Oblivio.gs`** e crie uma versão nova
-da implantação. **`setupRama()` não é necessário.** Site: os arquivos
-listados em `docs/HOMEBREW-SISTEMAS.md` (seção "Publicar a v9.19.0").
-
-**v9.18.0 — VLOGUEIRA:** Arquétipo e Estilo Homebrew de BRUTAL. Troque
-**`Codigo.gs`** e **`Brutal.gs`** e crie uma versão nova da implantação.
-**`setupRama()` não é necessário.** Site: os arquivos listados em
-`docs/HOMEBREW-SISTEMAS.md` (seção "Publicar a v9.18.0").
-
-**v9.17.0 — SOPRADOR:** Ocupação e Descritor Homebrew de Malditos
-Goblins. Troque **`Codigo.gs`** e **`Goblins.gs`** e crie uma versão nova
-da implantação. **`setupRama()` não é necessário.** Site: os arquivos
-listados em `docs/HOMEBREW-SISTEMAS.md` (seção "Publicar a v9.17.0").
-
-**v9.16.0 — CARTEIRADA:** escolha de perícia nos poderes Homebrew de
-Ordem. Troque **`Ordem.gs`** e crie uma versão nova da implantação.
-**`setupRama()` não é necessário.** Site: os arquivos listados em
-`docs/HOMEBREW-SISTEMAS.md` (seção "Publicar a v9.16.0").
-
-**v9.15.0 — ATUALIZA:** atualizar a cópia Homebrew de uma ficha para a
-versão da biblioteca (Ordem e Tormenta20). **Servidor: nada muda.**
-Site: os arquivos listados em `docs/HOMEBREW-SISTEMAS.md` (seção
-"Publicar a v9.15.0").
-
-**v9.14.0 — ESTILHACO:** Magia e Poder Homebrew no motor de Tormenta20
-(etapa 2, parte 7). Troque **`Tormenta20.gs`** e **`Tormenta20Dados.gs`**
-e crie uma versão nova da implantação. **`setupRama()` não é
-necessário.** Site: os arquivos listados em `docs/HOMEBREW-SISTEMAS.md`
-(seção "Publicar a v9.14.0").
-
-**v9.13.0 — REFLEXO:** habilidades ativadas, escolha de magia e variantes
-nos tipos Homebrew de Tormenta20 (etapa 2, parte 6). Troque só o
-**`Tormenta20Dados.gs`** e crie uma versão nova da implantação. **`setupRama()` não é necessário.** Site: os arquivos
-listados em `docs/HOMEBREW-SISTEMAS.md` (seção "Publicar a v9.13.0").
-
-**v9.12.0 — OFICINA:** Classe Homebrew de Tormenta20 (etapa 2, parte 5).
-Troque **`Codigo.gs`**, **`Tormenta20.gs`** e **`Tormenta20Dados.gs`** e
-crie uma versão nova da implantação. **`setupRama()` não é necessário.**
-Site: os arquivos listados em `docs/HOMEBREW-SISTEMAS.md` (seção
-"Publicar a v9.12.0").
-
-**v9.11.0 — PANTEAO:** Origem e Divindade Homebrew de Tormenta20 (etapa 2,
-parte 4). Troque **`Codigo.gs`**, **`Tormenta20.gs`** e
-**`Tormenta20Dados.gs`** e crie uma versão nova da implantação.
-**`setupRama()` não é necessário.** Site: os arquivos listados em
-`docs/HOMEBREW-SISTEMAS.md` (seção "Publicar a v9.11.0").
-
-**v9.10.0 — FORNALHA:** Raça Homebrew de Tormenta20 (etapa 2, parte 3).
-Troque **`Codigo.gs`**, **`Tormenta20.gs`** e **`Tormenta20Dados.gs`** e
-crie uma versão nova da implantação. **`setupRama()` não é necessário.**
-Site: os arquivos listados em `docs/HOMEBREW-SISTEMAS.md` (seção
-"Publicar a v9.10.0").
-
-**v9.9.0 — LAPIDA:** Origem e Trilha Homebrew de Ordem (etapa 2, parte 2).
-Troque **`Codigo.gs`** e crie uma versão nova da implantação. **`setupRama()`
-não é necessário.** Site: os arquivos listados em `docs/HOMEBREW-SISTEMAS.md`
-(seção "Publicar a v9.9.0").
-
-**v9.8.0 — SOTAQUE:** Elemento e Classe Homebrew de Ordem (etapa 2, parte 1).
-Troque **`Codigo.gs`** e crie uma versão nova da implantação. **`setupRama()`
-não é necessário.** Site: os arquivos listados em `docs/HOMEBREW-SISTEMAS.md`
-(seção "Publicar a v9.8.0").
-
-**v9.7.0 — DIALETO:** Homebrew por sistema (etapa 1). Troque **`Codigo.gs`**
-e **`HomebrewPacotes.gs`** e crie uma versão nova da implantação.
-**`setupRama()` não é necessário.** Site: os arquivos listados em
-`docs/HOMEBREW-SISTEMAS.md` (seção "Publicar a v9.7.0"), que também traz o
-inventário de cobertura e as etapas que faltam.
+Site: `js/` (com os novos `homebrew-adaptadores.js`, `homebrew-recursos.js`,
+`homebrew-versoes.js` e os `homebrew-*` de cada sistema), `css/componentes.css`,
+`css/homebrew.css`, `css/modern20/homebrew.css` e as páginas da raiz,
+`campanha/`, `campanhas/`, `catalogo/`, `ficha/`, `homebrew/`, `perfil/` e
+`personagens/`. O histórico do desenvolvimento
+está em `docs/HOMEBREW-SISTEMAS.md`, e a cobertura em
+`docs/HOMEBREW-COBERTURA.md`.
 
 **v9.6.0 — BROCHURA:** Pacotes de Homebrew.
 1. Adicione **`HomebrewPacotes.gs`** (novo) e troque **`Dados.gs`** e **`Codigo.gs`**.
@@ -2167,7 +2020,7 @@ Três números diferentes, que não se misturam:
 
 | | Onde | O que é |
 |---|---|---|
-| versão do aplicativo | `js/versao.js` | o que a pessoa vê: v9.37.0 |
+| versão do aplicativo | `js/versao.js` | o que a pessoa vê: v9.7.0 |
 | `schemaVersion` | `js/ficha.js` | o formato da FICHA |
 | `versaoFormato` | `js/config.js` | o formato dos arquivos de importação |
 

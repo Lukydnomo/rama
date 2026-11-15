@@ -1,5 +1,10 @@
 # Homebrew nativo por sistema e Modelo Universal
 
+> **Sobre a numeração.** O desenvolvimento passou por registros internos de
+> v9.7.0 a v9.37.0, que aparecem abaixo. Nenhum deles foi publicado sozinho:
+> o conjunto saiu como uma versão só, a **v9.7.0 — DIALETO**. Os números
+> abaixo servem só para achar cada entrega no histórico do git.
+
 A especificação ("Homebrew nativo por sistema e Homebrew Universal") se
 organiza em três etapas.
 
