@@ -1,5 +1,5 @@
 /* =====================================================================
-   R.A.M.A. — Homebrew · Origem e Trilha de Ordem Paranormal (v9.9)
+   R.A.M.A. — Homebrew · Origem, Trilha e Poder paranormal de Ordem (v9.9)
    ---------------------------------------------------------------------
    Dois editores por etapas (Identidade → Regras → Revisão), no mesmo
    modelo do editor de Classe:
@@ -8,6 +8,9 @@
              efeitos opcionais que o motor já calcula
      Trilha  a classe a que serve, um requisito opcional e os quatro
              poderes (NEX 10%, 40%, 65%, 99%), cada um com efeitos opcionais
+     Poder    poder PARANORMAL: elemento, requisito "<Elemento> N", texto,
+              efeitos, escolha de perícia e a linha de Afinidade (com
+              efeitos próprios). Entra nas vagas de poder paranormal.
 
    A definição passa pelo normalizador do motor (js/ordem/homebrew-ordem.js)
    antes de ser gravada; a ficha guarda a sua própria cópia ao escolher.
@@ -24,39 +27,43 @@
   function A() { return global.RAMAHomebrewAdaptadores; }
 
   function vaziaOrigem() { return { pericias: [], periciasAEscolher: 0, periciasOpcoes: [], periciasObservacao: "", poder: "", resumo: "", efeitos: [] }; }
+  function vazioPoder() { return { elemento: "", requisitoElemento: 0, resumo: "", afinidade: "", repetivel: false, efeitos: [], efeitosAfinidade: [], escolhaHb: null }; }
   function vaziaTrilha() { return { classe: "combatente", resumo: "", requisitos: [], poderes: [10, 40, 65, 99].map(function (n) { return { nex: n, nome: "", resumo: "", efeitos: [] }; }) }; }
 
   function editor(tipo, opcoes) {
     var o = opcoes || {};
     var reg = o.registro || null;
-    var ehOrigem = tipo === "origem";
-    var d = reg && reg.modelo && reg.modelo.def ? JSON.parse(JSON.stringify(reg.modelo.def)) : (ehOrigem ? vaziaOrigem() : vaziaTrilha());
+    var ehOrigem = tipo === "origem", ehPoder = tipo === "poder";
+    var d = reg && reg.modelo && reg.modelo.def ? JSON.parse(JSON.stringify(reg.modelo.def)) : (ehOrigem ? vaziaOrigem() : ehPoder ? vazioPoder() : vaziaTrilha());
     if (ehOrigem && !Array.isArray(d.periciasOpcoes)) d.periciasOpcoes = [];
-    if (!ehOrigem) d.poderes = H().normalizarTrilha(d).poderes.map(function (p, i) { var x = (d.poderes || [])[i] || {}; return { nex: p.nex, nome: x.nome || "", resumo: x.resumo || "", efeitos: x.efeitos || [], escolha: x.escolha || null }; });
-    var rotulo = ehOrigem ? "origem" : "trilha";
+    if (ehPoder) { d = Object.assign(vazioPoder(), d); if (!d.resumo && reg) d.resumo = reg.descricao || reg.texto || ""; }
+    if (!ehOrigem && !ehPoder) d.poderes = H().normalizarTrilha(d).poderes.map(function (p, i) { var x = (d.poderes || [])[i] || {}; return { nex: p.nex, nome: x.nome || "", resumo: x.resumo || "", efeitos: x.efeitos || [], escolha: x.escolha || null }; });
+    var rotulo = ehOrigem ? "origem" : ehPoder ? "poder paranormal" : "trilha";
+    /* Concordância: "o poder", "a origem", "a trilha". */
+    var g = ehPoder ? { a: "o", A: "O", da: "do", nova: "Novo", salva: "salvo" } : { a: "a", A: "A", da: "da", nova: "Nova", salva: "salva" };
     var r = { nome: reg ? reg.nome : "", descricao: reg ? reg.descricao || "" : (d.resumo && !ehOrigem ? d.resumo : ""), visibilidade: reg ? reg.visibilidade || "privado" : "privado", passo: 1, sujo: false };
-    var pref = ehOrigem ? "hbo" : "hbt";
+    var pref = ehOrigem ? "hbo" : ehPoder ? "hbpp" : "hbt";
     var form = el("div.hbe-form"), lado = el("aside.hbe-lado", { "aria-label": "Revisão" });
     var janela = UI.modal({
-      titulo: (reg ? "Editar " : "Nova ") + rotulo + " · Ordem Paranormal", largo: true, classe: "hbe-janela hbc-janela",
+      titulo: (reg ? "Editar " : g.nova + " ") + rotulo + " · Ordem Paranormal", largo: true, classe: "hbe-janela hbc-janela",
       conteudo: el("div.hbe-grade", {}, [form, lado]),
       podeFechar: function () {
         if (!r.sujo) return true;
-        UI.confirmar({ titulo: "Descartar o rascunho?", texto: "A " + rotulo + " ainda não foi salva.", rotuloConfirmar: "Descartar", perigo: true }).then(function (s) { if (s) { r.sujo = false; janela.fechar(); } });
+        UI.confirmar({ titulo: "Descartar o rascunho?", texto: g.A + " " + rotulo + " ainda não foi " + g.salva + ".", rotuloConfirmar: "Descartar", perigo: true }).then(function (s) { if (s) { r.sujo = false; janela.fechar(); } });
         return false;
       },
       botoes: [{ rotulo: "Cancelar", classe: "r-botao--fantasma" }, { rotulo: reg ? "Salvar " + rotulo : "Criar " + rotulo, classe: "r-botao--principal", aoClicar: salvar }],
     });
     function mudou(repintar) { r.sujo = true; if (repintar) pintar(); else pintarLado(); }
 
-    var PASSOS = ["Identidade", ehOrigem ? "Perícias e poder" : "Poderes", "Revisão"];
+    var PASSOS = ["Identidade", ehOrigem ? "Perícias e poder" : ehPoder ? "Efeitos e afinidade" : "Poderes", "Revisão"];
     function pintar() {
       var foco = document.activeElement && form.contains(document.activeElement) ? document.activeElement.id : "";
       U.trocar(form, [
         el("ol.pc-passos", { "aria-label": "Etapas" }, PASSOS.map(function (p, i) {
           return el("li", {}, [el("button.pc-passo", { type: "button", id: pref + "-passo-" + (i + 1), "aria-current": r.passo === i + 1 ? "step" : null, onclick: function () { r.passo = i + 1; pintar(); } }, [el("span.pc-passo__n", { texto: String(i + 1) }), el("span", { texto: p })])]);
         })),
-        [passo1, ehOrigem ? passoOrigem : passoTrilha, passoRevisao][r.passo - 1](),
+        [passo1, ehOrigem ? passoOrigem : ehPoder ? passoPoder : passoTrilha, passoRevisao][r.passo - 1](),
         el("div.faixa.pc-editor__rodape", {}, [
           r.passo > 1 ? el("button.r-botao.r-botao--fantasma", { type: "button", id: pref + "-voltar", texto: "Voltar", onclick: function () { r.passo--; pintar(); } }) : null,
           r.passo < PASSOS.length ? el("button.r-botao", { type: "button", id: pref + "-continuar", texto: "Continuar", onclick: function () { r.passo++; pintar(); } }) : null,
@@ -115,9 +122,18 @@
     /* ---------- 1. identidade ---------- */
     function passo1() {
       var partes = [
-        txt(pref + "-nome", "Nome da " + rotulo, r.nome, function (v) { r.nome = v; }, 60),
-        txt(pref + "-desc", "Descrição", r.descricao, function (v) { r.descricao = v; }, 1200, ehOrigem ? "O que a pessoa fazia antes da Ordem." : "O estilo da trilha, em poucas linhas.", true),
+        txt(pref + "-nome", "Nome " + g.da + " " + rotulo, r.nome, function (v) { r.nome = v; }, 60),
       ];
+      if (ehPoder) {
+        var ELx = global.RAMAOrdemElementos;
+        var opsEl = [["", "Sem elemento fixo"]].concat(ELx ? ELx.paraSelecao().map(function (e) { return [e.chave, e.nome + (e.oficial ? "" : " (Homebrew)")]; }) : []);
+        partes.push(sel("hbpp-elemento", "Elemento", opsEl, d.elemento, function (v) { d.elemento = v; if (!v) { d.requisitoElemento = 0; d.afinidade = ""; d.efeitosAfinidade = []; } }, "Os oficiais e os seus elementos Homebrew de Ordem. Conta para requisitos como “Sangue 2” e para a afinidade."));
+        if (d.elemento) partes.push(sel("hbpp-req", "Requisito", [[0, "Nenhum"], [1, "1 poder do elemento"], [2, "2 poderes do elemento"], [3, "3 poderes do elemento"], [4, "4 poderes do elemento"]], d.requisitoElemento || 0, function (v) { d.requisitoElemento = Number(v); }, "Como o “Sangue 1” do livro: quantos poderes desse elemento a pessoa já precisa ter."));
+        partes.push(el("label.r-marca", {}, [el("input", { type: "checkbox", id: "hbpp-repetivel", checked: !!d.repetivel, onchange: function (ev) { d.repetivel = ev.target.checked; mudou(); } }), el("span", { texto: "Pode ser escolhido várias vezes (como Aprender Ritual)" })]));
+        partes.push(txt("hbpp-texto", "Texto do poder", d.resumo, function (v) { d.resumo = v; }, 1200, "O que o poder faz, como aparece na ficha.", true));
+        return el("div.pc-editor__passo", {}, partes);
+      }
+      partes.push(txt(pref + "-desc", "Descrição", r.descricao, function (v) { r.descricao = v; }, 1200, ehOrigem ? "O que a pessoa fazia antes da Ordem." : "O estilo da trilha, em poucas linhas.", true));
       if (!ehOrigem) {
         partes.push(sel("hbt-classe", "Classe", H().OFICIAIS.map(function (k) { return [k, C().classe(k).nome]; }), d.classe, function (v) { d.classe = v; }, "Serve a essa classe e às Classes Homebrew que usam as trilhas dela."));
         partes.push(sel("hbt-req", "Requisito (opcional)", pericias("Nenhum"), d.requisitos && d.requisitos[0] ? d.requisitos[0].pericia : "", function (v) { d.requisitos = v ? [{ tipo: "treinado", pericia: v }] : []; }, "Ser treinado nessa perícia para escolher a trilha (como Médico de Campo pede Medicina)."));
@@ -146,6 +162,21 @@
       partes.push(blocoEscolha(d, "hbo-esc", "escolhaHb"));
       return el("div.pc-editor__passo", {}, partes);
     }
+    /* ---------- 2. poder paranormal ---------- */
+    function passoPoder() {
+      var partes = [blocoEfeitos(d, "hbpp-ef"), blocoEscolha(d, "hbpp-esc", "escolhaHb")];
+      if (d.elemento) {
+        var af = { efeitos: d.efeitosAfinidade };
+        partes.push(el("fieldset.r-campo.hbo-efeitos", {}, [
+          el("legend.r-rotulo", { texto: "Afinidade (opcional)" }),
+          el("p.r-ajuda", { texto: "Com afinidade no elemento, o poder pode ser escolhido uma segunda vez para receber esta linha (OPRPG p. 114)." }),
+          txt("hbpp-afinidade", "Texto da afinidade", d.afinidade, function (v) { d.afinidade = v; }, 600, null, true),
+          blocoEfeitos(af, "hbpp-af"),
+        ]));
+        d.efeitosAfinidade = af.efeitos;
+      } else partes.push(el("p.t-mini", { texto: "Sem elemento fixo, o poder não tem linha de afinidade." }));
+      return el("div.pc-editor__passo", {}, partes);
+    }
     /* ---------- 2. trilha ---------- */
     function passoTrilha() {
       return el("div.pc-editor__passo", {}, [el("p.t-mini", { texto: "Os poderes chegam sozinhos no marco (NEX 10%, 40%, 65% e 99%; nível e Patentes seguem a mesma regra das trilhas do livro)." })].concat(d.poderes.map(function (p, i) {
@@ -161,25 +192,30 @@
     /* ---------- 3. revisão ---------- */
     function definicao() {
       var x = JSON.parse(JSON.stringify(d));
-      x.nome = r.nome || (ehOrigem ? "Origem Homebrew" : "Trilha Homebrew");
+      x.nome = r.nome || (ehOrigem ? "Origem Homebrew" : ehPoder ? "Poder paranormal Homebrew" : "Trilha Homebrew");
       x.homebrewId = reg ? reg.id : "rascunho";
+      if (ehPoder) return H().normalizarPoder(x);
       if (ehOrigem) x.descricao = r.descricao; else x.resumo = r.descricao;
       return ehOrigem ? H().normalizarOrigem(x) : H().normalizarTrilha(x);
     }
-    function previa(def) { return ehOrigem ? H().previaOrigem(def) : H().previaTrilha(def); }
+    function previa(def) { return ehOrigem ? H().previaOrigem(def) : ehPoder ? H().previaPoder(def) : H().previaTrilha(def); }
     function passoRevisao() {
       var def = definicao();
-      var auto = ehOrigem
+      var auto = ehPoder
+        ? ["Aparece nas vagas de poder paranormal da Progressão (Transcender e as demais), junto dos do livro" + (def.elemento ? ", no grupo do elemento" : "") + ".", def.requisitoElemento ? "O requisito é conferido pela Progressão." : null, def.efeitos.length ? "Os efeitos entram na conta (" + def.efeitos.map(H().textoEfeito).join(", ") + ")." : "Sem efeito na conta.", def.efeitosAfinidade.length ? "Com a segunda escolha (afinidade), entram também: " + def.efeitosAfinidade.map(H().textoEfeito).join(", ") + "." : null]
+        : ehOrigem
         ? ["As perícias fixas entram treinadas na criação e na troca de origem.", def.efeitos.length ? "Os efeitos entram na conta (" + def.efeitos.map(H().textoEfeito).join(", ") + ")." : (def.escolhaHb ? "Sem efeito fixo; a escolha do poder entra na conta depois de feita." : "Sem efeito na conta.")]
         : ["A trilha aparece na vaga de Trilha para " + C().classe(def.classe).nome + " (e para as Classes Homebrew que usam as trilhas dela).", "Cada poder chega no seu marco; os efeitos configurados entram na conta."];
-      var manual = ehOrigem
+      var manual = ehPoder
+        ? [def.escolhaHb ? "Do poder: " + H().textoEscolha(def.escolhaHb) + " — escolhida na Progressão." : null, "O que o texto descreve além dos efeitos é aplicado pela mesa."]
+        : ehOrigem
         ? [def.periciasAEscolher ? "As " + def.periciasAEscolher + " perícias à escolha são escolhidas por quem joga." : null, def.escolhaHb ? "Do poder: " + H().textoEscolha(def.escolhaHb) + " — escolhida na Progressão (“Falta decidir”)." : null, "O que o texto do poder descreve além dos efeitos é aplicado pela mesa."]
         : def.poderes.filter(function (p) { return p.escolha; }).map(function (p) { return "NEX " + p.nex + "% · " + p.nome + ": " + H().textoEscolha(p.escolha) + " — escolhida na Progressão."; }).concat(["O que o texto de cada poder descreve além dos efeitos é aplicado pela mesa."]);
       return el("div.pc-editor__passo", {}, [
         el("p.t-rotulo", { texto: "Prévia" }),
         el("ul.hbe-mini", {}, previa(def).map(function (t) { return el("li", { texto: t }); })),
         el("p.t-rotulo", { texto: "Automático" }),
-        el("ul.hbe-mini", {}, auto.map(function (t) { return el("li", { texto: t }); })),
+        el("ul.hbe-mini", {}, auto.filter(Boolean).map(function (t) { return el("li", { texto: t }); })),
         el("p.t-rotulo", { texto: "Decisão de quem joga / da mesa" }),
         el("ul.hbe-mini", {}, manual.filter(Boolean).map(function (t) { return el("li", { texto: t }); })),
         el("div.r-campo", {}, [el("span.r-rotulo", { texto: "Visibilidade" }), el("div.filtros__grupo", { role: "group", "aria-label": "Visibilidade" }, [["privado", "Privada"], ["publico", "Pública"]].map(function (x) {
@@ -197,18 +233,23 @@
     }
 
     async function salvar(fechar) {
-      if (!U.aparar(r.nome)) { r.passo = 1; pintar(); UI.avisoErro("Dê um nome à " + rotulo + "."); var n = document.getElementById(pref + "-nome"); if (n) n.focus(); return; }
+      if (!U.aparar(r.nome)) { r.passo = 1; pintar(); UI.avisoErro("Dê um nome " + (ehPoder ? "ao " : "à ") + rotulo + "."); var n = document.getElementById(pref + "-nome"); if (n) n.focus(); return; }
       var def = definicao();
       ["chave", "homebrewId", "homebrew", "fonte", "pagina", "nome", "descricao"].forEach(function (k) { delete def[k]; });
-      if (!ehOrigem) delete def.resumo;
-      var g = A().guardar("ordem", "estrutural", tipo, { id: reg ? reg.id : undefined, nome: r.nome, descricao: r.descricao, valores: {}, def: def, visibilidade: r.visibilidade, modeloAnterior: reg ? reg.modelo : null });
-      if (!g.ok) { UI.avisoErro(g.erro); return; }
-      var resp = await global.RAMAApi.salvarHomebrew(g.registro);
-      if (!resp.ok) { UI.avisoDeFalha(resp, "gravação da " + rotulo); return; }
+      if (ehPoder) delete def.tipo;
+      else if (!ehOrigem) delete def.resumo;
+      var gd = ehPoder
+        ? A().guardar("ordem", "habilidade", "poderParanormal", { id: reg ? reg.id : undefined, nome: r.nome, descricao: def.resumo, origem: "Poder paranormal", valores: {}, def: def, visibilidade: r.visibilidade, modeloAnterior: reg ? reg.modelo : null })
+        : A().guardar("ordem", "estrutural", tipo, { id: reg ? reg.id : undefined, nome: r.nome, descricao: r.descricao, valores: {}, def: def, visibilidade: r.visibilidade, modeloAnterior: reg ? reg.modelo : null });
+      if (!gd.ok) { UI.avisoErro(gd.erro); return; }
+      var resp = await global.RAMAApi.salvarHomebrew(gd.registro);
+      if (!resp.ok) { UI.avisoDeFalha(resp, "gravação " + g.da + " " + rotulo); return; }
       r.sujo = false;
       fechar();
       if (H()) H().carregarBiblioteca(true);
-      UI.avisoOk(ehOrigem
+      UI.avisoOk(ehPoder
+        ? (reg ? "Poder atualizado. As fichas que já o usam continuam com a versão delas." : "Poder paranormal criado. Ele aparece nas vagas de poder paranormal da Progressão (Transcender e as demais).")
+        : ehOrigem
         ? (reg ? "Origem atualizada. As fichas que já a usam continuam com a versão delas." : "Origem criada. Ela aparece na criação de agentes de Ordem (aba Homebrew) e na troca de origem.")
         : (reg ? "Trilha atualizada. As fichas que já a usam continuam com a versão delas." : "Trilha criada. Ela aparece na vaga de Trilha da progressão para a classe dela."));
       if (o.aoSalvar) o.aoSalvar(resp.dados && resp.dados.id);
@@ -222,5 +263,6 @@
   global.RAMAHomebrewOrigemTrilha = {
     origem: function (o) { return editor("origem", o); },
     trilha: function (o) { return editor("trilha", o); },
+    poder: function (o) { return editor("poder", o); },
   };
 })(window);

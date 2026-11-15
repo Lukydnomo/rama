@@ -40,6 +40,7 @@
   "use strict";
 
   function C() { return global.RAMAOrdemCatalogo; }
+  function P() { return global.RAMAOrdemPoderes; }
   function EL() { return global.RAMAOrdemElementos; }
   function obj(v) { return v && typeof v === "object" && !Array.isArray(v) ? v : {}; }
   function lista(v) { return Array.isArray(v) ? v : []; }
@@ -63,6 +64,7 @@
   var PADRAO_CHAVE = /^hbc-[a-z0-9-]{3,60}$/;
   var PADRAO_ORIGEM = /^hbo-[a-z0-9-]{3,60}$/;
   var PADRAO_TRILHA = /^hbt-[a-z0-9-]{3,60}$/;
+  var PADRAO_PODER = /^hbpp-[a-z0-9-]{3,60}$/;
   var NEX_TRILHA = [10, 40, 65, 99];
   /* Os efeitos que uma origem ou um poder de trilha Homebrew podem ter:
      só os tipos que o motor de Ordem já soma (mesmo formato dos do livro). */
@@ -197,6 +199,42 @@
     return d;
   }
 
+  /* PODER PARANORMAL Homebrew: elemento (oficial, Homebrew ou nenhum), o
+     requisito "<Elemento> N" (poderes do elemento já adquiridos), o
+     texto, a linha de Afinidade e os efeitos que o motor soma (também os
+     da afinidade). Entra nas vagas de poder paranormal da Progressão. */
+  function normalizarPoder(bruto) {
+    var b = obj(bruto);
+    var el = String(b.elemento || "");
+    if (!(EL() ? EL().aceito(el) : ["conhecimento", "energia", "morte", "sangue", "medo"].indexOf(el) >= 0)) el = "";
+    var d = {
+      chave: PADRAO_PODER.test(String(b.chave || "")) ? b.chave : "",
+      nome: texto(b.nome, 60).trim() || "Poder paranormal Homebrew",
+      tipo: "paranormal",
+      homebrew: true, homebrewId: texto(b.homebrewId, 80), fonte: "HOMEBREW", pagina: 0,
+      elemento: el,
+      requisitoElemento: el ? int(b.requisitoElemento, 0, 4, 0) : 0,
+      resumo: texto(b.resumo, 1200).trim(),
+      afinidade: el ? texto(b.afinidade, 600).trim() : "",
+      repetivel: b.repetivel === true,
+      efeitos: efeitos(b.efeitos),
+      efeitosAfinidade: el ? efeitos(b.efeitosAfinidade) : [],
+    };
+    var esc = escolhaDoPoder(b.escolhaHb);
+    if (esc) d.escolhaHb = esc;
+    if (!d.chave) d.chave = chaveVersionada("hbpp-", d);
+    return d;
+  }
+  function nomeDoElem(k) { return EL() ? EL().nome(k) : k; }
+  function previaPoder(d) {
+    var linhas = [];
+    linhas.push((d.elemento ? "Poder paranormal de " + nomeDoElem(d.elemento) : "Poder paranormal sem elemento fixo") + (d.requisitoElemento ? " · requisito: " + nomeDoElem(d.elemento) + " " + d.requisitoElemento : "") + (d.repetivel ? " · pode ser escolhido várias vezes" : "") + ".");
+    linhas.push(d.efeitos.length ? "Na conta da ficha: " + d.efeitos.map(textoEfeito).join(", ") + "." : (d.escolhaHb ? "Sem efeito fixo." : "Informativo: a ficha mostra o poder; o efeito é aplicado pela mesa."));
+    if (d.escolhaHb) linhas.push("Escolha (na Progressão): " + textoEscolha(d.escolhaHb) + ".");
+    if (d.afinidade || d.efeitosAfinidade.length) linhas.push("Afinidade: " + (d.afinidade || "—") + (d.efeitosAfinidade.length ? " (na conta: " + d.efeitosAfinidade.map(textoEfeito).join(", ") + ")" : ""));
+    return linhas;
+  }
+
   /* A definição da classe, no formato que o catálogo e o motor leem. */
   function normalizarClasse(bruto) {
     var b = obj(bruto);
@@ -280,7 +318,7 @@
   /* O bloco que a ficha guarda. */
   function normalizarBloco(bruto) {
     var b = obj(bruto);
-    var classes = {}, elementos = {}, origens = {}, trilhas = {};
+    var classes = {}, elementos = {}, origens = {}, trilhas = {}, poderes = {};
     Object.keys(obj(b.classes)).slice(0, 8).forEach(function (k) {
       if (!PADRAO_CHAVE.test(k)) return;
       var d = normalizarClasse(Object.assign({}, b.classes[k], { chave: k }));
@@ -295,8 +333,13 @@
     Object.keys(obj(b.trilhas)).slice(0, 8).forEach(function (k) {
       if (PADRAO_TRILHA.test(k)) trilhas[k] = normalizarTrilha(Object.assign({}, b.trilhas[k], { chave: k }));
     });
-    if (![classes, elementos, origens, trilhas].some(function (m) { return Object.keys(m).length; })) return null;
-    return { versao: 1, classes: classes, elementos: elementos, origens: origens, trilhas: trilhas };
+    Object.keys(obj(b.poderes)).slice(0, 20).forEach(function (k) {
+      if (PADRAO_PODER.test(k)) poderes[k] = normalizarPoder(Object.assign({}, b.poderes[k], { chave: k }));
+    });
+    if (![classes, elementos, origens, trilhas, poderes].some(function (m) { return Object.keys(m).length; })) return null;
+    var saida = { versao: 1, classes: classes, elementos: elementos, origens: origens, trilhas: trilhas };
+    if (Object.keys(poderes).length) saida.poderes = poderes;
+    return saida;
   }
   /* Registra no catálogo (idempotente; chaves versionadas não colidem). */
   function registrar(bloco) {
@@ -305,11 +348,15 @@
     if (EL()) EL().registrarMapa(b.elementos);
     Object.keys(obj(b.origens)).forEach(function (k) { if (C() && C().registrarOrigemHomebrew) C().registrarOrigemHomebrew(b.origens[k]); });
     Object.keys(obj(b.trilhas)).forEach(function (k) { if (C() && C().registrarTrilhaHomebrew) C().registrarTrilhaHomebrew(b.trilhas[k]); });
+    Object.keys(obj(b.poderes)).forEach(function (k) { if (P() && P().registrarParanormalHomebrew) P().registrarParanormalHomebrew(b.poderes[k]); });
   }
 
   /* Da biblioteca (registro com modelo) para a definição da ficha. */
   function deRegistro(reg) {
     var m = obj(obj(reg).modelo);
+    if (m.sistema === "ordem" && m.grupo === "habilidade" && m.subtipo === "poderParanormal") {
+      return { tipo: "poder", def: normalizarPoder(Object.assign({}, obj(m.def), { chave: "", nome: reg.nome, resumo: obj(m.def).resumo || reg.descricao || reg.texto || "", homebrewId: reg.id })) };
+    }
     if (m.sistema !== "ordem" || m.grupo !== "estrutural") return null;
     var def = Object.assign({}, obj(m.def), { nome: reg.nome, resumo: reg.descricao || obj(m.def).resumo, homebrewId: reg.id });
     if (m.subtipo === "classe") return { tipo: "classe", def: normalizarClasse(def) };
@@ -319,12 +366,17 @@
     return null;
   }
   /* Põe uma definição na ficha (cópia) e registra. */
-  var MAPA_DO_TIPO = { classe: "classes", elemento: "elementos", origem: "origens", trilha: "trilhas" };
+  var MAPA_DO_TIPO = { classe: "classes", elemento: "elementos", origem: "origens", trilha: "trilhas", poder: "poderes" };
   function guardarNaFicha(ordem, tipo, def) {
     if (!ordem.homebrew || typeof ordem.homebrew !== "object") ordem.homebrew = { versao: 1, classes: {}, elementos: {} };
     var campo = MAPA_DO_TIPO[tipo] || "elementos";
     if (!ordem.homebrew[campo] || typeof ordem.homebrew[campo] !== "object") ordem.homebrew[campo] = {};
     ordem.homebrew[campo][def.chave] = JSON.parse(JSON.stringify(def));
+    /* O poder de um elemento Homebrew leva a cópia do elemento junto. */
+    if (tipo === "poder" && def.elemento && EL() && EL().ehHomebrew(def.elemento) && EL().def(def.elemento)) {
+      if (!ordem.homebrew.elementos || typeof ordem.homebrew.elementos !== "object") ordem.homebrew.elementos = {};
+      if (!ordem.homebrew.elementos[def.elemento]) ordem.homebrew.elementos[def.elemento] = JSON.parse(JSON.stringify(EL().def(def.elemento)));
+    }
     registrar(ordem.homebrew);
     return def.chave;
   }
@@ -336,6 +388,7 @@
     if (PADRAO_CHAVE.test(k)) return "classe";
     if (PADRAO_ORIGEM.test(k)) return "origem";
     if (PADRAO_TRILHA.test(k)) return "trilha";
+    if (PADRAO_PODER.test(k)) return "poder";
     if (EL() && EL().ehHomebrew(k)) return "elemento";
     return "";
   }
@@ -344,7 +397,8 @@
     if (!ordem || !tipo) return false;
     var campo = MAPA_DO_TIPO[tipo];
     if (ordem.homebrew && ordem.homebrew[campo] && ordem.homebrew[campo][chave]) return true;
-    var def = tipo === "classe" ? C() && C().classe(chave) : tipo === "origem" ? C() && C().origem(chave) : tipo === "trilha" ? C() && C().trilha(chave) : EL() && EL().def(chave);
+    var pz = tipo === "poder" && P() && P().poder(chave);
+    var def = tipo === "poder" ? (pz && pz.defHomebrew) : tipo === "classe" ? C() && C().classe(chave) : tipo === "origem" ? C() && C().origem(chave) : tipo === "trilha" ? C() && C().trilha(chave) : EL() && EL().def(chave);
     if (!def || !def.homebrew) return false;
     guardarNaFicha(ordem, tipo, def);
     return true;
@@ -407,11 +461,11 @@
     if (biblioteca && !forcar) return Promise.resolve(biblioteca);
     if (carga && !forcar) return carga;
     var API = global.RAMAApi;
-    var VAZIA = { classes: [], elementos: [], origens: [], trilhas: [] };
+    var VAZIA = { classes: [], elementos: [], origens: [], trilhas: [], poderes: [] };
     if (!API || !API.listarHomebrew) return Promise.resolve(VAZIA);
-    carga = API.listarHomebrew({ escopo: "todos", tipos: ["classe", "elemento", "origem", "trilha"] }).then(function (r) {
+    carga = API.listarHomebrew({ escopo: "todos", tipos: ["classe", "elemento", "origem", "trilha", "habilidade"] }).then(function (r) {
       carga = null;
-      var saida = { classes: [], elementos: [], origens: [], trilhas: [] };
+      var saida = { classes: [], elementos: [], origens: [], trilhas: [], poderes: [] };
       ((r && r.ok && r.dados) || []).forEach(function (reg) {
         var x = deRegistro(reg);
         if (!x || !x.def) return;
@@ -422,6 +476,8 @@
            Trilha as mostram; escolher uma grava a cópia na ficha. */
         if (x.tipo === "origem") { if (C() && C().registrarOrigemHomebrew) C().registrarOrigemHomebrew(x.def); saida.origens.push(x.def); }
         if (x.tipo === "trilha") { if (C() && C().registrarTrilhaHomebrew) C().registrarTrilhaHomebrew(x.def); saida.trilhas.push(x.def); }
+        /* Poder paranormal: entra nas vagas de poder paranormal. */
+        if (x.tipo === "poder") { if (P() && P().registrarParanormalHomebrew) P().registrarParanormalHomebrew(x.def); saida.poderes.push(x.def); }
       });
       biblioteca = saida;
       return saida;
@@ -431,7 +487,7 @@
 
   /* v9.15: as cópias da ficha e as versões novas da biblioteca (classe,
      origem, trilha; o elemento tem chave estável e não versiona). */
-  var CAMPOS_VERSAO = [["classes", "classes", "classe"], ["origens", "origens", "origem"], ["trilhas", "trilhas", "trilha"]];
+  var CAMPOS_VERSAO = [["classes", "classes", "classe"], ["origens", "origens", "origem"], ["trilhas", "trilhas", "trilha"], ["poderes", "poderes", "poder"]];
   function trocarChave(bloco, antiga, nova) {
     var novo = JSON.parse(JSON.stringify(bloco).split(antiga).join(nova));
     Object.keys(bloco).forEach(function (k) { delete bloco[k]; });
@@ -464,7 +520,7 @@
     normalizarClasse: normalizarClasse, chaveDaClasse: chaveDaClasse, disponivelNoTrilho: disponivelNoTrilho, faltas: faltas,
     normalizarBloco: normalizarBloco, registrar: registrar, deRegistro: deRegistro, guardarNaFicha: guardarNaFicha,
     previa: previa, modeloDeOficial: modeloDeOficial, circulosPorNex: circulosPorNex, CIRCULOS_DO_OCULTISTA: CIRCULOS_DO_OCULTISTA,
-    NEX_TRILHA: NEX_TRILHA, EFEITOS: EFEITOS, MODOS_ESCOLHA: MODOS_ESCOLHA, escolhaDoPoder: escolhaDoPoder, textoEscolha: textoEscolha, normalizarOrigem: normalizarOrigem, normalizarTrilha: normalizarTrilha,
+    NEX_TRILHA: NEX_TRILHA, EFEITOS: EFEITOS, MODOS_ESCOLHA: MODOS_ESCOLHA, escolhaDoPoder: escolhaDoPoder, textoEscolha: textoEscolha, normalizarOrigem: normalizarOrigem, normalizarTrilha: normalizarTrilha, normalizarPoder: normalizarPoder, previaPoder: previaPoder,
     textoEfeito: textoEfeito, previaOrigem: previaOrigem, previaTrilha: previaTrilha, embutir: embutir, tipoDaChave: tipoDaChave,
   };
 })(typeof window !== "undefined" ? window : globalThis);

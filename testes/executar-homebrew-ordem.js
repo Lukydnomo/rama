@@ -357,5 +357,48 @@ t.grupo("Elemento Homebrew · origens Exorcizado e Ferido por Ritual (v9.28)");
   t.ok("Ferido por Ritual recusa Vidro (perícia por elemento é tabela do livro)", simFr && !simFr.valido && /elementos do livro/.test(JSON.stringify(simFr)), JSON.stringify(simFr));
 }
 
+t.grupo("Poder paranormal Homebrew · nas vagas de poder paranormal");
+{
+  const P = G.RAMAOrdemPoderes, A = G.RAMAHomebrewAdaptadores;
+  const brutoPp = { nome: "Couraça de Ossos", homebrewId: "pp000001-sintetico", elemento: "morte", requisitoElemento: 0, resumo: "Ossos cobrem a pele.", afinidade: "A Defesa sobe mais.", efeitos: [{ tipo: "defesa", valor: 2 }], efeitosAfinidade: [{ tipo: "defesa", valor: 1 }] };
+  const pp = H.normalizarPoder(brutoPp);
+  t.ok("a chave é versionada (hbpp-<id>-<hash>)", /^hbpp-pp000001-[a-z0-9]+$/.test(pp.chave), pp.chave);
+  t.ok("mudar a definição muda a chave", H.normalizarPoder(Object.assign(copia(brutoPp), { resumo: "Outro texto." })).chave !== pp.chave);
+  t.ok("sem elemento, não há requisito nem afinidade", (() => { const x = H.normalizarPoder(Object.assign(copia(brutoPp), { elemento: "" , requisitoElemento: 2 })); return x.requisitoElemento === 0 && x.afinidade === "" && x.efeitosAfinidade.length === 0; })());
+  const reg = { id: "pp000001-sintetico", nome: "Couraça de Ossos", tipo: "habilidade", modelo: { sistema: "ordem", grupo: "habilidade", subtipo: "poderParanormal", def: Object.assign({}, brutoPp) } };
+  const x = H.deRegistro(reg);
+  t.ok("da biblioteca: o registro vira a definição do poder", x && x.tipo === "poder" && x.def.chave === pp.chave, JSON.stringify(x && x.def && x.def.chave));
+  const g = A.guardar("ordem", "habilidade", "poderParanormal", { nome: "Couraça de Ossos", descricao: pp.resumo, valores: {}, def: Object.assign({}, brutoPp) });
+  t.ok("o adaptador grava o subtipo com a definição inteira", g.ok && g.registro.modelo.subtipo === "poderParanormal" && g.registro.modelo.def.efeitos.length === 1, JSON.stringify(g.erro || ""));
+  t.ok("e o destino na ficha é Nativo (vagas de poder paranormal)", A.destinoNaFicha(Object.assign({}, g.registro), "ordem").modo === "nativo");
+  P.registrarParanormalHomebrew(pp);
+  t.ok("registrado, é um poder paranormal do motor", P.poder(pp.chave) && P.poder(pp.chave).tipo === "paranormal" && P.poder(pp.chave).elemento === "morte");
+  const o = R.normalizar({ classe: "combatente", origem: "academico", nex: 15, atributos: { agi: 1, for: 2, int: 1, pre: 1, vig: 2 } });
+  t.ok("aparece entre os candidatos de Transcender, com os do livro", E.candidatosParanormais(o, "d3.poderClasse", {}).some((c) => c.entrada.chave === pp.chave) && E.candidatosParanormais(o, "d3.poderClasse", {}).some((c) => c.entrada.chave === "encararAMorte"));
+  const vaga = E.vagas(o).filter((v) => v.id === "d3.poderClasse")[0];
+  const esc = { valor: "transcender", opcoes: { poder: { valor: pp.chave, opcoes: {} } } };
+  const sim = E.simular(copia(o), vaga, esc, {}).avaliacao;
+  t.ok("Transcender com o poder Homebrew é válido", sim && sim.valido, JSON.stringify(sim));
+  const antes = R.calcular(o).defesa.total;
+  E.registrar(o, vaga, esc);
+  t.ok("ao escolher, a ficha guarda a cópia do poder", o.homebrew && o.homebrew.poderes && o.homebrew.poderes[pp.chave] && o.homebrew.poderes[pp.chave].nome === "Couraça de Ossos", JSON.stringify(o.homebrew));
+  t.iguais("e o efeito entra na conta (+2 Defesa)", R.calcular(o).defesa.total - antes, 2);
+  const re = R.normalizar(copia(o));
+  t.ok("recarregar a ficha mantém a cópia e o efeito", re.homebrew.poderes[pp.chave] && R.calcular(re).defesa.total - antes === 2);
+  const req = H.normalizarPoder({ nome: "Sangue Fervente", homebrewId: "pp000002-sintetico", elemento: "sangue", requisitoElemento: 1, resumo: "Pede Sangue 1." });
+  P.registrarParanormalHomebrew(req);
+  const o2 = R.normalizar({ classe: "combatente", origem: "academico", nex: 15, atributos: { agi: 1, for: 2, int: 1, pre: 1, vig: 2 } });
+  const simReq = E.simular(copia(o2), E.vagas(o2).filter((v) => v.id === "d3.poderClasse")[0], { valor: "transcender", opcoes: { poder: { valor: req.chave, opcoes: {} } } }, {}).avaliacao;
+  t.ok("o requisito \u201cSangue 1\u201d é conferido (sem poder de Sangue: recusado)", simReq && !simReq.valido, JSON.stringify(simReq));
+  EL.registrar(vidro);
+  const ppV = H.normalizarPoder({ nome: "Estilhaço", homebrewId: "pp000003-sintetico", elemento: vidro.chave, resumo: "Cacos." });
+  t.ok("aceita elemento Homebrew", ppV.elemento === vidro.chave);
+  P.registrarParanormalHomebrew(ppV);
+  const o3 = R.normalizar({ classe: "combatente", origem: "academico", nex: 15, atributos: { agi: 1, for: 2, int: 1, pre: 1, vig: 2 } });
+  E.registrar(o3, E.vagas(o3).filter((v) => v.id === "d3.poderClasse")[0], { valor: "transcender", opcoes: { poder: { valor: ppV.chave, opcoes: {} } } });
+  t.ok("o poder de Vidro leva a cópia do elemento para a ficha", o3.homebrew.poderes[ppV.chave] && o3.homebrew.elementos[vidro.chave]);
+  t.ok("as cópias do poder entram no painel de versões", H.copiasDaFicha(o).some((c) => c.tipo === "poder" && c.chave === pp.chave));
+}
+
 console.log(`\n${FORTE}${passaram} ok${FIM}, ${falharam ? VERMELHO : ""}${falharam} falha(s)${FIM}.`);
 if (falharam) Deno.exit(1);

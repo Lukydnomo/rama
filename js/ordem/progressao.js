@@ -863,14 +863,19 @@
     if (!EL || !HO || !HO.guardarNaFicha) return;
     (function andar(v, prof) {
       if (prof > 8 || v === null || v === undefined) return;
-      if (typeof v === "string") { if (EL.ehHomebrew(v) && EL.def(v)) HO.guardarNaFicha(ordem, "elemento", EL.def(v)); return; }
+      if (typeof v === "string") {
+        if (EL.ehHomebrew(v) && EL.def(v)) HO.guardarNaFicha(ordem, "elemento", EL.def(v));
+        /* Um poder paranormal Homebrew escolhido (Transcender…) ganha a cópia. */
+        else if (HO.tipoDaChave && HO.tipoDaChave(v) === "poder" && HO.embutir) HO.embutir(ordem, v);
+        return;
+      }
       if (typeof v === "object") Object.keys(v).forEach(function (k) { andar(v[k], prof + 1); });
     })(opcoes, 0);
   }
 
   function registrar(ordem, v, candidato) {
     if (!ordem.escolhas) ordem.escolhas = [];
-    guardarElementosDaEscolha(ordem, (candidato || {}).opcoes);
+    guardarElementosDaEscolha(ordem, [(candidato || {}).valor, (candidato || {}).opcoes]);
     var c = candidato || {};
     var existente = ordem.escolhas.filter(function (r) { return r.etapa === v.id; })[0];
 
@@ -3952,7 +3957,7 @@
   function candidatosParanormais(ordem, idVaga, contexto) {
     var c = contextoDaVaga(ordem, idVaga, contexto);
     if (!c) return [];
-    return P.PODERES_PARANORMAIS.map(function (e) {
+    return (P.paranormaisDisponiveis ? P.paranormaisDisponiveis() : P.PODERES_PARANORMAIS).map(function (e) {
       var cand = candidato(e, c.percurso, c.etapa, ordem);
       var el = e.elemento;
       var af = afinidadeNaEtapa(ordem, c.percurso, c.etapa);

@@ -23,6 +23,7 @@ criatura de cada sistema), não na ficha de personagem.
 | Item | Mochila / recipiente | editor de campos | Nativo | Entra no inventário com as regras do sistema. |
 | Item | Outro (narrativo) | editor de campos | Nativo | Entra no inventário como item narrativo (nome e descrição): as regras ficam com a mesa. |
 | Habilidade | Habilidade / poder | editor de campos | Nativo | Entra nas habilidades da ficha. |
+| Habilidade | Poder paranormal | editor próprio (por etapas) | Nativo | Escolhido nas vagas de poder paranormal da Progressão (Transcender e as demais), como os do livro: requisito de elemento, afinidade e os efeitos configurados. A cópia fica na ficha. |
 | Habilidade | Ritual | editor de rituais | Nativo | Entra na aba Rituais, com símbolo, círculo, elemento(s) e a conjuração automática. |
 | Tipo estrutural | Elemento | editor de campos | Nativo | Aparece nos seletores de elemento (rituais, criaturas, itens e, se permitido, afinidade). |
 | Tipo estrutural | Classe | editor próprio (por etapas) | Nativo | Escolhida na criação do agente (Classes Homebrew), com a cópia guardada na ficha. |

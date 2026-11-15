@@ -836,7 +836,7 @@
     /* v9.25: os elementos Homebrew da biblioteca entram nas opções de
        elemento (uma consulta; a janela repinta quando chegar). */
     var HOb = global.RAMAOrdemHomebrew;
-    var quantosHb = function () { var ELq = global.RAMAOrdemElementos; return ELq ? ELq.paraSelecao().filter(function (e) { return !e.oficial; }).length : 0; };
+    var quantosHb = function () { var ELq = global.RAMAOrdemElementos, POq = global.RAMAOrdemPoderes; return (ELq ? ELq.paraSelecao().filter(function (e) { return !e.oficial; }).length : 0) + (POq && POq.paranormaisDisponiveis ? POq.paranormaisDisponiveis().length : 0); };
     var hbAntes = quantosHb();
     if (HOb && HOb.carregarBiblioteca) HOb.carregarBiblioteca().then(function () { if (corpo.isConnected && quantosHb() > hbAntes) pintar(); }, function () {});
 

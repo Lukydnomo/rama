@@ -2205,6 +2205,42 @@
     return lista;
   }
 
+  /* PODER PARANORMAL Homebrew (chave hbpp-…, versionada): entra nas
+     mesmas vagas dos do livro (Transcender, Traços do Outro Lado…), com
+     elemento, o requisito "<Elemento> N", o texto da afinidade e os
+     efeitos que o motor já soma. A definição original fica em
+     `defHomebrew` (a ficha guarda a cópia). */
+  var PARANORMAIS_HOMEBREW = {};
+  function registrarParanormalHomebrew(d) {
+    if (!d || !/^hbpp-[a-z0-9-]{3,60}$/.test(String(d.chave || ""))) return null;
+    var efs = Array.isArray(d.efeitos) ? d.efeitos.slice() : [];
+    var extra = {};
+    var esc = d.escolhaHb;
+    if (esc && esc.modo) {
+      extra.opcoes = [{ chave: "pericia", tipo: "pericia", rotulo: "Perícia", entre: esc.entre && esc.entre.length ? esc.entre.slice() : undefined, modo: esc.modo === "treinar" ? "treinar" : undefined }];
+      if (!extra.opcoes[0].entre) delete extra.opcoes[0].entre;
+      if (!extra.opcoes[0].modo) delete extra.opcoes[0].modo;
+      efs.push(esc.modo === "treinar" ? { tipo: "treinar", opcao: "pericia" } : esc.modo === "treinarOuBonus" ? { tipo: "treinarOuBonus", opcao: "pericia", bonus: esc.valor || 2 } : { tipo: "bonusPericia", opcao: "pericia", valor: esc.valor || 2 });
+    }
+    var efsAf = Array.isArray(d.efeitosAfinidade) ? d.efeitosAfinidade.slice() : [];
+    var e = entrada(Object.assign({
+      chave: d.chave, nome: d.nome, tipo: "paranormal", elemento: d.elemento || "",
+      fonte: "HOMEBREW", pagina: 0, resumo: d.resumo || "", afinidade: d.afinidade || "",
+      requisitos: d.elemento && d.requisitoElemento ? [req.elem(d.elemento, d.requisitoElemento)] : [],
+      repetivel: !!d.repetivel, efeitos: efs, efeitosAfinidade: efsAf,
+      automacao: efs.length || efsAf.length ? "calculo" : "informacao",
+    }, extra));
+    e.homebrew = true;
+    e.defHomebrew = JSON.parse(JSON.stringify(d));
+    POR_CHAVE[e.chave] = e;
+    PARANORMAIS_HOMEBREW[e.chave] = e;
+    return e;
+  }
+  /* Os do livro e os Homebrew registrados (as listas de escolha). */
+  function paranormaisDisponiveis() {
+    return PODERES_PARANORMAIS.concat(Object.keys(PARANORMAIS_HOMEBREW).map(function (k) { return PARANORMAIS_HOMEBREW[k]; }));
+  }
+
   /* As habilidades de uma trilha de Sobrevivente, pelo estágio. */
   function habilidadesDaTrilhaSobrevivente(chaveTrilha) {
     return HABILIDADES_SOBREVIVENTE.filter(function (h) { return h.trilhaSobrevivente === chaveTrilha; })
@@ -2258,6 +2294,8 @@
     pertenceAClasse: pertenceAClasse,
     habilidadesDaTrilha: habilidadesDaTrilha,
     registrarHabilidadesDeTrilha: registrarHabilidadesDeTrilha,
+    registrarParanormalHomebrew: registrarParanormalHomebrew,
+    paranormaisDisponiveis: paranormaisDisponiveis,
     habilidadesDaTrilhaSobrevivente: habilidadesDaTrilhaSobrevivente,
     treinamento: treinamento,
     primeiraDaTrilha: primeiraDaTrilha,

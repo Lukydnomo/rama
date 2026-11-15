@@ -819,6 +819,10 @@
       global.RAMAHomebrewT20Estruturais[stHb]({ registro: registro, aoSalvar: carregar });
       return;
     }
+    if (sisHb === "ordem" && registro.modelo.grupo === "habilidade" && registro.modelo.subtipo === "poderParanormal" && global.RAMAHomebrewOrigemTrilha) {
+      global.RAMAHomebrewOrigemTrilha.poder({ registro: registro, aoSalvar: carregar });
+      return;
+    }
     if (sisHb === "ordem" && (stHb === "origem" || stHb === "trilha") && global.RAMAHomebrewOrigemTrilha) {
       global.RAMAHomebrewOrigemTrilha[stHb]({ registro: registro, aoSalvar: carregar });
       return;

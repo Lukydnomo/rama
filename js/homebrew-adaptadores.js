@@ -429,7 +429,7 @@
      editor de sempre); Ordem ganha Ritual como subtipo. */
   /* v9.10: Raça de Tormenta20 (editor próprio: js/paginas/homebrew-raca-t20.js). */
   TORMENTA20.estrutural = { subtipos: [{ chave: "raca", rotulo: "Raça", campos: [] }, { chave: "origem", rotulo: "Origem", campos: [] }, { chave: "divindade", rotulo: "Divindade", campos: [] }, { chave: "classe", rotulo: "Classe", campos: [] }] };
-  ORDEM.habilidade = { subtipos: [{ chave: "habilidade", rotulo: "Habilidade / poder", campos: [] }, { chave: "ritual", rotulo: "Ritual", campos: [] }] };
+  ORDEM.habilidade = { subtipos: [{ chave: "habilidade", rotulo: "Habilidade / poder", campos: [] }, { chave: "poderParanormal", rotulo: "Poder paranormal", campos: [] }, { chave: "ritual", rotulo: "Ritual", campos: [] }] };
   UNIVERSAL.habilidade = { subtipos: [{ chave: "habilidade", rotulo: "Habilidade", campos: [] }, { chave: "poder", rotulo: "Poder", campos: [] }, { chave: "tecnica", rotulo: "Técnica", campos: [] }, { chave: "magia", rotulo: "Magia", campos: [] }] };
 
   function adaptador(id) { return SISTEMAS[id] || null; }
@@ -512,6 +512,8 @@
       reg.origem = texto(r.origem, 60);
       /* v9.14: o Poder de T20 guarda também efeitos, ativação e nível mínimo. */
       if (sistema === "tormenta20" && subtipo === "poder" && r.def) reg.modelo.def = Object.assign({}, v, r.def);
+      /* Poder paranormal de Ordem: a definição inteira (elemento, requisito, efeitos, afinidade). */
+      if (sistema === "ordem" && subtipo === "poderParanormal" && r.def) reg.modelo.def = Object.assign({}, v, r.def);
     } else if (grupo === "estrutural") {
       reg.tipo = subtipo;
       /* Elemento: a chave estável nasce uma vez (e não muda ao renomear). */
@@ -643,6 +645,7 @@
       if (g === "item") return { modo: "nativo", texto: destino === "brutal" ? "Vira o Apego \"item\" da ficha." : (subtipoDe(r) === "outro" ? "Entra no inventário como item narrativo (nome e descrição): as regras ficam com a mesa." : "Entra no inventário com as regras do sistema.") };
       /* v9.36: o Ritual de Ordem entra na aba Rituais. */
       if (s === "ordem" && subtipoDe(r) === "ritual") return { modo: "nativo", texto: "Entra na aba Rituais, com símbolo, círculo, elemento(s) e a conjuração automática." };
+      if (s === "ordem" && subtipoDe(r) === "poderParanormal") return { modo: "nativo", texto: "Escolhido nas vagas de poder paranormal da Progressão (Transcender e as demais), como os do livro: requisito de elemento, afinidade e os efeitos configurados. A cópia fica na ficha." };
       if (s === "ordem" || s === "universal" || s === "ordem2") return { modo: "nativo", texto: "Entra nas habilidades da ficha." };
       var stH = subtipoDe(r), dH = defDe(r);
       if (s === "brutal" && stH === "vantagem") return { modo: "nativo", texto: "A Diretora traz para a mesa (Vantagens da mesa → Da biblioteca): custo em PT, recarga e o efeito que o motor aplica. A mesa guarda a cópia." };
@@ -707,6 +710,7 @@
     if (s === "tormenta20" && st === "divindade") p.push("energia " + (d.energia || "qualquer") + " · " + ((d.poderes || []).length + (d.poderesProprios || []).length) + " poderes concedidos");
     if (s === "tormenta20" && st === "raca" && Array.isArray(d.habilidades)) p.push((((global.RAMATormenta20Dados || {}).TAMANHO || {})[d.tamanho] || { nome: d.tamanho || "Médio" }).nome + " · " + d.habilidades.filter(function (h) { return h && h.id !== "corpo"; }).length + " habilidades");
     if (s === "ordem" && st === "elemento" && d.permiteAfinidade) p.push("pode ser afinidade");
+    if (s === "ordem" && st === "poderParanormal") p.push("poder paranormal" + (d.elemento && global.RAMAOrdemElementos ? " de " + global.RAMAOrdemElementos.nome(d.elemento) : "") + ((d.efeitos || []).length ? " · na conta" : ""));
     if (s === "ordem" && st === "origem" && Array.isArray(d.pericias)) p.push((d.pericias.length + (d.periciasAEscolher || 0)) + " perícias · " + (d.poder || "poder") + (d.efeitos && d.efeitos.length ? " · na conta" : ""));
     if (s === "ordem" && st === "trilha" && d.classe) p.push("para " + (((global.RAMAOrdemCatalogo && global.RAMAOrdemCatalogo.classe(d.classe)) || {}).nome || d.classe));
     if (s === "ordem" && st === "classe" && d.pvInicial) p.push(d.pvInicial.base + (d.pvInicial.atributo ? " + " + d.pvInicial.atributo.toUpperCase() : "") + " PV iniciais" + (d.patentes ? " · Patentes" : ""));
