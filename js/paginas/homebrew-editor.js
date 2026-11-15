@@ -416,6 +416,7 @@
     var pares = [];
     if (spec) (spec.campos || []).concat(spec.avancado || []).forEach(function (c) {
       var v = d[c.chave]; if (v === undefined || v === "" || v === false) return;
+      if (c.tipo === "elementos") { if (!Array.isArray(v) || !v.length) return; v = v.map(function (k) { return global.RAMAOrdemElementos ? global.RAMAOrdemElementos.nome(k) : k; }).join(", "); }
       if (c.tipo === "selecao") { var op = c.opcoes.filter(function (x) { return String(x.valor) === String(v); })[0]; v = op ? op.rotulo : v; }
       if (v === true) v = "Sim";
       pares.push([c.rotulo, String(v) + (c.unidade && typeof v !== "string" ? " " + c.unidade : "")]);
@@ -481,10 +482,6 @@
         HT.previaRaca(xr.def).forEach(function (t, i) { pares.push([i ? "" : "Regras", t]); });
         xr.def.habilidades.forEach(function (h) { if (h.resumo && h.id !== "corpo") pares.push([h.nome, h.resumo]); });
       }
-    }
-    if (s === "ordem" && st === "elemento") {
-      if (d.forteContra && d.forteContra.length) pares.push(["Forte contra", d.forteContra.map(function (k) { return global.RAMAOrdemElementos ? global.RAMAOrdemElementos.nome(k) : k; }).join(", ")]);
-      if (d.fracoContra && d.fracoContra.length) pares.push(["Fraco contra", d.fracoContra.map(function (k) { return global.RAMAOrdemElementos ? global.RAMAOrdemElementos.nome(k) : k; }).join(", ")]);
     }
     var u = reg.universal;
     if (u) (u.campos || []).forEach(function (c) { var v = (u.valores || {})[c.chave]; if (v === undefined) return; if (v && typeof v === "object" && !Array.isArray(v)) v = v.max ? "máximo " + v.max : ""; if (Array.isArray(v)) v = v.join(", "); if (v === true) v = "Sim"; pares.push([c.rotulo, String(v)]); });

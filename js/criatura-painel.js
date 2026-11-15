@@ -398,7 +398,11 @@
         destaques.childNodes.length ? destaques : null,
         el("p.t-mini.criatura-linha", { texto: linha.filter(function (x) { return x && x !== od.tipo && x !== od.tamanho && !/^VD /.test(x); }).join(" · ") }),
         el("div.faixa.criatura-elementos", {}, od.elementos.map(function (e) {
-          return el("span.r-etiqueta.bib-elemento.bib-elemento--" + e, { texto: NOMES_ELEMENTO[e] || e });
+          /* Elemento Homebrew: o nome vem da cópia que a criatura leva
+             (elementosHomebrew), nunca a chave hbe-… crua. */
+          var ELp = global.RAMAOrdemElementos;
+          if (!NOMES_ELEMENTO[e] && ELp && od.elementosHomebrew) ELp.registrarMapa(od.elementosHomebrew);
+          return el("span.r-etiqueta.bib-elemento.bib-elemento--" + (NOMES_ELEMENTO[e] ? e : "homebrew"), { texto: NOMES_ELEMENTO[e] || (ELp ? ELp.nome(e) : e) });
         }).concat(od.elementos.length ? [] : [el("span.r-etiqueta", { texto: v.natureza === "paranormal" ? "Sem elemento" : "Realidade" })])),
         el("p.t-mini", { texto: origemTexto + (od.variante ? " · " + (od.variante.rotulo || "Variante") : "") }),
         el("p.t-mini", {
