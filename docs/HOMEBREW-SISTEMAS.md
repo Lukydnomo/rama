@@ -1122,8 +1122,8 @@ verificações:
 
 ### Publicar a v9.13.0
 
-**Servidor:** troque **`Tormenta20.gs`** e **`Tormenta20Dados.gs`**, e crie
-uma versão nova da implantação. `Codigo.gs` não mudou.
+**Servidor:** troque só o **`Tormenta20Dados.gs`** e crie uma versão nova
+da implantação. `Codigo.gs` e `Tormenta20.gs` não mudaram.
 **`setupRama()` não é necessário.**
 
 **Site:**

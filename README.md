@@ -930,9 +930,8 @@ segredo nenhum — ele os lê das Script Properties. Publicá-lo não expõe nad
 ### Atualizar o backend
 
 **v9.13.0 — REFLEXO:** habilidades ativadas, escolha de magia e variantes
-nos tipos Homebrew de Tormenta20 (etapa 2, parte 6). Troque
-**`Tormenta20.gs`** e **`Tormenta20Dados.gs`** e crie uma versão nova da
-implantação. **`setupRama()` não é necessário.** Site: os arquivos
+nos tipos Homebrew de Tormenta20 (etapa 2, parte 6). Troque só o
+**`Tormenta20Dados.gs`** e crie uma versão nova da implantação. **`setupRama()` não é necessário.** Site: os arquivos
 listados em `docs/HOMEBREW-SISTEMAS.md` (seção "Publicar a v9.13.0").
 
 **v9.12.0 — OFICINA:** Classe Homebrew de Tormenta20 (etapa 2, parte 5).
