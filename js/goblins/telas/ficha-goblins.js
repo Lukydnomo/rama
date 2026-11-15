@@ -256,7 +256,7 @@
     return el("div.pilha.pilha--curta", {}, [
       el("p", {}, [el("strong", { texto: "Ocupação: " }), el("span", { texto: R().nomeDaOcupacao(o) || "—" }), oc ? T().fonte(oc.pagina) : null]),
       oc && oc.mod ? linha(Object.keys(oc.mod).map(function (k) { return T().nomeAtr(k) + " " + (oc.mod[k] > 0 ? "+" : "") + oc.mod[k]; }).join(", ")) : null,
-      el("p", {}, [el("strong", { texto: "Descritor: " }), el("span", { texto: de ? de.nome + (o.descritor === "supimpa" && o.supimpa ? " (+1 em " + T().nomeAtr(o.supimpa) + ")" : "") : "—" }), T().fonte(5)]),
+      el("p", {}, [el("strong", { texto: "Descritor: " }), el("span", { texto: de ? de.nome + (de.escolha && o.supimpa ? " (+1 em " + T().nomeAtr(o.supimpa) + ")" : "") : "—" }), T().fonte(de && de.homebrew ? 0 : 5)]),
       el("div", {}, [el("strong", { texto: "Característica" + (o.caracteristicas.length > 1 ? "s" : "") + ":" })].concat(o.caracteristicas.map(function (x) {
         var d = C().CARACTERISTICAS[x.chave];
         return el("p.gob-caracteristica", {}, [el("span.gob-caracteristica__nome", { texto: d.nome + (x.quantidade ? " (" + x.quantidade + " " + (d.unidade || "") + ")" : "") }), el("span.t-mini", { texto: " — " + d.texto }), T().fonte(6)]);
@@ -579,6 +579,8 @@
     if (t.chave === "rastrear") return botao("Rastrear", function () { UI().pedirTexto({ titulo: "Rastrear", rotulo: "Que pegadas?", valor: "", rotuloConfirmar: "Anotar" }).then(function (q) { if (q !== null) op(ctx, function (b) { return R().usarTecnica(b, "rastrear", { alvo: q }, T().rolador); }); }); });
     if (t.chave === "ataqueBrutal" || t.chave === "tiroCerteiro") return botao(t.nome, function () { abrirAtaque(ctx, {}); }, { motivo: motivo, dica: "Marque a opção na janela de ataque" });
     if (t.chave === "implacavel") return botao("Conjurar escolhendo o resultado", function () { abrirConjurar(ctx, null, { implacavel: true }); }, { motivo: motivo });
+    /* v9.17: técnica Homebrew de 1 vez por dia: marca o uso (o efeito é o do texto). */
+    if (/^hbgo-/.test(t.chave) && t.uso === "dia") return botao("Usar (1 vez por dia)", function () { op(ctx, function (b) { return R().usarTecnica(b, t.chave, {}, T().rolador); }); }, { motivo: motivo });
     return null;
   }
 

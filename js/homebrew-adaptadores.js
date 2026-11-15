@@ -225,6 +225,8 @@
       { chave: "item", rotulo: "Item", ajuda: "Arma (mãos, ataque, bônus, munição, recarga), proteção (uso e durabilidade) ou outro item." },
       { chave: "habilidade", rotulo: "Habilidade", ajuda: "Magia, técnica ou habilidade — por enquanto para consulta e anotações." },
       { chave: "criatura", rotulo: "Inimigo", ajuda: "Combate, Noção, Habilidade e Vitalidade, bônus da arma, proteção e efeitos." },
+      { chave: "ocupacao", rotulo: "Ocupação", ajuda: "Modificador de atributo, opções de equipamento inicial e as três técnicas. Entra na criação de goblins." },
+      { chave: "descritor", rotulo: "Descritor", ajuda: "Modificadores de atributo (ou um +1 à escolha, como Supimpa). Entra na criação de goblins." },
     ],
     item: {
       subtipos: [
@@ -357,6 +359,8 @@
     { chave: "trilha", rotulo: "Trilha", campos: [] },
   ] };
 
+  /* v9.17: Ocupação e Descritor de Malditos Goblins (js/paginas/homebrew-goblins.js). */
+  GOBLINS.estrutural = { subtipos: [{ chave: "ocupacao", rotulo: "Ocupação", campos: [] }, { chave: "descritor", rotulo: "Descritor", campos: [] }] };
   /* Habilidade de Ordem e Universal: o modelo do RAMAHabilidades (o
      editor de sempre); Ordem ganha Ritual como subtipo. */
   /* v9.10: Raça de Tormenta20 (editor próprio: js/paginas/homebrew-raca-t20.js). */
@@ -386,7 +390,7 @@
   function grupoDe(r) {
     var t = obj(r).tipo;
     if (obj(r).modelo && obj(r).modelo.grupo) return obj(r).modelo.grupo;
-    if (t === "classe" || t === "elemento" || t === "origem" || t === "trilha" || t === "raca" || t === "divindade") return "estrutural";
+    if (t === "classe" || t === "elemento" || t === "origem" || t === "trilha" || t === "raca" || t === "divindade" || t === "ocupacao" || t === "descritor") return "estrutural";
     if (t === "criatura") return "criatura";
     if (t === "habilidade" || t === "ritual") return "habilidade";
     return "item";
@@ -453,7 +457,7 @@
         v.chave = chaveAntiga && ELx && ELx.ehHomebrew(chaveAntiga) ? chaveAntiga : (ELx ? ELx.chaveNova(nome, r.id || "") : "");
       }
       if (subtipo === "classe" && r.classe) reg.modelo.def = r.classe;
-      if (["origem", "trilha", "raca", "divindade", "classe"].indexOf(subtipo) >= 0 && r.def) reg.modelo.def = r.def;
+      if (["origem", "trilha", "raca", "divindade", "classe", "ocupacao", "descritor"].indexOf(subtipo) >= 0 && r.def) reg.modelo.def = r.def;
     }
     if (r.universal && sistema === "universal") reg.universal = normalizarUniversal(r.universal);
     if (r.id) reg.id = r.id;
@@ -550,6 +554,7 @@
     if (g === "estrutural") {
       if (s !== destino) return { modo: "incompativel", texto: "É de " + nomeDoSistema(s) + "." };
       var stE = subtipoDe(r);
+      if (s === "goblins") return { modo: "nativo", texto: stE === "ocupacao" ? "Escolhida na criação de goblins (e como ocupação épica), com a cópia guardada na ficha." : "Escolhido na criação de goblins, depois dos do livro, com a cópia guardada na ficha." };
       if (s === "tormenta20") return { modo: "nativo", texto: ({
         raca: "Escolhida na criação de personagem (depois das raças do livro), com a cópia guardada na ficha.",
         origem: "Escolhida na criação de personagem (depois das origens do livro): quem joga escolhe dois benefícios. A cópia fica na ficha.",
@@ -599,6 +604,7 @@
     var p = [rotuloDoSubtipo(r)];
     if (s === "tormenta20" && st === "arma") p.push(d.dano + " " + (d.margem && d.margem < 20 ? d.margem + "/" : "") + "x" + (d.mult || 2));
     if (s === "tormenta20" && (st === "armadura" || st === "escudo")) p.push("Defesa +" + (d.defesa || 0));
+    if (s === "goblins" && (st === "ocupacao" || st === "descritor") && global.RAMAGoblinsHomebrew) p.push(global.RAMAGoblinsHomebrew.textoMods(d.mod) || (d.escolha ? "+1 à escolha" : "sem modificador"));
     if (s === "goblins" && st === "arma") p.push("bônus +" + (d.bonus || 0));
     if (s === "goblins" && st === "protecao") p.push("Durabilidade " + (d.durabilidade || 0));
     if (s === "vampiro" && st === "arma" && d.arma) p.push(((global.RAMAVampiroCatalogo || {}).ARMAS || {})[d.arma] ? global.RAMAVampiroCatalogo.ARMAS[d.arma].nome : d.arma);
@@ -798,6 +804,13 @@
       defImportada = RAi.normalizarRacaHomebrew(Object.assign({}, m.def, { id: "", nome: x.nome }));
       ["id", "homebrewId", "homebrew", "fonte", "pagina", "nome", "descricao"].forEach(function (k) { delete defImportada[k]; });
       defImportada.habilidades = defImportada.habilidades.filter(function (h) { return h.id !== "corpo"; });
+    }
+    /* Ocupação e Descritor de Goblins (v9.17). */
+    var GC = global.RAMAGoblinsCatalogo;
+    if (g === "estrutural" && m.sistema === "goblins" && GC && GC.normalizarOcupacaoHomebrew && (m.subtipo === "ocupacao" || m.subtipo === "descritor")) {
+      defImportada = (m.subtipo === "ocupacao" ? GC.normalizarOcupacaoHomebrew : GC.normalizarDescritorHomebrew)(Object.assign({}, m.def, { chave: "", nome: x.nome }));
+      ["chave", "homebrewId", "homebrew", "fonte", "pagina", "nome", "descricao", "escolhas"].forEach(function (k) { delete defImportada[k]; });
+      (defImportada.tecnicas || []).forEach(function (t) { delete t.chave; });
     }
     /* Origem e Divindade de T20 (v9.11). */
     var cat20 = m.sistema === "tormenta20" ? ({ origem: global.RAMATormenta20Origens, divindade: global.RAMATormenta20Deuses, classe: global.RAMATormenta20Classes })[m.subtipo] : null;

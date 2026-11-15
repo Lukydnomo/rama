@@ -1242,7 +1242,82 @@ function acaoGoblinsOperar(corpo, usuario) {
     return null;
   }
 
+  /* =================================================================
+     v9.17 — OCUPAÇÃO e DESCRITOR HOMEBREW (chaves hbgo-/hbgd-<id>-<hash>,
+     cópias em o.homebrew). No formato dos do livro: a ocupação tem o
+     modificador de atributo, as opções de equipamento inicial (itens do
+     catálogo) e as três técnicas (níveis 1 a 3; "1 vez por dia" é
+     contado pela ficha); o descritor, os modificadores ou "escolha um
+     atributo para +1" (como o Supimpa). O resto do texto é da mesa.
+     Registradas nos MESMOS mapas que o motor lê. Puro (o servidor roda).
+     ================================================================= */
+  var PADRAO_OCUP = /^hbgo-[a-z0-9-]{3,30}$/, PADRAO_DESC = /^hbgd-[a-z0-9-]{3,30}$/;
+  var DESCRITORES_HB = [];
+  function hbObj(v) { return v && typeof v === "object" && !Array.isArray(v) ? v : {}; }
+  function hbLista(v) { return Array.isArray(v) ? v : []; }
+  function hbTexto(v, max) { return String(v === undefined || v === null ? "" : v).slice(0, max || 200); }
+  function hbInt(v, min, max, p) { var n = Math.round(Number(v)); return v !== "" && v !== null && v !== undefined && isFinite(n) ? Math.max(min, Math.min(max, n)) : p; }
+  function hbEstavel(v) {
+    if (Array.isArray(v)) return "[" + v.map(hbEstavel).join(",") + "]";
+    if (v && typeof v === "object") return "{" + Object.keys(v).sort().map(function (k) { return JSON.stringify(k) + ":" + hbEstavel(v[k]); }).join(",") + "}";
+    return JSON.stringify(v === undefined ? null : v);
+  }
+  function hbHash(t) { var h = 5381; for (var i = 0; i < t.length; i++) h = ((h << 5) + h + t.charCodeAt(i)) | 0; return (h >>> 0).toString(36).slice(0, 6); }
+  function hbChave(prefixo, d) { var sem = Object.assign({}, d); delete sem.chave; return prefixo + (String(d.homebrewId || "local").toLowerCase().replace(/[^a-z0-9]/g, "").slice(0, 8) || "local") + "-" + hbHash(hbEstavel(sem)); }
+  function hbMods(v, min, max) { var m = {}; CHAVES_ATRIBUTO.forEach(function (a) { var x = hbInt(hbObj(v)[a], min, max, 0); if (x) m[a] = x; }); return m; }
+  function ehOcupacaoHomebrew(k) { return PADRAO_OCUP.test(String(k || "")); }
+  function ehDescritorHomebrew(k) { return PADRAO_DESC.test(String(k || "")); }
+  function normalizarOcupacaoHomebrew(bruto) {
+    var b = hbObj(bruto);
+    var d = {
+      chave: ehOcupacaoHomebrew(b.chave) ? b.chave : "",
+      nome: hbTexto(b.nome, 60).trim() || "Ocupação Homebrew",
+      homebrew: true, homebrewId: hbTexto(b.homebrewId, 80), fonte: "HOMEBREW", pagina: 0,
+      descricao: hbTexto(b.descricao, 1200),
+      mod: hbMods(b.mod, -1, 2),
+      equipamento: hbLista(b.equipamento).slice(0, 3).map(function (e0, i) {
+        var e = hbObj(e0);
+        var itens = hbLista(e.itens).map(String).filter(function (k) { return !!itemDoCatalogo(k); }).slice(0, 4);
+        return { rotulo: hbTexto(e.rotulo, 60).trim() || itens.map(function (k) { return itemDoCatalogo(k).def.nome; }).join(" e ") || "Opção " + (i + 1), itens: itens };
+      }).filter(function (e) { return e.itens.length; }),
+      escolhas: [],
+      tecnicas: [1, 2, 3].map(function (n, i) {
+        var t = hbObj(hbLista(b.tecnicas).filter(function (x) { return hbObj(x).nivel === n; })[0] || hbLista(b.tecnicas)[i]);
+        var x = { nivel: n, chave: "", nome: hbTexto(t.nome, 60).trim() || "Técnica " + n, texto: hbTexto(t.texto, 600).trim() };
+        if (t.uso === "dia") x.uso = "dia";
+        return x;
+      }),
+    };
+    if (!d.chave) d.chave = hbChave("hbgo-", d);
+    d.tecnicas.forEach(function (t) { t.chave = d.chave + "-t" + t.nivel; });
+    return d;
+  }
+  function normalizarDescritorHomebrew(bruto) {
+    var b = hbObj(bruto);
+    var d = {
+      chave: ehDescritorHomebrew(b.chave) ? b.chave : "",
+      nome: hbTexto(b.nome, 40).trim() || "Descritor Homebrew",
+      homebrew: true, homebrewId: hbTexto(b.homebrewId, 80), fonte: "HOMEBREW",
+      mod: hbMods(b.mod, -2, 2),
+      texto: hbTexto(b.texto, 300).trim(),
+    };
+    if (b.escolha) d.escolha = true;
+    if (!d.chave) d.chave = hbChave("hbgd-", d);
+    return d;
+  }
+  function registrarOcupacaoHomebrew(def) { if (!def || !ehOcupacaoHomebrew(def.chave)) return null; OCUPACOES[def.chave] = def; return def; }
+  function registrarDescritorHomebrew(def) {
+    if (!def || !ehDescritorHomebrew(def.chave)) return null;
+    DESCRITORES[def.chave] = def;
+    if (DESCRITORES_HB.indexOf(def.chave) < 0) DESCRITORES_HB.push(def.chave);
+    return def;
+  }
+  function descritoresDisponiveis() { return DESCRITOR_D6.concat(DESCRITORES_HB); }
+
   global.RAMAGoblinsCatalogo = {
+    ehOcupacaoHomebrew: ehOcupacaoHomebrew, ehDescritorHomebrew: ehDescritorHomebrew,
+    normalizarOcupacaoHomebrew: normalizarOcupacaoHomebrew, normalizarDescritorHomebrew: normalizarDescritorHomebrew,
+    registrarOcupacaoHomebrew: registrarOcupacaoHomebrew, registrarDescritorHomebrew: registrarDescritorHomebrew, descritoresDisponiveis: descritoresDisponiveis,
     LIVRO: LIVRO, referencia: referencia,
     ATRIBUTOS: ATRIBUTOS, CHAVES_ATRIBUTO: CHAVES_ATRIBUTO, NOMES: NOMES,
     OCUPACOES: OCUPACOES, OCUPACAO_D6: OCUPACAO_D6, DESCRITORES: DESCRITORES, DESCRITOR_D6: DESCRITOR_D6,
@@ -1817,6 +1892,29 @@ function acaoGoblinsOperar(corpo, usuario) {
     return v;
   }
 
+  /* v9.17: ocupação e descritor Homebrew vêm com a CÓPIA guardada na
+     ficha (ou, escolhidos de uma lista da biblioteca, do catálogo). Sem
+     cópia e sem catálogo, a escolha some: nada é inventado. */
+  function homebrewDaFicha(b, o) {
+    var Cc = C();
+    if (!Cc.ehOcupacaoHomebrew) return;
+    var hb = objeto(b.homebrew), saida = {};
+    var ocs = [b.ocupacao].concat(lista(b.epicas).map(function (e) { return objeto(e).ocupacao; })).filter(function (k, i, l) { return Cc.ehOcupacaoHomebrew(k) && l.indexOf(k) === i; });
+    ocs.forEach(function (k) {
+      var cp = objeto(objeto(hb.ocupacoes)[k]);
+      var def = Object.keys(cp).length ? Cc.normalizarOcupacaoHomebrew(Object.assign({}, cp, { chave: k })) : (Cc.OCUPACOES[k] && Cc.OCUPACOES[k].homebrew ? JSON.parse(JSON.stringify(Cc.OCUPACOES[k])) : null);
+      if (!def) return;
+      Cc.registrarOcupacaoHomebrew(def);
+      (saida.ocupacoes = saida.ocupacoes || {})[k] = def;
+    });
+    if (Cc.ehDescritorHomebrew(b.descritor)) {
+      var k = b.descritor, cp = objeto(objeto(hb.descritores)[k]);
+      var def = Object.keys(cp).length ? Cc.normalizarDescritorHomebrew(Object.assign({}, cp, { chave: k })) : (Cc.DESCRITORES[k] && Cc.DESCRITORES[k].homebrew ? JSON.parse(JSON.stringify(Cc.DESCRITORES[k])) : null);
+      if (def) { Cc.registrarDescritorHomebrew(def); (saida.descritores = saida.descritores || {})[k] = def; }
+    }
+    if (Object.keys(saida).length) o.homebrew = Object.assign({ versao: 1 }, saida);
+  }
+
   function normalizar(bruto) {
     var b = objeto(bruto);
     var o = fichaVazia();
@@ -1830,6 +1928,7 @@ function acaoGoblinsOperar(corpo, usuario) {
       pendenciaDeNome: ["", "comida", "inverter"].indexOf(cr.pendenciaDeNome) >= 0 ? cr.pendenciaDeNome : "",
     };
     o.nomeDeFamilia = texto(b.nomeDeFamilia, 60);
+    homebrewDaFicha(b, o);
     o.ocupacao = C().OCUPACOES[b.ocupacao] ? b.ocupacao : "";
     o.descritor = C().DESCRITORES[b.descritor] ? b.descritor : "";
     o.supimpa = C().CHAVES_ATRIBUTO.indexOf(b.supimpa) >= 0 ? b.supimpa : "";
@@ -1966,7 +2065,7 @@ function acaoGoblinsOperar(corpo, usuario) {
       if (oc && oc.mod && oc.mod[a]) comp.push({ fonte: oc.nome, valor: oc.mod[a], camada: "base" });
       if (oc && oc.modEscolha && o.modEscolhido === a) comp.push({ fonte: oc.nome + " (escolha)", valor: 1, camada: "base" });
       if (de && de.mod && de.mod[a]) comp.push({ fonte: de.nome, valor: de.mod[a], camada: "base" });
-      if (de && de.escolha && o.supimpa === a) comp.push({ fonte: "Supimpa", valor: 1, camada: "base" });
+      if (de && de.escolha && o.supimpa === a) comp.push({ fonte: de.nome, valor: 1, camada: "base" });
       o.ajustes.forEach(function (aj) { if (aj.atributo === a) comp.push({ fonte: aj.motivo || "Ajuste", valor: aj.valor, camada: "permanente" }); });
       o.itens.forEach(function (i) {
         if (!vestido(i)) return;
@@ -2576,6 +2675,13 @@ function acaoGoblinsOperar(corpo, usuario) {
     var t = C().tecnica(chave);
     if (t.uso === "dia" && usoDiario(o, chave)) return falha(t.nome + " já foi usada hoje.");
     var eventos = [];
+    /* v9.17: técnica Homebrew de 1 vez por dia: a ficha marca o uso e
+       registra; o efeito é o do texto (a mesa aplica). */
+    if (/^hbgo-/.test(chave) && t.uso === "dia") {
+      o.marcas.dia["tecnica:" + chave] = true;
+      registrar(o, "tecnica", t.nome + (op.alvo ? " em " + op.alvo : ""));
+      return ok([evento("tecnica", { chave: chave })]);
+    }
     if (chave === "gritoDeGuerra") {
       var tr = testar(o, { atributo: "nocao", rotulo: "Grito de Guerra", dificuldade: op.dificuldade, seZero: op.seZero }, rolador);
       if (!tr.ok || tr.lacuna) return tr;
@@ -3457,7 +3563,8 @@ function acaoGoblinsOperar(corpo, usuario) {
     var oc = C().OCUPACOES[o.ocupacao];
     if (!oc) { p.push("Escolha (ou role) a ocupação."); return p; }
     if (!o.descritor) p.push("Escolha (ou role) o descritor.");
-    if (o.descritor === "supimpa" && !o.supimpa) p.push("Supimpa: escolha o atributo que ganha +1.");
+    var deP = C().DESCRITORES[o.descritor];
+    if (deP && deP.escolha && !o.supimpa) p.push(deP.nome + ": escolha o atributo que ganha +1.");
     if (oc.modEscolha && !o.modEscolhido) p.push(oc.nome + ": escolha Habilidade ou Noção (+1).");
     if (!o.caracteristicas.length) p.push("Escolha (ou role) a característica.");
     var war = o.opcoes.adaptacoes.wargoblin;

@@ -1,5 +1,11 @@
 # A API
 
+## Ocupação e Descritor Homebrew de Malditos Goblins — v9.17
+
+- `salvar_homebrew`: o grupo `estrutural` de `goblins` aceita `ocupacao` e
+  `descritor`; em outros sistemas, `dados_invalidos` (`detalhe: subtipo`).
+- O motor do servidor mantém as cópias em `goblins.homebrew`.
+
 ## Classe Homebrew de Tormenta20 — v9.12
 
 - `salvar_homebrew`: o grupo `estrutural` de Tormenta20 aceita também

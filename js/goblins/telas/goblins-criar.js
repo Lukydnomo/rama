@@ -139,10 +139,11 @@
         partes.push(selecao("Turminha (WarGoblin 40k, p. 36)", [{ valor: "", rotulo: "—" }].concat(Object.keys(C().WARGOBLIN.grupos).map(function (k) { var g = C().WARGOBLIN.grupos[k]; return { valor: k, rotulo: g.nome + " (igual ao " + C().OCUPACOES[g.ocupacao].nome + ")" }; })), o.escolhas.grupoWar, function (v) { o.escolhas.grupoWar = v; if (v) o.ocupacao = C().WARGOBLIN.grupos[v].ocupacao; desenhar(); }));
       }
       partes.push(selecao("Ocupação", [{ valor: "", rotulo: "—" }].concat(ocs.map(function (k) { var d = C().OCUPACOES[k]; var mods = d.mod ? Object.keys(d.mod).map(function (a) { return T().nomeAtr(a) + " +" + d.mod[a]; }).join(", ") : "Habilidade ou Noção +1"; return { valor: k, rotulo: (ad.cthulin && C().CTHULIN.nomes[k] ? C().CTHULIN.nomes[k] + " = " : "") + d.nome + " (" + mods + ")" }; })), o.ocupacao, function (v) { o.ocupacao = v; o.equipamentoInicial = null; desenhar(); }));
-      partes.push(selecao("Descritor", [{ valor: "", rotulo: "—" }].concat(C().DESCRITOR_D6.map(function (k) { var d = C().DESCRITORES[k]; return { valor: k, rotulo: d.nome + (d.escolha ? " (escolha um atributo +1)" : Object.keys(d.mod).length ? " (" + Object.keys(d.mod).map(function (a) { return T().nomeAtr(a) + " " + d.mod[a]; }).join("") + ")" : " (nada muda)") }; })), o.descritor, function (v) { o.descritor = v; desenhar(); }));
+      partes.push(selecao("Descritor", [{ valor: "", rotulo: "—" }].concat((C().descritoresDisponiveis ? C().descritoresDisponiveis() : C().DESCRITOR_D6).map(function (k) { var d = C().DESCRITORES[k]; return { valor: k, rotulo: d.nome + (d.escolha ? " (escolha um atributo +1)" : Object.keys(d.mod).length ? " (" + Object.keys(d.mod).map(function (a) { return T().nomeAtr(a) + " " + d.mod[a]; }).join("") + ")" : " (nada muda)") }; })), o.descritor, function (v) { o.descritor = v; desenhar(); }));
       if (info.modo !== "manual" && !ad.pokepragas) partes.push(el("div.faixa", {}, [botao("Rolar ocupação e descritor (1d6 cada)", function () { rolarOcupacao(); desenhar(); }), T().fonte(4)]));
       if (info.modo !== "manual" && ad.pokepragas) partes.push(el("div.faixa", {}, [botao("Rolar descritor (1d6)", function () { var d = sortear("descritor", "Descritor", 4, "1d6", C().DESCRITOR_D6); o.descritor = d.resultado; desenhar(); })]));
-      if (o.descritor === "supimpa") partes.push(selecao("Supimpa: +1 em", [{ valor: "", rotulo: "—" }].concat(C().ATRIBUTOS.map(function (a) { return { valor: a.chave, rotulo: a.nome }; })), o.supimpa, function (v) { o.supimpa = v; desenhar(); }));
+      var deEsc = C().DESCRITORES[o.descritor];
+      if (deEsc && deEsc.escolha) partes.push(selecao(deEsc.nome + ": +1 em", [{ valor: "", rotulo: "—" }].concat(C().ATRIBUTOS.map(function (a) { return { valor: a.chave, rotulo: a.nome }; })), o.supimpa, function (v) { o.supimpa = v; desenhar(); }));
       var oc = C().OCUPACOES[o.ocupacao];
       if (oc && oc.modEscolha) partes.push(selecao(oc.nome + ": +1 em", [{ valor: "", rotulo: "—" }].concat(oc.modEscolha.map(function (a) { return { valor: a, rotulo: T().nomeAtr(a) }; })), o.modEscolhido, function (v) { o.modEscolhido = v; desenhar(); }));
       if (oc) partes.push(el("div.gob-ocupacao", {}, [el("strong", { texto: "Técnicas de " + oc.nome }), el("ul.gob-lista", {}, oc.tecnicas.map(function (t) { return el("li", { texto: "N" + t.nivel + " " + t.nome + ": " + t.texto }); })), T().fonte(oc.pagina)]));
@@ -279,6 +280,8 @@
       ],
     });
     desenhar();
+    /* v9.17: as ocupações e os descritores Homebrew da conta (uma viagem). */
+    if (global.RAMAGoblinsHomebrew) global.RAMAGoblinsHomebrew.carregarBiblioteca().then(function (r) { if (r && (r.ocupacoes.length || r.descritores.length)) desenhar(); });
     return m;
   }
 

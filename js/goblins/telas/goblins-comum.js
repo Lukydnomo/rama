@@ -251,7 +251,7 @@
     return el("button.gob-regra", { type: "button", texto: (rotulo ? rotulo + " · " : "") + "p. " + rg.pagina, title: "Regra: " + rg.nome + " (" + C().referencia(rg.pagina) + ")", "aria-label": "Consultar a regra " + rg.nome + ", página " + rg.pagina, onclick: function () { consulta(chave); } });
   }
 
-  function fonte(pagina, texto) { return el("span.gob-fonte", { texto: (texto ? texto + " · " : "") + "p. " + pagina, title: C().referencia(pagina) }); }
+  function fonte(pagina, texto) { return el("span.gob-fonte", { texto: (texto ? texto + " · " : "") + (pagina ? "p. " + pagina : "Homebrew"), title: pagina ? C().referencia(pagina) : "Homebrew" }); }
 
   /* ---------------------------------------------------------------
      A FICHA NUMA CAMPANHA

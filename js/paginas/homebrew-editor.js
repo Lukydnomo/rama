@@ -87,6 +87,7 @@
           if (t.chave === "classe" && sistema === "tormenta20") { if (global.RAMAHomebrewClasseT20) global.RAMAHomebrewClasseT20.editor({ aoSalvar: o.aoSalvar }); return; }
           if (t.chave === "classe") { if (global.RAMAHomebrewClasse) global.RAMAHomebrewClasse.editor({ aoSalvar: o.aoSalvar }); return; }
           if (t.chave === "elemento") { editor({ sistema: sistema, grupo: "estrutural", subtipo: "elemento", aoSalvar: o.aoSalvar }); return; }
+          if (sistema === "goblins" && (t.chave === "ocupacao" || t.chave === "descritor") && global.RAMAHomebrewGoblins) { global.RAMAHomebrewGoblins[t.chave]({ aoSalvar: o.aoSalvar }); return; }
           if (sistema === "tormenta20" && (t.chave === "origem" || t.chave === "divindade") && global.RAMAHomebrewT20Estruturais) { global.RAMAHomebrewT20Estruturais[t.chave]({ aoSalvar: o.aoSalvar }); return; }
           if (sistema === "ordem" && (t.chave === "origem" || t.chave === "trilha") && global.RAMAHomebrewOrigemTrilha) { global.RAMAHomebrewOrigemTrilha[t.chave]({ aoSalvar: o.aoSalvar }); return; }
           if (t.chave === "raca" && global.RAMAHomebrewRacaT20) { global.RAMAHomebrewRacaT20.editor({ aoSalvar: o.aoSalvar }); return; }
@@ -429,6 +430,10 @@
       if (x && x.def && st === "trilha") x.def.poderes.forEach(function (p) { if (p.resumo) pares.push(["NEX " + p.nex + "% · " + p.nome, p.resumo]); });
     }
     /* Raça Homebrew de Tormenta20 (v9.10): a prévia e o texto das habilidades. */
+    if (s === "goblins" && (st === "ocupacao" || st === "descritor") && global.RAMAGoblinsHomebrew) {
+      var HG = global.RAMAGoblinsHomebrew, xg = HG.deRegistro(reg);
+      if (xg && xg.def) (st === "ocupacao" ? HG.previaOcupacao(xg.def) : HG.previaDescritor(xg.def)).forEach(function (t, i) { pares.push([i ? "" : "Regras", t]); });
+    }
     if (s === "tormenta20" && (st === "magia" || st === "poder") && global.RAMATormenta20Homebrew) {
       var HT4 = global.RAMATormenta20Homebrew, xm = HT4.deRegistro(reg);
       if (xm && xm.def) (st === "magia" ? HT4.previaMagia(xm.def) : HT4.previaPoder(xm.def)).forEach(function (t, i) { pares.push([i ? "" : "Na ficha", t]); });

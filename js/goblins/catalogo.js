@@ -792,7 +792,82 @@
     return null;
   }
 
+  /* =================================================================
+     v9.17 — OCUPAÇÃO e DESCRITOR HOMEBREW (chaves hbgo-/hbgd-<id>-<hash>,
+     cópias em o.homebrew). No formato dos do livro: a ocupação tem o
+     modificador de atributo, as opções de equipamento inicial (itens do
+     catálogo) e as três técnicas (níveis 1 a 3; "1 vez por dia" é
+     contado pela ficha); o descritor, os modificadores ou "escolha um
+     atributo para +1" (como o Supimpa). O resto do texto é da mesa.
+     Registradas nos MESMOS mapas que o motor lê. Puro (o servidor roda).
+     ================================================================= */
+  var PADRAO_OCUP = /^hbgo-[a-z0-9-]{3,30}$/, PADRAO_DESC = /^hbgd-[a-z0-9-]{3,30}$/;
+  var DESCRITORES_HB = [];
+  function hbObj(v) { return v && typeof v === "object" && !Array.isArray(v) ? v : {}; }
+  function hbLista(v) { return Array.isArray(v) ? v : []; }
+  function hbTexto(v, max) { return String(v === undefined || v === null ? "" : v).slice(0, max || 200); }
+  function hbInt(v, min, max, p) { var n = Math.round(Number(v)); return v !== "" && v !== null && v !== undefined && isFinite(n) ? Math.max(min, Math.min(max, n)) : p; }
+  function hbEstavel(v) {
+    if (Array.isArray(v)) return "[" + v.map(hbEstavel).join(",") + "]";
+    if (v && typeof v === "object") return "{" + Object.keys(v).sort().map(function (k) { return JSON.stringify(k) + ":" + hbEstavel(v[k]); }).join(",") + "}";
+    return JSON.stringify(v === undefined ? null : v);
+  }
+  function hbHash(t) { var h = 5381; for (var i = 0; i < t.length; i++) h = ((h << 5) + h + t.charCodeAt(i)) | 0; return (h >>> 0).toString(36).slice(0, 6); }
+  function hbChave(prefixo, d) { var sem = Object.assign({}, d); delete sem.chave; return prefixo + (String(d.homebrewId || "local").toLowerCase().replace(/[^a-z0-9]/g, "").slice(0, 8) || "local") + "-" + hbHash(hbEstavel(sem)); }
+  function hbMods(v, min, max) { var m = {}; CHAVES_ATRIBUTO.forEach(function (a) { var x = hbInt(hbObj(v)[a], min, max, 0); if (x) m[a] = x; }); return m; }
+  function ehOcupacaoHomebrew(k) { return PADRAO_OCUP.test(String(k || "")); }
+  function ehDescritorHomebrew(k) { return PADRAO_DESC.test(String(k || "")); }
+  function normalizarOcupacaoHomebrew(bruto) {
+    var b = hbObj(bruto);
+    var d = {
+      chave: ehOcupacaoHomebrew(b.chave) ? b.chave : "",
+      nome: hbTexto(b.nome, 60).trim() || "Ocupação Homebrew",
+      homebrew: true, homebrewId: hbTexto(b.homebrewId, 80), fonte: "HOMEBREW", pagina: 0,
+      descricao: hbTexto(b.descricao, 1200),
+      mod: hbMods(b.mod, -1, 2),
+      equipamento: hbLista(b.equipamento).slice(0, 3).map(function (e0, i) {
+        var e = hbObj(e0);
+        var itens = hbLista(e.itens).map(String).filter(function (k) { return !!itemDoCatalogo(k); }).slice(0, 4);
+        return { rotulo: hbTexto(e.rotulo, 60).trim() || itens.map(function (k) { return itemDoCatalogo(k).def.nome; }).join(" e ") || "Opção " + (i + 1), itens: itens };
+      }).filter(function (e) { return e.itens.length; }),
+      escolhas: [],
+      tecnicas: [1, 2, 3].map(function (n, i) {
+        var t = hbObj(hbLista(b.tecnicas).filter(function (x) { return hbObj(x).nivel === n; })[0] || hbLista(b.tecnicas)[i]);
+        var x = { nivel: n, chave: "", nome: hbTexto(t.nome, 60).trim() || "Técnica " + n, texto: hbTexto(t.texto, 600).trim() };
+        if (t.uso === "dia") x.uso = "dia";
+        return x;
+      }),
+    };
+    if (!d.chave) d.chave = hbChave("hbgo-", d);
+    d.tecnicas.forEach(function (t) { t.chave = d.chave + "-t" + t.nivel; });
+    return d;
+  }
+  function normalizarDescritorHomebrew(bruto) {
+    var b = hbObj(bruto);
+    var d = {
+      chave: ehDescritorHomebrew(b.chave) ? b.chave : "",
+      nome: hbTexto(b.nome, 40).trim() || "Descritor Homebrew",
+      homebrew: true, homebrewId: hbTexto(b.homebrewId, 80), fonte: "HOMEBREW",
+      mod: hbMods(b.mod, -2, 2),
+      texto: hbTexto(b.texto, 300).trim(),
+    };
+    if (b.escolha) d.escolha = true;
+    if (!d.chave) d.chave = hbChave("hbgd-", d);
+    return d;
+  }
+  function registrarOcupacaoHomebrew(def) { if (!def || !ehOcupacaoHomebrew(def.chave)) return null; OCUPACOES[def.chave] = def; return def; }
+  function registrarDescritorHomebrew(def) {
+    if (!def || !ehDescritorHomebrew(def.chave)) return null;
+    DESCRITORES[def.chave] = def;
+    if (DESCRITORES_HB.indexOf(def.chave) < 0) DESCRITORES_HB.push(def.chave);
+    return def;
+  }
+  function descritoresDisponiveis() { return DESCRITOR_D6.concat(DESCRITORES_HB); }
+
   global.RAMAGoblinsCatalogo = {
+    ehOcupacaoHomebrew: ehOcupacaoHomebrew, ehDescritorHomebrew: ehDescritorHomebrew,
+    normalizarOcupacaoHomebrew: normalizarOcupacaoHomebrew, normalizarDescritorHomebrew: normalizarDescritorHomebrew,
+    registrarOcupacaoHomebrew: registrarOcupacaoHomebrew, registrarDescritorHomebrew: registrarDescritorHomebrew, descritoresDisponiveis: descritoresDisponiveis,
     LIVRO: LIVRO, referencia: referencia,
     ATRIBUTOS: ATRIBUTOS, CHAVES_ATRIBUTO: CHAVES_ATRIBUTO, NOMES: NOMES,
     OCUPACOES: OCUPACOES, OCUPACAO_D6: OCUPACAO_D6, DESCRITORES: DESCRITORES, DESCRITOR_D6: DESCRITOR_D6,

@@ -278,7 +278,7 @@ nova, e o modelo vai no `dadosJson` de sempre.
 - **Oblívio**: Papel, Motivação, Mazela e Fardo.
 - **Vampiro**: Clã, Predador, Disciplina, Vantagem, Defeito e Ficha de
   Conhecimento.
-- **Goblins**: Ocupação, Descritor e opções das variantes.
+- **Goblins**: ~~Ocupação, Descritor~~ (v9.17.0) e opções das variantes.
 - **BRUTAL**: Arquétipo, Estilo e modelos de mesa.
 - **Habilidades Homebrew no motor** de T20, Vampiro, Goblins, Oblívio e
   BRUTAL: resolver ids de Homebrew junto com o catálogo, com cópia
@@ -1387,3 +1387,116 @@ passaram a aceitar hífen.
   `js/ordem/progressao.js`, `js/ordem/ramificacao.js`;
 - `js/paginas/homebrew-origem-trilha.js`;
 - `js/versao.js`.
+
+## v9.17.0 — Etapa 2: Ocupação e Descritor Homebrew de Malditos Goblins
+
+### Os editores
+
+**Homebrew → + Criar → Malditos Goblins → Ocupação.** Três etapas:
+- **Identidade:** nome, descrição e o modificador de atributo (−1 a +2;
+  no livro, +1 num atributo);
+- **Equipamento e técnicas:**
+  - até 3 opções de equipamento inicial, cada uma com até 3 itens do
+    catálogo (armas, proteções, equipamentos);
+  - as **três técnicas** (níveis 1, 2 e 3): nome, texto e, se quiser,
+    "1 vez por dia";
+- **Revisão:** a prévia, o que é automático, o que quem joga escolhe e o
+  que fica com a mesa.
+
+**→ Descritor.** Uma etapa:
+- modificadores de −2 a +2;
+- ou "quem joga escolhe um atributo para +1", como o Supimpa;
+- um texto.
+
+### No motor
+
+As definições entram nos **mesmos mapas** que o motor e as telas leem
+(`OCUPACOES`, `DESCRITORES`), a partir da cópia guardada na ficha em
+`goblins.homebrew`:
+- o modificador entra nos atributos;
+- as técnicas chegam pelo nível, também como ocupação épica;
+- a técnica de "1 vez por dia" tem o botão **Usar** na ficha, que marca
+  o uso do dia e recusa a segunda vez. O efeito é o do texto;
+- a opção de equipamento entra na conclusão da criação, como no livro;
+- o "+1 à escolha" do descritor, que era específico do Supimpa (três
+  lugares conferiam `descritor === "supimpa"`), passou a ser genérico:
+  vale para qualquer descritor com escolha;
+- a criação mostra as ocupações e os descritores Homebrew depois dos do
+  livro (`descritoresDisponiveis`). A rolagem de 1d6 continua só com os
+  do livro.
+
+### Cópia, versão e servidor
+
+- chaves `hbgo-…` e `hbgd-…`, versionadas; as técnicas usam
+  `<ocupação>-t<n>`;
+- sem cópia e sem catálogo, a escolha some;
+- o servidor roda o mesmo motor (`catalogo.js` e `regras.js` em
+  `Goblins.gs`, por `testes/gerar-goblins-gs.js`);
+- `RAMAGoblinsHomebrew` tem `copiasDaFicha`, `versoesNovas` e
+  `atualizarVersao`, como Ordem e T20. O painel na ficha de Goblins fica
+  para uma próxima entrega.
+
+### Servidor e pacotes
+
+- `TIPOS_HOMEBREW` ganhou `ocupacao` e `descritor`; os estruturais de
+  Goblins são os dois. Ocupação em outro sistema é recusada.
+- Os pacotes ganharam os grupos "Ocupações" e "Descritores".
+
+### Validação da v9.17.0
+
+**Automática.** O novo `testes/executar-homebrew-goblins.js` tem 24
+verificações:
+- **Definição:**
+  - chave;
+  - modificadores limitados;
+  - equipamento só com itens do catálogo;
+  - técnicas com chave e uso diário;
+  - chave estável;
+  - descritor com modificadores e com escolha.
+- **Motor:**
+  - as cópias ficam;
+  - os atributos;
+  - as técnicas pelo nível;
+  - o uso diário marcado e a segunda vez recusada;
+  - o +1 à escolha e a pendência genérica;
+  - a ocupação épica;
+  - some sem cópia nem catálogo;
+  - é embutida a partir do catálogo;
+  - a lista de descritores;
+  - o resumo da Mesa.
+- **Biblioteca:** guardar, voltar com a mesma chave, destino, resumo,
+  arquivo, pacote e a atualização de versão.
+
+`testes/pacotes-backend.js`:
+- a Ocupação de Goblins é aceita;
+- a Ocupação em Vampiro é recusada.
+
+**Na interface** (servidor local, conta sintética):
+- Criei a ocupação **Vidreiro** pelo editor (Habilidade +1, opção Adaga,
+  técnicas Sopro, Lente e Vitral, esta de 1 vez por dia).
+- Criei o descritor **Sortudo** (+1 à escolha).
+- Na criação de goblin (manual):
+  - os dois apareceram nas listas, e o campo "Sortudo: +1 em" apareceu;
+  - escolhida Vitalidade, os atributos ficaram Habilidade 3 (Vidreiro +1)
+    e Vitalidade 3 (Sortudo +1);
+  - as técnicas apareceram com "Homebrew".
+- **Ficha:** "Ocupação: Vidreiro · Homebrew" e "Descritor: Sortudo (+1 em
+  Vitalidade) · Homebrew", com as cópias no servidor.
+- Sem erros no console.
+
+### Publicar a v9.17.0
+
+**Servidor:** troque **`Codigo.gs`** e **`Goblins.gs`**, e crie uma versão
+nova da implantação. **`setupRama()` não é necessário.**
+
+**Site:**
+- `js/goblins/homebrew-goblins.js` e `js/paginas/homebrew-goblins.js`
+  (novos);
+- `js/goblins/catalogo.js`, `js/goblins/regras.js`;
+- `js/goblins/telas/goblins-criar.js`, `ficha-goblins.js`,
+  `goblins-comum.js`;
+- `js/homebrew-adaptadores.js`, `js/pacotes-homebrew.js`,
+  `js/paginas/homebrew-editor.js`, `js/paginas/homebrew.js`,
+  `js/paginas/homebrew-origem-divindade-t20.js`;
+- `js/versao.js`;
+- `homebrew/index.html`, `ficha/index.html`, `personagens/index.html`.

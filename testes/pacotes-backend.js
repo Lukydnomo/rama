@@ -221,6 +221,9 @@ export function testarPacotesBackend({ t, preparar, novaConta, comoFn }) {
   t.recusa("tipo estrutural que o sistema não usa (Elemento em T20) é recusado", A({ acao: "salvar_homebrew", dados: { tipo: "item", nome: "Elemento", modelo: modelo("tormenta20", "estrutural", "elemento") } }), "dados_invalidos");
   t.ok("pacote de T20 aceita a Raça; o de Ordem a recusa", salvar(A, { dados: dados("Povos de Vidro", "tormenta20"), conteudo: { adicionar: [racaHb.dados.id] } }).ok && salvar(A, { dados: dados("Errado 2", "ordem"), conteudo: { adicionar: [racaHb.dados.id] } }).erro === "incompativel");
   t.recusa("subtipo estrutural desconhecido em Ordem", A({ acao: "salvar_homebrew", dados: { tipo: "item", nome: "X", modelo: modelo("ordem", "estrutural", "raca") } }), "dados_invalidos");
+  const ocupGob = A({ acao: "salvar_homebrew", dados: { tipo: "item", nome: "Vidreiro", modelo: Object.assign(modelo("goblins", "estrutural", "ocupacao"), { def: { mod: { habilidade: 1 } } }) } });
+  t.ok("Ocupação de Goblins (v9.17): coluna ocupacao", ocupGob.ok && A({ acao: "ler_homebrew", homebrewId: ocupGob.dados.id }).dados.tipo === "ocupacao");
+  t.recusa("Ocupação em Vampiro é recusada", A({ acao: "salvar_homebrew", dados: { tipo: "item", nome: "X", modelo: modelo("vampiro", "estrutural", "ocupacao") } }), "dados_invalidos");
   t.ok("listar com tipos [classe, elemento] devolve os três (classe de Ordem, de T20 e o elemento)", A({ acao: "listar_homebrew", tipos: ["classe", "elemento"] }).dados.length === 3);
   const pOrdemEst = salvar(A, { dados: dados("Livro do Vidro", "ordem"), conteudo: { adicionar: [vidro.dados.id, classeHb.dados.id] } });
   t.ok("pacote de Ordem aceita Classe e Elemento", pOrdemEst.ok && pOrdemEst.dados.tipos.classe === 1 && pOrdemEst.dados.tipos.elemento === 1);

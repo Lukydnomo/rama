@@ -929,6 +929,11 @@ segredo nenhum — ele os lê das Script Properties. Publicá-lo não expõe nad
 
 ### Atualizar o backend
 
+**v9.17.0 — SOPRADOR:** Ocupação e Descritor Homebrew de Malditos
+Goblins. Troque **`Codigo.gs`** e **`Goblins.gs`** e crie uma versão nova
+da implantação. **`setupRama()` não é necessário.** Site: os arquivos
+listados em `docs/HOMEBREW-SISTEMAS.md` (seção "Publicar a v9.17.0").
+
 **v9.16.0 — CARTEIRADA:** escolha de perícia nos poderes Homebrew de
 Ordem. Troque **`Ordem.gs`** e crie uma versão nova da implantação.
 **`setupRama()` não é necessário.** Site: os arquivos listados em
@@ -2059,7 +2064,7 @@ Três números diferentes, que não se misturam:
 
 | | Onde | O que é |
 |---|---|---|
-| versão do aplicativo | `js/versao.js` | o que a pessoa vê: v9.16.0 |
+| versão do aplicativo | `js/versao.js` | o que a pessoa vê: v9.17.0 |
 | `schemaVersion` | `js/ficha.js` | o formato da FICHA |
 | `versaoFormato` | `js/config.js` | o formato dos arquivos de importação |
 

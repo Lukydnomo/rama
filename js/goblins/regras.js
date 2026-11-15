@@ -218,6 +218,29 @@
     return v;
   }
 
+  /* v9.17: ocupação e descritor Homebrew vêm com a CÓPIA guardada na
+     ficha (ou, escolhidos de uma lista da biblioteca, do catálogo). Sem
+     cópia e sem catálogo, a escolha some: nada é inventado. */
+  function homebrewDaFicha(b, o) {
+    var Cc = C();
+    if (!Cc.ehOcupacaoHomebrew) return;
+    var hb = objeto(b.homebrew), saida = {};
+    var ocs = [b.ocupacao].concat(lista(b.epicas).map(function (e) { return objeto(e).ocupacao; })).filter(function (k, i, l) { return Cc.ehOcupacaoHomebrew(k) && l.indexOf(k) === i; });
+    ocs.forEach(function (k) {
+      var cp = objeto(objeto(hb.ocupacoes)[k]);
+      var def = Object.keys(cp).length ? Cc.normalizarOcupacaoHomebrew(Object.assign({}, cp, { chave: k })) : (Cc.OCUPACOES[k] && Cc.OCUPACOES[k].homebrew ? JSON.parse(JSON.stringify(Cc.OCUPACOES[k])) : null);
+      if (!def) return;
+      Cc.registrarOcupacaoHomebrew(def);
+      (saida.ocupacoes = saida.ocupacoes || {})[k] = def;
+    });
+    if (Cc.ehDescritorHomebrew(b.descritor)) {
+      var k = b.descritor, cp = objeto(objeto(hb.descritores)[k]);
+      var def = Object.keys(cp).length ? Cc.normalizarDescritorHomebrew(Object.assign({}, cp, { chave: k })) : (Cc.DESCRITORES[k] && Cc.DESCRITORES[k].homebrew ? JSON.parse(JSON.stringify(Cc.DESCRITORES[k])) : null);
+      if (def) { Cc.registrarDescritorHomebrew(def); (saida.descritores = saida.descritores || {})[k] = def; }
+    }
+    if (Object.keys(saida).length) o.homebrew = Object.assign({ versao: 1 }, saida);
+  }
+
   function normalizar(bruto) {
     var b = objeto(bruto);
     var o = fichaVazia();
@@ -231,6 +254,7 @@
       pendenciaDeNome: ["", "comida", "inverter"].indexOf(cr.pendenciaDeNome) >= 0 ? cr.pendenciaDeNome : "",
     };
     o.nomeDeFamilia = texto(b.nomeDeFamilia, 60);
+    homebrewDaFicha(b, o);
     o.ocupacao = C().OCUPACOES[b.ocupacao] ? b.ocupacao : "";
     o.descritor = C().DESCRITORES[b.descritor] ? b.descritor : "";
     o.supimpa = C().CHAVES_ATRIBUTO.indexOf(b.supimpa) >= 0 ? b.supimpa : "";
@@ -367,7 +391,7 @@
       if (oc && oc.mod && oc.mod[a]) comp.push({ fonte: oc.nome, valor: oc.mod[a], camada: "base" });
       if (oc && oc.modEscolha && o.modEscolhido === a) comp.push({ fonte: oc.nome + " (escolha)", valor: 1, camada: "base" });
       if (de && de.mod && de.mod[a]) comp.push({ fonte: de.nome, valor: de.mod[a], camada: "base" });
-      if (de && de.escolha && o.supimpa === a) comp.push({ fonte: "Supimpa", valor: 1, camada: "base" });
+      if (de && de.escolha && o.supimpa === a) comp.push({ fonte: de.nome, valor: 1, camada: "base" });
       o.ajustes.forEach(function (aj) { if (aj.atributo === a) comp.push({ fonte: aj.motivo || "Ajuste", valor: aj.valor, camada: "permanente" }); });
       o.itens.forEach(function (i) {
         if (!vestido(i)) return;
@@ -977,6 +1001,13 @@
     var t = C().tecnica(chave);
     if (t.uso === "dia" && usoDiario(o, chave)) return falha(t.nome + " já foi usada hoje.");
     var eventos = [];
+    /* v9.17: técnica Homebrew de 1 vez por dia: a ficha marca o uso e
+       registra; o efeito é o do texto (a mesa aplica). */
+    if (/^hbgo-/.test(chave) && t.uso === "dia") {
+      o.marcas.dia["tecnica:" + chave] = true;
+      registrar(o, "tecnica", t.nome + (op.alvo ? " em " + op.alvo : ""));
+      return ok([evento("tecnica", { chave: chave })]);
+    }
     if (chave === "gritoDeGuerra") {
       var tr = testar(o, { atributo: "nocao", rotulo: "Grito de Guerra", dificuldade: op.dificuldade, seZero: op.seZero }, rolador);
       if (!tr.ok || tr.lacuna) return tr;
@@ -1858,7 +1889,8 @@
     var oc = C().OCUPACOES[o.ocupacao];
     if (!oc) { p.push("Escolha (ou role) a ocupação."); return p; }
     if (!o.descritor) p.push("Escolha (ou role) o descritor.");
-    if (o.descritor === "supimpa" && !o.supimpa) p.push("Supimpa: escolha o atributo que ganha +1.");
+    var deP = C().DESCRITORES[o.descritor];
+    if (deP && deP.escolha && !o.supimpa) p.push(deP.nome + ": escolha o atributo que ganha +1.");
     if (oc.modEscolha && !o.modEscolhido) p.push(oc.nome + ": escolha Habilidade ou Noção (+1).");
     if (!o.caracteristicas.length) p.push("Escolha (ou role) a característica.");
     var war = o.opcoes.adaptacoes.wargoblin;

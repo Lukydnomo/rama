@@ -1,5 +1,12 @@
 # O banco
 
+## Ocupação e Descritor Homebrew de Malditos Goblins — v9.17
+
+Nenhuma aba nova. No `HOMEBREW`, a coluna `tipo` aceita `ocupacao` e
+`descritor`. Na ficha de Goblins, `goblins.homebrew` guarda as cópias
+(`ocupacoes` com chave `hbgo-…`, `descritores` com `hbgd-…`); `ocupacao`,
+`descritor` e `epicas[].ocupacao` aceitam essas chaves. Opcional.
+
 ## Magia e Poder Homebrew de Tormenta20 — v9.14
 
 Nenhuma coluna nova: continuam na coluna `habilidade` do `HOMEBREW`

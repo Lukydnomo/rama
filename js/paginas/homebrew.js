@@ -791,6 +791,10 @@
       return;
     }
     var sisHb = registro && registro.modelo ? registro.modelo.sistema : "";
+    if (sisHb === "goblins" && (stHb === "ocupacao" || stHb === "descritor") && global.RAMAHomebrewGoblins) {
+      global.RAMAHomebrewGoblins[stHb]({ registro: registro, aoSalvar: carregar });
+      return;
+    }
     if (sisHb === "tormenta20" && registro.modelo.grupo === "habilidade" && registro.modelo.subtipo === "poder" && global.RAMAHomebrewT20Estruturais) {
       global.RAMAHomebrewT20Estruturais.poder({ registro: registro, aoSalvar: carregar });
       return;

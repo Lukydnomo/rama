@@ -118,6 +118,19 @@
 
   var CHANGELOG = [
     {
+      versao: "9.17.0",
+      codinome: "SOPRADOR",
+      data: "15/11/2026",
+      mudancas: {
+        "Adicionado": [
+          "Ocupação Homebrew de Malditos Goblins: modificador de atributo, opções de equipamento inicial (itens do catálogo) e as três técnicas, com \u201c1 vez por dia\u201d marcado pela ficha. Aparece na criação (e como ocupação épica).",
+          "Descritor Homebrew de Malditos Goblins: modificadores ou um +1 à escolha (como o Supimpa). Aparece na criação, depois dos do livro.",
+          "A ficha guarda a própria cópia: mudar a biblioteca não muda um goblin em jogo.",
+        ],
+        "Técnico": ["Novos js/goblins/homebrew-goblins.js e js/paginas/homebrew-goblins.js. O catálogo de Goblins ganhou normalizar/registrar Ocupação e Descritor (chaves hbgo-/hbgd- versionadas); a ficha guarda as cópias em goblins.homebrew; o +1 à escolha do descritor ficou genérico (antes só o Supimpa). Servidor: tipos ocupacao e descritor (só Goblins). Novo testes/executar-homebrew-goblins.js (24 verificações)."],
+      },
+    },
+    {
       versao: "9.16.0",
       codinome: "CARTEIRADA",
       data: "15/11/2026",

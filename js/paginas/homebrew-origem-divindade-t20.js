@@ -129,13 +129,13 @@
     async function salvar(fechar) {
       if (!U.aparar(r.nome)) { r.passo = 1; pintar(); UI.avisoErro("Dê um nome à " + cfg.rotulo + "."); var n = document.getElementById(cfg.pref + "-nome"); if (n) n.focus(); return; }
       var def = cfg.paraGravar();
-      var g = A().guardar("tormenta20", cfg.grupo || "estrutural", cfg.subtipo, { id: cfg.reg ? cfg.reg.id : undefined, nome: r.nome, descricao: r.descricao, valores: cfg.valores ? cfg.valores() : {}, def: def, visibilidade: r.visibilidade, modeloAnterior: cfg.reg ? cfg.reg.modelo : null });
+      var g = A().guardar(cfg.sistema || "tormenta20", cfg.grupo || "estrutural", cfg.subtipo, { id: cfg.reg ? cfg.reg.id : undefined, nome: r.nome, descricao: r.descricao, valores: cfg.valores ? cfg.valores() : {}, def: def, visibilidade: r.visibilidade, modeloAnterior: cfg.reg ? cfg.reg.modelo : null });
       if (!g.ok) { UI.avisoErro(g.erro); return; }
       var resp = await global.RAMAApi.salvarHomebrew(g.registro);
       if (!resp.ok) { UI.avisoDeFalha(resp, "gravação da " + cfg.rotulo); return; }
       r.sujo = false;
       fechar();
-      if (H()) H().carregarBiblioteca(true);
+      if (cfg.recarregar) cfg.recarregar(); else if (H()) H().carregarBiblioteca(true);
       UI.avisoOk(cfg.reg ? cfg.okEditar : cfg.okCriar);
       if (cfg.aoSalvar) cfg.aoSalvar(resp.dados && resp.dados.id);
     }
