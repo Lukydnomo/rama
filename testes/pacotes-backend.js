@@ -181,4 +181,22 @@ export function testarPacotesBackend({ t, preparar, novaConta, comoFn }) {
   t.ok("  as cópias importadas continuam", B({ acao: "listar_homebrew" }).dados.filter((h) => h.pacote && h.pacote.id === pid).length === 5);
   t.ok("  as entradas, a capa e os recibos saíram", !G.lerLeves(G.ABAS.PACOTES_HOMEBREW_ENTRADAS).some((e) => e.pacoteId === pid) && !G.lerLeves(G.ABAS.PACOTES_HOMEBREW_IMPORTACOES).some((e) => e.pacoteId === pid));
   t.recusa("o Homebrew individual continua como era: original privado da dona fechado ao amigo", B({ acao: "ler_homebrew", homebrewId: enfermeira }), "nao_encontrado");
+
+  t.grupo("Homebrew por sistema (v9.7) · o servidor confere o modelo");
+  const modelo = (sistema, grupo, subtipo) => ({ versao: 1, sistema, grupo, subtipo, def: {} });
+  t.recusa("sistema que não existe", A({ acao: "salvar_homebrew", dados: { tipo: "item", nome: "X", modelo: modelo("inexistente", "item", "arma") } }), "dados_invalidos");
+  t.recusa("grupo desconhecido", A({ acao: "salvar_homebrew", dados: { tipo: "item", nome: "X", modelo: modelo("tormenta20", "classe", "x") } }), "dados_invalidos");
+  t.recusa("sistema do registro diferente do modelo", A({ acao: "salvar_homebrew", dados: { tipo: "item", nome: "X", sistema: "ordem", modelo: modelo("tormenta20", "item", "arma") } }), "dados_invalidos");
+  t.recusa("def que não é objeto", A({ acao: "salvar_homebrew", dados: { tipo: "item", nome: "X", modelo: Object.assign(modelo("tormenta20", "item", "arma"), { def: "1d10" }) } }), "dados_invalidos");
+  const espadaT20 = A({ acao: "salvar_homebrew", dados: { tipo: "arma", nome: "Espada T20", modelo: Object.assign(modelo("tormenta20", "item", "arma"), { def: { dano: "1d10" } }) } });
+  const lidaT20 = A({ acao: "ler_homebrew", homebrewId: espadaT20.dados.id }).dados;
+  t.ok("um item de T20 não entra com o tipo \"arma\" do RAMAFicha: a coluna vira \"item\"", espadaT20.ok && lidaT20.tipo === "item" && lidaT20.sistema === "tormenta20" && lidaT20.modelo.def.dano === "1d10");
+  const armaOrdem = A({ acao: "salvar_homebrew", dados: { tipo: "arma", nome: "Arma de Ordem", modelo: modelo("ordem", "item", "arma") } });
+  t.ok("um item de Ordem mantém o tipo do RAMAFicha (arma)", armaOrdem.ok && A({ acao: "ler_homebrew", homebrewId: armaOrdem.dados.id }).dados.tipo === "arma");
+  const pT20 = salvar(A, { dados: dados("Arsenal de Arton", "tormenta20"), conteudo: { adicionar: [espadaT20.dados.id] } });
+  t.ok("pacote de T20 aceita o item nativo de T20", pT20.ok && pT20.dados.qtd === 1);
+  const pOrdem = salvar(A, { dados: dados("Errado", "ordem"), conteudo: { adicionar: [espadaT20.dados.id] } });
+  t.ok("pacote de Ordem recusa o item de T20, com o motivo (sem converter)", pOrdem.erro === "incompativel" && /Tormenta20/.test(pOrdem.itens[0].motivo));
+  const kitU = A({ acao: "salvar_homebrew", dados: { tipo: "item", nome: "Kit Universal", modelo: modelo("universal", "item", "consumivel"), universal: { acoes: [{ chave: "usar", nome: "Usar" }] } } });
+  t.ok("Universal entra em qualquer pacote (até no de BRUTAL)", salvar(A, { dados: dados("Universal no BRUTAL", "brutal"), conteudo: { adicionar: [kitU.dados.id] } }).ok);
 }

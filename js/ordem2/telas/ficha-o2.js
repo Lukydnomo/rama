@@ -404,6 +404,8 @@
         UI().campo({ rotulo: "Ou uma própria: nome", limite: 80, aoMudar: function (v) { st.nome = v; } }),
         UI().campo({ rotulo: "Texto", limite: 1200, aoMudar: function (v) { st.texto = v; } }),
         botao("Adicionar própria", function () { if (!String(st.nome).trim()) return; x.habilidades.push(R().normalizarHabilidade({ nome: st.nome, texto: st.texto })); alterou(ctx, true); }),
+        /* v9.7: habilidade Homebrew de Ordem II — entra como habilidade própria. */
+        global.RAMAHomebrewFicha ? global.RAMAHomebrewFicha.botao(ctx, { sistema: "ordem2", grupo: "habilidade", aoAdicionarHabilidade: function (h) { x.habilidades.push(R().normalizarHabilidade({ nome: h.nome, texto: h.descricao || h.texto || "" })); alterou(ctx, true); global.RAMAUI.avisoOk(h.nome + " entrou nas habilidades."); } }) : null,
       ]),
     ]));
   }
@@ -732,6 +734,8 @@
       ctx.podeEditar() ? el("div.faixa", {}, [
         botao("+ Item", function () { x.itens.push(R().normalizarItem({ nome: "Novo item" })); alterou(ctx, true); }),
         botao("+ Arma", function () { x.itens.push(R().normalizarItem({ nome: "Nova arma", tipo: "arma", dano: 1 })); alterou(ctx, true); }),
+        /* v9.7: do Homebrew — itens com os dados de Ordem II. */
+        global.RAMAHomebrewFicha ? global.RAMAHomebrewFicha.botao(ctx, { sistema: "ordem2", grupo: "item", aoAdicionarItem: function (obj) { x.itens.push(R().normalizarItem(obj)); alterou(ctx, true); } }) : null,
       ]) : null,
     ]);
   }

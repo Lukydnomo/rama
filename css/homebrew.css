@@ -245,3 +245,38 @@
   .pc-importar .faixa .r-botao, .pc-editor__rodape .r-botao { flex: 1 1 auto; }
   .pc-barra__sistema { flex: 1 1 100%; }
 }
+
+/* =====================================================================
+   HOMEBREW POR SISTEMA (v9.7) — js/paginas/homebrew-editor.js
+   ---------------------------------------------------------------------
+   Seletor de sistema (as capas de .hb-sistemas), cartões de tipo e o
+   editor: formulário à esquerda e o resumo (Revisão) à direita no
+   computador; uma coluna no celular, com a ação principal no rodapé.
+   ===================================================================== */
+.hbe-janela.r-modal--largo { max-width: 1040px; }
+.hbe-sistema[data-sugerido="sim"] { border-color: var(--cor-paranormal); }
+.hbe-tipos { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 240px), 1fr)); gap: var(--e2); }
+.hbe-tipo { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; text-align: left; text-transform: none; padding: var(--e3); min-height: var(--alvo-toque); }
+.hbe-grade { display: grid; grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); gap: var(--e4); align-items: start; }
+.hbe-form { display: flex; flex-direction: column; gap: var(--e3); min-width: 0; }
+.hbe-lado { position: sticky; top: 0; display: flex; flex-direction: column; gap: var(--e2); padding: var(--e3); border: var(--borda) solid var(--cor-traco-fraca); background: var(--fundo-superficie-2); min-width: 0; }
+.hbe-lado p { margin: 0; overflow-wrap: anywhere; }
+.hbe-sistema-sel { align-items: center; gap: var(--e2); }
+.hbe-campos { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 200px), 1fr)); gap: var(--e2) var(--e3); }
+.hbe-bool { align-self: end; min-height: var(--alvo-toque); }
+.hbe-avancado { border: var(--borda) dashed var(--cor-traco-media); padding: var(--e2) var(--e3); }
+.hbe-avancado > summary { cursor: pointer; font-weight: 700; min-height: var(--alvo-toque); display: flex; align-items: center; }
+.hbe-avancado[open] > summary { margin-bottom: var(--e2); }
+.hbe-universal { display: flex; flex-direction: column; gap: var(--e2); padding-top: var(--e2); border-top: var(--borda) solid var(--cor-traco-fraca); }
+.hbe-universal h3 { margin: 0; }
+.hbe-lista, .hbe-mini { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--e1); }
+.hbe-mini li { font-size: var(--texto-mini); padding-left: var(--e2); border-left: 2px solid var(--cor-traco-media); }
+.hbe-item { display: flex; flex-wrap: wrap; gap: var(--e1) var(--e2); align-items: center; justify-content: space-between; padding: var(--e2); border: var(--borda) solid var(--cor-traco-fraca); background: var(--fundo-superficie); }
+.hbe-item__corpo { flex: 1 1 16rem; min-width: 0; display: flex; flex-wrap: wrap; gap: var(--e1); align-items: center; overflow-wrap: anywhere; }
+.hbe-refs { display: flex; flex-wrap: wrap; gap: var(--e1) var(--e3); flex-basis: 100%; }
+.hbe-previa { padding: var(--e2); border-left: 3px solid var(--cor-paranormal); background: var(--fundo-superficie-2); }
+@media (max-width: 760px) {
+  .hbe-grade { grid-template-columns: minmax(0, 1fr); }
+  .hbe-lado { position: static; order: 2; }
+  .hbe-campos { grid-template-columns: minmax(0, 1fr); }
+}

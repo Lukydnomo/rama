@@ -1,5 +1,15 @@
 # O banco
 
+## Homebrew por sistema — v9.7
+
+Nenhuma aba nova (**`setupRama()` não é necessário**). O `dadosJson` do
+`HOMEBREW` pode trazer `sistema`, `modelo: { versao, sistema, grupo,
+subtipo, def }` e `universal: { versao, rotuloTipo, campos, valores, acoes }`.
+Os registros antigos não são regravados.
+
+Na ficha, um item do inventário pode trazer `universal`, com
+`estado.usos[chaveDaAcao]` guardando os usos gastos.
+
 ## Pacotes de Homebrew — v9.6
 
 **Rode `setupRama()`**: são cinco abas novas.

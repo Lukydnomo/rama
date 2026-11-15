@@ -27,16 +27,27 @@
   var tipoFiltro = "";
   var painel = null;
 
+  /* v9.7: os filtros agrupam como o + Criar — Item reúne arma, armadura,
+     mochila e os itens de cada sistema; Habilidade reúne os rituais (que
+     também têm o filtro próprio). Os tipos gravados não mudam. */
   var TIPOS = [
     { chave: "", rotulo: "Tudo" },
-    { chave: "criatura", rotulo: "Criaturas" },
-    { chave: "arma", rotulo: "Armas" },
-    { chave: "armadura", rotulo: "Armaduras" },
-    { chave: "item", rotulo: "Itens" },
-    { chave: "mochila", rotulo: "Mochilas" },
-    { chave: "habilidade", rotulo: "Habilidades" },
-    { chave: "ritual", rotulo: "Rituais" },
+    { chave: "g:item", rotulo: "Itens" },
+    { chave: "g:habilidade", rotulo: "Habilidades" },
+    { chave: "s:ritual", rotulo: "Rituais" },
+    { chave: "g:criatura", rotulo: "Criaturas" },
   ];
+  var sistemaFiltro = "";
+  function AD() { return global.RAMAHomebrewAdaptadores || null; }
+  function casaFiltro(r, chave) {
+    if (!chave) return true;
+    var A = AD();
+    if (!A) return r.tipo === chave.slice(2);
+    if (chave === "s:ritual") return A.subtipoDe(r) === "ritual";
+    return A.grupoDe(r) === chave.slice(2);
+  }
+  function sistemaDoRegistro(r) { return AD() ? AD().sistemaDe(r) : "universal"; }
+  function nomeDoSistema(id) { var s = global.RAMASistemas.lista().filter(function (x) { return x.id === id; })[0]; return s ? s.nome : id; }
 
   /* "Minhas criações" e "Públicas" são bibliotecas diferentes: a segunda
      é o que outras contas publicaram, e nela você consulta e copia, mas
@@ -198,6 +209,14 @@
       "aria-label": "Buscar na biblioteca", "aria-controls": "hb-lista",
       oninput: function (ev) { busca = ev.target.value; pintarResultados(); },
     });
+    var sistemasPresentes = {};
+    registros.forEach(function (r) { sistemasPresentes[sistemaDoRegistro(r)] = true; });
+    var seletorSistema = el("select.r-selecao.hb-barra__sistema", {
+      "aria-label": "Filtrar por sistema",
+      onchange: function (ev) { sistemaFiltro = ev.target.value; pintarResultados(); },
+    }, [el("option", { value: "", texto: "Todos os sistemas" })].concat(global.RAMASistemas.lista().filter(function (s) { return sistemasPresentes[s.id]; }).map(function (s) {
+      return el("option", { value: s.id, texto: s.nome, selected: s.id === sistemaFiltro });
+    })));
     chips = TIPOS.filter(function (t) { return !t.chave || contar(t.chave); }).map(function (t) {
       return el("button.filtro", {
         type: "button", dataset: { tipo: t.chave },
@@ -209,6 +228,7 @@
     return el("div.hb-barra", {}, [
       el("div.r-busca.hb-barra__busca", {}, [el("span.r-busca__marca", {}, [UI.simbolo("busca")]), campo]),
       el("div.filtros__grupo.hb-barra__tipos", { role: "group", "aria-label": "Filtrar por tipo" }, chips),
+      Object.keys(sistemasPresentes).length > 1 ? seletorSistema : null,
       contagem,
     ]);
   }
@@ -217,22 +237,23 @@
     if (!resultados) return;
     chips.forEach(function (c) { c.setAttribute("aria-pressed", String((c.dataset.tipo || "") === tipoFiltro)); });
     var v = filtrar();
-    var filtrando = !!(U.aparar(busca) || tipoFiltro);
+    var filtrando = !!(U.aparar(busca) || tipoFiltro || sistemaFiltro);
     contagem.textContent = filtrando ? v.length + " de " + registros.length + (registros.length === 1 ? " registro" : " registros")
       : registros.length + (registros.length === 1 ? " registro" : " registros");
     U.trocar(resultados, v.length ? v.map(linha) : [nadaEncontrado()]);
   }
 
-  function contar(tipo) {
-    return registros.filter(function (r) { return r.tipo === tipo; }).length;
+  function contar(chave) {
+    return registros.filter(function (r) { return casaFiltro(r, chave); }).length;
   }
 
   function filtrar() {
     var chave = U.chaveDeBusca(busca);
     return registros.filter(function (r) {
-      if (tipoFiltro && r.tipo !== tipoFiltro) return false;
+      if (tipoFiltro && !casaFiltro(r, tipoFiltro)) return false;
+      if (sistemaFiltro && sistemaDoRegistro(r) !== sistemaFiltro) return false;
       if (!chave) return true;
-      return U.chaveDeBusca(r.nome + " " + (r.descricao || "") + " " + rotuloDoTipo(r.tipo) + " " + resumoDe(r)).indexOf(chave) >= 0;
+      return U.chaveDeBusca(r.nome + " " + (r.descricao || "") + " " + rotuloDe(r) + " " + resumoDe(r) + " " + nomeDoSistema(sistemaDoRegistro(r))).indexOf(chave) >= 0;
     });
   }
 
@@ -277,6 +298,7 @@
      ================================================================= */
 
   function resumoDe(r) {
+    if (r.modelo && AD()) return AD().resumo(r);
     var p = [];
     if (r.tipo === "arma") {
       p.push("Dano " + (r.dano || "—") + (r.danoExtra ? "+" + r.danoExtra : ""));
@@ -354,11 +376,11 @@
       el("div.hb-linha__principal", {}, [
         el("button.hb-linha__nome", {
           type: "button", texto: registro.nome, title: "Consultar " + registro.nome,
-          "aria-label": "Consultar " + registro.nome + " (" + rotuloDoTipo(registro.tipo) + ")",
+          "aria-label": "Consultar " + registro.nome + " (" + rotuloDe(registro) + ")",
           onclick: function () { consultar(registro); },
         }),
         el("p.hb-linha__meta", {}, [
-          el("span.hb-linha__tipo", { texto: rotuloDoTipo(registro.tipo) }),
+          el("span.hb-linha__tipo", { texto: rotuloDe(registro) + (sistemaDoRegistro(registro) !== "universal" || registro.modelo ? " · " + nomeDoSistema(sistemaDoRegistro(registro)) : "") }),
           resumo ? el("span.hb-linha__resumo", { texto: resumo }) : null,
         ]),
       ]),
@@ -371,6 +393,10 @@
      com os detalhes, a descrição longa e o código do registro. */
   function consultar(registro, opcoesConsulta) {
     var semRegistro = !!(opcoesConsulta && opcoesConsulta.semRegistro);
+    if (registro.modelo && global.RAMAHomebrewEditor) {
+      UI.modal({ titulo: registro.nome, largo: true, conteudo: [global.RAMAHomebrewEditor.consulta(registro), semRegistro ? null : rodapeDoRegistro(registro)], botoes: [{ rotulo: "Fechar", classe: "r-botao--fantasma" }] });
+      return;
+    }
     if (registro.tipo === "criatura") { consultarCriatura(registro, semRegistro); return; }
     var meu = registro.meu !== false;
     UI.modal({
@@ -409,6 +435,9 @@
     var painelC = global.RAMACriaturaPainel.criar(registro, { consulta: true, rotulo: semRegistro ? "Pacote" : "Homebrew" });
     UI.modal({ titulo: registro.nome, largo: true, conteudo: [painelC.raiz, semRegistro ? null : rodapeDoRegistro(registro)], botoes: [{ rotulo: "Fechar" }] });
   }
+
+  /* O rótulo de um registro: o subtipo do adaptador (Arma, Magia…) ou o tipo de antes. */
+  function rotuloDe(r) { return r.modelo && AD() ? (r.universal && r.universal.rotuloTipo) || AD().rotuloDoSubtipo(r) : rotuloDoTipo(r.tipo); }
 
   function rotuloDoTipo(tipo) {
     if (tipo === "criatura") return "Criatura";
@@ -625,7 +654,28 @@
      Habilidades e rituais. Os editores são os de sempre; Criatura abre a
      escolha de sistema pelas capas (e Vampiro, os dois modelos). Criar
      estando em Públicas leva para Minhas criações, onde o novo aparece. */
+  /* v9.7: + Criar abre o seletor de sistema (js/paginas/homebrew-editor.js);
+     os editores de criatura, ritual e habilidade de sempre continuam os
+     mesmos, chamados de lá. */
   function escolherTipo() {
+    if (global.RAMAHomebrewEditor) {
+      global.RAMAHomebrewEditor.criar({
+        sistemaSugerido: sistemaFiltro || "",
+        aoSalvar: function () { if (escopo !== "meus") { escopo = "meus"; busca = ""; tipoFiltro = ""; } carregar(); },
+        editarCriatura: function (s) {
+          if (escopo !== "meus") { escopo = "meus"; busca = ""; tipoFiltro = ""; carregar(); }
+          if (s === "vampiro") { escolherModeloVampiro(); return; }
+          if (s === "universal") { editar(null, "criatura"); return; }
+          editar(null, "criatura", { sistema: s });
+        },
+        editarRitual: function () { editar(null, "ritual"); },
+        editarHabilidadeLegada: function () { editar(null, "habilidade"); },
+      });
+      return;
+    }
+    escolherTipoAntigo();
+  }
+  function escolherTipoAntigo() {
     var m = UI.modal({
       titulo: "Criar na biblioteca",
       conteudo: el("div.pilha.hb-criar", {}, [
@@ -718,6 +768,10 @@
   }
 
   function editar(registro, tipoNovo, opcoesCriatura) {
+    if (registro && registro.modelo && global.RAMAHomebrewEditor) {
+      global.RAMAHomebrewEditor.editor({ registro: registro, aoSalvar: carregar });
+      return;
+    }
     var criando = !registro;
     var tipo = registro ? registro.tipo : tipoNovo;
 
@@ -884,7 +938,7 @@
      ================================================================= */
 
   async function duplicar(registro) {
-    var copia = registro.tipo === "criatura"
+    var copia = registro.modelo ? JSON.parse(JSON.stringify(registro)) : registro.tipo === "criatura"
       ? global.RAMACriaturas.normalizar(registro)
       : (registro.tipo === "habilidade"
           ? global.RAMAHabilidades.normalizarHabilidade(registro)

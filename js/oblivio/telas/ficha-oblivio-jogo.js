@@ -387,7 +387,9 @@
       UI().painel("Espaços", [
         el("p", { role: "status", class: esp.usados > esp.total ? "oblivio-criar__contador--falta" : "", texto: esp.usados + " de " + esp.total + " espaços guardados (" + esp.partes.map(function (p) { return p.fonte + " " + p.valor; }).join(" + ") + "). Carregados não ocupam espaço; um por região." }),
         el("p.t-mini", { texto: "Moedas: " + o.inventario.moedas }),
-        pode ? el("div.faixa", {}, [botaoAdicionar(ctx), el("button.r-botao.r-botao--mini", { type: "button", texto: "Fabricar", onclick: function () { abrirFabricar(ctx); } })]) : null,
+        pode ? el("div.faixa", {}, [botaoAdicionar(ctx), el("button.r-botao.r-botao--mini", { type: "button", texto: "Fabricar", onclick: function () { abrirFabricar(ctx); } }),
+          /* v9.7: do Homebrew — com base num item do catálogo (as regras vêm dela) ou narrativo. */
+          global.RAMAHomebrewFicha ? global.RAMAHomebrewFicha.botao(ctx, { sistema: "oblivio", grupo: "item", aoAdicionarItem: function (obj) { FX().operar(ctx, function (b) { return R().adicionarItem(b, obj.chave, { nome: obj.nome, nota: obj.nota, qtd: obj.qtd }); }); } }) : null]) : null,
       ]),
     ].concat(grupos.map(function (g) {
       var itens = o.inventario.itens.filter(function (i) { return g[0] === "derrubado" ? (i.estado === "derrubado" || i.estado === "arremessado") : i.estado === g[0]; });

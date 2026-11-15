@@ -819,6 +819,8 @@
       s,
       el("div.faixa", {}, [
         botao("Adicionar", function () { op(ctx, function (b) { return R().adicionarItem(b, s.entrada.value, {}, T().rolador); }); }),
+        /* v9.7: do Homebrew — arma e proteção pelo `personalizado` do motor. */
+        global.RAMAHomebrewFicha ? global.RAMAHomebrewFicha.botao(ctx, { sistema: "goblins", grupo: "item", aoAdicionarItem: function (obj) { op(ctx, function (b) { return R().adicionarItem(b, "", obj); }); } }) : null,
         botao("Sortear item mágico", function () { sortearMagico(ctx); }, { dica: "Tipo (1d6) e item (1d6), p. 24" }),
         botao("Item sem tabela…", function () { itemPersonalizado(ctx); }, { classe: "r-botao--fantasma" }),
       ]),

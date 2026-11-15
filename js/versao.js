@@ -118,6 +118,21 @@
 
   var CHANGELOG = [
     {
+      versao: "9.7.0",
+      codinome: "DIALETO",
+      data: "15/11/2026",
+      mudancas: {
+        "Adicionado": [
+          "Homebrew por sistema (etapa 1): + Criar abre primeiro o sistema (Universal em destaque) e depois os tipos dele. Itens com Tipo de item e os campos de cada RPG: Ordem Paranormal, Ordem II, Tormenta20, Oblívio, Vampiro, Malditos Goblins e BRUTAL.",
+          "Do Homebrew nas fichas de T20, Goblins, Vampiro, Oblívio, Ordem II e BRUTAL: o item entra com as regras do próprio sistema (a arma de T20 dá ataque, a proteção de Goblins conta, a arma de Vampiro usa a base do V5). Entra uma cópia: mudar a biblioteca não muda a ficha.",
+          "Modelo Universal: campos próprios (texto, número com faixa, lista, referências, fórmula de dado, recurso) e ações com usos, custo, teste e efeito. Na ficha Universal, o botão da ação rola, mostra o que muda e aplica ao confirmar. A carga gasta fica salva.",
+          "Na biblioteca, Itens reúne armas, armaduras e mochilas, e Habilidades reúne os rituais (com filtro próprio). Há também filtro por sistema.",
+        ],
+        "Corrigido": ["Exportar um registro na página Homebrew não funcionava."],
+        "Técnico": ["Novos js/homebrew-adaptadores.js (registro de adaptadores por sistema: campos, guardar, paraFicha, destino, resumo; motor das ações do Modelo Universal), js/paginas/homebrew-editor.js e js/paginas/homebrew-ficha.js. Registro versionado (modelo.def), conferido em salvar_homebrew; pacotes julgam o Homebrew nativo pelo sistema; importar refaz o registro pelo adaptador. Novo testes/executar-homebrew-sistemas.js. Etapas 2 e 3 em docs/HOMEBREW-SISTEMAS.md."],
+      },
+    },
+    {
       versao: "9.6.0",
       codinome: "BROCHURA",
       data: "14/11/2026",

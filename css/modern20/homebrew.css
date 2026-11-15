@@ -40,3 +40,11 @@
   & .pc-passo__n { border-radius: 999px; }
   & .pc-sistema[aria-checked="true"] { box-shadow: none; background: var(--m20-selecao-suave); }
 }
+
+/* Homebrew por sistema (v9.7): editor e resumo com a pele do Modern20. */
+:where(:root[data-interface="modern20"]) {
+  & .hbe-lado, & .hbe-item { border-radius: var(--m20-raio-cartao); border-color: var(--m20-borda); }
+  & .hbe-avancado { border-radius: var(--m20-raio-controle); border-style: solid; border-color: var(--m20-borda); }
+  & .hbe-tipo.r-botao--bloco { border-radius: var(--m20-raio-controle); font-weight: 550; }
+  & .hbe-previa { border-radius: var(--m20-raio-controle); }
+}

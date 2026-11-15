@@ -670,8 +670,17 @@
         } else {
           /* Um servidor anterior a esta versão ignora `tipos`: filtrar de
              novo aqui garante que habilidade e criatura não viram item. */
+          /* v9.7: só o que vale nesta ficha — Universal sempre; itens
+             nativos de Ordem só numa ficha de Ordem. Um item de outro
+             sistema (T20, Goblins…) não aparece: o R.A.M.A. não converte. */
+          var A = global.RAMAHomebrewAdaptadores;
           estado.homebrew = {
-            registros: (r.dados || []).filter(function (h) { return h && TIPOS_DE_ITEM.indexOf(h.tipo) >= 0; }),
+            registros: (r.dados || []).filter(function (h) {
+              if (!h || TIPOS_DE_ITEM.indexOf(h.tipo) < 0) return false;
+              if (!A) return !h.modelo;
+              var s = A.sistemaDe(h);
+              return s === "universal" || (ordem && s === "ordem");
+            }),
           };
         }
         if (aberta && estado.origem === "homebrew") {

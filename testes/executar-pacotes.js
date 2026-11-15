@@ -13,7 +13,7 @@
 globalThis.window = globalThis;
 globalThis.document = { currentScript: null, createElement: () => ({ style: {}, setAttribute() {}, appendChild() {} }) };
 const ler = (c) => Deno.readTextFile(new URL("../" + c, import.meta.url));
-for (const c of ["js/util.js", "js/sistemas.js", "js/pacotes-homebrew.js", "js/imagem-editor.js"]) (0, eval)(await ler(c));
+for (const c of ["js/util.js", "js/sistemas.js", "js/dados.js", "js/homebrew-adaptadores.js", "js/pacotes-homebrew.js", "js/imagem-editor.js"]) (0, eval)(await ler(c));
 /* O servidor: só as declarações (Sistemas.gs e HomebrewPacotes.gs). */
 const servidor = {};
 (new Function("alvo", (await ler("backend/Sistemas.gs")) + "\n" + (await ler("backend/HomebrewPacotes.gs")) +
@@ -41,6 +41,10 @@ const amostras = [
   { tipo: "criatura", nome: "Goblin", sistema: "goblins" }, { tipo: "criatura", nome: "Ameaça", sistema: "tormenta20" },
   { tipo: "criatura", nome: "Oblívio", sistema: "oblivio" }, { tipo: "criatura", nome: "O2", sistema: "ordem2" },
   { tipo: "criatura", nome: "Rato" }, { tipo: "criatura", nome: "Resumo", resumo: { sistema: "vampiro" } },
+  /* v9.7: Homebrew por sistema (com modelo) */
+  { tipo: "item", nome: "Espada T20", sistema: "tormenta20", modelo: { versao: 1, sistema: "tormenta20", grupo: "item", subtipo: "arma", def: {} } },
+  { tipo: "habilidade", nome: "Disciplina", sistema: "vampiro", modelo: { versao: 1, sistema: "vampiro", grupo: "habilidade", subtipo: "disciplina", def: {} } },
+  { tipo: "item", nome: "Kit Universal", sistema: "universal", modelo: { versao: 1, sistema: "universal", grupo: "item", subtipo: "consumivel", def: {} } },
 ];
 let iguais = 0, total = 0, divergencias = [];
 for (const s of ids) for (const a of amostras) {

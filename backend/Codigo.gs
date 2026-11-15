@@ -3585,6 +3585,16 @@ function acaoSalvarHomebrew(corpo, usuario) {
   var nome = String(dados.nome || '').trim().slice(0, 120);
   if (!nome) return { ok: false, erro: 'dados_invalidos' };
 
+  /* v9.7: o Homebrew por sistema. Um registro com `modelo` declara o
+     sistema, o grupo e o subtipo; o servidor confere que o sistema existe
+     e que a coluna `tipo` é uma que aquele sistema aceita — um registro
+     não entra com um tipo de outro RPG. Registro sem modelo: como antes. */
+  if (dados.modelo !== undefined) {
+    var conferido = conferirModeloDeHomebrew(dados, tipo);
+    if (!conferido.ok) return conferido;
+    tipo = conferido.tipo;
+  }
+
   var json = JSON.stringify(dados);
   if (json.length > MAX_CELULA) return { ok: false, erro: 'dados_grandes' };
 
@@ -3627,6 +3637,28 @@ function acaoSalvarHomebrew(corpo, usuario) {
 
     return { ok: true, dados: { id: id }, rev: 1 };
   });
+}
+
+/* Ordem e Universal guardam itens no formato do RAMAFicha (arma,
+   armadura, mochila, item); os outros sistemas, "item" com a definição
+   nativa em modelo.def. Habilidade é "habilidade"; o ritual de Ordem e
+   Universal continua com o tipo "ritual". */
+var GRUPOS_DE_HOMEBREW = ['item', 'habilidade'];
+function conferirModeloDeHomebrew(dados, tipoPedido) {
+  var m = dados.modelo;
+  if (!m || typeof m !== 'object' || Array.isArray(m)) return { ok: false, erro: 'dados_invalidos', detalhe: 'modelo' };
+  var sistemas = typeof SISTEMAS_DO_RAMA !== 'undefined' ? SISTEMAS_DO_RAMA.map(function (s) { return s.id; }) : ['universal'];
+  if (sistemas.indexOf(String(m.sistema)) < 0) return { ok: false, erro: 'dados_invalidos', detalhe: 'sistema' };
+  if (GRUPOS_DE_HOMEBREW.indexOf(String(m.grupo)) < 0) return { ok: false, erro: 'dados_invalidos', detalhe: 'grupo' };
+  if (!/^[a-z0-9]{1,30}$/i.test(String(m.subtipo || ''))) return { ok: false, erro: 'dados_invalidos', detalhe: 'subtipo' };
+  if (m.def !== undefined && (typeof m.def !== 'object' || Array.isArray(m.def))) return { ok: false, erro: 'dados_invalidos', detalhe: 'def' };
+  if (dados.sistema !== undefined && String(dados.sistema) !== String(m.sistema)) return { ok: false, erro: 'dados_invalidos', detalhe: 'sistema' };
+  var ramaFicha = m.sistema === 'ordem' || m.sistema === 'universal';
+  var tipo;
+  if (m.grupo === 'habilidade') tipo = tipoPedido === 'ritual' && ramaFicha ? 'ritual' : 'habilidade';
+  else tipo = ramaFicha && ['item', 'arma', 'armadura', 'mochila'].indexOf(tipoPedido) >= 0 ? tipoPedido : 'item';
+  dados.sistema = String(m.sistema);
+  return { ok: true, tipo: tipo };
 }
 
 function acaoExcluirHomebrew(corpo, usuario) {

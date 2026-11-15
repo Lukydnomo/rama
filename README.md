@@ -929,6 +929,12 @@ segredo nenhum — ele os lê das Script Properties. Publicá-lo não expõe nad
 
 ### Atualizar o backend
 
+**v9.7.0 — DIALETO:** Homebrew por sistema (etapa 1). Troque **`Codigo.gs`**
+e **`HomebrewPacotes.gs`** e crie uma versão nova da implantação.
+**`setupRama()` não é necessário.** Site: os arquivos listados em
+`docs/HOMEBREW-SISTEMAS.md` (seção "Publicar a v9.7.0"), que também traz o
+inventário de cobertura e as etapas que faltam.
+
 **v9.6.0 — BROCHURA:** Pacotes de Homebrew.
 1. Adicione **`HomebrewPacotes.gs`** (novo) e troque **`Dados.gs`** e **`Codigo.gs`**.
 2. **Rode `setupRama()`**: ele cria as cinco abas `PACOTES_HOMEBREW*`.
@@ -2004,7 +2010,7 @@ Três números diferentes, que não se misturam:
 
 | | Onde | O que é |
 |---|---|---|
-| versão do aplicativo | `js/versao.js` | o que a pessoa vê: v9.6.0 |
+| versão do aplicativo | `js/versao.js` | o que a pessoa vê: v9.7.0 |
 | `schemaVersion` | `js/ficha.js` | o formato da FICHA |
 | `versaoFormato` | `js/config.js` | o formato dos arquivos de importação |
 

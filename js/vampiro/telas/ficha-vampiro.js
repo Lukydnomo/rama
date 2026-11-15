@@ -796,6 +796,8 @@
           UI().campo({ rotulo: "Armadura", tipo: "selecao", valor: "", opcoes: [{ valor: "", rotulo: "—" }].concat(Object.keys(C().ARMADURAS).map(function (k) { return { valor: k, rotulo: C().ARMADURAS[k].nome + " (" + C().ARMADURAS[k].valor + ")" }; })), aoMudar: function (v) { novo.armadura = v; } }),
           UI().campo({ rotulo: "Nota", valor: "", limite: 200, aoMudar: function (v) { novo.nota = v; } }),
           botao("Adicionar", function () { op(ctx, function (b) { b.equipamento.push({ id: R().novoId("eq"), nome: novo.nome, arma: novo.arma, armadura: novo.armadura, nota: novo.nota }); return ok(); }, { silencioso: true }); }),
+          /* v9.7: do Homebrew — arma ou armadura sobre uma base do V5. */
+          global.RAMAHomebrewFicha ? global.RAMAHomebrewFicha.botao(ctx, { sistema: "vampiro", grupo: "item", aoAdicionarItem: function (obj) { op(ctx, function (b) { b.equipamento.push(Object.assign({ id: R().novoId("eq") }, obj)); return ok(); }, { silencioso: true }); } }) : null,
         ]) : null]),
       UI().painel("Referência de combate", [el("ul.vamp-lista.t-mini", {}, [
         el("li", { texto: "Dano = margem do ataque + bônus da arma. Superficial de vampiro é dividido; armas de fogo e impacto contra vampiros: Superficial (p. 125–126)." }),

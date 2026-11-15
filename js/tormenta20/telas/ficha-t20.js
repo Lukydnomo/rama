@@ -50,6 +50,14 @@
   function pode(ctx) { return ctx.podeEditar(); }
   function linha(t) { return el("p.t-mini", { texto: t }); }
   function ok() { return { ok: true }; }
+  /* v9.7: itens Homebrew de T20 (definição personalizada do motor) e
+     Universal como item narrativo (Manual). Sempre cópia. */
+  function homebrewT20(ctx) {
+    if (!global.RAMAHomebrewFicha) return null;
+    return global.RAMAHomebrewFicha.botao(ctx, { sistema: "tormenta20", grupo: "item", aoAdicionarItem: function (obj) {
+      op(ctx, function (t) { t.inventario.itens.push(R().normalizarItem(obj)); return ok(); });
+    } });
+  }
   function nomeClasse(k) { return CL().CLASSE[k] ? CL().CLASSE[k].nome : k; }
   function nomeCondicao(id) { return D().CONDICAO[id] ? D().CONDICAO[id].nome : id; }
   function janela(titulo, conteudo, botoes, extra) { return UI().modal(Object.assign({ titulo: titulo, conteudo: conteudo, botoes: botoes || [{ rotulo: "Fechar" }] }, extra || {})); }
@@ -834,7 +842,7 @@
             ]);
           })),
         ])]) : linha("Inventário vazio."),
-      ], { acoes: pode(ctx) ? [botao("+ Item", function () { dialogoItem(ctx); }, { classe: "r-botao--fantasma" }), botao("Fabricar", function () { dialogoFabricar(ctx); }, { classe: "r-botao--fantasma" })] : null }),
+      ], { acoes: pode(ctx) ? [botao("+ Item", function () { dialogoItem(ctx); }, { classe: "r-botao--fantasma" }), homebrewT20(ctx), botao("Fabricar", function () { dialogoFabricar(ctx); }, { classe: "r-botao--fantasma" })] : null }),
       engenhocas(ctx, c),
     ]);
   }

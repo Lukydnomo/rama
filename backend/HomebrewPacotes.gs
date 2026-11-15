@@ -109,6 +109,13 @@ function sistemaNativoDaCriatura(d) {
 }
 /* '' quando a criação cabe num pacote do sistema; senão, o motivo. */
 function motivoDeIncompatibilidade(tipo, dados, sistema) {
+  /* v9.7: Homebrew por sistema (com `modelo`): nativo só no sistema dele,
+     Universal em qualquer pacote. O formato de antes segue a regra da v9.6. */
+  if (dados && dados.modelo && typeof dados.modelo === 'object') {
+    var doModelo = sistemaDoPacoteValido(String(dados.modelo.sistema)) ? String(dados.modelo.sistema) : 'universal';
+    if (doModelo === 'universal' || doModelo === sistema) return '';
+    return 'Criação de ' + nomeDoSistemaDoPacote(doModelo) + ': o pacote é de ' + nomeDoSistemaDoPacote(sistema) + ', e o R.A.M.A. não converte conteúdo entre sistemas.';
+  }
   if (TIPOS_GENERICOS_PACOTE.indexOf(tipo) >= 0) return '';
   if (tipo === 'ritual') {
     return SISTEMAS_COM_RITUAIS.indexOf(sistema) >= 0 ? '' :

@@ -897,6 +897,15 @@
         : JSON.parse(JSON.stringify(d.ordem));
     }
 
+    /* Modelo Universal do Homebrew (v9.7): campos, ações e os usos já
+       gastos. Só existe no item que veio de lá; sem o módulo na página, o
+       bloco é PRESERVADO como veio. */
+    if (d.universal && typeof d.universal === "object") {
+      base.universal = global.RAMAHomebrewAdaptadores
+        ? global.RAMAHomebrewAdaptadores.normalizarUniversal(d.universal)
+        : JSON.parse(JSON.stringify(d.universal));
+    }
+
     if (base.tipo === "mochila") {
       base.reducaoPeso = U.peso(d.reducaoPeso);
       return base;

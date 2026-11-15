@@ -247,12 +247,22 @@
          <summary> — então eles só apareciam depois de abrir a arma,
          que é exatamente o contrário do que o comentário ali embaixo
          promete. A `faixa` do recolhível resolve para os dois casos. */
-      faixa: arma
+      faixa: faixaComAcoes(ctx, item, arma
         ? (perfil && perfil.botoesDaArma ? perfil.botoesDaArma(ctx, item) : botoesDeArma(ctx, item))
-        : (perfil && perfil.faixaDoItem ? perfil.faixaDoItem(ctx, item) : null),
+        : (perfil && perfil.faixaDoItem ? perfil.faixaDoItem(ctx, item) : null)),
     });
 
     return caixa;
+  }
+
+  /* v9.7: as ações do Modelo Universal (Homebrew) ficam à vista com o
+     item fechado, ao lado dos botões que a faixa já tinha. Fora do modo
+     edição, como os de arma. */
+  function faixaComAcoes(ctx, item, faixa) {
+    var HF = global.RAMAHomebrewFicha;
+    var acoes = HF && item.universal && !ctx.emEdicao() ? HF.acoesDoItem(ctx, item) : null;
+    if (!acoes) return faixa;
+    return faixa ? el("div.faixa", {}, [faixa, acoes]) : acoes;
   }
 
   /* A linha abaixo do nome: o que se consulta sem abrir o item, como
@@ -319,6 +329,8 @@
         linhas.push(["Defesa", String(item.defesa)]);
       }
     }
+    /* Os campos próprios de um item Universal do Homebrew. */
+    if (global.RAMAHomebrewFicha && item.universal) linhas = linhas.concat(global.RAMAHomebrewFicha.camposDoItem(item));
 
     return el("dl.r-dados", {}, linhas.reduce(function (saida, par) {
       saida.push(el("dt", { texto: par[0] }));

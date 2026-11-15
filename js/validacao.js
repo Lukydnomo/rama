@@ -260,7 +260,8 @@
   function tipoDeExportacao(registro) {
     if (!registro || !registro.tipo) return "homebrew-item";
     if (registro.tipo === "criatura") return "homebrew-criatura";
-    if (registro.tipo === "habilidade") return "homebrew-habilidade";
+    /* v9.7: uma habilidade de sistema (com modelo) também é habilidade. */
+    if (registro.tipo === "habilidade" || (registro.modelo && registro.modelo.grupo === "habilidade")) return "homebrew-habilidade";
     return "homebrew-item";
   }
 
@@ -723,6 +724,16 @@
       return { ok: true, tipo: "homebrew-criatura", dados: criatura };
     }
 
+    /* v9.7: Homebrew por sistema (com `modelo`): volta pelo adaptador, com
+       a mesma validação do editor — sem o normalizador genérico, que
+       apagaria o modelo e o bloco nativo. */
+    if (limpo && limpo.modelo && typeof limpo.modelo === "object" && (pacote.tipo === "homebrew-item" || pacote.tipo === "homebrew-habilidade")) {
+      if (!global.RAMAHomebrewAdaptadores) return ruim("tipo", "Este arquivo é uma criação de sistema. Importe-o pela tela Homebrew.");
+      var nativo = global.RAMAHomebrewAdaptadores.deArquivo(limpo);
+      if (!nativo.ok) return ruim("invalido", nativo.erro);
+      return { ok: true, tipo: pacote.tipo, dados: nativo.registro };
+    }
+
     if (pacote.tipo === "homebrew-habilidade") {
       var hab = global.RAMAHabilidades.normalizarHabilidade(limpo);
       if (!hab) return ruim("invalido", "A habilidade importada não pôde ser lida.");
@@ -1078,6 +1089,8 @@
     homebrew: homebrew,
     importado: importado,
     exportar: exportar,
+    /* v9.7: faltava — o Exportar da página Homebrew chama esta função. */
+    tipoDeExportacao: tipoDeExportacao,
     TIPOS_IMPORTACAO: TIPOS_IMPORTACAO,
     CAMPOS_PROIBIDOS: CAMPOS_PROIBIDOS,
   };

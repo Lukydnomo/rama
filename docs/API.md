@@ -1,5 +1,20 @@
 # A API
 
+## Homebrew por sistema — v9.7
+
+- `salvar_homebrew`: um registro com `modelo` (`{ versao, sistema, grupo:
+  item|habilidade, subtipo, def }`) passa a ser conferido. O sistema precisa
+  existir em `SISTEMAS_DO_RAMA`, o subtipo precisa ser `[a-z0-9]{1,30}`,
+  `def` precisa ser um objeto, e `dados.sistema` precisa ser igual a
+  `modelo.sistema`. Senão, a resposta é `dados_invalidos` com `detalhe`.
+- A coluna `tipo` fica restrita ao que o sistema aceita: Ordem e Universal
+  usam `item`, `arma`, `armadura`, `mochila`, `habilidade` ou `ritual`; os
+  outros sistemas usam `item` ou `habilidade`.
+- Registro sem `modelo`: como antes.
+- Pacotes: um registro com `modelo` só entra em pacote do próprio sistema,
+  e Universal entra em qualquer um (`incompativel` com o motivo). As rotas
+  não mudaram.
+
 ## Pacotes de Homebrew — v9.6
 
 Rotas de `HomebrewPacotes.gs`. Todas exigem sessão. Detalhes em

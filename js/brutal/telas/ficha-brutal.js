@@ -609,6 +609,11 @@
       UI().painel("Apegos", el("div.pilha", {}, [
         el("p.t-mini", { texto: "Usá-los rende Pontos de Tensão (p. 7). O uso é no tabuleiro (Detalhes) ou aqui no Thriller; aqui você escreve quem eles são." }),
         texto("Item Icônico", b.apegos.item, "nome", 80), texto("Sobre o Item", b.apegos.item, "texto", 600, true),
+        /* v9.7: o item Homebrew de BRUTAL é o Apego "item" (nome e texto). */
+        edita && global.RAMAHomebrewFicha ? global.RAMAHomebrewFicha.botao(ctx, { sistema: "brutal", grupo: "item", aoAdicionarItem: function (obj) {
+          if ((b.apegos.item.nome || b.apegos.item.texto) && !global.confirm("Trocar o Item Icônico \"" + b.apegos.item.nome + "\" por \"" + obj.nome + "\"?")) return false;
+          b.apegos.item = { nome: obj.nome, texto: obj.texto }; ctx.alterou(); if (ctx.redesenhar) ctx.redesenhar();
+        } }) : null,
         texto("Relação Afetiva", b.apegos.relacao, "nome", 80), texto("Sobre a Relação", b.apegos.relacao, "texto", 600, true),
         texto("Desejo Obscuro", b.apegos.desejo, "texto", 600, true),
         el("p.t-mini", { texto: revelado ? "Revelado em " + (b.apegos.desejo.reveladoEm || "").slice(0, 10) + ": não rende mais PT." : "Ainda em segredo." }),

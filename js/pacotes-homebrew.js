@@ -60,6 +60,12 @@
 
   /* { ok, motivo } — o mesmo texto do servidor. */
   function compatibilidade(registro, sistema) {
+    /* v9.7: um registro com modelo de sistema (Homebrew nativo) segue o
+       adaptador — nativo só no sistema dele, Universal em qualquer um. O
+       formato de antes segue a regra abaixo, igual à da v9.6. */
+    var A = global.RAMAHomebrewAdaptadores;
+    var porAdaptador = A ? A.compativelComPacote(registro, sistema) : null;
+    if (porAdaptador) return porAdaptador;
     var t = registro && registro.tipo;
     if (GENERICOS.indexOf(t) >= 0) return { ok: true, motivo: "" };
     if (t === "ritual") {
