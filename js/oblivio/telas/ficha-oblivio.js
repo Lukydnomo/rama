@@ -24,6 +24,7 @@
 
 (function (global) {
   "use strict";
+  var bibliotecaPedida = false;
 
   var U = global.RAMAUtil;
   var el = U.el;
@@ -71,6 +72,17 @@
   }
 
   /* fn(o) → { ok, motivo?, eventos } ; aplicada uma vez por id. */
+  /* v9.19: um Fardo Homebrew entra pela mesa (os do livro vêm da rolagem). */
+  function aplicarFardoHomebrew(ctx, pode) {
+    var hb = C().FARDOS.filter(function (f) { return f.homebrew; });
+    if (!pode || !hb.length) return null;
+    var sel = UI().campo({ rotulo: "Aplicar Fardo Homebrew", tipo: "selecao", opcoes: [{ valor: "", rotulo: "Escolha…" }].concat(hb.map(function (f) { return { valor: f.chave, rotulo: f.nome }; })) });
+    return el("div.editar-grade", {}, [sel, el("button.r-botao.r-botao--mini", { type: "button", texto: "Aplicar", onclick: function () {
+      var k = sel.entrada.value; if (!k) return;
+      operar(ctx, function (b) { return R().aplicarFardo(b, k, function () { return 1; }, {}); });
+    } })]);
+  }
+
   function operar(ctx, fn, opcoes) {
     var op = opcoes || {};
     if (!ctx.podeEditar()) { UI().avisoAtencao("Esta ficha está em modo de leitura."); return { ok: false }; }
@@ -281,7 +293,7 @@
         el("div.oblivio-hab__topo", {}, [
           el("span.oblivio-hab__nome", { texto: cat.nome + param }),
           el("span.r-etiqueta", { texto: { passiva: "Efeito Passivo", regular: "Ação Regular", extra: "Ação Extra", completa: "Ação Completa", "regular+movimento": "Ação Regular + Movimento" }[cat.acao] }),
-          el("span.t-mini", { texto: { principal: "Principal", unica: "Única", geral: "Geral" }[cat.tipo] + " · p. " + cat.pag }),
+          el("span.t-mini", { texto: { principal: "Principal", unica: "Única", geral: "Geral" }[cat.tipo] + (cat.homebrew ? " · Homebrew" : " · p. " + cat.pag) }),
         ]),
         el("p.oblivio-hab__resumo", { texto: cat.resumo }),
         ativa ? el("div.faixa", {}, [
@@ -345,12 +357,14 @@
     var o = ctx.ficha.oblivio;
     var cx = contextoDeJogo(ctx);
     var pode = ctx.podeEditar();
+    /* v9.19: as Mazelas e os Fardos Homebrew da biblioteca entram na lista (uma viagem). */
+    if (global.RAMAOblivioHomebrew && pode && !bibliotecaPedida) { bibliotecaPedida = true; global.RAMAOblivioHomebrew.carregarBiblioteca().then(function (r) { if (r && (r.mazelas.length || r.fardos.length) && ctx.redesenhar) ctx.redesenhar(); }); }
     var mazelas = el("ul.oblivio-mazelas", {}, o.mazelas.map(function (m) {
       var cat = C().mazela[m.chave];
       var detalhe = m.chave === "ferida" ? " — " + m.param.dano + " por rodada" : m.chave === "pegandoFogo" ? " — próximo: " + m.param.proximo : m.chave === "coragemCega" ? " — −" + m.param.reducao + " de Proteção" : m.chave === "semFolego" ? " — " + m.param.turnos + "/" + m.param.maximo + " turnos" : m.chave === "semReacao" ? " — turno " + (m.param.turnos || 0) + "/2" : "";
       return el("li.oblivio-mazela", {}, [
         el("span.oblivio-mazela__nome", { texto: cat.nome + detalhe }),
-        el("p.t-mini", { texto: cat.resumo + " (p. " + cat.pag + ")" }),
+        el("p.t-mini", { texto: cat.resumo + (cat.homebrew ? " (Homebrew)" : " (p. " + cat.pag + ")") }),
         pode ? el("div.faixa", {}, cat.remocao.filter(function (r) { return r.indexOf("teste:") !== 0 && MEIOS_AUTOMATICOS.indexOf(r) < 0; }).map(function (meio) {
           return botaoDoMeio(ctx, m.chave, meio);
         }).concat(cat.remocao.filter(function (r) { return r.indexOf("teste:") === 0; }).map(function (meio) {
@@ -382,7 +396,7 @@
       UI().painel("Fora de Ação e Fardos", [
         el("p", { texto: "Nesta Missão: " + R().ocorrenciasNaMissao(o) + " de 3. Descansar não zera; só concluir a Missão (glossário, p. 121)." }),
         o.morte ? el("p.r-etiqueta.r-etiqueta--aviso", { texto: "Morta: " + o.morte.causa + ". A ficha continua guardada." }) : null,
-        historico, fardos,
+        historico, fardos, aplicarFardoHomebrew(ctx, pode),
         pendFardo.map(function (p) {
           return el("div.faixa", {}, [el("span", { texto: p.texto }), el("button.r-botao.r-botao--mini", { type: "button", texto: p.tipo === "rolarFardo" ? "Rolar Fardo" : "Testar Esforço", onclick: function () {
             if (p.tipo === "rolarFardo") operar(ctx, function (b) { b.escolhasPendentes = b.escolhasPendentes.filter(function (x) { return x.id !== p.id; }); return R().rolarFardo(b, rolador); });

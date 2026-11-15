@@ -639,7 +639,7 @@
     return m;
   }
 
-  global.RAMAOblivioCatalogo = {
+  var CAT = global.RAMAOblivioCatalogo = {
     FONTE: "Oblívio RPG — livro de regras e Ficha de Persona",
     paginaDoPdf: paginaDoPdf,
     ATRIBUTOS: ATRIBUTOS, CRIACAO: CRIACAO, MUTAVEIS: MUTAVEIS, MAXIMO_MUTAVEL: MAXIMO_MUTAVEL,
@@ -659,4 +659,81 @@
     fardo: porChave(FARDOS), motivacao: porChave(MOTIVACOES), atributo: porChave(ATRIBUTOS), mutavel: porChave(MUTAVEIS),
     regiao: porChave(REGIOES), acao: porChave(ACOES), alcance: porChave(ALCANCES), cena: porChave(CENAS),
   };
+
+  /* =================================================================
+     v9.19 — PAPEL, MOTIVAÇÃO, MAZELA e FARDO HOMEBREW (chaves
+     hbop-/hbmo-/hbmz-/hbfd-<id>-<hash>, cópias em o.homebrew). No formato
+     dos do livro, registrados nos MESMOS mapas e listas:
+       Papel      Estresse, cor, resumo, os 6 Conhecimentos da lista, a
+                  Habilidade Principal e até 3 Únicas (nome, tipo de ação
+                  e texto; viram habilidades "<papel>-h0…h3")
+       Motivação  nome e resumo
+       Mazela     nome, resumo e como sai (Bálsamo, Kit de Primeiros
+                  Socorros); o efeito por turno é da mesa
+       Fardo      nome, resumo e se acumula
+     As mecânicas especiais do livro (por chave) não valem para as
+     Homebrew: a ficha registra; a mesa aplica. Puro (o servidor roda).
+     ================================================================= */
+  var PADROES = { papel: /^hbop-[a-z0-9-]{3,30}$/, motivacao: /^hbmo-[a-z0-9-]{3,30}$/, mazela: /^hbmz-[a-z0-9-]{3,30}$/, fardo: /^hbfd-[a-z0-9-]{3,30}$/ };
+  var PREFIXOS = { papel: "hbop-", motivacao: "hbmo-", mazela: "hbmz-", fardo: "hbfd-" };
+  var ACOES_HAB = ["passiva", "regular", "extra", "completa", "regular+movimento"];
+  function hbObj(v) { return v && typeof v === "object" && !Array.isArray(v) ? v : {}; }
+  function hbTx(v, max) { return String(v === undefined || v === null ? "" : v).slice(0, max || 200); }
+  function hbInt(v, min, max, p) { var n = Math.round(Number(v)); return v !== "" && v !== null && v !== undefined && isFinite(n) ? Math.max(min, Math.min(max, n)) : p; }
+  function hbEstavel(v) {
+    if (Array.isArray(v)) return "[" + v.map(hbEstavel).join(",") + "]";
+    if (v && typeof v === "object") return "{" + Object.keys(v).sort().map(function (k) { return JSON.stringify(k) + ":" + hbEstavel(v[k]); }).join(",") + "}";
+    return JSON.stringify(v === undefined ? null : v);
+  }
+  function hbHash(t) { var h = 5381; for (var i = 0; i < t.length; i++) h = ((h << 5) + h + t.charCodeAt(i)) | 0; return (h >>> 0).toString(36).slice(0, 6); }
+  function hbChave(tipo, d) { var sem = Object.assign({}, d); delete sem.chave; return PREFIXOS[tipo] + (String(d.homebrewId || "local").toLowerCase().replace(/[^a-z0-9]/g, "").slice(0, 8) || "local") + "-" + hbHash(hbEstavel(sem)); }
+  function ehHomebrew(tipo, k) { return !!PADROES[tipo] && PADROES[tipo].test(String(k || "")); }
+  function habHomebrew(h0, i) { var h = hbObj(h0); return { nome: hbTx(h.nome, 60).trim() || (i ? "Habilidade Única " + i : "Habilidade Principal"), acao: ACOES_HAB.indexOf(h.acao) >= 0 ? h.acao : "passiva", resumo: hbTx(h.resumo, 600).trim() }; }
+  function normalizarHomebrew(tipo, bruto) {
+    var b = hbObj(bruto), d;
+    var base = { chave: ehHomebrew(tipo, b.chave) ? b.chave : "", homebrew: true, homebrewId: hbTx(b.homebrewId, 80), pag: 0 };
+    if (tipo === "papel") {
+      d = Object.assign(base, {
+        nome: hbTx(b.nome, 40).trim() || "Papel Homebrew", estresse: hbInt(b.estresse, 5, 25, 15),
+        cor: /^#[0-9a-fA-F]{6}$/.test(String(b.cor || "")) ? String(b.cor).toLowerCase() : "#888888", resumo: hbTx(b.resumo, 400).trim(),
+        lista: (Array.isArray(b.lista) ? b.lista : []).map(String).filter(function (k, i, l) { return !!CAT.conhecimento[k] && l.indexOf(k) === i; }).slice(0, 6),
+        habilidadePrincipal: habHomebrew(b.habilidadePrincipal, 0),
+        habilidadesUnicas: (Array.isArray(b.habilidadesUnicas) ? b.habilidadesUnicas : []).slice(0, 3).map(function (h, i) { return habHomebrew(h, i + 1); }),
+      });
+    } else if (tipo === "motivacao") {
+      d = Object.assign(base, { nome: hbTx(b.nome, 40).trim() || "Motivação Homebrew", resumo: hbTx(b.resumo, 300).trim() });
+    } else if (tipo === "mazela") {
+      d = Object.assign(base, { nome: hbTx(b.nome, 40).trim() || "Mazela Homebrew", resumo: hbTx(b.resumo, 600).trim(), processamento: [],
+        remocao: (Array.isArray(b.remocao) ? b.remocao : ["balsamo"]).filter(function (r, i, l) { return ["balsamo", "kitPrimeirosSocorros"].indexOf(r) >= 0 && l.indexOf(r) === i; }) });
+    } else if (tipo === "fardo") {
+      d = Object.assign(base, { nome: hbTx(b.nome, 40).trim() || "Fardo Homebrew", resumo: hbTx(b.resumo, 600).trim(), acumula: b.acumula === true });
+    } else return null;
+    if (!d.chave) d.chave = hbChave(tipo, d);
+    if (tipo === "papel") {
+      d.principal = d.chave + "-h0";
+      d.unicas = d.habilidadesUnicas.map(function (h, i) { return d.chave + "-h" + (i + 1); });
+    }
+    return d;
+  }
+  var MAPA = { papel: ["papel", "PAPEIS"], motivacao: ["motivacao", "MOTIVACOES"], mazela: ["mazela", "MAZELAS"], fardo: ["fardo", "FARDOS"] };
+  function registrarHomebrew(tipo, def) {
+    if (!def || !ehHomebrew(tipo, def.chave)) return null;
+    var m = MAPA[tipo];
+    CAT[m[0]][def.chave] = def;
+    var l = CAT[m[1]], i = l.map(function (x) { return x.chave; }).indexOf(def.chave);
+    if (i >= 0) l[i] = def; else l.push(def);
+    if (tipo === "papel") {
+      [def.habilidadePrincipal].concat(def.habilidadesUnicas).forEach(function (h, j) {
+        var hab = { chave: def.chave + "-h" + j, nome: h.nome, papel: def.chave, tipo: j ? "unica" : "principal", acao: h.acao, pag: 0, resumo: h.resumo, homebrew: true };
+        CAT.habilidade[hab.chave] = hab;
+        var k = CAT.HABILIDADES.map(function (x) { return x.chave; }).indexOf(hab.chave);
+        if (k >= 0) CAT.HABILIDADES[k] = hab; else CAT.HABILIDADES.push(hab);
+      });
+    }
+    return def;
+  }
+  CAT.ehHomebrew = ehHomebrew;
+  CAT.normalizarHomebrew = normalizarHomebrew;
+  CAT.registrarHomebrew = registrarHomebrew;
+  CAT.ACOES_HAB = ACOES_HAB;
 })(typeof window !== "undefined" ? window : globalThis);

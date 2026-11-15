@@ -178,9 +178,37 @@
     return item;
   }
 
+  /* v9.19: Papel, Motivação, Mazela e Fardo Homebrew vêm com a CÓPIA
+     guardada na ficha (ou, escolhidos de uma lista da biblioteca, do
+     catálogo). Sem cópia e sem catálogo, a escolha some. */
+  var CAMPOS_HB = [["papel", "papeis"], ["motivacao", "motivacoes"], ["mazela", "mazelas"], ["fardo", "fardos"]];
+  function homebrewDaFicha(b, o) {
+    if (!C.ehHomebrew) return;
+    var hb = b.homebrew && typeof b.homebrew === "object" ? b.homebrew : {}, saida = {};
+    var usados = {
+      papel: [b.papel],
+      motivacao: [(b.motivacao || {}).chave],
+      mazela: (Array.isArray(b.mazelas) ? b.mazelas : []).map(function (m) { return m && m.chave; }),
+      fardo: (Array.isArray(b.fardos) ? b.fardos : []).map(function (f) { return f && f.chave; }),
+    };
+    CAMPOS_HB.forEach(function (c) {
+      var tipo = c[0], campo = c[1];
+      usados[tipo].filter(function (k, i, l) { return C.ehHomebrew(tipo, k) && l.indexOf(k) === i; }).forEach(function (k) {
+        var cp = (hb[campo] || {})[k];
+        var noCat = C[tipo][k];
+        var def = cp && typeof cp === "object" ? C.normalizarHomebrew(tipo, Object.assign({}, cp, { chave: k })) : (noCat && noCat.homebrew ? copiar(noCat) : null);
+        if (!def) return;
+        C.registrarHomebrew(tipo, def);
+        (saida[campo] = saida[campo] || {})[k] = def;
+      });
+    });
+    if (Object.keys(saida).length) o.homebrew = Object.assign({ versao: 1 }, saida);
+  }
+
   function normalizar(bruto) {
     var b = bruto && typeof bruto === "object" ? bruto : {};
     var o = fichaVazia();
+    homebrewDaFicha(b, o);
     o.papel = C.papel[b.papel] ? b.papel : "";
     var atr = b.atributos || {};
     Object.keys(o.atributos).forEach(function (k) { o.atributos[k] = inteiro(atr[k], 0, 99, 0); });

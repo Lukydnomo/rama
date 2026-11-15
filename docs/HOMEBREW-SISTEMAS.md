@@ -275,7 +275,7 @@ nova, e o modelo vai no `dadosJson` de sempre.
 - **T20**: ~~Raça~~ (v9.10.0), ~~Origem e Divindade~~ (v9.11.0) e ~~Classe~~
   (v9.12.0), selecionáveis na criação e na progressão.
 - **Ordem II**: Perfil e Ocupação.
-- **Oblívio**: Papel, Motivação, Mazela e Fardo.
+- **Oblívio**: ~~Papel, Motivação, Mazela e Fardo~~ (v9.19.0).
 - **Vampiro**: Clã, Predador, Disciplina, Vantagem, Defeito e Ficha de
   Conhecimento.
 - **Goblins**: ~~Ocupação, Descritor~~ (v9.17.0) e opções das variantes.
@@ -1595,6 +1595,118 @@ nova da implantação. **`setupRama()` não é necessário.**
 - `js/brutal/catalogo.js`, `regras.js`, `mesa.js`;
 - `js/brutal/telas/brutal-criar.js`, `brutal-comum.js`,
   `ficha-brutal.js`, `campanha-brutal.js`;
+- `js/homebrew-adaptadores.js`, `js/pacotes-homebrew.js`,
+  `js/paginas/homebrew-editor.js`, `js/paginas/homebrew.js`;
+- `js/versao.js`;
+- `homebrew/index.html`, `ficha/index.html`, `personagens/index.html`.
+
+## v9.19.0 — Etapa 2: Papel, Motivação, Mazela e Fardo Homebrew de Oblívio
+
+### Os editores
+
+**Homebrew → + Criar → Oblívio:**
+- **Papel**, em três etapas:
+  - **Identidade:** nome, resumo, cor, limite de Estresse (5 a 25, +
+    Carne) e os seis Conhecimentos de onde saem as especializações;
+  - **Habilidades:** a **Principal** e até 3 **Únicas**, cada uma com
+    nome, tipo de ação (passiva, Regular, Extra, Completa, Regular +
+    Movimento) e texto;
+  - **Revisão.**
+- **Motivação:** nome e resumo.
+- **Mazela:** nome, texto e como sai (Bálsamo, Kit de Primeiros
+  Socorros).
+- **Fardo:** nome, texto e se acumula.
+
+### No motor
+
+As definições entram nos **mesmos mapas e listas** que o motor e as
+telas leem (`papel`, `PAPEIS`, `habilidade`, `HABILIDADES`, `motivacao`,
+`MOTIVACOES`, `mazela`, `MAZELAS`, `fardo`, `FARDOS`), a partir da cópia
+em `oblivio.homebrew`:
+- **Papel:**
+  - o limite de Estresse entra na conta;
+  - a lista orienta as especializações;
+  - a Habilidade Principal entra ao concluir a criação, como a dos do
+    livro;
+  - as Únicas aparecem para aprender (`<papel>-h1…h3`).
+- **Motivação:** aparece na criação, depois das do livro, marcada
+  "Homebrew". A rolagem de 1d6 continua só com as do livro.
+- **Mazela:** aparece em "Aplicar mazela" na ficha, que carrega a
+  biblioteca uma vez. Sai pelos meios marcados; o efeito por turno é da
+  mesa.
+- **Fardo:** a ficha ganhou "**Aplicar Fardo Homebrew**", pela mesma
+  função do motor (`aplicarFardo`). A rolagem de Fardo continua com os
+  seis do livro.
+
+As mecânicas especiais que o livro tem por chave (Voracidade, Ferida,
+Mal das Pernas…) não valem para as Homebrew: a ficha registra e a mesa
+aplica.
+
+### Cópia, versão e servidor
+
+- chaves `hbop-…`, `hbmo-…`, `hbmz-…`, `hbfd-…`, versionadas. As
+  Habilidades do Papel usam `<papel>-h0…h3`; atualizar a versão troca
+  também essas chaves;
+- sem cópia e sem catálogo, a escolha some;
+- o servidor roda o mesmo motor (`catalogo.js` e `regras.js` em
+  `Oblivio.gs`, por `testes/gerar-oblivio-gs.js`);
+- `RAMAOblivioHomebrew` tem `versoesNovas` e `atualizarVersao`.
+
+### Servidor e pacotes
+
+- `TIPOS_HOMEBREW` ganhou `papel`, `motivacao`, `mazela` e `fardo`; os
+  estruturais de Oblívio são os quatro.
+- Os pacotes ganharam os quatro grupos.
+
+### Validação da v9.19.0
+
+**Automática.** O novo `testes/executar-homebrew-oblivio.js` tem 20
+verificações:
+- **Definições:**
+  - chave, Estresse e cor do Papel;
+  - Conhecimentos válidos (até seis);
+  - Principal e Únicas;
+  - chave estável;
+  - Motivação, Mazela (só os meios que existem) e Fardo.
+- **Ficha:**
+  - as cópias ficam;
+  - o limite de Estresse 12 + Carne 3;
+  - concluir a criação dá a Principal;
+  - as Únicas na lista;
+  - a Principal fica ao normalizar de novo;
+  - a Mazela aplicada, com a cópia;
+  - o Fardo aplicado sem rolagem, com a cópia;
+  - a rolagem com os seis do livro;
+  - some sem cópia nem catálogo.
+- **Biblioteca:** guardar, voltar com a mesma chave, destino, resumo,
+  arquivo, pacote e a versão nova do Papel (com a chave da Principal e o
+  limite 20 + 3).
+
+`testes/pacotes-backend.js`: o Papel de Oblívio é aceito.
+
+**Na interface** (servidor local, conta sintética):
+- Criei o Papel **Quem Vigia** pelo editor (Estresse 15, seis
+  Conhecimentos, Principal Olho Aberto, Única Sinal de Ação Extra). A
+  revisão mostrou tudo.
+- Na criação de Persona, ele apareceu depois dos cinco Papéis do livro,
+  com "Homebrew". Escolhido, o passo Corpo mostrou "Quem Vigia 15 + Carne
+  0 = 15".
+- **Correções encontradas:**
+  - os ids do editor do Papel não batiam com a moldura (o foco no nome
+    ao salvar sem nome);
+  - a Motivação Homebrew apareceria como "undefined —" na lista; agora
+    mostra "Homebrew —".
+
+### Publicar a v9.19.0
+
+**Servidor:** troque **`Codigo.gs`** e **`Oblivio.gs`**, e crie uma versão
+nova da implantação. **`setupRama()` não é necessário.**
+
+**Site:**
+- `js/oblivio/homebrew-oblivio.js` e `js/paginas/homebrew-oblivio.js`
+  (novos);
+- `js/oblivio/catalogo.js`, `js/oblivio/regras.js`;
+- `js/oblivio/telas/oblivio-criar.js`, `ficha-oblivio.js`;
 - `js/homebrew-adaptadores.js`, `js/pacotes-homebrew.js`,
   `js/paginas/homebrew-editor.js`, `js/paginas/homebrew.js`;
 - `js/versao.js`;

@@ -37,6 +37,10 @@
     { chave: "descritor", rotulo: "Descritores", um: "Descritor" },
     { chave: "arquetipo", rotulo: "Arquétipos", um: "Arquétipo" },
     { chave: "estilo", rotulo: "Estilos", um: "Estilo" },
+    { chave: "papel", rotulo: "Papéis", um: "Papel" },
+    { chave: "motivacao", rotulo: "Motivações", um: "Motivação" },
+    { chave: "mazela", rotulo: "Mazelas", um: "Mazela" },
+    { chave: "fardo", rotulo: "Fardos", um: "Fardo" },
   ];
   var GENERICOS = ["item", "arma", "armadura", "mochila", "habilidade"];
   var NATIVOS = ["oblivio", "vampiro", "goblins", "tormenta20", "ordem2"];

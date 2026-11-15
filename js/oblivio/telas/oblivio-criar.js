@@ -131,7 +131,7 @@
           el("span.oblivio-papel__dado", { texto: "Limite de Estresse: " + p.estresse + " + Carne" }),
           el("span.oblivio-papel__dado", { texto: "Especializações: " + p.lista.map(function (k) { return C().conhecimento[k].nome; }).join(", ") }),
           el("span.oblivio-papel__dado", { texto: "Habilidade Principal: " + hab.nome }),
-          el("span.t-mini", { texto: "p. " + p.pag }),
+          el("span.t-mini", { texto: p.homebrew ? "Homebrew" : "p. " + p.pag }),
         ]);
       });
       return bloco("Papel", "Papéis repetidos no grupo são permitidos — o livro só recomenda variedade (p. 17).", [
@@ -274,7 +274,7 @@
       var grupo = "obl-mot-" + U.uuid().slice(0, 6);
       var opcoes = C().MOTIVACOES.map(function (m) {
         return el("label.r-marca", {}, [el("input", { type: "radio", name: grupo, checked: o.motivacao.chave === m.chave, onchange: function () { o.motivacao.chave = m.chave; desenhar(); } }),
-          el("span", { texto: m.d6 + " — " + m.nome + ": " + m.resumo })]);
+          el("span", { texto: (m.d6 ? m.d6 + " — " : "Homebrew — ") + m.nome + ": " + m.resumo })]);
       });
       var rolar = el("button.r-botao.r-botao--mini", { type: "button", texto: "Rolar 1D6",
         onclick: function () { var d = global.RAMADados.rolar("1d6").rolagens[0]; o.motivacao.chave = C().MOTIVACOES[d - 1].chave; UI().avisoOk("1D6: " + d + " — " + C().MOTIVACOES[d - 1].nome); desenhar(); } });
@@ -350,6 +350,8 @@
     var bs = U.$$(".r-modal__rodape .r-botao", m.janela);
     botaoVoltar = bs[0]; botaoSeguir = bs[1];
     desenhar();
+    /* v9.19: Papéis e Motivações Homebrew da conta (uma viagem). */
+    if (global.RAMAOblivioHomebrew) global.RAMAOblivioHomebrew.carregarBiblioteca().then(function (r) { if (r && (r.papeis.length || r.motivacoes.length)) desenhar(); });
     return m;
   }
 

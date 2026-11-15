@@ -225,6 +225,8 @@ export function testarPacotesBackend({ t, preparar, novaConta, comoFn }) {
   t.ok("Ocupação de Goblins (v9.17): coluna ocupacao", ocupGob.ok && A({ acao: "ler_homebrew", homebrewId: ocupGob.dados.id }).dados.tipo === "ocupacao");
   const arqBrutal = A({ acao: "salvar_homebrew", dados: { tipo: "item", nome: "Vlogueira", modelo: Object.assign(modelo("brutal", "estrutural", "arquetipo"), { def: { estilos: ["ligeiro", "potente"] } }) } });
   t.ok("Arquétipo de BRUTAL (v9.18): coluna arquetipo", arqBrutal.ok && A({ acao: "ler_homebrew", homebrewId: arqBrutal.dados.id }).dados.tipo === "arquetipo");
+  const papelObl = A({ acao: "salvar_homebrew", dados: { tipo: "item", nome: "Quem Vigia", modelo: Object.assign(modelo("oblivio", "estrutural", "papel"), { def: { estresse: 15 } }) } });
+  t.ok("Papel de Oblívio (v9.19): coluna papel", papelObl.ok && A({ acao: "ler_homebrew", homebrewId: papelObl.dados.id }).dados.tipo === "papel");
   t.recusa("Ocupação em Vampiro é recusada", A({ acao: "salvar_homebrew", dados: { tipo: "item", nome: "X", modelo: modelo("vampiro", "estrutural", "ocupacao") } }), "dados_invalidos");
   t.ok("listar com tipos [classe, elemento] devolve os três (classe de Ordem, de T20 e o elemento)", A({ acao: "listar_homebrew", tipos: ["classe", "elemento"] }).dados.length === 3);
   const pOrdemEst = salvar(A, { dados: dados("Livro do Vidro", "ordem"), conteudo: { adicionar: [vidro.dados.id, classeHb.dados.id] } });

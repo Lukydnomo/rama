@@ -285,6 +285,10 @@
       { chave: "item", rotulo: "Item", ajuda: "Equipamento sobre uma base do catálogo (espaços, Durabilidade, Dano, Proteção) ou objeto narrativo." },
       { chave: "habilidade", rotulo: "Habilidade", ajuda: "Requisitos, custo, alvo e limite — por enquanto para consulta e anotações." },
       { chave: "criatura", rotulo: "Ameaça", ajuda: "Grau, Dano, Proteção, Velocidade, Estresse e Regiões." },
+      { chave: "papel", rotulo: "Papel", ajuda: "Estresse, cor, os seis Conhecimentos, a Habilidade Principal e as Únicas. Entra na criação de Personas." },
+      { chave: "motivacao", rotulo: "Motivação", ajuda: "Nome e resumo. Entra na criação de Personas." },
+      { chave: "mazela", rotulo: "Mazela", ajuda: "Nome, texto e como sai (Bálsamo, Kit). Entra em \u201cAplicar mazela\u201d na ficha." },
+      { chave: "fardo", rotulo: "Fardo", ajuda: "Nome, texto e se acumula. A mesa aplica na ficha." },
     ],
     item: {
       subtipos: [
@@ -363,6 +367,8 @@
     { chave: "trilha", rotulo: "Trilha", campos: [] },
   ] };
 
+  /* v9.19: Papel, Motivação, Mazela e Fardo de Oblívio (js/paginas/homebrew-oblivio.js). */
+  OBLIVIO.estrutural = { subtipos: ["papel", "motivacao", "mazela", "fardo"].map(function (k) { return { chave: k, rotulo: ({ papel: "Papel", motivacao: "Motivação", mazela: "Mazela", fardo: "Fardo" })[k], campos: [] }; }) };
   /* v9.17: Ocupação e Descritor de Malditos Goblins (js/paginas/homebrew-goblins.js). */
   GOBLINS.estrutural = { subtipos: [{ chave: "ocupacao", rotulo: "Ocupação", campos: [] }, { chave: "descritor", rotulo: "Descritor", campos: [] }] };
   /* Habilidade de Ordem e Universal: o modelo do RAMAHabilidades (o
@@ -394,7 +400,7 @@
   function grupoDe(r) {
     var t = obj(r).tipo;
     if (obj(r).modelo && obj(r).modelo.grupo) return obj(r).modelo.grupo;
-    if (t === "classe" || t === "elemento" || t === "origem" || t === "trilha" || t === "raca" || t === "divindade" || t === "ocupacao" || t === "descritor" || t === "arquetipo" || t === "estilo") return "estrutural";
+    if (t === "classe" || t === "elemento" || t === "origem" || t === "trilha" || t === "raca" || t === "divindade" || t === "ocupacao" || t === "descritor" || t === "arquetipo" || t === "estilo" || t === "papel" || t === "motivacao" || t === "mazela" || t === "fardo") return "estrutural";
     if (t === "criatura") return "criatura";
     if (t === "habilidade" || t === "ritual") return "habilidade";
     return "item";
@@ -461,7 +467,7 @@
         v.chave = chaveAntiga && ELx && ELx.ehHomebrew(chaveAntiga) ? chaveAntiga : (ELx ? ELx.chaveNova(nome, r.id || "") : "");
       }
       if (subtipo === "classe" && r.classe) reg.modelo.def = r.classe;
-      if (["origem", "trilha", "raca", "divindade", "classe", "ocupacao", "descritor", "arquetipo", "estilo"].indexOf(subtipo) >= 0 && r.def) reg.modelo.def = r.def;
+      if (["origem", "trilha", "raca", "divindade", "classe", "ocupacao", "descritor", "arquetipo", "estilo", "papel", "motivacao", "mazela", "fardo"].indexOf(subtipo) >= 0 && r.def) reg.modelo.def = r.def;
     }
     if (r.universal && sistema === "universal") reg.universal = normalizarUniversal(r.universal);
     if (r.id) reg.id = r.id;
@@ -558,6 +564,7 @@
     if (g === "estrutural") {
       if (s !== destino) return { modo: "incompativel", texto: "É de " + nomeDoSistema(s) + "." };
       var stE = subtipoDe(r);
+      if (s === "oblivio") return { modo: "nativo", texto: ({ papel: "Escolhido na criação de Personas, com a Habilidade Principal; a cópia fica na ficha.", motivacao: "Escolhida na criação de Personas, depois das do livro; a cópia fica na ficha.", mazela: "Aparece em \u201cAplicar mazela\u201d na ficha; a cópia fica na ficha.", fardo: "A mesa aplica na ficha (\u201cAplicar Fardo Homebrew\u201d); a cópia fica na ficha." })[stE] };
       if (s === "brutal") return { modo: "nativo", texto: stE === "arquetipo" ? "Escolhido na criação de Sobreviventes e na troca de Arquétipo; a mesa recebe a cópia pelo resumo da ficha." : "Aparece no editor de Arquétipo e nas listas de Estilo da ficha e da mesa." };
       if (s === "goblins") return { modo: "nativo", texto: stE === "ocupacao" ? "Escolhida na criação de goblins (e como ocupação épica), com a cópia guardada na ficha." : "Escolhido na criação de goblins, depois dos do livro, com a cópia guardada na ficha." };
       if (s === "tormenta20") return { modo: "nativo", texto: ({
@@ -609,6 +616,7 @@
     var p = [rotuloDoSubtipo(r)];
     if (s === "tormenta20" && st === "arma") p.push(d.dano + " " + (d.margem && d.margem < 20 ? d.margem + "/" : "") + "x" + (d.mult || 2));
     if (s === "tormenta20" && (st === "armadura" || st === "escudo")) p.push("Defesa +" + (d.defesa || 0));
+    if (s === "oblivio" && st === "papel" && d.estresse) p.push("Estresse " + d.estresse + " + Carne · " + (1 + (d.habilidadesUnicas || []).length) + " habilidades");
     if (s === "brutal" && st === "arquetipo" && Array.isArray(d.estilos)) p.push("Iniciativa " + (d.iniciativa || "?") + "º · " + d.estilos.map(function (k) { var B = global.RAMABrutalCatalogo; return B && B.ESTILOS[k] ? B.ESTILOS[k].nome : k; }).join(" e "));
     if (s === "goblins" && (st === "ocupacao" || st === "descritor") && global.RAMAGoblinsHomebrew) p.push(global.RAMAGoblinsHomebrew.textoMods(d.mod) || (d.escolha ? "+1 à escolha" : "sem modificador"));
     if (s === "goblins" && st === "arma") p.push("bônus +" + (d.bonus || 0));
@@ -810,6 +818,12 @@
       defImportada = RAi.normalizarRacaHomebrew(Object.assign({}, m.def, { id: "", nome: x.nome }));
       ["id", "homebrewId", "homebrew", "fonte", "pagina", "nome", "descricao"].forEach(function (k) { delete defImportada[k]; });
       defImportada.habilidades = defImportada.habilidades.filter(function (h) { return h.id !== "corpo"; });
+    }
+    /* Papel, Motivação, Mazela e Fardo de Oblívio (v9.19). */
+    var OC = global.RAMAOblivioCatalogo;
+    if (g === "estrutural" && m.sistema === "oblivio" && OC && OC.normalizarHomebrew && ["papel", "motivacao", "mazela", "fardo"].indexOf(m.subtipo) >= 0) {
+      defImportada = OC.normalizarHomebrew(m.subtipo, Object.assign({}, m.def, { chave: "", nome: x.nome }));
+      ["chave", "homebrewId", "homebrew", "nome", "pag", "principal", "unicas", "processamento"].forEach(function (k) { delete defImportada[k]; });
     }
     /* Arquétipo e Estilo de BRUTAL (v9.18). */
     var BC = global.RAMABrutalCatalogo;

@@ -1,5 +1,13 @@
 # O banco
 
+## Papel, Motivação, Mazela e Fardo Homebrew de Oblívio — v9.19
+
+Nenhuma aba nova. No `HOMEBREW`, a coluna `tipo` aceita `papel`,
+`motivacao`, `mazela` e `fardo`. Na ficha de Oblívio, `oblivio.homebrew`
+guarda as cópias (`papeis`, `motivacoes`, `mazelas`, `fardos`); `papel`,
+`motivacao.chave`, `mazelas[].chave`, `fardos[].chave` e as Habilidades
+`<papel>-h…` aceitam essas chaves. Opcional.
+
 ## Arquétipo e Estilo Homebrew de BRUTAL — v9.18
 
 Nenhuma aba nova. No `HOMEBREW`, a coluna `tipo` aceita `arquetipo` e

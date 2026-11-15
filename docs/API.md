@@ -1,5 +1,11 @@
 # A API
 
+## Papel, Motivação, Mazela e Fardo Homebrew de Oblívio — v9.19
+
+- `salvar_homebrew`: o grupo `estrutural` de `oblivio` aceita `papel`,
+  `motivacao`, `mazela` e `fardo`.
+- O motor do servidor mantém as cópias em `oblivio.homebrew`.
+
 ## Arquétipo e Estilo Homebrew de BRUTAL — v9.18
 
 - `salvar_homebrew`: o grupo `estrutural` de `brutal` aceita `arquetipo` e

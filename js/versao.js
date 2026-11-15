@@ -118,6 +118,19 @@
 
   var CHANGELOG = [
     {
+      versao: "9.19.0",
+      codinome: "VIGIA",
+      data: "15/11/2026",
+      mudancas: {
+        "Adicionado": [
+          "Papel Homebrew de Oblívio: limite de Estresse, cor, os seis Conhecimentos, a Habilidade Principal e até três Únicas (tipo de ação e texto). Aparece na criação de Personas; a Principal entra com o Papel.",
+          "Motivação, Mazela e Fardo Homebrew de Oblívio: a Motivação na criação, a Mazela em \u201cAplicar mazela\u201d e o Fardo em \u201cAplicar Fardo Homebrew\u201d, na ficha.",
+          "A ficha guarda a própria cópia: mudar a biblioteca não muda uma Persona em jogo.",
+        ],
+        "Técnico": ["Novos js/oblivio/homebrew-oblivio.js e js/paginas/homebrew-oblivio.js. O catálogo de Oblívio ganhou normalizarHomebrew/registrarHomebrew (chaves hbop-/hbmo-/hbmz-/hbfd- versionadas; as Habilidades do Papel viram <papel>-h0…h3) nos mesmos mapas e listas; a ficha guarda as cópias em oblivio.homebrew. Servidor: tipos papel, motivacao, mazela e fardo (só Oblívio). Novo testes/executar-homebrew-oblivio.js (20 verificações)."],
+      },
+    },
+    {
       versao: "9.18.0",
       codinome: "VLOGUEIRA",
       data: "15/11/2026",
