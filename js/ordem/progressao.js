@@ -850,8 +850,27 @@
   /* Registra uma decisão. Trocar a escolha de uma vaga reaproveita o id
      do registro: para a sincronização é o mesmo registro mudando, e não
      um apagado e outro criado. */
+  /* v9.25: um elemento Homebrew de Ordem (registrado ou referência
+     pendente: "hbe-…"). */
+  function elementoHomebrew(k) {
+    var EL = global.RAMAOrdemElementos;
+    return !!(EL && EL.ehHomebrew(k));
+  }
+  /* Os elementos Homebrew que uma escolha usa ganham a cópia na ficha
+     (ordem.homebrew.elementos), como a afinidade. */
+  function guardarElementosDaEscolha(ordem, opcoes) {
+    var EL = global.RAMAOrdemElementos, HO = global.RAMAOrdemHomebrew;
+    if (!EL || !HO || !HO.guardarNaFicha) return;
+    (function andar(v, prof) {
+      if (prof > 8 || v === null || v === undefined) return;
+      if (typeof v === "string") { if (EL.ehHomebrew(v) && EL.def(v)) HO.guardarNaFicha(ordem, "elemento", EL.def(v)); return; }
+      if (typeof v === "object") Object.keys(v).forEach(function (k) { andar(v[k], prof + 1); });
+    })(opcoes, 0);
+  }
+
   function registrar(ordem, v, candidato) {
     if (!ordem.escolhas) ordem.escolhas = [];
+    guardarElementosDaEscolha(ordem, (candidato || {}).opcoes);
     var c = candidato || {};
     var existente = ordem.escolhas.filter(function (r) { return r.etapa === v.id; })[0];
 
@@ -1509,7 +1528,14 @@
           break;
         case "elemento": {
           var validos = op.comMedo ? ELEMENTOS_PODER.concat(["medo"]) : ELEMENTOS_PODER;
-          if (validos.indexOf(valor) < 0) { saida.problemas.push(op.rotulo + ": elemento inválido."); break; }
+          /* v9.25: um elemento Homebrew de Ordem só onde a regra é
+             genérica (op.aceitaHomebrew). Onde o livro dá um efeito por
+             elemento (Grão-Mestre, Ser Amaldiçoado…), só os oficiais. */
+          var hbOk = op.aceitaHomebrew && elementoHomebrew(valor);
+          if (validos.indexOf(valor) < 0 && !hbOk) {
+            saida.problemas.push(op.rotulo + (elementoHomebrew(valor) ? ": este poder tem efeitos só para os elementos do livro (um elemento Homebrew não herda nenhum)." : ": elemento inválido."));
+            break;
+          }
 
           /* "Este poder conta como um poder do elemento do ritual
              escolhido" (Aprender Ritual, OPRPG p.114). Quando o ritual
@@ -3145,9 +3171,11 @@
       ritualId: ritualId,
       nome: String(bruto.nome || "").slice(0, 120),
       circulo: circulo >= 1 && circulo <= 4 ? circulo : 0,
-      elemento: ELEMENTOS_PODER.concat(["medo"]).indexOf(bruto.elemento) >= 0 ? bruto.elemento : "",
+      /* v9.25: o ritual de um elemento Homebrew guarda o elemento dele
+         (Aprender Ritual conta como poder desse elemento). */
+      elemento: ELEMENTOS_PODER.concat(["medo"]).indexOf(bruto.elemento) >= 0 || elementoHomebrew(bruto.elemento) ? bruto.elemento : "",
       elementos: Array.isArray(bruto.elementos) && bruto.todosOsElementos === true
-        ? bruto.elementos.filter(function (k) { return ELEMENTOS_PODER.indexOf(k) >= 0; }).slice(0, 4) : [],
+        ? bruto.elementos.filter(function (k) { return ELEMENTOS_PODER.indexOf(k) >= 0 || elementoHomebrew(k); }).slice(0, 4) : [],
       todosOsElementos: bruto.todosOsElementos === true && Array.isArray(bruto.elementos) && bruto.elementos.length > 1,
       degrau: degrau >= 1 && degrau <= 40 ? degrau : 0,
       fonte: CHAVES_DE_FONTE[bruto.fonte] ? bruto.fonte : "",
@@ -3650,6 +3678,8 @@
 
     ordem.escolhas = copia.escolhas;
     ordem.registrosDeRitual = copia.registrosDeRitual;
+    /* v9.25: a cópia de um elemento Homebrew escolhido vem junto. */
+    if (copia.homebrew) ordem.homebrew = copia.homebrew;
     entram.forEach(function (r) {
       if (!lista.some(function (x) { return x && x.id === r.id; })) lista.push(r);
     });

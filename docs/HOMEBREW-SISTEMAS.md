@@ -2166,3 +2166,123 @@ Continuam pendentes:
   maldições;
 - detalhes por sistema, como a escolha de poder geral dentro de uma
   habilidade de raça em T20 e a Ficha de Conhecimento em Vampiro.
+
+## v9.25.0 — Ordem I: elemento Homebrew em poderes, itens e maldições
+
+O elemento Homebrew de Ordem (v9.8) já valia em rituais, criaturas,
+itens paranormais e afinidade. Agora vale também nos poderes e nas
+escolhas de elemento de itens e maldições.
+
+O critério é o da especificação: separar **o elemento que o campo
+aceita** do **elemento para o qual uma regra do livro dá efeito**.
+
+### Poderes
+
+**Aceitam o elemento Homebrew** os poderes cuja regra serve a qualquer
+elemento:
+
+| Poder | Por que é genérico |
+|---|---|
+| Especialista em Elemento | +2 na DT dos rituais do elemento |
+| Mestre em Elemento | –1 PE nos rituais do elemento |
+| Acostumado à Maldição de Elemento | itens amaldiçoados do elemento |
+| Aprender Ritual | conta como poder do elemento do ritual; um ritual de Vidro dá Vidro |
+| Resistir a Elemento | resistência 10 ao dano do elemento |
+| Cicatrizado | –1 dado contra o perigo do elemento |
+
+**Continuam só com os elementos do livro** os poderes que dão um efeito
+por elemento oficial:
+- Dominador de Elemento (usa a opressão do livro);
+- Grão-Mestre em Elemento (um efeito para cada elemento);
+- Ser Amaldiçoado, Ser Experimentado e Ser Escarificado (efeitos e
+  etapas por elemento).
+
+Escolher um elemento Homebrew num desses dá o motivo: "este poder tem
+efeitos só para os elementos do livro (um elemento Homebrew não herda
+nenhum)". Um elemento Homebrew também não ganha a linha "Afinidade" dos
+poderes: isso continua só para os oficiais.
+
+A janela de escolha mostra o elemento como "Vidro (Homebrew)", com a
+descrição dele e "Sem efeitos de elemento do livro". A janela consulta a
+biblioteca uma vez, para mostrar também os elementos que ainda não estão
+na ficha. Escolher grava a **cópia** do elemento em
+`ordem.homebrew.elementos`.
+
+### Itens e maldições
+
+As escolhas de elemento dos itens do catálogo são todas genéricas, e
+agora oferecem os elementos Homebrew:
+- componentes ritualísticos;
+- catalisadores;
+- amarras;
+- scanner;
+- amuleto sinalizador;
+- as maldições Antielemento (arma letal contra o elemento) e Proteção
+  elemental (resistência contra o elemento).
+
+O item e a maldição levam a cópia do elemento (`elementosHomebrew`). A
+biblioteca de itens consulta a biblioteca Homebrew uma vez, ao abrir.
+
+Continuam só dos elementos do livro:
+- o **preço da maldição** (OPRPG p. 145);
+- a **opressão** entre maldições no mesmo item.
+
+Uma escolha de item pode ser marcada `soOficiais` para recusar os
+Homebrew.
+
+### Correção
+
+A confirmação de uma escolha da Progressão (`confirmarAquisicao`)
+trabalha numa cópia da ficha. Ela trazia de volta só as escolhas e os
+registros de ritual, e não as cópias Homebrew que a escolha tinha posto
+na ficha. Agora traz.
+
+### Validação da v9.25.0
+
+**Automática.** `testes/executar-homebrew-ordem.js` ganhou 14
+verificações (agora 117):
+- Especialista em Elemento aceita Vidro;
+- Dominador de Elemento recusa Vidro, com o motivo;
+- texto que não é elemento continua inválido;
+- só os seis poderes genéricos aceitam elemento Homebrew;
+- a cópia na ficha, pelos dois caminhos (registrar e a janela), o nome
+  "Especialista em Vidro" e a recarga;
+- as opções de elemento dos itens, inclusive com `soOficiais`;
+- a maldição Proteção elemental contra Vidro: o registro, a ficha e a
+  falta de preço do livro;
+- os componentes ritualísticos de Vidro.
+
+As outras suítes continuam verdes. `testes/executar-simbolos-rituais.js`
+tem 1 falha que já existia antes desta versão: cinco símbolos de ritual
+de AS1/AS2 não são quadrados. Nenhuma imagem foi mexida.
+
+**Na interface** (servidor local, conta sintética):
+- Criei o elemento **Vidro** e um ocultista de NEX 15%.
+- Em **Escolher poder**, Especialista em Elemento mostrou "Vidro
+  (Homebrew)" junto dos cinco do livro.
+- Confirmei. A ficha relida do servidor tinha "Especialista em Vidro" e a
+  cópia do elemento.
+- A primeira tentativa revelou a correção acima: a escolha gravava sem a
+  cópia. Corrigi e refiz o teste.
+- As opções de elemento dos componentes mostraram Sangue, Morte,
+  Conhecimento, Energia e Vidro.
+
+### Publicar a v9.25.0
+
+**Servidor:** nada muda.
+
+**Site:**
+- `js/ordem/poderes.js`, `js/ordem/progressao.js`, `js/ordem/itens.js`,
+  `js/ordem/inventario.js`;
+- `js/ordem/telas/ordem-escolhas.js`, `js/ordem/telas/ficha-ordem.js`;
+- `js/paginas/ficha-inventario-biblioteca.js`;
+- `js/versao.js`.
+
+### Etapa 2 depois da v9.25
+
+Os itens de Ordem I estão feitos. Continuam pendentes detalhes por
+sistema:
+- a escolha de poder geral dentro de uma habilidade de raça em T20;
+- a Ficha de Conhecimento em Vampiro;
+- a origem Exorcizado e a Mácula de Ferido por Ritual continuam só com
+  os elementos do livro (revisar se a mesa quer o Homebrew ali).

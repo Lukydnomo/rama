@@ -391,7 +391,7 @@
 
     entrada({ chave: "especialistaEmElemento", nome: "Especialista em Elemento", tipo: "classe", classes: ["ocultista"], pagina: 33,
       resumo: "Escolha um elemento: a DT para resistir aos seus rituais dele aumenta em +2.",
-      opcoes: [{ chave: "elemento", tipo: "elemento", comMedo: true, rotulo: "Elemento" }] }),
+      opcoes: [{ chave: "elemento", tipo: "elemento", comMedo: true, aceitaHomebrew: true, rotulo: "Elemento" }] }),
 
     entrada({ chave: "ferramentasParanormais", nome: "Ferramentas Paranormais", tipo: "classe", classes: ["ocultista"], pagina: 33,
       resumo: "Reduz em I a categoria de um item paranormal e ativa itens paranormais sem pagar o custo em PE.",
@@ -418,7 +418,7 @@
     entrada({ chave: "mestreEmElemento", nome: "Mestre em Elemento", tipo: "classe", classes: ["ocultista"], pagina: 34,
       resumo: "Rituais do elemento escolhido custam –1 PE.",
       requisitos: [{ tipo: "poderElemento", poder: "especialistaEmElemento" }, req.nex(45)],
-      opcoes: [{ chave: "elemento", tipo: "elemento", comMedo: true, rotulo: "Elemento" }] }),
+      opcoes: [{ chave: "elemento", tipo: "elemento", comMedo: true, aceitaHomebrew: true, rotulo: "Elemento" }] }),
 
     entrada({ chave: "ritualPotente", nome: "Ritual Potente", tipo: "classe", classes: ["ocultista"], pagina: 34,
       resumo: "Soma o Intelecto nas rolagens de dano e nos efeitos de cura dos seus rituais.",
@@ -537,7 +537,7 @@
     entrada({ chave: "acostumadoAMaldicao", nome: "Acostumado à Maldição de Elemento", tipo: "classe", classes: ["ocultista"], fonte: AS1, pagina: 44,
       resumo: "Escolha um elemento (exceto Medo). Ao falhar num teste ligado ao preço da maldição de um item amaldiçoado desse elemento (OPRPG p. 145), você não perde Sanidade; os outros efeitos negativos continuam.",
       requisitos: [req.atr("int", 2), { tipo: "conjurarRitual", circulo: 2, elementoDaOpcao: "elemento" }],
-      opcoes: [{ chave: "elemento", tipo: "elemento", rotulo: "Elemento (exceto Medo)" }],
+      opcoes: [{ chave: "elemento", tipo: "elemento", aceitaHomebrew: true, rotulo: "Elemento (exceto Medo)" }],
       nota: "O nome no livro é “Acostumado à Maldição de <Elemento>”. A perda de Sanidade é do teste, na cena." }),
     entrada({ chave: "reterRitualDeCombate", nome: "Reter Ritual de Combate", tipo: "classe", classes: ["ocultista"], fonte: AS1, pagina: 44,
       resumo: "Com a regra opcional Reter Ritual: como reação, muda para cena a duração retida de um ritual que afeta negativamente um alvo, no instante em que ele sai da linha de efeito. E, ao sofrer uma condição que faz deixar de reter rituais, reação e 1 PE por ritual mudam a duração deles para cena, sem perder os efeitos.",
@@ -976,7 +976,7 @@
             ajuda: "Escolha pela biblioteca. O círculo permitido sobe com o NEX de exposição: 1º, 2º a partir de 45% e 3º a partir de 75%." },
           { chave: "substituicao", tipo: "substituicaoDeRitual", opcional: true, rotulo: "Substituir um ritual conhecido",
             ajuda: "“Além disso, você pode substituir um ritual que já conhece por outro” (OPRPG p.114). É a única troca que as regras dão, e é opcional: deixar em branco não troca nada." },
-          { chave: "elemento", tipo: "elemento", comMedo: true, doRitual: "aprendido", rotulo: "Elemento do ritual",
+          { chave: "elemento", tipo: "elemento", comMedo: true, aceitaHomebrew: true, doRitual: "aprendido", rotulo: "Elemento do ritual",
             ajuda: "Este poder conta como um poder do elemento do ritual escolhido: com o ritual escolhido, o elemento vem dele." },
         ],
         nota: "Este é o único aprendizado que conta no limite de rituais conhecidos (Intelecto). O elemento escolhido conta para requisitos como Morte 2." }),
@@ -985,7 +985,7 @@
       "Resistência 10 contra o elemento escolhido. Conta como poder desse elemento.",
       "A resistência aumenta para 20.",
       { repeticaoPorOpcao: "elemento",
-        opcoes: [{ chave: "elemento", tipo: "elemento", rotulo: "Elemento" }],
+        opcoes: [{ chave: "elemento", tipo: "elemento", aceitaHomebrew: true, rotulo: "Elemento" }],
         efeitos: [{ tipo: "resistenciaDano", opcao: "elemento", valor: 10 }],
         efeitosAfinidade: [{ tipo: "resistenciaDano", opcao: "elemento", valor: 10 }],
         automacao: "calculo",
@@ -1902,7 +1902,7 @@
       fonte: SAH, pagina: 31,
       resumo: "Um perigo paranormal de um elemento deixou trauma: –1 dado em testes de resistência contra ele. Uma vez por sessão, como reação, sacrifique 1 PV para sempre para ignorar um dano mental ou gasto de PE, ou 1 PE para sempre para reduzir um dano físico à metade.",
       opcoes: [
-        { chave: "elemento", tipo: "elemento", comMedo: true, rotulo: "Elemento do perigo" },
+        { chave: "elemento", tipo: "elemento", comMedo: true, aceitaHomebrew: true, rotulo: "Elemento do perigo" },
         { chave: "perigo", tipo: "texto", rotulo: "O perigo enfrentado", dica: "um tipo de criatura, um culto, um lugar…", limite: 80 },
       ],
       automacao: "parcial",

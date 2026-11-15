@@ -292,5 +292,52 @@ t.grupo("Classe Homebrew · conjura rituais como o Ocultista (v9.24)");
   t.ok("a classe sem a marca não conjura", R.rituais(ficha({ nex: 30 })).circuloMaximo === 0 && E.concessoesDeRitual(ficha({ nex: 30 })).length === 0);
 }
 
+t.grupo("Elemento Homebrew · poderes, itens e maldições (v9.25)");
+{
+  for (const c of ["js/ordem/itens-dados.js", "js/ordem/itens.js"]) (0, eval)(await Deno.readTextFile(new URL("../" + c, import.meta.url)));
+  const IT = G.RAMAOrdemItens;
+  EL.registrar(vidro);
+  const oc = (extra) => R.normalizar(Object.assign({ classe: "ocultista", origem: "academico", nex: 15, atributos: { agi: 1, for: 1, int: 2, pre: 2, vig: 1 } }, extra || {}));
+  const o15 = oc();
+  const vagaP = E.vagas(o15).filter((v) => v.id === "d3.poderClasse")[0];
+  const sim = (valor, opcoes) => E.simular(copia(o15), vagaP, { valor, opcoes }, {}).avaliacao;
+  t.ok("Especialista em Elemento aceita Vidro (a regra é genérica: +2 na DT dos rituais dele)", vagaP && sim("especialistaEmElemento", { elemento: vidro.chave }).valido, JSON.stringify(vagaP ? sim("especialistaEmElemento", { elemento: vidro.chave }) : E.vagas(o15).map((v) => v.id)));
+  const gm = vagaP ? sim("dominadorDeElemento", { elemento: vidro.chave }) : null;
+  t.ok("Dominador de Elemento (opressão do livro) recusa Vidro, com o motivo", gm && !gm.valido && /elementos do livro/.test(JSON.stringify(gm)), JSON.stringify(gm));
+  t.ok("  e um texto qualquer continua inválido", vagaP && /elemento inválido/.test(JSON.stringify(sim("especialistaEmElemento", { elemento: "vidro" }))));
+  const P = G.RAMAOrdemPoderes;
+  const aceitam = ["especialistaEmElemento", "mestreEmElemento", "acostumadoAMaldicao", "aprenderRitual", "resistirAElemento", "cicatrizado"].filter((k) => (P.poder(k).opcoes || []).some((op) => op.tipo === "elemento" && op.aceitaHomebrew));
+  const recusam = ["dominadorDeElemento", "graoMestreEmElemento", "serAmaldicoado", "serExperimentado", "serEscarificado"].filter((k) => P.poder(k) && (P.poder(k).opcoes || []).some((op) => op.tipo === "elemento" && op.aceitaHomebrew));
+  t.ok("só os poderes de regra genérica aceitam Homebrew (seis); os de efeito por elemento do livro, não", aceitam.length === 6 && recusam.length === 0, aceitam.join(",") + " | " + recusam.join(","));
+  const vagaE = { id: "d3.poderClasse", tipo: "poderClasse" };
+  const semCopia = oc();
+  E.registrar(semCopia, vagaP || vagaE, { valor: "especialistaEmElemento", opcoes: { elemento: vidro.chave } });
+  t.ok("escolher Vidro num poder guarda a cópia do elemento na ficha", semCopia.homebrew && semCopia.homebrew.elementos && semCopia.homebrew.elementos[vidro.chave] && semCopia.homebrew.elementos[vidro.chave].nome === "Vidro");
+  t.ok("  e o nome do poder diz o elemento", /Especialista em Vidro/.test(semCopia.escolhas[0].nome), semCopia.escolhas[0].nome);
+  const pelaTela = oc();
+  const rca = E.confirmarAquisicao(pelaTela, [], { tipo: "escolha", vaga: "d3.poderClasse", candidato: { valor: "especialistaEmElemento", opcoes: { elemento: vidro.chave } }, novos: [] }, {});
+  t.ok("  pelo caminho da janela (confirmarAquisicao) a cópia também vem", rca.ok && pelaTela.homebrew && pelaTela.homebrew.elementos && !!pelaTela.homebrew.elementos[vidro.chave], JSON.stringify(rca));
+  const rd = R.normalizar(Object.assign(copia(semCopia), {}));
+  t.ok("  recarregada, a escolha e a cópia continuam", rd.escolhas[0].opcoes.elemento === vidro.chave && !!rd.homebrew.elementos[vidro.chave]);
+  const comp = IT.opcoesDaEscolha({ tipo: "elemento", semMedo: true });
+  t.ok("itens: Componentes, catalisador e afins oferecem Vidro (sem Medo quando o livro tira)", comp.some((o) => o.valor === vidro.chave && o.rotulo === "Vidro") && !comp.some((o) => o.valor === "medo"));
+  t.ok("  uma escolha marcada só para os oficiais não oferece", !IT.opcoesDaEscolha({ tipo: "elemento", soOficiais: true }).some((o) => o.valor === vidro.chave));
+  const CATI = IT.normalizarCatalogo(G.RAMAOrdemItensDados);
+  const entComp = CATI.porId["op.paranormal.componentes"];
+  const protecao = CATI.porId["op.maldicao.acessorio.protecao-elemental"];
+  if (protecao) {
+    const reg = IT.modificacaoParaItem(protecao, { escolha: vidro.chave });
+    t.ok("maldição Proteção elemental contra Vidro: elemento e cópia no registro", reg.ok && reg.registro.elemento === vidro.chave && reg.registro.elementosHomebrew[vidro.chave].nome === "Vidro" && /Vidro/.test(reg.registro.nome), JSON.stringify(reg));
+    const itemM = G.RAMAOrdemInventario.normalizarDados({ grupo: "paranormal", modificacoes: [reg.registro] }, "item");
+    const m0 = (itemM.modificacoes || [])[0];
+    t.ok("  a ficha guarda a maldição de Vidro (com a cópia)", m0 && m0.elemento === vidro.chave && m0.elementosHomebrew && m0.elementosHomebrew[vidro.chave], JSON.stringify(itemM.modificacoes));
+    t.ok("  sem preço de maldição do livro para Vidro (tabela só dos oficiais)", !IT.PRECO_DA_MALDICAO[vidro.chave]);
+  } else t.ok("catálogo de itens com porId", false, Object.keys(IT).join(","));
+  if (entComp) {
+    const inst = IT.paraInventario(entComp, { escolha: vidro.chave });
+    t.ok("Componentes ritualísticos de Vidro: o item leva o elemento e a cópia", inst.ok !== false && JSON.stringify(inst).indexOf(vidro.chave) >= 0 && /Vidro/.test(JSON.stringify(inst)), JSON.stringify(inst).slice(0, 300));
+  }
+}
+
 console.log(`\n${FORTE}${passaram} ok${FIM}, ${falharam ? VERMELHO : ""}${falharam} falha(s)${FIM}.`);
 if (falharam) Deno.exit(1);

@@ -4685,7 +4685,7 @@
       if (d.elemento && IT()) linhas.push(["Elemento", IT().ELEMENTOS[d.elemento]]);
       if (d.modificacoes && d.modificacoes.length) {
         linhas.push(["Modificações e maldições", d.modificacoes.map(function (m) {
-          return m.nome + (m.natureza === "maldicao" ? " (maldição" + (m.elemento && IT() ? " de " + IT().ELEMENTOS[m.elemento] : "") + ")" : "");
+          return m.nome + (m.natureza === "maldicao" ? " (maldição" + (m.elemento && IT() ? " de " + (IT().nomeDoElemento ? IT().nomeDoElemento(m.elemento) : IT().ELEMENTOS[m.elemento]) : "") + ")" : "");
         }).join("; ")]);
       }
       if (d.referencia && IT()) linhas.push(["Fonte", IT().NOME_FONTE[d.referencia.fonte] + ", p. " + d.referencia.pagina]);

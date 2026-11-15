@@ -261,7 +261,7 @@
   /* A linha abaixo do nome: "Arma tática · Corpo a corpo · Duas mãos". */
   function classificacao(e) {
     if (e.natureza === "modificacao") return "Modificação · " + rotuloAplicaEm(e);
-    if (e.natureza === "maldicao") return "Maldição de " + (ELEMENTOS[e.elemento] || "elemento variável") + " · " + rotuloAplicaEm(e);
+    if (e.natureza === "maldicao") return "Maldição de " + (e.elemento && e.elemento !== "varia" ? nomeDoElemento(e.elemento) : "elemento variável") + " · " + rotuloAplicaEm(e);
     if (e.arma && e.aba !== "geral") {
       var partes = [];
       if (e.aba === "amaldicoados") partes.push((e.elemento ? "Item amaldiçoado de " + (ELEMENTOS[e.elemento] || e.elemento) : "Item amaldiçoado (elemento não informado)"));
@@ -669,6 +669,13 @@
      ESCOLHAS AO ADICIONAR
      ================================================================= */
 
+  /* v9.25: o nome de um elemento, também Homebrew de Ordem. */
+  function nomeDoElemento(k) {
+    if (ELEMENTOS[k]) return ELEMENTOS[k];
+    var EL = global.RAMAOrdemElementos;
+    return EL && EL.ehHomebrew(k) ? EL.nome(k) : String(k || "");
+  }
+
   function opcoesDaEscolha(escolha) {
     if (!escolha) return [];
     if (escolha.tipo === "pericia") {
@@ -680,9 +687,17 @@
       }).map(function (p) { return { valor: p.chave, rotulo: p.nome }; });
     }
     if (escolha.tipo === "elemento") {
+      /* v9.25: as escolhas de elemento dos itens são todas genéricas
+         (componentes, catalisador, amarras, scanner, amuleto, a arma
+         letal contra um elemento, a proteção contra um elemento): o
+         elemento Homebrew de Ordem entra. O que é tabela do livro (preço
+         da maldição, opressão entre maldições) continua só dos oficiais. */
+      var EL = global.RAMAOrdemElementos;
+      var hb = EL ? EL.paraSelecao().filter(function (e) { return !e.oficial; }).map(function (e) { return { valor: e.chave, rotulo: e.nome }; }) : [];
       return ["sangue", "morte", "conhecimento", "energia", "medo"]
         .filter(function (k) { return !(escolha.semMedo && k === "medo"); })
-        .map(function (k) { return { valor: k, rotulo: ELEMENTOS[k] }; });
+        .map(function (k) { return { valor: k, rotulo: ELEMENTOS[k] }; })
+        .concat(escolha.soOficiais ? [] : hb);
     }
     if (escolha.tipo === "circulo") {
       return [1, 2, 3, 4].map(function (n) { return { valor: String(n), rotulo: n + "º círculo" }; });
@@ -770,6 +785,9 @@
     var elemento = e.elemento || (e.escolha && e.escolha.tipo === "elemento" && escolhida.valor ? escolhida.valor : null);
     if (e.aba === "amaldicoados") ordem.amaldicoado = true;
     if (elemento) ordem.elemento = elemento;
+    /* v9.25: o item de um elemento Homebrew leva a cópia dele. */
+    var ELi = global.RAMAOrdemElementos;
+    if (ELi && ELi.ehHomebrew(elemento)) { var cpi = ELi.copiasPara([elemento]); if (Object.keys(cpi).length) ordem.elementosHomebrew = cpi; }
 
     var marcadores = [];
     ["acessorio", "utensilio", "vestimenta", "eletrico", "camera", "granada"].forEach(function (k) { if (e[k]) marcadores.push(k); });
@@ -1033,6 +1051,9 @@
     var elemento = e.elemento;
     if (e.escolha && e.escolha.defineElemento) elemento = escolhida.valor;
     if (elemento) registro.elemento = elemento;
+    /* v9.25: a maldição de um elemento Homebrew leva a cópia dele. */
+    var ELm = global.RAMAOrdemElementos;
+    if (ELm && ELm.ehHomebrew(elemento)) { var cpm = ELm.copiasPara([elemento]); if (Object.keys(cpm).length) registro.elementosHomebrew = cpm; }
     if (escolhida.rotulo) registro.escolha = escolhida.rotulo;
     /* O id do que foi escolhido, quando é uma entrada do catálogo (Dupla:
        a outra granada, para o uso rolar o efeito dela). */
@@ -1107,7 +1128,7 @@
     ROTULO_FONTE: ROTULO_FONTE,
     SIGLA_FONTE: SIGLA_FONTE,
     NOME_FONTE: NOME_FONTE,
-    ELEMENTOS: ELEMENTOS,
+    ELEMENTOS: ELEMENTOS, nomeDoElemento: nomeDoElemento,
     TIPOS_ARMA: TIPOS_ARMA,
     EMPUNHADURAS: EMPUNHADURAS,
     PROFICIENCIAS: PROFICIENCIAS,

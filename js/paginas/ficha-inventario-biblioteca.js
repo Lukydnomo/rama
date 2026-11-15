@@ -75,6 +75,9 @@
   function abrir(ctx, opcoes) {
     var o = opcoes || {};
     var ordem = deOrdem(ctx);
+    /* v9.25: os elementos Homebrew da biblioteca entram nas escolhas de
+       elemento dos itens (consulta única, guardada). */
+    if (ordem && global.RAMAOrdemHomebrew && global.RAMAOrdemHomebrew.carregarBiblioteca) global.RAMAOrdemHomebrew.carregarBiblioteca().then(null, function () {});
     var id = "bib-" + (++contador);
 
     var estado = {

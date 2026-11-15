@@ -393,6 +393,9 @@
 
       case "elemento": {
         var lista3 = E.ELEMENTOS_PODER.concat(op.comMedo ? ["medo"] : []);
+        /* v9.25: os elementos Homebrew da mesa, onde a regra aceita. */
+        var ELz = global.RAMAOrdemElementos;
+        if (op.aceitaHomebrew && ELz) ELz.paraSelecao().forEach(function (e) { if (!e.oficial) lista3.push(e.chave); });
         /* Aprender Ritual conta como poder do elemento do ritual
            escolhido (OPRPG p.114): com o ritual escolhido, o elemento
            dele é o único que cabe. O motor confere o mesmo. */
@@ -402,7 +405,7 @@
         var botoesEl = botoesDeEscolha(lista3.map(function (k) {
           var e = C.elemento(k);
           return {
-            valor: k, rotulo: e ? e.nome : k, ajuda: e ? e.resumo : "",
+            valor: k, rotulo: e ? e.nome + (e.homebrew ? " (Homebrew)" : "") : k, ajuda: e ? (e.homebrew ? (e.resumo || "Elemento Homebrew da sua mesa.") + " Sem efeitos de elemento do livro." : e.resumo) : "",
             motivo: elementoFixo && k !== elementoFixo
               ? "Este poder conta como poder do elemento do ritual escolhido: " + (ritualDoPoder.nome || "o ritual") + " é de " + nomeFixo + " (OPRPG p.114)."
               : "",
@@ -830,6 +833,12 @@
     };
     sessao.contexto = contextoComNovos(sessao);
     var gravando = false;
+    /* v9.25: os elementos Homebrew da biblioteca entram nas opções de
+       elemento (uma consulta; a janela repinta quando chegar). */
+    var HOb = global.RAMAOrdemHomebrew;
+    var quantosHb = function () { var ELq = global.RAMAOrdemElementos; return ELq ? ELq.paraSelecao().filter(function (e) { return !e.oficial; }).length : 0; };
+    var hbAntes = quantosHb();
+    if (HOb && HOb.carregarBiblioteca) HOb.carregarBiblioteca().then(function () { if (corpo.isConnected && quantosHb() > hbAntes) pintar(); }, function () {});
 
     var m = UI.modal({
       titulo: vaga.rotulo + " — " + vaga.rotuloEtapa,

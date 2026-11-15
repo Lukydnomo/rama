@@ -356,6 +356,16 @@
     var resumo = textoCurto(m.resumo, 300);
     if (resumo) saida.resumo = resumo;
     if (ELEMENTOS.indexOf(m.elemento) >= 0) saida.elemento = m.elemento;
+    /* v9.25: a maldição de um elemento Homebrew de Ordem (Proteção
+       elemental contra Vidro): a chave e a cópia da definição. */
+    var ELm = global.RAMAOrdemElementos;
+    if (ELm && ELm.ehHomebrew(m.elemento)) {
+      saida.elemento = m.elemento;
+      ELm.registrarMapa(m.elementosHomebrew);
+      var cpm = ELm.copiasPara([m.elemento]);
+      if (!cpm[m.elemento] && m.elementosHomebrew && m.elementosHomebrew[m.elemento]) { cpm = {}; cpm[m.elemento] = JSON.parse(JSON.stringify(m.elementosHomebrew[m.elemento])); }
+      if (Object.keys(cpm).length) saida.elementosHomebrew = cpm;
+    }
     var escolha = textoCurto(m.escolha, 60);
     if (escolha) saida.escolha = escolha;
     var escolhaId = textoCurto(m.escolhaId, 80);

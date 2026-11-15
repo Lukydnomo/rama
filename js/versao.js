@@ -118,6 +118,19 @@
 
   var CHANGELOG = [
     {
+      versao: "9.25.0",
+      codinome: "ESTILHACO",
+      data: "15/11/2026",
+      mudancas: {
+        "Adicionado": [
+          "Ordem Paranormal: o elemento Homebrew da mesa entra nos poderes de regra genérica (Especialista e Mestre em Elemento, Acostumado à Maldição de Elemento, Aprender Ritual, Resistir a Elemento, Cicatrizado), nas escolhas de elemento dos itens (componentes, catalisadores, amarras, scanner, amuleto) e nas maldições (Antielemento, Proteção elemental). A ficha guarda a cópia do elemento.",
+          "Onde o livro dá um efeito por elemento (Dominador e Grão-Mestre em Elemento, Ser Amaldiçoado, Ser Experimentado, Ser Escarificado), continuam só os elementos do livro, e a ficha diz o porquê. O preço da maldição e a opressão entre maldições continuam só dos oficiais.",
+        ],
+        "Corrigido": ["A confirmação de uma escolha da Progressão trazia de volta só as escolhas e os registros de ritual, e não as cópias Homebrew que a escolha pôs na ficha."],
+        "Técnico": ["Opções de elemento com aceitaHomebrew nos poderes; a progressão valida, guarda a cópia (ordem.homebrew.elementos) e aceita o elemento Homebrew no ritual de Aprender Ritual. RAMAOrdemItens.nomeDoElemento; opcoesDaEscolha inclui os Homebrew (soOficiais para recusar); maldição e item levam elementosHomebrew. testes/executar-homebrew-ordem.js: 14 verificações novas (117)."],
+      },
+    },
+    {
       versao: "9.24.0",
       codinome: "CIRCULO",
       data: "15/11/2026",
