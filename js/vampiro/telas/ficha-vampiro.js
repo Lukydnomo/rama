@@ -708,7 +708,7 @@
 
   function painelCompra(ctx) {
     /* v9.20: Disciplinas e Vantagens Homebrew da biblioteca na compra (uma viagem). */
-    if (global.RAMAVampiroHomebrew && !bibliotecaPedida) { bibliotecaPedida = true; global.RAMAVampiroHomebrew.carregarBiblioteca().then(function (r) { if (r && (r.disciplinas.length || r.vantagens.length) && ctx.redesenhar) ctx.redesenhar(); }); }
+    if (global.RAMAVampiroHomebrew && !bibliotecaPedida) { bibliotecaPedida = true; global.RAMAVampiroHomebrew.carregarBiblioteca().then(function (r) { if (r && (r.disciplinas.length || r.vantagens.length || (r.fichas || []).length || (r.poderes || []).length) && ctx.redesenhar) ctx.redesenhar(); }); }
     var o = ctx.ficha.vampiro;
     var p = { tipo: "habilidade", alvo: "", para: 1, nome: "", poderes: [], ressonancia: false, sangueProvado: false };
     var alvoCaixa = el("div"), extra = el("div"), previa = el("p.vamp-previa", { role: "status" });
@@ -754,7 +754,7 @@
       U.trocar(caixaPoderes, Array.from({ length: n }, function (_, i) {
         var nivel = de + i + 1;
         return UI().campo({ rotulo: "Poder do nível " + nivel + " (nível ≤ " + nivel + ")", tipo: "selecao", valor: p.poderes[i] || "",
-          opcoes: [{ valor: "", rotulo: "Escolha…" }].concat(opcoes.filter(function (x) { return x.nivel <= nivel && !R().temPoder(o, x.chave); }).map(function (x) { return { valor: x.chave, rotulo: x.nivel + " · " + x.nome + (x.amalgama ? " (amálgama)" : "") }; })),
+          opcoes: [{ valor: "", rotulo: "Escolha…" }].concat(opcoes.filter(function (x) { return x.nivel <= nivel && !R().temPoder(o, x.chave); }).map(function (x) { return { valor: x.chave, rotulo: x.nivel + " · " + x.nome + (x.homebrew ? " (Homebrew)" : "") + (x.amalgama ? " (amálgama)" : "") }; })),
           aoMudar: function (v) { p.poderes[i] = v; conferir(); } });
       }));
     }

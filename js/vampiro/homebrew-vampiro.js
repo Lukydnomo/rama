@@ -14,7 +14,10 @@
   function DS() { return global.RAMAVampiroDisciplinas; }
   function obj(v) { return v && typeof v === "object" && !Array.isArray(v) ? v : {}; }
   var TIPOS = ["cla", "predador", "disciplina", "vantagem", "conhecimento"];
-  var CAMPO = { cla: "clas", predador: "predadores", disciplina: "disciplinas", vantagem: "vantagens", conhecimento: "fichas" };
+  var CAMPO = { cla: "clas", predador: "predadores", disciplina: "disciplinas", vantagem: "vantagens", conhecimento: "fichas", poder: "poderes" };
+  /* v9.29: o Poder de Disciplina Homebrew vem do tipo Habilidade (subtipo
+     "disciplina"), numa Disciplina do livro. */
+  var TIPOS_COPIA = TIPOS.concat(["poder"]);
   var USOS = { historia: "1× por história", sessao: "1× por sessão", cronica: "1× por crônica" };
   function nomeDisc(k) { return (DS() && DS().DISCIPLINAS[k] || { nome: k }).nome; }
   function nomeHab(k) { var h = C() && C().habilidade(k); return h ? h.nome : k; }
@@ -36,6 +39,8 @@
     if (tipo === "disciplina") return [(d.tipo === "fisica" ? "Física" : "Mental") + (d.ressonancia ? " · ressonância " + d.ressonancia : "") + "."].concat(d.poderesHb.map(function (p) {
       return "Nível " + p.nivel + " · " + p.nome + " (" + (p.checagens ? p.checagens + " Checagem(ns)" : "grátis") + (p.atributo ? ", " + nomeAtr(p.atributo) + " + Disciplina" : "") + ", " + DURACOES[p.duracao] + ")" + (p.efeito ? ": " + p.efeito : "");
     }));
+    if (tipo === "poder") return [nomeDisc(d.disciplina) + " " + "●".repeat(d.nivel) + " · " + (d.checagens ? d.checagens + " Checagem(ns)" : "grátis") + (d.atributo ? " · " + nomeAtr(d.atributo) + " + " + nomeDisc(d.disciplina) : " · sem teste") + " · " + DURACOES[d.duracao] + ".",
+      d.efeito ? "Efeito (a mesa): " + d.efeito : "(sem texto de efeito)"].concat(d.requisitos ? ["Pré-requisito (a mesa confere): " + d.requisitos + "."] : []);
     if (tipo === "conhecimento") return [(d.cla ? "Exclusiva do clã " + ((C().CLAS[d.cla] || {}).nome || d.cla) + ". " : "") + "Cada nível se compra à parte (Antecedente, 3 XP por ponto)."].concat(d.niveis.map(function (n) {
       return "Nível " + n.nivel + " · " + n.nome + (n.uso ? " (" + USOS[n.uso] + ")" : "") + (n.texto ? ": " + n.texto.replace(/\.$/, "") + "." : "");
     }));
@@ -44,6 +49,10 @@
 
   function deRegistro(reg) {
     var m = obj(obj(reg).modelo);
+    if (m.sistema === "vampiro" && m.grupo === "habilidade" && m.subtipo === "disciplina" && DS() && DS().normalizarPoderHomebrew) {
+      var pd = DS().normalizarPoderHomebrew(Object.assign({}, obj(m.def), { chave: "", nome: reg.nome, homebrewId: reg.id, efeito: reg.descricao || obj(m.def).efeito || "" }));
+      return pd ? { tipo: "poder", def: pd } : null;
+    }
     if (m.sistema !== "vampiro" || m.grupo !== "estrutural" || TIPOS.indexOf(m.subtipo) < 0 || !C() || !C().normalizarHomebrew) return null;
     var base = Object.assign({}, obj(m.def), { chave: "", nome: reg.nome, homebrewId: reg.id });
     if (m.subtipo === "disciplina") return { tipo: "disciplina", def: DS().normalizarDisciplinaHomebrew(base) };
@@ -52,17 +61,17 @@
     return { tipo: m.subtipo, def: C().normalizarHomebrew(m.subtipo, base) };
   }
   function registrar(x) {
-    if (x.tipo === "disciplina") DS().registrarDisciplinaHomebrew(x.def); else C().registrarHomebrew(x.tipo, x.def);
+    if (x.tipo === "disciplina") DS().registrarDisciplinaHomebrew(x.def); else if (x.tipo === "poder") DS().registrarPoderHomebrew(x.def); else C().registrarHomebrew(x.tipo, x.def);
   }
 
   var biblioteca = null, carga = null;
-  function vazia() { return { clas: [], predadores: [], disciplinas: [], vantagens: [], fichas: [] }; }
+  function vazia() { return { clas: [], predadores: [], disciplinas: [], vantagens: [], fichas: [], poderes: [] }; }
   function carregarBiblioteca(forcar) {
     if (biblioteca && !forcar) return Promise.resolve(biblioteca);
     if (carga && !forcar) return carga;
     var API = global.RAMAApi;
     if (!API || !API.listarHomebrew || !C() || !DS()) return Promise.resolve(vazia());
-    carga = API.listarHomebrew({ escopo: "todos", tipos: TIPOS }).then(function (r) {
+    carga = API.listarHomebrew({ escopo: "todos", tipos: TIPOS.concat(["habilidade"]) }).then(function (r) {
       carga = null;
       var saida = vazia();
       var xs = ((r && r.ok && r.dados) || []).map(deRegistro).filter(function (x) { return x && x.def; });
@@ -76,7 +85,7 @@
 
   function copiasDaFicha(o) {
     var hb = obj(obj(o).homebrew), out = [];
-    TIPOS.forEach(function (t) { Object.keys(obj(hb[CAMPO[t]])).forEach(function (k) { var d = hb[CAMPO[t]][k]; out.push({ campo: CAMPO[t], tipo: t, chave: k, nome: d.nome || k, homebrewId: d.homebrewId || "" }); }); });
+    TIPOS_COPIA.forEach(function (t) { Object.keys(obj(hb[CAMPO[t]])).forEach(function (k) { var d = hb[CAMPO[t]][k]; out.push({ campo: CAMPO[t], tipo: t, chave: k, nome: d.nome || k, homebrewId: d.homebrewId || "" }); }); });
     return out;
   }
   function versoesNovas(o, bib) {

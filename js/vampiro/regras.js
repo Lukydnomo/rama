@@ -131,6 +131,11 @@
       var k = objeto(v).chave;
       usar("vantagens", k, function (x) { return C.ehHomebrew("vantagem", x); }, C.VANTAGENS[k], function (x) { return C.normalizarHomebrew("vantagem", x); }, function (d) { C.registrarHomebrew("vantagem", d); });
     });
+    /* v9.29: Poderes de Disciplina Homebrew (numa Disciplina do livro). */
+    if (DS().ehPoderHomebrew) lista(b.poderes).forEach(function (x) {
+      var k = objeto(x).chave;
+      usar("poderes", k, DS().ehPoderHomebrew, (DS().poder(k) || {}).def, DS().normalizarPoderHomebrew, DS().registrarPoderHomebrew);
+    });
     /* v9.27: Fichas de Conhecimento Homebrew. */
     lista(b.fichas).forEach(function (f) {
       var k = objeto(f).ficha;
@@ -1806,6 +1811,10 @@
     if (p.tipo === "vantagem") guardarCopiaHomebrew(o, "vantagens", C.VANTAGENS[p.alvo]);
     if (p.tipo === "ficha") guardarCopiaHomebrew(o, "fichas", C.FICHAS_DE_CONHECIMENTO[p.alvo]);
     if (p.tipo === "disciplina" && DS()) guardarCopiaHomebrew(o, "disciplinas", DS().DISCIPLINAS[p.alvo]);
+    /* v9.29: um Poder Homebrew comprado junto (a cópia é a definição, não a entrada do catálogo). */
+    if (p.tipo === "disciplina" && DS() && DS().ehPoderHomebrew) lista(p.poderes).forEach(function (k) {
+      if (DS().ehPoderHomebrew(k) && DS().poder(k)) guardarCopiaHomebrew(o, "poderes", DS().poder(k).def);
+    });
     o.compras.push(compra);
     eventos.push(evento("compra", { compra: p.tipo, alvo: p.alvo, de: v.de, para: v.para, custo: compra.custo, credito: v.desconto }));
     return { ok: true, eventos: eventos, compra: compra };
@@ -2193,12 +2202,30 @@
   }
 
   /* Aplica `fn(o)` uma vez por opId. Uma segunda chegada não muda nada. */
+  /* v9.29: depois de uma operação (comprar, adicionar um poder à mão,
+     escolher na criação), tudo o que é Homebrew na ficha tem a CÓPIA da
+     definição — a ficha aberta sem a biblioteca continua inteira. */
+  function garantirCopiasHomebrew(o) {
+    Object.keys(objeto(o.disciplinas)).forEach(function (k) { if (DS().ehDisciplinaHomebrew(k)) guardarCopiaHomebrew(o, "disciplinas", DS().DISCIPLINAS[k]); });
+    lista(o.poderes).forEach(function (x) {
+      var k = objeto(x).chave;
+      if (DS().ehPoderHomebrew && DS().ehPoderHomebrew(k) && DS().poder(k)) guardarCopiaHomebrew(o, "poderes", DS().poder(k).def);
+      var hd = String(k || "").replace(/-p\d+$/, "");
+      if (DS().ehDisciplinaHomebrew(hd)) guardarCopiaHomebrew(o, "disciplinas", DS().DISCIPLINAS[hd]);
+    });
+    lista(o.vantagens).forEach(function (v) { if (C.ehHomebrew("vantagem", objeto(v).chave)) guardarCopiaHomebrew(o, "vantagens", C.VANTAGENS[v.chave]); });
+    lista(o.fichas).forEach(function (f) { if (C.ehHomebrew("conhecimento", objeto(f).ficha)) guardarCopiaHomebrew(o, "fichas", C.FICHAS_DE_CONHECIMENTO[f.ficha]); });
+    if (C.ehHomebrew("cla", o.cla)) guardarCopiaHomebrew(o, "clas", C.CLAS[o.cla]);
+    if (C.ehHomebrew("predador", o.predador)) guardarCopiaHomebrew(o, "predadores", C.PREDADORES[o.predador]);
+  }
+
   function aplicarOperacao(o, opId, fn) {
     var id = texto(opId, 120);
     if (!id) return falha("Operação sem identificação.");
     if (o.operacoes.indexOf(id) >= 0) return { ok: true, repetida: true, eventos: [] };
     var r = fn(o) || { ok: true, eventos: [] };
     if (r.ok !== false) {
+      garantirCopiasHomebrew(o);
       o.operacoes.push(id);
       if (o.operacoes.length > LIMITE_OPERACOES) o.operacoes = o.operacoes.slice(-LIMITE_OPERACOES);
     }

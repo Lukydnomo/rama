@@ -1,5 +1,13 @@
 # O banco
 
+## Poder de Disciplina Homebrew de Vampiro — v9.29
+
+Nenhuma aba nova. O registro é do tipo `habilidade` (subtipo
+`disciplina`), com `modelo.def` = `{ disciplina, nivel, checagens,
+atributo, duracao, requisitos }`. Na ficha de Vampiro,
+`vampiro.homebrew.poderes` guarda as cópias; `poderes[].chave` aceita
+essas chaves (`hbvq-…`). Opcional.
+
 ## Ficha de Conhecimento Homebrew de Vampiro — v9.27
 
 Nenhuma aba nova. No `HOMEBREW`, a coluna `tipo` aceita `conhecimento`.

@@ -290,7 +290,7 @@
         return el("div.pilha.pilha--curta", {}, [el("h4.t-rotulo", { texto: T().nomeDisc(k) + " " + total + " — " + precisa + " poder(es) da criação" + (predDisc.indexOf(k) >= 0 ? " (+1 do Predador, na etapa 7)" : "") })].concat(Array.from({ length: precisa }, function (_, i) {
           var atual = meus[i];
           var possiveis = DS().daDisciplina(k).filter(function (x) { return !x.formula && x.nivel <= total; });
-          return UI().campo({ rotulo: "Poder " + (i + 1), tipo: "selecao", valor: atual ? atual.chave : "", opcoes: [{ valor: "", rotulo: "Escolha…" }].concat(possiveis.map(function (x) { return { valor: x.chave, rotulo: x.nivel + " · " + x.nome + (x.amalgama ? " (amálgama: " + T().nomeDisc(x.amalgama.disciplina) + " " + x.amalgama.nivel + ")" : "") }; })),
+          return UI().campo({ rotulo: "Poder " + (i + 1), tipo: "selecao", valor: atual ? atual.chave : "", opcoes: [{ valor: "", rotulo: "Escolha…" }].concat(possiveis.map(function (x) { return { valor: x.chave, rotulo: x.nivel + " · " + x.nome + (x.homebrew ? " (Homebrew)" : "") + (x.amalgama ? " (amálgama: " + T().nomeDisc(x.amalgama.disciplina) + " " + x.amalgama.nivel + ")" : "") }; })),
             aoMudar: function (v) {
               if (atual) o.poderes = o.poderes.filter(function (p) { return p !== atual; });
               if (v) {
@@ -343,7 +343,7 @@
         escolhas.push(UI().campo({ rotulo: "Disciplina do Predador (+1 ponto)", tipo: "selecao", valor: esc.disciplina, opcoes: [{ valor: "", rotulo: "Escolha…" }].concat(p.disciplinas.filter(function (d) { return !(p.soTremere && p.soTremere.indexOf(d) >= 0 && o.cla !== "tremere"); }).map(function (d) { return { valor: d, rotulo: T().nomeDisc(d) }; })), aoMudar: function (v) { esc.disciplina = v; esc.poder = ""; regravar(); } }));
         if (esc.disciplina) {
           var nivel = R().valorDeDisciplina(o, esc.disciplina);
-          escolhas.push(UI().campo({ rotulo: "Poder do ponto do Predador (nível ≤ " + nivel + ")", tipo: "selecao", valor: esc.poder, opcoes: [{ valor: "", rotulo: "Escolha…" }].concat(DS().daDisciplina(esc.disciplina).filter(function (x) { return !x.formula && x.nivel <= nivel && !o.poderes.some(function (q) { return q.chave === x.chave; }) && (!x.amalgama || R().valorDeDisciplina(o, x.amalgama.disciplina) >= x.amalgama.nivel); }).map(function (x) { return { valor: x.chave, rotulo: x.nivel + " · " + x.nome }; })), aoMudar: function (v) { esc.poder = v; regravar(); } }));
+          escolhas.push(UI().campo({ rotulo: "Poder do ponto do Predador (nível ≤ " + nivel + ")", tipo: "selecao", valor: esc.poder, opcoes: [{ valor: "", rotulo: "Escolha…" }].concat(DS().daDisciplina(esc.disciplina).filter(function (x) { return !x.formula && x.nivel <= nivel && !o.poderes.some(function (q) { return q.chave === x.chave; }) && (!x.amalgama || R().valorDeDisciplina(o, x.amalgama.disciplina) >= x.amalgama.nivel); }).map(function (x) { return { valor: x.chave, rotulo: x.nivel + " · " + x.nome + (x.homebrew ? " (Homebrew)" : "") }; })), aoMudar: function (v) { esc.poder = v; regravar(); } }));
         }
         (p.escolhas || []).forEach(function (es, i) {
           var feito = esc.escolhas[String(i)];
@@ -478,7 +478,7 @@
         if (tipo !== "disciplina" || !alvo) { U.limpar(segundo); return; }
         var de = R().valorDeDisciplina(o, alvo);
         if (para !== de + 1) { U.trocar(segundo, [el("p.t-mini", { texto: "Na criação, compre um nível de Disciplina por vez (de " + de + " para " + (de + 1) + ")." })]); return; }
-        U.trocar(segundo, [UI().campo({ rotulo: "Poder do nível novo", tipo: "selecao", valor: "", opcoes: [{ valor: "", rotulo: "Escolha…" }].concat(DS().daDisciplina(alvo).filter(function (x) { return !x.formula && x.nivel <= para && !R().temPoder(o, x.chave); }).map(function (x) { return { valor: x.chave, rotulo: x.nivel + " · " + x.nome }; })), aoMudar: function (v) { poder = v; conferir(); } })]);
+        U.trocar(segundo, [UI().campo({ rotulo: "Poder do nível novo", tipo: "selecao", valor: "", opcoes: [{ valor: "", rotulo: "Escolha…" }].concat(DS().daDisciplina(alvo).filter(function (x) { return !x.formula && x.nivel <= para && !R().temPoder(o, x.chave); }).map(function (x) { return { valor: x.chave, rotulo: x.nivel + " · " + x.nome + (x.homebrew ? " (Homebrew)" : "") }; })), aoMudar: function (v) { poder = v; conferir(); } })]);
       }
       desenharAlvo();
       var compras = o.compras.map(function (cp, i) {

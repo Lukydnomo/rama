@@ -103,7 +103,14 @@
     ]);
   }
 
+  /* v9.29: os Poderes e as Disciplinas Homebrew da biblioteca entram em
+     "Adicionar poder" (uma consulta por página). */
+  var bibliotecaPedida = false;
   function aba(ctx) {
+    if (global.RAMAVampiroHomebrew && !bibliotecaPedida) {
+      bibliotecaPedida = true;
+      global.RAMAVampiroHomebrew.carregarBiblioteca().then(function (r) { if (r && ((r.poderes || []).length || r.disciplinas.length) && ctx.redesenhar) ctx.redesenhar(); });
+    }
     var o = ctx.ficha.vampiro;
     var c = R().calcular(o);
     var edicao = ctx.emEdicao() && ctx.podeEditar();
@@ -139,7 +146,7 @@
   function escolherPoder(ctx, disciplina, nivelMax) {
     var o = ctx.ficha.vampiro;
     var opcoes = DS().daDisciplina(disciplina).filter(function (x) { return !x.formula && x.nivel <= nivelMax && !R().temPoder(o, x.chave); });
-    var sel = UI().campo({ rotulo: "Poder", tipo: "selecao", valor: "", opcoes: [{ valor: "", rotulo: "Escolha…" }].concat(opcoes.map(function (x) { return { valor: x.chave, rotulo: x.nivel + " · " + x.nome }; })) });
+    var sel = UI().campo({ rotulo: "Poder", tipo: "selecao", valor: "", opcoes: [{ valor: "", rotulo: "Escolha…" }].concat(opcoes.map(function (x) { return { valor: x.chave, rotulo: x.nivel + " · " + x.nome + (x.homebrew ? " (Homebrew)" : "") }; })) });
     return el("div.faixa", {}, [sel, botao("Adicionar poder", function () {
       var k = sel.entrada.value; if (!k) return;
       op(ctx, function (b) {

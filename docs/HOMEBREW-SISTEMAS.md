@@ -2470,3 +2470,94 @@ da lista geral da especificação:
   (resolver ids de Homebrew junto com o catálogo, com cópia versionada
   na ficha). Em T20, Magia e Poder Homebrew já entram no motor desde a
   v9.14.
+
+## v9.29.0 — Vampiro: Poder de Disciplina Homebrew no motor
+
+Até aqui, a Habilidade Homebrew de Vampiro só ia para as anotações. O
+subtipo **Poder de Disciplina** agora entra no motor.
+
+### O editor
+
+**Homebrew → + Criar → Vampiro → Habilidade → Poder de Disciplina**:
+- **Disciplina (do livro)**. Para uma Disciplina Homebrew, os poderes
+  ficam no editor dela (v9.20);
+- **nível** de 1 a 5;
+- **custo**: grátis ou 1 a 3 Checagens de Despertar;
+- **parada**: sem teste, ou Atributo + Disciplina;
+- **duração**: passiva, turno, cena, noite ou indefinida;
+- **pré-requisitos**, em texto (a mesa confere);
+- o **texto** do registro é o efeito.
+
+Registros antigos, com a Disciplina escrita em texto, continuam
+**Manual**. O R.A.M.A. não adivinha qual Disciplina era.
+
+### No motor
+
+- Chave `hbvq-<id>-<hash>`, versionada. O poder entra na **mesma lista**
+  dos poderes da Disciplina (`daDisciplina`), como os poderes
+  "narrativos" do livro: o motor cobra as Checagens, rola a parada e
+  marca a duração. O efeito é da mesa.
+- O poder aparece, com "(Homebrew)":
+  - na **criação**;
+  - em **Adicionar poder** (aba Disciplinas, em edição);
+  - nas **compras com XP**.
+- Valem as regras de aquisição de sempre: um poder por ponto, de nível
+  menor ou igual ao valor da Disciplina.
+- A ficha guarda a **cópia da definição** em `vampiro.homebrew.poderes`.
+  Aberta sem a biblioteca (no servidor, por exemplo), o poder volta pela
+  cópia.
+
+### Correção: a cópia depois de qualquer operação
+
+A v9.27 corrigiu a cópia na compra com XP. Faltavam os outros caminhos,
+como adicionar um poder à mão ou escolher algo na criação. Agora
+`aplicarOperacao` garante, depois de cada operação, a cópia de tudo o
+que é Homebrew na ficha:
+- Disciplinas e poderes;
+- Vantagens;
+- Fichas de Conhecimento;
+- clã e predador.
+
+A aba **Disciplinas** passou a consultar a biblioteca Homebrew, como a
+aba Experiência já fazia.
+
+### Validação da v9.29.0
+
+**Automática.** `testes/executar-homebrew-vampiro.js` ganhou 10
+verificações (agora 42):
+- a definição;
+- a recusa de Disciplina Homebrew, Alquimia ou inventada;
+- a entrada na lista com custo, parada e duração;
+- a aquisição pelo nível;
+- a cópia da definição depois de uma operação;
+- a ficha reaberta sem a biblioteca;
+- a biblioteca e o destino;
+- o registro antigo continua Manual;
+- a prévia.
+
+As outras suítes continuam verdes.
+
+**Na interface** (servidor local, conta sintética):
+- Pelo editor, o subtipo mostrou "Disciplina (do livro)" com as 11
+  Disciplinas, Custo, Parada e Duração. Criei **Olhar de Cristal**
+  (Auspícios 2, 1 Checagem, Raciocínio + Auspícios, uma cena).
+- Numa vampira com Auspícios 2, em edição, a aba Disciplinas ofereceu "2
+  · Olhar de Cristal (Homebrew)". Adicionei o poder. A ficha relida do
+  servidor tinha o poder e a cópia da definição (com as Checagens e a
+  parada).
+- Na primeira tentativa, a aba não oferecia o poder: ela não consultava
+  a biblioteca. Corrigi e refiz o teste.
+
+### Publicar a v9.29.0
+
+**Servidor:** troque **`Vampiro.gs`** e crie uma versão nova da
+implantação. **`setupRama()` não é necessário.**
+
+**Site:**
+- `js/vampiro/disciplinas-dados.js`, `js/vampiro/regras.js`,
+  `js/vampiro/homebrew-vampiro.js`;
+- `js/vampiro/telas/ficha-vampiro.js`,
+  `js/vampiro/telas/ficha-vampiro-disciplinas.js`,
+  `js/vampiro/telas/vampiro-criar.js`;
+- `js/homebrew-adaptadores.js`;
+- `js/versao.js`.

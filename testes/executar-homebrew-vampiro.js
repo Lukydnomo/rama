@@ -114,5 +114,33 @@ t.grupo("Ficha de Conhecimento Homebrew (v9.27)");
   t.ok("versão nova da biblioteca é oferecida e atualizar troca a chave", novas.length === 1 && (() => { const x = copia(ff); H.atualizarVersao(x, novas[0]); const y = R.normalizar(x); return y.fichas.some((z) => z.ficha === fcN.chave) && !y.homebrew.fichas[fc.chave]; })());
 }
 
+t.grupo("Poder de Disciplina Homebrew no motor (v9.29)");
+{
+  const pdB = { nome: "Olhar de Cristal", homebrewId: "a9a9a9a9-sintetico", disciplina: "auspicios", nivel: 2, checagens: 1, atributo: "raciocinio", duracao: "cena", efeito: "Vê através de vidro." };
+  const pd = DS.normalizarPoderHomebrew(pdB);
+  t.ok("chave hbvq-<id>-<hash>, numa Disciplina do livro", /^hbvq-a9a9a9a9-[a-z0-9]+$/.test(pd.chave) && pd.disciplina === "auspicios" && pd.nivel === 2);
+  t.ok("Disciplina Homebrew, Alquimia ou inventada: recusado (sem poder no motor)", DS.normalizarPoderHomebrew(Object.assign(copia(pdB), { disciplina: vit.chave })) === null && DS.normalizarPoderHomebrew(Object.assign(copia(pdB), { disciplina: "alquimia" })) === null && DS.normalizarPoderHomebrew(Object.assign(copia(pdB), { disciplina: "x" })) === null);
+  DS.registrarPoderHomebrew(pd);
+  const e = DS.poder(pd.chave);
+  t.ok("entra na lista da Disciplina, com custo, parada e duração dos poderes do livro", DS.daDisciplina("auspicios").some((x) => x.chave === pd.chave) && e.custo.checagens === 1 && e.parada[0][0] === "raciocinio" && e.duracao === "cena" && e.narrativo);
+  const fP = R.normalizar({ natureza: "vampiro", cla: "toreador", disciplinas: { auspicios: 2 } });
+  R.receberXP(fP, 60, "teste");
+  const okP = R.podeAdquirirPoder(fP, pd.chave, { disciplina: "auspicios", nivel: 2 });
+  t.ok("pode ser adquirido com Auspícios 2 (e não com 1)", okP.ok && !R.podeAdquirirPoder(fP, pd.chave, { disciplina: "auspicios", nivel: 1 }).ok);
+  const r1 = R.aplicarOperacao(fP, "op-teste-1", (b) => { b.poderes.push({ id: "po-x", chave: pd.chave, origem: "ajuste" }); return { ok: true, eventos: [] }; });
+  t.ok("adicionado à mão (operação): a cópia da DEFINIÇÃO vai para a ficha", r1.ok && fP.homebrew.poderes[pd.chave] && fP.homebrew.poderes[pd.chave].checagens === 1 && fP.homebrew.poderes[pd.chave].atributo === "raciocinio", JSON.stringify(fP.homebrew));
+  const idx = DS.PODERES.findIndex((x) => x.chave === pd.chave); const guard = DS.PODERES.splice(idx, 1)[0];
+  const y = R.normalizar(copia(fP));
+  t.ok("reaberta (o servidor, sem a biblioteca): o poder volta pela cópia", y.poderes.some((x) => x.chave === pd.chave) && DS.poder(pd.chave).custo.checagens === 1);
+  if (!DS.PODERES.some((x) => x.chave === pd.chave)) DS.PODERES.push(guard);
+  const g = A.guardar("vampiro", "habilidade", "disciplina", { nome: "Olhar de Cristal", descricao: "Vê através de vidro.", valores: { disciplina: "auspicios", nivel: 2, checagens: 1, atributo: "raciocinio", duracao: "cena" } });
+  const xr = g.ok ? H.deRegistro(Object.assign({}, g.registro, { id: "a9a9a9a9-sintetico" })) : null;
+  t.ok("biblioteca: o registro de Habilidade vira o poder (mesma chave)", xr && xr.tipo === "poder" && xr.def.chave === pd.chave, JSON.stringify(g.ok ? g.registro.modelo : g));
+  t.ok("destino na ficha: nativo", g.ok && A.destinoNaFicha(g.registro, "vampiro").modo === "nativo");
+  const gV = A.guardar("vampiro", "habilidade", "disciplina", { nome: "Velho", descricao: "", valores: { disciplina: "Auspícios" } });
+  t.ok("um registro antigo, com a Disciplina em texto, continua Manual (nada é inventado)", gV.ok && A.destinoNaFicha(gV.registro, "vampiro").modo === "manual" && H.deRegistro(gV.registro) === null);
+  t.ok("prévia", /Auspícios ●● · 1 Checagem\(ns\) · Raciocínio \+ Auspícios · uma cena/.test(H.previa("poder", pd)[0]), H.previa("poder", pd)[0]);
+}
+
 console.log(`\n${FORTE}${passaram} ok${FIM}, ${falharam ? VERMELHO : ""}${falharam} falha(s)${FIM}.`);
 if (falharam) Deno.exit(1);

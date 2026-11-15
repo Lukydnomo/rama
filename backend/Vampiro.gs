@@ -1540,8 +1540,42 @@ function acaoVampiroOperar(corpo, usuario) {
     return def;
   }
 
+  /* v9.29 — PODER DE DISCIPLINA HOMEBREW (chave hbvq-<id>-<hash>, cópia
+     em o.homebrew.poderes): um poder novo numa Disciplina do LIVRO (a
+     Homebrew tem os poderes dela no próprio editor). Nível, custo em
+     Checagens, parada Atributo + Disciplina e duração, como os poderes
+     de uma Disciplina Homebrew; o efeito é texto (a mesa). */
+  var PADRAO_PODER = /^hbvq-[a-z0-9-]{3,30}$/;
+  function ehPoderHomebrew(k) { return PADRAO_PODER.test(String(k || "")); }
+  function disciplinaDoLivro(k) { return !!DISCIPLINAS[k] && !DISCIPLINAS[k].homebrew && k !== "alquimia"; }
+  function normalizarPoderHomebrew(bruto) {
+    var b = hbObj(bruto);
+    if (!disciplinaDoLivro(b.disciplina)) return null;
+    var d = {
+      chave: ehPoderHomebrew(b.chave) ? b.chave : "",
+      nome: hbTx(b.nome, 60).trim() || "Poder Homebrew", homebrew: true, homebrewId: hbTx(b.homebrewId, 80),
+      disciplina: b.disciplina, nivel: hbInt(b.nivel, 1, 5, 1), checagens: hbInt(b.checagens, 0, 3, 0),
+      atributo: ATRS_DISC.indexOf(b.atributo) >= 0 ? b.atributo : "",
+      duracao: ["passiva", "turno", "cena", "noite", "indefinida"].indexOf(b.duracao) >= 0 ? b.duracao : "cena",
+      efeito: hbTx(b.efeito, 1200).trim(), requisitos: hbTx(b.requisitos, 200).trim(),
+    };
+    if (!d.chave) d.chave = hbChave("hbvq-", d);
+    return d;
+  }
+  function registrarPoderHomebrew(def) {
+    if (!def || !ehPoderHomebrew(def.chave) || !disciplinaDoLivro(def.disciplina)) return null;
+    var e = p(def.disciplina, def.nivel, def.chave, def.nome, 0, { custo: def.checagens ? { checagens: def.checagens } : { gratis: true }, duracao: def.duracao, efeito: def.efeito + (def.requisitos ? " Pré-requisito (a mesa confere): " + def.requisitos + "." : ""), narrativo: true, homebrew: true });
+    if (def.atributo) e.parada = [[def.atributo, "disciplina"]];
+    e.def = JSON.parse(JSON.stringify(def));
+    porChave[def.chave] = e;
+    var j = PODERES.map(function (x) { return x.chave; }).indexOf(def.chave);
+    if (j >= 0) PODERES[j] = e; else PODERES.push(e);
+    return e;
+  }
+
   global.RAMAVampiroDisciplinas = {
     ehDisciplinaHomebrew: ehDisciplinaHomebrew, normalizarDisciplinaHomebrew: normalizarDisciplinaHomebrew, registrarDisciplinaHomebrew: registrarDisciplinaHomebrew, ATRS_DISC: ATRS_DISC,
+    ehPoderHomebrew: ehPoderHomebrew, normalizarPoderHomebrew: normalizarPoderHomebrew, registrarPoderHomebrew: registrarPoderHomebrew,
     DISCIPLINAS: DISCIPLINAS, PODERES: PODERES, RITUAIS: RITUAIS, PROTECOES: PROTECOES,
     METODOS_DE_ALQUIMIA: METODOS_DE_ALQUIMIA, IMITACAO: IMITACAO, qualidadeDaDestilacao: qualidadeDaDestilacao,
     poder: function (k) { return porChave[k] || null; },
@@ -2048,6 +2082,11 @@ function acaoVampiroOperar(corpo, usuario) {
     lista(b.vantagens).forEach(function (v) {
       var k = objeto(v).chave;
       usar("vantagens", k, function (x) { return C.ehHomebrew("vantagem", x); }, C.VANTAGENS[k], function (x) { return C.normalizarHomebrew("vantagem", x); }, function (d) { C.registrarHomebrew("vantagem", d); });
+    });
+    /* v9.29: Poderes de Disciplina Homebrew (numa Disciplina do livro). */
+    if (DS().ehPoderHomebrew) lista(b.poderes).forEach(function (x) {
+      var k = objeto(x).chave;
+      usar("poderes", k, DS().ehPoderHomebrew, (DS().poder(k) || {}).def, DS().normalizarPoderHomebrew, DS().registrarPoderHomebrew);
     });
     /* v9.27: Fichas de Conhecimento Homebrew. */
     lista(b.fichas).forEach(function (f) {
@@ -3724,6 +3763,10 @@ function acaoVampiroOperar(corpo, usuario) {
     if (p.tipo === "vantagem") guardarCopiaHomebrew(o, "vantagens", C.VANTAGENS[p.alvo]);
     if (p.tipo === "ficha") guardarCopiaHomebrew(o, "fichas", C.FICHAS_DE_CONHECIMENTO[p.alvo]);
     if (p.tipo === "disciplina" && DS()) guardarCopiaHomebrew(o, "disciplinas", DS().DISCIPLINAS[p.alvo]);
+    /* v9.29: um Poder Homebrew comprado junto (a cópia é a definição, não a entrada do catálogo). */
+    if (p.tipo === "disciplina" && DS() && DS().ehPoderHomebrew) lista(p.poderes).forEach(function (k) {
+      if (DS().ehPoderHomebrew(k) && DS().poder(k)) guardarCopiaHomebrew(o, "poderes", DS().poder(k).def);
+    });
     o.compras.push(compra);
     eventos.push(evento("compra", { compra: p.tipo, alvo: p.alvo, de: v.de, para: v.para, custo: compra.custo, credito: v.desconto }));
     return { ok: true, eventos: eventos, compra: compra };
@@ -4111,12 +4154,30 @@ function acaoVampiroOperar(corpo, usuario) {
   }
 
   /* Aplica `fn(o)` uma vez por opId. Uma segunda chegada não muda nada. */
+  /* v9.29: depois de uma operação (comprar, adicionar um poder à mão,
+     escolher na criação), tudo o que é Homebrew na ficha tem a CÓPIA da
+     definição — a ficha aberta sem a biblioteca continua inteira. */
+  function garantirCopiasHomebrew(o) {
+    Object.keys(objeto(o.disciplinas)).forEach(function (k) { if (DS().ehDisciplinaHomebrew(k)) guardarCopiaHomebrew(o, "disciplinas", DS().DISCIPLINAS[k]); });
+    lista(o.poderes).forEach(function (x) {
+      var k = objeto(x).chave;
+      if (DS().ehPoderHomebrew && DS().ehPoderHomebrew(k) && DS().poder(k)) guardarCopiaHomebrew(o, "poderes", DS().poder(k).def);
+      var hd = String(k || "").replace(/-p\d+$/, "");
+      if (DS().ehDisciplinaHomebrew(hd)) guardarCopiaHomebrew(o, "disciplinas", DS().DISCIPLINAS[hd]);
+    });
+    lista(o.vantagens).forEach(function (v) { if (C.ehHomebrew("vantagem", objeto(v).chave)) guardarCopiaHomebrew(o, "vantagens", C.VANTAGENS[v.chave]); });
+    lista(o.fichas).forEach(function (f) { if (C.ehHomebrew("conhecimento", objeto(f).ficha)) guardarCopiaHomebrew(o, "fichas", C.FICHAS_DE_CONHECIMENTO[f.ficha]); });
+    if (C.ehHomebrew("cla", o.cla)) guardarCopiaHomebrew(o, "clas", C.CLAS[o.cla]);
+    if (C.ehHomebrew("predador", o.predador)) guardarCopiaHomebrew(o, "predadores", C.PREDADORES[o.predador]);
+  }
+
   function aplicarOperacao(o, opId, fn) {
     var id = texto(opId, 120);
     if (!id) return falha("Operação sem identificação.");
     if (o.operacoes.indexOf(id) >= 0) return { ok: true, repetida: true, eventos: [] };
     var r = fn(o) || { ok: true, eventos: [] };
     if (r.ok !== false) {
+      garantirCopiasHomebrew(o);
       o.operacoes.push(id);
       if (o.operacoes.length > LIMITE_OPERACOES) o.operacoes = o.operacoes.slice(-LIMITE_OPERACOES);
     }

@@ -118,6 +118,18 @@
 
   var CHANGELOG = [
     {
+      versao: "9.29.0",
+      codinome: "CRISTAL",
+      data: "15/11/2026",
+      mudancas: {
+        "Adicionado": [
+          "Vampiro: o Poder de Disciplina Homebrew (Habilidade → Poder de Disciplina) entra no motor — numa Disciplina do livro, com nível, custo em Checagens, parada e duração. Aparece na criação, em \u201cAdicionar poder\u201d e nas compras com XP, marcado (Homebrew); o efeito é da mesa.",
+        ],
+        "Corrigido": ["Vampiro: adicionar à mão (ou escolher na criação) algo Homebrew — Disciplina, poder, Vantagem, Ficha de Conhecimento, clã ou predador — agora grava a cópia na ficha depois de qualquer operação. A aba Disciplinas carrega a biblioteca Homebrew."],
+        "Técnico": ["disciplinas-dados.js: normalizar/registrarPoderHomebrew (chaves hbvq-; a definição fica em poder(k).def). regras.js: cópias em vampiro.homebrew.poderes e garantirCopiasHomebrew depois de aplicarOperacao. O subtipo Poder de Disciplina ganhou campos estruturados (registros antigos, com a Disciplina em texto, continuam Manual). Vampiro.gs regenerado. testes/executar-homebrew-vampiro.js: 10 verificações novas (42)."],
+      },
+    },
+    {
       versao: "9.28.0",
       codinome: "RESQUICIO",
       data: "15/11/2026",

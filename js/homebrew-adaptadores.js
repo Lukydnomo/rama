@@ -245,6 +245,11 @@
     },
   };
 
+  function opcoesDisciplinasVampiro() {
+    var D = global.RAMAVampiroDisciplinas;
+    var mapa = D && D.DISCIPLINAS ? D.DISCIPLINAS : {};
+    return Object.keys(mapa).filter(function (k) { return !mapa[k].homebrew && k !== "alquimia"; }).map(function (k) { return [k, mapa[k].nome]; });
+  }
   function opcoesVampiro(qual) {
     var C = global.RAMAVampiroCatalogo;
     var mapa = C && C[qual] ? C[qual] : {};
@@ -254,7 +259,7 @@
     id: "vampiro",
     tipos: [
       { chave: "item", rotulo: "Item", ajuda: "Arma ou armadura sobre uma base do livro (dano e proteção do V5) ou objeto, inclusive sobrenatural." },
-      { chave: "habilidade", rotulo: "Habilidade", ajuda: "Poder de Disciplina ou outra habilidade — por enquanto para consulta e anotações." },
+      { chave: "habilidade", rotulo: "Habilidade", ajuda: "Poder de Disciplina (numa Disciplina do livro: entra nas compras e na criação, com custo, parada e duração) ou outra habilidade, para consulta." },
       { chave: "criatura", rotulo: "Antagonista", ajuda: "Compacto (paradas) ou ficha completa." },
       { chave: "cla", rotulo: "Clã", ajuda: "Três Disciplinas, a Perdição e a Compulsão. Entra na criação de vampiros." },
       { chave: "predador", rotulo: "Predador", ajuda: "Especializações, Disciplinas, Humanidade, Vantagens e Defeitos que dá, paradas de caça. Entra na criação." },
@@ -274,7 +279,14 @@
     },
     habilidade: {
       subtipos: [
-        { chave: "disciplina", rotulo: "Poder de Disciplina", campos: [campo("disciplina", "Disciplina", "texto", { limite: 40, exemplo: "Auspícios" }), campo("nivel", "Nível", "numero", { min: 1, max: 5, padrao: 1, unidade: "●" }), campo("custo", "Custo", "texto", { limite: 40, exemplo: "Uma Checagem de Despertar" }), campo("parada", "Parada", "texto", { limite: 60, exemplo: "Raciocínio + Auspícios" }), campo("duracao", "Duração", "texto", { limite: 40 })], avancado: [campo("requisitos", "Pré-requisitos", "texto", { limite: 200 })] },
+        /* v9.29: o poder entra no motor (uma Disciplina do livro; a
+           Disciplina Homebrew tem os poderes no próprio editor). O efeito
+           é a descrição. */
+        { chave: "disciplina", rotulo: "Poder de Disciplina", campos: [sel("disciplina", "Disciplina (do livro)", opcoesDisciplinasVampiro(), { obrigatorio: true, ajuda: "Para uma Disciplina Homebrew, ponha os poderes no editor dela." }), campo("nivel", "Nível", "numero", { min: 1, max: 5, padrao: 1, unidade: "●" }),
+          sel("checagens", "Custo", [[0, "Grátis"], [1, "1 Checagem de Despertar"], [2, "2 Checagens"], [3, "3 Checagens"]], { padrao: 0 }),
+          sel("atributo", "Parada", [["", "Sem teste"], ["forca", "Força + Disciplina"], ["destreza", "Destreza + Disciplina"], ["vigor", "Vigor + Disciplina"], ["carisma", "Carisma + Disciplina"], ["manipulacao", "Manipulação + Disciplina"], ["autocontrole", "Autocontrole + Disciplina"], ["inteligencia", "Inteligência + Disciplina"], ["raciocinio", "Raciocínio + Disciplina"], ["determinacao", "Determinação + Disciplina"]], { padrao: "" }),
+          sel("duracao", "Duração", [["passiva", "Passiva"], ["turno", "Um turno"], ["cena", "Uma cena"], ["noite", "Uma noite"], ["indefinida", "Indefinida"]], { padrao: "cena" })],
+          avancado: [campo("requisitos", "Pré-requisitos (a mesa confere)", "texto", { limite: 200 })] },
         { chave: "habilidade", rotulo: "Habilidade", campos: [campo("custo", "Custo", "texto", { limite: 40 })] },
       ],
     },
@@ -598,6 +610,7 @@
       if (g === "item") return { modo: "nativo", texto: destino === "brutal" ? "Vira o Apego \"item\" da ficha." : "Entra no inventário com as regras do sistema." };
       if (s === "ordem" || s === "universal" || s === "ordem2") return { modo: "nativo", texto: "Entra nas habilidades da ficha." };
       var stH = subtipoDe(r), dH = defDe(r);
+      if (s === "vampiro" && stH === "disciplina" && dH.disciplina) return { modo: "nativo", texto: "Entra nos poderes da Disciplina (criação e compras com XP), com o custo em Checagens, a parada e a duração; o efeito é da mesa. A cópia fica na ficha." };
       if (s === "tormenta20" && stH === "magia") return { modo: "nativo", texto: "Aprendida na aba Magias (+ Aprender magia) e lançada com o custo do círculo, o dano, a cura e os efeitos configurados. A cópia fica na ficha." };
       if (s === "tormenta20" && stH === "poder" && (dH.grupoT20 || dH.grupo === "geral" || dH.grupo === "tormenta")) return { modo: "nativo", texto: "Escolhido ao subir de nível ou em + Poder avulso, com os efeitos e a ativação configurados. A cópia fica na ficha." };
       return { modo: "manual", texto: "O motor de " + nomeDoSistema(s) + " ainda só aplica habilidades do livro: a habilidade entra nas anotações da ficha, para consulta (Manual)." };

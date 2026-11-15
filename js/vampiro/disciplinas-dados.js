@@ -287,8 +287,42 @@
     return def;
   }
 
+  /* v9.29 — PODER DE DISCIPLINA HOMEBREW (chave hbvq-<id>-<hash>, cópia
+     em o.homebrew.poderes): um poder novo numa Disciplina do LIVRO (a
+     Homebrew tem os poderes dela no próprio editor). Nível, custo em
+     Checagens, parada Atributo + Disciplina e duração, como os poderes
+     de uma Disciplina Homebrew; o efeito é texto (a mesa). */
+  var PADRAO_PODER = /^hbvq-[a-z0-9-]{3,30}$/;
+  function ehPoderHomebrew(k) { return PADRAO_PODER.test(String(k || "")); }
+  function disciplinaDoLivro(k) { return !!DISCIPLINAS[k] && !DISCIPLINAS[k].homebrew && k !== "alquimia"; }
+  function normalizarPoderHomebrew(bruto) {
+    var b = hbObj(bruto);
+    if (!disciplinaDoLivro(b.disciplina)) return null;
+    var d = {
+      chave: ehPoderHomebrew(b.chave) ? b.chave : "",
+      nome: hbTx(b.nome, 60).trim() || "Poder Homebrew", homebrew: true, homebrewId: hbTx(b.homebrewId, 80),
+      disciplina: b.disciplina, nivel: hbInt(b.nivel, 1, 5, 1), checagens: hbInt(b.checagens, 0, 3, 0),
+      atributo: ATRS_DISC.indexOf(b.atributo) >= 0 ? b.atributo : "",
+      duracao: ["passiva", "turno", "cena", "noite", "indefinida"].indexOf(b.duracao) >= 0 ? b.duracao : "cena",
+      efeito: hbTx(b.efeito, 1200).trim(), requisitos: hbTx(b.requisitos, 200).trim(),
+    };
+    if (!d.chave) d.chave = hbChave("hbvq-", d);
+    return d;
+  }
+  function registrarPoderHomebrew(def) {
+    if (!def || !ehPoderHomebrew(def.chave) || !disciplinaDoLivro(def.disciplina)) return null;
+    var e = p(def.disciplina, def.nivel, def.chave, def.nome, 0, { custo: def.checagens ? { checagens: def.checagens } : { gratis: true }, duracao: def.duracao, efeito: def.efeito + (def.requisitos ? " Pré-requisito (a mesa confere): " + def.requisitos + "." : ""), narrativo: true, homebrew: true });
+    if (def.atributo) e.parada = [[def.atributo, "disciplina"]];
+    e.def = JSON.parse(JSON.stringify(def));
+    porChave[def.chave] = e;
+    var j = PODERES.map(function (x) { return x.chave; }).indexOf(def.chave);
+    if (j >= 0) PODERES[j] = e; else PODERES.push(e);
+    return e;
+  }
+
   global.RAMAVampiroDisciplinas = {
     ehDisciplinaHomebrew: ehDisciplinaHomebrew, normalizarDisciplinaHomebrew: normalizarDisciplinaHomebrew, registrarDisciplinaHomebrew: registrarDisciplinaHomebrew, ATRS_DISC: ATRS_DISC,
+    ehPoderHomebrew: ehPoderHomebrew, normalizarPoderHomebrew: normalizarPoderHomebrew, registrarPoderHomebrew: registrarPoderHomebrew,
     DISCIPLINAS: DISCIPLINAS, PODERES: PODERES, RITUAIS: RITUAIS, PROTECOES: PROTECOES,
     METODOS_DE_ALQUIMIA: METODOS_DE_ALQUIMIA, IMITACAO: IMITACAO, qualidadeDaDestilacao: qualidadeDaDestilacao,
     poder: function (k) { return porChave[k] || null; },
