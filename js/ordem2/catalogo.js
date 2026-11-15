@@ -687,4 +687,55 @@
     PRESETS: PRESETS, preset: preset, IMPRESSO_BETA: IMPRESSO_BETA,
     DIVERGENCIAS: DIVERGENCIAS, DECISOES: DECISOES,
   };
+
+  /* =================================================================
+     v9.21 — PERFIL e OCUPAÇÃO HOMEBREW (chaves hbo2p-/hbo2o-<id>-<hash>,
+     cópias em o.homebrew). Perfil: nome, texto e a habilidade de perfil
+     (uma do catálogo). Ocupação: nome, as ambientações onde é sugerida, a
+     habilidade de ocupação (do catálogo) e um texto. Registrados nos
+     MESMOS mapas e listas (PERFIS, ORDEM_PERFIS, HABILIDADE_DE_PERFIL,
+     OCUPACOES). Experimental como o resto de Ordem II. Puro.
+     ================================================================= */
+  var CAT2 = global.RAMAOrdem2Catalogo;
+  var PADRAO_P = /^hbo2p-[a-z0-9-]{3,30}$/, PADRAO_O = /^hbo2o-[a-z0-9-]{3,30}$/;
+  function hbObj(v) { return v && typeof v === "object" && !Array.isArray(v) ? v : {}; }
+  function hbTx(v, max) { return String(v === undefined || v === null ? "" : v).slice(0, max || 200); }
+  function hbEstavel(v) {
+    if (Array.isArray(v)) return "[" + v.map(hbEstavel).join(",") + "]";
+    if (v && typeof v === "object") return "{" + Object.keys(v).sort().map(function (k) { return JSON.stringify(k) + ":" + hbEstavel(v[k]); }).join(",") + "}";
+    return JSON.stringify(v === undefined ? null : v);
+  }
+  function hbHash(t) { var h = 5381; for (var i = 0; i < t.length; i++) h = ((h << 5) + h + t.charCodeAt(i)) | 0; return (h >>> 0).toString(36).slice(0, 6); }
+  function hbChave(prefixo, d) { var sem = Object.assign({}, d); delete sem.chave; delete sem.id; return prefixo + (String(d.homebrewId || "local").toLowerCase().replace(/[^a-z0-9]/g, "").slice(0, 8) || "local") + "-" + hbHash(hbEstavel(sem)); }
+  function ehHomebrew(tipo, k) { return (tipo === "perfil" ? PADRAO_P : PADRAO_O).test(String(k || "")); }
+  function normalizarHomebrew(tipo, bruto) {
+    var b = hbObj(bruto), d;
+    var hab = CAT2.HABILIDADES[b.habilidade] ? b.habilidade : "";
+    if (tipo === "perfil") {
+      d = { chave: ehHomebrew("perfil", b.chave) ? b.chave : "", nome: hbTx(b.nome, 40).trim() || "Perfil Homebrew", texto: hbTx(b.texto, 300).trim(), habilidade: hab, homebrew: true, homebrewId: hbTx(b.homebrewId, 80) };
+      if (!d.chave) d.chave = hbChave("hbo2p-", d);
+    } else {
+      var amb = (Array.isArray(b.ambientacoes) ? b.ambientacoes : []).filter(function (a, i, l) { return !!CAT2.AMBIENTACOES[a] && l.indexOf(a) === i; });
+      d = { id: ehHomebrew("ocupacao", b.id) ? b.id : "", nome: hbTx(b.nome, 60).trim() || "Ocupação Homebrew", ambientacoes: amb.length ? amb : Object.keys(CAT2.AMBIENTACOES), habilidade: hab, texto: hbTx(b.texto, 300).trim(), vistas: hab ? [hab] : [], homebrew: true, homebrewId: hbTx(b.homebrewId, 80) };
+      if (!d.id) d.id = hbChave("hbo2o-", d);
+    }
+    return d;
+  }
+  function registrarHomebrew(tipo, def) {
+    if (!def) return null;
+    if (tipo === "perfil") {
+      if (!ehHomebrew("perfil", def.chave)) return null;
+      CAT2.PERFIS[def.chave] = def;
+      if (CAT2.ORDEM_PERFIS.indexOf(def.chave) < 0) CAT2.ORDEM_PERFIS.push(def.chave);
+      if (def.habilidade) CAT2.HABILIDADE_DE_PERFIL[def.chave] = def.habilidade; else delete CAT2.HABILIDADE_DE_PERFIL[def.chave];
+      return def;
+    }
+    if (!ehHomebrew("ocupacao", def.id)) return null;
+    var i = CAT2.OCUPACOES.map(function (o) { return o.id; }).indexOf(def.id);
+    if (i >= 0) CAT2.OCUPACOES[i] = def; else CAT2.OCUPACOES.push(def);
+    return def;
+  }
+  CAT2.ehHomebrew = ehHomebrew;
+  CAT2.normalizarHomebrew = normalizarHomebrew;
+  CAT2.registrarHomebrew = registrarHomebrew;
 })(typeof window !== "undefined" ? window : globalThis);

@@ -791,6 +791,10 @@
       return;
     }
     var sisHb = registro && registro.modelo ? registro.modelo.sistema : "";
+    if (sisHb === "ordem2" && (stHb === "perfil" || stHb === "ocupacao") && global.RAMAHomebrewOrdem2) {
+      global.RAMAHomebrewOrdem2[stHb]({ registro: registro, aoSalvar: carregar });
+      return;
+    }
     if (sisHb === "vampiro" && ["cla", "predador", "disciplina", "vantagem"].indexOf(stHb) >= 0 && global.RAMAHomebrewVampiro) {
       global.RAMAHomebrewVampiro[stHb]({ registro: registro, aoSalvar: carregar });
       return;

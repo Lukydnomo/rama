@@ -325,6 +325,28 @@
      — a ambientação e a procedência ficam; o perfil antigo vai para
      `migracao.de`. Um pedido que traga o perfil antigo não muda regra
      nenhuma: o campo é só lido como legado. */
+  /* v9.21: Perfil e Ocupação Homebrew vêm com a CÓPIA guardada na ficha
+     (ou, escolhidos de uma lista da biblioteca, do catálogo). Sem cópia e
+     sem catálogo, o perfil some e a ocupação fica como "própria" (o nome
+     escrito continua). */
+  function homebrewDaFicha(b, v) {
+    var k = K();
+    if (!k.ehHomebrew) return;
+    var hb = obj(b.homebrew), saida = {};
+    if (k.ehHomebrew("perfil", b.perfil)) {
+      var cp = obj(obj(hb.perfis)[b.perfil]), cat = k.PERFIS[b.perfil];
+      var def = Object.keys(cp).length ? k.normalizarHomebrew("perfil", Object.assign({}, cp, { chave: b.perfil })) : (cat && cat.homebrew ? copiar(cat) : null);
+      if (def) { k.registrarHomebrew("perfil", def); (saida.perfis = {})[b.perfil] = def; }
+    }
+    var ocId = obj(b.ocupacao).id;
+    if (k.ehHomebrew("ocupacao", ocId)) {
+      var cpo = obj(obj(hb.ocupacoes)[ocId]), cato = k.ocupacao(ocId);
+      var defo = Object.keys(cpo).length ? k.normalizarHomebrew("ocupacao", Object.assign({}, cpo, { id: ocId })) : (cato && cato.homebrew ? copiar(cato) : null);
+      if (defo) { k.registrarHomebrew("ocupacao", defo); (saida.ocupacoes = {})[ocId] = defo; }
+    }
+    if (Object.keys(saida).length) v.homebrew = Object.assign({ versao: 1 }, saida);
+  }
+
   function normalizar(bruto) {
     var b = obj(bruto);
     var legada = !(Number(b.versaoRegras) >= K().REGRAS.versao);
@@ -334,9 +356,11 @@
     v.modoCriacao = ["pronta", "livre", "guiada"].indexOf(b.modoCriacao) >= 0 ? b.modoCriacao : "livre";
     v.procedencia = normalizarProcedencia(b.procedencia);
     v.escolhas = b.escolhas && typeof b.escolhas === "object" ? copiar(b.escolhas) : null;
+    homebrewDaFicha(b, v);
     v.perfil = K().PERFIS[b.perfil] ? b.perfil : "";
     var oc = obj(b.ocupacao);
     v.ocupacao = { id: texto(oc.id, 40), nome: texto(oc.nome, 80), personalizada: oc.personalizada === true };
+    if (K().ehHomebrew && K().ehHomebrew("ocupacao", v.ocupacao.id) && !(v.homebrew && v.homebrew.ocupacoes && v.homebrew.ocupacoes[v.ocupacao.id])) { v.ocupacao.id = ""; v.ocupacao.personalizada = true; }
     v.nivel = inteiro(b.nivel, 1, 10, 1);
     v.patamar = K().PATAMARES[b.patamar] ? b.patamar : "";
     v.idade = texto(b.idade, 20);

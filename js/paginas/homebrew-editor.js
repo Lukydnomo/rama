@@ -87,6 +87,7 @@
           if (t.chave === "classe" && sistema === "tormenta20") { if (global.RAMAHomebrewClasseT20) global.RAMAHomebrewClasseT20.editor({ aoSalvar: o.aoSalvar }); return; }
           if (t.chave === "classe") { if (global.RAMAHomebrewClasse) global.RAMAHomebrewClasse.editor({ aoSalvar: o.aoSalvar }); return; }
           if (t.chave === "elemento") { editor({ sistema: sistema, grupo: "estrutural", subtipo: "elemento", aoSalvar: o.aoSalvar }); return; }
+          if (sistema === "ordem2" && (t.chave === "perfil" || t.chave === "ocupacao") && global.RAMAHomebrewOrdem2) { global.RAMAHomebrewOrdem2[t.chave]({ aoSalvar: o.aoSalvar }); return; }
           if (sistema === "vampiro" && ["cla", "predador", "disciplina", "vantagem", "defeito"].indexOf(t.chave) >= 0 && global.RAMAHomebrewVampiro) { global.RAMAHomebrewVampiro[t.chave]({ aoSalvar: o.aoSalvar }); return; }
           if (sistema === "oblivio" && ["papel", "motivacao", "mazela", "fardo"].indexOf(t.chave) >= 0 && global.RAMAHomebrewOblivio) { global.RAMAHomebrewOblivio[t.chave]({ aoSalvar: o.aoSalvar }); return; }
           if (sistema === "brutal" && (t.chave === "arquetipo" || t.chave === "estilo") && global.RAMAHomebrewBrutal) { global.RAMAHomebrewBrutal[t.chave]({ aoSalvar: o.aoSalvar }); return; }
@@ -433,6 +434,10 @@
       if (x && x.def && st === "trilha") x.def.poderes.forEach(function (p) { if (p.resumo) pares.push(["NEX " + p.nex + "% · " + p.nome, p.resumo]); });
     }
     /* Raça Homebrew de Tormenta20 (v9.10): a prévia e o texto das habilidades. */
+    if (s === "ordem2" && (st === "perfil" || st === "ocupacao") && global.RAMAOrdem2Homebrew) {
+      var HO3 = global.RAMAOrdem2Homebrew, xo3 = HO3.deRegistro(reg);
+      if (xo3 && xo3.def) HO3.previa(st, xo3.def).forEach(function (t, i) { pares.push([i ? "" : "Regras", t]); });
+    }
     if (s === "vampiro" && ["cla", "predador", "disciplina", "vantagem"].indexOf(st) >= 0 && global.RAMAVampiroHomebrew) {
       var HV = global.RAMAVampiroHomebrew, xv = HV.deRegistro(reg);
       if (xv && xv.def) HV.previa(st, xv.def).forEach(function (t, i) { pares.push([i ? "" : "Regras", t]); });

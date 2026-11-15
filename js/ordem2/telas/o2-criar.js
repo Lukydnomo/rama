@@ -545,6 +545,8 @@
     });
     st.focarTitulo = true;
     desenhar(true);
+    /* v9.21: Perfis e Ocupações Homebrew da conta (uma viagem). */
+    if (global.RAMAOrdem2Homebrew) global.RAMAOrdem2Homebrew.carregarBiblioteca().then(function (r) { if (r && (r.perfis.length || r.ocupacoes.length)) desenhar(); });
     return m;
   }
 

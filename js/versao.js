@@ -118,6 +118,18 @@
 
   var CHANGELOG = [
     {
+      versao: "9.21.0",
+      codinome: "GUARDIAO",
+      data: "15/11/2026",
+      mudancas: {
+        "Adicionado": [
+          "Perfil Homebrew de Ordem Paranormal RPG II (nome, texto e a habilidade de perfil do catálogo) e Ocupação Homebrew (ambientações e a habilidade de ocupação). Aparecem na criação, como os do playtest. Experimental, como a edição.",
+          "A ficha guarda a própria cópia; sem ela, a Ocupação vira \u201cprópria\u201d e o nome continua.",
+        ],
+        "Técnico": ["Novos js/ordem2/homebrew-ordem2.js e js/paginas/homebrew-ordem2.js. O catálogo de Ordem II ganhou normalizar/registrar Perfil e Ocupação (chaves hbo2p-/hbo2o- versionadas) nos mesmos mapas e listas; a ficha guarda as cópias em ordem2.homebrew. Servidor: tipo perfil e os estruturais de Ordem II. Novo testes/executar-homebrew-ordem2.js (12 verificações)."],
+      },
+    },
+    {
       versao: "9.20.0",
       codinome: "VITRIFICACAO",
       data: "15/11/2026",

@@ -1,5 +1,11 @@
 # A API
 
+## Perfil e Ocupação Homebrew de Ordem II — v9.21
+
+- `salvar_homebrew`: o grupo `estrutural` de `ordem2` aceita `perfil` e
+  `ocupacao` (a coluna `ocupacao` serve a Goblins e a Ordem II).
+- O motor do servidor mantém as cópias em `ordem2.homebrew`.
+
 ## Clã, Predador, Disciplina e Vantagem Homebrew de Vampiro — v9.20
 
 - `salvar_homebrew`: o grupo `estrutural` de `vampiro` aceita `cla`,

@@ -45,6 +45,7 @@
     { chave: "predador", rotulo: "Predadores", um: "Predador" },
     { chave: "disciplina", rotulo: "Disciplinas", um: "Disciplina" },
     { chave: "vantagem", rotulo: "Vantagens e Defeitos", um: "Vantagem" },
+    { chave: "perfil", rotulo: "Perfis", um: "Perfil" },
   ];
   var GENERICOS = ["item", "arma", "armadura", "mochila", "habilidade"];
   var NATIVOS = ["oblivio", "vampiro", "goblins", "tormenta20", "ordem2"];

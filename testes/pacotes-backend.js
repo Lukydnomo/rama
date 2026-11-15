@@ -229,6 +229,9 @@ export function testarPacotesBackend({ t, preparar, novaConta, comoFn }) {
   t.ok("Papel de Oblívio (v9.19): coluna papel", papelObl.ok && A({ acao: "ler_homebrew", homebrewId: papelObl.dados.id }).dados.tipo === "papel");
   const claVamp = A({ acao: "salvar_homebrew", dados: { tipo: "item", nome: "Vidreiros", modelo: Object.assign(modelo("vampiro", "estrutural", "cla"), { def: { disciplinas: ["fortitude"] } }) } });
   t.ok("Clã de Vampiro (v9.20): coluna cla", claVamp.ok && A({ acao: "ler_homebrew", homebrewId: claVamp.dados.id }).dados.tipo === "cla");
+  const perfO2 = A({ acao: "salvar_homebrew", dados: { tipo: "item", nome: "Guardião", modelo: Object.assign(modelo("ordem2", "estrutural", "perfil"), { def: { habilidade: "prontidao" } }) } });
+  const ocupO2 = A({ acao: "salvar_homebrew", dados: { tipo: "item", nome: "Vidreiro", modelo: Object.assign(modelo("ordem2", "estrutural", "ocupacao"), { def: {} }) } });
+  t.ok("Perfil e Ocupação de Ordem II (v9.21)", perfO2.ok && ocupO2.ok && A({ acao: "ler_homebrew", homebrewId: perfO2.dados.id }).dados.tipo === "perfil");
   t.recusa("Ocupação em Vampiro é recusada", A({ acao: "salvar_homebrew", dados: { tipo: "item", nome: "X", modelo: modelo("vampiro", "estrutural", "ocupacao") } }), "dados_invalidos");
   t.ok("listar com tipos [classe, elemento] devolve os três (classe de Ordem, de T20 e o elemento)", A({ acao: "listar_homebrew", tipos: ["classe", "elemento"] }).dados.length === 3);
   const pOrdemEst = salvar(A, { dados: dados("Livro do Vidro", "ordem"), conteudo: { adicionar: [vidro.dados.id, classeHb.dados.id] } });

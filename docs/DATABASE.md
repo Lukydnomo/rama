@@ -1,5 +1,11 @@
 # O banco
 
+## Perfil e Ocupação Homebrew de Ordem II — v9.21
+
+Nenhuma aba nova. No `HOMEBREW`, a coluna `tipo` aceita `perfil`. Na
+ficha de Ordem II, `ordem2.homebrew` guarda as cópias (`perfis`,
+`ocupacoes`); `perfil` e `ocupacao.id` aceitam essas chaves. Opcional.
+
 ## Clã, Predador, Disciplina e Vantagem Homebrew de Vampiro — v9.20
 
 Nenhuma aba nova. No `HOMEBREW`, a coluna `tipo` aceita `cla`, `predador`,

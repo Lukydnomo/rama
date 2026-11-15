@@ -274,7 +274,7 @@ nova, e o modelo vai no `dadosJson` de sempre.
     efeito oficial. O caso de teste é "Vidro".
 - **T20**: ~~Raça~~ (v9.10.0), ~~Origem e Divindade~~ (v9.11.0) e ~~Classe~~
   (v9.12.0), selecionáveis na criação e na progressão.
-- **Ordem II**: Perfil e Ocupação.
+- **Ordem II**: ~~Perfil e Ocupação~~ (v9.21.0).
 - **Oblívio**: ~~Papel, Motivação, Mazela e Fardo~~ (v9.19.0).
 - **Vampiro**: ~~Clã, Predador, Disciplina, Vantagem, Defeito~~ (v9.20.0) e
   Ficha de Conhecimento.
@@ -1827,3 +1827,98 @@ nova da implantação. **`setupRama()` não é necessário.**
   `js/paginas/homebrew-editor.js`, `js/paginas/homebrew.js`;
 - `js/versao.js`;
 - `homebrew/index.html`, `ficha/index.html`, `personagens/index.html`.
+
+## v9.21.0 — Etapa 2: Perfil e Ocupação Homebrew de Ordem Paranormal RPG II
+
+Experimental, como a edição.
+
+### Os editores
+
+**Homebrew → + Criar → Ordem Paranormal RPG II**, uma etapa cada:
+- **Perfil:** nome, texto e a **habilidade de perfil**, uma do catálogo de
+  Ordem II (Ímpeto, Avaliação, Prontidão…);
+- **Ocupação:** nome, texto, as ambientações onde é sugerida
+  (Contemporâneo, Contos da Vigília) e a **habilidade de ocupação**, do
+  catálogo.
+
+### No motor
+
+As definições entram nos **mesmos mapas e listas** que o motor e as
+telas leem (`PERFIS`, `ORDEM_PERFIS`, `HABILIDADE_DE_PERFIL`,
+`OCUPACOES`), a partir da cópia em `ordem2.homebrew`:
+- a **criação guiada** mostra o Perfil Homebrew depois dos três do
+  playtest, com "Concede: <habilidade>", e entrega a habilidade de perfil
+  como as do catálogo;
+- a Ocupação Homebrew aparece na lista da ambientação e dá a habilidade
+  de ocupação dela;
+- sem cópia e sem catálogo, o Perfil some. A Ocupação vira "própria"
+  (`personalizada`), e o nome escrito continua: nada é inventado e nada se
+  perde.
+
+### Cópia, versão e servidor
+
+- chaves `hbo2p-…` (Perfil) e `hbo2o-…` (id da Ocupação), versionadas;
+- o servidor roda o mesmo motor (`catalogo.js` e `regras.js` em
+  `Ordem2.gs`, por `testes/gerar-ordem2-gs.js`);
+- `RAMAOrdem2Homebrew` tem `versoesNovas` e `atualizarVersao`.
+
+### Servidor e pacotes
+
+- `TIPOS_HOMEBREW` ganhou `perfil`; a coluna `ocupacao` serve a Goblins e
+  a Ordem II, e `modelo.sistema` diz qual. Os estruturais de Ordem II são
+  `perfil` e `ocupacao`.
+- Os pacotes ganharam o grupo "Perfis" (o de "Ocupações" já existia).
+
+### Validação da v9.21.0
+
+**Automática.** O novo `testes/executar-homebrew-ordem2.js` tem 12
+verificações:
+- as definições;
+- o registro nas listas;
+- a criação guiada com as cópias e a habilidade de perfil;
+- o catálogo vazio (servidor) registrando pela cópia;
+- sem cópia: o perfil some e a ocupação vira própria com o nome;
+- guardar e voltar com a mesma chave;
+- o destino (a Ocupação de Ordem II não serve a Goblins);
+- o arquivo;
+- a versão nova do Perfil.
+
+`testes/pacotes-backend.js`: Perfil e Ocupação de Ordem II aceitos.
+
+**Na interface** (servidor local, conta sintética):
+- Criei o Perfil **Guardião** (habilidade Prontidão) pelo editor. A
+  prévia mostrou "Habilidade de perfil: Prontidão".
+- Na criação guiada de Ordem II, ele apareceu como "Guardião — Protege
+  antes de tudo. · Concede: Prontidão.", depois de Executor, Analista e
+  Vigilante.
+
+### Publicar a v9.21.0
+
+**Servidor:** troque **`Codigo.gs`** e **`Ordem2.gs`**, e crie uma versão
+nova da implantação. **`setupRama()` não é necessário.**
+
+**Site:**
+- `js/ordem2/homebrew-ordem2.js` e `js/paginas/homebrew-ordem2.js`
+  (novos);
+- `js/ordem2/catalogo.js`, `js/ordem2/regras.js`,
+  `js/ordem2/telas/o2-criar.js`;
+- `js/homebrew-adaptadores.js`, `js/pacotes-homebrew.js`,
+  `js/paginas/homebrew-editor.js`, `js/paginas/homebrew.js`;
+- `js/versao.js`;
+- `homebrew/index.html`, `ficha/index.html`, `personagens/index.html`.
+
+### Etapa 2 depois da v9.21
+
+Todos os sistemas têm agora os tipos estruturais da especificação.
+Continuam pendentes:
+- em **Ordem I**:
+  - a classe que conjura rituais;
+  - a Classe Homebrew na transição de mundano ou sobrevivente para
+    agente (a transição usa uma tabela de ganhos só das classes do
+    livro);
+  - o elemento Homebrew em poderes paranormais e maldições;
+- os **painéis "Homebrew desta ficha"** de Goblins, BRUTAL, Oblívio,
+  Vampiro e Ordem II: as funções de versão existem e têm testes, mas o
+  painel está só em Ordem I e T20;
+- detalhes por sistema, como a escolha de poder geral dentro de uma
+  habilidade de raça em T20 e a Ficha de Conhecimento em Vampiro.
