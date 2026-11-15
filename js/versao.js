@@ -119,7 +119,7 @@
   var CHANGELOG = [
     {
       versao: "9.25.0",
-      codinome: "ESTILHACO",
+      codinome: "FACETA",
       data: "15/11/2026",
       mudancas: {
         "Adicionado": [

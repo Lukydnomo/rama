@@ -929,7 +929,7 @@ segredo nenhum — ele os lê das Script Properties. Publicá-lo não expõe nad
 
 ### Atualizar o backend
 
-**v9.25.0 — ESTILHACO:** elemento Homebrew de Ordem em poderes, itens e
+**v9.25.0 — FACETA:** elemento Homebrew de Ordem em poderes, itens e
 maldições. **Só o site muda: o servidor fica como está.** Site: os
 arquivos listados em `docs/HOMEBREW-SISTEMAS.md` (seção "Publicar a
 v9.25.0").
