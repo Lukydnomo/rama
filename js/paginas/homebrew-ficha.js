@@ -85,7 +85,7 @@
         if (spec) (spec.campos || []).concat(spec.avancado || []).forEach(function (c) { if (d[c.chave] !== undefined && d[c.chave] !== "") linhas.push(c.rotulo + ": " + d[c.chave]); });
         if (!ctx.ficha.anotacoes) ctx.ficha.anotacoes = { pastas: [], soltas: [] };
         if (!Array.isArray(ctx.ficha.anotacoes.soltas)) ctx.ficha.anotacoes.soltas = [];
-        ctx.ficha.anotacoes.soltas.push(F.normalizarNota({ titulo: h.nome + " (Homebrew · " + A().rotuloDoSubtipo(h) + ")", conteudo: linhas.filter(Boolean).join("\n") + "\n\nManual: o motor de " + nomeDoSistema(sistema) + " ainda só aplica habilidades do livro." }));
+        ctx.ficha.anotacoes.soltas.push(F.normalizarNota({ titulo: h.nome + " (Homebrew · " + A().rotuloDoSubtipo(h) + ")", conteudo: linhas.filter(Boolean).join("\n") + "\n\nManual: habilidade só de texto (o motor de " + nomeDoSistema(sistema) + " aplica as que têm subtipo próprio)." }));
         ctx.alterou();
         if (ctx.redesenhar) ctx.redesenhar();
         UI.avisoOk(h.nome + " foi para as anotações da ficha (consulta).");

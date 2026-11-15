@@ -454,7 +454,7 @@
   function grupoDe(r) {
     var t = obj(r).tipo;
     if (obj(r).modelo && obj(r).modelo.grupo) return obj(r).modelo.grupo;
-    if (t === "classe" || t === "elemento" || t === "origem" || t === "trilha" || t === "raca" || t === "divindade" || t === "ocupacao" || t === "descritor" || t === "arquetipo" || t === "estilo" || t === "papel" || t === "motivacao" || t === "mazela" || t === "fardo" || t === "cla" || t === "predador" || t === "disciplina" || t === "vantagem" || t === "perfil") return "estrutural";
+    if (t === "classe" || t === "elemento" || t === "origem" || t === "trilha" || t === "raca" || t === "divindade" || t === "ocupacao" || t === "descritor" || t === "arquetipo" || t === "estilo" || t === "papel" || t === "motivacao" || t === "mazela" || t === "fardo" || t === "cla" || t === "predador" || t === "disciplina" || t === "vantagem" || t === "perfil" || ["conhecimento", "assassino", "ameaca", "apavoro", "pokepraga", "receita"].indexOf(t) >= 0) return "estrutural";
     if (t === "criatura") return "criatura";
     if (t === "habilidade" || t === "ritual") return "habilidade";
     return "item";
@@ -640,7 +640,9 @@
       })[stE] || "Aparece nos seletores de elemento (rituais, criaturas, itens e, se permitido, afinidade)." };
     }
     if (s === destino) {
-      if (g === "item") return { modo: "nativo", texto: destino === "brutal" ? "Vira o Apego \"item\" da ficha." : "Entra no inventário com as regras do sistema." };
+      if (g === "item") return { modo: "nativo", texto: destino === "brutal" ? "Vira o Apego \"item\" da ficha." : (subtipoDe(r) === "outro" ? "Entra no inventário como item narrativo (nome e descrição): as regras ficam com a mesa." : "Entra no inventário com as regras do sistema.") };
+      /* v9.36: o Ritual de Ordem entra na aba Rituais. */
+      if (s === "ordem" && subtipoDe(r) === "ritual") return { modo: "nativo", texto: "Entra na aba Rituais, com símbolo, círculo, elemento(s) e a conjuração automática." };
       if (s === "ordem" || s === "universal" || s === "ordem2") return { modo: "nativo", texto: "Entra nas habilidades da ficha." };
       var stH = subtipoDe(r), dH = defDe(r);
       if (s === "brutal" && stH === "vantagem") return { modo: "nativo", texto: "A Diretora traz para a mesa (Vantagens da mesa → Da biblioteca): custo em PT, recarga e o efeito que o motor aplica. A mesa guarda a cópia." };
@@ -650,7 +652,10 @@
       if (s === "vampiro" && stH === "disciplina" && dH.disciplina) return { modo: "nativo", texto: "Entra nos poderes da Disciplina (criação e compras com XP), com o custo em Checagens, a parada e a duração; o efeito é da mesa. A cópia fica na ficha." };
       if (s === "tormenta20" && stH === "magia") return { modo: "nativo", texto: "Aprendida na aba Magias (+ Aprender magia) e lançada com o custo do círculo, o dano, a cura e os efeitos configurados. A cópia fica na ficha." };
       if (s === "tormenta20" && stH === "poder" && (dH.grupoT20 || dH.grupo === "geral" || dH.grupo === "tormenta")) return { modo: "nativo", texto: "Escolhido ao subir de nível ou em + Poder avulso, com os efeitos e a ativação configurados. A cópia fica na ficha." };
-      return { modo: "manual", texto: "O motor de " + nomeDoSistema(s) + " ainda só aplica habilidades do livro: a habilidade entra nas anotações da ficha, para consulta (Manual)." };
+      /* v9.36: o que o motor aplica tem subtipo próprio; a Habilidade só
+         de texto vai para as anotações. */
+      var aplicaveis = ({ tormenta20: "Magia e Poder", vampiro: "Poder de Disciplina", goblins: "Magia e Técnica", oblivio: "Habilidade", brutal: "Vantagem" })[s];
+      return { modo: "manual", texto: "Habilidade só de texto: entra nas anotações da ficha, para consulta (Manual)." + (aplicaveis ? " O que o motor de " + nomeDoSistema(s) + " aplica tem subtipo próprio: " + aplicaveis + "." : "") };
     }
     /* v9.35: com ações, entra nas Ações Homebrew da ficha (recursos nativos). */
     if (s === "universal" && lista(obj(obj(r).universal).acoes).length && destino !== "universal") return { modo: "manual", texto: "Conteúdo Universal com ações: entra nas Ações Homebrew da ficha, e as ações usam os recursos dela (custo, efeito e usos; o que não tiver recurso nativo, a mesa resolve)." };

@@ -929,6 +929,11 @@ segredo nenhum — ele os lê das Script Properties. Publicá-lo não expõe nad
 
 ### Atualizar o backend
 
+**v9.36.0 — MATRIZ:** inventário de cobertura e matriz de regressão do
+Homebrew. **Só o site muda: o servidor fica como está.** Site:
+`js/homebrew-adaptadores.js`, `js/paginas/homebrew-ficha.js` e
+`js/versao.js`.
+
 **v9.35.0 — TONICO:** ações do Modelo Universal nas fichas de sistema,
 com os recursos nativos. **Só o site muda: o servidor fica como está.**
 Site: os arquivos listados em `docs/HOMEBREW-SISTEMAS.md` (seção
@@ -2159,7 +2164,7 @@ Três números diferentes, que não se misturam:
 
 | | Onde | O que é |
 |---|---|---|
-| versão do aplicativo | `js/versao.js` | o que a pessoa vê: v9.35.0 |
+| versão do aplicativo | `js/versao.js` | o que a pessoa vê: v9.36.0 |
 | `schemaVersion` | `js/ficha.js` | o formato da FICHA |
 | `versaoFormato` | `js/config.js` | o formato dos arquivos de importação |
 

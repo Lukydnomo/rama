@@ -118,6 +118,21 @@
 
   var CHANGELOG = [
     {
+      versao: "9.36.0",
+      codinome: "MATRIZ",
+      data: "15/11/2026",
+      mudancas: {
+        "Adicionado": [
+          "Etapa 3, parte 2: o inventário de cobertura do Homebrew (docs/HOMEBREW-COBERTURA.md) — por sistema, cada tipo com o editor, onde entra na ficha e o que fica com a mesa — gerado dos próprios adaptadores, e a matriz de regressão que confere, em cada sistema, que o servidor e os pacotes aceitam cada tipo e que nada é convertido entre sistemas.",
+        ],
+        "Corrigido": [
+          "Os textos de destino na ficha: o Ritual de Ordem entra na aba Rituais; um item \u201cOutro\u201d entra como narrativo; a Habilidade só de texto diz quais subtipos o motor do sistema aplica.",
+          "Registros sem modelo (formato anterior) dos tipos Ficha de Conhecimento, Assassino, Ameaça, Apavoro, PokéPraga e Receita eram lidos como item, e não como tipo estrutural.",
+        ],
+        "Técnico": ["Novo testes/executar-homebrew-matriz.js (40 verificações; com --gerar escreve docs/HOMEBREW-COBERTURA.md). grupoDe conhece os tipos estruturais novos."],
+      },
+    },
+    {
       versao: "9.35.0",
       codinome: "TONICO",
       data: "15/11/2026",

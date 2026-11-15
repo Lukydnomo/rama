@@ -3067,3 +3067,92 @@ Falta:
 - o inventário de cobertura (tipo, editor, destino, automações e pontos
   manuais) e a matriz de regressão por sistema;
 - a validação em celular e desktop, nos dois temas, com teclado.
+
+## v9.36.0 — Etapa 3, parte 2: inventário de cobertura e matriz de regressão
+
+### O inventário de cobertura
+
+O novo **`docs/HOMEBREW-COBERTURA.md`** lista, por sistema, cada tipo e
+subtipo do Homebrew com:
+- o **editor** (de campos, de rituais ou próprio, por etapas);
+- **onde entra na ficha** (Nativo, Manual ou fora da ficha);
+- o **que entra e o que fica com a mesa**.
+
+No fim, a tabela dos recursos nativos das ações Universais.
+
+O documento é **gerado** pelos adaptadores (`js/homebrew-adaptadores.js`),
+os mesmos que a interface usa: não tem como ficar desatualizado em
+silêncio. Para escrever de novo:
+
+    deno run --allow-read --allow-write=docs testes/executar-homebrew-matriz.js --gerar
+
+### A matriz de regressão
+
+O novo `testes/executar-homebrew-matriz.js` (40 verificações) passa por
+**cada sistema e cada tipo/subtipo** e confere:
+- que os tipos estruturais do adaptador são **os que o servidor aceita**
+  (lidos do próprio `backend/Codigo.gs`), e que cada um está em
+  `TIPOS_HOMEBREW` e nos pacotes;
+- que cada tipo é lido como estrutural mesmo sem o modelo, no formato
+  anterior;
+- que **todo tipo diz o que entra** na ficha do sistema (Nativo ou
+  Manual, sempre com o texto);
+- que, em **outro sistema**, ele é incompatível, porque o R.A.M.A. não
+  converte, e que Universal entra como Manual, com o texto;
+- que o pacote aceita o tipo no próprio sistema e recusa em outro;
+- que todo sistema tem adaptador de recursos para as ações Universais,
+  e que só Oblívio e BRUTAL ficam sem, com o motivo.
+
+### O que a matriz e o inventário acharam (corrigido)
+
+- Os tipos novos das v9.27, v9.32 e v9.33 (Ficha de Conhecimento,
+  Assassino, Ameaça, Apavoro, PokéPraga, Receita) eram lidos como
+  **item** num registro sem modelo. Agora são estruturais.
+- Três textos de destino estavam imprecisos:
+  - o **Ritual** de Ordem dizia "entra nas habilidades da ficha": ele
+    entra na **aba Rituais**;
+  - um item **"Outro (narrativo)"** dizia "com as regras do sistema":
+    entra como item narrativo;
+  - a **Habilidade só de texto** dizia que o motor "só aplica habilidades
+    do livro" (não é mais verdade): agora diz quais subtipos o motor
+    aplica, como "Magia e Poder" em T20 ou "Poder de Disciplina" em
+    Vampiro.
+
+### Interface: celular, desktop, temas e teclado
+
+Feito no servidor local, com os editores das versões novas (Ficha de
+Conhecimento de Vampiro e Assassino de BRUTAL):
+- **Celular (375 px)**: os editores cabem na largura, sem rolagem
+  horizontal, com os botões fixos no rodapé.
+- **Desktop (1280 px)**: o editor aparece com a revisão lateral.
+- **Temas**: escuro com Legacy e claro com Modern20, legíveis e com o
+  painel opaco.
+- **Teclado**:
+  - o Tab percorre os campos e os botões de nível até "Criar", com o
+    contorno de foco visível;
+  - o foco dá a volta dentro da janela, sem escapar para a página;
+  - Esc fecha a janela (sem rascunho, sem pergunta).
+
+### Validação da v9.36.0
+
+- `testes/executar-homebrew-matriz.js`: 40 verificações;
+- `testes/executar-homebrew-sistemas.js`: a verificação da Habilidade só
+  de texto acompanha o texto novo.
+
+As outras suítes continuam verdes.
+
+### Publicar a v9.36.0
+
+**Servidor:** nada muda.
+
+**Site:** `js/homebrew-adaptadores.js`, `js/paginas/homebrew-ficha.js` e
+`js/versao.js`.
+
+### Etapa 3 depois da v9.36
+
+Ainda faltam, dos critérios de aceitação:
+- pacote privado entre duas contas na interface;
+- pacote antigo e pacote Universal.
+
+Os testes do servidor já cobrem os dois casos; falta passar por eles na
+interface.
