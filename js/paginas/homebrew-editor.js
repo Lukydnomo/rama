@@ -80,6 +80,7 @@
           if (t.chave === "classe") { if (global.RAMAHomebrewClasse) global.RAMAHomebrewClasse.editor({ aoSalvar: o.aoSalvar }); return; }
           if (t.chave === "elemento") { editor({ sistema: sistema, grupo: "estrutural", subtipo: "elemento", aoSalvar: o.aoSalvar }); return; }
           if ((t.chave === "origem" || t.chave === "trilha") && global.RAMAHomebrewOrigemTrilha) { global.RAMAHomebrewOrigemTrilha[t.chave]({ aoSalvar: o.aoSalvar }); return; }
+          if (t.chave === "raca" && global.RAMAHomebrewRacaT20) { global.RAMAHomebrewRacaT20.editor({ aoSalvar: o.aoSalvar }); return; }
           if (t.chave === "ritual") { if (o.editarRitual) o.editarRitual(); return; }
           editor({ sistema: sistema, grupo: t.chave, aoSalvar: o.aoSalvar });
         }));
@@ -99,7 +100,8 @@
           el("span.t-rotulo", { texto: nome(sistema) }),
         ]),
         el("div.hbe-tipos", { role: "list", "aria-label": "Tipos de " + nome(sistema) }, cartoes),
-        sistema !== "universal" && sistema !== "ordem" ? el("p.t-mini", { texto: "Os tipos estruturais deste sistema (raça, clã, papel, arquétipo…) chegam numa próxima etapa do Homebrew por sistema." }) : null,
+        sistema === "tormenta20" ? el("p.t-mini", { texto: "Origem, Classe e Divindade de Tormenta20 chegam numa próxima etapa do Homebrew por sistema." }) :
+          sistema !== "universal" && sistema !== "ordem" ? el("p.t-mini", { texto: "Os tipos estruturais deste sistema (clã, papel, arquétipo…) chegam numa próxima etapa do Homebrew por sistema." }) : null,
       ]);
       var b = corpo.querySelector(".hbe-tipo"); if (b) b.focus();
     }
@@ -416,6 +418,14 @@
       var x = HOy.deRegistro(reg);
       if (x && x.def) (st === "origem" ? HOy.previaOrigem(x.def) : HOy.previaTrilha(x.def)).forEach(function (t, i) { pares.push([i ? "" : "Regras", t]); });
       if (x && x.def && st === "trilha") x.def.poderes.forEach(function (p) { if (p.resumo) pares.push(["NEX " + p.nex + "% · " + p.nome, p.resumo]); });
+    }
+    /* Raça Homebrew de Tormenta20 (v9.10): a prévia e o texto das habilidades. */
+    if (s === "tormenta20" && st === "raca" && global.RAMATormenta20Homebrew) {
+      var HT = global.RAMATormenta20Homebrew, xr = HT.deRegistro(reg);
+      if (xr && xr.def) {
+        HT.previaRaca(xr.def).forEach(function (t, i) { pares.push([i ? "" : "Regras", t]); });
+        xr.def.habilidades.forEach(function (h) { if (h.resumo && h.id !== "corpo") pares.push([h.nome, h.resumo]); });
+      }
     }
     if (s === "ordem" && st === "elemento") {
       if (d.forteContra && d.forteContra.length) pares.push(["Forte contra", d.forteContra.map(function (k) { return global.RAMAOrdemElementos ? global.RAMAOrdemElementos.nome(k) : k; }).join(", ")]);

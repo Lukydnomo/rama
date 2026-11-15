@@ -1,5 +1,13 @@
 # O banco
 
+## Raça Homebrew de Tormenta20 — v9.10
+
+Nenhuma aba nova. No `HOMEBREW`, a coluna `tipo` aceita `raca`
+(`modelo.sistema` igual a `tormenta20`, `modelo.grupo` igual a
+`estrutural`). Na ficha de Tormenta20, `tormenta20.homebrew.racas` guarda
+a cópia da raça Homebrew usada (chave `hbr-…`), e `tormenta20.raca.id`
+aceita essa chave. É opcional: as fichas existentes não mudam.
+
 ## Origem e Trilha Homebrew de Ordem — v9.9
 
 Nenhuma aba nova. No `HOMEBREW`, a coluna `tipo` aceita `origem` e

@@ -31,6 +31,7 @@
     { chave: "elemento", rotulo: "Elementos", um: "Elemento" },
     { chave: "origem", rotulo: "Origens", um: "Origem" },
     { chave: "trilha", rotulo: "Trilhas", um: "Trilha" },
+    { chave: "raca", rotulo: "Raças", um: "Raça" },
   ];
   var GENERICOS = ["item", "arma", "armadura", "mochila", "habilidade"];
   var NATIVOS = ["oblivio", "vampiro", "goblins", "tormenta20", "ordem2"];

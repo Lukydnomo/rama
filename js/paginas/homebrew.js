@@ -782,6 +782,10 @@
     }
     /* v9.9: Origem e Trilha de Ordem têm editores próprios. */
     var stHb = registro && registro.modelo && registro.modelo.grupo === "estrutural" ? registro.modelo.subtipo : "";
+    if (stHb === "raca" && global.RAMAHomebrewRacaT20) {
+      global.RAMAHomebrewRacaT20.editor({ registro: registro, aoSalvar: carregar });
+      return;
+    }
     if ((stHb === "origem" || stHb === "trilha") && global.RAMAHomebrewOrigemTrilha) {
       global.RAMAHomebrewOrigemTrilha[stHb]({ registro: registro, aoSalvar: carregar });
       return;

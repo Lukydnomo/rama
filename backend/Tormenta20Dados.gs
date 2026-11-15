@@ -690,7 +690,131 @@
      construto; osteon, morto-vivo. */
   var HUMANOIDES = ["humano", "anao", "dahllan", "elfo", "goblin", "minotauro", "qareen", "hynne", "kliren", "sereia"];
 
-  global.RAMATormenta20Racas = { RACAS: RACAS, RACA: RACA, habilidade: habilidade, habilidadesDe: habilidadesDe, atributosDe: atributosDe, HUMANOIDES: HUMANOIDES };
+  /* =================================================================
+     v9.10 — RAÇA HOMEBREW
+     -----------------------------------------------------------------
+     Uma raça da mesa entra pelo MESMO mapa RACA (todo o motor a lê
+     dali), a partir de uma CÓPIA guardada na ficha:
+
+       t20.homebrew = { versao, racas: { "hbr-<id>-<hash>": def } }
+
+     A chave é versionada pelo conteúdo: editar a raça na biblioteca cria
+     outra versão, e o personagem em jogo continua com a dele. Só entram
+     efeitos que o motor já soma, no formato das raças do livro:
+       bonus     Defesa ou uma perícia (−5 a +10)
+       treino    uma perícia treinada
+       pvNivel   PV no 1º nível e por nível seguinte (Duro como Pedra)
+       pmNivel   PM por nível (Sangue Mágico)
+       sentido   visão no escuro, na penumbra, faro
+       rd        redução de dano de um tipo
+       prof      uma proficiência
+     e UMA escolha por habilidade: perícias à escolha, treinadas ou com
+     bônus (Versátil, Híbrido, Deformidade). Tamanho e deslocamento são
+     da raça (viram a habilidade "Tamanho e deslocamento"). O resto do
+     texto é da mesa. Puro: o servidor roda este arquivo.
+     ================================================================= */
+  var PADRAO_HB = /^hbr-[a-z0-9-]{3,30}$/;
+  var ATRS = ["for", "des", "con", "int", "sab", "car"];
+  var TAMANHOS_HB = ["minusculo", "pequeno", "medio", "grande"];
+  var SENTIDOS_HB = ["visaoNoEscuro", "visaoNaPenumbra", "faro"];
+  var PROFS_HB = ["marciais", "escudos", "pesadas", "exoticas", "fogo"];
+  var RACAS_HOMEBREW = [];
+  function Dd() { return global.RAMATormenta20Dados; }
+  function oo(v) { return v && typeof v === "object" && !Array.isArray(v) ? v : {}; }
+  function ll(v) { return Array.isArray(v) ? v : []; }
+  function tx(v, max) { return String(v === undefined || v === null ? "" : v).slice(0, max || 200); }
+  function nn(v, min, max, p) { var n = Math.round(Number(v)); return v !== "" && v !== null && v !== undefined && isFinite(n) ? Math.max(min, Math.min(max, n)) : p; }
+  function periciaOk(k) { return k !== "oficio" && (!Dd() || Dd().PERICIAS.some(function (p) { return p.chave === k; })); }
+  function danoOk(k) { return !Dd() || Dd().TIPOS_DANO.some(function (x) { return x[0] === k; }); }
+  function estavel(v) {
+    if (Array.isArray(v)) return "[" + v.map(estavel).join(",") + "]";
+    if (v && typeof v === "object") return "{" + Object.keys(v).sort().map(function (k) { return JSON.stringify(k) + ":" + estavel(v[k]); }).join(",") + "}";
+    return JSON.stringify(v === undefined ? null : v);
+  }
+  function hash(t) { var h = 5381; for (var i = 0; i < t.length; i++) h = ((h << 5) + h + t.charCodeAt(i)) | 0; return (h >>> 0).toString(36).slice(0, 6); }
+  function ehHomebrew(id) { return PADRAO_HB.test(String(id || "")); }
+
+  function efeitoHomebrew(bruto) {
+    var e = oo(bruto);
+    if (e.t === "bonus") {
+      var alvo = e.alvo === "defesa" ? "defesa" : (/^pericia\.[a-z]+$/.test(String(e.alvo)) && periciaOk(String(e.alvo).slice(8)) ? e.alvo : "");
+      var v = nn(e.valor, -5, 10, 0);
+      return alvo && v ? { t: "bonus", alvo: alvo, valor: v } : null;
+    }
+    if (e.t === "treino") return periciaOk(e.pericia) ? { t: "treino", pericia: e.pericia } : null;
+    if (e.t === "pvNivel") { var ini = nn(e.inicial, 0, 10, 0), pn = nn(e.valor, -2, 5, 0); return ini || pn ? { t: "pvNivel", inicial: ini, valor: pn } : null; }
+    if (e.t === "pmNivel") { var pm = nn(e.valor, 1, 3, 0); return pm ? { t: "pmNivel", valor: pm } : null; }
+    if (e.t === "sentido") return SENTIDOS_HB.indexOf(e.valor) >= 0 ? { t: "sentido", valor: e.valor } : null;
+    if (e.t === "rd") { var tp = ll(e.tipos)[0], rv = nn(e.valor, 1, 10, 0); return rv && danoOk(tp) ? { t: "rd", valor: rv, tipos: [tp] } : null; }
+    if (e.t === "prof") return PROFS_HB.indexOf(e.qual) >= 0 ? { t: "prof", qual: e.qual } : null;
+    return null;
+  }
+  function escolhaHomebrew(bruto, id) {
+    var x = oo(bruto);
+    if (x.tipo !== "pericia") return null;
+    var q = nn(x.quantidade, 1, 3, 1);
+    var ef = oo(x.efeito);
+    var efeito = ef.t === "bonus" ? { t: "bonus", valor: nn(ef.valor, 1, 5, 2) } : { t: "treino" };
+    return { id: id, tipo: "pericia", quantidade: q, efeito: efeito };
+  }
+  function textoCorpo(tam, desl) {
+    var nome = ((Dd() && Dd().TAMANHO && Dd().TAMANHO[tam]) || { nome: tam }).nome;
+    return "Tamanho " + nome + ", deslocamento " + String(desl).replace(".", ",") + "m.";
+  }
+  function normalizarRacaHomebrew(bruto) {
+    var b = oo(bruto);
+    var at = oo(b.atributos), fixo = {};
+    ATRS.forEach(function (a) { var v = nn(oo(at.fixo)[a], -2, 2, 0); if (v) fixo[a] = v; });
+    var atributos = { fixo: fixo };
+    var esc = oo(at.escolha), q = nn(esc.quantidade, 0, 3, 0);
+    if (q) atributos.escolha = { quantidade: q, valor: nn(esc.valor, 1, 2, 1), exceto: ll(esc.exceto).filter(function (a, i, l) { return ATRS.indexOf(a) >= 0 && !fixo[a] && l.indexOf(a) === i; }).concat(Object.keys(fixo)) };
+    if (atributos.escolha && !atributos.escolha.exceto.length) delete atributos.escolha.exceto;
+    var tam = TAMANHOS_HB.indexOf(b.tamanho) >= 0 ? b.tamanho : "medio";
+    var desl = Math.max(3, Math.min(18, Math.round((Number(b.deslocamento) || 9) / 1.5) * 1.5));
+    var d = {
+      id: ehHomebrew(b.id) ? b.id : "",
+      nome: tx(b.nome, 60).trim() || "Raça Homebrew",
+      homebrew: true, homebrewId: tx(b.homebrewId, 80), fonte: "HOMEBREW", pagina: 0,
+      descricao: tx(b.descricao, 1200),
+      tamanho: tam, deslocamento: desl,
+      atributos: atributos,
+      habilidades: [],
+    };
+    ll(b.habilidades).filter(function (h) { return oo(h).id !== "corpo"; }).slice(0, 6).forEach(function (h0, i) {
+      var h = oo(h0);
+      var id = "h" + (i + 1);
+      var x = { id: id, nome: tx(h.nome, 60).trim() || "Habilidade " + (i + 1), resumo: tx(h.resumo, 600).trim(), efeitos: ll(h.efeitos).map(efeitoHomebrew).filter(Boolean).slice(0, 4), homebrew: true };
+      var e = ll(h.escolhas).map(function (y) { return escolhaHomebrew(y, id + "e"); }).filter(Boolean)[0];
+      if (e) x.escolhas = [e];
+      d.habilidades.push(x);
+    });
+    if (tam !== "medio" || desl !== 9) {
+      var corpo = [];
+      if (tam !== "medio") corpo.push({ t: "tamanho", valor: tam });
+      if (desl !== 9) corpo.push({ t: "deslocamento", tipo: "terrestre", base: desl });
+      d.habilidades.unshift({ id: "corpo", nome: "Tamanho e deslocamento", resumo: textoCorpo(tam, desl), efeitos: corpo, homebrew: true });
+    }
+    if (!d.id) {
+      var sem = Object.assign({}, d); delete sem.id;
+      d.id = "hbr-" + (String(d.homebrewId || "local").toLowerCase().replace(/[^a-z0-9]/g, "").slice(0, 8) || "local") + "-" + hash(estavel(sem));
+    }
+    return d;
+  }
+  /* Registra no mapa (idempotente; chaves versionadas não colidem). */
+  function registrarRacaHomebrew(def) {
+    if (!def || !ehHomebrew(def.id)) return null;
+    RACA[def.id] = def;
+    RACAS_HOMEBREW = RACAS_HOMEBREW.filter(function (r) { return r.id !== def.id; }).concat([def]);
+    return def;
+  }
+  function racasHomebrew() { return RACAS_HOMEBREW.slice(); }
+  function racasDisponiveis() { return RACAS.concat(RACAS_HOMEBREW); }
+  function referencia(r) { return r && r.homebrew ? "Homebrew" : (r && r.pagina ? "p. " + r.pagina : ""); }
+
+  global.RAMATormenta20Racas = { RACAS: RACAS, RACA: RACA, habilidade: habilidade, habilidadesDe: habilidadesDe, atributosDe: atributosDe, HUMANOIDES: HUMANOIDES,
+    ehHomebrew: ehHomebrew, normalizarRacaHomebrew: normalizarRacaHomebrew, registrarRacaHomebrew: registrarRacaHomebrew, efeitoHomebrew: efeitoHomebrew,
+    racasHomebrew: racasHomebrew, racasDisponiveis: racasDisponiveis, referencia: referencia, textoCorpo: textoCorpo,
+    TAMANHOS_HB: TAMANHOS_HB, SENTIDOS_HB: SENTIDOS_HB, PROFS_HB: PROFS_HB };
 })(typeof window !== "undefined" ? window : globalThis);
 /* <<< js/tormenta20/racas.js */
 

@@ -929,6 +929,12 @@ segredo nenhum — ele os lê das Script Properties. Publicá-lo não expõe nad
 
 ### Atualizar o backend
 
+**v9.10.0 — FORNALHA:** Raça Homebrew de Tormenta20 (etapa 2, parte 3).
+Troque **`Codigo.gs`**, **`Tormenta20.gs`** e **`Tormenta20Dados.gs`** e
+crie uma versão nova da implantação. **`setupRama()` não é necessário.**
+Site: os arquivos listados em `docs/HOMEBREW-SISTEMAS.md` (seção
+"Publicar a v9.10.0").
+
 **v9.9.0 — LAPIDA:** Origem e Trilha Homebrew de Ordem (etapa 2, parte 2).
 Troque **`Codigo.gs`** e crie uma versão nova da implantação. **`setupRama()`
 não é necessário.** Site: os arquivos listados em `docs/HOMEBREW-SISTEMAS.md`
@@ -2020,7 +2026,7 @@ Três números diferentes, que não se misturam:
 
 | | Onde | O que é |
 |---|---|---|
-| versão do aplicativo | `js/versao.js` | o que a pessoa vê: v9.9.0 |
+| versão do aplicativo | `js/versao.js` | o que a pessoa vê: v9.10.0 |
 | `schemaVersion` | `js/ficha.js` | o formato da FICHA |
 | `versaoFormato` | `js/config.js` | o formato dos arquivos de importação |
 

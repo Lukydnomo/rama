@@ -210,7 +210,11 @@ export function testarPacotesBackend({ t, preparar, novaConta, comoFn }) {
   const trilhaHb = A({ acao: "salvar_homebrew", dados: { tipo: "item", nome: "Lapidador", modelo: Object.assign(modelo("ordem", "estrutural", "trilha"), { def: { classe: "combatente", poderes: [] } }) } });
   t.ok("Origem e Trilha de Ordem: colunas tipo \"origem\" e \"trilha\"", origemHb.ok && trilhaHb.ok && A({ acao: "ler_homebrew", homebrewId: origemHb.dados.id }).dados.tipo === "origem" && A({ acao: "ler_homebrew", homebrewId: trilhaHb.dados.id }).dados.tipo === "trilha");
   t.recusa("Origem estrutural em T20 ainda é recusada", A({ acao: "salvar_homebrew", dados: { tipo: "item", nome: "Origem", modelo: modelo("tormenta20", "estrutural", "origem") } }), "dados_invalidos");
-  t.recusa("tipo estrutural que o sistema ainda não usa (Raça em T20) é recusado", A({ acao: "salvar_homebrew", dados: { tipo: "item", nome: "Raça", modelo: modelo("tormenta20", "estrutural", "raca") } }), "dados_invalidos");
+  /* v9.10: Raça de T20. */
+  const racaHb = A({ acao: "salvar_homebrew", dados: { tipo: "item", nome: "Vidrado", modelo: Object.assign(modelo("tormenta20", "estrutural", "raca"), { def: { tamanho: "pequeno", deslocamento: 6, atributos: { fixo: { des: 2 } }, habilidades: [] } }) } });
+  t.ok("Raça de T20: coluna tipo \"raca\" (v9.10)", racaHb.ok && A({ acao: "ler_homebrew", homebrewId: racaHb.dados.id }).dados.tipo === "raca");
+  t.recusa("tipo estrutural que o sistema ainda não usa (Classe em T20) é recusado", A({ acao: "salvar_homebrew", dados: { tipo: "item", nome: "Classe", modelo: modelo("tormenta20", "estrutural", "classe") } }), "dados_invalidos");
+  t.ok("pacote de T20 aceita a Raça; o de Ordem a recusa", salvar(A, { dados: dados("Povos de Vidro", "tormenta20"), conteudo: { adicionar: [racaHb.dados.id] } }).ok && salvar(A, { dados: dados("Errado 2", "ordem"), conteudo: { adicionar: [racaHb.dados.id] } }).erro === "incompativel");
   t.recusa("subtipo estrutural desconhecido em Ordem", A({ acao: "salvar_homebrew", dados: { tipo: "item", nome: "X", modelo: modelo("ordem", "estrutural", "raca") } }), "dados_invalidos");
   t.ok("listar com tipos [classe, elemento] devolve os dois", A({ acao: "listar_homebrew", tipos: ["classe", "elemento"] }).dados.length === 2);
   const pOrdemEst = salvar(A, { dados: dados("Livro do Vidro", "ordem"), conteudo: { adicionar: [vidro.dados.id, classeHb.dados.id] } });

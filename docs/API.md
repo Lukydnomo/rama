@@ -1,5 +1,14 @@
 # A API
 
+## Raça Homebrew de Tormenta20 — v9.10
+
+- `salvar_homebrew`: o grupo `estrutural` de Tormenta20 aceita `raca`.
+  Outros subtipos estruturais de T20 continuam `dados_invalidos`
+  (`detalhe: subtipo`).
+- `listar_homebrew` aceita `tipos: ["raca"]`.
+- O motor do servidor (`RAMATormenta20.normalizar`, usado pela Mesa)
+  mantém a cópia da raça em `tormenta20.homebrew.racas`.
+
 ## Origem e Trilha Homebrew de Ordem — v9.9
 
 - `salvar_homebrew`: o grupo `estrutural` de Ordem aceita também `origem`

@@ -50,7 +50,8 @@ página, não o reproduz.
   metodo: "pontos" | "rolagem" | "livre",
   rolagens: [valores das seis rolagens já convertidos],
   atributosBase: { for, des, con, int, sab, car },     // sem raça: a raça entra no cálculo
-  raca: { id, variante, atributos: [os +1 escolhidos], escolhas },
+  raca: { id, variante, atributos: [os +1 escolhidos], escolhas },   // id pode ser "hbr-…" (v9.10)
+  homebrew: { versao, racas: { "hbr-…": cópia da raça Homebrew } },  // só quando usada
   origem: { id, beneficios: [{ tipo: "pericia"|"poder", id, escolhas: { oficio? } }], escolhas, propria },
   divindade: { id, energia, poderes: [{ id, escolhas }] } | null,
   niveis: [{ classe, escolhas }],                       // um por nível de personagem, em ordem

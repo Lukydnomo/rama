@@ -566,7 +566,7 @@
       return el("li.t20-hab", {}, [
         el("div.t20-hab__topo", {}, [
           el("strong.t20-hab__nome", { texto: f.nome + (feita ? ": " + feita : "") }),
-          el("span.t20-hab__origem", { texto: f.origem + (d.pagina ? " · p. " + d.pagina : "") }),
+          el("span.t20-hab__origem", { texto: f.origem + (d.pagina ? " · p. " + d.pagina : "") + (d.homebrew ? " · Homebrew" : "") }),
           a && pode(ctx) ? botao("Usar" + (a.custo ? " · " + a.custo + " PM" : ""), function () { usarHabilidade(ctx, f, a, c); }, { rotulo: "Usar " + f.nome }) : null,
         ]),
         texto ? el("p.t20-hab__texto", { texto: texto }) : null,

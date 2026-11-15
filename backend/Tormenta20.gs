@@ -642,6 +642,16 @@ function acaoTormenta20Operar(corpo, usuario) {
     var op = obj(b.opcoes);
     v.opcoes = { parceirosVulneraveis: !!op.parceirosVulneraveis, envelhecimento: !!op.envelhecimento };
     v.historico = lista(b.historico).slice(-60).map(function (h) { var y = obj(h); return { quando: texto(y.quando, 40), texto: texto(y.texto, 300) }; });
+    /* v9.10: a raça Homebrew vem com a CÓPIA guardada na ficha (ou, se
+       acabou de ser escolhida de uma lista da biblioteca, do catálogo).
+       Sem cópia e sem catálogo, a chave some: nada é inventado. */
+    if (RA() && RA().ehHomebrew && RA().ehHomebrew(v.raca.id)) {
+      var copiaR = obj(obj(b.homebrew).racas)[v.raca.id];
+      var noCatalogo = RA().RACA[v.raca.id];
+      var defR = copiaR && typeof copiaR === "object" ? RA().normalizarRacaHomebrew(Object.assign({}, copiaR, { id: v.raca.id })) : (noCatalogo && noCatalogo.homebrew ? clone(noCatalogo) : null);
+      if (defR) { RA().registrarRacaHomebrew(defR); v.homebrew = { versao: 1, racas: {} }; v.homebrew.racas[defR.id] = defR; }
+      else v.raca = { id: "", variante: "", atributos: [], escolhas: {} };
+    }
     return v;
   }
 

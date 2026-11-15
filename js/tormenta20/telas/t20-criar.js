@@ -270,8 +270,11 @@
       var c = calc();
       var raca = RA().RACA[b.raca.id];
       var at = raca ? RA().atributosDe(b.raca.id, b.raca.variante) : null;
-      var itens = [cartas("Raças", RA().RACAS.map(function (r) {
-        return { id: r.id, nome: r.nome, linhas: [r.variantes ? r.variantes.map(function (v) { return v.nome; }).join(" ou ") : textoAtributos(r.atributos), "p. " + r.pagina] };
+      /* v9.10: as raças Homebrew da biblioteca (suas e públicas) vêm depois
+         das do livro; escolher uma grava a cópia na ficha (normalizar). */
+      var todas = RA().racasDisponiveis ? RA().racasDisponiveis() : RA().RACAS;
+      var itens = [cartas("Raças", todas.map(function (r) {
+        return { id: r.id, nome: r.nome, linhas: [r.variantes ? r.variantes.map(function (v) { return v.nome; }).join(" ou ") : textoAtributos(r.atributos), RA().referencia ? RA().referencia(r) : "p. " + r.pagina] };
       }), b.raca.id, function (v) { if (v !== b.raca.id) { b.raca = { id: v, variante: "", atributos: [], escolhas: {} }; } desenhar(); })];
       if (raca) {
         var det = [];
@@ -283,7 +286,8 @@
             return campoDeEscolha(e, b.raca.escolhas[e.id], function (v) { b.raca.escolhas[e.id] = v; desenhar(); }, { calc: c, t20: b });
           }))));
         });
-        itens.push(escolhido(raca.nome + " · p. " + raca.pagina, det));
+        if (raca.homebrew && raca.descricao) det.unshift(el("p.t20-legenda", { texto: raca.descricao }));
+        itens.push(escolhido(raca.nome + " · " + (RA().referencia ? RA().referencia(raca) : "p. " + raca.pagina), det));
       }
       return itens;
     }
@@ -539,6 +543,10 @@
     }
 
     desenhar();
+    /* As raças Homebrew da conta (uma viagem; sem rede, só as do livro). */
+    if (global.RAMATormenta20Homebrew) global.RAMATormenta20Homebrew.carregarBiblioteca().then(function (r) {
+      if (r && r.racas && r.racas.length && PASSOS[estado.passo].chave === "raca") desenhar();
+    });
     return janela;
   }
 

@@ -175,6 +175,7 @@
       { chave: "item", rotulo: "Item", ajuda: "Arma, armadura, escudo, vestuário, ferramenta, alquímico e o resto do inventário, com preço e espaços." },
       { chave: "habilidade", rotulo: "Habilidade", ajuda: "Magia por círculo, poder ou habilidade — por enquanto para consulta e anotações." },
       { chave: "criatura", rotulo: "Ameaça", ajuda: "ND, Defesa, resistências, PV, ataques, habilidades e magias." },
+      { chave: "raca", rotulo: "Raça", ajuda: "Atributos, tamanho, deslocamento e habilidades (com efeito na conta e perícias à escolha). Entra na criação de personagem." },
     ],
     item: {
       subtipos: [
@@ -350,6 +351,8 @@
 
   /* Habilidade de Ordem e Universal: o modelo do RAMAHabilidades (o
      editor de sempre); Ordem ganha Ritual como subtipo. */
+  /* v9.10: Raça de Tormenta20 (editor próprio: js/paginas/homebrew-raca-t20.js). */
+  TORMENTA20.estrutural = { subtipos: [{ chave: "raca", rotulo: "Raça", campos: [] }] };
   ORDEM.habilidade = { subtipos: [{ chave: "habilidade", rotulo: "Habilidade / poder", campos: [] }, { chave: "ritual", rotulo: "Ritual", campos: [] }] };
   UNIVERSAL.habilidade = { subtipos: [{ chave: "habilidade", rotulo: "Habilidade", campos: [] }, { chave: "poder", rotulo: "Poder", campos: [] }, { chave: "tecnica", rotulo: "Técnica", campos: [] }, { chave: "magia", rotulo: "Magia", campos: [] }] };
 
@@ -375,7 +378,7 @@
   function grupoDe(r) {
     var t = obj(r).tipo;
     if (obj(r).modelo && obj(r).modelo.grupo) return obj(r).modelo.grupo;
-    if (t === "classe" || t === "elemento" || t === "origem" || t === "trilha") return "estrutural";
+    if (t === "classe" || t === "elemento" || t === "origem" || t === "trilha" || t === "raca") return "estrutural";
     if (t === "criatura") return "criatura";
     if (t === "habilidade" || t === "ritual") return "habilidade";
     return "item";
@@ -440,7 +443,7 @@
         v.chave = chaveAntiga && ELx && ELx.ehHomebrew(chaveAntiga) ? chaveAntiga : (ELx ? ELx.chaveNova(nome, r.id || "") : "");
       }
       if (subtipo === "classe" && r.classe) reg.modelo.def = r.classe;
-      if ((subtipo === "origem" || subtipo === "trilha") && r.def) reg.modelo.def = r.def;
+      if ((subtipo === "origem" || subtipo === "trilha" || subtipo === "raca") && r.def) reg.modelo.def = r.def;
     }
     if (r.universal && sistema === "universal") reg.universal = normalizarUniversal(r.universal);
     if (r.id) reg.id = r.id;
@@ -541,6 +544,7 @@
         classe: "Escolhida na criação do agente (Classes Homebrew), com a cópia guardada na ficha.",
         origem: "Escolhida na criação do agente (aba Homebrew) ou ao trocar de origem, com a cópia guardada na ficha.",
         trilha: "Aparece na vaga de Trilha da progressão (e na criação, a partir de NEX 10%) para a classe dela, com a cópia guardada na ficha.",
+        raca: "Escolhida na criação de personagem (depois das raças do livro), com a cópia guardada na ficha.",
       })[stE] || "Aparece nos seletores de elemento (rituais, criaturas, itens e, se permitido, afinidade)." };
     }
     if (s === destino) {
@@ -583,6 +587,7 @@
     if (s === "ordem2" && st === "arma") p.push("dano " + (d.dano || 0));
     if (s === "ordem2" && st === "protecao") p.push("armadura " + (d.armadura || 0));
     if (s === "tormenta20" && st === "magia") p.push(d.circulo + "º círculo");
+    if (s === "tormenta20" && st === "raca" && Array.isArray(d.habilidades)) p.push((((global.RAMATormenta20Dados || {}).TAMANHO || {})[d.tamanho] || { nome: d.tamanho || "Médio" }).nome + " · " + d.habilidades.filter(function (h) { return h && h.id !== "corpo"; }).length + " habilidades");
     if (s === "ordem" && st === "elemento" && d.permiteAfinidade) p.push("pode ser afinidade");
     if (s === "ordem" && st === "origem" && Array.isArray(d.pericias)) p.push((d.pericias.length + (d.periciasAEscolher || 0)) + " perícias · " + (d.poder || "poder") + (d.efeitos && d.efeitos.length ? " · na conta" : ""));
     if (s === "ordem" && st === "trilha" && d.classe) p.push("para " + (((global.RAMAOrdemCatalogo && global.RAMAOrdemCatalogo.classe(d.classe)) || {}).nome || d.classe));
@@ -763,6 +768,13 @@
     if (g === "estrutural" && HOi && (m.subtipo === "origem" || m.subtipo === "trilha")) {
       defImportada = (m.subtipo === "origem" ? HOi.normalizarOrigem : HOi.normalizarTrilha)(Object.assign({}, m.def, { chave: "", nome: x.nome }));
       ["chave", "homebrewId", "homebrew", "fonte", "pagina", "nome", "descricao"].forEach(function (k) { delete defImportada[k]; });
+    }
+    /* Raça de T20 (v9.10): refeita pelo normalizador do motor. */
+    var RAi = global.RAMATormenta20Racas;
+    if (g === "estrutural" && m.sistema === "tormenta20" && m.subtipo === "raca" && RAi) {
+      defImportada = RAi.normalizarRacaHomebrew(Object.assign({}, m.def, { id: "", nome: x.nome }));
+      ["id", "homebrewId", "homebrew", "fonte", "pagina", "nome", "descricao"].forEach(function (k) { delete defImportada[k]; });
+      defImportada.habilidades = defImportada.habilidades.filter(function (h) { return h.id !== "corpo"; });
     }
     var r = guardar(m.sistema, g, m.subtipo, { nome: x.nome, descricao: x.descricao || x.texto, origem: x.origem, valores: m.def, universal: x.universal, etiqueta: x.etiqueta, modeloAnterior: m, classe: classeImportada, def: defImportada });
     if (r.ok) { delete r.registro.id; r.registro.visibilidade = "privado"; }

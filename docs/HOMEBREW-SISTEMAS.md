@@ -6,7 +6,7 @@ organiza em três etapas.
 | Etapa | Situação |
 |---|---|
 | **1 — Estrutura e compatibilidade** | entregue na **v9.7.0** |
-| **2 — Tipos estruturais e elementos** | parte 1 na **v9.8.0** (Elemento e Classe de Ordem I), parte 2 na **v9.9.0** (Origem e Trilha de Ordem I); o resto pendente |
+| **2 — Tipos estruturais e elementos** | parte 1 na **v9.8.0** (Elemento e Classe de Ordem I), parte 2 na **v9.9.0** (Origem e Trilha de Ordem I), parte 3 na **v9.10.0** (Raça de Tormenta20); o resto pendente |
 | **3 — Automação por sistema, publicação e regressão** | pendente |
 
 Este documento é o **inventário de cobertura**. Para cada sistema e tipo,
@@ -160,7 +160,8 @@ Legenda:
 | Ordem II | Ameaça | o de sempre | mesa de Ordem II | **N** | Perfil e Ocupação: **Etapa 2** |
 | **Tormenta20** | Item: arma, armadura, escudo, vestuário, ferramenta, alquímico, esotérico, aventura, alimentação, munição, outro | adaptador (preço, espaços, proficiência, empunhadura, dano, margem, multiplicador, tipo, alcance, munição, bônus de perícia) | inventário (Do Homebrew), como `personalizado` | **N**: ataque calculado, Defesa e penalidade, bônus de perícia (`efeitos`), espaços | melhorias e encantos (pela ficha, como antes) |
 | Tormenta20 | Habilidade: magia (círculo, escola, execução…), poder, habilidade | adaptador | anotações | **Ma** | o motor só aplica poderes e magias do livro: **Etapa 2** |
-| Tormenta20 | Ameaça | o de sempre | mesa de T20 | **N** | Raça, Origem, Classe e Divindade: **Etapa 2** |
+| Tormenta20 | Ameaça | o de sempre | mesa de T20 | **N** | Origem, Classe e Divindade: **Etapa 2** |
+| Tormenta20 | **Raça** (v9.10) | editor próprio em 3 etapas | criação de personagem (passo Raça, depois das do livro) | **N**: atributos fixos e à escolha, tamanho, deslocamento; efeitos que o motor soma (Defesa, perícia, treino, PV/PM por nível, sentido, RD, proficiência); perícias à escolha (treino ou bônus) | variantes, habilidades ativadas (PM), escolhas de magia/poder; o resto do texto é da mesa |
 | **Goblins** | Item: arma (mãos, ataque, bônus, munição, recarga, arremesso), proteção (uso, durabilidade), equipamento, outro | adaptador | inventário (Do Homebrew), pelo `adicionarItem` com `personalizado` | **N**: ataque, bônus, munição, recarga e durabilidade no `defDoItem` | — |
 | Goblins | Habilidade: magia, técnica, habilidade | adaptador | anotações | **Ma** | **Etapa 2** |
 | Goblins | Inimigo | o de sempre | consulta | **N** | Ocupação, Descritor e PokéPragas: **Etapa 2** |
@@ -266,8 +267,8 @@ nova, e o modelo vai no `dadosJson` de sempre.
     `js/ordem/regras.js`, `js/ordem/progressao.js` e
     `js/ordem/inventario.js`. O elemento aceito pelo campo fica separado do
     efeito oficial. O caso de teste é "Vidro".
-- **T20**: Raça, Origem, Classe e Divindade selecionáveis na criação e na
-  progressão.
+- **T20**: ~~Raça~~ (v9.10.0, abaixo), Origem, Classe e Divindade
+  selecionáveis na criação e na progressão.
 - **Ordem II**: Perfil e Ocupação.
 - **Oblívio**: Papel, Motivação, Mazela e Fardo.
 - **Vampiro**: Clã, Predador, Disciplina, Vantagem, Defeito e Ficha de
@@ -612,3 +613,177 @@ próprias; Origem estrutural em T20 recusada.
 **Os outros sistemas:** os mesmos da lista da v9.8 (T20, Ordem II,
 Oblívio, Vampiro, Goblins e BRUTAL, e as habilidades Homebrew nesses
 motores).
+
+## v9.10.0 — Etapa 2, parte 3: Raça Homebrew de Tormenta20
+
+### O editor
+
+**Homebrew → + Criar → Tormenta20 → Raça.** Três etapas
+(Identidade → Atributos e habilidades → Revisão), com a prévia ao lado no
+desktop e uma coluna no celular:
+- **Identidade:** nome, descrição, tamanho (Minúsculo, Pequeno, Médio,
+  Grande) e deslocamento (6, 9 ou 12 m);
+- **Atributos:** fixos de −2 a +2 e, se quiser, 1 a 3 atributos à escolha
+  (+1 ou +2), como o Humano. Um atributo fixo não pode ser escolhido de
+  novo;
+- **Habilidades** (até 6): nome, texto e até 4 **efeitos** do conjunto que
+  o motor de T20 já soma, no formato das raças do livro:
+  - bônus na Defesa ou numa perícia (−5 a +10);
+  - perícia treinada;
+  - PV no 1º nível e por nível seguinte (como Duro como Pedra);
+  - PM por nível (como Sangue Mágico);
+  - sentido: visão no escuro, na penumbra ou faro;
+  - redução de dano de um tipo (1 a 10);
+  - proficiência: armas marciais ou exóticas, armas de fogo, escudos,
+    armaduras pesadas.
+
+  E **uma escolha** por habilidade: 1 a 3 perícias à escolha, treinadas
+  (como Híbrido) ou com bônus de +1 a +5 (como Deformidade). É o "traço
+  inicial" que quem joga escolhe na criação.
+- **Revisão:** a prévia, o que é automático, o que quem joga escolhe e o
+  que fica com a mesa.
+
+Um efeito fora da lista é descartado na normalização. Sem efeito, a
+habilidade é informativa: a ficha mostra o texto e a mesa aplica.
+Tamanho e deslocamento diferentes do comum viram a habilidade "Tamanho e
+deslocamento".
+
+### Onde entra
+
+Na **criação de personagem de Tormenta20** (passo Raça): as raças da
+biblioteca (suas e públicas) aparecem depois das 17 do livro, marcadas
+"Homebrew". A raça escolhida mostra a descrição, os atributos, cada
+habilidade e o campo da escolha. Os atributos, o tamanho, o deslocamento
+e os efeitos entram na conta da ficha. Na aba Habilidades, cada uma
+aparece em "Raça e origem" com "Homebrew". O resumo da Mesa mostra o nome
+da raça.
+
+### Cópia, versão e servidor
+
+O mesmo esquema da classe de Ordem:
+- a chave é versionada pelo conteúdo (`hbr-<id>-<hash>`). Editar a raça
+  na biblioteca cria outra versão, e o personagem em jogo continua com a
+  dele;
+- a ficha guarda a cópia em `tormenta20.homebrew.racas`. A normalização
+  (`RAMATormenta20.normalizar`) passa a cópia pelo mesmo filtro e a
+  registra em `RAMATormenta20Racas.RACA`, o mapa que o motor inteiro lê.
+  Quem abre a ficha não precisa da biblioteca de ninguém;
+- escolhida de uma lista da biblioteca, a normalização embute a cópia.
+  Sem cópia e sem catálogo, a chave some: nada é inventado;
+- **o servidor roda o mesmo motor:** `racas.js` e `regras.js` foram
+  copiados para `backend/Tormenta20Dados.gs` e `backend/Tormenta20.gs`
+  (`testes/gerar-tormenta20-gs.js`). A Mesa (dano, cura, recompensa)
+  normaliza a ficha e mantém a cópia.
+
+Arquivos: o motor (normalizar, registrar, referência "Homebrew") está em
+`js/tormenta20/racas.js`; a página (biblioteca, textos da prévia) em
+`js/tormenta20/homebrew-t20.js`, que é novo; o editor em
+`js/paginas/homebrew-raca-t20.js`, também novo.
+
+### Servidor e pacotes
+
+- `TIPOS_HOMEBREW` ganhou `raca`; os estruturais de Tormenta20 são
+  `['raca']`. Origem e Classe estruturais em T20 continuam recusadas.
+- Pacotes agrupam em "Raças" (só em pacote de T20).
+- Exportar e importar (`homebrew-estrutural`) refazem a definição pelo
+  normalizador do motor.
+
+### Validação da v9.10.0
+
+**Automática.** O novo `testes/executar-homebrew-t20.js` tem 36
+verificações:
+- **Definição:**
+  - chave versionada, estável ao normalizar de novo e diferente ao mudar;
+  - atributos limitados a −2…+2;
+  - só os efeitos aceitos e uma escolha de perícia por habilidade;
+  - o corpo vem dos campos;
+  - referência "Homebrew".
+- **Motor:**
+  - atributos;
+  - PV 25 (Guerreiro 20 + Con 2 + 3);
+  - Defesa 14;
+  - Pequeno, 6 m;
+  - redução de fogo 5 e visão no escuro;
+  - a perícia escolhida entra treinada;
+  - atributos e bônus à escolha;
+  - resumo da Mesa.
+- **Cópia:**
+  - sobrevive a normalizar de novo;
+  - some sem cópia e sem catálogo;
+  - é embutida a partir do catálogo;
+  - uma versão nova não muda a ficha;
+  - uma cópia adulterada passa pelo filtro;
+  - a raça do livro não ganha bloco Homebrew.
+- **Biblioteca:** guardar, voltar da biblioteca com a mesma chave, resumo,
+  destino, arquivo e pacote.
+
+`testes/pacotes-backend.js`:
+- a Raça de T20 é gravada com a coluna `raca`;
+- a Classe estrutural em T20 é recusada;
+- o pacote de T20 aceita a Raça e o de Ordem a recusa.
+
+**Na interface** (servidor local, conta sintética):
+- Criei a raça **Vidrado** pelo editor:
+  - Pequeno, 6 m;
+  - For −1, Des +2, Sab +1;
+  - Pele de Cristal: +1 Defesa e redução de fogo 5;
+  - Olhar Lapidado: visão no escuro e uma perícia treinada à escolha;
+  - Têmpera: +3 PV no 1º nível e +1 por nível seguinte.
+
+  A lista mostra "Raça · Pequeno · 3 habilidades", e a consulta mostra as
+  regras e os textos.
+- **Criação de personagem:**
+  - Vidrado apareceu depois das 17 raças, com "Homebrew";
+  - escolhi Furtividade no Olhar Lapidado, Acólito e Guerreiro;
+  - a conferência mostrou PV 25, Defesa 14, deslocamento 6 m e
+    Furtividade treinada.
+- **Ficha gravada:**
+  - raça Vidrado, tamanho Pequeno, PV 25 e deslocamento 6 m (Defesa 15
+    com o escudo inicial);
+  - visão no escuro e redução de fogo 5 no Combate;
+  - as quatro habilidades em "Raça e origem" com "Homebrew";
+  - no servidor, a cópia em `tormenta20.homebrew.racas` e a escolha em
+    `raca.escolhas`.
+- **Versão:** mudei o deslocamento da raça na biblioteca para 9 m; a ficha
+  continuou com 6 m.
+- O editor reabre preenchido. Funciona no celular (uma coluna, sem rolagem
+  lateral) e no desktop (com o resumo ao lado). Sem erros no console nem no
+  servidor.
+
+### Publicar a v9.10.0
+
+**Servidor:** troque **`Codigo.gs`**, **`Tormenta20.gs`** e
+**`Tormenta20Dados.gs`**, e crie uma versão nova da implantação.
+**`setupRama()` não é necessário.**
+
+**Site:**
+- `js/tormenta20/homebrew-t20.js` e `js/paginas/homebrew-raca-t20.js`
+  (novos);
+- `js/tormenta20/racas.js`, `js/tormenta20/regras.js`,
+  `js/tormenta20/telas/t20-criar.js`, `js/tormenta20/telas/ficha-t20.js`;
+- `js/homebrew-adaptadores.js`, `js/pacotes-homebrew.js`,
+  `js/paginas/homebrew-editor.js`, `js/paginas/homebrew.js`;
+- `css/homebrew.css`, `js/versao.js`;
+- `homebrew/index.html`, `ficha/index.html`, `personagens/index.html`.
+
+### O que ainda falta na Etapa 2 (depois da v9.10)
+
+**Tormenta20:**
+- Origem, Classe e Divindade Homebrew.
+- Raça Homebrew: variantes (como o Suraggel), habilidades ativadas com
+  custo em PM e escolhas além de perícias (magia, poder geral, elemento).
+  Hoje, só efeitos fixos e perícias à escolha.
+- Trocar a raça de uma ficha existente (a ficha de T20 ainda não tem essa
+  troca para nenhuma raça).
+- Habilidades e magias Homebrew no motor de T20 (hoje, anotações).
+
+**Ordem I:** o mesmo da v9.9 (classe que conjura rituais, troca de classe,
+atualizar a versão de uma cópia, escolhas internas nos poderes, elemento
+em poderes paranormais e maldições).
+
+**Os outros sistemas:**
+- Ordem II: Perfil e Ocupação.
+- Oblívio: Papel, Motivação, Mazela e Fardo.
+- Vampiro: Clã, Predador, Disciplina, Vantagem e Defeito.
+- Goblins: Ocupação e Descritor.
+- BRUTAL: Arquétipo e Estilo.

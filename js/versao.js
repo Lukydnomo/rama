@@ -118,6 +118,18 @@
 
   var CHANGELOG = [
     {
+      versao: "9.10.0",
+      codinome: "FORNALHA",
+      data: "15/11/2026",
+      mudancas: {
+        "Adicionado": [
+          "Raça Homebrew de Tormenta20: atributos (fixos e à escolha), tamanho, deslocamento e até seis habilidades. Cada habilidade pode ter efeitos que a ficha já sabe somar (Defesa, bônus em perícia, perícia treinada, PV e PM por nível, visão no escuro ou na penumbra, faro, redução de dano, proficiência) e uma escolha de perícias, treinadas ou com bônus.",
+          "A raça aparece na criação de personagem de Tormenta20, depois das raças do livro, com a escolha da habilidade no mesmo passo. A ficha guarda a própria cópia: mudar a raça na biblioteca não muda um personagem em jogo.",
+        ],
+        "Técnico": ["Novos js/tormenta20/homebrew-t20.js e js/paginas/homebrew-raca-t20.js. RAMATormenta20Racas ganhou normalizarRacaHomebrew e registrarRacaHomebrew (chave hbr- versionada, só efeitos aceitos); a normalização guarda a cópia em tormenta20.homebrew.racas. Servidor: tipo raca (só Tormenta20) e as cópias do motor atualizadas. Novo testes/executar-homebrew-t20.js (36 verificações)."],
+      },
+    },
+    {
       versao: "9.9.0",
       codinome: "LAPIDA",
       data: "15/11/2026",
