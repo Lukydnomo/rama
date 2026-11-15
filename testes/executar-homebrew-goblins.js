@@ -133,5 +133,42 @@ t.grupo("Magia e Técnica Homebrew no motor (v9.30)");
   t.ok("prévias", /0 hits: O vidro corta você. \[a ficha aplica: 1 ferimento em quem conjurou\]/.test(H.previaMagia(mg)[0]) && /1 vez por dia/.test(H.previaTecnica(tc)[0]));
 }
 
+t.grupo("Opções das variantes: PokéPraga e Receita Homebrew (v9.33)");
+{
+  const fila = (...faces) => { const q = faces.flat(); return () => q.length ? q.shift() : 6; };
+  const pp = C.normalizarPragaHomebrew({ nome: "Gato de Vidro", homebrewId: "a7a7a7a7-sintetico", raridade: "raro", combate: 3, habilidade: 4, nocao: 2, vitalidade: 3, elemento: "fantasma" });
+  t.ok("PokéPraga: chave hbgp-, raridade e atributos; elemento fixo", /^hbgp-a7a7a7a7-/.test(pp.chave) && pp.raridade === "raro" && pp.elemento === "fantasma");
+  C.registrarPragaHomebrew(pp);
+  t.ok("  as tabelas d6 do livro não mudam", C.POKE.bichos.raro.length === 6 && C.POKE.bichos.raro.indexOf(pp.chave) < 0 && C.POKE.ficha[pp.chave][0] === "Gato de Vidro");
+  const o = R.normalizar(Object.assign(R.fichaVazia(), { ocupacao: "gatuno", descritor: "mediocre", opcoes: Object.assign(R.fichaVazia().opcoes, { adaptacoes: { pokepragas: true } }) }));
+  o.adaptacoes.pokepragas.pokepedras = 2;
+  const av = R.pragaHomebrewAVista(o, pp.chave, null);
+  t.ok("a mesa põe à vista (o elemento fixo, sem rolar)", av.ok && o.adaptacoes.pokepragas.encontrada.bicho === pp.chave && o.adaptacoes.pokepragas.encontrada.elementos[0] === "fantasma");
+  const cap = R.capturarPraga(o, "Vidrinho", {}, fila(6, 6, 6, 6, 6, 6));
+  t.ok("  a captura segue a regra (rara: 3 hits) e a PokéPraga entra", cap.ok && o.adaptacoes.pokepragas.pragas.some((x) => x.bicho === pp.chave && x.nome === "Vidrinho"), JSON.stringify(cap).slice(0, 200));
+  const st = R.statsDaPraga(o.adaptacoes.pokepragas.pragas[0]);
+  t.ok("  os atributos vêm da espécie, com o elemento (Fantasma: Habilidade +1)", st.combate === 3 && st.habilidade === 5 && st.vitalidade === 3, JSON.stringify(st));
+  const rOp = R.aplicarOperacao(o, "op-gob-var", () => ({ ok: true, eventos: [] }));
+  t.ok("  depois de uma operação, a cópia da espécie vai para a ficha", rOp.ok && o.homebrew && o.homebrew.pragas && o.homebrew.pragas[pp.chave]);
+  const desligado = R.normalizar(Object.assign(R.fichaVazia(), { ocupacao: "gatuno", descritor: "mediocre" }));
+  t.ok("  com a adaptação desligada: recusado", !R.pragaHomebrewAVista(desligado, pp.chave, null).ok);
+  const rc = C.normalizarReceitaHomebrew({ nome: "Sopa de Vidro", homebrewId: "a8a8a8a8-sintetico", hits: 1, ingredientes: { Cenoura: 1, "Brócolis": 2, Inventado: 3 } });
+  t.ok("Receita: chave hbgr-, só ingredientes da lista", /^hbgr-a8a8a8a8-/.test(rc.chave) && rc.ingredientes.Cenoura === 1 && rc.ingredientes["Brócolis"] === 2 && !rc.ingredientes.Inventado);
+  t.ok("  sem ingrediente nem peixe, não vira receita", C.normalizarReceitaHomebrew({ nome: "Vazia" }) === null);
+  C.registrarReceitaHomebrew(rc);
+  const fv = R.normalizar(Object.assign(R.fichaVazia(), { ocupacao: "gatuno", descritor: "mediocre", opcoes: Object.assign(R.fichaVazia().opcoes, { adaptacoes: { vale: true } }) }));
+  fv.adaptacoes.vale.alimentos.Cenoura = 1; fv.adaptacoes.vale.alimentos["Brócolis"] = 2;
+  const ck = R.cozinhar(fv, rc.chave, {}, fila(6, 6, 6, 6, 6, 6));
+  t.ok("  cozinhar: gasta os ingredientes e o prato entra", ck.ok && ck.cozinhou && fv.adaptacoes.vale.pratos[rc.chave] === 1 && !fv.adaptacoes.vale.alimentos.Cenoura, JSON.stringify(ck).slice(0, 200));
+  R.aplicarOperacao(fv, "op-gob-var2", () => ({ ok: true, eventos: [] }));
+  t.ok("  a cópia da receita vai para a ficha (o prato continua com nome)", fv.homebrew && fv.homebrew.receitas && fv.homebrew.receitas[rc.chave]);
+  const gP = A.guardar("goblins", "estrutural", "pokepraga", { nome: "Gato de Vidro", descricao: "", valores: { raridade: "raro", combate: 3, habilidade: 4, nocao: 2, vitalidade: 3, elemento: "fantasma" } });
+  const xP = gP.ok ? H.deRegistro(Object.assign({}, gP.registro, { id: "a7a7a7a7-sintetico" })) : null;
+  t.ok("biblioteca: a PokéPraga volta com a mesma chave; destino nativo", xP && xP.def.chave === pp.chave && A.destinoNaFicha(gP.registro, "goblins").modo === "nativo", JSON.stringify(gP.ok ? gP.registro.modelo : gP));
+  const gR = A.guardar("goblins", "estrutural", "receita", { nome: "Sopa de Vidro", descricao: "", valores: { hits: 1, i_cenoura: 1, i_brocolis: 2 } });
+  t.ok("  e a Receita", gR.ok && H.deRegistro(Object.assign({}, gR.registro, { id: "a8a8a8a8-sintetico" })).def.chave === rc.chave);
+  t.ok("prévias e pacote", /Raro \(captura 3 hits\)/.test(H.previaPraga(pp)[0]) && /1 Cenoura, 2 Brócolis/.test(H.previaReceita(rc)[0]) && G.RAMAPacotesHomebrew.TIPOS.some((x) => x.chave === "pokepraga"), JSON.stringify([H.previaPraga(pp), H.previaReceita(rc)]));
+}
+
 console.log(`\n${FORTE}${passaram} ok${FIM}, ${falharam ? VERMELHO : ""}${falharam} falha(s)${FIM}.`);
 if (falharam) Deno.exit(1);

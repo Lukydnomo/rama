@@ -1,5 +1,13 @@
 # O banco
 
+## Opções das variantes de Goblins — v9.33
+
+Nenhuma aba nova. No `HOMEBREW`, a coluna `tipo` aceita `pokepraga` e
+`receita`. Na ficha de Goblins, `goblins.homebrew.pragas` e
+`goblins.homebrew.receitas` guardam as cópias; `pragas[].bicho`,
+`encontrada.bicho` e as chaves de `vale.pratos` aceitam essas chaves
+(`hbgp-…`, `hbgr-…`). Opcional.
+
 ## Modelos de mesa de BRUTAL — v9.32
 
 Nenhuma aba nova. No `HOMEBREW`, a coluna `tipo` aceita `assassino`,

@@ -278,11 +278,11 @@ nova, e o modelo vai no `dadosJson` de sempre.
 - **Oblívio**: ~~Papel, Motivação, Mazela e Fardo~~ (v9.19.0).
 - **Vampiro**: ~~Clã, Predador, Disciplina, Vantagem, Defeito~~ (v9.20.0) e
   ~~Ficha de Conhecimento~~ (v9.27.0).
-- **Goblins**: ~~Ocupação, Descritor~~ (v9.17.0) e opções das variantes.
+- **Goblins**: ~~Ocupação, Descritor~~ (v9.17.0) e ~~opções das variantes~~ (v9.33.0).
 - **BRUTAL**: Arquétipo, Estilo e ~~modelos de mesa~~ (v9.32.0).
-- **Habilidades Homebrew no motor** de T20, Vampiro, Goblins, Oblívio e
-  BRUTAL: resolver ids de Homebrew junto com o catálogo, com cópia
-  versionada na ficha.
+- ~~**Habilidades Homebrew no motor** de T20, Vampiro, Goblins, Oblívio e
+  BRUTAL~~ (T20 na v9.14.0; Vampiro v9.29.0, Goblins v9.30.0, Oblívio
+  v9.31.0, BRUTAL v9.32.0).
 - **Dependências nos pacotes**: elemento de um ritual, poder de uma classe
   e assim por diante.
 
@@ -2823,3 +2823,88 @@ nova da implantação. **`setupRama()` não é necessário.**
 - `js/homebrew-adaptadores.js`, `js/pacotes-homebrew.js`;
 - `campanha/index.html`;
 - `js/versao.js`.
+
+## v9.33.0 — Malditos Goblins: opções das variantes (PokéPraga e Receita)
+
+### PokéPraga (adaptação PokéPragas)
+
+**Homebrew → + Criar → Malditos Goblins → PokéPraga**, no editor de
+campos:
+- **raridade**: comum, incomum ou rara (a captura pede 1, 2 ou 3 hits);
+- **Combate**, **Habilidade**, **Noção** e **Vitalidade**;
+- **elemento**: rolado, como nas do livro, ou um fixo.
+
+Chave `hbgp-<id>-<hash>`. A espécie entra na ficha das PokéPragas
+(`POKE.ficha`). **As tabelas d6 do livro não mudam**: "Procurar na grama
+alta" e a PokéPraga inicial do Treinador continuam rolando só as do
+livro.
+
+Na ficha, com a adaptação ligada (aba **Adaptações**, em edição),
+"PokéPraga Homebrew → **Pôr à vista**" coloca a espécie à vista, com o
+elemento fixo ou um elemento rolado. Daí em diante vale a regra de
+sempre:
+- a **captura** com PokéPedra (teste de Habilidade pela raridade);
+- o **ataque**;
+- a **evolução**;
+- os atributos da espécie, somados aos do elemento.
+
+### Receita (adaptação Vale dos Goblins)
+
+**Receita**: hits do teste de Noção, os ingredientes (as plantas do Vale,
+Tomate, Ovo, Leite e Fruta, de 0 a 3 cada) e o peixe (200 g a 3 kg).
+Chave `hbgr-<id>-<hash>`.
+
+A receita aparece na **cozinha**, com "· Homebrew". Cozinhar segue a
+regra: confere os ingredientes, testa Noção e, se falhar, os ingredientes
+se perdem.
+
+### Cópias
+
+A ficha guarda as cópias em `goblins.homebrew.pragas` e
+`goblins.homebrew.receitas`. Como nas outras versões, isso também
+acontece depois de cada operação. Uma espécie sem cópia não quebra a
+ficha: aparece pelo nome que a PokéPraga tem.
+
+### Validação da v9.33.0
+
+**Automática.** `testes/executar-homebrew-goblins.js` ganhou 14
+verificações (agora 53):
+- a espécie, e as tabelas d6 sem mudança;
+- pôr à vista com o elemento fixo;
+- a captura de uma rara com 3 hits;
+- os atributos com o elemento;
+- a cópia;
+- a recusa com a adaptação desligada;
+- a receita, e a recusa sem ingrediente;
+- cozinhar e a cópia da receita;
+- a biblioteca, o destino, as prévias e o pacote.
+
+`testes/pacotes-backend.js` verifica que o servidor aceita os dois tipos.
+As outras suítes continuam verdes.
+
+**Na interface** (servidor local, conta sintética):
+- Pelo editor de campos, criei a PokéPraga **Gato de Vidro** (rara,
+  Combate 3, Habilidade 4, Noção 2, Vitalidade 3, Fantasma).
+- Num goblin com PokéPragas ligada, a aba Adaptações ofereceu "Gato de
+  Vidro (raro, Fantasma)". "Pôr à vista" mostrou "À vista: Gato de Vidro
+  (Raro, Fantasma). Captura com 3 hit(s) de Habilidade". A ficha relida
+  do servidor tinha a PokéPraga à vista e a cópia.
+- A Receita foi validada pelos testes automáticos, não na interface.
+
+### Publicar a v9.33.0
+
+**Servidor:** troque **`Codigo.gs`** e **`Goblins.gs`** e crie uma versão
+nova da implantação. **`setupRama()` não é necessário.**
+
+**Site:**
+- `js/goblins/catalogo.js`, `js/goblins/regras.js`,
+  `js/goblins/homebrew-goblins.js`, `js/goblins/telas/ficha-goblins.js`;
+- `js/homebrew-adaptadores.js`, `js/paginas/homebrew-editor.js`,
+  `js/pacotes-homebrew.js`;
+- `js/versao.js`.
+
+### Etapa 2 depois da v9.33
+
+Feitos os tipos estruturais de todos os sistemas, as Habilidades Homebrew
+no motor, os modelos de mesa de BRUTAL e as opções das variantes de
+Goblins. Da Etapa 2 resta **dependências nos pacotes**.

@@ -92,6 +92,7 @@
           if (sistema === "vampiro" && ["cla", "predador", "disciplina", "vantagem", "defeito", "conhecimento"].indexOf(t.chave) >= 0 && global.RAMAHomebrewVampiro) { global.RAMAHomebrewVampiro[t.chave]({ aoSalvar: o.aoSalvar }); return; }
           if (sistema === "oblivio" && ["papel", "motivacao", "mazela", "fardo"].indexOf(t.chave) >= 0 && global.RAMAHomebrewOblivio) { global.RAMAHomebrewOblivio[t.chave]({ aoSalvar: o.aoSalvar }); return; }
           if (sistema === "brutal" && (t.chave === "arquetipo" || t.chave === "estilo") && global.RAMAHomebrewBrutal) { global.RAMAHomebrewBrutal[t.chave]({ aoSalvar: o.aoSalvar }); return; }
+          if (sistema === "goblins" && (t.chave === "pokepraga" || t.chave === "receita")) { editor({ sistema: sistema, grupo: "estrutural", subtipo: t.chave, aoSalvar: o.aoSalvar }); return; }
           if (sistema === "goblins" && (t.chave === "ocupacao" || t.chave === "descritor") && global.RAMAHomebrewGoblins) { global.RAMAHomebrewGoblins[t.chave]({ aoSalvar: o.aoSalvar }); return; }
           if (sistema === "tormenta20" && (t.chave === "origem" || t.chave === "divindade") && global.RAMAHomebrewT20Estruturais) { global.RAMAHomebrewT20Estruturais[t.chave]({ aoSalvar: o.aoSalvar }); return; }
           if (sistema === "ordem" && (t.chave === "origem" || t.chave === "trilha") && global.RAMAHomebrewOrigemTrilha) { global.RAMAHomebrewOrigemTrilha[t.chave]({ aoSalvar: o.aoSalvar }); return; }
@@ -451,9 +452,9 @@
       var HBr = global.RAMABrutalHomebrew, xb = HBr.deRegistro(reg);
       if (xb && xb.def) ({ arquetipo: HBr.previaArquetipo, estilo: HBr.previaEstilo, assassino: HBr.previaAssassino, ameaca: HBr.previaAmeaca, apavoro: HBr.previaApavoro, vantagem: HBr.previaVantagem })[xb.tipo](xb.def).forEach(function (t, i) { pares.push([i ? "" : "Regras", t]); });
     }
-    if (s === "goblins" && ["ocupacao", "descritor", "magia", "tecnica"].indexOf(st) >= 0 && global.RAMAGoblinsHomebrew) {
+    if (s === "goblins" && ["ocupacao", "descritor", "magia", "tecnica", "pokepraga", "receita"].indexOf(st) >= 0 && global.RAMAGoblinsHomebrew) {
       var HG = global.RAMAGoblinsHomebrew, xg = HG.deRegistro(reg);
-      if (xg && xg.def) ({ ocupacao: HG.previaOcupacao, descritor: HG.previaDescritor, magia: HG.previaMagia, tecnica: HG.previaTecnica })[xg.tipo](xg.def).forEach(function (t, i) { pares.push([i ? "" : "Regras", t]); });
+      if (xg && xg.def) ({ ocupacao: HG.previaOcupacao, descritor: HG.previaDescritor, magia: HG.previaMagia, tecnica: HG.previaTecnica, pokepraga: HG.previaPraga, receita: HG.previaReceita })[xg.tipo](xg.def).forEach(function (t, i) { pares.push([i ? "" : "Regras", t]); });
     }
     if (s === "tormenta20" && (st === "magia" || st === "poder") && global.RAMATormenta20Homebrew) {
       var HT4 = global.RAMATormenta20Homebrew, xm = HT4.deRegistro(reg);

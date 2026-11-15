@@ -559,10 +559,13 @@
   /* v9.30: as Técnicas Homebrew que a mesa concede (biblioteca); o uso
      de 1 vez por dia é marcado pela ficha, o efeito é o do texto. */
   var bibliotecaHbPedida = false;
+  function pedirBibliotecaHb(ctx) {
+    var HG = global.RAMAGoblinsHomebrew;
+    if (HG && !bibliotecaHbPedida) { bibliotecaHbPedida = true; HG.carregarBiblioteca().then(function (r) { if (r && ((r.tecnicas || []).length || (r.magias || []).length || (r.pragas || []).length || (r.receitas || []).length) && ctx.redesenhar) ctx.redesenhar(); }); }
+  }
   function painelTecnicasHb(ctx) {
     var o = ctx.ficha.goblins;
-    var HG = global.RAMAGoblinsHomebrew;
-    if (HG && !bibliotecaHbPedida) { bibliotecaHbPedida = true; HG.carregarBiblioteca().then(function (r) { if (r && ((r.tecnicas || []).length || (r.magias || []).length) && ctx.redesenhar) ctx.redesenhar(); }); }
+    pedirBibliotecaHb(ctx);
     var p = pode(ctx), muda = ctx.podeEditar() && ctx.emEdicao();
     var lista = o.tecnicasHb.map(function (k) {
       var t = C().tecnica(k);
@@ -959,7 +962,7 @@
     var lista = pk.pragas.map(function (pr) {
       var st = R().statsDaPraga(pr);
       return el("li.gob-praga", { class: pr.desmaiada ? "gob-item--fora" : "" }, [
-        el("strong", { texto: pr.nome }), el("span.t-mini", { texto: " — " + C().POKE.ficha[pr.bicho][0] + " " + C().POKE.raridades[pr.raridade].nome.toLowerCase() + " · " + pr.elementos.map(function (e) { return C().POKE.elementos[e].nome; }).join("/") + (pr.evolucoes ? " · evoluiu " + pr.evolucoes + "×" : "") }),
+        el("strong", { texto: pr.nome }), el("span.t-mini", { texto: " — " + (C().POKE.ficha[pr.bicho] || [pr.nome])[0] + " " + C().POKE.raridades[pr.raridade].nome.toLowerCase() + " · " + pr.elementos.map(function (e) { return C().POKE.elementos[e].nome; }).join("/") + (pr.evolucoes ? " · evoluiu " + pr.evolucoes + "×" : "") }),
         el("p.t-mini", { texto: "Com " + st.combate + " · Hab " + st.habilidade + " · Noç " + st.nocao + " · Vit " + st.vitalidade + " · ferimentos " + pr.ferimentos + (pr.desmaiada ? " (desmaiada)" : "") + " · fraqueza: " + (C().POKE.elementos[st.fraqueza] ? C().POKE.elementos[st.fraqueza].nome : "—") }),
         p ? el("div.faixa", {}, [
           botao("Atacar", function () { ataqueDePraga(ctx, pr); }, { motivo: pr.desmaiada ? "Desmaiada." : "" }),
@@ -976,6 +979,14 @@
         ctx.podeEditar() ? botao("−1", function () { op(ctx, function (b) { b.adaptacoes.pokepragas.pokepedras = Math.max(0, b.adaptacoes.pokepragas.pokepedras - 1); return ok(); }); }, { motivo: pk.pokepedras ? "" : "Nenhuma." }) : null,
       ]),
       lista.length ? el("ul.gob-lista", {}, lista) : linha("Nenhuma PokéPraga."),
+      /* v9.33: uma PokéPraga Homebrew à vista (a mesa escolhe). */
+      (function () {
+        pedirBibliotecaHb(ctx);
+        var hbs = C().pragasHomebrew ? C().pragasHomebrew() : [];
+        if (!hbs.length || !ctx.podeEditar() || pk.encontrada) return null;
+        var sel = selecao("PokéPraga Homebrew", [{ valor: "", rotulo: "Escolha…" }].concat(hbs.map(function (d) { return { valor: d.chave, rotulo: d.nome + " (" + C().POKE.raridades[d.raridade].nome.toLowerCase() + (d.elemento ? ", " + C().POKE.elementos[d.elemento].nome : "") + ")" }; })), "", function () {});
+        return el("div.faixa", {}, [sel, botao("Pôr à vista", function () { var k = sel.entrada.value; if (!k) return; op(ctx, function (b) { return R().pragaHomebrewAVista(b, k, T().rolador); }); })]);
+      })(),
       pk.encontrada ? el("div.gob-pendencias", {}, [
         el("p", { texto: "À vista: " + pk.encontrada.nome + " (" + C().POKE.raridades[pk.encontrada.raridade].nome + ", " + pk.encontrada.elementos.map(function (e) { return C().POKE.elementos[e].nome; }).join("/") + "). Captura com " + C().POKE.raridades[pk.encontrada.raridade].captura + " hit(s) de Habilidade." }),
         p ? botao("Arremessar uma PokéPedra", function () {
@@ -1057,8 +1068,9 @@
       return el("span.gob-contador", {}, [el("span", { texto: rot + ": " + v[chave] + " " }), ctx.podeEditar() ? botao("+", function () { op(ctx, function (b) { b.adaptacoes.vale[chave]++; return ok(); }); }, { rotulo: rot + " +1" }) : null, ctx.podeEditar() ? botao("−", function () { op(ctx, function (b) { b.adaptacoes.vale[chave] = Math.max(0, b.adaptacoes.vale[chave] - 1); return ok(); }); }, { rotulo: rot + " −1" }) : null]);
     }
     var planta = selecao("Plantar", C().VALE.plantas.map(function (x) { return { valor: x, rotulo: x }; }), "Batata");
+    pedirBibliotecaHb(ctx);
     var receitas = Object.keys(C().VALE.receitas);
-    var receita = selecao("Receita", receitas.map(function (k) { var r = C().VALE.receitas[k]; return { valor: k, rotulo: r.nome + " (" + r.hits + " hit" + (r.hits > 1 ? "s" : "") + ")" }; }), receitas[0]);
+    var receita = selecao("Receita", receitas.map(function (k) { var r = C().VALE.receitas[k]; return { valor: k, rotulo: r.nome + (r.homebrew ? " · Homebrew" : "") + " (" + r.hits + " hit" + (r.hits > 1 ? "s" : "") + ")" }; }), receitas[0]);
     var peixe = selecao("Peixe", [{ valor: "", rotulo: "—" }].concat(v.peixes.map(function (x) { return { valor: x.id, rotulo: x.nome + " " + x.gramas + " g" }; })), v.peixes[0] ? v.peixes[0].id : "");
     var constr = selecao("Construir", Object.keys(C().VALE.construcoes).map(function (k) { var d = C().VALE.construcoes[k]; return { valor: k, rotulo: d.nome + " (" + Object.keys(d.custo).map(function (c) { return d.custo[c] + " " + c; }).join(", ") + ")" }; }), "varaDePesca");
     var alimentos = Object.keys(v.alimentos).map(function (k) { return k + " " + v.alimentos[k]; });

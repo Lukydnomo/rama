@@ -32,8 +32,19 @@
     return d.resultados.map(function (r, i) { return (i === 3 ? "3+ hits" : i + (i === 1 ? " hit" : " hits")) + ": " + (r.texto || "(sem texto)") + (r.efeito ? " [a ficha aplica: " + ROT_EFEITO[r.efeito] + "]" : ""); });
   }
   function previaTecnica(d) { return [(d.uso === "dia" ? "1 vez por dia (a ficha marca o uso). " : "") + (d.texto || "(sem texto)")]; }
+  /* v9.33: PokéPraga e Receita (opções das variantes). */
+  var ING = { cenoura: "Cenoura", batata: "Batata", alface: "Alface", brocolis: "Brócolis", morango: "Morango", banana: "Banana", arroz: "Arroz", trigo: "Trigo", milho: "Milho", tomate: "Tomate", ovo: "Ovo", leite: "Leite", fruta: "Fruta" };
+  function previaPraga(d) { return [d.nome + " · " + C().POKE.raridades[d.raridade].nome + " (captura " + C().POKE.raridades[d.raridade].captura + " hit" + (C().POKE.raridades[d.raridade].captura > 1 ? "s" : "") + ") · Com " + d.combate + " · Hab " + d.habilidade + " · Noç " + d.nocao + " · Vit " + d.vitalidade + " · " + (d.elemento ? "elemento " + C().POKE.elementos[d.elemento].nome : "elemento rolado") + "."]; }
+  function previaReceita(d) { return [d.nome + " · " + d.hits + " hit(s) no teste de Noção · " + (Object.keys(d.ingredientes).map(function (k) { return d.ingredientes[k] + " " + k; }).join(", ") || "sem ingredientes") + (d.peixe ? " · peixe de " + d.peixe.gramas + " g" : "") + "."]; }
   function deRegistro(reg) {
     var m = obj(obj(reg).modelo);
+    if (m.sistema === "goblins" && m.grupo === "estrutural" && C() && C().normalizarPragaHomebrew && (m.subtipo === "pokepraga" || m.subtipo === "receita")) {
+      var v = obj(m.def);
+      if (m.subtipo === "pokepraga") return { tipo: "pokepraga", def: C().normalizarPragaHomebrew(Object.assign({}, v, { chave: "", nome: reg.nome, homebrewId: reg.id })) };
+      var ing = {}; Object.keys(ING).forEach(function (k) { if (v["i_" + k]) ing[ING[k]] = v["i_" + k]; });
+      var dr = C().normalizarReceitaHomebrew({ chave: "", nome: reg.nome, homebrewId: reg.id, hits: v.hits, ingredientes: ing, peixe: v.peixe ? { gramas: Number(v.peixe) } : null });
+      return dr ? { tipo: "receita", def: dr } : null;
+    }
     if (m.sistema === "goblins" && m.grupo === "habilidade" && C() && C().normalizarMagiaHomebrew) {
       var v = obj(m.def);
       if (m.subtipo === "magia") {
@@ -54,11 +65,11 @@
   function carregarBiblioteca(forcar) {
     if (biblioteca && !forcar) return Promise.resolve(biblioteca);
     if (carga && !forcar) return carga;
-    var API = global.RAMAApi, VAZIA = { ocupacoes: [], descritores: [], magias: [], tecnicas: [] };
+    var API = global.RAMAApi, VAZIA = { ocupacoes: [], descritores: [], magias: [], tecnicas: [], pragas: [], receitas: [] };
     if (!API || !API.listarHomebrew || !C()) return Promise.resolve(VAZIA);
-    carga = API.listarHomebrew({ escopo: "todos", tipos: ["ocupacao", "descritor", "habilidade"] }).then(function (r) {
+    carga = API.listarHomebrew({ escopo: "todos", tipos: ["ocupacao", "descritor", "habilidade", "pokepraga", "receita"] }).then(function (r) {
       carga = null;
-      var saida = { ocupacoes: [], descritores: [], magias: [], tecnicas: [] };
+      var saida = { ocupacoes: [], descritores: [], magias: [], tecnicas: [], pragas: [], receitas: [] };
       ((r && r.ok && r.dados) || []).forEach(function (reg) {
         var x = deRegistro(reg);
         if (!x || !x.def) return;
@@ -72,13 +83,15 @@
   }
 
   /* As cópias da ficha e as versões novas (o painel de js/homebrew-versoes.js). */
-  var CAMPOS = [["ocupacoes", "ocupacoes", "ocupacao"], ["descritores", "descritores", "descritor"], ["magias", "magias", "magia"], ["tecnicas", "tecnicas", "tecnica"]];
-  var CAMPO = { ocupacao: "ocupacoes", descritor: "descritores", magia: "magias", tecnica: "tecnicas" };
+  var CAMPOS = [["ocupacoes", "ocupacoes", "ocupacao"], ["descritores", "descritores", "descritor"], ["magias", "magias", "magia"], ["tecnicas", "tecnicas", "tecnica"], ["pragas", "pragas", "pokepraga"], ["receitas", "receitas", "receita"]];
+  var CAMPO = { ocupacao: "ocupacoes", descritor: "descritores", magia: "magias", tecnica: "tecnicas", pokepraga: "pragas", receita: "receitas" };
   function registrar(tipo, def) {
     if (tipo === "ocupacao") C().registrarOcupacaoHomebrew(def);
     else if (tipo === "descritor") C().registrarDescritorHomebrew(def);
     else if (tipo === "magia") C().registrarMagiaHomebrew(def);
     else if (tipo === "tecnica") C().registrarTecnicaHomebrew(def);
+    else if (tipo === "pokepraga") C().registrarPragaHomebrew(def);
+    else if (tipo === "receita") C().registrarReceitaHomebrew(def);
   }
   function copiasDaFicha(o) {
     var hb = obj(obj(o).homebrew), out = [];
@@ -104,6 +117,6 @@
     return true;
   }
 
-  global.RAMAGoblinsHomebrew = { previaMagia: previaMagia, previaTecnica: previaTecnica, previaOcupacao: previaOcupacao, previaDescritor: previaDescritor, textoMods: textoMods, deRegistro: deRegistro, carregarBiblioteca: carregarBiblioteca,
+  global.RAMAGoblinsHomebrew = { previaPraga: previaPraga, previaReceita: previaReceita, previaMagia: previaMagia, previaTecnica: previaTecnica, previaOcupacao: previaOcupacao, previaDescritor: previaDescritor, textoMods: textoMods, deRegistro: deRegistro, carregarBiblioteca: carregarBiblioteca,
     copiasDaFicha: copiasDaFicha, versoesNovas: versoesNovas, atualizarVersao: atualizarVersao };
 })(typeof window !== "undefined" ? window : globalThis);

@@ -1,5 +1,10 @@
 # A API
 
+## Opções das variantes de Goblins — v9.33
+
+- `salvar_homebrew`: o grupo `estrutural` de `goblins` aceita
+  `pokepraga` e `receita`.
+
 ## Modelos de mesa de BRUTAL — v9.32
 
 - `salvar_homebrew`: o grupo `estrutural` de `brutal` aceita `assassino`,

@@ -1358,12 +1358,54 @@ function acaoGoblinsOperar(corpo, usuario) {
   function registrarTecnicaHomebrew(def) { if (!def || !ehTecnicaHomebrew(def.chave)) return null; TECNICAS_HB[def.chave] = JSON.parse(JSON.stringify(def)); return TECNICAS_HB[def.chave]; }
   function tecnicasHomebrew() { return Object.keys(TECNICAS_HB).map(function (k) { return TECNICAS_HB[k]; }); }
 
+  /* v9.33 — OPÇÕES DAS VARIANTES (chaves hbgp-/hbgr-<id>-<hash>):
+     PokéPraga  uma espécie (raridade, Combate, Habilidade, Noção,
+                Vitalidade e um elemento fixo opcional) na ficha das
+                PokéPragas; as tabelas d6 do livro não mudam — a mesa a
+                põe "à vista", e a captura segue a regra de sempre.
+     Receita    do Vale dos Goblins: hits, ingredientes e peixe (gramas). */
+  var PADRAO_PRAGA = /^hbgp-[a-z0-9-]{3,30}$/, PADRAO_RECEITA = /^hbgr-[a-z0-9-]{3,30}$/;
+  var PRAGAS_HB = {};
+  var INGREDIENTES_DE_RECEITA = VALE.plantas.concat(["Tomate", "Ovo", "Leite", "Fruta"]);
+  var GRAMAS_DE_PEIXE = [200, 400, 600, 1000, 3000];
+  function ehPragaHomebrew(k) { return PADRAO_PRAGA.test(String(k || "")); }
+  function ehReceitaHomebrew(k) { return PADRAO_RECEITA.test(String(k || "")); }
+  function normalizarPragaHomebrew(bruto) {
+    var b = hbObj(bruto);
+    var d = { chave: ehPragaHomebrew(b.chave) ? b.chave : "", nome: hbTexto(b.nome, 40).trim() || "PokéPraga Homebrew", homebrew: true, homebrewId: hbTexto(b.homebrewId, 80),
+      raridade: ["comum", "incomum", "raro"].indexOf(b.raridade) >= 0 ? b.raridade : "comum",
+      combate: hbInt(b.combate, 0, 6, 1), habilidade: hbInt(b.habilidade, 0, 6, 1), nocao: hbInt(b.nocao, 0, 6, 1), vitalidade: hbInt(b.vitalidade, 1, 8, 2),
+      elemento: POKE.elementos[b.elemento] ? b.elemento : "" };
+    if (!d.chave) d.chave = hbChave("hbgp-", d);
+    return d;
+  }
+  function registrarPragaHomebrew(def) {
+    if (!def || !ehPragaHomebrew(def.chave)) return null;
+    POKE.ficha[def.chave] = [def.nome, def.combate, def.habilidade, def.nocao, def.vitalidade];
+    PRAGAS_HB[def.chave] = JSON.parse(JSON.stringify(def));
+    return PRAGAS_HB[def.chave];
+  }
+  function pragasHomebrew() { return Object.keys(PRAGAS_HB).map(function (k) { return PRAGAS_HB[k]; }); }
+  function normalizarReceitaHomebrew(bruto) {
+    var b = hbObj(bruto), ing = {};
+    Object.keys(hbObj(b.ingredientes)).forEach(function (k) { var n = hbInt(b.ingredientes[k], 0, 3, 0); if (n && INGREDIENTES_DE_RECEITA.indexOf(k) >= 0) ing[k] = n; });
+    var g = Number(hbObj(b.peixe).gramas);
+    if (!Object.keys(ing).length && GRAMAS_DE_PEIXE.indexOf(g) < 0) return null;
+    var d = { chave: ehReceitaHomebrew(b.chave) ? b.chave : "", nome: hbTexto(b.nome, 40).trim() || "Receita Homebrew", homebrew: true, homebrewId: hbTexto(b.homebrewId, 80), hits: hbInt(b.hits, 1, 3, 1), ingredientes: ing };
+    if (GRAMAS_DE_PEIXE.indexOf(g) >= 0) d.peixe = { gramas: g };
+    if (!d.chave) d.chave = hbChave("hbgr-", d);
+    return d;
+  }
+  function registrarReceitaHomebrew(def) { if (!def || !ehReceitaHomebrew(def.chave)) return null; VALE.receitas[def.chave] = JSON.parse(JSON.stringify(def)); return VALE.receitas[def.chave]; }
+
   global.RAMAGoblinsCatalogo = {
     ehOcupacaoHomebrew: ehOcupacaoHomebrew, ehDescritorHomebrew: ehDescritorHomebrew,
     normalizarOcupacaoHomebrew: normalizarOcupacaoHomebrew, normalizarDescritorHomebrew: normalizarDescritorHomebrew,
     registrarOcupacaoHomebrew: registrarOcupacaoHomebrew, registrarDescritorHomebrew: registrarDescritorHomebrew, descritoresDisponiveis: descritoresDisponiveis,
     ehMagiaHomebrew: ehMagiaHomebrew, ehTecnicaHomebrew: ehTecnicaHomebrew, normalizarMagiaHomebrew: normalizarMagiaHomebrew, registrarMagiaHomebrew: registrarMagiaHomebrew, magiasDoBruxo: magiasDoBruxo,
     normalizarTecnicaHomebrew: normalizarTecnicaHomebrew, registrarTecnicaHomebrew: registrarTecnicaHomebrew, tecnicasHomebrew: tecnicasHomebrew, EFEITOS_DE_MAGIA: EFEITOS_DE_MAGIA,
+    ehPragaHomebrew: ehPragaHomebrew, normalizarPragaHomebrew: normalizarPragaHomebrew, registrarPragaHomebrew: registrarPragaHomebrew, pragasHomebrew: pragasHomebrew,
+    ehReceitaHomebrew: ehReceitaHomebrew, normalizarReceitaHomebrew: normalizarReceitaHomebrew, registrarReceitaHomebrew: registrarReceitaHomebrew, INGREDIENTES_DE_RECEITA: INGREDIENTES_DE_RECEITA, GRAMAS_DE_PEIXE: GRAMAS_DE_PEIXE,
     LIVRO: LIVRO, referencia: referencia,
     ATRIBUTOS: ATRIBUTOS, CHAVES_ATRIBUTO: CHAVES_ATRIBUTO, NOMES: NOMES,
     OCUPACOES: OCUPACOES, OCUPACAO_D6: OCUPACAO_D6, DESCRITORES: DESCRITORES, DESCRITOR_D6: DESCRITOR_D6,
@@ -1957,6 +1999,22 @@ function acaoGoblinsOperar(corpo, usuario) {
       var k = b.descritor, cp = objeto(objeto(hb.descritores)[k]);
       var def = Object.keys(cp).length ? Cc.normalizarDescritorHomebrew(Object.assign({}, cp, { chave: k })) : (Cc.DESCRITORES[k] && Cc.DESCRITORES[k].homebrew ? JSON.parse(JSON.stringify(Cc.DESCRITORES[k])) : null);
       if (def) { Cc.registrarDescritorHomebrew(def); (saida.descritores = saida.descritores || {})[k] = def; }
+    }
+    /* v9.33: PokéPragas e Receitas Homebrew (das variantes). */
+    if (Cc.ehPragaHomebrew) {
+      var ad = objeto(b.adaptacoes), pk = objeto(ad.pokepragas), va = objeto(ad.vale);
+      lista(pk.pragas).map(function (p) { return objeto(p).bicho; }).concat([objeto(pk.encontrada).bicho]).forEach(function (k) {
+        if (!Cc.ehPragaHomebrew(k) || (saida.pragas && saida.pragas[k])) return;
+        var cp = objeto(objeto(hb.pragas)[k]);
+        var def = Object.keys(cp).length ? Cc.normalizarPragaHomebrew(Object.assign({}, cp, { chave: k })) : (Cc.pragasHomebrew().filter(function (x) { return x.chave === k; })[0] || null);
+        if (def) { Cc.registrarPragaHomebrew(def); (saida.pragas = saida.pragas || {})[k] = def; }
+      });
+      Object.keys(objeto(va.pratos)).forEach(function (k) {
+        if (!Cc.ehReceitaHomebrew(k) || (saida.receitas && saida.receitas[k])) return;
+        var cp = objeto(objeto(hb.receitas)[k]);
+        var def = Object.keys(cp).length ? Cc.normalizarReceitaHomebrew(Object.assign({}, cp, { chave: k })) : (Cc.VALE.receitas[k] && Cc.VALE.receitas[k].homebrew ? JSON.parse(JSON.stringify(Cc.VALE.receitas[k])) : null);
+        if (def) { Cc.registrarReceitaHomebrew(def); (saida.receitas = saida.receitas || {})[k] = def; }
+      });
     }
     /* v9.30: Magias (do Bruxo) e Técnicas concedidas Homebrew. */
     if (Cc.ehMagiaHomebrew) {
@@ -3150,6 +3208,20 @@ function acaoGoblinsOperar(corpo, usuario) {
     return s;
   }
 
+  /* v9.33: a mesa põe "à vista" uma PokéPraga Homebrew (as tabelas d6
+     do livro não mudam); o elemento fixo dela, ou rolado como sempre. A
+     captura, o ataque e a evolução seguem a regra de sempre. */
+  function pragaHomebrewAVista(o, chave, rolador) {
+    if (!o.opcoes.adaptacoes.pokepragas) return falha("Ligue a adaptação PokéPragas.");
+    var def = C().pragasHomebrew().filter(function (x) { return x.chave === chave; })[0];
+    if (!def) return falha("PokéPraga Homebrew desconhecida.");
+    var el = def.elemento, sorteios = [];
+    if (!el) { var se = rolarElemento(rolador); el = se.resultado; sorteios.push(se); }
+    o.adaptacoes.pokepragas.encontrada = normalizarPraga({ nome: def.nome, bicho: def.chave, raridade: def.raridade, elementos: [el] });
+    registrar(o, "poke", "À vista: " + def.nome + " (" + C().POKE.raridades[def.raridade].nome.toLowerCase() + ", " + C().POKE.elementos[el].nome + ")");
+    return ok([evento("poke", { praga: def.chave })], { sorteios: sorteios });
+  }
+
   function gerarPraga(raridade, rolador, nome) {
     var bichos = C().POKE.bichos[raridade];
     var sb = D().sortear({ id: "bicho", nome: "Bicho (" + raridade + ")", pagina: 34, dados: "1d6", entradas: bichos }, rolador);
@@ -3738,6 +3810,13 @@ function acaoGoblinsOperar(corpo, usuario) {
     lista(o.tecnicasHb).forEach(function (k) { var t = Cc.tecnica(k); if (t && t.concedida) guardarCopia(o, "tecnicas", Cc.normalizarTecnicaHomebrew(t)); });
     [o.ocupacao].concat(lista(o.epicas).map(function (e) { return objeto(e).ocupacao; })).forEach(function (k) { if (Cc.ehOcupacaoHomebrew(k) && Cc.OCUPACOES[k]) guardarCopia(o, "ocupacoes", Cc.OCUPACOES[k]); });
     if (Cc.ehDescritorHomebrew(o.descritor) && Cc.DESCRITORES[o.descritor]) guardarCopia(o, "descritores", Cc.DESCRITORES[o.descritor]);
+    if (Cc.ehPragaHomebrew) {
+      var pk = objeto(objeto(o.adaptacoes).pokepragas);
+      lista(pk.pragas).map(function (p) { return objeto(p).bicho; }).concat([objeto(pk.encontrada).bicho]).forEach(function (k) {
+        if (Cc.ehPragaHomebrew(k)) { var d = Cc.pragasHomebrew().filter(function (x) { return x.chave === k; })[0]; if (d) guardarCopia(o, "pragas", d); }
+      });
+      Object.keys(objeto(objeto(objeto(o.adaptacoes).vale).pratos)).forEach(function (k) { if (Cc.ehReceitaHomebrew(k) && Cc.VALE.receitas[k]) guardarCopia(o, "receitas", Cc.VALE.receitas[k]); });
+    }
   }
 
   function aplicarOperacao(o, opId, fn) {
@@ -3791,7 +3870,7 @@ function acaoGoblinsOperar(corpo, usuario) {
     novoItem: novoItem, adicionarItem: adicionarItem, restricaoDeUso: restricaoDeUso, equipar: equipar, removerItem: removerItem, marcarDestruido: marcarDestruido, usarItem: usarItem,
     passarMinuto: passarMinuto, bombaRelogio: bombaRelogio,
     receberMedo: receberMedo, verHorror: verHorror, descansarEmLugarSagrado: descansarEmLugarSagrado,
-    gerarPraga: gerarPraga, statsDaPraga: statsDaPraga, procurarPraga: procurarPraga, capturarPraga: capturarPraga, verificarEvolucao: verificarEvolucao, ferirPraga: ferirPraga, ataqueDePraga: ataqueDePraga,
+    gerarPraga: gerarPraga, pragaHomebrewAVista: pragaHomebrewAVista, statsDaPraga: statsDaPraga, procurarPraga: procurarPraga, capturarPraga: capturarPraga, verificarEvolucao: verificarEvolucao, ferirPraga: ferirPraga, ataqueDePraga: ataqueDePraga,
     gerarEstudante: gerarEstudante, adicionarEstudante: adicionarEstudante, conversar: conversar, perguntarSegredo: perguntarSegredo, agradar: agradar, mudarReacao: mudarReacao, tentarRomance: tentarRomance, resolverBriga: resolverBriga,
     coletar: coletar, plantar: plantar, colher: colher, guardarPeixe: guardarPeixe, construir: construir, cozinhar: cozinhar, heranca: heranca,
     sorteioDeNome: sorteioDeNome, sortearCaracteristicas: sortearCaracteristicas, criarAleatoria: criarAleatoria, rerrolarCaracteristica: rerrolarCaracteristica,

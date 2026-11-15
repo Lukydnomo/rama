@@ -118,6 +118,18 @@
 
   var CHANGELOG = [
     {
+      versao: "9.33.0",
+      codinome: "GRAMAALTA",
+      data: "15/11/2026",
+      mudancas: {
+        "Adicionado": [
+          "Malditos Goblins: PokéPraga Homebrew (adaptação PokéPragas) — uma espécie com raridade, Combate, Habilidade, Noção, Vitalidade e elemento fixo opcional. A mesa põe à vista na ficha; a captura, o ataque e a evolução seguem a regra. As tabelas d6 do livro não mudam.",
+          "Malditos Goblins: Receita Homebrew (Vale dos Goblins) — hits, ingredientes e peixe; aparece na cozinha.",
+        ],
+        "Técnico": ["catalogo.js: PokéPraga (hbgp-) em POKE.ficha e Receita (hbgr-) em VALE.receitas; regras.js: pragaHomebrewAVista e as cópias em goblins.homebrew.pragas/receitas (também depois de cada operação). Os dois tipos usam o editor de campos. Servidor: tipos pokepraga e receita; Goblins.gs regenerado. testes/executar-homebrew-goblins.js: 14 verificações novas (53)."],
+      },
+    },
+    {
       versao: "9.32.0",
       codinome: "VIDRARIA",
       data: "15/11/2026",

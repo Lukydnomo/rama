@@ -47,6 +47,8 @@
     { chave: "vantagem", rotulo: "Vantagens e Defeitos", um: "Vantagem" },
     { chave: "conhecimento", rotulo: "Fichas de Conhecimento", um: "Ficha de Conhecimento" },
     { chave: "assassino", rotulo: "Assassinos", um: "Assassino" },
+    { chave: "pokepraga", rotulo: "PokéPragas", um: "PokéPraga" },
+    { chave: "receita", rotulo: "Receitas", um: "Receita" },
     { chave: "ameaca", rotulo: "Ameaças", um: "Ameaça" },
     { chave: "apavoro", rotulo: "Apavoros", um: "Apavoro" },
     { chave: "perfil", rotulo: "Perfis", um: "Perfil" },

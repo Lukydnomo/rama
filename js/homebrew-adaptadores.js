@@ -227,6 +227,8 @@
       { chave: "criatura", rotulo: "Inimigo", ajuda: "Combate, Noção, Habilidade e Vitalidade, bônus da arma, proteção e efeitos." },
       { chave: "ocupacao", rotulo: "Ocupação", ajuda: "Modificador de atributo, opções de equipamento inicial e as três técnicas. Entra na criação de goblins." },
       { chave: "descritor", rotulo: "Descritor", ajuda: "Modificadores de atributo (ou um +1 à escolha, como Supimpa). Entra na criação de goblins." },
+      { chave: "pokepraga", rotulo: "PokéPraga", ajuda: "Adaptação PokéPragas: uma espécie (raridade, atributos, elemento fixo opcional). A mesa põe à vista; a captura segue a regra." },
+      { chave: "receita", rotulo: "Receita", ajuda: "Adaptação Vale dos Goblins: hits, ingredientes e peixe. Entra na cozinha." },
     ],
     item: {
       subtipos: [
@@ -417,7 +419,12 @@
   /* v9.19: Papel, Motivação, Mazela e Fardo de Oblívio (js/paginas/homebrew-oblivio.js). */
   OBLIVIO.estrutural = { subtipos: ["papel", "motivacao", "mazela", "fardo"].map(function (k) { return { chave: k, rotulo: ({ papel: "Papel", motivacao: "Motivação", mazela: "Mazela", fardo: "Fardo" })[k], campos: [] }; }) };
   /* v9.17: Ocupação e Descritor de Malditos Goblins (js/paginas/homebrew-goblins.js). */
-  GOBLINS.estrutural = { subtipos: [{ chave: "ocupacao", rotulo: "Ocupação", campos: [] }, { chave: "descritor", rotulo: "Descritor", campos: [] }] };
+  GOBLINS.estrutural = { subtipos: [{ chave: "ocupacao", rotulo: "Ocupação", campos: [] }, { chave: "descritor", rotulo: "Descritor", campos: [] },
+    /* v9.33: as opções das variantes, no editor de campos. */
+    { chave: "pokepraga", rotulo: "PokéPraga", campos: [sel("raridade", "Raridade", [["comum", "Comum (captura 1 hit)"], ["incomum", "Incomum (2 hits)"], ["raro", "Rara (3 hits)"]], { padrao: "comum" }),
+      campo("combate", "Combate", "numero", { min: 0, max: 6, padrao: 1 }), campo("habilidade", "Habilidade", "numero", { min: 0, max: 6, padrao: 1 }), campo("nocao", "Noção", "numero", { min: 0, max: 6, padrao: 1 }), campo("vitalidade", "Vitalidade", "numero", { min: 1, max: 8, padrao: 2 }),
+      sel("elemento", "Elemento", [["", "Rolado (como as do livro)"], ["fogo", "Fogo"], ["agua", "Água"], ["planta", "Planta"], ["eletrico", "Elétrico"], ["pedra", "Pedra"], ["vento", "Vento"], ["dragao", "Dragão"], ["trevoso", "Trevoso"], ["metal", "Metal"], ["fada", "Fada"], ["psiquico", "Psíquico"], ["fantasma", "Fantasma"]], { padrao: "" })] },
+    { chave: "receita", rotulo: "Receita", campos: [campo("hits", "Hits no teste de Noção", "numero", { min: 1, max: 3, padrao: 1 })].concat([["cenoura", "Cenoura"], ["batata", "Batata"], ["alface", "Alface"], ["brocolis", "Brócolis"], ["morango", "Morango"], ["banana", "Banana"], ["arroz", "Arroz"], ["trigo", "Trigo"], ["milho", "Milho"], ["tomate", "Tomate"], ["ovo", "Ovo"], ["leite", "Leite"], ["fruta", "Fruta (qualquer)"]].map(function (x) { return campo("i_" + x[0], x[1], "numero", { min: 0, max: 3 }); })).concat([sel("peixe", "Peixe", [["", "Sem peixe"], ["200", "200 g"], ["400", "400 g"], ["600", "600 g"], ["1000", "1 kg"], ["3000", "3 kg"]], { padrao: "" })]) }] };
   /* Habilidade de Ordem e Universal: o modelo do RAMAHabilidades (o
      editor de sempre); Ordem ganha Ritual como subtipo. */
   /* v9.10: Raça de Tormenta20 (editor próprio: js/paginas/homebrew-raca-t20.js). */
@@ -616,6 +623,8 @@
       if (s === "oblivio") return { modo: "nativo", texto: ({ papel: "Escolhido na criação de Personas, com a Habilidade Principal; a cópia fica na ficha.", motivacao: "Escolhida na criação de Personas, depois das do livro; a cópia fica na ficha.", mazela: "Aparece em \u201cAplicar mazela\u201d na ficha; a cópia fica na ficha.", fardo: "A mesa aplica na ficha (\u201cAplicar Fardo Homebrew\u201d); a cópia fica na ficha." })[stE] };
       if (s === "brutal" && ["assassino", "ameaca", "apavoro"].indexOf(stE) >= 0) return { modo: "nativo", texto: "Modelo de mesa: aparece na mesa da Diretora, ao configurar o Assassino; a mesa guarda a cópia." };
       if (s === "brutal") return { modo: "nativo", texto: stE === "arquetipo" ? "Escolhido na criação de Sobreviventes e na troca de Arquétipo; a mesa recebe a cópia pelo resumo da ficha." : "Aparece no editor de Arquétipo e nas listas de Estilo da ficha e da mesa." };
+      if (s === "goblins" && stE === "pokepraga") return { modo: "nativo", texto: "Adaptação PokéPragas: a mesa põe à vista na ficha (aba Adaptações, em edição); captura, ataque e evolução seguem a regra. A cópia fica na ficha." };
+      if (s === "goblins" && stE === "receita") return { modo: "nativo", texto: "Adaptação Vale dos Goblins: aparece na cozinha (aba Adaptações). A cópia fica na ficha." };
       if (s === "goblins") return { modo: "nativo", texto: stE === "ocupacao" ? "Escolhida na criação de goblins (e como ocupação épica), com a cópia guardada na ficha." : "Escolhido na criação de goblins, depois dos do livro, com a cópia guardada na ficha." };
       if (s === "tormenta20") return { modo: "nativo", texto: ({
         raca: "Escolhida na criação de personagem (depois das raças do livro), com a cópia guardada na ficha.",

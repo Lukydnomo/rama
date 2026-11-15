@@ -908,12 +908,54 @@
   function registrarTecnicaHomebrew(def) { if (!def || !ehTecnicaHomebrew(def.chave)) return null; TECNICAS_HB[def.chave] = JSON.parse(JSON.stringify(def)); return TECNICAS_HB[def.chave]; }
   function tecnicasHomebrew() { return Object.keys(TECNICAS_HB).map(function (k) { return TECNICAS_HB[k]; }); }
 
+  /* v9.33 — OPÇÕES DAS VARIANTES (chaves hbgp-/hbgr-<id>-<hash>):
+     PokéPraga  uma espécie (raridade, Combate, Habilidade, Noção,
+                Vitalidade e um elemento fixo opcional) na ficha das
+                PokéPragas; as tabelas d6 do livro não mudam — a mesa a
+                põe "à vista", e a captura segue a regra de sempre.
+     Receita    do Vale dos Goblins: hits, ingredientes e peixe (gramas). */
+  var PADRAO_PRAGA = /^hbgp-[a-z0-9-]{3,30}$/, PADRAO_RECEITA = /^hbgr-[a-z0-9-]{3,30}$/;
+  var PRAGAS_HB = {};
+  var INGREDIENTES_DE_RECEITA = VALE.plantas.concat(["Tomate", "Ovo", "Leite", "Fruta"]);
+  var GRAMAS_DE_PEIXE = [200, 400, 600, 1000, 3000];
+  function ehPragaHomebrew(k) { return PADRAO_PRAGA.test(String(k || "")); }
+  function ehReceitaHomebrew(k) { return PADRAO_RECEITA.test(String(k || "")); }
+  function normalizarPragaHomebrew(bruto) {
+    var b = hbObj(bruto);
+    var d = { chave: ehPragaHomebrew(b.chave) ? b.chave : "", nome: hbTexto(b.nome, 40).trim() || "PokéPraga Homebrew", homebrew: true, homebrewId: hbTexto(b.homebrewId, 80),
+      raridade: ["comum", "incomum", "raro"].indexOf(b.raridade) >= 0 ? b.raridade : "comum",
+      combate: hbInt(b.combate, 0, 6, 1), habilidade: hbInt(b.habilidade, 0, 6, 1), nocao: hbInt(b.nocao, 0, 6, 1), vitalidade: hbInt(b.vitalidade, 1, 8, 2),
+      elemento: POKE.elementos[b.elemento] ? b.elemento : "" };
+    if (!d.chave) d.chave = hbChave("hbgp-", d);
+    return d;
+  }
+  function registrarPragaHomebrew(def) {
+    if (!def || !ehPragaHomebrew(def.chave)) return null;
+    POKE.ficha[def.chave] = [def.nome, def.combate, def.habilidade, def.nocao, def.vitalidade];
+    PRAGAS_HB[def.chave] = JSON.parse(JSON.stringify(def));
+    return PRAGAS_HB[def.chave];
+  }
+  function pragasHomebrew() { return Object.keys(PRAGAS_HB).map(function (k) { return PRAGAS_HB[k]; }); }
+  function normalizarReceitaHomebrew(bruto) {
+    var b = hbObj(bruto), ing = {};
+    Object.keys(hbObj(b.ingredientes)).forEach(function (k) { var n = hbInt(b.ingredientes[k], 0, 3, 0); if (n && INGREDIENTES_DE_RECEITA.indexOf(k) >= 0) ing[k] = n; });
+    var g = Number(hbObj(b.peixe).gramas);
+    if (!Object.keys(ing).length && GRAMAS_DE_PEIXE.indexOf(g) < 0) return null;
+    var d = { chave: ehReceitaHomebrew(b.chave) ? b.chave : "", nome: hbTexto(b.nome, 40).trim() || "Receita Homebrew", homebrew: true, homebrewId: hbTexto(b.homebrewId, 80), hits: hbInt(b.hits, 1, 3, 1), ingredientes: ing };
+    if (GRAMAS_DE_PEIXE.indexOf(g) >= 0) d.peixe = { gramas: g };
+    if (!d.chave) d.chave = hbChave("hbgr-", d);
+    return d;
+  }
+  function registrarReceitaHomebrew(def) { if (!def || !ehReceitaHomebrew(def.chave)) return null; VALE.receitas[def.chave] = JSON.parse(JSON.stringify(def)); return VALE.receitas[def.chave]; }
+
   global.RAMAGoblinsCatalogo = {
     ehOcupacaoHomebrew: ehOcupacaoHomebrew, ehDescritorHomebrew: ehDescritorHomebrew,
     normalizarOcupacaoHomebrew: normalizarOcupacaoHomebrew, normalizarDescritorHomebrew: normalizarDescritorHomebrew,
     registrarOcupacaoHomebrew: registrarOcupacaoHomebrew, registrarDescritorHomebrew: registrarDescritorHomebrew, descritoresDisponiveis: descritoresDisponiveis,
     ehMagiaHomebrew: ehMagiaHomebrew, ehTecnicaHomebrew: ehTecnicaHomebrew, normalizarMagiaHomebrew: normalizarMagiaHomebrew, registrarMagiaHomebrew: registrarMagiaHomebrew, magiasDoBruxo: magiasDoBruxo,
     normalizarTecnicaHomebrew: normalizarTecnicaHomebrew, registrarTecnicaHomebrew: registrarTecnicaHomebrew, tecnicasHomebrew: tecnicasHomebrew, EFEITOS_DE_MAGIA: EFEITOS_DE_MAGIA,
+    ehPragaHomebrew: ehPragaHomebrew, normalizarPragaHomebrew: normalizarPragaHomebrew, registrarPragaHomebrew: registrarPragaHomebrew, pragasHomebrew: pragasHomebrew,
+    ehReceitaHomebrew: ehReceitaHomebrew, normalizarReceitaHomebrew: normalizarReceitaHomebrew, registrarReceitaHomebrew: registrarReceitaHomebrew, INGREDIENTES_DE_RECEITA: INGREDIENTES_DE_RECEITA, GRAMAS_DE_PEIXE: GRAMAS_DE_PEIXE,
     LIVRO: LIVRO, referencia: referencia,
     ATRIBUTOS: ATRIBUTOS, CHAVES_ATRIBUTO: CHAVES_ATRIBUTO, NOMES: NOMES,
     OCUPACOES: OCUPACOES, OCUPACAO_D6: OCUPACAO_D6, DESCRITORES: DESCRITORES, DESCRITOR_D6: DESCRITOR_D6,
