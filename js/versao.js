@@ -118,6 +118,41 @@
 
   var CHANGELOG = [
     {
+      versao: "9.9.0",
+      codinome: "LIAME",
+      data: "15/11/2026",
+      mudancas: {
+        "Adicionado": [
+          "Ordem Paranormal: uma Trilha Homebrew pode ser só de uma Classe Homebrew sua. No editor de Trilha, o campo Classe lista também as suas classes; a trilha passa a aparecer só na vaga de Trilha dessa classe, em qualquer versão dela.",
+          "E o contrário: no editor de Classe, além das trilhas oficiais, você marca as trilhas Homebrew que a classe usa. As feitas só para ela aparecem marcadas e entram sempre.",
+        ],
+        "Técnico": ["Trilha: classeHomebrew (o id do registro da classe, não a chave versionada). Classe: trilhasHomebrew (ids). trilhaServe decide as duas coisas, e trilhasDaClasse e Dominar Habilidade Ritualística passam por ele. Nos pacotes, o vínculo segue as cópias pela troca de ids da importação. testes/executar-homebrew-ordem.js: 11 verificações novas (147)."],
+      },
+    },
+    {
+      versao: "9.8.0",
+      codinome: "UMBRAL",
+      data: "15/11/2026",
+      mudancas: {
+        "Adicionado": [
+          "Ordem Paranormal: Poder paranormal Homebrew (+ Criar → Ordem Paranormal → Habilidade → Poder paranormal) — elemento (oficial, Homebrew ou nenhum), requisito como \u201cSangue 1\u201d, texto, efeitos na conta, escolha de perícia e a linha de Afinidade com efeitos próprios.",
+          "Ele aparece em Transcender e nas outras vagas de poder paranormal da Progressão, junto dos do livro. A Progressão confere o requisito, e com afinidade no elemento dá para escolhê-lo uma segunda vez. A ficha guarda a cópia (e a do elemento Homebrew).",
+        ],
+        "Técnico": ["Subtipo poderParanormal no grupo Habilidade de Ordem (o servidor já aceitava). RAMAOrdemHomebrew.normalizarPoder (chave hbpp- versionada) e ordem.homebrew.poderes; RAMAOrdemPoderes.registrarParanormalHomebrew e paranormaisDisponiveis; candidatosParanormais usa os dois. Editor em js/paginas/homebrew-origem-trilha.js. testes/executar-homebrew-ordem.js: 16 verificações novas (136)."],
+      },
+    },
+    {
+      versao: "9.7.1",
+      codinome: "RÓTULO",
+      data: "15/11/2026",
+      mudancas: {
+        "Corrigido": [
+          "A ficha da criatura mostrava a chave crua de um elemento Homebrew (como HBE-DESTINO-…) em vez do nome.",
+          "A consulta de um elemento Homebrew repetia as linhas Forte contra e Fraco contra (uma com a chave, outra com o nome).",
+        ],
+      },
+    },
+    {
       versao: "9.7.0",
       codinome: "DIALETO",
       data: "15/11/2026",
@@ -127,7 +162,7 @@
           "Homebrew nativo por sistema: + Criar abre primeiro o sistema (Universal em destaque) e depois os tipos dele, cada um com os campos e as regras daquele RPG. Na biblioteca, Itens reúne armas, armaduras e mochilas, Habilidades reúne os rituais, e há filtro por sistema.",
           "Modelo Universal: campos próprios (texto, número com faixa, lista, referências, fórmula de dado, recurso) e ações com usos, custo, teste e efeito. Na ficha Universal, a ação rola, mostra o que muda e aplica ao confirmar. Levadas a uma ficha de sistema, as ações entram no painel “Ações Homebrew” e usam os recursos nativos: Ordem (PV, PE, SAN, PD), Ordem II (PV, PD), Tormenta20 (PV, PM), Goblins (Vitalidade pelos ferimentos) e Vampiro (Vitalidade e Força de Vontade). Em Oblívio e BRUTAL, o recurso fica com a mesa; teste e usos funcionam. Em Ordem e Tormenta20, dá para somar uma perícia nativa ao teste.",
           "Itens Homebrew nas fichas de todos os sistemas, com as regras de cada um (a arma de T20 dá ataque, a proteção de Goblins conta, a arma de Vampiro usa a base do V5).",
-          "Ordem Paranormal: Elemento (nome, cor, símbolo, relações e afinidade — aceito em rituais, criaturas, itens, poderes de regra genérica, maldições e no Exorcizado, nunca herdando a regra de um oficial), Classe (atributos por marco, perícias, proficiências, tabelas de NEX e Patentes, conjuração de rituais por círculo, transição de Mundano e Sobrevivente), Origem e Trilha (poderes com efeitos na conta e escolha de perícia; a trilha pode ser exclusiva de uma Classe Homebrew, e a classe pode escolher as trilhas Homebrew que usa) e Poder paranormal (elemento, requisito, efeitos e a linha de Afinidade — escolhido nas vagas de poder paranormal, como Transcender, junto dos do livro). Entram na criação, na progressão e na Ramificação.",
+          "Ordem Paranormal: Elemento (nome, cor, símbolo, relações e afinidade — aceito em rituais, criaturas, itens, poderes de regra genérica, maldições e no Exorcizado, nunca herdando a regra de um oficial), Classe (atributos por marco, perícias, proficiências, tabelas de NEX e Patentes, conjuração de rituais por círculo, transição de Mundano e Sobrevivente), Origem e Trilha (poderes com efeitos na conta e escolha de perícia). Entram na criação, na progressão e na Ramificação.",
           "Ordem Paranormal RPG II: Perfil e Ocupação Homebrew na criação.",
           "Tormenta20: Raça (atributos, tamanho, habilidades com efeitos, escolha de perícia, de magia ou de poder geral, e variantes), Origem, Divindade, Classe (PV e PM, perícias, magias, habilidades por nível e poderes, também em multiclasse), Magia (lançada pelo motor, com PM, dano e cura) e Poder (geral ou da Tormenta). Habilidades e poderes podem ser ativados: o botão Usar cobra os PM e cria o efeito ativo.",
           "Vampiro: Clã, Predador, Disciplina (até dez poderes que o motor cobra, rola e marca), Poder de Disciplina avulso, Vantagem e Defeito, e Ficha de Conhecimento (1 a 5 níveis). Aparecem na criação e nas compras com XP.",

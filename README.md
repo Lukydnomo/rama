@@ -929,6 +929,23 @@ segredo nenhum — ele os lê das Script Properties. Publicá-lo não expõe nad
 
 ### Atualizar o backend
 
+**v9.9.0 — LIAME:** Trilha Homebrew exclusiva de uma Classe Homebrew, e a
+classe escolhe as suas trilhas Homebrew. **Só o site muda.** Site:
+`js/ordem/catalogo.js`, `js/ordem/homebrew-ordem.js`, `js/ordem/progressao.js`,
+`js/homebrew-adaptadores.js`, `js/paginas/homebrew-classe.js`,
+`js/paginas/homebrew-origem-trilha.js` e `js/versao.js`.
+
+**v9.8.0 — UMBRAL:** Poder paranormal Homebrew de Ordem. **Só o site muda.**
+Site: `js/ordem/poderes.js`, `js/ordem/homebrew-ordem.js`,
+`js/ordem/progressao.js`, `js/ordem/telas/ordem-escolhas.js`,
+`js/homebrew-adaptadores.js`, `js/paginas/homebrew-editor.js`,
+`js/paginas/homebrew-origem-trilha.js`, `js/paginas/homebrew.js` e
+`js/versao.js`.
+
+**v9.7.1 — RÓTULO:** nome do elemento Homebrew na ficha da criatura e na
+consulta. **Só o site muda.** Site: `js/criatura-painel.js`,
+`js/paginas/homebrew-editor.js` e `js/versao.js`.
+
 **v9.7.0 — DIALETO:** Homebrew nativo por sistema e Modelo Universal.
 1. Troque **`Codigo.gs`**, **`HomebrewPacotes.gs`**, **`Ordem.gs`**,
    **`Ordem2.gs`**, **`Tormenta20.gs`**, **`Tormenta20Dados.gs`**,
@@ -2020,7 +2037,7 @@ Três números diferentes, que não se misturam:
 
 | | Onde | O que é |
 |---|---|---|
-| versão do aplicativo | `js/versao.js` | o que a pessoa vê: v9.7.0 |
+| versão do aplicativo | `js/versao.js` | o que a pessoa vê: v9.9.0 |
 | `schemaVersion` | `js/ficha.js` | o formato da FICHA |
 | `versaoFormato` | `js/config.js` | o formato dos arquivos de importação |
 
