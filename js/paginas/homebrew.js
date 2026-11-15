@@ -791,6 +791,10 @@
       return;
     }
     var sisHb = registro && registro.modelo ? registro.modelo.sistema : "";
+    if (sisHb === "tormenta20" && registro.modelo.grupo === "habilidade" && registro.modelo.subtipo === "poder" && global.RAMAHomebrewT20Estruturais) {
+      global.RAMAHomebrewT20Estruturais.poder({ registro: registro, aoSalvar: carregar });
+      return;
+    }
     if (sisHb === "tormenta20" && (stHb === "origem" || stHb === "divindade") && global.RAMAHomebrewT20Estruturais) {
       global.RAMAHomebrewT20Estruturais[stHb]({ registro: registro, aoSalvar: carregar });
       return;

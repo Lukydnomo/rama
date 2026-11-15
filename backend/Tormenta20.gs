@@ -662,6 +662,14 @@ function acaoTormenta20Operar(corpo, usuario) {
        FICAM (o motor ignora a classe que não conhece; nada é apagado). */
     { campo: "classes", cat: CL, norm: "normalizarHomebrew", reg: "registrarHomebrew", mapa: "CLASSE",
       ids: function (v) { return v.niveis.map(function (n) { return n.classe; }).filter(function (k, i, l) { return l.indexOf(k) === i; }); }, tirar: function () {} },
+    /* v9.14: magias e poderes (gerais e da Tormenta) Homebrew. Sem a
+       cópia, a magia/o poder avulso saem da lista; a escolha de um nível
+       fica (o motor ignora o poder que não conhece). */
+    { campo: "magias", cat: MG, norm: "normalizarHomebrew", reg: "registrarHomebrew", mapa: "MAGIA", copiaDe: function (m) { return m.definicao; },
+      ids: function (v) { return v.magias.map(function (m) { return m.id; }).filter(function (k, i, l) { return l.indexOf(k) === i; }); }, tirar: function (v, id) { v.magias = v.magias.filter(function (m) { return m.id !== id; }); } },
+    { campo: "poderes", cat: PO, norm: "normalizarHomebrew", reg: "registrarHomebrew", mapa: "PODER",
+      ids: function (v) { return v.poderes.map(function (p) { return p.id; }).concat(v.niveis.map(function (n) { return obj(obj(n.escolhas).poder).id; })).filter(function (k, i, l) { return k && l.indexOf(k) === i; }); },
+      tirar: function (v, id) { v.poderes = v.poderes.filter(function (p) { return p.id !== id; }); } },
   ];
   function homebrewDaFicha(b, v) {
     var hb = obj(b.homebrew), saida = {};
@@ -671,8 +679,9 @@ function acaoTormenta20Operar(corpo, usuario) {
       tp.ids(v).filter(function (id) { return cat.ehHomebrew(id); }).forEach(function (id) {
         var copia = obj(hb[tp.campo])[id];
         var noCatalogo = cat[tp.mapa][id];
-        var def = copia && typeof copia === "object" && Object.keys(copia).length ? cat[tp.norm](Object.assign({}, copia, { id: id })) : (noCatalogo && noCatalogo.homebrew ? clone(noCatalogo) : null);
-        if (!def) { tp.tirar(v); return; }
+        var doCatalogo = noCatalogo && noCatalogo.homebrew ? (tp.copiaDe ? tp.copiaDe(noCatalogo) : noCatalogo) : null;
+        var def = copia && typeof copia === "object" && Object.keys(copia).length ? cat[tp.norm](Object.assign({}, copia, { id: id })) : (doCatalogo ? clone(doCatalogo) : null);
+        if (!def) { tp.tirar(v, id); return; }
         cat[tp.reg](def);
         saida[tp.campo] = saida[tp.campo] || {};
         saida[tp.campo][id] = def;

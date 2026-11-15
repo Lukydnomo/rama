@@ -69,6 +69,13 @@
       var ad = A().adaptador(sistema);
       var cartoes = [];
       ad.tipos.forEach(function (t) {
+        /* v9.14: Tormenta20 — Magia (o editor de campos), Poder (editor próprio) e habilidade de texto. */
+        if (t.chave === "habilidade" && sistema === "tormenta20") {
+          cartoes.push(cartao("Habilidade → Magia", "Círculo, escola, execução, alcance e, se quiser, dano, cura e resistência. A ficha aprende e lança.", function () { janela.fechar(); editor({ sistema: sistema, grupo: "habilidade", subtipo: "magia", aoSalvar: o.aoSalvar }); }));
+          cartoes.push(cartao("Habilidade → Poder", "Poder geral ou da Tormenta, com efeitos, ativação (PM) e nível mínimo. Entra ao subir de nível e como poder avulso.", function () { janela.fechar(); if (global.RAMAHomebrewT20Estruturais) global.RAMAHomebrewT20Estruturais.poder({ aoSalvar: o.aoSalvar }); }));
+          cartoes.push(cartao("Habilidade (só texto)", "Para consulta e anotações.", function () { janela.fechar(); editor({ sistema: sistema, grupo: "habilidade", subtipo: "habilidade", aoSalvar: o.aoSalvar }); }));
+          return;
+        }
         if (t.chave === "habilidade" && sistema === "ordem") {
           cartoes.push(cartao("Habilidade / poder", "Poderes e habilidades, com cor e origem.", function () { janela.fechar(); if (o.editarHabilidadeLegada) o.editarHabilidadeLegada(); }));
           cartoes.push(cartao("Habilidade → Ritual", "O editor de rituais: círculo, elemento(s), conjuração e versões. Na ficha, entra na aba Rituais.", function () { janela.fechar(); if (o.editarRitual) o.editarRitual(); }));
@@ -125,6 +132,7 @@
     var subs = A().subtipos(sistema, grupo);
     /* Tipos estruturais não se trocam entre si (Elemento não vira Classe). */
     if (grupo === "estrutural") { var fixo = reg ? A().subtipoDe(reg) : o.subtipo; subs = subs.filter(function (s) { return s.chave === fixo; }); }
+    else if (grupo === "habilidade" && o.subtipo && !reg) subs = subs.filter(function (s) { return s.chave === o.subtipo; });
     if (!subs.length) { UI.avisoErro("Este tipo não tem editor neste sistema."); return null; }
     var r = {
       nome: reg ? reg.nome : "",
@@ -421,6 +429,10 @@
       if (x && x.def && st === "trilha") x.def.poderes.forEach(function (p) { if (p.resumo) pares.push(["NEX " + p.nex + "% · " + p.nome, p.resumo]); });
     }
     /* Raça Homebrew de Tormenta20 (v9.10): a prévia e o texto das habilidades. */
+    if (s === "tormenta20" && (st === "magia" || st === "poder") && global.RAMATormenta20Homebrew) {
+      var HT4 = global.RAMATormenta20Homebrew, xm = HT4.deRegistro(reg);
+      if (xm && xm.def) (st === "magia" ? HT4.previaMagia(xm.def) : HT4.previaPoder(xm.def)).forEach(function (t, i) { pares.push([i ? "" : "Na ficha", t]); });
+    }
     if (s === "tormenta20" && st === "classe" && global.RAMATormenta20Homebrew) {
       var HT3 = global.RAMATormenta20Homebrew, xc = HT3.deRegistro(reg);
       if (xc && xc.def) {

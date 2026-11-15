@@ -118,6 +118,19 @@
 
   var CHANGELOG = [
     {
+      versao: "9.14.0",
+      codinome: "ESTILHACO",
+      data: "15/11/2026",
+      mudancas: {
+        "Adicionado": [
+          "Magia Homebrew de Tormenta20 no motor: tipo, círculo, escola, execução, alcance, alvo, duração, resistência e, se quiser, dano (com metade na resistência) e cura. Aparece na criação e em + Aprender magia; o lançamento cobra os PM e rola o dano ou a cura.",
+          "Poder Homebrew de Tormenta20 (geral ou da Tormenta): texto, efeitos na conta, ativação com PM e nível mínimo. Aparece ao subir de nível e em + Poder avulso.",
+          "A ficha guarda a própria cópia da magia e do poder: mudar a biblioteca não muda um personagem em jogo.",
+        ],
+        "Técnico": ["RAMATormenta20Magias e RAMATormenta20Poderes ganharam normalizarHomebrew/registrarHomebrew (chaves hbmg-/hbpd- versionadas); a magia é registrada pelo mesmo def das do livro. Novo editor de Poder em js/paginas/homebrew-origem-divindade-t20.js; Habilidade de T20 virou três cartões (Magia, Poder, só texto). testes/executar-homebrew-t20.js: 124 verificações."],
+      },
+    },
+    {
       versao: "9.13.0",
       codinome: "REFLEXO",
       data: "15/11/2026",

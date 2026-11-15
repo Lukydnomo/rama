@@ -25,6 +25,7 @@
   function EQ() { return global.RAMATormenta20Equipamento; }
   function CL() { return global.RAMATormenta20Classes; }
   function D() { return global.RAMATormenta20Dados; }
+  function MG() { return global.RAMATormenta20Magias; }
   function obj(v) { return v && typeof v === "object" && !Array.isArray(v) ? v : {}; }
 
   /* O que o editor oferece em cada habilidade (no formato do motor). */
@@ -155,9 +156,47 @@
     return l;
   }
 
+  /* v9.14: a prévia de uma magia e de um poder Homebrew. */
+  var NOMES_ESCOLA = { abjuracao: "Abjuração", adivinhacao: "Adivinhação", convocacao: "Convocação", encantamento: "Encantamento", evocacao: "Evocação", ilusao: "Ilusão", necromancia: "Necromancia", transmutacao: "Transmutação" };
+  function previaMagia(d) {
+    var l = [({ arcana: "Arcana", divina: "Divina", universal: "Universal" })[d.tipo] + " " + d.circulo + "º círculo (" + (MG() ? MG().custoBase(d.circulo) : "") + " PM) · " + NOMES_ESCOLA[d.escola] + "."];
+    l.push([EXECUCOES[d.execucao] || d.execucao, d.alcance, d.alvo, d.duracao, d.resistencia].filter(Boolean).join(" · ") + ".");
+    var mec = [];
+    if (d.dano) mec.push("dano " + d.dano + (d.tipoDano ? " de " + nomeDano(d.tipoDano) : "") + (d.metade ? " (a resistência reduz à metade)" : ""));
+    if (d.cura) mec.push("cura " + d.cura);
+    if (d.efeitos.length) mec.push("efeito ativo: " + d.efeitos.map(textoEfeito).join(", "));
+    l.push(mec.length ? "No lançamento: " + mec.join("; ") + "." : "Sem mecânica automática: a ficha mostra o texto e cobra os PM.");
+    if (d.aprimoramentosTexto) l.push("Aprimoramentos (a mesa aplica): " + d.aprimoramentosTexto);
+    return l;
+  }
+  function previaPoder(d) {
+    var l = [({ combate: "Poder de combate", destino: "Poder de destino", magia: "Poder de magia", tormenta: "Poder da Tormenta" })[d.grupo] + (d.nivelMinimo > 1 ? " · a partir do " + d.nivelMinimo + "º nível" : "") + (d.requisitosTexto ? " · requisitos (a mesa confere): " + d.requisitosTexto : "") + "."];
+    if (d.efeitos.length) l.push("Na conta da ficha: " + d.efeitos.map(textoEfeito).join(", ") + ".");
+    if (d.acao) l.push("Ativado: " + textoAcao(d.acao) + ".");
+    if (!d.efeitos.length && !d.acao) l.push("Informativo: a ficha mostra o texto; a mesa aplica.");
+    return l;
+  }
+  /* Os campos do editor de habilidade (magia) para a definição do motor. */
+  function magiaDoRegistro(reg, m) {
+    var v = obj(m.def);
+    return MG().normalizarHomebrew({ id: "", nome: reg.nome, homebrewId: reg.id, resumo: reg.descricao || reg.texto || "", tipo: v.tipoMagia, circulo: v.circulo, escola: v.escola, execucao: ({ "padrão": "padrao", padrao: "padrao", movimento: "movimento", completa: "completa", livre: "livre", "reação": "reacao", reacao: "reacao" })[String(v.execucao || "").toLowerCase().trim()] || "padrao",
+      alcance: v.alcance, alvo: v.alvo, duracao: v.duracao, resistencia: v.resistencia, aprimoramentosTexto: v.aprimoramentos, dano: v.dano, tipoDano: v.tipoDano, cura: v.cura, metade: v.metade, efeitos: v.efeitos });
+  }
+  function poderDoRegistro(reg, m) {
+    var v = obj(m.def);
+    var grupo = v.grupoT20 || ({ geral: "destino", tormenta: "tormenta" })[v.grupo];
+    if (!grupo) return null; /* de classe, concedido ou de origem: pelos tipos estruturais */
+    return PO().normalizarHomebrew({ id: "", nome: reg.nome, homebrewId: reg.id, resumo: reg.descricao || reg.texto || "", grupo: grupo, requisitosTexto: v.requisitos, nivelMinimo: v.nivelMinimo, efeitos: v.efeitos, acao: v.acao });
+  }
+
   /* Da biblioteca para a definição do motor. */
   function deRegistro(reg) {
     var m = obj(obj(reg).modelo);
+    if (m.sistema === "tormenta20" && m.grupo === "habilidade") {
+      if (m.subtipo === "magia" && MG() && MG().normalizarHomebrew) return { tipo: "magia", def: magiaDoRegistro(reg, m) };
+      if (m.subtipo === "poder" && PO() && PO().normalizarHomebrew) { var p = poderDoRegistro(reg, m); return p ? { tipo: "poder", def: p } : null; }
+      return null;
+    }
     if (m.sistema !== "tormenta20" || m.grupo !== "estrutural") return null;
     var base = Object.assign({}, obj(m.def), { id: "", nome: reg.nome, descricao: reg.descricao || "", homebrewId: reg.id });
     if (m.subtipo === "raca" && RA()) return { tipo: "raca", def: RA().normalizarRacaHomebrew(base) };
@@ -171,6 +210,8 @@
     if (x.tipo === "origem") OR().registrarHomebrew(x.def);
     if (x.tipo === "divindade") DE().registrarHomebrew(x.def);
     if (x.tipo === "classe") CL().registrarHomebrew(x.def);
+    if (x.tipo === "magia") MG().registrarHomebrew(x.def);
+    if (x.tipo === "poder") PO().registrarHomebrew(x.def);
   }
 
   /* As raças da conta (as suas e as públicas) entram no catálogo — uma
@@ -180,12 +221,12 @@
     if (biblioteca && !forcar) return Promise.resolve(biblioteca);
     if (carga && !forcar) return carga;
     var API = global.RAMAApi;
-    var VAZIA = { racas: [], origens: [], divindades: [], classes: [] };
+    var VAZIA = { racas: [], origens: [], divindades: [], classes: [], magias: [], poderes: [] };
     if (!API || !API.listarHomebrew || !RA()) return Promise.resolve(VAZIA);
-    carga = API.listarHomebrew({ escopo: "todos", tipos: ["raca", "origem", "divindade", "classe"] }).then(function (r) {
+    carga = API.listarHomebrew({ escopo: "todos", tipos: ["raca", "origem", "divindade", "classe", "habilidade"] }).then(function (r) {
       carga = null;
-      var saida = { racas: [], origens: [], divindades: [], classes: [] };
-      var CAMPO = { raca: "racas", origem: "origens", divindade: "divindades", classe: "classes" };
+      var saida = { racas: [], origens: [], divindades: [], classes: [], magias: [], poderes: [] };
+      var CAMPO = { raca: "racas", origem: "origens", divindade: "divindades", classe: "classes", magia: "magias", poder: "poderes" };
       ((r && r.ok && r.dados) || []).forEach(function (reg) {
         var x = deRegistro(reg);
         if (!x || !x.def) return;
@@ -201,6 +242,6 @@
   global.RAMATormenta20Homebrew = {
     EFEITOS: EFEITOS, efeitosPara: efeitosPara, textoAcao: textoAcao, EXECUCOES: EXECUCOES, DURACOES: DURACOES, SENTIDOS: SENTIDOS, PROFS: PROFS, NOMES_ATR: NOMES_ATR,
     chaveDoEfeito: chaveDoEfeito, textoEfeito: textoEfeito, textoEscolha: textoEscolha, textoAtributos: textoAtributos,
-    previaRaca: previaRaca, automacao: automacao, previaOrigem: previaOrigem, previaDeus: previaDeus, previaClasse: previaClasse, nomePoder: nomePoder, nomePericiaOuOficio: nomePericiaOuOficio, deRegistro: deRegistro, carregarBiblioteca: carregarBiblioteca,
+    previaRaca: previaRaca, automacao: automacao, previaOrigem: previaOrigem, previaDeus: previaDeus, previaClasse: previaClasse, previaMagia: previaMagia, previaPoder: previaPoder, NOMES_ESCOLA: NOMES_ESCOLA, nomePoder: nomePoder, nomePericiaOuOficio: nomePericiaOuOficio, deRegistro: deRegistro, carregarBiblioteca: carregarBiblioteca,
   };
 })(typeof window !== "undefined" ? window : globalThis);

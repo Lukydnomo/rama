@@ -589,10 +589,20 @@
       outros.length ? T().secao("De itens e parceiros", [el("ul.t20-habs", {}, outros.map(cartao))]) : null,
     ]);
   }
-  function dialogoPoderAvulso(ctx) {
+  /* v9.14: os poderes e as magias Homebrew da biblioteca entram nas listas
+     (uma viagem, na primeira vez que uma dessas janelas abre). */
+  function comBiblioteca(fn) {
+    var HB = global.RAMATormenta20Homebrew;
+    if (!HB || comBiblioteca.feito) { fn(); return; }
+    comBiblioteca.feito = true;
+    HB.carregarBiblioteca().then(fn, fn);
+  }
+  function poderesDaLista() { return PO().poderesDisponiveis ? PO().poderesDisponiveis() : PO().PODERES; }
+  function dialogoPoderAvulso(ctx) { comBiblioteca(function () { abrirPoderAvulso(ctx); }); }
+  function abrirPoderAvulso(ctx) {
     var c = calc(ctx);
     var b = bl(ctx);
-    var lista = PO().PODERES.map(function (p) { return { def: p, classe: null }; });
+    var lista = poderesDaLista().map(function (p) { return { def: p, classe: null }; });
     Object.keys(c.niveisClasse).forEach(function (k) { (CL().CLASSE[k].poderes || []).forEach(function (p) { lista.push({ def: p, classe: k }); }); });
     var sel = T().selecao("Poder", lista.map(function (x, i) { var r = R().cumpreRequisitos(b, x.def, x.classe, c); return { valor: String(i), rotulo: x.def.nome + " (" + (x.def.grupo ? PO().GRUPOS[x.def.grupo] : nomeClasse(x.classe)) + ")" + (r.ok ? "" : " — falta: " + r.falta.join(", ")) }; }), "0");
     var origem = UI().campo({ rotulo: "Origem (de onde veio)", valor: "" });
@@ -649,7 +659,7 @@
         return el("li.t20-magia", {}, [
           el("div.t20-magia__topo", {}, [
             el("button.t20-magia__nome", { type: "button", "aria-label": "Lançar " + mg.nome, onclick: function () { dialogoLancar(ctx, x.e); } }, [el("span", { texto: mg.nome }), el("span.t20-magia__custo", { texto: MG().custoBase(mg.circulo) + " PM" })]),
-            el("span.t20-magia__tipo", { texto: humanizar(mg.tipo) + " · p. " + mg.pagina }),
+            el("span.t20-magia__tipo", { texto: humanizar(mg.tipo) + (mg.homebrew ? " · Homebrew" : " · p. " + mg.pagina) }),
           ]),
           el("p.t20-magia__meta", { texto: meta.join(" · ") }),
           el("details.t20-magia__desc", {}, [el("summary", { texto: "Descrição" }), el("p", { texto: mg.resumo })]),
@@ -661,7 +671,8 @@
       }))]);
     })));
   }
-  function dialogoAprender(ctx) {
+  function dialogoAprender(ctx) { comBiblioteca(function () { abrirAprender(ctx); }); }
+  function abrirAprender(ctx) {
     var c = calc(ctx);
     var b = bl(ctx);
     var fontes = Object.keys(c.magias.fontes);
@@ -740,7 +751,7 @@
     danoSofrido.entrada.addEventListener("input", function () { sit.dano = Math.max(0, T().lerNumero(danoSofrido, 0)); desenharPrevia(); });
     var mesa = alvosMesa.length ? el("fieldset.t20-alvos", {}, [el("legend", { texto: "Ameaças da mesa (o servidor rola resistências e aplica)" })].concat(alvosMesa.map(function (p) { return el("label.r-marca", {}, [el("input", { type: "checkbox", onchange: function (ev) { alvosMarcados[p.id] = ev.currentTarget.checked; } }), el("span", { texto: p.nome })]); }))) : null;
     desenharPrevia();
-    janela(mg.nome, [linha(mg.resumo + " (" + T().referencia(mg.pagina) + ")"), opcaoBase, el("div.t20-aprims", {}, aprims.concat(metas)), condicao, danoSofrido, mesa, previa], [
+    janela(mg.nome, [linha(mg.resumo + " (" + (mg.homebrew ? "Homebrew" : T().referencia(mg.pagina)) + ")"), opcaoBase, el("div.t20-aprims", {}, aprims.concat(metas)), condicao, danoSofrido, mesa, previa], [
       { rotulo: "Cancelar", classe: "r-botao--fantasma" },
       { rotulo: "Lançar", classe: "r-botao--principal", aoClicar: function (fechar) {
         var r = prep();
@@ -1145,13 +1156,7 @@
      requisitos conferidos no nível que vai ser alcançado. */
   function dialogoSubir(ctx) {
     /* v9.12: as classes Homebrew da biblioteca entram na lista (multiclasse). */
-    var HB = global.RAMATormenta20Homebrew;
-    if (HB && !dialogoSubir.carregado) {
-      dialogoSubir.carregado = true;
-      HB.carregarBiblioteca().then(function () { abrirSubir(ctx); }, function () { abrirSubir(ctx); });
-      return;
-    }
-    abrirSubir(ctx);
+    comBiblioteca(function () { abrirSubir(ctx); });
   }
   function abrirSubir(ctx) {
     var b = bl(ctx);
@@ -1167,7 +1172,7 @@
       var itens = [linha(cl.nome + " " + nc + ": PV +" + cl.pv.nivel + " + Constituição, PM +" + cl.pm + ". Personagem nível " + nivelFuturo + ".")];
       (cl.tabela[nc] || []).forEach(function (hid) {
         if (hid === "poder") {
-          var lista = (cl.poderes || []).map(function (p) { return { def: p, classe: cl.id }; }).concat(PO().PODERES.filter(function (p) { return p.grupo !== "concedido" || (b.divindade && DE().DEUS[b.divindade.id].poderes.indexOf(p.id) >= 0); }).map(function (p) { return { def: p, classe: null }; }));
+          var lista = (cl.poderes || []).map(function (p) { return { def: p, classe: cl.id }; }).concat(poderesDaLista().filter(function (p) { return p.grupo !== "concedido" || (b.divindade && DE().DEUS[b.divindade.id].poderes.indexOf(p.id) >= 0); }).map(function (p) { return { def: p, classe: null }; }));
           var copia = Object.assign({}, b, { niveis: b.niveis.concat([{ classe: cl.id, escolhas: {} }]) });
           var cFut = R().calcular(R().normalizar(copia));
           var ops = lista.map(function (x, i) { var r = R().cumpreRequisitos(copia, x.def, x.classe, cFut); return { valor: String(i), rotulo: x.def.nome + " (" + (x.classe ? cl.nome : PO().GRUPOS[x.def.grupo]) + ")" + (r.ok ? "" : " — falta: " + r.falta.join(", ")), ok: r.ok }; });

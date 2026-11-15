@@ -207,3 +207,74 @@
     }).sort(function (a, b) { return a.circulo - b.circulo || a.nome.localeCompare(b.nome); });
   };
 })(typeof window !== "undefined" ? window : globalThis);
+
+/* =====================================================================
+   v9.14 — MAGIA HOMEBREW de Tormenta20 (chave hbmg-<id>-<hash>, cópia em
+   t20.homebrew.magias). Registrada pelo MESMO M.def das magias do livro:
+   tipo, círculo (custo pela tabela), escola, execução, alcance, alvo,
+   duração e resistência; a mecânica que o lançamento já resolve — dano
+   (dados e tipo; a resistência pode reduzir à metade), cura e efeitos
+   que viram efeito ativo (bônus em Defesa, perícia, ataque, dano;
+   redução de dano). Os aprimoramentos ficam como texto: a mesa aplica.
+   Puro: o servidor roda este arquivo.
+   ===================================================================== */
+(function (global) {
+  "use strict";
+
+  var M = global.RAMATormenta20Magias = global.RAMATormenta20Magias || { MAGIAS: [], MAGIA: {} };
+  var PADRAO_HB = /^hbmg-[a-z0-9-]{3,30}$/;
+  var DADO = /^\d{1,2}d\d{1,3}([+-]\d{1,3})?$/;
+  var ESCOLAS = ["abjuracao", "adivinhacao", "convocacao", "encantamento", "evocacao", "ilusao", "necromancia", "transmutacao"];
+  var EXECUCOES = ["padrao", "movimento", "completa", "livre", "reacao"];
+  var LETRA = { arcana: "A", divina: "D", universal: "U" };
+  function RA() { return global.RAMATormenta20Racas; }
+  function Dd() { return global.RAMATormenta20Dados; }
+  function oo(v) { return v && typeof v === "object" && !Array.isArray(v) ? v : {}; }
+  function ll(v) { return Array.isArray(v) ? v : []; }
+  function tx(v, max) { return String(v === undefined || v === null ? "" : v).slice(0, max || 200); }
+  function nn(v, min, max, p) { var n = Math.round(Number(v)); return v !== "" && v !== null && v !== undefined && isFinite(n) ? Math.max(min, Math.min(max, n)) : p; }
+  function semAcento(s) { return String(s || "").toLowerCase().normalize ? String(s || "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^a-z]/g, "") : String(s || "").toLowerCase(); }
+  function escola(v) { var k = semAcento(v); return ESCOLAS.filter(function (e) { return e === k || e.indexOf(k) === 0 && k.length >= 4; })[0] || "evocacao"; }
+  function dado(v) { var s = tx(v, 20).replace(/\s+/g, "").toLowerCase(); return DADO.test(s) ? s : ""; }
+
+  M.ehHomebrew = function (id) { return PADRAO_HB.test(String(id || "")); };
+  M.normalizarHomebrew = function (bruto) {
+    var b = oo(bruto);
+    var tipoDano = tx(b.tipoDano, 20);
+    var d = {
+      id: M.ehHomebrew(b.id) ? b.id : "",
+      nome: tx(b.nome, 60).trim() || "Magia Homebrew",
+      homebrew: true, homebrewId: tx(b.homebrewId, 80), fonte: "HOMEBREW", pagina: 0,
+      tipo: LETRA[b.tipo] ? b.tipo : "arcana",
+      circulo: nn(b.circulo, 1, 5, 1),
+      escola: escola(b.escola),
+      execucao: EXECUCOES.indexOf(b.execucao) >= 0 ? b.execucao : "padrao",
+      alcance: tx(b.alcance, 40).trim(), alvo: tx(b.alvo, 80).trim(), duracao: tx(b.duracao, 40).trim(), resistencia: tx(b.resistencia, 60).trim(),
+      resumo: tx(b.resumo, 1200).trim(),
+      aprimoramentosTexto: tx(b.aprimoramentosTexto, 2000).trim(),
+      dano: dado(b.dano),
+      tipoDano: !Dd() || Dd().TIPOS_DANO.some(function (x) { return x[0] === tipoDano; }) ? tipoDano : "",
+      cura: dado(b.cura),
+      metade: !!b.metade,
+      efeitos: RA() && RA().acaoHomebrew ? (RA().acaoHomebrew({ efeitos: b.efeitos }) || { efeitos: [] }).efeitos : [],
+    };
+    if (!d.dano) { d.tipoDano = ""; d.metade = false; }
+    if (!d.id) d.id = RA() ? RA().chaveHomebrew("hbmg-", d) : "hbmg-local-000000";
+    return d;
+  };
+  M.registrarHomebrew = function (def) {
+    if (!def || !M.ehHomebrew(def.id)) return null;
+    var mec = {};
+    if (def.dano) { mec.dano = def.dano; if (def.tipoDano) mec.tipo = def.tipoDano; if (def.metade) mec.metade = true; }
+    if (def.cura) mec.cura = def.cura;
+    if (def.efeitos && def.efeitos.length) mec.efeitos = def.efeitos;
+    var resumo = def.resumo + (def.aprimoramentosTexto ? " Aprimoramentos (a mesa aplica): " + def.aprimoramentosTexto : "");
+    var m = M.def(def.id, def.nome, LETRA[def.tipo] + def.circulo, def.escola, 0, [def.execucao, def.alcance, def.alvo, def.duracao, def.resistencia].join("|"), resumo, [], mec);
+    m.homebrew = true;
+    m.fonte = { livro: "Homebrew", pagina: 0 };
+    m.definicao = def;
+    return m;
+  };
+  /* A cópia guardada na ficha é a definição (não o registro do M.def). */
+  M.ESCOLAS_HB = ESCOLAS;
+})(typeof window !== "undefined" ? window : globalThis);

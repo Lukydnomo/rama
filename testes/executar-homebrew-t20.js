@@ -1,5 +1,5 @@
 /* =====================================================================
-   R.A.M.A. — testes: Raça, Origem, Divindade e Classe Homebrew de Tormenta20 (v9.10–9.12)
+   R.A.M.A. — testes: tipos e habilidades Homebrew de Tormenta20 (v9.10–9.14)
    ---------------------------------------------------------------------
        deno run --allow-read testes/executar-homebrew-t20.js
 
@@ -281,6 +281,60 @@ t.ok("prévias mencionam a ativada e a magia", /ativada: 1 PM, ação de movimen
 const gV = A.guardar("tormenta20", "estrutural", "raca", { nome: "Espelhado", descricao: "", valores: {}, def: (() => { const x = copia(espelho); ["id", "homebrewId", "homebrew", "fonte", "pagina", "nome", "descricao"].forEach((k) => delete x[k]); return x; })() });
 const aV = G.RAMAValidacao.importado(JSON.parse(JSON.stringify(G.RAMAValidacao.exportar(G.RAMAValidacao.tipoDeExportacao(gV.registro), gV.registro))));
 t.ok("arquivo: variantes, ativada e escolha de magia voltam", aV.ok && aV.dados.modelo.def.variantes.length === 2 && aV.dados.modelo.def.habilidades[0].acao.custo === 1 && aV.dados.modelo.def.habilidades[1].escolhas[0].tipo === "magia");
+
+/* ================= v9.14: Magia e Poder ================= */
+const MG = G.RAMATormenta20Magias, PO = G.RAMATormenta20Poderes;
+t.grupo("Magia Homebrew de T20");
+const lancaB = { nome: "Lança de Vidro", homebrewId: "f0f0f0f0-sintetico", tipo: "arcana", circulo: 2, escola: "Evocação", execucao: "padrao", alcance: "médio", alvo: "1 criatura", duracao: "instantânea", resistencia: "Reflexos reduz à metade",
+  resumo: "Um estilhaço gigante.", aprimoramentosTexto: "+2 PM: +1d8.", dano: "4D8", tipoDano: "perfuracao", metade: true, cura: "x+1", efeitos: [{ t: "bonus", alvo: "defesa", valor: 1 }, { t: "pvNivel", inicial: 9 }] };
+const lanca = MG.normalizarHomebrew(lancaB);
+t.ok("chave hbmg-, escola pelo nome, dano normalizado, cura inválida sai, só efeitos que duram", /^hbmg-f0f0f0f0-/.test(lanca.id) && lanca.escola === "evocacao" && lanca.dano === "4d8" && lanca.cura === "" && lanca.efeitos.length === 1);
+const mReg = MG.registrarHomebrew(lanca);
+t.ok("registrada pelo M.def do livro: 2º círculo custa 3 PM, Homebrew", mReg.circulo === 2 && MG.custoBase(mReg.circulo) === 3 && mReg.homebrew && MG.MAGIA[lanca.id] === mReg && /Aprimoramentos \(a mesa aplica\)/.test(mReg.resumo));
+const prep = MG.preparar(mReg, {}, { circuloMax: 2, deClasse: true, limitePM: 10 });
+t.ok("preparar o lançamento: custo 3, dano 4d8 perfuração, metade", prep.custo === 3 && /4d8/.test(prep.dano) && prep.tipoDano === "perfuracao" && prep.metade === true, JSON.stringify(prep).slice(0, 300));
+t.ok("disponível para arcanista com 2º círculo; não para divino", MG.disponivel(mReg, { tipo: "arcana", circuloMax: 2 }) && !MG.disponivel(mReg, { tipo: "divina", circuloMax: 2 }));
+const fMag = R.normalizar({ atributosBase: { "for": 0, des: 1, con: 1, "int": 3, sab: 0, car: 0 }, raca: { id: "humano", atributos: ["for", "des", "con"] }, origem: { id: "acolito", beneficios: [] }, niveis: [{ classe: "arcanista", escolhas: { caminho: "mago" } }], magias: [{ id: lanca.id, fonte: "classe:arcanista" }], homebrew: { magias: { [lanca.id]: lanca } } });
+t.ok("na ficha: a magia aprendida fica, com a cópia (a definição, não o registro)", fMag.magias[0].id === lanca.id && fMag.homebrew.magias[lanca.id].dano === "4d8" && !fMag.homebrew.magias[lanca.id].aprimoramentos);
+t.ok("sem cópia e sem catálogo: a magia sai da lista", R.normalizar({ magias: [{ id: "hbmg-zzzzzzzz-abcdef", fonte: "classe:arcanista" }, { id: "adagaMental", fonte: "classe:arcanista" }] }).magias.map((m) => m.id).join() === "adagaMental");
+const fMag2 = R.normalizar({ niveis: [{ classe: "arcanista", escolhas: {} }], magias: [{ id: lanca.id, fonte: "classe:arcanista" }] });
+t.ok("aprendida de uma lista da biblioteca: a normalização embute a cópia", fMag2.homebrew && fMag2.homebrew.magias[lanca.id].nome === "Lança de Vidro");
+
+t.grupo("Poder Homebrew de T20");
+const pB = { nome: "Olhar de Lince", homebrewId: "a0a0a0a0-sintetico", grupo: "destino", resumo: "Enxerga longe.", requisitosTexto: "Sab 1", nivelMinimo: 3,
+  efeitos: [{ t: "bonus", alvo: "pericia.percepcao", valor: 2 }, { t: "imune", valor: "x" }], acao: { custo: 1, execucao: "livre", duracao: "rodada", efeitos: [{ t: "bonus", alvo: "ataque", valor: 1 }] } };
+const lince = PO.normalizarHomebrew(pB);
+t.ok("chave hbpd-, grupo, nível mínimo vira requisito, efeitos e ativação filtrados", /^hbpd-a0a0a0a0-/.test(lince.id) && lince.grupo === "destino" && lince.req.nivel === 3 && lince.efeitos.length === 1 && lince.acao.efeitos[0].alvo === "ataque");
+const fPod = (extra) => R.normalizar(Object.assign({ atributosBase: atrBase, raca: { id: "humano", atributos: ["for", "des", "con"] }, origem: { id: "acolito", beneficios: [] }, niveis: [{ classe: "guerreiro", escolhas: {} }], homebrew: { poderes: { [lince.id]: lince } } }, extra || {}));
+const cPA = R.calcular(fPod({ poderes: [{ id: lince.id, origem: "Recompensa" }] })), cP0 = R.calcular(fPod());
+t.iguais("poder avulso: +2 em Percepção", cPA.pericias.percepcao.total - cP0.pericias.percepcao.total, 2);
+const nv3p = [{ classe: "guerreiro", escolhas: {} }, { classe: "guerreiro", escolhas: {} }, { classe: "guerreiro", escolhas: { poder: { id: lince.id } } }];
+const fP3 = fPod({ niveis: nv3p });
+t.ok("escolhido no 3º nível (subida): entra na conta e a cópia fica", R.calcular(fP3).pericias.percepcao.total - R.calcular(fPod({ niveis: nv3p.slice(0, 2).concat([{ classe: "guerreiro", escolhas: {} }]) })).pericias.percepcao.total === 2 && fP3.homebrew.poderes[lince.id]);
+const subP = R.subirNivel(fPod(), "guerreiro", { poder: { id: lince.id } }, { ignorarXp: true });
+t.ok("subir para o 2º nível com ele: recusa pelo nível mínimo (3º)", !subP.ok && /3º nível/.test(subP.motivo), JSON.stringify(subP));
+const fAtP = fPod({ poderes: [{ id: lince.id }] });
+const fonteP = R.calcular(fAtP).fontes.filter((f) => f.poderId === lince.id)[0];
+const uP = R.ativar(fAtP, fonteP.id, {});
+t.ok("ativado: 1 PM, +1 nos ataques por 1 rodada", uP.ok && uP.custo === 1 && uP.ativo.duracao === "rodada");
+t.ok("entra nas listas (poderesDisponiveis) sem mexer em PODERES", PO.poderesDisponiveis().some((x) => x.id === lince.id) && PO.PODERES.every((x) => !x.homebrew));
+t.ok("sem cópia e sem catálogo: o poder avulso sai", R.normalizar({ poderes: [{ id: "hbpd-zzzzzzzz-abcdef" }, { id: "vontadeDeFerro" }] }).poderes.map((p) => p.id).join() === "vontadeDeFerro");
+
+t.grupo("Magia e Poder de T20 · biblioteca e arquivo");
+const gM = A.guardar("tormenta20", "habilidade", "magia", { nome: "Lança de Vidro", descricao: "Um estilhaço gigante.", valores: { tipoMagia: "arcana", circulo: 2, escola: "Evocação", execucao: "padrão", alcance: "médio", alvo: "1 criatura", duracao: "instantânea", resistencia: "Reflexos reduz à metade", dano: "4d8", tipoDano: "perfuracao", metade: true, aprimoramentos: "+2 PM: +1d8." } });
+t.ok("Magia guardada com dano, tipo e metade (campos do editor)", gM.ok && gM.registro.modelo.def.dano === "4d8" && gM.registro.modelo.def.tipoDano === "perfuracao" && gM.registro.modelo.def.metade === true, JSON.stringify(gM.ok ? gM.registro.modelo.def : gM));
+const dM = H.deRegistro(Object.assign({}, gM.registro, { id: "f0f0f0f0-sintetico" }));
+t.ok("da biblioteca: a definição do motor (execução \"padrão\" vira padrao)", dM.tipo === "magia" && dM.def.execucao === "padrao" && dM.def.circulo === 2 && dM.def.metade);
+const gP = A.guardar("tormenta20", "habilidade", "poder", { nome: "Olhar de Lince", descricao: "Enxerga longe.", valores: { grupo: "geral", requisitos: "Sab 1" }, def: { grupoT20: "destino", nivelMinimo: 3, efeitos: lince.efeitos, acao: lince.acao } });
+t.ok("Poder guardado: campos do editor e efeitos/ativação", gP.ok && gP.registro.tipo === "habilidade" && gP.registro.modelo.def.grupoT20 === "destino" && gP.registro.modelo.def.efeitos.length === 1);
+const dP = H.deRegistro(Object.assign({}, gP.registro, { id: "a0a0a0a0-sintetico" }));
+t.ok("da biblioteca: o mesmo poder (mesma chave)", dP.tipo === "poder" && dP.def.id === lince.id, dP.def.id + " ≠ " + lince.id);
+t.ok("um poder antigo \"de classe\" (só texto) não vira poder do motor", H.deRegistro({ id: "x", nome: "Velho", modelo: { sistema: "tormenta20", grupo: "habilidade", subtipo: "poder", def: { grupo: "classe" } } }) === null);
+t.ok("destino nativo para Magia e Poder; habilidade de texto continua Manual", A.destinoNaFicha(gM.registro, "tormenta20").modo === "nativo" && A.destinoNaFicha(gP.registro, "tormenta20").modo === "nativo" && A.destinoNaFicha(A.guardar("tormenta20", "habilidade", "habilidade", { nome: "Texto", valores: {} }).registro, "tormenta20").modo === "manual");
+const ida2 = (g) => G.RAMAValidacao.importado(JSON.parse(JSON.stringify(G.RAMAValidacao.exportar(G.RAMAValidacao.tipoDeExportacao(g.registro), g.registro))));
+const aM = ida2(gM), aP = ida2(gP);
+t.ok("exportar e importar: a magia mantém dano; o poder mantém efeitos e ativação", aM.ok && aM.dados.modelo.def.dano === "4d8" && aP.ok && aP.dados.modelo.def.efeitos.length === 1 && aP.dados.modelo.def.acao.custo === 1, JSON.stringify(aP.ok ? aP.dados.modelo.def : aP));
+t.ok("prévias", /2º círculo \(3 PM\) · Evocação/.test(H.previaMagia(lanca)[0]) && /dano 4d8 de perfuração \(a resistência reduz à metade\)/.test(H.previaMagia(lanca).join(" ")) && /a partir do 3º nível/.test(H.previaPoder(lince)[0]));
 
 console.log(`\n${FORTE}${passaram} ok${FIM}, ${falharam ? VERMELHO : ""}${falharam} falha(s)${FIM}.`);
 if (falharam) Deno.exit(1);

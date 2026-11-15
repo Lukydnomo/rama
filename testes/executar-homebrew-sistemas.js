@@ -118,7 +118,8 @@ t.ok("a regra dos pacotes da tela usa os adaptadores", !G.RAMAPacotesHomebrew.co
 t.grupo("Destino na ficha");
 t.iguais("nativo, Manual (Universal num sistema cadastrado) e incompatível", [A.destinoNaFicha(espada, "tormenta20").modo, A.destinoNaFicha(guardar("universal", "item", "equipamento", {}), "tormenta20").modo, A.destinoNaFicha(espada, "goblins").modo], ["nativo", "manual", "incompativel"]);
 const hT20 = guardar("tormenta20", "habilidade", "magia", { tipoMagia: "arcana", circulo: 2, escola: "Evocação" });
-t.ok("habilidade de T20: o motor só aplica as do livro — Manual, com o motivo", A.destinoNaFicha(hT20, "tormenta20").modo === "manual" && /só aplica habilidades do livro/.test(A.destinoNaFicha(hT20, "tormenta20").texto));
+const hT20texto = guardar("tormenta20", "habilidade", "habilidade", { fonte: "raça" });
+t.ok("magia de T20 é nativa (v9.14); habilidade só de texto continua Manual, com o motivo", A.destinoNaFicha(hT20, "tormenta20").modo === "nativo" && A.destinoNaFicha(hT20texto, "tormenta20").modo === "manual" && /só aplica habilidades do livro/.test(A.destinoNaFicha(hT20texto, "tormenta20").texto));
 t.ok("Universal em T20 entra como item narrativo marcado Manual", /Manual/.test(A.narrativoPara(guardar("universal", "item", "equipamento", {}), "tormenta20").notas));
 
 t.grupo("Modelo Universal");

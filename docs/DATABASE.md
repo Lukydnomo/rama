@@ -1,5 +1,13 @@
 # O banco
 
+## Magia e Poder Homebrew de Tormenta20 — v9.14
+
+Nenhuma coluna nova: continuam na coluna `habilidade` do `HOMEBREW`
+(`modelo.subtipo` igual a `magia` ou `poder`). Na ficha de Tormenta20,
+`tormenta20.homebrew` ganhou `magias` (chave `hbmg-…`) e `poderes`
+(chave `hbpd-…`); `magias[].id`, `poderes[].id` e o poder escolhido num
+nível aceitam essas chaves. Opcional.
+
 ## Tipos Homebrew de Tormenta20 — v9.13
 
 Nenhuma coluna nova. As definições guardadas (no `HOMEBREW` e nas cópias

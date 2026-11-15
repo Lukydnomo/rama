@@ -129,7 +129,7 @@
     async function salvar(fechar) {
       if (!U.aparar(r.nome)) { r.passo = 1; pintar(); UI.avisoErro("Dê um nome à " + cfg.rotulo + "."); var n = document.getElementById(cfg.pref + "-nome"); if (n) n.focus(); return; }
       var def = cfg.paraGravar();
-      var g = A().guardar("tormenta20", "estrutural", cfg.subtipo, { id: cfg.reg ? cfg.reg.id : undefined, nome: r.nome, descricao: r.descricao, valores: {}, def: def, visibilidade: r.visibilidade, modeloAnterior: cfg.reg ? cfg.reg.modelo : null });
+      var g = A().guardar("tormenta20", cfg.grupo || "estrutural", cfg.subtipo, { id: cfg.reg ? cfg.reg.id : undefined, nome: r.nome, descricao: r.descricao, valores: cfg.valores ? cfg.valores() : {}, def: def, visibilidade: r.visibilidade, modeloAnterior: cfg.reg ? cfg.reg.modelo : null });
       if (!g.ok) { UI.avisoErro(g.erro); return; }
       var resp = await global.RAMAApi.salvarHomebrew(g.registro);
       if (!resp.ok) { UI.avisoDeFalha(resp, "gravação da " + cfg.rotulo); return; }
@@ -273,5 +273,52 @@
     return m.janela;
   }
 
-  global.RAMAHomebrewT20Estruturais = { origem: origem, divindade: divindade, ferramentas: { controles: controles, moldura: moldura, rascunho: rascunho, limpar: limpar } };
+  /* ================================================== PODER (v9.14) */
+  function poder(opcoes) {
+    var o = opcoes || {};
+    var reg = o.registro || null;
+    var v0 = reg && reg.modelo && reg.modelo.def ? copia(reg.modelo.def) : {};
+    var d = { grupo: v0.grupoT20 || ({ tormenta: "tormenta" })[v0.grupo] || "destino", requisitosTexto: v0.requisitos || "", nivelMinimo: v0.nivelMinimo || 1, efeitos: v0.efeitos || [], acao: v0.acao || null };
+    var r = rascunho(reg);
+    var m;
+    function mudou(rep) { r.sujo = true; if (rep) m.pintar(); else m.pintarLado(); }
+    var c = controles(mudou);
+    function def() { return PO().normalizarHomebrew(Object.assign(copia(d), { id: "", nome: r.nome || "Poder Homebrew", resumo: r.descricao, homebrewId: reg ? reg.id : "rascunho" })); }
+    function niveis() { var l = []; for (var n = 1; n <= 20; n++) l.push([n, n === 1 ? "Qualquer" : n + "º"]); return l; }
+    function passo1() {
+      return el("div.pc-editor__passo", {}, [
+        c.txt("hbtp-nome", "Nome do poder", r.nome, function (v) { r.nome = v; }, 60),
+        c.txt("hbtp-desc", "Texto", r.descricao, function (v) { r.descricao = v; }, 1200, "O que o poder faz, como aparece na ficha.", true),
+        el("div.editar-grade", {}, [
+          c.sel("hbtp-grupo", "Grupo", [["combate", "Combate"], ["destino", "Destino"], ["magia", "Magia"], ["tormenta", "Tormenta"]], d.grupo, function (v) { d.grupo = v; }, "Poderes de classe, concedidos e de origem: pelos tipos Classe, Divindade e Origem."),
+          c.sel("hbtp-nivel", "Nível mínimo", niveis(), d.nivelMinimo, function (v) { d.nivelMinimo = Number(v); }, "Conferido ao subir de nível."),
+        ]),
+        c.txt("hbtp-req", "Outros requisitos (texto)", d.requisitosTexto, function (v) { d.requisitosTexto = v; }, 200, "Ex.: \"Des 2, treinado em Acrobacia\". A mesa confere."),
+      ]);
+    }
+    function passo2() {
+      return el("div.pc-editor__passo", {}, [c.efeitos(d, "hbtp-ef"), c.ativada(d, "hbtp-at")]);
+    }
+    function passo3() {
+      var x = def();
+      return el("div.pc-editor__passo", {}, [].concat(
+        m.lista("Prévia", H().previaPoder(x)),
+        m.lista("Onde entra", ["Subir de nível (na escolha do poder) e + Poder avulso, na ficha de Tormenta20."]),
+        m.lista("Decisão da mesa", [x.requisitosTexto ? "Os requisitos em texto." : null, "O que o texto descreve além dos efeitos."].filter(Boolean)),
+        [m.visibilidade()]
+      ));
+    }
+    m = moldura({ r: r, reg: reg, pref: "hbtp", rotulo: "habilidade", subtipo: "poder", grupo: "habilidade", aoSalvar: o.aoSalvar,
+      titulo: (reg ? "Editar poder" : "Novo poder") + " · Tormenta20", rotuloSalvar: reg ? "Salvar poder" : "Criar poder",
+      passos: [["Identidade", passo1], ["Regras", passo2], ["Revisão", passo3]],
+      previa: function () { return H().previaPoder(def()); },
+      valores: function () { return { grupo: d.grupo === "tormenta" ? "tormenta" : "geral", requisitos: d.requisitosTexto }; },
+      paraGravar: function () { var x = def(); var out = { grupoT20: x.grupo, nivelMinimo: x.nivelMinimo, efeitos: x.efeitos }; if (x.acao) out.acao = x.acao; return out; },
+      okCriar: "Poder criado. Ele aparece ao subir de nível e em + Poder avulso, na ficha de Tormenta20.",
+      okEditar: "Poder atualizado. As fichas que já o usam continuam com a versão delas." });
+    m.pintar();
+    return m.janela;
+  }
+
+  global.RAMAHomebrewT20Estruturais = { origem: origem, divindade: divindade, poder: poder, ferramentas: { controles: controles, moldura: moldura, rascunho: rascunho, limpar: limpar } };
 })(typeof window !== "undefined" ? window : globalThis);

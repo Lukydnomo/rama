@@ -173,7 +173,7 @@
     id: "tormenta20",
     tipos: [
       { chave: "item", rotulo: "Item", ajuda: "Arma, armadura, escudo, vestuário, ferramenta, alquímico e o resto do inventário, com preço e espaços." },
-      { chave: "habilidade", rotulo: "Habilidade", ajuda: "Magia por círculo, poder ou habilidade — por enquanto para consulta e anotações." },
+      { chave: "habilidade", rotulo: "Habilidade", ajuda: "Magia por círculo (a ficha aprende e lança), poder geral ou da Tormenta (com efeitos) ou habilidade de texto." },
       { chave: "criatura", rotulo: "Ameaça", ajuda: "ND, Defesa, resistências, PV, ataques, habilidades e magias." },
       { chave: "raca", rotulo: "Raça", ajuda: "Atributos, tamanho, deslocamento e habilidades (com efeito na conta e perícias à escolha). Entra na criação de personagem." },
       { chave: "origem", rotulo: "Origem", ajuda: "Itens, perícias e poderes gerais de onde saem os dois benefícios, e o poder único. Entra na criação de personagem." },
@@ -207,7 +207,12 @@
     },
     habilidade: {
       subtipos: [
-        { chave: "magia", rotulo: "Magia", campos: [sel("tipoMagia", "Tipo", [["arcana", "Arcana"], ["divina", "Divina"], ["universal", "Universal"]], { padrao: "arcana" }), campo("circulo", "Círculo", "numero", { min: 1, max: 5, padrao: 1, unidade: "º" }), campo("escola", "Escola", "texto", { limite: 30, exemplo: "Evocação" }), campo("execucao", "Execução", "texto", { limite: 40, exemplo: "padrão" }), campo("alcance", "Alcance", "texto", { limite: 40, exemplo: "curto" }), campo("alvo", "Alvo / área", "texto", { limite: 80 }), campo("duracao", "Duração", "texto", { limite: 40, exemplo: "cena" }), campo("resistencia", "Resistência", "texto", { limite: 60, exemplo: "Vontade anula" })], avancado: [campo("aprimoramentos", "Aprimoramentos", "area", { limite: 2000, exemplo: "+2 PM: aumenta o dano em 1d6." })] },
+        { chave: "magia", rotulo: "Magia", campos: [sel("tipoMagia", "Tipo", [["arcana", "Arcana"], ["divina", "Divina"], ["universal", "Universal"]], { padrao: "arcana" }), campo("circulo", "Círculo", "numero", { min: 1, max: 5, padrao: 1, unidade: "º" }), campo("escola", "Escola", "texto", { limite: 30, exemplo: "Evocação" }), campo("execucao", "Execução", "texto", { limite: 40, exemplo: "padrão" }), campo("alcance", "Alcance", "texto", { limite: 40, exemplo: "curto" }), campo("alvo", "Alvo / área", "texto", { limite: 80 }), campo("duracao", "Duração", "texto", { limite: 40, exemplo: "cena" }), campo("resistencia", "Resistência", "texto", { limite: 60, exemplo: "Vontade anula" }),
+          /* v9.14: a mecânica que o lançamento da ficha resolve. */
+          campo("dano", "Dano (opcional)", "dado", { exemplo: "2d6" }),
+          sel("tipoDano", "Tipo de dano", [["", "—"], ["acido", "Ácido"], ["corte", "Corte"], ["eletricidade", "Eletricidade"], ["essencia", "Essência"], ["fogo", "Fogo"], ["frio", "Frio"], ["impacto", "Impacto"], ["luz", "Luz"], ["perfuracao", "Perfuração"], ["psiquico", "Psíquico"], ["trevas", "Trevas"]]),
+          campo("metade", "A resistência reduz o dano à metade", "booleano"),
+          campo("cura", "Cura (opcional)", "dado", { exemplo: "2d8+2" })], avancado: [campo("aprimoramentos", "Aprimoramentos", "area", { limite: 2000, exemplo: "+2 PM: aumenta o dano em 1d6." })] },
         { chave: "poder", rotulo: "Poder", campos: [sel("grupo", "Grupo", [["geral", "Geral"], ["classe", "De classe"], ["concedido", "Concedido"], ["tormenta", "Da Tormenta"], ["origem", "De origem"]], { padrao: "geral" }), campo("requisitos", "Pré-requisitos", "texto", { limite: 200 }), campo("custo", "Custo", "texto", { limite: 40, exemplo: "2 PM" })] },
         { chave: "habilidade", rotulo: "Habilidade", campos: [campo("fonte", "De onde vem", "texto", { limite: 60, exemplo: "raça, classe" })] },
       ],
@@ -437,6 +442,8 @@
       reg.tipo = "habilidade";
       reg.texto = descricao;
       reg.origem = texto(r.origem, 60);
+      /* v9.14: o Poder de T20 guarda também efeitos, ativação e nível mínimo. */
+      if (sistema === "tormenta20" && subtipo === "poder" && r.def) reg.modelo.def = Object.assign({}, v, r.def);
     } else if (grupo === "estrutural") {
       reg.tipo = subtipo;
       /* Elemento: a chave estável nasce uma vez (e não muda ao renomear). */
@@ -559,6 +566,9 @@
     if (s === destino) {
       if (g === "item") return { modo: "nativo", texto: destino === "brutal" ? "Vira o Apego \"item\" da ficha." : "Entra no inventário com as regras do sistema." };
       if (s === "ordem" || s === "universal" || s === "ordem2") return { modo: "nativo", texto: "Entra nas habilidades da ficha." };
+      var stH = subtipoDe(r), dH = defDe(r);
+      if (s === "tormenta20" && stH === "magia") return { modo: "nativo", texto: "Aprendida na aba Magias (+ Aprender magia) e lançada com o custo do círculo, o dano, a cura e os efeitos configurados. A cópia fica na ficha." };
+      if (s === "tormenta20" && stH === "poder" && (dH.grupoT20 || dH.grupo === "geral" || dH.grupo === "tormenta")) return { modo: "nativo", texto: "Escolhido ao subir de nível ou em + Poder avulso, com os efeitos e a ativação configurados. A cópia fica na ficha." };
       return { modo: "manual", texto: "O motor de " + nomeDoSistema(s) + " ainda só aplica habilidades do livro: a habilidade entra nas anotações da ficha, para consulta (Manual)." };
     }
     if (s === "universal") return { modo: "manual", texto: "Conteúdo Universal: entra como item narrativo (nome e descrição); regras e ações ficam marcadas como Manual." };
@@ -595,7 +605,8 @@
     if (s === "oblivio" && st === "equipamento" && d.chave) p.push("base: " + ((((global.RAMAOblivioCatalogo || {}).equipamento || {})[d.chave] || {}).nome || d.chave));
     if (s === "ordem2" && st === "arma") p.push("dano " + (d.dano || 0));
     if (s === "ordem2" && st === "protecao") p.push("armadura " + (d.armadura || 0));
-    if (s === "tormenta20" && st === "magia") p.push(d.circulo + "º círculo");
+    if (s === "tormenta20" && st === "magia") p.push(d.circulo + "º círculo" + (d.dano ? " · dano " + d.dano : "") + (d.cura ? " · cura " + d.cura : ""));
+    if (s === "tormenta20" && st === "poder" && d.grupoT20) p.push(({ combate: "combate", destino: "destino", magia: "magia", tormenta: "Tormenta" })[d.grupoT20] + ((d.efeitos || []).length || d.acao ? " · na conta" : ""));
     if (s === "tormenta20" && st === "origem" && Array.isArray(d.pericias)) p.push(d.pericias.length + (d.pericias.length === 1 ? " perícia · " : " perícias · ") + (d.poderes || []).length + ((d.poderes || []).length === 1 ? " poder · " : " poderes · ") + ((d.unico || {}).nome || "poder único"));
     if (s === "tormenta20" && st === "classe" && d.pv) p.push("PV " + d.pv.inicial + " + Con · PM " + (d.pm || 0) + "/nível" + (d.magias ? " · magias " + (d.magias.tipo === "arcana" ? "arcanas" : "divinas") : ""));
     if (s === "tormenta20" && st === "divindade") p.push("energia " + (d.energia || "qualquer") + " · " + ((d.poderes || []).length + (d.poderesProprios || []).length) + " poderes concedidos");
@@ -795,6 +806,12 @@
       ["id", "homebrewId", "homebrew", "fonte", "pagina", "nome", "descricao"].forEach(function (k) { delete defImportada[k]; });
       if (m.subtipo === "classe") { ["habilidades", "tabela", "poderes"].forEach(function (k) { delete defImportada[k]; }); defImportada.poderesProprios.forEach(function (p) { delete p.id; }); }
       if (m.subtipo === "divindade") { defImportada.poderes = defImportada.poderes.filter(function (k) { return !/-p\d$/.test(k); }); defImportada.poderesProprios.forEach(function (p) { delete p.id; }); }
+    }
+    /* Poder de T20 (v9.14): efeitos, ativação e nível mínimo pelo motor. */
+    if (g === "habilidade" && m.sistema === "tormenta20" && m.subtipo === "poder" && global.RAMATormenta20Poderes && global.RAMATormenta20Poderes.normalizarHomebrew && m.def && m.def.grupoT20) {
+      var pz = global.RAMATormenta20Poderes.normalizarHomebrew(Object.assign({}, m.def, { grupo: m.def.grupoT20 }));
+      defImportada = { grupoT20: pz.grupo, nivelMinimo: pz.nivelMinimo, efeitos: pz.efeitos };
+      if (pz.acao) defImportada.acao = pz.acao;
     }
     var r = guardar(m.sistema, g, m.subtipo, { nome: x.nome, descricao: x.descricao || x.texto, origem: x.origem, valores: m.def, universal: x.universal, etiqueta: x.etiqueta, modeloAnterior: m, classe: classeImportada, def: defImportada });
     if (r.ok) { delete r.registro.id; r.registro.visibilidade = "privado"; }

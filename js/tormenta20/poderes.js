@@ -205,5 +205,44 @@
     return n <= 0 ? 0 : 1 + Math.floor((n - 1) / 2);
   }
 
-  global.RAMATormenta20Poderes = { PODERES: PODERES, PODER: PODER, perdaDeCarisma: perdaDeCarisma, GRUPOS: { combate: "Combate", destino: "Destino", magia: "Magia", concedido: "Concedidos", tormenta: "Tormenta" } };
+  /* =================================================================
+     v9.14 — PODER HOMEBREW (chave hbpd-<id>-<hash>, cópia em
+     t20.homebrew.poderes): um poder geral (combate, destino, magia) ou da
+     Tormenta, com texto, efeitos que o motor já soma, a ativação
+     opcional (PM) e o nível mínimo. Escolhido ao subir de nível e como
+     poder avulso, como os do livro. Puro: o servidor roda este arquivo.
+     ================================================================= */
+  var PADRAO_HB = /^hbpd-[a-z0-9-]{3,30}$/;
+  var PODERES_HOMEBREW = [];
+  function RAh() { return global.RAMATormenta20Racas; }
+  function ehHomebrew(id) { return PADRAO_HB.test(String(id || "")); }
+  function normalizarPoderHomebrew(bruto) {
+    var b = bruto && typeof bruto === "object" ? bruto : {};
+    var nivel = Math.max(1, Math.min(20, Math.round(Number(b.nivelMinimo)) || 1));
+    var d = {
+      id: ehHomebrew(b.id) ? b.id : "",
+      nome: String(b.nome || "").slice(0, 60).trim() || "Poder Homebrew",
+      homebrew: true, homebrewId: String(b.homebrewId || "").slice(0, 80), fonte: "HOMEBREW", pagina: 0,
+      grupo: ["combate", "destino", "magia", "tormenta"].indexOf(b.grupo) >= 0 ? b.grupo : "destino",
+      resumo: String(b.resumo || "").slice(0, 1200).trim(),
+      requisitosTexto: String(b.requisitosTexto || "").slice(0, 200).trim(),
+      nivelMinimo: nivel,
+      efeitos: RAh() ? (Array.isArray(b.efeitos) ? b.efeitos : []).map(RAh().efeitoHomebrew).filter(Boolean).slice(0, 4) : [],
+    };
+    var ac = RAh() && RAh().acaoHomebrew ? RAh().acaoHomebrew(b.acao) : null;
+    if (ac) d.acao = ac;
+    if (nivel > 1) d.req = { nivel: nivel };
+    if (!d.id) d.id = RAh() ? RAh().chaveHomebrew("hbpd-", d) : "hbpd-local-000000";
+    return d;
+  }
+  function registrarPoderHomebrew(def) {
+    if (!def || !ehHomebrew(def.id)) return null;
+    PODER[def.id] = def;
+    PODERES_HOMEBREW = PODERES_HOMEBREW.filter(function (x) { return x.id !== def.id; }).concat([def]);
+    return def;
+  }
+  function poderesDisponiveis() { return PODERES.concat(PODERES_HOMEBREW); }
+
+  global.RAMATormenta20Poderes = { PODERES: PODERES, PODER: PODER, perdaDeCarisma: perdaDeCarisma,
+    ehHomebrew: ehHomebrew, normalizarHomebrew: normalizarPoderHomebrew, registrarHomebrew: registrarPoderHomebrew, poderesDisponiveis: poderesDisponiveis, GRUPOS: { combate: "Combate", destino: "Destino", magia: "Magia", concedido: "Concedidos", tormenta: "Tormenta" } };
 })(typeof window !== "undefined" ? window : globalThis);

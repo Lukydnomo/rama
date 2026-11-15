@@ -6,7 +6,7 @@ organiza em três etapas.
 | Etapa | Situação |
 |---|---|
 | **1 — Estrutura e compatibilidade** | entregue na **v9.7.0** |
-| **2 — Tipos estruturais e elementos** | parte 1 na **v9.8.0** (Elemento e Classe de Ordem I), parte 2 na **v9.9.0** (Origem e Trilha de Ordem I), parte 3 na **v9.10.0** (Raça de Tormenta20), parte 4 na **v9.11.0** (Origem e Divindade de Tormenta20), parte 5 na **v9.12.0** (Classe de Tormenta20), parte 6 na **v9.13.0** (ativadas, magia e variantes em T20); o resto pendente |
+| **2 — Tipos estruturais e elementos** | parte 1 na **v9.8.0** (Elemento e Classe de Ordem I), parte 2 na **v9.9.0** (Origem e Trilha de Ordem I), parte 3 na **v9.10.0** (Raça de Tormenta20), parte 4 na **v9.11.0** (Origem e Divindade de Tormenta20), parte 5 na **v9.12.0** (Classe de Tormenta20), parte 6 na **v9.13.0** (ativadas, magia e variantes em T20), parte 7 na **v9.14.0** (Magia e Poder no motor de T20); o resto pendente |
 | **3 — Automação por sistema, publicação e regressão** | pendente |
 
 Este documento é o **inventário de cobertura**. Para cada sistema e tipo,
@@ -159,7 +159,9 @@ Legenda:
 | Ordem II | Habilidade, Poder, Ritual (experimental) | adaptador | habilidades (habilidade própria) | **C** (texto) | efeitos estruturados: **Etapa 3** |
 | Ordem II | Ameaça | o de sempre | mesa de Ordem II | **N** | Perfil e Ocupação: **Etapa 2** |
 | **Tormenta20** | Item: arma, armadura, escudo, vestuário, ferramenta, alquímico, esotérico, aventura, alimentação, munição, outro | adaptador (preço, espaços, proficiência, empunhadura, dano, margem, multiplicador, tipo, alcance, munição, bônus de perícia) | inventário (Do Homebrew), como `personalizado` | **N**: ataque calculado, Defesa e penalidade, bônus de perícia (`efeitos`), espaços | melhorias e encantos (pela ficha, como antes) |
-| Tormenta20 | Habilidade: magia (círculo, escola, execução…), poder, habilidade | adaptador | anotações | **Ma** | o motor só aplica poderes e magias do livro: **Etapa 2** |
+| Tormenta20 | Habilidade → **Magia** (v9.14) | editor de campos | criação (Magias), + Aprender magia, lançamento | **N**: custo pelo círculo, CD, dano (metade na resistência), cura | aprimoramentos (texto) |
+| Tormenta20 | Habilidade → **Poder** (v9.14) | editor próprio | Subir de nível, + Poder avulso | **N**: efeitos, ativação (PM), nível mínimo | outros requisitos (texto) |
+| Tormenta20 | Habilidade (só texto) | adaptador | anotações | **Ma** | — |
 | Tormenta20 | Ameaça | o de sempre | mesa de T20 | **N** | — |
 | Tormenta20 | **Classe** (v9.12) | editor próprio em 4 etapas | criação de personagem; Subir de nível (também multiclasse) | **N**: PV, PM, perícias, proficiências, magias (CD, círculo, PM), habilidades da tabela com efeitos e escolha de perícia, poderes de classe com efeitos e nível mínimo | o resto do texto das habilidades e poderes; habilidades ativadas (PM) |
 | Tormenta20 | **Origem** (v9.11) | editor próprio em 3 etapas | criação de personagem (depois das do livro) | **N**: os dois benefícios (perícia treinada, poder geral com as regras do livro, poder único com efeitos) | itens (texto); o resto do texto do poder único |
@@ -1133,3 +1135,109 @@ da implantação. `Codigo.gs` e `Tormenta20.gs` não mudaram.
   `js/paginas/homebrew-origem-divindade-t20.js`,
   `js/paginas/homebrew-classe-t20.js`;
 - `js/versao.js`.
+
+## v9.14.0 — Etapa 2, parte 7: Magia e Poder Homebrew no motor de Tormenta20
+
+Até a v9.13, a habilidade Homebrew de T20 (magia, poder, habilidade)
+entrava nas anotações (Manual). Agora a **Magia** e o **Poder** são
+nativos. A habilidade só de texto continua Manual.
+
+### Magia
+
+**Homebrew → + Criar → Tormenta20 → Habilidade → Magia** (o editor de
+campos):
+- tipo, círculo, escola, execução, alcance, alvo, duração e resistência;
+- a mecânica que o lançamento resolve: **dano** (dados e tipo; a
+  resistência pode reduzir à metade) e **cura**;
+- os aprimoramentos, em texto. A mesa aplica.
+
+O motor registra a magia pelo mesmo `RAMATormenta20Magias.def` das magias
+do livro, com o custo pela tabela de círculos. Ela aparece:
+- no passo Magias da criação;
+- em **+ Aprender magia**, para as fontes do tipo e do círculo certos.
+
+No lançamento, a ficha cobra os PM, mostra CD, alcance e alvo e rola o
+dano ou a cura. A aba Magias marca "Homebrew".
+
+### Poder
+
+**Homebrew → + Criar → Tormenta20 → Habilidade → Poder** (editor
+próprio, três etapas):
+- nome, texto, grupo (combate, destino, magia ou Tormenta), nível mínimo
+  e outros requisitos em texto (a mesa confere);
+- efeitos na conta e ativação opcional (PM), os mesmos dos tipos
+  estruturais.
+
+O poder entra no catálogo de poderes (`poderesDisponiveis`). Aparece na
+escolha de poder do **Subir de nível**, onde o nível mínimo é conferido,
+e em **+ Poder avulso**. Poderes de classe, concedidos e de origem são
+feitos pelos tipos Classe, Divindade e Origem. Um poder antigo "de
+classe" só de texto continua Manual.
+
+### Cópia, versão e servidor
+
+- chaves `hbmg-…` e `hbpd-…`, versionadas; cópias em
+  `tormenta20.homebrew.magias` (a definição, não o registro do catálogo)
+  e `tormenta20.homebrew.poderes`;
+- sem cópia e sem catálogo, a magia aprendida e o poder avulso saem da
+  lista. A escolha feita num nível fica, e o motor a ignora;
+- o servidor roda o mesmo código (`magias.js` e `poderes.js` em
+  `Tormenta20Dados.gs`; `regras.js` em `Tormenta20.gs`).
+
+### Validação da v9.14.0
+
+**Automática.** `testes/executar-homebrew-t20.js` passou de 102 para 124
+verificações:
+- **Magia:**
+  - normalização (escola pelo nome, dados, efeitos);
+  - registro com custo 3 no 2º círculo;
+  - preparar com dano 4d8 de perfuração e metade;
+  - disponível só para o tipo certo;
+  - cópia na ficha;
+  - some sem cópia nem catálogo;
+  - é embutida a partir do catálogo.
+- **Poder:**
+  - normalização (nível mínimo vira requisito);
+  - avulso dá +2 Percepção;
+  - escolhido no 3º nível;
+  - recusado no 2º pelo nível mínimo;
+  - ativado com 1 PM;
+  - listas;
+  - some sem cópia nem catálogo.
+- **Biblioteca:**
+  - campos do editor;
+  - voltar com a mesma chave;
+  - um poder antigo de classe não vira poder do motor;
+  - destinos;
+  - arquivo;
+  - prévias.
+
+`testes/executar-homebrew-sistemas.js`: a magia de T20 passou a ser
+nativa; a habilidade só de texto continua Manual.
+
+**Na interface** (servidor local, conta sintética):
+- Criei o poder **Olhar de Lince** pelo editor: destino, +2 Percepção,
+  ativado com 1 PM, livre, 1 rodada, +1 nos ataques.
+- Criei a magia **Lança de Vidro** pelo editor de campos: arcana, 1º
+  círculo, 2d8 de perfuração, metade na resistência.
+- Criei um elfo Arcanista (mago); a Lança de Vidro estava no passo Magias.
+- Na ficha:
+  - a magia aparece com "1 PM · Arcana · Homebrew";
+  - o lançamento mostrou CD 15 e "2d8 perfuracao (resistência: metade)";
+  - ao lançar, cobrou 1 PM (12 para 11) e rolou o dano.
+- **+ Poder avulso** listou "Olhar de Lince (Destino)". Adicionado, ele
+  aparece com "Homebrew" e "Usar · 1 PM".
+- Sem erros no console nem no servidor.
+
+### Publicar a v9.14.0
+
+**Servidor:** troque **`Tormenta20.gs`** e **`Tormenta20Dados.gs`**, e crie
+uma versão nova da implantação. `Codigo.gs` não mudou.
+**`setupRama()` não é necessário.**
+
+**Site:**
+- `js/tormenta20/magias.js`, `poderes.js`, `regras.js`,
+  `homebrew-t20.js`, `telas/ficha-t20.js`;
+- `js/homebrew-adaptadores.js`, `js/paginas/homebrew-editor.js`,
+  `js/paginas/homebrew.js`, `js/paginas/homebrew-origem-divindade-t20.js`;
+- `js/versao.js`, `homebrew/index.html`.
