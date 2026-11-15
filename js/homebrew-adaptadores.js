@@ -712,7 +712,8 @@
     if (s === "ordem" && st === "elemento" && d.permiteAfinidade) p.push("pode ser afinidade");
     if (s === "ordem" && st === "poderParanormal") p.push("poder paranormal" + (d.elemento && global.RAMAOrdemElementos ? " de " + global.RAMAOrdemElementos.nome(d.elemento) : "") + ((d.efeitos || []).length ? " · na conta" : ""));
     if (s === "ordem" && st === "origem" && Array.isArray(d.pericias)) p.push((d.pericias.length + (d.periciasAEscolher || 0)) + " perícias · " + (d.poder || "poder") + (d.efeitos && d.efeitos.length ? " · na conta" : ""));
-    if (s === "ordem" && st === "trilha" && d.classe) p.push("para " + (((global.RAMAOrdemCatalogo && global.RAMAOrdemCatalogo.classe(d.classe)) || {}).nome || d.classe));
+    if (s === "ordem" && st === "trilha" && d.classeHomebrew) p.push("só para " + (d.classeHomebrewNome || "a classe Homebrew"));
+    else if (s === "ordem" && st === "trilha" && d.classe) p.push("para " + (((global.RAMAOrdemCatalogo && global.RAMAOrdemCatalogo.classe(d.classe)) || {}).nome || d.classe));
     if (s === "ordem" && st === "classe" && d.pvInicial) p.push(d.pvInicial.base + (d.pvInicial.atributo ? " + " + d.pvInicial.atributo.toUpperCase() : "") + " PV iniciais" + (d.patentes ? " · Patentes" : ""));
     var u = obj(r).universal;
     if (u && lista(u.acoes).length) p.push(u.acoes.length === 1 ? "1 ação" : u.acoes.length + " ações");

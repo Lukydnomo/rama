@@ -60,6 +60,24 @@
       botoes: [{ rotulo: "Cancelar", classe: "r-botao--fantasma" }, { rotulo: reg ? "Salvar classe" : "Criar classe", classe: "r-botao--principal", aoClicar: salvar }],
     });
     function mudou(repintar) { r.sujo = true; if (repintar) pintar(); else pintarLado(); }
+    /* As trilhas Homebrew da biblioteca (para escolher as que a classe usa). */
+    var trilhasHb = null;
+    if (H() && H().carregarBiblioteca) H().carregarBiblioteca().then(function (b) { trilhasHb = (b && b.trilhas) || []; if (r.passo === 1 && form.isConnected) pintar(); }, function () { trilhasHb = []; });
+    function blocoTrilhasHb() {
+      if (!trilhasHb) return el("p.t-mini", { texto: "Carregando as suas trilhas Homebrew…" });
+      var minha = reg ? reg.id : "";
+      var proprias = trilhasHb.filter(function (t) { return minha && t.classeHomebrew === minha; });
+      var livres = trilhasHb.filter(function (t) { return !t.classeHomebrew; });
+      d.trilhasHomebrew = Array.isArray(d.trilhasHomebrew) ? d.trilhasHomebrew : [];
+      return el("fieldset.r-campo.hbc-pericias", {}, [el("legend.r-rotulo", { texto: "Trilhas Homebrew desta classe (opcional)" })]
+        .concat(proprias.map(function (t) { return el("label.r-marca", {}, [el("input", { type: "checkbox", checked: true, disabled: true }), el("span", { texto: t.nome + " (feita para esta classe)" })]); }))
+        .concat(livres.map(function (t) {
+          return el("label.r-marca", {}, [el("input", { type: "checkbox", checked: d.trilhasHomebrew.indexOf(t.homebrewId) >= 0, onchange: function (ev) {
+            d.trilhasHomebrew = d.trilhasHomebrew.filter(function (k) { return k !== t.homebrewId; }); if (ev.target.checked) d.trilhasHomebrew.push(t.homebrewId); mudou();
+          } }), el("span", { texto: t.nome + " (de " + ((C().classe(t.classe) || {}).nome || t.classe) + ")" })]);
+        }))
+        .concat([el("p.r-ajuda", { texto: (proprias.length || livres.length ? "" : "Você ainda não tem trilhas Homebrew. ") + "Uma trilha criada \u201csó para esta classe\u201d (no editor de Trilha) entra sempre, em qualquer versão da classe" + (reg ? "." : " — salve a classe primeiro para ela aparecer lá.") })]));
+    }
 
     var PASSOS = ["Identidade", "Recursos", "Perícias", "NEX e nível", "Patentes", "Revisão"];
     function pintar() {
@@ -103,7 +121,8 @@
           } });
         }).concat([el("button.r-botao.r-botao--mini.r-botao--fantasma", { type: "button", texto: "Em branco", onclick: function () { d = vazia(); mudou(true); } })])), el("p.r-ajuda", { texto: "É uma cópia: a classe Homebrew nunca muda se a oficial mudar." })]) : null,
         sel("hbc-poderes", "Poderes de classe", oficiais, d.poderesDe, function (v) { d.poderesDe = v; }),
-        sel("hbc-trilhas", "Trilhas", [["", "Nenhuma trilha de classe"]].concat(H().OFICIAIS.map(function (k) { return [k, "As do " + C().classe(k).nome]; })), d.trilhasDe, function (v) { d.trilhasDe = v; }),
+        sel("hbc-trilhas", "Trilhas oficiais", [["", "Nenhuma trilha oficial"]].concat(H().OFICIAIS.map(function (k) { return [k, "As do " + C().classe(k).nome]; })), d.trilhasDe, function (v) { d.trilhasDe = v; }),
+        blocoTrilhasHb(),
         el("p.t-mini", { texto: "Nas vagas \"Poder de classe\" e \"Trilha\", a ficha oferece só o que você escolher aqui. Nada é emprestado sozinho de uma classe oficial." }),
       ]);
     }
@@ -221,7 +240,7 @@
         el("p.t-rotulo", { texto: "Prévia (com todos os atributos em 2)" }),
         el("ul.hbe-mini", {}, H().previa(def, { agi: 2, for: 2, int: 2, pre: 2, vig: 2 }).map(function (t) { return el("li", { texto: t }); })),
         el("p.t-rotulo", { texto: "Automático" }),
-        el("ul.hbe-mini", {}, ["PV, PE, SAN e PD pela tabela, em cada marco.", "As vagas de cada marco aparecem na Progressão da ficha e na Ramificação.", def.poderesDe ? "Poderes de classe: os do " + C().classe(def.poderesDe).nome + " e os gerais." : "Poderes de classe: só os gerais.", def.trilhasDe ? "Trilhas: as do " + C().classe(def.trilhasDe).nome + "." : "Sem trilhas de classe."].map(function (t) { return el("li", { texto: t }); })),
+        el("ul.hbe-mini", {}, ["PV, PE, SAN e PD pela tabela, em cada marco.", "As vagas de cada marco aparecem na Progressão da ficha e na Ramificação.", def.poderesDe ? "Poderes de classe: os do " + C().classe(def.poderesDe).nome + " e os gerais." : "Poderes de classe: só os gerais.", (def.trilhasDe ? "Trilhas: as do " + C().classe(def.trilhasDe).nome : "Trilhas: nenhuma oficial") + (def.trilhasHomebrew.length ? ", mais " + def.trilhasHomebrew.length + " Homebrew escolhida(s)" : "") + "; as trilhas feitas só para esta classe entram sempre."].map(function (t) { return el("li", { texto: t }); })),
         el("p.t-rotulo", { texto: "Decisão da mesa / manual" }),
         el("ul.hbe-mini", {}, ["O efeito mecânico das habilidades escritas nos marcos (o texto aparece; a automação de cada uma é da Etapa 3)."].concat(f.map(function (x) { return "Falta a " + x + ": a classe não será oferecida nesse trilho."; })).map(function (t) { return el("li", { texto: t }); })),
         el("div.r-campo", {}, [el("span.r-rotulo", { texto: "Visibilidade" }), el("div.filtros__grupo", { role: "group", "aria-label": "Visibilidade" }, [["privado", "Privada"], ["publico", "Pública"]].map(function (x) {
@@ -249,6 +268,7 @@
       if (!g.ok) { UI.avisoErro(g.erro); return; }
       var resp = await global.RAMAApi.salvarHomebrew(g.registro);
       if (!resp.ok) { UI.avisoDeFalha(resp, "gravação da classe"); return; }
+      if (H() && H().carregarBiblioteca) H().carregarBiblioteca(true);
       r.sujo = false;
       fechar();
       UI.avisoOk(reg ? "Classe atualizada. As fichas que já a usam continuam com a versão delas." : "Classe criada. Ela aparece na criação de agentes de Ordem, em Classes Homebrew.");

@@ -179,10 +179,13 @@
     var b = obj(bruto);
     var pod = lista(b.poderes);
     var req = obj(lista(b.requisitos)[0]);
+    /* Exclusiva de uma classe Homebrew: o id do REGISTRO da classe (não a
+       chave versionada) — editar a classe não quebra o vínculo. */
+    var classeHb = /^[A-Za-z0-9_-]{1,80}$/.test(String(b.classeHomebrew || "")) ? String(b.classeHomebrew) : "";
     var d = {
       chave: PADRAO_TRILHA.test(String(b.chave || "")) ? b.chave : "",
       nome: texto(b.nome, 60).trim() || "Trilha Homebrew",
-      classe: OFICIAIS.indexOf(b.classe) >= 0 ? b.classe : "combatente",
+      classe: classeHb ? "" : (OFICIAIS.indexOf(b.classe) >= 0 ? b.classe : "combatente"),
       homebrew: true, homebrewId: texto(b.homebrewId, 80), fonte: "HOMEBREW", pagina: 0,
       resumo: texto(b.resumo || b.descricao, 1200).trim(),
       requisitos: req.tipo === "treinado" && C() && C().pericia(req.pericia) ? [{ tipo: "treinado", pericia: req.pericia }] : [],
@@ -195,6 +198,7 @@
         return x;
       }),
     };
+    if (classeHb) { d.classeHomebrew = classeHb; d.classeHomebrewNome = texto(b.classeHomebrewNome, 60).trim() || "Classe Homebrew"; }
     if (!d.chave) d.chave = chaveVersionada("hbt-", d);
     return d;
   }
@@ -255,6 +259,9 @@
       grauTreinamentoBase: int(b.grauTreinamentoBase, 0, 10, 3),
       poderesDe: OFICIAIS.indexOf(b.poderesDe) >= 0 ? b.poderesDe : "",
       trilhasDe: OFICIAIS.indexOf(b.trilhasDe) >= 0 ? b.trilhasDe : "",
+      /* As trilhas Homebrew que a classe usa (ids dos registros), além das
+         feitas só para ela (essas entram sempre). */
+      trilhasHomebrew: lista(b.trilhasHomebrew).map(String).filter(function (k, i, l) { return /^[A-Za-z0-9_-]{1,80}$/.test(k) && l.indexOf(k) === i; }).slice(0, 12),
       habilidadesIniciais: lista(b.habilidadesIniciais).map(function (s) { return texto(s, 80).trim(); }).filter(Boolean).slice(0, 6),
       progressao: null, patentes: null,
     };
@@ -430,7 +437,9 @@
     return linhas;
   }
   function previaTrilha(d) {
-    var linhas = ["Para: " + ((C() && C().classe(d.classe)) || { nome: d.classe }).nome + " (e as classes Homebrew que usam as trilhas dela)."];
+    var linhas = [d.classeHomebrew
+      ? "Só para a classe Homebrew " + d.classeHomebrewNome + " (em qualquer versão dela)."
+      : "Para: " + ((C() && C().classe(d.classe)) || { nome: d.classe }).nome + " (e as classes Homebrew que usam as trilhas dela)."];
     if (d.requisitos.length) linhas.push("Requisito: treinado em " + ((C() && C().pericia(d.requisitos[0].pericia)) || {}).nome + ".");
     d.poderes.forEach(function (p) { linhas.push("NEX " + p.nex + "%: " + p.nome + (p.efeitos.length ? " (" + p.efeitos.map(textoEfeito).join(", ") + ")" : "") + (p.escolha ? " · " + textoEscolha(p.escolha) : "")); });
     return linhas;

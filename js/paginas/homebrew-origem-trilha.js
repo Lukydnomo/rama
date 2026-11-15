@@ -43,6 +43,9 @@
     var g = ehPoder ? { a: "o", A: "O", da: "do", nova: "Novo", salva: "salvo" } : { a: "a", A: "A", da: "da", nova: "Nova", salva: "salva" };
     var r = { nome: reg ? reg.nome : "", descricao: reg ? reg.descricao || "" : (d.resumo && !ehOrigem ? d.resumo : ""), visibilidade: reg ? reg.visibilidade || "privado" : "privado", passo: 1, sujo: false };
     var pref = ehOrigem ? "hbo" : ehPoder ? "hbpp" : "hbt";
+    /* As classes Homebrew (para uma trilha exclusiva de uma delas). */
+    var classesHb = null;
+    if (tipo === "trilha" && H().carregarBiblioteca) H().carregarBiblioteca().then(function (b) { classesHb = (b && b.classes) || []; if (r.passo === 1 && form.isConnected) pintar(); }, function () { classesHb = []; });
     var form = el("div.hbe-form"), lado = el("aside.hbe-lado", { "aria-label": "Revisão" });
     var janela = UI.modal({
       titulo: (reg ? "Editar " : g.nova + " ") + rotulo + " · Ordem Paranormal", largo: true, classe: "hbe-janela hbc-janela",
@@ -135,7 +138,12 @@
       }
       partes.push(txt(pref + "-desc", "Descrição", r.descricao, function (v) { r.descricao = v; }, 1200, ehOrigem ? "O que a pessoa fazia antes da Ordem." : "O estilo da trilha, em poucas linhas.", true));
       if (!ehOrigem) {
-        partes.push(sel("hbt-classe", "Classe", H().OFICIAIS.map(function (k) { return [k, C().classe(k).nome]; }), d.classe, function (v) { d.classe = v; }, "Serve a essa classe e às Classes Homebrew que usam as trilhas dela."));
+        var opsCl = H().OFICIAIS.map(function (k) { return [k, C().classe(k).nome]; }).concat((classesHb || []).map(function (c) { return ["hb:" + c.homebrewId, c.nome + " (classe Homebrew — só ela)"]; }));
+        if (d.classeHomebrew && !(classesHb || []).some(function (c) { return c.homebrewId === d.classeHomebrew; })) opsCl.push(["hb:" + d.classeHomebrew, (d.classeHomebrewNome || "Classe Homebrew") + " (classe Homebrew — só ela)"]);
+        partes.push(sel("hbt-classe", "Classe", opsCl, d.classeHomebrew ? "hb:" + d.classeHomebrew : d.classe, function (v) {
+          if (v.indexOf("hb:") === 0) { var id = v.slice(3); var c = (classesHb || []).filter(function (x) { return x.homebrewId === id; })[0]; d.classeHomebrew = id; if (c) d.classeHomebrewNome = c.nome; }
+          else { delete d.classeHomebrew; delete d.classeHomebrewNome; d.classe = v; }
+        }, d.classeHomebrew ? "Só essa classe Homebrew oferece a trilha (em qualquer versão dela)." : (classesHb === null ? "Carregando as suas classes Homebrew…" : "Uma classe oficial (e as Classes Homebrew que usam as trilhas dela) ou uma classe Homebrew sua, exclusiva.")));
         partes.push(sel("hbt-req", "Requisito (opcional)", pericias("Nenhum"), d.requisitos && d.requisitos[0] ? d.requisitos[0].pericia : "", function (v) { d.requisitos = v ? [{ tipo: "treinado", pericia: v }] : []; }, "Ser treinado nessa perícia para escolher a trilha (como Médico de Campo pede Medicina)."));
       }
       return el("div.pc-editor__passo", {}, partes);
@@ -205,7 +213,7 @@
         ? ["Aparece nas vagas de poder paranormal da Progressão (Transcender e as demais), junto dos do livro" + (def.elemento ? ", no grupo do elemento" : "") + ".", def.requisitoElemento ? "O requisito é conferido pela Progressão." : null, def.efeitos.length ? "Os efeitos entram na conta (" + def.efeitos.map(H().textoEfeito).join(", ") + ")." : "Sem efeito na conta.", def.efeitosAfinidade.length ? "Com a segunda escolha (afinidade), entram também: " + def.efeitosAfinidade.map(H().textoEfeito).join(", ") + "." : null]
         : ehOrigem
         ? ["As perícias fixas entram treinadas na criação e na troca de origem.", def.efeitos.length ? "Os efeitos entram na conta (" + def.efeitos.map(H().textoEfeito).join(", ") + ")." : (def.escolhaHb ? "Sem efeito fixo; a escolha do poder entra na conta depois de feita." : "Sem efeito na conta.")]
-        : ["A trilha aparece na vaga de Trilha para " + C().classe(def.classe).nome + " (e para as Classes Homebrew que usam as trilhas dela).", "Cada poder chega no seu marco; os efeitos configurados entram na conta."];
+        : [def.classeHomebrew ? "A trilha aparece na vaga de Trilha só para a classe Homebrew " + def.classeHomebrewNome + "." : "A trilha aparece na vaga de Trilha para " + C().classe(def.classe).nome + " (e para as Classes Homebrew que usam as trilhas dela ou que a escolherem).", "Cada poder chega no seu marco; os efeitos configurados entram na conta."];
       var manual = ehPoder
         ? [def.escolhaHb ? "Do poder: " + H().textoEscolha(def.escolhaHb) + " — escolhida na Progressão." : null, "O que o texto descreve além dos efeitos é aplicado pela mesa."]
         : ehOrigem

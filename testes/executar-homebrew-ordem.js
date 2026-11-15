@@ -400,5 +400,41 @@ t.grupo("Poder paranormal Homebrew · nas vagas de poder paranormal");
   t.ok("as cópias do poder entram no painel de versões", H.copiasDaFicha(o).some((c) => c.tipo === "poder" && c.chave === pp.chave));
 }
 
+t.grupo("Trilha × Classe Homebrew · vínculo exclusivo nos dois sentidos");
+{
+  const IDC = "cl000001-sintetico";
+  const base2 = Object.assign(copia(H.modeloDeOficial("combatente")), { nome: "Guardião", homebrewId: IDC, poderesDe: "combatente", trilhasDe: "", patentes: null });
+  const gua = H.normalizarClasse(base2);
+  C.registrarClasseHomebrew(gua);
+  const poderesTr = [10, 40, 65, 99].map((n) => ({ nex: n, nome: "Passo " + n, resumo: "Texto.", efeitos: n === 10 ? [{ tipo: "defesa", valor: 1 }] : [] }));
+  const exc = H.normalizarTrilha({ nome: "Vigília Eterna", homebrewId: "tr000001-sintetico", classe: "combatente", classeHomebrew: IDC, classeHomebrewNome: "Guardião", poderes: poderesTr });
+  t.ok("a trilha exclusiva guarda o id do registro da classe, sem classe oficial", exc.classeHomebrew === IDC && exc.classe === "" && exc.classeHomebrewNome === "Guardião");
+  t.ok("a prévia diz para quem ela é", /Só para a classe Homebrew Guardião/.test(H.previaTrilha(exc)[0]));
+  C.registrarTrilhaHomebrew(exc);
+  const fGua = (classe) => R.normalizar({ classe: classe.chave, origem: "academico", nex: 10, atributos: { agi: 1, for: 2, int: 1, pre: 1, vig: 2 }, homebrew: { classes: { [classe.chave]: classe }, trilhas: { [exc.chave]: exc } } });
+  const o1 = fGua(gua);
+  t.ok("aparece na vaga de Trilha da classe Homebrew dela", E.candidatosTrilha(o1, "d2.trilha", {}).some((c) => c.trilha.chave === exc.chave));
+  const oComb = R.normalizar({ classe: "combatente", origem: "academico", nex: 10, atributos: { agi: 1, for: 2, int: 1, pre: 1, vig: 2 } });
+  t.ok("e não aparece para o Combatente do livro", !E.candidatosTrilha(oComb, "d2.trilha", {}).some((c) => c.trilha.chave === exc.chave));
+  const outra = H.normalizarClasse(Object.assign(copia(base2), { nome: "Outra", homebrewId: "cl000002-sintetico", trilhasDe: "combatente" }));
+  C.registrarClasseHomebrew(outra);
+  t.ok("nem para outra classe Homebrew (mesmo usando as trilhas do Combatente)", !C.trilhaServe(exc, outra.chave, null));
+  const gua2 = H.normalizarClasse(Object.assign(copia(base2), { pvInicial: { base: 21, atributo: "vig" } }));
+  C.registrarClasseHomebrew(gua2);
+  t.ok("vale em qualquer versão da classe (chave nova, mesmo registro)", gua2.chave !== gua.chave && C.trilhaServe(exc, gua2.chave, null));
+  const vaga = E.vagas(o1).filter((v) => v.id === "d2.trilha")[0];
+  E.registrar(o1, vaga, { valor: exc.chave, opcoes: {} });
+  const re = R.normalizar(copia(Object.assign({}, o1, { trilha: exc.chave })));
+  t.ok("escolhida, a trilha fica na ficha ao recarregar", re.trilha === exc.chave, re.trilha);
+  const livre = H.normalizarTrilha({ nome: "Rastro Livre", homebrewId: "tr000002-sintetico", classe: "especialista", poderes: poderesTr });
+  C.registrarTrilhaHomebrew(livre);
+  t.ok("uma classe sem a trilha na lista não a recebe", !C.trilhaServe(livre, gua.chave, null));
+  const gua3 = H.normalizarClasse(Object.assign(copia(base2), { trilhasHomebrew: [livre.homebrewId, "id inválido!"] }));
+  C.registrarClasseHomebrew(gua3);
+  t.iguais("a classe guarda as trilhas Homebrew escolhidas (ids válidos)", gua3.trilhasHomebrew, [livre.homebrewId]);
+  t.ok("e passa a oferecer a trilha escolhida, junto da exclusiva", C.trilhasDaClasse(gua3.chave).some((x) => x.chave === livre.chave) && C.trilhasDaClasse(gua3.chave).some((x) => x.chave === exc.chave));
+  t.ok("a trilha livre continua valendo para a classe oficial dela", C.trilhasDaClasse("especialista").some((x) => x.chave === livre.chave));
+}
+
 console.log(`\n${FORTE}${passaram} ok${FIM}, ${falharam ? VERMELHO : ""}${falharam} falha(s)${FIM}.`);
 if (falharam) Deno.exit(1);

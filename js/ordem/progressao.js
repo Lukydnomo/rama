@@ -1793,7 +1793,7 @@
     var motivos = [];
     var tr = h ? C.trilha(h.trilha) : null;
     if (!h || h.tipo !== "trilha" || !tr) return ["Habilidade de trilha desconhecida."];
-    if (tr.classe !== classe) motivos.push(h.nome + " não é de uma trilha de " + (C.classe(classe) || { nome: classe }).nome.toLowerCase() + ".");
+    if (!((tr.classe === classe && !tr.classeHomebrew) || C.trilhaServe(tr, classe, ordem))) motivos.push(h.nome + " não é de uma trilha de " + (C.classe(classe) || { nome: classe }).nome.toLowerCase() + ".");
     if (ordem.trilha === tr.chave) motivos.push(h.nome + " já é da sua trilha.");
     if (etapa.nex < h.nex) motivos.push(h.nome + " pede NEX " + h.nex + "% (esta escolha é de " + etapa.rotulo + ").");
     if (h.dependeDe) {

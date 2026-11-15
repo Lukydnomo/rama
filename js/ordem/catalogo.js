@@ -1572,10 +1572,14 @@
      ficha, para uma classe de agente. */
   function trilhaServe(tr, chaveClasse, ordem) {
     if (!tr || !chaveClasse) return false;
-    if (tr.classe === chaveClasse) return true;
-    /* v9.8: classe Homebrew com "usa as trilhas de…" (a mesa escolheu). */
     var hb = POR_CHAVE.classes[chaveClasse];
-    if (hb && hb.homebrew) return !!hb.trilhasDe && tr.classe === hb.trilhasDe;
+    /* Trilha Homebrew exclusiva de uma classe Homebrew: só ela (em
+       qualquer versão — o vínculo é o id do registro da classe). */
+    if (tr.classeHomebrew) return !!(hb && hb.homebrew && hb.homebrewId === tr.classeHomebrew);
+    if (tr.classe === chaveClasse) return true;
+    /* v9.8: classe Homebrew com "usa as trilhas de…" (a mesa escolheu) e,
+       também, as trilhas Homebrew que ela escolheu pelo nome. */
+    if (hb && hb.homebrew) return (!!hb.trilhasDe && tr.classe === hb.trilhasDe) || !!(tr.homebrew && tr.homebrewId && (hb.trilhasHomebrew || []).indexOf(tr.homebrewId) >= 0);
     if (!tr.geral || !ehAgente(chaveClasse)) return false;
     var OP = global.RAMAOrdemOpcionais;
     return !!(OP && ordem && OP.ligada(ordem, "trilhaGeral"));
@@ -1590,7 +1594,7 @@
   /* `ordem` (opcional): com ela, as trilhas gerais entram quando a regra
      Trilha Geral está ligada. */
   function trilhasDaClasse(chaveClasse, ordem) {
-    return TRILHAS.concat(trilhasHomebrew()).filter(function (t) { return t.classe === chaveClasse || (ordem && trilhaServe(t, chaveClasse, ordem)); });
+    return TRILHAS.concat(trilhasHomebrew()).filter(function (t) { return (t.classe === chaveClasse && !t.classeHomebrew) || trilhaServe(t, chaveClasse, ordem); });
   }
 
   function progressaoDaClasse(chaveClasse) {
