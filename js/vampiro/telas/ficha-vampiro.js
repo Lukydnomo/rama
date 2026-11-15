@@ -29,6 +29,7 @@
 
 (function (global) {
   "use strict";
+  var bibliotecaPedida = false;
 
   var U = global.RAMAUtil;
   var el = U.el;
@@ -706,6 +707,8 @@
   }
 
   function painelCompra(ctx) {
+    /* v9.20: Disciplinas e Vantagens Homebrew da biblioteca na compra (uma viagem). */
+    if (global.RAMAVampiroHomebrew && !bibliotecaPedida) { bibliotecaPedida = true; global.RAMAVampiroHomebrew.carregarBiblioteca().then(function (r) { if (r && (r.disciplinas.length || r.vantagens.length) && ctx.redesenhar) ctx.redesenhar(); }); }
     var o = ctx.ficha.vampiro;
     var p = { tipo: "habilidade", alvo: "", para: 1, nome: "", poderes: [], ressonancia: false, sangueProvado: false };
     var alvoCaixa = el("div"), extra = el("div"), previa = el("p.vamp-previa", { role: "status" });

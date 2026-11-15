@@ -1,5 +1,12 @@
 # A API
 
+## Clã, Predador, Disciplina e Vantagem Homebrew de Vampiro — v9.20
+
+- `salvar_homebrew`: o grupo `estrutural` de `vampiro` aceita `cla`,
+  `predador`, `disciplina` e `vantagem` (Vantagem e Defeito; o tipo está
+  em `modelo.def.tipo`).
+- O motor do servidor mantém as cópias em `vampiro.homebrew`.
+
 ## Papel, Motivação, Mazela e Fardo Homebrew de Oblívio — v9.19
 
 - `salvar_homebrew`: o grupo `estrutural` de `oblivio` aceita `papel`,

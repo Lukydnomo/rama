@@ -91,7 +91,7 @@
         def.amalgama ? el("span.r-etiqueta", { texto: "Amálgama: " + T().nomeDisc(def.amalgama.disciplina) + " " + def.amalgama.nivel }) : null,
         def.formula ? el("span.r-etiqueta", { texto: "Fórmula" }) : null,
         d.ativo ? el("span.r-etiqueta.r-etiqueta--aviso", { texto: "Ativo" }) : null,
-        el("span.t-mini", { texto: (origem ? origem + " · " : "") + "p. " + def.pagina }),
+        el("span.t-mini", { texto: (origem ? origem + " · " : "") + (def.homebrew ? "Homebrew" : "p. " + def.pagina) }),
       ]),
       el("p.vamp-poder__efeito", { texto: def.efeito || "" }),
       el("p.t-mini", { texto: ["Custo: " + custoTexto(def), def.parada ? "Parada: " + paradaTexto(def.parada) : "", def.resistencia ? "Resistência: " + paradaTexto(def.resistencia) : "", "Duração: " + (DURACAO[def.duracao] || def.duracao)].filter(Boolean).join(" · ") }),
@@ -158,7 +158,7 @@
     return el("ul.vamp-poderes", {}, o.rituais.map(function (ri) {
       var def = DS().ritual(ri.chave);
       return el("li.vamp-poder", {}, [
-        el("div.vamp-poder__topo", {}, [el("span.vamp-poder__nome", { texto: def.nome }), el("span.r-etiqueta", { texto: "Nível " + def.nivel }), el("span.t-mini", { texto: "p. " + def.pagina })]),
+        el("div.vamp-poder__topo", {}, [el("span.vamp-poder__nome", { texto: def.nome }), el("span.r-etiqueta", { texto: "Nível " + def.nivel }), el("span.t-mini", { texto: def.homebrew ? "Homebrew" : "p. " + def.pagina })]),
         el("p.vamp-poder__efeito", { texto: def.efeito }),
         el("p.t-mini", { texto: ["Dificuldade " + def.dificuldade, def.ingredientes ? "Ingredientes: " + def.ingredientes : "", def.execucaoNoites ? def.execucaoNoites + " noites" : def.execucaoMinutos + " min"].filter(Boolean).join(" · ") }),
         pode ? botao("Conduzir", function () {
@@ -178,7 +178,7 @@
     var conhecidas = el("ul.vamp-poderes", {}, o.formulas.map(function (f) {
       var def = DS().poder(f.chave);
       return el("li.vamp-poder", {}, [
-        el("div.vamp-poder__topo", {}, [el("span.vamp-poder__nome", { texto: def.nome }), el("span.r-etiqueta", { texto: "Nível " + def.nivel }), el("span.t-mini", { texto: "p. " + def.pagina })]),
+        el("div.vamp-poder__topo", {}, [el("span.vamp-poder__nome", { texto: def.nome }), el("span.r-etiqueta", { texto: "Nível " + def.nivel }), el("span.t-mini", { texto: def.homebrew ? "Homebrew" : "p. " + def.pagina })]),
         el("p.vamp-poder__efeito", { texto: def.efeito || "" }),
         pode ? botao("Destilar", function () {
           var res = null;

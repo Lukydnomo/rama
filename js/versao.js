@@ -118,6 +118,19 @@
 
   var CHANGELOG = [
     {
+      versao: "9.20.0",
+      codinome: "VITRIFICACAO",
+      data: "15/11/2026",
+      mudancas: {
+        "Adicionado": [
+          "Disciplina Homebrew de Vampiro: tipo, ressonância e até dez poderes (nível, custo em Checagens, parada, duração e efeito). O motor cobra, rola e marca a duração; o efeito é da mesa.",
+          "Clã Homebrew (três Disciplinas, Perdição e Compulsão), Predador Homebrew (especializações, Disciplinas, Humanidade, Vantagem e Defeito que dá, caça) e Vantagem/Defeito Homebrew (pontos, efeito Social). Aparecem na criação e nas compras com XP.",
+          "A ficha guarda a própria cópia: mudar a biblioteca não muda um vampiro em jogo.",
+        ],
+        "Técnico": ["Novos js/vampiro/homebrew-vampiro.js e js/paginas/homebrew-vampiro.js. O catálogo e as Disciplinas de Vampiro ganharam normalizar/registrar (chaves hbvc-/hbvp-/hbvv-/hbvd- versionadas; os poderes viram <disciplina>-p<n>); a ficha guarda as cópias em vampiro.homebrew. Servidor: tipos cla, predador, disciplina e vantagem (só Vampiro). Novo testes/executar-homebrew-vampiro.js (18 verificações)."],
+      },
+    },
+    {
       versao: "9.19.0",
       codinome: "VIGIA",
       data: "15/11/2026",

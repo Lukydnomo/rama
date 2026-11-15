@@ -41,6 +41,10 @@
     { chave: "motivacao", rotulo: "Motivações", um: "Motivação" },
     { chave: "mazela", rotulo: "Mazelas", um: "Mazela" },
     { chave: "fardo", rotulo: "Fardos", um: "Fardo" },
+    { chave: "cla", rotulo: "Clãs", um: "Clã" },
+    { chave: "predador", rotulo: "Predadores", um: "Predador" },
+    { chave: "disciplina", rotulo: "Disciplinas", um: "Disciplina" },
+    { chave: "vantagem", rotulo: "Vantagens e Defeitos", um: "Vantagem" },
   ];
   var GENERICOS = ["item", "arma", "armadura", "mochila", "habilidade"];
   var NATIVOS = ["oblivio", "vampiro", "goblins", "tormenta20", "ordem2"];

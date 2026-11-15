@@ -801,7 +801,86 @@
     ] },
   };
 
+  /* =================================================================
+     v9.20 — CLÃ, PREDADOR, VANTAGEM e DEFEITO HOMEBREW (chaves hbvc-/
+     hbvp-/hbvv-<id>-<hash>, cópias em o.homebrew). No formato dos do
+     livro, nos MESMOS mapas:
+       Clã        três Disciplinas, a Perdição (texto) e a Compulsão
+                  (penalidade em todas as paradas até a condição de fim)
+       Predador   especializações, Disciplinas, Humanidade, Vantagens e
+                  Defeitos que dá, paradas de caça, clãs proibidos
+       Vantagem   qualidade ou defeito: níveis, efeito Social (±dados) e
+                  clãs proibidos
+     Puro (o servidor roda).
+     ================================================================= */
+  function hbObj(v) { return v && typeof v === "object" && !Array.isArray(v) ? v : {}; }
+  function hbLista(v) { return Array.isArray(v) ? v : []; }
+  function hbTx(v, max) { return String(v === undefined || v === null ? "" : v).slice(0, max || 200); }
+  function hbInt(v, min, max, p) { var n = Math.round(Number(v)); return v !== "" && v !== null && v !== undefined && isFinite(n) ? Math.max(min, Math.min(max, n)) : p; }
+  function hbEstavel(v) {
+    if (Array.isArray(v)) return "[" + v.map(hbEstavel).join(",") + "]";
+    if (v && typeof v === "object") return "{" + Object.keys(v).sort().map(function (k) { return JSON.stringify(k) + ":" + hbEstavel(v[k]); }).join(",") + "}";
+    return JSON.stringify(v === undefined ? null : v);
+  }
+  function hbHash(t) { var h = 5381; for (var i = 0; i < t.length; i++) h = ((h << 5) + h + t.charCodeAt(i)) | 0; return (h >>> 0).toString(36).slice(0, 6); }
+  function hbChave(prefixo, d) { var sem = Object.assign({}, d); delete sem.chave; return prefixo + (String(d.homebrewId || "local").toLowerCase().replace(/[^a-z0-9]/g, "").slice(0, 8) || "local") + "-" + hbHash(hbEstavel(sem)); }
+  var PADROES = { cla: /^hbvc-[a-z0-9-]{3,30}$/, predador: /^hbvp-[a-z0-9-]{3,30}$/, vantagem: /^hbvv-[a-z0-9-]{3,30}$/ };
+  function ehHomebrew(tipo, k) { return !!PADROES[tipo] && PADROES[tipo].test(String(k || "")); }
+  function DSh() { return global.RAMAVampiroDisciplinas; }
+  function disciplinaOk(k) { return !DSh() || !!DSh().DISCIPLINAS[k] || (DSh().ehDisciplinaHomebrew && DSh().ehDisciplinaHomebrew(k)); }
+  function habOk(k) { return HABILIDADES.some(function (h) { return h.chave === k; }); }
+  function atrOk(k) { return ATRIBUTOS.some(function (a) { return a.chave === k; }); }
+  function clasOk(l) { return hbLista(l).map(String).filter(function (k, i, x) { return (!!CLAS[k] || ehHomebrew("cla", k)) && x.indexOf(k) === i; }); }
+  function vantagensOk(l, tipo) {
+    return hbLista(l).slice(0, 2).map(function (v0) { var v = hbObj(v0); var d = VANTAGENS[v.chave]; return d && d.tipo === tipo && !d.homebrew ? { chave: v.chave, pontos: hbInt(v.pontos, 1, 5, d.niveis[0]), nota: hbTx(v.nota, 60) } : null; }).filter(Boolean);
+  }
+  function normalizarHomebrew(tipo, bruto) {
+    var b = hbObj(bruto), d, prefixo = { cla: "hbvc-", predador: "hbvp-", vantagem: "hbvv-" }[tipo];
+    if (!prefixo) return null;
+    var base = { chave: ehHomebrew(tipo, b.chave) ? b.chave : "", homebrew: true, homebrewId: hbTx(b.homebrewId, 80), pagina: 0 };
+    if (tipo === "cla") {
+      var c = hbObj(b.compulsao);
+      d = Object.assign(base, {
+        nome: hbTx(b.nome, 40).trim() || "Clã Homebrew", descricao: hbTx(b.descricao, 600).trim(),
+        disciplinas: hbLista(b.disciplinas).map(String).filter(function (k, i, l) { return disciplinaOk(k) && k !== "alquimia" && l.indexOf(k) === i; }).slice(0, 3),
+        perdicao: { pagina: 0, efeito: "", texto: hbTx(hbObj(b.perdicao).texto, 600).trim() },
+        compulsao: { chave: "", nome: hbTx(c.nome, 40).trim() || "Compulsão", penalidade: hbInt(c.penalidade, 1, 3, 2), alvo: "todas", termina: hbTx(c.termina, 300).trim(), pagina: 0 },
+      });
+    } else if (tipo === "predador") {
+      d = Object.assign(base, {
+        nome: hbTx(b.nome, 40).trim() || "Predador Homebrew", descricao: hbTx(b.descricao, 600).trim(),
+        especializacoes: hbLista(b.especializacoes).slice(0, 2).map(function (e0) { var e = hbObj(e0); return habOk(e.habilidade) ? { habilidade: e.habilidade, nome: hbTx(e.nome, 40).trim() || "Especialização" } : null; }).filter(Boolean),
+        disciplinas: hbLista(b.disciplinas).map(String).filter(function (k, i, l) { return disciplinaOk(k) && k !== "alquimia" && l.indexOf(k) === i; }).slice(0, 2),
+        humanidade: hbInt(b.humanidade, -2, 2, 0),
+        vantagens: vantagensOk(b.vantagens, "qualidade"),
+        defeitos: vantagensOk(b.defeitos, "defeito"),
+        parada: hbLista(b.parada).slice(0, 2).map(function (x) { var y = hbLista(x); return atrOk(y[0]) && habOk(y[1]) ? [y[0], y[1]] : null; }).filter(Boolean),
+        proibidoPara: clasOk(b.proibidoPara),
+      });
+      if (!d.proibidoPara.length) delete d.proibidoPara;
+    } else {
+      var nv = hbLista(b.niveis).map(Number).filter(function (n, i, l) { return n >= 1 && n <= 5 && Math.floor(n) === n && l.indexOf(n) === i; }).sort();
+      var soc = hbInt(hbObj(b.efeito).social, -3, 3, 0);
+      d = Object.assign(base, {
+        tipo: b.tipo === "defeito" ? "defeito" : "qualidade", grupo: "Homebrew",
+        nome: hbTx(b.nome, 40).trim() || "Vantagem Homebrew", niveis: nv.length ? nv : [1], texto: hbTx(b.texto, 600).trim(),
+        proibidoPara: clasOk(b.proibidoPara),
+      });
+      if (soc) d.efeito = { social: soc };
+      if (!d.proibidoPara.length) delete d.proibidoPara;
+    }
+    if (!d.chave) d.chave = hbChave(prefixo, d);
+    if (tipo === "cla") d.compulsao.chave = d.chave + "-c";
+    return d;
+  }
+  function registrarHomebrew(tipo, def) {
+    if (!def || !ehHomebrew(tipo, def.chave)) return null;
+    ({ cla: CLAS, predador: PREDADORES, vantagem: VANTAGENS })[tipo][def.chave] = def;
+    return def;
+  }
+
   global.RAMAVampiroCatalogo = {
+    ehHomebrew: ehHomebrew, normalizarHomebrew: normalizarHomebrew, registrarHomebrew: registrarHomebrew,
     paginaDoPdf: paginaDoPdf,
     ATRIBUTOS: ATRIBUTOS, CATEGORIAS: CATEGORIAS, HABILIDADES: HABILIDADES,
     DISTRIBUICAO_DE_ATRIBUTOS: DISTRIBUICAO_DE_ATRIBUTOS, DISTRIBUICOES_DE_HABILIDADES: DISTRIBUICOES_DE_HABILIDADES,

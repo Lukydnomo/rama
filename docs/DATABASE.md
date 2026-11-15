@@ -1,5 +1,13 @@
 # O banco
 
+## Clã, Predador, Disciplina e Vantagem Homebrew de Vampiro — v9.20
+
+Nenhuma aba nova. No `HOMEBREW`, a coluna `tipo` aceita `cla`, `predador`,
+`disciplina` e `vantagem`. Na ficha de Vampiro, `vampiro.homebrew` guarda
+as cópias (`clas`, `predadores`, `disciplinas`, `vantagens`); `cla`,
+`predador`, as chaves de `disciplinas`, `poderes[].chave` e
+`vantagens[].chave` aceitam essas chaves. Opcional.
+
 ## Papel, Motivação, Mazela e Fardo Homebrew de Oblívio — v9.19
 
 Nenhuma aba nova. No `HOMEBREW`, a coluna `tipo` aceita `papel`,

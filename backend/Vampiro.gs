@@ -1135,7 +1135,86 @@ function acaoVampiroOperar(corpo, usuario) {
     ] },
   };
 
+  /* =================================================================
+     v9.20 — CLÃ, PREDADOR, VANTAGEM e DEFEITO HOMEBREW (chaves hbvc-/
+     hbvp-/hbvv-<id>-<hash>, cópias em o.homebrew). No formato dos do
+     livro, nos MESMOS mapas:
+       Clã        três Disciplinas, a Perdição (texto) e a Compulsão
+                  (penalidade em todas as paradas até a condição de fim)
+       Predador   especializações, Disciplinas, Humanidade, Vantagens e
+                  Defeitos que dá, paradas de caça, clãs proibidos
+       Vantagem   qualidade ou defeito: níveis, efeito Social (±dados) e
+                  clãs proibidos
+     Puro (o servidor roda).
+     ================================================================= */
+  function hbObj(v) { return v && typeof v === "object" && !Array.isArray(v) ? v : {}; }
+  function hbLista(v) { return Array.isArray(v) ? v : []; }
+  function hbTx(v, max) { return String(v === undefined || v === null ? "" : v).slice(0, max || 200); }
+  function hbInt(v, min, max, p) { var n = Math.round(Number(v)); return v !== "" && v !== null && v !== undefined && isFinite(n) ? Math.max(min, Math.min(max, n)) : p; }
+  function hbEstavel(v) {
+    if (Array.isArray(v)) return "[" + v.map(hbEstavel).join(",") + "]";
+    if (v && typeof v === "object") return "{" + Object.keys(v).sort().map(function (k) { return JSON.stringify(k) + ":" + hbEstavel(v[k]); }).join(",") + "}";
+    return JSON.stringify(v === undefined ? null : v);
+  }
+  function hbHash(t) { var h = 5381; for (var i = 0; i < t.length; i++) h = ((h << 5) + h + t.charCodeAt(i)) | 0; return (h >>> 0).toString(36).slice(0, 6); }
+  function hbChave(prefixo, d) { var sem = Object.assign({}, d); delete sem.chave; return prefixo + (String(d.homebrewId || "local").toLowerCase().replace(/[^a-z0-9]/g, "").slice(0, 8) || "local") + "-" + hbHash(hbEstavel(sem)); }
+  var PADROES = { cla: /^hbvc-[a-z0-9-]{3,30}$/, predador: /^hbvp-[a-z0-9-]{3,30}$/, vantagem: /^hbvv-[a-z0-9-]{3,30}$/ };
+  function ehHomebrew(tipo, k) { return !!PADROES[tipo] && PADROES[tipo].test(String(k || "")); }
+  function DSh() { return global.RAMAVampiroDisciplinas; }
+  function disciplinaOk(k) { return !DSh() || !!DSh().DISCIPLINAS[k] || (DSh().ehDisciplinaHomebrew && DSh().ehDisciplinaHomebrew(k)); }
+  function habOk(k) { return HABILIDADES.some(function (h) { return h.chave === k; }); }
+  function atrOk(k) { return ATRIBUTOS.some(function (a) { return a.chave === k; }); }
+  function clasOk(l) { return hbLista(l).map(String).filter(function (k, i, x) { return (!!CLAS[k] || ehHomebrew("cla", k)) && x.indexOf(k) === i; }); }
+  function vantagensOk(l, tipo) {
+    return hbLista(l).slice(0, 2).map(function (v0) { var v = hbObj(v0); var d = VANTAGENS[v.chave]; return d && d.tipo === tipo && !d.homebrew ? { chave: v.chave, pontos: hbInt(v.pontos, 1, 5, d.niveis[0]), nota: hbTx(v.nota, 60) } : null; }).filter(Boolean);
+  }
+  function normalizarHomebrew(tipo, bruto) {
+    var b = hbObj(bruto), d, prefixo = { cla: "hbvc-", predador: "hbvp-", vantagem: "hbvv-" }[tipo];
+    if (!prefixo) return null;
+    var base = { chave: ehHomebrew(tipo, b.chave) ? b.chave : "", homebrew: true, homebrewId: hbTx(b.homebrewId, 80), pagina: 0 };
+    if (tipo === "cla") {
+      var c = hbObj(b.compulsao);
+      d = Object.assign(base, {
+        nome: hbTx(b.nome, 40).trim() || "Clã Homebrew", descricao: hbTx(b.descricao, 600).trim(),
+        disciplinas: hbLista(b.disciplinas).map(String).filter(function (k, i, l) { return disciplinaOk(k) && k !== "alquimia" && l.indexOf(k) === i; }).slice(0, 3),
+        perdicao: { pagina: 0, efeito: "", texto: hbTx(hbObj(b.perdicao).texto, 600).trim() },
+        compulsao: { chave: "", nome: hbTx(c.nome, 40).trim() || "Compulsão", penalidade: hbInt(c.penalidade, 1, 3, 2), alvo: "todas", termina: hbTx(c.termina, 300).trim(), pagina: 0 },
+      });
+    } else if (tipo === "predador") {
+      d = Object.assign(base, {
+        nome: hbTx(b.nome, 40).trim() || "Predador Homebrew", descricao: hbTx(b.descricao, 600).trim(),
+        especializacoes: hbLista(b.especializacoes).slice(0, 2).map(function (e0) { var e = hbObj(e0); return habOk(e.habilidade) ? { habilidade: e.habilidade, nome: hbTx(e.nome, 40).trim() || "Especialização" } : null; }).filter(Boolean),
+        disciplinas: hbLista(b.disciplinas).map(String).filter(function (k, i, l) { return disciplinaOk(k) && k !== "alquimia" && l.indexOf(k) === i; }).slice(0, 2),
+        humanidade: hbInt(b.humanidade, -2, 2, 0),
+        vantagens: vantagensOk(b.vantagens, "qualidade"),
+        defeitos: vantagensOk(b.defeitos, "defeito"),
+        parada: hbLista(b.parada).slice(0, 2).map(function (x) { var y = hbLista(x); return atrOk(y[0]) && habOk(y[1]) ? [y[0], y[1]] : null; }).filter(Boolean),
+        proibidoPara: clasOk(b.proibidoPara),
+      });
+      if (!d.proibidoPara.length) delete d.proibidoPara;
+    } else {
+      var nv = hbLista(b.niveis).map(Number).filter(function (n, i, l) { return n >= 1 && n <= 5 && Math.floor(n) === n && l.indexOf(n) === i; }).sort();
+      var soc = hbInt(hbObj(b.efeito).social, -3, 3, 0);
+      d = Object.assign(base, {
+        tipo: b.tipo === "defeito" ? "defeito" : "qualidade", grupo: "Homebrew",
+        nome: hbTx(b.nome, 40).trim() || "Vantagem Homebrew", niveis: nv.length ? nv : [1], texto: hbTx(b.texto, 600).trim(),
+        proibidoPara: clasOk(b.proibidoPara),
+      });
+      if (soc) d.efeito = { social: soc };
+      if (!d.proibidoPara.length) delete d.proibidoPara;
+    }
+    if (!d.chave) d.chave = hbChave(prefixo, d);
+    if (tipo === "cla") d.compulsao.chave = d.chave + "-c";
+    return d;
+  }
+  function registrarHomebrew(tipo, def) {
+    if (!def || !ehHomebrew(tipo, def.chave)) return null;
+    ({ cla: CLAS, predador: PREDADORES, vantagem: VANTAGENS })[tipo][def.chave] = def;
+    return def;
+  }
+
   global.RAMAVampiroCatalogo = {
+    ehHomebrew: ehHomebrew, normalizarHomebrew: normalizarHomebrew, registrarHomebrew: registrarHomebrew,
     paginaDoPdf: paginaDoPdf,
     ATRIBUTOS: ATRIBUTOS, CATEGORIAS: CATEGORIAS, HABILIDADES: HABILIDADES,
     DISTRIBUICAO_DE_ATRIBUTOS: DISTRIBUICAO_DE_ATRIBUTOS, DISTRIBUICOES_DE_HABILIDADES: DISTRIBUICOES_DE_HABILIDADES,
@@ -1393,7 +1472,62 @@ function acaoVampiroOperar(corpo, usuario) {
   var ritualPorChave = {};
   RITUAIS.forEach(function (x) { ritualPorChave[x.chave] = x; });
 
+  /* =================================================================
+     v9.20 — DISCIPLINA HOMEBREW (chave hbvd-<id>-<hash>, cópia em
+     o.homebrew.disciplinas): tipo (mental ou física — vale para estacado
+     e frenesi), ressonância e até 10 poderes (nível 1 a 5, custo em
+     Checagens de Sangue, parada Atributo + Disciplina, duração e o
+     efeito em texto). O motor resolve custo, teste e duração, como nos
+     poderes "narrativos" do livro; o efeito é da mesa. Puro.
+     ================================================================= */
+  function hbObj(v) { return v && typeof v === "object" && !Array.isArray(v) ? v : {}; }
+  function hbLista(v) { return Array.isArray(v) ? v : []; }
+  function hbTx(v, max) { return String(v === undefined || v === null ? "" : v).slice(0, max || 200); }
+  function hbInt(v, min, max, p) { var n = Math.round(Number(v)); return v !== "" && v !== null && v !== undefined && isFinite(n) ? Math.max(min, Math.min(max, n)) : p; }
+  function hbEstavel(v) {
+    if (Array.isArray(v)) return "[" + v.map(hbEstavel).join(",") + "]";
+    if (v && typeof v === "object") return "{" + Object.keys(v).sort().map(function (k) { return JSON.stringify(k) + ":" + hbEstavel(v[k]); }).join(",") + "}";
+    return JSON.stringify(v === undefined ? null : v);
+  }
+  function hbHash(t) { var h = 5381; for (var i = 0; i < t.length; i++) h = ((h << 5) + h + t.charCodeAt(i)) | 0; return (h >>> 0).toString(36).slice(0, 6); }
+  function hbChave(prefixo, d) { var sem = Object.assign({}, d); delete sem.chave; return prefixo + (String(d.homebrewId || "local").toLowerCase().replace(/[^a-z0-9]/g, "").slice(0, 8) || "local") + "-" + hbHash(hbEstavel(sem)); }
+  var PADRAO_DISC = /^hbvd-[a-z0-9-]{3,30}$/;
+  var ATRS_DISC = ["forca", "destreza", "vigor", "carisma", "manipulacao", "autocontrole", "inteligencia", "raciocinio", "determinacao"];
+  function ehDisciplinaHomebrew(k) { return PADRAO_DISC.test(String(k || "")); }
+  function normalizarDisciplinaHomebrew(bruto) {
+    var b = hbObj(bruto);
+    var d = {
+      chave: ehDisciplinaHomebrew(b.chave) ? b.chave : "",
+      nome: hbTx(b.nome, 40).trim() || "Disciplina Homebrew", homebrew: true, homebrewId: hbTx(b.homebrewId, 80), pagina: 0,
+      tipo: b.tipo === "fisica" ? "fisica" : "mental",
+      mascara: hbTx(b.mascara, 40).trim(),
+      ressonancia: ["animal", "fleumatica", "colerica", "melancolica", "sanguinea"].indexOf(b.ressonancia) >= 0 ? b.ressonancia : "",
+      poderesHb: hbLista(b.poderesHb).slice(0, 10).map(function (p0, i) {
+        var q = hbObj(p0);
+        return { nivel: hbInt(q.nivel, 1, 5, 1), nome: hbTx(q.nome, 60).trim() || "Poder " + (i + 1), checagens: hbInt(q.checagens, 0, 3, 0),
+          atributo: ATRS_DISC.indexOf(q.atributo) >= 0 ? q.atributo : "", duracao: ["passiva", "turno", "cena", "noite", "indefinida"].indexOf(q.duracao) >= 0 ? q.duracao : "cena",
+          efeito: hbTx(q.efeito, 600).trim() };
+      }),
+    };
+    if (!d.chave) d.chave = hbChave("hbvd-", d);
+    return d;
+  }
+  function registrarDisciplinaHomebrew(def) {
+    if (!def || !ehDisciplinaHomebrew(def.chave)) return null;
+    DISCIPLINAS[def.chave] = def;
+    def.poderesHb.forEach(function (q, i) {
+      var chave = def.chave + "-p" + (i + 1);
+      var e = p(def.chave, q.nivel, chave, q.nome, 0, { custo: q.checagens ? { checagens: q.checagens } : { gratis: true }, duracao: q.duracao, efeito: q.efeito, narrativo: true, homebrew: true });
+      if (q.atributo) e.parada = [[q.atributo, "disciplina"]];
+      porChave[chave] = e;
+      var j = PODERES.map(function (x) { return x.chave; }).indexOf(chave);
+      if (j >= 0) PODERES[j] = e; else PODERES.push(e);
+    });
+    return def;
+  }
+
   global.RAMAVampiroDisciplinas = {
+    ehDisciplinaHomebrew: ehDisciplinaHomebrew, normalizarDisciplinaHomebrew: normalizarDisciplinaHomebrew, registrarDisciplinaHomebrew: registrarDisciplinaHomebrew, ATRS_DISC: ATRS_DISC,
     DISCIPLINAS: DISCIPLINAS, PODERES: PODERES, RITUAIS: RITUAIS, PROTECOES: PROTECOES,
     METODOS_DE_ALQUIMIA: METODOS_DE_ALQUIMIA, IMITACAO: IMITACAO, qualidadeDaDestilacao: qualidadeDaDestilacao,
     poder: function (k) { return porChave[k] || null; },
@@ -1875,11 +2009,41 @@ function acaoVampiroOperar(corpo, usuario) {
     return { superficial: inteiro(x.superficial, 0, 30, 0), agravado: inteiro(x.agravado, 0, 30, 0) };
   }
 
+  /* v9.20: Disciplina, Clã, Predador e Vantagem/Defeito Homebrew vêm com
+     a CÓPIA guardada na ficha (ou, escolhidos de uma lista da biblioteca,
+     do catálogo). As Disciplinas primeiro (clã e predador apontam para
+     elas). Sem cópia e sem catálogo, a escolha some. */
+  function homebrewDaFicha(b, o) {
+    if (!C.ehHomebrew || !DS() || !DS().ehDisciplinaHomebrew) return;
+    var hb = objeto(b.homebrew), saida = {};
+    function usar(campo, chave, ehHb, doCatalogo, normalizar, registrar) {
+      if (!ehHb(chave) || (saida[campo] && saida[campo][chave])) return null;
+      var cp = objeto(objeto(hb[campo])[chave]);
+      var def = Object.keys(cp).length ? normalizar(Object.assign({}, cp, { chave: chave })) : (doCatalogo && doCatalogo.homebrew ? copiar(doCatalogo) : null);
+      if (!def) return null;
+      registrar(def);
+      (saida[campo] = saida[campo] || {})[chave] = def;
+      return def;
+    }
+    var cla = C.ehHomebrew("cla", b.cla) ? (objeto(objeto(hb.clas)[b.cla]).disciplinas || (C.CLAS[b.cla] || {}).disciplinas || []) : [];
+    var pred = C.ehHomebrew("predador", b.predador) ? (objeto(objeto(hb.predadores)[b.predador]).disciplinas || (C.PREDADORES[b.predador] || {}).disciplinas || []) : [];
+    var discs = Object.keys(objeto(b.disciplinas)).concat(lista(b.poderes).map(function (x) { return String(objeto(x).chave || "").replace(/-p\d+$/, ""); })).concat(cla, pred);
+    discs.forEach(function (k) { usar("disciplinas", k, DS().ehDisciplinaHomebrew, DS().DISCIPLINAS[k], DS().normalizarDisciplinaHomebrew, DS().registrarDisciplinaHomebrew); });
+    usar("clas", b.cla, function (k) { return C.ehHomebrew("cla", k); }, C.CLAS[b.cla], function (x) { return C.normalizarHomebrew("cla", x); }, function (d) { C.registrarHomebrew("cla", d); });
+    usar("predadores", b.predador, function (k) { return C.ehHomebrew("predador", k); }, C.PREDADORES[b.predador], function (x) { return C.normalizarHomebrew("predador", x); }, function (d) { C.registrarHomebrew("predador", d); });
+    lista(b.vantagens).forEach(function (v) {
+      var k = objeto(v).chave;
+      usar("vantagens", k, function (x) { return C.ehHomebrew("vantagem", x); }, C.VANTAGENS[k], function (x) { return C.normalizarHomebrew("vantagem", x); }, function (d) { C.registrarHomebrew("vantagem", d); });
+    });
+    if (Object.keys(saida).length) o.homebrew = Object.assign({ versao: 1 }, saida);
+  }
+
   function normalizar(bruto) {
     var b = objeto(bruto);
     var o = fichaVazia(b.natureza);
     o.v = VERSAO_BLOCO;
     ["conceito", "senhor", "idadeVerdadeira", "idadeAparente", "epoca", "ambicao", "desejo", "perdicaoParametro", "notas", "metodoAlquimia"].forEach(function (k) { o[k] = texto(b[k], k === "notas" ? 20000 : 600); });
+    homebrewDaFicha(b, o);
     o.cla = C.CLAS[b.cla] ? b.cla : "";
     o.predador = C.PREDADORES[b.predador] ? b.predador : "";
     o.idade = C.IDADES[b.idade] ? b.idade : "neofito";

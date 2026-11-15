@@ -929,6 +929,12 @@ segredo nenhum — ele os lê das Script Properties. Publicá-lo não expõe nad
 
 ### Atualizar o backend
 
+**v9.20.0 — VITRIFICACAO:** Clã, Predador, Disciplina, Vantagem e Defeito
+Homebrew de Vampiro. Troque **`Codigo.gs`** e **`Vampiro.gs`** e crie uma
+versão nova da implantação. **`setupRama()` não é necessário.** Site: os
+arquivos listados em `docs/HOMEBREW-SISTEMAS.md` (seção "Publicar a
+v9.20.0").
+
 **v9.19.0 — VIGIA:** Papel, Motivação, Mazela e Fardo Homebrew de
 Oblívio. Troque **`Codigo.gs`** e **`Oblivio.gs`** e crie uma versão nova
 da implantação. **`setupRama()` não é necessário.** Site: os arquivos
@@ -2074,7 +2080,7 @@ Três números diferentes, que não se misturam:
 
 | | Onde | O que é |
 |---|---|---|
-| versão do aplicativo | `js/versao.js` | o que a pessoa vê: v9.19.0 |
+| versão do aplicativo | `js/versao.js` | o que a pessoa vê: v9.20.0 |
 | `schemaVersion` | `js/ficha.js` | o formato da FICHA |
 | `versaoFormato` | `js/config.js` | o formato dos arquivos de importação |
 

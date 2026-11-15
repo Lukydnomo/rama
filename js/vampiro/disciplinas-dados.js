@@ -233,7 +233,62 @@
   var ritualPorChave = {};
   RITUAIS.forEach(function (x) { ritualPorChave[x.chave] = x; });
 
+  /* =================================================================
+     v9.20 — DISCIPLINA HOMEBREW (chave hbvd-<id>-<hash>, cópia em
+     o.homebrew.disciplinas): tipo (mental ou física — vale para estacado
+     e frenesi), ressonância e até 10 poderes (nível 1 a 5, custo em
+     Checagens de Sangue, parada Atributo + Disciplina, duração e o
+     efeito em texto). O motor resolve custo, teste e duração, como nos
+     poderes "narrativos" do livro; o efeito é da mesa. Puro.
+     ================================================================= */
+  function hbObj(v) { return v && typeof v === "object" && !Array.isArray(v) ? v : {}; }
+  function hbLista(v) { return Array.isArray(v) ? v : []; }
+  function hbTx(v, max) { return String(v === undefined || v === null ? "" : v).slice(0, max || 200); }
+  function hbInt(v, min, max, p) { var n = Math.round(Number(v)); return v !== "" && v !== null && v !== undefined && isFinite(n) ? Math.max(min, Math.min(max, n)) : p; }
+  function hbEstavel(v) {
+    if (Array.isArray(v)) return "[" + v.map(hbEstavel).join(",") + "]";
+    if (v && typeof v === "object") return "{" + Object.keys(v).sort().map(function (k) { return JSON.stringify(k) + ":" + hbEstavel(v[k]); }).join(",") + "}";
+    return JSON.stringify(v === undefined ? null : v);
+  }
+  function hbHash(t) { var h = 5381; for (var i = 0; i < t.length; i++) h = ((h << 5) + h + t.charCodeAt(i)) | 0; return (h >>> 0).toString(36).slice(0, 6); }
+  function hbChave(prefixo, d) { var sem = Object.assign({}, d); delete sem.chave; return prefixo + (String(d.homebrewId || "local").toLowerCase().replace(/[^a-z0-9]/g, "").slice(0, 8) || "local") + "-" + hbHash(hbEstavel(sem)); }
+  var PADRAO_DISC = /^hbvd-[a-z0-9-]{3,30}$/;
+  var ATRS_DISC = ["forca", "destreza", "vigor", "carisma", "manipulacao", "autocontrole", "inteligencia", "raciocinio", "determinacao"];
+  function ehDisciplinaHomebrew(k) { return PADRAO_DISC.test(String(k || "")); }
+  function normalizarDisciplinaHomebrew(bruto) {
+    var b = hbObj(bruto);
+    var d = {
+      chave: ehDisciplinaHomebrew(b.chave) ? b.chave : "",
+      nome: hbTx(b.nome, 40).trim() || "Disciplina Homebrew", homebrew: true, homebrewId: hbTx(b.homebrewId, 80), pagina: 0,
+      tipo: b.tipo === "fisica" ? "fisica" : "mental",
+      mascara: hbTx(b.mascara, 40).trim(),
+      ressonancia: ["animal", "fleumatica", "colerica", "melancolica", "sanguinea"].indexOf(b.ressonancia) >= 0 ? b.ressonancia : "",
+      poderesHb: hbLista(b.poderesHb).slice(0, 10).map(function (p0, i) {
+        var q = hbObj(p0);
+        return { nivel: hbInt(q.nivel, 1, 5, 1), nome: hbTx(q.nome, 60).trim() || "Poder " + (i + 1), checagens: hbInt(q.checagens, 0, 3, 0),
+          atributo: ATRS_DISC.indexOf(q.atributo) >= 0 ? q.atributo : "", duracao: ["passiva", "turno", "cena", "noite", "indefinida"].indexOf(q.duracao) >= 0 ? q.duracao : "cena",
+          efeito: hbTx(q.efeito, 600).trim() };
+      }),
+    };
+    if (!d.chave) d.chave = hbChave("hbvd-", d);
+    return d;
+  }
+  function registrarDisciplinaHomebrew(def) {
+    if (!def || !ehDisciplinaHomebrew(def.chave)) return null;
+    DISCIPLINAS[def.chave] = def;
+    def.poderesHb.forEach(function (q, i) {
+      var chave = def.chave + "-p" + (i + 1);
+      var e = p(def.chave, q.nivel, chave, q.nome, 0, { custo: q.checagens ? { checagens: q.checagens } : { gratis: true }, duracao: q.duracao, efeito: q.efeito, narrativo: true, homebrew: true });
+      if (q.atributo) e.parada = [[q.atributo, "disciplina"]];
+      porChave[chave] = e;
+      var j = PODERES.map(function (x) { return x.chave; }).indexOf(chave);
+      if (j >= 0) PODERES[j] = e; else PODERES.push(e);
+    });
+    return def;
+  }
+
   global.RAMAVampiroDisciplinas = {
+    ehDisciplinaHomebrew: ehDisciplinaHomebrew, normalizarDisciplinaHomebrew: normalizarDisciplinaHomebrew, registrarDisciplinaHomebrew: registrarDisciplinaHomebrew, ATRS_DISC: ATRS_DISC,
     DISCIPLINAS: DISCIPLINAS, PODERES: PODERES, RITUAIS: RITUAIS, PROTECOES: PROTECOES,
     METODOS_DE_ALQUIMIA: METODOS_DE_ALQUIMIA, IMITACAO: IMITACAO, qualidadeDaDestilacao: qualidadeDaDestilacao,
     poder: function (k) { return porChave[k] || null; },

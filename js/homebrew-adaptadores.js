@@ -256,6 +256,11 @@
       { chave: "item", rotulo: "Item", ajuda: "Arma ou armadura sobre uma base do livro (dano e proteção do V5) ou objeto, inclusive sobrenatural." },
       { chave: "habilidade", rotulo: "Habilidade", ajuda: "Poder de Disciplina ou outra habilidade — por enquanto para consulta e anotações." },
       { chave: "criatura", rotulo: "Antagonista", ajuda: "Compacto (paradas) ou ficha completa." },
+      { chave: "cla", rotulo: "Clã", ajuda: "Três Disciplinas, a Perdição e a Compulsão. Entra na criação de vampiros." },
+      { chave: "predador", rotulo: "Predador", ajuda: "Especializações, Disciplinas, Humanidade, Vantagens e Defeitos que dá, paradas de caça. Entra na criação." },
+      { chave: "disciplina", rotulo: "Disciplina", ajuda: "Tipo, ressonância e os poderes por nível (custo, parada, duração). Entra na criação e nas compras com XP." },
+      { chave: "vantagem", rotulo: "Vantagem", ajuda: "Níveis, efeito Social e clãs proibidos. Entra na criação e nas compras com XP." },
+      { chave: "defeito", rotulo: "Defeito", ajuda: "Como a Vantagem, mas é um Defeito." },
     ],
     item: {
       subtipos: [
@@ -367,6 +372,8 @@
     { chave: "trilha", rotulo: "Trilha", campos: [] },
   ] };
 
+  /* v9.20: Clã, Predador, Disciplina e Vantagem/Defeito de Vampiro (js/paginas/homebrew-vampiro.js). */
+  VAMPIRO.estrutural = { subtipos: [["cla", "Clã"], ["predador", "Predador"], ["disciplina", "Disciplina"], ["vantagem", "Vantagem / Defeito"]].map(function (x) { return { chave: x[0], rotulo: x[1], campos: [] }; }) };
   /* v9.19: Papel, Motivação, Mazela e Fardo de Oblívio (js/paginas/homebrew-oblivio.js). */
   OBLIVIO.estrutural = { subtipos: ["papel", "motivacao", "mazela", "fardo"].map(function (k) { return { chave: k, rotulo: ({ papel: "Papel", motivacao: "Motivação", mazela: "Mazela", fardo: "Fardo" })[k], campos: [] }; }) };
   /* v9.17: Ocupação e Descritor de Malditos Goblins (js/paginas/homebrew-goblins.js). */
@@ -400,7 +407,7 @@
   function grupoDe(r) {
     var t = obj(r).tipo;
     if (obj(r).modelo && obj(r).modelo.grupo) return obj(r).modelo.grupo;
-    if (t === "classe" || t === "elemento" || t === "origem" || t === "trilha" || t === "raca" || t === "divindade" || t === "ocupacao" || t === "descritor" || t === "arquetipo" || t === "estilo" || t === "papel" || t === "motivacao" || t === "mazela" || t === "fardo") return "estrutural";
+    if (t === "classe" || t === "elemento" || t === "origem" || t === "trilha" || t === "raca" || t === "divindade" || t === "ocupacao" || t === "descritor" || t === "arquetipo" || t === "estilo" || t === "papel" || t === "motivacao" || t === "mazela" || t === "fardo" || t === "cla" || t === "predador" || t === "disciplina" || t === "vantagem") return "estrutural";
     if (t === "criatura") return "criatura";
     if (t === "habilidade" || t === "ritual") return "habilidade";
     return "item";
@@ -467,7 +474,7 @@
         v.chave = chaveAntiga && ELx && ELx.ehHomebrew(chaveAntiga) ? chaveAntiga : (ELx ? ELx.chaveNova(nome, r.id || "") : "");
       }
       if (subtipo === "classe" && r.classe) reg.modelo.def = r.classe;
-      if (["origem", "trilha", "raca", "divindade", "classe", "ocupacao", "descritor", "arquetipo", "estilo", "papel", "motivacao", "mazela", "fardo"].indexOf(subtipo) >= 0 && r.def) reg.modelo.def = r.def;
+      if (["origem", "trilha", "raca", "divindade", "classe", "ocupacao", "descritor", "arquetipo", "estilo", "papel", "motivacao", "mazela", "fardo", "cla", "predador", "disciplina", "vantagem"].indexOf(subtipo) >= 0 && r.def) reg.modelo.def = r.def;
     }
     if (r.universal && sistema === "universal") reg.universal = normalizarUniversal(r.universal);
     if (r.id) reg.id = r.id;
@@ -564,6 +571,7 @@
     if (g === "estrutural") {
       if (s !== destino) return { modo: "incompativel", texto: "É de " + nomeDoSistema(s) + "." };
       var stE = subtipoDe(r);
+      if (s === "vampiro") return { modo: "nativo", texto: ({ cla: "Escolhido na criação de vampiros; a Compulsão entra pelo mesmo caminho das do livro. A cópia fica na ficha.", predador: "Escolhido na criação: a especialização, a Disciplina e o que ele dá entram na ficha. A cópia fica na ficha.", disciplina: "Aparece na criação (clã e predador) e nas compras com XP; os poderes têm custo, teste e duração. A cópia fica na ficha.", vantagem: "Aparece na criação e nas compras com XP. A cópia fica na ficha." })[stE] };
       if (s === "oblivio") return { modo: "nativo", texto: ({ papel: "Escolhido na criação de Personas, com a Habilidade Principal; a cópia fica na ficha.", motivacao: "Escolhida na criação de Personas, depois das do livro; a cópia fica na ficha.", mazela: "Aparece em \u201cAplicar mazela\u201d na ficha; a cópia fica na ficha.", fardo: "A mesa aplica na ficha (\u201cAplicar Fardo Homebrew\u201d); a cópia fica na ficha." })[stE] };
       if (s === "brutal") return { modo: "nativo", texto: stE === "arquetipo" ? "Escolhido na criação de Sobreviventes e na troca de Arquétipo; a mesa recebe a cópia pelo resumo da ficha." : "Aparece no editor de Arquétipo e nas listas de Estilo da ficha e da mesa." };
       if (s === "goblins") return { modo: "nativo", texto: stE === "ocupacao" ? "Escolhida na criação de goblins (e como ocupação épica), com a cópia guardada na ficha." : "Escolhido na criação de goblins, depois dos do livro, com a cópia guardada na ficha." };
@@ -616,6 +624,9 @@
     var p = [rotuloDoSubtipo(r)];
     if (s === "tormenta20" && st === "arma") p.push(d.dano + " " + (d.margem && d.margem < 20 ? d.margem + "/" : "") + "x" + (d.mult || 2));
     if (s === "tormenta20" && (st === "armadura" || st === "escudo")) p.push("Defesa +" + (d.defesa || 0));
+    if (s === "vampiro" && st === "cla" && Array.isArray(d.disciplinas)) p.push(d.disciplinas.length + " Disciplinas");
+    if (s === "vampiro" && st === "disciplina" && Array.isArray(d.poderesHb)) p.push((d.tipo === "fisica" ? "física" : "mental") + " · " + d.poderesHb.length + " poderes");
+    if (s === "vampiro" && st === "vantagem" && d.tipo) p.push((d.tipo === "defeito" ? "Defeito" : "Vantagem") + " · " + (d.niveis || []).join("/") + " pts");
     if (s === "oblivio" && st === "papel" && d.estresse) p.push("Estresse " + d.estresse + " + Carne · " + (1 + (d.habilidadesUnicas || []).length) + " habilidades");
     if (s === "brutal" && st === "arquetipo" && Array.isArray(d.estilos)) p.push("Iniciativa " + (d.iniciativa || "?") + "º · " + d.estilos.map(function (k) { var B = global.RAMABrutalCatalogo; return B && B.ESTILOS[k] ? B.ESTILOS[k].nome : k; }).join(" e "));
     if (s === "goblins" && (st === "ocupacao" || st === "descritor") && global.RAMAGoblinsHomebrew) p.push(global.RAMAGoblinsHomebrew.textoMods(d.mod) || (d.escolha ? "+1 à escolha" : "sem modificador"));
@@ -818,6 +829,13 @@
       defImportada = RAi.normalizarRacaHomebrew(Object.assign({}, m.def, { id: "", nome: x.nome }));
       ["id", "homebrewId", "homebrew", "fonte", "pagina", "nome", "descricao"].forEach(function (k) { delete defImportada[k]; });
       defImportada.habilidades = defImportada.habilidades.filter(function (h) { return h.id !== "corpo"; });
+    }
+    /* Clã, Predador, Disciplina e Vantagem de Vampiro (v9.20). */
+    var VC = global.RAMAVampiroCatalogo, VD = global.RAMAVampiroDisciplinas;
+    if (g === "estrutural" && m.sistema === "vampiro" && VC && VC.normalizarHomebrew && ["cla", "predador", "disciplina", "vantagem"].indexOf(m.subtipo) >= 0) {
+      defImportada = m.subtipo === "disciplina" ? VD.normalizarDisciplinaHomebrew(Object.assign({}, m.def, { chave: "", nome: x.nome })) : VC.normalizarHomebrew(m.subtipo, Object.assign({}, m.def, { chave: "", nome: x.nome }));
+      ["chave", "homebrewId", "homebrew", "nome", "pagina", "descricao", "texto", "grupo"].forEach(function (k) { delete defImportada[k]; });
+      if (defImportada.compulsao) delete defImportada.compulsao.chave;
     }
     /* Papel, Motivação, Mazela e Fardo de Oblívio (v9.19). */
     var OC = global.RAMAOblivioCatalogo;

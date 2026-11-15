@@ -146,7 +146,7 @@
           el("span.vamp-cartao__dado", { texto: cl.disciplinas.length ? "Disciplinas: " + cl.disciplinas.map(T().nomeDisc).join(", ") : k === "caitiff" ? "Disciplinas: quaisquer (custam 6× na XP)" : "Sem Disciplinas de clã" }),
           el("span.vamp-cartao__dado", { texto: "Perdição: " + cl.perdicao.texto }),
           cl.compulsao ? el("span.vamp-cartao__dado", { texto: "Compulsão: " + cl.compulsao.nome }) : null,
-          el("span.t-mini", { texto: "p. " + cl.pagina }),
+          el("span.t-mini", { texto: cl.homebrew ? "Homebrew" : "p. " + cl.pagina }),
         ]);
       });
       var extra = null;
@@ -170,7 +170,7 @@
           return radio(grupo, o.idade === k, i.nome, function () { o.idade = k; if (i.geracoes.indexOf(o.geracao) < 0) o.geracao = i.geracoes[i.geracoes.length - 1]; desenhar(); }, [
             el("span.vamp-cartao__dado", { texto: i.resumo }),
             el("span.vamp-cartao__dado", { texto: "Geração " + i.geracoes.join(" ou ") + " · Potência " + i.potencia + " · " + i.xp + " XP · Humanidade " + i.humanidade + (i.vantagens ? " · +" + i.vantagens + " Vantagens e +" + i.defeitos + " Defeitos" : "") }),
-            el("span.t-mini", { texto: "p. " + i.pagina }),
+            el("span.t-mini", { texto: i.homebrew ? "Homebrew" : "p. " + i.pagina }),
           ]);
         })));
         var idade = C().IDADES[o.idade];
@@ -578,6 +578,8 @@
     var bs = U.$$(".r-modal__rodape .r-botao", m.janela);
     botaoVoltar = bs[0]; botaoSeguir = bs[1];
     desenhar();
+    /* v9.20: Clãs, Predadores, Disciplinas e Vantagens Homebrew da conta (uma viagem). */
+    if (global.RAMAVampiroHomebrew) global.RAMAVampiroHomebrew.carregarBiblioteca().then(function (r) { if (r && (r.clas.length || r.predadores.length || r.disciplinas.length || r.vantagens.length)) desenhar(); });
     return m;
   }
 

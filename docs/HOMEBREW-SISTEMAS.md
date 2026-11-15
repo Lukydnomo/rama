@@ -276,8 +276,8 @@ nova, e o modelo vai no `dadosJson` de sempre.
   (v9.12.0), selecionáveis na criação e na progressão.
 - **Ordem II**: Perfil e Ocupação.
 - **Oblívio**: ~~Papel, Motivação, Mazela e Fardo~~ (v9.19.0).
-- **Vampiro**: Clã, Predador, Disciplina, Vantagem, Defeito e Ficha de
-  Conhecimento.
+- **Vampiro**: ~~Clã, Predador, Disciplina, Vantagem, Defeito~~ (v9.20.0) e
+  Ficha de Conhecimento.
 - **Goblins**: ~~Ocupação, Descritor~~ (v9.17.0) e opções das variantes.
 - **BRUTAL**: Arquétipo, Estilo e modelos de mesa.
 - **Habilidades Homebrew no motor** de T20, Vampiro, Goblins, Oblívio e
@@ -1707,6 +1707,122 @@ nova da implantação. **`setupRama()` não é necessário.**
   (novos);
 - `js/oblivio/catalogo.js`, `js/oblivio/regras.js`;
 - `js/oblivio/telas/oblivio-criar.js`, `ficha-oblivio.js`;
+- `js/homebrew-adaptadores.js`, `js/pacotes-homebrew.js`,
+  `js/paginas/homebrew-editor.js`, `js/paginas/homebrew.js`;
+- `js/versao.js`;
+- `homebrew/index.html`, `ficha/index.html`, `personagens/index.html`.
+
+## v9.20.0 — Etapa 2: Clã, Predador, Disciplina, Vantagem e Defeito Homebrew de Vampiro
+
+### Os editores
+
+**Homebrew → + Criar → Vampiro: A Máscara**, todos com uma etapa de
+regras e uma de revisão:
+- **Clã:** nome, descrição, as três Disciplinas (do livro ou Homebrew), a
+  Perdição (texto) e a Compulsão (nome, penalidade de −1 a −3 em todas as
+  paradas, quando termina);
+- **Predador:**
+  - duas especializações (Habilidade + nome) e duas Disciplinas, das
+    quais quem joga escolhe uma de cada;
+  - Humanidade (−2 a +2);
+  - a Vantagem e o Defeito que dá (do livro, com pontos);
+  - a parada de caça;
+  - os clãs proibidos;
+- **Disciplina:** tipo (mental ou física), ressonância e até 10 poderes.
+  Cada poder tem nome, nível de 1 a 5, custo em Checagens, parada
+  Atributo + Disciplina, duração e efeito em texto;
+- **Vantagem** e **Defeito** (o mesmo tipo, `vantagem`, com o tipo
+  dentro): os pontos possíveis, um efeito Social opcional (±1 a ±3 dados,
+  como Belo/Feio), os clãs proibidos e o texto.
+
+### No motor
+
+As definições entram nos **mesmos mapas** que o motor e as telas leem
+(`CLAS`, `PREDADORES`, `VANTAGENS`, `DISCIPLINAS`, `PODERES`), a partir da
+cópia em `vampiro.homebrew`. As Disciplinas são registradas primeiro,
+porque clã e predador apontam para elas.
+- **Clã:**
+  - as Disciplinas do clã na criação;
+  - a Compulsão pelo mesmo `iniciarCompulsao` (penalidade em todas as
+    paradas);
+  - a Perdição é texto (a mesa aplica a Gravidade).
+- **Predador:** a especialização, a Disciplina (+1), a Humanidade e a
+  Vantagem/Defeito entram pelas concessões, como os do livro.
+- **Disciplina:**
+  - os poderes viram poderes do catálogo (`<disciplina>-p<n>`),
+    "narrativos";
+  - o motor confere posse, estado (estacado só mentais, frenesi só
+    físicas), cobra as Checagens, rola a parada e marca a duração;
+  - o efeito é da mesa.
+- **Vantagem:** aparece na criação e nas compras com XP; o efeito Social
+  entra nas paradas Sociais.
+
+A criação e as compras com XP carregam a biblioteca uma vez. As cartas e
+os poderes Homebrew mostram "Homebrew" no lugar da página.
+
+### Cópia, versão e servidor
+
+- chaves `hbvd-…`, `hbvc-…`, `hbvp-…`, `hbvv-…`, versionadas. Atualizar
+  uma Disciplina troca a chave dela em toda a ficha (clã, predador,
+  poderes);
+- sem cópia e sem catálogo, a escolha some;
+- o servidor roda o mesmo motor (`catalogo.js`, `disciplinas-dados.js` e
+  `regras.js` em `Vampiro.gs`, por `testes/gerar-vampiro-gs.js`).
+
+### Servidor e pacotes
+
+- `TIPOS_HOMEBREW` ganhou `cla`, `predador`, `disciplina` e `vantagem`; os
+  estruturais de Vampiro são os quatro.
+- Os pacotes ganharam os grupos.
+
+### Validação da v9.20.0
+
+**Automática.** O novo `testes/executar-homebrew-vampiro.js` tem 18
+verificações:
+- **Definições:**
+  - Disciplina (custo limitado, parada e duração válidas, poderes no
+    catálogo);
+  - Clã (três Disciplinas sem Alquimia, Compulsão);
+  - Predador (o que é válido entra);
+  - Vantagem (níveis, efeito Social).
+- **Ficha**, com o catálogo vazio, como no servidor:
+  - tudo é registrado pela cópia;
+  - as cópias ficam;
+  - a Disciplina conta;
+  - as concessões do Predador;
+  - a Compulsão do clã (−3 em todas as paradas);
+  - some sem cópia nem catálogo;
+  - normalizar de novo mantém.
+- **Biblioteca:**
+  - guardar e voltar com a mesma chave;
+  - destino e resumo;
+  - arquivo;
+  - pacote;
+  - versão nova da Disciplina com a chave trocada em toda a ficha.
+
+`testes/pacotes-backend.js`: o Clã de Vampiro é aceito.
+
+**Na interface** (servidor local, conta sintética):
+- Criei a Disciplina **Vitrificação** (física; Pele de Vidro, nível 1, 1
+  Checagem, Vigor + Disciplina, uma cena).
+- Criei o Clã **Vidreiros** (Vitrificação, Fortitude e Presença;
+  Perdição; Compulsão Polimento). A Disciplina Homebrew apareceu na lista
+  do editor de Clã.
+- Na criação de vampiro, o passo Clã mostrou "Vidreiros", com as três
+  Disciplinas, a Perdição, a Compulsão e "Homebrew".
+- **Correção encontrada:** pontuação dobrada na prévia do Clã.
+
+### Publicar a v9.20.0
+
+**Servidor:** troque **`Codigo.gs`** e **`Vampiro.gs`**, e crie uma versão
+nova da implantação. **`setupRama()` não é necessário.**
+
+**Site:**
+- `js/vampiro/homebrew-vampiro.js` e `js/paginas/homebrew-vampiro.js`
+  (novos);
+- `js/vampiro/catalogo.js`, `disciplinas-dados.js`, `regras.js`;
+- `js/vampiro/telas/vampiro-criar.js`, `ficha-vampiro.js`,
+  `ficha-vampiro-disciplinas.js`;
 - `js/homebrew-adaptadores.js`, `js/pacotes-homebrew.js`,
   `js/paginas/homebrew-editor.js`, `js/paginas/homebrew.js`;
 - `js/versao.js`;

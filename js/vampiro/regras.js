@@ -105,11 +105,41 @@
     return { superficial: inteiro(x.superficial, 0, 30, 0), agravado: inteiro(x.agravado, 0, 30, 0) };
   }
 
+  /* v9.20: Disciplina, Clã, Predador e Vantagem/Defeito Homebrew vêm com
+     a CÓPIA guardada na ficha (ou, escolhidos de uma lista da biblioteca,
+     do catálogo). As Disciplinas primeiro (clã e predador apontam para
+     elas). Sem cópia e sem catálogo, a escolha some. */
+  function homebrewDaFicha(b, o) {
+    if (!C.ehHomebrew || !DS() || !DS().ehDisciplinaHomebrew) return;
+    var hb = objeto(b.homebrew), saida = {};
+    function usar(campo, chave, ehHb, doCatalogo, normalizar, registrar) {
+      if (!ehHb(chave) || (saida[campo] && saida[campo][chave])) return null;
+      var cp = objeto(objeto(hb[campo])[chave]);
+      var def = Object.keys(cp).length ? normalizar(Object.assign({}, cp, { chave: chave })) : (doCatalogo && doCatalogo.homebrew ? copiar(doCatalogo) : null);
+      if (!def) return null;
+      registrar(def);
+      (saida[campo] = saida[campo] || {})[chave] = def;
+      return def;
+    }
+    var cla = C.ehHomebrew("cla", b.cla) ? (objeto(objeto(hb.clas)[b.cla]).disciplinas || (C.CLAS[b.cla] || {}).disciplinas || []) : [];
+    var pred = C.ehHomebrew("predador", b.predador) ? (objeto(objeto(hb.predadores)[b.predador]).disciplinas || (C.PREDADORES[b.predador] || {}).disciplinas || []) : [];
+    var discs = Object.keys(objeto(b.disciplinas)).concat(lista(b.poderes).map(function (x) { return String(objeto(x).chave || "").replace(/-p\d+$/, ""); })).concat(cla, pred);
+    discs.forEach(function (k) { usar("disciplinas", k, DS().ehDisciplinaHomebrew, DS().DISCIPLINAS[k], DS().normalizarDisciplinaHomebrew, DS().registrarDisciplinaHomebrew); });
+    usar("clas", b.cla, function (k) { return C.ehHomebrew("cla", k); }, C.CLAS[b.cla], function (x) { return C.normalizarHomebrew("cla", x); }, function (d) { C.registrarHomebrew("cla", d); });
+    usar("predadores", b.predador, function (k) { return C.ehHomebrew("predador", k); }, C.PREDADORES[b.predador], function (x) { return C.normalizarHomebrew("predador", x); }, function (d) { C.registrarHomebrew("predador", d); });
+    lista(b.vantagens).forEach(function (v) {
+      var k = objeto(v).chave;
+      usar("vantagens", k, function (x) { return C.ehHomebrew("vantagem", x); }, C.VANTAGENS[k], function (x) { return C.normalizarHomebrew("vantagem", x); }, function (d) { C.registrarHomebrew("vantagem", d); });
+    });
+    if (Object.keys(saida).length) o.homebrew = Object.assign({ versao: 1 }, saida);
+  }
+
   function normalizar(bruto) {
     var b = objeto(bruto);
     var o = fichaVazia(b.natureza);
     o.v = VERSAO_BLOCO;
     ["conceito", "senhor", "idadeVerdadeira", "idadeAparente", "epoca", "ambicao", "desejo", "perdicaoParametro", "notas", "metodoAlquimia"].forEach(function (k) { o[k] = texto(b[k], k === "notas" ? 20000 : 600); });
+    homebrewDaFicha(b, o);
     o.cla = C.CLAS[b.cla] ? b.cla : "";
     o.predador = C.PREDADORES[b.predador] ? b.predador : "";
     o.idade = C.IDADES[b.idade] ? b.idade : "neofito";
